@@ -392,8 +392,8 @@ export function AccountScreen({
                 redeeming
                   ? t.points.converting
                   : t.points.convert
-                      .replace('{threshold}', String(wallet.redeem.minimumPoints))
-                      .replace('{value}', formatCompactEuro(wallet.redeem.valueCents, locale))
+                      .replace('{threshold}', String(wallet.nextRedeem.points))
+                      .replace('{value}', formatCompactEuro(wallet.nextRedeem.valueCents, locale))
               }
               onPress={convertPoints}
               disabled={redeeming || wallet.balance < wallet.redeem.minimumPoints}

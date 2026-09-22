@@ -16,13 +16,13 @@ import type { Messages } from '../account-types';
 interface RedeemPointsProps {
   t: Messages;
   locale: Locale;
-  /** Eşik ve karşılık ayardan gelir, ekrana gömülmez. */
-  redeem: { minimumPoints: number; valueCents: number };
+  /** Bu basışın çevireceği puan ve karşılığı — motordan, ekrana gömülmez. */
+  amount: { points: number; valueCents: number };
   enough: boolean;
   compact?: boolean;
 }
 
-export function RedeemPoints({ t, locale, redeem, enough, compact = false }: RedeemPointsProps) {
+export function RedeemPoints({ t, locale, amount, enough, compact = false }: RedeemPointsProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -64,8 +64,8 @@ export function RedeemPoints({ t, locale, redeem, enough, compact = false }: Red
           <div className="flex flex-col gap-3">
             <p className="font-sans text-body-sm leading-relaxed text-body">
               {t.redeemBody
-                .replace('{points}', String(redeem.minimumPoints))
-                .replace('{amount}', formatPrice(redeem.valueCents, locale))}
+                .replace('{points}', String(amount.points))
+                .replace('{amount}', formatPrice(amount.valueCents, locale))}
             </p>
             {/* Geri alınamazlık AYRI bir satır: onayın asıl sebebi bu ve gövde metninin içinde
                 kaybolmamalı. */}

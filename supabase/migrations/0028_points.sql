@@ -108,6 +108,8 @@ insert into public.settings (key, value, description) values
   -- 270 bugünkü azami bedava kazancın (18) çok üstündedir, kart ya da ziyaret puanı büyürse pay bırakır.
   ('points_daily_cap',          '270', 'Bir müşterinin GÜNDE kazanabileceği azami puan — YALNIZ bedava eylemler için (istismar freni).'),
   ('points_redeem_min',         '500', 'Kupona çevirmek için asgari puan (500 puan = 5 €).'),
+  -- Tek kupon tek siparişte kırpılır ve artanı yanar; tavan bakiyeyi parçalara böler, fazlası bakiyede kalır.
+  ('points_redeem_max',         '2000', 'Tek kupona çevrilebilecek azami puan (2000 puan = 20 €); fazlası bakiyede kalır.'),
   ('points_cent_value',         '1',   'Bir puanın kuruş değeri. 1 = puan başına 1 cent.')
 -- Global satırın kısmi unique indeksi `scope_id is null` üzerindedir (0013).
 on conflict (key) where scope_id is null do nothing;

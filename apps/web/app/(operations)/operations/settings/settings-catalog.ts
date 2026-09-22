@@ -2,15 +2,8 @@ import type { z } from 'zod';
 import { SettingScopeEnum } from '@lezzet/types';
 
 /**
- * İstisna açılabilen eksenler — `global` bir istisna değil, değerin kendisidir.
- *
- * **Burada, `settings-types`'ta DEĞİL** ve sebebi yapısal: sözlük bu tipe ihtiyaç duyuyor
- * (`SettingDef.exceptionScopes`), `settings-types` de sözlükten `SettingDef`/`SettingValue`
- * alıyor. Tip öteki dosyada kalınca ikisi birbirini import etti ve `pnpm boundaries` döngü hatası
- * verdi. Eksen tanımı zaten sözlüğün konusu — "bu ayar hangi eksende bölünebilir" sorusunun evi.
- *
- * `warehouse` DAHİL (03.08): arka uç ekseni açtı (`SettingScopeEnum` beş değerli, çözücüde
- * `warehouse > zone > channel > country > global`), bu ekran da kabloladı.
+ * İstisna açılabilen eksenler; `global` istisna değil, değerin kendisidir. Tip burada durur, çünkü `settings-types` sözlükten tip
+ * alıyor ve öteki dosyada kalsaydı iki dosya birbirini import ederdi.
  */
 export const ExceptionScopeEnum = SettingScopeEnum.exclude(['global']);
 export type ExceptionScope = z.infer<typeof ExceptionScopeEnum>;
@@ -20,6 +13,8 @@ import {
   CONVERSATION_DEFAULT_HANDLER_KEY,
   POINTS_DAILY_CAP_DEFAULT,
   POINTS_DAILY_CAP_KEY,
+  POINTS_REDEEM_MAX_DEFAULT,
+  POINTS_REDEEM_MAX_KEY,
   POINTS_SETTING_KEYS,
 } from '@lezzet/domain-core';
 import { TICKET_HANDLER_LABELS, TicketHandlerEnum } from '@lezzet/types';
@@ -27,36 +22,8 @@ import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POI
 import { DAY_HOUR_FALLBACK } from '@/lib/settings/day-hours';
 
 /**
- * Ayar SÖZLÜĞÜ (09.16) — anahtarın insan dilindeki karşılığı.
- *
- * ── NEDEN BİR SÖZLÜK GEREKİYOR ───────────────────────────────────────────────
- * `settings` tablosu bir anahtar/değer deposudur: satırda `mlor_percent` yazar, `75` yazar. Ekranın
- * söylemesi gereken cümle ise "mal kabulde asgari kalan raf ömrü — altında uyarır, kabulü
- * engellemez"dir. Tasarım bunu kural olarak koyuyor (`admin-ayarlar.md §6`): **iç anahtar adı
- * arayüzde GÖRÜNMEZ.** O çeviri bir yerde yaşamak zorunda; burası orası.
- *
- * ── SÖZLÜK ANAHTAR ÜRETMEZ, ANAHTARA BAĞLANIR ────────────────────────────────
- * Zaten sabiti olan anahtarlar (`lib/settings-keys.ts`, `domain-core/feedback/points`) buradan
- * İTHAL edilir, yeniden yazılmaz. `settings-keys.ts`'in kendi künyesi "bir sabit dosyası her ayarı
- * toplamasın" diyor ve haklı — bu dosya o değil: burada anahtarın anlamı değil, **operatöre
- * gösterilecek yüzü** durur. Sabiti olmayan anahtarlar (tek yerde okunanlar) dize olarak geçer;
- * ikisi bir gün ayrışırsa aşağıdaki nöbet testi yakalar.
- *
- * ── `fallback` NEDEN BURADA DA VAR ───────────────────────────────────────────
- * Ekran "varsayılan 20,00 €" yazıyor ve "Varsayılana dön" düğmesi sunuyor. Satırdaki değer
- * DEĞİŞTİRİLDİĞİ an fabrika değeri veride kalmaz — migration'daki `insert` bir kez koşar. O yüzden
- * fabrika değeri burada da durur. Bu bilinçli bir kopyadır ve `settings-catalog.test.ts` onu
- * migration dosyasına karşı doğrular: sayı ayrışırsa test düşer, ekran yalan söylemez.
- *
- * ── KAPSAM: 'warehouse' ARKA UÇTA AÇILDI, EKRAN HENÜZ KABLOLU DEĞİL (03.08) ──
- * Talep karşılandı: `SettingScopeEnum` artık beş değerli, `SettingScopeContext.warehouseId` var ve
- * çözücü depoyu EN ÖZGÜL eksen olarak arıyor (depo > bölge > kanal > ülke > global). Yani depo
- * kapsamlı bir satır artık hem yazılıyor hem okunuyor.
- *
- * Ekranın eksiği kablolama: `ScopeOptions.warehouse` alanı ve `toScopeOptions`'ın depo listesini
- * alması — veri zaten sayfada (`SettingsData.warehouseOptions`). O inene kadar `ExceptionScopeEnum`
- * `warehouse`'u dışarıda tutuyor, çünkü seçenekleri boş bir eksen operatöre "Depo" yazıp seçecek
- * bir şey vermezdi. Bu sözlüğün tipi de o enum'dan gelir: sözlük, ekranın SUNABİLDİĞİNİ anlatır.
+ * Ayar sözlüğü: iç anahtar adı arayüzde görünmediği için operatöre gösterilecek yüz burada durur, anahtarlar sabitlerinden ithal
+ * edilir. `fallback` bilinçli bir kopyadır, çünkü değiştirilen satırda fabrika değeri kalmaz; nöbet testi onu migration'a karşı doğrular.
  */
 
 /** Ayarın ekranda hangi sekmede durduğu. */
@@ -69,16 +36,13 @@ export const SETTING_GROUPS: readonly { key: SettingGroup; label: string }[] = [
   { key: 'points', label: 'Puan' },
   { key: 'cost', label: 'Birim maliyet' },
   { key: 'feedback', label: 'Geri bildirim' },
-  // Sosyal mesajlaşma (15.30): ilk ayarı yeni sohbetin yürütücüsü; ajan/kanal ayarları buraya gelir.
+  // Sosyal mesajlaşma: ilk ayarı yeni sohbetin yürütücüsü; ajan ve kanal ayarları buraya gelir.
   { key: 'social', label: 'Sosyal mesajlar' },
 ] as const;
 
 /**
- * Değerin TÜRÜ — hem gösterimi hem düzenleme kontrolünü belirler.
- *
- * `channelFlags` ayrı bir tür çünkü değeri kanal başına bir bayrak taşıyor (`{b2b, b2c}`). Bu ayarın
- * kapsamı yine de `global`: kanal ayrımı değerin İÇİNDE yaşıyor, bir istisna satırı olarak değil.
- * İkisini birden sunmak aynı soruya iki cevap kapısı açmak olurdu.
+ * Değerin türü, gösterimi ve düzenleme kontrolünü belirler. `channelFlags`in kanal ayrımı değerin içinde yaşar, istisna satırı
+ * olarak değil, yoksa aynı soruya iki cevap kapısı açılırdı.
  */
 export type SettingKind = 'money' | 'percent' | 'integer' | 'time' | 'boolean' | 'channelFlags' | 'text' | 'account' | 'choice';
 
@@ -95,11 +59,7 @@ export interface SettingDef {
   kind: SettingKind;
   /** Sayısal değerin birimi (`dk`, `gün`, `puan`, `cent`). Para ve yüzde kendi biçimini taşır. */
   unit?: string;
-  /**
-   * `choice` türünün seçenekleri — değer LİSTEDEN gelir, serbest metin değil (15.30). Etiket
-   * operatörün gördüğü ad, değer satıra yazılan kimlik; ikisi sözlükte yan yana durur ki ekran
-   * bir enum'u ham kimliğiyle göstermesin.
-   */
+  /** `choice` türünün seçenekleri: değer listeden gelir ki ekran bir enum'u ham kimliğiyle göstermesin. */
   choices?: readonly { value: string; label: string }[];
   /** Alt/üst sınır — ham sayı üzerinden (para cent, yüzde tam sayı). */
   min?: number;
@@ -108,50 +68,23 @@ export interface SettingDef {
   limitReason?: string;
   /** Geniş etkili ayar: düzenleme penceresi bu cümleyi uyarı olarak gösterir. */
   impact?: string;
-  /**
-   * `global` dışında hangi eksenlerde istisna açılabilir. Boş = yalnız genel değer.
-   *
-   * Tip `ExceptionScope`'tan gelir (`settings-types`), `SettingScope`'tan değil: `warehouse` arka
-   * uçta açık ama bu ekranda henüz kablolu değil ve sözlük ekranın sunabildiğini anlatmalı.
-   * Gerekçe `ExceptionScopeEnum` künyesinde.
-   */
+  /** `global` dışında istisna açılabilen eksenler; boşsa yalnız genel değer. Tip ekranın sunabildiği eksenlerden gelir. */
   exceptionScopes: readonly ExceptionScope[];
   /**
-   * Fabrika değeri — migration'ın yazdığı satır. `settings-catalog.test.ts` doğrular.
-   *
-   * **İSTEĞE BAĞLI, ve boş olması bir eksiklik değil karar.** Bazı ayarların fabrika değeri
-   * OLAMAZ: `door_cash_account_id` bir hesap kimliğidir ve o kimlik her kurulumda başkadır —
-   * migration'a bir uuid gömmek, o satırın hiçbir yerde karşılığı olmayan bir hesabı işaret
-   * etmesi demekti. Böyle ayarlarda ekran "Varsayılana dön" SUNMAZ (dönülecek bir yer yok) ve
-   * "varsayılandan farklı" işareti de anlamsızdır — kurulumun kendi seçimidir.
-   *
-   * Nöbet testi bunu İKİ YÖNLÜ doğrular: `fallback` verilen anahtar migration'da BULUNMALI,
-   * verilmeyen BULUNMAMALI. Tek yönlü olsaydı, migration'a sonradan eklenen bir fabrika değeri
-   * sözlükte görünmeden yaşardı.
+   * Fabrika değeri, migration'ın yazdığı satır; kurulumdan kuruluma değişen ayarlarda (hesap kimliği gibi) bilerek boştur. Nöbet
+   * testi iki yönlü doğrular: `fallback` verilen anahtar migration'da bulunmalı, verilmeyen bulunmamalı.
    */
   fallback?: SettingValue;
 }
 
 const CHANNEL_ONLY = ['channel'] as const;
 const NONE = [] as const;
-/**
- * **YALNIZ rota ekseni** — günün eşik saatleri (kullanıcı kararı 17.08).
- *
- * Depo ekseni bilerek dışarıda: `SCOPE_PRIORITY`de `warehouse` `zone`dan daha özgül olduğu için iki
- * eksen birden açık olsaydı depoya yazılan bir değer bölgenin saatini **sessizce** yutardı. Tek
- * eksen = tuzak yok. Gerekçe `docs/feature/cok-gunluk-sefer.md §5`.
- */
+/** Yalnız rota ekseni: depo ekseni de açık olsaydı depoya yazılan değer daha özgül olduğu için bölgenin saatini sessizce yutardı. */
 const ZONE_ONLY = ['zone'] as const;
 
 /**
- * Depo istisnası HANGİ ayarlarda açık — ve bu liste uydurulmadı, `0016`'nın kendi künyesinden
- * geldi: *"Depo bazlı olmaya aday değerler: kesim saati, rota teslimat birim maliyeti (kâr
- * hesabına girer — global kalırsa kâr sessizce yanlışlaşır), paketleme maliyeti, minimum sepet.
- * TTL ve raf ömrü eşikleri global kalır."*
- *
- * Ekseni AÇMAK ile her ayara AÇMAK ayrı iki karar. İkincisini yapmadım: bir eşiğin depo başına
- * ayrışabilir olması iş kuralıdır, ekranın tercihi değil — ve gereksiz açılan her eksen, operatöre
- * "burası da bölünebilir" diye yanlış bir davet olur.
+ * Depo istisnasının açık olduğu ayarlar; liste `0016`'nın depo bazlı aday listesinden gelir. Bir eşiğin depo başına ayrışması iş
+ * kuralıdır, gereksiz açılan her eksen operatöre yanlış bir davet olurdu.
  */
 const WITH_WAREHOUSE = (...rest: readonly ExceptionScope[]): readonly ExceptionScope[] => ['warehouse', ...rest];
 
@@ -210,12 +143,8 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     group: 'order',
     kind: 'time',
     impact: 'Geniş etkili: kesim saatini öne çekmek, bugüne yetişeceğini sanan siparişleri yarına atar.',
-    // **DEPO EKSENİ KALDIRILDI (kullanıcı kararı 17.08).** `0016`'nın aday listesinde bu ayar adıyla
-    // geçiyordu ("depolar farklı şehirlerde, kesim saatleri ayrışır") ve iki eksen birden açıktı.
-    // Sorun ölçüldü: `SCOPE_PRIORITY`de `warehouse` `zone`dan DAHA ÖZGÜL — depoya 11:00, bölgeye
-    // 09:00 yazılırsa depo kazanır ve bölgenin saati hiçbir hata vermeden ölü kalır. Kullanıcının
-    // cümlesi: *"depo saatini komple kaldıralım, her rota saatini barındırsın; böylelikle sessiz
-    // kapsam tuzağına düşmeyiz."* Gerekçe zinciri: `docs/feature/cok-gunluk-sefer.md §5`.
+    // Depo ekseni yok: depo bölgeden daha özgül olduğu için depoya yazılan saat bölgenin saatini hata vermeden öldürürdü; her rota
+    // kendi saatini taşır.
     exceptionScopes: ZONE_ONLY,
     // Fabrika değeri `lib/settings/day-hours`ten geliyor — bu dört saati panelin gün akışı ve rota
     // kurulumu da okuyor, değer üç yerde ayrı yazılıydı. Nöbet testi migration'a karşı doğrulamaya
@@ -257,11 +186,8 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
   {
     key: 'delivery_proof_required',
     label: 'Teslim onayı kapsamı',
-    /* İMZA ADIMI KURYE EKRANINDAN SÖKÜLDÜ (kullanıcı kararı 30.08): ekrana çizilen şekil
-       imzalayanın kimliğini kanıtlamıyordu, yerine kutu okutması geçti (`box_scan`). Ayar
-       DURUYOR çünkü kapsam gerekirse yine açılabilir — ama açıldığında kurye ekranında
-       alınacak bir kanıt bugün YOK; yardım metni bunu söylüyor ki ayarı açan boşa beklemesin.
-       Gelecek yol backlog'da: kapıda WhatsApp OTP. */
+    /* Kurye ekranında imza adımı yok, yerine kutu okutması var; ayar durur ki kapsam gerekirse açılabilsin, yardım metni de açıldığında
+       alınacak kanıt olmadığını söyler. */
     help: 'Kanıt hangi kanalda zorunlu olsun. Bugün ikisi de kapalı: kanıt kutu okutmasının kendisidir (imza adımı kaldırıldı).',
     group: 'order',
     kind: 'channelFlags',
@@ -432,10 +358,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     exceptionScopes: NONE,
     fallback: 2,
   },
-  // "Sipariş puanı" girdisi bilerek YOK (kullanıcı kararı 26.08): sipariş puanı 11.08'de
-  // kaldırıldı, kodda okuyan kalmadı ve ayar satırı yalnız yanlış bilgi veriyordu — Ayarlar'a
-  // bakan operatör "siparişten 10 puan veriliyor" sonucuna varıyordu. `points_order` migration'dan
-  // da söküldü; defterdeki eski `order` satırları kazanılmış puan olarak durur (DOMAIN §14).
+  // Sipariş puanı girdisi bilerek yok: sipariş puanı yazılmıyor ve ayar satırı operatöre yanlış bilgi verirdi.
   {
     key: POINTS_SETTING_KEYS.referral,
     label: 'Getiren müşteri puanı',
@@ -486,6 +409,18 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     impact: 'Müşteri hesabında söz olarak yazılır. Yükseltmek, eşiğe yaklaşmış müşterinin beklediği kuponu uzaklaştırır.',
     exceptionScopes: NONE,
     fallback: 500,
+  },
+  {
+    key: POINTS_REDEEM_MAX_KEY,
+    label: 'Tek kuponun azami puanı',
+    help: 'Müşteri bir basışta en fazla bu kadar puanı kupona çevirir; fazlası bakiyede kalır.',
+    group: 'points',
+    kind: 'integer',
+    unit: 'puan',
+    min: 0,
+    impact: 'Tek siparişe inebilecek puan indirimini sınırlar. Düşürmek, büyük bakiyeyi daha çok parçaya böler.',
+    exceptionScopes: NONE,
+    fallback: POINTS_REDEEM_MAX_DEFAULT,
   },
   {
     key: POINTS_CENT_VALUE_KEY,

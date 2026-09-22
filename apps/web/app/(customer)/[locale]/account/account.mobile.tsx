@@ -227,7 +227,13 @@ function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps)
       )}
       <PrimaryButton
         shape="block"
-        label={redeem.busy ? copy.points.converting : fill(copy.points.convert)}
+        label={
+          redeem.busy
+            ? copy.points.converting
+            : copy.points.convert
+                .replace('{threshold}', String(points.nextRedeem.points))
+                .replace('{value}', formatCompactEuro(points.nextRedeem.valueCents, locale))
+        }
         onClick={redeem.convert}
         disabled={redeem.busy || !enough}
       />

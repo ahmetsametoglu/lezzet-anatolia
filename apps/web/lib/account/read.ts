@@ -4,13 +4,16 @@ import type { Address, CompanyInfo, ConversationSource, PointsEntry, PreferredLa
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
 import { entryOfItem, type CartLine } from '@/lib/cart/cart-types';
-import { readCustomerPoints, type CustomerCoupon, type CustomerPointsRules, type PendingNeighborAward } from '@lezzet/application';
+import {
+  readCustomerPoints,
+  type CustomerCoupon,
+  type CustomerPointsCard,
+  type CustomerPointsRules,
+  type PendingNeighborAward,
+} from '@lezzet/application';
 import { listPointsHistory } from '@/lib/feedback/points';
 
-/**
- * Hesap sayfasının tek okuma kapısı; kanal saklanmaz, şirket künyesinden türer. Puan yalnız B2C'de okunur, çünkü B2B'de hiç
- * çizilmeyecek veriyi getirmek boşa sorgudur.
- */
+/** Hesap sayfasının tek okuma kapısı; puan yalnız B2C’de okunur, çünkü B2B’de hiç çizilmeyecek veriyi getirmek boşa sorgudur. */
 /**
  * `since` bağlanma anı, yoksa sohbetin açılışı: WhatsApp sohbeti müşterisiyle doğar ve ayrıca bağlanmaz.
  */
@@ -47,7 +50,9 @@ export interface AccountView {
     balance: number;
     history: PointsEntry[];
     /** Kural ayardan gelir, çünkü ekranın eşiği motorunkinden ayrışırsa müşteri reddedilecek düğmeye basar. */
-    redeem: { minimumPoints: number; valueCents: number };
+    redeem: CustomerPointsRules['redeem'];
+    /** Düğmeye basılınca çevrilecek puan ve karşılığı — motordan. */
+    nextRedeem: CustomerPointsCard['nextRedeem'];
     /** Kazanma yolları ve para karşılıkları; telefon kartı native'in kazanma listesini bunlarla çizer. */
     earnWays: CustomerPointsRules['earnWays'];
     centValue: number;
@@ -150,6 +155,7 @@ async function readPointsAndCoupons(
       balance: card.balance,
       history: history.rows,
       redeem: card.redeem,
+      nextRedeem: card.nextRedeem,
       earnWays: card.earnWays,
       centValue: card.centValue,
       neighborMaxUses: card.neighborMaxUses,

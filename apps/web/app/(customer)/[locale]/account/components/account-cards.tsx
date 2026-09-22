@@ -14,14 +14,8 @@ import { cancelZoneNoticeAction } from '../actions';
 import type { Messages } from '../account-types';
 import { RedeemPoints } from './redeem-points';
 
-/**
- * Hesap sayfasının kart ailesi — masaüstü ve mobil AYNI parçaları kullanır, yalnız ölçüleri ve
- * SIRALARI değişir (tasarım: web iki sütun, mobil tek sütun ve puan kartı en üstte).
- *
- * Her kart kendi başına bir bölümdür ve **bulunmayan veri için hiç çizilmez**: B2C'de şirket
- * bölümü, B2B'de puan bölümü DOM'da yoktur. Tasarımın açık kuralı bu — boş bir kart, olmayan bir
- * özelliği varmış gibi gösterir.
- */
+// Hesap sayfasının kart ailesi: bulunmayan veri için kart hiç çizilmez, çünkü boş kart olmayan bir özelliği varmış gibi gösterir.
+
 /** Kart başlığı + (varsa) sağdaki eylem bağlantısı. Künye notu mobilde düşer: satır zaten dar. */
 export function CardHead({ title, compact, action, note }: { title: string; compact: boolean; action?: ReactNode; note?: string }) {
   return (
@@ -46,16 +40,8 @@ export function Row({ label, value }: { label: string; value: ReactNode }) {
 }
 
 /**
- * İzin anahtarı — **anında yazar, ayrı "Kaydet" yok** (tasarımın etkileşim sözleşmesi) ve kapatma
- * onay istemez: izni geri almak müşterinin en doğal hakkı, önüne diyalog koymak caydırmak olurdu.
- *
- * Bir süre yalnız OKUYORDU (yazacak kapı yoktu) ve o zaman `role="switch"` bilerek verilmemişti:
- * çalışmayan bir denetimi ekran okuyucuya "anahtar" diye duyurmak yanlıştı. Artık gerçekten
- * çalışıyor, rol de yerine geldi.
- *
- * **İyimser gösterim:** tıklama anında görünür, sunucu turu beklenmez — izin anahtarı bir onay
- * kutusu gibi davranmalı. Yazma düşerse eski hâle geri döner ve sebep yazılır; sessizce açık
- * kalması, müşteriye vermediği bir izni verdiğini düşündürürdü.
+ * İzin anahtarı anında ve iyimser yazar, kapatma onay istemez; izni geri almak müşterinin en doğal hakkıdır. Yazma düşerse eski
+ * hâle döner ve sebep yazılır, yoksa müşteri vermediği bir izni vermiş sanırdı.
  */
 export function ConsentSwitch({
   label,
@@ -68,23 +54,12 @@ export function ConsentSwitch({
   failedText,
 }: {
   label: string;
-  /**
-   * Kanalın ikonu — ikon setinden, boyutu çağıran verir (v1: e-posta `mail`, WhatsApp `chat`;
-   * masaüstü 17, mobil 16). Önce etiketin başında emoji vardı (✉ 💬); v1 ikonları çizgi setiyle
-   * çiziyor ve emoji yanındaki çizgi ikonların arasında bozuk görünüyordu (14.09).
-   */
+  /** Kanalın ikonu ikon setinden, boyutu çağıran verir; emoji çizgi ikonların yanında bozuk göründüğü için kullanılmaz. */
   icon?: ReactNode;
   on: boolean;
   onLabel: string;
   offLabel: string;
-  /**
-   * Yazma eylemi ÇAĞIRANIN — anahtar hangi kapıya yazdığını bilmez (22.08).
-   *
-   * Önce `channel: 'email' | 'whatsapp'` alıyordu ve `setConsentAction`ı kendi çağırıyordu; bildirim
-   * tercihleri sayfası açılınca aynı anahtar üç ayrı kapıya yazmak zorunda kaldı (kampanya kanalı ·
-   * bildirim türü · jetonlu hâlleri). Kanal listesini büyütmek anahtarı her yeni tercihte
-   * değiştirmek, ikinci bir anahtar yazmak ise duplikasyon olurdu (CLAUDE §1).
-   */
+  /** Yazma eylemi çağıranın: aynı anahtar kampanya kanalı ve bildirim türü gibi farklı kapılara yazar, anahtar hangisi olduğunu bilmez. */
   onToggle: (next: boolean) => Promise<{ errorKey: string | null }>;
   /**
    * Telefon görünümü — native hesabın kampanya satırı (etiket `control` · 600, native anahtar 50×30,
@@ -159,22 +134,13 @@ export function ConsentSwitch({
   );
 }
 
-/**
- * Puan kartı — koyu blok (tasarım). **Yalnız B2C'de çizilir**: oyunlaştırma B2C-only bir karardır
- * (DOMAIN §14) ve B2B müşteriye puan göstermek olmayan bir hakkı ima ederdi.
- *
- * Eşik altındaysa düğme pasif ve KALAN puan yazılı — pasif bir düğmenin sebebi görünmelidir.
- */
-/**
- * Eksi işaretli ödülün ters etiketi — sözlükte yalnız iki sebep var ve bu bilinçli (ötekilere
- * ters etiket uydurmak olmayan bir olayı adlandırmak olurdu). Tip daraltması cast'siz: sebep
- * sözlük anahtarı değilse `undefined` döner, çağıran normal etikete düşer.
- */
+/** Eksi işaretli ödülün ters etiketi; yalnız iki sebepte var, ötekilere uydurmak olmayan bir olayı adlandırmak olurdu. */
 function reversedReasonLabel(t: Messages, reason: string, points: number): string | undefined {
   if (points >= 0) return undefined;
   return reason === 'neighbor' || reason === 'referral' ? t.pointsReasonReversed[reason] : undefined;
 }
 
+/** Puan kartı yalnız B2C'de çizilir; eşik altındaysa düğme pasif ve kalan puan yazılı, çünkü pasif düğmenin sebebi görünmeli. */
 export function PointsCard({
   t,
   locale,
@@ -191,10 +157,8 @@ export function PointsCard({
   const rule = t.pointsRule.replace('{points}', String(minimumPoints)).replace('{amount}', formatPrice(valueCents, locale));
 
   /**
-   * MOBİL YAPICA FARKLI ve bu tasarımın kararı: tek satır — solda başlık + kural, sağda rakam ve
-   * küçük hap. İç panel ve "son kazanımlar" listesi mobilde YOK (bekleyen komşu ödülü bloğu da
-   * aynı kararın kapsamında). Masaüstü kartını küçültüp kullanmak improvise etmek olurdu
-   * (CLAUDE.md §3); dar ekranda dört satırlık bir döküm, bakılan tek sayıyı (bakiye) aşağı itiyor.
+   * Mobil kart tasarım gereği tek satır: solda başlık ve kural, sağda rakam ve küçük hap. İç panel ve son kazanımlar mobilde yok,
+   * çünkü dar ekranda döküm bakılan tek sayıyı (bakiye) aşağı iterdi.
    */
   if (compact) {
     return (
@@ -202,14 +166,14 @@ export function PointsCard({
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="font-serif text-card-title-sm leading-tight">{t.pointsTitle}</span>
           <span className="font-sans text-micro leading-relaxed text-neutral-400">{rule}</span>
-          {/* Tam döküm ayrı sayfada (20.08) — mobil kart döküm taşımaz (tasarım), yol buradan. */}
+          {/* Tam döküm ayrı sayfada; mobil kart döküm taşımaz, yol buradan. */}
           <Link href="/account/points" className="cursor-pointer font-sans text-micro font-semibold text-olive-light hover:text-cream">
             {t.pointsHistoryLink}
           </Link>
         </div>
         <div className="flex flex-none flex-col items-end gap-1.5">
           <span className="font-sans text-page-title-sm font-bold text-olive-light">{points.balance}</span>
-          <RedeemPoints t={t} locale={locale} redeem={points.redeem} enough={enough} compact />
+          <RedeemPoints t={t} locale={locale} amount={points.nextRedeem} enough={enough} compact />
         </div>
       </section>
     );
@@ -229,13 +193,10 @@ export function PointsCard({
         <span className="font-sans text-note leading-relaxed font-semibold text-olive-light">
           {enough ? rule : `${t.pointsShort.replace('{missing}', String(minimumPoints - points.balance))} (${rule})`}
         </span>
-        <RedeemPoints t={t} locale={locale} redeem={points.redeem} enough={enough} />
+        <RedeemPoints t={t} locale={locale} amount={points.nextRedeem} enough={enough} />
       </div>
 
-      {/* Bekleyen komşu ödülü — geçmişin ÜSTÜNDE ayrı blok, deftere KARIŞMAZ (★ karar 3; 21.73'ün
-          web yarısı): defter "ne oldu"yu tutar, bu "ne olacak"tır — sanal bir satır bakiyeyi de
-          yalan söyletirdi. Puan sayısı `neighborPoints` bilinmiyorsa blok hiç çizilmez: bilinmeyen
-          sayıyla söz verilmez. */}
+      {/* Bekleyen komşu ödülü deftere karışmaz, çünkü defter olanı tutar; puan sayısı bilinmiyorsa blok çizilmez, bilinmeyen sayıyla söz verilmez. */}
       {points.pendingNeighborAwards.length > 0 && points.neighborPoints !== null && (
         <div className="flex flex-col gap-1.5 rounded-soft bg-cream/10 px-4 py-3">
           <span className="font-sans text-note font-bold text-cream">{t.pointsPendingTitle}</span>
@@ -273,7 +234,7 @@ export function PointsCard({
             </span>
           </div>
         ))}
-        {/* Tam d\u00f6k\u00fcm ayr\u0131 sayfada (20.08): kart yaln\u0131z son 4 hareketi ta\u015f\u0131r, gerisi sayfal\u0131d\u0131r. */}
+        {/* Tam döküm ayrı sayfada: kart yalnız son hareketleri taşır, gerisi sayfalıdır. */}
         <Link href="/account/points" className="cursor-pointer pt-0.5 font-sans text-note font-semibold text-olive-light hover:text-cream">
           {t.pointsHistoryLink}
         </Link>
@@ -283,12 +244,8 @@ export function PointsCard({
 }
 
 /**
- * Davet kart\u0131 (20.08) \u2014 native hesab\u0131n webde olmayan blo\u011fu (kullan\u0131c\u0131 bulgusu): `/parrainage/[code]`
- * kar\u015f\u0131lamas\u0131 aylard\u0131r \u00e7al\u0131\u015f\u0131yordu ama m\u00fc\u015fteri kendi ba\u011flant\u0131s\u0131n\u0131 hi\u00e7bir yerden ALAMIYORDU, yani
- * program webde tek y\u00f6nl\u00fcyd\u00fc. Adres application'dan gelir (`inviteUrl` \u2014 ekran adres kurmaz).
- *
- * \u0130ki alan da yoksa kart H\u0130\u00c7 do\u011fmaz: ba\u011flant\u0131s\u0131z davet \u00e7a\u011fr\u0131s\u0131 bas\u0131lamayan bir d\u00fc\u011fme, puan\u0131
- * bilinmeyen davet ise tutulamayacak bir s\u00f6z olurdu (`neighborPoints` kural\u0131n\u0131n ayn\u0131s\u0131).
+ * Davet kartı; bağlantı adresi application'dan gelir, ekran adres kurmaz. İki alan da yoksa kart çizilmez: bağlantısız davet
+ * basılamayan bir düğme, puanı bilinmeyen davet tutulamayacak bir söz olurdu.
  */
 export function InviteCard({ t, points, compact }: { t: Messages; points: NonNullable<AccountView['points']>; compact: boolean }) {
   const [copied, setCopied] = useState(false);
@@ -370,14 +327,8 @@ export function SavedList({ t, locale, saved, compact }: { t: Messages; locale: 
 }
 
 /**
- * "Hepsini sepete al" — kart başlığının sağındaki toplu eylem (tasarım).
- *
- * Satır başına taşımanın yanında durmasının sebebi pratik: listeye biriktiren müşteri genelde
- * hepsini birden alır ve tek tek basmak N tıklama demektir. Tek turda gider (`addMany`) — satır
- * satır çağırmak N sunucu turu olurdu ve arada biri düşerse liste yarım kalırdı.
- *
- * Alınamayan kalem SESSİZCE atlanır ama sayılır: uyarıyı sepet gösterir (`addSkipped`), çünkü bu
- * ekran taşımadan sonra da yerinde duruyor ve müşteri sepete gittiğinde eksiği orada okumalı.
+ * "Hepsini sepete al": biriktiren müşteri genelde hepsini birden alır; tek turda gider ki yarım liste kalmasın. Alınamayan kalem
+ * atlanır ve sayılır, uyarıyı sepet gösterir.
  */
 export function SavedAddAll({ label, saved }: { label: string; saved: AccountView['saved'] }) {
   const { addMany } = useCart();
@@ -411,13 +362,8 @@ export function SavedAddAll({ label, saved }: { label: string; saved: AccountVie
 }
 
 /**
- * Bekleyen bölge haberi — "şu posta koduna gelince haber verin" kayıtları.
- *
- * Pazarlama izinlerinden BAĞIMSIZ (tasarımın sözleşmesi) ve o anahtarlarla aynı kartta durmaz:
- * biri "bana kampanya yaz", bu ise tek seferlik bir bekleyiş. Tek eylemi vazgeçmektir; onay
- * istemez — kaydı silmek müşterinin kendi kararı ve geri alması da bir tık.
- *
- * Kayıt yoksa blok hiç çizilmez: "bekleyen kaydınız yok" satırı, olmayan bir şeyi anlatan gürültü.
+ * Bekleyen bölge haberi kayıtları; pazarlama izninden bağımsız tek seferlik bir bekleyiştir, vazgeçmek onay istemez. Kayıt
+ * yoksa blok çizilmez.
  */
 export function ZoneNoticeList({ t, notices }: { t: Messages; notices: AccountView['zoneNotices'] }) {
   const [busy, setBusy] = useState<string | null>(null);

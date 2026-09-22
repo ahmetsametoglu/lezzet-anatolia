@@ -2,11 +2,14 @@ import { DiscountCodeService, DiscountService, PointsEntryService, SettingsServi
 import {
   NEIGHBOR_INVITE_MAX_USES,
   POINTS_CENT_VALUE_KEY,
+  POINTS_REDEEM_MAX_DEFAULT,
+  POINTS_REDEEM_MAX_KEY,
   POINTS_REDEEM_MIN_KEY,
   POINTS_SETTING_KEYS,
   anchorStateOf,
   canOpenHistory,
   canRedeem,
+  nextRedemption,
   redemptionCode,
 } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
@@ -71,30 +74,17 @@ export interface CustomerCoupon {
   validTo: string | null;
 }
 
-/**
- * Puan KAZANMA yolu — anahtar + puan; ekrandaki cümle istemcide (i18n).
- *
- * Anahtar tipi SÖZLEŞMEDEN geliyor (`MePointsEarnWayKey`), burada ikinci kez sıralanmıyor: üç yolun
- * listesi hem burada hem şemada dursaydı, dördüncü yol eklendiğinde biri güncellenir öteki
- * unutulurdu ve sonuç derleme hatası değil, çalışma anında `parse` düşmesi olurdu. Tek liste, tek
- * doğru — sözcük dağarcığının kendisi zaten defterin sebep sözlüğünden türüyor (şemadaki künye).
- */
+/** Puan kazanma yolu: anahtar ve puan; anahtar tipi sözleşmeden gelir ki yeni yol eklendiğinde iki liste ayrışmasın. */
 export interface CustomerEarnWay {
   key: MePointsEarnWayKey;
   /** Ayardan okunan değer; sıfır ya da okunamayan yol listeye HİÇ girmez (bkz. `readEarnWays`). */
   points: number;
 }
 
-/**
- * **Programın kuralları — kimlikten BAĞIMSIZ kısım.** Şekli sözleşmede (`PointsRulesSchema`).
- *
- * Ayrı bir tip olmasının sebebi ikinci bir tüketici: onboarding'in puan adımını MİSAFİR görüyor ve
- * o ekranın bakiyesi, kodu, kuponu yok — yalnız "program neyi ne kadar ödüllendirir" sorusu var.
- * Kart bunu `extends` ile alır, kendi içinde ikinci kez saymaz.
- */
+/** Programın kimlikten bağımsız kuralları; misafir onboarding de okuduğu için karttan ayrı durur, kart bunu genişletir. */
 export interface CustomerPointsRules {
-  /** `minimumPoints` puan = `valueCents` cent. İkisi de ayardan. */
-  redeem: { minimumPoints: number; valueCents: number };
+  /** `minimumPoints` puan = `valueCents` cent; tek kupon en fazla `maximumPoints`. Hepsi ayardan. */
+  redeem: { minimumPoints: number; maximumPoints: number; valueCents: number };
   /** Bir puanın CENT karşılığı — bir yolun para değeri `points × centValue`. */
   centValue: number;
   /** Bir komşu davetinden kaç komşu ödül doğurabilir (`NEIGHBOR_INVITE_MAX_USES`). */
@@ -106,30 +96,15 @@ export interface CustomerPointsRules {
 /** Puan kartı — `null` hâli çağıranda değil, `CustomerPointsView.points`ta yaşıyor. */
 export interface CustomerPointsCard extends CustomerPointsRules {
   balance: number;
+  /** Düğmeye basılınca çevrilecek puan ve karşılığı; ekran hesaplamaz, çünkü tavan ve eşik motorun kuralıdır. */
+  nextRedeem: { points: number; valueCents: number };
   /** Davet kodu — kart varsa GARANTİLİ (yoksa üretilir); `null` yalnız üretim başarısızsa. */
   referralCode: string | null;
-  /**
-   * Kodun paylaşılabilir TAM adresi (17.9) — kod varsa GARANTİLİ, yoksa `null`.
-   *
-   * **Adresi ekran KURMAZ, sunucu verir:** üç yüzey (web hesabı, mobil paylaş sayfası, ileride
-   * WhatsApp metni) kendi adresini kursaydı rota adı değiştiği gün ikisi sessizce 404'e düşerdi —
-   * `PATHNAMES` künyesinin kendi dersi. Dil PAYLAŞANIN dilidir (`inviteUrl` künyesi).
-   */
+  /** Kodun paylaşılabilir tam adresi; sunucu kurar, çünkü her yüzey kendi kursaydı rota adı değiştiği gün davetler kırılırdı. */
   inviteUrl: string | null;
-  /**
-   * **"Puan yolda"** — komşu sipariş verdi, parası henüz alınmadı (★ karar 3 · `readPendingNeighborAwards`).
-   *
-   * Puan değeri TAŞIMAZ, olay taşır: kaç puan olduğu zaten `earnWays`te (`neighbor`) ve iki yerde
-   * tutmak, ayar değiştiğinde ikisinin ayrışması demekti. Boş dizi = bekleyen yok.
-   */
+  /** Ödemesi bekleyen komşu ödülleri; puan değeri `earnWays`te durur, burada yalnız olay taşınır ki iki kopya ayrışmasın. */
   pendingNeighborAwards: PendingNeighborAward[];
-  /**
-   * **Bugünkü ziyaret puanı alındı mı** (MB-54) — ekranın *"o tik yanmalı"* dediği hâl.
-   *
-   * Kartın içinde çünkü kimliğe bağlı: program tarifi (`earnWays`) misafire de gösteriliyor ve
-   * oraya kimlikli bir bayrak koymak açık ucun sınırını delerdi. Gün İŞLETMENİN günü —
-   * `earnedToday` kısıtla ve tavanla aynı tanımı okuyor, ikinci bir "bugün" yazılmıyor.
-   */
+  /** Bugünkü ziyaret puanı alındı mı; kimliğe bağlı olduğu için misafirin de gördüğü kurallarda değil kartta durur. */
   visitClaimedToday: boolean;
 }
 
@@ -140,72 +115,36 @@ export interface CustomerPointsView {
 }
 
 /**
- * Başarıda GÜNCEL CÜZDAN döner; yeni kupon zaten `view.coupons` içindedir. `code` ayrıca taşınıyor
- * çünkü ekran "PUAN-7K4M2P hazır" diyebilmeli ve bunu listeyi ESKİSİYLE karşılaştırarak bulmak
- * zorunda kalmamalı. Kuponun kendisi ikinci kez KURULMUYOR — o iş süzgeçten geçmiş listenin.
- * `code: null` yalnız RPC kodu döndürmediğinde (olmaması gereken hâl): uydurma bir kod basmaktansa
- * ekran o bildirimi hiç göstermesin.
+ * Başarıda güncel cüzdan döner; `code` ayrıca taşınır ki ekran yeni kuponu listeyi karşılaştırmadan söyleyebilsin. `code:
+ * null` yalnız RPC kod döndürmezse olur ve ekran o hâlde bildirimi hiç göstermez.
  */
 export type RedeemCustomerPointsOutcome =
   | { status: 'ok'; view: CustomerPointsView; code: string | null }
-  /**
-   * `anchor_required` — kimlik çapası yok (04.10, DOMAIN §10). Puanı harcatmak, kapılı üç yetkiden
-   * biridir: "seni tanıyorum" demektir ve yanlış kişiye söylenirse geri alınamaz.
-   */
+  /** Kimlik çapası yok; puanı harcatmak "seni tanıyorum" demektir ve yanlış kişiye söylenirse geri alınamaz. */
   | { status: 'insufficient_balance' | 'below_minimum' | 'not_eligible' | 'anchor_required' };
 
 /**
- * Program dışı mı — **İKİ sinyal de sayılır** ve bu web'in okumasından bilinçli bir SAPMA.
- *
- * Web hesap okuması B2B'yi yalnız `companyInfo`dan türetiyor ("kanal saklanmaz, türetilir"), ama
- * çevirmeye izin veren motor (`canRedeem`) yalnız `type`a bakıyor. İki ölçüt AYRIŞABİLİYOR ve
- * bugün gerçekten ayrışıyor (ölçüldü, yerel veri: `type='company'` + künyesi boş bir profil var).
- * O profilde web bugün puan kartını ÇİZİYOR, düğmeyi gösteriyor, müşteri basıyor ve motor
- * `not_eligible` diyor — ekranın vaat ettiği ile motorun uyguladığı ayrışması, 29.07 denetiminin
- * tam olarak kapattığı arıza sınıfı.
- *
- * Burada birleşim (OR) alınıyor: hangi sinyal B2B derse kart çizilmez. Sonuç motorun kararından
- * ASLA daha cömert olmaz — reddedilecek bir düğme gösterilmez. Ters yön (künyesi dolu ama
- * `type='individual'`) zaten web'in de sakladığı hâl, orada davranış aynen korunuyor.
- *
- * **Bu bir yama, kök çözüm değil:** iki ölçütten hangisinin doğru olduğu bir ürün/veri kararıdır
- * (`type` mi kanonik, `companyInfo` mu) ve rapora açık madde olarak yazıldı. Kararı verilene kadar
- * güvenli taraf budur.
+ * Program dışı mı: `type` ile `companyInfo`dan hangisi B2B derse kart çizilmez, çünkü iki ölçüt ayrışabiliyor ve kart
+ * motorun kararından cömert olursa müşteri reddedilecek düğmeye basar.
  */
 function isOutsideProgram(type: CustomerType, companyInfo: CompanyInfo | null): boolean {
   return type === 'company' || companyInfo !== null;
 }
 
 /** Çevirme eşiği — tek yerde okunur; kart da çevirme kapısı da AYNI sayıyı görür. */
-async function redeemSettings(db: SupabaseClient): Promise<{ minimum: number; centValue: number }> {
+async function redeemSettings(db: SupabaseClient): Promise<{ minimum: number; maximum: number; centValue: number }> {
   const settings = new SettingsService(db);
-  const [minimum, centValue] = await Promise.all([
+  const [minimum, maximum, centValue] = await Promise.all([
     settings.getNumber(POINTS_REDEEM_MIN_KEY, 500),
+    settings.getNumber(POINTS_REDEEM_MAX_KEY, POINTS_REDEEM_MAX_DEFAULT),
     settings.getNumber(POINTS_CENT_VALUE_KEY, 1),
   ]);
-  return { minimum, centValue };
+  return { minimum, maximum, centValue };
 }
 
 /**
- * **Gösterilecek kazanma yolları ve SIRASI** — ödül merdiveni, en yüksek basamaktan en düşüğe.
- *
- * ── SIRANIN GEREKÇESİ DEĞİŞTİ (kullanıcı kararı 12.08) ──────────────────────
- * Eskiden üç yol vardı ve sıra *"ürün sırası"* diye anlatılıyordu: davet → değerlendirme → keşif.
- * Liste artık ALTI yolu taşıyor ve ikinci bir tüketicisi var — *"nasıl puan kazanırım"* anlatımı.
- * Bir merdiveni basamak sırasına göre dizmemek, okuyana keyfî görünür: müşteri "en çok ne
- * kazandırır" sorusuyla bakıyor ve cevabı listenin KENDİ sırasından okuyabilmeli.
- *
- * Çelişki de yok: değer sırası eski ürün sırasını zaten koruyor (davet 500 → komşu 100 → yorum 20
- * → giriş 10 → beğeni 5 → keşif oyu 2). Değişen şey listenin gerekçesi, dizilişi değil.
- *
- * Sıra sunucudan gelir ki üç yüzey (mobil hesap, onboarding anlatımı, ileride web hesap) aynı
- * hikâyeyi anlatsın; istemcinin kendi sıralaması, aynı programı iki farklı düzende sunmak olurdu.
- * Liste bir DOMAIN kuralı DEĞİL — "hangi aksiyon kaç puan" motorda/ayarda, "hangisini ekranda önce
- * anlatırız" burada; o yüzden `domain-core`a değil bu kapıya yazıldı.
- *
- * **Sıra ELLE yazılı, puana göre `sort` EDİLMİYOR** ve bu bilinçli: bir ayar değiştiğinde listenin
- * anlatım düzeni sessizce başkalaşmamalı. Ayrıca sıfır/okunamayan değerli yol listeye hiç girmiyor
- * (`readEarnWays`), yani sıralanacak sayının var olduğu bile garanti değil.
+ * Gösterilecek kazanma yolları, ödül merdiveninin en yüksek basamağından en düşüğüne; müşteri "en çok ne kazandırır"
+ * sorusunun cevabını sıradan okur. Sıra elle yazılı ve sunucudan gelir ki bir ayar değişince anlatım düzeni sessizce başkalaşmasın.
  */
 const EARN_WAYS: readonly MePointsEarnWayKey[] = [
   'referral',
@@ -217,19 +156,8 @@ const EARN_WAYS: readonly MePointsEarnWayKey[] = [
 ];
 
 /**
- * Kazanma yollarının ayardaki değerleri — **okunamayan yol LİSTEYE GİRMEZ.**
- *
- * Varsayılan YOK ve bu bilinçli: aksiyonun kaç puan ettiğinin varsayılanı yazım kapısında yaşıyor
- * (`feedback/points.ts` → `POINTS_DEFAULTS`) ve orası dışa açık değil. Burada ikinci bir tablo
- * açsaydık aynı sayı üçüncü kez yazılmış olurdu (web `pointsSettings` + paket `POINTS_DEFAULTS` +
- * bu) ve üçü bir gün ayrışırdı — ekran, motorun vermeyeceği bir sayı söylerdi (29.07 denetiminin
- * tam olarak kapattığı arıza sınıfı).
- *
- * Bu yüzden ayar satırı YOKSA yol sessizce değil, LOG'la atlanır ve ekran o yolu hiç göstermez.
- * Yön güvenli: motor yine de puanı yazar (varsayılanı var), yani müşteri kazanır ama fazlasını
- * vaat etmiş olmayız — kart hiçbir zaman motordan cömert olmaz (`isOutsideProgram` ile aynı ilke).
- * Sıfır da aynı kapıdan düşer: `canEarnPoints` sıfır değerli aksiyonu `no_value` diye reddediyor,
- * yani "0 puan kazandıran yol" diye bir şey yok (CLAUDE §1: ölçülemeyen değer sıfır değildir).
+ * Kazanma yollarının ayardaki değerleri; okunamayan ya da sıfır değerli yol listeye girmez, çünkü kart motorun vereceğinden
+ * fazlasını vaat etmemeli. Varsayılan yok: aynı sayının üçüncü kopyası bir gün ayrışırdı.
  */
 async function readEarnWays(db: SupabaseClient, customerId: string | null): Promise<CustomerEarnWay[]> {
   const settings = new SettingsService(db);
@@ -252,21 +180,11 @@ async function readEarnWays(db: SupabaseClient, customerId: string | null): Prom
   return ways;
 }
 
-/**
- * **Programın kuralları — KİMLİKSİZ** (`GET /api/v1/points/rules`, kullanıcı kararı 12.08).
- *
- * Onboarding'in son adımı puanı anlatıyor ve o ekranı gören kişi henüz misafir: bakiyesi yok, davet
- * kodu yok, `/me` ailesine hiç gidemez. Ama söylediği her sayı motorun uyguladığı sayı olmalı — bu
- * kapı tam olarak o ortak zemini verir.
- *
- * Kartla arasında kopya YOK: `readCustomerPoints` bu kapıyı çağırır ve üstüne yalnız kimliğe bağlı
- * olanı (bakiye, kod, adres) ekler. İki ayrı okuma yazsaydık, bir gün biri altı yol öteki üç yol
- * gösterirdi — ve ikisi de "doğru" görünürdü.
- */
+/** Programın kimliksiz kuralları; misafir onboarding okur, kart da bu kapıyı çağırır ki iki okuma ayrışmasın. */
 export async function readPointsRules(db: SupabaseClient): Promise<CustomerPointsRules> {
   const [settings, earnWays] = await Promise.all([redeemSettings(db), readEarnWays(db, null)]);
   return {
-    redeem: { minimumPoints: settings.minimum, valueCents: settings.minimum * settings.centValue },
+    redeem: { minimumPoints: settings.minimum, maximumPoints: settings.maximum, valueCents: settings.minimum * settings.centValue },
     centValue: settings.centValue,
     // Ayardan DEĞİL motordan: sınır davet satırına yazılıyor, ayarlar tablosunda karşılığı yok
     // (`NEIGHBOR_INVITE_MAX_USES` künyesi — davetin sözü doğduğu gün donuyor).
@@ -276,17 +194,8 @@ export async function readPointsRules(db: SupabaseClient): Promise<CustomerPoint
 }
 
 /**
- * Hesap ekranının puan bölümü — bakiye, eşik, kullanılabilir kuponlar, davet kodu ve kazanma
- * yolları TEK turda.
- *
- * B2B'de sorgu bile atılmaz: sonucu hiç çizilmeyecek bir veriyi getirmek, boşa dolaşmaktır (web'in
- * aynı kısa devresi). Profil yoksa da program dışı sayılır — kimliksiz bir cüzdan yoktur.
- *
- * **Okuma YAZABİLİR ve bu bilinçli:** davet kodu yoksa burada üretilir (`ensureCustomerReferralCode`
- * — web'in tembel üretiminin aynısı). Bir GET'in yan etkisi olması ilk bakışta rahatsız edicidir
- * ama alternatifi daha kötü: ekran "arkadaşını davet et, 50 puan" der, müşteri dokunur ve
- * paylaşılacak kod olmadığı için hiçbir şey olmaz. Yazım İDEMPOTENT (kod bir kez doğar, sonraki her
- * okuma aynısını döndürür) ve yalnız programa dahil profilde çalışır — B2B'de kısa devre yukarıda.
+ * Hesap ekranının puan bölümü tek turda. Okuma davet kodu yoksa üretir: kod olmadan "arkadaşını davet et" düğmesi hiçbir
+ * şey paylaşamazdı; yazım idempotent ve B2B'de hiç koşmaz.
  */
 export async function readCustomerPoints(db: SupabaseClient, customerId: string): Promise<CustomerPointsView> {
   const profile = await new UserProfileService(db).getById(customerId);
@@ -316,6 +225,12 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
     points: {
       ...rules,
       balance: balance.balance,
+      nextRedeem: nextRedemption({
+        balance: balance.balance,
+        minimum: rules.redeem.minimumPoints,
+        maximum: rules.redeem.maximumPoints,
+        centValue: rules.centValue,
+      }),
       referralCode,
       // Adres kodun yanında doğuyor: kod `null`sa (üretim çakışması) paylaşılacak bağ da yoktur —
       // "bu bağlantıyı paylaş" deyip boş bir adres vermek, çalışmayan bir düğme göstermektir.
@@ -338,14 +253,8 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
  */
 export async function listCustomerCoupons(db: SupabaseClient, customerId: string): Promise<CustomerCoupon[]> {
   const discounts = new DiscountService(db);
-  // ── İKİ ELEME SORGUDA, BİRİ BURADA (08.5 · 09.08) ──────────────────────────
-  // Aktiflik ve tarih penceresi burada elle süzülüyordu ve tavan (50) o yüzden "en yeni 50 KUPON"a
-  // vuruyordu, "en yeni 50 KULLANILABİLİR kupon"a değil. Kullanılmış kuponlar kümede kalır
-  // (silinmez, kapatılır), yani pencere yıllar içinde onlarla dolar ve ekranda kullanılabilir kupon
-  // sessizce eksik görünürdü — eksik kupon "yok" gibi okunur, hata vermez.
-  //
-  // **Kota elemesi AŞAĞIDA kaldı** ve bu bilinçli: `usageCounts` iptal/iade kuralını taşıyan ayrı
-  // bir turdur; aynı kuralı SQL'e ikinci kez yazmak bir gün ayrışan iki cevap üretirdi.
+  // Aktiflik ve tarih süzgeci sorguda, çünkü kullanılmış kuponlar kümede kalır ve tavan onlarla dolup kullanılabilir kuponu
+  // gizlerdi. Kota elemesi aşağıda, çünkü iptal/iade kuralı `usageCounts`ta ve SQL'e ikinci kez yazılsa ayrışırdı.
   const active = await discounts.listByCustomer(customerId, { usableAt: new Date() });
   if (active.length === 0) return [];
 
@@ -377,15 +286,8 @@ export async function listCustomerCoupons(db: SupabaseClient, customerId: string
 }
 
 /**
- * **Puan → kişisel kupon** (17.5). Müşteri kendi isteyince çevirir, otomatik değil: biriken puanı
- * kendiliğinden bozmak, daha büyük bir ödül için biriktirme kararını elinden almaktır (DOMAIN §14).
- *
- * Karar motorda (`canRedeem`), uygulama RPC'de (`redeem_points`): puan düşümü ve kuponun doğuşu
- * bölünemez ve müşteri başına serileştirilir — iki eşzamanlı çevirme aynı puanı iki kez harcayamaz.
- *
- * Kod motorda üretilir, benzersizliği veritabanı söyler. Çakışma astronomik ölçüde nadirdir (26^6)
- * ama imkânsız değil: çarpışmada yeni kodla yeniden denenir (`generateReferenceNo` ile aynı
- * sözleşme). Üç denemeden sonra ısrar etmenin anlamı yok — ortada başka bir sorun vardır.
+ * Puanı kişisel kupona çevirir; karar motorda, puan düşümü ile kuponun doğuşu tek RPC'de ve müşteri başına sıralı ki aynı
+ * puan iki kez harcanmasın. Kod çakışırsa yeni kodla üç kez denenir.
  */
 export async function redeemCustomerPoints(db: SupabaseClient, input: { customerId: string }): Promise<RedeemCustomerPointsOutcome> {
   const [profile, balance, settings] = await Promise.all([
@@ -395,21 +297,15 @@ export async function redeemCustomerPoints(db: SupabaseClient, input: { customer
   ]);
   if (!profile) return { status: 'not_eligible' };
 
-  // ── KİMLİK KAPISI (04.10, DOMAIN §10) ─────────────────────────────────────────────────────────
-  // Puanı harcatmak kapılı üç yetkiden biri. Kapı burada, çünkü kural puanın KENDİSİNE ait: bugünkü
-  // tek çağıran oturum açmış müşteri (mobil `/me/points/redeem`) ve orada çapa zaten kurulu — ama
-  // yarın bir ajan aracı ya da operatör kapısı eklendiğinde kuralı hatırlaması gereken yer burası.
-  //
-  // **Bekleyen kimlik SORUSU burada okunmuyor** (`anchorGateOf` yerine doğrudan motor): o soru
-  // WhatsApp'tan dönen numaraya sorulur ve cevabı o kanaldan gelir. Oturum açmış müşteri kimliğini
-  // ŞU AN kanıtlamıştır (posta kutusuna gelen kodla girdi) — onu WhatsApp'ta bekleyen bir soru
-  // yüzünden reddetmek, daha güçlü kanıtı daha zayıfına yenik düşürmek olurdu.
+  // Puanı harcatmak kapılı yetkidir ve kural puanın kendisine ait, bu yüzden kapı burada. Bekleyen WhatsApp kimlik sorusu
+  // okunmaz: oturum açmış müşteri kimliğini posta koduyla kanıtlamıştır, daha güçlü kanıt daha zayıfına yenilmemeli.
   if (!canOpenHistory(anchorStateOf(profile))) return { status: 'anchor_required' };
 
   const check = canRedeem({
     customerType: profile.type,
     balance: balance.balance,
     minimum: settings.minimum,
+    maximum: settings.maximum,
     centValue: settings.centValue,
   });
   if (!check.allowed) {
@@ -446,24 +342,8 @@ export async function redeemCustomerPoints(db: SupabaseClient, input: { customer
 }
 
 /**
- * **Puan geçmişinin bir sayfası** (kullanıcı isteği 15.08) — *"hangi puan nereden geldi."*
- *
- * ── NEDEN ŞİMDİ TERFİ ETTİ ──────────────────────────────────────────────────
- * `feedback/points.ts` künyesi puan geçmişi okumalarını BİLEREK dışarıda bırakmıştı: *"bugün tek
- * yüzeyleri var (web hesap sayfası · operasyon); ikinci yüzeyleri doğduğu gün AYNI yoldan buraya
- * taşınırlar."* Doğdu — native hesap ekranı istiyor. Söz gereğince taşındı, kopyalanmadı.
- *
- * ── SIRA VE İMLEÇ SERVİSİN ──────────────────────────────────────────────────
- * `listByCustomer` yeniden eskiye sıralı ve keyset imleçli (`points.service.ts`); burada ikinci bir
- * sıralama ya da elle bir pencere KURULMAZ. Defter veriyle sınırsız büyüyen bir küme (CLAUDE §1) ve
- * sayfalayan okumanın tüketeni de var: ekran `nextCursor`ı sonsuz kaydırmada harcıyor.
- *
- * ── B2B ADLI RETLE DÜŞER, BOŞ SAYFAYLA DEĞİL ────────────────────────────────
- * Program dışı profile boş bir sayfa dönmek *"hiç hareketiniz yok"* demektir; doğrusu *"bu program
- * size açık değil"* (`CLAUDE §1`: ölçülemeyen değer sıfır değildir — kartın `points: null` dönmesiyle
- * aynı karar). Ölçüt de kartınkiyle AYNI kapıdan geçiyor (`isOutsideProgram`), ikinci bir tanım
- * yazılmadı: iki koşuldan biri bir gün ötekinden ayrılırsa müşteri kartı göremediği hâlde geçmişi
- * görebilirdi.
+ * Puan geçmişinin bir sayfası, yeniden eskiye ve keyset imleçli; defter sınırsız büyüdüğü için ekran sonsuz kaydırır.
+ * Program dışı profil boş sayfa değil adlı ret alır, çünkü "hareket yok" ile "program size açık değil" ayrı cümlelerdir.
  */
 export type ReadPointsHistoryOutcome =
   | { status: 'ok'; entries: PointsEntry[]; nextCursor: KeysetCursor | null }

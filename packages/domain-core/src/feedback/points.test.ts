@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { PointsReasonEnum } from '@lezzet/types';
-import { POINTS_SETTING_KEYS, canEarnPoints, canRedeem, feedbackPointsReason } from './points';
+import { POINTS_SETTING_KEYS, canEarnPoints, canRedeem, feedbackPointsReason, nextRedemption } from './points';
 
 describe('puan kazanımı', () => {
-  // Taban TAVANA TABİ bir sebep: tavan sınamalarının ölçtüğü şey tam olarak o kural. Sebep
-  // eklendiğinde (11.08) taban `review`dı ve o artık tavanın DIŞINDA — testler geçmeye devam
-  // ederdi ama ölçtükleri kural ortadan kalkmış olurdu.
+  // Taban tavana tabi bir sebep, çünkü tavan sınamalarının ölçtüğü kural tam olarak bu; taban tavan dışı olsaydı testler ölçtükleri kural yokken de geçerdi.
   const base = { customerType: 'individual' as const, reason: 'feedback_candidate' as const, actionPoints: 20, earnedToday: 0, dailyCap: 100 };
 
   it('son kullanıcı kazanır', () => {
@@ -33,11 +31,8 @@ describe('puan kazanımı', () => {
 });
 
 /**
- * **Tavan yalnız PARA ÖDENMEDEN yapılabilen eylemleri kapsar** (kullanıcı onayı 11.08).
- *
- * Bu blok bir kuralı değil, o kural olmadan doğan ARIZAYI çiviliyor: değer merdiveni 500/100'e
- * çıkınca (17.9 · 17.10) tavan 100'de kalıyor ve tavan kısmi uygulanmadığı için davet ödülleri
- * hiçbir zaman yazılamaz hâle gelirdi — hata vermeden, sessizce.
+ * Tavan yalnız para ödenmeden yapılabilen eylemleri kapsar. Blok, kural olmadan doğan arızayı çiviler: tavan kısmi
+ * uygulanmadığı için büyük davet ödülleri tavana takılıp hiç yazılamazdı.
  */
 describe('günlük tavanın kapsamı', () => {
   const paid = { customerType: 'individual' as const, earnedToday: 0, dailyCap: 100 };
@@ -81,10 +76,20 @@ describe('günlük tavanın kapsamı', () => {
 });
 
 describe('kupona çevirme', () => {
-  const base = { customerType: 'individual' as const, balance: 600, minimum: 500, centValue: 1 };
+  const base = { customerType: 'individual' as const, balance: 600, minimum: 500, maximum: 2000, centValue: 1 };
 
   it('eşiği geçen bakiye çevrilir; karşılığı puan × kuruş değeri', () => {
     expect(canRedeem(base)).toEqual({ allowed: true, pointsSpent: 600, valueCents: 600 });
+  });
+
+  it('tavanın üstündeki bakiyede yalnız tavan çevrilir — fazlası bakiyede kalır', () => {
+    expect(canRedeem({ ...base, balance: 3000 })).toEqual({ allowed: true, pointsSpent: 2000, valueCents: 2000 });
+  });
+
+  it('düğmenin söylediği çevirme: eşik altında eşik, aralıkta bakiye, tavan üstünde tavan', () => {
+    expect(nextRedemption({ ...base, balance: 300 })).toEqual({ points: 500, valueCents: 500 });
+    expect(nextRedemption({ ...base, balance: 610 })).toEqual({ points: 610, valueCents: 610 });
+    expect(nextRedemption({ ...base, balance: 3000 })).toEqual({ points: 2000, valueCents: 2000 });
   });
 
   it('istenen miktar kadar çevrilebilir — kalanı birikmeye devam eder', () => {
@@ -111,9 +116,7 @@ describe('geri bildirimin puan sebebi', () => {
   });
 
   it('KEŞİF metinle bile yorum puanına TERFİ ETMEZ — her hâlükârda aday puanı (karar 6)', () => {
-    // "metin varsa yorum puanı ile keşfin bir alakası yok" (kullanıcı kararı 11.08). Keşif
-    // akışında bugün metin alanı yok; bu test, alan bir gün eklendiğinde kimse fark etmeden
-    // 10 kat puan dağıtan kapının açılmamasını çiviler (21.47'nin gizli tuzağı).
+    // Keşif kartı metin taşısa da aday puanıdır; keşif akışına metin alanı eklendiği gün on kat puan dağıtan kapı açılmasın.
     expect(feedbackPointsReason({ context: 'candidate', hasText: true })).toBe('feedback_candidate');
   });
 
@@ -122,12 +125,7 @@ describe('geri bildirimin puan sebebi', () => {
     expect(feedbackPointsReason({ context: 'candidate', hasText: false })).toBe('feedback_candidate');
   });
 
-  /**
-   * Ölçüt ENUM'DAN türer, sabit sayıdan değil. Önce `toHaveLength(5)` yazıyordu ve bu, korumak
-   * istediği şeyi korumuyordu: yeni bir kazanım sebebi eklendiğinde test "6 ≠ 5" diye düşer, ama
-   * cümlesi ("her sebebin anahtarı var") hâlâ doğru olabilir — yani gürültü üretir, hata değil.
-   * Tersi daha kötü: anahtar EKLENİP sebep eklenmeseydi sayı yine tutar, sessizce geçerdi.
-   */
+  /** Ölçüt enum'dan türer, sabit sayıdan değil: sayı tutsa bile eksik anahtar sessizce geçerdi. */
   it('her kazanım sebebinin bir ayar anahtarı vardır', () => {
     expect(POINTS_SETTING_KEYS.review).toBe('points_review');
     expect(POINTS_SETTING_KEYS.feedback_candidate).toBe('points_feedback_candidate');
