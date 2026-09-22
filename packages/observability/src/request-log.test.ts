@@ -45,4 +45,30 @@ describe('requestLog', () => {
       expect(vi.mocked(logger[other])).not.toHaveBeenCalled();
     }
   });
+
+  // Bu dönüşüm kalkarsa Hono düz nesneyi `onError`a vermez; istemci boş 500 alır ve `error_log`a kayıt düşmez.
+  it('düz nesne fırlatılırsa mesajı ve kodu taşıyan bir Error olarak yeniden fırlatır', async () => {
+    const postgrest = { code: '22P02', message: 'invalid input syntax for type uuid', details: null, hint: null };
+    const c: RequestLogContext = { set: () => undefined, req: { method: 'GET', path: '/v1/orders' }, res: { status: 200 } };
+
+    const thrown = await requestLog(c, async () => {
+      throw postgrest;
+    }).catch((err: unknown) => err);
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toBe('invalid input syntax for type uuid [22P02]');
+    expect((thrown as Error).cause).toBe(postgrest);
+    expect(vi.mocked(logger.error)).toHaveBeenCalledWith(expect.objectContaining({ path: '/v1/orders', status: 500 }), 'request');
+  });
+
+  it('Error olduğu gibi geçer; kaydı onError yazar', async () => {
+    const original = new Error('boom');
+    const c: RequestLogContext = { set: () => undefined, req: { method: 'GET', path: '/v1/x' }, res: { status: 200 } };
+
+    await expect(
+      requestLog(c, async () => {
+        throw original;
+      }),
+    ).rejects.toBe(original);
+  });
 });

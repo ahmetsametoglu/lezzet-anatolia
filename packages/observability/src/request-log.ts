@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { errorMessageOf } from './error-message';
 import { logger } from './logger';
 
 /** Ara katmanın bağlamdan istediği üç şey; Hono'nun `Context`i buna uyar, paket bir HTTP çatısına bağlanmaz. */
@@ -18,7 +19,14 @@ export async function requestLog(c: RequestLogContext, next: () => Promise<void>
   c.set('reqId', reqId);
   const startedAt = Date.now();
 
-  await next();
+  try {
+    await next();
+  } catch (err) {
+    if (err instanceof Error) throw err;
+    // Hono `onError`a yalnız `Error` verir; PostgREST hatası düz nesnedir ve çevrilmezse boş gövdeli 500 döner, kayıt düşmez.
+    logger.error({ reqId, method: c.req.method, path: c.req.path, status: 500, ms: Date.now() - startedAt }, 'request');
+    throw new Error(errorMessageOf(err), { cause: err });
+  }
 
   const status = c.res.status;
   const line = { reqId, method: c.req.method, path: c.req.path, status, ms: Date.now() - startedAt };
