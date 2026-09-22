@@ -1,16 +1,17 @@
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { Text, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import type { MeAddress } from '@/lib/api/addresses';
 import { addressLine, addressTitle } from '@lezzet/address';
 // Yalnız metin bloğunun tipi için: komponent sözlüğü okumaz, çağıran geçirir.
 import type accountMessages from '@lezzet/i18n/customer/account';
 
 /*
-  Rolün adı "teslimat adresi", "varsayılan" değil: varsayılan bir mekanizmanın adıdır, müşterinin gördüğü şey roldür. Rol eylemi
-  yalnız o rolü taşımayan kartta çıkar ve mobilde kısa yazılır, çünkü eylemler kısalmaz ve uzayan etiket adres satırını ezer.
+  Rolün adı "teslimat adresi", "varsayılan" değil: varsayılan bir mekanizmanın adıdır, müşterinin gördüğü şey roldür. Satırda eylem
+  yok — rol ve düzenleme çekmecede sorulur, çünkü eylemler kısalmıyor ve üçü birden adres satırını kelime ortasından bölüyordu.
 */
 
 type AddressCopy = LocalizedCopy<typeof accountMessages>['addresses'];
@@ -18,64 +19,38 @@ type AddressCopy = LocalizedCopy<typeof accountMessages>['addresses'];
 interface AddressCardProps {
   address: MeAddress;
   copy: AddressCopy;
-  onMakeDefault: () => void;
-  /** `null` ise kart fatura rolünü göstermez: bireysel hesapta bu kavramın karşılığı yok. */
-  onMakeBilling: (() => void) | null;
-  /** Çekmeceyi dolu açar. */
-  onEdit: () => void;
+  /** Satırın tamamı çekmeceyi açar. */
+  onOpen: () => void;
+  /** `false` ise fatura rozeti hiç çizilmez: bireysel hesapta bu rolün karşılığı yok. */
+  showBilling: boolean;
   testID?: string;
 }
 
-export function AddressCard({ address, copy, onMakeDefault, onMakeBilling, onEdit, testID }: AddressCardProps) {
-  /* İki rol ayrı rozet: bir adres ikisi birden olabilir ve müşteri hangi rolü kaldırdığını görmeli. */
-  const faturaGoster = onMakeBilling !== null;
-
-  const eylemler = [
-    address.isDefault ? null : (
-      <TextAction
-        key="default"
-        label={copy.makeDefault}
-        onPress={onMakeDefault}
-        accessibilityHint={copy.makeDefaultLabel.replace('{label}', addressTitle(address))}
-        testID={testID === undefined ? undefined : `${testID}-default`}
-      />
-    ),
-    faturaGoster && !address.isBilling ? (
-      <TextAction
-        key="billing"
-        label={copy.makeBilling}
-        onPress={onMakeBilling}
-        accessibilityHint={copy.makeBillingLabel.replace('{label}', addressTitle(address))}
-        testID={testID === undefined ? undefined : `${testID}-billing`}
-      />
-    ) : null,
-    <TextAction
-      key="edit"
-      label={copy.edit}
-      onPress={onEdit}
-      accessibilityHint={copy.editLabel.replace('{label}', addressTitle(address))}
-      testID={testID === undefined ? undefined : `${testID}-edit`}
-    />,
-  ].filter((eylem) => eylem !== null);
-
-  /*
-    Eylemler kısalmadığı için üçüncü eylem adres satırını kelime ortasından böler; üç eylemde eylemler metnin altına, sağa yaslı
-    tek şeride iner. İki eylemde tasarımın satırı aynen korunur.
-  */
-  const tekSatir = eylemler.length <= 2;
+export function AddressCard({ address, copy, onOpen, showBilling, testID }: AddressCardProps) {
+  const { theme } = useUnistyles();
 
   return (
-    <View style={tekSatir ? styles.card : styles.cardStacked} testID={testID}>
+    <PressableSurface
+      onPress={onOpen}
+      feedback="opacity"
+      haptic={false}
+      style={styles.card}
+      accessibilityLabel={addressTitle(address)}
+      accessibilityHint={copy.editLabel.replace('{label}', addressTitle(address))}
+      testID={testID}
+    >
       <View style={styles.text}>
+        {/* İki rol ayrı rozet: bir adres ikisi birden olabilir ve müşteri hangi rolü kaldırdığını görmeli. */}
         <View style={styles.labelRow}>
           <Text style={styles.label}>{addressTitle(address)}</Text>
           {address.isDefault ? <Text style={styles.defaultBadge}>{copy.default}</Text> : null}
-          {faturaGoster && address.isBilling ? <Text style={styles.billingBadge}>{copy.billing}</Text> : null}
+          {showBilling && address.isBilling ? <Text style={styles.billingBadge}>{copy.billing}</Text> : null}
         </View>
         <Text style={styles.line}>{addressLine(address)}</Text>
       </View>
-      <View style={tekSatir ? styles.actions : styles.actionsBelow}>{eylemler}</View>
-    </View>
+      {/* Ok, satırın bir kapı olduğunu söyler; eylem adı yazılsaydı kalkan eylemler geri gelirdi. */}
+      <Icon name="arrow-right" size={16} color={theme.colors.muted} />
+    </PressableSurface>
   );
 }
 
@@ -85,19 +60,6 @@ const styles = StyleSheet.create((theme) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.lg,
-  },
-  /* Üç eylemli hâl: metin tam genişlikte, eylemler altında. */
-  cardStacked: { gap: theme.space.md },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.space.lg,
-  },
-  actionsBelow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: theme.space['2xl'],
   },
   text: { flex: 1, gap: theme.space['2xs'] },
   labelRow: {

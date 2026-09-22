@@ -1,19 +1,12 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { MeAddress } from '@/lib/api/addresses';
 import { AddressCard } from './address-card';
 import messages from '@lezzet/i18n/customer/account';
 
 /*
-  KARTIN DÜZEN KURALI — üçüncü eylem satıra sığmaz.
-
-  Tasarımın satırında İKİ eylem var ("varsayılan yap · Düzenle") ve eylemler `flex:none`: yeri
-  metin bloğu verir. Fatura rolü tasarımdan SONRA doğdu; rolsüz bir adreste eylem sayısı üçe
-  çıkıyor ve cihazda ölçüldü (09.09) — adres satırı 111 px'e sıkışıp kelime ortasından
-  bölünüyordu ("12 Quai des Ba / teliers").
-
-  Kusur uzun süre GÖRÜNMEDİ çünkü fatura rolünün kapısı ölü bir alana bağlıydı; kapı canlı ölçüte
-  taşınınca ortaya çıktı. Test o yüzden hem SAYIYI hem düzeni tutuyor.
+  Satır artık bir kapı: eylemler çekmeceye taşındı, çünkü üç eylem satıra sığmıyordu ve adres kelime ortasından bölünüyordu
+  ("12 Quai des Ba / teliers"). Satır dokunuşu çekmeceyi açmazsa müşterinin adrese ulaşacağı hiçbir yol kalmaz.
 */
 
 const copy = messages.tr.addresses;
@@ -32,67 +25,25 @@ const ADRES: MeAddress = {
   isBilling: false,
 };
 
-/** Kartın kökündeki düzen — `flexDirection: 'row'` ise tasarımın tek satırı. */
-const kartDuzeni = () => {
-  const flat = ([] as unknown[]).concat(screen.getByTestId('kart').props.style ?? []);
-  return Object.assign({}, ...flat.filter((entry) => entry !== null && entry !== undefined));
-};
+describe('AddressCard', () => {
+  it('satırın kendisi çekmeceyi açar ve rol eylemi satırda çizilmez', async () => {
+    const onOpen = jest.fn();
+    await render(<AddressCard address={ADRES} copy={copy} onOpen={onOpen} showBilling={false} testID="kart" />);
 
-describe('AddressCard düzeni', () => {
-  it('İKİ eylemde tasarımın TEK SATIRI korunur', async () => {
-    // Bireysel hesap: fatura rolü hiç çizilmez → "teslimat adresi yap" + "Düzenle" = iki eylem.
-    await render(
-      <AddressCard
-        address={ADRES}
-        copy={copy}
-        onMakeDefault={jest.fn()}
-        onMakeBilling={null}
-        onEdit={jest.fn()}
-        testID="kart"
-      />,
-    );
-
-    expect(screen.getByTestId('kart-default')).toBeOnTheScreen();
-    expect(screen.getByTestId('kart-edit')).toBeOnTheScreen();
-    expect(screen.queryByTestId('kart-billing')).toBeNull();
-    expect(kartDuzeni().flexDirection).toBe('row');
+    await fireEvent.press(screen.getByTestId('kart'));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(copy.makeDefault)).toBeNull();
+    expect(screen.queryByText(copy.edit)).toBeNull();
   });
 
-  it('ÜÇ eylemde eylemler metnin ALTINA iner — adres satırı ezilmez', async () => {
-    // Şirket hesabı + hiçbir rolü olmayan adres: üç eylem birden çıkar.
-    await render(
-      <AddressCard
-        address={ADRES}
-        copy={copy}
-        onMakeDefault={jest.fn()}
-        onMakeBilling={jest.fn()}
-        onEdit={jest.fn()}
-        testID="kart"
-      />,
-    );
+  it('rolleri rozet söyler; fatura rozeti yalnız şirket hesabında çizilir', async () => {
+    const dolu = { ...ADRES, isDefault: true, isBilling: true };
+    const { rerender } = await render(<AddressCard address={dolu} copy={copy} onOpen={jest.fn()} showBilling={false} testID="kart" />);
 
-    expect(screen.getByTestId('kart-default')).toBeOnTheScreen();
-    expect(screen.getByTestId('kart-billing')).toBeOnTheScreen();
-    expect(screen.getByTestId('kart-edit')).toBeOnTheScreen();
-    // Kök artık satır DEĞİL: metin tam genişlik alır, eylemler alt şeride geçer.
-    expect(kartDuzeni().flexDirection).toBeUndefined();
-  });
+    expect(screen.getByText(copy.default)).toBeOnTheScreen();
+    expect(screen.queryByText(copy.billing)).toBeNull();
 
-  /* Rolü OLAN adreste o rolün eylemi düşer — üçüncü eylem doğmaz, satır yine tasarımın hâlinde. */
-  it('şirket hesabında rolleri TAŞIYAN adres yine tek satırda kalır', async () => {
-    await render(
-      <AddressCard
-        address={{ ...ADRES, isDefault: true, isBilling: true }}
-        copy={copy}
-        onMakeDefault={jest.fn()}
-        onMakeBilling={jest.fn()}
-        onEdit={jest.fn()}
-        testID="kart"
-      />,
-    );
-
-    expect(screen.queryByTestId('kart-default')).toBeNull();
-    expect(screen.queryByTestId('kart-billing')).toBeNull();
-    expect(kartDuzeni().flexDirection).toBe('row');
+    await rerender(<AddressCard address={dolu} copy={copy} onOpen={jest.fn()} showBilling testID="kart" />);
+    expect(screen.getByText(copy.billing)).toBeOnTheScreen();
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   addressLabelKind,
   addressLineOf,
@@ -123,6 +123,11 @@ interface AddressFormProps {
   error?: string | null;
   /** Verilirse mobil web çekmecesi düzenlemede kaydetmenin altında "Adresi sil" sunar, native adres çekmecesi gibi. */
   onDelete?: () => Promise<void>;
+  /**
+   * Rol eylemleri — çekmecenin en üstünde tek şerit (native adres çekmecesiyle aynı). Satırdan kalktılar, çünkü üç eylem adres
+   * satırını eziyordu; kutu ya da başlık açılmaz, çekmece yükselmemeli.
+   */
+  roleActions?: ReactNode;
 }
 
 type Kind = AddressLabelKind;
@@ -155,6 +160,7 @@ export function AddressForm({
   compact = false,
   error = null,
   onDelete,
+  roleActions,
 }: AddressFormProps) {
   const copy = messages[locale];
   const t = copy.form;
@@ -357,6 +363,7 @@ export function AddressForm({
   const body = (
     <div className={frame && !compact ? cardClass({ className: 'w-full' }) : 'w-full'}>
       <div className="flex flex-col gap-4">
+        {roleActions && <div className="flex flex-wrap items-center gap-x-5 gap-y-2">{roleActions}</div>}
         {/* Önce ülke: öneri ve doğrulama seçilen ülkede yapılır. */}
         {compact && <span className="-mb-2 font-sans text-eyebrow-xs text-terracotta uppercase">{t.countryLabel}</span>}
         <div className="flex gap-2">

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import addressMessages from '@lezzet/i18n/customer/address';
 import type { Address } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
 import { AddressForm, toAddressFields, toFormInput, type AddressDefaults } from '@/components/customer/delivery/address-form';
+import { Icon } from '@/components/customer/ui/icons';
 import { Note } from '@/components/customer/phone-kit/note';
 import { SettingsCard, SettingsDivider } from '@/components/customer/phone-kit/settings-card';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
@@ -66,12 +67,13 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
     return true;
   };
 
-  const editForm = (address: Address) => (
+  const editForm = (address: Address, roleActions?: ReactNode) => (
     <AddressForm
       key={address.id}
       locale={locale}
       // Mobil webde form çekmecede açılır.
       compact={compact}
+      roleActions={roleActions}
       initial={toFormInput(address)}
       billingChoice={billing}
       onCancel={() => setEditing(null)}
@@ -122,7 +124,8 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
         {addresses.length > 0 && <p className="font-sans text-helper text-muted">{phoneCopy.note}</p>}
         {addresses.map((address, index) => {
           const title = addressTitle(address);
-          const actions = [
+          /* Rol eylemleri çekmecenin üstünde tek şerit; rolü taşıyan adreste hiç çizilmezler, çekmece kısa kalsın. */
+          const roleActions = [
             address.isDefault ? null : (
               <TextAction
                 key="default"
@@ -139,35 +142,32 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
                 onClick={() => act(() => setBillingAddressAction(address.id))}
               />
             ) : null,
-            <TextAction key="edit" label={phoneCopy.edit} ariaLabel={phoneCopy.editLabel.replace('{label}', title)} onClick={() => setEditing(address.id)} />,
           ].filter((action) => action !== null);
-          const inline = actions.length <= 2;
+          /* Satırın tamamı çekmecenin kapısı: eylemler kısalmıyor ve üçü birden adres satırını kelime ortasından bölüyordu. */
           const row = (
-            <div className={inline ? 'flex items-center gap-2.5' : 'flex flex-col gap-2'}>
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setEditing(address.id)}
+              aria-label={phoneCopy.editLabel.replace('{label}', title)}
+              className="flex w-full cursor-pointer items-center gap-2.5 text-left hover:opacity-80"
+            >
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="flex flex-wrap items-center gap-2">
                   <span className="font-sans text-note font-bold text-ink">{title}</span>
                   {address.isDefault && <span className={`${BADGE} bg-olive-bg text-olive-dark`}>{phoneCopy.default}</span>}
                   {/* İki rol ayrı rozet ve ayrı tonda: bir adres ikisi birden olabilir. */}
                   {billing && address.isBilling && <span className={`${BADGE} bg-sand-300 text-ink`}>{phoneCopy.billing}</span>}
-                </div>
+                </span>
                 <span className="font-sans text-body-sm text-muted">{addressLine(address)}</span>
-              </div>
-              {/* Eylem bölünmez: sığmayan eylem metninin ortasından kırılmaz, bütün olarak alt satıra iner. */}
-              <div
-                className={[
-                  '[&>*]:whitespace-nowrap',
-                  inline ? 'flex flex-none items-center gap-2.5' : 'flex flex-wrap items-center justify-end gap-x-3.5 gap-y-2',
-                ].join(' ')}
-              >
-                {actions}
-              </div>
-            </div>
+              </span>
+              {/* Ok, satırın bir kapı olduğunu söyler; eylem adı yazılsaydı kalkan eylemler geri gelirdi. */}
+              <Icon name="arrowRight" size={16} className="flex-none text-muted" />
+            </button>
           );
           return (
             <div key={address.id}>
               {index === 0 ? row : <SettingsDivider>{row}</SettingsDivider>}
-              {editing === address.id && editForm(address)}
+              {editing === address.id && editForm(address, roleActions.length === 0 ? undefined : roleActions)}
             </div>
           );
         })}

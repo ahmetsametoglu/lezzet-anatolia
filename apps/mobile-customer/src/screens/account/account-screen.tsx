@@ -490,10 +490,9 @@ export function AccountScreen({
               <AddressCard
                 address={address}
                 copy={t.addresses}
-                onMakeDefault={() => makeDefault(address)}
+                onOpen={() => setAddressSheet({ editing: address })}
                 /* Fatura rolü yalnız şirket hesabında; ölçüt `companyAccount`. */
-                onMakeBilling={companyAccount ? () => makeBilling(address) : null}
-                onEdit={() => setAddressSheet({ editing: address })}
+                showBilling={companyAccount}
                 testID={`account-address-${address.id}`}
               />
             </View>
@@ -780,6 +779,11 @@ export function AccountScreen({
         onSaved={(next) => addressBook.publish(next)}
         /* Yeni adres hesabın künyesiyle dolu açılır. */
         defaults={addressDefaultsOf({ name: data.name, phone: data.phone })}
+        roles={{
+          labels: { makeDefault: t.addresses.makeDefault, makeBilling: t.addresses.makeBilling },
+          onMakeDefault: makeDefault,
+          onMakeBilling: companyAccount ? makeBilling : null,
+        }}
         testID="account-address-sheet"
       />
     </View>

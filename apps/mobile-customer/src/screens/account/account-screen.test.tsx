@@ -135,12 +135,12 @@ describe('AccountScreen', () => {
     expect(mockPush).toHaveBeenCalledWith('/support/new');
   });
 
-  it('adresler UÇTAN gelir: kartlar çizilir, satır parçalardan kurulur, ekle/düzenle kapıları var (21.15)', async () => {
+  it('adresler UÇTAN gelir: satırlar çizilir, ekleme kapısı ve satırın kendisi açılır', async () => {
     await render(<AccountScreen />);
 
     expect(await screen.findByText('12 Quai des Bateliers, 67000 Strasbourg')).toBeOnTheScreen();
     expect(screen.getByTestId('account-address-add')).toBeOnTheScreen();
-    expect(screen.getByTestId('account-address-addr-home-edit')).toBeOnTheScreen();
+    expect(screen.getByTestId('account-address-addr-home')).toBeOnTheScreen();
     expect(mockFetchAddresses).toHaveBeenCalledTimes(1);
   });
 
@@ -154,9 +154,9 @@ describe('AccountScreen', () => {
   */
   it('rol adı EKRANIN HER YERİNDE "teslimat adresi"; "varsayılan" kelimesi hiç geçmez', async () => {
     await render(<AccountScreen />);
-    await screen.findByTestId('account-address-addr-home-edit');
+    // HOME `isDefault` — rozet onda; WORK değil, eylem onun çekmecesinde.
+    await fireEvent.press(await screen.findByTestId('account-address-addr-work'));
 
-    // HOME `isDefault` — rozet onda; WORK değil, eylem onda.
     expect(screen.getByText('teslimat adresi')).toBeOnTheScreen();
     expect(screen.getByText('teslimat adresi yap')).toBeOnTheScreen();
     expect(screen.queryByText(/varsayılan/i)).toBeNull();
@@ -191,24 +191,24 @@ describe('AccountScreen', () => {
   */
   it('BİREYSEL hesapta fatura adresi rolü HİÇ çizilmez', async () => {
     await render(<AccountScreen />);
-    await screen.findByTestId('account-address-addr-home-edit');
+    await fireEvent.press(await screen.findByTestId('account-address-addr-work'));
 
-    expect(screen.queryByTestId('account-address-addr-home-billing')).toBeNull();
-    expect(screen.queryByTestId('account-address-addr-work-billing')).toBeNull();
+    expect(screen.queryByTestId('address-make-billing')).toBeNull();
+    expect(screen.getByTestId('address-make-default')).toBeOnTheScreen();
   });
 
   it('ŞİRKET hesabında "fatura adresi yap" GERÇEK uca gider ve rozet sunucunun listesinden taşınır', async () => {
     mockMakeBillingAddress.mockResolvedValue(listResult([{ ...HOME, isBilling: false }, { ...WORK, isBilling: true }]));
 
     await render(<AccountScreen companyAccount />);
-    await screen.findByTestId('account-address-addr-work-billing');
+    await fireEvent.press(await screen.findByTestId('account-address-addr-work'));
 
-    await fireEvent.press(screen.getByTestId('account-address-addr-work-billing'));
+    await fireEvent.press(screen.getByTestId('address-make-billing'));
 
     expect(mockMakeBillingAddress).toHaveBeenCalledWith('addr-work');
-    /* İşaretli satırda eylem kalkar — rozet onun yerine geçer; "zaten fatura adresi" olan bir
-       satırda ikinci kez basılacak bir şey kalmamalı. */
-    await waitFor(() => expect(screen.queryByTestId('account-address-addr-work-billing')).toBeNull());
+    /* Rol verilince eylem kalkar — rozet onun yerine geçer; "zaten fatura adresi" olan bir adreste
+       ikinci kez basılacak bir şey kalmamalı. */
+    await waitFor(() => expect(screen.queryByTestId('address-make-billing')).toBeNull());
   });
 
   it('FATURA seçimi VARSAYILANI düşürmez — iki rol aynı satırda olabilir', async () => {
@@ -217,26 +217,26 @@ describe('AccountScreen', () => {
     mockMakeBillingAddress.mockResolvedValue(listResult([{ ...HOME, isDefault: true, isBilling: true }, WORK]));
 
     await render(<AccountScreen companyAccount />);
-    await screen.findByTestId('account-address-addr-home-billing');
+    await fireEvent.press(await screen.findByTestId('account-address-addr-home'));
 
-    await fireEvent.press(screen.getByTestId('account-address-addr-home-billing'));
+    await fireEvent.press(screen.getByTestId('address-make-billing'));
 
     /* HOME hem teslimat hem fatura adresi: "teslimat adresi yap" eylemi yine yok (zaten o rolde),
        fatura eylemi de kalktı — iki rozet yan yana duruyor. */
-    await waitFor(() => expect(screen.queryByTestId('account-address-addr-home-billing')).toBeNull());
-    expect(screen.queryByTestId('account-address-addr-home-default')).toBeNull();
+    await waitFor(() => expect(screen.queryByTestId('address-make-billing')).toBeNull());
+    expect(screen.queryByTestId('address-make-default')).toBeNull();
   });
 
   it('"teslimat adresi yap" GERÇEK uca gider; rozet sunucunun döndürdüğü listeye göre taşınır', async () => {
     mockMakeDefaultAddress.mockResolvedValue(listResult([{ ...WORK, isDefault: true }, { ...HOME, isDefault: false }]));
     await render(<AccountScreen />);
-    await screen.findByTestId('account-address-addr-work-default');
+    await fireEvent.press(await screen.findByTestId('account-address-addr-work'));
 
-    await fireEvent.press(screen.getByTestId('account-address-addr-work-default'));
+    await fireEvent.press(screen.getByTestId('address-make-default'));
 
     expect(mockMakeDefaultAddress).toHaveBeenCalledWith('addr-work');
-    await waitFor(() => expect(screen.getByTestId('account-address-addr-home-default')).toBeOnTheScreen());
-    expect(screen.queryByTestId('account-address-addr-work-default')).toBeNull();
+    /* Rol sunucunun listesinden taşınır: açık çekmecedeki eylem düşer, rozet HOME'dan WORK'e geçer. */
+    await waitFor(() => expect(screen.queryByTestId('address-make-default')).toBeNull());
   });
 
   /*
@@ -250,9 +250,9 @@ describe('AccountScreen', () => {
   it('teslimat adresi yapma ONAYI toast ile söylenir ve adresin ADIYLA söylenir', async () => {
     mockMakeDefaultAddress.mockResolvedValue(listResult([{ ...WORK, isDefault: true }, { ...HOME, isDefault: false }]));
     await render(<AccountScreen />);
-    await screen.findByTestId('account-address-addr-work-default');
+    await fireEvent.press(await screen.findByTestId('account-address-addr-work'));
 
-    await fireEvent.press(screen.getByTestId('account-address-addr-work-default'));
+    await fireEvent.press(screen.getByTestId('address-make-default'));
 
     await waitFor(() => expect(mockToast).toHaveBeenCalledWith('İş artık teslimat adresiniz.'));
   });
@@ -264,9 +264,9 @@ describe('AccountScreen', () => {
     mockFetchAddresses.mockResolvedValue(listResult([HOME, noLabel]));
     mockMakeDefaultAddress.mockResolvedValue(listResult([{ ...noLabel, isDefault: true }, { ...HOME, isDefault: false }]));
     await render(<AccountScreen />);
-    await screen.findByTestId('account-address-addr-work-default');
+    await fireEvent.press(await screen.findByTestId('account-address-addr-work'));
 
-    await fireEvent.press(screen.getByTestId('account-address-addr-work-default'));
+    await fireEvent.press(screen.getByTestId('address-make-default'));
 
     await waitFor(() => expect(mockToast).toHaveBeenCalledWith('Strasbourg artık teslimat adresiniz.'));
     expect(mockToast).not.toHaveBeenCalledWith(expect.stringContaining('{label}'));
@@ -277,14 +277,14 @@ describe('AccountScreen', () => {
        ayarı değişmiş sanırdı ve hatayı ancak bir sonraki siparişinde fark ederdi. */
     mockMakeDefaultAddress.mockResolvedValue({ data: null, error: 'unexpected', status: 500, retryAfterSec: null });
     await render(<AccountScreen />);
-    await screen.findByTestId('account-address-addr-work-default');
+    await fireEvent.press(await screen.findByTestId('account-address-addr-work'));
 
-    await fireEvent.press(screen.getByTestId('account-address-addr-work-default'));
+    await fireEvent.press(screen.getByTestId('address-make-default'));
 
     await waitFor(() => expect(screen.getByTestId('account-address-error')).toBeOnTheScreen());
     expect(mockToast).not.toHaveBeenCalled();
-    // Rozet de kaymadı: ekran sunucunun döndürdüğü listeyi bekliyor.
-    expect(screen.getByTestId('account-address-addr-work-default')).toBeOnTheScreen();
+    // Eylem de yerinde: ekran sunucunun döndürdüğü listeyi bekliyor, rozet kendiliğinden kaymaz.
+    expect(screen.getByTestId('address-make-default')).toBeOnTheScreen();
   });
 
   it('"＋ Yeni adres ekle" çekmeceyi BOŞ açar; Kaydet doğru gövdeyle yazar ve dönen liste basılır', async () => {
@@ -339,9 +339,9 @@ describe('AccountScreen', () => {
   it('kartın "Düzenle"si çekmeceyi DOLU açar; "Adresi sil" gerçek silmeye gider', async () => {
     mockDeleteAddress.mockResolvedValue(listResult([HOME]));
     await render(<AccountScreen />);
-    await screen.findByTestId('account-address-addr-work-edit');
+    await screen.findByTestId('account-address-addr-work');
 
-    await fireEvent.press(screen.getByTestId('account-address-addr-work-edit'));
+    await fireEvent.press(screen.getByTestId('account-address-addr-work'));
     expect(screen.getByTestId('address-line').props.value).toBe('3 Rue du Dôme');
     expect(screen.getByTestId('address-zip').props.value).toBe('67000');
 
@@ -357,9 +357,9 @@ describe('AccountScreen', () => {
        Toast, geri alınamayan tek adres işleminin gerçekten olduğunu söyleyen cümledir. */
     mockDeleteAddress.mockResolvedValue(listResult([HOME]));
     await render(<AccountScreen />);
-    await screen.findByTestId('account-address-addr-work-edit');
+    await screen.findByTestId('account-address-addr-work');
 
-    await fireEvent.press(screen.getByTestId('account-address-addr-work-edit'));
+    await fireEvent.press(screen.getByTestId('account-address-addr-work'));
     await fireEvent.press(screen.getByTestId('address-delete'));
 
     await waitFor(() => expect(mockToast).toHaveBeenCalledWith('Adres silindi'));
