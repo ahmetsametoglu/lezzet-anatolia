@@ -4,8 +4,8 @@ import { AppState, Linking, type AppStateStatus } from 'react-native';
 import { useLinkedChannels } from './use-linked-channels.hook';
 
 /*
-  Kanca kodu mesaja (WhatsApp'ta bağlantıya, öteki kanallarda panoya) koymazsa müşteri gönderdiği hâlde bağ kurulmaz; dönüşte okumazsa
-  kurulan bağ görünmez; bağ görüldükten sonra da okumaya devam ederse her dönüş sunucuya boşuna gider.
+  Kanca kodu mesaja (WhatsApp ve Messenger'da bağlantıya, Instagram'da panoya) koymazsa müşteri gönderdiği hâlde bağ kurulmaz;
+  dönüşte okumazsa kurulan bağ görünmez; bağ görüldükten sonra da okumaya devam ederse her dönüş sunucuya boşuna gider.
 */
 
 const mockFetchChannels = jest.fn();
@@ -83,9 +83,12 @@ it('bağlama başlatılmadıysa dönüş sunucuya gitmez', async () => {
   expect(mockFetchChannels).toHaveBeenCalledTimes(1);
 });
 
-it('Messenger kodu panoya kopyalar, adımları açar ve bağ görülünce kapatır', async () => {
-  const messenger = (linked: boolean) => ok({ channels: [{ source: 'messenger', linked, since: null, numbers: [] }] });
-  mockFetchChannels.mockResolvedValueOnce(messenger(false)).mockResolvedValue(messenger(true));
+const tekKanal = (source: string, linked: boolean) => ok({ channels: [{ source, linked, since: null, numbers: [] }] });
+
+it('Messenger kodu hazır mesajla açar — panoya düşmez', async () => {
+  const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+  openURL.mockClear();
+  mockFetchChannels.mockResolvedValue(tekKanal('messenger', false));
   mockRequestCode.mockResolvedValue(ok({ code: 'LA-WA-ABCDEFGHJKMN', expiresAt: new Date(Date.now() + 60_000).toISOString() }));
 
   const { result } = await renderHook(() => useLinkedChannels(true, MESSAGES));
@@ -93,8 +96,23 @@ it('Messenger kodu panoya kopyalar, adımları açar ve bağ görülünce kapat�
   await act(async () => {
     await result.current.start('messenger');
   });
+
+  expect(decodeURIComponent(String(openURL.mock.calls[0]?.[0]))).toContain('m.me');
+  expect(decodeURIComponent(String(openURL.mock.calls[0]?.[0]))).toContain('Salut ! LA-WA-ABCDEFGHJKMN');
+  expect(mockSetString).not.toHaveBeenCalled();
+});
+
+it('Instagram kodu panoya kopyalar, adımları açar ve bağ görülünce kapatır', async () => {
+  mockFetchChannels.mockResolvedValueOnce(tekKanal('instagram', false)).mockResolvedValue(tekKanal('instagram', true));
+  mockRequestCode.mockResolvedValue(ok({ code: 'LA-WA-ABCDEFGHJKMN', expiresAt: new Date(Date.now() + 60_000).toISOString() }));
+
+  const { result } = await renderHook(() => useLinkedChannels(true, MESSAGES));
+  await act(async () => {});
+  await act(async () => {
+    await result.current.start('instagram');
+  });
   expect(mockSetString).toHaveBeenCalledWith('Salut ! LA-WA-ABCDEFGHJKMN');
-  expect(result.current.copied?.source).toBe('messenger');
+  expect(result.current.copied?.source).toBe('instagram');
 
   await comeBack();
   expect(result.current.copied).toBeNull();

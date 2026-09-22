@@ -1,4 +1,4 @@
-import { whatsappHref } from '@lezzet/brand';
+import { messengerHref, whatsappHref } from '@lezzet/brand';
 import { channelLinkRecheckDue, linkedChannelsKey, type PendingChannelLink } from '@lezzet/helper';
 import type { MeLinkedChannel } from '@lezzet/types';
 import * as Clipboard from 'expo-clipboard';
@@ -10,7 +10,7 @@ import { useLiveRefresh } from '@/lib/app-state/use-live-refresh';
 
 type Source = MeLinkedChannel['source'];
 
-/** Kodlu mesajın metinleri: WhatsApp'ta hazır mesaj bağlantıya konur, öteki kanallarda panoya kopyalanır. */
+/** Kodlu mesajın metinleri: WhatsApp ve Messenger hazır mesajı bağlantıda taşır, Instagram'da metin panoya kopyalanır. */
 interface LinkMessages {
   whatsapp: string;
   chat: string;
@@ -22,7 +22,8 @@ interface LinkMessages {
  */
 export function useLinkedChannels(enabled: boolean, messages: LinkMessages) {
   const [channels, setChannels] = useState<MeLinkedChannel[] | null>(null);
-  const [busy, setBusy] = useState(false);
+  /** Hangi kanalın kodu hazırlanıyor; tek bayrak olsaydı bir satıra basınca üçü birden "hazırlanıyor" derdi. */
+  const [busy, setBusy] = useState<Source | null>(null);
   const [failed, setFailed] = useState(false);
   /** Kopyalanan mesaj ve kanalı; kart adımları bununla gösterir. */
   const [copied, setCopied] = useState<{ source: Source; message: string } | null>(null);
@@ -55,10 +56,12 @@ export function useLinkedChannels(enabled: boolean, messages: LinkMessages) {
 
   const start = async (source: Source): Promise<void> => {
     if (busy) return;
-    setBusy(true);
+    setBusy(source);
     setFailed(false);
+    // Kod hesaba aittir ve her üretim öncekini geçersizler: açık kutudaki metin ölür, kutu da kapanır.
+    setCopied(null);
     const result = await requestChannelLinkCode();
-    setBusy(false);
+    setBusy(null);
     if (result.error !== null) {
       setFailed(true);
       return;
@@ -68,8 +71,13 @@ export function useLinkedChannels(enabled: boolean, messages: LinkMessages) {
       await Linking.openURL(whatsappHref(`${messages.whatsapp} ${result.data.code}`));
       return;
     }
-    // Messenger ve Instagram hazır mesaj almaz; kodlu mesaj panoya gider, müşteri sohbete yapıştırıp gönderir.
     const message = `${messages.chat} ${result.data.code}`;
+    const href = source === 'messenger' ? messengerHref(message) : null;
+    if (href) {
+      await Linking.openURL(href);
+      return;
+    }
+    // Instagram bağlantısı hazır mesaj taşımaz; kodlu mesaj panoya gider, müşteri sohbete yapıştırıp gönderir.
     await Clipboard.setStringAsync(message);
     setCopied({ source, message });
   };

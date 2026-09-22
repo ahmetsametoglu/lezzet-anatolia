@@ -1,17 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { brand, whatsappHref } from './index';
+import { brand, messengerHref, whatsappHref } from './index';
 
 /*
-  `wa.me` bağı (15.3 · test dalgası 15.18).
-
-  İddialar SEED'e ya da bugünkü numaraya değil, DEĞİŞMEZE yazılıyor: numara `brand`ten okunuyor,
-  yani numara değişince test kırılmaz — kırılması gereken tek şey davranıştır.
+  Sohbet açan bağlar. İddialar bugünkü numaraya ya da sayfa adresine değil değişmeze yazılıyor: değerler `brand`ten okunuyor, yani
+  künye değişince test kırılmaz — kırılması gereken tek şey davranıştır.
 */
 const digits = brand.contact.phoneE164.replace(/\D/g, '');
 
 describe('whatsappHref', () => {
   it('metinsiz çağrıda `?text=` HİÇ eklenmez', () => {
-    // Boş yuva, operatöre anlamsız bir mesaj düşürürdü (15.3 durum notu).
+    // Boş yuva, operatöre anlamsız bir mesaj düşürürdü.
     expect(whatsappHref()).toBe(`https://wa.me/${digits}`);
   });
 
@@ -36,5 +34,19 @@ describe('whatsappHref', () => {
     // `wa.me/+33…` çalışmaz; ayıraç ya da artı kalırsa bağ sessizce bozulur.
     expect(whatsappHref()).toMatch(/^https:\/\/wa\.me\/\d+$/);
     expect(digits).not.toContain('+');
+  });
+});
+
+describe('messengerHref', () => {
+  it('hazır mesajı URL kodlayarak taşır — kodlanmazsa Messenger mesajı yarıda keser', () => {
+    const href = messengerHref('Merhaba! Bu sohbeti hesabıma bağlamak istiyorum. LA-WA-ABCDEFGHJKMN');
+    expect(href).toBe(
+      `${brand.contact.messengerUrl}?text=Merhaba!%20Bu%20sohbeti%20hesab%C4%B1ma%20ba%C4%9Flamak%20istiyorum.%20LA-WA-ABCDEFGHJKMN`,
+    );
+  });
+
+  it('metinsiz çağrıda `?text=` hiç eklenmez', () => {
+    expect(messengerHref()).toBe(brand.contact.messengerUrl);
+    expect(messengerHref('   ')).toBe(brand.contact.messengerUrl);
   });
 });

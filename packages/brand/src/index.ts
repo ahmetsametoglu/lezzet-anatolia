@@ -22,11 +22,9 @@ export const brand = {
     phoneE164: '+33616990681',
     phoneDisplay: '+33 (0)6 16 99 06 81',
     email: 'lezzetanatolie@gmail.com',
-    /**
-     * Sohbet başlatma bağlantıları (`m.me/…`, `ig.me/m/…`); boşken kanal satırı bağlantısız kalır.
-     * BEKLEYEN(K.29): Messenger sayfası ve Instagram kullanıcı adı gerçek değerleriyle girilecek.
-     */
-    messengerUrl: null as string | null,
+    /** Sayfanın kullanıcı adı yok; `m.me` sayısal kimliği de çözüyor. */
+    messengerUrl: 'https://m.me/61593784978310' as string | null,
+    /** BEKLEYEN(K.29): Instagram kullanıcı adı girilecek; boşken kanal satırı bağlantısız kalır. */
     instagramUrl: null as string | null,
   },
   /**
@@ -79,6 +77,17 @@ export function fillBrandFacts<T>(value: T): T {
  * Müşteriden bize yazan WhatsApp bağı; `wa.me` numarayı artısız ve rakam dışı karaktersiz ister. Önceden yazılı metin parametredir,
  * çünkü müşteriye görünen kopya sayfanın kendi sözlüğünde yaşar; boş metin `?text=` göndermez, yoksa sohbet boş taslakla açılır.
  */
+/**
+ * Messenger sohbetini açan bağ; `m.me` de WhatsApp gibi hazır mesaj taşır, o yüzden kodu müşteriye yapıştırtmaya gerek kalmaz.
+ * Sayfa adresi yoksa `null` döner ve çağıran kopyalama yoluna düşer.
+ */
+export function messengerHref(text?: string | null): string | null {
+  const base = brand.contact.messengerUrl;
+  if (!base) return null;
+  const message = text?.trim();
+  return message ? `${base}?text=${encodeURIComponent(message)}` : base;
+}
+
 export function whatsappHref(text?: string | null): string {
   const number = brand.contact.phoneE164.replace(/\D/g, '');
   const message = text?.trim();

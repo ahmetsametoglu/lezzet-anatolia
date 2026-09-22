@@ -24,7 +24,8 @@ interface ChannelsCardProps {
   channels: MeLinkedChannel[] | null;
   copy: ChannelsCopy;
   locale: Locale;
-  busy: boolean;
+  /** Kodu hazırlanan kanal; öteki satırlar beklemez. */
+  busy: Source | null;
   failed: boolean;
   /** Mesajı kopyalanmış, bağı henüz kurulmamış kanal; satırın altında adımlar açılır. */
   copiedSource: Source | null;
@@ -46,6 +47,7 @@ export function ChannelsCard({ channels, copy, locale, busy, failed, copiedSourc
             ? copy.linked
             : copy.since.replace('{date}', formatOrderDate(channel.since, locale));
         const name = copy.source[channel.source];
+        const hazir = busy === channel.source;
         const copied = copiedSource === channel.source;
         const chatUrl = CHAT_URL[channel.source] ?? null;
 
@@ -62,18 +64,18 @@ export function ChannelsCard({ channels, copy, locale, busy, failed, copiedSourc
                 ))}
                 {channel.source === 'whatsapp' && channel.linked ? (
                   <TextAction
-                    label={busy ? copy.busy : copy.relink}
+                    label={hazir ? copy.busy : copy.relink}
                     onPress={() => onLink('whatsapp')}
-                    disabled={busy}
+                    disabled={busy !== null}
                     testID="account-whatsapp-relink"
                   />
                 ) : null}
               </View>
               {!channel.linked && !copied ? (
                 <SecondaryButton
-                  label={busy ? copy.busy : copy.cta}
+                  label={hazir ? copy.busy : copy.cta}
                   onPress={() => onLink(channel.source)}
-                  disabled={busy}
+                  disabled={busy !== null}
                   tone="olive"
                   shape="pill"
                   testID={`account-channel-${channel.source}-link`}

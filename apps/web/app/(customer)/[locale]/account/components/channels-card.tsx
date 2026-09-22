@@ -41,6 +41,7 @@ export function ChannelsCard({ t, locale, channels, compact }: ChannelsCardProps
 
   const rows = channels.map((channel) => {
     const name = copy.source[channel.source];
+    const hazir = busy === channel.source;
     const steps = copied?.source === channel.source && !channel.linked;
     const chatUrl = CHAT_URL[channel.source] ?? null;
     return (
@@ -59,18 +60,18 @@ export function ChannelsCard({ t, locale, channels, compact }: ChannelsCardProps
               ))}
               {channel.source === 'whatsapp' && channel.linked && (
                 <span className="self-start">
-                  <TextAction label={busy ? copy.busy : copy.relink} onClick={() => void start('whatsapp')} disabled={busy} />
+                  <TextAction label={hazir ? copy.busy : copy.relink} onClick={() => void start('whatsapp')} disabled={busy !== null} />
                 </span>
               )}
             </div>
             {!channel.linked && !steps && (
               <span className="flex-none">
                 <SecondaryButton
-                  label={busy ? copy.busy : copy.cta}
+                  label={hazir ? copy.busy : copy.cta}
                   tone="olive"
                   shape="pill"
                   onClick={() => void start(channel.source)}
-                  disabled={busy}
+                  disabled={busy !== null}
                 />
               </span>
             )}
