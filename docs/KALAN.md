@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.27). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.29). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 
 Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin andığı 25
@@ -394,6 +394,9 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   yalnız depo kimliğini geçiyor (`api/v1/cart-view.ts`), istemci de yalnız posta kodu gönderiyor. Almanya'daki müşteri
   sepette FR kargo ücretini görür, checkout DE ücretini keser; bölge asgari sepeti sepette görünmez. Web `readPlaceScope`
   ile ülke + bölge + depo geçiyor; mağaza yayınından önce.
+- [ ] (K.29) [hedef: web] Messenger sayfa adresi (`m.me/…`) ve Instagram kullanıcı adı `@lezzet/brand`e girilecek — hesap
+  ekranının "Bağlı kanallar" kartı bağlı olmayan Messenger/Instagram satırında "Yazın" bağlantısını bu adreslerle açar; adres
+  yokken satır bağlantısız kalır. Künyede (`BUSINESS_CATALOG.md`) Instagram "LezzetAnatolie" yazıyor, doğrulanmadı.
 - [ ] (K.22) [hedef: web] Künye aynası `preparation_steps`e bölünecek (`15da29f9` alanı açtı). Aynadaki 39 ürünün
   hazırlaması bugün `storage` metninin satırlarında duruyor; satırlar KOŞUL ve ADIM diye ayrılıp adımlar diziye
   taşınacak. Ayrım ölçütü: koşul, uyarı ve "doğaldır" gözlemi saklamada kalır; yalnız müşterinin SIRAYLA yaptığı

@@ -22,6 +22,12 @@ export const brand = {
     phoneE164: '+33616990681',
     phoneDisplay: '+33 (0)6 16 99 06 81',
     email: 'lezzetanatolie@gmail.com',
+    /**
+     * Sohbet başlatma bağlantıları (`m.me/…`, `ig.me/m/…`); boşken kanal satırı bağlantısız kalır.
+     * BEKLEYEN(K.29): Messenger sayfası ve Instagram kullanıcı adı gerçek değerleriyle girilecek.
+     */
+    messengerUrl: null as string | null,
+    instagramUrl: null as string | null,
   },
   /**
    * Resmî kayıttaki tüzel kişi. `name` (marka) ile `legalName` (unvan) ayrı, çünkü ziyaretçi markayı arar, yasal kayıt unvanı taşır.

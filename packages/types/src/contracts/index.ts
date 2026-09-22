@@ -65,7 +65,7 @@ export * from './invite-api.schema';
 export * from './me-notifications.schema';
 export * from './realtime.contract';
 // WhatsApp bağı — doğrulanmış numaralar ve bağlama kodu; kodu tüketen webhook'tur.
-export * from './me-whatsapp.schema';
+export * from './me-channels.schema';
 // Sosyal gelen kutusu — üç Meta kanalının mobil operasyon yüzü (kuyruk · sohbet · cevap · mod ·
 // taslak). Varlık şemasından `pick` ile türer; ham alan taşır, hesaplanmış etiket taşımaz.
 export * from './social-api.schema';

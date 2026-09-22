@@ -35,16 +35,25 @@
       "editLabel": "Profil bilgilerini düzenle",
       "addName": "Adınızı ekleyin"
     },
-    "whatsapp": {
-      "title": "WhatsApp",
-      "body": "WhatsApp'tan sipariş vermek ve siparişinizin durumunu WhatsApp mesajıyla öğrenmek için numaranızı bağlayın.",
+    "channels": {
+      "title": "Bağlı kanallar",
+      "body": "Bu kanallardan yazdığınızda sizi tanırız; sohbetten verdiğiniz siparişler burada görünür.",
+      "source": {
+        "whatsapp": "WhatsApp",
+        "messenger": "Messenger",
+        "instagram": "Instagram"
+      },
+      "since": "{date} tarihinden beri",
+      "linked": "Bağlı",
+      "notLinked": "Bağlı değil",
       "cta": "WhatsApp'ımı bağla",
       "busy": "Hazırlanıyor…",
       "hint": "WhatsApp açılır; hazır mesajı göndermeniz yeterli.",
       "message": "Merhaba! Hesabımı WhatsApp numarama bağlamak istiyorum.",
-      "verified": "Doğrulandı",
       "relink": "Başka bir numara bağla",
-      "failed": "Bağlantı hazırlanamadı — tekrar deneyin."
+      "failed": "Bağlantı hazırlanamadı — tekrar deneyin.",
+      "write": "Yazın",
+      "chatHint": "Messenger ya da Instagram'dan yazdığınızda sohbeti hesabınıza bağlamanız için bir bağlantı göndeririz."
     },
     "company": {
       "eyebrow": "Onaylı profesyonel hesap",
@@ -183,16 +192,25 @@
       "editLabel": "Modifier les informations du profil",
       "addName": "Ajoutez votre nom"
     },
-    "whatsapp": {
-      "title": "WhatsApp",
-      "body": "Pour commander sur WhatsApp et suivre vos commandes par message WhatsApp, reliez votre numéro.",
+    "channels": {
+      "title": "Canaux reliés",
+      "body": "Quand vous nous écrivez par ces canaux, nous vous reconnaissons ; vos commandes passées dans la conversation apparaissent ici.",
+      "source": {
+        "whatsapp": "WhatsApp",
+        "messenger": "Messenger",
+        "instagram": "Instagram"
+      },
+      "since": "depuis le {date}",
+      "linked": "Relié",
+      "notLinked": "Non relié",
       "cta": "Rattacher mon WhatsApp",
       "busy": "Préparation…",
       "hint": "WhatsApp s'ouvre ; il suffit d'envoyer le message pré-rempli.",
       "message": "Bonjour ! Je souhaite rattacher mon compte à mon numéro WhatsApp.",
-      "verified": "Vérifié",
       "relink": "Rattacher un autre numéro",
-      "failed": "Le lien n'a pas pu être préparé — réessayez."
+      "failed": "Le lien n'a pas pu être préparé — réessayez.",
+      "write": "Écrire",
+      "chatHint": "Quand vous nous écrivez sur Messenger ou Instagram, nous vous envoyons un lien pour relier la conversation à votre compte."
     },
     "company": {
       "eyebrow": "Compte professionnel validé",
@@ -331,16 +349,25 @@
       "editLabel": "Profildaten bearbeiten",
       "addName": "Fügen Sie Ihren Namen hinzu"
     },
-    "whatsapp": {
-      "title": "WhatsApp",
-      "body": "Verknüpfen Sie Ihre Nummer, um über WhatsApp zu bestellen und den Stand Ihrer Bestellungen per WhatsApp-Nachricht zu erfahren.",
+    "channels": {
+      "title": "Verknüpfte Kanäle",
+      "body": "Wenn Sie uns über diese Kanäle schreiben, erkennen wir Sie; im Chat aufgegebene Bestellungen erscheinen hier.",
+      "source": {
+        "whatsapp": "WhatsApp",
+        "messenger": "Messenger",
+        "instagram": "Instagram"
+      },
+      "since": "seit {date}",
+      "linked": "Verknüpft",
+      "notLinked": "Nicht verknüpft",
       "cta": "Mein WhatsApp verknüpfen",
       "busy": "Wird vorbereitet…",
       "hint": "WhatsApp öffnet sich; senden Sie einfach die vorbereitete Nachricht.",
       "message": "Hallo! Ich möchte mein Konto mit meiner WhatsApp-Nummer verknüpfen.",
-      "verified": "Bestätigt",
       "relink": "Andere Nummer verknüpfen",
-      "failed": "Der Link konnte nicht vorbereitet werden — bitte erneut versuchen."
+      "failed": "Der Link konnte nicht vorbereitet werden — bitte erneut versuchen.",
+      "write": "Schreiben",
+      "chatHint": "Wenn Sie uns über Messenger oder Instagram schreiben, senden wir Ihnen einen Link, um den Chat mit Ihrem Konto zu verknüpfen."
     },
     "company": {
       "eyebrow": "Bestätigtes Geschäftskonto",

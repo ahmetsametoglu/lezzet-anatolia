@@ -39,11 +39,12 @@ import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { LegalLinks } from '@/screens/legal/legal-links';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { AddressCard } from './address-card';
+import { ChannelsCard } from './channels-card';
 import { CouponRow } from './coupon-row';
 import { AccountAddressesSkeleton, AccountPointsSkeleton } from './account-skeleton';
 import { accountData, type AccountData } from './account-fixture';
 import { usePoints } from './use-points.hook';
-import { useWhatsappLink } from './use-whatsapp-link.hook';
+import { useLinkedChannels } from './use-linked-channels.hook';
 import messages from '@lezzet/i18n/customer/account';
 
 /*
@@ -162,8 +163,7 @@ export function AccountScreen({
 
   /* Her yazma cevabı güncel listedir; ekran ikinci bir okuma yapmaz, dönen listeyi yayınlar. */
   const addressBook = useAddresses(signedIn);
-  const whatsapp = useWhatsappLink(signedIn, t.whatsapp.message);
-  const whatsappLinked = (whatsapp.numbers?.length ?? 0) > 0;
+  const channels = useLinkedChannels(signedIn, t.channels.message);
 
   /* Varsayılan adres rota dışındaysa kart "buraya teslimat açılsın" diye sorar. Posta kodu girmek zayıf, talep bırakmak kuvvetli
      sinyaldir ve ikisi aynı sayılırsa yatırım kararı yanlış veriden çıkar. */
@@ -546,40 +546,14 @@ export function AccountScreen({
           </View>
         </View>
 
-        {/* Bağlı numaralar salt okunur: müşterinin tercihi değil, kendi hattından gönderdiği mesajın kanıtıdır. */}
-        <View style={styles.settingsCard} testID="account-whatsapp">
-          <View style={styles.pointsHead}>
-            <Text style={styles.cardTitle}>{t.whatsapp.title}</Text>
-            {whatsappLinked ? <Text style={styles.whatsappVerified}>{t.whatsapp.verified}</Text> : null}
-          </View>
-          <Text style={styles.cardBody}>{t.whatsapp.body}</Text>
-          {(whatsapp.numbers ?? []).map((number) => (
-            <Text key={number} style={styles.whatsappNumber}>
-              {number}
-            </Text>
-          ))}
-          {whatsappLinked ? (
-            <TextAction
-              label={whatsapp.busy ? t.whatsapp.busy : t.whatsapp.relink}
-              onPress={() => void whatsapp.start()}
-              disabled={whatsapp.busy}
-              testID="account-whatsapp-relink"
-            />
-          ) : (
-            <>
-              <SecondaryButton
-                label={whatsapp.busy ? t.whatsapp.busy : t.whatsapp.cta}
-                onPress={() => void whatsapp.start()}
-                disabled={whatsapp.busy}
-                tone="olive"
-                shape="pill"
-                testID="account-whatsapp-link"
-              />
-              <Text style={styles.helperNote}>{t.whatsapp.hint}</Text>
-            </>
-          )}
-          {whatsapp.failed ? <Note description={t.whatsapp.failed} tone="terracotta" testID="account-whatsapp-error" /> : null}
-        </View>
+        <ChannelsCard
+          channels={channels.channels}
+          copy={t.channels}
+          locale={locale}
+          busy={channels.busy}
+          failed={channels.failed}
+          onLinkWhatsapp={() => void channels.startWhatsapp()}
+        />
 
         <View style={styles.settingsCard}>
           <Text style={styles.cardTitle}>{t.marketing.title}</Text>
@@ -913,16 +887,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text['body-sm'],
     lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.body,
-  },
-  whatsappVerified: {
-    fontFamily: theme.font.body[theme.text['button--font-weight']],
-    fontSize: theme.text.helper,
-    color: theme.colors['olive-dark'],
-  },
-  whatsappNumber: {
-    fontFamily: theme.font.body[theme.text['button--font-weight']],
-    fontSize: theme.text.note,
-    color: theme.colors.ink,
   },
   pointsGap: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],

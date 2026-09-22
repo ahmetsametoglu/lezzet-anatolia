@@ -24,12 +24,11 @@ import { ConsentSwitch, SavedAddAll, SavedList, ZoneNoticeList } from './compone
 import { AddressesCard } from './components/addresses-card';
 import { LanguageCard } from './components/language-card';
 import { LegalDirectory } from './components/legal-directory';
-import { ChatLinkNoticeBanner, LinkedChatsCard } from './components/linked-chats-card';
+import { ChannelsCard, ChatLinkNoticeBanner } from './components/channels-card';
 import { PhoneCouponList } from './components/phone-coupon-list';
 import { PhoneDeleteAccount } from './components/phone-delete-account';
 import { PhonePointsEarnList, type PhoneEarnActions } from './components/phone-points-earn-list';
 import { PhoneProfileSheet } from './components/phone-profile-sheet';
-import { PhoneWhatsappCard } from './components/phone-whatsapp-card';
 import { useRedeemPoints } from './use-redeem-points.hook';
 
 /**
@@ -69,9 +68,6 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
         <NavRow label={copy.menu.delivery} href="/legal/delivery" icon={<MobileIcon name="truck" size={17} className="text-muted" />} divider />
       </nav>
 
-      {/* Bağlı sohbetler salt okunur; gerekçesi kartın künyesinde. */}
-      <LinkedChatsCard t={t} locale={locale} chats={account.chats} compact />
-
       <AddressesCard
         t={t}
         locale={locale}
@@ -91,7 +87,7 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
 
       <LanguageCard copy={copy.language} locale={locale} stored={account.profile.preferredLanguage} />
 
-      <PhoneWhatsappCard t={t} copy={copy.whatsapp} numbers={account.whatsappNumbers} />
+      <ChannelsCard t={t} locale={locale} channels={account.channels} compact />
 
       <SettingsCard title={copy.marketing.title}>
         {/* Kanal burada bağlanır, çünkü anahtar hangi kapıya yazdığını bilmez. */}

@@ -1,12 +1,13 @@
 import 'server-only';
-import { CartService, ConversationService, CustomerPhoneService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
-import type { Address, CompanyInfo, ConversationSource, PointsEntry, PreferredLanguage } from '@lezzet/types';
+import { CartService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
+import type { Address, CompanyInfo, MeLinkedChannel, PointsEntry, PreferredLanguage } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
 import { entryOfItem, type CartLine } from '@/lib/cart/cart-types';
 import {
   listCustomerAddresses,
   readCustomerPoints,
+  readLinkedChannels,
   type CustomerCoupon,
   type CustomerPointsCard,
   type CustomerPointsRules,
@@ -15,36 +16,22 @@ import {
 import { listPointsHistory } from '@/lib/feedback/points';
 
 /** Hesap sayfasının tek okuma kapısı; puan yalnız B2C’de okunur, çünkü B2B’de hiç çizilmeyecek veriyi getirmek boşa sorgudur. */
-/**
- * `since` bağlanma anı, yoksa sohbetin açılışı: WhatsApp sohbeti müşterisiyle doğar ve ayrıca bağlanmaz.
- */
-export interface LinkedChat {
-  id: string;
-  source: ConversationSource;
-  since: string;
-}
-
 export interface AccountView {
   profile: {
     name: string;
     email: string | null;
     /**
      * İletişim numarası, kimlik anahtarı değil: doğrulanmamış serbest metindir ve yeni adres formuna öneri olur. Kimlik
-     * `whatsappNumbers`ta ayrı durur, çünkü tek kutuda müşteri kurye numarasıyla WhatsApp kimliğini aynı sanıyor.
+     * kanal satırlarında ayrı durur, çünkü tek kutuda müşteri kurye numarasıyla WhatsApp kimliğini aynı sanıyor.
      */
     phone: string | null;
     preferredLanguage: PreferredLanguage;
   };
-  /**
-   * Doğrulanmış WhatsApp numaraları; boş dizi hiç kanıt yok demektir. Salt okunurdur, çünkü elle yazılabilen satır kanıt olmaktan
-   * çıkar.
-   */
-  whatsappNumbers: string[];
   /** Doluysa profil B2B — puan/kupon bölümleri hiç çizilmez, şirket bölümü çizilir. */
   company: (CompanyInfo & { vatNumber: string | null }) | null;
   addresses: Address[];
-  /** Bu hesaba bağlı sohbetler, en yeni bağ başta. Salt okunur, çünkü bağı çözmek bir birleştirme kararıdır. */
-  chats: LinkedChat[];
+  /** Kanal satırları sabit sırada, native ile aynı okumadan; salt okunur, çünkü bağı çözmek bir birleştirme kararıdır. */
+  channels: MeLinkedChannel[];
   /** Kampanya izinleri; kanal başına "verildi mi". Sipariş bildirimleri bundan BAĞIMSIZDIR. */
   consent: { email: boolean; whatsapp: boolean };
   points: {
@@ -90,20 +77,13 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
 
   // KDV numarası künyede değil profilin kendi sütununda; kart ikisini birlikte yazar.
   const company = profile.companyInfo ? { ...profile.companyInfo, vatNumber: profile.vatNumber } : null;
-  const [addresses, cart, zoneNotices, phones, conversations] = await Promise.all([
+  const [addresses, cart, zoneNotices, channels] = await Promise.all([
     // Native ile aynı sıra: teslimat adresi başta, gerisi en yeniden eskiye; servisin tek sıralaması ikinciyi belirsiz bırakır.
     listCustomerAddresses(db, customerId),
     new CartService(db).get(customerId),
     readZoneNotices(db, customerId),
-    // Emekli numaralar gelmez: artık bizde olmayan numarayı "sizde" diye göstermek en kafa karıştırıcı hâl olurdu.
-    new CustomerPhoneService(db).listActiveByCustomer(customerId),
-    // Kaynak sayısı kadar satır; sayfalanmaz.
-    new ConversationService(db).listByCustomer(customerId),
+    readLinkedChannels(db, customerId),
   ]);
-
-  const chats: LinkedChat[] = conversations
-    .map((c) => ({ id: c.id, source: c.source, since: c.linkedAt ?? c.createdAt }))
-    .sort((a, b) => b.since.localeCompare(a.since));
 
   // Kaydedilenler sepetin kendi okumasıyla çözülür: ad, görsel, fiyat ve "bölge içi mi" bilgisi
   // orada zaten hesaplanıyor. İkinci bir çözüm yazmak, aynı satırın iki görünümü demekti.
@@ -119,10 +99,9 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
       phone: profile.phone,
       preferredLanguage: profile.preferredLanguage,
     },
-    whatsappNumbers: phones.map((p) => p.phone),
     company,
     addresses,
-    chats,
+    channels,
     consent: {
       email: Boolean(profile.marketingConsent?.email?.granted),
       whatsapp: Boolean(profile.marketingConsent?.whatsapp?.granted),

@@ -6,7 +6,7 @@ import { Icon } from '@/components/customer/ui/icons';
 import { CardHead, ConsentSwitch, InviteCard, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { setConsentAction } from './actions';
 import { AddressesCard } from './components/addresses-card';
-import { ChatLinkNoticeBanner, LinkedChatsCard } from './components/linked-chats-card';
+import { ChannelsCard, ChatLinkNoticeBanner } from './components/channels-card';
 import { addressDefaultsOf } from '@/components/customer/delivery/address-form';
 import { DesktopCouponsCard } from './components/desktop-coupons-card';
 import { DesktopDeleteAccount } from './components/desktop-delete-account';
@@ -26,7 +26,7 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
 
       <div className="grid grid-cols-2 items-start gap-5">
         <div className="flex flex-col gap-5">
-          <ProfileCard t={t} locale={locale} profile={account.profile} whatsappNumbers={account.whatsappNumbers} compact={compact} />
+          <ProfileCard t={t} locale={locale} profile={account.profile} compact={compact} />
 
           {account.company && (
             <Card compact={compact}>
@@ -129,7 +129,7 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
           </Card>
 
           {/* Bağlı sohbetler, sohbetten gelen siparişlerin neden burada göründüğünü anlatır. */}
-          <LinkedChatsCard t={t} locale={locale} chats={account.chats} compact={compact} />
+          <ChannelsCard t={t} locale={locale} channels={account.channels} compact={compact} />
         </div>
       </div>
     </div>

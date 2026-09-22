@@ -28,15 +28,18 @@ afterAll(async () => {
   await purgeTestData(db, { profileIds, authUserIds });
 });
 
-describe('/api/v1/me/whatsapp', () => {
+type Channels = { channels: { source: string; linked: boolean; numbers: string[] }[] };
+const whatsappRow = (view: Channels) => view.channels.find((channel) => channel.source === 'whatsapp');
+
+describe('/api/v1/me/whatsapp + /me/channels', () => {
   it('Bearer olmadan 401', async () => {
-    const res = await app.request('/api/v1/me/whatsapp');
-    expect(res.status).toBe(401);
+    expect((await app.request('/api/v1/me/channels')).status).toBe(401);
+    expect((await app.request('/api/v1/me/whatsapp', { method: 'POST' })).status).toBe(401);
   });
 
   it('uçtan dönen kodla gönderilen mesaj numarayı bağlar ve okuma onu gösterir', async () => {
-    const before = await envelopeData<{ numbers: string[] }>(await app.request('/api/v1/me/whatsapp', { headers: bearer(token) }));
-    expect(before.numbers).toEqual([]);
+    const before = await envelopeData<Channels>(await app.request('/api/v1/me/channels', { headers: bearer(token) }));
+    expect(whatsappRow(before)).toMatchObject({ linked: false, numbers: [] });
 
     const link = await envelopeData<{ code: string; expiresAt: string }>(
       await app.request('/api/v1/me/whatsapp', { method: 'POST', headers: bearer(token) }),
@@ -46,7 +49,7 @@ describe('/api/v1/me/whatsapp', () => {
     const outcome = await consumeWhatsappLink(db, phone, `Bonjour ! ${link.code}`);
     expect(outcome).toMatchObject({ status: 'linked', customerId: profileIds[0] });
 
-    const after = await envelopeData<{ numbers: string[] }>(await app.request('/api/v1/me/whatsapp', { headers: bearer(token) }));
-    expect(after.numbers).toEqual([phone]);
+    const after = await envelopeData<Channels>(await app.request('/api/v1/me/channels', { headers: bearer(token) }));
+    expect(whatsappRow(after)).toMatchObject({ linked: true, numbers: [phone] });
   });
 });

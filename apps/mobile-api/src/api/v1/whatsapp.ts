@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { startWhatsappLink } from '@lezzet/application';
-import { CustomerPhoneService, serviceDb, UserProfileService } from '@lezzet/database';
-import { MeWhatsappLinkSchema, MeWhatsappSchema } from '@lezzet/types';
+import { serviceDb, UserProfileService } from '@lezzet/database';
+import { MeWhatsappLinkSchema } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import type { V1Env } from './auth';
 
@@ -11,15 +11,6 @@ import type { V1Env } from './auth';
 */
 
 export const whatsapp = new Hono<V1Env>();
-
-whatsapp.get('/', async (c) => {
-  const db = serviceDb();
-  const profile = await new UserProfileService(db).findByAuthUserId(c.get('authUser').id);
-  if (!profile) return fail(c, 'profile_not_found', 404);
-
-  const rows = await new CustomerPhoneService(db).listActiveByCustomer(profile.id);
-  return ok(c, MeWhatsappSchema.parse({ numbers: rows.map((row) => row.phone) }));
-});
 
 // Her basış yeni kod üretir ve eskisini geçersizler: açılıp gönderilmeyen bağlantının kodu ekranda görünmeden yaşamasın.
 whatsapp.post('/', async (c) => {
