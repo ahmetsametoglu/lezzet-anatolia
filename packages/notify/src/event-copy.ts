@@ -59,6 +59,12 @@ export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => str
       fr: `Le remboursement de votre commande ${d.referenceNo} a été traité.`,
       de: `Die Erstattung Ihrer Bestellung ${d.referenceNo} wurde bearbeitet.`,
     }),
+  order_payment_incomplete: (d) =>
+    say(d.locale, {
+      tr: 'Kartla ödemeniz tamamlanmadı, siparişiniz oluşmadı. Sepetiniz duruyor.',
+      fr: 'Votre paiement par carte n’a pas abouti, la commande n’a pas été créée. Votre panier est intact.',
+      de: 'Ihre Kartenzahlung wurde nicht abgeschlossen, die Bestellung wurde nicht angelegt. Ihr Warenkorb bleibt erhalten.',
+    }),
   ticket_received: (d) =>
     say(d.locale, {
       tr: `Talebinizi aldık, en kısa sürede döneceğiz: ${d.ticketUrl}`,

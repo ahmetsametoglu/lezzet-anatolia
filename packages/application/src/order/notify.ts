@@ -3,6 +3,7 @@ import { type NotifyEventName, type NotifyResult } from '@lezzet/notify';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { OrderStatus } from '@lezzet/types';
 import { dispatchCustomerNotification } from '../notification/dispatch';
+import type { OrderExceptionEvent } from './effects';
 import { buildOrderNotification } from './notification-data';
 
 /**
@@ -66,7 +67,7 @@ export async function notifyOrderStatus(db: Db, orderId: string, status: OrderSt
 export function notifyOrderException(
   db: Db,
   orderId: string,
-  event: 'order_cancelled' | 'order_shortfall' | 'order_refunded',
+  event: OrderExceptionEvent,
   opts: { refundedAmountCents?: number | null } = {},
 ): Promise<NotifyResult[]> {
   return notifyOrderEvent(db, orderId, event, opts);

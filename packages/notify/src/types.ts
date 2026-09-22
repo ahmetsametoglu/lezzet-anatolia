@@ -28,6 +28,8 @@ export interface NotifyPayloads {
   // İstisna bildirimleri: akışın kesildiği ya da değiştiği anlar.
   order_cancelled: OrderNotification;
   order_shortfall: OrderNotification;
+  /** Kart ödemesi hiç gelmeyen taslak iptal edildi: sipariş oluşmadı, numara `—`dır. */
+  order_payment_incomplete: OrderNotification;
   order_refunded: OrderNotification;
   // Talep bildirimleri (14.7 · 16.4) — olay başına ayrı veri şekli; hepsi `OrderNotification`
   // olsaydı sürücüler "bu payload'da referenceNo var mı" diye tahmin etmek zorunda kalırdı.
@@ -141,6 +143,7 @@ export const NOTIFY_EVENT_META: Record<NotifyEventName, NotifyEventMeta> = {
   order_cancelled: { class: 'document', inApp: true },
   order_shortfall: { class: 'document', inApp: true }, // para etkisi var — tutar değişti
   order_refunded: { class: 'document', inApp: true },
+  order_payment_incomplete: { class: 'ping', inApp: false }, // sipariş oluşmadı: belge değil haber, açılacak kayıt yok
   ticket_received: { class: 'ping', inApp: false }, // teyit — satır yazmaz (gerekçe NotifyEventMeta)
   ticket_replied: { class: 'ping', inApp: true },
   ticket_status_changed: { class: 'ping', inApp: true },

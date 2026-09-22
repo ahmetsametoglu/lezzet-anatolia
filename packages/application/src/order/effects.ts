@@ -6,8 +6,8 @@ import type { OrderStatus } from '@lezzet/types';
  * varsayılan olsaydı her geçiş, fikstür kuran testler dahil, mail göndermeye kalkardı.
  */
 
-/** İstisna haberleri durum geçişine değil para çözümüne bağlıdır. */
-export type OrderExceptionEvent = 'order_cancelled' | 'order_shortfall' | 'order_refunded';
+/** İstisna haberleri durum geçişine değil para çözümüne bağlıdır; gelmeyen kart ödemesi de sipariş oluşmadığı için buradadır. */
+export type OrderExceptionEvent = 'order_cancelled' | 'order_shortfall' | 'order_refunded' | 'order_payment_incomplete';
 
 export type ProviderRefundOutcome =
   | { status: 'ok'; refundId: string }

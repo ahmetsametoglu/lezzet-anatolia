@@ -1,7 +1,7 @@
 import { openPaymentBefore, type OpenPayment } from '@lezzet/application';
 import type { Db } from '@lezzet/database';
 import { captureError, SOURCES } from '@lezzet/observability';
-import { mobileOrderEffects } from './order-effects';
+import { mobilePaymentEffects } from './order-effects';
 import { paymentGateway } from './stripe';
 
 /**
@@ -9,7 +9,7 @@ import { paymentGateway } from './stripe';
  * gelmese de native'de ödeme sonrası sepet ve sipariş okuması siparişi görsün diye; web'de bu işi ödeme sayfası yapar.
  */
 export async function settleOpenPayment(db: Db, customerId: string): Promise<OpenPayment | null> {
-  return openPaymentBefore(db, customerId, { gateway: paymentGateway(), effects: mobileOrderEffects(db) });
+  return openPaymentBefore(db, customerId, { gateway: paymentGateway(), effects: mobilePaymentEffects(db) });
 }
 
 /** Okuma uçları için: Stripe'a ulaşılamazsa iz bırakılır ve okuma sürer, sepet ya da liste bu yüzden düşmemeli. */

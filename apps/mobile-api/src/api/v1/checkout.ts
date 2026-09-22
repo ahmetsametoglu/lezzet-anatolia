@@ -13,7 +13,7 @@ import {
 } from '@lezzet/application';
 import { CartService, OrderService, serviceDb, UserProfileService } from '@lezzet/database';
 // Yan etki portu ortak dosyada: kurye uçları da aynı nesneyi geçirir.
-import { mobileOrderEffects } from '../../lib/order-effects';
+import { mobileOrderEffects, mobilePaymentEffects } from '../../lib/order-effects';
 import {
   CheckoutOrderBodySchema,
   CheckoutOrderResultSchema,
@@ -156,7 +156,7 @@ checkout.get('/order/:orderId/status', async (c) => {
   const status = await readCheckoutOrderStatus(
     db,
     { orderId: orderId.data, customerId: c.get('customerId') },
-    { gateway: paymentGateway(), effects: mobileOrderEffects(db) },
+    { gateway: paymentGateway(), effects: mobilePaymentEffects(db) },
   );
   if (!status) return fail(c, 'order_not_found', 404);
   return ok(c, CheckoutOrderStatusSchema.parse(status));

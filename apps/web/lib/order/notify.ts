@@ -1,6 +1,7 @@
 import {
   notifyOrderException as notifyOrderExceptionFor,
   notifyOrderStatus as notifyOrderStatusFor,
+  type OrderExceptionEvent,
 } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
 import type { NotifyResult } from '@lezzet/notify';
@@ -14,10 +15,10 @@ export function notifyOrderStatus(orderId: string, status: OrderStatus): Promise
   return notifyOrderStatusFor(serviceDb(), orderId, status);
 }
 
-/** İSTİSNA bildirimleri (14.5) — iptal, eksik karşılanma, iade. Kural ve künye pakette. */
+/** İstisna bildirimleri: iptal, eksik karşılanma, iade, gelmeyen kart ödemesi. Kural ve künye pakette. */
 export function notifyOrderException(
   orderId: string,
-  event: 'order_cancelled' | 'order_shortfall' | 'order_refunded',
+  event: OrderExceptionEvent,
   opts: { refundedAmountCents?: number | null } = {},
 ): Promise<NotifyResult[]> {
   return notifyOrderExceptionFor(serviceDb(), orderId, event, opts);

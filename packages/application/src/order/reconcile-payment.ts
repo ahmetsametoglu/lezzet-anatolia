@@ -4,6 +4,7 @@ import { captureError, SOURCES } from '@lezzet/observability';
 import { ringBell } from '../realtime/bell';
 import { orderChannelName } from '../realtime/order-channel';
 import { confirmOnlinePayment, type ConfirmPaymentDeps } from './confirm-payment';
+import { notifyExceptionEffect } from './effects';
 import type { PaymentSnapshot } from './payment-gateway';
 
 /**
@@ -75,9 +76,8 @@ export async function reconcileDraftPayment(db: Db, orderId: string, deps: Confi
   await reservations.releaseByOrder(order.id);
   // Sebep `payment_failed`: para çekilmedi, ödeme gelmedi. Ekran bu sebeple "tahsilat yapılmadı" der.
   await orders.cancel(order.id, 'draft', null, 'payment_failed');
-  // BEKLEYEN(07.18): müşteriye "ödemeniz tamamlanmadı, siparişiniz oluşmadı" e-postası. Mevcut iptal e-postası
-  // NUMARALI sipariş için yazılmış — numarasız taslakta numara yerine "—" basar ve "siparişiniz iptal edildi"
-  // der; verilmemiş bir sipariş için yanlış cümle. O güne dek sonucu ödeme sayfası söylüyor.
+  // İptal maili numaralı sipariş içindir; burada sipariş hiç oluşmadı, müşteri kendi cümlesini alır.
+  await notifyExceptionEffect(deps.effects, order.id, 'order_payment_incomplete');
   // Açık bir onay ekranı varsa bekleyişi bitsin: sayfa sunucudan yeniden ister ve iptali görür.
   await ringBell(orderChannelName(order.id));
   return { status: 'cancelled', payment };

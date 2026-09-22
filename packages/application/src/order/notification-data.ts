@@ -63,7 +63,7 @@ const EVENT_STEP: Partial<Record<NotifyEventName, NotificationStep['key']>> = {
 };
 
 /** Zaman çizgisi taşımayan olaylar — bunlarda tek durum bloğu ve para çözümü vardır. */
-const EXCEPTION_EVENTS: readonly NotifyEventName[] = ['order_cancelled', 'order_shortfall', 'order_refunded'];
+const EXCEPTION_EVENTS: readonly NotifyEventName[] = ['order_cancelled', 'order_shortfall', 'order_refunded', 'order_payment_incomplete'];
 
 export interface NotificationBundle {
   data: OrderNotification;

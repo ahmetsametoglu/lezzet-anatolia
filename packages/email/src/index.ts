@@ -12,6 +12,7 @@ export { OrderDeliveredEmail, orderDeliveredSubject } from './templates/order-de
 export { OrderCancelledEmail, orderCancelledSubject } from './templates/order-cancelled';
 export { OrderShortfallEmail, orderShortfallSubject } from './templates/order-shortfall';
 export { OrderRefundedEmail, orderRefundedSubject } from './templates/order-refunded';
+export { OrderPaymentIncompleteEmail, orderPaymentIncompleteSubject } from './templates/order-payment-incomplete';
 
 // Talep bildirimleri (14.7 · 16.4) — aynı iskelet; her mail yazışmanın kendisini taşır.
 export {
