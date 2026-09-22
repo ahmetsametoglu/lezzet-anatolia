@@ -256,6 +256,10 @@ function rejectionMessage(outcome: Exclude<Awaited<ReturnType<typeof placeOrder>
         : 'Kargo deposu tanımlı değil.';
     case 'customer_not_found':
       return 'Müşteri bulunamadı.';
+    case 'shipping_option_unavailable':
+      return 'Bu adrese eve teslim eden kargo servisi bulunamadı.';
+    case 'service_point_invalid':
+      return 'Seçilen kargo servisi teslim noktası istiyor; nokta geçerli değil.';
     case 'address_not_found':
       return 'Adres bulunamadı.';
     case 'empty_cart':

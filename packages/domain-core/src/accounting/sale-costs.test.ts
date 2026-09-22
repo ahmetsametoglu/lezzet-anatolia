@@ -8,8 +8,16 @@ describe('sipariş anındaki doğrudan maliyetler', () => {
     expect(costsAtSale('route', UNIT)).toEqual({ deliveryCostCents: 250, packagingCostCents: 120 });
   });
 
-  it('kargo siparişinin teslimat maliyeti bilinmiyor kalır, sıfır yazılmaz', () => {
+  it('kargo siparişinin teslimat maliyeti seçilen servisin teklif fiyatıdır', () => {
+    expect(costsAtSale('shipping', UNIT, 690).deliveryCostCents).toBe(690);
+  });
+
+  it('teklif yoksa kargo maliyeti bilinmiyor kalır, sıfır yazılmaz', () => {
     expect(costsAtSale('shipping', UNIT).deliveryCostCents).toBeNull();
+  });
+
+  it('rota siparişine kargo teklifi karışmaz', () => {
+    expect(costsAtSale('route', UNIT, 690).deliveryCostCents).toBe(250);
   });
 
   it('yerinde satışta mal gitmez, paketleme kapı maliyetidir', () => {

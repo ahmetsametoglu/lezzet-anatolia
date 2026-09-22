@@ -1,29 +1,16 @@
-import { planParcels, type ParcelBox, type ParcelItem } from '@lezzet/domain-core';
+import { planParcels, type ParcelBox, type ParcelItem, type PlannedParcel } from '@lezzet/domain-core';
 import { ProductVariantService, ShippingBoxService, WarehouseService } from '@lezzet/database';
 import type { ParcelSpec, ShippingQuote } from '@lezzet/sendcloud';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { RecipientAddress, SenderAddress, ShippingRateProvider } from './port';
 
 /**
- * **KARGO TEKLİFİ — TEK KAPI** (07.12).
- *
- * Sepet ekranı da checkout da sipariş yaratma da BURAYI çağırır. İki yerde ayrı kurulsaydı,
- * müşterinin gördüğü fiyat ile tahsil edilen fiyat ayrışabilirdi — referans projede bu, kaydı
- * tutulmuş bir sömürü kapısıydı (`priceEur=0` payload'ı). Fiyat daima SUNUCUDA hesaplanır;
- * istemci yalnız hangi SEÇENEĞİ seçtiğini söyler.
- *
- * ── ZİNCİR ──────────────────────────────────────────────────────────────────
- *   varyant ölçüleri + deponun kutuları → koli planı → sağlayıcı teklifi → süzgeç
- *
- * ── ⚠ ÇOK KUTU SÜZGECİ, canlı ölçümün bulgusu (28.08) ───────────────────────
- * Seçeneklerin hepsi çok koli desteklemiyor: gerçek hesapta 17'nin 10'u destekliyor ve
- * **Mondial Relay'in hiçbiri desteklemiyor** — üstelik en ucuz üç seçeneğin ikisi o. Süzgeç
- * olmasaydı müşteri en ucuzu seçer, etiket satın alma anında sağlayıcı reddeder ve sipariş
- * SEVK EDİLEMEZ hâlde kalırdı. Sıra bu yüzden zorunlu: plan → süzgeç → teklif.
+ * Kargo teklifinin tek kapısı: sepet, checkout ve sipariş taslağı buradan geçer ki gösterilen fiyatla tahsil edilen ayrışmasın.
+ * Zincir: varyant ölçüleri + deponun kutuları → koli planı → sağlayıcı teklifi → çok koli süzgeci.
  */
 
 export type ShippingQuoteOutcome =
-  | { status: 'ok'; options: readonly ShippingQuote[]; parcelCount: number; totalWeightG: number }
+  | { status: 'ok'; options: readonly ShippingQuote[]; parcelCount: number; totalWeightG: number; plan: readonly PlannedParcel[] }
   /** Bir ya da daha çok kalemin ambalaj ölçüsü yok — TAHMİN EDİLMEZ. */
   | { status: 'unmeasured'; variantIds: readonly string[] }
   /** Deponun aktif kargo kutusu yok — Depolar ekranından tanımlanmalı. */
@@ -70,7 +57,7 @@ export async function quoteShipping(
   input: ShippingQuoteInput,
 ): Promise<ShippingQuoteOutcome> {
   const wanted = input.items.filter((i) => i.qty > 0);
-  if (wanted.length === 0) return { status: 'ok', options: [], parcelCount: 0, totalWeightG: 0 };
+  if (wanted.length === 0) return { status: 'ok', options: [], parcelCount: 0, totalWeightG: 0, plan: [] };
 
   const [warehouse, variants, boxes] = await Promise.all([
     new WarehouseService(db).getById(input.warehouseId),
@@ -123,31 +110,14 @@ export async function quoteShipping(
   return {
     status: 'ok',
     /*
-      **FİYATI OLMAYAN VE SIFIR OLAN SEÇENEKLER ELENİR.**
-
-      `null` = tarife hesaplanamadı: tıklanabilir ama tutarı olmayan bir satır, müşteriye
-      cevaplayamayacağımız bir soru sordurur.
-
-      **Sıfır ise gerçek bir kargo hizmeti DEĞİLDİR** — ve bu ölçülmüş bir arızanın düzeltmesidir
-      (28.08, mobil şeridin tespiti): sağlayıcı her sorguya ücretsiz `sendcloud:letter` kanalını da
-      döndürüyor, liste ucuzdan sıralı ve seçim yapılmadığında ilk sıra alınıyordu. Sonuç: **her
-      kargo siparişinde ücret 0,00 € hesaplanıyor** ve 15 kg'lık koli mektup tarifesiyle
-      işaretleniyordu. Canlı ölçüm (FR 67000 → FR 75001, 5 kg): `0,00 € sendcloud:letter` ·
-      `7,74 € chronopost:shop2shop` — yani sipariş başına kaçan tutar 7,74 €.
-
-      **"Kampanya tarifesi de düşer" itirazı geçerli değil** (notta öyle deniyordu): bu liste bizim
-      MALİYETİMİZ, müşteriden aldığımız ücret değil. Ücretsiz kargo bizim kararımızdır ve eşik
-      mantığında yaşar (`resolveShippingFee` → `freeReason: 'threshold'`); taşıyıcının 15 kg'ı
-      sıfıra taşıması diye bir şey yok. Sıfır, "bu kanalı fiyatlamıyorum" demektir — fiyatlamadığı
-      bir kanalın maliyetini de biz bilemeyiz.
-
-      Aynı kural sevk kapısında da uygulanıyor (`dispatch.ts` → `quoteOrderShipment`): iki kapı
-      ayrı davransaydı, checkout'ta görünen seçenek satın alma anında reddedilirdi.
+      Fiyatsız ve sıfır fiyatlı seçenekler elenir: sağlayıcı her sorguya ücretsiz "mektup" kanalını da döndürür ve ucuzdan sıralı
+      listede o başa geçerek koliyi mektup tarifesiyle işaretlerdi. Sevk kapısı (`quoteOrderShipment`) aynı kuralı uygular.
     */
     options: usable
       .filter((o): o is typeof o & { priceCents: number } => typeof o.priceCents === 'number' && o.priceCents > 0)
       .sort((a, b) => a.priceCents - b.priceCents),
     parcelCount: plan.parcels.length,
     totalWeightG: plan.parcels.reduce((sum, p) => sum + p.weightG, 0),
+    plan: plan.parcels,
   };
 }

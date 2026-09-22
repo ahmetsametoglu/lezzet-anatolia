@@ -137,6 +137,9 @@ export interface PlaceOrderInput {
   idempotencyKey?: string | null;
   /** Sepetin kargo grubundan açılan ikinci sipariş mi — anlık görüntüyle AYNI bayrak (19.15). */
   shippingOrder?: boolean;
+  /** Kargo servisi ve teslim noktası seçimi; taslak doğrular (`CheckoutDraftInput`). */
+  shippingOptionCode?: string | null;
+  servicePointId?: string | null;
   // Komşu davetinin belirteci girdi DEĞİL (12.08): davet kişiye yazılı, taslak onu müşterinin
   // kendi kaydından okuyor. Yüzeyin taşıyacak bir şeyi kalmadı.
   /** Paket çözümünün kapısı — taslağa olduğu gibi geçilir (aşama 1'in `CartBundlePort`u). */
@@ -220,6 +223,8 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
     expectedCartFingerprint: input.expectedCartFingerprint,
     idempotencyKey: input.idempotencyKey,
     shippingOrder: input.shippingOrder,
+    shippingOptionCode: input.shippingOptionCode,
+    servicePointId: input.servicePointId,
     bundles: input.bundles,
     onCustomerAcquired: input.onCustomerAcquired,
   });

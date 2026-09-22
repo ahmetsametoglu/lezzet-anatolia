@@ -12,7 +12,9 @@ import { getCartView, type CartBundlePort } from '../cart/read';
 import { orderScopeOf } from '../cart/cart-types';
 import { cartFingerprint } from '../cart/fingerprint';
 import type { CartDiscount, CartEntry, CartLine, DiscountReason } from '../cart/cart-types';
+import { chooseShippingOption, homeShortlist, needsServicePoint } from '@lezzet/domain-core';
 import { resolveCheckoutPayment } from './checkout-options';
+import { optionForPricing, pricedOptions } from './shipping-selection';
 import { quoteShipping } from '../shipping/quote';
 import { sendcloudProvider, shippingProviderConfigured } from '../shipping/provider';
 import type { ShippingRateProvider } from '../shipping/port';
@@ -96,11 +98,14 @@ export interface CheckoutSnapshot {
     status: 'ok' | 'unmeasured' | 'no_box' | 'too_large' | 'no_sender' | 'provider_error' | 'off';
     options: ReadonlyArray<{
       code: string;
+      carrierCode: string;
       carrierName: string;
       name: string;
       priceCents: number;
       leadTimeHours: number | null;
       lastMile: string | null;
+      /** Bu servis teslim noktası seçilmeden sipariş edilemez. */
+      needsServicePoint: boolean;
       tracked: boolean;
     }>;
     /** Kaç kutuya bölünüyor — ekran "2 koli" diyebilsin diye. */
@@ -338,34 +343,23 @@ export async function readCheckoutSnapshot(
         })
       : null;
 
-  /*
-    Seçilen servisin fiyatı SUNUCUDAN okunur — istemcinin gönderdiği tutar hiç sorulmaz.
-
-    **ÖNSEÇİM DE SUNUCUDA** ve bu bir tur kazandırmıyor, bir ÇELİŞKİYİ önlüyor: istemci kendi
-    önseçseydi ilk açılışta liste seçili görünür ama ücret hâlâ sabit tarifeden hesaplanmış
-    olurdu — ekran "Chronopost 4,99 €" derken toplamda 11,90 € görünürdü. Sunucu seçince liste
-    ve ücret aynı hesaptan çıkıyor.
-
-    Seçim yoksa EN UCUZ: liste zaten ucuzdan pahalıya sıralı (`quoteShipping`). Müşteriye
-    seçeneksiz bir "seçim" göstermek yerine en ucuzu işaretlemek, hem ücreti baştan doğru
-    gösteriyor hem de değiştirme hakkını elinden almıyor.
-  */
-  const chosen =
-    shipping?.status === 'ok'
-      ? (shipping.options.find((o) => o.code === input.shippingOptionCode) ?? shipping.options[0] ?? null)
-      : null;
+  // Fiyat sunucudan okunur, istemci yalnız kodu söyler; ön seçim de burada yapılır ki liste ile ücret aynı hesaptan çıksın.
+  // Oranlar ödeme kapısına giden kalemlerle aynı: ücretin KDV'si orada bu kalemlere bölünüyor.
+  const vatLines = scope.lines.map((l) => ({ totalCents: l.lineTotalCents ?? 0, vatRate: l.vatRate }));
+  const quoted = shipping?.status === 'ok' ? pricedOptions(shipping.options, vatLines) : [];
+  const priced = optionForPricing(quoted, input.shippingOptionCode ?? null);
 
   const options = await resolveCheckoutPayment(db, {
     customerId: input.customerId,
     deliveryType,
-    quotedFeeCents: chosen?.priceCents ?? null,
+    quotedFeeCents: priced?.priceCents ?? null,
     basketCents: scope.basketCents,
     // Asgari sepet eşiği İNDİRİM ÖNCESİNİ ister (kullanıcı kararı 11.08) — `basketCents` kargo ve
     // toplam içindir. Ayrımın tamamı `CheckoutPaymentInput` künyesinde.
     subtotalCents: scope.subtotalCents,
     // Oran satırın kendi gerçeğinden gelir (paketse kalemlerin en yükseği) — sabit yazmak
     // malzeme gibi %20'lik kalemlerde kargo KDV'sini yanlış bölerdi.
-    lines: scope.lines.map((l) => ({ totalCents: l.lineTotalCents ?? 0, vatRate: l.vatRate })),
+    lines: vatLines,
     /* AYAR KAPSAMI (07.15'in ikinci yarısı, 09.08) — üç eksen de sepet okumasına yukarıda ZATEN
        geçiyor; ödeme kapısına geçmiyordu. Ekran o hâlde kendi kendisiyle çelişiyordu: kalem bloğu
        kapsamlı eşiği, ödeme bloğu global eşiği gösteriyordu. Gerekçe ve ölçüm `checkout-draft.ts`in
@@ -374,6 +368,10 @@ export async function readCheckoutSnapshot(
     zoneId: input.shippingOrder ? null : place.zoneId,
     warehouseId: place.warehouseId,
   });
+
+  const free = options.shippingFreeReason === 'threshold';
+  const finalChoice = free ? chooseShippingOption(quoted, { free: true, requestedCode: null }) : null;
+  const chosen = free ? (finalChoice?.ok ? finalChoice.option : null) : priced;
 
   // Komşu daveti: kişiye yazılı kabuttan okunur (çerezden değil — 12.08 kararı). Kargo siparişinde
   // hiç sorulmaz: orada sefer diye bir şey yok.
@@ -411,21 +409,23 @@ export async function readCheckoutSnapshot(
             status: shipping.status,
             options:
               shipping.status === 'ok'
-                ? shipping.options.map((o) => ({
+                ? // Eve teslimde en ucuz ve en hızlı, noktaya teslimde hepsi (harita taşıyıcı başına fiyatı bunlardan okur).
+                  [...homeShortlist(quoted), ...quoted.filter((o) => needsServicePoint(o.lastMile))].map((o) => ({
                     code: o.code,
+                    carrierCode: o.carrierCode,
                     carrierName: o.carrierName,
                     name: o.name,
-                    // Fiyatsız seçenek zaten `quoteShipping`te süzülüyor — burada tip daraltması.
-                    priceCents: o.priceCents ?? 0,
+                    priceCents: o.priceCents,
                     leadTimeHours: o.leadTimeHours,
                     lastMile: o.lastMile,
+                    needsServicePoint: needsServicePoint(o.lastMile),
                     tracked: o.tracked,
                   }))
                 : [],
             parcelCount: shipping.status === 'ok' ? shipping.parcelCount : 0,
             selectedCode: chosen?.code ?? null,
-            // Eşik geçildiyse ücret zaten sıfır: seçimin tutara etkisi YOK, o yüzden sorulmuyor.
-            mode: options.shippingFreeReason === 'threshold' ? ('auto' as const) : ('customer' as const),
+            // Eşik geçildiyse ücret sıfır ve koli eve gider: seçimin tutara etkisi yok, o yüzden sorulmuyor.
+            mode: free ? ('auto' as const) : ('customer' as const),
           },
     payment: {
       methods: options.methods,

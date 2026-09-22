@@ -2,22 +2,8 @@ import { distributeDiscount, vatPortion } from '@lezzet/helper';
 import type { AddressDeliveryType } from '@lezzet/types';
 
 /**
- * Kargo ücreti ve KDV'si (07.3) — DOMAIN §6.
- *
- * - **Rota içi teslimat ücretsizdir** (müşteri beklemeyi kabul eder, kapıya biz gideriz).
- * - **Kargoda** eşik altı siparişten ücret alınır; eşik ve ücret parametriktir (`Setting`).
- * - Ücret `Order.shipping_fee`'ye yazılır, `total`'a dâhildir ve **KDV'ye tabidir**.
- *
- * Saf: eşik/ücret değerlerini çağıran ayarlardan getirir.
- *
- * **`pickup` bu motorun sorusu DEĞİLDİR ve girdi tipi onu dışlıyor** (`AddressDeliveryType`, 26.08).
- * Yerinde satışta taşıma yoktur; "kargo ücreti kaç" sorusunun cevabı "0" değil — sorunun kendisi
- * geçersizdir. Sıfır döndürseydi motor cevabı olmayan bir soruya cevap vermiş olur, `freeReason`
- * da müşteri sözleşmesine hiç ulaşamayacak bir değer taşırdı. Yerinde satış siparişi
- * `shipping_fee`ye doğrudan 0 yazar, buraya hiç uğramaz.
- *
- * Dışlamanın TİPTE olması bilinçli: enum 26.08'de genişleyince `pickup` sessizce `else` dalına
- * düşüp KARGO ÜCRETİ ödüyordu. Bugün aynı hatayı yapan çağıran derlemede durur, ekranda değil.
+ * Kargo ücreti ve KDV'si, saf karar: rota içi ücretsiz, kargoda eşik altı ücretli ve ücret KDV'ye tabi. `pickup` girdi tipinde
+ * yok, çünkü yerinde satışta taşıma sorusu geçersizdir; tipte dışlanınca yanlış dala düşen çağıran derlemede durur.
  */
 
 export interface ShippingFeeInput {
@@ -29,13 +15,8 @@ export interface ShippingFeeInput {
   /** Eşik altında alınan ücret (cent) — SABİT tarife; canlı teklif yoksa geçerli. */
   feeCents: number;
   /**
-   * **CANLI TEKLİF** (07.12) — müşterinin seçtiği kargo seçeneğinin sunucuda yeniden hesaplanmış
-   * fiyatı (cent). `null` = teklif alınamadı ya da seçim yapılmadı → sabit tarife geçerli.
-   *
-   * **Fiyat modeli HİBRİT ve motor bu yüzden değişmedi, yalnız GİRDİSİ genişledi** (07.12 kararı):
-   * canlı teklif ücretin *tutarını* belirler, ücretsiz kargo eşiği ise *alınıp alınmayacağını*.
-   * Eşik canlı fiyata bakmaz — 100 €'yu geçen sepet, taşıma bize kaça mal olursa olsun ücretsiz
-   * gider; bu bir pazarlama sözüdür ve maliyete bağlanamaz.
+   * Seçilen servisin sunucuda hesaplanmış müşteri ücreti (KDV dahil, cent); `null` = teklif yok, sabit tarife geçerli. Teklif ücretin
+   * tutarını belirler, alınıp alınmayacağını eşik belirler.
    */
   quotedFeeCents?: number | null;
 }
@@ -46,13 +27,7 @@ export interface ShippingFeeResult {
   freeReason: 'route' | 'threshold' | null;
   /** Ücretsiz kargoya kalan tutar (cent); zaten ücretsizse 0. "X € daha ekleyin" mesajının girdisi. */
   remainingForFreeCents: number;
-  /**
-   * Ücret NEREDEN geldi — `quote` canlı teklif, `tariff` sabit tarife.
-   *
-   * **Ekranın bunu söylemesi gerekiyor** (07.12): teklif alınamadığında sessizce sabit tarifeye
-   * düşmek, müşteriye "canlı fiyat" diye hesaplanmamış bir sayı göstermek olurdu. Ücret
-   * alınmadığında (rota / eşik) kaynak sorusu doğmaz — `null`.
-   */
+  /** Ücret nereden geldi: `quote` canlı teklif, `tariff` sabit tarife; ekran bunu söyler ki hesaplanmamış sayı canlı fiyat sanılmasın. */
   source: 'quote' | 'tariff' | null;
 }
 
@@ -60,9 +35,7 @@ export function resolveShippingFee(input: ShippingFeeInput): ShippingFeeResult {
   if (input.deliveryType === 'route') {
     return { feeCents: 0, freeReason: 'route', remainingForFreeCents: 0, source: null };
   }
-  // **EŞİK CANLI FİYATA BAKMAZ** (künye: `quotedFeeCents`): eşik bir pazarlama sözüdür, taşımanın
-  // bize maliyeti ne olursa olsun tutar. Sırayı ters çevirmek (önce teklif, sonra eşik) sözü
-  // maliyete bağlardı ve "100 € üzeri ücretsiz" cümlesi bazı adreslerde yalan olurdu.
+  // Eşik canlı fiyata bakmaz: "eşik üzeri ücretsiz" bir sözdür ve maliyete bağlansaydı bazı adreslerde yalan olurdu.
   if (input.basketCents >= input.freeThresholdCents) {
     return { feeCents: 0, freeReason: 'threshold', remainingForFreeCents: 0, source: null };
   }
@@ -124,4 +97,16 @@ export function apportionShippingVat(feeCents: number, lines: readonly VatLine[]
   return rates
     .map((vatRate, i) => ({ vatRate, amountCents: shares[i]!, vatCents: vatPortion(shares[i]!, vatRate) }))
     .filter((part) => part.amountCents > 0);
+}
+
+/**
+ * Taşıyıcının KDV hariç teklifinden müşterinin ödeyeceği KDV dahil ücret. Ücretin KDV'si kalem oranlarına orantılı bölündüğü için
+ * (`apportionShippingVat`) aynı ağırlıklarla geri çevrilir; böylece ücretin KDV hariç kısmı teklife eşit kalır.
+ */
+export function shippingPriceWithVat(netCents: number, lines: readonly VatLine[]): number {
+  const total = lines.reduce((sum, l) => sum + Math.max(0, l.totalCents), 0);
+  // Kalemsiz sepette oran yoktur; ücret de zaten sorulmaz.
+  if (netCents <= 0 || total <= 0) return netCents;
+  const netShare = lines.reduce((sum, l) => sum + Math.max(0, l.totalCents) / total / (1 + l.vatRate / 100), 0);
+  return Math.round(netCents / netShare);
 }

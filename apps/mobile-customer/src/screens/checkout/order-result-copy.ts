@@ -94,6 +94,10 @@ export function rejectionMessage(
       return r.cart_changed;
     case 'customer_not_found':
       return r.customer_not_found;
+    case 'shipping_option_unavailable':
+      return r.shipping_option_unavailable;
+    case 'service_point_invalid':
+      return r.service_point_invalid;
     case 'insufficient_stock': {
       const name = resolveName(result.variantId);
       return name === null

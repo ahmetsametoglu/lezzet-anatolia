@@ -8,17 +8,17 @@ export interface UnitCosts {
 }
 
 export interface SaleCosts {
-  /** `null` = bilinmiyor: kargo maliyeti koli taşıyıcıya bildirilince yazılır. */
+  /** `null` = bilinmiyor: kargoda teklif alınamadıysa maliyet koli bildirilince yazılır. */
   deliveryCostCents: number | null;
   packagingCostCents: number;
 }
 
 /**
  * Siparişin sipariş anında yazılan doğrudan maliyetleri; sonradan değişen ayar geçmiş kârı oynatmasın diye o anın değeridir.
- * Kargoda maliyet taşıyıcı fiyatıdır ve sipariş anında bilinmez, sıfır yazılsaydı kâr şişerdi.
+ * Kargoda maliyet seçilen servisin teklif fiyatıdır; teklif yoksa bilinmez ve sıfır yazılmaz, yoksa kâr şişerdi.
  */
-export function costsAtSale(deliveryType: DeliveryType, unit: UnitCosts): SaleCosts {
+export function costsAtSale(deliveryType: DeliveryType, unit: UnitCosts, shippingQuoteCents: number | null = null): SaleCosts {
   if (deliveryType === 'route') return { deliveryCostCents: unit.routeDeliveryCents, packagingCostCents: unit.packagingCents };
-  if (deliveryType === 'shipping') return { deliveryCostCents: null, packagingCostCents: unit.packagingCents };
+  if (deliveryType === 'shipping') return { deliveryCostCents: shippingQuoteCents, packagingCostCents: unit.packagingCents };
   return { deliveryCostCents: 0, packagingCostCents: unit.doorPackagingCents };
 }

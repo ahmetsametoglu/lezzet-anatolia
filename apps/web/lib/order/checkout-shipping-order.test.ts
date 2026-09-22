@@ -6,11 +6,19 @@ import {
   OrderService,
   PriceService,
   ProductService,
+  ProductVariantService,
   SettingsService,
+  ShippingBoxService,
   StockService,
   UserProfileService,
+  WarehouseService,
   serviceDb,
 } from '@lezzet/database';
+import type { ShippingRateProvider } from '@lezzet/application';
+import { shippingPriceWithVat } from '@lezzet/domain-core';
+
+type ShippingQuote = Awaited<ReturnType<ShippingRateProvider['quote']>>[number];
+type ServicePoint = NonNullable<Awaited<ReturnType<ShippingRateProvider['servicePoint']>>>;
 import { createTestWarehouse, purgeTestData, purgeVariantStock, mustDelete, testPostalCode } from '@lezzet/database/testing';
 import { createCheckoutDraft } from './checkout-draft';
 
@@ -269,5 +277,92 @@ describe('KDV işlemi — sipariş anında çözülür', () => {
       // Değiştirdiğini geri koy (`CLAUDE.md §4b`): sıra değişirse ilk test bu satırı bozuk bulurdu.
       await profiles.update({ id: b2bCustomerId, vatNumberValid: true });
     }
+  });
+});
+
+describe('kargo seçimi ödeme anında siparişe yazılır', () => {
+  const secenek = (code: string, priceCents: number, lastMile: string, carrierCode = 'colissimo'): ShippingQuote => ({
+    code, carrierCode, carrierName: carrierCode, name: code, priceCents, currency: 'EUR', leadTimeHours: null,
+    lastMile: lastMile as ShippingQuote['lastMile'], signature: false, tracked: true, ecoDelivery: false, multicollo: true,
+  });
+  const nokta = (id: string, carrierCode: string): ServicePoint => ({
+    id, carrierCode, name: `Nokta ${id}`, street: 'Marktplatz', houseNumber: '1', postalCode: rotaKodu, city: 'Kehl', country: 'DE',
+    latitude: null, longitude: null, distanceM: null, active: true, openingTimes: null,
+  });
+  // Liste bilerek fiyata göre sıralı değil ve en ucuzu teslim noktası: "seçim yoksa en ucuz" hatası burada görünür.
+  const saglayici: ShippingRateProvider = {
+    quote: async () => [secenek('eve-pahali', 990, 'home_delivery'), secenek('nokta-mr', 450, 'service_point', 'mondial_relay'), secenek('eve-ucuz', 690, 'home_delivery')],
+    announce: () => Promise.reject(new Error('taslakta duyuru çağrılmamalı')),
+    cancel: () => Promise.reject(new Error('taslakta iptal çağrılmamalı')),
+    status: () => Promise.reject(new Error('taslakta durum çağrılmamalı')),
+    listRecent: () => Promise.reject(new Error('taslakta liste çağrılmamalı')),
+    servicePoints: () => Promise.reject(new Error('taslakta arama çağrılmamalı')),
+    servicePoint: async (id) => (id === 'sp-mr' ? nokta('sp-mr', 'mondial_relay') : id === 'sp-dpd' ? nokta('sp-dpd', 'dpd') : null),
+  };
+  const siparis = (over: Record<string, unknown> = {}) =>
+    createCheckoutDraft({ ...base(), entries: entries(), shippingOrder: true, rateProvider: saglayici, ...over });
+  /** Teklif KDV hariç gelir; müşterinin ücreti siparişin kendi kalem oranlarıyla KDV dahildir. */
+  const brut = async (orderId: string, netCents: number) => {
+    const kayit = await new OrderService(db).getWithItems(orderId);
+    return shippingPriceWithVat(netCents, kayit!.items.map((i) => ({ totalCents: i.unitPriceCents * i.qty, vatRate: i.vatRate })));
+  };
+
+  beforeAll(async () => {
+    await new ProductVariantService(db).update({ id: variantId, packedWeightG: 1000, packedLengthMm: 140, packedWidthMm: 90, packedHeightMm: 60 });
+    await new WarehouseService(db).update({ id: shippingWarehouseId, address: { line1: 'Depostraße 1', postalCode: '77694', city: 'Kehl' } });
+    await new ShippingBoxService(db).insert({
+      warehouseId: shippingWarehouseId, name: `Seçim kutusu ${stamp}`, lengthMm: 300, widthMm: 200, heightMm: 150, tareG: 130, maxContentG: null,
+    });
+  });
+
+  it('müşterinin seçtiği servis, gördüğü fiyat ve koli planı siparişe yazılır; ücret sabit tarifeden gelmez', async () => {
+    const outcome = await siparis({ shippingOptionCode: 'eve-pahali' });
+    if (outcome.status !== 'ok') throw new Error(`taslak bekleniyordu: ${outcome.status}`);
+    const order = await new OrderService(db).getById(outcome.orderId);
+    // Müşteri KDV dahil öder, maliyet taşıyıcının KDV hariç fiyatıdır: ikisi eşit yazılsaydı KDV bizden çıkardı.
+    expect(order).toMatchObject({ shippingOptionCode: 'eve-pahali', shippingFeeCents: await brut(outcome.orderId, 990), deliveryCostCents: 990, servicePoint: null });
+    expect(order!.shippingFeeCents).toBeGreaterThan(990);
+    expect(order?.parcelPlan).toHaveLength(1);
+  });
+
+  it('seçim yoksa en ucuz değil, EVE giden en ucuz servis yazılır', async () => {
+    const outcome = await siparis();
+    if (outcome.status !== 'ok') throw new Error(`taslak bekleniyordu: ${outcome.status}`);
+    expect(await new OrderService(db).getById(outcome.orderId)).toMatchObject({ shippingOptionCode: 'eve-ucuz', shippingFeeCents: await brut(outcome.orderId, 690) });
+  });
+
+  it('teslim noktası isteyen servis noktasız sipariş AÇMAZ', async () => {
+    expect((await siparis({ shippingOptionCode: 'nokta-mr' })).status).toBe('service_point_invalid');
+  });
+
+  it('başka taşıyıcının noktası kabul edilmez — nokta sağlayıcıdan yeniden okunur', async () => {
+    expect((await siparis({ shippingOptionCode: 'nokta-mr', servicePointId: 'sp-dpd' })).status).toBe('service_point_invalid');
+  });
+
+  it('geçerli nokta siparişe kopyası ile yazılır', async () => {
+    const outcome = await siparis({ shippingOptionCode: 'nokta-mr', servicePointId: 'sp-mr' });
+    if (outcome.status !== 'ok') throw new Error(`taslak bekleniyordu: ${outcome.status}`);
+    expect(await new OrderService(db).getById(outcome.orderId)).toMatchObject({
+      shippingOptionCode: 'nokta-mr',
+      shippingFeeCents: await brut(outcome.orderId, 450),
+      servicePoint: { id: 'sp-mr', carrierCode: 'mondial_relay', name: 'Nokta sp-mr' },
+    });
+  });
+
+  it('listede olmayan servis başka servise düşmez, sipariş açılmaz', async () => {
+    expect((await siparis({ shippingOptionCode: 'kalkmis' })).status).toBe('shipping_option_unavailable');
+  });
+
+  it('ücretsiz kargoda istenen teslim noktası yok sayılır: koli eve gider, maliyet teklifin fiyatıdır', async () => {
+    const outcome = await siparis({
+      entries: [{ kind: 'variant' as const, variantId, qty: 10, stockId: null }],
+      shippingOptionCode: 'nokta-mr',
+      servicePointId: 'sp-mr',
+    });
+    if (outcome.status !== 'ok') throw new Error(`taslak bekleniyordu: ${outcome.status}`);
+    const order = await new OrderService(db).getById(outcome.orderId);
+    // Ön koşul: sepet eşiği geçti. Geçmediyse test kendi kurulumunu yalanlar, kural sınanmış olmaz.
+    expect(order?.shippingFeeCents).toBe(0);
+    expect(order).toMatchObject({ shippingOptionCode: 'eve-ucuz', servicePoint: null, deliveryCostCents: 690 });
   });
 });

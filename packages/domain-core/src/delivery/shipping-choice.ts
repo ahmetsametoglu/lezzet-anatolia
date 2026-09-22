@@ -1,47 +1,69 @@
 import type { AddressDeliveryType } from '@lezzet/types';
 
 /**
- * **TAŞIYICI SEÇİMİNİN KURALI** (07.12 · kullanıcı kararı 29.08) — saf karar.
- *
- * Kullanıcının cümlesi: *"Teslimat noktasına kullanıcı eğer kendisi seçiyorsa ve kargo parası
- * mevcut siparişin üzerine ekleniyorsa olabilir. Ama eşiği geçtiyse ve kargo ücretsiz diyorsak
- * o zaman evine teslim senaryosu devrede demektir."*
- *
- * İki hâl, ve ayıran şey PARANIN KİMDEN çıktığı:
- *
- * 1. **Müşteri ödüyor** (eşik altı) → seçim MÜŞTERİNİN. Teslimat noktası da bir seçenektir; onu
- *    seçen kendisi olduğu için "eve gitmedi" diye bir şikâyet doğmaz.
- * 2. **Biz ödüyoruz** (eşik üstü, "ücretsiz kargo") → seçim BİZİM ve **eve gider**. Müşteriye
- *    hiçbir şey sorulmaz; sorulsaydı ücreti etkilemeyen bir soru sormuş olurduk.
- *
- * ── KURAL NEDEN CHECKOUT'TA DEĞİL, SEVKTE BAĞLAYICI ─────────────────────────
- * Ölçüldü (29.08): müşterinin checkout'ta seçtiği servis kodu **hiçbir yere yazılmıyor** — yalnız
- * gösterilen ücreti belirliyor. Taşıyıcıyı gerçekte depo seçiyor (`quoteOrderShipment`), sevk
- * anında. Yani "ücretsiz kargo eve gider" kuralını checkout'a koymak onu SÖYLEMEK olurdu,
- * UYGULAMAK değil: checkout'ta ne seçilirse seçilsin depo başka bir şey satın alabilirdi.
- *
- * Kural bu yüzden iki yerde birden geçerli ve tek kaynaktan: checkout SORMAZ, sevk SEÇTİRMEZ.
+ * Kargo servisinin seçimi, saf karar. Kargoyu müşteri ödüyorsa seçim onundur ve teslim noktası da bir seçenektir;
+ * eşik geçilip kargo ücretsizse parayı biz ödüyoruz, koli eve gider ve müşteriye bir şey sorulmaz.
  */
 
 /** Sağlayıcıların "son adım" değeri; eve teslim bu. Dize olarak taşınıyor — `domain-core` sağlayıcı paketini bilmez. */
 export const HOME_DELIVERY = 'home_delivery';
 
+/** Son adımı bir noktada biten servisler: sipariş bir teslim noktası seçilmeden verilemez. */
+const POINT_LAST_MILES: readonly string[] = ['service_point', 'locker', 'locker_or_service_point'];
+
+/** Bu servis teslim noktası ister mi. */
+export function needsServicePoint(lastMile: string | null): boolean {
+  return lastMile !== null && POINT_LAST_MILES.includes(lastMile);
+}
+
 /**
- * Bu siparişin taşıması EVE mi gitmek zorunda?
- *
- * Ölçüt ücretin SIFIR olması, "eşiği geçti mi" değil — ve fark önemli: ücret rota teslimatında da
- * sıfırdır ama orada kargo yoktur, kampanyayla sıfırlanırsa da yine biz ödüyoruzdur. Soru
- * *"parayı kim ödedi"*; cevabı `shipping_fee` satırında duruyor ve o satır siparişin kendi kaydı.
+ * Bu siparişin taşıması EVE mi gitmek zorunda? Ölçüt eşik değil ücretin sıfır olması, çünkü kampanyayla sıfırlanan
+ * kargoyu da biz ödüyoruzdur; rota ve gel-al siparişinde kargo yoktur.
  */
 export function requiresHomeDelivery(order: { deliveryType: AddressDeliveryType | 'pickup'; shippingFeeCents: number }): boolean {
   return order.deliveryType === 'shipping' && order.shippingFeeCents === 0;
 }
 
-/**
- * Eve teslim edenleri süz. **Son adımı BİLİNMEYEN seçenek elenir** (`null`): "bilmiyorum" ile
- * "eve gidiyor" aynı şey değildir (`CLAUDE §1`) ve burada yanılmanın bedeli somut — müşteri
- * ücretsiz kargo bekleyip kolisini teslim noktasında bulur.
- */
+/** Eve teslim edenleri süz. Son adımı bilinmeyen (`null`) seçenek elenir: "bilmiyorum" ile "eve gidiyor" aynı şey değil. */
 export function homeDeliveryOnly<T extends { lastMile: string | null }>(options: readonly T[]): T[] {
   return options.filter((o) => o.lastMile === HOME_DELIVERY);
+}
+
+/**
+ * Müşteriye gösterilen eve teslim servisleri: en ucuz ve en hızlı (süresi bilinenler içinde, eşitse ucuz olan); ikisi aynıysa tek.
+ * Aynı taşıyıcının saat, cumartesi ve imza kademeleri müşteriye ayrı bir karar sunmuyor, listeyi yalnız uzatıyordu.
+ */
+export function homeShortlist<T extends { code: string; lastMile: string | null; priceCents: number; leadTimeHours: number | null }>(
+  options: readonly T[],
+): T[] {
+  const home = [...homeDeliveryOnly(options)].sort((a, b) => a.priceCents - b.priceCents);
+  const cheapest = home[0];
+  if (!cheapest) return [];
+  const fastest = home
+    .filter((o) => o.leadTimeHours !== null)
+    .sort((a, b) => a.leadTimeHours! - b.leadTimeHours! || a.priceCents - b.priceCents)[0];
+  return fastest && fastest.code !== cheapest.code ? [cheapest, fastest] : [cheapest];
+}
+
+export type ShippingChoice<T> =
+  | { ok: true; option: T }
+  /** İstenen servis bu sepette yok (liste değişti ya da çok kutu onu düşürdü). */
+  | { ok: false; reason: 'unavailable' }
+  /** Seçim bize kalmış ama eve teslim eden hiçbir servis yok. */
+  | { ok: false; reason: 'no_home_option' };
+
+/**
+ * Siparişin servisi. Ücretsiz kargoda istenen koda bakılmaz ve eve giden en ucuz alınır; müşteri ödüyorsa istediği
+ * servis, istemediyse yine eve giden en ucuz — seçmeyen müşterinin kolisi bir noktaya gitmez.
+ */
+export function chooseShippingOption<T extends { code: string; lastMile: string | null; priceCents: number }>(
+  options: readonly T[],
+  input: { free: boolean; requestedCode: string | null },
+): ShippingChoice<T> {
+  if (!input.free && input.requestedCode !== null) {
+    const requested = options.find((o) => o.code === input.requestedCode);
+    return requested ? { ok: true, option: requested } : { ok: false, reason: 'unavailable' };
+  }
+  const cheapestHome = [...homeDeliveryOnly(options)].sort((a, b) => a.priceCents - b.priceCents)[0];
+  return cheapestHome ? { ok: true, option: cheapestHome } : { ok: false, reason: 'no_home_option' };
 }

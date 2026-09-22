@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apportionShippingVat, meetsMinBasket, resolveShippingFee } from './shipping-fee';
+import { apportionShippingVat, meetsMinBasket, resolveShippingFee, shippingPriceWithVat } from './shipping-fee';
 
 const ESIK = 6000; // 60 € ücretsiz kargo eşiği
 const UCRET = 790; // 7,90 €
@@ -104,5 +104,29 @@ describe('canlı teklif — hibrit fiyat modeli (07.12)', () => {
   it('ROTA teklifi hiç sormaz — kendi aracımızla giden malın tarifesi yok', () => {
     const sonuc = resolveShippingFee({ ...taban, deliveryType: 'route', quotedFeeCents: 2500 });
     expect(sonuc).toMatchObject({ feeCents: 0, freeReason: 'route', source: null });
+  });
+});
+
+describe('shippingPriceWithVat — KDV hariç teklif → müşterinin KDV dahil ücreti', () => {
+  /** Ücretin KDV'si bölüştürme kuralıyla geri ayrıştırıldığında kalan KDV hariç kısım. */
+  const netOf = (grossCents: number, lines: { totalCents: number; vatRate: number }[]) =>
+    grossCents - apportionShippingVat(grossCents, lines).reduce((sum, p) => sum + p.vatCents, 0);
+
+  it("tek oranlı sepette teklife o oranın KDV'si eklenir", () => {
+    expect(shippingPriceWithVat(617, [{ totalCents: 2070, vatRate: 5.5 }])).toBe(651);
+    expect(shippingPriceWithVat(617, [{ totalCents: 2070, vatRate: 20 }])).toBe(740);
+  });
+
+  it("karışık oranlı sepette ücretin KDV hariç kısmı teklife eşit kalır — kargo KDV'si bizden çıkmaz", () => {
+    const lines = [
+      { totalCents: 3000, vatRate: 5.5 },
+      { totalCents: 1500, vatRate: 20 },
+    ];
+    const gross = shippingPriceWithVat(617, lines);
+    expect(Math.abs(netOf(gross, lines) - 617)).toBeLessThanOrEqual(1);
+  });
+
+  it('ters vergilendirmede (%0) ücret teklifin kendisidir', () => {
+    expect(shippingPriceWithVat(617, [{ totalCents: 2070, vatRate: 0 }])).toBe(617);
   });
 });

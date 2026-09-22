@@ -134,7 +134,9 @@
         "provider_unavailable": "Ödeme sağlayıcısına ulaşılamıyor. Kapıda ödemeyi seçebilirsiniz.",
         "no_client_secret": "Ödeme oturumu açılamadı. Kapıda ödemeyi seçebilir ya da biraz sonra tekrar deneyebilirsiniz."
       },
-      "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin."
+      "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin.",
+      "shipping_option_unavailable": "Seçtiğiniz kargo servisi bu sepet için artık sunulmuyor. Lütfen kargo seçimini yeniden yapın.",
+      "service_point_invalid": "Bu kargo servisi bir teslim noktasına teslim ediyor. Lütfen açık bir teslim noktası seçin."
     },
     "paymentSheet": {
       "canceled": "Ödeme yarıda kaldı — siparişiniz duruyor, hazır olduğunuzda tekrar deneyebilirsiniz.",
@@ -309,7 +311,9 @@
         "provider_unavailable": "Le prestataire de paiement est injoignable. Vous pouvez choisir le paiement à la livraison.",
         "no_client_secret": "La session de paiement n'a pas pu être ouverte. Choisissez le paiement à la livraison ou réessayez dans un instant."
       },
-      "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer."
+      "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer.",
+      "shipping_option_unavailable": "Le mode de livraison choisi n'est plus proposé pour ce panier. Merci de choisir à nouveau.",
+      "service_point_invalid": "Ce mode de livraison livre en point relais. Merci de choisir un point relais ouvert."
     },
     "paymentSheet": {
       "canceled": "Paiement interrompu — votre commande vous attend, réessayez quand vous voulez.",
@@ -484,7 +488,9 @@
         "provider_unavailable": "Der Zahlungsanbieter ist nicht erreichbar. Sie können bei Lieferung zahlen.",
         "no_client_secret": "Die Zahlungssitzung konnte nicht geöffnet werden. Wählen Sie Zahlung bei Lieferung oder versuchen Sie es gleich noch einmal."
       },
-      "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut."
+      "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
+      "shipping_option_unavailable": "Die gewählte Versandart ist für diesen Warenkorb nicht mehr verfügbar. Bitte wählen Sie erneut.",
+      "service_point_invalid": "Diese Versandart liefert an einen Abholpunkt. Bitte wählen Sie einen geöffneten Abholpunkt."
     },
     "paymentSheet": {
       "canceled": "Zahlung abgebrochen — Ihre Bestellung wartet, Sie können es jederzeit erneut versuchen.",

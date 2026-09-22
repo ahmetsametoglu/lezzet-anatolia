@@ -10,9 +10,17 @@ import {
   type Db,
 } from '@lezzet/database';
 import { cityMatchesPlaces } from '@lezzet/address';
-import { costsAtSale, deriveChannel, meetsMinBasket, resolveVatTreatment } from '@lezzet/domain-core';
+import { chooseShippingOption, costsAtSale, deriveChannel, meetsMinBasket, needsServicePoint, resolveVatTreatment } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import type { AddressDeliveryType, OrderItemInsert, OrderSource, PaymentMethod, PreferredLanguage } from '@lezzet/types';
+import type {
+  AddressDeliveryType,
+  OrderItemInsert,
+  OrderSource,
+  ParcelPlanSnapshot,
+  PaymentMethod,
+  PreferredLanguage,
+  ServicePointSnapshot,
+} from '@lezzet/types';
 import { getCartView, type CartBundlePort } from '../cart/read';
 import { matchNeighborInviteForOrder } from '../customer/neighbor';
 import { placesForPostalCode } from '../delivery/places';
@@ -31,6 +39,10 @@ import {
 import { resolveCheckoutPayment } from './checkout-options';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
 import { readUnitCosts } from './unit-costs';
+import { optionForPricing, parcelPlanSnapshot, pricedOptions, servicePointSnapshot } from './shipping-selection';
+import { quoteShipping } from '../shipping/quote';
+import { sendcloudProvider, shippingProviderConfigured } from '../shipping/provider';
+import type { ShippingRateProvider } from '../shipping/port';
 
 /*
   Bağlayıcı fiyat burada sabitlenir: sepet sunucuda yeniden okunur ve istemciden yalnız seçimler (adres, gün, ödeme yöntemi) alınır,
@@ -71,7 +83,11 @@ export type CheckoutDraftOutcome =
   | { status: 'price_changed'; lines: { name: string; fromCents: number; toCents: number }[] }
   /** Yük taşımaz: söylenecek şey ekranın kendisidir, özet yeniden okununca yeni liste görünür. */
   | { status: 'cart_changed' }
-  | { status: 'customer_not_found' };
+  | { status: 'customer_not_found' }
+  /** Seçilen kargo servisi bu sepette artık yok ya da seçim bize kalmışken eve giden servis yok; ekran listeyi yeniden okur. */
+  | { status: 'shipping_option_unavailable' }
+  /** Servis teslim noktası istiyor ama nokta yok, kapalı ya da başka taşıyıcının. */
+  | { status: 'service_point_invalid' };
 
 export interface CheckoutDraftInput {
   locale: PreferredLanguage;
@@ -108,6 +124,12 @@ export interface CheckoutDraftInput {
    * çünkü stok arada değişirse türetilen tür sessizce değişirdi.
    */
   shippingOrder?: boolean;
+  /** Müşterinin seçtiği kargo servisi; seçmediyse ya da kargo ücretsizse eve giden en ucuz alınır. */
+  shippingOptionCode?: string | null;
+  /** Servis teslim noktası istiyorsa seçilen nokta; sağlayıcıdan yeniden okunur, istemcinin söylediği adres alınmaz. */
+  servicePointId?: string | null;
+  /** Testte sahte sağlayıcı; verilmezse ortamın Sendcloud'u, o da yoksa teklifsiz (sabit tarife). */
+  rateProvider?: ShippingRateProvider | null;
   /** Verilmezse paket satırı engelli durur; paket taşımayan yüzey bu kapıyı geçmez. */
   bundles?: CartBundlePort;
   /**
@@ -239,13 +261,29 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // Kargonun KDV'si taşıdığı malın oranını izler, bu yüzden oranlar kalem kalem geçilir; ters vergilendirmede kalem oranı
   // sıfırlanınca ücretinki de kendiliğinden sıfırlanır.
   const items = await expandToOrderItems(db, orderedLines, orderedShares, vat.zeroRated, input.staff?.actorId ?? null);
+  // Kargo teklifi ekranınkiyle aynı kapıdan yeniden alınır: fiyat istemciden gelmez, yalnız servis kodu ve nokta gelir.
+  const rateProvider = input.rateProvider === undefined ? (shippingProviderConfigured() ? sendcloudProvider() : null) : input.rateProvider;
+  const quote =
+    deliveryType === 'shipping' && rateProvider && orderWarehouseId
+      ? await quoteShipping(db, rateProvider, {
+          warehouseId: orderWarehouseId,
+          to: { countryCode: address.country, postalCode: address.postalCode, city: address.city ?? undefined },
+          items: orderedLines.flatMap((l) => (l.variantId ? [{ variantId: l.variantId, qty: l.qty }] : [])),
+        })
+      : null;
+  // Oranlar ödeme kapısına giden kalemlerle aynı: ücretin KDV'si orada bu kalemlere bölünüyor.
+  const vatLines = items.map((i) => ({ totalCents: i.unitPriceCents * i.qty, vatRate: i.vatRate }));
+  const quoted = quote?.status === 'ok' ? pricedOptions(quote.options, vatLines) : [];
+  const priced = optionForPricing(quoted, input.shippingOptionCode ?? null);
+
   const options = await resolveCheckoutPayment(db, {
     customerId: customer.id,
     deliveryType,
     basketCents: scope.basketCents,
     // Asgari sepet eşiği indirim öncesini ister; `basketCents` kargo ve toplam içindir.
     subtotalCents: scope.subtotalCents,
-    lines: items.map((i) => ({ totalCents: i.unitPriceCents * i.qty, vatRate: i.vatRate })),
+    quotedFeeCents: priced?.priceCents ?? null,
+    lines: vatLines,
     /* Ayar kapsamı ödeme kapısına da sepet okumasındaki ifadelerle geçer; geçmeseydi sepet kapsamlı ayarı, siparişe yazılan kargo
        ücreti ise genel değeri okurdu. */
     country: address.country,
@@ -255,6 +293,26 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   });
   if (!options.methods.includes(input.paymentMethod)) {
     return { status: 'payment_not_allowed', methods: options.methods };
+  }
+
+  // Teklif alınamadıysa sipariş sabit tarifeyle açılır ve seçimsiz kalır; servisi o zaman depo seçer.
+  let shippingChoice: { code: string; costCents: number; servicePoint: ServicePointSnapshot | null; plan: ParcelPlanSnapshot } | null =
+    null;
+  if (quote?.status === 'ok') {
+    const choice = chooseShippingOption(quoted, {
+      free: options.shippingFreeReason === 'threshold',
+      requestedCode: input.shippingOptionCode ?? null,
+    });
+    if (!choice.ok) return { status: 'shipping_option_unavailable' };
+    let servicePoint: ServicePointSnapshot | null = null;
+    if (needsServicePoint(choice.option.lastMile)) {
+      const point = input.servicePointId ? await rateProvider!.servicePoint(input.servicePointId) : null;
+      if (!point || !point.active || point.carrierCode !== choice.option.carrierCode || point.country !== address.country) {
+        return { status: 'service_point_invalid' };
+      }
+      servicePoint = servicePointSnapshot(point);
+    }
+    shippingChoice = { code: choice.option.code, costCents: choice.option.costCents, servicePoint, plan: parcelPlanSnapshot(quote.plan) };
   }
 
   // Deposuz sipariş yazılamaz; sebep çağırana taşınır, çünkü "bölge dışısınız" ile "kargo deposu tanımlı değil" aynı cümle olamaz.
@@ -319,8 +377,12 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       vatNumberSnapshot: vat.zeroRated ? customer.vatNumber : null,
       shippingFeeCents: options.shippingFeeCents,
       orderedTotalCents: options.orderTotalCents,
-      // Doğrudan maliyetler sipariş anının değeriyle yazılır; kargonun maliyeti koli bildirilince gelir.
-      ...costsAtSale(deliveryType, await readUnitCosts(db)),
+      // Doğrudan maliyetler sipariş anının değeriyle yazılır; kargoda seçilen servisin teklifi, bildirimde gerçek kutularla düzelir.
+      // Maliyet taşıyıcının KDV hariç fiyatıdır; müşterinin KDV dahil ücreti `shippingFeeCents`te.
+      ...costsAtSale(deliveryType, await readUnitCosts(db), shippingChoice?.costCents ?? null),
+      shippingOptionCode: shippingChoice?.code ?? null,
+      servicePoint: shippingChoice?.servicePoint ?? null,
+      parcelPlan: shippingChoice?.plan ?? null,
       // Reddedilen kuponun yerine kampanya kazanmış olabilir; tutar sepet toplamının kullandığı aynı fonksiyondan okunur.
       discountAmountCents: discountAmountOf(cart.discount),
       discountId: discountIdOf(cart.discount),

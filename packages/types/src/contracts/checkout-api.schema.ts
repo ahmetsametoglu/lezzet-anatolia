@@ -125,6 +125,10 @@ export const CheckoutOrderBodySchema = z.object({
   marketingConsent: z.boolean().default(false),
   /** Bölünmüş sepetin kargo yarısı: tür adresin cevabını ezer, gün sorulmaz; ekran ile sipariş aynı olsun diye açıkça seçilir. */
   shippingOrder: z.boolean().default(false),
+  /** Seçilen kargo servisi; yoksa eve giden en ucuz. Fiyatı sunucu hesaplar. */
+  shippingOptionCode: z.string().min(1).nullable().default(null),
+  /** Servis teslim noktası istiyorsa seçilen nokta; sunucu sağlayıcıdan yeniden okur. */
+  servicePointId: z.string().min(1).nullable().default(null),
 });
 
 /**
@@ -201,6 +205,10 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
    */
   z.object({ status: z.literal('cart_changed') }),
   z.object({ status: z.literal('customer_not_found') }),
+  /** Seçilen kargo servisi artık yok; ekran listeyi yeniden okur. */
+  z.object({ status: z.literal('shipping_option_unavailable') }),
+  /** Servis teslim noktası istiyor ama nokta yok, kapalı ya da başka taşıyıcının. */
+  z.object({ status: z.literal('service_point_invalid') }),
   /**
    * Stok son anda ayrılamadı (yarış): taslak kapatılır, kapıda/vadeli ödemede para çekilmedi. Ad değil kimlik taşınır, ekranın
    * elinde çözülmüş sepet var.
