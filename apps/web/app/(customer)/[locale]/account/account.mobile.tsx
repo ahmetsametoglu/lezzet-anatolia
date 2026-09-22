@@ -8,12 +8,14 @@ import { SignOutLink } from '@/components/customer/account/sign-out-link';
 import { addressDefaultsOf } from '@/components/customer/delivery/address-form';
 import { CirclePhoto } from '@/components/customer/phone-kit/circle-photo';
 import { NavRow } from '@/components/customer/phone-kit/nav-row';
+import { Note } from '@/components/customer/phone-kit/note';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { SecondaryButton } from '@/components/customer/phone-kit/secondary-button';
 import { DASHED_TOP, SettingsCard } from '@/components/customer/phone-kit/settings-card';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { Dialog } from '@/components/customer/ui/dialog';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
+import { NewsStrip } from '@/components/customer/ui/toast';
 import type { AccountView } from '@/lib/account/read';
 import { useShareLink } from '@/lib/use-share-link.hook';
 import { setConsentAction } from './actions';
@@ -28,7 +30,7 @@ import { PhoneDeleteAccount } from './components/phone-delete-account';
 import { PhonePointsEarnList, type PhoneEarnActions } from './components/phone-points-earn-list';
 import { PhoneProfileSheet } from './components/phone-profile-sheet';
 import { PhoneWhatsappCard } from './components/phone-whatsapp-card';
-import { RedeemPoints } from './components/redeem-points';
+import { useRedeemPoints } from './use-redeem-points.hook';
 
 /**
  * Hesabım'ın telefon görünümü, native hesap ekranının ikizi; web'e özgü bloklar aynı kum kartla araya girer. Sonraya kaydedilenler
@@ -191,6 +193,7 @@ function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps)
   const { minimumPoints, valueCents } = points.redeem;
   const enough = points.balance >= minimumPoints;
   const fill = (text: string) => text.replace('{threshold}', String(minimumPoints)).replace('{value}', formatCompactEuro(valueCents, locale));
+  const redeem = useRedeemPoints();
   const [earnOpen, setEarnOpen] = useState(false);
   const closeEarn = useCallback(() => setEarnOpen(false), []);
   const { share } = useShareLink();
@@ -222,14 +225,13 @@ function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps)
           {copy.points.gap.replace('{n}', String(minimumPoints - points.balance))}
         </p>
       )}
-      <RedeemPoints
-        t={t}
-        locale={locale}
-        redeem={points.redeem}
-        enough={enough}
-        compact
-        renderTrigger={(open) => <PrimaryButton shape="block" label={fill(copy.points.convert)} onClick={open} disabled={!enough} />}
+      <PrimaryButton
+        shape="block"
+        label={redeem.busy ? copy.points.converting : fill(copy.points.convert)}
+        onClick={() => void redeem.convert()}
+        disabled={redeem.busy || !enough}
       />
+      {redeem.failed && <Note tone="terracotta" description={copy.points.failed} />}
       {/* Kazanma yolları kartta değil yalnız çekmecede; kart onlara buradan açılır. */}
       <span className="self-start">
         <TextAction label={copy.points.howTo} onClick={() => setEarnOpen(true)} />
@@ -240,6 +242,8 @@ function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps)
       </span>
       {/* Kuponlar puan kartının içinde: ikisi aynı cüzdanın iki yüzü (kazanılan ↔ harcanabilir). */}
       <PhoneCouponList copy={copy.points} locale={locale} coupons={coupons} />
+
+      {redeem.converted && <NewsStrip message={copy.points.converted} placement="bottom" compact />}
 
       {earnOpen && (
         <Dialog title={copy.points.howToTitle} closeLabel={t.cancel} onClose={closeEarn} placement="sheet">
