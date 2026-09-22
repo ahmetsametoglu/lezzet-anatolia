@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import addressMessages from '@lezzet/i18n/customer/address';
 import type { Address } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
 import { AddressForm, toAddressFields, toFormInput, type AddressDefaults } from '@/components/customer/delivery/address-form';
@@ -12,6 +13,8 @@ import { addressLine, addressTitle } from '@lezzet/address';
 import { errorText } from '@/lib/customer-error-text';
 import { addAddressAction, deleteAddressAction, setBillingAddressAction, setDefaultAddressAction, updateAddressAction } from '../actions';
 import { Card } from '@/components/customer/ui/card';
+import { NewsStrip } from '@/components/customer/ui/toast';
+import { useFlash } from '@/lib/use-flash.hook';
 import { CardHead } from './account-cards';
 import type { AccountCopy, Messages } from '../account-types';
 
@@ -32,6 +35,9 @@ interface AddressesCardProps {
   phoneCopy?: AccountCopy['addresses'];
 }
 
+/** "Adres silindi" haberinin ekranda kaldığı süre (ms). */
+const DELETED_MS = 3000;
+
 /** Native'in rol rozetiyle aynı ölçü. */
 const BADGE = 'rounded-badge px-2 py-0.5 font-sans text-eyebrow-xs font-semibold tracking-normal';
 
@@ -42,16 +48,22 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const run = async (task: () => Promise<{ errorKey: string | null }>) => {
+  const [deleted, showDeleted] = useFlash(DELETED_MS);
+
+  const run = async (task: () => Promise<{ errorKey: string | null }>): Promise<boolean> => {
     setBusy(true);
     setError(null);
     // Çağrı dönmezse genel cümleye düşer ve kart kilitli kalmaz.
     const { errorKey } = await task().catch(() => ({ errorKey: 'unexpected' }));
     setBusy(false);
     // Sunucu anahtar döner, cümle burada kurulur; bilinmeyen anahtar genel cümleye düşer.
-    if (errorKey) return setError(errorText(t.errors, errorKey));
+    if (errorKey) {
+      setError(errorText(t.errors, errorKey));
+      return false;
+    }
     setEditing(null);
     setConfirmDelete(null);
+    return true;
   };
 
   const editForm = (address: Address) => (
@@ -63,6 +75,14 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
       initial={toFormInput(address)}
       billingChoice={billing}
       onCancel={() => setEditing(null)}
+      // Telefonda silme native gibi düzenleme çekmecesinde ve onaysızdır; masaüstü satırdaki onayı korur.
+      onDelete={
+        phoneCopy
+          ? async () => {
+              if (await run(() => deleteAddressAction(address.id))) showDeleted();
+            }
+          : undefined
+      }
       onSave={async (input) => {
         await run(async () => {
           const result = await updateAddressAction(address.id, toAddressFields(input), input.point);
@@ -120,10 +140,8 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
               />
             ) : null,
             <TextAction key="edit" label={phoneCopy.edit} ariaLabel={phoneCopy.editLabel.replace('{label}', title)} onClick={() => setEditing(address.id)} />,
-            <TextAction key="delete" label={t.addressDelete} tone="terracotta" onClick={() => setConfirmDelete(address.id)} />,
           ].filter((action) => action !== null);
-          const confirming = confirmDelete === address.id;
-          const inline = actions.length <= 2 && !confirming;
+          const inline = actions.length <= 2;
           const row = (
             <div className={inline ? 'flex items-center gap-2.5' : 'flex flex-col gap-2'}>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -135,23 +153,15 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
                 </div>
                 <span className="font-sans text-body-sm text-muted">{addressLine(address)}</span>
               </div>
-              {confirming ? (
-                <div className="flex flex-wrap items-center justify-end gap-3.5">
-                  <span className="font-sans text-note font-semibold text-terracotta">{t.addressDeleteConfirm}</span>
-                  <TextAction label={t.addressDeleteYes} tone="terracotta" onClick={() => act(() => deleteAddressAction(address.id))} />
-                  <TextAction label={t.cancel} onClick={() => setConfirmDelete(null)} />
-                </div>
-              ) : (
-                /* Eylem bölünmez: sığmayan eylem metninin ortasından kırılmaz, bütün olarak alt satıra iner. */
-                <div
-                  className={[
-                    '[&>*]:whitespace-nowrap',
-                    inline ? 'flex flex-none items-center gap-2.5' : 'flex flex-wrap items-center justify-end gap-x-3.5 gap-y-2',
-                  ].join(' ')}
-                >
-                  {actions}
-                </div>
-              )}
+              {/* Eylem bölünmez: sığmayan eylem metninin ortasından kırılmaz, bütün olarak alt satıra iner. */}
+              <div
+                className={[
+                  '[&>*]:whitespace-nowrap',
+                  inline ? 'flex flex-none items-center gap-2.5' : 'flex flex-wrap items-center justify-end gap-x-3.5 gap-y-2',
+                ].join(' ')}
+              >
+                {actions}
+              </div>
             </div>
           );
           return (
@@ -164,6 +174,7 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
         {error && <Note tone="terracotta" description={error} />}
         {addresses.length > 0 ? <SettingsDivider>{add}</SettingsDivider> : <span className="self-start">{add}</span>}
         {editing === 'new' && newForm}
+        {deleted && <NewsStrip message={addressMessages[locale].form.deleted} placement="bottom" compact />}
       </SettingsCard>
     );
   }

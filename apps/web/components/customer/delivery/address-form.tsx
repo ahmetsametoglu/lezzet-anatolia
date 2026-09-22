@@ -15,6 +15,7 @@ import type { Locale } from '@lezzet/i18n';
 import { Button, focusRingClass } from '@/components/customer/ui/button';
 import { cardClass } from '@/components/customer/ui/card';
 import { ChoiceChip } from '@/components/customer/ui/choice-chip';
+import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { Dialog } from '@/components/customer/ui/dialog';
 import { Icon } from '@/components/customer/ui/icons';
 import { SuggestionList } from '@/components/customer/ui/suggestion-list';
@@ -120,6 +121,8 @@ interface AddressFormProps {
   compact?: boolean;
   /** Cümleyi çağıran kurar; kaydet düğmesinin üstünde çizilir ki pencere ve çekmece aynı yerde göstersin. */
   error?: string | null;
+  /** Verilirse mobil web çekmecesi düzenlemede kaydetmenin altında "Adresi sil" sunar, native adres çekmecesi gibi. */
+  onDelete?: () => Promise<void>;
 }
 
 type Kind = AddressLabelKind;
@@ -140,7 +143,19 @@ interface ManualDraft {
 }
 
 
-export function AddressForm({ locale, initial, defaults, billingChoice = false, frame = true, defaultChoice = true, onSave, onCancel, compact = false, error = null }: AddressFormProps) {
+export function AddressForm({
+  locale,
+  initial,
+  defaults,
+  billingChoice = false,
+  frame = true,
+  defaultChoice = true,
+  onSave,
+  onCancel,
+  compact = false,
+  error = null,
+  onDelete,
+}: AddressFormProps) {
   const copy = messages[locale];
   const t = copy.form;
   const places = placeCopy[locale];
@@ -306,15 +321,30 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
     </>
   );
 
+  const remove = async (task: () => Promise<void>) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await task();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const saveButton = (
     <Button disabled={!complete || busy} fullWidth={compact} onClick={() => void save()}>
       {defaultChoice ? t.save : t.saveAndSelect}
     </Button>
   );
 
-  /** Çekmecede "Vazgeç" yok: çekmecenin zaten üç kapanış yolu var (✕, örtü, Escape). */
+  /** Çekmecede "Vazgeç" yok, çünkü çekmecenin üç kapanış yolu var; silme kaydetmenin altında dolgusuz durur ki silmeye davet etmesin. */
   const actions = compact ? (
-    saveButton
+    <div className="flex flex-col items-center gap-3">
+      {saveButton}
+      {initial && onDelete && (
+        <TextAction label={t.delete} tone="terracotta" onClick={() => void remove(onDelete)} />
+      )}
+    </div>
   ) : (
     <div className="flex items-center gap-3 border-t border-sand-200 pt-4">
       <button type="button" onClick={onCancel} className={`cursor-pointer font-sans text-body-sm font-bold text-muted transition-colors hover:text-ink ${focusRingClass}`}>
@@ -328,6 +358,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
     <div className={frame && !compact ? cardClass({ className: 'w-full' }) : 'w-full'}>
       <div className="flex flex-col gap-4">
         {/* Önce ülke: öneri ve doğrulama seçilen ülkede yapılır. */}
+        {compact && <span className="-mb-2 font-sans text-eyebrow-xs text-terracotta uppercase">{t.countryLabel}</span>}
         <div className="flex gap-2">
           {CountryEnum.options.map((code) => (
             <ChoiceChip
@@ -477,10 +508,10 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
 
         <div className="flex flex-col gap-2.25">
           <span className="font-sans text-note font-bold text-ink">{t.kindLabel}</span>
-          <div className="flex flex-wrap gap-2">
-            <ChoiceChip label={t.kindHome} active={kind === 'home'} onSelect={() => setKind('home')} />
-            <ChoiceChip label={t.kindWork} active={kind === 'work'} onSelect={() => setKind('work')} />
-            <ChoiceChip label={t.kindOther} active={kind === 'other'} onSelect={() => setKind('other')} />
+          <div className={compact ? 'flex gap-2' : 'flex flex-wrap gap-2'}>
+            <ChoiceChip size={compact ? 'segment' : 'choice'} label={t.kindHome} active={kind === 'home'} onSelect={() => setKind('home')} />
+            <ChoiceChip size={compact ? 'segment' : 'choice'} label={t.kindWork} active={kind === 'work'} onSelect={() => setKind('work')} />
+            <ChoiceChip size={compact ? 'segment' : 'choice'} label={t.kindOther} active={kind === 'other'} onSelect={() => setKind('other')} />
           </div>
           {kind === 'other' && (
             <div className="flex animate-fade-in flex-col gap-1.5 motion-reduce:animate-none">
@@ -531,7 +562,8 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           name="phone"
         />
 
-        {defaultChoice && (
+        {/* Mobil webde iki rol satırın kendi eylemleriyle verilir, native adres çekmecesi gibi. */}
+        {defaultChoice && !compact && (
           <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
             <input
               type="checkbox"
@@ -544,7 +576,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
         )}
 
         {/* Ayrı kutu: "mal nereye" ile "fatura nereye" iki ayrı soru. */}
-        {billingChoice && (
+        {billingChoice && !compact && (
           <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
             <input
               type="checkbox"
@@ -562,7 +594,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           </p>
         )}
 
-        {!compact && actions}
+        {actions}
       </div>
     </div>
   );
@@ -576,7 +608,6 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
       closeLabel={places.close}
       onClose={onCancel}
       placement="sheet"
-      footer={actions}
     >
       {body}
     </Dialog>
