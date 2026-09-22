@@ -1,10 +1,11 @@
 import 'server-only';
-import { AddressService, CartService, ConversationService, CustomerPhoneService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
+import { CartService, ConversationService, CustomerPhoneService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import type { Address, CompanyInfo, ConversationSource, PointsEntry, PreferredLanguage } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
 import { entryOfItem, type CartLine } from '@/lib/cart/cart-types';
 import {
+  listCustomerAddresses,
   readCustomerPoints,
   type CustomerCoupon,
   type CustomerPointsCard,
@@ -90,7 +91,8 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
   // KDV numarası künyede değil profilin kendi sütununda; kart ikisini birlikte yazar.
   const company = profile.companyInfo ? { ...profile.companyInfo, vatNumber: profile.vatNumber } : null;
   const [addresses, cart, zoneNotices, phones, conversations] = await Promise.all([
-    new AddressService(db).listByCustomer(customerId),
+    // Native ile aynı sıra: teslimat adresi başta, gerisi en yeniden eskiye; servisin tek sıralaması ikinciyi belirsiz bırakır.
+    listCustomerAddresses(db, customerId),
     new CartService(db).get(customerId),
     readZoneNotices(db, customerId),
     // Emekli numaralar gelmez: artık bizde olmayan numarayı "sizde" diye göstermek en kafa karıştırıcı hâl olurdu.
