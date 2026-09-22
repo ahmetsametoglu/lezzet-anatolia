@@ -1,14 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FILL_RATE, planParcels, type ParcelBox, type ParcelItem } from './parcel-plan';
+import { planParcels, type ParcelBox, type ParcelItem } from './parcel-plan';
 
-/*
-  Sınanan beş değişmez:
-    1. ÖLÇÜSÜZ kalem planı DURDURUR — yedek sabite düşmez, tahmin etmez.
-    2. Kutu yoksa plan yok — "bir tane uydur" yok.
-    3. Sığmayan paket sessizce büyük kutuya tıkıştırılmaz, söylenir.
-    4. Bölme ölçütü HACİM + AĞIRLIK, adet değil.
-    5. Bildirilen ağırlık DARAYI içerir, tavan denetimi İÇERİĞE bakar — ikisi ayrı sayı.
-*/
 
 const kutu = (over: Partial<ParcelBox> = {}): ParcelBox => ({
   id: 'box-orta',
@@ -72,10 +64,10 @@ describe('planParcels — bölme ölçütü', () => {
     expect(sonuc.ok && sonuc.parcels[0]!.contents).toEqual([{ variantId: 'v1', qty: 3 }]);
   });
 
-  it('HACİM dolunca yeni kutu açılır — adet böleni yok', () => {
-    // Kutu hacmi 300×200×150 = 9.000.000 mm³; kullanılabilir = ×0,75. Paket 140×90×60 = 756.000.
-    const sigar = Math.floor((9_000_000 * FILL_RATE) / 756_000);
-    const sonuc = planParcels([kalem({ qty: sigar + 1 })], [kutu()]);
+  it('hacmen yetse de GEOMETRİK olarak sığmayan ikinci paket yeni kutu açar', () => {
+    // İki 6 cm'lik küp 10 cm'lik kutunun hacminin yarısını bile doldurmaz, ama hiçbir eksende yan yana giremez.
+    const kup = kalem({ qty: 2, packedLengthMm: 60, packedWidthMm: 60, packedHeightMm: 60 });
+    const sonuc = planParcels([kup], [kutu({ lengthMm: 100, widthMm: 100, heightMm: 100 })]);
     expect(sonuc.ok && sonuc.parcels.length).toBe(2);
   });
 
@@ -98,6 +90,42 @@ describe('planParcels — bölme ölçütü', () => {
     const buyuk = kutu({ id: 'buyuk', name: 'Büyük', lengthMm: 400, widthMm: 300, heightMm: 200 });
     const sonuc = planParcels([kalem({ packedLengthMm: 140, packedWidthMm: 90, packedHeightMm: 60 })], [buyuk, kucuk]);
     expect(sonuc.ok && sonuc.parcels[0]!.box.id).toBe('kucuk');
+  });
+});
+
+describe('planParcels — gerçek katalog ölçüleri (şablon kutular)', () => {
+  const kucuk = kutu({ id: 'kucuk', lengthMm: 200, widthMm: 150, heightMm: 100, tareG: 60, maxContentG: 5000 });
+  const orta = kutu({ id: 'orta', lengthMm: 300, widthMm: 200, heightMm: 150, tareG: 130, maxContentG: 10_000 });
+  const pekmez = kalem({ variantId: 'pekmez', packedWeightG: 920, packedLengthMm: 165, packedWidthMm: 70, packedHeightMm: 70 });
+
+  it('açık kutu yetmezse yeni kutu açmadan önce kutu BÜYÜTÜLÜR', () => {
+    // Nar ekşisi 23 cm, küçük kutuya girmez; ikisi birlikte tek orta kutuya girer.
+    const narEksisi = kalem({ variantId: 'nar', packedWeightG: 605, packedLengthMm: 45, packedWidthMm: 45, packedHeightMm: 230 });
+    const sonuc = planParcels([pekmez, narEksisi], [kucuk, orta]);
+    expect(sonuc.ok && sonuc.parcels.map((p) => p.box.id)).toEqual(['orta']);
+  });
+
+  it('hacmen sığan ama yerleşemeyen iki paket küçük kutuya YAZILMAZ', () => {
+    // Aronya küçük kutuya yalnız yatık girer; üstünde 6 cm kalır, pekmez 7 cm.
+    const aronya = kalem({ variantId: 'aronya', packedWeightG: 151, packedLengthMm: 130, packedWidthMm: 185, packedHeightMm: 40 });
+    const sonuc = planParcels([aronya, pekmez], [kucuk, orta]);
+    expect(sonuc.ok && sonuc.parcels.map((p) => p.box.id)).toEqual(['orta']);
+  });
+});
+
+describe('planParcels — ağırlık tavanı', () => {
+  it('kutu büyütülürken de büyük kutunun tavanı uygulanır', () => {
+    // Hacimce ikisi de küçüğe sığar; küçüğün tavanı 1 kg, büyüğün 3 kg: tek büyük kutu.
+    const kucuk = kutu({ id: 'kucuk', lengthMm: 200, widthMm: 150, heightMm: 100, maxContentG: 1000 });
+    const buyuk = kutu({ id: 'buyuk', lengthMm: 400, widthMm: 300, heightMm: 200, maxContentG: 3000 });
+    const agir = kalem({ qty: 2, packedWeightG: 900, packedLengthMm: 50, packedWidthMm: 50, packedHeightMm: 50 });
+    const sonuc = planParcels([agir], [kucuk, buyuk]);
+    expect(sonuc.ok && sonuc.parcels.map((p) => p.box.id)).toEqual(['buyuk']);
+  });
+
+  it('hiçbir kutunun tavanına girmeyen tek paket SÖYLENİR, en büyük kutuya yazılmaz', () => {
+    const sonuc = planParcels([kalem({ variantId: 'bidon', packedWeightG: 12_000 })], [kutu({ maxContentG: 10_000 })]);
+    expect(sonuc).toMatchObject({ ok: false, reason: 'too_large', variantId: 'bidon' });
   });
 });
 

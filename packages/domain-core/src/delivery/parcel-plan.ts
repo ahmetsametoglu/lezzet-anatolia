@@ -1,25 +1,6 @@
 /**
- * KOLİ PLANI (07.12) — sepetteki kalemler hangi kutulara, kaç kutuya sığar?
- *
- * **Saf karar:** girdi olarak ölçüleri ve deponun kutu listesini alır, dizi döndürür. Veritabanı
- * bilmez, sağlayıcı bilmez (`STACK §4`).
- *
- * ── ÖLÇÜT HACİM + AĞIRLIK TAVANI, ADET DEĞİL ────────────────────────────────
- * Referans projede bölen sabit bir ADETTİ (`ceil(Σadet / 20)`) ve orada doğruydu: satılan tek şey
- * kupaydı, hepsi aynı boydaydı. Bizim katalogda 90 g'lık dilim ile 2,5 kg'lık tepsi yan yana
- * duruyor — sabit adet böleni ikisini aynı kutuya koyar ve ya kutu patlar ya yarısı boş gider.
- *
- * ── ÖLÇÜSÜZ KALEM PLANI DURDURUR, YEDEK SABİTE DÜŞMEZ ───────────────────────
- * 07.12'nin en keskin kuralı: *"ölçüsüzlük `null`'dur, sıfır değil ve plan yedek sabite düştüğünü
- * SÖYLEMELİ"*. Burada bir adım öteye gidiliyor — **yedek sabit YOK**. Ölçüsü olmayan bir kalem
- * varsa plan `ok: false` döner ve hangi varyantların ölçüsüz olduğunu söyler. Sebep kozmetik değil:
- * uydurulmuş bir ölçü doğrudan tarifeye girer, taşıyıcı gerçeği tartar ve farkı faturaya yazar.
- * Referans projedeki sessiz yedek (`19×10×13 cm`) tam bu riski üretiyordu.
- *
- * ── DOLULUK ORANI — kutu %100 dolmaz ────────────────────────────────────────
- * Düzgün olmayan paketler arasında boşluk kalır. Hacim karşılaştırması bu yüzden ham değil,
- * `FILL_RATE` ile indirgenmiş kapasiteye karşı yapılır. Oran parametrik bir varsayımdır
- * (`CLAUDE §4`): ölçülebilir bir gerçek değil, güvenli tarafta kalan bir katsayı.
+ * Koli planı: sepetin kalemleri deponun kutularına geometrik olarak yerleştirilir, kaç kutu ve hangi
+ * kutu olduğu buradan çıkar. Ölçüsü eksik kalem planı durdurur, çünkü uydurulmuş ölçü doğrudan tarifeye girer.
  */
 
 /** Planlanacak kalem — ambalajlı ürün ölçüsü + adet. */
@@ -42,7 +23,7 @@ export interface ParcelBox {
   widthMm: number;
   heightMm: number;
   tareG: number;
-  /** Azami içerik ağırlığı (g). `null` = sınır bilinmiyor → ağırlık tavanı uygulanmaz. */
+  /** Kutunun taşıyabileceği azami içerik ağırlığı (g). `null` = sınır bilinmiyor → ağırlık tavanı uygulanmaz. */
   maxContentG: number | null;
 }
 
@@ -53,7 +34,7 @@ export interface PlannedParcel {
   contents: ReadonlyArray<{ variantId: string; qty: number }>;
   /** Taşıyıcıya bildirilecek ağırlık: içerik + kutunun darası. */
   weightG: number;
-  /** İçeriğin kapladığı ham hacim (mm³) — doluluk denetiminin kanıtı. */
+  /** İçeriğin kapladığı ham hacim (mm³). */
   contentVolumeMm3: number;
 }
 
@@ -62,18 +43,28 @@ export type ParcelPlanFailure =
   | { ok: false; reason: 'no_box'; unmeasured: readonly string[] }
   /** Bir ya da daha çok kalemin ölçüsü yok — TAHMİN EDİLMEZ, plan durur. */
   | { ok: false; reason: 'unmeasured'; unmeasured: readonly string[] }
-  /** Tek bir paket en büyük kutuya bile sığmıyor — operatör kararı gerekir. */
+  /** Tek bir paket hiçbir kutuya girmiyor: ölçüsü ya da ağırlığı her kutuyu aşıyor — operatör kararı gerekir. */
   | { ok: false; reason: 'too_large'; unmeasured: readonly string[]; variantId: string };
 
 export type ParcelPlanResult = { ok: true; parcels: readonly PlannedParcel[]; unmeasured: readonly [] } | ParcelPlanFailure;
 
-/**
- * Kutunun kullanılabilir hacim oranı. Düzgün olmayan paketler arasında kalan boşluğun payı —
- * ölçülmüş bir gerçek değil, güvenli tarafta kalan bir varsayım (parametrik).
- */
-export const FILL_RATE = 0.75;
+type Dims = readonly [number, number, number];
 
-const volumeOf = (l: number, w: number, h: number): number => l * w * h;
+interface Unit {
+  variantId: string;
+  weightG: number;
+  dims: Dims;
+  volume: number;
+}
+
+interface Placement {
+  x: number;
+  y: number;
+  z: number;
+  l: number;
+  w: number;
+  h: number;
+}
 
 /** Kalem ölçülü mü — dördü de dolu olmalı (ölçüler zaten all-or-none, ağırlık ayrı sorulur). */
 function measured(item: ParcelItem): boolean {
@@ -85,86 +76,111 @@ function measured(item: ParcelItem): boolean {
   );
 }
 
-/** Paket kutuya FİZİKSEL olarak giriyor mu — üç kenarın da sığması gerekir (döndürme serbest). */
-function fitsInside(item: ParcelItem, box: ParcelBox): boolean {
-  const paket = [item.packedLengthMm!, item.packedWidthMm!, item.packedHeightMm!].sort((a, b) => a - b);
-  const kutu = [box.lengthMm, box.widthMm, box.heightMm].sort((a, b) => a - b);
-  return paket.every((kenar, i) => kenar <= kutu[i]!);
+const boxVolume = (b: ParcelBox): number => b.lengthMm * b.widthMm * b.heightMm;
+
+/** Kapaklı ambalaj her yöne yatabilir, bu yüzden altı yönün hepsi denenir. */
+function orientations([a, b, c]: Dims): Dims[] {
+  return [
+    [a, b, c],
+    [a, c, b],
+    [b, a, c],
+    [b, c, a],
+    [c, a, b],
+    [c, b, a],
+  ];
+}
+
+const overlaps = (p: Placement, q: Placement): boolean =>
+  p.x < q.x + q.l && q.x < p.x + p.l && p.y < q.y + q.w && q.y < p.y + p.w && p.z < q.z + q.h && q.z < p.z + p.h;
+
+/**
+ * Kalemleri kutuya yerleştirmeyi dener (extreme point, büyükten küçüğe, önce en alçak nokta).
+ * Başarı bir yerleşimin kanıtıdır; başarısızlık "sığmaz" değil "yerleşim bulunamadı" demektir.
+ */
+function packsInto(units: readonly Unit[], box: ParcelBox): boolean {
+  if (box.maxContentG !== null && units.reduce((sum, u) => sum + u.weightG, 0) > box.maxContentG) return false;
+  if (units.reduce((sum, u) => sum + u.volume, 0) > boxVolume(box)) return false;
+
+  const placed: Placement[] = [];
+  let points: Array<readonly [number, number, number]> = [[0, 0, 0]];
+  for (const unit of [...units].sort((a, b) => b.volume - a.volume)) {
+    let spot: Placement | null = null;
+    const ordered = [...points].sort((p, q) => p[2] - q[2] || p[1] - q[1] || p[0] - q[0]);
+    search: for (const [x, y, z] of ordered) {
+      for (const [l, w, h] of orientations(unit.dims)) {
+        if (x + l > box.lengthMm || y + w > box.widthMm || z + h > box.heightMm) continue;
+        const candidate = { x, y, z, l, w, h };
+        if (placed.some((q) => overlaps(candidate, q))) continue;
+        spot = candidate;
+        break search;
+      }
+    }
+    if (!spot) return false;
+    placed.push(spot);
+    const used = spot;
+    points = points.filter(([x, y, z]) => !(x === used.x && y === used.y && z === used.z));
+    points.push([used.x + used.l, used.y, used.z], [used.x, used.y + used.w, used.z], [used.x, used.y, used.z + used.h]);
+  }
+  return true;
+}
+
+/** Kalemlerin hepsini alan EN KÜÇÜK kutu; büyük kutu hacimsel ağırlığı ve tarifeyi yukarı çeker. */
+function smallestBoxFor(units: readonly Unit[], boxesByVolume: readonly ParcelBox[]): ParcelBox | null {
+  return boxesByVolume.find((box) => packsInto(units, box)) ?? null;
 }
 
 /**
- * Sepeti kutulara böler.
- *
- * **Sıra: büyükten küçüğe** (first-fit decreasing). Küçükten başlamak kutuları küçük paketlerle
- * doldurur ve büyük paket sonunda kendine yer bulamaz — aynı sepet için gereksiz bir kutu daha
- * doğar. Klasik bir sezgiseldir; en iyi çözümü vaat etmez, ama sonucu ÖLÇÜLEBİLİRDİR (dönen plan
- * ağırlığı ve hacmi taşır) ve tekrarlanabilir.
- *
- * **Kutu seçimi: sığan EN KÜÇÜK kutu.** Büyük kutu daha az kutu demek değil (hacim aynı) ama daha
- * çok hacimsel ağırlık demek — tarifenin barajı yukarı doğru işliyor.
+ * Sepeti kutulara böler: her birim önce açık bir kutuya, gerekirse o kutuyu daha büyüğüyle değiştirerek konur;
+ * ancak hiçbirine girmiyorsa yeni kutu açılır. Kutu büyütülmeden yeni kutu açmak, tek kutuya sığan sepeti iki koliye bölerdi.
  */
 export function planParcels(items: readonly ParcelItem[], boxes: readonly ParcelBox[]): ParcelPlanResult {
   const unmeasured = items.filter((i) => i.qty > 0 && !measured(i)).map((i) => i.variantId);
-  // Ölçüsüzlük ÖNCE söylenir: kutu yokluğu da bir eksiklik ama operatörün göreceği ilk iş
-  // ölçüyü tamamlamaktır ve iki eksikliği aynı anda söylemek ekranı okunmaz kılar.
+  // Ölçüsüzlük kutu yokluğundan önce söylenir: iki eksikliği aynı anda söylemek ekranı okunmaz kılar.
   if (unmeasured.length > 0) return { ok: false, reason: 'unmeasured', unmeasured };
 
-  const usable = boxes.filter((b) => volumeOf(b.lengthMm, b.widthMm, b.heightMm) > 0);
-  if (usable.length === 0) return { ok: false, reason: 'no_box', unmeasured: [] };
+  const boxesByVolume = boxes.filter((b) => boxVolume(b) > 0).sort((a, b) => boxVolume(a) - boxVolume(b));
+  if (boxesByVolume.length === 0) return { ok: false, reason: 'no_box', unmeasured: [] };
 
-  // Her adet AYRI bir paket olarak açılır: iki adet aynı varyant iki ayrı kutuya düşebilir.
-  const units = items
+  // Her adet ayrı bir birimdir: aynı varyantın iki adedi iki ayrı kutuya düşebilir.
+  const units: Unit[] = items
     .filter((i) => i.qty > 0)
-    .flatMap((i) => Array.from({ length: i.qty }, () => i))
-    .sort((a, b) => volumeOf(b.packedLengthMm!, b.packedWidthMm!, b.packedHeightMm!) - volumeOf(a.packedLengthMm!, a.packedWidthMm!, a.packedHeightMm!));
+    .flatMap((i) => {
+      const dims: Dims = [i.packedLengthMm!, i.packedWidthMm!, i.packedHeightMm!];
+      const unit: Unit = { variantId: i.variantId, weightG: i.packedWeightG!, dims, volume: dims[0] * dims[1] * dims[2] };
+      return Array.from({ length: i.qty }, () => unit);
+    })
+    .sort((a, b) => b.volume - a.volume);
 
-  const byVolume = [...usable].sort(
-    (a, b) => volumeOf(a.lengthMm, a.widthMm, a.heightMm) - volumeOf(b.lengthMm, b.widthMm, b.heightMm),
-  );
-  const largest = byVolume[byVolume.length - 1]!;
-
-  const parcels: Array<{ box: ParcelBox; contents: Map<string, number>; weightG: number; volume: number }> = [];
-
+  const bins: Array<{ box: ParcelBox; units: Unit[] }> = [];
   for (const unit of units) {
-    if (!fitsInside(unit, largest)) {
-      return { ok: false, reason: 'too_large', unmeasured: [], variantId: unit.variantId };
-    }
-    const unitVolume = volumeOf(unit.packedLengthMm!, unit.packedWidthMm!, unit.packedHeightMm!);
-
-    // 1) Açık kutulardan sığan İLKİNE koy (first-fit).
-    const open = parcels.find((p) => {
-      const kapasite = volumeOf(p.box.lengthMm, p.box.widthMm, p.box.heightMm) * FILL_RATE;
-      const agirlikTamam = p.box.maxContentG === null || p.weightG + unit.packedWeightG! <= p.box.maxContentG;
-      return fitsInside(unit, p.box) && p.volume + unitVolume <= kapasite && agirlikTamam;
+    const target = bins.find((bin) => {
+      const box = smallestBoxFor([...bin.units, unit], boxesByVolume);
+      if (!box) return false;
+      bin.box = box;
+      bin.units.push(unit);
+      return true;
     });
-    if (open) {
-      open.contents.set(unit.variantId, (open.contents.get(unit.variantId) ?? 0) + 1);
-      open.weightG += unit.packedWeightG!;
-      open.volume += unitVolume;
-      continue;
-    }
+    if (target) continue;
 
-    // 2) Yeni kutu: paketi ALAN en küçük kutu — hacim de ağırlık da tutmalı.
-    const box =
-      byVolume.find(
-        (b) =>
-          fitsInside(unit, b) &&
-          unitVolume <= volumeOf(b.lengthMm, b.widthMm, b.heightMm) * FILL_RATE &&
-          (b.maxContentG === null || unit.packedWeightG! <= b.maxContentG),
-      ) ?? largest;
-    parcels.push({ box, contents: new Map([[unit.variantId, 1]]), weightG: unit.packedWeightG!, volume: unitVolume });
+    const box = smallestBoxFor([unit], boxesByVolume);
+    if (!box) return { ok: false, reason: 'too_large', unmeasured: [], variantId: unit.variantId };
+    bins.push({ box, units: [unit] });
   }
 
   return {
     ok: true,
     unmeasured: [],
-    parcels: parcels.map((p) => ({
-      box: p.box,
-      contents: [...p.contents.entries()].map(([variantId, qty]) => ({ variantId, qty })),
-      // Dara BURADA ekleniyor, biriktirme sırasında değil: ağırlık tavanı İÇERİĞE bakar
-      // (`max_content_g` künyesi), taşıyıcıya bildirilen sayı ise kutuyla birlikte olandır.
-      weightG: p.weightG + p.box.tareG,
-      contentVolumeMm3: p.volume,
-    })),
+    parcels: bins.map((bin) => {
+      const contents = new Map<string, number>();
+      for (const u of bin.units) contents.set(u.variantId, (contents.get(u.variantId) ?? 0) + 1);
+      const contentG = bin.units.reduce((sum, u) => sum + u.weightG, 0);
+      return {
+        box: bin.box,
+        contents: [...contents.entries()].map(([variantId, qty]) => ({ variantId, qty })),
+        // Tavan içeriğe bakar, taşıyıcıya bildirilen ağırlık ise darayla birliktedir.
+        weightG: contentG + bin.box.tareG,
+        contentVolumeMm3: bin.units.reduce((sum, u) => sum + u.volume, 0),
+      };
+    }),
   };
 }
