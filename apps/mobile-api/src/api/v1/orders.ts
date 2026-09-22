@@ -36,13 +36,7 @@ const MAX_PAGE_SIZE = 50;
 const BILINEN_TASIYICILAR = ['colissimo', 'chronopost', 'dhl', 'ups', 'other'] as const;
 
 /**
- * Kargo künyesini sözleşmeye çevirir (07.12).
- *
- * **Neden bir çevirici var:** motor artık koli başına takip döndürüyor (multicollo), sözleşme ise
- * hem yeni listeyi hem de native ekranın hâlâ okuduğu üç eski alanı taşıyor. Eski alanlar İLK
- * koliyi anlatır — ve `carrier` sağlayıcının adını enum'a sıkıştırdığı için çoğu zaman `other`
- * der. Bu bir kayıp ama SESSİZ değil: gerçek ad `carrierName`de, öteki kutular `parcels`ta duruyor
- * ve native o alanlara geçince eski üçlü silinecek (`docs/talep/not-mobil-cok-kutulu-kargo-takibi.md`).
+ * Kargo künyesini sözleşmeye çevirir: yeni koli listesi ve native'in hâlâ okuduğu üç eski alan (ilk koliyi anlatır).
  */
 function toMeShipment(shipment: NonNullable<Awaited<ReturnType<typeof getCustomerOrderDetail>>>['shipment']): MeOrderShipment | null {
   if (!shipment) return null;
@@ -89,13 +83,8 @@ export const orders = new Hono<CustomerEnv>();
 orders.use('*', resolveCustomer);
 
 /**
- * Sipariş listesi — keyset sayfalı, en yeni önce, taslaksız.
- *
- * **Numarasız satır zarfa girmez ve bu SESSİZ değildir.** Referans ilk kalıcı durumda doğuyor
- * (`create_order`/`advance_order`) ve taslak zaten süzülü; yani numarasız bir satır bir ANOMALİDİR.
- * Mobil siparişi referansla adresliyor — numarasız satır ekranda açılamayan bir satır olurdu ve
- * sözleşme onu `min(1)` ile keser. Düşen satır kayda geçer: kimlik yazılır, içerik yazılmaz
- * (CLAUDE §1) ve o kimlikle veritabanına bakılır.
+ * Sipariş listesi — keyset sayfalı, en yeni önce, taslaksız. Numarasız satır zarfa girmez (ekranda açılamazdı) ama kimliğiyle
+ * kayda geçer.
  */
 orders.get('/', async (c) => {
   const parsed = ListQuerySchema.safeParse(c.req.query());
@@ -136,13 +125,8 @@ orders.get('/', async (c) => {
 });
 
 /**
- * Sipariş detayı — sayfanın TAMAMI tek turda (kalemler, çizgi, adres, para; bölüm başına çağrı yok).
- *
- * **Bulunamayan · başkasına ait · taslak — üçü de AYNI cevabı alır** (404 `order_not_found`): ayrım
- * söylenirse deneme yanılmayla başkasının sipariş numarası doğrulatılabilirdi. Karar kapının içinde
- * (`null` döner), burada yalnız HTTP karşılığı veriliyor.
- *
- * Numarasız sipariş buraya HİÇ gelemez: adresin kendisi numaradır.
+ * Sipariş detayı tek turda. Bulunamayan, başkasına ait ve taslak aynı 404'ü alır: ayrım söylenseydi başkasının numarası
+ * deneme yanılmayla doğrulatılabilirdi.
  */
 orders.get('/:reference', async (c) => {
   const locale = PreferredLanguageEnum.safeParse(c.req.query('locale'));

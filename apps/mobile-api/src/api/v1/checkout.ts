@@ -11,7 +11,7 @@ import {
   UNRESOLVED_PLACE,
 } from '@lezzet/application';
 import { CartService, serviceDb, UserProfileService } from '@lezzet/database';
-// Yan etki portu artık ortak dosyada (03.09): kurye uçları da aynı nesneyi geçiriyor.
+// Yan etki portu ortak dosyada: kurye uçları da aynı nesneyi geçirir.
 import { mobileOrderEffects } from '../../lib/order-effects';
 import {
   CheckoutOrderBodySchema,
@@ -93,21 +93,8 @@ checkout.use('*', resolveLocale);
 checkout.use('*', resolveCustomer);
 
 /**
- * Ekranın açılış okuması. Adres DEĞİŞTİKÇE yeniden çağrılır — teslimat da ücret de ödeme yolları da
- * seçilen adrese bağlı; birini değiştirip ötekini eski bırakmak ekranı kendi kendisiyle çelişkiye
- * düşürürdü.
- *
- * `?addressId=` yoksa kapı varsayılan adresi, o da yoksa ilkini seçer — ilk açılışta istemcinin
- * "hangisi varsayılan" sorusunu sorup ikinci bir tura çıkması gerekmesin.
- *
- * `?coupon=` sepette girilen koddur ve BURAYA KADAR taşınmak zorundadır: taşınmadığında ekran
- * kendisiyle çelişiyordu — satırlar ve indirim sepet bağlamından (kuponlu), toplam buradan
- * (kuponsuz) geliyor, üstelik siparişe yazılan tutar da kuponsuz oluyordu; müşteri kuponu kullanmış
- * görünüp TAM FİYAT ödüyordu (web'de ölçülmüş arıza, 29.07).
- *
- * `?group=shipping` bölünmüş sepetin KARGO yarısıdır. Bayrak TÜRETİLMEZ, açıkça gelir (kapının
- * kendi künyesi): türetilseydi ekran adresin cevabını gösterir, siparişi açan taslak kargo siparişi
- * açardı.
+ * Ekranın açılış okuması; teslimat, ücret ve ödeme yolları adrese bağlı olduğu için adres değiştikçe yeniden çağrılır.
+ * `?coupon=` buraya kadar taşınır (yoksa toplam kuponsuz yazılırdı), `?group=shipping` bölünmüş sepetin kargo yarısıdır.
  */
 checkout.get('/', async (c) => {
   const db = serviceDb();
@@ -116,9 +103,7 @@ checkout.get('/', async (c) => {
   // (`entryOfItem`) — iki tür satırın hangi alanı hangi türde taşıdığı bilgisi tek yerde durur.
   const stored = await new CartService(db).get(customerId);
 
-  /* HUNİNİN SON ADIMI BAŞLIYOR (24.08 · MB-63). Web bunu checkout SAYFASINDAN atıyor; native'de
-     sayfa yok, o yüzden ekranın verisini kuran uçtan atılıyor — aynı an, aynı niyet.
-     Depo boyutu snapshot'tan SONRA bilinecek ama olay "başladı" diyor, "nereye" demiyor. */
+  /* Huninin son adımı: native'de checkout sayfası olmadığı için ekranın verisini kuran uçtan atılır. */
   void recordNativeEvent(
     {
       db,
@@ -137,15 +122,7 @@ checkout.get('/', async (c) => {
     addressId: c.req.query('addressId') ?? null,
     couponCode: c.req.query('coupon') ?? null,
     shippingOrder: c.req.query('group') === 'shipping',
-    /* PAKET KAPISI BURADA DA GEÇİLİR (20.08) — `placeOrder` geçiyordu, OKUMA geçmiyordu ve ikisinin
-       ayrışması ekranda ölçüldü: özet paketi listeliyor ve ara toplama katıyor, GENEL TOPLAM ise
-       saymıyordu (92,97 − 6,28 = 86,69 iken ekranda 49,31 €; fark tam olarak paketin 37,38 €'su).
-       Sebebi kapının yokluğu: paket satırı `orphanLine`a düşüyor — adı boş, fiyatı `null`, engelli —
-       ve fiyatsız satır toplama girmiyor. Ekran kendi kendini yalanlıyordu.
-
-       Sipariş AÇILIRKEN kapı zaten geçiliyordu, yani müşteri doğru tutarı ödeyecekti ama ekranda
-       yanlışını görüyordu. İki yerin aynı kapıyı görmesi şart: biri paketi tanıyıp öteki tanımazsa
-       "gördüğüm tutar ile tahsil edilen tutar" bir gün ayrışır. */
+    /* Paket kapısı okumada da geçilir: geçilmezse paket satırı fiyatsız kalır ve ekrandaki toplam tahsil edilecek tutarla ayrışır. */
     bundles: (ids, bundleLocale, place) => getPackagesByIds(db, ids, bundleLocale, place),
   });
 
@@ -153,9 +130,7 @@ checkout.get('/', async (c) => {
   // taşıdığı ama ekranın işi olmayan alanlar (adresin telefonu, alıcı adı) zarfa sızamaz.
   const body: z.input<typeof CheckoutSnapshotSchema> = {
     addresses: snapshot.addresses,
-    // Teslimat dilimi kapıdan OLDUĞU GİBİ geçer — bekleyen komşu daveti dâhil (21.45). Alanın
-    // süzgeci de kapıda: davetin günü seçilebilir günlerden biri değilse orada `null` oluyor,
-    // yani ekran seçilemeyen bir günü hiç görmüyor (`CheckoutDeliverySchema` künyesi).
+    // Teslimat dilimi kapıdan olduğu gibi geçer; seçilemeyen davet günü kapıda zaten `null`a iner.
     delivery: snapshot.delivery,
     payment: snapshot.payment === null ? null : { ...snapshot.payment, codBlockedReason: codReasonOf(snapshot.payment.codBlockedReason) },
     // Döküm de kapıdan OLDUĞU GİBİ geçer: ekranın çizeceği küme ile taslağın tahsil edeceği küme
@@ -167,32 +142,8 @@ checkout.get('/', async (c) => {
 });
 
 /**
- * SİPARİŞİ AÇ — checkout'un yazma yarısı.
- *
- * ── RET BİR HATA DEĞİL, BİR CEVAPTIR ────────────────────────────────────────
- * On beş ret hâlinin hepsi `200` ile ve zarfın `data`sında döner, `error` anahtarıyla DEĞİL. Sebep:
- * her ret müşteriden BAŞKA bir şey istiyor ve çoğu YAPISAL ayrıntı taşıyor — hangi satır engelli,
- * hangi üründen kaç tane kaldı, fiyat neyden neye çıktı, hangi günler açık. `fail()` yalnız bir
- * anahtar taşıyabilir; ayrıntıyı düşürmek müşteriye "olmadı" deyip nedenini yutmak olurdu.
- * Taşıma hataları (bozuk gövde, kimliksizlik) yine `error` tarafındadır — ayrım korunuyor.
- *
- * ── KURAL BURADA DEĞİL ──────────────────────────────────────────────────────
- * Bağlayıcı fiyatın sabitlenmesi, stok ayırma, durum geçişi, sepetin O SİPARİŞİN kalemlerinden
- * temizlenmesi ve ödeme niyetinin açılması `@lezzet/application`ın `placeOrder`ında — web checkout'u
- * AYNI kapıyı çağırıyor. Bu dosya gövdeyi süzer, niyeti sunucudan okur, iki portu geçer ve cevabı
- * sözleşme şekline indirger.
- *
- * ── ÜÇ PORT GEÇİLİR ─────────────────────────────────────────────────────────
- * · `bundles` — paket çözümü (terfi 09.08). Geçilmezse paket satırı ENGELLİ görünür ve sepetinde
- *   paket olan müşteri sipariş veremezdi.
- * · `createPaymentSession` — sağlayıcı kapısı (`lib/stripe`). `null` = anahtar yok; `placeOrder`
- *   bunu `provider_unavailable` diye okur ve "ödendi" ile KARIŞTIRMAZ.
- * · `effects` — durum haberi + sipariş puanı (`mobileOrderEffects`). Bir süre GEÇİLMİYORDU ve
- *   sonucu ölçülmüş bir ayrışmaydı: webden verilen kapıda/vadeli ödemeli siparişte müşteriye
- *   "siparişiniz alındı" maili gidiyor, mobilden verilende GİTMİYORDU (online ödemede gidiyordu,
- *   çünkü Stripe webhook'u web köprüsünden geçiyor — arıza tek bir dala saklanmıştı). Engel
- *   gönderimin `apps/web` içinde olmasıydı; 21.21'de `@lezzet/application`a terfi etti ve port
- *   doldu.
+ * Siparişi açar: kural `placeOrder`dadır (web aynı kapıyı çağırır), burası gövdeyi süzer, niyeti sepetten okur, portları geçer.
+ * Retler `200` ile `data`da döner, çünkü her biri müşteriden başka bir düzeltme ister ve yapısal ayrıntı taşır.
  */
 checkout.post('/order', async (c) => {
   const body = CheckoutOrderBodySchema.safeParse(await readJsonBody(c));
@@ -216,18 +167,8 @@ checkout.post('/order', async (c) => {
     effects: mobileOrderEffects(db),
   });
 
-  /* SÖZLEŞMENİN KİLİDİ: kapının birliği `z.input<>` ile TİPLENİR. Birlik bilerek DÜZ ve sözleşmeye
-     yakın kuruldu (kapının kendi künyesi) — taslağın on iki ret hâli BİREBİR geçiyor, elle eşleme
-     YOK. Kapı yarın bir hâl eklerse burası DERLENMEZ ve fark edilir; elle yazılmış bir `switch`
-     olsaydı yeni hâl sessizce eski bir cümleye düşerdi. `parse` de süzgeç: kapının taşıdığı ama
-     ekranın işi olmayan alanlar zarfa sızamaz. */
-  /* HUNİNİN KAPANIŞI (24.08 · MB-63) — iki olay, tek yer.
-     `order_placed` `ANALYTICS §1`in TEK bilinçli istisnası: sipariş kendi tablosunda zaten duruyor
-     ama huniyi defterde kapatmanın öteki yolu oturum anahtarını siparişe yazmaktı. İstisna
-     mahremiyeti bozan değil, KORUYAN seçenek — tutar ve müşteri taşımaz, yalnız "oturum siparişle
-     bitti" der.
-     Ret eşlemesi ortak kapıdan (`checkoutBlockedAnalyticsReason`): hangi retlerin ölçülmediği ve
-     NEDEN ölçülmediği orada yazılı — `price_changed` engel değil, onay yenilemesidir. */
+  /* Kapının birliği `z.input<>` ile tiplenir: kapı yeni bir hâl eklerse burası derlenmez; `parse` ekranın işi olmayan alanları süzer.
+     Huninin kapanışı: `order_placed` tutar ve müşteri taşımaz, ret eşlemesi `checkoutBlockedAnalyticsReason`tadır. */
   const olcumCtx = {
     db,
     channel: c.get('channel'),
@@ -248,14 +189,8 @@ checkout.post('/order', async (c) => {
 });
 
 /**
- * Kapının `codBlockedReason`u bugün ham `string | null`; sözleşme onu ÜÇ değere daraltıyor
- * (`over_limit` · `customer_blocked` · `shipping`) çünkü ekran her biri için AYRI cümle kuruyor —
- * "bu tutarda kapıda ödeme sunulamıyor" ile "kargoda kapıda ödeme yok" aynı şey değil ve
- * birincisinde müşteri sepetini küçültüp yöntemi açabilir.
- *
- * Tanınmayan değer `null`a düşer, uydurulmuş bir sebebe DEĞİL: yanlış bir cümle, cümlesizlikten
- * kötüdür — müşteriyi düzeltemeyeceği bir şeyi düzeltmeye uğraştırırdı. Kapı bir gün dördüncü bir
- * sebep eklerse yöntem yine kapalı görünür, yalnız gerekçesi yazılmaz.
+ * Kapıda ödeme engelinin sebebi üç değere daralır, çünkü ekran her biri için ayrı cümle kurar. Tanınmayan değer `null`a düşer:
+ * yanlış cümle cümlesizlikten kötüdür.
  */
 function codReasonOf(reason: string | null): 'over_limit' | 'customer_blocked' | 'shipping' | null {
   return reason === 'over_limit' || reason === 'customer_blocked' || reason === 'shipping' ? reason : null;

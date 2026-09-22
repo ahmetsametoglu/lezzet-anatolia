@@ -66,25 +66,8 @@ import { entryOfWrite, localeOf, readCartView, type CartRead } from './cart-view
 */
 
 /**
- * VARYANT satırının ADRESİ bir çifttir: varyant + parti. Teklif satırı normal satırdan ayrı yaşar
- * (DOMAIN §5), o yüzden `stockId` bir ayrıntı değil adresin parçasıdır — yol parçası + sorgu olarak
- * taşınır (`/items/:variantId?stock=…`). Gövdeye koymak, `DELETE`in gövdeli olmasını gerektirirdi.
- *
- * ── PAKET SATIRI DA BU ADRESLE ANILIR (borç KAPANDI, 20.08) ─────────────────
- * Paketin varyantı YOKTUR; adresi `bundleId`dir ve yol parçası artık ikisini de taşıyor
- * (`/items/:lineId`, paket için `?kind=bundle`). Servis imzası satır anahtarına geçtiği için
- * (`CartRef`) azaltma ve silme paket satırında da çalışıyor.
- *
- * KAPATILMASININ SEBEBİ BİR NOT DEĞİL, ÖLÇÜLMÜŞ ZARARDI (cihazda 20.08): mobil paketi sunucuya
- * yazamadığı için cihazda tutuyordu; sunucu görmediğini toplayamıyor ve müşterinin sepetinde
- * 96,92 € dururken alttaki bar 14,85 €, asgari sepet uyarısı "22,54 € eksik" diyor, sipariş düğmesi
- * kilitli kalıyordu. Web ise paketi sunucuya yazıyor (`cart.replace` → `itemOfEntry`), yani
- * 09.08'in "telefonda doldurulan sepet webde açılır" sözü de yalnız paketlerde tutmuyordu.
- *
- * Buraya bir okuma+yeniden yazma (`CartService.replace` ile) YAZILMADI ve bu bilinçli: "sıfır adet
- * satırı siler" ile "aynı satır ikinci kez eklenince adet birleşir" kuralları servisin kendisinde
- * duruyor (`cart.service.ts` künyesi, web sepetiyle TEK kural) — taşıma katmanında ikinci bir kopya,
- * iki yüzeyin bir gün farklı davranması demekti.
+ * Satırın adresi bir çift: varyant + parti (teklif satırı ayrı yaşar), paket satırında `bundleId` (`?kind=bundle`). Yol parçası
+ * ve sorgu olarak taşınır, `DELETE` gövdeli olmasın; birleştirme ve silme kuralları servistedir, burada kopyası yoktur.
  */
 const LineKeySchema = z.union([
   z.object({ kind: z.literal('variant'), variantId: ProductVariantSchema.shape.id, stockId: StockSchema.shape.id.nullable() }),
@@ -99,13 +82,7 @@ interface CustomerEnv {
 }
 
 /**
- * `?locale=` YAZMADAN ÖNCE çözülür — sıra bilinçli.
- *
- * Cevap artık çözülmüş görünüm, yani her uç dile ihtiyaç duyuyor. Dili uç gövdesinde okusaydık
- * eksik dilli bir `POST /items` isteği sepeti DEĞİŞTİRİP sonra 400 dönerdi: istemci "istek
- * başarısız" diye okur, sepette ise satır durur. Middleware'de süzülünce yazma hiç başlamaz.
- *
- * Zorunlu ve varsayılansız (gerekçe `cart-view.ts` → `localeOf`).
+ * `?locale=` yazmadan önce çözülür: dilsiz bir yazma isteği sepeti değiştirip sonra 400 dönmesin. Zorunlu ve varsayılansız.
  */
 async function resolveLocale(c: Context<CustomerEnv>, next: Next): Promise<Response | void> {
   const locale = localeOf(c);
@@ -115,10 +92,7 @@ async function resolveLocale(c: Context<CustomerEnv>, next: Next): Promise<Respo
 }
 
 /**
- * Profil çözümü TEK middleware'de (adres/puan uçlarının deseni birebir). Profili olmayan auth
- * kullanıcısı `/me` ailesinin ortak cevabını alır (`profile_not_found`, 404): `cart.customer_id`
- * `user_profiles`a FK'lidir — auth kimliğiyle yazmak sepeti sessizce kaybettirirdi (web'de
- * ölçülmüş arıza, 28.07).
+ * Profil çözümü tek middleware'de; profili olmayan kullanıcı `profile_not_found` alır, çünkü sepet profile FK'lidir.
  */
 async function resolveCustomer(c: Context<CustomerEnv>, next: Next): Promise<Response | void> {
   const profile = await new UserProfileService(serviceDb()).findByAuthUserId(c.get('authUser').id);
@@ -129,17 +103,8 @@ async function resolveCustomer(c: Context<CustomerEnv>, next: Next): Promise<Res
 }
 
 /**
- * Gövdenin satırlarını sepet kalemine çevirir — **fiyat SUNUCUNUNDUR, gövdenin değil** (bu yüzden
- * `unitPrice` verilmez, `itemOfEntry`nin 0 varsayılanı kalır; gerekçe dosya başlığında). Ekleme ile
- * devir aynı eşlemeyi kullanır — iki yerde yazılsaydı biri bir gün ötekinden geride kalırdı.
- *
- * **İKİ ADIM, İKİSİ DE ORTAK KAPI:** gövde → niyet (`entryOfWrite`, sepet ailesinin tek eşlemesi)
- * → saklanan kalem (`itemOfEntry`, `@lezzet/application`). Boş alan burada elle YAZILMAZ: paket
- * satırında `variantId`/`stockId`, varyant satırında `bundleId` null'a düşürmek `itemOfEntry`nin
- * işidir ve o kural web'in yazma yolunda da aynı yerden geliyor. Elle yazılsaydı birleşimin hangi
- * alanı hangi türde taşıdığı bilgisi ikinci bir yere daha dağılırdı (`CartEntry` künyesinin uyardığı
- * tuzak) — türü kimlik alanının VARLIĞINDAN çıkaran bir satır, paket satırını bir gün varyant
- * satırına çevirir.
+ * Gövde satırlarını sepet kalemine çevirir; fiyat sunucunundur, gövdenin değil. Eşleme ortak kapılardan geçer (`entryOfWrite`,
+ * `itemOfEntry`), boş alanları elle yazmak paket satırını bir gün varyant satırına çevirirdi.
  */
 function incomingOf(items: readonly z.infer<typeof MeCartItemWriteSchema>[]) {
   return items.map((item) => itemOfEntry(entryOfWrite(item)));
@@ -170,21 +135,8 @@ cart.use('*', resolveLocale);
 cart.use('*', resolveCustomer);
 
 /**
- * SAKLANAN SEPET → ÇÖZÜLMÜŞ GÖRÜNÜM — beş ucun ORTAK kuyruğu.
- *
- * Her uç kendi eşlemesini yazsaydı biri bir gün ötekinden geride kalırdı; özellikle
- * `previousPrices`: geçilmeyen tek uçta zam bildirimi sessizce doğmaz ve müşteri artmış fiyatı
- * uyarısız görür. Yer (`?postalCode=`) ve kupon (`?coupon=`) da her uçta okunur — yazma sonrası
- * dönen görünüm, `GET`in döndüreceğiyle birebir aynı olmalı.
- *
- * ── DÖNÜŞÜ TELE OLDUĞU GİBİ VERME: `.body` ÇIKAR ────────────────────────────
- * `CartRead` ÜÇ parça taşıyor (`body` · `source` · `place`) ve yalnız ilki müşterinindir; `source`
- * sepetin iç karar nesnesi, `place` depo çözümüdür. **`ok()` gevşek tipli, tamamını göndermek
- * DERLEMEDE HATA VERMEZ** — ve tam bu yüzden yaşandı: 25.08'de beş uçtan ÜÇÜ (`PATCH` · `DELETE` ·
- * `takeover`) `.body`yi atlıyordu ve ikisini istemciye sızdırıyordu. Aynı sınıftan bir sızıntı bir
- * gün önce `cart-view`da gözle yakalanıp düzeltilmiş, kardeşleri görülmemişti.
- * Koruma artık `cart.test.ts`te: beş ucun beşi de `source`/`place` taşımadığı için ayrı ayrı
- * sınanıyor. Yeni bir uç eklerken `.body` unutulursa orada kırmızı yanar.
+ * Saklanan sepetten çözülmüş görünüm, beş ucun ortak kuyruğu. Yalnız `.body` tele gider: `source` ve `place` sunucuda kalır
+ * ve `ok()` gevşek tipli olduğu için unutulması derlemede yakalanmaz (`cart.test.ts` sınar).
  */
 async function viewOf(c: Context<CustomerEnv>, db: Db, stored: Cart): Promise<CartRead> {
   return readCartView(db, c.get('locale'), stored.items.map(entryOfItem), {
@@ -205,12 +157,8 @@ cart.get('/', async (c) => {
 });
 
 /**
- * Satır ekleme. Aynı adres (varyant + parti) zaten sepetteyse ADET BİRLEŞİR, ikinci satır açılmaz —
- * kural servisin (`addItems`), burada tekrarlanmaz.
- *
- * **GÖVDE HER ZAMAN LİSTE**, tek ürün bile (09.08): sepet tek satırda yaşıyor ve her ekleme onu
- * okuyup geri yazıyor; eşzamanlı gelen istekler birbirini eziyordu (ölçüldü: eşzamanlı üç ekleme →
- * 1–2 satır). Bir kullanıcı eylemi tek yazma turuna indi. Gerekçe `MeCartAddBodySchema`da.
+ * Satır ekleme: aynı adres zaten sepetteyse adet birleşir (kural servisin). Gövde her zaman liste, bir kullanıcı eylemi tek yazma
+ * turu olsun, eşzamanlı istekler birbirini ezmesin.
  */
 cart.post('/items', async (c) => {
   const body = MeCartAddBodySchema.safeParse(await c.req.json().catch(() => null));
@@ -224,24 +172,8 @@ cart.post('/items', async (c) => {
 });
 
 /**
- * SEPET TURUNUN ÖLÇÜMÜ (24.08 · MB-63) — iki olay, tek yer.
- *
- * **`add_to_cart` niyeti İSTEMCİ BEYANIDIR** (`ANALYTICS §3`): sepet ucu bir EŞİTLEME ucudur,
- * "az önce ne oldu" bilgisi yalnız istemcide var. Beyan-edilmiş olay gözlenen olay değildir —
- * sayısı sepet satırlarıyla tutmaz ve bu bir arıza değil.
- *
- * **`cart_blocked` bir DURUM değil bir AN olarak yazılır** (web kapısının aynı kararı): engel her
- * okumada var olabilir, ama burası müşterinin sepetini DEĞİŞTİRDİĞİ an. Her okumada atsaydık aynı
- * engel onlarca kez sayılır ve huninin en kıymetli olayı gürültüye dönerdi.
- *
- * ── `productId` ÇÖZÜLÜYOR, ve bu WEB'DEN BİLİNÇLİ BİR AYRILIK ───────────────
- * Web `productId: null` geçiyor (`lib/cart/actions.ts`) çünkü `AddToCartIntent` ürünü taşımıyor.
- * Ama günlük ürün özeti satırları **gruplamadan ÖNCE** `product_id is not null` ile eliyor
- * (`build_analytics_daily_product`), yani `cart_count` yapısal olarak SIFIR kalıyor — "ilgi sepete
- * dönüşüyor mu" sorusu hiç cevaplanamıyor. Ölçüldü 24.08; web'e not bırakıldı.
- * Native aynı boşluğu tekrarlamıyor: varyantın ürünü TEK okumada çözülüyor (`listByIds`, kimlik
- * başına sorgu yok). PAKET satırında `productId` yine null — paket bir ürün değil, ürünlerin
- * demeti; birine atfetmek ürün özetini yanlış beslerdi (paket detayının aynı kararı).
+ * Sepet turunun ölçümü: `add_to_cart` istemci beyanıdır, `cart_blocked` her okumada değil sepetin değiştiği anda yazılır.
+ * `productId` çözülür, yoksa günlük ürün özeti sepete eklemeyi hiç saymazdı; paket satırında `null` kalır.
  */
 async function measureCartWrite(
   c: Context<CustomerEnv>,
@@ -306,15 +238,7 @@ cart.delete('/items/:lineId', async (c) => {
 });
 
 /**
- * MİSAFİR SEPETİNİN DEVRİ — cihazda biriken satırlar giriş anında müşterinin sepetiyle BİRLEŞİR.
- *
- * Birleştirme mantığı BURADA YAZILMAZ: `CartService.takeOver` tam da bunun için var (07.1) ve
- * web'in giriş yolu da onu çağırıyor — sunucudaki sepet KORUNUR, gelen kalemler üstüne eklenir,
- * çakışan satırda adetler toplanır. İkinci bir birleştirme yazmak, iki yüzeyin girişte farklı
- * davranması demekti.
- *
- * BOŞ LİSTE de geçerli bir gövdedir ve sepeti aynen döndürür: istemcinin "devredilecek bir şey var
- * mı" sorusunu kendi cevaplayıp uca hiç gelmemesi gerekmez, ama geldiğinde de bir şey bozulmaz.
+ * Misafir sepetinin girişte devri: birleştirme `CartService.takeOver`da, web de onu çağırır. Boş liste geçerli bir gövdedir.
  */
 cart.post('/takeover', async (c) => {
   const body = MeCartTakeOverBodySchema.safeParse(await c.req.json().catch(() => null));
