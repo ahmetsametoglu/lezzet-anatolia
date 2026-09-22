@@ -59,7 +59,8 @@ let musteriId = '';
 let token = '';
 let yabanciToken = '';
 let addressId = '';
-const gun = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+/* Teslim günü sunucunun listesinden alınır: kesim saati geçince en erken gün kayar ve sabit "yarın" akşamları reddedilirdi. */
+let gun = '';
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'ACK' })).id;
@@ -82,6 +83,9 @@ beforeAll(async () => {
   profileIds.push(yabanci.profileId);
   yabanciToken = yabanci.token;
   addressId = (await new AddressService(db).insert({ customerId: musteriId, recipient: 'Açık Ödeme', phone: '+33600000000', line1: '1 rue du Test', postalCode: kod, city: 'Strasbourg' })).id;
+  await new CartService(db).replace(musteriId, [{ variantId, qty: 1, stockId: null, unitPrice: 60 }]);
+  const snapshot = (await (await istek(`/checkout?addressId=${addressId}`)).json()) as { data: { delivery: { availableDates: string[] } } };
+  gun = snapshot.data.delivery.availableDates[0]!;
 });
 
 beforeEach(async () => {
