@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { customerChannelsOf } from './customer-channels';
+import { customerChannelsOf, linkedChannelsOf } from './customer-channels';
 
-// 15.32 — "müşteri bizimle hangi kanallardan, en son hangisinden yazıştı". İki yüzey (operasyon web'i,
-// native kurye ekranı) aynı cevabı okumalı; bu yüzden karar burada ve burada sınanıyor.
+// Operasyon web'i ve native aynı "son kanal" cevabını okumalı; karar burada sınanır.
 
 const c = (id: string, source: string, lastInboundAt: string | null, lastMessageAt: string | null) => ({
   id,
@@ -71,5 +70,33 @@ describe('customerChannelsOf — WhatsApp sohbetini biz açabilir miyiz', () => 
   it('telefon yok ya da boş → açılamaz', () => {
     expect(customerChannelsOf({ conversations: [], phone: null }).canStartWhatsapp).toBe(false);
     expect(customerChannelsOf({ conversations: [], phone: '   ' }).canStartWhatsapp).toBe(false);
+  });
+});
+
+describe('müşterinin bağlı kanalları', () => {
+  const sources = ['whatsapp', 'messenger', 'instagram'] as const;
+  const chat = (source: string, linkedAt: string | null, createdAt: string) => ({ source, linkedAt, createdAt });
+
+  it('her kanal sabit sırada tek satır; sohbeti olmayan kanal bağlı değil', () => {
+    const rows = linkedChannelsOf({ sources, conversations: [chat('messenger', '2026-09-10T10:00:00Z', '2026-09-01T00:00:00Z')], whatsappNumbers: [] });
+    expect(rows.map((r) => [r.source, r.linked])).toEqual([
+      ['whatsapp', false],
+      ['messenger', true],
+      ['instagram', false],
+    ]);
+  });
+
+  it('WhatsApp doğrulanmış numarayla sohbet açılmadan da bağlıdır', () => {
+    const [whatsapp] = linkedChannelsOf({ sources, conversations: [], whatsappNumbers: ['+33612345678'] });
+    expect(whatsapp).toEqual({ source: 'whatsapp', linked: true, since: null, numbers: ['+33612345678'] });
+  });
+
+  it('aynı kanalda birden çok sohbet varsa tarih ilk bağlanmadır; bağlanma anı yoksa sohbetin açılışı', () => {
+    const [, messenger] = linkedChannelsOf({
+      sources,
+      conversations: [chat('messenger', '2026-09-12T00:00:00Z', '2026-09-01T00:00:00Z'), chat('messenger', null, '2026-09-05T00:00:00Z')],
+      whatsappNumbers: [],
+    });
+    expect(messenger?.since).toBe('2026-09-05T00:00:00Z');
   });
 });

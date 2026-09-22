@@ -1,14 +1,6 @@
 /**
- * **Müşterinin sohbet kanalları** (15.32 · kullanıcı isteği 14.09) — saf karar, I/O yok.
- *
- * Kullanıcının sorusu: *"müşterinin bizimle hangi kanallardan irtibat kurduğunu, en son hangisinden
- * kurduğunu bilmeliyiz"*. Cevap ayrı bir kolonda DURMAZ, müşterinin sohbet satırlarından TÜRER
- * (`conversation.customer_id` + `last_inbound_at`, 0039): "son kanal" saklansaydı her gelen mesajda iki
- * yere yazılır ve bir gün ayrışırdı.
- *
- * Kural burada, çünkü iki yüzey okuyor: operasyon web'i (sipariş · müşteri kartı · talep) ve native
- * uygulamanın kurye/yönetim ekranları. Sıralamayı her yüzey kendisi yazsaydı biri "son mesaj", öteki "son
- * gelen mesaj" derdi ve aynı müşteri iki ekranda iki ayrı "son kanal" gösterirdi.
+ * Müşterinin sohbet kanalları — saf karar. Cevap ayrı kolonda durmaz, sohbet satırlarından türer, çünkü saklanan "son kanal" her
+ * gelen mesajda iki yere yazılır ve ayrışırdı; operasyon ve native aynı sıralamayı okusun diye kural burada.
  */
 
 /** Karara gereken alanlar — `Conversation`ın alt kümesi; `types` paketine bağlanılmaz (STACK §4). */
@@ -35,9 +27,8 @@ export interface CustomerChannelSet<T extends ChannelConversation> {
 }
 
 /**
- * Ölçüt son GELEN mesaj: bizim son cevabımız müşterinin o kanalda "görünmesi" değildir. Hiç yazmadığı
- * kanal yazdığı kanalların arkasına düşer, kendi aralarında son harekete göre dizilir ve "en son"
- * SAYILMAZ — işaret yalnız müşterinin gerçekten yazdığı kanala konur. Çağıranın dizisine dokunmaz.
+ * Ölçüt son gelen mesaj, çünkü bizim son cevabımız müşterinin o kanalda görünmesi değildir; hiç yazmadığı kanal arkaya düşer ve
+ * "en son" sayılmaz. Çağıranın dizisine dokunmaz.
  */
 export function customerChannelsOf<T extends ChannelConversation>(input: {
   conversations: readonly T[];
@@ -53,4 +44,30 @@ export function customerChannelsOf<T extends ChannelConversation>(input: {
     channels,
     canStartWhatsapp: Boolean(input.phone?.trim()) && !channels.some((c) => c.source === 'whatsapp'),
   };
+}
+
+/** Müşteriye gösterilen kanal satırı: bağlı mı, ne zamandan beri, WhatsApp'ta hangi numaralarla. */
+export interface LinkedChannel<S extends string> {
+  source: S;
+  linked: boolean;
+  /** İlk bağlanma anı; `null` = sohbet yok (WhatsApp numarası sohbetten önce doğrulanmış olabilir). */
+  since: string | null;
+  numbers: string[];
+}
+
+/**
+ * Hesap ekranının kanal listesi: her kanal sabit sırada tek satır, bağlı olmasa da, çünkü bağlı olmayan satır bağlanma yolunu
+ * söyler. WhatsApp numarayla da bağlı sayılır, çünkü doğrulanmış numara sohbet açılmadan önce de müşteriyi tanıtır.
+ */
+export function linkedChannelsOf<S extends string>(input: {
+  sources: readonly S[];
+  conversations: readonly { source: string; linkedAt: string | null; createdAt: string }[];
+  whatsappNumbers: readonly string[];
+}): LinkedChannel<S>[] {
+  return input.sources.map((source) => {
+    const starts = input.conversations.filter((c) => c.source === source).map((c) => c.linkedAt ?? c.createdAt);
+    const numbers = source === 'whatsapp' ? [...input.whatsappNumbers] : [];
+    const since = starts.length === 0 ? null : starts.reduce((a, b) => (a < b ? a : b));
+    return { source, linked: since !== null || numbers.length > 0, since, numbers };
+  });
 }
