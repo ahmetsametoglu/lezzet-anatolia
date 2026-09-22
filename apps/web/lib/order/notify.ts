@@ -7,16 +7,8 @@ import type { NotifyResult } from '@lezzet/notify';
 import type { OrderStatus } from '@lezzet/types';
 
 /**
- * Sipariş bildirimlerinin tetiklendiği yer (14.5) — **köprü**.
- *
- * Gövde `@lezzet/application`'ın `order/notify`sine taşındı (terfi 21.21): hangi geçişin hangi
- * haberi doğurduğu, "geçiş başına tek mail" kuralı ve gönderim hatasının yutulması ORADA — künyeler
- * de orada. Taşınma gerekçesi ölçülmüş bir arıza: `apps/mobile-api` bu dosyayı import edemediği için
- * `placeOrder`a `effects` geçiremiyordu ve mobilden verilen kapıda/vadeli ödemeli siparişte onay
- * maili hiç gitmiyordu. İki yüzeyde iki bildirim kuralı olamaz.
- *
- * Köprünün taşıdığı tek şey `serviceDb()` — pakette `db` çağırandan gelir. Web çağıranlarının
- * (`transition`, `fulfillment`, `refund` + testleri) imzası değişmedi.
+ * Paketin `order/notify` kapılarına köprü: kural ve gönderim hatasının yutulması orada, iki yüzeyde iki bildirim kuralı olmasın.
+ * Köprünün taşıdığı tek şey `serviceDb()`.
  */
 export function notifyOrderStatus(orderId: string, status: OrderStatus): Promise<NotifyResult[]> {
   return notifyOrderStatusFor(serviceDb(), orderId, status);

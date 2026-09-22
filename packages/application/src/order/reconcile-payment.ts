@@ -7,16 +7,8 @@ import { confirmOnlinePayment, type ConfirmPaymentDeps } from './confirm-payment
 import type { PaymentSnapshot } from './payment-gateway';
 
 /**
- * **"Sağlayıcıya sor" kapısı** (07.18) — ödemesi beklenen kart taslağını sağlayıcının cevabına göre
- * netleştirir: ödendiyse onaylar, banka işliyorsa bekler, ödeme gelmeyecekse ödemeyi ve taslağı iptal eder.
- *
- * Neden var: siparişe dönüşün tek yolu webhook'tu. Olay gelmediğinde (tünel kapalı, uç yanlış
- * yapılandırılmış, sağlayıcı gecikmesi) taslak süresiz "onaylanıyor"da kalıyor, 30 dakika sonra stok
- * ayırması düşse de sipariş ne onaylanıyor ne iptal ediliyordu; müşteri yeniden ödeyince eski ödeme
- * durdurulamıyordu. Webhook artık bir HIZLANDIRICI: gelirse sipariş saniyesinde onaylanır, gelmezse
- * ödeme sayfası ve zamanlayıcı bu kapıdan sorar. Onay yolu tek (`confirmOnlinePayment`).
- *
- * Karar saf motorda (`decideDraftPayment`); burası sorar, kararı uygular.
+ * Ödemesi beklenen kart taslağını sağlayıcının cevabına göre netleştirir: ödendiyse onaylar, banka işliyorsa bekler, ödeme
+ * gelmeyecekse ödemeyi ve taslağı iptal eder. Webhook yalnız hızlandırıcıdır; gelmezse onay sayfası ve zamanlayıcı buradan sorar.
  */
 
 export type ReconcileOutcome =
@@ -91,7 +83,7 @@ export async function reconcileDraftPayment(db: Db, orderId: string, deps: Confi
   return { status: 'cancelled', payment };
 }
 
-/** Yeni ödeme açılmadan önce bulunan açık ödeme (07.18) — `openPaymentBefore`ın cevabı. */
+/** Yeni ödeme açılmadan önce bulunan açık ödeme; `openPaymentBefore`ın cevabı. */
 export interface OpenPayment {
   orderId: string;
   /** `paid`: önceki ödeme geçti ve sipariş onaylandı · `processing`: banka hâlâ işliyor. */
@@ -99,11 +91,8 @@ export interface OpenPayment {
 }
 
 /**
- * **Yeni ödeme açılmadan ÖNCE müşterinin açık ödemesi** (07.18). Önceki ödeme geçtiyse ya da bankada
- * işleniyorsa yeni bir ödeme açmak aynı sepet için iki kez çekim demekti — müşteri "onaylanıyor"
- * ekranını kapatıp sepetine döndüğünde sepet dolu duruyor. Geçtiyse sipariş burada onaylanır (aynı onay
- * yolu) ve müşteri onun sayfasına gider; işleniyorsa sonucu beklemesi söylenir. Ödenmemişse `null`: yeni
- * deneme eski taslağı süpürür ve eski ödemeyi sağlayıcıda iptal eder (`placeOrder`).
+ * Önceki ödeme geçtiyse ya da bankada işleniyorsa yeni ödeme açmak aynı sepet için iki çekim olurdu: geçtiyse sipariş burada
+ * onaylanır, işleniyorsa müşteri bekletilir. Ödenmemişse `null`; yeni deneme eski taslağı ve ödemesini kapatır (`placeOrder`).
  */
 export async function openPaymentBefore(db: Db, customerId: string, deps: ConfirmPaymentDeps): Promise<OpenPayment | null> {
   const draft = await new OrderService(db).findOpenOnlineDraft(customerId);
@@ -117,12 +106,8 @@ export async function openPaymentBefore(db: Db, customerId: string, deps: Confir
 }
 
 /**
- * **Ödeme zamanlayıcısının turu** (07.18) — ödeme penceresi kapanmış kart taslaklarını sağlayıcıya sorar.
- *
- * Yalnız penceresi KAPANMIŞ taslaklar sorulur: pencere açıkken müşteri hâlâ ödeme adımında olabilir ve
- * her dakika her taslak için sağlayıcıya soru atmak boşuna bir yük olurdu (açık penceredeki taslağı onay
- * sayfası kendisi soruyor). Satırlar birbirinden bağımsız: biri düşerse iz bırakılır, tur sürer —
- * bir satırın arızası ötekilerin netleşmesini bekletmemeli.
+ * Ödeme zamanlayıcısının turu: yalnız penceresi kapanmış taslaklar sorulur, açık penceredekini onay ekranı kendisi soruyor. Satırlar
+ * bağımsızdır; biri düşerse iz bırakılır ve tur sürer.
  */
 export async function sweepUnpaidDrafts(
   db: Db,
