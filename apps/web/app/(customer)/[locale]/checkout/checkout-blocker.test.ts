@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckoutSnapshot } from '@lezzet/application';
-import { checkoutBlocker } from './checkout-types';
+import { checkoutBlocker, servicePointMissing } from './checkout-types';
 
 /**
  * Siparişin verilememe sebebi — iki ekranın (özet kartı + kart ödemesi formu) TEK cevabı.
@@ -77,5 +77,10 @@ describe('checkoutBlocker', () => {
   it('kalem sorunu asgari sepetten önce gelir', () => {
     const snapshot = snapshotOf({ payment: { ...payment, minBasketOk: false } });
     expect(checkoutBlocker({ ...OK, cartHasBlocked: true, snapshot })).toBe('undeliverable_line');
+  });
+
+  it('teslim noktası seçilip nokta seçilmediyse onaylanamaz — sipariş sessizce eve gitmez', () => {
+    expect(checkoutBlocker({ ...OK, pointMissing: servicePointMissing({ shippingMode: 'point', servicePoint: null }) })).toBe('service_point_missing');
+    expect(checkoutBlocker({ ...OK, pointMissing: servicePointMissing({ shippingMode: 'home', servicePoint: null }) })).toBeNull();
   });
 });
