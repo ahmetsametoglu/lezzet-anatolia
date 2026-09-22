@@ -86,3 +86,4 @@ export * from './catalog/storage';
 export * from './content/user-text';
 export * from './observability/health-status';
 export * from './printing/paper';
+export { PICKUP_WAIT_DAYS_DEFAULT, PICKUP_WAIT_DAYS_KEY } from './delivery/pickup-wait';

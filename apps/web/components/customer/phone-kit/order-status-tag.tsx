@@ -12,6 +12,7 @@ import type { CustomerOrderStatus } from '@lezzet/types';
 const TONE = {
   received: 'bg-olive-bg text-olive-dark',
   preparing: 'bg-terracotta-bg text-terracotta',
+  ready_for_pickup: 'bg-terracotta-bg text-terracotta',
   on_the_way: 'bg-terracotta-bg text-terracotta',
   delivered: 'bg-closed-bg text-closed',
   cancelled: 'bg-error-bg text-error',

@@ -50,6 +50,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | `price_rule_percent` | numeric(6, 2) | • |  |
 | `price_group_id` | uuid | • |  |
 | `cod_allowed` | boolean |  | `true` |
+| `pickup_allowed` | boolean |  | `false` |
 | `marketing_consent` | jsonb |  | `'{}'::jsonb` |
 | `notification_consent` | jsonb |  | `'{}'::jsonb` |
 | `notification_token` | text | • |  |

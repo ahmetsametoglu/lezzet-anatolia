@@ -7,32 +7,40 @@ describe('customerOrderStatus', () => {
     // Enum'dan türetiliyor: elle liste tutsaydık, yeni bir durum eklendiğinde bu test sessizce
     // eksik kalırdı ve müşteri ekranı bilinmeyen bir hâlle karşılaşırdı.
     for (const status of OrderStatusEnum.options) {
-      expect(() => customerOrderStatus(status)).not.toThrow();
+      expect(() => customerOrderStatus(status, 'route')).not.toThrow();
     }
   });
 
   it('taslak müşteriye GÖSTERİLMEZ — uydurma bir hâl verilmez', () => {
-    expect(customerOrderStatus('draft')).toBeNull();
+    expect(customerOrderStatus('draft', 'route')).toBeNull();
   });
 
   it('operasyonun "hazır" ayrımı müşteriye sızmaz', () => {
-    expect(customerOrderStatus('preparing')).toBe('preparing');
-    expect(customerOrderStatus('ready')).toBe('preparing');
+    expect(customerOrderStatus('preparing', 'route')).toBe('preparing');
+    expect(customerOrderStatus('ready', 'route')).toBe('preparing');
   });
 
   it('muhasebe kapanışı ("completed") müşteriye teslim edildi görünür', () => {
-    expect(customerOrderStatus('delivered')).toBe('delivered');
-    expect(customerOrderStatus('completed')).toBe('delivered');
+    expect(customerOrderStatus('delivered', 'route')).toBe('delivered');
+    expect(customerOrderStatus('completed', 'route')).toBe('delivered');
   });
 
   it('iptal ve iade kendi hâllerini korur', () => {
-    expect(customerOrderStatus('cancelled')).toBe('cancelled');
-    expect(customerOrderStatus('returned')).toBe('returning');
+    expect(customerOrderStatus('cancelled', 'route')).toBe('cancelled');
+    expect(customerOrderStatus('returned', 'route')).toBe('returning');
   });
 
   it('müşteri kümesi altı hâlden ibarettir — daralma gerçekten oluyor', () => {
-    const seen = new Set(OrderStatusEnum.options.map(customerOrderStatus).filter(Boolean));
+    const seen = new Set(OrderStatusEnum.options.map((status) => customerOrderStatus(status, 'route')).filter(Boolean));
     expect(seen.size).toBe(6);
+  });
+
+  it('gel-al\'da "hazır" müşterinin beklediği andır — rota/kargoda değil (aksi hâlde müşteri hiç çağrılmaz)', () => {
+    expect(customerOrderStatus('ready', 'pickup')).toBe('ready_for_pickup');
+    expect(customerOrderStatus('ready', 'route')).toBe('preparing');
+    expect(customerOrderStatus('ready', 'shipping')).toBe('preparing');
+    // Hazırlık sürerken gel-al da "hazırlanıyor"dur: erken "gelin" demek müşteriyi boşa yürütür.
+    expect(customerOrderStatus('preparing', 'pickup')).toBe('preparing');
   });
 });
 
@@ -41,6 +49,8 @@ describe('isActiveForCustomer', () => {
     expect(isActiveForCustomer('received')).toBe(true);
     expect(isActiveForCustomer('preparing')).toBe(true);
     expect(isActiveForCustomer('on_the_way')).toBe(true);
+    // Gel-al'da hazır sipariş listenin başında kalmalı: müşterinin yapacağı iş var (gidip almak).
+    expect(isActiveForCustomer('ready_for_pickup')).toBe(true);
   });
 
   it('kapanmışlar aktif değildir — iade dahil', () => {
@@ -83,14 +93,14 @@ describe('orderTimeline', () => {
   const log = (...pairs: [string, string][]) => pairs.map(([toStatus, createdAt]) => ({ toStatus, createdAt })) as never;
 
   it('yolda olan siparişte önceki adımlar GEÇMİŞTEN okunur, damgalarıyla', () => {
-    const steps = orderTimeline('out_for_delivery', log(['confirmed', '2026-07-22T09:14:00Z'], ['preparing', '2026-07-23T10:00:00Z'], ['ready', '2026-07-23T16:40:00Z']));
+    const steps = orderTimeline('out_for_delivery', log(['confirmed', '2026-07-22T09:14:00Z'], ['preparing', '2026-07-23T10:00:00Z'], ['ready', '2026-07-23T16:40:00Z']), 'route');
     expect(steps?.map((s) => s.state)).toEqual(['done', 'done', 'current', 'pending']);
     expect(steps?.[0]?.at).toBe('2026-07-22T09:14:00Z');
     expect(steps?.[1]?.at).toBe('2026-07-23T16:40:00Z');
   });
 
   it('teslim edilmişte son adım da tamamlanmıştır — "şu an" kalmaz', () => {
-    const steps = orderTimeline('delivered', log(['confirmed', 'a'], ['ready', 'b'], ['out_for_delivery', 'c']));
+    const steps = orderTimeline('delivered', log(['confirmed', 'a'], ['ready', 'b'], ['out_for_delivery', 'c']), 'route');
     expect(steps?.map((s) => s.state)).toEqual(['done', 'done', 'done', 'done']);
   });
 
@@ -98,23 +108,36 @@ describe('orderTimeline', () => {
     // İlk yazdığım test bunun tersini bekliyordu ve yanlıştı: hazırlanmamış sipariş yola çıkmaz,
     // yani `ready` kaydı yoksa bile fiziksel olarak geçilmiştir. Ortada boş halka bırakmak
     // müşteriye bozuk bir çizgi gösterirdi. Çıkarsanamayan tek şey ZAMAN.
-    const steps = orderTimeline('out_for_delivery', log(['confirmed', 'a']));
+    const steps = orderTimeline('out_for_delivery', log(['confirmed', 'a']), 'route');
     expect(steps?.[1]?.state).toBe('done');
     expect(steps?.[1]?.at).toBeNull();
   });
 
   it('iptal ve iadede çizgi ÇİZİLMEZ — tek durum bloğu gösterilir', () => {
-    expect(orderTimeline('cancelled', log(['confirmed', 'a']))).toBeNull();
-    expect(orderTimeline('returned', log(['confirmed', 'a'], ['delivered', 'b']))).toBeNull();
-    expect(orderTimeline('draft', [])).toBeNull();
+    expect(orderTimeline('cancelled', log(['confirmed', 'a']), 'route')).toBeNull();
+    expect(orderTimeline('returned', log(['confirmed', 'a'], ['delivered', 'b']), 'route')).toBeNull();
+    expect(orderTimeline('draft', [], 'route')).toBeNull();
   });
 
   it('yalnız hazırlıktaysa ilk adım "şu an"dır — boş çizgi gösterilmez', () => {
-    const steps = orderTimeline('preparing', []);
+    const steps = orderTimeline('preparing', [], 'route');
     expect(steps?.map((s) => s.state)).toEqual(['current', 'pending', 'pending', 'pending']);
   });
 
   it('dört adım her zaman dörttür', () => {
-    expect(orderTimeline('confirmed', log(['confirmed', 'a']))).toHaveLength(4);
+    expect(orderTimeline('confirmed', log(['confirmed', 'a']), 'route')).toHaveLength(4);
+  });
+
+  it('gel-al çizgisinde "yolda" yoktur: üç adım, hazır sipariş "şu an" teslimi bekler', () => {
+    // Rota çizgisi çizilseydi gel-al siparişi "Yolda" adımında sonsuza dek "bekliyor" kalırdı.
+    const steps = orderTimeline('ready', log(['confirmed', 'a'], ['preparing', 'b'], ['ready', 'c']), 'pickup');
+    expect(steps?.map((s) => s.milestone)).toEqual(['received', 'ready_for_pickup', 'delivered']);
+    expect(steps?.map((s) => s.state)).toEqual(['done', 'current', 'pending']);
+    expect(steps?.[1]?.at).toBe('c');
+  });
+
+  it('gel-al teslim edilince üç adım da tamamlanır — out_for_delivery kaydı olmadan', () => {
+    const steps = orderTimeline('delivered', log(['confirmed', 'a'], ['ready', 'b'], ['delivered', 'c']), 'pickup');
+    expect(steps?.map((s) => s.state)).toEqual(['done', 'done', 'done']);
   });
 });

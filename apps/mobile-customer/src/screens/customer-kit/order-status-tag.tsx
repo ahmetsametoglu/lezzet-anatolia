@@ -30,6 +30,7 @@ type StatusTone = 'olive' | 'terracotta' | 'closed' | 'error';
 const STATUS_TONES = {
   received: 'olive',
   preparing: 'terracotta',
+  ready_for_pickup: 'terracotta',
   on_the_way: 'terracotta',
   delivered: 'closed',
   cancelled: 'error',

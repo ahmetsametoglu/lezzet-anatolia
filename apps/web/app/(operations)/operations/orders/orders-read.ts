@@ -1,3 +1,4 @@
+import { waitingDaysSince } from '@lezzet/application';
 import {
   derivePaymentStatusForOrder,
   dueDateOf,
@@ -30,6 +31,10 @@ interface OrderRowInput {
   now: Date;
   /** Kimlik → depo adı/kodu; KAPALI depolar dahil (geçmiş sipariş tesisini söylemek zorunda). */
   warehouseLabels: Map<string, { code: string; name: string }>;
+  /** Hazır gel-al siparişlerinin `ready`ye ilk geçiş anı (sipariş → ISO); yalnız o satırlar için okunur. */
+  pickupReadyAt: ReadonlyMap<string, string>;
+  /** `pickup_wait_days` ayarı — süresi dolan gel-al bu eşikle işaretlenir. */
+  pickupWaitDays: number;
 }
 
 export function toOrderRows(input: OrderRowInput): OrderRow[] {
@@ -41,6 +46,9 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
   const items = input.itemsByOrder.get(order.id) ?? [];
   const termDays = customer?.paymentTermDays ?? input.defaultTermDays;
   const warehouse = input.warehouseLabels.get(order.warehouseId) ?? null;
+  // Süre yalnız HAZIR gel-al'da anlamlı: toplanmamış sipariş henüz müşteriyi bekletmiyor, teslim edilmiş beklemiyor.
+  const pickupWaitingDays =
+    order.deliveryType === 'pickup' && order.status === 'ready' ? waitingDaysSince(input.pickupReadyAt.get(order.id) ?? null, input.now) : null;
 
   return {
     id: order.id,
@@ -56,6 +64,8 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
     totalCents: order.orderedTotalCents,
     deliveryType: order.deliveryType,
     deliveryDate: order.deliveryDate,
+    pickupWaitingDays,
+    pickupOverdue: pickupWaitingDays !== null && pickupWaitingDays > input.pickupWaitDays,
     deliveryArea: areaOf(order.addressSnapshot),
     courierId: order.courierId,
     courierName: order.courierId ? (input.courierNames.get(order.courierId) ?? null) : null,

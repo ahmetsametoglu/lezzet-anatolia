@@ -48,6 +48,9 @@ alter table public.user_profiles
   -- grup sessizce silinmesin; operatör önce müşterileri taşır.
   add column price_group_id uuid references public.price_group (id) on delete restrict,
   add column cod_allowed boolean not null default true, -- kapıda ödeme izni; kötüye kullanımda kapanır
+  -- Gel-al izni: depodan teslim herkese açık bir Drive değil, depoyla telefonla randevulaşan anlaşmalı müşterinin yoludur;
+  -- bayrak kapalıyken checkout seçeneği hiç sunmaz ve sunucu kapısı da reddeder.
+  add column pickup_allowed boolean not null default false,
 
   -- Kanal bazlı pazarlama izni ve GDPR kanıtı (ne zaman, nereden); opt-in, yani anahtar yoksa izin yoktur. Kampanya açık rıza ister
   -- ve sessizliği rıza saymak hukuken yanlıştır.

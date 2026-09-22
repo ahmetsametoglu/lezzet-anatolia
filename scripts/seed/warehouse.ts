@@ -146,6 +146,8 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
       lat: 48.5839,
       lng: 7.7455,
       shipsOnline: true,
+      // Gel-al noktası: izinli müşteri hazır siparişini buradan alır (yalnız STR — KEHL ve BDX'te tezgâh yok).
+      pickupEnabled: true,
       sortOrder: 1,
     });
     strId = str.id;

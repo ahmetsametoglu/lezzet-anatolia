@@ -317,7 +317,7 @@ export function WarehouseHubScreen() {
 
   const overview = buildOverview(hub.orders, hub.pendingHandover);
   const picking = buildPicking(hub.orders);
-  const tiles = buildTiles(hub.orders, hub.transfers, hub.returningCouriers, hub.pendingHandover, hub.nearExpiry, router);
+  const tiles = buildTiles(hub.orders, hub.transfers, hub.returningCouriers, hub.pendingHandover, hub.pickupWaiting, hub.nearExpiry, router);
 
   return (
     <View style={styles.screen} testID="operations-section-warehouse">
@@ -562,6 +562,8 @@ function buildTiles(
   /** D6'nın kaynağı — `null` = okunamadı; sıfıra düşürmek "rampa boş" derdi (CLAUDE §1). */
   returningCouriers: number | null,
   pendingHandover: number | null,
+  /** D9'un kaynağı — müşterisini bekleyen gel-al; `null` = okunamadı. */
+  pickupWaiting: number | null,
   /** D3'ün kaynağı — `null` = okunamadı (kart sayı yazmaz, "okunamadı" der). */
   nearExpiry: readonly { decision: string }[] | null,
   router: ReturnType<typeof useRouter>,
@@ -569,6 +571,16 @@ function buildTiles(
   const transfer = t.hub.rows.transfer;
   const handover = t.hub.rows.handover;
   const ramp = t.hub.rows.return;
+  const pickup = t.hub.rows.pickup;
+
+  const pickupSubtitle =
+    pickupWaiting === null
+      ? pickup.unknown
+      : pickupWaiting === 0
+        ? pickup.none
+        : pickupWaiting === 1
+          ? pickup.one
+          : fillCopy(pickup.some, { n: String(pickupWaiting) });
 
   /* D6 ALTYAZISI ARTIK OLGU (04.09): satır *"1 döküm bekliyor"* yazıyordu ve o sayı hiçbir yerden
      gelmiyordu — kodun içine yazılmış bir cümleydi. Rampa boşken bile "1 döküm" diyordu. */
@@ -714,6 +726,22 @@ function buildTiles(
       // Sayaç ucundan geliyor; `null` "okunamadı" demek ve o hâlde kesikli çizilmez.
       empty: pendingHandover === 0,
       onPress: () => router.navigate('/handover'),
+    },
+    /*
+      GEL-AL TESLİM (D9, 22.09) — izinli müşterinin hazır siparişini tezgâhtan alması. Rampanın
+      aynası: orada kutu taşıyıcıya, burada müşteriye verilir; tahsilat da burada olabilir.
+      Bekleyen müşteri bir iştir: sayı sıfırdan büyükse alt metin dikkat rengine geçer.
+    */
+    {
+      key: 'pickup',
+      code: pickup.code,
+      icon: 'handover',
+      tone: operationsTheme.colors.terracotta,
+      title: pickup.title,
+      subtitle: pickupSubtitle,
+      alert: (pickupWaiting ?? 0) > 0,
+      empty: pickupWaiting === 0,
+      onPress: () => router.navigate('/pickup'),
     },
   ];
 }

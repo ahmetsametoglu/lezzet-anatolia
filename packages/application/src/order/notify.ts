@@ -1,7 +1,7 @@
-import { OrderStatusLogService, type Db } from '@lezzet/database';
+import { OrderService, OrderStatusLogService, type Db } from '@lezzet/database';
 import { type NotifyEventName, type NotifyResult } from '@lezzet/notify';
 import { captureError, SOURCES } from '@lezzet/observability';
-import type { OrderStatus } from '@lezzet/types';
+import type { DeliveryType, OrderStatus } from '@lezzet/types';
 import { dispatchCustomerNotification } from '../notification/dispatch';
 import type { OrderExceptionEvent } from './effects';
 import { buildOrderNotification } from './notification-data';
@@ -29,12 +29,17 @@ const EVENT_OF_STATUS: Partial<Record<OrderStatus, NotifyEventName>> = {
   delivered: 'order_delivered',
 };
 
-function notificationEventOf(status: OrderStatus): NotifyEventName | null {
+/**
+ * Gel-al'da "hazır" müşteriye HABERDİR: mal depoda onu bekliyor ve randevuyu o ayarlayacak. Rota ve kargoda aynı durum
+ * sessizdir — müşterinin yapacağı bir şey yok, haber "yolda"da gelir. Ayrım teslimat türünden, olayın adından değil.
+ */
+export function notificationEventOf(status: OrderStatus, deliveryType: DeliveryType): NotifyEventName | null {
+  if (status === 'ready') return deliveryType === 'pickup' ? 'order_ready_for_pickup' : null;
   return EVENT_OF_STATUS[status] ?? null;
 }
 
 /** Durum olaylarının kümesi — dedupe anahtarı yalnız bunlarda kurulur (istisnalar tekrarlanabilir). */
-const EVENT_OF_STATUS_VALUES: NotifyEventName[] = Object.values(EVENT_OF_STATUS);
+const EVENT_OF_STATUS_VALUES: NotifyEventName[] = [...Object.values(EVENT_OF_STATUS), 'order_ready_for_pickup'];
 
 /**
  * Geçiş sonrası bildirim. **Geçiş başına en fazla bir mail**: sipariş bu duruma ikinci kez
@@ -44,7 +49,9 @@ const EVENT_OF_STATUS_VALUES: NotifyEventName[] = Object.values(EVENT_OF_STATUS)
  * zaten tutuluyor (07.6). Bayrak tutsaydık iki kaynak olurdu ve biri kayardı.
  */
 export async function notifyOrderStatus(db: Db, orderId: string, status: OrderStatus): Promise<NotifyResult[]> {
-  const event = notificationEventOf(status);
+  const order = await new OrderService(db).getById(orderId);
+  if (!order) return [{ status: 'skipped', channel: 'email', reason: 'order_not_found' }];
+  const event = notificationEventOf(status, order.deliveryType);
   if (!event) return [];
 
   const log = await new OrderStatusLogService(db).listByOrder(orderId);

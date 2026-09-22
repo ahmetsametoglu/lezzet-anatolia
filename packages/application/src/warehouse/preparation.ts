@@ -221,7 +221,7 @@ export async function listPreparationQueue(
   input: { warehouseId: string; deliveryDate?: string; limit?: number; orderId?: string; scope?: PreparationScope },
 ): Promise<PreparationOrder[]> {
   const scope = input.scope ?? 'pending';
-  const orders = await new OrderService(db).listByStatus(scope === 'done' ? ['ready'] : ['confirmed', 'preparing'], {
+  const listed = await new OrderService(db).listByStatus(scope === 'done' ? ['ready'] : ['confirmed', 'preparing'], {
     deliveryDate: input.deliveryDate,
     /* TAMAMLANANLARDA TAVAN YÜKSEK VE UÇ TERS: kaç sipariş okunacağı elde SIRALANACAK kümedir,
        ekrana çizilecek olan değil (aşağıdaki `sonKapanis` sıralaması). En yeni uçtan doldurulur —
@@ -232,6 +232,9 @@ export async function listPreparationQueue(
     orderId: input.orderId,
     orderDirection: scope === 'done' ? 'desc' : undefined,
   });
+  // Hazır gel-al siparişi bu yüzde değil: burası taşıyıcıya gidecek kutuları sayar, gel-al ise müşterisini bekler ve
+  // kendi listesinde durur (`pickup.ts`). Bekleyen yüzde kalır — toplanması aynı kuyruğun işi.
+  const orders = scope === 'done' ? listed.filter((order) => order.deliveryType !== 'pickup') : listed;
   if (orders.length === 0) return [];
 
   const items = await new OrderItemService(db).listByOrders(orders.map((order) => order.id));

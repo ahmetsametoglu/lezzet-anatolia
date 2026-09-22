@@ -58,6 +58,7 @@ function temelDetay(feedback: MeOrderDetail['feedback']): MeOrderDetail {
     address: { line1: '8 rue de la Mésange', line2: null, postalCode: '67000', city: 'Strasbourg' },
     lines: [],
     timeline: null,
+    pickup: null,
     subtotalCents: 2000,
     discountCents: 0,
     discountLabel: '',

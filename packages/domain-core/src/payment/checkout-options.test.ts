@@ -25,6 +25,14 @@ describe('kapıda ödeme (03.8)', () => {
     expect(r.codBlockedReason).toBe('shipping');
   });
 
+  it('gel-al\'da tezgâhta ödeme kapıda ödemeyle AYNI kurala tabidir — kargo gibi kapanmaz', () => {
+    // `shipping` dalına düşseydi müşteri depoda nakit/kart ödeyemezdi; tavan da uygulanmalı.
+    const r = resolveCheckoutOptions(base({ deliveryType: 'pickup' }));
+    expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card', 'cheque']);
+    expect(r.codBlockedReason).toBeNull();
+    expect(resolveCheckoutOptions(base({ deliveryType: 'pickup', orderTotalCents: TAVAN + 1 })).codBlockedReason).toBe('over_limit');
+  });
+
   it('tavan aşılırsa kapıda ödeme kapanır ("hepsini alıp kapıda öderim" kesilir)', () => {
     expect(resolveCheckoutOptions(base({ orderTotalCents: TAVAN + 1 })).codBlockedReason).toBe('over_limit');
     expect(resolveCheckoutOptions(base({ orderTotalCents: TAVAN })).codBlockedReason).toBeNull(); // tam tavan geçer

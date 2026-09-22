@@ -93,9 +93,10 @@ export type MeOrderPage = z.infer<typeof MeOrderPageSchema>;
  *
  * `prepared` durağı iç durum `ready`ye bakar, `preparing`e DEĞİL (motor künyesi): müşteri
  * "hazırlandı" gördüğünde işin bittiğini anlar; mutfakta olmayı ayrı bir durak saymak aynı adımı
- * iki kez göstermek olurdu.
+ * iki kez göstermek olurdu. Gel-al çizgisinde `prepared` ve `on_the_way` yerine tek durak
+ * `ready_for_pickup` vardır: mal yola çıkmaz, müşteri gelir.
  */
-export const OrderMilestoneEnum = z.enum(['received', 'prepared', 'on_the_way', 'delivered']);
+export const OrderMilestoneEnum = z.enum(['received', 'prepared', 'on_the_way', 'ready_for_pickup', 'delivered']);
 export type OrderMilestone = z.infer<typeof OrderMilestoneEnum>;
 
 export const OrderTimelineStepSchema = z.object({
@@ -224,6 +225,8 @@ export const MeOrderDetailSchema = z.object({
    * istiyor ve kararı motor veriyor: iptal bir yolculuğun adımı değil, yolculuğun sonlanmasıdır.
    */
   timeline: z.array(OrderTimelineStepSchema).nullable(),
+  /** Gel-al: müşterinin gideceği depo ve randevu için arayacağı numara; öteki türlerde `null` (adres bloğu o zaman müşterinin). */
+  pickup: z.object({ warehouseName: z.string(), addressLine: z.string(), phoneDisplay: z.string() }).nullable(),
   subtotalCents: z.number().int(),
   discountCents: z.number().int(),
   /** İndirimin adı, seçili dilde çözülmüş; indirim yoksa boş dize. */

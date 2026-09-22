@@ -60,6 +60,8 @@ const build = (orders: Order[], opts: { items?: OrderItem[]; customer?: UserProf
     courierNames: new Map([['k1', 'Ali']]),
     defaultTermDays: opts.termDays ?? 30,
     now: NOW,
+    pickupReadyAt: new Map(),
+    pickupWaitDays: 7,
     warehouseLabels: new Map([['w1', { code: 'STR', name: 'Strasbourg' }]]),
   });
 

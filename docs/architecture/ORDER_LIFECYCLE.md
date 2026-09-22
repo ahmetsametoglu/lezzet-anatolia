@@ -36,6 +36,8 @@ draft → confirmed → preparing → ready → out_for_delivery → delivered �
 Ek geçişler:
 - `draft → cancelled` (terk edilen checkout / rezervasyon TTL'inin dolması — DOMAIN §4; kart ödemesinde ödemenin gelmeyeceği sağlayıcıya sorularak netleşince — sebep `payment_failed`, 07.18). *(Bu satır kodda ve testte doğduğu günden beri vardı ama bu listede YOKTU; denetim 26.08'de eklendi.)*
 - `confirmed / preparing / ready → cancelled` (stok geri bırakılır — depo çıkışıysa depoya girişte)
+- `ready → delivered` (**yalnız `delivery_type = 'pickup'`** — gel-al: mal yola çıkmaz, müşteri depodan alır; kapı yine
+  `deliver_order`, RPC bu kaynağı yalnız gel-al'da kabul eder; motorda `canTransition(from, to, { deliveryType })`)
 - `out_for_delivery → ready` (**ulaşılamadı** — yeniden teslim; mal ayrılmış kalır)
 - `out_for_delivery → returned` (**reddedildi** — mal depoya döner)
 - `delivered → returned` (teslim sonrası iade/hasar)
@@ -66,7 +68,7 @@ Kararın tek yeri motordur: `gateFor(from, to)` (`domain-core/order/status-machi
 
 | Sahip | Geçişler | Nereden yazılır |
 | --- | --- | --- |
-| **Saha** | `→ preparing` · `→ ready` · `→ out_for_delivery` · `out_for_delivery → delivered / ready / returned` · `draft → completed` | depo uygulaması (kutu açma, mühürleme, eksik beyanı) · kurye uygulaması (yükleme, kapıdaki üç sonuç, sefer kapanışı) · kargoda taşıyıcı takibi · yerinde satış |
+| **Saha** | `→ preparing` · `→ ready` · `→ out_for_delivery` · `out_for_delivery → delivered / ready / returned` · `ready → delivered` (gel-al) · `draft → completed` | depo uygulaması (kutu açma, mühürleme, eksik beyanı, gel-al teslimi ve tezgâh tahsilatı) · kurye uygulaması (yükleme, kapıdaki üç sonuç, sefer kapanışı) · kargoda taşıyıcı takibi · yerinde satış |
 | **Ofis** | `confirmed / preparing / ready → cancelled` (kendi kapısı) · `delivered / completed → returned` · `returned → completed` | operasyon sipariş detayı — iptal "Kararlar" bloğundan, iade süreci ve iadenin kapanışı şeritten |
 | **Sistem** | `draft → confirmed` · `draft → cancelled` · `delivered → completed` | ödeme ve sipariş verme akışı · terk edilen sepetin süpürücüsü · teslim ve ödemenin tamamlanması |
 

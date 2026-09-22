@@ -114,6 +114,14 @@
         "code": "D7",
         "title": "Yerinde satış",
         "subtitle": "kapıya gelen müşteri"
+      },
+      "pickup": {
+        "code": "D9",
+        "title": "Gel-al teslim",
+        "some": "{n} sipariş müşterisini bekliyor",
+        "one": "1 sipariş müşterisini bekliyor",
+        "none": "bekleyen gel-al siparişi yok",
+        "unknown": "okunamadı"
       }
     }
   },
@@ -158,7 +166,8 @@
     },
     "queueDelivery": {
       "route": "kurye rotası",
-      "shipping": "taşıyıcı"
+      "shipping": "taşıyıcı",
+      "pickup": "gel-al · müşteri alır"
     },
     "queueShippingTag": "KARGO",
     "queueFootnote": "Kuyruk teslim gününe göre sıralı; yarım kalan kutu en üstte durur.",
@@ -1174,6 +1183,85 @@
       "hint": "Elindeki kolinin çarpanını seç — sayı bu çarpanla toplanır.",
       "footnote": "Listede yoksa tek tek say: sahada uydurulmuş bir çarpan, sayımı düzeltmek yerine bozar.",
       "cancel": "Vazgeç"
+    }
+  },
+  "pickup": {
+    "title": "Gel-al teslim",
+    "subtitle": "müşteri tezgâhta · kutuyu okut, parayı al, teslim et",
+    "rule": "Sipariş hazır olmadan buraya düşmez; kutular okutulmadan teslim yazılmaz. Randevu telefonla — burada saat yok.",
+    "listHeading": "MÜŞTERİSİNİ BEKLEYEN",
+    "count": "{n} sipariş",
+    "countOne": "1 sipariş",
+    "countNone": "boş",
+    "countUnknown": "okunamadı",
+    "row": {
+      "waiting": "{n} gündür hazır",
+      "waitingUnknown": "hazır",
+      "due": "tezgâhta {amount}",
+      "paid": "ödendi",
+      "onAccount": "hesaba yazılı",
+      "meta": "{lines} kalem · {boxes} kutu",
+      "noCustomer": "müşteri adı yok"
+    },
+    "empty": {
+      "title": "Bekleyen gel-al siparişi yok",
+      "body": "İzinli müşterinin siparişi hazırlanıp mühürlenince burada görünür."
+    },
+    "error": {
+      "title": "Liste okunamadı",
+      "body": "Bağlantı ya da sunucu sorunu — bekleyen siparişler güvende."
+    },
+    "locked": {
+      "title": "Teslim kapalı",
+      "body": "Teslim ANINDA yazılır, kuyruğa alınmaz — müşteriye verilen malın sistemde beklemesi kabul edilemez. Bağlantı gelince açılır."
+    },
+    "deliver": {
+      "heading": "TESLİM",
+      "boxesHeading": "KUTULAR — hepsi okutulmadan teslim yazılmaz",
+      "boxRow": "Kutu {no}",
+      "scanned": "okutuldu",
+      "pending": "bekliyor",
+      "scanCta": "Kutuyu okut",
+      "scanTitle": "Kutuyu okut",
+      "scanHint": "Kutu etiketindeki QR kodunu çerçeveye getirin.",
+      "unknownCode": "Bu kod seçili siparişin kutusu değil: {code}",
+      "collectionHeading": "TAHSİLAT — MOTOR TUTARI {amount}",
+      "settled": "✓ Borç yok",
+      "settledNote": "online ödenmiş ya da hesaba yazılmış — tezgâhta para konuşulmaz",
+      "amountLabel": "Tahsil edilen tutar (€)",
+      "keypadBadge": "tuş takımı",
+      "keypad": {
+        "title": "TAHSİL EDİLEN",
+        "hint": "ilk rakam mevcut tutarın yerine yazılır",
+        "expected": "beklenen {amount}",
+        "confirm": "Yaz",
+        "delete": "son rakamı sil",
+        "footnote": "Cihaz klavyesi açılmaz — büyük tuşlar."
+      },
+      "partial": "Eksik ödeme — durum \"Kısmi\"ye türer",
+      "cashWarning": "⚠ Nakit yasal sınırın üstünde — bilgi amaçlıdır, engellemez.",
+      "blocked": "Tahsilat YAZILAMIYOR: bu deponun kapı kasası ayarlanmamış. Para alınırsa defterde görünmez — önce ayarı düzeltin.",
+      "method": {
+        "cash": "nakit",
+        "card": "kart",
+        "cheque": "çek"
+      },
+      "cta": "Müşteriye teslim et",
+      "busy": "Yazılıyor…",
+      "cancel": "Vazgeç"
+    },
+    "result": {
+      "ok": "Teslim edildi · {ref}",
+      "okCollected": "{amount} tahsil edildi · kalan {due}",
+      "okSettled": "borç yok",
+      "okDeduped": "tahsilat zaten yazılmıştı",
+      "cashLimit": "nakit yasal sınırın üstünde",
+      "boxesMissing": "Okutulmayan kutu: {nos}",
+      "notReady": "Sipariş hazır değil — {status}",
+      "notPickup": "Bu sipariş gel-al değil",
+      "forbidden": "Başka deponun siparişi",
+      "notFound": "Sipariş bulunamadı",
+      "failed": "Yazılamadı: {reason}"
     }
   }
 }

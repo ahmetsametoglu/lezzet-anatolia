@@ -181,8 +181,11 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
   }
 
   const address = detail.address;
-  const addressLine =
-    address === null
+  /* Gel-al'da adres satırı DEPONUN adresidir (müşteri oraya gider) ve yanına randevu numarası yazılır; fatura adresi çizilmez.
+     Web telefon görünümünün aynı kararı. */
+  const addressLine = detail.pickup
+    ? `${detail.pickup.warehouseName}, ${detail.pickup.addressLine} · ${t.detail.pickupPhone.replace('{phone}', detail.pickup.phoneDisplay)}`
+    : address === null
       ? null
       : [address.line1, address.line2, [address.postalCode, address.city].filter(Boolean).join(' ')]
           .filter((part) => Boolean(part) && part !== '')
@@ -213,7 +216,7 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
       // Teslim türü + (varsa) gün. Gün yoksa TÜR YALNIZ BAŞINA yazılır: kargoda teslim günü
       // taşıyıcının işidir ve biz söz veremeyiz (web'in aynı kararı).
       value: [
-        detail.deliveryType === 'route' ? t.detail.deliveryRoute : t.detail.deliveryShipping,
+        detail.deliveryType === 'route' ? t.detail.deliveryRoute : detail.deliveryType === 'shipping' ? t.detail.deliveryShipping : t.detail.deliveryPickup,
         detail.deliveryDate === null ? null : formatDeliveryDate(detail.deliveryDate, locale),
       ]
         .filter(Boolean)

@@ -151,6 +151,8 @@ export const UserProfileSchema = z.object({
    */
   priceGroupId: z.string().uuid().nullable(),
   codAllowed: z.boolean(),
+  /** Gel-al izni: depodan teslim yalnız işaretli müşteriye sunulur; admin açar, checkout kapısı da bakar. */
+  pickupAllowed: z.boolean(),
   marketingConsent: MarketingConsentSchema,
   notificationConsent: NotificationConsentSchema,
   /**

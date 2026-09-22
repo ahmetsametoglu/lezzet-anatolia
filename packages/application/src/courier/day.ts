@@ -40,6 +40,7 @@ import type {
   StopOrderMetric,
   StopOrderPrecision,
   StopOrderSource,
+  SettingScopeContext,
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -296,8 +297,9 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * Gün başına tekil olduğu için durak dizisinden ayrı okunur. Kullanılamaz ayar `null` döner ve tahsilat kapısı kapalı kalır: para
  * olmayan bir hesaba yazılmaz; log'a anahtar yazılır, değer yazılmaz.
  */
-export async function readDoorCashAccountId(db: SupabaseClient): Promise<string | null> {
-  const raw = await new SettingsService(db).get<unknown>('door_cash_account_id', null);
+export async function readDoorCashAccountId(db: SupabaseClient, scope: SettingScopeContext = {}): Promise<string | null> {
+  // Kapsam: her depo bir kasadır (DOMAIN §17); gel-al tezgâhı deponun satırını, kurye küresel satırı okur.
+  const raw = await new SettingsService(db).get<unknown>('door_cash_account_id', null, scope);
   if (typeof raw !== 'string') {
     if (raw !== null && raw !== undefined) {
       logger.warn({ setting: 'door_cash_account_id' }, 'kapı kasası ayarı metin değil — tahsilat kapısı kapalı');

@@ -253,8 +253,8 @@ async function proofRequired(db: SupabaseClient, channel: Order['channel']): Pro
   return scope?.[channel] === true;
 }
 
-/** Nakit yasal sınırı (cent) — ayardan; kodda sabit yok (CLAUDE.md §4). */
-function cashLegalLimitCents(db: SupabaseClient): Promise<number> {
+/** Nakit yasal sınırı (cent) — ayardan; kodda sabit yok (CLAUDE.md §4). Gel-al tezgâhı da aynı sınırı okur. */
+export function cashLegalLimitCents(db: SupabaseClient): Promise<number> {
   return new SettingsService(db).getNumber('cash_legal_limit_cents', 100_000);
 }
 
@@ -281,8 +281,9 @@ function proofRecord(proof: DeliveryProofInput, courierId: string, boxCodes: str
 /**
  * Görselsiz kanıt (23.8): kanıtın kendisi kapıda okutulan QR'lardır. Yalnız kutulu siparişin
  * görselsiz tesliminde doğar — görselli kanıt varken kodlar onun İÇİNE yazılır, iki kayıt olmaz.
+ * Gel-al tezgâhı da bu kaydı yazar; `courierId` orada teslim eden depocudur (alan adı kanıtın şeklinden gelir).
  */
-function boxScanRecord(boxCodes: string[], courierId: string): DeliveryProofRecord {
+export function boxScanRecord(boxCodes: string[], courierId: string): DeliveryProofRecord {
   return {
     kind: 'box_scan',
     imageKey: null,

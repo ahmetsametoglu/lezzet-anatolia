@@ -22,6 +22,7 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 | `lat` | numeric(9, 6) | • |  |
 | `lng` | numeric(9, 6) | • |  |
 | `ships_online` | boolean |  | `false` |
+| `pickup_enabled` | boolean |  | `false` |
 | `is_active` | boolean |  | `true` |
 | `sort_order` | int |  | `0` |
 | `home_warehouse_id` | uuid | • |  |

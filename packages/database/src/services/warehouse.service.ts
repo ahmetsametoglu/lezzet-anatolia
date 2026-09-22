@@ -49,12 +49,15 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
       homeWarehouseId?: string;
       /** Bu ARACIN deposu (21.249) — bağ 1:1, yani sonuç ya tek satır ya boş. */
       vehicleId?: string;
+      /** Gel-al noktaları — checkout'un müşteriye sunduğu küme. */
+      pickupEnabled?: boolean;
     } = {},
   ): Promise<Warehouse[]> {
     if (opts.warehouseIds?.length === 0) return Promise.resolve([]);
     const filters: Record<string, unknown> = {};
     if (opts.activeOnly) filters.isActive = true;
     if (opts.kind) filters.kind = opts.kind;
+    if (opts.pickupEnabled !== undefined) filters.pickupEnabled = opts.pickupEnabled;
     if (opts.homeWarehouseId) filters.homeWarehouseId = opts.homeWarehouseId;
     if (opts.vehicleId) filters.vehicleId = opts.vehicleId;
     if (opts.warehouseIds) filters.id = [...opts.warehouseIds];

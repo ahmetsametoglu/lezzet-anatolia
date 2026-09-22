@@ -64,6 +64,8 @@ export const WarehouseSchema = z.object({
   lng: dbNumericNullable,
   /** Kargo çıkış deposu. Ülke başına en fazla bir aktif tane — kural veritabanında (0042). */
   shipsOnline: z.boolean(),
+  /** Gel-al noktası: izinli müşteri hazır siparişini buradan alır; yalnız tesiste açılabilir (kısıt veride). */
+  pickupEnabled: z.boolean(),
   isActive: z.boolean(),
   sortOrder: z.number().int(),
   createdAt: z.string(),
@@ -84,6 +86,7 @@ export const WarehouseInsertSchema = z.object({
   lat: z.number().nullish(),
   lng: z.number().nullish(),
   shipsOnline: z.boolean().optional(),
+  pickupEnabled: z.boolean().optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
 });

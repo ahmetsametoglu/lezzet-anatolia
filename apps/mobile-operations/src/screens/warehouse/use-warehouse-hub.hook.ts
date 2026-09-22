@@ -12,6 +12,7 @@ import {
   fetchReturningCouriers,
   fetchWarehouseTransfers,
   fetchPendingHandover,
+  fetchPickupQueue,
   fetchPreparationQueue,
   fetchPrinters,
 } from '@/lib/api/warehouse';
@@ -68,6 +69,11 @@ interface UseWarehouseHubResult {
    */
   pendingHandover: number | null;
   /**
+   * Müşterisini bekleyen gel-al siparişi sayısı (D9); **`null` = OKUNAMADI, sıfır DEĞİL** (CLAUDE §1). Sayaç listeden
+   * sayılır (hub kuralı): liste zaten ekranın kendisi.
+   */
+  pickupWaiting: number | null;
+  /**
    * **Bu cihazın yazıcı kurulumu** — hub'ın alt şeridi tasarımda bir AÇIKLAMA değil bir DURUM
    * yazıyor: *"kutu etiketi QL-1110NWB · kargo etiketi tanımsız"* (görsel ajanı ölçümü 30.08,
    * hub farkı #4). Şerit "bu cihaz" diyorsa cihazın o anki hâlini söylemeli; ne işe yaradığını
@@ -95,6 +101,7 @@ export function useWarehouseHub(): UseWarehouseHubResult {
   const [transfers, setTransfers] = useState<InboundTransferContract[] | null>(null);
   const [returningCouriers, setReturningCouriers] = useState<number | null>(null);
   const [pendingHandover, setPendingHandover] = useState<number | null>(null);
+  const [pickupWaiting, setPickupWaiting] = useState<number | null>(null);
   const [printers, setPrinters] = useState<BoxPrinterContract[] | null>(null);
   /** D3 kartının iki sayısı — okunamadıysa `null` ve kart "okunamadı" der (CLAUDE §1). */
   const [nearExpiry, setNearExpiry] = useState<NearExpiryBatchContract[] | null>(null);
@@ -105,7 +112,7 @@ export function useWarehouseHub(): UseWarehouseHubResult {
   const load = useCallback(async () => {
     const run = (generation.current += 1);
 
-    const [queue, inbound, handover, printerList, expiring, ramp] = await Promise.all([
+    const [queue, inbound, handover, printerList, expiring, ramp, pickup] = await Promise.all([
       trackWarehouse(fetchPreparationQueue()),
       trackWarehouse(fetchWarehouseTransfers()),
       trackWarehouse(fetchPendingHandover()),
@@ -130,6 +137,8 @@ export function useWarehouseHub(): UseWarehouseHubResult {
          `trackWarehouse`TAN GEÇMEZ: D3 sayacıyla aynı gerekçe — başarılı bir D6 okuması hazırlık
          kuyruğunun çevrimdışı sinyalini ezerdi. Rozetin düşmesi hub'ı kullanılamaz yapmaz. */
       fetchReturningCouriers(),
+      /* D9 SAYACI: rozet, hata koşuluna katılmaz (D3/D6 ile aynı gerekçe) ve `trackWarehouse`tan geçmez. */
+      fetchPickupQueue(),
     ]);
     if (run !== generation.current) return;
 
@@ -139,6 +148,7 @@ export function useWarehouseHub(): UseWarehouseHubResult {
     setPrinters(printerList.error === null ? printerList.data.printers : null);
     setNearExpiry(expiring.error === null ? expiring.data.batches : null);
     setReturningCouriers(ramp.error === null ? ramp.data.couriers.length : null);
+    setPickupWaiting(pickup.error === null ? pickup.data.orders.length : null);
     /*
       HATA HÂLİ İKİ ANA OKUMAYA BAĞLI KALDI — devir sayacı onu tetiklemiyor.
 
@@ -169,5 +179,5 @@ export function useWarehouseHub(): UseWarehouseHubResult {
     void load().finally(() => setReloading(false));
   }, [load]);
 
-  return { status, orders, transfers, returningCouriers, pendingHandover, printers, nearExpiry, reload, refresh, reloading };
+  return { status, orders, transfers, returningCouriers, pendingHandover, pickupWaiting, printers, nearExpiry, reload, refresh, reloading };
 }

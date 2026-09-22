@@ -5,6 +5,7 @@ import {
   OrderStatusLogService,
   ProductService,
   ProductVariantService,
+  WarehouseService,
 } from '@lezzet/database';
 import {
   bundleQtyOf,
@@ -27,7 +28,9 @@ import type {
   PreferredLanguage,
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { brand } from '@lezzet/brand';
 import { EMPTY_IMAGE, imageOf } from '../catalog/map';
+import { warehouseAddressLine } from '../warehouse/pickup';
 import { parcelOrdinal, readOrderTracking } from '../shipping/tracking';
 import type { StorefrontImage } from '../catalog/storefront-types';
 
@@ -144,7 +147,7 @@ export async function listCustomerOrders(
 
   const orders: CustomerOrderSummary[] = [];
   for (const order of page.rows) {
-    const status = customerOrderStatus(order.status);
+    const status = customerOrderStatus(order.status, order.deliveryType);
     if (!status) continue; // Taslak — müşterinin siparişi değil.
     /*
       Hiç KESİNLEŞMEMİŞ iptal de listede yok (07.18): süpürülen taslak ya da ödemesi gelmeyen taslak —
@@ -272,6 +275,11 @@ export interface CustomerOrderDetail {
    * bloğu" istiyor ve kararı motor veriyor (`orderTimeline`).
    */
   timeline: readonly OrderTimelineStep[] | null;
+  /**
+   * Gel-al'da müşterinin GİDECEĞİ yer: depo adı, adresi ve randevu için arayacağı numara (marka hattı — randevu sistem
+   * dışı, DOMAIN §6). Öteki türlerde `null`; adres bloğu o zaman müşterinin adresidir.
+   */
+  pickup: { warehouseName: string; addressLine: string; phoneDisplay: string } | null;
   subtotalCents: number;
   discountCents: number;
   discountLabel: string;
@@ -348,7 +356,7 @@ export async function getCustomerOrderDetail(
       : await service.findByReference(input.lookup.reference, input.customerId);
   if (!order || order.customerId !== input.customerId) return null;
 
-  const status = customerOrderStatus(order.status);
+  const status = customerOrderStatus(order.status, order.deliveryType);
   if (!status) return null;
 
   const items = await new OrderItemService(db).listByOrder(order.id);
@@ -489,6 +497,11 @@ export async function getCustomerOrderDetail(
     order.deliveryType === 'shipping'
       ? await readOrderTracking(db, order.id, { carrier: order.carrier, trackingNumber: order.trackingNumber })
       : null;
+  // Gel-al'da deponun kartı: müşteri nereye gideceğini ve kimi arayacağını bu ekrandan okur.
+  const pickupWarehouse = order.deliveryType === 'pickup' ? await new WarehouseService(db).getById(order.warehouseId) : null;
+  const pickup = pickupWarehouse
+    ? { warehouseName: pickupWarehouse.name, addressLine: warehouseAddressLine(pickupWarehouse), phoneDisplay: brand.contact.phoneDisplay }
+    : null;
 
   return {
     id: order.id,
@@ -500,7 +513,8 @@ export async function getCustomerOrderDetail(
     deliveryDate: order.deliveryDate,
     address: order.addressSnapshot as CustomerOrderDetail['address'],
     lines,
-    timeline: orderTimeline(order.status, history),
+    timeline: orderTimeline(order.status, history, order.deliveryType),
+    pickup,
     /*
       ARA TOPLAM VE İNDİRİM DE TÜRETİLİR — siparişte ayrı bir alan yok ve olmamalı: iki kaynak bir
       gün ayrışır (ve ayrıştı, künye aşağıda `totalCents`ta).

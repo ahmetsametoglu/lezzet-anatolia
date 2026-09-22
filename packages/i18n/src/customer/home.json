@@ -27,7 +27,8 @@
         "on_the_way": "yolda",
         "delivered": "teslim edildi",
         "cancelled": "iptal edildi",
-        "returning": "iade sürecinde"
+        "returning": "iade sürecinde",
+        "ready_for_pickup": "teslime hazır"
       }
     },
     "lastOrder": {
@@ -117,7 +118,8 @@
         "on_the_way": "en route",
         "delivered": "livrée",
         "cancelled": "annulée",
-        "returning": "en retour"
+        "returning": "en retour",
+        "ready_for_pickup": "prête au retrait"
       }
     },
     "lastOrder": {
@@ -207,7 +209,8 @@
         "on_the_way": "unterwegs",
         "delivered": "geliefert",
         "cancelled": "storniert",
-        "returning": "in Rücksendung"
+        "returning": "in Rücksendung",
+        "ready_for_pickup": "abholbereit"
       }
     },
     "lastOrder": {

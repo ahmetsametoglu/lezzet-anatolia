@@ -35,6 +35,9 @@ export function minBasketFor(
   deliveryType: DeliveryType,
   scope: SettingScopeContext,
 ): Promise<number> {
-  if (deliveryType === 'shipping') return settings.getNumber(MIN_BASKET_KEY, 0, scope, { only: ['channel'] });
+  // Gel-al'da da araç çıkmaz: müşteri gelir. Lojistik taban yok, kanal şartı (toptan) yine var.
+  if (deliveryType === 'shipping' || deliveryType === 'pickup') {
+    return settings.getNumber(MIN_BASKET_KEY, 0, scope, { only: ['channel'] });
+  }
   return settings.getNumber(MIN_BASKET_KEY, MIN_BASKET_DEFAULT, scope);
 }

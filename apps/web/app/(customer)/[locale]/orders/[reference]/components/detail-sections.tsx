@@ -216,7 +216,7 @@ export function DeliveryCard({ t, locale, order, title }: Pick<DetailViewProps, 
   return (
     <Panel title={title}>
       <span className="font-sans text-body-sm leading-relaxed text-body">
-        {order.deliveryType === 'route' ? t.routeLine : t.shippingLine}
+        {order.deliveryType === 'route' ? t.routeLine : order.deliveryType === 'shipping' ? t.shippingLine : t.pickupLine}
         {/* Taşıyıcı adı teslimat satırının DEVAMI, ayrı satır değil — tasarımda tek cümle:
             "📦 Kargo ile — Colissimo". Gün ile aynı yeri paylaşamazlar (kargoda teslim günü
             taşıyıcının işidir, biz söz veremeyiz), o yüzden ikisi de aynı ayraçla ekleniyor. */}

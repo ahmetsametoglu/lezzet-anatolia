@@ -50,8 +50,12 @@ export interface OrderRow {
   hasBundle: boolean;
   totalCents: number;
   deliveryType: DeliveryType;
-  /** Rota günü (YYYY-AA-GG); kargoda `null`. */
+  /** Rota günü (YYYY-AA-GG); kargoda ve gel-al'da `null`. */
   deliveryDate: string | null;
+  /** Gel-al: hazır (`ready`) olalı kaç gün beklediği; öteki türlerde ve hazır değilken `null`. */
+  pickupWaitingDays: number | null;
+  /** Bekleme süresi ayarı (`pickup_wait_days`) aşıldı — karar ofisin (arama, iptal). */
+  pickupOverdue: boolean;
   /** Adresin sipariş anındaki kopyasından semt/şehir — nereye gittiği listede okunsun. */
   deliveryArea: string;
   /** Kurye atanmış mı — rota gününde "kim götürüyor" sorusu listede yanıtlanır. */

@@ -9,7 +9,9 @@ import {
   boxLabelSvg,
   confirmPreparation,
   countAwaitingHandover,
+  deliverPickupOrder,
   handOverBox,
+  listPickupQueue,
   printersFor,
   registerPrinter,
   markBoxPrinted,
@@ -50,6 +52,8 @@ import {
 // Alt yol (paketin `./*` ihracı): arama kapısı bugün TEK yüzeyin işi — barrel'a ad eklemek, henüz
 // ortak olmayan bir şeyi paketin kamu sözleşmesine yazmak olurdu. İkinci çağıran doğduğunda terfi eder.
 import { searchVariantsForIntake } from '@lezzet/application/warehouse/variant-search';
+// Teslim haberi ve puan portu — kurye uçlarıyla aynı nesne.
+import { mobileOrderEffects } from '../../lib/order-effects';
 import {
   AnnounceShipmentRequestSchema,
   AnnounceShipmentResponseSchema,
@@ -60,6 +64,9 @@ import {
   HandoverRequestSchema,
   HandoverPendingResponseSchema,
   HandoverResponseSchema,
+  PickupDeliverRequestSchema,
+  PickupDeliverResponseSchema,
+  PickupQueueResponseSchema,
   IntakeFormResponseSchema,
   LearnCodeRequestSchema,
   LearnCodeResponseSchema,
@@ -664,6 +671,38 @@ warehouse.post('/handover', async (c) => {
  * Kapsam depodan (`warehouseId`) geliyor, istemciden değil — depo bir boyut değil DEĞİŞMEZ
  * (`CLAUDE §1`) ve süzgeci istemciye bırakmak, başka deponun yığınını saydırabilirdi.
  */
+/**
+ * **GEL-AL KUYRUĞU — D9**: bu depoda müşterisini bekleyen hazır (`ready`) gel-al siparişleri. Hazırlık kuyruğunun
+ * "tamamlananlar" yüzünden ayrı: orası taşıyıcıya gidecek kutuları sayar, burada bekleyen müşteridir ve süre karar girdisidir.
+ * Kasa kimliği de burada döner (kurye `/day` deseni): tezgâh tahsilatı o kasaya yazılır, ekran kimliği yankılar.
+ */
+warehouse.get('/pickup', async (c) => {
+  const queue = await listPickupQueue(serviceDb(), { warehouseId: c.get('warehouseId') });
+  const body: z.input<typeof PickupQueueResponseSchema> = queue;
+  return ok(c, PickupQueueResponseSchema.parse(body));
+});
+
+/**
+ * **MÜŞTERİYE TESLİM** (gel-al). Kutu okutması rota kapısıyla aynı şart, tahsilat kuryenin kapı tahsilatıyla aynı şekil;
+ * teslim `ready`den yazılır (`deliver_order` gel-al'da bu kaynağı kabul eder). Olumsuz dallar 200 ve adlı.
+ */
+warehouse.post('/pickup/:orderId/deliver', async (c) => {
+  const orderId = UuidSchema.safeParse(c.req.param('orderId'));
+  if (!orderId.success) return fail(c, 'invalid_order_id', 400);
+  const parsed = PickupDeliverRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+  const outcome = await deliverPickupOrder(serviceDb(), {
+    orderId: orderId.data,
+    warehouseId: c.get('warehouseId'),
+    actorId: c.get('staff').id,
+    scannedBoxCodes: parsed.data.scannedBoxCodes,
+    collection: parsed.data.collection ?? null,
+    effects: mobileOrderEffects(serviceDb()),
+  });
+  const body: z.input<typeof PickupDeliverResponseSchema> = outcome;
+  return ok(c, PickupDeliverResponseSchema.parse(body));
+});
+
 warehouse.get('/handover/pending', async (c) => {
   const warehouseId = c.get('warehouseId');
   /* Sayı ve liste TEK turda ve AYNI süzgeçten: ikisi tek gerçeği söylüyor, ayrı turlarda

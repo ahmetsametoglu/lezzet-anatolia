@@ -44,6 +44,8 @@ export type WarehouseAddressView = WarehouseAddress | null;
 export const WarehouseFormSchema = WarehouseInsertSchema.pick({ code: true, name: true }).extend({
   countryCode: CountryEnum,
   shipsOnline: z.boolean(),
+  /** Gel-al noktası: izinli müşteri hazır siparişini buradan alır; adresi müşteriye görünür. */
+  pickupEnabled: z.boolean(),
   address: WarehouseAddressSchema,
   /**
    * Deponun coğrafi noktası (11.9) — **rotanın çıpası**: kapalı tur hesabı buradan başlar ve buraya

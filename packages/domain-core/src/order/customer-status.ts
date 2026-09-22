@@ -1,4 +1,4 @@
-import type { CustomerOrderStatus, OrderStatus } from '@lezzet/types';
+import type { CustomerOrderStatus, DeliveryType, OrderStatus } from '@lezzet/types';
 
 /**
  * Sipariş durumunun müşteriye görünen karşılığı (08.5) — saf karar, DB'siz.
@@ -16,16 +16,20 @@ import type { CustomerOrderStatus, OrderStatus } from '@lezzet/types';
  * **`draft` için `null` döner ve bu bir hata değil, cevabın kendisidir:** taslak henüz bir sipariş
  * değil (checkout yarıda kalmış). Ona uydurma bir müşteri hâli vermek — "alındı" demek — müşteriye
  * vermediği bir siparişi göstermek olurdu. Çağıran onu listeden düşürür.
+ *
+ * Teslimat türü girdidir, çünkü gel-al'da `ready` bir operasyon aşaması değil müşterinin beklediği andır:
+ * mal depoda hazır, gelip alacak. Rota ve kargoda aynı durum "hazırlanıyor" kalır.
  */
-export function customerOrderStatus(status: OrderStatus): CustomerOrderStatus | null {
+export function customerOrderStatus(status: OrderStatus, deliveryType: DeliveryType): CustomerOrderStatus | null {
   switch (status) {
     case 'draft':
       return null;
     case 'confirmed':
       return 'received';
     case 'preparing':
-    case 'ready':
       return 'preparing';
+    case 'ready':
+      return deliveryType === 'pickup' ? 'ready_for_pickup' : 'preparing';
     case 'out_for_delivery':
       return 'on_the_way';
     case 'delivered':
@@ -48,7 +52,7 @@ export function customerOrderStatus(status: OrderStatus): CustomerOrderStatus | 
  * yaratırdı.
  */
 export function isActiveForCustomer(status: CustomerOrderStatus): boolean {
-  return status === 'received' || status === 'preparing' || status === 'on_the_way';
+  return status === 'received' || status === 'preparing' || status === 'ready_for_pickup' || status === 'on_the_way';
 }
 
 /**
@@ -82,8 +86,11 @@ export function isFulfilmentKnown(status: OrderStatus): boolean {
   }
 }
 
-/** Müşteriye gösterilen dört sabit kilometre taşı (tasarım: "zaman çizgisi 4 sabit adım"). */
-export type OrderMilestone = 'received' | 'prepared' | 'on_the_way' | 'delivered';
+/**
+ * Müşteriye gösterilen dört sabit kilometre taşı (tasarım: "zaman çizgisi 4 sabit adım"). Gel-al'da üçüncü taş
+ * "yolda" değil "teslime hazır": mal hiç yola çıkmaz, müşteri gelir.
+ */
+export type OrderMilestone = 'received' | 'prepared' | 'on_the_way' | 'ready_for_pickup' | 'delivered';
 
 export interface OrderTimelineStep {
   milestone: OrderMilestone;
@@ -108,6 +115,16 @@ const MILESTONE_STATUSES: readonly (readonly [OrderMilestone, readonly OrderStat
 ];
 
 /**
+ * Gel-al çizgisi: "hazırlandı" ile "teslime hazır" aynı iç durumdur (`ready`) ve çizgide iki kez gösterilmez;
+ * üçüncü taş teslimi bekleyen malın kendisidir.
+ */
+const PICKUP_MILESTONE_STATUSES: readonly (readonly [OrderMilestone, readonly OrderStatus[]])[] = [
+  ['received', ['confirmed']],
+  ['ready_for_pickup', ['ready']],
+  ['delivered', ['delivered', 'completed']],
+];
+
+/**
  * Sipariş zaman çizgisi (08.5) — dört adımın hangisi geçildi, hangisi şu an, hangisi bekliyor.
  *
  * **Girdi durum GEÇMİŞİDİR, anlık durum değil.** Sipariş `out_for_delivery` iken "Hazırlandı"nın
@@ -125,14 +142,16 @@ export function orderTimeline(
   current: OrderStatus,
   /** Durum defteri (`order_status_log`), eskiden yeniye. */
   history: readonly { toStatus: OrderStatus; createdAt: string }[],
+  deliveryType: DeliveryType,
 ): OrderTimelineStep[] | null {
   if (current === 'draft' || current === 'cancelled' || current === 'returned') return null;
 
+  const milestones = deliveryType === 'pickup' ? PICKUP_MILESTONE_STATUSES : MILESTONE_STATUSES;
   const stampOf = new Map<OrderStatus, string>();
   for (const row of history) if (!stampOf.has(row.toStatus)) stampOf.set(row.toStatus, row.createdAt);
 
   const reached = new Set<OrderStatus>([...history.map((h) => h.toStatus), current]);
-  const hit = MILESTONE_STATUSES.map(([, statuses]) => statuses.some((s) => reached.has(s)));
+  const hit = milestones.map(([, statuses]) => statuses.some((s) => reached.has(s)));
 
   // En ileri geçilen adım. Hiçbiri yoksa (yalnız `preparing`) ilk adım "şu an"dır: sipariş alınmış
   // ama kaydı düşmemiş olabilir — müşteriye boş bir çizgi göstermektense ilk adımı işaretlemek doğru.
@@ -145,7 +164,7 @@ export function orderTimeline(
   }
 
   const terminal = current === 'delivered' || current === 'completed';
-  return MILESTONE_STATUSES.map(([milestone, statuses], i) => ({
+  return milestones.map(([milestone, statuses], i) => ({
     milestone,
     // Geçilmiş adım `done`: yoldaki sipariş hazırlanmıştır, kaydı düşmemiş olsa da. Bu bir uydurma
     // DEĞİL, fiziksel bir çıkarım — ortada boş halka bırakmak müşteriye bozuk bir çizgi gösterirdi.

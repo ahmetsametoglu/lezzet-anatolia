@@ -61,6 +61,7 @@ export function WarehouseDialog({
       // oradan doğması olağan hâl. Ülke değişince mali uyarı zaten belirir.
       countryCode: editing?.countryCode ?? 'FR',
       shipsOnline: editing?.shipsOnline ?? false,
+      pickupEnabled: editing?.pickupEnabled ?? false,
       address: {
         line1: editing?.address?.line1 ?? '',
         postalCode: editing?.address?.postalCode ?? '',
@@ -162,6 +163,9 @@ export function WarehouseDialog({
           <FormInput control={form.control} name="lat" label="Enlem" mono placeholder="boş bırak — adresten çözülür" />
           <FormInput control={form.control} name="lng" label="Boylam" mono placeholder="boş bırak — adresten çözülür" />
         </div>
+
+        {/* Gel-al noktası: müşteriye adresi gösterilen tek yer (DOMAIN §17'nin bilinçli istisnası); yalnız izinli müşteri görür. */}
+        <FormSwitch control={form.control} name="pickupEnabled" label="Gel-al noktası — izinli müşteri hazır siparişini buradan alır" />
 
         <div className="flex flex-col gap-2">
           <FormSwitch control={form.control} name="shipsOnline" label="Kargo çıkış deposu" />

@@ -961,6 +961,8 @@ function queueMetaOf(order: PreparationOrderContract): string {
   const parts = [order.customerName, t.common.channel[order.channel]];
   if (order.deliveryType === 'route') parts.push(t.picking.queueDelivery.route);
   if (order.deliveryType === 'shipping') parts.push(t.picking.queueDelivery.shipping);
+  // Gel-al da kutuyla hazırlanır; kulvar söylenir ki depocu kutuyu rampaya değil tezgâha koysun.
+  if (order.deliveryType === 'pickup') parts.push(t.picking.queueDelivery.pickup);
   return parts.join(' · ');
 }
 

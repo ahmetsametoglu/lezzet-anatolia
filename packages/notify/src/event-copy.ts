@@ -35,6 +35,12 @@ export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => str
       fr: `Votre commande ${d.referenceNo} est en route.`,
       de: `Ihre Bestellung ${d.referenceNo} ist unterwegs.`,
     }),
+  order_ready_for_pickup: (d) =>
+    say(d.locale, {
+      tr: `${d.referenceNo} numaralı siparişiniz hazır — depodan teslim alabilirsiniz. Saat için bizi arayın.`,
+      fr: `Votre commande ${d.referenceNo} est prête : vous pouvez la retirer à l’entrepôt. Appelez-nous pour convenir de l’heure.`,
+      de: `Ihre Bestellung ${d.referenceNo} ist abholbereit. Rufen Sie uns an, um die Uhrzeit zu vereinbaren.`,
+    }),
   order_delivered: (d) =>
     say(d.locale, {
       tr: `${d.referenceNo} numaralı siparişiniz teslim edildi. Afiyet olsun!`,

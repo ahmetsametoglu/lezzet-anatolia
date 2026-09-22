@@ -178,6 +178,7 @@ orders.get('/:reference', async (c) => {
     // Motorun `OrderMilestone`u ile sözleşmenin `OrderMilestoneEnum`u burada karşılaşır: ikizler
     // ayrışırsa bu atama DERLENMEZ (`packages/types` domain-core'u bilemez — şema künyesi).
     timeline: detail.timeline ? detail.timeline.map((step) => ({ ...step })) : null,
+    pickup: detail.pickup,
     subtotalCents: detail.subtotalCents,
     discountCents: detail.discountCents,
     discountLabel: detail.discountLabel,

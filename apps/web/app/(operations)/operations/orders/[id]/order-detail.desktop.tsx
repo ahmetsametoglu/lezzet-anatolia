@@ -420,11 +420,15 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             <div className="flex items-center gap-2 border-b border-ops-line-soft px-3.5 py-2.5">
               <span className="mr-auto font-ops-display text-ops-sm font-semibold text-ops-ink">Teslimat</span>
               <Badge tone={order.delivery.type === 'shipping' ? 'slate' : 'olive'}>
-                {order.delivery.type === 'shipping' ? 'Kargo' : 'Rota'}
+                {order.delivery.type === 'shipping' ? 'Kargo' : order.delivery.type === 'pickup' ? 'Gel-al' : 'Rota'}
               </Badge>
             </div>
             <div className="flex flex-col gap-2 px-3.5 py-[11px]">
-              <InfoRow label="Gün" value={order.delivery.date ? shortDate(order.delivery.date) : 'girilmemiş'} />
+              {/* Gel-al'ın günü yok: randevu sistem dışı (telefon), sipariş `pickup_wait_days` kadar hazır bekler. */}
+              <InfoRow
+                label="Gün"
+                value={order.delivery.type === 'pickup' ? 'gel-al — randevu telefonla' : order.delivery.date ? shortDate(order.delivery.date) : 'girilmemiş'}
+              />
               {/* Kapı doğrulaması engel değil kopyanın niteliği, bu yüzden ipucu satırında; `confirmed`/`unknown` hiçbir şey yazmaz,
                   her siparişte beliren bir satır uyarıyı gürültüye çevirirdi. */}
               <InfoRow
@@ -462,8 +466,9 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               ) : (
                 <ShipmentRows shipment={order.delivery.shipment} showParcels={order.delivery.boxes.length === 0} />
               )}
-              {/* Yerinde satışta (`pickup`) hazırlık yok, kutu satırı da yok: "kutu açılmadı" orada yanlış olurdu. */}
-              {order.delivery.type !== 'pickup' ? <BoxRows boxes={order.delivery.boxes} type={order.delivery.type} /> : null}
+              {/* Yerinde satışta (`pickup` + `door`) hazırlık yok, kutu satırı da yok: "kutu açılmadı" orada yanlış olurdu.
+                  Gel-al checkout'u ise kutuyla hazırlanır — iki `pickup` yolunu kaynak ayırır. */}
+              {order.delivery.type !== 'pickup' || order.source !== 'door' ? <BoxRows boxes={order.delivery.boxes} type={order.delivery.type} /> : null}
               {/* Kanıt açılabilir olmalı: ihtilafta bakılan şey görselin kendisi. Kova yoksa görsel yerine sebep yazılır, boş çerçeve
                   "kanıt bozuk" derdi. */}
               {order.delivery.proof ? (

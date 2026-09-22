@@ -136,11 +136,12 @@ export const CHANNEL_TONE: Record<(typeof CHANNEL_FILTERS)[number], 'olive' | 'a
   b2b: 'amber',
 };
 
-export const DELIVERY_FILTERS = ['all', 'route', 'shipping'] as const;
+export const DELIVERY_FILTERS = ['all', 'route', 'shipping', 'pickup'] as const;
 export const DELIVERY_LABEL: Record<(typeof DELIVERY_FILTERS)[number], string> = {
   all: 'Her teslim',
   route: 'Rota',
   shipping: 'Kargo',
+  pickup: 'Gel-al',
 };
 
 export const PAYMENT_FILTERS = ['all', 'pending', 'partial', 'paid', 'refunded'] as const;

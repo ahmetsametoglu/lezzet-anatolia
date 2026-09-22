@@ -361,6 +361,8 @@ export { sellOnSite, listRecentDoorSales, ANONYMOUS_BUYER_ID } from './order/on-
 export type { DoorSaleRecord, OnSiteSaleInput, OnSiteSaleLine, OnSiteSaleOutcome } from './order/on-site-sale';
 export type { PreparationBox, PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
 export { boxLabelPayload, declareOrderShort, printersFor, registerPrinter, markBoxPrinted, openBox, sealBox, unsealBox } from './warehouse/boxes';
+export { countOverduePickups, deliverPickupOrder, listPickupQueue, waitingDaysSince, warehouseAddressLine } from './warehouse/pickup';
+export type { PickupDeliveryOutcome, PickupQueue, PickupQueueOrder } from './warehouse/pickup';
 export type { RegisterPrinterOutcome } from './warehouse/boxes';
 export type { BoxLabel, BoxLabelOutcome, BoxPrinter, MarkPrintedOutcome, OpenBoxOutcome, SealBoxOutcome } from './warehouse/boxes';
 export { listOrderBoxes } from './warehouse/order-boxes';

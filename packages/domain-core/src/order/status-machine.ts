@@ -1,4 +1,4 @@
-import type { OrderStatus, PaymentStatus } from '@lezzet/types';
+import type { DeliveryType, OrderStatus, PaymentStatus } from '@lezzet/types';
 
 /**
  * Sipariş durum makinesi: katı bir zincir değil, izin verilen geçişler kümesi (tam yol ve hızlı satış).
@@ -29,6 +29,19 @@ const TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   cancelled: [],
 };
 
+/**
+ * Geçişin bağlamı: yalnız teslimat türü. Gel-al siparişinin "yolda"sı yoktur — hazır mal depoda müşteriyi bekler ve
+ * teslim `ready`den yazılır; rota ve kargo için o kapı kapalı kalır (`deliver_order` RPC'si aynı şartı tutar).
+ */
+export interface TransitionContext {
+  deliveryType?: DeliveryType;
+}
+
+/** Türe bağlı ek geçişler — tabloya girseydi her sipariş için izinli görünürdü. */
+const PICKUP_TRANSITIONS: Partial<Record<OrderStatus, readonly OrderStatus[]>> = {
+  ready: ['delivered'],
+};
+
 /** Terminal durumlar — buradan çıkış yoktur. */
 export function isTerminal(status: OrderStatus): boolean {
   return TRANSITIONS[status].length === 0;
@@ -45,17 +58,18 @@ export function isFulfillmentSettled(status: OrderStatus, lines: readonly { fulf
 }
 
 /** Bir durumdan gidilebilecek durumlar (UI yalnız bunları sunar — yasak geçiş hiç gösterilmez). */
-export function allowedTransitions(from: OrderStatus): readonly OrderStatus[] {
-  return TRANSITIONS[from];
+export function allowedTransitions(from: OrderStatus, ctx: TransitionContext = {}): readonly OrderStatus[] {
+  const extra = ctx.deliveryType === 'pickup' ? (PICKUP_TRANSITIONS[from] ?? []) : [];
+  return extra.length === 0 ? TRANSITIONS[from] : [...TRANSITIONS[from], ...extra];
 }
 
 export type TransitionCheck = { allowed: true } | { allowed: false; reason: 'same_status' | 'terminal' | 'not_allowed' };
 
 /** Geçiş izinli mi; izinsiz geçiş fırlatma değil hata değeridir. */
-export function canTransition(from: OrderStatus, to: OrderStatus): TransitionCheck {
+export function canTransition(from: OrderStatus, to: OrderStatus, ctx: TransitionContext = {}): TransitionCheck {
   if (from === to) return { allowed: false, reason: 'same_status' };
   if (isTerminal(from)) return { allowed: false, reason: 'terminal' };
-  return TRANSITIONS[from].includes(to) ? { allowed: true } : { allowed: false, reason: 'not_allowed' };
+  return allowedTransitions(from, ctx).includes(to) ? { allowed: true } : { allowed: false, reason: 'not_allowed' };
 }
 
 /**

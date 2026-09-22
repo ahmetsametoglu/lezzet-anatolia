@@ -111,6 +111,8 @@ const UYGULAMA_DBSIZ = [
   // Ödeme sağlayıcısı portunun uyarlaması (07.18) — sahte istemciyle: ağsız, DB'siz. Sınanan şey
   // tanımadığı durumda karar VERMEMESİ ve tutarın alınan paradan okunması.
   'packages/application/src/order/payment-gateway.test.ts',
+  // Durum → müşteri haberi seçimi (22.09): gel-al'da "hazır" haberdir, rota/kargoda sessiz. Saf, DB'siz.
+  'packages/application/src/order/notify-event.test.ts',
 ];
 
 const WEB_LIB_DBSIZ = [

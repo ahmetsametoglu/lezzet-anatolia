@@ -217,7 +217,8 @@ const CELLS: Record<string, (row: OrderRow) => ReactNode> = {
     return (
       <div className="flex min-w-0 flex-col gap-px">
         <span className="truncate font-ops-body text-ops-xs text-ops-body">{main}</span>
-        <span className="truncate font-ops-body text-ops-micro text-ops-muted">{meta}</span>
+        {/* Süresi dolan gel-al kırmızı: mal ayrılmış bekliyor, karar ofisin. */}
+        <span className={`truncate font-ops-body text-ops-micro ${row.pickupOverdue ? 'font-semibold text-ops-red' : 'text-ops-muted'}`}>{meta}</span>
       </div>
     );
   },

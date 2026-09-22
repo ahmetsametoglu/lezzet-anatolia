@@ -5,16 +5,19 @@ import {
   ProductService,
   ProductVariantService,
   UserProfileService,
+  WarehouseService,
   type Db,
 } from '@lezzet/database';
+import { brand } from '@lezzet/brand';
 import { derivePaymentStatusForOrder, isFulfillmentSettled } from '@lezzet/domain-core';
 import { formatPrice, formatShortDate } from '@lezzet/helper';
 import { localizedUrl } from '@lezzet/i18n';
 import type { NotifyEventName, NotifyRecipient } from '@lezzet/notify';
 import { resolveLocalizedText } from '@lezzet/types';
-import type { Order, OrderItem, OrderNotification, NotificationStep, PreferredLanguage } from '@lezzet/types';
+import type { Order, OrderItem, OrderNotification, NotificationStep, PreferredLanguage, Warehouse } from '@lezzet/types';
 import { notificationPreferencesUrl } from '../customer/notification-preferences';
 import { parcelOrdinal, readOrderTracking } from '../shipping/tracking';
+import { warehouseAddressLine } from '../warehouse/pickup';
 
 /**
  * Sipariş bildiriminin VERİSİNİ kurar (14.5) — **uygulama katmanı orkestrasyonu**.
@@ -59,6 +62,8 @@ const STEP_ORDER: NotificationStep['key'][] = ['received', 'prepared', 'on_the_w
 const EVENT_STEP: Partial<Record<NotifyEventName, NotificationStep['key']>> = {
   order_confirmed: 'received',
   order_out_for_delivery: 'on_the_way',
+  // Gel-al: "hazır" mailinde çizgi hazırlık adımında durur; "yolda" adımı bu türde hiç çizilmez (`buildSteps`).
+  order_ready_for_pickup: 'prepared',
   order_delivered: 'delivered',
 };
 
@@ -102,12 +107,14 @@ export async function buildOrderNotification(
     olayın adından değil: aynı mail (`order_out_for_delivery`) iki kulvarda da kullanılıyor ve
     kargoda kurye penceresi yerine takip gösteriliyor (DOMAIN §6).
   */
-  const [lines, steps, tracking] = await Promise.all([
+  const [lines, steps, tracking, pickupWarehouse] = await Promise.all([
     buildLines(db, items, locale, settled),
-    buildSteps(db, orderId, event),
+    buildSteps(db, orderId, event, order.deliveryType),
     order.deliveryType === 'shipping'
       ? readOrderTracking(db, orderId, { carrier: order.carrier, trackingNumber: order.trackingNumber })
       : Promise.resolve(null),
+    // Gel-al'da mailin teslimat bloğu müşterinin GİDECEĞİ yeri yazar: deponun adı ve adresi.
+    order.deliveryType === 'pickup' ? new WarehouseService(db).getById(order.warehouseId) : Promise.resolve(null),
   ]);
 
   const derivation = derivePaymentStatusForOrder(order, items, {
@@ -140,7 +147,7 @@ export async function buildOrderNotification(
     refund: buildRefund(order, refundAmountCents(items, event, opts.refundedAmountCents, derivation.refundDueCents), event, locale),
     paidOnline: order.amountCollectedCents > 0,
     paymentNote: paymentNote(order, derivation.amountToCollectCents, locale),
-    delivery: buildDelivery(order, locale),
+    delivery: buildDelivery(order, locale, pickupWarehouse),
     /*
       KARGO TAKİBİ — kaynağı 07.12'de bağlandı (önceden `null` sabitti ve şablon takip kutusunu
       hiç çizemiyordu: alan hazır, kaynağı yoktu).
@@ -225,8 +232,10 @@ async function buildLines(db: Db, items: readonly OrderItem[], locale: Preferred
  * Zaman çizgisi durum LOGUNDAN türetilir — siparişte "hazırlandı" damgası tutulmaz, geçiş kaydı
  * zaten vardır (07.6). Gerçekleşmiş adım zamanını gösterir, gerçekleşmemiş adım soluk kalır.
  */
-async function buildSteps(db: Db, orderId: string, event: NotifyEventName): Promise<NotificationStep[]> {
+async function buildSteps(db: Db, orderId: string, event: NotifyEventName, deliveryType: Order['deliveryType']): Promise<NotificationStep[]> {
   const log = await new OrderStatusLogService(db).listByOrder(orderId);
+  // Gel-al'ın "yolda"sı yoktur: çizgi üç adımdır, mal depodan elden gider.
+  const order = deliveryType === 'pickup' ? STEP_ORDER.filter((key) => key !== 'on_the_way') : STEP_ORDER;
   const firstAt = (status: string) => log.find((entry) => entry.toStatus === status)?.createdAt ?? null;
 
   const stampOf: Record<NotificationStep['key'], string | null> = {
@@ -239,8 +248,8 @@ async function buildSteps(db: Db, orderId: string, event: NotifyEventName): Prom
   const step = EVENT_STEP[event];
   if (!step) return []; // İstisna bildirimi — çizgi yok.
 
-  const currentIndex = STEP_ORDER.indexOf(step);
-  return STEP_ORDER.map((key, index) => {
+  const currentIndex = order.indexOf(step);
+  return order.map((key, index) => {
     const stamp = stampOf[key];
     return {
       key,
@@ -347,14 +356,25 @@ function paymentNote(order: Order, toCollectCents: number, locale: PreferredLang
   return order.amountCollectedCents > 0 ? PAYMENT_NOTE[locale].paid : null;
 }
 
-const DELIVERY_COPY: Record<PreferredLanguage, { route: string; shipping: string }> = {
-  tr: { route: 'Kapıya teslim', shipping: 'Kargoyla gönderim' },
-  fr: { route: 'Livraison à domicile', shipping: 'Expédition' },
-  de: { route: 'Lieferung an die Tür', shipping: 'Versand' },
+const DELIVERY_COPY: Record<PreferredLanguage, { route: string; shipping: string; pickup: string }> = {
+  tr: { route: 'Kapıya teslim', shipping: 'Kargoyla gönderim', pickup: 'Depodan teslim' },
+  fr: { route: 'Livraison à domicile', shipping: 'Expédition', pickup: 'Retrait à l’entrepôt' },
+  de: { route: 'Lieferung an die Tür', shipping: 'Versand', pickup: 'Abholung im Lager' },
 };
 
-function buildDelivery(order: Order, locale: PreferredLanguage) {
+/**
+ * Teslimat bloğu. Gel-al'da adres MÜŞTERİNİN değil DEPONUN adresidir ve yanına aranacak numara yazılır: randevu sistem
+ * dışı, telefonla (DOMAIN §6). Depo kaydı okunamadıysa tür yine yazılır, adres uydurulmaz.
+ */
+function buildDelivery(order: Order, locale: PreferredLanguage, pickupWarehouse: Warehouse | null) {
   const copy = DELIVERY_COPY[locale];
+  if (order.deliveryType === 'pickup') {
+    return {
+      icon: '🏬',
+      headline: pickupWarehouse ? `${copy.pickup} · ${pickupWarehouse.name}` : copy.pickup,
+      detail: [pickupWarehouse ? warehouseAddressLine(pickupWarehouse) : null, brand.contact.phoneDisplay].filter(Boolean).join(' · '),
+    };
+  }
   const kind = order.deliveryType === 'shipping' ? copy.shipping : copy.route;
   const address = order.addressSnapshot as { line1?: string; postalCode?: string; city?: string } | null;
 

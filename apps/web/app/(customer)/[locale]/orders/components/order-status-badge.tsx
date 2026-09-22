@@ -17,6 +17,8 @@ import type { Messages } from '../orders-types';
 const BADGE_CLASS: Record<CustomerOrderStatus, string> = {
   received: 'bg-olive-bg text-olive',
   preparing: 'bg-olive-bg text-olive',
+  // Gel-al'ın "hazır"ı da aktif ailede: müşterinin yapacağı iş var (gidip almak).
+  ready_for_pickup: 'bg-olive-bg text-olive',
   on_the_way: 'bg-olive-bg text-olive',
   delivered: 'bg-closed-bg text-closed',
   cancelled: 'bg-terracotta-bg text-terracotta-bright',

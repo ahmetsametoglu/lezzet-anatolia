@@ -91,6 +91,29 @@ describe('ek geçişler', () => {
   });
 });
 
+describe('gel-al (pickup) bağlamı', () => {
+  it('ready → delivered yalnız gel-al siparişinde izinli — rota/kargo "yolda"yı atlayamaz', () => {
+    // Bağlamsız izin verilseydi kurye uygulaması yola çıkmamış siparişi teslim edebilirdi.
+    expect(canTransition('ready', 'delivered').allowed).toBe(false);
+    expect(canTransition('ready', 'delivered', { deliveryType: 'route' }).allowed).toBe(false);
+    expect(canTransition('ready', 'delivered', { deliveryType: 'shipping' }).allowed).toBe(false);
+    expect(canTransition('ready', 'delivered', { deliveryType: 'pickup' }).allowed).toBe(true);
+  });
+
+  it('bağlam yalnız o geçişi açar — gel-al da hazır olmadan teslim edilemez', () => {
+    expect(canTransition('confirmed', 'delivered', { deliveryType: 'pickup' }).allowed).toBe(false);
+    expect(canTransition('preparing', 'delivered', { deliveryType: 'pickup' }).allowed).toBe(false);
+    expect(allowedTransitions('ready', { deliveryType: 'pickup' })).toEqual(['out_for_delivery', 'cancelled', 'delivered']);
+    expect(allowedTransitions('ready')).toEqual(['out_for_delivery', 'cancelled']);
+  });
+
+  it('gel-al teslimi de stok kapısından geçer ve anı sahanındır — ofis şeridine düşmez', () => {
+    expect(gateFor('ready', 'delivered')).toBe('deliver_order');
+    expect(transitionOwner('ready', 'delivered')).toBe('field');
+    expect(officeTransitions('ready')).not.toContain('delivered');
+  });
+});
+
 describe('yasak geçişler', () => {
   it('geri gitmek yasak (delivered → preparing gibi)', () => {
     expect(canTransition('delivered', 'preparing')).toEqual({ allowed: false, reason: 'not_allowed' });

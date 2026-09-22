@@ -6,6 +6,7 @@ export { OtpCodeEmail, otpSubject, type OtpCodeEmailProps, type OtpCodePurpose }
 // Sipariş bildirimleri (14.5) — üç şablon ortak iskeleti paylaşır.
 export { OrderConfirmedEmail, orderConfirmedSubject, type OrderEmailProps } from './templates/order-confirmed';
 export { OrderOutForDeliveryEmail, orderOutForDeliverySubject } from './templates/order-out-for-delivery';
+export { OrderReadyForPickupEmail, orderReadyForPickupSubject } from './templates/order-ready-for-pickup';
 export { OrderDeliveredEmail, orderDeliveredSubject } from './templates/order-delivered';
 
 // İstisna bildirimleri — zaman çizgisi yerine tek durum bloğu, para çözümü ilk kartta.

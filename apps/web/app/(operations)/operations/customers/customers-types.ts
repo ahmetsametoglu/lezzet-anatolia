@@ -120,6 +120,8 @@ export interface CustomerDetail {
   /** Vade limiti (kuruş); `null` = limit tanımlı değil (sınırsız DEĞİL — tanımsız). */
   creditLimitCents: number | null;
   codAllowed: boolean;
+  /** Gel-al izni: depodan teslim yalnız işaretli müşteriye sunulur. */
+  pickupAllowed: boolean;
   /** Genel fiyat kuralı; ikisi birlikte dolu ya da boş. */
   priceRuleBasis: CustomerPriceBasis | null;
   priceRulePercent: number | null;
@@ -153,6 +155,7 @@ export type CustomerEditInput = Pick<
   | 'type'
   | 'vatNumber'
   | 'codAllowed'
+  | 'pickupAllowed'
   /** Genel fiyat kuralı; `null` kuralı kaldırır. */
   | 'priceRuleBasis'
   | 'priceRulePercent'

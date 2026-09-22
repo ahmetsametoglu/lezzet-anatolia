@@ -32,7 +32,7 @@ export async function advanceOrder(db: SupabaseClient, orderId: string, path: re
     const order = await orders.getById(orderId);
     if (!order) throw new Error(`advanceOrder: sipariş yok (${orderId})`);
 
-    const verdict = canTransition(order.status, to);
+    const verdict = canTransition(order.status, to, { deliveryType: order.deliveryType });
     if (!verdict.allowed) throw new Error(`advanceOrder: ${order.status} → ${to} izinli değil (${verdict.reason})`);
 
     const gate = gateFor(order.status, to);
@@ -69,6 +69,8 @@ export async function prepareOrderToReady(
     unitPriceCents: number;
     shippingFeeCents?: number;
     lineDiscountAmountCents?: number;
+    /** Varsayılan rota; gel-al testi `pickup` geçer — aynı beş adım, teslim kapısı farklı. */
+    deliveryType?: 'route' | 'pickup';
   },
 ): Promise<{ orderId: string; itemId: string }> {
   const orders = new OrderService(db);
@@ -79,7 +81,7 @@ export async function prepareOrderToReady(
       warehouseId: input.warehouseId,
       customerId: input.customerId,
       channel: 'b2c',
-      deliveryType: 'route',
+      deliveryType: input.deliveryType ?? 'route',
       shippingFeeCents: input.shippingFeeCents ?? 0,
       // Başlıktaki indirim kalem paylarının toplamıdır ve bunu veritabanı zorluyor (0041) —
       // tek kalemli fikstürde ikisi aynı sayı.

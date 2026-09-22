@@ -27,6 +27,7 @@ export const AppNotificationKindEnum = z.enum([
   // ── Müşteri: sipariş yaşam döngüsü ──
   'order_confirmed',
   'order_out_for_delivery',
+  'order_ready_for_pickup',
   'order_delivered',
   'order_cancelled',
   'order_shortfall',

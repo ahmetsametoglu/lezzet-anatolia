@@ -21,6 +21,9 @@ import {
   DispatchOptionsResponseSchema,
   HandoverPendingResponseSchema,
   HandoverResponseSchema,
+  PickupDeliverResponseSchema,
+  PickupQueueResponseSchema,
+  type PickupDeliverRequest,
   WarehousePrintersResponseSchema,
   RegisterPrinterResponseSchema,
   type RegisterPrinterRequest,
@@ -476,6 +479,16 @@ export function handOverBox(code: string): Promise<ApiResult<z.infer<typeof Hand
  */
 export function fetchPendingHandover(): Promise<ApiResult<z.infer<typeof HandoverPendingResponseSchema>>> {
   return warehouseFetch('/api/v1/warehouse/handover/pending', HandoverPendingResponseSchema);
+}
+
+/** D9 · Gel-al: müşterisini bekleyen hazır siparişler + tezgâh kasası. */
+export function fetchPickupQueue(): Promise<ApiResult<z.infer<typeof PickupQueueResponseSchema>>> {
+  return warehouseFetch('/api/v1/warehouse/pickup', PickupQueueResponseSchema);
+}
+
+/** D9 · Gel-al teslimi: okutulan kutular + (borç varsa) tahsilat; teslim `ready`den yazılır. */
+export function deliverPickup(orderId: string, body: PickupDeliverRequest): Promise<ApiResult<z.infer<typeof PickupDeliverResponseSchema>>> {
+  return warehouseFetch(`/api/v1/warehouse/pickup/${encodeURIComponent(orderId)}/deliver`, PickupDeliverResponseSchema, { method: 'POST', body });
 }
 
 /**

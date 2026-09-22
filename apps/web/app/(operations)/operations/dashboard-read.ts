@@ -246,6 +246,8 @@ interface BandFacts {
    */
   flow: RouteFlowView[];
   queue: QueueGroupView[];
+  /** Bekleme süresi dolan gel-al siparişleri — masa temiz olsa da ofisin kararını bekleyen iş. */
+  overduePickups: number;
 }
 
 /**
@@ -280,7 +282,12 @@ export function buildBand(facts: BandFacts): AlertBandView {
    * olmuyordu. Kuyruğun kaç kalem olduğu şeridin GEREKÇE satırında zaten yazılı; bir de düğme
    * koymak, iş yapmayan bir düğmeyi günde onlarca kez göstermek demekti.
    */
-  const secondary = null;
+  /* GEL-AL BEKLEMESİ (22.09): randevu sistem dışı, süre dolunca kararı ofis verir — arama ya da iptal. Cümle şeridin
+     gerekçe satırına biner, köprü sipariş listesinin gel-al süzgecine iner: iş yapılacak yer orası. */
+  const pickupNote =
+    facts.overduePickups > 0 ? `${num(facts.overduePickups)} gel-al siparişinin bekleme süresi doldu — müşteri aranmalı ya da sipariş iptal edilmeli.` : null;
+  const secondary = pickupNote ? { label: 'Gel-al siparişleri →', href: '/operations/orders?tab=ready&del=pickup' } : null;
+  const detailOf = (base: string | null): string | null => [base, pickupNote].filter(Boolean).join(' ') || null;
 
   // Kesim riski en yüksek sesle konuşur: mal rafta kalırsa gün kurtarılamaz, ötekiler gün içinde döner.
   if (behind.length > 0) {
@@ -297,7 +304,7 @@ export function buildBand(facts: BandFacts): AlertBandView {
       headline: missed
         ? `${names} ${cutoff} hazırlık kesimini kaçırdı — ${num(late)} sipariş hazırlanmadı.`
         : `${names} ${cutoff} kesimine yetişmiyor — ${num(late)} sipariş hâlâ hazırlanmadı.`,
-      detail: queueDetail,
+      detail: detailOf(queueDetail),
       tone: missed ? 'red' : 'amber',
       // Hazırlık masası web'den söküldü (kullanıcı kararı 07.09): kuyruk native depo ekranında
       // (21.11). Şerit burada yalnız söyler; iş yapılacak yer bu tarayıcı değil.
@@ -309,12 +316,13 @@ export function buildBand(facts: BandFacts): AlertBandView {
   if (totalCount === 0) {
     return {
       eyebrow: current ? `SIRADAKİ · ${current.time}` : 'GÜN AKIŞI',
+      // Masa TEMİZ değilse (süresi dolan gel-al var) kutlama cümlesi kalır ama ton amber: karar bekleyen bir şey var.
       headline: 'Karar bekleyen iş yok — masa temiz.',
       // Kartın kendi notu kalktı; cümle SATIRIN ölçülmüş notundan ve rota adından kuruluyor.
-      detail: currentRow ? `${currentRow.step.title} · ${currentRow.zoneName}: ${currentRow.row.note}.` : null,
-      tone: 'olive',
+      detail: detailOf(currentRow ? `${currentRow.step.title} · ${currentRow.zoneName}: ${currentRow.row.note}.` : null),
+      tone: pickupNote ? 'amber' : 'olive',
       primary: null,
-      secondary: null,
+      secondary,
     };
   }
 
@@ -325,8 +333,8 @@ export function buildBand(facts: BandFacts): AlertBandView {
     headline: currentRow
       ? `${currentRow.step.title} · ${currentRow.zoneName} — ${currentRow.row.note}.`
       : `${num(totalCount)} kalem karar bekliyor.`,
-    detail: queueDetail,
-    tone: urgentCount > 0 ? 'amber' : 'neutral',
+    detail: detailOf(queueDetail),
+    tone: urgentCount > 0 || pickupNote ? 'amber' : 'neutral',
     primary: null,
     secondary: null,
   };

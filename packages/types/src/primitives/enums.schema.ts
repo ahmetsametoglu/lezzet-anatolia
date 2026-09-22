@@ -65,8 +65,9 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
 
 /**
  * Sipariş durumunun MÜŞTERİ yüzeyindeki hâli — **kapalı ve dar bir küme** (tasarım: "iç durum
- * adları asla sızmaz"). Dokuz iç durum altıya iner: müşteri `preparing` ile `ready` arasındaki
- * operasyon ayrımını da, `delivered` ile `completed` arasındaki muhasebe ayrımını da görmez.
+ * adları asla sızmaz"). Dokuz iç durum yediye iner: müşteri `preparing` ile `ready` arasındaki
+ * operasyon ayrımını da, `delivered` ile `completed` arasındaki muhasebe ayrımını da görmez. Tek
+ * istisna gel-al: orada `ready` müşterinin eylemini bekler ("gelip alın"), o yüzden ayrı hâldir.
  *
  * Burası yalnız KATEGORİdir, metin değil: adı üç dilde sayfanın `messages.json`'undan gelir
  * (operasyon haritası düz Türkçe metin tutar, çünkü o yüzey tek dillidir). Kategori ile metni
@@ -77,6 +78,8 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
 export const CustomerOrderStatusEnum = z.enum([
   'received',
   'preparing',
+  /** Gel-al siparişi hazır, müşteri depodan alabilir — "yolda" hiç olmaz, bu hâl onun yerini tutar. */
+  'ready_for_pickup',
   'on_the_way',
   'delivered',
   'cancelled',
@@ -128,12 +131,12 @@ export type DeliveryType = z.infer<typeof DeliveryTypeEnum>;
  * depo zinciri hiç çalışmaz. Bu yüzden checkout, adres çözümü ve kargo ücreti bu dar kümeyi
  * konuşur; siparişin kendisi (`Order.deliveryType`) geniş kümeyi taşır.
  *
- * **Müşteri sözleşmeleri de bunu kullanır**, geniş olanı değil: checkout sonucu `pickup`
- * döndüremez ve sözleşme döndürebilirmiş gibi yazılırsa istemci hiç oluşmayacak bir hâli ele
- * almak zorunda kalır — "okuyan, var olmayan bir kabiliyeti varsayar" (0031 künyesi).
+ * Checkout sözleşmesi BU KÜMEYİ KULLANMAZ: gel-al (`pickup`) izinli müşteriye checkout'tan
+ * açıldığından beri sipariş açma sonucu üç türü de taşır. Dar küme yalnız adresten çözülen
+ * sorulara kaldı — bölge/depo çözümü ve kargo ücreti.
  *
- * `.exclude()` ile TÜRETİLİYOR, ikinci bir liste yazılmıyor: küme bir gün büyürse (örn. "gel-al"
- * siteye açılırsa) tek yer değişir. Elle yazılmış dar birleşimler tam bu yüzden 26.08'de kırıldı.
+ * `.exclude()` ile TÜRETİLİYOR, ikinci bir liste yazılmıyor: küme büyürse tek yer değişir. Elle
+ * yazılmış dar birleşimler tam bu yüzden 26.08'de kırıldı.
  */
 export const AddressDeliveryTypeEnum = DeliveryTypeEnum.exclude(['pickup']);
 export type AddressDeliveryType = z.infer<typeof AddressDeliveryTypeEnum>;

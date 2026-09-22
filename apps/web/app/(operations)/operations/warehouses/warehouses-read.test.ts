@@ -23,6 +23,7 @@ const WAREHOUSE = {
   lat: null,
   lng: null,
   shipsOnline: false,
+  pickupEnabled: false,
   isActive: true,
   sortOrder: 1,
   createdAt: '2026-01-01T00:00:00Z',

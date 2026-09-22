@@ -260,6 +260,15 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
   - **Kanal satırı bunun istisnası ve her yolda geçerli:** `channel: b2b` alt sınırı toptan fiyat vermenin karşılığıdır — **ticari şarttır, mesafeyle ilgisi yoktur.** Toptancı kargoyla alsa da doldurur.
   - Kural **kodda zorlanır, veriyle değil** (`packages/application/src/cart/min-basket.ts`): kargo yolunda ayar yalnız kanal kapsamından okunur (`only: ['channel']`), küresel satır bile sayılmaz. Kapsam düşürmek yetmiyordu — küresel satır her zaman eşleşir, yani operatör küresel bir eşik yazdığı gün kargo siparişleri sessizce ona takılırdı. **Kimsenin vermediği bir kararın oluşabildiği yol kapatıldı.**
   - Bu güvence sayesinde taban **küresel satıra** yazılabiliyor (bölge bölge tekrarlanmadan); bölge satırı yalnız gerçekten farklı bir tur için gerekir.
+- **Depodan teslim (gel-al) — yalnız izinli müşteriye (22.09):** üçüncü teslim türü `pickup`, checkout'ta yalnız
+  `Customer.pickup_allowed` müşteriye ve yalnız gel-al noktası olan tesisler (`Warehouse.pickup_enabled`) için
+  sunulur; herkese açık bir Drive değildir. Sipariş seçilen depodan çıkar, bölge ve gün yok, kargo ücreti yok, asgari
+  sepet kargo kuralıyla aynı (yalnız kanal satırı). Randevu sistem dışıdır: sipariş hazır olunca müşteriye haber gider
+  (`order_ready_for_pickup`), saati depoyla telefonla kararlaştırır. Ödeme online ya da **depoda** (kapıda ödeme
+  kurallarıyla: tavan, `cod_allowed`, nakit uyarısı; para deponun kapı kasasına). Teslim depo uygulamasından, kutular
+  okutularak, `ready`den yazılır (ORDER_LIFECYCLE). Hazır sipariş `pickup_wait_days` (parametrik, varsayılan 7) kadar
+  bekleyince ofisin listesine düşer; iptal ofisin kararıdır (ödenmişse tam iade). Depo adresi müşteriye gösterilir —
+  "depo gösterilmez" kuralının bilinçli tek istisnası.
 - **Ücretsiz kargo eşiği:** parametrik.
 - **Kargo ücreti:** eşik altı siparişte müşteriden alınan ücret `Order.shipping_fee`'ye yazılır ve **KDV'ye tabidir**; `total` bu ücreti içerir. Tam iptalde ücret de iade edilir; kısmi eksikte varsayılan olarak iade edilmez (teslimat yapılmıştır).
 - Faz 1'de rota kapasitesi ve zaman penceresi **yok** (Faz 2); sadece içerideyim/dışarıdayım ayrımı.
@@ -321,6 +330,7 @@ gösterilen sıra aslında **siparişin verilme sırasıydı** — ekran olmayan
 | Müşteri / teslimat | Seçenekler |
 | --- | --- |
 | Rota-içi B2C | Online öde / Kapıda öde (nakit/kart/çek) |
+| Gel-al (izinli müşteri) | Online öde / Depoda öde (kapıda ödeme kurallarıyla) |
 | Kargo (rota-dışı) B2C | Sadece online öde (peşin) |
 | B2B (credit yok) | Online öde / havale (peşin) |
 | B2B (credit var) | + Hesaba (vadeli) |

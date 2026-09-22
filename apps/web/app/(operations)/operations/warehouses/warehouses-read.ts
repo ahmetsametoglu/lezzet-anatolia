@@ -79,6 +79,7 @@ export function toWarehouseRows({ warehouses, zones, staff, batches, transfers }
       lat: w.lat,
       lng: w.lng,
       shipsOnline: w.shipsOnline,
+      pickupEnabled: w.pickupEnabled,
       isActive: w.isActive,
       sortOrder: w.sortOrder,
       zoneCount: own.length,

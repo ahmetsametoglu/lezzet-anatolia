@@ -33,6 +33,8 @@ export interface TestWarehouseOptions {
    */
   kind?: Warehouse['kind'];
   shipsOnline?: boolean;
+  /** Gel-al noktası — checkout'un gel-al testi bu tesisi ister; varsayılan kapalı (üretim varsayılanıyla aynı). */
+  pickupEnabled?: boolean;
   isActive?: boolean;
   /** Aracın evi olan tesis (02.09) — yalnız `kind: 'vehicle'` ile birlikte anlamlı. */
   homeWarehouseId?: string;
@@ -70,6 +72,7 @@ export async function createTestWarehouse(db: SupabaseClient, opts: TestWarehous
     homeWarehouseId: opts.homeWarehouseId ?? null,
     vehicleId,
     shipsOnline: opts.shipsOnline ?? false,
+    pickupEnabled: opts.pickupEnabled ?? false,
     isActive: opts.isActive ?? true,
   });
 }

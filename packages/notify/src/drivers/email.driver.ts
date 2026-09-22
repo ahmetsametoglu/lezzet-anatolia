@@ -6,6 +6,7 @@ import {
   OrderDeliveredEmail,
   OrderOutForDeliveryEmail,
   OrderPaymentIncompleteEmail,
+  OrderReadyForPickupEmail,
   OrderRefundedEmail,
   OrderShortfallEmail,
   TicketReceivedEmail,
@@ -19,6 +20,7 @@ import {
   orderDeliveredSubject,
   orderOutForDeliverySubject,
   orderPaymentIncompleteSubject,
+  orderReadyForPickupSubject,
   orderRefundedSubject,
   orderShortfallSubject,
   sendEmail,
@@ -56,6 +58,7 @@ interface Template<E extends NotifyEventName> {
 const TEMPLATES: { [E in NotifyEventName]: Template<E> } = {
   order_confirmed: { subject: orderConfirmedSubject, render: OrderConfirmedEmail },
   order_out_for_delivery: { subject: orderOutForDeliverySubject, render: OrderOutForDeliveryEmail },
+  order_ready_for_pickup: { subject: orderReadyForPickupSubject, render: OrderReadyForPickupEmail },
   order_delivered: { subject: orderDeliveredSubject, render: OrderDeliveredEmail },
   order_cancelled: { subject: orderCancelledSubject, render: OrderCancelledEmail },
   order_shortfall: { subject: orderShortfallSubject, render: OrderShortfallEmail },

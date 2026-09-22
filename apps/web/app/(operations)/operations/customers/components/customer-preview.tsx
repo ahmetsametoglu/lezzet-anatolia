@@ -254,6 +254,15 @@ export function CustomerPreview({
                   value={<Badge tone={detail.codAllowed ? 'olive' : 'neutral'}>{detail.codAllowed ? 'Açık' : 'Kapalı'}</Badge>}
                 />
                 <Readout
+                  label="Gel-al"
+                  hint={
+                    detail.pickupAllowed
+                      ? 'Açık — müşteri checkout’ta depodan teslim seçeneğini görür; saati depoyla telefonla kararlaştırır.'
+                      : 'Kapalı (varsayılan) — depodan teslim yalnız anlaşmalı müşteriye açılır; Düzenle formundan.'
+                  }
+                  value={<Badge tone={detail.pickupAllowed ? 'olive' : 'neutral'}>{detail.pickupAllowed ? 'Açık' : 'Kapalı'}</Badge>}
+                />
+                <Readout
                   label="Fiyat kuralı"
                   hint={
                     detail.priceRuleBasis === null

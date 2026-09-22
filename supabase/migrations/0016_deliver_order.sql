@@ -14,19 +14,21 @@ set search_path = public
 as $$
 declare
   v_current order_status;
+  v_delivery_type delivery_type;
   v_batch record;
   v_consumed int := 0;
   v_reference text;
 begin
-  select status, reference_no into v_current, v_reference
+  select status, reference_no, delivery_type into v_current, v_reference, v_delivery_type
     from public.order where id = p_order_id for update;
   if not found then
     raise exception 'deliver_order: sipariş bulunamadı (%)', p_order_id;
   end if;
 
-  -- Teslim yalnız yoldaki siparişten olur. İzin tablosunun tamamı motordadır (status-machine);
-  -- burada yalnız beklenen kaynak doğrulanır — araya biri girmişse sessizce ezilmez.
-  if v_current <> 'out_for_delivery' then
+  -- Teslim yalnız yoldaki siparişten olur; gel-al (`pickup`) siparişinin "yolda"sı yoktur, müşteri hazır (`ready`)
+  -- malı depodan alır. İzin tablosunun tamamı motordadır (status-machine); burada yalnız beklenen kaynak
+  -- doğrulanır — araya biri girmişse sessizce ezilmez.
+  if not (v_current = 'out_for_delivery' or (v_current = 'ready' and v_delivery_type = 'pickup')) then
     return jsonb_build_object('ok', false, 'reason', 'stale', 'current_status', v_current);
   end if;
 

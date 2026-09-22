@@ -12,6 +12,8 @@ const STEP_ICON = {
   received: 'check-wide',
   prepared: 'box',
   on_the_way: 'truck',
+  // Gel-al: "yolda" yerine "teslime hazır" — mal depoda müşteriyi bekliyor.
+  ready_for_pickup: 'pin',
   delivered: 'home',
 } as const satisfies Record<OrderMilestone, string>;
 

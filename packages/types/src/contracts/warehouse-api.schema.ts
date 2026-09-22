@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CourierReturnBoxSchema, CourierReturnFreeGoodSchema, CourierReturnStayBoxSchema } from './courier-return-api.schema';
+import { DoorCollectionInputSchema } from './courier-api.schema';
 import { FulfillmentAdjustmentSchema, PreparationPickSchema } from '../entities/order.schema';
 import { ProductDateTypeEnum } from '../entities/product.schema';
 import { AdjustBatchResultSchema, StockDirectionEnum, StockWriteOffReasonEnum } from '../entities/stock-movement.schema';
@@ -1921,3 +1922,71 @@ export const LearnCodeResponseSchema = z.discriminatedUnion('status', [
   }),
 ]);
 export type LearnCodeResponse = z.infer<typeof LearnCodeResponseSchema>;
+// ── D9 · Gel-al teslim ───────────────────────────────────────────────────────
+
+/**
+ * `GET /warehouse/pickup` — **müşterisini bekleyen gel-al siparişleri**: hazır (`ready`) ve `delivery_type = 'pickup'`, bu
+ * deponun. Hazırlık kuyruğunun "tamamlananlar" yüzünden ayrı bir liste, çünkü orası taşıyıcıya gidecek kutuları sayar;
+ * burada bekleyen müşteridir ve süre (`waitingDays`) kararın girdisidir — randevu sistem dışı (telefon), mal süresiz
+ * ayrılmış kalamaz.
+ */
+export const PickupQueueOrderSchema = z.object({
+  orderId: z.string().uuid(),
+  referenceNo: z.string().nullable(),
+  /** Hesap sahibi — tezgâhta "kim için" sorusunun cevabı; alıcı adı değil, çünkü gel-al'da kapıya giden yok. */
+  customerName: z.string().nullable(),
+  channel: ChannelEnum,
+  lineCount: z.number().int().nonnegative(),
+  boxCount: z.number().int().nonnegative(),
+  /** Kutu kodları — tezgâhta okutulur; ekran yabancı kodu buradan ayırır, simülasyon çipini buradan kurar. */
+  boxes: z.array(z.object({ boxNo: z.number().int().positive(), code: z.string() })),
+  /** `ready`ye ilk geçiş anı; defterde yoksa `null` (eski kayıt) — süre o zaman hesaplanmaz. */
+  readyAt: z.string().nullable(),
+  waitingDays: z.number().int().nonnegative().nullable(),
+  /** Tezgâhta alınacak para (cent); online ödenmiş ya da vadeli siparişte 0. */
+  amountDueCents: z.number().int().nonnegative(),
+  onAccount: z.boolean(),
+  paymentStatus: PaymentStatusEnum,
+});
+export type PickupQueueOrderContract = z.infer<typeof PickupQueueOrderSchema>;
+
+export const PickupQueueResponseSchema = z.object({
+  orders: z.array(PickupQueueOrderSchema),
+  /** Tezgâh tahsilatının gireceği kasa (deponun kapı kasası ayarı); boşsa ekran tahsilat bloğunu kapalı çizer. */
+  cashAccountId: z.string().uuid().nullable(),
+});
+export type PickupQueueResponse = z.infer<typeof PickupQueueResponseSchema>;
+
+/**
+ * `POST /warehouse/pickup/:orderId/deliver` — müşteriye teslim. Kutu okutması rota kapısıyla aynı şart (tüm kutular),
+ * tahsilat kuryenin kapı tahsilatıyla aynı şekil (`DoorCollectionInputSchema`): yöntem, tutar, kasa, tekrar anahtarı.
+ */
+export const PickupDeliverRequestSchema = z.object({
+  scannedBoxCodes: z.array(z.string()).default([]),
+  collection: DoorCollectionInputSchema.nullish(),
+});
+export type PickupDeliverRequest = z.infer<typeof PickupDeliverRequestSchema>;
+
+export const PickupDeliverResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    /** Fiilen yazılan tahsilat (cent); tahsilat yoksa 0. */
+    collectedCents: z.number().int(),
+    /** Teslim sonrası kalan borç (cent). */
+    amountDueCents: z.number().int(),
+    paymentStatus: PaymentStatusEnum,
+    /** Nakit yasal sınırı aşıldı mı — engel değil, bilgi (DOMAIN §7). */
+    cashLimitExceeded: z.boolean(),
+    /** Tahsilat bu istekte yazılmadı; aynı anahtarla zaten yazılmıştı. */
+    collectionDeduped: z.literal(true).optional(),
+  }),
+  /** Okutulmamış kutu var — teslim YAZILMADI; kalan kutuların numarası döner. */
+  z.object({ status: z.literal('boxes_missing'), remainingBoxNos: z.array(z.number().int()) }),
+  /** Sipariş hazır değil (henüz toplanıyor ya da çoktan teslim edilmiş). */
+  z.object({ status: z.literal('not_ready'), currentStatus: OrderStatusEnum }),
+  /** Sipariş gel-al değil — rota ve kargo bu kapıdan teslim edilmez. */
+  z.object({ status: z.literal('not_pickup') }),
+  z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
+  z.object({ status: z.literal('not_found') }),
+]);
+export type PickupDeliverResponse = z.infer<typeof PickupDeliverResponseSchema>;

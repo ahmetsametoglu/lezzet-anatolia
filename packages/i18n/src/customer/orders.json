@@ -9,7 +9,8 @@
       "on_the_way": "Yolda",
       "delivered": "Teslim edildi",
       "cancelled": "İptal",
-      "returning": "İade sürecinde"
+      "returning": "İade sürecinde",
+      "ready_for_pickup": "Teslime hazır"
     },
     "guest": {
       "title": "Siparişleriniz için hızlı doğrulama",
@@ -82,18 +83,22 @@
         "received": "Sipariş alındı",
         "prepared": "Hazırlandı",
         "on_the_way": "Yolda",
-        "delivered": "Teslim edildi"
+        "delivered": "Teslim edildi",
+        "ready_for_pickup": "Teslime hazır"
       },
       "note": {
         "received": "Siparişiniz onaylandı",
         "prepared": "Siparişiniz özenle paketlendi",
-        "on_the_way": "Kurye bölgenizde — kapınıza yaklaşıyor"
+        "on_the_way": "Kurye bölgenizde — kapınıza yaklaşıyor",
+        "ready_for_pickup": "Siparişiniz depoda hazır — saati telefonla kararlaştırıp alabilirsiniz"
       },
       "feedback": {
         "title": "Aldığınız ürünlere yorum yazın",
         "body": "Birkaç dokunuşla değerlendirin — {points} puan kazanın ve bir sonraki alışverişinizde kullanın.",
         "cta": "Değerlendirmeye başla"
-      }
+      },
+      "deliveryPickup": "Depodan teslim",
+      "pickupPhone": "Randevu için: {phone}"
     }
   },
   "fr": {
@@ -106,7 +111,8 @@
       "on_the_way": "En route",
       "delivered": "Livrée",
       "cancelled": "Annulée",
-      "returning": "En retour"
+      "returning": "En retour",
+      "ready_for_pickup": "Prête au retrait"
     },
     "guest": {
       "title": "Vérification rapide pour vos commandes",
@@ -179,18 +185,22 @@
         "received": "Commande reçue",
         "prepared": "Préparée",
         "on_the_way": "En route",
-        "delivered": "Livrée"
+        "delivered": "Livrée",
+        "ready_for_pickup": "Prête au retrait"
       },
       "note": {
         "received": "Votre commande est confirmée",
         "prepared": "Votre commande a été emballée avec soin",
-        "on_the_way": "Le livreur est dans votre quartier"
+        "on_the_way": "Le livreur est dans votre quartier",
+        "ready_for_pickup": "Votre commande vous attend à l’entrepôt — convenez de l’heure par téléphone"
       },
       "feedback": {
         "title": "Donnez votre avis sur vos produits",
         "body": "Quelques gestes suffisent — gagnez {points} points à utiliser lors de votre prochaine commande.",
         "cta": "Commencer l’évaluation"
-      }
+      },
+      "deliveryPickup": "Retrait à l’entrepôt",
+      "pickupPhone": "Pour convenir de l’heure : {phone}"
     }
   },
   "de": {
@@ -203,7 +213,8 @@
       "on_the_way": "Unterwegs",
       "delivered": "Geliefert",
       "cancelled": "Storniert",
-      "returning": "In Rücksendung"
+      "returning": "In Rücksendung",
+      "ready_for_pickup": "Abholbereit"
     },
     "guest": {
       "title": "Schnelle Verifizierung für Ihre Bestellungen",
@@ -276,18 +287,22 @@
         "received": "Bestellung eingegangen",
         "prepared": "Vorbereitet",
         "on_the_way": "Unterwegs",
-        "delivered": "Geliefert"
+        "delivered": "Geliefert",
+        "ready_for_pickup": "Abholbereit"
       },
       "note": {
         "received": "Ihre Bestellung ist bestätigt",
         "prepared": "Ihre Bestellung wurde sorgfältig verpackt",
-        "on_the_way": "Der Kurier ist in Ihrer Nähe"
+        "on_the_way": "Der Kurier ist in Ihrer Nähe",
+        "ready_for_pickup": "Ihre Bestellung liegt im Lager bereit — vereinbaren Sie die Uhrzeit telefonisch"
       },
       "feedback": {
         "title": "Bewerten Sie Ihre Produkte",
         "body": "Wenige Handgriffe genügen — sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",
         "cta": "Bewertung starten"
-      }
+      },
+      "deliveryPickup": "Abholung im Lager",
+      "pickupPhone": "Für die Terminabsprache: {phone}"
     }
   }
 }

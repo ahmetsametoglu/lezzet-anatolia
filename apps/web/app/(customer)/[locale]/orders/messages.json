@@ -23,7 +23,8 @@
       "on_the_way": "● Yolda",
       "delivered": "Teslim edildi",
       "cancelled": "İptal edildi",
-      "returning": "İade sürecinde"
+      "returning": "İade sürecinde",
+      "ready_for_pickup": "● Teslime hazır"
     },
     "empty": {
       "title": "Henüz siparişiniz yok",
@@ -64,7 +65,8 @@
       "on_the_way": "● En route",
       "delivered": "Livrée",
       "cancelled": "Annulée",
-      "returning": "Retour en cours"
+      "returning": "Retour en cours",
+      "ready_for_pickup": "● Prête au retrait"
     },
     "empty": {
       "title": "Vous n'avez pas encore de commande",
@@ -105,7 +107,8 @@
       "on_the_way": "● Unterwegs",
       "delivered": "Geliefert",
       "cancelled": "Storniert",
-      "returning": "Rückgabe läuft"
+      "returning": "Rückgabe läuft",
+      "ready_for_pickup": "● Abholbereit"
     },
     "empty": {
       "title": "Sie haben noch keine Bestellung",

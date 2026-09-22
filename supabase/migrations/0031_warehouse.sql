@@ -24,6 +24,9 @@ create table public.warehouse (
   lng numeric(9, 6),
   -- Kargo çıkış deposu: bölge dışı müşteriler ve rota müşterilerinin kargo dolgusu buradan gider.
   ships_online boolean not null default false,
+  -- Gel-al noktası: izinli müşteri hazır siparişini buradan alır. Her tesis otomatik gel-al noktası değildir —
+  -- müşteriye adresi gösterilen bir yer operatör kararıdır (DOMAIN §17 "müşteriye depo gösterilmez" kuralının tek istisnası).
+  pickup_enabled boolean not null default false,
   is_active boolean not null default true,
   sort_order int not null default 0,
   -- Aracın sabah çıkıp akşam döndüğü tesis: transferden, kuryeden ya da seferden türetmek "genelde doğru" olurdu, yetmez.
@@ -33,6 +36,8 @@ create table public.warehouse (
   -- Araçtan kargo çıkmaz: kargo çıkış deposu bir adrestir, taşıyıcı oraya gelir. Kısıt aynı
   -- tabloda durabildiği için tetikleyiciye gerek yok — en ucuz yerde.
   constraint warehouse_vehicle_never_ships check (kind = 'facility' or not ships_online),
+  -- Müşteri hareket hâlindeki bir yere gelemez: gel-al noktası da bir adrestir.
+  constraint warehouse_vehicle_never_pickup check (kind = 'facility' or not pickup_enabled),
   -- Ev YALNIZ aracın alanıdır. Tesise ev yazılabilseydi ağaç iki anlama gelirdi.
   constraint warehouse_home_only_vehicle check (kind = 'vehicle' or home_warehouse_id is null),
   -- `postal_code_place_point` / `address_geo_point` ile aynı kural, aynı gerekçe.

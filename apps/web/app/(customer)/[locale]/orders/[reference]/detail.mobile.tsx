@@ -28,9 +28,15 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
   const d = copy.detail;
 
   // Teslim türü + (varsa) gün. Gün yoksa tür yalnız başına: kargoda teslim günü taşıyıcının işidir (native'in kararı).
-  const kind = order.deliveryType === 'route' ? d.deliveryRoute : order.deliveryType === 'shipping' ? d.deliveryShipping : null;
+  const kind =
+    order.deliveryType === 'route' ? d.deliveryRoute : order.deliveryType === 'shipping' ? d.deliveryShipping : order.pickup ? d.deliveryPickup : null;
   const delivery = [kind, order.deliveryDate === null ? null : formatDeliveryDate(order.deliveryDate, locale)].filter(Boolean).join(' — ');
-  const address = order.address === null ? '' : addressLine(order.address);
+  // Gel-al'da adres satırı DEPONUN adresidir (müşteri oraya gider) ve yanına randevu numarası yazılır; fatura adresi çizilmez.
+  const address = order.pickup
+    ? `${order.pickup.warehouseName}, ${order.pickup.addressLine} · ${d.pickupPhone.replace('{phone}', order.pickup.phoneDisplay)}`
+    : order.address === null
+      ? ''
+      : addressLine(order.address);
   const carrier = order.shipment === null ? '' : carrierLabel(t, order.shipment.carrierName);
 
   // Para satırları toplamı açıkladığı için önce gelir ve sıfır indirim indirim olmadığı için çizilmez. Koli sırası yalnız birden

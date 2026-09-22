@@ -221,10 +221,11 @@ tabloları (günlük KPI vb.) analitik modülüyle birlikte, soruları netleşin
 - **Yerinde satış üçüncü bir teslimat tipidir — `pickup` (kullanıcı kararı 26.08).** `delivery_type`in sorusu "mal müşteriye NASIL ulaşır" ve üç gerçek cevabı var: bizim aracımız · taşıyıcı · **müşterinin kendisi**. Yerinde satışta mal hiç gitmez; müşteri tezgâhın ya da kuryenin arabasının önündedir. O güne kadar böyle bir satış varsayılana düşüp `route` yazıyordu — adressiz, bölgesiz, kuryesiz bir "rota siparişi"; sipariş geçerli görünüyor, yalnız teslimat tipine göre kırılan her rapor onu yanlış kovaya koyuyordu.
   **Enum genişlerken 36 dallanma noktası ölçüldü ve yönü karışıktı** (17 tanesi `=== 'shipping'`, 15 tanesi `=== 'route'`): iki varsayılan da yanlıştı, yani "additive" bir değişiklik değildi. Karşılığında **dar küme türetildi**: `AddressDeliveryType = DeliveryTypeEnum.exclude(['pickup'])`. Bir ADRESTEN çözülen her şey (checkout, teslimat çözümü, kargo ücreti, müşteri sözleşmeleri) dar kümeyi konuşur; siparişin kendisi ve onu GÖSTEREN her ekran (operasyon detayı, müşterinin "Siparişlerim"i) geniş kümeyi taşır. Ölçüt tek soru: *bu değer buraya gerçekten gelebilir mi.* Elle yazılmış `'route' | 'shipping'` birleşimleri tam bu yüzden kırıldı ve türetilmiş tiple değiştirildi (CLAUDE §1).
   **`pickup` YALNIZ YERİNDE SATIŞ DEMEK DEĞİL — kapı bilerek açık bırakıldı (26.08, kullanıcı
-  sorusu üzerine).** Değerin sorusu *"mal müşteriye NASIL ulaşır"* ve cevabı **"müşterinin
-  kendisi"**; yerinde satış bugün bunu yazan TEK yol, tanımın kendisi değil. Kullanıcı ileriyi
-  sordu: *"Drive mantığı olacak — müşteri sipariş verip depodan gelip alacak, belki randevuyla.
-  Bu konunun önünü kapatmamamız lazım."*
+  sorusu üzerine) ve 22.09'da ikinci yol açıldı:** gel-al checkout'u (`checkout-draft` →
+  `pickupWarehouseId`; `order_source` sepetin kaynağı, `door` değil). Değerin sorusu *"mal müşteriye
+  NASIL ulaşır"* ve cevabı **"müşterinin kendisi"**; yerinde satış artık bunu yazan iki yoldan biri.
+  Kullanıcı ileriyi sormuştu: *"Drive mantığı olacak — müşteri sipariş verip depodan gelip alacak,
+  belki randevuyla. Bu konunun önünü kapatmamamız lazım."* Randevu sistem dışı kaldı (telefon).
 
   Bir tur *"`pickup` ⇒ mal her zaman anında düşer"* diye bir değişmez önerildi ve **GERİ ALINDI**:
   tam da o cümle kapıyı kapatırdı. Anında tüketim `pickup`ın değil **yerinde satışın** kuralıdır ve
@@ -237,9 +238,11 @@ tabloları (günlük KPI vb.) analitik modülüyle birlikte, soruları netleşin
   **Kapıyı açık tutmanın dört şartı** (bu satır onların kaydı): *(1)* anında tüketim kuralı yerinde
   satış orkestrasyonunda durur, `delivery_type` semantiğinde DEĞİL; *(2)* sipariş açan kapı
   `pickup` gördüğü için tüketime karar VERMEZ — yolu çağıran seçer; *(3)* misafir müşteri kaydı
-  yerinde satışa özeldir, Drive'da müşteri gerçek ve kimliklidir; *(4)* `AddressDeliveryType`
-  dışlaması Drive'ı engellemez — o dışlama *"adresten çözülen akış"* kuralıdır ve Drive adresten
-  değil SEÇİLEN DEPODAN çözülür.
+  yerinde satışa özeldir, gel-al'da müşteri gerçek ve kimliklidir; *(4)* `AddressDeliveryType`
+  dışlaması gel-al'ı engellemedi — o dışlama *"adresten çözülen akış"* kuralıdır (bölge/depo çözümü,
+  kargo ücreti) ve gel-al adresten değil SEÇİLEN DEPODAN çözülür. Checkout sözleşmesi 22.09'dan beri
+  geniş kümeyi taşır; gel-al'ın iki ek kapısı: `ready → delivered` geçişi (`status-machine`, yalnız
+  `pickup`; `deliver_order` RPC aynı şartı tutar) ve müşteri durumu `ready_for_pickup`.
 
   **Kodda kapanan bir şey yok; kapanan tek şey bir pazarlama kaydının bugünkü biçimi.** `DOMAIN
   §624` işletmeyi Google'a **hizmet bölgesi (SAB)** olarak kaydediyor — adres gizli — ve gerekçesi

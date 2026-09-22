@@ -11,7 +11,8 @@ import {
   UserProfileService,
   type serviceDb,
 } from '@lezzet/database';
-import { readFacilityVanSummary } from '@lezzet/application';
+import { countOverduePickups, readFacilityVanSummary } from '@lezzet/application';
+import { PICKUP_WAIT_DAYS_DEFAULT, PICKUP_WAIT_DAYS_KEY } from '@lezzet/domain-core';
 import type { Order, OrderStatus, TicketStatus } from '@lezzet/types';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import { stockLink } from './stock/stock-url';
@@ -156,6 +157,12 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
   const flow = buildRouteFlow(routeFlowFacts(dayOrders, { zones, labels, times, isoWeekday }), { nowMinutes });
 
   const queue = buildQueue(queueFacts({ overdue, openTickets: ticketCounts }));
+  // Süresi dolan gel-al: eşik ayardan, sayı kapıdan (`countOverduePickups`) — kapsam personelin depolarıdır.
+  const overduePickups = await countOverduePickups(db, {
+    warehouseIds,
+    waitDays: await settings.getNumber(PICKUP_WAIT_DAYS_KEY, PICKUP_WAIT_DAYS_DEFAULT),
+    now,
+  });
 
   return {
     now: {
@@ -164,7 +171,7 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
       time: now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
     },
     scopeLabel: scopeLabelOf(ctx),
-    band: buildBand({ flow, queue }),
+    band: buildBand({ flow, queue, overduePickups }),
     kpis: buildKpis({
       orders: {
         /* İPTAL HARİÇ (21.265): kartın başlığı `total`dan geliyordu (iptal DÂHİL) ama hemen
@@ -340,6 +347,9 @@ async function toRows(
     defaultTermDays: input.termDays,
     now: input.now,
     warehouseLabels: input.labels,
+    // Panelin satırları GÜNÜN rota siparişleri ve açık ödemeler; hazır gel-al satırı buraya düşmez, süre okunmaz.
+    pickupReadyAt: new Map(),
+    pickupWaitDays: Number.POSITIVE_INFINITY,
   });
 }
 

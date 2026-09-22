@@ -9,7 +9,8 @@
       "received": "Alındı",
       "prepared": "Hazırlandı",
       "on_the_way": "Yolda",
-      "delivered": "Teslim edildi"
+      "delivered": "Teslim edildi",
+      "ready_for_pickup": "Teslime hazır"
     },
     "lineFormula": "{qty} × {unit} = ",
     "bundlePill": "Paket · {count} ürün",
@@ -45,7 +46,8 @@
       "title": "Aldığınız ürünlere yorum yazın",
       "body": "Birkaç dokunuşla değerlendirin — {points} puan kazanın ve bir sonraki alışverişinizde kullanın.",
       "cta": "Değerlendirmeye başla"
-    }
+    },
+    "pickupLine": "Depodan teslim"
   },
   "fr": {
     "back": "← Mes commandes",
@@ -57,7 +59,8 @@
       "received": "Reçue",
       "prepared": "Préparée",
       "on_the_way": "En route",
-      "delivered": "Livrée"
+      "delivered": "Livrée",
+      "ready_for_pickup": "Prête au retrait"
     },
     "lineFormula": "{qty} × {unit} = ",
     "bundlePill": "Coffret · {count} produits",
@@ -93,7 +96,8 @@
       "title": "Donnez votre avis sur vos produits",
       "body": "Quelques gestes suffisent — gagnez {points} points à utiliser lors de votre prochaine commande.",
       "cta": "Commencer l’évaluation"
-    }
+    },
+    "pickupLine": "Retrait à l’entrepôt"
   },
   "de": {
     "back": "← Meine Bestellungen",
@@ -105,7 +109,8 @@
       "received": "Eingegangen",
       "prepared": "Vorbereitet",
       "on_the_way": "Unterwegs",
-      "delivered": "Geliefert"
+      "delivered": "Geliefert",
+      "ready_for_pickup": "Abholbereit"
     },
     "lineFormula": "{qty} × {unit} = ",
     "bundlePill": "Paket · {count} Produkte",
@@ -141,6 +146,7 @@
       "title": "Bewerten Sie Ihre Produkte",
       "body": "Wenige Handgriffe genügen — sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",
       "cta": "Bewertung starten"
-    }
+    },
+    "pickupLine": "Abholung im Lager"
   }
 }

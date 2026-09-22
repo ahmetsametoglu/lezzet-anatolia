@@ -1,5 +1,6 @@
-import { OrderItemService, OrderService, SettingsService, UserProfileService, type serviceDb } from '@lezzet/database';
+import { OrderItemService, OrderService, OrderStatusLogService, SettingsService, UserProfileService, type serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, type KeysetCursor, type OrderItem } from '@lezzet/types';
+import { PICKUP_WAIT_DAYS_DEFAULT, PICKUP_WAIT_DAYS_KEY } from '@lezzet/domain-core';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import { warehouseFilterOf } from '@/lib/warehouse/filter';
 import { toCountsView, toOrderRows } from './orders-read';
@@ -50,7 +51,7 @@ export async function readOrdersPage(
   // okumanın karşılığı yok.
   const selectedId = opts.cursor ? '' : urlState.selected;
 
-  const [page, counts, termDays, labels, selectedOrders] = await Promise.all([
+  const [page, counts, termDays, labels, selectedOrders, pickupWaitDays] = await Promise.all([
     orderSvc.listPage(
       { ...filters, warehouseIds: warehouse.warehouseIds },
       { cursor: opts.cursor, limit: opts.limit ?? DEFAULT_PAGE_SIZE },
@@ -59,6 +60,8 @@ export async function readOrdersPage(
     new SettingsService(db).getNumber(PAYMENT_TERM_KEY, PAYMENT_TERM_DEFAULT),
     readWarehouseLabels(),
     selectedId ? orderSvc.listByIds([selectedId]) : Promise.resolve([]),
+    // Gel-al bekleme eşiği — satır "N gündür hazır" derken kırmızıya bu sayıda döner.
+    new SettingsService(db).getNumber(PICKUP_WAIT_DAYS_KEY, PICKUP_WAIT_DAYS_DEFAULT),
   ]);
 
   // Kapsam BURADA DA sorulur: `listByIds` depo süzgeci görmez — paylaşılan bir bağlantı, personelin
@@ -74,12 +77,19 @@ export async function readOrdersPage(
   const orderIds = orders.map((o) => o.id);
   const customerIds = [...new Set(orders.map((o) => o.customerId))];
   const courierIds = [...new Set(orders.flatMap((o) => (o.courierId ? [o.courierId] : [])))];
+  // Yalnız hazır gel-al satırlarının defteri okunur: sürenin tek kaynağı `ready`ye ilk geçiş anıdır.
+  const pickupIds = orders.filter((o) => o.deliveryType === 'pickup' && o.status === 'ready').map((o) => o.id);
 
-  const [items, customers, couriers] = await Promise.all([
+  const [items, customers, couriers, readyLogs] = await Promise.all([
     orderIds.length ? new OrderItemService(db).listByOrders(orderIds) : Promise.resolve([]),
     profileSvc.listByIds(customerIds),
     courierIds.length ? profileSvc.listByIds(courierIds) : Promise.resolve([]),
+    pickupIds.length ? new OrderStatusLogService(db).listByOrders(pickupIds) : Promise.resolve([]),
   ]);
+  const pickupReadyAt = new Map<string, string>();
+  for (const log of readyLogs) {
+    if (log.toStatus === 'ready' && !pickupReadyAt.has(log.orderId)) pickupReadyAt.set(log.orderId, log.createdAt);
+  }
 
   const itemsByOrder = new Map<string, OrderItem[]>();
   for (const item of items) {
@@ -97,6 +107,8 @@ export async function readOrdersPage(
     // TEK "şimdi": istek ortasında gün dönerse listenin yarısı "gecikmiş" görünmesin.
     now: new Date(),
     warehouseLabels: labels,
+    pickupReadyAt,
+    pickupWaitDays,
   });
 
   return {

@@ -24,6 +24,8 @@ export type NotifyChannel = 'email' | 'wa_link' | 'whatsapp_api' | 'push';
 export interface NotifyPayloads {
   order_confirmed: OrderNotification;
   order_out_for_delivery: OrderNotification;
+  /** Gel-al: mal depoda hazır, müşteri gelip alacak — bu türde "yolda" hiç olmaz, haber budur. */
+  order_ready_for_pickup: OrderNotification;
   order_delivered: OrderNotification;
   // İstisna bildirimleri: akışın kesildiği ya da değiştiği anlar.
   order_cancelled: OrderNotification;
@@ -139,6 +141,7 @@ export interface NotifyEventMeta {
 export const NOTIFY_EVENT_META: Record<NotifyEventName, NotifyEventMeta> = {
   order_confirmed: { class: 'document', inApp: true },
   order_out_for_delivery: { class: 'ping', inApp: true },
+  order_ready_for_pickup: { class: 'ping', inApp: true }, // "yolda"nın gel-al karşılığı: tek kanal, en hızlısı
   order_delivered: { class: 'document', inApp: true }, // teslim özeti/fiş taşır (14.6'nın zemini)
   order_cancelled: { class: 'document', inApp: true },
   order_shortfall: { class: 'document', inApp: true }, // para etkisi var — tutar değişti

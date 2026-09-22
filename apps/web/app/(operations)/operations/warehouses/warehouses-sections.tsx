@@ -127,7 +127,10 @@ function FacilityChip({ row, active, onSelect }: { row: WarehouseRowView; active
 function railNote(row: WarehouseRowView): string {
   if (!row.isActive) return 'kapalı';
   if (row.setupGap) return 'kurulumu eksik';
-  return row.shipsOnline ? `${COUNTRY_LABELS[row.countryCode]} · kargo çıkışı` : COUNTRY_LABELS[row.countryCode];
+  // Roller ülkenin yanına dizilir: kargo çıkışı ve gel-al noktası aynı tesiste olabilir.
+  return [COUNTRY_LABELS[row.countryCode], row.shipsOnline ? 'kargo çıkışı' : null, row.pickupEnabled ? 'gel-al' : null]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 // ── `FactCard` KALKTI (17.08) ─────────────────────────────────────────────────────────────────

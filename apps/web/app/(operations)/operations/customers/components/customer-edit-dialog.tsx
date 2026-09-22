@@ -34,6 +34,8 @@ interface CustomerEditDialogProps {
   preferredLanguage: PreferredLanguage;
   /** Kapıda ödeme izni — detaydan gelir (satırda taşınmıyor). */
   codAllowed: boolean;
+  /** Gel-al izni — depodan teslim yalnız işaretli müşteriye sunulur; detaydan gelir. */
+  pickupAllowed: boolean;
   /** Genel fiyat kuralı; ikisi birlikte dolu ya da boş. */
   priceRuleBasis: CustomerPriceBasis | null;
   priceRulePercent: number | null;
@@ -52,6 +54,7 @@ export function CustomerEditDialog({
   vatNumber,
   preferredLanguage,
   codAllowed,
+  pickupAllowed,
   priceRuleBasis,
   priceRulePercent,
   priceGroupId,
@@ -69,6 +72,7 @@ export function CustomerEditDialog({
   const [type, setType] = useState<CustomerType>(row.type);
   const [vat, setVat] = useState(vatNumber ?? '');
   const [cod, setCod] = useState(codAllowed);
+  const [pickup, setPickup] = useState(pickupAllowed);
   // Kuralın yokluğu '' ile temsil edilir (Select string ister); yüzde metin tutulur, çünkü boş kutu sayı state'inde temsil edilemez.
   const [ruleBasis, setRuleBasis] = useState<CustomerPriceBasis | ''>(priceRuleBasis ?? '');
   const [rulePercent, setRulePercent] = useState(priceRulePercent === null ? '' : String(priceRulePercent));
@@ -118,6 +122,7 @@ export function CustomerEditDialog({
             type,
             vatNumber: vat.trim() || null,
             codAllowed: cod,
+            pickupAllowed: pickup,
             priceRuleBasis: ruleBasis || null,
             priceRulePercent: ruleBasis ? kuralYuzde : null,
             priceGroupId: group || null,
@@ -186,6 +191,14 @@ export function CustomerEditDialog({
             {cod
               ? 'Varsayılan açık. Ödememe ya da ret geçmişi varsa kapatın.'
               : 'Kapalı — müşteri checkout’ta kapıda ödeme seçeneğini göremiyor.'}
+          </span>
+
+          {/* Gel-al herkese açık değil: depodan teslimi telefonla randevulaşan anlaşmalı müşteri alır (DOMAIN §6). */}
+          <ToggleField label="Gel-al izni" on={pickup} onChange={setPickup} />
+          <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
+            {pickup
+              ? 'Açık — müşteri checkout’ta "depodan teslim al" seçeneğini görür; saati depoyla telefonla kararlaştırır.'
+              : 'Kapalı (varsayılan) — depodan teslim seçeneği bu müşteriye sunulmaz.'}
           </span>
 
           {/* Fiyat grubu YALNIZ şirkette: kademe B2B listesinden düşer, bireysel müşteride motor

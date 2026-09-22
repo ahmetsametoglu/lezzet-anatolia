@@ -88,8 +88,13 @@ export function paymentToneClass(row: OrderRow): string {
   }
 }
 
-/** Teslim yazısı — rota gününde tarih, kargoda "Kargo"; ikinci satırda semt. */
+/** Teslim yazısı — rota gününde tarih, kargoda "Kargo", gel-al'da "Gel-al" ve bekleme süresi; ikinci satırda semt. */
 export function deliveryText(row: OrderRow, shortDate: (d: string) => string): { main: string; meta: string } {
+  if (row.deliveryType === 'pickup') {
+    // Randevu sistem dışı: satır yalnız kaç gündür beklediğini söyler; eşiği aşan satırın tonunu ekran boyar.
+    const meta = row.pickupWaitingDays === null ? 'müşteri depodan alır' : `${row.pickupWaitingDays} gündür hazır`;
+    return { main: 'Gel-al', meta };
+  }
   const main = row.deliveryType === 'shipping' ? 'Kargo' : row.deliveryDate ? shortDate(row.deliveryDate) : 'Gün yok';
   const meta = row.deliveryType === 'shipping' ? (row.deliveryArea || 'adres kopyası yok') : (row.courierName ?? row.deliveryArea);
   return { main, meta };

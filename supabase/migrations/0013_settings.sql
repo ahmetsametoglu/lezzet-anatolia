@@ -109,7 +109,9 @@ insert into public.settings (key, value, description) values
   ('delivery_summary_email',       'true',   'Teslimde teslimat özeti e-postası otomatik gönderilsin mi.'),
   ('route_delivery_unit_cost_cents','250',   'Rota teslimat birim maliyeti (cent) — kâr hesabı.'),
   ('packaging_unit_cost_cents',    '120',    'Paketleme (soğuk zincir) birim maliyeti (cent) — kâr hesabı.'),
-  ('door_packaging_unit_cost_cents','0',     'Kapı önü satışta paketleme birim maliyeti (cent). Varsayılan 0: mal elden gidiyor, soğuk zincir paketi yok.');
+  ('door_packaging_unit_cost_cents','0',     'Kapı önü satışta paketleme birim maliyeti (cent). Varsayılan 0: mal elden gidiyor, soğuk zincir paketi yok.'),
+  -- Gel-al siparişinde randevu sistem dışıdır (telefon); ayrılmış mal süresiz bekleyemez, süre dolunca ofis görür ve karar verir.
+  ('pickup_wait_days',             '7',      'Gel-al siparişinin hazır bekleyebileceği süre (gün); dolunca ofis listesine düşer, iptal kararı ofisin.');
 
 -- ── ÜLKE TARİFESİ — kargo ücreti ülkeye göre değişir (19.08) ──────────────────────────────────────
 -- Bu satırlar **seed'de değil migration'da** duruyor ve sebebi katman: `base` katmanı üretime

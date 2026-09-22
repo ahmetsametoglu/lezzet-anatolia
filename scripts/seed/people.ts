@@ -70,6 +70,8 @@ interface SeedKisi {
   priceRuleBasis?: CustomerPriceBasis;
   priceRulePercent?: number;
   codAllowed?: boolean;
+  /** Gel-al izni — depodan teslim yalnız işaretli müşteriye sunulur; besleme iki kişide açar ki kapı iki kanalda da denensin. */
+  pickupAllowed?: boolean;
   marketingConsent?: { email?: { granted: boolean; at?: string; source?: string } };
   note?: string;
 }
@@ -98,6 +100,7 @@ const KISILER: SeedKisi[] = [
     priceRuleBasis: 'list',
     priceRulePercent: 5,
     codAllowed: true,
+    pickupAllowed: true,
     marketingConsent: { email: { granted: true, at: an(-120), source: 'b2b-kayit' } },
     note: 'Haftalık düzenli alım; perşembe rotası.',
   },
@@ -152,6 +155,8 @@ const KISILER: SeedKisi[] = [
     roles: ['customer'],
     preferredLanguage: 'fr',
     codAllowed: true,
+    // Giriş hesabı olan tek müşteri (`GIRIS_ACILAN_MUSTERI`): gel-al kartı web ve native checkout'ta onunla görülür.
+    pickupAllowed: true,
     marketingConsent: { email: { granted: true, at: an(-200), source: 'checkout' } },
   },
   // — B2C: kapıda ödemesi KAPALI (geçmişte teslim alınmayan sipariş). Ödeme seçeneği testi.

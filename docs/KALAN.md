@@ -381,9 +381,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
 - [ ] (K.19) [hedef: mobil] Hesap ekranının şirket kartı gerçek kullanımda hiç çizilmiyor: rota `company: null` geçiyor
   (`app/(tabs)/account.tsx`), çünkü `/me` şirket künyesini taşımıyor. Web telefon görünümü kartı "SIRET · KDV" ile
   çiziyor (`companyInfo` + `vatNumber`); native de aynı veriyi okumalı.
-- [ ] (K.20) [hedef: mobil] Sipariş detayı gel-al (`pickup`) siparişinde teslim satırına "kargoyla" yazıyor
-  (`order-detail-screen.tsx`: `route` değilse `deliveryShipping`). Web bu türde teslim türünü hiç yazmıyor; native de
-  yalnız `route` ve `shipping` için yazmalı.
 - [ ] (K.21) [hedef: web] Sipariş durumu WhatsApp'tan gitmeli — canlıya çıkmadan önce. Hesap sayfasındaki WhatsApp kartı
   müşteriye "WhatsApp'tan sipariş vermek ve siparişinizin durumunu WhatsApp mesajıyla öğrenmek için numaranızı bağlayın"
   diyor; bugün `packages/notify` WhatsApp API sürücüsü her gönderimi `skipped` döndürüyor. İş `15.11`in sürücü yarısı.

@@ -182,8 +182,8 @@ export function boxLabelSvg(label: BoxLabel, size: LabelSizeMm = { widthMm: 62, 
     );
   }
 
-  // Rota/kulvar + gün. Kargoda rota yok — kulvarın adı yazılır.
-  const lane = label.deliveryType === 'shipping' ? 'Kargo' : (label.routeName ?? '—');
+  // Rota/kulvar + gün. Kargoda ve gel-al'da rota yok — kulvarın adı yazılır.
+  const lane = label.deliveryType === 'shipping' ? 'Kargo' : label.deliveryType === 'pickup' ? 'Gel-al' : (label.routeName ?? '—');
   const date = formatDate(label.deliveryDate);
   for (const satir of wrapMm(date ? `${lane} · ${date}` : lane, contentMm, TYPE_MM.lane, MAX_WRAP_LINES)) {
     y += px(GAP_MM.afterLane);
