@@ -34,7 +34,7 @@ import type messages from '@lezzet/i18n/customer/checkout';
 type Messages = LocalizedCopy<typeof messages>;
 
 /** Ret hâlleri — başarı dalları dışarıda; onları ekran kendi akışında karşılar. */
-type CheckoutRejection = Exclude<CheckoutOrderResult, { status: 'placed' } | { status: 'payment_required' }>;
+type CheckoutRejection = Exclude<CheckoutOrderResult, { status: 'placed' } | { status: 'payment_required' } | { status: 'open_payment' }>;
 
 /** Satır adını sepet görünümünden çözen kapı; bilinmiyorsa `null` (boş metin DEĞİL — CLAUDE §1). */
 type ResolveVariantName = (variantId: string) => string | null;
@@ -89,10 +89,7 @@ export function rejectionMessage(
           .map((line) => `${line.name}: ${formatPrice(line.fromCents, locale)} → ${formatPrice(line.toCents, locale)}`)
           .join(', '),
       );
-    /* Sepet altımızdan değişti (21.08). Cümle NE değiştiğini saymaz — özet yeniden okununca yeni
-       liste zaten ekranda; sayarsak aynı gerçeği iki kez, üstelik daha kötü anlatmış oluruz
-       (sözleşme künyesindeki aynı gerekçe). Söylenmesi gereken tek şey siparişin AÇILMADIĞI ve
-       listenin tazelendiğidir — müşteri onaya ikinci kez, bilerek bassın. */
+    /* Sepet değişti: cümle neyin değiştiğini saymaz, yeni liste özette zaten görünür; söylenen, siparişin açılmadığıdır. */
     case 'cart_changed':
       return r.cart_changed;
     case 'customer_not_found':

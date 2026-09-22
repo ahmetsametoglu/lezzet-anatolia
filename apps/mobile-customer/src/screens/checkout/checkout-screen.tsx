@@ -435,6 +435,11 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       finish(outcome.orderId, outcome.totalCents, outcome.deliveryType, outcome.referenceNo);
       return;
     }
+    // Önceki kart ödemesi geçti ya da bankada işleniyor: yeni sipariş açılmadı, müşteri o siparişin onayına gider.
+    if (outcome.status === 'open_payment') {
+      finish(outcome.orderId, outcome.totalCents, outcome.deliveryType, outcome.referenceNo);
+      return;
+    }
     if (outcome.status === 'payment_required') {
       /* YEREL ÖDEME KARTI (sağlayıcının kendi yüzeyi) — ayrı bir ekran YAZILMAZ. Üç sonuç ayrı
          karşılanır: iptal bir HATA DEĞİLDİR (müşteri vazgeçti, sipariş taslak kalır ve ekran

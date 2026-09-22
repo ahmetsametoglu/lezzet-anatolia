@@ -10,7 +10,7 @@ import {
   readCheckoutSnapshot,
   UNRESOLVED_PLACE,
 } from '@lezzet/application';
-import { CartService, serviceDb, UserProfileService } from '@lezzet/database';
+import { CartService, OrderService, serviceDb, UserProfileService } from '@lezzet/database';
 // Yan etki portu ortak dosyada: kurye uçları da aynı nesneyi geçirir.
 import { mobileOrderEffects } from '../../lib/order-effects';
 import {
@@ -23,7 +23,8 @@ import {
 import { readJsonBody } from '../../lib/request';
 import { fail, ok } from '../../lib/respond';
 import { recordNativeEvent } from '../../lib/analytics';
-import { paymentSessionCreator } from '../../lib/stripe';
+import { paymentGateway, paymentSessionCreator } from '../../lib/stripe';
+import { settleOpenPayment } from '../../lib/open-payment';
 import type { V1Env } from './auth';
 import { localeOf } from './cart-view';
 
@@ -151,6 +152,24 @@ checkout.post('/order', async (c) => {
 
   const db = serviceDb();
   const customerId = c.get('customerId');
+
+  // Önceki kart ödemesi geçtiyse ya da bankada işleniyorsa yeni ödeme açılmaz, yoksa aynı sepet için iki kez para çekilirdi.
+  const open = await settleOpenPayment(db, customerId);
+  if (open) {
+    const order = await new OrderService(db).getById(open.orderId);
+    if (order && order.deliveryType !== 'pickup') {
+      const result: z.input<typeof CheckoutOrderResultSchema> = {
+        status: 'open_payment',
+        state: open.state,
+        orderId: order.id,
+        totalCents: order.orderedTotalCents,
+        deliveryType: order.deliveryType,
+        referenceNo: order.referenceNo,
+      };
+      return ok(c, CheckoutOrderResultSchema.parse(result));
+    }
+  }
+
   // NİYET SUNUCUDAN — gövdeden ASLA. İstemcinin gönderdiği bir kalem listesi, siparişin neyi
   // içereceğini istemciye yazdırırdı; sepetin sahibi `cart.customer_id`dir.
   const stored = await new CartService(db).get(customerId);
@@ -164,6 +183,8 @@ checkout.post('/order', async (c) => {
     // okuması onu zaten tutuyor. Bağlama burada, sarmalayıcı yazmadan.
     bundles: (ids, bundleLocale, place) => getPackagesByIds(db, ids, bundleLocale, place),
     createPaymentSession: paymentSessionCreator(),
+    // Yeni deneme eski, ödenmemiş taslağın ödemesini Stripe'ta da kapatır.
+    paymentGateway: paymentGateway(),
     effects: mobileOrderEffects(db),
   });
 

@@ -20,6 +20,7 @@ import {
 import type { Cart, Channel, MeCartItemWriteSchema, PreferredLanguage } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { recordNativeEvent } from '../../lib/analytics';
+import { settleOpenPaymentQuietly } from '../../lib/open-payment';
 import type { V1Env } from './auth';
 import { entryOfWrite, localeOf, readCartView, type CartRead } from './cart-view';
 
@@ -152,6 +153,8 @@ async function viewOf(c: Context<CustomerEnv>, db: Db, stored: Cart): Promise<Ca
 /** Sepetin görünümü. Hiç sepet açılmamışsa BOŞ sepet döner — `CartService.get` boş sepet kurar. */
 cart.get('/', async (c) => {
   const db = serviceDb();
+  // Ödemesi geçmiş ama henüz onaylanmamış sipariş varsa önce netleşir: kalemleri sepetten düşer, müşteri ikinci kez ödemeye yönelmez.
+  await settleOpenPaymentQuietly(db, c.get('customerId'));
   const stored = await new CartService(db).get(c.get('customerId'));
   return ok(c, (await viewOf(c, db, stored)).body);
 });

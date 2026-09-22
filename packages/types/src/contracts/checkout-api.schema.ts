@@ -155,6 +155,18 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
     deliveryType: AddressDeliveryTypeEnum,
     clientSecret: z.string().min(1),
   }),
+  /**
+   * Önceki kart ödemesi geçti (`paid`, sipariş onaylandı) ya da bankada işleniyor (`processing`): yeni sipariş açılmadı, müşteri o
+   * siparişe gider. Açılsaydı aynı sepet için ikinci kez para çekilirdi.
+   */
+  z.object({
+    status: z.literal('open_payment'),
+    state: z.enum(['paid', 'processing']),
+    orderId: OrderSchema.shape.id,
+    totalCents: z.number().int(),
+    deliveryType: AddressDeliveryTypeEnum,
+    referenceNo: OrderSchema.shape.referenceNo,
+  }),
   /** Yer çözülemedi — VERİ/YAPILANDIRMA hatası; müşteriye "bölge dışısınız" DENMEZ, o başka şey. */
   z.object({ status: z.literal('warehouse_unresolved'), reason: z.enum(['ambiguous_zone', 'no_shipping_warehouse']) }),
   z.object({ status: z.literal('empty_cart') }),

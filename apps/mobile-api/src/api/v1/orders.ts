@@ -14,6 +14,7 @@ import {
 import type { MeOrderShipment } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { decodeCursor, encodeCursor } from '../../lib/request';
+import { settleOpenPaymentQuietly } from '../../lib/open-payment';
 import type { V1Env } from './auth';
 
 /*
@@ -92,6 +93,8 @@ orders.get('/', async (c) => {
     return fail(c, parsed.error.issues[0]?.path[0] === 'locale' ? 'invalid_locale' : 'invalid_query', 400);
   }
 
+  // Stripe'ın mesajı gelmese de ödenmiş sipariş listede görünsün: taslak numarasızdır ve listeye giremez.
+  await settleOpenPaymentQuietly(serviceDb(), c.get('customerId'));
   const page = await listCustomerOrders(serviceDb(), {
     customerId: c.get('customerId'),
     locale: parsed.data.locale,

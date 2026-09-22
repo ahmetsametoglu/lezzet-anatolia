@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import type { CheckoutSessionCreator } from '@lezzet/application';
+import { stripeGateway, type CheckoutSessionCreator, type PaymentGateway } from '@lezzet/application';
 import { CurrencyEnum } from '@lezzet/types';
 
 /**
@@ -39,4 +39,9 @@ export function paymentSessionCreator(): CheckoutSessionCreator | null {
     );
     return { id: intent.id, clientSecret: intent.client_secret };
   };
+}
+
+/** Ödemenin durumunu soran, iptal ve iade eden kapı; web'in ve zamanlanmış işin kullandığıyla aynı port. */
+export function paymentGateway(): PaymentGateway | null {
+  return stripeGateway(stripeClient());
 }
