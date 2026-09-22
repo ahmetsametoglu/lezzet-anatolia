@@ -23,7 +23,8 @@ export type DeliveryZone = z.infer<typeof DeliveryZoneSchema>;
 export const DeliveryZoneInsertSchema = z.object({
   name: z.string().min(1),
   warehouseId: z.string().uuid(),
-  weekdays: z.array(z.number().int().min(1).max(7)).optional(),
+  /** En az bir gün: günü olmayan rota hiçbir sefere düşmez (veride de `check`). */
+  weekdays: z.array(z.number().int().min(1).max(7)).min(1),
   isActive: z.boolean().optional(),
 });
 export type DeliveryZoneInsert = z.infer<typeof DeliveryZoneInsertSchema>;

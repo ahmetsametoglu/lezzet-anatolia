@@ -325,7 +325,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 
 ## backlog-operasyon-web.md (eski docs/denetim/backlog-operasyon-web.md)
 
-- [ ] **OB-01 · Yeni Rota tanımlanırken depo seçilemiyor ve kaydetme işlemi bloke oluyor** _(1. Bloke Edici Bulgular / Hatalar)_
 - [ ] **OB-09 · Aynı üründen çoklu adet içeren siparişlerde İade (Return) ve İmha (Disposal/Waste) işlemlerinin veritabanında tutarsızlığa yol açması** _(1. Bloke Edici Bulgular / Hatalar)_
 - [ ] **OB-02 · Harita üzerinde Shift + Sürükle ile çoklu posta kodu seçimi (alan seçimi)** _(2. Geliştirme ve İyileştirme Talepleri)_
 - [~] **OB-03 · Posta kodu arama kutusunda yerleşim/şehir adına göre arama yapılabilmesi** _(2. Geliştirme ve İyileştirme Talepleri)_
@@ -339,8 +338,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 
 ## Kullanıcı bulguları (eski docs/kullanici-bulgulari.md)
 
-- [ ] (B.1) Rota kaydı — ikinci "Kaydet" yeni rota açmaya çalışıyor
-- [ ] (B.2) Rota, teslim günü ve posta kodu olmadan kaydedilebiliyor
 - [ ] (B.3) Native uygulama · sipariş tamamlama — mevcut adres düzenlenemiyor ⟶ MOBİL ŞERİT
 - [ ] (B.4) Native uygulama · dokunmatik geri bildirim (haptic) kapsamı dar ⟶ MOBİL ŞERİT
 - [ ] (B.6) Native uygulamada online ödeme "henüz açık değil" — anahtar eksik, kod değil

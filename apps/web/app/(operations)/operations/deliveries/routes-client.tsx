@@ -189,6 +189,11 @@ export function RoutesClient({
         setError(result.error);
         return;
       }
+      // Yeni rota kaydedilince form onu seçer; seçmeseydi ikinci Kaydet aynı kodlarla ikinci bir rota açmaya çalışırdı.
+      if (!selected && result.data) {
+        select(result.data.id);
+        return;
+      }
       router.refresh();
     });
   };

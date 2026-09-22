@@ -54,4 +54,5 @@ const ZoneHoursSchema = z.record(z.string(), z.string().nullable());
 /** Rota formunun şeması — yazma eyleminin (`saveZoneAction`) girdisi. */
 export const ZoneFormSchema = DeliveryZoneInsertSchema.pick({ name: true, weekdays: true, isActive: true })
   .partial({ isActive: true })
-  .extend({ postalCodes: z.array(PostalCodePickSchema), hours: ZoneHoursSchema.optional() });
+  // Posta kodu olmayan rota hiçbir adresi kapsamaz; kodlar ayrı tabloda olduğu için kural veride değil burada.
+  .extend({ postalCodes: z.array(PostalCodePickSchema).min(1), hours: ZoneHoursSchema.optional() });

@@ -328,12 +328,18 @@ export function RoutesDesktop(props: RoutesViewProps) {
 
             <div className="flex items-center gap-3">
               <ToggleField on={draft.isActive} onChange={(on) => props.onDraft({ isActive: on })} label="Rota aktif" bare />
-              {/* Düğme ad ve depo seçilene kadar kapalı: engel tıklamadan önce okunsun. */}
+              {/* Düğme ad, depo, en az bir gün ve bir posta kodu olana kadar kapalı: engel tıklamadan önce okunsun. */}
               <Button
                 variant="primary"
                 className="ml-auto"
                 onClick={props.onSave}
-                disabled={props.busy || draft.name.trim().length === 0 || draft.warehouseId === null}
+                disabled={
+                  props.busy ||
+                  draft.name.trim().length === 0 ||
+                  draft.warehouseId === null ||
+                  draft.weekdays.length === 0 ||
+                  draft.codes.length === 0
+                }
               >
                 Kaydet
               </Button>

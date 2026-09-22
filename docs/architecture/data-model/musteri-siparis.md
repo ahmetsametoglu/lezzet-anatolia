@@ -215,7 +215,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | `id` | uuid |  | `gen_random_uuid()` |
 | `name` | text |  |  |
 | `warehouse_id` | uuid |  |  |
-| `weekdays` | int[] |  | `'{}'` |
+| `weekdays` | int[] |  |  |
 | `is_active` | boolean |  | `true` |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->

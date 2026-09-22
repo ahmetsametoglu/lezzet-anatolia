@@ -6,8 +6,9 @@ create table public.delivery_zone (
   name text not null,                                -- iç etiket ("Strasbourg Kuzey")
   -- Bölge tek depoya bağlıdır: posta kodu → bölge → depo zinciri tekil çözülür. FK yok: `warehouse` 0031'de açılır.
   warehouse_id uuid not null,
-  -- Haftalık teslimat günleri, ISO: 1=Pazartesi … 7=Pazar.
-  weekdays int[] not null default '{}',
+  -- Haftalık teslimat günleri, ISO: 1=Pazartesi … 7=Pazar. Günü olmayan rota hiçbir sefere düşmez, bu yüzden en az bir gün;
+  -- form tek yazma yolu olmadığı için kural veride.
+  weekdays int[] not null check (cardinality(weekdays) > 0),
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );

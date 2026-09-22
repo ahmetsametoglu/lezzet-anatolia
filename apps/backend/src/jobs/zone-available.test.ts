@@ -22,7 +22,7 @@ let zoneId = '';
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'ZONE' })).id;
-  const zone = await zones.insert({ name: `Test bölgesi ${stamp}`, warehouseId, isActive: true });
+  const zone = await zones.insert({ name: `Test bölgesi ${stamp}`, warehouseId, weekdays: [1], isActive: true });
   zoneId = zone.id;
   await zones.replacePostalCodes(zoneId, [{ country: 'FR', postalCode: coveredCode }]);
 });
