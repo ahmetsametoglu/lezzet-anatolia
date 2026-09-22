@@ -228,7 +228,7 @@ function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps)
       <PrimaryButton
         shape="block"
         label={redeem.busy ? copy.points.converting : fill(copy.points.convert)}
-        onClick={() => void redeem.convert()}
+        onClick={redeem.convert}
         disabled={redeem.busy || !enough}
       />
       {redeem.failed && <Note tone="terracotta" description={copy.points.failed} />}

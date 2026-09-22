@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { redeemPointsAction } from './actions';
 
 /** "Kupon hesabınıza eklendi" haberinin ekranda kaldığı süre (ms). */
@@ -11,7 +11,8 @@ const CONVERTED_MS = 3000;
  * kalır, çünkü haber kaybolur ve müşteri çevirmenin neden olmadığını göremez.
  */
 export function useRedeemPoints() {
-  const [busy, setBusy] = useState(false);
+  // Geçiş, sayfanın yeni bakiyeyle tazelenmesi bitene kadar sürer; eylem döner dönmez bitseydi düğme eski bakiyeyle bir an etkinleşirdi.
+  const [busy, startTransition] = useTransition();
   const [failed, setFailed] = useState(false);
   const [converted, setConverted] = useState(false);
   const timer = useRef<number | null>(null);
@@ -23,16 +24,15 @@ export function useRedeemPoints() {
     [],
   );
 
-  const convert = async () => {
-    setBusy(true);
-    setFailed(false);
-    const { data } = await redeemPointsAction();
-    setBusy(false);
-    if (!data) return setFailed(true);
-    setConverted(true);
-    if (timer.current !== null) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setConverted(false), CONVERTED_MS);
-  };
+  const convert = () =>
+    startTransition(async () => {
+      setFailed(false);
+      const { data } = await redeemPointsAction();
+      if (!data) return setFailed(true);
+      setConverted(true);
+      if (timer.current !== null) window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => setConverted(false), CONVERTED_MS);
+    });
 
   return { busy, failed, converted, convert };
 }
