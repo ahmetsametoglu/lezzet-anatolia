@@ -12,36 +12,13 @@ import checkoutMessages from '../messages.json';
 export type Messages = LocalizedCopy<typeof messages>;
 
 /**
- * **Checkout AİLESİNİN ortak sözcükleri — aile kökünden okunur** (08.20).
- *
- * "Kapıya teslim · ücretsiz / Kargo" ve "Ödeme" başlığı iki ekranda da aynı blokun kelimeleri;
- * onay ekranı bunların birebir kopyasını taşıyordu. Kopya sessizce ayrışır: checkout'ta bir
- * kelimeyi değiştiren, onay ekranının eskisinde kaldığını göremez.
- *
- * Aile kökünün sözlüğü okunuyor, üçüncü bir dosya AÇILMADI: desen `support`ta zaten var (alt rota
- * `../messages.json`'u okur) ve buradaki ilişki de aynı — onay ekranı checkout'un devamı.
- *
- * ⚠ **SİPARİŞ ÖZETİNİN sözcükleri artık BURADAN GELMİYOR** (08.20'nin ikinci turu, 08.08):
- * "Sipariş özeti · İndirim · Teslimat · Ücretsiz · Genel toplam · KDV dahildir" nötr bir sözlüğe
- * taşındı (`components/customer/ui/summary-messages.json`). Aile bağı DOĞRUYDU ama YETMİYORDU:
- * aynı blok sepette ve sipariş detayında da çiziliyor ve o ikisi checkout ailesinin dışında.
- * Onları buraya bağlamak, sipariş geçmişini ödeme akışına bağımlı kılardı.
- *
- * **Kalan üçü checkout'a ÖZGÜ:** `delivery.route`/`delivery.shipping` teslimat seçeneğinin kendi
- * cümleleri, `payment.title` ödeme adımının başlığı. Bunlar sipariş detayında yok.
+ * Checkout ailesinin ortak sözcükleri aile kökünden okunur (onay ekranı checkout'un devamı); sipariş özetinin sözcükleri ise
+ * sepet ve sipariş detayında da çizildiği için nötr bir sözlükte.
  */
 export type SharedCopy = LocalizedCopy<typeof checkoutMessages>;
 
 /**
- * Sipariş alındı ekranının GÖRÜNÜM MODELİ — sunucuda bir kez çözülür, iki cihaz dalı aynı nesneyi
- * okur (08.13 · cihaz forku).
- *
- * **Ham `Order` taşınmıyor** ve bu bilinçli: ekranın sorduğu şey "sipariş kesinleşti mi", "kart
- * bekleniyor mu", "kapıya mı gidiyor" — hepsi durum makinesinden TÜRETİLMİŞ cevaplar. Türetmeyi
- * iki dala bırakmak, aynı kuralın iki kopyasını doğururdu; ikisi bir gün ayrışır ve mobil ekran
- * masaüstünden farklı bir gerçek anlatırdı.
- *
- * Tutarlar CENT: `formatPrice` cent bekliyor ve euro/cent dönüşümü tek yerde (sunucuda) yapılır.
+ * Sipariş alındı ekranının görünüm modeli: sunucuda bir kez çözülür, iki cihaz dalı aynı türetilmiş cevapları okur. Tutarlar cent.
  */
 export interface ConfirmationView {
   /** Yolda taşınan kimlik SİPARİŞ KİMLİĞİDİR — takip bağı da bununla kurulur. */
@@ -53,32 +30,15 @@ export interface ConfirmationView {
   placed: boolean;
   cancelled: boolean;
   /**
-   * **Sağlayıcı ödemesinin İADE DAMGASI** — `null` ise iade yok (07.14).
-   *
-   * Bulunan arıza şuydu: iptal edilmiş her siparişte ekran *"Ödeme tamamlanmadı — kartınızdan
-   * tahsilat yapılmadı"* diyordu. Üç yolun ikisinde doğru, birinde YANLIŞ: parası çekilip
-   * **otomatik iade edilmiş** siparişte de aynı cümle çıkıyordu. İade ekstreye günler sonra düşer;
-   * o aralıkta müşteri "tahsilat yapılmadı" okur ama hesabında para eksiktir.
-   *
-   * **İlk çözüm iptal SEBEBİNİ okuyordu ve yetmiyordu** — ölçüldü: `out_of_stock` iki ayrı yolda
-   * yazılıyor (kartta para çekilmiş, kapıda ödemede hiç çekilmemiş), ayrıca webhook'un "zaten iptal
-   * edilmiş siparişe geç gelen ödeme" dalı parayı iade ederken sebebi `superseded` bırakıyordu —
-   * yani düzeltilen yalanın dar bir kopyası orada duruyordu. Arka uç kolonu ikiye ayırdı: sebep
-   * "neden iptal oldu" sorusunun, damga "para çekilip geri verildi mi" sorusunun cevabı.
-   *
-   * **Bayrak değil TARİH:** "ekstremde görünmüyor" diyen müşteriye iade tarihi söylenebilsin.
+   * Sağlayıcı ödemesinin iade damgası, `null` = iade yok. İptal sebebi "para geri verildi mi" sorusunu cevaplamaz; damga
+   * tarih, çünkü müşteriye iade günü söylenebilmeli.
    */
   refundedAt: string | null;
   /** "Bankanızdan onay bekliyoruz" YALNIZ kart ödemesinde doğru; kapıda ödemede beklenen banka yok. */
   awaitingCard: boolean;
   /**
-   * **Sağlayıcının söylediği** (07.18) — yalnız ödemesi beklenen kart taslağında dolu, yoksa `null`.
-   *
-   * Sipariş "taslak" derken ödemenin kendisi üç ayrı yerde olabilir ve ekran üçüne ayrı cümle kurar:
-   * `paid` para alındı, onay saniyeler içinde; `processing` banka işliyor; `incomplete` ödeme tamamlanmadı
-   * (kart reddi, 3-D Secure yarım) — müşteri boşuna beklemesin, yeniden denesin. Önce ekran yalnız
-   * veritabanına bakıyordu ve olay gelmeyince süresiz "onaylanıyor" diyordu. `null` = sorulamadı
-   * (anahtarsız ortam, sağlayıcı düştü): ekran bugünkü "onaylanıyor" cümlesinde kalır.
+   * Sağlayıcının söylediği, yalnız ödemesi beklenen kart taslağında: `paid` para alındı, `processing` banka işliyor, `incomplete`
+   * tamamlanmadı. `null` = sorulamadı, ekran "onaylanıyor"da kalır.
    */
   paymentState: 'paid' | 'processing' | 'incomplete' | null;
   onRoute: boolean;
@@ -97,19 +57,8 @@ export interface ConfirmationView {
   /** Adresin ANLIK GÖRÜNTÜSÜ: müşteri adresini sonradan düzenlerse bu sipariş nereye gittiğini unutmaz. */
   address: { label?: string; line1?: string; line2?: string; postalCode?: string; city?: string } | null;
   /**
-   * Komşu daveti (17.10 · 08.55) — `null` ise bloğu HİÇ çizilmez.
-   *
-   * `null` üç meşru hâlde: kargo siparişi (sefer diye bir şey yok), sipariş henüz kesinleşmedi ya
-   * da seferin kesim saati doldu (çağırmanın anlamı kalmadı). Üçü de "bugün değil" der ve boş bir
-   * blok göstermek, müşteriye çalışmayan bir düğme sunmak olurdu.
-   *
-   * **Tek nesne, üç ayrı alan DEĞİL** (08.55): adres varsa kontenjan da vardır, yoksa hiçbiri
-   * yoktur. Üç alan yan yana dursaydı "adres dolu ama sayı yok" gibi anlamsız bir ara hâl tipçe
-   * mümkün olur ve ekran onu bir gün çizerdi.
-   *
-   * **`remainingUses` SUNUCUDA sayılır** (kullanıcı kararı 21.08), `maxUses` da davet satırından
-   * gelir — ekrana sabit bir "3" gömmek, ayar değiştiği gün yalan söyleyen bir cümle bırakırdı.
-   * Sıfır "davet yok" demek değil, **davet doldu** demektir.
+   * Komşu daveti; `null` = kargo, kesinleşmemiş sipariş ya da kesimi dolmuş sefer. Tek nesne, çünkü adres varsa kontenjan da
+   * vardır; `remainingUses` sunucuda sayılır, sıfır "doldu" demektir.
    */
   neighborInvite: { url: string; remainingUses: number; maxUses: number } | null;
   lines: ConfirmationLine[];
@@ -137,30 +86,15 @@ export interface ConfirmationViewProps {
 }
 
 /**
- * **Parası iade edilmiş bir iptal mi** — onay ekranının iptalde hangi cümleyi kuracağı (07.14).
- *
- * Saf ve ayrı bir fonksiyon, çünkü bu kural bir kez YANLIŞ kuruldu: ekran yalnız "iptal mi" diye
- * sorup üç yolun hepsine *"kartınızdan tahsilat yapılmadı"* diyordu. Kuralı bir satır ifade olarak
- * sayfanın içinde bırakmak, aynı yanlışın ikinci kez sessizce kurulmasına açık kapı bırakırdı.
- *
- * **Soruyu SEBEBE değil DAMGAYA soruyoruz** ve arada bir tur var: kural önce
- * `out_of_stock + online` diye kurulmuştu, çünkü elimizdeki tek alan iptal sebebiydi. O ikili bugün
- * de doğru cevap verirdi ama EKSİK kalırdı — parayı iade eden ikinci webhook dalı sebebi
- * `superseded` bırakıyor. Damga iki dalın da geçtiği tek ayakta yazılıyor (`refundProviderPayment`,
- * iadeden SONRA), yani "para geri verildi mi" sorusunun tek dayanağı var.
- *
- * `cancelled` koşulu duruyor: damga bugün yalnız iptal edilmiş siparişlerde doğuyor, ama cümleyi
- * kuran şey iptaldir — ayakta bir siparişe geçmiş bir iade damgası yüzünden iptal cümlesi kurulmaz.
+ * Parası iade edilmiş bir iptal mi: soru sebebe değil iade damgasına sorulur, çünkü iade eden iki yoldan biri sebebi
+ * `superseded` bırakır.
  */
 export function isRefundedCancellation(view: Pick<ConfirmationView, 'cancelled' | 'refundedAt'>): boolean {
   return view.cancelled && view.refundedAt !== null;
 }
 
 /**
- * **Sağlayıcının durumundan ekranın hâli** (07.18) — saf; ekran üç hâle ayrı cümle kurar (`paymentState`
- * künyesi). İptal edilmiş ödeme de "tamamlanmadı"dır: müşteri için ikisinin anlamı aynı — para çekilmedi,
- * yeniden deneyebilir. Bu sayfaya ödeme adımından dönülür; `requires_action` burada 3-D Secure'un
- * bitmediği demektir, "bekleniyor" değil.
+ * Sağlayıcının durumundan ekranın hâli; iptal edilmiş ödeme de "tamamlanmadı"dır, `requires_action` 3-D Secure'un bitmediğidir.
  */
 export function paymentStateOf(status: PaymentIntentStatus): NonNullable<ConfirmationView['paymentState']> {
   switch (status) {

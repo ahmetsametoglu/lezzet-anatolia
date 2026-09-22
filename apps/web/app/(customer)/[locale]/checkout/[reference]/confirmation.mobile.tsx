@@ -13,22 +13,8 @@ import { useShareLink } from '@/lib/use-share-link.hook';
 import { isRefundedCancellation, type ConfirmationView, type ConfirmationViewProps, type Messages } from './confirmation-types';
 
 /**
- * Sipariş alındı — TELEFON görünümü: native onay ekranının (`apps/mobile/src/screens/checkout/order-confirmed-screen.tsx`)
- * web ikizi (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı, referans native). Ortalı tek sütun:
- * büyük işaret · başlık · sipariş numarası · teslimat/ödeme/toplam özeti · bildirim notu · komşu daveti · iki çıkış
- * (siparişlerim · alışverişe dön). Metin ortak ödeme sözlüğünün `confirmed` bölümünden (`@lezzet/i18n/customer/checkout`).
- *
- * ── WEB'E ÖZGÜ ─────────────────────────────────────────────────────────────
- * · Bu sayfa kart ödemesinin DÖNÜŞ yeri: sipariş henüz taslakken (onayı webhook yazar) "ödemeniz onaylanıyor" der ve
- *   kendini yeniler (`OrderWatch`, sayfada); tamamlanmayan ödeme ve iptal (iadeli/iadesiz) kendi cümlesiyle ve "tekrar
- *   dene" çıkışıyla çizilir. İşaretin rengi hâli söyler — zeytin oldu · bal bekleniyor · terracotta olmadı (masaüstü
- *   bandının üç tonu, aynı kural). Native'de bu hâller yok: native ödeme kartının sonucunu ekrana gelmeden karşılıyor.
- * · Komşu davetinin metni web'in sözlüğünden: native başlığı emojiyle yazıyor, web'in müşteri ekranlarında emoji yok
- *   (08.59, ikon seti). Paylaşım masaüstüyle aynı kapıdan (`useShareLink`).
- *
- * ── BİLİNÇLİ FARKLAR ───────────────────────────────────────────────────────
- * Masaüstünün zaman çizgisi, kalem listesi, adres kartı ve yardım şeridi telefonda yok — native'de karşılığı yok;
- * siparişin ayrıntısı "Siparişlerim"de.
+ * Sipariş alındı — telefon görünümü, native onay ekranının web ikizi. Kart ödemesinin dönüş yeri olduğu için taslakta
+ * "onaylanıyor", tamamlanmayan ödemede ve iptalde kendi cümlesi çizilir; işaretin rengi hâli söyler.
  */
 
 /** Hâlin tonu — işaretin zemini. */
@@ -117,8 +103,7 @@ interface NeighborInviteProps {
 }
 
 /**
- * Komşunu bu güne çağır (17.10) — native şeridin yerleşimi (zeytin kutu, ortalı, hap düğme), metin web'in (künye).
- * Kontenjan söylenir; dolduysa paylaşım sunulmaz — ölü bir bağlantı iki tarafı da boşa uğraştırır (08.55).
+ * Komşunu bu güne çağır: native bandın yerleşimi, web'in metni. Dolmuş davet paylaşılmaz.
  */
 function NeighborInvite({ t, invite }: NeighborInviteProps) {
   const { share, copied } = useShareLink();

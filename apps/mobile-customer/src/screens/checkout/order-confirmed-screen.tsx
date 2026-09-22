@@ -13,45 +13,14 @@ import messages from '@lezzet/i18n/customer/checkout';
 import { useOrderNeighborInvite } from './use-neighbor-invite.hook';
 
 /*
-  SİPARİŞ ONAYI (v3 `vConfirm`) — büyük onay işareti, sipariş numarası, teslimat/ödeme/toplam
-  özeti ve iki çıkış yolu.
-
-  ── PUAN SATIRI KALDIRILDI (MB-49, 14.08) ───────────────────────────────────
-  Ekran *"✦ Teslimatta +{n} puan kazanacaksınız"* diyordu ve sayıyı KENDİSİ hesaplıyordu
-  (`tutar ÷ 100`), oysa motor `points_order` ayarını okuyup sabit yazıyordu — cihazda ölçüldü
-  (11.08): ekran 47, defter 10. Sonra kullanıcı kararıyla (11.08) SİPARİŞ PUANI TÜMDEN KALKTI,
-  yani vaat edilecek bir puan da kalmadı. Satır geri gelmez; yerine bir sayı KONMAZ da —
-  bu ekranın puandan haberi olmaması bilinçli. Puanın anlatıldığı yer hesap ekranı ve
-  onboarding'in ortak listesidir (`customer-kit/points-earn-list.tsx`).
-
-  ── DEĞERLER GERÇEK SİPARİŞTEN (21.14 ikinci etap) ──────────────────────────
-  Tutar ve teslimat/ödeme künyesi checkout'un AÇTIĞI siparişten geliyor (`POST /me/checkout/order`
-  cevabı). Değerler rota PARAMETRESİYLE taşınıyor (durum deposuyla değil) çünkü bu ekranın hayatı
-  tek bir geçişten ibarettir: geri gelinemez (`replace` ile açılır), yenilenmez, paylaşılmaz.
-
-  ── SİPARİŞ NUMARASI (27.08 · eski `BEKLEYEN(21.14)` kapandı) ───────────────
-  Numara artık cevapta: sözleşmenin `placed` dalı `referenceNo` taşıyor ve değer geçişin kendi
-  cevabından geliyor (`transitionOrder` — ek okuma yok, kural `place-order.ts` künyesinde).
-
-  **İKİ YOLUN CEVABI FARKLI ve bu doğru:** kapıda/vadeli ödemede sipariş bu çağrıda kesinleşiyor,
-  numara doğuyor ve satır çiziliyor. Kart yolunda sipariş ödeme kartı kapandığında hâlâ TASLAKTIR
-  (onayı webhook yazar) — numara henüz yok, `null` gelir ve satır ÇİZİLMEZ: "bilinmiyor" yazan bir
-  sipariş numarası, olmayan bir numaradan kötüdür. Müşteri numarayı "Siparişlerim"de görür.
-
-  ── SAPMA: onay işaretinin "pop" animasyonu çizilmedi ───────────────────────
-  Şablonda işaret 0,5 sn'lik bir yay ile büyüyerek geliyor. RN'de karşılığı `Animated`; tek bir
-  giriş efekti için ekranın ömrüne bir animasyon döngüsü bağlamak bu etabın kazancından büyük.
-  İşaret ilk kareden itibaren tam boyuyla duruyor — söylediği şey aynı.
+  Sipariş onayı: onay işareti, numara, teslimat/ödeme/toplam özeti ve iki çıkış. Puan satırı yok, sipariş puanı kalktı.
+  Değerler rota parametresiyle gelir; kart yolunda sipariş o an taslaktır ve numarası yoktur, satır çizilmez.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
 interface OrderConfirmedScreenProps {
-  /**
-   * Açılan siparişin kimliği — **ekranda GÖRÜNMEZ**, yalnız komşu davetini açmak için (21.45).
-   * `null` = parametre gelmedi; şerit çizilmez. Uuid müşteriye gösterilecek bir numara değil
-   * (dosya künyesindeki `reference` ayrımı).
-   */
+  /** Açılan siparişin kimliği — ekranda görünmez, komşu davetini açmaya yarar; `null` ise davet bandı çizilmez. */
   orderId: string | null;
   /** Müşteriye gösterilen sipariş numarası; `null` = bilinmiyor → satır çizilmez (dosya künyesi). */
   reference: string | null;
@@ -101,36 +70,18 @@ export function OrderConfirmedScreen({
 
         <Text style={styles.note}>{t.confirmed.note}</Text>
 
-        {/*
-          KOMŞUNU BU GÜNE ÇAĞIR (21.45) — kullanıcının işaret ettiği an: *"nerede görünür — sipariş
-          tamamlandı ekranında; en değerli an orası, sefer somut, gün belli."* Hesap sayfasındaki
-          durgun kutu bu anı hiç yakalamıyordu.
-
-          Sistem paylaşım sayfası kullanılıyor, kendi çekmecemiz çizilmiyor: davet WhatsApp'a
-          gidiyor ve uygulama sırasını işletim sistemi bizden iyi biliyor (hesap ekranının aynı
-          kararı). Bağlantı YOKSA şerit hiç çizilmez — boş bir şerit "burada bir şey vardı ama
-          çalışmıyor" der.
-        */}
+        {/* Komşu daveti onay anında, çünkü sefer ve gün o an somut; paylaşım sistem sayfasından. Bağlantı yoksa bant çizilmez. */}
         {neighborInvite === null || neighborInvite.inviteUrl === null ? null : (
           <View style={styles.neighbor} testID="confirmed-neighbor">
             <Text style={styles.neighborTitle}>{t.confirmed.neighborTitle}</Text>
             <Text style={styles.neighborBody}>{t.confirmed.neighborBody}</Text>
-            {/* SINIR ARTIK YAZILI (kullanıcı kararı 21.08 — şeffaflık). Ekran bir süre kaç komşunun
-                yararlanabileceğini HİÇ söylemiyordu ve `maxUses` müşteri yüzeyine hiçbir yoldan
-                ulaşmıyordu; sonuç, dolmuş bir daveti paylaşmaya devam eden müşteri ve tıkladıktan
-                SONRA "bu davet dolu" cümlesiyle karşılaşan komşuydu — iki tarafın da emeği boşa.
-
-                SAYI SABİT YAZILMAZ, sözleşmeden gelir: tavan davet satırında dondurulmuş ve ayar
-                bir gün değişebilir; ekrana "3" gömmek, değiştiği gün yalan söyleyen bir cümle
-                bırakırdı (29.07 denetiminin kapattığı arıza sınıfı). */}
+            {/* Kontenjan yazılır, dolmuş davet paylaşılmasın; sayı sözleşmeden gelir, sabit yazılsaydı ayar değişince yalan söylerdi. */}
             <Text style={styles.neighborLimit} testID="confirmed-neighbor-limit">
               {(neighborInvite.remainingUses === 0 ? t.confirmed.neighborFull : t.confirmed.neighborRemaining)
                 .replace('{n}', String(neighborInvite.remainingUses))
                 .replace('{max}', String(neighborInvite.maxUses))}
             </Text>
-            {/* DOLDUYSA PAYLAŞIM SUNULMAZ: ölü bir bağlantı paylaştırmak, davet edeni de komşusunu
-                da boşa uğraştırır. Şerit yine duruyor — düğmeyi tümden kaldırmak "bir şey bozuldu"
-                gibi okunurdu; kalan, ne olduğunu söyleyen bir cümle. */}
+            {/* Dolduysa paylaşım sunulmaz; bant kalır, ne olduğunu söyleyen cümleyle. */}
             {neighborInvite.remainingUses > 0 ? (
               <SecondaryButton
                 label={t.confirmed.neighborShare}
@@ -202,9 +153,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space.lg,
     marginTop: theme.space.md,
   },
-  /* Şerit kitin BİLGİ KUTUSU dilinde (zeytin zemin, kart yarıçapı) — yeni bir blok dili icat
-     edilmedi (CLAUDE §3: improvise etme). Web'in `NeighborBand`i de yardım şeridinin gramerini
-     ödünç aldı; iki yüzey aynı kararı verdi. */
+  /* Bant kitin bilgi kutusu dilinde; yeni bir blok dili icat edilmedi. */
   neighbor: {
     alignSelf: 'stretch',
     alignItems: 'center',

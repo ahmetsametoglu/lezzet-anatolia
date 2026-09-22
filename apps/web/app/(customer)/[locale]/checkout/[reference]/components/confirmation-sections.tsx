@@ -14,20 +14,12 @@ import { isRefundedCancellation, type ConfirmationView, type ConfirmationViewPro
 import { useShareLink } from '@/lib/use-share-link.hook';
 
 /**
- * Sipariş alındı ekranının blokları (tasarım: `Musteri - Checkout.dc.html` · "Sipariş Alındı").
- *
- * Masaüstü ve mobil AYNI parçaları kullanır ama **aynı düzeni kullanmaz** — masaüstünde 1.5/1 iki
- * sütun, mobilde tek sütun; zaman çizgisi orada yatay, burada dikey. Bu yüzden parça bazında ortak,
- * diziliş bazında ayrı (`orders/[reference]` ile birebir aynı desen).
- *
- * `compact` bloklara PROP olarak iner, dalların içinde ikinci kez türetilmez: bir bloğun mobil hâli
- * onu çağıran dosyanın değil, bloğun kendi kararıdır.
+ * Sipariş alındı ekranının blokları: masaüstü ve mobil aynı parçaları farklı düzende dizer; `compact` bloğa prop olarak iner,
+ * mobil hâl bloğun kendi kararıdır.
  */
 
 /**
- * Ödemesi beklenen kart taslağının cümlesi — sağlayıcının söylediğine göre (07.18, `paymentState`).
- * Önce tek cümle vardı ("onaylanıyor") ve olay gelmeyince kartı reddedilmiş müşteri de parası alınmış
- * müşteri de onu okuyordu. Sorulamadıysa (`null`) bugünkü cümle kalır.
+ * Ödemesi beklenen kart taslağının cümlesi, sağlayıcının söylediğine göre; sorulamadıysa (`null`) "onaylanıyor" kalır.
  */
 export function awaitingCopy(t: Messages, state: ConfirmationView['paymentState']): { title: string; body: string } {
   switch (state) {
@@ -51,8 +43,7 @@ export function awaitingCopy(t: Messages, state: ConfirmationView['paymentState'
  */
 export function CelebrationBand({ t, locale, view, compact }: ConfirmationViewProps) {
   const placedTime = formatTime(view.createdAt, locale);
-  // Ödemesi beklenen taslakta sağlayıcının söylediği de bandın tonunu belirler (07.18): tamamlanmamış
-  // ödeme bir ret gibi, alınmış ödeme bir onay gibi okunur — sipariş henüz taslak olsa da.
+  // Taslakta da sağlayıcının söylediği tonu belirler: tamamlanmamış ödeme ret, alınmış ödeme onay gibi okunur.
   const failed = view.cancelled || view.paymentState === 'incomplete';
   const settledOk = view.placed || view.paymentState === 'paid';
   const awaiting = awaitingCopy(t, view.paymentState);
@@ -75,9 +66,7 @@ export function CelebrationBand({ t, locale, view, compact }: ConfirmationViewPr
           <Icon name={failed ? 'close' : settledOk ? 'check' : 'timer'} size={compact ? 22 : 28} strokeWidth={2.2} />
         </span>
 
-        {/* `leading-tight`: tip token'larımız yalnız punto taşıyor, satır yüksekliğini preflight'ın
-            1.5'inden miras alıyor — 38px başlık 57px'lik bir satır kutusuna oturunca çember ile
-            başlık arası tasarımın iki katı açılıyordu (aynı tuzak `controlClass`'ta da yaşandı). */}
+        {/* `leading-tight`: tip token'ları satır yüksekliği taşımaz, miras kalan 1.5 çember ile başlık arasını açardı. */}
         <h1 className={['font-serif leading-tight text-ink', compact ? 'text-page-title-sm' : 'text-page-title'].join(' ')}>
           {view.cancelled
             ? isRefundedCancellation(view)
@@ -94,8 +83,7 @@ export function CelebrationBand({ t, locale, view, compact }: ConfirmationViewPr
 
         <p className="max-w-[620px] font-sans text-body leading-relaxed text-body">
           {view.cancelled ? (
-            // İptalde İKİ ayrı cümle (07.14): parası iade edilmişe "tahsilat yapılmadı" demek,
-            // ekstresinde eksik para gören müşteriye söylenebilecek en pahalı yalandı.
+            // İptalde iki cümle: parası iade edilmişe "tahsilat yapılmadı" demek yalan olurdu.
             isRefundedCancellation(view) ? t.refundedBody : t.failedBody
           ) : view.placed ? (
             // E-posta KALIN (tasarım): cümlenin içinde müşterinin gözünün aradığı tek şey kendi
@@ -178,16 +166,7 @@ export function PaymentCard({ t, shared, locale, view, compact }: ConfirmationVi
       {/* Kart künyesi: son dört hane ödeme sağlayıcısından çekilecek (12) — bugün saklamıyoruz,
           uydurma rakam yazmaktansa yalnız aracı söyleriz. */}
       {view.paymentMethod === 'online' && view.placed && <span className="font-sans text-body-sm text-body">{t.payment.card}</span>}
-      {/**
-       * **FATURA DEĞİL, TESLİMAT ÖZETİ (02.08 · kullanıcı kararı).** Burada "Faturayı indir"
-       * yazıyordu ve altında "fatura hazır olduğunda e-postanıza eklenecek" deniyordu — ikisi de
-       * tutulmayacak sözdü: sistem fatura KESMİYOR ve kesmeyecek (fatura dışarıdaki muhasebede
-       * doğuyor, biz yalnız numarasını kendi referansımızla eşleştiriyoruz). Müşteriye verdiğimiz
-       * tek belge teslimat özeti.
-       *
-       * Zamanı da "yakında" değil: belge kutu HAZIRLANDIKTAN sonra doğuyor, çünkü işi eksik konan
-       * bir şey varsa onu göstermek.
-       */}
+      {/* Fatura değil teslimat özeti: fatura dışarıdaki muhasebede doğar; belge kutu hazırlandıktan sonra oluşur. */}
       <Footnote>{t.payment.deliveryNoteBody}</Footnote>
       {/* BEKLEYEN(14.6): teslimat özeti PDF üretimi — bağlantı tasarımda var, yerinde durur ve ne
           zaman geleceğini söyler; silmek tasarımın bu satırını kaybetmek olurdu. */}
@@ -251,17 +230,8 @@ export function TimelineCard({ t, locale, view, compact }: ConfirmationViewProps
 /* ————————————————————————————— Yardım · Özet ————————————————————————————— */
 
 /**
- * Yardım şeridi: kart değil BANT — "bir sorunuz mu var" siparişin bir parçası değil, sayfanın
- * altındaki açık kapı. Düğme mobilde çizilmiyor (tasarım): dar ekranda bant zaten tek satır.
- *
- * **Kanal bağlandı (15.3):** düğme artık gerçek bir `wa.me` bağı ve metin SİPARİŞE ÖZGÜ — müşteri
- * WhatsApp'ı referans numarası yazılı hâlde açıyor. Bu, bandın kendi cümlesinin ("sipariş
- * numaranızla yazın") gereğini müşteriye yaptırmak yerine BİZİM yapmamız: numarayı hatırlamak,
- * kopyalamak ve doğru yazmak operatörün değil müşterinin sırtındaydı ve orada sık sık düşerdi.
- *
- * Referans TASLAKTA `null` olabilir (`ConfirmationView` künyesi: numara ilk kalıcı durumda doğar) —
- * o hâlde numarasız metin gider. Yuvası boş bir cümle ("siparişim {reference} hakkında") göndermek,
- * operatöre anlamsız bir mesaj düşürürdü.
+ * Yardım bandı: sayfanın altındaki açık kapı, düğme mobilde çizilmez. `wa.me` metni siparişe özgüdür; taslakta numara yoksa
+ * numarasız metin gider, yuvası boş bir cümle gönderilmez.
  */
 export function HelpBand({
   t,
@@ -316,39 +286,11 @@ export function HelpBand({
 }
 
 /**
- * **Komşunu bu sefere çağır** (17.10) — yardım şeridinin KARDEŞİ, aynı görsel gramer.
- *
- * Kendi düzenini kurmuyor ve bu bilinçli (CLAUDE §3 — improvise etme): şerit `HelpBand`in kutusunu,
- * boşluklarını ve tipografisini birebir kullanıyor. Yeni bir blok dili icat etmek, tasarımı
- * görmeden verilmiş görsel bir karar olurdu; var olan gramerde kalmak ise yalnız içerik ekliyor.
- * Nihai görsel karar Claude Design'da verilecek (`design/pages/musteri-checkout.md`'ye brief yazıldı).
- *
- * **Davet yoksa blok HİÇ çizilmez** (`neighborInvite === null`): kargo siparişi, taslak ya da
- * kesim saati dolmuş sefer. Boş bir şerit "burada bir şey vardı ama çalışmıyor" der.
- *
- * ── KONTENJAN SÖYLENİR, DOLDUYSA PAYLAŞIM SUNULMAZ (08.55 · kullanıcı kararı 21.08) ──────────
- * Şerit kaç komşunun daha yararlanabileceğini HİÇ söylemiyordu ve `maxUses` müşteri yüzeyine
- * hiçbir yoldan ulaşmıyordu. Sonuç: dolmuş bir daveti paylaşmaya devam eden müşteri ve tıkladıktan
- * SONRA "bu davet dolu" cümlesiyle karşılaşan komşu — iki tarafın da emeği boşa.
- *
- * Karar 21.08'de verilmişti ama iki yüzeyden yalnız **native'e** yazılmıştı; web müşterisi için
- * durum aynen duruyordu (mobil şeridin gözlemi, denetim 24.08'de ölçtü). Kayıtta "webde
- * yapılmayacak" diyen tek satır yoktu — bilinçli sapma değil, atlama.
- *
- * **Dolduğunda şerit KALIR, yalnız düğme gider.** Şeridi tümden kaldırmak "bir şey bozuldu" gibi
- * okunurdu; kalan, ne olduğunu söyleyen bir cümle (native'in aynı kararı). Ölü bir bağlantıyı
- * paylaştırmak ise daveti de komşusunu da boşa uğraştırır.
- *
- * **Sayı sözleşmeden gelir, ekrana gömülmez:** tavan davet açılırken dondurulur ve ayar bir gün
- * değişebilir — sabit bir "3", değiştiği gün yalan söyleyen bir cümle bırakırdı.
- *
- * Kopyalama `coupons-card`taki desenin aynısı: başarısızlık sessiz ama SONUÇSUZ değil — adres zaten
- * ekranda seçilebilir hâlde duruyor, hata cümlesi açmak müşterinin hâlâ yapabildiği bir işi arıza
- * gibi gösterirdi. Sistem paylaşım menüsü (`navigator.share`) varsa o açılır: davet WhatsApp'a
- * gidiyor ve uygulama sırasını işletim sistemi bizden iyi biliyor (`ShareButton` künyesi).
+ * Komşunu bu sefere çağır: yardım bandının gramerinde; davet yoksa hiç çizilmez. Kontenjan sözleşmeden gelir ve yazılır,
+ * dolduysa bant kalır, yalnız paylaşım düğmesi gider.
  */
 export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, 't' | 'compact' | 'view'>) {
-  // Paylaşım kapısı telefonun şeridiyle ORTAK (`useShareLink`); kanca koşulsuz — erken dönüşten önce çağrılır.
+  // Paylaşım kapısı telefonun bandıyla ortak; kanca erken dönüşten önce çağrılır.
   const { share, copied } = useShareLink();
   const invite = view.neighborInvite;
   if (!invite) return null;
@@ -372,9 +314,7 @@ export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, '
           {limitText}
         </span>
       </div>
-      {/* Mobilde de çizilir — yardım şeridinden farkı bu: orada düğme bir "yakında"dır (tasarım),
-          burada bloğun TEK işlevi paylaşmak; düğmesiz bir davet şeridi hiçbir şey yapmaz.
-          DOLUYSA çizilmez: ölü bir bağlantıyı paylaştırmak iki tarafı da boşa uğraştırır. */}
+      {/* Mobilde de çizilir, çünkü bloğun tek işlevi paylaşmak; dolduysa çizilmez. */}
       {full ? null : (
         <Button variant="secondary" size="sm" className="flex-none" onClick={() => void share(url)}>
           {copied ? t.neighbor.copied : t.neighbor.cta}
@@ -387,9 +327,7 @@ export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, '
 /** Ne alındı, ne ödendi + iki çıkış (takip / katalog). */
 export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps) {
   const total = formatPrice(view.totalCents, locale);
-  // Özetin ORTAK sözcükleri (08.20): artık checkout'un sözlüğünden değil, bloğu ÇİZEN komponentin
-  // yanındaki nötr sözlükten. Aile bağı doğruydu ama aynı blok sipariş detayında da var ve o
-  // checkout ailesinin dışında — kelimeler bir aileye değil, bloğa ait.
+  // Özetin ortak sözcükleri bloğun yanındaki nötr sözlükten: aynı blok sipariş detayında da çizilir.
   const summary = summaryCopy(locale);
   // Kod tasarımda birebir yazılı ("İndirim — HOSGELDIN10"); kodsuz indirimde satır genel adında kalır.
   const discountLabel = view.discountName ? `${summary.discount} — ${view.discountName}` : summary.discount;
@@ -431,20 +369,13 @@ export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps)
         <span className="font-sans text-micro text-muted">{summary.vatIncluded}</span>
       </div>
 
-      {/* Tamamlanmamış ödemede de (07.18) müşteri sepetine döner: yeni deneme eski taslağı ve eski ödemeyi kapatır. */}
+      {/* Tamamlanmamış ödemede de müşteri sepetine döner: yeni deneme eski taslağı ve ödemeyi kapatır. */}
       {view.cancelled || view.paymentState === 'incomplete' ? (
         <Link href="/cart" className={buttonClass({ size: 'md', compact, fullWidth: true })}>
           {t.retry}
         </Link>
       ) : (
-        /**
-         * Sipariş takip sayfası ARTIK VAR (08.5, 30.07) — burada bir dönem devre dışı bir düğme
-         * duruyordu (`BEKLEYEN(08.5)`: "bağ verilseydi 404'e düşerdi") ve o gün doğruydu. Detay
-         * sayfası inince işaret arandı ve bağ verildi.
-         *
-         * Yolda taşınan kimlik sipariş kimliğidir: numara ancak onayla doğuyor, detay okuması da
-         * kimlikle çalışıyor.
-         */
+        /** Sipariş detayı kimlikle açılır, çünkü numara ancak onayla doğar. */
         <Link href={{ pathname: '/orders/[reference]', params: { reference: view.orderId } }} className={buttonClass({ size: 'md', compact, fullWidth: true })}>
           {t.track}
         </Link>
