@@ -342,7 +342,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [ ] (B.4) Native uygulama · dokunmatik geri bildirim (haptic) kapsamı dar ⟶ MOBİL ŞERİT
 - [ ] (B.6) Native uygulamada online ödeme "henüz açık değil" — anahtar eksik, kod değil
 - [ ] (B.7) Native uygulama · kapsam bilgisi bayat kalıyor — uygulama kapatılmadan tazelenmiyor ⟶ MOBİL ŞERİT
-- [ ] (B.8) Ödeme çekmecesi iptal edilince ikinci deneme kırılıyor — anahtar "yanmış" oluyor
 - [ ] (B.9) Stripe çekmecesinde test kartı otomatik doldurma ⟶ MOBİL ŞERİT · araştırma gerekiyor
 - [ ] (B.11) Talebin varsayılan modu `human` — AI taslağı hiç üretilmiyor
 - [ ] (B.12) AI cevap yazdı, müşteriye hiçbir bildirim gitmedi — bildirim mailin bastırma kuralına asılı

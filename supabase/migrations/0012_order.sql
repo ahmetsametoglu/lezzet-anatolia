@@ -133,7 +133,10 @@ create table public.order (
 
 -- Referans müşteriye söylenen numaradır: iki siparişte aynı olamaz. Draft'ta null (kısmi indeks).
 create unique index order_reference_key on public.order (reference_no) where reference_no is not null;
-create unique index order_idempotency_key on public.order (idempotency_key) where idempotency_key is not null;
+-- İptal edilmiş sipariş anahtarı bırakır: ödemeden vazgeçip aynı ekrandan yeniden deneyen müşterinin yeni taslağı,
+-- yerine geçtiği taslağın anahtarına takılmasın. Açık ve kesinleşmiş sipariş anahtarı tutmaya devam eder.
+create unique index order_idempotency_key on public.order (idempotency_key)
+  where idempotency_key is not null and status <> 'cancelled';
 create unique index order_payment_ref on public.order (payment_ref) where payment_ref is not null;
 -- Müşteri sipariş geçmişi (sonsuz kaydırma).
 create index order_customer_idx on public.order (customer_id, created_at desc);

@@ -432,8 +432,9 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    * ve süzgeçsiz okuma başkasının siparişini döndürürdü.
    */
   async findByIdempotencyKey(key: string, customerId: string): Promise<Order | null> {
-    const rows = await this.getAll({ idempotencyKey: key, customerId }, { limit: 1 });
-    return rows[0] ?? null;
+    // İptal edilmiş sipariş anahtarı bırakır, aynı anahtarda en çok bir iptal edilmemiş satır olur; o öne alınır.
+    const rows = await this.getAll({ idempotencyKey: key, customerId }, { limit: 20 });
+    return rows.find((row) => row.status !== 'cancelled') ?? rows[0] ?? null;
   }
 
   /**
