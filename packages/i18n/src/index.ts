@@ -44,3 +44,5 @@ export {
   type StaffNotificationBrief,
   type StaffNotificationTone,
 } from './notification-copy';
+
+export { confirmationCopy } from './confirmation-copy';

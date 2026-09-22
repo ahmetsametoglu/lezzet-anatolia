@@ -1,4 +1,4 @@
-import type { PaymentIntentStatus } from '@lezzet/domain-core';
+import type { CardPaymentState } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { PaymentMethod } from '@lezzet/types';
@@ -40,7 +40,7 @@ export interface ConfirmationView {
    * Sağlayıcının söylediği, yalnız ödemesi beklenen kart taslağında: `paid` para alındı, `processing` banka işliyor, `incomplete`
    * tamamlanmadı. `null` = sorulamadı, ekran "onaylanıyor"da kalır.
    */
-  paymentState: 'paid' | 'processing' | 'incomplete' | null;
+  paymentState: CardPaymentState | null;
   onRoute: boolean;
   deliveryDate: string | null;
   onAccount: boolean;
@@ -83,30 +83,4 @@ export interface ConfirmationViewProps {
   view: ConfirmationView;
   /** Mobil yerleşim (cihaz forku — `md:` yok). */
   compact: boolean;
-}
-
-/**
- * Parası iade edilmiş bir iptal mi: soru sebebe değil iade damgasına sorulur, çünkü iade eden iki yoldan biri sebebi
- * `superseded` bırakır.
- */
-export function isRefundedCancellation(view: Pick<ConfirmationView, 'cancelled' | 'refundedAt'>): boolean {
-  return view.cancelled && view.refundedAt !== null;
-}
-
-/**
- * Sağlayıcının durumundan ekranın hâli; iptal edilmiş ödeme de "tamamlanmadı"dır, `requires_action` 3-D Secure'un bitmediğidir.
- */
-export function paymentStateOf(status: PaymentIntentStatus): NonNullable<ConfirmationView['paymentState']> {
-  switch (status) {
-    case 'succeeded':
-      return 'paid';
-    case 'processing':
-    case 'requires_capture':
-      return 'processing';
-    case 'requires_payment_method':
-    case 'requires_confirmation':
-    case 'requires_action':
-    case 'canceled':
-      return 'incomplete';
-  }
 }

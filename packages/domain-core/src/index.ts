@@ -17,6 +17,7 @@ export * from './order/decisions';
 export * from './order/box-completion';
 export * from './order/customer-status';
 export * from './order/draft-payment';
+export * from './order/order-outcome';
 export * from './identity/anchor';
 export * from './identity/b2b-application';
 export * from './identity/b2b-approval';

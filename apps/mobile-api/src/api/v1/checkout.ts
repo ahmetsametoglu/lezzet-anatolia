@@ -7,6 +7,7 @@ import {
   entryOfItem,
   getPackagesByIds,
   placeOrder,
+  readCheckoutOrderStatus,
   readCheckoutSnapshot,
   UNRESOLVED_PLACE,
 } from '@lezzet/application';
@@ -16,11 +17,12 @@ import { mobileOrderEffects } from '../../lib/order-effects';
 import {
   CheckoutOrderBodySchema,
   CheckoutOrderResultSchema,
+  CheckoutOrderStatusSchema,
   CheckoutSnapshotSchema,
   type Channel,
   type PreferredLanguage,
 } from '@lezzet/types';
-import { readJsonBody } from '../../lib/request';
+import { readJsonBody, UuidSchema } from '../../lib/request';
 import { fail, ok } from '../../lib/respond';
 import { recordNativeEvent } from '../../lib/analytics';
 import { paymentGateway, paymentSessionCreator } from '../../lib/stripe';
@@ -140,6 +142,24 @@ checkout.get('/', async (c) => {
     summary: snapshot.summary,
   };
   return ok(c, CheckoutSnapshotSchema.parse(body));
+});
+
+/**
+ * Onay ekranının ödeme beklemesi: kart taslağında sağlayıcıya sorar ve netleşen durumu döndürür. Başkasının siparişi de bulunamayan
+ * gibi 404 alır, numara deneyen biri ayrımı öğrenmesin.
+ */
+checkout.get('/order/:orderId/status', async (c) => {
+  const orderId = UuidSchema.safeParse(c.req.param('orderId'));
+  if (!orderId.success) return fail(c, 'order_not_found', 404);
+
+  const db = serviceDb();
+  const status = await readCheckoutOrderStatus(
+    db,
+    { orderId: orderId.data, customerId: c.get('customerId') },
+    { gateway: paymentGateway(), effects: mobileOrderEffects(db) },
+  );
+  if (!status) return fail(c, 'order_not_found', 404);
+  return ok(c, CheckoutOrderStatusSchema.parse(status));
 });
 
 /**

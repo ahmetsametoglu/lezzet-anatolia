@@ -79,6 +79,8 @@ export const ICON_PATHS = {
   plus: { paths: ['M12 5v14M5 12h14'] },
   /* Fişin onay imi; metin "✓" daire içinde yazı tipinin çizgi yüksekliğine yaslanıp merkezden kayardı. */
   check: { paths: ['M5 12.5l4.5 4.5L19 7'] },
+  /** Saat: kart ödemesinin sonucu beklenen onay ekranının işareti; web çiziminin aynısı. */
+  timer: { paths: ['M12 9.8v3.4l2.4 1.7M9.6 3.5h4.8'], circles: [[12, 13.2, 7.3]] },
   /** Harita iğnesi: adres çekmecesinin öneri satırı; web masaüstü çiziminin aynısı. */
   pin: { paths: ['M12 21.5s7-6.6 7-11.4A7 7 0 1 0 5 10.1c0 4.8 7 11.4 7 11.4z'], circles: [[12, 10, 2.4]] },
   /* Okutucu: gövde ve mercek, ürün ve parti barkodu okutan düğmelerin ikonu; `camera` müşterinin fotoğraf düğmesidir. Emoji

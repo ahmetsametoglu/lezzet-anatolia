@@ -14,7 +14,8 @@ import { routing } from '@/i18n/routing';
 import { OrderWatch } from './components/order-watch';
 import { ConfirmationClient } from './confirmation-client';
 import { stripePaymentGateway } from '@/lib/stripe';
-import { paymentStateOf, type ConfirmationView } from './confirmation-types';
+import { orderOutcomeOf, paymentStateOf } from '@lezzet/domain-core';
+import type { ConfirmationView } from './confirmation-types';
 import messages from './messages.json';
 // Aile kökünün sözlüğü: özetin ortak sözcükleri orada yaşıyor (`confirmation-types`).
 import checkoutMessages from '../messages.json';
@@ -49,8 +50,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
    * Sipariş kesinleşti mi (taslak değil, iptal değil); "ödendi" ile aynı şey değil, kapıda ödenecek
    * sipariş de kesinleşmiştir.
    */
-  const placed = order.status !== 'draft' && order.status !== 'cancelled';
-  const cancelled = order.status === 'cancelled';
+  const { placed, cancelled, awaitingCard } = orderOutcomeOf(order);
 
   // Kalem künyesi: sipariş varyant satırlarından oluşuyor, müşteri ürün adını ve görselini görmeli.
   const variants = await new ProductVariantService(db).listByIds([...new Set(items.map((i) => i.variantId))]);
@@ -76,11 +76,6 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   const invite =
     placed && order.deliveryType === 'route' ? await tryOpenNeighborInvite(db, { orderId: order.id, customerId: profile.id }) : null;
 
-  /**
-   * "Bankanızdan onay bekliyoruz" yalnız kart ödemesinde doğru; kapıda ödemede ve havalede
-   * beklenen bir banka onayı yok.
-   */
-  const awaitingCard = !placed && !cancelled && order.paymentMethod === 'online';
   /**
    * Sağlayıcının söylediği, yalnız ödemesi beklenen kart taslağında sorulur; okuma yan etkisizdir. Hata
    * burada `null`a düşer, çünkü canlı bağın eylemi aynı soruyu saniyeler sonra sorar ve orada iz bırakır.

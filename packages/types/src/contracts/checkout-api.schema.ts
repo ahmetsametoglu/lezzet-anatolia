@@ -219,3 +219,20 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('order_not_placed') }),
 ]);
 export type CheckoutOrderResult = z.infer<typeof CheckoutOrderResultSchema>;
+
+/**
+ * Onay ekranının sipariş durumu: native kart ödemesini bu cevapla bekler. Çağrı taslakta sağlayıcıya da sorar; `channel`da çalan
+ * zil yeniden sormanın işaretidir, veri taşımaz.
+ */
+export const CheckoutOrderStatusSchema = z.object({
+  placed: z.boolean(),
+  cancelled: z.boolean(),
+  /** İptal edilmiş siparişin parası iade edildi mi. */
+  refunded: z.boolean(),
+  awaitingCard: z.boolean(),
+  /** Yalnız kart beklenirken dolu; `null` = sağlayıcıya sorulamadı. */
+  paymentState: z.enum(['paid', 'processing', 'incomplete']).nullable(),
+  referenceNo: OrderSchema.shape.referenceNo,
+  channel: z.string().min(1),
+});
+export type CheckoutOrderStatus = z.infer<typeof CheckoutOrderStatusSchema>;

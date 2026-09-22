@@ -10,29 +10,17 @@ import { Icon } from '@/components/customer/ui/icons';
 import { SummaryRow, summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import { formatDeliveryDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
-import { isRefundedCancellation, type ConfirmationView, type ConfirmationViewProps, type Messages } from '../confirmation-types';
+import { confirmationPhaseOf, confirmationToneOf, isRefundedCancellation } from '@lezzet/domain-core';
+import { confirmationCopy } from '@lezzet/i18n';
+import checkoutMessages from '@lezzet/i18n/customer/checkout';
+import type { ConfirmationViewProps } from '../confirmation-types';
+
 import { useShareLink } from '@/lib/use-share-link.hook';
 
 /**
  * Sipariş alındı ekranının blokları: masaüstü ve mobil aynı parçaları farklı düzende dizer; `compact` bloğa prop olarak iner,
  * mobil hâl bloğun kendi kararıdır.
  */
-
-/**
- * Ödemesi beklenen kart taslağının cümlesi, sağlayıcının söylediğine göre; sorulamadıysa (`null`) "onaylanıyor" kalır.
- */
-export function awaitingCopy(t: Messages, state: ConfirmationView['paymentState']): { title: string; body: string } {
-  switch (state) {
-    case 'paid':
-      return { title: t.paid, body: t.paidBody };
-    case 'processing':
-      return { title: t.pending, body: t.processingBody };
-    case 'incomplete':
-      return { title: t.failed, body: t.failedBody };
-    default:
-      return { title: t.pending, body: t.pendingBody };
-  }
-}
 
 /* ————————————————————————————— Kutlama bandı ————————————————————————————— */
 
@@ -43,10 +31,11 @@ export function awaitingCopy(t: Messages, state: ConfirmationView['paymentState'
  */
 export function CelebrationBand({ t, locale, view, compact }: ConfirmationViewProps) {
   const placedTime = formatTime(view.createdAt, locale);
-  // Taslakta da sağlayıcının söylediği tonu belirler: tamamlanmamış ödeme ret, alınmış ödeme onay gibi okunur.
-  const failed = view.cancelled || view.paymentState === 'incomplete';
-  const settledOk = view.placed || view.paymentState === 'paid';
-  const awaiting = awaitingCopy(t, view.paymentState);
+  const phase = confirmationPhaseOf({ ...view, refunded: isRefundedCancellation(view) });
+  const tone = confirmationToneOf(phase);
+  const failed = tone === 'failed';
+  const settledOk = tone === 'ok';
+  const status = phase === 'placed' ? null : confirmationCopy(locale, phase);
   return (
     <section
       className={[
@@ -68,31 +57,20 @@ export function CelebrationBand({ t, locale, view, compact }: ConfirmationViewPr
 
         {/* `leading-tight`: tip token'ları satır yüksekliği taşımaz, miras kalan 1.5 çember ile başlık arasını açardı. */}
         <h1 className={['font-serif leading-tight text-ink', compact ? 'text-page-title-sm' : 'text-page-title'].join(' ')}>
-          {view.cancelled
-            ? isRefundedCancellation(view)
-              ? t.refunded
-              : t.failed
-            : view.placed
-              ? view.customerFirstName
-                ? t.title.replace('{name}', view.customerFirstName)
-                : t.titleAnon
-              : view.awaitingCard
-                ? awaiting.title
-                : t.incomplete}
+          {status !== null
+            ? status.title
+            : view.customerFirstName
+              ? t.title.replace('{name}', view.customerFirstName)
+              : t.titleAnon}
         </h1>
 
         <p className="max-w-[620px] font-sans text-body leading-relaxed text-body">
-          {view.cancelled ? (
-            // İptalde iki cümle: parası iade edilmişe "tahsilat yapılmadı" demek yalan olurdu.
-            isRefundedCancellation(view) ? t.refundedBody : t.failedBody
-          ) : view.placed ? (
+          {status !== null ? (
+            status.body
+          ) : (
             // E-posta KALIN (tasarım): cümlenin içinde müşterinin gözünün aradığı tek şey kendi
             // adresidir — doğru yere gitti mi diye bakar. Düz metinde kayboluyordu.
             <Mailed template={t.mailed} email={view.customerEmail} />
-          ) : view.awaitingCard ? (
-            awaiting.body
-          ) : (
-            t.incompleteBody
           )}
         </p>
 
@@ -159,7 +137,7 @@ export function PaymentCard({ t, shared, locale, view, compact }: ConfirmationVi
         {view.onAccount
           ? t.payment.onAccount.replace('{amount}', total)
           : view.paymentMethod === 'online'
-            ? (view.placed ? t.payment.paid : t.pending).replace('{amount}', total)
+            ? (view.placed ? t.payment.paid : checkoutMessages[locale].confirmed.pending).replace('{amount}', total)
             : t.payment.due.replace('{amount}', total)}
       </span>
       <Chip>{view.onAccount ? t.payment.credit : view.paymentMethod === 'online' ? t.payment.online : t.payment.cod}</Chip>
@@ -372,7 +350,7 @@ export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps)
       {/* Tamamlanmamış ödemede de müşteri sepetine döner: yeni deneme eski taslağı ve ödemeyi kapatır. */}
       {view.cancelled || view.paymentState === 'incomplete' ? (
         <Link href="/cart" className={buttonClass({ size: 'md', compact, fullWidth: true })}>
-          {t.retry}
+          {checkoutMessages[locale].confirmed.retry}
         </Link>
       ) : (
         /** Sipariş detayı kimlikle açılır, çünkü numara ancak onayla doğar. */

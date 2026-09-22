@@ -4,16 +4,6 @@
     "titleAnon": "Siparişiniz alındı",
     "mailed": "Onay e-postasını {email} adresine gönderdik. Hazırlığa başladığımızda haber vereceğiz.",
     "orderNo": "Sipariş no · {reference}",
-    "pending": "Ödemeniz onaylanıyor",
-    "pendingBody": "Bankanızdan onay bekliyoruz. Bu genelde birkaç saniye sürer ve sonuç bu sayfada görünür. Sayfayı kapatırsanız Siparişlerim'den izleyebilirsiniz; ödeme onaylanınca e-postayla da bildiririz.",
-    "paid": "Ödemeniz alındı",
-    "paidBody": "Siparişiniz onaylanıyor — bu sayfa birkaç saniye içinde kendini güncelleyecek.",
-    "processingBody": "Bankanız ödemeyi işliyor; bu bazen birkaç dakika sürer. Sonuç bu sayfada ve Siparişlerim'de görünür, ödeme onaylanınca e-postayla da bildiririz.",
-    "failed": "Ödeme tamamlanmadı",
-    "failedBody": "Kartınızdan tahsilat yapılmadı. Sepetiniz duruyor; dilerseniz başka bir kartla ya da kapıda ödeme ile tekrar deneyebilirsiniz.",
-    "refunded": "Siparişiniz iptal edildi, paranız iade edildi",
-    "refundedBody": "Ödemeniz alındıktan sonra ürünlerden biri tükendi ve siparişi tamamlayamadık. Tahsil edilen tutarın tamamı kartınıza iade edildi — bankanıza göre 3-5 iş günü içinde hesabınıza döner. Özür dileriz.",
-    "retry": "Ödemeyi tekrar dene",
     "delivery": {
       "title": "Teslimat",
       "coldChain": "Soğuk zincir bozulmadan kapınıza gelir. Kurye yola çıkınca saat aralığını bildiririz.",
@@ -60,25 +50,13 @@
       "remaining": "Bu davetten {n} komşunuz daha yararlanabilir (en fazla {max}).",
       "full": "Bu davet doldu — {max} komşunuz katıldı. Bir sonraki siparişinizde yeni bir davet açılır."
     },
-    "track": "Siparişi takip et",
-    "incomplete": "Siparişiniz tamamlanmadı",
-    "incompleteBody": "Sipariş kaydedildi ama kesinleşmedi. Sepetiniz duruyor — checkout'a dönüp yeniden deneyebilirsiniz."
+    "track": "Siparişi takip et"
   },
   "fr": {
     "title": "Votre commande est confirmée, {name}",
     "titleAnon": "Votre commande est confirmée",
     "mailed": "Nous avons envoyé la confirmation à {email}. Nous vous préviendrons dès le début de la préparation.",
     "orderNo": "N° de commande · {reference}",
-    "pending": "Paiement en cours de validation",
-    "pendingBody": "Nous attendons la confirmation de votre banque. Cela prend généralement quelques secondes et le résultat s'affiche sur cette page. Si vous la fermez, suivez-le dans Mes commandes ; nous vous écrirons aussi par e-mail dès que le paiement sera confirmé.",
-    "paid": "Paiement reçu",
-    "paidBody": "Votre commande est en cours de confirmation — cette page se mettra à jour dans quelques secondes.",
-    "processingBody": "Votre banque traite le paiement ; cela peut prendre quelques minutes. Le résultat s'affiche sur cette page et dans Mes commandes, et nous vous écrirons par e-mail dès sa confirmation.",
-    "failed": "Paiement non abouti",
-    "failedBody": "Aucun montant n'a été débité. Votre panier est intact ; réessayez avec une autre carte ou choisissez le paiement à la livraison.",
-    "refunded": "Commande annulée, vous avez été remboursé",
-    "refundedBody": "Après votre paiement, l'un des produits s'est retrouvé en rupture et nous n'avons pas pu honorer la commande. La totalité du montant débité a été remboursée sur votre carte — le délai est de 3 à 5 jours ouvrés selon votre banque. Nous vous prions de nous en excuser.",
-    "retry": "Réessayer le paiement",
     "delivery": {
       "title": "Livraison",
       "coldChain": "Livraison sans rupture de la chaîne du froid. Nous vous indiquerons le créneau au départ du livreur.",
@@ -125,25 +103,13 @@
       "remaining": "Encore {n} voisin(s) peuvent profiter de cette invitation (maximum {max}).",
       "full": "Cette invitation est complète — {max} voisins y ont participé. Une nouvelle invitation s'ouvrira à votre prochaine commande."
     },
-    "track": "Suivre ma commande",
-    "incomplete": "Votre commande n'a pas abouti",
-    "incompleteBody": "La commande a été enregistrée mais non confirmée. Votre panier est intact — revenez au paiement pour réessayer."
+    "track": "Suivre ma commande"
   },
   "de": {
     "title": "Ihre Bestellung ist eingegangen, {name}",
     "titleAnon": "Ihre Bestellung ist eingegangen",
     "mailed": "Wir haben die Bestätigung an {email} gesendet. Sobald die Zubereitung beginnt, melden wir uns.",
     "orderNo": "Bestellnummer · {reference}",
-    "pending": "Zahlung wird bestätigt",
-    "pendingBody": "Wir warten auf die Bestätigung Ihrer Bank. Das dauert meist wenige Sekunden, das Ergebnis erscheint auf dieser Seite. Wenn Sie sie schließen, finden Sie es unter Meine Bestellungen; sobald die Zahlung bestätigt ist, schreiben wir Ihnen auch per E-Mail.",
-    "paid": "Zahlung eingegangen",
-    "paidBody": "Ihre Bestellung wird bestätigt — diese Seite aktualisiert sich in wenigen Sekunden.",
-    "processingBody": "Ihre Bank bearbeitet die Zahlung; das kann einige Minuten dauern. Das Ergebnis erscheint auf dieser Seite und unter Meine Bestellungen, nach der Bestätigung schreiben wir Ihnen auch per E-Mail.",
-    "failed": "Zahlung nicht abgeschlossen",
-    "failedBody": "Es wurde nichts abgebucht. Ihr Warenkorb bleibt bestehen; versuchen Sie es mit einer anderen Karte oder wählen Sie Zahlung bei Lieferung.",
-    "refunded": "Bestellung storniert, Ihr Geld wurde erstattet",
-    "refundedBody": "Nach Ihrer Zahlung war eines der Produkte nicht mehr verfügbar und wir konnten die Bestellung nicht ausführen. Der gesamte abgebuchte Betrag wurde auf Ihre Karte erstattet — je nach Bank dauert das 3 bis 5 Werktage. Wir bitten um Entschuldigung.",
-    "retry": "Zahlung erneut versuchen",
     "delivery": {
       "title": "Lieferung",
       "coldChain": "Ohne Unterbrechung der Kühlkette bis zu Ihrer Tür. Das Zeitfenster nennen wir, sobald der Fahrer losfährt.",
@@ -190,8 +156,6 @@
       "remaining": "Noch {n} Nachbarn können diese Einladung nutzen (höchstens {max}).",
       "full": "Diese Einladung ist voll — {max} Nachbarn haben teilgenommen. Bei Ihrer nächsten Bestellung öffnet sich eine neue."
     },
-    "track": "Bestellung verfolgen",
-    "incomplete": "Ihre Bestellung wurde nicht abgeschlossen",
-    "incompleteBody": "Die Bestellung wurde gespeichert, aber nicht bestätigt. Ihr Warenkorb ist erhalten — gehen Sie zurück zur Kasse und versuchen Sie es erneut."
+    "track": "Bestellung verfolgen"
   }
 }

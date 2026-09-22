@@ -1,9 +1,11 @@
+import { confirmationPhaseOf, confirmationToneOf } from '@lezzet/domain-core';
 import { formatPrice } from '@lezzet/helper';
-import type { LocalizedCopy } from '@lezzet/i18n';
+import { confirmationCopy, type LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { ScrollView, Share, Text, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-button';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
@@ -11,10 +13,11 @@ import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/cust
 import { SummaryPanel } from '@/screens/customer-kit/summary-panel';
 import messages from '@lezzet/i18n/customer/checkout';
 import { useOrderNeighborInvite } from './use-neighbor-invite.hook';
+import { useOrderStatus } from './use-order-status.hook';
 
 /*
   Sipariş onayı: onay işareti, numara, teslimat/ödeme/toplam özeti ve iki çıkış. Puan satırı yok, sipariş puanı kalktı.
-  Değerler rota parametresiyle gelir; kart yolunda sipariş o an taslaktır ve numarası yoktur, satır çizilmez.
+  Kart yolunda sipariş o an taslaktır ve numarası yoktur: ekran ödemenin sonucunu sunucudan bekler, web onay sayfasıyla aynı hâlleri çizer.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -22,7 +25,7 @@ type Messages = LocalizedCopy<typeof messages>;
 interface OrderConfirmedScreenProps {
   /** Açılan siparişin kimliği — ekranda görünmez, komşu davetini açmaya yarar; `null` ise davet bandı çizilmez. */
   orderId: string | null;
-  /** Müşteriye gösterilen sipariş numarası; `null` = bilinmiyor → satır çizilmez (dosya künyesi). */
+  /** Müşteriye gösterilen sipariş numarası; `null` = sipariş henüz kesinleşmedi, ekran durumu sunucudan bekler. */
   reference: string | null;
   /** Genel toplam (cent); `null` = parametre okunamadı — sıfır YAZILMAZ (CLAUDE §1). */
   totalCents: number | null;
@@ -41,20 +44,37 @@ export function OrderConfirmedScreen({
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const router = useRouter();
-  const neighborInvite = useOrderNeighborInvite(orderId, locale);
+  const { theme } = useUnistyles();
+  const status = useOrderStatus(reference === null ? orderId : null, locale);
+  // Durum gelmeden kart taslağı "onaylanıyor"dur; numarası rota parametresiyle gelen sipariş zaten kesinleşmiştir.
+  const phase =
+    status !== null ? confirmationPhaseOf(status) : reference === null ? 'pending' : 'placed';
+  const tone = confirmationToneOf(phase);
+  const copy = phase === 'placed' ? null : confirmationCopy(locale, phase);
+  const shownReference = reference ?? status?.referenceNo ?? null;
+  const neighborInvite = useOrderNeighborInvite(phase === 'placed' ? orderId : null, locale);
 
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} testID="confirmed-scroll">
-        <View style={styles.mark}>
-          <Text style={styles.markGlyph}>✓</Text>
+        <View style={styles.mark(tone)} testID={`confirmed-mark-${tone}`}>
+          <Icon
+            name={tone === 'failed' ? 'close' : tone === 'ok' ? 'check' : 'timer'}
+            size={theme.text['page-title-sm']}
+            color={theme.colors.card}
+          />
         </View>
-        <Text style={styles.title} accessibilityRole="header">
-          {t.confirmed.title}
+        <Text style={styles.title} accessibilityRole="header" testID="confirmed-title">
+          {copy?.title ?? t.confirmed.title}
         </Text>
-        {reference === null ? null : (
+        {copy === null ? null : (
+          <Text style={styles.status} testID="confirmed-status">
+            {copy.body}
+          </Text>
+        )}
+        {shownReference === null ? null : (
           <Text style={styles.reference} testID="confirmed-reference">
-            {t.confirmed.reference.replace('{reference}', reference)}
+            {t.confirmed.reference.replace('{reference}', shownReference)}
           </Text>
         )}
 
@@ -68,7 +88,7 @@ export function OrderConfirmedScreen({
           testID="confirmed-summary"
         />
 
-        <Text style={styles.note}>{t.confirmed.note}</Text>
+        {phase === 'placed' ? <Text style={styles.note}>{t.confirmed.note}</Text> : null}
 
         {/* Komşu daveti onay anında, çünkü sefer ve gün o an somut; paylaşım sistem sayfasından. Bağlantı yoksa bant çizilmez. */}
         {neighborInvite === null || neighborInvite.inviteUrl === null ? null : (
@@ -97,7 +117,12 @@ export function OrderConfirmedScreen({
         )}
 
         <View style={styles.actions}>
-          <PrimaryButton label={t.confirmed.orders} onPress={() => router.replace('/orders')} testID="confirmed-orders" />
+          {/* Olmadıysa çıkış sepete: yeni deneme eski taslağı ve eski ödemeyi kapatır. */}
+          {tone === 'failed' ? (
+            <PrimaryButton label={t.confirmed.retry} onPress={() => router.replace('/cart')} testID="confirmed-retry" />
+          ) : (
+            <PrimaryButton label={t.confirmed.orders} onPress={() => router.replace('/orders')} testID="confirmed-orders" />
+          )}
           <SecondaryButton label={t.confirmed.home} onPress={() => router.replace('/')} testID="confirmed-home" />
         </View>
       </ScrollView>
@@ -117,23 +142,25 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingHorizontal: theme.space['8xl'],
     paddingBottom: rt.insets.bottom + theme.space['8xl'],
   },
-  mark: {
+  mark: (tone: 'failed' | 'ok' | 'waiting') => ({
     width: customerMetrics.confirmMark,
     height: customerMetrics.confirmMark,
     borderRadius: customerMetrics.confirmMark / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.olive,
-  },
-  markGlyph: {
-    fontFamily: theme.font.body[theme.text['button--font-weight']],
-    fontSize: theme.text['page-title-sm'],
-    color: theme.colors.card,
-  },
+    backgroundColor: tone === 'failed' ? theme.colors['terracotta-bright'] : tone === 'ok' ? theme.colors.olive : theme.colors.honey,
+  }),
   title: {
     fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
     fontSize: theme.text['page-title-sm'],
     color: theme.colors.ink,
+    textAlign: 'center',
+  },
+  status: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors.body,
     textAlign: 'center',
   },
   reference: {

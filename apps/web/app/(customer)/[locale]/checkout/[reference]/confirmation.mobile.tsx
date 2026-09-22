@@ -1,6 +1,6 @@
 'use client';
 
-import type { Locale } from '@lezzet/i18n';
+import { confirmationCopy, type Locale } from '@lezzet/i18n';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { SecondaryButton } from '@/components/customer/phone-kit/secondary-button';
@@ -8,43 +8,37 @@ import { SummaryPanel } from '@/components/customer/phone-kit/summary-panel';
 import { Icon } from '@/components/customer/ui/icons';
 import { formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import type { CheckoutCopy } from '../checkout-types';
-import { awaitingCopy } from './components/confirmation-sections';
 import { useShareLink } from '@/lib/use-share-link.hook';
-import { isRefundedCancellation, type ConfirmationView, type ConfirmationViewProps, type Messages } from './confirmation-types';
+import { confirmationPhaseOf, confirmationToneOf, isRefundedCancellation } from '@lezzet/domain-core';
+import type { ConfirmationView, ConfirmationViewProps, Messages } from './confirmation-types';
 
 /**
  * Sipariş alındı — telefon görünümü, native onay ekranının web ikizi. Kart ödemesinin dönüş yeri olduğu için taslakta
  * "onaylanıyor", tamamlanmayan ödemede ve iptalde kendi cümlesi çizilir; işaretin rengi hâli söyler.
  */
 
-/** Hâlin tonu — işaretin zemini. */
-type Tone = 'olive' | 'honey' | 'terracotta';
-
-const MARK: Record<Tone, string> = {
-  olive: 'bg-olive',
-  honey: 'bg-honey',
-  terracotta: 'bg-terracotta-bright',
+const MARK: Record<ReturnType<typeof confirmationToneOf>, string> = {
+  ok: 'bg-olive',
+  waiting: 'bg-honey',
+  failed: 'bg-terracotta-bright',
 };
 
 export function ConfirmationMobile({ t, locale, view }: ConfirmationViewProps) {
   const copy = checkoutMessages[locale];
   const c = copy.confirmed;
-  // Masaüstünün bandıyla AYNI kural: tamamlanmayan ödeme bir ret gibi, alınmış ödeme bir onay gibi okunur.
-  const failed = view.cancelled || view.paymentState === 'incomplete';
-  const tone: Tone = failed ? 'terracotta' : view.placed || view.paymentState === 'paid' ? 'olive' : 'honey';
-  const awaiting = awaitingCopy(t, view.paymentState);
-  const refunded = isRefundedCancellation(view);
-  const title = view.cancelled ? (refunded ? t.refunded : t.failed) : view.placed ? c.title : view.awaitingCard ? awaiting.title : t.incomplete;
+  const phase = confirmationPhaseOf({ ...view, refunded: isRefundedCancellation(view) });
+  const tone = confirmationToneOf(phase);
+  const failed = tone === 'failed';
   // Kesinleşmemiş hâlde cümle başlığın hemen altında — ekranın asıl söylediği o. Kesinleşmişte native'in notu özetin altında.
-  const statusBody = view.cancelled ? (refunded ? t.refundedBody : t.failedBody) : view.placed ? null : view.awaitingCard ? awaiting.body : t.incompleteBody;
+  const status = phase === 'placed' ? null : confirmationCopy(locale, phase);
 
   return (
     <div className="flex flex-col items-center gap-3.5 px-7.5 pt-17.5 pb-[calc(30px+env(safe-area-inset-bottom))] text-center">
       <span aria-hidden className={['grid size-23 flex-none place-items-center rounded-full text-card', MARK[tone]].join(' ')}>
-        <Icon name={failed ? 'close' : tone === 'olive' ? 'check' : 'timer'} size={40} strokeWidth={2.2} />
+        <Icon name={failed ? 'close' : tone === 'ok' ? 'check' : 'timer'} size={40} strokeWidth={2.2} />
       </span>
-      <h1 className="font-serif text-page-title-sm leading-[1.15] text-ink">{title}</h1>
-      {statusBody !== null && <p className="font-sans text-body-sm leading-[1.6] text-body">{statusBody}</p>}
+      <h1 className="font-serif text-page-title-sm leading-[1.15] text-ink">{status?.title ?? c.title}</h1>
+      {status !== null && <p className="font-sans text-body-sm leading-[1.6] text-body">{status.body}</p>}
       {/* Numara ilk kalıcı durumda doğar: taslakta satır HİÇ çizilmez — "bilinmiyor" yazan numara, olmayandan kötüdür. */}
       {view.referenceNo && <p className="font-sans text-body-sm font-semibold text-muted">{c.reference.replace('{reference}', view.referenceNo)}</p>}
 
@@ -64,7 +58,7 @@ export function ConfirmationMobile({ t, locale, view }: ConfirmationViewProps) {
 
       <div className="mt-2 flex w-full flex-col gap-2.5">
         {/* Olmadıysa çıkış sepete: yeni deneme eski taslağı ve eski ödemeyi kapatır (masaüstünün aynı yolu). */}
-        {failed ? <PrimaryButton shape="block" label={t.retry} href="/cart" /> : <PrimaryButton shape="block" label={c.orders} href="/orders" />}
+        {failed ? <PrimaryButton shape="block" label={c.retry} href="/cart" /> : <PrimaryButton shape="block" label={c.orders} href="/orders" />}
         <SecondaryButton label={c.home} href="/" />
       </div>
     </div>

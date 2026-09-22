@@ -515,6 +515,7 @@ export type { TransitionInput, TransitionOutcome } from './order/transition';
 export { confirmOnlinePayment, providerAccountId } from './order/confirm-payment';
 export type { ConfirmPaymentDeps, ConfirmPaymentInput, ConfirmPaymentOutcome } from './order/confirm-payment';
 export { openPaymentBefore, reconcileDraftPayment, sweepUnpaidDrafts } from './order/reconcile-payment';
+export { readCheckoutOrderStatus } from './order/order-status';
 export type { OpenPayment, ReconcileOutcome } from './order/reconcile-payment';
 export { stripeGateway } from './order/payment-gateway';
 export type { PaymentGateway, PaymentSnapshot, StripeLike } from './order/payment-gateway';
