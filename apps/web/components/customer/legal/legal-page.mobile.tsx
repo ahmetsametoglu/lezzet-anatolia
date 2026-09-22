@@ -6,20 +6,16 @@ import legalMessages from '@lezzet/i18n/customer/legal';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { AppBar } from '@/components/customer/ui/app-bar';
 import { BackButton } from '@/components/customer/ui/back-button';
-import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import { PhoneLegalFaq } from './phone-legal-faq';
-import { useActiveSection } from './use-active-section.hook';
 import type { LegalNotice, LegalSection } from './legal-types';
 import type { LegalViewProps } from './legal-view-types';
 
 /**
  * Statik sayfanın telefon dizilişi, native bilgi ekranının ikizi: çubukta sayfanın adı, gövdede güncelleme satırı, bölümler,
- * SSS ve çıkış bandı. "Bu sayfada" çipleri yalnız web'de ve okumadan önce görünsünler diye gövdenin başında.
+ * SSS ve çıkış bandı.
  */
 export function LegalPageMobile({ document: doc, t, updatedLine }: LegalViewProps) {
   const locale = useLocale() as Locale;
-  const active = useActiveSection(doc.sections.map((section) => section.id));
-  const showToc = doc.texture === 'prose' && doc.sections.length > 1;
 
   return (
     <>
@@ -27,23 +23,6 @@ export function LegalPageMobile({ document: doc, t, updatedLine }: LegalViewProp
       <AppBar title={doc.title} left={<BackButton label={legalMessages[locale].back} fallback="/account" />} />
       <div className="flex flex-col gap-5.5 px-5.5 pt-5 pb-7.5">
         <span className="font-sans text-helper text-muted">{updatedLine}</span>
-
-        {showToc && (
-          <nav aria-label={t.onThisPage} className={`${SCROLL_STRIP} gap-2`}>
-            {doc.sections.map((section) => (
-              <a
-                key={section.id}
-                href={`#${section.id}`}
-                className={[
-                  'flex-none cursor-pointer rounded-pill px-3.5 py-2 font-sans text-note font-bold transition-colors',
-                  section.id === active ? 'bg-olive text-cream' : 'border-[1.5px] border-sand-400 bg-card text-ink',
-                ].join(' ')}
-              >
-                {section.heading}
-              </a>
-            ))}
-          </nav>
-        )}
 
         {doc.sections.map((section) => (
           <PhoneLegalSection key={section.id} section={section} />
