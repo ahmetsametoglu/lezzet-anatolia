@@ -3,11 +3,8 @@ import type { OrderItem, OrderSale } from '@lezzet/types';
 import { buildAccountingExport, buildExportRow, exportEligibility } from './export';
 
 /**
- * Muhasebe export motoru (12.7). Doğrulanan sözleşme üç maddede:
- * 1. `net + vat === gross` — her satırda, her oran kovasında, dönem özetinde.
- * 2. Satış TTC'dir; muhasebeciye giden HT/KDV ondan AYRIŞTIRILIR, ayrıca saklanmaz.
- * 3. Hediye sipariş export'a girmez ama **görünür kalır** — sessiz dışlama dönem farkını
- *    açıklanamaz bırakırdı.
+ * Muhasebe export sözleşmesi: her satırda ve özette `net + vat === gross`; HT/KDV TTC satıştan ayrıştırılır;
+ * hediye sipariş export'a girmez ama görünür kalır.
  */
 
 const BASE_SALE: OrderSale = {
@@ -20,7 +17,7 @@ const BASE_SALE: OrderSale = {
   orderSource: 'web',
   isGiftOrder: false,
   status: 'completed',
-  // Tamamlanmış satışta iptal sebebi yoktur (07.14) — `null` "iptal edilmedi" demek.
+  // Tamamlanmış satışta iptal sebebi yoktur — `null` "iptal edilmedi" demek.
   cancelReason: null,
   providerRefundedAt: null,
   paymentRef: null,
@@ -54,6 +51,7 @@ const BASE_SALE: OrderSale = {
   amountCollectedCents: 0,
   amountRefundedCents: 0,
   cogsAmountCents: null,
+  cogsIsEstimate: false,
   deliveryCostCents: null,
   paymentFeeCents: null,
   packagingCostCents: null,
@@ -117,7 +115,7 @@ describe('kargo — malın oranını izler', () => {
       line({ unitPriceCents: 1000, vatRate: 20 }),
     ]);
 
-    // Kargo 3/4–1/4 dağılır: 7.50 + 2.50.
+    // Kargo 3/4–1/4 dağılır: 7,50 + 2,50.
     expect(row.vatLines.find((l) => l.vatRate === 5.5)!.gross).toBe(37.5);
     expect(row.vatLines.find((l) => l.vatRate === 20)!.gross).toBe(12.5);
     expect(row.gross).toBe(50);

@@ -9,31 +9,9 @@ import type { OrderEffects } from '../order/effects';
 import type { ShippingRateProvider } from './port';
 
 /**
- * **TAŞIYICI DURUMUNU BİZE YAZAN TEK KAPI** (07.12) — webhook da nöbet cron'u da buradan geçer.
- *
- * ── ÖLÇÜLMÜŞ BOŞLUĞU KAPATIR ────────────────────────────────────────────────
- * 28.08'de ölçüldü ve tasarım kaydına §8.1 olarak yazıldı: `out_for_delivery` yalnız KURYE
- * akışından yazılıyor (`courier/load.ts`, `courier/day.ts` — ikisi de `order.courierId` şartına
- * bağlı), `delivered` ise yalnız `deliver_order` RPC'sinden ve tek çağıranı kurye kapısı.
- * **Kargo siparişinin kuryesi yok, dolayısıyla `ready`de takılı kalıyordu.** Bu dosya o zincirin
- * kargo kulvarındaki karşılığıdır.
- *
- * ── OPTION B: GELEN OLAYA DEĞİL, SAĞLAYICIYA SORULUR ────────────────────────
- * Webhook yalnız *"bir şey değişti"* der. Durum `provider.status()` ile REST'ten okunur. Gerekçe
- * ölçüme dayanıyor: v3 dokümanı webhook gövdesinin şemasını vermiyor, biçim oynadığı gün gövdeden
- * okunan bir durum siparişi sessizce yanlış yere taşırdı. Yan faydası: kaçan webhook nöbet
- * turunda kendiliğinden telafi olur — kapı iki çağıran için de aynı.
- *
- * ── OTOMATİK ZİNCİR YALNIZ İKİ DURUMU YAZAR ─────────────────────────────────
- * `out_for_delivery` ve `delivered`. **`returned`/`error` sipariş durumuna DOKUNMAZ** ve bu
- * bilinçli: iade stok ve paraya dokunur, stok etkisi de malın FİZİKSEL depoya dönüşüne çıpalıdır
- * (`DOMAIN §4`, `status-machine` künyesi). Taşıyıcının "gönderene dönüyor" demesi malın depoda
- * olduğu anlamına gelmez — o an `returned` yazmak, olmamış bir fiziksel olayı kaydetmek olurdu.
- * Gönderi durumu ve ham kod deftere yazılır, kararı operatör verir.
- *
- * **Kapanış (`completed`) da burada YAPILMAZ** — ölçüldü 28.08: `closeOrder`ın bugün hiçbir
- * üretim çağıranı yok, rota kulvarında da yok. Kargoya özel bir kapanış yazmak, iki kulvarı ayrı
- * kurallara bölmek olurdu; eksik olan zincirin tamamı ve yeri burası değil (`BEKLEYEN(07.13)`).
+ * Taşıyıcı durumunu bize yazan tek kapı: webhook ve nöbet cron'u buradan geçer, çünkü kargo siparişinin kuryesi yok ve
+ * durum başka yoldan ilerlemez. Durum webhook gövdesinden değil sağlayıcıya sorularak okunur; sipariş yalnız
+ * `out_for_delivery` ve `delivered`e taşınır, iade malın depoya fiziksel dönüşüne bağlı olduğu için operatöre kalır.
  */
 
 export type SyncOutcome =
@@ -84,9 +62,7 @@ export async function syncShipmentStatus(db: SupabaseClient, provider: ShippingR
 
   const boxes = (await new OrderBoxService(db).listByOrder(shipment.orderId)).filter((b) => b.shipmentId === shipment.id);
   const events = new ShipmentEventService(db);
-  // Koli başına SON olay — defter DEĞİŞİMİ kaydeder, yoklamayı değil. Nöbet saat başı koşuyor;
-  // her turda satır yazsaydı bir haftalık gönderi 168 özdeş satır bırakırdı ve zaman çizgisi
-  // okunmaz hâle gelirdi.
+  // Koli başına son olay: defter yoklamayı değil değişimi kaydeder, saatlik nöbet özdeş satır bırakmasın.
   const sonKod = new Map<string, string>();
   for (const e of await events.listByShipment(shipment.id)) {
     if (e.orderBoxId && !sonKod.has(e.orderBoxId)) sonKod.set(e.orderBoxId, e.providerCode);
@@ -103,27 +79,12 @@ export async function syncShipmentStatus(db: SupabaseClient, provider: ShippingR
     if (verdict.kind === 'unknown') taninmayan += 1;
     if (!parcel.code) continue;
 
-    // Eşleşmeyen koli de deftere girer (`orderBoxId: null`): sağlayıcıda bizde karşılığı olmayan
-    // bir koli varsa bu ÖKSÜZ KOLİ'nin ilk izidir ve kaybolmamalı.
+    // Eşleşmeyen koli de deftere girer: sağlayıcıda olup bizde karşılığı olmayan koli öksüz kolinin ilk izidir.
     const boxId = box?.id ?? null;
     if (boxId && sonKod.get(boxId) === parcel.code.trim().toUpperCase()) continue;
 
-    /*
-      TANINMAYAN KOD OPERATÖRE GÖRÜNÜR OLMALI — ve görünme yeri bir SAYAÇ değil, hata kaydıdır.
-
-      Tasarım kaydı önce `/operations/system`de "N tanınmayan kod" sayacı öngörüyordu. Yazarken
-      ölçünce daha iyisi çıktı: sayaç kaç tane olduğunu söyler, operatörün ihtiyacı ise HANGİ kod
-      olduğudur — eşleme tablosuna yazılacak şey odur. `error_log` bunu zaten yapıyor: parmak izine
-      göre gruplar (kod normalizasyondan geçmez, yani her kod kendi satırında toplanır), sayar ve
-      **çözülmemiş kaydı süresiz tutar**. Bir sayaç ise pencere geçince sıfıra döner ve gece gelen
-      kod sabah görünmez olurdu.
-
-      `warning` seviyesi: beklenen ama izlenmesi gereken hâl. `error` deseydik gerçek arızaların
-      sayacını şişirir, o sayacı da anlamsızlaştırırdık.
-
-      **Yalnız DEĞİŞİMDE yazılır** çünkü bu blok yalnız değişimde koşuyor: aynı koli aynı kodda
-      kaldığı sürece nöbet her saat aynı uyarıyı tekrarlamaz.
-    */
+    /* Tanınmayan kod hata kaydına `warning` olarak yazılır: kaydın parmak izi hangi kod olduğunu gruplar ve çözülene kadar
+       tutar, sayaç ise pencere geçince sıfırlanırdı. Yalnız değişimde yazılır, nöbet aynı uyarıyı tekrarlamaz. */
     if (verdict.kind === 'unknown') {
       await captureError(new Error(`Tanınmayan taşıyıcı durum kodu: ${parcel.code.trim().toUpperCase()}`), {
         source: SOURCES.applicationShipping,
@@ -141,19 +102,13 @@ export async function syncShipmentStatus(db: SupabaseClient, provider: ShippingR
       recognized: verdict.kind !== 'unknown',
       message: parcel.message,
       occurredAt: new Date().toISOString(),
-      /*
-        `raw` YALNIZ tanınmayan kodda ve **sağlayıcı yükünün tamamı DEĞİL**: okuduğumuz iki alan.
-        Kişisel veri kuralı (CLAUDE §1) böyle yapıca sağlanıyor — ayıklamaya güvenmek, bir gün
-        ayıklamayı unutmaya güvenmektir. Alıcı adı/adresi/telefonu bu satıra hiç girmiyor.
-      */
+      /* `raw` yalnız tanınmayan kodda ve yalnız okuduğumuz iki alan: kişisel veri satıra hiç girmez. */
       raw: verdict.kind === 'unknown' ? { code: parcel.code, message: parcel.message, source: 'rest' } : null,
     });
     yazilan += 1;
   }
 
-  // Uzlaştırma BİZİM kutularımız üzerinden: sağlayıcının hiç bildirmediği kutu "ölçülemedi"dir
-  // (`null`) ve gönderiyi terminale taşımaz. Sağlayıcının dizisi üzerinden saysaydık, eksik
-  // bildirilen koli hiç yokmuş gibi davranır ve sipariş erken teslim olurdu.
+  // Uzlaştırma bizim kutularımız üzerinden: sağlayıcının bildirmediği kutu "ölçülemedi"dir ve siparişi erken teslim etmez.
   const toplu = aggregateShipmentStatus(boxes.map((b) => durum.get(b.id) ?? null));
   const changed = toplu !== null && toplu !== shipment.status;
   if (changed) await shipments.setStatus(shipment.id, toplu);
@@ -163,9 +118,8 @@ export async function syncShipmentStatus(db: SupabaseClient, provider: ShippingR
 }
 
 /**
- * Koli eşleştirme — **birincil anahtar sağlayıcının koli kimliği**, takip numarası yedek.
- * Sıra önemli: takip numarası bazı taşıyıcılarda geç atanıyor, ona bağlanan eşleşme erken
- * olayları kaçırır (referans projenin 13 migration sonra öğrendiği ders, tasarım kaydı §6.2).
+ * Koli eşleştirme: birincil anahtar sağlayıcının koli kimliği, takip numarası yedek; takip numarası bazı taşıyıcılarda
+ * geç atandığı için ona bağlı eşleşme erken olayları kaçırırdı.
  */
 function eslesenKutu(boxes: readonly OrderBox[], parcelId: string | null, trackingNumber: string | null): OrderBox | undefined {
   if (parcelId) {
@@ -177,17 +131,8 @@ function eslesenKutu(boxes: readonly OrderBox[], parcelId: string | null, tracki
 }
 
 /**
- * Gönderi durumundan SİPARİŞ durumuna — zincirin kargo kulvarındaki halkası.
- *
- * **Dışa açık, çünkü İKİ olay onu tetikliyor** (29.08): taşıyıcının webhook'u ve depodaki DEVİR
- * OKUTMASI. İkincisi bizim kendi gözlemimiz — kutu fiziksel olarak taşıyıcıya verildi ve
- * sağlayıcının haberi henüz yok. Aynı kuralı iki yere yazmak, bir gün yalnız birinde değişen iki
- * durum makinesi olurdu (`CLAUDE §1`).
- *
- * Atlanan adım yazılır: sipariş `ready`deyken gönderi doğrudan `delivered` görünürse önce
- * `out_for_delivery` yazılır, sonra teslim edilir. `deliver_order` RPC'si yalnız
- * `out_for_delivery`den teslim ediyor (0016) — ara adımı atlamak teslim çağrısını `stale`e
- * düşürürdü ve sipariş yine takılı kalırdı, ama bu kez sebebi görünmez olurdu.
+ * Gönderi durumundan sipariş durumuna; taşıyıcının webhook'u ve depodaki devir okutması aynı kuralı buradan çağırır.
+ * Atlanan `out_for_delivery` önce yazılır, çünkü teslim RPC'si yalnız o durumdan teslim eder.
  */
 export async function siparisiTasi(
   db: SupabaseClient,
@@ -207,8 +152,7 @@ export async function siparisiTasi(
   const order = await new OrderService(db).getById(shipment.orderId);
   if (!order) return null;
 
-  // Yola çıkış: yalnız hazırlık kulvarındaki siparişte anlamlı. Sipariş zaten ilerideyse
-  // (teslim/iptal) geri çekilmez — durum makinesi de buna izin vermez, ama boş çağrı da atılmaz.
+  // Yola çıkış yalnız hazırlık kulvarındaki siparişte anlamlı; ilerideki sipariş geri çekilmez.
   const yolaCikisGerek = order.status === 'confirmed' || order.status === 'preparing' || order.status === 'ready';
   if (yolaCikisGerek) {
     const sonuc = await transitionOrder(db, { orderId: order.id, to: 'out_for_delivery', actorId: null, effects });

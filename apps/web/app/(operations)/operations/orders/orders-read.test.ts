@@ -78,22 +78,17 @@ describe('sipariş satırı', () => {
 
   it('izinli geçişler MOTORDAN gelir — ekran kendi listesini kurmaz', () => {
     const [ready] = build([order({ status: 'ready' })]);
-    // `cancelled` BİLEREK yok (denetim 26.08): izinli bir geçiş ama düz durum yazımından
-    // üretilemez — iptalde ayrılmış mal ve para aynı transaction'da işlenmeli. Bu satır 26.08'e
-    // kadar `cancelled`ı BEKLİYORDU, yani arızayı sabitleyen testti: ekran yanlış kapıya götüren
-    // bir düğme çiziyordu ve test onu doğru sayıyordu. İptal artık "Kararlar" bloğundan yapılır.
-    // `out_for_delivery` de yok (09.29): düz kapıdan geçer ama anı kuryenindir — araca yükleme
-    // sahadan yazılır. Bu satır 09.29'a kadar onu BEKLİYORDU; aynı ders ikinci kez.
+    // İptal kendi kapısından, araca yükleme sahadan yazılır; ikisi de burada düğme olmaz.
     expect(ready?.allowedNext).toEqual([]);
 
-    // Teslimden sonrası ofisindir: iade süreci ve kapanış.
+    // Teslimden sonra ofis yalnız iade sürecini açar; kapanış teslim ve ödeme tamamlanınca sistemindir.
     const [delivered] = build([order({ status: 'delivered' })]);
-    expect(delivered?.allowedNext).toEqual(['completed', 'returned']);
+    expect(delivered?.allowedNext).toEqual(['returned']);
   });
 
-  it('kapanmış siparişin ilerleyeceği yer yoktur', () => {
+  it('kapanmış sipariş yalnız iade sürecine girebilir', () => {
     const [row] = build([order({ status: 'completed' })]);
-    expect(row?.allowedNext).toEqual([]);
+    expect(row?.allowedNext).toEqual(['returned']);
   });
 
   it('vade günü MÜŞTERİNİN süresinden hesaplanır, yoksa ayardan', () => {
@@ -134,7 +129,7 @@ describe('sayaç görünümü', () => {
       byStatus: new Map([['confirmed', 2]]),
       total: 5,
       sum: { totalCents: 30_000, collectedCents: 10_000, refundedCents: 0 },
-      // İptal hariç sayılan iş (21.265) — bu testin konusu değil, tipin gereği.
+      // İptal hariç sayılan iş — bu testin konusu değil, tipin gereği.
       active: { count: 5, totalCents: 30_000 },
       cod: { count: 2, totalCents: 14_000, collectedCents: 4000, refundedCents: 1000 },
     });

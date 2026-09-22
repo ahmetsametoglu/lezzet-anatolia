@@ -58,6 +58,7 @@ export * from './accounting/export';
 export * from './accounting/movement-export';
 export * from './accounting/line';
 export * from './accounting/profit';
+export * from './accounting/sale-costs';
 export * from './bank/column-mapping';
 export * from './bank/parse';
 export * from './bank/fingerprint';

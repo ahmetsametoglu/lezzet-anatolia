@@ -35,17 +35,8 @@ import type {
 import { app } from '../../app';
 
 /**
- * Kurye uçları uçtan uca — `app.request()` ile PORT AÇMADAN (katalog testiyle aynı desen).
- *
- * Paylaşılan-DB disiplini (CLAUDE §4b): zeminin TAMAMI bu dosyanın kendi damgalı satırlarıdır —
- * bir depo, bir kategori, bir ürün, bir müşteri, İKİ kurye profili (biri gerçek auth kullanıcısı),
- * bir kasa hesabı ve her testin kendi siparişleri. **Küresel sayıya bakan tek bir iddia yok:**
- * gün listesi hep kendi sipariş kimliklerimizle daraltılıyor, başka bir ajanın açtığı sipariş bu
- * dosyayı kızartamaz. Teardown `purgeTestData` + `mustDelete` ile toplanır.
- *
- * **Asıl sınanan şey taşımadır:** kapının kararı (`stale`, `forbidden`, `already_closed`) gövdeye
- * BOZULMADAN çıkıyor mu, kimlik jetondan mı geliyor, rolsüz kişi kapıdan dönüyor mu. Kararların
- * kendisi `packages/application`ın kurye testlerinde sınandı; burada tekrarlanmıyor.
+ * Kurye uçları uçtan uca, port açmadan: kapının kararı gövdeye bozulmadan çıkıyor mu, kimlik jetondan mı geliyor, rolsüz
+ * kişi dönüyor mu. Zemin dosyanın kendi damgalı satırlarıdır, küresel sayıya bakan iddia yoktur.
  */
 const stamp = Date.now();
 const db = serviceDb();
@@ -71,9 +62,7 @@ let customerId = '';
 let warehouseId = '';
 /** Testin kendi ROTASI — sefer (`delivery_run`) rota+gün ikilisiyle doğar, rotasız başlatılamaz. */
 let zoneId = '';
-/* İKİNCİ ROTA (31.08) — "başka kuryenin durağı" artık AYNI rotada duramaz: sefer başlatan kurye
-   o rotanın o günkü BÜTÜN siparişlerini claim eder (`open_delivery_run`), yani aynı bölgedeki bir
-   sipariş kaçınılmaz olarak bizim olur. Üretimde de böyle: iki kurye = iki rota. */
+/* İkinci rota: sefer başlatan kurye rotanın o günkü bütün siparişlerini alır, "başka kuryenin durağı" aynı rotada duramaz. */
 let otherZoneId = '';
 let addressId = '';
 let accountId = '';
@@ -82,10 +71,8 @@ let productId = '';
 let variantId = '';
 let stockId = '';
 /**
- * ARAÇ DEPOSU ve onun ARACI (21.278) — van-stock uçlarının bağlamı bu ikisinden çözülüyor
- * (`courierVanContext`): araç deposu seferin ARACINDAN, çıkış tesisi seferin ROTASINDAN. Fikstür
- * ikisini de kuruyor ama VARSAYILAN sefer yardımcıları aracı GEÇMİYOR — araçsız sefer de meşru bir
- * hâl ve ötekilerin zeminini değiştirmek, ölçtükleri şeyi sessizce kaydırmak olurdu.
+ * Araç deposu ve aracı: van-stock uçlarının bağlamı bunlardan çözülür. Varsayılan sefer yardımcıları aracı geçmez,
+ * araçsız sefer de meşru bir hâldir.
  */
 let vanWarehouseId = '';
 let vanVehicleId = '';
@@ -116,15 +103,8 @@ async function post(path: string, body: unknown): Promise<Response> {
 }
 
 /**
- * Auth kullanıcısı + rolleri yazılmış profil + açık oturum.
- *
- * Roller AÇIKÇA yazılıyor, trigger'ın verdiğine güvenilmiyor: `0002` ilk kullanıcıya `admin`,
- * sonrakilere `customer` veriyor — yani "rolsüz kullanıcı" testi, yerel veritabanında hiç admin
- * yoksa sessizce ADMİN kullanıcısı üretir ve 403 iddiası yanlış sebeple kırılırdı.
- *
- * **Kurye KAPSAMSIZ olamaz** (`user_profiles_warehouse_scope`, 0031): `courier`/`warehouse` rolü
- * en az bir depo ister ve kısıt veritabanındadır — uygulama unutsa da geçmez. Depo bir boyut değil
- * DEĞİŞMEZDİR (CLAUDE §1) ve bu test onu fikstürde de öyle kabul ediyor.
+ * Auth kullanıcısı, rolleri yazılmış profil ve açık oturum. Roller açıkça yazılır, çünkü trigger ilk kullanıcıya `admin`
+ * verir; kurye de veritabanı kısıtı gereği en az bir depo ister.
  */
 async function signedInUser(label: string, roles: ('customer' | 'courier' | 'admin')[], warehouseIds: string[] = []) {
   const email = `courier-api-${label}-${stamp}@example.test`;
@@ -145,14 +125,8 @@ async function signedInUser(label: string, roles: ('customer' | 'courier' | 'adm
 }
 
 /**
- * Siparişi durum durum ilerletir — `application/src/order/advance.testkit.ts`in yerel karşılığı.
- *
- * Testkit ÇAĞRILAMIYOR: `@lezzet/application`ın `exports` haritası yalnız `"."` açıyor, yani
- * alt-yol import'u paket sınırında kapalı ve testkit `index.ts`ten dışa verilmiyor. Terfi ihtiyacı
- * (testkit'i dışa açmak) rapora yazıldı; o gün buradaki on satır silinir.
- *
- * Motor (`canTransition`) burada sorulmuyor çünkü mobile-api `@lezzet/domain-core`a bağlı değil —
- * ve gerekmiyor: yol sabit ve yanlış yazılırsa RPC `ok:false` döner, fikstür de gürültü çıkarır.
+ * Siparişi durum durum ilerletir; paket testkit'i dışa açık olmadığı için yerel karşılığıdır. Yol sabittir, yanlış
+ * yazılırsa RPC `ok:false` döner.
  */
 async function advance(orderId: string, path: readonly OrderStatus[]): Promise<void> {
   for (const to of path) {
@@ -227,11 +201,7 @@ async function dispatched(
   return order.id;
 }
 
-/**
- * Durağın kutu kodu — kapıda okutma 30.08'den beri ZORUNLU. Kod fikstürden taşınmıyor, KAYITTAN
- * okunuyor: `dispatched` tek kimlik döndürüyor ve yirmi çağrı yerini imza değiştirmek için
- * dolaşmak, testin konusuyla ilgisi olmayan bir gürültü olurdu.
- */
+/** Durağın kutu kodu kayıttan okunur; kapıda okutma zorunlu. */
 async function boxCodeOf(orderId: string): Promise<string> {
   const [box] = await new OrderBoxService(db).listByOrder(orderId);
   if (!box) throw new Error('fikstür: siparişin kutusu yok');
@@ -299,7 +269,7 @@ beforeAll(async () => {
   adminToken = (await signedInUser('patron', ['admin'])).token;
 
   addressId = (
-    // Alıcı ve telefon 22.08'de zorunlu oldu (kolonlar `not null`); kurye kapıda ikisini de okur.
+    // Alıcı ve telefon zorunlu; kurye kapıda ikisini de okur.
     await new AddressService(db).insert({
       customerId,
       recipient: 'Ali Şahin',
@@ -351,33 +321,22 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Kapanış, sipariş, rezervasyon ve adres AYRICA silinmez: dördü de `purgeTestData`'nın bildiği
-  // bağlar ve dördünün de kimliği `profileIds`/`productIds` içinde. Buradaki `if (…)` korumaları
-  // doğru bir tehlikeyi görmüştü — kurulum yarıda kalınca boş kimlikle silme "invalid input syntax
-  // for uuid" fırlatır — ama kalkanı yanlış yere koyuyordu: doğru cevap silmeyi kimliğin BİLİNDİĞİ
-  // yere, purge'e bırakmak (`cleanup.ts`).
-  //
-  // SEFER ve ROTA da purge'ün bildiği bağlar: seferler kurye profilinden VE depodan (`courier_id` /
-  // `warehouse_id` snapshot'ı) toplanıyor, rota da depodan — ayrı bir hedef bildirmek gerekmiyor.
+  // Kapanış, sipariş, rezervasyon, adres, sefer ve rota ayrıca silinmez: hepsi `purgeTestData`'nın bildiği bağlar,
+  // boş kimlikle elle silme kurulum yarıda kalınca fırlatırdı.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds,
     authUserIds,
     accountIds: [accountId],
-    // Araç deposu da buradan gidiyor; purge onun ARAÇ kaydını da topluyor (21.249 · `cleanup.ts`).
+    // Araç deposu da buradan gider; purge aracın kaydını da toplar.
     warehouseIds: [warehouseId, vanWarehouseId],
   });
 });
 
 /**
- * Testin rotasında açılmış seferleri toplar — kapanış seferi `restrict` ile tuttuğu için sıra sabit
- * (`cleanup.ts`in `purgeDeliveryRuns` sırasının aynısı).
- *
- * Süzgeç ROTA: `courier_id` de olabilirdi ama sefer kaydını doğuran anahtar rota+gündür ve testin
- * sahibi olduğu şey o rotadır — başka bir ajanın aynı kuryeyle açtığı bir sefer bu dosyanın işi
- * değil. `mustDelete` hatayı FIRLATIR: sessizce yarım kalan bir temizlik, bir sonraki testte
- * "neden already_started" diye saatler yakardı (CLAUDE §4b).
+ * Testin rotasında açılmış seferleri toplar (kapanış seferi `restrict` ile tuttuğu için sıra sabit). Süzgeç rota,
+ * çünkü başka bir ajanın aynı kuryeyle açtığı sefer bu dosyanın işi değil.
  */
 async function resetRuns(): Promise<void> {
   const { data, error } = await db.from('delivery_run').select('id').eq('delivery_zone_id', zoneId);
@@ -390,14 +349,8 @@ async function resetRuns(): Promise<void> {
 }
 
 /**
- * **Seferi başlatır ve künyesini döndürür** — kapanışın öznesi (`runId`) buradan gelir.
- *
- * `zoneId` HER ÇAĞRIDA açıkça geçiyor: kapının tek-rota otomatiği o gün koşan TÜM aktif rotalara
- * bakıyor ve yerel veritabanı paylaşımlı (tohumun ve başka ajanların rotaları da orada) — rotayı
- * söylemeyen bir çağrı `route_required` alıp testi kendi verisiyle ilgisiz bir sebepten kırardı.
- *
- * Ret dalları burada HATAYA çevriliyor: mutlu dal beklenirken gelen `no_route`/`route_required`
- * kurulumun bozulduğunu söyler ve iddia satırında `undefined` olarak değil, sebebiyle patlamalı.
+ * Seferi başlatır ve künyesini döndürür. `zoneId` her çağrıda geçilir, paylaşılan veritabanındaki başka rotalar
+ * `route_required` doğurmasın; ret dalları sebebiyle hataya çevrilir.
  */
 async function startRun(body: Record<string, unknown> = {}): Promise<Extract<StartCourierDayResponse, { status: 'ok' }>> {
   const result = await dataOf<StartCourierDayResponse>(await post('/api/v1/courier/day/start', { zoneId, ...body }));
@@ -406,11 +359,7 @@ async function startRun(body: Record<string, unknown> = {}): Promise<Extract<Sta
 }
 
 /**
- * Seferi KURAR, yola çıkarmaz (`depart:false`).
- *
- * 31.08'den beri gerekli: "aynı anda tek sefer sürülür" kuralı (kullanıcı kararı) ikinci seferin
- * yola çıkmasını reddediyor ve kural GÜNE de bakmıyor — ileri günün seferi de bugünkü sürülürken
- * başlatılamaz. Araçta birden çok sefer olması hâlâ meşru; **taşımak** ile **sürmek** ayrı.
+ * Seferi kurar, yola çıkarmaz: aynı anda tek sefer sürülür, ama araçta birden çok sefer taşınabilir.
  */
 async function openRun(body: Record<string, unknown> = {}): Promise<Extract<StartCourierDayResponse, { status: 'ok' }>> {
   const result = await dataOf<StartCourierDayResponse>(
@@ -449,8 +398,7 @@ describe('GET /api/v1/courier/day', () => {
     const benim = await dispatched({ qty: 3, orderedTotalCents: 3000 });
     // Başka rotada, başka kuryede: bizim seferimiz onu claim edemez (RPC bölge+gün süzüyor).
     const baskasinin = await dispatched({ courier: otherCourierId, zone: otherZoneId });
-    /* DURAKLAR SEFERE BAĞLI (31.08): araç bir ara depo ve gün cevabı ona bakıyor. Sefer
-       kurulmadan durak yoktur — ekran o hâlde rota seçimi gösterir (v3:14 "Araçta sefer yok"). */
+    /* Duraklar sefere bağlıdır: sefer kurulmadan durak yoktur. */
     await startRun();
 
     const res = await asCourier('/api/v1/courier/day');
@@ -465,7 +413,7 @@ describe('GET /api/v1/courier/day', () => {
 
     const stop = day.stops.find((s) => s.orderId === benim)!;
     expect(stop.address).toBe('12 rue des Fleurs, 67000, Strasbourg');
-    /* `collectedAtDoorCents` 30.08'de eklendi — bekleyen durakta `null`. */
+    /* Bekleyen durakta kapıda tahsilat `null`. */
     expect(stop.payment).toEqual({ dueAmountCents: 3000, expectedMethod: 'cash', collectedAtDoorCents: null });
     expect(stop.outcome).toBe('pending');
     // Kuryenin gördüğü tek para tahsil edeceği tutardır — maliyet/kâr sözleşmede YOK (tasarım §6).
@@ -475,7 +423,7 @@ describe('GET /api/v1/courier/day', () => {
   it('ARAÇTAKİ seferlerin durakları güne bakılmaksızın gelir — ileri günün seferi de araçta (31.08)', async () => {
     const bugunku = await dispatched();
     const ilerideki = await dispatched({ date: dayOffset(3) });
-    /* İKİSİ DE KURULUR, biri sürülür: araç iki seferi TAŞIR ama kurye birini SÜRER (31.08). */
+    /* İkisi de kurulur, biri sürülür: araç iki seferi taşır, kurye birini sürer. */
     const bugunSefer = await startRun();
     const ileriSefer = await openRun({ date: dayOffset(3) });
 
@@ -525,7 +473,7 @@ describe('GET /api/v1/courier/day', () => {
 
   it('durak kalem satırlarını kimlik ve adetle taşır (21.10d)', async () => {
     const orderId = await dispatched({ qty: 3, orderedTotalCents: 3000 });
-    await startRun(); // durak sefere bağlı (31.08)
+    await startRun(); // durak sefere bağlı
 
     const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
     const stop = day.stops.find((s) => s.orderId === orderId)!;
@@ -539,11 +487,9 @@ describe('GET /api/v1/courier/day', () => {
   });
 
   it('KALEM KİMLİĞİ ZİNCİRİ KAPANDI: gün cevabındaki satır kısmi iade olarak geri gönderilebilir', async () => {
-    // Boşluğun kendisi buydu (ekran künyesi, 21.10): kurye kapıda eksik kalem işaretleyebiliyor ama
-    // gönderemiyordu, çünkü `adjustments[].orderItemId`nin geleceği bir yer yoktu. Test iki ucu
-    // birbirine bağlıyor — okunan kimlik, yazan uca aynen gidiyor.
+    // Okunan kalem kimliği yazan uca aynen gider; kurye kapıda eksik kalemi ancak böyle gönderebilir.
     const orderId = await dispatched({ qty: 2, orderedTotalCents: 2000 });
-    await startRun(); // durak sefere bağlı (31.08)
+    await startRun(); // durak sefere bağlı
     const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
     const item = day.stops.find((s) => s.orderId === orderId)!.items[0]!;
 
@@ -605,8 +551,7 @@ describe('POST /api/v1/courier/day/start — seferi başlat', () => {
     if (result.status !== 'ok') throw new Error(`sefer başlatılamadı: ${result.status}`);
     expect(result.date).toBe(today);
     expect(result.started).toContain(hazir);
-    // Sefer kaydı GERÇEKTEN doğdu: ekranın "başladı" bayrağı artık bu künye (18.08) — yerel bir
-    // tahmin değil, sunucunun kaydı.
+    // Sefer kaydı gerçekten doğdu: ekranın "başladı" bayrağı sunucunun kaydıdır.
     expect(result.run.zoneId).toBe(zoneId);
     expect(result.run.referenceNo).toMatch(/^SF-/);
     // Uç "başladı" demiyor, durum gerçekten değişti — kapı sırasının şartı bu (teslim yalnız
@@ -692,8 +637,8 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
       adjustedLines: 0,
     });
 
-    // Taşıma "oldu" demiyor, gerçek değişti: sipariş teslim, mal fiiliden düştü, para defterde.
-    expect((await orders.getById(orderId))?.status).toBe('delivered');
+    // Sipariş teslim edildi ve tahsilat tamamlandığı için kapandı; mal fiiliden düştü, para defterde.
+    expect((await orders.getById(orderId))?.status).toBe('completed');
     expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(18);
     const movements = await new MoneyMovementService(db).listByOrder(orderId);
     expect(movements.filter((m) => m.type === 'order_payment')).toHaveLength(1);
@@ -701,9 +646,7 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
 
   it('AYNI istek tekrar gelirse `stale` — ve bu bir HATA değil, 200 ile GÖRÜNÜR cevap', async () => {
     const orderId = await dispatched();
-    /* Kutu kapısı `stale`den ÖNCE (30.08): okutma olmadan ikinci istek de `boxes_missing` alırdı
-       ve testin konusu olan bayat geçiş hiç ölçülemezdi. Çevrimdışı kuyruk zaten aynı gövdeyi
-       tekrar gönderir — kodlar da o gövdededir. */
+    /* Kutu kapısı `stale`den önce gelir; okutma olmadan ikinci istek `boxes_missing` alır ve bayat geçiş ölçülemezdi. */
     const codes = [await boxCodeOf(orderId)];
     await post(`/api/v1/courier/stops/${orderId}/deliver`, { scannedBoxCodes: codes });
 
@@ -725,8 +668,7 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
   });
 
   it('kanıt kapsamı AÇIKKEN B2B kanalında kanıt yoksa `proof_required` — ve HİÇBİR yazım yapılmaz', async () => {
-    /* Fabrika değeri 30.08'de iki kanal için de kapatıldı (imza adımı söküldü); kapıyı ölçen test
-       kapsamı kendisi açar ve `finally`'de geri koyar — `settings` küresel tekil satırdır. */
+    /* Fabrika değeri iki kanalda kapalı; test kapsamı kendisi açar ve `finally`de geri koyar (`settings` küresel tekil satır). */
     const settings = settingsSnapshot(db);
     await settings.override('delivery_proof_required', { b2b: true, b2c: false });
     try {
@@ -748,10 +690,8 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
   });
 
   it('`idempotencyKey` aynıysa para İKİNCİ kez yazılmaz — `collectionDeduped`', async () => {
-    // **Kurulum bilinçli:** uçtan aynı isteği iki kez göndermek `deduped` ÜRETMEZ, `stale` üretir —
-    // mükerrer yazımın birinci kilidi durum makinesidir (`delivery.ts` künyesi) ve o kilit yukarıda
-    // ayrıca sınandı. Anahtar İKİNCİ kilittir; devreye ancak para yazılmışken teslim yazılmamışsa
-    // girer. Test tam o hâli kuruyor: hareket önceden yazılı, sipariş hâlâ yolda.
+    // Anahtar ikinci kilittir: para yazılmışken teslim yazılmamış hâlde devreye girer ve test tam o hâli kurar.
+    // Aynı isteği iki kez göndermek `stale` üretir, çünkü birinci kilit durum makinesidir.
     const orderId = await dispatched({ orderedTotalCents: 2000 });
     const key = `kuyruk-${stamp}`;
     await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, description: 'Kapıda tahsilat', idempotencyKey: key });
@@ -796,7 +736,7 @@ describe('POST /api/v1/courier/stops/:orderId/undelivered', () => {
 
   it('ulaşılamadı: sipariş `ready`e döner ve NOT durum kaydına düşer', async () => {
     const orderId = await dispatched();
-    await startRun(); // durak sefere bağlı (31.08) — aşağıda gün listesinde aranıyor
+    await startRun(); // durak sefere bağlı — aşağıda gün listesinde aranıyor
 
     const res = await post(`/api/v1/courier/stops/${orderId}/undelivered`, { outcome: 'unreachable', note: 'zil bozuk' });
 
@@ -871,13 +811,8 @@ describe('POST /api/v1/courier/stops/:orderId/proof-upload', () => {
 });
 
 /**
- * Kapanış artık SEFER kapatıyor (K7 · 18.08): öznesi gün değil `runId`. Testlerin kurulumu bu yüzden
- * bir adım kazandı — duraklar önce sefere BAĞLANMALI (`/day/start` claim eder), yoksa kapanış
- * bakacağı hiçbir durak bulamaz: beklenen tahsilat görünümü ve kapanış fotoğrafı ikisi de
- * `order.delivery_run_id` üzerinden gruplanıyor.
- *
- * Kapanış kaydı testler arasında yaşamıyor: seferler `beforeEach`te toplanıyor (`resetRuns`) ve
- * kapanış sefere `restrict` ile bağlı olduğu için onunla birlikte gidiyor.
+ * Kapanış seferi kapatır: duraklar önce sefere bağlanmalı, çünkü beklenen tahsilat ve kapanış fotoğrafı sefer
+ * üzerinden gruplanır. Seferler `beforeEach`te toplanır.
  */
 describe('sefer kapanışı (K7)', () => {
   it('taslak: teslim/bekleyen/dönen ayrı listeler + beklenen tahsilat', async () => {
@@ -964,18 +899,8 @@ describe('sefer kapanışı (K7)', () => {
 });
 
 /**
- * **ARAÇ STOĞU UÇLARI (21.278)** — bu dosyanın hiç sormadığı dört yol.
- *
- * Boşluk ölçülmüştü ve tam ORTADAYDI: motor testli (`application/courier/van-stock.test.ts`, 19
- * iddia), ekran testli (`van-stock-screen.test.tsx`) ama ekran testi kapıyı TAKLİT ediyor ve motor
- * testi fonksiyonu DOĞRUDAN çağırıyor — yani ikisi de HTTP katmanının üstünden atlıyor. Yalnız
- * orada yaşayan dört şey hiç ölçülmüyordu: yetki kapısı, gövdenin Zod ile çözülmesi, gövdedeki
- * alanın motorun hangi argümanına bağlandığı ve cevabın zarf biçimi. Uçtaki bir hata (alan adı
- * kayması, argüman yer değiştirmesi, unutulmuş kapsam denetimi) iki testten de YEŞİL geçer ve ilk
- * kez kuryenin elinde görünürdü — üstelik bunlar rampada para ve mal hareketi yazan uçlar.
- *
- * Kararların kendisi burada TEKRARLANMIYOR (dosyanın genel kuralı): "araçta ne kadar olmalı"
- * sorusu motorun testinde. Buradaki iddialar taşımanın kendisi.
+ * Araç stoğu uçları: motor ve ekran testleri HTTP katmanının üstünden atlar; yetki kapısı, gövde çözümü, alanın argümana
+ * bağlanması ve cevap zarfı yalnız burada ölçülür.
  */
 describe('araç stoğu uçları (21.278)', () => {
   /** Araçlı sefer — van-stock bağlamı ancak SÜRÜLEN ve ARACI OLAN seferden çözülüyor. */
@@ -983,14 +908,7 @@ describe('araç stoğu uçları (21.278)', () => {
     await startRun({ vehicleId: vanVehicleId });
   }
 
-  /**
-   * Araca mal koyar ve CEVABI DOĞRULAR — kurulum adımı sessizce düşmesin.
-   *
-   * Bu yardımcı testi yazarken doğdu (07.09): kurulum `post(...)` cevabını hiç okumuyordu ve gövdeye
-   * `observedQty` koymayı unuttuğum tur `invalid_body` dönüp sessizce geçti. İddia üç satır aşağıda,
-   * *"araçta ürün yok"* diye kırıldı — yani test doğru şeyi ölçüyordu ama YANLIŞ SEBEBİ gösteriyordu.
-   * Kurulumun kendisi de bir iddiadır.
-   */
+  /** Araca mal koyar ve cevabı doğrular: kurulumun kendisi de bir iddiadır, sessizce düşen kurulum yanlış sebep gösterirdi. */
   async function araca(targetQty: number, observedQty: number): Promise<CourierVanStockMoveResponse> {
     const sonuc = await dataOf<CourierVanStockMoveResponse>(
       await post('/api/v1/courier/van-stock/set', { variantId, targetQty, observedQty }),

@@ -33,6 +33,7 @@ import {
   allowedTransitions,
   canTransition,
   gateFor,
+  isSettled,
   isTerminal,
   needsDedicatedGate,
   officeTransitions,
@@ -102,10 +103,13 @@ describe('yasak geçişler', () => {
   });
 
   it('terminal durumdan çıkış yok', () => {
-    expect(isTerminal('completed')).toBe(true);
     expect(isTerminal('cancelled')).toBe(true);
-    expect(canTransition('completed', 'returned')).toEqual({ allowed: false, reason: 'terminal' });
     expect(canTransition('cancelled', 'confirmed')).toEqual({ allowed: false, reason: 'terminal' });
+  });
+
+  it('kendiliğinden kapanan sipariş iade sürecine girebilir', () => {
+    expect(isTerminal('completed')).toBe(false);
+    expect(canTransition('completed', 'returned')).toEqual({ allowed: true });
   });
 
   it('aynı duruma geçiş ayrı bir sebep döndürür (çift tıklama / tekrarlanan webhook)', () => {
@@ -114,7 +118,7 @@ describe('yasak geçişler', () => {
 
   it('UI yalnız izinli geçişleri sunar — yasak geçiş hiç gösterilmez', () => {
     expect(allowedTransitions('delivered')).toEqual(['completed', 'returned']);
-    expect(allowedTransitions('completed')).toEqual([]);
+    expect(allowedTransitions('completed')).toEqual(['returned']);
   });
 });
 
@@ -183,8 +187,7 @@ describe('kendi kapısını isteyen geçişler (denetim 26.08)', () => {
   });
 
   it('stok işi ÖNCE yapılan geçiş düz yazımdan geçer — yoksa checkout kırılırdı', () => {
-    // `place-order` önce ayırır (`reserveOrderStock`), sonra buraya gelir; Stripe yolunda ayırma
-    // checkout başında yapılmıştır. Kapı istemek bu iki akışı da kesecekti — ölçüldü 26.08.
+    // Ayırma geçişten önce yapılır (sipariş verme akışında ya da checkout başında); kapı istemek iki akışı da keserdi.
     expect(needsDedicatedGate('draft', 'confirmed')).toBe(false);
   });
 
@@ -250,12 +253,8 @@ describe('skippedBetween', () => {
 });
 
 describe('geçişin anı kimin — saha, ofis, sistem (09.29)', () => {
-  /*
-    Kapı bekçisiyle aynı ilke: izinli geçişlerin TAMAMI sınıflandırılıyor ve üç küme de burada elle
-    duruyor. Tabloya yeni bir geçiş eklenip hiçbir kümeye yazılmazsa test düşer; ekleyen kişi "bu
-    anı kim yaşıyor" sorusunu yanıtlamak ZORUNDA kalır. Cevapsız kalan geçiş operasyon şeridine
-    sessizce düğme olarak düşerdi — 12.09'da ölçülen arızanın kaynağı buydu.
-  */
+  /* İzinli geçişlerin tamamı elle sınıflandırılır: yeni geçiş hiçbir kümeye yazılmazsa test düşer, çünkü cevapsız
+     kalan geçiş operasyon ekranına sessizce düğme olarak düşerdi. */
   const SAHA = new Set([
     'draft→completed',
     'confirmed→preparing',
@@ -268,8 +267,8 @@ describe('geçişin anı kimin — saha, ofis, sistem (09.29)', () => {
     'out_for_delivery→ready',
     'out_for_delivery→returned',
   ]);
-  const OFIS = new Set(['confirmed→cancelled', 'preparing→cancelled', 'ready→cancelled', 'delivered→completed', 'delivered→returned', 'returned→completed']);
-  const SISTEM = new Set(['draft→confirmed', 'draft→cancelled']);
+  const OFIS = new Set(['confirmed→cancelled', 'preparing→cancelled', 'ready→cancelled', 'delivered→returned', 'completed→returned', 'returned→completed']);
+  const SISTEM = new Set(['draft→confirmed', 'draft→cancelled', 'delivered→completed']);
 
   it('her izinli geçiş sınıflandırılmıştır — yeni geçiş cevapsız kalamaz', () => {
     for (const [from, to] of tumGecisler) {
@@ -287,8 +286,9 @@ describe('geçişin anı kimin — saha, ofis, sistem (09.29)', () => {
     }
   });
 
-  it('teslimden sonrası ofisindir: iade süreci ve kapanış', () => {
-    expect(officeTransitions('delivered')).toEqual(['completed', 'returned']);
+  it('teslimden sonra ofis iade sürecini açar ve kapatır; teslimin kapanışı sistemindir', () => {
+    expect(officeTransitions('delivered')).toEqual(['returned']);
+    expect(officeTransitions('completed')).toEqual(['returned']);
     expect(officeTransitions('returned')).toEqual(['completed']);
   });
 
@@ -297,9 +297,25 @@ describe('geçişin anı kimin — saha, ofis, sistem (09.29)', () => {
     expect(officeTransitions('ready')).not.toContain('cancelled');
   });
 
-  it('taslakta ve kapanmış kayıtta sunulacak geçiş yoktur', () => {
-    for (const status of ['draft', 'completed', 'cancelled'] as const) {
+  it('taslakta ve iptal edilmiş kayıtta sunulacak geçiş yoktur', () => {
+    for (const status of ['draft', 'cancelled'] as const) {
       expect(officeTransitions(status), status).toEqual([]);
     }
+  });
+});
+
+describe('kapanış kararı', () => {
+  it('teslim edilmiş ve tamamen ödenmiş sipariş kapanır', () => {
+    expect(isSettled('delivered', 'paid')).toBe(true);
+  });
+
+  it('parası tamamen alınmamış teslimat açık kalır — vadeli ve kapıda eksik tahsilat', () => {
+    expect(isSettled('delivered', 'pending')).toBe(false);
+    expect(isSettled('delivered', 'partial')).toBe(false);
+  });
+
+  it('teslim edilmemiş ödenmiş sipariş kapanmaz', () => {
+    expect(isSettled('confirmed', 'paid')).toBe(false);
+    expect(isSettled('out_for_delivery', 'paid')).toBe(false);
   });
 });

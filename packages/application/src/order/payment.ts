@@ -3,6 +3,7 @@ import { derivePaymentStatusForOrder, type PaymentDerivation } from '@lezzet/dom
 import { revokeReferralOnUnpaidOrder, rewardReferralOnPaidOrder } from '../feedback/points';
 import type { MovementSource, Order, OrderItem, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { settleOrder } from './settle';
 
 /**
  * Siparişin para bağları: veritabanı hareketi yazar, motor ödeme durumunu türetir, burası ikisini bağlar.
@@ -115,6 +116,9 @@ async function finalize(
       await revokeReferralOnUnpaidOrder(db, order.id);
     }
   }
+
+  // Değişim şartı yok: parası önceden alınmış sipariş teslimden sonraki senkronda kapanır.
+  if (derivation.status === 'paid') await settleOrder(db, order.id);
 
   return {
     status: 'ok',

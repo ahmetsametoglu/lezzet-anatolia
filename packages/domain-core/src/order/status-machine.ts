@@ -1,4 +1,4 @@
-import type { OrderStatus } from '@lezzet/types';
+import type { OrderStatus, PaymentStatus } from '@lezzet/types';
 
 /**
  * Sipariş durum makinesi: katı bir zincir değil, izin verilen geçişler kümesi (tam yol ve hızlı satış).
@@ -24,7 +24,8 @@ const TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   // Depo aksiyonu ve para iadesi bitince sipariş kapanır; kalıcı `returned`'da kalmaz.
   returned: ['completed'],
 
-  completed: [],
+  // Kapanış teslim ve ödeme tamamlanınca kendiliğinden olur; şikâyet sonradan gelebildiği için iade süreci açık kalır.
+  completed: ['returned'],
   cancelled: [],
 };
 
@@ -99,15 +100,21 @@ export function needsDedicatedGate(from: OrderStatus, to: OrderStatus): boolean 
 }
 
 /**
- * Geçişin anı kimin: saha (depo ve kurye uygulaması, kapı satışı), ofis (iptal, iade süreci, kapanış) ya da
- * sistem (taslağın onayı ve süpürülmesi). Düz kapıdan geçen geçiş bile anı sahibinden yazılır.
+ * Geçişin anı kimin: saha (depo ve kurye uygulaması, kapı satışı), ofis (iptal, iade süreci ve iadenin kapanışı) ya da
+ * sistem (taslağın onayı ve süpürülmesi, teslim ve ödeme tamamlanınca kapanış). Düz kapıdan geçen geçiş bile anı sahibinden yazılır.
  */
 export type TransitionOwner = 'field' | 'office' | 'system';
 
 export function transitionOwner(from: OrderStatus, to: OrderStatus): TransitionOwner {
   if (from === 'draft') return to === 'completed' ? 'field' : 'system';
-  if (to === 'cancelled' || to === 'completed' || (from === 'delivered' && to === 'returned')) return 'office';
+  if (from === 'delivered' && to === 'completed') return 'system';
+  if (to === 'cancelled' || to === 'completed' || (to === 'returned' && (from === 'delivered' || from === 'completed'))) return 'office';
   return 'field';
+}
+
+/** Sipariş kapanır mı: teslim edildi ve parası tamamen alındı — açık iş kalmadı. */
+export function isSettled(status: OrderStatus, paymentStatus: PaymentStatus): boolean {
+  return status === 'delivered' && paymentStatus === 'paid';
 }
 
 /**

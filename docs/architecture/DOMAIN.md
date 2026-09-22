@@ -206,7 +206,7 @@ Toptanda "bugün 10 koli alırsan şu fiyat" gündeliktir; kalıcı `Price` sat�
 ### Maliyet ve hedef marj
 
 - Her stok partisinin alış fiyatı (`Stock.purchase_price`) tutulur.
-- **Fiyat kararının maliyet tabanı = YENİLEME MALİYETİ** (son alış fiyatı; hiç parti yoksa tedarikçi eşlemesindeki son alış). Soru "depoda ne duruyor" değil, **"bunu yeniden almak kaça"**: elde kalmış ucuz eski parti yüzünden fiyatı düşürürsek stok bitince zam yapmak zorunda kalırız; pahalı bir partinin parasını rafın fiyatından geri almaya çalışırsak mal hiç satılmaz. **Kötü alımın parası zaten harcanmıştır** (batık maliyet) ve onun görüneceği yer rapordur: gerçek kâr, sipariş kapanışında SATILAN PARTİNİN kendi maliyetinden hesaplanır.
+- **Fiyat kararının maliyet tabanı = YENİLEME MALİYETİ** (son alış fiyatı; hiç parti yoksa tedarikçi eşlemesindeki son alış). Soru "depoda ne duruyor" değil, **"bunu yeniden almak kaça"**: elde kalmış ucuz eski parti yüzünden fiyatı düşürürsek stok bitince zam yapmak zorunda kalırız; pahalı bir partinin parasını rafın fiyatından geri almaya çalışırsak mal hiç satılmaz. **Kötü alımın parası zaten harcanmıştır** (batık maliyet) ve onun görüneceği yer rapordur: gerçek kâr, SATILAN PARTİNİN kendi maliyetinden hesaplanır.
 - **Aykırı freni:** son alış, kendinden önceki alımların **ortancasından** %25'ten fazla saparsa otomatik fiyat o boyda **durur** ve ekran sebebini yazar. Gerçek bir zam da olabilir, tek seferlik/acil bir alım da; ikisini ayıran bilgi sistemde yok, admin'de var. Ortanca (ortalama değil) seçildi: ortalama, ölçmeye çalıştığımız aykırılığın kendisinden etkilenirdi. Eşik ve pencere parametriktir.
 - **Ekran ve motor AYNI tabanı kullanır.** Ayrılsalardı, sistemin kendi yazdığı otomatik fiyat, ekranın marj hesabına göre "marj-altı" görünebilirdi.
 - Ürüne bir **hedef kâr marjı** (`Product.target_margin_percent`) yazılabilir — maliyet üzerine markup (ör. maliyet 10€, hedef %40 → hedef fiyat ≥ 14€).
@@ -567,7 +567,7 @@ Yalnızca siparişin **doğrudan** (o sipariş yüzünden var olan) giderleri d�
 - **Ödeme komisyonu:** online (Stripe) ve kapıda kart (SumUp) oranı; nakit 0.
 - **Paketleme:** soğuk zincir (jel/kutu) sipariş/kalem başına maliyet (parametrik).
 
-Ürün kârı = karşılanan satış − bu doğrudan giderler. **Kanal ve ürün bazında** toplanır. Bu doğrudan gider kalemleri sipariş kapanışında **sabitlenir** (snapshot) — geçmiş kârın rakamı sonradan değişen oran/maliyetten etkilenmesin (fiyat sabitleme ile aynı mantık). **Kapanış = `completed`'a geçiş anıdır** (`OrderStatusLog`'dan).
+Ürün kârı = karşılanan satış − bu doğrudan giderler. **Kanal ve ürün bazında** toplanır. Bu doğrudan gider kalemleri **sipariş anında** yazılır — geçmiş kârın rakamı sonradan değişen oran/maliyetten etkilenmesin (fiyat sabitleme ile aynı mantık); kâr satış anından itibaren görünür. Mal maliyeti parti seçilmeden deponun son alış fiyatıyla **tahmin** edilir ve hazırlıkta çıkan partilerin fiyatıyla kesinleşir; iade edilip stoğa dönen malın maliyeti düşer, imha edilenin kalır. Kargo maliyeti taşıyıcı fiyatıdır ve koli taşıyıcıya bildirilince yazılır. **Bilinmeyen maliyet sıfır sayılmaz:** o siparişin kârı gösterilmez, raporda "fiyatlanmamış" durur.
 
 **Fire ürün kârlılığına dahil edilir:** `StockAdjustment` (DLC imhası, hasar, sayım farkı) maliyet değeriyle kayıptır; ürün bazında **"fire düşülmüş net marj"** raporlanır — "bu üründen yılda ne kadar çöpe attım" görünür, kârlılık süslü kalmaz.
 

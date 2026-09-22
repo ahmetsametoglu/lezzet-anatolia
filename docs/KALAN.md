@@ -33,9 +33,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 
 - [~] (07.12) **Taşıyıcı + kargo takip numarası:** `order.carrier` (tanımlı küme: `colissimo · chronopost · dhl · ups · other`) + `order.tracking_number`; ikisi de yalnız `delivery_type = 'shipping'` siparişlerde anlamlı — kısıt veride (rota siparişine takip numarası yazılamaz). Numarayı hazırlık ekranı girer (paketi kapatan kişi etiketi elinde tutar), ayrı sevk adımı açılmaz. Takip bağlantısı taşıyıcının URL kalıbından üretilir; `other` seçilirse bağlantı gösterilmez, numara düz metin durur
   - Eksik: `GET /api/v3/parcels/statuses` taksonominin tamamını veriyor (35 kod, HTTP 200) — ilk yazımın *"kamuya açık liste yok"* varsayımı yanlıştı. Sezgisel (metin araması) tablo gerçek listeye karşı koşturulunca **yedi kod yanlış, on biri tanınmıyor** çıktı; en tehlikelisi `CANCELLATION_FAILED` → `cancelled` (iptal EDİLEMEDİ…
-- [x] (07.13) **Bağlayıcı fiyat sabitlenirken artış SESSİZ uygulanıyor**
-  - Görev kapandı; koddaki `BEKLEYEN(07.13)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
-- [ ] (07.16) **Sipariş KAPANIŞINI (`completed`) yazan hiçbir üretim çağıranı yok — iki kulvarda birden** *(ölçüldü 28.08, kargo durum zinciri yazılırken)*
 - [ ] (07.17) **AB ülkelerine kargo satış kanalı — bugün sistem iki ülke tanıyor, üçüncüsünü SESSİZCE Fransa yazıyor** *(kullanıcı kararı 02.09)*
 - [~] (07.18) **Ödeme sonucu gelmezse sistem afallamaz — kart taslağı sağlayıcıya sorularak netleşir** *(kullanıcı bildirimi ve kararı 14.09)*
 
@@ -329,7 +326,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 ## backlog-operasyon-web.md (eski docs/denetim/backlog-operasyon-web.md)
 
 - [ ] **OB-01 · Yeni Rota tanımlanırken depo seçilemiyor ve kaydetme işlemi bloke oluyor** _(1. Bloke Edici Bulgular / Hatalar)_
-- [ ] **OB-08 · Sipariş tamamlandıktan sonra bile finansal bölümde "mal maliyeti tahmini" ve "kar sipariş kapandığında hesaplanır" uyarısı kalması** _(1. Bloke Edici Bulgular / Hatalar)_
 - [ ] **OB-09 · Aynı üründen çoklu adet içeren siparişlerde İade (Return) ve İmha (Disposal/Waste) işlemlerinin veritabanında tutarsızlığa yol açması** _(1. Bloke Edici Bulgular / Hatalar)_
 - [ ] **OB-02 · Harita üzerinde Shift + Sürükle ile çoklu posta kodu seçimi (alan seçimi)** _(2. Geliştirme ve İyileştirme Talepleri)_
 - [~] **OB-03 · Posta kodu arama kutusunda yerleşim/şehir adına göre arama yapılabilmesi** _(2. Geliştirme ve İyileştirme Talepleri)_

@@ -4,22 +4,11 @@ import { saleNetCents, type SaleVatBasis } from './export';
 import { lineNetCents, type AccountingLine } from './line';
 
 /**
- * Kârlılık (12.6) — DOMAIN §12. **İki ayrı kavram, ayrı hesaplanır ve karıştırılmaz:**
- *
- * - **Ürün/sipariş kârlılığı = katkı payı.** Yalnız siparişin DOĞRUDAN giderleri düşülür (COGS,
- *   teslimat, komisyon, paketleme). Genel gider karışmaz — karışsaydı "bu ürünü satmalı mıyım"
- *   sorusu kiranın büyüklüğüne göre cevap değiştirirdi.
- * - **Şirket kârlılığı = tam P&L.** Katkı paylarının toplamından genel gider BİR KEZ düşülür,
- *   ürünlere dağıtılmaz.
- *
- * **Kâr HT üstünden hesaplanır** (`line.ts`): KDV ciro değildir, devlet adına tahsil edilir.
- *
- * **Eksik maliyet 0 sayılmaz.** Kapanmamış siparişin maliyet kalemleri henüz sabitlenmemiştir;
- * onları 0 sayarsak kâr şişer. Böyle satırlar kârdan DIŞLANIR ama sayı ve ciroyla raporda görünür
- * (DOMAIN §13'ün paket marjındaki kuralın aynısı).
+ * Sipariş kârı katkı payıdır (yalnız doğrudan giderler, HT); şirket kârı genel gideri bir kez düşer, ürüne dağıtmaz.
+ * Bilinmeyen maliyet 0 sayılmaz: öyle siparişler kârdan dışlanır ama sayı ve ciroyla raporda görünür.
  */
 
-/** Siparişin doğrudan gider kalemleri — kapanışta SABİTLENİR (snapshot). */
+/** Siparişin doğrudan gider kalemleri — sipariş anında yazılır, mal maliyeti hazırlıkta kesinleşir. */
 export interface DirectCosts {
   cogs: number;
   delivery: number;
@@ -36,15 +25,12 @@ export interface OrderContribution {
   /** KDV hariç ciro — kalemler + kargo. */
   revenue: number;
   costs: DirectCosts;
-  /** `revenue − doğrudan giderler`. Maliyet sabitlenmemişse `null`. */
+  /** `revenue − doğrudan giderler`. Maliyet bilinmiyorsa `null`. */
   contribution: number | null;
   /** Katkı payının ciroya oranı (%). Ciro 0 ya da maliyet eksikse `null`. */
   marginPct: number | null;
-  /**
-   * Maliyet kalemleri kapanışta sabitlendi mi. `false` = sipariş henüz `completed` değil; kâr
-   * hesaplanmaz, ciro raporda "fiyatlanmamış" olarak durur.
-   */
-  costsFixed: boolean;
+  /** Mal, teslimat ve paketleme maliyeti biliniyor mu; `false` ise kâr hesaplanmaz, ciro "fiyatlanmamış" durur. */
+  costsKnown: boolean;
 }
 
 export interface VariantProfit {
@@ -88,10 +74,7 @@ export interface CompanyProfit {
   /** `contribution − lossCost − overhead`. */
   netProfit: number;
   orderCount: number;
-  /**
-   * Maliyeti henüz sabitlenmemiş siparişler — kâra girmez ama **görünür**: sessiz dışlansaydı
-   * dönemin cirosu ile rapordaki ciro arasındaki fark açıklanamaz kalırdı.
-   */
+  /** Maliyeti bilinmeyen siparişler — kâra girmez ama görünür, yoksa ciro farkı açıklanamazdı. */
   unpricedCount: number;
   unpricedRevenue: number;
   byChannel: ChannelProfit[];
@@ -104,26 +87,17 @@ function marginOf(contributionCents: number, revenueCents: number): number | nul
 }
 
 /**
- * Katkı payı hesabının istediği satış alanları — tam bir `OrderSale` DEĞİL.
- *
- * Sipariş detayı da bu hesabı soruyor (09.7) ama elindeki kayıt henüz `order_sale` görünümüne
- * girmemiş olabilir: o görünüme yalnız teslim edilmiş/kapanmış siparişler düşer. Girdiyi
- * daraltmak, açık bir siparişin kârını sormak için sahte bir satış kaydı uydurmayı gereksiz kılar.
+ * Katkı payının istediği satış alanları; sipariş detayı henüz `order_sale`e girmemiş siparişin kârını da sorar.
  */
 export type ContributionInput = SaleVatBasis &
   Pick<OrderSale, 'id' | 'saleDate' | 'isGiftOrder' | 'cogsAmountCents' | 'deliveryCostCents' | 'paymentFeeCents' | 'packagingCostCents'>;
 
-/**
- * Bir siparişin katkı payı. Maliyetler **kapanışta sabitlenmiş snapshot'lardır** — geçmiş kârın
- * rakamı sonradan değişen oran/birim maliyetten etkilenmesin (fiyat sabitlemeyle aynı mantık).
- */
+/** Bir siparişin katkı payı; maliyetler sipariş anında yazılmış değerlerdir, sonradan değişen ayar onları oynatmaz. */
 export function orderContribution(sale: ContributionInput, items: readonly AccountingLine[]): OrderContribution {
   const revenue = saleNetCents(sale, items);
-  // `cogs_amount` kapanışta yazılır; null ise sipariş teslim edilmiş ama kapanmamıştır.
-  const costsFixed = sale.cogsAmountCents !== null;
+  const costsKnown = sale.cogsAmountCents !== null && sale.deliveryCostCents !== null && sale.packagingCostCents !== null;
 
-  // Toplam CENT üstünden alınır, euro'ya yalnız çıktı alanları için inilir (02.9): dört kalemi tek
-  // tek euro'ya çevirip toplasaydık her kalemde bir kuruş yuvarlama riski birikirdi.
+  // Toplam cent üstünden alınır; kalemleri tek tek euro'ya çevirmek yuvarlama biriktirirdi.
   const costCents =
     (sale.cogsAmountCents ?? 0) + (sale.deliveryCostCents ?? 0) + (sale.paymentFeeCents ?? 0) + (sale.packagingCostCents ?? 0);
   const costs: DirectCosts = {
@@ -141,9 +115,9 @@ export function orderContribution(sale: ContributionInput, items: readonly Accou
     isGiftOrder: sale.isGiftOrder,
     revenue: fromCents(revenue),
     costs,
-    contribution: costsFixed ? fromCents(contributionCents) : null,
-    marginPct: costsFixed ? marginOf(contributionCents, revenue) : null,
-    costsFixed,
+    contribution: costsKnown ? fromCents(contributionCents) : null,
+    marginPct: costsKnown ? marginOf(contributionCents, revenue) : null,
+    costsKnown,
   };
 }
 
@@ -166,14 +140,8 @@ export interface SoldLine {
 }
 
 /**
- * Ürün (varyant) kârlılığı — **fire düşülmüş net marj** (DOMAIN §12).
- *
- * Kargo/komisyon/paketleme BURAYA GİRMEZ: onlar siparişin gideridir, ürünün değil. Ürüne
- * dağıtsaydık "iki kalemlik siparişte gelen ürün kârlı, tek kalemlikte gelen kârsız" gibi
- * anlamsız bir tablo çıkardı.
- *
- * **Maliyeti bilinmeyen kalem cirosuyla birlikte DIŞLANIR** (`costCents === null`): eksiği 0 saymak
- * marjı şişirir.
+ * Ürün kârlılığı, fire düşülmüş net marj: kargo, komisyon ve paketleme siparişin gideridir, ürüne dağıtılmaz.
+ * Maliyeti bilinmeyen kalem cirosuyla birlikte dışlanır, eksiği 0 saymak marjı şişirirdi.
  */
 export function variantProfit(lines: readonly SoldLine[], losses: readonly VariantLoss[] = []): VariantProfit[] {
   const byVariant = new Map<string, { qty: number; revenue: number; cogs: number }>();
@@ -215,20 +183,16 @@ export function variantProfit(lines: readonly SoldLine[], losses: readonly Varia
 }
 
 /**
- * Şirket kârlılığı — tam P&L. Katkı paylarının toplamından **fire** ve **genel gider** birer kez
- * düşülür.
- *
- * **Stok alımı (`purchase`) genel gidere GİRMEZ:** malın maliyeti satıldığı anda COGS olarak zaten
- * düşülüyor. İkisini de saysaydık aynı parayı iki kez gider yazar, kârı olduğundan düşük
- * gösterirdik — ve depoda bekleyen mal, satılmadan şirketi zarara sokmuş görünürdü.
+ * Şirket kârlılığı: katkı paylarından fire ve genel gider birer kez düşülür. Stok alımı genel gidere girmez,
+ * çünkü malın maliyeti satıldığında mal maliyeti olarak zaten düşülüyor.
  */
 export function companyProfit(
   period: { from: string; to: string },
   contributions: readonly OrderContribution[],
   input: { lossCost: number; overhead: number },
 ): CompanyProfit {
-  const priced = contributions.filter((c) => c.costsFixed);
-  const unpriced = contributions.filter((c) => !c.costsFixed);
+  const priced = contributions.filter((c) => c.costsKnown);
+  const unpriced = contributions.filter((c) => !c.costsKnown);
 
   const totalRevenueCents = priced.reduce((s, c) => s + toCents(c.revenue), 0);
   const costCents = priced.reduce(

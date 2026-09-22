@@ -39,6 +39,7 @@ Ek geçişler:
 - `out_for_delivery → ready` (**ulaşılamadı** — yeniden teslim; mal ayrılmış kalır)
 - `out_for_delivery → returned` (**reddedildi** — mal depoya döner)
 - `delivered → returned` (teslim sonrası iade/hasar)
+- `completed → returned` (kapanmış siparişte iade: kapanış kendiliğinden olduğu için şikâyet sonradan gelebilir)
 - `returned → completed` (iade süreci kapanışı: depo aksiyonu — restok/imha — ve para iadesi tamamlanınca sipariş kapanır; kalıcı `returned`'da kalmaz)
 
 **İptalde para kuralı:** ödenmiş sipariş iptal edilirse tutarın **tamamı otomatik iade** edilir; iptal edilen siparişte karşılanan tutar **0 sayılır** — `payment_status` türetimi buna göre `refunded` olur (hiç ödenmemişse `pending` kapanır).
@@ -66,10 +67,10 @@ Kararın tek yeri motordur: `gateFor(from, to)` (`domain-core/order/status-machi
 | Sahip | Geçişler | Nereden yazılır |
 | --- | --- | --- |
 | **Saha** | `→ preparing` · `→ ready` · `→ out_for_delivery` · `out_for_delivery → delivered / ready / returned` · `draft → completed` | depo uygulaması (kutu açma, mühürleme, eksik beyanı) · kurye uygulaması (yükleme, kapıdaki üç sonuç, sefer kapanışı) · kargoda taşıyıcı takibi · yerinde satış |
-| **Ofis** | `confirmed / preparing / ready → cancelled` (kendi kapısı) · `delivered → returned` · `delivered / returned → completed` | operasyon sipariş detayı — iptal "Kararlar" bloğundan, iade süreci ve kapanış şeritten |
-| **Sistem** | `draft → confirmed` · `draft → cancelled` | ödeme ve sipariş verme akışı · terk edilen sepetin süpürücüsü |
+| **Ofis** | `confirmed / preparing / ready → cancelled` (kendi kapısı) · `delivered / completed → returned` · `returned → completed` | operasyon sipariş detayı — iptal "Kararlar" bloğundan, iade süreci ve iadenin kapanışı şeritten |
+| **Sistem** | `draft → confirmed` · `draft → cancelled` · `delivered → completed` | ödeme ve sipariş verme akışı · terk edilen sepetin süpürücüsü · teslim ve ödemenin tamamlanması |
 
-Kapanışın (`→ completed`) nasıl olacağı ayrı bir karardır (07.16); o gelene kadar ofiste ve düz kapıda kalır. Sevkiyat masasının askıda kalan durak yolu (`out_for_delivery → ready`, teslim günü geçmiş ve sonuçlanmamış durak) bir kapı kaydı değil sevkiyat kaydıdır ve kendi kuralıyla yazılır (`deliveries/dispatch-actions.ts`).
+Kapanış (`delivered → completed`) teslim edilmiş ve parası tamamen alınmış siparişte kendiliğinden yazılır (`isSettled`, `settleOrder`): teslim ve ödeme hangi sırayla tamamlanırsa ikincisinin ardından. Kapanış kârla ilgili değildir; maliyetler sipariş anında yazılır (`DOMAIN.md §12`). Sevkiyat masasının askıda kalan durak yolu (`out_for_delivery → ready`, teslim günü geçmiş ve sonuçlanmamış durak) bir kapı kaydı değil sevkiyat kaydıdır ve kendi kuralıyla yazılır (`deliveries/dispatch-actions.ts`).
 
 > **Neden yazılı bir kural oldu (kullanıcı notları 11.09, ölçüm 12.09):** saha akışlarının web ekranları 07.09'da söküldü ama sipariş detayının şeridi süzülmedi — düz kapıdan geçen her geçiş düğme olarak kaldı. Web'den "hazırlandı" denen siparişte kutu mühürlenmediği ve eksik beyan edilmediği için karşılanan adet sıfır kaldı; ödenmiş sipariş tam tutarlık iade borcu taşıdı. Aynı zincirin sonundaki "iade → tamamlandı" iade adımını hiç çalıştırmadı.
 

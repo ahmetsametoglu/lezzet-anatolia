@@ -119,8 +119,11 @@ create table public.order (
   -- CACHE — kaynak `MoneyMovement` (modül 12). Ödeme durumu bunlardan TÜRETİLİR.
   amount_collected numeric(10, 2) not null default 0,
   amount_refunded numeric(10, 2) not null default 0,
-  -- Kapanışta sabitlenen maliyetler (kâr hesabı, DOMAIN §12).
+  -- Doğrudan maliyetler sipariş anında yazılır, sonradan değişen ayar geçmiş kârı oynatmasın. Mal maliyeti
+  -- `refresh_order_cogs` (0016) ile tutulur; `null` = bilinmiyor, kargo maliyeti koli bildirilince yazılır.
   cogs_amount numeric(10, 2),
+  -- Mal maliyeti henüz parti seçilmeden son alış fiyatıyla mı tahmin edildi.
+  cogs_is_estimate boolean not null default false,
   delivery_cost numeric(10, 2),
   payment_fee numeric(10, 2),
   packaging_cost numeric(10, 2),

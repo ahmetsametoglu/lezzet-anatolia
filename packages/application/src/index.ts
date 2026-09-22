@@ -335,7 +335,7 @@ export { readDeliveryProof, requestDeliveryProofUploadUrl } from './courier/proo
 export { adjustFulfillment, cancelOrder, deliverOrderWithAdjustments, retryRefund } from './order/refund';
 export { cancelOrderShipment, isOpenShipment, type ShipmentCancelOutcome } from './shipping/cancel';
 export type { AdjustOutcome, CancelOutcome, RefundBlockReason, RefundOptions, WarehouseScope } from './order/refund';
-export { closeOrder, deliverOrder } from './order/fulfillment';
+export { deliverOrder } from './order/fulfillment';
 export { recordOrderPayment, recordOrderRefund, syncOrderPaymentStatus } from './order/payment';
 export type { OrderMovementInput, PaymentOutcome } from './order/payment';
 export type {

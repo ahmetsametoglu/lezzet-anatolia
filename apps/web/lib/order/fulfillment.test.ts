@@ -3,12 +3,12 @@ import {
   CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
-import { closeOrder, deliverOrder } from './fulfillment';
+import { deliverOrder } from './fulfillment';
 import { transitionOrder } from './transition';
 
 /**
- * Teslim ve kapanış (07.7) — zincirin son halkası. Uçtan uca: sipariş → ayır → hazırla → teslim →
- * kapan. Doğrulanan şey **fiziksel gerçek** (stok tam bir kez düşer) ve **kâr snapshot'ı**.
+ * Teslim, mal maliyeti ve kapanış uçtan uca: stok tam bir kez düşer, maliyet parti fiyatından kesinleşir,
+ * parası alınmış sipariş teslimle kendiliğinden kapanır.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -41,7 +41,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  // Sıra defter → parti → sipariş: defter satırı partiyi, parti siparişi tutar.
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
@@ -119,32 +119,42 @@ describe('teslim (07.7)', () => {
   });
 });
 
-describe('kapanış — kâr kalemleri sabitlenir (DOMAIN §12)', () => {
-  it('COGS GERÇEK maliyettir: her parti kendi alış fiyatından', async () => {
+describe('mal maliyeti — sipariş anında tahmin, partiyle kesinleşir', () => {
+  it('hazırlıktan önce son alış fiyatlı partiyle tahmin edilir', async () => {
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c' }, [{ variantId, qty: 2, unitPriceCents: 1000, vatRate: 5.5 }]);
+
+    expect(await orders.getById(order.id)).toMatchObject({ cogsAmountCents: 600, cogsIsEstimate: true }); // 2 × son parti (3 €)
+  });
+
+  it('parti yazılınca her parti kendi alış fiyatından kesinleşir', async () => {
     const order = await sendOut([{ stockId: batchA, qty: 4 }, { stockId: batchB, qty: 2 }]);
-    await deliverOrder(order.id);
 
-    const outcome = await closeOrder(order.id);
-    expect(outcome.ok).toBe(true);
-    expect(outcome.cogsAmountCents).toBe(1400); // 4×2 + 2×3 — ortalama olsaydı 15 € çıkardı
+    expect(await orders.getById(order.id)).toMatchObject({ cogsAmountCents: 1400, cogsIsEstimate: false }); // 4×2 + 2×3
   });
 
-  it('rota-içinde teslimat birim maliyeti, paketleme maliyeti ayardan gelir', async () => {
+  it('hiç toplanmamış kalemin tahmini hazırlık bitince düşer', async () => {
+    const { order, items } = await orders.create({ warehouseId, customerId, channel: 'b2c' }, [{ variantId, qty: 2, unitPriceCents: 1000, vatRate: 5.5 }]);
+    for (const d of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: d });
+    await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [] }]);
+    await transitionOrder({ orderId: order.id, to: 'ready' });
+
+    expect(await orders.getById(order.id)).toMatchObject({ cogsAmountCents: 0, cogsIsEstimate: false });
+  });
+});
+
+describe('kapanış — teslim ve ödeme tamamlanınca kendiliğinden', () => {
+  it('parası alınmış sipariş teslimle kapanır', async () => {
     const order = await sendOut([{ stockId: batchB, qty: 1 }]);
+    await orders.update({ id: order.id, paymentStatus: 'paid' });
+
     await deliverOrder(order.id);
-
-    const outcome = await closeOrder(order.id);
-    // Ayar zaten cent'ti; artık dönüş de cent — arada `/100 → *100` gidip gelen bir çevrim yok (02.9).
-    expect(outcome.deliveryCostCents).toBe(250); // route_delivery_unit_cost_cents
-    expect(outcome.packagingCostCents).toBe(120); // packaging_unit_cost_cents
-
-    const closed = await orders.getById(order.id);
-    expect(closed).toMatchObject({ status: 'completed', cogsAmountCents: 300, deliveryCostCents: 250 });
-    expect(closed?.paymentFeeCents).toBeNull(); // komisyon oranları modül 12'de
+    expect((await orders.getById(order.id))?.status).toBe('completed');
   });
 
-  it('teslim edilmemiş sipariş kapanamaz', async () => {
+  it('parası alınmamış teslimat açık kalır', async () => {
     const order = await sendOut([{ stockId: batchB, qty: 1 }]);
-    expect(await closeOrder(order.id)).toMatchObject({ ok: false, reason: 'stale', currentStatus: 'out_for_delivery' });
+
+    await deliverOrder(order.id);
+    expect((await orders.getById(order.id))?.status).toBe('delivered');
   });
 });

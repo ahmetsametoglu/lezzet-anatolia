@@ -1,5 +1,5 @@
--- Teslim ve kapanış iki ayrı an: teslimde malın fiziksel gerçeği değişir, kapanışta kâr kalemleri sabitlenir.
--- İkisi de RPC, çünkü koşullu geçiş ve çok tablolu yazım yarıda kalırsa elle düzeltilecek hâl doğar.
+-- Teslim ve siparişin mal maliyeti. Teslim RPC'dir, çünkü koşullu geçiş ve çok tablolu yazım yarıda kalırsa
+-- elle düzeltilecek hâl doğar.
 
 -- ── Teslim ────────────────────────────────────────────────────────────────────
 -- Stok hazırlıkta yazılan kalem–parti kaydından düşer; rezervasyon da burada biter.
@@ -69,62 +69,115 @@ begin
 end;
 $$;
 
--- ── Kapanış ───────────────────────────────────────────────────────────────────
--- Kâr kalemleri sabitlenir; `payment_fee` burada hesaplanmaz, uydurma oran kârı yanlış gösterirdi.
-create or replace function public.close_order(
-  p_order_id uuid,
-  p_actor_id uuid default null,
-  p_delivery_cost numeric default null,             -- kargoda GERÇEK ücret; rota-içinde null → birim maliyet
-  p_route_unit_cost numeric default 0,              -- Setting: rota teslimat birim maliyeti
-  p_packaging_unit_cost numeric default 0           -- Setting: paketleme birim maliyeti
-) returns jsonb
+-- ── Mal maliyeti ──────────────────────────────────────────────────────────────
+-- Kâr satış anından görünür: parti seçilmeden önce kalem, deposundaki son partinin alış fiyatıyla tahmin edilir;
+-- parti yazılınca o partilerin fiyatıyla kesinleşir. İade edilip stoğa dönen mal kalem–parti kaydından düştüğü için
+-- maliyetten de düşer, imha edilenin maliyeti kalır. Fiyatı bilinmeyen parti maliyeti 0 değil `null` yapar.
+create or replace function public.refresh_order_cogs(p_order_id uuid)
+returns void
 language plpgsql
 security invoker
 set search_path = public
 as $$
 declare
-  v_current order_status;
-  v_delivery_type delivery_type;
+  v_status order_status;
+  v_warehouse_id uuid;
   v_cogs numeric(10, 2);
-  v_delivery numeric(10, 2);
+  v_estimate boolean;
 begin
-  select status, delivery_type into v_current, v_delivery_type
-    from public.order where id = p_order_id for update;
+  select status, warehouse_id into v_status, v_warehouse_id from public.order where id = p_order_id;
   if not found then
-    raise exception 'close_order: sipariş bulunamadı (%)', p_order_id;
+    return;
   end if;
 
-  -- İki kaynaktan kapanır: normal teslim ve iade sürecinin bitişi.
-  if v_current not in ('delivered', 'returned') then
-    return jsonb_build_object('ok', false, 'reason', 'stale', 'current_status', v_current);
-  end if;
-
-  -- Stoğa dönen mal kalem–parti kaydından düştüğü için buraya girmez; imha edilenin maliyeti kalır.
-  select coalesce(sum(b.qty * coalesce(s.purchase_price, 0)), 0) into v_cogs
-    from public.order_item_batch b
-    join public.order_item i on i.id = b.order_item_id
-    join public.stock s on s.id = b.stock_id
-   where i.order_id = p_order_id;
-
-  -- Teslimat maliyeti: kargoda gerçek ücret, rota-içinde sipariş başına birim maliyet.
-  v_delivery := case when v_delivery_type = 'shipping' then coalesce(p_delivery_cost, 0) else p_route_unit_cost end;
+  with line as (
+    select exists (select 1 from public.order_item_batch b where b.order_item_id = i.id) as picked,
+           i.id,
+           i.qty,
+           i.variant_id
+      from public.order_item i
+     where i.order_id = p_order_id
+  ),
+  priced as (
+    select not l.picked and v_status in ('draft', 'confirmed', 'preparing') as estimated,
+           case
+             when l.picked then (
+               select case when bool_or(s.purchase_price is null) then null else sum(b.qty * s.purchase_price) end
+                 from public.order_item_batch b
+                 join public.stock s on s.id = b.stock_id
+                where b.order_item_id = l.id
+             )
+             -- Hazırlık bitmiş ve kalem hiç toplanmamışsa mal gitmemiştir.
+             when v_status not in ('draft', 'confirmed', 'preparing') then 0
+             else l.qty * (
+               select s.purchase_price
+                 from public.stock s
+                where s.variant_id = l.variant_id
+                  and s.warehouse_id = v_warehouse_id
+                  and s.purchase_price is not null
+                order by s.created_at desc
+                limit 1
+             )
+           end as cost
+      from line l
+  )
+  select case when bool_or(cost is null) then null else sum(cost) end, coalesce(bool_or(estimated), false)
+    into v_cogs, v_estimate
+    from priced;
 
   update public.order
-     set status = 'completed',
-         cogs_amount = v_cogs,
-         delivery_cost = v_delivery,
-         packaging_cost = p_packaging_unit_cost
-   where id = p_order_id;
-
-  insert into public.order_status_log (order_id, from_status, to_status, actor_id)
-  values (p_order_id, v_current, 'completed', p_actor_id);
-
-  return jsonb_build_object(
-    'ok', true, 'current_status', 'completed',
-    'cogs_amount', v_cogs, 'delivery_cost', v_delivery, 'packaging_cost', p_packaging_unit_cost
-  );
+     set cogs_amount = v_cogs,
+         cogs_is_estimate = v_estimate
+   where id = p_order_id
+     and (cogs_amount is distinct from v_cogs or cogs_is_estimate is distinct from v_estimate);
 end;
 $$;
 
+create or replace function public.order_cogs_on_item() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  perform public.refresh_order_cogs(coalesce(new.order_id, old.order_id));
+  return null;
+end;
+$$;
+
+create or replace function public.order_cogs_on_batch() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  perform public.refresh_order_cogs(
+    (select order_id from public.order_item where id = coalesce(new.order_item_id, old.order_item_id))
+  );
+  return null;
+end;
+$$;
+
+-- Hazırlık bitince toplanmamış kalemin tahmini düşer; bu yüzden durum da maliyeti tazeler.
+create or replace function public.order_cogs_on_status() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  perform public.refresh_order_cogs(new.id);
+  return null;
+end;
+$$;
+
+create trigger order_item_cogs
+  after insert or delete or update of qty, variant_id on public.order_item
+  for each row execute function public.order_cogs_on_item();
+
+create trigger order_item_batch_cogs
+  after insert or delete or update of qty, stock_id on public.order_item_batch
+  for each row execute function public.order_cogs_on_batch();
+
+create trigger order_status_cogs
+  after update of status on public.order
+  for each row when (old.status is distinct from new.status)
+  execute function public.order_cogs_on_status();
+
 revoke execute on function public.deliver_order(uuid, uuid, jsonb) from public, anon, authenticated;
-revoke execute on function public.close_order(uuid, uuid, numeric, numeric, numeric) from public, anon, authenticated;
+revoke execute on function public.refresh_order_cogs(uuid) from public, anon, authenticated;

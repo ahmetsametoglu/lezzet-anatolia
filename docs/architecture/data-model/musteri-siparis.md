@@ -278,6 +278,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | `amount_collected` | numeric(10, 2) |  | `0` |
 | `amount_refunded` | numeric(10, 2) |  | `0` |
 | `cogs_amount` | numeric(10, 2) | • |  |
+| `cogs_is_estimate` | boolean |  | `false` |
 | `delivery_cost` | numeric(10, 2) | • |  |
 | `payment_fee` | numeric(10, 2) | • |  |
 | `packaging_cost` | numeric(10, 2) | • |  |
@@ -322,10 +323,11 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 - **`discount_label`** — inen indirimin **müşteriye görünen adının** sipariş anındaki kopyası (`{"fr":"Offre de bienvenue",…}`) — kampanya yeniden adlandırılsa/silinse de siparişin maili ve fişi aynı şeyi der; `address_snapshot` ile aynı gerekçe. `null` = ad verilmemiş → yüzey genel "İndirim"e düşer
 - **`amount_collected`** — **cache** — kaynak `MoneyMovement` (siparişe bağlı girişler); toplam tahsil edilen. App: `amountCollectedCents`
 - **`amount_refunded`** — **cache** — kaynak `MoneyMovement` (`order_refund` çıkışları); toplam iade edilen. App: `amountRefundedCents`
-- **`cogs_amount`** — malın maliyeti — tüketilen partilerin alışı; kapanışta sabitlenir. App: `cogsAmountCents`
-- **`delivery_cost`** — teslimat maliyeti (kargo gerçek / rota birim); kapanışta sabitlenir. App: `deliveryCostCents`
-- **`payment_fee`** — ödeme komisyonu (Stripe/SumUp); kapanışta sabitlenir. App: `paymentFeeCents`
-- **`packaging_cost`** — paketleme (soğuk zincir) maliyeti; kapanışta sabitlenir. App: `packagingCostCents`
+- **`cogs_amount`** — malın maliyeti; sipariş anında son alış fiyatıyla tahmin, parti yazılınca partilerin alışı (`refresh_order_cogs` tetikleyicisi). `null` = bilinmiyor. App: `cogsAmountCents`
+- **`cogs_is_estimate`** — mal maliyeti henüz parti seçilmeden tahmin mi. App: `cogsIsEstimate`
+- **`delivery_cost`** — teslimat maliyeti; rotada sipariş anında birim maliyet, kargoda koli bildirilince taşıyıcı fiyatı. App: `deliveryCostCents`
+- **`payment_fee`** — ödeme komisyonu (Stripe/SumUp); ödeme anında yazılır. App: `paymentFeeCents`
+- **`packaging_cost`** — paketleme (soğuk zincir) maliyeti; sipariş anında yazılır. App: `packagingCostCents`
 
 **`cancel_reason` "para hareket etti mi" DEMEZ ve tek başına okunamaz** (08.08 · müşteri şeridinin ölçümü). Eskiden bu tablo *"`out_of_stock` → para çekildi ve iade edildi"* diyordu; **yalnız kart yolunda doğru.** Aynı sebep ikinci bir yerde de yazılıyor: `paymentMethod !== 'online'` dalında rezervasyon tutmazsa sipariş `draft`ta kapanıyor ve ortada tahsilat hiç yok. Sebebi tek başına okuyan bir ekran orada tam ters yönde bir yalan üretirdi. Para sorusunun cevabı `provider_refunded_at`'tir (yukarıda); sebep "neden iptal oldu"yu cevaplar, o kadar.
 
@@ -386,7 +388,7 @@ Hazırlıkta fiilen çıkan parti(ler)in kaydı — depocu FEFO önerisini onayl
 - **`stock_id`** — çıkan parti
 - **`qty`** — bu partiden çıkan adet (kalem birden çok partiden karşılanabilir)
 
-Σ qty = kalemin `fulfilled_qty`'si. `cogs_amount` = Σ (qty × partinin `purchase_price`) — kapanışta sabitlenir.
+Σ qty = kalemin `fulfilled_qty`'si. `cogs_amount` = Σ (qty × partinin `purchase_price`) — parti yazıldıkça tetikleyiciyle güncellenir.
 
 ## OrderBox (sipariş kutusu — 0048 · 23.6)
 

@@ -1,4 +1,4 @@
-import { OrderBoxService, ShipmentEventService, ShipmentService } from '@lezzet/database';
+import { OrderBoxService, OrderService, ShipmentEventService, ShipmentService } from '@lezzet/database';
 import { getR2Private, r2Keys } from '@lezzet/storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isOpenShipment } from './cancel';
@@ -140,6 +140,11 @@ export async function announceOrderShipment(
     ].join(' · ') || null,
     occurredAt: new Date().toISOString(),
   });
+
+  // Kargo maliyeti taşıyıcı fiyatıdır ve ilk kez burada bilinir; o gelene kadar siparişin kârı hesaplanmaz.
+  if (input.quotedCents !== undefined) {
+    await new OrderService(db).update({ id: input.orderId, deliveryCostCents: input.quotedCents });
+  }
 
   return { status: 'ok', shipmentId: shipment.id, parcels: sonuc, labelFailures };
 }

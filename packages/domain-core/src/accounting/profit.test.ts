@@ -4,11 +4,8 @@ import type { OrderSale } from '@lezzet/types';
 import { companyProfit, orderContribution, variantProfit, type SoldLine } from './profit';
 
 /**
- * Kârlılık motoru (12.6) — DOMAIN §12. Doğrulanan dört sözleşme:
- * 1. **Kâr HT üstünden** hesaplanır; KDV ciro değildir.
- * 2. **Eksik maliyet 0 SAYILMAZ** — kapanmamış sipariş kârdan düşer ama görünür kalır.
- * 3. **Fire ürün marjından düşülür** ("bu üründen ne kadar çöpe attım" gizlenmez).
- * 4. **Genel gider bir kez**, şirket seviyesinde düşülür; ürüne dağıtılmaz.
+ * Kâr motorunun sözleşmeleri: kâr HT üstünden, bilinmeyen maliyet 0 sayılmaz ama görünür kalır, fire ürün marjından
+ * düşülür, genel gider şirket seviyesinde bir kez düşülür.
  */
 
 const BASE_SALE: OrderSale = {
@@ -21,7 +18,7 @@ const BASE_SALE: OrderSale = {
   orderSource: 'web',
   isGiftOrder: false,
   status: 'completed',
-  // Tamamlanmış satışta iptal sebebi yoktur (07.14) — `null` "iptal edilmedi" demek.
+  // Tamamlanmış satışta iptal sebebi yoktur — `null` "iptal edilmedi" demek.
   cancelReason: null,
   providerRefundedAt: null,
   paymentRef: null,
@@ -55,6 +52,7 @@ const BASE_SALE: OrderSale = {
   amountCollectedCents: 0,
   amountRefundedCents: 0,
   cogsAmountCents: null,
+  cogsIsEstimate: false,
   deliveryCostCents: null,
   paymentFeeCents: null,
   packagingCostCents: null,
@@ -66,13 +64,13 @@ const line = (over: Partial<SoldLine['item']> = {}) => ({
   qty: 1, fulfilledQty: 1, unitPriceCents: 1000, lineDiscountAmountCents: 0, vatRate: 5.5, ...over,
 });
 
-/** Kapanmış sipariş: maliyet kalemleri sabitlenmiş. */
+/** Maliyeti bilinen sipariş. */
 const closed = (over: Partial<OrderSale> = {}) =>
   sale({ cogsAmountCents: 0, deliveryCostCents: 0, paymentFeeCents: 0, packagingCostCents: 0, ...over });
 
 describe('sipariş katkı payı', () => {
   it('kâr HT üstünden hesaplanır — KDV ciro değildir', () => {
-    // 21.10 € TTC @ %5,5 → 20 € HT. Maliyet 8 € → katkı 12 €.
+    // 21,10 € TTC @ %5,5 → 20 € HT; maliyet 8 € → katkı 12 €.
     const result = orderContribution(closed({ cogsAmountCents: 800 }), [line({ unitPriceCents: 2110 })]);
 
     expect(result.revenue).toBe(20);
@@ -87,8 +85,7 @@ describe('sipariş katkı payı', () => {
     );
 
     expect(result.costs).toEqual({ cogs: 8, delivery: 2.5, paymentFee: 0.6, packaging: 1.2 });
-    // 20 − 12.30 = 7.70 TAM. (JS'te `20 - 12.3` 7.699999999999999'dur; motor cent'te hesapladığı
-    // için o artığı üretmiyor — beklenti de kayan noktayla yazılmaz.)
+    // 20 − 12,30 = 7,70 tam: motor cent'te hesapladığı için kayan nokta artığı üretmez.
     expect(result.contribution).toBe(7.7);
   });
 
@@ -102,9 +99,8 @@ describe('sipariş katkı payı', () => {
   });
 
   it('B2B fiyatı ZATEN HT\'dir — KDV bir daha çıkarılmaz', () => {
-    // DOMAIN §5: `Price.amount` kanalın tabanında saklanır — b2c TTC, b2b HT. Aynı sayı (100 €)
-    // iki kanalda iki ayrı şey demektir: b2c'de 94,79 HT, b2b'de 100 HT. Tek yön varsayıldığında
-    // b2b cirosu her satırda %5,5 eriyordu ve aynı hata muhasebe dosyasına da geçiyordu.
+    // Fiyat kanalın tabanında saklanır (b2c TTC, b2b HT): aynı 100 € b2c'de 94,79 HT, b2b'de 100 HT'dir;
+    // tek yön varsayılsaydı b2b cirosu her satırda eriyordu.
     const b2b = orderContribution(closed({ channel: 'b2b', cogsAmountCents: 6000 }), [line({ unitPriceCents: 10_000 })]);
     const b2c = orderContribution(closed({ channel: 'b2c', cogsAmountCents: 6000 }), [line({ unitPriceCents: 10_000 })]);
 
@@ -132,14 +128,20 @@ describe('sipariş katkı payı', () => {
 });
 
 describe('eksik maliyet 0 SAYILMAZ', () => {
-  it('kapanmamış siparişin kârı hesaplanmaz, cirosu durur', () => {
-    // Teslim edilmiş ama `completed` olmamış: `cogs_amount` henüz sabitlenmedi.
+  it('maliyeti bilinmeyen siparişin kârı hesaplanmaz, cirosu durur', () => {
     const result = orderContribution(sale({ status: 'delivered' }), [line({ unitPriceCents: 2110 })]);
 
-    expect(result.costsFixed).toBe(false);
+    expect(result.costsKnown).toBe(false);
     expect(result.contribution).toBeNull();
     expect(result.marginPct).toBeNull();
     expect(result.revenue).toBe(20); // ciro biliniyor, kâr bilinmiyor
+  });
+
+  it('kargo maliyeti henüz bilinmiyorsa kâr hesaplanmaz — sıfır sayılmaz', () => {
+    const result = orderContribution(closed({ cogsAmountCents: 800, deliveryCostCents: null }), [line({ unitPriceCents: 2110 })]);
+
+    expect(result.costsKnown).toBe(false);
+    expect(result.contribution).toBeNull();
   });
 
   it('şirket P&L fiyatlanmamışı kârdan düşer ama SAYI ve CİRO olarak gösterir', () => {

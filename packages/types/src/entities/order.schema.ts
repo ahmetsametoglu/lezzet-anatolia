@@ -108,7 +108,10 @@ export const OrderSchema = z.object({
   /** CACHE — kaynak `MoneyMovement` (modül 12); ödeme durumu bunlardan türetilir. */
   amountCollectedCents: z.number().int(),
   amountRefundedCents: z.number().int(),
+  /** Doğrudan maliyetler sipariş anında yazılır; `null` = bilinmiyor (kargo maliyeti koli bildirilince gelir). */
   cogsAmountCents: z.number().int().nullable(),
+  /** Mal maliyeti parti seçilmeden son alış fiyatıyla tahmin edildi mi. */
+  cogsIsEstimate: z.boolean(),
   deliveryCostCents: z.number().int().nullable(),
   paymentFeeCents: z.number().int().nullable(),
   packagingCostCents: z.number().int().nullable(),
@@ -141,6 +144,8 @@ export const OrderInsertSchema = z.object({
   vatTreatment: VatTreatmentEnum.optional(),
   shippingFeeCents: z.number().int().nonnegative().optional(),
   orderedTotalCents: z.number().int().nonnegative().optional(),
+  deliveryCostCents: z.number().int().nonnegative().nullish(),
+  packagingCostCents: z.number().int().nonnegative().nullish(),
   /* `revenueTotalCents` INSERT ŞEMASINDA YOK ve bu bilinçli: kalemlerden türeyen bir cache'i elle
      yazmak, kaynağıyla çelişen bir sayı bırakmanın en kolay yoludur. Tetikleyici (0012) onu
      kalemler yazılınca kendisi kuruyor; taslakta 0 kalması doğru cevaptır. */
@@ -277,18 +282,6 @@ export const DeliverResultSchema = z.object({
   consumedQty: z.number().int().optional(),
 });
 export type DeliverResult = z.infer<typeof DeliverResultSchema>;
-
-/** `close_order` dönüşü (07.7) — kâr kalemleri kapanışta SABİTLENİR (DOMAIN §12). */
-export const CloseResultSchema = z.object({
-  ok: z.boolean(),
-  reason: z.literal('stale').optional(),
-  currentStatus: OrderStatusEnum,
-  // RPC dönüşü euro; cent'e çevrim servis sınırında (02.9 · STACK §8) — jsonb tablo satırı değildir.
-  cogsAmountCents: z.number().int().optional(),
-  deliveryCostCents: z.number().int().optional(),
-  packagingCostCents: z.number().int().optional(),
-});
-export type CloseResult = z.infer<typeof CloseResultSchema>;
 
 /** `quick_sale` dönüşü; `stale` sipariş taslak değil, `insufficient_stock` mal yok demektir. */
 export const QuickSaleResultSchema = z.object({

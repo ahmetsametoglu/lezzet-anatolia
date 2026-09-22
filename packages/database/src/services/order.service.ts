@@ -11,7 +11,6 @@ import {
   OrderStatusLogInsertSchema,
   OrderStatusLogUpdateSchema,
   CancelResultSchema,
-  CloseResultSchema,
   DeliverResultSchema,
   DeliverWithAdjustmentsResultSchema,
   FulfillmentResultSchema,
@@ -34,7 +33,6 @@ import {
   type OrderCancelReason,
   type OrderStatus,
   type CancelResult,
-  type CloseResult,
   type DeliverResult,
   type FulfillmentAdjustment,
   type DeliverWithAdjustmentsResult,
@@ -287,29 +285,6 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       p_delivery_proof: opts.deliveryProof ?? null,
     });
     return DeliverResultSchema.parse(dbToApp(raw));
-  }
-
-  /**
-   * Kapanış: kâr kalemleri sabitlenir; mal maliyeti tüketilen partilerin kendi alış fiyatıdır.
-   */
-  async close(
-    orderId: string,
-    costs: {
-      actorId?: string | null;
-      deliveryCostCents?: number | null;
-      routeUnitCostCents?: number;
-      packagingUnitCostCents?: number;
-    } = {},
-  ): Promise<CloseResult> {
-    // RPC euro konuşuyor (kolonlarla aynı taban); uygulama cent — çevrim bu sınırda, TEK yerde.
-    const raw = await this.executeRpc('close_order', {
-      p_order_id: orderId,
-      p_actor_id: costs.actorId ?? null,
-      p_delivery_cost: costs.deliveryCostCents == null ? null : fromCents(costs.deliveryCostCents),
-      p_route_unit_cost: fromCents(costs.routeUnitCostCents ?? 0),
-      p_packaging_unit_cost: fromCents(costs.packagingUnitCostCents ?? 0),
-    });
-    return CloseResultSchema.parse(rpcMoneyToCents(dbToApp(raw), ['cogsAmount', 'deliveryCost', 'packagingCost']));
   }
 
   /**

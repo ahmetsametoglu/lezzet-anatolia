@@ -201,6 +201,21 @@ describe('sepet → taslak sipariş', () => {
     expect(items[0]!.bundleId).toBeNull();
   });
 
+  it('rota siparişi teslimat ve paketleme maliyetini sipariş anındaki ayardan yazar', async () => {
+    const outcome = await createCheckoutDraft({
+      ...(await base()),
+      entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }],
+    });
+
+    expect(outcome.status).toBe('ok');
+    if (outcome.status !== 'ok') return;
+    const settings = new SettingsService(db);
+    const order = await new OrderService(db).getById(outcome.orderId);
+    expect(order?.deliveryType).toBe('route');
+    expect(order?.deliveryCostCents).toBe(await settings.getNumber('route_delivery_unit_cost_cents', 250));
+    expect(order?.packagingCostCents).toBe(await settings.getNumber('packaging_unit_cost_cents', 120));
+  });
+
   it('SOHBETİN dokunduğu sepetin siparişi sohbetin KANALINI taşır; izsiz sepet `web` (15.23)', async () => {
     // Sepet Messenger'da kurulup ödeme sitede yapılırsa sipariş `web` yazmaz; kaynak sepetteki izden (`source_conversation_id`) okunur.
     const conversations = new ConversationService(db);

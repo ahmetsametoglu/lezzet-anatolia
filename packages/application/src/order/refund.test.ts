@@ -4,18 +4,14 @@ import {
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeVariantStock } from '@lezzet/database/testing';
 import { recordOrderPayment } from './payment';
-import { closeOrder, deliverOrder } from './fulfillment';
+import { deliverOrder } from './fulfillment';
 import { adjustFulfillment, cancelOrder } from './refund';
 import { advanceOrder, prepareOrderToReady } from './advance.testkit';
 import { transitionOrder } from './transition';
 
 /**
- * Kısmi karşılama (07.8) ve iptal/iade (07.9) — terfi 21.10 ile taşındı (kaynağı
- * `apps/web/lib/order/refund.test.ts`); D6 depo kapsamı burada sınanıyor.
- *
- * Doğrulanan iki şey: **iade tutarı türetimden çıkıyor mu** (kupon payı ve kargo dâhil) ve **mal ile
- * para aynı gerçeği mi söylüyor** — geri dönen adet stoğa girerken maliyetin de siparişten çıkması,
- * imha edilende ise kalması gerekir.
+ * Kısmi karşılama, iptal ve iade: iade tutarı türetimden çıkıyor mu (kupon payı ve kargo dâhil) ve mal ile para aynı
+ * gerçeği söylüyor mu — stoğa dönen adetin maliyeti siparişten çıkar, imha edilenin maliyeti kalır.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -52,9 +48,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await db.from('money_movement').delete().eq('account_id', cashAccount);
-  // **DEFTER SİPARİŞTEN ÖNCE** (06.14): `stock_movement.order_id` `restrict` — teslim ve kapı
-  // satışı satırları siparişi tutuyor. Eskiden burada `stock_adjustment` siliniyordu ve sipariş
-  // ondan önce gidebiliyordu, çünkü o tabloda sipariş bağı yoktu.
+  // Defter siparişten önce silinir: `stock_movement.order_id` `restrict`, teslim satırları siparişi tutar.
   await purgeVariantStock(db, [variantId]);
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
@@ -62,9 +56,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Sipariş ve rezervasyon AYRICA silinmez: `purgeTestData` ikisini de biliyor — siparişi
-  // `profileIds`ten, rezervasyonu hem sipariş üzerinden (FK'sız bağ, 0007) hem `productIds`ten.
-  // Elle yazılan bu satırlar teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
+  // Sipariş ve rezervasyon ayrıca silinmez: `purgeTestData` ikisini de biliyor, elle silme teardown'ı bozuyordu.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -75,11 +67,8 @@ afterAll(async () => {
 });
 
 /**
- * Sipariş aç → ayır → hazırla. Kalem tek: `qty` adet, birim 10 €. Durum `ready`'de bırakılır.
- *
- * **Adımlar 25.08'de testkit'e taşındı** (`prepareOrderToReady`): ödül geri alma testi (17.11) aynı
- * beş adıma ihtiyaç duydu ve ikinci nüsha yazmak yerine ortak eve alındı (CLAUDE §1). Burada kalan
- * tek şey BU dosyanın sabitleri — depo, müşteri, varyant, parti ve 10 €'luk birim.
+ * Sipariş aç → ayır → hazırla; kalem tek, birim 10 €, durum `ready`de bırakılır. Adımlar ortak testkit'te, burada
+ * yalnız bu dosyanın sabitleri var.
  */
 async function prepare(qty: number, extra: { shippingFeeCents?: number; lineDiscountAmountCents?: number } = {}) {
   return prepareOrderToReady(db, {
@@ -113,15 +102,8 @@ describe('kısmi karşılama (07.8)', () => {
   });
 
   it('PARA İKİ HESABA girmişse iade YAZILMAZ — yanlış hesaptan çıkarmaktansa borç açıkta kalır', async () => {
-    /* ÖLÇÜLEN ARIZA (21.265 · iptal ön çalışması 05.09): hesap "son tahsilat hareketinin hesabı"
-       diye seçiliyordu. Tek hesaplı siparişte doğru cevap veriyor; para bölünmüşse (kartla kapora
-       + kapıda nakit — üçü de `order_payment` yazıyor) iadenin TAMAMI son hareketin hesabından
-       çıkıyor: para hiç girmediği kasadan düşüyor ve o hesabın bakiyesi sessizce yanlış oluyordu.
-
-       Otomatik bölme YAPILMIYOR (BEKLEYEN(21.266)): hesap başına ayrı sağlayıcı çağrısı, ayrı
-       tekillik anahtarı ve "ikincisi düşerse birincisi yazılı kalır" hâli demek — geri alınamayan
-       yarım bir iade bugünkü arızadan beter olurdu. Dosyanın kendi ilkesi uygulanıyor: sessizce
-       yanlış hesaba yazmaktansa borcu açıkta bırak. */
+    /* Bölünmüş ödemede iadenin tamamı son hareketin hesabından çıkarsa para hiç girmediği kasadan düşer. Otomatik bölme yok
+       (BEKLEYEN(21.266)): yarım kalan bir iade bugünkü hâlden beter olurdu, borç açıkta bırakılır. */
     const ikinciKasa = (await new AccountService(db).insert({ name: `İkinci kasa ${stamp}`, type: 'cash' })).id;
     try {
       const { orderId, itemId } = await sendOut(3);
@@ -186,18 +168,14 @@ describe('kısmi karşılama (07.8)', () => {
     await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 1 }]);
     await deliverOrder(db, orderId);
 
-    expect(await closeOrder(db, orderId)).toMatchObject({ ok: true, cogsAmountCents: 400 }); // 1 × 4 €, 4 × 4 değil
+    expect((await orders.getById(orderId))?.cogsAmountCents).toBe(400); // 1 × 4 €, 4 × 4 değil
     expect((await stocks.getById(batchId))?.physicalQty).toBe(9);
   });
 });
 
 /**
- * **D6 — akıbet kapısının depo kapsamı** (21.10 hazırlığı).
- *
- * Bugün web köprüsü bu kapıyı `requireAdmin` guard'ıyla açıyor ve DOMAIN §8 "akıbet kararı
- * depocunundur" diyor. Kapsam parametresi, mobil depo ucunun (21.11) guard'ı UÇTA ikinci kez
- * yazmadan açabilmesi için imzada duruyor. Kimlik/rol kararı hâlâ ucun işi — burada yalnız
- * "siparişin deposu verilen kümede mi" sorusu var.
+ * Akıbet kapısının depo kapsamı: mobil depo ucu guard'ı ikinci kez yazmadan açabilsin diye imzada durur; soru yalnız
+ * "siparişin deposu verilen kümede mi".
  */
 describe('depo kapsamı (D6 hazırlığı)', () => {
   it('kapsam VERİLMEZSE soru sorulmaz — bugünkü davranış birebir', async () => {
@@ -254,7 +232,7 @@ describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOM
 
     expect(outcome).toMatchObject({ status: 'ok', restockedQty: 2, refundedAmountCents: 2000 });
     expect((await stocks.getById(batchId))?.physicalQty).toBe(9); // 7 + 2
-    expect(await closeOrder(db, orderId)).toMatchObject({ ok: true, cogsAmountCents: 400 }); // yalnız kalan 1 adet
+    expect(await orders.getById(orderId)).toMatchObject({ status: 'completed', cogsAmountCents: 400 }); // kapanmış siparişte iade; yalnız kalan 1 adet
   });
 
   it('discard: fiili stok DEĞİŞMEZ (ikinci kez düşemez), maliyet siparişte kalır', async () => {
@@ -268,7 +246,7 @@ describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOM
 
     expect(outcome).toMatchObject({ status: 'ok', restockedQty: 0, refundedAmountCents: 2000 });
     expect((await stocks.getById(batchId))?.physicalQty).toBe(7); // teslimdeki düşüm, tek sefer
-    expect(await closeOrder(db, orderId)).toMatchObject({ ok: true, cogsAmountCents: 1200 }); // 3 × 4 — kayıp kârda görünür
+    expect((await orders.getById(orderId))?.cogsAmountCents).toBe(1200); // 3 × 4 — kayıp kârda görünür
   });
 
   it('goodwill: mal müşteride kalır — miktar da stok da değişmez, tutarı operatör verir', async () => {
@@ -293,39 +271,22 @@ describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOM
     const { orderId, itemId } = await sendOut(2);
     await deliverOrder(db, orderId);
     await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'restock', note: 'Tamamı döndü' }]);
-    await advanceOrder(db, orderId, ['returned']);
+    await advanceOrder(db, orderId, ['returned', 'completed']);
 
-    expect(await closeOrder(db, orderId)).toMatchObject({ ok: true, currentStatus: 'completed', cogsAmountCents: 0 });
+    expect(await orders.getById(orderId)).toMatchObject({ status: 'completed', cogsAmountCents: 0 });
   });
 });
 
 /**
- * **KAPI DENKLİĞİ (02.20 · denetim 26.08).** Aşağıdaki testler bir SONUCU değil bir KURALI sabitler:
- * *"iptal ve teslim, hangi kapıdan geçilirse geçilsin, malı doğru yere koyar."*
- *
- * Neden gerekti: iki kapı vardı ve ikisi zıt davranıyordu. `cancel_order` rezervasyonu siliyor,
- * parayı iade ediyor, sebebi yazıyordu; düz durum yazımı (`transition_order_status`) yalnız
- * `status` + log yazıyordu. Operasyon sipariş detayının "İzinli geçişler" şeridi ise geçişleri
- * SÜZMEDEN düğmeye çeviriyordu — yani ekranda kırmızı bir "İptal" düğmesi vardı ve yanlış kapıya
- * gidiyordu. Kapıda/vadeli siparişte rezervasyonun TTL'i olmadığı için (`place-order`, `expiring:
- * false`) süpürücü de o satıra bakmıyordu: mal kalıcı olarak ayrılmış kalıyordu, üstelik `cancelled`
- * terminal olduğu için doğru kapı da kapanıyordu.
- *
- * **Neden HİÇBİR test görmedi** — ve bu testlerin biçimi tam olarak o dersten çıktı:
- *   · Doğru kapının testi vardı (aşağıdaki "ayrılmış geri bırakılır"), kesin ve yeşildi.
- *   · Yanlış kapının testi de vardı (`transition.test.ts`) ve KODU DOĞRU ANLATIYORDU: durum, log,
- *     referans, eşzamanlılık. Stoğa bakmıyordu — çünkü kod da bakmıyordu.
- *   · Bir e2e testi tam o şeride basıyordu ama `confirmed → preparing`i seçmişti: şeritteki TEK
- *     yan etkisiz geçiş.
- * Yani her test kendi işini eksiksiz yapıyordu. Eksik olan, **kapıların aynı odaya açtığını**
- * soran testti — koddan değil KURALDAN yazılan test. Buradakiler odur.
+ * Kapı denkliği: iptal ve teslim, hangi kapıdan geçilirse geçilsin malı doğru yere koymalı. Bu testler koddan değil
+ * kuraldan yazılır, çünkü düz durum yazımı stoğa bakmadan ilerleyip ayrılmış malı kalıcı olarak kilitliyordu.
  */
 describe('kapı denkliği: yan etkili geçiş düz durum yazımından ÜRETİLEMEZ', () => {
   it('iptal — üretilebilseydi ayrılmış mal ortada kalırdı', async () => {
     const { orderId } = await prepare(3);
     expect(await reservations.listActiveByOrder(orderId)).toHaveLength(1);
 
-    // Operatörün "İzinli geçişler" şeridinden bastığı yol.
+    // Operatörün geçiş düğmesinden bastığı yol.
     const outcome = await transitionOrder(db, { orderId, to: 'cancelled' });
 
     expect(outcome).toMatchObject({ status: 'forbidden', reason: 'needs_dedicated_gate' });
@@ -378,17 +339,8 @@ describe('iptal (07.9)', () => {
   });
 
   it('İPTAL EDİLEN sipariş TAHSİLAT BEKLEYENLERE girmez ve "bugünkü iş" sayılmaz', async () => {
-    /* ÖLÇÜLEN ARIZA (21.265 · iptal ön çalışması 05.09): `order_counts` tabanı yalnız `draft`ı
-       eliyordu. İptal edilmiş ÖDENMEMİŞ her sipariş tutarı kadar KALICI BİR HAYALET ALACAK
-       yazıyordu — motor aynı siparişe "borç yok" derken (`credit.ts` `isOpenCredit`) toplam
-       "borç var" diyordu. Üç tüketici birden yanlış okuyordu: panelin "Bekleyen tahsilat" kartı,
-       sipariş ekranının alt şeridi ve sabah brifingi.
-
-       Süzgeç `base`e DEĞİL kovalara kondu: `byStatus` iptal SEKMESİNİ besliyor, orada görünmeleri
-       gerekiyor. Elenmesi gereken şey siparişin varlığı değil, ondan para bekleniyor olması. */
-    /* Kapı yöntemi AÇIKÇA yazılıyor: `prepareOrderToReady` ödeme yöntemi koymuyor ve yöntemsiz
-       sipariş `cod` kovasına hiç girmiyor — ölçüldü, ilk yazımda test bunu varsaymış ve öncülü
-       yanlış olduğu için düşmüştü. Kova boşken "bir azaldı" diye bir şey iddia edilemez. */
+    /* İptal edilmiş ödenmemiş sipariş kapıda tahsilat kovasına girmemeli, yoksa kalıcı bir hayalet alacak yazardı.
+       Kapı yöntemi açıkça yazılır, çünkü yöntemsiz sipariş bu kovaya hiç girmez. */
     const { order } = await orders.create(
       { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', paymentMethod: 'cash', orderedTotalCents: 2000, status: 'confirmed' },
       [{ variantId, qty: 2, unitPriceCents: 1000, vatRate: 5.5 }],
@@ -432,13 +384,8 @@ describe('iptal (07.9)', () => {
 });
 
 /**
- * **AKIBETİN ÜÇ DEĞİŞMEZİ** (kusurlar, ölçüldü 04.09 · D6 denetimi).
- *
- * Üçü de sessizdi: hiçbiri hata vermiyordu, yalnız yanlış yazıyordu.
- *   1. "Stoğa dön"ün ZORUNLU tuttuğu soğuk zincir beyanı hiçbir yere yazılmıyordu.
- *   2. Yazılmış bir akıbet ikinci bir istekle DEĞİŞTİRİLEBİLİYORDU (bayat ekran).
- *   3. "Mal fiili stoktan düştü mü" sorusu ANLIK duruma bakıyordu; teslim SONRASI iade yolunda
- *      iki dal birden ters çalışıyordu.
+ * Akıbetin değişmezleri: "stoğa dön" beyanı yazılır, yazılmış akıbet bayat ekrandan değiştirilemez, fiili stok
+ * sorusu teslim sonrası iadede de doğru dala gider.
  */
 describe('akıbetin değişmezleri (04.09)', () => {
   it('BEYAN KALEME YAZILIR — "stoğa dön"ün zorunlu notu kaybolmuyor', async () => {

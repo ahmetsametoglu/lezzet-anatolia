@@ -10,7 +10,7 @@ import {
   type Db,
 } from '@lezzet/database';
 import { cityMatchesPlaces } from '@lezzet/address';
-import { deriveChannel, meetsMinBasket, resolveVatTreatment } from '@lezzet/domain-core';
+import { costsAtSale, deriveChannel, meetsMinBasket, resolveVatTreatment } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import type { AddressDeliveryType, OrderItemInsert, OrderSource, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { getCartView, type CartBundlePort } from '../cart/read';
@@ -30,6 +30,7 @@ import {
 } from '../cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
+import { readUnitCosts } from './unit-costs';
 
 /*
   Bağlayıcı fiyat burada sabitlenir: sepet sunucuda yeniden okunur ve istemciden yalnız seçimler (adres, gün, ödeme yöntemi) alınır,
@@ -318,6 +319,8 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       vatNumberSnapshot: vat.zeroRated ? customer.vatNumber : null,
       shippingFeeCents: options.shippingFeeCents,
       orderedTotalCents: options.orderTotalCents,
+      // Doğrudan maliyetler sipariş anının değeriyle yazılır; kargonun maliyeti koli bildirilince gelir.
+      ...costsAtSale(deliveryType, await readUnitCosts(db)),
       // Reddedilen kuponun yerine kampanya kazanmış olabilir; tutar sepet toplamının kullandığı aynı fonksiyondan okunur.
       discountAmountCents: discountAmountOf(cart.discount),
       discountId: discountIdOf(cart.discount),

@@ -25,7 +25,6 @@ import {
   type OrderItem,
   type OrderStatus,
   type OrderStatusLog,
-  type Stock,
   type Ticket,
 } from '@lezzet/types';
 import {
@@ -289,34 +288,15 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
         : null,
     },
     links: linksOf(tickets),
-    finance: financeOf(order, items, cogsOf(batches, stocks)),
+    finance: financeOf(order, items),
   };
 }
 
 /**
- * Fiilen çıkan partilerin alış maliyeti, çünkü aynı ürün iki partide iki fiyata girmiş olabilir. Parti ya da alış fiyatı eksikse
- * maliyet bilinmez, `null` döner.
+ * Kâr raporuyla aynı sayı için motorun dökümü; burada ikinci formül yok. Maliyetler sipariş anında yazılır, mal maliyeti
+ * hazırlıkta parti fiyatıyla kesinleşir; bilinmeyen maliyet kârı gizler, sıfır sayılmaz.
  */
-function cogsOf(
-  batches: ReadonlyArray<{ stockId: string; qty: number }>,
-  stocks: readonly Stock[],
-): number | null {
-  if (batches.length === 0) return null;
-  const priceOfStock = new Map(stocks.map((s) => [s.id, s.purchasePriceCents]));
-  let total = 0;
-  for (const batch of batches) {
-    const priceCents = priceOfStock.get(batch.stockId);
-    if (priceCents == null) return null; // tek bir eksik alış fiyatı bile toplamı yalancı yapar
-    total += priceCents * batch.qty;
-  }
-  return total;
-}
-
-/**
- * Kâr raporuyla aynı sayı için motorun dökümü; burada ikinci formül yok. Kâr yalnız maliyetler sabitlenince hesaplanır, parti
- * maliyeti öncesinde yalnız tahmin olarak gösterilir.
- */
-function financeOf(order: Order, items: readonly OrderItem[], batchCogsCents: number | null): OrderFinanceView {
+function financeOf(order: Order, items: readonly OrderItem[]): OrderFinanceView {
   const contribution = orderContribution(
     {
       id: order.id,
@@ -337,31 +317,37 @@ function financeOf(order: Order, items: readonly OrderItem[], batchCogsCents: nu
   const rows: OrderFinanceView['rows'] = [
     { label: 'Satış (KDV hariç)', amountCents: toCents(contribution.revenue), kind: 'sale' },
   ];
-
-  if (contribution.costsFixed) {
-    const costs: Array<[string, number]> = [
-      ['Mal maliyeti', contribution.costs.cogs],
-      ['Dağıtım payı', contribution.costs.delivery],
-      ['Ödeme komisyonu', contribution.costs.paymentFee],
-      ['Ambalaj', contribution.costs.packaging],
-    ];
-    for (const [label, value] of costs) {
-      if (value > 0) rows.push({ label, amountCents: toCents(value), kind: 'expense' });
-    }
-  } else if (batchCogsCents !== null) {
-    rows.push({ label: 'Mal maliyeti (tahmini)', amountCents: batchCogsCents, kind: 'estimate' });
+  if (order.cogsAmountCents !== null) {
+    rows.push(
+      order.cogsIsEstimate
+        ? { label: 'Mal maliyeti (tahmini)', amountCents: order.cogsAmountCents, kind: 'estimate' }
+        : { label: 'Mal maliyeti', amountCents: order.cogsAmountCents, kind: 'expense' },
+    );
+  }
+  const costs: Array<[string, number | null]> = [
+    ['Dağıtım payı', order.deliveryCostCents],
+    ['Ödeme komisyonu', order.paymentFeeCents],
+    ['Ambalaj', order.packagingCostCents],
+  ];
+  for (const [label, amountCents] of costs) {
+    if (amountCents !== null && amountCents > 0) rows.push({ label, amountCents, kind: 'expense' });
   }
 
   return {
     rows,
-    profitCents: contribution.costsFixed ? toCents(contribution.contribution ?? 0) : null,
+    profitCents: contribution.costsKnown ? toCents(contribution.contribution ?? 0) : null,
     marginPercent: contribution.marginPct,
-    costNote: contribution.costsFixed
-      ? null
-      : batchCogsCents === null
-        ? 'Mal maliyeti parti seçiminden sonra bilinir; kâr sipariş kapandığında hesaplanır.'
-        : 'Kâr sipariş kapandığında hesaplanır — dağıtım payı, komisyon ve ambalaj o an sabitlenir.',
+    costNote: costNoteOf(order),
   };
+}
+
+/** Kârın neden gösterilmediğini ya da neden tahmini olduğunu söyler; bilinmeyen maliyet sıfır diye geçmez. */
+function costNoteOf(order: Order): string | null {
+  if (order.cogsAmountCents === null) return 'Mal maliyeti bilinmiyor: ürünün bu depoda alış fiyatı kayıtlı partisi yok.';
+  if (order.deliveryCostCents === null) return 'Kargo maliyeti koli taşıyıcıya bildirilince yazılır; kâr o zaman hesaplanır.';
+  if (order.packagingCostCents === null) return 'Ambalaj maliyeti bu siparişe yazılmamış; kâr hesaplanamıyor.';
+  if (order.cogsIsEstimate) return 'Mal maliyeti son alış fiyatıyla tahmini; hazırlıkta çıkan partinin fiyatıyla kesinleşir.';
+  return null;
 }
 
 /**

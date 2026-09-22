@@ -11,11 +11,8 @@ import { deliverOrder } from '../order/fulfillment';
 import { openBox, sealBox } from '../warehouse/boxes';
 
 /**
- * Kapıda teslim, eksik kalem ve tahsilat (11.2/11.3) — terfi 21.10 ile taşındı (kaynağı
- * `apps/web/lib/courier/delivery.test.ts`); K4 anahtarının kapıdaki ucu burada sınanıyor.
- *
- * Üç kritik doğrulama: **B2B imzasız kapanmıyor mu**, **eksik işareti tutarı kendiliğinden
- * düşürüyor mu** (kurye hesap yapmaz) ve **nakit sınır uyarısı engel değil mi**.
+ * Kapıda teslim, eksik kalem ve tahsilat: B2B imzasız kapanmıyor mu, eksik işareti tutarı kendiliğinden düşürüyor mu
+ * (kurye hesap yapmaz), nakit sınır uyarısı engel değil mi; tekrar anahtarının kapıdaki ucu da burada.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -65,13 +62,8 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // **DEFTER SİPARİŞTEN DE PARTİDEN DE ÖNCE** (06.14). Teslim, deftere bir `sale` satırı yazıyor ve
-  // o satır İKİSİNİ birden `restrict` ile tutuyor — `order_id` ve `stock_id`. `purgeVariantStock`
-  // partinin bütün hareketlerini topladığı için sipariş de aynı anda serbest kalıyor.
-  //
-  // Eski hâlde üç silme de `db.from(...).delete()` ile yazılmıştı ve o çağrı hatayı **yutuyor**:
-  // ne sipariş ne parti gidiyordu, her test bir öncekinin malını da sayıyordu (ölçüldü 27.08:
-  // kalan stok 28 yerine 137). Testin iddiası doğruydu, zemin temizliği yalan söylüyordu.
+  // Defter siparişten de partiden de önce silinir: teslimin `sale` satırı ikisini `restrict` ile tutar ve
+  // `purgeVariantStock` partinin hareketlerini topladığı için sipariş de serbest kalır.
   await purgeVariantStock(db, [variantId]);
   for (const id of [customerId, b2bCustomerId]) await mustDelete(db, 'order', (q) => q.eq('customer_id', id));
   // Partiye çıpalanmamış (yalnız varyant taşıyan) rezervasyonlar `purgeVariantStock`ın kapsamında
@@ -81,10 +73,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Sipariş ve rezervasyon AYRICA silinmez: ikisi de `purgeTestData`'nın bildiği bağlar (sipariş
-  // `profileIds`ten, rezervasyon `productIds`ten) ve hareketin anahtarı zaten hesaptır
-  // (`money_movement.order_id` `set null` — denetim R1). Elle yazılan bu satırlar teardown'ı
-  // öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
+  // Sipariş ve rezervasyon ayrıca silinmez: ikisi de `purgeTestData`'nın bildiği bağlar, elle silme teardown'ı bozuyordu.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -175,7 +164,7 @@ describe('teslim onayı (11.2)', () => {
 
       expect(outcome.status).toBe('ok');
       const order = await orders.getById(orderId);
-      expect(order?.status).toBe('delivered');
+      expect(order?.status).toBe('completed'); // kapıda tamamen tahsil edildi → teslimle kapandı
       expect(order?.deliveryProof).toMatchObject({ kind: 'signature', receivedBy: 'Şef Murat', courierId });
     } finally {
       await settings.restore();
@@ -280,7 +269,7 @@ describe('eksik/reddedilen kalem (11.2)', () => {
 
 describe('tahsilat ve nakit sınırı (11.3)', () => {
   it('nakit yasal sınır aşımında UYARI çıkar ama tahsilat tamamlanır', async () => {
-    const { orderId, boxCode } = await atTheDoor({ qty: 4, unitPriceCents: 50_000 }); // 2.000 € — sınır 1.000 €
+    const { orderId, boxCode } = await atTheDoor({ qty: 4, unitPriceCents: 50_000 }); // 2 000 € — sınır 1 000 €
 
     const outcome = await confirmDoorDelivery(db, {
       orderId, courierId, scannedBoxCodes: [boxCode],
@@ -288,7 +277,7 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
     });
 
     expect(outcome).toMatchObject({ status: 'ok', cashLimitExceeded: true, collectedCents: 200_000, paymentStatus: 'paid' });
-    expect((await orders.getById(orderId))?.status).toBe('delivered'); // engellenmedi
+    expect((await orders.getById(orderId))?.status).toBe('completed'); // engellenmedi, tahsilat tamam olduğu için kapandı
   });
 
   it('aynı tutar KARTLA alınırsa uyarı yok — sınır yalnız nakde ait', async () => {
@@ -329,9 +318,7 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
   });
 
   it('K4: kapı anahtarı HAREKETE yazılır — kuyruk tekrarının yakalanacağı tek yer orası', async () => {
-    // Anahtar sözleşmede duruyor ama harekete geçmiyorsa hiçbir şeyi engellemez: tekrarı yakalayan
-    // kontrol artık hareketin KENDİ KOLONU üzerinden çalışıyor (`money_movement.idempotency_key`
-    // + tekil indeks, 21.263). 05.09'a kadar `meta`da duruyordu ve kontrol oku-sonra-yazdı.
+    // Tekrarı yakalayan kontrol hareketin kendi kolonundadır (`money_movement.idempotency_key` + tekil indeks).
     const { orderId, boxCode } = await atTheDoor({ qty: 2 });
     const key = `door-${stamp}-${orderId}`;
 
@@ -356,18 +343,14 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
     const second = await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode], collection });
 
     expect(first.status).toBe('ok');
-    expect(second).toEqual({ status: 'stale', currentStatus: 'delivered' });
+    expect(second).toEqual({ status: 'stale', currentStatus: 'completed' });
     expect((await movements.listByOrder(orderId)).filter((m) => m.type === 'order_payment')).toHaveLength(1);
   });
 });
 
 /**
- * Teslim kanıtının YÜKLEME kapısı (11.2).
- *
- * Bu blok kendi fikstürünü kurmuyor, yukarıdakini kullanıyor (`atTheDoor`): ikinci bir sipariş
- * kurulumu yazmak aynı seksen satırı ikinci kez yazmak olurdu ve ikisi bir gün ayrışırdı
- * (`CLAUDE §1`). Sınanan üç kural: **anahtarı kapı seçer**, **başkasının siparişine yüklenemez**,
- * **yalnız görsel kabul edilir**.
+ * Teslim kanıtının yükleme kapısı: anahtarı kapı seçer, başkasının siparişine yüklenemez, yalnız görsel kabul edilir.
+ * Fikstür yukarıdaki `atTheDoor`, ikinci kurulum bir gün ayrışırdı.
  */
 describe('teslim kanıtı yükleme kapısı (11.2)', () => {
   it('kuryesi olduğu siparişe imzalı adres üretir ve ANAHTARI kapı seçer', async () => {
