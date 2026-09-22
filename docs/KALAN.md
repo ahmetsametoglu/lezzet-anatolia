@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.29). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.30). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 
 Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin andığı 25
@@ -32,7 +32,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 ## 07 · Sipariş, Checkout ve Ödeme
 
 - [~] (07.12) **Taşıyıcı + kargo takip numarası:** `order.carrier` (tanımlı küme: `colissimo · chronopost · dhl · ups · other`) + `order.tracking_number`; ikisi de yalnız `delivery_type = 'shipping'` siparişlerde anlamlı — kısıt veride (rota siparişine takip numarası yazılamaz). Numarayı hazırlık ekranı girer (paketi kapatan kişi etiketi elinde tutar), ayrı sevk adımı açılmaz. Takip bağlantısı taşıyıcının URL kalıbından üretilir; `other` seçilirse bağlantı gösterilmez, numara düz metin durur
-  - Eksik: `GET /api/v3/parcels/statuses` taksonominin tamamını veriyor (35 kod, HTTP 200) — ilk yazımın *"kamuya açık liste yok"* varsayımı yanlıştı. Sezgisel (metin araması) tablo gerçek listeye karşı koşturulunca **yedi kod yanlış, on biri tanınmıyor** çıktı; en tehlikelisi `CANCELLATION_FAILED` → `cancelled` (iptal EDİLEMEDİ…
 - [ ] (07.17) **AB ülkelerine kargo satış kanalı — bugün sistem iki ülke tanıyor, üçüncüsünü SESSİZCE Fransa yazıyor** *(kullanıcı kararı 02.09)*
 
 ## 08 · Müşteri Web Uygulaması (Vitrin)
@@ -396,3 +395,13 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   taşınacak. Ayrım ölçütü: koşul, uyarı ve "doğaldır" gözlemi saklamada kalır; yalnız müşterinin SIRAYLA yaptığı
   hareket adım olur. Raf ürünlerinin çoğunda (pekmez, sirke, macun) dizi boş kalır — beklenen hâl, kutu çizilmez.
   Zorunlu takviye ibareleri (Bromelain: "ilaç değildir", doz) adım YAPILMAZ: onlar beyan, `storage`ta kalır.
+- [ ] (K.28) [hedef: müşteri] Teslim noktası seçimi mobil web ve native checkout'ta; masaüstü web'de var ve örnek o. Telefonda eşik
+  altındaki müşteri röle noktasına gönderi seçemiyor: mobil web noktaya giden servisleri listelemiyor, native'de servis listesi de
+  yok. Masaüstünün davranışı taşınacak: "Teslim noktası · Eve teslim" tür kartları en düşük fiyatla, altında servis listesi ya da
+  harita; haritada bütün taşıyıcıların noktaları renkli, fiyat yalnız listede; liste en ucuz başta, eşit fiyatta yakın önce; nokta
+  seçilmeden onay yok. Sunucu hazır (web `loadServicePointsAction`, ortak kapı `searchCheckoutServicePoints`); native harita
+  kütüphanesi o sırada seçilecek.
+- [ ] (K.30) [hedef: web] Harita altlığı yayından önce değişmeli: müşteri haritası kamusal `tile.openstreetmap.org` karosunu
+  kullanıyor (yoğun trafiğe açık değil ve görünümü kalabalık). Tercih yeni sağlayıcı değil, kullandığımız Google: Map Tiles API'nin
+  2D "roadmap" karosu JSON stille sadeleştirilebiliyor ve Leaflet'e bağlanabiliyor; oturum jetonu (sunucuda) ve anahtar kısıtı
+  gerekiyor, istek başına ücretli. Kota/fiyat ölçülüp kullanıcıya sunulacak; karar kullanıcıda. CARTO anahtarsız çalışmıyor (ölçüldü).

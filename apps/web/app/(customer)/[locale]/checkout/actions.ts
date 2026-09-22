@@ -7,6 +7,9 @@ import {
   openPaymentBefore,
   placeOrder,
   readCheckoutSnapshot,
+  searchCheckoutServicePoints,
+  sendcloudProvider,
+  shippingProviderConfigured,
   type CheckoutSnapshot,
   type PlaceOrderRejection,
 } from '@lezzet/application';
@@ -15,6 +18,7 @@ import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
 import { checkAddressForCustomer, type AddressCheckOutcome } from '@lezzet/application';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
+import type { ServicePointsResult } from './checkout-types';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CartEntry } from '@/lib/cart/cart-types';
 import { getPackagesByIds } from '@/lib/storefront/packages';
@@ -106,6 +110,27 @@ export async function loadCheckoutAction(
 }
 
 /**
+ * Harita için teslim noktaları: adres müşterinin kendi adresleri arasında aranır, taşıyıcılar anlık görüntünün noktaya
+ * teslim servislerinden gelir. Fiyat burada dönmez; ekran onu anlık görüntüden okur, sipariş yeniden doğrular.
+ */
+export async function loadServicePointsAction(addressId: string, carrierCodes: string[]): Promise<CustomerResult<ServicePointsResult>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+    if (!shippingProviderConfigured()) return { data: { status: 'off' }, errorKey: null };
+    // Taşıyıcı listesi istemciden geliyor; sınırsız liste sağlayıcıya sınırsız istek demek.
+    const outcome = await searchCheckoutServicePoints(serviceDb(), sendcloudProvider(), {
+      customerId,
+      addressId,
+      carrierCodes: carrierCodes.slice(0, 8),
+    });
+    return { data: outcome, errorKey: null };
+  } catch (err) {
+    return { data: null, errorKey: customerErrorKey(err) };
+  }
+}
+
+/**
  * **Seçilen adresin kapısı gerçekten var mı** (11.11) — SİPARİŞ ANINDA sorulur.
  *
  * ── NEDEN BURADA, ADRES KAYDEDİLİRKEN DEĞİL ─────────────────────────────────
@@ -185,6 +210,9 @@ export async function confirmCheckoutAction(input: {
   idempotencyKey?: string | null;
   /** Sepetin kargo grubundan açılan ikinci sipariş mi — `loadCheckoutAction` ile aynı bayrak. */
   shippingOrder?: boolean;
+  /** Kargo servisi ve teslim noktası seçimi; sunucu doğrular, fiyatı kendisi hesaplar. */
+  shippingOptionCode?: string | null;
+  servicePointId?: string | null;
   /**
    * **Ekranın gösterdiği sepetin imzası** — anlık görüntünün `summary.fingerprint`ı, olduğu gibi
    * geri gelir (21.08). Sepet iki yüzeyde paylaşıldığı için son okuma ile bu dokunuş arasında
@@ -224,6 +252,8 @@ export async function confirmCheckoutAction(input: {
       couponCode: input.couponCode,
       idempotencyKey: input.idempotencyKey,
       shippingOrder: input.shippingOrder,
+      shippingOptionCode: input.shippingOptionCode,
+      servicePointId: input.servicePointId,
       expectedCartFingerprint: input.expectedCartFingerprint,
       // Paket türetmesi hâlâ web'te (`lib/storefront/packages.ts`), terfisi ayrı bir adım.
       bundles: getPackagesByIds,

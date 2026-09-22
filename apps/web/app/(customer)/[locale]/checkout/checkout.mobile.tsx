@@ -20,7 +20,7 @@ import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefron
 import { AccountLine } from './components/checkout-steps';
 import { PhoneCheckoutSkeleton } from './components/phone-checkout-skeleton';
 import { ShippingOrderNote } from './components/shipping-order-note';
-import { checkoutBlocker, type CheckoutCopy, type CheckoutViewProps } from './checkout-types';
+import { checkoutBlocker, selectableShippingOptions, type CheckoutCopy, type CheckoutViewProps } from './checkout-types';
 
 /**
  * Ödemenin telefon görünümü, native "Siparişi tamamla" ekranının web ikizi: metin ortak sözlükten, durum ve sunucu turları
@@ -359,7 +359,7 @@ function lineValue(copy: CheckoutCopy, line: SummaryLine, locale: CheckoutViewPr
 function CarrierChoice({ t, locale, snapshot, state, onSelectShipping }: CheckoutViewProps) {
   const shipping = snapshot.shipping;
   if (shipping?.mode === 'auto') return <p className="font-sans text-body-sm leading-[1.6] text-muted">{t.delivery.carrierFreeHome}</p>;
-  if (shipping === null || shipping.options.length === 0) {
+  if (shipping === null || selectableShippingOptions(shipping.options).length === 0) {
     return (
       <p className="font-sans text-body-sm leading-[1.6] text-muted">
         {shipping?.status === 'unmeasured' ? t.delivery.carrierUnmeasured : shipping?.status === 'ok' ? t.delivery.carrierNone : t.delivery.carrierOff}
@@ -372,7 +372,7 @@ function CarrierChoice({ t, locale, snapshot, state, onSelectShipping }: Checkou
         {t.delivery.carrierTitle}
         {shipping.parcelCount > 1 && ` · ${t.delivery.carrierParcels.replace('{count}', String(shipping.parcelCount))}`}
       </span>
-      {shipping.options.map((option) => {
+      {selectableShippingOptions(shipping.options).map((option) => {
         const details = [
           option.leadTimeHours ? t.delivery.carrierDays.replace('{hours}', String(option.leadTimeHours)) : null,
           option.tracked ? t.delivery.carrierTracked : null,

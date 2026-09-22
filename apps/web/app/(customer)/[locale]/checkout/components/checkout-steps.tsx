@@ -14,7 +14,8 @@ import { Skeleton } from '@/components/customer/ui/skeleton';
 import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
-import { checkoutBlocker, type CheckoutViewProps } from '../checkout-types';
+import { checkoutBlocker, pointOptionsByCarrier, selectableShippingOptions, servicePointMissing, type CheckoutViewProps } from '../checkout-types';
+import { ServicePointPicker } from './service-point-picker';
 
 /**
  * Checkout'un üç adımı, masaüstü ve mobil web için aynı bloklar. Cihaz forku yerleşimi ayırır, mantığı değil; bu yüzden bloklar
@@ -38,12 +39,16 @@ export function StepShell({ step, title, compact, children }: { step: string; ti
   );
 }
 
+/** Seçeneklerin en düşük fiyatı — "… €'dan başlayan fiyatlarla" cümlesinin sayısı. */
+const minPriceOf = (options: readonly { priceCents: number }[]): number => Math.min(...options.map((o) => o.priceCents));
+
 /** Seçilebilir kart — adres, gün ve ödeme yöntemi aynı görsel dili konuşur (tasarım). */
 function ChoiceCard({
   selected,
   onClick,
   disabled,
   center,
+  small,
   children,
 }: {
   selected: boolean;
@@ -51,6 +56,8 @@ function ChoiceCard({
   disabled?: boolean;
   /** Gün kartları ORTALANMIŞ (tasarım: `padding 12px 20px`, içerik merkezde); adres/ödeme sola. */
   center?: boolean;
+  /** Bir seçimin altındaki alt seçenek: daha dar ve hafif, ki üstteki kararla aynı ağırlıkta okunmasın. */
+  small?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -62,7 +69,8 @@ function ChoiceCard({
       // Tasarım: seçili `2px zeytin + zeytin-zemin`, normal `1.5px kum-400 + beyaz`; radius 14,
       // ped 14/18, satır arası 3. Seçili kenarın kalınlaşması kartı 1px büyütür — tasarım da öyle.
       className={[
-        'flex cursor-pointer flex-col gap-[3px] rounded-soft px-[18px] py-3.5 text-left transition-colors',
+        'flex cursor-pointer flex-col gap-[3px] rounded-soft text-left transition-colors',
+        small ? 'px-3.5 py-2.5' : 'px-[18px] py-3.5',
         'disabled:cursor-not-allowed disabled:border-sand-200 disabled:bg-sand-25 disabled:opacity-60',
         selected ? 'border-2 border-olive bg-olive-bg' : 'border-[1.5px] border-sand-400 bg-card hover:border-olive',
         center ? 'items-center text-center' : '',
@@ -70,6 +78,36 @@ function ChoiceCard({
     >
       {children}
     </button>
+  );
+}
+
+interface ModeCardProps {
+  icon: 'building' | 'home';
+  title: string;
+  from: string;
+  selected: boolean;
+  onClick: () => void;
+}
+
+/** Teslim türü kartı: ikon başta ve büyük, çünkü tür ilk bakışta ikondan okunmalı; altında en düşük fiyat. */
+function ModeCard({ icon, title, from, selected, onClick }: ModeCardProps) {
+  return (
+    <ChoiceCard selected={selected} onClick={onClick}>
+      <span className="flex items-center gap-3.5">
+        <span
+          className={[
+            'flex size-12 flex-none items-center justify-center rounded-full text-olive',
+            selected ? 'bg-card' : 'bg-olive-bg',
+          ].join(' ')}
+        >
+          <Icon name={icon} size={26} />
+        </span>
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="font-sans text-body font-bold text-ink">{title}</span>
+          <span className="font-sans text-note text-muted">{from}</span>
+        </span>
+      </span>
+    </ChoiceCard>
   );
 }
 
@@ -161,7 +199,13 @@ export function AddressStep({ t, compact, selectedAddress }: CheckoutViewProps) 
 }
 
 export function DeliveryStep(props: CheckoutViewProps) {
-  const { t, locale, snapshot, state, compact, onSelectDate, onSelectShipping, cart, selectedAddress } = props;
+  const { t, locale, snapshot, state, compact, onSelectDate, onSelectShipping, onSelectServicePoint, onSelectShippingMode, cart, selectedAddress } = props;
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const homeOptions = selectableShippingOptions(snapshot.shipping?.options ?? []);
+  // Telefon görünümünde nokta seçimi yok (K.28): orada yalnız eve teslim servisleri listelenir.
+  const pointOptions = compact ? new Map<string, never>() : pointOptionsByCarrier(snapshot.shipping?.options ?? []);
+  const hasModes = homeOptions.length > 0 && pointOptions.size > 0;
+  const mode: 'home' | 'point' = homeOptions.length === 0 && pointOptions.size > 0 ? 'point' : hasModes ? state.shippingMode : 'home';
   const router = useRouter();
   const delivery = snapshot.delivery;
   const payment = snapshot.payment;
@@ -291,30 +335,115 @@ export function DeliveryStep(props: CheckoutViewProps) {
             )}
           </div>
 
-          {snapshot.shipping !== null && snapshot.shipping.options.length > 0 ? (
+          {snapshot.shipping !== null && (homeOptions.length > 0 || (!compact && pointOptions.size > 0)) ? (
             <>
-              <div className={compact ? 'flex flex-col gap-2' : 'grid grid-cols-2 gap-2.5'}>
-                {snapshot.shipping.options.map((option) => (
-                  <ChoiceCard
-                    key={option.code}
-                    selected={state.shippingOptionCode === option.code}
-                    onClick={() => onSelectShipping(option.code)}
-                  >
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="font-sans text-body-sm font-bold text-ink">{option.carrierName}</span>
-                      <span className="font-sans text-body-sm font-bold text-ink">{formatPrice(option.priceCents, locale)}</span>
-                    </span>
-                    <span className="font-sans text-note text-muted">
-                      {[
-                        option.leadTimeHours ? t.delivery.carrierDays.replace('{hours}', String(option.leadTimeHours)) : null,
-                        option.tracked ? t.delivery.carrierTracked : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </span>
+              {/* Önce teslim türü seçilir, servis ya da nokta onun altında açılır; her tür en düşük fiyatıyla görünür. */}
+              {hasModes && (
+                <div className="grid grid-cols-2 gap-2.5">
+                  <ModeCard
+                    icon="building"
+                    title={t.delivery.carrierPoint}
+                    from={t.delivery.carrierFrom.replace('{price}', formatPrice(minPriceOf([...pointOptions.values()]), locale))}
+                    selected={mode === 'point'}
+                    onClick={() => onSelectShippingMode('point')}
+                  />
+                  <ModeCard
+                    icon="home"
+                    title={t.delivery.carrierHome}
+                    from={t.delivery.carrierFrom.replace('{price}', formatPrice(minPriceOf(homeOptions), locale))}
+                    selected={mode === 'home'}
+                    onClick={() => onSelectShippingMode('home')}
+                  />
+                </div>
+              )}
+
+              {/* Tür kararıyla altındaki seçim arasında çizgi ve başlık: ikisi yan yana aynı ölçüde dursa tek bir liste gibi okunuyordu. */}
+              {hasModes && (
+                <div className="mt-1 flex flex-col gap-2 border-t border-sand-200 pt-3.5">
+                  <span className="font-sans text-note font-semibold text-muted">
+                    {mode === 'home' ? t.delivery.carrierPickHome : t.delivery.carrierPickPoint}
+                  </span>
+                </div>
+              )}
+
+              {mode === 'home' && homeOptions.length > 0 && (
+                <div className={compact ? 'flex flex-col gap-2' : 'grid grid-cols-2 gap-2'}>
+                  {homeOptions.map((option, index) => (
+                    <ChoiceCard
+                      key={option.code}
+                      small={hasModes}
+                      selected={state.shippingOptionCode === option.code}
+                      onClick={() => onSelectShipping(option.code)}
+                    >
+                      <span className="flex items-baseline justify-between gap-2">
+                        <span className="font-sans text-note font-bold text-ink">{option.carrierName}</span>
+                        <span className="font-sans text-note font-bold text-ink">{formatPrice(option.priceCents, locale)}</span>
+                      </span>
+                      <span className="font-sans text-note text-muted">
+                        {[
+                          option.leadTimeHours ? t.delivery.carrierDays.replace('{hours}', String(option.leadTimeHours)) : null,
+                          option.tracked ? t.delivery.carrierTracked : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                      {/* Liste sunucuda en ucuz + en hızlı diye kısaltıldı (`homeShortlist`); iki kart varsa neden o ikisi olduğu söylenir. */}
+                      {homeOptions.length === 2 && (
+                        <span className="font-sans text-helper font-semibold text-olive">
+                          {index === 0 ? t.delivery.carrierCheapest : t.delivery.carrierFastest}
+                        </span>
+                      )}
+                    </ChoiceCard>
+                  ))}
+                </div>
+              )}
+
+              {mode === 'point' && (
+                <>
+                  <ChoiceCard selected={state.servicePoint !== null} onClick={() => setPickerOpen(true)}>
+                    {state.servicePoint ? (
+                      <>
+                        <span className="flex items-baseline justify-between gap-2">
+                          <span className="font-sans text-body-sm font-bold text-ink capitalize">{state.servicePoint.name.toLowerCase()}</span>
+                          {pointOptions.get(state.servicePoint.carrierCode) && (
+                            <span className="font-sans text-body-sm font-bold text-ink">
+                              {formatPrice(pointOptions.get(state.servicePoint.carrierCode)!.priceCents, locale)}
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-sans text-note text-body capitalize">
+                          {[state.servicePoint.street, state.servicePoint.houseNumber].filter(Boolean).join(' ').toLowerCase()}, {state.servicePoint.postalCode}{' '}
+                          {state.servicePoint.city.toLowerCase()}
+                        </span>
+                        <span className="font-sans text-note font-semibold text-olive">
+                          {pointOptions.get(state.servicePoint.carrierCode)?.carrierName} · {t.delivery.pointChange}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex items-center gap-2 font-sans text-body-sm font-bold text-ink">
+                          <Icon name="pin" size={15} />
+                          {t.delivery.pointChoose}
+                        </span>
+                        <span className="font-sans text-note text-muted">{t.delivery.pointMapHint}</span>
+                      </>
+                    )}
                   </ChoiceCard>
-                ))}
-              </div>
+                  {servicePointMissing(state) && <span className="font-sans text-note font-semibold text-honey">{t.delivery.pointNone}</span>}
+                  {pickerOpen && state.addressId && (
+                    <ServicePointPicker
+                      t={t}
+                      locale={locale}
+                      addressId={state.addressId}
+                      home={selectedAddress?.lat != null && selectedAddress.lng != null ? { lat: selectedAddress.lat, lng: selectedAddress.lng } : null}
+                      options={snapshot.shipping.options}
+                      selected={state.servicePoint}
+                      onSelect={onSelectServicePoint}
+                      onClose={() => setPickerOpen(false)}
+                    />
+                  )}
+                </>
+              )}
               <span className="font-sans text-note text-muted">{t.delivery.carrierHint}</span>
             </>
           ) : (
@@ -457,7 +586,8 @@ export function OrderSummary(props: CheckoutViewProps) {
   const showConfirm = state.paymentMethod !== null && state.paymentMethod !== 'online';
   // Engel tek yerde kararlaşır (`checkoutBlocker`): burada ve kart ödemesinin formunda aynı cevap okunur. Sepet okunamadıysa da
   // sipariş verilemez, çünkü ekrandaki 0,00 € bir toplam değil cevapsızlıktır.
-  const blocked = checkoutBlocker({ cartFailed, cartHasBlocked: cart.hasBlocked, snapshot, addressId: state.addressId }) !== null;
+  const blocked =
+    checkoutBlocker({ cartFailed, cartHasBlocked: cart.hasBlocked, snapshot, addressId: state.addressId, pointMissing: servicePointMissing(state) }) !== null;
 
   return (
     // Tasarım künyesi `radius 18 · ped 22/24 · gap 12`: adım kartlarıyla aynı aile, bir tık dar; `snug` tam olarak bu.

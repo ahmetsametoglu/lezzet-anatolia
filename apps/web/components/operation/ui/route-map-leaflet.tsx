@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { mapToken, TILE_ATTRIBUTION, TILE_MAX_ZOOM, TILE_URL } from './leaflet-base';
+import { mapToken, TILE_ATTRIBUTION, TILE_MAX_ZOOM, TILE_URL } from '@/lib/map/leaflet-base';
 import { allPoints, metricNote, tourPath, type RouteMapProps } from './route-map-model';
 
 /**

@@ -20,7 +20,7 @@ import { CheckoutMobile } from './checkout.mobile';
 import type { AddressCheckOutcome } from '@lezzet/application';
 import type { CheckoutSnapshot } from '@lezzet/application';
 import { checkCheckoutAddressAction, confirmCheckoutAction, loadCheckoutAction } from './actions';
-import { checkoutBlocker, isSeparateOrder, type CheckoutState, type CheckoutViewProps, type Messages } from './checkout-types';
+import { checkoutBlocker, isSeparateOrder, servicePointMissing, type CheckoutState, type CheckoutViewProps, type Messages } from './checkout-types';
 
 /**
  * Checkout'un karar merkezi (08.13) — durum ve sunucu turları burada, yerleşim iki ekran dosyasında.
@@ -71,6 +71,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     addressId: null,
     deliveryDate: null,
     shippingOptionCode: null,
+    servicePoint: null,
+    shippingMode: 'home',
     paymentMethod: null,
     onAccount: false,
     marketingConsent: false,
@@ -145,7 +147,11 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
            kursaydık ilk açılışta liste seçili görünür ama ücret sabit tarifeden hesaplanmış olurdu
            (kapının künyesi). Adres değişince eski kod başka taşıyıcının kodu olabilir; sunucu onu
            da zaten süzüyor. */
-        return { ...prev, addressId: selected?.id ?? null, deliveryDate: keepDate, shippingOptionCode: data.shipping?.selectedCode ?? null };
+        const selectedCode = data.shipping?.selectedCode ?? null;
+        // Nokta ancak aynı adreste ve servisi hâlâ seçiliyken kalır; ücretsiz kargoya geçişte sunucu eve giden servisi seçer.
+        const keepPoint =
+          prev.servicePoint && prev.addressId === (selected?.id ?? null) && prev.servicePoint.optionCode === selectedCode ? prev.servicePoint : null;
+        return { ...prev, addressId: selected?.id ?? null, deliveryDate: keepDate, shippingOptionCode: selectedCode, servicePoint: keepPoint };
       });
     },
     [t, locale, cartEntries, coupon, shippingOrder],
@@ -203,6 +209,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       couponCode: coupon,
       idempotencyKey: attemptKey.current,
       shippingOrder,
+      shippingOptionCode: state.shippingOptionCode,
+      servicePointId: state.servicePoint?.id ?? null,
       /* Ekranın gösterdiği sepetin imzası (21.08) — sunucunun verdiği değer, olduğu gibi geri
          gidiyor. Sepet iki yüzeyde paylaşıldığı için son okumamızla bu tıklama arasında değişmiş
          olabilir; değiştiyse kapı `cart_changed` ile reddeder ve müşteri yeni özeti görüp bilerek
@@ -256,6 +264,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       marketingConsent: state.marketingConsent,
       couponCode: coupon,
       shippingOrder,
+      shippingOptionCode: state.shippingOptionCode,
+      servicePointId: state.servicePoint?.id ?? null,
     });
     if (errorKey || !data) return { ok: false, error: errorText(t.errors, errorKey) };
     if (data.status === 'rejected') return { ok: false, error: rejectionMessage(t, data.reason, data.detail) };
@@ -297,7 +307,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
           // Özet kartıyla AYNI kapıdan: burası üç koşula bakıyordu, özet beşe — sepette
           // gönderilemeyen kalem varken kart formu açık kalıyor, müşteri reddi ancak
           // bastıktan sonra öğreniyordu.
-          disabled={busy || checkoutBlocker({ cartFailed, cartHasBlocked: view.hasBlocked, snapshot, addressId: state.addressId }) !== null}
+          disabled={busy || checkoutBlocker({ cartFailed, cartHasBlocked: view.hasBlocked, snapshot, addressId: state.addressId, pointMissing: servicePointMissing(state) }) !== null}
           labels={{
             submit: t.summary.submit,
             validating: t.pay.validating,
@@ -372,8 +382,19 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
        hesaplanmıyor. Yerel `setState` ile yetinseydik ekran seçili seçeneği gösterir ama toplam
        eski ücretle kalırdı — checkout'un en pahalı çelişkisi. */
     onSelectShipping: (code) => {
-      setState((prev) => ({ ...prev, shippingOptionCode: code }));
+      setState((prev) => ({ ...prev, shippingOptionCode: code, servicePoint: null, shippingMode: 'home' }));
       void refresh(state.addressId, code);
+    },
+    onSelectServicePoint: (point) => {
+      setState((prev) => ({ ...prev, shippingOptionCode: point.optionCode, servicePoint: point, shippingMode: 'point' }));
+      void refresh(state.addressId, point.optionCode);
+    },
+    onSelectShippingMode: (mode) => {
+      if (mode === 'point') return setState((prev) => ({ ...prev, shippingMode: 'point' }));
+      // Noktanın servisi seçiliyken eve dönülürse kod boşaltılır: sunucu eve giden en ucuzu seçer, ücret onunla çözülür.
+      const hadPoint = state.servicePoint !== null;
+      setState((prev) => ({ ...prev, shippingMode: 'home', servicePoint: null, shippingOptionCode: hadPoint ? null : prev.shippingOptionCode }));
+      if (hadPoint) void refresh(state.addressId, null);
     },
     onSelectPayment: (method, onAccount) => setState((prev) => ({ ...prev, paymentMethod: method, onAccount })),
     onToggleConsent: (value) => setState((prev) => ({ ...prev, marketingConsent: value })),

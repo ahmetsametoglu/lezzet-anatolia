@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { placesLabel } from './labels';
-import { mapToken, TILE_ATTRIBUTION, TILE_MAX_ZOOM, TILE_URL } from './leaflet-base';
+import { mapToken, TILE_ATTRIBUTION, TILE_MAX_ZOOM, TILE_URL } from '@/lib/map/leaflet-base';
 import {
   FREE_CODE_MIN_ZOOM,
   type ZoneCodeState,

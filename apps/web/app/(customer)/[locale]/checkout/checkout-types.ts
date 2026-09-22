@@ -1,10 +1,9 @@
-import type { AddressCheckOutcome } from '@lezzet/application';
+import type { AddressCheckOutcome, CheckoutServicePointsOutcome, CheckoutSnapshot } from '@lezzet/application';
 import type { Address, PaymentMethod } from '@lezzet/types';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 // Ortak ödeme sözlüğü — native ödeme ekranıyla AYNI metin (CLAUDE §2 istisnası, 14.09).
 import type checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { isSplitCart, type CartView } from '@/lib/cart/cart-types';
-import type { CheckoutSnapshot } from '@lezzet/application';
 import type messages from './messages.json';
 
 /** Sayfa metinleri — şekli JSON'un kendisinden TÜRER, elle interface yazılmaz (CLAUDE.md §2). */
@@ -34,6 +33,10 @@ export interface CheckoutState {
    * hangi seçeneğin işaretli olduğunu tutar.
    */
   shippingOptionCode: string | null;
+  /** Haritadan seçilen teslim noktası ve onun servisi; eve teslimde `null`. */
+  servicePoint: SelectedServicePoint | null;
+  /** Müşterinin seçtiği teslim türü; `point` iken nokta seçilmeden sipariş onaylanmaz. */
+  shippingMode: 'home' | 'point';
   paymentMethod: PaymentMethod | null;
   /** Vadeli satın alma işaretlendi mi — ödeme yöntemi değil, siparişin bayrağı. */
   onAccount: boolean;
@@ -62,6 +65,10 @@ export interface CheckoutViewProps extends StepProps {
    * ücret ve toplam ona bağlı. İstemci tarafında bir fiyat hesabı YOKTUR.
    */
   onSelectShipping: (code: string) => void;
+  /** Haritadan nokta seçildi: noktanın servisi seçilen servis olur ve ücret yeniden çözülür. */
+  onSelectServicePoint: (point: SelectedServicePoint) => void;
+  /** Eve teslim ↔ teslim noktası; eve dönülünce nokta bırakılır ve eve giden en ucuz servis seçilir. */
+  onSelectShippingMode: (mode: 'home' | 'point') => void;
   onSelectPayment: (method: PaymentMethod, onAccount: boolean) => void;
   onToggleConsent: (value: boolean) => void;
   /**
@@ -118,7 +125,7 @@ export interface CheckoutViewProps extends StepProps {
  */
 // Sepet tarafındaki eşiyle aynı gerekçeyle dışa açılmıyor: bugün sebebi adıyla anan çağıran yok
 // (`!== null` yetiyor), `checkout_blocked` atıcısı (08.9) geldiğinde açılır.
-type CheckoutBlockReason = 'cart_unreachable' | 'address_missing' | 'undeliverable_line' | 'min_basket';
+type CheckoutBlockReason = 'cart_unreachable' | 'address_missing' | 'undeliverable_line' | 'min_basket' | 'service_point_missing';
 
 export function checkoutBlocker(input: {
   cartFailed: boolean;
@@ -126,6 +133,8 @@ export function checkoutBlocker(input: {
   cartHasBlocked: boolean;
   snapshot: CheckoutSnapshot;
   addressId: string | null;
+  /** Teslim noktası seçildi ama nokta yok; verilmezse sorulmaz (telefon görünümünde nokta seçimi yok). */
+  pointMissing?: boolean;
 }): CheckoutBlockReason | null {
   if (input.cartFailed) return 'cart_unreachable';
   // Ödeme bloğu adresin cevabıdır: adres yokken `null` gelir ve o hâl bir engel DEĞİL, henüz
@@ -133,6 +142,7 @@ export function checkoutBlocker(input: {
   if (!input.addressId || !input.snapshot.payment) return 'address_missing';
   if (input.snapshot.delivery?.blocked || input.cartHasBlocked) return 'undeliverable_line';
   if (!input.snapshot.payment.minBasketOk) return 'min_basket';
+  if (input.pointMissing) return 'service_point_missing';
   return null;
 }
 
@@ -147,4 +157,77 @@ export function checkoutBlocker(input: {
  */
 export function isSeparateOrder(shippingOrder: boolean, cart: Pick<CartView, 'lines'>): boolean {
   return shippingOrder && isSplitCart(cart);
+}
+
+/** Haritanın noktaları; `off` = sağlayıcı yapılandırılmamış, harita açılmaz. Tip `'use server'` dosyasında durmaz: Turbopack oradaki tip ihracını değer sanıyor. */
+export type ServicePointsResult = CheckoutServicePointsOutcome | { status: 'off' };
+
+/** Sunucunun döndürdüğü teslim noktası. */
+export type CheckoutServicePoint = Extract<ServicePointsResult, { status: 'ok' }>['points'][number];
+
+/** Haritada seçilen nokta: nokta + onu taşıyan servisin kodu. */
+export type SelectedServicePoint = CheckoutServicePoint & { optionCode: string };
+
+type ShippingOption = NonNullable<CheckoutSnapshot['shipping']>['options'][number];
+
+/** Taşıyıcı başına noktaya teslim eden en ucuz servis: haritadaki her nokta kendi taşıyıcısının bu fiyatıyla görünür. */
+export function pointOptionsByCarrier(options: readonly ShippingOption[]): Map<string, ShippingOption> {
+  const byCarrier = new Map<string, ShippingOption>();
+  for (const option of options) {
+    if (!option.needsServicePoint) continue;
+    const current = byCarrier.get(option.carrierCode);
+    if (!current || option.priceCents < current.priceCents) byCarrier.set(option.carrierCode, option);
+  }
+  return byCarrier;
+}
+
+/** Listede seçilebilen servisler: noktaya gidenler listede değil haritada seçilir. BEKLEYEN(K.28): telefon görünümünde harita yok. */
+export function selectableShippingOptions<T extends { needsServicePoint: boolean }>(options: readonly T[]): T[] {
+  return options.filter((o) => !o.needsServicePoint);
+}
+
+/** Teslim noktası türü seçili ama nokta seçilmemiş mi — onay düğmesi ve kart uyarısı aynı sorudan okur. */
+export function servicePointMissing(state: Pick<CheckoutState, 'shippingMode' | 'servicePoint'>): boolean {
+  return state.shippingMode === 'point' && state.servicePoint === null;
+}
+
+/**
+ * Harita listesinin sırası: en ucuz başta, aynı fiyattakiler yakından uzağa. Aynı taşıyıcının her noktası aynı fiyatı taşıdığı
+ * için bu "en ucuz taşıyıcının en yakın noktaları" demektir. Servisi olmayan taşıyıcının noktası listeye girmez.
+ */
+export function orderServicePoints(
+  points: readonly CheckoutServicePoint[],
+  byCarrier: ReadonlyMap<string, { code: string; priceCents: number }>,
+): SelectedServicePoint[] {
+  return points
+    .flatMap((p) => {
+      const option = byCarrier.get(p.carrierCode);
+      return option ? [{ point: { ...p, optionCode: option.code }, price: option.priceCents }] : [];
+    })
+    .sort((a, b) => a.price - b.price || (a.point.distanceM ?? Infinity) - (b.point.distanceM ?? Infinity))
+    .map((x) => x.point);
+}
+
+/**
+ * Açılış saatleri, aynı saatlere sahip ardışık günler birleşik: "Pzt–Cmt 08:00 - 12:00 · Paz kapalı". Sağlayıcının günleri
+ * "0" pazartesiden başlar; gün adı dilin kendi kısaltmasıdır. Hiç saat yoksa `null` — bilinmiyor, "kapalı" değil.
+ */
+export function openingLines(times: Record<string, string[]> | null, locale: string, closed: string): string[] | null {
+  if (!times || Object.values(times).every((slots) => slots.length === 0)) return null;
+  const monday = Date.UTC(2024, 0, 1);
+  const day = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
+  const nameOf = (i: number) => day.format(new Date(monday + i * 86_400_000));
+  const hoursOf = (i: number) => {
+    const slots = times[String(i)] ?? [];
+    return slots.length > 0 ? slots.join(', ') : closed;
+  };
+  const lines: string[] = [];
+  let from = 0;
+  for (let i = 1; i <= 7; i++) {
+    if (i < 7 && hoursOf(i) === hoursOf(from)) continue;
+    const range = from === i - 1 ? nameOf(from) : `${nameOf(from)}–${nameOf(i - 1)}`;
+    lines.push(`${range} ${hoursOf(from)}`);
+    from = i;
+  }
+  return lines;
 }
