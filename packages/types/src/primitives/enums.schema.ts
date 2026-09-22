@@ -355,15 +355,10 @@ export const ConversationHandlerEnum = z.enum(TicketHandlerEnum.options);
 export type ConversationHandler = z.infer<typeof ConversationHandlerEnum>;
 
 /**
- * **Sohbet–müşteri bağının KANITI** (`conversation.link_proof` · 15.19 · 15.22) — satır "bağ nasıl kuruldu" diye
- * okur. Bugün yazan tek yol sistemdir: `cart_link` — müşterinin açtığı hesap/sepet bağlantısının jetonu; sistemin
- * doğruladığı, operatörün ne bildiği ne yazdığı bir kanıt.
- *
- * İlk üç değer operatörün elle bağlama penceresinin kanıtlarıydı (sipariş numarası · kayıtlı e-posta · kayıtlı
- * telefon); pencere 15.40'ta kalktı (kullanıcı kararı 15.09: bağı müşteri kurar). Değerler DB kısıtında duruyor ve
- * satır şemayla birebir kalsın diye burada da.
+ * Sohbet–müşteri bağının kanıtı (`conversation.link_proof`): yazan yalnız sistemdir — `cart_link` müşterinin açtığı bağlantının
+ * jetonu, `chat_code` sohbete yapıştırdığı kod. İlk üç değer kaldırılan elle bağlamadan kalır; satır DB kısıtıyla birebir kalsın diye burada.
  */
-export const ConversationLinkProofEnum = z.enum(['order_ref', 'email', 'phone', 'cart_link']);
+export const ConversationLinkProofEnum = z.enum(['order_ref', 'email', 'phone', 'cart_link', 'chat_code']);
 export type ConversationLinkProof = z.infer<typeof ConversationLinkProofEnum>;
 
 /** Mod anahtarının etiketleri — Talepler ve WhatsApp ekranı aynı üçlüyü okur (16.08). */

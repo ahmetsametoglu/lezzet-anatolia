@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { answerEmailAnchor, offerAnchorIfDue, verifySecurityCode } from '../customer/anchor';
 import { buttonReplyText, CART_ADD_PREFIX } from '../catalog/product-card';
+import { consumeChatLink } from '../customer/chat-link';
 import { consumeWhatsappLink, waLinkTokenIn } from '../customer/whatsapp-link';
 import { ringConversationBell, ringConversationsBell } from '../realtime/bell';
 import { metaSenderFromEnv } from './meta-sender';
@@ -81,13 +82,24 @@ const LINK_CONFIRMATION: Record<PreferredLanguage, string> = {
   de: 'Ihre Nummer ist jetzt mit Ihrem Konto verknüpft — Sie können Ihre Bestellungen hier verfolgen. Wie können wir helfen?',
 };
 
-async function bagalamaOnayiGonder(conversation: Pick<Conversation, 'id' | 'language'>, customerId: string | null): Promise<void> {
+/** Messenger/Instagram'da bağlanan şey numara değil sohbettir; cümle onu söyler. */
+const CHAT_LINK_CONFIRMATION: Record<PreferredLanguage, string> = {
+  tr: 'Bu sohbet hesabınıza bağlandı — buradan siparişlerinizi sorabilirsiniz. Nasıl yardımcı olabiliriz?',
+  fr: 'Cette conversation est désormais liée à votre compte — vous pouvez suivre vos commandes ici. Comment pouvons-nous vous aider ?',
+  de: 'Dieser Chat ist jetzt mit Ihrem Konto verknüpft — Sie können Ihre Bestellungen hier verfolgen. Wie können wir helfen?',
+};
+
+async function bagalamaOnayiGonder(
+  conversation: Pick<Conversation, 'id' | 'language'>,
+  customerId: string | null,
+  confirmation: Record<PreferredLanguage, string> = LINK_CONFIRMATION,
+): Promise<void> {
   const db = serviceDb();
   // Bağ az önce kuruldu: `conversation.customerId` bayat, taze kimlik parametreden.
   const { language: dil } = await resolveOutboundLanguage(db, { language: conversation.language, customerId });
   const sonuc = await sendOutboundMessage(db, metaSenderFromEnv(), {
     conversationId: conversation.id,
-    text: LINK_CONFIRMATION[dil],
+    text: confirmation[dil],
     author: 'admin',
     language: dil,
   });
@@ -530,12 +542,15 @@ async function ingestMessengerEntry(
             // Sayfadan giden cevap (Business Suite, telefon): defter kendiliğinden dolar, pencereye dokunmaz.
             await recordOutboundMessage(serviceDb(), { conversationId: conversation.id, text, kind, payload, providerMessageId: message.mid });
           } else {
+            // Kod kaydı düşmeden önce tüketilir; bağ kurulursa ajan tetiklenmez, başarıyı sistem söyler.
+            const bag = await consumeChatLink(serviceDb(), conversation, text);
             // Ek CDN adresinden indirilir; düşerse satır medyasız yazılır, WhatsApp'la aynı kural.
             const ek = sticker ? null : messengerAttachmentOf(message.attachments);
             const medya = ek ? await storeConversationMediaFromUrl(conversation.id, ek, fetchImpl) : null;
             const yazilan = await recordInboundMessage(serviceDb(), {
               conversationId: conversation.id,
-              text,
+              // Kod deftere düz yazılmaz: tüketilmiş olsa da hesap devralmaya açılan bir sırdı.
+              text: maskSecretsInText(text, [waLinkTokenIn(text)]),
               kind,
               payload,
               mediaKey: medya?.key ?? null,
@@ -543,6 +558,10 @@ async function ingestMessengerEntry(
               providerMessageId: message.mid,
               receivedAt: msTimestamp(event.timestamp),
             });
+            if (bag.status === 'linked') {
+              await bagalamaOnayiGonder(conversation, bag.customerId, CHAT_LINK_CONFIRMATION);
+              return;
+            }
             triggerInboundPipeline({ message: yazilan, conversation, media: medya });
           }
         },

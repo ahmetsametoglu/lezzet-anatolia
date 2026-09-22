@@ -80,6 +80,19 @@ export type ConsumeWhatsappLinkOutcome =
  * Numara çoğu zaman önce yazışmadan doğan bir taslağa bağlıdır, o yüzden taslak birleştirme olağan yoldur.
  */
 export async function consumeWhatsappLink(db: SupabaseClient, phone: string, text: string | null): Promise<ConsumeWhatsappLinkOutcome> {
+  const claim = await claimLinkToken(db, text);
+  if (claim.status !== 'ok') return claim;
+  return bindPhoneToAccount(db, { accountId: claim.accountId, phone, context: 'customer/whatsapp-link' });
+}
+
+/**
+ * Mesajdaki bağlama kodunu doğrular ve tüketir; hangi kanaldan geldiği çağıranın işidir. Kod her hâlde düşer, çünkü tek kullanım
+ * başarısız denemede de geçerli bir güvenlik özelliğidir.
+ */
+export async function claimLinkToken(
+  db: SupabaseClient,
+  text: string | null,
+): Promise<{ status: 'none' } | { status: 'invalid' } | { status: 'ok'; accountId: string }> {
   const token = waLinkTokenIn(text);
   if (!token) return { status: 'none' };
 
@@ -87,15 +100,9 @@ export async function consumeWhatsappLink(db: SupabaseClient, phone: string, tex
   const profile = await profiles.findByWaLinkToken(token);
   if (!profile) return { status: 'invalid' };
 
-  const suresiGecti = !profile.waLinkExpiresAt || new Date(profile.waLinkExpiresAt).getTime() < Date.now();
-  if (suresiGecti) {
-    await temizle(profiles, profile.id);
-    return { status: 'invalid' };
-  }
-
-  // Jeton her hâlde düşer: tek kullanım başarısız denemede de geçerli bir güvenlik özelliğidir.
+  const expired = !profile.waLinkExpiresAt || new Date(profile.waLinkExpiresAt).getTime() < Date.now();
   await temizle(profiles, profile.id);
-  return bindPhoneToAccount(db, { accountId: profile.id, phone, context: 'customer/whatsapp-link' });
+  return expired ? { status: 'invalid' } : { status: 'ok', accountId: profile.id };
 }
 
 export type BindPhoneOutcome = Exclude<ConsumeWhatsappLinkOutcome, { status: 'none' }>;

@@ -46,7 +46,7 @@ create table public.conversation (
   linked_at timestamptz,
   -- Kanıtın değeri değil türü: değeri saklamak kişisel veriyi ikinci bir yere kopyalamak olurdu. Enum değil `text`+check,
   -- yeni değer tip değişimi gerektirmesin.
-  link_proof text check (link_proof in ('order_ref', 'email', 'phone', 'cart_link')),
+  link_proof text check (link_proof in ('order_ref', 'email', 'phone', 'cart_link', 'chat_code')),
 
   -- Biz ona hangi dilde yazarız: küme konuştuğumuz üç dildir, Boşnakça yazana Boşnakça cevap üretemeyiz. Gelen mesajdan öğrenilir
   -- ve son gelen kazanır.

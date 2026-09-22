@@ -1,6 +1,7 @@
+import { brand } from '@lezzet/brand';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { MeLinkedChannel } from '@lezzet/types';
-import { Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { Note } from '@/components/ui/note';
@@ -11,6 +12,12 @@ import { formatOrderDate } from '@/screens/orders/order-format';
 import type accountMessages from '@lezzet/i18n/customer/account';
 
 type ChannelsCopy = LocalizedCopy<typeof accountMessages>['channels'];
+type Source = MeLinkedChannel['source'];
+
+const CHAT_URL: Partial<Record<Source, string | null>> = {
+  messenger: brand.contact.messengerUrl,
+  instagram: brand.contact.instagramUrl,
+};
 
 interface ChannelsCardProps {
   /** `null` okunamadı ya da okunuyor; bilinmeyen bağ "bağlı değil" diye gösterilmez. */
@@ -19,11 +26,14 @@ interface ChannelsCardProps {
   locale: Locale;
   busy: boolean;
   failed: boolean;
-  onLinkWhatsapp: () => void;
+  /** Mesajı kopyalanmış, bağı henüz kurulmamış kanal; satırın altında adımlar açılır. */
+  copiedSource: Source | null;
+  onLink: (source: Source) => void;
+  onCopyAgain: () => void;
 }
 
 /** Bağlı kanallar: satırlar salt okunur, çünkü bağı çözmek bir birleştirme kararıdır ve insana aittir. */
-export function ChannelsCard({ channels, copy, locale, busy, failed, onLinkWhatsapp }: ChannelsCardProps) {
+export function ChannelsCard({ channels, copy, locale, busy, failed, copiedSource, onLink, onCopyAgain }: ChannelsCardProps) {
   return (
     <View style={styles.card} testID="account-channels">
       <Text style={styles.title}>{copy.title}</Text>
@@ -35,36 +45,54 @@ export function ChannelsCard({ channels, copy, locale, busy, failed, onLinkWhats
           : channel.since === null
             ? copy.linked
             : copy.since.replace('{date}', formatOrderDate(channel.since, locale));
-        // Bugün kendi başına bağlanabilen tek kanal WhatsApp: hazır mesajdaki kodu webhook okur.
-        const linkable = channel.source === 'whatsapp' && !channel.linked;
+        const name = copy.source[channel.source];
+        const copied = copiedSource === channel.source;
+        const chatUrl = CHAT_URL[channel.source] ?? null;
 
         return (
           <View key={channel.source} style={styles.row} testID={`account-channel-${channel.source}`}>
-            <View style={styles.text}>
-              <Text style={styles.name}>{copy.source[channel.source]}</Text>
-              <Text style={channel.linked ? styles.linked : styles.muted}>{status}</Text>
-              {channel.numbers.map((number) => (
-                <Text key={number} style={styles.number}>
-                  {number}
-                </Text>
-              ))}
-              {channel.source === 'whatsapp' && channel.linked ? (
-                <TextAction
-                  label={busy ? copy.busy : copy.relink}
-                  onPress={onLinkWhatsapp}
+            <View style={styles.line}>
+              <View style={styles.text}>
+                <Text style={styles.name}>{name}</Text>
+                <Text style={channel.linked ? styles.linked : styles.muted}>{status}</Text>
+                {channel.numbers.map((number) => (
+                  <Text key={number} style={styles.number}>
+                    {number}
+                  </Text>
+                ))}
+                {channel.source === 'whatsapp' && channel.linked ? (
+                  <TextAction
+                    label={busy ? copy.busy : copy.relink}
+                    onPress={() => onLink('whatsapp')}
+                    disabled={busy}
+                    testID="account-whatsapp-relink"
+                  />
+                ) : null}
+              </View>
+              {!channel.linked && !copied ? (
+                <SecondaryButton
+                  label={busy ? copy.busy : copy.cta}
+                  onPress={() => onLink(channel.source)}
                   disabled={busy}
-                  testID="account-whatsapp-relink"
+                  tone="olive"
+                  shape="pill"
+                  testID={`account-channel-${channel.source}-link`}
                 />
               ) : null}
             </View>
-            {linkable ? (
-              <SecondaryButton
-                label={busy ? copy.busy : copy.cta}
-                onPress={onLinkWhatsapp}
-                disabled={busy}
+            {copied && !channel.linked ? (
+              <Note
+                description={copy.copied.replace('{channel}', name)}
                 tone="olive"
-                shape="pill"
-                testID="account-whatsapp-link"
+                testID={`account-channel-${channel.source}-steps`}
+                action={
+                  <View style={styles.actions}>
+                    <TextAction label={copy.copyAgain} onPress={onCopyAgain} testID={`account-channel-${channel.source}-copy`} />
+                    {chatUrl === null ? null : (
+                      <TextAction label={copy.open.replace('{channel}', name)} onPress={() => void Linking.openURL(chatUrl)} />
+                    )}
+                  </View>
+                }
               />
             ) : null}
           </View>
@@ -96,16 +124,16 @@ const styles = StyleSheet.create((theme) => ({
   },
   /* Satırlar kart içinde kesikli çizgiyle ayrılır, hesap ekranının öteki kartları gibi. */
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.space.lg,
+    gap: theme.space.md,
     borderTopWidth: theme.border.base,
     borderTopColor: theme.colors['sand-400'],
     borderStyle: 'dashed',
     paddingTop: theme.space.lg,
     marginTop: theme.space.xs,
   },
+  line: { flexDirection: 'row', alignItems: 'center', gap: theme.space.lg },
   text: { flex: 1, gap: theme.space['2xs'] },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.lg },
   name: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,

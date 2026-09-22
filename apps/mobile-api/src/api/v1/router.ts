@@ -34,7 +34,6 @@ import { management } from './management';
 import { money } from './money';
 import { operations } from './operations';
 import { warehouse } from './warehouse';
-import { whatsapp } from './whatsapp';
 import { channels } from './channels';
 import { bearerAuth, type V1Env } from './auth';
 
@@ -134,7 +133,6 @@ v1.route('/me/cart', cart);
 v1.route('/me/checkout', checkout);
 
 v1.route('/me/preferences', preferences);
-v1.route('/me/whatsapp', whatsapp);
 v1.route('/me/channels', channels);
 
 // Ödeme tutarı gövdeden alınmaz, siparişten çözülür; niyet web'inkiyle aynı künyeyi taşır ki onayı aynı webhook işlesin.

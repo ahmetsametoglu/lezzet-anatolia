@@ -14,7 +14,7 @@ export type MeLinkedChannel = z.infer<typeof MeLinkedChannelSchema>;
 export const MeChannelsSchema = z.object({ channels: z.array(MeLinkedChannelSchema) });
 
 /**
- * `POST /me/whatsapp`: bağlama kodu. İstemci kodu hazır mesaja ekleyip işletmenin hattını açar; kod `expiresAt`e kadar ve tek kez
- * geçerli, bu yüzden istemci dönüşte bağın kurulup kurulmadığını yalnız bu süre içinde yeniden okur.
+ * `POST /me/channels/code`: bağlama kodu. İstemci kodu mesaja ekler (WhatsApp'ta hazır mesaja, öteki kanallarda panoya); kod
+ * `expiresAt`e kadar ve tek kez geçerli, bu yüzden istemci dönüşte bağı yalnız bu süre içinde yeniden okur.
  */
-export const MeWhatsappLinkSchema = z.object({ code: z.string(), expiresAt: z.string() });
+export const MeChannelLinkCodeSchema = z.object({ code: z.string(), expiresAt: z.string() });

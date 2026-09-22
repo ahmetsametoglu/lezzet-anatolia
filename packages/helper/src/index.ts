@@ -17,4 +17,4 @@ export * from './rich-text';
 export * from './slug';
 export * from './ticket';
 export * from './variant';
-export * from './whatsapp-link';
+export * from './channel-link';

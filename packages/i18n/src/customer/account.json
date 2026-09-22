@@ -50,7 +50,11 @@
       "busy": "Hazırlanıyor…",
       "message": "Merhaba! Hesabımı WhatsApp numarama bağlamak istiyorum.",
       "relink": "Başka bir numara bağla",
-      "failed": "Bağlantı hazırlanamadı — tekrar deneyin."
+      "failed": "Bağlantı hazırlanamadı — tekrar deneyin.",
+      "chatMessage": "Merhaba! Bu sohbeti hesabıma bağlamak istiyorum.",
+      "copied": "Mesaj kopyalandı. {channel} üzerinden bize yapıştırıp gönderin; hesabınız kendiliğinden bağlanır.",
+      "copyAgain": "Tekrar kopyala",
+      "open": "{channel} uygulamasını aç"
     },
     "company": {
       "eyebrow": "Onaylı profesyonel hesap",
@@ -204,7 +208,11 @@
       "busy": "Préparation…",
       "message": "Bonjour ! Je souhaite rattacher mon compte à mon numéro WhatsApp.",
       "relink": "Rattacher un autre numéro",
-      "failed": "Le lien n'a pas pu être préparé — réessayez."
+      "failed": "Le lien n'a pas pu être préparé — réessayez.",
+      "chatMessage": "Bonjour ! Je souhaite relier cette conversation à mon compte.",
+      "copied": "Message copié. Collez-le et envoyez-le-nous sur {channel} ; votre compte sera relié automatiquement.",
+      "copyAgain": "Copier à nouveau",
+      "open": "Ouvrir {channel}"
     },
     "company": {
       "eyebrow": "Compte professionnel validé",
@@ -358,7 +366,11 @@
       "busy": "Wird vorbereitet…",
       "message": "Hallo! Ich möchte mein Konto mit meiner WhatsApp-Nummer verknüpfen.",
       "relink": "Andere Nummer verknüpfen",
-      "failed": "Der Link konnte nicht vorbereitet werden — bitte erneut versuchen."
+      "failed": "Der Link konnte nicht vorbereitet werden — bitte erneut versuchen.",
+      "chatMessage": "Hallo! Ich möchte diesen Chat mit meinem Konto verknüpfen.",
+      "copied": "Nachricht kopiert. Fügen Sie sie in {channel} ein und senden Sie sie uns; Ihr Konto wird automatisch verknüpft.",
+      "copyAgain": "Erneut kopieren",
+      "open": "{channel} öffnen"
     },
     "company": {
       "eyebrow": "Bestätigtes Geschäftskonto",

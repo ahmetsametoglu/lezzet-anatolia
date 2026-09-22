@@ -1,5 +1,6 @@
 'use client';
 
+import { brand } from '@lezzet/brand';
 import type { Locale } from '@lezzet/i18n';
 import accountMessages from '@lezzet/i18n/customer/account';
 import type { MeLinkedChannel } from '@lezzet/types';
@@ -12,8 +13,13 @@ import { SettingsCard, SettingsDivider } from '@/components/customer/phone-kit/s
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { Note } from '@/components/customer/phone-kit/note';
 import { CardHead } from './account-cards';
-import { useWhatsappLink } from '../use-whatsapp-link.hook';
+import { useChannelLink } from '../use-channel-link.hook';
 import type { Messages } from '../account-types';
+
+const CHAT_URL: Partial<Record<MeLinkedChannel['source'], string | null>> = {
+  messenger: brand.contact.messengerUrl,
+  instagram: brand.contact.instagramUrl,
+};
 
 interface ChannelsCardProps {
   t: Messages;
@@ -25,8 +31,7 @@ interface ChannelsCardProps {
 /** Bağlı kanallar, native kanal kartının ikizi: satırlar salt okunur, çünkü bağı çözmek bir birleştirme kararıdır ve insana aittir. */
 export function ChannelsCard({ t, locale, channels, compact }: ChannelsCardProps) {
   const copy = accountMessages[locale].channels;
-  const whatsappNumbers = channels.find((channel) => channel.source === 'whatsapp')?.numbers ?? [];
-  const { busy, errorKey, start } = useWhatsappLink(copy.message, whatsappNumbers);
+  const { busy, errorKey, copied, start, copyAgain } = useChannelLink({ whatsapp: copy.message, chat: copy.chatMessage }, channels);
   const statusOf = (channel: MeLinkedChannel) =>
     !channel.linked
       ? copy.notLinked
@@ -35,31 +40,52 @@ export function ChannelsCard({ t, locale, channels, compact }: ChannelsCardProps
         : copy.since.replace('{date}', formatOrderDate(channel.since, locale, true));
 
   const rows = channels.map((channel) => {
-    // Bugün kendi başına bağlanabilen tek kanal WhatsApp: hazır mesajdaki kodu webhook okur.
-    const linkable = channel.source === 'whatsapp' && !channel.linked;
+    const name = copy.source[channel.source];
+    const steps = copied?.source === channel.source && !channel.linked;
+    const chatUrl = CHAT_URL[channel.source] ?? null;
     return (
       <SettingsDivider key={channel.source}>
-        <div className="flex items-center gap-2.5">
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="font-sans text-note font-bold text-ink">{copy.source[channel.source]}</span>
-            <span className={['font-sans text-helper', channel.linked ? 'font-bold text-olive-dark' : 'text-muted'].join(' ')}>
-              {statusOf(channel)}
-            </span>
-            {channel.numbers.map((number) => (
-              <span key={number} className="font-sans text-note font-bold text-ink">
-                {number}
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="font-sans text-note font-bold text-ink">{name}</span>
+              <span className={['font-sans text-helper', channel.linked ? 'font-bold text-olive-dark' : 'text-muted'].join(' ')}>
+                {statusOf(channel)}
               </span>
-            ))}
-            {channel.source === 'whatsapp' && channel.linked && (
-              <span className="self-start">
-                <TextAction label={busy ? copy.busy : copy.relink} onClick={() => void start()} disabled={busy} />
+              {channel.numbers.map((number) => (
+                <span key={number} className="font-sans text-note font-bold text-ink">
+                  {number}
+                </span>
+              ))}
+              {channel.source === 'whatsapp' && channel.linked && (
+                <span className="self-start">
+                  <TextAction label={busy ? copy.busy : copy.relink} onClick={() => void start('whatsapp')} disabled={busy} />
+                </span>
+              )}
+            </div>
+            {!channel.linked && !steps && (
+              <span className="flex-none">
+                <SecondaryButton
+                  label={busy ? copy.busy : copy.cta}
+                  tone="olive"
+                  shape="pill"
+                  onClick={() => void start(channel.source)}
+                  disabled={busy}
+                />
               </span>
             )}
           </div>
-          {linkable && (
-            <span className="flex-none">
-              <SecondaryButton label={busy ? copy.busy : copy.cta} tone="olive" shape="pill" onClick={() => void start()} disabled={busy} />
-            </span>
+          {steps && (
+            <Note
+              tone="olive"
+              description={copy.copied.replace('{channel}', name)}
+              action={
+                <span className="flex flex-wrap gap-4">
+                  <TextAction label={copy.copyAgain} onClick={() => void copyAgain()} />
+                  {chatUrl !== null && <TextAction label={copy.open.replace('{channel}', name)} externalHref={chatUrl} />}
+                </span>
+              }
+            />
           )}
         </div>
       </SettingsDivider>

@@ -392,8 +392,8 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   sepette FR kargo ücretini görür, checkout DE ücretini keser; bölge asgari sepeti sepette görünmez. Web `readPlaceScope`
   ile ülke + bölge + depo geçiyor; mağaza yayınından önce.
 - [ ] (K.29) [hedef: web] Messenger sayfa adresi (`m.me/…`) ve Instagram kullanıcı adı `@lezzet/brand`e girilecek — hesap
-  ekranının "Bağlı kanallar" kartı bağlı olmayan Messenger/Instagram satırında "Yazın" bağlantısını bu adreslerle açar; adres
-  yokken satır bağlantısız kalır. Künyede (`BUSINESS_CATALOG.md`) Instagram "LezzetAnatolie" yazıyor, doğrulanmadı.
+  ekranının "Bağlı kanallar" kartı kodlu mesajı kopyaladıktan sonra "… uygulamasını aç" bağlantısını bu adreslerle gösterir;
+  adres yokken yalnız kopyalama kalır. Künyede (`BUSINESS_CATALOG.md`) Instagram "LezzetAnatolie" yazıyor, doğrulanmadı.
 - [ ] (K.22) [hedef: web] Künye aynası `preparation_steps`e bölünecek (`15da29f9` alanı açtı). Aynadaki 39 ürünün
   hazırlaması bugün `storage` metninin satırlarında duruyor; satırlar KOŞUL ve ADIM diye ayrılıp adımlar diziye
   taşınacak. Ayrım ölçütü: koşul, uyarı ve "doğaldır" gözlemi saklamada kalır; yalnız müşterinin SIRAYLA yaptığı

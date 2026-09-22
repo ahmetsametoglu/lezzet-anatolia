@@ -31,10 +31,10 @@ afterAll(async () => {
 type Channels = { channels: { source: string; linked: boolean; numbers: string[] }[] };
 const whatsappRow = (view: Channels) => view.channels.find((channel) => channel.source === 'whatsapp');
 
-describe('/api/v1/me/whatsapp + /me/channels', () => {
+describe('/api/v1/me/channels', () => {
   it('Bearer olmadan 401', async () => {
     expect((await app.request('/api/v1/me/channels')).status).toBe(401);
-    expect((await app.request('/api/v1/me/whatsapp', { method: 'POST' })).status).toBe(401);
+    expect((await app.request('/api/v1/me/channels/code', { method: 'POST' })).status).toBe(401);
   });
 
   it('uçtan dönen kodla gönderilen mesaj numarayı bağlar ve okuma onu gösterir', async () => {
@@ -42,7 +42,7 @@ describe('/api/v1/me/whatsapp + /me/channels', () => {
     expect(whatsappRow(before)).toMatchObject({ linked: false, numbers: [] });
 
     const link = await envelopeData<{ code: string; expiresAt: string }>(
-      await app.request('/api/v1/me/whatsapp', { method: 'POST', headers: bearer(token) }),
+      await app.request('/api/v1/me/channels/code', { method: 'POST', headers: bearer(token) }),
     );
     expect(new Date(link.expiresAt).getTime()).toBeGreaterThan(Date.now());
 

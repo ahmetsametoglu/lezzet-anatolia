@@ -1,7 +1,6 @@
 'use server';
 
 import { startWhatsappLink, updateCustomerProfile } from '@lezzet/application';
-import { whatsappHref } from '@lezzet/brand';
 import { UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import type { AddressInsert } from '@lezzet/types';
 import { revalidatePath } from 'next/cache';
@@ -45,11 +44,8 @@ export async function updateProfileAction(input: { name?: string; phone?: string
   }
 }
 
-/**
- * Bağlamanın ilk yarısı: kodu üretip hazır mesajlı bağlantıyı döner, ikinci yarısı gelen mesajı işleyen webhook'tadır. Mesaj
- * metni istemciden gelir, çünkü müşteriye görünen cümle sözlükte yaşar.
- */
-export async function startWhatsappLinkAction(message: string): Promise<CustomerResult<{ href: string; expiresAt: string }>> {
+/** Bağlamanın ilk yarısı: kodu üretir; ikinci yarısı, müşterinin kendi sohbetinden gönderdiği mesajı işleyen webhook'tadır. */
+export async function startChannelLinkAction(): Promise<CustomerResult<{ code: string; expiresAt: string }>> {
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
@@ -59,7 +55,7 @@ export async function startWhatsappLinkAction(message: string): Promise<Customer
     // öteki jeton çakışmasının tükenmesi — ikisi de onun düzeltebileceği bir şey değil.
     if (sonuc.status !== 'ok') throw new CustomerError('unexpected');
 
-    return { data: { href: whatsappHref(`${message.trim()} ${sonuc.code}`), expiresAt: sonuc.expiresAt }, errorKey: null };
+    return { data: { code: sonuc.code, expiresAt: sonuc.expiresAt }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }

@@ -163,7 +163,7 @@ export function AccountScreen({
 
   /* Her yazma cevabı güncel listedir; ekran ikinci bir okuma yapmaz, dönen listeyi yayınlar. */
   const addressBook = useAddresses(signedIn);
-  const channels = useLinkedChannels(signedIn, t.channels.message);
+  const channels = useLinkedChannels(signedIn, { whatsapp: t.channels.message, chat: t.channels.chatMessage });
 
   /* Varsayılan adres rota dışındaysa kart "buraya teslimat açılsın" diye sorar. Posta kodu girmek zayıf, talep bırakmak kuvvetli
      sinyaldir ve ikisi aynı sayılırsa yatırım kararı yanlış veriden çıkar. */
@@ -552,7 +552,9 @@ export function AccountScreen({
           locale={locale}
           busy={channels.busy}
           failed={channels.failed}
-          onLinkWhatsapp={() => void channels.startWhatsapp()}
+          copiedSource={channels.copied?.source ?? null}
+          onLink={(source) => void channels.start(source)}
+          onCopyAgain={() => void channels.copyAgain()}
         />
 
         <View style={styles.settingsCard}>
