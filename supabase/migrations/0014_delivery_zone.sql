@@ -1,17 +1,10 @@
--- Modül 07 — Teslimat bölgesi (07.2). DOMAIN §6, ADR-002 (sınır ötesi posta kodları).
---
--- **Rota-içi/dışı SAKLANMAZ, türetilir:** adresin posta kodu aktif bir bölgeye düşüyorsa rota içi,
--- düşmüyorsa kargo. Adres tablosunda `in_route` diye bir kolon bilerek yok.
---
--- Bölgeler admin-editable: posta kodu kümesi ve haftalık günler kod sabiti değildir. Alman (Baden)
--- posta kodları da bir bölgeye dahil edilebilir — sınır, rotanın değil devletin çizgisidir.
+-- Teslimat bölgesi. Rota içi/dışı saklanmaz, adresin posta kodundan türetilir; bölge sınır ötesi kod da
+-- kapsayabilir (sınır rotanın değil devletin çizgisidir).
 
 create table public.delivery_zone (
   id uuid primary key default gen_random_uuid(),
   name text not null,                                -- iç etiket ("Strasbourg Kuzey")
-  -- **BÖLGE TEK DEPOYA BAĞLIDIR** (DOMAIN §17): posta kodu → bölge → depo zincirinin orta halkası.
-  -- Zincir bu yüzden tek yönlü ve tekil çözülür; "hangi depo bakar" sorusunun ikinci cevabı yoktur.
-  -- FK YOK: `warehouse` 0031'de açılır.
+  -- Bölge tek depoya bağlıdır: posta kodu → bölge → depo zinciri tekil çözülür. FK yok: `warehouse` 0031'de açılır.
   warehouse_id uuid not null,
   -- Haftalık teslimat günleri, ISO: 1=Pazartesi … 7=Pazar.
   weekdays int[] not null default '{}',
@@ -19,23 +12,8 @@ create table public.delivery_zone (
   created_at timestamptz not null default now()
 );
 
--- ── Posta kodu ↔ bölge (DOMAIN §17, tekillik VERİDE) ─────────────────────────
--- Kod kümesi `delivery_zone.postal_codes` dizisiydi; iki bölgeye aynı kodu yazmak SERBESTTİ ve
--- çözücü "ilki kazanır" diyerek sessizce birini seçiyordu. Tek depoda bu yalnız yanlış rota günü
--- demekti; çok depoda **siparişin yanlış depoya düşmesi** demek — mal başka şehirde, sipariş burada.
--- Bu yüzden küme diziden çıkıp kendi tablosuna taşındı: çakışma artık kayıt anında reddedilir.
---
--- PK `(country, postal_code)`: posta kodu ülkeler arası benzersiz DEĞİLDİR — `67000` hem Fransa'da
--- hem Almanya'da geçerlidir. Yer çözümü daima (ülke, kod) ikilisidir.
---
--- Ülke BÖLGEDE değil burada durur, bilerek: bir bölge sınır ötesi olabilir (ADR-002 — Strasbourg
--- rotası Kehl'i de kapsayabilir, "sınır rotanın değil devletin çizgisidir"). Bölgeye tek bir ülke
--- yazmak o bölgeyi bir devlete hapsederdi. Deponun ülkesi ayrı mesele: o fiziksel bir tesistir ve
--- `warehouse.country_code`'da durur.
---
--- Aktif/pasif ayrımı YOK, kapsam tüm bölgeler: pasif bölge de kodu tutar. Aynı kodu başka bölgeye
--- vermek için önce eskisinden silinir — "pasifken çakışmasın" esnekliği, bölge yeniden açıldığında
--- iki sahipli bir kod bırakırdı ve o an kimse bakmıyor olurdu.
+-- Posta kodu ↔ bölge: tekillik veride, çünkü iki bölgedeki aynı kod siparişi yanlış depoya düşürürdü. Anahtar
+-- `(country, postal_code)`, çünkü `67000` iki ülkede de geçerli; pasif bölge de kodunu tutar.
 create table public.delivery_zone_postal_code (
   country country_code not null,
   -- Normalize saklanır (boşluksuz, büyük harf) — arama tarafı da normalize eder; iki taraf aynı

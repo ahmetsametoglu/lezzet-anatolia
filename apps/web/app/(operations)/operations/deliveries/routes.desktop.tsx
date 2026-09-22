@@ -33,23 +33,14 @@ import type { CodeStatsView, SuggestionView } from './routes-types';
 import type { Country } from '@lezzet/types';
 
 /**
- * **Rotalar** — güzergâh kurulumu (19.20 · 09.15). `Depolar - Bolge Haritasi.html`.
- *
- * Diyalog DEĞİL, sayfanın kendisi: rota kurmak dar bir kutuya sığmaz — operatör haritayı kaydırır,
- * yakınlaşır, komşu güzergâhla karşılaştırır. 280 piksellik bir pencerede yapılan iş, yapılmamış iştir.
- *
- * Harita SOLDA ve baskın: kod listesi haritanın SONUCUDUR, girdisi değil (tasarım §"Kod hâlleri").
+ * Rotalar — güzergâh kurulumu. Diyalog değil sayfanın kendisi, çünkü operatör haritayı kaydırıp komşu güzergâhla
+ * karşılaştırır; harita baskındır, kod listesi onun sonucudur.
  */
 interface RoutesViewProps {
   data: RoutesData;
   /**
-   * Başlıktaki depo bağlamı; `null` = "tüm depolar".
-   *
-   * **YALNIZ seçicinin listesini daraltır** (kullanıcı kararı 17.08). Haritanın kümesine ve
-   * `membership.taken` hesabına DOKUNMAZ, çünkü dokunsaydı komşu deponun kodları "boşta" görünür,
-   * operatör onları tıklayıp kendi rotasına eklemeye çalışır ve reddin sebebi ekranda hiç yazmazdı —
-   * çakışan posta kodu tam orada doğuyor (`routes-read` başlığındaki eski karar bunu koruyordu).
-   * Süzgeç odak verir, körlük vermez.
+   * Başlıktaki depo bağlamı (`null` = tüm depolar); yalnız seçicinin listesini daraltır. Haritaya dokunsaydı komşu
+   * deponun kodları "boşta" görünür ve çakışmanın sebebi ekranda hiç yazmazdı.
    */
   contextWarehouseId: string | null;
   selected: RouteView | null;
@@ -92,21 +83,12 @@ interface RoutesViewProps {
 export function RoutesDesktop(props: RoutesViewProps) {
   const { data, selected, draft, tooFar } = props;
 
-  /**
-   * **Ray açık mı** — kapanınca yalnız başlığı kalır ve harita tamamen görünür.
-   *
-   * Katlamak, rayı DARALTMANIN alternatifi: operatörün iki ayrı anı var — güzergâhı kurarken forma
-   * bakar, kurduğunu okurken haritaya. Paneli kalıcı olarak küçültmek ikisini birden kötüleştirirdi;
-   * kapatılabilir olması ise hiçbir yeteneği elinden almıyor, yalnız o anda bakmadığı şeyi kaldırıyor.
-   */
+  /** Ray açık mı: kapanınca yalnız başlığı kalır; kurarken form, okurken harita bakılır, kalıcı daraltma ikisini kötüleştirirdi. */
   const [railOpen, setRailOpen] = useState(true);
 
   /**
-   * Haritaya verilen "şuraya git" emri — ekran dışındaki bir öneriye tıklanınca doğuyor.
-   *
-   * Her tıklamada YENİ nesne kuruluyor (`{lat, lng}` yeniden yazılıyor): emri taşıyan şey nesnenin
-   * kimliği, değeri değil. Aynı öneriye ikinci kez tıklamak da bir emirdir — operatör aradan
-   * kaydırmış olabilir ve değere bakan bir karşılaştırma o ikinci tıklamayı görmezdi.
+   * Haritaya "şuraya git" emri; her tıklamada yeni nesne kurulur, çünkü aynı öneriye ikinci tıklama da bir emirdir ve
+   * değere bakan karşılaştırma onu görmezdi.
    */
   const [focus, setFocus] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -124,9 +106,7 @@ export function RoutesDesktop(props: RoutesViewProps) {
     );
   }, [data.routes, props.contextWarehouseId, selected?.id]);
 
-  // Kimlik SABİT tutuluyor: harita `points`/`stateOf` değişince tüm katmanı yeniden çiziyor ve bu
-  // ikisi her render'da yeniden kurulsaydı, sönen bir ipucu şeridi bile yüzlerce noktayı baştan
-  // çizdirirdi.
+  // Kimlik sabit tutulur: harita `points`/`stateOf` değişince tüm katmanı yeniden çizer.
   const membership = useMemo(() => {
     const mine = new Set((draft?.codes ?? []).map(keyOfPoint));
     const taken = new Set<string>();
@@ -153,22 +133,10 @@ export function RoutesDesktop(props: RoutesViewProps) {
     [membership, suggested],
   );
 
+  /** Uzaktayken boştaki kodlar çizilmez (`FREE_CODE_MIN_ZOOM` ölçülmüş eşik); tanımlı kodlar her yakınlıkta kalır. */
   /**
-   * Uzaktayken boştaki kodlar ÇİZİLMEZ — ölçülmüş bir eşik (`FREE_CODE_MIN_ZOOM`): z10'un altında
-   * komşu noktalar 29 pikselden yakına düşüp birbirine değiyor, z8'de tek bir lekeye dönüşüyor.
-   * Tanımlı kodlar her yakınlıkta kalır: onlar aday değil, güzergâhın kendisidir ve haritanın
-   * şeklini onlar veriyor.
-   */
-  /**
-   * Önerinin uzaklığı DÜZENLENEN rotanın kendi kodlarına göre ölçülüyor, tüm rotalara göre değil.
-   *
-   * Sunucuda hesaplanırken bu bir kusurdu (07.08, kontrol sırasında bulundu): Strasbourg'u
-   * düzenlerken Kehl rotasının 5 km yanındaki kod da "rotaya 5 km" diye görünüyordu — oysa onu
-   * Strasbourg'un güzergâhına eklemek coğrafi olarak anlamsız. İstemcide, taslağa göre hesaplanınca
-   * hem doğru oluyor hem de kod ekledikçe canlı güncelleniyor.
-   *
-   * **Noktaların ÜSTÜNDE duruyor** (17.08): uzaklık artık haritanın ipucuna da giriyor, yani
-   * `points` ona bağımlı — bağımlının altında kalamaz.
+   * Önerinin uzaklığı düzenlenen rotanın kendi kodlarına göre ölçülür, başka rotanın komşuluğu anlamsızdır;
+   * taslağa göre hesaplandığı için kod eklendikçe canlı güncellenir.
    */
   const anchors = useMemo(() => {
     const coords = new Map(data.points.map((point) => [keyOfPoint(point), point]));
@@ -176,14 +144,8 @@ export function RoutesDesktop(props: RoutesViewProps) {
   }, [data.points, draft?.codes]);
 
   /**
-   * Rotanın hiç kodu yoksa uzaklık ÖLÇÜLEMEZ ve yazılmaz (`CLAUDE §1`) — "0 km" ölçmüş gibi okuturdu.
-   *
-   * **Karar MOTORUN** (`nearestOf`, 27.08). Önceki hâli `Math.min(...)` ile en yakını burada
-   * seçiyor ve uzaklığı sayfa klasöründeki bir `distanceKm` KOPYASINDAN alıyordu — motorda aynı
-   * haversine zaten vardı ve kopyada iki koruma eksikti: koordinat yoksa `null` dönüşü ve `asin`
-   * girdisinin kırpılması. Kopya söküldü; motorun sürümü koordinatsız adayı eler ve hiçbiri
-   * ölçülemiyorsa `null` der — yani "hiç çıpa yok" ile "çıpaların koordinatı yok" artık aynı
-   * cevabı veriyor ve ikisi de sıfır sayılmıyor.
+   * Rotanın hiç kodu yoksa uzaklık ölçülemez ve yazılmaz, "0 km" ölçmüş gibi okuturdu. Karar motorun (`nearestOf`):
+   * koordinatsız adayı eler, hiçbiri ölçülemiyorsa `null` der.
    */
   const distanceOf = useCallback(
     (point: { lat: number; lng: number }): number | null => {
@@ -194,25 +156,12 @@ export function RoutesDesktop(props: RoutesViewProps) {
   );
 
   /**
-   * Haritanın çizdiği küme İKİ KAYNAKTAN birleşiyor ve ayrım kasıtlı:
-   *
-   * - **Sayfa okuması** (`data.points`): tanımlı kodlar + öneriler. Görüş alanına bağlı DEĞİL —
-   *   önerilen `68000` ekranda görünmese bile listede durmalı, harita oraya kaydırılınca çizilmeli.
-   * - **Görüş alanı okuması** (`freePoints`): boştaki kodlar. Kaydırmayla değişiyor.
-   *
-   * Çakışma sayfanın lehine: aynı kod iki kaynakta da varsa (tanımlı ya da önerilen bir kod görüş
-   * alanına da düşer) sayfanınki kalır, yoksa "boşta" diye çizilip hâlini kaybederdi.
+   * Haritanın kümesi iki kaynaktan birleşir: sayfa okuması (tanımlı kodlar ve öneriler, görüş alanından bağımsız) ve
+   * görüş alanı okuması (boştaki kodlar). Çakışmada sayfanınki kalır, yoksa kod hâlini kaybederdi.
    */
   const points = useMemo(() => {
     const seen = new Set(data.points.map(keyOfPoint));
-    /**
-     * Önerilen kodun TAM künyesi etikete iliştiriliyor: "üzerine gelince neden önerildiği görünsün"
-     * (kullanıcı isteği 07.08), 17.08'de genişledi — noktanın neden mor olduğu, rotaya uzaklığı ve
-     * talebin yaşı da buraya girdi. Üçü yalnız sağdaki listede vardı ve liste tam da bu yüzden
-     * kaldırılamıyordu; harita aynı soruyu cevaplayamıyordu.
-     *
-     * Harita metni KURMUYOR, taşıyor — sözlük ekranın tarafında (`deliveries-labels`).
-     */
+    /** Önerilen kodun künyesi (gerekçe, uzaklık, talebin yaşı) etikete iliştirilir; metin ekranın sözlüğünden gelir. */
     const own = data.points.map((point) => {
       const row = suggested.get(keyOfPoint(point));
       if (!row) return point;
@@ -238,13 +187,7 @@ export function RoutesDesktop(props: RoutesViewProps) {
         <DeliveryTabs value="routes" />
       </PageHeader>
 
-      {/* **Harita artık ZEMİN, sütun değil** (kullanıcı isteği 17.08). Eskiden ekran ikiye
-          bölünüyordu (`1fr` + 380 piksel ray) ve haritanın sağ kenarı rayın altında hiç yoktu —
-          oysa bu sayfada asıl iş yüzeyi harita: operatör kaydırır, yakınlaşır, komşu güzergâhla
-          karşılaştırır. Ray onun ÜSTÜNE yüzüyor; kapladığı yer artık haritadan çalınmıyor, yalnız
-          bir köşesini örtüyor ve katlanınca o köşe de geri geliyor.
-
-          Lejant SOL üstte (`zone-map-leaflet`), ray SAĞ üstte: ikisi aynı yüzeyde ama çakışmıyor. */}
+      {/* Harita zemindir, ray onun üstüne yüzer ve katlanınca köşe geri gelir; lejant sol üstte, ray sağ üstte. */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {/* Harita her zaman çizilir — rota seçilmemişken bile tanımlı güzergâhların şekli görünür;
             boş bir gri kutu, ekranın ne işe yaradığını anlatmazdı. */}
@@ -266,19 +209,8 @@ export function RoutesDesktop(props: RoutesViewProps) {
           />
         </div>
 
-        {/* **`z-[500]` KALDIRILDI → `z-10` (17.08, ölçülmüş arıza).** Eski gerekçe şuydu: *"Leaflet'in
-            kendi katmanları 400'de biter, işaretçiler 600'e çıkar — 500 ikisinin arasıdır."* O gerekçe
-            `ZoneMap`'e `isolation: isolate` gelene kadar doğruydu; artık haritanın bütün iç sayıları
-            kendi kutusunda hapis (`zone-map-leaflet` künyesi: *"yarışı kazanmak değil, yarışı
-            bitirmek"*). Ray, DOM'da haritadan SONRA gelen konumlanmış bir kardeş — üstünde durması
-            için yüksek bir sayıya ihtiyacı yok.
-            Sayı ÖNEMLİ çünkü ray artık kendi içinde açılır menü barındırıyor: `AnchoredMenu` body'ye
-            portal edilip `z-[60]` ile çiziliyor, yani 500 taşıyan bir rayın İÇİNDEN açılan menü rayın
-            ALTINDA kalıyordu. Rota saatleri çubuğu (`route-hours`) böyle görünmez çıktı — DOM'da
-            vardı, ölçüsü doğruydu, hiç boyanmıyordu. Aynı arıza rota seçicisinde de vardı.
-            Açıkken boy tavana dayanır ve içerik kendi içinde kayar; kapalıyken o sınıf düşer, panel
-            başlığı kadar kalır. Alt boşluk `bottom-8` — 3 değil: sağ altta OSM atıf yazısı duruyor
-            ve lisans gereği görünür kalmak zorunda, panel oraya kadar inseydi üstünü örterdi. */}
+        {/* `z-10`: harita `isolation: isolate` ile kendi sayılarını hapseder; yüksek sayı raydan açılan menüyü rayın altında bırakıyordu.
+            Alt boşluk `bottom-8`, çünkü sağ alttaki OSM atıf yazısı lisans gereği görünür kalmalı. */}
         <aside
           className={`absolute right-3 top-3 z-10 flex w-[320px] flex-col rounded-ops-card border border-ops-line bg-ops-card/95 shadow-[0_8px_24px_rgba(20,22,18,0.12)] backdrop-blur-sm ${
             railOpen ? 'bottom-8 overflow-y-auto' : 'overflow-hidden'
@@ -315,10 +247,8 @@ export function RoutesDesktop(props: RoutesViewProps) {
 
         {draft ? (
           <div className={`flex flex-col gap-3 px-3 py-3 ${railOpen ? '' : 'hidden'}`}>
-            {/* **ÇIKIŞ DEPOSU EN ÜSTTE ve bu bir sıralama tercihi değil** (`OB-01`): depo rotanın
-                ülkesini belirliyor (`homeCountry` → kod etiketleri) ve hangi kodların anlamlı
-                olduğunu o karar veriyor. Addan sonra sorulsaydı, operatör kod eklemeye başladıktan
-                sonra depoyu değiştirdiğinde seçtiği kodlar sessizce yabancı ülkeye düşerdi. */}
+            {/* Çıkış deposu en üstte, çünkü rotanın ülkesini ve hangi kodların anlamlı olduğunu o belirler;
+                kodlardan sonra değişseydi seçilen kodlar sessizce yabancı ülkeye düşerdi. */}
             <WarehouseField
               warehouses={data.warehouses}
               value={draft.warehouseId}
@@ -359,9 +289,8 @@ export function RoutesDesktop(props: RoutesViewProps) {
               </div>
             </FieldShell>
 
-            {/* **Saatler günlerin HEMEN ardında** ve kodlardan önce: ikisi de "bu rota ne zaman
-                çalışıyor" sorusunun parçası — hangi günler, o gün hangi saatlerde. Kod kümesi ise
-                "nereye" sorusu ve haritayla birlikte okunuyor. Araya girmek iki soruyu böler. */}
+            {/* Saatler günlerin hemen ardında: ikisi de "bu rota ne zaman çalışıyor" sorusunun parçası,
+                kodlar ise haritayla birlikte okunan "nereye" sorusu. */}
             <RouteHours
               exceptions={draft.hours}
               global={data.globalHours}
@@ -399,9 +328,7 @@ export function RoutesDesktop(props: RoutesViewProps) {
 
             <div className="flex items-center gap-3">
               <ToggleField on={draft.isActive} onChange={(on) => props.onDraft({ isActive: on })} label="Rota aktif" bare />
-              {/* Depo seçilmeden kaydetmek reddediliyordu ve reddin sebebi ancak tıklandıktan
-                  SONRA görünüyordu. Düğme artık ad gibi depoyu da bekliyor — engel tıklamadan önce
-                  okunur (`OB-01`). */}
+              {/* Düğme ad ve depo seçilene kadar kapalı: engel tıklamadan önce okunsun. */}
               <Button
                 variant="primary"
                 className="ml-auto"
@@ -424,17 +351,8 @@ export function RoutesDesktop(props: RoutesViewProps) {
 }
 
 /**
- * **Rota seçici** — seçmek ve YENİ KURMAK aynı açılır kutuda (kullanıcı isteği 17.08).
- *
- * Önceden rotalar rayın tepesinde bir liste, "+ Rota" ise onun yanında ayrı bir düğmeydi. İki kusuru
- * vardı: liste panelin en değerli yerini yiyordu (rota sayısı arttıkça form aşağı kayıyordu) ve
- * satırların TIKLANABİLİR bir seçim olduğu görünmüyordu — kullanıcının kendi cümlesiyle *"seçimi hiç
- * anlaşılır olmamış"*. Açılır kutu ikisini de çözüyor: kapalıyken tek satır yer kaplar, açıldığında
- * ne seçilebileceği listelenir, ve "yeni rota" o listenin son maddesi olur — çünkü operatörün sorusu
- * tek: *"hangi rotayı düzenliyorum?"* Cevaplardan biri "henüz yok, kuruyorum".
- *
- * Seçili rotanın künyesi (depo · kod · gün) menüde durur, başlıkta değil: başlıkta yalnız AD var,
- * çünkü künye zaten formun kendisinde satır satır yazılı.
+ * Rota seçici: seçmek ve yeni kurmak aynı açılır kutuda, çünkü operatörün sorusu tek: "hangi rotayı düzenliyorum?"
+ * Kapalıyken tek satır yer kaplar; künye başlıkta değil menüde durur.
  */
 interface RoutePickerProps {
   routes: RoutesData['routes'];
@@ -531,17 +449,8 @@ function RoutePicker({ routes, hidden, selected, onSelect }: RoutePickerProps) {
 }
 
 /**
- * **Çıkış deposu** — rotanın hangi tesisten dağıtıma çıkacağı (`OB-01`, kullanıcının arayüz
- * testi 14.08).
- *
- * Alan eskiden HİÇ YOKTU: depo yalnız kaydetme anında adresten ya da "tek depo varsa o"dan
- * çözülüyordu ve çok depolu bir kurulumda Rotalar sekmesinden yeni rota kurmak **imkânsızdı** —
- * ekran operatörü Depolar sayfasına yolluyordu.
- *
- * **Pasif depo listeden SÜZÜLMEZ, işaretlenir.** Süzmek iki şeyi birden bozardı: bugün pasif bir
- * depoya bağlı olan bir rotayı açan operatör kendi deposunu göremez (seçici boş görünür), ve
- * "kapalı tesise rota bağlıyorum" kararı operatörün önünde değil kodun içinde verilmiş olurdu.
- * Aynı ayrım katalogda da var (`isActive` ≠ `isFeatured`): işaretlemek yasaklamak değildir.
+ * Çıkış deposu: rotanın hangi tesisten çıkacağı. Pasif depo süzülmez, işaretlenir; süzülseydi pasif depoya bağlı
+ * rota kendi deposunu göremez ve karar operatörün değil kodun olurdu.
  */
 function WarehouseField({
   warehouses,
@@ -589,20 +498,8 @@ function WarehouseField({
 }
 
 /**
- * **Ekran dışındaki öneriler** (kullanıcı kararı 17.08) — eskiden burada önerilerin TAM listesi vardı.
- *
- * Liste haritayla neredeyse tamamen örtüşüyordu: aynı kodlar orada zaten mor noktalar olarak
- * çiziliydi ve 17.08'de ipucu zenginleşince gerekçe · uzaklık · yaş da haritaya geçti. Geriye
- * listenin tek gerçek işi kaldı ve o iş haritanın **yapısal olarak** yapamadığı şey: bakılmayan yeri
- * göstermek. `68000 Colmar` görüş alanının dışındayken haritada hiç yoktur; operatör oraya
- * kaydırmayı aklından geçirmedikçe o talebi asla görmez.
- *
- * Bu yüzden ray artık yalnız **ekranda olmayanları** yazıyor ve tıklama "ekle" değil **"oraya bak"**
- * demek — kodu görmeden eklemek zaten bu ekranın reddettiği şeydi (kullanıcının kendi cümlesi:
- * *"haritaya bakmadan karar veremem"*).
- *
- * **Taslağa eklenmiş öneri listeden düşer** — kalsaydı operatör aynı kodu ikinci kez eklemeye
- * çalışır, hiçbir şey olmaz ve ekran bozuk görünürdü.
+ * Ekran dışındaki öneriler: harita bakılmayan yeri gösteremez, bu yüzden ray yalnız görüş alanı dışındakileri yazar
+ * ve tıklama "oraya bak" demektir. Taslağa eklenmiş öneri listeden düşer.
  */
 function OffscreenSuggestions({
   rows,
@@ -654,9 +551,7 @@ function OffscreenSuggestions({
                   className="flex w-full cursor-pointer items-baseline gap-2 px-2.5 py-1.5 text-left transition-colors hover:bg-ops-violet-bg"
                 >
                   <span className="shrink-0 font-ops-mono text-ops-xs text-ops-ink">{row.postalCode}</span>
-                  {/* Tek satır: ad + uzaklık. GEREKÇE burada YAZILMIYOR — haritada, noktanın
-                      ipucunda tam hâliyle duruyor ve operatör oraya gittiğinde zaten onu okuyacak.
-                      İki yere yazmak, rayı kısaltma kararını geri almak olurdu. */}
+                  {/* Tek satır: ad ve uzaklık; gerekçe haritadaki noktanın ipucunda tam hâliyle durur. */}
                   <span className="truncate font-ops-body text-ops-xs text-ops-muted">
                     {ROUTE_NOTES.suggestionWhere(distanceOf(row), placesLabel(row.places ?? [], 2) ?? undefined)}
                   </span>
@@ -674,16 +569,8 @@ function OffscreenSuggestions({
 }
 
 /**
- * **Kodların ağırlığı** — rota kurulumunun analitiği (kullanıcı isteği 07.08:
- * *"rota düzenlemesi yapılırken posta kodlarıyla alakalı analitikler"*).
- *
- * **Sıra CİROYA göre, koda göre değil.** Operatörün sorusu "hangi kod" değil *"yükü kim taşıyor"*;
- * alfabetik sıra cevabı listenin içinde saklardı. En üstteki satır rotanın sebebidir, en alttaki
- * güzergâhtan çıkarma adayı.
- *
- * **Ölçülmemiş kod "0" YAZMAZ** (`CLAUDE §1`): taslağa yeni eklenen koda RPC'ye hiç sorulmadı, yani
- * sıfır değil BİLİNMİYOR. Sıfır yazmak, kaydedilmemiş bir kodu "hiç sipariş getirmiyor" diye
- * okutup çıkarılmasına yol açardı.
+ * Kodların ağırlığı: ciroya göre sıralı, çünkü soru "yükü kim taşıyor". Ölçülmemiş kod "0" yazmaz, kaydedilmemiş
+ * kod "hiç sipariş getirmiyor" diye okunup çıkarılırdı.
  */
 function CodeWeights({ codes, stats }: { codes: RouteView['postalCodes']; stats: Record<string, CodeStatsView> }) {
   if (codes.length === 0) return null;

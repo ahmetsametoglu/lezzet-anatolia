@@ -17,22 +17,12 @@ import type { PostalCodePick } from './routes-types';
 import { DAY_HOUR_KEYS, type DayHourKey } from '@/lib/settings/day-hours';
 import type { Country } from '@lezzet/types';
 
-/**
- * Sönen ipucu şeridinin taşıdığı en fazla yerleşim adı (`OB-04`). Şerit 2,6 saniye görünüyor —
- * okunabilecek kadar kısa olmalı; haritanın kendi ipucu tam listeyi zaten veriyor.
- */
+/** Sönen ipucu bandının taşıdığı en fazla yerleşim adı: bant kısa görünür, tam listeyi haritanın ipucu verir. */
 const HINT_MAX_PLACES = 2;
 
 /**
- * Kaydedilecek saat farkı — **değişmeyen istisna yeniden yazılmaz.**
- *
- * Taslak açılışta var olan istisnalarla dolduğu için, hiçbir saate dokunmadan "Kaydet"e basmak
- * dördünü de aynı değerle yeniden yazardı. Sonuç bir hata değil ama iz yanlışlaşır: `updated_at` ve
- * `updated_by` oynar, yani "bu saati kim ne zaman değiştirdi" sorusu artık rotayı kaydeden son kişiyi
- * gösterir — değiştiren kişiyi değil.
- *
- * `null` yalnız GERÇEKTEN bir istisna varsa gönderilir: olmayan bir satırı silmeye çalışmak boşa bir
- * okuma turudur.
+ * Kaydedilecek saat farkı: değişmeyen istisna yeniden yazılmaz, yoksa "bu saati kim değiştirdi" izi rotayı son
+ * kaydedeni gösterirdi. `null` yalnız gerçekten var olan istisna için gönderilir.
  */
 function hoursPatch(
   draft: Partial<Record<DayHourKey, string | null>>,
@@ -55,39 +45,23 @@ function hoursPatch(
 interface Draft {
   name: string;
   /**
-   * Güzergâhın çıkacağı depo — **taslağın alanı** (`OB-01`, kullanıcının arayüz testi 14.08).
-   *
-   * Eskiden taslakta hiç yoktu; depo yalnız KAYDETME anında üç kaynaktan çözülüyordu (seçili
-   * rotanın deposu · adresteki `warehouseId` · sistemde tek depo varsa o). Üçü de sağlanmadığında —
-   * yani çok depolu bir kurulumda operatör doğrudan Rotalar sekmesine girip "+ Rota" dediğinde —
-   * kayıt reddediliyor ve ekran *"Depolar sayfasından depoyu seçip 'Rota ekle' ile gelin"* diyordu.
-   * **Formda depo seçecek hiçbir kontrol yoktu**, yani ekran operatöre kendi sayfasında
-   * yapamayacağı bir şeyi tarif ediyordu: yeni rota oradan hiç kurulamıyordu.
-   *
-   * `null` = henüz seçilmedi. Boş dizgi DEĞİL: "seçilmedi" ile "seçildi ve boş" ayrı hâller ve
-   * seçicinin yer tutucusunu ancak `null` doğru gösterir.
+   * Güzergâhın çıkacağı depo taslağın alanıdır, çünkü çok depolu kurulumda operatör bu formdan depo seçebilmeli.
+   * `null` = henüz seçilmedi; seçicinin yer tutucusunu ancak `null` doğru gösterir.
    */
   warehouseId: string | null;
   weekdays: number[];
   isActive: boolean;
   codes: PostalCodePick[];
   /**
-   * Rotaya özel eşik saatleri — **üç hâl taşıyor** (17.08).
-   *
-   * Anahtar YOK = bu eşiğe dokunulmadı (veride ne varsa kalır) · `string` = bu saat yazılacak ·
-   * `null` = istisna kaldırılacak, eşik genel değeri okuyacak. Üçüncü hâl olmasaydı "genele dön"
-   * anahtarı taslaktan silmek olurdu ve silinen anahtar kaydetmede hiç gitmediği için veritabanındaki
-   * satır sessizce yaşamaya devam ederdi — operatör geri aldığını sanır, sistem eski saati uygular.
+   * Rotaya özel eşik saatleri üç hâl taşır: anahtar yok = dokunulmadı, `string` = yazılacak, `null` = istisna kalkacak.
+   * Üçüncü hâl olmasaydı "genele dön" kaydetmede hiç gitmez, eski saat sessizce yaşardı.
    */
   hours: Partial<Record<DayHourKey, string | null>>;
 }
 
 /**
- * Rota kurulumunun istemci kökü (19.20).
- *
- * **Seçili rota ADRESTE** (`?tab=routes&route=<id>`): bir güzergâhın bağlantısı paylaşılabilmeli ve
- * Depolar'dan gelen köprü doğrudan o rotayı açabilmeli. Taslak (yazılan ad, işaretlenen gün, atılan
- * kod) adreste DEĞİL — o bir işlemin yarısıdır; geri düğmesi yarım bir rotayı geri getirmemeli.
+ * Rota kurulumunun istemci kökü. Seçili rota adreste durur (paylaşılabilir, Depolar'dan köprü açabilir); taslak
+ * adreste durmaz, geri düğmesi yarım bir rotayı geri getirmemeli.
  */
 export function RoutesClient({
   data,
@@ -98,18 +72,14 @@ export function RoutesClient({
   data: RoutesData;
   routeId: string | null;
   warehouseId: string | null;
-  /**
-   * Başlıktaki depo bağlamı (19.14) — `null` = "tüm depolar". YALNIZ seçicinin listesini daraltır;
-   * haritanın kümesine dokunmaz (kullanıcı kararı 17.08, gerekçe `routes.desktop`'ta).
-   */
+  /** Başlıktaki depo bağlamı (`null` = tüm depolar); yalnız seçicinin listesini daraltır, haritaya dokunmaz. */
   contextWarehouseId: string | null;
   /** Asistan önerisinden gelindiyse ön dolgu (22.5); `null` ise ekran hiç değişmez. */
 }) {
   const router = useRouter();
   const [busy, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  // Tıklamanın kısa geri bildirimi (tasarımın `hint` şeridi). `error`den AYRI: biri olanı anlatır,
-  // öteki olmayanı — ikisini tek alanda toplamak, bir eklemeyi hata gibi kırmızıya boyardı.
+  // Tıklamanın kısa geri bildirimi `error`den ayrı: biri olanı anlatır, öteki olmayanı; eklemeyi kırmızıya boyamasın.
   const [hint, setHint] = useState<string | null>(null);
   const [viewport, setViewport] = useState<MapViewport | null>(null);
   /**
@@ -121,12 +91,8 @@ export function RoutesClient({
 
   const selected: RouteView | null = routeId ? (data.routes.find((route) => route.id === routeId) ?? null) : null;
   /**
-   * Taslak seçili rotadan doğar; `key` ile bileşen yeniden kurulduğu için seçim değişince tazelenir.
-   *
-   * **Öneriden gelindiyse kodlar ÜSTÜNE eklenir, yerine geçmez** — `zone_extend` bir EKLEME
-   * önerisidir; mevcut kümeyi önerininkiyle değiştirmek, kaydetmeye basan operatörün haberi olmadan
-   * rotadan kod düşürürdü (uygulayıcının kendi kuralı da bu: *"önce okur, üstüne ekler — 'ekle'
-   * sessizce 'değiştir' olmasın"*). Zaten var olan kod ikinci kez eklenmiyor.
+   * Taslak seçili rotadan doğar; `key` ile bileşen seçim değişince yeniden kurulur. Öneriden gelindiyse kodlar üstüne
+   * eklenir, yerine geçmez: ekleme önerisi operatörün haberi olmadan rotadan kod düşürmemeli.
    */
   const [draft, setDraft] = useState<Draft | null>(() => {
     const base = selected
@@ -142,12 +108,7 @@ export function RoutesClient({
         }
       : {
           name: '',
-          /**
-           * Yeni rotanın açılış deposu — eski KAYDETME anı çözümünün aynısı, ama artık bir
-           * ÖNERİ olarak taslağa konuyor, gizli bir varsayım olarak değil. Depolar'dan köprüyle
-           * gelindiyse adresteki depo seçili açılır (operatörün niyeti belli), tek depolu
-           * kurulumda tek seçenek zaten odur. İkisi de yoksa `null` — ve seçici bunu söyler.
-           */
+          /** Yeni rotanın açılış deposu bir öneridir: adresteki depo ya da tek depo; ikisi de yoksa `null` ve seçici bunu söyler. */
           warehouseId: warehouseId ?? (data.warehouses.length === 1 ? (data.warehouses[0]?.id ?? null) : null),
           weekdays: [],
           isActive: true,
@@ -160,13 +121,8 @@ export function RoutesClient({
   });
 
   /**
-   * Kod aramasında ülke etiketi yalnız YABANCI kod için basılır; "kendi ülkemiz" rotanın deposundan
-   * gelir.
-   *
-   * **Artık TASLAKTAN okunuyor** (`OB-01`), seçili rotadan ya da adresten değil: depo seçilebilir
-   * hâle gelince ülke de seçimle birlikte değişmeli. Aksi hâlde Kehl deposunu seçen operatör hâlâ
-   * Fransız kodlarını sade, Alman kodlarını "· Almanya" etiketiyle görürdü — yani etiket seçtiği
-   * depoyu değil, sayfaya girdiği andaki depoyu anlatırdı.
+   * Kod aramasında ülke etiketi yalnız yabancı kod için basılır; "kendi ülkemiz" taslaktaki depodan gelir, ki depo
+   * değişince etiket de değişsin.
    */
   const home = data.warehouses.find((w) => w.id === draft?.warehouseId) ?? data.warehouses[0];
 
@@ -177,16 +133,8 @@ export function RoutesClient({
   };
 
   /**
-   * Haritadaki (ya da çipteki) bir koda dokunma — tasarımın tek etkileşimi: *"noktaya tıkla →
-   * ekle / çıkar."*
-   *
-   * Üç dal, üç kod hâline birebir karşılık geliyor:
-   * **benim** → çıkar · **başka rotada** → çıkarılamaz, kimin tuttuğu yazılır · **boşta** → ekle.
-   *
-   * Üçüncü dal bugün de ULAŞILABİLİR ve bu önemli: operatör kendi kodunu çıkardığında nokta
-   * "boşta"ya döner ve aynı noktaya ikinci kez tıklamak onu geri getirmelidir. O dal olmasaydı
-   * yanlışlıkla çıkarılan bir kod geri konulamaz, tıklama sessizce hiçbir şey yapmazdı — ki
-   * sessiz tıklama operatöre "bozuk" der.
+   * Koda dokunma: benim → çıkar · başka rotada → çıkarılamaz, kimin tuttuğu yazılır · boşta → ekle. Üçüncü dal
+   * yanlışlıkla çıkarılan kodu geri koyar; sessiz tıklama operatöre "bozuk" derdi.
    */
   const pick = (point: ZoneMapPoint) => {
     if (!draft) return;
@@ -217,15 +165,8 @@ export function RoutesClient({
   const save = () => {
     if (!draft) return;
     /**
-     * Depo TASLAKTAN gelir (`OB-01`). Eskiden burada üç kaynaklı bir çözüm vardı ve hiçbiri
-     * tutmadığında ekran operatörü başka sayfaya yolluyordu — oysa gideceği yerde de yapacağı iş
-     * aynıydı, yalnız bu formda seçemiyordu.
-     *
-     * **Guard KALDIRILMADI, ama artık son çare:** düğme depo seçilmeden zaten kapalı
-     * (`routes.desktop`). Yine de duruyor çünkü bir gün taslağı başka bir yol kurabilir (öneri
-     * köprüsü, adres bağlantısı) ve deposuz bir kayıt güzergâhı hiçbir tesise bağlamaz — sessizce
-     * geçmesindense burada durması iyidir. Cümle de değişti: artık operatöre yapabileceği şeyi
-     * söylüyor.
+     * Depo taslaktan gelir; düğme depo seçilmeden zaten kapalı, bu guard taslağı başka bir yol kurarsa deposuz
+     * kaydı durdurmak için son çaredir.
      */
     const targetWarehouse = draft.warehouseId;
     if (!targetWarehouse) {
@@ -258,14 +199,8 @@ export function RoutesClient({
   const tooFar = zoom < FREE_CODE_MIN_ZOOM;
 
   /**
-   * **Görüş alanı okuması** — haritanın boştaki kodları çizebilmesinin tek yolu (19.20).
-   *
-   * Eşiğin ALTINDA istek atılmıyor: o yakınlıkta noktalar birbirine değip tıklanamaz hâle geliyor
-   * (ölçüm `FREE_CODE_MIN_ZOOM` künyesinde), yani getirilen veri kullanılamazdı. Kaydırma zaten
-   * haritada 250 ms geciktiriliyor; burada ikinci bir gecikme yok.
-   *
-   * Yarış koşulu: iki kaydırma arka arkaya yapıldığında ikinci istek daha önce dönebilir ve eski
-   * cevap yenisini ezerdi. `latest` damgası son isteğin dışındaki cevapları atıyor.
+   * Görüş alanındaki boştaki kodların okuması: eşiğin altında istek atılmaz (noktalar tıklanamaz olur), `latest`
+   * damgası geç dönen eski cevabın yenisini ezmesini önler.
    */
   const latestRequest = useRef(0);
   useEffect(() => {

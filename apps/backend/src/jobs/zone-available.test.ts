@@ -4,15 +4,8 @@ import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { zoneAvailableJob } from './zone-available';
 
 /**
- * Bölge açıldı → bekleyene haber (14.10 · 19.21).
- *
- * **Bu iş MÜŞTERİYE SÖZ VERİYOR**, o yüzden sınanan şey gönderimin kendisi değil (sağlayıcı
- * anahtarı yerelde yok) — **damganın ne zaman atıldığı**. Yanlış damga iki yönde de sessizdir:
- * erken atılırsa müşteri hiç haber almaz ve kimse fark etmez, hiç atılmazsa aynı kişiye her saat
- * mail gider.
- *
- * **Küresel sayıya bakılmıyor** (`CLAUDE §4b`): `zone_notice` paylaşılan bir tablo. Her sınama
- * kendi damgalı kaydına bakıyor.
+ * Bölge açılınca bekleyene haber: sınanan şey damganın ne zaman atıldığı; erken damga müşteriyi habersiz bırakır,
+ * hiç atılmazsa her saat mail gider. Her sınama kendi damgalı kaydına bakar.
  */
 const db = serviceDb();
 const notices = new ZoneNoticeService(db);
@@ -64,7 +57,7 @@ describe('zone_available', () => {
 
   it('kayıt DİLİ taşıyor — ziyaretçide profil yok, kaydetmeseydik tahmin ederdik', async () => {
     const bekleyen = (await notices.listPending(500)).find((n) => n.postalCode === coveredCode);
-    // Alman müşteri Fransızca haber okumamalı; dil kolonu 14.10'da tam bunun için eklendi.
+    // Alman müşteri Fransızca haber okumamalı.
     expect(bekleyen?.locale).toBe('de');
   });
 
