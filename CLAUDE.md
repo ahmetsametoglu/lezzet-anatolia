@@ -120,7 +120,8 @@
   Dokunulan dosyanın yorumları aynı commit'te bu ölçüye çekilir. Blok yorumda `*/` yazılmaz.
 - **Açık işin tek listesi `docs/KALAN.md`:** satır = kimlik + ne + neden; biten satır silinir,
   ilerleme notu yazılmaz. Koddaki boşluk `BEKLEYEN(<kimlik>): <ne>` ile KALAN'daki satıra bağlanır
-  (`pnpm repo:check` doğrular); `TODO`/`FIXME` yok. Yeni kimlik `K.<sıradaki sayı>`.
+  (`pnpm repo:check` doğrular); `TODO`/`FIXME` yok. Yeni kimlik `K.<sıradaki sayı>`. Şimdi yapılmayacak özellikler
+  `docs/GELECEK.md`'de; açık iş sayılmaz, `BEKLEYEN` oraya bağlanmaz.
 - **`docs/architecture/*` referanstır:** kural değişirse aynı commit'te o cümle düzeltilir;
   durum/ilerleme/tarihçe yazılmaz. Veri modeli alan tabloları `pnpm docs:sync` ile migration'dan
   türetilir, elle yazılmaz.
@@ -134,5 +135,5 @@ Kod dizilimi → `docs/architecture/STACK.md` · migration/deploy/git → `WORKF
 i18n/SEO → `SEO_I18N.md` · log/PII → `OBSERVABILITY.md` · analitik kapıları → `ANALYTICS.md` · kanal ve
 sipariş kaynağı → `CHANNELS.md` · dış servisler → `INTEGRATIONS.md` · sapmalar →
 `ARCHITECTURE_DECISIONS.md` · şirket künyesi → `BUSINESS_CATALOG.md` + `packages/brand` · sefer modeli →
-`docs/feature/` · operasyon prosedürü → `docs/runbook/` · açık işler → `docs/KALAN.md` · tasarım →
-`design/Harita.dc.html`.
+`docs/feature/` · operasyon prosedürü → `docs/runbook/` · açık işler → `docs/KALAN.md` · gelecek özellikler →
+`docs/GELECEK.md` · tasarım → `design/Harita.dc.html`.

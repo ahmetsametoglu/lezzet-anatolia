@@ -32,7 +32,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 ## 07 · Sipariş, Checkout ve Ödeme
 
 - [~] (07.12) **Taşıyıcı + kargo takip numarası:** `order.carrier` (tanımlı küme: `colissimo · chronopost · dhl · ups · other`) + `order.tracking_number`; ikisi de yalnız `delivery_type = 'shipping'` siparişlerde anlamlı — kısıt veride (rota siparişine takip numarası yazılamaz). Numarayı hazırlık ekranı girer (paketi kapatan kişi etiketi elinde tutar), ayrı sevk adımı açılmaz. Takip bağlantısı taşıyıcının URL kalıbından üretilir; `other` seçilirse bağlantı gösterilmez, numara düz metin durur
-- [ ] (07.17) **AB ülkelerine kargo satış kanalı — bugün sistem iki ülke tanıyor, üçüncüsünü SESSİZCE Fransa yazıyor** *(kullanıcı kararı 02.09)*
 
 ## 08 · Müşteri Web Uygulaması (Vitrin)
 

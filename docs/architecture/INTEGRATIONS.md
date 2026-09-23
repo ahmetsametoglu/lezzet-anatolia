@@ -106,7 +106,7 @@ fırlatmaz, her başarısızlık adlı — BAN paketiyle aynı disiplin):
 
 **Fransa'da çoğu sipariş SIFIR maliyet** — BAN önerisinden kapı düzeyinde seçilmiş adres zaten
 doğrulanmış ve koordinatı süresiz; Google yalnız DE adresleri için çağrılır (FR'de elle yazılmış
-adres de BAN'a sorulur). **Kapsam yine FR+DE:** `07.17` (AB'nin tamamı) dondurulmuş kalıyor.
+adres de BAN'a sorulur). **Kapsam yine FR+DE:** diğer AB ülkeleri `docs/GELECEK.md` 07.17.
 
 ### Kargo sağlayıcısı bu işi YAPAMAZ — ölçüldü, ve nedeni yapısal
 
