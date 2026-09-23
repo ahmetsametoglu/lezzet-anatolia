@@ -66,6 +66,7 @@ export type {
 } from './customer/points';
 // ── B2B başvurusu: kayıt okuması, vergi numarası doğrulaması ve başvuru yazımı tek formun parçasıdır ──
 export { readB2bApplicant, submitB2bApplication } from './customer/b2b';
+export { notifyB2bDecision } from './customer/b2b-decision';
 export type { B2bApplicantView, B2bApplicationOutcome } from './customer/b2b';
 export { lookupCompanyBySiret } from './b2b/company-registry';
 export type { CompanyLookupFailure, CompanyRegistryRecord } from './b2b/company-registry';

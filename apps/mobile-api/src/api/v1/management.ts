@@ -9,6 +9,7 @@ import {
   listOfferCandidates,
   listOrderExceptions,
   listSupplyGroups,
+  notifyB2bDecision,
   openBatchOffer,
   readComplaint,
   readComplaintQueue,
@@ -388,7 +389,7 @@ management.get('/b2b/:id/summary', async (c) => {
 management.post('/b2b/:id/approve', async (c) => {
   const id = UuidSchema.safeParse(c.req.param('id'));
   if (!id.success) return fail(c, 'invalid_id', 400);
-  return decide(c, id.data, (profiles) => profiles.approveB2b(id.data));
+  return decide(c, id.data, true, (profiles) => profiles.approveB2b(id.data));
 });
 
 /** RET — sebep ZORUNLU. Ret SİLMEZ: kayıt B2C olarak yaşar ve aday künyesini düzeltip yeniden
@@ -400,7 +401,7 @@ management.post('/b2b/:id/reject', async (c) => {
   if (!parsed.success) return fail(c, 'invalid_body', 400);
 
   const actorId = c.get('staff').id;
-  return decide(c, id.data, (profiles) => profiles.rejectB2b(id.data, { actorId, reason: parsed.data.reason }));
+  return decide(c, id.data, false, (profiles) => profiles.rejectB2b(id.data, { actorId, reason: parsed.data.reason }));
 });
 
 /**
@@ -410,6 +411,7 @@ management.post('/b2b/:id/reject', async (c) => {
 async function decide(
   c: Context<StaffEnv>,
   customerId: string,
+  onay: boolean,
   yaz: (profiles: UserProfileService) => Promise<unknown>,
 ) {
   const profiles = new UserProfileService(serviceDb());
@@ -422,6 +424,8 @@ async function decide(
   }
 
   await yaz(profiles);
+  // Sonuç başvurana gider; beklenmez, çünkü mail gitmedi diye yazılmış karar geri alınmaz.
+  void notifyB2bDecision(serviceDb(), customerId, onay);
   const sonra = await profiles.getById(customerId);
   const body: z.input<typeof B2bDecisionResponseSchema> = {
     result: 'ok',
