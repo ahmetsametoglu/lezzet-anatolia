@@ -2535,7 +2535,7 @@
     "imageWidth": 1536,
     "imageHeight": 1024
   },
-  "site/empty_cart.webp": {
+  "site/empty-cart.webp": {
     "imageUpdatedAt": "2026-09-23T20:29:09.838627Z",
     "imageWidth": 1430,
     "imageHeight": 1100
@@ -2545,12 +2545,12 @@
     "imageWidth": 1920,
     "imageHeight": 1080
   },
-  "site/home_hero.webp": {
+  "site/home-hero.webp": {
     "imageUpdatedAt": "2026-09-23T20:29:09.838627Z",
     "imageWidth": 1672,
     "imageHeight": 941
   },
-  "site/packages_hero.webp": {
+  "site/packages-hero.webp": {
     "imageUpdatedAt": "2026-09-23T20:29:09.838627Z",
     "imageWidth": 1536,
     "imageHeight": 1024
@@ -2560,7 +2560,7 @@
     "imageWidth": 1920,
     "imageHeight": 1080
   },
-  "site/professionals_hero.webp": {
+  "site/professionals-hero.webp": {
     "imageUpdatedAt": "2026-09-23T20:29:09.838627Z",
     "imageWidth": 1672,
     "imageHeight": 941
