@@ -172,10 +172,28 @@ export function AccountLine({ t, email, compact }: { t: CheckoutViewProps['t']; 
  * Adres adımı salt okunur: seçim, ekleme ve düzenleme sepette (`CartIdentity` → `AddressPickerDialog`), iki ekran iki ayrı
  * adresle konuşmasın diye. Çıkış bağlantısı şart, çünkü yanlış adresi ödeme adımında fark eden müşteri nereye gideceğini aramamalı.
  */
-export function AddressStep({ t, compact, selectedAddress }: CheckoutViewProps) {
+export function AddressStep({ t, compact, selectedAddress, snapshot }: CheckoutViewProps) {
+  // Gel-al adres seçicide seçilir (sepet); burada yalnız gösterilir: depo, telefon ve fatura adresi olarak kalan varsayılan adres.
+  const pickedWarehouse = snapshot.pickup?.warehouses.find((w) => w.id === snapshot.pickup?.selectedWarehouseId) ?? null;
   return (
     <StepShell step={t.address.step} title={t.address.title} compact={compact}>
-      {selectedAddress ? (
+      {pickedWarehouse ? (
+        <div className="flex w-max max-w-full flex-col gap-[3px] rounded-soft border-2 border-olive bg-olive-bg px-[18px] py-3.5" data-testid="checkout-pickup-place">
+          <span className="flex items-center gap-1.5 font-sans text-body-sm font-bold text-ink">
+            <Icon name="pin" size={14} />
+            {t.address.pickupTitle}
+          </span>
+          <span className="font-sans text-note leading-relaxed text-body">
+            {pickedWarehouse.name} · {pickedWarehouse.addressLine}
+          </span>
+          <span className="font-sans text-note leading-relaxed text-muted">{t.address.pickupNote.replace('{phone}', brand.contact.phoneDisplay)}</span>
+          {selectedAddress && (
+            <span className="font-sans text-note leading-relaxed text-muted">
+              {t.address.billing.replace('{address}', `${addressTitle(selectedAddress)} · ${selectedAddress.line1}, ${selectedAddress.postalCode} ${selectedAddress.city}`)}
+            </span>
+          )}
+        </div>
+      ) : selectedAddress ? (
         // Seçili kartın dili: `2px zeytin + zeytin-zemin` (tasarımın seçili adres kartı) — ama bir
         // `<button>` değil, çünkü burada seçilecek bir şey yok.
         <div className="flex w-max max-w-full flex-col gap-[3px] rounded-soft border-2 border-olive bg-olive-bg px-[18px] py-3.5">
@@ -200,7 +218,7 @@ export function AddressStep({ t, compact, selectedAddress }: CheckoutViewProps) 
 }
 
 export function DeliveryStep(props: CheckoutViewProps) {
-  const { t, locale, snapshot, state, compact, onSelectDate, onSelectShipping, onSelectServicePoint, onSelectShippingMode, onSelectPickup, cart, selectedAddress } =
+  const { t, locale, snapshot, state, compact, onSelectDate, onSelectShipping, onSelectServicePoint, onSelectShippingMode, cart, selectedAddress } =
     props;
   const router = useRouter();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -243,29 +261,6 @@ export function DeliveryStep(props: CheckoutViewProps) {
 
   return (
     <StepShell step={t.delivery.step} title={t.delivery.title} compact={compact}>
-      {/* Gel-al yalnız izinli müşteriye sunulur (`snapshot.pickup`); seçim iki kart: adrese teslim (adresin cevabı) · depodan
-          teslim (depo başına bir kart). Tasarım dosyasında bloğu yok — gün/servis kartlarının deseniyle kuruldu. */}
-      {snapshot.pickup && (
-        <div className="flex flex-wrap gap-2.5">
-          <ChoiceCard selected={!pickup} onClick={() => onSelectPickup(null)} small>
-            <span className="font-sans text-body-sm font-bold text-ink">{t.delivery.modeAddress}</span>
-            <span className="font-sans text-note leading-relaxed text-body">{t.delivery.modeAddressBody}</span>
-          </ChoiceCard>
-          {snapshot.pickup.warehouses.map((warehouse) => (
-            <ChoiceCard
-              key={warehouse.id}
-              selected={pickup && snapshot.pickup?.selectedWarehouseId === warehouse.id}
-              onClick={() => onSelectPickup(warehouse.id)}
-              small
-            >
-              <span className="font-sans text-body-sm font-bold text-ink">{t.delivery.modePickup}</span>
-              <span className="font-sans text-note leading-relaxed text-body">
-                {warehouse.name} · {warehouse.addressLine}
-              </span>
-            </ChoiceCard>
-          ))}
-        </div>
-      )}
       {/* Teslimat türü önce söylenir, çünkü gün seçeneği ancak "kim getiriyor" bilinince anlam kazanır; kargo hata gibi yazılmaz.
           Tür bir rozet, açıklaması altında düz metin: renkli kutu bilgiyi uyarı gibi gösterirdi. */}
       <div className="flex flex-col gap-2">

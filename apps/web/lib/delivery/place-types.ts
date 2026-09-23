@@ -1,4 +1,4 @@
-import type { Address, Country } from '@lezzet/types';
+import type { Address, CheckoutPickup, Country } from '@lezzet/types';
 
 /*
   Teslimat yeri müşterinin "nereye getirelim" cevabıdır ve yalnız posta kodu tutulur: teslimat şeklini o belirler, sokak ve numara
@@ -92,6 +92,8 @@ export interface PlaceSnapshot {
   place: DeliveryPlace | null;
   address: PlaceAddress | null;
   unresolved: PlaceUnresolved | null;
+  /** Gel-al teklifi ve seçimi (yalnız izinli müşteride); `null` = teklif yok, kart çizilmez. */
+  pickup: CheckoutPickup | null;
 }
 
 /** Kod tanınıyor ama ne rota ne kargo karşılıyor; iki sebep de müşteriye "bölge dışısınız" dedirtmez. */

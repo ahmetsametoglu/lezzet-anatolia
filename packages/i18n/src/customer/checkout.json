@@ -23,7 +23,9 @@
       "add": "＋ Yeni adres ekle",
       "empty": "Henüz kayıtlı adresiniz yok. Nereye getirelim?",
       "emptyBody": "Adresinizi buradan ekleyin — siparişinizden çıkmanıza gerek yok.",
-      "editHint": "Düzenlemek için basılı tutun"
+      "editHint": "Düzenlemek için basılı tutun",
+      "pickupOption": "Depodan teslim al",
+      "billing": "Fatura adresi: {address}"
     },
     "addressCheck": {
       "foundElsewhere": "Bu adresi şurada bulduk:",
@@ -50,7 +52,6 @@
       "neighborInviteOtherDay": "{name} sizi {day} teslimatına çağırdı. Birlikte teslim alıp puan kazanmak için o günü seçin.",
       "neighborSomeone": "Komşunuz",
       "neighborDecline": "Bu daveti kaldır",
-      "pickup": "Depodan teslim al",
       "pickupBody": "Hazır olunca haber veririz — saati depoyla telefonla kararlaştırın. Teslimat: ücretsiz",
       "pickupPhone": "Randevu için: {phone}"
     },
@@ -208,7 +209,9 @@
       "add": "＋ Ajouter une adresse",
       "empty": "Vous n'avez pas encore d'adresse enregistrée. Où livrons-nous ?",
       "emptyBody": "Ajoutez votre adresse ici — pas besoin de quitter votre commande.",
-      "editHint": "Maintenez appuyé pour modifier"
+      "editHint": "Maintenez appuyé pour modifier",
+      "pickupOption": "Retirer à l'entrepôt",
+      "billing": "Adresse de facturation : {address}"
     },
     "addressCheck": {
       "foundElsewhere": "Nous avons trouvé cette adresse ici :",
@@ -235,7 +238,6 @@
       "neighborInviteOtherDay": "{name} vous invite à la livraison du {day}. Choisissez cette date pour être livrés ensemble et gagner des points.",
       "neighborSomeone": "Votre voisin",
       "neighborDecline": "Retirer cette invitation",
-      "pickup": "Retirer à l’entrepôt",
       "pickupBody": "Nous vous prévenons dès que c’est prêt — convenez de l’heure avec l’entrepôt par téléphone. Livraison : offerte",
       "pickupPhone": "Pour convenir de l’heure : {phone}"
     },
@@ -393,7 +395,9 @@
       "add": "＋ Neue Adresse",
       "empty": "Sie haben noch keine gespeicherte Adresse. Wohin liefern wir?",
       "emptyBody": "Fügen Sie Ihre Adresse hier hinzu — Sie müssen Ihre Bestellung nicht verlassen.",
-      "editHint": "Zum Bearbeiten gedrückt halten"
+      "editHint": "Zum Bearbeiten gedrückt halten",
+      "pickupOption": "Im Lager abholen",
+      "billing": "Rechnungsadresse: {address}"
     },
     "addressCheck": {
       "foundElsewhere": "Wir haben diese Adresse hier gefunden:",
@@ -420,7 +424,6 @@
       "neighborInviteOtherDay": "{name} lädt Sie zur Lieferung am {day} ein. Wählen Sie diesen Tag, um zusammen beliefert zu werden und Punkte zu sammeln.",
       "neighborSomeone": "Ihre Nachbarschaft",
       "neighborDecline": "Diese Einladung entfernen",
-      "pickup": "Im Lager abholen",
       "pickupBody": "Wir melden uns, sobald alles bereit ist — die Abholzeit vereinbaren Sie telefonisch mit dem Lager. Lieferung: kostenlos",
       "pickupPhone": "Für die Terminabsprache: {phone}"
     },

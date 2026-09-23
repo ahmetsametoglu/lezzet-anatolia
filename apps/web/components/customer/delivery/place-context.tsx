@@ -2,10 +2,10 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useTransition } from 'react';
 import type { ReactNode } from 'react';
-import type { Address, Country } from '@lezzet/types';
+import type { Address, CheckoutPickup, Country } from '@lezzet/types';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
-import { saveMyAddressAction, selectMyAddressAction, type SaveAddressInput } from '@/lib/address/actions';
+import { saveMyAddressAction, selectMyAddressAction, selectMyPickupAction, type SaveAddressInput } from '@/lib/address/actions';
 import { writePlaceAnswer } from '@/lib/delivery/place-store';
 import type { DeliveryPlace, DeliveryZoneSummary, PlaceAddress, PlaceLookup, PlaceSnapshot, PlaceUnresolved } from '@/lib/delivery/place-types';
 
@@ -67,6 +67,10 @@ interface PlaceContextValue {
   clear: () => void;
   /** Kayıtlı adreslerden birini teslimat adresi yapar; yer ona göre yeniden kurulur. */
   selectAddress: (addressId: string) => Promise<boolean>;
+  /** Gel-al teklifi (izinli müşteride) ve seçili depo; adres seçicideki depo kartı buradan çizilir. */
+  pickup: CheckoutPickup | null;
+  /** Depo kartına dokunmak: gel-al seçer, `null` adrese döner; sepet ve checkout aynı seçimi okur. */
+  selectPickup: (warehouseId: string | null) => Promise<boolean>;
   /** Adres ekler ya da düzenler; kaydedilen adres seçiliyse yer ona göre yeniden kurulur. */
   saveAddress: (input: SaveAddressInput) => Promise<{ ok: true; address: Address } | { ok: false; errorKey: string | null }>;
   /**
@@ -104,13 +108,15 @@ interface PlaceProviderProps {
   initialAddress: PlaceAddress | null;
   /** Adres karşılanamıyorsa sebebi (`readPlaceSnapshot`) — sepet onu söyler. */
   initialUnresolved: PlaceUnresolved | null;
+  initialPickup: CheckoutPickup | null;
 }
 
-export function PlaceProvider({ children, zones, initialPlace, initialAddress, initialUnresolved }: PlaceProviderProps) {
+export function PlaceProvider({ children, zones, initialPlace, initialAddress, initialUnresolved, initialPickup }: PlaceProviderProps) {
   const router = useRouter();
   const [place, setPlace] = useState<DeliveryPlace | null>(initialPlace);
   const [address, setAddress] = useState<PlaceAddress | null>(initialAddress);
   const [unresolved, setUnresolved] = useState<PlaceUnresolved | null>(initialUnresolved);
+  const [pickup, setPickup] = useState<CheckoutPickup | null>(initialPickup);
   const [ready, setReady] = useState(false);
   /** Yeri değiştiren kaç istek havada — sayı, bayrak değil: iki istek üst üste binebilir. */
   const [inflight, setInflight] = useState(0);
@@ -124,7 +130,8 @@ export function PlaceProvider({ children, zones, initialPlace, initialAddress, i
     setPlace(initialPlace);
     setAddress(initialAddress);
     setUnresolved(initialUnresolved);
-  }, [initialPlace, initialAddress, initialUnresolved]);
+    setPickup(initialPickup);
+  }, [initialPlace, initialAddress, initialUnresolved, initialPickup]);
 
   /**
    * Sunucu tarafını tazeler — GEÇİŞ (`transition`) içinde: tazeleme bitene dek `refreshing` açık
@@ -148,6 +155,7 @@ export function PlaceProvider({ children, zones, initialPlace, initialAddress, i
       setPlace(snapshot.place);
       setAddress(snapshot.address);
       setUnresolved(snapshot.unresolved);
+      setPickup(snapshot.pickup);
       // Sunucuyu da tazele: katalog kartlarının işaretleri ve sepetin grupları RSC'de yeni yere
       // göre yeniden çizilsin (19.7'deki `setPostalCode` gerekçesinin aynısı).
       refresh();
@@ -195,6 +203,16 @@ export function PlaceProvider({ children, zones, initialPlace, initialAddress, i
     [adopt, track],
   );
 
+  const selectPickup = useCallback(
+    async (warehouseId: string | null): Promise<boolean> => {
+      const { data } = await track(selectMyPickupAction(warehouseId));
+      if (!data) return false;
+      adopt(data);
+      return true;
+    },
+    [adopt, track],
+  );
+
   const saveAddress = useCallback(
     async (input: SaveAddressInput) => {
       const { data, errorKey } = await track(saveMyAddressAction(input));
@@ -232,10 +250,12 @@ export function PlaceProvider({ children, zones, initialPlace, initialAddress, i
         refresh();
       },
       selectAddress,
+      pickup,
+      selectPickup,
       saveAddress,
       zones,
     }),
-    [place, address, unresolved, ready, updating, panelOpen, refresh, setPostalCode, selectAddress, saveAddress, zones],
+    [place, address, unresolved, ready, updating, panelOpen, refresh, setPostalCode, selectAddress, pickup, selectPickup, saveAddress, zones],
   );
 
   return <PlaceContext.Provider value={value}>{children}</PlaceContext.Provider>;

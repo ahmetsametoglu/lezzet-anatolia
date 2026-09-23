@@ -134,7 +134,9 @@
       "stripInRoute": "{place} — {date} kapınızda, ücretsiz",
       "stripInRouteNoDate": "{place} — kapıya teslim, ücretsiz",
       "stripShipping": "{place} — kargoyla gönderiyoruz",
-      "stripUnreachable": "{place} — buraya şu an gönderemiyoruz"
+      "stripUnreachable": "{place} — buraya şu an gönderemiyoruz",
+      "pickupTitle": "Depodan teslim al",
+      "pickupNote": "Sepet ve ödeme {name} deposuna göre kurulur; teslim saatini telefonla kararlaştırın."
     },
     "gate": {
       "login": "Devam etmek için giriş yapın",
@@ -277,7 +279,9 @@
       "stripInRoute": "{place} — livré chez vous {date}, livraison offerte",
       "stripInRouteNoDate": "{place} — livraison à domicile, offerte",
       "stripShipping": "{place} — expédié par transporteur",
-      "stripUnreachable": "{place} — livraison impossible à cette adresse pour le moment"
+      "stripUnreachable": "{place} — livraison impossible à cette adresse pour le moment",
+      "pickupTitle": "Retirer à l'entrepôt",
+      "pickupNote": "Le panier et le paiement sont établis pour l'entrepôt {name} ; convenez de l'heure par téléphone."
     },
     "gate": {
       "login": "Connectez-vous pour continuer",
@@ -420,7 +424,9 @@
       "stripInRoute": "{place} — {date} an Ihrer Haustür, kostenlos",
       "stripInRouteNoDate": "{place} — Lieferung an die Haustür, kostenlos",
       "stripShipping": "{place} — Versand per Paket",
-      "stripUnreachable": "{place} — derzeit keine Lieferung an diese Adresse"
+      "stripUnreachable": "{place} — derzeit keine Lieferung an diese Adresse",
+      "pickupTitle": "Im Lager abholen",
+      "pickupNote": "Warenkorb und Zahlung richten sich nach dem Lager {name}; die Abholzeit vereinbaren Sie telefonisch."
     },
     "gate": {
       "login": "Zum Fortfahren anmelden",

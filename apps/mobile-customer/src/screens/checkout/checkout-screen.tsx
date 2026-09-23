@@ -30,7 +30,7 @@ import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
 import { cartLineId, refreshCart, setPurchasePlace, useCart } from '@/screens/customer-kit/cart-store';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
-import { selectDeliveryAddress, useSelectedDeliveryAddress } from '@/screens/customer-kit/delivery-address-store';
+import { selectDeliveryAddress, selectPickupWarehouse, useSelectedDeliveryAddress, useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { discountSummaryOf, orderDiscountSummaryOf } from '@/screens/customer-kit/discount-label';
 import { OptionRow } from '@/screens/customer-kit/option-row';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
@@ -87,8 +87,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /** Hesap ekranıyla aynı ortak form; kapalıyken `null`. */
   const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
   const [deliveryDate, setDeliveryDate] = useState<string | null>(null);
-  /* Gel-al seçimi — yalnız sunucu teklif ediyorsa (`snapshot.pickup`) anlamlı; seçim sunucuya gider, tür oradan döner. */
-  const [pickupWarehouseId, setPickupWarehouseId] = useState<string | null>(null);
+  /* Gel-al seçimi ORTAK depoda (sepetin adres seçicisiyle aynı): depo bir adres gibi seçilir, tür sunucudan döner. */
+  const pickupWarehouseId = useSelectedPickupWarehouse();
   const [paymentKey, setPaymentKey] = useState<string | null>(null);
   const [marketing, setMarketing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -636,7 +636,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   key={candidate.id}
                   label={addressTitle(candidate)}
                   description={addressLine(candidate)}
-                  selected={candidate.id === selectedAddress?.id}
+                  // Depo seçiliyken varsayılan adres fatura adresidir, seçili çizilmez — tek seçim, tek çerçeve.
+                  selected={!isPickup && candidate.id === selectedAddress?.id}
                   onPress={() => setAddressId(candidate.id)}
                   /* Uzun basma düzenler: kayıtlı adresi düzeltmek için sipariş akışından çıkmak gerekmesin. */
                   onLongPress={() => setAddressSheet({ editing: candidate })}
@@ -645,6 +646,23 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   testID={`checkout-address-${candidate.id}`}
                 />
               ))}
+              {/* Gel-al (izinli müşteri): depo bir adres gibi seçilir; adres fatura adresi olarak kalır, seçim ortak depoda. */}
+              {pickupOffer?.warehouses.map((warehouse) => (
+                <OptionRow
+                  key={warehouse.id}
+                  label={t.address.pickupOption}
+                  description={`${warehouse.name} · ${warehouse.addressLine}`}
+                  selected={isPickup && pickupOffer.selectedWarehouseId === warehouse.id}
+                  descriptionTone="muted"
+                  onPress={() => selectPickupWarehouse(warehouse.id)}
+                  testID={`checkout-pickup-${warehouse.id}`}
+                />
+              ))}
+              {isPickup && selectedAddress !== null ? (
+                <Text style={styles.dayLine} testID="checkout-pickup-billing">
+                  {t.address.billing.replace('{address}', `${addressTitle(selectedAddress)} · ${addressLine(selectedAddress)}`)}
+                </Text>
+              ) : null}
               {/* Adres YAZIMI kitin ortak çekmecesinde (tek form, tek doğrulama) — hesap
                   ekranıyla aynı dosya; burada ikinci bir kopyası yok. */}
               {addresses.length === 0 ? (
@@ -676,45 +694,36 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
             {delivery === null ? null : (
               <View style={styles.section}>
                 <Text style={styles.eyebrow}>{upperIn(t.delivery.eyebrow, locale)}</Text>
-                {/* Kapı/kargo adresin cevabıdır (dokunuş değiştirmez); gel-al seçiliyken ikisi de seçili değildir ama adrese
-                    dönüş için dokunulabilir — seçim sunucuya gider, tür oradan döner. */}
-                <OptionRow
-                  label={t.delivery.door}
-                  description={isRoute ? t.delivery.doorBody.replace('{fee}', shippingFeeLabel) : isPickup ? '' : t.delivery.doorUnavailable}
-                  selected={isRoute}
-                  disabled={!isRoute && !isPickup}
-                  /* Sebep yalnız kapalı hâlde kırmızı: soluk griyle yazılınca müşteri onu fark etmiyordu. */
-                  descriptionTone={isRoute || isPickup ? 'muted' : 'danger'}
-                  onPress={isPickup ? () => setPickupWarehouseId(null) : keepDelivery}
-                  testID="checkout-mode-door"
-                />
-                <OptionRow
-                  label={t.delivery.shipping}
-                  description={isRoute ? t.delivery.shippingUnavailable : isPickup ? '' : t.delivery.shippingBody.replace('{fee}', shippingFeeLabel)}
-                  selected={!isRoute && !isPickup}
-                  disabled={isRoute}
-                  descriptionTone={isRoute ? 'danger' : 'muted'}
-                  onPress={isPickup ? () => setPickupWarehouseId(null) : keepDelivery}
-                  testID="checkout-mode-shipping"
-                />
-                {/* Gel-al yalnız izinli müşteriye sunulur (`snapshot.pickup`); depo başına bir satır, adres ve randevu numarası
-                    satırın altında. Web telefon görünümünün aynı kartı. */}
-                {pickupOffer?.warehouses.map((warehouse) => (
-                  <OptionRow
-                    key={warehouse.id}
-                    label={t.delivery.pickup}
-                    description={`${warehouse.name} · ${warehouse.addressLine}\n${t.delivery.pickupBody}`}
-                    selected={isPickup && pickupOffer.selectedWarehouseId === warehouse.id}
-                    descriptionTone="muted"
-                    onPress={() => setPickupWarehouseId(warehouse.id)}
-                    testID={`checkout-mode-pickup-${warehouse.id}`}
-                  />
-                ))}
+                {/* Kapı/kargo adresin cevabıdır (dokunuş değiştirmez); gel-al seçiliyken ikisi de çizilmez — depo bloğu konuşur. */}
                 {isPickup ? (
                   <Text style={styles.dayLine} testID="checkout-pickup-phone">
+                    {t.delivery.pickupBody}
+                    {'\n'}
                     {t.delivery.pickupPhone.replace('{phone}', brand.contact.phoneDisplay)}
                   </Text>
-                ) : null}
+                ) : (
+                  <>
+                    <OptionRow
+                      label={t.delivery.door}
+                      description={isRoute ? t.delivery.doorBody.replace('{fee}', shippingFeeLabel) : t.delivery.doorUnavailable}
+                      selected={isRoute}
+                      disabled={!isRoute}
+                      /* Sebep yalnız kapalı hâlde kırmızı: soluk griyle yazılınca müşteri onu fark etmiyordu. */
+                      descriptionTone={isRoute ? 'muted' : 'danger'}
+                      onPress={keepDelivery}
+                      testID="checkout-mode-door"
+                    />
+                    <OptionRow
+                      label={t.delivery.shipping}
+                      description={isRoute ? t.delivery.shippingUnavailable : t.delivery.shippingBody.replace('{fee}', shippingFeeLabel)}
+                      selected={!isRoute}
+                      disabled={isRoute}
+                      descriptionTone={isRoute ? 'danger' : 'muted'}
+                      onPress={keepDelivery}
+                      testID="checkout-mode-shipping"
+                    />
+                  </>
+                )}
                 {/* Komşu daveti gün seçiminin hemen üstünde, çünkü cümle o seçimin gerekçesidir. Her davet kendi satırında: müşteriyi
                     birden çok komşu birden çok güne çağırmış olabilir. */}
                 {isRoute

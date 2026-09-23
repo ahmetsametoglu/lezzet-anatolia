@@ -15,7 +15,8 @@
     "savedToast": "{name} adresi eklendi ve teslimat adresi olarak seçildi",
     "errors": {
       "unexpected": "Bir şeyler ters gitti. Tekrar deneyin; sürerse bize yazın.",
-      "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın."
+      "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın.",
+      "pickup_unavailable": "Bu depo şu an gel-al için açık değil."
     },
     "form": {
       "searchLabel": "Sokak ve kapı numarası",
@@ -56,7 +57,8 @@
       "delete": "Adresi sil",
       "deleted": "Adres silindi",
       "saving": "Kaydediliyor…"
-    }
+    },
+    "pickupOption": "Depodan teslim al"
   },
   "fr": {
     "pickerTitle": "Adresse de livraison",
@@ -74,7 +76,8 @@
     "savedToast": "Adresse « {name} » ajoutée et choisie pour la livraison",
     "errors": {
       "unexpected": "Une erreur est survenue. Réessayez ; si cela persiste, écrivez-nous.",
-      "session_expired": "Votre session semble expirée. Reconnectez-vous."
+      "session_expired": "Votre session semble expirée. Reconnectez-vous.",
+      "pickup_unavailable": "Ce dépôt n'est pas disponible pour le retrait en ce moment."
     },
     "form": {
       "searchLabel": "Rue et numéro",
@@ -115,7 +118,8 @@
       "delete": "Supprimer l'adresse",
       "deleted": "Adresse supprimée",
       "saving": "Enregistrement…"
-    }
+    },
+    "pickupOption": "Retirer à l'entrepôt"
   },
   "de": {
     "pickerTitle": "Lieferadresse",
@@ -133,7 +137,8 @@
     "savedToast": "Adresse „{name}“ hinzugefügt und als Lieferadresse gewählt",
     "errors": {
       "unexpected": "Etwas ist schiefgelaufen. Bitte erneut versuchen; wenn es bleibt, schreiben Sie uns.",
-      "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden."
+      "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden.",
+      "pickup_unavailable": "Dieses Lager ist derzeit nicht für die Abholung geöffnet."
     },
     "form": {
       "searchLabel": "Straße und Hausnummer",
@@ -174,6 +179,7 @@
       "delete": "Adresse löschen",
       "deleted": "Adresse gelöscht",
       "saving": "Wird gespeichert…"
-    }
+    },
+    "pickupOption": "Im Lager abholen"
   }
 }

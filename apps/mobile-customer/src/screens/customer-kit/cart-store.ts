@@ -210,6 +210,8 @@ let context: ViewContext | null = null;
  * ikinci bir görünüm yoktur.
  */
 let purchasePostalCode: string | null = null;
+/** Gel-al seçimi (adres seçicideki depo kartı): görünüm o deponun stoğuyla çözülür, posta kodu yalnız yedek. */
+let purchasePickupWarehouseId: string | null = null;
 
 /** Görünümün çözüleceği yer — adres biliniyorsa o, yoksa gezinme kodu (künye: `purchasePostalCode`). */
 function placeNow(): string | null {
@@ -218,15 +220,16 @@ function placeNow(): string | null {
 
 function queryNow(): CartViewQuery | null {
   if (context === null) return null;
-  return { locale: context.locale, postalCode: placeNow(), coupon: state.couponCode };
+  return { locale: context.locale, postalCode: placeNow(), coupon: state.couponCode, pickupWarehouseId: purchasePickupWarehouseId };
 }
 
 /**
  * Satın alma yerini bildirir; değişince görünüm yeniden çözülür, `null` gezinme koduna döner.
  */
-export function setPurchasePlace(postalCode: string | null): void {
-  if (purchasePostalCode === postalCode) return;
+export function setPurchasePlace(postalCode: string | null, pickupWarehouseId: string | null = null): void {
+  if (purchasePostalCode === postalCode && purchasePickupWarehouseId === pickupWarehouseId) return;
   purchasePostalCode = postalCode;
+  purchasePickupWarehouseId = pickupWarehouseId;
   refreshView();
 }
 

@@ -2,12 +2,14 @@ import 'server-only';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { POSTAL_CODE_PATTERN } from '@lezzet/address';
+import { readPickupOffer } from '@lezzet/application';
 import { AddressService, PostalCodePlaceService, serviceDb } from '@lezzet/database';
 import { findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
-import type { Address } from '@lezzet/types';
+import type { Address, CheckoutPickup, Warehouse } from '@lezzet/types';
 import { currentCustomerId } from '@/lib/guard';
 import { describePlace } from './describe-place';
 import { readDeliveryInputs } from './inputs';
+import { readPickupCookie } from './pickup-cookie';
 import { toPlaceAddress, type PlaceAnswer, type PlaceSnapshot } from './place-types';
 
 /*
@@ -20,6 +22,9 @@ interface PlaceContext {
   resolution: PostalCodeResolution | null;
   /** Girişli ve adresli müşterinin varsayılan adresi; ziyaretçide ve adressiz müşteride `null`, o hâlde `answer` çerezden gelir. */
   address: Address | null;
+  /** Gel-al teklifi (izinli müşteride) ve çerezdeki seçimin kapıdan geçmiş hâli; seçim yoksa `pickupWarehouse` null. */
+  pickup: CheckoutPickup | null;
+  pickupWarehouse: Warehouse | null;
   /** `null`: yer bilinmiyor; okuma depo-üstüne düşer ve orada "var" bir vaat değildir. */
   warehouseId: string | null;
   /**
@@ -29,7 +34,7 @@ interface PlaceContext {
   shippingWarehouseId: string | null;
 }
 
-const EMPTY: PlaceContext = { answer: null, resolution: null, warehouseId: null, shippingWarehouseId: null, address: null };
+const EMPTY: PlaceContext = { answer: null, resolution: null, warehouseId: null, shippingWarehouseId: null, address: null, pickup: null, pickupWarehouse: null };
 
 /** Aynı kod birden çok bileşenden sorulabilir; tablo yılda bir yenilendiği için bayatlamaz. */
 const getPostalMatches = cache(async (postalCode: string) =>
@@ -45,10 +50,19 @@ const readDefaultAddress = cache(async (): Promise<Address | null> => {
 });
 
 /** Kod çözülemezse yer bilinmiyor sayılır ve hata fırlatılmaz: cevaplanmamış soru arıza değildir. */
+/** Çerezdeki gel-al seçimi teklif kapısından geçer (izin × gel-al deposu); misafirde teklif yoktur. */
+const readPickupSelection = cache(async (): Promise<{ offer: CheckoutPickup | null; warehouse: Warehouse | null }> => {
+  const customerId = await currentCustomerId();
+  if (!customerId) return { offer: null, warehouse: null };
+  return readPickupOffer(serviceDb(), customerId, await readPickupCookie());
+});
+
 const readPlaceContext = cache(async (): Promise<PlaceContext> => {
   const address = await readDefaultAddress();
+  const pickup = await readPickupSelection();
   const answer = address ? { country: address.country, postalCode: address.postalCode } : await readPlaceAnswerFromCookie();
-  if (!answer) return EMPTY;
+  // Adres yokken de gel-al seçilebilir: sepet o zaman deponun stoğuyla okunur, adres yalnız faturadır.
+  if (!answer) return { ...EMPTY, pickup: pickup.offer, pickupWarehouse: pickup.warehouse };
 
   const [{ zones, warehouses }, matches] = await Promise.all([readDeliveryInputs(), getPostalMatches(answer.postalCode)]);
 
@@ -61,6 +75,8 @@ const readPlaceContext = cache(async (): Promise<PlaceContext> => {
     answer,
     resolution,
     address,
+    pickup: pickup.offer,
+    pickupWarehouse: pickup.warehouse,
     /**
      * Yalnız rota deposu: çözüm kargo hâlinde bu alana kargo deposunu koyar ve olduğu gibi yayılsaydı rota dışındaki müşteri rota
      * deposundaymış gibi stok görürdü.
@@ -73,7 +89,9 @@ const readPlaceContext = cache(async (): Promise<PlaceContext> => {
 
 /** İki depo birlikte döner: "yerelde yok" tek başına "tükendi" değildir, kargo deposunda varsa ürün satılabilir. */
 export async function readPlaceWarehouses(): Promise<{ warehouseId: string | null; shippingWarehouseId: string | null }> {
-  const { warehouseId, shippingWarehouseId } = await readPlaceContext();
+  const { warehouseId, shippingWarehouseId, pickupWarehouse } = await readPlaceContext();
+  // Gel-al'da okumalar SEÇİLEN DEPONUN stoğuyla yapılır; kargo dolgusu yoktur (depoda olmayan kalem "burada yok").
+  if (pickupWarehouse) return { warehouseId: pickupWarehouse.id, shippingWarehouseId: null };
   return { warehouseId, shippingWarehouseId };
 }
 
@@ -82,11 +100,11 @@ export const readPlaceAnswer = cache(async (): Promise<PlaceAnswer | null> => (a
 
 /** Layout'un ilk karesi, istemci yeri ikinci bir turla çözmesin diye. Tarif sayımsızdır, çünkü sayfa açılışı bir niyet değildir. */
 export const readPlaceSnapshot = cache(async (): Promise<PlaceSnapshot> => {
-  const { answer, resolution, address } = await readPlaceContext();
+  const { answer, resolution, address, pickup } = await readPlaceContext();
   const placeAddress = address ? toPlaceAddress(address) : null;
   if (!answer || !resolution || (resolution.kind !== 'route' && resolution.kind !== 'shipping')) {
     // Karşılanamayan yerin sebebi taşınır ki sepet "buraya gönderemiyoruz" diyebilsin.
-    return { place: null, address: placeAddress, unresolved: resolution?.kind === 'unresolved' ? resolution.reason : null };
+    return { place: null, address: placeAddress, unresolved: resolution?.kind === 'unresolved' ? resolution.reason : null, pickup };
   }
   const [{ zones }, matches] = await Promise.all([readDeliveryInputs(), getPostalMatches(answer.postalCode)]);
   const place = await describePlace(
@@ -95,7 +113,7 @@ export const readPlaceSnapshot = cache(async (): Promise<PlaceSnapshot> => {
     zones,
     matches,
   );
-  return { place, address: placeAddress, unresolved: null };
+  return { place, address: placeAddress, unresolved: null, pickup };
 });
 
 /**
@@ -108,7 +126,9 @@ export async function readPlaceScope(): Promise<{
   warehouseId: string | null;
   shippingWarehouseId: string | null;
 }> {
-  const { answer, resolution, warehouseId, shippingWarehouseId } = await readPlaceContext();
+  const { answer, resolution, warehouseId, shippingWarehouseId, pickupWarehouse } = await readPlaceContext();
+  // Gel-al: kapsam deponun ülkesi ve kendisidir; bölge yok, kargo deposu yok.
+  if (pickupWarehouse) return { country: pickupWarehouse.countryCode, zoneId: null, warehouseId: pickupWarehouse.id, shippingWarehouseId: null };
   return {
     country: answer?.country ?? null,
     zoneId: resolution?.kind === 'route' ? resolution.zoneId : null,
@@ -122,10 +142,11 @@ export async function readPlaceScope(): Promise<{
  * Ekran kipi depo kimliklerinden türetemez, çünkü kargo çözümü de depo verir; türetme her sayfada ayrı yapılsaydı bir gün ayrışırdı.
  * Kip çerezden değil çözümden okunur.
  */
-export type PlaceMode = 'unknown' | 'route' | 'shipping';
+export type PlaceMode = 'unknown' | 'route' | 'shipping' | 'pickup';
 
 export async function readPlaceMode(): Promise<PlaceMode> {
-  const { resolution } = await readPlaceContext();
+  const { resolution, pickupWarehouse } = await readPlaceContext();
+  if (pickupWarehouse) return 'pickup';
   if (resolution?.kind === 'route') return 'route';
   if (resolution?.kind === 'shipping') return 'shipping';
   return 'unknown';
@@ -145,4 +166,9 @@ async function readPlaceAnswerFromCookie(): Promise<PlaceAnswer | null> {
   } catch {
     return null;
   }
+}
+
+/** Checkout'un gel-al girdisi: seçim ekrandan değil yerden gelir — tek kaynak çerez + teklif kapısı. */
+export async function readSelectedPickupWarehouseId(): Promise<string | null> {
+  return (await readPlaceContext()).pickupWarehouse?.id ?? null;
 }

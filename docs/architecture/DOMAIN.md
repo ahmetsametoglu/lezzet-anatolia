@@ -262,7 +262,9 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
   - Bu güvence sayesinde taban **küresel satıra** yazılabiliyor (bölge bölge tekrarlanmadan); bölge satırı yalnız gerçekten farklı bir tur için gerekir.
 - **Depodan teslim (gel-al) — yalnız izinli müşteriye (22.09):** üçüncü teslim türü `pickup`, checkout'ta yalnız
   `Customer.pickup_allowed` müşteriye ve yalnız gel-al noktası olan tesisler (`Warehouse.pickup_enabled`) için
-  sunulur; herkese açık bir Drive değildir. Sipariş seçilen depodan çıkar, bölge ve gün yok, kargo ücreti yok, asgari
+  sunulur; herkese açık bir Drive değildir. Seçim adres seçicide yapılır: depo bir adres gibi listelenir (web sepet,
+  telefon adres çekmecesi, checkout adres bölümü), seçilen adres fatura adresi olarak kalır (seçim yoksa varsayılan),
+  posta koduyla ilişkisi yoktur. Sipariş seçilen depodan çıkar, bölge ve gün yok, kargo ücreti yok, asgari
   sepet kargo kuralıyla aynı (yalnız kanal satırı). Randevu sistem dışıdır: sipariş hazır olunca müşteriye haber gider
   (`order_ready_for_pickup`), saati depoyla telefonla kararlaştırır. Ödeme online ya da **depoda** (kapıda ödeme
   kurallarıyla: tavan, `cod_allowed`, nakit uyarısı; para deponun kapı kasasına). Teslim depo uygulamasından, kutular

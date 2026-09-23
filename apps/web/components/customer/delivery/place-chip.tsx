@@ -47,12 +47,16 @@ interface PlaceChipProps {
 
 export function PlaceChip({ locale, line = false }: PlaceChipProps) {
   const t = messages[locale];
-  const { place, address, updating, panelOpen, setPanelOpen } = useDeliveryPlace();
+  const { place, address, updating, panelOpen, setPanelOpen, pickup } = useDeliveryPlace();
+  // Gel-al seçiliyken hap depoyu söyler: sepet o depoya göre okunuyor, adres yalnız fatura.
+  const pickedWarehouse = pickup?.warehouses.find((w) => w.id === pickup.selectedWarehouseId) ?? null;
 
   // `placeName` → `zoneName` → yalnız kod. İkinci basamak bir emniyet ağı: referansta olmayan ama
   // kendi bölgemizde duran bir kodda (bkz. `19.16`) hap yine bir ad gösterebilsin.
   const placeLabel = place?.placeName ?? place?.zoneName ?? null;
-  const label = address
+  const label = pickedWarehouse
+    ? pickedWarehouse.name
+    : address
     ? `${address.label || address.city} · ${address.postalCode}`
     : place
       ? placeLabel
@@ -60,7 +64,7 @@ export function PlaceChip({ locale, line = false }: PlaceChipProps) {
         : place.postalCode
       : t.empty;
   // Teslim şekli yalnız yer biliniyorken yazılır — boş hapta söylenecek bir şey yok.
-  const channel = place ? (place.inRoute ? t.channelDoor : t.channelShip) : null;
+  const channel = pickedWarehouse ? t.channelPickup : place ? (place.inRoute ? t.channelDoor : t.channelShip) : null;
 
   if (line) {
     // Satır ilk kareden çizilir (yer sunucudan geliyor); yer DEĞİŞİRKEN iskelet — hapın kuralı
@@ -69,7 +73,9 @@ export function PlaceChip({ locale, line = false }: PlaceChipProps) {
     // biliniyorsa "{kod} {ŞEHİR} ▾" — şehir native'deki gibi dilin kuralıyla büyük harf. Girişli ve
     // adresli müşteride adres göstermek web'e özgü karar (13.09) ve aynen kalır.
     const header = homeMessages[locale].header;
-    const postal = address
+    const postal = pickedWarehouse
+      ? pickedWarehouse.name
+      : address
       ? `${address.label || address.city} · ${address.postalCode}`
       : place
         ? placeLabel

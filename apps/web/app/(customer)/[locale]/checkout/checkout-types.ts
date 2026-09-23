@@ -35,8 +35,6 @@ export interface CheckoutState {
   shippingOptionCode: string | null;
   /** Haritadan seçilen teslim noktası ve onun servisi; eve teslimde `null`. */
   servicePoint: SelectedServicePoint | null;
-  /** Gel-al seçimi: müşterinin malı alacağı depo; adrese teslimde `null`. Sunucu tanımadığı kimliği düşürür. */
-  pickupWarehouseId: string | null;
   /** Müşterinin seçtiği teslim türü; `point` iken nokta seçilmeden sipariş onaylanmaz. */
   shippingMode: 'home' | 'point';
   paymentMethod: PaymentMethod | null;
@@ -69,8 +67,6 @@ export interface CheckoutViewProps extends StepProps {
   onSelectShipping: (code: string) => void;
   /** Haritadan nokta seçildi: noktanın servisi seçilen servis olur ve ücret yeniden çözülür. */
   onSelectServicePoint: (point: SelectedServicePoint) => void;
-  /** Gel-al ↔ adrese teslim: seçim sunucuya gider, anlık görüntü seçilen depoyla yeniden çözülür (`null` = adresime). */
-  onSelectPickup: (warehouseId: string | null) => void;
   /** Eve teslim ↔ teslim noktası; eve dönülünce nokta bırakılır ve eve giden en ucuz servis seçilir. */
   onSelectShippingMode: (mode: 'home' | 'point') => void;
   onSelectPayment: (method: PaymentMethod, onAccount: boolean) => void;

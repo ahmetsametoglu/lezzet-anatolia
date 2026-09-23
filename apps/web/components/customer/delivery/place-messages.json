@@ -54,7 +54,8 @@
     "failed": "Şu an cevap veremedik — bağlantıyı kontrol edip tekrar deneyin.",
     "doorMark": "Kapıya gelir",
     "doorBody": "En erken {date} kapınızda.",
-    "doorBodyPlain": "Kapınıza getiriyoruz."
+    "doorBodyPlain": "Kapınıza getiriyoruz.",
+    "channelPickup": "depodan teslim"
   },
   "fr": {
     "empty": "Saisissez le code postal",
@@ -111,7 +112,8 @@
     "failed": "Nous n'avons pas pu répondre — vérifiez la connexion et réessayez.",
     "doorMark": "Livraison à votre porte",
     "doorBody": "Chez vous au plus tôt le {date}.",
-    "doorBodyPlain": "Nous livrons à votre porte."
+    "doorBodyPlain": "Nous livrons à votre porte.",
+    "channelPickup": "retrait à l'entrepôt"
   },
   "de": {
     "empty": "Postleitzahl eingeben",
@@ -168,6 +170,7 @@
     "failed": "Wir konnten gerade nicht antworten — bitte Verbindung prüfen und erneut versuchen.",
     "doorMark": "Lieferung an die Tür",
     "doorBody": "Frühestens am {date} bei Ihnen.",
-    "doorBodyPlain": "Wir liefern an Ihre Tür."
+    "doorBodyPlain": "Wir liefern an Ihre Tür.",
+    "channelPickup": "Abholung im Lager"
   }
 }

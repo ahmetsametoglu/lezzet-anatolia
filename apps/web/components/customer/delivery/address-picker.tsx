@@ -7,6 +7,7 @@ import type { Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/customer/ui/button';
 import { Dialog } from '@/components/customer/ui/dialog';
+import { Icon } from '@/components/customer/ui/icons';
 import { useToast } from '@/components/customer/ui/toast';
 import { useAccount } from '@/components/customer/account/account-context';
 import { errorText } from '@/lib/customer-error-text';
@@ -35,7 +36,8 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
   const t = messages[locale];
   const account = useAccount();
   const notify = useToast();
-  const { address: current, saveAddress } = useDeliveryPlace();
+  const { address: current, saveAddress, pickup, selectPickup } = useDeliveryPlace();
+  const pickedWarehouseId = pickup?.selectedWarehouseId ?? null;
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>(initialMode === 'new' ? { kind: 'new' } : { kind: 'list' });
   // "Düzenle" ile açıldıysa form SEÇİLİ adresin tam satırıyla açılır (alıcı, telefon burada).
@@ -49,6 +51,11 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
   const pick = async (id: string) => {
     setError(null);
     if (!(await choose(id))) return setError(errorText(t.errors, null));
+    onClose();
+  };
+  const pickPickup = async (id: string) => {
+    setError(null);
+    if (!(await selectPickup(id))) return setError(errorText(t.errors, null));
     onClose();
   };
 
@@ -108,7 +115,8 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
       {addresses !== null && addresses.length > 0 && (
         <div className="flex flex-col gap-2">
           {addresses.map((row) => {
-            const selected = row.id === current?.id;
+            // Depo seçiliyken varsayılan adres fatura adresidir, seçili çizilmez — tek seçim, tek çerçeve.
+            const selected = pickedWarehouseId === null && row.id === current?.id;
             return (
               <div
                 key={row.id}
@@ -145,6 +153,39 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
                   {t.edit}
                 </button>
               </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Gel-al (izinli müşteri): depo bir adres gibi seçilir — sepet ve ödeme o depoya göre kurulur, adres fatura adresi
+          olarak kalır. Teklif sunucudan (`pickup`), izinsiz müşteride blok hiç yoktur. */}
+      {pickup && (
+        <div className="flex flex-col gap-2">
+          {pickup.warehouses.map((warehouse) => {
+            const selected = warehouse.id === pickedWarehouseId;
+            return (
+              <button
+                key={warehouse.id}
+                type="button"
+                disabled={busy}
+                onClick={() => void pickPickup(warehouse.id)}
+                aria-pressed={selected}
+                className={[
+                  'flex cursor-pointer flex-col gap-0.5 rounded-soft px-3.5 py-3 text-left disabled:cursor-progress',
+                  selected ? 'border-[1.5px] border-olive bg-olive-bg' : 'border border-sand-200 bg-card',
+                ].join(' ')}
+                data-testid={`address-pick-warehouse-${warehouse.id}`}
+              >
+                <span className="flex items-center gap-1.5 font-sans text-body-sm font-bold text-ink">
+                  <Icon name="pin" size={14} />
+                  {t.pickupOption}
+                  {selected && <span className="font-semibold text-olive-dark"> · {t.selected}</span>}
+                </span>
+                <span className="font-sans text-note text-body">
+                  {warehouse.name} · {warehouse.addressLine}
+                </span>
+              </button>
             );
           })}
         </div>

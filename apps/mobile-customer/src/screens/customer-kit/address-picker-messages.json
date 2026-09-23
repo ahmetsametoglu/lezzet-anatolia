@@ -2,16 +2,19 @@
   "tr": {
     "title": "Teslimat adresi",
     "untitled": "Adres",
-    "addNew": "＋ Yeni adres ekle"
+    "addNew": "＋ Yeni adres ekle",
+    "pickupOption": "Depodan teslim al"
   },
   "fr": {
     "title": "Adresse de livraison",
     "untitled": "Adresse",
-    "addNew": "＋ Ajouter une adresse"
+    "addNew": "＋ Ajouter une adresse",
+    "pickupOption": "Retirer à l'entrepôt"
   },
   "de": {
     "title": "Lieferadresse",
     "untitled": "Adresse",
-    "addNew": "＋ Neue Adresse"
+    "addNew": "＋ Neue Adresse",
+    "pickupOption": "Im Lager abholen"
   }
 }

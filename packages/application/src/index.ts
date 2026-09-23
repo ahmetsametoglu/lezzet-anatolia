@@ -504,6 +504,7 @@ export type { ReserveOrderInput, ReserveOutcome } from './order/reserve';
 export { createCheckoutDraft } from './order/checkout-draft';
 export type { CheckoutDraftInput, CheckoutDraftOutcome } from './order/checkout-draft';
 export { readCheckoutSnapshot } from './order/checkout-snapshot';
+export { readPickupOffer } from './order/pickup-offer';
 export type { CheckoutSnapshot, CheckoutSnapshotInput } from './order/checkout-snapshot';
 // ── Sipariş onaylama ──
 // `stripe` pakete girmez, çünkü paket React Native ağacında da okunur; ödeme niyeti, ölçüm ve durum yan etkileri port.

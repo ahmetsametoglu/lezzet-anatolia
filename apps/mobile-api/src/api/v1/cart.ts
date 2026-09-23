@@ -147,6 +147,8 @@ async function viewOf(c: Context<CustomerEnv>, db: Db, stored: Cart): Promise<Ca
     previousPrices: storedPrices(stored.items),
     couponCode: c.req.query('coupon') ?? null,
     postalCode: c.req.query('postalCode'),
+    // Gel-al seçimi: adres seçicideki depo kartı; kapı `readCartView`de (izin × gel-al deposu), geçemeyen yok sayılır.
+    pickupWarehouseId: c.req.query('pickupWarehouseId'),
   });
 }
 

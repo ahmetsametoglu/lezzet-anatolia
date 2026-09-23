@@ -36,7 +36,8 @@ import { addressLine } from '@lezzet/address';
 import { AddressPickerSheet } from '@/screens/customer-kit/address-picker-sheet';
 import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
-import { selectDeliveryAddress, useSelectedDeliveryAddress } from '@/screens/customer-kit/delivery-address-store';
+import { selectDeliveryAddress, selectPickupWarehouse, useSelectedDeliveryAddress, useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
+import { usePickupPoints } from '@/screens/customer-kit/use-pickup-points.hook';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
@@ -90,16 +91,20 @@ export function CartScreen() {
   const selectedAddressId = useSelectedDeliveryAddress();
   const deliveryAddress =
     addresses.find((a) => a.id === selectedAddressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
+  /* Gel-al (izinli müşteri): depo adres seçicide bir kart; seçim ortak depoda, sepet SEÇİLEN DEPONUN stoğuyla okunur. */
+  const pickupPoints = usePickupPoints(meStatus === 'ready');
+  const selectedPickupId = useSelectedPickupWarehouse();
+  const pickupPoint = pickupPoints.find((point) => point.id === selectedPickupId) ?? null;
   const [pickerOpen, setPickerOpen] = useState(false);
   const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
   /* Görünüm tek ve yeri adresten gelir: yer depoya bildirilir, görünüm tek yerde çözülür; ikinci bir okuma yazma turlarıyla
      tazelenmediği için ekranı dondururdu. */
   useEffect(() => {
-    setPurchasePlace(deliveryAddress?.postalCode ?? null);
-  }, [deliveryAddress?.postalCode]);
+    setPurchasePlace(deliveryAddress?.postalCode ?? null, pickupPoint?.id ?? null);
+  }, [deliveryAddress?.postalCode, pickupPoint?.id]);
   const view = cart.view;
   /** Bandın ve künyenin andığı yer — adres varsa onun kodu, yoksa gezinme kodu. */
-  const placeLabel = deliveryAddress?.postalCode ?? browsingCode;
+  const placeLabel = pickupPoint?.name ?? deliveryAddress?.postalCode ?? browsingCode;
 
   const [couponSheetOpen, setCouponSheetOpen] = useState(false);
   const [couponInput, setCouponInput] = useState('');
@@ -371,7 +376,16 @@ export function CartScreen() {
       <ScrollView contentContainerStyle={styles.content} testID="cart-scroll">
         {/* Teslimat adresi sepetin neye göre değerlendirildiğini söyler; posta kodu düzenleyicisi sepette yok, çünkü iki ayrı yer
             tutmak kapattığımız ayrışmayı geri açardı. */}
-        {deliveryAddress === null ? (
+        {pickupPoint !== null ? (
+          <View style={styles.place}>
+            <Text style={styles.placeEyebrow}>{t.address.eyebrow}</Text>
+            <Text style={styles.placeLine} testID="cart-place-pickup">
+              {t.address.pickupLine.replace('{name}', pickupPoint.name)}
+            </Text>
+            <Text style={styles.placeNote}>{t.address.pickupNote}</Text>
+            <TextAction label={t.address.change} onPress={() => setPickerOpen(true)} testID="cart-place-address" />
+          </View>
+        ) : deliveryAddress === null ? (
           browsingCode === '' ? null : (
             <View style={styles.place}>
               <Text style={styles.placeEyebrow}>{t.address.eyebrow}</Text>
@@ -573,6 +587,9 @@ export function CartScreen() {
         addresses={addresses}
         selectedId={deliveryAddress?.id ?? null}
         onSelect={selectDeliveryAddress}
+        pickupPoints={pickupPoints}
+        selectedPickupId={selectedPickupId}
+        onSelectPickup={selectPickupWarehouse}
         onAddNew={() => {
           setPickerOpen(false);
           setAddressSheet({ editing: null });

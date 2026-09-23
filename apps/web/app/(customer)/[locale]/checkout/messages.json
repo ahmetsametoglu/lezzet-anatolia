@@ -17,7 +17,10 @@
       "missing": "Bu sipariş için henüz bir teslimat adresi seçilmedi.",
       "missingCta": "Sepette adres seç",
       "change": "Değiştir",
-      "inCartNote": "Adres sepette seçildi — burada yalnız onaylıyorsunuz."
+      "inCartNote": "Adres sepette seçildi — burada yalnız onaylıyorsunuz.",
+      "pickupTitle": "Depodan teslim alacaksınız",
+      "pickupNote": "Teslim saati için depoyu arayın: {phone}",
+      "billing": "Fatura adresi: {address}"
     },
     "delivery": {
       "step": "2",
@@ -64,9 +67,6 @@
       "pointYourAddress": "Adresiniz",
       "pointHoursUnknown": "Açılış saatleri bildirilmiyor",
       "pointClosed": "kapalı",
-      "modeAddress": "Adresime teslim",
-      "modeAddressBody": "Kapıya ya da kargoyla",
-      "modePickup": "Depodan teslim al",
       "pickup": "Depodan teslim · ücretsiz",
       "pickupBody": "Siparişiniz hazırlanınca haber veririz; teslim saatini depoyla telefonla kararlaştırırsınız.",
       "pickupPhone": "Randevu için: {phone}"
@@ -179,7 +179,10 @@
       "missing": "Aucune adresse de livraison n'est encore choisie pour cette commande.",
       "missingCta": "Choisir une adresse dans le panier",
       "change": "Modifier",
-      "inCartNote": "L'adresse a été choisie dans le panier — ici, vous confirmez seulement."
+      "inCartNote": "L'adresse a été choisie dans le panier — ici, vous confirmez seulement.",
+      "pickupTitle": "Vous retirerez à l'entrepôt",
+      "pickupNote": "Appelez l'entrepôt pour convenir de l'heure : {phone}",
+      "billing": "Adresse de facturation : {address}"
     },
     "delivery": {
       "step": "2",
@@ -226,9 +229,6 @@
       "pointYourAddress": "Votre adresse",
       "pointHoursUnknown": "Horaires non communiqués",
       "pointClosed": "fermé",
-      "modeAddress": "Livraison à mon adresse",
-      "modeAddressBody": "À domicile ou par colis",
-      "modePickup": "Retirer à l’entrepôt",
       "pickup": "Retrait à l’entrepôt · offert",
       "pickupBody": "Nous vous prévenons dès que la commande est prête ; vous convenez de l’heure du retrait avec l’entrepôt par téléphone.",
       "pickupPhone": "Pour convenir de l’heure : {phone}"
@@ -341,7 +341,10 @@
       "missing": "Für diese Bestellung ist noch keine Lieferadresse gewählt.",
       "missingCta": "Adresse im Warenkorb wählen",
       "change": "Ändern",
-      "inCartNote": "Die Adresse wurde im Warenkorb gewählt — hier bestätigen Sie nur."
+      "inCartNote": "Die Adresse wurde im Warenkorb gewählt — hier bestätigen Sie nur.",
+      "pickupTitle": "Sie holen im Lager ab",
+      "pickupNote": "Rufen Sie das Lager für die Abholzeit an: {phone}",
+      "billing": "Rechnungsadresse: {address}"
     },
     "delivery": {
       "step": "2",
@@ -388,9 +391,6 @@
       "pointYourAddress": "Ihre Adresse",
       "pointHoursUnknown": "Öffnungszeiten nicht angegeben",
       "pointClosed": "geschlossen",
-      "modeAddress": "Lieferung an meine Adresse",
-      "modeAddressBody": "An die Tür oder per Paket",
-      "modePickup": "Im Lager abholen",
       "pickup": "Abholung im Lager · kostenlos",
       "pickupBody": "Wir melden uns, sobald die Bestellung bereit ist; die Abholzeit vereinbaren Sie telefonisch mit dem Lager.",
       "pickupPhone": "Für die Terminabsprache: {phone}"

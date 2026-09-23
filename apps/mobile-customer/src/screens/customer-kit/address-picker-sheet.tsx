@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { MeAddress } from '@/lib/api/addresses';
+import type { PickupPoint } from '@/lib/api/pickup-points';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { addressLine } from '@lezzet/address';
 import messages from './address-picker-messages.json';
@@ -38,6 +39,10 @@ interface AddressPickerSheetProps {
   onSelect: (id: string) => void;
   onAddNew: () => void;
   onClose: () => void;
+  /** Gel-al noktaları (izinli müşteride): depo bir adres gibi seçilir; boş listede kart çizilmez. */
+  pickupPoints?: readonly PickupPoint[];
+  selectedPickupId?: string | null;
+  onSelectPickup?: (warehouseId: string) => void;
   testID?: string;
 }
 
@@ -48,6 +53,9 @@ export function AddressPickerSheet({
   onSelect,
   onAddNew,
   onClose,
+  pickupPoints = [],
+  selectedPickupId = null,
+  onSelectPickup,
   testID,
 }: AddressPickerSheetProps) {
   const locale = useAppLocale();
@@ -61,13 +69,28 @@ export function AddressPickerSheet({
             key={address.id}
             label={address.label ?? t.untitled}
             description={addressLine(address)}
-            selected={address.id === selectedId}
+            // Depo seçiliyken varsayılan adres fatura adresidir, seçili çizilmez — tek seçim, tek çerçeve.
+            selected={address.id === selectedId && selectedPickupId === null}
             onPress={() => {
               onSelect(address.id);
               // Seçim ANINDA kapanır: liste tek soruluk, "tamam" düğmesi ikinci bir dokunuş isterdi.
               onClose();
             }}
             testID={`address-pick-${address.id}`}
+          />
+        ))}
+        {/* Gel-al: depo satırı adreslerin altında, aynı seçim dili. Sepet ve ödeme o depoya göre kurulur; adres fatura adresi olarak kalır. */}
+        {pickupPoints.map((point) => (
+          <OptionRow
+            key={point.id}
+            label={t.pickupOption}
+            description={`${point.name} · ${point.addressLine}`}
+            selected={point.id === selectedPickupId}
+            onPress={() => {
+              onSelectPickup?.(point.id);
+              onClose();
+            }}
+            testID={`address-pick-warehouse-${point.id}`}
           />
         ))}
         <TextAction label={t.addNew} onPress={onAddNew} testID="address-pick-new" />

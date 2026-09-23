@@ -99,7 +99,7 @@ async function recordVariantNotices(lines: CartLine[], email: string): Promise<C
 
 export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCents, compact = false, place: override, onChangePlace }: PlaceRestrictionProps) {
   const t = messages[locale];
-  const { place: chipPlace, address, setPanelOpen } = useDeliveryPlace();
+  const { place: chipPlace, address, setPanelOpen, pickup } = useDeliveryPlace();
   const { saveForLater } = useCart();
   const [placeOpen, setPlaceOpen] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
@@ -109,7 +109,8 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
 
   // Kısıt YALNIZ rota dışı bir yer bilindiğinde doğar. Yer sorulmamışsa kimse "gönderemiyoruz"
   // diyemez: kime gönderileceği bilinmiyor (tasarım: atlanırsa uyarılar "muhtemel" tonunda kalır).
-  const blocked = restrictedLines(place, lines);
+  // Gel-al seçiliyken adresin kısıtı geçersizdir: sepet deponun stoğuyla okunur, "burada yok" satırın kendisinde yazar.
+  const blocked = pickup?.selectedWarehouseId ? [] : restrictedLines(place, lines);
   if (!place || blocked.length === 0) return null;
 
   /**

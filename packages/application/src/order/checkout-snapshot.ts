@@ -1,4 +1,4 @@
-import { AddressService, UserProfileService, WarehouseService, type Db } from '@lezzet/database';
+import { AddressService, type Db } from '@lezzet/database';
 import {
   resolveLocalizedText,
   type Address,
@@ -20,7 +20,7 @@ import { quoteShipping } from '../shipping/quote';
 import { sendcloudProvider, shippingProviderConfigured } from '../shipping/provider';
 import type { ShippingRateProvider } from '../shipping/port';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
-import { warehouseAddressLine } from '../warehouse/pickup';
+import { readPickupOffer } from './pickup-offer';
 
 /**
  * Checkout ekranının ADIM VERİSİ (08.13) — **uygulama katmanı orkestrasyonu**.
@@ -459,30 +459,6 @@ export async function readCheckoutSnapshot(
        kalmaması için o kümeyi de döndürmek. */
     summary: summarySlice(cart, scope, input.entries, locale),
     pickup: pickup.offer,
-  };
-}
-
-/**
- * Gel-al teklifi: müşteri izni × gel-al noktası olan tesisler. İki okuma, ikisi de kapı: `pickup_allowed` olmayan müşteriye
- * teklif yok, gel-al deposu olmayan kurulumda da yok. `requested` listede değilse seçim düşer — istemcinin söylediği depo
- * hiçbir zaman olduğu gibi yazılmaz.
- */
-async function readPickupOffer(
-  db: Db,
-  customerId: string,
-  requested: string | null,
-): Promise<{ offer: CheckoutSnapshot['pickup']; warehouse: Warehouse | null }> {
-  const customer = await new UserProfileService(db).getById(customerId);
-  if (!customer?.pickupAllowed) return { offer: null, warehouse: null };
-  const warehouses = await new WarehouseService(db).list({ activeOnly: true, kind: 'facility', pickupEnabled: true });
-  if (warehouses.length === 0) return { offer: null, warehouse: null };
-  const warehouse = warehouses.find((w) => w.id === requested) ?? null;
-  return {
-    offer: {
-      warehouses: warehouses.map((w) => ({ id: w.id, name: w.name, addressLine: warehouseAddressLine(w) })),
-      selectedWarehouseId: warehouse?.id ?? null,
-    },
-    warehouse,
   };
 }
 

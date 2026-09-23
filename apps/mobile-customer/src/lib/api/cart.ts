@@ -56,6 +56,8 @@ export interface CartViewQuery {
   postalCode: string | null;
   /** Uygulanmak İSTENEN kupon kodu; `null` = kupon denenmiyor. */
   coupon: string | null;
+  /** Gel-al seçimi: görünüm seçilen deponun stoğuyla çözülür; sunucu kimliği teklif kapısından geçirir, geçemeyeni yok sayar. */
+  pickupWarehouseId: string | null;
 }
 
 /** Sorgu dizesi — verilmemiş parametre YAZILMAZ; boş dize meşru bir değerdir (`catalog.ts` deseni). */
@@ -76,6 +78,7 @@ function viewQuery(query: CartViewQuery, extra: Record<string, string | undefine
   return queryOf({
     locale: query.locale,
     postalCode: present(query.postalCode),
+    pickupWarehouseId: present(query.pickupWarehouseId),
     coupon: present(query.coupon),
     ...extra,
   });

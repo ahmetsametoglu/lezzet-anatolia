@@ -107,6 +107,23 @@
     <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">Durumlar</span>
     <div style="display:flex;gap:16px;flex-wrap:wrap">
       <div style="width:560px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:22px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Gel-al seçili — depo adres seçicide seçildi (izinli müşteri)</span>
+        <div style="background:#fff;border:1px solid #e0d8c2;border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:26px;height:26px;border-radius:13px;background:#5f7a2c;color:#fff;font:700 13px 'Karla';display:grid;place-items:center">1</span><span style="font:600 18px 'Lora';color:#343b41">Teslimat adresi</span></div>
+          <div style="width:max-content;max-width:100%;border:2px solid #5f7a2c;background:#eef2e2;border-radius:12px;padding:12px 18px;display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 14px 'Karla';color:#3a4147">🏬 Depodan teslim alacaksınız</span>
+            <span style="font:400 13px/1.6 'Karla';color:#6d7261">Strasbourg deposu · 14 Rue de la Course, 67000 Strasbourg</span>
+            <span style="font:400 12.5px/1.6 'Karla';color:#8a8270">Teslim saati için depoyu arayın: +33 (0)6 16 99 06 81</span>
+            <span style="font:400 12.5px/1.6 'Karla';color:#8a8270">Fatura adresi: Ev · 12 Rue des Orfèvres, 67000 Strasbourg</span>
+          </div>
+          <span style="font:700 13px 'Karla';color:#5f7a2c;text-decoration:underline">Adresi sepette değiştir</span>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:26px;height:26px;border-radius:13px;background:#5f7a2c;color:#fff;font:700 13px 'Karla';display:grid;place-items:center">2</span><span style="font:600 18px 'Lora';color:#343b41">Teslimat</span><span style="background:#eef2e2;color:#5f7a2c;font:700 12px 'Karla';padding:3px 10px;border-radius:12px">📍 Depodan teslim · ücretsiz</span></div>
+          <span style="font:400 13px/1.6 'Karla';color:#6d7261">Siparişiniz hazırlanınca haber veririz; teslim saatini depoyla telefonla kararlaştırırsınız. Gün kartı yok.</span>
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:26px;height:26px;border-radius:13px;background:#5f7a2c;color:#fff;font:700 13px 'Karla';display:grid;place-items:center">3</span><span style="font:600 18px 'Lora';color:#343b41">Ödeme</span><span style="background:#f0e9d6;color:#6d7261;font:700 12px 'Karla';padding:3px 10px;border-radius:12px">🚪 Depoda öde · nakit, kart, çek</span></div>
+        </div>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">Seçim checkout'ta yapılmaz: sepetteki adres seçicide (telefonda adres çekmecesinde) depo bir adres gibi seçilir; 1. adım depoyu ve fatura adresi olarak kalan varsayılan adresi gösterir. Posta koduyla ilişkisi yoktur; ödeme kartı kapıda ödeme kartının aynısıdır.</span>
+      </div>
+      <div style="width:560px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:22px;display:flex;flex-direction:column;gap:12px">
         <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Yer ekseni · adres kazanır — seçilen adres şeritteki koddan farklı</span>
         <div style="background:#fff;border:1px solid #e0d8c2;border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:11px">
           <span style="font:600 18px 'Lora';color:#343b41">Sipariş <strong>68000 Colmar</strong> adresine göre hazırlandı</span>
@@ -275,7 +292,7 @@
       <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
         <li><strong>Adım zinciri</strong> → (0: girişsizse hızlı doğrulama) → adres → gün → ödeme → onay; tek sayfada dikey bölümler, tamamlanan adım seçili haliyle kalır (akordeon daraltma yok — az adım, tam görünürlük).</li>
         <li><strong>+ Yeni adres</strong> → kayıtlı adres listesinin altında satır içi form açılır (ayrı sayfa/modal değil); kaydedilince liste yenilenir, yeni adres seçili gelir ve akış adım 2'ye kendiliğinden iner. "Varsayılan yap" işaretliyse hesaptaki varsayılan da güncellenir.</li>
-        <li><strong>Adres seçimi</strong> → posta kodu teslimat şeklini belirler: bölge içi = kapıya teslim (ücretsiz, gün kartları); bölge dışı = kargo (ücret + eşik). Sepette soğuk zincir kalemi varken bölge dışı adres seçilirse teslimat kısıtı bloğu (sepetteki bileşenin aynısı) açılır: sonraya kaydet / adres değiştir / haber ver. Kargo yolu hiç mümkün değilse yöntem seçici render edilmez, tek satır "Kapıya teslim" kalır. Adım 2'nin içeriği adrese göre yeniden kurulur.</li>
+        <li><strong>Adres seçimi</strong> → posta kodu teslimat şeklini belirler: bölge içi = kapıya teslim (ücretsiz, gün kartları); bölge dışı = kargo (ücret + eşik). Sepette soğuk zincir kalemi varken bölge dışı adres seçilirse teslimat kısıtı bloğu (sepetteki bileşenin aynısı) açılır: sonraya kaydet / adres değiştir / haber ver. Gel-al (izinli müşteri): depo adres seçicide bir kart gibi seçilir; seçilince 1. adım depoyu ve fatura adresini gösterir, gün adımı çıkmaz, ödeme "Depoda öde" olur — posta koduyla ilişkisi yoktur. Kargo yolu hiç mümkün değilse yöntem seçici render edilmez, tek satır "Kapıya teslim" kalır. Adım 2'nin içeriği adrese göre yeniden kurulur.</li>
         <li><strong>Ödeme kartları</strong> → yalnız bağlamda geçerli olanlar render edilir; geçersiz yol DOM'da hiç yoktur. Kural sonuçları tek sade cümleyle verilir.</li>
         <li><strong>Adres ↔ yer çelişkisi</strong> → adresin posta kodu şeritteki koddan farklıysa sipariş <strong>adresin yerine</strong> göre çözülür ve sepet o an yeniden değerlendirilir; sonuç checkout'un içinde açıkça bildirilir. Kalem silinmez, sonraya kaydedilir.</li>
         <li><strong>Kargo checkout'u</strong> → sepetteki kargo grubundan açılan <strong>ayrı bir sipariştir</strong>: kendi kargo ücreti/eşiği, yalnız online peşin, gün kartı yok. Rota siparişiyle tek ödemeye birleştirilmez.</li>

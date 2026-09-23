@@ -195,6 +195,14 @@
             <span style="font:700 14px 'Karla';margin-top:auto">Kargo devri</span>
             <span style="font:400 11px/1.35 'Karla';color:#8a8270">{{ ov.d8Alt }}</span>
           </div>
+          <div onClick="{{ go.gelAl }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-height:104px;transition:transform .12s" style-active="transform:scale(.98)">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6v10H3z"/><path d="M9 20v-6h6v6"/></svg>
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#b3ab97">D9</span>
+            </div>
+            <span style="font:700 14px 'Karla';margin-top:auto">Gel-al teslim</span>
+            <span style="font:400 11px/1.35 'Karla';color:{{ ov.d9Rengi }}">{{ ov.d9Alt }}</span>
+          </div>
         </div>
 
         <div onClick="{{ go.yazicilar }}" style="background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:11px;cursor:pointer">
@@ -2267,6 +2275,98 @@
       </div>
     </sc-if>
 
+    <sc-if value="{{ is.gelAl }}">
+      <div data-screen-label="Depo · Gel-al teslim" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.depoHub }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">Gel-al Teslim</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">müşteri tezgâhta · siparişi bul, kutuları okut</span>
+          </div>
+        </div>
+
+        <div style="padding:6px 20px 8px"><span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">BEKLEYEN GEL-AL · {{ ov.d9Alt }}</span></div>
+        <div style="padding:0 20px;display:flex;flex-direction:column;gap:10px">
+          <div onClick="{{ go.gelAlTeslim }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.99)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font:700 14px 'Karla';flex:1">LA-26-9ERUNH · Restaurant Oberjaegerhof</span>
+              <span style="background:#fdf1e3;color:#9a6416;font:800 10.5px 'Karla';border-radius:9px;padding:3px 9px">196,00 € borç</span>
+            </div>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">6 kalem · 2 kutu · 2 gündür hazır · B2B</span>
+          </div>
+          <div onClick="{{ go.gelAlTeslim }}" style="background:#fbfaf4;border:1.5px solid #e2c4c0;border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.99)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font:700 14px 'Karla';flex:1">LA-26-QRPRRV · Claire Weber</span>
+              <span style="background:#eef2e2;color:#46601f;font:800 10.5px 'Karla';border-radius:9px;padding:3px 9px">ödendi</span>
+            </div>
+            <span style="font:400 11.5px 'Karla';color:#a44a3f">1 kalem · 1 kutu · <b>9 gündür hazır</b> — bekleme süresi doldu, ofis arıyor</span>
+          </div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191">Liste önce (kullanıcı kararı 23.09): müşteri tezgâhta adını söyler, depocu satırı açar. Hazırlığı bitmemiş sipariş burada görünmez; süre ayarı `Gel-al bekleme süresi` (varsayılan 7 gün). Depo ekranları tutar görmez — tek istisna borç hapı, çünkü tahsilat bu ekranda.</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ is.gelAlTeslim }}">
+      <div data-screen-label="Depo · Gel-al teslim yüzü" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.gelAl }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">LA-26-9ERUNH</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">Restaurant Oberjaegerhof · gel-al · 2 gündür hazır</span>
+          </div>
+        </div>
+
+        <div style="padding:0 20px;display:flex;flex-direction:column;gap:12px">
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="width:22px;height:22px;border-radius:50%;background:#2f353a;color:#f5f1e6;font:700 11px 'Karla';display:flex;align-items:center;justify-content:center">1</span>
+              <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#2f353a">KUTULAR — 1/2 OKUTULDU</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="width:26px;height:26px;border-radius:9px;background:#eef2e2;border:1.5px solid #cfe0b0;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';color:#46601f;flex:none">✓</span>
+                <span style="font:700 12.5px 'Karla';color:#2f353a;flex:1">KT-26-9ERUNH-1</span>
+                <span style="font:400 11px 'Karla';color:#8a8270">okutuldu</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="width:26px;height:26px;border-radius:9px;background:#fff;border:1.5px solid #ddd6c4;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';color:#b3ab97;flex:none">2</span>
+                <span style="font:700 12.5px 'Karla';color:#8a8270;flex:1">KT-26-9ERUNH-2</span>
+                <span style="font:400 11px 'Karla';color:#8a8270">bekliyor</span>
+              </div>
+            </div>
+            <div onClick="{{ tg.scanner }}" style="height:50px;border-radius:15px;background:#5f7a2c;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.98)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3.2"/></svg>
+              <span style="font:700 13.5px 'Karla';color:#f5f1e6">Kutuyu okut — 1 kaldı</span>
+            </div>
+            <span style="font:400 11.5px/1.5 'Karla';color:#8a8270">Kutular okutulmadan tahsilat ve teslim açılmaz — kurye durağıyla aynı kural. Başka deponun ya da başka siparişin kutusu reddedilir.</span>
+          </div>
+
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:12px;opacity:.55">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="width:22px;height:22px;border-radius:50%;background:#b05c2e;color:#fff;font:700 11px 'Karla';display:flex;align-items:center;justify-content:center">2</span>
+              <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#b05c2e">TAHSİLAT — MOTOR TUTARI 196,00 €</span>
+            </div>
+            <div style="height:56px;border:1.5px solid #2f353a;border-radius:15px;background:#fff;padding:0 15px;display:flex;align-items:center;gap:10px">
+              <span style="font:700 22px 'Karla';color:#2f353a;flex:1">196,00 €</span>
+              <span style="font:700 11px 'Karla';color:#8a8270;background:#f2f0e8;border-radius:10px;padding:6px 10px">tuş takımı</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <span style="flex:1;height:46px;border-radius:15px;border:1.5px solid #2f353a;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla'">nakit</span>
+              <span style="flex:1;height:46px;border-radius:15px;border:1.5px solid #ddd6c4;background:#fff;color:#2f353a;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla'">kart</span>
+              <span style="flex:1;height:46px;border-radius:15px;border:1.5px solid #ddd6c4;background:#fff;color:#2f353a;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla'">çek</span>
+            </div>
+            <span style="font:400 11.5px/1.55 'Karla';color:#8a8270">Depoda ödeme = kapıda ödeme kuralları (tavan, nakit uyarısı 1.000 €); para deponun kapı kasasına yazılır. Ödenmiş siparişte bu blok "ödendi" satırına iner; vadeli B2B'de "hesaba".</span>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:14px"></div>
+        <div style="position:sticky;bottom:0;padding:12px 20px 18px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 40%);display:flex;flex-direction:column;gap:9px">
+          <div style="background:#e7e2d2;color:#8a8270;font:700 15px 'Karla';border-radius:17px;height:54px;display:flex;align-items:center;justify-content:center">Sıra: kutular → tahsilat → teslim</div>
+          <span style="font:400 11px/1.5 'Karla';color:#a8a191;text-align:center">İmza, fotoğraf ve mal adımı yok: müşteri tezgâhta, kimlik referans + ad. Teslim anında yazılır (`deliver_order`), kuyruğa alınmaz.</span>
+        </div>
+      </div>
+    </sc-if>
+
     <sc-if value="{{ is.satis }}">
       <div data-screen-label="Yerinde satış" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
         <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
@@ -3995,7 +4095,7 @@
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:920},&quot;baslangicEkran&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;depoHub&quot;,&quot;toplama&quot;,&quot;toplamaDetay&quot;,&quot;maKabul&quot;,&quot;maDetay&quot;,&quot;maPlansiz&quot;,&quot;skt&quot;,&quot;sayim&quot;,&quot;transfer&quot;,&quot;transferKabul&quot;,&quot;kuryeDonus&quot;,&quot;satis&quot;,&quot;sonSatislar&quot;,&quot;kargoDevri&quot;,&quot;kuryeGun&quot;,&quot;seferBaslat&quot;,&quot;aracaYukle&quot;,&quot;serbestUrun&quot;,&quot;kuryeDurak&quot;,&quot;seferKapat&quot;,&quot;para&quot;,&quot;gunSonu&quot;,&quot;karar&quot;,&quot;sosyal&quot;,&quot;konusma&quot;,&quot;sikayet&quot;,&quot;gunOzeti&quot;,&quot;kampanya&quot;,&quot;tedarik&quot;,&quot;bildirim&quot;,&quot;b2bOnay&quot;,&quot;b2bListe&quot;,&quot;kapsam&quot;,&quot;yazicilar&quot;],&quot;default&quot;:&quot;depoHub&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;listeHali&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dolu&quot;,&quot;boş&quot;,&quot;yükleniyor&quot;,&quot;hata&quot;],&quot;default&quot;:&quot;dolu&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;roller&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;yalniz depo&quot;,&quot;depo + para&quot;,&quot;dort rol&quot;],&quot;default&quot;:&quot;dort rol&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;b2bKuyruk&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;tek başvuru&quot;,&quot;üç başvuru&quot;,&quot;bekleyen yok&quot;],&quot;default&quot;:&quot;üç başvuru&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;cevrimdisiMi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;kanitZorunlu&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;vurguRengi&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#5f7a2c&quot;,&quot;#b05c2e&quot;,&quot;#2f353a&quot;,&quot;#7a5c8a&quot;],&quot;default&quot;:&quot;#5f7a2c&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;}}">
-const SCREENS = ['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat','para','gunSonu','karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','bildirim','eksikKarar','kapsam','yazicilar','b2bOnay','b2bListe'];
+const SCREENS = ['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','gelAl','gelAlTeslim','kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat','para','gunSonu','karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','bildirim','eksikKarar','kapsam','yazicilar','b2bOnay','b2bListe'];
 // B2B başvuru örnekleri — masaüstü kontrol kartıyla aynı kaynak (readB2bCheck); üç yüzey aynı şeyi söyler.
 const B2B_ORNEK = {
   temiz: { ad:'Restaurant Anatolie', unvan:'ANATOLIE SAS', ulke:'FR', kimlikEt:'SIRET', kimlik:'812 456 789 00012', kaynak:'resmî kayıttan', tel:'+33 3 88 12 44 70', adres:'8 Rue du Fossé, 67000 Strasbourg', geldi:'bugün 05:31 · web formu', sehir:'Strasbourg', onceDk:180,
@@ -4036,8 +4136,8 @@ const CUBUK_EKRAN = ['depoHub','toplama','maKabul','skt','transfer','sonSatislar
 // Ekran numarası tek yerde durur; yeni ekran araya girerse harfle eklenir, sonrakiler kaymaz.
 // Serbest ürün 16'nın devamı olduğu için 16b — Durak 17, Seferi kapat 18, Yerinde satış 20 yerinde kalır.
 const NUMARA = { skt:'D3', sayim:'D4', dusum:'D4b', kuryeDonus:'13', kuryeGun:'14', aracSeferler:'14b', seferBaslat:'15', aracaYukle:'16', serbestUrun:'17', kuryeDurak:'18', seferKapat:'19', satis:'20' };
-const ADLAR = { depoHub:'Depo İşleri', toplama:'Toplama kuyruğu', toplamaDetay:'Sipariş toplama', maKabul:'Mal kabul', maDetay:'Kabul satırları', maPlansiz:'Siparişsiz kabul', skt:'Yakın-SKT turu', sayim:'Sayım', dusum:'Stok düşümü', transfer:'Transfer', transferKabul:'Transfer kabulü', kuryeDonus:'Kurye dönüşü', satis:'Yerinde satış', sonSatislar:'Son satışlar', sonSatis:'Satış fişi', kargoDevri:'Kargo devri', kuryeGun:'Günün Rotası', aracSeferler:'Araçtaki seferler', seferBaslat:'Sefer ve araç seçimi', aracaYukle:'Araca yükleme', serbestUrun:'Araca serbest ürün', kuryeDurak:'Durak', seferKapat:'Seferi kapat', para:'Tahsilat izleme', gunSonu:'Gün sonu', karar:'Karar kutusu', sosyal:'Sosyal gelen kutusu', konusma:'Konuşma', sikayet:'Talep detayı', talepler:'Talep ve şikâyetler', gunOzeti:'Gün özeti', kampanya:'Kampanya', tedarik:'Tedarik taslağı', b2bOnay:'Kurumsal hesap başvurusu', b2bListe:'Kurumsal başvurular', bildirim:'Bildirimler', kapsam:'Kapsam', yazicilar:'Yazıcılar' };
-const TABS = { depo:['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kapsam','yazicilar'], kurye:['kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat'], yon:['karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','eksikKarar','b2bOnay','b2bListe'], para:['para','gunSonu'] };
+const ADLAR = { depoHub:'Depo İşleri', toplama:'Toplama kuyruğu', toplamaDetay:'Sipariş toplama', maKabul:'Mal kabul', maDetay:'Kabul satırları', maPlansiz:'Siparişsiz kabul', skt:'Yakın-SKT turu', sayim:'Sayım', dusum:'Stok düşümü', transfer:'Transfer', transferKabul:'Transfer kabulü', kuryeDonus:'Kurye dönüşü', satis:'Yerinde satış', sonSatislar:'Son satışlar', sonSatis:'Satış fişi', kargoDevri:'Kargo devri', gelAl:'Gel-al teslim', gelAlTeslim:'Gel-al teslim yüzü', kuryeGun:'Günün Rotası', aracSeferler:'Araçtaki seferler', seferBaslat:'Sefer ve araç seçimi', aracaYukle:'Araca yükleme', serbestUrun:'Araca serbest ürün', kuryeDurak:'Durak', seferKapat:'Seferi kapat', para:'Tahsilat izleme', gunSonu:'Gün sonu', karar:'Karar kutusu', sosyal:'Sosyal gelen kutusu', konusma:'Konuşma', sikayet:'Talep detayı', talepler:'Talep ve şikâyetler', gunOzeti:'Gün özeti', kampanya:'Kampanya', tedarik:'Tedarik taslağı', b2bOnay:'Kurumsal hesap başvurusu', b2bListe:'Kurumsal başvurular', bildirim:'Bildirimler', kapsam:'Kapsam', yazicilar:'Yazıcılar' };
+const TABS = { depo:['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','gelAl','gelAlTeslim','kapsam','yazicilar'], kurye:['kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat'], yon:['karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','eksikKarar','b2bOnay','b2bListe'], para:['para','gunSonu'] };
 
 // Kurye kendi deposunun dışını görmez: rota, araç ve serbest ürün listeleri depo künyesine göre süzülür.
 // Araç bir ara depodur: aynı anda birden çok seferin kutusunu taşır.
@@ -5002,6 +5102,8 @@ class Component extends DCLogic {
           d5Alt: d ? '1 gelen · 1 yolda' : bos ? 'yolda transfer yok' : yuk ? 'yükleniyor…' : 'yüklenemedi',
           d6Alt: d ? '1 döküm bekliyor' : bos ? 'bekleyen döküm yok' : yuk ? 'yükleniyor…' : 'yüklenemedi',
           d8Alt: d ? '2 kutu verildi · okut, devret' : bos ? 'bugün kutu verilmedi' : yuk ? 'yükleniyor…' : 'yüklenemedi',
+          d9Alt: d ? '2 sipariş bekliyor · 1 gecikmiş' : bos ? 'bekleyen gel-al yok' : yuk ? 'yükleniyor…' : 'yüklenemedi',
+          d9Rengi: d ? '#a44a3f' : '#8a8270',
           d6Rengi: d ? '#a44a3f' : '#8a8270',
           d3Rengi: d ? '#a44a3f' : '#8a8270'
         };
@@ -5020,6 +5122,7 @@ class Component extends DCLogic {
         : cur === 'dusum' ? 'Parti etiketini okut'
         : cur === 'maDetay' ? 'Koli okut — satırı bul'
         : cur === 'kargoDevri' ? 'Kutuyu okut — gönderiyi bul'
+        : cur === 'gelAlTeslim' ? 'Kutuyu okut — müşteriye ver'
         : cur === 'satis' ? 'Ürün barkodunu okut'
         : cur === 'serbestUrun' ? 'Ürün barkodunu okut'
         : cur === 'aracaYukle' ? 'Kutuyu okut — araca al'

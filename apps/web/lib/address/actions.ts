@@ -2,8 +2,9 @@
 
 import { AddressService, serviceDb } from '@lezzet/database';
 import type { Address, AddressInsert } from '@lezzet/types';
-import type { AddressPointCandidate } from '@lezzet/application';
+import { readPickupOffer, type AddressPointCandidate } from '@lezzet/application';
 import { currentCustomerId } from '@/lib/guard';
+import { writePickupCookie } from '@/lib/delivery/pickup-cookie';
 import { addAddress, setDefaultAddress, updateAddress } from '@/lib/account/addresses';
 import { readPlaceSnapshot } from '@/lib/delivery/read-place';
 import type { PlaceSnapshot } from '@/lib/delivery/place-types';
@@ -74,6 +75,25 @@ export async function selectMyAddressAction(addressId: string): Promise<Customer
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
     await setDefaultAddress(customerId, addressId);
+    // Adres seçmek gel-al'dan dönmektir: iki seçim aynı anda geçerli olamaz, sepet tek yere göre okunur.
+    await writePickupCookie(null);
+    return { data: await readPlaceSnapshot(), errorKey: null };
+  } catch (err) {
+    return { data: null, errorKey: customerErrorKey(err) };
+  }
+}
+
+/**
+ * Adres seçicideki depo kartı: gel-al seçer ya da (`null`) adrese döner. Kimlik teklif kapısından geçmezse (izin yok, depo
+ * gel-al noktası değil) seçim yazılmaz — istemcinin söylediği depo hiçbir zaman olduğu gibi çereze girmez.
+ */
+export async function selectMyPickupAction(warehouseId: string | null): Promise<CustomerResult<PlaceSnapshot>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+    const accepted = warehouseId === null ? null : ((await readPickupOffer(serviceDb(), customerId, warehouseId)).warehouse?.id ?? null);
+    if (warehouseId !== null && accepted === null) throw new CustomerError('pickup_unavailable');
+    await writePickupCookie(accepted);
     return { data: await readPlaceSnapshot(), errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };

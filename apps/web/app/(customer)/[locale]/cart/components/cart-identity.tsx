@@ -171,13 +171,20 @@ function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
 function CartAddress({ t, locale }: Pick<CartIdentityProps, 't' | 'locale'>) {
   const copy = cartMessages[locale].address;
   const c = t.identity;
-  const { address } = useDeliveryPlace();
+  const { address, pickup } = useDeliveryPlace();
+  const pickedWarehouse = pickup?.warehouses.find((w) => w.id === pickup.selectedWarehouseId) ?? null;
   const [open, setOpen] = useState<'list' | 'new' | null>(null);
 
   return (
     <div className="flex flex-col items-start gap-0.5 px-4 pb-2.5">
       <span className="font-sans text-eyebrow-xs text-terracotta uppercase">{copy.eyebrow}</span>
-      {address ? (
+      {pickedWarehouse ? (
+        <>
+          <span className="font-sans text-body font-semibold text-ink">{copy.pickupLine.replace('{name}', pickedWarehouse.name)}</span>
+          <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.pickupNote}</span>
+          <TextAction label={copy.change} onClick={() => setOpen('list')} />
+        </>
+      ) : address ? (
         <>
           <span className="font-sans text-body font-semibold text-ink">{addressLine(address)}</span>
           <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.note}</span>
@@ -237,7 +244,8 @@ interface AddressChoiceProps {
 function AddressChoice({ t, locale }: AddressChoiceProps) {
   const c = t.identity;
   const am = addressMessages[locale];
-  const { place, unresolved } = useDeliveryPlace();
+  const { place, unresolved, pickup, selectPickup } = useDeliveryPlace();
+  const pickedWarehouseId = pickup?.selectedWarehouseId ?? null;
   const { addresses, failed, busy, current, choose } = useMyAddresses();
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -249,6 +257,10 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
   const pick = async (id: string) => {
     setError(null);
     if (!(await choose(id))) setError(errorText(am.errors, null));
+  };
+  const pickPickup = async (id: string) => {
+    setError(null);
+    if (!(await selectPickup(id))) setError(errorText(am.errors, null));
   };
 
   const dialog = adding && <AddressPickerDialog locale={locale} initialMode="new" onClose={() => setAdding(false)} />;
@@ -299,7 +311,8 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
       {failed && <span className="font-sans text-note font-semibold text-terracotta">{am.failed}</span>}
 
       {rows.map((row) => {
-        const selected = row.id === current?.id;
+        // Depo seçiliyken varsayılan adres fatura adresidir, seçili çizilmez — tek seçim, tek çerçeve.
+        const selected = pickedWarehouseId === null && row.id === current?.id;
         return (
           <button
             key={row.id}
@@ -329,7 +342,36 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
         );
       })}
 
-      {current && place && (
+      {/* Gel-al (izinli müşteri): depo kartı adreslerin altında, aynı seçim dili. Seçilince şerit yerine depo notu. */}
+      {pickup?.warehouses.map((warehouse) => {
+        const selected = warehouse.id === pickedWarehouseId;
+        return (
+          <button
+            key={warehouse.id}
+            type="button"
+            disabled={busy}
+            aria-pressed={selected}
+            onClick={() => void pickPickup(warehouse.id)}
+            className={[
+              'flex cursor-pointer items-start gap-2.5 rounded-soft px-3.5 py-3 text-left transition-colors disabled:cursor-progress',
+              focusRingClass,
+              selected ? 'border-2 border-olive bg-olive-bg' : 'border border-sand-200 bg-cream hover:border-olive',
+            ].join(' ')}
+            data-testid={`cart-pick-warehouse-${warehouse.id}`}
+          >
+            <RadioMark selected={selected} />
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="truncate font-sans text-body-sm font-bold text-ink">{c.pickupTitle}</span>
+              <span className="font-sans text-note leading-normal text-body">
+                {warehouse.name} · {warehouse.addressLine}
+              </span>
+              {selected && <span className="font-sans text-note leading-normal text-muted">{c.pickupNote.replace('{name}', warehouse.name)}</span>}
+            </span>
+          </button>
+        );
+      })}
+
+      {current && place && pickedWarehouseId === null && (
         <DeliveryStrip inRoute={place.inRoute} tone="deep">
           <span>{stripText(c, locale, current, place)}</span>
         </DeliveryStrip>

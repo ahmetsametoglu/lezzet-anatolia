@@ -2,15 +2,16 @@ import { Hono } from 'hono';
 import type { Context } from 'hono';
 import type { z } from 'zod';
 import {
-  getCartView,
-  getPackagesByIds,
-  resolvedOrNull,
-  shippingGroupFee,
   type CartDiscount,
   type CartEntry,
   type CartLine,
   type CartView,
+  getCartView,
+  getPackagesByIds,
   type PlaceWarehouses,
+  readPickupOffer,
+  resolvedOrNull,
+  shippingGroupFee,
 } from '@lezzet/application';
 import { serviceDb, type Db } from '@lezzet/database';
 import {
@@ -52,15 +53,24 @@ export async function readCartView(
     couponCode: string | null;
     /** Ham posta kodu; depoya çeviren `readPlace` — istemcinin yazdığı bir depo kimliği KABUL EDİLMEZ. */
     postalCode: string | undefined;
+    /**
+     * Gel-al seçimi (adres seçicideki depo kartı). Kimlik olduğu gibi yazılmaz: teklif kapısından geçer
+     * (`readPickupOffer` — müşteri izni × gel-al deposu); geçemeyen seçim yok sayılır ve sepet posta koduyla okunur.
+     */
+    pickupWarehouseId?: string | undefined;
   },
 ): Promise<CartRead> {
-  const place = await readPlace(db, opts.postalCode);
+  const pickup =
+    opts.customerId && opts.pickupWarehouseId ? (await readPickupOffer(db, opts.customerId, opts.pickupWarehouseId)).warehouse : null;
+  // Gel-al'da sepet SEÇİLEN DEPONUN stoğuyla okunur ve kargo dolgusu yoktur: depoda olmayan kalem "burada yok"tur.
+  const place: PlaceWarehouses = pickup ? { warehouseId: pickup.id, shippingWarehouseId: null } : await readPlace(db, opts.postalCode);
   const view = await getCartView(db, locale, entries, {
     customerId: opts.customerId,
     previousPrices: opts.previousPrices,
     couponCode: opts.couponCode,
     warehouseId: place.warehouseId,
     shippingWarehouseId: place.shippingWarehouseId,
+    ...(pickup ? { country: pickup.countryCode, zoneId: null } : {}),
     // `db` bağlanır, başka hiçbir şey yapılmaz: port imzası (`CartBundlePort`) ile kapının imzası
     // `db` dışında birebir tutuyor ve dönüş şekli `CartBundleSource`un yapısal ikizi. Araya bir
     // eşleme yazmak, sepetin gördüğü paketi vitrinin gösterdiğinden ayırma riski demekti.

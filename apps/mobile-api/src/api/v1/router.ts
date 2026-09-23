@@ -4,6 +4,7 @@ import { serviceDb, UserProfileService } from '@lezzet/database';
 import { MeSchema, MeUpdateSchema } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { addresses } from './addresses';
+import { pickupPoints } from './pickup-points';
 import { authOauth } from './auth-oauth';
 import { authOtp } from './auth-otp';
 import { b2b, b2bPublic } from './b2b';
@@ -123,6 +124,7 @@ v1.delete('/me', async (c) => {
 });
 
 v1.route('/me/addresses', addresses);
+v1.route('/me/pickup-points', pickupPoints);
 
 v1.route('/me/orders', orders);
 
