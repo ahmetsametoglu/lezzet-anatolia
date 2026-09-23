@@ -1,6 +1,6 @@
 import { SiteImageService } from '@lezzet/database';
 import { getR2 } from '@lezzet/storage';
-import { SITE_IMAGE_SLOTS } from '@lezzet/types';
+import { SITE_IMAGE_SLOTS, type SiteImageSlot } from '@lezzet/types';
 import { r2Keys, uploadImageFromPath, type Db } from './shared';
 
 // ── Sayfa görselleri (`site_image`, 09.16 · 0043) ────────────────────────────────────────────────
@@ -37,15 +37,22 @@ import { r2Keys, uploadImageFromPath, type Db } from './shared';
 // evi düzeltildi. Kural olarak: **seed'in ihtiyaç duyduğu fikstür seed'in klasöründe durur.** Bir
 // başkasının ürün kararıyla silinebilecek bir dosyaya bağlanmak, sessizce bozulan bir bağımlılıktır.
 
+/** Bir sayfa yerinin kaynağı — slot, repodaki dosya ve rapor satırında görünecek not. */
+export interface SayfaGorseli {
+  slot: SiteImageSlot;
+  kaynak: string;
+  not: string;
+}
+
 /** Kaynağı repoda duran slotlar. Ötekiler bilerek boş — yer tutucu yolu koşsun. */
-const DOLU_SLOTLAR = [
+const DOLU_SLOTLAR: SayfaGorseli[] = [
   {
-    slot: 'home_hero' as const,
+    slot: 'home_hero',
     kaynak: 'scripts/seed/data/hero-sofra.jpg',
     not: 'ana sayfa kahramanı (müşteri şeridinin fotoğrafı, fikstür kopyası)',
   },
   {
-    slot: 'professionals_hero' as const,
+    slot: 'professionals_hero',
     kaynak: 'scripts/seed/data/hero-profesyonel-mutfak.jpg',
     /*
       Kurumsal sayfanın kahramanı (kullanıcı isteği 19.08 — *"tıpkı ana sayfada olduğu gibi uygun
@@ -78,14 +85,15 @@ const DOLU_SLOTLAR = [
   Slot başına bakmak idempotentliği de daraltıyor: operatörün kendi yüklediği bir görselin üstüne
   seed YAZMAZ. Eski hâlde de yazmıyordu ama sebebi tesadüftü (tablo doluydu); şimdi kural.
 */
-export async function seedSiteImages(db: Db): Promise<void> {
+export async function seedSiteImages(db: Db, slotlar: readonly SayfaGorseli[] = DOLU_SLOTLAR): Promise<void> {
   console.log('▸ SAYFA GÖRSELLERİ seed');
 
   const images = new SiteImageService(db);
   let yazilan = 0;
   let atlanan = 0;
 
-  for (const s of DOLU_SLOTLAR) {
+  // Liste parametre: gerçek besleme (`seed-real`) kendi çekimlerini verir, kurgu fikstürünü değil.
+  for (const s of slotlar) {
     // Doluysa DOKUNULMAZ: bu satır operatörün kendi yüklediği görsel olabilir ve seed onu ezmemeli.
     if (await images.getSlot(s.slot)) {
       atlanan += 1;
@@ -110,8 +118,8 @@ export async function seedSiteImages(db: Db): Promise<void> {
     console.log(`  ✓ ${s.slot} — ${s.not}`);
   }
 
-  const bosSlot = SITE_IMAGE_SLOTS.length - DOLU_SLOTLAR.length;
+  const bosSlot = SITE_IMAGE_SLOTS.length - slotlar.length;
   console.log(
-    `✓ sayfa görseli: ${yazilan} yeni / ${atlanan} zaten dolu · ${bosSlot} slot bilerek BOŞ (yer tutucu yolu koşsun)`,
+    `✓ sayfa görseli: ${yazilan} yeni / ${atlanan} zaten dolu${bosSlot > 0 ? ` · ${bosSlot} slot boş (yer tutucu çizilir)` : ''}`,
   );
 }

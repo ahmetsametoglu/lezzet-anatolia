@@ -37,6 +37,7 @@ import { fileURLToPath } from 'node:url';
 import { brand } from '../packages/brand/src/index';
 import { lezzaGorselUrlByDosya, seedLezzaProducts } from './seed/catalog-lezza';
 import { gorselOzeti, r2Keys, uploadImageFromPath, uploadImageFromUrl } from './seed/shared';
+import { seedSiteImages } from './seed/site-image';
 import {
   ADAY_SKULARI,
   BUNDLE_DISCOUNT,
@@ -52,6 +53,7 @@ import {
   PURCHASES,
   RECIPES,
   SALE_PRICES,
+  SAYFA_GORSELLERI,
   SETTINGS,
   STORAGE_AREAS,
   SUPPLIERS,
@@ -664,8 +666,10 @@ async function seedFamilies(db: Db): Promise<void> {
     }
     plan(`${aile.ad} · ${yazilacak.length} çeşit${aileId ? ' (var olan aileye eklendi)' : ''}`);
     const id = aileId ?? (await families.insert({ name: aile.ad })).id;
-    // Sıra var olan üyelerin ARDINDAN gider: katalog kendi dizisini kurmuşsa o dizi korunur.
-    const baslangic = aileId ? urunler.filter((p) => p.familyId === aileId).length : 0;
+    // Sıra var olan üyelerin ARDINDAN gider: katalog kendi dizisini kurmuşsa o dizi korunur. Ölçüt
+    // SAYI DEĞİL EN BÜYÜK SIRA: katalog dizisi 0'dan başlamayabilir ya da boşluk taşıyabilir, sayıyla
+    // hesaplarsak yeni üye var olan bir sıranın üstüne düşer (23.09'da düştü: iki üye de 8 oldu).
+    const baslangic = aileId ? Math.max(-1, ...urunler.filter((p) => p.familyId === aileId).map((p) => p.familyPosition ?? -1)) + 1 : 0;
     for (const [sira, uye] of yazilacak.entries()) {
       await products.update({ id: uye.id, familyId: id, familyLabel: uye.etiket, familyPosition: baslangic + sira });
     }
@@ -1069,6 +1073,9 @@ async function main(): Promise<void> {
   // Paket fiyatı liste fiyatlarından türediği için fiyatlardan sonra.
   await seedBundles(db);
   await seedRecipes(db);
+  // Sayfa görselleri kuru koşuda YÜKLENMEZ: fonksiyon slot doluysa atlar, boşsa kovaya yazar.
+  if (DRY_RUN) console.log(`▸ sayfa görselleri\n  ○ ${SAYFA_GORSELLERI.map((g) => g.slot).join(' · ')} — eklenecek`);
+  else await seedSiteImages(db, SAYFA_GORSELLERI);
   // Mal kabulü KATMAN 2 (işletmeci kararı 19.09): lot ve son kullanma uydurmadır, mal fiilen
   // sayılmamıştır — ama ürünün BEYANINA dokunmaz, yalnız stok açar. Beyanı tahminle dolduran
   // türetme katman 3'te kaldı; ikisi aynı kapıda olsaydı stok görmek için beyan bozmak gerekirdi.

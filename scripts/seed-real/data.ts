@@ -149,6 +149,19 @@ export const KATALOG_BOY_ADI: Record<string, UcDil> = {
 };
 
 /**
+ * SAYFA GÖRSELLERİ — bir varlığa değil bir sayfa yerine ait kareler (`site_image`). Dördü de işletmecinin
+ * kendi ürettiği karedir (23.09); kaynağı `images/sayfa/`. Kurgu beslemesinin fikstürü değil bunlar:
+ * test sunucusu sıfırlandığında sayfalar yer tutucuya düşmesin diye beslemede durur.
+ */
+export const SAYFA_GORSELLERI: Array<{ slot: 'home_hero' | 'packages_hero' | 'professionals_hero' | 'empty_cart'; kaynak: string; not: string }> = [
+  { slot: 'home_hero', kaynak: 'scripts/seed-real/images/sayfa/home-hero.webp', not: 'ana sayfa — buğusu tüten su böreği, aile sofrası' },
+  { slot: 'packages_hero', kaynak: 'scripts/seed-real/images/sayfa/packages-hero.webp', not: 'paketler — kurulmuş kahvaltı sofrası, açık teslimat kutusu' },
+  // İki kare üretildi (mutfak · araç), yer tek: ürün görünen mutfak seçildi — sayfa "mutfağınızın tedarikçisi" diyor.
+  { slot: 'professionals_hero', kaynak: 'scripts/seed-real/images/sayfa/professionals-hero.webp', not: 'profesyoneller — restoran mutfağında tepsi börek' },
+  { slot: 'empty_cart', kaynak: 'scripts/seed-real/images/sayfa/empty-cart.webp', not: 'boş sepet — şeffaf fonlu çizim' },
+];
+
+/**
  * KATMAN 3 · UYDURMA STOK. Faturası olmayan kalemin mal kabulü de yoktur; partisi olmayan varyant
  * vitrinde "Tükendi" görünür (`stockStatusOf`) ve ürün gezilemez. Parti ÜRETİLİR: tedarikçi başına
  * tek sipariş, tek kabul, boy başına sabit adet.
@@ -429,7 +442,7 @@ type LooseDraft = Omit<Draft, 'variants'>;
  * fiyat ve maliyet alış faturası gelince yazılır, o gün kalem faturasının altına taşınır.
  */
 export const EK_TASLAKLAR: LooseDraft[] = [
-  { name: 'Girit Natürel Sızma Zeytinyağı' },
+  { name: 'Girit Natürel Sızma Zeytinyağı', ...studyoSeti('girit-naturel-sizma-zeytinyagi') },
   { name: 'Böreklik Yufka', ...studyoSeti('boreklik-yufka') },
   { name: 'Lahmacun', ...studyoSeti('lahmacun') },
   { name: 'Cevizli Pestil Tatlısı', ...studyoSeti('cevizli-pestil-tatlisi') },
@@ -438,7 +451,7 @@ export const EK_TASLAKLAR: LooseDraft[] = [
   { name: 'Fındıklı Sultan Sarma', ...studyoSeti('findikli-sultan-sarma') },
   // Kaynak katalogda 145 g'lık porsiyon tiramisu var, bütün pasta yok: ambalajı elimizde, künyesi
   // etiketinden panele girildi (23.09). Kapak fotoğrafı henüz çekilmedi.
-  { name: 'Tiramisu Pasta (bütün)' },
+  { name: 'Tiramisu Pasta (bütün)', ...studyoSeti('tiramisu-pasta-butun') },
   // Tekil kap pastalar ve trileçe: kaynağın kataloğunda hiç yok, ambalajları elimizde ve künyeleri
   // etiketinden panele girildi (23.09). Kapak fotoğrafları henüz çekilmedi.
   { name: 'Trileçe (Tres Leches Caramel)' },
