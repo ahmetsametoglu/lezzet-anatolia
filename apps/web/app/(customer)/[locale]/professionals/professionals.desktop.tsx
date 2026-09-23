@@ -21,9 +21,9 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
       <section className="flex items-stretch bg-ink text-on-image">
         <div className="flex min-w-0 flex-1 flex-col gap-4.5 px-12 py-13">
           <span className="font-sans text-caps-label tracking-[0.14em] text-olive-light uppercase">{t.hero.eyebrow}</span>
-          {/* Başlık tasarımda 44 px — merdivenin en yakın basamağı 38. 30 px'te başlık tek satıra
+          {/* Başlık tasarımın kendi ölçüsünde (44 px, kullanıcı kararı 24.09): 30 px'te tek satıra
               sığıyor, sol sütun kısalıyor ve fotoğraf sütunu dar kalıyordu. */}
-          <h1 className="font-serif text-page-title leading-tight">{t.hero.title}</h1>
+          <h1 className="font-serif text-h1-md">{t.hero.title}</h1>
           <ul className="flex flex-col gap-2.5 font-sans text-body leading-relaxed text-on-image-soft">
             {t.hero.benefits.map((benefit) => (
               <li key={benefit} className="flex items-start gap-2">
@@ -58,10 +58,10 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
           ratio={RATIO_BAND}
           crop={hero?.crop}
           frames={hero?.frames}
-          // %59 = bloğun yüksekliğinin 16:9 karşılığı (406 × 16/9 ≈ 805 ÷ 1360): tasarımda genişliği
+          // %59 = bloğun yüksekliğinin 16:9 karşılığı (464 × 16/9 ≈ 825 ÷ 1360): tasarımda genişliği
           // oran belirliyor, ama o hesap ızgarada döngüye giriyor (genişlik yüksekliğe, yükseklik
           // metne bağlı). Pay sabit verilince kadraj aynı yere oturur ve blok hiçbir enlemde taşmaz.
-          // Görsel ~805 px; içerik 1360 px'te durur.
+          // Görsel ~800 px; içerik 1360 px'te durur.
           sizes="750px"
           className="!rounded-none h-auto min-h-[340px] w-[59%] flex-none"
         />

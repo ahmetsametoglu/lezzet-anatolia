@@ -47,7 +47,7 @@ const EXCLUDED_FONT_TOKENS = ['--font-sans', '--font-serif', '--font-ops-display
 // 14.09 (5): +1 — ürün detayının sarkan fiyat rozetinin gölgesi (`price`).
 // 14.09 (6): +2 — hata ailesinin metni ve zemini (`error`, `error-bg`): paket detayının "bu adrese gitmiyor" işareti.
 // 15.09: +2 — giriş düğmelerinin iki marka işareti (`brand-google`, `brand-whatsapp-pure`) telefon görünümüyle tabana çıktı.
-const EXPECTED_LIGHT_COUNT = 212; // @theme bloğu, fontlar hariç (126 renk + 66 yazı + 9 yarıçap + 3 hareket + 8 gölge) — +2: messenger/instagram marka (15.15) · +1: sert gölge (14.09) · +1: `sand-650`, bu adrese gitmeyen kartın fiyat çipi
+const EXPECTED_LIGHT_COUNT = 215; // @theme bloğu, fontlar hariç (126 renk + 69 yazı + 9 yarıçap + 3 hareket + 8 gölge) — +2: messenger/instagram marka (15.15) · +1: sert gölge (14.09) · +1: `sand-650`, bu adrese gitmeyen kartın fiyat çipi
 const EXPECTED_DARK_COUNT = 65; // operasyon karanlık bloğu (tümü --color-ops-*)
 
 const cssPath = fileURLToPath(new URL('../../../apps/web/app/globals.css', import.meta.url));
@@ -155,7 +155,7 @@ describe('renderThemeCss', () => {
 */
 describe('telefon görünümünün yazı ölçeği', () => {
   /** `customerText`in BOYUT anahtarları (alt anahtarlar hariç) — 14.09 sayımı (+1 `button`, katalog turu). */
-  const EXPECTED_PHONE_COUNT = 29;
+  const EXPECTED_PHONE_COUNT = 30;
 
   it("globals.css'teki blok modülün türettiği haritaya birebir eşit", () => {
     const css = stripComments(readFileSync(cssPath, 'utf8'));

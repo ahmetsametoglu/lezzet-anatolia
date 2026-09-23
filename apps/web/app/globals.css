@@ -107,6 +107,10 @@
   --text-h1-sm: 30px;
   --text-h1-sm--line-height: 1.2;
   --text-h1-sm--font-weight: 600;
+  /* B2B kahramanı — 52 ile 30 arasında ayrı kademe (bkz. `customerText` künyesi). */
+  --text-h1-md: 44px;
+  --text-h1-md--line-height: 1.2;
+  --text-h1-md--font-weight: 600;
 
   /* Sayfa başlığı ("Katalog"): kahraman h1'i ile bölüm h2'si arasında ayrı kademe, liste sayfalarının tepesinde durur. */
   --text-page-title: 38px;
@@ -387,6 +391,7 @@ body {
 [data-type-scale='phone'] {
   --text-h1: 53px;
   --text-h1-sm: 31px;
+  --text-h1-md: 45px;
   --text-page-title: 39px;
   --text-page-title-sm: 27px;
   --text-h2: 29px;

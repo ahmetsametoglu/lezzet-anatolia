@@ -143,6 +143,12 @@ export const customerText = {
   'h1-sm': '30px',
   'h1-sm--line-height': '1.2',
   'h1-sm--font-weight': '600',
+  /* B2B kahramanının başlığı: ana sayfanın 52'sinden küçük, sayfa başlığının 38'inden büyük ayrı bir
+     kademe (tasarım `Musteri - Professionnels.dc.html`). Yuvarlanmadı, çünkü aradaki iki durak da
+     kahramanın dengesini bozuyor — 38'de blok kısalıyor, 52'de başlık üç satıra iniyor. */
+  'h1-md': '44px',
+  'h1-md--line-height': '1.2',
+  'h1-md--font-weight': '600',
 
   /* Sayfa başlığı ("Katalog"): kahraman h1'i ile bölüm h2'si arasında ayrı kademe, liste sayfalarının tepesinde durur. */
   'page-title': '38px',
