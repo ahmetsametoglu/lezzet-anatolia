@@ -442,11 +442,11 @@ export const EK_TASLAKLAR: LooseDraft[] = [
   // Tekil kap pastalar ve trileçe: kaynağın kataloğunda hiç yok, ambalajları elimizde ve künyeleri
   // etiketinden panele girildi (23.09). Kapak fotoğrafları henüz çekilmedi.
   { name: 'Trileçe (Tres Leches Caramel)' },
-  { name: 'Kırmızı Kadife Pasta (tekil kap)' },
-  { name: 'Fıstıklı Pasta (tekil kap)' },
-  { name: 'Ahududulu Cheesecake (tekil kap)' },
-  { name: 'Çikolatalı Tofi Karamel Pasta (tekil kap)' },
-  { name: 'Çikolatalı Pasta (tekil kap)' },
+  { name: 'Kırmızı Kadife Pasta (tekil kap)', ...studyoSeti('kirmizi-kadife-pasta-tekil-kap') },
+  { name: 'Fıstıklı Pasta (tekil kap)', ...studyoSeti('fistikli-pasta-tekil-kap') },
+  { name: 'Ahududulu Cheesecake (tekil kap)', ...studyoSeti('ahududulu-cheesecake-tekil-kap') },
+  { name: 'Çikolatalı Tofi Karamel Pasta (tekil kap)', ...studyoSeti('cikolatali-tofi-karamel-pasta-tekil-kap') },
+  { name: 'Çikolatalı Pasta (tekil kap)', ...studyoSeti('cikolatali-pasta-tekil-kap') },
 ];
 
 /**
@@ -538,7 +538,7 @@ export const CATEGORIES: SeedCategory[] = [
     name: { tr: 'Fırın', fr: 'Boulangerie', de: 'Backwaren' },
     tagline: { tr: 'Börek, poğaça ve simit', fr: 'Böreks, pogaças et simits', de: 'Börek, Pogaça und Simit' },
     featured: true,
-    image: { lezza: 'Cheese-Pastry-Su-Borek-2500g.webp' },
+    image: { file: 'scripts/seed-real/images/kategori/firin.webp' },
     lezza: ['bakery'],
     aiQuestion: {
       tr: '{n} ({w}) nasıl pişirilir — fırın mı tava mı, kaç derecede ve ne kadar? Yanına ne yakışır?',
@@ -551,7 +551,7 @@ export const CATEGORIES: SeedCategory[] = [
     name: { tr: 'Tatlı', fr: 'Desserts', de: 'Süßes' },
     tagline: { tr: 'Baklava, künefe, pasta ve dondurma', fr: 'Baklava, künefe, gâteaux et glaces', de: 'Baklava, Künefe, Torten und Eis' },
     featured: true,
-    image: { lezza: 'Baklava-with-Pistachio-225g.webp' },
+    image: { file: 'scripts/seed-real/images/kategori/tatli.webp' },
     lezza: ['cake', 'dessert', 'ice-cream'],
     aiQuestion: {
       tr: '{n} ({w}) için servis önerileri ver: yanına ne gider, nasıl sunulur, kaç kişilik masada yeter?',
@@ -564,7 +564,7 @@ export const CATEGORIES: SeedCategory[] = [
     name: { tr: 'Et & Tavuk', fr: 'Viande & volaille', de: 'Fleisch & Geflügel' },
     tagline: { tr: 'Döner, mantı ve tavuk', fr: 'Döner, mantı et volaille', de: 'Döner, Mantı und Geflügel' },
     featured: true,
-    image: { lezza: 'Chicken-Tender-Fillet-700g.webp' },
+    image: { file: 'scripts/seed-real/images/kategori/et-tavuk.webp' },
     lezza: ['chicken'],
     aiQuestion: {
       tr: '{n} ({w}) nasıl pişirilir ve neyle servis edilir? Yanına hangi garnitür, hangi sos gider?',
@@ -577,7 +577,7 @@ export const CATEGORIES: SeedCategory[] = [
     name: { tr: 'Meze', fr: 'Mezze', de: 'Meze' },
     tagline: { tr: 'Çiğ köfte, humus ve falafel', fr: 'Çiğ köfte, houmous et falafels', de: 'Çiğ Köfte, Hummus und Falafel' },
     featured: true,
-    image: { lezza: 'Vegan-Raw-Meatballs-1000g.webp' },
+    image: { file: 'scripts/seed-real/images/kategori/meze.webp' },
     // Kaynağın bu kategorisinde kıymalı mantı da var; o kalem seçime girerse buraya düşer, oysa rafı
     // Et & Tavuk'tur (faturadaki mantı taslak olarak oraya yazılıyor).
     lezza: ['anatolian'],
@@ -592,7 +592,7 @@ export const CATEGORIES: SeedCategory[] = [
     name: { tr: 'Doğal & Geleneksel', fr: 'Nature & tradition', de: 'Natur & Tradition' },
     tagline: { tr: 'Pekmez, sirke, öz ve macun', fr: 'Mélasse, vinaigres, extraits et pâtes', de: 'Melasse, Essig, Extrakte und Pasten' },
     featured: true,
-    image: { url: 'https://www.besegida.com/wp-content/uploads/2025/04/Bese-Helva-Pekmez-650.jpg' },
+    image: { file: 'scripts/seed-real/images/kategori/dogal-geleneksel.webp' },
     aiQuestion: {
       tr: '{n} nedir, nasıl üretilir ve mutfakta nasıl kullanılır? Tadı neye benzer, neyle birlikte tüketilir?',
       fr: 'Qu\'est-ce que {n}, comment est-il produit et comment l\'utilise-t-on en cuisine ? Quel goût a-t-il, avec quoi se consomme-t-il ?',
@@ -606,7 +606,7 @@ export const CATEGORIES: SeedCategory[] = [
     tagline: { tr: 'Kuru meyve ve Antep fıstığı', fr: 'Fruits séchés et pistaches', de: 'Trockenfrüchte und Pistazien' },
     featured: true,
     // Kapak, kuruyemiş rafının stüdyo karesinden: depodaki ustaların hiçbiri kuru meyve ya da fıstık değil.
-    image: { file: 'scripts/seed-real/images/antep-fistigi/0.webp' },
+    image: { file: 'scripts/seed-real/images/kategori/kuru-meyve-kuruyemis.webp' },
     aiQuestion: {
       tr: '{n} ({w}) mutfakta nasıl kullanılır? Tadı neye benzer, hangi tariflerde işe yarar?',
       fr: 'Comment utiliser {n} ({w}) en cuisine ? Quel goût a-t-il, dans quelles recettes l\'employer ?',

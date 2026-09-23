@@ -45,10 +45,10 @@
     "imageWidth": 1500,
     "imageHeight": 1500
   },
-  "catalog/categories/dogal-geleneksel.jpg": {
-    "imageUpdatedAt": "2026-09-17T10:15:16.343+00:00",
-    "imageWidth": 1000,
-    "imageHeight": 1000
+  "catalog/categories/dogal-geleneksel.webp": {
+    "imageUpdatedAt": "2026-09-23T16:07:34.953493Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
   },
   "catalog/categories/dondurma-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:48.052+00:00",
@@ -76,9 +76,9 @@
     "imageHeight": 1500
   },
   "catalog/categories/et-tavuk.webp": {
-    "imageUpdatedAt": "2026-09-17T06:22:26.644+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
+    "imageUpdatedAt": "2026-09-23T16:07:34.953493Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
   },
   "catalog/categories/firin-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:42.344+00:00",
@@ -101,19 +101,19 @@
     "imageHeight": 1500
   },
   "catalog/categories/firin.webp": {
-    "imageUpdatedAt": "2026-09-14T12:57:42.126+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
+    "imageUpdatedAt": "2026-09-23T16:07:34.953493Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
   },
   "catalog/categories/kuru-meyve-kuruyemis.webp": {
-    "imageUpdatedAt": "2026-09-20T00:20:53.540Z",
+    "imageUpdatedAt": "2026-09-23T16:07:34.953493Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/categories/meze.webp": {
-    "imageUpdatedAt": "2026-09-17T10:15:15.8+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
+    "imageUpdatedAt": "2026-09-23T16:07:34.953493Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
   },
   "catalog/categories/pasta-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:45.275+00:00",
@@ -161,9 +161,9 @@
     "imageHeight": 1500
   },
   "catalog/categories/tatli.webp": {
-    "imageUpdatedAt": "2026-09-14T12:57:43.626+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
+    "imageUpdatedAt": "2026-09-23T16:07:34.953493Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
   },
   "catalog/categories/tavuk-urunleri-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:46.721+00:00",
@@ -214,6 +214,11 @@
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
     "imageWidth": 1500,
     "imageHeight": 1500
+  },
+  "catalog/products/ahududulu-cheesecake-tekil-kap.webp": {
+    "imageUpdatedAt": "2026-09-23T14:28:59.683317Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
   },
   "catalog/products/alic-sirkesi-1.webp": {
     "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
@@ -665,6 +670,16 @@
     "imageWidth": 1500,
     "imageHeight": 1500
   },
+  "catalog/products/cikolatali-pasta-tekil-kap.webp": {
+    "imageUpdatedAt": "2026-09-23T14:28:59.683317Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
+  "catalog/products/cikolatali-tofi-karamel-pasta-tekil-kap.webp": {
+    "imageUpdatedAt": "2026-09-23T14:28:59.683317Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
   "catalog/products/coconut-mix-1.webp": {
     "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
@@ -965,6 +980,11 @@
     "imageWidth": 1254,
     "imageHeight": 836
   },
+  "catalog/products/fistikli-pasta-tekil-kap.webp": {
+    "imageUpdatedAt": "2026-09-23T14:28:59.683317Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
   "catalog/products/form-macunu-1.webp": {
     "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 920,
@@ -1109,6 +1129,11 @@
     "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
+  },
+  "catalog/products/kirmizi-kadife-pasta-tekil-kap.webp": {
+    "imageUpdatedAt": "2026-09-23T14:28:59.683317Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
   },
   "catalog/products/kozalak-macunu.webp": {
     "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
@@ -2155,16 +2180,6 @@
     "imageWidth": 1254,
     "imageHeight": 836
   },
-  "catalog/products/tiramisu-2.webp": {
-    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
-    "imageWidth": 1254,
-    "imageHeight": 1254
-  },
-  "catalog/products/tiramisu-3.webp": {
-    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
-    "imageWidth": 1254,
-    "imageHeight": 1254
-  },
   "catalog/products/tiramisu-cake.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
     "imageWidth": 1500,
@@ -2181,9 +2196,9 @@
     "imageHeight": 1500
   },
   "catalog/products/tiramisu.webp": {
-    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
-    "imageWidth": 1254,
-    "imageHeight": 836
+    "imageUpdatedAt": "2026-09-23T14:28:59.683317Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
   },
   "catalog/products/toffee-caramel-cake-cup.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
