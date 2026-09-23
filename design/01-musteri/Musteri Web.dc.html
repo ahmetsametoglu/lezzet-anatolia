@@ -417,48 +417,73 @@
 
     <sc-if value="{{ is.urun }}">
       <div data-screen-label="Web · Ürün detay" key="{{ sayfaKey }}" style="animation:pageIn .26s ease">
-        <div style="padding:20px 48px 0;font:400 14px 'Karla';color:#8a8270"><span onClick="{{ git.katalog }}" style="color:#5f7a2c;font-weight:700;cursor:pointer">← Katalog</span> · {{ ud.c }} · {{ ud.n }}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;padding:24px 48px 44px">
-          <div style="display:flex;flex-direction:column;gap:12px">
-            <div style="aspect-ratio:3/2"><image-slot id="w-prd-{{ ud.id }}" radius="20" placeholder="{{ ud.n }} — iştah açan yakın çekim"></image-slot></div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-              <div style="aspect-ratio:3/2;border:2px solid #5f7a2c;border-radius:12px;overflow:hidden"><image-slot id="w-prd-{{ ud.id }}-t0" radius="10" placeholder="1"></image-slot></div>
-              <div style="aspect-ratio:3/2"><image-slot id="w-prd-{{ ud.id }}-t1" radius="12" placeholder="2"></image-slot></div>
-              <div style="aspect-ratio:3/2"><image-slot id="w-prd-{{ ud.id }}-t2" radius="12" placeholder="3"></image-slot></div>
-              <div style="aspect-ratio:3/2;background:#f0e9d6;border-radius:12px;display:grid;place-items:center;font:700 14px 'Karla';color:#8a8270">+2</div>
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:18px">
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <span style="font:600 13px 'Karla';letter-spacing:.12em;text-transform:uppercase;color:#5f7a2c">{{ ud.c }}</span>
-              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
-                <h1 style="margin:0;font:600 40px/1.15 'Lora';color:#343b41">{{ ud.n }}</h1>
-                <span style="font-size:20px;border:1px solid #e0d8c2;border-radius:50%;width:44px;height:44px;display:grid;place-items:center;background:#fff;flex:none;cursor:pointer" title="WhatsApp ile paylaş"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M8 16 16.5 7.5M10 7.5h6.5V14"/></svg></span>
-              </div>
-              <div style="display:flex;align-items:center;gap:10px">
-                <span style="display:inline-flex;gap:2px;color:#d99a2b"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex:none"><path d="M12 3.4l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.9-5.2 2.9 1-5.9L3.5 9.6l5.9-.8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex:none"><path d="M12 3.4l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.9-5.2 2.9 1-5.9L3.5 9.6l5.9-.8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex:none"><path d="M12 3.4l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.9-5.2 2.9 1-5.9L3.5 9.6l5.9-.8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex:none"><path d="M12 3.4l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.9-5.2 2.9 1-5.9L3.5 9.6l5.9-.8z"/></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex:none"><path d="M12 3.4l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.9-5.2 2.9 1-5.9L3.5 9.6l5.9-.8z"/></svg></span>
-                <span style="font:700 15px 'Karla';color:#3a4147">{{ ud.rt }}</span>
-                <span style="font:400 14px 'Karla';color:#8a8270">· {{ ud.rc }} yorum</span>
-                <span style="font:600 13px 'Karla';color:{{ ud.stokFg }};background:{{ ud.stokBg }};border-radius:12px;padding:3px 10px">{{ ud.stok }}</span>
-              </div>
-            </div>
-            <p style="margin:0;font:400 16px/1.65 'Karla';color:#6d7261;text-wrap:pretty">{{ ud.d }}</p>
 
-            <sc-if value="{{ ud.cesitVar }}" hint-placeholder-val="{{ false }}">
-              <div style="display:flex;flex-direction:column;gap:10px;background:#f4efe1;border:1px solid #e6dfcd;border-radius:18px;padding:16px 18px">
-                <div style="display:flex;align-items:baseline;gap:10px">
-                  <span style="font:700 15px 'Karla';color:#3a4147">Çeşitler</span>
-                  <span style="font:400 13px 'Karla';color:#8a8270">{{ ud.cesitSayi }} çeşit · seçtiğiniz çeşidin sayfası açılır</span>
+        <div style="display:grid;grid-template-columns:1fr 470px;gap:44px;padding:32px 48px 38px;align-items:start">
+
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="position:relative;aspect-ratio:3/2;border-radius:20px;overflow:hidden">
+              <image-slot id="w-prd-{{ ud.id }}" radius="20" placeholder="{{ ud.n }} — iştah açan yakın çekim"></image-slot>
+              <div style="position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(180deg,rgba(26,28,20,0) 0%,rgba(26,28,20,.42) 100%);pointer-events:none"></div>
+              <div style="position:absolute;left:14px;bottom:14px;display:flex;gap:8px;align-items:center">
+                <span style="width:64px;flex:none;aspect-ratio:3/2;border-radius:8px;overflow:hidden;border:2px solid #fff;box-shadow:0 0 0 2px #5f7a2c,0 2px 8px rgba(26,28,20,.28);cursor:pointer"><image-slot id="w-prd-{{ ud.id }}-t0" radius="6" placeholder="1"></image-slot></span>
+                <span style="width:64px;flex:none;aspect-ratio:3/2;border-radius:8px;overflow:hidden;border:2px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(26,28,20,.28);cursor:pointer"><image-slot id="w-prd-{{ ud.id }}-t1" radius="6" placeholder="2"></image-slot></span>
+                <span style="width:64px;flex:none;aspect-ratio:3/2;border-radius:8px;overflow:hidden;border:2px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(26,28,20,.28);cursor:pointer"><image-slot id="w-prd-{{ ud.id }}-t2" radius="6" placeholder="3"></image-slot></span>
+                <span style="width:64px;flex:none;aspect-ratio:3/2;border-radius:8px;overflow:hidden;border:2px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(26,28,20,.28);cursor:pointer"><image-slot id="w-prd-{{ ud.id }}-t3" radius="6" placeholder="4"></image-slot></span>
+                <span style="width:64px;flex:none;aspect-ratio:3/2;border-radius:8px;border:2px solid rgba(255,255,255,.5);background:rgba(24,26,19,.78);backdrop-filter:blur(3px);display:grid;place-items:center;font:700 13px 'Karla';color:#f3efe2;cursor:pointer">+2</span>
+              </div>
+            </div>
+
+            <sc-if value="{{ ud.cesitSolda }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:baseline;gap:9px">
+                  <span style="font:700 14px 'Karla';color:#3a4147">Çeşitler</span>
+                  <span style="font:400 12.5px 'Karla';color:#8a8270">{{ ud.cesitSayi }} çeşit · seçtiğiniz çeşidin sayfası açılır</span>
                 </div>
-                <div style="display:flex;gap:10px">
-                  <sc-for list="{{ ud.cesitler }}" as="f" hint-placeholder-count="4">
-                    <div onClick="{{ f.ac }}" style="position:relative;width:106px;flex:none;border:{{ f.bd }};border-radius:16px;background:#fff;padding:6px;display:flex;flex-direction:column;gap:6px;cursor:pointer">
-                      <div style="aspect-ratio:1"><image-slot id="w-fam-{{ f.id }}" radius="11" placeholder="{{ f.n }}"></image-slot></div>
-                      <sc-if value="{{ f.secili }}"><span style="position:absolute;top:-8px;right:-8px;background:#5f7a2c;color:#fff;font:700 12px 'Karla';width:22px;height:22px;border-radius:11px;display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.8 9.2 17 19 6.5"/></svg></span></sc-if>
-                      <div style="display:flex;flex-direction:column;gap:1px;padding:0 3px 3px">
-                        <span style="font:700 12.5px 'Karla';color:#3a4147">{{ f.n }}</span>
-                        <span style="font:400 11.5px 'Karla';color:{{ f.altFg }}">{{ f.alt }}</span>
-                      </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,104px);gap:8px;justify-content:start">
+                  <sc-for list="{{ ud.cesitler }}" as="f" hint-placeholder-count="5">
+                    <div onClick="{{ f.ac }}" style="position:relative;border:{{ f.bd }};border-radius:13px;background:#fff;padding:4px;display:flex;flex-direction:column;gap:4px;cursor:pointer">
+                      <div style="aspect-ratio:3/2"><image-slot id="w-fam-{{ f.id }}" radius="9" placeholder="{{ f.n }}"></image-slot></div>
+                      <span style="display:flex;flex-direction:column;gap:0;padding:0 3px 3px">
+                        <span style="font:700 11.5px/1.2 'Karla';color:#3a4147">{{ f.n }}</span>
+                        <span style="font:400 10.5px 'Karla';color:{{ f.altFg }}">{{ f.alt }}</span>
+                      </span>
+                      <sc-if value="{{ f.secili }}"><span style="position:absolute;top:-8px;right:-8px;background:#5f7a2c;color:#fff;width:22px;height:22px;border-radius:11px;display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.8 9.2 17 19 6.5"/></svg></span></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px;position:sticky;top:96px">
+            <span style="font:600 12px 'Karla';letter-spacing:.14em;text-transform:uppercase;color:#5f7a2c">{{ ud.c }}</span>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+              <h1 style="margin:0;font:600 38px/1.12 'Lora';color:#343b41">{{ ud.n }}</h1>
+              <span style="border:1px solid #e0d8c2;border-radius:50%;width:42px;height:42px;display:grid;place-items:center;background:#fff;flex:none;cursor:pointer;color:#6d7261" title="Paylaş"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8.5 7.5 12 4l3.5 3.5M5 14v5.5h14V14"/></svg></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="display:inline-flex;gap:2px;color:#d99a2b">{{ ud.yildiz }}</span>
+              <span style="font:700 14.5px 'Karla';color:#3a4147">{{ ud.rt }}</span>
+              <span style="font:400 13.5px 'Karla';color:#8a8270">· {{ ud.rc }} yorum</span>
+              <span style="font:600 12.5px 'Karla';color:{{ ud.stokFg }};background:{{ ud.stokBg }};border-radius:12px;padding:3px 10px">{{ ud.stok }}</span>
+            </div>
+            <p style="margin:0;font:400 15.5px/1.6 'Karla';color:#6d7261;text-wrap:pretty">{{ ud.d }}</p>
+
+            <sc-if value="{{ ud.cesitSagda }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:10px;background:#f4efe1;border:1px solid #e6dfcd;border-radius:18px;padding:14px 16px">
+                <div style="display:flex;align-items:baseline;gap:9px">
+                  <span style="font:700 14.5px 'Karla';color:#3a4147">Çeşitler</span>
+                  <span style="font:400 12.5px 'Karla';color:#8a8270">{{ ud.cesitSayi }} çeşit · sayfası açılır</span>
+                </div>
+                <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
+                  <sc-for list="{{ ud.cesitler }}" as="f" hint-placeholder-count="5">
+                    <div onClick="{{ f.ac }}" style="position:relative;width:104px;flex:none;border:{{ f.bd }};border-radius:13px;background:#fff;padding:4px;display:flex;flex-direction:column;gap:4px;cursor:pointer">
+                      <div style="aspect-ratio:3/2"><image-slot id="w-fam-{{ f.id }}" radius="9" placeholder="{{ f.n }}"></image-slot></div>
+                      <span style="display:flex;flex-direction:column;gap:0;padding:0 3px 3px">
+                        <span style="font:700 11.5px/1.2 'Karla';color:#3a4147">{{ f.n }}</span>
+                        <span style="font:400 10.5px 'Karla';color:{{ f.altFg }}">{{ f.alt }}</span>
+                      </span>
+                      <sc-if value="{{ f.secili }}"><span style="position:absolute;top:-7px;right:-7px;background:#5f7a2c;color:#fff;width:20px;height:20px;border-radius:10px;display:grid;place-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.8 9.2 17 19 6.5"/></svg></span></sc-if>
                     </div>
                   </sc-for>
                 </div>
@@ -466,96 +491,202 @@
             </sc-if>
 
             <sc-if value="{{ ud.boyVar }}" hint-placeholder-val="{{ false }}">
-              <div style="display:flex;flex-direction:column;gap:10px">
-                <span style="font:700 15px 'Karla';color:#3a4147">Boy seçin</span>
-                <div style="display:flex;gap:12px">
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <span style="font:700 14.5px 'Karla';color:#3a4147">Boy seçin</span>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:9px">
                   <sc-for list="{{ ud.boylar }}" as="b" hint-placeholder-count="2">
-                    <div onClick="{{ b.sec }}" style="border:{{ b.bd }};background:#fff;border-radius:16px;padding:14px 20px;display:flex;flex-direction:column;gap:3px;min-width:150px;cursor:pointer">
-                      <span style="font:700 15px 'Karla';color:#3a4147">{{ b.n }}</span>
-                      <span style="font:700 17px 'Karla';color:#343b41">{{ b.prF }}</span>
-                      <span style="font:400 12.5px 'Karla';color:#8a8270">{{ b.kg }}</span>
+                    <div onClick="{{ b.sec }}" style="border:{{ b.bd }};background:#fff;border-radius:13px;padding:11px 13px;display:flex;flex-direction:column;gap:1px;cursor:pointer">
+                      <span style="font:700 13.5px 'Karla';color:#3a4147">{{ b.n }}</span>
+                      <span style="font:700 15.5px 'Karla';color:#343b41">{{ b.prF }}</span>
+                      <span style="font:400 11.5px 'Karla';color:#8a8270">{{ b.kg }}</span>
                     </div>
                   </sc-for>
                 </div>
               </div>
             </sc-if>
 
-            <div style="display:flex;gap:14px;align-items:center">
-              <span style="display:inline-flex;align-items:center;border:2px solid #5f7a2c;border-radius:24px;overflow:hidden;background:#fff">
-                <span onClick="{{ ud.azalt }}" style="font:700 20px 'Karla';color:#5f7a2c;padding:10px 18px;cursor:pointer">−</span>
-                <span style="font:700 17px 'Karla';color:#3a4147;min-width:52px;text-align:center;border-left:1px solid #ece5d2;border-right:1px solid #ece5d2;padding:10px 0">{{ ud.adet }}</span>
-                <span onClick="{{ ud.artir }}" style="font:700 20px 'Karla';color:#fff;background:#5f7a2c;padding:10px 18px;cursor:pointer">+</span>
+            <sc-if value="{{ ud.halKapi }}" hint-placeholder-val="{{ true }}">
+              <div style="background:#eef2e2;border:1px solid #cfdcb3;border-radius:14px;padding:12px 15px;display:flex;gap:10px;align-items:flex-start">
+                <span style="width:8px;height:8px;border-radius:4px;background:#5f7a2c;flex:none;margin-top:6px"></span>
+                <span style="display:flex;flex-direction:column;gap:3px">
+                  <span style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+                    <span style="font:700 13.5px 'Karla';color:#41571c">Kapıya gelir · {{ ud.kod }}</span>
+                    <span onClick="{{ yerAc }}" style="font:600 12px 'Karla';color:#5f7a2c;text-decoration:underline;cursor:pointer">değiştir</span>
+                  </span>
+                  <span style="font:400 12.5px/1.5 'Karla';color:#5c6a49">{{ ud.teslim }} Kargo ücreti yok; sepette rota grubuna düşer.</span>
+                </span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ ud.halKargo }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#f0e9d6;border:1px solid #ddd2b4;border-radius:14px;padding:12px 15px;display:flex;gap:10px;align-items:flex-start">
+                <span style="width:8px;height:8px;border-radius:4px;background:#8a8270;flex:none;margin-top:6px"></span>
+                <span style="display:flex;flex-direction:column;gap:3px">
+                  <span style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+                    <span style="font:700 13.5px 'Karla';color:#5f5a48">Kargoyla gönderilir · {{ ud.kod }}</span>
+                    <span onClick="{{ yerAc }}" style="font:600 12px 'Karla';color:#5f7a2c;text-decoration:underline;cursor:pointer">değiştir</span>
+                  </span>
+                  <span style="font:400 12.5px/1.5 'Karla';color:#6d7261">Bu ürün {{ ud.kod }} için araç teslimine giremiyor. Sepette kargo grubunda toplanır, ayrı ödemeyle ayrı sipariş olarak verilir. Kargo ücreti ve eşiği kendi grubunun tutarından hesaplanır.</span>
+                </span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ ud.halYok }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:14px;padding:12px 15px;display:flex;gap:10px;align-items:flex-start">
+                <span style="width:8px;height:8px;border-radius:4px;background:#b05c2e;flex:none;margin-top:6px"></span>
+                <span style="display:flex;flex-direction:column;gap:5px">
+                  <span style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+                    <span style="font:700 13.5px 'Karla';color:#8a6b2a">Bölgenizde şu an yok · {{ ud.kod }}</span>
+                    <span onClick="{{ yerAc }}" style="font:600 12px 'Karla';color:#8a6b2a;text-decoration:underline;cursor:pointer">değiştir</span>
+                  </span>
+                  <span style="font:400 12.5px/1.5 'Karla';color:#6d7261">Soğuk zincir gerektirdiği için kargoya verilemiyor. Sepete alırsanız "sonraya kaydedilenler" bölmesinde bekler.</span>
+                </span>
+              </div>
+            </sc-if>
+
+            <div style="display:flex;align-items:center;gap:16px;background:#fff;border:1px solid #e6dfcd;border-radius:16px;padding:14px 16px">
+              <span style="display:flex;flex-direction:column;gap:2px;flex:none">
+                <span style="font:700 29px/1.05 'Karla';color:#343b41">{{ ud.prF }}</span>
+                <span style="font:400 12px 'Karla';color:#8a8270">{{ ud.birim }}</span>
               </span>
-              <span onClick="{{ ud.ekle }}" style="background:{{ ud.cbaBg }};color:#fff;font:700 17px 'Karla';padding:16px 40px;border-radius:30px;flex:1;text-align:center;cursor:pointer">{{ ud.cba }}</span>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
+                <sc-if value="{{ ud.sold }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:block;background:#efece2;color:#a09781;font:700 15.5px 'Karla';padding:14px 0;border-radius:28px;text-align:center">Şu an alınamıyor</span>
+                  <span onClick="{{ ud.haberVer }}" style="display:block;border:2px solid #5f7a2c;color:#5f7a2c;font:700 14px 'Karla';padding:9px 0;border-radius:26px;text-align:center;cursor:pointer">{{ ud.haberYazi }}</span>
+                </sc-if>
+                <sc-if value="{{ ud.sepetYok }}" hint-placeholder-val="{{ true }}">
+                  <span onClick="{{ ud.ekle1 }}" style="display:block;background:#5f7a2c;color:#fff;font:700 16px 'Karla';padding:15px 0;border-radius:28px;text-align:center;cursor:pointer;transition:background .15s" style-hover="background:#4a6121">Sepete ekle</span>
+                </sc-if>
+                <sc-if value="{{ ud.sepetteVar }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:flex;align-items:center;border:2px solid #5f7a2c;border-radius:28px;overflow:hidden;background:#fff">
+                    <span onClick="{{ ud.sAzalt }}" style="font:700 21px 'Karla';color:#5f7a2c;padding:10px 20px;cursor:pointer;flex:none">−</span>
+                    <span style="font:700 17px 'Karla';color:#3a4147;flex:1;text-align:center;border-left:1px solid #ece5d2;border-right:1px solid #ece5d2;padding:10px 0">{{ ud.sepetAdet }}</span>
+                    <span onClick="{{ ud.sArtir }}" style="font:700 21px 'Karla';color:#fff;background:#5f7a2c;padding:10px 20px;cursor:pointer;flex:none">+</span>
+                  </span>
+                </sc-if>
+              </div>
             </div>
+            <sc-if value="{{ ud.lim }}" hint-placeholder-val="{{ false }}"><span style="font:600 12px 'Karla';color:#b05c2e;background:#fbeee4;border:1px solid #edd3bf;border-radius:11px;padding:4px 10px;align-self:flex-start">{{ ud.lim }}</span></sc-if>
 
-            <div style="display:flex;gap:20px;font:400 13.5px 'Karla';color:#6d7261;background:#f0e9d6;border-radius:14px;padding:14px 18px;flex-wrap:wrap;align-items:center">
-              <span style="display:inline-flex;align-items:center;gap:7px;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5 4.2 16.5"/><path d="M12 6.8 9.9 5.1M12 6.8l2.1-1.7M12 17.2l-2.1 1.7M12 17.2l2.1 1.7"/></svg> Soğuk zincirle gelir</span>
-              <span style="display:inline-flex;align-items:center;gap:7px;gap:6px;font-weight:700;color:{{ ud.teslimFg }}"><sc-if value="{{ ud.kargoMu }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3.5 8 12 4l8.5 4v8L12 20l-8.5-4V8z"/><path d="M3.5 8 12 12l8.5-4M12 12v8"/></svg></sc-if><sc-if value="{{ ud.kapiMi }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M2.5 6.5h11v9h-11z"/><path d="M13.5 9.5h4l3 3v3h-7"/><circle cx="6.6" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg></sc-if>{{ ud.teslim }}</span>
-              <span onClick="{{ yerAc }}" style="margin-left:auto;text-decoration:underline;color:#5f7a2c;cursor:pointer">teslimat yerini değiştir</span>
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#ece5d2;border:1px solid #ece5d2;border-radius:14px;overflow:hidden">
-              <div style="background:#fff;padding:13px 16px;display:flex;flex-direction:column;gap:2px">
-                <span style="font:400 12px 'Karla';color:#8a8270">Net ağırlık</span>
-                <span style="font:700 15px 'Karla';color:#3a4147">{{ ud.w }}</span>
-              </div>
-              <div style="background:#fff;padding:13px 16px;display:flex;flex-direction:column;gap:2px">
-                <span style="font:400 12px 'Karla';color:#8a8270">Çözdükten sonra tüketim</span>
-                <span style="font:700 15px 'Karla';color:#3a4147">En geç 3 gün içinde</span>
-              </div>
-              <div style="background:#fff;padding:13px 16px;display:flex;flex-direction:column;gap:4px;grid-column:1/-1">
-                <span style="font:400 12px 'Karla';color:#8a8270">Alerjenler</span>
-                <div style="display:flex;gap:6px;flex-wrap:wrap">
-                  <sc-for list="{{ ud.alerjen }}" as="a" hint-placeholder-count="3">
-                    <span style="font:600 12.5px 'Karla';color:#8a6b2a;background:#fdf3e0;border:1px solid #ecd9b4;border-radius:11px;padding:3px 10px;white-space:nowrap">{{ a }}</span>
-                  </sc-for>
-                </div>
-              </div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;font:400 12.5px 'Karla';color:#6d7261;border-top:1px solid #ece5d2;padding-top:13px">
+              <span style="display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5 4.2 16.5"/></svg> Soğuk zincirle gelir</span>
+              <span>Kırılmaz kargo kutusu</span>
             </div>
           </div>
         </div>
 
-        <div style="background:#f0e9d6;border-top:1px solid #e0d8c2;padding:40px 48px;display:grid;grid-template-columns:1fr 1.4fr;gap:40px">
-          <div style="display:flex;flex-direction:column;gap:12px">
-            <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">Nasıl hazırlanır?</h2>
-            <sc-for list="{{ ud.adimlar }}" as="s" hint-placeholder-count="3">
-              <div style="display:flex;gap:12px;align-items:flex-start">
-                <span style="width:26px;height:26px;border-radius:13px;background:#5f7a2c;color:#fff;font:700 13px 'Karla';display:grid;place-items:center;flex:none">{{ s.i }}</span>
-                <span style="font:400 14.5px/1.6 'Karla';color:#6d7261">{{ s.t }}</span>
-              </div>
-            </sc-for>
+        <div style="background:#f0e9d6;border-top:1px solid #e0d8c2;padding:34px 48px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:baseline;gap:12px">
+            <h2 style="margin:0;font:600 25px 'Lora';color:#343b41">Ürün künyesi</h2>
+            <span style="font:400 13px 'Karla';color:#8a8270">yasal beyanlar</span>
           </div>
-          <div style="display:flex;flex-direction:column;gap:14px">
-            <div style="display:flex;align-items:baseline;justify-content:space-between">
-              <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">Yorumlar</h2>
-              <span style="font:600 14px 'Karla';color:#8a8270">{{ ud.rt }} / 5 · {{ ud.rc }} yorum</span>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:stretch">
+
+            <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:11px">
+              <span style="font:600 19px 'Lora';color:#343b41">İçindekiler ve alerjenler</span>
+              <p style="margin:0;font:400 14px/1.7 'Karla';color:#6d7261">{{ ud.ing }}</p>
+              <div style="display:flex;gap:7px;flex-wrap:wrap">
+                <sc-for list="{{ ud.alerjen }}" as="a" hint-placeholder-count="3">
+                  <span style="font:700 12.5px 'Karla';color:#b05c2e;background:#fbeee4;border:1px solid #edd3bf;border-radius:12px;padding:4px 11px;white-space:nowrap">{{ a }}</span>
+                </sc-for>
+              </div>
+              <span style="font:400 12.5px/1.6 'Karla';color:#8a8270;margin-top:auto;border-top:1px solid #f0ead9;padding-top:10px">Aynı tesiste Yer fıstığı ve Sert kabuklu yemişler işlenmektedir.</span>
             </div>
-            <sc-for list="{{ ud.yorumlar }}" as="y" hint-placeholder-count="2">
-              <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:16px 20px;display:flex;flex-direction:column;gap:6px">
-                <div style="display:flex;align-items:center;gap:10px">
-                  <span style="display:inline-flex;gap:2px;color:#d99a2b">{{ y.yildiz }}</span>
-                  <span style="font:700 14px 'Karla';color:#3a4147">{{ y.ad }}</span>
-                  <span style="font:400 12.5px 'Karla';color:#8a8270">· {{ y.tarih }}</span>
-                  <sc-if value="{{ y.dogrulanmis }}"><span style="font:600 11.5px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:10px;padding:2px 8px">Satın aldı</span></sc-if>
-                </div>
-                <span style="font:400 14px/1.6 'Karla';color:#6d7261">{{ y.t }}</span>
+
+            <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+                <span style="font:600 19px 'Lora';color:#343b41">Besin değerleri</span>
+                <span style="font:400 12px 'Karla';color:#8a8270">100 g için</span>
               </div>
-            </sc-for>
+              <div style="display:flex;flex-direction:column">
+                <sc-for list="{{ ud.besin }}" as="b" hint-placeholder-count="5">
+                  <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #f0ead9;font:400 13.5px 'Karla';color:#6d7261"><span>{{ b.n }}</span><span style="font-weight:700;color:#3a4147">{{ b.v }}</span></div>
+                </sc-for>
+              </div>
+              <span style="font:400 12.5px 'Karla';color:#8a8270;margin-top:auto">Net miktar: {{ ud.w }}</span>
+            </div>
+
+            <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:11px">
+              <span style="font:600 19px 'Lora';color:#343b41">Saklama ve hazırlama</span>
+              <p style="margin:0;font:400 14px/1.7 'Karla';color:#6d7261">{{ ud.saklama }}</p>
+              <div style="display:flex;flex-direction:column;gap:9px;margin-top:auto;border-top:1px solid #f0ead9;padding-top:12px">
+                <sc-for list="{{ ud.adimlar }}" as="s" hint-placeholder-count="3">
+                  <div style="display:flex;gap:11px;align-items:flex-start">
+                    <span style="width:24px;height:24px;border-radius:12px;background:#5f7a2c;color:#fff;font:700 12px 'Karla';display:grid;place-items:center;flex:none">{{ s.i }}</span>
+                    <span style="font:400 13.5px/1.55 'Karla';color:#6d7261">{{ s.t }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
           </div>
+
+          <sc-if value="{{ ud.aiVar }}" hint-placeholder-val="{{ true }}">
+            <div style="border-top:1px solid #e0d8c2;padding-top:17px;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;gap:26px;flex-wrap:wrap">
+                <span style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:340px">
+                  <span style="font:700 14px 'Karla';color:#3a4147">Bu ürünü yapay zekâya sorun</span>
+                  <span style="font:400 13px/1.5 'Karla';color:#6d7261">“{{ ud.aiSoru }}”</span>
+                </span>
+                <div style="display:flex;gap:8px;flex:none">
+                  <span style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #ddd5c0;border-radius:20px;padding:7px 15px;font:700 12.5px 'Karla';color:#3a4147;cursor:pointer;transition:border-color .15s,background .15s" style-hover="border-color:#5f7a2c;background:#f7faf0">Gemini <span style="color:#8a8270;font-weight:400">↗</span></span>
+                  <span style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #ddd5c0;border-radius:20px;padding:7px 15px;font:700 12.5px 'Karla';color:#3a4147;cursor:pointer;transition:border-color .15s,background .15s" style-hover="border-color:#5f7a2c;background:#f7faf0">Claude <span style="color:#8a8270;font-weight:400">↗</span></span>
+                  <span style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #ddd5c0;border-radius:20px;padding:7px 15px;font:700 12.5px 'Karla';color:#3a4147;cursor:pointer;transition:border-color .15s,background .15s" style-hover="border-color:#5f7a2c;background:#f7faf0">ChatGPT <span style="color:#8a8270;font-weight:400">↗</span></span>
+                </div>
+              </div>
+              <span style="font:400 11.5px/1.5 'Karla';color:#8a8270">Cevap üçüncü tarafa aittir; alerjen, saklama ve besin bilgisi için yukarıdaki künye geçerlidir.</span>
+            </div>
+          </sc-if>
         </div>
 
-        <div style="padding:40px 48px 48px;display:flex;flex-direction:column;gap:18px">
-          <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">Bunlarla iyi gider</h2>
+        <div style="padding:36px 48px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+            <h2 style="margin:0;font:600 25px 'Lora';color:#343b41">Yorumlar</h2>
+            <span style="display:inline-flex;align-items:baseline;gap:8px">
+              <span style="font:700 22px 'Karla';color:#343b41">{{ ud.rt }}</span>
+              <span style="display:inline-flex;gap:2px;color:#d99a2b;align-self:center">{{ ud.yildiz }}</span>
+              <span style="font:400 13px 'Karla';color:#8a8270">{{ ud.rc }} yorum</span>
+            </span>
+            <span style="margin-left:auto;font:400 12px 'Karla';color:#a09781">Yorum yazma yalnız bu ürünü satın almış müşterilere açıktır.</span>
+            <sc-if value="{{ ud.yorumVar }}" hint-placeholder-val="{{ true }}"><span style="font:600 13.5px 'Karla';color:#5f7a2c;text-decoration:underline;cursor:pointer">{{ ud.rc }} yorumun tümü →</span></sc-if>
+          </div>
+
+          <sc-if value="{{ ud.yorumVar }}" hint-placeholder-val="{{ true }}">
+            <div style="column-count:3;column-gap:16px">
+              <sc-for list="{{ ud.yorumlar }}" as="y" hint-placeholder-count="6">
+                <div style="break-inside:avoid;margin:0 0 16px;background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:16px 19px;display:flex;flex-direction:column;gap:7px">
+                  <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+                    <span style="display:inline-flex;gap:2px;color:#d99a2b">{{ y.yildiz }}</span>
+                    <span style="font:700 13.5px 'Karla';color:#3a4147">{{ y.ad }}</span>
+                    <span style="font:400 12px 'Karla';color:#8a8270">· {{ y.tarih }}</span>
+                    <sc-if value="{{ y.dogrulanmis }}"><span style="font:600 11px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:10px;padding:2px 8px">Satın aldı</span></sc-if>
+                  </div>
+                  <span style="font:400 13.5px/1.65 'Karla';color:#6d7261">{{ y.t }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ ud.yorumYok }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff;border:1.5px dashed #ddd5c0;border-radius:16px;padding:34px 24px;display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center">
+              <span style="font-size:20px;color:#d8cfb6">★</span>
+              <span style="font:700 15px 'Karla';color:#3a4147">Henüz yorum yok</span>
+              <span style="font:400 13px/1.55 'Karla';color:#8a8270">Bu ürünü satın aldıysanız ilk yorumu siz yazabilirsiniz.</span>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="background:#f4efe1;border-top:1px solid #e6dfcd;padding:34px 48px 42px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <h2 style="margin:0;font:600 25px 'Lora';color:#343b41">Bunları da sevebilirsiniz</h2>
+            <span onClick="{{ git.katalog }}" style="font:600 13.5px 'Karla';color:#5f7a2c;text-decoration:underline;cursor:pointer">Tüm katalog →</span>
+          </div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
             <sc-for list="{{ ud.benzer }}" as="p" hint-placeholder-count="4">
               <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;overflow:hidden;display:flex;flex-direction:column">
-                <div onClick="{{ p.ac }}" style="aspect-ratio:3/2;cursor:pointer"><image-slot id="w-bnz-{{ p.id }}" shape="rect" placeholder="{{ p.n }}"></image-slot></div>
-                <div style="padding:13px 16px 15px;display:flex;flex-direction:column;gap:5px">
-                  <span onClick="{{ p.ac }}" style="font:700 15px 'Karla';color:#3a4147;cursor:pointer">{{ p.n }}</span>
-                  <div style="display:flex;align-items:center;justify-content:space-between">
+                <div onClick="{{ p.ac }}" style="aspect-ratio:4/3;cursor:pointer"><image-slot id="w-bnz-{{ p.id }}" shape="rect" placeholder="{{ p.n }}"></image-slot></div>
+                <div style="padding:13px 16px 15px;display:flex;flex-direction:column;gap:6px;flex:1">
+                  <span onClick="{{ p.ac }}" style="font:700 14.5px 'Karla';color:#3a4147;cursor:pointer">{{ p.n }}</span>
+                  <span style="font:400 12px 'Karla';color:#8a8270">{{ p.w }}</span>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:6px">
                     <span style="font:700 17px 'Karla';color:#343b41">{{ p.prF }}</span>
-                    <span onClick="{{ p.ekle }}" style="background:#5f7a2c;color:#fff;font:700 12.5px 'Karla';padding:7px 13px;border-radius:16px;cursor:pointer">Sepete ekle</span>
+                    <span onClick="{{ p.ekle }}" style="background:#5f7a2c;color:#fff;font:700 12.5px 'Karla';padding:7px 14px;border-radius:16px;cursor:pointer">Ekle</span>
                   </div>
                 </div>
               </div>
@@ -1736,6 +1867,7 @@ class Component extends DCLogic {
 
   P = [
     {id:'baklava', n:'Fıstıklı Baklava', c:'Tatlılar', w:'700 g tepsi', u:'24,14 €/kg', pr:16.9, b2b:13.5, rt:'4,7', rc:23, zone:'her', fam:'baklava', boy:[{n:'700 g tepsi',pr:16.9,kg:'24,14 €/kg'},{n:'1 kg tepsi',pr:22.9,kg:'22,90 €/kg'}], d:'Gaziantep usulü, kat kat el açması yufka ve bol Antep fıstığıyla. Fırından çıktığı gün şoklanır — çözdürüp 10 dakika ısıtın, bayram sofranız hazır.', al:['Gluten','Süt','Fıstık','Kuruyemiş']},
+    {id:'baklava-ceviz', n:'Cevizli Baklava', c:'Tatlılar', w:'700 g tepsi', u:'21,29 €/kg', pr:14.9, b2b:11.9, rt:'4,6', rc:12, zone:'her', fam:'baklava', d:'Aynı el açması yufka, Antep fıstığı yerine iri çekilmiş ceviz içiyle. Fıstıklıdan daha az tatlı, şerbeti hafif.', al:['Gluten','Süt','Kuruyemiş']},
     {id:'gozleme', n:'Ispanaklı Gözleme', c:'Hamur İşleri', w:'4 adet', u:'paket', pr:5.9, was:7.9, b2b:4.7, lim:'Bu fiyattan en fazla 5 adet', rt:'4,8', rc:41, zone:'bolge', d:'İnce açılmış yufkanın arasında ıspanak ve lor. Tavada 4 dakikada kızarır, kahvaltıya yetişir.', al:['Gluten','Süt']},
     {id:'suborek', n:'Su Böreği', c:'Börekler', w:'1,2 kg tepsi', u:'10,42 €/kg', pr:12.5, b2b:9.9, rt:'4,9', rc:57, zone:'bolge', d:'Haşlanmış yufka, bol tereyağı ve peynir. Fırında 25 dakika — üstü çıtır, içi yumuşak.', al:['Gluten','Süt','Yumurta']},
     {id:'manti', n:'Kayseri Mantısı', c:'Hamur İşleri', w:'1 kg', u:'9,90 €/kg', pr:9.9, b2b:7.9, rt:'4,6', rc:34, zone:'bolge', d:'Elde kapatılmış küçük mantı. Kaynayan suda 8 dakika, üstüne sarımsaklı yoğurt ve kızgın tereyağı.', al:['Gluten','Yumurta']},
@@ -1858,7 +1990,7 @@ class Component extends DCLogic {
 
   fiyat(p) { return this.b2b() && p.b2b ? p.b2b : (p.was ? p.pr : p.pr); }
 
-  urun(id) { return this.P.find(p => p.id === (id || '').replace(/-.*$/, '')) || this.P[0]; }
+  urun(id) { const k = id || ''; return this.P.find(p => p.id === k) || this.P.find(p => p.id === k.replace(/-.*$/, '')) || this.P[0]; }
   paket(id) { return this.PKG.find(p => p.id === id) || this.PKG[0]; }
 
   nav(r, param) {
@@ -2054,7 +2186,7 @@ class Component extends DCLogic {
       toast: s.toast ? { yazi: s.toast.yazi, link: s.toast.link, ac: () => { self.setState({ toast:null }); self.nav(s.toast.hedef); } } : null,
       kategoriler: kesilenler, firsatlar, firsatVar: firsatlar.length > 0,
       koleksiyonlar, koleksiyonVar: koleksiyonlar.length > 0,
-      vitrin: tumUrun.slice(0, 4),
+      vitrin: tumUrun.slice(0, 8),
       paketler: this.PKG.map(pk => ({ n:pk.n, adet:pk.adet, d:pk.d, prF: E(this.b2b() ? pk.b2b : pk.pr), ac:() => self.nav('paketDetay', pk.id) })),
       tarifler: this.RCP.map(rc => ({ n:rc.n, meta:rc.meta, ac:() => self.nav('tarif', rc.id) })),
       statik: { sss:() => self.setState({ statikSayfa:'sss' }, () => self.nav('statik')), hakkinda:() => self.setState({ statikSayfa:'hakkinda' }, () => self.nav('statik')), gizlilik:() => self.setState({ statikSayfa:'gizlilik' }, () => self.nav('statik')), kunye:() => self.setState({ statikSayfa:'kunye' }, () => self.nav('statik')) },
@@ -2721,6 +2853,81 @@ class Component extends DCLogic {
     };
   }
 
+  KUNYE = {
+    'Tatlılar': {
+      ing: 'El açması yufka (BUĞDAY unu, su, tuz), Antep fıstığı, TEREYAĞI, şeker, limon.',
+      besin: [{n:'Enerji',v:'2.010 kJ / 480 kcal'},{n:'Yağ (doymuş)',v:'26 g (9,4 g)'},{n:'Karbonhidrat (şeker)',v:'52 g (31 g)'},{n:'Protein',v:'7,2 g'},{n:'Tuz',v:'0,12 g'}],
+      saklama: '−18 °C\'de saklayın. Çözdürdükten sonra tekrar dondurmayın; 24 saat içinde tüketin.',
+      adimlar: [{i:1,t:'Buzdolabında 4 saat çözdürün — oda sıcaklığında bekletmeyin.'},{i:2,t:'Fırını 160 °C ısıtın, tepsiyi orta rafa alın.'},{i:3,t:'10 dakika ısıtın, ılık servis edin.'}],
+      ai: '{n} ({w}, dondurulmuş) için servis önerileri ver: yanına ne gider, nasıl sunulur, kaç kişilik masada yeter?'
+    },
+    'Börekler': {
+      ing: 'BUĞDAY unu, su, tuz, YUMURTA, beyaz PEYNİR, TEREYAĞI, maydanoz.',
+      besin: [{n:'Enerji',v:'1.180 kJ / 282 kcal'},{n:'Yağ (doymuş)',v:'15,4 g (8,1 g)'},{n:'Karbonhidrat (şeker)',v:'26 g (1,8 g)'},{n:'Protein',v:'9,8 g'},{n:'Tuz',v:'1,1 g'}],
+      saklama: '−18 °C\'de saklayın. Çözdürmeden doğrudan fırına verilebilir; çözdürdüyseniz tekrar dondurmayın.',
+      adimlar: [{i:1,t:'Fırını 190 °C ısıtın.'},{i:2,t:'Tepsiyi orta rafa alın, 25 dakika pişirin.'},{i:3,t:'Üstü altın rengi olunca 5 dakika dinlendirip kesin.'}],
+      ai: '{n} ({w}) nasıl pişirilir ve nasıl servis edilir? Yanına uygun içecek ve meze önerisi ver.'
+    },
+    'Hamur İşleri': {
+      ing: 'BUĞDAY unu, su, tuz, ıspanak, lor PEYNİRİ, ayçiçek yağı.',
+      besin: [{n:'Enerji',v:'980 kJ / 234 kcal'},{n:'Yağ (doymuş)',v:'9,6 g (3,2 g)'},{n:'Karbonhidrat (şeker)',v:'29 g (1,4 g)'},{n:'Protein',v:'7,4 g'},{n:'Tuz',v:'0,9 g'}],
+      saklama: '−18 °C\'de saklayın. Çözdürdükten sonra tekrar dondurmayın; aynı gün tüketin.',
+      adimlar: [{i:1,t:'Tavayı orta ateşte ısıtın, yağ gerekmez.'},{i:2,t:'Donmuş hâlde her iki yüzü 2 dakika pişirin.'},{i:3,t:'Üzerine tereyağı sürüp sıcak servis edin.'}],
+      ai: '{n} ({w}) nasıl pişirilir, yanında ne ikram edilir? Kahvaltı ve akşam sofrası için ayrı öneri ver.'
+    },
+    'Et Ürünleri': {
+      ing: 'İnce BULGUR, dana kıyma, soğan, ceviz, salça, baharat, BUĞDAY irmiği.',
+      besin: [{n:'Enerji',v:'1.050 kJ / 251 kcal'},{n:'Yağ (doymuş)',v:'11,2 g (4,1 g)'},{n:'Karbonhidrat (şeker)',v:'24 g (2,1 g)'},{n:'Protein',v:'12,6 g'},{n:'Tuz',v:'1,2 g'}],
+      saklama: '−18 °C\'de saklayın. Çözdürmeden pişirilir; çözdürdüyseniz tekrar dondurmayın.',
+      adimlar: [{i:1,t:'Yağı 175 °C\'ye ısıtın.'},{i:2,t:'Donmuş hâlde 5-6 dakika kızartın.'},{i:3,t:'Kâğıt havluda süzüp limonla servis edin.'}],
+      ai: '{n} ({w}) nasıl pişirilir ve yanında hangi soslar, salatalar iyi gider?'
+    },
+    'Çerezler': {
+      ing: 'Kavrulmuş kuruyemiş karışımı, tuz.',
+      besin: [{n:'Enerji',v:'2.480 kJ / 597 kcal'},{n:'Yağ (doymuş)',v:'52 g (6,8 g)'},{n:'Karbonhidrat (şeker)',v:'14 g (4,2 g)'},{n:'Protein',v:'19 g'},{n:'Tuz',v:'0,8 g'}],
+      saklama: 'Serin ve kuru yerde, ağzı kapalı kavanozda saklayın. Açıldıktan sonra 3 hafta içinde tüketin.',
+      adimlar: [{i:1,t:'Paketi açtıktan sonra cam kavanoza alın.'},{i:2,t:'Doğrudan güneş görmeyen bir rafta tutun.'}],
+      ai: '{n} ({w}) hangi ikram tabaklarında nasıl kullanılır? Saklama ve tazelik için öneri ver.'
+    },
+    'Kahvaltılık': {
+      ing: 'Süt, tuz, maya, peynir mayası.',
+      besin: [{n:'Enerji',v:'1.120 kJ / 269 kcal'},{n:'Yağ (doymuş)',v:'21 g (14 g)'},{n:'Karbonhidrat (şeker)',v:'2,4 g (2,4 g)'},{n:'Protein',v:'17 g'},{n:'Tuz',v:'2,6 g'}],
+      saklama: 'Buzdolabında (+4 °C) kendi suyunda saklayın. Açıldıktan sonra 5 gün içinde tüketin.',
+      adimlar: [{i:1,t:'Servisten 20 dakika önce dolaptan çıkarın.'},{i:2,t:'Kalın dilimleyip zeytinyağı gezdirin.'}],
+      ai: '{n} ({w}) ile nasıl bir kahvaltı sofrası kurulur? Yanına gidecek beş şey öner.'
+    }
+  };
+
+  kunye(p) {
+    return this.KUNYE[p.c] || this.KUNYE['Börekler'];
+  }
+
+  yorumDagilim(p) {
+    const rt = parseFloat(String(p.rt).replace(',', '.')), rc = p.rc || 0;
+    if (!rc) return [5,4,3,2,1].map(e => ({ e, s:0, w:'0%' }));
+    const agir = [Math.max(0, rt - 3.6), .22, .08, .04, .02];
+    const top = agir.reduce((a, b) => a + b, 0);
+    let kalan = rc;
+    return [5,4,3,2,1].map((e, i) => {
+      const s = i === 4 ? kalan : Math.round(rc * agir[i] / top);
+      kalan -= s;
+      return { e, s, w: Math.round(s / rc * 100) + '%', renk: ['#c98a1e','#dcae57','#ecd3a4','#d8cfb6','#c3bba8'][i] };
+    });
+  }
+
+  yorumlar(p) {
+    if (!p.rc) return [];
+    const havuz = [
+      { p:5, ad:'Selin K.', tarih:'12 Eylül', t:'Tam anneannemin yaptığı gibi. Kargo kutusu buz aküleriyle geldi, hiç çözülmemişti; akşam yemeğinden önce dolaba aldım, servise tam kıvamındaydı. Altı kişilik masada rahat yetti, üstelik ertesi güne de kaldı. Fiyatına göre gerçekten iyi iş.' },
+      { p:5, ad:'Ayşe T.', tarih:'9 Eylül', t:'Harika. Tekrar alırım.' },
+      { p:4, ad:'Murat D.', tarih:'3 Eylül', t:'Lezzeti beklediğim gibi ama porsiyon biraz küçük geldi. Yine de memnunum, ikinci kez sipariş verdim.' },
+      { p:5, ad:'Fatih Ö.', tarih:'28 Ağustos', t:'Misafir için aldık, sunumu güzel oldu.' },
+      { p:5, ad:'Hatice B.', tarih:'21 Ağustos', t:'Üç ayrı siparişte de aynı kalitede geldi, bu benim için en önemlisi. Paketleme özenli; kutunun içinde hiçbir şey kaymamış. Tek not: teslimat gününü bir gün önceden hatırlatma gelse çok iyi olur, ben bir keresinde evde yoktum.' },
+      { p:3, ad:'Kenan A.', tarih:'14 Ağustos', t:'Fena değil ama fotoğraftaki kadar dolgun değildi.' }
+    ];
+    return havuz.slice(0, Math.min(6, p.rc)).map(y => ({ yildiz:this.yildizSira(y.p), ad:y.ad, tarih:y.tarih, dogrulanmis:true, t:y.t }));
+  }
+
   urunDetay(bolgeIci, aktifKod) {
     const self = this, s = this.state;
     const id = s.param || 'baklava';
@@ -2729,33 +2936,49 @@ class Component extends DCLogic {
     const boy = p.boy ? p.boy[s.udBoy] : null;
     const pr = boy ? (this.b2b() ? boy.pr * 0.8 : boy.pr) : this.fiyat(p);
     const teslimVar = p.zone !== 'kargo' && bolgeIci;
+    const sepKalem = s.sepet.find(x => x.id === p.id);
+    const sepQty = sepKalem ? sepKalem.qty : 0;
+    const kunye = this.kunye(p);
     return {
       id:p.id, n:p.n, c:p.c, w:p.w, d:p.d, rt:p.rt, rc:p.rc,
       stok: p.sold ? '○ Tükendi' : '● Stokta', stokFg: p.sold ? '#8a8270' : '#5f7a2c', stokBg: p.sold ? '#f0e9d6' : '#eef2e2',
       cesitVar: !!fam, cesitSayi: fam ? fam.l.length : 0,
+      cesitSolda: !!fam && !!p.boy, cesitSagda: !!fam && !p.boy,
       cesitler: fam ? fam.l.map(f => ({
         id:f.id, n:f.n, secili: f.id === id,
         bd: f.id === id ? '2px solid #5f7a2c' : '1.5px solid #e2dac4',
-        alt: f.id === id ? 'Bakıyorsunuz' : (f.pr ? E(f.pr) + "'dan" : E(p.pr) + "'dan"),
+        alt: f.id === id ? 'Bakıyorsunuz' : (function () {
+          const fp = self.P.find(x => x.id === f.id);
+          return E(fp ? self.fiyat(fp) : (f.pr || p.pr)) + "'dan";
+        })(),
         altFg: f.id === id ? '#5f7a2c' : '#8a8270',
         ac: () => self.setState({ param:f.id, udBoy:0 })
       })) : [],
       boyVar: !!p.boy,
       boylar: p.boy ? p.boy.map((b, i) => ({ n:b.n, prF:E(this.b2b() ? b.pr * 0.8 : b.pr), kg:b.kg, bd: i === s.udBoy ? '2px solid #5f7a2c' : '1.5px solid #d8cfb6', sec: () => self.setState({ udBoy:i }) })) : [],
-      adet: s.udAdet, azalt: () => self.setState(x => ({ udAdet: Math.max(1, x.udAdet - 1) })), artir: () => self.setState(x => ({ udAdet: x.udAdet + 1 })),
-      cba: p.sold ? 'Tükendi — gelince haber ver' : 'Sepete ekle — ' + E(pr * s.udAdet),
-      cbaBg: p.sold ? '#c9c3b0' : '#5f7a2c',
-      ekle: () => (p.sold ? self.bildir(p.n + ' gelince haber vereceğiz') : self.ekle(p.id, s.udAdet)),
-      teslim: teslimVar ? aktifKod + ' — Perşembe kapınızda' : 'Kargoyla, 2–3 iş günü',
+      prF: E(pr), birim: p.w + (p.u && p.u !== 'paket' ? ' · ' + p.u : ''), lim: p.lim || null,
+      sold: !!p.sold,
+      haberYazi: s.haberVerilen.indexOf(p.id) >= 0 ? 'Haber vereceğiz' : 'Gelince haber ver',
+      haberVer: () => { self.setState(x => ({ haberVerilen: x.haberVerilen.concat([p.id]) })); self.bildir(p.n + ' gelince haber vereceğiz'); },
+      sepetAdet: sepQty, sepetteVar: !p.sold && sepQty > 0, sepetYok: !p.sold && sepQty === 0, sepetTut: E(pr * sepQty),
+      ekle1: () => self.ekle(p.id, 1),
+      sArtir: () => self.adet(p.id, 1), sAzalt: () => self.adet(p.id, -1),
+      yildiz: this.yildizSira(Math.round(parseFloat(String(p.rt).replace(',', '.')))),
+      teslim: teslimVar ? aktifKod + ' bölgesinin teslimat gününde, perşembe kapınızda.' : '',
+      kod: aktifKod,
+      halKapi: !p.sold && teslimVar, halKargo: !p.sold && !teslimVar && p.zone !== 'bolge', halYok: !p.sold && !teslimVar && p.zone === 'bolge',
       kapiMi: teslimVar, kargoMu: !teslimVar,
       teslimFg: teslimVar ? '#4a6121' : '#6d7261',
       alerjen: p.al.length ? p.al : ['Bildirilen alerjen yok'],
-      adimlar: [{i:1,t:'Buzdolabında 4 saat çözdürün — oda sıcaklığında bekletmeyin.'},{i:2,t:'Fırını 190°C ısıtın, tepsiyi orta rafa alın.'},{i:3,t:'20–25 dakika, üstü altın rengi olana dek pişirin.'}],
-      yorumlar: [
-        { yildiz:this.yildizSira(5), ad:'Ayşe K.', tarih:'12 Temmuz', dogrulanmis:true, t:'Tam anneannemin yaptığı gibi. Kargoyla geldi, hiç bozulmamış.' },
-        { yildiz:this.yildizSira(4), ad:'Mehmet D.', tarih:'3 Temmuz', dogrulanmis:true, t:'Lezzeti çok iyi, porsiyon biraz küçük geldi. Yine alırım.' }
-      ],
-      benzer: this.P.filter(x => x.id !== p.id && x.c === p.c).concat(this.P.filter(x => x.c !== p.c)).slice(0, 4).map(x => self.kart(x))
+      ing: kunye.ing, besin: kunye.besin, saklama: kunye.saklama, adimlar: kunye.adimlar,
+      aiVar: !!kunye.ai, aiSoru: kunye.ai ? kunye.ai.replace('{n}', p.n).replace('{w}', p.w) : '',
+      dagilim: this.yorumDagilim(p),
+      yorumVar: p.rc > 0, yorumYok: !p.rc,
+      yorumlar: this.yorumlar(p),
+      benzer: (function () {
+        const aile = x => x.id !== p.id && !(p.fam && x.fam === p.fam);
+        return self.P.filter(x => aile(x) && x.c === p.c).concat(self.P.filter(x => aile(x) && x.c !== p.c)).slice(0, 4).map(x => self.kart(x));
+      })()
     };
   }
 }

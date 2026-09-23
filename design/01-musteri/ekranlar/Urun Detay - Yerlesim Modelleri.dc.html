@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#faf6ec; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:40px;display:flex;flex-direction:column;gap:26px;color:#3a3f35">
+
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:860px">
+    <span style="font:600 13px 'Karla';letter-spacing:.14em;text-transform:uppercase;color:#5f7a2c">Tur 2 · Ana görsel 3:2 olunca</span>
+    <span style="font:600 25px 'Lora';color:#343b41">İki kolonun yüksekliği nasıl eşitlenir</span>
+    <span style="font:400 14px/1.65 'Karla';color:#5c6155;text-wrap:pretty">Görsel artık 3:2 — 750 × 500. Eskiden 4:3 (750 × 562) olduğu için sol kolon 62 px daha uzundu; oranı düzeltince fark açıldı. Şemalar yarı ölçekte, rakamlar gerçek piksel. Sağ rafın yüksekliği çeşit ve boy sayısına göre değişir; burada beş çeşit, iki boy varsayıldı.</span>
+  </div>
+
+  <!-- ===== E ===== -->
+  <div id="2e" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <span style="background:#343b41;color:#f3efe2;font:700 12px 'Karla';padding:3px 10px;border-radius:11px">2e</span>
+      <span style="font:600 17px 'Lora';color:#343b41">Satın alma sola, anlatım sağa</span>
+      <span style="font:400 12.5px 'Karla';color:#6a6f61">filmşerit yanda · fiyat ve boy görselin altında · çeşitler sağda</span>
+    </div>
+    <span style="font:400 13px/1.65 'Karla';color:#5c6155;max-width:900px;text-wrap:pretty">Küçük görseller ana görselin soluna geçince görsel 668 × 445 olur (3:2 korunur, altındaki 134 px'lik şerit satırı kalkar). Boşalan yere fiyat kutusu ve boy kartları iner — boy dört kartıyla tek satıra sığar. Sağ sütun kimlik, açıklama, teslimat ve varsa çeşitleri taşır. Dört senaryo, gerçek piksel:</span>
+
+    <div style="display:flex;gap:18px;flex-wrap:wrap">
+
+      <div style="background:#faf6ec;border:1px solid #ddd5c0;border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:9px">
+        <span style="font:700 12px 'Karla';color:#3a4147">1 · Çeşit + boy</span>
+        <div style="display:flex;gap:11px;align-items:flex-start">
+          <div style="width:338px;flex:none;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;gap:5px">
+              <div style="width:32px;flex:none;display:flex;flex-direction:column;gap:5px"><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div></div>
+              <div style="flex:1;height:200px;background:#ded7c4;border-radius:8px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">görsel 668 × 445</div>
+            </div>
+            <div style="height:64px;background:#efe8d5;border:1px solid #e0d8c2;border-radius:6px;display:grid;place-items:center;font:600 10.5px 'Karla';color:#8a8270">Boy — dört kart tek satır</div>
+            <div style="height:51px;background:#fff;border:1px solid #e0d8c2;border-radius:6px;display:grid;place-items:center;font:600 10.5px 'Karla';color:#8a8270">Fiyat + sepet</div>
+            <span style="font:600 10.5px 'Karla';color:#5c6155">sol 701</span>
+          </div>
+          <div style="width:212px;flex:none;display:flex;flex-direction:column;gap:6px">
+            <div style="height:95px;background:#ece5d2;border-radius:6px;display:grid;place-items:center;font:600 10.5px 'Karla';color:#8a8270">kimlik + açıklama</div>
+            <div style="height:32px;background:#e9f0dc;border:1px solid #cfdcb3;border-radius:6px;display:grid;place-items:center;font:600 10px 'Karla';color:#6f8542">Teslimat</div>
+            <div style="height:68px;background:#efe8d5;border:1px solid #e0d8c2;border-radius:6px;display:grid;place-items:center;font:600 10.5px 'Karla';color:#8a8270">Çeşitler</div>
+            <div style="height:18px;background:#ece5d2;border-radius:4px"></div>
+            <div style="height:53px;background:#f4efe1;border:1px dashed #ddd5c0;border-radius:6px;display:grid;place-items:center;font:600 10px 'Karla';color:#a09781">133</div>
+            <span style="font:600 10.5px 'Karla';color:#4a6121">sağ 568 · fark 133</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#faf6ec;border:1px solid #cfdcb3;border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:9px">
+        <span style="font:700 12px 'Karla';color:#3a4147">2 · Yalnız çeşit</span>
+        <div style="display:flex;gap:11px;align-items:flex-start">
+          <div style="width:338px;flex:none;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;gap:5px">
+              <div style="width:32px;flex:none;display:flex;flex-direction:column;gap:5px"><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div></div>
+              <div style="flex:1;height:200px;background:#ded7c4;border-radius:8px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">görsel 668 × 445</div>
+            </div>
+            <div style="height:51px;background:#fff;border:1px solid #e0d8c2;border-radius:6px;display:grid;place-items:center;font:600 10.5px 'Karla';color:#8a8270">Fiyat + sepet</div>
+            <span style="font:600 10.5px 'Karla';color:#5c6155">sol 559</span>
+          </div>
+          <div style="width:212px;flex:none;display:flex;flex-direction:column;gap:6px">
+            <div style="height:95px;background:#ece5d2;border-radius:6px;display:grid;place-items:center;font:600 10.5px 'Karla';color:#8a8270">kimlik + açıklama</div>
+            <div style="height:32px;background:#e9f0dc;border:1px solid #cfdcb3;border-radius:6px;display:grid;place-items:center;font:600 10px 'Karla';color:#6f8542">Teslimat</div>
+            <div style="height:68px;background:#efe8d5;border:1px solid #e0d8c2;border-radius:6px;display:grid;place-items:center;font:600 10.5px 'Karla';color:#8a8270">Çeşitler</div>
+            <div style="height:18px;background:#ece5d2;border-radius:4px"></div>
+            <span style="font:600 10.5px 'Karla';color:#4a6121">sağ 568 · fark −9 · neredeyse tam</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#faf6ec;border:1px solid #ecd9b4;border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:9px">
+        <span style="font:700 12px 'Karla';color:#3a4147">3 · Yalnız boy</span>
+        <div style="display:flex;gap:11px;align-items:flex-start">
+          <div style="width:338px;flex:none;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;gap:5px">
+              <div style="width:32px;flex:none;display:flex;flex-direction:column;gap:5px"><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div></div>
+              <div style="flex:1;height:200px;background:#ded7c4;border-radius:8px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">görsel 668 × 445</div>
+            </div>
+            <div style="height:64px;background:#efe8d5;border:1px solid #e0d8c2;border-radius:6px;display:grid;place-items:center;font:600 10.5px 'Karla';color:#8a8270">Boy — dört kart tek satır</div>
+            <div style="height:51px;background:#fff;border:1px solid #e0d8c2;border-radius:6px;display:grid;place-items:center;font:600 10.5px 'Karla';color:#8a8270">Fiyat + sepet</div>
+            <span style="font:600 10.5px 'Karla';color:#5c6155">sol 701</span>
+          </div>
+          <div style="width:212px;flex:none;display:flex;flex-direction:column;gap:6px">
+            <div style="height:95px;background:#ece5d2;border-radius:6px;display:grid;place-items:center;font:600 10.5px 'Karla';color:#8a8270">kimlik + açıklama</div>
+            <div style="height:32px;background:#e9f0dc;border:1px solid #cfdcb3;border-radius:6px;display:grid;place-items:center;font:600 10px 'Karla';color:#6f8542">Teslimat</div>
+            <div style="height:18px;background:#ece5d2;border-radius:4px"></div>
+            <div style="height:120px;background:#fdf3e0;border:1px dashed #ecd9b4;border-radius:6px;display:grid;place-items:center;font:600 10px 'Karla';color:#8a6b2a">283</div>
+            <span style="font:600 10.5px 'Karla';color:#8a6b2a">sağ 418 · fark 283</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#faf6ec;border:1px solid #ddd5c0;border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:9px">
+        <span style="font:700 12px 'Karla';color:#3a4147">4 · Ne çeşit ne boy</span>
+        <div style="display:flex;gap:11px;align-items:flex-start">
+          <div style="width:338px;flex:none;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;gap:5px">
+              <div style="width:32px;flex:none;display:flex;flex-direction:column;gap:5px"><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div><div style="height:32px;background:#e6dfcd;border-radius:5px"></div></div>
+              <div style="flex:1;height:200px;background:#ded7c4;border-radius:8px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">görsel 668 × 445</div>
+            </div>
+            <div style="height:51px;background:#fff;border:1px solid #e0d8c2;border-radius:6px;display:grid;place-items:center;font:600 10.5px 'Karla';color:#8a8270">Fiyat + sepet</div>
+            <span style="font:600 10.5px 'Karla';color:#5c6155">sol 559</span>
+          </div>
+          <div style="width:212px;flex:none;display:flex;flex-direction:column;gap:6px">
+            <div style="height:95px;background:#ece5d2;border-radius:6px;display:grid;place-items:center;font:600 10.5px 'Karla';color:#8a8270">kimlik + açıklama</div>
+            <div style="height:32px;background:#e9f0dc;border:1px solid #cfdcb3;border-radius:6px;display:grid;place-items:center;font:600 10px 'Karla';color:#6f8542">Teslimat</div>
+            <div style="height:18px;background:#ece5d2;border-radius:4px"></div>
+            <div style="height:60px;background:#f4efe1;border:1px dashed #ddd5c0;border-radius:6px;display:grid;place-items:center;font:600 10px 'Karla';color:#a09781">141</div>
+            <span style="font:600 10.5px 'Karla';color:#5c6155">sağ 418 · fark 141</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:18px 22px;display:flex;flex-direction:column;gap:10px;max-width:820px">
+      <span style="font:700 14px 'Karla';color:#3a4147">2e ile 2c yan yana</span>
+      <div style="display:grid;grid-template-columns:auto auto auto;gap:9px 26px;font:400 13px 'Karla';color:#5c6155;align-items:baseline">
+        <span style="font-weight:700;color:#3a4147">Bileşim</span><span style="font-weight:700;color:#3a4147">2e farkı</span><span style="font-weight:700;color:#3a4147">2c farkı</span>
+        <span>Çeşit + boy</span><span>133</span><span style="color:#4a6121">96</span>
+        <span>Yalnız çeşit</span><span style="color:#4a6121">−9</span><span style="color:#8a6b2a">174</span>
+        <span>Yalnız boy</span><span style="color:#b05c2e">283</span><span>−91</span>
+        <span>Hiçbiri</span><span>141</span><span style="color:#4a6121">14</span>
+      </div>
+      <span style="font:400 12.5px/1.7 'Karla';color:#5c6155;text-wrap:pretty">2e, çeşitli ürünlerde <a href="#2c">2c</a>'den daha dengeli — "yalnız çeşit" hâli neredeyse tam oturuyor ve sizin dediğiniz gibi çeşit sayfanın asıl değişkeni. Bedeli, boyu olup çeşidi olmayan üründe 283 px: sağ sütun erken bitiyor. Dengelerin dışında iki gerçek fark var: 2e'de görsel 500'den 445'e iniyor (filmşerit yer alıyor), buna karşılık <strong>fiyat ve sepet ekranın soluna, görselin hemen altına</strong> geliyor — satın alma kararı fotoğrafla aynı sütunda birleşiyor, sağ sütun tamamen anlatıya kalıyor.</span>
+      <span style="font:400 12.5px/1.7 'Karla';color:#6a6f61">283 px'i kapatmanın yolu var: boyu olup çeşidi olmayan üründe künye özetinin (net ağırlık, alerjen çipleri) rafa çıkması. Ama bu, yalnız boşluk doldurmak için içerik taşımak olur — önermem, sormadan da yapmam.</span>
+    </div>
+  </div>
+
+  <!-- ===== D ===== -->
+  <div id="2d" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <span style="background:#b05c2e;color:#fff;font:700 12px 'Karla';padding:3px 10px;border-radius:11px">2d</span>
+      <span style="font:600 17px 'Lora';color:#343b41">Pul fikri düştü</span>
+      <span style="font:400 12.5px 'Karla';color:#6a6f61">boy kartı üç satır taşıyor, pula sığmıyor</span>
+    </div>
+    <span style="font:400 13px/1.65 'Karla';color:#5c6155;max-width:900px;text-wrap:pretty">Boyu fiyat kutusunun içinde tek sıra pula indirmeyi önermiştim. Gerçek veriye bakınca yanlış: her boy <strong>üç bilgi</strong> taşıyor — adet ve gramaj, fiyat, kg fiyatı. "500 g" yazan bir pul bunların ikisini siliyor, üstelik kg fiyatı boydan boya değiştiği için (20,31 · 20,33 · 20,67) karşılaştırmanın kendisi kayboluyor. Kart kalıyor.</span>
+
+    <div style="background:#faf6ec;border:1px solid #ddd5c0;border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:11px;width:750px">
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <span style="font:700 15px 'Karla';color:#3a4147">Boy seçin</span>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Fıstıklı çeşidin boyları</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+            <div style="border:2px solid #5f7a2c;background:#fff;border-radius:14px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;cursor:pointer">
+              <span style="font:700 14.5px 'Karla';color:#3a4147">6 adet · 225 g</span>
+              <span style="font:700 18px 'Karla';color:#343b41">4,57 €</span>
+              <span style="font:400 12.5px 'Karla';color:#8a8270">20,31 €/kg</span>
+            </div>
+            <div style="border:1.5px solid #ece5d2;background:#fff;border-radius:14px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;cursor:pointer">
+              <span style="font:700 14.5px 'Karla';color:#3a4147">12 adet · 450 g</span>
+              <span style="font:700 18px 'Karla';color:#343b41">9,15 €</span>
+              <span style="font:400 12.5px 'Karla';color:#8a8270">20,33 €/kg</span>
+            </div>
+            <div style="border:1.5px solid #ece5d2;background:#fff;border-radius:14px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;cursor:pointer">
+              <span style="font:700 14.5px 'Karla';color:#3a4147">36 adet · 1,3 kg</span>
+              <span style="font:700 18px 'Karla';color:#343b41">25,84 €</span>
+              <span style="font:400 12.5px 'Karla';color:#8a8270">20,67 €/kg</span>
+            </div>
+            <div style="border:1.5px solid #ece5d2;background:#fff;border-radius:14px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;cursor:pointer">
+              <span style="font:700 14.5px 'Karla';color:#3a4147">72 adet · 2,5 kg</span>
+              <span style="font:700 18px 'Karla';color:#343b41">50,81 €</span>
+              <span style="font:400 12.5px 'Karla';color:#8a8270">20,32 €/kg</span>
+            </div>
+      </div>
+      <span style="font:400 12px/1.6 'Karla';color:#6a6f61">470 px rafta bu dört kart iki satıra düşüyor (≈ 210 px). 750 px'lik galeri kolonunda tek satıra sığıyor (≈ 105 px) — kartın kendisi değişmeden.</span>
+    </div>
+
+    <div style="background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:18px 22px;display:flex;flex-direction:column;gap:10px;max-width:760px">
+      <span style="font:700 14px 'Karla';color:#3a4147">O hâlde denge nerede kuruluyor</span>
+      <span style="font:400 13px/1.7 'Karla';color:#5c6155">İçerik toplamı sabit; mesele hangi kolona düştüğü. Çeşit sola, boy rafta kalırsa — yani <a href="#2c">2c</a> — dört bileşimin hepsinde fark 174 px'in altında ve iki yönde de aşırıya kaçmıyor:</span>
+      <div style="display:grid;grid-template-columns:auto auto auto auto;gap:9px 22px;font:400 13px 'Karla';color:#5c6155;align-items:baseline">
+        <span style="font-weight:700;color:#3a4147">Bileşim</span><span style="font-weight:700;color:#3a4147">Sol</span><span style="font-weight:700;color:#3a4147">Sağ</span><span style="font-weight:700;color:#3a4147">Fark</span>
+        <span>Çeşit + boy</span><span>794</span><span>698</span><span style="color:#4a6121">96</span>
+        <span>Yalnız çeşit</span><span>794</span><span>620</span><span style="color:#8a6b2a">174</span>
+        <span>Yalnız boy</span><span>634</span><span>725</span><span style="color:#8a6b2a">−91</span>
+        <span>Hiçbiri</span><span>634</span><span>620</span><span style="color:#4a6121">14</span>
+      </div>
+      <span style="font:400 12.5px/1.65 'Karla';color:#6a6f61">Boyu da sola almak farkı 269 px'e çıkarıyor — ters yöne savuruyor. Çeşidi rafta bırakmak zaten bugünkü hâl. Ortadaki bölüşüm bu tablo; raf yapışkan olduğu için 174 px'lik en kötü hâl de kaydırmada kaybolur.</span>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+
+    <!-- ===== A ===== -->
+    <div id="2a" style="width:700px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px">
+        <span style="background:#343b41;color:#f3efe2;font:700 12px 'Karla';padding:3px 10px;border-radius:11px">2a</span>
+        <span style="font:600 17px 'Lora';color:#343b41">Olduğu gibi</span>
+        <span style="font:400 12.5px 'Karla';color:#6a6f61">şerit görselin altında</span>
+      </div>
+      <div style="background:#faf6ec;border:1px solid #ddd5c0;border-radius:8px;padding:20px 24px;display:flex;gap:22px;align-items:flex-start">
+        <div style="width:375px;flex:none;display:flex;flex-direction:column;gap:5px">
+          <div style="height:250px;background:#ded7c4;border-radius:9px;display:grid;place-items:center;font:600 12px 'Karla';color:#8a8270">ana görsel · 750 × 500</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px">
+            <div style="height:67px;background:#e6dfcd;border-radius:6px"></div><div style="height:67px;background:#e6dfcd;border-radius:6px"></div><div style="height:67px;background:#e6dfcd;border-radius:6px"></div><div style="height:67px;background:#e6dfcd;border-radius:6px"></div><div style="height:67px;background:#e6dfcd;border-radius:6px"></div>
+          </div>
+          <span style="font:600 11px 'Karla';color:#8a8270">sol kolon ≈ 644 px</span>
+        </div>
+        <div style="width:235px;flex:none;display:flex;flex-direction:column;gap:5px">
+          <div style="height:14px;background:#e6dfcd;border-radius:4px;width:60px"></div>
+          <div style="height:34px;background:#d3cbb6;border-radius:5px"></div>
+          <div style="height:14px;background:#e6dfcd;border-radius:4px;width:150px"></div>
+          <div style="height:38px;background:#ece5d2;border-radius:5px"></div>
+          <div style="height:96px;background:#efe8d5;border:1px solid #e0d8c2;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">Çeşitler</div>
+          <div style="height:54px;background:#efe8d5;border:1px solid #e0d8c2;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">Boy</div>
+          <div style="height:44px;background:#e9f0dc;border:1px solid #cfdcb3;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#6f8542">Teslimat</div>
+          <div style="height:60px;background:#fff;border:1px solid #e0d8c2;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">Fiyat + sepet</div>
+          <div style="height:22px;background:#ece5d2;border-radius:5px"></div>
+          <span style="font:600 11px 'Karla';color:#b05c2e">sağ raf ≈ 780 px · 136 px taşar</span>
+        </div>
+      </div>
+      <span style="font:400 12.5px/1.65 'Karla';color:#5c6155">Sağ taraf aşağı sarkıyor. Raf yapışkan olduğu için kaydırmada sorun çıkmaz ama üstten bakışta kolonlar hizasız duruyor — şikâyet ettiğiniz dengesizliğin ta kendisi.</span>
+    </div>
+
+    <!-- ===== B ===== -->
+    <div id="2b" style="width:700px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px">
+        <span style="background:#343b41;color:#f3efe2;font:700 12px 'Karla';padding:3px 10px;border-radius:11px">2b</span>
+        <span style="font:600 17px 'Lora';color:#343b41">Filmşerit yanda</span>
+        <span style="font:400 12.5px 'Karla';color:#6a6f61">görsel daha büyük, sol kolon kısa</span>
+      </div>
+      <div style="background:#faf6ec;border:1px solid #ddd5c0;border-radius:8px;padding:20px 24px;display:flex;gap:22px;align-items:flex-start">
+        <div style="width:375px;flex:none;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;gap:5px">
+            <div style="width:36px;flex:none;display:flex;flex-direction:column;gap:5px">
+              <div style="height:36px;background:#e6dfcd;border-radius:5px"></div><div style="height:36px;background:#e6dfcd;border-radius:5px"></div><div style="height:36px;background:#e6dfcd;border-radius:5px"></div><div style="height:36px;background:#e6dfcd;border-radius:5px"></div><div style="height:36px;background:#e6dfcd;border-radius:5px"></div>
+            </div>
+            <div style="flex:1;height:223px;background:#ded7c4;border-radius:9px;display:grid;place-items:center;font:600 12px 'Karla';color:#8a8270">ana görsel · 668 × 445</div>
+          </div>
+          <span style="font:600 11px 'Karla';color:#8a8270">sol kolon ≈ 445 px</span>
+        </div>
+        <div style="width:235px;flex:none;display:flex;flex-direction:column;gap:5px">
+          <div style="height:14px;background:#e6dfcd;border-radius:4px;width:60px"></div>
+          <div style="height:34px;background:#d3cbb6;border-radius:5px"></div>
+          <div style="height:14px;background:#e6dfcd;border-radius:4px;width:150px"></div>
+          <div style="height:38px;background:#ece5d2;border-radius:5px"></div>
+          <div style="height:96px;background:#efe8d5;border:1px solid #e0d8c2;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">Çeşitler</div>
+          <div style="height:54px;background:#efe8d5;border:1px solid #e0d8c2;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">Boy</div>
+          <div style="height:44px;background:#e9f0dc;border:1px solid #cfdcb3;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#6f8542">Teslimat</div>
+          <div style="height:60px;background:#fff;border:1px solid #e0d8c2;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">Fiyat + sepet</div>
+          <div style="height:22px;background:#ece5d2;border-radius:5px"></div>
+          <span style="font:600 11px 'Karla';color:#b05c2e">sağ raf ≈ 780 px · 335 px taşar</span>
+        </div>
+      </div>
+      <span style="font:400 12.5px/1.65 'Karla';color:#5c6155">Görsel kırpılmadan büyür ve şerit yer kaplamaz, ama fark daha da açılır. Bu model yalnız sol kolonun bilinçli olarak kısa ve yapışkan tutulduğu bir kurguda doğru olur — yani dengeyi eşit yükseklikle değil, "plaka" fikriyle çözer.</span>
+    </div>
+
+    <!-- ===== C ===== -->
+    <div id="2c" style="width:700px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:10px">
+        <span style="background:#5f7a2c;color:#fff;font:700 12px 'Karla';padding:3px 10px;border-radius:11px">2c</span>
+        <span style="font:600 17px 'Lora';color:#343b41">Çeşitler sola iner</span>
+        <span style="background:#5f7a2c;color:#fff;font:700 11px 'Karla';padding:3px 9px;border-radius:10px">önerim</span>
+      </div>
+      <div style="background:#faf6ec;border:1px solid #ddd5c0;border-radius:8px;padding:20px 24px;display:flex;gap:22px;align-items:flex-start">
+        <div style="width:375px;flex:none;display:flex;flex-direction:column;gap:5px">
+          <div style="height:250px;background:#ded7c4;border-radius:9px;display:grid;place-items:center;font:600 12px 'Karla';color:#8a8270">ana görsel · 750 × 500</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px">
+            <div style="height:67px;background:#e6dfcd;border-radius:6px"></div><div style="height:67px;background:#e6dfcd;border-radius:6px"></div><div style="height:67px;background:#e6dfcd;border-radius:6px"></div><div style="height:67px;background:#e6dfcd;border-radius:6px"></div><div style="height:67px;background:#e6dfcd;border-radius:6px"></div>
+          </div>
+          <div style="height:75px;background:#efe8d5;border:1px solid #e0d8c2;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">Çeşitler — beş kart, geniş alanda rahat</div>
+          <span style="font:600 11px 'Karla';color:#4a6121">sol kolon ≈ 794 px</span>
+        </div>
+        <div style="width:235px;flex:none;display:flex;flex-direction:column;gap:5px">
+          <div style="height:14px;background:#e6dfcd;border-radius:4px;width:60px"></div>
+          <div style="height:34px;background:#d3cbb6;border-radius:5px"></div>
+          <div style="height:14px;background:#e6dfcd;border-radius:4px;width:150px"></div>
+          <div style="height:38px;background:#ece5d2;border-radius:5px"></div>
+          <div style="height:54px;background:#efe8d5;border:1px solid #e0d8c2;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">Boy</div>
+          <div style="height:44px;background:#e9f0dc;border:1px solid #cfdcb3;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#6f8542">Teslimat</div>
+          <div style="height:60px;background:#fff;border:1px solid #e0d8c2;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#8a8270">Fiyat + sepet</div>
+          <div style="height:22px;background:#ece5d2;border-radius:5px"></div>
+          <div style="height:48px;background:#f4efe1;border:1px dashed #ddd5c0;border-radius:7px;display:grid;place-items:center;font:600 11px 'Karla';color:#a09781">boşluk ≈ 96 px</div>
+          <span style="font:600 11px 'Karla';color:#4a6121">sağ raf ≈ 698 px · 96 px fark</span>
+        </div>
+      </div>
+      <span style="font:400 12.5px/1.65 'Karla';color:#5c6155">Denge, fotoğrafın oranıyla değil <strong>içeriğin yeriyle</strong> kuruluyor. Çeşitler zaten galeri işidir — beş kart 470 px rafta sıkışıyordu, 750 px'te rahat nefes alıyor. Raf da asıl işine indirgeniyor: kimlik, boy, teslimat, fiyat, sepet. Kalan 96 px fark göze çarpmaz.</span>
+    </div>
+
+  </div>
+
+  <div style="background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:18px 22px;display:flex;flex-direction:column;gap:8px;max-width:1000px">
+    <span style="font:700 14px 'Karla';color:#3a4147">Notlar</span>
+    <ul style="margin:0;padding-left:18px;font:400 13px/1.75 'Karla';color:#6d7261">
+      <li>Ana görsel her üç modelde de <strong>3:2</strong>. Oran artık dengeyi ayarlamak için kullanılmıyor — haklıydınız, 4:3 tam olarak bunun içindi.</li>
+      <li>Rakamlar beş çeşit ve iki boy varsayımıyla. Çeşit yoksa raf ≈ 600 px'e iner ve <a href="#2a">2a</a> kendiliğinden dengelenir; bu yüzden <a href="#2c">2c</a>'de çeşit bloğu yalnız çeşit varken sola basılır.</li>
+      <li>Küçük görsel şeridi beş kare; altıncıdan sonrası "+N" olarak son karede toplanır.</li>
+    </ul>
+  </div>
+
+</section>
+</x-dc>
+</body>
+</html>
