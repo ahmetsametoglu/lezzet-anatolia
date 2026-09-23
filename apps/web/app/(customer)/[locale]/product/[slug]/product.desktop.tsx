@@ -93,7 +93,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
       {/* Solda ürünün kendisi, sağda 470 px'lik yapışkan karar rafı. */}
       <div className="grid grid-cols-[1fr_470px] items-start gap-11 px-12 pt-8 pb-9.5">
         <div className="flex min-w-0 flex-col gap-3.5">
-          <Gallery images={product.gallery} alt={product.name} />
+          <Gallery images={product.gallery} alt={product.name} labels={t.gallery} />
           {familyOnLeft && (
             <FamilyBlock t={t.family} locale={locale} members={product.family} currentUnavailable={unavailable} layout="grid" />
           )}

@@ -112,6 +112,10 @@
       "packsOf": "{n} paket · {weight}"
     },
     "backLabel": "Geri",
+    "gallery": {
+      "previous": "Önceki fotoğraf",
+      "next": "Sonraki fotoğraf"
+    },
     "similarAll": "Tüm katalog →",
     "ai": {
       "title": "Bu ürünü yapay zekâya sorun",
@@ -231,6 +235,10 @@
       "packsOf": "{n} paquets · {weight}"
     },
     "backLabel": "Retour",
+    "gallery": {
+      "previous": "Photo précédente",
+      "next": "Photo suivante"
+    },
     "similarAll": "Tout le catalogue →",
     "ai": {
       "title": "Posez la question à une IA",
@@ -350,6 +358,10 @@
       "packsOf": "{n} Packungen · {weight}"
     },
     "backLabel": "Zurück",
+    "gallery": {
+      "previous": "Vorheriges Foto",
+      "next": "Nächstes Foto"
+    },
     "similarAll": "Ganzer Katalog →",
     "ai": {
       "title": "Fragen Sie eine KI zu diesem Produkt",
