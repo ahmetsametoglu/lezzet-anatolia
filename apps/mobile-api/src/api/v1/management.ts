@@ -1,6 +1,5 @@
 import { Hono, type Context } from 'hono';
-/* `z` artık DEĞER olarak da kullanılıyor: liste ucunun sorgu şeması burada kuruluyor (21.281) —
-   gövde şemaları sözleşmeden gelir ama sorgu dizesi UCUN kendi kabuğudur, sözleşmenin değil. */
+/* Gövde şemaları sözleşmeden gelir; sorgu dizesi ucun kendi kabuğudur ve burada kurulur. */
 import { z } from 'zod';
 import {
   askShortfall,
@@ -58,21 +57,8 @@ import { decodeCursor, encodeCursor, readJsonBody, UuidSchema } from '../../lib/
 import { requireStaffRole, type StaffEnv } from './auth';
 
 /**
- * **YÖNETİM BÖLÜMÜ UÇLARI** (21.12) — hub'ın karar kutusu + Y5 gün özeti.
- *
- * ── BU DOSYA KURAL HESAPLAMAZ ────────────────────────────────────────────────
- * parse → kapı → zarf. Karar kutusunun sayıları ve günün toplamları `readManagementHub`ta
- * birleşir; eksik toplama önerisi hazırlık motorunun, teklif adayı raf ömrü motorunun,
- * tedarik önerisi eşik servisinin sözüdür — uç yalnız taşır.
- *
- * ── KAPI YALNIZ `admin` ─────────────────────────────────────────────────────
- * Doc 04 rol tablosu: karar kutusu (Y1–Y6) yönetim bölümünündür. Depo süzgeci YOK ve bu bilinçli:
- * yönetim işletmenin tamamına bakar (`OrderListFilters` künyesi — depo-üstü okuma yalnız
- * admin/muhasebe için meşru); depo bazlı motorlar hub okumasının içinde tesis tesis sorulur.
- *
- * ── TEK UÇ, İKİ EKRAN ───────────────────────────────────────────────────────
- * Hub ve gün özeti ekranı aynı zarfı okur: özet ekranı hub'daki başlık şeridinin AÇILMIŞ hâlidir,
- * ayrı bir uç iki ekranın sayılarını iki ayrı ana düşürürdü ("kutu 3 diyor, özet 2" çelişkisi).
+ * Yönetim bölümü uçları: parse → kapı → zarf, kural hesaplanmaz. Kapı yalnız `admin`, depo süzgeci yok (yönetim işletmenin
+ * tamamına bakar) ve hub ile gün özeti aynı zarfı okur — ayrı uç iki ekranın sayılarını iki ayrı ana düşürürdü.
  */
 export const management = new Hono<StaffEnv>();
 
@@ -85,7 +71,6 @@ management.get('/hub', async (c) => {
 
 /** Yönetim okumalarının kapsamı: aktif TESİSLER — hub motoruyla aynı küme, iki yerde ayrışmasın. */
 async function activeFacilityIds(): Promise<string[]> {
-  // Süzgeç servise geçti (02.09) — aynı cümlenin üçüncü elle yazılmış kopyasıydı.
   const warehouses = await new WarehouseService(serviceDb()).list({ activeOnly: true, kind: 'facility' });
   return warehouses.map((warehouse) => warehouse.id);
 }
@@ -138,10 +123,8 @@ management.post('/supply/draft', async (c) => {
 const COMPLAINTS_MAX_PAGE_SIZE = 50;
 
 /**
- * Kuyruk sorgusu (21.281). Süzgeç ile tür AYRI iki alan ama ekranda tek şerit: çipler birbirini
- * dışlıyor (v3:29'da tam bir çip koyu). Telde ayrı tutuluyor çünkü ikisi farklı sorular —
- * `filter` kuyruğun HÂLİNİ (`awaiting`/`resolved`), `type` SINIFINI daraltır; tek bir enum'a
- * gömülseydi "bozuk VE top bizde" gibi meşru bir daralma bir daha hiç sorulamazdı.
+ * Süzgeç ile tür telde ayrı iki alan, çünkü farklı sorular: `filter` kuyruğun hâlini, `type` sınıfını daraltır. Tek enum'a
+ * gömülseydi "bozuk ve top bizde" gibi meşru bir daralma sorulamazdı.
  */
 const ComplaintsQuerySchema = z.object({
   cursor: z.string().min(1).optional(),
@@ -151,19 +134,15 @@ const ComplaintsQuerySchema = z.object({
 });
 
 /**
- * Y1 · TALEP LİSTESİ — kuyruk sayfası + şerit sayaçları tek turda.
- *
- * Ekranın satırı `TicketQueueItem`dan daraltılıyor: kuyruk satırı `handledBy`, `answeredByAi`,
- * `source`, `returnBound` gibi TARAMANIN sormadığı alanlar da taşıyor ve `parse` bir SÜZGEÇTİR
- * (`MeSchema` kararı) — sözleşmede olmayan alan zarfa sızmaz.
+ * Talep listesi kuyruk sayfasını ve şerit sayaçlarını tek turda verir; satır `TicketQueueItem`dan daraltılır, çünkü `parse` bir
+ * süzgeçtir ve sözleşmede olmayan alan zarfa sızmaz.
  */
 management.get('/complaints', async (c) => {
   const parsed = ComplaintsQuerySchema.safeParse(c.req.query());
   if (!parsed.success) return fail(c, 'invalid_query', 400);
   const { cursor, limit, filter, type } = parsed.data;
 
-  /* Tür seçiliyse şeridin hâl çipi zaten koyu değildir — tür DAHA DAR bir sorudur ve ikisi
-     çakışırsa tür kazanır. Ekran zaten ikisini birden göndermiyor; uç yine de belirli davranır. */
+  /* Tür daha dar bir sorudur; ikisi birden gelirse tür kazanır. Ekran ikisini birden göndermiyor, uç yine de belirli davranır. */
   const queueFilter: ComplaintQueueFilter = type ? { kind: 'type', type } : { kind: filter };
   const { rows, nextCursor, counts } = await readComplaintQueue(serviceDb(), queueFilter, decodeCursor(cursor), limit);
 
@@ -180,9 +159,7 @@ management.get('/complaints', async (c) => {
       awaitingReply: row.awaitingReply,
       hasAttachment: row.hasAttachment,
       orderReferenceNo: row.orderReferenceNo,
-      /* Bağlı konuşmanın servis penceresi (21.301) — satırın "22 sa kaldı"sı. Konuşmasız talepte
-         `null` ve ekran susar. Satır burada ELLE kuruluyor (parse süzgeci), o yüzden alan buraya
-         da yazılmak zorunda: unutulsaydı `parse` bütün listeyi 500'e düşürürdü. */
+      /* Satır elle kurulduğu için alan burada da yazılmak zorunda: unutulsaydı `parse` bütün listeyi 500'e düşürürdü. */
       windowExpiresAt: row.windowExpiresAt,
     })),
     nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
@@ -224,14 +201,8 @@ management.post('/complaints/:id/reply', async (c) => {
 });
 
 /**
- * Talebin durumunu değiştir — **`/claim`in yerine geçti** (21.276).
- *
- * Eski uç hedefi kendi içinde `in_progress` diye sabitliyordu; aksiyon çekmecesi üç geçişi birden
- * istiyor (üstlen · çöz · yeniden aç). İkinci bir uç açmak aynı motor çağrısına iki kapı açmak
- * olurdu — niyet artık çağıranın, uç yalnız hedefi taşıyor.
- *
- * İZNİ MOTOR VERİYOR (`canTransitionTicket`, `changeTicketStatus`in içinde): geçersiz geçiş
- * `ok:false` + sebeple döner, HTTP hatasıyla değil — ekran sebebi cümleye çevirir.
+ * Talebin durumunu değiştirir; hedef çağırandan gelir, çünkü aksiyon çekmecesi üç geçişi birden istiyor (üstlen · çöz · yeniden aç).
+ * İzni motor verir: geçersiz geçiş HTTP hatasıyla değil sebeple döner ve ekran sebebi cümleye çevirir.
  */
 management.post('/complaints/:id/status', async (c) => {
   const id = UuidSchema.safeParse(c.req.param('id'));
@@ -284,11 +255,7 @@ management.post('/complaints/:id/type', async (c) => {
 });
 
 /**
- * İade akışını bu talepten başlat — **yalnız damga**, gövdesiz.
- *
- * Tutar ve akıbet (`restock` · `discard` · `goodwill`) BURADA seçilmez; iade siparişte yaşıyor
- * (DOMAIN §8). Tasarımın çekmecesi karar setini talebe koyuyor, sistem siparişe — bu uç o farkın
- * talep tarafındaki tek meşru yarısı.
+ * İade akışını bu talepten başlatır — yalnız damga, gövdesiz. Tutar ve akıbet burada seçilmez; iade siparişte yaşıyor.
  */
 management.post('/complaints/:id/return', async (c) => {
   const id = UuidSchema.safeParse(c.req.param('id'));
@@ -393,14 +360,8 @@ management.get('/b2b/:id', async (c) => {
 });
 
 /**
- * ASİSTAN ÖZETİ — karttan AYRI uç (21.285).
- *
- * Ayrı olması bilinçli: model çağrısı saniye mertebesinde ve kartın açılışı onu beklememeli.
- * Ekran kartı çizer, özeti sonradan ister; gelmezse kart bugüne kadarki dürüst hâlinde kalır.
- *
- * Üretilememek 200 döner, hata DEĞİL: anahtar yapılandırılmamış da olabilir sağlayıcı düşmüş de.
- * İkisini 5xx yapmak, ekranı "okuma yüklenemedi" hâline düşürüp kartı da götürürdü — oysa kararın
- * dayanağı sinyaller ve onlar yerinde. Sebep kayda geçer, tele çıkmaz.
+ * Asistan özeti karttan ayrı uçtur, çünkü model çağrısı saniye mertebesinde ve kartın açılışı onu beklememeli. Üretilememek 200
+ * döner: anahtar yapılandırılmamış da olabilir sağlayıcı düşmüş de, ikisini 5xx yapmak kartı da götürürdü.
  */
 management.get('/b2b/:id/summary', async (c) => {
   const id = UuidSchema.safeParse(c.req.param('id'));
@@ -421,10 +382,8 @@ management.get('/b2b/:id/summary', async (c) => {
 });
 
 /**
- * ONAY — tek dokunuş, sebep istemez. Sonucu: müşteri toptan fiyatları görmeye başlar.
- *
- * `already_decided` bir HATA DEĞİL cevaptır (200): aynı başvuruyu iki telefondan açmak mümkün ve
- * ikinci dokunuş hiçbir şeyi ikilemez — ekran bayat hâlini tazeleyip kararı gösterir.
+ * Onay tek dokunuştur, sebep istemez; sonucu müşterinin toptan fiyatları görmesi. `already_decided` hata değil cevaptır: aynı
+ * başvuru iki telefondan açılabilir ve ikinci dokunuş hiçbir şeyi ikilemez.
  */
 management.post('/b2b/:id/approve', async (c) => {
   const id = UuidSchema.safeParse(c.req.param('id'));
@@ -445,12 +404,8 @@ management.post('/b2b/:id/reject', async (c) => {
 });
 
 /**
- * İki kararın ortak gövdesi — okuma, bayatlık kapısı, yazım, cevap.
- *
- * **BAYATLIK KAPISI YAZIMDAN ÖNCE:** hâl `pending` değilse hiçbir şey yazılmıyor. Motor tarafında
- * ikinci bir onay zararsız olurdu (aynı değeri yazar) ama ret öyle değil — reddedilmiş bir kaydı
+ * İki kararın ortak gövdesi: okuma, bayatlık kapısı, yazım, haber, cevap. Kapı yazımdan öncedir, çünkü reddedilmiş bir kaydı
  * ikinci kez reddetmek `b2b_rejected_at`i ileri taşır ve "ne zaman reddedildi" cevabını bozar.
- * Tek kapı, tek kural: karar bir kez verilir.
  */
 async function decide(
   c: Context<StaffEnv>,

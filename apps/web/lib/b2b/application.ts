@@ -15,27 +15,13 @@ import { currentCustomerId } from '@/lib/guard';
 import { CustomerError } from '@/lib/customer-error';
 
 /**
- * B2B başvurusunun web kapısı (08.7 · DOMAIN §10).
- *
- * **KÖPRÜ (21.31):** yazma ve okuma kurallarının gövdesi `@lezzet/application/customer/b2b`ye
- * TAŞINDI — ikinci yüzey doğdu (mobil başvuru formu) ve `apps/mobile-api` bu klasörü import
- * edemez. Kuralların künyeleri (başvuru ayrı bir varlık değil · kimlik verilir, çözülmez ·
- * SIRET'i giren o şirket değildir · denetim sunucuda tekrarlanır) orada yaşıyor. Burada kalan
- * yalnız WEBE ÖZGÜ iki şey: oturumdan kimlik çözümü ve adlı sonucun `CustomerError`a çevrimi.
- *
- * `notifyB2bDecision` TAŞINMADI ve bilinçli: tek çağıranı operasyon yüzeyinin onay/ret eylemi
- * (`operations/customers/actions.ts`) — mobilde karşılığı yok. Terfi ölçütü "en az iki yüzey"dir
- * (`@lezzet/application` künyesi); tek yüzeyin işi kendi uygulamasında kalır.
+ * B2B başvurusunun web kapısı: kuralların gövdesi `@lezzet/application/customer/b2b`de, çünkü ikinci yüzey (mobil başvuru formu)
+ * `apps/web`i import edemez. Burada kalan yalnız oturumdan kimlik çözümü ve sonucun `CustomerError`a çevrimi.
  */
 
 /**
- * Kaydın son hâlini döndürür (imza korundu: entegrasyon testi ve server action aynı şekli okuyor).
- *
- * **Ret `CustomerError` olarak fırlatılır**, çünkü müşteri yüzeyinin funnel'ı YALNIZ onu tanıyor
- * (`customerErrorKey`): başka bir hata sınıfı anahtarını kaybeder ve ekran "beklenmeyen hata"
- * gösterirdi — düzeltilebilir bir eksiği düzeltilemez bir arıza gibi anlatan bir cümle. Paketin
- * taşıdığı ALAN listesi bu yüzeyde kullanılmıyor: web formu aynı motoru kendisi de çağırıyor ve
- * eksik alanı zaten kendi işaretliyor (mobil uçta liste telden geçiyor — paket künyesi).
+ * Kaydın son hâlini döndürür. Ret `CustomerError` olarak fırlatılır, çünkü müşteri yüzeyinin funnel'ı yalnız onu tanıyor; başka
+ * bir hata sınıfı anahtarı kaybeder ve ekran düzeltilebilir bir eksiği "beklenmeyen hata" diye gösterirdi.
  */
 export async function submitB2bApplication(
   customerId: string,
