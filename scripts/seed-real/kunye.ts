@@ -69,3 +69,23 @@ const DOSYA = join(dirname(fileURLToPath(import.meta.url)), 'data/urun-kunyeleri
 
 /** Anahtar katalogdaki TÜRKÇE addır (`Draft.nameTr ?? Draft.name`) — taslakla künyeyi o eşler. */
 export const KUNYELER: Record<string, UrunKunyesi> = JSON.parse(readFileSync(DOSYA, 'utf8')) as Record<string, UrunKunyesi>;
+
+/**
+ * KAYNAK KATALOĞUN ürününe yazılan künye — ürünü kurmaz, kaynaktan kurulanın ÜSTÜNE yazar. Bu yüzden `name` ve
+ * `description` yoktur (onlar `seed/data/translations.json`ta), `variants` da dizi değil SKU sözlüğüdür: yalnız
+ * kaynağınkinden farklı olan boy yazılır. Gerisi aynı kural — kaynak veritabanı, eksik alan orada da eksikti.
+ */
+export interface KatalogKunyesi extends Omit<UrunKunyesi, 'name' | 'description' | 'variants'> {
+  /** Tarih türü kaynakta yok, etikette var: ürünün imha mı yoksa kalite tarihi mi taşıdığını beyan belirler. */
+  dateType?: 'DLC' | 'DDM';
+  variants?: Record<string, { label?: LocalizedText; netQuantity?: number; netUnit?: 'g' | 'ml'; piecesCount?: number }>;
+}
+
+const KATALOG_DOSYASI = join(dirname(fileURLToPath(import.meta.url)), 'data/katalog-kunyeleri.json');
+
+/** Anahtar ürünün Türkçe adı (`translations.json`taki ad) — `_` ile başlayan satır dosyanın künyesidir, veri değil. */
+export const KATALOG_KUNYELERI: Record<string, KatalogKunyesi> = Object.fromEntries(
+  Object.entries(JSON.parse(readFileSync(KATALOG_DOSYASI, 'utf8')) as Record<string, KatalogKunyesi>).filter(
+    ([ad]) => !ad.startsWith('_'),
+  ),
+);

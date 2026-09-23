@@ -2703,5 +2703,59 @@
         "de": "Auf einer Platte anrichten und reichen."
       }
     ]
+  },
+  "Tiramisu Pasta (bütün)": {
+    "name": {
+      "tr": "Tiramisu Pasta (bütün)",
+      "fr": "Gâteau tiramisu entier",
+      "de": "Tiramisu-Torte (ganz)"
+    },
+    "description": {
+      "tr": "L'amour de Paris (LEZZA) derin dondurulmuş tiramisu pasta, 1450 g. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
+      "fr": "Gâteau tiramisu surgelé L'amour de Paris (LEZZA), 1450 g. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
+      "de": "Tiefgefrorene Tiramisu-Torte L'amour de Paris (LEZZA), 1450 g. 4–6 Stunden im Kühlschrank auftauen lassen; gekühlt genießen."
+    },
+    "ingredients": {
+      "tr": "**Buğday** unu [antioksidan (E300)], pastörize bütün **yumurta**, pudra şekeri, içme suyu, kek katkısı [su, emülgatörler (E471, E475 (%1)), taşıyıcı (E422), bitkisel yağ (palm çekirdeği yağı)], kakao tozu, kabartma tozu [E500, E450i, mısır nişastası, E170, E341i], kahveli pastacılık karışımı [glikoz şurubu, şeker, su, renklendirici (E150d), aroma (moka), kahve (%1), kıvam artırıcılar (E406, E440), asitlik düzenleyici (E330), koruyucu (E202), antioksidan (E300)], granül kahve, labne peyniri [pastörize inek **sütü**, pastörize **süt** kreması, yoğurt kültürü, tuz, kıvam artırıcılar (E401, E466, E412, E406, E410)], şekerli bitkisel krem şanti [su, hidrojene bitkisel yağ (palm), şeker, **süt** proteini (kazeinat), stabilizörler (E420i, E463, E466), emülgatörler (E472b, E472d, **soya** lesitini (E322)), koruyucu (E202), aroma, renklendirici (E160a)], tiramisu aromalı şarlot toz karışımı [şeker, maltodekstrin, modifiye patates nişastası, kıvam artırıcı (E401), aroma (kahve, tiramisu), renklendiriciler (E160a, E150d)], toz jelatin.",
+      "fr": "Farine de **blé** [antioxydant (E300)], **œuf** entier pasteurisé, sucre cristallisé, eau potable, additif pour gâteau [eau, émulsifiants (E471, E475 (1 %)), support (E422), huile végétale (huile de palmiste)], poudre de cacao, levure chimique [E500, E450i, amidon de maïs, E170, E341i], mélange pâtissier au café [sirop de glucose, sucre, eau, colorant (E150d), arôme (moka), café (1 %), épaississants (E406, E440), correcteur d'acidité (E330), conservateur (E202), antioxydant (E300)], café granulé, fromage labneh [**lait** de vache pasteurisé, crème de **lait** pasteurisée, culture de yaourt, sel, épaississants (E401, E466, E412, E406, E410)], crème fouettée végétale sucrée [eau, huile végétale hydrogénée (palme), sucre, protéine de **lait** (caséinate), stabilisants (E420i, E463, E466), émulsifiants (E472b, E472d, lécithine de **soja** (E322)), conservateur (E202), arôme, colorant (E160a)], mélange de poudre de charlotte au tiramisu [sucre, maltodextrine, amidon de pomme de terre modifié, épaississant (E401), arôme (café, tiramisu), colorants (E160a, E150d)], gélatine en poudre.",
+      "de": "**Weizen**mehl [Antioxidationsmittel (E300)], pasteurisiertes ganzes **Ei**, Puderzucker, Trinkwasser, Kuchenzusatz [Wasser, Emulgatoren (E471, E475 (1 %)), Trägerstoff (E422), Pflanzenöl (Palmkernöl)], Kakaopulver, Backpulver [E500, E450i, Maisstärke, E170, E341i], Kaffeezubereitung für Konditorei [Glukosesirup, Zucker, Wasser, Farbstoff (E150d), Aroma (Mokka), Kaffee (1 %), Verdickungsmittel (E406, E440), Säureregulator (E330), Konservierungsstoff (E202), Antioxidationsmittel (E300)], gemahlener Kaffee, Labneh-Käse [pasteurisierte Kuh**milch**, pasteurisierter **Milch**rahm, Joghurtkultur, Salz, Verdickungsmittel (E401, E466, E412, E406, E410)], gezuckerte pflanzliche Schlagcreme [Wasser, gehärtetes Pflanzenöl (Palm), Zucker, **Milch**eiweiß (Caseinat), Stabilisatoren (E420i, E463, E466), Emulgatoren (E472b, E472d, **Soja**lecithin (E322)), Konservierungsstoff (E202), Aroma, Farbstoff (E160a)], Charlotte-Pulvermischung mit Tiramisu-Geschmack [Zucker, Maltodextrin, modifizierte Kartoffelstärke, Verdickungsmittel (E401), Aroma (Kaffee, Tiramisu), Farbstoffe (E160a, E150d)], Gelatinepulver."
+    },
+    "nutrition": {
+      "energyKj": 1230,
+      "energyKcal": 249,
+      "fatG": 18.92,
+      "saturatedFatG": 0,
+      "carbohydrateG": 25.83,
+      "sugarsG": 17.5,
+      "proteinG": 4.8,
+      "saltG": 0
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut",
+      "soya"
+    ],
+    "traces": [
+      "sert_kabuklu"
+    ],
+    "storage": {
+      "tr": "Derin dondurulmuş üründür; -18 °C'de saklayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
+      "fr": "Produit surgelé ; conserver à -18 °C. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
+      "de": "Tiefkühlprodukt; bei -18 °C lagern. 4–6 Stunden im Kühlschrank auftauen lassen; gekühlt genießen."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "1450 g",
+          "fr": "1450 g",
+          "de": "1450 g"
+        },
+        "netQuantity": 1450,
+        "netUnit": "g"
+      }
+    ]
   }
 }

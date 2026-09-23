@@ -64,7 +64,7 @@ import {
   WAREHOUSE,
   ZONES,
 } from './seed-real/data';
-import { KUNYELER, type UrunKunyesi } from './seed-real/kunye';
+import { KATALOG_KUNYELERI, KUNYELER, type UrunKunyesi } from './seed-real/kunye';
 
 const KOK = dirname(fileURLToPath(import.meta.url));
 /** Katalog kaynağının slug'ı → beslemedeki ürün görsel klasörü (`katalogKareleri`). */
@@ -496,6 +496,14 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
     const boy = secim.get(sku);
     if (boy) secim.set(sku, { ...boy, label: ad });
   }
+  // Aynadaki boy kaynağı da boy adını da YENER: ölçü ürünün kendi ambalajından okundu (sade dondurmanın
+  // kabı 500 g çıktı, kaynak 250 g yazıyordu). Seçimde olmayan koda dokunulmaz — o boy zaten kurulmuyor.
+  for (const boylar of Object.values(KATALOG_KUNYELERI)) {
+    for (const [sku, duzeltme] of Object.entries(boylar.variants ?? {})) {
+      const boy = secim.get(sku);
+      if (boy) secim.set(sku, { ...boy, ...duzeltme });
+    }
+  }
   // KATMAN 3: her kalem "satış kurgusunda" sayılır. Motorun kapısı `teklifli || kurguda`; alış
   // fiyatı olmayan kalem aksi hâlde aday kalırdı. Fiyatı `seedTestCatalogPrices` üretir.
   const kurguSku = LAYERS >= 3 ? new Set(secim.keys()) : new Set(lines.map((l) => l.sku));
@@ -517,6 +525,7 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
       candidates: LAYERS >= 3 ? new Set() : new Set(ADAYLAR),
       localFrames: katalogKareleri,
       merge: KATALOG_BIRLESIK,
+      kunye: KATALOG_KUNYELERI,
     },
   );
   console.log(`  ✓ ${made.made} ürün · ${made.variants} varyant · ${made.photos} galeri görseli · ${made.families} aile`);
@@ -855,9 +864,9 @@ async function seedRecipes(db: Db): Promise<void> {
       );
       continue;
     }
-    plan(`tarif · ${tarif.name.tr} · ${ids.length} ürün`);
+    plan(`tarif · ${tarif.name.tr} · ${ids.length} ürün${tarif.image ? ' · kareli' : ''}`);
     if (DRY_RUN) continue;
-    await recipes.createWithItems({
+    const olusan = await recipes.createWithItems({
       name: tarif.name,
       description: tarif.description,
       duration: tarif.duration,
@@ -869,6 +878,12 @@ async function seedRecipes(db: Db): Promise<void> {
       sortOrder: i + 1,
       items: tarif.items.map((line, k) => ({ variantId: ids[k] as string, qty: line.qty })),
     });
+    // Kare kayıttan SONRA: anahtar servisin benzersizleştirdiği KESİN slug'a bağlanır (paket ve
+    // kurgu tarifiyle aynı sıra). R2 ayarsızsa null döner ve tarif karesiz kalır — besleme durmaz.
+    if (tarif.image) {
+      const kapak = await uploadImageFromPath(tarif.image, r2Keys.recipeImage(olusan.slug, tarif.image));
+      if (kapak) await recipes.update({ id: olusan.id, ...kapak });
+    }
   }
 }
 

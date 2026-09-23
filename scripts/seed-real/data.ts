@@ -139,11 +139,11 @@ export const KATALOG_BIRLESIK: Record<string, string> = {
  * Anahtar varyant kodu, çünkü etiket boya aittir: aynı ürünün iki boyu iki ayrı satır ister.
  */
 export const KATALOG_BOY_ADI: Record<string, UcDil> = {
-  '111106': { tr: '250 g kalıp', fr: 'Pain 250 g', de: '250 g Block' },
+  // 111106 ve 111121 BURADA DEĞİL: sade dondurmanın iki boyu `katalog-kunyeleri.json` aynasında,
+  // kap 500 g çıktı (kaynak 250 g yazıyordu) ve gramajı da ad gibi aynadan geliyor.
   '111107': { tr: '250 g kalıp', fr: 'Pain 250 g', de: '250 g Block' },
   '111112': { tr: '250 g kalıp', fr: 'Pain 250 g', de: '250 g Block' },
   '111113': { tr: '500 g kalıp', fr: 'Pain 500 g', de: '500 g Block' },
-  '111121': { tr: '70 g dilim', fr: 'Tranche 70 g', de: 'Scheibe 70 g' },
   '111131': { tr: '70 g dilim', fr: 'Tranche 70 g', de: 'Scheibe 70 g' },
   '111141': { tr: '70 g dilim', fr: 'Tranche 70 g', de: 'Scheibe 70 g' },
 };
@@ -436,6 +436,9 @@ export const EK_TASLAKLAR: LooseDraft[] = [
   { name: 'Rulo Fındıklı Pestil', ...studyoSeti('rulo-findikli-pestil') },
   { name: 'Fındıklı Kadayıf Rulo Pestil', ...studyoSeti('findikli-kadayif-rulo-pestil') },
   { name: 'Fındıklı Sultan Sarma', ...studyoSeti('findikli-sultan-sarma') },
+  // Kaynak katalogda 145 g'lık porsiyon tiramisu var, bütün pasta yok: ambalajı elimizde, künyesi
+  // etiketinden panele girildi (23.09). Kapak fotoğrafı henüz çekilmedi.
+  { name: 'Tiramisu Pasta (bütün)' },
 ];
 
 /**
@@ -774,6 +777,9 @@ export const DRAFT_CATEGORY: Record<string, string> = {
   'Gedroogde Kaki cips': 'kuru-meyve-kuruyemis',
   'Gedroogde perzik': 'kuru-meyve-kuruyemis',
   'Gedroogde meloen': 'kuru-meyve-kuruyemis',
+  // Veritabanında kategorisiz doğdu (asistan etiketten okuyamaz); rafı kardeşi olan porsiyon
+  // tiramisununkiyle aynı — kategorisiz ürün katalog listelerinde hiç görünmezdi.
+  'Tiramisu Pasta (bütün)': 'tatli',
 };
 
 /**
@@ -1021,7 +1027,20 @@ interface SeedRecipe {
   /** Satır = madde; bizim ürünümüz değildir, sepete eklenmez. */
   pantry: UcDil;
   items: SeedLine[];
+  /**
+   * Sofranın karesi — `images/sofra/` altındaki dosya. Ürün kapağından farkı kurgusu: karede bir ürün
+   * değil kurulmuş bir sofra var, o yüzden klasör değil tek kare (tarifin galerisi yok).
+   * Karesiz tarif görselsiz kurulur — uydurma kare konmaz.
+   */
+  image?: string;
 }
+
+/** `images/sofra/<dosya>` — dosya yoksa besleme DURUR: adı yanlış yazılmış kare sessizce görselsiz tarif bırakırdı. */
+const sofraKaresi = (dosya: string): string => {
+  const yol = join(GORSEL_KOKU, 'sofra', dosya);
+  if (!existsSync(yol)) throw new Error(`sofra karesi yok: images/sofra/${dosya} — dosya adını ya da klasörü kontrol et`);
+  return `scripts/seed-real/images/sofra/${dosya}`;
+};
 
 const OGUN = {
   kahvalti: { tr: 'Kahvaltı', fr: 'Petit-déjeuner', de: 'Frühstück' },
@@ -1057,6 +1076,7 @@ export const RECIPES: SeedRecipe[] = [
       fr: 'Beurre\nCerneaux de noix (facultatif)\nThé en théière',
       de: 'Butter\nWalnusskerne (nach Belieben)\nTee aus der Kanne',
     },
+    image: sofraKaresi('tahin-pekmezli-kahvalti.webp'),
     items: [
       { sku: '700101', qty: 1 },
       { draft: 'Tahini', qty: 1 },
@@ -1083,6 +1103,7 @@ export const RECIPES: SeedRecipe[] = [
       fr: 'Yaourt égoutté\nAil\nBeurre\nPiment en flocons\nMenthe séchée\nSumac',
       de: 'Abgetropfter Joghurt\nKnoblauch\nButter\nPaprikaflocken\nGetrocknete Minze\nSumach',
     },
+    image: sofraKaresi('yogurtlu-manti.webp'),
     items: [{ draft: 'LEZZA Manti with Minced Meat (Kiymali)', qty: 1 }],
   },
   {
@@ -1105,6 +1126,7 @@ export const RECIPES: SeedRecipe[] = [
       fr: 'Lavash ou tortillas\nOignon, tomate, laitue\nSumac, persil\nYaourt',
       de: 'Lavash oder Tortillas\nZwiebel, Tomate, Salat\nSumach, Petersilie\nJoghurt',
     },
+    image: sofraKaresi('evde-doner-durum.webp'),
     items: [{ draft: 'LEZZA Traditional Meet Doner', qty: 1 }],
   },
   {
@@ -1127,6 +1149,7 @@ export const RECIPES: SeedRecipe[] = [
       fr: 'Pain pide ou pain rassis\nConcentré de tomate\nBeurre\nYaourt égoutté\nPiments verts (facultatif)',
       de: 'Pide oder altbackenes Brot\nTomatenmark\nButter\nAbgetropfter Joghurt\nGrüne Spitzpaprika (nach Belieben)',
     },
+    image: sofraKaresi('iskender-usulu-doner.webp'),
     items: [{ draft: 'LEZZA Traditional Meet Doner', qty: 1 }],
   },
   {
@@ -1149,6 +1172,7 @@ export const RECIPES: SeedRecipe[] = [
       fr: 'Tomates, oignon, poivron vert\nCerneaux de noix\nPersil\nCitron, sumac, sel',
       de: 'Tomaten, Zwiebel, grüne Paprika\nWalnusskerne\nPetersilie\nZitrone, Sumach, Salz',
     },
+    image: sofraKaresi('nar-eksili-gavurdagi-salatasi.webp'),
     items: [
       { draft: 'Granaatappelextraat', qty: 1 },
       { draft: 'Olijfolie', label: '750 ml', qty: 1 },
@@ -1178,6 +1202,7 @@ export const RECIPES: SeedRecipe[] = [
       fr: 'Laitue\nLavash\nCitron\nMenthe fraîche\nPickles\nAyran',
       de: 'Salat\nLavash\nZitrone\nFrische Minze\nEingelegtes Gemüse\nAyran',
     },
+    image: sofraKaresi('cig-kofte-durum-ve-marul-sarma.webp'),
     items: [
       { sku: '201301', qty: 1 },
       { draft: 'Granaatappelextraat', qty: 1 },
@@ -1203,6 +1228,7 @@ export const RECIPES: SeedRecipe[] = [
       fr: 'Eau\nBâton de cannelle\nClous de girofle',
       de: 'Wasser\nZimtstange\nGewürznelken',
     },
+    image: sofraKaresi('pekmezli-hosaf.webp'),
     items: [
       { draft: 'Gedroogde perzik', qty: 1 },
       { draft: 'Gedroogde appel', qty: 1 },
@@ -1259,6 +1285,7 @@ export const RECIPES: SeedRecipe[] = [
       fr: 'Flocons d’avoine\nLait ou boisson végétale\nBanane',
       de: 'Haferflocken\nMilch oder Pflanzendrink\nBanane',
     },
+    image: sofraKaresi('pekmezli-tahinli-yulaf-kasesi.webp'),
     items: [
       { draft: 'Johannesbroodmelasse', qty: 1 },
       { draft: 'Tahini', qty: 1 },
@@ -1285,6 +1312,7 @@ export const RECIPES: SeedRecipe[] = [
       fr: 'Fromage blanc en saumure\nOlives noires et vertes\nTomates, concombre\nThé en théière',
       de: 'Weißer Salzlakenkäse\nSchwarze und grüne Oliven\nTomaten, Gurke\nTee aus der Kanne',
     },
+    image: sofraKaresi('kalabalik-pazar-sofrasi.webp'),
     items: [
       { sku: '700402', qty: 1 },
       { sku: '700501', qty: 1 },
@@ -1313,6 +1341,7 @@ export const RECIPES: SeedRecipe[] = [
       fr: 'Moutarde\nMiel\nSel',
       de: 'Senf\nHonig\nSalz',
     },
+    image: sofraKaresi('sirkeli-ev-salata-sosu.webp'),
     items: [
       { draft: 'Olijfolie', label: '750 ml', qty: 1 },
       { draft: 'Meidoorn azijn', qty: 1 },
@@ -1338,6 +1367,7 @@ export const RECIPES: SeedRecipe[] = [
       fr: 'Pommes de terre\nYaourt égoutté\nAil\nHuile d’olive, sel',
       de: 'Kartoffeln\nAbgetropfter Joghurt\nKnoblauch\nOlivenöl, Salz',
     },
+    image: sofraKaresi('firinda-acili-kanat-tabagi.webp'),
     items: [
       { sku: '312442', qty: 1 },
       { sku: '312341', qty: 1 },

@@ -173,6 +173,12 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
    (kalem, adet, alış fiyatı), işletmecinin kararlarını (kategori, koleksiyon, paket, tarif,
    `SALE_PRICES`) ve kapakları taşır. Künyesi aynada olmayan taslak beslemeyi DURDURUR.
 
+   **İKİ ayna var, ikisi de aynı kuralla:** `urun-kunyeleri.json` TASLAKLARIN künyesi (ürünü o kurar),
+   `katalog-kunyeleri.json` KAYNAK KATALOĞUN ürünlerine yazılan künye (ürün kaynaktan kurulur, beyan
+   üstüne yazılır). İkincide ad ve açıklama yoktur — onlar `seed/data/translations.json`ta; `variants`
+   anahtarı SKU'dur ve yalnız kaynağınkinden farklı olan boy yazılır (ör. sade dondurmanın kabı 500 g
+   çıktı, kaynak 250 g yazıyordu).
+
    **Yeni ürün sırası:** önce panelde/asistanla veritabanına girilir → sonra ayna tazelenir → sonra
    beslemeye taslak satırı eklenir. Ters sıra yok: besleme beyan uydurmaz.
 

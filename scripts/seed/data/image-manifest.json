@@ -2430,6 +2430,11 @@
     "imageWidth": 1542,
     "imageHeight": 1024
   },
+  "catalog/recipes/cig-kofte-durum-ve-marul-sarma.webp": {
+    "imageUpdatedAt": "2026-09-23T09:24:46.241292Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
   "catalog/recipes/citir-pazar-kahvaltisi.jpg": {
     "imageUpdatedAt": null,
     "imageWidth": 1312,
@@ -2445,6 +2450,26 @@
     "imageWidth": 1920,
     "imageHeight": 1440
   },
+  "catalog/recipes/evde-doner-durum.webp": {
+    "imageUpdatedAt": "2026-09-23T09:24:46.241292Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
+  "catalog/recipes/firinda-acili-kanat-tabagi.webp": {
+    "imageUpdatedAt": "2026-09-23T09:24:46.241292Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
+  "catalog/recipes/iskender-usulu-doner.webp": {
+    "imageUpdatedAt": "2026-09-23T09:24:46.241292Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
+  "catalog/recipes/kalabalik-pazar-sofrasi.webp": {
+    "imageUpdatedAt": "2026-09-23T09:24:46.241292Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
   "catalog/recipes/kunefe-sofrasi.jpg": {
     "imageUpdatedAt": null,
     "imageWidth": 1920,
@@ -2454,6 +2479,36 @@
     "imageUpdatedAt": null,
     "imageWidth": 1920,
     "imageHeight": 1440
+  },
+  "catalog/recipes/nar-eksili-gavurdagi-salatasi.webp": {
+    "imageUpdatedAt": "2026-09-23T09:24:46.241292Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
+  "catalog/recipes/pekmezli-hosaf.webp": {
+    "imageUpdatedAt": "2026-09-23T09:24:46.241292Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
+  "catalog/recipes/pekmezli-tahinli-yulaf-kasesi.webp": {
+    "imageUpdatedAt": "2026-09-23T09:24:46.241292Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
+  "catalog/recipes/sirkeli-ev-salata-sosu.webp": {
+    "imageUpdatedAt": "2026-09-23T09:24:46.241292Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
+  "catalog/recipes/tahin-pekmezli-kahvalti.webp": {
+    "imageUpdatedAt": "2026-09-23T09:24:46.241292Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
+  },
+  "catalog/recipes/yogurtlu-manti.webp": {
+    "imageUpdatedAt": "2026-09-23T09:24:46.241292Z",
+    "imageWidth": 1536,
+    "imageHeight": 1024
   },
   "site/home-hero.jpg": {
     "imageUpdatedAt": "2026-09-14T12:59:31.642+00:00",

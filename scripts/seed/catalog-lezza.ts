@@ -396,6 +396,26 @@ export interface LezzaSecim {
    * beslemenin bilgisi; katalog kaynağı kendi adlandırmasından başkasını bilmez.
    */
   localFrames?: (catalogSlug: string) => string[] | null;
+  /**
+   * Ürünün TÜRKÇE adından künyesine — kaynağın beyanının ÜSTÜNE yazılır. Gerçek besleme burayı test
+   * veritabanının aynasından doldurur (`seed-real/data/katalog-kunyeleri.json`): kaynağın belgesi olmayan
+   * üründe beyan etiket fotoğrafıyla panele girdi ve kaynaktan değil oradan gelir. Kurgu beslemesi vermez.
+   */
+  kunye?: Readonly<Record<string, KatalogUrunKunyesi>>;
+}
+
+/** Kaynağın üstüne yazılan beyan — alanların adı kolonlarla aynı, çeviri katmanı yok. */
+export interface KatalogUrunKunyesi {
+  ingredients?: LocalizedText;
+  nutrition?: Nutrition;
+  allergens?: ProductAllergen[];
+  traces?: ProductAllergen[];
+  storage?: LocalizedText;
+  preparationSteps?: LocalizedText[];
+  shelfLifeDays?: number;
+  storageType?: 'ambient' | 'chilled' | 'frozen';
+  shippable?: boolean;
+  dateType?: 'DLC' | 'DDM';
 }
 
 /** Kataloğu kurar; çağıran servisleri ve başlangıç sırasını verir, sonuç sayıları döner. */
@@ -541,6 +561,9 @@ export async function seedLezzaProducts(
     const tamAd: LocalizedText = ceviri?.name ?? { tr: ad, fr: ad, de: ad };
     const tamAciklama: LocalizedText | null = ceviri?.description ?? (p.description ? { tr: p.description, fr: p.description, de: p.description } : null);
     const name: LocalizedText = dilEksik ? { tr: tamAd.tr } : tamAd;
+    // Test veritabanının aynası kaynağı YENER: bu beyan ürünün kendi etiketinden okundu, kaynağın belgesi
+    // ya hiç yoktu ya eksikti. `undefined` alan yazılmaz — ayna yalnız BİLDİĞİNİ söyler.
+    const ayna = secim?.kunye?.[tamAd.tr ?? ''];
     const aciklama: LocalizedText | null = tamAciklama ? (dilEksik ? { tr: tamAciklama.tr } : tamAciklama) : null;
 
     // Kapak GERÇEK görselden; R2 ayarsızsa null döner ve kayıt görselsiz oluşur (graceful).
@@ -555,8 +578,11 @@ export async function seedLezzaProducts(
         : null;
 
     // Yayına hazırlık `has_all_locales` kısıtının TS karşılığıyla ölçülür, elle yeniden yazılmaz.
+    // Ayna da bir BEYAN KAYNAĞIDIR: kaynağın belgesi olmayan ürün, etiketinden okunmuş künyesi varsa
+    // yayına hazırdır — burada sayılmasaydı beyanı tam ürün aday kalır ve rafa hiç çıkmazdı.
+    const beyanli = Boolean(beyan) || Boolean(ayna?.ingredients && ayna?.storage && ayna?.allergens);
     const yayinaHazirDegil =
-      !hasAllLocales(name) || !hasAllLocales(aciklama) || beyanEksik || (!beyan && !turetmeSerbest);
+      !hasAllLocales(name) || !hasAllLocales(aciklama) || beyanEksik || (!beyanli && !turetmeSerbest);
     const aday = p.variants.some((v) => v.sku != null && Boolean(secim?.candidates?.has(String(v.sku))));
     const durum: ProductStatus = satilabilirDurum({ aday, teklifli, kurguda, zayifVeri, aileli, kusurlu, yayinaHazirDegil, i });
 
@@ -607,6 +633,17 @@ export async function seedLezzaProducts(
         : turetmeSerbest
           ? rejim.storageType
           : undefined,
+      // Aynadan gelen beyan en sonda: yukarıdaki türetmelerin ve kaynağın üstüne yazar.
+      ...(ayna?.ingredients ? { ingredients: ayna.ingredients } : {}),
+      ...(ayna?.storage ? { storageInstructions: ayna.storage } : {}),
+      ...(ayna?.preparationSteps ? { preparationSteps: ayna.preparationSteps } : {}),
+      ...(ayna?.nutrition ? { nutrition: ayna.nutrition } : {}),
+      ...(ayna?.allergens ? { allergens: ayna.allergens } : {}),
+      ...(ayna?.traces ? { traces: ayna.traces } : {}),
+      ...(ayna?.shelfLifeDays ? { shelfLifeDays: ayna.shelfLifeDays } : {}),
+      ...(ayna?.storageType ? { storageType: ayna.storageType } : {}),
+      ...(ayna?.shippable === undefined ? {} : { shippable: ayna.shippable }),
+      ...(ayna?.dateType ? { dateType: ayna.dateType } : {}),
       // Hedef marj ve otomatik fiyat beyan değil fiyat KARARIDIR: türetilmez, yalnız sahnede serpiştirilir.
       targetMarginPercent: marjYok || !kusurlu ? undefined : 30 + (i % 6) * 3,
       autoPrice: kusurlu && i % 4 === 0,
