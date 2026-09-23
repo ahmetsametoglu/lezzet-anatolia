@@ -8,7 +8,7 @@ import { statusPillClass } from '@/components/customer/ui/badge';
 import { SummaryRow, summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import type { CustomerOrderDetail, CustomerOrderDetailLine } from '@/lib/order/customer-orders';
-import type { DetailViewProps } from '../detail-types';
+import { paymentKeyOf, type DetailViewProps } from '../detail-types';
 
 /**
  * Sipariş detayının MASAÜSTÜ blokları (tasarım: `Musteri - Siparis Detay.dc.html`).
@@ -358,20 +358,6 @@ export function SummaryCard({ t, locale, order, title }: Pick<DetailViewProps, '
   );
 }
 
-/**
- * Ödeme hâli — tasarımın beş hapı; masaüstü hapı ve telefonun özet satırı AYNI anahtardan okur (14.09). Sıra ANLAMLI:
- * iade her şeyi ezer (para geri döndüyse "kapıda ödenecek" demek yanlış olur), vade yöntemden önce gelir (vadeli
- * sipariş de kapıda kapanabilir). Native'in `paymentKey`i aynı sırayı izliyor.
- */
-export function paymentKeyOf(
-  order: Pick<CustomerOrderDetail, 'paymentStatus' | 'onAccount' | 'paymentMethod'>,
-): 'refunded' | 'credit' | 'online' | 'transfer' | 'door' {
-  if (order.paymentStatus === 'refunded') return 'refunded';
-  if (order.onAccount) return 'credit';
-  if (order.paymentMethod === 'online') return order.paymentStatus === 'paid' ? 'online' : 'transfer';
-  if (order.paymentMethod === 'bank_transfer') return 'transfer';
-  return 'door';
-}
 
 /** Ödeme hapı — anahtar `paymentKeyOf`tan, ton hâlin kendisinden. */
 function PaymentPill({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
@@ -380,6 +366,8 @@ function PaymentPill({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
   const tone: Record<typeof key, string> = {
     online: 'bg-olive-bg text-olive',
     door: 'bg-closed-bg text-body',
+    pickup: 'bg-closed-bg text-body',
+    paidOnHandover: 'bg-olive-bg text-olive',
     transfer: 'bg-honey-bg text-honey',
     credit: 'bg-closed-bg text-body',
     refunded: 'bg-cream-deep text-ink',

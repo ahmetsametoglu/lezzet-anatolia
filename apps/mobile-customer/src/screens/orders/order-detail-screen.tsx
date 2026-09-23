@@ -89,7 +89,9 @@ function paymentKey(order: OrderDetail): keyof Messages['detail']['pay'] {
   if (order.onAccount) return 'credit';
   if (order.paymentMethod === 'online') return order.paymentStatus === 'paid' ? 'online' : 'transfer';
   if (order.paymentMethod === 'bank_transfer') return 'transfer';
-  return 'door';
+  // Kapıda/depoda tahsil edilmişse borç cümlesi kalmaz; gel-al'da tahsilat kapıda değil depoda.
+  if (order.paymentStatus === 'paid') return 'paidOnHandover';
+  return order.deliveryType === 'pickup' ? 'pickup' : 'door';
 }
 
 /**

@@ -13,9 +13,9 @@ import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { addressLine } from '@lezzet/address';
 import type { CustomerOrderDetailLine } from '@/lib/order/customer-orders';
 import { formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
-import { carrierLabel, formatStamp, paymentKeyOf } from './components/detail-sections';
+import { carrierLabel, formatStamp } from './components/detail-sections';
 import { PhoneReorderButton } from './components/phone-reorder-button';
-import type { DetailViewProps } from './detail-types';
+import { paymentKeyOf, type DetailViewProps } from './detail-types';
 
 type OrdersCopy = LocalizedCopy<typeof ordersMessages>;
 
