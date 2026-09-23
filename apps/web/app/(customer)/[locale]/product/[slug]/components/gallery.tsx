@@ -1,85 +1,27 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { FramedImage } from '@/components/media/framed-image';
 import { Icon } from '@/components/customer/ui/icons';
-import { RATIO_SOURCE, RATIO_SQUARE } from '@lezzet/types';
+import { RATIO_SOURCE } from '@lezzet/types';
 import type { StorefrontImage } from '@lezzet/application';
 import { useGalleryAutoplay } from './use-gallery-autoplay.hook';
 
 /**
- * Ürün galerisi: masaüstünde ana görsel ve içindeki küçük görsel şeridi, telefonda yatay kaydırma ve nokta göstergesi; tek
- * görselli üründe şerit hiç çizilmez. Sığmayan görseller son kutuda "+N" olarak toplanır ve o kutu düğmedir, basınca kalanlar açılır.
+ * Ürün galerisi (masaüstü): ana görsel ve içindeki küçük görsel şeridi; tek görselli üründe şerit hiç çizilmez. Sığmayan görseller
+ * son kutuda "+N" olarak toplanır ve o kutu düğmedir, basınca kalanlar açılır.
  */
 interface GalleryProps {
   images: StorefrontImage[];
   alt: string;
   /** Ana görselin iki yanındaki geçiş düğmelerinin erişilebilir adı. */
   labels: { previous: string; next: string };
-  /** Telefon düzeni: kaydırmalı şerit ve nokta göstergesi, oran kare. */
-  compact?: boolean;
-  /** Görsel sayfayla bütünleşik, köşesiz ve kenardan kenara; yalnız telefon dalında anlamlı. */
-  flush?: boolean;
 }
 
-export function Gallery({ images, alt, labels, compact = false, flush = false }: GalleryProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
+export function Gallery({ images, alt, labels }: GalleryProps) {
   const [expanded, setExpanded] = useState(false);
-  // Otomatik geçiş yalnız masaüstü dalında; telefonda görseli parmak kaydırıyor.
-  const autoplay = useGalleryAutoplay(compact ? 0 : images.length);
-  const track = useRef<HTMLDivElement>(null);
-  const frame = flush ? '!rounded-none' : '!rounded-card';
-  // Telefonda kare, çünkü native ürün ekranının kahramanı telefon eninde ≈1:1 ve kırpma editörü o çerçeveyi önizliyor.
-  const ratio = compact ? RATIO_SQUARE : RATIO_SOURCE;
-  if (images.length === 0) return <FramedImage src={null} alt={alt} ratio={ratio} className={frame} />;
-
-  if (compact) {
-    /**
-     * Etkin görsel kaydırma konumundan türer ki parmak ve noktalar tek gerçeğe baksın. Ölçü slaytların gerçek konumundan
-     * okunur, çünkü aradaki boşluğu saymayan `scrollLeft / clientWidth` bölmesi birkaç slayt sonra bir tam kayar.
-     */
-    const onScroll = () => {
-      const el = track.current;
-      if (!el) return;
-      const center = el.scrollLeft + el.clientWidth / 2;
-      const slides = Array.from(el.children) as HTMLElement[];
-      let nearest = 0;
-      let best = Infinity;
-      slides.forEach((slide, i) => {
-        const distance = Math.abs(slide.offsetLeft + slide.offsetWidth / 2 - center);
-        if (distance < best) {
-          best = distance;
-          nearest = i;
-        }
-      });
-      setActiveIndex(nearest);
-    };
-    return (
-      <div className="relative">
-        {/* Slaytlar arasında boşluk ŞART: bitişik olunca geçiş sırasında iki fotoğraf tek bir
-            görüntü gibi birleşiyor, hangisinin nerede bittiği anlaşılmıyor. Boşluk, kaydırmanın
-            iki ayrı görsel arasında olduğunu söyler. */}
-        <div
-          ref={track}
-          onScroll={onScroll}
-          className="flex snap-x snap-mandatory gap-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {images.map((img, i) => (
-            <div key={i} className="w-full flex-none snap-center">
-              <FramedImage src={img.url} alt={i === 0 ? alt : ''} ratio={ratio} crop={img.crop} frames={img.frames} sizes="100vw" className={frame} />
-            </div>
-          ))}
-        </div>
-        {images.length > 1 && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
-            {images.map((_, i) => (
-              <span key={i} className={['size-2 rounded-full', i === activeIndex ? 'bg-olive' : 'bg-card/80'].join(' ')} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
+  const autoplay = useGalleryAutoplay(images.length);
+  if (images.length === 0) return <FramedImage src={null} alt={alt} ratio={RATIO_SOURCE} className="!rounded-card" />;
 
   const current = autoplay.index;
   const active = images[current] ?? images[0]!;
