@@ -667,10 +667,15 @@ export const ADAY_SKULARI: string[] = [
 ];
 
 /**
- * Tek üyeli aile kurulmaz (`ELLE_AILELER` ile aynı kural), çünkü çeşit bloğu en az iki kart ister. Anahtar
- * faturadaki addır (`Draft.name`); etiket yalnız çeşidi söyler, çünkü blok aile adını zaten yazıyor.
+ * Çeşit blokları — üye ya TASLAĞIMIZ (`draft`, faturadaki ad) ya da KATALOĞUN ürünü (`sku`). İkisi bir arada
+ * durabilir, çünkü aile rafın sorusudur ("hangisi?") ve raf ürünün nereden geldiğini bilmez; koleksiyonlar da
+ * aynı ikili kimliği kullanıyor. Tek üyeli aile kurulmaz (`ELLE_AILELER` ile aynı kural): çeşit bloğu en az iki
+ * kart ister. Etiket yalnız çeşidi söyler, çünkü blok aile adını zaten yazıyor.
+ *
+ * **Adı var olan aileye EKLENİR, ikincisi kurulmaz:** katalog tarafı kendi ailesini kurmuş olabilir ve bir ürün
+ * tek aileye girer; ikinci bir "Bütün Pasta" ailesi aynı rafı ikiye bölerdi.
  */
-export const DRAFT_FAMILIES: Array<{ ad: string; uyeler: Array<{ draft: string; etiket: UcDil }> }> = [
+export const AILELER: Array<{ ad: string; uyeler: Array<({ draft: string } | { sku: string }) & { etiket: UcDil }> }> = [
   {
     ad: 'Sirke',
     uyeler: [
@@ -734,6 +739,30 @@ export const DRAFT_FAMILIES: Array<{ ad: string; uyeler: Array<{ draft: string; 
     uyeler: [
       { draft: 'LEZZA Traditional Meet Doner', etiket: { tr: 'Et', fr: 'Viande', de: 'Fleisch' } },
       { draft: 'LEZZA Traditional Chicken Doner', etiket: { tr: 'Tavuk', fr: 'Poulet', de: 'Hähnchen' } },
+    ],
+  },
+  {
+    // Tekil kaplar (165 g, L'amour de Paris) kendi rafı: müşteri önce "tek kişilik mi, bütün pasta mı"
+    // diye seçiyor. VARYANT DEĞİL AİLE, çünkü tekil kabın tarifi bütün pastanınkinden farklı — beyanları
+    // ve besin değerleri ayrı (ölçüldü 23.09: kırmızı kadife 269 kcal ↔ 510 kcal). Boy yalnız gramaj
+    // taşır; iki tarife tek beyan yazmak etikete aykırı olurdu.
+    ad: 'Tekil Kap Tatlı',
+    uyeler: [
+      { sku: '901813', etiket: { tr: 'Tiramisu', fr: 'Tiramisu', de: 'Tiramisu' } },
+      { draft: 'Kırmızı Kadife Pasta (tekil kap)', etiket: { tr: 'Kırmızı kadife', fr: 'Red velvet', de: 'Red Velvet' } },
+      { draft: 'Fıstıklı Pasta (tekil kap)', etiket: { tr: 'Fıstıklı', fr: 'Pistache', de: 'Pistazie' } },
+      { draft: 'Ahududulu Cheesecake (tekil kap)', etiket: { tr: 'Ahududulu cheesecake', fr: 'Cheesecake framboise', de: 'Himbeer-Cheesecake' } },
+      { draft: 'Çikolatalı Pasta (tekil kap)', etiket: { tr: 'Çikolatalı', fr: 'Chocolat', de: 'Schokolade' } },
+      { draft: 'Çikolatalı Tofi Karamel Pasta (tekil kap)', etiket: { tr: 'Çikolatalı tofi karamel', fr: 'Chocolat toffee caramel', de: 'Schoko-Toffee-Karamell' } },
+    ],
+  },
+  {
+    // Katalog tarafı bu aileyi kendi ürünleriyle kuruyor (`ELLE_AILELER`); buradaki iki taslak onun
+    // yanına ekleniyor. İkisi de dilimlenerek servis edilen bütün tatlılar.
+    ad: 'Bütün Pasta',
+    uyeler: [
+      { draft: 'Tiramisu Pasta (bütün)', etiket: { tr: 'Tiramisu (bütün)', fr: 'Tiramisu entier', de: 'Tiramisu (ganz)' } },
+      { draft: 'Trileçe (Tres Leches Caramel)', etiket: { tr: 'Trileçe', fr: 'Tres leches', de: 'Tres Leches' } },
     ],
   },
 ];

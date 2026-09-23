@@ -44,7 +44,7 @@ import {
   CATEGORIES,
   COLLECTIONS,
   DRAFT_CATEGORY,
-  DRAFT_FAMILIES,
+  AILELER,
   EK_TASLAKLAR,
   KATALOG_BIRLESIK,
   KATALOG_BOY_ADI,
@@ -625,38 +625,49 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
 }
 
 /**
- * Taslakların çeşit blokları. Tek üyeli aile KURULMAZ — katalog tarafındaki kuralın aynısı: bir
- * çeşit bloğu en az iki kart ister, tek kart "seçenek" değil tekrardır.
+ * Çeşit blokları — üyesi taslağımız da kataloğun ürünü de olabilir. Tek üyeli aile KURULMAZ (katalog
+ * tarafındaki kuralın aynısı: bir çeşit bloğu en az iki kart ister). Adı var olan aileye ÜYE EKLENİR:
+ * katalog kendi ailesini kurmuş olabilir ve bir ürün tek aileye girer — ikinci bir aile rafı böler.
  */
-async function seedDraftFamilies(db: Db): Promise<void> {
-  console.log('▸ taslak aileleri');
+async function seedFamilies(db: Db): Promise<void> {
+  console.log('▸ aileler');
   const families = new ProductFamilyService(db);
   const products = new ProductService(db);
-  const mevcut = new Set((await families.list()).map((f) => f.name));
+  const variants = new ProductVariantService(db);
+  const mevcut = new Map((await families.list()).map((f) => [f.name, f.id]));
   // Kuru koşuda ürünler henüz yazılmadığı için üyelik aranmaz; plan listedeki çeşit sayısını gösterir.
   const urunler = DRY_RUN ? [] : await products.listAll();
-  for (const aile of DRAFT_FAMILIES) {
-    if (mevcut.has(aile.ad)) {
-      done(aile.ad);
-      continue;
-    }
+  for (const aile of AILELER) {
     if (DRY_RUN) {
       plan(`${aile.ad} · ${aile.uyeler.length} çeşit`);
       continue;
     }
-    const uyeler: Array<{ id: string; etiket: (typeof DRAFT_FAMILIES)[number]['uyeler'][number]['etiket'] }> = [];
+    const uyeler: Array<{ id: string; etiket: (typeof AILELER)[number]['uyeler'][number]['etiket'] }> = [];
     for (const uye of aile.uyeler) {
-      const id = urunler.find((p) => p.name.tr === TASLAK_ADI.get(uye.draft))?.id;
+      const id =
+        'draft' in uye
+          ? urunler.find((p) => p.name.tr === TASLAK_ADI.get(uye.draft))?.id
+          : (await variants.findBySku(uye.sku))?.productId;
       if (id) uyeler.push({ id, etiket: uye.etiket });
     }
-    if (uyeler.length < 2) {
+    const aileId = mevcut.get(aile.ad);
+    // Var olan ailede yalnız EKSİK üye yazılır: zaten bağlı olanın sırasını yeniden yazmak, katalogun
+    // kurduğu diziyi bozardı.
+    const yazilacak = aileId ? uyeler.filter((u) => urunler.find((p) => p.id === u.id)?.familyId !== aileId) : uyeler;
+    if (!aileId && uyeler.length < 2) {
       console.log(`  ⚠ ${aile.ad} — ${uyeler.length} üye bulundu, aile kurulmadı`);
       continue;
     }
-    plan(`${aile.ad} · ${uyeler.length} çeşit`);
-    const created = await families.insert({ name: aile.ad });
-    for (const [sira, uye] of uyeler.entries()) {
-      await products.update({ id: uye.id, familyId: created.id, familyLabel: uye.etiket, familyPosition: sira });
+    if (yazilacak.length === 0) {
+      done(aile.ad);
+      continue;
+    }
+    plan(`${aile.ad} · ${yazilacak.length} çeşit${aileId ? ' (var olan aileye eklendi)' : ''}`);
+    const id = aileId ?? (await families.insert({ name: aile.ad })).id;
+    // Sıra var olan üyelerin ARDINDAN gider: katalog kendi dizisini kurmuşsa o dizi korunur.
+    const baslangic = aileId ? urunler.filter((p) => p.familyId === aileId).length : 0;
+    for (const [sira, uye] of yazilacak.entries()) {
+      await products.update({ id: uye.id, familyId: id, familyLabel: uye.etiket, familyPosition: baslangic + sira });
     }
   }
 }
@@ -1050,7 +1061,7 @@ async function main(): Promise<void> {
   const catId = await seedCategories(db);
   await seedCatalog(db, catId);
   await seedDrafts(db, catId);
-  await seedDraftFamilies(db);
+  await seedFamilies(db);
   await seedCollections(db);
   await seedPurchases(db);
   // Uydurma fiyat gerçeklerden SONRA: var olan fiyatın üstüne yazmaz.
