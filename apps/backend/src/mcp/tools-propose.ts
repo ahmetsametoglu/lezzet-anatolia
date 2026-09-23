@@ -679,8 +679,11 @@ async function readIdentity(args: Record<string, unknown>): Promise<{ identity: 
 }
 
 /**
- * Var olan boyların künyesi — satır KİMLİKLE eşleşir ve kimliğin kaynağı okuma araçlarıdır (`catalog_lookup` ·
- * `product_detail`). Başka ürünün boyu ya da uydurma kimlik reddedilir: dilekçe ürünün kendi listesini tamamlar.
+ * Ürünün boy satırları — `variantId` VARSA var olan boyun künyesi, YOKSA yeni boy.
+ *
+ * Kimliğin kaynağı okuma araçlarıdır (`catalog_lookup` · `product_detail`); başka ürünün boyu ya da uydurma kimlik
+ * reddedilir. Kimliksiz satırda etiket ve gramaj ZORUNLU: etiketsiz boy müşteriye seçtirilemez, gramajsız boy
+ * satılamaz (kilo başı fiyat ondan çıkar). Var olan boyda ikisi de kayıtta durur, dilekçe yalnız eksiği tamamlar.
  */
 async function readVariantEdits(
   args: Record<string, unknown>,
@@ -696,9 +699,11 @@ async function readVariantEdits(
 
   for (const [i, entry] of raw.entries()) {
     const row = (entry ?? {}) as Record<string, unknown>;
-    const variantId = textArg(row.variantId) ?? '';
-    const variantLabel = adByaId.get(variantId);
-    if (!variantLabel) return { error: `variants[${i}].variantId bu ürünün boyu değil. Ürünün boyları: ${liste}` };
+    const variantId = textArg(row.variantId);
+    const variantLabel = variantId === null ? undefined : adByaId.get(variantId);
+    if (variantId !== null && !variantLabel) {
+      return { error: `variants[${i}].variantId bu ürünün boyu değil. Ürünün boyları: ${liste}` };
+    }
 
     const label = localizedArg(row.label);
     const olcu: Record<string, number> = {};
@@ -710,14 +715,34 @@ async function readVariantEdits(
     }
     const portionKind = row.portionKind === undefined ? undefined : porsiyonTuru(row.portionKind);
     if (row.portionKind !== undefined && portionKind === null) return { error: `variants[${i}].portionKind 'item' | 'slice' olmalı.` };
+    if (row.netUnit !== undefined && row.netUnit !== 'g' && row.netUnit !== 'ml') {
+      return { error: `variants[${i}].netUnit 'g' | 'ml' olmalı — şişe 500 ml der, 500 g demez.` };
+    }
     const okunanKod = await readBarcode(row.barcode, `variants[${i}]`);
     if ('error' in okunanKod) return okunanKod;
+
+    if (variantId === null) {
+      if (!label) return { error: `variants[${i}] yeni boy (variantId yok) — etiket zorunlu: { "label": { "tr": "500 g kalıp" } }.` };
+      if (olcu.netQuantity === undefined) return { error: `variants[${i}] yeni boy — netQuantity zorunlu, gramajsız boy satılamaz.` };
+      variants.push({
+        variantLabel: resolveLocalizedText(label, 'tr') || 'etiketsiz',
+        label: label as ProductDraftPayload['variants'][number]['label'],
+        ...olcu,
+        // Birim verilmediyse gram: gramajı olan bir boyun birimi boş bırakılamaz ve katı ürün kuraldır
+        // (`propose_product_create` aynı varsayımı kullanıyor).
+        netUnit: row.netUnit === 'ml' ? 'ml' : 'g',
+        ...(portionKind ? { portionKind } : {}),
+        ...(okunanKod.barcode ? { barcode: okunanKod.barcode } : {}),
+      } as ProductDraftPayload['variants'][number]);
+      continue;
+    }
 
     const edit = {
       variantId,
       variantLabel,
       ...(label ? { label } : {}),
       ...olcu,
+      ...(row.netUnit === undefined ? {} : { netUnit: row.netUnit }),
       ...(portionKind ? { portionKind } : {}),
       ...(okunanKod.barcode ? { barcode: okunanKod.barcode } : {}),
     } as ProductDraftPayload['variants'][number];

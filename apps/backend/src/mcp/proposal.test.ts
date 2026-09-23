@@ -190,6 +190,78 @@ describe('ürün künyesi dilekçesi', () => {
   });
 
   /**
+   * Kimliksiz satır YENİ boydur (K.31). Sınanan iki şey: boy gerçekten doğuyor ve SONA düşüyor —
+   * mevcut boyların sırası oynasaydı müşterinin gördüğü boy listesi bir onayla yeniden dizilirdi.
+   */
+  it('kimliksiz satır yeni boy açar; mevcut boy ve sırası bozulmaz', async () => {
+    const products = new ProductService(db);
+    const { product, variants } = await products.create({
+      name: { tr: `Yeni boy ${stamp}` },
+      variants: [{ label: { tr: '70 g dilim' }, netQuantity: 70, netUnit: 'g' }],
+    });
+    createdProducts.push(product.id);
+    const kod = `4${String(stamp).slice(-12)}`;
+
+    const payload: ProductDraftPayload = {
+      productId: product.id,
+      productName: `Yeni boy ${stamp}`,
+      fields: {},
+      identity: {},
+      variants: [
+        {
+          variantLabel: '500 g kalıp',
+          label: { tr: '500 g kalıp' },
+          netQuantity: 500,
+          netUnit: 'g',
+          barcode: { code: kod, kind: 'unit', qtyPerCode: 1 },
+        },
+      ],
+      uncertainFields: [],
+      remainingGaps: [],
+    };
+    const row = await proposals.create({
+      kind: 'product_draft',
+      payload,
+      summary: `Yeni boy ${stamp}`,
+      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      sourceSession: `test-${stamp}`,
+    });
+    created.push(row.id);
+    await applyProposal(db, (await proposals.claimForApply(row.id, null as unknown as string))!);
+
+    const sonrasi = await new ProductVariantService(db).listByProduct(product.id);
+    expect(sonrasi).toHaveLength(2);
+    const eski = sonrasi.find((v) => v.id === variants[0]!.id);
+    const yeni = sonrasi.find((v) => v.id !== variants[0]!.id);
+    expect(resolveLocalizedText(eski!.label, 'tr')).toBe('70 g dilim');
+    expect(resolveLocalizedText(yeni!.label, 'tr')).toBe('500 g kalıp');
+    expect(yeni!.netQuantity).toBe(500);
+    // Sıra: yeni boy sonda. `sortOrder` eşit olsaydı liste rastgele dizilirdi.
+    expect(yeni!.sortOrder).toBeGreaterThan(eski!.sortOrder);
+    // Kod yeni boya bağlandı: kimlik ancak yazıldıktan sonra doğuyor, eşleme onu bekler.
+    const kodlar = await new VariantBarcodeService(db).listByVariant(yeni!.id);
+    expect(kodlar.map((c) => c.code)).toEqual([kod]);
+  });
+
+  /**
+   * Gramajsız boy SATILAMAZ (birim fiyat ondan çıkar) ve etiketsiz boy müşteriye seçtirilemez. Kapı şemada:
+   * araç atlasa bile kuyruğa böyle bir satır giremez.
+   */
+  it('yeni boy gramajsız ya da etiketsiz olamaz', () => {
+    const taban = { productId: crypto.randomUUID(), productName: 'Şema', fields: {}, identity: {}, uncertainFields: [], remainingGaps: [] };
+    expect(() =>
+      parseProposalPayload('product_draft', { ...taban, variants: [{ variantLabel: '500 g', label: { tr: '500 g' } }] }),
+    ).toThrow();
+    expect(() => parseProposalPayload('product_draft', { ...taban, variants: [{ variantLabel: '500 g', netQuantity: 500, netUnit: 'g' }] })).toThrow();
+    expect(() =>
+      parseProposalPayload('product_draft', {
+        ...taban,
+        variants: [{ variantLabel: '500 g', label: { tr: '500 g' }, netQuantity: 500, netUnit: 'g' }],
+      }),
+    ).not.toThrow();
+  });
+
+  /**
    * Bir kod İKİ boya bağlanamaz (`variant_barcode_code_uq`). Uygulama sessizce atlasaydı patron kodu
    * yazıldı sanırdı ve arıza ilk kez depoda, koli yanlış ürüne sayıldığında görünürdü.
    */

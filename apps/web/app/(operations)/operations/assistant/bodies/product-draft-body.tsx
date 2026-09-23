@@ -82,8 +82,8 @@ export function productDraftValuesFrom(payload: ProductDraftPayload, product: Pr
     onayla ürünün öteki boylarını götürürdü.
   */
   if (payload.variants.length > 0) {
-    const edits = new Map(payload.variants.map((v) => [v.variantId, v]));
-    patch.variants = base.variants.map((row) => {
+    const edits = new Map(payload.variants.filter((v) => v.variantId).map((v) => [v.variantId, v]));
+    const guncel = base.variants.map((row) => {
       const edit = row.id ? edits.get(row.id) : undefined;
       if (!edit) return row;
       // Kimlik ve okunur ad forma girmez: satırın kendi kimliği zaten var, ad kartın işi. Kod da
@@ -93,6 +93,26 @@ export function productDraftValuesFrom(payload: ProductDraftPayload, product: Pr
       );
       return { ...row, ...Object.fromEntries(patch), ...(edit.barcode ? { newBarcodes: [edit.barcode] } : {}) };
     });
+    // Kimliksiz satır YENİ boy: `id` verilmez, `syncVariants` onu ekler. Sona konur ki mevcut boyların
+    // sırası oynamasın; formun kalan kutuları (SKU, asgari stok) boş doğar — ikisi de ayrı karar.
+    const yeniler = payload.variants
+      .filter((v) => !v.variantId)
+      .map((v) => ({
+        label: v.label,
+        netQuantity: v.netQuantity ?? null,
+        netUnit: v.netUnit ?? null,
+        piecesCount: v.piecesCount ?? null,
+        portionKind: v.portionKind ?? null,
+        packedWeightG: v.packedWeightG ?? null,
+        packedLengthMm: v.packedLengthMm ?? null,
+        packedWidthMm: v.packedWidthMm ?? null,
+        packedHeightMm: v.packedHeightMm ?? null,
+        minStockQty: null,
+        sku: null,
+        isActive: true,
+        ...(v.barcode ? { newBarcodes: [v.barcode] } : {}),
+      }));
+    patch.variants = [...guncel, ...yeniler];
   }
   return { ...base, ...patch } as ProductFormValues;
 }

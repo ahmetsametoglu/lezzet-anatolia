@@ -237,7 +237,13 @@ export function draftFieldSummary(payload: {
     ...Object.entries(payload.identity ?? {}).filter(([key]) => key !== 'categoryName'),
   ].filter(([, value]) => value !== undefined && value !== null);
   const labels = written.map(([key]) => DECLARATION_FIELD_LABEL[key] ?? key);
-  if (payload.variants && payload.variants.length > 0) labels.push(`${payload.variants.length} boy`);
+  // Yeni boy AYRI sayılır: var olanın kutusunu doldurmak ile ürüne boy eklemek aynı karar değil —
+  // ikincisi rafta duran bir ambalajın kayda geçmesidir ve kartta görünmeden onaylanmamalı.
+  if (payload.variants && payload.variants.length > 0) {
+    const yeni = payload.variants.filter((v) => (v as { variantId?: string }).variantId === undefined).length;
+    if (payload.variants.length > yeni) labels.push(`${payload.variants.length - yeni} boy`);
+    if (yeni > 0) labels.push(`${yeni} yeni boy`);
+  }
   if (!payload.currentFields) return { labels, overwrites: null };
 
   const current = { ...payload.currentFields, ...(payload.currentIdentity ?? {}) };

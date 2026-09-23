@@ -233,16 +233,20 @@ const applyProductDraft: Applier = async (db, raw) => {
   const productPatch = { ...declarationUpdate(payload.fields), ...identityUpdate(payload.identity) };
   if (Object.keys(productPatch).length > 0) await new ProductService(db).updateDetails(payload.productId, productPatch);
   // Boy satırı KİMLİKLE güncellenir, liste yeniden yazılmaz (`syncVariants` eksik satırı silerdi):
-  // dilekçe yalnız var olan boyun boş alanını doldurur, ürünün öteki boyları yerinde kalır.
+  // dilekçe var olan boyun boş alanını doldurur, ürünün öteki boyları yerinde kalır. Kimliksiz satır
+  // YENİ boydur ve listenin sonuna eklenir — mevcut boyların sırası oynamaz.
   const variants = new ProductVariantService(db);
+  const yeniler = payload.variants.filter((v) => v.variantId === undefined);
+  let sira = yeniler.length === 0 ? 0 : Math.max(-1, ...(await variants.listByProduct(payload.productId)).map((v) => v.sortOrder)) + 1;
   for (const edit of payload.variants) {
     // `variantLabel` boyun OKUNUR adı (kartın işi), `barcode` ayrı bir eşleme kaydı: ikisi de kolon
     // değil, patch'e girerlerse yazma reddedilirdi.
     const patch = Object.fromEntries(
       Object.entries(edit).filter(([key, value]) => !['variantId', 'variantLabel', 'barcode'].includes(key) && value !== undefined),
     );
-    if (Object.keys(patch).length > 0) await variants.update({ id: edit.variantId, ...patch });
-    if (edit.barcode) await bindBarcode(db, edit.variantId, edit.barcode);
+    const variantId = edit.variantId ?? (await variants.insert({ productId: payload.productId, ...patch, sortOrder: sira++ })).id;
+    if (edit.variantId && Object.keys(patch).length > 0) await variants.update({ id: edit.variantId, ...patch });
+    if (edit.barcode) await bindBarcode(db, variantId, edit.barcode);
   }
   return { productId: payload.productId };
 };

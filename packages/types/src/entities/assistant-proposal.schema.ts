@@ -358,14 +358,19 @@ export const ProductDraftPayloadSchema = ProductReviewSignalsSchema.extend({
   /** Beyan olmayan künye — yeni üründe yazılabilen alanlar var olan üründe de yazılabilmeli, yoksa eksik künye elde kalırdı. */
   identity: ProductIdentitySchema.default({}),
   /**
-   * VAR OLAN boyların künyesi; satır `variantId` ile bulunur. Dilekçe yeni boy AÇMAZ ve var olanı SİLMEZ: onay formu
-   * varyant listesinin tamamını kaydeder, eksik gelen satır silinirdi — bir onay ürünün boylarını götürürdü.
+   * Ürünün boyları. `variantId` VARSA o boy güncellenir, YOKSA satır yeni boydur. Ayrımın ölçütü kimliğin varlığı:
+   * boyun kendi beyanı yoktur, künyesi ürünündür — ayrı bir dilekçe tipi aynı kararı iki kuyruğa bölerdi.
+   *
+   * Dilekçe hiçbir boyu SİLMEZ: onay formu varyant listesinin tamamını kaydeder (`syncVariants`) ve eksik gelen satır
+   * silinirdi, yani gelen liste olduğu gibi forma konsaydı bir onay ürünün öteki boylarını götürürdü. Liste eşlenir:
+   * kimlikli satır yerinde güncellenir, kimliksiz satır sona eklenir.
    */
   variants: z
     .array(
       z.object({
-        variantId: z.string().uuid(),
-        /** Boyun BUGÜNKÜ okunur adı — kategoriyle aynı gerekçe: panel uuid göstermez. */
+        /** Yoksa YENİ boy — kimliğin kaynağı okuma araçlarıdır, uydurulamaz (araç doğrular). */
+        variantId: z.string().uuid().optional(),
+        /** Boyun okunur adı; var olanda BUGÜNKÜ ad, yenide önerilen ad — kategoriyle aynı gerekçe: panel uuid göstermez. */
         variantLabel: z.string().min(1),
         label: LocalizedTextSchema.optional(),
         netQuantity: z.number().int().positive().nullable().optional(),
@@ -379,6 +384,14 @@ export const ProductDraftPayloadSchema = ProductReviewSignalsSchema.extend({
         packedHeightMm: z.number().int().positive().nullable().optional(),
         /** Ambalajın üstünde basılı kod — onaylanınca bu boya bağlanır; kod ZATEN başkasındaysa araç önermez. */
         barcode: NewVariantBarcodeSchema.optional(),
+      }).superRefine((row, ctx) => {
+        // Yeni boyun ETİKETİ ve GRAMAJI zorunlu: etiketsiz boy müşteriye seçtirilemez, gramajsız boy satılamaz
+        // (birim fiyat ondan çıkar). Var olan boyda ikisi de kayıtta duruyor, dilekçe yalnız eksiği tamamlar.
+        if (row.variantId !== undefined) return;
+        if (!row.label) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['label'], message: 'Yeni boyda etiket zorunlu' });
+        if (row.netQuantity == null || row.netUnit == null) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['netQuantity'], message: 'Yeni boyda gramaj ve birimi zorunlu' });
+        }
       }),
     )
     .default([]),

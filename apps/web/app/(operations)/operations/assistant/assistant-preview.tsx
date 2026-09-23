@@ -858,11 +858,16 @@ function sizeValueText(key: string, value: unknown): string {
   return String(value);
 }
 
-/** Boy satırları — okunur ad dilekçede taşınır (`variantLabel`), kimlik ekrana çıkmaz. */
+/**
+ * Boy satırları — okunur ad dilekçede taşınır (`variantLabel`), kimlik ekrana çıkmaz.
+ *
+ * Kimliksiz satır YENİ boydur ve adının yanında öyle yazar: var olanın boş kutusunu doldurmak ile ürüne boy
+ * eklemek ayrı kararlardır ve ikincisi ürünün satış listesine bir satır daha koyar.
+ */
 function sizeRows(payload: ProductDraftPayload): { key: string; boy: string; next: string }[] {
-  return payload.variants.map((variant) => ({
-    key: variant.variantId,
-    boy: variant.variantLabel,
+  return payload.variants.map((variant, index) => ({
+    key: variant.variantId ?? `yeni-${index}`,
+    boy: variant.variantId ? variant.variantLabel : `${variant.variantLabel} · yeni boy`,
     next: Object.entries(variant)
       .filter(([key, value]) => key !== 'variantId' && key !== 'variantLabel' && value !== undefined)
       .map(([key, value]) => `${SIZE_FIELD_LABEL[key] ?? key}: ${sizeValueText(key, value)}`)
