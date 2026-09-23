@@ -276,26 +276,8 @@ interface KindTabProps {
 }
 
 /**
- * Yol seçici hap — v3: iki hap, `flex:1`, seçili olan zeytin dolgu (v3:26-27).
- *
- * Kitin `Chip`i KULLANILMADI: `alignSelf:'flex-start'` ile içeriği kadar genişliyor ve bu ekranda
- * iki hap ekranı EŞİT bölmek zorunda (bir sekme çiftidir, iki süzgeç çipi değil). Kite tam
- * genişlikli bir ikili seçici ihtiyacı raporlandı.
- *
- * ── ROZETİN BOZUKLUĞUNUN SEBEBİ ÖLÇÜLDÜ (MB-07) ────────────────────────────
- * Şikâyet "yatay dolgu yok, metin kenarlığa yapışıyor"du; sebep dolgu DEĞİL, `flex: 1`in hiç
- * uygulanmamasıydı: `PressableSurface` çağıranın stilini İÇ yüzeye veriyor, dış `Pressable`a
- * geçmiyor — iç yüzeyin `flex: 1`i ise dikey eksene düşüyor. Sonuç: her hap ekranın yarısını
- * değil kendi METNİ kadar yer kaplıyor ve çerçeve etiketin dibine oturuyor. Kitin kendi çözümü
- * var ve aynı tuzağın künyesi orada yazılı (`bottom-tab-bar`: "genişliği YUVA dağıtır") — yuva
- * buraya da o desenle kondu, ikinci bir yol icat edilmedi.
- *
- * Ölçüldü (Karla 700, 13.5 dp — `theme.text.control`): en uzun etiket "Französische Firma"
- * 125,9 dp; 360 dp'lik ekranda yuvanın içi 158 dp. Yani yarım-ekran yuva geri gelince etiket
- * varsayılan ölçekte rahat sığıyor; `space.lg` yatay dolgu (tasarımın aynı sayfadaki mobil
- * çipi `padding:9px` diyor, ölçek kuralıyla 10) yazı ölçeği büyütülmüş cihazda da metnin
- * çerçeveye değmesini engelliyor. v3 yatay dolguyu 0 yazabiliyor çünkü HTML'de span SATIRA
- * BÖLÜNÜR; RN'de tek satıra kilitli etiket bölünemez — o yüzden sınır iki satır.
+ * Yol seçici hap: iki hap ekranı eşit böler, kitin `Chip`i içeriği kadar genişlediği için kullanılmadı. Genişliği yuva dağıtır,
+ * çünkü `PressableSurface` stili iç yüzeye verir ve `flex: 1` orada dikey eksene düşerdi.
  */
 function KindTab({ label, active, onPress, testID }: KindTabProps) {
   return (

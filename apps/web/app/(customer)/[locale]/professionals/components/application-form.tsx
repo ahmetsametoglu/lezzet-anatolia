@@ -24,21 +24,8 @@ import type { ApplicationDefaults, ApplicationStep, Messages } from '../professi
 import { CompanyFacts } from './company-facts';
 
 /**
- * B2B başvuru formu — tasarımın "Başvuru" kutusu, iki yolu ve üç adımı.
- *
- * **TEK DOSYA, iki cihaz.** Masaüstü ve mobil düzenler bu bileşeni aynı hâliyle yerleştiriyor;
- * ikisi arasındaki fark yalnız sütun genişliği ve dolgu, yani KAPSAYICININ işi. Formu çatallamak,
- * üç adımlı bir durum makinesini iki kez yazmak olurdu — cihaz forkunun amacı yerleşimi ayırmak,
- * mantığı kopyalamak değil (aynı karar: 08.6 talep formu, 08.7 değerlendirme akışı).
- *
- * ── ÜÇ ADIM ─────────────────────────────────────────────────────────────────
- * `form` → `verify` (yalnız girişsizde) → `sent`. Girişli müşteride orta adım hiç doğmaz; tasarım
- * bunu açıkça söylüyor ("mevcut hesabınızla başvurursunuz").
- *
- * ── DENETİM İKİ YERDE VE BU TEKRAR DEĞİL ─────────────────────────────────────
- * Aynı motoru (`b2bApplicationIssues`) hem burası hem server action çağırıyor. Ekranın çağırması
- * kullanıcı içindir (hangi alan kırmızı), sunucununki güvenlik içindir (forma hiç uğramadan da
- * istek atılabilir). Kopya olan KURAL değil, çağrı.
+ * B2B başvuru formu: iki yol (SIRET · vergi numarası) ve üç adım (`form` → yalnız girişsizde `verify` → `sent`). Masaüstü ve
+ * mobil aynı bileşeni yerleştirir; denetim hem burada (hangi alan kırmızı) hem sunucuda (güvenlik) aynı motordan okunur.
  */
 interface ApplicationFormProps {
   t: Messages;
@@ -118,10 +105,7 @@ export function ApplicationForm({ t, locale, signedIn, defaults, compact = false
       }
       const record = res.data;
       setFetched(true);
-      // KDV numarası da künyenin parçası (28.08): kayıt onu `tva` alanında zaten veriyor ve
-      // taşınmadığı sürece Fransız başvurusunda `user_profiles.vat_number` boş kalıyordu — onay
-      // kartının KDV satırı daima "Numara yok" diyordu. Form onu göstermiyor (başvuranın
-      // doldurduğu bir alan değil), yalnız taşıyor.
+      // KDV numarası künyenin parçası: taşınmazsa Fransız başvurusunda onay kartının KDV satırı boş kalır. Form onu göstermez.
       setFacts({
         activityCode: record.activityCode,
         foundedYear: record.foundedYear,
@@ -152,11 +136,8 @@ export function ApplicationForm({ t, locale, signedIn, defaults, compact = false
   }
 
   /**
-   * Gönder. Girişli müşteride tek adım; girişsizde önce kod gönderilir.
-   *
-   * **Geçersiz numara başvuruyu ENGELLEMEZ** ve bu bilinçli: doğrulama bir sinyal, kapı değil.
-   * Numarası VIES'te görünmeyen meşru bir yeni şirket vardır ve kararı admin verir (`b2b-approval`
-   * o sinyali `bad` tonuyla zaten gösteriyor). Ekran uyarısını yazar, yolu kapatmaz.
+   * Gönder; girişli müşteride tek adım, girişsizde önce kod gönderilir. Doğrulanamayan numara başvuruyu engellemez, çünkü
+   * VIES'te görünmeyen meşru yeni şirket vardır ve kararı admin verir.
    */
   function submit() {
     const found = b2bApplicationIssues(input);
@@ -227,7 +208,7 @@ export function ApplicationForm({ t, locale, signedIn, defaults, compact = false
 
       {/* İki yol — tasarımın iki hapı. `radiogroup` çünkü seçim birbirini dışlıyor. */}
       <div className="flex gap-2" role="radiogroup" aria-label={t.form.title}>
-        {/* Bayrak YOK (14.09): ülke sekmenin metninde zaten yazılı ("Fransız şirketi"). */}
+        {/* Bayrak yok: ülke sekmenin metninde yazılı. */}
         <KindTab label={t.form.tabSiret} active={isSiret} onSelect={() => switchKind('siret')} />
         <KindTab label={t.form.tabVat} active={!isSiret} onSelect={() => switchKind('eu_vat')} />
       </div>
@@ -379,11 +360,8 @@ function KindTab({ label, active, onSelect }: { label: string; active: boolean; 
 }
 
 /**
- * AB numarasının doğrulama işareti — ÜÇ hâl, iki değil.
- *
- * "Sorulamadı" hâli sessizce gizlenmiyor: aday numarasının kontrol edilmediğini bilmeli, yoksa
- * ekrandaki sessizliği "geçti" diye okur. Ama kırmızı da değil — servis arızası müşterinin kusuru
- * gibi gösterilmez.
+ * Numaranın doğrulama işareti üç hâllidir: "sorulamadı" gizlenmez (sessizlik "geçti" diye okunurdu) ama kırmızı da çizilmez,
+ * çünkü servis arızası müşterinin kusuru değil.
  */
 function VatSignal({ t, checking, valid }: { t: Messages; checking: boolean; valid: boolean | null | undefined }) {
   if (checking) return <span className="text-muted">{t.form.vatChecking}</span>;
