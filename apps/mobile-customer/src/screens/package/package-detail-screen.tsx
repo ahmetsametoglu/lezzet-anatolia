@@ -23,6 +23,7 @@ import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { StockMark } from '@/components/ui/stock-mark';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addBundle, cartCount, useCart } from '@/screens/customer-kit/cart-store';
+import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 // Metin ortak pakette: web'in telefon paket detayı aynı sözlüğü okur.
@@ -65,7 +66,8 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const postalCode = onboarding?.postalCode ?? null;
   const place = usePlaceResolution(postalCode ?? '');
-  const { status, detail, retry } = usePackage(slug, locale, postalCode);
+  const pickupWarehouseId = useSelectedPickupWarehouse();
+  const { status, detail, retry } = usePackage(slug, locale, postalCode, pickupWarehouseId);
 
   const [quantity, setQuantity] = useState(1);
   const cart = useCart();

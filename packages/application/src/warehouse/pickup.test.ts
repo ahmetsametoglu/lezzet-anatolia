@@ -149,6 +149,45 @@ describe('gel-al teslimi', () => {
     expect(data?.length).toBe(1);
   });
 
+  it('mühürsüz boş kutu tezgâhta yoktur: kuyrukta sayılmaz, teslim için okutulmaz', async () => {
+    const { order, items } = await new OrderService(db).create(
+      { warehouseId, customerId, channel: 'b2c', deliveryType: 'pickup', shippingFeeCents: 0, orderedTotalCents: 1000 },
+      [{ variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }],
+    );
+    await new ReservationService(db).reserve({ orderId: order.id, warehouseId, variantId, qty: 1 });
+    await advanceOrder(db, order.id, ['confirmed']);
+    // Hazırlık artığı: açılıp mühürlenmeyen ilk kutu, mal ikinci kutuya konur (D9 turunda ölçüldü, 23.09).
+    const empty = await openBox(db, { orderId: order.id, warehouseId });
+    const filled = await openBox(db, { orderId: order.id, warehouseId });
+    if (empty.status !== 'ok' || filled.status !== 'ok') throw new Error('kutu açılamadı');
+    const sealed = await sealBox(db, { boxId: filled.box.boxId, warehouseId, picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty: 1 }] }] });
+    expect(sealed).toMatchObject({ status: 'ok', ready: true });
+    const queue = await listPickupQueue(db, { warehouseId });
+    expect(queue.orders.find((o) => o.orderId === order.id)).toMatchObject({ boxCount: 1, boxes: [{ code: filled.box.code }] });
+    const outcome = await deliverPickupOrder(db, { orderId: order.id, warehouseId, actorId: staffId, scannedBoxCodes: [filled.box.code], collection: null });
+    expect(outcome.status).toBe('ok');
+  });
+
+  it('son kutu mühürlenince "hazır" haberi koşar — gel-al müşterisi çağrılır', async () => {
+    const { order, items } = await new OrderService(db).create(
+      { warehouseId, customerId, channel: 'b2c', deliveryType: 'pickup', shippingFeeCents: 0, orderedTotalCents: 1000 },
+      [{ variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }],
+    );
+    await new ReservationService(db).reserve({ orderId: order.id, warehouseId, variantId, qty: 1 });
+    await advanceOrder(db, order.id, ['confirmed']);
+    const opened = await openBox(db, { orderId: order.id, warehouseId });
+    if (opened.status !== 'ok') throw new Error(opened.status);
+    const notified: string[] = [];
+    const sealed = await sealBox(db, {
+      boxId: opened.box.boxId,
+      warehouseId,
+      picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty: 1 }] }],
+      effects: { notifyStatus: async (_orderId: string, status: string) => void notified.push(status) },
+    });
+    expect(sealed).toMatchObject({ status: 'ok', ready: true });
+    expect(notified).toEqual(['ready']);
+  });
+
   it('hazır olmayan gel-al teslim edilemez; başka deponun siparişi de', async () => {
     const { order } = await new OrderService(db).create(
       { warehouseId, customerId, channel: 'b2c', deliveryType: 'pickup', shippingFeeCents: 0, orderedTotalCents: 1000 },

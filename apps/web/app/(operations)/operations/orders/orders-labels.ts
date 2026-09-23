@@ -56,7 +56,8 @@ export function paymentText(row: OrderRow, money: (cents: number) => string): st
   if (status === 'paid') return `Ödendi${methodText}`;
   // Vade tarihi OKUNUR biçimde ("29 Ağu 2026") — ham ISO dar kolonda kırpılıyordu (15.08).
   if (onAccount) return `Vade${row.payment.overdue ? ' geçti' : ''} · ${dueDate ? shortDate(dueDate) : '—'}`;
-  const prefix = status === 'partial' ? 'Kalan' : 'Kapıda';
+  // Gel-al'da tahsilat kapıda değil depoda: kurye değil tezgâh alır.
+  const prefix = status === 'partial' ? 'Kalan' : row.deliveryType === 'pickup' ? 'Depoda' : 'Kapıda';
   return `${prefix} ${money(openCents)}${methodText}`;
 }
 

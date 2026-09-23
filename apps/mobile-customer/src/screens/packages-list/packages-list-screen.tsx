@@ -18,6 +18,7 @@ import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onb
 import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
+import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { PhotoSurface } from '@/screens/customer-kit/photo-surface';
 import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
@@ -79,7 +80,8 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
      `undefined` olamaz; yine de `?.` ile okunur (kataloğun aynı gerekçesi). */
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const postalCode = onboarding?.postalCode ?? null;
-  const list = usePackagesList(locale, postalCode);
+  const pickupWarehouseId = useSelectedPickupWarehouse();
+  const list = usePackagesList(locale, postalCode, pickupWarehouseId);
   /* İkinci çözüm YALNIZ "rota içinde miyim" sorusunu cevaplar (depo kimliği istemciye hiç
      verilmez): cümlenin GEÇİCİ mi KALICI mı olduğunu ve bandın çizilip çizilmeyeceğini belirler. */
   const place = usePlaceResolution(postalCode ?? '');

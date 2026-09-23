@@ -37,7 +37,7 @@ interface UseHomeResult {
  * vitrin yeniden okunur: teklif ve stok yere göre değişiyor, eski ekran kalırsa müşteri başka bir
  * bölgenin fiyatına bakar.
  */
-export function useHome(locale: Locale, postalCode: string | null): UseHomeResult {
+export function useHome(locale: Locale, postalCode: string | null, pickupWarehouseId: string | null = null): UseHomeResult {
   const [status, setStatus] = useState<HomeStatus>('loading');
   const [home, setHome] = useState<Home | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,7 +49,7 @@ export function useHome(locale: Locale, postalCode: string | null): UseHomeResul
       if (options.refresh) setRefreshing(true);
       else setStatus('loading');
 
-      void fetchHome(locale, postalCode).then((result) => {
+      void fetchHome(locale, postalCode, pickupWarehouseId).then((result) => {
         if (run !== generation.current) return;
         setRefreshing(false);
         if (result.error !== null) {
@@ -61,7 +61,7 @@ export function useHome(locale: Locale, postalCode: string | null): UseHomeResul
         setStatus('ready');
       });
     },
-    [locale, postalCode],
+    [locale, pickupWarehouseId, postalCode],
   );
 
   useEffect(() => {

@@ -14,7 +14,11 @@ import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
   vitrin rayları sabit sınırlı editoryal seçkidir (CLAUDE §1).
 */
 
-export function fetchHome(locale: Locale, postalCode?: string | null): Promise<ApiResult<z.infer<typeof HomeSchema>>> {
+export function fetchHome(
+  locale: Locale,
+  postalCode?: string | null,
+  pickupWarehouseId?: string | null,
+): Promise<ApiResult<z.infer<typeof HomeSchema>>> {
   /* POSTA KODU YERİN SORUSUDUR, cevabı değil: depo kimliğini sunucu çözer (uç künyesi
      `catalog.ts` → `readPlace`). Kod yoksa parametre HİÇ gönderilmez — boş bir `postalCode=`
      sunucuda "yer bilinmiyor"a düşer ama isteği de gereksiz kirletir.
@@ -24,6 +28,8 @@ export function fetchHome(locale: Locale, postalCode?: string | null): Promise<A
      `postalCode=67000` ile `offers=2`. */
   const query = new URLSearchParams({ locale });
   if (postalCode !== undefined && postalCode !== null && postalCode !== '') query.set('postalCode', postalCode);
+  // Gel-al seçiliyken vitrin de seçilen depodan okunur (katalog/ürünle aynı yer kuralı).
+  if (pickupWarehouseId) query.set('pickupWarehouseId', pickupWarehouseId);
   /* KİMLİK VARSA GİDER, YOKSA İSTEK YİNE ATILIR (`maybeAuthorizedFetch` — künyesi tam bu hâl için
      yazılmış: "ziyaretçiye açık ama kimlikten YARARLANAN çağrı"). Giriş duvarı YOK; değişen tek
      şey sunucunun kimi okuduğu.

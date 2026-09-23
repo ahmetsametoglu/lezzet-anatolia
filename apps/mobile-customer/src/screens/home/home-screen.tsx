@@ -33,6 +33,7 @@ import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
+import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { PhotoTile } from '@/screens/customer-kit/photo-tile';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
 import { useMe, useWholesale } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
@@ -126,7 +127,9 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
 
   /* Vitrin okuması yere bağlı: posta kodu `useHome`a geçer, sunucu depoyu çözer ve fırsat rayı ancak öyle dolar; çağrı bu yüzden
      posta kodunun tanımlandığı satırdan sonra durur. */
-  const home = useHome(locale, postalCode);
+  // Gel-al seçiliyken vitrin seçilen depodan okunur; kaynak sepetle aynı seçim deposu.
+  const pickupWarehouseId = useSelectedPickupWarehouse();
+  const home = useHome(locale, postalCode, pickupWarehouseId);
   const bands = home.home?.bands ?? [];
   const featured = home.home?.featured ?? [];
   const offers = home.home?.offers ?? [];

@@ -39,7 +39,11 @@ interface UsePackagesListResult {
  *   YERİN SORUSUDUR, cevabı sunucu verir — kart "bu adrese gelir mi"yi ancak bu kodla söyleyebilir
  *   (10.08). Kod değişince liste baştan okunur: `load` ona bağlı.
  */
-export function usePackagesList(locale: Locale, postalCode: string | null): UsePackagesListResult {
+export function usePackagesList(
+  locale: Locale,
+  postalCode: string | null,
+  pickupWarehouseId: string | null = null,
+): UsePackagesListResult {
   const [status, setStatus] = useState<PackagesStatus>('loading');
   const [packages, setPackages] = useState<HomePackage[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -51,7 +55,7 @@ export function usePackagesList(locale: Locale, postalCode: string | null): UseP
       if (options.refresh) setRefreshing(true);
       else setStatus('loading');
 
-      void fetchPackages(locale, postalCode).then((result) => {
+      void fetchPackages(locale, postalCode, pickupWarehouseId).then((result) => {
         if (run !== generation.current) return;
         setRefreshing(false);
 
@@ -67,7 +71,7 @@ export function usePackagesList(locale: Locale, postalCode: string | null): UseP
         setStatus('ready');
       });
     },
-    [locale, postalCode],
+    [locale, pickupWarehouseId, postalCode],
   );
 
   useEffect(() => {

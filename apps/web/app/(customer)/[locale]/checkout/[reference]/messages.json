@@ -20,7 +20,9 @@
       "deliveryNoteBody": "Kutuda ne olduğunu kalem kalem gösteren özet, sipariş hazırlandıktan sonra e-postanıza gelir ve kutunun içinde de bulunur. Resmî fatura değildir.",
       "card": "Kart ile",
       "deliveryNote": "Teslimat özetini indir (PDF) ↓",
-      "deliveryNoteWhen": "Siparişiniz hazırlandıktan sonra"
+      "deliveryNoteWhen": "Siparişiniz hazırlandıktan sonra",
+      "duePickup": "Depoda ödenecek · {amount}",
+      "codPickup": "Depoda ödeme"
     },
     "timeline": {
       "title": "Sırada ne var",
@@ -32,7 +34,8 @@
       "placedAt": "Bugün {time}",
       "preparingAt": "Teslimattan bir gün önce mutfakta",
       "onTheWayAt": "{date} sabah",
-      "deliveredAt": "{date}"
+      "deliveredAt": "{date}",
+      "readyForPickup": "Teslime hazır"
     },
     "continue": "Alışverişe devam et",
     "notFound": "Bu siparişi bulamadık.",
@@ -74,7 +77,9 @@
       "deliveryNoteBody": "Le récapitulatif, article par article, de ce que contient le colis vous est envoyé par e-mail après la préparation ; il se trouve aussi dans le colis. Ce n'est pas une facture.",
       "card": "Par carte",
       "deliveryNote": "Télécharger le récapitulatif de livraison (PDF) ↓",
-      "deliveryNoteWhen": "Après la préparation de votre commande"
+      "deliveryNoteWhen": "Après la préparation de votre commande",
+      "duePickup": "À régler à l'entrepôt · {amount}",
+      "codPickup": "Paiement à l'entrepôt"
     },
     "timeline": {
       "title": "La suite",
@@ -86,7 +91,8 @@
       "placedAt": "Aujourd'hui {time}",
       "preparingAt": "En cuisine la veille",
       "onTheWayAt": "{date} au matin",
-      "deliveredAt": "{date}"
+      "deliveredAt": "{date}",
+      "readyForPickup": "Prête à retirer"
     },
     "continue": "Continuer mes achats",
     "notFound": "Commande introuvable.",
@@ -128,7 +134,9 @@
       "deliveryNoteBody": "Die Übersicht, Artikel für Artikel, über den Inhalt des Pakets senden wir nach der Vorbereitung per E-Mail; sie liegt auch im Paket. Es ist keine Rechnung.",
       "card": "Mit Karte",
       "deliveryNote": "Lieferübersicht herunterladen (PDF) ↓",
-      "deliveryNoteWhen": "Nach der Vorbereitung Ihrer Bestellung"
+      "deliveryNoteWhen": "Nach der Vorbereitung Ihrer Bestellung",
+      "duePickup": "Im Lager zu zahlen · {amount}",
+      "codPickup": "Zahlung im Lager"
     },
     "timeline": {
       "title": "Wie es weitergeht",
@@ -140,7 +148,8 @@
       "placedAt": "Heute {time}",
       "preparingAt": "Am Vortag in der Küche",
       "onTheWayAt": "{date} morgens",
-      "deliveredAt": "{date}"
+      "deliveredAt": "{date}",
+      "readyForPickup": "Abholbereit"
     },
     "continue": "Weiter einkaufen",
     "notFound": "Bestellung nicht gefunden.",

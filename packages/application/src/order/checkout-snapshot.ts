@@ -480,6 +480,7 @@ async function pickupSnapshot(
     shippingWarehouseId: null,
     country: ctx.warehouse.countryCode,
     zoneId: null,
+    pickup: true,
     bundles: input.bundles,
   });
   const scope = orderScopeOf(cart, false);

@@ -213,6 +213,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     country: deliveryCountry,
     // Kargo ve gel-al siparişi bir bölgeye ait değildir; bölgenin asgari sepeti onlara uygulanmaz.
     zoneId: input.shippingOrder || pickupWarehouse ? null : place.zoneId,
+    pickup: pickupWarehouse !== null,
     previousPrices,
     bundles: input.bundles,
   });

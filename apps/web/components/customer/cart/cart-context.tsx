@@ -145,7 +145,7 @@ interface CartProviderProps {
 export function CartProvider({ locale, children }: CartProviderProps) {
   // Yer sağlayıcısı BU sağlayıcıyı sarıyor (`(customer)/layout`), yani buradan okunabilir —
   // tersi mümkün değildi ve olması da gerekmiyor: sepet yeri izler, yer sepeti değil.
-  const { place, ready: placeReady, unresolved } = useDeliveryPlace();
+  const { place, ready: placeReady, unresolved, pickup } = useDeliveryPlace();
   /**
    * Yer karşılanamıyor mu — yer değişiminin farkında `no_delivery` kararı için (14.09). `ref`, çünkü
    * farkı okuma DÖNÜNCE hesaplanıyor ve o an geçerli olan değer lazım; okumayı yeniden kurmamalı.
@@ -373,7 +373,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
    * İLK KARE atlanır: sayfa açılırken yer "yok"tan "var"a geçiyor ve bu bir değişim değil, cevabın
    * gelmesi. Atlanmasaydı her açılışta bir tazeleme turu ve boş bir bildirim doğardı.
    */
-  const placeKey = place ? `${place.country}:${place.postalCode}` : '';
+  // Gel-al da bir yer değişimidir: depo seçilince sepet deponun stoğuyla yeniden okunmalı, yoksa satırlar adresin yolunu gösterir.
+  const placeKey = pickup?.selectedWarehouseId ? `pickup:${pickup.selectedWarehouseId}` : place ? `${place.country}:${place.postalCode}` : '';
   const lastPlaceKey = useRef<string | null>(null);
   useEffect(() => {
     if (!placeReady) return;

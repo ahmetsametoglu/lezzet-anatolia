@@ -8,8 +8,8 @@ import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { recordNativeEvent } from '../../lib/analytics';
 import { optionalCustomerId } from './auth';
-// Yer çözümü katalog ucunun kapısından (`readPlace`): posta kodu → depo eşlemesi TEK yerde durur.
-import { readPlace } from './catalog';
+// Yer çözümü katalog ucunun kapısından (`readPlaceOrPickup`): posta kodu → depo eşlemesi TEK yerde durur.
+import { readPlaceOrPickup } from './catalog';
 
 /**
  * Paket uçları oturumsuz gezilir ve fiyat kimliğe göre okunmaz, çünkü paket yalnız B2C'dedir ve tek fiyat taşır. Uç kural
@@ -27,7 +27,11 @@ packages.get('/packages', async (c) => {
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   const db = serviceDb();
-  const place = await readPlace(db, c.req.query('postalCode'));
+  const { place } = await readPlaceOrPickup(db, {
+    postalCode: c.req.query('postalCode'),
+    pickupWarehouseId: c.req.query('pickupWarehouseId'),
+    customerId: await optionalCustomerId(db, c.req.header('authorization')),
+  });
   const list = await readPackageCards(db, locale.data, { featuredOnly: false, place });
 
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
@@ -48,10 +52,12 @@ packages.get('/packages/:slug', async (c) => {
      `readViewer` çağırmak, o kararın açıkça "boşa bir tur" dediği şeyi yapmak olurdu. Okunan tek
      şey KİMLİK ve o da yalnız personel süzgeci için (`ANALYTICS §1`: personel ölçülmez); misafirde
      ek sorgu doğmaz, `optionalCustomerId` kimliksizde erken döner. */
-  const [place, customerId] = await Promise.all([
-    readPlace(db, c.req.query('postalCode')),
-    optionalCustomerId(db, c.req.header('authorization')),
-  ]);
+  const customerId = await optionalCustomerId(db, c.req.header('authorization'));
+  const { place } = await readPlaceOrPickup(db, {
+    postalCode: c.req.query('postalCode'),
+    pickupWarehouseId: c.req.query('pickupWarehouseId'),
+    customerId,
+  });
   const pack = await getPackageDetail(db, c.req.param('slug'), locale.data, place);
   if (!pack) return fail(c, 'package_not_found', 404);
 

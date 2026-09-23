@@ -6,12 +6,14 @@ import {
   DeliveryZoneService,
   PriceService,
   ProductService,
+  SettingsService,
   StockService,
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData, testPostalCode } from '@lezzet/database/testing';
-import type { CheckoutPickup, MeCartView } from '@lezzet/types';
+import { MIN_BASKET_KEY } from '@lezzet/application';
+import type { CatalogProductDetail, CheckoutPickup, MeCartView } from '@lezzet/types';
 import { app } from '../../app';
 import { createSignedInUser } from '../../lib/testing';
 
@@ -29,6 +31,7 @@ let zoneWarehouseId = '';
 let zoneId = '';
 let categoryId = '';
 let productId = '';
+let productSlug = '';
 let variantId = '';
 let musteriId = '';
 let token = '';
@@ -51,12 +54,19 @@ beforeAll(async () => {
 
   categoryId = (await new CategoryService(db).create({ name: { tr: `Gel-al nokta ${stamp}` } })).id;
   const { product, variants } = await new ProductService(db).create({
-    name: { tr: `Gel-al mantısı ${stamp}` },
+    // Detay ucu yalnız satıştaki ürünü döndürür; satışa açmak dört metni üç dilde ister (`product_publish_requires_all_locales`).
+    name: { tr: `Gel-al mantısı ${stamp}`, fr: `Manti retrait ${stamp}`, de: `Manti Abholung ${stamp}` },
+    description: { tr: 'El açması', fr: 'Fait main', de: 'Handgemacht' },
+    ingredients: { tr: 'Un, kıyma', fr: 'Farine, viande', de: 'Mehl, Hackfleisch' },
+    storageInstructions: { tr: 'Dondurucuda', fr: 'Au congélateur', de: 'Im Gefrierfach' },
+    allergens: [],
     categoryId,
+    status: 'active',
     shelfLifeDays: 200,
-    variants: [{ label: { tr: '1 kg' } }],
+    variants: [{ label: { tr: '1 kg', fr: '1 kg', de: '1 kg' }, netQuantity: 1000, netUnit: 'g' }],
   });
   productId = product.id;
+  productSlug = product.slug;
   variantId = variants[0]!.id;
   await new PriceService(db).setPrice({ variantId, channel: 'b2c', amountCents: 1800 });
   await new StockService(db).insert({ warehouseId: pickupWarehouseId, variantId, physicalQty: 20, expiryDate: '2027-06-01', purchasePriceCents: 500 });
@@ -68,10 +78,13 @@ beforeAll(async () => {
   token = musteri.token;
   await new AddressService(db).insert({ customerId: musteriId, recipient: 'Gel-al Nokta', phone: '+33600000001', line1: '2 rue du Test', postalCode: kod, city: 'Strasbourg' });
   await new CartService(db).replace(musteriId, [{ variantId, qty: 1, stockId: null, unitPrice: 18 }]);
+  // Gel-al deposuna depo kapsamlı bir eşik: gel-al okuması rota kuralına düşerse bu sayı sepete girer.
+  await new SettingsService(db).set(MIN_BASKET_KEY, 9900, { scopeType: 'warehouse', scopeId: pickupWarehouseId });
 });
 
 afterAll(async () => {
   await new CartService(db).replace(musteriId, []);
+  await db.from('settings').delete().eq('key', MIN_BASKET_KEY).eq('scope_type', 'warehouse').eq('scope_id', pickupWarehouseId);
   await db.from('delivery_zone').delete().eq('id', zoneId);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds, authUserIds, warehouseIds: [pickupWarehouseId, zoneWarehouseId] });
 });
@@ -100,5 +113,28 @@ describe('gel-al teklifi', () => {
   it('gel-al noktası olmayan depo kimliği yok sayılır — sepet adresle okunmaya döner', async () => {
     const view = await veri<MeCartView>(await istek(`/cart?postalCode=${kod}&pickupWarehouseId=${zoneWarehouseId}`));
     expect(view.lines[0]?.route).toBe('not_shippable_here');
+  });
+
+  it('gel-al sepeti rota tabanını uygulamaz: depo kapsamındaki 9900 eşiği gel-al okumasına girmez', async () => {
+    // Gel-al kuralı yalnız kanal satırını okur (`minBasketFor`); rota kuralına düşülseydi kapsamdaki depo eşiği (9900) sepete yazılırdı.
+    const depoyla = await veri<MeCartView>(await istek(`/cart?postalCode=${kod}&pickupWarehouseId=${pickupWarehouseId}`));
+    expect(depoyla.minBasketCents).toBeLessThan(9900);
+  });
+
+  it('ürün detayı seçili depoyla okunur: bölgede olmayan kalem gel-al deposunda satılabilir, izinsizde depo yok sayılır', async () => {
+    const detay = (q: string, bearer = token) =>
+      app.request(`/api/v1/products/${productSlug}?locale=tr${q}`, { headers: { authorization: `Bearer ${bearer}` } });
+    const adresle = await veri<CatalogProductDetail>(await detay(`&postalCode=${kod}`));
+    expect(adresle.variants[0]?.stockStatus).not.toBe('available');
+
+    const depoyla = await veri<CatalogProductDetail>(await detay(`&postalCode=${kod}&pickupWarehouseId=${pickupWarehouseId}`));
+    expect(depoyla.variants[0]?.stockStatus).toBe('available');
+
+    // İzin kapısı sunucuda: izinsiz müşterinin gönderdiği depo kimliği yok sayılır, yer posta kodundan çözülür.
+    const izinsiz = await createSignedInUser({ prefix: 'gel-al-nokta', label: 'izinsiz' });
+    authUserIds.push(izinsiz.authUserId);
+    profileIds.push(izinsiz.profileId);
+    const izinsizle = await veri<CatalogProductDetail>(await detay(`&postalCode=${kod}&pickupWarehouseId=${pickupWarehouseId}`, izinsiz.token));
+    expect(izinsizle.variants[0]?.stockStatus).not.toBe('available');
   });
 });

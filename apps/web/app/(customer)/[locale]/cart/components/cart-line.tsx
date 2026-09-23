@@ -54,7 +54,9 @@ interface CartLineProps {
 
 export function CartLineRow({ line, t, locale, compact = false, tone = 'default' }: CartLineProps) {
   const { setQty } = useCart();
-  const { unresolved } = useDeliveryPlace();
+  const { unresolved, pickup: pickupPlace } = useDeliveryPlace();
+  // Gel-al seçiliyken motorun "rota içi" cevabı depodan teslimdir; satır adrese değil depoya konuşur.
+  const atPickup = pickupPlace?.selectedWarehouseId != null;
   const pt = placeMessages[locale];
   // Satırın kimliği türüne göre doğar: pakette paketin kendisi, varyantta varyant + parti.
   const key: CartRef =
@@ -261,8 +263,8 @@ export function CartLineRow({ line, t, locale, compact = false, tone = 'default'
           line.route === 'local' ? 'text-olive-dark' : line.route === 'shipping' ? 'text-muted' : 'text-honey',
         ].join(' ')}
       >
-        <Icon name={line.route === 'local' ? 'truck' : line.route === 'shipping' ? 'box' : 'snowflake'} size={compact ? 12 : 14} />
-        {line.route === 'local' ? pt.lineInRoute : line.route === 'shipping' ? pt.lineShipping : pt.lineBlocked}
+        <Icon name={line.route === 'local' ? (atPickup ? 'pin' : 'truck') : line.route === 'shipping' ? 'box' : 'snowflake'} size={compact ? 12 : 14} />
+        {line.route === 'local' ? (atPickup ? pt.linePickup : pt.lineInRoute) : line.route === 'shipping' ? pt.lineShipping : pt.lineBlocked}
       </span>
     );
 

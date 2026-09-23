@@ -125,11 +125,16 @@ export async function readPlaceScope(): Promise<{
   zoneId: string | null;
   warehouseId: string | null;
   shippingWarehouseId: string | null;
+  /** Gel-al seçili: sepet eşiği gel-al kuralından okunur (`getCartView`). */
+  pickup: boolean;
 }> {
   const { answer, resolution, warehouseId, shippingWarehouseId, pickupWarehouse } = await readPlaceContext();
   // Gel-al: kapsam deponun ülkesi ve kendisidir; bölge yok, kargo deposu yok.
-  if (pickupWarehouse) return { country: pickupWarehouse.countryCode, zoneId: null, warehouseId: pickupWarehouse.id, shippingWarehouseId: null };
+  if (pickupWarehouse) {
+    return { country: pickupWarehouse.countryCode, zoneId: null, warehouseId: pickupWarehouse.id, shippingWarehouseId: null, pickup: true };
+  }
   return {
+    pickup: false,
     country: answer?.country ?? null,
     zoneId: resolution?.kind === 'route' ? resolution.zoneId : null,
     // Kargo deposu da buradan çıkar: `warehouseId` yalnız rota deposu olduğundan, onsuz rota dışı müşteri kargo havuzunu kaybederdi.

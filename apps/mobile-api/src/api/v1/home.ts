@@ -4,7 +4,7 @@ import { serviceDb } from '@lezzet/database';
 import { PreferredLanguageEnum } from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
-import { readPlace, readViewer } from './catalog';
+import { readPlaceOrPickup, readViewer } from './catalog';
 
 /**
  * Vitrin ucu (21.14 bağlanma etabı) — ana ekranın MÜŞTERİDEN BAĞIMSIZ bölümleri TEK turda.
@@ -31,12 +31,14 @@ home.get('/home', async (c) => {
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   const db = serviceDb();
-  /* Yer İSTEKTEN çözülür (09.08): istemci posta kodunu gönderir, sunucu depoyu bulur. Kimlikle
-     birlikte tek turda okunur — biri ötekini bekletmez. Gerekçe `catalog.ts` `readPlace`
-     künyesinde; kod yoksa iki `null` döner ve okuma depo-üstüne düşer. */
-  const [viewer, place] = await Promise.all([
-    readViewer(db, c.req.header('authorization')),
-    readPlace(db, c.req.query('postalCode')),
-  ]);
+  /* Yer İSTEKTEN çözülür (09.08): istemci posta kodunu gönderir, sunucu depoyu bulur; gel-al seçimi kimliği
+     istediğinden önce kimlik okunur. Gerekçe `catalog.ts` `readPlace`/`readPlaceOrPickup` künyesinde; kod yoksa
+     iki `null` döner ve okuma depo-üstüne düşer. */
+  const viewer = await readViewer(db, c.req.header('authorization'));
+  const { place } = await readPlaceOrPickup(db, {
+    postalCode: c.req.query('postalCode'),
+    pickupWarehouseId: c.req.query('pickupWarehouseId'),
+    customerId: viewer.customerId,
+  });
   return ok(c, await readHome(db, locale.data, place, viewer));
 });

@@ -2,7 +2,8 @@ import type { z } from 'zod';
 import { PackageDetailSchema, PackageListSchema } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
-import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
+import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
+import { maybeAuthorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
 
 /*
   PAKET OKUMASI — `/api/v1/packages/:slug`. Sayfanın TAMAMI tek turda (içerik satırları dahil);
@@ -19,19 +20,22 @@ import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client'
   sunucuda yine "yer bilinmiyor"a düşer ama isteği kirletir.
 */
 
-/** Sorgu dizesi — `catalog.ts`teki ikizinin aynısı; kod boş/`null` ise parametre hiç yazılmaz. */
-function queryOf(locale: Locale, postalCode?: string | null): string {
+/** Sorgu dizesi — `catalog.ts`teki ikizinin aynısı; kod boş/`null` ise parametre hiç yazılmaz. Gel-al deposu kimlikle
+ *  kapılanır (`maybeAuthorizedFetch`, vitrin ve katalogla aynı). */
+function queryOf(locale: Locale, postalCode?: string | null, pickupWarehouseId?: string | null): string {
   const trimmed = postalCode?.trim();
   const place = trimmed === undefined || trimmed.length === 0 ? '' : `&postalCode=${encodeURIComponent(trimmed)}`;
-  return `?locale=${encodeURIComponent(locale)}${place}`;
+  const pickup = pickupWarehouseId ? `&pickupWarehouseId=${encodeURIComponent(pickupWarehouseId)}` : '';
+  return `?locale=${encodeURIComponent(locale)}${place}${pickup}`;
 }
 
 export function fetchPackageDetail(
   slug: string,
   locale: Locale,
   postalCode?: string | null,
+  pickupWarehouseId?: string | null,
 ): Promise<ApiResult<z.infer<typeof PackageDetailSchema>>> {
-  return apiFetch(`/api/v1/packages/${encodeURIComponent(slug)}${queryOf(locale, postalCode)}`, PackageDetailSchema);
+  return maybeAuthorizedFetch(`/api/v1/packages/${encodeURIComponent(slug)}${queryOf(locale, postalCode, pickupWarehouseId)}`, PackageDetailSchema);
 }
 
 /**
@@ -42,6 +46,7 @@ export function fetchPackageDetail(
 export function fetchPackages(
   locale: Locale,
   postalCode?: string | null,
+  pickupWarehouseId?: string | null,
 ): Promise<ApiResult<z.infer<typeof PackageListSchema>>> {
-  return apiFetch(`/api/v1/packages${queryOf(locale, postalCode)}`, PackageListSchema);
+  return maybeAuthorizedFetch(`/api/v1/packages${queryOf(locale, postalCode, pickupWarehouseId)}`, PackageListSchema);
 }

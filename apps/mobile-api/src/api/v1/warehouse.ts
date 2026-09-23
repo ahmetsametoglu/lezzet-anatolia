@@ -334,6 +334,8 @@ warehouse.post('/preparation/:orderId/confirm', async (c) => {
     warehouseId: c.get('warehouseId'),
     picks: parsed.data.picks,
     actorId: c.get('staff').id,
+    // Hazır olunca haber (gel-al: "depodan alabilirsiniz"); rota/kargoda olay sessizdir.
+    effects: mobileOrderEffects(serviceDb()),
   });
 
   const body: z.input<typeof ConfirmPreparationResponseSchema> = outcome;
@@ -481,6 +483,7 @@ warehouse.post('/boxes/:boxId/seal', async (c) => {
     picks: parsed.data.picks,
     declareShort: parsed.data.declareShort,
     actorId: c.get('staff').id,
+    effects: mobileOrderEffects(serviceDb()),
   });
 
   const body: z.input<typeof SealBoxResponseSchema> = outcome;

@@ -260,7 +260,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
   const freeThresholdCents = cart.freeShippingCents;
 
   return (
-    <StepShell step={t.delivery.step} title={t.delivery.title} compact={compact}>
+    <StepShell step={t.delivery.step} title={pickup ? t.delivery.titlePickup : t.delivery.title} compact={compact}>
       {/* Teslimat türü önce söylenir, çünkü gün seçeneği ancak "kim getiriyor" bilinince anlam kazanır; kargo hata gibi yazılmaz.
           Tür bir rozet, açıklaması altında düz metin: renkli kutu bilgiyi uyarı gibi gösterirdi. */}
       <div className="flex flex-col gap-2">
@@ -487,7 +487,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
           )}
         </div>
       )}
-      {!inRoute && (
+      {!inRoute && !pickup && (
         <span className="inline-flex items-center gap-1.5 font-sans text-note font-semibold text-body">
           <Icon name="box" size={14} />
           {t.delivery.shippingDays}

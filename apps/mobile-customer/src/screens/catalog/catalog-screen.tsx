@@ -26,6 +26,7 @@ import placeMessages from '@lezzet/i18n/customer/place';
 import { usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
+import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { CatalogSkeleton } from './catalog-skeleton';
@@ -64,7 +65,9 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
      kaydı. Kök kapı kayıt okunmadan ağacı çizmez, `?.` yine de kapının kararını bu ekranın varsayımı yapmaz. */
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const postalCode = onboarding?.postalCode ?? null;
-  const catalog = useCatalog(locale, postalCode);
+  // Gel-al seçiliyken liste seçilen depodan okunur; ürün detayı aynı seçimi taşır (09.08 tutarlılık kuralı).
+  const pickupWarehouseId = useSelectedPickupWarehouse();
+  const catalog = useCatalog(locale, postalCode, pickupWarehouseId);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
 
   /* Yerin çözümü kartın cümlesini ve süzgeç satırını belirler; stok hâli sunucunun cevabından gelir, bu çözüm yalnız "rota

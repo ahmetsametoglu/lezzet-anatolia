@@ -55,7 +55,8 @@ export function parseOrdersUrl(params: RawParams): OrdersUrlState {
     tab: oneOf(params.tab, ORDER_TABS, DEFAULTS.tab),
     q: one(params.q).trim(),
     chan: oneOf(params.chan, ['b2c', 'b2b', 'all'] as const, DEFAULTS.chan),
-    del: oneOf(params.del, ['route', 'shipping', 'all'] as const, DEFAULTS.del),
+    // Tek liste (`DELIVERY_FILTERS`): panonun `del=pickup` köprüsü elle yazılmış dar listeye takılıp 'all'a düşüyordu.
+    del: oneOf(params.del, DELIVERY_FILTERS, DEFAULTS.del),
     pay: oneOf(params.pay, PAYMENT_FILTERS, DEFAULTS.pay),
     day: /^\d{4}-\d{2}-\d{2}$/.test(one(params.day)) ? one(params.day) : DEFAULTS.day,
     // Kod burada DOĞRULANMAZ, yalnız normalize edilir: "bu kod benim evrenimde var mı" sorusunun

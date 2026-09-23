@@ -93,6 +93,11 @@ export async function getCartView(
     country?: string | null;
     zoneId?: string | null;
     /**
+     * Gel-al okuması: asgari sepet gel-al kuralından (kanal satırı) okunur, rota tabanı uygulanmaz. Yoksa sepet 40 € isterken
+     * checkout aynı siparişi kabul ederdi.
+     */
+    pickup?: boolean;
+    /**
      * Paket çözümünün kapısı (`CartBundlePort`). Verilmezse paket satırı ENGELLİ durur — sepette
      * paket taşımayan yüzey (bugün mobil) bu kapıyı hiç geçmez.
      */
@@ -109,10 +114,11 @@ export async function getCartView(
     warehouseId: opts.warehouseId,
   });
   /**
-   * Asgari sepet iki değer okunur, çünkü hangisinin geçerli olduğunu sepetin içeriği söyler (`shippingOnly`).
+   * Asgari sepet iki değer okunur, çünkü hangisinin geçerli olduğunu sepetin içeriği söyler (`shippingOnly`); gel-al'da taban
+   * gel-al kuralıdır.
    */
   const [minBasketRouteCents, minBasketShippingCents, freeShippingCents, shippingTariffCents] = await Promise.all([
-    minBasketFor(settings, 'route', scope),
+    minBasketFor(settings, opts.pickup ? 'pickup' : 'route', scope),
     minBasketFor(settings, 'shipping', scope),
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
     // Tarife de aynı sebeple ortak anahtardan: kargo grubunun blokunda yazdığımız sayı, checkout'un

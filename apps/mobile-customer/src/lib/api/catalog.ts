@@ -3,6 +3,7 @@ import { CatalogCategoryListSchema, CatalogPageSchema, CatalogProductDetailSchem
 import type { Locale } from '@lezzet/i18n';
 
 import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
+import { maybeAuthorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
 
 /*
   KATALOG OKUMALARI — `/api/v1/categories` + `/api/v1/products`.
@@ -14,6 +15,9 @@ import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client'
   `locale` HER İSTEKTE zorunlu: uç dilsiz çağrıyı 400'le reddediyor (sessizce Türkçe'ye düşmesin
   diye). Değer UYGULAMANIN DİLİDİR (`lib/i18n/app-locale.ts` — kullanıcının seçimi, yoksa cihaz
   dili), ekranların kendi kararı değil: ekran metniyle ürün adı aynı kaynaktan beslenir.
+
+  ÜRÜN VE LİSTE KİMLİKLE OKUNUR (`maybeAuthorizedFetch`): gel-al deposu sunucuda müşteri izniyle kapılanır,
+  kimliksiz istek seçimi yok sayar; oturum yoksa istek yine atılır. Kategori rayı kimliksizdir.
 */
 
 /** Sorgu dizesi — verilmemiş (`undefined`) parametre YAZILMAZ; boş dize meşru bir değerdir. */
@@ -62,6 +66,8 @@ interface ProductPageQuery {
    * `home.ts`): boş bir `postalCode=` sunucuda yine "yer bilinmiyor"a düşer ama isteği kirletir.
    */
   postalCode?: string | null;
+  /** Seçili gel-al deposu (adres çekmecesindeki depo kartı): sunucu teklif kapısından geçirir, geçerse yer o depodur. */
+  pickupWarehouseId?: string | null;
   /**
    * "Adresime gönderilebilir" çipi (21.20) — kargolanabilir kalemlere daraltır.
    *
@@ -80,6 +86,7 @@ export function fetchProductDetail(
   slug: string,
   locale: Locale,
   postalCode?: string | null,
+  pickupWarehouseId?: string | null,
 ): Promise<ApiResult<z.infer<typeof CatalogProductDetailSchema>>> {
   /* POSTA KODU DETAYDA DA ZORUNLU — atlanınca ÖLÇÜLEBİLİR bir tutarsızlık doğuyor (09.08):
      katalog kodu gönderiyor, detay göndermiyordu ve aynı ürün listede 1,84 €, detayda 2,30 €
@@ -87,8 +94,12 @@ export function fetchProductDetail(
      bozulmasının ta kendisi. Teklif tutarı depoya bağlı olduğu için iki ekranın AYNI yeri
      sorması şart. */
   const trimmed = postalCode?.trim();
-  return apiFetch(
-    `/api/v1/products/${encodeURIComponent(slug)}${queryOf({ locale, ...(trimmed ? { postalCode: trimmed } : {}) })}`,
+  return maybeAuthorizedFetch(
+    `/api/v1/products/${encodeURIComponent(slug)}${queryOf({
+      locale,
+      ...(trimmed ? { postalCode: trimmed } : {}),
+      ...(pickupWarehouseId ? { pickupWarehouseId } : {}),
+    })}`,
     CatalogProductDetailSchema,
   );
 }
@@ -105,7 +116,8 @@ export function fetchProducts(query: ProductPageQuery): Promise<ApiResult<z.infe
     sort: query.sort,
     cursor: query.cursor,
     postalCode: postalCode === undefined || postalCode.length === 0 ? undefined : postalCode,
+    pickupWarehouseId: query.pickupWarehouseId ?? undefined,
     shippable: query.onlyShippable === true ? '1' : undefined,
   })}`;
-  return apiFetch(path, CatalogPageSchema);
+  return maybeAuthorizedFetch(path, CatalogPageSchema);
 }

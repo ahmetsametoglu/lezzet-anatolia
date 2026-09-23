@@ -25,7 +25,12 @@ interface UseProductResult {
   retry: () => void;
 }
 
-export function useProduct(slug: string, locale: Locale, postalCode: string | null): UseProductResult {
+export function useProduct(
+  slug: string,
+  locale: Locale,
+  postalCode: string | null,
+  pickupWarehouseId: string | null = null,
+): UseProductResult {
   const [status, setStatus] = useState<ProductStatus>('loading');
   const [detail, setDetail] = useState<CatalogProductDetail | null>(null);
   const generation = useRef(0);
@@ -33,7 +38,7 @@ export function useProduct(slug: string, locale: Locale, postalCode: string | nu
   const load = useCallback(() => {
     const run = (generation.current += 1);
     setStatus('loading');
-    void fetchProductDetail(slug, locale, postalCode).then((result) => {
+    void fetchProductDetail(slug, locale, postalCode, pickupWarehouseId).then((result) => {
       if (run !== generation.current) return;
       if (result.error !== null) {
         setStatus(result.status === 404 ? 'missing' : 'error');
@@ -42,7 +47,7 @@ export function useProduct(slug: string, locale: Locale, postalCode: string | nu
       setDetail(result.data);
       setStatus('ready');
     });
-  }, [locale, postalCode, slug]);
+  }, [locale, pickupWarehouseId, postalCode, slug]);
 
   useEffect(() => {
     load();

@@ -29,7 +29,12 @@ interface UsePackageResult {
  *   (10.08) — göndermeseydi kartında "bu adrese gönderemiyoruz" yazan paket, detayında normal
  *   görünürdü (ürün detayının 09.08'de ölçülen fiyat tutarsızlığının aynı sınıfı).
  */
-export function usePackage(slug: string, locale: Locale, postalCode: string | null): UsePackageResult {
+export function usePackage(
+  slug: string,
+  locale: Locale,
+  postalCode: string | null,
+  pickupWarehouseId: string | null = null,
+): UsePackageResult {
   const [status, setStatus] = useState<PackageStatus>('loading');
   const [detail, setDetail] = useState<PackageDetail | null>(null);
   const generation = useRef(0);
@@ -37,7 +42,7 @@ export function usePackage(slug: string, locale: Locale, postalCode: string | nu
   const load = useCallback(() => {
     const run = (generation.current += 1);
     setStatus('loading');
-    void fetchPackageDetail(slug, locale, postalCode).then((result) => {
+    void fetchPackageDetail(slug, locale, postalCode, pickupWarehouseId).then((result) => {
       if (run !== generation.current) return;
       if (result.error !== null) {
         setStatus(result.status === 404 ? 'missing' : 'error');
@@ -46,7 +51,7 @@ export function usePackage(slug: string, locale: Locale, postalCode: string | nu
       setDetail(result.data);
       setStatus('ready');
     });
-  }, [locale, postalCode, slug]);
+  }, [locale, pickupWarehouseId, postalCode, slug]);
 
   useEffect(() => {
     load();

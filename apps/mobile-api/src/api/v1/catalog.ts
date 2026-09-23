@@ -12,6 +12,7 @@ import {
   type PlaceWarehouses,
   type PricingViewer,
   availabilityOf,
+  readPickupOffer,
 } from '@lezzet/application';
 import { localizedUrl } from '@lezzet/i18n';
 import {
@@ -21,6 +22,7 @@ import {
   CatalogSortEnum,
   DEFAULT_PAGE_SIZE,
   PreferredLanguageEnum,
+  type Warehouse,
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AppEnv } from '../../context';
@@ -71,6 +73,21 @@ const MAX_PAGE_SIZE = 50;
 export async function readPlace(db: SupabaseClient, postalCode: string | undefined): Promise<PlaceWarehouses> {
   if (postalCode === undefined || postalCode.trim() === '') return UNRESOLVED_PLACE;
   return resolvePlaceWarehouses(db, postalCode);
+}
+
+/**
+ * Yer + gel-al: seçili depo teklif kapısından (`readPickupOffer` — müşteri izni × gel-al deposu) geçerse yer SEÇİLEN
+ * DEPODUR ve kargo dolgusu yoktur; geçmezse seçim yok sayılır, yer posta kodundan çözülür. Katalog, ürün, vitrin, paket ve
+ * sepet aynı kapıyı okur ki liste ile detay farklı depodan fiyat ve stok göstermesin.
+ */
+export async function readPlaceOrPickup(
+  db: SupabaseClient,
+  opts: { postalCode: string | undefined; pickupWarehouseId: string | undefined; customerId: string | null },
+): Promise<{ place: PlaceWarehouses; pickup: Warehouse | null }> {
+  const pickup =
+    opts.customerId && opts.pickupWarehouseId ? (await readPickupOffer(db, opts.customerId, opts.pickupWarehouseId)).warehouse : null;
+  const place: PlaceWarehouses = pickup ? { warehouseId: pickup.id, shippingWarehouseId: null } : await readPlace(db, opts.postalCode);
+  return { place, pickup };
 }
 
 /**
@@ -224,10 +241,12 @@ catalog.get('/products', async (c) => {
   const { locale, q, category, collection, sort, limit } = parsed.data;
 
   const db = serviceDb();
-  const [viewer, place] = await Promise.all([
-    readViewer(db, c.req.header('authorization')),
-    readPlace(db, c.req.query('postalCode')),
-  ]);
+  const viewer = await readViewer(db, c.req.header('authorization'));
+  const { place } = await readPlaceOrPickup(db, {
+    postalCode: c.req.query('postalCode'),
+    pickupWarehouseId: c.req.query('pickupWarehouseId'),
+    customerId: viewer.customerId,
+  });
   const data = await getCatalogData(db, {
     locale,
     query: {
@@ -316,10 +335,12 @@ catalog.get('/products/:slug', async (c) => {
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   const db = serviceDb();
-  const [viewer, place] = await Promise.all([
-    readViewer(db, c.req.header('authorization')),
-    readPlace(db, c.req.query('postalCode')),
-  ]);
+  const viewer = await readViewer(db, c.req.header('authorization'));
+  const { place } = await readPlaceOrPickup(db, {
+    postalCode: c.req.query('postalCode'),
+    pickupWarehouseId: c.req.query('pickupWarehouseId'),
+    customerId: viewer.customerId,
+  });
   const detail = await getProductDetail(db, {
     locale: locale.data,
     slug: c.req.param('slug'),

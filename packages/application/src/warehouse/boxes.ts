@@ -7,6 +7,7 @@ import {
   UserProfileService,
   WarehousePrinterService,
 } from '@lezzet/database';
+import { notifyStatusEffect, type OrderEffects } from '../order/effects';
 import { boxCompletion, defaultLabelSizeFor, orderBoxCode, type ShortfallSuggestion } from '@lezzet/domain-core';
 import type { Order, PreparationPick, PrinterPurpose, TransitionResult } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -171,6 +172,8 @@ export async function sealBox(
     picks: readonly PreparationPick[];
     declareShort?: boolean;
     actorId?: string | null;
+    /** Hazır olunca haber: gel-al'da müşteri çağrılır (`order_ready_for_pickup`), rota/kargoda olay sessizdir. */
+    effects?: OrderEffects;
   },
 ): Promise<SealBoxOutcome> {
   const boxes = new OrderBoxService(db);
@@ -264,6 +267,7 @@ export async function sealBox(
       actorId: input.actorId,
     });
     ready = transition.ok;
+    if (ready) await notifyStatusEffect(input.effects, box.orderId, 'ready');
   }
 
   const shortfalls = input.declareShort

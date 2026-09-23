@@ -29,6 +29,7 @@ import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { toastError, toastInfo, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
+import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { NoticeSheet, type NoticeSheetCopy } from '@/screens/customer-kit/notice-sheet';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
@@ -109,7 +110,9 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
   const t: Messages = messages[locale];
   /* Yer bağlamı katalogla aynı kaynaktan: iki ekran farklı yer sorarsa aynı ürün iki fiyatla görünür. */
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
-  const { status, detail, retry } = useProduct(slug, locale, onboarding?.postalCode ?? null);
+  // Gel-al seçiliyken stok ve fiyat seçilen depodan okunur: soğuk zincir kalem adrese gelmese de depodan alınabilir.
+  const pickupWarehouseId = useSelectedPickupWarehouse();
+  const { status, detail, retry } = useProduct(slug, locale, onboarding?.postalCode ?? null, pickupWarehouseId);
   /* "Rota içinde miyim" kapısı katalogla aynı; stok hâlini sunucu cevaplar, bu çözüm yalnız `elsewhere`in geçici kalem ile
      kalıcı bölge sebebini ayırır. */
   const place = usePlaceResolution(onboarding?.postalCode ?? '');

@@ -96,9 +96,10 @@ export async function listPickupQueue(db: Db, input: { warehouseId: string; now?
       customerName: nameOf.get(order.customerId) ?? null,
       channel: order.channel,
       lineCount: own.length,
-      boxCount: boxes.filter((box) => box.orderId === order.id).length,
+      // Mühürsüz (boş) kutu tezgâhta yoktur: hazırlık artığıdır, sayılmaz ve okutulmaz.
+      boxCount: boxes.filter((box) => box.orderId === order.id && box.sealedAt !== null).length,
       boxes: boxes
-        .filter((box) => box.orderId === order.id)
+        .filter((box) => box.orderId === order.id && box.sealedAt !== null)
         .sort((a, b) => a.boxNo - b.boxNo)
         .map((box) => ({ boxNo: box.boxNo, code: box.code })),
       readyAt,
@@ -172,7 +173,8 @@ export async function deliverPickupOrder(
   }
 
   // Kutu kapısı yazımdan önce: mal kutusuyla hazırlanır, kutusuyla müşteriye verilir (kurye kapısının aynı kuralı, 23.8).
-  const boxes = await new OrderBoxService(db).listByOrder(input.orderId);
+  // Mühürsüz (boş) kutu okutulacak kutu değildir — kuyrukla aynı süzgeç, yoksa depocu olmayan bir kutuyu arar.
+  const boxes = (await new OrderBoxService(db).listByOrder(input.orderId)).filter((box) => box.sealedAt !== null);
   const scanned = new Set(input.scannedBoxCodes.map((code) => code.trim()));
   const remaining = boxes.filter((box) => !scanned.has(box.code));
   if (boxes.length === 0 || remaining.length > 0) {

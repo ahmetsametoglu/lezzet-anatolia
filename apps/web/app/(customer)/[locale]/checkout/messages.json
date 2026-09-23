@@ -69,7 +69,8 @@
       "pointClosed": "kapalı",
       "pickup": "Depodan teslim · ücretsiz",
       "pickupBody": "Siparişiniz hazırlanınca haber veririz; teslim saatini depoyla telefonla kararlaştırırsınız.",
-      "pickupPhone": "Randevu için: {phone}"
+      "pickupPhone": "Randevu için: {phone}",
+      "titlePickup": "Teslimat"
     },
     "payment": {
       "step": "3",
@@ -231,7 +232,8 @@
       "pointClosed": "fermé",
       "pickup": "Retrait à l’entrepôt · offert",
       "pickupBody": "Nous vous prévenons dès que la commande est prête ; vous convenez de l’heure du retrait avec l’entrepôt par téléphone.",
-      "pickupPhone": "Pour convenir de l’heure : {phone}"
+      "pickupPhone": "Pour convenir de l’heure : {phone}",
+      "titlePickup": "Livraison"
     },
     "payment": {
       "step": "3",
@@ -393,7 +395,8 @@
       "pointClosed": "geschlossen",
       "pickup": "Abholung im Lager · kostenlos",
       "pickupBody": "Wir melden uns, sobald die Bestellung bereit ist; die Abholzeit vereinbaren Sie telefonisch mit dem Lager.",
-      "pickupPhone": "Für die Terminabsprache: {phone}"
+      "pickupPhone": "Für die Terminabsprache: {phone}",
+      "titlePickup": "Lieferung"
     },
     "payment": {
       "step": "3",

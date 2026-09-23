@@ -9,7 +9,6 @@ import {
   getCartView,
   getPackagesByIds,
   type PlaceWarehouses,
-  readPickupOffer,
   resolvedOrNull,
   shippingGroupFee,
 } from '@lezzet/application';
@@ -24,7 +23,7 @@ import {
 } from '@lezzet/types';
 import { readJsonBody } from '../../lib/request';
 import { fail, ok } from '../../lib/respond';
-import { readPlace } from './catalog';
+import { readPlaceOrPickup } from './catalog';
 
 /*
   Sepetin çözülmüş görünümü: aynı sepet web ve telefonda aynı tutarı göstermek zorunda, hesabın sahibi `getCartView`.
@@ -60,17 +59,19 @@ export async function readCartView(
     pickupWarehouseId?: string | undefined;
   },
 ): Promise<CartRead> {
-  const pickup =
-    opts.customerId && opts.pickupWarehouseId ? (await readPickupOffer(db, opts.customerId, opts.pickupWarehouseId)).warehouse : null;
   // Gel-al'da sepet SEÇİLEN DEPONUN stoğuyla okunur ve kargo dolgusu yoktur: depoda olmayan kalem "burada yok"tur.
-  const place: PlaceWarehouses = pickup ? { warehouseId: pickup.id, shippingWarehouseId: null } : await readPlace(db, opts.postalCode);
+  const { place, pickup } = await readPlaceOrPickup(db, {
+    postalCode: opts.postalCode,
+    pickupWarehouseId: opts.pickupWarehouseId,
+    customerId: opts.customerId,
+  });
   const view = await getCartView(db, locale, entries, {
     customerId: opts.customerId,
     previousPrices: opts.previousPrices,
     couponCode: opts.couponCode,
     warehouseId: place.warehouseId,
     shippingWarehouseId: place.shippingWarehouseId,
-    ...(pickup ? { country: pickup.countryCode, zoneId: null } : {}),
+    ...(pickup ? { country: pickup.countryCode, zoneId: null, pickup: true } : {}),
     // `db` bağlanır, başka hiçbir şey yapılmaz: port imzası (`CartBundlePort`) ile kapının imzası
     // `db` dışında birebir tutuyor ve dönüş şekli `CartBundleSource`un yapısal ikizi. Araya bir
     // eşleme yazmak, sepetin gördüğü paketi vitrinin gösterdiğinden ayırma riski demekti.

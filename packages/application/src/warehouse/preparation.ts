@@ -11,6 +11,7 @@ import {
   UserProfileService,
   VariantBarcodeService,
 } from '@lezzet/database';
+import { notifyStatusEffect, type OrderEffects } from '../order/effects';
 import { isSellableBatch, suggestFefoPicks, suggestShortfallAction, type ShortfallSuggestion } from '@lezzet/domain-core';
 import type { Order, OrderItem, PreparationPick, PreparationResult, TransitionResult } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -455,6 +456,8 @@ export async function confirmPreparation(
     warehouseId: string;
     picks: readonly PreparationPick[];
     actorId?: string | null;
+    /** Hazır olunca haber: gel-al'da müşteri çağrılır, rota/kargoda olay sessizdir. */
+    effects?: OrderEffects;
   },
 ): Promise<ConfirmOutcome> {
   const found = await new OrderService(db).getWithItems(input.orderId);
@@ -462,10 +465,10 @@ export async function confirmPreparation(
   if (found.order.warehouseId !== input.warehouseId) return { status: 'forbidden', reason: 'out_of_scope' };
 
   /* HAZIRLANAN SİPARİŞTE KUTUSUZ ONAY YOK (künye yukarıda) — rota da kargo da. Ayrım teslim
-     türünde değil HAZIRLIĞIN kendisinde: kapı satışında (`pickup`) toplama adımı hiç yok, mal
-     tezgâhtan gider. Sıra bilinçli: yazımdan ÖNCE, çünkü reddedilen bir onay hiçbir satır
+     türünde değil HAZIRLIĞIN kendisinde: yalnız kapı satışında (`order_source = door`) toplama adımı hiç yok, mal
+     tezgâhtan gider; gel-al da `pickup` türüdür ama kutuyla hazırlanır ve D9 kutuyu okutur. Sıra bilinçli: yazımdan ÖNCE, çünkü reddedilen bir onay hiçbir satır
      bırakmamalı. */
-  if (found.order.deliveryType !== 'pickup') return { status: 'box_required' };
+  if (found.order.orderSource !== 'door') return { status: 'box_required' };
 
   const violation = await findPinnedViolation(db, input.orderId, found.items, input.picks);
   if (violation) return { status: 'pinned_violation', ...violation };
@@ -496,6 +499,7 @@ export async function confirmPreparation(
       actorId: input.actorId,
     });
     ready = transition.ok;
+    if (ready) await notifyStatusEffect(input.effects, input.orderId, 'ready');
   }
 
   return { status: 'ok', items: result.items, ready, shortfalls };

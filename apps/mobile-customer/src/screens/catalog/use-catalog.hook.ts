@@ -127,7 +127,7 @@ interface UseCatalogResult {
  * Yerin SORUSUDUR, cevabı sunucu verir — vitrinle aynı desen (`use-home.hook.ts`). Kod değişince
  * katalog yeniden okunur: eski liste kalırsa müşteri başka bir bölgenin fiyatına bakar.
  */
-export function useCatalog(locale: Locale, postalCode: string | null): UseCatalogResult {
+export function useCatalog(locale: Locale, postalCode: string | null, pickupWarehouseId: string | null = null): UseCatalogResult {
   const [status, setStatus] = useState<CatalogStatus>('loading');
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [filters, setFilters] = useState<CatalogFilters>({
@@ -178,6 +178,7 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
           sort: next.sort,
           onlyShippable: next.onlyShippable,
           postalCode,
+          pickupWarehouseId,
         }),
       ]);
       if (run !== generation.current) return;
@@ -205,7 +206,7 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
       setCursor(pageResult.data.nextCursor);
       setStatus('ready');
     },
-    [locale, postalCode],
+    [locale, pickupWarehouseId, postalCode],
   );
 
   /* Etkinin okuduğu GÜNCEL süzgeçler. Ref, çünkü etkinin bağımlılığı olsalardı her çip dokunuşu
@@ -312,6 +313,7 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
       onlyShippable: filters.onlyShippable,
       cursor,
       postalCode,
+      pickupWarehouseId,
     }).then(
       (result) => {
         // Bu kuyruk artık BAŞKA bir listenin kuyruğu olabilir (süzgeç değişti) — yazılmaz.
@@ -325,7 +327,7 @@ export function useCatalog(locale: Locale, postalCode: string | null): UseCatalo
         setCursor(result.data.nextCursor);
       },
     );
-  }, [cursor, filters, loadingMore, locale, postalCode, status]);
+  }, [cursor, filters, loadingMore, locale, pickupWarehouseId, postalCode, status]);
 
   return {
     status,

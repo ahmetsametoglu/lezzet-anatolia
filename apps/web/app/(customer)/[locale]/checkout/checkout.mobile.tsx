@@ -1,6 +1,7 @@
 'use client';
 
 import type { PaymentMethod } from '@lezzet/types';
+import { brand } from '@lezzet/brand';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { Chip } from '@/components/customer/phone-kit/chip';
 import { ThumbStack } from '@/components/customer/phone-kit/thumb-stack';
@@ -57,6 +58,9 @@ export function CheckoutMobile(props: CheckoutViewProps) {
   const payment = snapshot.payment;
   const summary = snapshot.summary;
   const isRoute = delivery?.deliveryType === 'route';
+  // Gel-al adres seçicide seçilir (sepet); burada depo, telefon ve fatura adresi olarak kalan adres gösterilir (native ikizi).
+  const isPickup = delivery?.deliveryType === 'pickup';
+  const pickedWarehouse = snapshot.pickup?.warehouses.find((w) => w.id === snapshot.pickup?.selectedWarehouseId) ?? null;
   const dates = delivery?.availableDates ?? [];
 
   // Döküm ve toplam aynı okumadan: özet varsa satırlar da indirim de ondan, yoksa ikisi de sepetten, asla karışık. Adres
@@ -116,9 +120,14 @@ export function CheckoutMobile(props: CheckoutViewProps) {
       key: 'cod',
       method: 'cash',
       onAccount: false,
-      label: copy.payment.onDelivery,
+      label: isPickup ? copy.payment.atPickup : copy.payment.onDelivery,
       // Kapalı yolun SEBEBİ yazılır: "yok" ile "bu tutarda yok" ayrı cümleler — ikincisinde müşteri sepeti küçültebilir.
-      body: codReason === null ? copy.payment.onDeliveryBody : (copy.payment.codBlocked[codReason as keyof CheckoutCopy['payment']['codBlocked']] ?? copy.payment.onDeliveryBody),
+      body:
+        codReason === null
+          ? isPickup
+            ? copy.payment.atPickupBody
+            : copy.payment.onDeliveryBody
+          : (copy.payment.codBlocked[codReason as keyof CheckoutCopy['payment']['codBlocked']] ?? copy.payment.onDeliveryBody),
       available: methods.includes('cash') && codReason === null,
     },
     ...(methods.includes('bank_transfer')
@@ -175,7 +184,24 @@ export function CheckoutMobile(props: CheckoutViewProps) {
           <>
             <section className="flex flex-col gap-2">
               <Eyebrow text={copy.address.eyebrow} />
-              {selectedAddress ? (
+              {pickedWarehouse ? (
+                <div className="flex flex-col gap-2" data-testid="checkout-pickup-place">
+                  <PhoneOptionRow
+                    label={t.address.pickupTitle}
+                    description={`${pickedWarehouse.name} · ${pickedWarehouse.addressLine}`}
+                    selected
+                    trailing={<TextAction label={t.address.change} href="/cart" />}
+                  />
+                  <p className="font-sans text-micro leading-[1.45] text-muted">
+                    {t.address.pickupNote.replace('{phone}', brand.contact.phoneDisplay)}
+                  </p>
+                  {selectedAddress && (
+                    <p className="font-sans text-micro leading-[1.45] text-muted">
+                      {t.address.billing.replace('{address}', `${addressTitle(selectedAddress)} · ${addressLine(selectedAddress)}`)}
+                    </p>
+                  )}
+                </div>
+              ) : selectedAddress ? (
                 <PhoneOptionRow
                   label={addressTitle(selectedAddress)}
                   description={addressLine(selectedAddress)}
@@ -186,7 +212,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                 // Buraya adressiz gelinmez (sepetin kapısı) — derin bağlantıyla gelen için cümle + çıkış.
                 <Note description={t.address.missing} action={<TextAction label={t.address.missingCta} href="/cart" />} />
               )}
-              {selectedAddress && <p className="font-sans text-micro leading-[1.45] text-muted">{t.address.inCartNote}</p>}
+              {selectedAddress && !pickedWarehouse && <p className="font-sans text-micro leading-[1.45] text-muted">{t.address.inCartNote}</p>}
             </section>
 
             {/* Engel değil bilgi: o kalemler bu siparişe girmiyor, sepette bekliyor. */}
@@ -200,22 +226,34 @@ export function CheckoutMobile(props: CheckoutViewProps) {
             {delivery !== null && (
               <section className="flex flex-col gap-2">
                 <Eyebrow text={copy.delivery.eyebrow} />
+                {/* Gel-al'da kapı/kargo satırları çizilmez; depo bloğu konuşur (native ikizi). */}
+                {isPickup && (
+                  <p className="font-sans text-body-sm leading-[1.6] text-body" data-testid="checkout-pickup-phone">
+                    {copy.delivery.pickupBody}
+                    <br />
+                    {copy.delivery.pickupPhone.replace('{phone}', brand.contact.phoneDisplay)}
+                  </p>
+                )}
                 {/* Yol ADRESİN CEVABIDIR, seçim değil: iki satır da çizilir (hangisi geçerli, öteki NEDEN değil) ama
                     dokunuş bir şey değiştirmez — satırlar düğme değil. Kapalı yolun sebebi kırmızı. */}
-                <PhoneOptionRow
-                  label={copy.delivery.door}
-                  description={isRoute ? copy.delivery.doorBody.replace('{fee}', feeLabel) : copy.delivery.doorUnavailable}
-                  selected={isRoute}
-                  disabled={!isRoute}
-                  descriptionTone={isRoute ? 'muted' : 'danger'}
-                />
-                <PhoneOptionRow
-                  label={copy.delivery.shipping}
-                  description={isRoute ? copy.delivery.shippingUnavailable : copy.delivery.shippingBody.replace('{fee}', feeLabel)}
-                  selected={!isRoute}
-                  disabled={isRoute}
-                  descriptionTone={isRoute ? 'danger' : 'muted'}
-                />
+                {!isPickup && (
+                  <>
+                    <PhoneOptionRow
+                      label={copy.delivery.door}
+                      description={isRoute ? copy.delivery.doorBody.replace('{fee}', feeLabel) : copy.delivery.doorUnavailable}
+                      selected={isRoute}
+                      disabled={!isRoute}
+                      descriptionTone={isRoute ? 'muted' : 'danger'}
+                    />
+                    <PhoneOptionRow
+                      label={copy.delivery.shipping}
+                      description={isRoute ? copy.delivery.shippingUnavailable : copy.delivery.shippingBody.replace('{fee}', feeLabel)}
+                      selected={!isRoute}
+                      disabled={isRoute}
+                      descriptionTone={isRoute ? 'danger' : 'muted'}
+                    />
+                  </>
+                )}
                 {delivery.blocked && <Note tone="error" description={t.delivery.blocked} />}
                 {/* Komşu daveti gün seçiminin hemen üstünde, çünkü cümle o seçimin gerekçesi. Cümle seçime bağlı: başka güne
                     geçen müşteriye "o gün sizin için seçili" demek yalan olurdu. */}
@@ -245,7 +283,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                       {copy.delivery.dayLabel.replace('{day}', formatDeliveryDate(dates[0] ?? '', locale))}
                     </p>
                   ))}
-                {!isRoute && !delivery.blocked && <CarrierChoice {...props} />}
+                {!isRoute && !isPickup && !delivery.blocked && <CarrierChoice {...props} />}
               </section>
             )}
 

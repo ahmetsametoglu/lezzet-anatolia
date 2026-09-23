@@ -146,9 +146,10 @@ export function PaymentCard({ t, shared, locale, view, compact }: ConfirmationVi
           ? t.payment.onAccount.replace('{amount}', total)
           : view.paymentMethod === 'online'
             ? (view.placed ? t.payment.paid : checkoutMessages[locale].confirmed.pending).replace('{amount}', total)
-            : t.payment.due.replace('{amount}', total)}
+            : (view.pickup ? t.payment.duePickup : t.payment.due).replace('{amount}', total)}
       </span>
-      <Chip>{view.onAccount ? t.payment.credit : view.paymentMethod === 'online' ? t.payment.online : t.payment.cod}</Chip>
+      {/* Gel-al'da kapıda ödeme depoda ödemedir: aynı kural, başka yer. */}
+      <Chip>{view.onAccount ? t.payment.credit : view.paymentMethod === 'online' ? t.payment.online : view.pickup ? t.payment.codPickup : t.payment.cod}</Chip>
       {/* Kart künyesi: son dört hane ödeme sağlayıcısından çekilecek (12) — bugün saklamıyoruz,
           uydurma rakam yazmaktansa yalnız aracı söyleriz. */}
       {view.paymentMethod === 'online' && view.placed && <span className="font-sans text-body-sm text-body">{t.payment.card}</span>}
@@ -171,12 +172,16 @@ export function PaymentCard({ t, shared, locale, view, compact }: ConfirmationVi
  */
 export function TimelineCard({ t, locale, view, compact }: ConfirmationViewProps) {
   const day = view.deliveryDate ? formatDeliveryDate(view.deliveryDate, locale) : null;
-  const steps = [
-    { label: t.timeline.placed, when: t.timeline.placedAt.replace('{time}', formatTime(view.createdAt, locale)), done: true },
-    { label: t.timeline.preparing, when: day ? t.timeline.preparingAt : null, done: false },
-    { label: t.timeline.onTheWay, when: day ? t.timeline.onTheWayAt.replace('{date}', day) : null, done: false },
-    { label: t.timeline.delivered, when: day ? t.timeline.deliveredAt.replace('{date}', day) : null, done: false },
-  ];
+  const placed = { label: t.timeline.placed, when: t.timeline.placedAt.replace('{time}', formatTime(view.createdAt, locale)), done: true };
+  // Gel-al'da "yolda" hiç olmaz: üç adım, hazır olunca müşteri çağrılır (müşteri çizgisiyle aynı kural).
+  const steps = view.pickup
+    ? [placed, { label: t.timeline.readyForPickup, when: null, done: false }, { label: t.timeline.delivered, when: null, done: false }]
+    : [
+        placed,
+        { label: t.timeline.preparing, when: day ? t.timeline.preparingAt : null, done: false },
+        { label: t.timeline.onTheWay, when: day ? t.timeline.onTheWayAt.replace('{date}', day) : null, done: false },
+        { label: t.timeline.delivered, when: day ? t.timeline.deliveredAt.replace('{date}', day) : null, done: false },
+      ];
 
   return (
     <Card compact={compact} gap="sm">
