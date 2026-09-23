@@ -97,6 +97,7 @@
 
               <div style="display:flex;gap:9px">
                 <div style="flex:1;border:1px solid #e6e7e1;background:#fff;border-radius:8px;padding:9px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font:500 11.5px 'Karla';color:#3a3f37">Kapıda ödeme</span><span style="font:600 10px 'Space Grotesk';color:{{ det.codFg }};background:{{ det.codBg }};border-radius:6px;padding:2px 8px">{{ det.cod }}</span></div>
+                <div style="flex:1;border:1px solid #e6e7e1;background:#fff;border-radius:8px;padding:9px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font:500 11.5px 'Karla';color:#3a3f37">Gel-al izni</span><span style="font:600 10px 'Space Grotesk';color:{{ det.pickupFg }};background:{{ det.pickupBg }};border-radius:6px;padding:2px 8px">{{ det.pickup }}</span></div>
                 <div style="flex:1;border:1px solid #e6e7e1;background:#fff;border-radius:8px;padding:9px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font:500 11.5px 'Karla';color:#3a3f37">İndirim</span><span style="font:500 12.5px 'IBM Plex Mono';color:#22251f">{{ det.discount }}</span></div>
               </div>
 
@@ -231,7 +232,7 @@ class Component extends DCLogic {
       vadeState: overdue ? 'Gecikmiş' : 'Açık', vadeFg: overdue ? '#a5443c' : '#4a6121',
       vadeBd: overdue ? '#e2c4c0' : '#cdd8b6', vadeBg: overdue ? '#fbe9e7' : '#eef4e2',
       limit:'500 €', balance: overdue ? '312 €' : '0 €', balFg: overdue ? '#a5443c' : '#22251f', term:'30 gün', overdue,
-      cod: overdue ? 'Kapalı' : 'Açık', codFg: overdue ? '#a5443c' : '#4a6121', codBg: overdue ? '#fbe9e7' : '#eef4e2',
+      cod: overdue ? 'Kapalı' : 'Açık', codFg: overdue ? '#a5443c' : '#4a6121', codBg: overdue ? '#fbe9e7' : '#eef4e2', pickup: isB2B ? 'Açık' : 'Kapalı', pickupFg: isB2B ? '#4a6121' : '#6a7065', pickupBg: isB2B ? '#eef4e2' : '#eef0ea',
       discount: isB2B ? '%8' : '—',
       recentOrders: [
         { no:'#2451', date:'22 Tem', amt:'312,00 €', pay:'Vade geçti', pFg:'#a5443c', pBg:'#fbe9e7' },

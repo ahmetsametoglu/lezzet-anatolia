@@ -51,7 +51,7 @@
           <span onClick="{{ c.select }}" style="font:600 12px 'Space Grotesk';color:{{ c.fg }};background:{{ c.bg }};border:1px solid {{ c.bd }};border-radius:14px;padding:5px 12px;cursor:pointer">{{ c.label }}</span>
         </sc-for>
         <span style="width:1px;height:18px;background:#dfe1d9;margin:0 4px"></span>
-        <span style="font:500 12px 'Karla';color:#6a7065;border:1px dashed #d2d4cb;border-radius:14px;padding:5px 12px">+ teslim türü</span>
+        <span style="font:500 12px 'Karla';color:#6a7065;border:1px dashed #d2d4cb;border-radius:14px;padding:5px 12px">+ teslim türü · Rota / Kargo / Gel-al</span>
         <span style="font:500 12px 'Karla';color:#6a7065;border:1px dashed #d2d4cb;border-radius:14px;padding:5px 12px">+ tahsilat</span>
         <span onClick="{{ cycleDepo }}" style="font:600 12px 'Space Grotesk';color:{{ depoChipFg }};background:{{ depoChipBg }};border:1px solid {{ depoChipBd }};border-radius:14px;padding:5px 11px;cursor:pointer;display:flex;align-items:center;gap:6px">Depo: {{ depoChipLabel }}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span>
         <span style="margin-left:auto;font:500 12px 'IBM Plex Mono';color:#8b9086">bugün · 24 Tem ▾</span>
@@ -183,7 +183,7 @@ class Component extends DCLogic {
       mk('#2450','Restaurant Anatolie','6 koli','466,00','B2B','Rota · 16:00','Rue du Fossé','onay','Onaylandı','Kapıda 466 € · nakit','#9a6416'),
       mk('#2449','M. Leroy','1 paket','24,50','B2C','Rota · 14:30','Quai des Bateliers','yolda','Yolda','Kapıda 24,50 € · kart','#9a6416'),
       mk('#2448','Épicerie du Port','2 koli','188,00','B2B','Rota · 16:30','Rue de Zurich','yolda','Yolda','Ödendi · havale','#4a6121'),
-      mk('#2447','B. Meunier','3 paket','38,50','B2C','Kargo','Colissimo · yarın','onay','Onaylandı','Ödendi · online','#4a6121'),
+      mk('#2447','B. Meunier','3 paket','38,50','B2C','Kargo','Colissimo · yarın','onay','Onaylandı','Ödendi · online','#4a6121'), mk('#2444','Restaurant Oberjaegerhof','2 koli','196,00','B2B','Gel-al · 3 gündür hazır','Strasbourg deposu','ready','Hazır','Ödendi · havale','#4a6121'),
       mk('#2446','Sofia R.','Fıstıklı baklava 1kg','34,00','B2C','Rota · 15:00','Neudorf','teslim','Teslim','Ödendi · online','#4a6121'),
       mk('#2445','Traiteur Yıldız','8 koli','624,00','B2B','Rota · 17:00','Cronenbourg','hazir','Hazırlanıyor','Vade 30 Tem','#3a3f37'),
       mk('#2444','K. Demir','2 paket','52,00','B2C','Rota · 14:15','Esplanade','teslim','Teslim','Ödendi · online','#4a6121'),

@@ -54,6 +54,9 @@
                 <sc-if value="{{ d.kargo }}" hint-placeholder-val="{{ true }}">
                   <span style="font:600 10.5px 'Space Grotesk';color:#2f5a78;background:#e6eef3;border:1px solid #bcd0e0;border-radius:6px;padding:3px 9px;display:flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v13H1z"></path><path d="M14 8h4l3 3v5h-7"></path><circle cx="5.5" cy="18.5" r="2"></circle><circle cx="17.5" cy="18.5" r="2"></circle></svg>Kargo çıkışı</span>
                 </sc-if>
+              <sc-if value="{{ d.pickup }}" hint-placeholder-val="{{ false }}">
+                <span style="font:600 10.5px 'Space Grotesk';color:#5a4a8a;background:#ece8f5;border:1px solid #cfc6e6;border-radius:6px;padding:3px 9px;display:flex;align-items:center;gap:5px">🏬 Gel-al noktası</span>
+              </sc-if>
                 <span style="font:600 10.5px 'Space Grotesk';color:{{ d.stFg }};background:{{ d.stBg }};border-radius:6px;padding:3px 9px">{{ d.status }}</span>
               </div>
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -150,6 +153,11 @@
                 <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Kargo çıkışı</span>
                 <span style="font:600 14px 'Space Grotesk'">Evet · Fransa</span>
                 <span style="font:400 10.5px 'Karla';color:#8b9086">ülke başına tek</span>
+              </div>
+              <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Gel-al noktası</span>
+                <span style="font:600 14px 'Space Grotesk'">Evet</span>
+                <span style="font:400 10.5px 'Karla';color:#8b9086">izinli müşteri depodan alır · araçta olmaz</span>
               </div>
               <div style="background:#fff;border:1px solid #e6e7e1;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:3px">
                 <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">Son hareket</span>
@@ -401,17 +409,17 @@ class Component extends DCLogic {
     };
     const open = () => this.setState({ modal:'detay' });
     const depolar = [
-      { order:'1', code:'STR', name:'Strasbourg', country:'Fransa', addr:'14 Rue de la Course · 67000 Strasbourg', kargo:true, status:'Aktif', tone:'ok',
+      { order:'1', code:'STR', name:'Strasbourg', country:'Fransa', addr:'14 Rue de la Course · 67000 Strasbourg', kargo:true, pickup:true, status:'Aktif', tone:'ok',
         stats:[chip('2 bölge · 12 posta kodu'), chip('4 personel'), chip('128 varyant · 296 parti'), chip('1 sevkiyat yolda','b')] },
-      { order:'2', code:'COL', name:'Colmar', country:'Fransa', addr:'7 Route de Rouffach · 68000 Colmar', kargo:false, status:'Aktif', tone:'ok',
+      { order:'2', code:'COL', name:'Colmar', country:'Fransa', addr:'7 Route de Rouffach · 68000 Colmar', kargo:false, pickup:false, status:'Aktif', tone:'ok',
         stats:[chip('1 bölge · 9 posta kodu'), chip('2 personel'), chip('41 varyant · 88 parti'), chip('2 yaklaşan tarihli','w')] },
-      { order:'3', code:'KEHL', name:'Kehl', country:'Almanya', addr:'Hafenstraße 22 · 77694 Kehl', kargo:false, status:'Aktif', tone:'ok',
+      { order:'3', code:'KEHL', name:'Kehl', country:'Almanya', addr:'Hafenstraße 22 · 77694 Kehl', kargo:false, pickup:false, status:'Aktif', tone:'ok',
         stats:[chip('1 bölge (pasif)'), chip('1 personel'), chip('18 varyant · 30 parti')],
         flag:'Almanya\'da kargo çıkış deposu yok — bu ülkede bölge dışı müşteriye satış yapılamaz. Rolü bu depoya vermek için künyesinden işaretleyin.' },
-      { order:'4', code:'MUL', name:'Mulhouse', country:'Fransa', addr:'3 Rue de l\'Illberg · 68100 Mulhouse', kargo:false, status:'Kurulumu eksik', tone:'warn',
+      { order:'4', code:'MUL', name:'Mulhouse', country:'Fransa', addr:'3 Rue de l\'Illberg · 68100 Mulhouse', kargo:false, pickup:false, status:'Kurulumu eksik', tone:'warn',
         stats:[chip('bölge yok','r'), chip('personel yok','r'), chip('stok yok')],
         flag:'Açık ama ulaşılamaz tesis: ne bağlı bölgesi ne kargo çıkışı var — hiçbir sipariş buraya çözülmez. Kapsamlı personeli olmadığı için mal kabul ve hazırlık da yapılamaz.' },
-      { order:'5', code:'OFB', name:'Offenburg', country:'Almanya', addr:'Zeller Straße 5 · 77654 Offenburg', kargo:false, status:'Kapalı', tone:'off',
+      { order:'5', code:'OFB', name:'Offenburg', country:'Almanya', addr:'Zeller Straße 5 · 77654 Offenburg', kargo:false, pickup:false, status:'Kapalı', tone:'off',
         stats:[chip('geçmiş kayıtlarda 214 sipariş'), chip('seçicilerde görünmez')] },
     ].map(d => {
       const t = { ok:['#4a6121','#eef4e2','#e6e7e1','#fff','1'], warn:['#8a6410','#fdf1e3','#ecd9b4','#fffdf9','1'], off:['#6a7065','#eef0ea','#e6e7e1','#f8f9f5','.72'] }[d.tone];

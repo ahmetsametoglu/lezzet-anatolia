@@ -773,6 +773,33 @@
       <span style="font:400 13px/1.7 'Karla';color:#8a8270">Teklifli (indirimli) kalem özeldir: near-expiry teklifi bir partiye bağlıdır ve parti tek yerdedir — yeni yerde geçerli olmayabilir. Kalem normal fiyata döner ve bu, mevcut <strong>"fiyat değişti"</strong> akışından geçer (arttıysa açıkça sorulur). Liste fiyatı yere göre asla değişmez. Checkout'ta <strong>adres kazanır</strong>: adresin posta kodu şeritteki koddan farklıysa sipariş adrese göre çözülür ve sepet o an yeniden değerlendirilir — sürpriz checkout'un içinde, açık mesajla yaşanır. Kullanıldığı sayfalar: Sepet · Checkout · Hesap (adres değişimi).</span>
     </div>
   </div>
+
+  <!-- §7C GEL-AL (İZİNLİ MÜŞTERİ) -->
+  <div style="background:#fff;border:1px solid #e3dcc8;border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font:600 26px 'Lora';color:#343b41">§7C · Gel-al — izinli müşteri depodan alır <span style="font:400 15px 'Karla';color:#b05c2e">(yeni, 23.09)</span></h2>
+    <span style="font:400 14px/1.7 'Karla';color:#6d7261;max-width:900px">Gel-al herkese açık bir teslim şekli <strong>değildir</strong>: yalnız operasyonun gel-al izni verdiği müşteri görür ve yalnız gel-al noktası olan depodan alınır. §7B'nin "müşteri depoyu görmez" kuralı burada bilinçli olarak bükülür: gel-al seçen müşteri deponun adını ve adresini görür, çünkü oraya gidecektir. Randevu sistemde yoktur; saat depoyla <strong>telefonla</strong> kararlaştırılır. Teslim şekli ve durum dışında hiçbir parça değişmez: sepet, kalem hâlleri, kargo grubu ve ödeme kartları §7/§7B'deki gibidir.</span>
+
+    <div style="display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #f0ead9;padding-bottom:22px">
+      <span style="font:700 17px 'Karla'">K40 · Depodan teslim al — üçüncü teslim şekli <span style="font:400 13px 'Karla';color:#8a8270">(koşullu — yalnız izinli müşteride)</span></span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Checkout'ta adresin cevabının (kapıya · kargo) yanında üçüncü yol. Seçilince <strong>gün kartı yok, kargo yok, teslimat ücreti 0</strong>; seçili adres fatura adresi olarak kalır. Ödeme online ya da depoda; depoda ödeme kapıda ödeme kurallarına tabidir (tavan, müşteri izni, nakit uyarısı) ve kart etiketi "Depoda öde"dir. Adres teslimat bölgesinin dışındayken de seçilebilir: mal depodan alınır, adres yalnız faturadır.</span>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <span style="background:#efdfc2;border:1.5px solid #343b41;border-radius:14px;padding:10px 14px;display:flex;flex-direction:column;gap:2px;min-width:260px"><span style="font:700 14px 'Karla';color:#343b41">🏬 Depodan teslim al</span><span style="font:400 12.5px 'Karla';color:#6d7261">Strasbourg deposu · 14 Rue de la Course · ücretsiz · saati telefonla</span></span>
+        <span style="background:#f0e9d6;color:#6d7261;font:700 12px 'Karla';padding:4px 12px;border-radius:12px">🚪 Depoda öde · nakit, kart, çek</span>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı yerler: Checkout (web + mobil) · Sipariş alındı (teslimat kartı: depo adı + adres + telefon, gün yok). Masaüstünde seçimin yeri ayrı kararla çizilir; mobilde teslimat seçenek listesinin üçüncü satırıdır.</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font:700 17px 'Karla'">K41 · Teslime hazır — gel-al durumu ve üç adımlı çizgi</span>
+      <span style="font:400 14px 'Karla';color:#6d7261">Gel-al siparişinde "Yolda" hiç olmaz; onun yerine <strong>"Teslime hazır"</strong> vardır (aktif, yeşil aile). Zaman çizgisi üç adımdır: Alındı · Teslime hazır · Teslim edildi. Teslimat kartı "🏬 Depodan teslim — depo adı, adres, telefon"; hazır olunca e-posta ve uygulama içi bildirim "siparişiniz hazır, depodan alabilirsiniz" der. Bekleme süresi dolan sipariş operasyonun işidir; müşteriye yeni bir hâl gösterilmez.</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="background:#eef2e2;color:#5f7a2c;font:700 12px 'Karla';padding:4px 12px;border-radius:12px">● Teslime hazır</span>
+        <span style="background:#f0e9d6;color:#6d7261;border:1px solid #e0d8c2;font:700 11.5px 'Karla';padding:2px 10px;border-radius:11px">🏬 Depodan teslim</span>
+        <span style="background:#f0e9d6;color:#6d7261;font:700 12px 'Karla';padding:4px 12px;border-radius:12px">🚪 Depoda ödenecek</span>
+      </div>
+      <span style="font:400 13px 'Karla';color:#8a8270">Kullanıldığı yerler: Siparişler (rozet + tür çipi) · Sipariş detay (çizgi + teslimat kartı) · e-posta "Teslime hazır" · Canlı örnek: <a href="../01-musteri/ekranlar/Musteri - Siparis Detay.dc.html">Sipariş Detay mokapları</a></span>
+    </div>
+  </div>
   </div>
 </div>
 </x-dc>
