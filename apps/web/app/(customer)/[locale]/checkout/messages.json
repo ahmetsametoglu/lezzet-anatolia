@@ -63,7 +63,13 @@
       "pointDistance": "{distance} uzaklıkta",
       "pointYourAddress": "Adresiniz",
       "pointHoursUnknown": "Açılış saatleri bildirilmiyor",
-      "pointClosed": "kapalı"
+      "pointClosed": "kapalı",
+      "modeAddress": "Adresime teslim",
+      "modeAddressBody": "Kapıya ya da kargoyla",
+      "modePickup": "Depodan teslim al",
+      "pickup": "Depodan teslim · ücretsiz",
+      "pickupBody": "Siparişiniz hazırlanınca haber veririz; teslim saatini depoyla telefonla kararlaştırırsınız.",
+      "pickupPhone": "Randevu için: {phone}"
     },
     "payment": {
       "step": "3",
@@ -86,7 +92,9 @@
       "openPayment": "Önceki ödemeniz alındı ya da bankada işleniyor — sizi o siparişin sayfasına götürüyoruz.",
       "transfer": "Havale ile öde",
       "transferBody": "Fatura ile hesabımıza",
-      "onlineRequired": "Bu tutarda online ödeme gerekir."
+      "onlineRequired": "Bu tutarda online ödeme gerekir.",
+      "codPickup": "Depoda öde",
+      "codPickupBody": "Teslim alırken nakit, kart veya çek"
     },
     "summary": {
       "submit": "Siparişi onayla",
@@ -121,7 +129,9 @@
       "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin.",
       "warehouse_unresolved": "Adresiniz için teslimat noktası belirlenemedi. Ekibimize haber verildi — lütfen bizimle iletişime geçin.",
       "price_changed": "Siz ekrandayken bazı fiyatlar değişti: {detail}. Sipariş vermeden önce görmenizi istedik — onaylıyorsanız tekrar \"Siparişi tamamla\"ya basın.",
-      "cart_changed": "Siz ekrandayken sepetiniz değişti — sipariş verilmedi. Yandaki özet güncellendi; uygunsa tekrar \"Siparişi tamamla\"ya basın."
+      "cart_changed": "Siz ekrandayken sepetiniz değişti — sipariş verilmedi. Yandaki özet güncellendi; uygunsa tekrar \"Siparişi tamamla\"ya basın.",
+      "pickup_not_allowed": "Depodan teslim hesabınız için açık değil — adresinize teslimi seçin.",
+      "pickup_warehouse_unavailable": "Seçtiğiniz depo şu an gel-al için kapalı. Sayfayı yenileyip yeniden seçin."
     },
     "eyebrow": "sepetiniz · ödeme",
     "shippingEyebrow": "kargo siparişi · ayrı ödeme",
@@ -215,7 +225,13 @@
       "pointDistance": "à {distance}",
       "pointYourAddress": "Votre adresse",
       "pointHoursUnknown": "Horaires non communiqués",
-      "pointClosed": "fermé"
+      "pointClosed": "fermé",
+      "modeAddress": "Livraison à mon adresse",
+      "modeAddressBody": "À domicile ou par colis",
+      "modePickup": "Retirer à l’entrepôt",
+      "pickup": "Retrait à l’entrepôt · offert",
+      "pickupBody": "Nous vous prévenons dès que la commande est prête ; vous convenez de l’heure du retrait avec l’entrepôt par téléphone.",
+      "pickupPhone": "Pour convenir de l’heure : {phone}"
     },
     "payment": {
       "step": "3",
@@ -238,7 +254,9 @@
       "openPayment": "Votre paiement précédent a été reçu ou est en cours de traitement — nous vous emmenons vers cette commande.",
       "transfer": "Payer par virement",
       "transferBody": "Sur notre compte, avec facture",
-      "onlineRequired": "À ce montant, le paiement en ligne est requis."
+      "onlineRequired": "À ce montant, le paiement en ligne est requis.",
+      "codPickup": "Payer à l’entrepôt",
+      "codPickupBody": "Espèces, carte ou chèque au retrait"
     },
     "summary": {
       "submit": "Confirmer la commande",
@@ -273,7 +291,9 @@
       "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer.",
       "warehouse_unresolved": "Nous n'avons pas pu déterminer le point de livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter.",
       "price_changed": "Certains prix ont changé pendant que vous étiez sur cette page : {detail}. Nous tenions à vous le montrer avant de valider — si cela vous convient, appuyez à nouveau sur « Finaliser la commande ».",
-      "cart_changed": "Votre panier a changé pendant que vous étiez sur cette page — la commande n'a pas été passée. Le récapitulatif est à jour ; si cela vous convient, appuyez à nouveau sur « Finaliser la commande »."
+      "cart_changed": "Votre panier a changé pendant que vous étiez sur cette page — la commande n'a pas été passée. Le récapitulatif est à jour ; si cela vous convient, appuyez à nouveau sur « Finaliser la commande ».",
+      "pickup_not_allowed": "Le retrait à l’entrepôt n’est pas ouvert pour votre compte — choisissez la livraison à votre adresse.",
+      "pickup_warehouse_unavailable": "L’entrepôt choisi n’accepte pas le retrait pour le moment. Rechargez la page et choisissez à nouveau."
     },
     "eyebrow": "votre panier · commande",
     "shippingEyebrow": "commande en colis · paiement séparé",
@@ -367,7 +387,13 @@
       "pointDistance": "{distance} entfernt",
       "pointYourAddress": "Ihre Adresse",
       "pointHoursUnknown": "Öffnungszeiten nicht angegeben",
-      "pointClosed": "geschlossen"
+      "pointClosed": "geschlossen",
+      "modeAddress": "Lieferung an meine Adresse",
+      "modeAddressBody": "An die Tür oder per Paket",
+      "modePickup": "Im Lager abholen",
+      "pickup": "Abholung im Lager · kostenlos",
+      "pickupBody": "Wir melden uns, sobald die Bestellung bereit ist; die Abholzeit vereinbaren Sie telefonisch mit dem Lager.",
+      "pickupPhone": "Für die Terminabsprache: {phone}"
     },
     "payment": {
       "step": "3",
@@ -390,7 +416,9 @@
       "openPayment": "Ihre vorherige Zahlung ist eingegangen oder wird bearbeitet — wir bringen Sie zu dieser Bestellung.",
       "transfer": "Per Überweisung",
       "transferBody": "Auf unser Konto, mit Rechnung",
-      "onlineRequired": "In dieser Höhe ist Online-Zahlung erforderlich."
+      "onlineRequired": "In dieser Höhe ist Online-Zahlung erforderlich.",
+      "codPickup": "Im Lager bezahlen",
+      "codPickupBody": "Bar, Karte oder Scheck bei der Abholung"
     },
     "summary": {
       "submit": "Bestellung bestätigen",
@@ -425,7 +453,9 @@
       "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
       "warehouse_unresolved": "Für Ihre Adresse konnte kein Lieferpunkt bestimmt werden. Unser Team wurde benachrichtigt — bitte kontaktieren Sie uns.",
       "price_changed": "Während Sie auf dieser Seite waren, haben sich einige Preise geändert: {detail}. Wir wollten es Ihnen vor der Bestellung zeigen — wenn das für Sie in Ordnung ist, tippen Sie erneut auf „Bestellung abschließen“.",
-      "cart_changed": "Ihr Warenkorb hat sich geändert, während Sie auf dieser Seite waren — die Bestellung wurde nicht aufgegeben. Die Übersicht ist aktualisiert; wenn das für Sie in Ordnung ist, tippen Sie erneut auf „Bestellung abschließen“."
+      "cart_changed": "Ihr Warenkorb hat sich geändert, während Sie auf dieser Seite waren — die Bestellung wurde nicht aufgegeben. Die Übersicht ist aktualisiert; wenn das für Sie in Ordnung ist, tippen Sie erneut auf „Bestellung abschließen“.",
+      "pickup_not_allowed": "Die Abholung im Lager ist für Ihr Konto nicht freigeschaltet — wählen Sie die Lieferung an Ihre Adresse.",
+      "pickup_warehouse_unavailable": "Das gewählte Lager bietet die Abholung derzeit nicht an. Laden Sie die Seite neu und wählen Sie erneut."
     },
     "eyebrow": "Ihr Warenkorb · Kasse",
     "shippingEyebrow": "Versandbestellung · separate Zahlung",

@@ -291,6 +291,10 @@ function rejectionMessage(outcome: Exclude<Awaited<ReturnType<typeof placeOrder>
      */
     case 'payment_required':
       return 'Sipariş taslak olarak açıldı ama ödeme adımı bu ekranda tamamlanamaz — siparişler listesinden takip edin.';
+    // Elle giriş gel-al seçmez (adres yolu); bu iki ret ancak istek elle kurulursa doğar ve adlandırılır ki sessiz kalmasın.
+    case 'pickup_not_allowed':
+    case 'pickup_warehouse_unavailable':
+      return 'Gel-al seçimi elle sipariş girişinde yok — sipariş adrese teslim olarak yazılır, yeniden deneyin.';
   }
   /**
    * `default` YOK ve bu bilinçli: bir toplayıcı dal, motora eklenen YENİ bir ret hâlini sessizce

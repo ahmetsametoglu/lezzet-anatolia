@@ -1,11 +1,12 @@
-import { AddressService, type Db } from '@lezzet/database';
+import { AddressService, UserProfileService, WarehouseService, type Db } from '@lezzet/database';
 import {
   resolveLocalizedText,
   type Address,
-  type AddressDeliveryType,
+  type DeliveryType,
   type LocalizedText,
   type PaymentMethod,
   type PreferredLanguage,
+  type Warehouse,
 } from '@lezzet/types';
 import { readPendingNeighborInvites } from '../customer/neighbor';
 import { getCartView, type CartBundlePort } from '../cart/read';
@@ -19,6 +20,7 @@ import { quoteShipping } from '../shipping/quote';
 import { sendcloudProvider, shippingProviderConfigured } from '../shipping/provider';
 import type { ShippingRateProvider } from '../shipping/port';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
+import { warehouseAddressLine } from '../warehouse/pickup';
 
 /**
  * Checkout ekranının ADIM VERİSİ (08.13) — **uygulama katmanı orkestrasyonu**.
@@ -58,8 +60,8 @@ export interface CheckoutSnapshot {
   addresses: Address[];
   /** Seçili adrese göre çözülmüş teslimat; adres seçilmemişse null. */
   delivery: {
-    /** Checkout `pickup` üretemez — yerinde satışın adresi yok (`AddressDeliveryType`, 26.08). */
-    deliveryType: AddressDeliveryType;
+    /** Adresin cevabı (`route`/`shipping`) ya da müşterinin seçtiği gel-al (`pickup`); gel-al'da gün, davet ve engel boş. */
+    deliveryType: DeliveryType;
     availableDates: string[];
     requiresDateChoice: boolean;
     /**
@@ -131,7 +133,7 @@ export interface CheckoutSnapshot {
     codBlockedReason: string | null;
     cashWarning: boolean;
     shippingFeeCents: number;
-    shippingFreeReason: 'route' | 'threshold' | null;
+    shippingFreeReason: 'route' | 'threshold' | 'pickup' | null;
     /**
      * Ücret NEREDEN geldi (07.12): `quote` canlı teklif · `tariff` sabit tarife · `null` ücret yok.
      * Ekran bunu SÖYLEMEK zorunda — teklif alınamadığında sessizce tarifeye düşmek, müşteriye
@@ -209,6 +211,16 @@ export interface CheckoutSnapshot {
      */
     fingerprint: string;
   } | null;
+  /**
+   * Gel-al teklifi: yalnız `pickup_allowed` müşteriye ve yalnız gel-al noktası olan tesisler (`pickup_enabled`) için dolu;
+   * ikisinden biri yoksa `null` ve ekran kartı hiç çizmez. Depo adresi müşteriye burada görünür — "depo gösterilmez"
+   * kuralının tek istisnası, çünkü müşteri oraya gidecek. `selectedWarehouseId` isteğin seçtiği depodur; tanınmayan kimlik
+   * düşer, sunucu ADRESİN cevabına döner.
+   */
+  pickup: {
+    warehouses: { id: string; name: string; addressLine: string }[];
+    selectedWarehouseId: string | null;
+  } | null;
 }
 
 export interface CheckoutSnapshotInput {
@@ -245,6 +257,11 @@ export interface CheckoutSnapshotInput {
   /** Kargo tarifesi sağlayıcısı — test sahte sağlayıcı geçirir, üretimde varsayılan kullanılır. */
   rateProvider?: ShippingRateProvider | null;
   /**
+   * Gel-al seçimi: müşterinin malı alacağı depo. Taslakla AYNI alan, aynı gerekçe (`shippingOrder` gibi açık seçim,
+   * türetilmez): ekran gel-al gösterirken taslak adresin cevabını açsaydı müşteri kasada reddedilirdi.
+   */
+  pickupWarehouseId?: string | null;
+  /**
    * Paket çözümünün kapısı (`CartBundlePort`) — sepet okumasına olduğu gibi geçilir. Verilmezse
    * paket satırı ENGELLİ durur; sepette paket taşımayan yüzey bu kapıyı hiç geçmez.
    */
@@ -262,7 +279,11 @@ export async function readCheckoutSnapshot(
 ): Promise<CheckoutSnapshot> {
   const addresses = await new AddressService(db).listByCustomer(input.customerId);
   const selected = addresses.find((a) => a.id === input.addressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0];
-  if (!selected) return { addresses, delivery: null, shipping: null, payment: null, summary: null };
+  // Gel-al teklifi adresten bağımsız okunur: kart adres seçilmeden de görünsün ki müşteri yolu bilsin; ama teslimat
+  // ve ödeme yine adresi bekler — gel-al'da da adres fatura adresi olarak siparişe yazılır.
+  const pickup = await readPickupOffer(db, input.customerId, input.pickupWarehouseId ?? null);
+  if (!selected) return { addresses, delivery: null, shipping: null, payment: null, summary: null, pickup: pickup.offer };
+  if (pickup.warehouse) return pickupSnapshot(db, locale, input, { addresses, offer: pickup.offer, warehouse: pickup.warehouse });
 
   // ── YER ÖNCE, SEPET SONRA (07.15'in kalanı, arka-uç talebi 09.08) ────────
   // Sepet yeri ÇEREZTEN alıyordu (`readPlaceWarehouses`) ve ayar kapsamının ülke/bölge eksenleri
@@ -427,38 +448,120 @@ export async function readCheckoutSnapshot(
             // Eşik geçildiyse ücret sıfır ve koli eve gider: seçimin tutara etkisi yok, o yüzden sorulmuyor.
             mode: free ? ('auto' as const) : ('customer' as const),
           },
-    payment: {
-      methods: options.methods,
-      creditAvailable: options.creditAvailable,
-      codBlockedReason: options.codBlockedReason,
-      cashWarning: options.cashWarning,
-      shippingFeeCents: options.shippingFeeCents,
-      shippingFreeReason: options.shippingFreeReason,
-      shippingFeeSource: options.shippingFeeSource,
-      orderTotalCents: options.orderTotalCents,
-      minBasketOk: options.minBasketOk,
-      missingForMinBasketCents: options.missingForMinBasketCents,
-      // Eşiği hangi yerin belirlediği: seçili adresin kendisi. Bölge ADI değil posta kodu +
-      // şehir, çünkü müşteri kendi bölgemizin adını ("Strasbourg Merkez") bilmiyor — adresini
-      // biliyor. `resolveDelivery` zaten bölge adını taşımıyor; ikinci bir okuma açmaya da
-      // gerek yok.
-      placeLabel: `${selected.postalCode} ${selected.city}`,
-    },
+    // Eşiği hangi yerin belirlediği: seçili adresin kendisi. Bölge ADI değil posta kodu +
+    // şehir, çünkü müşteri kendi bölgemizin adını ("Strasbourg Merkez") bilmiyor — adresini
+    // biliyor. `resolveDelivery` zaten bölge adını taşımıyor; ikinci bir okuma açmaya da
+    // gerek yok.
+    payment: paymentSlice(options, `${selected.postalCode} ${selected.city}`),
     /* DÖKÜM VE TOPLAM AYNI OKUMADAN (kullanıcı kararı 21.08) — arayüzdeki `summary` künyesi
        gerekçenin tamamını taşıyor. Burada yeni bir hesap YOK: `scope` yukarıda zaten çözüldü ve
        `orderTotalCents` de ondan çıktı. Tek yaptığımız, ekranın kendi kopyasından çizmek zorunda
        kalmaması için o kümeyi de döndürmek. */
-    summary: {
-      lines: scope.lines.map(summaryLineOf),
-      subtotalCents: scope.subtotalCents,
-      // Kapsamın payı kadar — sepetin toplam indirimi değil (alan künyesi).
-      discount: discountOf(cart.discount, scope.subtotalCents - scope.basketCents, locale),
-      /* Kapsam dışında kalanlar: sepette olup siparişe girmeyenler. Karşılaştırma NESNE KİMLİĞİYLE
-         (`includes`) — `orderScopeOf` süzgeci aynı dizinin elemanlarını döndürüyor, yani kimlik
-         güvenilir ve ada/indekse dayanan bir eşleştirmeye gerek yok. */
-      excludedLines: cart.lines.filter((l) => !scope.lines.includes(l)).map(summaryLineOf),
-      fingerprint: cartFingerprint(input.entries),
+    summary: summarySlice(cart, scope, input.entries, locale),
+    pickup: pickup.offer,
+  };
+}
+
+/**
+ * Gel-al teklifi: müşteri izni × gel-al noktası olan tesisler. İki okuma, ikisi de kapı: `pickup_allowed` olmayan müşteriye
+ * teklif yok, gel-al deposu olmayan kurulumda da yok. `requested` listede değilse seçim düşer — istemcinin söylediği depo
+ * hiçbir zaman olduğu gibi yazılmaz.
+ */
+async function readPickupOffer(
+  db: Db,
+  customerId: string,
+  requested: string | null,
+): Promise<{ offer: CheckoutSnapshot['pickup']; warehouse: Warehouse | null }> {
+  const customer = await new UserProfileService(db).getById(customerId);
+  if (!customer?.pickupAllowed) return { offer: null, warehouse: null };
+  const warehouses = await new WarehouseService(db).list({ activeOnly: true, kind: 'facility', pickupEnabled: true });
+  if (warehouses.length === 0) return { offer: null, warehouse: null };
+  const warehouse = warehouses.find((w) => w.id === requested) ?? null;
+  return {
+    offer: {
+      warehouses: warehouses.map((w) => ({ id: w.id, name: w.name, addressLine: warehouseAddressLine(w) })),
+      selectedWarehouseId: warehouse?.id ?? null,
     },
+    warehouse,
+  };
+}
+
+/**
+ * Gel-al anlık görüntüsü: sepet SEÇİLEN DEPONUN stoğuyla okunur ve bölünmez (kargo deposu verilmez — depoda olmayan kalem
+ * "burada yok"tur, taslak onu reddeder). Ödeme rotayla aynı kurallardan çıkar (depoda ödeme = kapıda ödeme); gün, davet
+ * ve kargo teklifi yoktur. Ayar kapsamı deponun ülkesi ve kendisidir.
+ */
+async function pickupSnapshot(
+  db: Db,
+  locale: PreferredLanguage,
+  input: CheckoutSnapshotInput,
+  ctx: { addresses: Address[]; offer: CheckoutSnapshot['pickup']; warehouse: Warehouse },
+): Promise<CheckoutSnapshot> {
+  const cart = await getCartView(db, locale, input.entries, {
+    customerId: input.customerId,
+    couponCode: input.couponCode,
+    warehouseId: ctx.warehouse.id,
+    shippingWarehouseId: null,
+    country: ctx.warehouse.countryCode,
+    zoneId: null,
+    bundles: input.bundles,
+  });
+  const scope = orderScopeOf(cart, false);
+  const options = await resolveCheckoutPayment(db, {
+    customerId: input.customerId,
+    deliveryType: 'pickup',
+    quotedFeeCents: null,
+    basketCents: scope.basketCents,
+    subtotalCents: scope.subtotalCents,
+    lines: scope.lines.map((l) => ({ totalCents: l.lineTotalCents ?? 0, vatRate: l.vatRate })),
+    country: ctx.warehouse.countryCode,
+    zoneId: null,
+    warehouseId: ctx.warehouse.id,
+  });
+  return {
+    addresses: ctx.addresses,
+    delivery: { deliveryType: 'pickup', availableDates: [], requiresDateChoice: false, neighborInvites: [], blocked: false },
+    shipping: null,
+    payment: paymentSlice(options, ctx.warehouse.name),
+    summary: summarySlice(cart, scope, input.entries, locale),
+    pickup: ctx.offer,
+  };
+}
+
+/** Ödeme dilimi — iki yol (adres, gel-al) aynı motor cevabını aynı şekle döker; `placeLabel` eşiğin dayandığı yerdir. */
+function paymentSlice(
+  options: Awaited<ReturnType<typeof resolveCheckoutPayment>>,
+  placeLabel: string,
+): NonNullable<CheckoutSnapshot['payment']> {
+  return {
+    methods: options.methods,
+    creditAvailable: options.creditAvailable,
+    codBlockedReason: options.codBlockedReason,
+    cashWarning: options.cashWarning,
+    shippingFeeCents: options.shippingFeeCents,
+    shippingFreeReason: options.shippingFreeReason,
+    shippingFeeSource: options.shippingFeeSource,
+    orderTotalCents: options.orderTotalCents,
+    minBasketOk: options.minBasketOk,
+    missingForMinBasketCents: options.missingForMinBasketCents,
+    placeLabel,
+  };
+}
+
+/** Özet dilimi — döküm ve toplam aynı okumadan (alan künyesi); kapsam dışı satırlar nesne kimliğiyle ayrılır. */
+function summarySlice(
+  cart: Awaited<ReturnType<typeof getCartView>>,
+  scope: ReturnType<typeof orderScopeOf>,
+  entries: readonly CartEntry[],
+  locale: PreferredLanguage,
+): NonNullable<CheckoutSnapshot['summary']> {
+  return {
+    lines: scope.lines.map(summaryLineOf),
+    subtotalCents: scope.subtotalCents,
+    // Kapsamın payı kadar — sepetin toplam indirimi değil (alan künyesi).
+    discount: discountOf(cart.discount, scope.subtotalCents - scope.basketCents, locale),
+    excludedLines: cart.lines.filter((l) => !scope.lines.includes(l)).map(summaryLineOf),
+    fingerprint: cartFingerprint(entries),
   };
 }
 

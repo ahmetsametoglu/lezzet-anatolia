@@ -125,6 +125,8 @@ checkout.get('/', async (c) => {
     addressId: c.req.query('addressId') ?? null,
     couponCode: c.req.query('coupon') ?? null,
     shippingOrder: c.req.query('group') === 'shipping',
+    // Gel-al seçimi de bir SEÇİMDİR (`shippingOrder` gibi): tanınmayan kimliği kapı düşürür, adresin cevabına döner.
+    pickupWarehouseId: c.req.query('pickupWarehouseId') ?? null,
     /* Paket kapısı okumada da geçilir: geçilmezse paket satırı fiyatsız kalır ve ekrandaki toplam tahsil edilecek tutarla ayrışır. */
     bundles: (ids, bundleLocale, place) => getPackagesByIds(db, ids, bundleLocale, place),
   });
@@ -140,6 +142,7 @@ checkout.get('/', async (c) => {
     // aynı hesaptan çıktı (`summary` künyesi), burada yeniden şekillendirilmesi ikinci bir kaynak
     // açardı — düzeltilen arıza tam olarak buydu.
     summary: snapshot.summary,
+    pickup: snapshot.pickup,
   };
   return ok(c, CheckoutSnapshotSchema.parse(body));
 });
@@ -176,8 +179,9 @@ checkout.post('/order', async (c) => {
   // Önceki kart ödemesi geçtiyse ya da bankada işleniyorsa yeni ödeme açılmaz, yoksa aynı sepet için iki kez para çekilirdi.
   const open = await settleOpenPayment(db, customerId);
   if (open) {
+    // Tür daraltılmaz: checkout artık gel-al da açıyor ve açık ödeme o siparişe de ait olabilir.
     const order = await new OrderService(db).getById(open.orderId);
-    if (order && order.deliveryType !== 'pickup') {
+    if (order) {
       const result: z.input<typeof CheckoutOrderResultSchema> = {
         status: 'open_payment',
         state: open.state,

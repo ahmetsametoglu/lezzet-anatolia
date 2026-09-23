@@ -83,11 +83,15 @@ export async function loadCheckoutAction(
    * Referans projede bunun tersi kayda geçmiş bir sömürü kapısıydı (`priceEur=0` yükü).
    */
   shippingOptionCode: string | null = null,
+  /** Gel-al seçimi (depo kimliği) — `shippingOrder` gibi açık seçim; sunucu izni ve depoyu doğrular, tanımadığını düşürür. */
+  pickupWarehouseId: string | null = null,
 ): Promise<CustomerResult<CheckoutSnapshot>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     const customerId = await currentCustomerId();
-    if (!customerId) return { data: { addresses: [], delivery: null, shipping: null, payment: null, summary: null }, errorKey: null };
+    if (!customerId) {
+      return { data: { addresses: [], delivery: null, shipping: null, payment: null, summary: null, pickup: null }, errorKey: null };
+    }
 
     // Sıra, iki tur teslimat çözümü ve kargo siparişinin bölgesizliği — hepsi kapının kendi
     // künyesinde (`@lezzet/application`, `order/checkout-snapshot`). Uç yalnız kimliği çözer,
@@ -99,6 +103,7 @@ export async function loadCheckoutAction(
       couponCode,
       shippingOrder,
       shippingOptionCode,
+      pickupWarehouseId,
       // Paket türetmesi hâlâ web'te (`lib/storefront/packages.ts`), terfisi ayrı bir adım — kapı
       // geçiliyor ki bugünkü paket davranışı birebir korunsun.
       bundles: getPackagesByIds,
@@ -213,6 +218,8 @@ export async function confirmCheckoutAction(input: {
   /** Kargo servisi ve teslim noktası seçimi; sunucu doğrular, fiyatı kendisi hesaplar. */
   shippingOptionCode?: string | null;
   servicePointId?: string | null;
+  /** Gel-al deposu; sunucu izni ve depoyu doğrular (`pickup_not_allowed` · `pickup_warehouse_unavailable`). */
+  pickupWarehouseId?: string | null;
   /**
    * **Ekranın gösterdiği sepetin imzası** — anlık görüntünün `summary.fingerprint`ı, olduğu gibi
    * geri gelir (21.08). Sepet iki yüzeyde paylaşıldığı için son okuma ile bu dokunuş arasında
@@ -254,6 +261,7 @@ export async function confirmCheckoutAction(input: {
       shippingOrder: input.shippingOrder,
       shippingOptionCode: input.shippingOptionCode,
       servicePointId: input.servicePointId,
+      pickupWarehouseId: input.pickupWarehouseId,
       expectedCartFingerprint: input.expectedCartFingerprint,
       // Paket türetmesi hâlâ web'te (`lib/storefront/packages.ts`), terfisi ayrı bir adım.
       bundles: getPackagesByIds,

@@ -52,6 +52,8 @@ export function useCheckout(
   addressId: string | null,
   coupon: string | null,
   shippingOrder: boolean,
+  /** Gel-al seçimi — adres gibi bir girdi: değişince anlık görüntü yeniden okunur. */
+  pickupWarehouseId: string | null,
 ): UseCheckoutResult {
   const [status, setStatus] = useState<CheckoutStatus>('loading');
   const [snapshot, setSnapshot] = useState<CheckoutSnapshot | null>(null);
@@ -67,7 +69,7 @@ export function useCheckout(
     if (loaded.current) setRefreshing(true);
     else setStatus('loading');
 
-    const result = await fetchCheckout({ locale, addressId, coupon, shippingOrder });
+    const result = await fetchCheckout({ locale, addressId, coupon, shippingOrder, pickupWarehouseId });
     if (run !== generation.current) return;
 
     setRefreshing(false);
@@ -83,7 +85,7 @@ export function useCheckout(
     setSnapshot(result.data);
     setStatus('ready');
     loaded.current = true;
-  }, [addressId, coupon, locale, shippingOrder]);
+  }, [addressId, coupon, locale, shippingOrder, pickupWarehouseId]);
 
   useEffect(() => {
     void load();

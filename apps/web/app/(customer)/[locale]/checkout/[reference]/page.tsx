@@ -1,13 +1,14 @@
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import { OrderService, ProductService, ProductVariantService, UserProfileService, serviceDb } from '@lezzet/database';
+import { OrderService, ProductService, ProductVariantService, UserProfileService, WarehouseService, serviceDb } from '@lezzet/database';
+import { brand } from '@lezzet/brand';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
 import { getSessionUser } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
-import { imageOf, neighborInviteUrl, remainingNeighborInviteUses, tryOpenNeighborInvite } from '@lezzet/application';
+import { imageOf, neighborInviteUrl, remainingNeighborInviteUses, tryOpenNeighborInvite, warehouseAddressLine } from '@lezzet/application';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { orderIdOrNull } from '@/lib/order/order-id';
 import { routing } from '@/i18n/routing';
@@ -46,6 +47,8 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   if (!found || !profile || found.order.customerId !== profile.id) notFound();
 
   const { order, items } = found;
+  // Gel-al'da onay kartı DEPONUN adresini ve randevu numarasını yazar — müşteri oraya gidecek.
+  const pickupWarehouse = order.deliveryType === 'pickup' ? await new WarehouseService(db).getById(order.warehouseId) : null;
   /**
    * Sipariş kesinleşti mi (taslak değil, iptal değil); "ödendi" ile aynı şey değil, kapıda ödenecek
    * sipariş de kesinleşmiştir.
@@ -102,6 +105,9 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     awaitingCard,
     paymentState: payment ? paymentStateOf(payment.status) : null,
     onRoute: order.deliveryType === 'route',
+    pickup: pickupWarehouse
+      ? { warehouseName: pickupWarehouse.name, addressLine: warehouseAddressLine(pickupWarehouse), phoneDisplay: brand.contact.phoneDisplay }
+      : null,
     deliveryDate: order.deliveryDate,
     onAccount: order.onAccount,
     paymentMethod: order.paymentMethod,

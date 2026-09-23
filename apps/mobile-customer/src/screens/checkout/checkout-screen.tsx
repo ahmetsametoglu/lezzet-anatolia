@@ -40,6 +40,7 @@ import { isNameMissing, isPhoneMissing } from '@/screens/customer-kit/profile-ga
 import { newOrderKey } from './order-key';
 import { deliveryLabelOf, paymentFailureMessage, rejectionMessage } from './order-result-copy';
 import { CheckoutSkeleton } from './checkout-skeleton';
+import { brand } from '@lezzet/brand';
 import { useCheckout } from './use-checkout.hook';
 import messages from '@lezzet/i18n/customer/checkout';
 
@@ -86,6 +87,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /** Hesap ekranıyla aynı ortak form; kapalıyken `null`. */
   const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
   const [deliveryDate, setDeliveryDate] = useState<string | null>(null);
+  /* Gel-al seçimi — yalnız sunucu teklif ediyorsa (`snapshot.pickup`) anlamlı; seçim sunucuya gider, tür oradan döner. */
+  const [pickupWarehouseId, setPickupWarehouseId] = useState<string | null>(null);
   const [paymentKey, setPaymentKey] = useState<string | null>(null);
   const [marketing, setMarketing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -105,7 +108,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /* Tekrar anahtarı açılışta bir kez üretilir ve seçimler değişse de korunur: çift dokunuş ve ağın yeniden denemesi aynı niyettir. */
   const [orderKey] = useState(newOrderKey);
 
-  const checkout = useCheckout(locale, addressId, cart.couponCode, shippingOrder);
+  const checkout = useCheckout(locale, addressId, cart.couponCode, shippingOrder, pickupWarehouseId);
   const snapshot = checkout.snapshot;
   const addresses = snapshot?.addresses ?? [];
   const delivery = snapshot?.delivery ?? null;
@@ -132,6 +135,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   };
 
   const isRoute = delivery?.deliveryType === 'route';
+  const isPickup = delivery?.deliveryType === 'pickup';
+  const pickupOffer = snapshot?.pickup ?? null;
   const dates = delivery?.availableDates ?? [];
 
   /* Komşu daveti cihazdan değil kişiden gelir; süzgeç sunucuda, seçilemeyen gün hiç görünmez. */
@@ -165,10 +170,16 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       key: 'cod',
       method: 'cash',
       onAccount: false,
-      label: t.payment.onDelivery,
+      // Gel-al'da aynı yol "depoda ödeme"dir: nakit/kart tezgâhta, kural kapıdakiyle aynı.
+      label: isPickup ? t.payment.atPickup : t.payment.onDelivery,
       // Kapalı yöntemin SEBEBİ yazılır: "kapıda ödeme yok" ile "bu tutarda sunulamıyor" farklı
       // cümlelerdir ve ikincisinde müşteri sepetini küçültüp yöntemi açabilir (sözleşme künyesi).
-      body: codBlockedReason === null ? t.payment.onDeliveryBody : t.payment.codBlocked[codBlockedReason],
+      body:
+        codBlockedReason === null
+          ? isPickup
+            ? t.payment.atPickupBody
+            : t.payment.onDeliveryBody
+          : t.payment.codBlocked[codBlockedReason],
       available: methods.includes('cash') && codBlockedReason === null,
     },
   ];
@@ -360,7 +371,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const finish = (
     orderId: string,
     totalCents: number,
-    deliveryType: 'route' | 'shipping',
+    deliveryType: 'route' | 'shipping' | 'pickup',
     referenceNo: string | null,
   ): void => {
     /* Sepet yerelde boşaltılmaz, sunucudan tazelenir: `resetCart()` henüz sipariş edilmemiş kargo yarısını da silerdi. Ekran
@@ -417,6 +428,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       idempotencyKey: orderKey,
       marketingConsent: marketing,
       shippingOrder,
+      // Gel-al: seçilen depo; sunucu izni ve depoyu yeniden doğrular.
+      pickupWarehouseId: isPickup ? pickupWarehouseId : null,
       /* Ekranın gösterdiği sepetin imzası, sunucunun verdiği gibi geri gider; sepet arada değiştiyse sunucu `cart_changed` ile
          reddeder ve müşteri yeni listeyi bilerek onaylar. */
       expectedCartFingerprint: summary?.fingerprint ?? null,
@@ -663,26 +676,45 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
             {delivery === null ? null : (
               <View style={styles.section}>
                 <Text style={styles.eyebrow}>{upperIn(t.delivery.eyebrow, locale)}</Text>
+                {/* Kapı/kargo adresin cevabıdır (dokunuş değiştirmez); gel-al seçiliyken ikisi de seçili değildir ama adrese
+                    dönüş için dokunulabilir — seçim sunucuya gider, tür oradan döner. */}
                 <OptionRow
                   label={t.delivery.door}
-                  description={isRoute ? t.delivery.doorBody.replace('{fee}', shippingFeeLabel) : t.delivery.doorUnavailable}
+                  description={isRoute ? t.delivery.doorBody.replace('{fee}', shippingFeeLabel) : isPickup ? '' : t.delivery.doorUnavailable}
                   selected={isRoute}
-                  disabled={!isRoute}
+                  disabled={!isRoute && !isPickup}
                   /* Sebep yalnız kapalı hâlde kırmızı: soluk griyle yazılınca müşteri onu fark etmiyordu. */
-                  descriptionTone={isRoute ? 'muted' : 'danger'}
-                  // Yol adresin cevabı: dokunuş bir şey değiştirmez (dosya künyesi).
-                  onPress={keepDelivery}
+                  descriptionTone={isRoute || isPickup ? 'muted' : 'danger'}
+                  onPress={isPickup ? () => setPickupWarehouseId(null) : keepDelivery}
                   testID="checkout-mode-door"
                 />
                 <OptionRow
                   label={t.delivery.shipping}
-                  description={isRoute ? t.delivery.shippingUnavailable : t.delivery.shippingBody.replace('{fee}', shippingFeeLabel)}
-                  selected={!isRoute}
+                  description={isRoute ? t.delivery.shippingUnavailable : isPickup ? '' : t.delivery.shippingBody.replace('{fee}', shippingFeeLabel)}
+                  selected={!isRoute && !isPickup}
                   disabled={isRoute}
                   descriptionTone={isRoute ? 'danger' : 'muted'}
-                  onPress={keepDelivery}
+                  onPress={isPickup ? () => setPickupWarehouseId(null) : keepDelivery}
                   testID="checkout-mode-shipping"
                 />
+                {/* Gel-al yalnız izinli müşteriye sunulur (`snapshot.pickup`); depo başına bir satır, adres ve randevu numarası
+                    satırın altında. Web telefon görünümünün aynı kartı. */}
+                {pickupOffer?.warehouses.map((warehouse) => (
+                  <OptionRow
+                    key={warehouse.id}
+                    label={t.delivery.pickup}
+                    description={`${warehouse.name} · ${warehouse.addressLine}\n${t.delivery.pickupBody}`}
+                    selected={isPickup && pickupOffer.selectedWarehouseId === warehouse.id}
+                    descriptionTone="muted"
+                    onPress={() => setPickupWarehouseId(warehouse.id)}
+                    testID={`checkout-mode-pickup-${warehouse.id}`}
+                  />
+                ))}
+                {isPickup ? (
+                  <Text style={styles.dayLine} testID="checkout-pickup-phone">
+                    {t.delivery.pickupPhone.replace('{phone}', brand.contact.phoneDisplay)}
+                  </Text>
+                ) : null}
                 {/* Komşu daveti gün seçiminin hemen üstünde, çünkü cümle o seçimin gerekçesidir. Her davet kendi satırında: müşteriyi
                     birden çok komşu birden çok güne çağırmış olabilir. */}
                 {isRoute

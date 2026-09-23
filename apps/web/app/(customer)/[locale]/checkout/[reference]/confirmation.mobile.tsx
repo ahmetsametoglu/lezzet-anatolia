@@ -67,6 +67,7 @@ export function ConfirmationMobile({ t, locale, view }: ConfirmationViewProps) {
 
 /** Teslimat satırı: rota-içinde gün, kargoda kargonun adı; gün yoksa yolun adı — uydurulmuş gün yazılmaz (native kuralı). */
 function deliveryLabel(copy: CheckoutCopy, view: ConfirmationView, locale: Locale): string {
+  if (view.pickup) return `${copy.confirmed.pickup} · ${view.pickup.warehouseName}`;
   if (!view.onRoute) return copy.confirmed.shipping;
   return view.deliveryDate ? formatDeliveryDate(view.deliveryDate, locale) : copy.delivery.door;
 }

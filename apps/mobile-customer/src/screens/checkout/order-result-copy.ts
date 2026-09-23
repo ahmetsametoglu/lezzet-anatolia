@@ -98,6 +98,10 @@ export function rejectionMessage(
       return r.shipping_option_unavailable;
     case 'service_point_invalid':
       return r.service_point_invalid;
+    case 'pickup_not_allowed':
+      return r.pickup_not_allowed;
+    case 'pickup_warehouse_unavailable':
+      return r.pickup_warehouse_unavailable;
     case 'insufficient_stock': {
       const name = resolveName(result.variantId);
       return name === null
@@ -130,8 +134,10 @@ export function paymentFailureMessage(outcome: Extract<PaymentSheetOutcome, { st
  * YOKTUR** ve bu bir eksiklik değil, sözleşmenin hükmü — teslimat gün düzeyinde sözleşilir
  * (`CheckoutDeliverySchema` künyesi), saat vaat etmek veride karşılığı olmayan bir söz olurdu.
  */
-export function deliveryLabelOf(deliveryType: 'route' | 'shipping', date: string | null, t: Messages, locale: Locale): string {
+export function deliveryLabelOf(deliveryType: 'route' | 'shipping' | 'pickup', date: string | null, t: Messages, locale: Locale): string {
   if (deliveryType === 'shipping') return t.confirmed.shipping;
+  // Gel-al'da gün yoktur: randevu telefonla, ekran yalnız yolun adını yazar.
+  if (deliveryType === 'pickup') return t.confirmed.pickup;
   // Rota-içi ama gün yoksa (uygun tarih hiç dönmediyse) yolun ADI yazılır: uydurulmuş bir gün,
   // müşteriye verilmemiş bir söz olurdu.
   return date === null ? t.delivery.door : formatDeliveryDate(date, locale);

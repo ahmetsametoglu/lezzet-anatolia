@@ -42,6 +42,8 @@ export interface ConfirmationView {
    */
   paymentState: CardPaymentState | null;
   onRoute: boolean;
+  /** Gel-al: müşteri depodan alır — gün yok, kargo yok; kart depoyu ve aranacak numarayı yazar. */
+  pickup: { warehouseName: string; addressLine: string; phoneDisplay: string } | null;
   deliveryDate: string | null;
   onAccount: boolean;
   /** Taslak siparişte yöntem henüz seçilmemiş olabilir — `null` "kart değil" demektir, "kapıda" değil. */

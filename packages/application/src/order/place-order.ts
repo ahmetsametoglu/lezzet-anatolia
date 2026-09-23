@@ -1,6 +1,6 @@
 import { OrderService, ReservationService, type Db } from '@lezzet/database';
 import { captureError, SOURCES } from '@lezzet/observability';
-import type { AddressDeliveryType, OrderCancelReason, PaymentMethod, PreferredLanguage } from '@lezzet/types';
+import type { DeliveryType, OrderCancelReason, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { clearOrderedLines } from '../cart/settle';
 import type { CartBundlePort } from '../cart/read';
 import type { CartEntry } from '../cart/cart-types';
@@ -82,7 +82,7 @@ export type PlaceOrderRejection =
 
 export type PlaceOrderOutcome =
   /** Kart yolu: sipariş `draft`, ödeme istemcide tamamlanacak. */
-  | { status: 'payment_required'; orderId: string; totalCents: number; deliveryType: AddressDeliveryType; clientSecret: string }
+  | { status: 'payment_required'; orderId: string; totalCents: number; deliveryType: DeliveryType; clientSecret: string }
   /**
    * Kapıda/vadeli: ödeme sağlayıcısı yok, sipariş AÇILDI ve kesinleşti.
    *
@@ -93,7 +93,7 @@ export type PlaceOrderOutcome =
    * "bilinmiyor" yazan bir sipariş numarası, olmayan numaradan kötüdür (27.08 · eski
    * `BEKLEYEN(21.14)`: native onay ekranı numarayı çizemiyordu çünkü cevapta hiç yoktu).
    */
-  | { status: 'placed'; orderId: string; totalCents: number; deliveryType: AddressDeliveryType; referenceNo: string | null }
+  | { status: 'placed'; orderId: string; totalCents: number; deliveryType: DeliveryType; referenceNo: string | null }
   | PlaceOrderRejection;
 
 export interface PlaceOrderInput {
@@ -140,6 +140,8 @@ export interface PlaceOrderInput {
   /** Kargo servisi ve teslim noktası seçimi; taslak doğrular (`CheckoutDraftInput`). */
   shippingOptionCode?: string | null;
   servicePointId?: string | null;
+  /** Gel-al deposu; taslak izni ve depoyu doğrular (`CheckoutDraftInput.pickupWarehouseId`). */
+  pickupWarehouseId?: string | null;
   // Komşu davetinin belirteci girdi DEĞİL (12.08): davet kişiye yazılı, taslak onu müşterinin
   // kendi kaydından okuyor. Yüzeyin taşıyacak bir şeyi kalmadı.
   /** Paket çözümünün kapısı — taslağa olduğu gibi geçilir (aşama 1'in `CartBundlePort`u). */
@@ -181,26 +183,15 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
   if (input.idempotencyKey) {
     const already = await new OrderService(db).findByIdempotencyKey(input.idempotencyKey, input.customerId);
     if (already && already.status !== 'draft' && already.status !== 'cancelled') {
-      // Satır GENİŞ tipte okunuyor (`Order.deliveryType`), sonuç ise DAR (`AddressDeliveryType`).
-      // Daraltma güvenli çünkü `idempotency_key`i yalnız checkout yazar — yerinde satışın böyle
-      // bir anahtarı hiç olmaz. Yine de sessizce zorlanmıyor: beklenmedik bir satır gelirse
-      // (elle yazılmış anahtar, onarım betiği) kayıt düşülür ve `route` varsayılmaz — o an
-      // uydurulacak her değer müşteriye yanlış bir teslimat vaadi olurdu.
-      if (already.deliveryType === 'pickup') {
-        captureError(new Error('placeOrder: idempotency anahtarı yerinde satış siparişine düştü'), {
-          source: SOURCES.applicationOrder,
-          context: { orderId: already.id },
-        });
-      } else {
-        // Numara SATIRDAN: bu dal zaten kesinleşmiş bir siparişi geri veriyor, numarası yazılı.
-        return {
-          status: 'placed',
-          orderId: already.id,
-          totalCents: already.orderedTotalCents,
-          deliveryType: already.deliveryType,
-          referenceNo: already.referenceNo,
-        };
-      }
+      // Numara SATIRDAN: bu dal zaten kesinleşmiş bir siparişi geri veriyor, numarası yazılı. Tür de satırdan — checkout
+      // artık üç türü de açabiliyor (gel-al dahil), daraltacak bir şey kalmadı.
+      return {
+        status: 'placed',
+        orderId: already.id,
+        totalCents: already.orderedTotalCents,
+        deliveryType: already.deliveryType,
+        referenceNo: already.referenceNo,
+      };
     }
   }
 
@@ -225,6 +216,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
     shippingOrder: input.shippingOrder,
     shippingOptionCode: input.shippingOptionCode,
     servicePointId: input.servicePointId,
+    pickupWarehouseId: input.pickupWarehouseId,
     bundles: input.bundles,
     onCustomerAcquired: input.onCustomerAcquired,
   });

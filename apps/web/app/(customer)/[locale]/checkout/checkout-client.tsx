@@ -46,7 +46,7 @@ interface CheckoutClientProps {
   customer: { name: string; email: string; phone: string | null };
 }
 
-const EMPTY: CheckoutSnapshot = { addresses: [], delivery: null, shipping: null, payment: null, summary: null };
+const EMPTY: CheckoutSnapshot = { addresses: [], delivery: null, shipping: null, payment: null, summary: null, pickup: null };
 
 /** `crypto.randomUUID` sunucu render'ında da var (Node 19+); yine de eski tarayıcı için yedeği var. */
 function newAttemptKey(): string {
@@ -72,6 +72,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     deliveryDate: null,
     shippingOptionCode: null,
     servicePoint: null,
+    pickupWarehouseId: null,
     shippingMode: 'home',
     paymentMethod: null,
     onAccount: false,
@@ -112,11 +113,23 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
    */
   const attemptKey = useRef(newAttemptKey());
 
-  /** Adım verisini tazeler. Seçili adres (sepetten) ve sepet değiştikçe koşar. */
+  /* Gel-al seçimi adres ve sepet değişse de KORUNUR: tazeleme çağrıları seçimi buradan okur, `state`ten değil — `refresh`
+     `useCallback`lı ve seçimi bağımlılığa koymak her seçimde adres etkisini de yeniden koşturmak olurdu. */
+  const pickupRef = useRef<string | null>(null);
+
+  /** Adım verisini tazeler. Seçili adres (sepetten), sepet ve gel-al seçimi değiştikçe koşar. */
   const refresh = useCallback(
-    async (addressId: string | null, shippingOptionCode: string | null = null) => {
+    async (addressId: string | null, shippingOptionCode: string | null = null, pickupWarehouseId: string | null = pickupRef.current) => {
       const ticket = ++seq.current;
-      const { data, errorKey } = await loadCheckoutAction(locale, cartEntries, addressId, coupon, shippingOrder, shippingOptionCode);
+      const { data, errorKey } = await loadCheckoutAction(
+        locale,
+        cartEntries,
+        addressId,
+        coupon,
+        shippingOrder,
+        shippingOptionCode,
+        pickupWarehouseId,
+      );
       if (ticket !== seq.current) return;
       // Okuma düşse de bayrak kalkar: sonsuza kadar iskelet göstermek, hatayı gizlemenin bir
       // başka biçimi olurdu — ekran hata satırını gösterebilmeli.
@@ -126,6 +139,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
         return;
       }
       setSnapshot(data);
+      // Sunucunun kabul ettiği seçim yankılanır: tanınmayan depo düşmüşse ekran da adrese teslime döner.
+      pickupRef.current = data.pickup?.selectedWarehouseId ?? null;
       setState((prev) => {
         // Adres SEPETTEKİ seçimdir: kapı `addressId` verilmezse varsayılanı seçer (aynı kural).
         const selected = data.addresses.find((a) => a.id === (addressId ?? prev.addressId)) ?? data.addresses.find((a) => a.isDefault) ?? data.addresses[0];
@@ -151,7 +166,14 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
         // Nokta ancak aynı adreste ve servisi hâlâ seçiliyken kalır; ücretsiz kargoya geçişte sunucu eve giden servisi seçer.
         const keepPoint =
           prev.servicePoint && prev.addressId === (selected?.id ?? null) && prev.servicePoint.optionCode === selectedCode ? prev.servicePoint : null;
-        return { ...prev, addressId: selected?.id ?? null, deliveryDate: keepDate, shippingOptionCode: selectedCode, servicePoint: keepPoint };
+        return {
+          ...prev,
+          addressId: selected?.id ?? null,
+          deliveryDate: keepDate,
+          shippingOptionCode: selectedCode,
+          servicePoint: keepPoint,
+          pickupWarehouseId: data.pickup?.selectedWarehouseId ?? null,
+        };
       });
     },
     [t, locale, cartEntries, coupon, shippingOrder],
@@ -211,6 +233,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       shippingOrder,
       shippingOptionCode: state.shippingOptionCode,
       servicePointId: state.servicePoint?.id ?? null,
+      pickupWarehouseId: state.pickupWarehouseId,
       /* Ekranın gösterdiği sepetin imzası (21.08) — sunucunun verdiği değer, olduğu gibi geri
          gidiyor. Sepet iki yüzeyde paylaşıldığı için son okumamızla bu tıklama arasında değişmiş
          olabilir; değiştiyse kapı `cart_changed` ile reddeder ve müşteri yeni özeti görüp bilerek
@@ -266,6 +289,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       shippingOrder,
       shippingOptionCode: state.shippingOptionCode,
       servicePointId: state.servicePoint?.id ?? null,
+      pickupWarehouseId: state.pickupWarehouseId,
     });
     if (errorKey || !data) return { ok: false, error: errorText(t.errors, errorKey) };
     if (data.status === 'rejected') return { ok: false, error: rejectionMessage(t, data.reason, data.detail) };
@@ -395,6 +419,13 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       const hadPoint = state.servicePoint !== null;
       setState((prev) => ({ ...prev, shippingMode: 'home', servicePoint: null, shippingOptionCode: hadPoint ? null : prev.shippingOptionCode }));
       if (hadPoint) void refresh(state.addressId, null);
+    },
+    /* Gel-al seçimi de SUNUCUYA gider: depo, ücret (yok) ve ödeme yolları ona bağlı. Kargo seçimi ve nokta düşer — gel-al'da
+       taşıyıcı yoktur; adrese dönüşte sunucu kargo servisini yeniden seçer. */
+    onSelectPickup: (warehouseId) => {
+      pickupRef.current = warehouseId;
+      setState((prev) => ({ ...prev, pickupWarehouseId: warehouseId, servicePoint: null, shippingOptionCode: null, shippingMode: 'home' }));
+      void refresh(state.addressId, null, warehouseId);
     },
     onSelectPayment: (method, onAccount) => setState((prev) => ({ ...prev, paymentMethod: method, onAccount })),
     onToggleConsent: (value) => setState((prev) => ({ ...prev, marketingConsent: value })),

@@ -7,7 +7,8 @@
     "delivery": {
       "title": "Teslimat",
       "coldChain": "Soğuk zincir bozulmadan kapınıza gelir. Kurye yola çıkınca saat aralığını bildiririz.",
-      "shippingNote": "Kargoya verildiğinde takip numarasını e-posta ile göndeririz."
+      "shippingNote": "Kargoya verildiğinde takip numarasını e-posta ile göndeririz.",
+      "pickupLine": "Depodan teslim"
     },
     "payment": {
       "paid": "Ödendi · {amount}",
@@ -60,7 +61,8 @@
     "delivery": {
       "title": "Livraison",
       "coldChain": "Livraison sans rupture de la chaîne du froid. Nous vous indiquerons le créneau au départ du livreur.",
-      "shippingNote": "Nous vous enverrons le numéro de suivi dès l'expédition."
+      "shippingNote": "Nous vous enverrons le numéro de suivi dès l'expédition.",
+      "pickupLine": "Retrait à l’entrepôt"
     },
     "payment": {
       "paid": "Payé · {amount}",
@@ -113,7 +115,8 @@
     "delivery": {
       "title": "Lieferung",
       "coldChain": "Ohne Unterbrechung der Kühlkette bis zu Ihrer Tür. Das Zeitfenster nennen wir, sobald der Fahrer losfährt.",
-      "shippingNote": "Die Sendungsnummer senden wir Ihnen beim Versand."
+      "shippingNote": "Die Sendungsnummer senden wir Ihnen beim Versand.",
+      "pickupLine": "Abholung im Lager"
     },
     "payment": {
       "paid": "Bezahlt · {amount}",

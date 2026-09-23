@@ -9,7 +9,7 @@ import {
   type CreditPosition,
   type ShippingVatPart,
 } from '@lezzet/domain-core';
-import type { AddressDeliveryType, PaymentMethod } from '@lezzet/types';
+import type { DeliveryType, PaymentMethod } from '@lezzet/types';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { minBasketFor } from '../cart/min-basket';
 import { settingScopeOf } from '../cart/setting-scope';
@@ -56,9 +56,9 @@ export interface CheckoutPaymentResult {
   creditBlockedReason: 'not_enabled' | 'overdue' | 'limit_exceeded' | null;
   creditRequiresApproval: boolean;
 
-  /** Kargo ücreti (cent) ve neden ücretsiz olduğu. */
+  /** Kargo ücreti (cent) ve neden ücretsiz olduğu; `pickup` = müşteri kendisi alıyor, taşıma yok. */
   shippingFeeCents: number;
-  shippingFreeReason: 'route' | 'threshold' | null;
+  shippingFreeReason: 'route' | 'threshold' | 'pickup' | null;
   /** Ücret nereden geldi: `quote` canlı teklif · `tariff` sabit tarife · `null` ücret yok. */
   shippingFeeSource: 'quote' | 'tariff' | null;
   /** "X € daha ekleyin, kargo bedava" mesajının girdisi. */
@@ -76,12 +76,11 @@ export interface CheckoutPaymentResult {
 export interface CheckoutPaymentInput {
   customerId: string;
   /**
-   * `AddressDeliveryType` — checkout bir ADRESE göre çözülür ve `pickup` üretemez (26.08).
-   * Yerinde satış checkout'tan geçmez: müşteri tezgâhın önündedir, ödeme yöntemi de kargo ücreti
-   * de orada başka kurallardan çıkar. Dar tutmak sözleşmeyi de koruyor — `shippingFreeReason`
-   * müşteriye ulaşamayacak bir değer taşımıyor.
+   * Üç tür de gelir: adresin cevabı (`route`/`shipping`) ya da müşterinin seçtiği gel-al (`pickup`). Gel-al'da
+   * kargo ücreti sorusu doğmaz (`resolveShippingFee` çağrılmaz), ödeme kuralları rotayla aynıdır: depoda
+   * ödeme = kapıda ödeme (tavan, müşteri kapısı, nakit uyarısı). Yerinde satış yine checkout'tan geçmez.
    */
-  deliveryType: AddressDeliveryType;
+  deliveryType: DeliveryType;
   /**
    * Sepet ara toplamı — **indirim UYGULANMIŞ**, kanal tabanında (cent). Kargo ücreti, bedava
    * kargo eşiği ve tahsil edilecek toplam bunu ister: müşteriden gerçekten alınacak paradır.
@@ -148,13 +147,17 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
   if (!customer) throw new Error(`checkout: müşteri bulunamadı (${input.customerId})`);
 
   // ── Kargo ücreti önce: sipariş toplamı ona bağlı, kapıda ödeme tavanı da toplama bakar.
-  const shipping = resolveShippingFee({
-    deliveryType: input.deliveryType,
-    basketCents: input.basketCents,
-    freeThresholdCents,
-    feeCents,
-    quotedFeeCents: input.quotedFeeCents,
-  });
+  // Gel-al'da motor sorulmaz: "kargo ücreti kaç" sorusu geçersizdir (DATA_MODEL), ücret doğrudan yok.
+  const shipping =
+    input.deliveryType === 'pickup'
+      ? { feeCents: 0, freeReason: 'pickup' as const, remainingForFreeCents: 0, source: null }
+      : resolveShippingFee({
+          deliveryType: input.deliveryType,
+          basketCents: input.basketCents,
+          freeThresholdCents,
+          feeCents,
+          quotedFeeCents: input.quotedFeeCents,
+        });
   const orderTotalCents = input.basketCents + shipping.feeCents;
 
   // ── Vade freni için açık bakiye ve gecikme TÜRETİLİR (saklanmaz).

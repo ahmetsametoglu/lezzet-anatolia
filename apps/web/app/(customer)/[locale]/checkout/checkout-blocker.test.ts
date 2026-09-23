@@ -40,7 +40,7 @@ function snapshotOf(over: Partial<CheckoutSnapshot> = {}): CheckoutSnapshot {
   // Özet engel kararına GİRMEZ (21.08): döküm "ne ödüyorum"un cevabıdır, "verebilir miyim"in değil
   // — `checkoutBlocker` sepetin engelli kalemine, adrese ve ödemeye bakar. Fikstürde `null`.
   // Kargo teklifi engel kararına GİRMEZ — bu dosyanın konusu değil, fikstürde `null`.
-  return { addresses: [], delivery, shipping: null, payment, summary: null, ...over };
+  return { addresses: [], delivery, shipping: null, payment, summary: null, pickup: null, ...over };
 }
 
 const OK = { cartFailed: false, cartHasBlocked: false, snapshot: snapshotOf(), addressId: 'adr-1' };

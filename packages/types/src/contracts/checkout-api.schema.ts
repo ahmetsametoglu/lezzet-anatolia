@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { OrderSchema } from '../entities/order.schema';
-import { AddressDeliveryTypeEnum, PaymentMethodEnum } from '../primitives/enums.schema';
+import { DeliveryTypeEnum, PaymentMethodEnum } from '../primitives/enums.schema';
 import { MeAddressSchema } from './address-api.schema';
 import { CartDiscountReasonSchema } from './cart-api.schema';
 
@@ -13,8 +13,11 @@ import { CartDiscountReasonSchema } from './cart-api.schema';
  * Teslimat dilimi. Saat aralığı yoktur: teslimat gün düzeyinde sözleşilir, veride karşılığı olmayan saat vaat edilmez.
  */
 export const CheckoutDeliverySchema = z.object({
-  /** Dar küme (`pickup` yok): checkout bir adrese göre çözülür, yerinde satış buradan geçmez. */
-  deliveryType: AddressDeliveryTypeEnum,
+  /**
+   * Geniş küme: adresin cevabı (`route`/`shipping`) ya da müşterinin seçtiği gel-al (`pickup`). Gel-al yalnız
+   * `pickup` dilimi doluyken ve istek `pickupWarehouseId` taşıdığında döner; gün, davet ve engel orada boştur.
+   */
+  deliveryType: DeliveryTypeEnum,
   /** Rota-içi teslimatın yaklaşan somut tarihleri (ISO gün); kargoda BOŞ — tarih taşıyıcıya bağlı. */
   availableDates: z.array(z.string()),
   /** Tek tarih varsa ekran seçim sunmaz, onu gösterir (DOMAIN §6). */
@@ -44,8 +47,8 @@ export const CheckoutPaymentSchema = z.object({
   cashWarning: z.boolean(),
   /** Kargo ücreti (cent); 0 olabilir ve NEDEN 0 olduğunu `shippingFreeReason` söyler. */
   shippingFeeCents: z.number().int(),
-  /** `route` = araçla gidiyor, ücret zaten yok · `threshold` = eşik aşıldı · `null` = ücretli. */
-  shippingFreeReason: z.enum(['route', 'threshold']).nullable(),
+  /** `route` = araçla gidiyor, ücret zaten yok · `threshold` = eşik aşıldı · `pickup` = müşteri alıyor · `null` = ücretli. */
+  shippingFreeReason: z.enum(['route', 'threshold', 'pickup']).nullable(),
   /** Müşteriden tahsil edilecek TOPLAM (sepet + kargo, cent) — ekranın son satırı. */
   orderTotalCents: z.number().int(),
   /** Asgari sepet tutmuyorsa sipariş açılmaz (DOMAIN §6, ayardan gelir). */
@@ -89,11 +92,31 @@ export type CheckoutSummary = z.infer<typeof CheckoutSummarySchema>;
  * Ekranın tek okuma sonucu. Dört dilim de `null` olabilir ve `null`lar ANLAMLIDIR:
  * adres listesi boşsa teslimat da ödeme de özet de sorulamaz — ekran önce adres ister.
  */
+/**
+ * Gel-al teklifi: yalnız izinli müşteriye (`pickup_allowed`) ve yalnız gel-al noktası olan tesisler için dolu. Depo adresi
+ * burada müşteriye görünür — "depo gösterilmez" kuralının bilinçli tek istisnası, çünkü müşteri oraya gidecek.
+ */
+export const CheckoutPickupSchema = z.object({
+  warehouses: z.array(
+    z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      /** Tek satır adres ("12 rue du Marché, 67000 Strasbourg"); kayıt jsonb'sinden ekran değil sunucu kurar. */
+      addressLine: z.string(),
+    }),
+  ),
+  /** İsteğin seçtiği depo; sunucu tanımadığı kimliği düşürür ve `null` döner. */
+  selectedWarehouseId: z.string().uuid().nullable(),
+});
+export type CheckoutPickup = z.infer<typeof CheckoutPickupSchema>;
+
 export const CheckoutSnapshotSchema = z.object({
   addresses: z.array(MeAddressSchema),
   delivery: CheckoutDeliverySchema.nullable(),
   payment: CheckoutPaymentSchema.nullable(),
   summary: CheckoutSummarySchema.nullable(),
+  /** Gel-al teklifi; izinsiz müşteride ya da gel-al noktası yokken `null` — ekran kartı hiç çizmez. */
+  pickup: CheckoutPickupSchema.nullable(),
 });
 export type CheckoutSnapshot = z.infer<typeof CheckoutSnapshotSchema>;
 
@@ -129,6 +152,11 @@ export const CheckoutOrderBodySchema = z.object({
   shippingOptionCode: z.string().min(1).nullable().default(null),
   /** Servis teslim noktası istiyorsa seçilen nokta; sunucu sağlayıcıdan yeniden okur. */
   servicePointId: z.string().min(1).nullable().default(null),
+  /**
+   * Gel-al: müşterinin malı alacağı depo. Doluysa tür `pickup`tur; izin ve depo sunucuda yeniden sorulur
+   * (`pickup_not_allowed` · `pickup_warehouse_unavailable`). Adres yine gönderilir — fatura adresi olarak kalır.
+   */
+  pickupWarehouseId: z.string().uuid().nullable().default(null),
 });
 
 /**
@@ -145,7 +173,7 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
     orderId: OrderSchema.shape.id,
     /** Gösterim tutarı — ÇEKİLECEK tutar bu değil: onu sunucu siparişten yeniden çözer. */
     totalCents: z.number().int(),
-    deliveryType: AddressDeliveryTypeEnum,
+    deliveryType: DeliveryTypeEnum,
     /** Müşteriye gösterilen numara, yalnız bu dalda: kart dalında sipariş henüz taslak ve numara yok. `null` ise satır çizilmez. */
     referenceNo: OrderSchema.shape.referenceNo,
   }),
@@ -156,7 +184,7 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
     status: z.literal('payment_required'),
     orderId: OrderSchema.shape.id,
     totalCents: z.number().int(),
-    deliveryType: AddressDeliveryTypeEnum,
+    deliveryType: DeliveryTypeEnum,
     clientSecret: z.string().min(1),
   }),
   /**
@@ -168,7 +196,7 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
     state: z.enum(['paid', 'processing']),
     orderId: OrderSchema.shape.id,
     totalCents: z.number().int(),
-    deliveryType: AddressDeliveryTypeEnum,
+    deliveryType: DeliveryTypeEnum,
     referenceNo: OrderSchema.shape.referenceNo,
   }),
   /** Yer çözülemedi — VERİ/YAPILANDIRMA hatası; müşteriye "bölge dışısınız" DENMEZ, o başka şey. */
@@ -209,6 +237,10 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('shipping_option_unavailable') }),
   /** Servis teslim noktası istiyor ama nokta yok, kapalı ya da başka taşıyıcının. */
   z.object({ status: z.literal('service_point_invalid') }),
+  /** Gel-al istendi ama müşterinin izni yok — ekran kartı göstermemişti, istek elle kurulmuştur. */
+  z.object({ status: z.literal('pickup_not_allowed') }),
+  /** Seçilen depo gel-al noktası değil, pasif ya da yok; ekran teklifi yeniden okur. */
+  z.object({ status: z.literal('pickup_warehouse_unavailable') }),
   /**
    * Stok son anda ayrılamadı (yarış): taslak kapatılır, kapıda/vadeli ödemede para çekilmedi. Ad değil kimlik taşınır, ekranın
    * elinde çözülmüş sepet var.

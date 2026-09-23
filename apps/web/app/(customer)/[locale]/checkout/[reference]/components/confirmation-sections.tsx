@@ -102,13 +102,21 @@ export function DeliveryCard({ t, shared, locale, view, compact }: ConfirmationV
     <Card compact={compact} gap="sm">
       <Eyebrow>{t.delivery.title}</Eyebrow>
       <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>
-        {day ?? shared.delivery.shipping}
+        {view.pickup ? view.pickup.warehouseName : (day ?? shared.delivery.shipping)}
       </span>
       <Chip>
-        <Icon name={view.onRoute ? 'truck' : 'box'} size={13} />
-        {view.onRoute ? shared.delivery.route : shared.delivery.shipping}
+        <Icon name={view.pickup ? 'pin' : view.onRoute ? 'truck' : 'box'} size={13} />
+        {view.pickup ? t.delivery.pickupLine : view.onRoute ? shared.delivery.route : shared.delivery.shipping}
       </Chip>
-      {view.address && (
+      {/* Gel-al'da adres DEPONUN adresidir, müşterinin değil; randevu telefonla (sistem saat vaat etmez). */}
+      {view.pickup && (
+        <span className="font-sans text-body-sm leading-relaxed text-body">
+          {view.pickup.addressLine}
+          <br />
+          {shared.delivery.pickupPhone.replace('{phone}', view.pickup.phoneDisplay)}
+        </span>
+      )}
+      {!view.pickup && view.address && (
         <span className="font-sans text-body-sm leading-relaxed text-body">
           {view.address.label ? `${view.address.label} · ` : ''}
           {view.address.line1}
@@ -119,8 +127,8 @@ export function DeliveryCard({ t, shared, locale, view, compact }: ConfirmationV
       )}
       <Footnote>
         <span className="flex items-start gap-2">
-          <Icon name={view.onRoute ? 'snowflake' : 'box'} size={14} className="mt-0.75 flex-none" />
-          {view.onRoute ? t.delivery.coldChain : t.delivery.shippingNote}
+          <Icon name={view.pickup ? 'pin' : view.onRoute ? 'snowflake' : 'box'} size={14} className="mt-0.75 flex-none" />
+          {view.pickup ? shared.delivery.pickupBody : view.onRoute ? t.delivery.coldChain : t.delivery.shippingNote}
         </span>
       </Footnote>
     </Card>

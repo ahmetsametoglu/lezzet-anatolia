@@ -49,7 +49,10 @@
       "neighborInvite": "{name} sizi {day} teslimatına çağırdı — o gün sizin için seçili.",
       "neighborInviteOtherDay": "{name} sizi {day} teslimatına çağırdı. Birlikte teslim alıp puan kazanmak için o günü seçin.",
       "neighborSomeone": "Komşunuz",
-      "neighborDecline": "Bu daveti kaldır"
+      "neighborDecline": "Bu daveti kaldır",
+      "pickup": "Depodan teslim al",
+      "pickupBody": "Hazır olunca haber veririz — saati depoyla telefonla kararlaştırın. Teslimat: ücretsiz",
+      "pickupPhone": "Randevu için: {phone}"
     },
     "payment": {
       "eyebrow": "Ödeme",
@@ -67,7 +70,9 @@
         "shipping": "Kapıda ödeme yalnız kendi aracımızla getirdiğimiz adreslerde."
       },
       "onlineRequired": "Bu tutarda online ödeme gerekir.",
-      "cashWarning": "Yasal sınır nedeniyle bu tutar nakit tahsil edilemez — kapıda kart ya da çek kullanabilirsiniz."
+      "cashWarning": "Yasal sınır nedeniyle bu tutar nakit tahsil edilemez — kapıda kart ya da çek kullanabilirsiniz.",
+      "atPickup": "Depoda ödeme",
+      "atPickupBody": "Teslim alırken nakit, kart veya çek."
     },
     "summary": {
       "eyebrow": "Sipariş özeti",
@@ -136,7 +141,9 @@
       },
       "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin.",
       "shipping_option_unavailable": "Seçtiğiniz kargo servisi bu sepet için artık sunulmuyor. Lütfen kargo seçimini yeniden yapın.",
-      "service_point_invalid": "Bu kargo servisi bir teslim noktasına teslim ediyor. Lütfen açık bir teslim noktası seçin."
+      "service_point_invalid": "Bu kargo servisi bir teslim noktasına teslim ediyor. Lütfen açık bir teslim noktası seçin.",
+      "pickup_not_allowed": "Depodan teslim hesabınız için açık değil — adresinize teslimi seçin.",
+      "pickup_warehouse_unavailable": "Seçtiğiniz depo şu an gel-al için kapalı — seçenekleri yenileyip yeniden seçin."
     },
     "paymentSheet": {
       "canceled": "Ödeme yarıda kaldı — siparişiniz duruyor, hazır olduğunuzda tekrar deneyebilirsiniz.",
@@ -173,7 +180,8 @@
       "refundedBody": "Ödemeniz alındıktan sonra ürünlerden biri tükendi ve siparişi tamamlayamadık. Tahsil edilen tutarın tamamı kartınıza iade edildi — bankanıza göre 3-5 iş günü içinde hesabınıza döner. Özür dileriz.",
       "incomplete": "Siparişiniz tamamlanmadı",
       "incompleteBody": "Sipariş kaydedildi ama kesinleşmedi. Sepetiniz duruyor — checkout'a dönüp yeniden deneyebilirsiniz.",
-      "retry": "Ödemeyi tekrar dene"
+      "retry": "Ödemeyi tekrar dene",
+      "pickup": "Depodan teslim"
     }
   },
   "fr": {
@@ -226,7 +234,10 @@
       "neighborInvite": "{name} vous invite à la livraison du {day} — cette date est présélectionnée.",
       "neighborInviteOtherDay": "{name} vous invite à la livraison du {day}. Choisissez cette date pour être livrés ensemble et gagner des points.",
       "neighborSomeone": "Votre voisin",
-      "neighborDecline": "Retirer cette invitation"
+      "neighborDecline": "Retirer cette invitation",
+      "pickup": "Retirer à l’entrepôt",
+      "pickupBody": "Nous vous prévenons dès que c’est prêt — convenez de l’heure avec l’entrepôt par téléphone. Livraison : offerte",
+      "pickupPhone": "Pour convenir de l’heure : {phone}"
     },
     "payment": {
       "eyebrow": "Paiement",
@@ -244,7 +255,9 @@
         "shipping": "Le paiement à la livraison n'existe que pour les adresses que nous livrons nous-mêmes."
       },
       "onlineRequired": "À ce montant, le paiement en ligne est requis.",
-      "cashWarning": "La loi interdit l'encaissement en espèces à ce montant — carte ou chèque à la livraison."
+      "cashWarning": "La loi interdit l'encaissement en espèces à ce montant — carte ou chèque à la livraison.",
+      "atPickup": "Paiement à l’entrepôt",
+      "atPickupBody": "Espèces, carte ou chèque au retrait."
     },
     "summary": {
       "eyebrow": "Récapitulatif",
@@ -313,7 +326,9 @@
       },
       "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer.",
       "shipping_option_unavailable": "Le mode de livraison choisi n'est plus proposé pour ce panier. Merci de choisir à nouveau.",
-      "service_point_invalid": "Ce mode de livraison livre en point relais. Merci de choisir un point relais ouvert."
+      "service_point_invalid": "Ce mode de livraison livre en point relais. Merci de choisir un point relais ouvert.",
+      "pickup_not_allowed": "Le retrait à l’entrepôt n’est pas ouvert pour votre compte — choisissez la livraison à votre adresse.",
+      "pickup_warehouse_unavailable": "L’entrepôt choisi n’accepte pas le retrait pour le moment — actualisez les options et choisissez à nouveau."
     },
     "paymentSheet": {
       "canceled": "Paiement interrompu — votre commande vous attend, réessayez quand vous voulez.",
@@ -350,7 +365,8 @@
       "refundedBody": "Après votre paiement, l'un des produits s'est retrouvé en rupture et nous n'avons pas pu honorer la commande. La totalité du montant débité a été remboursée sur votre carte — le délai est de 3 à 5 jours ouvrés selon votre banque. Nous vous prions de nous en excuser.",
       "incomplete": "Votre commande n'a pas abouti",
       "incompleteBody": "La commande a été enregistrée mais non confirmée. Votre panier est intact — revenez au paiement pour réessayer.",
-      "retry": "Réessayer le paiement"
+      "retry": "Réessayer le paiement",
+      "pickup": "Retrait à l’entrepôt"
     }
   },
   "de": {
@@ -403,7 +419,10 @@
       "neighborInvite": "{name} lädt Sie zur Lieferung am {day} ein — dieser Tag ist für Sie vorausgewählt.",
       "neighborInviteOtherDay": "{name} lädt Sie zur Lieferung am {day} ein. Wählen Sie diesen Tag, um zusammen beliefert zu werden und Punkte zu sammeln.",
       "neighborSomeone": "Ihre Nachbarschaft",
-      "neighborDecline": "Diese Einladung entfernen"
+      "neighborDecline": "Diese Einladung entfernen",
+      "pickup": "Im Lager abholen",
+      "pickupBody": "Wir melden uns, sobald alles bereit ist — die Abholzeit vereinbaren Sie telefonisch mit dem Lager. Lieferung: kostenlos",
+      "pickupPhone": "Für die Terminabsprache: {phone}"
     },
     "payment": {
       "eyebrow": "Zahlung",
@@ -421,7 +440,9 @@
         "shipping": "Zahlung bei Lieferung gibt es nur für Adressen, die wir selbst beliefern."
       },
       "onlineRequired": "In dieser Höhe ist Online-Zahlung erforderlich.",
-      "cashWarning": "Gesetzlich ist Barzahlung in dieser Höhe nicht zulässig — an der Tür Karte oder Scheck."
+      "cashWarning": "Gesetzlich ist Barzahlung in dieser Höhe nicht zulässig — an der Tür Karte oder Scheck.",
+      "atPickup": "Zahlung im Lager",
+      "atPickupBody": "Bar, Karte oder Scheck bei der Abholung."
     },
     "summary": {
       "eyebrow": "Bestellübersicht",
@@ -490,7 +511,9 @@
       },
       "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
       "shipping_option_unavailable": "Die gewählte Versandart ist für diesen Warenkorb nicht mehr verfügbar. Bitte wählen Sie erneut.",
-      "service_point_invalid": "Diese Versandart liefert an einen Abholpunkt. Bitte wählen Sie einen geöffneten Abholpunkt."
+      "service_point_invalid": "Diese Versandart liefert an einen Abholpunkt. Bitte wählen Sie einen geöffneten Abholpunkt.",
+      "pickup_not_allowed": "Die Abholung im Lager ist für Ihr Konto nicht freigeschaltet — wählen Sie die Lieferung an Ihre Adresse.",
+      "pickup_warehouse_unavailable": "Das gewählte Lager bietet die Abholung derzeit nicht an — Optionen aktualisieren und erneut wählen."
     },
     "paymentSheet": {
       "canceled": "Zahlung abgebrochen — Ihre Bestellung wartet, Sie können es jederzeit erneut versuchen.",
@@ -527,7 +550,8 @@
       "refundedBody": "Nach Ihrer Zahlung war eines der Produkte nicht mehr verfügbar und wir konnten die Bestellung nicht ausführen. Der gesamte abgebuchte Betrag wurde auf Ihre Karte erstattet — je nach Bank dauert das 3 bis 5 Werktage. Wir bitten um Entschuldigung.",
       "incomplete": "Ihre Bestellung wurde nicht abgeschlossen",
       "incompleteBody": "Die Bestellung wurde gespeichert, aber nicht bestätigt. Ihr Warenkorb ist erhalten — gehen Sie zurück zur Kasse und versuchen Sie es erneut.",
-      "retry": "Zahlung erneut versuchen"
+      "retry": "Zahlung erneut versuchen",
+      "pickup": "Abholung im Lager"
     }
   }
 }

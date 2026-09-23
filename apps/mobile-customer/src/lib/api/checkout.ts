@@ -30,6 +30,8 @@ interface CheckoutQuery {
   coupon: string | null;
   /** Bölünmüş sepetin kargo yarısı mı; bayrak türetilmez, açıkça gelir. */
   shippingOrder: boolean;
+  /** Gel-al seçimi (depo kimliği); `null` = adrese teslim. Sunucu izni ve depoyu doğrular. */
+  pickupWarehouseId: string | null;
 }
 
 /** `z.input`: varsayılanlı alanlar isteğe bağlı. */
@@ -54,6 +56,7 @@ export function fetchCheckout(query: CheckoutQuery): Promise<ApiResult<CheckoutS
     coupon: present(query.coupon),
     // Uç bayrağı `group=shipping` diye okuyor; kapalıyken parametre yazılmaz.
     group: query.shippingOrder ? 'shipping' : undefined,
+    pickupWarehouseId: present(query.pickupWarehouseId),
   })}`;
   return authorizedFetch(path, CheckoutSnapshotSchema);
 }

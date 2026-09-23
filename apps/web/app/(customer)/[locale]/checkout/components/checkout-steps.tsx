@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { addressTitle } from '@lezzet/address';
+import { brand } from '@lezzet/brand';
 import type { PaymentMethod } from '@lezzet/types';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Button } from '@/components/customer/ui/button';
@@ -199,19 +200,22 @@ export function AddressStep({ t, compact, selectedAddress }: CheckoutViewProps) 
 }
 
 export function DeliveryStep(props: CheckoutViewProps) {
-  const { t, locale, snapshot, state, compact, onSelectDate, onSelectShipping, onSelectServicePoint, onSelectShippingMode, cart, selectedAddress } = props;
+  const { t, locale, snapshot, state, compact, onSelectDate, onSelectShipping, onSelectServicePoint, onSelectShippingMode, onSelectPickup, cart, selectedAddress } =
+    props;
+  const router = useRouter();
   const [pickerOpen, setPickerOpen] = useState(false);
   const homeOptions = selectableShippingOptions(snapshot.shipping?.options ?? []);
   // Telefon görünümünde nokta seçimi yok (K.28): orada yalnız eve teslim servisleri listelenir.
   const pointOptions = compact ? new Map<string, never>() : pointOptionsByCarrier(snapshot.shipping?.options ?? []);
   const hasModes = homeOptions.length > 0 && pointOptions.size > 0;
   const mode: 'home' | 'point' = homeOptions.length === 0 && pointOptions.size > 0 ? 'point' : hasModes ? state.shippingMode : 'home';
-  const router = useRouter();
   const delivery = snapshot.delivery;
   const payment = snapshot.payment;
   if (!delivery) return null;
 
   const inRoute = delivery.deliveryType === 'route';
+  // Gel-al: adresin cevabı değil müşterinin seçimi — gün, kargo ve adres kısıtı bu türde hiç çizilmez.
+  const pickup = delivery.deliveryType === 'pickup';
 
   /**
    * Kısıt bloğu seçili adrese bakar, sitenin ortak cevabına (başlıktaki hap) değil: müşteri sepette kod vermemişse hap boştur
@@ -233,28 +237,57 @@ export function DeliveryStep(props: CheckoutViewProps) {
         point: null,
       }
     : null;
-  const restricted = restrictedLines(addressPlace, cart.lines);
+  const restricted = pickup ? [] : restrictedLines(addressPlace, cart.lines);
   // Eşik sepet okumasından gelir; ekran ayar okumaz (tek kaynak).
   const freeThresholdCents = cart.freeShippingCents;
 
   return (
     <StepShell step={t.delivery.step} title={t.delivery.title} compact={compact}>
+      {/* Gel-al yalnız izinli müşteriye sunulur (`snapshot.pickup`); seçim iki kart: adrese teslim (adresin cevabı) · depodan
+          teslim (depo başına bir kart). Tasarım dosyasında bloğu yok — gün/servis kartlarının deseniyle kuruldu. */}
+      {snapshot.pickup && (
+        <div className="flex flex-wrap gap-2.5">
+          <ChoiceCard selected={!pickup} onClick={() => onSelectPickup(null)} small>
+            <span className="font-sans text-body-sm font-bold text-ink">{t.delivery.modeAddress}</span>
+            <span className="font-sans text-note leading-relaxed text-body">{t.delivery.modeAddressBody}</span>
+          </ChoiceCard>
+          {snapshot.pickup.warehouses.map((warehouse) => (
+            <ChoiceCard
+              key={warehouse.id}
+              selected={pickup && snapshot.pickup?.selectedWarehouseId === warehouse.id}
+              onClick={() => onSelectPickup(warehouse.id)}
+              small
+            >
+              <span className="font-sans text-body-sm font-bold text-ink">{t.delivery.modePickup}</span>
+              <span className="font-sans text-note leading-relaxed text-body">
+                {warehouse.name} · {warehouse.addressLine}
+              </span>
+            </ChoiceCard>
+          ))}
+        </div>
+      )}
       {/* Teslimat türü önce söylenir, çünkü gün seçeneği ancak "kim getiriyor" bilinince anlam kazanır; kargo hata gibi yazılmaz.
           Tür bir rozet, açıklaması altında düz metin: renkli kutu bilgiyi uyarı gibi gösterirdi. */}
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex w-max items-center gap-1.5 rounded-[12px] bg-olive-bg px-2.5 py-[3px] font-sans text-note font-semibold text-olive">
-            <Icon name={inRoute ? 'truck' : 'box'} size={13} />
-            {inRoute ? t.delivery.route : t.delivery.shipping}
+            <Icon name={pickup ? 'pin' : inRoute ? 'truck' : 'box'} size={13} />
+            {pickup ? t.delivery.pickup : inRoute ? t.delivery.route : t.delivery.shipping}
           </span>
           {/* Ücret rozetin yanında: teslimat türünü okuyan müşteri bedelini aynı anda görmeli —
               özete kadar aşağı inip bulmak sürpriz hissi verirdi. */}
-          {!inRoute && payment && payment.shippingFeeCents > 0 && (
+          {!inRoute && !pickup && payment && payment.shippingFeeCents > 0 && (
             <span className="font-sans text-body-sm font-bold text-ink">{formatPrice(payment.shippingFeeCents, locale)}</span>
           )}
         </div>
-        <span className="font-sans text-body-sm leading-relaxed text-body">{inRoute ? t.delivery.routeBody : t.delivery.shippingBody}</span>
-        {!inRoute && (
+        <span className="font-sans text-body-sm leading-relaxed text-body">
+          {pickup ? t.delivery.pickupBody : inRoute ? t.delivery.routeBody : t.delivery.shippingBody}
+        </span>
+        {/* Randevu sistem dışı (telefonla): numara marka künyesinden, depo başına telefon alanı yok. */}
+        {pickup && (
+          <span className="font-sans text-note leading-relaxed text-muted">{t.delivery.pickupPhone.replace('{phone}', brand.contact.phoneDisplay)}</span>
+        )}
+        {!inRoute && !pickup && (
           <span className="font-sans text-note leading-relaxed text-muted">
             {t.delivery.shippingScope}
             {freeThresholdCents > 0 && ` ${t.delivery.shippingFree.replace('{threshold}', formatPrice(freeThresholdCents, locale))}`}
@@ -271,7 +304,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
         minBasketCents={cart.minBasketCents}
         freeShippingCents={cart.freeShippingCents}
         compact={compact}
-        place={addressPlace}
+        place={pickup ? null : addressPlace}
         // Adres sepette değişir: çıkış sepete götürür, burada seçici açılmaz.
         onChangePlace={() => router.push('/cart')}
       />
@@ -317,14 +350,14 @@ export function DeliveryStep(props: CheckoutViewProps) {
       {/* Kargo servisi seçimi: seçenekler taşıyıcıdan canlı gelir ve fiyat istemcide hesaplanmaz, seçim sunucuya gidip anlık
           görüntüyü yeniden çözer. Eşik üstünde seçim sorulmaz, çünkü ücret sıfır ve koli eve gider; kural asıl sevkte bağlayıcı
           (`quoteOrderShipment` → `requiresHomeDelivery`), burası yalnız sormama kısmı. */}
-      {!inRoute && !delivery.blocked && snapshot.shipping?.mode === 'auto' && (
+      {!inRoute && !pickup && !delivery.blocked && snapshot.shipping?.mode === 'auto' && (
         <div className="flex flex-col gap-1">
           <span className="font-sans text-body-sm font-bold text-ink">{t.delivery.carrierTitle}</span>
           <span className="font-sans text-body-sm text-body">{t.delivery.carrierFreeHome}</span>
         </div>
       )}
 
-      {!inRoute && !delivery.blocked && snapshot.shipping?.mode !== 'auto' && (
+      {!inRoute && !pickup && !delivery.blocked && snapshot.shipping?.mode !== 'auto' && (
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-baseline gap-2">
             <span className="font-sans text-body-sm font-bold text-ink">{t.delivery.carrierTitle}</span>
@@ -480,8 +513,9 @@ export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, onTo
     {
       method: 'cash',
       onAccount: false,
-      title: t.payment.cod,
-      body: t.payment.codBody,
+      // Gel-al'da aynı yol "depoda öde"dir: nakit/kart tezgâhta, kural kapıdakiyle aynı.
+      title: snapshot.delivery?.deliveryType === 'pickup' ? t.payment.codPickup : t.payment.cod,
+      body: snapshot.delivery?.deliveryType === 'pickup' ? t.payment.codPickupBody : t.payment.codBody,
       blocked: payment.codBlockedReason ? (t.payment.codBlocked[payment.codBlockedReason as keyof typeof t.payment.codBlocked] ?? null) : null,
     },
   ];

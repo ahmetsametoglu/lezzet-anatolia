@@ -7,13 +7,14 @@ import {
   ProductService,
   ProductVariantService,
   UserProfileService,
+  WarehouseService,
   type Db,
 } from '@lezzet/database';
 import { cityMatchesPlaces } from '@lezzet/address';
 import { chooseShippingOption, costsAtSale, deriveChannel, meetsMinBasket, needsServicePoint, resolveVatTreatment } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import type {
-  AddressDeliveryType,
+  DeliveryType,
   OrderItemInsert,
   OrderSource,
   ParcelPlanSnapshot,
@@ -50,8 +51,8 @@ import type { ShippingRateProvider } from '../shipping/port';
 */
 
 export type CheckoutDraftOutcome =
-  // Taslak bir adresten doğar, `pickup` üretemez.
-  | { status: 'ok'; orderId: string; totalCents: number; deliveryType: AddressDeliveryType }
+  // Adresin cevabı ya da müşterinin seçtiği gel-al: üç tür de bu kapıdan doğar (yerinde satış hâlâ kendi kapısında).
+  | { status: 'ok'; orderId: string; totalCents: number; deliveryType: DeliveryType }
   /**
    * `ambiguous_zone` veri hatası, `no_shipping_warehouse` yapılandırma eksiğidir; ikisi de müşteriye "bölge dışısınız"
    * dedirtmemeli.
@@ -87,7 +88,11 @@ export type CheckoutDraftOutcome =
   /** Seçilen kargo servisi bu sepette artık yok ya da seçim bize kalmışken eve giden servis yok; ekran listeyi yeniden okur. */
   | { status: 'shipping_option_unavailable' }
   /** Servis teslim noktası istiyor ama nokta yok, kapalı ya da başka taşıyıcının. */
-  | { status: 'service_point_invalid' };
+  | { status: 'service_point_invalid' }
+  /** Gel-al istendi ama müşterinin izni yok — ekran kartı göstermemişti, istek elle kurulmuştur. */
+  | { status: 'pickup_not_allowed' }
+  /** Seçilen depo gel-al noktası değil, pasif, araç ya da yok. */
+  | { status: 'pickup_warehouse_unavailable' };
 
 export interface CheckoutDraftInput {
   locale: PreferredLanguage;
@@ -130,6 +135,11 @@ export interface CheckoutDraftInput {
   servicePointId?: string | null;
   /** Testte sahte sağlayıcı; verilmezse ortamın Sendcloud'u, o da yoksa teklifsiz (sabit tarife). */
   rateProvider?: ShippingRateProvider | null;
+  /**
+   * Gel-al: müşterinin malı alacağı depo. Doluysa tür `pickup`, depo bu, bölge ve gün yok; adres yine yazılır (fatura adresi).
+   * Açık seçimdir (`shippingOrder` gibi): anlık görüntü gel-al gösterirken taslak adresin cevabını açamaz.
+   */
+  pickupWarehouseId?: string | null;
   /** Verilmezse paket satırı engelli durur; paket taşımayan yüzey bu kapıyı geçmez. */
   bundles?: CartBundlePort;
   /**
@@ -147,13 +157,23 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   const address = (await new AddressService(db).listByCustomer(customer.id)).find((a) => a.id === input.addressId);
   if (!address) return { status: 'address_not_found' };
 
-  // KDV ülkesi müşterinin kimliğinden değil adresten gelir: belirleyen malın gittiği yer. Kanal siparişe yazılanla aynı ifadeden
-  // türer ki sipariş kendi KDV'siyle çelişmesin.
+  // Gel-al: izin ve depo SUNUCUDA sorulur — ekran kartı göstermemiş olsa da istek elle kurulabilir.
+  const pickupWarehouse = input.pickupWarehouseId ? await pickupWarehouseOf(db, input.pickupWarehouseId) : null;
+  if (input.pickupWarehouseId) {
+    if (!customer.pickupAllowed) return { status: 'pickup_not_allowed' };
+    if (!pickupWarehouse) return { status: 'pickup_warehouse_unavailable' };
+  }
+  // Malın teslim edildiği ülke: adresinki, gel-al'da deponunki — KDV oraya bağlıdır (DOMAIN §5); Almanya adresli müşteri
+  // Strasbourg'dan alıyorsa mal Fransa'da teslim edilmiştir.
+  const deliveryCountry = pickupWarehouse?.countryCode ?? address.country;
+
+  // KDV ülkesi müşterinin kimliğinden değil malın gittiği yerden gelir. Kanal siparişe yazılanla aynı ifadeden türer ki
+  // sipariş kendi KDV'siyle çelişmesin.
   const channel = deriveChannel({ isCompany: customer.type === 'company' });
   // Doğrulanmamış numara %0 açmaz: yanlış %0 uygulamak bizim riskimizdir.
   const vat = resolveVatTreatment({
     channel,
-    deliveryCountry: address.country,
+    deliveryCountry,
     vatNumberValid: customer.vatNumberValid ?? undefined,
   });
 
@@ -169,8 +189,9 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     inputs: deliveryInputs,
   });
 
-  // Kargo siparişinin deposu ülkenin kargo deposudur, çünkü kalemler orada; yoksa sebep ayrı söylenir.
-  const orderWarehouseId = input.shippingOrder ? place.shippingWarehouseId : place.warehouseId;
+  // Kargo siparişinin deposu ülkenin kargo deposudur, çünkü kalemler orada; yoksa sebep ayrı söylenir. Gel-al'da depo
+  // müşterinin seçtiği tesistir (DATA_MODEL: "adresten değil seçilen depodan çözülür").
+  const orderWarehouseId = pickupWarehouse ? pickupWarehouse.id : input.shippingOrder ? place.shippingWarehouseId : place.warehouseId;
   if (input.shippingOrder && !orderWarehouseId) {
     return { status: 'warehouse_unresolved', reason: 'no_shipping_warehouse' };
   }
@@ -186,11 +207,12 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     // Pazarlıklı fiyat sepet okumasına girer: toplam, indirim matrahı, KDV kırılımı ve kargo eşiği bu okumadan türer.
     priceOverrides: input.staff?.priceOverrides,
     warehouseId: orderWarehouseId,
-    shippingWarehouseId: place.shippingWarehouseId,
-    // Kapsamlı ayarların (kargo tarifesi, asgari sepet) ülke ekseni çerezden değil adresten okunur.
-    country: address.country,
-    // Kargo siparişi bir bölgeye ait değildir; bölgenin asgari sepeti ona uygulanmaz.
-    zoneId: input.shippingOrder ? null : place.zoneId,
+    // Gel-al'da sepet bölünmez: kargo deposu verilmez, depoda olmayan kalem "burada yok" olarak reddedilir.
+    shippingWarehouseId: pickupWarehouse ? null : place.shippingWarehouseId,
+    // Kapsamlı ayarların (kargo tarifesi, asgari sepet) ülke ekseni çerezden değil malın teslim edildiği yerden okunur.
+    country: deliveryCountry,
+    // Kargo ve gel-al siparişi bir bölgeye ait değildir; bölgenin asgari sepeti onlara uygulanmaz.
+    zoneId: input.shippingOrder || pickupWarehouse ? null : place.zoneId,
     previousPrices,
     bundles: input.bundles,
   });
@@ -204,7 +226,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
 
   /* Rota dışı adreste gelemeyen soğuk zincir kalemi sipariş kapsamından düşer ama sepette kalır; ret yalnız geriye kalem kalmazsa
      doğar. İndirim payları satırla birlikte süzülür, yoksa kalan kalemlere başkasının indirimi yazılırdı. */
-  const scope = orderScopeOf(cart, !input.shippingOrder && place.deliveryType === 'shipping');
+  const scope = orderScopeOf(cart, !input.shippingOrder && !pickupWarehouse && place.deliveryType === 'shipping');
   const orderedLines = scope.lines;
   const orderedShares = scope.shares;
   if (orderedLines.length === 0) return { status: 'cold_chain_unshippable' };
@@ -218,8 +240,8 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     inputs: deliveryInputs,
   });
 
-  // Kargo seçimi adresin cevabını ezer, tersi olmaz; aşağıdaki her karar bu türü izler.
-  const deliveryType = input.shippingOrder ? ('shipping' as const) : delivery.deliveryType;
+  // Gel-al ve kargo seçimi adresin cevabını ezer, tersi olmaz; aşağıdaki her karar bu türü izler.
+  const deliveryType: DeliveryType = pickupWarehouse ? 'pickup' : input.shippingOrder ? 'shipping' : delivery.deliveryType;
 
   // Adres tutarlılığı yalnız rota siparişinde sorulur: kurye sokağa gider ve kod ile şehir çelişiyorsa hangisinin yanlış olduğunu
   // biz bilemeyiz. Kargoda adresi taşıyıcı doğrular; kural formda değil kapıda, çünkü form atlanabilir.
@@ -233,7 +255,8 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // Soğuk zincir engeli "şu an yok"tan önce söylenir, yoksa müşteri o adrese hiç gitmeyecek ürünü beklerdi. Kargo siparişi ayrıca
   // denetlenir, çünkü rota içi adreste `shippingBlockedReason` boştur.
   if (input.shippingOrder && hasNonShippableItem) return { status: 'cold_chain_unshippable' };
-  if (delivery.shippingBlockedReason === 'cold_chain') return { status: 'cold_chain_unshippable' };
+  // Gel-al'da soğuk zincir engeli yok: mal hiç yola çıkmıyor, müşteri depodan alıyor.
+  if (!pickupWarehouse && delivery.shippingBlockedReason === 'cold_chain') return { status: 'cold_chain_unshippable' };
   if (cart.hasBlocked) return { status: 'blocked_lines', lines: cart.lines.filter((l) => l.blocked).map((l) => l.name) };
 
   // Sipariş tek depodan çıkar: o depoda olmayan kalem buraya giremez, yoksa iş ödemeden sonra rezervasyonda patlar.
@@ -247,8 +270,9 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   }
   /* Asgari sepet siparişe giren tutara bakar, çünkü gelemeyen kalemle eşiği geçen müşteri kasada geri düşerdi. Personel yolunda
      sorulmaz: küçük siparişi alıp almamak operatörün kararı. */
+  // Gel-al'da sepetin eşiği (rota/kargo, içeriğe göre) geçerli değil: eşik ödeme kapısında `pickup` kuralıyla okunur (aşağıda).
   const basket = meetsMinBasket(scope.subtotalCents, cart.minBasketCents);
-  if (!input.staff && !basket.ok) return { status: 'min_basket', missingCents: basket.missingCents };
+  if (!input.staff && !pickupWarehouse && !basket.ok) return { status: 'min_basket', missingCents: basket.missingCents };
 
   // Gün kabul edilmez, doğrulanır: ekran açıkken kesim saati geçmiş olabilir. Kargoda gün sorulmaz.
   if (deliveryType === 'route') {
@@ -279,20 +303,24 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   const options = await resolveCheckoutPayment(db, {
     customerId: customer.id,
     deliveryType,
+    quotedFeeCents: priced?.priceCents ?? null,
     basketCents: scope.basketCents,
     // Asgari sepet eşiği indirim öncesini ister; `basketCents` kargo ve toplam içindir.
     subtotalCents: scope.subtotalCents,
-    quotedFeeCents: priced?.priceCents ?? null,
     lines: vatLines,
     /* Ayar kapsamı ödeme kapısına da sepet okumasındaki ifadelerle geçer; geçmeseydi sepet kapsamlı ayarı, siparişe yazılan kargo
        ücreti ise genel değeri okurdu. */
-    country: address.country,
-    // Kargo siparişi bölgeye ait değildir.
-    zoneId: input.shippingOrder ? null : place.zoneId,
+    country: deliveryCountry,
+    // Kargo ve gel-al siparişi bölgeye ait değildir.
+    zoneId: input.shippingOrder || pickupWarehouse ? null : place.zoneId,
     warehouseId: orderWarehouseId,
   });
   if (!options.methods.includes(input.paymentMethod)) {
     return { status: 'payment_not_allowed', methods: options.methods };
+  }
+  // Gel-al eşiği: araç çıkmadığı için yalnız kanal satırı (kargo kuralı) — kapı `pickup` türüyle okudu, karar onun.
+  if (pickupWarehouse && !input.staff && !options.minBasketOk) {
+    return { status: 'min_basket', missingCents: options.missingForMinBasketCents };
   }
 
   // Teklif alınamadıysa sipariş sabit tarifeyle açılır ve seçimsiz kalır; servisi o zaman depo seçer.
@@ -340,7 +368,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
 
   // Adres anlık görüntü olarak da yazılır ki müşteri adresini sonradan düzenlese de sipariş nereye gittiğini bilsin.
   const deliveryDate = deliveryType === 'route' ? (input.deliveryDate ?? delivery.availableDates[0] ?? null) : null;
-  const orderZoneId = input.shippingOrder ? null : delivery.zoneId;
+  const orderZoneId = input.shippingOrder || pickupWarehouse ? null : delivery.zoneId;
 
   // Komşu daveti kişinin kendi kabul kaydından okunur ve ancak sefer belli olunca sorulabilir; eşleşmeme sessizdir.
   const neighborInviteId = await matchedNeighborInviteId(db, {
@@ -371,7 +399,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       neighborInviteId,
       addressId: address.id,
       addressSnapshot: { ...address },
-      deliveryCountry: address.country,
+      deliveryCountry,
       vatTreatment: vat.treatment,
       // Vergi numarasının o anki kopyası, yalnız %0 uygulandığında: numara sonradan değişse de denetimde cevap siparişte durur.
       vatNumberSnapshot: vat.zeroRated ? customer.vatNumber : null,
@@ -488,6 +516,15 @@ async function matchedNeighborInviteId(
     // Davetin kendi yolu iz bırakıyor; ikinci log satırı aynı olayı iki kez anlatırdı.
     return null;
   }
+}
+
+/**
+ * Gel-al deposu: aktif, tesis ve gel-al noktası — üçü de tutmuyorsa depo yok sayılır; istemcinin söylediği kimlik hiçbir zaman
+ * olduğu gibi yazılmaz.
+ */
+async function pickupWarehouseOf(db: Db, warehouseId: string) {
+  const warehouse = await new WarehouseService(db).getById(warehouseId);
+  return warehouse && warehouse.isActive && warehouse.kind === 'facility' && warehouse.pickupEnabled ? warehouse : null;
 }
 
 /**
