@@ -330,7 +330,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 - **`amount_refunded`** — **cache** — kaynak `MoneyMovement` (`order_refund` çıkışları); toplam iade edilen. App: `amountRefundedCents`
 - **`cogs_amount`** — malın maliyeti; sipariş anında son alış fiyatıyla tahmin, parti yazılınca partilerin alışı (`refresh_order_cogs` tetikleyicisi). `null` = bilinmiyor. App: `cogsAmountCents`
 - **`cogs_is_estimate`** — mal maliyeti henüz parti seçilmeden tahmin mi. App: `cogsIsEstimate`
-- **`delivery_cost`** — teslimat maliyeti; rotada sipariş anında birim maliyet, kargoda koli bildirilince taşıyıcı fiyatı. App: `deliveryCostCents`
+- **`delivery_cost`** — teslimat maliyeti; rotada sipariş anında birim maliyet, kargoda sipariş anında seçilen servisin teklifi, koli bildirilince gerçek kolilerin teklifi. App: `deliveryCostCents`
 - **`payment_fee`** — ödeme komisyonu (Stripe/SumUp); ödeme anında yazılır. App: `paymentFeeCents`
 - **`packaging_cost`** — paketleme (soğuk zincir) maliyeti; sipariş anında yazılır. App: `packagingCostCents`
 

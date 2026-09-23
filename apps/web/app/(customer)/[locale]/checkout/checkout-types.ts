@@ -159,6 +159,11 @@ export function isSeparateOrder(shippingOrder: boolean, cart: Pick<CartView, 'li
   return shippingOrder && isSplitCart(cart);
 }
 
+/** Listede seçilebilen servisler: noktaya gidenler listede değil haritada seçilir. BEKLEYEN(K.28): telefon görünümünde harita yok. */
+export function selectableShippingOptions<T extends { needsServicePoint: boolean }>(options: readonly T[]): T[] {
+  return options.filter((o) => !o.needsServicePoint);
+}
+
 /** Haritanın noktaları; `off` = sağlayıcı yapılandırılmamış, harita açılmaz. Tip `'use server'` dosyasında durmaz: Turbopack oradaki tip ihracını değer sanıyor. */
 export type ServicePointsResult = CheckoutServicePointsOutcome | { status: 'off' };
 
@@ -179,11 +184,6 @@ export function pointOptionsByCarrier(options: readonly ShippingOption[]): Map<s
     if (!current || option.priceCents < current.priceCents) byCarrier.set(option.carrierCode, option);
   }
   return byCarrier;
-}
-
-/** Listede seçilebilen servisler: noktaya gidenler listede değil haritada seçilir. BEKLEYEN(K.28): telefon görünümünde harita yok. */
-export function selectableShippingOptions<T extends { needsServicePoint: boolean }>(options: readonly T[]): T[] {
-  return options.filter((o) => !o.needsServicePoint);
 }
 
 /** Teslim noktası türü seçili ama nokta seçilmemiş mi — onay düğmesi ve kart uyarısı aynı sorudan okur. */
