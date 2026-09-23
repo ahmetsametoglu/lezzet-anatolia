@@ -439,6 +439,14 @@ export const EK_TASLAKLAR: LooseDraft[] = [
   // Kaynak katalogda 145 g'lık porsiyon tiramisu var, bütün pasta yok: ambalajı elimizde, künyesi
   // etiketinden panele girildi (23.09). Kapak fotoğrafı henüz çekilmedi.
   { name: 'Tiramisu Pasta (bütün)' },
+  // Tekil kap pastalar ve trileçe: kaynağın kataloğunda hiç yok, ambalajları elimizde ve künyeleri
+  // etiketinden panele girildi (23.09). Kapak fotoğrafları henüz çekilmedi.
+  { name: 'Trileçe (Tres Leches Caramel)' },
+  { name: 'Kırmızı Kadife Pasta (tekil kap)' },
+  { name: 'Fıstıklı Pasta (tekil kap)' },
+  { name: 'Ahududulu Cheesecake (tekil kap)' },
+  { name: 'Çikolatalı Tofi Karamel Pasta (tekil kap)' },
+  { name: 'Çikolatalı Pasta (tekil kap)' },
 ];
 
 /**
@@ -780,6 +788,12 @@ export const DRAFT_CATEGORY: Record<string, string> = {
   // Veritabanında kategorisiz doğdu (asistan etiketten okuyamaz); rafı kardeşi olan porsiyon
   // tiramisununkiyle aynı — kategorisiz ürün katalog listelerinde hiç görünmezdi.
   'Tiramisu Pasta (bütün)': 'tatli',
+  'Trileçe (Tres Leches Caramel)': 'tatli',
+  'Kırmızı Kadife Pasta (tekil kap)': 'tatli',
+  'Fıstıklı Pasta (tekil kap)': 'tatli',
+  'Ahududulu Cheesecake (tekil kap)': 'tatli',
+  'Çikolatalı Tofi Karamel Pasta (tekil kap)': 'tatli',
+  'Çikolatalı Pasta (tekil kap)': 'tatli',
 };
 
 /**

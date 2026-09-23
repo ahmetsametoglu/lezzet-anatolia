@@ -44,6 +44,17 @@ const WARNINGS_PROP = {
   },
 } as const;
 
+/**
+ * Beyan metinlerinin BİÇİMLENDİRME kuralı — tarifi TEK yerde, çünkü iki araç (`product_create`,
+ * `product_draft`) ve iki alan (içindekiler, saklama) aynı kuralı paylaşıyor.
+ *
+ * Yaşanan hata (işletmeci bildirimi 23.09): modeller alerjeni GÖRÜNÜR yapmak için büyük harfe
+ * çeviriyor ("BUĞDAY unu"). Depodaki işaret `**` (`helper/rich-text`) ve vitrin onu kalın çiziyor;
+ * büyük harf ise metnin kendisini bozuyor ve her sıfırlamada elle düzeltiliyor.
+ */
+const BEYAN_BICIMI =
+  'FORMATTING: to make a word stand out, wrap it in ** ** — the storefront renders that as bold. NEVER UPPERCASE a word for emphasis: capitals are not emphasis here, they change the declaration itself. Capitals stay only where the label really prints them (a brand, or an abbreviation like UHT, E330, DLC). Mark the allergen AS IT IS WRITTEN IN THIS LIST, not by its allergen name: "**buğday** unu" / "farine de **blé**", never "GLUTEN". The closed allergen list is a separate field and is not a substitute for this marking.';
+
 const INSTRUCTIONS = [
   'You are the admin assistant for Lezzet Anatolie (Turkish food e-commerce, Strasbourg). You talk to the OWNER, never to customers.',
   'Always answer the admin in TURKISH. Keep answers short and concrete; lead with what needs attention.',
@@ -255,8 +266,8 @@ export const TOOLS = [
         },
         vatRate: { type: 'number', description: 'French food VAT: 5.5 (packaged/frozen) or 10 (immediate consumption). Default 5.5.' },
         description: { type: 'object', description: 'Per language.' },
-        ingredients: { type: 'object', description: 'Per language, as printed on the label.' },
-        storageInstructions: { type: 'object', description: 'Per language, as printed.' },
+        ingredients: { type: 'object', description: `Per language, as printed on the label — same order, same words, same numbers. ${BEYAN_BICIMI}` },
+        storageInstructions: { type: 'object', description: `Per language, as printed. ${BEYAN_BICIMI}` },
         nutrition: {
           type: 'object',
           description: 'Per 100 g: energyKj, energyKcal, fatG, saturatedFatG, carbohydrateG, sugarsG, proteinG, saltG.',
@@ -553,8 +564,8 @@ export const TOOLS = [
           description: 'Product name per language. Changing it does NOT change the URL (the slug is fixed at creation).',
         },
         description: { type: 'object', description: '{ "tr": "…", "fr": "…", "de": "…" }' },
-        ingredients: { type: 'object', description: 'Per language, as printed on the label.' },
-        storageInstructions: { type: 'object', description: 'Per language, as printed.' },
+        ingredients: { type: 'object', description: `Per language, as printed on the label — same order, same words, same numbers. ${BEYAN_BICIMI}` },
+        storageInstructions: { type: 'object', description: `Per language, as printed. ${BEYAN_BICIMI}` },
         nutrition: {
           type: 'object',
           description: 'Per 100 g: energyKj, energyKcal, fatG, saturatedFatG, carbohydrateG, sugarsG, proteinG, saltG.',

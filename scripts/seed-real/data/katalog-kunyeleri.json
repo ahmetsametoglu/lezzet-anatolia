@@ -16,8 +16,15 @@
       "proteinG": 4.95,
       "saltG": 0
     },
-    "allergens": ["gluten", "yumurta", "sut"],
-    "traces": ["sert_kabuklu", "susam"],
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut"
+    ],
+    "traces": [
+      "sert_kabuklu",
+      "susam"
+    ],
     "storage": {
       "tr": "Derin dondurulmuş üründür; -18 °C'de saklayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
       "fr": "Produit surgelé ; conserver à -18 °C. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
@@ -43,8 +50,15 @@
       "proteinG": 4.95,
       "saltG": 0
     },
-    "allergens": ["gluten", "yumurta", "sut"],
-    "traces": ["sert_kabuklu", "susam"],
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut"
+    ],
+    "traces": [
+      "sert_kabuklu",
+      "susam"
+    ],
     "storage": {
       "tr": "Derin dondurulmuş üründür; -18 °C'de saklayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
       "fr": "Produit surgelé ; conserver à -18 °C. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
@@ -70,8 +84,15 @@
       "proteinG": 4.05,
       "saltG": 0
     },
-    "allergens": ["gluten", "yumurta", "sut", "soya"],
-    "traces": ["sert_kabuklu"],
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut",
+      "soya"
+    ],
+    "traces": [
+      "sert_kabuklu"
+    ],
     "storage": {
       "tr": "Derin dondurulmuş üründür; -18 °C'de saklayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
       "fr": "Produit surgelé ; conserver à -18 °C. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
@@ -97,8 +118,14 @@
       "proteinG": 5,
       "saltG": 0.1
     },
-    "allergens": ["gluten", "yumurta", "sut"],
-    "traces": ["sert_kabuklu"],
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut"
+    ],
+    "traces": [
+      "sert_kabuklu"
+    ],
     "storage": {
       "tr": "Son tüketim tarihine kadar -18 °C'de saklayınız. Çözüldükten sonra buzdolabında (+4 °C) 3 gün içinde tüketiniz. Çözüldükten sonra tekrar dondurmayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
       "fr": "Conserver à -18 °C jusqu'à la date de péremption. Après décongélation, consommer sous 3 jours à +4 °C. Ne pas recongeler après décongélation. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
@@ -124,8 +151,17 @@
       "proteinG": 4.87,
       "saltG": 0
     },
-    "allergens": ["gluten", "yumurta", "sut", "soya", "sert_kabuklu"],
-    "traces": ["sert_kabuklu", "susam"],
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut",
+      "soya",
+      "sert_kabuklu"
+    ],
+    "traces": [
+      "sert_kabuklu",
+      "susam"
+    ],
     "storage": {
       "tr": "Derin dondurulmuş üründür; -18 °C'de saklayınız. Buzdolabında 4–6 saat çözdürün; soğuk servis edin.",
       "fr": "Produit surgelé ; conserver à -18 °C. Décongeler 4 à 6 heures au réfrigérateur ; à déguster frais.",
@@ -151,7 +187,9 @@
       "proteinG": 4,
       "saltG": 0.03
     },
-    "allergens": ["sut"],
+    "allergens": [
+      "sut"
+    ],
     "storage": {
       "tr": "-18 °C'de muhafaza ediniz. Çözündükten sonra tekrar dondurmayınız.",
       "fr": "Conserver à -18 °C. Ne pas recongeler après décongélation.",
@@ -177,7 +215,9 @@
       "proteinG": 4,
       "saltG": 0.03
     },
-    "allergens": ["sut"],
+    "allergens": [
+      "sut"
+    ],
     "storage": {
       "tr": "-18 °C'de muhafaza ediniz. Çözündükten sonra tekrar dondurmayınız.",
       "fr": "Conserver à -18 °C. Ne pas recongeler après décongélation.",
@@ -203,7 +243,10 @@
       "proteinG": 4,
       "saltG": 0.03
     },
-    "allergens": ["sut", "sert_kabuklu"],
+    "allergens": [
+      "sut",
+      "sert_kabuklu"
+    ],
     "storage": {
       "tr": "-18 °C'de muhafaza ediniz. Çözündükten sonra tekrar dondurmayınız.",
       "fr": "Conserver à -18 °C. Ne pas recongeler après décongélation.",
@@ -229,7 +272,10 @@
       "proteinG": 5.6,
       "saltG": 0.001
     },
-    "allergens": ["sut", "sert_kabuklu"],
+    "allergens": [
+      "sut",
+      "sert_kabuklu"
+    ],
     "storage": {
       "tr": "Son kullanma tarihinden önce -20 °C'de saklayınız.",
       "fr": "Conserver à -20 °C avant la date d'expiration.",
@@ -240,12 +286,20 @@
     "dateType": "DLC",
     "variants": {
       "111106": {
-        "label": { "tr": "500 g kap", "fr": "barquette 500 g", "de": "500 g Behälter" },
+        "label": {
+          "tr": "500 g kap",
+          "fr": "barquette 500 g",
+          "de": "500 g Behälter"
+        },
         "netQuantity": 500,
         "netUnit": "g"
       },
       "111121": {
-        "label": { "tr": "70 g dilim", "fr": "Tranche 70 g", "de": "Scheibe 70 g" },
+        "label": {
+          "tr": "70 g dilim",
+          "fr": "Tranche 70 g",
+          "de": "Scheibe 70 g"
+        },
         "netQuantity": 70,
         "netUnit": "g"
       }
@@ -267,7 +321,9 @@
       "proteinG": 2.23,
       "saltG": 0.8
     },
-    "allergens": ["gluten"],
+    "allergens": [
+      "gluten"
+    ],
     "storage": {
       "tr": "-18 °C'de donuk saklayınız. Çözdürdükten sonra tekrar dondurmayınız.",
       "fr": "Conserver congelé à -18 °C. Ne pas recongeler après décongélation.",
@@ -279,10 +335,94 @@
     "shelfLifeDays": 730,
     "variants": {
       "200201": {
-        "label": { "tr": "1000 g", "fr": "1000 g", "de": "1000 g" },
+        "label": {
+          "tr": "1000 g",
+          "fr": "1000 g",
+          "de": "1000 g"
+        },
         "netQuantity": 1000,
         "netUnit": "g"
       }
     }
+  },
+  "Tiramisu": {
+    "ingredients": {
+      "tr": "Su, UHT **süt**, şeker, **buğday** unu, kakao tozu, bitkisel yağ (palm, hindistan cevizi), **süt** kreması, peynir altı suyu tozu (**süt**), pastörize **yumurta** ve **yumurta** tozu, çikolata (kakao kitlesi, kakao yağı, şeker, ayçiçek lesitini), labne peyniri (pastörize inek **sütü** ve kreması, yoğurt kültürü), glikoz şurubu, jelatin, modifiye nişasta, **süt** proteini, emülgatörler (E471, E472a, **soya** lesitini (E322)), stabilizörler (E420ii, E463, E466), asitlik düzenleyici (E330), kıvam artırıcılar (E401, E410, E440), aromalar (**süt**, çikolata), renklendiriciler (E150d, E153, E102, E129), koruyucu (E202).",
+      "fr": "Eau, **lait** UHT, sucre, farine de **blé**, cacao en poudre, matière grasse végétale (palme, coco), crème de **lait**, lactosérum en poudre (**lait**), **œuf** pasteurisé et **œuf** en poudre, chocolat (pâte de cacao, beurre de cacao, sucre, lécithine de tournesol), fromage labneh (**lait** de vache pasteurisé et crème, ferments du yaourt), sirop de glucose, gélatine, amidon modifié, protéines de **lait**, émulsifiants (E471, E472a, lécithine de **soja** (E322)), stabilisants (E420ii, E463, E466), correcteur d'acidité (E330), épaississants (E401, E410, E440), arômes (**lait**, chocolat), colorants (E150d, E153, E102, E129), conservateur (E202).",
+      "de": "Wasser, UHT-**Milch**, Zucker, **Weizen**mehl, Kakaopulver, Pflanzenfett (Palm, Kokos), **Milch**rahm, **Molken**pulver (**Milch**), pasteurisiertes **Ei** und **Ei**pulver, Schokolade (Kakaomasse, Kakaobutter, Zucker, Sonnenblumenlecithin), Labneh-Käse (pasteurisierte Kuh**milch** und Sahne, Joghurtkultur), Glukosesirup, Gelatine, modifizierte Stärke, **Milch**eiweiß, Emulgatoren (E471, E472a, **Soja**lecithin (E322)), Stabilisatoren (E420ii, E463, E466), Säureregulator (E330), Verdickungsmittel (E401, E410, E440), Aromen (**Milch**, Schokolade), Farbstoffe (E150d, E153, E102, E129), Konservierungsstoff (E202)."
+    },
+    "nutrition": {
+      "energyKj": 1297,
+      "energyKcal": 310,
+      "fatG": 11.8,
+      "saturatedFatG": 7.1,
+      "carbohydrateG": 32.5,
+      "sugarsG": 21.8,
+      "proteinG": 5.6,
+      "saltG": 0.06
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut",
+      "soya"
+    ],
+    "traces": [
+      "sert_kabuklu"
+    ],
+    "storage": {
+      "tr": "-18 °C'de donuk saklayınız. Çözüldükten sonra buzdolabında (+4 °C) saklayıp 5 gün içinde tüketiniz. Çözüldükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver congelé à -18 °C. Après décongélation, conserver au réfrigérateur à +4 °C et consommer dans les 5 jours. Ne pas recongeler après décongélation.",
+      "de": "Tiefgefroren bei -18 °C lagern. Nach dem Auftauen im Kühlschrank bei +4 °C aufbewahren und innerhalb von 5 Tagen verzehren. Nach dem Auftauen nicht wieder einfrieren."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "variants": {
+      "901813": {
+        "label": {
+          "tr": "165 g",
+          "fr": "165 g",
+          "de": "165 g"
+        },
+        "netQuantity": 165,
+        "netUnit": "g"
+      }
+    }
+  },
+  "Sıkımlık Çiğ Köfte": {
+    "ingredients": {
+      "tr": "Su, **bulgur** (**buğday** glüteni), isot, pul biber, tuz, çiğ köfte baharat karışımı (soğan, sarımsak, havuç, kırmızı biber, tuz, şeker, pırasa, maydanoz, **kereviz**, zerdeçal, karabiber, asitlik düzenleyici, maya ekstraktı, doğala özdeş bitkisel aroma vericiler, bitkisel yağ (ayçiçek), baharat karışımı (tuz, soğan, tatlı kırmızı biber, karabiber, kimyon, kişniş, yenibahar, zencefil), tuz, domates salçası, biber salçası, keçap (su, invert şeker (pancar), domates salçası, sirke, şeker, asitlik düzenleyici (sitrik asit)), tuz, modifiye mısır nişastası, stabilizör (ksantan gam), karanfil tozu, renklendirici (havuç konsantresi), koruyucular (potasyum sorbat, sodyum benzoat)), invert şeker şurubu (pancar şekeri), bitkisel yağ (ayçiçek), maydanoz, sarımsak.",
+      "fr": "Eau, **boulgour** (gluten de **blé**), isot, piment en poudre, sel, mélange d'épices pour çiğ köfte (oignon, ail, carotte, poivron rouge, sel, sucre, poireau, persil, **céleri**, curcuma, poivre noir, correcteur d'acidité, extrait de levure, arômes végétaux identiques aux naturels, huile végétale (tournesol), mélange d'épices (sel, oignon, piment doux, poivre noir, cumin, coriandre, piment de la Jamaïque, gingembre), sel, concentré de tomates, concentré de poivrons doux, ketchup (eau, sucre inverti (betterave), concentré de tomates, vinaigre, sucre, correcteur d'acidité (acide citrique)), sel, amidon de maïs modifié, stabilisant (gomme xanthane), poudre de clou de girofle, colorant (concentré de carotte), conservateurs (sorbate de potassium, benzoate de sodium)), sirop de sucre inverti (sucre de betterave), huile végétale (tournesol), persil, ail.",
+      "de": "Wasser, **Bulgur** (**Weizen**gluten), Isot, Paprikapulver, Salz, Çiğköfte-Gewürzmischung (Zwiebel, Knoblauch, Karotte, rote Paprika, Salz, Zucker, Lauch, Petersilie, **Sellerie**, Kurkuma, schwarzer Pfeffer, Säureregulator, Hefeextrakt, naturidentische pflanzliche Aromastoffe, Pflanzenöl (Sonnenblume), Gewürzmischung (Salz, Zwiebel, süßer roter Paprika, schwarzer Pfeffer, Kreuzkümmel, Koriander, Piment, Ingwer), Salz, Tomatenmark, Paprikamark, Ketchup (Wasser, Invertzucker (Rübe), Tomatenmark, Essig, Zucker, Säureregulator (Zitronensäure)), Salz, modifizierte Maisstärke, Stabilisator (Xanthan), Nelkenpulver, Farbstoff (Karottenkonzentrat), Konservierungsstoffe (Kaliumsorbat, Natriumbenzoat)), Invertzuckersirup (Rübenzucker), Pflanzenöl (Sonnenblumenöl), Petersilie, Knoblauch."
+    },
+    "nutrition": {
+      "energyKj": 1013,
+      "energyKcal": 242,
+      "fatG": 11,
+      "saturatedFatG": 3.3,
+      "carbohydrateG": 27.6,
+      "sugarsG": 4.5,
+      "proteinG": 5.1,
+      "saltG": 0.6
+    },
+    "allergens": [
+      "gluten",
+      "kereviz"
+    ],
+    "traces": [
+      "susam",
+      "soya",
+      "sert_kabuklu"
+    ],
+    "storage": {
+      "tr": "-18 °C'de, güneş ışığından koruyarak saklayınız. Çözüldükten sonra tekrar dondurmayınız. Tüketimden bir gün önce buzdolabında (+4 °C) çözdürünüz; açtıktan sonra aynı gün tüketiniz. 4–12 °C arasında soğuk tüketilmesi önerilir. Raf ömrü, açılmamış ve uygun koşullarda saklanmış ürün için geçerlidir.",
+      "fr": "Conserver à -18 °C, à l'abri de la lumière. Ne pas recongeler après décongélation. Décongeler à +4 °C un jour avant consommation ; consommer le jour même après ouverture. À consommer frais, entre 4 °C et 12 °C. La durée de conservation est valable si le produit est non ouvert et correctement stocké.",
+      "de": "Bei -18 °C lagern, vor Sonnenlicht schützen. Nach dem Auftauen nicht erneut einfrieren. Produkt einen Tag vor dem Verzehr bei +4 °C auftauen; nach dem Öffnen am selben Tag verzehren. Verzehr gekühlt bei 4–12 °C empfohlen. Haltbarkeit gilt nur bei ungeöffneter Verpackung und sachgemäßer Lagerung."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "dateType": "DDM",
+    "shelfLifeDays": 360
   }
 }

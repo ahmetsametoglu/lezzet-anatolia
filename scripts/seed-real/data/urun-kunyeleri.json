@@ -1283,7 +1283,7 @@
       "de": "Johannisbrot- und Wacholdermelasse mit 24 % Zypressenzapfen, Mastix und Gewürzen. Harzig und dunkel; ein Löffel aufs Brot."
     },
     "ingredients": {
-      "tr": "Keçiboynuzu pekmezi, servi kozağı (%24), andız pekmezi, nane, zencefil, günlük (boswellia), çam sakızı (%2), zerdeçal, havlıcan, beta-glukan, çinko glukonat (%2), askorbik asit (C vitamini), kübabe, karanfil, keçiboynuzu tozu, kolekalsiferol (D3 vitamini) (%0,006).",
+      "tr": "Keçiboynuzu pekmezi, servi kozalağı (%24), andız pekmezi, nane, zencefil, günlük (boswellia), çam sakızı (%2), zerdeçal, havlıcan, beta-glukan, çinko glukonat (%2), askorbik asit (C vitamini), kübabe, karanfil, keçiboynuzu tozu, kolekalsiferol (D3 vitamini) (%0,006).",
       "fr": "Mélasse de caroube, cônes de cyprès (24 %), mélasse de genévrier de Syrie, menthe poivrée, gingembre, encens (boswellia), résine de pin (2 %), curcuma, galanga, bêta-glucane, gluconate de zinc (2 %), acide ascorbique (vitamine C), cubèbe, clou de girofle, poudre de caroube, cholécalciférol (vitamine D3) (0,006 %).",
       "de": "Johannesbrotmelasse, Zypressenzapfen (24 %), Syrische Wacholdermelasse, Pfefferminz, Ingwer, Weihrauch, Tannenharz (Mastix) (2 %), Kurkuma, Galgant, Beta-Glucan, Zinkgluconat (2 %), Ascorbinsäure (Vitamin C), Kubebe, Nelke, Johannisbrotpulver, Cholecalciferol (Vitamin D3) (0,006 %)."
     },
@@ -2754,6 +2754,325 @@
           "de": "1450 g"
         },
         "netQuantity": 1450,
+        "netUnit": "g"
+      }
+    ]
+  },
+  "Trileçe (Tres Leches Caramel)": {
+    "name": {
+      "tr": "Trileçe (Tres Leches Caramel)",
+      "fr": "Tres leches caramel (trileçe)",
+      "de": "Tres Leches Karamell (Trileçe)"
+    },
+    "description": {
+      "tr": "LEZZA derin dondurulmuş trileçe (Tres Leches Caramel), 2000 g, yemeye hazır. Buzdolabında (+4 °C) çözdürdükten sonra tüketiniz. Fırında çözdürmeyiniz.",
+      "fr": "Tres leches surgelé LEZZA (caramel), 2000 g, prêt à consommer. À consommer après décongélation au réfrigérateur (+4 °C). Ne pas décongeler au four.",
+      "de": "LEZZA tiefgefrorener Tres Leches (Karamell), 2000 g, verzehrfertig. Nach dem Auftauen im Kühlschrank (+4 °C) verzehren. Nicht im Backofen auftauen."
+    },
+    "ingredients": {
+      "tr": "**Buğday** unu, şeker, **yumurta**, bitkisel yağlı krema (su, bitkisel yağ (palm), kabartma maddeleri (E450i, E500ii), tatlandırıcı, kıvam artırıcı, **süt** proteinleri, emülgatörler (**soya** lesitini (E322), E472b)), tuz, aroma (vanilya, **süt**), renklendirici (E160a), pasta jölesi, **irmik** (**buğday**).",
+      "fr": "Farine de **blé**, sucre, **œuf**, crème à l'huile végétale (eau, huile végétale (palme), poudres à lever (E450i, E500ii), édulcorant, épaississant, protéines de **lait**, émulsifiants (lécithine de **soja** (E322), E472b)), sel, arôme (vanille, **lait**), colorant (E160a), gelée de pâtisserie, **semoule** (**blé**).",
+      "de": "**Weizen**mehl, Zucker, **Ei**, Sahne mit Pflanzenöl (Wasser, Pflanzenöl (Palm), Backtriebmittel (E450i, E500ii), Süßungsmittel, Verdickungsmittel, **Milch**eiweiß, Emulgatoren (**Soja**lecithin (E322), E472b)), Salz, Aroma (Vanille, **Milch**), Farbstoff (E160a), Kuchengelee, **Grieß** (**Weizen**)."
+    },
+    "nutrition": {
+      "energyKj": 674,
+      "energyKcal": 161,
+      "fatG": 30.1,
+      "saturatedFatG": 11.1,
+      "carbohydrateG": 20,
+      "sugarsG": 2.2,
+      "proteinG": 9.9,
+      "saltG": 1.3
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut",
+      "soya"
+    ],
+    "storage": {
+      "tr": "Son tüketim tarihine kadar -18 °C'de saklayınız. Çözüldükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver à -18 °C jusqu'à la date indiquée. Ne pas recongeler après décongélation.",
+      "de": "Bei -18 °C bis zum Mindesthaltbarkeitsdatum aufbewahren. Nach dem Auftauen nicht wieder einfrieren."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "2000 g",
+          "fr": "2000 g",
+          "de": "2000 g"
+        },
+        "netQuantity": 2000,
+        "netUnit": "g"
+      }
+    ]
+  },
+  "Kırmızı Kadife Pasta (tekil kap)": {
+    "name": {
+      "tr": "Kırmızı Kadife Pasta (tekil kap)",
+      "fr": "Gâteau red velvet (coupelle)",
+      "de": "Red-Velvet-Kuchen (Becher)"
+    },
+    "description": {
+      "tr": "L'amour de Paris (LEZZA) donuk red velvet pasta, 165 g. Çözüldükten sonra servise hazırdır.",
+      "fr": "Gâteau red velvet surgelé L'amour de Paris (LEZZA), 165 g. Prêt à servir après décongélation.",
+      "de": "Tiefgefrorener Red-Velvet-Kuchen L'amour de Paris (LEZZA), 165 g. Nach dem Auftauen servierfertig."
+    },
+    "ingredients": {
+      "tr": "Su, şeker, UHT **süt**, **buğday** unu, bitkisel yağ (palm, hindistan cevizi, ayçiçek), peynir altı suyu tozu (**süt**), kakao tozu, yağsız **süt** tozu, pastörize **yumurta**, **süt** kreması, glikoz şurubu, modifiye nişasta, bitkisel yağ, stabilizörler (E420ii, E463, E466), kıvam artırıcılar (E412, E415, E466), emülgatörler (E471, E472a, E472b, E472e, **soya** lesitini (E322)), asitlik düzenleyici (E330), aromalar (**süt**, vanilya, ahududu), renklendiriciler (E150d, E160a, siyah havuç, pancar, şeftali konsantresi), koruyucu (E202), antioksidan (E300).",
+      "fr": "Eau, sucre, **lait** UHT, farine de **blé**, huile végétale (palme, coco, tournesol), poudre de lactosérum (**lait**), poudre de cacao, **lait** écrémé en poudre, **œuf** pasteurisé, crème de **lait**, sirop de glucose, amidon modifié, huile végétale, stabilisants (E420ii, E463, E466), épaississants (E412, E415, E466), émulsifiants (E471, E472a, E472b, E472e, lécithine de **soja** (E322)), correcteur d'acidité (E330), arômes (**lait**, vanille, framboise), colorants (E150d, E160a, carotte noire, betterave, concentré de pêche), conservateur (E202), antioxydant (E300).",
+      "de": "Wasser, Zucker, UHT-**Milch**, **Weizen**mehl, Pflanzenöl (Palm, Kokos, Sonnenblume), **Molken**pulver (**Milch**), Kakaopulver, **Magermilch**pulver, pasteurisiertes **Ei**, **Milch**rahm, Glukosesirup, modifizierte Stärke, Pflanzenöl, Stabilisatoren (E420ii, E463, E466), Verdickungsmittel (E412, E415, E466), Emulgatoren (E471, E472a, E472b, E472e, **Soja**lecithin (E322)), Säureregulator (E330), Aromen (**Milch**, Vanille, Himbeere), Farbstoffe (E150d, E160a, Schwarze Karotte, Rote Bete, Pfirsichkonzentrat), Konservierungsstoff (E202), Antioxidationsmittel (E300)."
+    },
+    "nutrition": {
+      "energyKj": 1126,
+      "energyKcal": 269,
+      "fatG": 13.1,
+      "saturatedFatG": 6.2,
+      "carbohydrateG": 33.2,
+      "sugarsG": 23.8,
+      "proteinG": 5.2,
+      "saltG": 0.05
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut",
+      "soya"
+    ],
+    "traces": [
+      "sert_kabuklu"
+    ],
+    "storage": {
+      "tr": "-18 °C'de donuk saklayınız. Çözüldükten sonra buzdolabında (+4 °C) saklayıp 5 gün içinde tüketiniz. Çözüldükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver congelé à -18 °C. Après décongélation, conserver au réfrigérateur à +4 °C et consommer dans les 5 jours. Ne pas recongeler après décongélation.",
+      "de": "Tiefgefroren bei -18 °C lagern. Nach dem Auftauen im Kühlschrank bei +4 °C aufbewahren und innerhalb von 5 Tagen verzehren. Nach dem Auftauen nicht wieder einfrieren."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "165 g",
+          "fr": "165 g",
+          "de": "165 g"
+        },
+        "netQuantity": 165,
+        "netUnit": "g"
+      }
+    ]
+  },
+  "Fıstıklı Pasta (tekil kap)": {
+    "name": {
+      "tr": "Fıstıklı Pasta (tekil kap)",
+      "fr": "Gâteau à la pistache (coupelle)",
+      "de": "Pistazienkuchen (Becher)"
+    },
+    "description": {
+      "tr": "L'amour de Paris (LEZZA) donuk fıstıklı pasta, 165 g. Çözüldükten sonra servise hazırdır. **Tartrazin (E102): çocuklarda hareketlilik ve dikkat üzerinde olumsuz etkileri olabilir.**",
+      "fr": "Gâteau à la pistache surgelé L'amour de Paris (LEZZA), 165 g. Prêt à servir après décongélation. **Tartrazine (E102) : peut avoir des effets indésirables sur l'activité et l'attention chez les enfants.**",
+      "de": "Tiefgefrorener Pistazienkuchen L'amour de Paris (LEZZA), 165 g. Nach dem Auftauen servierfertig. **Tartrazin (E102): Kann Aktivität und Aufmerksamkeit bei Kindern beeinträchtigen.**"
+    },
+    "ingredients": {
+      "tr": "Su, UHT **süt**, şeker, **buğday** unu, bitkisel yağ (palm, hindistan cevizi), **süt** kreması, kakao tozu, peynir altı suyu tozu (**süt**), pastörize **yumurta** ve **yumurta** tozu, çikolata (kakao kitlesi, kakao yağı, şeker, ayçiçek lesitini), **antep fıstığı** (%5), öğütülmüş **antep fıstığı**, glikoz şurubu, jelatin, modifiye nişasta, **süt** proteini, emülgatörler (E471, E472a, **soya** lesitini (E322)), stabilizörler (E420ii, E463, E466), asitlik düzenleyici (E330), kıvam artırıcılar (E406, E440), aromalar (**süt**, **antep fıstığı**, çikolata), renklendiriciler (E150d, E102, E133), koruyucu (E202), antioksidan (E300).",
+      "fr": "Eau, **lait** UHT, sucre, farine de **blé**, huile végétale (palme, coco), crème de **lait**, poudre de cacao, poudre de lactosérum (**lait**), **œuf** pasteurisé et **œuf** en poudre, chocolat (pâte de cacao, beurre de cacao, sucre, lécithine de tournesol), **pistaches** (5 %), **pistaches** moulues, sirop de glucose, gélatine, amidon modifié, protéine de **lait**, émulsifiants (E471, E472a, lécithine de **soja** (E322)), stabilisants (E420ii, E463, E466), correcteur d'acidité (E330), épaississants (E406, E440), arômes (**lait**, **pistache**, chocolat), colorants (E150d, E102, E133), conservateur (E202), antioxydant (E300).",
+      "de": "Wasser, UHT-**Milch**, Zucker, **Weizen**mehl, Pflanzenöl (Palm, Kokos), **Milch**rahm, Kakaopulver, **Molken**pulver (**Milch**), pasteurisiertes **Ei** und **Ei**pulver, Schokolade (Kakaomasse, Kakaobutter, Zucker, Sonnenblumenlecithin), **Pistazien** (5 %), gemahlene **Pistazien**, Glukosesirup, Gelatine, modifizierte Stärke, **Milch**eiweiß, Emulgatoren (E471, E472a, **Soja**lecithin (E322)), Stabilisatoren (E420ii, E463, E466), Säureregulator (E330), Verdickungsmittel (E406, E440), Aromen (**Milch**, **Pistazie**, Schokolade), Farbstoffe (E150d, E102, E133), Konservierungsstoff (E202), Antioxidationsmittel (E300)."
+    },
+    "nutrition": {
+      "energyKj": 1339,
+      "energyKcal": 320,
+      "fatG": 18.3,
+      "saturatedFatG": 11.7,
+      "carbohydrateG": 30.2,
+      "sugarsG": 24.8,
+      "proteinG": 5.6,
+      "saltG": 0.04
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut",
+      "soya",
+      "sert_kabuklu"
+    ],
+    "storage": {
+      "tr": "-18 °C'de donuk saklayınız. Çözüldükten sonra buzdolabında (+4 °C) saklayıp 5 gün içinde tüketiniz. Çözüldükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver congelé à -18 °C. Après décongélation, conserver au réfrigérateur à +4 °C et consommer dans les 5 jours. Ne pas recongeler après décongélation.",
+      "de": "Tiefgefroren bei -18 °C lagern. Nach dem Auftauen im Kühlschrank bei +4 °C aufbewahren und innerhalb von 5 Tagen verzehren. Nach dem Auftauen nicht wieder einfrieren."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "165 g",
+          "fr": "165 g",
+          "de": "165 g"
+        },
+        "netQuantity": 165,
+        "netUnit": "g"
+      }
+    ]
+  },
+  "Ahududulu Cheesecake (tekil kap)": {
+    "name": {
+      "tr": "Ahududulu Cheesecake (tekil kap)",
+      "fr": "Cheesecake à la framboise (coupelle)",
+      "de": "Himbeer-Käsekuchen (Becher)"
+    },
+    "description": {
+      "tr": "L'amour de Paris (LEZZA) donuk ahududulu cheesecake, 165 g. Çözüldükten sonra servise hazırdır. **E129, E122: çocuklarda hareketlilik ve dikkat üzerinde olumsuz etkileri olabilir.**",
+      "fr": "Cheesecake à la framboise surgelé L'amour de Paris (LEZZA), 165 g. Prêt à servir après décongélation. **E129, E122 : peut avoir des effets indésirables sur l'activité et l'attention chez les enfants.**",
+      "de": "Tiefgefrorener Himbeer-Käsekuchen L'amour de Paris (LEZZA), 165 g. Nach dem Auftauen servierfertig. **E129, E122: Kann Aktivität und Aufmerksamkeit bei Kindern beeinträchtigen.**"
+    },
+    "ingredients": {
+      "tr": "UHT **süt**, şeker, **buğday** unu, ahududu (%30), bitkisel yağ (palm, hindistan cevizi, ayçiçek), krem peynir (pastörize inek **sütü**, yoğurt kültürü, tuz), yoğurt (pastörize inek **sütü**, yoğurt kültürü), peynir altı suyu tozu (**süt**), yağsız **süt** tozu, pastörize **yumurta**, **süt** kreması, glikoz şurubu, modifiye nişasta, bitkisel yağ, kıvam artırıcılar (E401, E406, E410, E412, E440), stabilizörler (E420ii, E463, E466), emülgatörler (E471, E472b, E472d, **soya** lesitini (E322)), asitlik düzenleyiciler (E330, E331iii), koruyucu (E202), renklendiriciler (E129, E122, E150d, E160a), aromalar (**süt**, vanilya, ahududu), antioksidan (E300).",
+      "fr": "**Lait** UHT, sucre, farine de **blé**, framboises (30 %), huile végétale (palme, coco, tournesol), fromage frais (**lait** de vache pasteurisé, ferments du yaourt, sel), yaourt (**lait** de vache pasteurisé, ferments du yaourt), poudre de lactosérum (**lait**), **lait** écrémé en poudre, **œuf** pasteurisé, crème de **lait**, sirop de glucose, amidon modifié, huile végétale, épaississants (E401, E406, E410, E412, E440), stabilisants (E420ii, E463, E466), émulsifiants (E471, E472b, E472d, lécithine de **soja** (E322)), correcteurs d'acidité (E330, E331iii), conservateur (E202), colorants (E129, E122, E150d, E160a), arômes (**lait**, vanille, framboise), antioxydant (E300).",
+      "de": "UHT-**Milch**, Zucker, **Weizen**mehl, Himbeeren (30 %), Pflanzenöl (Palm, Kokos, Sonnenblume), Frischkäse (pasteurisierte Kuh**milch**, Joghurtkultur, Salz), Joghurt (pasteurisierte Kuh**milch**, Joghurtkultur), **Molken**pulver (**Milch**), **Magermilch**pulver, pasteurisiertes **Ei**, **Milch**rahm, Glukosesirup, modifizierte Stärke, Pflanzenöl, Verdickungsmittel (E401, E406, E410, E412, E440), Stabilisatoren (E420ii, E463, E466), Emulgatoren (E471, E472b, E472d, **Soja**lecithin (E322)), Säureregulatoren (E330, E331iii), Konservierungsstoff (E202), Farbstoffe (E129, E122, E150d, E160a), Aromen (**Milch**, Vanille, Himbeere), Antioxidationsmittel (E300)."
+    },
+    "nutrition": {
+      "energyKj": 1126,
+      "energyKcal": 269,
+      "fatG": 13.1,
+      "saturatedFatG": 6.2,
+      "carbohydrateG": 33.2,
+      "sugarsG": 20,
+      "proteinG": 8.2,
+      "saltG": 0.05
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut",
+      "soya"
+    ],
+    "traces": [
+      "sert_kabuklu"
+    ],
+    "storage": {
+      "tr": "-18 °C'de donuk saklayınız. Çözüldükten sonra buzdolabında (+4 °C) saklayıp 5 gün içinde tüketiniz. Çözüldükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver congelé à -18 °C. Après décongélation, conserver au réfrigérateur à +4 °C et consommer dans les 5 jours. Ne pas recongeler après décongélation.",
+      "de": "Tiefgefroren bei -18 °C lagern. Nach dem Auftauen im Kühlschrank bei +4 °C aufbewahren und innerhalb von 5 Tagen verzehren. Nach dem Auftauen nicht wieder einfrieren."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "165 g",
+          "fr": "165 g",
+          "de": "165 g"
+        },
+        "netQuantity": 165,
+        "netUnit": "g"
+      }
+    ]
+  },
+  "Çikolatalı Tofi Karamel Pasta (tekil kap)": {
+    "name": {
+      "tr": "Çikolatalı Tofi Karamel Pasta (tekil kap)",
+      "fr": "Gâteau chocolat toffee caramel (coupelle)",
+      "de": "Schokoladen-Toffee-Karamell-Kuchen (Becher)"
+    },
+    "description": {
+      "tr": "L'amour de Paris (LEZZA) donuk çikolatalı tofi karamel pasta, 165 g. Çözüldükten sonra servise hazırdır. **E102, E124: çocuklarda hareketlilik ve dikkat üzerinde olumsuz etkileri olabilir.**",
+      "fr": "Gâteau chocolat toffee caramel surgelé L'amour de Paris (LEZZA), 165 g. Prêt à servir après décongélation. **E102, E124 : peut avoir des effets indésirables sur l'activité et l'attention chez les enfants.**",
+      "de": "Tiefgefrorener Schokoladen-Toffee-Karamell-Kuchen L'amour de Paris (LEZZA), 165 g. Nach dem Auftauen servierfertig. **E102, E124: Kann Aktivität und Aufmerksamkeit bei Kindern beeinträchtigen.**"
+    },
+    "ingredients": {
+      "tr": "Su, şeker, UHT **süt**, **buğday** unu, bitkisel yağ (palm, hindistan cevizi, ayçiçek), peynir altı suyu tozu (**süt**), kakao tozu, pastörize **yumurta**, **süt** kreması, glikoz şurubu, modifiye nişasta, yağsız **süt** tozu, bitkisel sıvı yağ, stabilizörler (E420ii, E463, E466), kıvam artırıcılar (E406, E440, E415), emülgatörler (E471, E472a, E472b, **soya** lesitini (E322)), asitlik düzenleyici (E330), aromalar (**süt**, çikolata, karamel, tofi), renklendiriciler (E150d, E102, E124, E133, E155), koruyucu (E202), antioksidan (E300).",
+      "fr": "Eau, sucre, **lait** UHT, farine de **blé**, huile végétale (palme, coco, tournesol), poudre de lactosérum (**lait**), poudre de cacao, **œuf** pasteurisé, crème de **lait**, sirop de glucose, amidon modifié, **lait** écrémé en poudre, huile végétale, stabilisants (E420ii, E463, E466), épaississants (E406, E440, E415), émulsifiants (E471, E472a, E472b, lécithine de **soja** (E322)), correcteur d'acidité (E330), arômes (**lait**, chocolat, caramel, toffee), colorants (E150d, E102, E124, E133, E155), conservateur (E202), antioxydant (E300).",
+      "de": "Wasser, Zucker, UHT-**Milch**, **Weizen**mehl, Pflanzenöl (Palm, Kokos, Sonnenblume), **Molken**pulver (**Milch**), Kakaopulver, pasteurisiertes **Ei**, **Milch**rahm, Glukosesirup, modifizierte Stärke, **Magermilch**pulver, Pflanzenöl, Stabilisatoren (E420ii, E463, E466), Verdickungsmittel (E406, E440, E415), Emulgatoren (E471, E472a, E472b, **Soja**lecithin (E322)), Säureregulator (E330), Aromen (**Milch**, Schokolade, Karamell, Toffee), Farbstoffe (E150d, E102, E124, E133, E155), Konservierungsstoff (E202), Antioxidationsmittel (E300)."
+    },
+    "nutrition": {
+      "energyKj": 1297,
+      "energyKcal": 310,
+      "fatG": 19.1,
+      "saturatedFatG": 11.8,
+      "carbohydrateG": 29.8,
+      "sugarsG": 24.1,
+      "proteinG": 4.3,
+      "saltG": 0.05
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut",
+      "soya"
+    ],
+    "traces": [
+      "sert_kabuklu"
+    ],
+    "storage": {
+      "tr": "-18 °C'de donuk saklayınız. Çözüldükten sonra buzdolabında (+4 °C) saklayıp 5 gün içinde tüketiniz. Çözüldükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver congelé à -18 °C. Après décongélation, conserver au réfrigérateur à +4 °C et consommer dans les 5 jours. Ne pas recongeler après décongélation.",
+      "de": "Tiefgefroren bei -18 °C lagern. Nach dem Auftauen im Kühlschrank bei +4 °C aufbewahren und innerhalb von 5 Tagen verzehren. Nach dem Auftauen nicht wieder einfrieren."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "165 g",
+          "fr": "165 g",
+          "de": "165 g"
+        },
+        "netQuantity": 165,
+        "netUnit": "g"
+      }
+    ]
+  },
+  "Çikolatalı Pasta (tekil kap)": {
+    "name": {
+      "tr": "Çikolatalı Pasta (tekil kap)",
+      "fr": "Gâteau au chocolat (coupelle)",
+      "de": "Schokoladenkuchen (Becher)"
+    },
+    "description": {
+      "tr": "L'amour de Paris (LEZZA) donuk çikolatalı pasta, 165 g. Çözüldükten sonra servise hazırdır. **E102, E129: çocuklarda hareketlilik ve dikkat üzerinde olumsuz etkileri olabilir.**",
+      "fr": "Gâteau au chocolat surgelé L'amour de Paris (LEZZA), 165 g. Prêt à servir après décongélation. **E102, E129 : peut avoir des effets indésirables sur l'activité et l'attention chez les enfants.**",
+      "de": "Tiefgefrorener Schokoladenkuchen L'amour de Paris (LEZZA), 165 g. Nach dem Auftauen servierfertig. **E102, E129: Kann Aktivität und Aufmerksamkeit bei Kindern beeinträchtigen.**"
+    },
+    "ingredients": {
+      "tr": "Su, UHT **süt**, şeker, **buğday** unu, kakao tozu, bitkisel yağ (palm, hindistan cevizi), **süt** kreması, peynir altı suyu tozu (**süt**), pastörize **yumurta** ve **yumurta** tozu, çikolata (kakao kitlesi, kakao yağı, şeker, ayçiçek lesitini), glikoz şurubu, jelatin, modifiye nişasta, **süt** proteini, emülgatörler (E471, E472a, **soya** lesitini (E322)), stabilizörler (E420ii, E463, E466), asitlik düzenleyici (E330), kıvam artırıcı (E440), aromalar (**süt**, çikolata), renklendiriciler (E150d, E153, E102, E129), koruyucu (E202).",
+      "fr": "Eau, **lait** UHT, sucre, farine de **blé**, poudre de cacao, huile végétale (palme, coco), crème de **lait**, poudre de lactosérum (**lait**), **œuf** pasteurisé et **œuf** en poudre, chocolat (pâte de cacao, beurre de cacao, sucre, lécithine de tournesol), sirop de glucose, gélatine, amidon modifié, protéine de **lait**, émulsifiants (E471, E472a, lécithine de **soja** (E322)), stabilisants (E420ii, E463, E466), correcteur d'acidité (E330), épaississant (E440), arômes (**lait**, chocolat), colorants (E150d, E153, E102, E129), conservateur (E202).",
+      "de": "Wasser, UHT-**Milch**, Zucker, **Weizen**mehl, Kakaopulver, Pflanzenöl (Palm, Kokos), **Milch**rahm, **Molken**pulver (**Milch**), pasteurisiertes **Ei** und **Ei**pulver, Schokolade (Kakaomasse, Kakaobutter, Zucker, Sonnenblumenlecithin), Glukosesirup, Gelatine, modifizierte Stärke, **Milch**eiweiß, Emulgatoren (E471, E472a, **Soja**lecithin (E322)), Stabilisatoren (E420ii, E463, E466), Säureregulator (E330), Verdickungsmittel (E440), Aromen (**Milch**, Schokolade), Farbstoffe (E150d, E153, E102, E129), Konservierungsstoff (E202)."
+    },
+    "nutrition": {
+      "energyKj": 1297,
+      "energyKcal": 310,
+      "fatG": 17.1,
+      "saturatedFatG": 11.9,
+      "carbohydrateG": 26.8,
+      "sugarsG": 27.1,
+      "proteinG": 5.3,
+      "saltG": 0.05
+    },
+    "allergens": [
+      "gluten",
+      "yumurta",
+      "sut",
+      "soya"
+    ],
+    "traces": [
+      "sert_kabuklu"
+    ],
+    "storage": {
+      "tr": "-18 °C'de donuk saklayınız. Çözüldükten sonra buzdolabında (+4 °C) saklayıp 5 gün içinde tüketiniz. Çözüldükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver congelé à -18 °C. Après décongélation, conserver au réfrigérateur à +4 °C et consommer dans les 5 jours. Ne pas recongeler après décongélation.",
+      "de": "Tiefgefroren bei -18 °C lagern. Nach dem Auftauen im Kühlschrank bei +4 °C aufbewahren und innerhalb von 5 Tagen verzehren. Nach dem Auftauen nicht wieder einfrieren."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "165 g",
+          "fr": "165 g",
+          "de": "165 g"
+        },
+        "netQuantity": 165,
         "netUnit": "g"
       }
     ]

@@ -567,6 +567,17 @@ function readDeclarations(args: Record<string, unknown>): { fields: Record<strin
     const value = args[key];
     if (value && typeof value === 'object') fields[key] = value;
   }
+  // Vurgu işareti `**`, büyük harf DEĞİL (işletmeci bildirimi 23.09 — modeller bu hataya sık düşüyor:
+  // alerjeni görünür yapmak için "BUĞDAY unu" yazıyorlar). Kural araç künyesinde yazılı; kapı burada,
+  // çünkü yazılı kural tek başına tutmadı ve düzeltmeyi her sıfırlamada insan yapıyordu.
+  for (const key of ['ingredients', 'storageInstructions'] as const) {
+    const bagiran = bagiranKelimeler(fields[key]);
+    if (bagiran.length > 0) {
+      problems.push(
+        `${key}: vurgu için BÜYÜK HARF kullanılmaz (${bagiran.join(', ')}) — kelimeyi ** ** arasına al ("**buğday** unu"). Büyük harf yalnız etikette gerçekten öyle basılıysa kalır (marka, UHT, E330 gibi kısaltmalar).`,
+      );
+    }
+  }
   if (args.nutrition && typeof args.nutrition === 'object') fields.nutrition = args.nutrition;
 
   for (const key of ['allergens', 'traces'] as const) {
@@ -587,6 +598,25 @@ function readDeclarations(args: Record<string, unknown>): { fields: Record<strin
 }
 
 const ALLERGEN_VALUES = ProductAllergenEnum.options;
+
+/**
+ * Vurgu niyetiyle büyük harfe çevrilmiş kelimeler — üç harf ve kısası (UHT, AB) ile içinde rakam olan
+ * (E330, B12) kod sayılır ve dokunulmaz. Türkçe küçük harfler `toLocaleLowerCase('tr')` ile ölçülür:
+ * "I" ile "İ" ayrı harflerdir ve İngilizce kural "IÇINDEKILER"i büyük harf saymazdı.
+ */
+function bagiranKelimeler(metin: unknown): string[] {
+  if (!metin || typeof metin !== 'object') return [];
+  const bulunan = new Set<string>();
+  for (const deger of Object.values(metin as Record<string, unknown>)) {
+    if (typeof deger !== 'string') continue;
+    for (const kelime of deger.split(/[^\p{L}\p{N}]+/u)) {
+      if (kelime.length < 4 || /\d/.test(kelime)) continue;
+      if (kelime !== kelime.toLocaleUpperCase('tr')) continue;
+      bulunan.add(kelime);
+    }
+  }
+  return [...bulunan];
+}
 
 /** Modelin "net okuyamadım" dediği alanlar — ekran gözü oraya çeker. */
 function readUncertain(args: Record<string, unknown>): string[] {

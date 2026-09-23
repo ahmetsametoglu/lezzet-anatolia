@@ -22,6 +22,7 @@ import {
   type SupplierCreatePayload,
 } from '@lezzet/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { proposeProductDraft } from './tools-propose';
 import { HANDLERS, TOOLS } from './server-factory';
 
 /**
@@ -187,6 +188,30 @@ describe('ürün künyesi dilekçesi', () => {
     // Kod varyantın kolonu değil ayrı eşleme: çarpanıyla birlikte bağlandı, ikinci kabulde tanınacak.
     const kodlar = await new VariantBarcodeService(db).listByVariant(bos!.id);
     expect(kodlar.map((c) => [c.code, c.kind, c.qtyPerCode])).toEqual([[kod, 'case', 12]]);
+  });
+
+  /**
+   * Vurgu işareti `**`, büyük harf değil (işletmeci bildirimi 23.09). Kural araç künyesinde yazılıydı ama
+   * modeller alerjeni görünür yapmak için büyük harfe çeviriyordu; kapı dilekçe anında durduruyor.
+   */
+  it('beyanda vurgu için büyük harf reddedilir, ** ** geçer', async () => {
+    const products = new ProductService(db);
+    const { product } = await products.create({ name: { tr: `Vurgu testi ${stamp}` }, variants: [{ label: { tr: '1 kg' } }] });
+    createdProducts.push(product.id);
+
+    const bagiran = (await proposeProductDraft({
+      productId: product.id,
+      ingredients: { tr: 'BUĞDAY unu, su, tuz' },
+    })) as { error?: string; problems?: string[] };
+    expect(bagiran.problems?.join(' ')).toContain('BUĞDAY');
+
+    // Kısaltma ve kod büyük harf kalır (etikette öyle basılı), vurgu işareti sorunsuz geçer.
+    const dogru = (await proposeProductDraft({
+      productId: product.id,
+      ingredients: { tr: '**buğday** unu, UHT süt, asitlik düzenleyici (E330)' },
+    })) as { error?: string; proposalId?: string };
+    expect(dogru.error).toBeUndefined();
+    if (dogru.proposalId) created.push(dogru.proposalId);
   });
 
   /**
