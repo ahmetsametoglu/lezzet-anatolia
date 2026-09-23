@@ -19,32 +19,14 @@ import { Reviews } from './components/reviews';
 import type { ProductViewProps } from './product-types';
 
 /**
- * Ürün detay — masaüstü düzeni (tasarım: `Musteri Web.dc.html`, "Web · Ürün detay", 20.09).
- *
- * Breadcrumb → **galeri + yapışkan karar rafı** (1fr / 470 px) → ürün künyesi bandı → yorumlar → benzer ürünler.
- *
- * ── İKİ SÜTUNUN BOYU NEDEN TUTUYOR ──────────────────────────────────────────
- * Sayfa uzun süre iki bağımsız sütundu ve sağ sütun sürekli aşağı sarkıyordu: içerik toplamı sabit,
- * mesele hangi sütuna düştüğü. Tasarım üç taşımayla dengeledi — küçük görsel şeridi ana görselin
- * İÇİNE girdi (sol sütun ~134 px kısaldı), çeşit kartları boy seçicisi olan üründe SOLA indi,
- * yasal künye sütundan çıkıp tam genişlik banda taşındı.
- *
- * Kalan fark kaydırmada kaybolur, çünkü raf yapışkandır: müşteri künyeyi okurken boy, fiyat ve
- * sepet düğmesi ekranda kalır.
+ * Ürün detay masaüstü düzeni: galeri ve yapışkan karar rafı (1fr / 470 px), künye bandı, yorumlar, benzer ürünler. Raf yapışkan,
+ * çünkü müşteri künyeyi okurken boy, fiyat ve sepet düğmesi ekranda kalmalı.
  */
 export function ProductDesktop({ t, locale, product, selected, onSelect, familyLabel, unavailable, reviews }: ProductViewProps) {
-  /**
-   * "Bu adrese gönderemiyoruz" hâli — sayfanın eylem sırasını DEĞİŞTİRİR (19.08): satın alma
-   * düğmesi normal yerinden iner ve karar kutusunda üçüncül olarak çizilir. Ölçüt tek yerde durur
-   * ki iki karar (nerede çizilecek / hangi ağırlıkta) bir gün ayrışmasın.
-   */
+  /** "Bu adrese gönderemiyoruz" hâli eylem sırasını değiştirir; ölçüt tek yerde ki yer ve ağırlık kararı ayrışmasın. */
   const away = selected?.stockStatus === 'elsewhere';
 
-  /**
-   * Çeşit kartları SOL sütuna iner — ama yalnız boy seçicisi de olan üründe (tasarımın denge
-   * kararı 20.09): iki seçici birden rafta dururken raf galeriden ~280 px uzuyordu. Boyu olmayan
-   * üründe çeşit rafta kalır, çünkü orada tek karar odur ve sol sütun zaten kısa.
-   */
+  /** Çeşit kartları yalnız boy seçicisi de olan üründe sola iner: iki seçici birden rafta dururken raf galeriden uzuyordu. */
   const familyOnLeft = product.family.length > 0 && product.variants.length > 1;
 
   /**
@@ -70,18 +52,8 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
       blockedActions={
         away && selected ? (
           /**
-           * **ÜÇ EYLEM, ÜÇ AĞIRLIK** — tasarımın kendi sırası (`Musteri - Urun Detay.dc.html`),
-           * kullanıcı kararı 19.08 ile uygulandı.
-           *
-           * Uygulama bu sıradan sapmıştı: "Sepete ekle" yukarıda tam ağırlıkta duruyor,
-           * "haber ver" de birincile terfi ettirilmişti — ekranda **iki dolu yeşil düğme**
-           * yan yana çıkıyor ve hiçbiri birincil olmuyordu (kullanıcı bildirimi, ekran
-           * görüntüsüyle). Tasarım sorunu zaten çözmüştü.
-           *
-           * Sıra bir yargıdır: müşteri bu ürünü BU ADRESE alamıyor, o yüzden ekranın en
-           * güçlü teklifi alabileceği bir alternatiftir. Satın alma yolu yine de KAPANMAZ
-           * (tasarımın kendi notu: *"müşteri bölge içindeki birine gönderiyor olabilir"*)
-           * — ama adı değişir, çünkü artık farklı bir şey yapıyor: uyarıya rağmen devam.
+           * Müşteri bu ürünü bu adrese alamıyor, o yüzden en güçlü teklif alternatiftir. Satın alma kapanmaz ama adı değişir,
+           * çünkü artık uyarıya rağmen devam etmektir.
            */
           <span className="flex w-full flex-col gap-2">
             <Link
@@ -97,15 +69,8 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
           </span>
         ) : selected?.stockStatus === 'shipping' ? undefined : (
           /**
-           * **`shipping` hâlinde çıkış düğmesi YOK** (ölçüldü 19.08, ekran turunda).
-           *
-           * O hâlde ürün zaten kargoyla gidiyor — çözülecek bir sorun yok. "Kargolanabilir
-           * benzerleri gör" demek karşılıksız bir teklifti: müşteri bakmakta olduğu ürünü
-           * ZATEN kargoyla alabiliyor. Üstelik düğme dolu yeşildi ve hemen üstündeki
-           * "Sepete ekle" ile ikinci bir çift-yeşil çarpışması üretiyordu.
-           *
-           * Burada kalan tek hâl gerçek çıkmaz: yer rota dışında VE ürün kargolanamıyor
-           * (`blocked`). Orada teklif anlamlı, çünkü müşterinin alabileceği bir şey yok.
+           * Kargoyla gidebilen üründe çıkış düğmesi yok, çözülecek sorun yok. Teklif yalnız gerçek çıkmazda: yer rota dışında ve
+           * ürün kargolanamıyor.
            */
           <Link href={{ pathname: '/catalog', query: { shippable: '1' } }} className={buttonClass({ size: 'sm', className: '!text-note' })}>
             {t.assurance.seeShippable}
@@ -125,7 +90,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
         <span>· {product.name}</span>
       </nav>
 
-      {/* Solda ürünün kendisi, sağda 470 px'lik YAPIŞKAN karar rafı — ölçü tasarımın (20.09). */}
+      {/* Solda ürünün kendisi, sağda 470 px'lik yapışkan karar rafı. */}
       <div className="grid grid-cols-[1fr_470px] items-start gap-11 px-12 pt-8 pb-9.5">
         <div className="flex min-w-0 flex-col gap-3.5">
           <Gallery images={product.gallery} alt={product.name} />
@@ -238,9 +203,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
             </Link>
           </div>
           <div className="grid grid-cols-4 gap-[18px]">
-            {/* Kart KATALOGLA ORTAK (kullanıcı kararı 20.09) — bandın kendisi tasarımın, kartlar bizim.
-                `priceFrom` notu geçilmez: "boy detayda seçilir" bilgisini kartın kendi "Seçenekler →"
-                düğmesi zaten veriyor. */}
+            {/* Kart katalogla ortak; `priceFrom` notu geçilmez, "boy detayda seçilir" bilgisini kartın kendi düğmesi veriyor. */}
             {product.similar.map((p) => (
               <ProductCard key={p.id} product={p} locale={locale} labels={{ ...t.card, priceFrom: undefined }} />
             ))}

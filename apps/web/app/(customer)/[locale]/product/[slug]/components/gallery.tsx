@@ -6,32 +6,15 @@ import { RATIO_SOURCE, RATIO_SQUARE } from '@lezzet/types';
 import type { StorefrontImage } from '@lezzet/application';
 
 /**
- * Ürün galerisi — ana görsel + küçük görsel şeridi. Küçüğe dokunmak ana görseli değiştirir.
- *
- * Tek görselli üründe şerit HİÇ gösterilmez: tek seçenekli bir seçici, seçenek olmadığını gizler.
- * Kırpma künyesi her görselde kendi odağını taşır (`FramedImage`) — kapak için verilen odak, ek
- * görselin odağı yerine geçmez.
- *
- * İKİ AYRI ETKİLEŞİM (tasarımın kararı, `Galeri` etkileşim sözleşmesi):
- *   masaüstü → küçük görsel şeridi; birine tıklamak ana görseli değiştirir
- *   mobil    → yatay KAYDIRMA + nokta göstergesi; parmak zaten kaydırıyor, ayrıca küçük görsele
- *              basmak dokunmatikte hem küçük hedef hem gereksiz bir adım
- *
- * Masaüstü şeridi ana görselin İÇİNDE, sol altta durur (tasarım 20.09) ve beş slotludur; sığmayan
- * görseller son kutuda "+N" olarak toplanır. O kutu bir SAYAÇ DEĞİL, DÜĞMEdir: basınca kalan
- * görseller açılır. Sayaç olarak bırakılmıştı ve altı görselli üründe üç görsel hiçbir şekilde
- * açılamıyordu — "+3" yazan ama içini gösteremeyen bir kutu, olmayan bir vaat.
+ * Ürün galerisi: masaüstünde ana görsel ve içindeki küçük görsel şeridi, telefonda yatay kaydırma ve nokta göstergesi; tek
+ * görselli üründe şerit hiç çizilmez. Sığmayan görseller son kutuda "+N" olarak toplanır ve o kutu düğmedir, basınca kalanlar açılır.
  */
 interface GalleryProps {
   images: StorefrontImage[];
   alt: string;
-  /** Mobil kahraman düzeni: kaydırmalı şerit + nokta göstergesi; oran karedir (aşağıdaki künye). */
+  /** Telefon düzeni: kaydırmalı şerit ve nokta göstergesi, oran kare. */
   compact?: boolean;
-  /**
-   * Görsel SAYFAYLA BÜTÜNLEŞİK: köşe yuvarlatması yok, kenardan kenara (kullanıcı kararı 20.08 —
-   * "resim orada bir kart gibi değil"). Başlıksız detay düzeninin parçası; yalnız kompakt dalda
-   * anlamlı çünkü masaüstünde görsel sütunun içinde kart olarak durmaya devam ediyor.
-   */
+  /** Görsel sayfayla bütünleşik, köşesiz ve kenardan kenara; yalnız telefon dalında anlamlı. */
   flush?: boolean;
 }
 
@@ -40,21 +23,14 @@ export function Gallery({ images, alt, compact = false, flush = false }: Gallery
   const [expanded, setExpanded] = useState(false);
   const track = useRef<HTMLDivElement>(null);
   const frame = flush ? '!rounded-none' : '!rounded-card';
-  // Mobil kahraman KARE (kullanıcı kararı 20.08, dokuzuncu tur): native ürün ekranının kahramanı
-  // tam genişlik × 400 dp — telefon eninde ≈1:1. 3:2 dar ekranda kısa bir bant kalıyordu. 1:1 zaten
-  // tanımlı bir çerçeve (`IMAGE_ROLES` sepet karesi) ve operatörün kırpma editörü onu canlı
-  // önizliyor — odak/zoom aynı künyeden uygulanır. Masaüstü sütun içinde 3:2 kartta kalır.
+  // Telefonda kare, çünkü native ürün ekranının kahramanı telefon eninde ≈1:1 ve kırpma editörü o çerçeveyi önizliyor.
   const ratio = compact ? RATIO_SQUARE : RATIO_SOURCE;
   if (images.length === 0) return <FramedImage src={null} alt={alt} ratio={ratio} className={frame} />;
 
   if (compact) {
     /**
-     * Etkin görsel kaydırma KONUMUNDAN türer, ayrı bir state'ten değil: parmak ve noktalar tek
-     * gerçeğe bakar, birbirinden kayamaz.
-     *
-     * Ölçü, slaytların GERÇEK konumundan okunur (`offsetLeft`), `scrollLeft / clientWidth`
-     * bölmesinden değil: slaytlar arasında boşluk var, o bölme boşluğu saymadığı için birkaç
-     * slayt sonra bir tam kayar. Merkeze en yakın slayt kazanır.
+     * Etkin görsel kaydırma konumundan türer ki parmak ve noktalar tek gerçeğe baksın. Ölçü slaytların gerçek konumundan
+     * okunur, çünkü aradaki boşluğu saymayan `scrollLeft / clientWidth` bölmesi birkaç slayt sonra bir tam kayar.
      */
     const onScroll = () => {
       const el = track.current;
@@ -100,9 +76,7 @@ export function Gallery({ images, alt, compact = false, flush = false }: Gallery
   }
 
   const active = images[activeIndex] ?? images[0]!;
-  // Şerit ana görselin İÇİNDE (tasarım, 20.09): görselin altındaki satır sol sütunu ~134 px uzatıyor
-  // ve iki sütunun boyunu ayırıyordu. Beş slot sığar; tam sığıyorsa sayaç kutusuna gerek yok
-  // ("+0" diye bir şey olmaz), sığmıyorsa son slot düğmeye ayrılır ve bir eksik görsel gösterilir.
+  // Tam sığıyorsa sayaç kutusu yok; sığmıyorsa son slot düğmeye ayrılır ve bir eksik görsel gösterilir.
   const slots = 5;
   const fits = images.length <= slots;
   const thumbs = expanded || fits ? images : images.slice(0, slots - 1);
