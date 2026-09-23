@@ -18,10 +18,12 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
   return (
     <div className="flex flex-col">
       {/* Kahraman — koyu blok tam genişlikte; solda vaat, sağda görsel (tasarım 1.1fr / 1fr). */}
-      <section className="grid grid-cols-[1.1fr_1fr] items-center bg-ink text-on-image">
-        <div className="flex flex-col gap-4.5 px-12 py-13">
-          <span className="font-sans text-eyebrow-sm uppercase text-olive-light">{t.hero.eyebrow}</span>
-          <h1 className="font-serif text-h1-sm leading-tight">{t.hero.title}</h1>
+      <section className="flex items-stretch bg-ink text-on-image">
+        <div className="flex min-w-0 flex-1 flex-col gap-4.5 px-12 py-13">
+          <span className="font-sans text-caps-label tracking-[0.14em] text-olive-light uppercase">{t.hero.eyebrow}</span>
+          {/* Başlık tasarımda 44 px — merdivenin en yakın basamağı 38. 30 px'te başlık tek satıra
+              sığıyor, sol sütun kısalıyor ve fotoğraf sütunu dar kalıyordu. */}
+          <h1 className="font-serif text-page-title leading-tight">{t.hero.title}</h1>
           <ul className="flex flex-col gap-2.5 font-sans text-body leading-relaxed text-on-image-soft">
             {t.hero.benefits.map((benefit) => (
               <li key={benefit} className="flex items-start gap-2">
@@ -45,16 +47,23 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
             </a>
           </div>
         </div>
-        {/* Kahraman `site_image.professionals_hero` slotundan (08.33); yüklenmemişse yer tutucu. */}
+        {/* Kahraman `site_image.professionals_hero` slotundan (08.33); yüklenmemişse yer tutucu.
+            Görsel BLOĞUN TAM YÜKSEKLİĞİNİ kaplar (tasarım: `height:100%`): 16:9 kutu olarak
+            çizilince sol sütun ondan uzun kalıyor ve fotoğrafın üstünde-altında koyu bant
+            oluşuyordu — fotoğraf blok içinde çerçevelenmiş gibi duruyordu. Yükseklik bloğun
+            kendisinden geldiği için genişliği de oran belirler; iki sütunun payı buna göre oturur. */}
         <FramedImage
           src={hero?.url ?? null}
           alt={hero?.alt ?? t.hero.imageAlt}
           ratio={RATIO_BAND}
           crop={hero?.crop}
           frames={hero?.frames}
-          // Kahramanın sağ sütunu (1.1fr / 1fr): ~648 px, içerik 1360 px'te durur.
-          sizes="650px"
-          className="!rounded-none"
+          // %59 = bloğun yüksekliğinin 16:9 karşılığı (406 × 16/9 ≈ 805 ÷ 1360): tasarımda genişliği
+          // oran belirliyor, ama o hesap ızgarada döngüye giriyor (genişlik yüksekliğe, yükseklik
+          // metne bağlı). Pay sabit verilince kadraj aynı yere oturur ve blok hiçbir enlemde taşmaz.
+          // Görsel ~805 px; içerik 1360 px'te durur.
+          sizes="750px"
+          className="!rounded-none h-auto min-h-[340px] w-[59%] flex-none"
         />
       </section>
 
