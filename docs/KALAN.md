@@ -80,7 +80,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
   - Görev kapandı; koddaki `BEKLEYEN(09.6)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [~] (09.9) **Müşteriler: liste + detay**
 - [~] (09.10) **Müşteriler: birleştirme + GDPR silme** — birleştirmede hedef/kaynak ve taşınacaklar onaydan önce net; RPC ile siparişler/puanlar/konuşmalar taşınır, kaynak kapanır. GDPR silme: kişisel veri silinir/anonimleşir, sipariş kayıtları muhasebe bütünlüğü için kalır; iki işlem de bilinçli onaylı
-- [~] (09.11) **B2B onay**
 - [~] (09.14) **Tedarik / satın alma**
 - [~] (09.15) **Rotalar** — bölge CRUD (posta kodları + haftalık günler; bir kod tek bölge), günün rota listesi (hazırlık durumu bağlamıyla), ~~kurye atama~~, siparişi başka güne taşıma, kesim saati etkisi görünümü
 - [~] (09.16) **Ayarlar** — kapsamlı Setting yönetimi (genel değer + kanal/bölge/ülke istisnaları; anlaşılır ad/açıklama; alt sınır kontrolü — TTL 30 dk altına inemez; değişiklik izi) + kullanıcı/rol yönetimi (çoklu rol, pasifleştirme)
