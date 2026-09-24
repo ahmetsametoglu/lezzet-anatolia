@@ -10,10 +10,8 @@ import type { StorefrontImage } from '../catalog/storefront-types';
  */
 
 /**
- * Kuponun neden tutmadığı — motorun sebepleri (`CouponRejection`) + kapının iki kendi hâli.
- *
- * Sebep listesi motordan TÜRER, elle kopyalanmaz: motora yeni bir koşul eklendiğinde ekranın
- * karşılaması gereken hâl de kendiliğinden büyür.
+ * Kuponun neden tutmadığı: motorun sebepleri (`CouponRejection`) ve kapının iki kendi hâli. Liste motordan türer ki motora
+ * eklenen koşulu ekran da karşılasın.
  */
 export type CouponFailure =
   | CouponRejection
@@ -120,10 +118,8 @@ export interface CartBundleEntry {
 }
 
 /**
- * Bir satırı GÖSTEREN kimlik — ekranın "şunu şu adede getir" derken tuttuğu şey.
- *
- * `CartEntry`'den ayrı durur çünkü adet TAŞIMAZ: `setQty` zaten adedi ayrı alıyor, referansın içinde
- * ikinci bir adet taşımak iki kaynağın ayrışabildiği bir yol açardı.
+ * Bir satırı gösteren kimlik; `CartEntry`den ayrı, çünkü adet taşımaz ve `setQty` adedi ayrıca aldığı için ikinci bir adet
+ * iki kaynağın ayrışmasına yol açardı.
  */
 export type CartRef = { kind: 'variant'; variantId: string; stockId: string | null; bundleId?: never } | { kind: 'bundle'; bundleId: string; variantId?: never; stockId?: never };
 
@@ -365,11 +361,8 @@ export function splitByRoute(lines: readonly CartLine[]): { route: CartLine[]; s
 }
 
 /**
- * Teslim edilemeyen kalemlerin toplamı — asgari sepete SAYILMAYAN tutar (`CartView` künyesi).
- *
- * Fiyatı çözülememiş satır 0 katar: sepet okuması orada `lineTotalCents: null` üretiyor ve
- * bilinmeyen bir tutarı sıfır saymakla toplamayı reddetmek arasında fark yok — eksilteceği bir şey
- * yok (`CLAUDE §1`: ölçülemeyen değer sıfır değildir; burada ölçüm zaten toplama girmiyor).
+ * Teslim edilemeyen kalemlerin toplamı, asgari sepete sayılmayan tutar. Fiyatı çözülememiş satır 0 katar, çünkü toplamaya
+ * zaten girmediği için eksiltecek bir şey yoktur.
  */
 export function undeliverableTotalOf(lines: readonly CartLine[]): number {
   return lines.reduce((sum, l) => (cartGroupOf(l) === 'undeliverable' ? sum + (l.lineTotalCents ?? 0) : sum), 0);
@@ -402,9 +395,8 @@ export function cartPayableCents(
 }
 
 /**
- * Satırın kimliği — aynı varyantın farklı partisi AYRI satır (React anahtarı da budur).
- * Paket kendi kimliğiyle anılır ve `b:` ile önlenir: bir paketin kimliği ile bir varyantınki
- * teorik olarak çakışmaz ama iki farklı KÜMEDEN gelirler; önek bunu okuyana da söyler.
+ * Satırın kimliği; aynı varyantın farklı partisi ayrı satırdır. Paket `b:` önekiyle anılır, çünkü iki kimlik farklı kümelerden
+ * gelir.
  */
 export function cartKey(ref: CartRef | CartEntry): string {
   return ref.kind === 'bundle' ? `b:${ref.bundleId}` : `${ref.variantId}:${ref.stockId ?? ''}`;
@@ -446,9 +438,8 @@ export function storedPrices(items: readonly CartItem[]): Map<string, number> {
 }
 
 /**
- * Çözülmüş satırdan NİYETE geri dönüş — sunucu yanıtı geldiğinde istemcinin listesi buna göre
- * tazelenir. Tek yerde durur çünkü iki tür satırın hangi alanları taşıdığı bilgisi budur; her
- * çağrı yerinde elle kurulsaydı paket satırı bir yerde varyant satırına dönüşürdü.
+ * Çözülmüş satırdan niyete dönüş; sunucu yanıtında istemcinin listesi buna göre tazelenir. Tek yerde, yoksa paket satırı bir
+ * çağrıda varyant satırına dönüşürdü.
  */
 export function entryOf(line: CartLine): CartEntry {
   return line.kind === 'bundle'

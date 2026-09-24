@@ -23,28 +23,8 @@ import { readDeliveryInputs, resolveDelivery } from './delivery';
 import { readPickupOffer } from './pickup-offer';
 
 /**
- * Checkout ekranının ADIM VERİSİ (08.13) — **uygulama katmanı orkestrasyonu**.
- *
- * Üç kapıyı (adres → teslimat → sepet → ödeme) belirli bir SIRAYLA ve belirli kurallarla
- * birleştirir; sıranın da kuralların da her biri yaşanmış bir arızanın karşılığıdır ve künyelerinde
- * yazılıdır. Ekran bu birleşimi kendisi kuramaz (STACK §4) ve **iki yüzey de aynısını istiyor**:
- * web'in checkout adımı ile mobilin "Siparişi tamamla" ekranı aynı cevabı görmek zorunda — ikinci
- * kez yazılsaydı dört dersin dördü de bir gün ayrışırdı.
- *
- * ── TERFİ (aşama 2/3) · WEB'DEN FARKLARI ─────────────────────────────────────
- * Kaynağı `apps/web/app/(customer)/[locale]/checkout/actions.ts`'in `loadCheckoutAction`'ıydı; web
- * tarafı KÖPRÜ olarak duruyor. `'use server'` dosyası bir UÇTUR, orkestrasyon barındırmaz
- * (CLAUDE §2) — taşınmasının ikinci gerekçesi bu. Kural tarafında hiçbir şey değişmedi; değişen
- * yalnız kapının taşımayla bağını kesen dört şey:
- *   · `db` çağırandan gelir (`serviceDb()` içeride çağrılmıyor) — paketin ortak deseni.
- *   · **Kimlik ÇAĞIRANDAN gelir.** `currentCustomerId()` oturumu/çerezi okur ve pakette yaşayamaz:
- *     web köprüsü oturumdan çözüp geçer, mobil uç Bearer'dan. Girişsiz hâlin cevabı (boş liste)
- *     çağıranın işi — kapı kimliksiz çağrılmaz. Sepet niyeti (`entries`) de aynı sebeple parametre.
- *   · **Zarf ve dil doğrulaması WEB'te kaldı:** `try/catch` + `CustomerResult` + `hasLocale`.
- *     Burası adlı sonuç döndürür, fırlatmaz — hata sözlüğü müşteri yüzeyinin kendi sözlüğüdür.
- *   · Paket çözümü `bundles` kapısından gelir (aşama 1'in `CartBundlePort`u); bölge + depo
- *     listeleri bir kez okunup iki teslimat çözümüne birden veriliyor (web'de bunu `react.cache()`
- *     yapıyordu, istek kapsamı pakette yok).
+ * Checkout ekranının adım verisi: adres, teslimat, sepet ve ödeme kapılarını belirli bir sırayla birleştirir. Web ve uygulama aynı
+ * cevabı görmek zorunda olduğu için ekranda değil burada kurulur; kimlik ve sepet niyeti çağırandan gelir.
  */
 
 /** Özetin tek satırı — dökümde ve kapsam dışı listede aynı şekil (`kind`: paket satırı ayrı yazılır). */
@@ -65,36 +45,16 @@ export interface CheckoutSnapshot {
     availableDates: string[];
     requiresDateChoice: boolean;
     /**
-     * **Komşu davetinin çağırdığı sefer** (17.10 · kullanıcı vurgusu 12.08) — `null` = davet yok
-     * ya da bu adrese/güne uymuyor.
-     *
-     * Kullanıcının cümlesi: *"komşusunun seçtiği seferi göstermemiz lazım — komşunuz sizi bu sefere
-     * davet etti diye. Bunun kaybolmaması lazım."* Ekran iki şey yapar: cümleyi kurar ve o günü
-     * **önseçili** getirir. Önseçim şart, çünkü davetin tek işlevi o güne denk gelmek: davetli günü
-     * kendi bulmak zorunda kalırsa ve bulamazsa davet hiçbir işe yaramaz — üstelik kimse fark etmez.
-     *
-     * Süzgeç burada: günü `availableDates` içinde OLMAYAN davet listeye girmez. Ekranda
-     * seçilemeyen bir günü vaat etmek, müşteriyi bulamayacağı bir şeyi aramaya göndermektir.
-     *
-     * **LİSTE, TEK DEĞİL (kullanıcı kararı 21.08 · MB-61):** müşteriyi birden çok komşusu birden
-     * çok güne çağırmış olabilir ve gün seçici her günün kendi davetini söylemeli. Gün başına en
-     * fazla bir kayıt döner; aynı güne iki davet varsa kazanan SON KABUL EDİLENdir. Sözleşme
-     * künyesi ayrıntıyı taşıyor (`checkout-api.schema` → `neighborInvites`).
+     * Komşu davetlerinin çağırdığı seferler; ekran cümleyi kurar ve günü önseçili getirir, yoksa davetli günü bulamaz ve davet işe
+     * yaramaz. Günü `availableDates`te olmayan davet girmez; gün başına bir kayıt döner, aynı güne iki davet varsa son kabul edilen.
      */
     neighborInvites: { inviteId: string; inviterName: string; deliveryDate: string }[];
     /** Rota dışı + soğuk zincir: sipariş verilemez, sepet bölünmeli (K32). */
     blocked: boolean;
   } | null;
-  /** Ödeme seçenekleri + kargo + toplam; adres seçilmemişse null. */
   /**
-   * **CANLI KARGO TEKLİFİ** (07.12) — yalnız kargo kulvarında dolu, rota siparişinde `null`.
-   *
-   * Liste sunucuda hesaplanır ve **fiyat istemciden ASLA kabul edilmez**: istemci yalnız hangi
-   * `code`u seçtiğini söyler, tutar sipariş anında yeniden hesaplanır (`checkout-draft` aynı
-   * kapıyı çağırır). Referans projede bunun tersi kayda geçmiş bir sömürü kapısıydı.
-   *
-   * `status` ekranın cümlesini belirler: teklif alınamadıysa sebebi söylenir ve sabit tarife
-   * uygulandığı yazılır — sessiz geri düşüş yok.
+   * Canlı kargo teklifi, yalnız kargo kulvarında dolu. Fiyat istemciden alınmaz: istemci yalnız `code`u söyler, tutar sipariş
+   * anında yeniden hesaplanır.
    */
   shipping: {
     status: 'ok' | 'unmeasured' | 'no_box' | 'too_large' | 'no_sender' | 'provider_error' | 'off';
@@ -114,19 +74,12 @@ export interface CheckoutSnapshot {
     parcelCount: number;
     selectedCode: string | null;
     /**
-     * **Müşteriye seçim SORULUYOR mu** (kullanıcı kararı 29.08).
-     *
-     * - `customer` — kargo ücreti siparişin üzerine ekleniyor, yani parayı müşteri ödüyor:
-     *   seçim onun ve teslimat noktası da meşru bir seçenek.
-     * - `auto` — eşik geçildi, "ücretsiz kargo" diyoruz: parayı BİZ ödüyoruz, koli EVE gider ve
-     *   müşteriye hiçbir şey sorulmaz. Sorsaydık ücreti hiç etkilemeyen bir soru sormuş olurduk.
-     *
-     * `auto` hâlinde `options` yine dolu gelir ama ekran onları ÇİZMEZ — liste operasyon
-     * tarafında (`quoteOrderShipment`) hâlâ gerekli ve kural asıl orada bağlayıcı: müşterinin
-     * seçtiği kod hiçbir yere yazılmıyor (ölçüldü 29.08), taşıyıcıyı sevk anında depo seçiyor.
+     * Müşteriye seçim soruluyor mu: `customer`da kargo ücretini müşteri öder ve seçim onundur; `auto`da eşik geçildi, ücreti biz
+     * öderiz ve koli eve gider. `auto`da `options` yine dolar ama çizilmez, çünkü taşıyıcıyı sevk anında depo seçer.
      */
     mode: 'customer' | 'auto';
   } | null;
+  /** Ödeme seçenekleri, kargo ve toplam; adres seçilmemişse null. */
   payment: {
     methods: PaymentMethod[];
     creditAvailable: boolean;
@@ -135,87 +88,46 @@ export interface CheckoutSnapshot {
     shippingFeeCents: number;
     shippingFreeReason: 'route' | 'threshold' | 'pickup' | null;
     /**
-     * Ücret NEREDEN geldi (07.12): `quote` canlı teklif · `tariff` sabit tarife · `null` ücret yok.
-     * Ekran bunu SÖYLEMEK zorunda — teklif alınamadığında sessizce tarifeye düşmek, müşteriye
-     * "canlı fiyat" diye hesaplanmamış bir sayı göstermek olurdu.
+     * Ücretin kaynağı: `quote` canlı teklif, `tariff` sabit tarife, `null` ücret yok. Ekran bunu söyler, yoksa hesaplanmamış bir
+     * sayı "canlı fiyat" diye görünürdü.
      */
     shippingFeeSource: 'quote' | 'tariff' | null;
     orderTotalCents: number;
     minBasketOk: boolean;
     missingForMinBasketCents: number;
     /**
-     * Eşiklerin DAYANDIĞI yer — "67000 Strasbourg" (08.13).
-     *
-     * Asgari sepet bir sistem sabiti değil, **seçilen adresin bölgesinin** ayarıdır (kapsam:
-     * depo → bölge → kanal → ülke → global). Sepet bu sayıyı ÇEREZTEKİ koda göre gösteriyor,
-     * checkout ADRESE göre hesaplıyor; ikisi ayrı yere düşen müşteride sayı değişir ve sayıyı
-     * yalnız başına gösteren cümle "az önce başka bir şey yazıyordu" hissi bırakır.
-     *
-     * Yer cümlenin İÇİNDE, ayrı bir uyarıda değil: fark çoğu müşteride hiç yaşanmaz, onu her
-     * sepette anlatmak gürültü olurdu (08.30 kararı). Duvarın kendisi çıktığında ise sebebi
-     * taşıması gerekiyor — ve yer her hâlde doğru bir bilgidir, fark olsun olmasın.
-     *
-     * "Fark var mı" ayrıca HESAPLANMADI ve bu bilinçli: çerez kapsamıyla ikinci bir ayar okuması,
-     * ekranın gösterdiği sayının ikinci bir kaynağı olurdu — bir gün ötekiyle çelişirdi. Yer tek
-     * kaynaktan (seçili adres) geliyor.
+     * Eşiklerin dayandığı yer ("67000 Strasbourg"): asgari sepet seçili adresin bölgesinin ayarıdır, sepet ise çerezdeki koda göre
+     * gösterdiği için sayı değişebilir. Yer cümlenin içinde durur ve tek kaynaktan, seçili adresten gelir.
      */
     placeLabel: string;
   } | null;
   /**
-   * **SİPARİŞİN ÖZETİ — ekranın çizeceği döküm** (kullanıcı kararı 21.08); adres seçilmemişse null.
-   *
-   * ── NEDEN SÖZLEŞMEYE GİRDİ ──────────────────────────────────────────────────
-   * Anlık görüntü toplamı ZATEN buradaki kalemlerden hesaplıyordu (`orderScopeOf` → `scope`), ama
-   * yalnız TOPLAMI döndürüyordu. İki ekran da dökümü kendi YEREL sepet kopyasından çiziyordu ve
-   * ifade iki yere birebir kopyalanmıştı (`payment?.orderTotalCents ?? view.totalCents`). İkisi
-   * ayrıştığı anda tek ekran iki sepet anlatıyor — cihazda ölçüldü (21.08): döküm 63,47 €
-   * toplarken genel toplam 16,00 € yazıyordu, üstelik hangisinin doğru olduğunu söyleyen hiçbir
-   * şey yoktu. (Doğru olan toplamdı; bayat olan listeydi.)
-   *
-   * Artık döküm ve toplam AYNI OKUMADAN geliyor. Ayrışma bir daha "olmasın diye dikkat edilen"
-   * bir şey değil, YAPISAL OLARAK imkânsız: tek `getCartView` çağrısı, tek `scope`.
-   *
-   * ── KAPSAM: TAHSİL EDİLECEK KÜME ────────────────────────────────────────────
-   * `lines`, taslağın gerçekten tahsil edeceği kümedir (`scope.lines`) — bu adrese hiç gelemeyen
-   * kalemler DIŞARIDA kalır ve sepette bekler — onlar da `excludedLines`ta, ekran üstünü çizerek
-   * gösterebilsin diye (dosyanın 10.08 kararı: ekran ile kasa aynı kümeyi göstermek zorunda).
+   * Ekranın çizeceği döküm (adres seçilmemişse `null`); döküm ve toplam aynı okumadan gelir ki ekran iki ayrı sepet anlatmasın.
+   * `lines` taslağın tahsil edeceği kümedir, bu adrese gelemeyenler `excludedLines`ta üstü çizili gösterilsin diye taşınır.
    */
   summary: {
     lines: CheckoutSummaryLine[];
     /** İndirim ÖNCESİ ara toplam — asgari sepet eşiğinin ölçtüğü tutar (`orderScopeOf` künyesi). */
     subtotalCents: number;
     /**
-     * Bu SİPARİŞE inen indirim; `null` = yok.
-     *
-     * Tutar sepetin toplam indirimi DEĞİL, kapsamdaki satırların payları kadardır
-     * (`subtotalCents − basketCents`): siparişe girmeyen bir kalemin indirimi, tahsil edilecek
-     * tutardan düşülemez.
-     *
-     * `label` seçili dilde çözülmüş kampanya adıdır; `null` ise ekran SEBEBİ yazar ("Kampanya ·
-     * %8") — kural iki yüzeyde ortak ve istemcide duruyor (`discount-label` künyesi), burada
-     * tekrarlanmaz.
+     * Bu siparişe inen indirim (`null` yok); tutar kapsamdaki satırların payı kadardır, çünkü siparişe girmeyen kalemin indirimi
+     * tahsil edilecek tutardan düşülemez. `label` `null`sa ekran sebebi yazar; kural istemcide (`discount-label`).
      */
     discount: { amountCents: number; label: string | null; reason: DiscountReason | null } | null;
     /**
-     * Siparişe GİRMEYEN, sepette kalan satırlar (soğuk zincir + rota dışı) — ekran onları üstü
-     * çizili gösterir. Sayı değil satırların kendisi: ekranın adları yerel kopyasından okuması,
-     * düzeltilen ayrışmayı özetin yarısında sürdürmek olurdu.
+     * Siparişe girmeyen, sepette bekleyen satırlar; ekran üstünü çizer. Satırların kendisi taşınır ki ekran adları yerel kopyasından
+     * okumasın.
      */
     excludedLines: CheckoutSummaryLine[];
     /**
-     * Bu özetin dayandığı sepetin içerik imzası (`cartFingerprint`).
-     *
-     * Onay çağrısı bunu geri gönderir; taslak sunucudaki sepeti yeniden okuyup karşılaştırır ve
-     * farklıysa `cart_changed` ile reddeder. Ekranın son okuması ile onay dokunuşu arasındaki
-     * boşluk ancak böyle kapanır — özet ne kadar taze olursa olsun o aralık her zaman vardır.
+     * Özetin dayandığı sepetin içerik imzası: onay çağrısı bunu geri gönderir ve taslak farklı bir sepette `cart_changed` ile
+     * reddeder, çünkü son okuma ile onay dokunuşu arasında hep bir aralık vardır.
      */
     fingerprint: string;
   } | null;
   /**
-   * Gel-al teklifi: yalnız `pickup_allowed` müşteriye ve yalnız gel-al noktası olan tesisler (`pickup_enabled`) için dolu;
-   * ikisinden biri yoksa `null` ve ekran kartı hiç çizmez. Depo adresi müşteriye burada görünür — "depo gösterilmez"
-   * kuralının tek istisnası, çünkü müşteri oraya gidecek. `selectedWarehouseId` isteğin seçtiği depodur; tanınmayan kimlik
-   * düşer, sunucu ADRESİN cevabına döner.
+   * Gel-al teklifi: yalnız `pickup_allowed` müşteriye ve gel-al noktası olan tesisler için dolu, yoksa `null` ve kart çizilmez. Depo
+   * adresi burada görünür, çünkü müşteri oraya gidecek; tanınmayan `selectedWarehouseId` düşer ve sunucu adresin cevabına döner.
    */
   pickup: {
     warehouses: { id: string; name: string; addressLine: string }[];
@@ -225,33 +137,24 @@ export interface CheckoutSnapshot {
 
 export interface CheckoutSnapshotInput {
   /**
-   * **Sunucuda çözülmüş** müşteri kimliği — istemciden ASLA alınmaz (`createCheckoutDraft` ile
-   * aynı sözleşme). Girişsiz ziyaretçide kapı hiç çağrılmaz: cevabı (boş adres listesi) çağıranın
-   * kendi yüzeyinde durur.
+   * Sunucuda çözülmüş müşteri kimliği, istemciden alınmaz; girişsiz ziyaretçide kapı hiç çağrılmaz.
    */
   customerId: string;
   entries: readonly CartEntry[];
   /** Seçili adres; `null` ise varsayılan, o da yoksa ilk adres kullanılır. */
   addressId: string | null;
   /**
-   * Sepette girilen kupon kodu — checkout'a KADAR taşınmalı. Taşınmadığında ekran kendisiyle
-   * çelişiyordu: kalem satırları ve indirim sepet bağlamından (kuponlu), toplam ise buradan
-   * (kuponsuz) geliyordu; üstelik siparişe yazılan tutar da kuponsuz oluyordu — müşteri kuponu
-   * kullanmış görünüp TAM FİYAT ödüyordu (29.07 denetimi).
+   * Sepette girilen kupon; buraya taşınmazsa kalemler kuponlu, toplam ve siparişe yazılan tutar kuponsuz olur ve müşteri kuponu
+   * kullanmış görünüp tam fiyat öder.
    */
   couponCode?: string | null;
   /**
-   * Sepetin KARGO grubundan açılan ikinci sipariş mi (19.7 · `/checkout?group=shipping`).
-   *
-   * Taslakla AYNI bayrak, aynı gerekçe (`createCheckoutDraft` künyesi): tür türetilmez, açık
-   * seçilir. Burada da geçmesi şart — geçmezse ekran adresin cevabını gösterir ("kapıya teslim,
-   * kapıda ödeme mümkün, şu günler"), taslak ise kargo siparişi açar. Müşteri ekranda gördüğü
-   * ödeme yöntemini seçer, onaylar ve kasada reddedilirdi.
+   * Sepetin kargo grubundan açılan ikinci sipariş mi (`/checkout?group=shipping`); taslakla aynı açık bayrak. Geçmezse ekran adresin
+   * cevabını gösterir, taslak kargo siparişi açar ve müşteri ekranda seçtiği yöntemle kasada reddedilir.
    */
   shippingOrder?: boolean;
   /**
-   * Müşterinin seçtiği kargo servisi (`code`). **Tutar İSTEMCİDEN ALINMAZ** — kod sunucudaki
-   * teklif listesinde aranır ve fiyatı oradan okunur (07.12 kararı).
+   * Müşterinin seçtiği kargo servisi (`code`); tutar istemciden alınmaz, sunucudaki teklif listesinden okunur.
    */
   shippingOptionCode?: string | null;
   /** Kargo tarifesi sağlayıcısı — test sahte sağlayıcı geçirir, üretimde varsayılan kullanılır. */
@@ -285,17 +188,8 @@ export async function readCheckoutSnapshot(
   if (!selected) return { addresses, delivery: null, shipping: null, payment: null, summary: null, pickup: pickup.offer };
   if (pickup.warehouse) return pickupSnapshot(db, locale, input, { addresses, offer: pickup.offer, warehouse: pickup.warehouse });
 
-  // ── YER ÖNCE, SEPET SONRA (07.15'in kalanı, arka-uç talebi 09.08) ────────
-  // Sepet yeri ÇEREZTEN alıyordu (`readPlaceWarehouses`) ve ayar kapsamının ülke/bölge eksenleri
-  // hiç geçmiyordu: DE kargo tarifesi ve bölge asgari sepeti okunmuyor, FR/global değerler
-  // kesiliyordu. Checkout'un yer kaynağı çerez DEĞİL **seçilen adrestir** — müşteri hangi adrese
-  // gönderiyorsa eşik de oranın eşiğidir.
-  //
-  // İki tur `resolveDelivery` fazladan maliyet DEĞİL ve bunu kapının kendi künyesi söylüyor:
-  // bölge/depo listeleri ortak ve tek okumadan geçiliyor, *"teslimat bir kez depoyu vermek, bir kez
-  // de sepet bilindikten sonra kargo kararını vermek için iki kez çözülebiliyor."* Taslak
-  // (`checkout-draft.ts`) aynı deseni zaten koşuyor — ekranın gösterdiği ile siparişi açanın
-  // uyguladığı ancak böyle aynı hesaptan çıkar.
+  // Yer seçilen adresten çözülür, çerezden değil: eşik, tarife ve bölge müşterinin gönderdiği adresin değeridir. Teslimat iki kez
+  // çözülür (önce depo, sepet bilinince kargo kararı) ve taslak aynı deseni koşar ki ekranla kasa aynı hesaptan çıksın.
   const deliveryInputs = await readDeliveryInputs(db);
   const place = await resolveDelivery(db, {
     postalCode: selected.postalCode,
@@ -305,12 +199,8 @@ export async function readCheckoutSnapshot(
   const cart = await getCartView(db, locale, input.entries, {
     customerId: input.customerId,
     couponCode: input.couponCode,
-    /* Bu alan BU SİPARİŞİN ÇIKACAĞI DEPOYU söyler — sepet ucunun kullandığı çözücüdeki "yalnız rota
-       deposu" anlamı BURADA GEÇERLİ DEĞİL (ölçüldü 10.08). Taslak da aynısını geçiyor ve `route ===
-       'local'` orada "bu siparişin deposundan karşılanıyor" demek oluyor; ayrıca fiyat/teklif
-       çözümü de bu depodan okunuyor. Rota dışı adreste kargo deposu gelmesi bu yüzden doğrudur.
-       Değiştirmeyi denedim, iki şeyi birden kırdı (fiyat çözülemedi, karşılanabilirlik kontrolü
-       çöktü) — geri alındı. */
+    /* Bu alan bu siparişin çıkacağı depoyu söyler, sepet ucundaki "yalnız rota deposu" anlamı burada geçerli değil; fiyat ve teklif
+       de bu depodan okunur, rota dışı adreste kargo deposu gelmesi bu yüzden doğrudur. */
     warehouseId: place.warehouseId,
     shippingWarehouseId: place.shippingWarehouseId,
     country: selected.country,
@@ -319,12 +209,8 @@ export async function readCheckoutSnapshot(
     zoneId: input.shippingOrder ? null : place.zoneId,
     bundles: input.bundles,
   });
-  /* KAPSAM: EKRAN, TASLAĞIN TAHSİL EDECEĞİ KÜMEYİ GÖSTERİR (kullanıcı kararı 10.08).
-     Bu adrese HİÇ gelemeyen kalemler (soğuk zincir + rota dışı) siparişin dışında kalıp sepette
-     bekliyor (`orderableLines` — taslağın da kullandığı kapı). Anlık görüntü sepetin TAMAMINI
-     okusaydı ekran ile kasa ayrışırdı: müşteri gelemeyen kalemi de içeren bir "Genel toplam"
-     görür, siparişten daha azı kesilirdi — ve asgari sepet eşiği de sipariş edilemeyecek bir
-     kalemle geçilmiş görünürdü. Taslak ile ekran AYNI sayıyı vermek zorunda. */
+  /* Ekran taslağın tahsil edeceği kümeyi gösterir: bu adrese hiç gelemeyen kalemler siparişin dışında kalıp sepette bekler. Tamamı
+     okunsaydı genel toplam gelemeyen kalemi içerir ve asgari sepet sipariş edilemeyecek bir kalemle geçilmiş görünürdü. */
   const scope = orderScopeOf(cart, !input.shippingOrder && place.deliveryType === 'shipping');
 
   // İkinci tur: kargo kararı ancak sepet bilinince verilebilir (soğuk zincir kalemi var mı).
@@ -337,23 +223,13 @@ export async function readCheckoutSnapshot(
     inputs: deliveryInputs,
   });
 
-  // Kargo siparişinde tür adresin cevabını EZER (19.15) ve gün hiç sorulmaz: tarih taşıyıcıya
-  // bağlıdır, söz verilmez. Ezme tek yönlü — normal taslak adresin cevabını olduğu gibi kullanır.
+  // Kargo siparişinde tür adresin cevabını ezer ve gün sorulmaz, çünkü tarih taşıyıcıya bağlıdır; ezme tek yönlüdür.
   const deliveryType = input.shippingOrder ? ('shipping' as const) : delivery.deliveryType;
 
-  /*
-    ── CANLI KARGO TEKLİFİ (07.12) ─────────────────────────────────────────────
-    Yalnız KARGO kulvarında sorulur: rota siparişinde taşıyıcı yok, tarife de yok.
-
-    Sağlayıcı yapılandırılmamışsa ağa HİÇ çıkılmaz (`off`) — anahtarı olmayan bir kurulumda her
-    checkout açılışında bir hata turu atmak, hem yavaşlık hem gürültüdür.
-
-    Teklif düşerse sipariş yolu KAPANMAZ: `resolveShippingFee` sabit tarifeye düşer ve
-    `shippingFeeSource: 'tariff'` ile bunu SÖYLER.
-  */
+  /* Canlı kargo teklifi yalnız kargo kulvarında sorulur; sağlayıcı yapılandırılmamışsa ağa hiç çıkılmaz. Teklif düşerse sipariş yolu
+     kapanmaz: `resolveShippingFee` sabit tarifeye düşer ve bunu `shippingFeeSource: 'tariff'` ile söyler. */
   const rateProvider = input.rateProvider ?? (shippingProviderConfigured() ? sendcloudProvider() : null);
-  // Kargo ÇIKIŞ deposu — rota deposu değil (19.23 ayrımı). Depo çözülemediyse teklif SORULMAZ:
-  // gönderici olmadan tarife hesaplanamaz ve uydurma bir depodan sorulan fiyat yanlış olur.
+  // Kargo çıkış deposu, rota deposu değil; depo çözülemediyse teklif sorulmaz, çünkü uydurma bir depodan sorulan fiyat yanlış olur.
   const quoteWarehouseId = place.shippingWarehouseId ?? place.warehouseId;
   const shipping =
     deliveryType === 'shipping' && rateProvider && quoteWarehouseId
@@ -375,16 +251,13 @@ export async function readCheckoutSnapshot(
     deliveryType,
     quotedFeeCents: priced?.priceCents ?? null,
     basketCents: scope.basketCents,
-    // Asgari sepet eşiği İNDİRİM ÖNCESİNİ ister (kullanıcı kararı 11.08) — `basketCents` kargo ve
-    // toplam içindir. Ayrımın tamamı `CheckoutPaymentInput` künyesinde.
+    // Asgari sepet indirim öncesini ister; `basketCents` kargo ve toplam içindir.
     subtotalCents: scope.subtotalCents,
     // Oran satırın kendi gerçeğinden gelir (paketse kalemlerin en yükseği) — sabit yazmak
     // malzeme gibi %20'lik kalemlerde kargo KDV'sini yanlış bölerdi.
     lines: vatLines,
-    /* AYAR KAPSAMI (07.15'in ikinci yarısı, 09.08) — üç eksen de sepet okumasına yukarıda ZATEN
-       geçiyor; ödeme kapısına geçmiyordu. Ekran o hâlde kendi kendisiyle çelişiyordu: kalem bloğu
-       kapsamlı eşiği, ödeme bloğu global eşiği gösteriyordu. Gerekçe ve ölçüm `checkout-draft.ts`in
-       aynı çağrısında; taslakla ekran AYNI sayıyı vermek zorunda olduğu için ifadeler de aynı. */
+    /* Ayar kapsamının üç ekseni sepet okumasıyla aynı ifadelerle geçer, yoksa kalem bloğu kapsamlı eşiği, ödeme bloğu global eşiği
+       gösterirdi. */
     country: selected.country,
     zoneId: input.shippingOrder ? null : place.zoneId,
     warehouseId: place.warehouseId,
@@ -394,11 +267,8 @@ export async function readCheckoutSnapshot(
   const finalChoice = free ? chooseShippingOption(quoted, { free: true, requestedCode: null }) : null;
   const chosen = free ? (finalChoice?.ok ? finalChoice.option : null) : priced;
 
-  // Komşu daveti: kişiye yazılı kabuttan okunur (çerezden değil — 12.08 kararı). Kargo siparişinde
-  // hiç sorulmaz: orada sefer diye bir şey yok.
-  /* HEPSİ DÖNER, TEKİ DEĞİL (kullanıcı kararı 21.08): müşteriyi birden çok komşusu farklı günlere
-     çağırmış olabilir ve ekran GÜN SEÇİCİDE her günün kendi davetini söylemeli — *"şu komşunuz
-     sizi bu güne davet etti"*. Eskiden yalnız en yakın gün dönüyordu, ötekiler hiç görünmüyordu. */
+  // Komşu daveti kişiye yazılı kabulden okunur, çerezden değil; kargo siparişinde sefer olmadığı için sorulmaz.
+  /* Bütün davetler döner: müşteriyi birden çok komşusu farklı günlere çağırmış olabilir ve gün seçici her günün davetini söylemeli. */
   const pendingInvites = input.shippingOrder ? [] : await readPendingNeighborInvites(db, input.customerId);
   const matchingInvites = pendingInvites.filter(
     (invite) => invite.deliveryZoneId === place.zoneId && delivery.availableDates.includes(invite.deliveryDate),
@@ -448,24 +318,17 @@ export async function readCheckoutSnapshot(
             // Eşik geçildiyse ücret sıfır ve koli eve gider: seçimin tutara etkisi yok, o yüzden sorulmuyor.
             mode: free ? ('auto' as const) : ('customer' as const),
           },
-    // Eşiği hangi yerin belirlediği: seçili adresin kendisi. Bölge ADI değil posta kodu +
-    // şehir, çünkü müşteri kendi bölgemizin adını ("Strasbourg Merkez") bilmiyor — adresini
-    // biliyor. `resolveDelivery` zaten bölge adını taşımıyor; ikinci bir okuma açmaya da
-    // gerek yok.
+    // Eşiği belirleyen yer seçili adrestir; bölge adı değil posta kodu ve şehir yazılır, çünkü müşteri bölgemizin adını değil adresini bilir.
     payment: paymentSlice(options, `${selected.postalCode} ${selected.city}`),
-    /* DÖKÜM VE TOPLAM AYNI OKUMADAN (kullanıcı kararı 21.08) — arayüzdeki `summary` künyesi
-       gerekçenin tamamını taşıyor. Burada yeni bir hesap YOK: `scope` yukarıda zaten çözüldü ve
-       `orderTotalCents` de ondan çıktı. Tek yaptığımız, ekranın kendi kopyasından çizmek zorunda
-       kalmaması için o kümeyi de döndürmek. */
+    /* Döküm ve toplam aynı okumadan: `scope` yukarıda çözüldü, ekran kendi kopyasından çizmesin diye küme de döner. */
     summary: summarySlice(cart, scope, input.entries, locale),
     pickup: pickup.offer,
   };
 }
 
 /**
- * Gel-al anlık görüntüsü: sepet SEÇİLEN DEPONUN stoğuyla okunur ve bölünmez (kargo deposu verilmez — depoda olmayan kalem
- * "burada yok"tur, taslak onu reddeder). Ödeme rotayla aynı kurallardan çıkar (depoda ödeme = kapıda ödeme); gün, davet
- * ve kargo teklifi yoktur. Ayar kapsamı deponun ülkesi ve kendisidir.
+ * Gel-al anlık görüntüsü: sepet seçilen deponun stoğuyla okunur ve bölünmez, depoda olmayan kalemi taslak reddeder. Ödeme rotanın
+ * kurallarından çıkar; gün, davet ve kargo teklifi yoktur.
  */
 async function pickupSnapshot(
   db: Db,
@@ -548,12 +411,8 @@ function summaryLineOf(line: CartLine): CheckoutSummaryLine {
 }
 
 /**
- * Sepet indiriminin ÖZET karşılığı — tutar kapsamdan, ad çok dilli alandan.
- *
- * `rejected` hâli de indirim TAŞIR (`appliedInsteadCents`): kupon tutmasa da sepete inen kampanya
- * yerinde durur ve künyesi `CartDiscount`ta yazılı — onu burada düşürmek, müşterinin hak ettiği
- * indirimi özetten silmek olurdu. Tutar yine de KAPSAMDAN okunur; `appliedInsteadCents` sepetin
- * tamamına aittir ve siparişe girmeyen kalemin payını da içerir.
+ * Sepet indiriminin özet karşılığı: tutar kapsamdan, ad çok dilli alandan. `rejected` hâli de indirim taşır, çünkü kupon tutmasa da
+ * sepete inen kampanya yerinde durur; tutarı yine kapsamdan okunur.
  */
 function discountOf(
   discount: CartDiscount,
@@ -563,10 +422,7 @@ function discountOf(
   if (scopedCents <= 0) return null;
   const label = (text: LocalizedText | null): string | null => (text === null ? null : resolveLocalizedText(text, locale));
   switch (discount.status) {
-    /* Adı yoksa KOD yazılır — sepetin aynı kuralı (`discount-label` künyesi: "kupon tuttu:
-       kampanyanın adı varsa o, yoksa müşterinin yazdığı KOD"). Kodu ayrı bir alan olarak taşımak
-       yerine `label`a koyuyoruz çünkü alanın anlamı "müşterinin okuduğu künye"dir; o hâlde okuduğu
-       şey gerçekten kodun kendisidir. */
+    /* Adı yoksa kod yazılır, sepetin aynı kuralı; alan "müşterinin okuduğu künye" olduğu için kod ayrı bir alana konmaz. */
     case 'applied':
       return { amountCents: scopedCents, label: label(discount.label) ?? discount.code, reason: null };
     case 'automatic':

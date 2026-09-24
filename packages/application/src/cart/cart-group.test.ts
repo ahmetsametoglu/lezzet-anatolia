@@ -2,18 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { CartLineRoute } from '@lezzet/domain-core';
 import { EMPTY_CART, cartGroupOf, orderableLines, splitByRoute, undeliverableTotalOf, viewWithEntries, type CartEntry, type CartLine, type CartView } from './cart-types';
 
-/**
- * **Karma sepetin üçüncü hâli** (kullanıcı kararı 10.08) — kalem hangi gruba düşer, siparişe hangisi
- * girer, eşiğe hangisi sayılır.
- *
- * Saf test: DB yok, motor yok — sınanan şey sepetin kendi KARAR yüzeyi. Dosya yine de paketin
- * entegrasyon kökünde, çünkü sınır dizinle çiziliyor (`vitest.config` künyesi).
- *
- * Neden test edilmesi gereken bir şey: sınanan üç kural da sessizce bozulan cinsten. Bozulduklarında
- * hiçbir şey patlamaz — müşteri yalnız sipariş edemeyeceği bir ürünle eşiği geçmiş görünür (ölçüldü
- * 10.08: soğuk zincir ürün rota dışı adresle sepette duruyor, "Siparişi tamamla" yeşil, engel ancak
- * checkout'ta çıkıyordu).
- */
+/*
+  Sepetin karar yüzeyi: kalem hangi gruba düşer, siparişe hangisi girer, eşiğe hangisi sayılır; bu kurallar bozulunca hiçbir şey
+  patlamaz, müşteri sipariş edemeyeceği ürünle eşiği geçmiş görünür. Test saf, ama sınır dizinle çizildiği için entegrasyon kökünde.
+*/
 
 let counter = 0;
 
