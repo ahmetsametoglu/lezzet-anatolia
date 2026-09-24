@@ -9,34 +9,18 @@ import { Skeleton, SkeletonBlock } from '@/components/customer/ui/skeleton';
 import { formatPrice } from '@/lib/storefront/format';
 
 /**
- * Sayfa içi kart ödemesi (08.13). Kart alanları **Stripe'ın kendi iframe'inde** yaşar: numara ne
- * sunucumuza ne de istemci kodumuza uğrar, PCI kapsamı barındırılan Checkout ile aynı kalır.
- * Kazanılan şey müşterinin siteden hiç çıkmaması.
- *
- * **Ertelenmiş Elements** (`mode: 'payment'`, `clientSecret` YOK): form açılışta monte olur ama
- * ödeme niyeti YARATILMAZ. Niyet ancak "Siparişi onayla"ya basınca doğar — yani stok ayırma ile
- * ödeme arasındaki mesafe dakikalar değil saniyelerdir. Müşteri formu bir saat açık bıraksa bile
- * ortada kilitlenmiş mal olmaz.
- *
- * Sıra bilinçli: **önce kart valide edilir, sonra sipariş açılır.** `elements.submit()` sağlayıcıya
- * gitmeden alanları kontrol eder; kartını yanlış yazan müşteri için taslak sipariş açılmaz, stok
- * ayrılmaz. Tersi, her yazım hatasında ardında yetim taslak bırakırdı.
- *
- * **Adres iki kez sorulmaz:** `fields.billingDetails: 'never'` ile Stripe'ın kendi adres formu
- * kapatılır, 1. adımda seçilen adres `confirmPayment`'a elle geçer.
+ * Sayfa içi kart ödemesi: kart alanları Stripe'ın iframe'inde kalır ve ödeme niyeti ancak onayda doğar (ertelenmiş Elements), böylece
+ * açık bırakılan form stok kilitlemez. Önce kart doğrulanır, sonra sipariş açılır, çünkü tersi her yazım hatasında yetim taslak bırakırdı.
  */
 interface PaymentSectionProps {
   stripe: Promise<StripeClient | null>;
   locale: Locale;
   amountCents: number;
-  /** Fatura bilgisi — 1. adımda seçilen adresten. Stripe'ın formu kapalı olduğu için elle gider. */
+  /** Fatura bilgisi ilk adımda seçilen adresten gelir; Stripe'ın adres formu kapalı olduğu için elle geçer. */
   billing: BillingDetails;
   /**
-   * Ödeme sonrası dönülecek adresin GÖVDESİ; sipariş kimliği sonuna eklenir.
-   *
-   * Adres ancak `onPrepare` dönünce tamamlanabiliyor — sipariş o anda doğuyor. Sabit bir "bekliyor"
-   * adresine dönmek, dönüş sayfasının hangi siparişi göstereceğini bilmemesi demekti (ve o yol
-   * `[reference]` rotasıyla çakışırdı).
+   * Ödeme sonrası dönülecek adresin gövdesi; sipariş kimliği sonuna `onPrepare` dönünce eklenir, çünkü sipariş o anda doğar ve sabit
+   * bir dönüş adresi hangi siparişin gösterileceğini bilemezdi.
    */
   returnUrlBase: string;
   /** Kart geçerliyse çağrılır: taslağı açar, stoğu ayırır, `clientSecret` döndürür. */
@@ -58,10 +42,8 @@ interface BillingDetails {
 }
 
 /**
- * Görünüm `globals.css` token'larına eşlenir. **Ham renk burada MEŞRUDUR ve tek istisnadır**
- * (kullanıcı onaylı, 28.07): Stripe iframe'i bizim CSS değişkenlerimizi okuyamaz, `var(--color-…)`
- * orada çözülmez. Her değerin yanında token adı yazılıdır — palet değişirse burası da değişir.
- * → `ARCHITECTURE_DECISIONS.md`
+ * Görünüm `globals.css` token'larına eşlenir ve ham renk burada tek istisnadır, çünkü Stripe iframe'i CSS değişkenlerimizi okuyamaz
+ * (`ARCHITECTURE_DECISIONS.md`). Her değerin yanında token adı yazılı; palet değişirse burası da değişir.
  */
 const APPEARANCE: Appearance = {
   theme: 'stripe',
@@ -130,13 +112,8 @@ export function PaymentSection(props: PaymentSectionProps) {
 }
 
 /**
- * Kart alanının iskeleti — düz bir gri dikdörtgen DEĞİL, gelen formun kendisi kadar yer tutan bir
- * kopya: bir satır kart numarası, altında ikiye bölünmüş son kullanma + CVC.
- *
- * Ölçüler yukarıdaki `APPEARANCE`'ın karşılığıdır ve rastgele değil: etiket 13px + 6px boşluk,
- * girdi 15px metin + 10px iç boşluk + 1.5px kenar ≈ 40px, satır arası `spacingGridRow` 14px.
- * Toplam, Stripe'ın çizdiği yükseklikle aynı — kutu alanlar gelince ne büyür ne küçülür
- * (kullanıcı geri bildirimi, 29.07). Ölçü tutmazsa düzeltilecek yer `APPEARANCE` ile burasıdır.
+ * Kart alanının iskeleti gelen formun ölçülerini taşır (bir satır kart numarası, altında son kullanma ve CVC), böylece alanlar gelince
+ * kutu zıplamaz. Ölçüler `APPEARANCE`ın karşılığıdır: etiket 13px + 6px boşluk, girdi ≈ 40px, satır arası 14px; biri değişirse öteki de.
  */
 function CardFieldsSkeleton() {
   const field = (
@@ -228,24 +205,16 @@ function PayForm({ locale, amountCents, billing, returnUrlBase, onPrepare, onErr
   return (
     <div className="flex flex-col gap-4">
       {/**
-       * Kart çerçevesi ile iskeleti yer değiştirir: **yüksekliği bekleyen taraf belirler.**
-       *
-       * Üç kural birden gerekiyordu ve üçü de tek tek öğrenildi:
-       *  1. Çerçeve `display:none` ile GİZLENMEZ — öyle gizlenen bir iframe kendini ölçemez, "hazırım"
-       *     dedikten sonra yerleşimini ancak açılınca kurar ve arada boşluk kalırdı (29.07).
-       *  2. Bu yüzden `invisible` + `absolute`: görünmez ama tam genişlikte, ölçüsünü baştan alır;
-       *     akışta yer kaplamadığı için yüksekliği iskelet söyler.
-       *  3. İskelet gerçek formun ÖLÇÜLERİNİ taşır (aşağıdaki `CardFieldsSkeleton`) — düz bir gri
-       *     dikdörtgen doğru yüksekliği tutturamıyordu, alanlar gelince kutu zıplıyordu.
+       * Çerçeve `display:none` ile gizlenmez, çünkü öyle gizlenen iframe kendini ölçemez ve yerleşimini ancak açılınca kurar;
+       * `invisible` + `absolute` ile ölçüsünü baştan alır ve akışta yer kaplamadığı için o sırada yüksekliği iskelet belirler.
        */}
       <div className="relative">
         {!ready && !loadFailed && <CardFieldsSkeleton />}
         <div className={ready ? undefined : 'invisible absolute inset-x-0 top-0'}>
           <PaymentElement
             onReady={() => setReady(true)}
-            // Yükleme HATASI sessiz kalmamalı: bu olmadan çerçeve hiç gelmiyor, iskelet sonsuza
-            // kadar dönüyor ve müşteri neyi beklediğini bilmiyordu — Stripe hatayı yalnız konsola
-            // yazıyordu (29.07, CSP joker eksikliği). Artık ekran cevap veriyor: kapıda ödeme açık.
+            // Yükleme hatası sessiz kalmaz, çünkü Stripe onu yalnız konsola yazar ve iskelet sonsuza kadar dönerdi; ekran başka bir
+            // ödeme yolu önerir.
             onLoadError={({ error }) => {
               // Sağlayıcının cümlesi müşteriye GİTMEZ: İngilizce ve entegrasyon diliyle yazılmış.
               // Ekrana yönlendiren bir cevap gider, teknik sebep konsola — teşhisin tek yeri burası.
