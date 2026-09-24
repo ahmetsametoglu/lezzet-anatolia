@@ -170,8 +170,7 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
       <footer className="bg-ink text-neutral-400">
         {footerTier === 'slim' ? (
           <div className={`${SHELL} flex items-center justify-between px-12 py-4 font-sans text-micro`}>
-            {/* Tasarımın ince altbilgisinde marka 17 px (merdivende 18, tam altbilgiyle aynı kademe). Önceki
-                `text-body` boyu hiç uygulamıyordu ve ad kapsayıcının 11,5 px'ini miras alıyordu. */}
+            {/* Tasarımın ince altbilgisinde marka 17 px; merdivende en yakın kademe 18, tam altbilgiyle aynı. */}
             <span className="font-serif text-card-title-sm text-cream">{brand.name}</span>
             <span className="uppercase">{LOCALES.join(' · ')}</span>
           </div>
@@ -202,7 +201,6 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             <FooterColumn
               title={t.footer.corporate}
               items={[
-                { label: t.footer.about },
                 { label: t.nav.pro, href: '/professionals' },
                 { label: t.footer.faq, href: '/legal/faq' },
                 { label: t.footer.imprint, href: '/legal/terms' },
@@ -239,23 +237,18 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
 
 interface FooterColumnProps {
   title: string;
-  /** `href` verilmeyen satır düz metin kalır: sayfası olmayan başlığı bağ yapmak ziyaretçiyi 404'e gönderir. */
-  items: { label: string; href?: ComponentProps<typeof Link>['href'] }[];
+  items: { label: string; href: ComponentProps<typeof Link>['href'] }[];
 }
 
 function FooterColumn({ title, items }: FooterColumnProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <span className="font-bold text-cream">{title}</span>
-      {items.map((item) =>
-        item.href ? (
-          <Link key={item.label} href={item.href} className="cursor-pointer transition-colors hover:text-cream">
-            {item.label}
-          </Link>
-        ) : (
-          <span key={item.label}>{item.label}</span>
-        ),
-      )}
+      {items.map((item) => (
+        <Link key={item.label} href={item.href} className="cursor-pointer transition-colors hover:text-cream">
+          {item.label}
+        </Link>
+      ))}
     </div>
   );
 }
