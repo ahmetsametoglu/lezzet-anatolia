@@ -37,6 +37,9 @@ const rotaKodu = testPostalCode();
 let categoryId: string;
 let productId: string;
 let variantId: string;
+/** Rota deposunda duran ikinci ürün: iki gruplu sepetin kapı kalemi. */
+let localProductId: string;
+let localVariantId: string;
 let customerId: string;
 let authUserId: string;
 let addressId: string;
@@ -73,6 +76,23 @@ beforeAll(async () => {
   await new StockService(db).insert({
     warehouseId: shippingWarehouseId,
     variantId,
+    physicalQty: 20,
+    expiryDate: new Date(Date.now() + 120 * 86_400_000).toISOString().slice(0, 10),
+  });
+
+  const local = await new ProductService(db).create({
+    name: { tr: `Kapı ürünü ${stamp}` },
+    categoryId,
+    shippable: true,
+    variants: [{ label: { tr: '1 kg' } }],
+  });
+  localProductId = local.product.id;
+  localVariantId = local.variants[0]!.id;
+  // Kapı siparişinin asgari sepeti küresel ayardan okunur; fiyat onun rahatça üstünde ki test ayara dokunmasın.
+  await new PriceService(db).insert({ variantId: localVariantId, channel: 'b2c', amountCents: 20_000 });
+  await new StockService(db).insert({
+    warehouseId: routeWarehouseId,
+    variantId: localVariantId,
     physicalQty: 20,
     expiryDate: new Date(Date.now() + 120 * 86_400_000).toISOString().slice(0, 10),
   });
@@ -137,11 +157,11 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await mustDelete(db, 'order', (q) => q.in('customer_id', [customerId, b2bCustomerId]));
-  await purgeVariantStock(db, [variantId]);
+  await purgeVariantStock(db, [variantId, localVariantId]);
   await db.from('address').delete().in('customer_id', [customerId, b2bCustomerId]);
   await db.from('delivery_zone').delete().eq('id', zoneId);
   await purgeTestData(db, {
-    productIds: [productId],
+    productIds: [productId, localProductId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
     authUserIds: [authUserId, b2bAuthUserId],
@@ -189,6 +209,38 @@ describe('kargo siparişi taslağı', () => {
     // çalışılır. Bu kontrol `blocked`tan ayrıdır: kargoyla gelebilen ürün sepette satılabilir görünür ama sipariş tek depodan çıkar.
     const outcome = await createCheckoutDraft({ ...base(), entries: entries() });
     expect(outcome.status).toBe('blocked_lines');
+  });
+
+  it('kapıya teslimin asgari sepetine takılmaz — kargo siparişinin tabanı yoktur', async () => {
+    // Taban yalnız bu testin kargo deposuna yazılır: kapı kuralı bu satırı okur, kargo kuralı okumaz; başka test etkilenmez.
+    await new SettingsService(db).set('min_basket_cents', 1_000_000, { scopeType: 'warehouse', scopeId: shippingWarehouseId });
+    try {
+      const outcome = await createCheckoutDraft({ ...base(), entries: entries(), shippingOrder: true });
+      expect(outcome.status).toBe('ok');
+    } finally {
+      await mustDelete(db, 'settings', (q) =>
+        q.eq('key', 'min_basket_cents').eq('scope_type', 'warehouse').eq('scope_id', shippingWarehouseId),
+      );
+      SettingsService.invalidate('min_basket_cents');
+    }
+  });
+
+  it('bütün sepet gönderilse de kargo siparişi yalnız kargo kalemini, kapı siparişi yalnız kapı kalemini alır', async () => {
+    const tumSepet = [...entries(), { kind: 'variant' as const, variantId: localVariantId, qty: 1, stockId: null }];
+    const kalemleri = async (orderId: string) => (await new OrderService(db).getWithItems(orderId))!.items.map((i) => i.variantId);
+
+    const kargo = await createCheckoutDraft({ ...base(), entries: tumSepet, shippingOrder: true });
+    expect(kargo.status).toBe('ok');
+    if (kargo.status !== 'ok') return;
+    expect(await kalemleri(kargo.orderId)).toEqual([variantId]);
+
+    // Kapı siparişi gün ister: ilk çağrı açık günleri söyler, ikincisi ilk günü seçer.
+    const ilk = await createCheckoutDraft({ ...base(), entries: tumSepet });
+    const gun = ilk.status === 'date_unavailable' ? (ilk.availableDates[0] ?? null) : null;
+    const kapi = gun === null ? ilk : await createCheckoutDraft({ ...base(), deliveryDate: gun, entries: tumSepet });
+    expect(kapi.status).toBe('ok');
+    if (kapi.status !== 'ok') return;
+    expect(await kalemleri(kapi.orderId)).toEqual([localVariantId]);
   });
 });
 

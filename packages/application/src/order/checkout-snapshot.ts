@@ -10,7 +10,7 @@ import {
 } from '@lezzet/types';
 import { readPendingNeighborInvites } from '../customer/neighbor';
 import { getCartView, type CartBundlePort } from '../cart/read';
-import { orderScopeOf } from '../cart/cart-types';
+import { laneEntriesOf, orderLaneOf, orderScopeOf, undeliverableLinesOf } from '../cart/cart-types';
 import { cartFingerprint } from '../cart/fingerprint';
 import type { CartDiscount, CartEntry, CartLine, DiscountReason } from '../cart/cart-types';
 import { chooseShippingOption, homeShortlist, needsServicePoint } from '@lezzet/domain-core';
@@ -196,7 +196,7 @@ export async function readCheckoutSnapshot(
     country: selected.country,
     inputs: deliveryInputs,
   });
-  const cart = await getCartView(db, locale, input.entries, {
+  const readOptions = {
     customerId: input.customerId,
     couponCode: input.couponCode,
     /* Bu alan bu siparişin çıkacağı depoyu söyler, sepet ucundaki "yalnız rota deposu" anlamı burada geçerli değil; fiyat ve teklif
@@ -208,7 +208,16 @@ export async function readCheckoutSnapshot(
     // gidilen teslimatın kaydıdır, kargoda bölge eşiği uygulanmaz.
     zoneId: input.shippingOrder ? null : place.zoneId,
     bundles: input.bundles,
-  });
+  };
+  const fullCart = await getCartView(db, locale, input.entries, readOptions);
+  /* Taslakla aynı daraltma: sipariş yalnız kendi şeridini alır ve indirim daraltılmış kalemlerle yeniden çözülür. Bütün sepetin
+     indirim payını süzmek, taslağın keseceğinden farklı bir indirim gösterirdi. */
+  const addressOutOfRoute = place.deliveryType === 'shipping';
+  const laneEntries = laneEntriesOf(fullCart, input.entries, orderLaneOf(Boolean(input.shippingOrder), addressOutOfRoute), addressOutOfRoute);
+  const cart =
+    laneEntries.length > 0 && laneEntries.length < input.entries.length
+      ? await getCartView(db, locale, laneEntries, readOptions)
+      : fullCart;
   /* Ekran taslağın tahsil edeceği kümeyi gösterir: bu adrese hiç gelemeyen kalemler siparişin dışında kalıp sepette bekler. Tamamı
      okunsaydı genel toplam gelemeyen kalemi içerir ve asgari sepet sipariş edilemeyecek bir kalemle geçilmiş görünürdü. */
   const scope = orderScopeOf(cart, !input.shippingOrder && place.deliveryType === 'shipping');
@@ -287,7 +296,7 @@ export async function readCheckoutSnapshot(
       })),
       // Kargo siparişi soğuk zincir kalemi TAŞIYAMAZ — adres rota içinde olsa bile. Taslak
       // bunu ayrıca reddediyor (`cold_chain_unshippable`); ekran aynı gerçeği önce söyler.
-      blocked: input.shippingOrder ? cart.lines.some((l) => !l.shippable) : delivery.shippingBlockedReason === 'cold_chain',
+      blocked: input.shippingOrder ? scope.lines.some((l) => !l.shippable) : delivery.shippingBlockedReason === 'cold_chain',
     },
     /* Kargo bloğu YALNIZ kargo kulvarında dolu (yukarıdaki künye). `off` = sağlayıcı
        yapılandırılmamış: ekran "canlı fiyat kapalı, sabit tarife geçerli" der. */
@@ -321,7 +330,7 @@ export async function readCheckoutSnapshot(
     // Eşiği belirleyen yer seçili adrestir; bölge adı değil posta kodu ve şehir yazılır, çünkü müşteri bölgemizin adını değil adresini bilir.
     payment: paymentSlice(options, `${selected.postalCode} ${selected.city}`),
     /* Döküm ve toplam aynı okumadan: `scope` yukarıda çözüldü, ekran kendi kopyasından çizmesin diye küme de döner. */
-    summary: summarySlice(cart, scope, input.entries, locale),
+    summary: summarySlice(cart, scope, input.entries, locale, undeliverableLinesOf(fullCart, addressOutOfRoute)),
     pickup: pickup.offer,
   };
 }
@@ -394,13 +403,15 @@ function summarySlice(
   scope: ReturnType<typeof orderScopeOf>,
   entries: readonly CartEntry[],
   locale: PreferredLanguage,
+  /** Sepette bekleyen, bu adrese gelemeyen satırlar; verilmezse okumanın kapsam dışı satırları. Öteki şeridin kalemi buraya girmez. */
+  excluded?: readonly CartLine[],
 ): NonNullable<CheckoutSnapshot['summary']> {
   return {
     lines: scope.lines.map(summaryLineOf),
     subtotalCents: scope.subtotalCents,
     // Kapsamın payı kadar — sepetin toplam indirimi değil (alan künyesi).
     discount: discountOf(cart.discount, scope.subtotalCents - scope.basketCents, locale),
-    excludedLines: cart.lines.filter((l) => !scope.lines.includes(l)).map(summaryLineOf),
+    excludedLines: (excluded ?? cart.lines.filter((l) => !scope.lines.includes(l))).map(summaryLineOf),
     fingerprint: cartFingerprint(entries),
   };
 }

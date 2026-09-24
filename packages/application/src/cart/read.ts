@@ -16,7 +16,7 @@ import {
   SHIPPING_FEE_KEY,
 } from './settings-keys';
 import { resolveCartDiscount } from './discount';
-import { EMPTY_CART, cartGroupOf, cartKey, discountAmountOf, undeliverableTotalOf, type CartEntry, type CartLine, type CartView } from './cart-types';
+import { EMPTY_CART, cartGroupOf, cartKey, discountAmountOf, minBasketBaseOf, undeliverableTotalOf, type CartEntry, type CartLine, type CartView } from './cart-types';
 
 /**
  * Sepetin paket satırının istediği alanlar; paket çözümü kapıdan gelir. Şekil dar, çünkü sepet alerjen, ağırlık ve kalem görselini kullanmaz.
@@ -97,6 +97,11 @@ export async function getCartView(
      * checkout aynı siparişi kabul ederdi.
      */
     pickup?: boolean;
+    /**
+     * Okuma bir kargo siparişi için: asgari sepet kargo kuralından okunur. Taslak kargo siparişinde sepeti kargo deposuyla
+     * okuduğu için satırlar `local` görünür; içerikten karar verilseydi kargoya kapıya teslimin tabanı uygulanırdı.
+     */
+    shippingOrder?: boolean;
     /**
      * Paket çözümünün kapısı (`CartBundlePort`). Verilmezse paket satırı ENGELLİ durur — sepette
      * paket taşımayan yüzey (bugün mobil) bu kapıyı hiç geçmez.
@@ -291,10 +296,10 @@ export async function getCartView(
     shippingOnly: hasShipping && !hasLocal,
     undeliverableSubtotalCents,
     /**
-     * Tamamı kargo grubundaysa doğacak tek sipariş kargo siparişidir ve lojistik tabanı yoktur; karışık sepette kapıya
-     * teslim tabanı yazılır.
+     * Doğacak tek sipariş kargo siparişiyse lojistik tabanı yoktur. İki gruplu sepette taban kapı siparişinin kendi tutarına
+     * uygulanır, çünkü kargo kalemleri o siparişe girmez.
      */
-    ...meets(subtotalCents - undeliverableSubtotalCents, hasShipping && !hasLocal ? minBasketShippingCents : minBasketRouteCents),
+    ...meets(minBasketBaseOf(lines), opts.shippingOrder || (hasShipping && !hasLocal) ? minBasketShippingCents : minBasketRouteCents),
   };
 }
 

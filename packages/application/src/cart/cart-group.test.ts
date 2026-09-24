@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import type { CartLineRoute } from '@lezzet/domain-core';
-import { EMPTY_CART, cartGroupOf, orderableLines, splitByRoute, undeliverableTotalOf, viewWithEntries, type CartEntry, type CartLine, type CartView } from './cart-types';
+import {
+  EMPTY_CART,
+  cartGroupOf,
+  entryOf,
+  laneEntriesOf,
+  minBasketBaseOf,
+  orderLaneOf,
+  orderableLines,
+  splitByRoute,
+  undeliverableTotalOf,
+  viewWithEntries,
+  type CartEntry,
+  type CartLine,
+  type CartView,
+} from './cart-types';
 
 /*
   Sepetin karar yüzeyi: kalem hangi gruba düşer, siparişe hangisi girer, eşiğe hangisi sayılır; bu kurallar bozulunca hiçbir şey
@@ -113,5 +127,33 @@ describe('asgari sepet — teslim edilemeyen tutar SAYILMAZ', () => {
     const lines = [line('local'), line('local'), line('not_shippable_here')];
     const view = viewWithEntries(viewOf(lines), entriesOf(lines));
     expect(view.hasBlocked).toBe(false);
+  });
+});
+
+/*
+  Sipariş yalnız kendi şeridini alır: uygulama bütün sepeti gönderdiğinde kapı siparişine kargo kalemi girerse sipariş reddedilir,
+  kargo siparişine kapı kalemi girerse kapıya ücretsiz gelecek mal ücretli kargoya biner (ikisi de cihazda ölçüldü).
+*/
+describe('siparişin şeridi', () => {
+  const kapi = line('local');
+  const kargo = line('shipping');
+  const gelemez = line('not_shippable_here', { shippable: false });
+  const view = { lines: [kapi, kargo, gelemez] };
+  const hepsi = [kapi, kargo, gelemez].map(entryOf);
+
+  it('bölge içinde kapı siparişi yalnız kapı, kargo siparişi yalnız kargo kalemini alır; gelemeyen hiçbirine girmez', () => {
+    expect(laneEntriesOf(view, hepsi, orderLaneOf(false, false), false)).toEqual([entryOf(kapi)]);
+    expect(laneEntriesOf(view, hepsi, orderLaneOf(true, false), false)).toEqual([entryOf(kargo)]);
+  });
+
+  it('bölge dışında tek sipariş vardır: kargolanabilen her kalem girer, soğuk zincir kalem girmez', () => {
+    const disarida = { lines: [line('local'), line('local', { shippable: false })] };
+    expect(laneEntriesOf(disarida, disarida.lines.map(entryOf), orderLaneOf(true, true), true)).toEqual([entryOf(disarida.lines[0]!)]);
+  });
+
+  it('iki gruplu sepette asgari sepet kapı siparişinin kendi tutarına bakar', () => {
+    // 10 € kapıya + 10 € kargoya: kapı siparişi 10 € taşır, kargo kalemi o siparişe girmez.
+    expect(minBasketBaseOf([kapi, kargo, gelemez])).toBe(1_000);
+    expect(minBasketBaseOf([kapi, line('local'), gelemez])).toBe(2_000);
   });
 });

@@ -32,6 +32,8 @@ import {
   discountLabelOf,
   entryOf,
   itemOfEntry,
+  laneEntriesOf,
+  orderLaneOf,
   orderScopeOf,
   storedPrices,
   type CartEntry,
@@ -196,12 +198,30 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     return { status: 'warehouse_unresolved', reason: 'no_shipping_warehouse' };
   }
 
-  // Saklanan fiyatlar sepet okumasından önce alınır: karşılaştırmanın "önceki"si müşterinin en son gördüğü fiyattır. Kargo
-  // siparişinde sepet kargo deposuyla okunur ve satırlar `local` görünür; grup zaten seçilmiştir.
+  // Sipariş yalnız kendi şeridini alır. Şerit müşterinin gerçek yeriyle okunur, çünkü aşağıdaki okuma kargo siparişinde kargo
+  // deposuyla yapılır ve orada her satır `local` görünür. Personel siparişi daraltılmaz: kalemi sessizce düşürmek yerine reddedilir.
+  const addressOutOfRoute = place.deliveryType === 'shipping';
+  let entries = input.entries;
+  if (!pickupWarehouse && !input.staff) {
+    const classified = await getCartView(db, input.locale, input.entries, {
+      customerId: customer.id,
+      warehouseId: place.warehouseId,
+      shippingWarehouseId: place.shippingWarehouseId,
+      country: address.country,
+      zoneId: place.zoneId,
+      bundles: input.bundles,
+    });
+    const lane = orderLaneOf(Boolean(input.shippingOrder), addressOutOfRoute);
+    const narrowed = laneEntriesOf(classified, input.entries, lane, addressOutOfRoute);
+    // Şerit boşsa eski ret yolları olduğu gibi çalışsın diye kalemler daraltılmaz.
+    if (narrowed.length > 0) entries = narrowed;
+  }
+
+  // Saklanan fiyatlar sepet okumasından önce alınır: karşılaştırmanın "önceki"si müşterinin en son gördüğü fiyattır.
   const cartService = new CartService(db);
   const storedCart = await cartService.get(customer.id);
   const previousPrices = storedPrices(storedCart.items);
-  const cart = await getCartView(db, input.locale, input.entries, {
+  const cart = await getCartView(db, input.locale, entries, {
     customerId: customer.id,
     couponCode: input.couponCode,
     // Pazarlıklı fiyat sepet okumasına girer: toplam, indirim matrahı, KDV kırılımı ve kargo eşiği bu okumadan türer.
@@ -214,6 +234,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     // Kargo ve gel-al siparişi bir bölgeye ait değildir; bölgenin asgari sepeti onlara uygulanmaz.
     zoneId: input.shippingOrder || pickupWarehouse ? null : place.zoneId,
     pickup: pickupWarehouse !== null,
+    shippingOrder: !pickupWarehouse && (Boolean(input.shippingOrder) || addressOutOfRoute),
     previousPrices,
     bundles: input.bundles,
   });

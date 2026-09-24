@@ -369,6 +369,16 @@ export function undeliverableTotalOf(lines: readonly CartLine[]): number {
 }
 
 /**
+ * Asgari sepetin ölçtüğü tutar (indirim öncesi): iki gruplu sepette kapı siparişinin kendi tutarı, çünkü kargo kalemleri o
+ * siparişe girmez; öteki hâlde bu adrese gelemeyenler hariç sepet.
+ */
+export function minBasketBaseOf(lines: readonly CartLine[]): number {
+  const total = (keep: (l: CartLine) => boolean) => lines.reduce((sum, l) => (keep(l) ? sum + (l.lineTotalCents ?? 0) : sum), 0);
+  if (lines.some((l) => l.route === 'local') && lines.some((l) => l.route === 'shipping')) return total((l) => l.route === 'local');
+  return total(() => true) - undeliverableTotalOf(lines);
+}
+
+/**
  * Kargo grubunun ücret kararı; sepet, ekran ve checkout aynı eşikle sorar ki ekranın sözü tutsun. Grup yoksa erken çıkar.
  */
 export function shippingGroupFee(
@@ -485,8 +495,8 @@ export function viewWithEntries(view: CartView, entries: readonly CartEntry[]): 
    * Teslim edilemeyen kalemler eşiğe sayılmaz, sunucu okumasıyla aynı kural.
    */
   const undeliverableSubtotalCents = undeliverableTotalOf(lines);
-  // Eşik kuralı MOTORDAN sorulur, burada yeniden yazılmaz — sunucu okumasıyla aynı karar.
-  const basket = meetsMinBasket(subtotalCents - undeliverableSubtotalCents, view.minBasketCents);
+  // Eşik kuralı MOTORDAN sorulur, matrahı sunucu okumasıyla aynı fonksiyondan (`minBasketBaseOf`).
+  const basket = meetsMinBasket(minBasketBaseOf(lines), view.minBasketCents);
   /**
    * Kargo grubunun sayıları da tazelenir; ücret motora sorulur (`shippingGroupFee`), son kargo satırı gidince `shippingOnly` düşer.
    */
@@ -511,6 +521,42 @@ export function viewWithEntries(view: CartView, entries: readonly CartEntry[]): 
     minBasketOk: basket.ok,
     missingForMinBasketCents: basket.missingCents,
   };
+}
+
+/**
+ * Siparişin şeridi: bölge dışındaki adreste tek sipariş vardır ve şerit sorulmaz (`null`); bölge içinde kargo siparişi kargo
+ * şeridini, öteki sipariş kapı şeridini alır.
+ */
+export function orderLaneOf(shippingOrder: boolean, addressOutOfRoute: boolean): CartLineGroup | null {
+  if (addressOutOfRoute) return null;
+  return shippingOrder ? 'shipping' : 'local';
+}
+
+/**
+ * Siparişe girecek kalemler, müşterinin gerçek yeriyle okunmuş görünümden seçilir: istemci bütün sepeti gönderse de kapı
+ * siparişine kargo kalemi, kargo siparişine kapı kalemi girmez; bu adrese gelemeyen kalem hiçbirine girmez, sepette bekler.
+ */
+export function laneEntriesOf(
+  view: Pick<CartView, 'lines'>,
+  entries: readonly CartEntry[],
+  lane: CartLineGroup | null,
+  outOfRoute: boolean,
+): CartEntry[] {
+  const kept = new Set(
+    view.lines
+      .filter((line) => !undeliverableAt(line, outOfRoute) && (lane === null || cartGroupOf(line) === lane))
+      .map((line) => cartKey(entryOf(line))),
+  );
+  return entries.filter((entry) => kept.has(cartKey(entry)));
+}
+
+/** Bu adrese hiçbir yoldan gelemeyen, sepette bekleyen satırlar; özet onları üstü çizili gösterir. */
+export function undeliverableLinesOf(view: Pick<CartView, 'lines'>, outOfRoute: boolean): CartLine[] {
+  return view.lines.filter((line) => undeliverableAt(line, outOfRoute));
+}
+
+function undeliverableAt(line: CartLine, outOfRoute: boolean): boolean {
+  return cartGroupOf(line) === 'undeliverable' || (outOfRoute && !line.shippable);
 }
 
 /**
