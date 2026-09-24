@@ -15,7 +15,7 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 
 - [ ] (K.30) [hedef: web] Harita altlığı Google'a geçecek: müşteri haritası kamusal `tile.openstreetmap.org` karosunu kullanıyor;
   bu sunucu yoğun trafiğe açık değil ve görünümü kalabalık. Map Tiles API'nin 2D "roadmap" karosu JSON stille sadeleştirilip
-  Leaflet'e bağlanır; oturum jetonu sunucuda alınır, haritada Google logosu ve görünür alanın telif satırı zorunludur. Ücret: ayda
+  Leaflet'e bağlanır; oturum jetonunu tarayıcı aynı anahtarla alır, haritada Google logosu ve görünür alanın telif satırı zorunludur. Ücret: ayda
   100.000 karo ücretsiz, sonrası 1.000 karo başına 0,60 $; proje başına günde 15.000 karo sınırı var. Önce kullanıcı: Google Cloud
   projesinde Map Tiles API açılır ve yalnız bu API'ye ve alan adlarımıza kısıtlı bir tarayıcı anahtarı üretilir (bugünkü anahtarda
   bu API kapalı).
