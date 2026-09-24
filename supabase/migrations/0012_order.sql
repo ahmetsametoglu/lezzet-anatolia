@@ -10,15 +10,8 @@ create type order_status as enum (
 create type order_source as enum ('web', 'whatsapp', 'messenger', 'instagram', 'door', 'manual');
 create type payment_status as enum ('pending', 'paid', 'partial', 'refunded');
 /**
- * İptalin SEBEBİ (07.14). Serbest metin DEĞİL: ekran buna göre farklı cümle kuruyor ve elle yazılan
- * bir sebep üç dile çevrilemez, süzülemez, sayılamaz.
- *
- * Ayrım paranın yolunu izliyor — müşteriye kurulacak cümlenin dayanağı bu:
- *   · `payment_failed` — ödeme hiç geçmedi. Para ÇEKİLMEDİ.
- *   · `superseded`     — müşteri yeni bir taslak açtı, eskisi süpürüldü. Para ÇEKİLMEDİ.
- *   · `out_of_stock`   — ödeme geçti ama mal kalmadı → otomatik iade. **Para ÇEKİLDİ ve İADE EDİLDİ.**
- *   · `customer`       — müşteri iptal etti.
- *   · `staff`          — operasyon iptal etti.
+ * İptalin sebebi serbest metin değildir, çünkü ekran ona göre farklı cümle kurar; ayrım paranın yolunu izler: `payment_failed` ve `superseded` para çekilmedi, `out_of_stock` çekildi ve iade edildi.
+ * `customer` müşterinin, `staff` operasyonun iptalidir.
  */
 create type order_cancel_reason as enum ('payment_failed', 'superseded', 'out_of_stock', 'customer', 'staff');
 -- `on_account` (vadeli) BU LİSTEDE DEĞİL: vade bir yöntem değil, siparişin bayrağıdır (DOMAIN §7).
@@ -215,29 +208,8 @@ create index order_item_order_idx on public.order_item (order_id);
 create index order_item_variant_idx on public.order_item (variant_id);
 
 /*
-  ═══ CİRO KALEMLERDEN TÜRER (01.09) ═══════════════════════════════════════════════════════════
-
-  `order.revenue_total` bir CACHE'tir; kaynağı `order_item.fulfilled_qty`dir. Kural
-  `resync_order_amounts`ın (0018) aynısı: **cache artırılmaz, kaynaktan yeniden hesaplanır.**
-  `revenue_total = revenue_total + x` yazsaydık kaçırılan ya da tekrarlanan her çağrı kalıcı bir
-  sapma bırakırdı ve hangisinin kaydırdığı bulunamazdı.
-
-  ── NEDEN TETİKLEYİCİ, NEDEN UYGULAMA KATMANI DEĞİL ─────────────────────────────────────────
-  `fulfilled_qty` BEŞ yerden yazılıyor ve hepsi SQL: `record_preparation` (0015) ·
-  `adjust_fulfillment` (0020, iki dal: hedef değer ve tam iade) · `quick_sale` (0017) · kutu
-  kapanışı (0048, `record_preparation`ı çağırır). TypeScript bu fonksiyonların içini görmez —
-  yeniden hesaplama uygulama katmanına yazılsaydı bu yolların bazısı onu atlar ve `revenue_total`
-  kalemlerle SESSİZCE ayrışırdı. Yakalayacak bir kısıt da yok. Tetikleyici hepsini kapsıyor, ve
-  yarın altıncı bir yol açılsa onu da kapsar.
-
-  ── FORMÜL MOTORUN AYNISI (`fulfilledLineAmountCents`) ──────────────────────────────────────
-  İndirim payı kalemin TAMAMI için yazılmıştır; karşılanan orana bölünür — yarısı gittiyse
-  indirimin yarısı düşülür. Yuvarlama kuruşta (`round(..., 2)`), TypeScript tarafı da tamsayı
-  cent üstünde yuvarlıyor: aynı sonuç.
-
-  ── KARGO: HİÇBİR KALEM GİTMEDİYSE CİROYA GİRMEZ ────────────────────────────────────────────
-  Motorun kararı birebir (`payment-status.ts`): en az bir kalem gittiyse taşıma hizmeti
-  verilmiştir. Hiçbiri gitmediyse kargo da iade edilir, ciro sıfırdır.
+  Ciro kalemlerden türer: `order.revenue_total` bir önbellektir, artırılmaz, `order_item.fulfilled_qty`den yeniden hesaplanır; tetikleyicidir, çünkü `fulfilled_qty`yi yazan bütün yollar SQL'dedir ve uygulama katmanı bazılarını atlardı.
+  Formül motorunkiyle (`fulfilledLineAmountCents`) aynıdır: indirim payı karşılanan orana bölünür, hiçbir kalem gitmediyse kargo da ciroya girmez.
 */
 create or replace function public.resync_order_revenue(p_order_id uuid)
 returns void
