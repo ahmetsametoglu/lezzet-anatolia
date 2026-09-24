@@ -62,9 +62,8 @@ const PRODUCT_HITS = 5;
 const CATEGORY_HITS = 20;
 
 /**
- * Yasal beyanın modele giden hâli — alerjen, olası bulaşma, içindekiler ve 100 g besin değerleri, Türkçe adlarla.
- * Detay yalnız satıştaki ürün için gelir ve onun alerjen beyanı veri kısıtıyla zorunludur: boş liste "içermez" beyanıdır.
- * Besin ya da içindekiler kaydı yoksa model tahmin etmez, yetkiliye yönlendirir.
+ * Yasal beyanın modele giden hâli (alerjen, olası bulaşma, içindekiler, 100 g besin değerleri); alerjen beyanı veri kısıtıyla zorunludur
+ * ve boş liste "içermez" beyanıdır. Besin ya da içindekiler kaydı yoksa model tahmin etmez, yetkiliye yönlendirir.
  */
 function beyanOf(d: StorefrontDeclaration): Record<string, unknown> {
   const ad = (a: ProductAllergen): string => resolveLocalizedText(ALLERGEN_LABELS[a], 'tr');
