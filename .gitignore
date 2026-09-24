@@ -40,3 +40,7 @@ design/07-kesif/
 design/08-export/
 design/09-arsiv/
 design/project/
+
+# Kişisel MCP ayarı: oturumun bağlandığı dış projeler kişiye özeldir; depoda olsa bu depoda açılan her oturum aynı
+# (bulut) projeye bağlanırdı.
+.mcp.json
