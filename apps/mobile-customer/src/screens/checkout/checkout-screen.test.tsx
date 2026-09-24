@@ -85,6 +85,7 @@ function snapshot(blocked: boolean, orderTotalCents: number, shippingFeeCents = 
     },
     // Gel-al teklifi yok: bu senaryonun müşterisi izinsiz (kartın çizilmediği hâl).
     pickup: null,
+    shipping: null,
     payment: {
       methods: ['online'],
       creditAvailable: false,

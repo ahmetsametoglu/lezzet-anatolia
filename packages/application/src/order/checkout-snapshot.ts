@@ -2,6 +2,7 @@ import { AddressService, type Db } from '@lezzet/database';
 import {
   resolveLocalizedText,
   type Address,
+  type CheckoutShipping,
   type DeliveryType,
   type LocalizedText,
   type PaymentMethod,
@@ -54,33 +55,8 @@ export interface CheckoutSnapshot {
     /** Adres bir teslimat bölgesinde mi; bölge içindeki kargo siparişinde kapı yolunun kapalı olma sebebi başkadır. */
     addressInRoute: boolean;
   } | null;
-  /**
-   * Canlı kargo teklifi, yalnız kargo kulvarında dolu. Fiyat istemciden alınmaz: istemci yalnız `code`u söyler, tutar sipariş
-   * anında yeniden hesaplanır.
-   */
-  shipping: {
-    status: 'ok' | 'unmeasured' | 'no_box' | 'too_large' | 'no_sender' | 'provider_error' | 'off';
-    options: ReadonlyArray<{
-      code: string;
-      carrierCode: string;
-      carrierName: string;
-      name: string;
-      priceCents: number;
-      leadTimeHours: number | null;
-      lastMile: string | null;
-      /** Bu servis teslim noktası seçilmeden sipariş edilemez. */
-      needsServicePoint: boolean;
-      tracked: boolean;
-    }>;
-    /** Kaç kutuya bölünüyor — ekran "2 koli" diyebilsin diye. */
-    parcelCount: number;
-    selectedCode: string | null;
-    /**
-     * Müşteriye seçim soruluyor mu: `customer`da kargo ücretini müşteri öder ve seçim onundur; `auto`da eşik geçildi, ücreti biz
-     * öderiz ve koli eve gider. `auto`da `options` yine dolar ama çizilmez, çünkü taşıyıcıyı sevk anında depo seçer.
-     */
-    mode: 'customer' | 'auto';
-  } | null;
+  /** Canlı kargo teklifi; sözleşmesi ve alanların anlamı `CheckoutShippingSchema`da. */
+  shipping: CheckoutShipping | null;
   /** Ödeme seçenekleri, kargo ve toplam; adres seçilmemişse null. */
   payment: {
     methods: PaymentMethod[];

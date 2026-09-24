@@ -413,26 +413,27 @@ function lineValue(copy: CheckoutCopy, line: SummaryLine, locale: CheckoutViewPr
  * Kargo servisi seçimi web'e özgü: seçenekler taşıyıcıdan canlı gelir, fiyat istemcide hesaplanmaz. Eşik üstünde seçim
  * sorulmaz, çünkü ücreti biz ödüyoruz ve koli eve gider; teklif alınamadıysa sebebi ve sabit tarife söylenir.
  */
-function CarrierChoice({ t, locale, snapshot, state, onSelectShipping }: CheckoutViewProps) {
+function CarrierChoice({ locale, snapshot, state, onSelectShipping }: CheckoutViewProps) {
+  const copy = checkoutMessages[locale];
   const shipping = snapshot.shipping;
-  if (shipping?.mode === 'auto') return <p className="font-sans text-body-sm leading-[1.6] text-muted">{t.delivery.carrierFreeHome}</p>;
+  if (shipping?.mode === 'auto') return <p className="font-sans text-body-sm leading-[1.6] text-muted">{copy.carrier.freeHome}</p>;
   if (shipping === null || selectableShippingOptions(shipping.options).length === 0) {
     return (
       <p className="font-sans text-body-sm leading-[1.6] text-muted">
-        {shipping?.status === 'unmeasured' ? t.delivery.carrierUnmeasured : shipping?.status === 'ok' ? t.delivery.carrierNone : t.delivery.carrierOff}
+        {shipping?.status === 'unmeasured' ? copy.carrier.unmeasured : shipping?.status === 'ok' ? copy.carrier.none : copy.carrier.off}
       </p>
     );
   }
   return (
     <div className="flex flex-col gap-2">
       <span className="font-sans text-note font-bold text-ink">
-        {t.delivery.carrierTitle}
-        {shipping.parcelCount > 1 && ` · ${t.delivery.carrierParcels.replace('{count}', String(shipping.parcelCount))}`}
+        {copy.carrier.title}
+        {shipping.parcelCount > 1 && ` · ${copy.carrier.parcels.replace('{count}', String(shipping.parcelCount))}`}
       </span>
       {selectableShippingOptions(shipping.options).map((option) => {
         const details = [
-          option.leadTimeHours ? t.delivery.carrierDays.replace('{hours}', String(option.leadTimeHours)) : null,
-          option.tracked ? t.delivery.carrierTracked : null,
+          option.leadTimeHours ? copy.carrier.days.replace('{hours}', String(option.leadTimeHours)) : null,
+          option.tracked ? copy.carrier.tracked : null,
         ].filter((part): part is string => part !== null);
         return (
           <PhoneOptionRow
@@ -445,7 +446,7 @@ function CarrierChoice({ t, locale, snapshot, state, onSelectShipping }: Checkou
           />
         );
       })}
-      <p className="font-sans text-helper text-muted">{t.delivery.carrierHint}</p>
+      <p className="font-sans text-helper text-muted">{copy.carrier.hint}</p>
     </div>
   );
 }

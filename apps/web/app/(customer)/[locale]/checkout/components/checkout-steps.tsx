@@ -221,6 +221,7 @@ export function AddressStep({ t, compact, selectedAddress, snapshot }: CheckoutV
 export function DeliveryStep(props: CheckoutViewProps) {
   const { t, locale, snapshot, state, compact, onSelectDate, onSelectShipping, onSelectServicePoint, onSelectShippingMode, cart, selectedAddress } =
     props;
+  const copy = checkoutMessages[locale];
   const router = useRouter();
   const [pickerOpen, setPickerOpen] = useState(false);
   const homeOptions = selectableShippingOptions(snapshot.shipping?.options ?? []);
@@ -356,18 +357,18 @@ export function DeliveryStep(props: CheckoutViewProps) {
           (`quoteOrderShipment` → `requiresHomeDelivery`), burası yalnız sormama kısmı. */}
       {!inRoute && !pickup && !delivery.blocked && snapshot.shipping?.mode === 'auto' && (
         <div className="flex flex-col gap-1">
-          <span className="font-sans text-body-sm font-bold text-ink">{t.delivery.carrierTitle}</span>
-          <span className="font-sans text-body-sm text-body">{t.delivery.carrierFreeHome}</span>
+          <span className="font-sans text-body-sm font-bold text-ink">{copy.carrier.title}</span>
+          <span className="font-sans text-body-sm text-body">{copy.carrier.freeHome}</span>
         </div>
       )}
 
       {!inRoute && !pickup && !delivery.blocked && snapshot.shipping?.mode !== 'auto' && (
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-baseline gap-2">
-            <span className="font-sans text-body-sm font-bold text-ink">{t.delivery.carrierTitle}</span>
+            <span className="font-sans text-body-sm font-bold text-ink">{copy.carrier.title}</span>
             {snapshot.shipping !== null && snapshot.shipping.parcelCount > 1 && (
               <span className="font-sans text-note text-muted">
-                {t.delivery.carrierParcels.replace('{count}', String(snapshot.shipping.parcelCount))}
+                {copy.carrier.parcels.replace('{count}', String(snapshot.shipping.parcelCount))}
               </span>
             )}
           </div>
@@ -379,15 +380,15 @@ export function DeliveryStep(props: CheckoutViewProps) {
                 <div className="grid grid-cols-2 gap-2.5">
                   <ModeCard
                     icon="building"
-                    title={t.delivery.carrierPoint}
-                    from={t.delivery.carrierFrom.replace('{price}', formatPrice(minPriceOf(pointOptions), locale))}
+                    title={copy.carrier.point}
+                    from={copy.carrier.from.replace('{price}', formatPrice(minPriceOf(pointOptions), locale))}
                     selected={mode === 'point'}
                     onClick={() => onSelectShippingMode('point')}
                   />
                   <ModeCard
                     icon="home"
-                    title={t.delivery.carrierHome}
-                    from={t.delivery.carrierFrom.replace('{price}', formatPrice(minPriceOf(homeOptions), locale))}
+                    title={copy.carrier.home}
+                    from={copy.carrier.from.replace('{price}', formatPrice(minPriceOf(homeOptions), locale))}
                     selected={mode === 'home'}
                     onClick={() => onSelectShippingMode('home')}
                   />
@@ -398,7 +399,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
               {hasModes && (
                 <div className="mt-1 flex flex-col gap-2 border-t border-sand-200 pt-3.5">
                   <span className="font-sans text-note font-semibold text-muted">
-                    {mode === 'home' ? t.delivery.carrierPickHome : t.delivery.carrierPickPoint}
+                    {mode === 'home' ? copy.carrier.pickHome : copy.carrier.pickPoint}
                   </span>
                 </div>
               )}
@@ -418,8 +419,8 @@ export function DeliveryStep(props: CheckoutViewProps) {
                       </span>
                       <span className="font-sans text-note text-muted">
                         {[
-                          option.leadTimeHours ? t.delivery.carrierDays.replace('{hours}', String(option.leadTimeHours)) : null,
-                          option.tracked ? t.delivery.carrierTracked : null,
+                          option.leadTimeHours ? copy.carrier.days.replace('{hours}', String(option.leadTimeHours)) : null,
+                          option.tracked ? copy.carrier.tracked : null,
                         ]
                           .filter(Boolean)
                           .join(' · ')}
@@ -427,7 +428,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
                       {/* Liste sunucuda en ucuz + en hızlı diye kısaltıldı (`homeShortlist`); iki kart varsa neden o ikisi olduğu söylenir. */}
                       {homeOptions.length === 2 && (
                         <span className="font-sans text-helper font-semibold text-olive">
-                          {index === 0 ? t.delivery.carrierCheapest : t.delivery.carrierFastest}
+                          {index === 0 ? copy.carrier.cheapest : copy.carrier.fastest}
                         </span>
                       )}
                     </ChoiceCard>
@@ -453,8 +454,8 @@ export function DeliveryStep(props: CheckoutViewProps) {
                         <span className="font-sans text-note font-semibold text-olive">
                           {[
                             chosenPointOption?.carrierName,
-                            state.servicePoint.kind ? t.delivery.pointKind[state.servicePoint.kind] : null,
-                            t.delivery.pointChange,
+                            state.servicePoint.kind ? copy.point.kind[state.servicePoint.kind] : null,
+                            copy.point.change,
                           ]
                             .filter(Boolean)
                             .join(' · ')}
@@ -464,16 +465,15 @@ export function DeliveryStep(props: CheckoutViewProps) {
                       <>
                         <span className="flex items-center gap-2 font-sans text-body-sm font-bold text-ink">
                           <Icon name="pin" size={15} />
-                          {t.delivery.pointChoose}
+                          {copy.point.choose}
                         </span>
-                        <span className="font-sans text-note text-muted">{t.delivery.pointMapHint}</span>
+                        <span className="font-sans text-note text-muted">{copy.point.mapHint}</span>
                       </>
                     )}
                   </ChoiceCard>
-                  {servicePointMissing(state) && <span className="font-sans text-note font-semibold text-honey">{t.delivery.pointNone}</span>}
+                  {servicePointMissing(state) && <span className="font-sans text-note font-semibold text-honey">{copy.point.none}</span>}
                   {pickerOpen && state.addressId && (
                     <ServicePointPicker
-                      t={t}
                       locale={locale}
                       addressId={state.addressId}
                       home={selectedAddress?.lat != null && selectedAddress.lng != null ? { lat: selectedAddress.lat, lng: selectedAddress.lng } : null}
@@ -485,17 +485,17 @@ export function DeliveryStep(props: CheckoutViewProps) {
                   )}
                 </>
               )}
-              <span className="font-sans text-note text-muted">{t.delivery.carrierHint}</span>
+              <span className="font-sans text-note text-muted">{copy.carrier.hint}</span>
             </>
           ) : (
             /* Sessiz geri düşüş yok: teklif alınamadıysa sebebi yazılır ve sabit tarife uygulandığı söylenir. Sebepler ayrı
                cümleler, çünkü çözümleri de ayrı: ölçü eksikliği bizim işimiz, seçenek yokluğu adresin gerçeği. */
             <span className="font-sans text-note leading-relaxed text-muted">
               {snapshot.shipping?.status === 'unmeasured'
-                ? t.delivery.carrierUnmeasured
+                ? copy.carrier.unmeasured
                 : snapshot.shipping?.status === 'ok'
-                  ? t.delivery.carrierNone
-                  : t.delivery.carrierOff}
+                  ? copy.carrier.none
+                  : copy.carrier.off}
             </span>
           )}
         </div>

@@ -4,12 +4,10 @@ import { serviceDb } from '@lezzet/database';
 import { hasLocale } from 'next-intl';
 import {
   checkoutBlockedAnalyticsReason,
+  checkoutServicePoints,
   openPaymentBefore,
   placeOrder,
   readCheckoutSnapshot,
-  searchCheckoutServicePoints,
-  sendcloudProvider,
-  shippingProviderConfigured,
   type CheckoutSnapshot,
   type PlaceOrderRejection,
 } from '@lezzet/application';
@@ -94,14 +92,7 @@ export async function loadServicePointsAction(addressId: string, carrierCodes: s
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
-    if (!shippingProviderConfigured()) return { data: { status: 'off' }, errorKey: null };
-    // Taşıyıcı listesi istemciden geliyor; sınırsız liste sağlayıcıya sınırsız istek demek.
-    const outcome = await searchCheckoutServicePoints(serviceDb(), sendcloudProvider(), {
-      customerId,
-      addressId,
-      carrierCodes: carrierCodes.slice(0, 8),
-    });
-    return { data: outcome, errorKey: null };
+    return { data: await checkoutServicePoints(serviceDb(), { customerId, addressId, carrierCodes }), errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }

@@ -3,7 +3,7 @@ import { AddressService, UserProfileService, serviceDb } from '@lezzet/database'
 import { mustDelete, purgeTestData } from '@lezzet/database/testing';
 import type { ServicePoint } from '@lezzet/sendcloud';
 import { providerStub } from './provider.testkit';
-import { searchCheckoutServicePoints } from './service-points';
+import { MAX_SERVICE_POINT_CARRIERS, searchCheckoutServicePoints } from './service-points';
 
 const db = serviceDb();
 const stamp = Date.now();
@@ -54,5 +54,19 @@ describe('searchCheckoutServicePoints', () => {
     expect(await searchCheckoutServicePoints(db, provider, { customerId: otherCustomerId, addressId, carrierCodes: ['colissimo'] })).toEqual({
       status: 'address_not_found',
     });
+  });
+
+  // Liste istemciden gelir; sınır olmasa elle kurulmuş bir istek sağlayıcıya sınırsız arama yaptırırdı.
+  it('sağlayıcıya sorulan taşıyıcı sayısı sınırlıdır', async () => {
+    const sorulan: string[] = [];
+    const provider = providerStub({
+      servicePoints: async ({ carrierCode }) => {
+        sorulan.push(carrierCode);
+        return [];
+      },
+    });
+    const carrierCodes = Array.from({ length: MAX_SERVICE_POINT_CARRIERS + 4 }, (_, i) => `tasiyici-${i}`);
+    await searchCheckoutServicePoints(db, provider, { customerId, addressId, carrierCodes });
+    expect(sorulan).toHaveLength(MAX_SERVICE_POINT_CARRIERS);
   });
 });

@@ -625,7 +625,7 @@ export { announceOrderShipment, type AnnounceInput, type AnnounceOutcome } from 
 export { quoteOrderShipment, resolveDispatch, type DispatchBlock, type DispatchQuoteOutcome } from './shipping/dispatch';
 export { countAwaitingHandover, handOverBox, listAwaitingHandover, type AwaitingHandoverBox, type HandoverOutcome } from './shipping/handover';
 export { sendcloudProvider, shippingProviderConfigured } from './shipping/provider';
-export { searchCheckoutServicePoints, type CheckoutServicePointsOutcome } from './shipping/service-points';
+export { checkoutServicePoints } from './shipping/service-points';
 export type { RecipientAddress, SenderAddress, ShippingRateProvider } from './shipping/port';
 export { syncShipmentStatus, type SyncInput, type SyncOutcome } from './shipping/sync-status';
 export { scanOrphanShipments, sweepStuckShipments, type OrphanScanResult, type StuckSweepResult } from './shipping/watch';

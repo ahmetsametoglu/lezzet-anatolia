@@ -9,6 +9,7 @@ export * from './format';
 export * from './home-copy';
 export * from './identity';
 export * from './money';
+export * from './opening-hours';
 export * from './package';
 export * from './place-change';
 export * from './points-history';

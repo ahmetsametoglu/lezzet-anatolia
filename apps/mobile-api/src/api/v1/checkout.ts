@@ -3,6 +3,7 @@ import type { Context, Next } from 'hono';
 import type { z } from 'zod';
 import {
   checkoutBlockedAnalyticsReason,
+  checkoutServicePoints,
   effectiveChannelOf,
   entryOfItem,
   getPackagesByIds,
@@ -18,6 +19,7 @@ import {
   CheckoutOrderBodySchema,
   CheckoutOrderResultSchema,
   CheckoutOrderStatusSchema,
+  CheckoutServicePointsSchema,
   CheckoutSnapshotSchema,
   type Channel,
   type PreferredLanguage,
@@ -127,6 +129,8 @@ checkout.get('/', async (c) => {
     shippingOrder: c.req.query('group') === 'shipping',
     // Gel-al seçimi de bir SEÇİMDİR (`shippingOrder` gibi): tanınmayan kimliği kapı düşürür, adresin cevabına döner.
     pickupWarehouseId: c.req.query('pickupWarehouseId') ?? null,
+    // Seçilen servis yalnız kod olarak gelir; ücret bu koda göre sunucuda çözülür, istemciden tutar alınmaz.
+    shippingOptionCode: c.req.query('shippingOptionCode') ?? null,
     /* Paket kapısı okumada da geçilir: geçilmezse paket satırı fiyatsız kalır ve ekrandaki toplam tahsil edilecek tutarla ayrışır. */
     bundles: (ids, bundleLocale, place) => getPackagesByIds(db, ids, bundleLocale, place),
   });
@@ -137,6 +141,7 @@ checkout.get('/', async (c) => {
     addresses: snapshot.addresses,
     // Teslimat dilimi kapıdan olduğu gibi geçer; seçilemeyen davet günü kapıda zaten `null`a iner.
     delivery: snapshot.delivery,
+    shipping: snapshot.shipping,
     payment: snapshot.payment === null ? null : { ...snapshot.payment, codBlockedReason: codReasonOf(snapshot.payment.codBlockedReason) },
     // Döküm de kapıdan olduğu gibi geçer: ekranın çizeceği küme ile taslağın tahsil edeceği küme aynı hesaptan çıkar, burada
     // yeniden şekillendirilmesi ikinci bir kaynak açardı.
@@ -144,6 +149,18 @@ checkout.get('/', async (c) => {
     pickup: snapshot.pickup,
   };
   return ok(c, CheckoutSnapshotSchema.parse(body));
+});
+
+/**
+ * Haritanın teslim noktaları; web'in `loadServicePointsAction`ıyla aynı kapı. Adres müşterinin kendi adresleri arasında aranır,
+ * taşıyıcılar anlık görüntünün noktaya teslim servislerinden gelir (`?carriers=a,b`).
+ */
+checkout.get('/service-points', async (c) => {
+  const addressId = UuidSchema.safeParse(c.req.query('addressId'));
+  if (!addressId.success) return fail(c, 'invalid_query', 400);
+  const carrierCodes = (c.req.query('carriers') ?? '').split(',').filter((code) => code !== '');
+  const result = await checkoutServicePoints(serviceDb(), { customerId: c.get('customerId'), addressId: addressId.data, carrierCodes });
+  return ok(c, CheckoutServicePointsSchema.parse(result));
 });
 
 /**

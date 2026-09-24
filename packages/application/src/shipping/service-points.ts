@@ -1,20 +1,19 @@
 import { AddressService } from '@lezzet/database';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { ServicePoint } from '@lezzet/sendcloud';
+import type { CheckoutServicePoints } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ShippingRateProvider } from './port';
+import { sendcloudProvider, shippingProviderConfigured } from './provider';
 
 /** Taşıyıcı başına haritaya gelen en yakın nokta sayısı; harita okunur kalsın diye sınırlı (parametrik). */
 export const SERVICE_POINTS_PER_CARRIER = 10;
 
-export type CheckoutServicePointsOutcome =
-  | {
-      status: 'ok';
-      points: ServicePoint[];
-      /** Araması düşen taşıyıcılar; ötekilerin noktaları yine gösterilir, eksik liste söylenir. */
-      failedCarriers: string[];
-    }
-  | { status: 'address_not_found' };
+/** Bir aramada sorulan en çok taşıyıcı: liste istemciden gelir ve sınırsız liste sağlayıcıya sınırsız istek demektir. */
+export const MAX_SERVICE_POINT_CARRIERS = 8;
+
+/** Sözleşmenin (`CheckoutServicePointsSchema`) bu kapıdan çıkan hâlleri; `off`u sağlayıcıyı soran çağıran verir. */
+type CheckoutServicePointsOutcome = Exclude<CheckoutServicePoints, { status: 'off' }>;
 
 /**
  * Müşterinin kendi adresine yakın teslim noktaları, istenen taşıyıcıların hepsi için birden. Adres istemciden değil
@@ -28,7 +27,7 @@ export async function searchCheckoutServicePoints(
   const address = (await new AddressService(db).listByCustomer(input.customerId)).find((a) => a.id === input.addressId);
   if (!address) return { status: 'address_not_found' };
 
-  const carriers = [...new Set(input.carrierCodes)];
+  const carriers = [...new Set(input.carrierCodes)].slice(0, MAX_SERVICE_POINT_CARRIERS);
   const results = await Promise.allSettled(
     carriers.map((carrierCode) =>
       provider.servicePoints({ countryCode: address.country, postalCode: address.postalCode, city: address.city ?? undefined, carrierCode }),
@@ -48,4 +47,13 @@ export async function searchCheckoutServicePoints(
     await captureError(result.reason, { source: SOURCES.applicationShipping, context: { carrierCode, addressId: input.addressId } });
   }
   return { status: 'ok', points: points.sort((a, b) => (a.distanceM ?? Infinity) - (b.distanceM ?? Infinity)), failedCarriers };
+}
+
+/** Ödeme ekranının nokta araması; web eylemi ve mobil uç bu kapıdan geçer. Sağlayıcı yapılandırılmamışsa `off`. */
+export async function checkoutServicePoints(
+  db: SupabaseClient,
+  input: { customerId: string; addressId: string; carrierCodes: readonly string[] },
+): Promise<CheckoutServicePoints> {
+  if (!shippingProviderConfigured()) return { status: 'off' };
+  return searchCheckoutServicePoints(db, sendcloudProvider(), input);
 }

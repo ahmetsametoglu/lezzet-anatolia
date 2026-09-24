@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { openingLines } from './checkout-types';
+import { openingLines } from './opening-hours';
 
 describe('openingLines — teslim noktasının saatleri', () => {
   const sabah = ['08:00 - 12:00', '14:00 - 18:00'];

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { OrderSchema } from '../entities/order.schema';
+import { OrderSchema, ServicePointSnapshotSchema } from '../entities/order.schema';
 import { DeliveryTypeEnum, PaymentMethodEnum } from '../primitives/enums.schema';
 import { MeAddressSchema } from './address-api.schema';
 import { CartDiscountReasonSchema } from './cart-api.schema';
@@ -112,17 +112,79 @@ export const CheckoutPickupSchema = z.object({
 export type CheckoutPickup = z.infer<typeof CheckoutPickupSchema>;
 
 /**
+ * Canlı kargo teklifi, yalnız kargo kulvarında dolu. Fiyat istemciden alınmaz: istemci yalnız `code`u söyler, tutar sipariş anında
+ * yeniden hesaplanır.
+ */
+export const CheckoutShippingSchema = z.object({
+  /** `ok` dışındaki hâl teklifin neden alınamadığıdır; ekran sebebi ve sabit tarifenin geçerli olduğunu söyler. */
+  status: z.enum(['ok', 'unmeasured', 'no_box', 'too_large', 'no_sender', 'provider_error', 'off']),
+  /** Eve teslimde en ucuz ve en hızlı, noktaya teslimde hepsi; fiyat KDV dahil. */
+  options: z.array(
+    z.object({
+      code: z.string(),
+      carrierCode: z.string(),
+      carrierName: z.string(),
+      name: z.string(),
+      priceCents: z.number().int(),
+      leadTimeHours: z.number().nullable(),
+      lastMile: z.string().nullable(),
+      /** Bu servis teslim noktası seçilmeden sipariş edilemez. */
+      needsServicePoint: z.boolean(),
+      tracked: z.boolean(),
+    }),
+  ),
+  /** Kaç kutuya bölünüyor — ekran "2 koli" diyebilsin diye. */
+  parcelCount: z.number().int(),
+  selectedCode: z.string().nullable(),
+  /**
+   * Müşteriye seçim soruluyor mu: `customer`da kargo ücretini müşteri öder ve seçim onundur; `auto`da eşik geçildi, ücreti biz
+   * öderiz ve koli eve gider. `auto`da `options` yine dolar ama çizilmez, çünkü taşıyıcıyı sevk anında depo seçer.
+   */
+  mode: z.enum(['customer', 'auto']),
+});
+export type CheckoutShipping = z.infer<typeof CheckoutShippingSchema>;
+
+/**
  * Ekranın tek okuma sonucu; dilimlerin `null` olması anlamlıdır: adres listesi boşsa teslimat, ödeme ve özet sorulamaz, ekran
  * önce adres ister.
  */
 export const CheckoutSnapshotSchema = z.object({
   addresses: z.array(MeAddressSchema),
   delivery: CheckoutDeliverySchema.nullable(),
+  /** Kargo kulvarında dolu, rota ve gel-al siparişinde `null`. */
+  shipping: CheckoutShippingSchema.nullable(),
   payment: CheckoutPaymentSchema.nullable(),
   summary: CheckoutSummarySchema.nullable(),
   /** Gel-al teklifi; izinsiz müşteride ya da gel-al noktası yokken `null` — ekran kartı hiç çizmez. */
   pickup: CheckoutPickupSchema.nullable(),
 });
+
+/** Teslim noktasının türü: dükkân, dolap ya da postane; sağlayıcı söylemiyorsa `null`. */
+export const ServicePointKindEnum = z.enum(['servicepoint', 'locker', 'post_office']);
+
+/** Haritadaki teslim noktası; siparişe yazılan kopya (`ServicePointSnapshotSchema`) bunun alt kümesidir. */
+export const CheckoutServicePointSchema = ServicePointSnapshotSchema.extend({
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
+  /** Müşterinin adresine uzaklık (m). */
+  distanceM: z.number().nullable(),
+  active: z.boolean(),
+  kind: ServicePointKindEnum.nullable(),
+  /** Gün numarası ("0" pazartesi) → "09:00 - 12:00" dizileri; `null` bilinmiyor demek, "kapalı" değil. */
+  openingTimes: z.record(z.array(z.string())).nullable(),
+});
+export type CheckoutServicePoint = z.infer<typeof CheckoutServicePointSchema>;
+
+/**
+ * Adrese yakın teslim noktaları, istenen taşıyıcıların hepsi için. `off` sağlayıcı yapılandırılmamış demek; `failedCarriers` araması
+ * düşen taşıyıcılardır, ötekilerin noktaları yine gelir.
+ */
+export const CheckoutServicePointsSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ok'), points: z.array(CheckoutServicePointSchema), failedCarriers: z.array(z.string()) }),
+  z.object({ status: z.literal('address_not_found') }),
+  z.object({ status: z.literal('off') }),
+]);
+export type CheckoutServicePoints = z.infer<typeof CheckoutServicePointsSchema>;
 export type CheckoutSnapshot = z.infer<typeof CheckoutSnapshotSchema>;
 
 /**

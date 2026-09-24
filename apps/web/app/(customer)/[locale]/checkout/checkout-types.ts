@@ -1,5 +1,5 @@
-import type { AddressCheckOutcome, CheckoutServicePointsOutcome, CheckoutSnapshot } from '@lezzet/application';
-import type { Address, PaymentMethod } from '@lezzet/types';
+import type { AddressCheckOutcome, CheckoutSnapshot } from '@lezzet/application';
+import type { Address, CheckoutServicePoints, PaymentMethod } from '@lezzet/types';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 // Telefon görünümü native ödeme ekranıyla aynı metni kullanır (CLAUDE §2).
 import type checkoutMessages from '@lezzet/i18n/customer/checkout';
@@ -143,7 +143,7 @@ export function selectableShippingOptions<T extends { needsServicePoint: boolean
 }
 
 /** Haritanın noktaları; `off` = sağlayıcı yapılandırılmamış, harita açılmaz. Tip `'use server'` dosyasında durmaz: Turbopack oradaki tip ihracını değer sanıyor. */
-export type ServicePointsResult = CheckoutServicePointsOutcome | { status: 'off' };
+export type ServicePointsResult = CheckoutServicePoints;
 
 /** Sunucunun döndürdüğü teslim noktası. */
 export type CheckoutServicePoint = Extract<ServicePointsResult, { status: 'ok' }>['points'][number];
@@ -154,28 +154,4 @@ export type SelectedServicePoint = CheckoutServicePoint & { optionCode: string }
 /** Teslim noktası türü seçili ama nokta seçilmemiş mi — onay düğmesi ve kart uyarısı aynı sorudan okur. */
 export function servicePointMissing(state: Pick<CheckoutState, 'shippingMode' | 'servicePoint'>): boolean {
   return state.shippingMode === 'point' && state.servicePoint === null;
-}
-
-/**
- * Açılış saatleri, aynı saatli ardışık günler birleşik ("Pzt–Cmt 08:00 - 12:00 · Paz kapalı"); sağlayıcının günleri "0"
- * pazartesiden başlar. Hiç saat yoksa `null`: bilinmiyor, "kapalı" değil.
- */
-export function openingLines(times: Record<string, string[]> | null, locale: string, closed: string): string[] | null {
-  if (!times || Object.values(times).every((slots) => slots.length === 0)) return null;
-  const monday = Date.UTC(2024, 0, 1);
-  const day = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
-  const nameOf = (i: number) => day.format(new Date(monday + i * 86_400_000));
-  const hoursOf = (i: number) => {
-    const slots = times[String(i)] ?? [];
-    return slots.length > 0 ? slots.join(', ') : closed;
-  };
-  const lines: string[] = [];
-  let from = 0;
-  for (let i = 1; i <= 7; i++) {
-    if (i < 7 && hoursOf(i) === hoursOf(from)) continue;
-    const range = from === i - 1 ? nameOf(from) : `${nameOf(from)}–${nameOf(i - 1)}`;
-    lines.push(`${range} ${hoursOf(from)}`);
-    from = i;
-  }
-  return lines;
 }

@@ -3,12 +3,14 @@
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { orderServicePoints } from '@lezzet/domain-core';
+import { openingLines } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
+import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { Button } from '@/components/customer/ui/button';
 import { Dialog } from '@/components/customer/ui/dialog';
 import { formatPrice } from '@/lib/storefront/format';
 import { loadServicePointsAction } from '../actions';
-import { openingLines, type CheckoutServicePoint, type CheckoutViewProps, type Messages, type SelectedServicePoint } from '../checkout-types';
+import { type CheckoutServicePoint, type CheckoutViewProps, type SelectedServicePoint } from '../checkout-types';
 
 const ServicePointMap = dynamic(() => import('./service-point-map-leaflet').then((mod) => mod.ServicePointMapLeaflet), {
   ssr: false,
@@ -24,7 +26,6 @@ type ShippingOption = NonNullable<CheckoutViewProps['snapshot']['shipping']>['op
 const CARRIER_TONES = ['bg-brand-messenger', 'bg-terracotta', 'bg-star', 'bg-brand-instagram', 'bg-olive-light'];
 
 interface ServicePointPickerProps {
-  t: Messages;
   locale: Locale;
   addressId: string;
   /** Müşterinin adresinin konumu; yoksa harita noktalara göre açılır. */
@@ -53,7 +54,8 @@ function distanceLabel(meters: number, locale: Locale): string {
  * Bütün noktaya teslim servislerinin noktaları tek haritada; müşteri önce servis seçmez, noktayı seçer ve servis noktadan gelir.
  * Her nokta, türünü kabul eden servisin fiyatıyla görünür; fiyat anlık görüntünün teklifidir, sipariş anında yeniden doğrulanır.
  */
-export function ServicePointPicker({ t, locale, addressId, home, options, selected, onSelect, onClose }: ServicePointPickerProps) {
+export function ServicePointPicker({ locale, addressId, home, options, selected, onSelect, onClose }: ServicePointPickerProps) {
+  const copy = checkoutMessages[locale];
   const pointOptions = useMemo(() => options.filter((o) => o.needsServicePoint), [options]);
   // Lejant ve renk sırası: taşıyıcının en düşük nokta fiyatı.
   const carriers = useMemo(() => {
@@ -98,17 +100,17 @@ export function ServicePointPicker({ t, locale, addressId, home, options, select
     [entries, toneByCarrier],
   );
   const pending = entries.find((e) => e.point.id === pendingId) ?? null;
-  const hours = pending ? openingLines(pending.point.openingTimes, locale, t.delivery.pointClosed) : null;
+  const hours = pending ? openingLines(pending.point.openingTimes, locale, copy.point.closed) : null;
   const carrierNames = (codes: string[]) => codes.map((c) => carriers.find((o) => o.carrierCode === c)?.carrierName ?? c).join(', ');
 
   return (
-    <Dialog title={t.delivery.pointDialogTitle} description={t.delivery.pointDialogBody} closeLabel={t.delivery.pointClose} onClose={onClose} maxWidth={1080}>
+    <Dialog title={copy.point.title} description={copy.point.body} closeLabel={copy.point.close} onClose={onClose} maxWidth={1080}>
       {load.phase === 'ready' && load.failedCarriers.length > 0 && (
-        <p className="font-sans text-note font-semibold text-honey">{t.delivery.pointFailed.replace('{carriers}', carrierNames(load.failedCarriers))}</p>
+        <p className="font-sans text-note font-semibold text-honey">{copy.point.failed.replace('{carriers}', carrierNames(load.failedCarriers))}</p>
       )}
       {/* Seçim düğmesi lejantla aynı satırda: alt bölme yalnız bir düğme için haritadan yer yiyordu. */}
       <div className="flex items-center justify-between gap-4">
-        <ul className="flex flex-wrap gap-x-5 gap-y-1.5" aria-label={t.delivery.carrierPoint}>
+        <ul className="flex flex-wrap gap-x-5 gap-y-1.5" aria-label={copy.carrier.point}>
           {carriers.map((c) => (
             <li key={c.carrierCode} className="flex items-center gap-2 font-sans text-note font-semibold text-ink">
               <span className={`size-3 rounded-full ${toneOf(c.carrierCode)}`} />
@@ -126,14 +128,14 @@ export function ServicePointPicker({ t, locale, addressId, home, options, select
             onClose();
           }}
         >
-          {t.delivery.pointSelect}
+          {copy.point.select}
         </Button>
       </div>
       <div className="grid h-[560px] grid-cols-[340px_1fr] gap-4">
-        <ul className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-1" aria-label={t.delivery.pointDialogTitle}>
-          {load.phase === 'loading' && <li className="font-sans text-body-sm text-muted">{t.delivery.pointLoading}</li>}
+        <ul className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-1" aria-label={copy.point.title}>
+          {load.phase === 'loading' && <li className="font-sans text-body-sm text-muted">{copy.point.loading}</li>}
           {(load.phase === 'failed' || (load.phase === 'ready' && entries.length === 0)) && (
-            <li className="font-sans text-body-sm text-muted">{t.delivery.pointEmpty}</li>
+            <li className="font-sans text-body-sm text-muted">{copy.point.empty}</li>
           )}
           {entries.map(({ point, option }) => {
             const isPending = point.id === pendingId;
@@ -166,14 +168,14 @@ export function ServicePointPicker({ t, locale, addressId, home, options, select
                     <span className={`size-2.5 flex-none rounded-full ${toneOf(point.carrierCode)}`} />
                     {[
                       option.carrierName,
-                      point.kind ? t.delivery.pointKind[point.kind] : null,
-                      point.distanceM !== null ? t.delivery.pointDistance.replace('{distance}', distanceLabel(point.distanceM, locale)) : null,
+                      point.kind ? copy.point.kind[point.kind] : null,
+                      point.distanceM !== null ? copy.point.distance.replace('{distance}', distanceLabel(point.distanceM, locale)) : null,
                     ]
                       .filter(Boolean)
                       .join(' · ')}
                   </span>
                   {isPending && (
-                    <span className="mt-1 font-sans text-helper leading-relaxed text-muted">{hours ? hours.join(' · ') : t.delivery.pointHoursUnknown}</span>
+                    <span className="mt-1 font-sans text-helper leading-relaxed text-muted">{hours ? hours.join(' · ') : copy.point.hoursUnknown}</span>
                   )}
                 </button>
               </li>
@@ -185,7 +187,7 @@ export function ServicePointPicker({ t, locale, addressId, home, options, select
             pins={pins}
             selectedId={pendingId}
             highlightId={hoverId}
-            home={home ? { ...home, label: t.delivery.pointYourAddress } : null}
+            home={home ? { ...home, label: copy.point.yourAddress } : null}
             onPick={(id) => {
               pendingFromMap.current = true;
               setPendingId(id);
