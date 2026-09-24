@@ -84,6 +84,7 @@ export function CartDesktop({ t, locale, emptyContext, awaitingPayment }: CartVi
           <>
             <CartGroup kind="route" lines={groups.route} view={view} t={t} locale={locale} />
             <CartGroup kind="shipping" lines={groups.shipping} view={view} t={t} locale={locale} />
+            {groups.undeliverable.length > 0 && <CartGroup kind="undeliverable" lines={groups.undeliverable} view={view} t={t} locale={locale} />}
           </>
         ) : (
           view.lines.map((line) => <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} />)

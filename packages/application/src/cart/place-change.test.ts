@@ -57,9 +57,10 @@ describe('splitByRoute — grup ayrımı tek yerde', () => {
     expect(groups.shipping).toHaveLength(0);
   });
 
-  it('karşılanamayan kalem de ana grupta kalır — çıkışını kısıt bloğu verir, grup değil', () => {
+  it('karşılanamayan kalem kapı grubuna girmez, kendi kümesinde durur', () => {
     const cold = line({ route: 'not_shippable_here', shippable: false });
-    expect(splitByRoute([cold]).route).toEqual([cold]);
+    expect(splitByRoute([cold]).route).toEqual([]);
+    expect(splitByRoute([cold]).undeliverable).toEqual([cold]);
   });
 });
 

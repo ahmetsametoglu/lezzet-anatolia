@@ -79,7 +79,7 @@
       "undeliverable": "Siparişe girmeyenler",
       "total": "Toplam",
       "note": "Fiyatlar KDV dahildir. Teslimat şekli ve varsa kargo ücreti bir sonraki adımda adresinize göre belirlenir.",
-      "undeliverableNote": "Toplam sepetinizin tamamını gösterir; bu adrese gelemeyen kalemler siparişe girmez ve ödemeye eklenmez."
+      "undeliverableNote": "Bu adrese gelemeyen ürünler toplama dahil değildir; siparişe girmez, sepetinizde bekler."
     },
     "minimum": "Asgari sepet {minimum}. Sipariş verebilmek için birkaç ürün daha ekleyin.",
     "blocked": "Devam etmek için tükenen ya da satışa kapanan kalemi sepetten çıkarın.",
@@ -185,7 +185,7 @@
       "undeliverable": "Hors commande",
       "total": "Total",
       "note": "Prix TTC. Le mode de livraison et les éventuels frais sont déterminés à l'étape suivante selon votre adresse.",
-      "undeliverableNote": "Le total reflète l'ensemble de votre panier ; les articles non livrables à cette adresse ne font pas partie de la commande et ne sont pas facturés."
+      "undeliverableNote": "Les articles non livrables à cette adresse ne sont pas inclus dans le total ; ils ne font pas partie de la commande et restent dans votre panier."
     },
     "minimum": "Panier minimum {minimum}. Ajoutez encore quelques produits pour pouvoir commander.",
     "blocked": "Retirez l'article épuisé ou retiré de la vente pour continuer.",
@@ -291,7 +291,7 @@
       "undeliverable": "Nicht in der Bestellung",
       "total": "Gesamt",
       "note": "Preise inkl. MwSt. Versandart und eventuelle Versandkosten werden im nächsten Schritt anhand Ihrer Adresse bestimmt.",
-      "undeliverableNote": "Die Summe zeigt Ihren gesamten Warenkorb; nicht lieferbare Artikel gehören nicht zur Bestellung und werden nicht berechnet."
+      "undeliverableNote": "Nicht an diese Adresse lieferbare Artikel sind in der Summe nicht enthalten; sie gehören nicht zur Bestellung und bleiben in Ihrem Warenkorb."
     },
     "minimum": "Mindestbestellwert {minimum}. Fügen Sie noch etwas hinzu, um bestellen zu können.",
     "blocked": "Bitte entfernen Sie den ausverkauften oder nicht mehr verkäuflichen Artikel, um fortzufahren.",

@@ -350,13 +350,14 @@ export function orderableLines(lines: readonly CartLine[]): CartLine[] {
 }
 
 /**
- * Sepetin iki şeridi (kapıya ve kargoya); karar `cartGroupOf`. Teslim edilemeyen kalem rota şeridinde görünmeye devam eder,
- * siparişin kapsamı ayrı soru ve ayrı kapıdır (`orderableLines`).
+ * Sepetin şeritleri, karar `cartGroupOf`: kapıya, kargoya ve bu adrese gelemeyenler. Gelemeyen kalem kapı şeridine konmaz, yoksa
+ * ekran onun için kalemsiz bir kapı ödemesi açardı.
  */
-export function splitByRoute(lines: readonly CartLine[]): { route: CartLine[]; shipping: CartLine[] } {
+export function splitByRoute(lines: readonly CartLine[]): { route: CartLine[]; shipping: CartLine[]; undeliverable: CartLine[] } {
   return {
-    route: lines.filter((l) => cartGroupOf(l) !== 'shipping'),
+    route: lines.filter((l) => cartGroupOf(l) === 'local'),
     shipping: lines.filter((l) => cartGroupOf(l) === 'shipping'),
+    undeliverable: lines.filter((l) => cartGroupOf(l) === 'undeliverable'),
   };
 }
 
@@ -490,11 +491,11 @@ export function viewWithEntries(view: CartView, entries: readonly CartEntry[]): 
       const qty = wanted.get(cartKey(l)) ?? l.qty;
       return qty === l.qty ? l : { ...l, qty, lineTotalCents: l.unitPriceCents === null ? null : l.unitPriceCents * qty };
     });
-  const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
   /**
-   * Teslim edilemeyen kalemler eşiğe sayılmaz, sunucu okumasıyla aynı kural.
+   * Teslim edilemeyen kalemler ne ara toplama ne eşiğe sayılır, sunucu okumasıyla aynı kural.
    */
   const undeliverableSubtotalCents = undeliverableTotalOf(lines);
+  const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0) - undeliverableSubtotalCents;
   // Eşik kuralı MOTORDAN sorulur, matrahı sunucu okumasıyla aynı fonksiyondan (`minBasketBaseOf`).
   const basket = meetsMinBasket(minBasketBaseOf(lines), view.minBasketCents);
   /**

@@ -1,6 +1,7 @@
 'use client';
 
 import type { Locale } from '@lezzet/i18n';
+import cartMessages from '@lezzet/i18n/customer/cart';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
@@ -17,7 +18,8 @@ import type { Messages } from '../cart-types';
  */
 
 interface CartGroupProps {
-  kind: 'route' | 'shipping';
+  /** `undeliverable`: bu adrese gelemeyenler; siparişe girmezler, o yüzden toplamları ve eylemleri yoktur. */
+  kind: 'route' | 'shipping' | 'undeliverable';
   lines: CartLine[];
   view: CartView;
   t: Messages;
@@ -29,6 +31,7 @@ export function CartGroup({ kind, lines, view, t, locale, compact = false }: Car
   const { place } = useDeliveryPlace();
   const g = t.group;
   const shipping = kind === 'shipping';
+  const undeliverable = kind === 'undeliverable';
 
   // Grubun kalem toplamı kendi satırlarından; indirim burada yazılmaz, çünkü checkout'ta siparişin kendi kalemlerine göre yeniden
   // çözülür ve özet kartı bunu bir cümleyle söyler (`discountSplit`).
@@ -37,9 +40,11 @@ export function CartGroup({ kind, lines, view, t, locale, compact = false }: Car
   const fee = shippingGroupFee(view);
   const totalCents = shipping ? itemsCents + fee.feeCents : itemsCents;
 
-  const title = shipping
-    ? g.shippingTitle
-    : place?.nextDate
+  const title = undeliverable
+    ? cartMessages[locale].group.undeliverable
+    : shipping
+      ? g.shippingTitle
+      : place?.nextDate
       ? g.routeTitleDated.replace('{date}', formatDeliveryDate(place.nextDate, locale))
       : g.routeTitle;
 
@@ -48,8 +53,14 @@ export function CartGroup({ kind, lines, view, t, locale, compact = false }: Car
       {/* Başlık + saç teli çizgi: grubu komşusundan ayırır ama bir kutu kurmaz — kalemler kendi
           kartlarında kalsın, ikinci bir çerçeve sepeti kutu içinde kutu yapardı. */}
       <div className="flex items-center gap-3">
-        <span className={['inline-flex items-center gap-1.5 font-sans font-bold', compact ? 'text-micro' : 'text-note', shipping ? 'text-muted' : 'text-olive-dark'].join(' ')}>
-          <Icon name={shipping ? 'box' : 'truck'} size={compact ? 13 : 15} />
+        <span
+          className={[
+            'inline-flex items-center gap-1.5 font-sans font-bold',
+            compact ? 'text-micro' : 'text-note',
+            undeliverable ? 'text-honey' : shipping ? 'text-muted' : 'text-olive-dark',
+          ].join(' ')}
+        >
+          <Icon name={undeliverable ? 'snowflake' : shipping ? 'box' : 'truck'} size={compact ? 13 : 15} />
           {title}
         </span>
         <span className="h-px flex-1 bg-sand-200" />
@@ -59,7 +70,7 @@ export function CartGroup({ kind, lines, view, t, locale, compact = false }: Car
         <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} compact={compact} tone={shipping ? 'shipping' : 'default'} />
       ))}
 
-      {shipping ? (
+      {undeliverable ? null : shipping ? (
         <ShippingAction view={view} t={t} locale={locale} compact={compact} itemsCents={itemsCents} totalCents={totalCents} feeCents={fee.feeCents} remainingCents={fee.remainingForFreeCents} />
       ) : (
         <RouteAction view={view} t={t} locale={locale} compact={compact} totalCents={totalCents} />

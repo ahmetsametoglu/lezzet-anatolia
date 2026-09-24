@@ -250,11 +250,12 @@ export async function getCartView(
     line.availableHere = decision.availableHere;
   }
 
-  const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
   /**
-   * Bu adrese gelemeyen kalemlerin toplamı asgari sepete sayılmaz; kalem sepetten silinmez, yalnız eşiğin matrahından düşer.
+   * Bu adrese gelemeyen kalem ara toplama, indirime ve eşiğe sayılmaz: siparişe girmez, sepette bekler. Toplam böylece ödenecek
+   * tutarı söyler; gelemeyenlerin tutarı ayrı alanda taşınır.
    */
   const undeliverableSubtotalCents = undeliverableTotalOf(lines);
+  const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0) - undeliverableSubtotalCents;
   // Kargo grubunun kendi toplamı — ücretsiz kargo eşiği BUNA bakar (K37).
   const shippingSubtotalCents = lines.reduce((sum, l) => (l.route === 'shipping' ? sum + (l.lineTotalCents ?? 0) : sum), 0);
   const hasLocal = lines.some((l) => l.route === 'local');
@@ -265,7 +266,8 @@ export async function getCartView(
     rules: discountRules,
     context: discountContext,
   } = await resolveCartDiscount(db, {
-    lines: discountable,
+    // Satır sırası korunur ki paylar satırlarla hizalı kalsın; gelemeyen satır fiyatı çözülemeyen satır gibi sıfır katar.
+    lines: discountable.map((line, index) => (lines[index] && cartGroupOf(lines[index]) === 'undeliverable' ? { ...line, unitPriceCents: 0 } : line)),
     customerId: opts.customerId,
     couponCode: opts.couponCode,
   });

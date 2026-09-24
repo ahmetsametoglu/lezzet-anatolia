@@ -71,16 +71,17 @@ describe('cartGroupOf — üç grup, dördüncü hâl engeldir', () => {
   });
 });
 
-describe('splitByRoute — teslim edilemeyen kalem EKRANDA kalır', () => {
+describe('splitByRoute — teslim edilemeyen kalem kendi kümesinde', () => {
   it('kargo grubuna yalnız kargo kalemi girer', () => {
     const lines = [line('local'), line('shipping'), line('not_shippable_here')];
     expect(splitByRoute(lines).shipping).toHaveLength(1);
   });
 
-  it('teslim edilemeyen kalem ana şeritten ÇIKARILMAZ (sepetten silinmiyor)', () => {
+  it('teslim edilemeyen kalem kapı şeridine girmez — girseydi ekran onun için kalemsiz bir kapı ödemesi açardı', () => {
     const undeliverable = line('not_shippable_here');
     const groups = splitByRoute([line('local'), undeliverable, line('shipping')]);
-    expect(groups.route).toContain(undeliverable);
+    expect(groups.route).not.toContain(undeliverable);
+    expect(groups.undeliverable).toEqual([undeliverable]);
   });
 });
 
@@ -110,7 +111,8 @@ describe('asgari sepet — teslim edilemeyen tutar SAYILMAZ', () => {
     // 10 € gelebilir + 10 € gelemez = 20 €; eşik 15 € ve TUTMAZ, çünkü matrah 10 €.
     const lines = [line('local'), line('not_shippable_here')];
     const view = viewWithEntries(viewOf(lines), entriesOf(lines));
-    expect(view.subtotalCents).toBe(2_000);
+    // Ara toplam da gelemeyeni saymaz: siparişe girmeyen tutar ödenecek tutarın parçası değildir.
+    expect(view.subtotalCents).toBe(1_000);
     expect(view.undeliverableSubtotalCents).toBe(1_000);
     expect(view.minBasketOk).toBe(false);
     expect(view.missingForMinBasketCents).toBe(500);
