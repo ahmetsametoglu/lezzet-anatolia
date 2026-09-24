@@ -92,7 +92,7 @@
       "failed": "Sepetiniz şu an yüklenemedi. Ürünleriniz duruyor ama tutarlarını gösteremiyoruz."
     },
     "sync": {
-      "failed": "Sepet sunucuyla eşitlenemedi; son değişiklik geri alındı."
+      "failed": "Değişiklik kaydedilemedi, sepet eski hâline döndü."
     },
     "continue": "← Alışverişe devam et",
     "checkout": "Siparişi tamamla →",
@@ -198,7 +198,7 @@
       "failed": "Votre panier n'a pas pu être récupéré. Vos articles sont conservés, mais nous ne pouvons pas afficher les montants."
     },
     "sync": {
-      "failed": "Le panier n'a pas pu être synchronisé ; la dernière modification a été annulée."
+      "failed": "Modification non enregistrée, le panier a été rétabli."
     },
     "continue": "← Continuer mes achats",
     "checkout": "Finaliser la commande →",
@@ -304,7 +304,7 @@
       "failed": "Ihr Warenkorb konnte gerade nicht geladen werden. Ihre Artikel bleiben erhalten, die Beträge können wir nicht anzeigen."
     },
     "sync": {
-      "failed": "Der Warenkorb konnte nicht mit dem Server abgeglichen werden; die letzte Änderung wurde zurückgenommen."
+      "failed": "Änderung nicht gespeichert, der Warenkorb wurde zurückgesetzt."
     },
     "continue": "← Weiter einkaufen",
     "checkout": "Bestellung abschließen →",

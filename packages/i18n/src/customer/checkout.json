@@ -131,7 +131,7 @@
       "payment_not_allowed": "Bu ödeme yöntemi şu an kullanılamıyor — açık yollardan birini seçin.",
       "price_changed": "Siz ekrandayken bazı fiyatlar değişti: {detail}. Sipariş vermeden önce görmenizi istedik — onaylıyorsanız tekrar onaylayın.",
       "cart_changed": "Siz ekrandayken sepetiniz değişti — sipariş verilmedi. Aşağıdaki özet güncellendi; uygunsa tekrar onaylayın.",
-      "customer_not_found": "Hesabınız çözümlenemedi, lütfen tekrar giriş yapın.",
+      "customer_not_found": "Hesabınızı tanıyamadık, lütfen yeniden giriş yapın.",
       "insufficient_stock": "Ürünlerden biri bu arada tükendi. Sepetinizi kontrol edin.",
       "insufficient_stock_named": "Siz ekrandayken bu üründen kalan adet düştü: {detail}. Parantezdeki sayı şu an elimizde kalan adet — sepette düzeltip tekrar deneyin.",
       "payment_unavailable": {
@@ -148,7 +148,7 @@
     },
     "paymentSheet": {
       "canceled": "Ödeme yarıda kaldı — siparişiniz duruyor, hazır olduğunuzda tekrar deneyebilirsiniz.",
-      "configuration_missing": "Bu uygulamada ödeme henüz açık değil. Kapıda ödemeyi seçebilirsiniz.",
+      "configuration_missing": "Kartla ödeme şu an kullanılamıyor. Kapıda ödemeyi seçebilirsiniz.",
       "setup_failed": "Ödeme ekranı açılamadı. Tekrar deneyin ya da başka bir ödeme yolu seçin.",
       "timeout": "Ödeme sağlayıcısı yanıt vermedi. Tekrar deneyin.",
       "declined": "Ödeme tamamlanamadı — hesabınızdan para çekilmedi. Bilgileri kontrol edip yeniden deneyin ya da başka bir yolla ödeyin."
@@ -334,7 +334,7 @@
     },
     "paymentSheet": {
       "canceled": "Paiement interrompu — votre commande vous attend, réessayez quand vous voulez.",
-      "configuration_missing": "Le paiement n'est pas encore actif dans cette application. Vous pouvez choisir le paiement à la livraison.",
+      "configuration_missing": "Le paiement par carte est indisponible pour le moment. Vous pouvez choisir le paiement à la livraison.",
       "setup_failed": "La fenêtre de paiement n'a pas pu s'ouvrir. Réessayez ou choisissez un autre moyen de paiement.",
       "timeout": "Le prestataire de paiement n'a pas répondu. Réessayez.",
       "declined": "Le paiement n'a pas abouti — aucun montant n'a été débité. Vérifiez vos informations et réessayez, ou payez autrement."
@@ -520,7 +520,7 @@
     },
     "paymentSheet": {
       "canceled": "Zahlung abgebrochen — Ihre Bestellung wartet, Sie können es jederzeit erneut versuchen.",
-      "configuration_missing": "Zahlung ist in dieser App noch nicht aktiv. Sie können bei Lieferung zahlen.",
+      "configuration_missing": "Die Kartenzahlung ist derzeit nicht verfügbar. Sie können bei Lieferung zahlen.",
       "setup_failed": "Das Zahlungsfenster konnte nicht geöffnet werden. Versuchen Sie es erneut oder wählen Sie eine andere Zahlungsart.",
       "timeout": "Der Zahlungsanbieter hat nicht geantwortet. Bitte erneut versuchen.",
       "declined": "Die Zahlung wurde nicht abgeschlossen — es wurde nichts abgebucht. Prüfen Sie Ihre Daten und versuchen Sie es erneut oder zahlen Sie anders."
