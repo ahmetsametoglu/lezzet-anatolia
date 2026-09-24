@@ -6,23 +6,8 @@ import { recordOrderPayment, syncOrderPaymentStatus } from '../order/payment';
 import { deliverOrderWithAdjustments } from '../order/refund';
 
 /**
- * Kapıda teslim: onay, eksik kalem ve tahsilat (11.2/11.3) — **uygulama katmanı orkestrasyonu**.
- * `design/pages/kurye-teslimat.md` + DOMAIN §6 (teslim onayı), §7 (nakit sınırı), §8 (kısmi).
- * Terfi 21.10; kaynağı `apps/web/lib/courier/delivery.ts`, web kopyası geçiş köprüsüdür.
- *
- * **Sıra kuralın kendisidir:** önce kanıt kapısı (hiçbir yazım yapılmadan), sonra MAL + TESLİM
- * (tek yazım), en sonda PARA.
- * - Kanıt kontrolü başta: B2B teslimatı imzasız kapanmamalı — yarısı yazılmış bir teslimat üstüne
- *   "olmadı" demek, malı düşmüş ama teslim görünmeyen sipariş bırakırdı.
- * - Eksik kalem teslimden ÖNCE düşülür: teslimden sonra düşseydi mal önce fiili stoktan çıkar,
- *   sonra geri alınırdı — kayıt aynı malı iki kez oynatırdı (0026'nın "tam bir kez say" kuralı).
- *   **İkisi 21.271'den beri BÖLÜNMEZ** (`deliver_order_with_adjustments`): ardışık iki çağrıyken
- *   teslim `stale` dönünce düzeltme yazılı kalıyordu ve ortada yarım bir teslim doğuyordu — tam da
- *   yukarıdaki maddenin engellemeye çalıştığı hâl, başka bir kapıdan.
- * - Tahsilat en sonda: teslim `stale` dönerse karşılığı olmayan para yazılmış olmaz.
- *
- * **Kurye hesap yapmaz.** Eksik işaretlendiğinde tahsil edilecek tutarı düşüren şey bu dosyadaki bir
- * çarpma değil, ödeme durumu türetimidir (`domain-core/payment`) — tutar tek yerde hesaplanır.
+ * Kapıda teslim: sıra kuralın kendisidir: önce kanıt kapısı (hiçbir yazım yapılmadan), sonra mal ve teslim tek yazımda, en sonda para; teslim `stale` dönerse karşılıksız para yazılmaz.
+ * Kurye hesap yapmaz: eksik işaretlenince tahsil edilecek tutarı ödeme durumu türetimi düşürür, tutar tek yerde hesaplanır.
  */
 
 /** Teslim onayı: müşteri ekranda imzalar ya da kurye fotoğraf çeker (DOMAIN §6). */
@@ -42,17 +27,8 @@ export interface DoorCollectionInput {
   /** Paranın gireceği hesap (kurye kasası / kapı tahsilatı). */
   accountId: string;
   /**
-   * **Kuyruk yeniden-denemesi parayı iki kez yazmasın** (K4 · doc 04 "kapı imzasına baştan
-   * `idempotencyKey`"). Alan taşıma sırasında sözleşmeye girdi, sonradan değil: mobil istemci
-   * çevrimdışı kuyrukla çalışıyor ve anahtarı sonradan eklemek kayıtlı isteklerin göçünü isterdi.
-   *
-   * Anahtar istemcide üretilir (durak + deneme değil, İSTEK kimliği) ve tahsilat hareketinin
-   * `meta`sında KALICI durur — sınırı `order/payment.ts` künyesinde yazılı (oku-sonra-yaz; eşzamanlı
-   * iki istek atomik olarak ayrılmıyor, ardışık tekrar yakalanıyor).
-   *
-   * **Tek başına yeterli değil ve bu bilerek böyle:** siparişin tamamı yeniden gönderilirse teslim
-   * RPC'si zaten `stale` döner (`deliver_order` yalnız `out_for_delivery`den teslim eder) ve para
-   * adımına HİÇ gelinmez. Yani mükerrer yazımın birinci kilidi durum makinesi, ikincisi bu anahtar.
+   * Kuyruk yeniden denemesi parayı iki kez yazmasın: anahtar istemcide üretilen istek kimliğidir ve tahsilat hareketinin `meta`sında kalıcı durur.
+   * Birinci kilit durum makinesidir (teslim yalnız yoldaki siparişten), ikincisi bu anahtar; sınırı `order/payment.ts` künyesinde yazılı.
    */
   idempotencyKey?: string | null;
 }
@@ -65,10 +41,7 @@ export type DoorDeliveryOutcome =
       /** Teslim sonrası kalan borç (**cent**) — kapıda ödenmediyse ya da eksik ödendiyse pozitif. */
       amountDueCents: number;
       paymentStatus: PaymentStatus;
-      /**
-       * Nakit yasal sınırı aşıldı mı (FR ~1.000 €). **Engel DEĞİL, bilgi:** tahsilat tamamlanır,
-       * karar sahadadır (DOMAIN §7).
-       */
+      /** Nakit yasal sınırı aşıldı mı; engel değil bilgi: tahsilat tamamlanır, karar sahadadır (DOMAIN §7). */
       cashLimitExceeded: boolean;
       /** Eksik/reddedilen kalem yazıldı mı — tutar buna göre kendiliğinden düştü. */
       adjustedLines: number;
@@ -102,9 +75,7 @@ export async function confirmDoorDelivery(
     proof?: DeliveryProofInput | null;
     collection?: DoorCollectionInput | null;
     /**
-     * Kapıda okutulan kutu kodları (23.8). Kutulu siparişte teslimin ÖN KOŞULU: set siparişin
-     * kutularını kapsamıyorsa hiçbir yazım yapılmadan `boxes_missing` döner — yanlış anda/yerde
-     * okutulan kod sessiz geçmez. Kodlar `delivery_proof`a yazılır.
+     * Kapıda okutulan kutu kodları: kutulu siparişte teslimin ön koşulu; set kutuları kapsamıyorsa hiçbir yazım yapılmadan `boxes_missing` döner.
      */
     scannedBoxCodes?: readonly string[];
     /** Müşteri haberi / puan portları — `order/effects.ts`. */
@@ -117,18 +88,8 @@ export async function confirmDoorDelivery(
   if (order.courierId !== input.courierId) return { status: 'forbidden', reason: 'not_assigned' };
 
   /*
-    ── Kutu kapısı: yazımdan önce (23.8, etüt 2.5) ─────────────────────────────────────────────
-    "Tüm kutular okutulmadan teslim tamamlanmaz." Ekran kalan kutuyu numarasıyla söyler — kurye
-    araçta hangi kutuyu unuttuğunu numaradan bulur.
-
-    **KUTUSUZ SİPARİŞ DE BU KAPIDAN GEÇEMEZ** (kullanıcı kararı 30.08). Eskiden `boxes.length > 0`
-    koşulu kutusuz siparişi kapının DIŞINDA bırakıyordu ve teslim hiç okutma istenmeden yazılıyordu.
-    Kural artık tek: mal kutusuyla hazırlanır, kutusuyla araca biner, kutusuyla kapıdan çıkar.
-
-    Buraya kutusuz bir sipariş DÜŞMEMELİ — hazırlık kapısı onu `ready` yapmıyor (`box_required`),
-    yani yola da çıkamaz. Yine de savunma yazılı ve SESSİZ DEĞİL: değişmez bir gün ihlal edilirse
-    teslim yazılmaz, ekran "kutu kaydı yok" der ve arıza görünür olur (CLAUDE §1 — belirtiyi
-    susturan düzeltme, arızayı gözden saklamaktır).
+    Kutu kapısı yazımdan önce çalışır: bütün kutular okutulmadan teslim tamamlanmaz ve kutusuz sipariş de geçemez, çünkü mal kutusuyla hazırlanır, araca biner ve kapıdan çıkar.
+    Kutusuz sipariş buraya düşmemeli (hazırlık onu `ready` yapmıyor); düşerse teslim yazılmaz ve ekran "kutu kaydı yok" der ki arıza görünür olsun.
   */
   const boxes = await new OrderBoxService(db).listByOrder(input.orderId);
   const scanned = new Set((input.scannedBoxCodes ?? []).map((code) => code.trim()));
@@ -224,7 +185,7 @@ export async function confirmDoorDelivery(
     amountCents: input.collection.amountCents,
     description: 'Kapıda tahsilat',
     idempotencyKey: input.collection.idempotencyKey,
-    // Sistemin yazdığı satır (13.09): kurye kapıda onaylar, deftere yazan teslim akışıdır.
+    // Sistemin yazdığı satır: kurye kapıda onaylar, deftere yazan teslim akışıdır.
     source: 'system',
   });
   if (paid.status !== 'ok') return { status: 'not_found' };
@@ -259,13 +220,8 @@ export function cashLegalLimitCents(db: SupabaseClient): Promise<number> {
 }
 
 /**
- * Siparişe yazılan kanıt: ne, kim, ne zaman — "eksik geldi" ihtilafının tek sigortası (DOMAIN §6).
- *
- * **Şekil `packages/types`'tan geliyor** (`DeliveryProofRecord`), burada elle yazılmıyor. Eskiden
- * yazılıyordu ve okuyan ekran BAŞKA alan adları arıyordu (`photos[]`, `by`, `note`) — ortak tek
- * alan `at` idi. İki taraf da kendi içinde tutarlı olduğu için hiçbir yerde hata vermiyordu; ekran
- * kanıtı "var" gösteriyor, ama neyin var olduğunu söyleyemiyordu. Tipe bağlanınca yanlış alan adı
- * derleme hatasına döndü.
+ * Siparişe yazılan kanıt (ne, kim, ne zaman): "eksik geldi" ihtilafının tek sigortası.
+ * Şekil `packages/types`tan gelir, çünkü elle yazıldığında okuyan ekran başka alan adları arıyor ve hata vermiyordu.
  */
 function proofRecord(proof: DeliveryProofInput, courierId: string, boxCodes: string[] | null = null): DeliveryProofRecord {
   return {
@@ -279,9 +235,8 @@ function proofRecord(proof: DeliveryProofInput, courierId: string, boxCodes: str
 }
 
 /**
- * Görselsiz kanıt (23.8): kanıtın kendisi kapıda okutulan QR'lardır. Yalnız kutulu siparişin
- * görselsiz tesliminde doğar — görselli kanıt varken kodlar onun İÇİNE yazılır, iki kayıt olmaz.
- * Gel-al tezgâhı da bu kaydı yazar; `courierId` orada teslim eden depocudur (alan adı kanıtın şeklinden gelir).
+ * Görselsiz kanıt: kapıda okutulan kodlar; yalnız kutulu siparişin görselsiz tesliminde doğar, görselli kanıt varken kodlar onun içine yazılır.
+ * Gel-al tezgâhı da bu kaydı yazar; `courierId` orada teslim eden depocudur.
  */
 export function boxScanRecord(boxCodes: string[], courierId: string): DeliveryProofRecord {
   return {

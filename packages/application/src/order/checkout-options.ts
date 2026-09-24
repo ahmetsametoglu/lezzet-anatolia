@@ -25,26 +25,8 @@ import {
 import { COD_MAX_DEFAULT, COD_MAX_KEY } from '../settings/public-terms';
 
 /**
- * Checkout ödeme seçenekleri (07.3) — **uygulama katmanı orkestrasyonu**. DOMAIN §6, §7.
- *
- * Motor (03.7/03.8) "bu müşteri bu siparişi nasıl ödeyebilir" kararını zaten veriyordu; burada
- * gerçek girdilere bağlanıyor: müşteri kartı (vade yetkisi, limit, `cod_allowed`), işletme ayarları
- * (kapıda ödeme tavanı, nakit yasal sınırı) ve teslimat türü.
- *
- * **Açık bakiye ve gecikme SAKLANMAZ, türetilir** (DOMAIN §7): ödenmemiş vadeli siparişlerden
- * hesaplanır. Burada o hesap yapılır, karar yine motorundur.
- *
- * ── TERFİ (aşama 2/3) · WEB'DEN FARKLARI ─────────────────────────────────────
- * Kaynağı `apps/web/lib/order/checkout-options.ts`tı; web kopyası KÖPRÜ olarak duruyor. Kural
- * tarafında hiçbir şey değişmedi — değişen üç şey:
- *   · `db` çağırandan gelir (`serviceDb()` içeride çağrılmıyor) — paketin ortak deseni.
- *   · `settingScopeOf` artık SAF (aşama 1'de terfi etti): kanalı belirleyen görüntüleyen burada
- *     çözülüp kapsama veriliyor. Kural değişmedi — kanal yine `pricingViewerOf`ün kararı.
- *   · Girdi/sonuç tipleri `CheckoutPayment*` diye adlandırıldı. Web'de `CheckoutOptions*`
- *     idiler ama orada dosya-yereldi; paket barrel'ından ihraç edilince MOTORUN aynı adlı
- *     tipiyle (`domain-core`'un `CheckoutOptionsInput`'u, bu dosyanın kendi çağırdığı) çakışırdı.
- *     İki farklı sözleşmenin tek ada oturması, ikisini birden import eden dosyada sessiz bir
- *     takas riskidir.
+ * Checkout ödeme seçenekleri, uygulama katmanı: motorun kararı gerçek girdilere bağlanır (müşteri kartı, işletme ayarları, teslimat türü).
+ * Açık bakiye ve gecikme saklanmaz, türetilir; tipler `CheckoutPayment*` adını taşır ki motorun `CheckoutOptionsInput`uyla çakışmasın.
  */
 
 export interface CheckoutPaymentResult {
@@ -76,9 +58,8 @@ export interface CheckoutPaymentResult {
 export interface CheckoutPaymentInput {
   customerId: string;
   /**
-   * Üç tür de gelir: adresin cevabı (`route`/`shipping`) ya da müşterinin seçtiği gel-al (`pickup`). Gel-al'da
-   * kargo ücreti sorusu doğmaz (`resolveShippingFee` çağrılmaz), ödeme kuralları rotayla aynıdır: depoda
-   * ödeme = kapıda ödeme (tavan, müşteri kapısı, nakit uyarısı). Yerinde satış yine checkout'tan geçmez.
+   * Üç tür de gelir: adresin cevabı (`route`/`shipping`) ya da müşterinin seçtiği gel-al (`pickup`); gel-alda kargo ücreti sorusu doğmaz.
+   * Depoda ödeme kapıda ödemedir (tavan, müşteri kapısı, nakit uyarısı); yerinde satış checkout'tan geçmez.
    */
   deliveryType: DeliveryType;
   /**
@@ -87,48 +68,29 @@ export interface CheckoutPaymentInput {
    */
   basketCents: number;
   /**
-   * Sepet ara toplamı — **indirim ÖNCESİ** (cent). Yalnız ASGARİ SEPET eşiği bunu okur.
-   *
-   * **Kullanıcı kararı 11.08:** eşik indirim öncesi tutara bakar — teslimatın ekonomisi taşınan
-   * malın değerine bağlıdır, kampanya eşiği düşürmez.
-   *
-   * **İki alan, çünkü iki ayrı soru** (mobil şeridin ölçümü 11.08): `orderScopeOf` ikisini de
-   * zaten üretiyordu ve künyesi ayrımı yazıyordu, ama bu kapı ikisini de `basketCents`ten
-   * okuyordu. Sonucu sessiz bir çelişkiydi: taslak kapısı eşiği indirim öncesinden ölçerken
-   * (`checkout-draft.ts`) ödeme kapısı indirim sonrasından ölçüyordu — eşiğin sınırında sepet
-   * "tamam" derken ödeme adımı "eksik" diyebilirdi ve müşteri kasada duvara çarpardı.
+   * Sepet ara toplamı, indirim öncesi (cent): yalnız asgari sepet eşiği bunu okur, çünkü teslimatın ekonomisi malın değerine bağlıdır ve kampanya eşiği düşürmez.
+   * İki alan, çünkü taslak kapısı da eşiği indirim öncesinden ölçer; aynı sepette biri "tamam" öteki "eksik" dememeli.
    */
   subtotalCents: number;
   /** KDV kırılımı için kalem tutarları + oranları. */
   lines: readonly { totalCents: number; vatRate: number }[];
   /**
-   * Ayar kapsamının yer eksenleri (07.15) — çağıran çözer, burası okumaz.
-   *
-   * `resolveCheckoutPayment` istek bağlamına bağlanamaz: aynı hesap kapıda ödeme akışından ve
-   * ileride WhatsApp/mobil uçlarından da çağrılacak. Çerezi okuyan yüzey, kapsamı geçen de o.
+   * Ayar kapsamının yer eksenleri; çağıran çözer, çünkü aynı hesap kapıda ödeme, WhatsApp ve mobil uçlardan da çağrılır ve çerezi okuyan yüzeydir.
    */
   country?: string | null;
   zoneId?: string | null;
   warehouseId?: string | null;
   /**
-   * **Canlı kargo teklifinin fiyatı** (cent, 07.12) — müşterinin seçtiği servisin SUNUCUDA
-   * hesaplanmış tutarı. `null`/verilmemiş = teklif yok → sabit tarife.
-   *
-   * Motor değişmedi, yalnız girdisi genişledi (07.12 kararı): teklif ücretin TUTARINI belirler,
-   * ücretsiz kargo eşiği ise ALINIP ALINMAYACAĞINI.
+   * Canlı kargo teklifinin sunucuda hesaplanmış tutarı (cent); `null` = teklif yok, sabit tarife.
+   * Teklif ücretin tutarını, ücretsiz kargo eşiği ise alınıp alınmayacağını belirler.
    */
   quotedFeeCents?: number | null;
 }
 
 export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput): Promise<CheckoutPaymentResult> {
   const settings = new SettingsService(db);
-  // **KAPSAM ÖNCE ÇÖZÜLÜR — SIRA ZORUNLU** (07.15). Eskiden `scope` boştu (`{ channel: undefined }`)
-  // ve beş okuma da kapsamsız gidiyordu; doldurmak da mümkün değildi, çünkü `customer` AYNI
-  // `Promise.all` içindeydi — kanal, kendisini belirleyecek satır gelmeden okunuyordu.
-  //
-  // Ek turun bedeli bir okuma; karşılığı b2b'ye perakende eşiği, Almanya'ya Fransa tarifesi ve
-  // bölge asgari sepetinin hiç uygulanmaması. Kapsam SEPETLE AYNI yerden kuruluyor
-  // (`settingScopeOf`) — iki yüzey farklı kapsam okursa sepette yazan eşik checkout'ta tutmaz.
+  // Kapsam önce çözülür, çünkü kanal müşteri satırından türer; kapsamsız okuma b2b'ye perakende eşiği, Almanya'ya Fransa tarifesi uygulardı.
+  // Kapsam sepetle aynı yerden kurulur (`settingScopeOf`), yoksa sepette yazan eşik checkout'ta tutmazdı.
   const scope = settingScopeOf(await pricingViewerOf(db, input.customerId), {
     country: input.country,
     zoneId: input.zoneId,
@@ -137,7 +99,7 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
 
   const [customer, codMaxCents, cashLegalLimitCents, freeThresholdCents, feeCents, minBasketCents] = await Promise.all([
     new UserProfileService(db).getById(input.customerId),
-    // Kapıda ödeme tavanı (kullanıcı kararı 04.08) — varsayılanı ve anahtarı `public-terms`te.
+    // Kapıda ödeme tavanı; varsayılanı ve anahtarı `public-terms`te.
     settings.getNumber(COD_MAX_KEY, COD_MAX_DEFAULT, scope),
     settings.getNumber('cash_legal_limit_cents', 100_000, scope),
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
@@ -168,14 +130,8 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
   );
 
   /**
-   * Ödeme yöntemi kanalı — **ONAYLI işletme** (04.08). Siparişe yazılan kanaldan bilerek ayrılıyor:
-   * `checkout-draft.ts` kanalı `type === 'company'` ile türetiyor ve orada doğru, çünkü o kanal
-   * KDV'nin ve muhasebenin kanalı — şirket, başvurusu onaylanmasa da şirkettir.
-   *
-   * Ertelenmiş tahsilat (havale/çek) ise bir GÜVEN kararıdır ve güveni veren şey başvurunun
-   * onaylanmasıdır. Onaysız bir şirket kaydı bugün zaten perakende fiyat görüyor
-   * (`read-viewer.ts:70`); ona havale açsaydık kendi kendini onaylayan bir kapı olurdu — "şirketim"
-   * yazan herkes ödemeden sipariş açabilirdi.
+   * Ödeme yöntemi kanalı onaylı işletmedir: ertelenmiş tahsilat bir güven kararıdır ve güveni başvurunun onayı verir; onaysız şirket kaydı kendi kendini onaylayamaz.
+   * Siparişe yazılan kanal (`checkout-draft.ts`, KDV ve muhasebe) bilerek ayrıdır: şirket, başvurusu onaylanmasa da şirkettir.
    */
   const paymentChannel = deriveChannel({ isCompany: customer.type === 'company' && customer.b2bApproved === true });
 
@@ -192,8 +148,7 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
     hasOverdue,
   });
 
-  // Eşik İNDİRİM ÖNCESİNİ ölçer (kullanıcı kararı 11.08) — `basketCents` DEĞİL. Kargo ve toplam
-  // yukarıda indirim sonrasını okuyor ve orası doğru; ikisi ayrı sorudur.
+  // Eşik indirim öncesini ölçer (`basketCents` değil); kargo ve toplam indirim sonrasını okur, ikisi ayrı sorudur.
   const minBasket = meetsMinBasket(input.subtotalCents, minBasketCents);
 
   return {
@@ -210,9 +165,7 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
 }
 
 /**
- * Açık bakiye ve gecikme — **ödenmemiş vadeli siparişlerden türetilir**, hiçbir yerde saklanmaz
- * (DOMAIN §7). Saklanan bakiye kayarsa fark edilmez; türetilen kayamaz.
- *
+ * Açık bakiye ve gecikme ödenmemiş vadeli siparişlerden türetilir, saklanmaz; saklanan bakiye kayarsa fark edilmez.
  * Gecikme ölçütü: vade süresini aşmış, hâlâ ödenmemiş sipariş.
  */
 async function deriveCreditPosition(db: Db, customerId: string, paymentTermDays: number): Promise<CreditPosition> {

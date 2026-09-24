@@ -133,8 +133,7 @@ export async function readMoneyDayEnd(db: Db, input: { date?: string } = {}): Pr
   const [movements, todayRuns, unexplainedMovementCount] = await Promise.all([
     new MoneyMovementService(db).listOrderMoneyOfDay(date),
     new DeliveryRunService(db).listByDate(date),
-    // İZAH sayacı (13.09): "eşleşmemiş" değil — o bayrak yalnız banka satırında anlamlıydı ve
-    // sistemin kendi yazdığı her tahsilatı kuyrukta gösteriyordu (sözleşme künyesi).
+    // İzah sayacı: banka mutabakat bayrağı yalnız ekstre satırında anlamlı olduğu için "eşleşmemiş" değil "izah edilmemiş" sayılır.
     new MoneyMovementService(db).unexplainedCount(),
   ]);
   const closes = await new DeliveryRunCloseService(db).listByRuns(todayRuns.map((run) => run.id));

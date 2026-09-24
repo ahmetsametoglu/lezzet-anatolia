@@ -25,13 +25,8 @@ import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
 import { rpcMoneyToCents } from '../utils/rpc-money';
 
-// SEFER — gerçekleşen teslimat rotası (11.7 · 18.08 · `docs/feature/sefer.md`).
-// 0025'teki `courier-day-close.service`in halefi: kapanışın ekseni kurye×gün'den SEFERE indi.
-//
-// **Karar vermez, satır getirir/yazar** (STACK §4). Yazım İKİ yoldan ve ikisi de RPC: sefer
-// başlatma (satır + siparişlerin damgalanması tek transaction) ve sefer kapatma (dönüş + fotoğraf +
-// takılı durakların çözümü tek an). Elle `insert`/`update` açık değil — ikinci bir yazım yolu,
-// beklenen tutarların başka yerde hesaplanması demekti.
+// Sefer: gerçekleşen teslimat rotası; servis karar vermez, satır getirir ve yazar.
+// Yazım yalnız RPC'lerden gider (sefer kurma, başlatma, kapatma), çünkü ikinci bir yazım yolu beklenen tutarların başka yerde hesaplanması demekti.
 
 /**
  * RPC dönüşündeki dokuz para alanı — euro `numeric` gelir, cent'e `rpcMoneyToCents`te iner (02.9).
@@ -55,7 +50,7 @@ export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never>
     super(supabase, 'delivery_run', DeliveryRunSchema, DeliveryRunSchema as never, DeliveryRunSchema as never, false);
   }
 
-  /** Rota+gün'ün seferi — mutlak unique (18.08), yani tekil okunur; yoksa sefer hiç açılmadı. */
+  /** Rota ve günün seferi; tekildir, yoksa sefer hiç açılmadı. */
   getByZoneDate(zoneId: string, date: string): Promise<DeliveryRun | null> {
     return this.getOneBy({ deliveryZoneId: zoneId, deliveryDate: date });
   }
@@ -74,7 +69,7 @@ export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never>
     return this.getAll({ id: [...ids] });
   }
 
-  /** Günün seferleri — sevkiyat ekranının "araç çıktı mı, döndü mü" şeridi. */
+  /** Günün seferleri: sevkiyat ekranının "araç çıktı mı, döndü mü" satırı. */
   listByDate(date: string): Promise<DeliveryRun[]> {
     return this.getAll({ deliveryDate: date }, { orderBy: 'createdAt', limit: 100 });
   }
@@ -94,12 +89,8 @@ export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never>
   }
 
   /**
-   * **Seferi KUR** — satır + siparişlerin damgalanması TEK transaction (`open_delivery_run`).
-   * `already_started` bir hata değil: rota+gün başına tek sefer, ikinci çağrı mevcut künyeyi alır.
-   *
-   * Sefer `departed_at` NULL doğar (31.08): kurulmuş sefer araçta bekler, kutuları okutulabilir,
-   * ama yola çıkmamıştır. Durum GEÇİŞİ de burada yapılmaz — `ready → out_for_delivery` iznini
-   * motor verir, uygulama katmanı yazar (dört-liste sözleşmesi orada kurulur).
+   * Seferi kur: satır ve siparişlerin damgalanması tek transaction; `already_started` hata değil, rota ve gün başına tek sefer vardır.
+   * Sefer `departed_at` boş doğar; `ready → out_for_delivery` geçişini motor izniyle uygulama katmanı yazar.
    */
   async open(input: {
     zoneId: string;
@@ -122,9 +113,7 @@ export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never>
   }
 
   /**
-   * **Seferi BAŞLAT** (yola çık) — kurulmuş seferin `departed_at` damgası (31.08).
-   * Durum geçişleri yine uygulama katmanında; RPC damganın atomikliğini ve tekrar basılamazlığını
-   * taşır. Başkasının seferi `not_mine` alır.
+   * Seferi başlat: kurulmuş seferin `departed_at` damgası; RPC atomikliği ve tekrar basılamazlığı taşır, başkasının seferi `not_mine` alır.
    */
   async depart(input: { runId: string; courierId: string }): Promise<DepartDeliveryRunResult> {
     const raw = await this.executeRpc('depart_delivery_run', {
@@ -135,9 +124,8 @@ export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never>
   }
 
   /**
-   * **Seferi ARAÇTAN ÇIKAR** — `open`ın tersi (31.08). Siparişleri serbest bırakır, kutuların
-   * araç damgasını siler ve satırı SİLER; rota+gün kilidi böylece açılır ve kurye kendi hatasını
-   * düzeltebilir. Başlamış sefer `already_departed` alır — onun çıkışı kapanıştır.
+   * Seferi araçtan çıkar, `open`ın tersi: siparişleri serbest bırakır, kutuların araç damgasını ve satırı siler ki kurye kendi hatasını düzeltebilsin.
+   * Başlamış sefer `already_departed` alır; onun çıkışı kapanıştır.
    */
   async discard(input: { runId: string; courierId: string }): Promise<DiscardDeliveryRunResult> {
     const raw = await this.executeRpc('discard_delivery_run', {
@@ -148,10 +136,7 @@ export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never>
   }
 
   /**
-   * **Durak sırasını yaz** (11.9) — `set_run_stop_order`. Yine RPC, çünkü kural VERİDE duruyor:
-   * elle dizilmiş sıra motor yazımıyla ezilmez ve kapanmış seferin sırası donar. Uygulamada
-   * oku-sonra-yaz olsaydı, biri sırayı düzeltirken uçuşta olan bir yeniden hesap onu sessizce
-   * ezebilirdi.
+   * Durak sırasını yaz (`set_run_stop_order`); RPC, çünkü kural veride durur: elle dizilen sıra motor yazımıyla ezilmez, kapanmış seferin sırası donar.
    */
   async saveStopOrder(input: {
     runId: string;
@@ -275,7 +260,7 @@ export class DeliveryRunCollectionService extends BaseDbService<DeliveryRunColle
     return this.getOneBy({ deliveryRunId: runId });
   }
 
-  /** Bir küme seferin beklenen tahsilatları — kuryelerin üstündeki paranın ham verisi (21.12). */
+  /** Bir küme seferin beklenen tahsilatları: kuryelerin üstündeki paranın ham verisi. */
   listByRuns(runIds: readonly string[]): Promise<DeliveryRunCollection[]> {
     if (runIds.length === 0) return Promise.resolve([]);
     return this.getAll({ deliveryRunId: [...runIds] });

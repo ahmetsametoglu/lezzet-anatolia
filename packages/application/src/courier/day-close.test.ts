@@ -12,13 +12,8 @@ import { openBox, sealBox } from '../warehouse/boxes';
 import { loadBox } from './load';
 
 /**
- * SEFER kapanışı ve kasa mutabakatı (11.7 · 18.08 — kurye×gün kapanışının halefi).
- *
- * Sınanan şey: **beklenen toplam yöntem bazında doğru mu**, **fark aynı gün görünüyor mu**,
- * **kapanmış sefer salt-okunur mu** ve **takılı duraklar kapanışta çözülüyor mu** (K4).
- *
- * Akış artık seferlidir: duraklar `startCourierDay` claim'iyle sefere bağlanır — kapanış GÜNÜN
- * değil SEFERİN duraklarını sayar.
+ * Sefer kapanışı ve kasa mutabakatı: beklenen toplam yöntem bazında doğru mu, fark aynı gün görünüyor mu, kapanmış sefer salt okunur mu, takılı duraklar çözülüyor mu.
+ * Kapanış günün değil seferin duraklarını sayar; duraklar `startCourierDay` ile sefere bağlanır.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -88,7 +83,7 @@ beforeEach(async () => {
     await db.from('delivery_run_close').delete().in('delivery_run_id', runIds);
     await db.from('delivery_run').delete().in('id', runIds);
   }
-  // SIRA: defter → parti → sipariş (06.14) — künye kardeş dosyada (`courier/day.test.ts`).
+  // Sıra: defter → parti → sipariş; gerekçesi `courier/day.test.ts`te.
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
@@ -97,11 +92,8 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Sefer, kapanışı, sipariş ve rezervasyon AYRICA silinmez: hepsi `purgeTestData`'nın bildiği
-  // bağlar (sefer `warehouseIds`/`profileIds`ten, sipariş `profileIds`ten, rezervasyon
-  // `productIds`ten). Elle yazılan satırlar teardown'ı öldürüyordu (ölçüldü 14.08).
-  // `run_close_mismatch` bildirimleri de purge'ün işi (27.08 · sahipsiz süpürme): satır HEDEFSİZ
-  // doğuyor ve seferine yalnız payload'daki referanstan bağlanıyor — sıra `cleanup.ts`te.
+  // Sefer, kapanış, sipariş ve rezervasyon ayrıca silinmez: hepsi `purgeTestData`nın bildiği bağlardır ve elle silme teardown'ı bozar.
+  // `run_close_mismatch` bildirimleri de purge'ün işidir; sıra `cleanup.ts`te.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -148,12 +140,7 @@ async function depart(): Promise<string> {
   return result.run.runId;
 }
 
-/**
- * Kapıda tahsilat — kapanışın beklenen toplamını besleyen tek yol.
- *
- * KUTU KODU ŞART (30.08): teslim kapısı kutusuz teslimi reddediyor; fikstürün kutusu da gerçek
- * yoldan geçtiği için kod elde.
- */
+/** Kapıda tahsilat: kapanışın beklenen toplamını besleyen tek yol; teslim kapısı kutusuz teslimi reddettiği için kutu kodu şarttır. */
 async function collect(orderId: string, qty: number, method: 'cash' | 'card' | 'cheque', boxCode: string) {
   await confirmDoorDelivery(db, {
     orderId,
@@ -276,7 +263,7 @@ describe('seferi kapat', () => {
     expect(result).toMatchObject({ ok: true, deliveredCount: 1, pendingCount: 1, releasedCount: 1 });
     const order = await orders.getById(takili);
     expect(order?.status).toBe('ready');
-    // Gün İLERLETİLMEZ: tarih sevkiyatçının kararı (16.08 "görünür devir" korunur).
+    // Gün ilerletilmez: yeni tarih sevkiyatçının kararıdır.
     expect(order?.deliveryDate).toBe(day);
 
     const { data } = await db.from('order_status_log').select('to_status,note').eq('order_id', takili);

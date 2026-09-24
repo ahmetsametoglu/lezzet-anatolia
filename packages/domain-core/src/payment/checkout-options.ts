@@ -1,28 +1,8 @@
 import type { Channel, DeliveryType, PaymentMethod } from '@lezzet/types';
 
 /**
- * Checkout ödeme seçenekleri (03.7 + 03.8) — DOMAIN §7. "Bu müşteri bu siparişi nasıl ödeyebilir"
- * kararı. Saf: tahsilat yapmaz, seçenek listesi ve gerekçesini döner.
- *
- * İki fren birlikte çalışır:
- * - **Kapıda ödeme** (03.8): değer tavanı (parametrik `Setting`) + `Customer.cod_allowed` +
- *   nakit yasal sınırı (uyarı, engel DEĞİL — karar sahada).
- * - **Vade / "hesaba"** (03.7): yalnız `credit_enabled` müşteride; açık bakiye + yeni sipariş
- *   limiti aşarsa **veya** gecikmiş sipariş varsa kapanır. Limit içinde onay OTOMATİKTİR
- *   (limit, önceden verilmiş onaydır — B2B hızı bozulmaz); limit aşımı admin'e düşer.
- *
- * Açık bakiye ve gecikme SAKLANMAZ, türetilir — çağıran hesaplayıp verir (DOMAIN §7).
- *
- * ── ERTELENMİŞ TAHSİLAT YALNIZ İŞLETMEYE AÇIK (kullanıcı kararı 04.08) ───────
- * Havale ve çek **kanala bağlıdır**, tavana ya da teslimat türüne değil. İkisi de "mal gitsin,
- * para sonra gelsin" demektir: havalede sipariş ödeme beklemeden hazırlığa girer, çekte tahsilat
- * kapıda alınan kâğıdın karşılığına bağlıdır. İşletme müşterisinde bunun karşılığı var — vergi
- * numarası, fatura, vade kaydı, açık bakiye takibi (aşağıdaki vade freni tam olarak bunun içindir).
- * Bireysel müşteride hiçbiri yok: ödemeyen müşterinin arkasında takip edilebilir bir muhatap
- * kalmıyor, tahsilat riski doğrudan bize kalıyor.
- *
- * Kart (`online`) her iki kanalda açık kalır — orada para SİPARİŞTEN ÖNCE tahsil ediliyor, yani
- * risk zaten yok. Kapıda nakit/kart da açık: mal ile para aynı anda el değiştiriyor.
+ * Checkout ödeme seçenekleri: "bu müşteri bu siparişi nasıl ödeyebilir" kararı; iki fren birlikte çalışır: kapıda ödeme (tavan, `cod_allowed`, nakit sınırı uyarısı) ve vade (limit, gecikme).
+ * Ertelenmiş tahsilat yalnız onaylı işletmeye açıktır, çünkü "mal gitsin, para sonra gelsin" diyen yöntemin arkasında vergi numarası ve vade kaydı olan bir muhatap gerekir.
  */
 
 export interface CheckoutOptionsInput {
@@ -35,7 +15,7 @@ export interface CheckoutOptionsInput {
   codMaxCents: number;
   /** Müşteri bazlı kapı — geçmişte ödememiş müşteride admin kapatır. */
   codAllowed?: boolean;
-  /** Nakit yasal sınırı (FR ~1.000 €) — aşımda UYARI, engel değil. */
+  /** Nakit yasal sınırı (Fransa'da bin avro civarı); aşımda uyarı verilir, engel değil. */
   cashLegalLimitCents?: number;
 
   /** Vade müşteri yetkisidir, varsayılan kapalı. */

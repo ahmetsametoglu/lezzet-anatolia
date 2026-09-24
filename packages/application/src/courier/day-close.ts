@@ -6,16 +6,8 @@ import { listCourierDay, readCourierRun, type CourierRunBriefView, type CourierS
 import { vehicleLabelOf } from './vehicle-label';
 
 /**
- * SEFER kapanışı (11.7 · 18.08 — kurye×gün kapanışının halefi, `docs/feature/sefer.md` K1 kararı).
- * `design/pages/kurye-kapanis.md` + DOMAIN §7. Web kopyası geçiş köprüsüdür.
- *
- * Kapanış bir **mutabakattır**, para hareketi değil: para kapıda tahsil edilirken yazıldı (11.3).
- * Eksen kurye×gün'den SEFERE indi: "fark hangi seferde doğdu" artık cevaplı — iki sefer sürmüş
- * kurye ikisini AYRI kapatır (akış sıralı: kapat → yeni sefer; ekran "hangi seferi kapatıyorum"
- * diye sormaz). Kurye kasaya yine günde bir gider; ekran günün toplamını ayrıca gösterebilir.
- *
- * **Kurye yalnız kendi seferini görür** — `courierId` her iki fonksiyonda da zorunludur ve sefer
- * sahipliği run kaydından doğrulanır; işletme kasası, diğer hesaplar ve marj bu okumaya hiç girmez.
+ * Sefer kapanışı: para kapıda tahsil edilirken yazıldığı için kapanış bir mutabakattır, para hareketi değil; eksen seferdir ki "fark hangi seferde doğdu" cevaplansın.
+ * Kurye yalnız kendi seferini görür: `courierId` zorunludur ve sahiplik sefer kaydından doğrulanır.
  */
 
 /** Kapanış öncesi ekranın gördüğü: seferin resmi + beklenen tahsilat. */
@@ -35,14 +27,8 @@ export interface DayCloseDraft {
 }
 
 /**
- * Kapanış taslağı. `runId` verilmezse kuryenin o günkü seferi bulunur (kapanmamış olan öncelikli).
- * Beklenen toplamlar **görünümden** okunur (`delivery_run_collection`) — kapanış RPC'si de aynı
- * görünümü okur, toplama iki kez yazılmaz.
- *
- * Sahiplik: verilen `runId` bu kuryenin değilse sefer YOK sayılır (`run: null`) — "yok" ile "senin
- * değil" aynı cevabı verir (proof kapısının haritalama savunmasıyla aynı gerekçe).
- *
- * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), `auth/otp` deseni.
+ * Kapanış taslağı; `runId` verilmezse kuryenin o günkü seferi bulunur (kapanmamış olan öncelikli) ve beklenen toplamlar RPC'nin de okuduğu görünümden gelir.
+ * Verilen `runId` bu kuryenin değilse sefer yok sayılır, çünkü "yok" ile "senin değil" aynı cevabı vermeli.
  */
 export async function openDayClose(
   db: SupabaseClient,
@@ -80,13 +66,8 @@ export async function openDayClose(
 }
 
 /**
- * **Seferi kapat.** Sonuçlanmamış durak varken de kapatılabilir (tasarım §4) — üstelik kapanış
- * onları ÇÖZER (K4, 18.08): hâlâ `out_for_delivery` görünen duraklar motorun "ulaşılamadı"
- * kenarıyla `ready`ye düşer, hangi güne yeniden yazılacağı sevkiyatçının kararı kalır. Dönen
- * `pendingCount`/`releasedCount` uyarı içindir — engel değil.
- *
- * Fark hesaplanmaz, **türer**: sayılan − beklenen. İşaret anlamlıdır (eksi eksik, artı fazla) ve
- * mutlak değere indirilmez — ikisi de açıklanmayı hak eder.
+ * Seferi kapat; sonuçlanmamış durak varken de kapanır ve kapanış hâlâ yoldaki durakları `ready`ye düşürür, yeni günü sevkiyatçı seçer.
+ * Fark türer (sayılan − beklenen) ve işareti korunur, çünkü eksik de fazla da açıklanmayı hak eder.
  */
 export async function closeCourierDay(
   db: SupabaseClient,
@@ -107,9 +88,7 @@ export async function closeCourierDay(
   if (!run || run.courierId !== input.courierId) return { ok: false, reason: 'not_found' };
 
   const sonuc = await new DeliveryRunService(db).close({ ...input, actorId: input.courierId });
-  // UYUŞMAZLIK ZİLİ (26.08): kapanış YAZILDIKTAN sonra ve sonucu değiştirmeden — fark çıkan
-  // kapanış para tarafının kapı zilini çalar (üretici kendi içinde sessiz; kapanış asla geri
-  // dönmez). Fark üç kanalın herhangi birinde olabilir; sıfır fark sessizliktir.
+  // Fark çıkan kapanış para tarafının zilini çalar; kapanış yazıldıktan sonra ve sonucu değiştirmeden, çünkü kapanış geri dönmez.
   if (
     sonuc.ok &&
     ((sonuc.differenceCashCents ?? 0) !== 0 || (sonuc.differenceCardCents ?? 0) !== 0 || (sonuc.differenceChequeCents ?? 0) !== 0)
@@ -121,10 +100,7 @@ export async function closeCourierDay(
       differenceChequeCents: sonuc.differenceChequeCents ?? 0,
     });
   }
-  /* ASKIDA KALAN DURAK ZİLİ (03.09 · denetim bulgusu 7): kapanış fotoğrafı `pending` listesi
-     doluysa — kapanışın `ready`ye düşürdükleri de, hiç hazırlanmamış olanlar da — sevkiyat masası
-     dürtülür. Gün burada SEÇİLMEZ; karar 16.08'den beri sevkiyatçının. Seferin deposu süzgeç:
-     o tesisin depocusu ve depo-üstü yönetim görür. */
+  /* Kapanış fotoğrafında bekleyen durak varsa sevkiyat masası dürtülür; gün burada seçilmez, seferin deposu kimin göreceğini süzer. */
   if (sonuc.ok && (sonuc.pendingCount ?? 0) > 0) {
     await notifyRunClosePending(db, {
       runReferenceNo: run.referenceNo,
@@ -139,8 +115,7 @@ export async function closeCourierDay(
 async function briefOf(db: SupabaseClient, runId: string, courierId: string): Promise<CourierRunBriefView | null> {
   const run = await new DeliveryRunService(db).getById(runId);
   if (!run || run.courierId !== courierId) return null;
-  // Araç adı künyenin parçası (30.08): sefer kapanışı da aynı künyeyi çiziyor ve kapanış
-  // ekranında "hangi araçla dönüldü" sorusu, kapanmış bir seferi ararken tek ayırt edici olabilir.
+  // Araç adı künyenin parçasıdır: kapanmış bir seferi ararken "hangi araçla dönüldü" tek ayırt edici olabilir.
   const [zone, close, vehicleLabel] = await Promise.all([
     new DeliveryZoneService(db).getById(run.deliveryZoneId),
     new DeliveryRunCloseService(db).getByRun(run.id),

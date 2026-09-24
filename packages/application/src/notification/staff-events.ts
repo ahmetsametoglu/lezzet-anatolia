@@ -40,12 +40,8 @@ export async function notifyTicketOpened(
 }
 
 /**
- * Rezervasyon SONRASI eşik yoklaması — yalnız dokunulan varyantlar (servis daraltması).
- *
- * Dedupe `stock-low:<depo>:<varyant>` KALICIDIR: haber "İLK KEZ eşiğin altına indi" dir; eşik
- * üstüne çıkıp yeniden inen varyant ikinci kez zile düşmez — süregelen hâli bildirim değil
- * tedarik ekranının eşik listesi taşır (bildirim kapı zilidir, liste değil). Depo süzgeci
- * fan-out'ta: depocu yalnız kendi deposunun düşüşünü görür, yönetim muaf.
+ * Rezervasyon sonrası eşik yoklaması, yalnız dokunulan varyantlar; dedupe kalıcıdır, çünkü haber "ilk kez eşiğin altına indi"dir ve süregelen hâli tedarik ekranı taşır.
+ * Depo süzgeci dağıtımdadır: depocu yalnız kendi deposunun düşüşünü görür, yönetim muaftır.
  */
 export async function notifyStockLowAfterReserve(
   db: SupabaseClient,
@@ -100,12 +96,8 @@ export async function notifyRunCloseMismatch(
 }
 
 /**
- * Sefer kapandı, durak(lar) sonuçlanmadı — sevkiyat masasına (03.09 · kurye denetimi bulgu 7).
- *
- * Kapanış askıda kalanı `ready`ye düşürüp "yeniden planlanacak" diyor; planlayan sevkiyatçı (16.08
- * kararı). Ama o güne dek kimse dürtülmüyordu: askıda şeridi web'de duruyor, bakan yoksa durak
- * kaybolmuş gibi kalıyor — kutusu araçta, müşterisi beklemede. Zil yalnız "bak" der, gün SEÇMEZ.
- * Depo süzgeçli: kapsamı o tesisi içeren personel + depo-üstü roller. Dedupesiz — her kapanış ayrı.
+ * Sefer kapandı ama durak sonuçlanmadı: sevkiyat masası dürtülür, çünkü askıdaki durak bakan olmazsa kaybolmuş gibi kalır; zil yalnız "bak" der, gün seçmez.
+ * Depo süzgeçlidir ve dedupe yoktur: her kapanış ayrıdır.
  */
 export async function notifyRunClosePending(
   db: SupabaseClient,
@@ -141,12 +133,8 @@ export async function notifyB2bApplicationReceived(db: SupabaseClient, customerI
 }
 
 /**
- * Transfer EKSİK kabul edildi (kullanıcı kararı 04.09, 21.248) — gönderen deponun personeline ve yönetime.
- *
- * Alan depo eksiği beyan etti ve kayıp KENDİ hanesine yazıldı; gönderen taraf "ben 8 yolladım,
- * 7 geldi" cümlesini artık web'in geçmiş sekmesini açmadan duyar (ölçüldü 03.09: fark yalnız o
- * sekmede, satır sayısı olarak duruyordu). Depo süzgeci KAYNAK depo: alan depo zaten biliyor,
- * beyanı o yaptı. Dedupe transfer başına — kabul bir kez yazılır, ikinci kabul zaten `stale`.
+ * Transfer eksik kabul edildi: gönderen deponun personeli ve yönetim duyar, çünkü alan depo beyanı kendisi yaptı ve fark yalnız geçmiş sekmesinde duruyordu.
+ * Depo süzgeci kaynak depodur; dedupe transfer başınadır.
  */
 export async function notifyTransferShortfall(
   db: SupabaseClient,
@@ -183,11 +171,8 @@ export async function notifyTransferShortfall(
 }
 
 /**
- * Transfer FAZLA kabul edildi (kullanıcı kararı 04.09, 21.253) — eksiğin aynası, aynı alıcılar.
- *
- * Alan depo sevk edilenden fazlasını saydı ve SAY belgesiyle stoğuna yazdı; gönderen deponun
- * defterinde o birim hâlâ duruyor ("dört sandım, beş koymuşum"). Zil gönderene gider ki kendi
- * sayımında bulsun. Dedupe transfer başına.
+ * Transfer fazla kabul edildi: eksiğin aynası, aynı alıcılar; gönderen o birimi kendi sayımında bulsun diye.
+ * Dedupe transfer başınadır.
  */
 export async function notifyTransferExcess(
   db: SupabaseClient,
