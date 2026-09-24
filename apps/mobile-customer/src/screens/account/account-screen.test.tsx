@@ -5,9 +5,8 @@ import { AccountScreen } from './account-screen';
 import messages from '@lezzet/i18n/customer/account';
 
 /*
-  HESAP EKRANI TESTİ — bu turda EKLENEN şey ekranın ÇIKIŞLARIDIR (21.14 ikinci dilim): profil
-  düzenleme, taleplerim, bize yazın ve adres düğmeleri artık gerçek sayfalara gidiyor. Testin
-  koruduğu değişmez de bu: bir gün biri bu satırları yer tutucuya geri bağlarsa kırmızı yanar.
+  Hesap ekranının çıkışları gerçek sayfalara gider (profil düzenleme, destek, bize yazın, adres düğmeleri); biri yer
+  tutucuya geri bağlanırsa bu test kırmızıya döner.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
@@ -47,8 +46,8 @@ const ME_BODY = {
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: (href: unknown) => mockPush(href) }) }));
 
-/* Adres uçları MOCK (21.15) — ekran gerçek istemci modülünü çağırır, testler cevabı kurar.
-   Sözleşme kararı testte de görünür: her çağrının cevabı GÜNCEL listedir. */
+/* Adres uçları mock'lu: ekran gerçek istemci modülünü çağırır, testler cevabı kurar. Sözleşme kararı testte de
+   görünür: her çağrının cevabı güncel listedir. */
 const mockFetchAddresses = jest.fn();
 const mockCreateAddress = jest.fn();
 const mockUpdateAddress = jest.fn();
@@ -62,8 +61,8 @@ jest.mock('@/lib/api/addresses', () => ({
   deleteAddress: (id: string) => mockDeleteAddress(id),
   makeDefaultAddress: (id: string) => mockMakeDefaultAddress(id),
   makeBillingAddress: (id: string) => mockMakeBillingAddress(id),
-  /* Çekmecenin arama kapıları (21.313): öneri çıkmaz, doğrulama bulamaz — bu dosyanın konusu hesap
-     ekranı; öneri akışının kendi testi `customer-kit/address-form.test.tsx`. */
+  /* Çekmecenin arama kapıları: öneri çıkmaz, doğrulama bulamaz. Bu dosyanın konusu hesap ekranı; öneri akışının kendi
+     testi `customer-kit/address-form.test.tsx`. */
   suggestAddressOptions: async () => ({ data: { options: [], busy: false }, error: null, status: 200, retryAfterSec: null }),
   resolveAddressOption: async () => ({ data: null, error: null, status: 200, retryAfterSec: null }),
   locateAddress: async () => ({ data: null, error: null, status: 200, retryAfterSec: null }),
@@ -144,14 +143,8 @@ describe('AccountScreen', () => {
     expect(mockFetchAddresses).toHaveBeenCalledTimes(1);
   });
 
-  /*
-    ROLÜN ADI — "TESLİMAT ADRESİ", "VARSAYILAN" DEĞİL (kullanıcı kararı 08.09).
-
-    *"varsayılan"* bir MEKANİZMANIN adıydı (alanın önden dolu gelmesi); müşterinin gördüğü şey bir
-    ROLDÜR. Web hesap sayfası aynı gün aynı kelimeye geçti ve notun tek derdi buydu: iki yüzey aynı
-    rolü iki adla anmamalı. Test kelimeyi TOPLUCA arıyor — rozet, eylem ve toast ayrı ayrı
-    yazılıyor ve biri geride kalırsa ekranda iki ad birden yaşar.
-  */
+  /* Rolün adı "teslimat adresi"dir; "varsayılan" bir mekanizmanın adıydı ve iki yüzey aynı rolü iki adla anmamalı.
+     Test kelimeyi toptan arar, çünkü rozet, eylem ve toast ayrı yazılır ve biri geride kalırsa ekranda iki ad birden yaşar. */
   it('rol adı EKRANIN HER YERİNDE "teslimat adresi"; "varsayılan" kelimesi hiç geçmez', async () => {
     await render(<AccountScreen />);
     // HOME `isDefault` — rozet onda; WORK değil, eylem onun çekmecesinde.
@@ -162,14 +155,8 @@ describe('AccountScreen', () => {
     expect(screen.queryByText(/varsayılan/i)).toBeNull();
   });
 
-  /*
-    DİPNOT ROZETİ AÇIKLAR, O YÜZDEN ROZETSİZ ÇİZİLMEZ.
-
-    Rozet rolün ADINI söylüyor ama ne İŞE yaradığını söylemiyor; iki rozet (teslimat · fatura) yan
-    yana durduğunda hangisinin siparişi etkilediği ancak bu satırdan okunuyor. Adres yokken hiçbir
-    rozet yok — açıklayacak bir şey de yok, ve boş bir listenin altındaki kural cümlesi müşteriye
-    yapması gereken bir şey varmış gibi okunur.
-  */
+  /* Dipnot rozeti açıklar, o yüzden rozetsiz çizilmez: iki rozet yan yana dururken hangisinin siparişi etkilediği ancak
+     bu satırdan okunur. Adres yokken rozet de yoktur ve boş listenin altındaki kural cümlesi yapılacak bir iş varmış gibi okunur. */
   it('adres rolleri DİPNOTU adres varken çizilir, liste BOŞKEN çizilmez', async () => {
     await render(<AccountScreen />);
 
@@ -183,12 +170,8 @@ describe('AccountScreen', () => {
     expect(screen.getByTestId('account-address-add')).toBeOnTheScreen();
   });
 
-  /*
-    FATURA ADRESİ — YALNIZ ŞİRKET HESABINDA (kullanıcı kararı 08.09).
-
-    İki rol ayrı: teslimat adresi "malı nereye götürelim", fatura adresi "fatura nereye kesilecek".
-    Bireysel hesapta ikincisinin karşılığı yok; göstermek, cevabı olmayan bir soru sormak olurdu.
-  */
+  /* Fatura adresi yalnız şirket hesabındadır: teslimat adresi "malı nereye götürelim", fatura adresi "fatura nereye
+     kesilecek" sorusudur. Bireysel hesapta ikincisinin karşılığı yok; göstermek cevapsız bir soru sormak olurdu. */
   it('BİREYSEL hesapta fatura adresi rolü HİÇ çizilmez', async () => {
     await render(<AccountScreen />);
     await fireEvent.press(await screen.findByTestId('account-address-addr-work'));
@@ -239,14 +222,8 @@ describe('AccountScreen', () => {
     await waitFor(() => expect(screen.queryByTestId('address-make-default')).toBeNull());
   });
 
-  /*
-    ONAY TOAST'LARI — rozetin yer değiştirmesi "oldu" demek DEĞİLDİR.
-
-    Rozet iyimser bir çizimdir: sunucu cevabı gelmeden de kayabilirdi. Toast ise yalnız yazma
-    BAŞARIYLA döndükten sonra basılıyor (`makeDefault` hata dalında erken çıkıyor). Bu yüzden
-    üç iddia birlikte anlam taşıyor: metin, ETİKETSİZ adreste ne yazdığı, ve BAŞARISIZLIKTA
-    basılmaması.
-  */
+  /* Rozetin yer değiştirmesi "oldu" demek değildir, çünkü rozet iyimser çizilir; toast ise yalnız yazma başarıyla dönünce
+     basılır. Bu yüzden üç iddia birlikte anlam taşır: metin, etiketsiz adreste ne yazdığı ve başarısızlıkta basılmaması. */
   it('teslimat adresi yapma ONAYI toast ile söylenir ve adresin ADIYLA söylenir', async () => {
     mockMakeDefaultAddress.mockResolvedValue(listResult([{ ...WORK, isDefault: true }, { ...HOME, isDefault: false }]));
     await render(<AccountScreen />);
@@ -296,7 +273,7 @@ describe('AccountScreen', () => {
 
     await fireEvent.press(screen.getByTestId('account-address-add'));
     expect(screen.getByTestId('account-address-sheet')).toBeOnTheScreen();
-    // Çekmece (Musteri Mobil `shAddr`, 21.313): boş arama alanı, elle giriş kartı KAPALI.
+    // Çekmece (tasarım `shAddr`): boş arama alanı, elle giriş kartı kapalı.
     expect(screen.getByTestId('address-search').props.value).toBe('');
     expect(screen.queryByTestId('address-manual')).toBeNull();
 
@@ -315,11 +292,8 @@ describe('AccountScreen', () => {
     await fireEvent.changeText(screen.getByTestId('address-city'), 'Strasbourg');
     await fireEvent.press(screen.getByTestId('address-save'));
 
-    /* Yeni adres "Ev" seçili açılır (tasarım); kat/daire boşsa `null` gider. ALICI VE TELEFON
-       HESABIN KÜNYESİNDEN (22.08): müşteri o iki alana hiç dokunmadı ve gövde yine de dolu gitti —
-       kullanıcı kararının ("alanlar dolu gelecek, değiştirmeyip de kaydedebilecek") ekrandaki
-       karşılığı. Telefon E.164'e indi (`+33 6 24…` → `+336 24…`). Ülke SEÇİLİR ve her zaman gider
-       (önce ülke); doğrulama kapısı bulamadığı için nokta hiç konmaz. */
+    /* Yeni adres "Ev" seçili açılır, kat/daire boşsa `null` gider; alıcı ve telefon hesabın bilgilerinden dolar, müşteri
+       dokunmasa da gövde dolu gider. Telefon E.164'e çevrilir, ülke her zaman gider ve doğrulama bulamadığı için nokta konmaz. */
     await waitFor(() =>
       expect(mockCreateAddress).toHaveBeenCalledWith({
         label: 'Ev',
@@ -378,11 +352,8 @@ describe('AccountScreen', () => {
     expect(mockPush).toHaveBeenCalledWith('/login');
   });
 
-  /*
-    "BURAYA TESLİMAT AÇILSIN" GERÇEK KAYIT (21.307). 10.09'a kadar düğme hiçbir şey yazmıyordu —
-    "talebiniz sayılır" diyor, yalnız kampanya iznini açıyordu. Artık vitrin bandının kaydını
-    (`zone_notice`) aynı uçtan bırakıyor ve izin YAN ETKİ olmaktan çıktı.
-  */
+  /* "Buraya teslimat açılsın" vitrin bandıyla aynı kaydı (`zone_notice`) aynı uçtan bırakır; kampanya izni bunun yan
+     etkisi değildir. */
   it('bölge dışı varsayılan adreste "Buraya teslimat açılsın" GERÇEK kayıt bırakır — izin sessizce açılmaz', async () => {
     const reply = (status: number, data: unknown) =>
       ({ status, headers: { get: () => null }, json: async () => ({ data, error: status === 200 ? null : 'not_found' }) }) as unknown as Response;
