@@ -17,25 +17,9 @@ import { generateReferenceNo } from '@lezzet/domain-core';
 import { customerSupportTools, type PendingProductCard } from './support-tools';
 
 /**
- * DESTEK AJANININ ARAÇLARI (16.9 · test dalgası 15.18) — modelin veriye kendi baktığı dar yüzey.
- *
- * ── ARAÇLAR ŞEMADAN GEÇİRİLEREK ÇAĞRILIYOR, `execute` ELLE ÇAĞRILMIYOR ──────
- * 22.08 ölçüm turunun dersi (15.18 künyesi): elle çağrıda parametre adı kaçınca (`terim` yerine
- * `sorgu`) araç `undefined` alıp ya varsayılan listeyi döndürdü ya `.replace` üzerinde çöktü — ve
- * iki kez **olmayan bir arıza** neredeyse bildirildi. Modelin gerçek yolu şemadır; test de o yoldan
- * geçmezse doğruladığı şey aracın kendisi değil, testin uydurduğu çağrı olur.
- *
- * ── İDDİALAR DEĞİŞMEZE YAZILIYOR, SEED SAYISINA DEĞİL ──────────────────────
- * Fikstürler bu dosyanın kendi ürünleri/bölgesi/müşterileri (hepsi damgalı) ve iddialar tutarın
- * KENDİSİNE değil kuralına bakıyor: fiyat DOLU ve biçimli mi, eşleşme yoksa `bilinmiyor` mu, adres
- * yoksa "adrese göre okumadım" deniyor mu. Yerel verinin sayısı zaten sahtedir (`CLAUDE` başlığı) —
- * ona yazılan bir iddia, seed değiştiği gün sebebi anlaşılmayan bir kırmızı olurdu.
- *
- * ── BU ARAÇLAR VERİTABANINI DEĞİŞTİRMEZ ────────────────────────────────────
- * Beşi de YALNIZ OKUR (künyenin değişmezi); yazan tek şey bu dosyanın kendi fikstürleridir ve
- * teardown onları toplar. Posta kodu bandı `005`/`006`: ne FR (01000'den) ne DE (01067'den)
- * referansında var, ve `place.test.ts`in kullandığı `007`/`008`/`009` bandına da girmiyor — iki
- * dosya aynı anda koştuğunda birbirinin bölgesini çözmesin.
+ * Destek ajanının araçları şemadan geçirilerek çağrılır, çünkü elle `execute` çağrısında kaçan parametre adı olmayan bir arızayı
+ * doğrulatırdı; iddialar seed sayısına değil kurala bakar. Araçlar yalnız okur, yazan tek şey dosyanın damgalı fikstürleridir ve posta
+ * kodu bandı (`005`/`006`) başka dosyalarla çakışmaz.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -57,7 +41,7 @@ const productIds: string[] = [];
 const sluglar: Record<string, string> = {};
 let categoryId = '';
 let warehouseId = '';
-/** İkinci depo: stoğu yalnız burada duran ürün rota müşterisine "başka depoda" görünür (10.09). */
+/** İkinci depo: stoğu yalnız burada duran ürün rota müşterisine "başka depoda" görünür. */
 let digerDepoId = '';
 let musteriId = '';
 let adressizId = '';
@@ -109,19 +93,18 @@ async function adresYaz(customerId: string, postalCode: string): Promise<void> {
 const gunSonra = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 /**
- * Fiyatlı/fiyatsız, stoklu/stoksuz ürün — katalogda görünmesi için gereken en az şey. `depo` stoğun
- * yerini, `kargolanamaz` soğuk zinciri seçer (10.09 — yere göre ayıklama).
+ * Fiyatlı/fiyatsız, stoklu/stoksuz ürün, katalogda görünmesi için gereken en az şey; `depo` stoğun yerini, `kargolanamaz` soğuk zinciri
+ * seçer.
  */
 async function urunAc(ad: string, opts: { b2c?: number; b2b?: number; stok?: boolean; depo?: string; kargolanamaz?: boolean } = {}) {
-  // Yayın kısıtı (05.36) `active` ürünü üç dilde dolu görmek istiyor — metinler fikstürün konusu
-  // değil ama kapının şartı (`product_publish_requires_all_locales`).
+  // Yayın kısıtı `active` ürünü üç dilde dolu görmek ister; metinler fikstürün konusu değil ama kapının şartı.
   const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
   const { product, variants } = await new ProductService(db).create({
     name: ucDil(`${ad} ${stamp}`),
     description: ucDil('Destek testi ürünü'),
     ingredients: ucDil('Un, su, tuz'),
     storageInstructions: ucDil('Serin yerde saklayın'),
-    // Yasal beyan (07.09): ajan alerjen/besin sorusunu KAYITTAN cevaplamalı — fikstür onu taşıyor.
+    // Yasal beyan: ajan alerjen ve besin sorusunu kayıttan cevaplamalı, fikstür onu taşır.
     allergens: ['sut', 'gluten'],
     nutrition: { ...EMPTY_NUTRITION, energyKcal: 290, fatG: 12 },
     categoryId,
@@ -169,8 +152,8 @@ beforeAll(async () => {
   await urunAc('Kapali', {});
   // Dolgu: tavanı (PRODUCT_HITS = 5) sınamak için damgalı ürünler beşten fazla (toplam sekiz).
   for (const n of [1, 2, 3, 4]) await urunAc(`Dolgu${n}`, { b2c: 100 });
-  /* Yere göre ayıklama (10.09): stoğu yalnız öteki depoda duran ürün rota müşterisine "başka depoda"
-     görünür; soğuk zincir ürünü rota deposunda durunca kapıya gider — kargolanamamak rotada engel değil. */
+  /* Yere göre ayıklama: stoğu yalnız öteki depoda duran ürün rota müşterisine "başka depoda" görünür; soğuk zincir ürünü rota deposunda
+     durunca kapıya gider. */
   await urunAc('Uzakta', { b2c: 300, stok: true, depo: digerDepoId });
   await urunAc('Soguk', { b2c: 500, stok: true, kargolanamaz: true });
 
@@ -187,11 +170,8 @@ beforeAll(async () => {
     },
     [{ variantId: fistikliVariantId, qty: 1, unitPriceCents: 4570, vatRate: 5.5 }],
   );
-  /* Referansı GEÇİŞE VEREN taraf üretiyor (`transition_order_status`: `coalesce(reference_no,
-     p_reference_no)`) — RPC kendiliğinden üretmiyor ve `advanceOrder` fikstürü referans
-     geçirmiyor. Ölçüldü 24.08: burada `siparisNo` `null` kalıyordu ve aşağıdaki iddia satırı
-     `numara === null` ile bulup YANLIŞ SEBEPLE geçiyordu — şekli doğru sınıyordu ama numarayı
-     hiç sınamıyordu. Numarayı motor üretir, fikstür geçirir. */
+  /* Referansı geçişe veren taraf üretir (`transition_order_status`), RPC kendiliğinden üretmez; fikstür numarayı geçirmezse aşağıdaki
+     iddia `null` ile eşleşip numarayı hiç sınamadan geçerdi. */
   const referenceNo = generateReferenceNo({ year: new Date().getFullYear() });
   const gecis = await new OrderService(db).transition({ orderId: order.id, from: 'draft', to: 'confirmed', referenceNo });
   if (!gecis.ok) throw new Error('fikstür: sipariş onaylanamadı');
@@ -216,9 +196,8 @@ describe('değişmez: kimlik ARGÜMAN değil, KAPANIŞTIR', () => {
       'urun_ara',
     ]);
 
-    /* Her aracın KENDİ geçerli girdisi + kaçak bir kimlik. Yalnız `customerId` göndermek şemayı
-       zaten "zorunlu alan eksik" diye düşürürdü (ölçüldü) — o düşüş kimliğin süzüldüğünü değil,
-       testin yanlış çağırdığını kanıtlardı. */
+    /* Her aracın kendi geçerli girdisi ve kaçak bir kimlik; yalnız `customerId` göndermek şemayı zorunlu alan eksikliğiyle düşürür ve
+       kimliğin süzüldüğünü değil testin yanlış çağırdığını kanıtlardı. */
     const GECERLI: Record<string, Record<string, unknown>> = {
       teslimat_gunleri: {},
       teslimat_sartlari: {},
@@ -237,7 +216,7 @@ describe('değişmez: kimlik ARGÜMAN değil, KAPANIŞTIR', () => {
 
   it('şema kapıdır: kısa posta kodu `execute`a HİÇ ulaşmaz', async () => {
     const tools = customerSupportTools(db, musteriId);
-    // Doğrudan `execute` çağıran bir test bunu göremezdi — 22.08'de tam olarak bu oldu.
+    // Doğrudan `execute` çağıran bir test bunu göremezdi.
     expect(() => (tools.posta_kodu_kontrol!.inputSchema as z.ZodType<unknown>).parse({ postaKodu: '67' })).toThrow();
     expect(() => (tools.urun_ara!.inputSchema as z.ZodType<unknown>).parse({ terim: 'a' })).toThrow();
   });
@@ -264,9 +243,8 @@ describe('kimliksiz sohbet — set BOŞ değil, DAR (28.08 · CHANNELS §3b)', (
   });
 
   it('söylenen GERÇEK kod sohbetin hafızasına yazılır; tanınmayan kod yazılmaz (10.09)', async () => {
-    /* Müşteri posta kodunu bir kez söyler: sepete yazan araçlar sonraki turlarda onu bilir
-       (`cart/chat-place.ts`). Yazım hatası saklansaydı sohbet yanlış bir yere kilitlenir ve her cevap
-       "oraya gitmiyoruz" derdi. Hafıza taklit: bu dosya aracın NE yazdırdığını sınar, yazımın kendisini değil. */
+    /* Müşteri posta kodunu bir kez söyler ve sepete yazan araçlar sonraki turlarda onu bilir; yazım hatası saklansaydı sohbet yanlış bir
+       yere kilitlenirdi. Hafıza taklittir, bu dosya aracın ne yazdırdığını sınar. */
     const yazilan: string[] = [];
     const hafiza = { known: () => null, knownCountry: () => null, remember: async (kod: string) => void yazilan.push(kod) };
     await cagir(customerSupportTools(db, null, null, hafiza), 'posta_kodu_kontrol', { postaKodu: ROTA_KODU });
@@ -275,8 +253,7 @@ describe('kimliksiz sohbet — set BOŞ değil, DAR (28.08 · CHANNELS §3b)', (
   });
 
   it('İKİ ÜLKELİ kodda ülke SORULUR, kod yine saklanır; ülke gelince çözüm tek ülkeye iner (15.20)', async () => {
-    /* Kod referans tablosunda iki hizmet ülkesinde birden geçerli (migration verisi, seed değil). Eskiden
-       saklanmıyordu ve sonraki tur posta kodunu YENİDEN soruyordu; artık kod saklanır, yalnız ülke sorulur. */
+    /* Kod referans tablosunda iki hizmet ülkesinde birden geçerlidir; kod saklanır, yalnız ülke sorulur. */
     const yazilan: [string, string | undefined][] = [];
     const hafiza = {
       known: () => null,
@@ -377,8 +354,7 @@ describe('urun_ara — fiyat MÜŞTERİNİN kendi fiyatıdır', () => {
   });
 
   it('B2C ile B2B müşteri AYNI ürüne farklı fiyat görür', async () => {
-    // Ölçülmüştü (22.08) ama regresyonu yakalayan bir şey yoktu: `pricingViewerOf` çağrısı
-    // düşerse toptancıya perakende fiyat söylenir ve hiçbir yerde hata görünmez.
+    // `pricingViewerOf` çağrısı düşerse toptancıya perakende fiyat söylenir ve hiçbir yerde hata görünmez.
     const perakende = await cagir(customerSupportTools(db, musteriId), 'urun_ara', { terim: `Fistikli ${stamp}` });
     const toptan = await cagir(customerSupportTools(db, b2bId), 'urun_ara', { terim: `Fistikli ${stamp}` });
 
@@ -408,9 +384,8 @@ describe('urun_ara — fiyat MÜŞTERİNİN kendi fiyatıdır', () => {
   });
 
   it('SÖYLENEN posta kodu kayıtlı adresi EZER — başka adrese gönderen müşteri (28.08)', async () => {
-    /* Kayıtlı adresi olan müşteri "annemin evine, şu koda gelir mi" diyebilir. Kayıtlı adres
-       kazansaydı araç DOĞRU bir cevabı YANLIŞ soruya vermiş olurdu — ve müşteri farkı anlayamazdı,
-       çünkü cevapta hangi yere bakıldığı yazmazdı. `yer` alanı tam da bunun için var. */
+    /* Kayıtlı adresi olan müşteri başka bir kodu sorabilir; kayıtlı adres kazansaydı araç doğru cevabı yanlış soruya verirdi. `yer` alanı
+       hangi yere bakıldığını bunun için söyler. */
     const sonuc = await cagir(customerSupportTools(db, musteriId), 'urun_ara', {
       terim: `Fistikli ${stamp}`,
       postaKodu: YABANCI_KOD,
@@ -419,20 +394,20 @@ describe('urun_ara — fiyat MÜŞTERİNİN kendi fiyatıdır', () => {
     // Yabancı kod hiçbir bölgeye düşmüyor → depo çözülemez → stok depo-üstü okunur, ama araç
     // sustuğu için değil, o kod bize gitmediği için: ürün yine listeleniyor.
     expect(sonuc.urunler).toBeDefined();
-    // Referansta olmayan kod bir YAZIM HATASIDIR (10.09): model kodu müşteriye teyit ettirir, "gider" demez.
+    // Referansta olmayan kod bir yazım hatasıdır: model kodu müşteriye teyit ettirir, "gider" demez.
     expect(sonuc.postaKoduGecersiz).toBeTruthy();
   });
 
   it('fiyatsız ürün "0,00 €" değil "bu kanalda satışa kapalı" der', async () => {
-    // `null` fiyat bir sayı değil bir HÂL (DOMAIN §5); sıfıra düşürmek bedavaya satmayı vaat ederdi.
-    // Yeri bilinmeyen müşteri (10.09): bilinen yerde stoksuz ürün listeden AYRILIR; fiyat cümlesi yer istemez.
+    // `null` fiyat bir hâldir (DOMAIN §5), sıfıra düşürmek bedavaya satmayı vaat ederdi. Yeri bilinmeyen müşteride fiyat cümlesi yer
+    // istemez; bilinen yerde stoksuz ürün listeden ayrılır.
     const sonuc = await cagir(customerSupportTools(db, adressizId), 'urun_ara', { terim: `Kapali ${stamp}` });
     expect((sonuc.urunler as { fiyat: string }[])[0]!.fiyat).toBe('bu kanalda satışa kapalı');
   });
 
   it('liste TAVANLI — sekiz eşleşme varken beş ürün döner ve kırpma SÖYLENİR', async () => {
-    // Araç cevabı prompt'a giriyor: sınırsız liste hem maliyeti hem modelin "hangisini söyleyeyim"
-    // belirsizliğini büyütürdü. Yeri bilinmeyen müşteri: ayıklama yok, sekizi de aday (10.09).
+    // Araç cevabı prompt'a girer; sınırsız liste maliyeti ve modelin kararsızlığını büyütürdü. Yeri bilinmeyen müşteride ayıklama yok,
+    // sekizi de aday.
     const sonuc = await cagir(customerSupportTools(db, adressizId), 'urun_ara', { terim: String(stamp) });
     expect((sonuc.urunler as unknown[]).length).toBe(5);
     // Toplam SAYAÇTAN (`total`), sayfadan değil — ve "tam liste değil" cümlesi modelin önünde.
@@ -441,7 +416,7 @@ describe('urun_ara — fiyat MÜŞTERİNİN kendi fiyatıdır', () => {
   });
 
   it('stoksuz ürün "tükendi" der — dört stok hâli dört ayrı cümle', async () => {
-    // Bilinen yerde stoksuz ürün listeye girmez (10.09); "yok" da denmez — sebebiyle ayrı alanda.
+    // Bilinen yerde stoksuz ürün listeye girmez, "yok" da denmez; sebebiyle ayrı alanda durur.
     const sonuc = await cagir(customerSupportTools(db, musteriId), 'urun_ara', { terim: `Dolgu1 ${stamp}` });
     expect(sonuc.urunler).toBeUndefined();
     expect((sonuc.buAdreseGitmeyenler as { urunler: string[] }).urunler[0]).toBe(`Dolgu1 ${stamp} — tükendi`);
@@ -450,8 +425,7 @@ describe('urun_ara — fiyat MÜŞTERİNİN kendi fiyatıdır', () => {
 
 describe('urun_ara — yer biliniyorsa yalnız o adrese GİDEN ürün önerilir (10.09)', () => {
   it('gidebilen listelenir; gidemeyen listeye girmez, sayısı ve sebebi ayrı alanda', async () => {
-    /* Kullanıcı sorusu (10.09): "posta koduna gönderilebilen ürünleri bulabiliyor mu?" Liste her ürüne
-       "bu adrese gider mi" yazıyordu ama gidemeyenlerle doluydu ve tavan gidebilenleri kesebiliyordu. */
+    /* Posta koduna gönderilebilen ürünler bulunabilmeli: gidemeyenler listeyi doldurursa tavan gidebilenleri keserdi. */
     const sonuc = await cagir(customerSupportTools(db, musteriId), 'urun_ara', { terim: String(stamp) });
     const urunler = sonuc.urunler as { ad: string; durum: string }[];
     expect(urunler.map((u) => u.ad).sort()).toEqual([`Fistikli ${stamp}`, `Soguk ${stamp}`]);
@@ -564,8 +538,7 @@ describe('siparislerim — durum söyler, TUTAR söylemez', () => {
     const siparisler = sonuc.siparisler as Record<string, unknown>[];
     expect(siparisler.length).toBeGreaterThan(0);
 
-    // Numaranın DOLU olduğu ayrıca iddia ediliyor: `null === null` eşleşmesi bir satır bulur ve
-    // test numarayı hiç sınamadan geçerdi (24.08'de tam olarak bu oldu).
+    // Numaranın dolu olduğu ayrıca iddia edilir, yoksa `null === null` eşleşmesi numarayı hiç sınamadan geçerdi.
     expect(siparisNo).toMatch(/^LA-/);
     const bizimki = siparisler.find((s) => s.numara === siparisNo);
     expect(bizimki).toBeDefined();
@@ -581,9 +554,8 @@ describe('siparislerim — durum söyler, TUTAR söylemez', () => {
   });
 
   it('siparişi olmayan müşteride boşluğun ADI söylenir — "bilinmiyor" değil', async () => {
-    // Boş liste bir cevaptır ama ADSIZ boş liste değil (f250e161): açıklamasız `[]` modelce
-    // "erişemiyorum" diye yorumlandı ve ajan boşuna devretti. Şimdi araç boşluğu cümleyle söylüyor.
-    // `bilinmiyor` ise okuma düştüğünde gelir ve devretmeyi gerektirir; ikisi karışmamalı.
+    // Boş liste bir cevaptır ama adsız boş liste değil: açıklamasız `[]` modelce "erişemiyorum" diye okunur ve ajan boşuna devreder.
+    // `bilinmiyor` ise okuma düştüğünde gelir ve devretmeyi gerektirir, ikisi karışmamalı.
     const sonuc = await cagir(customerSupportTools(db, adressizId), 'siparislerim');
     expect(sonuc.siparisler).toBeUndefined();
     expect(String(sonuc.siparisYok)).toContain('kayıtlı siparişi YOK');
