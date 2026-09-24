@@ -51,7 +51,8 @@ import { resolveCheckoutPayment } from './checkout-options';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
 import { readUnitCosts } from './unit-costs';
 import { optionForPricing, parcelPlanSnapshot, pricedOptions, servicePointSnapshot, shippingVatLines } from './shipping-selection';
-import { quoteFailureOf, quoteShipping } from '../shipping/quote';
+import { quoteDataGap, quoteFailureOf, quoteShipping } from '../shipping/quote';
+import { notifyShippingDataMissing } from '../notification/staff-events';
 import { sendcloudProvider, shippingProviderConfigured } from '../shipping/provider';
 import type { ShippingRateProvider } from '../shipping/port';
 
@@ -325,6 +326,9 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
           items: orderedLines.flatMap((l) => (l.variantId ? [{ variantId: l.variantId, qty: l.qty }] : [])),
         })
       : null;
+  // Elle siparişte ekran okuması yoktur; eksik veri operasyona buradan da haber olur.
+  const dataGap = quoteDataGap(quote);
+  if (dataGap && orderWarehouseId) await notifyShippingDataMissing(db, { ...dataGap, warehouseId: orderWarehouseId });
   // Ücretin KDV'si ekranın satırlarından: sipariş kalemleri (açılmış paket, ters vergilendirmede sıfır oran) başka bir ücret çıkarırdı.
   const vatLines = shippingVatLines(scope.lines);
   const quoted = quote?.status === 'ok' ? pricedOptions(quote.options, vatLines) : [];

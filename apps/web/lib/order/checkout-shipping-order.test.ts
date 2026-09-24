@@ -178,7 +178,10 @@ afterAll(async () => {
   await purgeVariantStock(db, [variantId, localVariantId]);
   await db.from('address').delete().in('customer_id', [customerId, b2bCustomerId]);
   await db.from('delivery_zone').delete().eq('id', zoneId);
+  // Zil satırı seed yöneticilerine de yazılır ve profil purge'üyle gitmez; anahtar test varyantına bağlı.
+  const { data: ziller } = await db.from('notification').select('id').eq('dedupe_key', `shipping-data:unmeasured:${variantId}`);
   await purgeTestData(db, {
+    notificationIds: ((ziller ?? []) as { id: string }[]).map((r) => r.id),
     productIds: [productId, localProductId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
@@ -494,12 +497,20 @@ describe('fiyatsız kargo siparişi', () => {
     expect(await new OrderService(db).getById(outcome.orderId)).toMatchObject({ shippingFeeCents: 0, shippingOptionCode: null });
   });
 
-  it('ölçüsü eksik ürün kargoyla sipariş açmaz; ekran ürünün adını söyler', async () => {
+  it('ölçüsü eksik ürün kargoyla sipariş açmaz; ekran ürünün adını söyler, operasyona haber gider', async () => {
+    const personel = await new UserProfileService(db).insert({ name: `Kargo personeli ${stamp}`, roles: ['admin'] });
+    createdProfiles.push(personel.id);
     const variants = new ProductVariantService(db);
     await variants.update({ id: variantId, packedWeightG: null });
     try {
       const ekran = await ekranOku();
       expect(ekran.shipping).toMatchObject({ status: 'unmeasured', unshippable: [expect.stringContaining(`Kargo ürünü ${stamp}`)] });
+      const { data: zil } = await db
+        .from('notification')
+        .select('id')
+        .eq('profile_id', personel.id)
+        .eq('dedupe_key', `shipping-data:unmeasured:${variantId}`);
+      expect(zil).toHaveLength(1);
       expect(await createCheckoutDraft({ ...base(), entries: entries(), shippingOrder: true })).toEqual({
         status: 'shipping_unpriced',
         reason: 'data',

@@ -246,6 +246,14 @@ const BELGE_ADI: Record<string, string> = {
 const belgeAdi = (p: Record<string, unknown>): string =>
   (typeof p.event === 'string' ? BELGE_ADI[p.event] : undefined) ?? 'belge';
 
+/** Kargo teklifini durduran eksik (`payload.reason`): düzeltmenin yeri ürün kartı ya da depo ekranıdır. */
+const KARGO_EKSIGI: Record<string, string> = {
+  unmeasured: 'ambalaj ölçüsü eksik',
+  too_large: 'en büyük kargo kutusuna sığmıyor',
+  no_box: 'deponun kargo kutusu yok',
+  no_sender: 'depo adresi eksik',
+};
+
 const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, unknown>) => StaffNotificationBrief>> = {
   document_undeliverable: (p) => ({
     // `alert`: yasal belge hiçbir kanala ulaşamadı, iş insana düştü.
@@ -293,6 +301,13 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
     label: 'Transfer',
     title: `Transfer fazla kabul edildi${referans(p)}`,
     subtitle: `${typeof p.excessQty === 'number' ? p.excessQty : '?'} adet fazla · ${typeof p.toWarehouseCode === 'string' ? p.toWarehouseCode : 'alan depo'} stoğuna yazdı`,
+  }),
+  // `alert`: eksik giderilene kadar müşteri o ürünü eşik altında kargoyla alamaz.
+  shipping_data_missing: (p) => ({
+    tone: 'alert',
+    label: 'Kargo',
+    title: `Kargo fiyatı alınamıyor${typeof p.sku === 'string' && p.sku ? ` — ${p.sku}` : ''}`,
+    subtitle: typeof p.reason === 'string' ? (KARGO_EKSIGI[p.reason] ?? null) : null,
   }),
   b2b_application_received: () => ({
     tone: 'attention',

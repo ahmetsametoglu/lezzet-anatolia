@@ -120,17 +120,21 @@ export async function quoteShipping(
   };
 }
 
+/** Teklifi durduran veri eksiği ve ilgili varyantlar (ölçüsüz ya da kutuya sığmayan); `null` = verimiz tam. */
+export type ShippingDataGap = { reason: 'unmeasured' | 'too_large' | 'no_box' | 'no_sender'; variantIds: readonly string[] };
+
+export function quoteDataGap(quote: ShippingQuoteOutcome | null): ShippingDataGap | null {
+  if (quote === null || quote.status === 'ok' || quote.status === 'provider_error') return null;
+  if (quote.status === 'unmeasured') return { reason: 'unmeasured', variantIds: quote.variantIds };
+  if (quote.status === 'too_large') return { reason: 'too_large', variantIds: [quote.variantId] };
+  return { reason: quote.status, variantIds: [] };
+}
+
 /**
  * Teklifin neden alınamadığı: `carrier` taşıyıcıya ulaşılamadı ya da sağlayıcı kurulu değil (teklif hiç sorulmadı), geçicidir; `data`
  * ürün ya da depo verimiz eksik ve düzeltmesi bizde.
  */
 export function quoteFailureOf(quote: ShippingQuoteOutcome | null): 'carrier' | 'data' | null {
-  if (quote === null || quote.status === 'provider_error') return 'carrier';
-  return quote.status === 'ok' ? null : 'data';
-}
-
-/** Teklifi durduran varyantlar: ölçüsü eksik olanlar ya da en büyük kutuya sığmayan. */
-export function unshippableVariantsOf(quote: ShippingQuoteOutcome | null): readonly string[] {
-  if (quote?.status === 'unmeasured') return quote.variantIds;
-  return quote?.status === 'too_large' ? [quote.variantId] : [];
+  if (quote?.status === 'ok') return null;
+  return quoteDataGap(quote) ? 'data' : 'carrier';
 }

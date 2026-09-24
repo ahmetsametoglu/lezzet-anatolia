@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CategoryService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
-import { notifyStockLowAfterReserve, notifyTicketOpened } from './staff-events';
+import { notifyShippingDataMissing, notifyStockLowAfterReserve, notifyTicketOpened } from './staff-events';
 
 /**
- * Personel olay üreticileri: `stock_low` eşik altında satır doğurur ve aynı düşüşü ikinci kez zile düşürmez, `ticket_opened` talep başına
- * tek haberdir. Fan-out `dispatch.test`te sınanır, burada üreticinin kararı; satırlar testin kurduğu personele yazılır ve purge ile gider.
+ * Personel olay üreticileri: `stock_low` aynı düşüşü, `ticket_opened` aynı talebi, `shipping_data_missing` aynı ürün ya da depo eksiğini
+ * ikinci kez zile düşürmez. Fan-out `dispatch.test`te sınanır, burada üreticinin kararı; satırlar testin kurduğu personele yazılır ve purge
+ * ile gider.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -50,7 +51,12 @@ afterAll(async () => {
   const { data } = await db
     .from('notification')
     .select('id')
-    .in('dedupe_key', [`stock-low:${warehouseId}:${variantId}`, `ticket-opened:${ticketId}`]);
+    .in('dedupe_key', [
+      `stock-low:${warehouseId}:${variantId}`,
+      `ticket-opened:${ticketId}`,
+      `shipping-data:unmeasured:${variantId}`,
+      `shipping-data:no_box:${warehouseId}`,
+    ]);
   await purgeTestData(db, {
     notificationIds: ((data ?? []) as { id: string }[]).map((r) => r.id),
     profileIds: [staffId],
@@ -90,5 +96,38 @@ describe('notifyTicketOpened', () => {
 
     const { data } = await db.from('notification').select('payload').eq('profile_id', staffId).eq('kind', 'ticket_opened').single();
     expect((data as { payload: Record<string, unknown> }).payload).toMatchObject({ ticketType: 'damaged', referenceNo: 'LA-26-SE1' });
+  });
+});
+
+describe('notifyShippingDataMissing', () => {
+  // Ekran okuması her seçimde tekrarlanır; tekilleştirme tutmazsa eksik giderilene kadar her okuma yeni bir zil satırı yazardı.
+  it('ürün eksiği ürün başına tek haberdir ve ürün kartına açılacak kimliği taşır', async () => {
+    await notifyShippingDataMissing(db, { reason: 'unmeasured', variantIds: [variantId], warehouseId });
+    await notifyShippingDataMissing(db, { reason: 'unmeasured', variantIds: [variantId], warehouseId });
+    expect(await kendiSatirlarim('shipping_data_missing')).toBe(1);
+
+    const { data } = await db
+      .from('notification')
+      .select('payload, target_type, target_id, warehouse_id')
+      .eq('profile_id', staffId)
+      .eq('kind', 'shipping_data_missing')
+      .single();
+    expect(data).toMatchObject({
+      payload: { reason: 'unmeasured', productId, sku: `SE-${stamp}` },
+      target_type: 'variant',
+      target_id: variantId,
+      warehouse_id: warehouseId,
+    });
+  });
+
+  it('depo eksiği ürünsüzdür: hedefsiz tek haber', async () => {
+    await notifyShippingDataMissing(db, { reason: 'no_box', variantIds: [], warehouseId });
+    await notifyShippingDataMissing(db, { reason: 'no_box', variantIds: [], warehouseId });
+    const { data } = await db
+      .from('notification')
+      .select('payload, target_type')
+      .eq('profile_id', staffId)
+      .eq('dedupe_key', `shipping-data:no_box:${warehouseId}`);
+    expect(data).toEqual([{ payload: { reason: 'no_box' }, target_type: null }]);
   });
 });

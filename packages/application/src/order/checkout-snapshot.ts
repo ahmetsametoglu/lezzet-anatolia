@@ -17,7 +17,8 @@ import type { CartDiscount, CartEntry, CartLine, DiscountReason } from '../cart/
 import { chooseShippingOption, homeShortlist, needsServicePoint } from '@lezzet/domain-core';
 import { resolveCheckoutPayment } from './checkout-options';
 import { optionForPricing, pricedOptions, shippingVatLines } from './shipping-selection';
-import { quoteShipping, unshippableVariantsOf } from '../shipping/quote';
+import { quoteDataGap, quoteShipping } from '../shipping/quote';
+import { notifyShippingDataMissing } from '../notification/staff-events';
 import { sendcloudProvider, shippingProviderConfigured } from '../shipping/provider';
 import type { ShippingRateProvider } from '../shipping/port';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
@@ -222,6 +223,9 @@ export async function readCheckoutSnapshot(
           items: scope.lines.flatMap((l) => (l.variantId ? [{ variantId: l.variantId, qty: l.qty }] : [])),
         })
       : null;
+  // Verimizin eksiği teklifi durdurur; operasyon hangi ürün ya da depo olduğunu zilden öğrenir.
+  const dataGap = quoteDataGap(shipping);
+  if (dataGap && quoteWarehouseId) await notifyShippingDataMissing(db, { ...dataGap, warehouseId: quoteWarehouseId });
 
   // Fiyat sunucudan okunur, istemci yalnız kodu söyler; ön seçim de burada yapılır ki liste ile ücret aynı hesaptan çıksın.
   const vatLines = shippingVatLines(scope.lines);
@@ -288,7 +292,7 @@ export async function readCheckoutSnapshot(
         : {
             status: shipping.status,
             // Ad kapsamın satırlarından: teklif varyant kimliği söyler, müşteri ürünün adını tanır.
-            unshippable: scope.lines.flatMap((l) => (l.variantId && unshippableVariantsOf(shipping).includes(l.variantId) ? [l.name] : [])),
+            unshippable: scope.lines.flatMap((l) => (l.variantId && dataGap?.variantIds.includes(l.variantId) ? [l.name] : [])),
             options:
               shipping.status === 'ok'
                 ? // Eve teslimde en ucuz ve en hızlı, noktaya teslimde hepsi (harita taşıyıcı başına fiyatı bunlardan okur).

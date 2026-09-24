@@ -2,6 +2,7 @@ import { ProductVariantService, StockService, WarehouseService } from '@lezzet/d
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { TicketType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { ShippingDataGap } from '../shipping/quote';
 import { dispatchStaffNotification } from './dispatch';
 
 /*
@@ -194,5 +195,37 @@ export async function notifyTransferExcess(
     });
   } catch (err) {
     yut(err, 'transfer_excess');
+  }
+}
+
+/**
+ * Müşteri kargo fiyatı alamadı, çünkü verimiz eksik: haber ürün başına ya da depo başına birdir ve dedupe kalıcıdır, çünkü eksiği ürün
+ * kartı ya da depo ekranı taşır. Ürün kimliği payload'da, çünkü ölçü ürün kartında düzeltilir ve web oraya açar.
+ */
+export async function notifyShippingDataMissing(db: SupabaseClient, input: ShippingDataGap & { warehouseId: string }): Promise<void> {
+  try {
+    const ortak = {
+      kind: 'shipping_data_missing' as const,
+      roles: ['admin' as const, 'warehouse' as const],
+      warehouseId: input.warehouseId,
+    };
+    if (input.variantIds.length === 0) {
+      await dispatchStaffNotification(db, {
+        ...ortak,
+        payload: { reason: input.reason },
+        dedupeKey: `shipping-data:${input.reason}:${input.warehouseId}`,
+      });
+      return;
+    }
+    for (const variant of await new ProductVariantService(db).listByIds([...input.variantIds])) {
+      await dispatchStaffNotification(db, {
+        ...ortak,
+        target: { type: 'variant', id: variant.id },
+        payload: { reason: input.reason, productId: variant.productId, ...(variant.sku ? { sku: variant.sku } : {}) },
+        dedupeKey: `shipping-data:${input.reason}:${variant.id}`,
+      });
+    }
+  } catch (err) {
+    yut(err, 'shipping_data_missing');
   }
 }

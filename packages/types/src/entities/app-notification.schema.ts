@@ -51,6 +51,11 @@ export const AppNotificationKindEnum = z.enum([
    * hâlâ durur ve kendi sayımında bulunmalı.
    */
   'transfer_excess',
+  /**
+   * Müşteri kargo fiyatı alamadı, çünkü ürün ya da depo verimiz eksik (ölçüsüz ya da kutuya sığmayan ürün, kutusuz ya da adressiz depo);
+   * düzeltilene kadar o ürün eşik altında kargoyla satılamaz.
+   */
+  'shipping_data_missing',
 ]);
 export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
 
@@ -67,6 +72,7 @@ export const STAFF_NOTIFICATION_KINDS = [
   'b2b_application_received',
   'transfer_shortfall',
   'transfer_excess',
+  'shipping_data_missing',
 ] as const satisfies readonly AppNotificationKind[];
 
 /** "Tıkla, git" hedefinin türü — adres, içerik değil. Yeni hedef türü ekranıyla birlikte gelir. */

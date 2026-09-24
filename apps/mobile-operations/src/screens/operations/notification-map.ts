@@ -67,6 +67,8 @@ const DESTINATION: Partial<Record<AppNotificationKind, (targetId: string | null)
 const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, OperationsSection>> = {
   document_undeliverable: 'management',
   run_close_pending: 'management',
+  // Ölçü ürün kartında, kutu ve adres depo ekranında düzeltilir; ikisi de web operasyonunda.
+  shipping_data_missing: 'management',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */
