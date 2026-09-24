@@ -307,7 +307,7 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
    */
   z.object({ status: z.literal('cart_changed') }),
   z.object({ status: z.literal('customer_not_found') }),
-  /** Seçilen kargo servisi artık yok; ekran listeyi yeniden okur. */
+  /** Seçilen kargo servisi bu sepette yok; ekran listeyi yeniden okur. */
   z.object({ status: z.literal('shipping_option_unavailable') }),
   /** Servis teslim noktası istiyor ama nokta yok, kapalı ya da başka taşıyıcının. */
   z.object({ status: z.literal('service_point_invalid') }),

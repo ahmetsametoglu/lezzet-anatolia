@@ -85,7 +85,7 @@ describe('kargo ücreti ve KDV (07.3)', () => {
   });
 
   it('eşik üstü kargo bedava', async () => {
-    // Sepet eşiğin (100 €) ÜSTÜNDE olmalı — eski 80 € artık eşiğin altında kalıyordu.
+    // Sepet eşiğin (100 €) üstünde olmalı.
     const r = await odemeCozumle({ customerId, deliveryType: 'shipping', basketCents: 12000, lines: [{ totalCents: 12000, vatRate: 5.5 }] });
     expect(r).toMatchObject({ shippingFeeCents: 0, shippingFreeReason: 'threshold' });
   });

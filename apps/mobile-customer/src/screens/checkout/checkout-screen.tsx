@@ -127,7 +127,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /* Seçili adres sunucuyla aynı kuralla çözülür (varsayılan, yoksa ilk); ekran açılışta seçim yazmaz, yoksa müşterinin
      yapmadığı bir seçim doğardı. */
   const selectedAddress = addresses.find((a) => a.id === addressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
-  /* Adres değişince önceki doğrulama artık bu adresin cevabı değildir. */
+  /* Adres değişince önceki doğrulama bu adresin cevabı değildir. */
   const selectedAddressId = selectedAddress?.id ?? null;
   useEffect(() => {
     checkedFor.current = null;

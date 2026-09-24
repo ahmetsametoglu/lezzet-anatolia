@@ -8,27 +8,8 @@ import { formatDeliveryDate } from '@/screens/orders/order-format';
 import type messages from '@lezzet/i18n/customer/checkout';
 
 /*
-  RETLERİN CÜMLESİ — sunucunun ADLI cevabı ekranın diline burada çevrilir.
-
-  ── TEK "OLMADI" CÜMLESİ YOK ────────────────────────────────────────────────
-  On beş ret hâlinin her biri müşteriden BAŞKA bir şey istiyor: `blocked_lines` satır çıkarmayı,
-  `insufficient_here` adet düşürmeyi, `price_changed` yeni fiyatı onaylamayı, `date_unavailable`
-  başka gün seçmeyi, `min_basket` sepeti büyütmeyi, `address_city_mismatch` adresi düzeltmeyi.
-  Hepsini "bir şeyler ters gitti"ye indirmek, müşteriye neyi düzelteceğini söylememek olurdu —
-  çoğu sepeti büsbütün terk ederdi (sözleşme künyesinin kendi gerekçesi).
-
-  ── PARA BİÇİMLEMESİ EKRANIN İŞİ ────────────────────────────────────────────
-  Sunucu YAPISAL döner (cent + ad); `{detail}` yerleri burada, seçili dille kuruluyor
-  (`formatPrice`). Sunucudan biçimli metin istemek, aynı tutarı üç dilde üç kez yazdırmak olurdu.
-
-  ── ÜRÜN ADI SUNUCUDAN İKİNCİ KEZ İSTENMEZ ──────────────────────────────────
-  `insufficient_stock` yalnız `variantId` taşır ve bu bilinçli (sözleşme künyesi): ekranın elinde
-  zaten çözülmüş sepet görünümü var. Adı çözen kapı çağırandan gelir (`resolveName`); ad
-  bulunamazsa adsız cümle kurulur — uydurulmuş bir ad, yanlış ürünü düzelttirirdi.
-
-  ── DERLEME KİLİDİ ──────────────────────────────────────────────────────────
-  `switch` TAM: sözleşmeye yarın yeni bir ret eklenirse bu dosya DERLENMEZ (`never` ataması) ve
-  fark edilir. Varsayılan bir dala düşseydi yeni hâl sessizce eski bir cümleye karışırdı.
+  Retlerin cümlesi: her ret müşteriden başka bir şey istediği için tek "olmadı" cümlesi yoktur; para ve ürün adı ekranın elindeki
+  görünümden kurulur. `switch` tamdır, sözleşmeye yeni bir ret eklenince dosya derlenmez ve yeni hâl eski bir cümleye karışmaz.
 */
 
 type Messages = LocalizedCopy<typeof messages>;

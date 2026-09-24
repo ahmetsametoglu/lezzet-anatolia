@@ -95,7 +95,7 @@ export type CheckoutDraftOutcome =
   /** Yük taşımaz: söylenecek şey ekranın kendisidir, özet yeniden okununca yeni liste görünür. */
   | { status: 'cart_changed' }
   | { status: 'customer_not_found' }
-  /** Seçilen kargo servisi bu sepette artık yok ya da seçim bize kalmışken eve giden servis yok; ekran listeyi yeniden okur. */
+  /** Seçilen kargo servisi bu sepette yok ya da seçim bize kalmışken eve giden servis yok; ekran listeyi yeniden okur. */
   | { status: 'shipping_option_unavailable' }
   /** Servis teslim noktası istiyor ama nokta yok, kapalı ya da başka taşıyıcının. */
   | { status: 'service_point_invalid' }
@@ -146,8 +146,8 @@ export interface CheckoutDraftInput {
   /** Testte sahte sağlayıcı; verilmezse ortamın Sendcloud'u, o da yoksa teklifsiz (sabit tarife). */
   rateProvider?: ShippingRateProvider | null;
   /**
-   * Gel-al: müşterinin malı alacağı depo. Doluysa tür `pickup`, depo bu, bölge ve gün yok; adres yine yazılır (fatura adresi).
-   * Açık seçimdir (`shippingOrder` gibi): anlık görüntü gel-al gösterirken taslak adresin cevabını açamaz.
+   * Gel-al: müşterinin malı alacağı depo; doluysa tür `pickup`, bölge ve gün yok, adres fatura adresi olarak yazılır. Açık seçimdir
+   * (`shippingOrder` gibi), çünkü anlık görüntü gel-al gösterirken taslak adresin cevabını açamaz.
    */
   pickupWarehouseId?: string | null;
   /** Verilmezse paket satırı engelli durur; paket taşımayan yüzey bu kapıyı geçmez. */
@@ -206,8 +206,8 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     return { status: 'warehouse_unresolved', reason: 'no_shipping_warehouse' };
   }
 
-  // Sipariş yalnız kendi şeridini alır. Şerit müşterinin gerçek yeriyle okunur, çünkü aşağıdaki okuma kargo siparişinde kargo
-  // deposuyla yapılır ve orada her satır `local` görünür. Personel siparişi daraltılmaz: kalemi sessizce düşürmek yerine reddedilir.
+  // Sipariş yalnız kendi şeridini alır ve şerit müşterinin gerçek yeriyle okunur, çünkü aşağıdaki okuma kargo siparişinde kargo
+  // deposuyla yapılır ve orada her satır `local` görünür. Personel siparişi daraltılmaz, kalemi sessizce düşürmek yerine reddedilir.
   const addressOutOfRoute = place.deliveryType === 'shipping';
   let entries = input.entries;
   if (!pickupWarehouse && !input.staff) {
@@ -221,7 +221,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     });
     const lane = orderLaneOf(Boolean(input.shippingOrder), addressOutOfRoute);
     const narrowed = laneEntriesOf(classified, input.entries, lane, addressOutOfRoute);
-    // Şerit boşsa eski ret yolları olduğu gibi çalışsın diye kalemler daraltılmaz.
+    // Şerit boşsa ret yolları olduğu gibi çalışsın diye kalemler daraltılmaz.
     if (narrowed.length > 0) entries = narrowed;
   }
 
