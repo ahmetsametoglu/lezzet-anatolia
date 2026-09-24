@@ -67,24 +67,35 @@ export function CheckoutMobile(props: CheckoutViewProps) {
 
   // Döküm ve toplam aynı okumadan: özet varsa satırlar da indirim de ondan, yoksa ikisi de sepetten, asla karışık. Adres
   // seçilmeden özet yoktur ve o hâlde sepete düşmek doğrudur.
+  // Sunucu cevap vermeden özet sepetten kurulmaz: sepet bu siparişin grubunu bilmez ve bölünmüş sepette bütün sepeti yazardı.
+  const settled = cartReady && snapshotReady;
   const orderedCartLines = cart.lines.filter((line) => line.group !== 'undeliverable');
-  const summaryLines: SummaryLine[] =
-    summary === null
+  const summaryLines: SummaryLine[] = !settled
+    ? []
+    : summary === null
       ? orderedCartLines.map((line) => ({ key: cartKey(line), name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }))
       : summary.lines.map((line, index) => ({ key: `order-${index}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }));
   // Bu adrese gelemeyen kalem siparişe girmez, sepette bekler; özette üstü çizili durur.
-  const droppedLines: SummaryLine[] =
-    summary === null
+  const droppedLines: SummaryLine[] = !settled
+    ? []
+    : summary === null
       ? cart.lines
           .filter((line) => line.group === 'undeliverable')
           .map((line) => ({ key: `dropped-${cartKey(line)}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }))
       : summary.excludedLines.map((line, index) => ({ key: `dropped-${index}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }));
 
   // Toplam SUNUCUNUN kararıdır; sepet okunmadan yazılmaz (CLAUDE §1 — ölçülemeyen değer sıfır değil).
-  const totalLabel = cartReady ? formatPrice(payment?.orderTotalCents ?? cart.totalCents, locale) : UNKNOWN_AMOUNT;
-  const feeLabel = payment === null ? copy.summary.pending : payment.shippingFeeCents === 0 ? copy.summary.free : formatPrice(payment.shippingFeeCents, locale);
-  const discountCents =
-    summary !== null
+  const totalLabel = settled ? formatPrice(payment?.orderTotalCents ?? cart.totalCents, locale) : UNKNOWN_AMOUNT;
+  const feeLabel = !settled
+    ? UNKNOWN_AMOUNT
+    : payment === null
+      ? copy.summary.pending
+      : payment.shippingFeeCents === 0
+        ? copy.summary.free
+        : formatPrice(payment.shippingFeeCents, locale);
+  const discountCents = !settled
+    ? 0
+    : summary !== null
       ? (summary.discount?.amountCents ?? 0)
       : cart.discount.status === 'applied' || cart.discount.status === 'automatic'
         ? cart.discount.amountCents
@@ -97,7 +108,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
     {
       key: 'subtotal',
       label: copy.summary.subtotal,
-      value: cartReady ? formatPrice(summary?.subtotalCents ?? cart.subtotalCents - cart.undeliverableSubtotalCents, locale) : UNKNOWN_AMOUNT,
+      value: settled ? formatPrice(summary?.subtotalCents ?? cart.subtotalCents - cart.undeliverableSubtotalCents, locale) : UNKNOWN_AMOUNT,
     },
     // İndirimin KÜNYESİ sepetle aynı yardımcıdan: müşteri aynı indirimi iki ekranda iki adla okumasın.
     ...(discountCents > 0

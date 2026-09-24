@@ -18,6 +18,9 @@ export function formatPrice(cents: number, locale: Locale): string {
   return `${amount}${EURO_SUFFIX}`;
 }
 
+/** Tutarı bilinmeyen satırın değeri: sıfır değil cevapsızlık; `formatPrice`ın yanında durur ki her çağıran kendi işaretini uydurmasın. */
+export const UNKNOWN_AMOUNT = '—';
+
 /**
  * Eşik ve eşleştirme tutarı: tam euroda kuruşsuz (`5 €`), kesirlide kuruşlu (`7,90 €`), çünkü "60 € üzeri kargo ücretsiz"de
  * `60,00 €` olmayan bir hassasiyet iddia eder. Ürün ve sipariş tutarları bununla değil, kuruşuyla `formatPrice` ile yazılır.

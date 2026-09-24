@@ -207,6 +207,24 @@ describe('CheckoutScreen — siparişin kapsamı', () => {
     expect(summary.getByText('1× Kaymak')).toBeOnTheScreen();
     expect(summary.getByText('32,50 €')).toBeOnTheScreen();
   });
+
+  it('sunucu cevap vermeden özete yerel sepetten kalem ve tutar yazmaz', async () => {
+    mockCart = cartWith(
+      cartView([
+        cartViewLine(1, 'Baklava', 'local', { unitPriceCents: 2000 }),
+        cartViewLine(2, 'Simit', 'shipping', { unitPriceCents: 550 }),
+      ]),
+    );
+    // Yerel sepet bölünmüş sepetin iki grubunu da taşır; cevap dönmeden yazılan özet bu siparişin olmayan kalemini de sayardı.
+    fetchMock.mockReturnValue(new Promise<Response>(() => {}));
+
+    await render(<CheckoutScreen />);
+
+    const summary = within(screen.getByTestId('checkout-summary'));
+    expect(summary.queryByText('1× Baklava')).toBeNull();
+    expect(summary.queryByText('1× Simit')).toBeNull();
+    expect(summary.queryAllByText(/€/)).toHaveLength(0);
+  });
 });
 
 /*

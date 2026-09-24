@@ -589,7 +589,8 @@ export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, onTo
 
 /** Sağdaki (mobil webde alttaki) özet — kalemler, indirim, kargo, toplam ve onay düğmesi. */
 export function OrderSummary(props: CheckoutViewProps) {
-  const { t, locale, cart, cartReady, cartFailed, snapshot, state, compact, busy, error, onConfirm, selectedAddress } = props;
+  const { t, locale, cart, cartReady, cartFailed, snapshot, snapshotReady, state, compact, busy, error, onConfirm, selectedAddress } =
+    props;
   const { addressNotice, onAcceptAddressFix, onDismissAddressNotice } = props;
   const payment = snapshot.payment;
   const delivery = snapshot.delivery;
@@ -612,6 +613,8 @@ export function OrderSummary(props: CheckoutViewProps) {
     yüzeyde paylaşıldığı için liste ile toplam ayrışabilir. Adres seçilmeden özet yoktur ve o hâlde sepete düşmek doğrudur.
   */
   const orderSummary = snapshot.summary;
+  // Sunucu cevap vermeden özet sepetten kurulmaz: sepet bu siparişin grubunu bilmez ve bölünmüş sepette bütün sepeti yazardı.
+  const settled = cartReady && snapshotReady;
   const summaryLines: { key: string; kind: 'variant' | 'bundle'; name: string; qty: number; lineTotalCents: number | null }[] =
     orderSummary === null
       ? cart.lines.map((line) => ({ key: cartKey(line), kind: line.kind, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }))
@@ -639,16 +642,16 @@ export function OrderSummary(props: CheckoutViewProps) {
       {/* Kalemler özetin içinde, tek sütunda: checkout'un sorusu "ne aldım" değil "ne ödüyorum" ve ad satırları o toplamın
           dökümü. Ara toplam yazılmaz, çünkü genel toplamla karıştırılan üçüncü bir sayı olurdu. */}
       <div className="flex flex-col gap-1.5">
-        {/* Sepet istemcide okunduğu için ilk karede kalem yok; boş bırakmak "özetiniz yok" gibi okunur, iskelet yerini tutar ve
-            tutarlar gelince sayfa zıplamaz. */}
-        {!cartReady &&
+        {/* Sepet ve özet istemcide okunduğu için ilk karede kalem yok; boş bırakmak "özetiniz yok" gibi okunur, iskelet yerini tutar
+            ve tutarlar gelince sayfa zıplamaz. */}
+        {!settled &&
           [0, 1, 2].map((i) => (
             <div key={i} className="flex items-baseline justify-between gap-3">
               <Skeleton className="h-3 w-2/5" />
               <Skeleton className="h-3 w-14" />
             </div>
           ))}
-        {cartReady &&
+        {settled &&
           summaryLines.map((line) => (
             <SummaryRow
               key={line.key}
@@ -658,7 +661,7 @@ export function OrderSummary(props: CheckoutViewProps) {
               value={line.lineTotalCents === null ? UNKNOWN_AMOUNT : formatPrice(line.lineTotalCents, locale)}
             />
           ))}
-        {discountCents > 0 && (
+        {settled && discountCents > 0 && (
           // Etiket sepetle AYNI yardımcıdan: müşteri iki ekranda aynı indirimi iki türlü okumamalı.
           <SummaryRow
             /* Künye de aynı kaynaktan: özet varsa sunucunun çözdüğü ad, yoksa sepetin türetmesi.
@@ -682,7 +685,7 @@ export function OrderSummary(props: CheckoutViewProps) {
           <span className="font-sans text-card-title-sm font-bold text-ink">{summary.total}</span>
           {/* Sepet okunmadan toplam yazılmaz: `formatPrice(0)` misafirde kalıcı olarak "0,00 €" gösterir ve sepet boş ya da bedava
               gibi okunurdu. */}
-          {cartReady ? (
+          {settled ? (
             <span className="font-sans text-card-title-sm font-bold text-ink">{formatPrice(totalCents, locale)}</span>
           ) : (
             <Skeleton className="h-4 w-20" />

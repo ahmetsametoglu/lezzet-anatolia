@@ -1,23 +1,14 @@
-import { formatPrice, formatShortDate, formatTime } from '@lezzet/helper';
+import { UNKNOWN_AMOUNT, formatPrice, formatShortDate, formatTime } from '@lezzet/helper';
 import { INTL_LOCALE, type Locale } from '@lezzet/i18n';
 
 /**
  * Vitrin biçimleri — sözleşme HAM cent taşır (`storefront-types`), gösterim burada kurulur; ayrı
  * durması aynı değerin masaüstü ve mobil web dosyasında iki kez biçimlendirilmesini önler.
  *
- * `formatPrice`, `formatShortDate` ve `formatTime` gövdeleri `@lezzet/helper`da — üçünün de web
- * dışında tüketeni var (native uygulama, `@lezzet/application`) ve o paketler `apps/web`ten import
- * edemez; buradan yeniden dışa veriliyorlar ki web çağıranları tek yolu kullansın.
+ * `formatPrice`, `formatShortDate`, `formatTime` ve `UNKNOWN_AMOUNT` gövdeleri `@lezzet/helper`da, çünkü web dışında da
+ * tüketilirler (native uygulama, `@lezzet/application`); buradan yeniden dışa verilirler ki web çağıranları tek yolu kullansın.
  */
-export { formatPrice, formatShortDate, formatTime };
-
-/**
- * Tutarı BİLİNMEYEN satırın değeri — sıfır değil, cevapsızlık.
- *
- * Burada duruyor çünkü "bilinmiyor" da bir yazım biçimidir: `formatPrice`ın yanında olmazsa her
- * çağıran kendi işaretini uydurur (biri "—", biri "?", biri sessizce `formatPrice(0)`).
- */
-export const UNKNOWN_AMOUNT = '—';
+export { UNKNOWN_AMOUNT, formatPrice, formatShortDate, formatTime };
 
 /**
  * Ondalıklı sayı — ayraç DİLE göre değişir (tr/fr/de: virgül), çünkü elle `String(value)` yazmak

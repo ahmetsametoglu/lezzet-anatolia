@@ -1,4 +1,4 @@
-import { formatPrice } from '@lezzet/helper';
+import { UNKNOWN_AMOUNT, formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { AddressCheckResult, PaymentMethod } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -234,13 +234,17 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     paylaşıldığı için liste ile toplam ayrışabilir. Adres seçilmeden özet yoktur ve yerel sepete düşmek doğrudur.
   */
   const summary = snapshot?.summary ?? null;
-  const summaryLines: { key: string; name: string; qty: number; lineTotalCents: number | null }[] =
-    summary === null
+  // Sunucu cevap vermeden özet yerel sepetten kurulmaz: yerel sepet bu siparişin grubunu bilmez ve bölünmüş sepette bütün sepeti yazardı.
+  const pending = checkout.status === 'loading';
+  const summaryLines: { key: string; name: string; qty: number; lineTotalCents: number | null }[] = pending
+    ? []
+    : summary === null
       ? orderedLines.map((line) => ({ key: cartLineId(line), name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }))
       : summary.lines.map((line, index) => ({ key: `order-${index}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }));
   /* Sipariş dışı kalanlar da aynı kaynaktan, yoksa özetin yarısı yerelden çizilir ve liste ile toplam ayrışır. */
-  const droppedRows: { key: string; name: string; qty: number; lineTotalCents: number | null }[] =
-    summary === null
+  const droppedRows: { key: string; name: string; qty: number; lineTotalCents: number | null }[] = pending
+    ? []
+    : summary === null
       ? droppedLines.map((line) => ({ key: `dropped-${cartLineId(line)}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }))
       : summary.excludedLines.map((line, index) => ({ key: `dropped-${index}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }));
 
@@ -251,8 +255,13 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       ? t.undeliverable.body
       : `${t.undeliverable.body} ${t.undeliverable.items.replace('{items}', droppedRows.map((line) => line.name).join(', '))}`;
 
-  const shippingFeeLabel =
-    payment === null ? t.summary.pending : payment.shippingFeeCents === 0 ? t.summary.free : formatPrice(payment.shippingFeeCents, locale);
+  const shippingFeeLabel = pending
+    ? UNKNOWN_AMOUNT
+    : payment === null
+      ? t.summary.pending
+      : payment.shippingFeeCents === 0
+        ? t.summary.free
+        : formatPrice(payment.shippingFeeCents, locale);
   /**
    * Ödenecek toplam sunucunun kararıdır ve taslağın tahsil edeceğiyle aynı kapsamdan çıkar; adres seçilmeden yalnız kalem toplamı
    * bilinir. Ekran indirim ve kargoyu kendisi hesaplamaz.
@@ -262,7 +271,11 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /* İndirim de aynı kaynaktan: özet varsa onun çözülmüş indirimi, yoksa sepetinki. `reasonLabel`
      ikisinde de ORTAK (künyesi kitte) — adı olmayan bir kampanya sepette "Kampanya · %8" iken
      özette başka türlü yazamaz. */
-  const discountSummary = summary === null ? discountSummaryOf(view.discount, locale) : orderDiscountSummaryOf(summary.discount, locale);
+  const discountSummary = pending
+    ? null
+    : summary === null
+      ? discountSummaryOf(view.discount, locale)
+      : orderDiscountSummaryOf(summary.discount, locale);
 
   /* Paket satırı sunucunun çözdüğü `orderedLines`ın içinde; yerel satır toplamı ekranın kendi çarpımı olurdu. */
   const summaryRows: SummaryRow[] = [
@@ -284,7 +297,11 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     ...(droppedRows.length === 0
       ? []
       : [{ key: 'undeliverable-note', label: t.summary.undeliverableNote, value: '', tone: 'danger' as const }]),
-    { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(summary?.subtotalCents ?? orderedSubtotalCents, locale) },
+    {
+      key: 'subtotal',
+      label: t.summary.subtotal,
+      value: pending ? UNKNOWN_AMOUNT : formatPrice(summary?.subtotalCents ?? orderedSubtotalCents, locale),
+    },
     /* İndirimin adı da yazılır ki sepetteki indirimle aynı olduğu anlaşılsın; türetme sepetle ortak. */
     ...(discountSummary === null
       ? []
@@ -823,7 +840,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           eyebrow={upperIn(t.summary.eyebrow, locale)}
           rows={summaryRows}
           totalLabel={t.summary.total}
-          totalValue={formatPrice(grandTotalCents, locale)}
+          totalValue={pending ? UNKNOWN_AMOUNT : formatPrice(grandTotalCents, locale)}
           totalTone="terracotta"
           testID="checkout-summary"
         />
