@@ -1,4 +1,4 @@
-import { meetsMinBasket, resolveShippingFee } from '@lezzet/domain-core';
+import { checkoutButtonCents, meetsMinBasket, payableTotalCents, resolveShippingFee } from '@lezzet/domain-core';
 import type { CouponRejection, DiscountRule, ShippingFeeResult } from '@lezzet/domain-core';
 import type { AnalyticsBlockedReason, CartItem, CartLineGroup } from '@lezzet/types';
 import type { LocalizedText } from '@lezzet/types';
@@ -84,6 +84,8 @@ export interface CartDiscountResult {
    */
   rules: readonly DiscountRule[];
   context: { isFirstOrder: boolean };
+  /** Kapı siparişinin yalnız kendi kalemleriyle alacağı indirim; kalemleri verilmediyse `null`. */
+  localOrderDiscountCents: number | null;
 }
 
 /**
@@ -249,6 +251,11 @@ export interface CartView {
    * Sepetin tamamı kargo grubunda mı; öyleyse tek sipariş vardır ve müşteriye "iki sipariş" denmez.
    */
   shippingOnly: boolean;
+  /**
+   * Kapı siparişinin indirimi: bölünmüş sepette checkout onu yalnız kapı kalemleriyle yeniden çözer, sepetin indirimi değildir.
+   * Sepet düğmesi bölünmüş sepette o siparişin tutarını yazar (`cartCheckoutCents`).
+   */
+  localOrderDiscountCents: number;
 }
 
 /** Boş sepet — hiç kalem yokken ve okuma yapılamadığında aynı şekil döner. */
@@ -272,6 +279,7 @@ export const EMPTY_CART: CartView = {
   shippingSubtotalCents: 0,
   shippingTariffCents: 0,
   shippingOnly: false,
+  localOrderDiscountCents: 0,
 };
 
 /**
@@ -395,14 +403,27 @@ export function shippingGroupFee(
   });
 }
 
-/**
- * Sepetin ödenecek tutarı, tek kaynak: ara toplam − indirim, kargo grubu varsa ücret de eklenir. Pakette durur ki iki
- * yüzeyin "ödenecek tutar" tanımı ayrışmasın.
- */
+/** Sepetin ödenecek tutarı (`payableTotalCents`); ücret kargo grubunun kararından okunur. */
 export function cartPayableCents(
   view: Pick<CartView, 'totalCents' | 'shippingOnly' | 'shippingSubtotalCents' | 'freeShippingCents' | 'shippingTariffCents'>,
 ): number {
-  return view.totalCents + (view.shippingOnly ? shippingGroupFee(view).feeCents : 0);
+  return payableTotalCents({
+    totalCents: view.totalCents,
+    shippingOnly: view.shippingOnly,
+    shippingFeeCents: shippingGroupFee(view).feeCents,
+  });
+}
+
+/** Sepet düğmesinin yazdığı tutar (`checkoutButtonCents`): düğmenin açtığı siparişin tutarı. */
+export function cartCheckoutCents(view: CartView): number {
+  return checkoutButtonCents({
+    totalCents: view.totalCents,
+    shippingOnly: view.shippingOnly,
+    shippingFeeCents: shippingGroupFee(view).feeCents,
+    split: isSplitCart(view),
+    localItemsCents: view.lines.reduce((sum, l) => (cartGroupOf(l) === 'local' ? sum + (l.lineTotalCents ?? 0) : sum), 0),
+    localOrderDiscountCents: view.localOrderDiscountCents,
+  });
 }
 
 /**

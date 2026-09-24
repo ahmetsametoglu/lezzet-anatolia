@@ -111,6 +111,7 @@ export function cartView(lines: MeCartViewLine[], overrides: Partial<MeCartView>
        sıfırdır — sunucunun `shippingGroupFee` kararının bu girdilerle verdiği cevabın aynısı. */
     shippingGroupFeeCents: lines.some((line) => line.group === 'shipping') ? 690 : 0,
     shippingFreeRemainingCents: 0,
+    localOrderDiscountCents: 0,
     ...overrides,
   };
 }

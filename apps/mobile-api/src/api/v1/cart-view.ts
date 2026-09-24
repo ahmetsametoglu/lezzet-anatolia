@@ -135,6 +135,7 @@ function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof M
     /* Kargo grubunun çözülmüş ücreti motordan (`shippingGroupFee`); istemci eşiği kendi karşılaştırsa kural iki yerde yaşardı. */
     shippingGroupFeeCents: fee.feeCents,
     shippingFreeRemainingCents: fee.remainingForFreeCents,
+    localOrderDiscountCents: view.localOrderDiscountCents,
   };
 }
 

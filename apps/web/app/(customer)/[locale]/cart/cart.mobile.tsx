@@ -23,7 +23,7 @@ import { Dialog } from '@/components/customer/ui/dialog';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
-import { cartKey, cartPayableCents, shippingGroupFee, type CartLine } from '@/lib/cart/cart-types';
+import { cartCheckoutCents, cartKey, cartPayableCents, shippingGroupFee, type CartLine } from '@/lib/cart/cart-types';
 import { discountLabel } from '@/lib/cart/discount-label';
 import { formatPrice } from '@/lib/storefront/format';
 import { CartIdentity } from './components/cart-identity';
@@ -35,8 +35,8 @@ import type { CartCopy, CartViewProps } from './cart-types';
 /**
  * Sepetin telefon görünümü, native sepet ekranının web ikizi: metin ortak sözlükten (`@lezzet/i18n/customer/cart`), sıra native'in
  * ve engelin kısa sebebi düğmenin üstünde, çünkü kilitli düğme neden kilitli olduğunu söylemeli. Web'e özgü: kimlik ve adres sepette
- * çözülür (`CartIdentity`, `useCheckoutGate`), tutar ödenecek tutardır (`cartPayableCents`), sepet tarayıcıda çözüldüğü için ilk
- * karede iskelet durur ve okuma düşerse boş sepet çizilmez.
+ * çözülür (`CartIdentity`, `useCheckoutGate`), sepet tarayıcıda çözüldüğü için ilk karede iskelet durur ve okuma düşerse boş sepet
+ * çizilmez.
  */
 
 /** Ürünler üstte, paketler altta, yalnız grup içinde (native `productsFirst`); `sort` kararlı. */
@@ -154,7 +154,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
       : []),
     // Sepetin tamamı kargodaysa tek sipariş doğar ve ücreti BELLİ — saklamak müşteriyi kasada sürprizle karşılardı.
     ...(view.shippingOnly
-      ? [{ key: 'shipping', label: t.group.shippingRow, value: fee.feeCents > 0 ? formatPrice(fee.feeCents, locale) : t.group.free }]
+      ? [{ key: 'shipping', label: copy.group.shippingRow, value: fee.feeCents > 0 ? formatPrice(fee.feeCents, locale) : copy.group.free }]
       : []),
     // Gelemeyen kalem toplamda durur ama siparişe girmez: kapsam belirsiz kalmasın diye ayrı satır.
     ...(view.undeliverableSubtotalCents > 0
@@ -165,8 +165,6 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
     copy.summary.note,
     view.undeliverableSubtotalCents > 0 ? copy.summary.undeliverableNote : null,
     discountCents > 0 ? copy.summary.singleRule : null,
-    // İki gruplu sepette indirim iki siparişe dağılacak: burada tek sayı "bunu ödeyeceksiniz" diye okunmasın.
-    split && discountCents > 0 ? t.group.discountSplit : null,
   ]
     .filter((part): part is string => part !== null)
     .join(' ');
@@ -177,8 +175,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
     : !view.minBasketOk
       ? copy.barBlock.minimum.replace('{missing}', formatPrice(view.missingForMinBasketCents, locale))
       : gate;
-  // Bölünmüş sepette bar ROTA siparişinin tutarını yazar: düğme o siparişi açıyor.
-  const barTotal = split ? localItemsCents : cartPayableCents(view);
+  const barTotal = cartCheckoutCents(view);
   const barInner = (
     <>
       <span>{copy.checkout}</span>

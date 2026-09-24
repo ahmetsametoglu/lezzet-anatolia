@@ -1,3 +1,4 @@
+import { checkoutButtonCents, payableTotalCents } from '@lezzet/domain-core';
 import { formatPrice, placeChangeText } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { MeCartViewLine } from '@lezzet/types';
@@ -170,6 +171,16 @@ export function CartScreen() {
   const summaryRows: SummaryRow[] = [
     { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(view.subtotalCents, locale) },
     ...(discountSummary === null ? [] : [discountSummary]),
+    // Sepetin tamamı kargodaysa tek sipariş doğar ve kargo ücreti bellidir; saklamak müşteriyi kasada sürprizle karşılardı.
+    ...(view.shippingOnly
+      ? [
+          {
+            key: 'shipping',
+            label: t.group.shippingRow,
+            value: view.shippingGroupFeeCents > 0 ? formatPrice(view.shippingGroupFeeCents, locale) : t.group.free,
+          },
+        ]
+      : []),
     ...(undeliverableCents === 0
       ? []
       : [{ key: 'undeliverable', label: t.summary.undeliverable, value: formatPrice(undeliverableCents, locale) }]),
@@ -272,6 +283,14 @@ export function CartScreen() {
   const localItemsCents = localLines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0);
   const shippingItemsCents = shippingLines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0);
   const shippingFeeCents = view.shippingGroupFeeCents;
+  const checkoutCents = checkoutButtonCents({
+    totalCents: view.totalCents,
+    shippingOnly: view.shippingOnly,
+    shippingFeeCents,
+    split,
+    localItemsCents,
+    localOrderDiscountCents: view.localOrderDiscountCents,
+  });
 
   const shippingBreakdown = [
     shippingFeeCents > 0
@@ -495,7 +514,14 @@ export function CartScreen() {
         <SummaryPanel
           rows={summaryRows}
           totalLabel={t.summary.total}
-          totalValue={formatPrice(view.totalCents, locale)}
+          totalValue={formatPrice(
+            payableTotalCents({
+              totalCents: view.totalCents,
+              shippingOnly: view.shippingOnly,
+              shippingFeeCents: view.shippingGroupFeeCents,
+            }),
+            locale,
+          )}
           note={summaryNote}
           testID="cart-summary"
         />
@@ -548,9 +574,8 @@ export function CartScreen() {
         >
           <Text style={styles.checkoutLabel}>{t.checkout}</Text>
           <View style={styles.checkoutTotal}>
-            {/* BÖLÜNMÜŞ sepette bar ROTA siparişinin tutarını yazar: düğme o siparişi açıyor ve
-                sepetin tamamını yazmak, basılınca başka bir tutarla karşılaşmak demekti. */}
-            <Text style={styles.checkoutLabel}>{formatPrice(split ? localItemsCents : view.totalCents, locale)}</Text>
+            {/* Düğme açtığı siparişin tutarını yazar, yoksa müşteri basınca başka bir tutarla karşılaşırdı. */}
+            <Text style={styles.checkoutLabel}>{formatPrice(checkoutCents, locale)}</Text>
           </View>
         </PressableSurface>
       </View>

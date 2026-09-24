@@ -16,7 +16,18 @@ import {
   SHIPPING_FEE_KEY,
 } from './settings-keys';
 import { resolveCartDiscount } from './discount';
-import { EMPTY_CART, cartGroupOf, cartKey, discountAmountOf, minBasketBaseOf, undeliverableTotalOf, type CartEntry, type CartLine, type CartView } from './cart-types';
+import {
+  EMPTY_CART,
+  cartGroupOf,
+  cartKey,
+  discountAmountOf,
+  isSplitCart,
+  minBasketBaseOf,
+  undeliverableTotalOf,
+  type CartEntry,
+  type CartLine,
+  type CartView,
+} from './cart-types';
 
 /**
  * Sepetin paket satırının istediği alanlar; paket çözümü kapıdan gelir. Şekil dar, çünkü sepet alerjen, ağırlık ve kalem görselini kullanmaz.
@@ -260,14 +271,17 @@ export async function getCartView(
   const shippingSubtotalCents = lines.reduce((sum, l) => (l.route === 'shipping' ? sum + (l.lineTotalCents ?? 0) : sum), 0);
   const hasLocal = lines.some((l) => l.route === 'local');
   const hasShipping = lines.some((l) => l.route === 'shipping');
+  const split = isSplitCart({ lines });
   const {
     discount,
     reachable: reachableDiscount,
     rules: discountRules,
     context: discountContext,
+    localOrderDiscountCents,
   } = await resolveCartDiscount(db, {
     // Satır sırası korunur ki paylar satırlarla hizalı kalsın; gelemeyen satır fiyatı çözülemeyen satır gibi sıfır katar.
     lines: discountable.map((line, index) => (lines[index] && cartGroupOf(lines[index]) === 'undeliverable' ? { ...line, unitPriceCents: 0 } : line)),
+    localOrderLines: split ? discountable.filter((_, index) => lines[index] && cartGroupOf(lines[index]) === 'local') : undefined,
     customerId: opts.customerId,
     couponCode: opts.couponCode,
   });
@@ -297,6 +311,8 @@ export async function getCartView(
     // vereceksiniz" denmez, verilecek tek sipariş vardır.
     shippingOnly: hasShipping && !hasLocal,
     undeliverableSubtotalCents,
+    // Bölünmüş değilse kapı siparişi sepetin kendisidir ya da hiç yoktur.
+    localOrderDiscountCents: localOrderDiscountCents ?? (lines.some((l) => cartGroupOf(l) === 'local') ? discountAmountOf(discount) : 0),
     /**
      * Doğacak tek sipariş kargo siparişiyse lojistik tabanı yoktur. İki gruplu sepette taban kapı siparişinin kendi tutarına
      * uygulanır, çünkü kargo kalemleri o siparişe girmez.

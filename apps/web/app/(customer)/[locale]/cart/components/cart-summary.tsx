@@ -1,6 +1,7 @@
 'use client';
 
 import type { Locale } from '@lezzet/i18n';
+import cartMessages from '@lezzet/i18n/customer/cart';
 import { resolveLocalizedText } from '@lezzet/types';
 import { buttonClass } from '@/components/customer/ui/button';
 import { cardClass } from '@/components/customer/ui/card';
@@ -97,6 +98,7 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
   const blocked = reason !== null;
   // Özetin ortak sözcükleri (toplam, KDV notu, indirim) ödeme sayfasıyla aynı kaynaktan gelir.
   const summary = summaryCopy(locale);
+  const copy = cartMessages[locale];
   // İndirim tutarı türetilir, yeniden hesaplanmaz — kararın sahibi motor, yazan sunucu.
   const discountCents = view.subtotalCents - view.totalCents;
   // Sepetin tamamı kargodaysa tek sipariş doğar ve kargo ücreti bellidir; saklamak müşteriyi kasada sürprizle karşılardı.
@@ -149,13 +151,13 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
 
         {fee !== null && (
           <div className="flex items-center justify-between font-sans text-body-sm">
-            <span className="text-body">{t.group.shippingRow}</span>
+            <span className="text-body">{copy.group.shippingRow}</span>
             {/* Ücretsizken tutar sütununa tek kelime yazılır, çünkü kutlama cümlesi sağa yaslı hücreyi bozar. Zeytin ton yalnız
                 ücretsizken, yoksa masraf kazanç gibi okunurdu. */}
             {fee.feeCents > 0 ? (
               <span className="font-bold text-ink">{formatPrice(fee.feeCents, locale)}</span>
             ) : (
-              <span className="font-bold text-olive">{t.group.free}</span>
+              <span className="font-bold text-olive">{copy.group.free}</span>
             )}
           </div>
         )}
@@ -163,7 +165,7 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
         {routeOnly && (
           <div className="flex items-center justify-between font-sans text-body-sm">
             <span className="text-body">{t.deliveryRow}</span>
-            <span className="font-bold text-olive">{t.group.free}</span>
+            <span className="font-bold text-olive">{copy.group.free}</span>
           </div>
         )}
 
@@ -177,10 +179,6 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
           <span>{formatPrice(totalCents, locale)}</span>
         </div>
         <span className="font-sans text-micro text-muted">{summary.vatIncluded}</span>
-        {/* İki gruplu sepette indirim bir siparişe DEĞİL, iki siparişe dağılacak. Kupon/kampanya
-            her siparişin kendi kalemlerine göre checkout'ta yeniden çözülüyor; burada tek bir
-            sayı yazıp "bunu ödeyeceksiniz" demek, tutulmayacak bir söz olurdu. */}
-        {grouped && discountCents > 0 && <span className="font-sans text-micro leading-relaxed text-muted">{t.group.discountSplit}</span>}
       </div>
 
       <FreeShippingProgress view={view} t={t} locale={locale} />

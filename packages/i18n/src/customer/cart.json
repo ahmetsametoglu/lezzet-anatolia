@@ -36,7 +36,9 @@
       "shippingFeeFree": "{items} · kargo ücretsiz",
       "shippingRemaining": "{amount} daha eklerseniz kargo ücretsiz",
       "shippingPayment": "yalnız online ödeme",
-      "shippingCta": "Kargolu ürünleri ayrıca sipariş ver"
+      "shippingCta": "Kargolu ürünleri ayrıca sipariş ver",
+      "shippingRow": "Kargo",
+      "free": "Ücretsiz"
     },
     "undeliverable": {
       "title": "{place} için bazı ürünler gelemiyor",
@@ -153,7 +155,9 @@
       "shippingFeeFree": "{items} · livraison offerte",
       "shippingRemaining": "encore {amount} et la livraison est offerte",
       "shippingPayment": "paiement en ligne uniquement",
-      "shippingCta": "Commander les articles en colis séparément"
+      "shippingCta": "Commander les articles en colis séparément",
+      "shippingRow": "Livraison",
+      "free": "Offerte"
     },
     "undeliverable": {
       "title": "Certains articles ne peuvent pas être livrés à {place}",
@@ -270,7 +274,9 @@
       "shippingFeeFree": "{items} · Versand kostenlos",
       "shippingRemaining": "noch {amount} und der Versand ist kostenlos",
       "shippingPayment": "nur Online-Zahlung",
-      "shippingCta": "Versandartikel separat bestellen"
+      "shippingCta": "Versandartikel separat bestellen",
+      "shippingRow": "Versand",
+      "free": "Kostenlos"
     },
     "undeliverable": {
       "title": "Einige Artikel erreichen {place} nicht",

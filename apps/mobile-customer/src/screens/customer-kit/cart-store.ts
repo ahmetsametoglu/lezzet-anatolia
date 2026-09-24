@@ -136,6 +136,7 @@ const EMPTY_VIEW: MeCartView = {
      yok, aşılacak eşik yok. */
   shippingGroupFeeCents: 0,
   shippingFreeRemainingCents: 0,
+  localOrderDiscountCents: 0,
 };
 
 const EMPTY_CART: CartState = {

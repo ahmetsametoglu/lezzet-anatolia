@@ -90,15 +90,12 @@
       "shippingTotal": "Kargoyla gidecek toplam: {amount}",
       "shippingFee": "{items} + kargo {fee}",
       "shippingFeeFree": "{items} · kargo ücretsiz",
-      "free": "Ücretsiz",
-      "shippingRow": "Kargo",
       "shippingRemaining": "{amount} daha eklerseniz kargo ücretsiz",
       "shippingPayment": "yalnız online ödeme",
       "shippingCta": "Kargolu ürünleri ayrıca sipariş ver",
       "shippingCtaShort": "Ayrıca sipariş ver",
       "shippingFootnote": "Ücretsiz kargo sınırı yalnız kargoyla gidecek ürünlerin tutarına bakar; iki siparişin tutarı toplanmaz. Kargo siparişini vermek zorunlu değildir: vermezseniz bu ürünler sepette bekler, kapıya teslim siparişiniz etkilenmez.",
-      "summaryScope": "Sepetin tamamı",
-      "discountSplit": "İndirim iki siparişe, tutarlarıyla orantılı olarak bölünür."
+      "summaryScope": "Sepetin tamamı"
     },
     "awaitingPayment": {
       "title": "Kart ödemeniz henüz onaylanmadı",
@@ -225,15 +222,12 @@
       "shippingTotal": "Total en colis : {amount}",
       "shippingFee": "{items} + livraison {fee}",
       "shippingFeeFree": "{items} · livraison offerte",
-      "free": "Offerte",
-      "shippingRow": "Livraison",
       "shippingRemaining": "encore {amount} et la livraison est offerte",
       "shippingPayment": "paiement en ligne uniquement",
       "shippingCta": "Commander les articles en colis séparément",
       "shippingCtaShort": "Commander séparément",
       "shippingFootnote": "Le seuil de livraison offerte se calcule sur ce total — les deux groupes ne s'additionnent pas. Cette seconde commande n'est pas obligatoire : sans elle, les articles restent au panier et votre commande à domicile n'est pas affectée.",
-      "summaryScope": "Panier complet",
-      "discountSplit": "La remise s’applique à chaque commande au prorata de ses articles."
+      "summaryScope": "Panier complet"
     },
     "awaitingPayment": {
       "title": "Votre paiement par carte n'est pas encore confirmé",
@@ -360,15 +354,12 @@
       "shippingTotal": "Summe für den Versand: {amount}",
       "shippingFee": "{items} + Versand {fee}",
       "shippingFeeFree": "{items} · Versand kostenlos",
-      "free": "Kostenlos",
-      "shippingRow": "Versand",
       "shippingRemaining": "noch {amount} und der Versand ist kostenlos",
       "shippingPayment": "nur Online-Zahlung",
       "shippingCta": "Versandartikel separat bestellen",
       "shippingCtaShort": "Separat bestellen",
       "shippingFootnote": "Die Versandgrenze wird aus dieser Summe berechnet — die beiden Gruppen zählen nicht zusammen. Die zweite Bestellung ist freiwillig: ohne sie bleiben die Artikel im Warenkorb und Ihre Lieferung an die Tür bleibt unberührt.",
-      "summaryScope": "Gesamter Warenkorb",
-      "discountSplit": "Der Rabatt wird je Bestellung anteilig auf deren Artikel angewendet."
+      "summaryScope": "Gesamter Warenkorb"
     },
     "awaitingPayment": {
       "title": "Ihre Kartenzahlung ist noch nicht bestätigt",

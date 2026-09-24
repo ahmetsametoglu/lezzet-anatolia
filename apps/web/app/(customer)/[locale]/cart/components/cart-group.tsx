@@ -33,8 +33,8 @@ export function CartGroup({ kind, lines, view, t, locale, compact = false }: Car
   const shipping = kind === 'shipping';
   const undeliverable = kind === 'undeliverable';
 
-  // Grubun kalem toplamı kendi satırlarından; indirim burada yazılmaz, çünkü checkout'ta siparişin kendi kalemlerine göre yeniden
-  // çözülür ve özet kartı bunu bir cümleyle söyler (`discountSplit`).
+  // Grubun kalem toplamı kendi satırlarından; indirim burada yazılmaz, çünkü her sipariş indirimini checkout'ta kendi kalemleriyle
+  // yeniden alır.
   const itemsCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
   // Ücret motordan: sepette "6,90 €" yazıp kasada başka bir sayı kesmek ekranın sözünü tutmamasıdır.
   const fee = shippingGroupFee(view);

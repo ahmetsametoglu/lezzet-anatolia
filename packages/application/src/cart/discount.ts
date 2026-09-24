@@ -18,6 +18,8 @@ import type { CartDiscount, CartReachableDiscount, CartDiscountResult, CouponFai
 
 export interface CartDiscountInput {
   lines: readonly DiscountableLine[];
+  /** Bölünmüş sepette kapı siparişinin kalemleri; verilirse o siparişin yalnız kendi kalemleriyle alacağı indirim de çözülür. */
+  localOrderLines?: readonly DiscountableLine[];
   customerId?: string | null;
   /** Müşterinin girdiği kod; boşsa yalnız otomatik adaylar değerlendirilir. */
   couponCode?: string | null;
@@ -53,6 +55,8 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
   };
   const rules = pool.map((row) => toRule(row, codesByDiscount.get(row.id) ?? [], usage.get(row.id), input.customerId));
   const winner = applyBestDiscount(input.lines, rules, ctx);
+  // Checkout kapı siparişini yalnız kendi kalemleriyle yeniden okur ve indirimi yine kazananın tutarıdır; aynı kurallarla burada da çözülür.
+  const localOrderDiscountCents = input.localOrderLines ? (applyBestDiscount(input.localOrderLines, rules, ctx)?.amountCents ?? 0) : null;
 
   /* Elinin altındaki indirim kazanandan bağımsız hesaplanır ve kupon yolundan da geçer; eklenen tek şey müşteriye görünen ad. */
   const reach = findReachableDiscount(input.lines, rules, ctx);
@@ -71,6 +75,7 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
     reachable,
     rules,
     context: { isFirstOrder: ctx.isFirstOrder },
+    localOrderDiscountCents,
   });
 
   if (!code) return out(winner ? automatic(winner, pool) : { status: 'none' });

@@ -201,6 +201,32 @@ describe('CartScreen — İKİ GRUP, İKİ SİPARİŞ', () => {
     expect(within(screen.getByTestId('cart-checkout')).getByText('20,00 €')).toBeOnTheScreen();
   });
 
+  it('bölünmüş sepette düğme kapı siparişinin kendi indirimiyle tutarını yazar', async () => {
+    mockCart = cartWith(
+      cartView(
+        [cartViewLine(1, 'Baklava', 'local', { unitPriceCents: 2000 }), cartViewLine(2, 'Kurabiye', 'shipping', { unitPriceCents: 1500 })],
+        { localOrderDiscountCents: 200 },
+      ),
+    );
+
+    await render(<CartScreen />);
+
+    // Kapı siparişi indirimini checkout'ta yalnız kendi kalemiyle alır; düğme o siparişin tutarını yazar.
+    expect(within(screen.getByTestId('cart-checkout')).getByText('18,00 €')).toBeOnTheScreen();
+  });
+
+  it('salt-kargo sepette kargo ücreti özette ayrı satırdır, toplama ve düğmeye girer', async () => {
+    mockCart = cartWith(cartView([cartViewLine(2, 'Kurabiye', 'shipping', { unitPriceCents: 1500 })]));
+
+    await render(<CartScreen />);
+
+    const summary = within(screen.getByTestId('cart-summary'));
+    expect(summary.getByText(t.group.shippingRow)).toBeOnTheScreen();
+    expect(summary.getByText('6,90 €')).toBeOnTheScreen();
+    expect(summary.getByText('21,90 €')).toBeOnTheScreen();
+    expect(within(screen.getByTestId('cart-checkout')).getByText('21,90 €')).toBeOnTheScreen();
+  });
+
   it('tek gruplu sepette ikinci sipariş eylemi HİÇ çizilmez', async () => {
     mockCart = cartWith(cartView([cartViewLine(2, 'Kurabiye', 'shipping', { unitPriceCents: 1500 })]));
 

@@ -285,6 +285,8 @@ export const MeCartViewSchema = z.object({
    * (0) o çıkarma negatif çıkar ve "−33,25 € kaldı" gibi bir cümle üretirdi.
    */
   shippingFreeRemainingCents: z.number().int(),
+  /** Kapı siparişinin yalnız kendi kalemleriyle alacağı indirim; bölünmüş sepette düğme o siparişin tutarını yazar. */
+  localOrderDiscountCents: z.number().int(),
 });
 export type MeCartView = z.infer<typeof MeCartViewSchema>;
 
