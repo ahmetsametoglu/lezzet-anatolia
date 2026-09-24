@@ -1,6 +1,7 @@
 import { chooseShippingOption, preferLabelled, shippingPriceWithVat, type PlannedParcel, type VatLine } from '@lezzet/domain-core';
 import type { ServicePoint, ShippingQuote } from '@lezzet/sendcloud';
 import type { ParcelPlanSnapshot, ServicePointSnapshot } from '@lezzet/types';
+import type { CartLine } from '../cart/cart-types';
 
 /** Müşteriye sunulan teklif: `priceCents` müşterinin ödediği KDV dahil ücret, `costCents` taşıyıcının KDV hariç fiyatı (bizim maliyetimiz). */
 export type PricedQuote = ShippingQuote & { priceCents: number; costCents: number };
@@ -13,6 +14,14 @@ export function pricedOptions(options: readonly ShippingQuote[], lines: readonly
   return preferLabelled(options).flatMap((o) =>
     typeof o.priceCents === 'number' ? [{ ...o, costCents: o.priceCents, priceCents: shippingPriceWithVat(o.priceCents, lines) }] : [],
   );
+}
+
+/**
+ * Kargo ücretine KDV ekleyen satırlar; ekran ve taslak bu tek kaynaktan okur ki gösterilen ücret alınanla aynı olsun. Ücret herkes
+ * için aynı kuralla bulunur: ters vergilendirme yalnız kalemlerin KDV'sini sıfırlar, paket satırı kalemlerinin en yüksek oranını taşır.
+ */
+export function shippingVatLines(lines: readonly Pick<CartLine, 'lineTotalCents' | 'vatRate'>[]): VatLine[] {
+  return lines.map((l) => ({ totalCents: l.lineTotalCents ?? 0, vatRate: l.vatRate }));
 }
 
 /**

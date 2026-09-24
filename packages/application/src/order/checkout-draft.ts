@@ -50,7 +50,7 @@ import {
 import { resolveCheckoutPayment } from './checkout-options';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
 import { readUnitCosts } from './unit-costs';
-import { optionForPricing, parcelPlanSnapshot, pricedOptions, servicePointSnapshot } from './shipping-selection';
+import { optionForPricing, parcelPlanSnapshot, pricedOptions, servicePointSnapshot, shippingVatLines } from './shipping-selection';
 import { quoteShipping } from '../shipping/quote';
 import { sendcloudProvider, shippingProviderConfigured } from '../shipping/provider';
 import type { ShippingRateProvider } from '../shipping/port';
@@ -312,8 +312,6 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     }
   }
 
-  // Kargonun KDV'si taşıdığı malın oranını izler, bu yüzden oranlar kalem kalem geçilir; ters vergilendirmede kalem oranı
-  // sıfırlanınca ücretinki de kendiliğinden sıfırlanır.
   const items = await expandToOrderItems(db, orderedLines, orderedShares, vat.zeroRated, input.staff?.actorId ?? null);
   // Kargo teklifi ekranınkiyle aynı kapıdan yeniden alınır: fiyat istemciden gelmez, yalnız servis kodu ve nokta gelir.
   const rateProvider = input.rateProvider === undefined ? (shippingProviderConfigured() ? sendcloudProvider() : null) : input.rateProvider;
@@ -325,8 +323,8 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
           items: orderedLines.flatMap((l) => (l.variantId ? [{ variantId: l.variantId, qty: l.qty }] : [])),
         })
       : null;
-  // Oranlar ödeme kapısına giden kalemlerle aynı: ücretin KDV'si orada bu kalemlere bölünüyor.
-  const vatLines = items.map((i) => ({ totalCents: i.unitPriceCents * i.qty, vatRate: i.vatRate }));
+  // Ücretin KDV'si ekranın satırlarından: sipariş kalemleri (açılmış paket, ters vergilendirmede sıfır oran) başka bir ücret çıkarırdı.
+  const vatLines = shippingVatLines(scope.lines);
   const quoted = quote?.status === 'ok' ? pricedOptions(quote.options, vatLines) : [];
   const priced = optionForPricing(quoted, input.shippingOptionCode ?? null);
 

@@ -14,7 +14,7 @@ import {
   WarehouseService,
   serviceDb,
 } from '@lezzet/database';
-import type { ShippingRateProvider } from '@lezzet/application';
+import { readCheckoutSnapshot, type ShippingRateProvider } from '@lezzet/application';
 import { shippingPriceWithVat } from '@lezzet/domain-core';
 
 type ShippingQuote = Awaited<ReturnType<ShippingRateProvider['quote']>>[number];
@@ -348,6 +348,19 @@ describe('kargo seçimi ödeme anında siparişe yazılır', () => {
     expect(order).toMatchObject({ shippingOptionCode: 'eve-pahali', shippingFeeCents: await brut(outcome.orderId, 990), deliveryCostCents: 990, servicePoint: null });
     expect(order!.shippingFeeCents).toBeGreaterThan(990);
     expect(order?.parcelPlan).toHaveLength(1);
+  });
+
+  // Ters vergilendirmede kalemlerin KDV'si sıfırdır ama kargo ücreti herkes için aynı kuralla bulunur; sıfırlanmış oranla hesaplansaydı
+  // sipariş ekranda gösterilenden düşük bir ücretle açılırdı.
+  it('ters vergilendirmeli şirkette kargo ücreti ekranda gösterilenle aynı ve KDV dahil', async () => {
+    const secim = { customerId: b2bCustomerId, addressId: b2bAddressId, entries: entries(), shippingOrder: true, rateProvider: saglayici, shippingOptionCode: 'eve-pahali' };
+    const ekran = await readCheckoutSnapshot(db, 'tr', { ...secim, couponCode: null, pickupWarehouseId: null });
+    const outcome = await createCheckoutDraft({ ...secim, locale: 'tr', deliveryDate: null, paymentMethod: 'online' });
+    if (outcome.status !== 'ok') throw new Error(`taslak bekleniyordu: ${outcome.status}`);
+    const order = await new OrderService(db).getById(outcome.orderId);
+    expect(order?.vatTreatment).toBe('intra_eu_b2b_reverse_charge');
+    expect(order?.shippingFeeCents).toBe(ekran.payment?.shippingFeeCents);
+    expect(order!.shippingFeeCents).toBeGreaterThan(990);
   });
 
   it('seçim yoksa en ucuz değil, EVE giden en ucuz servis yazılır', async () => {

@@ -15,7 +15,7 @@ import { cartFingerprint } from '../cart/fingerprint';
 import type { CartDiscount, CartEntry, CartLine, DiscountReason } from '../cart/cart-types';
 import { chooseShippingOption, homeShortlist, needsServicePoint } from '@lezzet/domain-core';
 import { resolveCheckoutPayment } from './checkout-options';
-import { optionForPricing, pricedOptions } from './shipping-selection';
+import { optionForPricing, pricedOptions, shippingVatLines } from './shipping-selection';
 import { quoteShipping } from '../shipping/quote';
 import { sendcloudProvider, shippingProviderConfigured } from '../shipping/provider';
 import type { ShippingRateProvider } from '../shipping/port';
@@ -252,8 +252,7 @@ export async function readCheckoutSnapshot(
       : null;
 
   // Fiyat sunucudan okunur, istemci yalnız kodu söyler; ön seçim de burada yapılır ki liste ile ücret aynı hesaptan çıksın.
-  // Oranlar ödeme kapısına giden kalemlerle aynı: ücretin KDV'si orada bu kalemlere bölünüyor.
-  const vatLines = scope.lines.map((l) => ({ totalCents: l.lineTotalCents ?? 0, vatRate: l.vatRate }));
+  const vatLines = shippingVatLines(scope.lines);
   const quoted = shipping?.status === 'ok' ? pricedOptions(shipping.options, vatLines) : [];
   const priced = optionForPricing(quoted, input.shippingOptionCode ?? null);
 
