@@ -3,7 +3,7 @@ import type { Address, PaymentMethod } from '@lezzet/types';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 // Telefon görünümü native ödeme ekranıyla aynı metni kullanır (CLAUDE §2).
 import type checkoutMessages from '@lezzet/i18n/customer/checkout';
-import { isSplitCart, type CartView } from '@/lib/cart/cart-types';
+import { entryOf, isSplitCart, type CartEntry, type CartLine, type CartView } from '@/lib/cart/cart-types';
 import type messages from './messages.json';
 
 /** Sayfa metinleri — şekli JSON'un kendisinden TÜRER, elle interface yazılmaz (CLAUDE.md §2). */
@@ -119,6 +119,14 @@ export function checkoutBlocker(input: {
   if (!input.snapshot.payment.minBasketOk) return 'min_basket';
   if (input.pointMissing) return 'service_point_missing';
   return null;
+}
+
+/**
+ * Ödeme okumasına ve siparişe giden kalemler sepetin tamamıdır, çünkü siparişin grubunu sunucu seçer ve bu adrese gelemeyen kalemi
+ * özette üstü çizili gösterebilmek için onu görmesi gerekir.
+ */
+export function checkoutEntriesOf(lines: readonly CartLine[]): CartEntry[] {
+  return lines.map(entryOf);
 }
 
 /**

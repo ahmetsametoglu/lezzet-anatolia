@@ -9,7 +9,6 @@ import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
-import { entryOf, splitByRoute } from '@/lib/cart/cart-types';
 import { clientStripe } from '@/lib/stripe-client';
 import { errorText } from '@/lib/customer-error-text';
 import { PaymentSection } from './components/payment-element';
@@ -18,7 +17,15 @@ import { CheckoutMobile } from './checkout.mobile';
 import type { AddressCheckOutcome } from '@lezzet/application';
 import type { CheckoutSnapshot } from '@lezzet/application';
 import { checkCheckoutAddressAction, confirmCheckoutAction, loadCheckoutAction } from './actions';
-import { checkoutBlocker, isSeparateOrder, servicePointMissing, type CheckoutState, type CheckoutViewProps, type Messages } from './checkout-types';
+import {
+  checkoutBlocker,
+  checkoutEntriesOf,
+  isSeparateOrder,
+  servicePointMissing,
+  type CheckoutState,
+  type CheckoutViewProps,
+  type Messages,
+} from './checkout-types';
 
 /**
  * Durum ve sunucu turları burada, yerleşim iki ekran dosyasında. Adres sepette seçilir ve burada yalnız okunur, çünkü teslimat
@@ -70,14 +77,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   const [snapshotReady, setSnapshotReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Bu siparişe girecek kalemler: sepetin tamamı değil, bu grubun kalemleri. Kapı siparişi araçla gidemeyecek kalemi de taşısaydı
-   * taslak onu siparişin deposunda karşılanamayan kalem diye reddederdi.
-   */
-  const cartEntries = useMemo(() => {
-    const groups = splitByRoute(view.lines);
-    return (shippingOrder ? groups.shipping : groups.route).map(entryOf);
-  }, [view.lines, shippingOrder]);
+  const cartEntries = useMemo(() => checkoutEntriesOf(view.lines), [view.lines]);
   /**
    * Okumanın sıra bileti: art arda iki okuma ters sırada dönerse geç gelen eski cevap yeniyi ezerdi. Kilit yerine bilet, arayüz açık
    * kalsın diye.
