@@ -27,7 +27,7 @@
         "name": "Ispanaklı Su Böreği",
         "meta": "17,80 € / kg · KDV dahil",
         "price": "8,90 €",
-        "body": "El açması yufka, bol ıspanak ve beyaz peynirle klasik su böreği."
+        "body": "İnce yufka, bol ıspanak ve beyaz peynirle klasik su böreği."
       }
     },
     "zip": {
@@ -59,7 +59,7 @@
       },
       "door": {
         "title": "Kapıda ödeme",
-        "body": "Bölge içi teslimatlarda nakit, kart veya çekle"
+        "body": "Bölge içi teslimatlarda nakit ya da kartla"
       },
       "transfer": {
         "title": "Havale ve vadeli hesap",
@@ -118,10 +118,10 @@
       "note": "Modifiable à tout moment depuis Mon compte.",
       "sampleCard": {
         "eyebrow": "BÖREKS",
-        "name": "Böreki aux épinards",
+        "name": "Börek aux épinards",
         "meta": "17,80 € / kg · TVA incluse",
         "price": "8,90 €",
-        "body": "Pâte étirée à la main, épinards et fromage blanc — le böreki classique."
+        "body": "Pâte fine, épinards et fromage (beyaz peynir) — le su böreği classique."
       }
     },
     "zip": {
@@ -153,7 +153,7 @@
       },
       "door": {
         "title": "Paiement à la livraison",
-        "body": "En zone locale : espèces, carte ou chèque"
+        "body": "Dans notre zone de livraison : espèces ou carte"
       },
       "transfer": {
         "title": "Virement et paiement différé",
@@ -215,7 +215,7 @@
         "name": "Spinat-Wasserbörek",
         "meta": "17,80 € / kg · inkl. MwSt.",
         "price": "8,90 €",
-        "body": "Handgezogener Teig, viel Spinat und Weißkäse — klassischer Wasserbörek."
+        "body": "Dünner Teig, viel Spinat und Weißkäse — der klassische Wasserbörek."
       }
     },
     "zip": {
@@ -247,7 +247,7 @@
       },
       "door": {
         "title": "Zahlung bei Lieferung",
-        "body": "Bei Lieferungen in der Region: bar, mit Karte oder Scheck"
+        "body": "Bei Lieferungen in unserem Liefergebiet: bar oder mit Karte"
       },
       "transfer": {
         "title": "Überweisung und Zahlung auf Rechnung",

@@ -2,11 +2,11 @@
   "tr": {
     "title": "Teşekkürler {name}, siparişiniz alındı",
     "titleAnon": "Teşekkürler, siparişiniz alındı",
-    "mailed": "Onay e-postasını {email} adresine gönderdik. Hazırlığa başladığımızda haber vereceğiz.",
+    "mailed": "Onay e-postasını {email} adresine gönderdik.",
     "orderNo": "Sipariş no · {reference}",
     "delivery": {
       "title": "Teslimat",
-      "coldChain": "Soğuk zincir bozulmadan kapınıza gelir. Kurye yola çıkınca saat aralığını bildiririz.",
+      "coldChain": "Soğuk zincir bozulmadan kapınıza gelir. Kurye yola çıkınca haber veririz.",
       "shippingNote": "Kargoya verildiğinde takip numarasını e-posta ile göndeririz.",
       "pickupLine": "Depodan teslim"
     },
@@ -59,11 +59,11 @@
   "fr": {
     "title": "Merci {name}, votre commande est confirmée",
     "titleAnon": "Merci, votre commande est confirmée",
-    "mailed": "Nous avons envoyé la confirmation à {email}. Nous vous préviendrons dès le début de la préparation.",
+    "mailed": "Nous avons envoyé la confirmation à {email}.",
     "orderNo": "N° de commande · {reference}",
     "delivery": {
       "title": "Livraison",
-      "coldChain": "Livraison sans rupture de la chaîne du froid. Nous vous indiquerons le créneau au départ du livreur.",
+      "coldChain": "Livraison sans rupture de la chaîne du froid. Nous vous prévenons au départ du livreur.",
       "shippingNote": "Nous vous enverrons le numéro de suivi dès l'expédition.",
       "pickupLine": "Retrait à l’entrepôt"
     },
@@ -116,11 +116,11 @@
   "de": {
     "title": "Vielen Dank, {name} — Ihre Bestellung ist eingegangen",
     "titleAnon": "Vielen Dank — Ihre Bestellung ist eingegangen",
-    "mailed": "Wir haben die Bestätigung an {email} gesendet. Sobald die Vorbereitung beginnt, melden wir uns.",
+    "mailed": "Wir haben die Bestätigung an {email} gesendet.",
     "orderNo": "Bestellnummer · {reference}",
     "delivery": {
       "title": "Lieferung",
-      "coldChain": "Ohne Unterbrechung der Kühlkette bis zu Ihrer Tür. Das Zeitfenster nennen wir, sobald der Fahrer losfährt.",
+      "coldChain": "Ohne Unterbrechung der Kühlkette bis zu Ihrer Tür. Wir melden uns, sobald der Fahrer losfährt.",
       "shippingNote": "Die Sendungsnummer senden wir Ihnen beim Versand.",
       "pickupLine": "Abholung im Lager"
     },

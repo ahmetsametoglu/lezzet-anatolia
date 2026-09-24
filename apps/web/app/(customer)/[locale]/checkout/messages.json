@@ -29,7 +29,7 @@
       "routeBody": "Adresiniz teslimat bölgemizde — aracımız kapınıza getirir.",
       "shipping": "Kargo",
       "shippingBody": "Bu adres teslimat bölgemizin dışında — kapıya teslim mümkün değil, sipariş kargoyla yola çıkar.",
-      "shippingDays": "2-3 iş gününde kargoda",
+      "shippingDays": "Hazırlıktan sonra 2–4 iş günü",
       "single": "{date} günü kapınızda",
       "neighborInvite": "Komşunuz {name} sizi {date} teslimatına çağırdı — o gün sizin için seçili.",
       "blocked": "Sepetinizdeki soğuk zincir ürünleri bu adrese gönderemiyoruz. Sepete dönüp o ürünleri sonraya kaydedebilir ya da teslimat adresinizi değiştirebilirsiniz.",
@@ -79,7 +79,7 @@
       "card": "Online öde",
       "cardBody": "Kart bilgileriniz Stripe tarafından şifrelenir",
       "cod": "Kapıda öde",
-      "codBody": "Nakit, kart veya çek",
+      "codBody": "Nakit ya da kart",
       "credit": "Hesaba yaz",
       "creditBody": "Vadeli ödeme — faturayla",
       "codBlocked": {
@@ -87,7 +87,7 @@
         "customer_blocked": "Hesabınızda kapıda ödeme kapalı.",
         "shipping": "Kapıda ödeme yalnız kendi aracımızla getirdiğimiz adreslerde."
       },
-      "cashWarning": "Yasal sınır nedeniyle bu tutar nakit tahsil edilemez — kapıda kart ya da çek kullanabilirsiniz.",
+      "cashWarning": "Yasal sınır nedeniyle bu tutar nakit tahsil edilemez — kapıda kartla ödeyebilirsiniz.",
       "consent": "Kampanya ve fırsatlardan e-posta ile haberdar olmak istiyorum",
       "consentOptional": "(isteğe bağlı)",
       "unavailable": "Online ödeme şu an açılamıyor. Kapıda ödemeyi seçebilir ya da biraz sonra tekrar deneyebilirsiniz.",
@@ -96,7 +96,7 @@
       "transferBody": "Fatura ile hesabımıza",
       "onlineRequired": "Bu tutarda online ödeme gerekir.",
       "codPickup": "Depoda öde",
-      "codPickupBody": "Teslim alırken nakit, kart veya çek"
+      "codPickupBody": "Teslim alırken nakit ya da kart"
     },
     "summary": {
       "submit": "Siparişi onayla",
@@ -195,7 +195,7 @@
       "routeBody": "Votre adresse est dans notre zone — notre véhicule vous livre en main propre.",
       "shipping": "Envoi postal",
       "shippingBody": "Cette adresse est hors de notre zone — la livraison à domicile n'est pas possible, la commande part par transporteur.",
-      "shippingDays": "Expédition sous 2-3 jours ouvrés",
+      "shippingDays": "2 à 4 jours ouvrés après préparation",
       "single": "Chez vous le {date}",
       "neighborInvite": "Votre voisin {name} vous a invité à la livraison du {date} — ce jour est présélectionné.",
       "blocked": "Nous ne pouvons pas envoyer les articles en chaîne du froid à cette adresse. Retournez au panier pour les garder pour plus tard, ou changez d'adresse.",
@@ -245,7 +245,7 @@
       "card": "Payer en ligne",
       "cardBody": "Vos données de carte sont chiffrées par Stripe",
       "cod": "Payer à la livraison",
-      "codBody": "Espèces, carte ou chèque",
+      "codBody": "Espèces ou carte",
       "credit": "Sur compte",
       "creditBody": "Paiement différé — sur facture",
       "codBlocked": {
@@ -253,7 +253,7 @@
         "customer_blocked": "Le paiement à la livraison est désactivé sur votre compte.",
         "shipping": "Le paiement à la livraison n'existe que pour les adresses que nous livrons nous-mêmes."
       },
-      "cashWarning": "La loi interdit l'encaissement en espèces à ce montant — carte ou chèque à la livraison.",
+      "cashWarning": "La loi interdit l'encaissement en espèces à ce montant — réglez par carte à la livraison.",
       "consent": "Je souhaite recevoir les offres et nouveautés par e-mail",
       "consentOptional": "(facultatif)",
       "unavailable": "Le paiement en ligne est momentanément indisponible. Choisissez le paiement à la livraison ou réessayez dans un instant.",
@@ -262,7 +262,7 @@
       "transferBody": "Sur notre compte, avec facture",
       "onlineRequired": "À ce montant, le paiement en ligne est requis.",
       "codPickup": "Payer à l’entrepôt",
-      "codPickupBody": "Espèces, carte ou chèque au retrait"
+      "codPickupBody": "Espèces ou carte au retrait"
     },
     "summary": {
       "submit": "Confirmer la commande",
@@ -361,7 +361,7 @@
       "routeBody": "Ihre Adresse liegt in unserem Liefergebiet — unser Fahrzeug bringt es zu Ihnen.",
       "shipping": "Versand",
       "shippingBody": "Diese Adresse liegt außerhalb unseres Liefergebiets — unser Fahrzeug fährt nicht dorthin, die Bestellung wird per Paket verschickt.",
-      "shippingDays": "Versand in 2-3 Werktagen",
+      "shippingDays": "2–4 Werktage nach der Vorbereitung",
       "single": "Am {date} bei Ihnen",
       "neighborInvite": "{name} aus Ihrer Nachbarschaft hat Sie zur Lieferung am {date} eingeladen — dieser Tag ist vorausgewählt.",
       "blocked": "Kühlkettenartikel können wir nicht an diese Adresse senden. Gehen Sie zum Warenkorb, um sie für später zu merken, oder ändern Sie die Adresse.",
@@ -411,7 +411,7 @@
       "card": "Online bezahlen",
       "cardBody": "Ihre Kartendaten werden von Stripe verschlüsselt",
       "cod": "Bei Lieferung zahlen",
-      "codBody": "Bar, Karte oder Scheck",
+      "codBody": "Bar oder Karte",
       "credit": "Auf Rechnung",
       "creditBody": "Zahlungsziel — per Rechnung",
       "codBlocked": {
@@ -419,7 +419,7 @@
         "customer_blocked": "Zahlung bei Lieferung ist für Ihr Konto deaktiviert.",
         "shipping": "Zahlung bei Lieferung gibt es nur für Adressen, die wir selbst beliefern."
       },
-      "cashWarning": "Gesetzlich ist Barzahlung in dieser Höhe nicht zulässig — an der Tür Karte oder Scheck.",
+      "cashWarning": "Gesetzlich ist Barzahlung in dieser Höhe nicht zulässig — an der Tür können Sie mit Karte zahlen.",
       "consent": "Ich möchte Angebote und Neuigkeiten per E-Mail erhalten",
       "consentOptional": "(optional)",
       "unavailable": "Online-Zahlung ist gerade nicht verfügbar. Wählen Sie Zahlung bei Lieferung oder versuchen Sie es gleich noch einmal.",
@@ -428,7 +428,7 @@
       "transferBody": "Auf unser Konto, mit Rechnung",
       "onlineRequired": "In dieser Höhe ist Online-Zahlung erforderlich.",
       "codPickup": "Im Lager bezahlen",
-      "codPickupBody": "Bar, Karte oder Scheck bei der Abholung"
+      "codPickupBody": "Bar oder Karte bei der Abholung"
     },
     "summary": {
       "submit": "Bestellung bestätigen",

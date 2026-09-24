@@ -410,7 +410,7 @@
     },
     "addresses": {
       "title": "Meine Adressen",
-      "note": "die Lieferadresse ist im Checkout vorausgewählt",
+      "note": "die Lieferadresse ist an der Kasse vorausgewählt",
       "default": "Lieferadresse",
       "makeDefault": "als Lieferadresse",
       "makeDefaultLabel": "{label} als Lieferadresse festlegen",

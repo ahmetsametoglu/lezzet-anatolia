@@ -22,7 +22,7 @@ import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/cust
 interface DeliveryMapProps {
   /** "Kurye yolda · tahmini 30–40 dk" — cümle çağırandan (i18n). */
   trackingLabel: string;
-  /** Sağ alt köşedeki "Canlı takip" künyesi. */
+  /** Sağ alt köşedeki durum etiketi (yoldaki sipariş). */
   liveLabel: string;
   testID?: string;
 }
@@ -41,7 +41,7 @@ export function DeliveryMap({ trackingLabel, liveLabel, testID }: DeliveryMapPro
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        {/* Yollar — krem şeritler. */}
+        {/* Yollar — krem çizgiler. */}
         <Path d="M-10 45 H350" stroke={theme.colors['sand-50']} strokeWidth={11} fill="none" />
         <Path d="M-10 110 H350" stroke={theme.colors['sand-50']} strokeWidth={8} fill="none" />
         <Path d="M70 -10 V205" stroke={theme.colors['sand-50']} strokeWidth={8} fill="none" />

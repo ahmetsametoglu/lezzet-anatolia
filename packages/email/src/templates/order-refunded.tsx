@@ -7,12 +7,8 @@ import type { OrderEmailProps } from './order-confirmed';
 void React;
 
 /**
- * **İade işlendi** (14.5) — `design/project/Email - Siparis Iade.html`.
- *
- * Yalnız iade KAPANDIĞINDA gider; inceleme sürerken ara bildirim yoktur (tasarım kuralı) — "işleme
- * aldık" maili müşteriye bir şey söylemez, parasının döndüğü an söyler.
- *
- * Zaman çizgisi yok, tek durum bloğu var. Döküm kalem bazındadır: hangi kalem için ne kadar.
+ * İade işlendi — yalnız iade kapandığında gider, çünkü "işleme aldık" müşteriye bir şey söylemez, parasının döndüğü an söyler.
+ * Zaman çizgisi yok; döküm iadeye konu ürün bazındadır.
  */
 
 interface Copy {
@@ -49,10 +45,10 @@ const COPY: Record<PreferredLanguage, Copy> = {
     total: 'İade toplamı',
     note: (previous, current) =>
       current
-        ? `Ödeme yönteminize iade · 3–5 iş günü. Sipariş toplamınız ${previous} → ${current} olarak güncellendi.`
-        : `Ödeme yönteminize iade · 3–5 iş günü.`,
+        ? `Ödeme yönteminize iade; hesaba geçiş süresi bankanıza bağlıdır. Sipariş toplamınız ${previous} → ${current} olarak güncellendi.`
+        : `Ödeme yönteminize iade; hesaba geçiş süresi bankanıza bağlıdır.`,
     onDeliveryTitle: 'Kapıda ödeme seçmiştiniz',
-    onDeliveryText: 'İade yerine tahsilat güncel tutardan yapılır; kuryeye ödediğiniz tutar zaten düşülmüş olur.',
+    onDeliveryText: 'İade yerine kapıda güncel tutarı ödersiniz; fark bu tutardan zaten düşülmüştür.',
     cta: 'Siparişe dön',
   },
   fr: {
@@ -72,10 +68,10 @@ const COPY: Record<PreferredLanguage, Copy> = {
     total: 'Total remboursé',
     note: (previous, current) =>
       current
-        ? `Remboursement sur votre moyen de paiement · 3 à 5 jours ouvrés. Total de la commande : ${previous} → ${current}.`
-        : `Remboursement sur votre moyen de paiement · 3 à 5 jours ouvrés.`,
+        ? `Remboursement sur votre moyen de paiement ; le délai dépend de votre banque. Total de la commande : ${previous} → ${current}.`
+        : `Remboursement sur votre moyen de paiement ; le délai dépend de votre banque.`,
     onDeliveryTitle: 'Vous aviez choisi le paiement à la livraison',
-    onDeliveryText: 'Au lieu d’un remboursement, l’encaissement se fait sur le montant actualisé ; ce que vous avez réglé est déjà déduit.',
+    onDeliveryText: 'Au lieu d’un remboursement, vous réglerez le montant actualisé à la livraison : la différence est déjà déduite.',
     cta: 'Revenir à la commande',
   },
   de: {
@@ -95,10 +91,10 @@ const COPY: Record<PreferredLanguage, Copy> = {
     total: 'Erstattet gesamt',
     note: (previous, current) =>
       current
-        ? `Erstattung auf Ihr Zahlungsmittel · 3–5 Werktage. Bestellsumme: ${previous} → ${current}.`
-        : `Erstattung auf Ihr Zahlungsmittel · 3–5 Werktage.`,
+        ? `Erstattung auf Ihr Zahlungsmittel; die Dauer hängt von Ihrer Bank ab. Bestellsumme: ${previous} → ${current}.`
+        : `Erstattung auf Ihr Zahlungsmittel; die Dauer hängt von Ihrer Bank ab.`,
     onDeliveryTitle: 'Sie hatten Zahlung bei Lieferung gewählt',
-    onDeliveryText: 'Statt einer Erstattung wird der aktualisierte Betrag eingezogen; Ihre Zahlung an den Kurier ist bereits abgezogen.',
+    onDeliveryText: 'Statt einer Erstattung zahlen Sie bei der Lieferung nur den aktualisierten Betrag – der Abzug ist darin bereits berücksichtigt.',
     cta: 'Zur Bestellung',
   },
 };

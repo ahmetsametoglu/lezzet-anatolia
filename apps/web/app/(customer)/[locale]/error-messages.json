@@ -9,7 +9,7 @@
     },
     "serverError": {
       "eyebrow": "Bir şeyler ters gitti",
-      "title": "Mutfakta küçük bir aksilik oldu",
+      "title": "Bizim tarafta küçük bir aksilik oldu",
       "description": "Sorun bizde, sizde değil. Birkaç saniye sonra yeniden denerseniz büyük olasılıkla yolunda gidecek.",
       "retryCta": "Yeniden dene",
       "cart": "Sepetiniz olduğu gibi duruyor",
@@ -26,7 +26,7 @@
     },
     "serverError": {
       "eyebrow": "Une erreur s'est produite",
-      "title": "Un petit contretemps en cuisine",
+      "title": "Un petit contretemps de notre côté",
       "description": "Le problème vient de nous, pas de vous. Réessayez dans quelques secondes, tout devrait rentrer dans l'ordre.",
       "retryCta": "Réessayer",
       "cart": "Votre panier est intact",
@@ -43,7 +43,7 @@
     },
     "serverError": {
       "eyebrow": "Etwas ist schiefgelaufen",
-      "title": "Ein kleines Missgeschick in der Küche",
+      "title": "Da ist bei uns etwas durcheinandergeraten",
       "description": "Das Problem liegt bei uns, nicht bei Ihnen. Versuchen Sie es in ein paar Sekunden erneut, meist läuft dann alles wieder rund.",
       "retryCta": "Erneut versuchen",
       "cart": "Ihr Warenkorb bleibt unverändert",

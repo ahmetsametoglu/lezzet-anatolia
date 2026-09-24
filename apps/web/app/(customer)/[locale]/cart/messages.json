@@ -356,7 +356,7 @@
       "routeTitleDated": "Lieferung an die Tür · {date}",
       "shippingTitle": "Versand als Paket",
       "routeTotal": "Summe für die Lieferung: {amount}",
-      "routeNote": "Lieferung kostenlos · Barzahlung an der Tür möglich",
+      "routeNote": "Lieferung kostenlos · Zahlung bei Lieferung möglich",
       "shippingTotal": "Summe für den Versand: {amount}",
       "shippingFee": "{items} + Versand {fee}",
       "shippingFeeFree": "{items} · Versand kostenlos",

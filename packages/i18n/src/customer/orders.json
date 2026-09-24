@@ -19,7 +19,7 @@
     },
     "empty": {
       "title": "Henüz siparişiniz yok",
-      "body": "İlk siparişinizi verin — teslimatta burada canlı takip edin.",
+      "body": "İlk siparişinizi verin — her adımı buradan izleyin.",
       "cta": "Kataloğa göz at"
     },
     "error": {
@@ -43,7 +43,7 @@
       "notFoundBody": "Bağlantı eski olabilir. Sipariş listenizden yeniden açın.",
       "notFoundCta": "Siparişlerim",
       "tracking": "Kurye yolda",
-      "trackingLive": "Canlı takip",
+      "trackingLive": "Kurye yolda",
       "itemsEyebrow": "Sipariş içeriği",
       "line": "{quantity}× {name}",
       "bundlePill": "Paket · {count} ürün",
@@ -123,7 +123,7 @@
     },
     "empty": {
       "title": "Aucune commande pour l'instant",
-      "body": "Passez votre première commande — suivez la livraison en direct ici.",
+      "body": "Passez votre première commande — vous suivrez ici chaque étape.",
       "cta": "Parcourir le catalogue"
     },
     "error": {
@@ -147,7 +147,7 @@
       "notFoundBody": "Le lien est peut-être périmé. Ouvrez-la depuis votre liste de commandes.",
       "notFoundCta": "Mes commandes",
       "tracking": "Livreur en route",
-      "trackingLive": "Suivi en direct",
+      "trackingLive": "Livreur en route",
       "itemsEyebrow": "Contenu de la commande",
       "line": "{quantity}× {name}",
       "bundlePill": "Coffret · {count} produits",
@@ -227,7 +227,7 @@
     },
     "empty": {
       "title": "Noch keine Bestellungen",
-      "body": "Geben Sie Ihre erste Bestellung auf — verfolgen Sie die Lieferung hier live.",
+      "body": "Geben Sie Ihre erste Bestellung auf — hier verfolgen Sie jeden Schritt.",
       "cta": "Katalog ansehen"
     },
     "error": {
@@ -251,7 +251,7 @@
       "notFoundBody": "Der Link ist womöglich veraltet. Öffnen Sie sie aus Ihrer Bestellliste.",
       "notFoundCta": "Meine Bestellungen",
       "tracking": "Kurier unterwegs",
-      "trackingLive": "Live-Verfolgung",
+      "trackingLive": "Fahrer unterwegs",
       "itemsEyebrow": "Bestellinhalt",
       "line": "{quantity}× {name}",
       "bundlePill": "Paket · {count} Produkte",

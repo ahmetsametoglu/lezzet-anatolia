@@ -264,7 +264,7 @@
       "undeliverable": "An diese Adresse nicht lieferbar",
       "split": "Dieser Warenkorb wird zu zwei getrennten Bestellungen: die Artikel für die Haustürlieferung und die Versandartikel werden separat bezahlt. Die Versandbestellung ist nicht verpflichtend — sonst bleiben diese Artikel im Warenkorb.",
       "routeTotal": "Summe für die Lieferung: {amount}",
-      "routeNote": "Lieferung kostenlos · Barzahlung an der Tür möglich",
+      "routeNote": "Lieferung kostenlos · Zahlung bei Lieferung möglich",
       "shippingTotal": "Summe für den Versand: {amount}",
       "shippingFee": "{items} + Versand {fee}",
       "shippingFeeFree": "{items} · Versand kostenlos",

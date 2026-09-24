@@ -42,7 +42,7 @@
             "id": "kargo",
             "heading": "Kargo ile gönderim",
             "paragraphs": [
-              "Paketiniz hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında elinizde olur.",
+              "Paketiniz hazırlandıktan sonra Fransa ve Almanya'da 2–4 iş gününde elinizde olur.",
               "Sepetinizde hem kargoya uygun hem yalnız araçla gidebilen ürünler varsa sepet iki gruba ayrılır: kapıya gidenler ve kargoya gidenler ayrı sipariş, ayrı ödeme olur. Kargolu siparişi vermek zorunlu değildir — vermezseniz o ürünler sepette bekler.",
               "Kargo ücreti ve ücretsiz kargo sınırı aşağıda, \"Güncel tutarlar\" bölümündedir; aynı sayıları sepette de, siparişi tamamlamadan önce görürsünüz."
             ],
@@ -133,7 +133,7 @@
           {
             "id": "teslimat-gunu",
             "question": "Siparişim ne zaman gelir?",
-            "answer": "Bölge içindeyseniz teslimat gününüz bölgenizin takvimine göre belirlenir ve siparişi verirken görürsünüz. Kargo gönderimlerinde paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında elinizde olur. Siparişinizin durumunu \"Siparişlerim\" bölümünden takip edebilir, her adımda e-posta alırsınız."
+            "answer": "Bölge içindeyseniz teslimat gününüz bölgenizin takvimine göre belirlenir ve siparişi verirken görürsünüz. Kargo gönderimlerinde paket hazırlandıktan sonra Fransa ve Almanya'da 2–4 iş gününde elinizde olur. Siparişinizin durumunu \"Siparişlerim\" bölümünden takip edebilir, önemli adımlarda (onay, yola çıkış, teslim) e-posta alırsınız."
           },
           {
             "id": "kapida-odeme",
@@ -148,7 +148,7 @@
           {
             "id": "toptan",
             "question": "Restoranım için toptan fiyat alabilir miyim?",
-            "answer": "Evet. \"Profesyoneller\" sayfasından SIRET numaranızla başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür. İşletme hesaplarında havale ve çekle ödeme de açılır; ödeme koşullarınız hesabınıza tanımlanır."
+            "answer": "Evet. \"Profesyoneller\" sayfasından SIRET numaranızla başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür. İşletme hesaplarında havale ile ödeme de açılır; ödeme koşullarınız hesabınıza tanımlanır."
           },
           {
             "id": "alerjen",
@@ -243,7 +243,7 @@
             "bullets": [
               "Ödeme sağlayıcısı: kart bilgileriniz bize hiç ulaşmaz, doğrudan ödeme sağlayıcısında işlenir.",
               "E-posta gönderim servisi: bildirim e-postalarını iletmek için.",
-              "Kargo firması: bölge dışı gönderimlerde adınız ve teslimat adresiniz.",
+              "Kargo firması: kargoyla gönderilen siparişlerde adınız ve teslimat adresiniz.",
               {
                 "web": "Adres arama (Fransa): adres alanına yazdığınız metin, öneri getirebilmek için doğrudan tarayıcınızdan IGN'in kamuya açık adres servisine (Base Adresse Nationale) gider. Adınız, hesabınız ya da başka bir bilginiz gönderilmez.",
                 "app": "Adres arama (Fransa): adres alanına yazdığınız metin, öneri getirebilmek için doğrudan cihazınızdan IGN'in kamuya açık adres servisine (Base Adresse Nationale) gider. Adınız, hesabınız ya da başka bir bilginiz gönderilmez."
@@ -354,7 +354,7 @@
             "heading": "Siparişin kurulması",
             "paragraphs": [
               "Sipariş, sepetinizi onaylayıp ödeme adımını tamamladığınızda kurulur — kapıda ödemeyi seçtiyseniz bu adımda ödeme yöntemini onaylamanız yeterlidir. Onay ekranını gördüğünüz ve onay e-postanız ulaştığı anda sipariş bizim tarafımızdan da kabul edilmiş sayılır.",
-              "Fiyatlar sepette gösterildiği anda sabitlenir. Sipariş verdikten sonra katalogdaki fiyat değişse de siparişinizin tutarı değişmez.",
+              "Sepetteki fiyat, siparişi verdiğiniz anda kesinleşir. Ürün sepetinizdeyken fiyatı yükselirse siparişten önce yeni fiyatı gösterip onayınızı alırız; düşerse düşük fiyat uygulanır. Sipariş verdikten sonra katalogdaki fiyat değişse de siparişinizin tutarı değişmez.",
               "Stokta olmadığı sonradan anlaşılan bir ürün varsa siparişiniz iptal edilmez: eksik ürün çıkarılır, bedeli tahsil edilmez ya da iade edilir ve durum size bildirilir."
             ],
             "bullets": []
@@ -375,7 +375,7 @@
             "paragraphs": [
               "Kartla ödeme, güvenli bir ödeme sağlayıcısı üzerinden alınır. Kart bilgileriniz bize hiçbir aşamada ulaşmaz ve tarafımızca saklanmaz.",
               "Teslimat bölgemiz içinde, belirli bir tutara kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla; üst sınır güncel hâliyle Teslimat ve iade sayfasındadır. Kapıda ödemede tahsil edilecek tutar, teslim edilen ürünlerin tutarıdır; eksik çıkan ürün baştan düşülür.",
-              "Havale ve çekle ödeme yalnız onaylı işletme hesaplarına açıktır; ödeme koşullarınız hesabınıza tanımlanır.",
+              "Havale ile ödeme yalnız onaylı işletme hesaplarına açıktır; ödeme koşullarınız hesabınıza tanımlanır.",
               "Peşin ödemeli siparişler, ödeme tamamlanmadan hazırlığa alınmaz. Kapıda ödemede tahsilat teslimat anında yapılır ve sipariş onaylandığı anda hazırlığa girer."
             ],
             "bullets": []
@@ -385,7 +385,7 @@
             "heading": "Teslimat",
             "paragraphs": [
               "Soğuk zincir gerektiren ürünleri (donuk ve soğutulmuş) yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere teslim ediyoruz. Diğer bütün ürünler kargoyla gönderilir — bölge içinde de, bölge dışında da. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
-              "Asgari sepet tutarı, kargo ücreti ve ücretsiz kargo sınırı güncel hâliyle Teslimat ve iade sayfasında yayımlanır; aynı tutarlar sipariş verilirken sepette de gösterilir. Paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında teslim edilir.",
+              "Asgari sepet tutarı, kargo ücreti ve ücretsiz kargo sınırı güncel hâliyle Teslimat ve iade sayfasında yayımlanır; aynı tutarlar sipariş verilirken sepette de gösterilir. Paket hazırlandıktan sonra Fransa ve Almanya'da 2–4 iş gününde teslim edilir.",
               "Belirtilen teslimat günleri tahminidir. Hava koşulları, trafik ya da kargo firmasından kaynaklanan gecikmeler teslimatı öteleyebilir; bu durumda sizi bilgilendiririz.",
               "Adreste bulunulmaması nedeniyle teslim edilemeyen siparişlerde teslimatı bir kez daha, ücretsiz deneriz. İkinci denemede de teslim edemezsek dondurulmuş ürünler satılamaz hâle geldiği için bedel iade edilmez. Ayrıntılar teslimat ve iade sayfasındadır."
             ],
@@ -573,7 +573,7 @@
             "id": "kargo",
             "heading": "Expédition",
             "paragraphs": [
-              "Une fois votre colis préparé, comptez 2 à 4 jours ouvrés en France, un jour de plus pour les adresses à l'étranger.",
+              "Une fois votre colis préparé, comptez 2 à 4 jours ouvrés en France comme en Allemagne.",
               "Si votre panier contient à la fois des articles expédiables et des articles réservés au camion, il est scindé en deux : la livraison à domicile et l'expédition deviennent deux commandes et deux paiements distincts. Passer la commande expédiée n'est pas obligatoire — sinon ces articles restent dans votre panier.",
               "Les frais d'expédition et le seuil de franco de port figurent ci-dessous, dans « Montants en vigueur » ; vous retrouvez les mêmes chiffres dans le panier, avant la validation."
             ],
@@ -664,7 +664,7 @@
           {
             "id": "teslimat-gunu",
             "question": "Quand ma commande arrive-t-elle ?",
-            "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, comptez 2 à 4 jours ouvrés en France une fois le colis préparé, un jour de plus pour les adresses à l'étranger. Vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail à chaque étape."
+            "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, comptez 2 à 4 jours ouvrés en France une fois le colis préparé comme en Allemagne. Vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail aux étapes clés (confirmation, départ, livraison)."
           },
           {
             "id": "kapida-odeme",
@@ -679,7 +679,7 @@
           {
             "id": "toptan",
             "question": "Puis-je obtenir des tarifs professionnels pour mon restaurant ?",
-            "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence. Les comptes professionnels ont également accès au virement et au paiement par chèque ; vos conditions de règlement sont définies sur votre compte."
+            "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence. Les comptes professionnels ont également accès au paiement par virement ; vos conditions de règlement sont définies sur votre compte."
           },
           {
             "id": "alerjen",
@@ -774,7 +774,7 @@
             "bullets": [
               "Prestataire de paiement : vos données de carte ne nous parviennent jamais, elles sont traitées directement chez le prestataire.",
               "Service d'envoi d'e-mails : pour acheminer les e-mails de notification.",
-              "Transporteur : votre nom et votre adresse de livraison pour les expéditions hors zone.",
+              "Transporteur : votre nom et votre adresse de livraison pour les commandes expédiées.",
               {
                 "web": "Recherche d'adresse (France) : le texte que vous saisissez dans le champ d'adresse est envoyé directement depuis votre navigateur au service public d'adresses de l'IGN (Base Adresse Nationale) afin d'obtenir des suggestions. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis.",
                 "app": "Recherche d'adresse (France) : le texte que vous saisissez dans le champ d'adresse est envoyé directement depuis votre appareil au service public d'adresses de l'IGN (Base Adresse Nationale) afin d'obtenir des suggestions. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis."
@@ -885,7 +885,7 @@
             "heading": "Formation de la commande",
             "paragraphs": [
               "La commande est formée lorsque vous validez votre panier et finalisez l'étape de paiement — si vous avez choisi le paiement à la livraison, il vous suffit de confirmer le moyen de paiement à cette étape. Dès l'affichage de la page de confirmation et la réception de votre e-mail de confirmation, la commande est également acceptée par nos soins.",
-              "Les prix sont figés au moment où ils s'affichent dans le panier. Même si le prix du catalogue change après votre commande, le montant de votre commande reste inchangé.",
+              "Le prix de votre panier devient définitif au moment où vous passez commande. Si le prix d'un article augmente pendant qu'il est dans votre panier, nous vous montrons le nouveau prix et vous demandons de le confirmer avant la commande ; s'il baisse, le prix le plus bas s'applique. Une fois la commande passée, son montant ne change plus, même si le prix du catalogue évolue.",
               "Si un article s'avère indisponible après coup, votre commande n'est pas annulée : l'article manquant est retiré, son montant n'est pas encaissé ou vous est remboursé, et vous en êtes informé."
             ],
             "bullets": []
@@ -906,7 +906,7 @@
             "paragraphs": [
               "Le paiement par carte est encaissé via un prestataire de paiement sécurisé. Vos données de carte ne nous parviennent à aucun moment et ne sont pas conservées par nos soins.",
               "Le paiement à la livraison est possible dans notre zone de livraison, jusqu'à un certain montant de commande — en espèces ou par carte ; le plafond en vigueur figure sur la page livraison et retours. Dans ce cas, le montant encaissé correspond aux articles effectivement livrés : un article manquant est déduit d'emblée.",
-              "Le virement et le chèque sont réservés aux comptes professionnels validés ; vos conditions de règlement sont définies sur votre compte.",
+              "Le virement est réservé aux comptes professionnels validés ; vos conditions de règlement sont définies sur votre compte.",
               "Les commandes payées d'avance ne sont pas mises en préparation avant la finalisation du paiement. En paiement à la livraison, l'encaissement a lieu au moment de la livraison et la commande entre en préparation dès sa validation."
             ],
             "bullets": []
@@ -916,7 +916,7 @@
             "heading": "Livraison",
             "paragraphs": [
               "Les produits sous chaîne du froid (surgelés et frais) ne sont livrés qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison. Tous les autres produits partent par transporteur — dans la zone comme en dehors. Le jour et les options de livraison sont affichés au moment de la commande selon le code postal de votre adresse.",
-              "Le montant minimum de commande, les frais d'expédition et le seuil de franco de port sont publiés, à jour, sur la page livraison et retours ; les mêmes montants sont affichés dans le panier au moment de commander. Une fois le colis préparé, comptez 2 à 4 jours ouvrés en France et un jour de plus pour les adresses à l'étranger.",
+              "Le montant minimum de commande, les frais d'expédition et le seuil de franco de port sont publiés, à jour, sur la page livraison et retours ; les mêmes montants sont affichés dans le panier au moment de commander. Une fois le colis préparé, comptez 2 à 4 jours ouvrés en France comme en Allemagne.",
               "Les jours de livraison indiqués sont estimatifs. Les conditions météorologiques, la circulation ou un retard du transporteur peuvent décaler la livraison ; le cas échéant, nous vous en informons.",
               "Si la livraison ne peut être effectuée parce que personne n'est présent à l'adresse, nous présentons la commande une seconde fois, sans frais. Si ce second passage échoue également, les produits surgelés ne sont plus commercialisables et le montant n'est pas remboursé. Les détails figurent sur la page livraison et retours."
             ],
@@ -1104,7 +1104,7 @@
             "id": "kargo",
             "heading": "Versand",
             "paragraphs": [
-              "Nach der Vorbereitung Ihres Pakets rechnen Sie in Frankreich mit 2 bis 4 Werktagen, bei Adressen im Ausland mit einem Tag mehr.",
+              "Nach der Vorbereitung Ihres Pakets rechnen Sie in Frankreich und Deutschland mit 2 bis 4 Werktagen.",
               "Enthält Ihr Warenkorb sowohl versandfähige als auch nur per Fahrzeug lieferbare Artikel, wird er geteilt: Haustürlieferung und Versand werden zu zwei getrennten Bestellungen mit getrennter Zahlung. Die Versandbestellung ist nicht verpflichtend — sonst bleiben diese Artikel im Warenkorb.",
               "Versandkosten und Freigrenze stehen unten unter „Aktuelle Beträge“; dieselben Zahlen sehen Sie auch im Warenkorb, vor dem Abschluss der Bestellung."
             ],
@@ -1195,7 +1195,7 @@
           {
             "id": "teslimat-gunu",
             "question": "Wann kommt meine Bestellung an?",
-            "answer": "Innerhalb des Liefergebiets richtet sich Ihr Liefertag nach dem Kalender Ihres Gebiets, und Sie sehen ihn bei der Bestellung. Beim Versand rechnen Sie nach der Vorbereitung des Pakets mit 2 bis 4 Werktagen in Frankreich, bei Adressen im Ausland mit einem Tag mehr. Den Status verfolgen Sie unter „Meine Bestellungen“ und erhalten bei jedem Schritt eine E-Mail."
+            "answer": "Innerhalb des Liefergebiets richtet sich Ihr Liefertag nach dem Kalender Ihres Gebiets, und Sie sehen ihn bei der Bestellung. Beim Versand rechnen Sie nach der Vorbereitung des Pakets mit 2 bis 4 Werktagen in Frankreich und Deutschland. Den Status verfolgen Sie unter „Meine Bestellungen“ und erhalten bei den wichtigen Schritten (Bestätigung, Abfahrt, Lieferung) eine E-Mail."
           },
           {
             "id": "kapida-odeme",
@@ -1210,7 +1210,7 @@
           {
             "id": "toptan",
             "question": "Bekomme ich Großhandelspreise für mein Restaurant?",
-            "answer": "Ja. Sie können sich über die Seite „Geschäftskunden“ mit Ihrer SIRET-Nummer bewerben; sobald Ihre Anfrage bestätigt ist, wird Ihr Konto zu einem Geschäftskonto und die Preise werden entsprechend angezeigt. Geschäftskonten können zusätzlich per Überweisung und Scheck bezahlen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt."
+            "answer": "Ja. Sie können sich über die Seite „Geschäftskunden“ mit Ihrer SIRET-Nummer bewerben; sobald Ihre Anfrage bestätigt ist, wird Ihr Konto zu einem Geschäftskonto und die Preise werden entsprechend angezeigt. Geschäftskonten können zusätzlich per Überweisung bezahlen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt."
           },
           {
             "id": "alerjen",
@@ -1305,7 +1305,7 @@
             "bullets": [
               "Zahlungsdienstleister: Ihre Kartendaten erreichen uns nie, sie werden direkt beim Dienstleister verarbeitet.",
               "E-Mail-Versanddienst: zur Zustellung der Benachrichtigungs-E-Mails.",
-              "Versanddienstleister: Ihr Name und Ihre Lieferadresse bei Sendungen außerhalb des Liefergebiets.",
+              "Versanddienstleister: Ihr Name und Ihre Lieferadresse bei versandten Bestellungen.",
               {
                 "web": "Adresssuche (Frankreich): Der Text, den Sie im Adressfeld eingeben, wird für Vorschläge direkt von Ihrem Browser an den öffentlichen Adressdienst des IGN (Base Adresse Nationale) gesendet. Weder Ihr Name noch Ihr Konto noch andere Daten werden übermittelt.",
                 "app": "Adresssuche (Frankreich): Der Text, den Sie im Adressfeld eingeben, wird für Vorschläge direkt von Ihrem Gerät an den öffentlichen Adressdienst des IGN (Base Adresse Nationale) gesendet. Weder Ihr Name noch Ihr Konto noch andere Daten werden übermittelt."
@@ -1406,7 +1406,7 @@
             "heading": "Produkte und Angaben",
             "paragraphs": [
               "Die von uns verkauften Produkte sind tiefgekühlte und lagerfähige Lebensmittel. Wir stellen sie nicht selbst her, sondern beziehen sie von ausgewählten Herstellern. Zutaten, Allergene und Nettomenge stehen auf der Seite jedes Produkts; diese Angaben stammen aus der Deklaration des Herstellers.",
-              "Produktfotos dienen der Veranschaulichung; Darstellung und Aussehen können von Produkt zu Produkt abweichen. Verbindlich sind allein die schriftlichen Angaben auf der Produktseite.",
+              "Produktfotos dienen der Veranschaulichung; Aufmachung und Aussehen des gelieferten Produkts können von der Abbildung abweichen. Verbindlich sind allein die schriftlichen Angaben auf der Produktseite.",
               "Produkte mit Kühlkette (Tiefkühl- und Frischware) können nur innerhalb unseres Liefergebiets verkauft werden: Da wir die Kühlkette unter Versandbedingungen nicht sicher gewährleisten können, versenden wir sie nicht als Paket. Sie sind im Katalog gekennzeichnet und können bei Auswahl einer Adresse außerhalb des Gebiets nicht bestellt werden."
             ],
             "bullets": []
@@ -1416,8 +1416,8 @@
             "heading": "Zustandekommen der Bestellung",
             "paragraphs": [
               "Die Bestellung kommt zustande, wenn Sie Ihren Warenkorb bestätigen und den Zahlungsschritt abschließen — bei Zahlung bei Lieferung genügt es, in diesem Schritt das Zahlungsmittel zu bestätigen. Mit der Bestätigungsseite und der Bestätigungs-E-Mail gilt die Bestellung auch von unserer Seite als angenommen.",
-              "Die Preise werden in dem Moment festgeschrieben, in dem sie im Warenkorb angezeigt werden. Ändert sich der Katalogpreis nach Ihrer Bestellung, bleibt der Betrag Ihrer Bestellung unverändert.",
-              "Stellt sich nachträglich heraus, dass ein Artikel nicht verfügbar ist, wird Ihre Bestellung nicht storniert: Der fehlende Artikel wird entfernt, sein Betrag nicht eingezogen oder erstattet, und Sie werden informiert."
+              "Der Preis in Ihrem Warenkorb wird mit Ihrer Bestellung verbindlich. Steigt der Preis eines Artikels, während er im Warenkorb liegt, zeigen wir Ihnen vor der Bestellung den neuen Preis und bitten um Ihre Bestätigung; sinkt er, gilt der niedrigere Preis. Nach der Bestellung ändert sich der Betrag nicht mehr, auch wenn sich der Katalogpreis ändert.",
+              "Stellt sich nachträglich heraus, dass ein Artikel nicht verfügbar ist, wird Ihre Bestellung nicht storniert: Der fehlende Artikel entfällt; sein Betrag wird nicht berechnet oder – falls bereits bezahlt – erstattet. Wir informieren Sie darüber."
             ],
             "bullets": []
           },
@@ -1437,7 +1437,7 @@
             "paragraphs": [
               "Kartenzahlungen werden über einen sicheren Zahlungsdienstleister eingezogen. Ihre Kartendaten erreichen uns zu keinem Zeitpunkt und werden von uns nicht gespeichert.",
               "Innerhalb unseres Liefergebiets ist Zahlung bei Lieferung bis zu einem bestimmten Bestellwert möglich — bar oder mit Karte; die aktuelle Obergrenze steht auf der Seite Lieferung und Rückgabe. Dabei entspricht der eingezogene Betrag den tatsächlich gelieferten Artikeln: Ein fehlender Artikel wird von vornherein abgezogen.",
-              "Überweisung und Scheck stehen ausschließlich bestätigten Geschäftskonten offen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt.",
+              "Die Überweisung steht ausschließlich bestätigten Geschäftskonten offen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt.",
               "Im Voraus bezahlte Bestellungen werden erst nach Abschluss der Zahlung in Vorbereitung genommen. Bei Zahlung bei Lieferung erfolgt der Einzug bei der Übergabe, und die Bestellung geht unmittelbar nach ihrer Bestätigung in Vorbereitung."
             ],
             "bullets": []
@@ -1447,7 +1447,7 @@
             "heading": "Lieferung",
             "paragraphs": [
               "Produkte mit Kühlkette (Tiefkühl- und Frischware) liefern wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Alle übrigen Produkte gehen per Paket — im Gebiet wie außerhalb. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
-              "Mindestbestellwert, Versandkosten und Freigrenze werden in ihrer aktuellen Höhe auf der Seite Lieferung und Rückgabe veröffentlicht; dieselben Beträge werden beim Bestellen im Warenkorb angezeigt. Nach der Vorbereitung des Pakets rechnen Sie mit 2 bis 4 Werktagen in Frankreich und einem Tag mehr bei Adressen im Ausland.",
+              "Mindestbestellwert, Versandkosten und Freigrenze werden in ihrer aktuellen Höhe auf der Seite Lieferung und Rückgabe veröffentlicht; dieselben Beträge werden beim Bestellen im Warenkorb angezeigt. Nach der Vorbereitung des Pakets rechnen Sie mit 2 bis 4 Werktagen in Frankreich und Deutschland.",
               "Die angegebenen Liefertage sind Schätzungen. Wetter, Verkehr oder Verzögerungen des Versanddienstleisters können die Lieferung verschieben; in diesem Fall informieren wir Sie.",
               "Kann nicht zugestellt werden, weil an der Adresse niemand angetroffen wird, versuchen wir die Zustellung ein zweites Mal kostenfrei. Scheitert auch dieser zweite Versuch, sind die tiefgekühlten Produkte nicht mehr verkehrsfähig und der Betrag wird nicht erstattet. Einzelheiten finden Sie auf der Seite Lieferung und Rücksendung."
             ],
@@ -1458,7 +1458,7 @@
             "heading": "Widerrufsrecht",
             "paragraphs": [
               "Nach französischem Verbraucherrecht (Code de la consommation, Art. L221-28) findet das 14-tägige Widerrufsrecht im Fernabsatz auf schnell verderbliche Lebensmittel KEINE ANWENDUNG.",
-              "Ihre Rechte bei fehlerhafter Lieferung bleiben davon unberührt: Bei fehlenden, beschädigten, aufgetauten oder falsch gelieferten Produkten wird der Betrag erstattet oder erneut versendet. Bedingungen und Fristen stehen auf der Seite Lieferung und Rücksendung."
+              "Ihre Rechte bei fehlerhafter Lieferung bleiben davon unberührt: Bei fehlenden, beschädigten, aufgetauten oder falsch gelieferten Produkten erstatten wir den Betrag oder liefern die Ware erneut. Bedingungen und Fristen stehen auf der Seite Lieferung und Rücksendung."
             ],
             "bullets": []
           },

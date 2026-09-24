@@ -12,7 +12,7 @@
 interface PhoneDeliveryMapProps {
   /** Sol üstteki künye ("Livreur en route") — çeviri çağıranda çözülür. */
   trackingLabel: string;
-  /** Sağ alttaki künye ("Suivi en direct"). */
+  /** Sağ alttaki durum etiketi (yoldaki sipariş). */
   liveLabel: string;
 }
 
@@ -20,7 +20,7 @@ export function PhoneDeliveryMap({ trackingLabel, liveLabel }: PhoneDeliveryMapP
   return (
     <div className="relative h-[195px] overflow-hidden rounded-card bg-olive-bg">
       <svg aria-hidden viewBox="0 0 340 195" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" fill="none">
-        {/* Yollar — krem şeritler. */}
+        {/* Yollar — krem çizgiler. */}
         <path d="M-10 45 H350" className="stroke-sand-50" strokeWidth={11} />
         <path d="M-10 110 H350" className="stroke-sand-50" strokeWidth={8} />
         <path d="M70 -10 V205" className="stroke-sand-50" strokeWidth={8} />

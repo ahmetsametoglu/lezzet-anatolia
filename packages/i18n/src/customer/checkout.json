@@ -42,7 +42,7 @@
     "delivery": {
       "eyebrow": "Teslimat",
       "door": "Kapıya teslim",
-      "doorBody": "Soğutuculu araçlarımızla — günü siz seçin. Teslimat: {fee}",
+      "doorBody": "Soğutuculu aracımızla — günü siz seçin. Teslimat: {fee}",
       "doorUnavailable": "Bu adres teslimat bölgemizin dışında.",
       "shippingInZone": "Bu siparişteki ürünler aracımızla gelmiyor; kargoyla gönderilir.",
       "shipping": "Kargoyla gönderim",
@@ -53,7 +53,7 @@
       "neighborInviteOtherDay": "{name} sizi {day} teslimatına çağırdı. Birlikte teslim alıp puan kazanmak için o günü seçin.",
       "neighborSomeone": "Komşunuz",
       "neighborDecline": "Bu daveti kaldır",
-      "pickupBody": "Hazır olunca haber veririz — saati depoyla telefonla kararlaştırın. Teslimat: ücretsiz",
+      "pickupBody": "Hazır olunca haber veririz — saati depoyla telefonla kararlaştırın. Teslim alma ücretsiz",
       "pickupPhone": "Randevu için: {phone}"
     },
     "payment": {
@@ -61,7 +61,7 @@
       "online": "Online ödeme",
       "onlineBody": "Kart bilgileriniz Stripe tarafından şifrelenir.",
       "onDelivery": "Kapıda ödeme",
-      "onDeliveryBody": "Nakit, kart veya çek.",
+      "onDeliveryBody": "Nakit ya da kart.",
       "transfer": "Havale ile öde",
       "transferBody": "Hesabımıza, faturayla.",
       "credit": "Hesaba yaz",
@@ -72,9 +72,9 @@
         "shipping": "Kapıda ödeme yalnız kendi aracımızla getirdiğimiz adreslerde."
       },
       "onlineRequired": "Bu tutarda online ödeme gerekir.",
-      "cashWarning": "Yasal sınır nedeniyle bu tutar nakit tahsil edilemez — kapıda kart ya da çek kullanabilirsiniz.",
+      "cashWarning": "Yasal sınır nedeniyle bu tutar nakit tahsil edilemez — kapıda kartla ödeyebilirsiniz.",
       "atPickup": "Depoda ödeme",
-      "atPickupBody": "Teslim alırken nakit, kart veya çek."
+      "atPickupBody": "Teslim alırken nakit ya da kart."
     },
     "summary": {
       "eyebrow": "Sipariş özeti",
@@ -179,7 +179,7 @@
       "failed": "Ödeme tamamlanmadı",
       "failedBody": "Kartınızdan tahsilat yapılmadı. Sepetiniz duruyor; dilerseniz başka bir kartla ya da kapıda ödeme ile tekrar deneyebilirsiniz.",
       "refunded": "Siparişiniz iptal edildi, paranız iade edildi",
-      "refundedBody": "Ödemeniz alındıktan sonra ürünlerden biri tükendi ve siparişi tamamlayamadık. Tahsil edilen tutarın tamamı kartınıza iade edildi — bankanıza göre 3-5 iş günü içinde hesabınıza döner. Özür dileriz.",
+      "refundedBody": "Ödemeniz alındıktan sonra ürünlerden biri tükendi ve siparişi tamamlayamadık. Tahsil edilen tutarın tamamı kartınıza iade edildi — hesabınıza geçiş süresi bankanıza bağlıdır. Özür dileriz.",
       "incomplete": "Siparişiniz tamamlanmadı",
       "incompleteBody": "Sipariş kaydedildi ama kesinleşmedi. Sepetiniz duruyor — ödeme adımına dönüp yeniden deneyebilirsiniz.",
       "retry": "Ödemeyi tekrar dene",
@@ -229,7 +229,7 @@
     "delivery": {
       "eyebrow": "Livraison",
       "door": "Livraison à domicile",
-      "doorBody": "Avec nos véhicules réfrigérés — vous choisissez le jour. Livraison : {fee}",
+      "doorBody": "Avec notre camion réfrigéré — vous choisissez le jour. Livraison : {fee}",
       "doorUnavailable": "Cette adresse est hors de notre zone de livraison.",
       "shippingInZone": "Les articles de cette commande ne sont pas livrés par notre véhicule ; ils partent par transporteur.",
       "shipping": "Envoi par transporteur",
@@ -240,7 +240,7 @@
       "neighborInviteOtherDay": "{name} vous invite à la livraison du {day}. Choisissez cette date pour être livrés ensemble et gagner des points.",
       "neighborSomeone": "Votre voisin",
       "neighborDecline": "Retirer cette invitation",
-      "pickupBody": "Nous vous prévenons dès que c’est prêt — convenez de l’heure avec l’entrepôt par téléphone. Livraison : offerte",
+      "pickupBody": "Nous vous prévenons dès que c’est prêt — convenez de l’heure avec l’entrepôt par téléphone. Retrait gratuit",
       "pickupPhone": "Pour convenir de l’heure : {phone}"
     },
     "payment": {
@@ -248,7 +248,7 @@
       "online": "Paiement en ligne",
       "onlineBody": "Vos données de carte sont chiffrées par Stripe.",
       "onDelivery": "Paiement à la livraison",
-      "onDeliveryBody": "Espèces, carte ou chèque.",
+      "onDeliveryBody": "Espèces ou carte.",
       "transfer": "Payer par virement",
       "transferBody": "Sur notre compte, avec facture.",
       "credit": "Sur compte",
@@ -259,9 +259,9 @@
         "shipping": "Le paiement à la livraison n'existe que pour les adresses que nous livrons nous-mêmes."
       },
       "onlineRequired": "À ce montant, le paiement en ligne est requis.",
-      "cashWarning": "La loi interdit l'encaissement en espèces à ce montant — carte ou chèque à la livraison.",
+      "cashWarning": "La loi interdit l'encaissement en espèces à ce montant — réglez par carte à la livraison.",
       "atPickup": "Paiement à l’entrepôt",
-      "atPickupBody": "Espèces, carte ou chèque au retrait."
+      "atPickupBody": "Espèces ou carte au retrait."
     },
     "summary": {
       "eyebrow": "Récapitulatif",
@@ -366,7 +366,7 @@
       "failed": "Paiement non abouti",
       "failedBody": "Aucun montant n'a été débité. Votre panier est intact ; réessayez avec une autre carte ou choisissez le paiement à la livraison.",
       "refunded": "Commande annulée, vous avez été remboursé",
-      "refundedBody": "Après votre paiement, l'un des produits s'est retrouvé en rupture et nous n'avons pas pu honorer la commande. La totalité du montant débité a été remboursée sur votre carte — le délai est de 3 à 5 jours ouvrés selon votre banque. Nous vous prions de nous en excuser.",
+      "refundedBody": "Après votre paiement, l'un des produits s'est retrouvé en rupture et nous n'avons pas pu honorer la commande. La totalité du montant débité a été remboursée sur votre carte — le délai de réception dépend de votre banque. Nous vous prions de nous en excuser.",
       "incomplete": "Votre commande n'a pas abouti",
       "incompleteBody": "La commande a été enregistrée mais non confirmée. Votre panier est intact — revenez au paiement pour réessayer.",
       "retry": "Réessayer le paiement",
@@ -416,7 +416,7 @@
     "delivery": {
       "eyebrow": "Lieferung",
       "door": "Lieferung an die Tür",
-      "doorBody": "Mit unseren Kühlfahrzeugen — Sie wählen den Tag. Lieferung: {fee}",
+      "doorBody": "Mit unserem Kühlfahrzeug — Sie wählen den Tag. Lieferung: {fee}",
       "doorUnavailable": "Diese Adresse liegt außerhalb unseres Liefergebiets.",
       "shippingInZone": "Die Artikel dieser Bestellung liefert unser Fahrzeug nicht; sie werden per Paket verschickt.",
       "shipping": "Versand per Paketdienst",
@@ -427,7 +427,7 @@
       "neighborInviteOtherDay": "{name} lädt Sie zur Lieferung am {day} ein. Wählen Sie diesen Tag, um zusammen beliefert zu werden und Punkte zu sammeln.",
       "neighborSomeone": "Ihre Nachbarin oder Ihr Nachbar",
       "neighborDecline": "Diese Einladung entfernen",
-      "pickupBody": "Wir melden uns, sobald alles bereit ist — die Abholzeit vereinbaren Sie telefonisch mit dem Lager. Lieferung: kostenlos",
+      "pickupBody": "Wir melden uns, sobald alles bereit ist — die Abholzeit vereinbaren Sie telefonisch mit dem Lager. Abholung: kostenlos",
       "pickupPhone": "Für die Terminabsprache: {phone}"
     },
     "payment": {
@@ -435,7 +435,7 @@
       "online": "Online bezahlen",
       "onlineBody": "Ihre Kartendaten werden von Stripe verschlüsselt.",
       "onDelivery": "Zahlung bei Lieferung",
-      "onDeliveryBody": "Bar, Karte oder Scheck.",
+      "onDeliveryBody": "Bar oder Karte.",
       "transfer": "Per Überweisung",
       "transferBody": "Auf unser Konto, mit Rechnung.",
       "credit": "Auf Rechnung",
@@ -446,9 +446,9 @@
         "shipping": "Zahlung bei Lieferung gibt es nur für Adressen, die wir selbst beliefern."
       },
       "onlineRequired": "In dieser Höhe ist Online-Zahlung erforderlich.",
-      "cashWarning": "Gesetzlich ist Barzahlung in dieser Höhe nicht zulässig — an der Tür Karte oder Scheck.",
+      "cashWarning": "Gesetzlich ist Barzahlung in dieser Höhe nicht zulässig — an der Tür können Sie mit Karte zahlen.",
       "atPickup": "Zahlung im Lager",
-      "atPickupBody": "Bar, Karte oder Scheck bei der Abholung."
+      "atPickupBody": "Bar oder Karte bei der Abholung."
     },
     "summary": {
       "eyebrow": "Bestellübersicht",
@@ -553,7 +553,7 @@
       "failed": "Zahlung nicht abgeschlossen",
       "failedBody": "Es wurde nichts abgebucht. Ihr Warenkorb bleibt bestehen; versuchen Sie es mit einer anderen Karte oder wählen Sie Zahlung bei Lieferung.",
       "refunded": "Bestellung storniert, Ihr Geld wurde erstattet",
-      "refundedBody": "Nach Ihrer Zahlung war eines der Produkte nicht mehr verfügbar und wir konnten die Bestellung nicht ausführen. Der gesamte abgebuchte Betrag wurde auf Ihre Karte erstattet — je nach Bank dauert das 3 bis 5 Werktage. Wir bitten um Entschuldigung.",
+      "refundedBody": "Nach Ihrer Zahlung war eines der Produkte nicht mehr verfügbar und wir konnten die Bestellung nicht ausführen. Der gesamte abgebuchte Betrag wurde auf Ihre Karte erstattet — wann er gutgeschrieben wird, hängt von Ihrer Bank ab. Wir bitten um Entschuldigung.",
       "incomplete": "Ihre Bestellung wurde nicht abgeschlossen",
       "incompleteBody": "Die Bestellung wurde gespeichert, aber nicht bestätigt. Ihr Warenkorb ist erhalten — gehen Sie zurück zur Kasse und versuchen Sie es erneut.",
       "retry": "Zahlung erneut versuchen",

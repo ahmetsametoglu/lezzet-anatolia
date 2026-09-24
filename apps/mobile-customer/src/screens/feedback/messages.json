@@ -7,7 +7,7 @@
       "eyebrow": "BU ÜRÜN NASILDI?",
       "like": "Beğendim",
       "dislike": "Beğenmedim",
-      "hint": "Değerlendirmeniz yalnız bir dokunuş — hangi lezzetleri geliştireceğimize yön verir."
+      "hint": "Değerlendirmeniz yalnız bir dokunuş — hangi lezzetleri getireceğimize yön verir."
     },
     "comment": {
       "title": "Teşekkürler! Bir şey eklemek ister misiniz?",
@@ -54,7 +54,7 @@
       "eyebrow": "COMMENT ÉTAIT CE PRODUIT ?",
       "like": "J'ai aimé",
       "dislike": "Je n'ai pas aimé",
-      "hint": "Un geste suffit — votre avis nous guide sur les saveurs à améliorer."
+      "hint": "Un geste suffit — votre avis nous aide à choisir les saveurs que nous proposons."
     },
     "comment": {
       "title": "Merci ! Souhaitez-vous ajouter un mot ?",
@@ -101,7 +101,7 @@
       "eyebrow": "WIE WAR DIESES PRODUKT?",
       "like": "Hat mir gefallen",
       "dislike": "Hat mir nicht gefallen",
-      "hint": "Ein Tippen genügt — Ihre Bewertung zeigt uns, welche Spezialitäten wir verbessern."
+      "hint": "Ein Tippen genügt — Ihre Bewertung zeigt uns, welche Spezialitäten wir anbieten sollen."
     },
     "comment": {
       "title": "Danke! Möchten Sie noch etwas hinzufügen?",
