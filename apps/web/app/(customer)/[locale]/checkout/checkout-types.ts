@@ -140,41 +140,12 @@ export type ServicePointsResult = CheckoutServicePointsOutcome | { status: 'off'
 /** Sunucunun döndürdüğü teslim noktası. */
 export type CheckoutServicePoint = Extract<ServicePointsResult, { status: 'ok' }>['points'][number];
 
-/** Haritada seçilen nokta: nokta + onu taşıyan servisin kodu. */
+/** Haritada seçilen nokta: nokta + türünü kabul eden servisin kodu. */
 export type SelectedServicePoint = CheckoutServicePoint & { optionCode: string };
-
-type ShippingOption = NonNullable<CheckoutSnapshot['shipping']>['options'][number];
-
-/** Taşıyıcı başına noktaya teslim eden en ucuz servis: haritadaki her nokta kendi taşıyıcısının bu fiyatıyla görünür. */
-export function pointOptionsByCarrier(options: readonly ShippingOption[]): Map<string, ShippingOption> {
-  const byCarrier = new Map<string, ShippingOption>();
-  for (const option of options) {
-    if (!option.needsServicePoint) continue;
-    const current = byCarrier.get(option.carrierCode);
-    if (!current || option.priceCents < current.priceCents) byCarrier.set(option.carrierCode, option);
-  }
-  return byCarrier;
-}
 
 /** Teslim noktası türü seçili ama nokta seçilmemiş mi — onay düğmesi ve kart uyarısı aynı sorudan okur. */
 export function servicePointMissing(state: Pick<CheckoutState, 'shippingMode' | 'servicePoint'>): boolean {
   return state.shippingMode === 'point' && state.servicePoint === null;
-}
-
-/**
- * Harita listesinin sırası: en ucuz başta, aynı fiyattakiler yakından uzağa. Servisi olmayan taşıyıcının noktası listeye girmez.
- */
-export function orderServicePoints(
-  points: readonly CheckoutServicePoint[],
-  byCarrier: ReadonlyMap<string, { code: string; priceCents: number }>,
-): SelectedServicePoint[] {
-  return points
-    .flatMap((p) => {
-      const option = byCarrier.get(p.carrierCode);
-      return option ? [{ point: { ...p, optionCode: option.code }, price: option.priceCents }] : [];
-    })
-    .sort((a, b) => a.price - b.price || (a.point.distanceM ?? Infinity) - (b.point.distanceM ?? Infinity))
-    .map((x) => x.point);
 }
 
 /**

@@ -1,13 +1,16 @@
-import { chooseShippingOption, shippingPriceWithVat, type PlannedParcel, type VatLine } from '@lezzet/domain-core';
+import { chooseShippingOption, preferLabelled, shippingPriceWithVat, type PlannedParcel, type VatLine } from '@lezzet/domain-core';
 import type { ServicePoint, ShippingQuote } from '@lezzet/sendcloud';
 import type { ParcelPlanSnapshot, ServicePointSnapshot } from '@lezzet/types';
 
 /** Müşteriye sunulan teklif: `priceCents` müşterinin ödediği KDV dahil ücret, `costCents` taşıyıcının KDV hariç fiyatı (bizim maliyetimiz). */
 export type PricedQuote = ShippingQuote & { priceCents: number; costCents: number };
 
-/** Taşıyıcı teklifi KDV hariç gelir; müşterinin ücreti sepetin oranlarıyla KDV dahile çevrilir, maliyet olduğu gibi kalır. */
+/**
+ * Taşıyıcı teklifi KDV hariç gelir; müşterinin ücreti sepetin oranlarıyla KDV dahile çevrilir, maliyet olduğu gibi kalır. Etiketli ikizi
+ * olan etiketsiz servis listeye girmez; ekran ile taslak aynı listeden seçtiği için istemci onu isteyemez de.
+ */
 export function pricedOptions(options: readonly ShippingQuote[], lines: readonly VatLine[]): PricedQuote[] {
-  return options.flatMap((o) =>
+  return preferLabelled(options).flatMap((o) =>
     typeof o.priceCents === 'number' ? [{ ...o, costCents: o.priceCents, priceCents: shippingPriceWithVat(o.priceCents, lines) }] : [],
   );
 }

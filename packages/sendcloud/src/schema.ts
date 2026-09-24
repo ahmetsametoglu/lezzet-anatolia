@@ -24,6 +24,14 @@ export function toLastMile(raw: unknown): LastMile | null {
   return typeof raw === 'string' && (LAST_MILE as readonly string[]).includes(raw) ? (raw as LastMile) : null;
 }
 
+/** Bilinen nokta türleri (`general_shop_type`). Dışındaki değer `null`'a düşer; servis eşlemesi bilinmeyen türü hiçbir türe saymaz. */
+const SERVICE_POINT_KIND = ['servicepoint', 'locker', 'post_office'] as const;
+export type ServicePointKind = (typeof SERVICE_POINT_KIND)[number];
+
+export function toServicePointKind(raw: unknown): ServicePointKind | null {
+  return typeof raw === 'string' && (SERVICE_POINT_KIND as readonly string[]).includes(raw) ? (raw as ServicePointKind) : null;
+}
+
 const MoneySchema = z.object({ value: z.string(), currency: z.string() });
 
 export const ShippingOptionSchema = z.object({
@@ -42,6 +50,8 @@ export const ShippingOptionSchema = z.object({
        * satın alma anında reddeder ve sipariş sevk edilemez kalır.
        */
       multicollo: Boolish,
+      /** Etiketsiz (QR) gönderi: etiket kolinin teslim edildiği noktada basılır. Depo etiket bastığı için etiketli ikizi öne alınır. */
+      labelless: Boolish,
     })
     .nullish(),
   quotes: z
@@ -106,6 +116,7 @@ export const ServicePointSchema = z.object({
   longitude: z.union([z.string(), z.number()]).nullish(),
   distance: z.number().nullish(),
   is_active: Boolish,
+  general_shop_type: z.string().nullish(),
   formatted_opening_times: z.record(z.array(z.string())).nullish(),
 });
 

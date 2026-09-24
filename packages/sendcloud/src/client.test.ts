@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { announceShipment, cancelShipment, fetchShippingQuotes, MAX_PARCELS_PER_SHIPMENT, type ParcelSpec } from './client';
+import { announceShipment, cancelShipment, fetchShippingQuotes, MAX_PARCELS_PER_SHIPMENT, searchServicePoints, type ParcelSpec } from './client';
 import { isSendcloudError } from './errors';
 import { fakeSendcloud, quoteResponse } from './testing';
 
@@ -58,6 +58,25 @@ describe('teklif okuması', () => {
     const { config } = fakeSendcloud([{ json: quoteResponse({ quotes: [] }) }]);
     const [q] = await fetchShippingQuotes(config, { from, to, parcels: [koli] });
     expect(q!.priceCents).toBeNull();
+  });
+
+  it('ETİKETSİZ (QR) seçenek işaretlenir — etiketli ikizi öne alan süzgeç buna bakar', async () => {
+    const { config } = fakeSendcloud([{ json: quoteResponse({ functionalities: { last_mile: 'locker', labelless: true } }) }]);
+    const [q] = await fetchShippingQuotes(config, { from, to, parcels: [koli] });
+    expect(q!.labelless).toBe(true);
+  });
+});
+
+describe('teslim noktası okuması', () => {
+  const nokta = (id: number, general_shop_type: string | null) => ({
+    id, carrier: 'mondial_relay', name: `N${id}`, country: 'FR', is_active: true, distance: id, general_shop_type,
+  });
+
+  // Tür servisin kabul ettiği noktayı belirler: bilinmeyeni dükkân ya da dolap saymak yanlış servise nokta yazdırırdı.
+  it('noktanın TÜRÜ yüzeye çıkar; bilinmeyen tür null olur', async () => {
+    const { config } = fakeSendcloud([{ json: [nokta(1, 'servicepoint'), nokta(2, 'locker'), nokta(3, 'post_office'), nokta(4, 'depot'), nokta(5, null)] }]);
+    const points = await searchServicePoints(config, { countryCode: 'FR', postalCode: '69007', carrierCode: 'mondial_relay' });
+    expect(points.map((p) => p.kind)).toEqual(['servicepoint', 'locker', 'post_office', null, null]);
   });
 });
 

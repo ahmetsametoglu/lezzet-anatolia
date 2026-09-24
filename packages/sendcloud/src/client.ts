@@ -7,8 +7,10 @@ import {
   ShipmentResponseSchema,
   ShippingOptionsResponseSchema,
   toLastMile,
+  toServicePointKind,
   truthy,
   type LastMile,
+  type ServicePointKind,
 } from './schema';
 
 /**
@@ -63,6 +65,8 @@ export interface ShippingQuote {
   ecoDelivery: boolean;
   /** Çok koli destekliyor mu; çok kutulu siparişte zorunlu süzgeç, çünkü seçeneklerin bir kısmı desteklemiyor. */
   multicollo: boolean;
+  /** Etiketsiz (QR) servis; aynı servisin etiketli ikizi varsa o seçilir. */
+  labelless: boolean;
 }
 
 export interface AnnouncedParcel {
@@ -222,6 +226,7 @@ export async function fetchShippingQuotes(
         tracked: truthy(fn.tracked),
         ecoDelivery: truthy(fn.eco_delivery),
         multicollo: truthy(fn.multicollo),
+        labelless: truthy(fn.labelless),
       },
     ];
   });
@@ -315,6 +320,8 @@ export interface ServicePoint {
   /** Aranan adrese uzaklık (m); tek nokta okumasında yok. */
   distanceM: number | null;
   active: boolean;
+  /** Dükkân, dolap ya da postane; sağlayıcı söylemiyorsa `null`. Servisin son adımı bu türü kabul etmelidir. */
+  kind: ServicePointKind | null;
   /** Gün numarası ("0" pazartesi) → "09:00 - 12:00" dizileri. */
   openingTimes: Record<string, string[]> | null;
 }
@@ -338,6 +345,7 @@ function toServicePoint(row: z.infer<typeof ServicePointSchema>): ServicePoint {
     longitude: coordinate(row.longitude),
     distanceM: row.distance ?? null,
     active: row.is_active == null ? true : truthy(row.is_active),
+    kind: toServicePointKind(row.general_shop_type),
     openingTimes: row.formatted_opening_times ?? null,
   };
 }

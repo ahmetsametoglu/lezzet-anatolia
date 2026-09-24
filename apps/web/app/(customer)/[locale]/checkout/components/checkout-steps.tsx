@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/customer/ui/skeleton';
 import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
-import { checkoutBlocker, pointOptionsByCarrier, selectableShippingOptions, servicePointMissing, type CheckoutViewProps } from '../checkout-types';
+import { checkoutBlocker, selectableShippingOptions, servicePointMissing, type CheckoutViewProps } from '../checkout-types';
 import { ServicePointPicker } from './service-point-picker';
 
 /**
@@ -223,10 +223,12 @@ export function DeliveryStep(props: CheckoutViewProps) {
   const router = useRouter();
   const [pickerOpen, setPickerOpen] = useState(false);
   const homeOptions = selectableShippingOptions(snapshot.shipping?.options ?? []);
-  // Telefon görünümünde nokta seçimi yok (K.28): orada yalnız eve teslim servisleri listelenir.
-  const pointOptions = compact ? new Map<string, never>() : pointOptionsByCarrier(snapshot.shipping?.options ?? []);
-  const hasModes = homeOptions.length > 0 && pointOptions.size > 0;
-  const mode: 'home' | 'point' = homeOptions.length === 0 && pointOptions.size > 0 ? 'point' : hasModes ? state.shippingMode : 'home';
+  // BEKLEYEN(K.28): telefon görünümünde nokta seçimi yok, orada yalnız eve teslim servisleri listelenir.
+  const pointOptions = compact ? [] : (snapshot.shipping?.options ?? []).filter((o) => o.needsServicePoint);
+  const hasModes = homeOptions.length > 0 && pointOptions.length > 0;
+  const mode: 'home' | 'point' = homeOptions.length === 0 && pointOptions.length > 0 ? 'point' : hasModes ? state.shippingMode : 'home';
+  // Fiyat taşıyıcıdan değil noktanın kendi servisinden okunur: aynı taşıyıcının dolabı ve dükkânı ayrı servistir.
+  const chosenPointOption = pointOptions.find((o) => o.code === state.servicePoint?.optionCode);
   const delivery = snapshot.delivery;
   const payment = snapshot.payment;
   if (!delivery) return null;
@@ -363,7 +365,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
             )}
           </div>
 
-          {snapshot.shipping !== null && (homeOptions.length > 0 || (!compact && pointOptions.size > 0)) ? (
+          {snapshot.shipping !== null && (homeOptions.length > 0 || pointOptions.length > 0) ? (
             <>
               {/* Önce teslim türü seçilir, servis ya da nokta onun altında açılır; her tür en düşük fiyatıyla görünür. */}
               {hasModes && (
@@ -371,7 +373,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
                   <ModeCard
                     icon="building"
                     title={t.delivery.carrierPoint}
-                    from={t.delivery.carrierFrom.replace('{price}', formatPrice(minPriceOf([...pointOptions.values()]), locale))}
+                    from={t.delivery.carrierFrom.replace('{price}', formatPrice(minPriceOf(pointOptions), locale))}
                     selected={mode === 'point'}
                     onClick={() => onSelectShippingMode('point')}
                   />
@@ -433,10 +435,8 @@ export function DeliveryStep(props: CheckoutViewProps) {
                       <>
                         <span className="flex items-baseline justify-between gap-2">
                           <span className="font-sans text-body-sm font-bold text-ink capitalize">{state.servicePoint.name.toLowerCase()}</span>
-                          {pointOptions.get(state.servicePoint.carrierCode) && (
-                            <span className="font-sans text-body-sm font-bold text-ink">
-                              {formatPrice(pointOptions.get(state.servicePoint.carrierCode)!.priceCents, locale)}
-                            </span>
+                          {chosenPointOption && (
+                            <span className="font-sans text-body-sm font-bold text-ink">{formatPrice(chosenPointOption.priceCents, locale)}</span>
                           )}
                         </span>
                         <span className="font-sans text-note text-body capitalize">
@@ -444,7 +444,13 @@ export function DeliveryStep(props: CheckoutViewProps) {
                           {state.servicePoint.city.toLowerCase()}
                         </span>
                         <span className="font-sans text-note font-semibold text-olive">
-                          {pointOptions.get(state.servicePoint.carrierCode)?.carrierName} · {t.delivery.pointChange}
+                          {[
+                            chosenPointOption?.carrierName,
+                            state.servicePoint.kind ? t.delivery.pointKind[state.servicePoint.kind] : null,
+                            t.delivery.pointChange,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </span>
                       </>
                     ) : (

@@ -14,7 +14,7 @@ let addressId: string;
 
 const nokta = (id: string, carrierCode: string, distanceM: number): ServicePoint => ({
   id, carrierCode, name: id, street: 'Rue', houseNumber: null, postalCode: '69007', city: 'Lyon', country: 'FR',
-  latitude: 45.75, longitude: 4.84, distanceM, active: true, openingTimes: null,
+  latitude: 45.75, longitude: 4.84, distanceM, active: true, kind: 'servicepoint', openingTimes: null,
 });
 
 beforeAll(async () => {

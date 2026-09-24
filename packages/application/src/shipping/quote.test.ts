@@ -48,6 +48,7 @@ const secenek = (over: Partial<ShippingQuote> = {}): ShippingQuote => ({
   tracked: true,
   ecoDelivery: false,
   multicollo: true,
+  labelless: false,
   ...over,
 });
 

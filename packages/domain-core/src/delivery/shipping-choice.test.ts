@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { chooseShippingOption, homeDeliveryOnly, homeShortlist, needsServicePoint, requiresHomeDelivery } from './shipping-choice';
+import {
+  chooseShippingOption,
+  homeDeliveryOnly,
+  homeShortlist,
+  needsServicePoint,
+  orderServicePoints,
+  preferLabelled,
+  requiresHomeDelivery,
+  servicePointAccepts,
+} from './shipping-choice';
 
 describe('requiresHomeDelivery', () => {
   it('ÜCRETSİZ kargo eve gider — parayı biz ödüyoruz, seçim bizim', () => {
@@ -40,6 +49,71 @@ describe('needsServicePoint', () => {
     expect(needsServicePoint('home_delivery')).toBe(false);
     expect(needsServicePoint('mailbox')).toBe(false);
     expect(needsServicePoint(null)).toBe(false);
+  });
+});
+
+describe('servicePointAccepts — servis noktanın türüne teslim ediyor mu', () => {
+  const turler = ['servicepoint', 'locker', 'post_office'];
+
+  it('dolap servisi yalnız dolaba, nokta servisi dükkâna ve postaneye', () => {
+    expect(turler.map((k) => servicePointAccepts('locker', k))).toEqual([false, true, false]);
+    expect(turler.map((k) => servicePointAccepts('service_point', k))).toEqual([true, false, true]);
+  });
+
+  it('"dolap ya da nokta" servisi türe bakmaz; eve teslim servisi hiçbir noktaya gitmez', () => {
+    expect([...turler, null].map((k) => servicePointAccepts('locker_or_service_point', k))).toEqual([true, true, true, true]);
+    expect(servicePointAccepts('home_delivery', 'servicepoint')).toBe(false);
+  });
+
+  // Bilinmeyen türü dükkân saymak, dolaba giden bir servisle dükkâna etiket kestirebilirdi.
+  it('türü bilinmeyen nokta yalnız türe bakmayan servise gider', () => {
+    expect(servicePointAccepts('service_point', null)).toBe(false);
+    expect(servicePointAccepts('locker', null)).toBe(false);
+  });
+});
+
+describe('preferLabelled — etiketsiz (QR) ikiz', () => {
+  const s = (code: string, carrierCode: string, lastMile: string, labelless: boolean) => ({ code, carrierCode, lastMile, labelless });
+
+  it('etiketli ikizi olan etiketsiz servis düşer; başka taşıyıcının ya da başka son adımın servisi ikiz sayılmaz', () => {
+    const kalan = preferLabelled([
+      s('mr-dolap-qr', 'mondial_relay', 'locker', true),
+      s('mr-dolap', 'mondial_relay', 'locker', false),
+      s('mr-nokta-qr', 'mondial_relay', 'service_point', true),
+      s('ch-nokta', 'chronopost', 'service_point', false),
+    ]);
+    expect(kalan.map((o) => o.code)).toEqual(['mr-dolap', 'mr-nokta-qr', 'ch-nokta']);
+  });
+});
+
+describe('orderServicePoints — haritadaki her noktanın servisi ve sırası', () => {
+  // Ölçülen Lyon listesinin şekli: Mondial Relay'in en ucuz nokta servisi dolaba gidiyor, dükkânları biraz pahalı servis taşıyor.
+  const servisler = [
+    { code: 'mr-dolap', carrierCode: 'mondial_relay', lastMile: 'locker', priceCents: 413 },
+    { code: 'mr-nokta', carrierCode: 'mondial_relay', lastMile: 'service_point', priceCents: 423 },
+    { code: 'ch-nokta', carrierCode: 'chronopost', lastMile: 'service_point', priceCents: 366 },
+    { code: 'mr-ev', carrierCode: 'mondial_relay', lastMile: 'home_delivery', priceCents: 290 },
+  ];
+  const nokta = (id: string, carrierCode: string, kind: string | null, distanceM: number) => ({ id, carrierCode, kind, distanceM });
+
+  it('dükkân, taşıyıcının en ucuz servisine (dolap) değil türünü kabul eden servise bağlanır', () => {
+    const sira = orderServicePoints([nokta('proxi', 'mondial_relay', 'servicepoint', 185), nokta('dolap', 'mondial_relay', 'locker', 302)], servisler);
+    expect(sira.map((x) => [x.point.id, x.option.code])).toEqual([
+      ['dolap', 'mr-dolap'],
+      ['proxi', 'mr-nokta'],
+    ]);
+  });
+
+  it('en ucuz başta, aynı fiyatta yakın önce', () => {
+    const sira = orderServicePoints(
+      [nokta('mr-yakin', 'mondial_relay', 'servicepoint', 100), nokta('ch-uzak', 'chronopost', 'servicepoint', 900), nokta('ch-yakin', 'chronopost', 'servicepoint', 400)],
+      servisler,
+    );
+    expect(sira.map((x) => x.point.id)).toEqual(['ch-yakin', 'ch-uzak', 'mr-yakin']);
+  });
+
+  it('türünü kabul eden servisi olmayan nokta listeye girmez', () => {
+    expect(orderServicePoints([nokta('ch-dolap', 'chronopost', 'locker', 50), nokta('dpd', 'dpd', 'servicepoint', 60)], servisler)).toEqual([]);
   });
 });
 

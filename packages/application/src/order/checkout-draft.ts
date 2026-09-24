@@ -11,7 +11,15 @@ import {
   type Db,
 } from '@lezzet/database';
 import { cityMatchesPlaces } from '@lezzet/address';
-import { chooseShippingOption, costsAtSale, deriveChannel, meetsMinBasket, needsServicePoint, resolveVatTreatment } from '@lezzet/domain-core';
+import {
+  chooseShippingOption,
+  costsAtSale,
+  deriveChannel,
+  meetsMinBasket,
+  needsServicePoint,
+  resolveVatTreatment,
+  servicePointAccepts,
+} from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import type {
   DeliveryType,
@@ -357,7 +365,13 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     let servicePoint: ServicePointSnapshot | null = null;
     if (needsServicePoint(choice.option.lastMile)) {
       const point = input.servicePointId ? await rateProvider!.servicePoint(input.servicePointId) : null;
-      if (!point || !point.active || point.carrierCode !== choice.option.carrierCode || point.country !== address.country) {
+      if (
+        !point ||
+        !point.active ||
+        point.carrierCode !== choice.option.carrierCode ||
+        point.country !== address.country ||
+        !servicePointAccepts(choice.option.lastMile, point.kind)
+      ) {
         return { status: 'service_point_invalid' };
       }
       servicePoint = servicePointSnapshot(point);

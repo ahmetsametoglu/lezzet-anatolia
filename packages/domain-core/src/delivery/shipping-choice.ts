@@ -17,6 +17,45 @@ export function needsServicePoint(lastMile: string | null): boolean {
 }
 
 /**
+ * Servisin son adımı bu türdeki noktaya teslim ediyor mu: dolap servisi yalnız dolaba, nokta servisi dükkâna ve postaneye gider,
+ * "dolap ya da nokta" servisi türe bakmaz. Tür uymazsa etiket, noktanın ağında olmayan bir servisle kesilirdi.
+ */
+export function servicePointAccepts(lastMile: string | null, kind: string | null): boolean {
+  if (lastMile === 'locker_or_service_point') return true;
+  if (lastMile === 'locker') return kind === 'locker';
+  if (lastMile === 'service_point') return kind === 'servicepoint' || kind === 'post_office';
+  return false;
+}
+
+/**
+ * Etiketli ikizi olan etiketsiz (QR) servis düşer; ikiz, aynı taşıyıcının aynı son adımlı etiketli servisidir. Etiketi depo bastığı
+ * için etiketsiz servis ancak ikizi yoksa kalır.
+ */
+export function preferLabelled<T extends { carrierCode: string; lastMile: string | null; labelless: boolean }>(options: readonly T[]): T[] {
+  return options.filter(
+    (o) => !o.labelless || !options.some((twin) => !twin.labelless && twin.carrierCode === o.carrierCode && twin.lastMile === o.lastMile),
+  );
+}
+
+/**
+ * Haritanın listesi: her nokta, türünü kabul eden en ucuz servisiyle; en ucuz başta, aynı fiyatta yakın önce. Taşıyıcının en ucuz
+ * servisi noktanın servisi olmayabilir (dolap servisi dükkâna gitmez); kabul eden servisi olmayan nokta listeye girmez.
+ */
+export function orderServicePoints<
+  P extends { carrierCode: string; kind: string | null; distanceM: number | null },
+  O extends { carrierCode: string; lastMile: string | null; priceCents: number },
+>(points: readonly P[], options: readonly O[]): { point: P; option: O }[] {
+  return points
+    .flatMap((point) => {
+      const option = options
+        .filter((o) => o.carrierCode === point.carrierCode && servicePointAccepts(o.lastMile, point.kind))
+        .sort((a, b) => a.priceCents - b.priceCents)[0];
+      return option ? [{ point, option }] : [];
+    })
+    .sort((a, b) => a.option.priceCents - b.option.priceCents || (a.point.distanceM ?? Infinity) - (b.point.distanceM ?? Infinity));
+}
+
+/**
  * Bu siparişin taşıması EVE mi gitmek zorunda? Ölçüt eşik değil ücretin sıfır olması, çünkü kampanyayla sıfırlanan
  * kargoyu da biz ödüyoruzdur; rota ve gel-al siparişinde kargo yoktur.
  */

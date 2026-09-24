@@ -299,17 +299,24 @@ describe('KDV işlemi — sipariş anında çözülür', () => {
 });
 
 describe('kargo seçimi ödeme anında siparişe yazılır', () => {
-  const secenek = (code: string, priceCents: number, lastMile: string, carrierCode = 'colissimo'): ShippingQuote => ({
+  const secenek = (code: string, priceCents: number, lastMile: string, carrierCode = 'colissimo', labelless = false): ShippingQuote => ({
     code, carrierCode, carrierName: carrierCode, name: code, priceCents, currency: 'EUR', leadTimeHours: null,
-    lastMile: lastMile as ShippingQuote['lastMile'], signature: false, tracked: true, ecoDelivery: false, multicollo: true,
+    lastMile: lastMile as ShippingQuote['lastMile'], signature: false, tracked: true, ecoDelivery: false, multicollo: true, labelless,
   });
-  const nokta = (id: string, carrierCode: string): ServicePoint => ({
+  const nokta = (id: string, carrierCode: string, kind: ServicePoint['kind'] = 'servicepoint'): ServicePoint => ({
     id, carrierCode, name: `Nokta ${id}`, street: 'Marktplatz', houseNumber: '1', postalCode: rotaKodu, city: 'Kehl', country: 'DE',
-    latitude: null, longitude: null, distanceM: null, active: true, openingTimes: null,
+    latitude: null, longitude: null, distanceM: null, active: true, kind, openingTimes: null,
   });
   // Liste bilerek fiyata göre sıralı değil ve en ucuzu teslim noktası: "seçim yoksa en ucuz" hatası burada görünür.
   const saglayici: ShippingRateProvider = {
-    quote: async () => [secenek('eve-pahali', 990, 'home_delivery'), secenek('nokta-mr', 450, 'service_point', 'mondial_relay'), secenek('eve-ucuz', 690, 'home_delivery')],
+    quote: async () => [
+      secenek('eve-pahali', 990, 'home_delivery'),
+      secenek('nokta-mr', 450, 'service_point', 'mondial_relay'),
+      secenek('dolap-mr', 400, 'locker', 'mondial_relay'),
+      secenek('eve-ucuz', 690, 'home_delivery'),
+      // Etiketli ikizinden ucuz etiketsiz servis: süzülmezse "eve giden en ucuz" onu seçerdi.
+      secenek('eve-ucuz-qr', 650, 'home_delivery', 'colissimo', true),
+    ],
     announce: () => Promise.reject(new Error('taslakta duyuru çağrılmamalı')),
     cancel: () => Promise.reject(new Error('taslakta iptal çağrılmamalı')),
     status: () => Promise.reject(new Error('taslakta durum çağrılmamalı')),
@@ -367,8 +374,16 @@ describe('kargo seçimi ödeme anında siparişe yazılır', () => {
     });
   });
 
+  it('dükkân noktası dolap servisiyle sipariş AÇMAZ — noktanın türü sağlayıcıdan okunur', async () => {
+    expect((await siparis({ shippingOptionCode: 'dolap-mr', servicePointId: 'sp-mr' })).status).toBe('service_point_invalid');
+  });
+
   it('listede olmayan servis başka servise düşmez, sipariş açılmaz', async () => {
     expect((await siparis({ shippingOptionCode: 'kalkmis' })).status).toBe('shipping_option_unavailable');
+  });
+
+  it('etiketli ikizi olan etiketsiz servis istenemez — depo etiketi kendisi basıyor', async () => {
+    expect((await siparis({ shippingOptionCode: 'eve-ucuz-qr' })).status).toBe('shipping_option_unavailable');
   });
 
   it('ücretsiz kargoda istenen teslim noktası yok sayılır: koli eve gider, maliyet teklifin fiyatıdır', async () => {
