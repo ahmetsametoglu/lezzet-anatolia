@@ -238,8 +238,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     summary === null
       ? orderedLines.map((line) => ({ key: cartLineId(line), name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }))
       : summary.lines.map((line, index) => ({ key: `order-${index}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }));
-  /* Sipariş DIŞI kalanlar da aynı kaynaktan — özetin yarısını yerelden çizmek, düzeltilen
-     ayrışmayı yarı yolda bırakmaktı. */
+  /* Sipariş dışı kalanlar da aynı kaynaktan, yoksa özetin yarısı yerelden çizilir ve liste ile toplam ayrışır. */
   const droppedRows: { key: string; name: string; qty: number; lineTotalCents: number | null }[] =
     summary === null
       ? droppedLines.map((line) => ({ key: `dropped-${cartLineId(line)}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }))

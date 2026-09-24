@@ -31,7 +31,7 @@ export function StepShell({ step, title, compact, children }: { step: string; ti
       className={['flex flex-col gap-3.5 rounded-card border border-sand-200 bg-card', compact ? 'px-4 py-4' : 'px-6.5 py-5.5'].join(' ')}
     >
       <div className="flex items-center gap-3">
-        {/* Tasarım: 30×30 daire, 700 15px. Küçüğü (28/13) başlığın yanında cılız kalıyordu. */}
+        {/* Tasarım: 30×30 daire, 700 15px; küçüğü (28/13) başlığın yanında cılız kalır. */}
         <span className="flex size-[30px] flex-none items-center justify-center rounded-full bg-olive font-sans text-copy font-bold text-white">{step}</span>
         {/* Tasarım: 600 19px Lora — `card-title-sm` (18) en yakın durak, yeni token açılmadı. */}
         <span className="font-serif text-card-title-sm text-ink">{title}</span>
@@ -394,7 +394,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
                 </div>
               )}
 
-              {/* Tür kararıyla altındaki seçim arasında çizgi ve başlık: ikisi yan yana aynı ölçüde dursa tek bir liste gibi okunuyordu. */}
+              {/* Tür kararıyla altındaki seçim arasında çizgi ve başlık: ikisi yan yana aynı ölçüde dursa tek bir liste gibi okunur. */}
               {hasModes && (
                 <div className="mt-1 flex flex-col gap-2 border-t border-sand-200 pt-3.5">
                   <span className="font-sans text-note font-semibold text-muted">
