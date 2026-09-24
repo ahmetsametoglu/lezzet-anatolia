@@ -60,13 +60,28 @@ const lightGroups: readonly TokenGroup[] = [
   ['--radius-', operationsRadius],
 ];
 
+/**
+ * Yazı kademesinin WEB'deki adı, paketteki adından farklıysa. Tailwind `--color-X` ile `--text-X`in
+ * ikisinden de `text-X` sınıfını türetir ve yalnız rengi üretir: `--text-body` boyu hiçbir sınıftan
+ * ulaşılamıyordu, boy diye yazılan her `text-body` 16 px çiziliyordu. Native aynı kademeyi `text.body`
+ * diye okumaya devam eder — çakışma yalnız web'in sınıf ad alanında.
+ */
+export const WEB_TEXT_NAMES: Readonly<Record<string, string>> = { body: 'copy' };
+
+/** `body` → `copy`, `body--line-height` → `copy--line-height`; `body-sm` gibi ayrı kademeler olduğu gibi kalır. */
+function webTextKey(key: string): string {
+  const [base, ...suffix] = key.split('--');
+  const renamed = WEB_TEXT_NAMES[base!];
+  return renamed ? [renamed, ...suffix].join('--') : key;
+}
+
 /* Bir grup listesini `--ad: değer` çiftlerine düzler. Çakışan tam ad üretimde sessizce
    kaybolmasın diye fırlatır — iki grup aynı CSS adını üretiyorsa bu bir veri hatasıdır. */
 function flatten(groups: readonly TokenGroup[]): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [prefix, tokens] of groups) {
     for (const [key, value] of Object.entries(tokens)) {
-      const name = `${prefix}${key}`;
+      const name = `${prefix}${prefix === '--text-' ? webTextKey(key) : key}`;
       if (name in out) {
         throw new Error(`Yinelenen token adı: ${name}`);
       }
@@ -96,7 +111,7 @@ export function flattenPhoneTextTokens(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(customerText)) {
     if (key.includes('--')) continue;
-    out[`--text-${key}`] = `${Number.parseFloat(value) + customerPhoneTextStepPx}px`;
+    out[`--text-${webTextKey(key)}`] = `${Number.parseFloat(value) + customerPhoneTextStepPx}px`;
   }
   return out;
 }

@@ -60,7 +60,7 @@ export function OrdersDesktop({
 
             <span
               className={[
-                'flex-none font-sans text-body font-bold leading-tight',
+                'flex-none font-sans text-copy font-bold leading-tight',
                 order.status === 'cancelled' ? 'text-muted' : 'text-ink',
               ].join(' ')}
             >
@@ -160,7 +160,7 @@ function AwaitingPaymentRow({ t, locale, awaiting }: AwaitingPaymentRowProps) {
           {[...metaOf(awaiting, t, locale), t.awaitingPayment.note].join(' · ')}
         </span>
       </div>
-      <span className="flex-none font-sans text-body font-bold leading-tight text-ink">{formatPrice(awaiting.totalCents, locale)}</span>
+      <span className="flex-none font-sans text-copy font-bold leading-tight text-ink">{formatPrice(awaiting.totalCents, locale)}</span>
       <Link
         href={{ pathname: '/checkout/[reference]', params: { reference: awaiting.orderId } }}
         className="flex-none cursor-pointer font-sans text-note font-bold text-olive hover:text-olive-dark"

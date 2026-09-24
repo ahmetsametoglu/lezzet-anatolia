@@ -41,7 +41,7 @@ export function DiscoverOutcome({ t, signedIn, earned, earnedMoney, emptyDeck, c
       {/* Puan rozeti YALNIZ girişli ve kazanılmışsa: girişsize burada rozet göstermek, alamadığı
           bir şeyi kutlamak olurdu — onun cümlesi zaten gövdede, teklif olarak duruyor. */}
       {signedIn && !emptyDeck && earned > 0 && (
-        <span className="rounded-pill bg-olive px-5 py-2 font-sans text-body font-bold text-white">
+        <span className="rounded-pill bg-olive px-5 py-2 font-sans text-copy font-bold text-white">
           {t.done.earned.replace('{points}', String(earned))}
         </span>
       )}

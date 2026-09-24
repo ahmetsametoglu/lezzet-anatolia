@@ -43,7 +43,7 @@ export function PhonePointsEarnList({ locale, rules, visitClaimedToday, actions,
   return (
     <div className="flex flex-col gap-3.5">
       {showRules && (
-        <p className="font-sans text-body font-bold text-terracotta">
+        <p className="font-sans text-copy font-bold text-terracotta">
           {copy.rate.replace('{points}', threshold).replace('{value}', value)}
         </p>
       )}
@@ -64,11 +64,11 @@ export function PhonePointsEarnList({ locale, rules, visitClaimedToday, actions,
               />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-sans text-body font-bold text-ink">{wayCopy.title}</span>
+                  <span className="font-sans text-copy font-bold text-ink">{wayCopy.title}</span>
                   {claimed && <MobileIcon name="check-wide" size={17} className="flex-none text-olive-dark" />}
                 </div>
                 <div className="my-0.5 flex flex-wrap items-center gap-2">
-                  <span className="rounded-badge bg-sand-150 px-2.5 py-1 font-sans text-body font-bold text-olive-dark">
+                  <span className="rounded-badge bg-sand-150 px-2.5 py-1 font-sans text-copy font-bold text-olive-dark">
                     {`+${way.points} (${formatCompactEuro(way.points * rules.centValue, locale)})`}
                   </span>
                   <span className="font-sans text-body-sm leading-[1.6] text-muted">

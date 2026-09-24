@@ -50,7 +50,7 @@ export function DesktopLegalFaq({ questions, t }: DesktopLegalFaqProps) {
       </label>
 
       {matches.length === 0 ? (
-        <span className="font-sans text-body text-muted">{t.noMatch}</span>
+        <span className="font-sans text-copy text-muted">{t.noMatch}</span>
       ) : (
         matches.map((item) => {
           const open = openId === item.id;
@@ -62,8 +62,8 @@ export function DesktopLegalFaq({ questions, t }: DesktopLegalFaqProps) {
                 onClick={() => setOpenId(open ? null : item.id)}
                 className="flex w-full cursor-pointer items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-hover-bg"
               >
-                <span className="font-sans text-body font-bold text-ink">{item.question}</span>
-                <span aria-hidden="true" className="flex-none font-sans text-body text-muted">
+                <span className="font-sans text-copy font-bold text-ink">{item.question}</span>
+                <span aria-hidden="true" className="flex-none font-sans text-copy text-muted">
                   {open ? '▴' : '▾'}
                 </span>
               </button>
@@ -75,7 +75,7 @@ export function DesktopLegalFaq({ questions, t }: DesktopLegalFaqProps) {
 
       {/* Kesikli çerçeve: bu bir cevap kartı değil, listenin bittiği yerdeki çıkış; cevabı bulunamayan soru talebe gider, form gömülmez. */}
       <div className="flex items-center justify-between gap-3 rounded-card border-[1.5px] border-dashed border-sand-500 px-5 py-3.5">
-        <span className="font-sans text-body text-body">{t.notFoundTitle}</span>
+        <span className="font-sans text-copy text-body">{t.notFoundTitle}</span>
         <Link href="/support/new" className={buttonClass({ size: 'sm', className: 'flex-none' })}>
           {t.notFoundCta}
         </Link>

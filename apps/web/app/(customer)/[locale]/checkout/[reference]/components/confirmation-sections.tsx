@@ -64,7 +64,7 @@ export function CelebrationBand({ t, locale, view, compact }: ConfirmationViewPr
               : t.titleAnon}
         </h1>
 
-        <p className="max-w-[620px] font-sans text-body leading-relaxed text-body">
+        <p className="max-w-[620px] font-sans text-copy leading-relaxed text-body">
           {status !== null ? (
             status.body
           ) : (

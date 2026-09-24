@@ -88,10 +88,10 @@ export function errorIdFor(fieldId: string, error?: string): string | undefined 
  * sınıfı kaynak sırasına göre çözer, dizgideki sıraya göre değil (`pill-input` künyesinin aynı tuzağı).
  */
 const CONTROL: Record<FieldVariant, string> = {
-  form: 'h-12 rounded-soft bg-card px-4 text-body',
+  form: 'h-12 rounded-soft bg-card px-4 text-copy',
   inline: 'h-10.5 rounded-xl bg-cream px-4 text-body-sm font-semibold',
   sheet: 'h-10.5 rounded-xl bg-card px-4 text-control font-semibold',
-  pill: 'h-13.5 rounded-pill bg-card px-5.5 text-body',
+  pill: 'h-13.5 rounded-pill bg-card px-5.5 text-copy',
 };
 
 /**
@@ -120,7 +120,7 @@ const CONTROL: Record<FieldVariant, string> = {
  * token'ları satır yüksekliği taşımıyor, kontrol o zaman gövde metninin 1.5 aralığını miras alıp
  * uzuyor (aynı tuzak K19 adet seçicide de yaşandı). Çok satırlı alanda `min-h-*` bu yüksekliği ezer.
  *
- * **Metin 15px** (`text-body`): tasarım `400 15px/20px`. 14px'e çekilmişti ve alan sitenin geri
+ * **Metin 15px** (`text-copy`): tasarım `400 15px/20px`. 14px'e çekilmişti ve alan sitenin geri
  * kalanından bir punto küçük kalıyordu.
  *
  * **Kenar `sand-400`** (#d8cfb6) — tasarımın verdiği ton. `sand-300` (#e0d8c2) kullanılıyordu; o ton

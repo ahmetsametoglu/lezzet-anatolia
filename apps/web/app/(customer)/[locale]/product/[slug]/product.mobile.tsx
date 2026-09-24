@@ -50,7 +50,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
         {/* Filigran galerinin kardeşi, çocuğu değil: kaydırmayla kaymaz, dokunuşu yutmaz. */}
         {placeMark !== null && (
           <span className="pointer-events-none absolute inset-0 grid place-items-center bg-scrim px-4 text-center">
-            <span className="line-clamp-3 font-sans text-body leading-[1.6] font-bold whitespace-pre-line text-on-image">{placeMark.label}</span>
+            <span className="line-clamp-3 font-sans text-copy leading-[1.6] font-bold whitespace-pre-line text-on-image">{placeMark.label}</span>
           </span>
         )}
         {/* Düğmeler üst güvenli alanın 8px altında: saate binmesin. */}

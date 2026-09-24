@@ -39,7 +39,7 @@ export function LoadMore({ hasMore, loading, onLoadMore, label, loadingLabel }: 
         <button
           type="button"
           onClick={loadMore}
-          className="cursor-pointer rounded-pill border-[1.5px] border-sand-400 bg-card px-6 py-3 font-sans text-body font-bold text-ink transition-colors hover:border-olive hover:text-olive"
+          className="cursor-pointer rounded-pill border-[1.5px] border-sand-400 bg-card px-6 py-3 font-sans text-copy font-bold text-ink transition-colors hover:border-olive hover:text-olive"
         >
           {label}
         </button>

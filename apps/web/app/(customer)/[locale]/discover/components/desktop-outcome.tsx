@@ -31,7 +31,7 @@ export function DesktopOutcome({ t, cards, decisions, earned, earnedMoney, signe
       <div className="flex max-w-[560px] flex-col gap-3">
         <Icon name={emptyDeck ? 'timer' : 'sparkle'} size={36} className="text-olive" />
         <h1 className="font-serif text-h1-sm text-ink">{copy.title}</h1>
-        <p className="font-sans text-body leading-relaxed text-body">{emptyDeck ? body : `${summary} ${body}`}</p>
+        <p className="font-sans text-copy leading-relaxed text-body">{emptyDeck ? body : `${summary} ${body}`}</p>
         <div className="mt-1.5 flex flex-wrap gap-2.5">
           {guestOffer && (
             <Link href="/login" className={buttonClass()}>

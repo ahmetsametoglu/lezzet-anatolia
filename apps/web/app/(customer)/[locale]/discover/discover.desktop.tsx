@@ -76,7 +76,7 @@ export function DiscoverDesktop({ t, cards, current, decisions, earned, signedIn
             <div className="flex flex-col gap-4 py-2">
               <span className="font-sans text-caps-label tracking-[0.14em] text-olive-dark uppercase">{counter(t.candidate)}</span>
               <h1 className="font-serif text-page-title leading-tight text-ink">{card.name}</h1>
-              {card.description && <p className="max-w-[520px] font-sans text-body leading-relaxed text-body">{card.description}</p>}
+              {card.description && <p className="max-w-[520px] font-sans text-copy leading-relaxed text-body">{card.description}</p>}
               <p className="max-w-[520px] rounded-soft border border-olive-line bg-card px-4 py-3.25 font-sans text-control leading-normal font-normal text-muted">
                 {t.notice}
               </p>

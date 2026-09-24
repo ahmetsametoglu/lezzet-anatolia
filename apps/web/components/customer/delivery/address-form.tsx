@@ -495,7 +495,7 @@ export function AddressForm({
               <Icon name="check" size={15} className="flex-none" />
               {t.verified}
             </span>
-            <span className="font-sans text-body font-bold text-ink">{picked.line1}</span>
+            <span className="font-sans text-copy font-bold text-ink">{picked.line1}</span>
             <span className="font-sans text-note text-body">
               {picked.postalCode} {picked.city}
             </span>

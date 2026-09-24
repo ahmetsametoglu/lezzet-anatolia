@@ -28,7 +28,7 @@ interface QuantityStepperProps {
 const STEP_BASE = 'flex cursor-pointer items-center justify-center font-sans text-icon-sm leading-none transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-40';
 
 const LOOK = {
-  bar: { box: 'bg-sand-250', step: 'h-12 w-11 text-olive', value: 'w-7.5 text-body text-ink' },
+  bar: { box: 'bg-sand-250', step: 'h-12 w-11 text-olive', value: 'w-7.5 text-copy text-ink' },
   sand: {
     box: 'bg-sand-300',
     step: "relative size-8.5 text-olive after:absolute after:inset-x-0 after:-top-2.5 after:bottom-0 after:content-['']",

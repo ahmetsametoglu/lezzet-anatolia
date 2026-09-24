@@ -85,7 +85,7 @@ export function PhoneProductCard({
             </span>
           </span>
         )}
-        <span className="line-clamp-2 font-serif text-body leading-[1.15] font-semibold text-on-image">{name}</span>
+        <span className="line-clamp-2 font-serif text-copy leading-[1.15] font-semibold text-on-image">{name}</span>
         {optionsLabel !== undefined && <span className="truncate font-sans text-micro font-semibold text-on-image-soft">{optionsLabel}</span>}
       </span>
 

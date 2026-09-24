@@ -122,6 +122,14 @@ describe('design-tokens ↔ globals.css paritesi', () => {
     }
   });
 
+  it('renk ve yazı kademesi aynı adı taşımaz — Tailwind ikisinden de `text-<ad>` türetir, yalnız rengi üretir', () => {
+    const tail = (prefix: string) =>
+      new Set(Object.keys(moduleLight).filter((n) => n.startsWith(prefix) && !n.slice(prefix.length).includes('--')).map((n) => n.slice(prefix.length)));
+    const colors = tail('--color-');
+    const clashes = [...tail('--text-')].filter((name) => colors.has(name));
+    expect(clashes, 'aynı adlı renk ve yazı kademesi: boy sınıftan ulaşılamaz (bkz. WEB_TEXT_NAMES)').toEqual([]);
+  });
+
   it('token sayıları beklenenle birebir', () => {
     expect(Object.keys(moduleLight)).toHaveLength(EXPECTED_LIGHT_COUNT);
     expect(Object.keys(moduleDark)).toHaveLength(EXPECTED_DARK_COUNT);

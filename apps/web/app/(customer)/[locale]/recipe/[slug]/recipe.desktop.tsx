@@ -60,7 +60,7 @@ export function RecipeDesktop({ t, locale, recipe }: RecipeViewProps) {
                     <span className="flex size-[30px] flex-none items-center justify-center rounded-full border border-sand-200 bg-card font-sans text-body-sm font-bold text-terracotta">
                       {index + 1}
                     </span>
-                    <span className="pt-1 font-sans text-body leading-relaxed text-ink">{step}</span>
+                    <span className="pt-1 font-sans text-copy leading-relaxed text-ink">{step}</span>
                   </li>
                 ))}
               </ol>

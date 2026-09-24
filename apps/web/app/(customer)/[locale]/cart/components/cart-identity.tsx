@@ -180,13 +180,13 @@ function CartAddress({ t, locale }: Pick<CartIdentityProps, 't' | 'locale'>) {
       <span className="font-sans text-eyebrow-xs text-terracotta uppercase">{copy.eyebrow}</span>
       {pickedWarehouse ? (
         <>
-          <span className="font-sans text-body font-semibold text-ink">{copy.pickupLine.replace('{name}', pickedWarehouse.name)}</span>
+          <span className="font-sans text-copy font-semibold text-ink">{copy.pickupLine.replace('{name}', pickedWarehouse.name)}</span>
           <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.pickupNote}</span>
           <TextAction label={copy.change} onClick={() => setOpen('list')} />
         </>
       ) : address ? (
         <>
-          <span className="font-sans text-body font-semibold text-ink">{addressLine(address)}</span>
+          <span className="font-sans text-copy font-semibold text-ink">{addressLine(address)}</span>
           <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.note}</span>
           <TextAction label={copy.change} onClick={() => setOpen('list')} />
         </>

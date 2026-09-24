@@ -49,7 +49,7 @@ function DeclarationCard({ title, note, warn = false, compact = false, children 
   const heading = (
     <>
       <span className="flex items-baseline gap-2">
-        <h2 className={['font-serif text-ink', compact ? 'text-body font-bold' : 'text-card-title-sm'].join(' ')}>{title}</h2>
+        <h2 className={['font-serif text-ink', compact ? 'text-copy font-bold' : 'text-card-title-sm'].join(' ')}>{title}</h2>
         {warn && <Icon name="warning" size={16} className="self-center text-terracotta" />}
       </span>
       {note && <span className="font-sans text-field-label font-normal text-muted">{note}</span>}

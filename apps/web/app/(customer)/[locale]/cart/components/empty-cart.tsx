@@ -101,7 +101,7 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
         <h1 className={['font-serif leading-tight text-ink', compact ? 'text-page-title-sm' : 'text-page-title'].join(' ')}>{title}</h1>
         {/* Mobilde metin KISALIR, küçültülmez: dar ekranda uzun cümle beş satıra yayılıp düğmeleri
             katlamanın altına iter. Tasarım iki ayrı cümle veriyor, ikisi de yazılı. */}
-        <p className={['font-sans leading-relaxed text-body', compact ? 'text-note' : 'text-body'].join(' ')}>
+        <p className={['font-sans leading-relaxed text-body', compact ? 'text-note' : 'text-copy'].join(' ')}>
           {compact ? t.empty.bodyShort : t.empty.body}
         </p>
 
@@ -139,7 +139,7 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
         </div>
       )}
       <div className="flex flex-1 flex-col gap-1">
-        <span className={['font-sans font-bold text-ink', compact ? 'text-body-sm' : 'text-body'].join(' ')}>{t.empty.repeatTitle}</span>
+        <span className={['font-sans font-bold text-ink', compact ? 'text-body-sm' : 'text-copy'].join(' ')}>{t.empty.repeatTitle}</span>
         {/* Meta satırı cihaza göre FARKLI ve bu tasarımın kararı: masaüstünde ürün adları
             ("…Fıstıklı Baklava, Ispanaklı Gözleme…"), mobilde kalem SAYISI ("3 kalem"). Dar ekranda
             üç uzun ad üç satıra yayılıp düğmeyi aşağı itiyor; sayı tek satırda aynı bilgiyi veriyor.

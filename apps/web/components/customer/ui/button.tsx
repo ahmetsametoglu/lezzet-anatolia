@@ -41,7 +41,7 @@ const PADDED_SIZE: Record<ButtonSize, string> = {
   // `lg` yalnız ürün detayın ana aksiyonunda: sayfanın tek satın alma butonu, toplam tutarı taşır
   // ve mobilde ekran altına sabitlenir — kart butonlarıyla aynı ağırlıkta olamaz.
   lg: 'h-14 px-10 text-lead',
-  md: 'h-12 px-7 text-body',
+  md: 'h-12 px-7 text-copy',
   sm: 'h-11 px-5 text-body-sm',
   // Satır içi eylem (sepet satırının "çıkar" düğmesi, mobil kartlar) — kartın yüksekliğini belirlemez.
   xs: 'h-9 px-3.5 text-micro',
@@ -81,13 +81,13 @@ const PADDED_SIZE: Record<ButtonSize, string> = {
  * zaten ayrı bir BOY: `cardSm`).
  */
 const COMPACT_PADDED_SIZE: Partial<Record<ButtonSize, string>> = {
-  md: 'h-13 px-7 text-body',
+  md: 'h-13 px-7 text-copy',
   sm: 'h-12 px-5 text-body-sm',
 };
 
 const GHOST_SIZE: Record<ButtonSize, string> = {
   lg: 'text-lead',
-  md: 'text-body',
+  md: 'text-copy',
   sm: 'text-sm',
   xs: 'text-micro',
   card: 'text-note',

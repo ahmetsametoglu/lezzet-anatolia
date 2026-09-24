@@ -144,14 +144,14 @@ export function CartLineRow({ line, t, locale, compact = false, tone = 'default'
           }
           className={[
             'cursor-pointer font-sans font-bold transition-colors hover:text-olive',
-            compact ? 'text-note' : 'text-body',
+            compact ? 'text-note' : 'text-copy',
             blocked ? 'text-muted' : 'text-ink',
           ].join(' ')}
         >
           {line.name}
         </Link>
       ) : (
-        <span className={['font-sans font-bold text-muted', compact ? 'text-note' : 'text-body'].join(' ')}>
+        <span className={['font-sans font-bold text-muted', compact ? 'text-note' : 'text-copy'].join(' ')}>
           {line.name || '—'}
         </span>
       )}
@@ -334,7 +334,7 @@ export function CartLineRow({ line, t, locale, compact = false, tone = 'default'
       <span
         className={[
           'font-sans font-bold',
-          compact ? 'text-body' : 'w-20 text-right text-card-title-sm',
+          compact ? 'text-copy' : 'w-20 text-right text-card-title-sm',
           isOffer ? 'text-terracotta' : 'text-ink',
         ].join(' ')}
       >

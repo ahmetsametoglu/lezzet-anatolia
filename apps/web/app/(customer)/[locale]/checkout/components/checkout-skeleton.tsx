@@ -30,7 +30,7 @@ export function CheckoutStepsSkeleton({ t, compact = false }: { t: Messages; com
             {/* Başlık satırı iskelet DEĞİL: numara ve ad zaten elimizde, onları da gri çubuğa
                 çevirmek bildiğimiz bir şeyi saklamak olurdu. */}
             <div className="flex items-center gap-3">
-              <span className="flex size-[30px] flex-none items-center justify-center rounded-full bg-sand-200 font-sans text-body font-bold text-muted">
+              <span className="flex size-[30px] flex-none items-center justify-center rounded-full bg-sand-200 font-sans text-copy font-bold text-muted">
                 {step}
               </span>
               <span className="font-serif text-card-title-sm text-muted">{title}</span>

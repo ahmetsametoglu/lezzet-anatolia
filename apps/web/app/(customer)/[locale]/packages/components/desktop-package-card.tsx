@@ -156,7 +156,7 @@ export function DesktopPackageCard({ pack, locale, labels, compact = false, wide
           <span
             className={[
               'font-sans font-bold',
-              compact ? 'text-body' : 'text-card-title',
+              compact ? 'text-copy' : 'text-card-title',
               pack.soldOut ? 'text-muted' : 'text-ink',
             ].join(' ')}
           >

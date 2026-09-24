@@ -31,7 +31,7 @@ export function StepShell({ step, title, compact, children }: { step: string; ti
     >
       <div className="flex items-center gap-3">
         {/* Tasarım: 30×30 daire, 700 15px. Küçüğü (28/13) başlığın yanında cılız kalıyordu. */}
-        <span className="flex size-[30px] flex-none items-center justify-center rounded-full bg-olive font-sans text-body font-bold text-white">{step}</span>
+        <span className="flex size-[30px] flex-none items-center justify-center rounded-full bg-olive font-sans text-copy font-bold text-white">{step}</span>
         {/* Tasarım: 600 19px Lora — `card-title-sm` (18) en yakın durak, yeni token açılmadı. */}
         <span className="font-serif text-card-title-sm text-ink">{title}</span>
       </div>
@@ -104,7 +104,7 @@ function ModeCard({ icon, title, from, selected, onClick }: ModeCardProps) {
           <Icon name={icon} size={26} />
         </span>
         <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="font-sans text-body font-bold text-ink">{title}</span>
+          <span className="font-sans text-copy font-bold text-ink">{title}</span>
           <span className="font-sans text-note text-muted">{from}</span>
         </span>
       </span>
@@ -331,7 +331,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
           <div className={compact ? 'flex flex-col gap-2' : 'grid grid-cols-3 gap-2.5'}>
             {delivery.availableDates.map((date) => (
               <ChoiceCard key={date} selected={state.deliveryDate === date} onClick={() => onSelectDate(date)} center>
-                <span className="font-sans text-body font-bold text-ink">{formatDeliveryDate(date, locale)}</span>
+                <span className="font-sans text-copy font-bold text-ink">{formatDeliveryDate(date, locale)}</span>
               </ChoiceCard>
             ))}
           </div>

@@ -108,7 +108,7 @@ export function CtaBand({ title, body, cta, compact = false }: CtaBandProps) {
     >
       <div className="flex flex-col gap-2">
         <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-card-title'].join(' ')}>{title}</span>
-        <span className={['font-sans text-body/relaxed text-body', compact ? 'text-note' : ''].join(' ')}>{body}</span>
+        <span className={['font-sans text-copy/relaxed text-body', compact ? 'text-note' : ''].join(' ')}>{body}</span>
       </div>
       <Link
         href={cta.href}
@@ -145,10 +145,10 @@ export function InviteBand({ title, body, cta, compact = false }: InviteBandProp
       ].join(' ')}
     >
       <span className="flex flex-col gap-1">
-        <span className={['font-sans font-bold text-ink', compact ? 'text-body' : 'text-lead leading-tight'].join(' ')}>{title}</span>
+        <span className={['font-sans font-bold text-ink', compact ? 'text-copy' : 'text-lead leading-tight'].join(' ')}>{title}</span>
         <span className={['font-sans text-muted', compact ? 'text-note' : 'text-body-sm'].join(' ')}>{body}</span>
       </span>
-      <span className={['font-sans font-bold text-olive transition-colors group-hover:text-olive-dark', compact ? 'mt-0.5 text-body-sm' : 'text-body'].join(' ')}>
+      <span className={['font-sans font-bold text-olive transition-colors group-hover:text-olive-dark', compact ? 'mt-0.5 text-body-sm' : 'text-copy'].join(' ')}>
         {cta.label}
       </span>
     </Link>

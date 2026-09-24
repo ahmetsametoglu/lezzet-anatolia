@@ -342,7 +342,7 @@ export function SummaryCard({ t, locale, order, title }: Pick<DetailViewProps, '
         // Ücretsiz teslimatta YALNIZ tutar yeşil (tasarım): etiket bir kazanç değil, tutar kazanç.
         tone={order.shippingFeeCents > 0 ? 'default' : 'oliveValue'}
       />
-      <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-sand-200 pt-2.5 font-sans text-body font-bold text-ink">
+      <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-sand-200 pt-2.5 font-sans text-copy font-bold text-ink">
         <span>{summary.total}</span>
         <span>{formatPrice(order.totalCents, locale)}</span>
       </div>
@@ -389,7 +389,7 @@ export function HelpCard({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
   return (
     <section className="flex flex-col gap-2 rounded-[16px] bg-cream-deep px-5.5 py-4.5">
       {/* Tasarımda 16px Lora 600 → `text-body` (15px); `text-lead` 18px olurdu ve blok kart gibi okunurdu. */}
-      <span className="font-serif text-body font-semibold leading-tight text-ink">{t.helpTitle}</span>
+      <span className="font-serif text-copy font-semibold leading-tight text-ink">{t.helpTitle}</span>
       <span className="font-sans text-note leading-relaxed text-body">{t.helpBodyLong}</span>
       <Link href={{ pathname: '/support/new', query: { order: order.id } }} className={buttonClass({ fullWidth: true })}>
         {t.reportIssue}
@@ -420,7 +420,7 @@ export function FeedbackInviteCard({
   if (invite === null) return null;
   return (
     <section className="flex flex-col gap-2 rounded-soft border border-dashed border-olive bg-olive-bg px-5.5 py-4.5">
-      <span className="font-serif text-body font-semibold leading-tight text-ink">{t.feedback.title}</span>
+      <span className="font-serif text-copy font-semibold leading-tight text-ink">{t.feedback.title}</span>
       <span className="font-sans text-note leading-relaxed text-body">
         {t.feedback.body.replace('{points}', String(invite.completionPoints))}
       </span>

@@ -131,7 +131,7 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
               <Link href="/" className="flex-none cursor-pointer">
                 <BrandLogo />
               </Link>
-              <nav className="flex gap-6.5 font-sans text-body font-semibold text-ink">
+              <nav className="flex gap-6.5 font-sans text-copy font-semibold text-ink">
                 <Link href="/catalog" className={navClass('catalog', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
                   {t.nav.catalog}
                 </Link>
@@ -170,7 +170,9 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
       <footer className="bg-ink text-neutral-400">
         {footerTier === 'slim' ? (
           <div className={`${SHELL} flex items-center justify-between px-12 py-4 font-sans text-micro`}>
-            <span className="font-serif text-body font-semibold text-cream">{brand.name}</span>
+            {/* Tasarımın ince altbilgisinde marka 17 px (merdivende 18, tam altbilgiyle aynı kademe). Önceki
+                `text-body` boyu hiç uygulamıyordu ve ad kapsayıcının 11,5 px'ini miras alıyordu. */}
+            <span className="font-serif text-card-title-sm text-cream">{brand.name}</span>
             <span className="uppercase">{LOCALES.join(' · ')}</span>
           </div>
         ) : (

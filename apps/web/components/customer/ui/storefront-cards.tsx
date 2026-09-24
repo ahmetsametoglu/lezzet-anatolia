@@ -191,7 +191,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
           href={productHref(product.slug)}
           className={[
             'cursor-pointer font-sans font-bold transition-colors hover:text-olive',
-            compact ? 'text-note' : 'text-body leading-tight',
+            compact ? 'text-note' : 'text-copy leading-tight',
             product.soldOut ? 'text-muted' : 'text-ink',
           ].join(' ')}
         >
@@ -352,7 +352,7 @@ export function OfferCard({ offer, locale, limitLabel, actionLabels }: OfferCard
       <div className="flex min-w-0 flex-1 flex-col gap-1.25">
         <Link
           href={productHref(offer.slug)}
-          className="cursor-pointer font-sans text-body leading-tight font-bold text-ink transition-colors hover:text-olive"
+          className="cursor-pointer font-sans text-copy leading-tight font-bold text-ink transition-colors hover:text-olive"
         >
           {offer.name}
         </Link>

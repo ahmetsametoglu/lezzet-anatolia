@@ -10,7 +10,7 @@ type PriceTone = 'default' | 'onDark' | 'muted';
 type PriceSize = 'sm' | 'md' | 'lg' | 'xl' | 'hero';
 
 const SIZE: Record<PriceSize, string> = {
-  sm: 'text-body',
+  sm: 'text-copy',
   md: 'text-card-title-sm',
   lg: 'text-lead',
   // Tek boylu üründe fiyat SAYFANIN ÇAPASIDIR: yanında seçilecek bir şey yok, kıyas edilecek ikinci

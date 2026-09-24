@@ -57,7 +57,7 @@ export function FeedbackOutcome({ t, completion, customerName, compact = false }
 
       {happy && completion.reviewUrl && (
         <div className="flex w-full flex-col gap-2 rounded-card border border-sand-200 bg-card px-4 py-4">
-          <span className="font-serif text-body font-semibold leading-snug text-ink">
+          <span className="font-serif text-copy font-semibold leading-snug text-ink">
             {t.reviewInviteTitle.replace('{platform}', completion.reviewPlatform ?? '')}
           </span>
           <span className="font-sans text-micro leading-relaxed text-body">{t.reviewInviteBody}</span>

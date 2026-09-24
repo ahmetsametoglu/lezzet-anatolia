@@ -115,7 +115,7 @@ export function PhoneReviews({ t, locale, productId, productName, data }: PhoneR
       {score.average === null ? (
         <div className="flex flex-col items-center gap-1.5 rounded-soft border border-dashed border-sand-400 px-6 py-6 text-center">
           <Icon name="star" size={24} className="text-sand-400" />
-          <span className="font-sans text-body font-bold text-ink">{t.reviews.emptyTitle}</span>
+          <span className="font-sans text-copy font-bold text-ink">{t.reviews.emptyTitle}</span>
           <span className="font-sans text-note text-muted">{t.reviews.emptyBody}</span>
         </div>
       ) : (

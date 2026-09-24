@@ -35,12 +35,12 @@ export function LegalBody({ sections }: LegalBodyProps) {
         <section key={section.id} id={section.id} className="flex flex-col gap-2.5 scroll-mt-24">
           <h2 className="font-serif text-card-title text-ink">{section.heading}</h2>
           {section.paragraphs.map((paragraph) => (
-            <p key={paragraph} className="font-sans text-body leading-relaxed text-body">
+            <p key={paragraph} className="font-sans text-copy leading-relaxed text-body">
               {paragraph}
             </p>
           ))}
           {section.bullets.length > 0 && (
-            <ul className="flex list-disc flex-col gap-1.5 pl-5 font-sans text-body leading-relaxed text-body">
+            <ul className="flex list-disc flex-col gap-1.5 pl-5 font-sans text-copy leading-relaxed text-body">
               {section.bullets.map((bullet) => (
                 <li key={bullet}>{bullet}</li>
               ))}
@@ -62,7 +62,7 @@ interface LegalNoticeBandProps {
  */
 export function LegalNoticeBand({ notice }: LegalNoticeBandProps) {
   return (
-    <div className="rounded-card bg-olive-bg px-5 py-4 font-sans text-body leading-relaxed text-ink">
+    <div className="rounded-card bg-olive-bg px-5 py-4 font-sans text-copy leading-relaxed text-ink">
       <span>{notice.text} </span>
       {notice.links.map((link, index) => (
         <span key={link.label}>

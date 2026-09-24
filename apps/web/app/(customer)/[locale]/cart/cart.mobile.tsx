@@ -258,7 +258,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
               ))}
               {split && group.key === 'local' && (
                 <div className={GROUP_CARD}>
-                  <span className="font-sans text-body font-semibold text-ink">{copy.group.routeTotal.replace('{amount}', formatPrice(localItemsCents, locale))}</span>
+                  <span className="font-sans text-copy font-semibold text-ink">{copy.group.routeTotal.replace('{amount}', formatPrice(localItemsCents, locale))}</span>
                   <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.group.routeNote}</span>
                 </div>
               )}
@@ -266,7 +266,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
                   satılamayan kalem ve kimlik/adres kapısı işler. */}
               {split && group.key === 'shipping' && (
                 <div className={GROUP_CARD}>
-                  <span className="font-sans text-body font-semibold text-ink">
+                  <span className="font-sans text-copy font-semibold text-ink">
                     {copy.group.shippingTotal.replace('{amount}', formatPrice(shippingItemsCents + fee.feeCents, locale))}
                   </span>
                   <span className="font-sans text-body-sm leading-[1.6] text-muted">{shippingBreakdown}</span>

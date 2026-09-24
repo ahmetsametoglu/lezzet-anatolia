@@ -47,7 +47,7 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, isSend
             <form onSubmit={onSubmit} className="flex flex-col gap-[18px]" noValidate>
               <div className="flex flex-col gap-2">
                 <h1 className="font-serif text-h1-sm text-ink">{t.title}</h1>
-                <p className="font-sans text-body leading-relaxed text-body">{subtitle}</p>
+                <p className="font-sans text-copy leading-relaxed text-body">{subtitle}</p>
               </div>
 
               <Button variant="secondary" fullWidth onClick={onGoogle}>

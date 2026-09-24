@@ -170,6 +170,7 @@ export const customerText = {
   /* Gövde kademeleri: kahraman paragrafı → kart metni → yardımcı satır → mobil alt satır. */
   lead: '18px',
   'lead--line-height': '1.6',
+  /* Web'de `--text-copy` adıyla yazılır (bkz. `render-theme-css` · `WEB_TEXT_NAMES`); native `text.body` okur. */
   body: '15px',
   /* Envanterin "gövde 14-18" aralığının tabanı — sonuç sayısı gibi yardımcı bilgi satırları. */
   'body-sm': '14px',

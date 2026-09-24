@@ -78,7 +78,7 @@ export function PackagesDesktop({ t, locale, packages, hero }: PackagesViewProps
           // Boş durum: kesikli çerçeveli TEK kutu (tasarım). Kahraman ve alt bant yerinde kalır.
           <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-sand-500 px-8 py-10 text-center">
             <Icon name="box" size={32} className="text-olive" />
-            <span className="font-sans text-body font-bold text-ink">{t.empty.title}</span>
+            <span className="font-sans text-copy font-bold text-ink">{t.empty.title}</span>
             <span className="max-w-[420px] font-sans text-note text-muted">{t.empty.body}</span>
             <Link href="/catalog" className={buttonClass({ size: 'sm', className: 'mt-1' })}>
               {t.empty.cta}
@@ -111,7 +111,7 @@ export function PackagesDesktop({ t, locale, packages, hero }: PackagesViewProps
       <section className="mx-12 mb-11 flex items-center gap-6 rounded-card bg-sand-100 px-8 py-7">
         <div className="flex flex-1 flex-col gap-1.5">
           <span className="font-serif text-card-title text-ink">{t.catalogBand.title}</span>
-          <span className="font-sans text-body leading-relaxed text-body">{t.catalogBand.body}</span>
+          <span className="font-sans text-copy leading-relaxed text-body">{t.catalogBand.body}</span>
         </div>
         <Link href="/catalog" className={buttonClass({ size: 'md', className: 'flex-none' })}>
           {t.catalogBand.cta}

@@ -88,7 +88,7 @@ export function PackageMobile({ locale, pack }: PackageViewProps) {
                   {item.unitLabel ? `${item.name} · ${item.unitLabel}` : item.name}
                 </span>
                 <span className="font-sans text-helper font-bold text-muted">{`×${item.qty}`}</span>
-                <span aria-hidden className="font-sans text-body text-sand-600">
+                <span aria-hidden className="font-sans text-copy text-sand-600">
                   ›
                 </span>
               </Link>

@@ -124,7 +124,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
       {score.average === null ? (
         <div className="flex flex-col items-center gap-1.5 rounded-card border-[1.5px] border-dashed border-sand-300 bg-card px-6 py-8.5 text-center">
           <Icon name="star" size={24} className="text-sand-400" />
-          <span className="font-sans text-body font-bold text-ink">{t.reviews.emptyTitle}</span>
+          <span className="font-sans text-copy font-bold text-ink">{t.reviews.emptyTitle}</span>
           <span className="font-sans text-note leading-normal text-muted">{t.reviews.emptyBody}</span>
         </div>
       ) : compact ? (

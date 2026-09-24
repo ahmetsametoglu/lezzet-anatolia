@@ -103,7 +103,7 @@ export function DesktopReplyBox({ t, locale, ticketId, onReplied }: DesktopReply
           onClick={send}
           disabled={busy || body.trim().length === 0}
           aria-label={t.reply.send}
-          className="grid size-9 flex-none cursor-pointer place-items-center rounded-full bg-olive font-sans text-body font-bold text-cream transition-colors hover:bg-olive-dark disabled:cursor-not-allowed disabled:bg-disabled-fill"
+          className="grid size-9 flex-none cursor-pointer place-items-center rounded-full bg-olive font-sans text-copy font-bold text-cream transition-colors hover:bg-olive-dark disabled:cursor-not-allowed disabled:bg-disabled-fill"
         >
           ↑
         </button>

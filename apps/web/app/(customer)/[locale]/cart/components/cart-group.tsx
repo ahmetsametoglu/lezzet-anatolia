@@ -109,7 +109,7 @@ function RouteAction({ view, t, locale, compact, totalCents }: RouteActionProps)
       ].join(' ')}
     >
       <div className="flex flex-1 flex-col gap-0.5">
-        <span className={['font-sans font-bold text-ink', compact ? 'text-body' : 'text-card-title-sm'].join(' ')}>
+        <span className={['font-sans font-bold text-ink', compact ? 'text-copy' : 'text-card-title-sm'].join(' ')}>
           {t.group.routeTotal.replace('{amount}', formatPrice(totalCents, locale))}
         </span>
         <span className={['font-sans text-olive-dark', compact ? 'text-micro' : 'text-note'].join(' ')}>{t.group.routeNote}</span>
@@ -181,7 +181,7 @@ function ShippingAction({ view, t, locale, compact, itemsCents, totalCents, feeC
         ].join(' ')}
       >
         <div className="flex flex-1 flex-col gap-0.5">
-          <span className={['font-sans font-bold text-ink', compact ? 'text-body' : 'text-card-title-sm'].join(' ')}>
+          <span className={['font-sans font-bold text-ink', compact ? 'text-copy' : 'text-card-title-sm'].join(' ')}>
             {g.shippingTotal.replace('{amount}', formatPrice(totalCents, locale))}
           </span>
           <span className={['font-sans text-muted', compact ? 'text-micro' : 'text-note'].join(' ')}>{breakdown}</span>

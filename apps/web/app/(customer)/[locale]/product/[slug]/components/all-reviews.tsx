@@ -228,7 +228,7 @@ export function AllReviews({ t, locale, productId, productName, breakdown, total
           type="button"
           onClick={onClose}
           aria-label={t.reviews.close}
-          className="flex size-11 flex-none cursor-pointer items-center justify-center font-sans text-body font-bold text-olive"
+          className="flex size-11 flex-none cursor-pointer items-center justify-center font-sans text-copy font-bold text-olive"
         >
           ←
         </button>

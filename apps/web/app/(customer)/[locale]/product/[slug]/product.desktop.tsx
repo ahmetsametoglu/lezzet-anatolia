@@ -135,7 +135,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
 
           {/* Açıklama 15 px (tasarım 15,5): rafın genişliği 470 px ve 18 px'lik satır orada üç yerine
               beş satıra çıkıyordu. */}
-          {product.description && <p className="font-sans text-body leading-relaxed text-body">{product.description}</p>}
+          {product.description && <p className="font-sans text-copy leading-relaxed text-body">{product.description}</p>}
 
           {/* Çeşit bloğu boy seçicisi YOKKEN rafta kalır; varken sola iner (yukarıdaki `familyOnLeft`). */}
           {!familyOnLeft && <FamilyBlock t={t.family} locale={locale} members={product.family} currentUnavailable={unavailable} />}

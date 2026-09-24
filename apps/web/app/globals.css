@@ -132,7 +132,8 @@
   /* Gövde kademeleri: kahraman paragrafı → kart metni → yardımcı satır → mobil alt satır. */
   --text-lead: 18px;
   --text-lead--line-height: 1.6;
-  --text-body: 15px;
+  /* Gövde metni — `copy`, `body` değil: `--color-body` ile aynı ad `text-body`de çakışıyordu (bkz. `customerText`). */
+  --text-copy: 15px;
   /* Envanterin "gövde 14-18" aralığının tabanı — sonuç sayısı gibi yardımcı bilgi satırları. */
   --text-body-sm: 14px;
   --text-note: 13px;
@@ -399,7 +400,7 @@ body {
   --text-card-title: 25px;
   --text-card-title-sm: 19px;
   --text-lead: 19px;
-  --text-body: 16px;
+  --text-copy: 16px;
   --text-body-sm: 15px;
   --text-note: 14px;
   --text-micro: 12.5px;

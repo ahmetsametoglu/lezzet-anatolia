@@ -24,7 +24,7 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
           {/* Başlık tasarımın kendi ölçüsünde (44 px, kullanıcı kararı 24.09): 30 px'te tek satıra
               sığıyor, sol sütun kısalıyor ve fotoğraf sütunu dar kalıyordu. */}
           <h1 className="font-serif text-h1-md">{t.hero.title}</h1>
-          <ul className="flex flex-col gap-2.5 font-sans text-body leading-relaxed text-on-image-soft">
+          <ul className="flex flex-col gap-2.5 font-sans text-copy leading-relaxed text-on-image-soft">
             {t.hero.benefits.map((benefit) => (
               <li key={benefit} className="flex items-start gap-2">
                 <Icon name="check" size={16} className="mt-1 flex-none text-olive-light" />
@@ -72,7 +72,7 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
         {t.steps.map((step, index) => (
           <Card key={step.title} gap="xs">
             <span className="font-serif text-card-title font-bold text-olive">{index + 1}</span>
-            <span className="font-sans text-body font-bold text-ink">{step.title}</span>
+            <span className="font-sans text-copy font-bold text-ink">{step.title}</span>
             <span className="font-sans text-note leading-relaxed text-body">{step.body}</span>
           </Card>
         ))}

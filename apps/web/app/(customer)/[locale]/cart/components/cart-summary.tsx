@@ -236,7 +236,7 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
         <div
           className={[
             'flex items-center justify-between border-t border-sand-200 font-sans font-bold text-ink',
-            compact ? 'pt-2 text-body' : 'pt-2.5 text-card-title-sm',
+            compact ? 'pt-2 text-copy' : 'pt-2.5 text-card-title-sm',
           ].join(' ')}
         >
           <span>{summary.total}</span>

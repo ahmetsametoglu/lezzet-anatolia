@@ -96,7 +96,7 @@ export function EmptyState({ title, body, action, icon }: EmptyStateProps) {
     <div className="flex flex-col items-center gap-3 rounded-card border-[1.5px] border-dashed border-sand-500 px-8 py-14 text-center">
       {icon && <Icon name={icon} size={30} className="text-olive" />}
       <span className="font-serif text-card-title text-ink">{title}</span>
-      <span className="max-w-md font-sans text-body text-muted">{body}</span>
+      <span className="max-w-md font-sans text-copy text-muted">{body}</span>
       {/* Düğme `buttonClass`tan gelir. Elle yazılmış hâli ODAK HALKASINI kaybetmişti ve sabit
           yükseklik yerine `py-3` kullanıyordu — `Button` künyesinin adıyla uyardığı tuzak: kontrol
           gövde metninin 1,5 satır aralığını miras alıp çizilenden uzuyor. Kardeş boş-durumlar
