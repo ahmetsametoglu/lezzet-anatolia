@@ -67,7 +67,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
       <h1 className="min-w-0 flex-1 font-serif text-screen-title text-ink">{copy.title}</h1>
       {ready && !failed && (
         <span className="font-sans text-note font-semibold text-muted">
-          {view.itemCount === 1 ? t.countOne : copy.count.replace('{n}', String(view.itemCount))}
+          {view.itemCount === 1 ? copy.countOne : copy.count.replace('{n}', String(view.itemCount))}
         </span>
       )}
     </header>

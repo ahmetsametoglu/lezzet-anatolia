@@ -89,8 +89,8 @@
     },
     "facts": {
       "weight": "Gesamtnettogewicht",
-      "weightValue": "{weight} · {n} Produkte",
-      "itemsOnly": "{n} Produkte",
+      "weightValue": "{weight} · {n} Artikel",
+      "itemsOnly": "{n} Artikel",
       "shelfLife": "Verzehr nach dem Auftauen",
       "shelfLifeValue": "Innerhalb von {n} Tagen",
       "allergens": "Im Paket enthaltene Allergene",
@@ -99,7 +99,7 @@
     "fixedNote": "Das Paket wird als Ganzes verkauft; der Inhalt ist nicht änderbar. Einzelne Produkte finden Sie im Katalog.",
     "contents": {
       "title": "Was ist im Paket?",
-      "subtitle": "{n} Produkte · klicken Sie auf ein Produkt, um seine Angaben zu sehen",
+      "subtitle": "{n} Artikel · klicken Sie auf ein Produkt, um seine Angaben zu sehen",
       "qty": "{label} · {n} Stück",
       "qtyPlain": "{n} Stück",
       "link": "Produktangaben →",

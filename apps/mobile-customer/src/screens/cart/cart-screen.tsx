@@ -352,7 +352,7 @@ export function CartScreen() {
       <Text style={styles.title} accessibilityRole="header">
         {t.title}
       </Text>
-      <Text style={styles.count}>{t.count.replace('{n}', String(count))}</Text>
+      <Text style={styles.count}>{count === 1 ? t.countOne : t.count.replace('{n}', String(count))}</Text>
     </View>
   );
 

@@ -132,7 +132,7 @@
       "retry": "Réessayer"
     },
     "row": {
-      "meta": "{date} · {count} articles",
+      "meta": "{date} · Articles : {count}",
       "more": "+{n}",
       "detail": "Détail ›",
       "open": "Détail de la commande {reference}"

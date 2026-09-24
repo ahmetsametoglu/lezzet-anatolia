@@ -94,7 +94,7 @@
       "options": "{n} options"
     },
     "cart": {
-      "open": "Ouvrir le panier, {n} articles"
+      "open": "Ouvrir le panier (articles : {n})"
     }
   },
   "de": {

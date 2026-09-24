@@ -48,7 +48,7 @@
     "navAccount": "Mon compte",
     "navOrders": "Mes commandes",
     "navSupport": "Assistance",
-    "itemCount": "{count} articles",
+    "itemCount": "Articles : {count}",
     "detail": "Détail",
     "detailArrow": "Détail →",
     "loadMore": "Commandes plus anciennes ↓",
@@ -74,9 +74,9 @@
       "cta": "Voir le catalogue"
     },
     "reorderResult": {
-      "added": "{count} articles ajoutés au panier",
+      "added": "Ajoutés au panier : {count}",
       "addedToast": "Articles ajoutés au panier aux prix actuels ✓",
-      "skipped": "{count} articles non ajoutés : {names}.",
+      "skipped": "Non ajoutés ({count}) : {names}.",
       "none": "Aucun produit de cette commande n'est disponible actuellement.",
       "goToCart": "Aller au panier",
       "dismiss": "Fermer",

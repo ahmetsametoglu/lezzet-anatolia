@@ -165,7 +165,7 @@
       "body": "Gleicher Tag, gleiches Fahrzeug: Bestellt jemand aus Ihrer Nachbarschaft für denselben Tag, werden Sie zusammen beliefert – und Sie sammeln Punkte.",
       "cta": "Link kopieren",
       "copied": "Kopiert",
-      "remaining": "Noch {n} Nachbarn können diese Einladung nutzen (höchstens {max}).",
+      "remaining": "Freie Plätze in dieser Einladung: {n} (höchstens {max}).",
       "full": "Diese Einladung ist ausgeschöpft – {max} Nachbarn haben mitbestellt. Mit Ihrer nächsten Bestellung erhalten Sie eine neue Einladung."
     },
     "track": "Bestellung verfolgen"

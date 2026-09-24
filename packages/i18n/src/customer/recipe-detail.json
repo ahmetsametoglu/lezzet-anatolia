@@ -32,7 +32,7 @@
   "fr": {
     "back": "Retour",
     "addedToast": "Ajouté au panier ✓",
-    "addAllToast": "{n} ingrédients ajoutés au panier ✓",
+    "addAllToast": "Ingrédients ajoutés au panier : {n} ✓",
     "eyebrow": "IDÉES DE TABLE",
     "sections": {
       "ours": "INGRÉDIENTS — À COMMANDER",
@@ -56,7 +56,7 @@
       "back": "Retour"
     },
     "cart": {
-      "open": "Ouvrir le panier, {n} articles"
+      "open": "Ouvrir le panier (articles : {n})"
     }
   },
   "de": {

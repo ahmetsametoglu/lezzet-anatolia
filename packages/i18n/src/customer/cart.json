@@ -3,6 +3,7 @@
     "title": "Sepet",
     "back": "Geri",
     "count": "{n} ürün",
+    "countOne": "1 ürün",
     "empty": {
       "title": "Sepetiniz boş",
       "body": "Anadolu'nun lezzetleri sizi bekliyor.",
@@ -122,6 +123,7 @@
     "title": "Panier",
     "back": "Retour",
     "count": "{n} articles",
+    "countOne": "1 article",
     "empty": {
       "title": "Votre panier est vide",
       "body": "Les saveurs d'Anatolie vous attendent.",
@@ -241,6 +243,7 @@
     "title": "Warenkorb",
     "back": "Zurück",
     "count": "{n} Artikel",
+    "countOne": "1 Artikel",
     "empty": {
       "title": "Ihr Warenkorb ist leer",
       "body": "Die Aromen Anatoliens warten auf Sie.",
@@ -345,7 +348,7 @@
       "pickupNote": "Ihr Warenkorb wurde anhand des Lagerbestands berechnet. Vereinbaren Sie die Abholzeit telefonisch."
     },
     "placeChange": {
-      "title": "{n} Artikel haben sich mit Ihrem neuen Ort geändert",
+      "title": "Durch Ihren neuen Lieferort geändert: {n} Artikel",
       "toShipping": "{name} wird jetzt verschickt",
       "toRoute": "{name} wird jetzt an die Tür geliefert",
       "noDelivery": "{name} kann derzeit nicht an diese Adresse geliefert werden",

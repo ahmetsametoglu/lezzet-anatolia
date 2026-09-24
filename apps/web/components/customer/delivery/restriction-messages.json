@@ -74,7 +74,7 @@
     }
   },
   "de": {
-    "title": "{n} Artikel können nicht an diese Adresse geliefert werden",
+    "title": "Nicht an diese Adresse lieferbar: {n} Artikel",
     "reason": "Diese Artikel werden in der Kühlkette transportiert; wir liefern sie nur in Straßburg und Umgebung bis an die Haustür.",
     "reasonHere": "Diese Artikel werden in der Kühlkette transportiert und sind derzeit in Ihrer Region nicht vorrätig; per Versand können sie ebenfalls nicht gehen.",
     "splitCta": "Für später speichern und Rest bestellen",

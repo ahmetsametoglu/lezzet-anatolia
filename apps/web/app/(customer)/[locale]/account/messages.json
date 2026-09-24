@@ -154,7 +154,7 @@
     "pointsTitle": "Mes points",
     "pointsRule": "{points} points = bon de {amount}",
     "pointsRedeem": "Convertir en bon",
-    "pointsShort": "Il vous manque {missing} points pour convertir.",
+    "pointsShort": "Points manquants pour convertir : {missing}",
     "pointsRecent": "Derniers gains",
     "pointsEmpty": "Aucun mouvement de points pour l'instant.",
     "pointsReason": {
@@ -270,7 +270,7 @@
     "pointsTitle": "Meine Punkte",
     "pointsRule": "{points} Punkte = Gutschein über {amount}",
     "pointsRedeem": "In Gutschein umwandeln",
-    "pointsShort": "Ihnen fehlen noch {missing} Punkte zum Umwandeln.",
+    "pointsShort": "Zum Umwandeln fehlende Punkte: {missing}",
     "pointsRecent": "Zuletzt gesammelt",
     "pointsEmpty": "Noch keine Punktebewegungen.",
     "pointsReason": {

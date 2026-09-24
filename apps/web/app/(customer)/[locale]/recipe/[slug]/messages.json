@@ -28,7 +28,7 @@
     "addOne": "+ Panier",
     "inCart": "Au panier",
     "soldOut": "Épuisé",
-    "added": "{n} ingrédients ajoutés au panier",
+    "added": "Ingrédients ajoutés au panier : {n}",
     "note": "Un ingrédient épuisé sort de la liste ; le total est calculé avec les produits restants. Les comptes professionnels validés voient les prix de gros."
   },
   "de": {

@@ -59,7 +59,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
     subject: (ref) => `Votre commande a été livrée — ${ref}`,
     preview: (ref) => `${ref} livrée — bon appétit !`,
     summaryTitle: 'Bon de livraison',
-    countLabel: (lines, qty) => `${lines} articles · ${qty} unités`,
+    countLabel: (lines, qty) => `${lines} ${lines === 1 ? 'article' : 'articles'} · ${qty} ${qty === 1 ? 'unité' : 'unités'}`,
     notInvoice: 'Ce document indique les articles et les quantités livrées ; il ne constitue pas une facture. Si vous en souhaitez une, écrivez-nous.',
     summaryLink: '📄 Voir le bon de livraison →',
     helpTitle: 'Un problème ?',

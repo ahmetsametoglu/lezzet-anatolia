@@ -100,7 +100,7 @@
     },
     "header": {
       "points": "✦ {n}",
-      "pointsLabel": "Vos {n} points — aller au compte",
+      "pointsLabel": "Votre solde de points : {n} — aller au compte",
       "wholesale": "PRO",
       "notifications": "Notifications",
       "notificationsUnread": "Notifications, {n} non lues",
@@ -133,8 +133,8 @@
     },
     "collections": {
       "eyebrow": "Collections",
-      "count": "{n} produits ›",
-      "countWithCampaign": "{n} produits · {campaign} ›"
+      "count": "Produits : {n} ›",
+      "countWithCampaign": "Produits : {n} · {campaign} ›"
     },
     "campaign": {
       "percent": "−{n} %",
@@ -170,7 +170,7 @@
       "body": "Ouvrez un compte professionnel pour les tarifs de gros."
     },
     "cart": {
-      "open": "Ouvrir le panier, {n} articles"
+      "open": "Ouvrir le panier (articles : {n})"
     },
     "error": {
       "title": "Service momentanément indisponible",
@@ -191,7 +191,7 @@
     },
     "header": {
       "points": "✦ {n}",
-      "pointsLabel": "Ihre {n} Punkte – zum Konto",
+      "pointsLabel": "Ihr Punktestand: {n} – zum Konto",
       "wholesale": "GROSSHANDEL",
       "notifications": "Benachrichtigungen",
       "notificationsUnread": "Benachrichtigungen, {n} ungelesen",
@@ -224,8 +224,8 @@
     },
     "collections": {
       "eyebrow": "Kollektionen",
-      "count": "{n} Sorten ›",
-      "countWithCampaign": "{n} Sorten · {campaign} ›"
+      "count": "{n} Artikel ›",
+      "countWithCampaign": "{n} Artikel · {campaign} ›"
     },
     "campaign": {
       "percent": "−{n} %",

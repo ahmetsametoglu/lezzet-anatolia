@@ -90,7 +90,7 @@
     },
     "categories": {
       "all": "Toutes les catégories →",
-      "items": "{n} produits",
+      "items": "Produits : {n}",
       "title": "Que cherchez-vous ?"
     },
     "campaign": {
@@ -102,7 +102,7 @@
       "eyebrow": "Collections",
       "title": "Sélections de saison",
       "tag": "Collection",
-      "items": "{n} produits",
+      "items": "Produits : {n}",
       "go": "Voir la collection →"
     },
     "offers": {
@@ -133,7 +133,7 @@
       "eyebrow": "Idées de table",
       "title": "Comment composer votre repas ?",
       "all": "Toutes les recettes →",
-      "items": "{n} produits",
+      "items": "{n} ingrédients",
       "pantry": "{n} de votre cuisine",
       "soldOutShort": "Ingrédients indisponibles",
       "cta": "Ajouter les ingrédients →"
@@ -166,7 +166,7 @@
     "categories": {
       "title": "Wonach suchen Sie?",
       "all": "Alle Kategorien →",
-      "items": "{n} Produkte"
+      "items": "{n} Artikel"
     },
     "campaign": {
       "percent": "{n} %",
@@ -177,7 +177,7 @@
       "eyebrow": "Kollektionen",
       "title": "Saisonale Auswahl",
       "tag": "Kollektion",
-      "items": "{n} Produkte",
+      "items": "{n} Artikel",
       "go": "Zur Kollektion →"
     },
     "offers": {
@@ -200,7 +200,7 @@
       "title": "Gedeckte Tische zum Festpreis",
       "all": "Alle Pakete →",
       "badge": "Genusspaket",
-      "items": "{n} Produkte",
+      "items": "{n} Artikel",
       "cta": "Paket ansehen",
       "ctaShort": "Ansehen"
     },
