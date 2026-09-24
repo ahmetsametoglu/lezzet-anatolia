@@ -13,7 +13,7 @@
     "inCart": "Sepette",
     "soldOut": "Tükendi",
     "added": "{n} malzeme sepete eklendi",
-    "note": "Tükenen malzeme listeden düşer; toplam, kalan ürünlerle hesaplanır. Fiyatlar hesabınıza göre gösterilir."
+    "note": "Tükenen malzeme listeden düşer; toplam, kalan ürünlerle hesaplanır. Onaylı işletme hesaplarında toptan fiyatlar gösterilir."
   },
   "fr": {
     "back": "← Recettes",
@@ -29,7 +29,7 @@
     "inCart": "Au panier",
     "soldOut": "Épuisé",
     "added": "{n} ingrédients ajoutés au panier",
-    "note": "Un ingrédient épuisé sort de la liste ; le total est calculé avec les produits restants. Les prix s'affichent selon votre compte."
+    "note": "Un ingrédient épuisé sort de la liste ; le total est calculé avec les produits restants. Les comptes professionnels validés voient les prix de gros."
   },
   "de": {
     "back": "← Rezepte",
@@ -45,6 +45,6 @@
     "inCart": "Im Warenkorb",
     "soldOut": "Ausverkauft",
     "added": "{n} Zutaten in den Warenkorb gelegt",
-    "note": "Ausverkaufte Zutaten fallen aus der Liste; die Summe wird mit den verbleibenden Produkten berechnet. Preise erscheinen gemäß Ihrem Konto."
+    "note": "Ausverkaufte Zutaten fallen aus der Liste; die Summe wird mit den verbleibenden Produkten berechnet. Bestätigte Geschäftskonten sehen Großhandelspreise."
   }
 }

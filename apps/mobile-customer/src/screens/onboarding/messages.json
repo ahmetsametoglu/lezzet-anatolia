@@ -5,7 +5,7 @@
     "doneToast": "Hoş geldiniz — afiyetle! ✓",
     "step": "Adım {n} / {total}",
     "language": {
-      "kicker": "HOŞ GELDİNİZ · BIENVENUE",
+      "kicker": "HOŞ GELDİNİZ · BIENVENUE · WILLKOMMEN",
       "title": "Hangi dilde devam edelim?",
       "names": {
         "tr": "Türkçe",
@@ -99,7 +99,7 @@
     "doneToast": "Bienvenue — bon appétit ! ✓",
     "step": "Étape {n} sur {total}",
     "language": {
-      "kicker": "HOŞ GELDİNİZ · BIENVENUE",
+      "kicker": "HOŞ GELDİNİZ · BIENVENUE · WILLKOMMEN",
       "title": "Dans quelle langue continuons-nous ?",
       "names": {
         "tr": "Türkçe",
@@ -193,7 +193,7 @@
     "doneToast": "Willkommen — guten Appetit! ✓",
     "step": "Schritt {n} von {total}",
     "language": {
-      "kicker": "HOŞ GELDİNİZ · BIENVENUE",
+      "kicker": "HOŞ GELDİNİZ · BIENVENUE · WILLKOMMEN",
       "title": "In welcher Sprache geht es weiter?",
       "names": {
         "tr": "Türkçe",

@@ -1,7 +1,7 @@
 {
   "tr": {
-    "title": "Siparişiniz alındı, {name}",
-    "titleAnon": "Siparişiniz alındı",
+    "title": "Teşekkürler {name}, siparişiniz alındı",
+    "titleAnon": "Teşekkürler, siparişiniz alındı",
     "mailed": "Onay e-postasını {email} adresine gönderdik. Hazırlığa başladığımızda haber vereceğiz.",
     "orderNo": "Sipariş no · {reference}",
     "delivery": {
@@ -57,8 +57,8 @@
     "track": "Siparişi takip et"
   },
   "fr": {
-    "title": "Votre commande est confirmée, {name}",
-    "titleAnon": "Votre commande est confirmée",
+    "title": "Merci {name}, votre commande est confirmée",
+    "titleAnon": "Merci, votre commande est confirmée",
     "mailed": "Nous avons envoyé la confirmation à {email}. Nous vous préviendrons dès le début de la préparation.",
     "orderNo": "N° de commande · {reference}",
     "delivery": {
@@ -114,8 +114,8 @@
     "track": "Suivre ma commande"
   },
   "de": {
-    "title": "Ihre Bestellung ist eingegangen, {name}",
-    "titleAnon": "Ihre Bestellung ist eingegangen",
+    "title": "Vielen Dank, {name} — Ihre Bestellung ist eingegangen",
+    "titleAnon": "Vielen Dank — Ihre Bestellung ist eingegangen",
     "mailed": "Wir haben die Bestätigung an {email} gesendet. Sobald die Vorbereitung beginnt, melden wir uns.",
     "orderNo": "Bestellnummer · {reference}",
     "delivery": {

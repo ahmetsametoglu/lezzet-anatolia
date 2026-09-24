@@ -99,7 +99,7 @@
     "address": {
       "eyebrow": "TESLİMAT ADRESİ",
       "change": "Değiştir",
-      "note": "Sepetiniz teslimat adresinize göre değerlendirildi.",
+      "note": "Sepetiniz teslimat adresinize göre hesaplandı.",
       "none": "Henüz adres eklemediniz — şimdilik {code} posta koduna göre gösteriyoruz.",
       "pickupLine": "Depodan teslim · {name}",
       "pickupNote": "Sepetiniz bu deponun stoğuna göre hesaplandı. Teslim saatini telefonla kararlaştırın."
@@ -205,7 +205,7 @@
     "address": {
       "eyebrow": "ADRESSE DE LIVRAISON",
       "change": "Modifier",
-      "note": "Votre panier a été évalué selon votre adresse de livraison.",
+      "note": "Votre panier est calculé pour votre adresse de livraison.",
       "none": "Vous n'avez pas encore d'adresse — nous affichons pour l'instant selon le code postal {code}.",
       "pickupLine": "Retrait à l'entrepôt · {name}",
       "pickupNote": "Votre panier a été évalué selon le stock de l'entrepôt. Convenez de l'heure de retrait par téléphone."
@@ -311,7 +311,7 @@
     "address": {
       "eyebrow": "LIEFERADRESSE",
       "change": "Ändern",
-      "note": "Ihr Warenkorb wurde anhand Ihrer Lieferadresse bewertet.",
+      "note": "Ihr Warenkorb wurde für Ihre Lieferadresse berechnet.",
       "none": "Sie haben noch keine Adresse — wir zeigen vorerst anhand der Postleitzahl {code}.",
       "pickupLine": "Abholung im Lager · {name}",
       "pickupNote": "Ihr Warenkorb wurde anhand des Lagerbestands bewertet. Vereinbaren Sie die Abholzeit telefonisch."

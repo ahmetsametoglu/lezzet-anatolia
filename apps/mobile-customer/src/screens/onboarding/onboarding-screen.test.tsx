@@ -5,15 +5,9 @@ import placeMessages from '@lezzet/i18n/customer/place';
 import { OnboardingScreen } from './onboarding-screen';
 
 /*
-  ONBOARDING — depo mock'lu (görev kısıtı): sınanan şey akışın kendisi — adım geçişleri, dil
-  seçiminin ANINDA arayüze yansıması, maske, yer cevabının cümlesi ve çıkışta ne saklandığı.
-
-  ALTI ADIM: dil · yazı boyutu · posta kodu · teslimat · ödeme · puan (yazı boyutu 09.08'de, puan
-  12.08'de eklendi).
-
-  DİL: uygulamanın dili modül durumunda yaşıyor ve testler arasında SIFIRLANMAZ (üretimde de öyle:
-  seçim kalıcıdır) — her test kendi başlangıcını `setAppLocale('tr')` ile kurar, yoksa bir önceki
-  testin seçtiği dil sonrakine sızar.
+  Onboarding depo mock'lu sınanır: adım geçişleri, dil seçiminin anında yansıması, maske, yer cevabının cümlesi ve
+  çıkışta saklanan. Uygulamanın dili modül durumunda yaşar ve testler arasında sıfırlanmaz; her test başlangıcını
+  `setAppLocale('tr')` ile kurar, yoksa önceki testin seçtiği dil sonrakine sızar.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
@@ -26,16 +20,14 @@ jest.mock('@/lib/onboarding/onboarding-store', () => ({
   saveOnboarding: (state: unknown) => mockSave(state),
 }));
 
-/* YER ÇÖZÜMÜ GERÇEK UÇTAN geliyor (09.08 — eski yerel '67' kuralı kalktı): test o ucu mock'lar,
-   böylece dört hâlin hangi cümleyi doğurduğu ağa çıkmadan ölçülür. */
+/* Yer çözümü gerçek uçtan gelir; test o ucu mock'lar ki dört hâlin hangi cümleyi doğurduğu ağa çıkmadan ölçülsün. */
 const mockResolve = jest.fn();
 jest.mock('@/lib/api/places', () => ({
   resolvePostalCode: (code: string) => mockResolve(code),
 }));
 
-/* PUAN KURALLARI da gerçek uçtan geliyor (12.08) ve MİSAFİRE açık: test o ucu mock'lar. Sayılar
-   burada UYDURMA değil ölçüt — ekranın sunucudan geleni bastığını, sabit bir sayı gömmediğini
-   sınıyoruz (bu yüzden 500/5 € çifti seçildi: gerçek ayarla aynı). */
+/* Puan kuralları da gerçek uçtan gelir ve misafire açıktır; test o ucu mock'lar. 500/5 € çifti, ekranın
+   sunucudan geleni bastığını ve sabit sayı gömmediğini ölçmek için seçildi. */
 jest.mock('@/lib/api/points', () => ({
   fetchPointsRules: () =>
     Promise.resolve({
@@ -53,8 +45,8 @@ jest.mock('@/lib/api/points', () => ({
     }),
 }));
 
-/* İLAN EDİLEN TUTARLAR da gerçek uçtan (18.08): posta kodu adımı kargo ücretini oradan yazıyor.
-   Mock'lanmasaydı çağrı `authorized-fetch`e düşer ve testte env olmadığı için patlardı. */
+/* İlan edilen tutarlar da gerçek uçtan gelir: posta kodu adımı kargo ücretini oradan yazar. Mock'lanmasaydı
+   çağrı `authorized-fetch`e düşer ve testte env olmadığı için patlardı. */
 jest.mock('@/lib/api/delivery-terms', () => ({
   fetchDeliveryTerms: () =>
     Promise.resolve({
@@ -97,10 +89,8 @@ async function pressNext() {
 }
 
 /**
- * Posta kodu adımı DÖRDÜNCÜDÜR: dil → yazı boyutu → **teslimat** → posta kodu.
- *
- * Sıra 13.08'de değişti (kullanıcı kararı): kodu istemeden ÖNCE neden istediğimizi anlatan kart
- * gelir. Sebebini bilmeyen kişi alanı boş geçiyor.
+ * Posta kodu adımı dördüncüdür (dil → yazı boyutu → teslimat → posta kodu): kodu istemeden önce nedenini anlatan
+ * kart gelir, çünkü sebebini bilmeyen kişi alanı boş geçer.
  */
 async function goToZipStep() {
   await pressNext();
@@ -112,7 +102,7 @@ describe('onboarding', () => {
   it('dil adımı LOCALES listesini çizer; uygulamanın dili önseçilidir, yalnız onda ✓ vardır', async () => {
     await render(<OnboardingScreen />);
 
-    expect(screen.getByText('HOŞ GELDİNİZ · BIENVENUE')).toBeOnTheScreen();
+    expect(screen.getByText('HOŞ GELDİNİZ · BIENVENUE · WILLKOMMEN')).toBeOnTheScreen();
     expect(screen.getByText('Hangi dilde devam edelim?')).toBeOnTheScreen();
 
     expect(within(screen.getByTestId('onboarding-language-tr')).getByText('✓')).toBeOnTheScreen();
@@ -126,7 +116,7 @@ describe('onboarding', () => {
     await fireEvent.press(screen.getByTestId('onboarding-language-fr'));
     expect(within(screen.getByTestId('onboarding-language-fr')).getByText('✓')).toBeOnTheScreen();
 
-    // Kullanıcı kararı 09.08: seçim yapılır yapılmaz O EKRANIN metni de seçilen dile döner.
+    // Seçim yapılır yapılmaz o ekranın metni de seçilen dile döner.
     expect(screen.getByText('Dans quelle langue continuons-nous ?')).toBeOnTheScreen();
 
     // v3: seçimden 250 ms sonra kendiliğinden bir sonraki adım — o adım da Fransızca çizilir.
@@ -164,13 +154,8 @@ describe('onboarding', () => {
     await fireEvent.changeText(input, '75000');
     await waitFor(() =>
       expect(screen.getByTestId('onboarding-zip-note')).toHaveTextContent(
-        /* Eşik SAYISI metinde YOK ve kalmayacak (13.08): `free_shipping_threshold_cents` kapsamlı —
-           global 60 €, ülke 90 €, b2b 250 €. Sabit bir sayı Alman müşteriye yanlış söz verirdi;
-           tutarlar yalnız GENEL kuralı anlatan yasal sayfada ve sepette yazılır (18.08).
-
-           Cümle ORTAK sözlükten okunuyor (`lib/places`): burada da bir kopyası vardı ve ayrışmıştı
-           — onboarding "soğuk zincir korumalı kargoyla ulaştırırız" diyerek kargoya veremediğimiz
-           bir şeyi vaat ediyordu (MB-74). Kopya kaldırıldı, beklenti kaynağın kendisi. */
+        /* Eşik sayısı metinde yok: `free_shipping_threshold_cents` kapsamlıdır ve sabit bir sayı Alman müşteriye
+           yanlış söz verirdi. Beklenti ortak sözlüğün kendisidir (`lib/places`), kopyası ayrışırdı. */
         placeMessages.tr.zip.shippingNote,
       ),
     );
@@ -183,7 +168,7 @@ describe('onboarding', () => {
     await pressNext(); // → yazı boyutu
     expect(screen.getByText('Yazı boyutunu seçin')).toBeOnTheScreen();
 
-    // GEREKÇE ÖNCE, SORU SONRA (kullanıcı kararı 13.08).
+    // Gerekçe önce, soru sonra.
     await pressNext(); // → teslimat
     expect(screen.getByText('İki teslimat yolumuz var')).toBeOnTheScreen();
 
@@ -199,8 +184,8 @@ describe('onboarding', () => {
 
     await pressNext(); // → puanın GİRİŞ kartı
     expect(screen.getByText('Kullandıkça kazanın')).toBeOnTheScreen();
-    // SAYI SUNUCUDAN: eşik de para karşılığı da mock'un verdiği değerler — ekran sabit gömmüyor.
-    // Kuruş YOK: puan karşılığı tam euroysa `5 €` yazılır (18.08 — `customer-kit/compact-euro`).
+    // Sayılar sunucudan: eşik de para karşılığı da mock'un verdiği değerler. Puan karşılığı tam euroysa
+    // kuruşsuz yazılır (`customer-kit/compact-euro`).
     await waitFor(() => expect(screen.getByTestId('onboarding-points-rate')).toHaveTextContent('500 puan = 5 € kupon'));
     // Giriş kartı döküm YAPMAZ ve hesap TEKLİF ETMEZ — soruyu düğmenin kendisi sorar.
     expect(screen.queryByTestId('onboarding-points-ways-invite')).toBeNull();
@@ -213,7 +198,7 @@ describe('onboarding', () => {
 
     await pressNext(); // → 2. (ve mock'ta SON) grup kartı
     expect(screen.getByTestId('onboarding-points-group-visit')).toBeOnTheScreen();
-    // Teklif ancak puan anlatıldıktan SONRA (kullanıcı kararı 13.08).
+    // Hesap teklifi ancak puan anlatıldıktan sonra gelir.
     expect(screen.getByTestId('onboarding-next')).toHaveTextContent('Hesap aç, kazanmaya başla');
 
     await pressNext(); // → hesap aç
@@ -229,8 +214,8 @@ describe('onboarding', () => {
     // Kart KENDİ grubunu çizer: `visit` bu kartta YOK, kendi kartında.
     expect(screen.getByTestId('points-earn-referral')).toBeOnTheScreen();
     expect(screen.queryByTestId('points-earn-visit')).toBeNull();
-    // Ödül rozeti puanı ve parasını BİRLİKTE taşır; para `points × centValue` ile türetilir.
-    // Ayraç `·` değil PARANTEZ, kuruş da yok (18.08): puan asıl birim, para onun karşılığı.
+    // Ödül rozeti puanı ve parasını birlikte taşır; para `points × centValue` ile türetilir ve parantezde
+    // durur, çünkü asıl birim puandır.
     expect(within(screen.getByTestId('points-earn-referral')).getByText('+500 (5 €)')).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByTestId('onboarding-later'));

@@ -21,9 +21,9 @@ function say(locale: PreferredLanguage, phrases: Record<PreferredLanguage, strin
 export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => string } = {
   order_confirmed: (d) =>
     say(d.locale, {
-      tr: `${d.referenceNo} numaralı siparişiniz alındı.`,
-      fr: `Votre commande ${d.referenceNo} a bien été reçue.`,
-      de: `Ihre Bestellung ${d.referenceNo} ist eingegangen.`,
+      tr: `Teşekkür ederiz — ${d.referenceNo} numaralı siparişiniz alındı.`,
+      fr: `Merci ! Votre commande ${d.referenceNo} a bien été reçue.`,
+      de: `Vielen Dank! Ihre Bestellung ${d.referenceNo} ist eingegangen.`,
     }),
   order_out_for_delivery: (d) =>
     say(d.locale, {

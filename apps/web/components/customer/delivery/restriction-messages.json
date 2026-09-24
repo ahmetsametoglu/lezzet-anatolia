@@ -10,7 +10,7 @@
     "noticeCtaHere": "Gelince haber ver",
     "allBlocked": "Sepetinizde yalnız bu ürünler var — ayrıca sipariş verilecek başka ürün kalmıyor. Teslimat yerinizi değiştirebilir ya da bölgenize teslimat başlayınca haber isteyebilirsiniz.",
     "allBlockedHere": "Sepetinizde yalnız bu ürünler var — ayrıca sipariş verilecek başka ürün kalmıyor. Teslimat yerinizi değiştirebilir ya da ürünler bölgenize gelince haber isteyebilirsiniz.",
-    "belowMin": "Kalan {remaining} tutarı, en az {min} olan sipariş alt sınırının altında kalıyor.",
+    "belowMin": "Geriye kalan {remaining}, en az {min} olması gereken sipariş tutarına yetmiyor.",
     "losesFreeShipping": "Bu ürünler çıkınca sepet ücretsiz kargo sınırının ({threshold}) altına düşer ve kargo ücreti eklenir.",
     "savedTitle": "Sonraya kaydedildi ({n})",
     "savedBody": "Teslimat yerinize gönderemediğimiz ürünler burada durur. Yerinizi değiştirirseniz ya da bölgemiz oraya ulaşırsa sepete geri alabilirsiniz.",

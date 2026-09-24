@@ -29,14 +29,14 @@
       "feedback_purchase": "Sipariş değerlendirmesi",
       "feedback_candidate": "Yeni lezzet oyu",
       "order": "Sipariş puanı",
-      "referral": "Getirdiğiniz müşteri",
+      "referral": "Getirdiğiniz arkadaş",
       "neighbor": "Komşu daveti",
       "visit": "Günlük giriş",
       "redemption": "Kupona çevrildi",
       "manual": "Elle düzeltme"
     },
     "reasonReverted": {
-      "referral": "Getirdiğiniz müşteri — iptal edildi",
+      "referral": "Getirdiğiniz arkadaş — iptal edildi",
       "neighbor": "Komşu daveti — iptal edildi"
     },
     "pending": {
@@ -75,14 +75,14 @@
       "feedback_purchase": "Évaluation de commande",
       "feedback_candidate": "Vote nouvelle saveur",
       "order": "Points de commande",
-      "referral": "Client parrainé",
+      "referral": "Ami parrainé",
       "neighbor": "Invitation voisin",
       "visit": "Visite du jour",
       "redemption": "Converti en bon",
       "manual": "Ajustement manuel"
     },
     "reasonReverted": {
-      "referral": "Client parrainé — annulé",
+      "referral": "Ami parrainé — annulé",
       "neighbor": "Invitation voisin — annulée"
     },
     "pending": {
@@ -121,14 +121,14 @@
       "feedback_purchase": "Bestellbewertung",
       "feedback_candidate": "Stimme für neue Sorte",
       "order": "Bestellpunkte",
-      "referral": "Geworbener Kunde",
+      "referral": "Geworbene Freundin oder Freund",
       "neighbor": "Nachbarn eingeladen",
       "visit": "Täglicher Besuch",
       "redemption": "In Gutschein umgewandelt",
       "manual": "Manuelle Korrektur"
     },
     "reasonReverted": {
-      "referral": "Geworbener Kunde — storniert",
+      "referral": "Geworbene Freundin oder Freund — storniert",
       "neighbor": "Nachbarn eingeladen — storniert"
     },
     "pending": {
