@@ -11,8 +11,8 @@
     "consentBefore": "Hangi yolu seçerseniz seçin aynı hesabınıza ulaşırsınız. Devam ederek ",
     "consentLink": "gizlilik politikasını",
     "consentAfter": " kabul etmiş olursunuz.",
-    "heroPill": "Soğuk zincirle taptaze",
-    "heroPillShort": "Taptaze",
+    "heroPill": "Soğuk zincirle teslim",
+    "heroPillShort": "Soğuk zincir",
     "brandQuote": "Anadolu lezzetleriyle aranızdaki köprüyüz.",
     "heroCodeText": "Neredeyse hazır — kod yolda.",
     "reasons": {
@@ -37,8 +37,8 @@
     "consentBefore": "Quelle que soit la méthode, vous accédez au même compte. En continuant, vous acceptez ",
     "consentLink": "la politique de confidentialité",
     "consentAfter": ".",
-    "heroPill": "Fraîcheur préservée par la chaîne du froid",
-    "heroPillShort": "Tout frais",
+    "heroPill": "Chaîne du froid respectée",
+    "heroPillShort": "Chaîne du froid",
     "brandQuote": "Nous sommes votre pont vers les saveurs d'Anatolie.",
     "heroCodeText": "Presque prêt — le code arrive.",
     "reasons": {
@@ -63,8 +63,8 @@
     "consentBefore": "Egal welchen Weg Sie wählen, Sie erreichen dasselbe Konto. Mit dem Fortfahren akzeptieren Sie ",
     "consentLink": "die Datenschutzerklärung",
     "consentAfter": ".",
-    "heroPill": "Durch die Kühlkette frisch gehalten",
-    "heroPillShort": "Ganz frisch",
+    "heroPill": "In der Kühlkette geliefert",
+    "heroPillShort": "Kühlkette",
     "brandQuote": "Wir sind Ihre Brücke zu den Aromen Anatoliens.",
     "heroCodeText": "Fast fertig — der Code ist unterwegs.",
     "reasons": {
