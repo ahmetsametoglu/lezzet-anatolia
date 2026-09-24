@@ -31,38 +31,14 @@ import { money } from './courier-format';
 import { useDelivery } from './use-delivery.hook';
 
 /*
-  KURYE · TESLİMAT (v2:96-215) — kapıdaki tek ekran: künye · iletişim · kanıt · mal · tahsilat ·
-  sonuç. Kararların ve sözleşme boşluklarının tamamı `use-delivery.hook.ts` künyesinde; burada
-  yalnız çizim var.
-
-  ── TASARIMDAN BİLİNÇLİ SAPMALAR ────────────────────────────────────────────
-  1. **"Fotoğraf" kanıtı ve sonuç fotoğrafı DEVRE DIŞI, ama ÇİZİLİ** (v2:122, 206). Kamera/galeri
-     için yerel bir modül gerekiyor (`expo-image-picker` ya da `expo-camera`) ve ikisi de kurulu
-     değil — yeni bağımlılık dev-client'ın yeniden derlenmesini ister ve bu dilimin işi değil.
-     Düğme SİLİNMEDİ çünkü tasarımın kararı iki kanıt yolu olması; kapalı ve sebebi yazılı duruyor
-     (CLAUDE §3: "dış-modül bekleyende UI tam, arka uç stub"). İmza yolu TAM çalışıyor, yani
-     B2B'nin kanıt kapısı bugün de geçilebiliyor.
-     BEKLEYEN(21.13): kanıt fotoğrafı — kamera modülü + aynı yükleme kapısı.
-  2. **Başarıdan sonra SIRADAKİ DURAĞA otomatik geçilmiyor** (v2:882). Şablon bunu YEREL durumla
-     yapıyor (liste bellekte); gerçek akışta bir sonraki durak ancak liste tazelendikten sonra
-     bilinir ve o tazeleme K1'de zaten var. Ekran bunun yerine sonucu GÖSTERİP kalıyor — kurye
-     "yazıldı mı?" sorusunun cevabını okuyor, sonra listeye dönüyor. Yazma sonrası kaybolan bir
-     ekran, `stale`/`deduped` gibi cevapları da beraberinde götürürdü.
-  3. **"Ara" ve "WhatsApp" düğmeleri veri yoksa ÇİZİLMEZ.** Tasarım "Ara"yı her zaman çiziyor ama
-     sözleşme telefonu `null` bırakabiliyor; işe yaramayacak bir düğme, tasarımın söylemediği bir
-     şey söyler ("arayabilirsin"). WhatsApp'ta kural zaten sözleşmenin kendisinde yazılı.
+  Kurye teslimat ekranı yalnız çizer, mantığı `use-delivery.hook.ts`tedir; "Fotoğraf" kanıtı çizili ama kapalıdır (kamera modülü kurulu değil), imza yolu tam çalışır.
+  Telefon ya da WhatsApp verisi yoksa o düğmeler çizilmez, çünkü işe yaramayan düğme yanlış bir şey söyler.
+  BEKLEYEN(21.13): kanıt fotoğrafı — kamera modülü + aynı yükleme kapısı
 */
 
 const t = courierCopy;
 
-/**
- * **ADIM BAŞLIĞI** (v3:17 · 30.08) — koyu daire içinde numara, yanında bölümün adı.
- *
- * Numara METNE GÖMÜLÜYDÜ (`"1 · KANIT — B2B'DE ZORUNLU"`) ve tasarım onu ayrı bir öğe olarak
- * çiziyor: 22 dp koyu daire + krem rakam. Fark süs değil — daire adımı SAYILABİLİR kılıyor,
- * kurye "kaçıncı adımdayım" sorusunu satırı okumadan cevaplıyor. Dört bölüm de aynı anatomiyi
- * paylaşıyor; ayrı ayrı yazsaydık biri bir gün ötekinden ayrılırdı (CLAUDE §1).
- */
+/** Adım başlığı: koyu daire içinde numara, yanında bölümün adı; daire adımı sayılabilir kılar ve dört bölüm aynı anatomiyi paylaşır. */
 function StepHeading({
   n,
   label,
@@ -72,10 +48,7 @@ function StepHeading({
   n: number;
   label: string;
   /**
-   * Başlık satırının SAĞ yuvası — bölümün tamamına ait bir eylem (`BottomSheet.titleAction`ın
-   * aynı kalıbı, 30.08). Mal adımında "reddedilen kalem ekle" buraya taşındı: gövdede tam
-   * genişlikte bir düğme olarak dururken, olmayan bir işi ekranın en görünür öğesi yapıyordu —
-   * oysa normal teslimde reddedilen kalem YOKTUR ve bölümün söylemesi gereken tek şey budur.
+   * Başlık satırının sağ yuvası, bölümün tamamına ait eylem için; normal teslimde reddedilen kalem yoktur, eylem gövdede tam genişlikte durmamalı.
    */
   action?: ReactNode;
   testID?: string;
@@ -93,33 +66,21 @@ function StepHeading({
   );
 }
 
-/*
-  İLK YÜK İSKELETİ — kapıdaki ekranın üç açılış bloğu: adres künyesi (iki satır), iletişim şeridi
-  (üç düğme, dolgu 12×2 + ikon) ve ilk adım bölümü (başlık + kutu satırları, satır başına 30).
-  Alt bölümler (kanıt · mal · tahsilat) yer tutucuya girmiyor: ekran zaten kaydırılıyor ve
-  görünmeyen bir bloğun yerini tutmak, zıplamayı önlemez — yalnız iskeleti uzatır.
-*/
+/* İlk yük iskeleti ekranın üç açılış bloğunu tutar (adres, iletişim, ilk adım); alt bölümler girmez, çünkü görünmeyen bloğun yerini tutmak zıplamayı önlemez. */
 const DELIVERY_SKELETON = { address: 46, contacts: 44, section: 110 } as const;
 
 export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
   const router = useRouter();
   const delivery = useDelivery(orderId);
   const stop = delivery.stop;
-  /* HOOK ERKEN DÖNÜŞLERİN ÜSTÜNDE: aşağıda "yükleniyor" ve "bulunamadı" dalları var ve durum
-     onların altında kurulsaydı hook sırası render'dan render'a değişirdi (React bunu "Rendered
-     more hooks than during the previous render" diye kesiyor — 30.08'de yaşandı). */
+  /* Hook erken dönüşlerin üstündedir, çünkü "yükleniyor" ve "bulunamadı" dallarının altında kurulsaydı hook sırası render'dan render'a değişirdi. */
   const [keypadOpen, setKeypadOpen] = useState(false);
   /* Navigasyon açılamadı mı (11.8) — reddi YUTMAK, kuryeye çalışmayan bir düğme bırakmaktı. */
   const [navFailed, setNavFailed] = useState(false);
   /** Reddedilen kalem çekmecesi — istisna girilirken açılır, ekranı sürekli doldurmaz. */
   const [refuseOpen, setRefuseOpen] = useState(false);
 
-  /*
-    İŞ BİTİNCE LİSTEYE DÖNÜLÜR (kullanıcı kararı 30.08) — ekran "sonuç ekranı"na dönüp KALMIYOR.
-    Sonuç toast olarak listenin üstünde görünüyor ve liste odakta tazeleniyor, yani kurye durağın
-    yeni hâlini kendi satırında da okuyor. Eski davranış her teslimden sonra kuryeye fazladan iki
-    dokunuş yaptırıyordu ve en sık yaptığı iş buydu.
-  */
+  /* İş bitince listeye dönülür: sonuç toast'ta görünür ve liste odakta tazelenir; sonuç ekranında kalmak en sık işte kuryeye fazladan iki dokunuş yaptırıyordu. */
   useEffect(() => {
     if (delivery.finished) router.back();
   }, [delivery.finished, router]);
@@ -128,7 +89,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
     return (
       <View style={styles.screen} testID="courier-delivery">
         <OperationsStackHeader title={t.delivery.loading} onBack={() => router.back()} backLabel={t.delivery.back} />
-        {/* İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08) — halka yerleşim tutmaz. */}
+        {/* İlk yükte iskelet, halka değil: halka yerleşimi tutmaz. */}
         <View style={styles.skeleton}>
           <OperationsSkeletonList
             heights={[DELIVERY_SKELETON.address, DELIVERY_SKELETON.contacts, DELIVERY_SKELETON.section]}
@@ -161,22 +122,14 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
     );
   }
 
-  /* KAPIYI AÇAN KİŞİ, hesabın sahibi DEĞİL (21.08). Değişken adı zaten `receiver`dı ama hesabın
-     adını okuyordu; adresin alıcısı varsa o yazılır — hediye/iş/aile adresinde kurye yanlış adı
-     soruyordu. İmza satırı ve imza ipucu da bu adı kullanıyor: kapıda imzalayan kişi odur. */
+  /* Kapıyı açan kişi, hesabın sahibi değil: adresin alıcısı varsa o yazılır; imza satırı da bu adı kullanır, çünkü kapıda imzalayan odur. */
   const receiver = stop.recipient ?? stop.customerName;
 
-  /* ADIM NUMARASI KUTUYA GÖRE KAYAR (v3, 30.08). Kutulu durakta kutular 1. adımdır ve kanıt/mal/
-     tahsilat 2/3/4'e kayar; kutusuz durakta eski 1/2/3 aynen kalır. Numara metne gömülü DEĞİL
-     (`delivery.step` kalıbı) — gömülü olduğu sürece bu kayma yazılamıyordu. */
+  /* Adım numarası kutuya göre kayar: kutulu durakta kutular 1. adımdır ve kanıt, mal, tahsilat 2, 3, 4 olur. */
   const boxesLeft = delivery.boxes.length - delivery.scannedBoxCount;
   /*
-    KUTU KAPISI SONRAKİ ADIMLARI DA KİLİTLER (v3:17 · düzeltme 30.08).
-    Tasarımın cümlesi açıktı: *"Kutular okutulmadan kanıt ve tahsilat adımları açılmaz."* 30.08'de
-    kodu ölçüp kilidin yalnız TESLİM DÜĞMESİNDE olduğunu görmüş ve **cümleyi koda uydurmuştum** —
-    tersi doğruydu. Sıra bir tercih değil: kutular kapıda müşteriye verilmeden imza almak, teslim
-    edilmemiş malın kanıtını toplamaktır; tahsilat da öyle.
-    Kutusuz durakta bu kilit YOKTUR (`boxesLeft` sıfır kalır) — eski akış aynen sürer.
+    Kutu kapısı sonraki adımları da kilitler: kutular müşteriye verilmeden imza almak teslim edilmemiş malın kanıtını toplamaktır, tahsilat da öyle.
+    Kutusuz durakta bu kilit yoktur (`boxesLeft` sıfır kalır).
   */
   const stepsLocked = boxesLeft > 0;
   /** Kapıda geri verilen kalemler — mal bölümünün özetini ve çekmecenin başlığını besler. */
@@ -187,8 +140,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
 
   return (
     <View style={styles.screen} testID="courier-delivery">
-      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — `FormScroll` sarılamadığı için KROM kapısı.
-          Başlık kaydırıcının İÇİNDE: dışarıda kalsaydı mikro şerit inince altında asılı kalırdı. */}
+      {/* Kabuk davranışları tek kapıdan; başlık kaydırıcının içinde, çünkü dışarıda kalsaydı mikro başlık inince altında asılı kalırdı. */}
       <OperationsScreenChrome
         title={fillCopy(t.delivery.title, { n: String(delivery.order), total: String(delivery.total) })}
         caption={operationsCopy.sections.courier.tab}
@@ -216,28 +168,13 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
       />
       </OperationsHeadBleed>
 
-        {/* ROZET HER KANALDA (kullanıcı bulgusu 30.08 · tasarımda başlığın sabit öğesi): eskiden
-            yalnız B2B'de çiziliyordu ve B2C durakta başlığın sağı boş kalıyordu. Kanal kapıda ne
-            beklendiğini söyler (fatura, teslim alan kişi, tahsilat âdeti) — "yok" demek "B2C"
-            demek değil, kuryeye hiçbir şey söylememektir. Yeri artık BAŞLIK satırı (yukarıda). */}
+        {/* Kanal rozeti her kanalda çizilir: kanal kapıda ne beklendiğini söyler, yokluğu "B2C" demek değil hiçbir şey söylememektir. */}
         <View style={styles.addressBlock}>
           <Text style={styles.address}>{stop.address ?? t.day.stop.noAddress}</Text>
           <Text style={styles.addressDetail}>{`${receiver} · ${t.channel[stop.channel]}`}</Text>
           {/*
-            KAPI DOĞRULAMASI (11.11 · talep: denetim → mobil) — kurye kapıya varmadan bilsin.
-
-            İki hâl YAZILIR, ikisi de sessiz: adresin altında, gövde fontunda, `muted`. Rozet ve
-            uyarı rengi bilerek YOK — kurye zaten oraya gidiyor, amaç onu korkutmak değil hazırlıklı
-            göndermek (gerekirse kapıya varmadan arasın). Navigasyon düğmesi de çizilmeye devam
-            eder: sokak ortası da bir hedeftir ve kuryeyi mahalleye götürür.
-
-            `elsewhere` bu satırın en değerli hâli: servis doğrusunu buldu, müşteri KENDİ yazdığını
-            korudu. Kurye tutarsızlığın BİLİNDİĞİNİ ve kasıtlı olduğunu okur — aksi hâlde kapıda bir
-            veri hatası sanıp ofisi arar, oysa araması gereken müşteridir.
-
-            `confirmed` ve `unknown` HİÇBİR ŞEY yazmaz. `unknown` bir kusur değil ölçülememedir
-            (bugün Almanya kalıcı olarak orada — sağlayıcı yok) ve her durakta görünen, hiçbir şey
-            söylemeyen bir satır kuryeyi GERÇEK uyarıyı da okumamaya alıştırırdı.
+            Kapı doğrulaması sessiz yazılır (rozet ve uyarı rengi yok), çünkü amaç kuryeyi korkutmak değil hazırlıklı göndermek; `elsewhere` tutarsızlığın bilindiğini ve kasıtlı olduğunu söyler.
+            `confirmed` ve `unknown` hiçbir şey yazmaz: her durakta görünen boş satır kuryeyi gerçek uyarıyı da okumamaya alıştırırdı.
           */}
           {stop.doorCheck === 'unverified' || stop.doorCheck === 'elsewhere' ? (
             <Text style={styles.doorCheck} testID={`courier-delivery-door-${stop.doorCheck}`}>
@@ -253,13 +190,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
             </View>
           ) : (
             <PressableSurface
-              /* HEDEF MOTORDAN (11.8) — elle yazılmış URL değil. İki yüzey (mobil + web operasyon)
-                 kendi adresini yazdığı sürece ikisi de aynı yanlışı taşıyordu: `maps/search` bir YER
-                 KARTI açar, yolculuğu başlatmaz — kurye ekranda ikinci kez "Yol tarifi"ne basmak
-                 zorunda kalıyordu. `navigationLink` `maps/dir` üretiyor: uygulama doğrudan rota kurar.
-
-                 REDDİ YUTMUYORUZ: `openURL` başarısız olursa (hiçbir uygulama açamıyorsa) kuryenin
-                 elinde sessizce hiçbir şey yapmayan bir düğme kalırdı — sahada en kötü şey odur. */
+              /* Hedef `navigationLink`ten gelir (`maps/dir`, doğrudan rota kurar); `openURL` başarısız olursa ret yutulmaz, çünkü sessizce hiçbir şey yapmayan düğme sahada en kötüsüdür. */
               onPress={() => {
                 const url = navigationLink({ address: stop.address });
                 if (!url) return;
@@ -267,10 +198,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                 void Linking.openURL(url).catch(() => setNavFailed(true));
               }}
               feedback="scale"
-              /* ESNEME `grow`DAN, STİLDEN DEĞİL (kit künyesi · kullanıcı bulgusu 30.08):
-                 `styles.contact` içindeki `flex: 1` DIŞ Pressable'a hiç ulaşmıyordu — stil İÇ
-                 yüzeye gidiyor ve dış kutu içeriğine büzülüyor. Ölçüldü (uiautomator): satır
-                 322 dp yerine 178 dp kalıyordu, Navigasyon 206 yerine 76 dp. */
+              /* Esneme `grow`dan gelir, stilden değil: `styles.contact` içindeki `flex: 1` dış Pressable'a ulaşmaz ve dış kutu içeriğine büzülür. */
               grow
               style={[styles.contact, styles.contactPrimary]}
               accessibilityLabel={t.delivery.navigate}
@@ -280,14 +208,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               <Text style={styles.contactPrimaryLabel}>{t.delivery.navigate}</Text>
             </PressableSurface>
           )}
-          {/*
-            ARA VE WHATSAPP YALNIZ İKON (v3:17 · 30.08) — tasarımda ikisi 56×52 kare, metinsiz;
-            yalnız Navigasyon etiketli ve satırın kalanını kaplıyor. Üçü de etiketliyken satır üç
-            eşit parçaya bölünüyordu ve asıl eylem (navigasyon) kaybolmuştu.
-
-            Metin GİTMEDİ, `accessibilityLabel`a taşındı: ekran okuyucu kullanan kurye düğmenin
-            adını duymaya devam ediyor — kaybolan yalnız görsel tekrar.
-          */}
+          {/* Ara ve WhatsApp yalnız ikondur ki satırı asıl eylem (navigasyon) kaplasın; metin `accessibilityLabel`a taşındı, ekran okuyucu adı duymaya devam eder. */}
           {stop.phone === null ? null : (
             <PressableSurface
               onPress={() => void Linking.openURL(`tel:${stop.phone ?? ''}`)}
@@ -325,19 +246,8 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         ) : null}
 
         {/*
-          ── KUTULAR (23.8 · v3:1478) — kutulu durakta teslimin ÖN koşulu ──────────────
-
-          NUMARA KOŞULLU (v3, 30.08): kutulu durakta akış DÖRT adımdır (kutular · kanıt · mal ·
-          tahsilat), kutusuzda ÜÇ. Numaralar metne gömülüydü ve kutular numarasızdı — "1 · KANIT"in
-          önünde zorunlu ama numarasız bir kapı duruyordu ve kurye onu adımdan saymıyordu. Sayı
-          artık gerçeği söylüyor; kutusuz durakta eski numaralar aynen kalıyor.
-        */}
-        {/*
-          KUTUSUZ DURAK ARTIK SESSİZ GEÇİLMEZ (kullanıcı kararı 30.08). Bölüm eskiden hiç
-          çizilmiyordu ve kurye kapıda hiçbir şey okutmadan teslim yazabiliyordu. Kutu zorunlu
-          olduğuna göre kutusuz bir durak bir ARIZADIR: ekran onu normal göstermez, adı konur ve
-          kurye ne yapacağını bilir (CLAUDE §1 — ölçülemeyen değer sıfır değildir; olmayan kutu da
-          "kutu yok" demektir, "kutu gerekmiyor" değil).
+          Kutular kutulu durakta teslimin ön koşuludur ve adım numarası kutuya göre kayar (kutulu dört, kutusuz üç adım).
+          Kutusuz durak sessiz geçilmez: kutu zorunlu olduğuna göre bu bir arızadır, ekran onu adıyla söyler.
         */}
         {delivery.boxes.length === 0 ? (
           <View style={styles.section}>
@@ -360,15 +270,8 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               testID="courier-boxes-heading"
             />
             {/*
-              KUTU SATIRI KODU YAZAR, SIRA NUMARASINI DEĞİL (v3:17 · 30.08).
-
-              "Kutu 1" kuryenin elindeki kartonla eşleşmiyor: kartonun üstünde `KT-26-7741` yazıyor.
-              Sıra numarası bizim iç sayacımız, kod ise **fiziksel nesnenin kimliği** — kurye yığından
-              doğru kutuyu seçerken ona bakıyor. Numara kare rozette duruyor (tasarım), kod gövdede.
-
-              Sağdaki durum da tasarımın: **araçta mı** (`loadedAt`) — okutulmuş kutuda "verildi"ye
-              döner. Yükleme ekranındaki bilgiyi kapıda tekrar sormak yerine burada gösteriyor:
-              araca binmemiş bir kutu kapıda hiç bulunamaz ve kurye onu boşuna arar.
+              Kutu satırı sıra numarasını değil kodu yazar, çünkü kartonun üstünde kod yazar ve kurye yığından doğru kutuyu ona bakarak seçer.
+              Sağdaki durum kutunun araçta olup olmadığıdır: araca binmemiş kutu kapıda bulunamaz.
             */}
             <View style={styles.boxRows}>
               {delivery.boxes.map((box) => {
@@ -395,28 +298,18 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               })}
             </View>
             {delivery.finished || boxesLeft === 0 ? null : (
-              /* OKUTMA DÜĞMESİ KİTTEN, ZEYTİN DOLGULU (v3:17 · 30.08). Çerçeveli çiziliyordu ve
-                 tasarım onu dolgulu gösteriyor — kutu okutma bu adımın TEK eylemi. İkon da
-                 emoji değil çizgi ikon: metne gömülü `📷` kitin `icon` prop'una taşındı
-                 (`load-screen`in aynı kararı, aynı gerekçe). Kalan sayısı DÜĞMEDE (v3:1487):
-                 kurye kaç kutu kaldığını başlıktaki sayaçtan geri hesaplamasın. */
+              /* Okutma düğmesi kitten ve zeytin dolgulu, çünkü kutu okutma bu adımın tek eylemidir; kalan sayısı düğmededir ki kurye sayaçtan geri hesaplamasın. */
               <PrimaryButton
                 label={fillCopy(t.delivery.boxes.scanCta, { n: String(boxesLeft) })}
                 onPress={() => delivery.setBoxScanOpen(true)}
                 icon="scan"
-                /* IŞIMA YOK ve bu ölçüldü: v3'ün ışımalı okutma düğmesi ARACA YÜKLEME ekranında
-                   (`16:box-shadow 0 4px 14px`); kapıdaki bu düğme düz zeytin (`17:durakOkut`).
-                   İkisi aynı işi yapıyor gibi görünse de biri rampada tek eylem, biri adımın
-                   içinde bir kapı. */
+                /* Işıma yok: ışımalı düğme araca yükleme ekranının tek eylemidir, kapıdaki bu düğme adımın içinde bir kapıdır. */
                 elevation="flat"
                 testID="courier-box-scan"
               />
             )}
 
-            {/* TEK CÜMLE (kullanıcı bulgusu 30.08): "hepsi verildi" bir izin, "eksik" bir uyarı ve
-                bedelini söylüyor. Altında ikinci bir cümle daha duruyordu ("Kutu QR'ları
-                okutulmadan teslim kapanmaz") ve aynı şeyi ikinci kez söylüyordu; tasarımda da tek
-                cümle var. */}
+            {/* Tek cümle: "hepsi verildi" bir izin, "eksik" bir uyarı ve bedeli; ikinci cümle aynı şeyi tekrarlıyordu. */}
             <Text style={boxesLeft === 0 ? styles.boxComplete : styles.boxNote}>
               {boxesLeft === 0 ? t.delivery.boxes.complete : t.delivery.boxes.pending}
             </Text>
@@ -424,16 +317,8 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         )}
 
         {/*
-          ── KANIT ADIMI KALKTI (kullanıcı kararı 30.08) ──────────────────────────────────────
-          Ekrana parmakla çizilen imza, imzalayanın KİMLİĞİNİ kanıtlamıyor — nitelikli elektronik
-          imza değil ve kim çizdiği bilinmiyor. Kutulu akış zorunlu olunca yerine ondan güçlü bir
-          kayıt geçti: kutu okutması (`box_scan`) — kod benzersiz, kutu fiziksel bir nesne, okutma
-          o kapıda ve o saniyede oldu. Uyuşmazlıkta konuşan zaten demettir (geçiş damgası + kurye
-          kimliği + kutu kodları + para hareketi), tek bir çizim değil.
-
-          Ayar duruyor (`delivery_proof_required`) ama fabrika değeri iki kanalda da kapalı; kapsam
-          gerekirse yine açılabilir. Yerine gelecek yol BACKLOG'da: kapıda WhatsApp OTP — müşteriye
-          altı haneli kod gider, kurye kodu girer; o kod kimliği gerçekten doğrular.
+          Kanıt adımı yok: parmakla çizilen imza kimliği kanıtlamaz, kutu okutması (`box_scan`) ondan güçlü bir kayıttır.
+          Ayar (`delivery_proof_required`) durur ama fabrika değeri iki kanalda da kapalıdır.
         */}
 
         {/* ── MAL ───────────────────────────────────────────────────────── */}
@@ -452,19 +337,9 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               />
             }
           />
-          {/*
-            ── TESLİM VARSAYILAN, RED İSTİSNA (kullanıcı kararı 30.08) ─────────────────────────
-            Bölüm eskiden kalemleri TEK TEK işaretletiyordu ve teslim kapısı bunu şart koşuyordu:
-            hiçbir şey reddedilmeyen normal bir teslimde bile kurye kalem sayısı kadar dokunuş
-            yapıyordu — elinde kutuyla, kapının önünde. Kutu okutması zorunlu olunca o soru zaten
-            cevaplanmış oluyor: kutu mühürlenirken içeriği sabitlendi, kapıda okutuldu, verildi.
-
-            Şimdi bölüm bir ÖZET: "hepsi teslim edildi" ya da geri verilen kalemlerin listesi.
-            İstisna çekmeceden giriliyor — ekranı sürekli doldurmuyor, yalnız gerektiğinde açılıyor.
-          */}
+          {/* Mal bölümü bir özettir ("hepsi teslim edildi" ya da geri verilenler): teslim varsayılandır, red istisnadır ve çekmeceden girilir. */}
           {refusedLines.length === 0 ? (
-            /* BOŞ HÂL BİR CÜMLE, DÜĞME DEĞİL (kullanıcı isteği 30.08): reddedilen kalem yoksa
-               bölümün söyleyeceği tek şey bu — eylem başlıktaki artıya taşındı. */
+            /* Boş hâl bir cümledir, düğme değil: reddedilen kalem yoksa bölümün söyleyeceği tek şey budur; eylem başlıktaki artıdadır. */
             <Text style={styles.goodsSummary} testID="courier-goods-summary">
               {t.delivery.goods.allDelivered}
             </Text>
@@ -519,19 +394,8 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
             </View>
             <View style={styles.amountRow}>
               {/*
-                TUTAR TEK SATIR, TUŞ TAKIMI ROZETİYLE (v3:17 `kpOpen.tahsilat` · 30.08).
-
-                Alan bir girdi değil, tuş takımını açan düğmedir: kapıda telefon eldivenle
-                tutuluyor ve sistem klavyesi ekranın yarısını kaplayıp motorun tutarını görüş
-                alanından çıkarıyordu.
-
-                ── ARTI/EKSİ SÖKÜLDÜ (kullanıcı kararı 30.08) ────────────────────────────────
-                İki stepper düğmesi tasarımda YOK ve gerekçesi künyede *"yuvarlak tutarlarda tek
-                dokunuş"* diye yazılıydı — ama kapıda tahsil edilen tutar MOTORUN hesabıdır,
-                kuryenin oynatacağı bir sayı değil. Adım adım artırma, tutarı "pazarlık edilebilir"
-                gibi gösteriyordu; eksik ödeme zaten tuş takımından yazılıyor ve ekranda "Kısmi"
-                diye işaretleniyor. Rozet tasarımın kendi öğesi: alanın dokunulabilir olduğunu
-                söyleyen tek işaret.
+                Tutar bir girdi değil tuş takımını açan düğmedir, çünkü sistem klavyesi motorun tutarını görüş alanından çıkarıyordu.
+                Artı/eksi yoktur: kapıda tahsil edilen tutar motorun hesabıdır ve pazarlık edilebilir görünmemeli; eksik ödeme tuş takımından yazılır.
               */}
               <PressableSurface
                 onPress={() => setKeypadOpen(true)}
@@ -586,8 +450,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
           value={delivery.amountText}
           expected={centsToAmountText(delivery.dueCents)}
           expectedLabel={fillCopy(t.delivery.collection.keypad.expected, { amount: money(delivery.dueCents) })}
-          // Birim artık PROP (30.08): tuş takımı mal kabulün ADET kutusunda da kullanılıyor ve
-          // `€` gömülü kalamazdı. Ondalık burada açık — para kuruş taşır.
+          // Birim prop'tur, çünkü tuş takımı mal kabulün adet kutusunda da kullanılır; ondalık açık, para kuruş taşır.
           unit="€"
           confirmLabel={t.delivery.collection.keypad.confirm}
           hint={t.delivery.collection.keypad.hint}
@@ -615,9 +478,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
 
       {/* ── SONUÇ ALANI ───────────────────────────────────────────────────── */}
       <View style={styles.footer}>
-        {/* Sonuç TOAST'ta (kullanıcı kararı 01.09): şerit sayfanın altında, kapanış düğmesinin
-            üstünde duruyordu ve kurye kutu okuturken oraya bakmıyordu — reddin sebebi çoğu zaman
-            hiç görülmüyordu. */}
+        {/* Sonuç toast'ta, çünkü sayfanın altındaki satıra kurye kutu okuturken bakmıyordu ve reddin sebebi görülmüyordu. */}
 
         {delivery.outcome === null ? (
           <>
@@ -636,15 +497,9 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                 {delivery.gateNote}
               </Text>
             )}
-            {/* İKİ SONUÇ DÜĞMESİ DE KİTTEN (v3:17 · 30.08): ikisi de İKİNCİL — "Ulaşılamadı"
-                nötr kum, "Kabul etmedi" kırmızı. Elden çiziliyorlardı ve ölçüleri kitin
-                kademesine uymuyordu (dolgudan türeyen yükseklik). */}
+            {/* İki sonuç düğmesi de kitten ve ikincildir: "Ulaşılamadı" nötr, "Kabul etmedi" kırmızı. */}
             <View style={styles.outcomeRow}>
-              {/* YOLA ÇIKMAMIŞ DURAKTA İKİSİ DE PASİF (ölçüldü 31.08 · cihazda). Kutuları
-                  binmemiş bir durakta "Ulaşılamadı" basılıyor, uç `same_status` diyordu —
-                  `unreachable`ın hedefi `ready` ve sipariş zaten oradaydı. Kurye ise hiçbir şey
-                  olmadığını görüyordu: bildirim açık çekmecenin ALTINDA çiziliyordu. Kapıya hiç
-                  gitmediğin bir durağa "ulaşılamadı" yazılmaz; sebebi zaten üstteki satırda. */}
+              {/* Yola çıkmamış durakta ikisi de pasiftir: kapıya hiç gidilmemiş durağa "ulaşılamadı" yazılmaz, sebebi üstteki satırdadır. */}
               <SecondaryButton
                 label={t.delivery.cta.unreachable}
                 onPress={() => delivery.openOutcome('unreachable')}
@@ -667,35 +522,14 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         ) : null}
       </View>
 
-      {/*
-        ── REDDEDİLEN KALEM ÇEKMECESİ (kullanıcı kararı 30.08) ────────────────────────────────
-        Kapıda geri verilen mal buradan giriliyor: kutulardaki ürünler listelenir, kurye hangi
-        üründen KAÇ ADET geri verildiğini seçer. Ekran akışında sürekli duran bir liste yerine
-        yalnız istisna varken açılan bir katman — normal teslimde kurye buraya hiç girmez.
-
-        ADET ÇEKMECEDE, SATIRDA DEĞİL: kalem listesi ekranda kalsaydı her durakta okunması gereken
-        bir tablo olurdu; oysa kuryenin kapıda cevapladığı soru tek ve nadirdir — "bir şey geri
-        verdi mi".
-      */}
+      {/* Reddedilen kalem çekmecesi: yalnız istisna varken açılır ve kurye hangi üründen kaç adet geri verildiğini seçer; normal teslimde buraya hiç girilmez. */}
       <BottomSheet
         visible={refuseOpen}
         title={t.delivery.goods.refuseTitle}
         onClose={() => setRefuseOpen(false)}
         testID="courier-refuse-sheet"
       >
-        {/*
-          ── MAL KABUL ÇEKMECESİNİN KALIBI (kullanıcı kararı 31.08) ──────────────────────────
-          Desen `OperationsQuantitySheet`ten alındı ve orada gerekçesiyle yazılı: künye satırı →
-          CANLI koyu kart → bölüm başlığı + ipucu → kartlı satırlar + bağlı sayaç → "Tamam"
-          (onay değil KAPATMA; değer her dokunuşta yukarı gitti).
-
-          İlk hâl düz satırlar ve AYRI ± düğmeleriydi; ikisi de projenin deseni değil:
-          · Satır KART olur (`OperationsSurface tone="card"`) — dokunulabilir olmasa bile kart,
-            listeyi bir döküme çevirmeden okunur kılıyor (mal kabulün aday listesiyle aynı karar).
-          · Sayaç BAĞLIDIR (`OperationsStepperGroup`): tek çerçeve, üç hücre. `StepperButton`
-            ayrı duran bir düğmedir ve v3'te ikisi ayrı kalıp (kitin kendi künyesi).
-          · Ton ANLAMDIR: geri verilen mal `error` — sayı sıfırdan büyükse kutu kırmızıya döner.
-        */}
+        {/* Mal kabul çekmecesinin kalıbı: kartlı satırlar ve bağlı sayaç, "Tamam" onay değil kapatmadır; geri verilen mal `error` tonundadır. */}
         <Text style={styles.refuseSubject}>
           {fillCopy(t.delivery.goods.refuseSubject, { n: String(delivery.lines.length) })}
         </Text>
@@ -753,16 +587,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         />
       </BottomSheet>
 
-      {/*
-        ── SONUÇ ÇEKMECESİ (00-ortak:477 · 30.08) ──────────────────────────────────────────────
-        Tasarımda bu bir ALT ÇEKMECEDİR: karartma katmanı, 26 dp üst yarıçap, tutamak, alttan
-        kayan panel. Kodda sayfaya GÖMÜLÜ bir kart olarak çiziliyordu ve fark yalnız görsel
-        değildi — gömülü panel sayfanın akışına giriyor, kurye onu görmek için kaydırmak zorunda
-        kalıyordu; çekmece ise ekranı kaplar ve "şu an tek işin bu" der.
-
-        Kit ZATEN VARDI (`BottomSheet`) ve aynı klasörün kardeş ekranları onu kullanıyordu; bu
-        ekran kite hiç sormamıştı (kullanıcı bulgusu 30.08).
-      */}
+      {/* Sonuç çekmecesi (`BottomSheet`): gömülü kart sayfanın akışına girip kaydırma istiyordu, çekmece ekranı kaplar ve "şu an tek işin bu" der. */}
       <OperationsConfirmSheet
         visible={delivery.outcome !== null && !delivery.finished}
         title={
@@ -837,14 +662,7 @@ const styles = StyleSheet.create({
     gap: operationsTheme.space['2xl'],
   },
   addressBlock: { gap: operationsTheme.space['2xs'] },
-  /*
-    ADRES GÖVDE FONTUYLA, BAŞLIK FONTUYLA DEĞİL (kullanıcı bulgusu 30.08 · tasarım ölçüldü).
-
-    `font:700 15px/1.4 'Karla'` — yani Karla/700/15, Lora değil. Kod başlık ailesini kullanıyordu
-    (`font.display` + `h2-sm`) ve adres ekranda bir SAYFA BAŞLIĞI gibi duruyordu: Durak künyesinden
-    (Lora 20) sonra ikinci bir Lora bloğu geliyor ve ikisi birbiriyle yarışıyordu. Adres bir
-    başlık değil, kapıda okunacak bir VERİ — tasarım onu gövde fontunda ve bir tık kalın yazıyor.
-  */
+  /* Adres gövde fontuyla yazılır, başlık fontuyla değil: bir başlık değil kapıda okunacak bir veridir ve durak künyesiyle yarışmamalı. */
   address: {
     flex: 1,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
@@ -922,12 +740,7 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
     textAlign: 'center',
   },
-  /*
-    ADIM BÖLÜMÜ KART (v3:17 · 30.08) — tasarımda her adım kendi kartında: krem panel, kum çerçeve,
-    20 dp yarıçap, `15/16` dolgu. Bizde düz bloklardı ve adımlar birbirine akıyordu; tahsilat
-    bölümü zaten kartlıydı (kendi rengiyle) ve yanındaki iki bölüm ondan farklı bir dilde
-    duruyordu. Kart, her adımı "burada şu iş var" diye çerçeveliyor.
-  */
+  /* Adım bölümü kart: her adım kendi kartında durur ki adımlar birbirine akmasın. */
   section: {
     gap: operationsTheme.space.lg,
     padding: operationsTheme.space['2xl'],
@@ -936,13 +749,7 @@ const styles = StyleSheet.create({
     borderColor: operationsTheme.colors['sand-300'],
     backgroundColor: operationsTheme.colors.panel,
   },
-  /*
-    KUTU ADIMI KENDİ TONUNU TAŞIR (v3 `c.kutuAdim` · 30.08) — kart nötr DEĞİL:
-    · eksik  → uyarı ailesi (`warning-bg` + `warning-line`, tasarımın değerleriyle BİREBİR)
-    · tamam  → zeytin ailesi: "bu adım bitti" işareti
-    Nötr kartla çizilirken kutuların okutulup okutulmadığı ancak başlıktaki sayaç okunarak
-    anlaşılıyordu; renk o soruyu ekrana bakar bakmaz cevaplıyor.
-  */
+  /* Kutu adımı kendi tonunu taşır: eksikte uyarı, tamamda zeytin; renk kutuların okutulup okutulmadığını ekrana bakar bakmaz söyler. */
   sectionPending: {
     backgroundColor: operationsTheme.colors['warning-bg'],
     borderColor: operationsTheme.colors['warning-line'],
@@ -980,11 +787,7 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.eyebrow,
     color: operationsTheme.colors.muted,
   },
-  /*
-    KUTULAR ALT ALTA, YAN YANA DEĞİL (v3:17 · 30.08). Rozet gibi sarmalanıyordu ve kutu kodu
-    (`KT-26-7741`) rozete sığmaz; tasarım her kutuyu kendi satırında, üç sütunlu çiziyor:
-    kare numara · kod · durum. Kurye yığından kutu seçerken satır satır okuyor.
-  */
+  /* Kutular alt alta durur, çünkü kod rozete sığmaz ve kurye yığından kutu seçerken satır satır okur. */
   boxRows: { gap: operationsTheme.space.sm },
   boxRow: {
     flexDirection: 'row',
@@ -1047,17 +850,8 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
   },
   proofButtons: { flexDirection: 'row', gap: operationsTheme.space.md },
-  // `flex` BURADA DEĞİL (23.08 ölçümü — `PressableSurface.grow` künyesi): esneyen düğme flex'i
-  // grow prop'undan alır; düz `View` kalan tek kullanım (`Fotoğraf`) `proofGrow` ile esner.
-  /*
-    KANIT DÜĞMELERİ ELDEN, AMA SABİT BOYLU (tasarım `height:50`).
-
-    Kite geçirilmediler ve gerekçesi ikincisinde: "Fotoğraf" düğmesi KESİKLİ çerçeveli ve pasif —
-    "bu yol bu sürümde bağlı değil" diyen bilinçli bir işaret. `SecondaryButton`ın `disabled` hâli
-    düz çerçeve çiziyor, kesikli değil; kite kesikli bir kenar eklemek tek kullanım için kitin
-    sözlüğünü büyütmek olurdu. İkisi yan yana ve eşit yükseklikte durmak zorunda, o yüzden ikisi de
-    burada. Yükseklik dolgudan DEĞİL kademeden: punto değişince hizaları bozulmasın.
-  */
+  // `flex` burada değil: esneyen düğme flex'i `grow` prop'undan alır; düz `View` (Fotoğraf) `proofGrow` ile esner.
+  /* Kanıt düğmeleri elden ve sabit boyludur: "Fotoğraf" kesikli çerçeveyle bu yolun bağlı olmadığını söyler, kitin pasif hâli bunu çizmez. */
   proofButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1380,8 +1174,7 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.note,
     color: operationsTheme.colors.card,
   },
-  /* KİTİN `panel` TONU (30.08): zemin + `sand-300` + kart yarıçapı + 14/16 dolgu birebir kitin
-     tarifiydi ve burada elden yazılıydı. Kalan yalnız satır arası aralık. */
+  /* Kitin `panel` tonu; burada yalnız satır arası aralık kalır. */
   outcomePanel: {
     gap: operationsTheme.space.lg,
   },

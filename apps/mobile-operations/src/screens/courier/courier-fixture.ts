@@ -8,24 +8,15 @@ import type {
 } from '@lezzet/types';
 
 /*
-  KURYE TEST VERİSİ — üç ekran testinin ortak satırları.
-
-  TEK YERDE durmasının sebebi sözleşmenin kendisi (katalog fixture'ının aynı gerekçesi): `CourierStop`
-  bir alan kazandığında üç test birden derlemede kırılsın ve üçü de güncellensin — ayrı ayrı yazılmış
-  yer tutucuların biri mutlaka eskir.
-
-  Satırlar v2'nin demo rotasından türetildi (v2:833-839): kapıda nakit tahsilatlı B2B durağı, borcu
-  olmayan B2C durağı, adres kayıtlı olmayan durak, ulaşılamamış durak. Kimlikler UUID biçiminde çünkü
-  şema öyle istiyor (`orderId`).
+  Kurye test verisi: üç ekran testinin ortak satırları, `CourierStop` bir alan kazandığında üç test birden derlemede kırılsın diye tek yerde.
+  Satırlar demo rotasından türer: kapıda nakit tahsilatlı B2B durağı, borçsuz B2C durağı, adressiz durak, ulaşılamamış durak.
 */
 
 const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
 /**
- * **Kapı kasası hesabı** — tahsilat senaryosu kuran testin gün cevabına koyduğu kimlik.
- * Fixture'ın varsayılanı `null` (ayar boş) çünkü kapının kapalı hâli de ölçülüyor.
- * Sayı kalem kimliklerinin (`stopItemId`) uzayının dışında seçildi: çakışan iki kimlik, testi
- * yanlış satırı işaretlerken YEŞİL gösterirdi.
+ * Kapı kasası hesabı: tahsilat senaryosu kuran testin gün cevabına koyduğu kimlik; varsayılan `null`, çünkü kapının kapalı hâli de ölçülür.
+ * Sayı kalem kimliklerinin uzayının dışında seçildi: çakışan iki kimlik testi yanlış satırda yeşil gösterirdi.
  */
 export const DOOR_ACCOUNT_ID = uuid(7000);
 
@@ -39,16 +30,7 @@ export function stopItemId(stopIndex: number, lineIndex: number): string {
 
 /** Kapıda nakit tahsilatlı, iki kalemli, bekleyen B2C durağı — testlerin "normal" satırı. */
 export function courierStop(index: number, overrides: Partial<CourierStopContract> = {}): CourierStopContract {
-  /*
-    TESLİM EDİLMİŞ DURAK TAM TESLİMDİR (30.08). `fulfilledQty` varsayılanı 0 ve bekleyen durakta bu
-    doğru — mal kapıya gitmedi. Ama `{ outcome: 'delivered' }` override'ı kalemlere DOKUNMUYORDU ve
-    ortaya üretimde doğamayacak bir satır çıkıyordu: teslim edilmiş, ama hiçbir adedi bırakılmamış
-    durak. Ekran onu haklı olarak KISMİ okuyordu (kısmi ölçütü tam olarak `fulfilledQty < qty`) ve
-    "teslim edildi" bekleyen testler kırmızıya döndü — fikstür yanlış bir gerçeklik kuruyordu.
-
-    Kısmi teslimi ölçen test kalemleri KENDİ veriyor (`items` override'ı); burada kurulan yalnız
-    varsayılanın tutarlılığı.
-  */
+  /* Teslim edilmiş durak tam teslimdir: `outcome: 'delivered'` kalemlerin `fulfilledQty`sini de doldurur, yoksa ekran onu kısmi okur; kısmi teslimi ölçen test kalemleri kendi verir. */
   const delivered = overrides.outcome === 'delivered';
   return {
     orderId: uuid(index),
@@ -58,11 +40,9 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
        (yaygın hâl). Alıcının AYRI olduğu hâli sınayan test bunu `overrides` ile verir. */
     recipient: null,
     channel: 'b2c',
-    /* Varsayılan HAZIR: fikstürün durakları kutulu ve toplanmış; "hazırlanmadı" hâlini ölçen test
-       bunu `overrides` ile verir (03.09). */
+    /* Varsayılan hazır: fikstürün durakları kutulu ve toplanmış; "hazırlanmadı" hâlini ölçen test bunu `overrides` ile verir. */
     awaitingPreparation: false,
-    /* İptal edilmiş durak fikstürde AÇIKÇA kurulur — varsayılan satır teslim edilecek bir
-       duraktır ve iptal onun bir varyantı değil, ayrı bir hâldir (05.09). */
+    /* İptal edilmiş durak açıkça kurulur, çünkü iptal varsayılan satırın bir varyantı değil ayrı bir hâldir. */
     cancelled: false,
     address: `Grand Rue ${index}`,
     phone: '+33600000001',
@@ -104,31 +84,22 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
     outcomeNote: null,
     hasProof: false,
     attempts: 0,
-    /* Kutu ARTIK ZORUNLU (30.08): kutusuz rota siparişi bir VERİ HATASI, "eski yol" değil.
-       Varsayılan tek kutu ve ARAÇTA — fikstürün kurduğu hâl yoldaki duraktır, o da yüklenmiş
-       kutuyla olur (31.08: yükleme ayrı bir an ama yola çıkmış durağın kutusu binmiştir). */
+    /* Kutu zorunludur; varsayılan tek kutu araçtadır, çünkü fikstürün kurduğu hâl yoldaki duraktır. */
     boxes: [{ boxNo: 1, code: `KT-26-${String(index).padStart(4, '0')}`, loadedAt: '2026-08-08T07:10:00.000Z' }],
-    /* DURAK HANGİ SEFERİN (31.08) — araçta birden çok sefer olabiliyor ve liste sefere göre
-       gruplanıyor. Varsayılan, fikstürün tek seferi (`courierRunBrief`in kimliği). */
+    /* Durağın seferi: liste sefere göre gruplanır; varsayılan fikstürün tek seferidir. */
     runId: uuid(800),
     runLabel: 'Kuzey rotası',
-    /* Varsayılan `unknown` = SORULMADI (11.11) ve bu bilerek NÖTR hâl: uyarı üretmeyen değer
-       varsayılan olmalı, yoksa her fikstür durağı kapıda bir işaret taşırdı. Uyarıyı sınayan test
-       değeri KENDİ verir — `stopSeq`in aynı deseni. */
+    /* Varsayılan `unknown`: uyarı üretmeyen değer varsayılan olmalı; uyarıyı sınayan test değeri kendi verir. */
     doorCheck: 'unknown',
-    /* Varsayılan `null` = SIRA BİLİNMİYOR (11.9). Bilerek sırasız: bugüne dek ekran dizi indeksini
-       rota sırasıymış gibi gösteriyordu ve o sıra siparişin verilme sırasıydı. Sıralı günü sınayan
-       test `stopSeq`i kendi verir. */
+    /* Varsayılan `null` = sıra bilinmiyor; sıralı günü sınayan test `stopSeq`i kendi verir. */
     stopSeq: null,
     ...overrides,
   };
 }
 
 /**
- * **Açık sefer künyesi** (18.08) — "kurye rotayı almış, yolda" hâli. Fixture'ın VARSAYILAN hâli bu
- * çünkü kurye ekranlarının çoğu o hâli konuşuyor: sefer yoksa durak da yoktur (siparişin kuryesi
- * seferin kuryesinden gelir), yani sefersiz bir gün cevabında liste zaten boş olurdu.
- * Rota seçimi ölçen test `courierDay([], { run: null })` geçirir.
+ * Açık sefer künyesi, fikstürün varsayılanı: kurye ekranlarının çoğu bu hâli konuşur ve sefer yoksa durak da yoktur.
+ * Rota seçimini ölçen test `courierDay([], { run: null })` geçirir.
  */
 export function courierRunBrief(overrides: Partial<CourierRunBrief> = {}): CourierRunBrief {
   return {
@@ -141,8 +112,7 @@ export function courierRunBrief(overrides: Partial<CourierRunBrief> = {}): Couri
     // kimliksiz bir ad ya da adsız bir kimlik, üretimde doğamayacak bir hâl olurdu.
     vehicleId: null,
     vehicleLabel: null,
-    /* Seferin GÜNÜ (31.08) — fikstürün gününün kendisi; araç birden çok günün seferini
-       taşıyabildiği için künyede duruyor. */
+    /* Seferin günü, fikstürün günüdür. */
     deliveryDate: '2026-08-08',
     departedAt: '2026-08-08T07:30:00.000Z',
     returnedAt: null,
@@ -157,8 +127,7 @@ export function courierRunBrief(overrides: Partial<CourierRunBrief> = {}): Couri
  */
 export function courierRoute(overrides: Partial<CourierRoute> = {}): CourierRoute {
   return {
-    /* Rotanın GÜNÜ (31.08) — liste birden çok gün taşıyor ve seçim ekranı ona göre grupluyor.
-       Fikstürün günü, gün cevabının günüyle aynı. */
+    /* Rotanın günü; seçim ekranı listeyi güne göre gruplar. */
     day: '2026-08-08',
     zoneId: uuid(801),
     zoneName: 'Kuzey rotası',
@@ -168,8 +137,7 @@ export function courierRoute(overrides: Partial<CourierRoute> = {}): CourierRout
     /* Seçim kartının üç sayısı (v3:17): durak · kutu · tahsilat. Kutu sayısı durak sayısından
        BÜYÜK — gerçek veride de öyle ve eşit yazılırsa "kutu" sütunu hiç sınanmamış olurdu. */
     boxCount: 5,
-    /* Geri getirilecek kutu varsayılanı SIFIR: normal bir rotada iptal edilmiş yük yoktur ve
-       o hâli sınayan test kendisi verir (05.09). */
+    /* Geri getirilecek kutu varsayılanı sıfırdır; o hâli sınayan test kendisi verir. */
     returningBoxCount: 0,
     collectionCount: 2,
     run: null,
@@ -189,21 +157,10 @@ export function takenRouteRun(overrides: Partial<CourierRoute['run']> = {}): Non
 }
 
 /**
- * Günün cevabı. Kasa hesabı GÜN başına (21.10d) ve varsayılanı `null` — ayar boşken ekran tahsilat
- * kapısını kapalı gösteriyor ve o hâl de ölçülüyor; tahsilat senaryosu kuran test
- * `{ doorAccountId: DOOR_ACCOUNT_ID }` geçirir.
- */
-/**
- * **Günün seferi** = künye + ÇIKIŞ DEPOSUNUN adı (30.08 · uyuşmazlık #12).
- *
- * Depo adı yalnız gün yanıtında var: rota seçim listesinde o değer rota düzeyinde duruyor ve
- * seferi olmayan rotada da bulunması gerekiyor. Ayrı fikstür, ayrı tip — künyeyi bekleyen bir
- * yere gün seferini geçirmek derlemede durur.
+ * Günün seferi: künye ve çıkış deposunun adı; ayrı fikstür, çünkü depo adı yalnız gün yanıtında vardır ve künyeyi bekleyen yere geçirilince derleme durur.
  */
 export function courierDayRun(overrides: Partial<NonNullable<CourierDayResponse['run']>> = {}): NonNullable<CourierDayResponse['run']> {
-  /* SIRANIN KÜNYESİ (11.9) — varsayılan `null` = sıra hesaplanmadı. Bilerek: fikstürün kurduğu hâl
-     "sırasız gün" ekranını da beslemeli (ray çizilmez, numara yok). Ölçü/inceliği gösteren test onu
-     `overrides` ile kendi verir. */
+  /* Sıranın künyesi varsayılan `null`: fikstür "sırasız gün" ekranını da besler; ölçü ve inceliği gösteren test onu kendi verir. */
   return { ...courierRunBrief(), warehouseName: 'Strasbourg Merkez', stopOrder: null, ...overrides };
 }
 
@@ -211,14 +168,7 @@ export function courierDay(
   stops: CourierStopContract[],
   overrides: Partial<Omit<CourierDayResponse, 'stops'>> = {},
 ): CourierDayResponse {
-  /*
-    `runs` VARSAYILAN OLARAK sürülen seferi taşır (31.08) — araçtaki seferlerin listesi ve sürülen
-    sefer o listenin İÇİNDEDİR, kopyası değil.
-
-    KAPANMIŞ SEFER ARAÇTA DEĞİLDİR ve bu bir ayrıntı değil kuralın kendisi: `readCourierRuns`
-    kapanmışları süzüyor (işi bitmiştir, kutuları da inmiştir). Fikstür bunu taklit etmezse kapanmış
-    seferli gün "araçta yük var" hâline düşer ve ekran yanlış gövdeyi çizer.
-  */
+  /* `runs` varsayılan olarak sürülen seferi taşır; kapanmış sefer araçta değildir, çünkü `readCourierRuns` onu süzer ve fikstür bunu taklit etmezse ekran yanlış gövdeyi çizer. */
   const run = overrides.run === undefined ? courierDayRun() : overrides.run;
   return {
     date: '2026-08-08',
@@ -244,7 +194,7 @@ export function dayCloseDraft(overrides: Partial<DayCloseDraftContract> = {}): D
   };
 }
 
-/** Kapanmış SEFER kaydı — salt-okunur ekranın kaynağı (18.08: anahtar kurye×gün değil sefer). */
+/** Kapanmış sefer kaydı: salt okunur ekranın kaynağı. */
 export function closedDayRecord(
   overrides: Partial<NonNullable<DayCloseDraftContract['closed']>> = {},
 ): NonNullable<DayCloseDraftContract['closed']> {
@@ -269,11 +219,7 @@ export function closedDayRecord(
 }
 
 /**
- * **BAŞLATMA CEVABI** — `POST /courier/day/start` ve `/runs/:id/depart` aynı şekli döndürür.
- *
- * `courier-day-screen.test`in içinde yerel bir yardımcıydı; 01.09'da ÜÇÜNCÜ çağıranı doğunca
- * fikstüre taşındı (rota seçimi ve araçtaki seferler ekranları da kurma/başlatma sonrasını
- * ölçüyor). Üç kopya, cevabın bir alanı değiştiğinde ikisinin sessizce eskimesi demekti.
+ * Başlatma cevabı: `POST /courier/day/start` ve `/runs/:id/depart` aynı şekli döndürür; üç çağıranı olduğu için fikstürde durur ki kopyalar eskimesin.
  */
 export function startResult(
   overrides: Partial<Extract<StartCourierDayResponse, { status: 'ok' }>> = {},
@@ -281,8 +227,7 @@ export function startResult(
   return {
     status: 'ok',
     date: '2026-08-08',
-    // Başlatma cevabının künyesi GÜN seferiyle aynı şekli taşıyor (30.08): ekran bu değeri
-    // doğrudan günün seferi olarak yazıyor, ayrışsalardı depo adı sefer başlar başlamaz boş kalırdı.
+    // Başlatma cevabının künyesi gün seferiyle aynı şekildedir; ekran bu değeri doğrudan günün seferi olarak yazar.
     run: courierDayRun(),
     started: [],
     alreadyOut: [],

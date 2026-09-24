@@ -24,38 +24,8 @@ import { moneyCopy } from './copy';
 import { useMoneyOverview } from './use-money.hook';
 
 /*
-  PARA KÖKÜ · TAHSİLAT İZLEME (v3:23) — bölümün kökü ve SALT OKUMA.
-
-  ── HİÇBİR YAZMA AKSİYONU ÇİZİLMEZ ──────────────────────────────────────────
-  Tasarımın altın kuralı ekranın son satırında yazılı: *"'bakiye düzeltme' diye bir kavram yok."*
-  Para bu yüzeyde DÜZELTİLMEZ, yalnız izlenir; kayıt masaüstünde ve muhasebe kurallarıyla doğar.
-  Bu yüzden ekranda tek bir eylem var ve o da gezinme: "gün sonu →".
-
-  ── v3 ANATOMİSİ (30.08 — ikinci tur) ───────────────────────────────────────
-  İlk geçiş METNİ taşıdı, YERLEŞİMİ taşımadı; kullanıcı cihazda gördü ve tur tekrarlandı. Beş
-  yapısal fark ölçülüp kapatıldı:
-    · Günün parası KOYU kart (`ink`) — açık panel değil. Ekranın ilk sorusu ("bugün ne girdi")
-      sayfanın öteki kutularıyla aynı sesle konuşamaz; koyu blok onu bir başlık yapıyor.
-    · Bekleyen tahsilatlar KART, kesikli liste satırı değil — her satır kendi kutusu (v3 gap 8).
-    · Kuryenin üstündeki para UYARI tonlu (`warning-line` kenar + terracotta tutar): o para
-      henüz kasada değil, nötr bir kart onu "gelmiş" gibi gösteriyordu.
-    · Hesap bakiyeleri TEK kartın içinde, kesikli ayraçlarla — çıplak satırlar sayfaya dağılıyordu.
-    · Dipnot TEK ve `tab-inactive` — dört ayrı not vardı, üçü tasarımda hiç yok.
-
-  ── ZİL YOK, METİN EYLEMİ VAR — VE YERİ DEĞİŞTİ ─────────────────────────────
-  v3 "gün sonu →"yu başlığın sağ yuvasından alıp **BEKLEYEN TAHSİLATLAR başlığının yanına**
-  koyuyor: eylem, götürdüğü listenin yanında duruyor. Başlığın sağ yuvasında yalnız kimlik kaldı
-  (oturum çıkışı — kabuğun kuralı, tasarımın her ekranda tekrarlamadığı ortak öğe).
-
-  ── ARTIK GERÇEK UÇTAN (21.12) ──────────────────────────────────────────────
-  `/money/overview` okunur; boş liste de, yüklenememe de gerçek hâller ve ikisi de çizili.
-  Bekleyen küme GÜNÜN ödenmemiş siparişleridir (sözleşme künyesi) — tüm zamanların dökümü
-  masaüstü muhasebenin işi.
-
-  ── HESAP SATIRLARI ADIYLA ──────────────────────────────────────────────────
-  v2 iki sabit satır çiziyordu (Kasa · Banka); defterde hesap SAYISI işletme kurulumudur (Kasa,
-  Revolut, Crédit Mutuel, Stripe…). Satır adı SUNUCUDAN gelir — iki ada indirmek, iki hesabı tek
-  satırda toplamak ya da birini gizlemek olurdu.
+  Para kökü, tahsilat izleme: salt okumadır, para burada düzeltilmez, yalnız izlenir; tek eylem "gün sonu →" gezintisidir ve götürdüğü listenin yanında durur.
+  Veri `/money/overview`dandır; bekleyen küme günün ödenmemiş siparişleridir ve hesap satırları defterdeki adıyla çizilir, çünkü hesap sayısı işletme kurulumudur.
 */
 
 const t = moneyCopy;
@@ -66,22 +36,13 @@ export function MoneyTrackingScreen() {
   const identity = useOperationsIdentity();
   const workplace = useOperationsWorkplace();
 
-  /* BAŞLIK KAYDIRICININ İÇİNE GİRİYOR (M1a → M1b devri, hub'la aynı gerekçe): tam başlık sayfayla
-     yukarı kayar, 44px'i geçince yerini mikro başlık alır. Kaydırıcının DIŞINDA kalsaydı ikisi üst
-     üste binerdi — hub'da tam olarak bu ölçülmüştü (mikro şerit indi, altında tam başlık asılı
-     kaldı). Yükleme ve hata hâllerinde kaydırıcı yok, başlık orada doğrudan çiziliyor. */
+  /* Başlık kaydırıcının içindedir: tam başlık sayfayla yukarı kayar ve yerini mikro başlık alır; dışarıda kalsaydı ikisi üst üste binerdi. */
   const header = (
     <OperationsSectionHeader
       section="money"
       eyebrow={shell.sections.money.eyebrow}
       title={shell.sections.money.title}
-        /* KİM · HANGİ GÜN · NEREDE (v3:23) — para ekranı bir günün fotoğrafıdır; hangi güne
-           baktığı yazılmazsa "bugün gerçekleşen" cümlesi hangi günü anlattığını söylemez.
-           TESİSİN ADI ARTIK GELİYOR (30.08, `/operations/scope`) ama **kuyruk şartlı**: satır
-           personelin BAĞLAMINI söyler ("nerede çalışıyorsun"), sayıların süzgecini değil — para
-           okumaları depo boyutu taşımaz (`money.ts` künyesi: *defter işletmenin*). Kapsamı iki
-           tesisli bir muhasebecide (seed'in `muhasebe` hâli) ad gelmez ve satır kuyruksuz kalır;
-           tesislerden birini yazmak, ekranın kendi künyesinde yalan söylemesi olurdu (CLAUDE §1). */
+        /* Kim, hangi gün, nerede: para ekranı bir günün fotoğrafıdır; tesis adı personelin bağlamıdır, süzgeç değil, kapsamı tek tesis çözmeyende yazılmaz. */
       context={captionOf(identity.name, todayLabel(), workplace)}
       identity={<OperationsStaffMenu testID="operations-staff-menu" />}
     />
@@ -90,9 +51,7 @@ export function MoneyTrackingScreen() {
   return (
     <View style={styles.screen} testID="operations-section-money">
       {state.status === 'loading' ? (
-        /* İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08) — halka yerleşim tutmaz ve söndüğü an
-           sayfa zıplar. Ölçüler ekranın kendi bloklarının: koyu günün kartı 146, bekleyen tahsilat
-           kartı 60 (iki metin satırı + `md` dolgu). */
+        /* İlk yük iskelettir, halka değil: halka yerleşim tutmaz ve söndüğü an sayfa zıplar; ölçüler ekranın kendi bloklarınındır. */
         <>
           {header}
           <View style={styles.skeleton}>
@@ -142,14 +101,9 @@ function OverviewBody({ overview, header }: OverviewBodyProps) {
       testID="money-tracking-body"
     >
       {header}
-      {/* GÜNÜN PARASI EN ÜSTTE VE KOYU (v3:23) — muhasebenin ilk sorusu "bugün ne girdi". Toplam
-          kırılımdan TÜRETİLİR: ayrı bir toplam alanı, bir gün kırılımla ayrışabilecek ikinci bir
-          gerçek olurdu. Tasarımın rozeti ("14 tahsilat") ÇİZİLMEDİ — `todayByMethod` yöntem
-          başına yalnız TUTAR taşıyor, adet sözleşmede yok (uyuşmazlık 16). */}
+      {/* Günün parası en üstte ve koyu: muhasebenin ilk sorusu "bugün ne girdi"; toplam kırılımdan türer ki ikinci bir gerçek doğmasın. */}
       <OperationsSurface tone="ink" padding="none" style={styles.todayCard} testID="money-today-card">
-        {/* ROZET TUTARIN YANINDA (v3:23) — "14 tahsilat". Adet tutardan TÜREMEZ: aynı toplam iki
-            tahsilattan da kırktan da gelebilir ve muhasebecinin "gün yoğun muydu" sorusunun cevabı
-            adettedir. Sözleşmeye 30.08'de eklendi (`todayCount`), önce yalnız tutar taşınıyordu. */}
+        {/* Rozet tutarın yanındadır: adet tutardan türemez ve "gün yoğun muydu" sorusunun cevabı adettedir. */}
         <View style={styles.todayHead}>
           <View style={styles.todayHeadText}>
             <Text style={styles.eyebrowOnInk}>{t.track.today.eyebrow}</Text>
@@ -237,11 +191,7 @@ function OverviewBody({ overview, header }: OverviewBodyProps) {
       )}
 
       <Text style={styles.eyebrow}>{t.track.float.eyebrow}</Text>
-      {/* PARA KİMDE (v3:23) — kart SEFER BAŞINA: "Marc Lemoine · SF-26-YRNWV9". Önce tek toplam
-          yazılıyordu ve muhasebecinin asıl sorusu cevapsız kalıyordu; "186,00 € kuryelerde" ile
-          "186,00 € Marc'ta" aynı cümle değil. Sözleşmeye 30.08'de eklendi (`CourierFloatRow`).
-          UYARI TONU: kenar `warning-line`, tutar terracotta — bu para kuryenin cebinde ve sefer
-          kapanışına dek kasada değil; nötr bir kartta "gelmiş" gibi okunuyordu. */}
+      {/* Para kimde: kart sefer başınadır (kurye adı ve sefer künyesi); uyarı tonundadır, çünkü bu para sefer kapanışına dek kasada değildir. */}
       {overview.courierFloat.length === 0 ? (
         <Text style={styles.emptyLine} testID="money-float-empty">
           {t.track.float.empty}
@@ -302,20 +252,11 @@ function OverviewBody({ overview, header }: OverviewBodyProps) {
   );
 }
 
-/**
- * Bekleyen satırın ETİKETİ (v3:23) — "KAPIDA · KART". Yöntem biliniyorsa eklenir, bilinmiyorsa
- * (henüz seçilmemiş kapıda ödeme) etiket yöntemsiz kalır — uydurulmaz.
- *
- * v2'de bu bir CÜMLEYDİ ("Kapıda 60,00 € · kart") ve tutarı içine alıyordu; tutar artık ayrı ve
- * büyük yazılıyor, etiket yalnız onun künyesi.
- */
+/** Bekleyen satırın etiketi ("KAPIDA · KART"): yöntem biliniyorsa eklenir, bilinmiyorsa etiket yöntemsiz kalır, uydurulmaz. */
 function pendingTag(item: PendingCollection): string {
   const kind = item.kind === 'door' ? t.track.pending.doorTag : t.track.pending.partialTag;
   if (item.method === null) return kind;
-  /* ETİKETİN TAMAMI BÜYÜK HARF (v3:23 — görsel ajanı ölçtü 30.08): tasarım "KAPIDA · KART" diyor,
-     kod "KAPIDA · nakit" yazıyordu; tek satırda iki ayrı büyüklük etiketi ikiye bölüyordu.
-     Büyütme DİLİN kuralıyla (`upperIn`, sabit `tr`) — stilin `textTransform`u Android'de CİHAZIN
-     diliyle uygular ve "nakit" Fransızca arayüzde "NAKIT" olurdu (gerekçe `section-header.tsx`). */
+  /* Etiketin tamamı büyük harftir; büyütme dilin kuralıyla (`upperIn`, sabit `tr`), çünkü stilin `textTransform`u Android'de cihazın diliyle uygular ve "nakit" "NAKIT" olurdu. */
   const method = upperIn(t.common.method[item.method], 'tr');
   return fillCopy(t.track.pending.tagWithMethod, { kind, method });
 }
@@ -490,10 +431,7 @@ const styles = StyleSheet.create({
     paddingVertical: operationsTheme.space.lg,
   },
 
-  /* ── KURYENİN ÜSTÜNDEKİ PARA ──────────────────────────────────────────────── */
-  /* TONLU KART: ZEMİN DE RENKLİ (kullanıcı bulgusu 30.08 — "cihazda göremiyorum"). Kenar tek
-     başına yetmedi; `warning-bg` çok açık bir şeftali ve kartı nötr olmaktan çıkaran şey o.
-     Token künyesi niçin eşiğin altında olmasına rağmen açıldığını yazıyor (kanal dengesi). */
+  /* Kuryenin üstündeki para: tonlu kart, zemin de renklidir, çünkü kenar tek başına kartı nötrlükten çıkarmıyordu. */
   floatCard: {
     backgroundColor: operationsTheme.colors['warning-bg'],
     borderColor: operationsTheme.colors['warning-line'],

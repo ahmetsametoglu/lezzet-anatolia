@@ -8,36 +8,8 @@ import { courierCopy } from './copy';
 import { centsToAmountText, money, parseAmountToCents, signedMoney } from './courier-format';
 
 /*
-  SEFER KAPANIŞI (K7) — taslak okuması, sayım girdileri, iki adımlı onay.
-
-  ── EKSEN GÜN DEĞİL SEFER (18.08 · `docs/feature/sefer.md` K1) ──────────────
-  Kapanışın öznesi kurye×gün'den SEFERE indi: "fark hangi seferde doğdu" sorusu ancak böyle
-  cevaplanır. İki sefer sürmüş kurye ikisini AYRI kapatır ve akış sıralıdır (kapat → yeni sefer),
-  bu yüzden ekran "hangi seferi kapatıyorum" diye SORMAZ: taslak kuryenin o günkü seferini getirir
-  (kapanmamış olan öncelikli) ve kapatma isteği o seferin kimliğiyle gider. `run === null` = o gün
-  sürülmüş sefer yok; kapanacak bir şey de yok, ekran bunu sakin bir bilgi olarak gösterir.
-
-  ── KAPANIŞ BİR MUTABAKATTIR, PARA HAREKETİ DEĞİL ───────────────────────────
-  Para kapıda tahsil edilirken zaten yazıldı; burada beklenen (sistemin hesabı) ile sayılan
-  (kuryenin teslim ettiği) yan yana durur ve FARK işaretiyle görünür — eksi eksik teslim, artı
-  fazla para (`design/pages/app-kurye.md` K7). Mutlak değere indirgemek işaretin taşıdığı tek
-  bilgiyi silerdi.
-
-  ── KAPANIŞ TAKILI DURAKLARI ÇÖZER (K4) ─────────────────────────────────────
-  Sonuçlanmamış durak kapanışı ENGELLEMEZ; üstelik kapanış hâlâ yolda görünen durakları çözer
-  (motorun "ulaşılamadı" kenarı). Kaç durağın çözüldüğü cevapta geliyor (`releasedCount`) ve
-  bildirimde yazılıyor — hangi güne yeniden yazılacağı sevkiyatçının kararı.
-
-  ── SAYIM ALANLARI BEKLENENLE AÇILIR ────────────────────────────────────────
-  v2:951 aynısını yapıyor (`say = S.sayilan[k] ?? bek`). Gerekçe: normal gün fark SIFIRDIR ve
-  kuryeye üç alanı elle doldurtmak, doğru olanı yazmak için emek isteyip yanlış olanı ise sessizce
-  geçirir. Değiştirilen alan zaten farkı anında gösteriyor.
-
-  ── KAPANMIŞ SEFER SALT-OKUNUR ──────────────────────────────────────────────
-  `closed` doluysa alanlar KİLİTLİ ve değerler kapanış KAYDINDAN okunur — taslağın "beklenen"i
-  değil, o gün ne konuşulduysa o (kaydın `expected_*` alanları anın fotoğrafıdır). İkinci kapanış
-  isteği zaten uçta reddediliyor (`already_closed`); ekranın kilidi o reddi beklemeden gösteriyor.
-  `already_closed` bir HATA DEĞİL, bir gerçektir: yeşil değil ama kırmızı da değil, bilgi.
+  Sefer kapanışı: öznesi seferdir ve taslak kuryenin o günkü seferini getirir; beklenen ile sayılan yan yana durur ve fark işaretiyle görünür (eksi eksik, artı fazla).
+  Sayım alanları beklenenle açılır, çünkü normal gün fark sıfırdır; kapanmış seferde alanlar kilitlidir ve değerler kapanış kaydından okunur.
 */
 
 const t = courierCopy;
@@ -48,8 +20,7 @@ const t = courierCopy;
  * bilmek zorunda değil, hook zaten sıralı satırlar döndürüyor.
  */
 const CLOSE_METHODS = ['cash', 'card', 'cheque'] as const;
-/** Kapanışta sayılan üç kasa. İHRAÇ EDİLDİ (30.08): ekran hangi kasanın tuş takımının açık
-    olduğunu bu tiple tutuyor — kimlik tutulur, satırın kendisi değil. */
+/** Kapanışta sayılan kasalar; ihraç edilir, çünkü ekran hangi kasanın tuş takımının açık olduğunu bu tiple tutar. */
 export type CloseMethod = (typeof CLOSE_METHODS)[number];
 
 interface CloseMoneyRow {
@@ -85,21 +56,15 @@ interface UseDayCloseResult {
   cancelConfirm: () => void;
   sending: boolean;
   /**
-   * Kapanışın sonucunun ŞEKLİ — tip olarak duruyor, DURUM olarak değil (01.09). `announce` bunu
-   * toast fiillerine çeviriyor; ekran artık okumuyor. Sözlük burada kalıyor ki tonların kümesi
-   * tek yerde tanımlı kalsın.
+   * Kapanış sonucunun şekli, durum değil tip olarak durur: `announce` onu toast fiillerine çevirir ve tonların kümesi tek yerde tanımlı kalır.
    */
   noticeShape?: { tone: 'ok' | 'info' | 'error'; text: string };
   close: () => void;
 }
 
 /**
- * @param onClosed Kapanış YAZILDIKTAN sonra çağrılır — ekranın kendini kapatması için (01.09).
- *   Kanca yönlendirme bilmez ve bilmemeli; bildiği tek şey "sefer artık kapalı". `already_closed`
- *   dalında ÇAĞRILMAZ: orada yeni bir kapanış olmadı, kurye zaten kapalı bir kaydı açtı.
- * @param runId Kapatılacak sefer — verilmezse sunucu SÜRÜLEN seferi çözer. İki seferli günde
- *   kimliği söylemek şart: sunucunun tahmini (`readCourierRun`) doğru cevabı verse de, ekranın
- *   gösterdiği künye ile kapatılan kaydın aynı olduğunu ancak kimlik garanti eder.
+ * `onClosed` kapanış yazıldıktan sonra çağrılır ki ekran kendini kapatsın; `already_closed` dalında çağrılmaz, çünkü yeni kapanış olmadı.
+ * `runId` verilmezse sunucu sürülen seferi çözer; iki seferli günde gösterilen künye ile kapatılan kaydın aynı olduğunu ancak kimlik garanti eder.
  */
 export function useDayClose(onClosed?: () => void, runId?: string): UseDayCloseResult {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -108,14 +73,7 @@ export function useDayClose(onClosed?: () => void, runId?: string): UseDayCloseR
   const [note, setNote] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [sending, setSending] = useState(false);
-  /*
-    SONUÇ TOAST'TA (kullanıcı kararı 01.09) — ve bu ekranda ayrıca bir AKIŞ arızasını kapatıyor.
-
-    Kapanış yazıldıktan sonra ekran yerinde kalıyor, alanlar kilitleniyor ve altta yeşil bir cümle
-    beliriyordu: kurye "kapattım" diyor ama kapattığı sefer hâlâ karşısında duruyordu (kullanıcı
-    bulgusu: *"kapanan sefer ekranda durmaya devam ediyor"*). Sonuç toast'a taşınınca ekranın
-    yerinde kalması için bir sebep de kalmadı — kapanan sefer geride bırakılır (`onClosed`).
-  */
+  /* Sonuç toast'ta ve ekran kapanan seferi geride bırakır (`onClosed`): yerinde kalsaydı kurye kapattığı seferi karşısında görmeye devam ederdi. */
   const announce = useCallback((notice: NonNullable<UseDayCloseResult['noticeShape']>) => {
     if (notice.tone === 'ok') toastSuccess(notice.text);
     else if (notice.tone === 'error') toastError(notice.text);
@@ -250,9 +208,7 @@ export function useDayClose(onClosed?: () => void, runId?: string): UseDayCloseR
           // burada okur. Sıfırsa cümle hiç kurulmaz — "0 durak çözüldü" bir bilgi değil gürültüdür.
           (released > 0 ? fillCopy(t.dayClose.released, { n: String(released) }) : ''),
       });
-      /* KAPANAN SEFER GERİDE BIRAKILIR (01.09): ekran yerinde kalırsa kurye kapattığı seferi
-         karşısında görmeye devam eder ve "kapandı mı" sorusu ekranın kendisiyle çelişir. Sonuç
-         zaten toast'ta; burada yapılacak iş kalmadı. */
+      /* Kapanan sefer geride bırakılır: ekran yerinde kalsaydı kurye kapattığı seferi karşısında görmeye devam ederdi; sonuç zaten toast'ta. */
       onClosed?.();
     })();
   };

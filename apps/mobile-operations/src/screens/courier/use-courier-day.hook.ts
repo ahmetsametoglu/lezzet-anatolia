@@ -25,69 +25,8 @@ import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
 
 /*
-  GÜNÜN SEFERİ (K1) — `/courier/day` + `/courier/routes` + `/courier/day/start` + `/courier/day-close`.
-
-  ── "BAŞLADI" ARTIK SUNUCUDA DURUYOR (18.08 · `docs/feature/sefer.md` K1) ───
-  Eski hâlde bir yerel bayrak vardı (`started`) ve künyesi kendi kusurunu yazıyordu: *"uygulama gün
-  ortasında yeniden başlarsa kilit kapanır… kilit kendini onarır"*. Onarım diye anlatılan şey bir
-  tahmindi — kurye düğmeye ikinci kez basıp `alreadyOut` cevabını görmeden kilidin doğru olduğunu
-  kimse bilmiyordu. Artık SEFER (`delivery_run`) gerçek bir kayıt: `/courier/day` cevabının `run`
-  alanı "bugün hangi seferi sürüyorum" sorusuna sunucudan cevap verir, uygulama kapanıp açılsa da
-  aynı cevabı verir. Yerel bayrak silindi; hâl üç dallı bir TÜRETİM oldu:
-
-  · `run === null`      → sefer alınmadı. Gövde ROTA SEÇİMİ gösterir (`/courier/routes`).
-  · `run` açık          → sefer sürülüyor. Duraklar açılabilir, birincil eylem "Seferi kapat".
-  · `run.closed`        → mutabakat yapıldı, o sefer BİTTİ. Gövde yeniden ROTA SEÇİMİNE döner
-                          (kullanıcı akışı: kapat → yeni sefer; kurye günün ikinci ROTASINA
-                          çıkabilir, aynı rotaya ikinci tur zaten veride yasak — K3). Kapanan
-                          seferin künyesi seçim gövdesinin üstünde bilgi şeridi olarak durur.
-
-  Sefer yokken durak da yoktur (siparişin kuryesi seferin kuryesinden gelir — start anında yazılır),
-  yani "yola çıkmadan liste kilitli" hâli yapısal olarak ölmüş durumda: liste ancak AÇIK sefer varsa
-  dolu; kapanmış seferin durakları K7'nin salt-okunur özetinde durur.
-
-  ── ÜÇ OKUMA, İKİ AŞAMA ────────────────────────────────────────────────────
-  Ne okunacağı sefere BAĞLI olduğu için okuma tek turda yapılamaz: önce gün (`run` orada), sonra
-  sefere göre ikinci okuma.
-  · Sefer YOK ya da KAPANMIŞ → `/courier/routes`: seçilecek rotalar. Kapanış taslağı istenmez
-    (açılacak sefer için cepteki para diye bir sayı yok; kapanmışın parası zaten sayıldı).
-  · Sefer AÇIK → `/courier/day-close?runId=…`: tasarımın ilerleme satırındaki **cepteki para**
-    (v2:63-65) yalnız buradan dürüstçe okunabilir — `/courier/day` bir durakta ne KADAR tahsil
-    edildiğini taşımıyor (yalnız kalan borcu). Sayıyı listeden tahmin etmek (borcu sıfırlanan
-    durağın tutarını toplamak) önceden ödenmiş siparişleri de sayardı ve K7'de sürpriz çıkardı —
-    oysa bu satırın varlık sebebi tam olarak o sürprizi önlemek. `runId` AÇIKÇA gönderilir: ekranın
-    gösterdiği sefer ile paranın sayıldığı sefer ayrışamaz.
-
-  ── İKİNCİL OKUMA DÜŞERSE LİSTE AYAKTA KALIR ───────────────────────────────
-  Gün gelmediyse ekran hata gösterir (gösterecek bir şey yok). Taslak gelmediyse liste çizilir ve
-  cepteki para `null` döner — okuyan taraf "bilinmiyor" yazar; sıfıra düşürmek dolu bir cebi boş
-  göstermek olurdu (CLAUDE §1). Rota listesi gelmediyse seçim yapılamaz, o yüzden o düşüş hata
-  sayılır: seçim ekranı boş bir liste ile "bugün rota yok" derdi ki bu YANLIŞ olurdu.
-
-  ── SEFERİ BAŞLATMAK: DÖRT DALLI CEVAP ─────────────────────────────────────
-  `POST /courier/day/start` sefer kaydını doğurur ve rotanın HAZIR duraklarını `ready →
-  out_for_delivery` yapar. Cevap dört dallıdır ve dördü de ekranda görünür:
-  · `ok` — sefer açıldı. Kilit artık cevabın `run`undan gelir; **hiçbir durak yola çıkmasa da sefer
-    AÇIKTIR** (eski yerel bayrak "hepsi atlandıysa açma" diyordu çünkü kaydı olmayan bir kilidi
-    korumaya çalışıyordu; şimdi kayıt var ve onu ekranda yok saymak yalan olurdu). Atlanan/bayat
-    duraklar gizlenmez, sayısı ve O ANKİ durumu yazılır.
-  · `already_started` + `mine` — aynı rota bugün ZATEN kendi seferiyle açılmış ve o sefer artık
-    kapalı: aynı rotaya ikinci tur veride yasak (K3). Bilgi verilir, liste tazelenir.
-  · `already_started` + `mine` DEĞİL — rota başkasında: seçim ekranında kalınır, uyarı yazılır ve
-    liste tazelenir (rota kartı artık "bugün X sürüyor" der).
-  · `route_required` / `no_route` — seçim bayatlamış: rotalar yeniden okunur.
-
-  **"Kalanları yola çıkar" GERÇEKTEN çalışıyor** (uç düzeltmesi 18.08): aynı kuryenin AÇIK seferine
-  ikinci basış artık `already_started` değil, geç kalan durakları aynı sefere bağlayan (`catch-up
-  claim`) bir `ok` döndürüyor — yani hazırlığı geciken durak `started` listesinde gelir ve ekranın
-  mevcut `ok` dalı onu olduğu gibi yazar. İkincil eylem bu yüzden duruyor; kaldırılsaydı gün içinde
-  hazırlanan durağı yola çıkaracak tek kapı kapanırdı (web sevkiyatın `out_for_delivery`ye giden
-  bir kapısı yok — `dispatch-types.ts` künyesinde ölçülü).
-
-  ── ODAKTA TAZELENİR ────────────────────────────────────────────────────────
-  Teslimat ekranından dönen kurye, az önce yazdığı sonucu listede GÖRMELİ. `useFocusEffect` ilk
-  girişte de koşar, yani tek yükleme yolu var; sonraki dönüşlerde iskelet gösterilmez (liste
-  yerinde kalır, sessizce tazelenir) — yoksa her geri dönüş ekranı boşaltırdı.
+  Günün seferi: "başladı" hâli yerel bayrak değil sunucudaki sefer kaydıdır (`/courier/day` → `run`), bu yüzden uygulama kapanıp açılsa da aynı cevap gelir; sefer yoksa ya da kapandıysa gövde rota seçimi gösterir.
+  Cepteki para yalnız kapanış taslağından okunur, çünkü liste tahsil edileni değil kalan borcu taşır; ikincil okuma düşerse liste ayakta kalır ve para sıfır değil "bilinmiyor" olur.
 */
 
 const t = courierCopy;
@@ -116,30 +55,20 @@ interface UseCourierDayResult {
    */
   run: CourierRunDetail | null;
   /**
-   * **ARAÇTAKİ SEFERLER** (31.08) — kurulmuş ve kapanmamış olanların hepsi, gün sırasıyla.
-   * `departedAt: null` olanı araçta bekliyor: kutuları okutulabilir ama durakları açılmamış.
+   * Araçtaki seferler: kurulmuş ve kapanmamış olanların hepsi, gün sırasıyla; `departedAt: null` olan araçta bekler, kutuları okutulabilir ama durakları açılmamıştır.
    */
   runs: CourierRunDetail[];
   /** Seçilebilir + başkasında olan rotalar (araca sefer eklerken okunur). */
   routes: CourierRoute[];
   /** Kuryenin deposunun araçları — biri seçilir, kurulan seferlere yazılır. */
   vehicles: CourierVehicle[];
-  /**
-   * Araca ALINACAK olarak işaretlenen rotalar (31.08 · v3:16 çoklu seçim). Tek aday varsa
-   * kendiliğinden işaretlidir — "tek adayda soru sorulmaz".
-   */
+  /** Araca alınacak olarak işaretlenen rotalar; tek aday varsa kendiliğinden işaretlidir, çünkü tek adayda soru sorulmaz. */
   selectedZoneIds: string[];
   toggleRoute: (zoneId: string) => void;
   selectedVehicleId: string | null;
   selectVehicle: (vehicleId: string | null) => void;
-  /** Seçilen rotalar için seferleri KURAR (yola çıkarmaz) ve yükleme ekranına hazırlar. */
   /**
-   * **Sefer(ler)i KUR** — sonuç DÖNER (01.09 · kullanıcı bulgusu).
-   *
-   * Eskiden `void`di ve ekran kurulduktan sonra yerinde kalıyordu: *"rotanın sorumluluğunu alıyor
-   * ama hâlâ rota sayfasında kalıyor, ne olduğunu anlayamıyor bile."* Yönlendirmeyi kanca YAPMAZ
-   * (router'ı bilmez, `useDayClose`un aynı kuralı) — sonucu söyler, nereye gidileceğine ekran
-   * karar verir.
+   * Seçilen rotalar için seferleri kurar (yola çıkarmaz) ve sonucu döner; yönlendirmeye ekran karar verir, çünkü kanca router'ı bilmez.
    */
   openRuns: () => Promise<'ok' | 'partial' | 'failed'>;
   /**
@@ -156,10 +85,7 @@ interface UseCourierDayResult {
    */
   discardRun: (runId: string, routeLabel: string) => void;
   stops: CourierStopContract[];
-  /**
-   * **ASKIDA KALAN DURAKLAR** (03.09 · denetim bulgusu 7) — teslim günü geçmiş, sonuçlanmamış;
-   * kutusu araçta olabilir. Kurye buradan iş yapmaz, yalnız görür: yeni günü sevkiyat seçer (16.08).
-   */
+  /** Askıda kalan duraklar: teslim günü geçmiş, sonuçlanmamış, kutusu araçta olabilir; kurye yalnız görür, yeni günü sevkiyat seçer. */
   stranded: CourierDayResponse['stranded'];
   /** Bugün tahsil edilmiş toplam (cent). `null` = ÖLÇÜLEMEDİ, sıfır değil. */
   collectedCents: number | null;
@@ -168,31 +94,20 @@ interface UseCourierDayResult {
   /** Başlatma isteği havada — düğme ikinci kez basılmaz. */
   starting: boolean;
   /**
-   * **Kısmi başarıdan sonra "kalanları yola çıkar" ikinci basışı açık mı** (01.09).
-   *
-   * Başlatmanın METNİ artık toast'ta (kurulum künyesi); ekranda kalan tek şey EYLEM. İki hâlde
-   * `true` olur: atlanmış ya da bayatlamış durak kaldığında, ve yola çıkarma isteği düştüğünde —
-   * ikisinde de çare aynı düğmeye ikinci kez basmaktır (uç catch-up claim yapıyor).
+   * Kısmi başarıdan sonra "kalanları yola çıkar" ikinci basışı açık mı: atlanmış ya da bayatlamış durak kaldığında ve yola çıkarma isteği düştüğünde `true` olur.
+   * İkisinde de çare aynı düğmeye yeniden basmaktır; metin toast'tadır.
    */
   canRetryStart: boolean;
   start: () => void;
   reload: () => void;
-  /**
-   * YÜKLEME SAYACI (23.8, karar §1.11) — duraklardaki kutu damgalarından TÜRER; `null` = günde
-   * kutulu sipariş yok, sayaç hiç çizilmez. Okutma `loadCourierBox` ile: rotaya ait olmayan kutu
-   * reddedilir, son kutu siparişi yola çıkarır.
-   */
+  /** Yükleme sayacı duraklardaki kutu damgalarından türer; `null` = kutulu sipariş yok, sayaç çizilmez. */
   boxCounter: { loaded: number; total: number } | null;
   boxScanOpen: boolean;
   setBoxScanOpen: (open: boolean) => void;
   handleLoadScan: (code: string) => void;
   /**
-   * **YANLIŞ KUTU** (kullanıcı kararı 01.09) — araçtaki hiçbir sefere ait olmayan bir kod
-   * okutuldu. `null` = böyle bir okutma yok.
-   *
-   * Bu hâl TOAST DEĞİL ÇEKMECE: toast birkaç saniyede kayboluyor ve rampada eli koli dolu kuryenin
-   * kaçırdığı bir uyarı, yanlış kutunun araca binmesi demek. Kullanıcının cümlesi: *"seferlerde
-   * olmayan bir kutu taratılırsa çekmece açılmalı, kırmızı ağırlıklı bir çekmece."*
+   * Yanlış kutu: araçtaki hiçbir sefere ait olmayan kod okutuldu (`null` = yok).
+   * Toast değil çekmece, çünkü rampada eli dolu kuryenin kaçırdığı uyarı yanlış kutunun araca binmesi demektir.
    */
   wrongBox: { orderRef: string | null; routeName: string | null; runRef: string | null } | null;
   dismissWrongBox: () => void;
@@ -209,23 +124,8 @@ export function isRouteFree(route: CourierRoute): boolean {
 }
 
 /**
- * **Rotanın BUGÜN İŞİ VAR MI** (kullanıcı kararı 01.09).
- *
- * Kullanıcı ekranda dört tane `0 durak · 0 kutu · 0 tahsilat` rota gördü ve sordu: *"seferde
- * herhangi bir durak, kutu veya tahsilat objesi yoksa inaktif olmalı değil mi?"* Haklı: iş olmayan
- * bir seferi kurmak, kapatılması gereken boş bir kayıt açmaktan başka bir şey yapmıyor — kurye
- * yükleme ekranına gider, okutacak kutu bulamaz, seferi başlatır ve akşam boş bir mutabakat kapatır.
- *
- * ── ÜÇ SAYIYA DA BAKILIYOR, YALNIZ DURAĞA DEĞİL ─────────────────────────────
- * Üçü ayrı şeyi ölçüyor ve biri sıfırken öteki dolu olabilir: durak siparişin kendisi, kutu
- * hazırlanmış yükü, tahsilat kapıda alınacak parayı. Yalnız durağa bakan bir kural, kutusu
- * hazırlanmış ama durağı henüz damgalanmamış bir rotayı yanlışlıkla kapatırdı.
- *
- * ── BEDELİ KAYDA GEÇİYOR ────────────────────────────────────────────────────
- * Bugünden sonra "yalnız serbest ürünle yola çıkmak" mümkün değil: araçtan satış SÜRÜLEN bir
- * sefere bağlı (`courier-day-screen` satış kapısı) ve sefer de ancak işi olan bir rotadan
- * kurulabiliyor. Kullanıcı bedeli bilerek seçti; iş olmayan güne çıkmak istenirse kural buradan,
- * tek satırla geri alınır.
+ * Rotanın bugün işi var mı: durak, kutu ve tahsilatın üçüne de bakılır, çünkü biri sıfırken öteki dolu olabilir; işi olmayan sefer yalnız boş bir kapanış doğurur.
+ * Bedeli: yalnız serbest ürünle yola çıkılamaz (araçtan satış sürülen sefere bağlıdır); gerekirse kural buradan tek satırla geri alınır.
  */
 export function routeHasWork(route: CourierRoute): boolean {
   return route.stopCount > 0 || route.boxCount > 0 || route.collectionCount > 0;
@@ -237,11 +137,7 @@ export function isRoutePickable(route: CourierRoute): boolean {
 }
 
 /**
- * **Dört listenin cümlesi** — "seferi başlat"ın kısmi başarısı okunur hâle gelir (18.08).
- *
- * ORTAK, çünkü iki kapı da aynı şekli döndürüyor: `startCourierDay` ve `departCourierRun`. İkisi
- * ayrı kurulsaydı biri bir gün `awaitingBoxes`ı yazmayı unuturdu ve kurye kutuların beklediğini
- * ancak teslim yazmayı deneyip başarısız olunca öğrenirdi.
+ * Dört listenin cümlesi: "seferi başlat"ın kısmi başarısı okunur hâle gelir; ortaktır, çünkü `startCourierDay` ve `departCourierRun` aynı şekli döndürür.
  */
 function noticeOfStart(data: {
   run: CourierRunDetail;
@@ -284,25 +180,15 @@ function noticeOfStart(data: {
 export function useCourierDay(): UseCourierDayResult {
   const [status, setStatus] = useState<CourierDayStatus>('loading');
   const [date, setDate] = useState<string | null>(null);
-  /*
-    Günün seferi künyeden GENİŞ: çıkış deposunun adını da taşıyor (30.08 · uyuşmazlık #12).
-    Başlatma cevabı da aynı şekli döndürüyor, yani `setRun(openedRun)` tip olarak da geçerli —
-    ikisi ayrışsaydı sefer başlar başlamaz depo adı boş kalırdı.
-  */
+  /* Günün seferi künyeden geniştir (çıkış deposunun adını da taşır) ve başlatma cevabı aynı şekli döndürür; ayrışsalardı sefer başlar başlamaz depo adı boş kalırdı. */
   const [run, setRun] = useState<CourierRunDetail | null>(null);
   const [runs, setRuns] = useState<CourierRunDetail[]>([]);
   const [routes, setRoutes] = useState<CourierRoute[]>([]);
   const [vehicles, setVehicles] = useState<CourierVehicle[]>([]);
   const [pickedZoneIds, setPickedZoneIds] = useState<string[]>([]);
   /*
-    SEÇİME DOKUNULDU MU (kullanıcı bulgusu 01.09: *"üç Eylül'dekini bana zorla seçtirtiyor,
-    bırakamıyorum"*).
-
-    "Tek adayda kendiliğinden işaretle" kuralı boş listeyi İKİ ayrı şey sayıyordu: "henüz
-    seçmedim" ve "işaretini KALDIRDIM". Kurye tek adayın işaretini kaldırdığında liste boşalıyor,
-    kural yeniden devreye giriyor ve aynı rotayı geri işaretliyordu — ekranda dokunuşun hiçbir
-    etkisi görünmüyordu. Bayrak ikisini ayırır: dokunulduktan sonra seçim ne ise odur, boş da
-    olabilir.
+    Seçime dokunuldu mu: boş liste "henüz seçmedim" ile "işaretini kaldırdım"ı ayırmalı, yoksa tek adayın işareti kaldırılınca kural onu geri işaretler.
+    Dokunulduktan sonra seçim ne ise odur, boş da olabilir.
   */
   const [pickTouched, setPickTouched] = useState(false);
   const [wrongBox, setWrongBox] = useState<UseCourierDayResult['wrongBox']>(null);
@@ -312,18 +198,8 @@ export function useCourierDay(): UseCourierDayResult {
   const [collectedCents, setCollectedCents] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
   /*
-    SONUÇ EKRANDA DEĞİL TOAST'TA (kullanıcı kararı 01.09).
-
-    Burada `useNotice` ile bir `{tone, text}` durumu tutuluyordu ve üç ekran onu kendi köşesinde
-    çiziyordu — biri yapışkan çubuğun içinde, biri listenin altında, biri kartın yanında. Aynı
-    cümle üç farklı yerde, üç farklı biçimde görünüyordu ve hiçbiri kaybolmuyordu: bir sonraki
-    eyleme kadar ekranda asılı kalıyordu. Kullanıcının kuralı tek satır: **sonuç toast'tır.**
-
-    Titreşim KAYBOLMADI, yalnız yer değiştirdi: `useNotice`ın yaptığı işi toast fiilleri yapıyor
-    (`toast-store` künyesi) — ve `warn` kanalı tam bu geçiş için açıldı.
-
-    Geriye kalan tek durum bir MESAJ değil bir EYLEM: kısmi başarıdan sonra "kalanları yola çıkar"
-    ikinci basışı. O bir düğmedir, toast onu taşıyamaz — bu yüzden ayrı bir bayrak olarak yaşıyor.
+    Sonuç ekranda değil toast'ta: aynı cümle üç ekranda üç biçimde asılı kalıyordu; titreşimi toast fiilleri taşır.
+    Geriye kalan tek durum bir mesaj değil eylemdir ("kalanları yola çıkar" ikinci basışı), bu yüzden ayrı bayrak olarak yaşar.
   */
   const [canRetryStart, setCanRetryStart] = useState(false);
   const setStartNotice = useCallback((notice: StartNotice | null) => {
@@ -356,20 +232,7 @@ export function useCourierDay(): UseCourierDayResult {
     setStops(day.stops);
     setStranded(day.stranded);
 
-    /*
-      ── ROTALAR VE ARAÇLAR HER HÂLDE OKUNUR (arıza · cihazda ölçüldü 31.08) ────────────────────
-      Buradaki dallanma "sürülen sefer varsa rota listesi gerekmez" varsayımına dayanıyordu ve o
-      varsayım 31.08'de ÇÜRÜDÜ: araç bir ara depo oldu, kurye sefer sürerken araca ikinci bir
-      sefer ekleyebiliyor ve seçim ekranına "Araca sefer ekle" ile giriliyor. Dallanma kaldığı
-      için o ekran sürülen seferde HER ZAMAN boş açılıyordu — cihazda görüldü: "Deponda
-      planlanmış sefer yok" ve "Deponda kayıtlı araç yok" yazıyordu, oysa depoda beş rota ve bir
-      araç kayıtlıydı. Yani ekran veriyi bulamadığı için değil, HİÇ SORMADIĞI için boştu.
-
-      Kullanıcının şikâyeti tam olarak buydu: *"bir sefer seçtikten sonra sürekli o sefer
-      içerisinde kalmamalıyım."* Sefere girmek, seçimin kapısını kapatıyordu.
-
-      Kapanış taslağı yine yalnız sürülen seferde çekiliyor — onun konusu gerçekten sefer.
-    */
+    /* Rotalar ve araçlar her hâlde okunur, çünkü kurye sefer sürerken de araca sefer ekleyebilir; yalnız kapanış taslağı sürülen seferde çekilir. */
     const [routeResult, vehicleResult, draftResult] = await Promise.all([
       fetchCourierRoutes(day.date),
       fetchCourierVehicles(),
@@ -407,16 +270,8 @@ export function useCourierDay(): UseCourierDayResult {
   }, [load]);
 
   /**
-   * **ÇOKLU SEÇİM** (31.08 · v3:16) — kurye araca birden çok sefer alabiliyor: bugünün, yarının,
-   * sonraki günün. Seçim bayatlarsa (o rota bu arada başkasınca açıldıysa) o kimlik sessizce
-   * düşer: ekranda pasif görünen bir rotayla kurma isteği gönderilmez.
-   *
-   * Elle hiç seçilmediyse ve TEK aday varsa o kendiliğinden işaretlidir — "tek adayda soru
-   * sorulmaz" (dispatch'in aynı ilkesi).
-   *
-   * ADAY = boşta VE İŞİ OLAN rota (01.09): işi olmayan rota ekranda pasif çizildiği için buraya da
-   * giremez — yoksa günün tek "boş" rotası kendiliğinden işaretlenir ve kurye dokunmadığı bir
-   * seferi kurardı.
+   * Çoklu seçim: kurye araca bugünün ve sonraki günlerin seferlerini alabilir; bayatlayan seçim sessizce düşer ki pasif rotayla istek gitmesin.
+   * Aday boşta ve işi olan rotadır; elle seçim yoksa ve tek aday varsa o kendiliğinden işaretlidir.
    */
   const free = routes.filter(isRoutePickable);
   const freeIds = new Set(free.map((route) => route.zoneId));
@@ -439,22 +294,8 @@ export function useCourierDay(): UseCourierDayResult {
   );
 
   /**
-   * **SEFERLERİ KUR** — seçilen her rota için ayrı bir sefer doğar (`depart:false`). Sefer başına
-   * ayrı istek gitmesi bilinçli: seferler birbirine BAĞLI DEĞİL (kullanıcı kararı 31.08) ve biri
-   * açılamazsa ötekiler açılmalı. Toplu bir istek "hepsi ya da hiçbiri" vaat ederdi; oysa burada
-   * yarım başarı meşru ve görünür olmalı.
-   *
-   * ── GÜN ROTANIN KENDİSİNDEN GELİR (kullanıcı bulgusu 01.09, ölçüldü) ───────
-   * İstek GÜNÜN tarihini taşıyordu (`/courier/day` cevabının `date`i) ve seçim ekranı 31.08'den
-   * beri ÜÇ GÜN listeliyor. Kurye 3 Eylül'ün rotasını seçiyor, sefer 1 Eylül'e açılıyordu; uç da
-   * siparişleri seferin gününe göre damgaladığı için (`claimOrders` `deliveryDate`) o gün hiçbir
-   * sipariş bulunamıyordu. Belirtisi ekranda şuydu: kartta "1 durak · 2 kutu · 1 tahsilat" yazan
-   * rotadan kurulan sefer **boş** doğuyordu — *"kutu ve sipariş yok"* (cihazda ölçüldü: sefer
-   * SF-26-WWYH39 açıldı, `delivery_date` bugündü, 3 Eylül'ün siparişi damgasız kaldı).
-   *
-   * Artık her istek KENDİ rotasının gününü taşıyor. Rota listede bulunamazsa gün hiç
-   * gönderilmiyor: sunucunun varsayılanı bugündür ve uydurma bir tarih göndermektense sunucunun
-   * kendi kuralına düşmek doğrudur.
+   * Seferleri kur: her rota için ayrı sefer ve ayrı istek, çünkü seferler birbirine bağlı değildir ve yarım başarı meşru ve görünür olmalı.
+   * Her istek kendi rotasının gününü taşır (rota bulunamazsa gün gitmez, sunucu bugüne düşer); günün tarihi gitseydi sonraki günün rotası boş sefer doğururdu.
    */
   const openRuns = useCallback(async (): Promise<'ok' | 'partial' | 'failed'> => {
     if (starting || selectedZoneIds.length === 0) return 'failed';
@@ -504,9 +345,7 @@ export function useCourierDay(): UseCourierDayResult {
       const result = await departCourierRun(runId);
       setStarting(false);
 
-      /* "Başka sefer sürülüyor" bir ARIZA DEĞİL, kuralın kendisi (31.08): araç birden çok
-         seferi taşır ama kurye birini sürer. Cümle hangisini kapatacağını söylüyor ve `canRetry`
-         KAPALI — tekrar basmak hiçbir şeyi değiştirmez, yapılacak iş başka bir ekranda. */
+      /* "Başka sefer sürülüyor" arıza değil kuralın kendisidir; cümle hangisini kapatacağını söyler ve `canRetry` kapalıdır, çünkü tekrar basmak bir şey değiştirmez. */
       if (result.error === null && result.data.status === 'another_running') {
         setStartNotice({
           tone: 'error',
@@ -536,9 +375,8 @@ export function useCourierDay(): UseCourierDayResult {
   );
 
   /**
-   * **SEFERİ ARAÇTAN ÇIKAR** (31.08) — `departRun`ın tersi ve onun aksine GERİ ALINABİLİR bir
-   * anın kapanışı: sefer hiç başlamadı, müşteriye haber gitmedi. Onayı ekranın işi (çekmece);
-   * kanca yalnız isteği ve cevabın üç dalını taşıyor.
+   * Seferi araçtan çıkar: `departRun`ın tersi; sefer hiç başlamadığı ve müşteriye haber gitmediği için geri alınabilir.
+   * Onay ekranın işidir.
    */
   const discardRun = useCallback(
     (runId: string, routeLabel: string) => {
@@ -584,10 +422,7 @@ export function useCourierDay(): UseCourierDayResult {
   const selectedZoneId = selectedZoneIds[0] ?? null;
 
   /**
-   * Başlatma isteğinin rotası. SEFER AÇIKKEN seferin kendi rotası — çünkü o hâlde tek başlatma
-   * sebebi "kalanları yola çıkar"dır ve o iş aynı rotada yapılır (seçim listesi de okunmuyor).
-   * Sefer yoksa ya da KAPANDIYSA seçim gövdesinde seçilen rota: kapanan seferin rotası bir daha
-   * açılamaz (K3), yeni sefer başka bir rotaya çıkar. İkisi de yoksa gönderilecek bir istek yok.
+   * Başlatma isteğinin rotası: sefer açıkken seferin kendi rotası (tek sebep "kalanları yola çıkar"), yoksa seçilen rota; kapanan seferin rotası yeniden açılamaz.
    */
   const startZoneId = run !== null && !run.closed ? run.zoneId : selectedZoneId;
 
@@ -597,12 +432,7 @@ export function useCourierDay(): UseCourierDayResult {
     setStartNotice(null);
 
     void (async () => {
-      /* GÜN SEFERİN KENDİ GÜNÜDÜR (03.09 · denetim bulgusu 2). Sürülen sefer varken buraya gönderilen
-         gün ekranın "bugün"üydü; sefer kendi gününden başka bir günde sürülüyorsa (uzak rotaya bir
-         akşam önce çıkmak, kapatmadan gece geçmesi) uç aynı rotaya BUGÜN için ikinci bir sefer
-         satırı açıyordu — `depart` `another_running` diyor, satır geri alınmıyordu: araçta hayalet
-         sefer. Sefer açıkken gün seferin gününden, yoksa ekranın gününden gelir; ikisi de yoksa alan
-         hiç doğmaz ve kapı bugüne düşer. İkinci basış ZARARSIZDIR: sefer varsa catch-up claim. */
+      /* Gün seferin kendi günüdür: ekranın bugünü gitseydi başka günde sürülen sefer için aynı rotaya ikinci bir sefer satırı açılırdı; sefer yoksa ekranın günü kullanılır. */
       const gun = run !== null && !run.closed ? run.deliveryDate : date;
       const result = await startCourierDay({ zoneId: startZoneId, ...(gun === null ? {} : { date: gun }) });
       setStarting(false);
@@ -640,12 +470,8 @@ export function useCourierDay(): UseCourierDayResult {
       }
 
       /*
-        ARAÇ RETLERİ KENDİ CÜMLESİYLE (21.249 · 04.09) — aşağıdaki dal ikisini de "bugün koşan
-        rota yok" diye gösterecekti ve o bir YALAN: rota duruyor, engel araçta. Kurye rota
-        listesine gönderilse orada değiştirebileceği hiçbir şey yok.
-
-        Künyesiz hâl AYRI cümle: sefer numarası yarış dalında okunamayabiliyor (sözleşme künyesi)
-        ve boş bir parantez, kuryeye "hangi sefer" sorusunu cevaplamadan sorar.
+        Araç retleri kendi cümlesiyle söylenir: engel rotada değil araçtadır ve kurye rota listesinde değiştirebileceği bir şey bulamaz.
+        Künyesiz hâl ayrı cümledir, çünkü sefer numarası yarış dalında okunamayabilir.
       */
       if (result.data.status === 'vehicle_taken' || result.data.status === 'vehicle_mismatch') {
         const ref = result.data.referenceNo;
@@ -688,12 +514,7 @@ export function useCourierDay(): UseCourierDayResult {
     })();
   }, [date, load, run, setStartNotice, startZoneId, starting]);
 
-  /*
-    YÜKLEME OKUTMASI (23.8). Sayaç duraklardaki damgalardan türer — ayrı tablo yok (karar §1.11).
-    Okutmanın sonucu bir StartNotice olarak yazılır (aynı bildirim alanı: iki iş de "araç yükleme"
-    aşamasının işi); ok/already dallarından sonra liste tazelenir ki sayaç ve durak durumu sunucu
-    gerçeğini göstersin.
-  */
+  /* Yükleme okutması: sayaç duraklardaki damgalardan türer; sonuç aynı bildirim alanına yazılır ve liste tazelenir ki sayaç sunucunun gerçeğini göstersin. */
   const allBoxes = stops.flatMap((stop) => stop.boxes);
   const boxCounter =
     allBoxes.length === 0
@@ -714,18 +535,8 @@ export function useCourierDay(): UseCourierDayResult {
 
         const data = result.data;
         /*
-          ── SONUÇ ROTAYI SÖYLER (kullanıcı kararı 01.09) ─────────────────────
-          Araçta birden çok sefer durabiliyor (v3:15) ve okutulan kutu hepsinin arasından birine
-          yazılıyor. Cümle yalnız "Kutu 1 yüklendi — LA-26-…" deseydi kurye HANGİ sefere yazdığını
-          bilemezdi; rampada iki yığın arasında duran biri için asıl soru odur.
-
-          **Sefer künyesi değil ROTA ADI** (kullanıcının düzeltmesi): `SF-26-CKKVXX` bir kayıt
-          numarası, "Kuzey Hattı — Frankfurt" ise kuryenin kafasındaki şey.
-
-          Ad SUNUCUDAN gelmiyor, elimizdeki duraktan çözülüyor: `/courier/day` her durakta
-          `runLabel` taşıyor ve ekran grupları da onunla kuruluyor — yani yeni bir alan eklemek,
-          aynı adı iki kaynaktan okumak olurdu (CLAUDE §1). Durak bulunamazsa ad YAZILMAZ: cümle
-          rotasız kalır ama uydurma bir ad taşımaz.
+          Sonuç rotayı söyler, çünkü araçta birden çok sefer durur ve rampadaki kurye kutunun hangisine yazıldığını bilmeli; sefer numarası değil rota adı, çünkü kurye onu bilir.
+          Ad durağın `runLabel`ından çözülür; durak bulunamazsa ad yazılmaz, uydurulmaz.
         */
         const routeOf = (orderId: string): string | null =>
           stops.find((stop) => stop.orderId === orderId)?.runLabel ?? null;
@@ -737,12 +548,10 @@ export function useCourierDay(): UseCourierDayResult {
           const route = routeOf(data.orderId);
           setStartNotice({
             tone: 'ok',
-            /* "YOLA ÇIKTI" DEĞİL "TAMAMI ARAÇTA" (31.08): yükleme siparişi yola çıkarmıyor artık;
-               o iş sefer başlatmanın. Eski metin kuryeye olmayan bir şeyi haber veriyordu. */
+            /* "Tamamı araçta", "yola çıktı" değil: yükleme siparişi yola çıkarmaz, o iş sefer başlatmanındır. */
             text: withRoute(
               route,
-              /* DURAK AÇILDIYSA cümle onu söyler (03.09): sefer yoldayken okutulan son kutu durağı
-                 yola çıkardı ve müşteriye haber gitti — "tamamı araçta" bunu anlatmazdı. */
+              /* Durak açıldıysa cümle onu söyler: sefer yoldayken okutulan son kutu durağı açar ve müşteriye haber gider. */
               data.stopOpened
                 ? fillCopy(t.day.boxes.loadedOpened, { route: route ?? '', n: String(data.boxNo), ref, m: String(data.boxCount) })
                 : data.allBoxesLoaded
@@ -814,8 +623,7 @@ export function useCourierDay(): UseCourierDayResult {
     stops,
     stranded,
     collectedCents,
-    /* Duraklara yazılabilir mi — SÜRÜLEN sefer varsa evet. Kurulmuş ama başlamamış sefer araçta
-       bekliyordur ve durakları açılmamıştır (31.08). */
+    /* Duraklara yazılabilir mi: sürülen sefer varsa evet; kurulmuş ama başlamamış seferin durakları açılmamıştır. */
     started: run !== null && !run.closed,
     starting,
     canRetryStart,

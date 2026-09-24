@@ -7,14 +7,8 @@ import { MoneyTrackingScreen } from './money-screen';
 import { moneyCopy } from './copy';
 
 /*
-  PARA EKRANLARI TESTİ (21.12 Dilim A · M1/M2) — hook taklit edilmez, ağ FETCH seviyesinde sahte,
-  cevaplar sözleşme şeklinde.
-
-  Çivilenen kararlar:
-  · Bekleyen satır KALAN tutarı ve yöntemi söyler; referanssız satır "referanssız" der (uydurulmaz).
-  · Hesap satırları defterdeki ADIYLA çizilir — iki sabit satıra indirgenmez.
-  · M2'de kapanan sefer yoksa fark 0 DEĞİL "soru sorulmadı"dır (`noRun` cümlesi).
-  · Fark varsa İŞARETLİ yazılır — eksi "eksik" demektir, mutlak değere indirgenmez.
+  Para ekranları testi: hook taklit edilmez, ağ fetch düzeyinde sahtedir ve cevaplar sözleşme şeklindedir.
+  Çivilenen kurallar: bekleyen satır kalan tutarı ve yöntemi söyler, hesap satırları defterdeki adıyla çizilir, kapanan sefer yoksa fark 0 değil "soru sorulmadı"dır ve fark işaretli yazılır.
 */
 
 jest.mock('expo-router', () => {
@@ -111,11 +105,7 @@ function dayEndData(overrides: Partial<MoneyDayEnd> = {}): MoneyDayEnd {
   };
 }
 
-/**
- * Oturum künyesi. Kapsam varsayılan olarak BOŞ ve bu bilinçli: muhasebecinin günlük hâli iki
- * tesisli olabilir (`seed/people.ts` → `muhasebe`) ve o hâlde üstbaşlık tesis adı YAZMAZ. Adı
- * ölçen test kendi tesisini verir.
- */
+/** Oturum künyesi; kapsam varsayılan olarak boştur, çünkü muhasebecinin günlük hâli iki tesisli olabilir ve o hâlde tesis adı yazılmaz. */
 async function renderScreen(node: React.ReactElement, loadingTestId: string, warehouse: StaffWarehouse | null = null) {
   await render(
     <OperationsSessionProvider
@@ -142,14 +132,7 @@ beforeEach(() => {
   fetchMock.mockReset();
 });
 
-/*
-  ÜSTBAŞLIĞIN KÜNYESİ (v3:23 · 30.08) — "Ayşe Demir · 28 Ağustos · Strasbourg Merkez".
-
-  Satır personelin BAĞLAMINI söyler, sayıların süzgecini değil: para okumaları depo boyutu taşımaz
-  (`money.ts`: *defter işletmenin*). Bu yüzden ikinci iddia birincisinden önemli — kapsamı tek bir
-  tesisi çözmeyen muhasebeciye (seed'in iki depolu `muhasebe` hâli) tesislerden birinin adını
-  yazmak, ekranın kendi künyesinde yalan söylemesi olurdu (CLAUDE §1).
-*/
+/* Üstbaşlığın künyesi personelin bağlamını söyler, sayıların süzgecini değil; kapsamı tek tesis çözmeyen muhasebeciye tesislerden birinin adını yazmak ekranın yalan söylemesi olurdu. */
 describe('tahsilat izleme · üstbaşlık künyesi', () => {
   const STR: StaffWarehouse = { id: 'w-str', code: 'STR', name: 'Strasbourg Merkez', kind: 'facility' };
 
@@ -207,9 +190,7 @@ describe('M1 · tahsilat izleme', () => {
     expect(screen.getByTestId('money-today-empty')).toBeOnTheScreen();
   });
 
-  /* PARA KİMDE (v3:23, kullanıcı bulgusu 30.08) — kart SEFER BAŞINA: kurye adı + sefer künyesi +
-     o seferin toplamı. Önce tek toplam taşınıyordu ve muhasebecinin asıl sorusu ("kimde")
-     cevapsız kalıyordu. */
+  /* Para kimde: kart sefer başınadır (kurye adı, sefer künyesi, o seferin toplamı), çünkü muhasebecinin asıl sorusu "kimde"dir. */
   it('kuryenin üstündeki para kurye ve sefer künyesiyle, sefer başına yazılır', async () => {
     fetchMock.mockResolvedValue(ok(overviewData()));
 
@@ -269,8 +250,7 @@ describe('M2 · gün sonu', () => {
        ekranda bir düğme arar. */
     expect(screen.getByText(/Sefer kapanışında 10,00 € eksik/u)).toBeOnTheScreen();
     expect(screen.getByText(/Çözüm masaüstünde/u)).toBeOnTheScreen();
-    /* HANGİ SEFER, KİM, NE ZAMAN (v3:24, kullanıcı bulgusu 30.08) — bir eksiğin peşine düşen
-       muhasebeci neyi arayacağını bilmeli; toplam tek başına "bir yerde 10,00 € eksik" diyordu. */
+    /* Hangi sefer, kim, ne zaman: bir eksiğin peşine düşen muhasebeci neyi arayacağını bilmeli. */
     expect(screen.getByTestId('money-day-end-discrepancy-runs')).toHaveTextContent(
       /SF-26-TESTRUN · Marc Lemoine · \d{2}:\d{2}/u,
     );

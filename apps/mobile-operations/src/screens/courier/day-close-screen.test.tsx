@@ -2,11 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import { ToastHost } from '@lezzet/mobile-kit/src/components/ui/toast-host';
 import { resetToast } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 
-/*
-  SAYIM ARTIK TUŞ TAKIMIYLA YAZILIYOR (v3 · `00-ortak`, 30.08). Alan bir `TextInput` değil, tuş
-  takımını açan bir düğme; testler de kapıdaki gerçek yolu izliyor: alana dokun → rakamlara bas →
-  "Yaz". Doğrudan metin yazmak, artık var olmayan bir yolu ölçmek olurdu.
-*/
+/* Sayım tuş takımıyla yazılır, bu yüzden testler kapıdaki gerçek yolu izler: alana dokun, rakamlara bas, "Yaz". */
 async function typeAmount(method: 'cash' | 'card' | 'cheque', amount: string) {
   await fireEvent.press(screen.getByTestId(`courier-money-input-${method}`));
   for (const key of amount) {
@@ -20,19 +16,14 @@ import { closedDayRecord, courierRunBrief, courierStop, dayCloseDraft } from './
 import messages from './messages.json';
 
 /*
-  K7 EKRAN TESTİ — sayaçlar, işaretli fark, iki adımlı onay, kapanmış seferin salt-okunurluğu ve
-  `already_closed`ın bir HATA değil bir GERÇEK olarak gösterilmesi.
-
-  Hook taklit edilmez: gerçek hook + taklit `fetch` (K1 ve teslimat testleriyle aynı karar).
-
-  KAPANIŞIN ÖZNESİ SEFER (18.08): taslak seferin künyesini taşır, kapatma isteği `runId` ile gider.
+  Kapanış ekranı testi: sayaçlar, işaretli fark, iki adımlı onay, kapanmış seferin salt okunurluğu ve `already_closed`ın hata değil bilgi olarak gösterilmesi.
+  Hook taklit edilmez (gerçek hook ve taklit `fetch`); taslak seferin künyesini taşır, kapatma isteği `runId` ile gider.
 */
 
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: () => mockBack(), navigate: jest.fn(), push: jest.fn() }),
-  /* Kabuk kromu odakta kaydırma durumunu hizalıyor (21.290); taklit modülü BÜTÜNÜYLE değiştirdiği
-     için eksik bırakılan her dışa-vurum çağrı anında patlar. */
+  /* Kabuk kromu odakta kaydırma durumunu hizalar; taklit modülü bütünüyle değiştirdiği için eksik bırakılan her dışa vurum çağrı anında patlar. */
   useFocusEffect: () => undefined,
 }));
 
@@ -81,8 +72,7 @@ function mockDraft(draft: unknown, closeResult?: unknown) {
 }
 
 async function renderClose() {
-  /* TOAST HOST TESTTE DE ÇİZİLİR (01.09): kapanışın sonucu artık ekranda değil toast'ta ve
-     iddiaların okuduğu yer orası — sahte bir gözcü değil, gerçek kanal. */
+  /* Toast host testte de çizilir, çünkü kapanışın sonucu toast'tadır ve iddialar gerçek kanalı okur. */
   await render(
     <>
       <CourierDayCloseScreen />
@@ -105,7 +95,7 @@ beforeEach(() => {
 });
 
 describe('K7 · sefer kapanışı', () => {
-  /* İLK YÜK İSKELET, HALKA DEĞİL (N9 · 30.08) — ayıran iz ROL: halka `progressbar`dır. */
+  /* İlk yük iskelettir, halka değil; ayıran iz roldür (halka `progressbar`dır). */
   it('yüklenirken İSKELET gösterir, halka değil', async () => {
     fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
 
@@ -224,9 +214,7 @@ describe('K7 · sefer kapanışı', () => {
     expect(notice).toHaveTextContent(/nakit −2,00/);
     // Kapanışın çözdüğü takılı durak sessiz geçmez (K4).
     expect(notice).toHaveTextContent(/1 takılı durak çözüldü/);
-    /* KAPANAN SEFER GERİDE BIRAKILIR (01.09 · kullanıcı bulgusu): ekran kilitlenip yerinde
-       kalıyordu ve kurye kapattığı seferi karşısında görmeye devam ediyordu. Ekran artık kendini
-       kapatıyor; kilit hâlâ var ama onu görecek olan yalnız kapalı bir kaydı yeniden AÇAN kurye. */
+    /* Kapanan sefer geride bırakılır: ekran kendini kapatır; kilidi yalnız kapalı bir kaydı yeniden açan kurye görür. */
     expect(mockBack).toHaveBeenCalled();
   });
 

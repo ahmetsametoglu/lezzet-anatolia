@@ -21,51 +21,15 @@ import { lineAmountCents } from '@lezzet/domain-core';
 import { centsToAmountText, money, parseAmountToCents } from './courier-format';
 
 /*
-  TESLİMAT EKRANININ MOTORU (K3 · K4 · K5) — durak okuması, kanıt yüklemesi, kapılar ve iki yazma
-  yolu tek yerde. Ekran yalnız çiziyor.
-
-  ── DURAK GÜN LİSTESİNDEN OKUNUR, KİMLİKLE DOĞRUDAN DEĞİL ───────────────────
-  Sahiplik sorgunun kendisine gömülüdür (web'in `readDeliveryStop`'uyla aynı karar): durak önce
-  kuryenin KENDİ gününde aranır, listede yoksa ekran "bu durak bugünkü rotanızda yok" der. Yan
-  faydası rota sırası — "Durak 3/6" ikinci bir sayma olmadan buradan çıkar.
-
-  ── SIRA EKRANDA GÖRÜNÜR, İSTEK BÖLÜNMEZ ───────────────────────────────────
-  Kanıt → mal → teslim → para sırası KAPININ içindedir; ekran onu üç bölüm hâlinde GÖSTERİR ama
-  tek `POST …/deliver` gönderir. Kanıt YÜKLEMESİ ayrı bir adımdır ve bilerek daha erken çalışır
-  (imza onaylanınca): yükleme düşerse kurye bunu kanıt panelinde görür, teslim düğmesine bastıktan
-  sonra değil.
-
-  ── OLUMSUZ CEVAPLAR YUTULMAZ ───────────────────────────────────────────────
-  `proof_required` · `stale` (+ `currentStatus`) · `forbidden` · `not_found` ekrana ÇIKAR ve
-  `stale`/`deduped` açıkça "para/kayıt ikilenmedi" diye okunur — HTTP koduna indirgenen bir ret
-  taşıdığı bilgiyi kaybeder (uç künyesi).
-
-  ── KALEM SATIRLARI SÖZLEŞMEDEN OKUNUR, METİNDEN TAHMİN EDİLMEZ ─────────────
-  Liste `stop.items`ten çıkıyor ve satırın anahtarı `orderItemId`nin KENDİSİDİR — yani ekranda
-  işaretlenen satır, uca gönderilen satırla aynı satırdır. 21.10d'den önce burada içerik özeti
-  (`contentSummary`) ayrıştırılıyordu: kurye işaretleyebiliyor ama gönderemiyordu, çünkü kimlik
-  yoktu. Kısmi iade artık gerçekten yazılıyor ve `fulfilledQty` **HEDEF** değerdir (kalan adet),
-  fark değil — ekranda görülen sayı gönderilir (sözleşme künyesi).
-
-  ── TAHSİLAT KAPISININ ANAHTARI GÜN CEVABINDA ───────────────────────────────
-  `collection.accountId` zorunlu bir uuid ve değeri gün başına tekil: `/courier/day` onu
-  `doorAccountId` olarak taşıyor (ayardan; kullanılamaz hâlde `null`). `null` gelirse tahsilat
-  paneli TAM çalışır (tutar, ±, yöntem, kısmi rozeti, nakit uyarısı) ama TESLİM KAPISI kapanır ve
-  sebebi ekranda yazılır. "Teslim yazıp parayı yazmamak" bilerek seçilmedi: kapıda alınan 42 €
-  kayda geçmeden teslim kapanırsa sipariş borçlu görünür, müşteriye borç hatırlatması gider ve para
-  ancak ay sonu mutabakatında aranır. Kanıt kapısının kuralı da aynı — eksik girdide HİÇBİR yazım
-  yapılmaz.
+  Teslimat ekranının motoru: durak kuryenin kendi gün listesinden okunur (sahiplik sorgunun içindedir), kanıt → mal → teslim → para sırası kapıdadır ve ekran tek istek gönderir.
+  Tahsilat hesabı gün cevabından gelir; `null` ise panel çalışır ama teslim kapısı kapanır, çünkü parayı yazmadan kapanan teslim siparişi borçlu gösterir.
 */
 
 const t = courierCopy;
 
 /**
- * NAKİT YASAL SINIRI — **yalnız ekrandaki uyarı için** (DOMAIN §7: bilgi, engel değil). Gerçek
- * karar sunucudadır ve cevabın `cashLimitExceeded` alanıyla geri gelir; bu sabit onu ÖNCEDEN
- * göstermek içindir. Değer `cash_legal_limit_cents` ayarından gelmeli ama o ayar bu uçtan okunamıyor;
- * migration'ın fabrika değeri BİLİNÇLİ kopyalandı — web okuması da aynısını yapıyor ve gerekçesi
- * orada yazılı: *"ayrışırlarsa ekran yanlış yazı gösterir, yanlış iş yapmaz"* (izin kararı tek
- * yerde, kapıda). PARAMETRİK ve tek yerde: 1.000 €.
+ * Nakit yasal sınırı yalnız ekrandaki uyarı içindir; gerçek karar sunucudadır ve `cashLimitExceeded` ile döner.
+ * Ayar bu uçtan okunamadığı için fabrika değeri bilinçli kopyalandı: ayrışırsa ekran yanlış yazı gösterir, yanlış iş yapmaz.
  */
 const CASH_LIMIT_CENTS = 100_000;
 
@@ -134,12 +98,7 @@ interface UseDeliveryResult {
 
   gateOpen: boolean;
   /**
-   * Olumsuz sonuç (ulaşılamadı · kabul etmedi) yazılabilir mi — durak YOLA ÇIKMIŞ olmalı.
-   *
-   * Ölçüldü 31.08 (cihazda): kutuları binmemiş bir durakta "Ulaşılamadı" basılıyor, uç
-   * `same_status` diyor ("sipariş zaten bu durumda") çünkü `unreachable`ın hedefi `ready` ve
-   * sipariş zaten orada. Ekran doğru davranıyordu ama kuryeye YAPILAMAYACAK bir yol vaat
-   * ediyordu — kapıya hiç gitmediğin bir durağa "ulaşılamadı" yazılmaz.
+   * Olumsuz sonuç (ulaşılamadı, kabul etmedi) yazılabilir mi: durak yola çıkmış olmalı, çünkü kapıya hiç gidilmemiş durağa "ulaşılamadı" yazılmaz.
    */
   outcomeOpen: boolean;
   gateNote: string | null;
@@ -190,26 +149,13 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const [order, setOrder] = useState(0);
   const [total, setTotal] = useState(0);
   /**
-   * **Kapı kasası hesabı** — gün cevabından (`doorAccountId`). Durak başına değil gün başına, çünkü
-   * ayarın kendisi tekil. `null` = ayar boş ya da kullanılamaz → tahsilat kapısı kapalı ve sebebi
-   * ekranda (dosya künyesi). Uydurma bir uuid göndermek 400 alırdı; rastgele bir değer ise kapıda
-   * alınan parayı olmayan bir hesaba yazardı.
+   * Kapı kasası hesabı gün cevabından gelir; `null` = ayar boş, tahsilat kapısı kapalıdır ve sebebi ekranda yazılır.
+   * Uydurma bir kimlik kapıda alınan parayı olmayan bir hesaba yazardı.
    */
   const [doorAccountId, setDoorAccountId] = useState<string | null>(null);
 
 
-  /*
-    ── TESLİM VARSAYILAN, RED İSTİSNA (kullanıcı kararı 30.08) ────────────────────────────────
-    Eskiden iki durum vardı (`marks`: işaretsiz · teslim · red) ve teslim kapısı HER kalemin
-    işaretlenmesini şart koşuyordu (`allMarked`). Kutulu akış zorunlu olunca o şart anlamını
-    yitirdi: kutu mühürlenirken içeriği sabitlendi, kapıda okutuldu, müşteriye verildi — "mal
-    verildi mi" sorusu ikinci kez sorulmuş oluyordu. Kurye hiçbir şey reddedilmeyen normal bir
-    teslimde de kalem sayısı kadar gereksiz dokunuş yapıyordu, hem de elinde kutuyla.
-
-    Model artık TEK sayı: kalem başına REDDEDİLEN adet. Kayıt yoksa ya da 0 ise kalem teslim
-    edilmiştir; >0 ise o kadarı geri verilmiştir. İki durumlu işaret (`marks`) kalktı — "işaretsiz"
-    diye bir hâl yok, çünkü varsayılanın kendisi bir cevap.
-  */
+  /* Teslim varsayılandır, red istisna: kalem başına tek sayı reddedilen adettir, çünkü kutulu akışta içerik mühürde sabitlendi ve her kalemi ayrıca işaretlemek gereksiz dokunuştu. */
   const [refusedQty, setRefusedQtyState] = useState<Record<string, number>>({});
 
   /** Kapıda okutulan kutu KODLARI (23.8) — teslim isteğiyle gider, kanıt kaydına yazılır. */
@@ -224,9 +170,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const [noteError, setNoteError] = useState<string | null>(null);
 
   const [sending, setSending] = useState(false);
-  /* SONUÇ TOAST'TA (kullanıcı kararı 01.09) — cümle sayfanın altında, kapanış düğmesinin
-     üstünde bir şerit olarak duruyordu: kurye kutu okuturken ekranın altına bakmıyor ve reddin
-     sebebini çoğu zaman hiç görmüyordu. Titreşim `useNotice`tan toast fiillerine geçti. */
+  /* Sonuç toast'ta: sayfanın altındaki satıra kurye kutu okuturken bakmıyor ve reddin sebebini görmüyordu. */
   const setNotice = useCallback((notice: DeliveryNotice | null) => {
     if (notice === null) return;
     if (notice.tone === 'ok') toastSuccess(notice.text);
@@ -234,10 +178,8 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   }, []);
 
   /**
-   * BAŞARILI SONUÇ: mesaj toast'a gider, ekran kapanır (kullanıcı kararı 30.08).
-   *
-   * `notice` ekranın İÇİNDE duran bir şerittir ve olumsuz cevaplar için doğru yer — kurye orada
-   * kalıp düzeltecek. Olumlu cevapta kalınacak bir şey yok: iş bitti, sıradaki durak listede.
+   * Başarılı sonuç toast'a gider ve ekran kapanır: olumlu cevapta kalınacak bir şey yok, sıradaki durak listede.
+   * Olumsuz cevap ekranda kalır, çünkü kurye orada kalıp düzeltecek.
    */
   const setDoneToast = useCallback((next: DeliveryNotice) => {
     toastSuccess(next.text);
@@ -267,14 +209,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     }
 
     setStop(found);
-    /*
-      ── "DURAK 3/6" SEFERİN İÇİNDE SAYILIR (v3:20 "Durak 1/1" · kullanıcı bulgusu 31.08) ────────
-      Sayaç günün BÜTÜN duraklarından geliyordu ve araçta iki sefer varken "Durak 3/15" yazıyordu —
-      oysa gün ekranının özet kartı aynı anda "3/6 durak" diyor. İki ekran aynı durağı iki farklı
-      sırada gösterince kurye hangisinin kendi seferi olduğunu okuyamıyor.
-
-      Sefersiz durakta (runId eşleşmezse) küme yine günün tamamıdır: bölünecek bir sefer yok.
-    */
+    /* "Durak 3/6" seferin içinde sayılır ki gün ekranının özet kartıyla aynı sırayı göstersin; sefersiz durakta küme günün tamamıdır. */
     const ownRun = result.data.stops.filter((candidate) => candidate.runId === found.runId);
     const inRun = ownRun.findIndex((candidate) => candidate.orderId === orderId);
     setOrder(inRun >= 0 ? inRun + 1 : index + 1);
@@ -298,23 +233,12 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     kapı önünde tur atılmaz), son doğrulama sunucuda (`boxes_missing` — bayat listeye karşı).
   */
   const boxes = stop?.boxes ?? [];
-  /* KUTUSUZ DURAK DA KAPIYI AÇMAZ (kullanıcı kararı 30.08): mal kutusuyla hazırlanır, kutusuyla
-     araca biner, kutusuyla kapıdan çıkar. Kutusuz bir durak bugün bir VERİ HATASIDIR ve sunucu da
-     onu reddediyor (`boxes_missing`) — ekranın kapıyı açık göstermesi, kuryeyi reddedilecek bir
-     isteğe göndermek olurdu. Eskiden `boxes.length === 0` "kutu kapısı yok" diye okunuyordu. */
+  /* Kutusuz durak da kapıyı açmaz: mal kutusuyla hazırlanır ve kapıdan çıkar; sunucu kutusuz teslimi reddettiği için ekran kuryeyi reddedilecek isteğe göndermemeli. */
   const boxesSatisfied = boxes.length > 0 && boxes.every((box) => scannedBoxCodes.includes(box.code));
 
   /**
-   * **DURAK YOLA ÇIKTI MI** (kullanıcı bulgusu 30.08 · cihazda yakalandı).
-   *
-   * Kutuları rampada okutulmamış sipariş `ready` kalır — yani araçta değildir ve kapıda teslim
-   * EDİLEMEZ. Ekran bunu bilmiyordu: durağı açıyor, kutuyu "kapıda okutturuyor" ve teslim
-   * düğmesini etkin gösteriyordu; kurye basınca uç `stale` diyordu ve ekran o reddi olduğu gibi
-   * yazıyordu — *"bu durak başkası tarafından kapatılmış olabilir"*. Cümle teknik olarak doğru
-   * ama kapıdaki kuryeye YANLIŞ bir hikâye anlatıyor: durağı kimse kapatmadı, mal araçta değil.
-   *
-   * Cevap zaten sözleşmede duruyordu (`boxes[].loadedAt`): bir kutu bile binmemişse sipariş yola
-   * çıkmamıştır. Kapı burada kapanır ve sebebi kuryenin dilinde yazılır.
+   * Durak yola çıktı mı: kutusu binmemiş sipariş `ready` kalır, araçta değildir ve kapıda teslim edilemez.
+   * Kapı burada kapanır ve sebebi kuryenin dilinde yazılır; yoksa sunucunun `stale` reddi kuryeye "başkası kapatmış olabilir" gibi yanlış bir hikâye anlatır.
    */
   const loadedOnVan = boxes.length > 0 && boxes.every((box) => box.loadedAt !== null);
 
@@ -333,11 +257,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       }
       const next = [...scannedBoxCodes, trimmed];
       setScannedBoxCodes(next);
-      /* BAŞARILI OKUTMA BİLDİRİM YAZMAZ (kullanıcı bulgusu 30.08): kutu kartı aynı şeyi zaten üç
-         yerde söylüyor — sayaç ("1/1 OKUTULDU"), satırın ✓ işareti ve "tüm kutular verildi"
-         cümlesi. Dördüncü kez, hem de ekranın en dibinde CTA'nın üstünde bir yeşil şerit olarak
-         söylemek gürültüydü. Bildirim OLUMSUZ cevaplarda kalıyor (yanlış kutu · zaten okutulmuş):
-         onlar kartta görünmez ve söylenmezse kurye neden ilerlemediğini bilemez. */
+      /* Başarılı okutma bildirim yazmaz: kutu kartı sayaç, ✓ ve cümleyle zaten söylüyor; bildirim kartta görünmeyen olumsuz cevaplarda kalır. */
     },
     [boxes, scannedBoxCodes],
   );
@@ -351,29 +271,16 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const partialReturn = hasRefused && !allRefused;
 
   /**
-   * **KALEM DÜZELTMELERİ** — yalnız REDDEDİLEN satırlardan doğar ve `fulfilledQty` HEDEF adettir:
-   * sipariş edilen adetten kapıda geri kalan çıkarılır. İşaretsiz ya da teslim edilen satır
-   * gönderilmez, çünkü onlarda değişen bir şey yok ve düzeltilmeyen satır kapıda olduğu gibi kalır.
-   *
-   * `returnDisposition` BİLEREK boş: malın akıbeti (stoğa dönsün mü, imha mı) kapıda değil DEPO
-   * KABULÜNDE karara bağlanır (DOMAIN §8 — "akıbet kararı depocunundur"). Kurye ne gördüğünü söyler,
-   * ne olacağını söylemez.
+   * Kalem düzeltmeleri yalnız reddedilen satırlardan doğar ve `fulfilledQty` hedef adettir; değişmeyen satır gönderilmez.
+   * `returnDisposition` bilerek boştur: malın akıbeti depo kabulünde karara bağlanır, kurye ne gördüğünü söyler.
    */
   const adjustments: FulfillmentAdjustment[] = lines
     .filter((line) => refusedOf(line) > 0)
     .map((line) => ({ orderItemId: line.orderItemId, fulfilledQty: line.qty - refusedOf(line) }));
 
   /*
-    ── KAPIDA ALINACAK TUTAR, GERİ VERİLEN MAL DÜŞÜLMÜŞ (kullanıcı bulgusu 30.08) ────────────────
-    `dueAmountCents` siparişin TAM tutarıdır ve kapıda bir kalem geri verilince değişmez — sunucu
-    düzeltmeyi teslim ANINDA yapıyor. Ekran onu olduğu gibi gösterirken kurye "1/2 geri verildi"
-    yazıp altında hâlâ tam tutarı görüyordu: kapıda ne tahsil edeceğini bilmiyordu ve kapıda geç
-    kalan bir doğruluk, doğruluk değildir.
-
-    Hesap MOTORUN kendisi (`lineAmountCents`, domain-core): ekran ikinci bir formül yazmıyor,
-    muhasebe export'u ve kârlılık hangi hesabı yapıyorsa onu çağırıyor. Fark satır başına alınır —
-    tam hâl eksi kalan hâl — çünkü indirim payı oransal düşüyor ve bunu ikinci kez türetmek iki
-    ayrı doğru üretirdi.
+    Kapıda alınacak tutar geri verilen mal düşülmüş hâlidir: `dueAmountCents` siparişin tam tutarıdır ve sunucu düzeltmeyi teslim anında yapar, kurye ise kapıda doğru rakamı görmeli.
+    Hesap motorun kendisidir (`lineAmountCents`); satır başına tam eksi kalan alınır, çünkü indirim payı oransal düşer.
   */
   const refundedCents = lines.reduce((sum, line) => {
     const refused = refusedOf(line);
@@ -386,12 +293,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const dueCents = fullDueCents === null ? null : Math.max(0, fullDueCents - refundedCents);
 
   /**
-   * Reddedilen adedi yazar VE tahsilat alanını yeni tutara çeker.
-   *
-   * İki iş bilerek TEK yerde: kurye kapıda bir kalemi geri aldığında alacağı para da o anda
-   * değişiyor ve alan eski rakamda kalırsa ekran kendi kendisiyle çelişir — üstte "1/2 geri
-   * verildi", altta hâlâ tam tutar. Alan kuryenin ELLE yazabildiği bir yer, ama burada yazan
-   * kurye değil MOTOR: geri verilen mal bir pazarlık değil, hesabın kendisi.
+   * Reddedilen adedi yazar ve tahsilat alanını yeni tutara çeker: kalem geri alınınca alacak da o an değişir, alan eski rakamda kalırsa ekran kendisiyle çelişir.
    */
   const setRefusedQty = useCallback(
     (line: StopLine, qty: number) => {
@@ -432,18 +334,12 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   }, [amountCents, doorAccountId, dueCents, method]);
 
   /**
-   * **Tahsilat YAZILAMAZ** — borç var ama kapı kasası hesabı yok (ayar boş / bozuk).
-   *
-   * Tutarın BOŞ olması bu kapıyı kapatmaz ve bu bilinçli bir ayrım: boş tutar "hesap bilinmiyor"
-   * değil, kuryenin "kapıda para almadım" demesidir — sipariş borçlu kalır, cevabın `amountDueCents`i
-   * bunu söyler ve CTA'nın kendisi de tahsilat yazılmayacağını yazar. İkisini tek bayrağa toplamak
-   * çalışan bir kapıyı, çalışmayan bir kapının gerekçesiyle kapatırdı.
+   * Tahsilat yazılamaz: borç var ama kapı kasası hesabı yok.
+   * Boş tutar bu kapıyı kapatmaz, çünkü boş tutar "kapıda para almadım" demektir ve sipariş borçlu kalır.
    */
   const collectionBlocked = dueCents !== null && doorAccountId === null;
 
-  /* `allMarked` KAPIDAN ÇIKTI (30.08): teslim varsayılan olduğuna göre işaretlenecek bir şey yok.
-     Kapı hâlâ üç şeyi soruyor — kutular okutuldu mu, kanıt alındı mı, para yazılabilir mi — ve bir
-     şeyi reddediyor: HEPSİ geri verilmişse o teslim değildir, "Kabul etmedi"dir. */
+  /* Kapı üç şeyi sorar: kutular okutuldu mu, kanıt alındı mı, para yazılabilir mi; hepsi geri verilmişse bu teslim değil "kabul etmedi"dir. */
   const gateOpen = loadedOnVan && boxesSatisfied && !allRefused && !collectionBlocked && !finished;
   /* Olumsuz sonucun kapısı DAHA DAR değil daha GENİŞ: kutuların kapıda okutulması gerekmiyor
      (mal verilmedi ki), ama durak yola çıkmış olmalı — yoksa yazılacak bir geçiş yok. */
@@ -502,13 +398,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
         return;
       }
 
-      /* SONUÇ TOAST'A, EKRAN LİSTEYE DÖNER (kullanıcı kararı 30.08) ─────────────────────────
-         Eskiden ekran "sonuç ekranı"na dönüp KALIYORDU (v2:882'nin bilinçli sapması: "kurye
-         yazıldı mı sorusunun cevabını okur, sonra listeye döner"). Cihazda ölçüldü: kurye
-         okuyacak bir şey olduğunu anlamıyor, durakta takılı kalıyor ve geri tuşunu arıyor —
-         üstelik en sık yaptığı iş bu ve her seferinde iki dokunuş fazladan.
-         Cevap kayboluyor DEĞİL: toast onu listenin üstünde taşıyor ve liste zaten tazeleniyor
-         (`useFocusEffect`), yani kurye sonucu durağın kendi satırında da görüyor. */
+      /* Sonuç toast'a gider, ekran listeye döner: kurye en sık yaptığı işte sonuç ekranında takılıyordu; liste de tazelendiği için sonuç durağın satırında görünür. */
       setDoneToast({
         tone: 'ok',
         text: [
@@ -547,9 +437,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
           setNoteError(t.delivery.outcome.noteRequired);
           return;
         }
-        /* ÇEKMECE KAPANIR (ölçüldü 31.08 · cihazda): bildirim ekranın gövdesinde çiziliyor ve
-           çekmece AÇIK kalınca onun altında kalıyordu — kurye "Onayla"ya basıyor, hiçbir şey
-           olmadığını görüyor, tekrar basıyordu. Yutulan bir hata yoktu; GÖRÜNMEYEN bir hata vardı. */
+        /* Çekmece kapanır, çünkü bildirim gövdede çizilir ve açık çekmecenin altında görünmez kalırdı. */
         setOutcome(null);
         setNotice({ tone: 'error', text: wireErrorText(result.error) });
         return;
