@@ -143,20 +143,20 @@
       "withSubject": "{type} · {subject}",
       "orderScope": "Commande {reference}",
       "generalScope": "Général",
-      "lastMessage": "dernier message : {date}",
-      "open": "Ouvrir la demande « {type} »",
+      "lastMessage": "dernier message : {date}",
+      "open": "Ouvrir la demande « {type} »",
       "loading": "Chargement…",
       "end": "Toutes vos demandes sont affichées.",
       "tailRetry": "Impossible de charger la suite — réessayer",
       "empty": {
         "title": "Aucune demande pour l'instant",
-        "body": "Une question ou un souci ? Écrivez-nous ici.",
+        "body": "Une question ou un souci ? Écrivez-nous ici.",
         "cta": "Écrivez-nous"
       }
     },
     "detail": {
       "generalScope": "Demande générale",
-      "resolution": "✓ Résultat : {value}",
+      "resolution": "✓ Résultat : {value}",
       "refunded": "{amount} remboursés",
       "notice": "Nous vous préviendrons par e-mail dès notre réponse.",
       "fromCustomer": "Vous",
@@ -171,19 +171,19 @@
         "failed": "Message non envoyé — votre texte est conservé, réessayez."
       },
       "notFound": "Demande introuvable",
-      "notFoundBody": "Le lien est peut-être ancien ; ouvrez la demande depuis la liste.",
+      "notFoundBody": "Le lien est peut-être ancien ; ouvrez la demande depuis la liste.",
       "notFoundCta": "Retour à l'assistance"
     },
     "new": {
       "title": "Écrivez-nous",
       "scope": {
-        "question": "Est-ce lié à une commande ?",
+        "question": "Est-ce lié à une commande ?",
         "body": "Nous le demandons pour orienter votre demande au bon endroit.",
         "yes": "Oui, à l'une de mes commandes",
         "no": "Non, un sujet général"
       },
       "order": {
-        "question": "Quelle commande ?",
+        "question": "Quelle commande ?",
         "pick": "Choisir la commande {reference}",
         "none": "Vous n'avez pas encore de commande — écrivez-nous directement.",
         "more": "Commandes plus anciennes",
@@ -191,15 +191,15 @@
       },
       "items": {
         "eyebrow": "Commande {reference}",
-        "question": "Quels articles sont concernés ?",
+        "question": "Quels articles sont concernés ?",
         "line": "{quantity}× {name}",
         "bundleNote": "Les coffrets ne peuvent pas être cochés article par article — décrivez le souci ci-dessous.",
-        "error": "Les articles n'ont pas pu être chargés ; vous pouvez tout de même nous écrire."
+        "error": "Les articles n'ont pas pu être chargés ; vous pouvez tout de même nous écrire."
       },
       "typeTitle": "Sujet",
       "message": {
-        "title": "Que s'est-il passé ?",
-        "placeholder": "Racontez brièvement — que s'est-il passé, comment pouvons-nous aider ?",
+        "title": "Que s'est-il passé ?",
+        "placeholder": "Racontez brièvement — que s'est-il passé, comment pouvons-nous aider ?",
         "label": "Description de votre demande",
         "error": "Écrivez une courte description."
       },
@@ -211,7 +211,7 @@
         "count": "{count}/{max} photos",
         "note": "Une photo accélère la résolution, surtout pour un produit abîmé — facultatif.",
         "errors": {
-          "unsupported": "Ce type de fichier n'est pas accepté ; envoyez une photo.",
+          "unsupported": "Ce type de fichier n'est pas accepté ; envoyez une photo.",
           "limit": "Nous ne pouvons pas ajouter plus de photos à un message.",
           "unavailable": "La photo n'a pas pu être envoyée. Vous pouvez envoyer votre message sans photo.",
           "cameraDenied": "L'accès à l'appareil photo n'est pas autorisé. Vous pouvez l'activer dans les réglages ou choisir dans la galerie."
@@ -231,7 +231,7 @@
     "back": "Zurück",
     "guest": {
       "title": "Melden Sie sich an, um Ihre Anfragen zu sehen",
-      "body": "Kein Passwort — mit E-Mail oder Google in Sekunden.",
+      "body": "Kein Passwort – mit E-Mail oder Google in Sekunden.",
       "cta": "Anmelden"
     },
     "error": {
@@ -240,7 +240,7 @@
       "retry": "Erneut versuchen"
     },
     "status": {
-      "open": "Erhalten — bald an der Reihe",
+      "open": "Erhalten – bald an der Reihe",
       "in_progress": "Wir kümmern uns darum",
       "resolved": "Gelöst"
     },
@@ -261,7 +261,7 @@
       "open": "Anfrage „{type}“ öffnen",
       "loading": "Wird geladen…",
       "end": "Alle Ihre Anfragen werden angezeigt.",
-      "tailRetry": "Weitere Einträge konnten nicht geladen werden — erneut versuchen",
+      "tailRetry": "Weitere Einträge konnten nicht geladen werden – erneut versuchen",
       "empty": {
         "title": "Noch keine Anfragen",
         "body": "Bei Fragen oder Problemen schreiben Sie uns einfach hier.",
@@ -282,7 +282,7 @@
         "send": "Senden",
         "sending": "Wird gesendet…",
         "sent": "Ihre Nachricht wurde gesendet",
-        "failed": "Nachricht nicht gesendet — Ihr Text bleibt stehen, bitte erneut versuchen."
+        "failed": "Nachricht nicht gesendet – Ihr Text bleibt stehen, bitte erneut versuchen."
       },
       "notFound": "Anfrage nicht gefunden",
       "notFoundBody": "Der Link ist womöglich veraltet; öffnen Sie die Anfrage über die Liste.",
@@ -299,7 +299,7 @@
       "order": {
         "question": "Welche Bestellung?",
         "pick": "Bestellung {reference} auswählen",
-        "none": "Sie haben noch keine Bestellung — schreiben Sie uns direkt.",
+        "none": "Sie haben noch keine Bestellung – schreiben Sie uns direkt.",
         "more": "Ältere Bestellungen",
         "error": "Ihre Bestellungen konnten nicht geladen werden."
       },
@@ -307,13 +307,13 @@
         "eyebrow": "Bestellung {reference}",
         "question": "Um welche Artikel geht es?",
         "line": "{quantity}× {name}",
-        "bundleNote": "Die Produkte eines Genusspakets lassen sich nicht einzeln auswählen — beschreiben Sie das Problem unten.",
+        "bundleNote": "Die Produkte eines Genusspakets lassen sich nicht einzeln auswählen – beschreiben Sie das Problem unten.",
         "error": "Die Artikel konnten nicht geladen werden; schreiben Sie uns trotzdem."
       },
       "typeTitle": "Thema",
       "message": {
         "title": "Was ist passiert?",
-        "placeholder": "Kurz beschrieben — was ist passiert, wie können wir helfen?",
+        "placeholder": "Kurz beschrieben – was ist passiert, wie können wir helfen?",
         "label": "Beschreibung Ihrer Anfrage",
         "error": "Schreiben Sie eine kurze Beschreibung."
       },
@@ -323,7 +323,7 @@
         "remove": "Foto entfernen",
         "uploading": "Foto wird hochgeladen",
         "count": "{count}/{max} Fotos",
-        "note": "Ein Foto beschleunigt die Lösung, besonders bei beschädigter Ware — optional.",
+        "note": "Ein Foto beschleunigt die Lösung, besonders bei beschädigter Ware – optional.",
         "errors": {
           "unsupported": "Diesen Dateityp können wir nicht annehmen; bitte ein Foto senden.",
           "limit": "Mehr Fotos können wir einer Nachricht nicht hinzufügen.",
@@ -333,10 +333,10 @@
       },
       "submit": "Senden",
       "submitting": "Wird gesendet…",
-      "sentToast": "Anfrage erhalten — wir antworten per E-Mail",
+      "sentToast": "Anfrage erhalten – wir antworten per E-Mail",
       "errors": {
         "order": "Wir konnten diese Bestellung Ihrem Konto nicht zuordnen. Schreiben Sie uns als allgemeine Anfrage.",
-        "guest": "Ihre Sitzung ist wohl abgelaufen — bitte erneut anmelden und senden.",
+        "guest": "Ihre Sitzung ist wohl abgelaufen – bitte erneut anmelden und senden.",
         "generic": "Ihre Anfrage konnte nicht gesendet werden. Prüfen Sie die Verbindung und versuchen Sie es erneut."
       }
     }

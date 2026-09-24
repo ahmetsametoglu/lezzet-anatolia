@@ -58,9 +58,9 @@
       "text": "Ce coffret est épuisé pour le moment."
     },
     "contents": {
-      "title": "Que contient ce coffret ?",
+      "title": "Que contient ce coffret ?",
       "open": "Voir le produit {name}",
-      "note": "Pour les ingrédients et les allergènes, consultez la page de chaque produit. Le coffret s'ajoute en entier ; son contenu ne peut pas être modifié."
+      "note": "Pour les ingrédients et les allergènes, consultez la page de chaque produit. Le coffret s'ajoute en entier ; son contenu ne peut pas être modifié."
     },
     "cta": {
       "add": "Ajouter le coffret"
@@ -92,7 +92,7 @@
     "gallery": {
       "photo": "Paketbild {n} / {total}"
     },
-    "noShip": "Nur Lieferung an die Haustür im Liefergebiet — kein Versand",
+    "noShip": "Nur Lieferung an die Haustür im Liefergebiet – kein Versand",
     "badge": {
       "soldOut": "Ausverkauft"
     },

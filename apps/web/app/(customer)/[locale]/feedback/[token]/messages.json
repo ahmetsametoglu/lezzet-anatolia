@@ -74,7 +74,7 @@
     "alreadyBody": "Merci ! Vos points ont déjà été ajoutés.",
     "myPoints": "Mon solde de points →",
     "errors": {
-      "unexpected": "Une erreur est survenue. Réessayez ; si cela persiste, écrivez-nous.",
+      "unexpected": "Une erreur est survenue. Réessayez ; si cela persiste, écrivez-nous.",
       "session_expired": "Votre session semble expirée. Reconnectez-vous.",
       "invalid_link": "Ce lien n'est plus valable.",
       "vote_failed": "Votre réponse n'a pas pu être enregistrée. Réessayez.",
@@ -83,7 +83,7 @@
   },
   "de": {
     "welcomeTitle": "Wie war Ihre Bestellung?",
-    "welcomeBody": "{order} — wir fragen Sie Produkt für Produkt, das dauert weniger als eine Minute. Am Ende erhalten Sie {points}.",
+    "welcomeBody": "{order} – wir fragen Sie Produkt für Produkt, das dauert weniger als eine Minute. Am Ende erhalten Sie {points}.",
     "welcomePoints": "+{n} Punkte",
     "start": "Los geht's",
     "progress": "{current} / {total}",
@@ -102,7 +102,7 @@
     "finishing": "Wird abgeschlossen…",
     "doneTitle": "Vielen Dank, {name}!",
     "doneTitleNoName": "Vielen Dank!",
-    "doneTitleUnhappy": "Vielen Dank — und entschuldigen Sie bitte",
+    "doneTitleUnhappy": "Vielen Dank – und entschuldigen Sie bitte",
     "pointsBadge": "+{n} Punkte auf Ihrem Konto",
     "pointsNote": "Ihre Punkte sammeln sich auf Ihrem Konto und lassen sich jederzeit in einen Gutschein umwandeln.",
     "reviewInviteTitle": "Möchten Sie Ihre Erfahrung auf {platform} teilen?",

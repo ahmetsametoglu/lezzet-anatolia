@@ -53,7 +53,7 @@
   "fr": {
     "meta": {
       "title": "Découverte — les produits qui pourraient arriver",
-      "description": "Donnez votre avis sur des produits pas encore en vente ; vos préférences nous guident sur ce que nous allons proposer."
+      "description": "Donnez votre avis sur des produits pas encore en vente ; vos préférences nous guident sur ce que nous allons proposer."
     },
     "title": "Découverte",
     "counter": "{index} / {total}",
@@ -65,26 +65,26 @@
     "progress": "{index}/{total} saveurs",
     "guestChip": "Connectez-vous pour gagner des points",
     "candidate": "Nouvelle saveur · {index}/{total}",
-    "notice": "Un « j’aime » n’est pas un engagement d’achat : il compte seulement quand nous choisissons les produits à ajouter à notre gamme.",
-    "likeLong": "J’aime",
+    "notice": "Un « j'aime » n'est pas un engagement d'achat : il compte seulement quand nous choisissons les produits à ajouter à notre gamme.",
+    "likeLong": "J'aime",
     "dislikeLong": "Pas pour moi",
     "keySkip": "passer",
-    "keyLike": "j’aime · vous pouvez aussi décider au clavier",
+    "keyLike": "j'aime · vous pouvez aussi décider au clavier",
     "round": "Saveurs de cette sélection",
     "likedTitle": "Vos coups de cœur",
     "likedCount": "Vous avez aimé {n} produits.",
-    "noLikes": "Aucun « j’aime » cette fois — ce n’est pas grave, un « non » nous renseigne aussi.",
-    "noLikesSummary": "Aucun « j’aime » cette fois.",
+    "noLikes": "Aucun « j'aime » cette fois — ce n'est pas grave, un « non » nous renseigne aussi.",
+    "noLikesSummary": "Aucun « j'aime » cette fois.",
     "balanceShort": "Mon solde de points",
     "done": {
-      "title": "Vous avez tout évalué !",
+      "title": "Vous avez tout évalué !",
       "earned": "+{points} points gagnés",
       "body": "Vos avis comptent dans le choix de nos prochains produits. De nouvelles saveurs arriveront ici.",
       "catalog": "Voir le catalogue",
       "balance": "Mon solde de points →"
     },
     "guestDone": {
-      "title": "Merci pour vos avis !",
+      "title": "Merci pour vos avis !",
       "body": "Vos avis comptent dans le choix de nos prochains produits. Si vous le souhaitez, créez un compte et nous y créditerons les {points} points ({money}) accumulés.",
       "cta": "Ouvrir un compte et récupérer les points",
       "catalog": "Voir le catalogue"
@@ -103,7 +103,7 @@
   },
   "de": {
     "meta": {
-      "title": "Entdecken — Produkte, die bald kommen könnten",
+      "title": "Entdecken – Produkte, die bald kommen könnten",
       "description": "Bewerten Sie Produkte, die noch nicht im Sortiment sind; Ihre Vorlieben helfen uns bei der Auswahl."
     },
     "title": "Entdecken",
@@ -124,7 +124,7 @@
     "round": "Sorten dieser Runde",
     "likedTitle": "Ihre Favoriten",
     "likedCount": "Ihnen haben {n} Produkte gefallen.",
-    "noLikes": "Diesmal kein Like — kein Problem, auch ein „Nein“ hilft uns weiter.",
+    "noLikes": "Diesmal kein Like – kein Problem, auch ein „Nein“ hilft uns weiter.",
     "noLikesSummary": "Diesmal kein Like.",
     "balanceShort": "Mein Punktestand",
     "done": {
@@ -136,7 +136,7 @@
     },
     "guestDone": {
       "title": "Danke für Ihre Bewertungen!",
-      "body": "Ihre Bewertungen sind in unsere Auswahl eingeflossen. Wenn Sie möchten, erstellen Sie ein Konto — wir schreiben Ihnen die gesammelten {points} Punkte ({money}) gut.",
+      "body": "Ihre Bewertungen sind in unsere Auswahl eingeflossen. Wenn Sie möchten, erstellen Sie ein Konto – wir schreiben Ihnen die gesammelten {points} Punkte ({money}) gut.",
       "cta": "Konto erstellen und Punkte sichern",
       "catalog": "Zum Katalog"
     },

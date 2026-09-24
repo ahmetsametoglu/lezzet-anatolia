@@ -151,7 +151,7 @@
       "itemsEyebrow": "Contenu de la commande",
       "line": "{quantity}× {name}",
       "bundlePill": "Coffret · {count} produits",
-      "shortfallLine": "Non livrés : {missing}",
+      "shortfallLine": "Non livrés : {missing}",
       "subtotal": "Sous-total",
       "discount": "Remise",
       "shipping": "Frais de livraison",
@@ -164,7 +164,7 @@
       "total": "Total",
       "cancelled": "Cette commande a été annulée",
       "returning": "Un retour est en cours",
-      "support": "Un souci ? Écrivez-nous",
+      "support": "Un souci ? Écrivez-nous",
       "carrierLabel": "Transporteur",
       "trackingNumber": "N° de suivi",
       "trackingCta": "Suivre mon colis ↗",
@@ -179,7 +179,7 @@
       "pay": {
         "online": "Payé en ligne",
         "door": "À régler à la livraison",
-        "pickup": "À régler à l’entrepôt",
+        "pickup": "À régler à l'entrepôt",
         "paidOnHandover": "Payé à la réception",
         "transfer": "Virement en attente",
         "credit": "Paiement différé",
@@ -196,15 +196,15 @@
         "received": "Votre commande est confirmée",
         "prepared": "Votre commande a été emballée avec soin",
         "on_the_way": "Le livreur est dans votre quartier",
-        "ready_for_pickup": "Votre commande vous attend à l’entrepôt — convenez de l’heure par téléphone"
+        "ready_for_pickup": "Votre commande vous attend à l'entrepôt — convenez de l'heure par téléphone"
       },
       "feedback": {
         "title": "Donnez votre avis sur vos produits",
         "body": "Quelques gestes suffisent — gagnez {points} points à utiliser lors de votre prochaine commande.",
-        "cta": "Commencer l’évaluation"
+        "cta": "Commencer l'évaluation"
       },
-      "deliveryPickup": "Retrait à l’entrepôt",
-      "pickupPhone": "Pour convenir de l’heure : {phone}"
+      "deliveryPickup": "Retrait à l'entrepôt",
+      "pickupPhone": "Pour convenir de l'heure : {phone}"
     }
   },
   "de": {
@@ -222,12 +222,12 @@
     },
     "guest": {
       "title": "Melden Sie sich an, um Ihre Bestellungen zu sehen",
-      "body": "Kein Passwort — mit E-Mail oder Google in Sekunden.",
+      "body": "Kein Passwort – mit E-Mail oder Google in Sekunden.",
       "cta": "Anmelden"
     },
     "empty": {
       "title": "Noch keine Bestellungen",
-      "body": "Geben Sie Ihre erste Bestellung auf — hier verfolgen Sie jeden Schritt.",
+      "body": "Geben Sie Ihre erste Bestellung auf – hier verfolgen Sie jeden Schritt.",
       "cta": "Katalog ansehen"
     },
     "error": {
@@ -244,7 +244,7 @@
     "list": {
       "loading": "Wird geladen…",
       "end": "Alle Ihre Bestellungen werden angezeigt.",
-      "tailRetry": "Weitere Einträge konnten nicht geladen werden — erneut versuchen"
+      "tailRetry": "Weitere Einträge konnten nicht geladen werden – erneut versuchen"
     },
     "detail": {
       "notFound": "Bestellung nicht gefunden",
@@ -300,11 +300,11 @@
         "received": "Ihre Bestellung ist bestätigt",
         "prepared": "Ihre Bestellung wurde sorgfältig verpackt",
         "on_the_way": "Der Fahrer ist in Ihrer Nähe",
-        "ready_for_pickup": "Ihre Bestellung liegt im Lager bereit — vereinbaren Sie die Uhrzeit telefonisch"
+        "ready_for_pickup": "Ihre Bestellung liegt im Lager bereit – vereinbaren Sie die Uhrzeit telefonisch"
       },
       "feedback": {
         "title": "Bewerten Sie Ihre Produkte",
-        "body": "Ein paar Fingertipps genügen — sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",
+        "body": "Ein paar Fingertipps genügen – sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",
         "cta": "Bewertung starten"
       },
       "deliveryPickup": "Abholung im Lager",

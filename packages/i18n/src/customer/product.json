@@ -107,11 +107,11 @@
     },
     "accordion": {
       "ingredients": "Ingrédients & allergènes",
-      "allergens": "Allergènes : {list}",
+      "allergens": "Allergènes : {list}",
       "traces": "Fabriqué dans un atelier qui manipule également {list}.",
       "nutrition": "Valeurs nutritionnelles & poids net",
-      "per100": "pour 100 g : {rows}",
-      "netQuantity": "Quantité nette : {quantity}",
+      "per100": "pour 100 g : {rows}",
+      "netQuantity": "Quantité nette : {quantity}",
       "storage": "Conservation & fraîcheur"
     },
     "nutrition": {
@@ -146,7 +146,7 @@
       "sheetIntro": "Nous envoyons un code à six chiffres à votre e-mail. Dès que vous le saisissez, votre compte est créé et vous rejoignez les personnes qui attendent cet article.",
       "recorded": "C'est noté — vous faites partie des personnes qui attendent cet article pour {code}.",
       "alreadyRecorded": "Vous attendez déjà cet article pour {code}.",
-      "emailRequired": "Votre compte n'a pas d'adresse e-mail ; la demande n'a pas été enregistrée."
+      "emailRequired": "Votre compte n'a pas d'adresse e-mail ; la demande n'a pas été enregistrée."
     },
     "error": {
       "title": "Connexion impossible",
@@ -183,9 +183,9 @@
       "was": "statt {price}"
     },
     "limit": "Zu diesem Preis maximal {n} Stück",
-    "noShip": "Nur Lieferung an die Haustür im Liefergebiet — kein Versand",
+    "noShip": "Nur Lieferung an die Haustür im Liefergebiet – kein Versand",
     "family": {
-      "browse": "{name} — ENTDECKEN",
+      "browse": "{name} – ENTDECKEN",
       "current": "Sie sehen gerade"
     },
     "accordion": {
@@ -208,7 +208,7 @@
     },
     "reviews": {
       "title": "Bewertungen",
-      "empty": "Noch keine Bewertungen — wenn Sie dieses Produkt kaufen, können Sie nach der Lieferung die erste Bewertung hinterlassen."
+      "empty": "Noch keine Bewertungen – wenn Sie dieses Produkt kaufen, können Sie nach der Lieferung die erste Bewertung hinterlassen."
     },
     "related": "Das könnte Ihnen auch schmecken",
     "cta": {
@@ -227,7 +227,7 @@
     "stockNotice": {
       "sheetTitle": "Benachrichtigung bei Verfügbarkeit",
       "sheetIntro": "Wir senden einen sechsstelligen Code an Ihre E-Mail. Sobald Sie ihn eingeben, wird Ihr Konto angelegt und Sie sind für diesen Artikel vorgemerkt.",
-      "recorded": "Vorgemerkt — wir benachrichtigen Sie, sobald der Artikel für {code} verfügbar ist.",
+      "recorded": "Vorgemerkt – wir benachrichtigen Sie, sobald der Artikel für {code} verfügbar ist.",
       "alreadyRecorded": "Für diesen Artikel sind Sie für {code} bereits vorgemerkt.",
       "emailRequired": "Ihr Konto hat keine E-Mail-Adresse; die Anfrage wurde nicht erfasst."
     },

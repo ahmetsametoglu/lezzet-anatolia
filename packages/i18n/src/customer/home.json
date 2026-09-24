@@ -105,7 +105,7 @@
       "notifications": "Notifications",
       "notificationsUnread": "Notifications, {n} non lues",
       "location": "{postal} ▾",
-      "locationLabel": "Zone de livraison : {postal}",
+      "locationLabel": "Zone de livraison : {postal}",
       "locationEmpty": "Choisir votre zone ▾",
       "locationEmptyLabel": "Choisir votre zone de livraison"
     },
@@ -127,7 +127,7 @@
       "summary": "{reference} · {total}"
     },
     "offers": {
-      "discount": "−{n} %",
+      "discount": "−{n} %",
       "limited": "STOCK LIMITÉ",
       "lastFew": "PLUS QUE {n}"
     },
@@ -137,9 +137,9 @@
       "countWithCampaign": "{n} produits · {campaign} ›"
     },
     "campaign": {
-      "percent": "−{n} %",
+      "percent": "−{n} %",
       "amount": "−{amount}",
-      "withMinimum": "dès {minimum} : {value}"
+      "withMinimum": "dès {minimum} : {value}"
     },
     "featured": {
       "eyebrow": "En vitrine",
@@ -149,7 +149,7 @@
     },
     "recipes": {
       "eyebrow": "Idées de table",
-      "title": "Comment composer votre repas ?",
+      "title": "Comment composer votre repas ?",
       "meta": "{n} ingrédients · Voir la recette ›",
       "moreTitle": "Toutes les recettes",
       "moreAction": "Tout voir",
@@ -166,7 +166,7 @@
       "guestBody": "Vos goûts orientent nos prochaines nouveautés — connectez-vous et chaque tour terminé rapporte des points."
     },
     "professional": {
-      "title": "Vous êtes restaurateur ou commerçant ?",
+      "title": "Vous êtes restaurateur ou commerçant ?",
       "body": "Ouvrez un compte professionnel pour les tarifs de gros."
     },
     "cart": {
@@ -191,7 +191,7 @@
     },
     "header": {
       "points": "✦ {n}",
-      "pointsLabel": "Ihre {n} Punkte — zum Konto",
+      "pointsLabel": "Ihre {n} Punkte – zum Konto",
       "wholesale": "GROSSHANDEL",
       "notifications": "Benachrichtigungen",
       "notificationsUnread": "Benachrichtigungen, {n} ungelesen",
@@ -252,20 +252,20 @@
       "soldOut": "Ausverkauft"
     },
     "discover": {
-      "title": "Entdecken — stimmen Sie als Erste über neue Sorten ab ✦",
-      "body": "Ihre Bewertungen lenken unsere Auswahl — eine abgeschlossene Runde bringt Punkte.",
-      "guestBody": "Ihre Vorlieben bestimmen unser nächstes Sortiment — melden Sie sich an, dann bringt jede Runde auch Punkte."
+      "title": "Entdecken – stimmen Sie als Erste über neue Sorten ab ✦",
+      "body": "Ihre Bewertungen lenken unsere Auswahl – eine abgeschlossene Runde bringt Punkte.",
+      "guestBody": "Ihre Vorlieben bestimmen unser nächstes Sortiment – melden Sie sich an, dann bringt jede Runde auch Punkte."
     },
     "professional": {
       "title": "Sie führen ein Restaurant oder ein Lebensmittelgeschäft?",
-      "body": "Registrieren Sie sich als Geschäftskunde — für Großhandelspreise."
+      "body": "Registrieren Sie sich als Geschäftskunde – für Großhandelspreise."
     },
     "cart": {
       "open": "Warenkorb öffnen, {n} Artikel"
     },
     "error": {
       "title": "Derzeit nicht verfügbar",
-      "body": "Die Startseite konnte nicht geladen werden. Prüfen Sie Ihre Verbindung — sobald sie wieder da ist, geht es weiter.",
+      "body": "Die Startseite konnte nicht geladen werden. Prüfen Sie Ihre Verbindung – sobald sie wieder da ist, geht es weiter.",
       "retry": "Erneut versuchen"
     },
     "card": {

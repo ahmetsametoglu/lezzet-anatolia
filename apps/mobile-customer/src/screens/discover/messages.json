@@ -57,7 +57,7 @@
       "likeBody": "j'en veux"
     },
     "stamp": {
-      "like": "J'en veux !",
+      "like": "J'en veux !",
       "pass": "Une autre fois"
     },
     "likes": {
@@ -71,7 +71,7 @@
     },
     "toast": "Tour terminé — merci ✓",
     "done": {
-      "title": "C'était tout — merci !",
+      "title": "C'était tout — merci !",
       "body": "Vos avis orientent les saveurs que nous ferons venir. De nouvelles saveurs rempliront cette page.",
       "loginHint": "Connectez-vous et vos tours de découverte vous rapporteront des points.",
       "loginCta": "Se connecter",
@@ -94,7 +94,7 @@
     "title": "Entdecken",
     "undo": "Rückgängig",
     "progress": "{current} / {total}",
-    "framing": "Diese Produkte sind noch nicht im Sortiment — Ihre Bewertungen lenken unsere Auswahl",
+    "framing": "Diese Produkte sind noch nicht im Sortiment – Ihre Bewertungen lenken unsere Auswahl",
     "hint": {
       "passTitle": "Nach links wischen",
       "passBody": "ein andermal",
@@ -114,9 +114,9 @@
       "like": "Gefällt mir",
       "pass": "Weiter"
     },
-    "toast": "Runde abgeschlossen — danke ✓",
+    "toast": "Runde abgeschlossen – danke ✓",
     "done": {
-      "title": "Das war alles — vielen Dank!",
+      "title": "Das war alles – vielen Dank!",
       "body": "Ihre Bewertungen lenken, welche Spezialitäten wir ins Sortiment aufnehmen. Sobald neue Sorten da sind, füllt sich diese Seite wieder.",
       "loginHint": "Mit Anmeldung bringen Ihnen Entdeckungsrunden Punkte.",
       "loginCta": "Anmelden",

@@ -74,7 +74,7 @@
     "pay": {
       "online": "Payé en ligne",
       "door": "À régler à la livraison",
-      "pickup": "À régler à l’entrepôt",
+      "pickup": "À régler à l'entrepôt",
       "paidOnHandover": "Payé à la réception",
       "transfer": "Virement en attente",
       "credit": "Paiement différé",
@@ -99,9 +99,9 @@
     "feedback": {
       "title": "Donnez votre avis sur vos produits",
       "body": "Quelques gestes suffisent — gagnez {points} points à utiliser lors de votre prochaine commande.",
-      "cta": "Commencer l’évaluation"
+      "cta": "Commencer l'évaluation"
     },
-    "pickupLine": "Retrait à l’entrepôt"
+    "pickupLine": "Retrait à l'entrepôt"
   },
   "de": {
     "back": "← Meine Bestellungen",
@@ -118,8 +118,8 @@
     },
     "lineFormula": "{qty} × {unit} = ",
     "bundlePill": "Genusspaket · {count} Artikel",
-    "shortfallRefund": "{ordered} bestellt, {fulfilled} geliefert — die Differenz von {amount} wird erstattet.",
-    "shortfallDoor": "{ordered} bestellt, {fulfilled} geliefert — Sie zahlen nur den tatsächlichen Betrag.",
+    "shortfallRefund": "{ordered} bestellt, {fulfilled} geliefert – die Differenz von {amount} wird erstattet.",
+    "shortfallDoor": "{ordered} bestellt, {fulfilled} geliefert – Sie zahlen nur den tatsächlichen Betrag.",
     "reportIssue": "Problem melden",
     "helpBodyLong": "Wenn etwas fehlt, beschädigt ist oder nicht Ihren Erwartungen entspricht, sagen Sie es uns direkt.",
     "refundNote": "Die Differenz ({amount}) wird erstattet.",
@@ -150,7 +150,7 @@
     "amountTitle": "Betrag",
     "feedback": {
       "title": "Bewerten Sie Ihre Produkte",
-      "body": "Ein paar Klicks genügen — sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",
+      "body": "Ein paar Klicks genügen – sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",
       "cta": "Bewertung starten"
     },
     "pickupLine": "Abholung im Lager"

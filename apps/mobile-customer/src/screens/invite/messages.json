@@ -37,7 +37,7 @@
     "ok": {
       "title": "{name} vous invite chez Lezzet Anatolie",
       "someone": "Une connaissance",
-      "body": "Les saveurs d'Anatolie, jusqu'à votre porte. Parcourez d'abord le catalogue ; vous créerez votre compte quand vous voudrez.",
+      "body": "Les saveurs d'Anatolie, jusqu'à votre porte. Parcourez d'abord le catalogue ; vous créerez votre compte quand vous voudrez.",
       "primary": "Voir le catalogue",
       "secondary": "Créer mon compte"
     },
@@ -53,7 +53,7 @@
     },
     "unknown": {
       "title": "Nous ne reconnaissons pas ce lien",
-      "body": "Le lien a peut-être été copié partiellement. Bienvenue tout de même : le catalogue est ouvert à tous.",
+      "body": "Le lien a peut-être été copié partiellement. Bienvenue tout de même : le catalogue est ouvert à tous.",
       "primary": "Voir le catalogue"
     }
   },
@@ -82,7 +82,7 @@
     },
     "unknown": {
       "title": "Diesen Einladungslink kennen wir nicht",
-      "body": "Der Link wurde vielleicht unvollständig kopiert. Kommen Sie trotzdem herein — der Katalog ist auch ohne Einladung offen.",
+      "body": "Der Link wurde vielleicht unvollständig kopiert. Kommen Sie trotzdem herein – der Katalog ist auch ohne Einladung offen.",
       "primary": "Katalog ansehen"
     }
   }

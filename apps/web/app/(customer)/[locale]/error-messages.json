@@ -38,7 +38,7 @@
     "notFound": {
       "eyebrow": "404 · Seite nicht gefunden",
       "title": "Die gesuchte Seite ist nicht im Angebot",
-      "description": "Der Link ist vielleicht veraltet oder falsch geschrieben. Unser Katalog ist da — machen Sie hier weiter.",
+      "description": "Der Link ist vielleicht veraltet oder falsch geschrieben. Unser Katalog ist da – machen Sie hier weiter.",
       "primaryCta": "Zurück zum Katalog"
     },
     "serverError": {

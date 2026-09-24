@@ -46,9 +46,9 @@
     "campaign": {
       "named": "{label} — {value} de remise sur cette sélection, appliquée au panier.",
       "anon": "{value} de remise sur cette sélection, appliquée au panier.",
-      "percent": "{n} %",
+      "percent": "{n} %",
       "amount": "{amount}",
-      "withMinimum": "dès {minimum} : {value}"
+      "withMinimum": "dès {minimum} : {value}"
     },
     "collectionTag": "Collection",
     "collectionExit": "Retour au catalogue",
@@ -60,7 +60,7 @@
     "onlyOffers": "% Uniquement les offres",
     "offersSwitch": "Uniquement les offres",
     "close": "Fermer",
-    "sortLabel": "Trier :",
+    "sortLabel": "Trier :",
     "sort": {
       "featured": "En vedette",
       "priceAsc": "Prix croissant",
@@ -86,7 +86,7 @@
   "de": {
     "title": "Katalog",
     "campaign": {
-      "named": "{label} — {value} Rabatt auf diese Auswahl, im Warenkorb angewendet.",
+      "named": "{label} – {value} Rabatt auf diese Auswahl, im Warenkorb angewendet.",
       "anon": "{value} Rabatt auf diese Auswahl, im Warenkorb angewendet.",
       "percent": "{n} %",
       "amount": "{amount}",
@@ -117,9 +117,9 @@
       "addToCart": "In den Warenkorb",
       "options": "Optionen →",
       "details": "Details",
-      "priceFrom": "Ab-Preis — Größe auf der Produktseite wählen",
+      "priceFrom": "Ab-Preis – Größe auf der Produktseite wählen",
       "offer": "Angebot",
-      "soldOut": "Ausverkauft — bald wieder da"
+      "soldOut": "Ausverkauft – bald wieder da"
     },
     "onlyShippable": "Lieferbar an meine Adresse",
     "searchPlaceholder": "Produkt suchen…",

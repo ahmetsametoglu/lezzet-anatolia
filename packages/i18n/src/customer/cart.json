@@ -147,10 +147,10 @@
       "local": "Livraison à domicile",
       "shipping": "Expédition par transporteur",
       "undeliverable": "Non livrables à cette adresse",
-      "split": "Ce panier donnera deux commandes distinctes : les articles livrés à votre porte et ceux expédiés par transporteur se règlent séparément. La commande expédiée est facultative : si vous ne la passez pas, ces articles restent dans votre panier.",
-      "routeTotal": "Total livraison à domicile : {amount}",
+      "split": "Ce panier donnera deux commandes distinctes : les articles livrés à votre porte et ceux expédiés par transporteur se règlent séparément. La commande expédiée est facultative : si vous ne la passez pas, ces articles restent dans votre panier.",
+      "routeTotal": "Total livraison à domicile : {amount}",
       "routeNote": "Livraison offerte · paiement à la livraison possible",
-      "shippingTotal": "Total expédition : {amount}",
+      "shippingTotal": "Total expédition : {amount}",
       "shippingFee": "{items} + livraison {fee}",
       "shippingFeeFree": "{items} · livraison offerte",
       "shippingRemaining": "encore {amount} et la livraison est offerte",
@@ -163,7 +163,7 @@
       "title": "Certains articles ne peuvent pas être livrés à {place}",
       "body": "Les produits sous chaîne du froid voyagent uniquement dans notre camion réfrigéré, et {place} est hors de notre zone de livraison. Avec une adresse dans la zone, ils rejoindront votre commande.",
       "change": "Changer de code postal",
-      "changeAddress": "Changer d’adresse de livraison"
+      "changeAddress": "Changer d'adresse de livraison"
     },
     "coupon": {
       "add": "Ajouter un code promo",
@@ -195,12 +195,12 @@
       "subtotal": "Sous-total",
       "discount": "Remise",
       "singleRule": "Les remises ne se cumulent pas — nous avons appliqué la plus avantageuse pour vous.",
-      "reachable": "Ajoutez {missing} et {label} s'applique : {amount} de remise.",
+      "reachable": "Ajoutez {missing} et {label} s'applique : {amount} de remise.",
       "reachableAnon": "Ajoutez {missing} et vous obtenez {amount} de remise.",
       "undeliverable": "Hors commande",
       "total": "Total",
       "note": "Prix TTC. Le mode de livraison et les éventuels frais sont déterminés à l'étape suivante selon votre adresse.",
-      "undeliverableNote": "Les articles non livrables à cette adresse ne sont pas inclus dans le total ; ils ne font pas partie de la commande et restent dans votre panier."
+      "undeliverableNote": "Les articles non livrables à cette adresse ne sont pas inclus dans le total ; ils ne font pas partie de la commande et restent dans votre panier."
     },
     "minimum": "Panier minimum {minimum}. Ajoutez encore quelques produits pour pouvoir commander.",
     "blocked": "Retirez l'article épuisé ou retiré de la vente pour continuer.",
@@ -226,7 +226,7 @@
       "pickupNote": "Votre panier a été évalué selon le stock de l'entrepôt. Convenez de l'heure de retrait par téléphone."
     },
     "placeChange": {
-      "title": "Articles modifiés par votre nouveau lieu de livraison : {n}",
+      "title": "Articles modifiés par votre nouveau lieu de livraison : {n}",
       "toShipping": "{name} sera expédié par transporteur",
       "toRoute": "{name} passe en livraison à domicile",
       "noDelivery": "{name} ne peut pas être livré à cette adresse pour le moment",
@@ -234,7 +234,7 @@
       "reduced": "{name} — {qty} au panier, nous pouvons en apporter {max} au maximum à ce lieu",
       "price": "{name} a changé de prix — {to} au lieu de {from}",
       "dismiss": "J'ai compris",
-      "note": "Aucun article n'a été supprimé. Les prix promotionnels dépendent du stock local et peuvent varier selon le lieu de livraison ; les prix normaux, eux, sont partout les mêmes."
+      "note": "Aucun article n'a été supprimé. Les prix promotionnels dépendent du stock local et peuvent varier selon le lieu de livraison ; les prix normaux, eux, sont partout les mêmes."
     }
   },
   "de": {
@@ -251,10 +251,10 @@
       "unknown": "Nicht mehr im Verkauf",
       "unit": "{variant} · {price}",
       "discounted": "Reduzierter Preis",
-      "soldOut": "Ausverkauft — nicht lieferbar, bitte entfernen",
-      "closed": "Nicht mehr im Verkauf — bitte entfernen",
+      "soldOut": "Ausverkauft – nicht lieferbar, bitte entfernen",
+      "closed": "Nicht mehr im Verkauf – bitte entfernen",
       "noPrice": "Preis nicht verfügbar",
-      "priceUp": "Preis aktualisiert — zuvor {price}",
+      "priceUp": "Preis aktualisiert – zuvor {price}",
       "undeliverable": "❄ An diese Adresse nicht lieferbar",
       "readOnly": "Dieser Artikel lässt sich in der App nicht ändern",
       "remove": "entfernen",
@@ -303,7 +303,7 @@
         "used_up": "Dieser Gutschein ist bereits aufgebraucht.",
         "not_yours": "Dieser Code ist ungültig.",
         "unknown_code": "Dieser Code ist ungültig.",
-        "outranked": "In Ihrem Warenkorb gilt bereits ein höherer Rabatt ({amount}) — wir haben den für Sie günstigeren behalten."
+        "outranked": "In Ihrem Warenkorb gilt bereits ein höherer Rabatt ({amount}) – wir haben den für Sie günstigeren behalten."
       }
     },
     "freeShipping": {
@@ -313,7 +313,7 @@
     "summary": {
       "subtotal": "Zwischensumme",
       "discount": "Rabatt",
-      "singleRule": "Rabatte sind nicht kombinierbar — wir haben den höchsten für Sie angewendet.",
+      "singleRule": "Rabatte sind nicht kombinierbar – wir haben den höchsten für Sie angewendet.",
       "reachable": "Noch {missing}, dann gilt „{label}“: {amount} Rabatt.",
       "reachableAnon": "Noch {missing} und Sie erhalten {amount} Rabatt.",
       "undeliverable": "Nicht in der Bestellung",
@@ -340,7 +340,7 @@
       "eyebrow": "LIEFERADRESSE",
       "change": "Ändern",
       "note": "Ihr Warenkorb wurde für Ihre Lieferadresse berechnet.",
-      "none": "Sie haben noch keine Adresse gespeichert — vorerst rechnen wir mit der Postleitzahl {code}.",
+      "none": "Sie haben noch keine Adresse gespeichert – vorerst rechnen wir mit der Postleitzahl {code}.",
       "pickupLine": "Abholung im Lager · {name}",
       "pickupNote": "Ihr Warenkorb wurde anhand des Lagerbestands berechnet. Vereinbaren Sie die Abholzeit telefonisch."
     },
@@ -350,8 +350,8 @@
       "toRoute": "{name} wird jetzt an die Tür geliefert",
       "noDelivery": "{name} kann derzeit nicht an diese Adresse geliefert werden",
       "unavailable": "{name} ist an Ihrem neuen Ort derzeit nicht erhältlich",
-      "reduced": "{name} — {qty} im Warenkorb, an diesen Ort können wir höchstens {max} bringen",
-      "price": "{name} hat einen anderen Preis — {to} statt {from}",
+      "reduced": "{name} – {qty} im Warenkorb, an diesen Ort können wir höchstens {max} bringen",
+      "price": "{name} hat einen anderen Preis – {to} statt {from}",
       "dismiss": "Verstanden",
       "note": "Es wurde kein Artikel entfernt. Aktionspreise hängen vom Bestand vor Ort ab und können sich mit dem Lieferort ändern; die normalen Preise sind überall gleich."
     }

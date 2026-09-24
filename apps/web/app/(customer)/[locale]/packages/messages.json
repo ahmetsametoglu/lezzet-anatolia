@@ -43,7 +43,7 @@
       "onePrice": "Prix unique"
     },
     "listTitle": "Coffrets en vente",
-    "listNote": "Chaque coffret est vendu tel quel ; son contenu est fixe.",
+    "listNote": "Chaque coffret est vendu tel quel ; son contenu est fixe.",
     "serves": "Pour {n} personnes",
     "items": "{n} produits",
     "weight": "Total {weight}",
@@ -68,8 +68,8 @@
   "de": {
     "title": "Genusspakete",
     "heroTitle": "Wir sorgen für den gedeckten Tisch, Sie laden ein",
-    "heroBody": "Ob Fest, Frühstück oder ein Abend mit vielen Gästen — unsere Pakete kommen zum Festpreis, der Inhalt steht fest. Ein voller Tisch, ganz ohne Auswählen.",
-    "subtitle": "Zusammengestellte Tafeln zum Festpreis — Inhalt bekannt, keine Auswahl nötig.",
+    "heroBody": "Ob Fest, Frühstück oder ein Abend mit vielen Gästen – unsere Pakete kommen zum Festpreis, der Inhalt steht fest. Ein voller Tisch, ganz ohne Auswählen.",
+    "subtitle": "Zusammengestellte Tafeln zum Festpreis – Inhalt bekannt, keine Auswahl nötig.",
     "promise": {
       "coldChain": "Kühlkette",
       "shippable": "Versandfähige Pakete",
@@ -83,12 +83,12 @@
     "inStock": "● Auf Lager",
     "shippable": "Versandfähig",
     "inRouteOnly": "Nur im Liefergebiet",
-    "soldOut": "Ausverkauft — bald wieder da",
+    "soldOut": "Ausverkauft – bald wieder da",
     "cta": "Paket ansehen",
     "more": "Weitere Pakete",
     "catalogBand": {
       "title": "Wenn Sie lieber selbst zusammenstellen",
-      "body": "Im Katalog gibt es Dutzende Produkte — wählen Sie einzeln aus.",
+      "body": "Im Katalog gibt es Dutzende Produkte – wählen Sie einzeln aus.",
       "cta": "Katalog ansehen"
     },
     "empty": {

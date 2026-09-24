@@ -52,7 +52,7 @@
     "empty": {
       "title": "Aucun mouvement de points",
       "body": "Vos mouvements apparaîtront ici au fur et à mesure de vos gains.",
-      "cta": "Comment gagner des points ?"
+      "cta": "Comment gagner des points ?"
     },
     "error": {
       "title": "Historique indisponible",
@@ -128,12 +128,12 @@
       "manual": "Manuelle Korrektur"
     },
     "reasonReverted": {
-      "referral": "Geworbene Freundin oder Freund — storniert",
-      "neighbor": "Nachbarn eingeladen — storniert"
+      "referral": "Geworbene Freundin oder Freund – storniert",
+      "neighbor": "Nachbarn eingeladen – storniert"
     },
     "pending": {
       "title": "Punkte unterwegs",
-      "one": "{name} hat bestellt — {points} Punkte, sobald die Zahlung eingegangen ist.",
+      "one": "{name} hat bestellt – {points} Punkte, sobald die Zahlung eingegangen ist.",
       "balance": "Ihr Punktestand"
     }
   }

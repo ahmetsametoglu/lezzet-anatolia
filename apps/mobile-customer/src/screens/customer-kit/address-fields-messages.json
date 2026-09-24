@@ -19,7 +19,7 @@
     "zipPlaceholder": "Code postal",
     "cityLabel": "Ville",
     "cityPlaceholder": "Ville",
-    "suggestCredit": "Adresses : Base Adresse Nationale (Licence Ouverte Etalab 2.0)",
+    "suggestCredit": "Adresses : Base Adresse Nationale (Licence Ouverte Etalab 2.0)",
     "suggestLabel": "Suggestions d'adresses",
     "suggestBusy": "Les suggestions d'adresses sont momentanément saturées — réessayez dans un instant. Vous pouvez aussi saisir l'adresse manuellement.",
     "zipSuggestLabel": "Suggestions de codes postaux",
@@ -34,7 +34,7 @@
     "cityPlaceholder": "Stadt",
     "suggestCredit": "Adressen: Base Adresse Nationale (Etalab 2.0)",
     "suggestLabel": "Adressvorschläge",
-    "suggestBusy": "Adressvorschläge sind gerade ausgelastet — versuchen Sie es gleich noch einmal. Sie können die Adresse auch manuell eingeben.",
+    "suggestBusy": "Adressvorschläge sind gerade ausgelastet – versuchen Sie es gleich noch einmal. Sie können die Adresse auch manuell eingeben.",
     "zipSuggestLabel": "Postleitzahl-Vorschläge",
     "citySuggestLabel": "Orte zu dieser Postleitzahl"
   }

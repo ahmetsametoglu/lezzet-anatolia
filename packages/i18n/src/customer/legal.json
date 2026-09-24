@@ -545,13 +545,13 @@
     "pages": {
       "delivery": {
         "title": "Livraison et retours",
-        "updatedAt": "Dernière mise à jour : 1er juillet 2026",
+        "updatedAt": "Dernière mise à jour : 1er juillet 2026",
         "sections": [
           {
             "id": "bolge",
             "heading": "Notre zone de livraison",
             "paragraphs": [
-              "Nous livrons à Strasbourg et dans ses environs avec notre propre camion réfrigéré, jusqu'à votre porte. Vous voyez automatiquement, au moment de la commande, si votre adresse est dans la zone ; votre jour de livraison dépend du calendrier de votre secteur.",
+              "Nous livrons à Strasbourg et dans ses environs avec notre propre camion réfrigéré, jusqu'à votre porte. Vous voyez automatiquement, au moment de la commande, si votre adresse est dans la zone ; votre jour de livraison dépend du calendrier de votre secteur.",
               {
                 "web": "Vous pouvez changer votre code postal à tout moment dans le bandeau en haut du site. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement.",
                 "app": "Vous pouvez changer votre code postal à tout moment depuis le bouton de zone en haut de la vitrine. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement."
@@ -563,9 +563,9 @@
             "id": "yollar",
             "heading": "Quel produit arrive par quel moyen",
             "paragraphs": [
-              "Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison. Ils ne peuvent pas partir en colis : nous ne pouvons pas garantir la chaîne du froid dans les conditions d'expédition, et nous ne transportons pas ce que nous ne pouvons pas garantir.",
-              "Tous les autres produits partent par transporteur — que vous soyez dans notre zone ou non. Être hors zone ne veut donc pas dire que vous ne pouvez pas commander : seuls les produits sous chaîne du froid ne peuvent pas vous parvenir.",
-              "Le catalogue et chaque fiche produit indiquent par quel moyen le produit vous parviendra. Si vous choisissez une adresse hors zone, les articles sous chaîne du froid ne sont pas ajoutés à la commande : ils restent dans votre panier."
+              "Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison. Ils ne peuvent pas partir en colis : nous ne pouvons pas garantir la chaîne du froid dans les conditions d'expédition, et nous ne transportons pas ce que nous ne pouvons pas garantir.",
+              "Tous les autres produits partent par transporteur — que vous soyez dans notre zone ou non. Être hors zone ne veut donc pas dire que vous ne pouvez pas commander : seuls les produits sous chaîne du froid ne peuvent pas vous parvenir.",
+              "Le catalogue et chaque fiche produit indiquent par quel moyen le produit vous parviendra. Si vous choisissez une adresse hors zone, les articles sous chaîne du froid ne sont pas ajoutés à la commande : ils restent dans votre panier."
             ],
             "bullets": []
           },
@@ -574,8 +574,8 @@
             "heading": "Expédition",
             "paragraphs": [
               "Une fois votre colis préparé, comptez 2 à 4 jours ouvrés en France comme en Allemagne.",
-              "Si votre panier contient à la fois des articles expédiables et des articles réservés au camion, il est scindé en deux : la livraison à domicile et l'expédition deviennent deux commandes et deux paiements distincts. Passer la commande expédiée est facultatif : si vous ne la passez pas, ces articles restent dans votre panier.",
-              "Les frais d'expédition et le seuil de franco de port figurent ci-dessous, dans « Montants en vigueur » ; vous retrouvez les mêmes chiffres dans le panier, avant la validation."
+              "Si votre panier contient à la fois des articles expédiables et des articles réservés au camion, il est scindé en deux : la livraison à domicile et l'expédition deviennent deux commandes et deux paiements distincts. Passer la commande expédiée est facultatif : si vous ne la passez pas, ces articles restent dans votre panier.",
+              "Les frais d'expédition et le seuil de franco de port figurent ci-dessous, dans « Montants en vigueur » ; vous retrouvez les mêmes chiffres dans le panier, avant la validation."
             ],
             "bullets": []
           },
@@ -583,8 +583,8 @@
             "id": "soguk-zincir",
             "heading": "Chaîne du froid",
             "paragraphs": [
-              "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant ; la chaîne du froid n'est rompue ni dans notre entrepôt ni dans notre véhicule. À la réception, il vous suffit de les placer directement au congélateur. Les produits frais font partie de la même chaîne : la plage 0–4 °C est maintenue pendant tout le trajet, et à la réception ils vont au réfrigérateur.",
-              "Comme nous livrons ces produits nous-mêmes, le trajet est court. Les bords des produits peuvent tout de même être légèrement ramollis à la réception : c'est normal et sans effet sur la qualité. Si le contenu est entièrement décongelé, ne le recongelez pas et signalez-le-nous comme indiqué ci-dessous."
+              "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant ; la chaîne du froid n'est rompue ni dans notre entrepôt ni dans notre véhicule. À la réception, il vous suffit de les placer directement au congélateur. Les produits frais font partie de la même chaîne : la plage de 0 à 4 °C est maintenue pendant tout le trajet, et à la réception ils vont au réfrigérateur.",
+              "Comme nous livrons ces produits nous-mêmes, le trajet est court. Les bords des produits peuvent tout de même être légèrement ramollis à la réception : c'est normal et sans effet sur la qualité. Si le contenu est entièrement décongelé, ne le recongelez pas et signalez-le-nous comme indiqué ci-dessous."
             ],
             "bullets": []
           },
@@ -593,23 +593,23 @@
             "heading": "Conditions de retour",
             "paragraphs": [
               "Pour les denrées alimentaires, le droit de rétractation général ne s'applique pas aux produits livrés et acceptés, en raison du risque de rupture de la chaîne du froid (exception des biens périssables, Code de la consommation).",
-              "En revanche, nous vous remboursons ou réexpédions votre commande dans les cas suivants — le choix vous appartient :"
+              "En revanche, nous vous remboursons ou réexpédions votre commande dans les cas suivants — le choix vous appartient :"
             ],
             "bullets": [
-              "Article manquant : le montant du produit absent de votre colis est remboursé automatiquement, sans démarche de votre part.",
-              "Produit endommagé ou décongelé : signalez-le avec une photo dans les 48 heures suivant la livraison.",
-              "Produit erroné : nous envoyons le bon produit ou nous vous remboursons.",
-              "Commande non livrée : si la livraison n'a pas pu être faite pour une raison qui nous incombe, aucun encaissement n'est effectué, ou il est remboursé.",
-              "Absence à l'adresse : nous présentons la commande une seconde fois, sans frais. Si nous ne pouvons pas livrer lors de ce second passage non plus, les produits surgelés ne sont plus commercialisables et le montant n'est pas remboursé."
+              "Article manquant : le montant du produit absent de votre colis est remboursé automatiquement, sans démarche de votre part.",
+              "Produit endommagé ou décongelé : signalez-le avec une photo dans les 48 heures suivant la livraison.",
+              "Produit erroné : nous envoyons le bon produit ou nous vous remboursons.",
+              "Commande non livrée : si la livraison n'a pas pu être faite pour une raison qui nous incombe, aucun encaissement n'est effectué, ou il est remboursé.",
+              "Absence à l'adresse : nous présentons la commande une seconde fois, sans frais. Si nous ne pouvons pas livrer lors de ce second passage non plus, les produits surgelés ne sont plus commercialisables et le montant n'est pas remboursé."
             ]
           },
           {
             "id": "iade-suresi",
             "heading": "Comment et quand le remboursement est effectué",
             "paragraphs": [
-              "Le remboursement est effectué sur le moyen de paiement utilisé. Si vous avez payé par carte, le montant est recrédité sur votre carte ; selon votre banque, quelques jours ouvrés peuvent être nécessaires avant qu'il apparaisse sur votre compte.",
-              "Si vous avez choisi le paiement à la livraison et que vous n'avez pas encore payé, il n'y a rien à rembourser : le montant de l'article manquant est déjà déduit de la somme réclamée à la livraison.",
-              "Vous pouvez ouvrir une demande depuis la rubrique « Assistance » ; en sélectionnant votre commande et les articles concernés dans le formulaire, nous savons directement ce qui manque ou ce qui est abîmé."
+              "Le remboursement est effectué sur le moyen de paiement utilisé. Si vous avez payé par carte, le montant est recrédité sur votre carte ; selon votre banque, quelques jours ouvrés peuvent être nécessaires avant qu'il apparaisse sur votre compte.",
+              "Si vous avez choisi le paiement à la livraison et que vous n'avez pas encore payé, il n'y a rien à rembourser : le montant de l'article manquant est déjà déduit de la somme réclamée à la livraison.",
+              "Vous pouvez ouvrir une demande depuis la rubrique « Assistance » ; en sélectionnant votre commande et les articles concernés dans le formulaire, nous savons directement ce qui manque ou ce qui est abîmé."
             ],
             "bullets": []
           }
@@ -617,20 +617,20 @@
         "questions": [],
         "amounts": {
           "heading": "Montants en vigueur",
-          "fee": "Les frais d'expédition sont de {fee} ; ils sont offerts à partir de {threshold} de commande.",
+          "fee": "Les frais d'expédition sont de {fee} ; ils sont offerts à partir de {threshold} de commande.",
           "minBasketRoute": "Pour la livraison à domicile, le montant minimum de commande est de {amount}.",
           "minBasketRouteNone": "Pour la livraison à domicile, il n'y a pas de montant minimum de commande.",
           "minBasketShipping": "Pour les commandes expédiées, le montant minimum est de {amount}.",
           "minBasketShippingNone": "Pour les commandes expédiées, il n'y a pas de montant minimum — les frais de port sont déjà à votre charge.",
-          "cod": "Le paiement à la livraison est possible sur les commandes en zone jusqu'à {amount} ; au-delà, le paiement est encaissé lors de la commande.",
-          "countries": "Pays desservis par transporteur : {countries}.",
+          "cod": "Le paiement à la livraison est possible sur les commandes en zone jusqu'à {amount} ; au-delà, le paiement est encaissé lors de la commande.",
+          "countries": "Pays desservis par transporteur : {countries}.",
           "and": " et ",
           "countryNames": {
             "FR": "France",
             "DE": "Allemagne"
           },
           "unavailable": "Vous retrouvez les frais d'expédition, le seuil de franco de port et le montant minimum en vigueur dans votre panier et à l'étape du paiement.",
-          "note": "Ces montants constituent la règle générale pour les achats particuliers et correspondent aux montants actuellement appliqués ; s'ils changent, cette page change avec eux. Certaines zones et les comptes professionnels peuvent relever d'un seuil différent — le montant qui vous est appliqué est toujours affiché dans votre panier."
+          "note": "Ces montants constituent la règle générale pour les achats particuliers et correspondent aux montants actuellement appliqués ; s'ils changent, cette page change avec eux. Certaines zones et les comptes professionnels peuvent relever d'un seuil différent — le montant qui vous est appliqué est toujours affiché dans votre panier."
         },
         "notice": {
           "text": "Vous ne trouvez pas la réponse à votre question ici ?",
@@ -648,58 +648,58 @@
       },
       "faq": {
         "title": "Questions fréquentes",
-        "updatedAt": "Dernière mise à jour : 1er juillet 2026",
+        "updatedAt": "Dernière mise à jour : 1er juillet 2026",
         "sections": [],
         "questions": [
           {
             "id": "donmus",
             "question": "Les produits arrivent-ils surgelés ?",
-            "answer": "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant et arrivent chez vous sans rupture de la chaîne du froid. Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison ; ils ne peuvent pas partir en colis. Tous les autres produits, eux, sont expédiés par transporteur en France et en Allemagne."
+            "answer": "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant et arrivent chez vous sans rupture de la chaîne du froid. Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison ; ils ne peuvent pas partir en colis. Tous les autres produits, eux, sont expédiés par transporteur en France et en Allemagne."
           },
           {
             "id": "asgari-sepet",
             "question": "Y a-t-il un montant minimum de commande ?",
-            "answer": "Uniquement pour la livraison dans notre zone : les commandes que nous apportons à votre porte avec notre propre véhicule ont un montant minimum, et si vous êtes en dessous, le montant restant est indiqué dans le panier. Pour l'expédition, il n'y a aucun montant minimum — les frais de port sont déjà à votre charge. Les montants en vigueur figurent sur la page livraison et retours."
+            "answer": "Uniquement pour la livraison dans notre zone : les commandes que nous apportons à votre porte avec notre propre véhicule ont un montant minimum, et si vous êtes en dessous, le montant restant est indiqué dans le panier. Pour l'expédition, il n'y a aucun montant minimum — les frais de port sont déjà à votre charge. Les montants en vigueur figurent sur la page livraison et retours."
           },
           {
             "id": "teslimat-gunu",
             "question": "Quand ma commande arrive-t-elle ?",
-            "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, comptez 2 à 4 jours ouvrés en France comme en Allemagne une fois le colis préparé. Vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail aux étapes clés (confirmation, départ, livraison)."
+            "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, comptez 2 à 4 jours ouvrés en France comme en Allemagne une fois le colis préparé. Vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail aux étapes clés (confirmation, départ, livraison)."
           },
           {
             "id": "kapida-odeme",
             "question": "Puis-je payer à la livraison ?",
-            "answer": "Le paiement à la livraison est possible pour les livraisons dans notre zone, jusqu'à un certain montant de commande — en espèces ou par carte ; le plafond en vigueur figure sur la page livraison et retours. Au-delà, et pour toutes les expéditions, le paiement est encaissé au moment de la commande. En paiement à la livraison, si un article manque, son montant est déduit dès la livraison — vous n'attendez pas un remboursement."
+            "answer": "Le paiement à la livraison est possible pour les livraisons dans notre zone, jusqu'à un certain montant de commande — en espèces ou par carte ; le plafond en vigueur figure sur la page livraison et retours. Au-delà, et pour toutes les expéditions, le paiement est encaissé au moment de la commande. En paiement à la livraison, si un article manque, son montant est déduit dès la livraison — vous n'attendez pas un remboursement."
           },
           {
             "id": "eksik-kalem",
             "question": "Un produit manque dans ma commande, que faire ?",
-            "answer": "Vous n'avez rien à faire : le montant de l'article absent de votre colis est calculé et remboursé automatiquement. Si vous souhaitez tout de même nous en parler, ouvrez une demande depuis « Assistance » en sélectionnant votre commande."
+            "answer": "Vous n'avez rien à faire : le montant de l'article absent de votre colis est calculé et remboursé automatiquement. Si vous souhaitez tout de même nous en parler, ouvrez une demande depuis « Assistance » en sélectionnant votre commande."
           },
           {
             "id": "toptan",
             "question": "Puis-je obtenir des tarifs professionnels pour mon restaurant ?",
-            "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET (France) ou votre numéro de TVA (Allemagne) ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence. Les comptes professionnels ont également accès au paiement par virement ; vos conditions de règlement sont définies sur votre compte."
+            "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET (France) ou votre numéro de TVA (Allemagne) ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence. Les comptes professionnels ont également accès au paiement par virement ; vos conditions de règlement sont définies sur votre compte."
           },
           {
             "id": "alerjen",
             "question": "Où puis-je voir les informations sur les allergènes ?",
-            "answer": "Les ingrédients, les allergènes et, le cas échéant, l'avertissement de contamination croisée figurent sur la fiche de chaque produit. Ces informations proviennent de la déclaration du fabricant — nous ne fabriquons pas nos produits, nous les achetons auprès de producteurs que nous sélectionnons. En cas d'allergie sévère, écrivez-nous avant de commander : nous demandons confirmation au fabricant."
+            "answer": "Les ingrédients, les allergènes et, le cas échéant, l'avertissement de contamination croisée figurent sur la fiche de chaque produit. Ces informations proviennent de la déclaration du fabricant — nous ne fabriquons pas nos produits, nous les achetons auprès de producteurs que nous sélectionnons. En cas d'allergie sévère, écrivez-nous avant de commander : nous demandons confirmation au fabricant."
           },
           {
             "id": "hesap-gerekli",
             "question": "Dois-je créer un compte pour commander ?",
-            "answer": "Vous n'avez pas besoin de créer un mot de passe : remplissez votre panier et finalisez la commande avec votre adresse e-mail — en saisissant le code que nous vous envoyons, votre compte est créé automatiquement et votre commande y est rattachée. Vos commandes, vos adresses et vos points y sont conservés : vous ne ressaisissez plus votre adresse et vous pouvez relancer une commande passée en un clic depuis « Mes commandes »."
+            "answer": "Vous n'avez pas besoin de créer un mot de passe : remplissez votre panier et finalisez la commande avec votre adresse e-mail — en saisissant le code que nous vous envoyons, votre compte est créé automatiquement et votre commande y est rattachée. Vos commandes, vos adresses et vos points y sont conservés : vous ne ressaisissez plus votre adresse et vous pouvez relancer une commande passée en un clic depuis « Mes commandes »."
           },
           {
             "id": "dil",
             "question": {
               "web": "Comment changer la langue du site et des e-mails ?",
-              "app": "Comment changer la langue de l'application et des e-mails ?"
+              "app": "Comment changer la langue de l'application et des e-mails ?"
             },
             "answer": {
-              "web": "Depuis le bandeau en haut du site ou depuis la ligne « Langue » de votre compte. Vos e-mails de notification vous parviennent dans la même langue.",
-              "app": "Depuis la ligne « Langue » de votre compte. Vos e-mails de notification vous parviennent dans la même langue."
+              "web": "Depuis le bandeau en haut du site ou depuis la ligne « Langue » de votre compte. Vos e-mails de notification vous parviennent dans la même langue.",
+              "app": "Depuis la ligne « Langue » de votre compte. Vos e-mails de notification vous parviennent dans la même langue."
             }
           }
         ],
@@ -710,7 +710,7 @@
       },
       "privacy": {
         "title": "Politique de confidentialité",
-        "updatedAt": "Dernière mise à jour : 21 septembre 2026",
+        "updatedAt": "Dernière mise à jour : 21 septembre 2026",
         "sections": [
           {
             "id": "sorumlu",
@@ -725,22 +725,22 @@
             "id": "hangi-veri",
             "heading": "Quelles données nous collectons",
             "paragraphs": [
-              "Nous ne collectons que les données nécessaires à l'activité. Il s'agit de :"
+              "Nous ne collectons que les données nécessaires à l'activité. Il s'agit de :"
             ],
             "bullets": [
-              "Identité et contact : votre nom, votre adresse e-mail, votre numéro de téléphone.",
+              "Identité et contact : votre nom, votre adresse e-mail, votre numéro de téléphone.",
               {
-                "web": "Livraison : vos adresses enregistrées et votre code postal. Le code postal est conservé dans votre navigateur même sans compte — afin de pouvoir vous montrer la partie du catalogue qui peut vous être livrée.",
-                "app": "Livraison : vos adresses enregistrées et votre code postal. Le code postal est conservé sur votre appareil même sans compte — afin de pouvoir vous montrer la partie du catalogue qui peut vous être livrée."
+                "web": "Livraison : vos adresses enregistrées et votre code postal. Le code postal est conservé dans votre navigateur même sans compte — afin de pouvoir vous montrer la partie du catalogue qui peut vous être livrée.",
+                "app": "Livraison : vos adresses enregistrées et votre code postal. Le code postal est conservé sur votre appareil même sans compte — afin de pouvoir vous montrer la partie du catalogue qui peut vous être livrée."
               },
-              "Commandes : vos commandes, leurs articles, leurs montants et leurs états.",
-              "Préférences de communication : vos consentements marketing et votre langue.",
-              "Vos demandes : les messages que vous nous envoyez et les photos que vous joignez.",
-              "Si vous êtes un client professionnel : votre numéro SIRET et les informations de votre société.",
-              "Vos messages : ce que vous nous écrivez sur WhatsApp, Messenger ou Instagram, y compris les photos et messages vocaux envoyés.",
-              "Si vous vous connectez avec Google : le nom et l'adresse e-mail que Google nous transmet.",
+              "Commandes : vos commandes, leurs articles, leurs montants et leurs états.",
+              "Préférences de communication : vos consentements marketing et votre langue.",
+              "Vos demandes : les messages que vous nous envoyez et les photos que vous joignez.",
+              "Si vous êtes un client professionnel : votre numéro SIRET et les informations de votre société.",
+              "Vos messages : ce que vous nous écrivez sur WhatsApp, Messenger ou Instagram, y compris les photos et messages vocaux envoyés.",
+              "Si vous vous connectez avec Google : le nom et l'adresse e-mail que Google nous transmet.",
               {
-                "app": "Notifications : si vous les avez autorisées, le jeton de notification de votre appareil, afin de pouvoir vous les envoyer."
+                "app": "Notifications : si vous les avez autorisées, le jeton de notification de votre appareil, afin de pouvoir vous les envoyer."
               }
             ]
           },
@@ -748,10 +748,10 @@
             "id": "neden",
             "heading": "Pourquoi nous les collectons",
             "paragraphs": [
-              "Sans votre nom et votre adresse, une commande ne peut pas être livrée ; sans votre adresse e-mail, nous ne pouvons pas vous informer de l'état de votre commande. Ces données sont traitées pour l'exécution du contrat.",
-              "Vos messages sont traités à l'aide de l'intelligence artificielle : ils sont traduits pour que nous puissions vous répondre dans votre langue, les messages vocaux sont transcrits et la réponse est préparée avec l'aide de l'intelligence artificielle.",
+              "Sans votre nom et votre adresse, une commande ne peut pas être livrée ; sans votre adresse e-mail, nous ne pouvons pas vous informer de l'état de votre commande. Ces données sont traitées pour l'exécution du contrat.",
+              "Vos messages sont traités à l'aide de l'intelligence artificielle : ils sont traduits pour que nous puissions vous répondre dans votre langue, les messages vocaux sont transcrits et la réponse est préparée avec l'aide de l'intelligence artificielle.",
               "Les messages promotionnels ne sont envoyés que si vous y avez expressément consenti, et vous pouvez retirer ce consentement à tout moment. Nous conservons la date et l'origine de votre consentement, afin de pouvoir en apporter la preuve.",
-              "Pour la comptabilité et nos obligations légales, nous sommes tenus de conserver les enregistrements de commande et de paiement ; ceux-ci ne dépendent pas du consentement."
+              "Pour la comptabilité et nos obligations légales, nous sommes tenus de conserver les enregistrements de commande et de paiement ; ceux-ci ne dépendent pas du consentement."
             ],
             "bullets": []
           },
@@ -759,9 +759,9 @@
             "id": "ne-kadar",
             "heading": "Combien de temps nous les conservons",
             "paragraphs": [
-              "Les données de votre compte sont conservées tant que votre compte est actif. Vous pouvez supprimer votre compte vous-même, à tout moment, depuis votre page compte : votre nom, votre e-mail et votre téléphone, vos adresses enregistrées, vos demandes, vos points et vos bons personnels sont retirés, vos identifiants sont effacés et vous ne pouvez plus vous connecter.",
-              "Les enregistrements de commande et de facturation sont conservés pendant la durée exigée par la réglementation commerciale et fiscale française ; ils sont préservés jusqu'à l'expiration de ce délai, même après la suppression du compte. Cela inclut le nom et l'adresse figurant sur la facture : la réglementation impose que la facture contienne ces informations, elles ne peuvent donc pas en être retirées. La note que vous avez donnée aux produits reste également, mais elle n'est plus rattachée à votre nom.",
-              "Nos journaux techniques ne contiennent pas de données personnelles. Lorsqu'un diagnostic l'exige, des informations telles que l'e-mail ou le téléphone n'y figurent que sous forme masquée (par exemple a***@example.com) ; l'objectif est uniquement de distinguer de quel enregistrement il s'agit, pas de savoir qui c'est."
+              "Les données de votre compte sont conservées tant que votre compte est actif. Vous pouvez supprimer votre compte vous-même, à tout moment, depuis votre page compte : votre nom, votre e-mail et votre téléphone, vos adresses enregistrées, vos demandes, vos points et vos bons personnels sont retirés, vos identifiants sont effacés et vous ne pouvez plus vous connecter.",
+              "Les enregistrements de commande et de facturation sont conservés pendant la durée exigée par la réglementation commerciale et fiscale française ; ils sont préservés jusqu'à l'expiration de ce délai, même après la suppression du compte. Cela inclut le nom et l'adresse figurant sur la facture : la réglementation impose que la facture contienne ces informations, elles ne peuvent donc pas en être retirées. La note que vous avez donnée aux produits reste également, mais elle n'est plus rattachée à votre nom.",
+              "Nos journaux techniques ne contiennent pas de données personnelles. Lorsqu'un diagnostic l'exige, des informations telles que l'e-mail ou le téléphone n'y figurent que sous forme masquée (par exemple a***@example.com) ; l'objectif est uniquement de distinguer de quel enregistrement il s'agit, pas de savoir qui c'est."
             ],
             "bullets": []
           },
@@ -769,23 +769,23 @@
             "id": "kiminle",
             "heading": "Avec qui nous les partageons",
             "paragraphs": [
-              "Nous ne vendons pas vos données. Elles ne sont partagées qu'avec les prestataires nécessaires à l'activité :"
+              "Nous ne vendons pas vos données. Elles ne sont partagées qu'avec les prestataires nécessaires à l'activité :"
             ],
             "bullets": [
-              "Prestataire de paiement : vos données de carte ne nous parviennent jamais, elles sont traitées directement chez le prestataire.",
-              "Service d'envoi d'e-mails : pour acheminer les e-mails de notification.",
-              "Transporteur : votre nom et votre adresse de livraison pour les commandes expédiées.",
+              "Prestataire de paiement : vos données de carte ne nous parviennent jamais, elles sont traitées directement chez le prestataire.",
+              "Service d'envoi d'e-mails : pour acheminer les e-mails de notification.",
+              "Transporteur : votre nom et votre adresse de livraison pour les commandes expédiées.",
               {
-                "web": "Recherche d'adresse (France) : le texte que vous saisissez dans le champ d'adresse est envoyé directement depuis votre navigateur au service public d'adresses de l'IGN (Base Adresse Nationale) afin d'obtenir des suggestions. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis.",
-                "app": "Recherche d'adresse (France) : le texte que vous saisissez dans le champ d'adresse est envoyé directement depuis votre appareil au service public d'adresses de l'IGN (Base Adresse Nationale) afin d'obtenir des suggestions. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis."
+                "web": "Recherche d'adresse (France) : le texte que vous saisissez dans le champ d'adresse est envoyé directement depuis votre navigateur au service public d'adresses de l'IGN (Base Adresse Nationale) afin d'obtenir des suggestions. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis.",
+                "app": "Recherche d'adresse (France) : le texte que vous saisissez dans le champ d'adresse est envoyé directement depuis votre appareil au service public d'adresses de l'IGN (Base Adresse Nationale) afin d'obtenir des suggestions. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis."
               },
-              "Recherche d'adresse (Allemagne) : le texte de l'adresse saisie est envoyé depuis nos serveurs au service d'adresses de Google, pour les suggestions et la vérification. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis.",
-              "Service d'intelligence artificielle : le contenu de vos messages, pour les traduire, transcrire les messages vocaux et préparer les réponses.",
-              "Plateformes de messagerie : si vous nous écrivez sur WhatsApp, Messenger ou Instagram (Meta), notre réponse vous parvient par la même plateforme ; la conversation est aussi conservée dans notre système.",
+              "Recherche d'adresse (Allemagne) : le texte de l'adresse saisie est envoyé depuis nos serveurs au service d'adresses de Google, pour les suggestions et la vérification. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis.",
+              "Service d'intelligence artificielle : le contenu de vos messages, pour les traduire, transcrire les messages vocaux et préparer les réponses.",
+              "Plateformes de messagerie : si vous nous écrivez sur WhatsApp, Messenger ou Instagram (Meta), notre réponse vous parvient par la même plateforme ; la conversation est aussi conservée dans notre système.",
               {
-                "app": "Service de notifications : le jeton de notification et le texte de la notification, pour acheminer les notifications de l'application vers votre appareil."
+                "app": "Service de notifications : le jeton de notification et le texte de la notification, pour acheminer les notifications de l'application vers votre appareil."
               },
-              "Hébergement et stockage : nos serveurs sont chez Hetzner Online GmbH (Allemagne) et notre base de données chez Supabase, tous deux dans l'Union européenne. Les photos que vous ajoutez sont conservées sur le service de stockage de Cloudflare."
+              "Hébergement et stockage : nos serveurs sont chez Hetzner Online GmbH (Allemagne) et notre base de données chez Supabase, tous deux dans l'Union européenne. Les photos que vous ajoutez sont conservées sur le service de stockage de Cloudflare."
             ]
           },
           {
@@ -803,7 +803,7 @@
             "id": "haklariniz",
             "heading": "Vos droits",
             "paragraphs": [
-              "Au titre du RGPD (règlement (UE) 2016/679), vous disposez des droits suivants. Pour les exercer, il vous suffit d'écrire à {email} ; une réponse vous est apportée dans un délai maximal d'un mois."
+              "Au titre du RGPD (règlement (UE) 2016/679), vous disposez des droits suivants. Pour les exercer, il vous suffit d'écrire à {email} ; une réponse vous est apportée dans un délai maximal d'un mois."
             ],
             "bullets": [
               "Accéder à vos données et en demander une copie",
@@ -823,20 +823,20 @@
             },
             "paragraphs": [
               {
-                "app": "L'application n'utilise aucun cookie — ni publicitaire, ni traceur, ni d'aucune autre sorte. Ce qui est conservé sur votre appareil est nécessaire au fonctionnement de l'application : votre session, votre panier et le code postal que vous avez choisi. La session est stockée dans le coffre sécurisé du système (Trousseau sur iOS, Keystore sur Android)."
+                "app": "L'application n'utilise aucun cookie — ni publicitaire, ni traceur, ni d'aucune autre sorte. Ce qui est conservé sur votre appareil est nécessaire au fonctionnement de l'application : votre session, votre panier et le code postal que vous avez choisi. La session est stockée dans le coffre sécurisé du système (Trousseau sur iOS, Keystore sur Android)."
               },
               {
-                "web": "Nous n'utilisons ni cookies publicitaires ni traceurs. Ce qui est conservé dans votre navigateur est nécessaire au fonctionnement du site : votre session, votre panier et le code postal que vous avez choisi."
+                "web": "Nous n'utilisons ni cookies publicitaires ni traceurs. Ce qui est conservé dans votre navigateur est nécessaire au fonctionnement du site : votre session, votre panier et le code postal que vous avez choisi."
               },
               {
-                "web": "Nous mesurons la fréquentation des pages, mais cette mesure est sans cookie et ne peut être rattachée à une personne : les visites sont comptées à l'aide d'une clé qui change chaque jour et qui est détruite le lendemain, et aucun enregistrement nominatif n'est conservé."
+                "web": "Nous mesurons la fréquentation des pages, mais cette mesure est sans cookie et ne peut être rattachée à une personne : les visites sont comptées à l'aide d'une clé qui change chaque jour et qui est détruite le lendemain, et aucun enregistrement nominatif n'est conservé."
               },
               {
-                "web": "Votre panier est conservé même sans compte ; à la connexion, le panier de votre navigateur est transféré vers votre compte puis supprimé du navigateur.",
-                "app": "Votre panier est conservé même sans compte ; à la connexion, le panier de votre appareil est transféré vers votre compte puis supprimé de l'appareil."
+                "web": "Votre panier est conservé même sans compte ; à la connexion, le panier de votre navigateur est transféré vers votre compte puis supprimé du navigateur.",
+                "app": "Votre panier est conservé même sans compte ; à la connexion, le panier de votre appareil est transféré vers votre compte puis supprimé de l'appareil."
               },
               {
-                "app": "Nous mesurons la façon dont l'application est utilisée : quels produits sont consultés, ce qui est recherché, ce qui est ajouté au panier et à quel endroit une commande s'interrompt. Cette mesure n'écrit rien sur votre appareil et n'utilise aucun identifiant publicitaire — l'enregistrement se crée sur nos serveurs, au moment où votre demande y arrive. Ni votre nom, ni votre adresse e-mail, ni votre numéro de compte n'y figurent : la clé qui regroupe les demandes est dérivée d'une valeur qui change chaque jour et n'est pas conservée le lendemain, elle ne peut donc pas être recalculée après coup. Le texte saisi dans la recherche est également conservé — afin de voir quelles recherches restent sans résultat."
+                "app": "Nous mesurons la façon dont l'application est utilisée : quels produits sont consultés, ce qui est recherché, ce qui est ajouté au panier et à quel endroit une commande s'interrompt. Cette mesure n'écrit rien sur votre appareil et n'utilise aucun identifiant publicitaire — l'enregistrement se crée sur nos serveurs, au moment où votre demande y arrive. Ni votre nom, ni votre adresse e-mail, ni votre numéro de compte n'y figurent : la clé qui regroupe les demandes est dérivée d'une valeur qui change chaque jour et n'est pas conservée le lendemain, elle ne peut donc pas être recalculée après coup. Le texte saisi dans la recherche est également conservé — afin de voir quelles recherches restent sans résultat."
               }
             ],
             "bullets": []
@@ -859,14 +859,14 @@
       },
       "sales": {
         "title": "Conditions générales de vente",
-        "updatedAt": "Dernière mise à jour : 1er juillet 2026",
+        "updatedAt": "Dernière mise à jour : 1er juillet 2026",
         "sections": [
           {
             "id": "kapsam",
             "heading": "Champ d'application",
             "paragraphs": [
               "Les présentes conditions s'appliquent à toutes les ventes réalisées via ce site par la société {legalName} (SIRET {siret} · {address}, France), sous le nom commercial Lezzet Anatolie. En passant commande, vous acceptez ces conditions.",
-              "Ces conditions peuvent évoluer ; la version applicable à votre commande est celle en vigueur à la date de la commande. La date de mise à jour en haut de page indique la version que vous consultez."
+              "Ces conditions peuvent évoluer ; la version applicable à votre commande est celle en vigueur à la date de la commande. La date de mise à jour en haut de page indique la version que vous consultez."
             ],
             "bullets": []
           },
@@ -874,9 +874,9 @@
             "id": "urunler",
             "heading": "Produits et informations",
             "paragraphs": [
-              "Les produits que nous vendons sont des denrées alimentaires surgelées ou de longue conservation. Nous ne les fabriquons pas nous-mêmes : nous les achetons auprès de producteurs que nous sélectionnons. Les ingrédients, les allergènes et la quantité nette figurent sur la fiche de chaque produit ; ces informations proviennent de la déclaration du fabricant.",
-              "Les photographies sont fournies à titre d'illustration ; la présentation et l'aspect peuvent varier d'un produit à l'autre. Seules les informations écrites sur la fiche produit sont contractuelles.",
-              "Les produits sous chaîne du froid (surgelés et frais) ne peuvent être vendus qu'à l'intérieur de notre zone de livraison : ne pouvant pas garantir la chaîne du froid dans les conditions d'expédition, nous ne les envoyons pas en colis. Ils sont signalés dans le catalogue et ne peuvent pas être commandés si une adresse hors zone est sélectionnée."
+              "Les produits que nous vendons sont des denrées alimentaires surgelées ou de longue conservation. Nous ne les fabriquons pas nous-mêmes : nous les achetons auprès de producteurs que nous sélectionnons. Les ingrédients, les allergènes et la quantité nette figurent sur la fiche de chaque produit ; ces informations proviennent de la déclaration du fabricant.",
+              "Les photographies sont fournies à titre d'illustration ; la présentation et l'aspect peuvent varier d'un produit à l'autre. Seules les informations écrites sur la fiche produit sont contractuelles.",
+              "Les produits sous chaîne du froid (surgelés et frais) ne peuvent être vendus qu'à l'intérieur de notre zone de livraison : ne pouvant pas garantir la chaîne du froid dans les conditions d'expédition, nous ne les envoyons pas en colis. Ils sont signalés dans le catalogue et ne peuvent pas être commandés si une adresse hors zone est sélectionnée."
             ],
             "bullets": []
           },
@@ -885,8 +885,8 @@
             "heading": "Formation du contrat",
             "paragraphs": [
               "Le contrat est conclu lorsque vous validez votre panier et finalisez l'étape de paiement — si vous avez choisi le paiement à la livraison, il vous suffit de confirmer le moyen de paiement à cette étape. Dès l'affichage de la page de confirmation et la réception de votre e-mail de confirmation, la commande est également acceptée par nos soins.",
-              "Le prix de votre panier devient définitif au moment où vous passez commande. Si le prix d'un article augmente pendant qu'il est dans votre panier, nous vous montrons le nouveau prix et vous demandons de le confirmer avant la commande ; s'il baisse, le prix le plus bas s'applique. Une fois la commande passée, son montant ne change plus, même si le prix du catalogue évolue.",
-              "Si un article s'avère indisponible après coup, votre commande n'est pas annulée : l'article manquant est retiré, son montant n'est pas encaissé ou vous est remboursé, et vous en êtes informé."
+              "Le prix de votre panier devient définitif au moment où vous passez commande. Si le prix d'un article augmente pendant qu'il est dans votre panier, nous vous montrons le nouveau prix et vous demandons de le confirmer avant la commande ; s'il baisse, le prix le plus bas s'applique. Une fois la commande passée, son montant ne change plus, même si le prix du catalogue évolue.",
+              "Si un article s'avère indisponible après coup, votre commande n'est pas annulée : l'article manquant est retiré, son montant n'est pas encaissé ou vous est remboursé, et vous en êtes informé."
             ],
             "bullets": []
           },
@@ -896,7 +896,7 @@
             "paragraphs": [
               "Les prix sont indiqués en euros, toutes taxes comprises. Le taux de TVA applicable varie selon le type de produit.",
               "Les comptes professionnels (B2B) bénéficient de tarifs distincts, visibles une fois le compte validé.",
-              "Les frais de livraison ne sont pas inclus dans le prix ; ils apparaissent sur une ligne distincte du panier et vous les voyez avant de finaliser la commande."
+              "Les frais de livraison ne sont pas inclus dans le prix ; ils apparaissent sur une ligne distincte du panier et vous les voyez avant de finaliser la commande."
             ],
             "bullets": []
           },
@@ -905,8 +905,8 @@
             "heading": "Paiement",
             "paragraphs": [
               "Le paiement par carte est encaissé via un prestataire de paiement sécurisé. Vos données de carte ne nous parviennent à aucun moment et ne sont pas conservées par nos soins.",
-              "Le paiement à la livraison est possible dans notre zone de livraison, jusqu'à un certain montant de commande — en espèces ou par carte ; le plafond en vigueur figure sur la page livraison et retours. Dans ce cas, le montant encaissé correspond aux articles effectivement livrés : un article manquant est déduit d'emblée.",
-              "Le virement est réservé aux comptes professionnels validés ; vos conditions de règlement sont définies sur votre compte.",
+              "Le paiement à la livraison est possible dans notre zone de livraison, jusqu'à un certain montant de commande — en espèces ou par carte ; le plafond en vigueur figure sur la page livraison et retours. Dans ce cas, le montant encaissé correspond aux articles effectivement livrés : un article manquant est déduit d'emblée.",
+              "Le virement est réservé aux comptes professionnels validés ; vos conditions de règlement sont définies sur votre compte.",
               "Les commandes payées d'avance ne sont pas mises en préparation avant la finalisation du paiement. En paiement à la livraison, l'encaissement a lieu au moment de la livraison et la commande entre en préparation dès sa validation."
             ],
             "bullets": []
@@ -916,8 +916,8 @@
             "heading": "Livraison",
             "paragraphs": [
               "Les produits sous chaîne du froid (surgelés et frais) ne sont livrés qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison. Tous les autres produits partent par transporteur — dans la zone comme en dehors. Le jour et les options de livraison sont affichés au moment de la commande selon le code postal de votre adresse.",
-              "Le montant minimum de commande, les frais d'expédition et le seuil de franco de port sont publiés, à jour, sur la page livraison et retours ; les mêmes montants sont affichés dans le panier au moment de commander. Une fois le colis préparé, comptez 2 à 4 jours ouvrés en France comme en Allemagne.",
-              "Les jours de livraison indiqués sont estimatifs. Les conditions météorologiques, la circulation ou un retard du transporteur peuvent décaler la livraison ; le cas échéant, nous vous en informons.",
+              "Le montant minimum de commande, les frais d'expédition et le seuil de franco de port sont publiés, à jour, sur la page livraison et retours ; les mêmes montants sont affichés dans le panier au moment de commander. Une fois le colis préparé, comptez 2 à 4 jours ouvrés en France comme en Allemagne.",
+              "Les jours de livraison indiqués sont estimatifs. Les conditions météorologiques, la circulation ou un retard du transporteur peuvent décaler la livraison ; le cas échéant, nous vous en informons.",
               "Si la livraison ne peut être effectuée parce que personne n'est présent à l'adresse, nous présentons la commande une seconde fois, sans frais. Si ce second passage échoue également, les produits surgelés ne sont plus commercialisables et le montant n'est pas remboursé. Les détails figurent sur la page livraison et retours."
             ],
             "bullets": []
@@ -927,7 +927,7 @@
             "heading": "Droit de rétractation",
             "paragraphs": [
               "Conformément au Code de la consommation (art. L221-28), le droit de rétractation de 14 jours applicable à la vente à distance NE S'APPLIQUE PAS aux denrées alimentaires susceptibles de se détériorer rapidement.",
-              "Cela ne supprime pas vos droits en cas de livraison non conforme : en cas d'article manquant, endommagé, décongelé ou erroné, le montant est remboursé ou le produit réexpédié. Les conditions et les délais sont précisés sur la page livraison et retours."
+              "Cela ne supprime pas vos droits en cas de livraison non conforme : en cas d'article manquant, endommagé, décongelé ou erroné, le montant est remboursé ou le produit réexpédié. Les conditions et les délais sont précisés sur la page livraison et retours."
             ],
             "bullets": []
           },
@@ -952,7 +952,7 @@
             "id": "uyusmazlik",
             "heading": "Litiges et droit applicable",
             "paragraphs": [
-              "En cas de problème, écrivez-nous ; les demandes peuvent être ouvertes et suivies depuis la rubrique « Assistance ».",
+              "En cas de problème, écrivez-nous ; les demandes peuvent être ouvertes et suivies depuis la rubrique « Assistance ».",
               "Nous résolvons volontiers tout problème que vous rencontrez et ne clôturons pas une demande sans solution. Les présentes conditions sont soumises au droit français."
             ],
             "bullets": []
@@ -960,7 +960,7 @@
         ],
         "questions": [],
         "notice": {
-          "text": "Les détails de livraison, d'expédition et de retour figurent sur une page distincte :",
+          "text": "Les détails de livraison, d'expédition et de retour figurent sur une page distincte :",
           "links": [
             {
               "label": "Livraison et retours",
@@ -975,7 +975,7 @@
       },
       "terms": {
         "title": "Mentions légales",
-        "updatedAt": "Dernière mise à jour : 1er juillet 2026",
+        "updatedAt": "Dernière mise à jour : 1er juillet 2026",
         "sections": [
           {
             "id": "isletme",
@@ -984,17 +984,17 @@
               "Ce site est édité par la société {legalName}, sous le nom commercial Lezzet Anatolie."
             ],
             "bullets": [
-              "Dénomination sociale : {denomination}",
-              "Nom commercial : Lezzet Anatolie",
-              "Forme juridique : SAS — société par actions simplifiée",
-              "Capital social : 500 €",
-              "SIREN : {siren}",
-              "SIRET (siège) : {siret}",
-              "Numéro de TVA intracommunautaire : {vatId}",
-              "Code APE : 4791B — vente à distance sur catalogue spécialisé",
-              "Siège social : {address}, France",
-              "E-mail : {email}",
-              "Téléphone : {phone}"
+              "Dénomination sociale : {denomination}",
+              "Nom commercial : Lezzet Anatolie",
+              "Forme juridique : SAS — société par actions simplifiée",
+              "Capital social : 500 €",
+              "SIREN : {siren}",
+              "SIRET (siège) : {siret}",
+              "Numéro de TVA intracommunautaire : {vatId}",
+              "Code APE : 4791B — vente à distance sur catalogue spécialisé",
+              "Siège social : {address}, France",
+              "E-mail : {email}",
+              "Téléphone : {phone}"
             ]
           },
           {
@@ -1012,9 +1012,9 @@
               "Le site est hébergé par Hetzner Online GmbH, dans des centres de données situés dans l'Union européenne."
             ],
             "bullets": [
-              "Hébergeur : Hetzner Online GmbH",
-              "Adresse : Industriestr. 25, 91710 Gunzenhausen, Allemagne",
-              "Téléphone : +49 (0)9831 505-0"
+              "Hébergeur : Hetzner Online GmbH",
+              "Adresse : Industriestr. 25, 91710 Gunzenhausen, Allemagne",
+              "Téléphone : +49 (0)9831 505-0"
             ]
           },
           {
@@ -1030,7 +1030,7 @@
             "id": "sorumluluk",
             "heading": "Responsabilité",
             "paragraphs": [
-              "Nous veillons à l'exactitude et à l'actualité du contenu du site. Les informations produits, les prix et les disponibilités peuvent évoluer ; l'information affichée dans le panier au moment de la commande fait foi.",
+              "Nous veillons à l'exactitude et à l'actualité du contenu du site. Les informations produits, les prix et les disponibilités peuvent évoluer ; l'information affichée dans le panier au moment de la commande fait foi.",
               "Notre responsabilité ne saurait être engagée en cas d'indisponibilité temporaire du site ou d'interruption pour maintenance."
             ],
             "bullets": []
@@ -1046,7 +1046,7 @@
         ],
         "questions": [],
         "notice": {
-          "text": "Les conditions relatives à l'achat figurent sur une page distincte :",
+          "text": "Les conditions relatives à l'achat figurent sur une page distincte :",
           "links": [
             {
               "label": "Conditions générales de vente",
@@ -1084,8 +1084,8 @@
             "paragraphs": [
               "Adressen in Straßburg und Umgebung beliefern wir mit unserem eigenen Kühlfahrzeug bis vor die Haustür. Ob Ihre Adresse im Liefergebiet liegt, sehen Sie bei der Bestellung automatisch anhand Ihrer Postleitzahl; Ihr Liefertag richtet sich nach dem Kalender Ihres Gebiets.",
               {
-                "web": "Sie können Ihre Postleitzahl jederzeit oben auf der Seite ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet — Sie erleben also an der Kasse keine Überraschung.",
-                "app": "Sie können Ihre Postleitzahl jederzeit über die Gebietsanzeige oben auf der Startseite ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet — beim Schritt „Bestellung abschließen“ erleben Sie also keine Überraschung."
+                "web": "Sie können Ihre Postleitzahl jederzeit oben auf der Seite ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet – Sie erleben also an der Kasse keine Überraschung.",
+                "app": "Sie können Ihre Postleitzahl jederzeit über die Gebietsanzeige oben auf der Startseite ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet – beim Schritt „Bestellung abschließen“ erleben Sie also keine Überraschung."
               }
             ],
             "bullets": []
@@ -1094,9 +1094,9 @@
             "id": "yollar",
             "heading": "Welches Produkt kommt auf welchem Weg",
             "paragraphs": [
-              "Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Diese Produkte können wir nicht verschicken: Unter Versandbedingungen können wir die Kühlkette nicht sicher gewährleisten, und was wir nicht gewährleisten können, transportieren wir nicht.",
-              "Alle übrigen Produkte verschicken wir — ob Sie in unserem Liefergebiet wohnen oder nicht. Außerhalb des Gebiets zu wohnen heißt also nicht, dass Sie nicht bestellen können: Nur Kühlkettenprodukte können wir Ihnen dann nicht liefern.",
-              "Im Katalog und auf jeder Produktseite steht, auf welchem Weg das Produkt zu Ihnen kommt. Wählen Sie eine Adresse außerhalb des Gebiets, werden Kühlkettenartikel nicht in die Bestellung aufgenommen — sie bleiben in Ihrem Warenkorb."
+              "Produkte mit Kühlkette – Tiefkühl- und Frischware – bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Diese Produkte können wir nicht verschicken: Unter Versandbedingungen können wir die Kühlkette nicht sicher gewährleisten, und was wir nicht gewährleisten können, transportieren wir nicht.",
+              "Alle übrigen Produkte verschicken wir – ob Sie in unserem Liefergebiet wohnen oder nicht. Außerhalb des Gebiets zu wohnen heißt also nicht, dass Sie nicht bestellen können: Nur Kühlkettenprodukte können wir Ihnen dann nicht liefern.",
+              "Im Katalog und auf jeder Produktseite steht, auf welchem Weg das Produkt zu Ihnen kommt. Wählen Sie eine Adresse außerhalb des Gebiets, werden Kühlkettenartikel nicht in die Bestellung aufgenommen – sie bleiben in Ihrem Warenkorb."
             ],
             "bullets": []
           },
@@ -1105,7 +1105,7 @@
             "heading": "Versand",
             "paragraphs": [
               "Nach der Vorbereitung Ihres Pakets rechnen Sie in Frankreich und Deutschland mit 2 bis 4 Werktagen.",
-              "Enthält Ihr Warenkorb sowohl versandfähige als auch nur per Fahrzeug lieferbare Artikel, wird er geteilt: Haustürlieferung und Versand werden zu zwei getrennten Bestellungen mit getrennter Zahlung. Die Versandbestellung ist nicht verpflichtend — sonst bleiben diese Artikel im Warenkorb.",
+              "Enthält Ihr Warenkorb sowohl versandfähige als auch nur per Fahrzeug lieferbare Artikel, wird er geteilt: Haustürlieferung und Versand werden zu zwei getrennten Bestellungen mit getrennter Zahlung. Die Versandbestellung ist nicht verpflichtend – sonst bleiben diese Artikel im Warenkorb.",
               "Versandkosten und die Grenze für kostenlosen Versand stehen unten unter „Aktuelle Beträge“; dieselben Zahlen sehen Sie auch im Warenkorb, vor dem Abschluss der Bestellung."
             ],
             "bullets": []
@@ -1124,7 +1124,7 @@
             "heading": "Rücksendebedingungen",
             "paragraphs": [
               "Bei Lebensmitteln gilt für gelieferte und angenommene Ware wegen des Risikos einer unterbrochenen Kühlkette kein allgemeines Widerrufsrecht (Ausnahme für schnell verderbliche Waren).",
-              "In den folgenden Fällen erstatten wir Ihnen den Betrag oder senden erneut — die Wahl liegt bei Ihnen:"
+              "In den folgenden Fällen erstatten wir Ihnen den Betrag oder senden erneut – die Wahl liegt bei Ihnen:"
             ],
             "bullets": [
               "Fehlender Artikel: Der Betrag des in Ihrer Lieferung fehlenden Produkts wird automatisch erstattet, ohne dass Sie etwas tun müssen.",
@@ -1152,7 +1152,7 @@
           "minBasketRoute": "Für die Haustürlieferung beträgt der Mindestbestellwert {amount}.",
           "minBasketRouteNone": "Für die Haustürlieferung gibt es keinen Mindestbestellwert.",
           "minBasketShipping": "Für Versandbestellungen beträgt der Mindestbestellwert {amount}.",
-          "minBasketShippingNone": "Für Versandbestellungen gibt es keinen Mindestbestellwert — die Versandkosten tragen Sie ohnehin.",
+          "minBasketShippingNone": "Für Versandbestellungen gibt es keinen Mindestbestellwert – die Versandkosten tragen Sie ohnehin.",
           "cod": "Zahlung bei Lieferung ist bei Bestellungen im Liefergebiet bis {amount} möglich; darüber wird die Zahlung bei der Bestellung eingezogen.",
           "countries": "Länder, in die wir versenden: {countries}.",
           "and": " und ",
@@ -1161,7 +1161,7 @@
             "DE": "Deutschland"
           },
           "unavailable": "Die aktuellen Versandkosten, die Grenze für kostenlosen Versand und den Mindestbestellwert sehen Sie in Ihrem Warenkorb und im Zahlungsschritt.",
-          "note": "Diese Beträge sind die allgemeine Regel für Privatkunden und die aktuell im System gültigen Werte; ändern sie sich, ändert sich diese Seite mit. In einzelnen Gebieten und bei Geschäftskonten kann eine andere Grenze gelten — den für Sie geltenden Betrag sehen Sie immer in Ihrem Warenkorb."
+          "note": "Diese Beträge sind die allgemeine Regel für Privatkunden und die aktuell im System gültigen Werte; ändern sie sich, ändert sich diese Seite mit. In einzelnen Gebieten und bei Geschäftskonten kann eine andere Grenze gelten – den für Sie geltenden Betrag sehen Sie immer in Ihrem Warenkorb."
         },
         "notice": {
           "text": "Sie finden hier keine Antwort auf Ihre Frage?",
@@ -1185,12 +1185,12 @@
           {
             "id": "donmus",
             "question": "Kommen die Produkte gefroren an?",
-            "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an. Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug an Adressen in unserem Liefergebiet; sie können nicht verschickt werden. Alle übrigen Produkte versenden wir dagegen nach Frankreich und Deutschland."
+            "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an. Produkte mit Kühlkette – Tiefkühl- und Frischware – bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug an Adressen in unserem Liefergebiet; sie können nicht verschickt werden. Alle übrigen Produkte versenden wir dagegen nach Frankreich und Deutschland."
           },
           {
             "id": "asgari-sepet",
             "question": "Gibt es einen Mindestbestellwert?",
-            "answer": "Nur für die Lieferung in unserem Gebiet: Bestellungen, die wir mit unserem eigenen Fahrzeug an Ihre Tür bringen, haben einen Mindestbestellwert; liegt Ihre Bestellung darunter, sehen Sie den fehlenden Betrag im Warenkorb. Beim Versand gibt es keinen Mindestbestellwert — die Versandkosten tragen Sie ohnehin. Die aktuellen Beträge stehen auf der Seite Lieferung und Rücksendung."
+            "answer": "Nur für die Lieferung in unserem Gebiet: Bestellungen, die wir mit unserem eigenen Fahrzeug an Ihre Tür bringen, haben einen Mindestbestellwert; liegt Ihre Bestellung darunter, sehen Sie den fehlenden Betrag im Warenkorb. Beim Versand gibt es keinen Mindestbestellwert – die Versandkosten tragen Sie ohnehin. Die aktuellen Beträge stehen auf der Seite Lieferung und Rücksendung."
           },
           {
             "id": "teslimat-gunu",
@@ -1200,7 +1200,7 @@
           {
             "id": "kapida-odeme",
             "question": "Kann ich bei Lieferung bezahlen?",
-            "answer": "Bei Lieferungen in unserem Gebiet ist Zahlung bei Lieferung bis zu einem bestimmten Bestellwert möglich — bar oder mit Karte; die aktuelle Obergrenze steht auf der Seite Lieferung und Rücksendung. Darüber hinaus und bei allen Versandbestellungen wird die Zahlung bei der Bestellung eingezogen. Fehlt bei Zahlung bei Lieferung ein Artikel, wird sein Betrag bereits bei der Lieferung abgezogen — Sie warten nicht auf eine Erstattung."
+            "answer": "Bei Lieferungen in unserem Gebiet ist Zahlung bei Lieferung bis zu einem bestimmten Bestellwert möglich – bar oder mit Karte; die aktuelle Obergrenze steht auf der Seite Lieferung und Rücksendung. Darüber hinaus und bei allen Versandbestellungen wird die Zahlung bei der Bestellung eingezogen. Fehlt bei Zahlung bei Lieferung ein Artikel, wird sein Betrag bereits bei der Lieferung abgezogen – Sie warten nicht auf eine Erstattung."
           },
           {
             "id": "eksik-kalem",
@@ -1215,12 +1215,12 @@
           {
             "id": "alerjen",
             "question": "Wo finde ich Angaben zu Allergenen?",
-            "answer": "Zutaten, Allergene und gegebenenfalls der Hinweis auf Kreuzkontamination stehen auf der Seite jedes Produkts. Diese Angaben stammen aus der Deklaration des Herstellers — wir stellen unsere Produkte nicht selbst her, sondern beziehen sie von ausgewählten Herstellern. Bei einer schweren Allergie schreiben Sie uns bitte vor der Bestellung; wir holen die Bestätigung beim Hersteller ein."
+            "answer": "Zutaten, Allergene und gegebenenfalls der Hinweis auf Kreuzkontamination stehen auf der Seite jedes Produkts. Diese Angaben stammen aus der Deklaration des Herstellers – wir stellen unsere Produkte nicht selbst her, sondern beziehen sie von ausgewählten Herstellern. Bei einer schweren Allergie schreiben Sie uns bitte vor der Bestellung; wir holen die Bestätigung beim Hersteller ein."
           },
           {
             "id": "hesap-gerekli",
             "question": "Brauche ich ein Konto, um zu bestellen?",
-            "answer": "Ein Passwort brauchen Sie nicht: Füllen Sie Ihren Warenkorb und schließen Sie die Bestellung mit Ihrer E-Mail-Adresse ab — sobald Sie den zugesandten Code eingeben, wird Ihr Konto im Hintergrund angelegt und Ihre Bestellung damit verknüpft. Ihre Bestellungen, Adressen und Punkte werden dort gespeichert: Sie geben Ihre Adresse nicht erneut ein und können eine frühere Bestellung unter „Meine Bestellungen“ mit einem Klick wiederholen."
+            "answer": "Ein Passwort brauchen Sie nicht: Füllen Sie Ihren Warenkorb und schließen Sie die Bestellung mit Ihrer E-Mail-Adresse ab – sobald Sie den zugesandten Code eingeben, wird Ihr Konto im Hintergrund angelegt und Ihre Bestellung damit verknüpft. Ihre Bestellungen, Adressen und Punkte werden dort gespeichert: Sie geben Ihre Adresse nicht erneut ein und können eine frühere Bestellung unter „Meine Bestellungen“ mit einem Klick wiederholen."
           },
           {
             "id": "dil",
@@ -1261,8 +1261,8 @@
             "bullets": [
               "Identität und Kontakt: Ihr Name, Ihre E-Mail-Adresse, Ihre Telefonnummer.",
               {
-                "web": "Lieferung: Ihre gespeicherten Adressen und Ihre Postleitzahl. Die Postleitzahl wird auch ohne Konto in Ihrem Browser gespeichert — damit wir Ihnen den für Sie lieferbaren Teil des Katalogs zeigen können.",
-                "app": "Lieferung: Ihre gespeicherten Adressen und Ihre Postleitzahl. Die Postleitzahl wird auch ohne Konto auf Ihrem Gerät gespeichert — damit wir Ihnen den für Sie lieferbaren Teil des Katalogs zeigen können."
+                "web": "Lieferung: Ihre gespeicherten Adressen und Ihre Postleitzahl. Die Postleitzahl wird auch ohne Konto in Ihrem Browser gespeichert – damit wir Ihnen den für Sie lieferbaren Teil des Katalogs zeigen können.",
+                "app": "Lieferung: Ihre gespeicherten Adressen und Ihre Postleitzahl. Die Postleitzahl wird auch ohne Konto auf Ihrem Gerät gespeichert – damit wir Ihnen den für Sie lieferbaren Teil des Katalogs zeigen können."
               },
               "Bestellungen: Ihre Bestellungen, deren Artikel, Beträge und Status.",
               "Kommunikationseinstellungen: Ihre Marketing-Einwilligungen und Ihre Sprache.",
@@ -1281,7 +1281,7 @@
             "paragraphs": [
               "Ohne Ihren Namen und Ihre Adresse kann eine Bestellung nicht zugestellt werden; ohne Ihre E-Mail-Adresse können wir Ihnen den Status Ihrer Bestellung nicht mitteilen. Diese Daten werden zur Erfüllung des Vertrags verarbeitet.",
               "Ihre Nachrichten werden mithilfe künstlicher Intelligenz verarbeitet: Wir übersetzen sie, damit wir Ihnen in Ihrer Sprache antworten können, Sprachnachrichten werden verschriftlicht, und bei der Vorbereitung der Antwort hilft künstliche Intelligenz.",
-              "Werbenachrichten senden wir nur, wenn Sie ausdrücklich eingewilligt haben, und Sie können die Einwilligung jederzeit widerrufen. Die Einwilligung wird nicht als bloßes Kennzeichen gespeichert, sondern mit Zeitpunkt und Herkunft — das ist der Nachweis, den wir vorlegen können, wenn die Einwilligung bestritten wird.",
+              "Werbenachrichten senden wir nur, wenn Sie ausdrücklich eingewilligt haben, und Sie können die Einwilligung jederzeit widerrufen. Die Einwilligung wird nicht als bloßes Kennzeichen gespeichert, sondern mit Zeitpunkt und Herkunft – das ist der Nachweis, den wir vorlegen können, wenn die Einwilligung bestritten wird.",
               "Für Buchhaltung und gesetzliche Pflichten sind wir verpflichtet, Bestell- und Zahlungsunterlagen aufzubewahren; diese hängen nicht von einer Einwilligung ab."
             ],
             "bullets": []
@@ -1354,7 +1354,7 @@
             },
             "paragraphs": [
               {
-                "app": "Die App verwendet keinerlei Cookies — weder Werbe- noch Tracking-Cookies noch sonstige. Was auf Ihrem Gerät gespeichert wird, ist für den Betrieb der App erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl. Die Sitzung liegt im sicheren Speicher des Betriebssystems (Schlüsselbund unter iOS, Keystore unter Android)."
+                "app": "Die App verwendet keinerlei Cookies – weder Werbe- noch Tracking-Cookies noch sonstige. Was auf Ihrem Gerät gespeichert wird, ist für den Betrieb der App erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl. Die Sitzung liegt im sicheren Speicher des Betriebssystems (Schlüsselbund unter iOS, Keystore unter Android)."
               },
               {
                 "web": "Wir verwenden weder Werbe- noch Tracking-Cookies. Was in Ihrem Browser gespeichert wird, ist für den Betrieb der Website erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl."
@@ -1367,7 +1367,7 @@
                 "app": "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb vom Gerät in Ihr Konto übernommen und vom Gerät gelöscht."
               },
               {
-                "app": "Wir messen, wie die App genutzt wird: welche Produkte angesehen werden, wonach gesucht wird, was in den Warenkorb gelegt wird und an welcher Stelle eine Bestellung abbricht. Für diese Messung wird nichts auf Ihrem Gerät gespeichert und keine Werbe-ID verwendet — der Eintrag entsteht auf unseren Servern, sobald Ihre Anfrage dort ankommt. Weder Ihr Name noch Ihre E-Mail-Adresse noch Ihre Kundennummer stehen darin: Der Schlüssel, der Anfragen gruppiert, wird aus einem Wert abgeleitet, der täglich wechselt und am Folgetag nicht aufbewahrt wird, er lässt sich also nachträglich nicht mehr berechnen. Auch der in der Suche eingegebene Text wird gespeichert — damit wir sehen, welche Suchen ohne Ergebnis bleiben."
+                "app": "Wir messen, wie die App genutzt wird: welche Produkte angesehen werden, wonach gesucht wird, was in den Warenkorb gelegt wird und an welcher Stelle eine Bestellung abbricht. Für diese Messung wird nichts auf Ihrem Gerät gespeichert und keine Werbe-ID verwendet – der Eintrag entsteht auf unseren Servern, sobald Ihre Anfrage dort ankommt. Weder Ihr Name noch Ihre E-Mail-Adresse noch Ihre Kundennummer stehen darin: Der Schlüssel, der Anfragen gruppiert, wird aus einem Wert abgeleitet, der täglich wechselt und am Folgetag nicht aufbewahrt wird, er lässt sich also nachträglich nicht mehr berechnen. Auch der in der Suche eingegebene Text wird gespeichert – damit wir sehen, welche Suchen ohne Ergebnis bleiben."
               }
             ],
             "bullets": []
@@ -1415,7 +1415,7 @@
             "id": "siparis",
             "heading": "Vertragsschluss",
             "paragraphs": [
-              "Die Bestellung kommt zustande, wenn Sie Ihren Warenkorb bestätigen und den Zahlungsschritt abschließen — bei Zahlung bei Lieferung genügt es, in diesem Schritt das Zahlungsmittel zu bestätigen. Mit der Bestätigungsseite und der Bestätigungs-E-Mail gilt die Bestellung auch von unserer Seite als angenommen.",
+              "Die Bestellung kommt zustande, wenn Sie Ihren Warenkorb bestätigen und den Zahlungsschritt abschließen – bei Zahlung bei Lieferung genügt es, in diesem Schritt das Zahlungsmittel zu bestätigen. Mit der Bestätigungsseite und der Bestätigungs-E-Mail gilt die Bestellung auch von unserer Seite als angenommen.",
               "Der Preis in Ihrem Warenkorb wird mit Ihrer Bestellung verbindlich. Steigt der Preis eines Artikels, während er im Warenkorb liegt, zeigen wir Ihnen vor der Bestellung den neuen Preis und bitten um Ihre Bestätigung; sinkt er, gilt der niedrigere Preis. Nach der Bestellung ändert sich der Betrag nicht mehr, auch wenn sich der Katalogpreis ändert.",
               "Stellt sich nachträglich heraus, dass ein Artikel nicht verfügbar ist, wird Ihre Bestellung nicht storniert: Der fehlende Artikel entfällt; sein Betrag wird nicht berechnet oder – falls bereits bezahlt – erstattet. Wir informieren Sie darüber."
             ],
@@ -1436,7 +1436,7 @@
             "heading": "Zahlung",
             "paragraphs": [
               "Kartenzahlungen werden über einen sicheren Zahlungsdienstleister eingezogen. Ihre Kartendaten erreichen uns zu keinem Zeitpunkt und werden von uns nicht gespeichert.",
-              "Innerhalb unseres Liefergebiets ist Zahlung bei Lieferung bis zu einem bestimmten Bestellwert möglich — bar oder mit Karte; die aktuelle Obergrenze steht auf der Seite Lieferung und Rücksendung. Dabei entspricht der eingezogene Betrag den tatsächlich gelieferten Artikeln: Ein fehlender Artikel wird von vornherein abgezogen.",
+              "Innerhalb unseres Liefergebiets ist Zahlung bei Lieferung bis zu einem bestimmten Bestellwert möglich – bar oder mit Karte; die aktuelle Obergrenze steht auf der Seite Lieferung und Rücksendung. Dabei entspricht der eingezogene Betrag den tatsächlich gelieferten Artikeln: Ein fehlender Artikel wird von vornherein abgezogen.",
               "Die Überweisung steht ausschließlich bestätigten Geschäftskonten offen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt.",
               "Im Voraus bezahlte Bestellungen werden erst nach Abschluss der Zahlung in Vorbereitung genommen. Bei Zahlung bei Lieferung erfolgt der Einzug bei der Übergabe, und die Bestellung geht unmittelbar nach ihrer Bestätigung in Vorbereitung."
             ],
@@ -1446,7 +1446,7 @@
             "id": "teslimat",
             "heading": "Lieferung",
             "paragraphs": [
-              "Produkte mit Kühlkette (Tiefkühl- und Frischware) liefern wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Alle übrigen Produkte verschicken wir — im Gebiet wie außerhalb. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
+              "Produkte mit Kühlkette (Tiefkühl- und Frischware) liefern wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Alle übrigen Produkte verschicken wir – im Gebiet wie außerhalb. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
               "Mindestbestellwert, Versandkosten und die Grenze für kostenlosen Versand werden in ihrer aktuellen Höhe auf der Seite Lieferung und Rücksendung veröffentlicht; dieselben Beträge werden beim Bestellen im Warenkorb angezeigt. Nach der Vorbereitung des Pakets rechnen Sie mit 2 bis 4 Werktagen in Frankreich und Deutschland.",
               "Die angegebenen Liefertage sind Schätzungen. Wetter, Verkehr oder Verzögerungen des Versanddienstleisters können die Lieferung verschieben; in diesem Fall informieren wir Sie.",
               "Kann nicht zugestellt werden, weil an der Adresse niemand angetroffen wird, versuchen wir die Zustellung ein zweites Mal kostenfrei. Scheitert auch dieser zweite Versuch, sind die tiefgekühlten Produkte nicht mehr verkehrsfähig und der Betrag wird nicht erstattet. Einzelheiten finden Sie auf der Seite Lieferung und Rücksendung."
@@ -1517,12 +1517,12 @@
             "bullets": [
               "Firma: {denomination}",
               "Handelsname: Lezzet Anatolie",
-              "Rechtsform: SAS — société par actions simplifiée",
+              "Rechtsform: SAS – société par actions simplifiée",
               "Grundkapital: 500 €",
               "SIREN: {siren}",
               "SIRET (Sitz): {siret}",
               "USt-IdNr.: {vatId}",
-              "APE-Code: 4791B — Fernabsatz über spezialisierten Katalog",
+              "APE-Code: 4791B – Fernabsatz über spezialisierten Katalog",
               "Sitz: {address}, Frankreich",
               "E-Mail: {email}",
               "Telefon: {phone}"

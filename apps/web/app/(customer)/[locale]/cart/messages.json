@@ -152,7 +152,7 @@
     "remove": "Retirer du panier",
     "summary": "Récapitulatif",
     "singleRule": "Les remises ne se cumulent pas — nous avons appliqué la plus avantageuse pour vous.",
-    "reachable": "Ajoutez {missing} et {label} s'applique : {amount} de remise.",
+    "reachable": "Ajoutez {missing} et {label} s'applique : {amount} de remise.",
     "reachableAnon": "Ajoutez {missing} et vous obtenez {amount} de remise.",
     "subtotal": "Sous-total",
     "deliveryRow": "Livraison à domicile",
@@ -170,8 +170,8 @@
       "delivery": "Livraison à domicile offerte à Strasbourg et alentours · expédition en France et en Allemagne — hors produits en chaîne du froid",
       "repeatTitle": "Reprenez votre dernière commande",
       "repeatCta": "Tout remettre au panier",
-      "repeatItems": "Articles : {n}",
-      "skipped": "Articles indisponibles non ajoutés : {n}.",
+      "repeatItems": "Articles : {n}",
+      "skipped": "Articles indisponibles non ajoutés : {n}.",
       "packagesChip": "Coffrets",
       "showcaseTitle": "Les préférés de la semaine",
       "showcaseAll": "Voir tout →",
@@ -190,13 +190,13 @@
       "apply": "Appliquer",
       "applied": "Appliqué",
       "remove": "Retirer le code",
-      "note": "Le code promo ne s’applique ni aux coffrets ni aux articles en promotion ; il reste valable sur le reste du panier.",
+      "note": "Le code promo ne s'applique ni aux coffrets ni aux articles en promotion ; il reste valable sur le reste du panier.",
       "rejected": {
         "invalid": "Ce code n'est pas valable.",
         "expired": "Ce code promo a expiré.",
         "minBasket": "Ce code demande un panier plus élevé.",
         "firstOrderOnly": "Ce code est réservé à la première commande.",
-        "usedUp": "Ce code a atteint sa limite d’utilisation.",
+        "usedUp": "Ce code a atteint sa limite d'utilisation.",
         "outranked": "Une remise plus avantageuse ({amount}) est déjà appliquée à votre panier — nous avons gardé la plus intéressante pour vous."
       }
     },
@@ -205,28 +205,28 @@
       "remaining": "Encore {amount} pour la livraison offerte"
     },
     "packageBadge": "Coffret · {n} produits",
-    "packageContents": "Contenu :",
+    "packageContents": "Contenu :",
     "packagePrice": "prix du coffret {price}",
     "packageWhole": "s'ajuste et se retire en entier",
     "unreachable": {
-      "title": "Votre panier n’a pas pu être chargé",
-      "body": "Vos articles sont bien là — nous n’avons pas pu les afficher.",
+      "title": "Votre panier n'a pas pu être chargé",
+      "body": "Vos articles sont bien là — nous n'avons pas pu les afficher.",
       "retry": "Réessayer"
     },
     "group": {
       "routeTitle": "Livraison à domicile",
       "routeTitleDated": "Livraison à domicile · {date}",
       "shippingTitle": "Expédition par transporteur",
-      "routeTotal": "Total livraison à domicile : {amount}",
+      "routeTotal": "Total livraison à domicile : {amount}",
       "routeNote": "Livraison offerte · paiement à la livraison possible",
-      "shippingTotal": "Total expédition : {amount}",
+      "shippingTotal": "Total expédition : {amount}",
       "shippingFee": "{items} + livraison {fee}",
       "shippingFeeFree": "{items} · livraison offerte",
       "shippingRemaining": "encore {amount} et la livraison est offerte",
       "shippingPayment": "paiement en ligne uniquement",
       "shippingCta": "Commander séparément les articles expédiés",
       "shippingCtaShort": "Commander séparément",
-      "shippingFootnote": "Le seuil de livraison offerte se calcule sur ce total — les deux groupes ne s'additionnent pas. Cette seconde commande n'est pas obligatoire : sans elle, les articles restent au panier et votre commande à domicile n'est pas affectée.",
+      "shippingFootnote": "Le seuil de livraison offerte se calcule sur ce total — les deux groupes ne s'additionnent pas. Cette seconde commande n'est pas obligatoire : sans elle, les articles restent au panier et votre commande à domicile n'est pas affectée.",
       "summaryScope": "Panier complet"
     },
     "awaitingPayment": {
@@ -246,7 +246,7 @@
       "googleUnavailable": "La connexion Google n'a pas pu s'ouvrir.",
       "addressTitle": "Adresse de livraison",
       "addressBody": "Le panier et la commande se calculent pour cette adresse.",
-      "addressEmpty": "Où souhaitez-vous être livré ? Une adresse de livraison est nécessaire pour commander.",
+      "addressEmpty": "Où souhaitez-vous être livré ? Une adresse de livraison est nécessaire pour commander.",
       "addressAdd": "+ Ajouter une adresse",
       "addressChange": "Changer",
       "addressEdit": "Modifier",
@@ -255,7 +255,7 @@
       "stripShipping": "{place} — expédié par transporteur",
       "stripUnreachable": "{place} — livraison impossible à cette adresse pour le moment",
       "pickupTitle": "Retrait à l'entrepôt",
-      "pickupNote": "Le panier et le paiement sont établis pour l'entrepôt {name} ; convenez de l'heure par téléphone."
+      "pickupNote": "Le panier et le paiement sont établis pour l'entrepôt {name} ; convenez de l'heure par téléphone."
     },
     "gate": {
       "login": "Connectez-vous pour continuer",
@@ -269,21 +269,21 @@
     "backLabel": "Zurück",
     "count": "{n} Produkte",
     "countOne": "1 Produkt",
-    "blockedNotice": "Bei einem Produkt hat sich der Bestand geändert — bitte entfernen Sie den markierten Artikel.",
+    "blockedNotice": "Bei einem Produkt hat sich der Bestand geändert – bitte entfernen Sie den markierten Artikel.",
     "unitPrice": "Einzelpreis {price}",
     "offerBadge": "Angebot",
-    "limitReached": "Maximal {n} Stück zu diesem Preis — Grenze erreicht",
+    "limitReached": "Maximal {n} Stück zu diesem Preis – Grenze erreicht",
     "placeCap": "An diese Adresse können wir derzeit höchstens {n} Stück bringen",
     "placeCapFix": "Auf {n} reduzieren",
-    "soldOut": "dieses Produkt ist ausverkauft — bitte entfernen, um fortzufahren",
+    "soldOut": "dieses Produkt ist ausverkauft – bitte entfernen, um fortzufahren",
     "soldOutBadge": "Ausverkauft",
-    "closed": "dieses Produkt ist nicht mehr im Verkauf — bitte entfernen",
+    "closed": "dieses Produkt ist nicht mehr im Verkauf – bitte entfernen",
     "closedBadge": "Nicht im Verkauf",
-    "gone": "dieses Produkt ist nicht mehr erhältlich — bitte entfernen",
+    "gone": "dieses Produkt ist nicht mehr erhältlich – bitte entfernen",
     "goneBadge": "Entfernt",
     "remove": "Aus dem Warenkorb entfernen",
     "summary": "Übersicht",
-    "singleRule": "Rabatte sind nicht kombinierbar — wir haben den höchsten für Sie angewendet.",
+    "singleRule": "Rabatte sind nicht kombinierbar – wir haben den höchsten für Sie angewendet.",
     "reachable": "Noch {missing}, dann gilt „{label}“: {amount} Rabatt.",
     "reachableAnon": "Noch {missing} und Sie erhalten {amount} Rabatt.",
     "subtotal": "Zwischensumme",
@@ -291,19 +291,19 @@
     "vatShort": "inkl. MwSt.",
     "checkout": "Zur Kasse",
     "checkoutBlocked": "Entfernen Sie den ausverkauften Artikel, um fortzufahren",
-    "minBasket": "Mindestbestellwert {min} — es fehlen noch {missing}.",
+    "minBasket": "Mindestbestellwert {min} – es fehlen noch {missing}.",
     "empty": {
       "title": "Ihr Warenkorb ist leer",
       "titleEmptied": "Ihr Warenkorb wurde geleert",
-      "body": "Die Aromen Anatoliens warten auf Sie. Sehen Sie sich den Katalog an oder wählen Sie ein Genusspaket — um den Rest kümmern wir uns.",
-      "bodyShort": "Die Aromen Anatoliens warten auf Sie — Katalog ansehen oder ein Genusspaket wählen.",
+      "body": "Die Aromen Anatoliens warten auf Sie. Sehen Sie sich den Katalog an oder wählen Sie ein Genusspaket – um den Rest kümmern wir uns.",
+      "bodyShort": "Die Aromen Anatoliens warten auf Sie – Katalog ansehen oder ein Genusspaket wählen.",
       "cta": "Katalog ansehen",
       "packagesCta": "Genusspakete ansehen",
-      "delivery": "Lieferung an die Haustür in Straßburg und Umgebung kostenlos · Versand nach Frankreich und Deutschland — ausgenommen Kühlkettenprodukte",
+      "delivery": "Lieferung an die Haustür in Straßburg und Umgebung kostenlos · Versand nach Frankreich und Deutschland – ausgenommen Kühlkettenprodukte",
       "repeatTitle": "Letzte Bestellung wiederholen",
       "repeatCta": "Alles in den Warenkorb",
       "repeatItems": "{n} Artikel",
-      "skipped": "{n} Artikel derzeit nicht verfügbar — nicht hinzugefügt.",
+      "skipped": "{n} Artikel derzeit nicht verfügbar – nicht hinzugefügt.",
       "packagesChip": "Genusspakete",
       "showcaseTitle": "Diese Woche besonders beliebt",
       "showcaseAll": "Alle ansehen →",
@@ -311,9 +311,9 @@
         "addToCart": "In den Warenkorb",
         "options": "Optionen →",
         "details": "Details",
-        "priceFrom": "Ab-Preis — Größe auf der Produktseite wählen",
+        "priceFrom": "Ab-Preis – Größe auf der Produktseite wählen",
         "offer": "Angebot",
-        "soldOut": "Ausverkauft — bald wieder da"
+        "soldOut": "Ausverkauft – bald wieder da"
       }
     },
     "coupon": {
@@ -329,7 +329,7 @@
         "minBasket": "Dieser Gutschein erfordert einen höheren Warenkorbwert.",
         "firstOrderOnly": "Dieser Gutschein gilt nur für die erste Bestellung.",
         "usedUp": "Dieser Gutschein wurde bereits vollständig eingelöst.",
-        "outranked": "Auf Ihren Warenkorb wird bereits ein höherer Rabatt angewendet ({amount}) — wir haben den für Sie günstigeren behalten."
+        "outranked": "Auf Ihren Warenkorb wird bereits ein höherer Rabatt angewendet ({amount}) – wir haben den für Sie günstigeren behalten."
       }
     },
     "freeShipping": {
@@ -342,7 +342,7 @@
     "packageWhole": "wird als Ganzes geändert/entfernt",
     "unreachable": {
       "title": "Ihr Warenkorb konnte nicht geladen werden",
-      "body": "Ihre Artikel sind noch da — wir konnten sie nur nicht anzeigen.",
+      "body": "Ihre Artikel sind noch da – wir konnten sie nur nicht anzeigen.",
       "retry": "Erneut versuchen"
     },
     "group": {
@@ -358,7 +358,7 @@
       "shippingPayment": "nur Online-Zahlung",
       "shippingCta": "Versandartikel separat bestellen",
       "shippingCtaShort": "Separat bestellen",
-      "shippingFootnote": "Die Grenze für kostenlosen Versand gilt nur für die Versandartikel — die Beträge beider Bestellungen werden nicht zusammengerechnet. Die Versandbestellung ist freiwillig: Ohne sie bleiben die Artikel im Warenkorb, Ihre Lieferung an die Haustür ist nicht betroffen.",
+      "shippingFootnote": "Die Grenze für kostenlosen Versand gilt nur für die Versandartikel – die Beträge beider Bestellungen werden nicht zusammengerechnet. Die Versandbestellung ist freiwillig: Ohne sie bleiben die Artikel im Warenkorb, Ihre Lieferung an die Haustür ist nicht betroffen.",
       "summaryScope": "Gesamter Warenkorb"
     },
     "awaitingPayment": {
@@ -382,17 +382,17 @@
       "addressAdd": "+ Adresse hinzufügen",
       "addressChange": "Ändern",
       "addressEdit": "Bearbeiten",
-      "stripInRoute": "{place} — {date} an Ihrer Haustür, kostenlos",
-      "stripInRouteNoDate": "{place} — Lieferung an die Haustür, kostenlos",
-      "stripShipping": "{place} — Versand",
-      "stripUnreachable": "{place} — derzeit keine Lieferung an diese Adresse",
+      "stripInRoute": "{place} – {date} an Ihrer Haustür, kostenlos",
+      "stripInRouteNoDate": "{place} – Lieferung an die Haustür, kostenlos",
+      "stripShipping": "{place} – Versand",
+      "stripUnreachable": "{place} – derzeit keine Lieferung an diese Adresse",
       "pickupTitle": "Im Lager abholen",
       "pickupNote": "Warenkorb und Zahlung richten sich nach dem Lager {name}; die Abholzeit vereinbaren Sie telefonisch."
     },
     "gate": {
       "login": "Zum Fortfahren anmelden",
       "address": "Wählen Sie zum Fortfahren eine Lieferadresse",
-      "unreachable": "An diese Adresse liefern wir derzeit nicht — wählen Sie eine andere Lieferadresse"
+      "unreachable": "An diese Adresse liefern wir derzeit nicht – wählen Sie eine andere Lieferadresse"
     }
   }
 }

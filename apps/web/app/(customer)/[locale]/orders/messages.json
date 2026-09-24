@@ -76,7 +76,7 @@
     "reorderResult": {
       "added": "{count} articles ajoutés au panier",
       "addedToast": "Articles ajoutés au panier aux prix actuels ✓",
-      "skipped": "{count} articles non ajoutés : {names}.",
+      "skipped": "{count} articles non ajoutés : {names}.",
       "none": "Aucun produit de cette commande n'est disponible actuellement.",
       "goToCart": "Aller au panier",
       "dismiss": "Fermer",

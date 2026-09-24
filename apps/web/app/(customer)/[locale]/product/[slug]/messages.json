@@ -147,7 +147,7 @@
       "traces": "Fabriqué dans un atelier qui manipule également {list}.",
       "nutrition": "Valeurs nutritionnelles",
       "per100g": "pour 100 g",
-      "netQuantity": "Quantité nette : {quantity}",
+      "netQuantity": "Quantité nette : {quantity}",
       "storage": "Conservation et préparation",
       "title": "Fiche produit",
       "note": "informations réglementaires"
@@ -175,8 +175,8 @@
       "sending": "Envoi…",
       "cancel": "Annuler",
       "moderationNote": "Votre avis est relu avant publication.",
-      "submitted": "Merci ! Votre avis apparaîtra ici après relecture.",
-      "emptyTitle": "Pas encore d’avis",
+      "submitted": "Merci ! Votre avis apparaîtra ici après relecture.",
+      "emptyTitle": "Pas encore d'avis",
       "emptyBody": "Si vous avez acheté ce produit, écrivez le premier avis.",
       "onlyBuyers": "Seuls les clients ayant acheté ce produit peuvent laisser un avis.",
       "close": "Fermer",
@@ -220,7 +220,7 @@
       "soldOut": "Épuisé — bientôt de retour"
     },
     "errors": {
-      "unexpected": "Votre avis n’a pas pu être envoyé. Réessayez dans un instant.",
+      "unexpected": "Votre avis n'a pas pu être envoyé. Réessayez dans un instant.",
       "session_expired": "Votre session semble expirée. Reconnectez-vous.",
       "review_empty": "Donnez une note ou écrivez quelques mots.",
       "purchase_required": "Vous devez avoir acheté ce produit pour laisser un avis."
@@ -242,14 +242,14 @@
     "similarAll": "Tout le catalogue →",
     "ai": {
       "title": "Posez la question à une IA",
-      "note": "La réponse est générée par un service tiers ; pour les allergènes, la conservation et les valeurs nutritionnelles, seule la fiche ci-dessus fait foi."
+      "note": "La réponse est générée par un service tiers ; pour les allergènes, la conservation et les valeurs nutritionnelles, seule la fiche ci-dessus fait foi."
     }
   },
   "de": {
     "back": "← Katalog",
     "share": "Teilen",
     "inStock": "● Auf Lager",
-    "soldOut": "Ausverkauft — bald wieder da",
+    "soldOut": "Ausverkauft – bald wieder da",
     "chooseSize": "Größe wählen",
     "addToCart": "In den Warenkorb",
     "offer": "Angebot",
@@ -259,7 +259,7 @@
       "coldChain": "Lieferung in der Kühlkette",
       "doorstep": "Lieferung an die Haustür im Liefergebiet",
       "shippable": "Versandfähig",
-      "notShippable": "Nur Lieferung an die Haustür in Straßburg und Umgebung — dieses Produkt kann nicht versandt werden.",
+      "notShippable": "Nur Lieferung an die Haustür in Straßburg und Umgebung – dieses Produkt kann nicht versandt werden.",
       "coldChainShort": "Kühlkette",
       "doorstepShort": "Lieferung an die Haustür",
       "seeShippable": "Versandfähige Alternativen",
@@ -306,7 +306,7 @@
       "shownCount": "{shown} Bewertungen angezeigt",
       "loadMore": "Mehr laden",
       "loading": "Wird geladen…",
-      "retry": "Bewertungen konnten nicht geladen werden — erneut versuchen",
+      "retry": "Bewertungen konnten nicht geladen werden – erneut versuchen",
       "panelEmpty": "Für dieses Produkt gibt es noch keine geschriebenen Bewertungen.",
       "filters": {
         "all": "Alle ({count})",
@@ -338,9 +338,9 @@
       "addToCart": "In den Warenkorb",
       "options": "Optionen →",
       "details": "Details",
-      "priceFrom": "Ab-Preis — Größe auf der Produktseite wählen",
+      "priceFrom": "Ab-Preis – Größe auf der Produktseite wählen",
       "offer": "Angebot",
-      "soldOut": "Ausverkauft — bald wieder da"
+      "soldOut": "Ausverkauft – bald wieder da"
     },
     "errors": {
       "unexpected": "Ihre Bewertung konnte nicht gesendet werden. Bitte gleich noch einmal versuchen.",

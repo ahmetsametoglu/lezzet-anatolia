@@ -96,11 +96,11 @@
   "fr": {
     "skip": "Passer",
     "next": "Continuer",
-    "doneToast": "Bienvenue — bon appétit ! ✓",
+    "doneToast": "Bienvenue — bon appétit ! ✓",
     "step": "Étape {n} sur {total}",
     "language": {
       "kicker": "HOŞ GELDİNİZ · BIENVENUE · WILLKOMMEN",
-      "title": "Dans quelle langue continuons-nous ?",
+      "title": "Dans quelle langue continuons-nous ?",
       "names": {
         "tr": "Türkçe",
         "fr": "Français",
@@ -119,30 +119,30 @@
       "sampleCard": {
         "eyebrow": "BÖREKS",
         "name": "Börek aux épinards",
-        "meta": "17,80 € / kg · TTC",
-        "price": "8,90 €",
+        "meta": "17,80 € / kg · TTC",
+        "price": "8,90 €",
         "body": "Pâte fine, épinards et fromage (beyaz peynir) — le su böreği classique."
       }
     },
     "zip": {
       "kicker": "ZONE DE LIVRAISON",
-      "title": "Comment vous livrer ?",
+      "title": "Comment vous livrer ?",
       "body": "Saisissez votre code postal, nous vous dirons comment nous livrons."
     },
     "back": "Retour",
     "delivery": {
       "kicker": "COMMENT NOUS LIVRONS",
       "title": "Deux modes de livraison",
-      "body": "Tout le catalogue est visible par tous : c'est le produit qui détermine comment il vous est livré.",
+      "body": "Tout le catalogue est visible par tous : c'est le produit qui détermine comment il vous est livré.",
       "route": {
-        "title": "Produits sous chaîne du froid : notre camion",
+        "title": "Produits sous chaîne du froid : notre camion",
         "body": "Les surgelés et les produits frais ne voyagent qu'avec notre camion réfrigéré, aux adresses de notre zone de livraison."
       },
       "shipping": {
-        "title": "Tous les autres produits : par transporteur",
+        "title": "Tous les autres produits : par transporteur",
         "body": "Les produits sans chaîne du froid sont expédiés par transporteur en France et en Allemagne — que vous soyez dans notre zone ou non."
       },
-      "note": "C'est pourquoi nous demandons votre code postal : pour indiquer à côté de chaque produit comment il vous parviendra."
+      "note": "C'est pourquoi nous demandons votre code postal : pour indiquer à côté de chaque produit comment il vous parviendra."
     },
     "payment": {
       "kicker": "PAIEMENT",
@@ -153,7 +153,7 @@
       },
       "door": {
         "title": "Paiement à la livraison",
-        "body": "Dans notre zone de livraison : espèces ou carte"
+        "body": "Dans notre zone de livraison : espèces ou carte"
       },
       "transfer": {
         "title": "Virement et paiement différé",
@@ -167,10 +167,10 @@
       "body": "Vous cumulez des points en passant sur l'application, en donnant votre avis sur les produits reçus et en invitant votre entourage. Les points deviennent des bons de réduction.",
       "rate": "{points} points = bon de {value}",
       "highlight": "Parrainer un ami rapporte à lui seul {value}.",
-      "how": "Comment gagner des points ?",
+      "how": "Comment gagner des points ?",
       "signUp": "Créer un compte et commencer à gagner",
       "later": "Plus tard",
-      "unavailable": "Les informations sur les points ne peuvent pas être affichées pour le moment. Vous les retrouverez dans « Mon compte » une fois votre compte créé.",
+      "unavailable": "Les informations sur les points ne peuvent pas être affichées pour le moment. Vous les retrouverez dans « Mon compte » une fois votre compte créé.",
       "groups": {
         "invite": {
           "title": "En invitant",
@@ -178,11 +178,11 @@
         },
         "review": {
           "title": "En donnant votre avis",
-          "body": "Un produit vous a plu ? Le dire aide le prochain client autant que nous — et vous rapporte des points."
+          "body": "Un produit vous a plu ? Le dire aide le prochain client autant que nous — et vous rapporte des points."
         },
         "visit": {
           "title": "En revenant chaque jour",
-          "body": "Vous gagnez aussi sans acheter : ouvrir l'application rapporte des points une fois par jour, et chaque vote pour une nouvelle saveur en rapporte aussi."
+          "body": "Vous gagnez aussi sans acheter : ouvrir l'application rapporte des points une fois par jour, et chaque vote pour une nouvelle saveur en rapporte aussi."
         }
       }
     }
@@ -190,7 +190,7 @@
   "de": {
     "skip": "Überspringen",
     "next": "Weiter",
-    "doneToast": "Willkommen — guten Appetit! ✓",
+    "doneToast": "Willkommen – guten Appetit! ✓",
     "step": "Schritt {n} von {total}",
     "language": {
       "kicker": "HOŞ GELDİNİZ · BIENVENUE · WILLKOMMEN",
@@ -215,13 +215,13 @@
         "name": "Spinat-Wasserbörek",
         "meta": "17,80 € / kg · inkl. MwSt.",
         "price": "8,90 €",
-        "body": "Dünner Teig, viel Spinat und Weißkäse — der klassische Wasserbörek."
+        "body": "Dünner Teig, viel Spinat und Weißkäse – der klassische Wasserbörek."
       }
     },
     "zip": {
       "kicker": "LIEFERGEBIET",
       "title": "Wie kommt Ihre Bestellung zu Ihnen?",
-      "body": "Geben Sie Ihre Postleitzahl ein — wir sagen Ihnen, wie wir liefern."
+      "body": "Geben Sie Ihre Postleitzahl ein – wir sagen Ihnen, wie wir liefern."
     },
     "back": "Zurück",
     "delivery": {
@@ -230,11 +230,11 @@
       "body": "Wir zeigen allen den gesamten Katalog; das Produkt selbst bestimmt, auf welchem Weg es zu Ihnen kommt.",
       "route": {
         "title": "Kühlkettenware: mit unserem Fahrzeug",
-        "body": "Tiefkühl- und Frischware bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug — an Adressen in unserem Liefergebiet."
+        "body": "Tiefkühl- und Frischware bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug – an Adressen in unserem Liefergebiet."
       },
       "shipping": {
         "title": "Alle übrigen Produkte: per Versand",
-        "body": "Produkte ohne Kühlkette versenden wir nach Frankreich und Deutschland — ob Sie in unserem Liefergebiet wohnen oder nicht."
+        "body": "Produkte ohne Kühlkette versenden wir nach Frankreich und Deutschland – ob Sie in unserem Liefergebiet wohnen oder nicht."
       },
       "note": "Deshalb fragen wir nach der Postleitzahl: damit neben jedem Produkt steht, wie es zu Ihnen kommt."
     },
@@ -243,7 +243,7 @@
       "title": "Zahlen Sie, wie Sie möchten",
       "online": {
         "title": "Online-Zahlung",
-        "body": "Über Stripe — Ihre Kartendaten werden bei uns nicht gespeichert"
+        "body": "Über Stripe – Ihre Kartendaten werden bei uns nicht gespeichert"
       },
       "door": {
         "title": "Zahlung bei Lieferung",
@@ -253,11 +253,11 @@
         "title": "Überweisung und Zahlung auf Rechnung",
         "body": "Exklusiv für unsere Geschäftskunden"
       },
-      "secure": "Ihre Zahlungen sind durch Stripe geschützt — derselbe Schutz wie bei Ihrer Bank. Bei Problemen ist die Erstattung einfach."
+      "secure": "Ihre Zahlungen sind durch Stripe geschützt – derselbe Schutz wie bei Ihrer Bank. Bei Problemen ist die Erstattung einfach."
     },
     "points": {
       "kicker": "PUNKTE",
-      "title": "Punkte sammeln — ganz nebenbei",
+      "title": "Punkte sammeln – ganz nebenbei",
       "body": "Sie sammeln Punkte, wenn Sie in der App vorbeischauen, erhaltene Produkte bewerten und Ihr Umfeld einladen. Punkte werden zu Rabattgutscheinen.",
       "rate": "{points} Punkte = Gutschein über {value}",
       "highlight": "Schon eine geworbene Freundin oder ein geworbener Freund bringt Ihnen {value}.",
@@ -272,11 +272,11 @@
         },
         "review": {
           "title": "Durch Bewerten",
-          "body": "Hat Ihnen ein Produkt geschmeckt? Ihre Bewertung hilft anderen Kundinnen und Kunden und uns — und bringt Ihnen Punkte."
+          "body": "Hat Ihnen ein Produkt geschmeckt? Ihre Bewertung hilft anderen Kundinnen und Kunden und uns – und bringt Ihnen Punkte."
         },
         "visit": {
           "title": "Durch Vorbeischauen",
-          "body": "Sie sammeln auch ohne Einkauf: Einmal am Tag gibt es Punkte fürs Öffnen der App — und zusätzlich für jede Stimme zu neuen Sorten."
+          "body": "Sie sammeln auch ohne Einkauf: Einmal am Tag gibt es Punkte fürs Öffnen der App – und zusätzlich für jede Stimme zu neuen Sorten."
         }
       }
     }

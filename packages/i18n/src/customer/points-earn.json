@@ -67,13 +67,13 @@
       "visit": {
         "title": "Revenez chaque jour",
         "cadence": "chaque jour",
-        "claimedToday": "obtenu aujourd’hui",
+        "claimedToday": "obtenu aujourd'hui",
         "body": "Une fois par jour, crédités sans rien avoir à faire."
       },
       "feedback_purchase": {
         "title": "Évaluez un produit reçu",
         "cadence": "une fois par produit",
-        "body": "Pas le temps d'écrire ? Un simple « J'ai aimé » ou « Je n'ai pas aimé » suffit. Avec un avis écrit, vous gagnez les deux."
+        "body": "Pas le temps d'écrire ? Un simple « J'ai aimé » ou « Je n'ai pas aimé » suffit. Avec un avis écrit, vous gagnez les deux."
       },
       "feedback_candidate": {
         "title": "Votez pour les nouvelles saveurs",
@@ -85,7 +85,7 @@
   },
   "de": {
     "rate": "{points} Punkte = {value} Rabattgutschein",
-    "footnote": "Ab {threshold} Punkten tauschen Sie diese gegen einen Gutschein über {value} — einlösbar im Warenkorb.",
+    "footnote": "Ab {threshold} Punkten tauschen Sie diese gegen einen Gutschein über {value} – einlösbar im Warenkorb.",
     "paidNote": "Einladungspunkte werden gutgeschrieben, sobald die Zahlung der eingeladenen Person eingegangen ist.",
     "ways": {
       "referral": {

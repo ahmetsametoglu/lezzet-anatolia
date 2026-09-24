@@ -45,13 +45,13 @@
     "name": {
       "kicker": "FAISONS CONNAISSANCE",
       "title": "Votre prénom et votre nom",
-      "body": "Pour savoir pour qui nous préparons la commande : ce nom figure sur le bon de livraison et dans nos messages.",
+      "body": "Pour savoir pour qui nous préparons la commande : ce nom figure sur le bon de livraison et dans nos messages.",
       "field": "Nom et prénom",
       "placeholder": "Nom et prénom"
     },
     "address": {
       "kicker": "LIVRAISON",
-      "title": "Où souhaitez-vous être livré ?",
+      "title": "Où souhaitez-vous être livré ?",
       "body": "Votre adresse détermine le jour et les frais de livraison. Sans elle, nous vous la demanderons au moment de commander.",
       "save": "Enregistrer et continuer",
       "later": "Je l'ajouterai plus tard"
@@ -76,7 +76,7 @@
     "finish": "Fertig",
     "saving": "Wird gespeichert…",
     "loading": "Ihr Profil wird geladen…",
-    "doneToast": "Danke — Ihr Profil ist vollständig ✓",
+    "doneToast": "Danke – Ihr Profil ist vollständig ✓",
     "name": {
       "kicker": "LERNEN WIR UNS KENNEN",
       "title": "Ihr Vor- und Nachname",
@@ -100,8 +100,8 @@
     },
     "errors": {
       "name_required": "Der Name darf nicht leer sein.",
-      "phone_invalid": "Die Telefonnummer konnte nicht erkannt werden — bitte prüfen.",
-      "unexpected": "Speichern fehlgeschlagen — versuchen Sie es erneut."
+      "phone_invalid": "Die Telefonnummer konnte nicht erkannt werden – bitte prüfen.",
+      "unexpected": "Speichern fehlgeschlagen – versuchen Sie es erneut."
     }
   }
 }

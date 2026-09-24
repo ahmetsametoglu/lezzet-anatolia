@@ -51,7 +51,7 @@
     },
     "reason": {
       "review": "Avis sur un produit",
-      "feedback_purchase": "Évaluation d’un produit",
+      "feedback_purchase": "Évaluation d'un produit",
       "feedback_candidate": "Vote pour une nouvelle saveur",
       "order": "Commande",
       "referral": "Ami parrainé",
@@ -68,7 +68,7 @@
   "de": {
     "title": "Punkteverlauf",
     "back": "← Mein Konto",
-    "empty": "Noch keine Punktebewegungen — unten steht, wie Sie Punkte sammeln.",
+    "empty": "Noch keine Punktebewegungen – unten steht, wie Sie Punkte sammeln.",
     "loadMore": "Ältere Bewegungen",
     "loading": "Wird geladen…",
     "earnTitle": "Wie sammle ich Punkte?",
@@ -78,8 +78,8 @@
       "review": "Schreiben Sie einen Kommentar zu einem gekauften Produkt",
       "feedback_purchase": "Bewerten Sie Ihre Produkte nach der Bestellung",
       "feedback_candidate": "Stimmen Sie unter „Entdecken“ über neue Sorten ab",
-      "referral": "Werben Sie Freunde — Punkte für deren erste Bestellung",
-      "neighbor": "Laden Sie Ihre Nachbarn zu Ihrem Liefertag ein — sobald deren Bestellung bezahlt ist",
+      "referral": "Werben Sie Freunde – Punkte für deren erste Bestellung",
+      "neighbor": "Laden Sie Ihre Nachbarn zu Ihrem Liefertag ein – sobald deren Bestellung bezahlt ist",
       "visit": "Schauen Sie täglich vorbei"
     },
     "reason": {
@@ -94,8 +94,8 @@
       "manual": "Manuelle Korrektur"
     },
     "reasonReversed": {
-      "referral": "Geworbene Freundin oder Freund — storniert",
-      "neighbor": "Nachbarn eingeladen — storniert"
+      "referral": "Geworbene Freundin oder Freund – storniert",
+      "neighbor": "Nachbarn eingeladen – storniert"
     }
   }
 }

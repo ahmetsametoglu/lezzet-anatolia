@@ -39,8 +39,8 @@
     "sent": "Nous avons envoyé un code à {email}.",
     "codeField": "Code à usage unique",
     "codePlaceholder": "• • • • • •",
-    "codeHint": "Saisissez les six chiffres ; inutile d'appuyer sur un bouton.",
-    "resend": "Pas reçu le code ? Renvoyer",
+    "codeHint": "Saisissez les six chiffres ; inutile d'appuyer sur un bouton.",
+    "resend": "Pas reçu le code ? Renvoyer",
     "verifying": "Connexion…",
     "done": "Bienvenue",
     "legal": "En continuant, vous acceptez notre politique de confidentialité. Quelle que soit la méthode choisie, vous retrouvez le même compte.",
@@ -57,7 +57,7 @@
     "back": "Zurück",
     "verifiedToast": "Willkommen ✓",
     "title": "In wenigen Sekunden anmelden",
-    "body": "Kein Passwort, kein Formular. Ob erste oder hundertste Bestellung — die Anmeldung ist immer gleich.",
+    "body": "Kein Passwort, kein Formular. Ob erste oder hundertste Bestellung – die Anmeldung ist immer gleich.",
     "google": "Mit Google fortfahren",
     "email": "Mit E-Mail fortfahren",
     "emailField": "Ihre E-Mail-Adresse",
@@ -66,7 +66,7 @@
     "sent": "Wir haben einen Code an {email} gesendet.",
     "codeField": "Einmalcode",
     "codePlaceholder": "• • • • • •",
-    "codeHint": "Geben Sie die sechs Ziffern ein — ein weiterer Klick ist nicht nötig.",
+    "codeHint": "Geben Sie die sechs Ziffern ein – ein weiterer Klick ist nicht nötig.",
     "resend": "Keinen Code erhalten? Erneut senden",
     "verifying": "Anmeldung läuft…",
     "done": "Willkommen",
@@ -76,8 +76,8 @@
     "resendWait": "Erneut senden ({s} s)",
     "legalPrefix": "Wenn Sie fortfahren, akzeptieren Sie ",
     "privacyInline": "unsere Datenschutzerklärung",
-    "legalSuffix": ". Egal welchen Weg Sie wählen — Sie erreichen dasselbe Konto.",
+    "legalSuffix": ". Egal welchen Weg Sie wählen – Sie erreichen dasselbe Konto.",
     "sendWait": "Bitte warten ({s} s)",
-    "sessionEnded": "Ihre Sitzung ist beendet — bitte melden Sie sich erneut an."
+    "sessionEnded": "Ihre Sitzung ist beendet – bitte melden Sie sich erneut an."
   }
 }

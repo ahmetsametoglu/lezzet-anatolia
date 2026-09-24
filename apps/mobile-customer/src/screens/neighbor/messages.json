@@ -58,12 +58,12 @@
     },
     "full": {
       "title": "Invitation complète pour le {day}",
-      "body": "Le nombre maximal de voisins pour cette invitation est atteint. Vous pouvez tout de même commander ; vous choisirez la date de livraison au moment du paiement.",
+      "body": "Le nombre maximal de voisins pour cette invitation est atteint. Vous pouvez tout de même commander ; vous choisirez la date de livraison au moment du paiement.",
       "primary": "Voir le catalogue"
     },
     "unknown": {
       "title": "Nous ne reconnaissons pas ce lien",
-      "body": "Le lien a peut-être été copié partiellement. Bienvenue tout de même : le catalogue est ouvert à tous.",
+      "body": "Le lien a peut-être été copié partiellement. Bienvenue tout de même : le catalogue est ouvert à tous.",
       "primary": "Voir le catalogue"
     }
   },
@@ -76,7 +76,7 @@
     "ok": {
       "title": "{name} lädt Sie zur Lieferung am {day} ein",
       "someone": "Ihre Nachbarin oder Ihr Nachbar",
-      "body": "Unser Fahrzeug ist an diesem Tag ohnehin in Ihrer Nähe. Bestellen Sie für denselben Tag, dann werden Sie zusammen beliefert — ohne Unterbrechung der Kühlkette, bis vor Ihre Tür.",
+      "body": "Unser Fahrzeug ist an diesem Tag ohnehin in Ihrer Nähe. Bestellen Sie für denselben Tag, dann werden Sie zusammen beliefert – ohne Unterbrechung der Kühlkette, bis vor Ihre Tür.",
       "primary": "Katalog ansehen",
       "secondary": "Konto erstellen"
     },
@@ -92,12 +92,12 @@
     },
     "full": {
       "title": "Für {day} sind alle Plätze dieser Einladung vergeben",
-      "body": "Über diese Einladung können keine weiteren Nachbarn bestellen. Sie können trotzdem bestellen — den Liefertag wählen Sie an der Kasse.",
+      "body": "Über diese Einladung können keine weiteren Nachbarn bestellen. Sie können trotzdem bestellen – den Liefertag wählen Sie an der Kasse.",
       "primary": "Katalog ansehen"
     },
     "unknown": {
       "title": "Diesen Einladungslink kennen wir nicht",
-      "body": "Der Link wurde vielleicht unvollständig kopiert. Kommen Sie trotzdem herein — der Katalog ist auch ohne Einladung offen.",
+      "body": "Der Link wurde vielleicht unvollständig kopiert. Kommen Sie trotzdem herein – der Katalog ist auch ohne Einladung offen.",
       "primary": "Katalog ansehen"
     }
   }

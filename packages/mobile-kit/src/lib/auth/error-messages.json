@@ -25,14 +25,14 @@
   },
   "de": {
     "invalid_email": "Diese E-Mail-Adresse scheint ungültig zu sein.",
-    "send_failed": "Der Code konnte nicht gesendet werden — versuchen Sie es gleich erneut.",
+    "send_failed": "Der Code konnte nicht gesendet werden – versuchen Sie es gleich erneut.",
     "rate_limit": "Zu viele Versuche.",
     "cooldown": "Bitte warten Sie kurz auf einen neuen Code.",
-    "invalid_code": "Der Code ist falsch — versuchen Sie es erneut.",
-    "code_expired": "Der Code ist abgelaufen — fordern Sie einen neuen an.",
-    "code_locked": "Zu viele Fehlversuche — fordern Sie einen neuen Code an.",
-    "no_active_code": "Kein Code ausstehend — fordern Sie einen neuen an.",
-    "google_unavailable": "Die Google-Anmeldung ist derzeit nicht verfügbar — versuchen Sie es per E-Mail.",
-    "oauth_failed": "Die Anmeldung über den Anbieter ist fehlgeschlagen — versuchen Sie es per E-Mail."
+    "invalid_code": "Der Code ist falsch – versuchen Sie es erneut.",
+    "code_expired": "Der Code ist abgelaufen – fordern Sie einen neuen an.",
+    "code_locked": "Zu viele Fehlversuche – fordern Sie einen neuen Code an.",
+    "no_active_code": "Kein Code ausstehend – fordern Sie einen neuen an.",
+    "google_unavailable": "Die Google-Anmeldung ist derzeit nicht verfügbar – versuchen Sie es per E-Mail.",
+    "oauth_failed": "Die Anmeldung über den Anbieter ist fehlgeschlagen – versuchen Sie es per E-Mail."
   }
 }

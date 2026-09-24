@@ -54,7 +54,7 @@
     "self": {
       "eyebrow": "Parrainage",
       "title": "C'est votre lien de parrainage",
-      "description": "Le lien fonctionne. Partagez-le autour de vous : vos points arrivent dès que la personne invitée règle sa première commande.",
+      "description": "Le lien fonctionne. Partagez-le autour de vous : vos points arrivent dès que la personne invitée règle sa première commande.",
       "primary": "Retour à mon compte"
     },
     "alreadyCustomer": {
@@ -67,7 +67,7 @@
   },
   "de": {
     "meta": {
-      "title": "Einladung — Lezzet Anatolie",
+      "title": "Einladung – Lezzet Anatolie",
       "description": "Jemand lädt Sie zu Lezzet Anatolie ein. Entdecken Sie die Aromen der türkischen Küche."
     },
     "ok": {
@@ -81,19 +81,19 @@
     "unknown": {
       "eyebrow": "Einladung",
       "title": "Dieser Einladungslink gilt nicht mehr",
-      "description": "Der Link wurde vielleicht unvollständig kopiert oder ist abgelaufen. Willkommen trotzdem — schauen Sie sich gern um.",
+      "description": "Der Link wurde vielleicht unvollständig kopiert oder ist abgelaufen. Willkommen trotzdem – schauen Sie sich gern um.",
       "primary": "Katalog entdecken"
     },
     "self": {
       "eyebrow": "Einladung",
       "title": "Das ist Ihr eigener Einladungslink",
-      "description": "Der Link funktioniert. Teilen Sie ihn — Ihre Punkte kommen, sobald die eingeladene Person ihre erste Bestellung bezahlt.",
+      "description": "Der Link funktioniert. Teilen Sie ihn – Ihre Punkte kommen, sobald die eingeladene Person ihre erste Bestellung bezahlt.",
       "primary": "Zurück zum Konto"
     },
     "alreadyCustomer": {
       "eyebrow": "Einladung",
       "title": "Sie gehören schon dazu",
-      "description": "Einladungen sind für neue Kundinnen und Kunden. Auch Sie haben einen eigenen Link — er steht in Ihrem Konto.",
+      "description": "Einladungen sind für neue Kundinnen und Kunden. Auch Sie haben einen eigenen Link – er steht in Ihrem Konto.",
       "primary": "Katalog entdecken",
       "secondary": "Zurück zum Konto"
     }

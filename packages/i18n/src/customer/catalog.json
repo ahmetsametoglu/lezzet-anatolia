@@ -65,9 +65,9 @@
     "campaign": {
       "named": "{label} — {value} de remise sur cette sélection, appliquée au panier.",
       "anon": "{value} de remise sur cette sélection, appliquée au panier.",
-      "percent": "{n} %",
+      "percent": "{n} %",
       "amount": "{amount}",
-      "withMinimum": "dès {minimum} : {value}"
+      "withMinimum": "dès {minimum} : {value}"
     },
     "filter": {
       "label": "Trier et filtrer",
@@ -75,8 +75,8 @@
     },
     "sort": {
       "featured": "Recommandés",
-      "priceAsc": "Prix : croissant",
-      "priceDesc": "Prix : décroissant"
+      "priceAsc": "Prix : croissant",
+      "priceDesc": "Prix : décroissant"
     },
     "empty": {
       "title": "Nous n'avons rien trouvé",
@@ -101,7 +101,7 @@
     "title": "Katalog",
     "all": "Alle",
     "loading": "Wird geladen…",
-    "listEnd": "— das war alles —",
+    "listEnd": "– das war alles –",
     "search": {
       "placeholder": "Produkt suchen…",
       "label": "Produkt suchen",
@@ -112,7 +112,7 @@
       "clear": "Kollektion verlassen"
     },
     "campaign": {
-      "named": "{label} — {value} Rabatt auf diese Auswahl, im Warenkorb angewendet.",
+      "named": "{label} – {value} Rabatt auf diese Auswahl, im Warenkorb angewendet.",
       "anon": "{value} Rabatt auf diese Auswahl, im Warenkorb angewendet.",
       "percent": "{n} %",
       "amount": "{amount}",

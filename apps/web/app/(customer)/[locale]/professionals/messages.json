@@ -104,7 +104,7 @@
   "fr": {
     "meta": {
       "title": "Professionnels — approvisionnement en gros pour restaurants et épiceries",
-      "description": "Produits turcs pour restaurants, épiceries et cafés. Inscrivez-vous en une minute avec votre SIRET ; vos tarifs professionnels sont activés dès la validation."
+      "description": "Produits turcs pour restaurants, épiceries et cafés. Inscrivez-vous en une minute avec votre SIRET ; vos tarifs professionnels sont activés dès la validation."
     },
     "hero": {
       "eyebrow": "Pour restaurants & épiceries",
@@ -126,11 +126,11 @@
       },
       {
         "title": "Validation",
-        "body": "Nous étudions votre demande et revenons vers vous rapidement ; réponse par e-mail."
+        "body": "Nous étudions votre demande et revenons vers vous rapidement ; réponse par e-mail."
       },
       {
         "title": "Commande en gros",
-        "body": "Vos tarifs professionnels sont activés ; vous commandez par le canal de votre choix."
+        "body": "Vos tarifs professionnels sont activés ; vous commandez par le canal de votre choix."
       }
     ],
     "form": {
@@ -151,13 +151,13 @@
       "vatValid": "Vérifié",
       "vatInvalid": "Ce numéro n'a pas pu être vérifié — vérifiez-le",
       "vatUnknown": "Vérification impossible pour le moment — cela ne bloque pas votre demande",
-      "vatUseSiret": "Les sociétés françaises s’inscrivent avec leur SIRET (onglet « Société française »).",
-      "vatUnsupported": "Pour l’instant, nous travaillons uniquement avec des entreprises en France et en Allemagne.",
+      "vatUseSiret": "Les sociétés françaises s'inscrivent avec leur SIRET (onglet « Société française »).",
+      "vatUnsupported": "Pour l'instant, nous travaillons uniquement avec des entreprises en France et en Allemagne.",
       "line1": "Rue et numéro",
       "postalCode": "Code postal",
       "city": "Ville",
       "suggestLabel": "Suggestions d'adresses",
-      "suggestCredit": "Adresses : Base Adresse Nationale (Licence Ouverte Etalab 2.0)",
+      "suggestCredit": "Adresses : Base Adresse Nationale (Licence Ouverte Etalab 2.0)",
       "suggestBusy": "Les suggestions d'adresses sont momentanément saturées — réessayez dans un instant. Vous pouvez aussi saisir l'adresse manuellement.",
       "zipSuggestLabel": "Suggestions de codes postaux",
       "citySuggestLabel": "Communes de ce code postal",
@@ -173,8 +173,8 @@
     },
     "aside": {
       "title": "Une question ?",
-      "body": "La plupart des collaborations commencent par une conversation. Écrivez-nous :",
-      "whatsapp": "WhatsApp : {phone}",
+      "body": "La plupart des collaborations commencent par une conversation. Écrivez-nous :",
+      "whatsapp": "WhatsApp : {phone}",
       "noticeLead": "En attendant la validation, vous pouvez parcourir le catalogue aux prix de détail.",
       "noticeStrong": "Vos tarifs professionnels sont activés dès la validation."
     },
@@ -205,14 +205,14 @@
   },
   "de": {
     "meta": {
-      "title": "Geschäftskunden — Großhandel für Restaurants und Lebensmittelgeschäfte",
+      "title": "Geschäftskunden – Großhandel für Restaurants und Lebensmittelgeschäfte",
       "description": "Türkische Lebensmittel für Restaurants, Lebensmittelgeschäfte und Cafés. In einer Minute registrieren; Ihre Großhandelspreise werden nach der Freischaltung sichtbar."
     },
     "hero": {
       "eyebrow": "Für Restaurants & Lebensmittelgeschäfte",
       "title": "Ihr Lieferant für türkische Spezialitäten",
       "benefits": [
-        "Großhandelspreise — sichtbar nach der Freischaltung",
+        "Großhandelspreise – sichtbar nach der Freischaltung",
         "Regelmäßige Lieferung im Gebiet, mit eigenem Kühlfahrzeug",
         "Große Mengen einfach bestellen + Nachbestellung mit einem Klick",
         "Bestellung und direkter Kontakt über WhatsApp"
@@ -224,7 +224,7 @@
     "steps": [
       {
         "title": "Registrieren",
-        "body": "Mit Ihrer USt-IdNr. in einer Minute — die Angaben tragen Sie einmal ein."
+        "body": "Mit Ihrer USt-IdNr. in einer Minute – die Angaben tragen Sie einmal ein."
       },
       {
         "title": "Freischaltung",
@@ -242,7 +242,7 @@
       "siret": "Ihre SIRET-Nummer",
       "fetch": "Abrufen",
       "fetching": "Wird abgerufen…",
-      "found": "Aus dem amtlichen Register — bitte prüfen",
+      "found": "Aus dem amtlichen Register – bitte prüfen",
       "legalNameLabel": "Firma",
       "addressLabel": "Anschrift",
       "activityLabel": "Tätigkeit",
@@ -251,8 +251,8 @@
       "vat": "Umsatzsteuer-Identifikationsnummer (USt-IdNr.)",
       "vatChecking": "Wird geprüft…",
       "vatValid": "Bestätigt",
-      "vatInvalid": "Diese Nummer konnte nicht bestätigt werden — bitte prüfen",
-      "vatUnknown": "Derzeit nicht prüfbar — Ihre Anfrage bleibt möglich",
+      "vatInvalid": "Diese Nummer konnte nicht bestätigt werden – bitte prüfen",
+      "vatUnknown": "Derzeit nicht prüfbar – Ihre Anfrage bleibt möglich",
       "vatUseSiret": "Französische Unternehmen registrieren sich mit ihrer SIRET-Nummer (Reiter „Französisches Unternehmen“).",
       "vatUnsupported": "Derzeit arbeiten wir nur mit Unternehmen in Frankreich und Deutschland.",
       "line1": "Straße und Hausnummer",
@@ -260,7 +260,7 @@
       "city": "Stadt",
       "suggestLabel": "Adressvorschläge",
       "suggestCredit": "Adressen: Base Adresse Nationale (Etalab 2.0)",
-      "suggestBusy": "Adressvorschläge sind gerade ausgelastet — versuchen Sie es gleich noch einmal. Sie können die Adresse auch manuell eingeben.",
+      "suggestBusy": "Adressvorschläge sind gerade ausgelastet – versuchen Sie es gleich noch einmal. Sie können die Adresse auch manuell eingeben.",
       "zipSuggestLabel": "Postleitzahl-Vorschläge",
       "citySuggestLabel": "Orte zu dieser Postleitzahl",
       "contactName": "Ihr Name",
@@ -268,7 +268,7 @@
       "email": "E-Mail",
       "submit": "Anfrage senden",
       "submitting": "Wird gesendet…",
-      "note": "Nach dem Senden erhalten Sie einen Einmalcode per E-Mail — damit wird Ihr Konto erstellt, ganz ohne Passwort. Wenn Sie bereits ein Konto haben, wird die Anfrage damit verknüpft.",
+      "note": "Nach dem Senden erhalten Sie einen Einmalcode per E-Mail – damit wird Ihr Konto erstellt, ganz ohne Passwort. Wenn Sie bereits ein Konto haben, wird die Anfrage damit verknüpft.",
       "noteSignedIn": "Ihre Anfrage wird mit Ihrem bestehenden Konto verknüpft.",
       "verifyTitle": "Geben Sie den Code aus Ihrer E-Mail ein",
       "back": "Zurück zum Formular"
@@ -283,13 +283,13 @@
     "sent": {
       "eyebrow": "Anfrage gesendet",
       "title": "Ihre Anfrage ist eingegangen",
-      "body": "Wir prüfen sie — die Antwort erhalten Sie per E-Mail. In der Zwischenzeit bleibt der Katalog zu Einzelhandelspreisen offen.",
+      "body": "Wir prüfen sie – die Antwort erhalten Sie per E-Mail. In der Zwischenzeit bleibt der Katalog zu Einzelhandelspreisen offen.",
       "cta": "Zum Katalog"
     },
     "status": {
-      "pending": "Ihre Anfrage wird geprüft — Antwort per E-Mail.",
+      "pending": "Ihre Anfrage wird geprüft – Antwort per E-Mail.",
       "approved": "Freigeschaltet! Ihre Großhandelspreise sind jetzt sichtbar.",
-      "rejected": "Ihre Anfrage konnte derzeit nicht angenommen werden — Sie können mit Ihrem Konto weiter einkaufen. Sie können Ihre Angaben auch korrigieren und die Anfrage erneut senden."
+      "rejected": "Ihre Anfrage konnte derzeit nicht angenommen werden – Sie können mit Ihrem Konto weiter einkaufen. Sie können Ihre Angaben auch korrigieren und die Anfrage erneut senden."
     },
     "rejectReasonTitle": "Prüfhinweis",
     "translation": {
@@ -301,7 +301,7 @@
       "invalid_email": "Diese E-Mail-Adresse scheint nicht gültig zu sein.",
       "invalid_application": "Einige Felder fehlen oder sind fehlerhaft.",
       "siret_not_found": "Zu dieser SIRET-Nummer wurde kein Eintrag gefunden.",
-      "registry_down": "Das amtliche Register ist derzeit nicht erreichbar — Sie können die Angaben manuell eintragen.",
+      "registry_down": "Das amtliche Register ist derzeit nicht erreichbar – Sie können die Angaben manuell eintragen.",
       "incomplete": "Bitte füllen Sie die rot markierten Felder aus."
     }
   }

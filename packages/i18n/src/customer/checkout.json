@@ -250,46 +250,46 @@
       "eyebrow": "Adresse de livraison",
       "default": "par défaut",
       "add": "＋ Ajouter une adresse",
-      "empty": "Vous n'avez pas encore d'adresse enregistrée. Où souhaitez-vous être livré ?",
+      "empty": "Vous n'avez pas encore d'adresse enregistrée. Où souhaitez-vous être livré ?",
       "emptyBody": "Ajoutez votre adresse ici — pas besoin de quitter votre commande.",
       "editHint": "Maintenez appuyé pour modifier",
       "pickupOption": "Retrait à l'entrepôt",
-      "billing": "Adresse de facturation : {address}"
+      "billing": "Adresse de facturation : {address}"
     },
     "addressCheck": {
-      "foundElsewhere": "Nous avons trouvé cette adresse ici :",
+      "foundElsewhere": "Nous avons trouvé cette adresse ici :",
       "useIt": "Utiliser cette adresse",
       "keepMine": "Mon adresse est correcte",
       "streetOnly": "Nous n'avons pas pu vérifier le numéro. Si votre adresse est correcte, vous pouvez continuer.",
-      "notFound": "Nous n'avons pas trouvé cette adresse. Pouvez-vous vérifier l'orthographe ?"
+      "notFound": "Nous n'avons pas trouvé cette adresse. Pouvez-vous vérifier l'orthographe ?"
     },
     "undeliverable": {
       "title": "Certains articles ne font pas partie de cette commande",
-      "body": "Les produits sous chaîne du froid ne peuvent pas venir à cette adresse ; ils restent dans votre panier et ne sont pas ajoutés à cette commande. Avec une adresse située dans notre zone, ils rejoindront la même commande.",
-      "items": "En attente : {items}."
+      "body": "Les produits sous chaîne du froid ne peuvent pas venir à cette adresse ; ils restent dans votre panier et ne sont pas ajoutés à cette commande. Avec une adresse située dans notre zone, ils rejoindront la même commande.",
+      "items": "En attente : {items}."
     },
     "delivery": {
       "eyebrow": "Livraison",
       "door": "Livraison à domicile",
-      "doorBody": "Avec notre camion réfrigéré — vous choisissez le jour. Livraison : {fee}",
+      "doorBody": "Avec notre camion réfrigéré — vous choisissez le jour. Livraison : {fee}",
       "doorUnavailable": "Cette adresse est hors de notre zone de livraison.",
-      "shippingInZone": "Les articles de cette commande ne sont pas livrés par notre camion ; ils sont expédiés par transporteur.",
+      "shippingInZone": "Les articles de cette commande ne sont pas livrés par notre camion ; ils sont expédiés par transporteur.",
       "shipping": "Expédition par transporteur",
-      "shippingBody": "2–4 jours ouvrés. Livraison : {fee}",
+      "shippingBody": "2 à 4 jours ouvrés. Livraison : {fee}",
       "shippingUnavailable": "Cette adresse est dans notre zone de livraison — notre camion vous livre.",
-      "dayLabel": "Jour de livraison : {day}",
+      "dayLabel": "Jour de livraison : {day}",
       "neighborInvite": "{name} vous invite à la livraison du {day} — cette date est présélectionnée.",
       "neighborInviteOtherDay": "{name} vous invite à la livraison du {day}. Choisissez cette date pour être livrés ensemble et gagner des points.",
       "neighborSomeone": "Votre voisin",
       "neighborDecline": "Retirer cette invitation",
-      "pickupBody": "Nous vous prévenons dès que c’est prêt — convenez de l’heure avec l’entrepôt par téléphone. Retrait gratuit",
-      "pickupPhone": "Pour convenir de l’heure : {phone}"
+      "pickupBody": "Nous vous prévenons dès que c'est prêt — convenez de l'heure avec l'entrepôt par téléphone. Retrait gratuit",
+      "pickupPhone": "Pour convenir de l'heure : {phone}"
     },
     "carrier": {
       "title": "Service de livraison",
       "hint": "Prix et délai en direct du transporteur.",
       "freeHome": "Livraison offerte — à votre adresse.",
-      "days": "sous {hours} h",
+      "days": "sous {hours} h",
       "tracked": "suivi",
       "parcels": "{count} colis",
       "off": "Frais de livraison calculés selon notre tarif forfaitaire.",
@@ -312,7 +312,7 @@
       "close": "Fermer",
       "loading": "Chargement des points…",
       "empty": "Aucun point relais trouvé autour de votre adresse.",
-      "failed": "Les points de ces transporteurs n'ont pas pu être chargés : {carriers}.",
+      "failed": "Les points de ces transporteurs n'ont pas pu être chargés : {carriers}.",
       "select": "Choisir ce point",
       "distance": "à {distance}",
       "yourAddress": "Votre adresse",
@@ -344,7 +344,7 @@
       },
       "onlineRequired": "À ce montant, le paiement en ligne est requis.",
       "cashWarning": "La loi interdit l'encaissement en espèces à ce montant — réglez par carte à la livraison.",
-      "atPickup": "Paiement à l’entrepôt",
+      "atPickup": "Paiement à l'entrepôt",
       "atPickupBody": "Espèces ou carte au retrait."
     },
     "summary": {
@@ -357,7 +357,7 @@
       "noPrice": "Prix indisponible",
       "pending": "Après le choix de l'adresse",
       "total": "Total général",
-      "undeliverableNote": "Les articles barrés ne sont pas livrables à ce code postal ; ils ne font pas partie de la commande ni du paiement."
+      "undeliverableNote": "Les articles barrés ne sont pas livrables à ce code postal ; ils ne font pas partie de la commande ni du paiement."
     },
     "marketing": "Je souhaite être informé des offres et nouveautés par e-mail/WhatsApp. (Facultatif — sans effet sur votre commande.)",
     "contact": {
@@ -393,19 +393,19 @@
       "session": "Votre session semble expirée. Reconnectez-vous.",
       "warehouse_unresolved": "Nous n'avons pas pu organiser la livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter.",
       "empty_cart": "Votre panier semble vide.",
-      "blocked_lines": "Certains articles ne sont plus disponibles : {detail}. Retournez au panier pour les retirer.",
-      "insufficient_here": "Pour certains articles, la quantité demandée ne peut pas être livrée à cette adresse — le nombre entre parenthèses est le maximum possible actuellement : {detail}. Vous pouvez corriger depuis le panier.",
+      "blocked_lines": "Certains articles ne sont plus disponibles : {detail}. Retournez au panier pour les retirer.",
+      "insufficient_here": "Pour certains articles, la quantité demandée ne peut pas être livrée à cette adresse — le nombre entre parenthèses est le maximum possible actuellement : {detail}. Vous pouvez corriger depuis le panier.",
       "min_basket": "Ajoutez encore {missing} à votre panier pour valider la commande.",
       "address_not_found": "Adresse introuvable.",
-      "address_city_mismatch": "Le code postal {postalCode} ne correspond pas à {city}. Ce doit être l'une de ces communes : {places}. Corrigez l'adresse dans votre compte.",
+      "address_city_mismatch": "Le code postal {postalCode} ne correspond pas à {city}. Ce doit être l'une de ces communes : {places}. Corrigez l'adresse dans votre compte.",
       "cold_chain_unshippable": "Les articles en chaîne du froid ne peuvent pas être envoyés à cette adresse.",
       "date_unavailable": "Le jour choisi n'est plus disponible — merci d'en choisir un autre.",
       "payment_not_allowed": "Ce moyen de paiement n'est pas disponible — choisissez-en un autre.",
-      "price_changed": "Certains prix ont changé pendant que vous étiez sur cette page : {detail}. Nous tenions à vous le montrer — si cela vous convient, confirmez à nouveau.",
-      "cart_changed": "Votre panier a changé pendant que vous étiez sur cette page — la commande n'a pas été passée. Le récapitulatif ci-dessous est à jour ; si cela vous convient, confirmez à nouveau.",
+      "price_changed": "Certains prix ont changé pendant que vous étiez sur cette page : {detail}. Nous tenions à vous le montrer — si cela vous convient, confirmez à nouveau.",
+      "cart_changed": "Votre panier a changé pendant que vous étiez sur cette page — la commande n'a pas été passée. Le récapitulatif ci-dessous est à jour ; si cela vous convient, confirmez à nouveau.",
       "customer_not_found": "Votre compte n'a pas pu être identifié, reconnectez-vous.",
       "insufficient_stock": "Un article vient d'être épuisé. Vérifiez votre panier.",
-      "insufficient_stock_named": "Pendant que vous étiez sur cette page, la quantité restante a baissé : {detail}. Le nombre entre parenthèses est ce qu'il nous reste — corrigez votre panier et réessayez.",
+      "insufficient_stock_named": "Pendant que vous étiez sur cette page, la quantité restante a baissé : {detail}. Le nombre entre parenthèses est ce qu'il nous reste — corrigez votre panier et réessayez.",
       "payment_unavailable": {
         "stale": "Cette commande est déjà en cours de traitement.",
         "not_found": "Le paiement en ligne n'a pas pu démarrer. Choisissez le paiement à la livraison ou réessayez dans un instant.",
@@ -415,8 +415,8 @@
       "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer.",
       "shipping_option_unavailable": "Le mode de livraison choisi n'est plus proposé pour ce panier. Merci de choisir à nouveau.",
       "service_point_invalid": "Ce mode de livraison livre en point relais. Merci de choisir un point relais ouvert.",
-      "pickup_not_allowed": "Le retrait à l’entrepôt n’est pas ouvert pour votre compte — choisissez la livraison à votre adresse.",
-      "pickup_warehouse_unavailable": "L’entrepôt choisi n’accepte pas le retrait pour le moment — actualisez les options et choisissez à nouveau."
+      "pickup_not_allowed": "Le retrait à l'entrepôt n'est pas ouvert pour votre compte — choisissez la livraison à votre adresse.",
+      "pickup_warehouse_unavailable": "L'entrepôt choisi n'accepte pas le retrait pour le moment — actualisez les options et choisissez à nouveau."
     },
     "paymentSheet": {
       "canceled": "Paiement interrompu — votre commande vous attend, réessayez quand vous voulez.",
@@ -426,8 +426,8 @@
       "declined": "Le paiement n'a pas abouti — aucun montant n'a été débité. Vérifiez vos informations et réessayez, ou payez autrement."
     },
     "confirmed": {
-      "title": "Merci, commande reçue !",
-      "reference": "N° de commande : {reference}",
+      "title": "Merci, commande reçue !",
+      "reference": "N° de commande : {reference}",
       "delivery": "Livraison",
       "shipping": "Expédition par transporteur",
       "payment": "Paiement",
@@ -439,35 +439,35 @@
       "neighborTitle": "🚚 Invitez votre voisin pour ce jour-là",
       "neighborBody": "Notre camion sera déjà dans votre rue ce jour-là. Si votre voisin commande pour la même date, vous serez livrés ensemble — et vous gagnerez des points.",
       "neighborShare": "Partager le lien d'invitation",
-      "neighborRemaining": "Places encore disponibles sur cette invitation : {n} (maximum {max}).",
+      "neighborRemaining": "Places encore disponibles sur cette invitation : {n} (maximum {max}).",
       "neighborFull": "Cette invitation est complète — {max} voisins y ont participé. Une nouvelle invitation s'ouvrira à votre prochaine commande.",
-      "neighborMessage": "Le camion Lezzet Anatolie passe dans notre rue — commandez pour la date indiquée dans le lien et nous serons livrés ensemble : {url}",
+      "neighborMessage": "Le camion Lezzet Anatolie passe dans notre rue — commandez pour la date indiquée dans le lien et nous serons livrés ensemble : {url}",
       "pending": "Paiement en cours de validation",
       "pendingBody": "Nous attendons la confirmation de votre banque. Cela prend généralement quelques secondes et le résultat s'affiche sur cette page. Si vous la fermez, suivez-le dans Mes commandes ; nous vous écrirons aussi par e-mail dès que le paiement sera confirmé.",
       "paid": "Paiement reçu",
       "paidBody": "Votre commande est en cours de confirmation — cette page se mettra à jour dans quelques secondes.",
       "processingBody": "Votre banque traite le paiement ; cela peut prendre quelques minutes. Le résultat s'affiche sur cette page et dans Mes commandes, et nous vous écrirons par e-mail dès sa confirmation.",
       "failed": "Paiement non abouti",
-      "failedBody": "Aucun montant n'a été débité. Votre panier est intact ; réessayez avec une autre carte ou choisissez le paiement à la livraison.",
+      "failedBody": "Aucun montant n'a été débité. Votre panier est intact ; réessayez avec une autre carte ou choisissez le paiement à la livraison.",
       "refunded": "Commande annulée, vous avez été remboursé",
       "refundedBody": "Après votre paiement, l'un des produits s'est retrouvé en rupture et nous n'avons pas pu honorer la commande. La totalité du montant débité a été remboursée sur votre carte — le délai de réception dépend de votre banque. Nous vous prions de nous en excuser.",
       "incomplete": "Votre commande n'a pas abouti",
       "incompleteBody": "La commande a été enregistrée mais non confirmée. Votre panier est intact — revenez au paiement pour réessayer.",
       "retry": "Réessayer le paiement",
-      "pickup": "Retrait à l’entrepôt"
+      "pickup": "Retrait à l'entrepôt"
     }
   },
   "de": {
     "title": "Bestellung abschließen",
     "back": "Zurück",
-    "hero": "Fast geschafft — gleich ist der Tisch gedeckt",
+    "hero": "Fast geschafft – gleich ist der Tisch gedeckt",
     "signedIn": "✓ {name}",
     "signedInAnon": "✓ Angemeldet",
-    "meUnreadable": "Wir konnten Ihr Konto nicht laden — prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "meUnreadable": "Wir konnten Ihr Konto nicht laden – prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "meRetry": "Erneut versuchen",
     "guest": {
       "title": "Melden Sie sich an, um die Bestellung abzuschließen",
-      "body": "Kein Passwort — in wenigen Sekunden anmelden und weitermachen.",
+      "body": "Kein Passwort – in wenigen Sekunden anmelden und weitermachen.",
       "cta": "Anmelden und fortfahren"
     },
     "state": {
@@ -480,7 +480,7 @@
       "default": "Standard",
       "add": "＋ Neue Adresse",
       "empty": "Sie haben noch keine gespeicherte Adresse. Wohin liefern wir?",
-      "emptyBody": "Fügen Sie Ihre Adresse hier hinzu — Sie müssen Ihre Bestellung nicht verlassen.",
+      "emptyBody": "Fügen Sie Ihre Adresse hier hinzu – Sie müssen Ihre Bestellung nicht verlassen.",
       "editHint": "Zum Bearbeiten gedrückt halten",
       "pickupOption": "Im Lager abholen",
       "billing": "Rechnungsadresse: {address}"
@@ -500,24 +500,24 @@
     "delivery": {
       "eyebrow": "Lieferung",
       "door": "Lieferung an die Tür",
-      "doorBody": "Mit unserem Kühlfahrzeug — Sie wählen den Tag. Lieferung: {fee}",
+      "doorBody": "Mit unserem Kühlfahrzeug – Sie wählen den Tag. Lieferung: {fee}",
       "doorUnavailable": "Diese Adresse liegt außerhalb unseres Liefergebiets.",
       "shippingInZone": "Die Artikel dieser Bestellung liefert unser Fahrzeug nicht; sie werden verschickt.",
       "shipping": "Versand per Paketdienst",
       "shippingBody": "2–4 Werktage. Lieferung: {fee}",
-      "shippingUnavailable": "Diese Adresse liegt in unserem Liefergebiet — unser Fahrzeug bringt Ihre Bestellung bis an die Haustür.",
+      "shippingUnavailable": "Diese Adresse liegt in unserem Liefergebiet – unser Fahrzeug bringt Ihre Bestellung bis an die Haustür.",
       "dayLabel": "Liefertag: {day}",
-      "neighborInvite": "{name} lädt Sie zur Lieferung am {day} ein — dieser Tag ist für Sie vorausgewählt.",
+      "neighborInvite": "{name} lädt Sie zur Lieferung am {day} ein – dieser Tag ist für Sie vorausgewählt.",
       "neighborInviteOtherDay": "{name} lädt Sie zur Lieferung am {day} ein. Wählen Sie diesen Tag, um zusammen beliefert zu werden und Punkte zu sammeln.",
       "neighborSomeone": "Ihre Nachbarin oder Ihr Nachbar",
       "neighborDecline": "Diese Einladung entfernen",
-      "pickupBody": "Wir melden uns, sobald alles bereit ist — die Abholzeit vereinbaren Sie telefonisch mit dem Lager. Abholung: kostenlos",
+      "pickupBody": "Wir melden uns, sobald alles bereit ist – die Abholzeit vereinbaren Sie telefonisch mit dem Lager. Abholung: kostenlos",
       "pickupPhone": "Für die Terminabsprache: {phone}"
     },
     "carrier": {
       "title": "Versandservice",
       "hint": "Preis und Lieferzeit kommen direkt vom Versanddienstleister.",
-      "freeHome": "Versand gratis — an Ihre Adresse.",
+      "freeHome": "Versand gratis – an Ihre Adresse.",
       "days": "in {hours} Std.",
       "tracked": "mit Sendungsverfolgung",
       "parcels": "{count} Pakete",
@@ -565,14 +565,14 @@
       "transfer": "Per Überweisung",
       "transferBody": "Auf unser Konto, mit Rechnung.",
       "credit": "Auf Rechnung",
-      "creditBody": "Zahlungsziel — per Rechnung.",
+      "creditBody": "Zahlungsziel – per Rechnung.",
       "codBlocked": {
         "over_limit": "Zahlung bei Lieferung ist über diesem Betrag nicht möglich.",
         "customer_blocked": "Zahlung bei Lieferung ist für Ihr Konto deaktiviert.",
         "shipping": "Zahlung bei Lieferung gibt es nur für Adressen, die wir selbst beliefern."
       },
       "onlineRequired": "In dieser Höhe ist Online-Zahlung erforderlich.",
-      "cashWarning": "Gesetzlich ist Barzahlung in dieser Höhe nicht zulässig — an der Tür können Sie mit Karte zahlen.",
+      "cashWarning": "Gesetzlich ist Barzahlung in dieser Höhe nicht zulässig – an der Tür können Sie mit Karte zahlen.",
       "atPickup": "Zahlung im Lager",
       "atPickupBody": "Bar oder Karte bei der Abholung."
     },
@@ -588,7 +588,7 @@
       "total": "Gesamtsumme",
       "undeliverableNote": "Durchgestrichene Artikel sind an diese Postleitzahl nicht lieferbar; sie gehören weder zur Bestellung noch zur Zahlung."
     },
-    "marketing": "Ich möchte per E-Mail/WhatsApp über Angebote und Neuheiten informiert werden. (Optional — ohne Einfluss auf Ihre Bestellung.)",
+    "marketing": "Ich möchte per E-Mail/WhatsApp über Angebote und Neuheiten informiert werden. (Optional – ohne Einfluss auf Ihre Bestellung.)",
     "contact": {
       "eyebrow": "Kontakt",
       "reason": "Wir benötigen Ihren Namen und Ihre Telefonnummer, um Sie zu Ihrer Bestellung zu erreichen und Ihnen Lieferbenachrichtigungen zu senden. Auch unser Fahrer erreicht Sie an der Tür unter dieser Nummer.",
@@ -598,7 +598,7 @@
       "saving": "Wird gespeichert…",
       "errors": {
         "name_required": "Vor- und Nachname sind erforderlich.",
-        "phone_invalid": "Diese Nummer scheint ungültig zu sein — Sie können sie mit Ländervorwahl angeben.",
+        "phone_invalid": "Diese Nummer scheint ungültig zu sein – Sie können sie mit Ländervorwahl angeben.",
         "generic": "Speichern nicht möglich. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
       }
     },
@@ -618,23 +618,23 @@
     "terms": "Mit Ihrer Bestellung akzeptieren Sie unsere AGB.",
     "termsLink": "Allgemeine Geschäftsbedingungen lesen",
     "reject": {
-      "transport": "Die Bestellung konnte nicht gesendet werden — prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "transport": "Die Bestellung konnte nicht gesendet werden – prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
       "session": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden.",
-      "warehouse_unresolved": "Für Ihre Adresse können wir die Lieferung gerade nicht einplanen. Unser Team wurde benachrichtigt — bitte kontaktieren Sie uns.",
+      "warehouse_unresolved": "Für Ihre Adresse können wir die Lieferung gerade nicht einplanen. Unser Team wurde benachrichtigt – bitte kontaktieren Sie uns.",
       "empty_cart": "Ihr Warenkorb scheint leer zu sein.",
       "blocked_lines": "Einige Artikel sind nicht mehr erhältlich: {detail}. Bitte im Warenkorb entfernen.",
-      "insufficient_here": "Bei einigen Artikeln kann die gewünschte Menge nicht an diese Adresse geliefert werden — die Zahl in Klammern ist die derzeit höchstmögliche Menge: {detail}. Im Warenkorb können Sie das korrigieren.",
+      "insufficient_here": "Bei einigen Artikeln kann die gewünschte Menge nicht an diese Adresse geliefert werden – die Zahl in Klammern ist die derzeit höchstmögliche Menge: {detail}. Im Warenkorb können Sie das korrigieren.",
       "min_basket": "Fügen Sie noch {missing} hinzu, um die Bestellung abzuschließen.",
       "address_not_found": "Adresse nicht gefunden.",
       "address_city_mismatch": "Die Postleitzahl {postalCode} passt nicht zu {city}. Es muss einer dieser Orte sein: {places}. Bitte korrigieren Sie die Adresse in Ihrem Konto.",
       "cold_chain_unshippable": "Kühlkettenartikel können nicht an diese Adresse gesendet werden.",
-      "date_unavailable": "Der gewählte Tag ist nicht mehr verfügbar — bitte neu wählen.",
-      "payment_not_allowed": "Diese Zahlungsart ist nicht verfügbar — wählen Sie eine andere.",
+      "date_unavailable": "Der gewählte Tag ist nicht mehr verfügbar – bitte neu wählen.",
+      "payment_not_allowed": "Diese Zahlungsart ist nicht verfügbar – wählen Sie eine andere.",
       "price_changed": "Während Sie auf dieser Seite waren, haben sich einige Preise geändert: {detail}. Wenn das für Sie in Ordnung ist, bestätigen Sie erneut.",
-      "cart_changed": "Ihr Warenkorb hat sich geändert, während Sie auf dieser Seite waren — die Bestellung wurde nicht aufgegeben. Die Übersicht unten ist aktualisiert; wenn das für Sie in Ordnung ist, bestätigen Sie erneut.",
+      "cart_changed": "Ihr Warenkorb hat sich geändert, während Sie auf dieser Seite waren – die Bestellung wurde nicht aufgegeben. Die Übersicht unten ist aktualisiert; wenn das für Sie in Ordnung ist, bestätigen Sie erneut.",
       "customer_not_found": "Ihr Konto konnte nicht ermittelt werden, bitte erneut anmelden.",
       "insufficient_stock": "Ein Artikel ist gerade ausverkauft. Bitte prüfen Sie den Warenkorb.",
-      "insufficient_stock_named": "Während Sie auf dieser Seite waren, ist die verfügbare Menge gesunken: {detail}. Die Zahl in Klammern ist der aktuelle Bestand — bitte passen Sie den Warenkorb an und versuchen Sie es erneut.",
+      "insufficient_stock_named": "Während Sie auf dieser Seite waren, ist die verfügbare Menge gesunken: {detail}. Die Zahl in Klammern ist der aktuelle Bestand – bitte passen Sie den Warenkorb an und versuchen Sie es erneut.",
       "payment_unavailable": {
         "stale": "Diese Bestellung wird bereits bearbeitet.",
         "not_found": "Die Zahlungssitzung konnte nicht geöffnet werden. Wählen Sie Zahlung bei Lieferung oder versuchen Sie es gleich noch einmal.",
@@ -644,15 +644,15 @@
       "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
       "shipping_option_unavailable": "Die gewählte Versandart ist für diesen Warenkorb nicht mehr verfügbar. Bitte wählen Sie erneut.",
       "service_point_invalid": "Diese Versandart liefert an einen Abholpunkt. Bitte wählen Sie einen geöffneten Abholpunkt.",
-      "pickup_not_allowed": "Die Abholung im Lager ist für Ihr Konto nicht freigeschaltet — wählen Sie die Lieferung an Ihre Adresse.",
-      "pickup_warehouse_unavailable": "Das gewählte Lager bietet die Abholung derzeit nicht an — Optionen aktualisieren und erneut wählen."
+      "pickup_not_allowed": "Die Abholung im Lager ist für Ihr Konto nicht freigeschaltet – wählen Sie die Lieferung an Ihre Adresse.",
+      "pickup_warehouse_unavailable": "Das gewählte Lager bietet die Abholung derzeit nicht an – Optionen aktualisieren und erneut wählen."
     },
     "paymentSheet": {
-      "canceled": "Zahlung abgebrochen — Ihre Bestellung wartet, Sie können es jederzeit erneut versuchen.",
+      "canceled": "Zahlung abgebrochen – Ihre Bestellung wartet, Sie können es jederzeit erneut versuchen.",
       "configuration_missing": "Die Kartenzahlung ist derzeit nicht verfügbar. Sie können bei Lieferung zahlen.",
       "setup_failed": "Das Zahlungsfenster konnte nicht geöffnet werden. Versuchen Sie es erneut oder wählen Sie eine andere Zahlungsart.",
       "timeout": "Der Zahlungsanbieter hat nicht geantwortet. Bitte erneut versuchen.",
-      "declined": "Die Zahlung wurde nicht abgeschlossen — es wurde nichts abgebucht. Prüfen Sie Ihre Daten und versuchen Sie es erneut oder zahlen Sie anders."
+      "declined": "Die Zahlung wurde nicht abgeschlossen – es wurde nichts abgebucht. Prüfen Sie Ihre Daten und versuchen Sie es erneut oder zahlen Sie anders."
     },
     "confirmed": {
       "title": "Danke, Bestellung eingegangen!",
@@ -666,22 +666,22 @@
       "orders": "Meine Bestellungen ansehen",
       "home": "Weiter einkaufen",
       "neighborTitle": "🚚 Laden Sie Ihre Nachbarn für diesen Tag ein",
-      "neighborBody": "Unser Fahrzeug ist an diesem Tag ohnehin in Ihrer Straße. Bestellt jemand aus Ihrer Nachbarschaft für denselben Tag, werden Sie zusammen beliefert — und Sie sammeln Punkte.",
+      "neighborBody": "Unser Fahrzeug ist an diesem Tag ohnehin in Ihrer Straße. Bestellt jemand aus Ihrer Nachbarschaft für denselben Tag, werden Sie zusammen beliefert – und Sie sammeln Punkte.",
       "neighborShare": "Einladungslink teilen",
       "neighborRemaining": "Noch {n} Nachbarn können diese Einladung nutzen (höchstens {max}).",
-      "neighborFull": "Diese Einladung ist ausgeschöpft — {max} Nachbarn haben mitbestellt. Mit Ihrer nächsten Bestellung erhalten Sie eine neue Einladung.",
-      "neighborMessage": "Das Lezzet-Anatolie-Fahrzeug kommt in unsere Straße — wer über diesen Link für denselben Tag bestellt, wird zusammen mit uns beliefert: {url}",
+      "neighborFull": "Diese Einladung ist ausgeschöpft – {max} Nachbarn haben mitbestellt. Mit Ihrer nächsten Bestellung erhalten Sie eine neue Einladung.",
+      "neighborMessage": "Das Lezzet-Anatolie-Fahrzeug kommt in unsere Straße – wer über diesen Link für denselben Tag bestellt, wird zusammen mit uns beliefert: {url}",
       "pending": "Zahlung wird bestätigt",
       "pendingBody": "Wir warten auf die Bestätigung Ihrer Bank. Das dauert meist wenige Sekunden, das Ergebnis erscheint auf dieser Seite. Wenn Sie sie schließen, finden Sie es unter „Meine Bestellungen“; sobald die Zahlung bestätigt ist, schreiben wir Ihnen auch per E-Mail.",
       "paid": "Zahlung eingegangen",
-      "paidBody": "Ihre Bestellung wird bestätigt — diese Seite aktualisiert sich in wenigen Sekunden.",
+      "paidBody": "Ihre Bestellung wird bestätigt – diese Seite aktualisiert sich in wenigen Sekunden.",
       "processingBody": "Ihre Bank bearbeitet die Zahlung; das kann einige Minuten dauern. Das Ergebnis erscheint auf dieser Seite und unter Meine Bestellungen, nach der Bestätigung schreiben wir Ihnen auch per E-Mail.",
       "failed": "Zahlung nicht abgeschlossen",
       "failedBody": "Es wurde nichts abgebucht. Ihr Warenkorb bleibt bestehen; versuchen Sie es mit einer anderen Karte oder wählen Sie Zahlung bei Lieferung.",
       "refunded": "Bestellung storniert, Ihr Geld wurde erstattet",
-      "refundedBody": "Nach Ihrer Zahlung war eines der Produkte nicht mehr verfügbar und wir konnten die Bestellung nicht ausführen. Der gesamte abgebuchte Betrag wurde auf Ihre Karte erstattet — wann er gutgeschrieben wird, hängt von Ihrer Bank ab. Wir bitten um Entschuldigung.",
+      "refundedBody": "Nach Ihrer Zahlung war eines der Produkte nicht mehr verfügbar und wir konnten die Bestellung nicht ausführen. Der gesamte abgebuchte Betrag wurde auf Ihre Karte erstattet – wann er gutgeschrieben wird, hängt von Ihrer Bank ab. Wir bitten um Entschuldigung.",
       "incomplete": "Ihre Bestellung wurde nicht abgeschlossen",
-      "incompleteBody": "Die Bestellung wurde gespeichert, aber nicht bestätigt. Ihr Warenkorb ist erhalten — gehen Sie zurück zur Kasse und versuchen Sie es erneut.",
+      "incompleteBody": "Die Bestellung wurde gespeichert, aber nicht bestätigt. Ihr Warenkorb ist erhalten – gehen Sie zurück zur Kasse und versuchen Sie es erneut.",
       "retry": "Zahlung erneut versuchen",
       "pickup": "Abholung im Lager"
     }

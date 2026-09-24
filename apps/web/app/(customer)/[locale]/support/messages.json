@@ -96,7 +96,7 @@
       "other": "Autre"
     },
     "noOrder": "sans commande",
-    "lastMessage": "dernier message : {when}",
+    "lastMessage": "dernier message : {when}",
     "today": "aujourd'hui",
     "orderBound": "liée à la commande {ref}",
     "reply": {
@@ -140,11 +140,11 @@
       "sentCta": "Ouvrir la demande"
     },
     "errors": {
-      "unexpected": "Une erreur est survenue. Réessayez ; si cela persiste, écrivez-nous.",
+      "unexpected": "Une erreur est survenue. Réessayez ; si cela persiste, écrivez-nous.",
       "session_expired": "Votre session semble expirée. Reconnectez-vous.",
-      "message_empty": "Écrivez quelques mots ; nous ne pouvons pas envoyer un message vide.",
+      "message_empty": "Écrivez quelques mots ; nous ne pouvons pas envoyer un message vide.",
       "ticket_unavailable": "Nous n'avons pas pu ouvrir cette demande. Réessayez depuis la liste.",
-      "photo_unsupported": "Ce type de fichier n'est pas accepté ; envoyez une photo.",
+      "photo_unsupported": "Ce type de fichier n'est pas accepté ; envoyez une photo.",
       "photo_limit": "Nous ne pouvons pas ajouter plus de photos à un message.",
       "photo_unavailable": "La photo n'a pas pu être envoyée. Vous pouvez envoyer votre message sans photo."
     }
@@ -160,7 +160,7 @@
       "cta": "Schreiben Sie uns"
     },
     "status": {
-      "open": "Erhalten — bald an der Reihe",
+      "open": "Erhalten – bald an der Reihe",
       "in_progress": "Wir kümmern uns darum",
       "resolved": "Gelöst"
     },
@@ -181,8 +181,8 @@
       "photo": "Foto hinzufügen",
       "removePhoto": "Foto entfernen"
     },
-    "refunded": "{amount} erstattet — auch in den Bestelldetails sichtbar",
-    "reopenNote": "Falls das Problem weiterbesteht, schreiben Sie einfach eine Nachricht — die Anfrage wird von selbst wieder geöffnet.",
+    "refunded": "{amount} erstattet – auch in den Bestelldetails sichtbar",
+    "reopenNote": "Falls das Problem weiterbesteht, schreiben Sie einfach eine Nachricht – die Anfrage wird von selbst wieder geöffnet.",
     "loadMore": "Ältere Anfragen ↓",
     "loading": "Wird geladen…",
     "photoAlt": "Foto zur Anfrage",
@@ -198,7 +198,7 @@
       "yes": "Ja, um meine Bestellung",
       "no": "Nein, anderes Thema",
       "pickOrder": "Welche Bestellung?",
-      "noOrders": "Sie haben noch keine Bestellung — schreiben Sie uns direkt.",
+      "noOrders": "Sie haben noch keine Bestellung – schreiben Sie uns direkt.",
       "items": "Um welche Artikel geht es?",
       "bundleLabel": "Genusspaket",
       "problem": "Was ist das Problem?",

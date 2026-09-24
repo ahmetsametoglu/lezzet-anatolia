@@ -59,7 +59,7 @@
       "allergens": "Allergènes présents dans le coffret",
       "allergensNote": "Les ingrédients détaillés et la déclaration complète figurent sur la page de chaque produit."
     },
-    "fixedNote": "Le coffret est vendu tel quel ; son contenu ne peut pas être modifié. Pour acheter les produits séparément, parcourez le catalogue.",
+    "fixedNote": "Le coffret est vendu tel quel ; son contenu ne peut pas être modifié. Pour acheter les produits séparément, parcourez le catalogue.",
     "contents": {
       "title": "Que contient le coffret ?",
       "subtitle": "{n} produits · cliquez sur un produit pour voir sa fiche",
@@ -67,7 +67,7 @@
       "qtyPlain": "× {n}",
       "link": "Fiche produit →",
       "linkShort": "Fiche →",
-      "legal": "La déclaration légale se fait par produit : ingrédients, allergènes et valeurs nutritionnelles figurent sur chaque fiche produit — accessibles depuis les cartes ci-dessus. La liste groupée des allergènes et la durée de consommation sont résumées dans la zone d'achat.",
+      "legal": "La déclaration légale se fait par produit : ingrédients, allergènes et valeurs nutritionnelles figurent sur chaque fiche produit — accessibles depuis les cartes ci-dessus. La liste groupée des allergènes et la durée de consommation sont résumées dans la zone d'achat.",
       "legalShort": "Ingrédients complets et déclaration légale sur la fiche de chaque produit. La liste groupée des allergènes est ci-dessus."
     },
     "seeShippablePackages": "Voir les coffrets expédiables",
@@ -78,14 +78,14 @@
     "eyebrow": "Genusspaket",
     "serves": "Für {n} Personen",
     "inStock": "● Auf Lager",
-    "soldOut": "Ausverkauft — bald wieder da",
+    "soldOut": "Ausverkauft – bald wieder da",
     "share": "Teilen",
     "addToCart": "Paket in den Warenkorb",
     "assurance": {
       "coldChain": "In der Kühlkette geliefert",
       "doorstep": "Lieferung bis an die Tür im Gebiet",
       "shippable": "Versandfähig",
-      "inRouteOnly": "Dieses Paket wird nur in Straßburg und Umgebung geliefert — Versand ist nicht möglich."
+      "inRouteOnly": "Dieses Paket wird nur in Straßburg und Umgebung geliefert – Versand ist nicht möglich."
     },
     "facts": {
       "weight": "Gesamtnettogewicht",
@@ -104,7 +104,7 @@
       "qtyPlain": "{n} Stück",
       "link": "Produktangaben →",
       "linkShort": "Angaben →",
-      "legal": "Die gesetzliche Kennzeichnung erfolgt je Produkt: Zutaten, Allergene und Nährwerte stehen auf der jeweiligen Produktseite — erreichbar über die Karten oben. Die gebündelte Allergenliste und die Verzehrdauer sind im Kaufbereich zusammengefasst.",
+      "legal": "Die gesetzliche Kennzeichnung erfolgt je Produkt: Zutaten, Allergene und Nährwerte stehen auf der jeweiligen Produktseite – erreichbar über die Karten oben. Die gebündelte Allergenliste und die Verzehrdauer sind im Kaufbereich zusammengefasst.",
       "legalShort": "Vollständige Zutaten und gesetzliche Kennzeichnung auf der Seite jedes Produkts. Die gebündelte Allergenliste steht oben."
     },
     "seeShippablePackages": "Versandfähige Pakete ansehen",

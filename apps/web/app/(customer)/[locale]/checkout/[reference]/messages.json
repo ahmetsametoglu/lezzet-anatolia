@@ -65,7 +65,7 @@
       "title": "Livraison",
       "coldChain": "Livraison sans rupture de la chaîne du froid. Nous vous prévenons au départ du livreur.",
       "shippingNote": "Nous vous enverrons le numéro de suivi dès l'expédition.",
-      "pickupLine": "Retrait à l’entrepôt"
+      "pickupLine": "Retrait à l'entrepôt"
     },
     "payment": {
       "paid": "Payé · {amount}",
@@ -74,7 +74,7 @@
       "online": "Paiement en ligne",
       "cod": "Paiement à la livraison",
       "credit": "Paiement différé",
-      "deliveryNoteBody": "Le bon de livraison détaille le contenu du colis article par article ; il vous est envoyé par e-mail après la préparation et se trouve aussi dans le colis. Ce n'est pas une facture ; si vous en souhaitez une, écrivez-nous.",
+      "deliveryNoteBody": "Le bon de livraison détaille le contenu du colis article par article ; il vous est envoyé par e-mail après la préparation et se trouve aussi dans le colis. Ce n'est pas une facture ; si vous en souhaitez une, écrivez-nous.",
       "card": "Par carte",
       "deliveryNote": "Télécharger le bon de livraison (PDF) ↓",
       "deliveryNoteWhen": "Après la préparation de votre commande",
@@ -105,17 +105,17 @@
     },
     "neighbor": {
       "title": "Invitez votre voisin à cette livraison",
-      "body": "Même jour, même camion : si votre voisin commande pour le même jour, vous serez livrés ensemble — et vous gagnerez des points.",
+      "body": "Même jour, même camion : si votre voisin commande pour le même jour, vous serez livrés ensemble — et vous gagnerez des points.",
       "cta": "Copier le lien",
       "copied": "Lien copié",
-      "remaining": "Places encore disponibles sur cette invitation : {n} (maximum {max}).",
+      "remaining": "Places encore disponibles sur cette invitation : {n} (maximum {max}).",
       "full": "Cette invitation est complète — {max} voisins y ont participé. Une nouvelle invitation s'ouvrira à votre prochaine commande."
     },
     "track": "Suivre ma commande"
   },
   "de": {
-    "title": "Vielen Dank, {name} — Ihre Bestellung ist eingegangen",
-    "titleAnon": "Vielen Dank — Ihre Bestellung ist eingegangen",
+    "title": "Vielen Dank, {name} – Ihre Bestellung ist eingegangen",
+    "titleAnon": "Vielen Dank – Ihre Bestellung ist eingegangen",
     "mailed": "Wir haben die Bestätigung an {email} gesendet.",
     "orderNo": "Bestellnummer · {reference}",
     "delivery": {
@@ -144,7 +144,7 @@
       "preparing": "In Vorbereitung",
       "onTheWay": "Unterwegs",
       "delivered": "Geliefert",
-      "note": "Für Änderungen oder Stornierung schreiben Sie uns vor Beginn der Vorbereitung — danach lässt sich die Bestellung nicht mehr ändern.",
+      "note": "Für Änderungen oder Stornierung schreiben Sie uns vor Beginn der Vorbereitung – danach lässt sich die Bestellung nicht mehr ändern.",
       "placedAt": "Heute {time}",
       "preparingAt": "Am Vortag der Lieferung",
       "onTheWayAt": "{date}, vormittags",
@@ -162,11 +162,11 @@
     },
     "neighbor": {
       "title": "Laden Sie Ihre Nachbarn zu dieser Lieferung ein",
-      "body": "Gleicher Tag, gleiches Fahrzeug: Bestellt jemand aus Ihrer Nachbarschaft für denselben Tag, werden Sie zusammen beliefert — und Sie sammeln Punkte.",
+      "body": "Gleicher Tag, gleiches Fahrzeug: Bestellt jemand aus Ihrer Nachbarschaft für denselben Tag, werden Sie zusammen beliefert – und Sie sammeln Punkte.",
       "cta": "Link kopieren",
       "copied": "Kopiert",
       "remaining": "Noch {n} Nachbarn können diese Einladung nutzen (höchstens {max}).",
-      "full": "Diese Einladung ist ausgeschöpft — {max} Nachbarn haben mitbestellt. Mit Ihrer nächsten Bestellung erhalten Sie eine neue Einladung."
+      "full": "Diese Einladung ist ausgeschöpft – {max} Nachbarn haben mitbestellt. Mit Ihrer nächsten Bestellung erhalten Sie eine neue Einladung."
     },
     "track": "Bestellung verfolgen"
   }

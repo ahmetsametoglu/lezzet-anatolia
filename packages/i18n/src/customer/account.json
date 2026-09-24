@@ -195,7 +195,7 @@
     },
     "channels": {
       "title": "Canaux reliés",
-      "body": "Quand vous nous écrivez par ces canaux, nous vous reconnaissons ; vos commandes passées dans la conversation apparaissent ici.",
+      "body": "Quand vous nous écrivez par ces canaux, nous vous reconnaissons ; vos commandes passées dans la conversation apparaissent ici.",
       "source": {
         "whatsapp": "WhatsApp",
         "messenger": "Messenger",
@@ -206,11 +206,11 @@
       "notLinked": "Pas encore relié",
       "cta": "Relier",
       "busy": "Préparation…",
-      "message": "Bonjour ! Je souhaite rattacher mon compte à mon numéro WhatsApp.",
+      "message": "Bonjour ! Je souhaite rattacher mon compte à mon numéro WhatsApp.",
       "relink": "Rattacher un autre numéro",
       "failed": "Le lien n'a pas pu être préparé — réessayez.",
-      "chatMessage": "Bonjour ! Je souhaite relier cette conversation à mon compte.",
-      "copied": "Message copié. Collez-le et envoyez-le-nous sur {channel} ; votre compte sera relié automatiquement.",
+      "chatMessage": "Bonjour ! Je souhaite relier cette conversation à mon compte.",
+      "copied": "Message copié. Collez-le et envoyez-le-nous sur {channel} ; votre compte sera relié automatiquement.",
       "copyAgain": "Copier à nouveau",
       "open": "Ouvrir {channel}"
     },
@@ -228,12 +228,12 @@
       "couponValue": "{value} de remise",
       "converting": "Conversion…",
       "converted": "Bon ajouté à votre compte ✓",
-      "failed": "L’opération sur les points a échoué — réessayez.",
-      "couponPercent": "{n} % de remise",
+      "failed": "L'opération sur les points a échoué — réessayez.",
+      "couponPercent": "{n} % de remise",
       "couponMinBasket": "panier minimum {amount}",
       "couponCopy": "Copier",
       "couponCopied": "Copié",
-      "howTo": "Comment gagner des points ?",
+      "howTo": "Comment gagner des points ?",
       "history": "Mon historique de points",
       "howToTitle": "Façons de gagner des points"
     },
@@ -241,8 +241,8 @@
       "title": "Parrainez un ami",
       "body": "Partagez votre lien. Vos points sont crédités lorsque la personne invitée crée son compte et règle sa première commande.",
       "share": "Partager",
-      "shareLabel": "Partager le lien d’invitation",
-      "shareMessage": "Lezzet Anatolie livre les saveurs d'Anatolie jusqu'à la porte. Mon invitation : {url}"
+      "shareLabel": "Partager le lien d'invitation",
+      "shareMessage": "Lezzet Anatolie livre les saveurs d'Anatolie jusqu'à la porte. Mon invitation : {url}"
     },
     "menu": {
       "orders": "Mes commandes",
@@ -287,12 +287,12 @@
       "note": "Lorsque ce réglage est désactivé, vous ne recevez aucune communication commerciale. Les notifications de commande ne sont pas concernées.",
       "zone": {
         "title": "Vous êtes hors de notre zone",
-        "body": "Pour {place}, nous ne pouvons afficher que les produits expédiables. Souhaitez-vous que nous ouvrions la livraison par notre camion réfrigéré ici ? Votre demande compte dans le choix des prochaines zones — et nous vous préviendrons par e-mail à l’ouverture.",
+        "body": "Pour {place}, nous ne pouvons afficher que les produits expédiables. Souhaitez-vous que nous ouvrions la livraison par notre camion réfrigéré ici ? Votre demande compte dans le choix des prochaines zones — et nous vous préviendrons par e-mail à l'ouverture.",
         "cta": "Je veux la livraison ici",
-        "done": "Demande enregistrée — nous vous préviendrons à l’ouverture ✓",
+        "done": "Demande enregistrée — nous vous préviendrons à l'ouverture ✓",
         "sent": "Demande enregistrée ✓"
       },
-      "saveFailed": "Votre préférence n’a pas pu être enregistrée — réessayez."
+      "saveFailed": "Votre préférence n'a pas pu être enregistrée — réessayez."
     },
     "data": {
       "title": "Vos données",
@@ -306,7 +306,7 @@
       "goesTitle": "Ce qui est supprimé",
       "goes": "Votre nom, votre e-mail et votre téléphone, vos adresses enregistrées, vos demandes et leurs échanges, vos alertes de disponibilité, vos points et bons personnels, le texte de vos avis et vos identifiants de connexion.",
       "staysTitle": "Ce qui est conservé, par obligation légale",
-      "stays": "Vos commandes et factures passées — y compris le nom et l'adresse figurant sur la facture. La réglementation française impose que la facture contienne ces informations : elles ne peuvent donc pas être effacées. La note que vous avez donnée aux produits reste également, mais elle n'est plus rattachée à votre nom.",
+      "stays": "Vos commandes et factures passées — y compris le nom et l'adresse figurant sur la facture. La réglementation française impose que la facture contienne ces informations : elles ne peuvent donc pas être effacées. La note que vous avez donnée aux produits reste également, mais elle n'est plus rattachée à votre nom.",
       "irreversible": "Cette action est irréversible.",
       "cancel": "Annuler",
       "confirm": "Supprimer mon compte",
@@ -331,19 +331,19 @@
       "saved": "Profil aktualisiert ✓",
       "errors": {
         "name_required": "Der Name darf nicht leer sein.",
-        "phone_invalid": "Die Telefonnummer konnte nicht erkannt werden — bitte prüfen.",
-        "unexpected": "Speichern fehlgeschlagen — versuchen Sie es erneut."
+        "phone_invalid": "Die Telefonnummer konnte nicht erkannt werden – bitte prüfen.",
+        "unexpected": "Speichern fehlgeschlagen – versuchen Sie es erneut."
       },
       "saving": "Wird gespeichert…"
     },
     "guest": {
       "title": "Willkommen",
-      "body": "Melden Sie sich in wenigen Sekunden an — ganz ohne Passwort.",
+      "body": "Melden Sie sich in wenigen Sekunden an – ganz ohne Passwort.",
       "cta": "Anmelden"
     },
     "error": {
       "title": "Derzeit nicht verfügbar",
-      "body": "Ihr Konto konnte nicht geladen werden. Prüfen Sie Ihre Verbindung — Sie sind nicht abgemeldet, Ihre Sitzung besteht weiter.",
+      "body": "Ihr Konto konnte nicht geladen werden. Prüfen Sie Ihre Verbindung – Sie sind nicht abgemeldet, Ihre Sitzung besteht weiter.",
       "retry": "Erneut versuchen"
     },
     "profile": {
@@ -366,7 +366,7 @@
       "busy": "Wird vorbereitet…",
       "message": "Hallo! Ich möchte mein Konto mit meiner WhatsApp-Nummer verknüpfen.",
       "relink": "Andere Nummer verknüpfen",
-      "failed": "Der Link konnte nicht vorbereitet werden — bitte erneut versuchen.",
+      "failed": "Der Link konnte nicht vorbereitet werden – bitte erneut versuchen.",
       "chatMessage": "Hallo! Ich möchte diesen Chat mit meinem Konto verknüpfen.",
       "copied": "Nachricht kopiert. Fügen Sie sie in {channel} ein und senden Sie sie uns; Ihr Konto wird automatisch verknüpft.",
       "copyAgain": "Erneut kopieren",
@@ -386,7 +386,7 @@
       "couponValue": "{value} Rabatt",
       "converting": "Wird umgewandelt…",
       "converted": "Gutschein Ihrem Konto gutgeschrieben ✓",
-      "failed": "Das hat leider nicht geklappt — bitte erneut versuchen.",
+      "failed": "Das hat leider nicht geklappt – bitte erneut versuchen.",
       "couponPercent": "{n} % Rabatt",
       "couponMinBasket": "Mindestbestellwert {amount}",
       "couponCopy": "Kopieren",
@@ -418,13 +418,13 @@
       "makeBilling": "als Rechnungsadresse",
       "makeBillingLabel": "{label} als Rechnungsadresse festlegen",
       "billingDone": "{label} ist jetzt Ihre Rechnungsadresse.",
-      "billingFailed": "Rechnungsadresse konnte nicht festgelegt werden — bitte erneut versuchen.",
+      "billingFailed": "Rechnungsadresse konnte nicht festgelegt werden – bitte erneut versuchen.",
       "edit": "Bearbeiten",
       "editLabel": "Adresse {label} bearbeiten",
       "add": "＋ Neue Adresse",
       "defaultDone": "{label} ist jetzt Ihre Lieferadresse.",
-      "loadError": "Adressen konnten nicht geladen werden — Seite erneut öffnen.",
-      "defaultFailed": "Lieferadresse konnte nicht festgelegt werden — bitte erneut versuchen."
+      "loadError": "Adressen konnten nicht geladen werden – Seite erneut öffnen.",
+      "defaultFailed": "Lieferadresse konnte nicht festgelegt werden – bitte erneut versuchen."
     },
     "language": {
       "title": "Sprache",
@@ -445,12 +445,12 @@
       "note": "Wenn diese Option ausgeschaltet ist, erhalten Sie keine Werbenachrichten. Bestellbenachrichtigungen sind davon nicht betroffen.",
       "zone": {
         "title": "Diese Adresse liegt außerhalb unseres Liefergebiets",
-        "body": "Für {place} können wir derzeit nur versandfähige Produkte zeigen. Sollen wir künftig auch hierher mit unserem Kühlfahrzeug liefern? Ihre Anfrage zählt bei der Wahl der nächsten Gebiete — sobald wir hierher liefern, informieren wir Sie per E-Mail.",
+        "body": "Für {place} können wir derzeit nur versandfähige Produkte zeigen. Sollen wir künftig auch hierher mit unserem Kühlfahrzeug liefern? Ihre Anfrage zählt bei der Wahl der nächsten Gebiete – sobald wir hierher liefern, informieren wir Sie per E-Mail.",
         "cta": "Lieferung hierher wünschen",
-        "done": "Anfrage erfasst — wir melden uns, sobald wir hierher liefern ✓",
+        "done": "Anfrage erfasst – wir melden uns, sobald wir hierher liefern ✓",
         "sent": "Anfrage aufgenommen ✓"
       },
-      "saveFailed": "Ihre Einstellung konnte nicht gespeichert werden — bitte erneut versuchen."
+      "saveFailed": "Ihre Einstellung konnte nicht gespeichert werden – bitte erneut versuchen."
     },
     "data": {
       "title": "Ihre Daten",
@@ -464,12 +464,12 @@
       "goesTitle": "Was gelöscht wird",
       "goes": "Ihr Name, Ihre E-Mail-Adresse und Telefonnummer, Ihre gespeicherten Adressen, Ihre Anfragen und deren Verlauf, Ihre Benachrichtigungswünsche, Ihre Punkte und persönlichen Gutscheine, der Text Ihrer Bewertungen und Ihre Anmeldedaten.",
       "staysTitle": "Was aus rechtlichen Gründen bleibt",
-      "stays": "Ihre bisherigen Bestellungen und Rechnungen — einschließlich des Namens und der Adresse auf der Rechnung. Das französische Recht schreibt vor, dass die Rechnung diese Angaben enthält; sie können daher nicht gelöscht werden. Ihre Produktbewertungen bleiben ohne Kommentartext erhalten, sind aber nicht mehr mit Ihrem Namen verknüpft.",
+      "stays": "Ihre bisherigen Bestellungen und Rechnungen – einschließlich des Namens und der Adresse auf der Rechnung. Das französische Recht schreibt vor, dass die Rechnung diese Angaben enthält; sie können daher nicht gelöscht werden. Ihre Produktbewertungen bleiben ohne Kommentartext erhalten, sind aber nicht mehr mit Ihrem Namen verknüpft.",
       "irreversible": "Dieser Vorgang kann nicht rückgängig gemacht werden.",
       "cancel": "Abbrechen",
       "confirm": "Konto löschen",
       "deleting": "Wird gelöscht…",
-      "failed": "Ihr Konto konnte nicht gelöscht werden — bitte erneut versuchen."
+      "failed": "Ihr Konto konnte nicht gelöscht werden – bitte erneut versuchen."
     },
     "logout": "Abmelden"
   }

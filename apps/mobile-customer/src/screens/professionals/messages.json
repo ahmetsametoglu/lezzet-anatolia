@@ -95,7 +95,7 @@
       "body": "Commandes en volume, livraisons régulières dans notre zone et réassort en un geste. Faites votre demande, nous revenons vers vous rapidement."
     },
     "steps": {
-      "signUp": "Inscrivez-vous — en une minute avec votre SIRET ; les informations viennent du registre officiel",
+      "signUp": "Inscrivez-vous — en une minute avec votre SIRET ; les informations viennent du registre officiel",
       "review": "Nous étudions votre demande — réponse par e-mail",
       "priceList": "Vos tarifs professionnels sont activés dès la validation"
     },
@@ -108,8 +108,8 @@
       "fetching": "Recherche…",
       "vatNumber": "USt-IdNr (DE + 9 chiffres)",
       "vatNote": "Votre numéro est vérifié auprès du registre TVA de l'UE (VIES). Une vérification impossible n'empêche pas votre demande.",
-      "vatUseSiret": "Les sociétés françaises s’inscrivent avec leur SIRET.",
-      "vatUnsupported": "Pour l’instant, nous travaillons uniquement avec des entreprises en France et en Allemagne.",
+      "vatUseSiret": "Les sociétés françaises s'inscrivent avec leur SIRET.",
+      "vatUnsupported": "Pour l'instant, nous travaillons uniquement avec des entreprises en France et en Allemagne.",
       "vatChecking": "Vérification…",
       "vatValid": "✓ Valide",
       "vatInvalid": "✗ Introuvable",
@@ -122,7 +122,7 @@
       "addressNote": "Nous ajoutons aussi cette adresse à vos adresses de livraison — vous la retrouverez dans la liste, sous la dénomination sociale de votre entreprise.",
       "contactTitle": "Contact",
       "contactName": "Nom et prénom",
-      "resultTo": "Nous enverrons la réponse à l'adresse e-mail de votre compte :",
+      "resultTo": "Nous enverrons la réponse à l'adresse e-mail de votre compte :",
       "resultToGuest": "Nous enverrons la réponse à l'adresse e-mail que vous confirmerez au moment de l'envoi.",
       "phone": "Téléphone (WhatsApp)",
       "submit": "Envoyer la demande",
@@ -130,17 +130,17 @@
     },
     "errors": {
       "siretLength": "Le SIRET compte 14 chiffres. Si vous ne le trouvez pas, continuez manuellement ou écrivez-nous.",
-      "incomplete": "Vérifiez ces champs : {fields}",
+      "incomplete": "Vérifiez ces champs : {fields}",
       "siretNotFound": "Aucun établissement trouvé avec ce SIRET. Vérifiez le numéro ou saisissez les informations manuellement.",
       "registryDown": "Le registre officiel est injoignable pour le moment — vous pouvez saisir les informations manuellement.",
       "unexpected": "Une erreur est survenue. Merci de réessayer.",
       "network": "Connexion impossible. Vérifiez votre connexion et réessayez.",
-      "accountEmail": "Nous n'avons pas pu récupérer l'adresse e-mail de votre compte ; nous ne pourrions pas vous envoyer la réponse. Déconnectez-vous et reconnectez-vous avec votre adresse e-mail."
+      "accountEmail": "Nous n'avons pas pu récupérer l'adresse e-mail de votre compte ; nous ne pourrions pas vous envoyer la réponse. Déconnectez-vous et reconnectez-vous avec votre adresse e-mail."
     },
     "identity": {
-      "sheetTitle": "À quel nom rattacher la demande ?",
-      "intro": "La demande est rattachée à un compte. Nous vous demandons votre adresse e-mail une seule fois : nous y envoyons le code, la réponse arrive à la même adresse et, après validation, vos tarifs professionnels y deviennent accessibles.",
-      "emailPrompt": "Quelle adresse e-mail utilisons-nous ?",
+      "sheetTitle": "À quel nom rattacher la demande ?",
+      "intro": "La demande est rattachée à un compte. Nous vous demandons votre adresse e-mail une seule fois : nous y envoyons le code, la réponse arrive à la même adresse et, après validation, vos tarifs professionnels y deviennent accessibles.",
+      "emailPrompt": "Quelle adresse e-mail utilisons-nous ?",
       "emailLabel": "Votre adresse e-mail",
       "emailPlaceholder": "exemple@email.com",
       "emailInvalid": "Saisissez une adresse e-mail valide.",
@@ -150,7 +150,7 @@
       "sent": "Nous avons envoyé un code à {email}.",
       "codeField": "Code à usage unique",
       "codePlaceholder": "• • • • • •",
-      "resend": "Pas reçu le code ? Renvoyer",
+      "resend": "Pas reçu le code ? Renvoyer",
       "resendWait": "Renvoyer ({s} s)",
       "verifying": "Vérification…"
     },
@@ -158,7 +158,7 @@
       "pendingTitle": "Votre demande est à l'étude",
       "pending": "Nous vous enverrons la réponse par e-mail. En attendant la validation, le catalogue reste accessible aux prix de détail.",
       "approvedTitle": "Validée",
-      "approved": "Validée ! Vos tarifs professionnels sont désormais actifs.",
+      "approved": "Validée ! Vos tarifs professionnels sont désormais actifs.",
       "rejectedTitle": "Votre demande n'a pas pu être validée",
       "rejected": "Vous pouvez continuer vos achats avec votre compte. Vous pouvez aussi corriger vos informations et renvoyer la demande.",
       "reasonTitle": "Commentaire de notre équipe",
@@ -166,10 +166,10 @@
       "reapply": "Renvoyer une demande",
       "toCatalog": "Voir le catalogue"
     },
-    "whatsapp": "Une question ? Écrivez-nous sur WhatsApp",
+    "whatsapp": "Une question ? Écrivez-nous sur WhatsApp",
     "sent": {
       "title": "Nous avons bien reçu votre demande",
-      "body": "Nous l'étudions — vous recevrez la réponse par e-mail. Vos tarifs professionnels seront activés dès la validation ; en attendant, le catalogue reste accessible aux prix de détail.",
+      "body": "Nous l'étudions — vous recevrez la réponse par e-mail. Vos tarifs professionnels seront activés dès la validation ; en attendant, le catalogue reste accessible aux prix de détail.",
       "cta": "Voir le catalogue"
     }
   },
@@ -179,18 +179,18 @@
     "hero": {
       "eyebrow": "Restaurant · Lebensmittelhandel · Großküche",
       "title": "Großhandelspreise, regelmäßige Lieferung",
-      "body": "Große Mengen bequem bestellen, regelmäßige Lieferung im Liefergebiet und Nachbestellung mit einem Fingertipp. Stellen Sie Ihre Anfrage — wir melden uns zügig."
+      "body": "Große Mengen bequem bestellen, regelmäßige Lieferung im Liefergebiet und Nachbestellung mit einem Fingertipp. Stellen Sie Ihre Anfrage – wir melden uns zügig."
     },
     "steps": {
-      "signUp": "Registrieren — in einer Minute mit Ihrer USt-IdNr.; die Angaben tragen Sie einmal ein",
-      "review": "Wir prüfen Ihre Anfrage — Antwort per E-Mail",
+      "signUp": "Registrieren – in einer Minute mit Ihrer USt-IdNr.; die Angaben tragen Sie einmal ein",
+      "review": "Wir prüfen Ihre Anfrage – Antwort per E-Mail",
       "priceList": "Mit der Freischaltung sehen Sie Ihre Großhandelspreise"
     },
     "form": {
       "tabSiret": "Französische Firma",
       "tabVat": "Deutsche Firma",
       "siret": "SIRET (14 Ziffern)",
-      "siretNote": "Geben Sie Ihre SIRET-Nummer ein und tippen Sie auf „Abrufen“ — Ihre Firmenangaben kommen aus dem amtlichen Register. Wird kein Eintrag gefunden, können Sie die Angaben manuell eintragen.",
+      "siretNote": "Geben Sie Ihre SIRET-Nummer ein und tippen Sie auf „Abrufen“ – Ihre Firmenangaben kommen aus dem amtlichen Register. Wird kein Eintrag gefunden, können Sie die Angaben manuell eintragen.",
       "fetch": "Abrufen",
       "fetching": "Wird gesucht…",
       "vatNumber": "USt-IdNr. (DE + 9 Ziffern)",
@@ -206,7 +206,7 @@
       "line1": "Straße und Hausnummer",
       "postalCode": "Postleitzahl",
       "city": "Stadt",
-      "addressNote": "Diese Adresse übernehmen wir auch in Ihre Lieferadressen — beim Bestellen finden Sie sie unter dem Namen Ihres Unternehmens in der Liste.",
+      "addressNote": "Diese Adresse übernehmen wir auch in Ihre Lieferadressen – beim Bestellen finden Sie sie unter dem Namen Ihres Unternehmens in der Liste.",
       "contactTitle": "Kontakt",
       "contactName": "Vor- und Nachname",
       "resultTo": "Die Antwort senden wir an die E-Mail-Adresse Ihres Kontos:",
@@ -219,7 +219,7 @@
       "siretLength": "Die SIRET-Nummer hat 14 Ziffern. Wenn Sie sie nicht finden, machen Sie manuell weiter oder schreiben Sie uns.",
       "incomplete": "Bitte prüfen Sie diese Felder: {fields}",
       "siretNotFound": "Zu dieser SIRET-Nummer wurde kein Eintrag gefunden. Prüfen Sie die Nummer oder tragen Sie die Angaben manuell ein.",
-      "registryDown": "Das amtliche Register ist derzeit nicht erreichbar — Sie können die Angaben manuell eintragen.",
+      "registryDown": "Das amtliche Register ist derzeit nicht erreichbar – Sie können die Angaben manuell eintragen.",
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
       "network": "Keine Verbindung. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
       "accountEmail": "Wir konnten die E-Mail-Adresse Ihres Kontos nicht abrufen und können Ihnen die Antwort daher nicht senden. Bitte melden Sie sich ab und mit Ihrer E-Mail-Adresse erneut an."
@@ -256,7 +256,7 @@
     "whatsapp": "Noch Fragen? Schreiben Sie uns auf WhatsApp",
     "sent": {
       "title": "Ihre Anfrage ist eingegangen",
-      "body": "Wir prüfen sie — die Antwort erhalten Sie per E-Mail. Ihre Großhandelspreise werden mit der Freischaltung sichtbar; bis dahin sehen Sie den Katalog zu Einzelhandelspreisen.",
+      "body": "Wir prüfen sie – die Antwort erhalten Sie per E-Mail. Ihre Großhandelspreise werden mit der Freischaltung sichtbar; bis dahin sehen Sie den Katalog zu Einzelhandelspreisen.",
       "cta": "Zum Katalog"
     }
   }

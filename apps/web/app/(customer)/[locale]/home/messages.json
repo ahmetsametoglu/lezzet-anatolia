@@ -77,7 +77,7 @@
   "fr": {
     "meta": {
       "title": "Les saveurs d'Anatolie à votre porte — Strasbourg",
-      "description": "Böreks, baklavas, künefe et bien d'autres, de producteurs sélectionnés. Les produits sous chaîne du froid livrés à domicile à Strasbourg et alentours ; les produits expédiables en France et en Allemagne."
+      "description": "Böreks, baklavas, künefe et bien d'autres, de producteurs sélectionnés. Les produits sous chaîne du froid livrés à domicile à Strasbourg et alentours ; les produits expédiables en France et en Allemagne."
     },
     "hero": {
       "eyebrow": "De Strasbourg à votre table",
@@ -94,9 +94,9 @@
       "title": "Que cherchez-vous ?"
     },
     "campaign": {
-      "percent": "{n} %",
+      "percent": "{n} %",
       "amount": "{amount}",
-      "withMinimum": "dès {minimum} : {value}"
+      "withMinimum": "dès {minimum} : {value}"
     },
     "collections": {
       "eyebrow": "Collections",
@@ -151,7 +151,7 @@
   },
   "de": {
     "meta": {
-      "title": "Anatoliens Aromen vor Ihrer Tür — Straßburg",
+      "title": "Anatoliens Aromen vor Ihrer Tür – Straßburg",
       "description": "Börek, Baklava, Künefe und mehr von ausgewählten Herstellern. Kühlkettenware liefern wir in Straßburg und Umgebung bis an die Tür; versandfähige Produkte nach Frankreich und Deutschland."
     },
     "hero": {
@@ -193,7 +193,7 @@
       "options": "Optionen →",
       "details": "Details",
       "offer": "Angebot",
-      "soldOut": "Ausverkauft — bald wieder da"
+      "soldOut": "Ausverkauft – bald wieder da"
     },
     "packages": {
       "eyebrow": "Genusspakete",
@@ -215,12 +215,12 @@
     },
     "discover": {
       "title": "Neue Sorten als Erste entdecken",
-      "body": "Sehen Sie sich neue Produkte an und sagen Sie uns, was Ihnen gefällt — jeder Beitrag bringt Punkte.",
+      "body": "Sehen Sie sich neue Produkte an und sagen Sie uns, was Ihnen gefällt – jeder Beitrag bringt Punkte.",
       "cta": "Entdecken"
     },
     "pro": {
       "title": "Restaurant oder Lebensmittelgeschäft?",
-      "body": "Registrieren Sie sich als Geschäftskunde — für Großhandelspreise und regelmäßige Lieferungen.",
+      "body": "Registrieren Sie sich als Geschäftskunde – für Großhandelspreise und regelmäßige Lieferungen.",
       "cta": "Geschäftskunden →"
     }
   }
