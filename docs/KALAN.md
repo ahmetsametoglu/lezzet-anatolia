@@ -2,10 +2,42 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.36). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.41). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
+Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
+`docs/GELECEK.md`'dedir.
 
 Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin andığı 25
+
+## Acil — yayından önce
+
+Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en sonda.
+
+- [ ] (K.30) [hedef: web] Harita altlığı Google'a geçecek: müşteri haritası kamusal `tile.openstreetmap.org` karosunu kullanıyor;
+  bu sunucu yoğun trafiğe açık değil ve görünümü kalabalık. Map Tiles API'nin 2D "roadmap" karosu JSON stille sadeleştirilip
+  Leaflet'e bağlanır; oturum jetonu sunucuda alınır, haritada Google logosu ve görünür alanın telif satırı zorunludur. Ücret: ayda
+  100.000 karo ücretsiz, sonrası 1.000 karo başına 0,60 $; proje başına günde 15.000 karo sınırı var. Önce kullanıcı: Google Cloud
+  projesinde Map Tiles API açılır ve yalnız bu API'ye ve alan adlarımıza kısıtlı bir tarayıcı anahtarı üretilir (bugünkü anahtarda
+  bu API kapalı).
+- [ ] (K.33) [hedef: müşteri] "Yapay zekâya sor" kutusu (ürün detayı) yalnız masaüstü web'de var; telefon görünümünde ve native'de
+  yok. Kutu yalnız soru şablonu dolu kategoride çiziliyor; gerçek beslemede Fırın, Tatlı ve Et & Tavuk'ta şablon var, yani kutu
+  yayında görünür (operatörün dolduracağı alanı K.23 açacak). Düğmeler: ChatGPT soruyu kutuya dolu açıyor; Gemini `?q=`yu yok
+  saydığı için kaldırıldı; Claude oturumsuz ziyaretçiyi giriş sayfasına gönderiyor ve bot koruması yüzünden otomatik ölçülemedi —
+  girişli bir tarayıcıda elle denenecek, soruyu taşımıyorsa kalkar. Marka düğmeleri yerine işletim sisteminin paylaşım tepsisi
+  tarafsızlık açısından daha güçlü. Soru kimlik ya da servis sorar, amaç sormaz ("ne işe yarar" sağlık beyanı ima eder, 1924/2006
+  md. 2(1)); metin bir kez sabitlenir, "daha iyi cevap alsın" diye ayarlanmaz: ayarlandığı an içeriği seçmiş oluruz ve üçüncü
+  taraf savunması düşer.
+- [ ] (K.21) [hedef: web] Sipariş onayı müşteriye "sipariş durumunuzu e-posta ve WhatsApp bildirimlerinden takip edebilirsiniz"
+  diyor (mobil web ve native ortak metni, `packages/i18n/src/customer/checkout.json` `confirmed.note`); `packages/notify` WhatsApp
+  API sürücüsü her gönderimi `skipped` döndürüyor. Yayından önce ya metinden WhatsApp çıkar ya da gönderim açılır (`15.11`in
+  sürücü yarısı).
+- [~] (21.310) **Operasyon uygulamasının (`apps/mobile-operations`, "Lezzet Operasyonu") kurulabilir sürümü** — personelin
+  telefonuna kurulur; müşteri uygulamasıyla ortak çekirdek `packages/mobile-kit`.
+  - Eksik: Expo proje kimliği (`extra.eas.projectId`) ve Firebase `google-services.json` (kayıt kullanıcının; ikisi yokken push
+    jetonu alınmaz) · operasyon ikonu (tasarım bekliyor; bugünkü ikon yolu artık olmayan `apps/mobile` klasörünü gösteriyor) ·
+    Supabase dönüş izin listesi (`supabase/config.toml`): `lezzetoperasyonu://**` yok, müşteri uygulamasının satırı eski adla
+    (`lezzetanatolia://**`) duruyor, uygulamanın şeması `lezzetanatolie`.
+- [ ] **Fiyat listesi (B2B/B2C)** — kullanıcı bekliyor (kendi notlarında); gelince gerçek beslemeye girer.
 
 ## 00 · Monorepo İskeleti
 
@@ -111,7 +143,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [ ] (14.8) **Kampanya e-postası elle gönderim aracı (admin):** alıcı listesi yalnız `marketing_consent.email` izinlilerden; içerik elle hazırlanır, önizleme + gönder; otomasyon/zamanlama **yok**
 - [ ] (14.9) **Bülten kayıt kutusu (site) + `marketing_consent` yazımı:** kutu baştan işaretsiz (AB açık eylem şartı); kayıtta `{granted, at, source}` yazılır — checkout/kayıt kutuları da aynı yazım fonksiyonunu kullanır
 - [ ] (14.11) **`notification-data` + `rewardCompletedOrder` terfisi (`@lezzet/application`)** *(mobil ucun ön şartı — koordinasyon defteri 08.08; kabul edildi)*: kurye/refund orkestrasyonları pakete terfi etti, yan etkileri port (`order/effects.ts`) — port boş kaldıkça `/api/v1/courier` teslimatı müşteriye mail atmıyor, puan yazmıyor (sessiz değil: süreç başına bir `logger.warn`). Web bugün etkilenmiyor: köprü kendi uygulamalarını çağırıyor. Terfi `@lezzet/notify` + `@lezzet/i18n` bağımlılığını pakete ekler; `17.4`'ün `rewardCompletedOrder`'ı aynı turda gider. **Stripe refunder TAŞINMAZ** — anahtar ve webhook bağlamı yüzeyin işidir, kalıcı port olarak kalır. Zamanlama: en geç kurye köprüsünün benimseme t…
-- [ ] (14.17) **Tarayıcı bildirimi (web push) + "uygulama önce" kuralı** *(kullanıcı kararı 10.09 — `design/KARARLAR.md` "Web push AÇILDI")*: müşteri web yüzeyinde (masaüstü + mobil web) tarayıcı aboneliği; bir haber TEK cihaz bildirimine gider — native uygulama (son 30 gün içinde görülmüş; parametrik) → tarayıcı → e-posta; BELGE'de e-posta daima + tek push. Parçalar: `app/manifest.ts` (iOS 16.4+ ana ekran şartı `display: standalone`) · service worker · VAPID anahtarları (web + backend + mobile-api — üç süreç de bildirim gönderiyor) · abonelik kaydı (`push_device`a `web` platformu + aboneliğin iki anahtarı; 0050 yerinde) · `packages/notify` tarayıcı sürücüsü (`web-push`; 404/410'da abonelik budanır) + sır…
 
 ## 15 · WhatsApp: Zemin ve Canlı Kanal
 
@@ -127,7 +158,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [~] (15.21) **Sepete YÖNLENDİRME — her kanaldan tek akışa:** sohbette kurulan/var olan sepetin bağlantısıyla müşterinin sepet sayfasına taşınması; onay ve ödeme orada
 - [~] (15.22) **Kimliksiz kanalda sepet — Messenger/Instagram + kimlik köprüsü:** kimliği çözülmemiş sohbette sepet kurulabilmesi ve bağlantıyı açıp giriş yapan kişinin hem sepeti hem kimliği kazanması
 - [~] (15.23) **Sohbetin dokunduğu sepetin siparişi sohbetin KANALINI taşır** (kullanıcı kararı 07.09: *"orada web yazmaması lazım… Instagram, Facebook veya WhatsApp'ı ifade etmemiz lazım"*): `order_source`a `messenger` + `instagram`; sepet kendisine dokunan sohbeti hatırlar (ajan yazınca ya da bağlantı devralınınca damga); checkout kaynağı o sohbetin kanalından yazar; sipariş kesinleşince damga silinir
-- [ ] (15.24) **Sohbet hunisi — platform verimliliği** (kullanıcı sorusu 07.09: *"hangi platformun daha verimli olduğunu gözlemleyebilecek miyiz?"*): gün × platform özeti — açılan sohbet · sepet kurulan sohbet · gönderilen bağlantı · açılan bağlantı · sipariş · ciro; analitik ekranına bölüm
 - [~] (15.25) **Gelen medya İNDİRİLİR ve GÖRÜNTÜLENİR:** fotoğraf/ses/belge Meta'dan indirilip PRIVATE R2 kovasına yazılır, operasyon ekranında ~~imzalı süreli adresle~~ **yetkili geçitten** (`/operations/social/media/<id>`) çizilir
 - [~] (15.26) **Sesli mesaj METNE ÇEVRİLİR; ajan sesten gelen isteği TEYİT ETMEDEN işlemez** (kullanıcı kararı 07.09, itiraz turuyla olgunlaştı)
 - [~] (15.27) **AI maliyeti ÖLÇÜLÜR** — tarife ayarı + her koşuda hesap + kaydedildiği yer
@@ -212,8 +242,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [x] (21.272) ~~**Kurye sözleşmesine `already_marked` dalı — bugün `stale` diye söyleniyor**~~ → **AKIBET ALANI KURYE İSTEĞİNDEN ÇIKARILDI** (21.271'in kalanı · yön değişti 07.09, kullanıcı kararı)
   - Görev kapandı; koddaki `BEKLEYEN(21.272)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [ ] (21.284) **Hedefi olmayan iki bildirim türü — belge ve askıda kapanış** (21.217'den ayrıldı 07.09)
-- [~] (21.310) **NATIVE UYGULAMA İKİYE BÖLÜNÜYOR — müşteri `apps/mobile-customer` + operasyon `apps/mobile-operations` ("Lezzet Operasyonu"); ortak çekirdek `packages/mobile-kit`** (kullanıcı kararları 14.09: *"mevcut mobil uygulamanın ikiye parçalanması … Operasyon uygulamasının adı lezzet-operasyonu olacak"* · *"Klasör yapısı bize projelerin tipi ve ne ile ilgili olduğu hakkında fikir vermeli"* · ortak kod ayrı pakette · taşıma sınırlı betik + kanıtla, önce iki dosyalık pilot · push jetonuna uygulama sütunu → 21.311)
-  - Eksik: Klasör
 - [~] (21.312) **OPERASYON GİRİŞİ TASARIMINDA — sistemde kayıtlı olmayan giremez; kod ve Google aynı kurala bağlı** (tasarım 14.09: 02-operasyon / Operasyon Mobil - Giris; kullanıcı kararları 14.09)
 - [~] (21.313) **ADRES ÇEKMECESİ TASARIMDA — ülke, tek arama, rozetli öneri, doğrulama; adres araması TEK KAPIDAN** (tasarım: 01-musteri / Musteri Mobil `shAddr`; kullanıcı kararları 13.09 · 14.09)
 
@@ -241,7 +269,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 
 - [ ] **Sepet teslimat satırı** ("Teslimat: Ücretsiz" / "6,90 €") — bekleyen: ücret teslimat türüne, tür ADRESE bağlı → checkout adres adımı. Ücretsiz kargo ilerleme çubuğu bundan AYRI ve yapıldı (eşik `Setting`'ten, ilerleme ara toplamdan)
 - [ ] **"Checkout'a geç" düğmesi** — girişli müşteri doğrudan, ziyaretçi önce hızlı doğrulamaya — bekleyen: **ENGEL KALKTI (28.07):** `07.4`/`07.5` indi. Kapı hazır — `lib/order/checkout-session.ts` `createCheckoutSession` (rezervasyon → Stripe oturumu, TTL'li), webhook `api/webhooks/stripe`. Kalan iş yüzeyin: düğmeyi kapıya b…
-- [ ] **Hediye kartı / hediye çeki** (bakiye taşıyan) — bekleyen: kavramın kendisi kararlaştırılmadı. `order.is_gift_order` var ama o "siparişi hediye olarak gönder"dir — bakiye taşıyan bir enstrüman değil. İstenirse önce `architecture/BACKLOG` kapsamına girer (kupon `§15`'ten AYRI: ku…
 - [ ] **Sipariş kalemi düzenleme** — hazırlanmamış siparişte kalem ekleme/çıkarma/adet değiştirme (`design/pages/admin-siparisler.md` §4 "İşlemler"), stok yeniden ayrılır/bırakılır — bekleyen: **09.8 kapandı ama bunu KAPSAMADI (26.08).** Elle giriş siparişi AÇIYOR; açılmış bir siparişin kalemini değiştirmek ayrı bir iş ve ayrı bir risk: rezervasyon geri bırakılıp yeniden alınmalı, indirim payları (`discount_am…
 - [ ] **"Fiyat değişti" bildirimi** — `DOMAIN §5`: fiyat arttıysa müşteriye açıkça söylenir ve onay istenir (kabul et / çıkar); düştüyse sessizce uygulanır — bekleyen: `CartItem.unitPrice` okuma tarafına bağlanmalı — alan yazılıyor, karşılaştırılmıyor
 - [ ] **Boş sepet: B2B sipariş şablonları** ("Haftalık standart · 14 kalem" + "Yükle") — bekleyen: şablon modeli yok (`07`); B2B müşteri bugün "son siparişi tekrarla" + vitrin seçkisi görür. Kod işareti: `BEKLEYEN(BACKLOG §2)` → aşağıdaki karar maddesi
@@ -298,13 +325,8 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 ### BACKLOG §8 · Teslimat ve rota
 
 - [ ] Posta kodu talebi ÜLKESİZ: `postal_code_demand` anahtarı yalnız `postal_code`; ülke gelince anahtar (ülke, kod) olmalı — koddaki `BEKLEYEN(BACKLOG §8)` buna bağlı.
-- [ ] Rota dışına soğuk zincir EKSPRES kargo — araştırılacak, şimdi değil.
-- [ ] Kuryenin telefonunda harita + akıllı rota.
-- [ ] Otomatik taşıyıcı seçiminde onaylı liste + azami teslim süresi.
-- [ ] Sınır ötesi satış — üç ayrı eksik (ölçüldü, analiz ertelendi).
 
 - [ ] Ana logo seçimi + renk paleti → `packages/brand`, Tailwind token _(0. Bekleyen kararlar (kod öncesi netleşmeli))_
-- [ ] Fiyat listesi (B2B/B2C) → seed verisi _(0. Bekleyen kararlar (kod öncesi netleşmeli))_
 - [~] Kategori yapısı: **düz (tek seviye) + koleksiyon** kararı verildi; nihai kategori/koleksiyon **içeriği** (isimler) bekliyor _(0. Bekleyen kararlar (kod öncesi netleşmeli))_
 - [ ] Ürün bazında KDV oranları _(0. Bekleyen kararlar (kod öncesi netleşmeli))_
 - [ ] Raf ömrü bilgisi (DLC uyarı eşiği için) _(0. Bekleyen kararlar (kod öncesi netleşmeli))_
@@ -316,7 +338,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [ ] **MB-31 · ~~Katalog Türkçe yüzeyde tamamen İngilizce ve toptancı dilinde.~~ → ARTIK ÜRETİLMİYOR; ölçüm TERS YÖNDE bir açık gösterdi (17.08).** _(7. İçerik ve dil)_
 - [~] **MB-34 · Kaydırma kabı kitte yok — 39 ekran ham `ScrollView` kullanıyor.** §11.A'nın işi: `components/ui/` altına klavye davranışı doğru kurulmuş tek bir kap, ekranların ona geçmesi ve ham `ScrollView` kullanımının lint'le kapatılması. MB-01 + MB-02 bunun içinde çözülür; ayrıca 40'ıncı ekranın aynı tuzağa düşmesini yapısal olarak engeller. _(12. Mobil şeridin eklediği kalemler (11.08))_
 - [ ] **MB-38 · Test defteri boşaltılmadı** (`docs/talep/not-mobil-test-defteri.md`, kullanıcı talimatı 09.08: *"testleri sonra topluca yaz"*). İçinde ölçülmemiş bir düşüş var: `account-routes.test` TAM koşuda düşüyor, tekil koşuda geçiyor — hata metni hâlâ yakalanmadı. **İKİNCİ ÖRNEK ÖLÇÜLDÜ (14.08):** `app-shell.test.tsx` de aynı şekilde davrandı — tam koşuda *"seçili sekmeye tekrar dokunmak rotayı OYNATMAZ"* düştü (`toHavePathname('/')`), tekil koşuda geçti, ve **aynı tam koşu ikinci kez çalıştırıldığında 84/84 · 599/599 yeşil geldi.** Yani düşüş dosyaya değil KOŞUYA bağlı; iki örnek de rota durumu okuyan testler. Ortak şüpheli expo-router'ın modül düzeyinde yaşayan bellek durumu ve testler ara… _(12. Mobil şeridin eklediği kalemler (11.08))_
-- [ ] **MB-44 · B2B'de FATURA e-postasının ayrı verilebilmesi — ileriye bırakıldı (kullanıcı kararı 11.08).** MB-04 kararının bilinçli açığı: bugün hesap e-postası her şeye gidiyor (karar maili, fatura, bildirim). Muhasebede yetkili adresi ile fatura adresi genelde ayrıdır ve kullanıcı bunu *"ileride küçük bir özellik olarak eklenir ve çalıştırılır"* diye kayda geçirdi. **Bugün bir arıza DEĞİL, ertelenmiş bir yetenek** — o güne dek kimse "fatura adresi nerede" diye aramasın diye buraya yazıldı. Geldiği gün dokunacağı yer: profil künyesi (ikinci bir adres alanı) + mail gönderen taraf; başvuru formu değil. _(12. Mobil şeridin eklediği kalemler (11.08))_
 - [ ] **MB-78 · FATURANIN NEREDEN ALINACAĞI HİÇBİR YERDE YAZMIYOR — B2B'de yasal ağırlığı var.** ⚑ **BU KALEM GÜNDEME GETİRİLMEZ — kullanıcı kendisi açacak** (kararı 21.08). Kayıt duruyor, hatırlatması yapılmaz; sıradaki işler önerilirken bu madde sayılmaz. Ölçüldü 19.08 (kullanıcı isteğiyle sistem geneli tarandı). Sistemin kararı net ve tutarlı (`DOMAIN §9`: resmî belge üretilmez, fatura muhasebeden gelir) — **eksik olan bu kararın müşteriye söylenmesi.** · **Satış koşullarında (CGV) fatura maddesi YOK** — "fatura" kelimesi hiç geçmiyor; tek ilgili satır *"Fiyatlar KDV dâhildir"*. · **SSS'te fatura sorusu YOK** (dokuz sorunun hiçbiri). · Gizlilik sayfası *"faturanın üzerindeki ad ve adres"*ten ba… _(12. Mobil şeridin eklediği kalemler (11.08))_
 
 ## backlog-operasyon-web.md (eski docs/denetim/backlog-operasyon-web.md)
@@ -329,8 +350,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [ ] **OB-10 · İade başlatıldığında açılan talebin (Request) iade tamamlandıktan sonra açık kalması** _(2. Geliştirme ve İyileştirme Talepleri)_
 - [ ] **OB-11 · Talepler sayfasında mesaj yazıldıktan sonra klavye kısayolu ile (Enter veya Shift+Enter) gönderim yapılması** _(2. Geliştirme ve İyileştirme Talepleri)_
 - [ ] **OB-12 · Talepler sayfasında Yapay Zeka destekli (AI-assisted) mesaj cevaplama özelliği** _(2. Geliştirme ve İyileştirme Talepleri)_
-- [ ] **OB-16 · Müşteri GRUBU bazlı genel yüzde indirimi (iskonto)** _(2. Geliştirme ve İyileştirme Talepleri)_
-- [ ] **OB-17 · Müşteriye özel, TEK ÜRÜN kapsamlı, TEK SEFERLİK indirim yapılamıyor** _(2. Geliştirme ve İyileştirme Talepleri)_
 
 ## Kullanıcı bulguları (eski docs/kullanici-bulgulari.md)
 
@@ -375,9 +394,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
 - [ ] (K.19) [hedef: mobil] Hesap ekranının şirket kartı gerçek kullanımda hiç çizilmiyor: rota `company: null` geçiyor
   (`app/(tabs)/account.tsx`), çünkü `/me` şirket künyesini taşımıyor. Web telefon görünümü kartı "SIRET · KDV" ile
   çiziyor (`companyInfo` + `vatNumber`); native de aynı veriyi okumalı.
-- [ ] (K.21) [hedef: web] Sipariş durumu WhatsApp'tan gitmeli — canlıya çıkmadan önce. Hesap sayfasındaki WhatsApp kartı
-  müşteriye "WhatsApp'tan sipariş vermek ve siparişinizin durumunu WhatsApp mesajıyla öğrenmek için numaranızı bağlayın"
-  diyor; bugün `packages/notify` WhatsApp API sürücüsü her gönderimi `skipped` döndürüyor. İş `15.11`in sürücü yarısı.
 - [ ] (K.27) [hedef: mobil] Müşteri uygulamasının sepeti ayarları ülkesiz ve bölgesiz okuyor: `mobile-api` `readCartView`
   yalnız depo kimliğini geçiyor (`api/v1/cart-view.ts`), istemci de yalnız posta kodu gönderiyor. Almanya'daki müşteri
   sepette FR kargo ücretini görür, checkout DE ücretini keser; bölge asgari sepeti sepette görünmez. Web `readPlaceScope`
@@ -396,10 +412,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   harita; haritada bütün taşıyıcıların noktaları renkli, fiyat yalnız listede; liste en ucuz başta, eşit fiyatta yakın önce; nokta
   seçilmeden onay yok. Sunucu hazır (web `loadServicePointsAction`, ortak kapı `searchCheckoutServicePoints`); native harita
   kütüphanesi o sırada seçilecek.
-- [ ] (K.30) [hedef: web] Harita altlığı yayından önce değişmeli: müşteri haritası kamusal `tile.openstreetmap.org` karosunu
-  kullanıyor (yoğun trafiğe açık değil ve görünümü kalabalık). Tercih yeni sağlayıcı değil, kullandığımız Google: Map Tiles API'nin
-  2D "roadmap" karosu JSON stille sadeleştirilebiliyor ve Leaflet'e bağlanabiliyor; oturum jetonu (sunucuda) ve anahtar kısıtı
-  gerekiyor, istek başına ücretli. Kota/fiyat ölçülüp kullanıcıya sunulacak; karar kullanıcıda. CARTO anahtarsız çalışmıyor (ölçüldü).
 - [ ] (K.31) [hedef: operasyon] Asistan onay kuyruğundaki öneri kartları (`operations/assistant`): kart tipe göre değişiyor ama
   her kartta ortak bilgiler (doldurulan ve üzerine yazılan alanlar, dil, belirsiz okuma) kartın içinde kötü duruyor; ortak
   bölümler gözetilerek kart yeniden düzenlenecek. Karttan açılan diyalogda öneri kabul ya da reddedilince sıradaki öneri
@@ -415,14 +427,8 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
     değil içindekini anlatıyor (kutuda kaç parça, dilim mi adet mi) ve ikizi "adet" kolonu tabloda duruyor.
   - Ürünün aktif olmamasına sebep olan eksikler diyalogda bir yerde yazmalı.
   - Alerjenlerde "alerjen eklenmez" düğmesiyle alerjen listesi aynı anda görünüyor; varsayılan boş hâlden olabilir, incelenecek.
-- [ ] (K.33) [hedef: müşteri] "Yapay zekâya sor" kutusu (ürün detayı) yalnız masaüstü web'de var; telefon görünümünde ve native'de
-  yok. Kutu yalnız soru şablonu dolu kategoride çiziliyor ve bugün hiçbir kategoride şablon yok (alanı K.23 açacak). Düğmeler:
-  ChatGPT soruyu kutuya dolu açıyor; Gemini `?q=`yu yok saydığı için kaldırıldı; Claude oturumsuz ziyaretçiyi giriş sayfasına
-  gönderiyor ve bot koruması yüzünden otomatik ölçülemedi — girişli bir tarayıcıda elle denenecek, soruyu taşımıyorsa kalkar.
-  Marka düğmeleri yerine işletim sisteminin paylaşım tepsisi tarafsızlık açısından daha güçlü. Soru kimlik ya da servis sorar,
-  amaç sormaz ("ne işe yarar" sağlık beyanı ima eder, 1924/2006 md. 2(1)); metin bir kez sabitlenir, "daha iyi cevap alsın" diye
-  ayarlanmaz: ayarlandığı an içeriği seçmiş oluruz ve üçüncü taraf savunması düşer.
-- [ ] (K.34) [hedef: operasyon] Ülkeye göre ürün etiketi: bazı ürünlerin üzerinde satıldığı ülkenin zorunlu bilgisi yok. Ürünün
-  hangi ülkeler için yeterli bilgi taşıdığı tutulacak; yetersiz olduğu ülkeler için önceden çevrilmiş etiket metni hazır olacak ve
-  kargoda paketlemeden önce yazıcıdan basılıp yapıştırılacak (satış anında çeviri yapılmaz, etiket yeterliyse çıktı alınmaz).
-  Veri modelini (ürün × ülke) ve operasyon mobil uygulamasının hazırlık adımını birlikte etkiler.
+- [ ] (K.34) [hedef: operasyon] Ülkeye göre ürün etiketi: bazı ürünlerin üzerinde satıldığı ülkenin zorunlu bilgisi yok. Etiketin
+  hangi ülke için yeterli olduğu ürün ürün, gerekirse varyant varyant tutulacak; önce Fransa ve Almanya, satış açılan her ülke
+  sonra eklenir. Yetersiz olduğu ülke için önceden çevrilmiş etiket metni hazır olacak ve kargoda paketlemeden önce yazıcıdan
+  basılıp yapıştırılacak (satış anında çeviri yapılmaz, etiket yeterliyse çıktı alınmaz). Veri modelini (ürün/varyant × ülke) ve
+  operasyon mobil uygulamasının hazırlık adımını birlikte etkiler.
