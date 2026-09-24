@@ -40,7 +40,7 @@
     "accountNav": {
       "account": "Hesabım",
       "orders": "Siparişlerim",
-      "support": "Taleplerim",
+      "support": "Destek",
       "backToCatalog": "← Kataloğa dön"
     },
     "menu": "Menü",
@@ -87,7 +87,7 @@
     "accountNav": {
       "account": "Mon compte",
       "orders": "Mes commandes",
-      "support": "Mes demandes",
+      "support": "Assistance",
       "backToCatalog": "← Retour au catalogue"
     },
     "menu": "Menu",
@@ -134,7 +134,7 @@
     "accountNav": {
       "account": "Mein Konto",
       "orders": "Meine Bestellungen",
-      "support": "Meine Anfragen",
+      "support": "Kundenservice",
       "backToCatalog": "← Zurück zum Katalog"
     },
     "menu": "Menü",

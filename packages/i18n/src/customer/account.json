@@ -88,7 +88,7 @@
     },
     "menu": {
       "orders": "Siparişlerim",
-      "tickets": "Taleplerim",
+      "tickets": "Destek",
       "write": "Bize yazın",
       "delivery": "Teslimat & soğuk zincir"
     },
@@ -246,7 +246,7 @@
     },
     "menu": {
       "orders": "Mes commandes",
-      "tickets": "Mes demandes",
+      "tickets": "Assistance",
       "write": "Écrivez-nous",
       "delivery": "Livraison & chaîne du froid"
     },
@@ -404,7 +404,7 @@
     },
     "menu": {
       "orders": "Meine Bestellungen",
-      "tickets": "Meine Anfragen",
+      "tickets": "Kundenservice",
       "write": "Schreiben Sie uns",
       "delivery": "Lieferung & Kühlkette"
     },

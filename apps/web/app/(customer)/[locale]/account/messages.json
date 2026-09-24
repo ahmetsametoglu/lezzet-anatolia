@@ -81,7 +81,7 @@
     "companyNote": "Şirket bilgilerinizi buradan değiştiremezsiniz; bir değişiklik için bize yazın.",
     "linksTitle": "Hesabım",
     "linkOrders": "Siparişlerim",
-    "linkSupport": "Taleplerim",
+    "linkSupport": "Destek",
     "chatNotice": {
       "linked": "Sohbetiniz bu hesaba bağlandı. Sohbetten verdiğiniz siparişler artık burada görünür.",
       "own": "Bu sohbet zaten hesabınıza bağlı.",
@@ -197,7 +197,7 @@
     "companyNote": "Vous ne pouvez pas modifier les informations de société ici ; écrivez-nous pour signaler un changement.",
     "linksTitle": "Mon compte",
     "linkOrders": "Mes commandes",
-    "linkSupport": "Mes demandes",
+    "linkSupport": "Assistance",
     "chatNotice": {
       "linked": "Votre conversation est reliée à ce compte. Les commandes passées dans la conversation apparaissent désormais ici.",
       "own": "Cette conversation est déjà reliée à votre compte.",
@@ -313,7 +313,7 @@
     "companyNote": "Firmendaten können Sie hier nicht ändern; schreiben Sie uns bei Änderungen.",
     "linksTitle": "Mein Konto",
     "linkOrders": "Meine Bestellungen",
-    "linkSupport": "Meine Anfragen",
+    "linkSupport": "Kundenservice",
     "chatNotice": {
       "linked": "Ihr Chat ist mit diesem Konto verknüpft. Im Chat aufgegebene Bestellungen erscheinen ab jetzt hier.",
       "own": "Dieser Chat ist bereits mit Ihrem Konto verknüpft.",

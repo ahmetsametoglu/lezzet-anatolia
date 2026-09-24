@@ -78,7 +78,7 @@
             "paragraphs": [
               "İade, ödemeyi yaptığınız yönteme yapılır. Kartla ödediyseniz tutar kartınıza geçer; bankanıza bağlı olarak hesabınızda görünmesi birkaç iş günü sürebilir.",
               "Kapıda ödeme seçtiyseniz ve henüz ödeme yapmadıysanız iade diye bir şey olmaz — eksik ürünün bedeli teslimat anındaki tutardan zaten düşülür.",
-              "Talebinizi \"Taleplerim\" bölümünden açabilirsiniz; siparişinizi ve ilgili ürünleri formda seçtiğinizde bize neyin eksik ya da hasarlı olduğu doğrudan ulaşır."
+              "Talebinizi \"Destek\" bölümünden açabilirsiniz; siparişinizi ve ilgili ürünleri formda seçtiğinizde bize neyin eksik ya da hasarlı olduğu doğrudan ulaşır."
             ],
             "bullets": []
           }
@@ -143,7 +143,7 @@
           {
             "id": "eksik-kalem",
             "question": "Bir ürün eksik geldi, ne yapmalıyım?",
-            "answer": "Bir şey yapmanız gerekmez: kutunuzdan çıkmayan ürünün bedeli otomatik olarak hesaplanır ve iade edilir. Yine de durumu bize anlatmak isterseniz \"Taleplerim\" bölümünden siparişinizi seçip yazabilirsiniz."
+            "answer": "Bir şey yapmanız gerekmez: kutunuzdan çıkmayan ürünün bedeli otomatik olarak hesaplanır ve iade edilir. Yine de durumu bize anlatmak isterseniz \"Destek\" bölümünden siparişinizi seçip yazabilirsiniz."
           },
           {
             "id": "toptan",
@@ -421,7 +421,7 @@
             "id": "uyusmazlik",
             "heading": "Uyuşmazlık ve uygulanacak hukuk",
             "paragraphs": [
-              "Bir sorun yaşarsanız bize yazın; talepler \"Taleplerim\" bölümünden açılabilir ve takip edilebilir.",
+              "Bir sorun yaşarsanız bize yazın; talepler \"Destek\" bölümünden açılabilir ve takip edilebilir.",
               "Her türlü sorununuzu memnuniyetle çözeriz ve bir talebi çözüme ulaşmadan kapatmayız. Bu koşullar Fransız hukukuna tabidir."
             ],
             "bullets": []
@@ -609,7 +609,7 @@
             "paragraphs": [
               "Le remboursement est effectué sur le moyen de paiement utilisé. Si vous avez payé par carte, le montant est recrédité sur votre carte ; selon votre banque, quelques jours ouvrés peuvent être nécessaires avant qu'il apparaisse sur votre compte.",
               "Si vous avez choisi le paiement à la livraison et que vous n'avez pas encore payé, il n'y a pas de remboursement : le montant de l'article manquant est déjà déduit de la somme réclamée à la livraison.",
-              "Vous pouvez ouvrir une demande depuis la rubrique « Mes demandes » ; en sélectionnant votre commande et les articles concernés dans le formulaire, nous savons directement ce qui manque ou ce qui est abîmé."
+              "Vous pouvez ouvrir une demande depuis la rubrique « Assistance » ; en sélectionnant votre commande et les articles concernés dans le formulaire, nous savons directement ce qui manque ou ce qui est abîmé."
             ],
             "bullets": []
           }
@@ -674,7 +674,7 @@
           {
             "id": "eksik-kalem",
             "question": "Un produit manque dans ma commande, que faire ?",
-            "answer": "Vous n'avez rien à faire : le montant de l'article absent de votre colis est calculé et remboursé automatiquement. Si vous souhaitez tout de même nous en parler, ouvrez une demande depuis « Mes demandes » en sélectionnant votre commande."
+            "answer": "Vous n'avez rien à faire : le montant de l'article absent de votre colis est calculé et remboursé automatiquement. Si vous souhaitez tout de même nous en parler, ouvrez une demande depuis « Assistance » en sélectionnant votre commande."
           },
           {
             "id": "toptan",
@@ -952,7 +952,7 @@
             "id": "uyusmazlik",
             "heading": "Litiges et droit applicable",
             "paragraphs": [
-              "En cas de problème, écrivez-nous ; les demandes peuvent être ouvertes et suivies depuis la rubrique « Mes demandes ».",
+              "En cas de problème, écrivez-nous ; les demandes peuvent être ouvertes et suivies depuis la rubrique « Assistance ».",
               "Nous résolvons volontiers tout problème que vous rencontrez et ne clôturons pas une demande sans solution. Les présentes conditions sont soumises au droit français."
             ],
             "bullets": []
@@ -1140,7 +1140,7 @@
             "paragraphs": [
               "Die Erstattung erfolgt auf das von Ihnen genutzte Zahlungsmittel. Bei Kartenzahlung wird der Betrag Ihrer Karte gutgeschrieben; je nach Bank kann es einige Werktage dauern, bis er auf Ihrem Konto erscheint.",
               "Haben Sie Zahlung bei Lieferung gewählt und noch nicht bezahlt, gibt es keine Erstattung: Der Betrag des fehlenden Artikels wird bereits von der bei der Lieferung fälligen Summe abgezogen.",
-              "Eine Anfrage können Sie im Bereich „Meine Anfragen“ eröffnen; wenn Sie im Formular Ihre Bestellung und die betroffenen Artikel auswählen, erfahren wir direkt, was fehlt oder beschädigt ist."
+              "Eine Anfrage können Sie im Bereich „Kundenservice“ eröffnen; wenn Sie im Formular Ihre Bestellung und die betroffenen Artikel auswählen, erfahren wir direkt, was fehlt oder beschädigt ist."
             ],
             "bullets": []
           }
@@ -1205,7 +1205,7 @@
           {
             "id": "eksik-kalem",
             "question": "Ein Produkt fehlt in meiner Bestellung, was tun?",
-            "answer": "Sie müssen nichts tun: Der Betrag des in Ihrem Paket fehlenden Artikels wird automatisch berechnet und erstattet. Möchten Sie uns dennoch davon berichten, eröffnen Sie unter „Meine Anfragen“ eine Anfrage und wählen Ihre Bestellung aus."
+            "answer": "Sie müssen nichts tun: Der Betrag des in Ihrem Paket fehlenden Artikels wird automatisch berechnet und erstattet. Möchten Sie uns dennoch davon berichten, eröffnen Sie unter „Kundenservice“ eine Anfrage und wählen Ihre Bestellung aus."
           },
           {
             "id": "toptan",
@@ -1483,7 +1483,7 @@
             "id": "uyusmazlik",
             "heading": "Streitigkeiten und anwendbares Recht",
             "paragraphs": [
-              "Bei Problemen schreiben Sie uns; Anfragen können unter „Meine Anfragen“ eröffnet und verfolgt werden.",
+              "Bei Problemen schreiben Sie uns; Anfragen können unter „Kundenservice“ eröffnet und verfolgt werden.",
               "Wir lösen jedes Problem gerne und schließen keine Anfrage ohne Lösung. Diese Bedingungen unterliegen französischem Recht."
             ],
             "bullets": []

@@ -23,7 +23,7 @@
       "other": "Diğer"
     },
     "list": {
-      "title": "Taleplerim",
+      "title": "Destek",
       "new": "＋ Yeni",
       "newLabel": "Yeni talep oluştur",
       "withSubject": "{type} · {subject}",
@@ -58,7 +58,7 @@
       },
       "notFound": "Bu talebi bulamadık",
       "notFoundBody": "Bağlantı eski olabilir; talebi listeden açmayı deneyin.",
-      "notFoundCta": "Taleplerim"
+      "notFoundCta": "Destek sayfasına dön"
     },
     "new": {
       "title": "Bize yazın",
@@ -137,7 +137,7 @@
       "other": "Autre"
     },
     "list": {
-      "title": "Mes demandes",
+      "title": "Assistance",
       "new": "＋ Nouvelle",
       "newLabel": "Créer une demande",
       "withSubject": "{type} · {subject}",
@@ -172,7 +172,7 @@
       },
       "notFound": "Demande introuvable",
       "notFoundBody": "Le lien est peut-être ancien ; ouvrez la demande depuis la liste.",
-      "notFoundCta": "Mes demandes"
+      "notFoundCta": "Retour à l'assistance"
     },
     "new": {
       "title": "Écrivez-nous",
@@ -251,7 +251,7 @@
       "other": "Sonstiges"
     },
     "list": {
-      "title": "Meine Anfragen",
+      "title": "Kundenservice",
       "new": "＋ Neu",
       "newLabel": "Neue Anfrage erstellen",
       "withSubject": "{type} · {subject}",
@@ -286,7 +286,7 @@
       },
       "notFound": "Anfrage nicht gefunden",
       "notFoundBody": "Der Link ist womöglich veraltet; öffnen Sie die Anfrage über die Liste.",
-      "notFoundCta": "Meine Anfragen"
+      "notFoundCta": "Zurück zum Kundenservice"
     },
     "new": {
       "title": "Schreiben Sie uns",

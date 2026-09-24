@@ -124,7 +124,7 @@ describe('AccountScreen', () => {
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({ name: 'Ayşe Yeni', phone: '+33 6 24 51 09 88' });
   });
 
-  it('menüdeki "Taleplerim" ve "Bize yazın" destek sayfalarına gider', async () => {
+  it('menüdeki "Destek" ve "Bize yazın" kendi sayfalarına gider', async () => {
     await render(<AccountScreen />);
 
     await fireEvent.press(screen.getByTestId('account-menu-tickets'));

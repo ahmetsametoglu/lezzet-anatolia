@@ -1,8 +1,8 @@
 {
   "tr": {
-    "title": "Taleplerim",
+    "title": "Destek",
     "backToAccount": "← Hesabım",
-    "backToList": "← Taleplerim",
+    "backToList": "← Destek",
     "newTicket": "+ Bize yazın",
     "empty": {
       "title": "Talebiniz yok",
@@ -75,9 +75,9 @@
     }
   },
   "fr": {
-    "title": "Mes demandes",
+    "title": "Assistance",
     "backToAccount": "← Mon compte",
-    "backToList": "← Mes demandes",
+    "backToList": "← Assistance",
     "newTicket": "+ Écrivez-nous",
     "empty": {
       "title": "Aucune demande",
@@ -150,9 +150,9 @@
     }
   },
   "de": {
-    "title": "Meine Anfragen",
+    "title": "Kundenservice",
     "backToAccount": "← Mein Konto",
-    "backToList": "← Meine Anfragen",
+    "backToList": "← Kundenservice",
     "newTicket": "+ Schreiben Sie uns",
     "empty": {
       "title": "Keine Anfragen",
