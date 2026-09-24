@@ -1,7 +1,7 @@
 import type { AddressCheckOutcome, CheckoutServicePointsOutcome, CheckoutSnapshot } from '@lezzet/application';
 import type { Address, PaymentMethod } from '@lezzet/types';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
-// Ortak ödeme sözlüğü — native ödeme ekranıyla AYNI metin (CLAUDE §2 istisnası, 14.09).
+// Telefon görünümü native ödeme ekranıyla aynı metni kullanır (CLAUDE §2).
 import type checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { isSplitCart, type CartView } from '@/lib/cart/cart-types';
 import type messages from './messages.json';
@@ -25,12 +25,11 @@ interface StepProps {
 
 /** Ekranın tuttuğu tüm seçim durumu — tek nesne, çünkü üçü birbirini etkiliyor. */
 export interface CheckoutState {
-  /** Sepette seçilen adres — burada değişmez, okunur (13.09). */
+  /** Sepette seçilen adres — burada değişmez, okunur. */
   addressId: string | null;
   deliveryDate: string | null;
   /**
-   * Seçilen kargo servisinin kodu (07.12) — tutar DEĞİL. Fiyat sunucudan gelir; ekran yalnız
-   * hangi seçeneğin işaretli olduğunu tutar.
+   * Seçilen kargo servisinin kodu, tutar değil: fiyat sunucudan gelir, ekran yalnız işaretli seçeneği tutar.
    */
   shippingOptionCode: string | null;
   /** Haritadan seçilen teslim noktası ve onun servisi; eve teslimde `null`. */
@@ -48,11 +47,8 @@ export interface CheckoutViewProps extends StepProps {
   snapshot: CheckoutSnapshot;
   state: CheckoutState;
   /**
-   * Bu sipariş sepetin bir PARÇASI mı — kargo grubundan açıldı VE kapıya giden kalemler sepette
-   * kalıyor (19.7 · `isSeparateOrder`). Ekran bunu SÖYLEMEK zorunda: iki checkout birbirinin
-   * tıpatıp aynısı görünürse müşteri hangisini verdiğini bilemez ve "kapıya giden kalemlerim
-   * nerede" diye sorar. Yalnız kargo kalemi taşıyan sepette ise söylenecek bir şey yok — orada
-   * "ayrı sipariş" demek yalan olur.
+   * Bu sipariş sepetin bir parçası mı (`isSeparateOrder`): iki checkout aynı görünürse müşteri hangisini verdiğini bilemez.
+   * Yalnız kargo kalemi taşıyan sepette "ayrı sipariş" demek yanlış olur.
    */
   separateOrder: boolean;
   /** Girişli müşterinin e-postası — kimlik satırı ("… olarak devam ediyorsunuz") bunu yazar. */
@@ -61,8 +57,8 @@ export interface CheckoutViewProps extends StepProps {
   error: string | null;
   onSelectDate: (date: string) => void;
   /**
-   * Kargo servisi seçimi (07.12) — seçim SUNUCUYA gider ve anlık görüntü yeniden çözülür, çünkü
-   * ücret ve toplam ona bağlı. İstemci tarafında bir fiyat hesabı YOKTUR.
+   * Kargo servisi seçimi sunucuya gider ve anlık görüntü yeniden çözülür, çünkü ücret ve toplam ona bağlı; istemcide fiyat
+   * hesabı yok.
    */
   onSelectShipping: (code: string) => void;
   /** Haritadan nokta seçildi: noktanın servisi seçilen servis olur ve ücret yeniden çözülür. */
@@ -72,21 +68,17 @@ export interface CheckoutViewProps extends StepProps {
   onSelectPayment: (method: PaymentMethod, onAccount: boolean) => void;
   onToggleConsent: (value: boolean) => void;
   /**
-   * Sepetin ilk okuması bitti mi. Özet kalem satırlarını sepetten çiziyor; okuma bitmeden orada
-   * boş bir kutu göstermek "sipariş özetiniz yok" gibi okunuyordu — iskelet çizilir.
+   * Sepetin ilk okuması bitti mi: özet kalem satırlarını sepetten çizer ve okuma bitmeden boş özet "siparişiniz yok" gibi
+   * okunur.
    */
   cartReady: boolean;
   /**
-   * Sepet okuması DÜŞTÜ mü. `cartReady` ile karıştırılmaz: biri "cevap geldi", öbürü "cevap
-   * gelmedi". Ayrımı yapmayan checkout, okuma düşünce kalemsiz ve 0,00 €'luk bir özet çizip
-   * "Siparişi onayla"yı ETKİN bırakıyordu — müşteri basınca `empty_cart` reddi alıyordu.
-   * Sepet sayfası bu ayrımı zaten yapıyor (`CartUnreachable`), checkout yapmıyordu (29.07 denetimi).
+   * Sepet okuması düştü mü; `cartReady`den ayrı, çünkü biri "cevap geldi" öbürü "cevap gelmedi" der. Ayrılmasa düşen okuma
+   * kalemsiz bir özet ve etkin bir onay düğmesi çizerdi.
    */
   cartFailed: boolean;
   /**
-   * Adım verisinin (adres · teslimat · ödeme) ilk okuması bitti mi. Üçü de seçili adresin cevabı ve
-   * istemcide çözülüyor; bitmeden adım çizmek "kayıtlı adresiniz yok" gibi HENÜZ BİLİNMEYEN bir
-   * hüküm verdiriyordu.
+   * Adım verisinin (adres · teslimat · ödeme) ilk okuması bitti mi: bitmeden adım çizmek henüz bilinmeyen bir hüküm verdirir.
    */
   snapshotReady: boolean;
   onConfirm: () => void;
@@ -95,8 +87,7 @@ export interface CheckoutViewProps extends StepProps {
   /** Seçili adresin künyesi — adres adımı, özetteki soğuk zincir cümlesi ve fatura bilgisi için. */
   selectedAddress: Address | null;
   /**
-   * Adres doğrulamasının sonucu (11.11) — `null` = söylenecek bir şey yok. Yalnız MÜŞTERİYE
-   * söylenecek üç hâl buraya ulaşır: `confirmed` ve `unknown` istemcide elenir.
+   * Adres doğrulamasının sonucu; `null` söylenecek bir şey yok demektir, `confirmed` ve `unknown` istemcide elenir.
    */
   addressNotice: AddressCheckOutcome | null;
   /** Teklif kabul edildi — kaydın posta kodu ve şehri düzelir, adres yeniden doğrulanır. */
@@ -106,25 +97,9 @@ export interface CheckoutViewProps extends StepProps {
 }
 
 /**
- * Siparişin verilememe SEBEBİ — sepettekinin checkout karşılığı (`lib/cart` → `cartBlockReason`).
- *
- * **Neden ayrı bir birlik:** buradaki engeller sepettekilerin üstüne iki tane daha ekliyor ve
- * ikisi de ADRESİN cevabı — teslimat çözülemiyor (`delivery.blocked`: rota dışı + soğuk zincir)
- * ve adres hiç seçilmemiş. Sepet bunları soramaz, çünkü sepette adres yok.
- *
- * **Neden tek yerde:** aynı karar iki yerde AYRI yazılmıştı ve ikisi tutmuyordu —
- * `OrderSummary` beş koşula bakıyor, kart ödemesinin formu üçüne. Yani sepette gönderilemeyen bir
- * kalem varken kartsız yolun düğmesi pasifken **kart formu açık kalıyordu**: müşteri kart
- * bilgilerini giriyor, basıyor ve reddi ancak sunucudan öğreniyordu. Para açığı değil (sunucu
- * `confirmCheckoutAction`'da aynı kontrolü yapıyor ve reddediyor), ama gereksiz bir emek ve iki
- * yoldan biri müşteriye önceden söylüyor, öteki söylemiyordu.
- *
- * **Sıra anlamlı:** önce "cevap yok" hâlleri (sepet okunamadı, adres seçilmedi) — bunlar
- * bilinmezliktir, hüküm değil; sonra teslimat, en sonra tutar. Sepetteki sıranın aynısı: kalem
- * çıkarılınca tutar da değişir.
+ * Siparişin verilememe sebebi, sepettekinin checkout karşılığı: adresin seçilmemesi ve teslimatın çözülememesi yalnız burada
+ * sorulur. Kart formu ve onay düğmesi aynı karardan okur; sıra önce bilinmezlik (sepet, adres), sonra teslimat, en son tutar.
  */
-// Sepet tarafındaki eşiyle aynı gerekçeyle dışa açılmıyor: bugün sebebi adıyla anan çağıran yok
-// (`!== null` yetiyor), `checkout_blocked` atıcısı (08.9) geldiğinde açılır.
 type CheckoutBlockReason = 'cart_unreachable' | 'address_missing' | 'undeliverable_line' | 'min_basket' | 'service_point_missing';
 
 export function checkoutBlocker(input: {
@@ -147,13 +122,8 @@ export function checkoutBlocker(input: {
 }
 
 /**
- * "AYRI sipariş" bandının ve başlığının tek koşulu (19.7): kargo checkout'u açık VE sepet bölünmüş.
- *
- * **`shippingOrder` tek başına yetmiyor:** sepet yalnız kargo kalemi taşırken de kargo checkout'unu
- * açıyor (`shippingOnly` → `?group=shipping`), çünkü siparişin türü ve ücreti o bayraktan geliyor.
- * Bayrağa bakan bant o sepette "kapıya giden kalemleriniz sepette bekliyor" diyordu — sepette
- * kapıya giden kalem yokken (kullanıcı ölçtü 14.09: "Ev · 67380 · kargoyla", her kalem kargoda).
- * Bayrak kalemleri ve fiyatı belirlemeye devam ediyor; ekrana söyleneni sepetin kendisi belirliyor.
+ * "Ayrı sipariş" bandının koşulu: kargo checkout'u açık ve sepet bölünmüş. `shippingOrder` tek başına yetmez, çünkü yalnız
+ * kargo kalemi taşıyan sepet de kargo checkout'unu açar ve orada kapıda bekleyen kalem yoktur.
  */
 export function isSeparateOrder(shippingOrder: boolean, cart: Pick<CartView, 'lines'>): boolean {
   return shippingOrder && isSplitCart(cart);
@@ -192,8 +162,7 @@ export function servicePointMissing(state: Pick<CheckoutState, 'shippingMode' | 
 }
 
 /**
- * Harita listesinin sırası: en ucuz başta, aynı fiyattakiler yakından uzağa. Aynı taşıyıcının her noktası aynı fiyatı taşıdığı
- * için bu "en ucuz taşıyıcının en yakın noktaları" demektir. Servisi olmayan taşıyıcının noktası listeye girmez.
+ * Harita listesinin sırası: en ucuz başta, aynı fiyattakiler yakından uzağa. Servisi olmayan taşıyıcının noktası listeye girmez.
  */
 export function orderServicePoints(
   points: readonly CheckoutServicePoint[],
@@ -209,8 +178,8 @@ export function orderServicePoints(
 }
 
 /**
- * Açılış saatleri, aynı saatlere sahip ardışık günler birleşik: "Pzt–Cmt 08:00 - 12:00 · Paz kapalı". Sağlayıcının günleri
- * "0" pazartesiden başlar; gün adı dilin kendi kısaltmasıdır. Hiç saat yoksa `null` — bilinmiyor, "kapalı" değil.
+ * Açılış saatleri, aynı saatli ardışık günler birleşik ("Pzt–Cmt 08:00 - 12:00 · Paz kapalı"); sağlayıcının günleri "0"
+ * pazartesiden başlar. Hiç saat yoksa `null`: bilinmiyor, "kapalı" değil.
  */
 export function openingLines(times: Record<string, string[]> | null, locale: string, closed: string): string[] | null {
   if (!times || Object.values(times).every((slots) => slots.length === 0)) return null;

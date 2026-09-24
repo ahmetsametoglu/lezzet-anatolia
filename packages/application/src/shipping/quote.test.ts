@@ -7,17 +7,8 @@ import type { ShippingRateProvider } from './port';
 import { providerStub } from './provider.testkit';
 
 /**
- * KARGO TEKLİFİ — TEK KAPI (07.12).
- *
- * Sınanan beş değişmez:
- *   1. Ölçüsüz kalem teklifi DURDURUR — tahmin edilmiş bir ölçü tarifeye girer.
- *   2. Kutusuz depo teklif üretemez — uydurulmuş kutu da tarifeye girer.
- *   3. ⚠ ÇOK KUTULU sipariş yalnız ÇOK KOLİ DESTEKLEYEN seçenekleri görür. Canlı ölçümde
- *      (28.08) seçeneklerin yalnız 10/17'si destekliyordu ve en ucuz ikisi desteklemiyordu:
- *      süzgeç olmasa müşteri en ucuzu seçer, etiket satın alma anında reddedilir ve sipariş
- *      SEVK EDİLEMEZ kalırdı.
- *   4. Sağlayıcı düşünce teklif YOK ama yol kapanmaz — çağıran sabit tarifeye DÜŞTÜĞÜNÜ bilir.
- *   5. Fiyatsız seçenek listede durmaz.
+ * Kargo teklifinin değişmezleri: ölçüsüz kalem ve kutusuz depo teklif üretmez, çok kutulu sipariş yalnız çok koli taşıyan
+ * servisleri görür, sağlayıcı düşünce çağıran sabit tarifeye düştüğünü bilir, fiyatsız ya da sıfır fiyatlı seçenek listede durmaz.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -179,14 +170,8 @@ describe('quoteShipping — teklif', () => {
   });
 
   /**
-   * ⚠ ÖLÇÜLMÜŞ ARIZANIN ÇİVİSİ (28.08). Sağlayıcı her sorguya ücretsiz `sendcloud:letter` kanalını
-   * da döndürüyor; liste ucuzdan sıralı ve seçim yapılmadığında ilk sıra alınıyor. Süzgeç yalnız
-   * `null` fiyatı elediği için **her kargo siparişinde ücret 0,00 € hesaplanıyordu** ve 15 kg'lık
-   * koli mektup tarifesiyle işaretleniyordu. Canlı ölçüm: `0,00 € letter` · `7,74 € shop2shop`
-   * → sipariş başına 7,74 € kaçıyordu.
-   *
-   * Sıfır bir kampanya DEĞİLDİR: bu liste bizim maliyetimiz, müşteriden aldığımız ücret değil.
-   * Ücretsiz kargo bizim kararımız ve eşik mantığında yaşıyor.
+   * Sağlayıcı ücretsiz `sendcloud:letter` kanalını da döndürür ve liste ucuzdan sıralıdır; süzülmezse her kargo siparişi mektup
+   * tarifesiyle 0,00 € hesaplanırdı. Bu liste bizim maliyetimizdir, ücretsiz kargo eşikte karar verilir.
    */
   it('SIFIR fiyatlı seçenek listede durmaz — ve sıralamanın başını kapmaz', async () => {
     const p = fakeProvider([secenek({ code: 'sendcloud:letter', priceCents: 0 }), secenek({ code: 'gerçek', priceCents: 774 })]);

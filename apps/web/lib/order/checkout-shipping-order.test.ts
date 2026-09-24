@@ -23,29 +23,14 @@ import { createTestWarehouse, purgeTestData, purgeVariantStock, mustDelete, test
 import { createCheckoutDraft } from './checkout-draft';
 
 /**
- * Kargo siparişi taslağı (19.15) — sepetin kargo grubundan açılan İKİNCİ sipariş.
- *
- * Sınanan asıl şey şu: **rota İÇİ bir adresten açılan kargo siparişi, rota deposundan değil KARGO
- * deposundan çıkar.** Taslak sepetin alt kümesini zaten alabiliyordu ama teslimatı adresten
- * çözüyordu; adres rota içindeyse zincir rota deposunu döndürür ve sipariş malın BULUNMADIĞI
- * depodan açılırdı.
- *
- * Kurulum `DE` üzerinde: "ülke başına en fazla bir aktif kargo deposu" kısmi unique indeksi (0042)
- * FR'de seed'in deposuyla çakışırdı. Test kendi ülkesinde kendi ikilisini kurar — paylaşılan
- * veritabanında başka bir koşuyu etkilemez (`CLAUDE.md §4b`).
+ * Kargo siparişi taslağı: rota içi adresten açılan kargo siparişi rota deposundan değil, malın durduğu kargo deposundan çıkar.
+ * Kurulum `DE` üzerinde, çünkü ülke başına tek aktif kargo deposu kuralı FR'de seed'in deposuyla çakışırdı.
  */
 const db = serviceDb();
 const stamp = Date.now();
 /**
- * Damgalı kod: seed'in `DE-77694`'ü PK'yi (ülke, kod) zaten tutuyor.
- *
- * **Önek 43, çünkü DE referansında 43 ile başlayan kod YOK** (ölçüldü: 0 satır; boş önekler
- * 00 · 05 · 43 · 62). Önceki hâli `10_000 + (stamp % 80_000)` idi ve künyesinde "bu kod GeoNames'te
- * de yok" yazıyordu — o iddia DOĞRULANMAMIŞTI ve yanlıştı: üretilen aralık gerçek DE kodlarıyla
- * dolu. 19.17 ile bedeli doğdu (`createCheckoutDraft` rota siparişinde şehri kodun yerleşimleriyle
- * karşılaştırıyor); damga gerçek bir koda denk geldiğinde buradaki "Kehl" uymaz ve dosya kendiliğinden
- * düşerdi. Şimdi iddia ölçülmüş bir gerçek: test aynı zamanda 19.16a'yı sınıyor — kendi bölge
- * tablomuz dış referanstan üstündür.
+ * Damgalı kod `43` önekli, çünkü DE referansında 43 ile başlayan kod yok: damga gerçek bir koda denk gelip "Kehl" şehir kontrolünü
+ * bozamaz. Test aynı zamanda kendi bölge tablomuzun dış referanstan üstün olduğunu sınar.
  */
 const rotaKodu = testPostalCode();
 
@@ -56,8 +41,7 @@ let customerId: string;
 let authUserId: string;
 let addressId: string;
 /**
- * KDV testlerinin ŞİRKET müşterisi (03.10) — ayrı bir profil, çünkü var olanın tipini değiştirmek
- * dosyadaki öteki testlere sızardı (`type: 'company'` ödeme seçeneklerini de oynatır).
+ * KDV testlerinin şirket müşterisi ayrı bir profil: var olanın tipini değiştirmek öteki testlerin ödeme seçeneklerini oynatırdı.
  */
 let b2bCustomerId: string;
 let b2bAuthUserId: string;
@@ -116,10 +100,8 @@ beforeAll(async () => {
     })
   ).id;
 
-  // ── KDV testlerinin şirket müşterisi: DE + B2B + VIES'te DOĞRULANMIŞ numara ────
-  // Reverse charge dalının üç şartı da burada kuruluyor. `vatNumberValid` AYRI bir alan ve öyle
-  // olmalı: numaranın yazılmış olması doğrulanmış olması demek değil — motor yalnız `true`da %0
-  // açar, çünkü yanlış %0 uygulamanın bedelini biz öderiz.
+  // Şirket müşterisi: DE + B2B + VIES'te doğrulanmış numara, reverse charge'ın üç şartı. `vatNumberValid` ayrı alan, çünkü motor
+  // %0'ı yalnız doğrulanmış numarada açar ve yanlış %0'ın bedelini biz öderiz.
   const b2bAuth = await db.auth.admin.createUser({ email: `kargob2b${stamp}@ornek.de`, email_confirm: true });
   b2bAuthUserId = b2bAuth.data.user!.id;
   const b2bProfile = await new UserProfileService(db).findByAuthUserId(b2bAuthUserId);
@@ -148,10 +130,8 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Parti BURADA SİLİNMEZ: `beforeAll`da bir kez kuruluyor ve bütün testler onu paylaşıyor.
-  // Silme `mustDelete` ile, çünkü `delete()` hatayı yutar: bu dosya bugün deftere yazan bir akış
-  // koşturmuyor, ama bir gün koşturursa sipariş `restrict` ile tutulur ve sessiz silme o günü
-  // görünmez kılardı (06.14 · künye `packages/application/src/courier/day.test.ts`te).
+  // Parti burada silinmez: `beforeAll`da bir kez kurulur ve bütün testler onu paylaşır. Silme `mustDelete` ile, çünkü
+  // `delete()` hatayı yutar.
   await mustDelete(db, 'order', (q) => q.in('customer_id', [customerId, b2bCustomerId]));
 });
 
@@ -205,30 +185,16 @@ describe('kargo siparişi taslağı', () => {
   });
 
   it('bayraksız çağrı, malın olmadığı depodan sipariş AÇMAZ — ezme tek yönlü', async () => {
-    // Aynı kalem, aynı adres: bayraksız çağrıda zincir adresin cevabını olduğu gibi kullanır ve
-    // sipariş ROTA deposundan açılmaya çalışılır. Kalem orada yok.
-    //
-    // Bu kontrol `blocked`'tan AYRIDIR ve olmak zorunda: 19.10 `blocked`'ı daralttı çünkü kargoyla
-    // gelebilen ürün "tükendi" değildir (C3) — sepette satılabilir görünür. Ama bu sipariş tek
-    // depodan çıkar (K5). Ayrım olmasaydı taslak açılır, iş rezervasyonda patlardı: müşteri
-    // ödemeye geçtikten SONRA.
+    // Aynı kalem, aynı adres: bayraksız çağrı adresin cevabını kullanır ve sipariş kalemin olmadığı rota deposundan açılmaya
+    // çalışılır. Bu kontrol `blocked`tan ayrıdır: kargoyla gelebilen ürün sepette satılabilir görünür ama sipariş tek depodan çıkar.
     const outcome = await createCheckoutDraft({ ...base(), entries: entries() });
     expect(outcome.status).toBe('blocked_lines');
   });
 });
 
 /**
- * KDV işlemi (03.10 · DOMAIN §5) — **sınanan şey motor değil, motorun ÇAĞRILDIĞI.**
- *
- * `resolveVatTreatment` yazılıydı, testliydi ve hiçbir yerden çağrılmıyordu: `vat_treatment`
- * kolonunu yazan tek şey `default 'domestic'`ti. Motorun kendi testi bu açığı göremezdi — test
- * motoru zaten elle çağırıyor. Görülebileceği tek yer burası: sepetten doğan gerçek bir siparişin
- * satırına bakmak.
- *
- * Kurulum bu dosyada, ayrı bir dosyada DEĞİL: reverse charge DE'ye teslimat ister, DE teslimatı
- * kargo deposu ister ve `warehouse_single_online` (0031) ülke başına tek aktif kargo deposuna izin
- * verir. İkinci bir dosya kendi DE kargo deposunu kursaydı, paralel koşan bu dosyayla çakışır ve
- * ortaya tekrarlanmayan bir düşüş çıkardı (`CLAUDE.md §4b`).
+ * KDV işlemi: sınanan motor değil, motorun sipariş anında çağrıldığı; bu yalnız sepetten doğan gerçek bir siparişin satırında
+ * görülür. Kurulum bu dosyada, çünkü reverse charge DE kargo deposu ister ve ülke başına tek depo paralel bir dosyayla çakışırdı.
  */
 describe('KDV işlemi — sipariş anında çözülür', () => {
   const b2bBase = () => ({
