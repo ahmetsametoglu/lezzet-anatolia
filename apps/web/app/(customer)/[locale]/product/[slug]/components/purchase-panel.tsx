@@ -22,14 +22,14 @@ import type { Messages } from '../product-types';
 
 /**
  * Boy kartlarının masaüstü sütun sayısı: seçim en fazla iki satır sürer ve bir satırda üçten fazla kart olmaz, dört boy bu yüzden ikiye
- * iki bölünür. Yediden itibaren seçim tek satırlık yatay şeride geçer.
+ * iki bölünür. Yediden itibaren seçim tek satırlık yatay kaydırma bandına geçer.
  */
 function sizeColumns(count: number): number {
   if (count <= 3) return count;
   return count === 4 ? 2 : 3;
 }
 
-/** Izgaranın iki satıra sığdığı son sayı; üstünde şerit. */
+/** Izgaranın iki satıra sığdığı son sayı; üstünde kaydırma bandı. */
 const SIZE_SCROLL_AT = 7;
 
 /** Adet tavanı: teklifte partide kalan miktar, aksi halde makul bir üst sınır (B2B hacmi sığar). */
@@ -45,11 +45,8 @@ interface VariantPickerProps {
   selected: StorefrontVariant;
   onSelect: (variantId: string) => void;
   /**
-   * Bakılan çeşidin aile içi etiketi ("Fıstıklı") — yalnız aileli üründe dolu.
-   *
-   * Boy başlığına bağlam ekler ("Fıstıklı çeşidin boyları"): hemen üstte çeşit kartları varken
-   * çıplak "Boy seçin" başlığı hangi çeşidin boyu olduğunu söylemiyordu ve iki seçici arka arkaya
-   * durduğu için tam da karışması istenmeyen yer burasıydı.
+   * Bakılan çeşidin aile içi etiketi ("Fıstıklı"), yalnız aileli üründe dolu. Boy başlığına bağlam ekler ("Fıstıklı çeşidinin boyları"),
+   * çünkü çeşit kartlarıyla boy seçici arka arkaya durur ve çıplak "Boy seçin" hangi çeşidin boyu olduğunu söylemez.
    */
   familyLabel?: string | null;
   compact?: boolean;
@@ -63,7 +60,7 @@ interface VariantPickerProps {
  */
 export function VariantPicker({ t, locale, variants, selected, onSelect, familyLabel = null, compact = false }: VariantPickerProps) {
   const multi = variants.length > 1;
-  // Şerit YALNIZ masaüstünde: mobil zaten iki sütunlu ızgarada akıyor ve orada satır sayısı serbest.
+  // Kaydırma bandı yalnız masaüstünde: mobil zaten iki sütunlu ızgarada akar ve orada satır sayısı serbesttir.
   const scrolls = !compact && variants.length >= SIZE_SCROLL_AT;
 
   /** "500 g · 15,00 €/kg" — boy adı ve kıyas fiyatı; ikisi de yoksa satır hiç çizilmez. */
@@ -106,9 +103,8 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
                   'flex cursor-pointer flex-col gap-0.5 bg-card text-left transition-colors',
                   // 194 = tasarımın 150 px içerik genişliği + 40 ped + 4 çerçeve: tasarım `content-box`, Tailwind `border-box` ölçer.
                   compact ? 'rounded-soft px-3.5 py-2.5' : 'rounded-soft px-3.25 py-2.75',
-                  // Şeritte kart sabit 158 px ve bu ölçü KASITLI: 470 px'lik rafta üçüncü kart
-                  // kenarda kesilir, yani "devamı var" görünür. 150 px'te üç kart rafı tam
-                  // dolduruyor ve şerit kaydırılabilir olduğunu hiçbir şeyle söylemiyordu.
+                  // Bantta kart sabit 158 px ve bu ölçü kasıtlı: 470 px'lik rafta üçüncü kart kenarda kesilir, yani "devamı var"
+                  // görünür; 150 px'te üç kart rafı tam doldurur ve bandın kaydırılabildiği anlaşılmaz.
                   scrolls ? 'w-[158px] flex-none' : '',
                   v.id === selected.id ? 'border-2 border-olive' : 'border-2 border-sand-200 hover:border-sand-400',
                   v.soldOut ? 'opacity-55' : '',
