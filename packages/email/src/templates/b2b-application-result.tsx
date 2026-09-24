@@ -74,7 +74,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
     reasonTitle: 'Ce qui manque',
     noticeApprovedTitle: 'Facturation',
     noticeApprovedText:
-      'Si votre numéro de TVA est valide, l’autoliquidation s’applique aux commandes professionnelles hors de France ; la mention figure sur la facture.',
+      'Si votre numéro de TVA est valide, l’autoliquidation s’applique aux commandes professionnelles hors de France\u00a0; la mention figure sur la facture.',
     noticeRejectedTitle: 'Vous pouvez renouveler votre demande',
     noticeRejectedText:
       'Une fois l’élément complété, il suffit de refaire la demande depuis la même page. D’ici là, vos achats particuliers restent possibles.',
@@ -90,7 +90,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
     introApproved:
       'Ihr Geschäftskundenantrag wurde angenommen. Ab sofort sehen Sie Großhandelspreise und die Mindestbestellbedingungen für Unternehmen.',
     introRejected:
-      'Wir haben Ihren Antrag geprüft und können ihn so noch nicht annehmen. Sobald der folgende Punkt ergänzt ist, können Sie ihn erneut stellen — Ihr Konto bleibt bestehen.',
+      'Wir haben Ihren Antrag geprüft und können ihn so noch nicht annehmen. Sobald der folgende Punkt ergänzt ist, können Sie ihn erneut stellen – Ihr Konto bleibt bestehen.',
     ctaApproved: 'Zu den Großhandelspreisen',
     ctaRejected: 'Zu meinem Konto',
     reasonTitle: 'Was fehlt',

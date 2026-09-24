@@ -2,15 +2,8 @@ import type { Locale } from '@lezzet/i18n';
 import type { AuthErrorKey } from '@lezzet/types';
 
 /**
- * Kullanıcıya dönen auth hata anahtarları. Ham Supabase mesajı yerine anlamsal anahtar
- * taşınır; çeviri tek yerde ({@link AUTH_MESSAGES}) tutulur (DRY + i18n).
- *
- * **Anahtar kümesi burada TANIMLANMIYOR, `@lezzet/types`ten geliyor** (`AuthErrorKeyEnum`,
- * 21.4a — benimseme 07.08). Küme iki yüzeyin ortak dili: aynı akışı web server action'ı da
- * mobil `/api/v1/auth/*` ucu da çağırıyor. Elle yazılmış ikinci bir liste, bir gün paket yeni bir
- * hâl eklediğinde sessizce eksik kalırdı — şimdi eksik anahtar aşağıdaki `Record`ta derleme
- * hatası. **Metin ise paylaşılmaz ve paylaşılmayacak:** cümleyi ekran kurar (web sözlüğü burada,
- * RN sözlüğü RN'de) — ortak olan yalnız anahtar.
+ * Auth hata anahtarları `@lezzet/types`ten gelir, çünkü aynı akışı web eylemi de mobil uç da çağırır; eksik anahtar aşağıdaki `Record`ta derleme hatasıdır.
+ * Metin paylaşılmaz: cümleyi her yüzey kendi sözlüğüyle kurar, ortak olan yalnız anahtardır.
  */
 export type { AuthErrorKey };
 
@@ -38,7 +31,7 @@ const AUTH_MESSAGES: Record<AuthErrorKey, Record<Locale, string>> = {
   invalid_code: {
     tr: 'Kod doğru değil — yeniden deneyin.',
     fr: 'Le code est incorrect — réessayez.',
-    de: 'Der Code ist ungültig — bitte erneut versuchen.',
+    de: 'Der Code ist ungültig – bitte erneut versuchen.',
   },
   code_expired: {
     tr: 'Kodun süresi doldu. Yeni bir kod isteyin.',

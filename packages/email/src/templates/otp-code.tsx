@@ -34,7 +34,7 @@ const COPY: Record<Locale, Copy> = {
   },
   fr: {
     heading: 'Votre code de connexion',
-    intro: 'Voici votre code à usage unique. Saisissez-le dans l’application ou sur la page ouverte :',
+    intro: 'Voici votre code à usage unique. Saisissez-le dans l’application ou sur la page ouverte\u00a0:',
     expires: (m) => `appuyez pour sélectionner · expire dans ${m} minutes`,
     ignore: 'Si vous n’êtes pas à l’origine de cette connexion, ignorez ce message — aucune action ne sera effectuée.',
   },
@@ -42,7 +42,7 @@ const COPY: Record<Locale, Copy> = {
     heading: 'Ihr Anmeldecode',
     intro: 'Hier ist Ihr Einmalcode. Geben Sie ihn in der App oder auf der geöffneten Seite ein:',
     expires: (m) => `zum Auswählen tippen · gültig für ${m} Minuten`,
-    ignore: 'Falls Sie diese Anmeldung nicht veranlasst haben, ignorieren Sie diese Nachricht — es wird nichts unternommen.',
+    ignore: 'Falls Sie diese Anmeldung nicht veranlasst haben, ignorieren Sie diese Nachricht – es wird nichts unternommen.',
   },
 };
 
@@ -56,7 +56,7 @@ const ANCHOR_COPY: Record<Locale, Copy> = {
   },
   fr: {
     heading: 'Votre code de rattachement',
-    intro: 'Renvoyez-nous ce code sur WhatsApp pour rattacher votre compte à votre numéro :',
+    intro: 'Renvoyez-nous ce code sur WhatsApp pour rattacher votre compte à votre numéro\u00a0:',
     expires: (m) => `appuyez pour sélectionner · expire dans ${m} minutes`,
     ignore: 'Si vous n’êtes pas à l’origine de cette demande, ignorez ce message — aucun rattachement ne sera effectué.',
   },
@@ -64,7 +64,7 @@ const ANCHOR_COPY: Record<Locale, Copy> = {
     heading: 'Ihr Verknüpfungscode',
     intro: 'Senden Sie uns diesen Code auf WhatsApp zurück, um Ihr Konto mit Ihrer Nummer zu verknüpfen:',
     expires: (m) => `zum Auswählen tippen · gültig für ${m} Minuten`,
-    ignore: 'Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese Nachricht — es wird nichts verknüpft.',
+    ignore: 'Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese Nachricht – es wird nichts verknüpft.',
   },
 };
 

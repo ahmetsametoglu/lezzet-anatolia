@@ -72,12 +72,12 @@ const COPY: Record<PreferredLanguage, Copy> = {
     previousTotal: 'Total précédent',
     difference: 'Écart article manquant',
     currentTotal: 'Total actualisé',
-    refundNote: (amount) => `Votre paiement étant en ligne, l’écart (${amount}) est remboursé sur votre moyen de paiement ; le délai dépend de votre banque.`,
-    collectNote: (amount) => `L’encaissement se fait directement sur ${amount} ; l’article manquant n’est pas facturé.`,
+    refundNote: (amount) => `Votre paiement étant en ligne, l’écart (${amount}) est remboursé sur votre moyen de paiement\u00a0; le délai dépend de votre banque.`,
+    collectNote: (amount) => `L’encaissement se fait directement sur ${amount}\u00a0; l’article manquant n’est pas facturé.`,
     fullItems: 'Articles expédiés en totalité',
     cta: 'Voir ma commande',
-    helpTitle: 'Cela ne vous convient pas ?',
-    helpText: 'Si cet article compte pour vous, écrivez-nous : nous l’ajoutons à votre prochaine livraison ou annulons la commande.',
+    helpTitle: 'Cela ne vous convient pas\u00a0?',
+    helpText: 'Si cet article compte pour vous, écrivez-nous\u00a0: nous l’ajoutons à votre prochaine livraison ou annulons la commande.',
     helpLink: 'Nous écrire →',
   },
   de: {
@@ -89,7 +89,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
         Menge versenden. Der Rest der Bestellung ist wie geplant unterwegs.
       </>
     ),
-    subject: (ref) => `Änderung an Ihrer Bestellung — ${ref}`,
+    subject: (ref) => `Änderung an Ihrer Bestellung – ${ref}`,
     preview: (amount) => (amount ? `Ein Artikel ist nicht vollständig lieferbar, ${amount} werden erstattet.` : 'Ein Artikel ist nicht vollständig lieferbar.'),
     blockHeadline: 'Unvollständig versandter Artikel',
     totalsTitle: 'Aktualisierter Betrag',

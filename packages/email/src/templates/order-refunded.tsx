@@ -68,10 +68,10 @@ const COPY: Record<PreferredLanguage, Copy> = {
     total: 'Total remboursé',
     note: (previous, current) =>
       current
-        ? `Remboursement sur votre moyen de paiement ; le délai dépend de votre banque. Total de la commande : ${previous} → ${current}.`
-        : `Remboursement sur votre moyen de paiement ; le délai dépend de votre banque.`,
+        ? `Remboursement sur votre moyen de paiement\u00a0; le délai dépend de votre banque. Total de la commande\u00a0: ${previous} → ${current}.`
+        : `Remboursement sur votre moyen de paiement\u00a0; le délai dépend de votre banque.`,
     onDeliveryTitle: 'Vous aviez choisi le paiement à la livraison',
-    onDeliveryText: 'Au lieu d’un remboursement, vous réglerez le montant actualisé à la livraison : la différence est déjà déduite.',
+    onDeliveryText: 'Au lieu d’un remboursement, vous réglerez le montant actualisé à la livraison\u00a0: la différence est déjà déduite.',
     cta: 'Revenir à la commande',
   },
   de: {
@@ -83,8 +83,8 @@ const COPY: Record<PreferredLanguage, Copy> = {
         <strong style={{ color: '#3a4147' }}>{amount}</strong> wurden auf Ihr Zahlungsmittel erstattet.
       </>
     ),
-    subject: (ref) => `Ihre Erstattung wurde bearbeitet — ${ref}`,
-    preview: (amount) => `${amount} erstattet — Anfrage abgeschlossen.`,
+    subject: (ref) => `Ihre Erstattung wurde bearbeitet – ${ref}`,
+    preview: (amount) => `${amount} erstattet – Anfrage abgeschlossen.`,
     blockHeadline: (at) => (at ? `Anfrage abgeschlossen · ${at}` : 'Anfrage abgeschlossen'),
     blockDetail: 'Die Erstattung wurde genehmigt und bearbeitet. Für Sie ist nichts weiter zu tun.',
     breakdown: 'Erstattungsdetails',

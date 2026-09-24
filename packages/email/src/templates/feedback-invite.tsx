@@ -52,18 +52,18 @@ const COPY: Record<PreferredLanguage, Copy> = {
   },
   fr: {
     preview: (reference) => `Donnez votre avis sur la commande ${reference}`,
-    subject: 'Vos produits vous ont-ils plu ?',
-    title: (name) => (name ? `${name}, vos produits vous ont-ils plu ?` : 'Vos produits vous ont-ils plu ?'),
+    subject: 'Vos produits vous ont-ils plu\u00a0?',
+    title: (name) => (name ? `${name}, vos produits vous ont-ils plu\u00a0?` : 'Vos produits vous ont-ils plu\u00a0?'),
     intro: (count) =>
       count === 1
-        ? 'Le produit de votre commande vous a-t-il plu ? Un seul geste suffit — cela prend moins d’une minute.'
+        ? 'Le produit de votre commande vous a-t-il plu\u00a0? Un seul geste suffit — cela prend moins d’une minute.'
         : `Dites-nous si les ${count} produits de votre commande vous ont plu — cela ne prend que quelques minutes.`,
     orderMeta: (deliveredOn) => `livrée le ${deliveredOn}`,
     statusLabel: 'Livrée',
     cta: 'Donner mon avis',
     rewardTitle: 'Votre avis nous guide',
     rewardText:
-      'Vous nous dites quels produits vous plaisent : notre prochaine sélection s’appuie sur vos réponses. Votre participation vous rapporte aussi des points.',
+      'Vous nous dites quels produits vous plaisent\u00a0: notre prochaine sélection s’appuie sur vos réponses. Votre participation vous rapporte aussi des points.',
     notice: (reference) => `Cet e-mail concerne votre commande ${reference}.`,
   },
   de: {
@@ -72,14 +72,14 @@ const COPY: Record<PreferredLanguage, Copy> = {
     title: (name) => (name ? `${name}, wie hat es Ihnen geschmeckt?` : 'Wie hat es Ihnen geschmeckt?'),
     intro: (count) =>
       count === 1
-        ? 'Hat Ihnen das Produkt aus Ihrer Bestellung gefallen? Ein Tippen genügt — es dauert weniger als eine Minute.'
-        : `Sagen Sie uns, ob Ihnen die ${count} Produkte Ihrer Bestellung gefallen haben — es dauert nur wenige Minuten.`,
+        ? 'Hat Ihnen das Produkt aus Ihrer Bestellung gefallen? Ein Tippen genügt – es dauert weniger als eine Minute.'
+        : `Sagen Sie uns, ob Ihnen die ${count} Produkte Ihrer Bestellung gefallen haben – es dauert nur wenige Minuten.`,
     orderMeta: (deliveredOn) => `am ${deliveredOn} zugestellt`,
     statusLabel: 'Geliefert',
     cta: 'Jetzt bewerten',
     rewardTitle: 'Ihre Meinung zeigt uns den Weg',
     rewardText:
-      'Sie sagen uns, was sich lohnt — danach stellen wir die nächste Auswahl zusammen. Für Ihre Teilnahme gibt es außerdem Punkte.',
+      'Sie sagen uns, was sich lohnt – danach stellen wir die nächste Auswahl zusammen. Für Ihre Teilnahme gibt es außerdem Punkte.',
     notice: (reference) => `Diese E-Mail betrifft Ihre Bestellung ${reference}.`,
   },
 };

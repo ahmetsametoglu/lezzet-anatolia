@@ -4,9 +4,8 @@ import type { FeedbackInviteNotification, PreferredLanguage } from '@lezzet/type
 import { FeedbackInviteEmail, feedbackInviteSubject } from './feedback-invite';
 
 /**
- * Değerlendirme daveti (17.2). Sınanan dört şey: **metin müşterinin dilinde çıkıyor**, **davet
- * bağlantısı mailde**, **tek eylem var** (ikinci bir davet düğmesi yok), **puan MİKTARI vaat
- * edilmiyor** — sonuncusu bilinçli bir karar ve sessizce bozulabilecek türden.
+ * Değerlendirme daveti: metin müşterinin dilinde, bağlantı mailde, tek eylem var ve puan miktarı vaat edilmiyor.
+ * Sonuncusu bilinçli bir karar ve sessizce bozulabilecek türden.
  */
 
 const base: FeedbackInviteNotification = {
@@ -69,6 +68,6 @@ describe('FeedbackInviteEmail', () => {
 
   it('konu başlığı dile göre', async () => {
     expect(feedbackInviteSubject(base)).toBe('Aldıklarınız nasıldı?');
-    expect(feedbackInviteSubject({ ...base, locale: 'fr' })).toBe('Vos produits vous ont-ils plu ?');
+    expect(feedbackInviteSubject({ ...base, locale: 'fr' })).toBe('Vos produits vous ont-ils plu\u00a0?');
   });
 });

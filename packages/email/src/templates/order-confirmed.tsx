@@ -63,7 +63,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
         Bestellung finden Sie unten.
       </>
     ),
-    subject: (ref) => `Ihre Bestellung ist eingegangen — ${ref}`,
+    subject: (ref) => `Ihre Bestellung ist eingegangen – ${ref}`,
     preview: (ref) => `Ihre Bestellung ${ref} ist eingegangen.`,
   },
 };

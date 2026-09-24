@@ -22,7 +22,7 @@ export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => str
   order_confirmed: (d) =>
     say(d.locale, {
       tr: `Teşekkür ederiz — ${d.referenceNo} numaralı siparişiniz alındı.`,
-      fr: `Merci ! Votre commande ${d.referenceNo} a bien été reçue.`,
+      fr: `Merci\u00a0! Votre commande ${d.referenceNo} a bien été reçue.`,
       de: `Vielen Dank! Ihre Bestellung ${d.referenceNo} ist eingegangen.`,
     }),
   order_out_for_delivery: (d) =>
@@ -34,13 +34,13 @@ export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => str
   order_ready_for_pickup: (d) =>
     say(d.locale, {
       tr: `${d.referenceNo} numaralı siparişiniz hazır — depodan teslim alabilirsiniz. Saat için bizi arayın.`,
-      fr: `Votre commande ${d.referenceNo} est prête : vous pouvez la retirer à l’entrepôt. Appelez-nous pour convenir de l’heure.`,
+      fr: `Votre commande ${d.referenceNo} est prête\u00a0: vous pouvez la retirer à l’entrepôt. Appelez-nous pour convenir de l’heure.`,
       de: `Ihre Bestellung ${d.referenceNo} ist abholbereit. Rufen Sie uns an, um die Uhrzeit zu vereinbaren.`,
     }),
   order_delivered: (d) =>
     say(d.locale, {
       tr: `${d.referenceNo} numaralı siparişiniz teslim edildi. Afiyet olsun!`,
-      fr: `Votre commande ${d.referenceNo} a été livrée. Bon appétit !`,
+      fr: `Votre commande ${d.referenceNo} a été livrée. Bon appétit\u00a0!`,
       de: `Ihre Bestellung ${d.referenceNo} wurde zugestellt. Guten Appetit!`,
     }),
   order_cancelled: (d) =>
@@ -70,25 +70,25 @@ export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => str
   ticket_received: (d) =>
     say(d.locale, {
       tr: `Talebinizi aldık, en kısa sürede döneceğiz: ${d.ticketUrl}`,
-      fr: `Nous avons bien reçu votre demande, nous revenons vers vous rapidement : ${d.ticketUrl}`,
+      fr: `Nous avons bien reçu votre demande, nous revenons vers vous rapidement\u00a0: ${d.ticketUrl}`,
       de: `Wir haben Ihre Anfrage erhalten und melden uns in Kürze: ${d.ticketUrl}`,
     }),
   ticket_replied: (d) =>
     say(d.locale, {
       tr: `Talebinize cevap verdik: ${d.ticketUrl}`,
-      fr: `Nous avons répondu à votre demande : ${d.ticketUrl}`,
+      fr: `Nous avons répondu à votre demande\u00a0: ${d.ticketUrl}`,
       de: `Wir haben auf Ihre Anfrage geantwortet: ${d.ticketUrl}`,
     }),
   ticket_status_changed: (d) =>
     d.status === 'resolved'
       ? say(d.locale, {
           tr: `Talebiniz çözüldü. Sorun sürerse yazmanız yeterli: ${d.ticketUrl}`,
-          fr: `Votre demande est résolue. Si le problème persiste, écrivez-nous : ${d.ticketUrl}`,
+          fr: `Votre demande est résolue. Si le problème persiste, écrivez-nous\u00a0: ${d.ticketUrl}`,
           de: `Ihre Anfrage ist gelöst. Besteht das Problem weiterhin, schreiben Sie uns: ${d.ticketUrl}`,
         })
       : say(d.locale, {
           tr: `Talebiniz yeniden açıldı: ${d.ticketUrl}`,
-          fr: `Votre demande a été rouverte : ${d.ticketUrl}`,
+          fr: `Votre demande a été rouverte\u00a0: ${d.ticketUrl}`,
           de: `Ihre Anfrage wurde wieder geöffnet: ${d.ticketUrl}`,
         }),
   // Davet mesajı KISA: WhatsApp'ta uzun metin okunmaz, tıklanır. Ürün sayısı yok — kaç ürün
@@ -96,7 +96,7 @@ export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => str
   feedback_invite: (d) =>
     say(d.locale, {
       tr: `${d.orderReferenceNo} numaralı siparişinizdekiler nasıldı? Birkaç saniyenizi alır: ${d.feedbackUrl}`,
-      fr: `Les produits de votre commande ${d.orderReferenceNo} vous ont-ils plu ? Cela ne prend que quelques secondes : ${d.feedbackUrl}`,
+      fr: `Les produits de votre commande ${d.orderReferenceNo} vous ont-ils plu\u00a0? Cela ne prend que quelques secondes\u00a0: ${d.feedbackUrl}`,
       de: `Wie waren die Produkte Ihrer Bestellung ${d.orderReferenceNo}? Es dauert nur Sekunden: ${d.feedbackUrl}`,
     }),
   // Bölge haberi tek cümle: kod + "artık geliyoruz" + bağlantı. Katalogda ne olduğu, hangi gün
@@ -104,7 +104,7 @@ export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => str
   zone_available: (d) =>
     say(d.locale, {
       tr: `${d.postalCode} artık teslimat bölgemizde. Katalog: ${d.catalogUrl}`,
-      fr: `Nous livrons désormais le ${d.postalCode}. Catalogue : ${d.catalogUrl}`,
+      fr: `Nous livrons désormais le ${d.postalCode}. Catalogue\u00a0: ${d.catalogUrl}`,
       de: `Wir liefern jetzt nach ${d.postalCode}. Katalog: ${d.catalogUrl}`,
     }),
   /**
@@ -115,12 +115,12 @@ export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => str
     d.approved
       ? say(d.locale, {
           tr: `Toptan hesabınız açıldı. Toptan fiyatlar: ${d.actionUrl}`,
-          fr: `Votre compte professionnel est ouvert. Tarifs pros : ${d.actionUrl}`,
+          fr: `Votre compte professionnel est ouvert. Tarifs pros\u00a0: ${d.actionUrl}`,
           de: `Ihr Geschäftskundenkonto ist freigeschaltet. Großhandelspreise: ${d.actionUrl}`,
         })
       : say(d.locale, {
           tr: `Toptan başvurunuzda bir eksik var; ayrıntı hesabınızda: ${d.actionUrl}`,
-          fr: `Il manque un élément à votre demande professionnelle ; détails dans votre compte : ${d.actionUrl}`,
+          fr: `Il manque un élément à votre demande professionnelle\u00a0; détails dans votre compte\u00a0: ${d.actionUrl}`,
           de: `In Ihrem Geschäftskundenantrag fehlt etwas; Details in Ihrem Konto: ${d.actionUrl}`,
         }),
 };

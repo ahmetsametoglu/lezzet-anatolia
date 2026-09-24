@@ -57,13 +57,13 @@ const COPY: Record<PreferredLanguage, Copy> = {
       </>
     ),
     subject: (ref) => `Votre commande a été livrée — ${ref}`,
-    preview: (ref) => `${ref} livrée — bon appétit !`,
+    preview: (ref) => `${ref} livrée — bon appétit\u00a0!`,
     summaryTitle: 'Bon de livraison',
     countLabel: (lines, qty) => `${lines} ${lines === 1 ? 'article' : 'articles'} · ${qty} ${qty === 1 ? 'unité' : 'unités'}`,
-    notInvoice: 'Ce document indique les articles et les quantités livrées ; il ne constitue pas une facture. Si vous en souhaitez une, écrivez-nous.',
+    notInvoice: 'Ce document indique les articles et les quantités livrées\u00a0; il ne constitue pas une facture. Si vous en souhaitez une, écrivez-nous.',
     summaryLink: '📄 Voir le bon de livraison →',
-    helpTitle: 'Un problème ?',
-    helpText: 'Article manquant, abîmé ou non conforme : écrivez-nous directement — nous répondons le jour même.',
+    helpTitle: 'Un problème\u00a0?',
+    helpText: 'Article manquant, abîmé ou non conforme\u00a0: écrivez-nous directement — nous répondons le jour même.',
     helpLink: 'Signaler un problème →',
   },
   de: {
@@ -75,14 +75,14 @@ const COPY: Record<PreferredLanguage, Copy> = {
         Ihre Bestellung <strong style={{ color: '#3a4147' }}>{ref}</strong> wurde bei Ihnen zugestellt.
       </>
     ),
-    subject: (ref) => `Ihre Bestellung wurde zugestellt — ${ref}`,
-    preview: (ref) => `${ref} zugestellt — guten Appetit!`,
+    subject: (ref) => `Ihre Bestellung wurde zugestellt – ${ref}`,
+    preview: (ref) => `${ref} zugestellt – guten Appetit!`,
     summaryTitle: 'Lieferschein',
     countLabel: (lines, qty) => `${lines} Artikel · ${qty} Stück`,
     notInvoice: 'Das Dokument zeigt Artikel und gelieferte Mengen; es ist keine offizielle Rechnung. Wenn Sie eine benötigen, schreiben Sie uns.',
     summaryLink: '📄 Lieferschein ansehen →',
     helpTitle: 'Gibt es ein Problem?',
-    helpText: 'Fehlt etwas, ist etwas beschädigt oder nicht wie erwartet — schreiben Sie uns direkt, wir antworten am selben Tag.',
+    helpText: 'Fehlt etwas, ist etwas beschädigt oder nicht wie erwartet – schreiben Sie uns direkt, wir antworten am selben Tag.',
     helpLink: 'Problem melden →',
   },
 };

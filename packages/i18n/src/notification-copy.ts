@@ -44,7 +44,7 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
     sentence: (p, l) =>
       say(l, {
         tr: `Siparişiniz${refOf(p)} teslim edildi. Afiyet olsun!`,
-        fr: `Votre commande${refOf(p)} a été livrée. Bon appétit !`,
+        fr: `Votre commande${refOf(p)} a été livrée. Bon appétit\u00a0!`,
         de: `Ihre Bestellung${refOf(p)} wurde zugestellt. Guten Appetit!`,
       }),
   },
@@ -99,7 +99,7 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
     sentence: (p, l) =>
       say(l, {
         tr: `Siparişinizi${referans(p) ? ` (${p.referenceNo})` : ''} değerlendirir misiniz?`,
-        fr: `Que pensez-vous de votre commande${referans(p) ? ` (${p.referenceNo})` : ''} ?`,
+        fr: `Que pensez-vous de votre commande${referans(p) ? ` (${p.referenceNo})` : ''}\u00a0?`,
         de: `Wie fanden Sie Ihre Bestellung${referans(p) ? ` (${p.referenceNo})` : ''}?`,
       }),
   },
@@ -108,7 +108,7 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
     sentence: (p, l) =>
       say(l, {
         tr: `Beklediğiniz bölge (${typeof p.postalCode === 'string' ? p.postalCode : '…'}) artık teslimat ağımızda!`,
-        fr: `Votre zone (${typeof p.postalCode === 'string' ? p.postalCode : '…'}) est désormais desservie !`,
+        fr: `Votre zone (${typeof p.postalCode === 'string' ? p.postalCode : '…'}) est désormais desservie\u00a0!`,
         de: `Ihr Gebiet (${typeof p.postalCode === 'string' ? p.postalCode : '…'}) wird jetzt beliefert!`,
       }),
   },
@@ -122,12 +122,12 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
         ? say(l, {
             tr: 'Kurumsal başvurunuz onaylandı — toptan fiyatlar açıldı.',
             fr: 'Votre demande professionnelle a été approuvée — les tarifs pro sont actifs.',
-            de: 'Ihr Antrag als Geschäftskunde wurde angenommen — Ihre Großhandelspreise sind freigeschaltet.',
+            de: 'Ihr Antrag als Geschäftskunde wurde angenommen – Ihre Großhandelspreise sind freigeschaltet.',
           })
         : say(l, {
             tr: 'Kurumsal başvurunuz sonuçlandı — ayrıntı hesabınızda.',
             fr: 'Votre demande professionnelle a été traitée — détails dans votre compte.',
-            de: 'Ihr Antrag als Geschäftskunde wurde bearbeitet — Details in Ihrem Konto.',
+            de: 'Ihr Antrag als Geschäftskunde wurde bearbeitet – Details in Ihrem Konto.',
           }),
   },
 };

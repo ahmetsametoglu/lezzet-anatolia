@@ -103,7 +103,7 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
     receivedIntro:
       'Votre message nous est bien parvenu et notre équipe s’en occupe. Nous vous préviendrons par e-mail dès que nous aurons répondu.',
     repliedTitle: 'Nous avons répondu à votre demande',
-    repliedIntro: 'La réponse complète figure ci-dessous ; vous pouvez continuer à écrire au même endroit.',
+    repliedIntro: 'La réponse complète figure ci-dessous\u00a0; vous pouvez continuer à écrire au même endroit.',
     resolvedTitle: 'Votre demande est résolue',
     resolvedIntro: 'Si le problème persiste, écrivez-nous — la demande se rouvre automatiquement.',
     reopenedTitle: 'Votre demande a été rouverte',
@@ -121,8 +121,8 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
     senderUs: 'Nous',
     truncatedNote: 'Le message complet se trouve sur la page de la demande.',
 
-    stillOpenTitle: 'Le problème persiste ?',
-    stillOpenText: 'Écrivez simplement sur la même demande ; même close, elle se rouvre avec votre message et nous reprenons là où nous en étions.',
+    stillOpenTitle: 'Le problème persiste\u00a0?',
+    stillOpenText: 'Écrivez simplement sur la même demande\u00a0; même close, elle se rouvre avec votre message et nous reprenons là où nous en étions.',
 
     types: { damaged: 'Produit abîmé', missing: 'Produit manquant', question: 'Question', other: 'Autre' },
     statuses: { open: 'Ouverte', in_progress: 'En cours', resolved: 'Résolue' },
@@ -131,10 +131,10 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
   },
   de: {
     ...BRAND_COPY.de,
-    receivedSubject: (ref) => `Wir haben Ihre Anfrage erhalten — ${ref}`,
-    repliedSubject: (ref) => `Wir haben auf Ihre Anfrage geantwortet — ${ref}`,
-    resolvedSubject: (ref) => `Ihre Anfrage ist gelöst — ${ref}`,
-    reopenedSubject: (ref) => `Ihre Anfrage wurde wieder geöffnet — ${ref}`,
+    receivedSubject: (ref) => `Wir haben Ihre Anfrage erhalten – ${ref}`,
+    repliedSubject: (ref) => `Wir haben auf Ihre Anfrage geantwortet – ${ref}`,
+    resolvedSubject: (ref) => `Ihre Anfrage ist gelöst – ${ref}`,
+    reopenedSubject: (ref) => `Ihre Anfrage wurde wieder geöffnet – ${ref}`,
 
     receivedTitle: 'Wir haben Ihre Anfrage erhalten',
     receivedIntro:
@@ -142,7 +142,7 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
     repliedTitle: 'Wir haben auf Ihre Anfrage geantwortet',
     repliedIntro: 'Die vollständige Antwort finden Sie unten; Sie können an derselben Stelle weiterschreiben.',
     resolvedTitle: 'Ihre Anfrage ist gelöst',
-    resolvedIntro: 'Besteht das Problem weiterhin, schreiben Sie uns — die Anfrage wird automatisch wieder geöffnet.',
+    resolvedIntro: 'Besteht das Problem weiterhin, schreiben Sie uns – die Anfrage wird automatisch wieder geöffnet.',
     reopenedTitle: 'Ihre Anfrage wurde wieder geöffnet',
     reopenedIntro: 'Ihre Anfrage wird erneut von unserem Team bearbeitet.',
 

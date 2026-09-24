@@ -23,8 +23,8 @@ export const CARD_OPEN_TITLE: Record<PreferredLanguage, string> = {
 /** Karuselin ana gövdesi — üç dilde elle; ürün adları ve fiyatlar zaten müşteri dilinde geliyor. */
 export const CAROUSEL_BODY: Record<PreferredLanguage, string> = {
   tr: 'Seçenekler — kaydırarak bakabilirsiniz:',
-  fr: 'Nos options — faites défiler pour voir :',
-  de: 'Unsere Auswahl — zum Ansehen wischen:',
+  fr: 'Nos options — faites défiler pour voir\u00a0:',
+  de: 'Unsere Auswahl – zum Ansehen wischen:',
 };
 
 /** Çok boylu ürünün kart satırı: "3 boy · 12,90 €'dan" — sayı ve fiyat çağırandan, kalıp burada. */

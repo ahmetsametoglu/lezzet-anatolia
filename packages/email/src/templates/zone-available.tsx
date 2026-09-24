@@ -63,7 +63,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
     cta: 'Zum Katalog',
     noticeTitle: 'Nur eine Nachricht',
     noticeText:
-      'Diese Benachrichtigung senden wir nur einmal — Ihre Vormerkung ist damit erledigt. Ändert sich das Liefergebiet, können Sie sich im Katalog erneut benachrichtigen lassen.',
+      'Diese Benachrichtigung senden wir nur einmal – Ihre Vormerkung ist damit erledigt. Ändert sich das Liefergebiet, können Sie sich im Katalog erneut benachrichtigen lassen.',
     footerNotice: (postalCode) => `Diese E-Mail bezieht sich auf Ihre Benachrichtigungsanfrage für ${postalCode}.`,
   },
 };
