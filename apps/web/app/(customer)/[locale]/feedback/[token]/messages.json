@@ -1,6 +1,6 @@
 {
   "tr": {
-    "welcomeTitle": "Geçen haftaki siparişiniz nasıldı?",
+    "welcomeTitle": "Siparişiniz nasıldı?",
     "welcomeBody": "{order} — aldığınız ürünleri tek tek soracağız, bir dakikadan kısa sürer. Tamamlayınca {points} sizindir.",
     "welcomePoints": "+{n} puan",
     "start": "Başlayalım",
@@ -23,9 +23,9 @@
     "doneTitleUnhappy": "Teşekkürler — ve kusura bakmayın",
     "pointsBadge": "+{n} puan hesabınızda",
     "pointsNote": "Puanlarınız hesabınızda birikir, dilediğinizde indirime çevrilir.",
-    "reviewInviteTitle": "Memnuniyetinizi {platform}'da paylaşır mısınız?",
+    "reviewInviteTitle": "Memnuniyetinizi {platform} üzerinden paylaşır mısınız?",
     "reviewInviteBody": "Küçük işletmemiz için büyük destek olur.",
-    "reviewInviteCta": "{platform}'da değerlendir",
+    "reviewInviteCta": "{platform} üzerinden değerlendir",
     "unhappyBody": "Beğenmediğiniz ürünler oldu. Bir sorun yaşadıysanız düzeltmek isteriz.",
     "reportIssue": "Sorun bildir",
     "toCatalog": "Kataloğa dön →",

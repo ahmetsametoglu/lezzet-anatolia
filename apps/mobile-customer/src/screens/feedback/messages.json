@@ -19,8 +19,8 @@
     },
     "done": {
       "title": "Değerlendirmeniz için teşekkürler",
-      "reviewBody": "Memnuniyetinizi {platform}'da paylaşırsanız çok seviniriz — bir dakikanızı alır.",
-      "reviewCta": "{platform}'da değerlendir ↗",
+      "reviewBody": "Memnuniyetinizi {platform} üzerinden paylaşırsanız çok seviniriz — bir dakikanızı alır.",
+      "reviewCta": "{platform} üzerinden değerlendir ↗",
       "issueBody": "Beğenmediğiniz bir ürün mü vardı? Sorunu bize iletin, düzeltelim.",
       "issueCta": "Sorun bildir",
       "home": "Vitrine dön"

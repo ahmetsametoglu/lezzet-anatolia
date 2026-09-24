@@ -16,19 +16,19 @@
       "eyebrow": "Komşu daveti",
       "title": "Bu davet bağlantısı tanınmıyor",
       "description": "Bağlantı eksik kopyalanmış olabilir. Yine de hoş geldiniz — teslimat günlerimizi katalogda görebilirsiniz.",
-      "primary": "Katalogu keşfet"
+      "primary": "Kataloğu keşfet"
     },
     "runClosed": {
       "eyebrow": "Komşu daveti",
       "title": "{date} teslimatı için artık geç",
       "description": "Bu davetin çağırdığı teslimat kapandı. Bölgenizin bir sonraki teslimat günü ödeme adımında görünür — sipariş vermeye devam edebilirsiniz.",
-      "primary": "Katalogu keşfet"
+      "primary": "Kataloğu keşfet"
     },
     "full": {
       "eyebrow": "Komşu daveti",
       "title": "Bu davetin kontenjanı doldu",
       "description": "{date} teslimatı için davet edilebilecek komşu sayısına ulaşıldı. Siz yine sipariş verebilirsiniz; teslimat gününü ödeme adımında seçersiniz.",
-      "primary": "Katalogu keşfet"
+      "primary": "Kataloğu keşfet"
     },
     "self": {
       "eyebrow": "Komşu daveti",

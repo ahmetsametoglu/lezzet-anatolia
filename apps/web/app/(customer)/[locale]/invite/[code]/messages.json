@@ -9,14 +9,14 @@
       "title": "{name} sizi Lezzet Anatolie'ye davet etti",
       "someone": "Bir tanıdığınız",
       "description": "Türkiye'nin dört bir yanından seçtiğimiz lezzetler, soğuk zincirle kapınıza kadar. Keşfetmeye buradan başlayın.",
-      "primary": "Katalogu keşfet",
+      "primary": "Kataloğu keşfet",
       "secondary": "Hesap oluştur"
     },
     "unknown": {
       "eyebrow": "Davet",
       "title": "Bu davet bağlantısı artık geçerli değil",
       "description": "Bağlantı eksik kopyalanmış ya da süresi dolmuş olabilir. Yine de hoş geldiniz — lezzetlere göz atabilirsiniz.",
-      "primary": "Katalogu keşfet"
+      "primary": "Kataloğu keşfet"
     },
     "self": {
       "eyebrow": "Davet",
@@ -28,7 +28,7 @@
       "eyebrow": "Davet",
       "title": "Zaten aramızdasınız",
       "description": "Davet yeni müşterilerimiz için. Sizin de kendi davet bağlantınız var — hesabınızdan paylaşabilirsiniz.",
-      "primary": "Katalogu keşfet",
+      "primary": "Kataloğu keşfet",
       "secondary": "Hesabıma dön"
     }
   },
