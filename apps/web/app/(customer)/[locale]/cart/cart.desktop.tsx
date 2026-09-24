@@ -56,7 +56,7 @@ export function CartDesktop({ t, locale, emptyContext, awaitingPayment }: CartVi
 
         {/* Yer değişimi bildirimi listenin üstünde, kalem uyarılarının ilki: aşağıdaki engel ve kısıt blokları çoğu zaman onun
             sonucudur. */}
-        <PlaceChangeCard t={t} locale={locale} />
+        <PlaceChangeCard locale={locale} />
 
         {/* Stok uyarısı BAL tonundadır, terracotta değil: müşteri hata yapmadı, dünya değişti.
             Kırmızı bir bant onu suçlu gösterir; asıl kırmızı, çıkarılacak satırın düğmesindedir. */}

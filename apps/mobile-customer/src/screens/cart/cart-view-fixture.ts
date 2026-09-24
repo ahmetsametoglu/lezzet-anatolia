@@ -1,5 +1,7 @@
 import type { CartLineGroup, MeCartView, MeCartViewLine } from '@lezzet/types';
 
+import type { CartState } from '@/screens/customer-kit/cart-store';
+
 /*
   Sepet görünümü fikstürü: sepet ve "Siparişi tamamla" testleri aynı şekli kullanır, şekil sözleşmenin kendisidir (`MeCartView`).
 */
@@ -110,5 +112,20 @@ export function cartView(lines: MeCartViewLine[], overrides: Partial<MeCartView>
     shippingGroupFeeCents: lines.some((line) => line.group === 'shipping') ? 690 : 0,
     shippingFreeRemainingCents: 0,
     ...overrides,
+  };
+}
+
+/** Sepet deposunun nötr hâli: niyet listesi boş, ekranın çizdiği şey sunucunun görünümüdür. */
+export function cartWith(view: MeCartView): CartState {
+  return {
+    products: [],
+    bundles: [],
+    couponCode: null,
+    coupon: null,
+    view,
+    resolving: false,
+    source: 'server',
+    error: null,
+    placeChange: null,
   };
 }

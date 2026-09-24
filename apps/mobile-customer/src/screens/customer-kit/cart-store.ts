@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
-import { applyBestDiscount, meetsMinBasket } from '@lezzet/domain-core';
+import { applyBestDiscount, diffCartByPlace, meetsMinBasket } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
-import type { CatalogImage, MeCartView, MeCartViewLine } from '@lezzet/types';
+import type { CartLineChange, CatalogImage, MeCartView, MeCartViewLine } from '@lezzet/types';
 
 import {
   addCartItems,
@@ -98,6 +98,8 @@ export interface CartState {
   source: CartSource;
   /** Son sunucu turunun REDDİ (anahtar, cümle değil); ekran satır altında söyler. */
   error: string | null;
+  /** Satın alma yeri değişince kalemlerin yeni hâli; `null` iken söylenecek bir şey yok, müşteri kapatınca da `null`a döner. */
+  placeChange: CartLineChange[] | null;
 }
 
 /**
@@ -142,6 +144,7 @@ const EMPTY_CART: CartState = {
   resolving: false,
   source: 'device',
   error: null,
+  placeChange: null,
 };
 
 let state: CartState = EMPTY_CART;
@@ -180,7 +183,13 @@ function getSnapshot(): CartState {
  */
 export function resetCart(): void {
   revision += 1;
+  compareTo = null;
   publish(EMPTY_CART);
+}
+
+/** Yer değişimi kartını kapatır; bir sonraki yer değişimine kadar yeniden çizilmez. */
+export function dismissPlaceChange(): void {
+  if (state.placeChange !== null) publish({ ...state, placeChange: null });
 }
 
 /**
@@ -212,6 +221,8 @@ let context: ViewContext | null = null;
 let purchasePostalCode: string | null = null;
 /** Gel-al seçimi (adres seçicideki depo kartı): görünüm o deponun stoğuyla çözülür, posta kodu yalnız yedek. */
 let purchasePickupWarehouseId: string | null = null;
+/** Yer değişince bir sonraki okumanın kıyaslanacağı eski görünüm; okuma dönünce boşalır. */
+let compareTo: MeCartView | null = null;
 
 /** Görünümün çözüleceği yer — adres biliniyorsa o, yoksa gezinme kodu (künye: `purchasePostalCode`). */
 function placeNow(): string | null {
@@ -228,6 +239,9 @@ function queryNow(): CartViewQuery | null {
  */
 export function setPurchasePlace(postalCode: string | null, pickupWarehouseId: string | null = null): void {
   if (purchasePostalCode === postalCode && purchasePickupWarehouseId === pickupWarehouseId) return;
+  // Gezinme kodundan ilk satın alma yerine hizalanma duyurulmaz: değişen bir yer değil, gelen cevaptır.
+  const known = purchasePostalCode !== null || purchasePickupWarehouseId !== null;
+  compareTo = known && state.view.lines.length > 0 ? state.view : null;
   purchasePostalCode = postalCode;
   purchasePickupWarehouseId = pickupWarehouseId;
   refreshView();
@@ -448,6 +462,17 @@ function adopted(current: CartState, view: MeCartView): CartState {
 }
 
 /**
+ * Yer değişiminden sonraki ilk okumada farkı çıkarır; yer bilinmiyorsa "gönderilemiyor" denmez, çünkü görünüm yerin karşılanamadığını
+ * taşımaz.
+ */
+function withPlaceChange(next: CartState): CartState {
+  if (compareTo === null) return next;
+  const changes = diffCartByPlace(compareTo.lines, next.view.lines, cartLineId);
+  compareTo = null;
+  return { ...next, placeChange: changes.length > 0 ? changes : null };
+}
+
+/**
  * Misafirin cevabı benimsenir; niyet listesi dokunulmadan kalır, satırlar fiyat değiştiyse tazelenir.
  */
 function resolved(current: CartState, view: MeCartView): CartState {
@@ -526,7 +551,7 @@ async function hydrateCart(query: CartViewQuery): Promise<void> {
     publish({ ...state, resolving: false, error: result.error });
     return;
   }
-  publish(adopted(state, result.data));
+  publish(withPlaceChange(adopted(state, result.data)));
 }
 
 /** Misafirin görünümü — niyet gövdeden gider, tutarı SUNUCU çözer. */
@@ -542,7 +567,7 @@ async function resolveGuestView(query: CartViewQuery): Promise<void> {
     publish({ ...state, resolving: false, error: result.error });
     return;
   }
-  publish(resolved(state, result.data));
+  publish(withPlaceChange(resolved(state, result.data)));
 }
 
 /**

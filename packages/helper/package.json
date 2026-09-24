@@ -12,7 +12,8 @@
     "clean": "rm -rf .turbo node_modules"
   },
   "dependencies": {
-    "@lezzet/i18n": "workspace:*"
+    "@lezzet/i18n": "workspace:*",
+    "@lezzet/types": "workspace:*"
   },
   "devDependencies": {
     "@lezzet/typescript-config": "workspace:*",

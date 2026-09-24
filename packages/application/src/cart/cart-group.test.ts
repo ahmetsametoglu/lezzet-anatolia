@@ -8,6 +8,7 @@ import {
   minBasketBaseOf,
   orderLaneOf,
   orderableLines,
+  shippingGroupFee,
   splitByRoute,
   undeliverableTotalOf,
   viewWithEntries,
@@ -157,5 +158,24 @@ describe('siparişin şeridi', () => {
     // 10 € kapıya + 10 € kargoya: kapı siparişi 10 € taşır, kargo kalemi o siparişe girmez.
     expect(minBasketBaseOf([kapi, kargo, gelemez])).toBe(1_000);
     expect(minBasketBaseOf([kapi, line('local'), gelemez])).toBe(2_000);
+  });
+});
+
+describe('shippingGroupFee — eşik kargo grubunun tutarından ölçülür', () => {
+  it('grup eşiğin altındaysa ücret doğar ve kalan söylenir', () => {
+    const fee = shippingGroupFee({ shippingSubtotalCents: 3_000, freeShippingCents: 6_000, shippingTariffCents: 790 });
+    expect(fee.feeCents).toBe(790);
+    expect(fee.remainingForFreeCents).toBe(3_000);
+  });
+
+  it('grup eşiği geçtiyse ücret düşer', () => {
+    const fee = shippingGroupFee({ shippingSubtotalCents: 6_000, freeShippingCents: 6_000, shippingTariffCents: 790 });
+    expect(fee.feeCents).toBe(0);
+    expect(fee.remainingForFreeCents).toBe(0);
+  });
+
+  it('kargo grubu yokken ücret de yok — boş grup eşiğin altı sayılmaz', () => {
+    const fee = shippingGroupFee({ shippingSubtotalCents: 0, freeShippingCents: 6_000, shippingTariffCents: 790 });
+    expect(fee.feeCents).toBe(0);
   });
 });

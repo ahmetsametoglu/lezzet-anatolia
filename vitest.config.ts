@@ -71,7 +71,6 @@ const WEB_LIB_DBSIZ = [
   'apps/web/lib/identity/cart-link-landing.test.ts',
   'apps/web/lib/cart/cart-blocker.test.ts',
   'apps/web/lib/cart/discount-label.test.ts',
-  'apps/web/lib/cart/place-change.test.ts',
   'apps/web/lib/customer/name.test.ts',
   'apps/web/lib/customer/scorecard.test.ts',
   // `delivery/map-codes.test.ts` buraya girmez: kendi metninde DB izi yok ama `./map-codes` `serviceDb` çağırır.

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import type { CheckoutSnapshot } from '@lezzet/types';
 
 import type { CartState } from '@/screens/customer-kit/cart-store';
-import { cartView, cartViewLine } from '@/screens/cart/cart-view-fixture';
+import { cartView, cartViewLine, cartWith } from '@/screens/cart/cart-view-fixture';
 import addressCopy from '@lezzet/i18n/customer/address';
 import { CheckoutScreen } from './checkout-screen';
 import messages from '@lezzet/i18n/customer/checkout';
@@ -120,10 +120,6 @@ function summaryOfMockCart(): NonNullable<CheckoutSnapshot['summary']> {
     excludedLines: lines.filter((line) => line.group === 'undeliverable').map(row),
     fingerprint: 'test-fingerprint',
   };
-}
-
-function cartWith(view: CartState['view']): CartState {
-  return { products: [], bundles: [], couponCode: null, coupon: null, view, resolving: false, source: 'server', error: null };
 }
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();

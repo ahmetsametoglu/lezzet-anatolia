@@ -41,6 +41,7 @@ export * from './delivery/cart-warehouse';
 export * from './delivery/bundle-warehouse';
 export * from './delivery/shipping-fee';
 export * from './delivery/shipping-choice';
+export * from './delivery/place-change';
 export * from './delivery/parcel-plan';
 export * from './delivery/carrier-status';
 export * from './delivery/on-the-way';

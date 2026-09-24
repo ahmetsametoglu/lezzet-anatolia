@@ -474,8 +474,6 @@ export type {
 } from './cart/cart-types';
 export { resolveCartDiscount } from './cart/discount';
 export type { CartDiscountInput } from './cart/discount';
-export { diffCartByPlace } from './cart/place-change';
-export type { CartLineChange } from './cart/place-change';
 export { clearOrderedLines } from './cart/settle';
 export { readLastOrderSuggestion } from './cart/last-order';
 export type { LastOrderSuggestion } from './cart/last-order';

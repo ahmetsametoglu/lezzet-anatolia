@@ -1,4 +1,4 @@
-import { formatPrice } from '@lezzet/helper';
+import { formatPrice, placeChangeText } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { MeCartViewLine } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -22,6 +22,7 @@ import {
   applyCoupon,
   cartCount,
   cartLineId,
+  dismissPlaceChange,
   removeBundle,
   removeCoupon,
   removeProduct,
@@ -374,6 +375,22 @@ export function CartScreen() {
     <View style={styles.screen}>
       {header}
       <ScrollView contentContainerStyle={styles.content} testID="cart-scroll">
+        {/* Sessiz daralma yok: yer değişince her kalemin yeni hâli tek tek söylenir, hiçbir kalem silinmez. */}
+        {cart.placeChange === null ? null : (
+          <Note
+            tone="warm"
+            title={t.placeChange.title.replace('{n}', String(cart.placeChange.length))}
+            description={t.placeChange.note}
+            action={<TextAction label={t.placeChange.dismiss} onPress={dismissPlaceChange} testID="cart-place-change-dismiss" />}
+            testID="cart-place-change"
+          >
+            {cart.placeChange.map((change, index) => (
+              <Text key={`${change.kind}:${index}`} style={styles.placeChangeLine}>
+                {placeChangeText(change, locale)}
+              </Text>
+            ))}
+          </Note>
+        )}
         {/* Teslimat adresi sepetin neye göre değerlendirildiğini söyler; posta kodu düzenleyicisi sepette yok, çünkü iki ayrı yer
             tutmak kapattığımız ayrışmayı geri açardı. */}
         {pickupPoint !== null ? (
@@ -672,6 +689,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text['body-sm'],
     lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.muted,
+  },
+  placeChangeLine: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.note,
+    lineHeight: theme.text.note * theme.text['lead--line-height'],
+    color: theme.colors.ink,
   },
   screen: {
     flex: 1,

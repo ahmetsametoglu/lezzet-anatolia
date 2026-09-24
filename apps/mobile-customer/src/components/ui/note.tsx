@@ -21,10 +21,12 @@ interface NoteProps {
   action?: ReactNode;
   /** Üst yuva: kutunun içinde, başlığın üstünde, çünkü cümlenin ön koşulu ("hangi yer için konuşuyoruz") başlıktan önce gelir. */
   header?: ReactNode;
+  /** Başlıkla açıklama arasındaki içerik, kalem listesi gibi; metinle birlikte tek okuma birimidir. */
+  children?: ReactNode;
   testID?: string;
 }
 
-export function Note({ description, tone = 'olive', title, action, header, testID }: NoteProps) {
+export function Note({ description, tone = 'olive', title, action, header, children, testID }: NoteProps) {
   return (
     <View style={[styles.box, styles[tone]]} testID={testID}>
       {header === undefined ? null : <View style={styles.header}>{header}</View>}
@@ -32,6 +34,7 @@ export function Note({ description, tone = 'olive', title, action, header, testI
           Sarmalayıcı eylemi KAPSAMAZ (künye) — kapsasaydı düğme odaklanamazdı. */}
       <View style={styles.text} accessible accessibilityRole={tone === 'error' ? 'alert' : undefined}>
         {title === undefined ? null : <Text style={[styles.title, styles[`${tone}Text`]]}>{title}</Text>}
+        {children}
         <Text style={[styles.description, styles[`${tone}Text`]]}>{description}</Text>
       </View>
       {action === undefined ? null : <View style={styles.action}>{action}</View>}

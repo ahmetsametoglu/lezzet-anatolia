@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react-native
 
 import type { CartState } from '@/screens/customer-kit/cart-store';
 import { CartScreen } from './cart-screen';
-import { cartView, cartViewBundleLine, cartViewLine } from './cart-view-fixture';
+import { cartView, cartViewBundleLine, cartViewLine, cartWith } from './cart-view-fixture';
 import messages from '@lezzet/i18n/customer/cart';
 
 /*
@@ -48,11 +48,6 @@ jest.mock('@/screens/customer-kit/cart-store', () => ({
 }));
 
 const t = messages.tr;
-
-/** Sepetin nötr hâli — NİYET listesi boş bırakılır: ekranın çizdiği şey SUNUCUNUN görünümüdür. */
-function cartWith(view: CartState['view']): CartState {
-  return { products: [], bundles: [], couponCode: null, coupon: null, view, resolving: false, source: 'server', error: null };
-}
 
 describe('CartScreen — üç gruplu sepet', () => {
   it('grupları SÖZLEŞMEDEN ayırır ve üçünün de başlığını çizer', async () => {

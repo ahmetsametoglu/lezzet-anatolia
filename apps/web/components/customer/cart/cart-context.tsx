@@ -2,7 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { diffCartByPlace } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
+import type { CartLineChange } from '@lezzet/types';
 import { readCartAction, writeCartAction } from '@/lib/cart/actions';
 import { clearGuestCart, mergeEntry, readGuestCart, setEntryQty, writeGuestCart } from '@/lib/cart/cart-store';
 import { clearSaved, readSaved, writeSaved } from '@/lib/cart/saved-store';
@@ -18,7 +20,6 @@ import {
   type CartRef,
   type CartView,
 } from '@/lib/cart/cart-types';
-import { diffCartByPlace, type CartLineChange } from '@/lib/cart/place-change';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { CartUndo } from './cart-undo';
 import { CartWriteFailed } from './cart-write-failed';
@@ -273,7 +274,9 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         // biri yeni yer bağlamıyla çözülmüş. Fark boşsa kart hiç çizilmez — "hiçbir şey değişmedi"
         // demek için bir kutu açmak, olmayan bir olayı haber yapmaktır.
         if (compareTo.current) {
-          const changes = diffCartByPlace(compareTo.current, data.view, { noDelivery: unresolvedNow.current !== null });
+          const changes = diffCartByPlace(compareTo.current.lines, data.view.lines, cartKey, {
+            noDelivery: unresolvedNow.current !== null,
+          });
           compareTo.current = null;
           setPlaceChange(changes.length > 0 ? changes : null);
         }

@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useCallback, useState } from 'react';
+import { placeChangeText } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import cartMessages from '@lezzet/i18n/customer/cart';
 import { resolveLocalizedText } from '@lezzet/types';
@@ -27,7 +28,6 @@ import { discountLabel } from '@/lib/cart/discount-label';
 import { formatPrice } from '@/lib/storefront/format';
 import { CartIdentity } from './components/cart-identity';
 import { useCheckoutGate } from './components/cart-summary';
-import { placeChangeText } from './components/place-change-card';
 import { PhoneCartLine } from './components/phone-cart-line';
 import { PhoneCartRowsSkeleton } from './components/phone-cart-skeleton';
 import type { CartCopy, CartViewProps } from './cart-types';
@@ -221,14 +221,14 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
         {placeChange !== null && placeChange.length > 0 && (
           <Note
             tone="warm"
-            title={t.placeChange.title.replace('{n}', String(placeChange.length))}
-            description={t.placeChange.note}
-            action={<TextAction label={t.placeChange.dismiss} onClick={dismissPlaceChange} />}
+            title={copy.placeChange.title.replace('{n}', String(placeChange.length))}
+            description={copy.placeChange.note}
+            action={<TextAction label={copy.placeChange.dismiss} onClick={dismissPlaceChange} />}
           >
             <ul className="flex flex-col gap-1 pb-1">
               {placeChange.map((change, index) => (
                 <li key={`${change.kind}:${index}`} className="font-sans text-note leading-[1.6]">
-                  {placeChangeText(change, t, locale)}
+                  {placeChangeText(change, locale)}
                 </li>
               ))}
             </ul>

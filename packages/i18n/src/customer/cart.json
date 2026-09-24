@@ -103,6 +103,17 @@
       "none": "Henüz adres eklemediniz — şimdilik {code} posta koduna göre gösteriyoruz.",
       "pickupLine": "Depodan teslim · {name}",
       "pickupNote": "Sepetiniz bu deponun stoğuna göre hesaplandı. Teslim saatini telefonla kararlaştırın."
+    },
+    "placeChange": {
+      "title": "Yeni teslimat yerinize göre {n} üründe değişiklik var",
+      "toShipping": "{name} artık kargoyla gidiyor",
+      "toRoute": "{name} kapıya teslime geçti",
+      "noDelivery": "{name} bu adrese şu an gönderilemiyor",
+      "unavailable": "{name} yeni yerinizde şu an alınamıyor",
+      "reduced": "{name} — sepette {qty} adet, bu yere en fazla {max} adet getirebiliyoruz",
+      "price": "{name} fiyatı değişti — {from} yerine {to}",
+      "dismiss": "Anladım",
+      "note": "Hiçbir ürün silinmedi. Fırsat fiyatları bölgedeki stoğa bağlıdır ve teslimat yerine göre değişebilir; normal fiyatlar ise her yerde aynıdır."
     }
   },
   "fr": {
@@ -209,6 +220,17 @@
       "none": "Vous n'avez pas encore d'adresse — nous affichons pour l'instant selon le code postal {code}.",
       "pickupLine": "Retrait à l'entrepôt · {name}",
       "pickupNote": "Votre panier a été évalué selon le stock de l'entrepôt. Convenez de l'heure de retrait par téléphone."
+    },
+    "placeChange": {
+      "title": "Articles modifiés par votre nouveau lieu de livraison : {n}",
+      "toShipping": "{name} passe en envoi colis",
+      "toRoute": "{name} passe en livraison à domicile",
+      "noDelivery": "{name} ne peut pas être livré à cette adresse pour le moment",
+      "unavailable": "{name} n'est pas disponible à votre nouveau lieu pour le moment",
+      "reduced": "{name} — {qty} au panier, nous pouvons en apporter {max} au maximum à ce lieu",
+      "price": "{name} a changé de prix — {to} au lieu de {from}",
+      "dismiss": "J'ai compris",
+      "note": "Aucun article n'a été supprimé. Les prix promotionnels dépendent du stock local et peuvent varier selon le lieu de livraison ; les prix normaux, eux, sont partout les mêmes."
     }
   },
   "de": {
@@ -315,6 +337,17 @@
       "none": "Sie haben noch keine Adresse — wir zeigen vorerst anhand der Postleitzahl {code}.",
       "pickupLine": "Abholung im Lager · {name}",
       "pickupNote": "Ihr Warenkorb wurde anhand des Lagerbestands bewertet. Vereinbaren Sie die Abholzeit telefonisch."
+    },
+    "placeChange": {
+      "title": "{n} Artikel haben sich mit Ihrem neuen Ort geändert",
+      "toShipping": "{name} geht jetzt als Paket",
+      "toRoute": "{name} wird jetzt an die Tür geliefert",
+      "noDelivery": "{name} kann derzeit nicht an diese Adresse geliefert werden",
+      "unavailable": "{name} ist an Ihrem neuen Ort derzeit nicht erhältlich",
+      "reduced": "{name} — {qty} im Warenkorb, an diesen Ort können wir höchstens {max} bringen",
+      "price": "{name} hat einen anderen Preis — {to} statt {from}",
+      "dismiss": "Verstanden",
+      "note": "Es wurde kein Artikel entfernt. Aktionspreise hängen vom Bestand vor Ort ab und können sich mit dem Lieferort ändern; die normalen Preise sind überall gleich."
     }
   }
 }

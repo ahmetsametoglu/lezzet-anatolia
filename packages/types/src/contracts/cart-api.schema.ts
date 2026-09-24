@@ -197,6 +197,26 @@ export const MeCartViewLineSchema = z.discriminatedUnion('kind', [
 export type MeCartViewLine = z.infer<typeof MeCartViewLineSchema>;
 
 /**
+ * Yer değişince bir kalemin yeni hâli; web ve native aynı farkı aynı cümleyle söyler (`diffCartByPlace`, `placeChangeText`). Kalem
+ * silinmez, her değişiklik tek tek söylenir.
+ */
+export const CartLineChangeSchema = z.discriminatedUnion('kind', [
+  /** Kapıdan kargoya düştü; artık ayrı bir siparişle gider. */
+  z.object({ kind: z.literal('to_shipping'), name: z.string() }),
+  /** Kargodan kapıya çıktı; yeni yerin deposunda var. */
+  z.object({ kind: z.literal('to_route'), name: z.string() }),
+  /** Yeni yerde karşılanamıyor: soğuk zincir olduğu için kargoya da verilemiyor ya da hiçbir depoda kalmadı. */
+  z.object({ kind: z.literal('unavailable'), name: z.string() }),
+  /** Kalem var ama sepetteki adet kadar yok; ayrı hâl, çünkü "alınamıyor" denirse müşteri kalemi büsbütün siler. */
+  z.object({ kind: z.literal('reduced'), name: z.string(), qty: z.number().int(), availableHere: z.number().int() }),
+  /** Fiyat değişti; teklif partisi yere bağlıdır (DOMAIN §5). */
+  z.object({ kind: z.literal('price'), name: z.string(), fromCents: z.number().int(), toCents: z.number().int() }),
+  /** Yeni adres hiçbir yoldan karşılanamıyor ve kalemin yolu bilinmez hâle düştü. */
+  z.object({ kind: z.literal('no_delivery'), name: z.string() }),
+]);
+export type CartLineChange = z.infer<typeof CartLineChangeSchema>;
+
+/**
  * İstemcinin motoru çalıştırabilmesi için kampanya kuralı, `DiscountRule`in taşınabilir kesiti. `codes` taşınmaz, çünkü
  * herkese geçerli kod listesi vermek olurdu; kalan alanlar vitrinde zaten açık.
  */
