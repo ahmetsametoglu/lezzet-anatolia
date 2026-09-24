@@ -1,27 +1,15 @@
 import { z } from 'zod';
 
 /**
- * **Bildirim KAYDI** (14.12, migration 0049) — "şu kişiye şu oldu" satırı.
- *
- * Dosya adı `app-notification` çünkü `contracts/notification.schema.ts` başka bir şeyin adı:
- * orada GİDEN bildirimin kanal yükleri yaşıyor (`OrderNotification` = maile giren veri). Bu ise
- * kalıcı KAYIT — uygulama içi zilin, okundu/gizlendi hâlinin ve teslim defterinin öznesi. İkisini
- * tek dosyada toplamak, "notification" kelimesinin iki ayrı anlamını tek ada sıkıştırmak olurdu.
- *
- * ── METİN YOK, VERİ VAR ─────────────────────────────────────────────────────
- * Satır cümle taşımaz (dil müşterinin tercihine bağlı ve değişebilir); `kind` + `payload` taşır,
- * cümleyi okuyan yüzey kurar. `payload` dil-bağımsız ve KİMLİKSİZ küçük veridir (referenceNo,
- * postalCode) — hedefe N+1 okuma yapmadan ve hedef silinse bile cümle kurulabilsin diye.
+ * Bildirim kaydı, "şu kişiye şu oldu" satırı; giden bildirimin kanal yükleri ayrı dosyada (`contracts/notification.schema.ts`), ad bu
+ * yüzden `app-notification`. Satır cümle değil `kind` + `payload` taşır, çünkü cümle okuyanın diliyle kurulur ve payload hedef silinse
+ * de cümle kurulabilsin diye dil-bağımsız, kimliksiz küçük veridir.
  */
 
 /**
- * Olay türü — kaynağı BU enum, DB'de düz text (0049 künyesi: her modülle büyüyen küme DB
- * enum'unda her seferinde migration isterdi; yanlış değeri Zod reddeder, ekran bilinmeyen türe
- * genel cümleyle düşer).
- *
- * Müşteri türleri `NotifyEventName` ile AYNI adları taşır (bilerek — iki sözlük eşlenmez, bir
- * sözlük paylaşılır). `ticket_received` LİSTEDE YOK: o bir teyittir, müşterinin kendi eyleminin
- * yankısını zile düşürmek gürültüdür (karşı-inceleme 11).
+ * Olay türü: küme burada, DB'de düz text, çünkü her modülle büyüyen küme DB enum'unda her seferinde migration isterdi; tanınmayan türü
+ * ekran genel cümleyle çizer. Müşteri türleri `NotifyEventName` ile aynı adları taşır; `ticket_received` yok, çünkü müşterinin kendi
+ * eyleminin yankısı zilde gürültüdür.
  */
 export const AppNotificationKindEnum = z.enum([
   // ── Müşteri: sipariş yaşam döngüsü ──
@@ -40,16 +28,9 @@ export const AppNotificationKindEnum = z.enum([
   'zone_available',
   'b2b_application_result',
   // ── Personel ──
-  /**
-   * Ulaştırılamayan BELGE (karşı-inceleme 2 + ölçüm): e-postasız müşterinin sipariş onayı bugün
-   * `wa_link` "sent" raporlayıp HİÇBİR YERE gitmiyordu (üretimde `onLink` boş). Dayanıklı ortam
-   * yükümlülüğü olan belge hiçbir kanala ulaşamadıysa iş İNSANA düşer — bu tür o düşüşün satırı.
-   */
+  /** Dayanıklı ortam yükümlülüğü olan belge (sipariş onayı gibi) hiçbir kanala ulaşamadı, örneğin e-postasız müşteride; iş insana düşer. */
   'document_undeliverable',
-  /*
-    Dört tür daha (kullanıcı kararı 26.08): "bildirim ≠ kuyruk" ilkesi bozulmadı — kuyruğun kendisi
-    değil, kuyruğa DÜŞME ÂNI haber olur. Üreticileri `notification/staff-events.ts`.
-  */
+  /* Personel türleri kuyruğun kendisi değil, kuyruğa düşme anının haberidir; üreticileri `notification/staff-events.ts`. */
   /** Müşteri şikâyet/talep açtı — yönetim kuyruğunun kapı zili. */
   'ticket_opened',
   /** Bir varyantın kullanılabilir stoğu eşiğin ALTINA indi (ilk iniş — künye staff-events'te). */
@@ -57,34 +38,25 @@ export const AppNotificationKindEnum = z.enum([
   /** Kurye gün kapanışında sayım/tahsilat farkı çıktı — para tarafının kapı zili. */
   'run_close_mismatch',
   /**
-   * Sefer kapandı, durak(lar) sonuçlanmadı — askıda kalanlar sevkiyat masasına düştü (03.09,
-   * kurye denetimi bulgu 7). Günü sevkiyatçı seçer (16.08 kararı korunur); bu zil yalnız "bak"
-   * der. Hedefi web'in askıda şeridi (`/operations/deliveries`).
+   * Sefer kapandı ama durak(lar) sonuçlanmadı: askıda kalanlar sevkiyat masasına düşer ve günü sevkiyatçı seçer, zil yalnız "bak" der.
+   * Hedefi web'in askıda şeridi (`/operations/deliveries`).
    */
   'run_close_pending',
   /** Yeni kurumsal başvuru düştü — onay kuyruğunun kapı zili. */
   'b2b_application_received',
-  /**
-   * Transfer eksik kabul edildi (04.09, 21.248): alan depo eksiği beyan etti, kayıp yazıldı.
-   * Zil GÖNDEREN deponun personeline ve yönetime gider — "ben 8 yolladım, 7 geldi" cümlesi
-   * artık kimsenin sekmesini açmasına bağlı değil. Hedefi transfer belgesi (payload'da).
-   */
+  /** Transfer eksik kabul edildi ve kayıp yazıldı; zil gönderen deponun personeline ve yönetime gider, hedefi transfer belgesi (payload'da). */
   'transfer_shortfall',
   /**
-   * Transfer FAZLA kabul edildi (04.09, 21.253): alan depo sevk edilenden fazlasını saydı, SAY belgesiyle
-   * stoğuna ekledi. Gönderen deponun defterinde o birim hâlâ duruyor — zil gönderene gider ki kendi
-   * sayımında bulsun ("dört sandım, beş koymuşum").
+   * Transfer fazla kabul edildi ve alan depo fazlayı sayım belgesiyle stoğuna ekledi; zil gönderene gider, çünkü o birim onun defterinde
+   * hâlâ durur ve kendi sayımında bulunmalı.
    */
   'transfer_excess',
 ]);
 export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
 
 /**
- * PERSONEL türleri — saklama süpürmesinin (14.15) süzgeci. Müşteri satırı SÜPÜRÜLMEZ (akış
- * müşterinin geçmişidir); personel satırı ise fan-out ile kişi başına ÇOĞALIR ve görülmüş hâli
- * yalnız gürültüdür. Yeni personel türü enum'a girerken BURAYA da girer — girmezse satırları
- * sonsuza dek birikir (süpürme tanımadığı türe dokunmaz: müşteri satırını silmemek, birikimden
- * pahalı bir yanlıştır).
+ * Personel türleri, saklama süpürmesinin süzgeci: personel satırı fan-out ile kişi başına çoğalır ve görülmüş hâli gürültüdür, müşteri
+ * satırı ise geçmiştir ve süpürülmez. Yeni personel türü buraya da girer, yoksa süpürme onu tanımaz ve satırları sonsuza dek birikir.
  */
 export const STAFF_NOTIFICATION_KINDS = [
   'document_undeliverable',
@@ -140,14 +112,13 @@ export const AppNotificationUpdateSchema = AppNotificationSchema.pick({ id: true
 export type AppNotificationUpdate = z.infer<typeof AppNotificationUpdateSchema>;
 
 /**
- * **Teslim defteri** (0049) — bildirim OLGUsu ile kanala TESLİMİ ayrı kayıtlardır: BELGE sınıfı
- * "e-posta her zaman + push da" der, tek satır birden çok teslim doğurur; notifier zaten
- * `NotifyResult[]` (dizi) döndürüyordu ve tek kolon o diziyi ezerdi.
+ * Teslim defteri: bildirimin olgusu ile kanala teslimi ayrı kayıtlardır, çünkü belge sınıfı birden çok kanala gider ve tek satır birden
+ * çok teslim doğurur.
  */
 export const NotificationDeliverySchema = z.object({
   id: z.string().uuid(),
   notificationId: z.string().uuid(),
-  /** Kanal adı — küme `NotifyChannel`dan (packages/notify) + ileride `push`; DB'de text. */
+  /** Kanal adı: `NotifyChannel` kümesi (packages/notify) ve `push`; DB'de text. */
   channel: z.string(),
   /** NotifyResult'ın üçlüsü, olduğu gibi. */
   status: z.enum(['sent', 'skipped', 'error']),
@@ -159,9 +130,8 @@ export const NotificationDeliverySchema = z.object({
    */
   ref: z.string().nullable(),
   /**
-   * Makbuz (14.16) — Expo teslimi ASENKRON söyler: gönderimde dönen BİLETTİR, teslim tutanağı
-   * sonradan sorulur. `ok` · `error` · `expired` (24 saatlik makbuz penceresi kaçtı) ·
-   * `unparseable` (ref çözülemedi — döngüye girmesin diye kapatıldı). `null` = henüz sorulmadı.
+   * Makbuz: Expo teslimi asenkron söyler, gönderimde dönen bilettir ve tutanak sonradan sorulur. `expired` 24 saatlik pencere kaçtı,
+   * `unparseable` ref çözülemedi ve döngüye girmesin diye kapatıldı; `null` henüz sorulmadı.
    */
   receiptStatus: z.string().nullable(),
   receiptCheckedAt: z.string().datetime({ offset: true }).nullable(),

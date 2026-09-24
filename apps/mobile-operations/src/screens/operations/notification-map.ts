@@ -5,37 +5,9 @@ import type { NotificationRow } from '@lezzet/mobile-kit/src/lib/api/notificatio
 import type { OperationsSection } from '@/lib/operations/sections';
 
 /*
-  UÇTAN GELEN SATIR → OPERASYON BİLDİRİMİ (14.13 — fixture'ın yerini alan çeviri katmanı).
-
-  ── BAŞLIK + ALT SATIR + TON `@lezzet/i18n`DEN ──────────────────────────────
-  Web operasyon zili aynı personel satırını aynı cümleyle göstermek zorunda; sözlük paylaşılan
-  pakette (`staffNotificationBrief`, Türkçe: operasyon yüzeyi tek dil, CLAUDE §2). Burada YÜZEYE
-  ÖZGÜ olan kalır: satırın nereye GİTTİĞİ ve bilinmeyen türün genel metni.
-
-  ── BÖLÜM ARTIK BİR KAPI DEĞİL, ETİKET (kullanıcı kararı 05.09) ─────────────
-  Eski hâlde bölüm iki iş yapıyordu: satırın rengini söylemek VE satırı gizlemek. İkincisi ölçülen
-  bir arızaydı — sunucu alıcıyı *rol × depo* ile seçtikten sonra ekran aynı satırı bir kez daha
-  *bölüm* ile süzüyordu ve iki süzgeç aynı fikirde değildi. Somut: `stock_low` rolleri
-  `['admin','warehouse']` ama eski eşleme onu `'warehouse'` bölümüne bağlıyordu, yani YALNIZ yönetici
-  olan kişiye YAZILAN satır ekranda hiç çizilmiyordu. Ters yönü de vardı: `run_close_pending`
-  depocuya yazılıyor ama bölümü `'management'`, depocu göremiyordu.
-
-  Bundan sonra kitleyi YALNIZ SUNUCU belirler. Bölüm rengi/rozeti/çipi verir; hiçbir satırı
-  düşürmez (`sections.ts` künyesi).
-
-  ── BÖLÜM = HEDEF EKRANIN BÖLÜMÜ, üreten modülün değil ─────────────────────
-  Kural tasarımın kendi verisinden: v3'ün örnek satırında "Azalan stok" bir STOK olayı ama bölümü
-  YÖNETİM, çünkü hedefi tedarik ekranı; "Musa K. rotayı kapattı" bir KURYE olayı ama bölümü DEPO,
-  çünkü hedefi kurye dönüş kabulü. Web de aynı şeyi söylüyor (`opsNotificationHref`: `stock_low` →
-  `/operations/procurement`). Eski mobil eşleme bölümü üreten modüle göre yazmıştı — tasarımla da
-  weble de çelişen tek yer orasıydı.
-
-  ── HEDEFİ OLMAYAN SATIR TIKLANMAZ ─────────────────────────────────────────
-  Tasarım bunu zaten öngörmüş (`sc-if bn.hedef`). Mobilde operasyon tarafında derin bağ altyapısı
-  yok ve İKİ türün (belge · askıda kapanış) açacağı ekran HENÜZ YOK — o satırlar yalnız haber
-  verir. "Var olmayan adrese götürmektense hiç götürme" kararının devamı; eskisinden farkı, artık
-  HERKESİ bölüm köküne götürmüyor olması (bölüm kökü bir cevap değil, bir savuşturmaydı).
-  **Kurumsal başvuru 07.09'da bu üçlüden ÇIKTI** — ekranı doğdu (21.217).
+  Uçtan gelen satır → operasyon bildirimi: başlık, alt satır ve ton web ile paylaşılan sözlükten (`staffNotificationBrief`) gelir, burada
+  yüzeye özgü olan satırın gittiği yer ve bilinmeyen türün genel metnidir. Kitleyi yalnız sunucu belirler; bölüm hedef ekranın bölümüdür,
+  rengi verir ve satır gizlemez, hedefi olmayan satır tıklanmaz.
   BEKLEYEN(21.284): belge · askıda kapanış için hedef ekranlar.
 */
 
@@ -45,7 +17,7 @@ export interface OperationsNotification {
   title: string;
   /** Açıklayıcı ikinci satır (tasarımın `bn.alt`ı) — sözlükten; olgusu yoksa `null`. */
   sub: string | null;
-  /** Kısa TÜR etiketi ("Belge") — bir bakışta ayırt etme (26.08); sözlükten gelir. */
+  /** Kısa tür etiketi ("Belge"), bir bakışta ayırt etmek için; sözlükten gelir. */
   label: string;
   /** Satırın RENGİNİ ve rozetini veren bölüm — hedef ekranın bölümü. Satırı GİZLEMEZ. */
   section: OperationsSection;
@@ -69,29 +41,21 @@ export interface NotificationDestination {
 }
 
 /**
- * TÜR → HEDEF. Etiket TÜR başına değil HEDEF başına yazılır: iki transfer türü aynı ekrana gider,
- * aynı cümleyi paylaşır. Şablonla türetilmedi ("{ad}'ı aç") çünkü Türkçe çekim eki sesli/sessiz
- * uyumuna göre değişiyor ("Transfer'i", "Gün Sonu'nu", "Toplama'yı") ve şablon üçünü de bozardı.
- *
- * Bölüm bu tablodan OKUNUR (aşağıdaki `sectionOf`) — ikinci bir bölüm tablosu tutmak, aynı gerçeği
- * iki yerde yazmak olurdu (CLAUDE §1).
+ * Tür → hedef tablosu: etiket hedef başına yazılır (iki transfer türü aynı ekrana gider) ve şablonla türetilmez, çünkü Türkçe ek ses
+ * uyumuna göre değişir ("Transfer'i", "Toplama'yı"); bölüm de bu tablodan okunur ki aynı gerçek iki tabloda yazılmasın.
  */
 const DESTINATION: Partial<Record<AppNotificationKind, (targetId: string | null) => NotificationDestination | null>> = {
   /* Talep kuyruğunun kaydına doğrudan açılan TEK tür — ekran `?id=` alıyor (complaint-screen). */
   ticket_opened: (targetId) => (targetId === null ? null : { href: `/complaint?id=${targetId}`, label: 'Talebi aç', section: 'management' }),
   /* Eşik listesi tedarik önerisinde yaşıyor; varyanta açılan bir ekran yok, kuyruk var. */
   stock_low: () => ({ href: '/supply-suggestion', label: 'Tedarik önerisini aç', section: 'management' }),
-  /*
-    BAŞVURUNUN KENDİSİNE (21.217) — bildirim hangisini kastettiğini biliyor, araya liste konmuyor.
-    Kimliksiz bildirimde satır tıklanmaz (`null`): hedefi olmayan bir "aç" düğmesi, dokunulunca
-    hiçbir yere gitmeyen ölü bir düğmedir.
-  */
+  /* Bildirim başvurunun kendisine açılır; kimliksiz satır tıklanmaz, çünkü hedefsiz bir "aç" düğmesi ölü düğmedir. */
   b2b_application_received: (targetId) =>
     targetId === null ? null : { href: `/b2b-application?id=${targetId}`, label: 'Başvuruyu aç', section: 'management' },
   /* Kapanış farkı gün sonu özetinde okunur (M2) — parametresiz, salt okuma. */
   run_close_mismatch: () => ({ href: '/day-end', label: 'Gün sonunu aç', section: 'money' }),
   /* Transferin iki yüzü de aynı ekranda: "son kapananlar" listesi gönderen satırını da taşıyor.
-     BEKLEYEN(21.284): ekran `?transferId=` alıp satırı seçmiyor — bugün liste başına gidiliyor. */
+     BEKLEYEN(21.284): ekran `?transferId=` alıp satırı seçmiyor, liste başına gidilir. */
   transfer_shortfall: () => ({ href: '/inbound', label: 'Transferi aç', section: 'warehouse' }),
   transfer_excess: () => ({ href: '/inbound', label: 'Transferi aç', section: 'warehouse' }),
 };
@@ -103,8 +67,6 @@ const DESTINATION: Partial<Record<AppNotificationKind, (targetId: string | null)
 const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, OperationsSection>> = {
   document_undeliverable: 'management',
   run_close_pending: 'management',
-  /* `b2b_application_received` 07.09'da BURADAN DÜŞTÜ — hedefi doğdu (21.217). Künyenin kendi
-     kuralı: "hedef doğduğu gün bu tablodan düşer; iki tablo aynı anda aynı türü taşımaz." */
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */
@@ -116,9 +78,8 @@ const FALLBACK = {
 };
 
 /**
- * Push dokunuşunun adresi (21.310) — uygulama içi listeyle AYNI hedef tablosundan (`DESTINATION`): iki yol
- * ayrı eşleme taşısaydı bildirimden açılan ekran listeden açılandan başka olurdu. Hedefi olmayan tür `null`
- * döner; dokunuş uygulamayı yalnız öne getirir.
+ * Push dokunuşunun adresi uygulama içi listeyle aynı hedef tablosundan (`DESTINATION`) gelir, yoksa bildirimden açılan ekran listeden
+ * açılandan başka olurdu. Hedefi olmayan tür `null` döner ve dokunuş uygulamayı yalnız öne getirir.
  */
 export function operationsNotificationHref(target: Pick<NotificationRow, 'kind' | 'targetId'>): string | null {
   return DESTINATION[target.kind as AppNotificationKind]?.(target.targetId)?.href ?? null;

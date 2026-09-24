@@ -2,24 +2,17 @@ import { staffNotificationBrief, type StaffNotificationTone } from '@lezzet/i18n
 import type { MeNotification } from '@lezzet/types';
 
 /*
-  UÇTAN GELEN SATIR → OPERASYON ZİL SATIRI (14.15) — mobil kabuğun `notification-map`inin web eşi.
-  Başlık ve ton PAYLAŞILAN sözlükten (`staffNotificationBrief`, `@lezzet/i18n`): aynı personel
-  satırı native akışta ve web panelinde AYNI cümleyi kurar. Yüzeye özgü olan GİDİLECEK YERDİR:
-  mobil bölüme götürür, web rotaya.
-
-  ── KÜME AÇIK: bilinmeyen tür SESSİZCE DÜŞMEZ ───────────────────────────────
-  `kind` sunucuda büyür; sözlüğün tanımadığı tür genel başlık + sakin tonla ÇİZİLİR. Web her
-  dağıtımda sunucuyla eşzamanlı olduğundan bu satır normalde görünmez — görünüyorsa sözlüğe
-  eşlemesi yazılmamış demektir ve gizlemek o açığı görünmez kılardı.
+  Uçtan gelen satır → operasyon zil satırı, mobil kabuğun `notification-map`inin web eşi: başlık ve ton paylaşılan sözlükten gelir,
+  yüzeye özgü olan gidilecek rotadır. Sözlüğün tanımadığı tür genel başlıkla çizilir, çünkü gizlemek eşlemesi yazılmamış türü görünmez kılardı.
 */
 
 export interface OpsNotificationRow {
   id: string;
   title: string;
-  /** Açıklayıcı ikinci satır (05.09) — sözlük başlığı ikiye ayırdı; `null` meşru (künyesi orada). */
+  /** Açıklayıcı ikinci satır; olgusu yoksa `null`. */
   subtitle: string | null;
   tone: StaffNotificationTone;
-  /** Kısa TÜR etiketi ("Belge") — bir bakışta ayırt etme (26.08); sözlükten gelir. */
+  /** Kısa tür etiketi ("Belge"), bir bakışta ayırt etmek için; sözlükten gelir. */
   label: string;
   /** Operasyon rotası — hedefsiz satırda null: satır tıklanmaz, yalnız haber verir. */
   href: string | null;
@@ -27,11 +20,8 @@ export interface OpsNotificationRow {
 }
 
 /**
- * Hedef ADRESTEN, içerikten değil: `document_undeliverable` hedefi siparişin kendisi (dispatch
- * `input.target`ı aynen taşır) — operatör "hangi belge" sorusunu sipariş detayında cevaplar.
- * Talep hedefi kuyruğun `?t=` sözleşmesine gider (seçili yazışma adreste yaşar — tickets künyesi).
- * Hedef nesnesi ekranlaşmamış türler EKRANA gider: eşik düşüşü tedarik önerisine (eşik listesi
- * orada), kapanış uyuşmazlığı teslimat/rota ekranına, kurumsal başvuru müşteri/onay kuyruğuna.
+ * Hedef adresten okunur, içerikten değil: sipariş ve talep kendi kaydına açılır; hedef nesnesi ekranlaşmamış tür işin yapıldığı ekrana
+ * gider (eşik düşüşü tedarik önerisine, kapanış uyuşmazlığı teslimat ekranına, kurumsal başvuru müşteri kuyruğuna).
  */
 export function opsNotificationHref(row: Pick<MeNotification, 'kind' | 'targetType' | 'targetId'>): string | null {
   if (row.targetType === 'order' && row.targetId) return `/operations/orders/${row.targetId}`;

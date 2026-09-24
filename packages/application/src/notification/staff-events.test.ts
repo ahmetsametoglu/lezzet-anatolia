@@ -4,13 +4,8 @@ import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { notifyStockLowAfterReserve, notifyTicketOpened } from './staff-events';
 
 /**
- * PERSONEL OLAY ÜRETİCİLERİ (26.08). En kritik iki üretici sınanır:
- *  · `stock_low`: eşik ALTINDA satır doğar (payload sayıları gerçek), aynı düşüş İKİNCİ kez zile
- *    düşmez (kalıcı dedupe — "ilk iniş" sözleşmesi), boş girdi sessizliktir
- *  · `ticket_opened`: talep başına tek haber (dedupe), tip payload'da tasinir
- *
- * Fan-out zaten `dispatch.test`te çivili; burada sınanan ÜRETİCİNİN kararı. Satırlar bu testin
- * kurduğu personele yazılır ve purge ile gider (CLAUDE §4b: küresel sayıya bakılmaz).
+ * Personel olay üreticileri: `stock_low` eşik altında satır doğurur ve aynı düşüşü ikinci kez zile düşürmez, `ticket_opened` talep başına
+ * tek haberdir. Fan-out `dispatch.test`te sınanır, burada üreticinin kararı; satırlar testin kurduğu personele yazılır ve purge ile gider.
  */
 const db = serviceDb();
 const stamp = Date.now();
