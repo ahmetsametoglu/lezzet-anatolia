@@ -10,7 +10,7 @@ import {
 } from '@lezzet/sendcloud';
 import type { ShippingRateProvider } from './port';
 
-/** Portun Sendcloud uygulaması. Anahtarlar burada okunur: her yüzey kendisi okusaydı yanlış yazılmış bir env adı tek yüzeyi sessizce sabit tarifeye düşürürdü. */
+/** Portun Sendcloud uygulaması. Anahtarlar burada okunur: her yüzey kendisi okusaydı yanlış yazılmış bir env adı tek yüzeyde teklifi sessizce kapatırdı. */
 export function sendcloudProvider(overrides: Partial<SendcloudConfig> = {}): ShippingRateProvider {
   const config: SendcloudConfig = {
     publicKey: overrides.publicKey ?? process.env.SENDCLOUD_PUBLIC_KEY ?? '',

@@ -67,37 +67,37 @@ afterAll(async () => {
   SettingsService.invalidate();
 });
 
-describe('kargo ücreti ve KDV (07.3)', () => {
+describe('kargo ücreti ve KDV', () => {
   it('rota içi teslimat ücretsiz; toplam sepetin kendisidir', async () => {
     const r = await odemeCozumle({ customerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r).toMatchObject({ shippingFeeCents: 0, shippingFreeReason: 'route', orderTotalCents: 4000 });
     expect(r.shippingVat).toEqual([]);
   });
 
-  it('kargoda eşik altı sipariş ücret öder ve ücret toplama eklenir', async () => {
-    const r = await odemeCozumle({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES });
-    // Ayar varsayılanı: ücret 11,90 €, eşik 100 €.
+  it('kargoda eşik altı sipariş seçilen servisin ücretini öder ve ücret toplama eklenir', async () => {
+    const r = await odemeCozumle({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES, quotedFeeCents: 1190 });
     expect(r.shippingFeeCents).toBe(1190);
     expect(r.orderTotalCents).toBe(5190);
     expect(r.remainingForFreeShippingCents).toBe(6000);
     expect(r.shippingVat).toEqual([{ vatRate: 5.5, amountCents: 1190, vatCents: 62 }]);
   });
 
-  it('eşik üstü kargo bedava', async () => {
-    // Sepet eşiğin (100 €) üstünde olmalı.
-    const r = await odemeCozumle({ customerId, deliveryType: 'shipping', basketCents: 12000, lines: [{ totalCents: 12000, vatRate: 5.5 }] });
-    expect(r).toMatchObject({ shippingFeeCents: 0, shippingFreeReason: 'threshold' });
+  // Sabit yedek ücret yok: bir ayardan ya da varsayılandan tutar okunursa müşteri hesaplanmamış bir kargo ücreti öderdi.
+  it('eşik altında taşıyıcı fiyat vermediyse ücret ve toplam bilinmez', async () => {
+    const r = await odemeCozumle({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES, quotedFeeCents: null });
+    expect(r).toMatchObject({
+      shippingFeeCents: null,
+      orderTotalCents: null,
+      shippingFreeReason: null,
+      remainingForFreeShippingCents: 6000,
+    });
+    expect(r.shippingVat).toEqual([]);
   });
 
-  it('ücret ayardan okunur — değiştirince hesap değişir', async () => {
-    const settings = settingsSnapshot(db);
-    await settings.override('shipping_fee_cents', 1200);
-    try {
-      const r = await odemeCozumle({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES });
-      expect(r.shippingFeeCents).toBe(1200);
-    } finally {
-      await settings.restore();
-    }
+  it('eşik üstü kargo teklifsiz de bedava', async () => {
+    // Sepet eşiğin (100 €) üstünde olmalı.
+    const r = await odemeCozumle({ customerId, deliveryType: 'shipping', basketCents: 12000, lines: [{ totalCents: 12000, vatRate: 5.5 }] });
+    expect(r).toMatchObject({ shippingFeeCents: 0, shippingFreeReason: 'threshold', orderTotalCents: 12000 });
   });
 });
 

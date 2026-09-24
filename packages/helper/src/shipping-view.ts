@@ -1,4 +1,4 @@
-import type { CheckoutServicePoint, CheckoutShippingOption } from '@lezzet/types';
+import type { CheckoutServicePoint, CheckoutShipping, CheckoutShippingOption } from '@lezzet/types';
 
 /** Seçicinin satırı: nokta ve onu taşıyacak, türünü kabul eden servis (`orderServicePoints`). */
 export type ServicePointEntry = { point: CheckoutServicePoint; option: CheckoutShippingOption };
@@ -33,6 +33,19 @@ export function servicePointRequired(
 ): boolean {
   if (shipping === null || shipping.mode === 'auto') return false;
   return shippingChoiceView(shipping.options, requestedMode).mode === 'point';
+}
+
+/**
+ * Servis listesi çizilemediğinde söylenecek cümle: taşıyıcıya ulaşılamadıysa geçici, ürün ya da depo verimiz eksikse "gönderilemiyor",
+ * teklif geldi ama servis yoksa adresin gerçeği. Masaüstü, telefon görünümü ve native aynı kuraldan okur.
+ */
+export function shippingNotice(
+  shipping: Pick<CheckoutShipping, 'status' | 'unshippable'> | null,
+  copy: { unavailable: string; unshippable: string; unshippableOrder: string; none: string },
+): string {
+  if (shipping === null || shipping.status === 'off' || shipping.status === 'provider_error') return copy.unavailable;
+  if (shipping.status === 'ok') return copy.none;
+  return shipping.unshippable.length > 0 ? copy.unshippable.replace('{products}', shipping.unshippable.join(', ')) : copy.unshippableOrder;
 }
 
 /**

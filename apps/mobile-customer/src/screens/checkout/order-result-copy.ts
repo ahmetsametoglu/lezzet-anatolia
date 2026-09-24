@@ -77,6 +77,8 @@ export function rejectionMessage(
       return r.customer_not_found;
     case 'shipping_option_unavailable':
       return r.shipping_option_unavailable;
+    case 'shipping_unpriced':
+      return r.shipping_unpriced[result.reason];
     case 'service_point_invalid':
       return r.service_point_invalid;
     case 'pickup_not_allowed':

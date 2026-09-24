@@ -1,4 +1,4 @@
-import { UNKNOWN_AMOUNT, formatPrice, servicePointRequired, type ServicePointEntry } from '@lezzet/helper';
+import { UNKNOWN_AMOUNT, formatPrice, servicePointRequired, shippingNotice, type ServicePointEntry } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { AddressCheckResult, PaymentMethod } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -299,14 +299,17 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     ? UNKNOWN_AMOUNT
     : payment === null
       ? t.summary.pending
-      : payment.shippingFeeCents === 0
-        ? t.summary.free
-        : formatPrice(payment.shippingFeeCents, locale);
+      : payment.shippingFeeCents === null
+        ? UNKNOWN_AMOUNT
+        : payment.shippingFeeCents === 0
+          ? t.summary.free
+          : formatPrice(payment.shippingFeeCents, locale);
   /**
    * Ödenecek toplam sunucunun kararıdır ve taslağın tahsil edeceğiyle aynı kapsamdan çıkar; adres seçilmeden yalnız kalem toplamı
-   * bilinir. Ekran indirim ve kargoyu kendisi hesaplamaz.
+   * bilinir, kargo ücreti bilinmiyorsa toplam da bilinmez. Ekran indirim ve kargoyu kendisi hesaplamaz.
    */
-  const grandTotalCents = payment?.orderTotalCents ?? view.totalCents;
+  const grandTotalCents = payment ? payment.orderTotalCents : view.totalCents;
+  const grandTotalLabel = grandTotalCents === null ? UNKNOWN_AMOUNT : formatPrice(grandTotalCents, locale);
 
   /* İndirim de aynı kaynaktan: özet varsa onun çözülmüş indirimi, yoksa sepetinki. `reasonLabel`
      ikisinde de ORTAK (künyesi kitte) — adı olmayan bir kampanya sepette "Kampanya · %8" iken
@@ -417,6 +420,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         .replace('{missing}', formatPrice(payment.missingForMinBasketCents, locale));
     }
     if (pointMissing) return t.point.none;
+    if (payment.orderTotalCents === null) return shippingNotice(shipping, t.carrier);
     if (isRoute && chosenDate === null) return t.block.day;
     if (selectedPayment === null) return t.block.payment;
     return null;
@@ -577,10 +581,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     applyAddressWrite(result.data, selectedAddress.id);
   };
 
-  const confirmLabel = (selectedPayment?.method === 'online' ? t.confirmPay : t.confirm).replace(
-    '{total}',
-    formatPrice(grandTotalCents, locale),
-  );
+  const confirmLabel = (selectedPayment?.method === 'online' ? t.confirmPay : t.confirm).replace('{total}', grandTotalLabel);
 
   return (
     <View style={styles.screen}>
@@ -896,7 +897,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           eyebrow={upperIn(t.summary.eyebrow, locale)}
           rows={summaryRows}
           totalLabel={t.summary.total}
-          totalValue={pending ? UNKNOWN_AMOUNT : formatPrice(grandTotalCents, locale)}
+          totalValue={pending ? UNKNOWN_AMOUNT : grandTotalLabel}
           totalTone="terracotta"
           testID="checkout-summary"
         />

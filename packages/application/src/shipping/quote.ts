@@ -19,7 +19,7 @@ export type ShippingQuoteOutcome =
   | { status: 'too_large'; variantId: string }
   /** Deponun adresi eksik — gönderici olmadan teklif sorulamaz. */
   | { status: 'no_sender' }
-  /** Sağlayıcı cevap veremedi — çağıran sabit tarifeye DÜŞER ve düştüğünü söyler. */
+  /** Sağlayıcı cevap veremedi; sabit yedek ücret yoktur, eşik altındaki kargo siparişi açılmaz. */
   | { status: 'provider_error'; message: string };
 
 export interface ShippingQuoteInput {
@@ -98,9 +98,7 @@ export async function quoteShipping(
   try {
     options = await provider.quote({ from, to: input.to, parcels });
   } catch (err) {
-    // Sağlayıcı düştüğünde teklif YOK — ama sipariş yolu kapanmaz: çağıran sabit tarifeye düşer
-    // ve DÜŞTÜĞÜNÜ söyler. Sessizce sabit tarife uygulamak, müşteriye "canlı fiyat" diye
-    // hesaplanmamış bir sayı göstermek olurdu.
+    // Hata sonuç olarak döner, çünkü eşik üstündeki sipariş fiyatsız da açılır; ötekini çağıran durdurur.
     return { status: 'provider_error', message: err instanceof Error ? err.message : String(err) };
   }
 
@@ -120,4 +118,19 @@ export async function quoteShipping(
     totalWeightG: plan.parcels.reduce((sum, p) => sum + p.weightG, 0),
     plan: plan.parcels,
   };
+}
+
+/**
+ * Teklifin neden alınamadığı: `carrier` taşıyıcıya ulaşılamadı ya da sağlayıcı kurulu değil (teklif hiç sorulmadı), geçicidir; `data`
+ * ürün ya da depo verimiz eksik ve düzeltmesi bizde.
+ */
+export function quoteFailureOf(quote: ShippingQuoteOutcome | null): 'carrier' | 'data' | null {
+  if (quote === null || quote.status === 'provider_error') return 'carrier';
+  return quote.status === 'ok' ? null : 'data';
+}
+
+/** Teklifi durduran varyantlar: ölçüsü eksik olanlar ya da en büyük kutuya sığmayan. */
+export function unshippableVariantsOf(quote: ShippingQuoteOutcome | null): readonly string[] {
+  if (quote?.status === 'unmeasured') return quote.variantIds;
+  return quote?.status === 'too_large' ? [quote.variantId] : [];
 }

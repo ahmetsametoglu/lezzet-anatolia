@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { shippingChoiceView } from '@lezzet/helper';
+import { shippingChoiceView, shippingNotice } from '@lezzet/helper';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
@@ -59,11 +59,7 @@ export function PhoneShippingChoice(props: CheckoutViewProps) {
 
   const view = shippingChoiceView(shipping?.options ?? [], state.shippingMode);
   if (shipping === null || (view.home.length === 0 && view.point.length === 0)) {
-    return (
-      <p className="font-sans text-body-sm leading-[1.6] text-muted">
-        {shipping?.status === 'unmeasured' ? copy.carrier.unmeasured : shipping?.status === 'ok' ? copy.carrier.none : copy.carrier.off}
-      </p>
-    );
+    return <p className="font-sans text-body-sm leading-[1.6] text-muted">{shippingNotice(shipping, copy.carrier)}</p>;
   }
   const point = state.servicePoint;
   const pointOption = view.point.find((o) => o.code === point?.optionCode);

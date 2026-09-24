@@ -50,12 +50,15 @@ export const CheckoutPaymentSchema = z.object({
   codBlockedReason: z.enum(['over_limit', 'customer_blocked', 'shipping']).nullable(),
   /** Nakit yasal sınırına yaklaşıldı — yöntem açık ama uyarı yazılır. */
   cashWarning: z.boolean(),
-  /** Kargo ücreti (cent); 0 olabilir ve NEDEN 0 olduğunu `shippingFreeReason` söyler. */
-  shippingFeeCents: z.number().int(),
+  /**
+   * Kargo ücreti (cent); 0 olabilir ve NEDEN 0 olduğunu `shippingFreeReason` söyler. `null` = eşik altında ve taşıyıcı fiyat vermedi:
+   * sabit bir yedek ücret yoktur ve sipariş açılmaz.
+   */
+  shippingFeeCents: z.number().int().nullable(),
   /** `route` = araçla gidiyor, ücret zaten yok · `threshold` = eşik aşıldı · `pickup` = müşteri alıyor · `null` = ücretli. */
   shippingFreeReason: z.enum(['route', 'threshold', 'pickup']).nullable(),
-  /** Müşteriden tahsil edilecek TOPLAM (sepet + kargo, cent) — ekranın son satırı. */
-  orderTotalCents: z.number().int(),
+  /** Müşteriden tahsil edilecek TOPLAM (sepet + kargo, cent) — ekranın son satırı; kargo ücreti bilinmiyorsa `null`. */
+  orderTotalCents: z.number().int().nullable(),
   /** Asgari sepet tutmuyorsa sipariş açılmaz (DOMAIN §6, ayardan gelir). */
   minBasketOk: z.boolean(),
   missingForMinBasketCents: z.number().int(),
@@ -116,8 +119,13 @@ export type CheckoutPickup = z.infer<typeof CheckoutPickupSchema>;
  * yeniden hesaplanır.
  */
 export const CheckoutShippingSchema = z.object({
-  /** `ok` dışındaki hâl teklifin neden alınamadığıdır; ekran sebebi ve sabit tarifenin geçerli olduğunu söyler. */
+  /**
+   * `ok` dışındaki hâl teklifin neden alınamadığıdır: `provider_error` ve `off` taşıyıcıya ulaşılamadığını, ötekiler ürün ya da depo
+   * verimizin eksik olduğunu söyler. Eşik altında teklifsiz sipariş açılmaz; eşik üstünde ücret yoktur ve servisi depo seçer.
+   */
   status: z.enum(['ok', 'unmeasured', 'no_box', 'too_large', 'no_sender', 'provider_error', 'off']),
+  /** Ölçüsü eksik ya da en büyük kutuya sığmayan ürünlerin adları; ekran bunları "kargoyla gönderilemiyor" diye anar. */
+  unshippable: z.array(z.string()),
   /** Eve teslimde en ucuz ve en hızlı, noktaya teslimde hepsi; fiyat KDV dahil. */
   options: z.array(
     z.object({
@@ -309,6 +317,11 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('customer_not_found') }),
   /** Seçilen kargo servisi bu sepette yok; ekran listeyi yeniden okur. */
   z.object({ status: z.literal('shipping_option_unavailable') }),
+  /**
+   * Eşik altındaki kargo siparişinin canlı fiyatı yok ve sabit yedek ücret de yok: `carrier` taşıyıcıya ulaşılamadı (geçici), `data`
+   * ürün ya da depo verimiz eksik.
+   */
+  z.object({ status: z.literal('shipping_unpriced'), reason: z.enum(['carrier', 'data']) }),
   /** Servis teslim noktası istiyor ama nokta yok, kapalı ya da başka taşıyıcının. */
   z.object({ status: z.literal('service_point_invalid') }),
   /** Gel-al istendi ama müşterinin izni yok — ekran kartı göstermemişti, istek elle kurulmuştur. */

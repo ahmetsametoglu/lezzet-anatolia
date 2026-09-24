@@ -2,6 +2,7 @@
 
 import type { PaymentMethod } from '@lezzet/types';
 import { brand } from '@lezzet/brand';
+import { shippingNotice } from '@lezzet/helper';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { Chip } from '@/components/customer/phone-kit/chip';
 import { ThumbStack } from '@/components/customer/phone-kit/thumb-stack';
@@ -85,14 +86,17 @@ export function CheckoutMobile(props: CheckoutViewProps) {
       : summary.excludedLines.map((line, index) => ({ key: `dropped-${index}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }));
 
   // Toplam SUNUCUNUN kararıdır; sepet okunmadan yazılmaz (CLAUDE §1 — ölçülemeyen değer sıfır değil).
-  const totalLabel = settled ? formatPrice(payment?.orderTotalCents ?? cart.totalCents, locale) : UNKNOWN_AMOUNT;
+  const totalCents = payment ? payment.orderTotalCents : cart.totalCents;
+  const totalLabel = settled && totalCents !== null ? formatPrice(totalCents, locale) : UNKNOWN_AMOUNT;
   const feeLabel = !settled
     ? UNKNOWN_AMOUNT
     : payment === null
       ? copy.summary.pending
-      : payment.shippingFeeCents === 0
-        ? copy.summary.free
-        : formatPrice(payment.shippingFeeCents, locale);
+      : payment.shippingFeeCents === null
+        ? UNKNOWN_AMOUNT
+        : payment.shippingFeeCents === 0
+          ? copy.summary.free
+          : formatPrice(payment.shippingFeeCents, locale);
   const discountCents = !settled
     ? 0
     : summary !== null
@@ -177,11 +181,13 @@ export function CheckoutMobile(props: CheckoutViewProps) {
             ? copy.block.minBasket.replace('{place}', payment.placeLabel).replace('{missing}', formatPrice(payment.missingForMinBasketCents, locale))
             : blocker === 'service_point_missing'
               ? copy.point.none
-              : isRoute && delivery?.requiresDateChoice && state.deliveryDate === null
-                ? copy.block.day
-                : state.paymentMethod === null
-                  ? copy.block.payment
-                  : null;
+              : blocker === 'shipping_unpriced'
+                ? shippingNotice(snapshot.shipping, copy.carrier)
+                : isRoute && delivery?.requiresDateChoice && state.deliveryDate === null
+                  ? copy.block.day
+                  : state.paymentMethod === null
+                    ? copy.block.payment
+                    : null;
 
   // Küçük resimler siparişin kendisini gösterir — kapsam dışı kalemin fotoğrafı "bunlar geliyor" diye okunurdu.
   // Paketler önce (native'in sırası).

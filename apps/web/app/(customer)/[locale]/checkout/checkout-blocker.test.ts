@@ -14,8 +14,6 @@ const payment: NonNullable<CheckoutSnapshot['payment']> = {
   cashWarning: false,
   shippingFeeCents: 0,
   shippingFreeReason: 'route',
-  // Rota kulvarı: ücret alınmıyor, dolayısıyla "nereden geldi" sorusu da doğmuyor.
-  shippingFeeSource: null,
   orderTotalCents: 4000,
   minBasketOk: true,
   missingForMinBasketCents: 0,
@@ -74,6 +72,11 @@ describe('checkoutBlocker', () => {
     expect(checkoutBlocker({ ...OK, cartHasBlocked: true, snapshot })).toBe('undeliverable_line');
   });
 
+  // Sabit yedek ücret yok: engel kalkarsa düğme bilinmeyen bir toplamla açık kalır ve ret ancak basınca gelir.
+  it('kargo ücreti bilinmiyorsa onay kapalıdır', () => {
+    const snapshot = snapshotOf({ payment: { ...payment, shippingFeeCents: null, shippingFreeReason: null, orderTotalCents: null } });
+    expect(checkoutBlocker({ ...OK, snapshot })).toBe('shipping_unpriced');
+  });
 });
 
 describe('servicePointMissing', () => {
@@ -94,6 +97,7 @@ describe('servicePointMissing', () => {
     parcelCount: 1,
     selectedCode: null,
     mode: 'customer',
+    unshippable: [],
   };
   const secilen: SelectedServicePoint = {
     id: 'sp-1',

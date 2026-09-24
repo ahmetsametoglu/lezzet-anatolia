@@ -14,12 +14,7 @@ import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { minBasketFor } from '../cart/min-basket';
 import { settingScopeOf } from '../cart/setting-scope';
 // Müşteriye söz veren ayarlar: sepet ve checkout AYNI satırı okumalı (`../cart/settings-keys`).
-import {
-  FREE_SHIPPING_THRESHOLD_DEFAULT,
-  FREE_SHIPPING_THRESHOLD_KEY,
-  SHIPPING_FEE_DEFAULT,
-  SHIPPING_FEE_KEY,
-} from '../cart/settings-keys';
+import { FREE_SHIPPING_THRESHOLD_DEFAULT, FREE_SHIPPING_THRESHOLD_KEY } from '../cart/settings-keys';
 // Kapıda ödeme tavanı: kasa kapıyı burada uyguluyor, SSS ve satış koşulları AYNI satırı ilan ediyor
 // (`../settings/public-terms`) — sayı iki yerde yazılıydı, biri değişince öteki yalan söylerdi.
 import { COD_MAX_DEFAULT, COD_MAX_KEY } from '../settings/public-terms';
@@ -38,11 +33,12 @@ export interface CheckoutPaymentResult {
   creditBlockedReason: 'not_enabled' | 'overdue' | 'limit_exceeded' | null;
   creditRequiresApproval: boolean;
 
-  /** Kargo ücreti (cent) ve neden ücretsiz olduğu; `pickup` = müşteri kendisi alıyor, taşıma yok. */
-  shippingFeeCents: number;
+  /**
+   * Kargo ücreti (cent) ve neden ücretsiz olduğu; `pickup` = müşteri kendisi alıyor, taşıma yok. `null` = eşik altında ve taşıyıcı
+   * fiyat vermedi: sabit bir yedek ücret yoktur ve sipariş açılamaz.
+   */
+  shippingFeeCents: number | null;
   shippingFreeReason: 'route' | 'threshold' | 'pickup' | null;
-  /** Ücret nereden geldi: `quote` canlı teklif · `tariff` sabit tarife · `null` ücret yok. */
-  shippingFeeSource: 'quote' | 'tariff' | null;
   /** "X € daha ekleyin, kargo bedava" mesajının girdisi. */
   remainingForFreeShippingCents: number;
   /** Ücretin KDV kırılımı — taşıdığı malın oranını izler (karışık sepette oransal). */
@@ -51,8 +47,8 @@ export interface CheckoutPaymentResult {
   /** Asgari sepet tutmuyorsa checkout açılmaz. */
   minBasketOk: boolean;
   missingForMinBasketCents: number;
-  /** Müşteriden tahsil edilecek toplam (sepet + kargo, cent). */
-  orderTotalCents: number;
+  /** Müşteriden tahsil edilecek toplam (sepet + kargo, cent); kargo ücreti bilinmiyorsa `null`. */
+  orderTotalCents: number | null;
 }
 
 export interface CheckoutPaymentInput {
@@ -81,8 +77,8 @@ export interface CheckoutPaymentInput {
   zoneId?: string | null;
   warehouseId?: string | null;
   /**
-   * Canlı kargo teklifinin sunucuda hesaplanmış tutarı (cent); `null` = teklif yok, sabit tarife.
-   * Teklif ücretin tutarını, ücretsiz kargo eşiği ise alınıp alınmayacağını belirler.
+   * Canlı kargo teklifinin sunucuda hesaplanmış tutarı (cent); `null` = taşıyıcı fiyat vermedi. Teklif ücretin tutarını, ücretsiz
+   * kargo eşiği ise alınıp alınmayacağını belirler.
    */
   quotedFeeCents?: number | null;
 }
@@ -97,13 +93,12 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
     warehouseId: input.warehouseId,
   });
 
-  const [customer, codMaxCents, cashLegalLimitCents, freeThresholdCents, feeCents, minBasketCents] = await Promise.all([
+  const [customer, codMaxCents, cashLegalLimitCents, freeThresholdCents, minBasketCents] = await Promise.all([
     new UserProfileService(db).getById(input.customerId),
     // Kapıda ödeme tavanı; varsayılanı ve anahtarı `public-terms`te.
     settings.getNumber(COD_MAX_KEY, COD_MAX_DEFAULT, scope),
     settings.getNumber('cash_legal_limit_cents', 100_000, scope),
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
-    settings.getNumber(SHIPPING_FEE_KEY, SHIPPING_FEE_DEFAULT, scope),
     minBasketFor(settings, input.deliveryType, scope),
   ]);
   if (!customer) throw new Error(`checkout: müşteri bulunamadı (${input.customerId})`);
@@ -112,15 +107,14 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
   // Gel-al'da motor sorulmaz: "kargo ücreti kaç" sorusu geçersizdir (DATA_MODEL), ücret doğrudan yok.
   const shipping =
     input.deliveryType === 'pickup'
-      ? { feeCents: 0, freeReason: 'pickup' as const, remainingForFreeCents: 0, source: null }
+      ? { feeCents: 0, freeReason: 'pickup' as const, remainingForFreeCents: 0 }
       : resolveShippingFee({
           deliveryType: input.deliveryType,
           basketCents: input.basketCents,
           freeThresholdCents,
-          feeCents,
           quotedFeeCents: input.quotedFeeCents,
         });
-  const orderTotalCents = input.basketCents + shipping.feeCents;
+  const orderTotalCents = shipping.feeCents === null ? null : input.basketCents + shipping.feeCents;
 
   // ── Vade freni için açık bakiye ve gecikme TÜRETİLİR (saklanmaz).
   const { openBalanceCents, hasOverdue } = await deriveCreditPosition(
@@ -136,7 +130,8 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
   const paymentChannel = deriveChannel({ isCompany: customer.type === 'company' && customer.b2bApproved === true });
 
   const options = resolveCheckoutOptions({
-    orderTotalCents,
+    // Ücret bilinmiyorsa sipariş zaten açılamaz; yöntemler ürün tutarına göre çözülür ki ekran ne sunulacağını yine bilsin.
+    orderTotalCents: orderTotalCents ?? input.basketCents,
     channel: paymentChannel,
     deliveryType: input.deliveryType,
     codMaxCents,
@@ -155,9 +150,8 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
     ...options,
     shippingFeeCents: shipping.feeCents,
     shippingFreeReason: shipping.freeReason,
-    shippingFeeSource: shipping.source,
     remainingForFreeShippingCents: shipping.remainingForFreeCents,
-    shippingVat: apportionShippingVat(shipping.feeCents, input.lines),
+    shippingVat: shipping.feeCents === null ? [] : apportionShippingVat(shipping.feeCents, input.lines),
     minBasketOk: minBasket.ok,
     missingForMinBasketCents: minBasket.missingCents,
     orderTotalCents,

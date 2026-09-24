@@ -1,4 +1,4 @@
-import { carrierToneOf, formatPrice, shippingChoiceView, type ServicePointEntry } from '@lezzet/helper';
+import { carrierToneOf, formatPrice, shippingChoiceView, shippingNotice, type ServicePointEntry } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import messages from '@lezzet/i18n/customer/checkout';
 import type { CheckoutSnapshot } from '@lezzet/types';
@@ -75,11 +75,7 @@ export function ShippingChoice({
 
   const view = shippingChoiceView(shipping?.options ?? [], mode);
   if (shipping === null || (view.home.length === 0 && view.point.length === 0)) {
-    return (
-      <Text style={styles.note}>
-        {shipping?.status === 'unmeasured' ? t.carrier.unmeasured : shipping?.status === 'ok' ? t.carrier.none : t.carrier.off}
-      </Text>
-    );
+    return <Text style={styles.note}>{shippingNotice(shipping, t.carrier)}</Text>;
   }
 
   return (

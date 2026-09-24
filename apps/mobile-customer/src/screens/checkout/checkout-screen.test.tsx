@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import type * as ReactModule from 'react';
 import type * as ReactNativeModule from 'react-native';
+import { UNKNOWN_AMOUNT } from '@lezzet/helper';
 import type { CheckoutSnapshot } from '@lezzet/types';
 
 import type { CartState } from '@/screens/customer-kit/cart-store';
@@ -499,7 +500,7 @@ describe('CheckoutScreen — kargo servisi ve teslim noktası', () => {
     return {
       ...base,
       payment: { ...base.payment!, methods: ['bank_transfer'] },
-      shipping: { status: 'ok', options: OPTIONS, parcelCount: 1, selectedCode, mode: 'customer' },
+      shipping: { status: 'ok', options: OPTIONS, parcelCount: 1, selectedCode, mode: 'customer', unshippable: [] },
     };
   }
 
@@ -564,6 +565,23 @@ describe('CheckoutScreen — kargo servisi ve teslim noktası', () => {
 
     expect(screen.getByText(t.point.none)).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: t.confirm.replace('{total}', '20,00 €') })).toBeDisabled();
+  });
+
+  // Sabit yedek ücret yok: engel kalkarsa düğme bilinmeyen bir toplamla açık kalır ve sipariş ancak basınca reddedilir.
+  it('taşıyıcı fiyat vermediyse onay kapalıdır ve sebep yazılır', async () => {
+    const fiyatsiz = kargoSnapshot('mr-eve');
+    fetchMock.mockImplementation(async () =>
+      reply({
+        ...fiyatsiz,
+        payment: { ...fiyatsiz.payment!, shippingFeeCents: null, orderTotalCents: null },
+        shipping: { status: 'provider_error', options: [], parcelCount: 0, selectedCode: null, mode: 'customer', unshippable: [] },
+      }),
+    );
+    await render(<CheckoutScreen />);
+    await fireEvent.press(await screen.findByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+
+    expect(screen.getAllByText(t.carrier.unavailable)).toHaveLength(2);
+    expect(screen.getByRole('button', { name: t.confirm.replace('{total}', UNKNOWN_AMOUNT) })).toBeDisabled();
   });
 
   // Seçilen nokta siparişe gitmezse sunucu siparişi `service_point_invalid` ile reddeder.

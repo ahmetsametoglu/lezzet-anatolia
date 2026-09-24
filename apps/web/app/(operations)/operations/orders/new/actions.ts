@@ -258,6 +258,10 @@ function rejectionMessage(outcome: Exclude<Awaited<ReturnType<typeof placeOrder>
       return 'Müşteri bulunamadı.';
     case 'shipping_option_unavailable':
       return 'Bu adrese eve teslim eden kargo servisi bulunamadı.';
+    case 'shipping_unpriced':
+      return outcome.reason === 'carrier'
+        ? 'Taşıyıcıdan kargo fiyatı alınamadı; birkaç dakika sonra tekrar deneyin.'
+        : 'Kargo fiyatı hesaplanamıyor: ürünün ambalaj ölçüsü, deponun kargo kutusu ya da depo adresi eksik.';
     case 'service_point_invalid':
       return 'Seçilen kargo servisi teslim noktası istiyor; nokta geçerli değil.';
     case 'address_not_found':

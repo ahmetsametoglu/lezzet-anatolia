@@ -6,7 +6,7 @@ import type { Appearance, Stripe as StripeClient, StripeElementsOptions } from '
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { Skeleton, SkeletonBlock } from '@/components/customer/ui/skeleton';
-import { formatPrice } from '@/lib/storefront/format';
+import { UNKNOWN_AMOUNT, formatPrice } from '@/lib/storefront/format';
 
 /**
  * Sayfa içi kart ödemesi: kart alanları Stripe'ın iframe'inde kalır ve ödeme niyeti ancak onayda doğar (ertelenmiş Elements), böylece
@@ -15,7 +15,8 @@ import { formatPrice } from '@/lib/storefront/format';
 interface PaymentSectionProps {
   stripe: Promise<StripeClient | null>;
   locale: Locale;
-  amountCents: number;
+  /** `null` = kargo ücreti bilinmiyor; o hâlde sipariş açılmaz ve form kapalıdır. */
+  amountCents: number | null;
   /** Fatura bilgisi ilk adımda seçilen adresten gelir; Stripe'ın adres formu kapalı olduğu için elle geçer. */
   billing: BillingDetails;
   /**
@@ -92,9 +93,8 @@ const APPEARANCE: Appearance = {
 export function PaymentSection(props: PaymentSectionProps) {
   const options: StripeElementsOptions = {
     mode: 'payment',
-    // Stripe sıfır tutarlı niyeti reddeder; alt sınır zaten `minBasket` ile korunuyor, bu yalnız
-    // ekranın toplam hesaplanmadan monte olduğu ilk kareyi güvene alır.
-    amount: Math.max(1, props.amountCents),
+    // Stripe sıfır tutarlı niyeti reddeder; tutar ekranın gösterimidir, çekilecek tutarı sunucu siparişten çözer.
+    amount: Math.max(1, props.amountCents ?? 0),
     currency: 'eur',
     locale: props.locale,
     // Kart yeterli: Apple/Google Pay de kart yöntemidir. Açık bırakılsaydı sepete uymayan
@@ -235,7 +235,7 @@ function PayForm({ locale, amountCents, billing, returnUrlBase, onPrepare, onErr
       {loadFailed && <p className="font-sans text-note leading-relaxed font-semibold text-honey">{labels.unavailable}</p>}
 
       <Button size="md" fullWidth onClick={() => void submit()} disabled={!stripe || busy || disabled || loadFailed}>
-        {busy ? stageLabel : `${labels.submit} · ${formatPrice(amountCents, locale)}`}
+        {busy ? stageLabel : `${labels.submit} · ${amountCents === null ? UNKNOWN_AMOUNT : formatPrice(amountCents, locale)}`}
       </Button>
 
       {busy && (

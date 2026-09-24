@@ -12,41 +12,36 @@ export interface ShippingFeeInput {
   basketCents: number;
   /** Bu tutarın üstünde kargo ücretsiz (cent). */
   freeThresholdCents: number;
-  /** Eşik altında alınan ücret (cent) — SABİT tarife; canlı teklif yoksa geçerli. */
-  feeCents: number;
   /**
-   * Seçilen servisin sunucuda hesaplanmış müşteri ücreti (KDV dahil, cent); `null` = teklif yok, sabit tarife geçerli. Teklif ücretin
-   * tutarını belirler, alınıp alınmayacağını eşik belirler.
+   * Seçilen servisin sunucuda hesaplanmış müşteri ücreti (KDV dahil, cent); `null` = taşıyıcı fiyat vermedi. Teklif ücretin tutarını
+   * belirler, alınıp alınmayacağını eşik belirler.
    */
   quotedFeeCents?: number | null;
 }
 
 export interface ShippingFeeResult {
-  feeCents: number;
+  /** `null` = eşik altında ve taşıyıcı fiyat vermedi: sabit bir yedek ücret yoktur, ücret bilinmez ve sipariş açılamaz. */
+  feeCents: number | null;
   /** Ücret neden alınmadı — arayüz "rota içi teslimat ücretsiz" ya da "kargo bedava" der. */
   freeReason: 'route' | 'threshold' | null;
   /** Ücretsiz kargoya kalan tutar (cent); zaten ücretsizse 0. "X € daha ekleyin" mesajının girdisi. */
   remainingForFreeCents: number;
-  /** Ücret nereden geldi: `quote` canlı teklif, `tariff` sabit tarife; ekran bunu söyler ki hesaplanmamış sayı canlı fiyat sanılmasın. */
-  source: 'quote' | 'tariff' | null;
 }
 
 export function resolveShippingFee(input: ShippingFeeInput): ShippingFeeResult {
   if (input.deliveryType === 'route') {
-    return { feeCents: 0, freeReason: 'route', remainingForFreeCents: 0, source: null };
+    return { feeCents: 0, freeReason: 'route', remainingForFreeCents: 0 };
   }
   // Eşik canlı fiyata bakmaz: "eşik üzeri ücretsiz" bir sözdür ve maliyete bağlansaydı bazı adreslerde yalan olurdu.
   const threshold = freeShippingOf(input.basketCents, input.freeThresholdCents);
   if (threshold.free) {
-    return { feeCents: 0, freeReason: 'threshold', remainingForFreeCents: 0, source: null };
+    return { feeCents: 0, freeReason: 'threshold', remainingForFreeCents: 0 };
   }
   const quoted = input.quotedFeeCents;
-  const live = typeof quoted === 'number' && quoted >= 0;
   return {
-    feeCents: live ? quoted : input.feeCents,
+    feeCents: typeof quoted === 'number' && quoted >= 0 ? quoted : null,
     freeReason: null,
     remainingForFreeCents: threshold.remainingForFreeCents,
-    source: live ? 'quote' : 'tariff',
   };
 }
 

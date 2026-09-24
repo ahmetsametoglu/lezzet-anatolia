@@ -63,9 +63,10 @@
       "days": "{hours} saat içinde",
       "tracked": "takipli",
       "parcels": "{count} koli",
-      "off": "Kargo ücreti sabit tarifeden hesaplandı — anlık taşıyıcı fiyatı bu sipariş için alınamadı.",
-      "unmeasured": "Kargo ücreti bu sipariş için sabit tarifeden hesaplandı.",
-      "none": "Bu adres için taşıyıcı seçeneği bulunamadı — sabit tarife uygulandı.",
+      "unavailable": "Kargo fiyatını şu an alamıyoruz; birkaç dakika sonra tekrar deneyin.",
+      "unshippable": "Şu an kargoyla gönderilemiyor: {products}.",
+      "unshippableOrder": "Siparişiniz şu an kargoyla gönderilemiyor.",
+      "none": "Bu adrese kargo servisi bulunamadı.",
       "home": "Eve teslim",
       "point": "Teslim noktası",
       "from": "{price}'dan başlayan fiyatlarla",
@@ -185,6 +186,10 @@
       },
       "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin.",
       "shipping_option_unavailable": "Seçtiğiniz kargo servisi bu sepet için artık sunulmuyor. Lütfen kargo seçimini yeniden yapın.",
+      "shipping_unpriced": {
+        "carrier": "Kargo fiyatını şu an alamıyoruz — sipariş verilmedi. Birkaç dakika sonra tekrar deneyin.",
+        "data": "Bu sipariş şu an kargoyla gönderilemiyor — sipariş verilmedi."
+      },
       "service_point_invalid": "Bu kargo servisi bir teslim noktasına teslim ediyor. Lütfen açık bir teslim noktası seçin.",
       "pickup_not_allowed": "Depodan teslim hesabınız için açık değil — adresinize teslimi seçin.",
       "pickup_warehouse_unavailable": "Seçtiğiniz depo şu an gel-al için kapalı — seçenekleri yenileyip yeniden seçin."
@@ -292,9 +297,10 @@
       "days": "sous {hours} h",
       "tracked": "suivi",
       "parcels": "{count} colis",
-      "off": "Frais de livraison calculés selon notre tarif forfaitaire.",
-      "unmeasured": "Les frais de livraison de cette commande sont calculés selon notre tarif forfaitaire.",
-      "none": "Aucun transporteur ne propose d'offre pour cette adresse — frais calculés selon notre tarif forfaitaire.",
+      "unavailable": "Nous ne parvenons pas à obtenir le tarif de livraison pour le moment ; réessayez dans quelques minutes.",
+      "unshippable": "Expédition impossible pour le moment : {products}.",
+      "unshippableOrder": "Votre commande ne peut pas être expédiée pour le moment.",
+      "none": "Aucun transporteur ne livre cette adresse.",
       "home": "Livraison à domicile",
       "point": "Point relais",
       "from": "À partir de {price}",
@@ -414,6 +420,10 @@
       },
       "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer.",
       "shipping_option_unavailable": "Le mode de livraison choisi n'est plus proposé pour ce panier. Merci de choisir à nouveau.",
+      "shipping_unpriced": {
+        "carrier": "Nous ne parvenons pas à obtenir le tarif de livraison — la commande n'a pas été passée. Réessayez dans quelques minutes.",
+        "data": "Cette commande ne peut pas être expédiée pour le moment — elle n'a pas été passée."
+      },
       "service_point_invalid": "Ce mode de livraison livre en point relais. Merci de choisir un point relais ouvert.",
       "pickup_not_allowed": "Le retrait à l'entrepôt n'est pas ouvert pour votre compte — choisissez la livraison à votre adresse.",
       "pickup_warehouse_unavailable": "L'entrepôt choisi n'accepte pas le retrait pour le moment — actualisez les options et choisissez à nouveau."
@@ -521,9 +531,10 @@
       "days": "in {hours} Std.",
       "tracked": "mit Sendungsverfolgung",
       "parcels": "Pakete: {count}",
-      "off": "Die Versandkosten wurden nach unserem Standardtarif berechnet.",
-      "unmeasured": "Die Versandkosten dieser Bestellung werden nach Festtarif berechnet.",
-      "none": "Für diese Adresse gilt unser Standardtarif.",
+      "unavailable": "Wir können den Versandpreis gerade nicht abrufen – bitte versuchen Sie es in einigen Minuten erneut.",
+      "unshippable": "Derzeit nicht versandfähig: {products}.",
+      "unshippableOrder": "Ihre Bestellung kann derzeit nicht versendet werden.",
+      "none": "Für diese Adresse ist kein Versanddienst verfügbar.",
       "home": "Lieferung nach Hause",
       "point": "Abholpunkt",
       "from": "Ab {price}",
@@ -643,6 +654,10 @@
       },
       "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
       "shipping_option_unavailable": "Die gewählte Versandart ist für diesen Warenkorb nicht mehr verfügbar. Bitte wählen Sie erneut.",
+      "shipping_unpriced": {
+        "carrier": "Wir können den Versandpreis gerade nicht abrufen – die Bestellung wurde nicht aufgegeben. Bitte versuchen Sie es in einigen Minuten erneut.",
+        "data": "Diese Bestellung kann derzeit nicht versendet werden – sie wurde nicht aufgegeben."
+      },
       "service_point_invalid": "Diese Versandart liefert an einen Abholpunkt. Bitte wählen Sie einen geöffneten Abholpunkt.",
       "pickup_not_allowed": "Die Abholung im Lager ist für Ihr Konto nicht freigeschaltet – wählen Sie die Lieferung an Ihre Adresse.",
       "pickup_warehouse_unavailable": "Das gewählte Lager bietet die Abholung derzeit nicht an – Optionen aktualisieren und erneut wählen."

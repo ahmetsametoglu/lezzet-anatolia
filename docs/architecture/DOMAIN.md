@@ -274,6 +274,7 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
   "depo gösterilmez" kuralının bilinçli tek istisnası.
 - **Ücretsiz kargo eşiği:** parametrik.
 - **Kargo ücreti:** eşik altı siparişte müşteriden alınan ücret `Order.shipping_fee`'ye yazılır ve **KDV'ye tabidir**; `total` bu ücreti içerir. Tam iptalde ücret de iade edilir; kısmi eksikte varsayılan olarak iade edilmez (teslimat yapılmıştır).
+  Ücret müşterinin seçtiği taşıyıcı servisinin canlı teklifidir; **sabit yedek ücret yoktur**: teklif alınamazsa (taşıyıcı cevap vermedi ya da ürün/depo verisi eksik) eşik altı kargo siparişi açılmaz. Eşik üstünde ücret alınmadığı için sipariş teklifsiz de açılır, servisi sevkte depo seçer.
 - Faz 1'de rota kapasitesi ve zaman penceresi **yok** (Faz 2); sadece içerideyim/dışarıdayım ayrımı.
 
 ### Rota bölgeleri ve teslimat günü

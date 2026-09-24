@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { addressTitle } from '@lezzet/address';
 import { brand } from '@lezzet/brand';
-import { pointAddress, pointText, shippingChoiceView } from '@lezzet/helper';
+import { pointAddress, pointText, shippingChoiceView, shippingNotice } from '@lezzet/helper';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import type { PaymentMethod } from '@lezzet/types';
 import { Link, useRouter } from '@/i18n/navigation';
@@ -276,7 +276,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
           </span>
           {/* Ücret rozetin yanında: teslimat türünü okuyan müşteri bedelini aynı anda görmeli —
               özete kadar aşağı inip bulmak sürpriz hissi verirdi. */}
-          {!inRoute && !pickup && payment && payment.shippingFeeCents > 0 && (
+          {!inRoute && !pickup && payment && payment.shippingFeeCents !== null && payment.shippingFeeCents > 0 && (
             <span className="font-sans text-body-sm font-bold text-ink">{formatPrice(payment.shippingFeeCents, locale)}</span>
           )}
         </div>
@@ -485,14 +485,9 @@ export function DeliveryStep(props: CheckoutViewProps) {
               <span className="font-sans text-note text-muted">{copy.carrier.hint}</span>
             </>
           ) : (
-            /* Sessiz geri düşüş yok: teklif alınamadıysa sebebi yazılır ve sabit tarife uygulandığı söylenir. Sebepler ayrı
-               cümleler, çünkü çözümleri de ayrı: ölçü eksikliği bizim işimiz, seçenek yokluğu adresin gerçeği. */
-            <span className="font-sans text-note leading-relaxed text-muted">
-              {snapshot.shipping?.status === 'unmeasured'
-                ? copy.carrier.unmeasured
-                : snapshot.shipping?.status === 'ok'
-                  ? copy.carrier.none
-                  : copy.carrier.off}
+            // Teklif yoksa sipariş açılmaz ve sebep yazılır; sebepler ayrı cümleler, çünkü çözümleri de ayrı.
+            <span className="font-sans text-note leading-relaxed font-semibold text-honey">
+              {shippingNotice(snapshot.shipping, copy.carrier)}
             </span>
           )}
         </div>
@@ -599,12 +594,14 @@ export function OrderSummary(props: CheckoutViewProps) {
    * `payment` yokken teslimat satırına "Ücretsiz" yazılmaz: ücret adresten çıkar (rota ücretsiz, kargo ücretli) ve adres seçilmeden
    * yazmak tutmayacağımız bir söz olurdu. Bilinmeyen tutar bu blokta "—" ile yazılır.
    */
-  const shippingLabel = !payment
-    ? UNKNOWN_AMOUNT
-    : payment.shippingFeeCents > 0
-      ? formatPrice(payment.shippingFeeCents, locale)
-      : summary.free;
-  const totalCents = payment?.orderTotalCents ?? cart.totalCents;
+  const shippingLabel =
+    !payment || payment.shippingFeeCents === null
+      ? UNKNOWN_AMOUNT
+      : payment.shippingFeeCents > 0
+        ? formatPrice(payment.shippingFeeCents, locale)
+        : summary.free;
+  // Adres seçilmeden yalnız kalem toplamı bilinir; kargo ücreti bilinmiyorsa toplam da bilinmez.
+  const totalCents = payment ? payment.orderTotalCents : cart.totalCents;
   /*
     Döküm ve toplam aynı okumadan: özet varsa satırlar da indirim de ondan, yoksa ikisi de sepetten, asla karışık, çünkü sepet iki
     yüzeyde paylaşıldığı için liste ile toplam ayrışabilir. Adres seçilmeden özet yoktur ve o hâlde sepete düşmek doğrudur.
@@ -674,7 +671,7 @@ export function OrderSummary(props: CheckoutViewProps) {
         <SummaryRow
           label={summary.delivery}
           value={shippingLabel}
-          tone={!payment || payment.shippingFeeCents > 0 ? 'default' : 'oliveValue'}
+          tone={!payment || payment.shippingFeeCents !== 0 ? 'default' : 'oliveValue'}
         />
         {/* Toplam satırı tasarımda **Karla 700/18** — serif DEĞİL. Serif yapmak onu bir başlığa
             çeviriyor; oysa bu bir sayı satırı ve üstündeki satırlarla aynı ailede okunmalı. */}
@@ -683,7 +680,9 @@ export function OrderSummary(props: CheckoutViewProps) {
           {/* Sepet okunmadan toplam yazılmaz: `formatPrice(0)` misafirde kalıcı olarak "0,00 €" gösterir ve sepet boş ya da bedava
               gibi okunurdu. */}
           {settled ? (
-            <span className="font-sans text-card-title-sm font-bold text-ink">{formatPrice(totalCents, locale)}</span>
+            <span className="font-sans text-card-title-sm font-bold text-ink">
+              {totalCents === null ? UNKNOWN_AMOUNT : formatPrice(totalCents, locale)}
+            </span>
           ) : (
             <Skeleton className="h-4 w-20" />
           )}
@@ -702,11 +701,12 @@ export function OrderSummary(props: CheckoutViewProps) {
 
       {/* Alt sınır yere bağlıdır ve cümle yeri taşır: sepet çerezdeki koda, checkout seçilen adrese göre hesaplar ve iki ayrı
           bölgeye düşen müşteride sayı değişir. */}
-      {payment && !payment.minBasketOk && (
+      {payment && !payment.minBasketOk && orderSummary && (
         <p className="font-sans text-note leading-relaxed font-semibold text-honey">
           {t.summary.minBasket
             .replace('{place}', payment.placeLabel)
-            .replace('{min}', formatPrice(payment.orderTotalCents + payment.missingForMinBasketCents, locale))
+            // Eşik indirim öncesi ara toplamı ölçer; kargo ve indirim içeren toplam başka bir sayı verirdi.
+            .replace('{min}', formatPrice(orderSummary.subtotalCents + payment.missingForMinBasketCents, locale))
             .replace('{missing}', formatPrice(payment.missingForMinBasketCents, locale))}
         </p>
       )}

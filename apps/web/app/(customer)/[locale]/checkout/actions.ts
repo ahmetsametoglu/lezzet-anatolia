@@ -266,6 +266,9 @@ async function rejectionOutcome(rejection: PlaceOrderRejection, locale: Locale):
      */
     case 'payment_unavailable':
       return { status: 'rejected', reason: rejection.reason };
+    // Taşıyıcıya ulaşılamaması geçicidir, verimizin eksikliği değildir; müşteriye ikisi ayrı cümleyle söylenir.
+    case 'shipping_unpriced':
+      return { status: 'rejected', reason: `shipping_unpriced_${rejection.reason}` };
     default:
       return { status: 'rejected', reason: rejection.status };
   }

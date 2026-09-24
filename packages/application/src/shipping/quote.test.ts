@@ -8,7 +8,7 @@ import { providerStub } from './provider.testkit';
 
 /**
  * Kargo teklifinin değişmezleri: ölçüsüz kalem ve kutusuz depo teklif üretmez, çok kutulu sipariş yalnız çok koli taşıyan
- * servisleri görür, sağlayıcı düşünce çağıran sabit tarifeye düştüğünü bilir, fiyatsız ya da sıfır fiyatlı seçenek listede durmaz.
+ * servisleri görür, sağlayıcı düşünce çağıran bunu sonuç olarak alır, fiyatsız ya da sıfır fiyatlı seçenek listede durmaz.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -180,7 +180,7 @@ describe('quoteShipping — teklif', () => {
     expect(sonuc.status === 'ok' && sonuc.options.map((o) => o.code)).toEqual(['gerçek']);
   });
 
-  it('sağlayıcı düşerse teklif YOK ama yol kapanmaz — çağıran düştüğünü BİLİR', async () => {
+  it('sağlayıcı düşerse teklif yok ve çağıran düştüğünü sonuçtan bilir', async () => {
     const p = fakeProvider([], { throws: true });
     const sonuc = await quoteShipping(db, p, { warehouseId, to: paris, items: [{ variantId: olculuId, qty: 1 }] });
     expect(sonuc).toMatchObject({ status: 'provider_error' });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { servicePointRequired, shippingChoiceView } from './shipping-view';
+import { servicePointRequired, shippingChoiceView, shippingNotice } from './shipping-view';
 
 describe('shippingChoiceView — çizilecek tür', () => {
   const ev = { needsServicePoint: false, priceCents: 613 };
@@ -43,5 +43,23 @@ describe('servicePointRequired', () => {
   // Eşik aşılınca sunucu eve giden servisi seçer ve nokta düşer; kural sürerse seçicisi olmayan ekranda onay kilitlenir.
   it('eşik üstünde nokta istenmez, tür "point" kalmış olsa da', () => {
     expect(servicePointRequired(kargo([ev, nokta], 'auto'), 'point')).toBe(false);
+  });
+});
+
+describe('shippingNotice', () => {
+  const copy = {
+    unavailable: 'geçici',
+    unshippable: 'gönderilemiyor: {products}',
+    unshippableOrder: 'sipariş gönderilemiyor',
+    none: 'servis yok',
+  };
+
+  // Taşıyıcı arızasında müşteri beklemeye, veri eksikliğinde ürünü çıkarmaya yönlenir; cümleler karışırsa beklemek işe yaramaz.
+  it('taşıyıcıya ulaşılamadıysa geçici cümle, verimiz eksikse ürün adlarıyla "gönderilemiyor"', () => {
+    expect(shippingNotice({ status: 'provider_error', unshippable: [] }, copy)).toBe('geçici');
+    expect(shippingNotice({ status: 'off', unshippable: [] }, copy)).toBe('geçici');
+    expect(shippingNotice({ status: 'unmeasured', unshippable: ['Ceviz', 'Pestil'] }, copy)).toBe('gönderilemiyor: Ceviz, Pestil');
+    expect(shippingNotice({ status: 'no_box', unshippable: [] }, copy)).toBe('sipariş gönderilemiyor');
+    expect(shippingNotice({ status: 'ok', unshippable: [] }, copy)).toBe('servis yok');
   });
 });

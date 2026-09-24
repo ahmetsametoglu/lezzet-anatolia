@@ -101,7 +101,8 @@ export interface CheckoutViewProps extends StepProps {
  * Siparişin verilememe sebebi, sepettekinin checkout karşılığı: adresin seçilmemesi ve teslimatın çözülememesi yalnız burada
  * sorulur. Kart formu ve onay düğmesi aynı karardan okur; sıra önce bilinmezlik (sepet, adres), sonra teslimat, en son tutar.
  */
-type CheckoutBlockReason = 'cart_unreachable' | 'address_missing' | 'undeliverable_line' | 'min_basket' | 'service_point_missing';
+type CheckoutBlockReason =
+  'cart_unreachable' | 'address_missing' | 'undeliverable_line' | 'min_basket' | 'service_point_missing' | 'shipping_unpriced';
 
 export function checkoutBlocker(input: {
   cartFailed: boolean;
@@ -119,6 +120,8 @@ export function checkoutBlocker(input: {
   if (input.snapshot.delivery?.blocked || input.cartHasBlocked) return 'undeliverable_line';
   if (!input.snapshot.payment.minBasketOk) return 'min_basket';
   if (input.pointMissing) return 'service_point_missing';
+  // Kargo ücreti bilinmiyor (eşik altında ve taşıyıcı fiyat vermedi); sabit yedek ücret olmadığı için sipariş açılmaz.
+  if (input.snapshot.payment.orderTotalCents === null) return 'shipping_unpriced';
   return null;
 }
 

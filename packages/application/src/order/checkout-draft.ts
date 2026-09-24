@@ -51,7 +51,7 @@ import { resolveCheckoutPayment } from './checkout-options';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
 import { readUnitCosts } from './unit-costs';
 import { optionForPricing, parcelPlanSnapshot, pricedOptions, servicePointSnapshot, shippingVatLines } from './shipping-selection';
-import { quoteShipping } from '../shipping/quote';
+import { quoteFailureOf, quoteShipping } from '../shipping/quote';
 import { sendcloudProvider, shippingProviderConfigured } from '../shipping/provider';
 import type { ShippingRateProvider } from '../shipping/port';
 
@@ -97,6 +97,8 @@ export type CheckoutDraftOutcome =
   | { status: 'customer_not_found' }
   /** Seçilen kargo servisi bu sepette yok ya da seçim bize kalmışken eve giden servis yok; ekran listeyi yeniden okur. */
   | { status: 'shipping_option_unavailable' }
+  /** Eşik altındaki kargo siparişinin canlı fiyatı yok ve sabit yedek ücret de yok; sebebi `quoteFailureOf` söyler. */
+  | { status: 'shipping_unpriced'; reason: 'carrier' | 'data' }
   /** Servis teslim noktası istiyor ama nokta yok, kapalı ya da başka taşıyıcının. */
   | { status: 'service_point_invalid' }
   /** Gel-al istendi ama müşterinin izni yok — ekran kartı göstermemişti, istek elle kurulmuştur. */
@@ -143,7 +145,7 @@ export interface CheckoutDraftInput {
   shippingOptionCode?: string | null;
   /** Servis teslim noktası istiyorsa seçilen nokta; sağlayıcıdan yeniden okunur, istemcinin söylediği adres alınmaz. */
   servicePointId?: string | null;
-  /** Testte sahte sağlayıcı; verilmezse ortamın Sendcloud'u, o da yoksa teklifsiz (sabit tarife). */
+  /** Testte sahte sağlayıcı; verilmezse ortamın Sendcloud'u, o da yoksa teklif sorulmaz. */
   rateProvider?: ShippingRateProvider | null;
   /**
    * Gel-al: müşterinin malı alacağı depo; doluysa tür `pickup`, bölge ve gün yok, adres fatura adresi olarak yazılır. Açık seçimdir
@@ -351,7 +353,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     return { status: 'min_basket', missingCents: options.missingForMinBasketCents };
   }
 
-  // Teklif alınamadıysa sipariş sabit tarifeyle açılır ve seçimsiz kalır; servisi o zaman depo seçer.
+  // Teklif alınamadıysa seçim yoktur: eşik üstündeki sipariş yine açılır ve servisi sevkte depo seçer.
   let shippingChoice: { code: string; costCents: number; servicePoint: ServicePointSnapshot | null; plan: ParcelPlanSnapshot } | null =
     null;
   if (quote?.status === 'ok') {
@@ -380,6 +382,13 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // Deposuz sipariş yazılamaz; sebep çağırana taşınır, çünkü "bölge dışısınız" ile "kargo deposu tanımlı değil" aynı cümle olamaz.
   if (!orderWarehouseId) {
     return { status: 'warehouse_unresolved', reason: delivery.unresolvedReason ?? 'no_shipping_warehouse' };
+  }
+
+  // Sabit yedek ücret yok: eşik altındaki kargo siparişi canlı fiyat olmadan açılmaz.
+  if (options.shippingFeeCents === null || options.orderTotalCents === null) {
+    const failure = quoteFailureOf(quote);
+    // Teklif varken ücretin boş kalması seçimin tutmamasıdır; o hâl yukarıda `shipping_option_unavailable` ile döner.
+    return failure ? { status: 'shipping_unpriced', reason: failure } : { status: 'shipping_option_unavailable' };
   }
 
   // Zam onayı en sonda ve yalnız siparişe giren kalem için sorulur: zaten açılmayacak siparişte fiyat onayı müşteriyi iki kez

@@ -101,6 +101,8 @@
       "price_changed": "Siz ekrandayken bazı fiyatlar değişti: {detail}. Sipariş vermeden önce görmenizi istedik — onaylıyorsanız tekrar \"Siparişi onayla\"ya basın.",
       "cart_changed": "Siz ekrandayken sepetiniz değişti — sipariş verilmedi. Yandaki özet güncellendi; uygunsa tekrar \"Siparişi onayla\"ya basın.",
       "shipping_option_unavailable": "Seçtiğiniz kargo servisi bu sepet için artık sunulmuyor. Lütfen kargo seçimini yeniden yapın.",
+      "shipping_unpriced_carrier": "Kargo fiyatını şu an alamıyoruz — sipariş verilmedi. Birkaç dakika sonra tekrar deneyin.",
+      "shipping_unpriced_data": "Bu sipariş şu an kargoyla gönderilemiyor — sipariş verilmedi.",
       "service_point_invalid": "Bu kargo servisi bir teslim noktasına teslim ediyor. Lütfen açık bir teslim noktası seçin.",
       "pickup_not_allowed": "Depodan teslim hesabınız için açık değil — adresinize teslimi seçin.",
       "pickup_warehouse_unavailable": "Seçtiğiniz depo şu an gel-al için kapalı. Sayfayı yenileyip yeniden seçin."
@@ -235,6 +237,8 @@
       "price_changed": "Certains prix ont changé pendant que vous étiez sur cette page : {detail}. Nous tenions à vous le montrer avant de valider — si cela vous convient, appuyez à nouveau sur « Confirmer la commande ».",
       "cart_changed": "Votre panier a changé pendant que vous étiez sur cette page — la commande n'a pas été passée. Le récapitulatif est à jour ; si cela vous convient, appuyez à nouveau sur « Confirmer la commande ».",
       "shipping_option_unavailable": "Le mode de livraison choisi n'est plus proposé pour ce panier. Merci de choisir à nouveau.",
+      "shipping_unpriced_carrier": "Nous ne parvenons pas à obtenir le tarif de livraison — la commande n'a pas été passée. Réessayez dans quelques minutes.",
+      "shipping_unpriced_data": "Cette commande ne peut pas être expédiée pour le moment — elle n'a pas été passée.",
       "service_point_invalid": "Ce mode de livraison livre en point relais. Merci de choisir un point relais ouvert.",
       "pickup_not_allowed": "Le retrait à l'entrepôt n'est pas ouvert pour votre compte — choisissez la livraison à votre adresse.",
       "pickup_warehouse_unavailable": "L'entrepôt choisi n'accepte pas le retrait pour le moment. Rechargez la page et choisissez à nouveau."
@@ -369,6 +373,8 @@
       "price_changed": "Während Sie auf dieser Seite waren, haben sich einige Preise geändert: {detail}. Wir wollten es Ihnen vor der Bestellung zeigen – wenn das für Sie in Ordnung ist, wählen Sie erneut „Bestellung bestätigen“.",
       "cart_changed": "Ihr Warenkorb hat sich geändert, während Sie auf dieser Seite waren – die Bestellung wurde nicht aufgegeben. Die Übersicht ist aktualisiert; wenn das für Sie in Ordnung ist, wählen Sie erneut „Bestellung bestätigen“.",
       "shipping_option_unavailable": "Die gewählte Versandart ist für diesen Warenkorb nicht mehr verfügbar. Bitte wählen Sie erneut.",
+      "shipping_unpriced_carrier": "Wir können den Versandpreis gerade nicht abrufen – die Bestellung wurde nicht aufgegeben. Bitte versuchen Sie es in einigen Minuten erneut.",
+      "shipping_unpriced_data": "Diese Bestellung kann derzeit nicht versendet werden – sie wurde nicht aufgegeben.",
       "service_point_invalid": "Diese Versandart liefert an einen Abholpunkt. Bitte wählen Sie einen geöffneten Abholpunkt.",
       "pickup_not_allowed": "Die Abholung im Lager ist für Ihr Konto nicht freigeschaltet – wählen Sie die Lieferung an Ihre Adresse.",
       "pickup_warehouse_unavailable": "Das gewählte Lager bietet die Abholung derzeit nicht an. Laden Sie die Seite neu und wählen Sie erneut."

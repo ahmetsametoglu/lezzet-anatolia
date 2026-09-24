@@ -146,6 +146,24 @@ beforeAll(async () => {
       country: 'DE',
     })
   ).id;
+  // Eşik altındaki kargo siparişi canlı fiyat ister: teklif ölçü, gönderici adresi ve kutu olmadan sorulamaz.
+  await new ProductVariantService(db).update({
+    id: variantId,
+    packedWeightG: 1000,
+    packedLengthMm: 140,
+    packedWidthMm: 90,
+    packedHeightMm: 60,
+  });
+  await new WarehouseService(db).update({ id: shippingWarehouseId, address: { line1: 'Depostraße 1', postalCode: '77694', city: 'Kehl' } });
+  await new ShippingBoxService(db).insert({
+    warehouseId: shippingWarehouseId,
+    name: `Seçim kutusu ${stamp}`,
+    lengthMm: 300,
+    widthMm: 200,
+    heightMm: 150,
+    tareG: 130,
+    maxContentG: null,
+  });
   SettingsService.invalidate();
 });
 
@@ -174,7 +192,66 @@ afterAll(async () => {
 // "kaynağı kayboldu" hâline düşer (`orphanLine`, `shippable: false`) — sipariş soğuk zincir
 // gerekçesiyle reddedilir ve testin ölçtüğü şey kaybolur.
 const entries = () => [{ kind: 'variant' as const, variantId, qty: 1, stockId: null }];
-const base = () => ({ locale: 'tr' as const, customerId, addressId, deliveryDate: null, paymentMethod: 'online' as const });
+
+const secenek = (code: string, priceCents: number, lastMile: string, carrierCode = 'colissimo', labelless = false): ShippingQuote => ({
+  code,
+  carrierCode,
+  carrierName: carrierCode,
+  name: code,
+  priceCents,
+  currency: 'EUR',
+  leadTimeHours: null,
+  lastMile: lastMile as ShippingQuote['lastMile'],
+  signature: false,
+  tracked: true,
+  ecoDelivery: false,
+  multicollo: true,
+  labelless,
+});
+const nokta = (id: string, carrierCode: string, kind: ServicePoint['kind'] = 'servicepoint'): ServicePoint => ({
+  id,
+  carrierCode,
+  name: `Nokta ${id}`,
+  street: 'Marktplatz',
+  houseNumber: '1',
+  postalCode: rotaKodu,
+  city: 'Kehl',
+  country: 'DE',
+  latitude: null,
+  longitude: null,
+  distanceM: null,
+  active: true,
+  kind,
+  openingTimes: null,
+});
+// Liste bilerek fiyata göre sıralı değil ve en ucuzu teslim noktası: "seçim yoksa en ucuz" hatası burada görünür.
+const saglayici: ShippingRateProvider = {
+  quote: async () => [
+    secenek('eve-pahali', 990, 'home_delivery'),
+    secenek('nokta-mr', 450, 'service_point', 'mondial_relay'),
+    secenek('dolap-mr', 400, 'locker', 'mondial_relay'),
+    secenek('eve-ucuz', 690, 'home_delivery'),
+    // Etiketli ikizinden ucuz etiketsiz servis: süzülmezse "eve giden en ucuz" onu seçerdi.
+    secenek('eve-ucuz-qr', 650, 'home_delivery', 'colissimo', true),
+  ],
+  announce: () => Promise.reject(new Error('taslakta duyuru çağrılmamalı')),
+  cancel: () => Promise.reject(new Error('taslakta iptal çağrılmamalı')),
+  status: () => Promise.reject(new Error('taslakta durum çağrılmamalı')),
+  listRecent: () => Promise.reject(new Error('taslakta liste çağrılmamalı')),
+  servicePoints: () => Promise.reject(new Error('taslakta arama çağrılmamalı')),
+  servicePoint: async (id) => (id === 'sp-mr' ? nokta('sp-mr', 'mondial_relay') : id === 'sp-dpd' ? nokta('sp-dpd', 'dpd') : null),
+};
+/** Taşıyıcıya ulaşılamayan hâl: teklif atar, öteki çağrılar zaten sorulmaz. */
+const cevapsizSaglayici: ShippingRateProvider = { ...saglayici, quote: () => Promise.reject(new Error('taşıyıcı cevap vermedi')) };
+
+const base = () => ({
+  locale: 'tr' as const,
+  customerId,
+  addressId,
+  deliveryDate: null,
+  paymentMethod: 'online' as const,
+  rateProvider: saglayici,
+});
 
 describe('kargo siparişi taslağı', () => {
   it('rota İÇİ adresten açılsa bile KARGO deposundan ve `shipping` türüyle doğar', async () => {
@@ -255,6 +332,7 @@ describe('KDV işlemi — sipariş anında çözülür', () => {
     addressId: b2bAddressId,
     deliveryDate: null,
     paymentMethod: 'online' as const,
+    rateProvider: saglayici,
   });
 
   it('DE + B2B + doğrulanmış vergi no → reverse charge; kalem KDV\'si %0 ve numara siparişe kopyalanır', async () => {
@@ -299,48 +377,14 @@ describe('KDV işlemi — sipariş anında çözülür', () => {
 });
 
 describe('kargo seçimi ödeme anında siparişe yazılır', () => {
-  const secenek = (code: string, priceCents: number, lastMile: string, carrierCode = 'colissimo', labelless = false): ShippingQuote => ({
-    code, carrierCode, carrierName: carrierCode, name: code, priceCents, currency: 'EUR', leadTimeHours: null,
-    lastMile: lastMile as ShippingQuote['lastMile'], signature: false, tracked: true, ecoDelivery: false, multicollo: true, labelless,
-  });
-  const nokta = (id: string, carrierCode: string, kind: ServicePoint['kind'] = 'servicepoint'): ServicePoint => ({
-    id, carrierCode, name: `Nokta ${id}`, street: 'Marktplatz', houseNumber: '1', postalCode: rotaKodu, city: 'Kehl', country: 'DE',
-    latitude: null, longitude: null, distanceM: null, active: true, kind, openingTimes: null,
-  });
-  // Liste bilerek fiyata göre sıralı değil ve en ucuzu teslim noktası: "seçim yoksa en ucuz" hatası burada görünür.
-  const saglayici: ShippingRateProvider = {
-    quote: async () => [
-      secenek('eve-pahali', 990, 'home_delivery'),
-      secenek('nokta-mr', 450, 'service_point', 'mondial_relay'),
-      secenek('dolap-mr', 400, 'locker', 'mondial_relay'),
-      secenek('eve-ucuz', 690, 'home_delivery'),
-      // Etiketli ikizinden ucuz etiketsiz servis: süzülmezse "eve giden en ucuz" onu seçerdi.
-      secenek('eve-ucuz-qr', 650, 'home_delivery', 'colissimo', true),
-    ],
-    announce: () => Promise.reject(new Error('taslakta duyuru çağrılmamalı')),
-    cancel: () => Promise.reject(new Error('taslakta iptal çağrılmamalı')),
-    status: () => Promise.reject(new Error('taslakta durum çağrılmamalı')),
-    listRecent: () => Promise.reject(new Error('taslakta liste çağrılmamalı')),
-    servicePoints: () => Promise.reject(new Error('taslakta arama çağrılmamalı')),
-    servicePoint: async (id) => (id === 'sp-mr' ? nokta('sp-mr', 'mondial_relay') : id === 'sp-dpd' ? nokta('sp-dpd', 'dpd') : null),
-  };
-  const siparis = (over: Record<string, unknown> = {}) =>
-    createCheckoutDraft({ ...base(), entries: entries(), shippingOrder: true, rateProvider: saglayici, ...over });
+  const siparis = (over: Record<string, unknown> = {}) => createCheckoutDraft({ ...base(), entries: entries(), shippingOrder: true, ...over });
   /** Teklif KDV hariç gelir; müşterinin ücreti siparişin kendi kalem oranlarıyla KDV dahildir. */
   const brut = async (orderId: string, netCents: number) => {
     const kayit = await new OrderService(db).getWithItems(orderId);
     return shippingPriceWithVat(netCents, kayit!.items.map((i) => ({ totalCents: i.unitPriceCents * i.qty, vatRate: i.vatRate })));
   };
 
-  beforeAll(async () => {
-    await new ProductVariantService(db).update({ id: variantId, packedWeightG: 1000, packedLengthMm: 140, packedWidthMm: 90, packedHeightMm: 60 });
-    await new WarehouseService(db).update({ id: shippingWarehouseId, address: { line1: 'Depostraße 1', postalCode: '77694', city: 'Kehl' } });
-    await new ShippingBoxService(db).insert({
-      warehouseId: shippingWarehouseId, name: `Seçim kutusu ${stamp}`, lengthMm: 300, widthMm: 200, heightMm: 150, tareG: 130, maxContentG: null,
-    });
-  });
-
-  it('müşterinin seçtiği servis, gördüğü fiyat ve koli planı siparişe yazılır; ücret sabit tarifeden gelmez', async () => {
+  it('müşterinin seçtiği servis, gördüğü fiyat ve koli planı siparişe yazılır', async () => {
     const outcome = await siparis({ shippingOptionCode: 'eve-pahali' });
     if (outcome.status !== 'ok') throw new Error(`taslak bekleniyordu: ${outcome.status}`);
     const order = await new OrderService(db).getById(outcome.orderId);
@@ -410,5 +454,58 @@ describe('kargo seçimi ödeme anında siparişe yazılır', () => {
     // Ön koşul: sepet eşiği geçti. Geçmediyse test kendi kurulumunu yalanlar, kural sınanmış olmaz.
     expect(order?.shippingFeeCents).toBe(0);
     expect(order).toMatchObject({ shippingOptionCode: 'eve-ucuz', servicePoint: null, deliveryCostCents: 690 });
+  });
+});
+
+/**
+ * Sabit yedek ücret yok: eşik altındaki kargo siparişi canlı fiyat olmadan açılmaz, eşik üstündeki fiyatsız da açılır ve servisi sevkte
+ * depo seçer. Sebep ayrı taşınır, çünkü taşıyıcı arızası geçer, verimizin eksiği ise düzeltilene kadar sürer.
+ */
+describe('fiyatsız kargo siparişi', () => {
+  const ekranOku = (over: Record<string, unknown> = {}) =>
+    readCheckoutSnapshot(db, 'tr', {
+      customerId,
+      addressId,
+      entries: entries(),
+      couponCode: null,
+      pickupWarehouseId: null,
+      shippingOrder: true,
+      rateProvider: saglayici,
+      ...over,
+    });
+
+  it('eşik altında taşıyıcı cevap vermezse toplam bilinmez ve sipariş açılmaz', async () => {
+    const ekran = await ekranOku({ rateProvider: cevapsizSaglayici });
+    expect(ekran.shipping?.status).toBe('provider_error');
+    expect(ekran.payment).toMatchObject({ shippingFeeCents: null, orderTotalCents: null });
+
+    const outcome = await createCheckoutDraft({ ...base(), entries: entries(), shippingOrder: true, rateProvider: cevapsizSaglayici });
+    expect(outcome).toEqual({ status: 'shipping_unpriced', reason: 'carrier' });
+  });
+
+  it('eşik üstünde taşıyıcı cevap vermese de sipariş ücretsiz açılır, servisi depo seçer', async () => {
+    const outcome = await createCheckoutDraft({
+      ...base(),
+      entries: [{ kind: 'variant' as const, variantId, qty: 10, stockId: null }],
+      shippingOrder: true,
+      rateProvider: cevapsizSaglayici,
+    });
+    if (outcome.status !== 'ok') throw new Error(`taslak bekleniyordu: ${outcome.status}`);
+    expect(await new OrderService(db).getById(outcome.orderId)).toMatchObject({ shippingFeeCents: 0, shippingOptionCode: null });
+  });
+
+  it('ölçüsü eksik ürün kargoyla sipariş açmaz; ekran ürünün adını söyler', async () => {
+    const variants = new ProductVariantService(db);
+    await variants.update({ id: variantId, packedWeightG: null });
+    try {
+      const ekran = await ekranOku();
+      expect(ekran.shipping).toMatchObject({ status: 'unmeasured', unshippable: [expect.stringContaining(`Kargo ürünü ${stamp}`)] });
+      expect(await createCheckoutDraft({ ...base(), entries: entries(), shippingOrder: true })).toEqual({
+        status: 'shipping_unpriced',
+        reason: 'data',
+      });
+    } finally {
+      await variants.update({ id: variantId, packedWeightG: 1000 });
+    }
   });
 });
