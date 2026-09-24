@@ -10,7 +10,7 @@ import {
   getPackagesByIds,
   type PlaceWarehouses,
   resolvedOrNull,
-  shippingGroupFee,
+  shippingGroupFree,
 } from '@lezzet/application';
 import { serviceDb, type Db } from '@lezzet/database';
 import {
@@ -95,7 +95,7 @@ export interface CartRead {
 
 /** Kapının görünümü → sözleşme şekli. `z.input` KİLİTTİR: kapı saparsa burası DERLENMEZ. */
 function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof MeCartViewSchema> {
-  const fee = shippingGroupFee(view);
+  const threshold = shippingGroupFree(view);
   return {
     lines: view.lines.map(toLineBody),
     subtotalCents: view.subtotalCents,
@@ -130,11 +130,10 @@ function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof M
     minBasketCents: view.minBasketCents,
     freeShippingCents: view.freeShippingCents,
     shippingSubtotalCents: view.shippingSubtotalCents,
-    shippingTariffCents: view.shippingTariffCents,
     shippingOnly: view.shippingOnly,
-    /* Kargo grubunun çözülmüş ücreti motordan (`shippingGroupFee`); istemci eşiği kendi karşılaştırsa kural iki yerde yaşardı. */
-    shippingGroupFeeCents: fee.feeCents,
-    shippingFreeRemainingCents: fee.remainingForFreeCents,
+    /* Eşik cevabı motordan (`shippingGroupFree`); istemci eşiği kendi karşılaştırsa kural iki yerde yaşardı. */
+    shippingFree: threshold.free,
+    shippingFreeRemainingCents: threshold.remainingForFreeCents,
     localOrderDiscountCents: view.localOrderDiscountCents,
   };
 }

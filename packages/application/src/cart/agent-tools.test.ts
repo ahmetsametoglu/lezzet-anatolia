@@ -168,12 +168,12 @@ describe('kimliksiz sohbette (Messenger) sepet SOHBETE yazılır', () => {
     const sonuc = await cagir(araclar(messenger), 'sepete_ekle', { urun: AD('Fıstıklı Sarma'), adet: 2 });
     expect(sonuc).toMatchObject({ eklendi: { urun: AD('Fıstıklı Sarma'), adet: 2 } });
     const sepet = sonuc.sepet as { kalemler: Array<{ birimFiyat: string; adet: number }>; toplam: string; kargo: string };
-    /* Kargo ve ödenecek tutar açık söylenir: ürün toplamını söyleyip kargoyu susan ajan müşteriye sitedekinden farklı tutar verir.
-       Yer biliniyor ve kalem rota deposunda: kapıya teslim. */
+    /* Kargo ayrı cümlede söylenir ve toplam sitenin sepetindeki ürün toplamıdır, kargo içermez. Yer biliniyor ve kalem rota deposunda:
+       kapıya teslim. */
     expect(sepet.kargo).toMatch(/kapıya teslim/);
     // Yeri BİLİNMEYEN okumada da eşik söylenir (satış cümlesi) — okumak yer istemez, yazmak ister.
     expect((await cagir(araclarHafizayla(messenger, null), 'sepetim')).kargo).toMatch(/ÜCRETSİZ/);
-    expect(sepet.toplam).toMatch(/ödeyeceği tutar/);
+    expect(sepet.toplam).toMatch(/kargo hariç/);
     expect(sepet.kalemler).toHaveLength(1);
     expect(sepet.kalemler[0]).toMatchObject({ adet: 2 });
     expect(sepet.kalemler[0]!.birimFiyat).toMatch(/4,57/);

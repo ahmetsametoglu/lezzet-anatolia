@@ -23,7 +23,7 @@ import { Dialog } from '@/components/customer/ui/dialog';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
-import { cartCheckoutCents, cartKey, cartPayableCents, shippingGroupFee, type CartLine } from '@/lib/cart/cart-types';
+import { cartCheckoutCents, cartKey, shippingGroupFree, type CartLine } from '@/lib/cart/cart-types';
 import { discountLabel } from '@/lib/cart/discount-label';
 import { formatPrice } from '@/lib/storefront/format';
 import { CartIdentity } from './components/cart-identity';
@@ -124,8 +124,8 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
   const split = localLines.length > 0 && shippingLines.length > 0;
   const localItemsCents = sumOf(localLines);
   const shippingItemsCents = sumOf(shippingLines);
-  // Kargo ücreti ve eşiğe kalan motordan: istemci eşik aritmetiği yapmaz.
-  const fee = shippingGroupFee(view);
+  // Ücretsiz kargo eşiğinin cevabı motordan: istemci eşik aritmetiği yapmaz.
+  const threshold = shippingGroupFree(view);
   const placeLabel = address?.postalCode ?? place?.postalCode ?? '';
 
   const discount = view.discount;
@@ -152,9 +152,9 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
     ...(discountCents > 0
       ? [{ key: 'discount', label: discountLabel(discount, summaryCopy(locale), locale), value: `−${formatPrice(discountCents, locale)}`, tone: 'olive' as const }]
       : []),
-    // Sepetin tamamı kargodaysa tek sipariş doğar ve ücreti BELLİ — saklamak müşteriyi kasada sürprizle karşılardı.
+    // Sepetin tamamı kargodaysa satır kargonun ücretsiz mi yoksa ödeme adımında mı belli olacağını söyler; tutarı taşıyıcı fiyatlar.
     ...(view.shippingOnly
-      ? [{ key: 'shipping', label: copy.group.shippingRow, value: fee.feeCents > 0 ? formatPrice(fee.feeCents, locale) : copy.group.free }]
+      ? [{ key: 'shipping', label: copy.group.shippingRow, value: threshold.free ? copy.group.free : copy.group.shippingAtCheckout }]
       : []),
     // Gelemeyen kalem toplamda durur ama siparişe girmez: kapsam belirsiz kalmasın diye ayrı satır.
     ...(view.undeliverableSubtotalCents > 0
@@ -184,10 +184,10 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
   );
 
   const shippingBreakdown = [
-    fee.feeCents > 0
-      ? copy.group.shippingFee.replace('{items}', formatPrice(shippingItemsCents, locale)).replace('{fee}', formatPrice(fee.feeCents, locale))
-      : copy.group.shippingFeeFree.replace('{items}', formatPrice(shippingItemsCents, locale)),
-    fee.remainingForFreeCents > 0 ? copy.group.shippingRemaining.replace('{amount}', formatPrice(fee.remainingForFreeCents, locale)) : null,
+    (threshold.free ? copy.group.shippingFeeFree : copy.group.shippingFee).replace('{items}', formatPrice(shippingItemsCents, locale)),
+    threshold.remainingForFreeCents > 0
+      ? copy.group.shippingRemaining.replace('{amount}', formatPrice(threshold.remainingForFreeCents, locale))
+      : null,
     copy.group.shippingPayment,
   ]
     .filter((part): part is string => part !== null)
@@ -195,8 +195,11 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
 
   // Ücretsiz kargo eşiği YALNIZ kargo grubu varken anlamlı; bölünmüş sepette aynı bilgi grubun kendi kutusunda.
   const freeShippingNote =
-    view.freeShippingCents === 0 || shippingLines.length === 0 || split ? null : fee.remainingForFreeCents > 0 ? (
-      <Note tone="warm" description={copy.freeShipping.remaining.replace('{amount}', formatPrice(fee.remainingForFreeCents, locale))} />
+    view.freeShippingCents === 0 || shippingLines.length === 0 || split ? null : threshold.remainingForFreeCents > 0 ? (
+      <Note
+        tone="warm"
+        description={copy.freeShipping.remaining.replace('{amount}', formatPrice(threshold.remainingForFreeCents, locale))}
+      />
     ) : (
       <Note tone="olive" description={copy.freeShipping.reached} />
     );
@@ -264,7 +267,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
               {split && group.key === 'shipping' && (
                 <div className={GROUP_CARD}>
                   <span className="font-sans text-copy font-semibold text-ink">
-                    {copy.group.shippingTotal.replace('{amount}', formatPrice(shippingItemsCents + fee.feeCents, locale))}
+                    {copy.group.shippingTotal.replace('{amount}', formatPrice(shippingItemsCents, locale))}
                   </span>
                   <span className="font-sans text-body-sm leading-[1.6] text-muted">{shippingBreakdown}</span>
                   <SecondaryButton label={copy.group.shippingCta} href={{ pathname: '/checkout', query: { group: 'shipping' } }} disabled={view.hasBlocked || gate !== null} />
@@ -302,7 +305,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
         {/* Sunucu yalnız KAZANILABİLİR olanı gönderir — boş vaat yerine sessizlik. */}
         {reachableNote !== null && <Note tone="olive" description={reachableNote} />}
 
-        <SummaryPanel rows={summaryRows} totalLabel={copy.summary.total} totalValue={formatPrice(cartPayableCents(view), locale)} note={summaryNote} />
+        <SummaryPanel rows={summaryRows} totalLabel={copy.summary.total} totalValue={formatPrice(view.totalCents, locale)} note={summaryNote} />
 
         {view.hasBlocked && <Note tone="error" description={copy.blocked} />}
         {/* Dipteki kutu eşiği ve ne yapılacağını söyler, eksik tutar barda: aynı sayı iki kez okunmasın. */}

@@ -1,3 +1,4 @@
+import { freeShippingOf } from '@lezzet/domain-core';
 import type { CartLineGroup, MeCartView, MeCartViewLine } from '@lezzet/types';
 
 import type { CartState } from '@/screens/customer-kit/cart-store';
@@ -81,11 +82,18 @@ export function cartViewBundleLine(index: number, name: string, group: CartLineG
   };
 }
 
+/** Ücretsiz kargo eşiği (cent). */
+const FREE_SHIPPING_CENTS = 10_000;
+
 /**
  * Satırlardan tam görünüm; toplamlar satırlardan türetilir, sunucu da öyle yapar.
  */
 export function cartView(lines: MeCartViewLine[], overrides: Partial<MeCartView> = {}): MeCartView {
   const subtotalCents = lines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0);
+  const shippingSubtotalCents = lines.reduce((sum, line) => (line.group === 'shipping' ? sum + (line.lineTotalCents ?? 0) : sum), 0);
+  // Eşik ayarın varsayılanı; cevap sunucunun kuralıyla (`shippingGroupFree`) kurulur ki fikstür sunucunun üretemeyeceği bir hâlde olmasın.
+  const threshold =
+    shippingSubtotalCents > 0 ? freeShippingOf(shippingSubtotalCents, FREE_SHIPPING_CENTS) : { free: false, remainingForFreeCents: 0 };
   return {
     lines,
     subtotalCents,
@@ -103,14 +111,11 @@ export function cartView(lines: MeCartViewLine[], overrides: Partial<MeCartView>
     minBasketOk: true,
     missingForMinBasketCents: 0,
     minBasketCents: 2500,
-    freeShippingCents: 0,
-    shippingSubtotalCents: lines.reduce((sum, line) => (line.group === 'shipping' ? sum + (line.lineTotalCents ?? 0) : sum), 0),
-    shippingTariffCents: 690,
+    freeShippingCents: FREE_SHIPPING_CENTS,
+    shippingSubtotalCents,
     shippingOnly: lines.length > 0 && lines.every((line) => line.group === 'shipping'),
-    /* Fikstürde eşik tanımsız (`freeShippingCents: 0`) olduğu için ücret HAM TARİFEDİR ve kalan
-       sıfırdır — sunucunun `shippingGroupFee` kararının bu girdilerle verdiği cevabın aynısı. */
-    shippingGroupFeeCents: lines.some((line) => line.group === 'shipping') ? 690 : 0,
-    shippingFreeRemainingCents: 0,
+    shippingFree: threshold.free,
+    shippingFreeRemainingCents: threshold.remainingForFreeCents,
     localOrderDiscountCents: 0,
     ...overrides,
   };

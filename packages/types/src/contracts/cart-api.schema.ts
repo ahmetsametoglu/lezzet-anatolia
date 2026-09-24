@@ -270,14 +270,13 @@ export const MeCartViewSchema = z.object({
   freeShippingCents: z.number().int(),
   /** KARGO grubunun toplamı — ücretsiz kargo eşiği buna bakar, sepetin tamamına değil (K37). */
   shippingSubtotalCents: z.number().int(),
-  /** Kargo TARİFESİ (ham tutar) — ücretsiz olup olmadığı kararı motorun. */
-  shippingTariffCents: z.number().int(),
   /** Sepetin tamamı kargo grubundaysa müşteriye "iki sipariş vereceksiniz" DENMEZ. */
   shippingOnly: z.boolean(),
   /**
-   * Kargo grubunun çözülmüş ücreti, eşik aşıldıysa 0; kararı sunucu `shippingGroupFee` ile verir, istemci kopyalamaz.
+   * Kargo grubu ücretsiz kargo eşiğini geçti mi; kararı sunucu verir (`shippingGroupFree`). Ücretin tutarını sepet bilmez, taşıyıcı onu
+   * ödeme adımında seçilen servise göre fiyatlar.
    */
-  shippingGroupFeeCents: z.number().int(),
+  shippingFree: z.boolean(),
   /**
    * Ücretsiz kargoya kalan (cent) — 0 ise ya eşik aşıldı ya eşik tanımsız.
    *

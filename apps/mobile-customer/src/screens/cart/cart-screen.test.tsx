@@ -215,16 +215,26 @@ describe('CartScreen — İKİ GRUP, İKİ SİPARİŞ', () => {
     expect(within(screen.getByTestId('cart-checkout')).getByText('18,00 €')).toBeOnTheScreen();
   });
 
-  it('salt-kargo sepette kargo ücreti özette ayrı satırdır, toplama ve düğmeye girer', async () => {
+  it('salt-kargo sepette eşik altındaki kargo tutar yazmaz, toplam ve düğme kargosuzdur', async () => {
     mockCart = cartWith(cartView([cartViewLine(2, 'Kurabiye', 'shipping', { unitPriceCents: 1500 })]));
 
     await render(<CartScreen />);
 
+    // Ücreti taşıyıcı ödeme adımında seçilen servise göre fiyatlar; sepet ne tutar ne tahmin yazar.
     const summary = within(screen.getByTestId('cart-summary'));
     expect(summary.getByText(t.group.shippingRow)).toBeOnTheScreen();
-    expect(summary.getByText('6,90 €')).toBeOnTheScreen();
-    expect(summary.getByText('21,90 €')).toBeOnTheScreen();
-    expect(within(screen.getByTestId('cart-checkout')).getByText('21,90 €')).toBeOnTheScreen();
+    expect(summary.getByText(t.group.shippingAtCheckout)).toBeOnTheScreen();
+    expect(within(screen.getByTestId('cart-checkout')).getByText('15,00 €')).toBeOnTheScreen();
+  });
+
+  it('salt-kargo sepet ücretsiz kargo eşiğini geçtiyse kargo satırı "Ücretsiz" der', async () => {
+    mockCart = cartWith(
+      cartView([cartViewLine(2, 'Kurabiye', 'shipping', { unitPriceCents: 1500 })], { shippingFree: true, shippingFreeRemainingCents: 0 }),
+    );
+
+    await render(<CartScreen />);
+
+    expect(within(screen.getByTestId('cart-summary')).getByText(t.group.free)).toBeOnTheScreen();
   });
 
   it('tek gruplu sepette ikinci sipariş eylemi HİÇ çizilmez', async () => {

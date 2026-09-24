@@ -8,7 +8,7 @@ import {
   minBasketBaseOf,
   orderLaneOf,
   orderableLines,
-  shippingGroupFee,
+  shippingGroupFree,
   splitByRoute,
   undeliverableTotalOf,
   viewWithEntries,
@@ -161,21 +161,19 @@ describe('siparişin şeridi', () => {
   });
 });
 
-describe('shippingGroupFee — eşik kargo grubunun tutarından ölçülür', () => {
-  it('grup eşiğin altındaysa ücret doğar ve kalan söylenir', () => {
-    const fee = shippingGroupFee({ shippingSubtotalCents: 3_000, freeShippingCents: 6_000, shippingTariffCents: 790 });
-    expect(fee.feeCents).toBe(790);
-    expect(fee.remainingForFreeCents).toBe(3_000);
+describe('shippingGroupFree — eşik kargo grubunun tutarından ölçülür', () => {
+  it('grup eşiğin altındaysa kargo ücretsiz değildir ve kalan söylenir', () => {
+    expect(shippingGroupFree({ shippingSubtotalCents: 3_000, freeShippingCents: 6_000 })).toEqual({
+      free: false,
+      remainingForFreeCents: 3_000,
+    });
   });
 
-  it('grup eşiği geçtiyse ücret düşer', () => {
-    const fee = shippingGroupFee({ shippingSubtotalCents: 6_000, freeShippingCents: 6_000, shippingTariffCents: 790 });
-    expect(fee.feeCents).toBe(0);
-    expect(fee.remainingForFreeCents).toBe(0);
+  it('grup eşiği geçtiyse kargo ücretsizdir', () => {
+    expect(shippingGroupFree({ shippingSubtotalCents: 6_000, freeShippingCents: 6_000 })).toEqual({ free: true, remainingForFreeCents: 0 });
   });
 
-  it('kargo grubu yokken ücret de yok — boş grup eşiğin altı sayılmaz', () => {
-    const fee = shippingGroupFee({ shippingSubtotalCents: 0, freeShippingCents: 6_000, shippingTariffCents: 790 });
-    expect(fee.feeCents).toBe(0);
+  it('kargo grubu yokken eşiğe kalan söylenmez — boş grup eşiğin altı sayılmaz', () => {
+    expect(shippingGroupFree({ shippingSubtotalCents: 0, freeShippingCents: 6_000 })).toEqual({ free: false, remainingForFreeCents: 0 });
   });
 });

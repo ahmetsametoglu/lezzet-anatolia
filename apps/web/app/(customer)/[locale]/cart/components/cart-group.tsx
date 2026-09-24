@@ -7,7 +7,7 @@ import { buttonClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
-import { cartKey, shippingGroupFee, type CartLine, type CartView } from '@/lib/cart/cart-types';
+import { cartKey, shippingGroupFree, type CartLine, type CartView } from '@/lib/cart/cart-types';
 import { CartLineRow } from './cart-line';
 import { checkoutBlockReason, useCheckoutGate } from './cart-summary';
 import type { Messages } from '../cart-types';
@@ -36,9 +36,8 @@ export function CartGroup({ kind, lines, view, t, locale, compact = false }: Car
   // Grubun kalem toplamı kendi satırlarından; indirim burada yazılmaz, çünkü her sipariş indirimini checkout'ta kendi kalemleriyle
   // yeniden alır.
   const itemsCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
-  // Ücret motordan: sepette "6,90 €" yazıp kasada başka bir sayı kesmek ekranın sözünü tutmamasıdır.
-  const fee = shippingGroupFee(view);
-  const totalCents = shipping ? itemsCents + fee.feeCents : itemsCents;
+  // Kargo ücreti yazılmaz, çünkü taşıyıcı onu ödeme adımında seçilen servise göre fiyatlar; grup yalnız eşik cevabını söyler.
+  const threshold = shippingGroupFree(view);
 
   const title = undeliverable
     ? cartMessages[locale].group.undeliverable
@@ -71,9 +70,17 @@ export function CartGroup({ kind, lines, view, t, locale, compact = false }: Car
       ))}
 
       {undeliverable ? null : shipping ? (
-        <ShippingAction view={view} t={t} locale={locale} compact={compact} itemsCents={itemsCents} totalCents={totalCents} feeCents={fee.feeCents} remainingCents={fee.remainingForFreeCents} />
+        <ShippingAction
+          view={view}
+          t={t}
+          locale={locale}
+          compact={compact}
+          itemsCents={itemsCents}
+          free={threshold.free}
+          remainingCents={threshold.remainingForFreeCents}
+        />
       ) : (
-        <RouteAction view={view} t={t} locale={locale} compact={compact} totalCents={totalCents} />
+        <RouteAction view={view} t={t} locale={locale} compact={compact} totalCents={itemsCents} />
       )}
     </div>
   );
@@ -134,16 +141,16 @@ interface ShippingActionProps {
   locale: Locale;
   compact: boolean;
   itemsCents: number;
-  totalCents: number;
-  feeCents: number;
+  /** Kargo grubu ücretsiz kargo eşiğini geçti mi. */
+  free: boolean;
   remainingCents: number;
 }
 
 /**
- * Kargo grubunun eylemi: çerçeveli düğme, çünkü bu ikinci ve isteğe bağlı sipariştir. Kendi ücreti, kendi eşiği ve yalnız online
- * ödeme burada söylenir, yoksa ikinci sipariş sürprizle başlar.
+ * Kargo grubunun eylemi: çerçeveli düğme, çünkü bu ikinci ve isteğe bağlı sipariştir. Kendi eşiği, ücretin ödeme adımında belli olacağı
+ * ve yalnız online ödeme burada söylenir, yoksa ikinci sipariş sürprizle başlar.
  */
-function ShippingAction({ view, t, locale, compact, itemsCents, totalCents, feeCents, remainingCents }: ShippingActionProps) {
+function ShippingAction({ view, t, locale, compact, itemsCents, free, remainingCents }: ShippingActionProps) {
   const g = t.group;
   // Kargo siparişi de kimlik ve adres ister; tükenen kalem sepetin tamamını durdurur, kapı ondan sonra okunur.
   const gate = useCheckoutGate(t);
@@ -151,9 +158,7 @@ function ShippingAction({ view, t, locale, compact, itemsCents, totalCents, feeC
   const blocked = reason !== null;
 
   const breakdown = [
-    feeCents > 0
-      ? g.shippingFee.replace('{items}', formatPrice(itemsCents, locale)).replace('{fee}', formatPrice(feeCents, locale))
-      : g.shippingFeeFree.replace('{items}', formatPrice(itemsCents, locale)),
+    (free ? g.shippingFeeFree : g.shippingFee).replace('{items}', formatPrice(itemsCents, locale)),
     remainingCents > 0 ? g.shippingRemaining.replace('{amount}', formatPrice(remainingCents, locale)) : null,
     g.shippingPayment,
   ]
@@ -170,7 +175,7 @@ function ShippingAction({ view, t, locale, compact, itemsCents, totalCents, feeC
       >
         <div className="flex flex-1 flex-col gap-0.5">
           <span className={['font-sans font-bold text-ink', compact ? 'text-copy' : 'text-card-title-sm'].join(' ')}>
-            {g.shippingTotal.replace('{amount}', formatPrice(totalCents, locale))}
+            {g.shippingTotal.replace('{amount}', formatPrice(itemsCents, locale))}
           </span>
           <span className={['font-sans text-muted', compact ? 'text-micro' : 'text-note'].join(' ')}>{breakdown}</span>
         </div>

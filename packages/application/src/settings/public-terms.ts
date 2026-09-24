@@ -3,12 +3,7 @@ import type { Country } from '@lezzet/types';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { minBasketFor } from '../cart/min-basket';
 import { settingScopeOf } from '../cart/setting-scope';
-import {
-  FREE_SHIPPING_THRESHOLD_DEFAULT,
-  FREE_SHIPPING_THRESHOLD_KEY,
-  SHIPPING_FEE_DEFAULT,
-  SHIPPING_FEE_KEY,
-} from '../cart/settings-keys';
+import { FREE_SHIPPING_THRESHOLD_DEFAULT, FREE_SHIPPING_THRESHOLD_KEY } from '../cart/settings-keys';
 
 /**
  * Müşteriye ilan edilen tutarların tek kapısı: bilgi sayfaları sayıları ayardan okur ki operatör değiştirdiğinde ilan eski sayıda kalmasın.
@@ -22,8 +17,6 @@ export interface PublicDeliveryTerms {
   minBasketShippingCents: number;
   /** Ücretsiz kargo eşiği (cent). */
   freeShippingCents: number;
-  /** Kargo ücreti (cent). */
-  shippingFeeCents: number;
   /** Kapıda ödemenin üst sınırı (cent) — üstünde ödeme sipariş sırasında alınır. */
   codMaxCents: number;
   /** Kargonun gidebildiği ülkeler; ayar değil veridir, ülke başına bir kargo deposu vardır ve küme depolardan türer. */
@@ -45,12 +38,11 @@ export async function readPublicDeliveryTerms(db: Db, customerId: string | null 
   const viewer = await pricingViewerOf(db, customerId);
   const scope = settingScopeOf(viewer, {});
 
-  const [minBasketRouteCents, minBasketShippingCents, freeShippingCents, shippingFeeCents, codMaxCents, countries] =
+  const [minBasketRouteCents, minBasketShippingCents, freeShippingCents, codMaxCents, countries] =
     await Promise.all([
       minBasketFor(settings, 'route', scope),
       minBasketFor(settings, 'shipping', scope),
       settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
-      settings.getNumber(SHIPPING_FEE_KEY, SHIPPING_FEE_DEFAULT, scope),
       settings.getNumber(COD_MAX_KEY, COD_MAX_DEFAULT, scope),
       new WarehouseService(db).listShippingCountries(),
     ]);
@@ -59,7 +51,6 @@ export async function readPublicDeliveryTerms(db: Db, customerId: string | null 
     minBasketRouteCents,
     minBasketShippingCents,
     freeShippingCents,
-    shippingFeeCents,
     codMaxCents,
     shippingCountries: countries,
   };

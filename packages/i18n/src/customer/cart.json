@@ -33,13 +33,14 @@
       "routeTotal": "Kapıya gidecek toplam: {amount}",
       "routeNote": "Teslimat ücretsiz · kapıda ödeme mümkün",
       "shippingTotal": "Kargoyla gidecek toplam: {amount}",
-      "shippingFee": "{items} + kargo {fee}",
+      "shippingFee": "{items} + kargo (ödeme adımında seçtiğiniz servise göre)",
       "shippingFeeFree": "{items} · kargo ücretsiz",
       "shippingRemaining": "{amount} daha eklerseniz kargo ücretsiz",
       "shippingPayment": "yalnız online ödeme",
       "shippingCta": "Kargolu ürünleri ayrıca sipariş ver",
       "shippingRow": "Kargo",
-      "free": "Ücretsiz"
+      "free": "Ücretsiz",
+      "shippingAtCheckout": "ödeme adımında"
     },
     "undeliverable": {
       "title": "{place} için bazı ürünler gelemiyor",
@@ -153,13 +154,14 @@
       "routeTotal": "Total livraison à domicile : {amount}",
       "routeNote": "Livraison offerte · paiement à la livraison possible",
       "shippingTotal": "Total expédition : {amount}",
-      "shippingFee": "{items} + livraison {fee}",
+      "shippingFee": "{items} + livraison (selon le service choisi au paiement)",
       "shippingFeeFree": "{items} · livraison offerte",
       "shippingRemaining": "encore {amount} et la livraison est offerte",
       "shippingPayment": "paiement en ligne uniquement",
       "shippingCta": "Commander séparément les articles expédiés",
       "shippingRow": "Livraison",
-      "free": "Offerte"
+      "free": "Offerte",
+      "shippingAtCheckout": "au paiement"
     },
     "undeliverable": {
       "title": "Certains articles ne peuvent pas être livrés à {place}",
@@ -273,13 +275,14 @@
       "routeTotal": "Summe für die Lieferung: {amount}",
       "routeNote": "Lieferung kostenlos · Zahlung bei Lieferung möglich",
       "shippingTotal": "Summe für den Versand: {amount}",
-      "shippingFee": "{items} + Versand {fee}",
+      "shippingFee": "{items} + Versand (je nach gewähltem Dienst im Bezahlschritt)",
       "shippingFeeFree": "{items} · Versand kostenlos",
       "shippingRemaining": "noch {amount} und der Versand ist kostenlos",
       "shippingPayment": "nur Online-Zahlung",
       "shippingCta": "Versandartikel separat bestellen",
       "shippingRow": "Versand",
-      "free": "Kostenlos"
+      "free": "Kostenlos",
+      "shippingAtCheckout": "im Bezahlschritt"
     },
     "undeliverable": {
       "title": "Einige Artikel können wir nicht nach {place} liefern",

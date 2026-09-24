@@ -56,7 +56,6 @@ jest.mock('@/lib/api/delivery-terms', () => ({
         minBasketRouteCents: 4000,
         minBasketShippingCents: 0,
         freeShippingCents: 6000,
-        shippingFeeCents: 790,
         codMaxCents: 50_000,
         shippingCountries: ['FR', 'DE'],
       },

@@ -36,7 +36,8 @@ export function resolveShippingFee(input: ShippingFeeInput): ShippingFeeResult {
     return { feeCents: 0, freeReason: 'route', remainingForFreeCents: 0, source: null };
   }
   // Eşik canlı fiyata bakmaz: "eşik üzeri ücretsiz" bir sözdür ve maliyete bağlansaydı bazı adreslerde yalan olurdu.
-  if (input.basketCents >= input.freeThresholdCents) {
+  const threshold = freeShippingOf(input.basketCents, input.freeThresholdCents);
+  if (threshold.free) {
     return { feeCents: 0, freeReason: 'threshold', remainingForFreeCents: 0, source: null };
   }
   const quoted = input.quotedFeeCents;
@@ -44,9 +45,16 @@ export function resolveShippingFee(input: ShippingFeeInput): ShippingFeeResult {
   return {
     feeCents: live ? quoted : input.feeCents,
     freeReason: null,
-    remainingForFreeCents: Math.max(0, input.freeThresholdCents - input.basketCents),
+    remainingForFreeCents: threshold.remainingForFreeCents,
     source: live ? 'quote' : 'tariff',
   };
+}
+
+/** Ücretsiz kargo eşiği: tutar eşiği geçtiyse kargo alınmaz, geçmediyse eşiğe kalan söylenir; sepet ve ödeme aynı kuraldan okur. */
+export function freeShippingOf(basketCents: number, freeThresholdCents: number): { free: boolean; remainingForFreeCents: number } {
+  return basketCents >= freeThresholdCents
+    ? { free: true, remainingForFreeCents: 0 }
+    : { free: false, remainingForFreeCents: freeThresholdCents - basketCents };
 }
 
 /** Asgari sepet tutuyor mu — tutmuyorsa checkout açılmaz (DOMAIN §6, parametrik). */

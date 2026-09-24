@@ -130,11 +130,9 @@ const EMPTY_VIEW: MeCartView = {
   minBasketCents: 0,
   freeShippingCents: 0,
   shippingSubtotalCents: 0,
-  shippingTariffCents: 0,
   shippingOnly: false,
-  /* Kargo grubunun çözülmüş ücreti ve eşiğe kalan — boş sepette ikisi de sıfır: ödenecek kargo
-     yok, aşılacak eşik yok. */
-  shippingGroupFeeCents: 0,
+  /* Boş sepette kargo grubu yok: ücretsizlik sorusu doğmaz, aşılacak eşik de yok. */
+  shippingFree: false,
   shippingFreeRemainingCents: 0,
   localOrderDiscountCents: 0,
 };

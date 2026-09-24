@@ -1,5 +1,5 @@
-import { checkoutButtonCents, meetsMinBasket, payableTotalCents, resolveShippingFee } from '@lezzet/domain-core';
-import type { CouponRejection, DiscountRule, ShippingFeeResult } from '@lezzet/domain-core';
+import { checkoutButtonCents, freeShippingOf, meetsMinBasket } from '@lezzet/domain-core';
+import type { CouponRejection, DiscountRule } from '@lezzet/domain-core';
 import type { AnalyticsBlockedReason, CartItem, CartLineGroup } from '@lezzet/types';
 import type { LocalizedText } from '@lezzet/types';
 import type { CartLineRoute } from '@lezzet/domain-core';
@@ -244,10 +244,6 @@ export interface CartView {
    */
   shippingSubtotalCents: number;
   /**
-   * Ayardaki ham kargo tarifesi; ücret kararı motorda (`shippingGroupFee`), çözülmüş sayı taşınsa aynı gerçeğin iki kopyası olurdu.
-   */
-  shippingTariffCents: number;
-  /**
    * Sepetin tamamı kargo grubunda mı; öyleyse tek sipariş vardır ve müşteriye "iki sipariş" denmez.
    */
   shippingOnly: boolean;
@@ -277,7 +273,6 @@ export const EMPTY_CART: CartView = {
   minBasketCents: 0,
   freeShippingCents: 0,
   shippingSubtotalCents: 0,
-  shippingTariffCents: 0,
   shippingOnly: false,
   localOrderDiscountCents: 0,
 };
@@ -388,38 +383,21 @@ export function minBasketBaseOf(lines: readonly CartLine[]): number {
 }
 
 /**
- * Kargo grubunun ücret kararı; sepet, ekran ve checkout aynı eşikle sorar ki ekranın sözü tutsun. Grup yoksa erken çıkar.
+ * Kargo grubunun ücretsiz kargo cevabı: eşiği geçti mi, geçmediyse ne kaldı. Ücretin tutarını sepet bilmez, taşıyıcı onu ödeme adımında
+ * seçilen servise göre fiyatlar; grup yoksa soru doğmaz.
  */
-export function shippingGroupFee(
-  view: Pick<CartView, 'shippingSubtotalCents' | 'freeShippingCents' | 'shippingTariffCents'>,
-): ShippingFeeResult {
-  // Kargo grubu yok: ücret sorusu doğmuyor, o yüzden kaynağı da yok (`source: null`).
-  if (view.shippingSubtotalCents <= 0) return { feeCents: 0, freeReason: null, remainingForFreeCents: 0, source: null };
-  return resolveShippingFee({
-    deliveryType: 'shipping',
-    basketCents: view.shippingSubtotalCents,
-    freeThresholdCents: view.freeShippingCents,
-    feeCents: view.shippingTariffCents,
-  });
-}
-
-/** Sepetin ödenecek tutarı (`payableTotalCents`); ücret kargo grubunun kararından okunur. */
-export function cartPayableCents(
-  view: Pick<CartView, 'totalCents' | 'shippingOnly' | 'shippingSubtotalCents' | 'freeShippingCents' | 'shippingTariffCents'>,
-): number {
-  return payableTotalCents({
-    totalCents: view.totalCents,
-    shippingOnly: view.shippingOnly,
-    shippingFeeCents: shippingGroupFee(view).feeCents,
-  });
+export function shippingGroupFree(view: Pick<CartView, 'shippingSubtotalCents' | 'freeShippingCents'>): {
+  free: boolean;
+  remainingForFreeCents: number;
+} {
+  if (view.shippingSubtotalCents <= 0) return { free: false, remainingForFreeCents: 0 };
+  return freeShippingOf(view.shippingSubtotalCents, view.freeShippingCents);
 }
 
 /** Sepet düğmesinin yazdığı tutar (`checkoutButtonCents`): düğmenin açtığı siparişin tutarı. */
 export function cartCheckoutCents(view: CartView): number {
   return checkoutButtonCents({
     totalCents: view.totalCents,
-    shippingOnly: view.shippingOnly,
-    shippingFeeCents: shippingGroupFee(view).feeCents,
     split: isSplitCart(view),
     localItemsCents: view.lines.reduce((sum, l) => (cartGroupOf(l) === 'local' ? sum + (l.lineTotalCents ?? 0) : sum), 0),
     localOrderDiscountCents: view.localOrderDiscountCents,
@@ -520,7 +498,7 @@ export function viewWithEntries(view: CartView, entries: readonly CartEntry[]): 
   // Eşik kuralı MOTORDAN sorulur, matrahı sunucu okumasıyla aynı fonksiyondan (`minBasketBaseOf`).
   const basket = meetsMinBasket(minBasketBaseOf(lines), view.minBasketCents);
   /**
-   * Kargo grubunun sayıları da tazelenir; ücret motora sorulur (`shippingGroupFee`), son kargo satırı gidince `shippingOnly` düşer.
+   * Kargo grubunun tutarı da tazelenir, çünkü ücretsiz kargo eşiği ona bakar; son kargo satırı gidince `shippingOnly` düşer.
    */
   const shippingSubtotalCents = lines.reduce((sum, l) => (l.route === 'shipping' ? sum + (l.lineTotalCents ?? 0) : sum), 0);
   const hasShipping = lines.some((l) => l.route === 'shipping');

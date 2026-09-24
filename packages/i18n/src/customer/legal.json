@@ -86,7 +86,7 @@
         "questions": [],
         "amounts": {
           "heading": "Güncel tutarlar",
-          "fee": "Kargo ücreti {fee}; {threshold} ve üzeri siparişlerde alınmaz.",
+          "fee": "Kargo ücreti, ödeme adımında seçtiğiniz taşıyıcı servisine göre hesaplanır; {threshold} ve üzeri siparişlerde alınmaz.",
           "minBasketRoute": "Kapıya teslimde asgari sepet tutarı {amount}.",
           "minBasketRouteNone": "Kapıya teslimde asgari sepet tutarı yoktur.",
           "minBasketShipping": "Kargo siparişlerinde asgari sepet tutarı {amount}.",
@@ -617,7 +617,7 @@
         "questions": [],
         "amounts": {
           "heading": "Montants en vigueur",
-          "fee": "Les frais d'expédition sont de {fee} ; ils sont offerts à partir de {threshold} de commande.",
+          "fee": "Les frais d'expédition dépendent du service de transport choisi à l'étape du paiement ; ils sont offerts à partir de {threshold} de commande.",
           "minBasketRoute": "Pour la livraison à domicile, le montant minimum de commande est de {amount}.",
           "minBasketRouteNone": "Pour la livraison à domicile, il n'y a pas de montant minimum de commande.",
           "minBasketShipping": "Pour les commandes expédiées, le montant minimum est de {amount}.",
@@ -1148,7 +1148,7 @@
         "questions": [],
         "amounts": {
           "heading": "Aktuelle Beträge",
-          "fee": "Die Versandkosten betragen {fee}; ab {threshold} Bestellwert entfallen sie.",
+          "fee": "Die Versandkosten richten sich nach dem im Bezahlschritt gewählten Versanddienst; ab {threshold} Bestellwert entfallen sie.",
           "minBasketRoute": "Für die Haustürlieferung beträgt der Mindestbestellwert {amount}.",
           "minBasketRouteNone": "Für die Haustürlieferung gibt es keinen Mindestbestellwert.",
           "minBasketShipping": "Für Versandbestellungen beträgt der Mindestbestellwert {amount}.",

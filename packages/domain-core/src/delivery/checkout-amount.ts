@@ -1,11 +1,7 @@
-/** Sepet tutarı sorularının girdisi; web ve native sepet görünümü aynı alanları taşır. */
-export interface CartAmountInput {
-  /** İndirimli sepet toplamı, kargo hariç. */
+/** Sepet düğmesinin tutar sorusunun girdisi; web ve native sepet görünümü aynı alanları taşır. */
+export interface CheckoutButtonInput {
+  /** İndirimli sepet toplamı. */
   totalCents: number;
-  /** Sepetin tamamı kargo grubunda mı. */
-  shippingOnly: boolean;
-  /** Kargo grubunun çözülmüş ücreti; eşik aşıldıysa 0. */
-  shippingFeeCents: number;
   /** Sepet kapıya ve kargoya iki siparişe bölünmüş mü. */
   split: boolean;
   /** Kapı grubunun indirimsiz kalem toplamı. */
@@ -15,17 +11,9 @@ export interface CartAmountInput {
 }
 
 /**
- * Sepetin ödenecek tutarı: sepetin tamamı kargodaysa tek sipariş doğar ve kargo ücreti bellidir, o yüzden toplama girer. Karışık
- * sepette ücret yalnız kargo grubunun kendi kutusunda yazılır.
+ * Sepet düğmesinin yazdığı tutar, açtığı siparişin ürün tutarıdır: bölünmüş sepette kapı siparişi indirimini yalnız kendi kalemleriyle
+ * alır. Kargo ücreti hiçbir hâlde katılmaz, çünkü taşıyıcı onu ödeme adımında seçilen servise göre fiyatlar.
  */
-export function payableTotalCents(input: Pick<CartAmountInput, 'totalCents' | 'shippingOnly' | 'shippingFeeCents'>): number {
-  return input.totalCents + (input.shippingOnly ? input.shippingFeeCents : 0);
-}
-
-/**
- * Sepet düğmesinin yazdığı tutar, açtığı siparişin tutarıdır. Bölünmüş sepette düğme kapı siparişini açar; o sipariş indirimini
- * yalnız kendi kalemleriyle alır ve kapı teslimatı ücretsizdir.
- */
-export function checkoutButtonCents(input: CartAmountInput): number {
-  return input.split ? Math.max(0, input.localItemsCents - input.localOrderDiscountCents) : payableTotalCents(input);
+export function checkoutButtonCents(input: CheckoutButtonInput): number {
+  return input.split ? Math.max(0, input.localItemsCents - input.localOrderDiscountCents) : input.totalCents;
 }

@@ -10,7 +10,7 @@ import { useAccount } from '@/components/customer/account/account-context';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
-import { cartBlockReason, cartPayableCents, shippingGroupFee, type CartView } from '@/lib/cart/cart-types';
+import { cartBlockReason, shippingGroupFree, type CartView } from '@/lib/cart/cart-types';
 import { discountLabel } from '@/lib/cart/discount-label';
 import type { Messages } from '../cart-types';
 
@@ -101,13 +101,11 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
   const copy = cartMessages[locale];
   // İndirim tutarı türetilir, yeniden hesaplanmaz — kararın sahibi motor, yazan sunucu.
   const discountCents = view.subtotalCents - view.totalCents;
-  // Sepetin tamamı kargodaysa tek sipariş doğar ve kargo ücreti bellidir; saklamak müşteriyi kasada sürprizle karşılardı.
-  const fee = view.shippingOnly ? shippingGroupFee(view) : null;
+  // Sepetin tamamı kargodaysa satır kargonun ücretsiz mi yoksa ödeme adımında mı belli olacağını söyler; tutarı taşıyıcı fiyatlar.
+  const threshold = view.shippingOnly ? shippingGroupFree(view) : null;
   /* Sepetin tamamı kapıya gidiyorsa teslimat ücretsizdir; karışık sepette her grup kendi bloğunda konuşur, yol bilinmiyorken söz
      yok. */
   const routeOnly = !grouped && view.lines.length > 0 && view.lines.every((l) => l.route === 'local');
-  // Toplam ortak fonksiyondan, çünkü aynı sayıyı mobil çubuk ve başlıktaki hap da yazar.
-  const totalCents = cartPayableCents(view);
   /* Cümle SUNUCUNUN kararından kurulur, ekran eşik aritmetiği yapmaz: hangi kampanyanın
      kazanılabilir olduğu ve eşiğe varıldığında ne ineceği motorda hesaplanıyor
      (`findReachableDiscount`). Burada yalnız üç sayı yerine konuyor — iki yüzey de aynı kapıdan
@@ -149,15 +147,14 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
             indirimi büyütmüyorsa alan `null`), yani buradaki cümle her zaman tutulabilir bir sözdür. */}
         {reachableNote !== null && <span className="font-sans text-note leading-relaxed text-olive">{reachableNote}</span>}
 
-        {fee !== null && (
+        {threshold !== null && (
           <div className="flex items-center justify-between font-sans text-body-sm">
             <span className="text-body">{copy.group.shippingRow}</span>
-            {/* Ücretsizken tutar sütununa tek kelime yazılır, çünkü kutlama cümlesi sağa yaslı hücreyi bozar. Zeytin ton yalnız
-                ücretsizken, yoksa masraf kazanç gibi okunurdu. */}
-            {fee.feeCents > 0 ? (
-              <span className="font-bold text-ink">{formatPrice(fee.feeCents, locale)}</span>
-            ) : (
+            {/* Zeytin ton yalnız ücretsizken, yoksa henüz belli olmayan bir masraf iyi haber gibi okunurdu. */}
+            {threshold.free ? (
               <span className="font-bold text-olive">{copy.group.free}</span>
+            ) : (
+              <span className="font-bold text-ink">{copy.group.shippingAtCheckout}</span>
             )}
           </div>
         )}
@@ -176,7 +173,7 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
           ].join(' ')}
         >
           <span>{summary.total}</span>
-          <span>{formatPrice(totalCents, locale)}</span>
+          <span>{formatPrice(view.totalCents, locale)}</span>
         </div>
         <span className="font-sans text-micro text-muted">{summary.vatIncluded}</span>
       </div>

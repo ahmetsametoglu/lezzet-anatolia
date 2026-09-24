@@ -452,7 +452,7 @@ export {
   itemOfEntry,
   // Siparişe girebilecek kalemler; gelemeyenler sepette kalır, çünkü yeni adreste yine lazım olabilir.
   orderableLines,
-  shippingGroupFee,
+  shippingGroupFree,
   splitByRoute,
   storedPrices,
   viewWithEntries,

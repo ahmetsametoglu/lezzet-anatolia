@@ -1,4 +1,4 @@
-import { checkoutButtonCents, payableTotalCents } from '@lezzet/domain-core';
+import { checkoutButtonCents } from '@lezzet/domain-core';
 import { formatPrice, placeChangeText } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { MeCartViewLine } from '@lezzet/types';
@@ -171,15 +171,9 @@ export function CartScreen() {
   const summaryRows: SummaryRow[] = [
     { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(view.subtotalCents, locale) },
     ...(discountSummary === null ? [] : [discountSummary]),
-    // Sepetin tamamı kargodaysa tek sipariş doğar ve kargo ücreti bellidir; saklamak müşteriyi kasada sürprizle karşılardı.
+    // Sepetin tamamı kargodaysa satır kargonun ücretsiz mi yoksa ödeme adımında mı belli olacağını söyler; tutarı taşıyıcı fiyatlar.
     ...(view.shippingOnly
-      ? [
-          {
-            key: 'shipping',
-            label: t.group.shippingRow,
-            value: view.shippingGroupFeeCents > 0 ? formatPrice(view.shippingGroupFeeCents, locale) : t.group.free,
-          },
-        ]
+      ? [{ key: 'shipping', label: t.group.shippingRow, value: view.shippingFree ? t.group.free : t.group.shippingAtCheckout }]
       : []),
     ...(undeliverableCents === 0
       ? []
@@ -279,25 +273,18 @@ export function CartScreen() {
   };
 
   /* İki grup iki sipariştir ve ikincisi zorunlu değil: bölünme bir seçim değil stokun sonucudur. Grup toplamlarına indirim yazılmaz,
-     çünkü kupon ve kampanya checkout'ta siparişin kendi kalemlerine göre yeniden çözülür; kargo ücreti sunucudan gelir. */
+     çünkü kupon ve kampanya checkout'ta siparişin kendi kalemlerine göre yeniden çözülür; kargo ücretini ödeme adımında taşıyıcı fiyatlar. */
   const localItemsCents = localLines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0);
   const shippingItemsCents = shippingLines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0);
-  const shippingFeeCents = view.shippingGroupFeeCents;
   const checkoutCents = checkoutButtonCents({
     totalCents: view.totalCents,
-    shippingOnly: view.shippingOnly,
-    shippingFeeCents,
     split,
     localItemsCents,
     localOrderDiscountCents: view.localOrderDiscountCents,
   });
 
   const shippingBreakdown = [
-    shippingFeeCents > 0
-      ? t.group.shippingFee
-          .replace('{items}', formatPrice(shippingItemsCents, locale))
-          .replace('{fee}', formatPrice(shippingFeeCents, locale))
-      : t.group.shippingFeeFree.replace('{items}', formatPrice(shippingItemsCents, locale)),
+    (view.shippingFree ? t.group.shippingFeeFree : t.group.shippingFee).replace('{items}', formatPrice(shippingItemsCents, locale)),
     view.shippingFreeRemainingCents > 0
       ? t.group.shippingRemaining.replace('{amount}', formatPrice(view.shippingFreeRemainingCents, locale))
       : null,
@@ -325,9 +312,7 @@ export function CartScreen() {
    */
   const shippingAction = !split ? null : (
     <View style={styles.groupCard} testID="cart-shipping-group">
-      <Text style={styles.groupTotal}>
-        {t.group.shippingTotal.replace('{amount}', formatPrice(shippingItemsCents + shippingFeeCents, locale))}
-      </Text>
+      <Text style={styles.groupTotal}>{t.group.shippingTotal.replace('{amount}', formatPrice(shippingItemsCents, locale))}</Text>
       <Text style={styles.groupNote}>{shippingBreakdown}</Text>
       <SecondaryButton
         label={t.group.shippingCta}
@@ -514,14 +499,7 @@ export function CartScreen() {
         <SummaryPanel
           rows={summaryRows}
           totalLabel={t.summary.total}
-          totalValue={formatPrice(
-            payableTotalCents({
-              totalCents: view.totalCents,
-              shippingOnly: view.shippingOnly,
-              shippingFeeCents: view.shippingGroupFeeCents,
-            }),
-            locale,
-          )}
+          totalValue={formatPrice(view.totalCents, locale)}
           note={summaryNote}
           testID="cart-summary"
         />

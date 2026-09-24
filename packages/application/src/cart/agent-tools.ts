@@ -9,7 +9,7 @@ import { getPackagesByIds, listStorefrontPackages } from '../catalog/packages';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { getProductDetail } from '../catalog/product';
 import type { PlaceWarehouses } from '../catalog/storefront-types';
-import { cartGroupOf, cartPayableCents, entryOfItem, shippingGroupFee, type CartEntry, type CartLine, type CartView } from './cart-types';
+import { cartGroupOf, entryOfItem, shippingGroupFree, type CartEntry, type CartLine, type CartView } from './cart-types';
 import { resolveChatPlace, ULKE_GIRDISI, yerNotu, type ChatPlace, type ChatPlaceMemory } from './chat-place';
 import { startCartLink, supportLinkUrl } from './link';
 import type { ChatLink } from './link-text';
@@ -442,20 +442,19 @@ async function paketiCoz(db: Db, ad: string): Promise<CozulmusSatir | { sonuc: R
 }
 
 /**
- * Kargo cümlesi — ücret, ücretsiz kargo eşiği ve eşiğe kalan tek cümlede; karar motorun
- * (`shippingGroupFee` → `resolveShippingFee`), burası yalnız söyler. Adres bilinmiyorsa ücret de
- * bilinmez ama EŞİK bilinir ve söylenir: "şu tutardan sonra kargo bedava" satış cümlesidir.
+ * Kargo cümlesi: ücretsiz kargo eşiği ve eşiğe kalan. Ücretin tutarı söylenmez, çünkü taşıyıcı onu ödeme adımında seçilen servise göre
+ * fiyatlar; eşik adres bilinmese de söylenir, "şu tutardan sonra kargo bedava" satış cümlesidir.
  */
 function kargoCumlesi(view: CartView, yerim: ChatPlace): string {
   const esik = formatPrice(view.freeShippingCents, 'tr');
+  const odemede = 'kargo ücreti ödeme adımında müşterinin seçtiği servise göre eklenir; tutar SÖYLEME, tahmin de verme';
   if (yerim.durum === 'hizmet-yok') return 'Bu posta koduna şu an ne kapıya teslim ne kargo var.';
-  if (yerim.durum !== 'biliniyor') return `Kargo ücreti adres bilinince belli olur; kargo ürünleri ${esik} ve üzerindeyse kargo ÜCRETSİZ.`;
+  if (yerim.durum !== 'biliniyor') return `Kargo ürünleri ${esik} ve üzerindeyse kargo ÜCRETSİZ; altındaysa ${odemede}.`;
   if (view.shippingSubtotalCents <= 0) return 'Sepettekiler kapıya teslim bölgesinde — kargo ücreti yok.';
-  const ucret = shippingGroupFee(view);
+  const esikCevabi = shippingGroupFree(view);
   const kargoUrunleri = formatPrice(view.shippingSubtotalCents, 'tr');
-  if (ucret.feeCents === 0) return `Kargo ÜCRETSİZ — kargoyla giden ürünler ${kargoUrunleri}, ${esik} eşiği aşıldı.`;
-  const karisik = view.shippingOnly ? '' : ' Sepet karışık (kapıya teslim + kargo); kargo ücreti adreste kesinleşir.';
-  return `Kargo ücreti ${formatPrice(ucret.feeCents, 'tr')} (kargoyla giden ürünler ${kargoUrunleri}). ${esik} ve üzerinde kargo ÜCRETSİZ — eşiğe ${formatPrice(ucret.remainingForFreeCents, 'tr')} kaldı, müşteriye SÖYLE.${karisik}`;
+  if (esikCevabi.free) return `Kargo ÜCRETSİZ — kargoyla giden ürünler ${kargoUrunleri}, ${esik} eşiği aşıldı.`;
+  return `Kargoyla giden ürünler ${kargoUrunleri}: ${odemede}. ${esik} ve üzerinde kargo ÜCRETSİZ — eşiğe ${formatPrice(esikCevabi.remainingForFreeCents, 'tr')} kaldı, müşteriye SÖYLE.`;
 }
 
 /**
@@ -474,7 +473,6 @@ function sepetOzeti(view: CartView, yerim: ChatPlace): Record<string, unknown> {
   const indirim =
     view.discount.status === 'applied' || view.discount.status === 'automatic' ? formatPrice(view.discount.amountCents, 'tr') : null;
   const kargo = kargoCumlesi(view, yerim);
-  const odenecek = cartPayableCents(view);
 
   return {
     kalemler: view.lines.map((line) => ({
@@ -488,10 +486,9 @@ function sepetOzeti(view: CartView, yerim: ChatPlace): Record<string, unknown> {
     kalemSayisi: view.itemCount,
     araToplam: formatPrice(view.subtotalCents, 'tr'),
     ...(indirim ? { indirim: `${indirim} indirim uygulandı — müşteriye SÖYLE` } : {}),
-    /* Kargo ve ödenecek toplam ayrı ve açık söylenir, yoksa ajanın söylediği tutar sitede görülenle ayrışırdı; ödenecek tutar
-       `cartPayableCents`ten. */
+    /* Toplam sitenin sepetindeki tutardır ve kargo içermez; kargo ayrı cümlede söylenir ki ajanın tutarı sitede görülenle ayrışmasın. */
     kargo,
-    toplam: `${formatPrice(odenecek, 'tr')} — müşterinin ödeyeceği tutar${odenecek > view.totalCents ? ' (kargo dahil)' : ''}; ürün toplamı ${formatPrice(view.totalCents, 'tr')}`,
+    toplam: `${formatPrice(view.totalCents, 'tr')} — ürün toplamı, kargo hariç`,
     ...(view.minBasketOk
       ? {}
       : { asgariSepet: `Asgari sepet ${formatPrice(view.minBasketCents, 'tr')} — ${formatPrice(view.missingForMinBasketCents, 'tr')} eksik; müşteri bu hâlde sipariş VEREMEZ, ürün eklemeli.` }),

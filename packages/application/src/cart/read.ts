@@ -9,12 +9,7 @@ import { pricingViewerOf } from '../catalog/pricing-viewer';
 import type { PlaceWarehouses, StorefrontImage } from '../catalog/storefront-types';
 import { minBasketFor } from './min-basket';
 import { settingScopeOf } from './setting-scope';
-import {
-  FREE_SHIPPING_THRESHOLD_DEFAULT,
-  FREE_SHIPPING_THRESHOLD_KEY,
-  SHIPPING_FEE_DEFAULT,
-  SHIPPING_FEE_KEY,
-} from './settings-keys';
+import { FREE_SHIPPING_THRESHOLD_DEFAULT, FREE_SHIPPING_THRESHOLD_KEY } from './settings-keys';
 import { resolveCartDiscount } from './discount';
 import {
   EMPTY_CART,
@@ -133,16 +128,13 @@ export async function getCartView(
    * Asgari sepet iki değer okunur, çünkü hangisinin geçerli olduğunu sepetin içeriği söyler (`shippingOnly`); gel-al'da taban
    * gel-al kuralıdır.
    */
-  const [minBasketRouteCents, minBasketShippingCents, freeShippingCents, shippingTariffCents] = await Promise.all([
+  const [minBasketRouteCents, minBasketShippingCents, freeShippingCents] = await Promise.all([
     minBasketFor(settings, opts.pickup ? 'pickup' : 'route', scope),
     minBasketFor(settings, 'shipping', scope),
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
-    // Tarife de aynı sebeple ortak anahtardan: kargo grubunun blokunda yazdığımız sayı, checkout'un
-    // keseceği sayının ta kendisi olmalı.
-    settings.getNumber(SHIPPING_FEE_KEY, SHIPPING_FEE_DEFAULT, scope),
   ]);
   // Boş sepette yol da yok: kapıya teslim tabanı yazılır ki ekran "en az şu kadar" diyebilsin.
-  if (entries.length === 0) return { ...EMPTY_CART, freeShippingCents, shippingTariffCents, ...meets(0, minBasketRouteCents) };
+  if (entries.length === 0) return { ...EMPTY_CART, freeShippingCents, ...meets(0, minBasketRouteCents) };
   // Motorun kalem sözleşmesi: satır çözülürken doldurulur (kategori/koleksiyon oradan gelir).
   const discountable: DiscountableLine[] = [];
 
@@ -302,11 +294,6 @@ export async function getCartView(
     hasBlocked: lines.some((l) => l.blocked),
     freeShippingCents,
     shippingSubtotalCents,
-    // Eşiğe kalan ve ücret KARGO grubundan çözülür (`shippingGroupFee`) — sepetin tamamından
-    // çözülseydi 80 €'luk bir rota siparişi 5 €'luk kargo kalemini bedava taşıtırdı: kendi
-    // aracımızla giden malın tutarı, bir kargo firmasına ödediğimiz ücreti karşılamaz. Tarife ham
-    // taşınır, karar motorun.
-    shippingTariffCents,
     // Tamamı kargodaysa salt-kargo siparişi kendiliğinden doğar; müşteriye "iki sipariş
     // vereceksiniz" denmez, verilecek tek sipariş vardır.
     shippingOnly: hasShipping && !hasLocal,

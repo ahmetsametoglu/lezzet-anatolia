@@ -310,7 +310,7 @@ describe('kimliksiz sohbet — set BOŞ değil, DAR (28.08 · CHANNELS §3b)', (
 
   it('kimliksizde teslimat şartları okunur — sayılar ziyaretçi kapsamından', async () => {
     const sonuc = await cagir(customerSupportTools(db, null), 'teslimat_sartlari', {});
-    expect(sonuc.kargoUcreti).toContain('€');
+    expect(sonuc.ucretsizKargoEsigi).toContain('€');
     expect(sonuc.kargoGonderilenUlkeler).toBeDefined();
   });
 });
@@ -513,11 +513,14 @@ describe('posta_kodu_kontrol — beş hâl, beş ayrı cümle', () => {
 });
 
 describe('teslimat_sartlari — sayılar tek kapıdan', () => {
-  it('altı alan da dolu ve BİÇİMLİ; ülkeler kod değil AD', async () => {
+  it('tutar alanları dolu ve BİÇİMLİ, kargo ücreti tutar değil kural; ülkeler kod değil AD', async () => {
     const sonuc = await cagir(customerSupportTools(db, musteriId), 'teslimat_sartlari');
-    for (const alan of ['kargoUcreti', 'ucretsizKargoEsigi', 'asgariSepetKapiyaTeslim', 'kapidaOdemeUstSiniri']) {
+    for (const alan of ['ucretsizKargoEsigi', 'asgariSepetKapiyaTeslim', 'kapidaOdemeUstSiniri']) {
       expect(String(sonuc[alan])).toContain('€');
     }
+    // Ücreti taşıyıcı ödeme adımında seçilen servise göre fiyatlar; sohbette söylenen sabit bir tutar sitede tutmazdı.
+    expect(String(sonuc.kargoUcreti)).not.toContain('€');
+    expect(String(sonuc.kargoUcreti)).toMatch(/seçtiği taşıyıcı/);
     // 'FR' değil 'Fransa': model ham ülke kodunu müşteriye olduğu gibi yazardı.
     for (const ulke of sonuc.kargoGonderilenUlkeler as string[]) expect(ulke.length).toBeGreaterThan(2);
   });

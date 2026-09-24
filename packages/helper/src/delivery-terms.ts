@@ -11,14 +11,13 @@ export interface DeliveryTermsAmounts {
   minBasketRouteCents: number;
   minBasketShippingCents: number;
   freeShippingCents: number;
-  shippingFeeCents: number;
   codMaxCents: number;
   shippingCountries: readonly string[];
 }
 
 /** Yer tutuculu cümleler — her yüzeyin sözlüğünden gelir, üç dilde aynı anahtar ağacı. */
 export interface DeliveryTermsCopy {
-  /** `{fee}` + `{threshold}` */
+  /** `{threshold}`: kargo ücreti seçilen servisten gelir, cümle yalnız ücretsiz kargo eşiğini yazar. */
   fee: string;
   /** `{amount}` — kapıya teslimin alt sınırı. */
   minBasketRoute: string;
@@ -56,7 +55,7 @@ export function deliveryTermsLines(
 ): string[] {
   const euro = (cents: number) => formatCompactEuro(cents, locale);
   const lines = [
-    copy.fee.replace('{fee}', euro(amounts.shippingFeeCents)).replace('{threshold}', euro(amounts.freeShippingCents)),
+    copy.fee.replace('{threshold}', euro(amounts.freeShippingCents)),
     amounts.minBasketRouteCents === 0
       ? copy.minBasketRouteNone
       : copy.minBasketRoute.replace('{amount}', euro(amounts.minBasketRouteCents)),

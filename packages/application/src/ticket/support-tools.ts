@@ -641,7 +641,8 @@ function publicTools(db: Db, customerId: string | null, memory: ChatPlaceMemory 
 
     teslimat_sartlari: tool({
       description:
-        'Kargo ücreti, ücretsiz kargo eşiği, asgari sepet tutarı, kapıda ödeme üst sınırı ve kargo gönderdiğimiz ülkeleri söyler. ' +
+        'Kargo ücretinin nasıl belirlendiğini, ücretsiz kargo eşiğini, asgari sepet tutarını, kapıda ödeme üst sınırını ' +
+        've kargo gönderdiğimiz ülkeleri söyler. ' +
         '"Kargo kaç para", "asgari sipariş var mı", "ne kadar alırsam kargo bedava", "kapıda ödeyebilir miyim" sorularında ÇAĞIR.',
       inputSchema: z.object({}),
       execute: async () => {
@@ -650,7 +651,9 @@ function publicTools(db: Db, customerId: string | null, memory: ChatPlaceMemory 
           // kapıyı okur ki sohbette söylenen sitede yazandan ayrışmasın.
           const s = await readPublicDeliveryTerms(db, customerId);
           return {
-            kargoUcreti: formatPrice(s.shippingFeeCents, 'tr'),
+            // Sabit bir ücret yok: taşıyıcı ödeme adımında seçilen servise göre fiyatlar, sohbette söylenen tutar sitede tutmazdı.
+            kargoUcreti:
+              'Sabit tutar YOK — ödeme adımında müşterinin seçtiği taşıyıcı servisine göre hesaplanır; tutar söyleme, tahmin de verme.',
             ucretsizKargoEsigi: formatPrice(s.freeShippingCents, 'tr'),
             asgariSepetKapiyaTeslim: formatPrice(s.minBasketRouteCents, 'tr'),
             // 0 = alt sınır YOK (kapının kendi künyesi) — "0,00 €" yazmak "sıfır euroluk sipariş

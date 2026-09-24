@@ -13,8 +13,6 @@ export const DeliveryTermsSchema = z.object({
   minBasketShippingCents: z.number().int().nonnegative(),
   /** Ücretsiz kargo eşiği (cent). */
   freeShippingCents: z.number().int().nonnegative(),
-  /** Kargo ücreti (cent). */
-  shippingFeeCents: z.number().int().nonnegative(),
   /** Kapıda ödemenin üst sınırı (cent) — üstünde ödeme sipariş sırasında alınır. */
   codMaxCents: z.number().int().nonnegative(),
   /**

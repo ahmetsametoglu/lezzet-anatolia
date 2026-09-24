@@ -5,11 +5,10 @@ import { Link } from '@/i18n/navigation';
 import { focusRingClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
 import { formatPrice } from '@/lib/storefront/format';
-import { cartPayableCents } from '@/lib/cart/cart-types';
 import { useCart } from './cart-context';
 
 /**
- * Masaüstü başlığının sepet hapı: adet ve ödenecek tutar ("8 ürün · 103,20 €"), boşken "Sepet boş". İlk okuma bitmeden sayı yazılmaz, çünkü
+ * Masaüstü başlığının sepet hapı: adet ve sepetin toplamı ("8 ürün · 103,20 €"), boşken "Sepet boş". İlk okuma bitmeden sayı yazılmaz, çünkü
  * sunucudaki sepeti görmeden "Sepet boş" demek girişli müşteriye sepetini kaybetmiş gibi bir an yaşatırdı.
  */
 interface CartPillProps {
@@ -25,7 +24,7 @@ export function CartPill({ locale, label, copy }: CartPillProps) {
   const text = !ready
     ? label
     : count > 0
-      ? (count === 1 ? copy.itemsOne : copy.items).replace('{n}', String(count)).replace('{total}', formatPrice(cartPayableCents(view), locale))
+      ? (count === 1 ? copy.itemsOne : copy.items).replace('{n}', String(count)).replace('{total}', formatPrice(view.totalCents, locale))
       : copy.empty;
 
   return (
