@@ -3,7 +3,7 @@
     "announcement": {
       "cold": "Soğuk zincirle teslim",
       "local": "Strasbourg & çevresinde kapıya teslim",
-      "shipping": "Fransa geneline kargo"
+      "shipping": "Fransa ve Almanya'ya kargo"
     },
     "cartPill": {
       "items": "{n} ürün · {total}",
@@ -51,7 +51,7 @@
     "announcement": {
       "cold": "Chaîne du froid respectée",
       "local": "Livraison à domicile à Strasbourg et alentours",
-      "shipping": "Expédition dans toute la France"
+      "shipping": "Expédition en France et en Allemagne"
     },
     "cartPill": {
       "items": "{n} produits · {total}",
@@ -99,7 +99,7 @@
     "announcement": {
       "cold": "Lieferung in der Kühlkette",
       "local": "Hauslieferung in Straßburg und Umgebung",
-      "shipping": "Versand in ganz Frankreich"
+      "shipping": "Versand nach Frankreich und Deutschland"
     },
     "cartPill": {
       "items": "{n} Artikel · {total}",

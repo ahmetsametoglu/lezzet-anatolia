@@ -123,7 +123,7 @@
           {
             "id": "donmus",
             "question": "Ürünler donmuş mu geliyor?",
-            "answer": "Donuk ürünlerimiz üreticisinden şoklanmış olarak gelir ve soğuk zincir bozulmadan kapınıza ulaşır. Soğuk zincir gerektiren ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz; bu ürünler kargoya verilemez. Diğer bütün ürünleri ise her adrese kargoyla gönderiyoruz."
+            "answer": "Donuk ürünlerimiz üreticisinden şoklanmış olarak gelir ve soğuk zincir bozulmadan kapınıza ulaşır. Soğuk zincir gerektiren ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz; bu ürünler kargoya verilemez. Diğer bütün ürünleri ise Fransa ve Almanya'daki her adrese kargoyla gönderiyoruz."
           },
           {
             "id": "asgari-sepet",
@@ -654,7 +654,7 @@
           {
             "id": "donmus",
             "question": "Les produits arrivent-ils surgelés ?",
-            "answer": "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant et arrivent chez vous sans rupture de la chaîne du froid. Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison ; ils ne peuvent pas partir en colis. Tous les autres produits, eux, partent par transporteur à n'importe quelle adresse."
+            "answer": "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant et arrivent chez vous sans rupture de la chaîne du froid. Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison ; ils ne peuvent pas partir en colis. Tous les autres produits, eux, partent par transporteur partout en France et en Allemagne."
           },
           {
             "id": "asgari-sepet",
@@ -1185,7 +1185,7 @@
           {
             "id": "donmus",
             "question": "Kommen die Produkte gefroren an?",
-            "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an. Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug an Adressen in unserem Liefergebiet; sie können nicht als Paket verschickt werden. Alle übrigen Produkte versenden wir dagegen an jede Adresse."
+            "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an. Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug an Adressen in unserem Liefergebiet; sie können nicht als Paket verschickt werden. Alle übrigen Produkte versenden wir dagegen an jede Adresse in Frankreich und Deutschland."
           },
           {
             "id": "asgari-sepet",

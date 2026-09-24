@@ -17,7 +17,7 @@
       "coldChainShort": "Soğuk zincir",
       "doorstepShort": "Kapıya teslim",
       "seeShippable": "Kargolanabilir benzerleri gör",
-      "sturdyBox": "Kırılmaz kargo kutusu"
+      "sturdyBox": "Özenle paketlenir"
     },
     "declaration": {
       "ingredients": "İçindekiler ve alerjenler",
@@ -139,7 +139,7 @@
       "coldChainShort": "Chaîne du froid",
       "doorstepShort": "Livraison à domicile",
       "seeShippable": "Voir des produits expédiables",
-      "sturdyBox": "Carton de transport renforcé"
+      "sturdyBox": "Emballage soigné"
     },
     "declaration": {
       "ingredients": "Ingrédients et allergènes",
@@ -261,7 +261,7 @@
       "coldChainShort": "Kühlkette",
       "doorstepShort": "Lieferung an die Haustür",
       "seeShippable": "Versandfähige Alternativen",
-      "sturdyBox": "Bruchsicherer Versandkarton"
+      "sturdyBox": "Sorgfältig verpackt"
     },
     "declaration": {
       "ingredients": "Zutaten und Allergene",

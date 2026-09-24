@@ -46,7 +46,7 @@
       },
       "shipping": {
         "title": "Diğer bütün ürünler: kargoyla",
-        "body": "Diğer ürünlerin hepsini her adrese kargoyla gönderiyoruz — teslimat bölgemizde olun ya da olmayın."
+        "body": "Diğer ürünlerin hepsini Fransa ve Almanya'daki her adrese kargoyla gönderiyoruz — teslimat bölgemizde olun ya da olmayın."
       },
       "note": "Posta kodunuzu bu yüzden soruyoruz: her ürünün yanında size nasıl ulaşacağını yazabilelim diye."
     },
@@ -140,7 +140,7 @@
       },
       "shipping": {
         "title": "Tous les autres produits : par colis",
-        "body": "Les produits sans chaîne du froid partent par transporteur, à n'importe quelle adresse — que vous soyez dans notre zone ou non."
+        "body": "Les produits sans chaîne du froid partent par transporteur, partout en France et en Allemagne — que vous soyez dans notre zone ou non."
       },
       "note": "C'est pourquoi nous demandons votre code postal : pour indiquer à côté de chaque produit comment il vous parviendra."
     },
@@ -234,7 +234,7 @@
       },
       "shipping": {
         "title": "Alle übrigen Produkte: per Paket",
-        "body": "Produkte ohne Kühlkette versenden wir an jede Adresse — ob Sie in unserem Liefergebiet wohnen oder nicht."
+        "body": "Produkte ohne Kühlkette versenden wir an jede Adresse in Frankreich und Deutschland — ob Sie in unserem Liefergebiet wohnen oder nicht."
       },
       "note": "Deshalb fragen wir nach der Postleitzahl: damit neben jedem Produkt steht, wie es zu Ihnen kommt."
     },
