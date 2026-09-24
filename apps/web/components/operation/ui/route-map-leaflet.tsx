@@ -5,17 +5,8 @@ import { mapToken, TILE_ATTRIBUTION, TILE_MAX_ZOOM, TILE_URL } from '@/lib/map/l
 import { allPoints, metricNote, tourPath, type RouteMapProps } from './route-map-model';
 
 /**
- * **Rota önizlemesi** (11.9) — motorun dizdiği turun gövdesi. Yalnız TARAYICIDA yüklenir
- * (`route-map.tsx` kapısı); Leaflet modül düzeyinde `window`a dokunuyor.
- *
- * ── NEDEN VAR: MOTORUN DENETİM GÖZÜ ─────────────────────────────────────────
- * Sıra bir hesaptır ve hesabın yanıldığı yer sahada anlaşılır — araç çıktıktan sonra. Bu ekran onu
- * ÖNCE gösteriyor: sevkiyatçı turun şeklini bir bakışta okur, bariyer atlayan bir bacak varsa
- * görür. Kuş uçuşu ölçüsüyle dizilmiş bir rotanın nerede yanıldığını ölçmenin de tek yolu bu —
- * `RouteMatrixProvider` kararı buradan çıkacak.
- *
- * Sırasız duraklar haritada DURUR ama tura girmez ve numarasız çizilir: çizgiye katmak, olmayan bir
- * sırayı varmış gibi göstermek olurdu (`CLAUDE §1`).
+ * Rota önizlemesi: sevkiyatçı motorun dizdiği turun şeklini araç çıkmadan görür, bariyer atlayan bir bacak varsa fark eder.
+ * Sırasız duraklar haritada durur ama çizgiye girmez ve numarasız çizilir; çizgiye katmak olmayan bir sırayı var gösterirdi.
  */
 export function RouteMapLeaflet({ origin, stops, metric, precision, className }: RouteMapProps) {
   const boxRef = useRef<HTMLDivElement | null>(null);
@@ -105,9 +96,7 @@ export function RouteMapLeaflet({ origin, stops, metric, precision, className }:
   return (
     <div className={`flex flex-col gap-2 ${className ?? ''}`}>
       <div ref={boxRef} className="h-full min-h-64 w-full rounded-ops-card bg-ops-subtle" />
-      {/* ÖLÇÜ VE İNCELİK YAZILI (11.9): kuş uçuşuyla dizilmiş bir sıra ile yol süresiyle dizilmiş
-          olan haritada aynı görünür. Farkı yalnız bu satır söyler — sonucun ne kadar güvenilir
-          olduğu sonucun yanında durmazsa, operatör kaba bir sırayı kesin sanar. */}
+      {/* Kuş uçuşuyla ve yol süresiyle dizilmiş sıra haritada aynı görünür; farkı yalnız bu satır söyler, yoksa operatör kaba bir sırayı kesin sanır. */}
       {note ? <p className="font-ops-body text-ops-xs text-ops-faint">{note}</p> : null}
     </div>
   );

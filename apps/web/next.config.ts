@@ -18,9 +18,7 @@ function supabaseOrigins(): { http: string; ws: string } {
   }
 }
 
-// R2 host'u: public okuma adresi (05.11) — r2.dev geliştirme adresi + env'deki asıl köke (09.09'dan
-// beri `cdn.lezzetanatolie.com`, Cloudflare dönüşümleri o zone'da). Alan adı koda yazılmaz, env'den
-// türer: `R2_PUBLIC_BASE_URL` değişince CSP kendiliğinden onu tanır. Görsel `<img>` = img-src.
+// Alan adı koda yazılmaz, `R2_PUBLIC_BASE_URL`den türer: env değişince CSP yeni kökü kendiliğinden tanır.
 const R2_PUBLIC_ORIGIN = (() => {
   try {
     return process.env.R2_PUBLIC_BASE_URL ? new URL(process.env.R2_PUBLIC_BASE_URL).origin : '';
@@ -30,88 +28,25 @@ const R2_PUBLIC_ORIGIN = (() => {
 })();
 const R2_HOSTS = ['https://*.r2.dev', R2_PUBLIC_ORIGIN].filter(Boolean).join(' ');
 
-// S3 API host'u — iki iş: YÜKLEME (`connect-src`, 11.2) ve PRIVATE kovadan OKUMA (`img-src` +
-// `media-src`, 15.25). Public kova (`*.r2.dev`) değil, imzalı adreslerin yaşadığı S3 host'u.
-//
-// ── OKUMA TARAFI 07.09'DA AÇILDI (15.25) — VE İLK TEŞHİS YANLIŞTI ────────────────────────────
-// Sohbet medyası (fotoğraf/ses) ve şikâyet ekleri private kovadan imzalı adresle okunuyor; adres bu
-// host'ta. `img-src` yalnız `*.r2.dev`i tanıyordu ve `media-src` HİÇ yoktu (`default-src 'self'`e
-// düşüyordu): tarayıcı fotoğrafı ve sesi CSP'de kesiyordu — sunucu 200 dönerken. Teşhis bir tur
-// "adres süresi doldu" oldu ve geçit yazıldı (o da gerekliydi: adres sekmede ölüyordu); asıl engel
-// ekran görüntüsü aracının konsol dökümünde çıktı: *"violates the following Content Security Policy
-// directive"*. Talep ekranının ek küçük resimleri (`Thumbnail`, private kova) de aynı sebeple hiç
-// çizilmiyordu — bağlantıyla açmak çalışıyordu, çünkü gezinme `img-src`e tabi değil.
-//
-// ── YÜKLEME TARAFININ TARİHİ (08.08) ──────────────────────────────────────────────────────────
-// 05.11'de bilerek dışarıda bırakılmıştı ve o gün doğruydu: *"yükleme sunucu tarafında, tarayıcı o
-// host'a hiç gitmiyor"*. Sonra kapı değişti — teslim kanıtının yükleme kapısı (`lib/courier/proof.ts`)
-// imzalı adres üretiyor ve künyesi *"dosya SUNUCUDAN GEÇMEZ: tarayıcı doğrudan R2'ye yükler"* diyor.
-// CSP o değişiklikte güncellenmedi ve **hiçbir yerde patlamadı, çünkü tüketicisi yoktu**: imzalı
-// yükleme kapısı yazıldığı günden beri hiçbir ekrandan çağrılmıyordu (şikâyet eki de dahil).
-// Kanıt yakalama bağlanınca ilk PUT'ta göründü — tarayıcı isteği CSP'de kesti, `fetch` hata verdi.
-//
-// **Neden sunucuya taşımak değil de host açmak:** dosyayı sunucu üzerinden geçirmek fotoğrafı iki kez
-// taşımak ve Next'in gövde sınırıyla boğuşmak demek — kapının kendi künyesi bu yolu bilinçle
-// reddediyor. Açılan yüzey dar: `connect-src` (PUT) + `img-src`/`media-src` (GET) — bu host'tan
-// script çalıştırılamaz, çerçeve açılamaz; giden ve gelen her şey imzalı, süreli adreslerdir.
+// İmzalı adreslerin S3 host'u: tarayıcı teslim kanıtını doğrudan buraya yükler (`connect-src`), private kovadaki fotoğraf ve sesi
+// buradan okur (`img-src`, `media-src`). Dosyayı sunucudan geçirmek onu iki kez taşımak ve Next'in gövde sınırına takılmak olurdu.
 const R2_S3_HOST = 'https://*.r2.cloudflarestorage.com';
 
-// Stripe host'ları (07.5) — kart alanı KENDİ checkout sayfamızda, Stripe'ın `PaymentElement`
-// iframe'i içinde (ADR Sapma 6). Barındırılan Checkout'a yönlendirseydik hiçbiri gerekmezdi;
-// içeri alınca üç yönün de açılması şart ve Stripe'ın belgelediği liste tam olarak bu:
-//   script-src  → `js.stripe.com` (Stripe.js'in kendisi; engellenince kart alanı HİÇ çizilmez)
-//   frame-src   → aynı host + `hooks.stripe.com` (kart alanı ve 3-D Secure doğrulaması iframe'de)
-//   connect-src → `api.stripe.com` (jeton ve ödeme onayı çağrıları)
-//   img-src     → `*.stripe.com` (kart markası/ödeme yöntemi simgeleri)
-// Kart bilgisi bu iframe'in içinde kalır: bizim sayfamız da, sunucumuz da onu hiç görmez.
-//
-// **`*.js.stripe.com` joker'i ŞART, süs değil.** Stripe kart çerçevesini başarım için değişken bir
-// alt kaynaktan (`b.js.stripe.com` gibi) açabiliyor ve hangisini seçeceği bize bağlı değil. Yalnız
-// çıplak `js.stripe.com`a izin verildiğinde alan bir açılıp bir açılmıyordu: seçim tuttuğunda
-// çalışıyor, kaydığında CSP çerçeveyi düşürüyor ve Payment Element `loaderror` veriyordu (29.07).
-// Stripe'ın kendi CSP belgesi de tam olarak bu yüzden joker'i listeliyor.
+// Kart alanı kendi checkout sayfamızda Stripe iframe'i içinde durduğu için script, çerçeve, istek ve görsel yönlerinin dördü de açık.
+// `*.js.stripe.com` joker'i şart: Stripe kart çerçevesini değişen bir alt adresten açabiliyor, yalnız çıplak host'a izin verilince alan ara ara hiç çizilmiyor.
 const STRIPE_SCRIPT = 'https://js.stripe.com https://*.js.stripe.com';
 const STRIPE_FRAME = 'https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com';
 const STRIPE_API = 'https://api.stripe.com';
 const STRIPE_IMG = 'https://*.stripe.com';
 
-// Harita karoları (19.20) — rota kurulumu haritadan (`Depolar - Bolge Haritasi.html`).
-//
-// **Haritanın İKİ yarısı var, yalnız biri dışarıdan geliyor.** Noktalar bizim: 16.878 posta kodu
-// enlem/boylamıyla `postal_code_place`ta ve `'self'`ten gelir. Dışarıdan gelen şey noktaların
-// ALTINDAKİ zemin — sokaklar, nehirler, yer adları. Tasarımın gerekçesi bu zemindir (*"karar 'bu yol
-// üstünde mi' olduğu için taban harita yol ağını gösterir"*); zemin olmadan ekran haritaya benzer ama
-// kararı vermez.
-//
-// **Bu host bizim verimizi GÖRMEZ:** giden istek yalnız karo koordinatıdır (z/x/y).
-//
-// **YALNIZ `img-src` gerekiyor** (07.08): karolar Leaflet'te `<img>` olarak yüklenir. Bir tur
-// MapLibre denendi ve `connect-src` + `worker-src 'self' blob:` gerekmişti — vektör karoyu bir Web
-// Worker'da çözüp WebGL ile boyadığı için. O zincir ekranda BOŞ TUVAL bıraktı ve tasarımın hiç
-// ihtiyaç duymadığı bir yüzeydi; ikisi de geri çıkarıldı. Daha az izin, daha az arıza.
+// Leaflet karoları `<img>` olarak yüklediği için karo host'u yalnız `img-src`te; giden istek yalnız karo koordinatıdır.
 const MAP_TILES = 'https://tile.openstreetmap.org';
 
-// Fransız devletinin adres servisi (BAN) — adres formunun sokak önerisi.
-//
-// **Tarayıcıdan çağrılıyor ve bu bilinçli** (`lib/address/use-address-search.hook` künyesi):
-// servisin sınırı IP başına saniyede 50 istek, sunucudan proxy'lense tüm müşteriler tek IP'yi
-// paylaşırdı. Ama o karar CSP'yi de gerektiriyor ve native'de böyle bir kapı olmadığı için akla
-// gelmiyordu. **ÖLÇÜLDÜ (21.08):** kapı açılmadan önce ekranda hiçbir öneri çıkmıyordu, konsolda
-// tek satır vardı — *"Connecting to 'https://data.geopf.fr/geocodage/search…' violates the
-// following Content Security Policy directive: connect-src"*. Sessiz bir başarısızlıktı: paket
-// `unavailable` dönüyor, ekran da öneri göstermiyor; yani hiçbir şey kırılmış GÖRÜNMÜYORDU.
-//
-// **Açılan yüzey dar:** yalnız `connect-src` — bu host'tan script çalıştırılamaz, çerçeve
-// açılamaz, görsel yüklenemez. **Servis bizim verimizi görmez:** giden tek şey müşterinin YAZDIĞI
-// adres metnidir; kimlik yok, oturum yok, çerez yok (istek anahtarsız ve kimliksiz).
+// Adres önerisi tarayıcıdan çağrılır: servisin sınırı IP başınadır ve sunucudan geçseydi bütün müşteriler tek IP'yi paylaşırdı.
+// Açılan yüzey yalnız `connect-src`; giden tek şey müşterinin yazdığı adres metnidir, kimlik ve çerez gitmez.
 const BAN_API = 'https://data.geopf.fr';
 
-/**
- * Güvenlik başlıkları (referans deseninden uyarlandı). CSP host'ları modül geldikçe genişler.
- * Bugün: self + Supabase + R2 görselleri (public) + R2 private medya (fotoğraf/ses, 15.25) + Stripe
- * (kart alanı, 07.5) + harita karoları (bölge kurulumu, 19.20) + adres servisi (BAN, 08.51) +
- * next/font (self-hosted).
- */
+/** Güvenlik başlıkları; her CSP host'unun gerekçesi kendi sabitinin üstünde. */
 function securityHeaders(): Array<{ key: string; value: string }> {
   const { http: sbHttp, ws: sbWs } = supabaseOrigins();
   const isProd = process.env.NODE_ENV === 'production';
@@ -123,10 +58,9 @@ function securityHeaders(): Array<{ key: string; value: string }> {
     `script-src 'self' 'unsafe-inline' ${STRIPE_SCRIPT}${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
     `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${R2_S3_HOST} ${STRIPE_API} ${BAN_API}`.replace(/\s+/g, ' ').trim(),
-    // Harita karoları BURADA ve yalnız burada: Leaflet onları `<img>` olarak yükler. Private kova
-    // (sohbet fotoğrafı, şikâyet eki) da burada — imzalı adres, S3 host'u (15.25).
+    // Leaflet karoları `<img>` olarak yükler; private kovadaki fotoğraflar da imzalı adresle buradan gelir.
     `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS} ${R2_S3_HOST} ${STRIPE_IMG} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
-    // Sesli mesaj `<audio>` (15.25): yönerge yoksa `default-src 'self'` devreye girer ve kaydı keser.
+    // Sesli mesaj `<audio>`: yönerge yoksa `default-src 'self'` devreye girer ve kaydı keser.
     `media-src 'self' ${R2_S3_HOST}`,
     "font-src 'self' data:",
     `frame-src 'self' ${STRIPE_FRAME}`,
@@ -151,44 +85,17 @@ function securityHeaders(): Array<{ key: string; value: string }> {
 const config: NextConfig = {
   reactStrictMode: true,
   /**
-   * ÇIKTI DİZİNİ ENV'DEN — dev sunucusu ile production derlemesinin YAN YANA koşabilmesi için
-   * (kullanıcı isteği 14.08). Varsayılan `.next`, yani dağıtımda ve CI'da hiçbir şey değişmez.
-   *
-   * **Neden gerekti:** ikisi de varsayılan `.next`i kullandığı sürece `next build`, dev
-   * sunucusunun O AN OKUDUĞU chunk'ların üstüne yazıyor ve dev server `Cannot find module
-   * './vendor-chunks/…'` ile çöküyor — CLAUDE §4'ün kayıt altına aldığı arıza. Çakışan şey PORT
-   * değil DİZİN; ayrı port açmak bunu çözmez.
-   *
-   * Kullanımı (dev 3000'de kesintisiz sürerken):
-   *   pnpm --filter @lezzet/web run build:prod
-   *   pnpm --filter @lezzet/web run start:prod      → 3001
-   *
-   * **Production sunucusu DONMUŞ bir kopyadır:** kod değişince kendiliğinden güncellenmez,
-   * yeniden derlenir. İstenen davranış bu — sayfa sürekli yenilenmesin diye açılıyor.
+   * Çıktı dizini env'den: dev sunucusu ile production kopyası aynı `.next`i paylaşınca `next build` dev sunucusunun okuduğu
+   * parçaların üstüne yazıp onu çökertiyor. Varsayılan `.next` olduğu için dağıtım değişmez.
    */
   distDir: process.env.NEXT_DIST_DIR ?? '.next',
-  // pino sunucu paketine GÖMÜLMEZ (ölçüldü 08.08): `@lezzet/application` (transpile listesinde)
-  // `@lezzet/observability` üzerinden pino'yu içeri çekince webpack pino+thread-stream'i
-  // vendor-chunks'a gömdü; pino'nun transport worker'ı `__dirname`den dosya arar ve
-  // `.next/server/vendor-chunks/lib/worker.js` diye OLMAYAN bir yola düşer — dev server
-  // `MODULE_NOT_FOUND` ile ÇÖKER (yaşandı: POST /fr/compte). Next'in varsayılan dış-paket
-  // listesi pino'yu tanır ama transpile edilen paketin import zincirinden gelen kopyayı
-  // kurtarmadı; açık beyan ikisini de dışta tutar: worker gerçek node_modules yolundan doğar.
-  //
-  // **BU SATIR TEK BAŞINA YETMEZ — `pino`/`pino-pretty` `apps/web`in KENDİ bağımlılıkları olmalı.**
-  // Beyan "paketleme, çalışma anında `require` et" demek; require'ın çözebilmesi için paketin
-  // `apps/web`ten görünmesi şart. pnpm'in katı `node_modules`ında pino yalnız
-  // `@lezzet/observability`nin bağımlılığı, yani web'den ÇÖZÜLEMİYOR — çözemeyen Next sessizce
-  // gömmeye düşer ve beyan hiçbir şey yapmaz. Web koddan pino'yu hiç `import` etmediği için ikili
-  // "kullanılmayan bağımlılık" görünür: 19.08'de bir temizlik commit'i tam olarak bunu sildi
-  // (`55573957`), satır yerinde kaldı, zemin çekildi ve arıza aynen geri geldi (ölçüldü 02.09:
-  // `vendor-chunks/thread-stream@3.2.0.js` yeniden oradaydı). `knip.json` bu yüzden ikisini
-  // `apps/web` için yoksayıyor — kaldırılırsa arıza üçüncü kez döner.
+  // pino pakete gömülürse transport worker'ı `.next` içinde olmayan bir yolda aranır ve sunucu `MODULE_NOT_FOUND` ile çöker.
+  // Beyan yalnız `pino`/`pino-pretty` `apps/web`in kendi bağımlılığıyken işler; kod onları import etmediği için kullanılmıyor görünürler, `knip.json` bu yüzden yoksayar.
   serverExternalPackages: ['pino', 'pino-pretty'],
   // Paketler kaynak olarak dışa verildiği için Next transpile eder (ara derleme yok).
   transpilePackages: [
     '@lezzet/brand',
-    // Telefon görünümünün ikon sözlüğü ve çizgi kalınlığı (`@lezzet/design-tokens/icons`, 15.09).
+    // Telefon görünümünün ikon sözlüğü ve çizgi kalınlığı (`@lezzet/design-tokens/icons`).
     '@lezzet/design-tokens',
     '@lezzet/i18n',
     '@lezzet/types',
@@ -197,8 +104,7 @@ const config: NextConfig = {
     '@lezzet/application',
     '@lezzet/database',
     '@lezzet/storage',
-    // Web artık DOĞRUDAN import etmiyor (OTP maili `@lezzet/application`a taşındı, 07.08) ama
-    // grafikte duruyor: listeden düşerse transpile edilmemiş TS olarak paketlenmeye çalışılır.
+    // Web doğrudan import etmiyor ama bağımlılık grafiğinde duruyor: listeden düşerse transpile edilmemiş TS olarak paketlenmeye çalışılır.
     '@lezzet/email',
     '@lezzet/notify',
     '@lezzet/ai',
@@ -206,12 +112,8 @@ const config: NextConfig = {
   experimental: {
     serverActions: {
       /**
-       * Görsel yüklemelerinin taşıyıcı sınırı. **Bizim kapımızın tavanından YÜKSEK olmalı**
-       * (`IMAGE_MAX_UPLOAD_BYTES` = 8 MB, `packages/types/src/primitives/image.schema.ts`).
-       *
-       * Sıra önemli: burası düşük olsaydı Next isteği bizim kapımıza hiç ulaştırmaz, operatör
-       * "Görsel en çok 8 MB olabilir" yerine anlamsız bir ağ hatası görürdü — yazılı kural bir
-       * daha hiç çalışmazdı. Aradaki pay, çok parçalı gövdenin dosya dışındaki alanları içindir.
+       * Kendi görsel sınırımızdan (`IMAGE_MAX_UPLOAD_BYTES`, 8 MB) yüksek olmalı: düşük olsaydı Next isteği kapımıza hiç
+       * ulaştırmaz, operatör yazılı kural yerine anlamsız bir ağ hatası görürdü. Aradaki pay çok parçalı gövdenin öteki alanları içindir.
        */
       bodySizeLimit: '10mb',
     },
@@ -220,17 +122,9 @@ const config: NextConfig = {
     return [{ source: '/:path*', headers: securityHeaders() }];
   },
   /**
-   * Mobil uygulama ilişkilendirmesi (17.9) — `/.well-known/*` → `/well-known/*`.
-   *
-   * İşletim sistemleri bu iki dosyayı **tam olarak `/.well-known/` altında** arar; adres
-   * pazarlık edilebilir değil. Rota klasörünün adı ise noktasız, çünkü `app/` altında nokta ile
-   * başlayan klasörün ele alınışı Next sürümlerine göre değişiyor ve bunu doğrulamanın tek yolu
-   * canlı bir sunucu — dev sunucusu kullanıcının (CLAUDE §4). Yeniden yazım o belirsizliği
-   * tamamen ortadan kaldırıyor: klasör sıradan, adres doğru.
-   *
-   * Middleware bu yolları zaten görmüyor (matcher noktalı yolları dışlıyor), yani dil öneki
-   * eklenmiyor — eklenseydi iOS `/fr/.well-known/...` diye bir dosya arayamayacağı için
-   * ilişkilendirme sessizce hiç kurulmazdı.
+   * İşletim sistemleri ilişkilendirme dosyalarını tam olarak `/.well-known/` altında arar; `app/` altında noktayla başlayan
+   * klasörün ele alınışı Next sürümüne göre değiştiği için klasör noktasız, adres yeniden yazımla doğru. Middleware bu
+   * yolları görmediği için dil öneki eklenmez.
    */
   async rewrites() {
     return [{ source: '/.well-known/:file', destination: '/well-known/:file' }];

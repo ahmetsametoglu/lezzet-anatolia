@@ -14,32 +14,9 @@ import {
 } from './zone-map-model';
 
 /**
- * **Rota haritası — Leaflet gövdesi** (19.20). `design/project/Depolar - Bolge Haritasi.html`.
- *
- * Bu dosya YALNIZ tarayıcıda yüklenir; kapısı `zone-map.tsx` (`next/dynamic`, `ssr: false`).
- * Doğrudan ithal ETMEYİN — `leaflet` modül düzeyinde `window`a dokunuyor ve sunucu çizimini düşürür.
- *
- * ── NEDEN HARİTA ────────────────────────────────────────────────────────────
- * Rota kararı COĞRAFİ bir karardır: operatör kodu değil YOLU bilir. Tasarımın cümlesi bunu kuruyor —
- * *"noktaya tıkla → ekle / çıkar; karar 'bu yol üstünde mi' olduğu için taban harita yol ağını
- * gösterir."* Kod listesi haritanın SONUCUDUR, girdisi değil.
- *
- * ── NEDEN LEAFLET, MapLibre DEĞİL (07.08, kullanıcı bildirimi) ──────────────
- * Görev satırı *"MapLibre GL JS + OpenFreeMap vektör karoları"* diyordu ve ben o nota uydum;
- * **çalışan tasarımı açmadım.** Tasarım Leaflet + raster karo kullanıyor ve sorunsuz çalışıyor.
- *
- * Fark tam olarak üç turluk arızanın kendisiydi: MapLibre vektör karoyu bir **Web Worker**'da çözüp
- * **WebGL** ile boyuyor; zincirin bir halkası kopunca stil ve künye yükleniyor ama tuval BOŞ kalıyor.
- * Leaflet karoyu `<img>` olarak yükler: worker yok, WebGL yok, CSP'de yalnız `img-src` gerekir.
- *
- * ── NOKTALAR BİZİM, ZEMİN DIŞARIDAN ─────────────────────────────────────────
- * Çizilen her nokta `postal_code_place`ten gelir (16.878 kod, enlem/boylamıyla). Dışarıdan gelen tek
- * şey altındaki karo; giden istek de yalnız karo koordinatıdır (z/x/y) — posta kodlarımız,
- * rotalarımız ve müşterilerimiz o tarafa hiç geçmez.
- *
- * ── CANVAS RENDERER, SVG DEĞİL ──────────────────────────────────────────────
- * Nokta başına bir SVG düğümü bugünkü avuç dolusu kod için sorun değil ama "boşta" kodlar açılınca
- * (görüş alanı başına yüzlerce) tarayıcıyı dizer. Katman baştan `L.canvas()` üstünde kuruluyor.
+ * Bölge haritasının Leaflet gövdesi: `leaflet` modül düzeyinde `window`a dokunduğu için yalnız `zone-map.tsx` kapısından
+ * (`next/dynamic`, `ssr: false`) yüklenir. Noktalar `L.canvas()` üstünde, çünkü "boşta" kodlar açılınca görüş alanı başına
+ * yüzlerce nokta çiziliyor ve nokta başına SVG düğümü tarayıcıyı yorardı.
  */
 
 /** Etiketin (kod + yerleşim adı) kalıcı olduğu yakınlık — tasarımın kendi eşiği. */
@@ -51,16 +28,8 @@ const LABEL_MIN_ZOOM = 13;
 
 
 /**
- * Üç kod hâlinin biçimi — tasarımın `STYLE` bloğunun token karşılığı.
- *
- * Yarıçap da anlam taşıyor ve tasarımdan birebir alındı (8 · 7 · 6,5): "benim" kodum en iri, "boşta"
- * en küçük — göz önce kendi rotasını görür. Eşit yarıçap, üç hâli aynı ağırlıkta okuturdu.
- *
- * **Token eşlemesi** (tasarımın ham hex'leri palette birebir yok, aile korundu):
- * `mine` `#5f7a2c` = `ops-olive` birebir · `taken` `#8ea3b5`/`#6e8598` → `ops-blue-line`/`ops-blue`
- * (mavi ailesi = "bilgi, nötr bildirim"; başka rotada tanımlı olmak bir engel değil bir BİLGİdir) ·
- * `free` içi `#fbfbf9` = `ops-card` birebir, halkası `#a7ac9f` → `ops-gray-700` (pasif kademe).
- * İçi boş nokta "henüz kimsenin değil" der; dolu bir nokta ona sahiplik yüklerdi.
+ * Üç kod hâlinin biçimi, tasarımın `STYLE` bloğunun token karşılığı: yarıçap da anlam taşır (8 · 7 · 6,5), göz önce kendi
+ * rotasını görsün diye. İçi boş nokta "henüz kimsenin değil" der, dolu nokta ona sahiplik yüklerdi.
  */
 function styleOf(state: ZoneCodeState): L.CircleMarkerOptions {
   if (state === 'mine') {
@@ -80,12 +49,8 @@ function styleOf(state: ZoneCodeState): L.CircleMarkerOptions {
     };
   }
   /**
-   * **BU KARARLA EKLENEN** (15.08) — zeytin dolgu, MOR çember.
-   *
-   * İki aile bilerek birleşti: dolgu "artık bu rotanın" der (`mine` ile aynı zeytin), çember
-   * "asistanın önerisiydi" der (`suggested`in moru). Yarıçap `mine`'dan bir tık iri (9) çünkü bu
-   * nokta operatörün AZ ÖNCE verdiği karardır — gözün ilk gideceği yer o olmalı; bölgenin yıllardır
-   * taşıdığı kodla aynı ağırlıkta çizilseydi karar yine kalabalığın içinde kaybolurdu.
+   * Zeytin dolgu "artık bu rotanın", mor çember "asistanın önerisiydi" der. Yarıçap `mine`dan bir tık iri: nokta operatörün az
+   * önce verdiği karar ve kalabalığın içinde kaybolmamalı.
    */
   if (state === 'adding') {
     return {
@@ -115,39 +80,14 @@ function styleOf(state: ZoneCodeState): L.CircleMarkerOptions {
 }
 
 /**
- * KALICI etiketin taşıdığı en fazla yerleşim adı (`OB-04`). Kalanı sayılır (`+2`), susturulmaz.
- *
- * İki değil de üç olmasının sebebi ölçüm: etiketler yalnız z13'ten sonra kalıcı ve o kademede
- * görüş alanında ~14 kod var (`FREE_CODE_MIN_ZOOM` tablosu) — üç ad haritayı örtmüyor. Üzerine
- * gelince açılan ipuçta tavan YOK; oradaki soru zaten "burası tam olarak neresi".
+ * Kalıcı etiketin taşıdığı en fazla yerleşim adı; kalanı sayılır (`+2`), susturulmaz. Etiketler z13'ten sonra kalıcı ve o
+ * kademede görüş alanında bir avuç kod var, üç ad haritayı örtmüyor.
  */
 const LABEL_MAX_PLACES = 3;
 
 /**
- * Etiket — kod, yerleşim adları ve gerekçe **ayrı satırlarda**.
- *
- * Metin dizesi değil DOM kuruyor ve iki sebebi var. Birincisi kullanıcının gördüğü kusur (17.08):
- * her şey tek satırdaydı, çok yerleşimli bir kodda ad listesi uzayınca ipucu ekranı kesen bir şerit
- * hâline geliyor ve okunmuyordu — Leaflet'in kendi ipucu `white-space: nowrap` ile çiziliyor.
- * İkincisi güvenlik: satırların içinde veritabanından gelen yerleşim adları var; HTML dizesi kurup
- * `innerHTML`e vermek onları işaretleme olarak yorumlatırdı. `textContent` ile yazılan DOM'da böyle
- * bir kapı yok.
- *
- * **`permanent` yine iki farklı metin üretiyor** (`OB-04`): kalıcı etiket dar (üç ad), üzerine
- * gelince açılan ipucu TAM. Leaflet katman başına tek ipucu bağlıyor, yani ikisini aynı anda
- * taşıyamayız — ama gerek de yok: kalıcı etiket zaten hover'ın yerine geçiyor.
- */
-/**
- * Künye ikonları — 24'lük kutuda tek `path`, `currentColor` ile boyanır.
- *
- * `components/operation/ui/icons.tsx`teki React ikonları BURADA kullanılamıyor: ipucu React
- * ağacının dışında, elle kurulan bir DOM. Bir React ağacını her ipucu için ayrıca boyamak, tek
- * `path` kopyalamaktan pahalı olurdu.
- */
-/**
- * **ÇİZGİSEL, dolgulu değil** (17.08): ilk tur dolgu yollarla yazılmıştı ve 13 pikselde hepsi aynı
- * mor lekeye dönüştü — zil de torba da soru işareti de ayırt edilemiyordu. Çizgi, küçük boyda
- * biçimi korur; ikonun tek işi zaten "bu sayı neyin sayısı" demek.
+ * Künye ikonları çizgisel, tek `path` ve `currentColor`: dolgulu yol 13 pikselde aynı lekeye dönüyor. React ikonları burada
+ * kullanılamıyor, çünkü ipucu React ağacının dışında elle kurulan bir DOM.
  */
 const FACT_ICONS: Record<ZoneMapFact['icon'], readonly string[]> = {
   // Zil — haber bekleyen kişi (izin vermiş, kimlikli).
@@ -183,6 +123,10 @@ function iconOf(name: ZoneMapFact['icon']): SVGSVGElement {
   return svg;
 }
 
+/**
+ * Etiket metin dizesi değil DOM: kod, yerleşim adları ve künye ayrı satırlarda sarmalanır, veritabanından gelen adlar da
+ * `textContent` ile yazıldığı için işaretleme olarak yorumlanamaz. Kalıcı etiket dar (üç ad), üzerine gelince açılan ipucu tam.
+ */
 function labelOf(point: ZoneMapPoint, permanent: boolean): HTMLElement {
   const box = document.createElement('div');
 
@@ -248,15 +192,8 @@ export function ZoneMapLeaflet({
     if (!box || mapRef.current) return;
 
     /**
-     * Yakınlaştırma denetimi SOL ALTTA — üç köşe de dolu, dördüncüsü boş.
-     *
-     * Sağ üstteydi ve 17.08'de ölçülen bir çakışma çıkardı: Rotalar sekmesinde ray haritanın
-     * üstüne yüzen bir panele dönünce denetim tam onun köşesine, "+ Rota" düğmesinin üzerine
-     * bindi. Leaflet kendi denetimlerini `z-index: 1000`de çiziyor, panel 500'de — yani sıra
-     * değil KONUM sorunuydu; z değeriyle oynamak düğmeleri bu kez panelin altına gömerdi.
-     *
-     * Kalan köşeler: sol üst lejant, alt orta ipucu şeridi, sağ alt OSM atıf yazısı (lisans
-     * gereği görünür kalmalı). Sol alt hepsinde boş.
+     * Yakınlaştırma denetimi sol altta: öteki köşelerde lejant, ipucu şeridi ve atıf yazısı duruyor, sağ üstte de Rotalar
+     * sekmesinin yüzen paneliyle çakışır. Çakışma sıra değil konum sorunu; z değeri büyütmek düğmeleri panelin altına gömer.
      */
     const map = L.map(box, {
       center: center ? [center.lat, center.lng] : [48.583, 7.75],
@@ -293,10 +230,8 @@ export function ZoneMapLeaflet({
     map.on('moveend', announce);
 
     /**
-     * **Kap ölçüsü sonradan oturuyor.** Harita bir sekmenin içinde doğuyor ve kurulurken kabın
-     * yüksekliği 0 olabiliyor; Leaflet ölçüyü bir kez okur. Gözlemci gerçeğe bağlıdır — tek
-     * seferlik bir gecikme bir TAHMİNE bağlı olurdu. Ölçü oturunca görüş alanı da değişir, o
-     * yüzden bildirim buradan da tetiklenir: ilk okuma yanlış bir kutuyla yapılmasın.
+     * Harita bir sekmenin içinde doğuyor ve kurulurken kabın yüksekliği 0 olabiliyor; Leaflet ölçüyü bir kez okuduğu için ölçü
+     * oturunca yeniden okutuluyor. Görüş alanı da değiştiği için bildirim buradan da tetiklenir.
      */
     const observer = new ResizeObserver(() => {
       map.invalidateSize();
@@ -330,18 +265,8 @@ export function ZoneMapLeaflet({
       for (const point of points) {
         L.circleMarker([point.lat, point.lng], styleOf(stateOf(point)))
           /**
-           * İçerik **FONKSİYON olarak** veriliyor ve bu bir üslup değil ölçülü bir tasarruf
-           * (kullanıcı uyarısı 17.08): Leaflet fonksiyonu ipucu AÇILDIĞINDA çağırıyor, kurulurken
-           * değil. Etiket bir metin dizesiyken bunun önemi yoktu; kart DOM'una dönünce her çizimde
-           * **nokta sayısı kadar** kart (tavan 1200: svg + span'ler) kurulur olurdu — hepsi de
-           * aynı anda en fazla BİRİ görünen kartlar. Şimdi yalnız üzerine gelinen nokta ödüyor.
-           *
-           * `labelsOn` (z ≥ 13) hâlinde ipuçları zaten açık olduğu için hepsi kurulur — ama o
-           * yakınlıkta görüş alanında ~14 kod var (`FREE_CODE_MIN_ZOOM` tablosu), yani tavan 1200
-           * değil bir avuç.
-           *
-           * Stil `globals.css`te (`.ops-map-tip`): içerik React ağacının dışında, ve renk/genişlik
-           * Leaflet'in kendi kuralıyla eşit özgüllükte yarışmamalı.
+           * İçerik fonksiyon olarak veriliyor: Leaflet onu ipucu açıldığında çağırıyor, böylece her çizimde nokta sayısı kadar kart
+           * kurulmuyor. Stil `globals.css`te (`.ops-map-tip`), çünkü içerik React ağacının dışında.
            */
           .bindTooltip(() => labelOf(point, labelsOn), {
             permanent: labelsOn,
@@ -367,12 +292,8 @@ export function ZoneMapLeaflet({
   }, [points, stateOf]);
 
   /**
-   * **Taşıma emri** (`focus`) — ekran dışındaki bir öneriye tıklandığında harita oraya gider.
-   *
-   * Yakınlaşma `FREE_CODE_MIN_ZOOM`in altına DÜŞMEZ ve bu kritik: eşiğin altında boştaki kodlar hiç
-   * çizilmiyor, yani uzaktan bakarken taşınan operatör gittiği yerde tam da aradığı noktayı
-   * göremezdi. Zaten daha yakındaysa yakınlık korunur — emir "oraya bak" demek, "yakınlığını
-   * sıfırla" değil.
+   * Ekran dışındaki bir öneriye tıklanınca harita oraya gider; yakınlık `FREE_CODE_MIN_ZOOM`in altına düşmez, çünkü eşiğin
+   * altında boştaki kodlar çizilmiyor ve operatör aradığı noktayı göremezdi. Zaten daha yakınsa yakınlık korunur.
    */
   useEffect(() => {
     const map = mapRef.current;
@@ -381,8 +302,8 @@ export function ZoneMapLeaflet({
   }, [focus]);
 
   /**
-   * İpucu şeridi 2,6 sn sonra söner (tasarım). Ölçüt DEĞERİN kendisidir: art arda gelen iki AYNI
-   * cümle sayaç sıfırlamaz — pratikte imkânsız, çünkü cümlenin içinde kodun kendisi geçiyor.
+   * İpucu şeridi 2,6 sn sonra söner (tasarım). Sayaç değer değişince yeniden başlar; aynı cümle art arda gelmez, çünkü
+   * cümlede kodun kendisi geçiyor.
    */
   useEffect(() => {
     setVisibleHint(hint ?? null);
@@ -393,14 +314,8 @@ export function ZoneMapLeaflet({
 
   return (
     /**
-     * `isolate` = kendi katman kutusu, ve bu bir süsleme değil ÖLÇÜLMÜŞ bir arızanın çözümü
-     * (17.08): Leaflet kendi panellerini `z-index: 400`, denetimlerini `1000` ile çiziyor. Bu
-     * sayılar bir yalıtım olmadan sayfanın kökünde yarışıyordu — başlıktaki depo seçicisinin açılan
-     * listesi `body`'ye portal edilip `z-[60]` ile çiziliyor, yani haritanın ALTINDA kalıyordu.
-     *
-     * `isolation: isolate` Leaflet'in bütün iç sayılarını bu kutunun içine hapsediyor: dışarıda
-     * haritanın tek bir katmanı var, iç 1000'i artık kimseyle yarışmıyor. z değerlerini tek tek
-     * büyütmek yerine burada durmasının sebebi bu — yarışı kazanmak değil, yarışı bitirmek.
+     * `isolate` Leaflet'in iç z-index sayılarını (panel 400, denetim 1000) bu kutuya hapseder; yalıtım olmasa bu sayılar
+     * sayfanın kökünde yarışır ve başlıktaki depo seçicisinin açılan listesi haritanın altında kalır.
      */
     <div className={`relative isolate h-full w-full ${className ?? ''}`}>
       <div ref={boxRef} className="absolute inset-0" />
