@@ -1,14 +1,8 @@
 import type { Messages } from '../product-types';
 
 /**
- * "Bu ürünü yapay zekâya sorun" — hazır soru + üç sohbet servisine bağlantı (tasarım 20.09).
- *
- * Soru KATEGORİDEN gelir (`category.ai_question`): tatlıda servis, börekte pişirme. Sorusu
- * girilmemiş kategoride bölüm hiç çizilmez — uydurulmuş bir soru üçüncü taraf modeline yanlış
- * bağlam gönderirdi.
- *
- * Bağlantı yeni sekmede açılır ve `noopener` taşır: açılan sayfa bizim sekmemizi yönlendiremez.
- * Cevabın içeriği bizim değil; dipnot bunu söyler ve yasal beyan için künyeyi işaret eder.
+ * "Bu ürünü yapay zekâya sorun": hazır soru ve sohbet servislerine bağlantı. Soru kategoriden gelir (`category.ai_question`);
+ * sorusu girilmemiş kategoride bölüm hiç çizilmez, çünkü uydurulmuş soru üçüncü taraf modeline yanlış bağlam gönderirdi.
  */
 
 /**
