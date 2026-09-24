@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { FlatList, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -19,7 +19,7 @@ import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 // Kampanya, fiyat etiketi ve yer notu kurucuları web telefon görünümüyle ortak.
 import { campaignValueOf, cardBadgeOf, cardPlaceNoteOf, productPriceLabel } from '@lezzet/helper';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
-import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
+import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
 import { placeModeOf, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
 // Kartın yer cümlesi ortak sözlükten; aynı metni web'in telefon görünümü de okuyor.
 import placeMessages from '@lezzet/i18n/customer/place';
@@ -61,10 +61,8 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
-  /* Katalog vitrinle aynı posta kodunu gönderir, çünkü fiyat, teklif ve stok depoya göre değişir; kaynak cihazdaki onboarding
-     kaydı. Kök kapı kayıt okunmadan ağacı çizmez, `?.` yine de kapının kararını bu ekranın varsayımı yapmaz. */
-  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
-  const postalCode = onboarding?.postalCode ?? null;
+  /* Katalog vitrinle aynı yeri gönderir (`usePurchasePlace`), çünkü fiyat, teklif ve stok depoya göre değişir. */
+  const { postalCode } = usePurchasePlace();
   // Gel-al seçiliyken liste seçilen depodan okunur; ürün detayı aynı seçimi taşır.
   const pickupWarehouseId = useSelectedPickupWarehouse();
   const catalog = useCatalog(locale, postalCode, pickupWarehouseId);

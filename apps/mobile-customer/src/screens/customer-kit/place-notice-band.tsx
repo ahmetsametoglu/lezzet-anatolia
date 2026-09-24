@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { z } from 'zod';
@@ -11,7 +11,6 @@ import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { submitPlaceNotice } from '@/lib/api/places';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
-import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { toastError, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 // Metin yer ailesinin ortak sözlüğünde: bandı iki liste birden çiziyor (katalog · paketler), web'in
 // telefon görünümü de aynısını — cümle tek nüsha durmalı.
@@ -19,7 +18,7 @@ import messages from '@lezzet/i18n/customer/place';
 import { rememberPlaceNotice, usePlaceNoticeRecord } from '@/lib/places/place-notice-store';
 import { PlaceNoticeSheet } from './place-notice-sheet';
 import { ToggleSwitch } from './toggle-switch';
-import { PostalCodeSheet } from './postal-code-sheet';
+import { PlaceSheet } from './place-sheet';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { useSheet } from './use-sheet.hook';
 
@@ -89,11 +88,6 @@ export function PlaceNoticeBand({
      dokunuşluk işi üçe çıkarırdı. Misafirde çekmece açılır (e-posta → kod → hesap → talep). */
   const meState = useMe();
   const me = meState.status === 'ready' ? meState.me : null;
-
-  /* Çekmecenin başlangıç değeri SAKLI koddur, bandın gösterdiği çözülmüş kod değil: ikisi bugün
-     aynı olsa da kaynakları farklı (biri cihazın kaydı, öteki sunucunun cevabı) ve çekmece
-     "kayıtlı olan ne" sorusunu sorar. */
-  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
 
   /* Alt kimlikler bandın kendi kimliğinden TÜRER: iki liste aynı bandı çiziyor ve sabit
      "catalog-…" önekleri paketler sekmesinde yalan söylerdi. */
@@ -216,9 +210,8 @@ export function PlaceNoticeBand({
 
       {/* Çekmeceler İLK AÇILIŞTA kurulur ve kapanınca sökülMEZ — gerekçe `use-sheet.hook`ta. */}
       {zipSheet.mounted ? (
-        <PostalCodeSheet
+        <PlaceSheet
           visible={zipSheet.visible}
-          code={onboarding?.postalCode ?? null}
           onClose={zipSheet.close}
           // Bant listenin başında: "nerelere gidiyorsunuz" sorusunun cevabı burada yok, sayfası var.
           showZonesLink

@@ -18,6 +18,9 @@ import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
+import { getSelectedPickupWarehouse, subscribeDeliverySelection } from './delivery-address-store';
+import { purchaseAddressNow } from './purchase-place';
+import { loadAddresses, subscribeAddresses } from './use-addresses.hook';
 
 /*
   Sepet: niyet cihazda (misafir) ya da sunucuda (girişli, iki yüzeyde paylaşılır), görünüm her iki hâlde sunucuda çözülür ve
@@ -234,10 +237,8 @@ function queryNow(): CartViewQuery | null {
   return { locale: context.locale, postalCode: placeNow(), coupon: state.couponCode, pickupWarehouseId: purchasePickupWarehouseId };
 }
 
-/**
- * Satın alma yerini bildirir; değişince görünüm yeniden çözülür, `null` gezinme koduna döner.
- */
-export function setPurchasePlace(postalCode: string | null, pickupWarehouseId: string | null = null): void {
+/** Satın alma yerini bildirir; değişince görünüm yeniden çözülür, `null` gezinme koduna döner. */
+function setPurchasePlace(postalCode: string | null, pickupWarehouseId: string | null): void {
   if (purchasePostalCode === postalCode && purchasePickupWarehouseId === pickupWarehouseId) return;
   // Gezinme kodundan ilk satın alma yerine hizalanma duyurulmaz: değişen bir yer değil, gelen cevaptır.
   const known = purchasePostalCode !== null || purchasePickupWarehouseId !== null;
@@ -245,6 +246,11 @@ export function setPurchasePlace(postalCode: string | null, pickupWarehouseId: s
   purchasePostalCode = postalCode;
   purchasePickupWarehouseId = pickupWarehouseId;
   refreshView();
+}
+
+/** Satın alma yeri adres listesinden ve seçimden kurulur; ekranlar yeri bildirmez, yalnız okur. */
+function syncPurchasePlace(): void {
+  setPurchasePlace(purchaseAddressNow()?.postalCode ?? null, getSelectedPickupWarehouse());
 }
 
 // ── SUNUCU TURU ─────────────────────────────────────────────────────────────
@@ -516,6 +522,7 @@ function commit(next: CartState, call: (query: CartViewQuery) => Promise<ApiResu
     if (result.error !== null) {
       /* 401 oturum bitti demektir, yazma hatası değil: değişiklik korunur, kaynak cihaza düşer ve görünüm misafir yolundan çözülür. */
       if (result.status === 401) {
+        sessionActive = false;
         publish({ ...next, source: 'device', error: null });
         refreshView();
         return;
@@ -544,6 +551,7 @@ async function hydrateCart(query: CartViewQuery): Promise<void> {
 
   if (result.error !== null) {
     if (result.status === 401) {
+      sessionActive = false;
       publish({ ...state, resolving: false, source: 'device', error: null });
       refreshView();
       return;
@@ -574,7 +582,7 @@ async function resolveGuestView(query: CartViewQuery): Promise<void> {
  * Görünümü yeniden çözdürür; boş niyet ve kapalı kapı ağa çıkmaz.
  */
 function refreshView(): void {
-  if (state.source !== 'server' && intentOf(state).length === 0) {
+  if (state.source !== 'server' && !sessionActive && intentOf(state).length === 0) {
     if (state.view.lines.length === 0 && !state.resolving) return;
     // Havadaki tur GEÇERSİZ: boşalan sepete geç gelen bir cevap satırları geri getirirdi.
     revision += 1;
@@ -584,7 +592,8 @@ function refreshView(): void {
 
   const query = queryNow();
   if (query === null || watchers === 0) return;
-  if (state.source === 'server') {
+  // Oturum açıkken ilk sunucu okuması bitmeden de yeniden okuma sunucudan yapılır, yoksa havadaki okuma misafir yoluna düşerdi.
+  if (state.source === 'server' || sessionActive) {
     void hydrateCart(query);
     return;
   }
@@ -596,13 +605,19 @@ function refreshView(): void {
  * bir kez tetiklenir, yani ilk okuma da buradan gelir (ayrı bir "mount'ta çek" adımı yok).
  */
 let authSubscription: { unsubscribe: () => void } | null = null;
+/** Oturum açık mı; sunucu 401 dönünce düşer ki yeniden okuma kendini döngüye sokmasın. */
+let sessionActive = false;
+/** Adres listesi ve seçim dinleyicilerinin sökülmesi; oturum dinleyicisiyle birlikte kurulur. */
+let placeSubscriptions: (() => void)[] = [];
 let watchers = 0;
 
 function startWatching(): void {
   watchers += 1;
   if (authSubscription !== null) return;
 
+  placeSubscriptions = [subscribeAddresses(syncPurchasePlace), subscribeDeliverySelection(syncPurchasePlace)];
   const { data } = getSupabase().auth.onAuthStateChange((_event, session) => {
+    sessionActive = session !== null;
     if (session === null) {
       /* ÇIKIŞ: sunucu sepetiyse ekrandan kalkar — telefonu bir sonraki kullanan, önceki müşterinin
          sepetini görmemeli. Misafir sepetine DOKUNULMAZ: oturumsuz açılışta da bu dal koşuyor
@@ -612,6 +627,8 @@ function startWatching(): void {
       refreshView();
       return;
     }
+    // Adres listesi oturumla okunur, çünkü girişli müşterinin yeri adresidir ve sepet onu hiçbir ekran açılmadan bilmeli.
+    void loadAddresses();
     const query = queryNow();
     if (query !== null) void hydrateCart(query);
   });
@@ -623,6 +640,9 @@ function stopWatching(): void {
   if (watchers > 0) return;
   authSubscription?.unsubscribe();
   authSubscription = null;
+  sessionActive = false;
+  for (const unsubscribe of placeSubscriptions) unsubscribe();
+  placeSubscriptions = [];
 }
 
 /**

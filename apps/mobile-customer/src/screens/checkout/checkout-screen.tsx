@@ -28,7 +28,7 @@ import { presentPayment } from '@/lib/payment/payment-sheet';
 import { addressLine, addressTitle } from '@lezzet/address';
 import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
-import { cartLineId, refreshCart, setPurchasePlace, useCart } from '@/screens/customer-kit/cart-store';
+import { cartLineId, refreshCart, useCart } from '@/screens/customer-kit/cart-store';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { selectDeliveryAddress, selectPickupWarehouse, useSelectedDeliveryAddress, useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { discountSummaryOf, orderDiscountSummaryOf } from '@/screens/customer-kit/discount-label';
@@ -210,11 +210,6 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /** Seçim de türetilir: adres değişip yöntem kapanınca seçili kalması "kapalıyı seçtim" olurdu. */
   const selectedPayment = paymentOptions.find((option) => option.key === paymentKey && option.available) ?? null;
 
-  /* Özetin kaynağı sunucunun çözdüğü görünüm, paket dahil. Yer depoya bildirilir; adres bilinmiyorsa depo gezinme koduna düşer,
-     çünkü boş ekrandan bir adım eski bir doğru iyidir. */
-  useEffect(() => {
-    setPurchasePlace(selectedAddress?.postalCode ?? null);
-  }, [selectedAddress?.postalCode]);
   const view = cart.view;
   const viewLines = view.lines;
 

@@ -2,7 +2,7 @@ import { formatPrice, placeChangeText } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { MeCartViewLine } from '@lezzet/types';
 import { useRouter } from 'expo-router';
-import { Fragment, useEffect, useState, useSyncExternalStore } from 'react';
+import { Fragment, useState, useSyncExternalStore } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -28,19 +28,15 @@ import {
   removeProduct,
   setBundleQuantity,
   setProductQuantity,
-  setPurchasePlace,
   useCart,
 } from '@/screens/customer-kit/cart-store';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
 import { addressLine } from '@lezzet/address';
-import { AddressPickerSheet } from '@/screens/customer-kit/address-picker-sheet';
-import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
-import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
-import { selectDeliveryAddress, selectPickupWarehouse, useSelectedDeliveryAddress, useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
+import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
+import { PlaceSheet } from '@/screens/customer-kit/place-sheet';
+import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
 import { usePickupPoints } from '@/screens/customer-kit/use-pickup-points.hook';
-import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
-import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { CartLineRow } from './cart-line-row';
@@ -75,34 +71,19 @@ export function CartScreen() {
   const router = useRouter();
   const cart = useCart();
 
-  const [codeSheetOpen, setCodeSheetOpen] = useState(false);
-  /* Adres YOKKEN düşülen yer — gezinme kodu. Bandın andığı yer ile görünümü çözen yer DAİMA aynı
-     olmalı; başka bir kaynaktan yazılsaydı ekran, arkasındaki hesabın dayanmadığı bir yeri
-     suçlardı. */
+  const [placeSheetOpen, setPlaceSheetOpen] = useState(false);
+  /* Adres yokken düşülen yer gezinme kodudur; bandın andığı yer ile görünümü çözen yer aynı olmalı, yoksa ekran hesabın dayanmadığı
+     bir yeri suçlardı. */
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const browsingCode = onboarding?.postalCode ?? '';
 
-  /* Sepetin yeri kayıtlı adrestir: satın alma tarafının tamamı (sepet ve checkout) adresle çözülür, gezinme kodu vitrinde kalır,
-     böylece iki yer ayrışamaz; adresi olmayanda gezinme koduna düşülür. `me`, adres çekmecesi yeni adresi hesabın künyesiyle dolu
-     açsın diye okunur. */
-  const { status: meStatus, me } = useMe();
-  const { addresses, publish: publishAddresses } = useAddresses(meStatus === 'ready');
-  /* Seçim ORTAK depoda (`delivery-address-store`): sepette seçilen adres checkout'ta da geçerli.
-     `null` = müşteri seçmedi, varsayılan geçerli — kimliğini burada saklamıyoruz (künye orada). */
-  const selectedAddressId = useSelectedDeliveryAddress();
-  const deliveryAddress =
-    addresses.find((a) => a.id === selectedAddressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
-  /* Gel-al (izinli müşteri): depo adres seçicide bir kart; seçim ortak depoda, sepet SEÇİLEN DEPONUN stoğuyla okunur. */
+  /* Sepetin yeri girişli müşteride teslimat adresidir (`usePurchasePlace`); yeri sepet deposu kurar, ekran yalnız okur. */
+  const { status: meStatus } = useMe();
+  const { address: deliveryAddress } = usePurchasePlace();
+  /* Gel-al (izinli müşteri): depo adres seçicide bir kart; seçim ortak depoda, sepet seçilen deponun stoğuyla okunur. */
   const pickupPoints = usePickupPoints(meStatus === 'ready');
   const selectedPickupId = useSelectedPickupWarehouse();
   const pickupPoint = pickupPoints.find((point) => point.id === selectedPickupId) ?? null;
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
-  /* Görünüm tek ve yeri adresten gelir: yer depoya bildirilir, görünüm tek yerde çözülür; ikinci bir okuma yazma turlarıyla
-     tazelenmediği için ekranı dondururdu. */
-  useEffect(() => {
-    setPurchasePlace(deliveryAddress?.postalCode ?? null, pickupPoint?.id ?? null);
-  }, [deliveryAddress?.postalCode, pickupPoint?.id]);
   const view = cart.view;
   /** Bandın ve künyenin andığı yer — adres varsa onun kodu, yoksa gezinme kodu. */
   const placeLabel = pickupPoint?.name ?? deliveryAddress?.postalCode ?? browsingCode;
@@ -400,14 +381,14 @@ export function CartScreen() {
               {t.address.pickupLine.replace('{name}', pickupPoint.name)}
             </Text>
             <Text style={styles.placeNote}>{t.address.pickupNote}</Text>
-            <TextAction label={t.address.change} onPress={() => setPickerOpen(true)} testID="cart-place-address" />
+            <TextAction label={t.address.change} onPress={() => setPlaceSheetOpen(true)} testID="cart-place-address" />
           </View>
         ) : deliveryAddress === null ? (
           browsingCode === '' ? null : (
             <View style={styles.place}>
               <Text style={styles.placeEyebrow}>{t.address.eyebrow}</Text>
               <Text style={styles.placeNote}>{t.address.none.replace('{code}', browsingCode)}</Text>
-              <TextAction label={t.undeliverable.change} onPress={() => setCodeSheetOpen(true)} testID="cart-place-code" />
+              <TextAction label={t.undeliverable.change} onPress={() => setPlaceSheetOpen(true)} testID="cart-place-code" />
             </View>
           )
         ) : (
@@ -418,7 +399,7 @@ export function CartScreen() {
             <TextAction
               label={t.address.change}
               /* Ekran terk edilmez: adres seçici burada açılır, checkout'un aynı işi. */
-              onPress={() => setPickerOpen(true)}
+              onPress={() => setPlaceSheetOpen(true)}
               testID="cart-place-address"
             />
           </View>
@@ -436,7 +417,7 @@ export function CartScreen() {
             /* Eylem yalnız adresi olmayanda, çünkü adres varken üstteki künyenin "Değiştir"iyle aynı yere açan ikinci düğme olurdu. */
             action={
               deliveryAddress !== null ? undefined : (
-                <TextAction label={t.undeliverable.change} onPress={() => setCodeSheetOpen(true)} testID="cart-change-code" />
+                <TextAction label={t.undeliverable.change} onPress={() => setPlaceSheetOpen(true)} testID="cart-change-code" />
               )
             }
             testID="cart-undeliverable"
@@ -598,48 +579,8 @@ export function CartScreen() {
         </View>
       </BottomSheet>
 
-      {/* Adres seçici ekranı terk etmeden açılır; seçim ortak depoya yazılır, checkout da aynı adresi okur. */}
-      <AddressPickerSheet
-        visible={pickerOpen}
-        addresses={addresses}
-        selectedId={deliveryAddress?.id ?? null}
-        onSelect={selectDeliveryAddress}
-        pickupPoints={pickupPoints}
-        selectedPickupId={selectedPickupId}
-        onSelectPickup={selectPickupWarehouse}
-        onAddNew={() => {
-          setPickerOpen(false);
-          setAddressSheet({ editing: null });
-        }}
-        onClose={() => setPickerOpen(false)}
-        testID="cart-address-picker"
-      />
-
-      {/* Adres YAZMA kitin ortak formu — hesap ve checkout ekranlarıyla AYNI dosya. Yazılan adres
-          hem listeye girer hem SEÇİLİ hâle gelir: müşteri onu az önce bu sepet için yazdı. */}
-      <AddressSheet
-        target={addressSheet}
-        addresses={addresses}
-        onClose={() => setAddressSheet(null)}
-        onSaved={(next, savedId) => {
-          publishAddresses(next);
-          // `savedId` silmede `null` gelir — o hâlde seçim varsayılana düşsün, silinmiş bir kimliğe değil.
-          selectDeliveryAddress(savedId);
-          setAddressSheet(null);
-        }}
-        /* Yeni adres hesabın künyesiyle dolu açılır. */
-        defaults={addressDefaultsOf(me)}
-        testID="cart-address-sheet"
-      />
-
-      <PostalCodeSheet
-        visible={codeSheetOpen}
-        code={browsingCode === '' ? null : browsingCode}
-        onClose={() => setCodeSheetOpen(false)}
-        // "Nerelere gidiyorsunuz?" ÇİZİLİR: müşteri tam da bu soruyu sorduğu anda burada.
-        showZonesLink
-        testID="cart-postal-sheet"
-      />
+      {/* Yer kapısı ekranı terk etmeden açılır: adresli müşteride adres seçici, adressizde posta kodu çekmecesi. */}
+      <PlaceSheet visible={placeSheetOpen} onClose={() => setPlaceSheetOpen(false)} showZonesLink testID="cart-place-sheet" />
     </View>
   );
 }

@@ -1,56 +1,78 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
+import { registerSessionCleanup } from '@lezzet/mobile-kit/src/lib/auth/session-end';
 import { fetchAddresses, type MeAddress } from '@/lib/api/addresses';
 
 /*
-  ADRES LİSTESİ DURUMU (21.15) — adres okuyan ekranların ortak durumu. `useMe` gibi modül-durumlu
-  DEĞİL, ekran-yerel: her ekran kendi listesini okur ve yazma cevabıyla günceller.
-
-  KİTE TERFİ ETTİ (10.08): dosya hesap ekranının klasöründeydi ve künyesi "ikinci tüketen doğarsa
-  terfi o gün yapılır" diyordu — doğdu (doğrulama sonrası profil tamamlama akışı adres adımını
-  göstermek için aynı listeyi okuyor). Checkout kendi listesini anlık görüntüden alır
-  (`/me/checkout` zaten adresleri taşıyor), o yüzden burayı çağırmaz.
-
-  `publish` yazma uçlarının döndürdüğü GÜNCEL listeyi yerleştirir — uçların "cevap hep listedir"
-  kararının ekran karşılığı (`lib/api/addresses.ts`): yazan el ikinci bir GET atmaz.
+  Hesabın adres listesi tek depoda durur, çünkü satın alma yeri (vitrin, sepet, checkout) ile hesap ekranı aynı listeyi okumalı; ekran
+  başına liste, bir ekranda eklenen adresi ötekine göstermezdi. Okuyan ekran açılışta listeyi tazeler, yazma uçlarının döndürdüğü
+  liste `publish`le yerleşir.
 */
 
 type AddressesStatus = 'loading' | 'ready' | 'error';
+
+interface AddressesState {
+  status: AddressesStatus;
+  addresses: MeAddress[];
+}
+
+const INITIAL: AddressesState = { status: 'loading', addresses: [] };
+
+let state: AddressesState = INITIAL;
+/** Okumanın kuşağı: yazma ya da oturum kapanışı havadaki eski cevabı geçersiz kılar. */
+let generation = 0;
+const listeners = new Set<() => void>();
+
+function setState(next: AddressesState): void {
+  state = next;
+  for (const listener of listeners) listener();
+}
+
+export function subscribeAddresses(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function getAddressesSnapshot(): AddressesState {
+  return state;
+}
+
+/** Listeyi sunucudan okur ve bitince çözülür. */
+export async function loadAddresses(): Promise<void> {
+  const mine = ++generation;
+  const result = await fetchAddresses();
+  if (mine !== generation) return;
+  setState(result.error !== null ? { status: 'error', addresses: [] } : { status: 'ready', addresses: result.data });
+}
+
+/** Yazma ucunun döndürdüğü güncel liste; havadaki okuma bu listeyi ezmesin diye kuşak ilerler. */
+function publishAddresses(next: MeAddress[]): void {
+  generation += 1;
+  setState({ status: 'ready', addresses: next });
+}
+
+function resetAddresses(): void {
+  generation += 1;
+  setState(INITIAL);
+}
+
+// Oturum kapanınca liste düşer; bir sonraki müşteri öncekinin adreslerini görmemeli.
+registerSessionCleanup(resetAddresses);
 
 export function useAddresses(enabled: boolean): {
   status: AddressesStatus;
   addresses: MeAddress[];
   publish: (next: MeAddress[]) => void;
-  /** Yeniden okur ve BİTİNCE çözülür — çağıran yenileme halkasını buna göre kapatır (21.29c). */
+  /** Yeniden okur ve bitince çözülür; çağıran yenileme halkasını buna göre kapatır. */
   reload: () => Promise<void>;
 } {
-  const [state, setState] = useState<{ status: AddressesStatus; addresses: MeAddress[] }>({
-    status: 'loading',
-    addresses: [],
-  });
-
-  /* Okuma TEK yerde: ilk yük de yenileme de aynı fonksiyonu çağırır. İkinci bir `fetch` yazmak,
-     hata karşılamasının bir gün ikisinde ayrışması demekti. */
-  const load = useCallback(async (): Promise<void> => {
-    const result = await fetchAddresses();
-    // Hata anahtarı ekranda cümleye dönmez (tek genel satır var) — hâl yeter, sebep loglanmaz:
-    // istemcide teşhis kanalı yok, sunucu tarafı zaten kendi izini bırakıyor.
-    if (result.error !== null) return setState({ status: 'error', addresses: [] });
-    setState({ status: 'ready', addresses: result.data });
-  }, []);
+  const current = useSyncExternalStore(subscribeAddresses, getAddressesSnapshot, getAddressesSnapshot);
 
   useEffect(() => {
-    if (!enabled) return;
-    let alive = true;
-    void fetchAddresses().then((result) => {
-      if (!alive) return;
-      if (result.error !== null) return setState({ status: 'error', addresses: [] });
-      setState({ status: 'ready', addresses: result.data });
-    });
-    return () => {
-      alive = false;
-    };
+    if (enabled) void loadAddresses();
   }, [enabled]);
 
-  return { ...state, publish: (next) => setState({ status: 'ready', addresses: next }), reload: load };
+  return { ...current, publish: publishAddresses, reload: loadAddresses };
 }

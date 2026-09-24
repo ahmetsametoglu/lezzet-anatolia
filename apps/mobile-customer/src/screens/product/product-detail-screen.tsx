@@ -6,12 +6,12 @@ import { ALLERGEN_LABELS, NUTRITION_KEYS, resolveLocalizedText } from '@lezzet/t
 import type { CatalogVariant, Nutrition, ProductAllergen } from '@lezzet/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
-import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
+import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
 import { BlurView } from 'expo-blur';
 import { CirclePhoto } from '@lezzet/mobile-kit/src/components/ui/circle-photo';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -109,13 +109,13 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   /* Yer bağlamı katalogla aynı kaynaktan: iki ekran farklı yer sorarsa aynı ürün iki fiyatla görünür. */
-  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
+  const { postalCode } = usePurchasePlace();
   // Gel-al seçiliyken stok ve fiyat seçilen depodan okunur: soğuk zincir kalem adrese gelmese de depodan alınabilir.
   const pickupWarehouseId = useSelectedPickupWarehouse();
-  const { status, detail, retry } = useProduct(slug, locale, onboarding?.postalCode ?? null, pickupWarehouseId);
+  const { status, detail, retry } = useProduct(slug, locale, postalCode, pickupWarehouseId);
   /* "Rota içinde miyim" kapısı katalogla aynı; stok hâlini sunucu cevaplar, bu çözüm yalnız `elsewhere`in geçici kalem ile
      kalıcı bölge sebebini ayırır. */
-  const place = usePlaceResolution(onboarding?.postalCode ?? '');
+  const place = usePlaceResolution(postalCode ?? '');
 
   /* Seçim boya aittir; aile çipi slug'ı değiştirince rota ekranı yeniden kurar ve seçim sıfırlanır. `null` = henüz seçilmedi,
      açılış boyu kullanılır. */

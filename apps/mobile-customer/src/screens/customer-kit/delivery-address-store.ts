@@ -3,26 +3,8 @@ import { useSyncExternalStore } from 'react';
 import { registerSessionCleanup } from '@lezzet/mobile-kit/src/lib/auth/session-end';
 
 /*
-  SİPARİŞİN GİDECEĞİ ADRES — SEPET İLE CHECKOUT'UN ORTAK SEÇİMİ.
-
-  Sepet 10.08'de adrese bağlandı (künyesi `cart-store` → `purchasePostalCode`): satın alma tarafının tamamı
-  ADRESLE çözülür, gezinme kodu vitrinde kalır. Bunun bir sonucu var — sepette "Değiştir" diyen
-  müşterinin seçimi checkout'a TAŞINMALI. Taşınmasaydı iki ekran yine iki ayrı adrese bakardı ve az
-  kapatılan ayrışma (sepette bir gerçek, checkout'ta başka) geri açılırdı.
-
-  ── NEDEN BİR DEPO, EKRAN İÇİ `useState` DEĞİL ──────────────────────────────
-  Seçim İKİ ekranın ortak gerçeği ve aralarında bir yönlendirme var; ekran state'i sepetten
-  checkout'a geçerken ölürdü. Modül düzeyinde depo + `useSyncExternalStore` (sepet deposunun ve
-  `use-me.hook`un aynı kalıbı) bunu kabuk sözleşmesine dokunmadan verir.
-
-  ── `null` BİR SEÇİMSİZLİKTİR, BOŞLUK DEĞİL ─────────────────────────────────
-  `null` = "müşteri henüz seçmedi, VARSAYILAN adres geçerli". Varsayılanın kimliğini burada
-  saklamıyoruz: o sunucunun kararı (`isDefault`) ve değişebilir. Ekranlar `null` gördüğünde kendi
-  listelerinden varsayılanı bulur — böylece burada bayatlayacak bir kopya durmaz.
-
-  DİSKE YAZILMAZ: bu, bir oturumun alışverişine ait geçici bir seçim. Kalıcı olan "varsayılan
-  adres"tir ve onun yeri sunucudur; burada saklamak, kayıtlı adresi silinmiş bir kimliği bir sonraki
-  açılışta diriltirdi.
+  Müşterinin seçtiği teslimat adresi ya da gel-al deposu: vitrin, sepet ve checkout aynı seçimi okur, bu yüzden ekran durumu değil
+  modül deposudur. `null` seçimsizliktir ve varsayılan adres geçerlidir; diske yazılmaz, çünkü kalıcı olan sunucudaki varsayılandır.
 */
 
 let selectedId: string | null = null;
@@ -35,18 +17,18 @@ function emit(): void {
   for (const listener of listeners) listener();
 }
 
-function subscribe(listener: () => void): () => void {
+export function subscribeDeliverySelection(listener: () => void): () => void {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
   };
 }
 
-function getSnapshot(): string | null {
+export function getSelectedDeliveryAddress(): string | null {
   return selectedId;
 }
 
-function getPickupSnapshot(): string | null {
+export function getSelectedPickupWarehouse(): string | null {
   return selectedPickupId;
 }
 
@@ -80,10 +62,10 @@ registerSessionCleanup(resetDeliveryAddress);
 
 /** Seçili adres kimliği; `null` = varsayılan geçerli (künye). Ekranların okuma seam'i. */
 export function useSelectedDeliveryAddress(): string | null {
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return useSyncExternalStore(subscribeDeliverySelection, getSelectedDeliveryAddress, getSelectedDeliveryAddress);
 }
 
 /** Seçili gel-al deposu; `null` = adrese teslim. Sepet ve checkout aynı seçimi okur. */
 export function useSelectedPickupWarehouse(): string | null {
-  return useSyncExternalStore(subscribe, getPickupSnapshot, getPickupSnapshot);
+  return useSyncExternalStore(subscribeDeliverySelection, getSelectedPickupWarehouse, getSelectedPickupWarehouse);
 }

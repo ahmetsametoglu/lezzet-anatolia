@@ -2,7 +2,7 @@ import { formatPrice, PACKAGE_QUANTITY_MAX, showsNoShipChip } from '@lezzet/help
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { PackageItem } from '@lezzet/types';
 import { useRouter } from 'expo-router';
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import { ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -16,7 +16,7 @@ import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable
 import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
-import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
+import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
 import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
@@ -60,11 +60,9 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
   const { theme } = useUnistyles();
   const locale = useAppLocale();
   const t: Messages = messages[locale];
-  /* YER: kaynak katalog/vitrinle AYNI (cihazdaki onboarding kaydı). Kod sunucuya gider ve `route`
-     onunla dolar; ikinci çözüm (`usePlaceResolution`) yalnız "rota içinde miyim" sorusunu
-     cevaplar — cümlenin GEÇİCİ mi KALICI mı olduğu ondan çıkar. */
-  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
-  const postalCode = onboarding?.postalCode ?? null;
+  /* Yer katalog ve vitrinle aynı kaynaktan (`usePurchasePlace`); ikinci çözüm yalnız "rota içinde miyim" sorusunu cevaplar ve
+     cümlenin geçici mi kalıcı mı olduğu ondan çıkar. */
+  const { postalCode } = usePurchasePlace();
   const place = usePlaceResolution(postalCode ?? '');
   const pickupWarehouseId = useSelectedPickupWarehouse();
   const { status, detail, retry } = usePackage(slug, locale, postalCode, pickupWarehouseId);

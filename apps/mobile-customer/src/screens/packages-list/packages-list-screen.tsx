@@ -2,7 +2,6 @@ import { formatPrice } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { HomePackage } from '@lezzet/types';
 import { useRouter } from 'expo-router';
-import { useSyncExternalStore } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
@@ -14,7 +13,7 @@ import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-butt
 import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
-import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
+import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
 import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
@@ -46,11 +45,9 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
-  /* YER: kaynak katalog ve vitrinle AYNI (cihazdaki onboarding kaydı) — kod sunucuya gider, depo
-     orada çözülür ve kartın `soldOut`/`route` alanları ona göre dolar. Snapshot kök kapı yüzünden
-     `undefined` olamaz; yine de `?.` ile okunur (kataloğun aynı gerekçesi). */
-  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
-  const postalCode = onboarding?.postalCode ?? null;
+  /* Yer katalog ve vitrinle aynı kaynaktan (`usePurchasePlace`): kod sunucuya gider, depo orada çözülür ve kartın `soldOut`/`route`
+     alanları ona göre dolar. */
+  const { postalCode } = usePurchasePlace();
   const pickupWarehouseId = useSelectedPickupWarehouse();
   const list = usePackagesList(locale, postalCode, pickupWarehouseId);
   /* İkinci çözüm YALNIZ "rota içinde miyim" sorusunu cevaplar (depo kimliği istemciye hiç

@@ -26,7 +26,6 @@ import { SectionHeader } from '@/components/ui/section-header';
 import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
-import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { rememberPlaceName, useRememberedPlaceName } from '@/lib/places/place-name-memory';
 import { usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
@@ -35,7 +34,8 @@ import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/cust
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { PhotoTile } from '@/screens/customer-kit/photo-tile';
-import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
+import { PlaceSheet } from '@/screens/customer-kit/place-sheet';
+import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
 import { useMe, useWholesale } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { CollectionBand, CollectionPhotoOverlay } from './collection-band';
@@ -104,9 +104,9 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const liveOrder = homeOrders.live;
   const lastOrder = homeOrders.last;
 
-  /* Teslimat bölgesinin kaynağı cihazdaki kod, adı `/places`tan; kod hiç girilmemişse hap bir davet olur, boş yer adı basılmaz. */
-  const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
-  const postalCode = onboarding?.postalCode ?? null;
+  /* Kod müşterinin yerinden gelir (girişlide teslimat adresi, değilse cihazın kodu), adı `/places`tan; kod hiç yoksa hap bir davet
+     olur, boş yer adı basılmaz. */
+  const { postalCode } = usePurchasePlace();
   /* Tam kanca (`place` + `refresh`), çünkü aşağı çekme kapsamı da tazeler; hareket çağıranın kaydırma alanına ait olduğu için buradan
      bağlanır. */
   const savedPlaceLookup = usePlaceLookup(postalCode ?? '');
@@ -601,9 +601,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         />
       </View>
 
-      <PostalCodeSheet
+      <PlaceSheet
         visible={zipSheetOpen}
-        code={postalCode}
         onClose={() => setZipSheetOpen(false)}
         // Vitrinde bölge dışı müşteri de geziniyor: "nerelere gidiyorsunuz" sorusu burada da doğar.
         showZonesLink
