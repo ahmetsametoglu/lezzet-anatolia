@@ -369,7 +369,7 @@ export type { BoxLabel, BoxLabelOutcome, BoxPrinter, MarkPrintedOutcome, OpenBox
 export { listOrderBoxes } from './warehouse/order-boxes';
 export type { OrderBoxTrace } from './warehouse/order-boxes';
 export { boxLabelSvg, sampleBoxLabel } from './warehouse/label-svg';
-export { listPendingIntakes, openIntakeForm, readIntakeHeader, receiveGoods, receivePurchase } from './warehouse/intake';
+export { listPendingIntakes, openIntakeForm, purchaseOrderUnitCosts, readIntakeHeader, receiveGoods, receivePurchase } from './warehouse/intake';
 export { duplicateSupplierMessage, duplicateSupplierOf, supplierRowOf } from './warehouse/supplier';
 // Tarama kapısı (Modül 23): kod → kimlik + öğrenen eşleme. Kimlik bulur, stok/depo kararı VERMEZ.
 export { learnCode, resolveScannedCode } from './warehouse/scan';

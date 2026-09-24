@@ -69,11 +69,16 @@ export function IntakeDialog({ purchaseOrderId, intake, showCost, onClose, onDon
           setError(failed ?? 'Sipariş kalemleri okunamadı.');
           return;
         }
+        // Fiyat salt okunur gösterilir: kabulün siparişten yazacağı değer, düzenlenmez ve geri gönderilmez.
         setValues((current) => ({
           ...current,
-          lines: data.map((row) => ({
-            ...emptyIntakeLine(row.variantId, titleOf(row.productName, row.variantLabel), row.expectedQty),
-          })),
+          lines: data.rows.map((row) => {
+            const cents = data.unitCostsCents?.[row.variantId];
+            return {
+              ...emptyIntakeLine(row.variantId, titleOf(row.productName, row.variantLabel), row.expectedQty),
+              unitCost: cents === undefined ? null : cents / 100,
+            };
+          }),
         }));
       })
       .finally(() => {
@@ -103,7 +108,6 @@ export function IntakeDialog({ purchaseOrderId, intake, showCost, onClose, onDon
           expiryDate: line.expiryDate,
           lotNumber: line.lotNumber,
           storageAreaId: line.storageAreaId,
-          unitCost: line.unitCost,
         })),
       });
 
@@ -162,6 +166,7 @@ export function IntakeDialog({ purchaseOrderId, intake, showCost, onClose, onDon
           warehouses={intake.warehouseOptions}
           storageAreas={intake.storageAreas}
           showCost={showCost}
+          costReadOnly
           onCreateSupplier={async (name, phone) => {
             const { data, error: failed } = await createSupplierAction(name, phone);
             // Hata sessiz KALMIYOR: satır açık kalır ve sebep alt barda görünür — "ekledim ama

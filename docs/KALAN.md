@@ -369,9 +369,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   cümleleri oradan okuyor, native `screens/discover/messages.json` ikinci kopya olarak kaldı.
 - [~] (K.14) [hedef: web] Gerçek başlangıç beslemesi kuruldu (`scripts/seed-real.ts` + `seed-real/data.ts`, `pnpm db:seed:real`);
   eksikler: aracın geçici plakası (`AA-000-AA`), taslak ürünlerin künyesi ve yeni faturaların kalemleri.
-- [ ] (K.15) [hedef: web] Mal kabulde "birim alış" alanı kaldırılsın ya da salt okunur gösterilsin — fiyat siparişin ve
-  faturanın kaydıdır, kabul ekranında değiştirilmesi maliyeti ve otomatik fiyatı sessizce kaydırır (işletmeci kararı:
-  "anlamsız, hatta problemli"). Bugün boş bırakılınca zaten siparişteki fiyat yazılıyor (`application/warehouse/intake.ts`).
 - [ ] (K.18) [hedef: mobil] Profesyoneller ekranının başlığı her dilin kendi sözcüğü olsun: TR "Profesyoneller", DE
   "Geschäftskunden" (FR "Professionnels" kalır) — web menüsü ve sayfası bu sözcüklere geçti, native
   `screens/professionals/messages.json` üç dilde hâlâ "Professionnels" diyor.

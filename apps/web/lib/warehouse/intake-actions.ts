@@ -4,13 +4,13 @@ import { revalidatePath } from 'next/cache';
 import {
   createMoneyDocument,
   openIntakeForm,
+  purchaseOrderUnitCosts,
   receiveGoods,
   receivePurchase,
   type IntakeFormRow,
   type PurchaseIntakeLine,
 } from '@lezzet/application';
 import { ProductService, SupplierProductService, SupplierService, serviceDb } from '@lezzet/database';
-import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText, type DocumentVatRegime } from '@lezzet/types';
 import { DOCUMENT_REASON } from '@/app/(operations)/operations/finance/finance-labels';
 import { titleOf } from '@/lib/catalog/title';
@@ -26,11 +26,21 @@ import type { ReceiveOutcome } from './intake-types';
  */
 const RECEIVING_PATH = '/operations/receiving';
 
-/** Seçilen tedarik siparişinin kalemleri — beklenen adetlerle dolu form. */
-export async function openIntakeFormAction(purchaseOrderId: string): Promise<ActionResult<IntakeFormRow[]>> {
+/**
+ * Siparişten dolu form; depo-üstü rolde kabulün yazacağı sipariş fiyatları da döner (salt okunur gösterim için). Depoya bağlı personele
+ * fiyat hiç gitmez.
+ */
+export async function openIntakeFormAction(
+  purchaseOrderId: string,
+): Promise<ActionResult<{ rows: IntakeFormRow[]; unitCostsCents: Record<string, number> | null }>> {
   try {
-    await requireWarehouseScope();
-    return { data: await openIntakeForm(serviceDb(), purchaseOrderId), error: null };
+    const { scope } = await requireWarehouseScope();
+    const db = serviceDb();
+    const [rows, costs] = await Promise.all([
+      openIntakeForm(db, purchaseOrderId),
+      scope.kind === 'all' ? purchaseOrderUnitCosts(db, purchaseOrderId) : Promise.resolve(null),
+    ]);
+    return { data: { rows, unitCostsCents: costs ? Object.fromEntries(costs) : null }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
@@ -38,8 +48,8 @@ export async function openIntakeFormAction(purchaseOrderId: string): Promise<Act
 
 
 /**
- * Stok ekranının kabul kapısı, yöneticiye de depocuya da açık; hangi kapıdan geçileceğine istemci değil sunucu karar verir. Kapsam
- * depo-üstüyse fiyat yazılır, depoya bağlı personelde satır maliyeti gönderilmiş olsa bile sunucuda düşürülür.
+ * Stok ekranının kabul kapısı, yöneticiye de depocuya da açık. Alış fiyatı bu ekrandan hiçbir rolde yazılmaz: fiyat siparişin ve
+ * faturanın kaydıdır, kabul fiyatsız kapıdan geçer ve maliyet siparişten eklenir.
  */
 export async function receiveIntakeAction(input: {
   warehouseId: string;
@@ -49,7 +59,6 @@ export async function receiveIntakeAction(input: {
   /** Belgenin tarihi — boşsa kapı BUGÜNE yazar (`StockIntakeService.receive`). */
   date: string | null;
   note: string | null;
-  /** Satırlar; `unitCost` **EURO** (form birimi) — cent'e çevrim burada, sınırda. */
   lines: Array<{
     variantId: string;
     qty: number;
@@ -57,12 +66,11 @@ export async function receiveIntakeAction(input: {
     lotNumber: string | null;
     /** Partinin konacağı alan (kimlik); boş = raf seçilmedi ve bu meşru. */
     storageAreaId: string | null;
-    unitCost: number | null;
   }>;
 }): Promise<ActionResult<ReceiveOutcome>> {
   try {
     // Depo kapsamı BU depo için doğrulanıyor: sekmeden gelmek yetkiyi atlatmaz.
-    const { user, scope } = await requireWarehouseScope(input.warehouseId);
+    const { user } = await requireWarehouseScope(input.warehouseId);
     if (input.lines.length === 0) throw new Error('Kabul edilecek satır yok — en az bir kaleme adet girin.');
 
     const base = input.lines.map((line) => ({
@@ -71,9 +79,6 @@ export async function receiveIntakeAction(input: {
       expiryDate: line.expiryDate,
       lotNumber: line.lotNumber?.trim() || null,
       storageAreaId: line.storageAreaId || null,
-      // Form EURO taşır, kapı CENT ister — çevrim tek noktada (`STACK §8`). Fiyatsız kapıya
-      // giderken bu alan hiç okunmuyor; `receiveGoods`un satır tipinde karşılığı yok.
-      unitCostCents: line.unitCost === null ? null : toCents(line.unitCost),
     }));
 
     const common = {
@@ -87,12 +92,7 @@ export async function receiveIntakeAction(input: {
       ...(input.date ? { date: input.date } : {}),
     };
 
-    const result =
-      scope.kind === 'all'
-        ? await receivePurchase(serviceDb(), { ...common, lines: base })
-        : // Depoya bağlı personelde maliyet SUNUCUDA düşürülüyor: `receiveGoods`un satır tipi onu
-          // taşımıyor ve `intake` çekirdeği hepsini `null`a çeviriyor (kendi künyesi).
-          await receiveGoods(serviceDb(), { ...common, lines: base });
+    const result = await receiveGoods(serviceDb(), { ...common, lines: base });
 
     if (result.status === 'empty') throw new Error('Kabul edilecek satır yok — en az bir kaleme adet girin.');
 

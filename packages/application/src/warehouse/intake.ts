@@ -320,7 +320,7 @@ async function intake(
 ): Promise<IntakeOutcome> {
   if (input.lines.length === 0) return { status: 'empty' };
 
-  const costsInCents = await unitCostsOf(db, input.purchaseOrderId);
+  const costsInCents = await purchaseOrderUnitCosts(db, input.purchaseOrderId);
   const expected = await expectedQtysOf(db, input.purchaseOrderId);
 
   const result = await new StockIntakeService(db).receive({
@@ -440,12 +440,10 @@ function differencesOf(lines: readonly IntakeFormLine[], expected: Map<string, n
 }
 
 /**
- * PO kalemlerinin birim fiyatı — **cent** olarak (servis öyle döndürüyor, 02.9 · `STACK §8`).
- *
- * Fiyatı GİRİLMEMİŞ kalem haritaya hiç girmez: `null`'ı taşımak "bilinmiyor"u bir değer gibi
- * göstermek olurdu; yokluk zaten `??` zincirinin bir sonraki halkasına düşüyor.
+ * Sipariş kalemlerinin birim fiyatı (cent, varyant anahtarlı): kabul bu fiyatı yazar, yetkili ekran da aynı haritayı gösterir ki görünen
+ * ile yazılan ayrışmasın. Fiyatı girilmemiş kalem haritaya girmez, çünkü yokluk bir değer gibi taşınmamalı.
  */
-async function unitCostsOf(db: SupabaseClient, purchaseOrderId?: string | null): Promise<Map<string, number>> {
+export async function purchaseOrderUnitCosts(db: SupabaseClient, purchaseOrderId?: string | null): Promise<Map<string, number>> {
   if (!purchaseOrderId) return new Map();
   const lines = await new PurchaseOrderItemService(db).listByOrder(purchaseOrderId);
   return new Map(

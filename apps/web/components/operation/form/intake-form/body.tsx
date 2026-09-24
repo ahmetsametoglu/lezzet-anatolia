@@ -28,6 +28,8 @@ interface IntakeFormBodyProps {
   storageAreas: Array<{ id: string; name: string; kind: StorageAreaKind }>;
   /** Alış fiyatı kolonu çizilsin mi (yukarıdaki künye: rol sınırı). */
   showCost?: boolean;
+  /** Fiyat gösterilir ama düzenlenmez: stok ekranında fiyat siparişin kaydıdır, asistan kuyruğunda ise faturadan okunup düzeltilebilir. */
+  costReadOnly?: boolean;
   /**
    * Faturanın KENDİ yazdığı toplam (cent) — satır toplamıyla karşılaştırılır. `null` ise belgede
    * toplam okunamamıştır ve mutabakat satırı çizilmez; uydurulmuş bir toplam, tutmayan bir hesabı
@@ -143,6 +145,7 @@ export function IntakeFormBody({
   warehouses,
   storageAreas,
   showCost = false,
+  costReadOnly = false,
   documentTotalCents = null,
   documentVatCents = null,
   onCreateSupplier,
@@ -302,7 +305,11 @@ export function IntakeFormBody({
               options={storageAreas.map((area) => ({ value: area.id, label: area.name }))}
               disabled={disabled || line.isMissing || storageAreas.length === 0}
             />
-            {showCost ? (
+            {showCost && costReadOnly ? (
+              <span className="text-right font-ops-mono text-ops-sm text-ops-muted" aria-label={`${line.title} birim alış`}>
+                {line.unitCost === null ? '—' : money(Math.round(line.unitCost * 100))}
+              </span>
+            ) : showCost ? (
               <MoneyInput
                 inputSize="sm"
                 fullWidth
@@ -379,7 +386,12 @@ export function IntakeFormBody({
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-ops-card border border-ops-line bg-ops-surface-sunken px-3.5 py-2.5 font-ops-body text-ops-sm">
           <span className="text-ops-muted">
             Satırların toplamı <span className="font-ops-mono font-semibold text-ops-ink">{money(totalCents)}</span>
-            {unpricedCount > 0 ? <span className="text-ops-amber"> · {unpricedCount} satırın fiyatı girilmedi</span> : null}
+            {unpricedCount > 0 ? (
+              <span className="text-ops-amber">
+                {' '}
+                · {unpricedCount} satırın {costReadOnly ? 'siparişte fiyatı yok' : 'fiyatı girilmedi'}
+              </span>
+            ) : null}
           </span>
           {documentTotalCents !== null ? (
             <span className="text-ops-muted">
