@@ -32,7 +32,7 @@
       "delivered": "Teslim edildi",
       "note": "Değişiklik veya iptal için hazırlığa girmeden önce bize yazabilirsiniz — hazırlık başladıktan sonra kalemler kilitlenir.",
       "placedAt": "Bugün {time}",
-      "preparingAt": "Teslimattan bir gün önce mutfakta",
+      "preparingAt": "Teslimattan bir gün önce",
       "onTheWayAt": "{date} sabah",
       "deliveredAt": "{date}",
       "readyForPickup": "Teslime hazır"
@@ -89,7 +89,7 @@
       "delivered": "Livrée",
       "note": "Pour modifier ou annuler, écrivez-nous avant le début de la préparation — ensuite les articles sont verrouillés.",
       "placedAt": "Aujourd'hui {time}",
-      "preparingAt": "En cuisine la veille",
+      "preparingAt": "La veille de la livraison",
       "onTheWayAt": "{date} au matin",
       "deliveredAt": "{date}",
       "readyForPickup": "Prête à retirer"
@@ -116,7 +116,7 @@
   "de": {
     "title": "Ihre Bestellung ist eingegangen, {name}",
     "titleAnon": "Ihre Bestellung ist eingegangen",
-    "mailed": "Wir haben die Bestätigung an {email} gesendet. Sobald die Zubereitung beginnt, melden wir uns.",
+    "mailed": "Wir haben die Bestätigung an {email} gesendet. Sobald die Vorbereitung beginnt, melden wir uns.",
     "orderNo": "Bestellnummer · {reference}",
     "delivery": {
       "title": "Lieferung",
@@ -141,12 +141,12 @@
     "timeline": {
       "title": "Wie es weitergeht",
       "placed": "Bestellung eingegangen",
-      "preparing": "In Zubereitung",
+      "preparing": "In Vorbereitung",
       "onTheWay": "Unterwegs",
       "delivered": "Geliefert",
-      "note": "Für Änderungen oder Stornierung schreiben Sie uns vor Beginn der Zubereitung — danach sind die Artikel fixiert.",
+      "note": "Für Änderungen oder Stornierung schreiben Sie uns vor Beginn der Vorbereitung — danach sind die Artikel fixiert.",
       "placedAt": "Heute {time}",
-      "preparingAt": "Am Vortag in der Küche",
+      "preparingAt": "Am Vortag der Lieferung",
       "onTheWayAt": "{date} morgens",
       "deliveredAt": "{date}",
       "readyForPickup": "Abholbereit"

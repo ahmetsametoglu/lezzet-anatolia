@@ -8,7 +8,7 @@
     "ok": {
       "title": "{name} sizi Lezzet Anatolie'ye davet etti",
       "someone": "Bir tanıdığınız",
-      "body": "Ev yapımı Anadolu lezzetleri. Önce kataloğa göz atın; hesabınızı dilediğiniz an açarsınız.",
+      "body": "Anadolu lezzetleri, kapınıza kadar. Önce kataloğa göz atın; hesabınızı dilediğiniz an açarsınız.",
       "primary": "Kataloğa göz at",
       "secondary": "Hesabımı aç"
     },
@@ -37,7 +37,7 @@
     "ok": {
       "title": "{name} vous invite chez Lezzet Anatolie",
       "someone": "Une connaissance",
-      "body": "Des saveurs anatoliennes faites maison. Parcourez d'abord le catalogue ; vous créerez votre compte quand vous voudrez.",
+      "body": "Les saveurs d'Anatolie, jusqu'à votre porte. Parcourez d'abord le catalogue ; vous créerez votre compte quand vous voudrez.",
       "primary": "Voir le catalogue",
       "secondary": "Créer mon compte"
     },
@@ -66,7 +66,7 @@
     "ok": {
       "title": "{name} lädt Sie zu Lezzet Anatolie ein",
       "someone": "Jemand, den Sie kennen",
-      "body": "Hausgemachte anatolische Spezialitäten. Sehen Sie sich zuerst den Katalog an; Ihr Konto eröffnen Sie, wann Sie möchten.",
+      "body": "Anatolische Spezialitäten bis vor Ihre Tür. Sehen Sie sich zuerst den Katalog an; Ihr Konto eröffnen Sie, wann Sie möchten.",
       "primary": "Katalog ansehen",
       "secondary": "Konto eröffnen"
     },

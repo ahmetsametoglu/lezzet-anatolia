@@ -14,7 +14,7 @@
     "progress": "{index}/{total} aday",
     "guestChip": "Giriş yapın, puan kazanın",
     "candidate": "Aday ürün · {index}/{total}",
-    "notice": "Beğeniler satın alma sözü değil: yalnız hangi ürünleri üretim listesine alacağımıza karar verirken sayılır.",
+    "notice": "Beğeniler satın alma sözü değil: yalnız hangi ürünleri getireceğimize karar verirken sayılır.",
     "likeLong": "Beğendim",
     "dislikeLong": "Bana göre değil",
     "keySkip": "geç",

@@ -1,3 +1,4 @@
+import { brand } from '@lezzet/brand';
 import { BrandLogo } from '@/components/customer/ui/brand-logo';
 import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
 import { FormInputField } from '@/components/customer/form/form-input-field';
@@ -9,7 +10,7 @@ import type { LoginViewProps } from './login-types';
 // Tasarımdaki aile sofrası fotoğrafının yerini tutan degrade; renkler token'dan (bal · ara durak · mürekkep).
 const HERO_BG = 'linear-gradient(150deg,var(--color-honey) 0%,var(--color-hero-mid) 45%,var(--color-ink) 100%)';
 
-// Bölünmüş ekran: solda kahraman, sağda doğrulama paneli. Tasarımın 1120px çerçevesi canvas'a ait; ekran pencereyi kaplar.
+// Bölünmüş ekran: solda kahraman, sağda giriş paneli. Tasarımın 1120px çerçevesi canvas'a ait; ekran pencereyi kaplar.
 export function LoginDesktop({ t, errors, subtitle, locale, stage, error, isSending, emailInvalid, emailRef, emailField, onSubmit, onBack, onGoogle, onVerify, onResend }: LoginViewProps) {
   return (
     <main className="flex min-h-screen bg-cream text-ink">
@@ -23,8 +24,9 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, isSend
         <div className="absolute inset-x-[34px] bottom-[34px] flex flex-col gap-2.5">
           {stage.kind === 'email' ? (
             <>
-              <span className="font-serif text-h2 font-medium leading-snug text-on-image">“{t.testimonialQuote}”</span>
-              <span className="font-sans text-note font-semibold tracking-wider text-on-image-soft">{t.testimonialAuthor}</span>
+              {/* Tasarımdaki müşteri yorumu yerine markanın kendi cümlesi: gerçek bir yorum yokken bir müşteriye söz yazdırılmaz. */}
+              <span className="font-serif text-h2 font-medium leading-snug text-on-image">“{t.brandQuote}”</span>
+              <span className="font-sans text-note font-semibold tracking-wider text-on-image-soft">{brand.name}</span>
             </>
           ) : (
             <span className="font-serif text-card-title font-medium leading-snug text-on-image">{t.heroCodeText}</span>
@@ -32,7 +34,7 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, isSend
         </div>
       </div>
 
-      {/* SAĞ: doğrulama paneli — kalan genişliği kaplar, içerik ortada (max 392px) */}
+      {/* SAĞ: giriş paneli — kalan genişliği kaplar, içerik ortada (max 392px) */}
       <div className="flex min-w-0 flex-1 flex-col px-13 py-10">
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={onBack}>

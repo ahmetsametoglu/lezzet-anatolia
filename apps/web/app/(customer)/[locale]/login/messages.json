@@ -13,8 +13,7 @@
     "consentAfter": " kabul etmiş olursunuz.",
     "heroPill": "Soğuk zincirle taptaze",
     "heroPillShort": "Taptaze",
-    "testimonialQuote": "Tıpkı anne sofrasından çıkmış gibi — kapımıza kadar geldi.",
-    "testimonialAuthor": "Ayşe · Strasbourg",
+    "brandQuote": "Anadolu lezzetleriyle aranızdaki köprüyüz.",
     "heroCodeText": "Neredeyse hazır — kod yolda.",
     "reasons": {
       "default": "Devam etmek için birkaç saniye. Şifre gerekmez.",
@@ -40,8 +39,7 @@
     "consentAfter": ".",
     "heroPill": "Fraîcheur préservée par la chaîne du froid",
     "heroPillShort": "Tout frais",
-    "testimonialQuote": "Comme sorti de la cuisine de maman — livré jusqu'à notre porte.",
-    "testimonialAuthor": "Ayşe · Strasbourg",
+    "brandQuote": "Nous sommes votre pont vers les saveurs d'Anatolie.",
     "heroCodeText": "Presque prêt — le code arrive.",
     "reasons": {
       "default": "Quelques secondes pour continuer. Sans mot de passe.",
@@ -67,8 +65,7 @@
     "consentAfter": ".",
     "heroPill": "Durch die Kühlkette frisch gehalten",
     "heroPillShort": "Ganz frisch",
-    "testimonialQuote": "Wie aus Mamas Küche — bis vor unsere Tür geliefert.",
-    "testimonialAuthor": "Ayşe · Straßburg",
+    "brandQuote": "Wir sind Ihre Brücke zu den Aromen Anatoliens.",
     "heroCodeText": "Fast fertig — der Code ist unterwegs.",
     "reasons": {
       "default": "Nur ein paar Sekunden, um fortzufahren. Ganz ohne Passwort.",
