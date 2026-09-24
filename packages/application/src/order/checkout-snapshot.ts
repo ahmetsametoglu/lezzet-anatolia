@@ -49,7 +49,7 @@ export interface CheckoutSnapshot {
      * yaramaz. Günü `availableDates`te olmayan davet girmez; gün başına bir kayıt döner, aynı güne iki davet varsa son kabul edilen.
      */
     neighborInvites: { inviteId: string; inviterName: string; deliveryDate: string }[];
-    /** Rota dışı + soğuk zincir: sipariş verilemez, sepet bölünmeli (K32). */
+    /** Rota dışı + soğuk zincir: sipariş verilemez, sepet bölünmeli. */
     blocked: boolean;
   } | null;
   /**
@@ -210,7 +210,7 @@ export async function readCheckoutSnapshot(
     bundles: input.bundles,
   };
   const fullCart = await getCartView(db, locale, input.entries, readOptions);
-  /* Taslakla aynı daraltma: sipariş yalnız kendi şeridini alır ve indirim daraltılmış kalemlerle yeniden çözülür. Bütün sepetin
+  /* Taslakla aynı daraltma: sipariş yalnız kendi grubunu alır ve indirim daraltılmış kalemlerle yeniden çözülür. Bütün sepetin
      indirim payını süzmek, taslağın keseceğinden farklı bir indirim gösterirdi. */
   const addressOutOfRoute = place.deliveryType === 'shipping';
   const laneEntries = laneEntriesOf(fullCart, input.entries, orderLaneOf(Boolean(input.shippingOrder), addressOutOfRoute), addressOutOfRoute);
@@ -403,7 +403,7 @@ function summarySlice(
   scope: ReturnType<typeof orderScopeOf>,
   entries: readonly CartEntry[],
   locale: PreferredLanguage,
-  /** Sepette bekleyen, bu adrese gelemeyen satırlar; verilmezse okumanın kapsam dışı satırları. Öteki şeridin kalemi buraya girmez. */
+  /** Sepette bekleyen, bu adrese gelemeyen satırlar; verilmezse okumanın kapsam dışı satırları. Öteki grubun kalemi buraya girmez. */
   excluded?: readonly CartLine[],
 ): NonNullable<CheckoutSnapshot['summary']> {
   return {

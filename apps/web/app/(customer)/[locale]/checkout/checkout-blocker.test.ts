@@ -3,11 +3,8 @@ import type { CheckoutSnapshot } from '@lezzet/application';
 import { checkoutBlocker, servicePointMissing } from './checkout-types';
 
 /**
- * Siparişin verilememe sebebi — iki ekranın (özet kartı + kart ödemesi formu) TEK cevabı.
- *
- * Bu testin varlık sebebi somut: koşul iki yerde ayrı yazılıyken ikisi tutmuyordu ve fark hiçbir
- * hata vermiyordu — sepette gönderilemeyen kalem varken kartsız yolun düğmesi pasif, kart formu
- * açıktı. Aşağıdaki `undeliverable_line` durumları tam olarak o farkı çiviliyor.
+ * Siparişin verilememe sebebi iki ekranın (özet kartı ve kart ödemesi formu) tek cevabıdır. Koşul iki yerde ayrı yazılırsa
+ * gönderilemeyen kalem varken kartsız yolun düğmesi pasif, kart formu açık kalır; `undeliverable_line` durumları bunu yakalar.
  */
 const payment: NonNullable<CheckoutSnapshot['payment']> = {
   methods: ['card'],
@@ -21,8 +18,7 @@ const payment: NonNullable<CheckoutSnapshot['payment']> = {
   orderTotalCents: 4000,
   minBasketOk: true,
   missingForMinBasketCents: 0,
-  // Eşiğin dayandığı yer (08.13) — engel kararına GİRMEZ, yalnız cümlede geçer. Fixture'da gerçek
-  // bir değer duruyor ki "boş string de geçer" gibi bir sessiz varsayım doğmasın.
+  // Eşiğin dayandığı yer engel kararına girmez, yalnız cümlede geçer; gerçek değer boş metnin de geçtiği varsayımını önler.
   placeLabel: '67000 Strasbourg',
 };
 
@@ -30,16 +26,13 @@ const delivery: NonNullable<CheckoutSnapshot['delivery']> = {
   deliveryType: 'route',
   availableDates: ['2026-08-06'],
   requiresDateChoice: true,
-  // Komşu daveti engel kararına GİRMEZ (17.10): davet bir kolaylıktır, sipariş verilebilirliğin
-  // koşulu değil. Fikstürde `null` — davetli hâli ayrı bir soru ve bu dosyanın konusu değil.
+  // Komşu daveti engel kararına girmez: davet bir kolaylıktır, sipariş verilebilirliğin koşulu değil.
   neighborInvites: [],
   blocked: false,
 };
 
 function snapshotOf(over: Partial<CheckoutSnapshot> = {}): CheckoutSnapshot {
-  // Özet engel kararına GİRMEZ (21.08): döküm "ne ödüyorum"un cevabıdır, "verebilir miyim"in değil
-  // — `checkoutBlocker` sepetin engelli kalemine, adrese ve ödemeye bakar. Fikstürde `null`.
-  // Kargo teklifi engel kararına GİRMEZ — bu dosyanın konusu değil, fikstürde `null`.
+  // Özet ve kargo teklifi engel kararına girmez: `checkoutBlocker` sepetin engelli kalemine, adrese ve ödemeye bakar.
   return { addresses: [], delivery, shipping: null, payment, summary: null, pickup: null, ...over };
 }
 

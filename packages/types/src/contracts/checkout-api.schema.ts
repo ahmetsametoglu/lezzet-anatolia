@@ -29,7 +29,7 @@ export const CheckoutDeliverySchema = z.object({
   neighborInvites: z.array(z.object({ inviteId: z.string().uuid(), inviterName: z.string(), deliveryDate: z.string() })),
   /**
    * Bu adrese HİÇBİR yoldan gidilemiyor: rota dışı adres + sepette soğuk zincir kalemi. Kargo
-   * dolgusu ona açılmaz (DOMAIN §6) — sipariş verilemez, sepet bölünmeli (K32).
+   * dolgusu ona açılmaz (DOMAIN §6) — sipariş verilemez, sepet bölünmeli.
    */
   blocked: z.boolean(),
 });
@@ -89,10 +89,6 @@ export const CheckoutSummarySchema = z.object({
 export type CheckoutSummary = z.infer<typeof CheckoutSummarySchema>;
 
 /**
- * Ekranın tek okuma sonucu. Dört dilim de `null` olabilir ve `null`lar ANLAMLIDIR:
- * adres listesi boşsa teslimat da ödeme de özet de sorulamaz — ekran önce adres ister.
- */
-/**
  * Gel-al teklifi: yalnız izinli müşteriye (`pickup_allowed`) ve yalnız gel-al noktası olan tesisler için dolu. Depo adresi
  * burada müşteriye görünür — "depo gösterilmez" kuralının bilinçli tek istisnası, çünkü müşteri oraya gidecek.
  */
@@ -110,6 +106,10 @@ export const CheckoutPickupSchema = z.object({
 });
 export type CheckoutPickup = z.infer<typeof CheckoutPickupSchema>;
 
+/**
+ * Ekranın tek okuma sonucu; dilimlerin `null` olması anlamlıdır: adres listesi boşsa teslimat, ödeme ve özet sorulamaz, ekran
+ * önce adres ister.
+ */
 export const CheckoutSnapshotSchema = z.object({
   addresses: z.array(MeAddressSchema),
   delivery: CheckoutDeliverySchema.nullable(),
@@ -153,8 +153,8 @@ export const CheckoutOrderBodySchema = z.object({
   /** Servis teslim noktası istiyorsa seçilen nokta; sunucu sağlayıcıdan yeniden okur. */
   servicePointId: z.string().min(1).nullable().default(null),
   /**
-   * Gel-al: müşterinin malı alacağı depo. Doluysa tür `pickup`tur; izin ve depo sunucuda yeniden sorulur
-   * (`pickup_not_allowed` · `pickup_warehouse_unavailable`). Adres yine gönderilir — fatura adresi olarak kalır.
+   * Gel-al: müşterinin malı alacağı depo; doluysa tür `pickup`tur ve izinle depo sunucuda yeniden sorulur
+   * (`pickup_not_allowed` · `pickup_warehouse_unavailable`). Adres yine gönderilir, çünkü fatura adresi olarak kalır.
    */
   pickupWarehouseId: z.string().uuid().nullable().default(null),
 });
@@ -218,7 +218,7 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
     city: z.string(),
     places: z.array(z.string()),
   }),
-  /** Rota dışı adres + soğuk zincir kalemi: ne kapıya ne kargoya (K32). */
+  /** Rota dışı adres + soğuk zincir kalemi: ne kapıya ne kargoya. */
   z.object({ status: z.literal('cold_chain_unshippable') }),
   z.object({ status: z.literal('date_unavailable'), availableDates: z.array(z.string()) }),
   z.object({ status: z.literal('payment_not_allowed'), methods: z.array(PaymentMethodEnum) }),

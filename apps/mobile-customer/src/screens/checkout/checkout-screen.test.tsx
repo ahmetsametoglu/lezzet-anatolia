@@ -8,15 +8,8 @@ import { CheckoutScreen } from './checkout-screen';
 import messages from '@lezzet/i18n/customer/checkout';
 
 /*
-  "SİPARİŞİ TAMAMLA" — GELEMEYEN KALEM ENGEL DEĞİL, KAPSAM SORUSU (kullanıcı kararı 10.08).
-
-  Ölçülen üç şey: bu adrese gelemeyen kalem özette YAZILMAZ (siparişe girmiyor), toplama SAYILMAZ
-  (ara toplam yalnız siparişe gireni toplar) ve kırmızı engel kutusunun yerine BİLGİ satırı çıkar —
-  eskiden "o kalemleri sepetten çıkarın" diyen bir hata kutusu vardı ve sipariş hiç açılmıyordu.
-
-  ANLIK GÖRÜNTÜ GERÇEK KAPIDAN GEÇER: `fetch` taklit edildi, `fetchCheckout` ve şeması değil —
-  ekranın gördüğü veri gerçekten `CheckoutSnapshotSchema`dan geçiyor. Sepet görünümü ise depodan
-  okunur, o yüzden yalnız `useCart` sahtelendi.
+  Bu adrese gelemeyen kalem siparişi engellemez, kapsamından düşer: özette üstü çizili durur, ara toplama girmez ve engel kutusu
+  yerine bilgi satırı çıkar. `fetch` taklit edilir, `fetchCheckout` ve şeması değil, böylece ekranın verisi gerçekten şemadan geçer.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
@@ -32,13 +25,8 @@ jest.mock('@/screens/customer-kit/cart-store', () => ({
   useCart: () => mockCart,
 }));
 
-/* Kimlik dört hâllidir ve ayrımı ekranın kendi testinin konusu; burada müşteri GİRİŞLİ sabitlendi
-   ki ölçülen şey sipariş kapsamı olsun. */
-/* Fikstür `phone` TAŞIMAK ZORUNDA: sözleşmede alan zorunlu ve `null` OLABİLİR ama yok olamaz
-   (`MeSchema.phone` = `.nullable()`, `.optional()` değil). Eksik bırakıldığında ekranın iletişim
-   ölçütü (`isPhoneMissing`) `undefined.trim()` ile patlıyordu — fikstürün sözleşmeden sapmasıydı,
-   ölçütün kusuru değil. Dolu veriliyor ki bu dosyanın konusu (gelemeyen kalemler) iletişim
-   bölümüyle karışmasın; bölümün kendi testi ayrı. */
+/* Müşteri girişli sabitlenir ki ölçülen şey sipariş kapsamı olsun; kimliğin dört hâli ekranın kendi testindedir. `phone` dolu
+   verilir, çünkü sözleşmede alan `null` olabilir ama eksik olamaz ve iletişim bölümü bu dosyanın konusu değildir. */
 jest.mock('@lezzet/mobile-kit/src/lib/me/use-me.hook', () => ({
   publishMe: () => undefined,
   useMe: () => ({
@@ -48,9 +36,8 @@ jest.mock('@lezzet/mobile-kit/src/lib/me/use-me.hook', () => ({
   }),
 }));
 
-/* ÖDEME KARTI: Stripe'ın kendi Jest mock'u `PaymentSheetError` numaralandırmasını TAŞIMIYOR ve
-   modül import edilir edilmez düşüyor (ölçüldü: "Cannot read properties of undefined (reading
-   'Failed')"). Kapı burada sahtelendi — bu dosyanın ölçtüğü şey ödeme değil, siparişin kapsamı. */
+/* Stripe'ın Jest mock'u `PaymentSheetError`ı taşımadığı için modül yüklenirken düşer; bu dosya ödemeyi değil siparişin
+   kapsamını ölçtüğü için kapı sahtelenir. */
 jest.mock('@/lib/payment/payment-sheet', () => ({ presentPayment: async () => ({ status: 'canceled' }) }));
 
 jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
@@ -68,7 +55,6 @@ const t = messages.tr;
 const ADDRESS = {
   id: '11111111-1111-4111-8111-111111111111',
   label: 'Ev',
-  // Adres artık teslim alacak kişiyi ve numarayı da taşıyor (22.08 · kullanıcı kararı).
   recipient: 'Claire Weber',
   phone: '+33612345678',
   line1: '3 rue des Lilas',
@@ -77,8 +63,7 @@ const ADDRESS = {
   city: 'Paris',
   country: 'FR' as const,
   isDefault: true,
-  /* Fatura adresi teslimat seçimini KISITLAMIYOR (kullanıcı kararı 08.09): checkout tüm adresleri
-     listelemeye devam ediyor. Bu fikstür bireysel bir hesabın ev adresi — işaretsiz. */
+  // Bireysel hesabın ev adresi; fatura rolü teslimat seçimini zaten kısıtlamaz.
   isBilling: false,
 };
 
@@ -89,7 +74,7 @@ const ADDRESS = {
 function snapshot(blocked: boolean, orderTotalCents: number, shippingFeeCents = 650): CheckoutSnapshot {
   return {
     addresses: [ADDRESS],
-    // Komşu daveti (21.45) bu senaryonun konusu değil: kargo siparişinde davet zaten açılmıyor.
+    // Kargo siparişinde komşu daveti açılmaz.
     delivery: { deliveryType: 'shipping', availableDates: [], requiresDateChoice: false, neighborInvites: [], blocked },
     // Gel-al teklifi yok: bu senaryonun müşterisi izinsiz (kartın çizilmediği hâl).
     pickup: null,
@@ -105,11 +90,8 @@ function snapshot(blocked: boolean, orderTotalCents: number, shippingFeeCents = 
       missingForMinBasketCents: 0,
       placeLabel: '75011 Paris',
     },
-    /* ÖZET FİKSTÜRDE DE SUNUCUNUN İŞİ (21.08): ekran artık dökümü buradan çiziyor, yerel sepetten
-       değil — arıza tam olarak ikisinin ayrışabilmesiydi. Fikstür bu yüzden sunucunun yaptığı
-       ayrımı BİREBİR tekrarlıyor (`group === 'undeliverable'` → kapsam dışı) ve `mockCart`tan
-       türetiliyor: elle yazılmış bir liste, testin sepetiyle sessizce ayrışır ve o gün test
-       ekranın değil kendisinin doğruluğunu ölçmeye başlardı. */
+    /* Özet `mockCart`tan sunucunun kapsam ayrımıyla türetilir (`group === 'undeliverable'` kapsam dışı), çünkü elle yazılmış
+       liste testin sepetiyle sessizce ayrışır ve test ekranı değil kendini ölçmeye başlar. */
     summary: summaryOfMockCart(),
   };
 }
@@ -169,9 +151,7 @@ describe('CheckoutScreen — siparişin kapsamı', () => {
     const summary = within(screen.getByTestId('checkout-summary'));
     expect(summary.getByText('1× Baklava')).toBeOnTheScreen();
     expect(summary.getByText('1× Şekerpare')).toBeOnTheScreen();
-    /* Gelemeyen kalem GİZLENMEZ, ÜSTÜ ÇİZİLİR (kullanıcı kararı 10.08): özetten sessizce çıkan
-       kalem müşteriye "herhâlde bunları alıyorum" dedirtiyordu — karar özetin uzağında, adresin
-       yanında duruyordu. Artık kalem gözün gittiği yerde ve kararı üstünde yazılı. */
+    // Gelemeyen kalem gizlenmez, üstü çizilir: özetten sessizce çıkan kalem müşteriye onu da aldığını düşündürür.
     const dropped = summary.getByText('1× Kaymak');
     expect(dropped).toBeOnTheScreen();
     expect(dropped).toHaveStyle({ textDecorationLine: 'line-through' });
@@ -194,7 +174,7 @@ describe('CheckoutScreen — siparişin kapsamı', () => {
     expect(screen.getByText(t.undeliverable.title)).toBeOnTheScreen();
     // Bekleyen kalemin adı da yazılır: müşteri neyin sepette kaldığını bilsin.
     expect(screen.getByText(`${t.undeliverable.body} ${t.undeliverable.items.replace('{items}', 'Kaymak')}`)).toBeOnTheScreen();
-    // Eski engel cümlesi ARTIK YAZILMIYOR — sunucu siparişi reddetmiyor, kapsamını daraltıyor.
+    // Engel cümlesi yazılmaz: sunucu siparişi reddetmez, kapsamını daraltır.
     expect(screen.queryByText(t.block.shipping)).toBeNull();
     /* Kalan tek engel ÖDEME SEÇİMİDİR; seçilince onay açılır — gelemeyen kalem kapıyı kapatmıyor.
        Dokunuş ERİŞİLEBİLİR öğeye yapılır (kitin kendi testinin kalıbı): `testID` görsel yüzeyde
@@ -223,18 +203,8 @@ describe('CheckoutScreen — siparişin kapsamı', () => {
 });
 
 /*
-  SİPARİŞ NUMARASI ONAY EKRANINA TAŞINIYOR (27.08 · eski `BEKLEYEN(21.14)`).
-
-  Cevap eskiden yalnız `orderId` (uuid) taşıyordu; müşteriye gösterilen `LA-26-…` hiçbir yoldan
-  ekrana ulaşamıyor ve onay ekranı o satırı hiç çizmiyordu. Sözleşmenin `placed` dalı artık
-  `referenceNo` taşıyor (`transitionOrder`ın kendi cevabı — ek okuma yok).
-
-  ÖLÇÜLEN ŞEY GEÇİŞİN PARAMETRESİ, ekranın çizimi değil: numarayı çizen yer onay ekranı ve orası
-  kendi testinde ölçülüyor. Burada sorulan tek soru "cevaptaki numara rotaya yazıldı mı".
-
-  HAVALE YOLU seçildi çünkü sipariş bu yolda TEK çağrıda kesinleşiyor: kart yolu ödeme kartını
-  açar (`presentPayment` bu dosyada sahtelenmiş) ve orada numara zaten YOKTUR — sipariş o an hâlâ
-  taslaktır, onayı webhook yazar.
+  Onay ekranına cevaptaki sipariş numarası taşınır; ölçülen geçişin parametresidir, numaranın çizimi onay ekranının testindedir.
+  Havale yolu seçildi, çünkü sipariş bu yolda tek çağrıda kesinleşir; kart yolunda sipariş hâlâ taslaktır ve numara yoktur.
 */
 describe('CheckoutScreen — sipariş numarası', () => {
   /** Havale ile ödenen KARGO siparişi: gün sorulmaz, ödeme kartı açılmaz — tek çağrıda kesinleşir. */
@@ -292,18 +262,14 @@ describe('CheckoutScreen — sipariş numarası', () => {
 
     const params = (mockReplace.mock.calls[0]?.[0] as { params: Record<string, unknown> }).params;
     expect(params).not.toHaveProperty('reference');
-    // Siparişin kimliği yine taşınıyor: komşu daveti onunla açılıyor (21.45).
+    // Siparişin kimliği de taşınır, çünkü komşu daveti onunla açılır.
     expect(params.orderId).toBe('22222222-2222-4222-8222-222222222222');
   });
 });
 
 /*
-  ADRES DÜZELTME TEKLİFİ (11.11 · 21.308) — "Siparişi onayla"ya basıldığı an, BİR KEZ, ve ENGEL
-  DEĞİL (tasarım `musteri-checkout.md` §4c). Web checkout'unun kuralı birebir: söylenecek bir şey
-  varsa ilk dokunuş durur; kabul KAYDI düzeltir, ret bir beyandır ve soru tekrarlanmaz; servis
-  düşerse satış durmaz.
-
-  UZUN BASMA (21.215) aynı dosyada: kayıtlı adresi sipariş akışından çıkmadan düzeltmenin yolu.
+  Adres düzeltme teklifi "Siparişi onayla"ya basılınca bir kez çıkar ve engel değildir: kabul kaydı düzeltir, ret bir beyandır ve
+  soru tekrarlanmaz, servis düşerse satış durmaz. Uzun basma kayıtlı adresi sipariş akışından çıkmadan düzeltmenin yoludur.
 */
 describe('CheckoutScreen — adres teklifi ve düzenleme', () => {
   const WRONG_CODE = {
@@ -319,8 +285,7 @@ describe('CheckoutScreen — adres teklifi ve düzenleme', () => {
     return { ...base, payment: { ...base.payment!, methods: ['bank_transfer'] } };
   }
 
-  /* Doğrulama ucu `/me/addresses/:id/check` — `includes('/check')` YETMEZ, `/me/checkout`u da
-     yakalar (ilk yazımda anlık görüntü doğrulama cevabıyla ezildi ve yedi test birden düştü). */
+  // `includes('/check')` yetmez, çünkü `/me/checkout`u da yakalar.
   const CHECK_URL = /\/me\/addresses\/[^/?]+\/check$/;
 
   /** Dört uç, tek mock: okuma · doğrulama · adres yazımı · sipariş. `Error` = doğrulama isteği düşer. */
