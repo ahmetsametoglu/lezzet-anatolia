@@ -96,7 +96,7 @@ export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => str
   feedback_invite: (d) =>
     say(d.locale, {
       tr: `${d.orderReferenceNo} numaralı siparişinizdekiler nasıldı? Birkaç saniyenizi alır: ${d.feedbackUrl}`,
-      fr: `Comment étaient les produits de votre commande ${d.orderReferenceNo} ? Cela prend quelques secondes : ${d.feedbackUrl}`,
+      fr: `Les produits de votre commande ${d.orderReferenceNo} vous ont-ils plu ? Cela ne prend que quelques secondes : ${d.feedbackUrl}`,
       de: `Wie waren die Produkte Ihrer Bestellung ${d.orderReferenceNo}? Es dauert nur Sekunden: ${d.feedbackUrl}`,
     }),
   // Bölge haberi tek cümle: kod + "artık geliyoruz" + bağlantı. Katalogda ne olduğu, hangi gün

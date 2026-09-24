@@ -2,12 +2,8 @@ import type { PreferredLanguage, TicketStatus, TicketType } from '@lezzet/types'
 import { BRAND_COPY } from './brand-copy';
 
 /**
- * Talep e-postalarının metinleri, üç dilde (14.7) — müşterinin `preferred_language`'ı.
- *
- * Operasyon yüzeyi Türkçedir ama bu mail MÜŞTERİYE gider; dil onun tercihidir (DOMAIN §10).
- *
- * **Durum ve tip sözlüğü burada, kapıda değil:** kapı ham enum geçirir. Etiketi kapı üretseydi
- * aynı sözlük hem `apps/web` hem şablon tarafında dururdu ve biri güncellenmeyi unuturdu.
+ * Talep e-postalarının metinleri — operasyon Türkçe olsa da alıcı müşteridir, dil onun tercihidir.
+ * Durum ve tip sözlüğü burada durur, çünkü etiketi kapı üretseydi aynı sözlük iki yerde yaşardı.
  */
 
 interface TicketCopy {
@@ -19,15 +15,8 @@ interface TicketCopy {
   reopenedSubject: (ref: string) => string;
 
   /**
-   * Başlık + giriş.
-   *
-   * **GİRİŞ, BAŞLIĞI TEKRAR ETMEZ** (kullanıcı gözlemi 09.08, telefondan okundu). Üç mailde de ilk
-   * cümle başlığın yeniden yazılmış hâliydi — *"Nous avons répondu à votre demande"* başlığının
-   * altında *"Notre équipe a répondu à votre demande."* Dar bir ekranda bu, okunacak asıl şeyi
-   * (cevabın kendisini) bir ekran aşağı itiyor ve okuyana hiçbir şey söylemiyordu.
-   *
-   * Kural: başlık NE OLDUĞUNU söyler, giriş BUNDAN SONRA NE OLACAĞINI. Giriş yalnız başlığın
-   * söylemediği bir şey ekliyorsa yazılır.
+   * Başlık ne olduğunu söyler, giriş bundan sonra ne olacağını; giriş başlığı tekrar ederse dar ekranda
+   * asıl içeriği (cevabın kendisini) aşağı iter.
    */
   receivedTitle: string;
   receivedIntro: string;
@@ -112,13 +101,13 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
 
     receivedTitle: 'Nous avons bien reçu votre demande',
     receivedIntro:
-      'Votre message nous est parvenu et se trouve dans la file de notre équipe. Nous vous préviendrons par e-mail dès que nous aurons répondu.',
+      'Votre message nous est bien parvenu et notre équipe s’en occupe. Nous vous préviendrons par e-mail dès que nous aurons répondu.',
     repliedTitle: 'Nous avons répondu à votre demande',
     repliedIntro: 'La réponse complète figure ci-dessous ; vous pouvez continuer à écrire au même endroit.',
     resolvedTitle: 'Votre demande est résolue',
     resolvedIntro: 'Si le problème persiste, écrivez-nous — la demande se rouvre automatiquement.',
     reopenedTitle: 'Votre demande a été rouverte',
-    reopenedIntro: 'Votre demande se trouve à nouveau dans la file de notre équipe.',
+    reopenedIntro: 'Votre demande est de nouveau prise en charge par notre équipe.',
 
     requestLabel: 'Demande',
     openedOn: (date) => `Ouverte le ${date}`,
@@ -133,7 +122,7 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
     truncatedNote: 'Le message complet se trouve sur la page de la demande.',
 
     stillOpenTitle: 'Le problème persiste ?',
-    stillOpenText: 'Écrivez simplement sur la même demande ; même close, elle se rouvre avec votre message et nous reprenons où nous en étions.',
+    stillOpenText: 'Écrivez simplement sur la même demande ; même close, elle se rouvre avec votre message et nous reprenons là où nous en étions.',
 
     types: { damaged: 'Produit abîmé', missing: 'Produit manquant', question: 'Question', other: 'Autre' },
     statuses: { open: 'Ouverte', in_progress: 'En cours', resolved: 'Résolue' },

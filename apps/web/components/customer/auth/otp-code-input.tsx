@@ -40,7 +40,7 @@ const LABELS: Record<
   fr: {
     verifying: 'Vérification…',
     success: 'Vérifié',
-    resendPrompt: 'Pas reçu ?',
+    resendPrompt: 'Code non reçu ?',
     resend: 'Renvoyer le code',
     resending: 'Envoi…',
     resent: 'Nouveau code envoyé.',

@@ -6,26 +6,8 @@ import { BRAND_COPY } from './brand-copy';
 void React;
 
 /**
- * **Beklenen bölge açıldı** (14.10 · 19.21).
- *
- * ── BU MAİL BİR SÖZÜN KARŞILIĞIDIR ──────────────────────────────────────────
- * Müşteri bir posta kodu için "buraya gelince haber verin" demişti. `zone_notice`'in künyesi o kaydı
- * *"bir söz değil, bir kayıt"* diye tanımlıyordu — çünkü o gün ne bölge kararı vardı ne gönderim.
- * İkisi de artık var; bu mail kaydı söze çeviren şey.
- *
- * ── ÜÇ ŞEY BİLEREK YOK ──────────────────────────────────────────────────────
- * **Künye kartı yok** (`HeaderCard`): sipariş maillerinde referans numarası vardır, burada
- * gösterilecek bir kayıt yok — posta kodu zaten başlıkta.
- * **Tarih yok:** "ne zaman gelmeye başlıyoruz" sorusunun cevabı rota gününe bağlı ve rota
- * değişebilir; mailde bir gün yazmak tutulamayabilecek bir söz olurdu. Müşteri katalogda kendi
- * gününü seçiyor.
- * **İkinci bağlantı yok:** tek eylem, tek buton (davet mailiyle aynı kural) — ikinci bir bağlantı
- * tıklamayı böler.
- *
- * ── ADSIZ ALICI NORMALDİR ───────────────────────────────────────────────────
- * `zone_notice` ziyaretçiden de kayıt alıyor, yani çoğu satırda yalnız e-posta var. Başlık adsız
- * hâli de doğal karşılıyor; "Değerli müşterimiz" gibi bir doldurma kullanılmadı — kimseye ait
- * olmayan bir hitap, hitapsızlıktan soğuktur.
+ * Beklenen bölge açıldı — müşterinin "buraya gelince haber verin" kaydının karşılığı; tek eylem, tek buton.
+ * Tarih yazılmaz, çünkü rota günü değişebilir ve müşteri gününü katalogda seçer.
  */
 
 export interface ZoneAvailableEmailProps {
@@ -65,11 +47,11 @@ const COPY: Record<PreferredLanguage, Copy> = {
     title: (name, postalCode) =>
       name ? `${name}, nous livrons désormais le ${postalCode}` : `Nous livrons désormais le ${postalCode}`,
     intro:
-      'Nous livrons désormais le code postal pour lequel vous souhaitiez être prévenu·e. En choisissant votre adresse dans le catalogue, vous verrez les jours de livraison disponibles.',
+      'Nous livrons désormais le code postal pour lequel vous souhaitiez être prévenu. En choisissant votre adresse dans le catalogue, vous verrez les jours de livraison disponibles.',
     cta: 'Découvrir le catalogue',
     noticeTitle: 'Un seul message',
     noticeText:
-      'Nous n’envoyons ce rappel qu’une seule fois — votre demande s’arrête ici. Si la zone évolue, vous pouvez à nouveau demander à être prévenu·e depuis le catalogue.',
+      'Nous n’envoyons ce rappel qu’une seule fois — votre demande s’arrête ici. Si la zone évolue, vous pouvez à nouveau demander à être prévenu depuis le catalogue.',
     footerNotice: (postalCode) => `Cet e-mail fait suite à votre demande d’information pour le ${postalCode}.`,
   },
   de: {

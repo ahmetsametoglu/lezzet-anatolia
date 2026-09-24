@@ -6,20 +6,8 @@ import { BRAND_COPY } from './brand-copy';
 void React;
 
 /**
- * Alım-sonrası değerlendirme daveti (17.2) — DOMAIN §14, `design/pages/musteri-geri-bildirim.md`.
- *
- * **Ayrı bir çizimi yok** (`design/project`'te `Email - Değerlendirme` bulunmuyor); talep mailiyle
- * aynı yol izlenir: marka iskeleti ve mevcut bloklar aynen kullanılır, yeni bir görsel öğe
- * UYDURULMAZ. Kullanılan dördü de sipariş maillerinden geliyor — künye kartı, başlık, tek yeşil
- * buton, krem davet kutusu.
- *
- * **Tek eylem, tek buton.** Davetin işi bir şey anlatmak değil, bir kapı açmak; ikinci bir bağlantı
- * (katalog, hesap, kampanya) koymak tıklamayı böler. Alt bilgideki tercih bağlantısı bunun dışında
- * çünkü o bir eylem değil, yasal bir çıkış.
- *
- * **Puan sayısı yazılmaz.** Puan tamamlamada verilir ve verilip verilmeyeceği o anki günlük tavana
- * ve müşteri türüne bağlıdır (B2B kazanmaz). Davette bir sayı yazmak tutulamayabilecek bir sözdür;
- * ödülün varlığından söz edilir, miktarından değil.
+ * Alım sonrası değerlendirme daveti — tek eylem, tek buton, çünkü ikinci bir bağlantı tıklamayı böler.
+ * Puan miktarı yazılmaz: günlük tavana ve müşteri türüne bağlıdır, yazılan sayı tutulamayabilir.
  */
 
 export interface FeedbackInviteEmailProps {
@@ -69,13 +57,13 @@ const COPY: Record<PreferredLanguage, Copy> = {
     intro: (count) =>
       count === 1
         ? 'Le produit de votre commande vous a-t-il plu ? Un seul geste suffit — cela prend moins d’une minute.'
-        : `Dites-nous si les ${count} produits de votre commande vous ont plu — cela prend moins de quelques minutes.`,
+        : `Dites-nous si les ${count} produits de votre commande vous ont plu — cela ne prend que quelques minutes.`,
     orderMeta: (deliveredOn) => `livrée le ${deliveredOn}`,
     statusLabel: 'Livrée',
     cta: 'Donner mon avis',
     rewardTitle: 'Votre avis nous guide',
     rewardText:
-      'C’est vous qui nous dites ce qui vaut la peine — la prochaine sélection se construit là-dessus. Votre participation vous rapporte aussi des points.',
+      'Vous nous dites quels produits vous plaisent : notre prochaine sélection s’appuie sur vos réponses. Votre participation vous rapporte aussi des points.',
     notice: (reference) => `Cet e-mail concerne votre commande ${reference}.`,
   },
   de: {

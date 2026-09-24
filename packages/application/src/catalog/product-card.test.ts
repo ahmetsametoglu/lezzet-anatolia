@@ -86,8 +86,7 @@ describe('ürün kartı — kanal gövdeleri (08.09)', () => {
   it('gelen düğme cevabı: önek tanınırsa "Sepete ekle — <boy>" / "Ürün kartı — <kod>", tanınmazsa başlık olduğu gibi', () => {
     expect(buttonReplyText('sepete_ekle:v1', '1 kg')).toBe('Sepete ekle — 1 kg');
     expect(buttonReplyText('sepete_ekle:v1', null)).toBe('Sepete ekle');
-    // Webhook boy kimliğinden adı çözdüyse METİN O AD olur (10.09): tek boylu ürünün düğmesi "Sepete ekle"
-    // yazıyor ve ajana "Sepete ekle — Sepete ekle" gidiyordu — hangi ürün olduğu kayboluyordu.
+    // Webhook boy kimliğinden adı çözdüyse metin o ad olur, çünkü tek boylu ürünün düğme başlığı hangi ürün olduğunu söylemez.
     expect(buttonReplyText('sepete_ekle:v1', 'Sepete ekle', 'Kara Orman Pastası (1 kg)')).toBe('Sepete ekle — Kara Orman Pastası (1 kg)');
     expect(buttonReplyText('urun_karti:fistikli-baklava', 'Boyları gör')).toBe('Ürün kartı — fistikli-baklava');
     expect(buttonReplyText('baska', 'Evet')).toBe('Evet');
@@ -132,7 +131,7 @@ describe('ürün karuseli — 2–10 kart tek mesajda (09.09)', () => {
     expect(productCarouselText({ source: 'whatsapp', body: CAROUSEL_BODY.tr, cards: kartlar })).toBe(
       "Seçenekler — kaydırarak bakabilirsiniz:\n• Fıstıklı Baklava — 3 boy · 12,90 €'dan\n• Cevizli Baklava — 11,90 €",
     );
-    expect(CAROUSEL_FROM.fr(2, '9,90 €')).toBe('2 tailles · dès 9,90 €');
+    expect(CAROUSEL_FROM.fr(2, '9,90 €')).toBe('2 formats · dès 9,90 €');
     expect(CAROUSEL_FROM.de(2, '9,90 €')).toBe('2 Größen · ab 9,90 €');
     for (const dil of ['tr', 'fr', 'de'] as const) expect(CARD_OPEN_TITLE[dil].length).toBeLessThanOrEqual(20);
   });

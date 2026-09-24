@@ -1,23 +1,8 @@
 import type { ConversationSource, PreferredLanguage } from '@lezzet/types';
 
 /**
- * **ÜRÜN KARTI** (08.09, kullanıcı kararı) — sohbette görsel + ad + fiyat + "Sepete ekle" düğmesi,
- * KATALOGSUZ ve sabit fiyatsız. Saf kurucu: kanalın gövdesini üretir, DB ve ağ bilmez.
- *
- * ── NEDEN KATALOG DEĞİL ─────────────────────────────────────────────────────
- * Meta kataloğu kalem başına TEK fiyat ister; bizim fiyat müşterinin kanalına/kademesine ve bölgeye
- * göre değişiyor. Kart ise müşterinin KENDİ fiyatını taşır (`urun_ara` ile aynı motor) ve her
- * müşteriye ayrı üretilir. Görsel: WhatsApp'ta etkileşimli mesajın görsel başlığı, Messenger/IG'de
- * ürün kartı (generic template). İkisi de 24 saatlik pencere içinde şablonsuz ve onaysız.
- *
- * ── DÜĞME CEVABI METİN OLARAK DÜŞER ─────────────────────────────────────────
- * Müşteri düğmeye basınca WhatsApp `button_reply` (id + başlık), Messenger `postback` (payload +
- * başlık) gönderir; webhook ikisini de "Sepete ekle — <boy>" metnine çevirir (`meta-webhook.ts`),
- * ajan onu sıradan bir müşteri mesajı gibi okur ve `sepete_ekle`yi çağırır. Düğme kimliği
- * `CART_ADD_PREFIX` + boy kimliğidir; başlık müşteri dilinde ve ≤20 karakter (Meta sınırı).
- *
- * Sınırlar Meta'nındır: WhatsApp gövde ≤1024, cevap düğmesi ≤3 ve başlık ≤20; Messenger kart
- * başlığı ≤80, alt yazı ≤80, düğme ≤3. Aşan metin burada kırpılır — sağlayıcıda düşmesin.
+ * Sohbetteki ürün kartı Meta kataloğu olmadan kurulur, çünkü katalog kalem başına tek fiyat ister; kart müşterinin kendi fiyatını taşır.
+ * Meta sınırlarını aşan metin burada kırpılır ki mesaj sağlayıcıda düşmesin.
  */
 export const CART_ADD_PREFIX = 'sepete_ekle:';
 /** Karusel kartının "boyları gör" düğmesi: `urun_karti:<kod>` — webhook "Ürün kartı — <kod>" metnine çevirir, ajan `urun_karti(kod)` çağırır. */
@@ -31,7 +16,7 @@ export const CARD_ADD_TITLE: Record<PreferredLanguage, string> = {
 
 export const CARD_OPEN_TITLE: Record<PreferredLanguage, string> = {
   tr: 'Boyları gör',
-  fr: 'Voir les tailles',
+  fr: 'Voir les formats',
   de: 'Größen ansehen',
 };
 
@@ -45,7 +30,7 @@ export const CAROUSEL_BODY: Record<PreferredLanguage, string> = {
 /** Çok boylu ürünün kart satırı: "3 boy · 12,90 €'dan" — sayı ve fiyat çağırandan, kalıp burada. */
 export const CAROUSEL_FROM: Record<PreferredLanguage, (count: number, price: string) => string> = {
   tr: (n, p) => `${n} boy · ${p}'dan`,
-  fr: (n, p) => `${n} tailles · dès ${p}`,
+  fr: (n, p) => `${n} formats · dès ${p}`,
   de: (n, p) => `${n} Größen · ab ${p}`,
 };
 
@@ -112,13 +97,8 @@ export function productCardInteractive(input: ProductCardInput): Record<string, 
 }
 
 /**
- * Webhook'un gelen düğme cevabını metne çevirirken kullandığı kural — kimlik önekiyle tanınır:
- * `sepete_ekle:<boy>` → "Sepete ekle — <seçim>" · `urun_karti:<kod>` → "Ürün kartı — <kod>" (ajan kodu
- * `urun_karti`ye geçer). Tanınmayan düğme başlığıyla düşer.
- *
- * `secim` webhook'un boy kimliğinden veriden çözdüğü "Ürün (boy)" adıdır (10.09 · canlı Messenger
- * turunda ölçüldü): tek boylu ürünün kart düğmesi "Sepete ekle" yazıyordu ve ajana "Sepete ekle —
- * Sepete ekle" gidiyordu — hangi ürün olduğu kimlikte vardı, metinde yoktu. Çözülemezse başlığa düşer.
+ * Gelen düğme cevabı kimlik önekiyle metne çevrilir; ajan onu sıradan bir müşteri mesajı gibi okur.
+ * `secim` boy kimliğinden çözülen "Ürün (boy)" adıdır, çünkü tek boylu ürünün düğme başlığı hangi ürün olduğunu söylemez.
  */
 export function buttonReplyText(id: string | null | undefined, title: string | null | undefined, secim: string | null = null): string | null {
   if (id?.startsWith(CARD_OPEN_PREFIX)) return `Ürün kartı — ${id.slice(CARD_OPEN_PREFIX.length)}`;
@@ -127,14 +107,8 @@ export function buttonReplyText(id: string | null | undefined, title: string | n
   return ad ? `Sepete ekle — ${ad}` : 'Sepete ekle';
 }
 
-// ── KARUSEL — çeşit sorusunun cevabı, 2–10 kart tek mesajda (09.09, kullanıcı isteği) ─────────
-//
-// WhatsApp "etkileşimli medya karuseli" (`interactive.type = carousel`): pencere içinde şablonsuz.
-// Meta kuralları (dokümandan): 2–10 kart · ana gövde zorunlu ≤1024 · her kartta görsel başlık ZORUNLU
-// (görselsiz ürün karusele giremez) · kart metni ≤160 ve en çok 2 satır sonu · düğme türü ve SAYISI
-// bütün kartlarda aynı (bizde her kartta tek hızlı cevap: tek boyluda "Sepete ekle", çok boyluda
-// "Boyları gör") · kart `type` alanı hızlı cevapta da `cta_url` (dokümanın kendi örneği böyle).
-// Messenger/IG: aynı generic template, 10 kart.
+// Karusel çeşit sorusunun cevabıdır. Meta her kartta görsel ve bütün kartlarda aynı düğme türü ve sayısını
+// ister; bu yüzden görselsiz ürün karusele girmez ve her kartta tek hızlı cevap vardır.
 
 const WA_CARD_BODY_MAX = 160;
 const CAROUSEL_MIN = 2;

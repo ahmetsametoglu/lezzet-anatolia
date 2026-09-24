@@ -6,27 +6,8 @@ import { BRAND_COPY } from './brand-copy';
 void React;
 
 /**
- * **B2B başvuru sonucu** — onay ya da ret (14.10).
- *
- * ── KAPATTIĞI BOŞLUK ────────────────────────────────────────────────────────
- * Ret gerekçesi veride ZORUNLU ve 20.2 onu üç dile çeviriyordu; ama gerekçeyi okuyan kimse yoktu.
- * Görev künyesi *"müşteriye e-postayla gidiyor"* diyordu — öyle bir şablon hiç yazılmamıştı
- * (müşteri şeridinin ölçümü, 04.08). Yani zorunlu tutulan, çevrilen ve saklanan bir cümle hiçbir
- * yere ulaşmıyordu.
- *
- * ── TEK ŞABLON, İKİ SONUÇ ───────────────────────────────────────────────────
- * Onay ile ret ayrı şablon değil: alıcı aynı, kanal aynı, tetikleyen aynı karar. İki dosya olsaydı
- * marka iskeleti iki kez yazılır ve biri gün gelip ötekinden ayrışırdı. Ayrım tek bayrakta
- * (`approved`) ve metin kümesinde.
- *
- * ── RETTE TON: KAPI KAPANMIYOR ──────────────────────────────────────────────
- * Reddedilen başvurunun sahibi çoğu zaman gerçek bir işletmedir ve eksik olan genelde bir belgedir.
- * Metin bu yüzden "başvurunuz reddedildi" demiyor, **neyin eksik olduğunu** söylüyor ve yeniden
- * başvurunun açık olduğunu yazıyor. Gerekçe kutusu da bu yüzden var: gerekçesiz bir ret, müşteriye
- * ne yapacağını söylemeyen bir kapıdır.
- *
- * **Ret metninde bireysel alışverişten söz ediliyor** çünkü hesap kapanmıyor: B2B onayı olmayan
- * kullanıcı vitrini perakende fiyatlarla görmeye devam eder.
+ * B2B başvuru sonucu — onay ve ret tek şablonda, çünkü alıcı, kanal ve tetikleyen karar aynıdır; ayrım `approved` bayrağındadır.
+ * Ret "reddedildi" demez, neyin eksik olduğunu söyler: eksik olan çoğu zaman bir belgedir ve hesap bireysel alışverişe açık kalır.
  */
 
 export interface B2bApplicationResultEmailProps {
@@ -83,7 +64,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
     subjectApproved: 'Votre compte professionnel est ouvert',
     subjectRejected: 'À propos de votre demande professionnelle',
     titleApproved: (who) => (who ? `Compte professionnel ouvert pour ${who}` : 'Votre compte professionnel est ouvert'),
-    titleRejected: (who) => (who ? `Il manque un élément au dossier ${who}` : 'Il manque un élément à votre demande'),
+    titleRejected: (who) => (who ? `Il manque un élément au dossier de ${who}` : 'Il manque un élément à votre demande'),
     introApproved:
       'Votre demande professionnelle est validée. Vous verrez désormais les tarifs professionnels et les conditions de commande minimum réservées aux entreprises.',
     introRejected:

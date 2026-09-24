@@ -75,7 +75,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
     refundNote: 'Remboursement sur le moyen de paiement utilisé ; le délai de réception dépend de votre banque.',
     collectNote: 'Aucun encaissement n’avait été effectué — il n’y a rien à rembourser.',
     itemsTitle: 'Articles annulés',
-    reorder: 'Recommander la même chose',
+    reorder: 'Commander à nouveau',
     helpTitle: 'L’annulation ne vous convient pas ?',
     helpText: 'Si vous n’êtes pas à l’origine de l’annulation ou pensez qu’il y a une erreur, écrivez-nous — réponse le jour même.',
     helpLink: 'Nous écrire →',
