@@ -6,6 +6,7 @@ export {
   EMPTY_CART,
   cartBlockReason,
   cartBlockedAnalyticsReason,
+  cartGroupOf,
   cartKey,
   cartPayableCents,
   entryOf,

@@ -4,8 +4,9 @@ import { bundleQtyOf } from '@lezzet/domain-core';
 import type { OrderItem } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
+import { readPlaceScope } from '@/lib/delivery/read-place';
 import { getPackagesByIds } from '@/lib/storefront/packages';
-import { entryOf, type CartEntry } from '@/lib/cart/cart-types';
+import { cartGroupOf, entryOf, type CartEntry } from '@/lib/cart/cart-types';
 import { resolveOrderLines } from './customer-lines';
 
 /**
@@ -53,10 +54,12 @@ export async function planReorder(locale: Locale, customerId: string, orderId: s
     entries.push({ kind: 'variant', variantId: item.variantId, qty: item.qty, stockId: null });
   }
 
-  // Tek otorite sepet okuması: hangi satır eklenebilir, onu o söyler.
-  const view = await getCartView(locale, entries, {});
-  const addable = view.lines.filter((line) => !line.blocked);
-  skipped.push(...view.lines.filter((line) => line.blocked).map((line) => line.name));
+  /* Hangi satırın eklenebileceğini müşterinin bugünkü yeriyle okunan sepet söyler: tükenen, satışa kapanan ve bu adrese gelemeyen kalem
+     eklenmez, çünkü yer biliniyorken gelemeyen kalem hiçbir kanaldan sepete girmez. */
+  const view = await getCartView(locale, entries, await readPlaceScope());
+  const unaddable = (line: (typeof view.lines)[number]) => line.blocked || cartGroupOf(line) === 'undeliverable';
+  const addable = view.lines.filter((line) => !unaddable(line));
+  skipped.push(...view.lines.filter(unaddable).map((line) => line.name));
 
   return { entries: addable.map(entryOf), skipped };
 }
