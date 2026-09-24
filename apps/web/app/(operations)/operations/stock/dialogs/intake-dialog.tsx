@@ -23,20 +23,8 @@ import type { ReceiveOutcome } from '@/lib/warehouse/intake-types';
 import type { IntakeTabData } from '../stock-types';
 
 /**
- * **MAL KABUL FORMU — liste üstünde diyalog** (22.26).
- *
- * Eski `/operations/receiving` sayfası formu sağ sütunda kalıcı tutuyordu; ikisi sürekli birbirinin
- * yerini daraltıyordu. Karar formu bu ekranın kendi deseniyle (teklif diyaloğu, lot sorgusu) aynı
- * yere geldi ve tasarımın kuralı da bu: *"kararlar liste üstünde açılan formlarda verilir"*.
- *
- * ── İKİ KİP, TEK FORM ───────────────────────────────────────────────────────
- * `purchaseOrderId` doluysa kalemler siparişten yüklenir ("beklenen ↔ gelen" + "gelmedi" beyanı);
- * boşsa irsaliyesiz kabuldür ve satırlar katalogdan aranarak eklenir. İkisi de AYNI satır editörünü
- * kullanıyor (`intake-form/body`) — 22.25'in kapattığı çift uygulama.
- *
- * ── ADET ÖNDEN DOLDURULMAZ ──────────────────────────────────────────────────
- * Ismarlanan adet ayrı bir kolonda okunur ama "gelen" hanesine yazılmaz: kabulün bütün amacı fiilen
- * geleni saymaktır ve dolu bir hane, saymadan onaylamayı teklif ederdi.
+ * Mal kabul formu, liste üstünde diyalog: siparişli kipte kalemler siparişten yüklenir, irsaliyesiz kipte katalogdan aranarak eklenir.
+ * Ismarlanan adet ayrı kolonda okunur ama "gelen" hanesine yazılmaz, çünkü dolu hane saymadan onaylamayı teklif ederdi.
  */
 interface IntakeDialogProps {
   /** `null` = irsaliyesiz (boş formla) kabul; dolu = o siparişin kalemleri. */
@@ -156,10 +144,7 @@ export function IntakeDialog({ purchaseOrderId, intake, showCost, onClose, onDon
       }
     >
       {loading ? (
-        /* **Formun ŞEKLİ önden çizilir** (22.34) — burada da çıplak metin vardı ve ortak iskelet
-           künyesinin yasakladığı şeydi: kalemler gelince diyalog bir anda dolup alt bardaki
-           "Kabulü tamamla" düğmesini aşağı itiyordu, yani operatörün tıklamak üzere olduğu düğme
-           yer değiştiriyordu. İki alan satırı (depo/tedarikçi · belge/tarih) + kalem satırları. */
+        /* Formun şekli önden çizilir: kalemler gelince diyalog birden dolup operatörün basmak üzere olduğu düğmeyi aşağı itmesin. */
         <div className="flex flex-col gap-4 px-1 py-2" aria-hidden="true">
           <div className="grid grid-cols-2 gap-3">
             {Array.from({ length: 4 }, (_, i) => (

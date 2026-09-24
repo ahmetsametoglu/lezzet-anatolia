@@ -13,21 +13,8 @@ import type { StorageAreaKind } from '@lezzet/types';
 import { emptyIntakeLine, intakeTotals, type IntakeFormValues, type IntakeLine } from './schema';
 
 /**
- * **MAL KABUL SATIRLARI** — iki yüzeyin paylaştığı tek uygulama (22.23).
- *
- * Mal kabul ekranının `FreeIntake` bloğundaydı; asistan kuyruğu aynı satırları kendi içinde açtığı
- * için ayrıldı. Kopyalansaydı bir gün biri "adet boşsa o satır kabule girmez" kuralını ya da SKT
- * zorunluluğunu yalnız bir yüzeyde düzeltirdi.
- *
- * ── FİYAT KOLONU BAYRAKLA AÇILIR — VE BU BİR ROL SINIRI ─────────────────────
- * Depocu alış fiyatını GÖRMEZ; sınır tipin kendisinde duruyor (`IntakeFormLine` fiyatsız,
- * `PurchaseIntakeLine` fiyatlı — "iki ayrı tip, iki ayrı kapı"). Bu gövde ekranın hangisi olduğunu
- * bilmez, yalnız `showCost` ile çizer: rampadaki depo ekranı kolonu hiç istemez, asistan kuyruğu
- * (patronun ekranı) ister. Kararı çağıran verir, çünkü yetkiyi bilen odur.
- *
- * ── KATALOG DIŞI ÜRÜN GİRİLMEZ ──────────────────────────────────────────────
- * Ürün arama katalogdan; tanımı olmayan ürün buradan yaratılamaz. Rampada açılan bir ürün kaydı,
- * adı/beyanı/görseli eksik bir katalog satırı bırakırdı (`FreeIntake` kararı, korunuyor).
+ * Mal kabul satırları, stok ekranı ile asistan kuyruğunun paylaştığı tek uygulama; kopyalansaydı adet ve son tarih kuralları bir gün
+ * yalnız bir yüzeyde düzeltilirdi. Fiyat kolonu `showCost` bayrağıyla açılır, çünkü yetkiyi çağıran bilir.
  */
 interface IntakeFormBodyProps {
   values: IntakeFormValues;
@@ -37,13 +24,7 @@ interface IntakeFormBodyProps {
   suppliers: Array<{ id: string; name: string }>;
   /** Seçilebilecek depolar. Tek depolu kapsamda tek seçenek gelir — seçim yine açık durur. */
   warehouses: Array<{ id: string; name: string }>;
-  /**
-   * Seçili deponun stoklama alanları (19.29) — parti rafı serbest metin değil, bu listeden seçim.
-   *
-   * `kind` taşınıyor çünkü form bir UYARI kuruyor: donuk ürün oda sıcaklığı alanına konuyorsa
-   * söylenir ama ENGELLENMEZ (`DOMAIN §4` deseni — karar mal kabul edenindir). Türü göndermeseydik
-   * uyarı ancak sunucuda, kayıttan sonra kurulabilirdi.
-   */
+  /** Seçili deponun stoklama alanları; `kind` taşınır ki form donuk ürünün yanlış alana konmasını kayıttan önce uyarabilsin. */
   storageAreas: Array<{ id: string; name: string; kind: StorageAreaKind }>;
   /** Alış fiyatı kolonu çizilsin mi (yukarıdaki künye: rol sınırı). */
   showCost?: boolean;
@@ -53,10 +34,7 @@ interface IntakeFormBodyProps {
    * tutuyor gibi gösterirdi.
    */
   documentTotalCents?: number | null;
-  /**
-   * Faturanın KDV'si (cent, 22.44) — verilirse mutabakat KDV HARİÇ tutarla yapılır: satırların maliyeti
-   * KDV hariçtir ve KDV'li bir faturanın toplamıyla karşılaştırılınca "fark" KDV'nin kendisi çıkıyordu.
-   */
+  /** Faturanın KDV'si (cent); verilirse mutabakat KDV hariç tutarla yapılır, çünkü satırların maliyeti KDV hariçtir. */
   documentVatCents?: number | null;
   /**
    * Yeni tedarikçiyi HIZLI ekleme kapısı — verilmezse alan yalnız seçim yapar. `null` dönerse kayıt
@@ -187,12 +165,7 @@ export function IntakeFormBody({
   const removeLine = (index: number) => onChange({ ...values, lines: values.lines.filter((_line, i) => i !== index) });
 
   const { totalCents, unpricedCount } = intakeTotals(values);
-  /**
-   * **Siparişli kabul mü, serbest kabul mü** — satırın kendisinden okunur (22.26).
-   *
-   * Ayrı bir `mode` prop'u koymadım: kip zaten veride duruyor (`expectedQty` dolu ⇒ ısmarlanmış bir
-   * kalem). İkinci bir bayrak, veriyle çelişebilecek ikinci bir gerçek olurdu.
-   */
+  /** Siparişli mi serbest mi, satırın kendisinden okunur; ayrı bir bayrak veriyle çelişebilecek ikinci bir gerçek olurdu. */
   const ordered = values.lines.some((line) => line.expectedQty !== null);
   // Satır ızgarası tek yerde: başlık satırı ile kalem satırı AYNI kolonları kullanmak zorunda,
   // ikisi ayrı yazılsaydı bir kolon eklenince biri kayardı.
@@ -320,8 +293,7 @@ export function IntakeFormBody({
               onChange={(event) => setLine(index, { lotNumber: event.target.value })}
               disabled={disabled || line.isMissing}
             />
-            {/* Raf artık SEÇİLİYOR, yazılmıyor (19.29). Boş seçenek meşru: rafı bilinmeden de mal
-                kabul edilir — zorunlu kılmak depocuyu rastgele bir alan seçmeye iterdi. */}
+            {/* Raf seçilir, yazılmaz; boş seçenek meşru, zorunlu kılmak depocuyu rastgele bir alan seçmeye iterdi. */}
             <Select
               className="w-full"
               value={line.storageAreaId}
@@ -412,7 +384,7 @@ export function IntakeFormBody({
           {documentTotalCents !== null ? (
             <span className="text-ops-muted">
               Belgede yazan <span className="font-ops-mono font-semibold text-ops-ink">{money(documentTotalCents)}</span>
-              {/* KDV biliniyorsa karşılaştırma KDV HARİÇ tutarla (22.44): satırların maliyeti KDV hariçtir. */}
+              {/* KDV biliniyorsa karşılaştırma KDV hariç tutarla: satırların maliyeti KDV hariçtir. */}
               {documentVatCents ? (
                 <>
                   {' '}

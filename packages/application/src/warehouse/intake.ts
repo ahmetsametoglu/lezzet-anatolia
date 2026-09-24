@@ -24,23 +24,8 @@ import { caseSizesByVariant } from './case-sizes';
 import { variantNames } from './names';
 
 /**
- * **Mal kabul — D2** (10.4), terfi 21.11. Kaynağı `apps/web/lib/stock/intake.ts`;
- * `design/pages/depo-stok-giris.md` + DOMAIN §16 + mobil v2 "Mal Kabul" ekranı bağlayıcı.
- *
- * **Depocu alış fiyatı GÖRMEZ ve GİRMEZ.** Form satırı yalnız adet, son tarih, lot ve konum ister;
- * birim maliyet tedarik siparişinden (admin'in girdiği) sunucu tarafında eklenir. Bu yüzden depocu
- * yolunun satır tipinde `unitCostCents` alanı YOKTUR — ekran isteseydi bile gönderemez.
- *
- * **MLOR uyarısı engellemez, uyarır** (DOMAIN §4): raf ömrünün yeterince kalmadığı parti yine kabul
- * edilebilir — kararı mal kabul eden verir (v2: *"kalan ömür %X — uyarı, engellemez"*). Sistem yalnız
- * görünür kılar.
- *
- * **Parçalı kabul meşrudur ve cevapta görünür:** beklenen–gelen farkı `differences` ile döner, iş
- * durmaz (v2: *"FARK ÖZETİ — YALNIZ SAPAN SATIRLAR"*). Tedarikçi eksik ya da fazla göndermiş
- * olabilir; kayıt gerçeği yazar, fark görünür kalır.
- *
- * **Çevrimdışı ÇALIŞMAZ ve bu kural burada DEĞİL** (doc 04 D2): bağlantı şartı istemci davranışıdır
- * — sunucu tarafında "kuyruk" diye bir kavram yok, olsaydı raf ↔ sistem çelişkisini kurumsallaştırırdı.
+ * Mal kabul: satırlar partiye dönüşür; depocu alış fiyatı görmez ve girmez, birim maliyet tedarik siparişinden sunucuda eklenir.
+ * Raf ömrü (MLOR) ve beklenen–gelen farkı uyarır ama kabulü engellemez, çünkü kayıt gelen malın gerçeğini yazmalı.
  */
 
 /** Depocunun doldurduğu satır — para alanı yok. */
@@ -49,30 +34,16 @@ export interface IntakeFormLine {
   qty: number;
   expiryDate: string;
   lotNumber?: string | null;
-  /** Partinin konacağı depo İÇİ alan (`storage_area`) — serbest metin değil kimlik (19.29). */
+  /** Partinin konacağı depo içi alan (`storage_area`); serbest metin değil kimlik. */
   storageAreaId?: string | null;
 }
 
 /**
- * Admin'in doldurduğu satır — **maliyeti taşıyan tek tip** (09.14).
- *
- * ── NEDEN AYRI TİP, `IntakeFormLine`'a ALAN DEĞİL ────────────────────────────
- * Depocunun fiyat görmemesi bir ekran kuralı değil, bir TİP sınırıdır: alanı ortak tipe koysaydık
- * depo ekranı onu "isteğe bağlı" diye gönderebilirdi ve sınır yalnız iyi niyetle ayakta kalırdı.
- * İki ayrı tip, iki ayrı kapı — depocu yolu fiyat gönderemez, admin yolu göndermeyi unutmaz.
- *
- * ── MALİYET SATIRIN, VARYANTIN DEĞİL ─────────────────────────────────────────
- * Aynı varyant birden çok satırda gelebilir (farklı son tarih ya da farklı lot ayrı satırdır ve aynı
- * sevkiyatta farklı fiyata alınmış olabilir); varyant anahtarlı bir harita o farkı sessizce yutardı.
+ * Yöneticinin doldurduğu, maliyet taşıyan tek satır tipi: fiyat ortak tipe alan olarak konsaydı depo ekranı onu gönderebilirdi.
+ * Maliyet varyanta değil satıra aittir; aynı varyant farklı lot ya da tarihle farklı fiyattan gelmiş olabilir.
  */
 export interface PurchaseIntakeLine extends IntakeFormLine {
-  /**
-   * Birim alış fiyatı — **tamsayı cent** (`STACK §8`). Euro'ya çevrim bu dosyada DEĞİL, servisin RPC
-   * sınırında (`StockIntakeService.receive`, 02.9).
-   *
-   * `null` = "bu satırın fiyatını bilmiyorum" ve bu meşrudur: PO'lu kabulde admin yalnız SAPAN
-   * satırı düzeltir, ötekiler siparişten eşleşmeye devam eder.
-   */
+  /** Birim alış fiyatı, tamsayı cent; `null` = bilinmiyor ve siparişli kabulde siparişteki fiyat kullanılır. */
   unitCostCents: number | null;
 }
 
@@ -82,90 +53,38 @@ export interface IntakeFormRow {
   productName: string;
   variantLabel: string;
   /**
-   * **Bu kabulde daha ne bekleniyor** — ısmarlanan toplam DEĞİL, kalan (`missingQty`).
-   *
-   * Ayrım ölçümle geldi (25.08, 10.4 turu) ve düzeltilmeden önce ekranla kayıt aynı olay hakkında
-   * iki farklı şey söylüyordu: kayıt tarafı (`expectedQtysOf` → `differencesOf`) ilk günden KALANa
-   * bakıyor, form ise ısmarlanan toplamı gösteriyordu. Kısmen gelmiş bir siparişte (60 ısmarlandı,
-   * 30 geldi) depocu ikinci 30'u sayıp yazınca ekran `30 / 60 · −30` diye **olmayan bir eksik**
-   * çiziyor, kayıt ise farkı sıfır yazıyordu. Depocu ya olmayan eksiğin peşine düşer ya gerçek
-   * eksiği o gürültünün içinde kaçırırdı.
-   *
-   * Tamamı gelmiş kalem `0` ile döner ve satır LİSTEDE KALIR: ikinci sevkiyatta koliden yine çıkabilir
-   * ve fazla kabul meşrudur (tedarikçi fazla göndermiş olabilir) — satırı gizlemek, gelen malı
-   * yazacak yeri ortadan kaldırırdı.
+   * Bu kabulde daha ne bekleniyor: ısmarlanan toplam değil kalan (`missingQty`), çünkü kayıt da farkı kalana göre yazıyor. Tamamı gelmiş
+   * kalem `0` ile listede kalır; fazla kabul meşrudur ve satırı gizlemek gelen malı yazacak yeri kaldırırdı.
    */
   expectedQty: number;
   /**
-   * **Tedarikçinin bu kaleme verdiği kod** (`supplier_product.supplier_code`) — kalemin
-   * `supplierProductId` bağından çözülür.
-   *
-   * Depocunun elindeki kâğıt bizim katalogumuz değil TEDARİKÇİNİN irsaliyesidir ve satırı o kâğıtla
-   * eşleştirmenin kesin anahtarı bu koddur; ürün adı çevrilmiş, boy etiketi bizim dilimizdedir.
-   *
-   * `null` = kalem bir eşlemeye bağlanmadan açılmış (`purchase_order_item.supplier_product_id`
-   * nullable — `createDraft` künyesi: eşlemesi olmayan kalem de listeye girer). Uydurma bir kod
-   * yerine görünür boşluk.
+   * Tedarikçinin bu kaleme verdiği kod: depocunun elindeki irsaliye tedarikçinin kâğıdıdır ve satırı eşleştirmenin kesin anahtarı budur.
+   * `null` = kalem bir eşlemeye bağlanmadan açılmış.
    */
   supplierCode: string | null;
-  /**
-   * Varyantın kendi kodu (`product_variant.sku`) — plansız kabulün satırında görünen kod.
-   *
-   * PO'lu satırın anahtarı tedarikçinin kodudur (elde onun irsaliyesi var); plansızda sipariş
-   * kalemi yoktur, yani tedarikçi kodu da yoktur ve satırı tanıtan tek kod budur. Aramayla ve
-   * okutmayla açılan satırlar aynı alanı göstermeli — biri kodlu öteki kodsuz bir liste,
-   * depocuya "bu ürünün kodu yok mu" diye sordururdu.
-   */
+  /** Varyantın kendi kodu: plansız kabulde tedarikçi kodu olmadığı için satırı tanıtan tek kod budur. */
   sku: string | null;
   /** Tarih rejimi (DOMAIN §4) — depocu kutunun üstünde DLC mi DDM mi arayacağını bilmeli. */
   dateType: ProductDateType;
-  /**
-   * Ürünün toplam raf ömrü (gün); girilmemişse `null` → kalan ömür HESAPLANAMAZ.
-   *
-   * Yüzdenin kendisi burada üretilemez ve bu bir eksiklik değil sıralamadır: girdisi olan SON TARİH
-   * henüz yazılmamıştır — depocu SKT'yi girdiği anda ekran `meetsMlor` ile hesaplar. Kabul
-   * yazıldıktan sonraki uyarı ayrı bir yerde duruyor (`IntakeWarning`) ve o da aynı motoru çağırır.
-   */
+  /** Ürünün toplam raf ömrü (gün); `null` ise kalan ömür hesaplanamaz. Yüzde burada üretilmez, çünkü son tarih henüz yazılmamıştır. */
   shelfLifeDays: number | null;
   /**
-   * Ürünün KAYITLI koli boyları (`variant_barcode`, `kind='case'`) — adet çekmecesinin çarpan
-   * tablosu: depocu "3 koli geldi" der, paketi ekran çarpar.
-   *
-   * **Boş dizi bir eksiklik değil bir CEVAPTIR:** o ürüne henüz koli kodu öğretilmemiştir ve
-   * çekmece yalnız tek paket sayar. Varsayılan bir boy (12'lik) koymak, ölçülmemiş bir çarpanı
-   * ölçülmüş gibi gösterip stok sayımını sessizce bozardı (CLAUDE §1).
+   * Ürünün kayıtlı koli boyları: depocu "3 koli" der, paketi ekran çarpar. Boş dizi bir cevaptır; varsayılan boy koymak ölçülmemiş bir
+   * çarpanla sayımı bozardı.
    */
   caseSizes: CaseSizeContract[];
-  /**
-   * **Bu varyantın depoda duran lot kodları** — çekmecenin öneri listesi (21.175).
-   *
-   * BOŞ DİZİ İKİ ŞEY DEMEK OLABİLİR ve ikisi de aynı davranışa çıkar: ya varyantın depoda kodlu
-   * partisi yok, ya form deposuz açıldı (`openIntakeForm`in üçüncü parametresi verilmedi). Ekran
-   * ikisini de "önerecek bir şey yok" diye okur — öneri zaten bir kolaylık, bir kapı değil.
-   */
+  /** Varyantın depoda duran lot kodları, çekmecenin öneri listesi; boş dizi kodlu parti yok ya da form deposuz açıldı demektir. */
   lotCandidates: string[];
 }
 
 /**
- * **Bekleyen tedarik siparişinden dolu form.** PO yoksa boş dizi döner — plansız alım da meşrudur
- * (v2'nin "+ plansız kabul" yolu), form elle doldurulur.
- *
- * **Depo sorulmaz ve sorulmamalı:** satın alma depo-üstüdür (K6), mal hangi kapıdan gireceğini
- * kabul anında söyler (`receiveGoods.warehouseId`). Formu depoya süzmek, aynı siparişin ikinci
- * deposundaki kalemleri gizlerdi.
- *
- * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), `auth/otp` deseni.
+ * Bekleyen tedarik siparişinden dolu form; kalem yoksa boş dizi döner ve form elle doldurulur. Depo sorulmaz, çünkü satın alma depo-üstüdür
+ * ve süzmek siparişin ikinci deposundaki kalemleri gizlerdi.
  */
 export async function openIntakeForm(
   db: SupabaseClient,
   purchaseOrderId: string,
-  /**
-   * **Lot önerileri BU deponun partilerinden okunur** (21.175) — isteğe bağlı.
-   *
-   * Form kendisi depo-üstüdür (satın alma depo-üstü, künye yukarıda) ama lot önerisi değil: başka
-   * bir depoda duran partinin kodu, buradaki koliyle aynı olmak zorunda değil. Depo verilmezse
-   * öneri listesi BOŞ döner — yanlış deponun kodlarını önermektense hiç önermemek doğru.
-   */
+  /** Lot önerileri bu deponun partilerinden okunur; depo verilmezse yanlış deponun kodları yerine öneri hiç dönmez. */
   warehouseId?: string | null,
 ): Promise<IntakeFormRow[]> {
   const lines = await new PurchaseOrderItemService(db).listByOrder(purchaseOrderId);
@@ -219,21 +138,10 @@ export async function openIntakeForm(
   }));
 }
 
-/**
- * Varyant başına kaç lot önerisi taşınır (21.175).
- *
- * ÜÇ, çünkü liste bir HATIRLATMADIR, bir arşiv değil: depocu elindeki etiketi okuyup benzerini
- * seçiyor ve gözle taranacak bir liste uzun olamaz. Daha fazlası çekmeceyi kaydırılır yapar ve
- * elle yazmaktan yavaşlatır — ki o zaman önerinin varlık sebebi kalmaz.
- */
+/** Varyant başına lot önerisi: liste bir hatırlatmadır ve gözle taranacak kadar kısa kalmalı. */
 const LOT_CANDIDATE_LIMIT = 3;
 
-/**
- * Tedarik siparişinin KÜNYESİ (21.11d) — ekranın başlığı: *"TS-26-0114 · Gaziantep Gıda"*.
- *
- * **Para taşımaz ve taşıyamaz:** sipariş tutarı da birim alış da bu tipte YOK. Depocu hangi belgeyi
- * elinde tuttuğunu bilmeli, o belgenin kaç para olduğunu değil (`receiveGoods` ile aynı sınır).
- */
+/** Tedarik siparişinin künyesi (numara, tedarikçi); para taşımaz, çünkü depocu belgenin tutarını değil hangisi olduğunu bilmeli. */
 export interface IntakeHeader {
   purchaseOrderId: string;
   /** İnsan-okur numara; **taslakta `null`** — numara gönderimde doğar (`markSent`). */
@@ -243,16 +151,8 @@ export interface IntakeHeader {
 }
 
 /**
- * **Siparişin künyesi** (D2 · 21.11d) — sipariş yoksa `null`.
- *
- * ── NEDEN `openIntakeForm`A ALAN OLARAK EKLENMEDİ ───────────────────────────
- * O kapı satır DİZİSİ döndürüyor ve künye sipariş başına TEKİLDİR; satıra kopyalamak aynı iki dizeyi
- * N kez taşımak olurdu (kurye ucundaki `readDoorCashAccountId` kararının aynısı). Dönüş tipini
- * nesneye çevirmek de seçenek değildi: kapının ikinci bir çağıranı var (operasyon web'in mal kabul
- * ekranı) ve künyeye ihtiyacı olmayan o çağıran, ihtiyacı olmayan iki sorgunun bedelini öderdi.
- *
- * İki tur okur (sipariş, sonra tedarikçi): `purchase_order` tek satır ve tedarikçi adı ayrı tabloda.
- * Yalnız bir sipariş açıldığında koşar — liste yolu (`listPendingIntakes`) adı gömülü okuyor.
+ * Siparişin künyesi; sipariş yoksa `null`. `openIntakeForm`a alan olarak eklenmedi, çünkü künye sipariş başına tekildir ve o kapının
+ * künyeye ihtiyacı olmayan çağıranı da var.
  */
 export async function readIntakeHeader(db: SupabaseClient, purchaseOrderId: string): Promise<IntakeHeader | null> {
   const order = await new PurchaseOrderService(db).getById(purchaseOrderId);
@@ -276,23 +176,8 @@ export interface PendingIntake extends IntakeHeader {
 }
 
 /**
- * **"Hangi sevkiyatı bekliyorum"** (D2'nin konusuz açılışı · 21.11d).
- *
- * ── HANGİ DURUMLAR, VE NEDEN ÜÇÜ DEĞİL İKİSİ ────────────────────────────────
- * `sent` **ve** `partially_received`. İkincisi ölçümle geldi, kolaylık olsun diye değil: tek sipariş
- * birden çok depoda parça parça kabul edilebilir (K6 — `expectedQtysOf` künyesi) ve ilk kabul
- * siparişi kapatmaz; `partially_received` süzülseydi Strasbourg kabul ettikten sonra Kehl'in payı
- * listeden SESSİZCE kaybolurdu. `draft` DIŞARIDA: tedarikçi ondan habersizdir, mal yolda değildir
- * (`openProgress` künyesindeki aynı ayrım). `received`/`cancelled` zaten kapandı.
- *
- * ── DEPO SORULMAZ ───────────────────────────────────────────────────────────
- * `openIntakeForm` ile aynı gerekçe: satın alma depo-üstüdür (K6), mal hangi kapıdan gireceğini
- * kabul ANINDA söyler. Listeyi depoya süzmek, aynı siparişin ikinci deposundaki payını gizlerdi.
- *
- * ── PARA OKUNUR AMA ÇIKMAZ ──────────────────────────────────────────────────
- * `listRows` kalemleri fiyatlarıyla getiriyor (tek turda tedarikçi adı + kalem sayısı veren tek
- * kamu okuması bu). Fiyat bu fonksiyonun SINIRINDA kalır: dönen tipte para alanı yok, yani depo
- * ekranı isteseydi bile gösteremez.
+ * Bekleyen sevkiyatlar `sent` ve `partially_received`dır, çünkü ilk depo kabulü siparişi kapatmaz ve ikinci deponun payı kaybolmamalı.
+ * Depo sorulmaz ve dönen tipte para yok: fiyatlar okunsa da bu fonksiyonun sınırında kalır.
  */
 export async function listPendingIntakes(db: SupabaseClient, opts: { limit?: number } = {}): Promise<PendingIntake[]> {
   const limit = opts.limit ?? 20;
@@ -304,11 +189,8 @@ export async function listPendingIntakes(db: SupabaseClient, opts: { limit?: num
     service.listRows({ status: 'partially_received', limit }),
   ]);
 
-  // Durum SATIRIN kendi alanından geliyor (`listRows` `status`u taşıyor) — süzgeçten türetilmiş bir
-  // sabit DEĞİL. İki kümeyi birleştirirken "bu satır `sent` sorgusundan geldi, demek ki `sent`"
-  // demek, doğruluğu iki ayrı yerin uyumuna bağlayan bir çıkarımdır; satır zaten durumunu söylüyor.
-  // Daraltma bir `as` ile değil, ayrımlı bir yoklamayla: beklenmedik bir durum gelirse satır
-  // sessizce yanlış etiketlenmez, LİSTEYE GİRMEZ ve bu görünür bir eksikliktir.
+  // Durum satırın kendi alanından okunur, süzgeçten türetilmez: beklenmedik durumdaki satır sessizce yanlış etiketlenmek yerine
+  // listeye hiç girmez.
   return [...sent.rows, ...partial.rows]
     // En yeni sipariş önce — birleştirilen iki sayfanın sırası tek başına anlamlı değil.
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -334,17 +216,8 @@ export interface IntakeWarning {
 }
 
 /**
- * **Ürünün saklama rejimi ile konduğu alan uyuşmuyor** (19.29) — `0045`'in kendi gerekçesinin
- * tamamlandığı yer.
- *
- * `storage_area.kind` bilerek `product.storage_type` ile aynı kelimeleri kullanıyordu ve migration
- * künyesi sebebini yazmıştı: *"donuk ürün donuk alanda durur" cümlesi ancak iki taraf aynı dili
- * konuşursa kurulabilir.* Cümlenin öteki yarısı `stock.storage_area_id` gelince doğdu; bu uyarı da
- * onunla.
- *
- * **ENGELLEMEZ, söyler** (`DOMAIN §4` deseni — MLOR'un ikizi): dondurucu bozulduğu için malı geçici
- * olarak başka alana koymak meşru bir karardır ve kabulü reddetmek depocuyu ya kaydı hiç yazmamaya
- * ya da yanlış alan seçmeye iterdi. İkisi de defteri yalancı yapar.
+ * Ürünün saklama rejimi ile konduğu alan uyuşmuyor. Engellemez, söyler: bozuk dondurucu yüzünden malı geçici olarak başka alana koymak
+ * meşrudur ve reddetmek depocuyu yanlış kayda iterdi.
  */
 export interface StorageMismatch {
   variantId: string;
@@ -362,16 +235,8 @@ export interface IntakeDifference {
 }
 
 /**
- * **Maliyet değişince otomatik fiyatı hedefe çeken port** (09.5 · DOMAIN "Maliyet ve hedef marj").
- *
- * ── NEDEN PORT, NEDEN TERFİ DEĞİL ────────────────────────────────────────────
- * Web kopyası `repriceVariants`'ı doğrudan çağırıyor (`apps/web/lib/pricing/auto-price.ts`, 146
- * satır + `cost-basis.ts`). O modül FİYAT şeridinin işi ve bu turda taşınmadı: taşımak, sahibi başka
- * olan bir modülü habersiz çatallamak olurdu (`order/effects.ts` ile aynı gerekçe). Port, bağın
- * KAYIP olduğunu değil **kayıtsız** olduğunu söyler — ve kaydedildiği gün davranış birebir olur.
- *
- * Dönen sayı "kaç fiyat hedefe çekildi". Kabulü BOZMAZ: fiyat hizalaması zaten yazılmış bir partinin
- * ardından gelir; port patlarsa mal kabul geri alınmaz.
+ * Maliyet değişince otomatik fiyatı hedef marja çeken port; dönen sayı hedefe çekilen fiyat adedidir. Kabulü bozmaz: port patlarsa
+ * yazılmış mal kabulü geri alınmaz.
  */
 export type RepricePort = (variantIds: readonly string[]) => Promise<number>;
 
@@ -381,27 +246,18 @@ type IntakeOutcome =
       result: ReceiveIntakeResult;
       /** Raf ömrü kısa gelen partiler — kabul ENGELLENMEZ, yalnız bildirilir. */
       warnings: IntakeWarning[];
-      /** Saklama rejimine uymayan alana konan partiler (19.29) — MLOR'un ikizi: uyarır, engellemez. */
+      /** Saklama rejimine uymayan alana konan partiler; MLOR gibi uyarır, engellemez. */
       storageMismatches: StorageMismatch[];
       /** PO'ya göre eksik/fazla — fark olarak işaretlenir, iş durmaz. */
       differences: IntakeDifference[];
-      /**
-       * Yeni maliyet yüzünden hedefe çekilen fiyat sayısı (otomatik fiyatlı ürünler). Depocuya
-       * gösterilmez — fiyat onun işi değil; kabul kaydında görünür kalması içindir.
-       *
-       * **`null` = ÖLÇÜLEMEDİ, sıfır DEĞİL** (CLAUDE.md §1): port kayıtlı değilse ya da çağrı
-       * düştüyse "hiçbir fiyat değişmedi" demek, bozuk bir ölçümü sağlıklı gibi okutmak olurdu.
-       */
+      /** Yeni maliyet yüzünden hedefe çekilen fiyat sayısı, depocuya gösterilmez; `null` = ölçülemedi, sıfır değil. */
       repricedCount: number | null;
     }
   | { status: 'empty' };
 
 /**
- * **Mal kabul — DEPOCU yolu.** Satırlar partiye dönüşür, PO kapanır, son alış fiyatı güncellenir —
- * hepsi tek transaction'da (RPC). Bu kapının eklediği üç şey: PO'dan maliyet eşlemesi, MLOR uyarısı
- * ve beklenen–gelen farkı.
- *
- * Fiyatlı giriş için `receivePurchase` (09.14) — bu kapı fiyat KABUL ETMEZ ve etmemeli.
+ * Mal kabul, depocu yolu: satırlar partiye dönüşür, sipariş kapanır ve son alış fiyatı güncellenir, hepsi tek RPC'de. Bu kapı fiyat kabul
+ * etmez; fiyatlı giriş `receivePurchase`tır.
  */
 export async function receiveGoods(
   db: SupabaseClient,
@@ -428,14 +284,8 @@ export async function receiveGoods(
 }
 
 /**
- * **Satın alma kaydı** — admin'in "Stok girişi" yolu (09.14).
- *
- * `receiveGoods`'tan tek farkı satırların maliyet taşıması; envanter tarafı (parti, PO kapanışı,
- * MLOR uyarısı, fark raporu, yeniden fiyatlama) birebir aynıdır ve aynı çekirdekten geçer — iki
- * ayrı akış yazsaydık biri gün gelir ötekinden ayrılırdı.
- *
- * İki durumu birden karşılar: **PO'suz doğrudan alım** (maliyet yalnız buradan gelebilir) ve **PO'lu
- * kabulde fiyat düzeltmesi** (fatura siparişten farklı geldiyse gerçek fiyat yazılır).
+ * Satın alma kaydı: `receiveGoods`tan tek farkı satırların maliyet taşıması, envanter tarafı aynı çekirdekten geçer. Siparişsiz alımda
+ * maliyet yalnız buradan gelir; siparişli kabulde belgedeki gerçek fiyat siparişteki fiyatı düzeltir.
  */
 export async function receivePurchase(
   db: SupabaseClient,
@@ -480,12 +330,8 @@ async function intake(
     date: input.date,
     note: input.note,
     actorId: input.actorId,
-    // ── MALİYETİN ÖNCELİĞİ: SATIR > PO > null ──────────────────────────────
-    // Elle girilen fiyat siparişteki beklentiyi EZER, çünkü fatura gerçeği söyler: tedarikçi zamla
-    // gönderdiyse "son alış fiyatı" o zamlı fiyattır ve `auto_price` da onu görmelidir. Tersi sıra
-    // (PO kazansa) admin'in düzeltmesini sessizce çöpe atardı.
-    //
-    // Birim CENT ve öyle KALIR: euro'ya çevrim servisin RPC sınırında (02.9 · `STACK §8`).
+    // Maliyetin önceliği satır > sipariş > yok: belge gerçeği söyler; tedarikçi zamlı gönderdiyse son alış fiyatı ve otomatik fiyat
+    // onu görmeli.
     lines: input.lines.map((line) => ({
       variantId: line.variantId,
       qty: line.qty,
@@ -548,11 +394,8 @@ async function mlorWarnings(db: SupabaseClient, lines: readonly IntakeFormLine[]
 }
 
 /**
- * Saklama rejimi ↔ alan uyuşmazlığı (19.29). Rafı seçilmemiş satır sorulmaz: alan yoksa
- * karşılaştırılacak bir şey de yok — "eksik" ile "yanlış" aynı uyarıya düşmemeli.
- *
- * `staging` HİÇ uyarmaz ve bu tanımın kendisi: geçiş alanı (mal kabul, sevk) bir saklama rejimi
- * değil, malın oradan geçtiği yerdir. Uyarsaydı her kabul kendi kabul alanını şikâyet ederdi.
+ * Saklama rejimi ile alan uyuşmazlığı; rafı seçilmemiş satır sorulmaz. Geçiş alanı (`staging`) hiç uyarmaz, çünkü bir saklama rejimi
+ * değil malın geçtiği yerdir.
  */
 async function storageMismatches(db: SupabaseClient, lines: readonly IntakeFormLine[]): Promise<StorageMismatch[]> {
   const placed = lines.filter((line) => line.storageAreaId);
@@ -577,17 +420,7 @@ async function storageMismatches(db: SupabaseClient, lines: readonly IntakeFormL
   return mismatches;
 }
 
-// Varyant → ürünün tarih rejimi okuması BURADAN KALKTI (30.08): `shelfLivesOf`/`dateRulesOf`,
-// `names.ts`in yaptığı zinciri (varyant → ürün) ikinci kez kuruyordu. Ad çözümü ürün satırını zaten
-// elinde tutuyor; `VariantName` artık `dateType` ve `shelfLifeDays` de taşıyor ve iki soru tek
-// okumadan cevaplanıyor (`CLAUDE §1` — iki kopya, bir gün ayrışacak iki kopyadır).
-
-/**
- * Beklenen–gelen farkı. Yalnız SAPAN satırlar döner; eşit olan satır gürültüdür.
- *
- * **PO yoksa fark da yoktur:** plansız alımda karşılaştırılacak bir sipariş bulunmaz; her satırı
- * "beklenmedik mal" diye işaretlemek anlamsız bir uyarı yığını üretirdi.
- */
+/** Beklenen–gelen farkı, yalnız sapan satırlar; sipariş yoksa fark da yoktur. */
 function differencesOf(lines: readonly IntakeFormLine[], expected: Map<string, number>): IntakeDifference[] {
   if (expected.size === 0) return [];
 
@@ -621,14 +454,8 @@ async function unitCostsOf(db: SupabaseClient, purchaseOrderId?: string | null):
 }
 
 /**
- * Siparişin KALAN beklentisi — "bu kabulden önce daha ne bekliyorduk".
- *
- * Ölçü `purchase_order_progress` görünümüdür (0031_warehouse), PO kaleminin ham `qty`'si DEĞİL. Fark bu
- * yüzden önemli: tek sipariş birden çok depoda parça parça kabul edilebilir (K6). Ham `qty`'ye
- * bakan bir karşılaştırma, 30'luk siparişin 20'si Strasbourg'a girdikten sonra Kehl'deki ikinci
- * kabulde "20 eksik" derdi — oysa o 20 çoktan gelmişti.
- *
- * `missing_qty` kümülatiftir ve `initial_qty` üzerinden hesaplanır (`physical_qty` satışla erir).
+ * Siparişin kalan beklentisi `purchase_order_progress` görünümünden okunur, ham `qty`'den değil: sipariş birden çok depoda parça parça
+ * kabul edilebilir ve ham adet gelmiş malı eksik gösterirdi.
  */
 async function expectedQtysOf(db: SupabaseClient, purchaseOrderId?: string | null): Promise<Map<string, number>> {
   if (!purchaseOrderId) return new Map();

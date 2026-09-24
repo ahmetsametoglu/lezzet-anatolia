@@ -21,11 +21,8 @@ import { withProposal } from '@/lib/assistant/handoff';
 import type { ReceiveOutcome } from './intake-types';
 
 /**
- * Mal kabulün yazma ve okuma yolları (10.4).
- *
- * **Depocu yolu FİYAT KABUL ETMEZ** ve bu bir ekran kuralı değil: `receiveGoods`'un satır tipinde
- * (`IntakeFormLine`) maliyet alanı YOKTUR. Fiyatlı giriş admin'in ayrı kapısıdır (`receivePurchase`,
- * 09.14). İki ayrı tip, iki ayrı kapı — depo ekranı fiyat gönderemez, gönderse tip tutmaz.
+ * Mal kabulün yazma ve okuma yolları. Depocu yolu fiyat kabul etmez: `receiveGoods`in satır tipinde maliyet alanı yoktur, fiyatlı giriş
+ * `receivePurchase`tır.
  */
 const RECEIVING_PATH = '/operations/receiving';
 
@@ -41,19 +38,8 @@ export async function openIntakeFormAction(purchaseOrderId: string): Promise<Act
 
 
 /**
- * **STOK EKRANININ KABUL KAPISI** (22.26) — mal kabul artık Stok'un bir sekmesi ve bu sekme HEM
- * yöneticiye HEM depocuya açık.
- *
- * ── TEK EYLEM, İKİ KAPI — VE SEÇİMİ SUNUCU YAPAR ────────────────────────────
- * Rol duvarı yerinde duruyor: `receiveGoods` maliyet taşıyan satırı kabul etmiyor (`IntakeFormLine`
- * fiyatsız), `receivePurchase` ediyor (`PurchaseIntakeLine`). Değişen tek şey, hangi kapıdan
- * geçileceğine **istemcinin değil sunucunun** karar vermesi: kapsam depo-üstüyse (yönetici/muhasebe)
- * fiyat yazılır, depoya bağlı personelde satırların maliyeti sunucuda DÜŞÜRÜLÜR — göndermiş olsa
- * bile. Ekranı gizlemeye güvenmiyoruz; ekran gizlemek bir yetki kontrolü değildir.
- *
- * Öneri kuyruğunun kendi kapısıyla (`receiveIntakeFromProposalAction`) da çakışmıyor: orada
- * satırlar bir faturadan geliyor ve karar kuyrukta veriliyor; burada operatör formu kendisi
- * dolduruyor.
+ * Stok ekranının kabul kapısı, yöneticiye de depocuya da açık; hangi kapıdan geçileceğine istemci değil sunucu karar verir. Kapsam
+ * depo-üstüyse fiyat yazılır, depoya bağlı personelde satır maliyeti gönderilmiş olsa bile sunucuda düşürülür.
  */
 export async function receiveIntakeAction(input: {
   warehouseId: string;
@@ -69,7 +55,7 @@ export async function receiveIntakeAction(input: {
     qty: number;
     expiryDate: string;
     lotNumber: string | null;
-    /** Partinin konacağı alan — kimlik (19.29); boş = raf seçilmedi ve bu meşru. */
+    /** Partinin konacağı alan (kimlik); boş = raf seçilmedi ve bu meşru. */
     storageAreaId: string | null;
     unitCost: number | null;
   }>;
@@ -95,9 +81,8 @@ export async function receiveIntakeAction(input: {
       purchaseOrderId: input.purchaseOrderId,
       supplierId: input.supplierId,
       note: input.note,
-      // **KABULÜ KİM YAPTI** (kullanıcı kararı 31.08): kapının doğruladığı kullanıcı, belgeye ve
-      // doğan her harekete yazılır. Native kapısı da aynı alanı besliyor — iki yüzeyden giren mal
-      // defterde aynı soruyu aynı yerde cevaplasın diye.
+      // Kabulü yapan, kapının doğruladığı kullanıcıdır; belgeye ve doğan her harekete yazılır ki iki yüzeyden giren mal defterde aynı
+      // yerde okunsun.
       actorId: user.id,
       ...(input.date ? { date: input.date } : {}),
     };
@@ -114,9 +99,7 @@ export async function receiveIntakeAction(input: {
     revalidatePath(RECEIVING_PATH);
     revalidatePath('/operations/stock');
 
-    // **Kapının sonucu OLDUĞU GİBİ geçirilmiyor, süzülüyor:** `ReceiveIntakeResult` girişin parasal
-    // toplamını da taşıyor. Sonucu yayarak döndürmek, depocunun ekranına para taşımanın en sessiz
-    // yolu olurdu. Ekrana giden tek sayı yazılan parti ADEDİ.
+    // Kapının sonucu süzülerek döner: `ReceiveIntakeResult` parasal toplamı da taşıyor ve depocunun ekranına para gitmemeli.
     return {
       data: {
         warnings: result.warnings,
@@ -162,12 +145,8 @@ export async function searchIntakeVariantsAction(term: string): Promise<ActionRe
 const VARIANT_SEARCH_LIMIT = 20;
 
 /**
- * **Yeni tedarikçi — hızlı ekleme** (tasarımın kuralı: *"ad + telefon yeter; vergi no, vade, adres
- * admin işi"*).
- *
- * Kamyon rampada beklerken ayrı bir sayfaya gitmek akışı kırar. Eksik alanlar sonradan yöneticinin
- * Tedarik ekranından tamamlanır — burada eksiksiz kayıt istemek, kabulü tedarikçi formuna rehin
- * vermek olurdu.
+ * Yeni tedarikçi, hızlı ekleme: ad ve telefon yeter, eksikler sonra Tedarik ekranında tamamlanır. Rampadaki kabul tedarikçi formuna
+ * rehin kalmamalı.
  */
 export async function createSupplierAction(name: string, phone: string | null): Promise<ActionResult<{ id: string; name: string }>> {
   try {
@@ -190,16 +169,8 @@ export async function createSupplierAction(name: string, phone: string | null): 
 }
 
 /**
- * **ÖNERİDEN MAL KABUL** — asistan kuyruğunun kendi kapısı (22.23).
- *
- * ── NEDEN AYRI BİR EYLEM ────────────────────────────────────────────────────
- * Kuyruğun kaydı bir ÖNERİYİ kapatıyor (`withProposal`): satır ve kayıt birlikte yazılır, ikinci bir
- * yazma yolu açılmaz. Ekranın kendi kapısında (`receiveIntakeAction`) böyle bir öneri yok.
- *
- * ── FİYAT DİLEKÇEDEN DEĞİL FORMDAN GELİR (kullanıcı kararı 12.08) ───────────
- * Kuyruk patronun ekranı: fatura yanlış okunmuşsa maliyet
- * onaydan ÖNCE düzeltilebilmeli. Düzeltilen değeri yok sayıp dilekçedekini yazsaydık, ekranda
- * görünen ile deftere geçen ayrışırdı — sistemin söyleyebileceği en sessiz yalan.
+ * Öneriden mal kabul, asistan kuyruğunun kapısı: kayıt öneriyi de kapatır. Fiyat öneriden değil formdan gelir, çünkü yanlış okunmuş
+ * fatura onaydan önce düzeltilebilmeli ve ekranda görünen deftere geçenle ayrışmamalı.
  */
 export async function receiveIntakeFromProposalAction(input: {
   warehouseId: string;
@@ -208,15 +179,11 @@ export async function receiveIntakeFromProposalAction(input: {
   /** Belgenin tarihi — boşsa kapı BUGÜNE yazar (`StockIntakeService.receive`). */
   date: string | null;
   lines: PurchaseIntakeLine[];
-  /**
-   * EŞLEME ÖNERİLERİ (22.43): asistan eşlemesi olmayan kalemi katalogdan bulup tedarikçinin adıyla
-   * birlikte gönderdi; girişin onayı eşlemenin de onayıdır. Anahtar motorun türettiği kod
-   * (`supplierItemKeyOf`), ad olduğu gibi.
-   */
+  /** Eşleme önerileri: asistanın katalogdan bulduğu kalem tedarikçinin adıyla gelir; girişin onayı eşlemenin de onayıdır. */
   mappings?: Array<{ variantId: string; supplierCode: string; nameAtSupplier: string | null }>;
   /**
-   * FATURANIN PARA KÜNYESİ (22.44 · 12.26): verildiyse fatura kabule bağlı bir BELGE olarak doğar ve
-   * tedarikçi borcu o belgeden türer. Numarası kabulün notu, günü kabulün günüdür — iki kez sorulmaz.
+   * Faturanın para künyesi: verildiyse fatura kabule bağlı bir belge olur ve tedarikçi borcu ondan türer. Numarası kabulün notu, günü
+   * kabulün günüdür.
    */
   invoice?: { amountCents: number; vatAmountCents: number | null; vatRegime: DocumentVatRegime; dueOn: string | null } | null;
   proposalId: string;
@@ -254,10 +221,8 @@ export async function receiveIntakeFromProposalAction(input: {
     revalidatePath('/operations/stock');
     revalidatePath('/operations/assistant');
 
-    // ── EŞLEME ÖNERİSİ ONAYLA KAYDA GEÇER (22.43) ─────────────────────────
-    // Yalnız GERÇEKTEN kabul edilen satırlar (adet girilmiş) ve tedarikçi hâlâ seçiliyken. Eşleme
-    // yazılamazsa giriş geri alınmaz — kabul olmuş bir gerçek, eşleme sonraki faturanın kolaylığı;
-    // cevap bunu SÖYLER (`recordManualMovementAction`ın belge bağı deseni), operatör elle eşler.
+    // Eşleme yalnız gerçekten kabul edilen satırlarda ve tedarikçi seçiliyken yazılır. Yazılamazsa giriş geri alınmaz; cevap bunu
+    // söyler ve operatör elle eşler.
     const failedMappings: string[] = [];
     if (input.supplierId && input.mappings?.length) {
       const received = new Set(input.lines.filter((line) => line.qty > 0).map((line) => line.variantId));
@@ -275,10 +240,8 @@ export async function receiveIntakeFromProposalAction(input: {
         }
       }
     }
-    // ── FATURA BELGE OLARAK DOĞAR (22.44 · 12.26) ────────────────────────────
-    // Toplam verildiyse fatura kabule bağlı bir belge olur ve tedarikçi borcu o belgeden türer — kabulün
-    // satır toplamı KDV hariçtir, nakliyeyi bilmez. Kabul olmuş bir gerçek: belge yazılamazsa giriş geri
-    // alınmaz ve cevap bunu SÖYLER (eşlemenin aynı deseni).
+    // Toplam verildiyse fatura kabule bağlı belge olur ve tedarikçi borcu ondan türer. Belge yazılamazsa giriş geri alınmaz; cevap
+    // bunu söyler.
     let documentId: string | null = null;
     let documentProblem: string | null = null;
     if (input.invoice) {
