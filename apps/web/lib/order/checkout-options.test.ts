@@ -5,9 +5,8 @@ import { CategoryService, ProductService } from '@lezzet/database';
 import { resolveCheckoutPayment } from './checkout-options';
 
 /**
- * Checkout ödeme seçenekleri (07.3) — motor + ayar + müşteri kartı birlikte. "Hangi yöntem açık"
- * kararı motorun birim testinde (`domain-core/payment`); burada **gerçek ayarların ve müşteri
- * kartının okunduğu**, açık bakiyenin siparişlerden TÜRETİLDİĞİ doğrulanır.
+ * Checkout ödeme seçenekleri: "hangi yöntem açık" kararı motorun birim testinde (`domain-core/payment`); burada gerçek ayarların ve
+ * müşteri kartının okunduğu, açık bakiyenin siparişlerden türetildiği doğrulanır.
  */
 const db = serviceDb();
 const profiles = new UserProfileService(db);
@@ -15,7 +14,7 @@ const orders = new OrderService(db);
 
 const stamp = Date.now();
 let customerId: string;
-// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+// Sipariş deposuz yazılamaz (DOMAIN §17); test kendi deposunu kurar.
 let warehouseId: string;
 let creditCustomerId: string;
 let businessCustomerId: string;
