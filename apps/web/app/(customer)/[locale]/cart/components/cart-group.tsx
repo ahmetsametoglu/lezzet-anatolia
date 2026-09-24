@@ -12,20 +12,8 @@ import { checkoutBlockReason, useCheckoutGate } from './cart-summary';
 import type { Messages } from '../cart-types';
 
 /**
- * Sepetin İKİ GRUBU (19.7 · tasarım `Musteri - Sepet.dc.html`, "tek sepet, iki grup, iki checkout").
- *
- * **Gruplama kalemin hâlinden kendiliğinden doğar; müşteri kalem taşımaz, yol seçmez.** Yolu stok
- * belirler (`decideCartAgainstWarehouse`): kendi deposunda bulunan her şey — kargolanabilir olsa
- * bile — araçla gider, çünkü ücretsiz kapı teslimi varken paralı kargo seçtirmek karşılığı olmayan
- * bir karar yükü. "Bunu kargoyla istiyorum" diye bir seçenek YOKTUR ve arayüzde de olmamalı.
- *
- * **İki grup = iki sipariş = iki ödeme** ve ikincisi ZORUNLU DEĞİL. Bu, "bir sipariş tek depodan
- * çıkar" kuralının bozulması değil korunmasıdır: sipariş bölünmüyor, ikinci bir sipariş doğuyor.
- * Müşteri ikincisini vermezse kalemler sepette bekler, kapıya siparişi hiç etkilenmez.
- *
- * ── GRUP BAŞLIKLARI TEK GRUPTA ÇİZİLMEZ ──────────────────────────────────────
- * Ayrım ancak ayrılacak bir şey varken bilgidir. Tek yolu olan sepette başlık, olmayan bir seçimi
- * varmış gibi gösterir ve müşteriye "acaba öteki grupta ne vardı" diye düşündürür.
+ * Sepetin grupları: gruplama kalemin hâlinden doğar, müşteri yol seçmez; kendi deposunda olan her şey araçla gider. İki grup iki
+ * sipariş ve iki ödemedir, ikincisi zorunlu değildir; tek grupta başlık çizilmez, çünkü ayrım ancak ayrılacak bir şey varken bilgidir.
  */
 
 interface CartGroupProps {
@@ -42,9 +30,8 @@ export function CartGroup({ kind, lines, view, t, locale, compact = false }: Car
   const g = t.group;
   const shipping = kind === 'shipping';
 
-  // Grubun kalem toplamı — kendi satırlarından. İndirim BURADA yazılmaz: kupon/kampanya siparişin
-  // kendi kalemlerine göre checkout'ta yeniden çözülüyor, sepette bir gruba düşecek payı kesin
-  // bilemeyiz. Dökümün yeri özet kartı; orası da bunu bir cümleyle söyler (`discountSplit`).
+  // Grubun kalem toplamı kendi satırlarından; indirim burada yazılmaz, çünkü checkout'ta siparişin kendi kalemlerine göre yeniden
+  // çözülür ve özet kartı bunu bir cümleyle söyler (`discountSplit`).
   const itemsCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
   // Ücret motordan: sepette "6,90 €" yazıp kasada başka bir sayı kesmek ekranın sözünü tutmamasıdır.
   const fee = shippingGroupFee(view);
@@ -90,13 +77,11 @@ interface RouteActionProps {
 }
 
 /**
- * Rota grubunun eylemi — sepetin ASIL akışı, o yüzden dolu düğme ve zeytin zemin.
- *
- * Engeller sepetin tamamına aittir (tükenen kalem, asgari sepet) ve burada da geçerlidir: ikisi de
- * checkout'ta yeniden kontrol ediliyor, buradaki kilit müşteriyi boşuna bir adım ilerletmemek için.
+ * Rota grubunun eylemi, sepetin asıl akışı; engeller sepetin tamamına aittir ve burada da kilitler ki müşteri boşuna bir adım
+ * ilerlemesin.
  */
 function RouteAction({ view, t, locale, compact, totalCents }: RouteActionProps) {
-  // Kimlik/adres kapısı sepetin engelinden SONRA — özet kartıyla aynı sıra, aynı kanca (13.09).
+  // Kimlik ve adres kapısı sepetin engelinden sonra, özet kartıyla aynı sıra ve aynı kanca.
   const gate = useCheckoutGate(t);
   const reason = checkoutBlockReason(view, t, locale) ?? gate;
   const blocked = reason !== null;
@@ -144,20 +129,12 @@ interface ShippingActionProps {
 }
 
 /**
- * Kargo grubunun eylemi — ÇERÇEVELİ düğme, kum zemin. Ağırlık farkı sırayı söyler: asıl akış kapıya
- * gidendir, bu ikinci ve isteğe bağlı bir sipariştir.
- *
- * **Karakter farkı burada sezdirilir** (tasarım §4): kendi kargo ücreti, kendi eşiği (kendi
- * tutarından — iki grup birbirinin eşiğini beslemez, K37) ve yalnız online peşin ödeme. Üçü de
- * checkout'ta karşılaşılacak gerçekler; burada söylenmezse ikinci sipariş sürprizle başlar.
- *
- * Ücret YAZILIR ve bu, özet kartının "sepette kargo satırı yok" kuralıyla çelişmez: o kural ücretin
- * teslimat türüne, türün de adrese bağlı olmasından doğuyordu. Kargo grubunda tür zaten belli.
+ * Kargo grubunun eylemi: çerçeveli düğme, çünkü bu ikinci ve isteğe bağlı sipariştir. Kendi ücreti, kendi eşiği ve yalnız online
+ * ödeme burada söylenir, yoksa ikinci sipariş sürprizle başlar.
  */
 function ShippingAction({ view, t, locale, compact, itemsCents, totalCents, feeCents, remainingCents }: ShippingActionProps) {
   const g = t.group;
-  // Kargo siparişi de kimlik ve adres ister: kapı burada da geçerli (13.09). Tükenen kalem
-  // sepetin tamamını durdurur, kapı ondan sonra okunur.
+  // Kargo siparişi de kimlik ve adres ister; tükenen kalem sepetin tamamını durdurur, kapı ondan sonra okunur.
   const gate = useCheckoutGate(t);
   const reason = view.hasBlocked ? t.checkoutBlocked : gate;
   const blocked = reason !== null;

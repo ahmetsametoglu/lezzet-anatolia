@@ -3,13 +3,10 @@ import type { CartLineRoute } from '@lezzet/domain-core';
 import { EMPTY_CART, shippingGroupFee, splitByRoute, type CartLine, type CartView } from './cart-types';
 import { diffCartByPlace } from './place-change';
 
-/**
- * Sepetin YER ekseni — grup ayrımı, kargo ücreti ve yer değişiminin farkı (19.7).
- *
- * Üçü de saf: karar motorda (`decideCartAgainstWarehouse`, `resolveShippingFee`), burada sınanan
- * şey ekranın o karara **ne yaptığı**. Bu yüzden DB'ye vurmuyorlar; dosya yine de entegrasyon
- * kökünde (`apps/web/lib`) çünkü sınır dizinle çiziliyor (`vitest.config` künyesi).
- */
+/*
+  Sepetin yer ekseni: grup ayrımı, kargo ücreti ve yer değişiminin farkı; karar motorda, burada sınanan ekranın o karara ne yaptığı.
+  Testler saf, ama sınır dizinle çizildiği için entegrasyon kökünde.
+*/
 
 let counter = 0;
 

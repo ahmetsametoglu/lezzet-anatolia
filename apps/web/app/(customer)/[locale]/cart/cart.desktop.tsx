@@ -18,14 +18,8 @@ import { CartSkeleton } from './components/cart-skeleton';
 import type { CartViewProps } from './cart-types';
 
 /**
- * Sepet — masaüstü düzeni (tasarım: `Musteri - Sepet.dc.html`, "Sepet Web").
- * Başlık + "alışverişe devam" → engel uyarısı → kalemler (sol 1.6fr) | özet (sağ 1fr, yapışkan).
- *
- * Özet YAPIŞKANDIR: uzun sepette müşteri kalemleri gezerken toplam ve tek aksiyon ekrandan
- * çıkmamalı — sepetin sorusu "ne var" değil, "ne tutuyor, devam edeyim mi".
- *
- * İlk okuma tamamlanmadan boş durum GÖSTERİLMEZ: sepette ürün varken bir an "sepetiniz boş" yazıp
- * sonra dolması, müşteriye sepetini kaybettiğini düşündürür.
+ * Sepetin masaüstü düzeni: kalemler solda, özet sağda ve yapışkan, çünkü uzun sepette toplam ve tek eylem ekrandan çıkmamalı.
+ * İlk okuma bitmeden boş durum gösterilmez, yoksa müşteri sepetini kaybettiğini sanırdı.
  */
 export function CartDesktop({ t, locale, emptyContext, awaitingPayment }: CartViewProps) {
   const { view, ready, failed, addSkipped } = useCart();
@@ -35,13 +29,8 @@ export function CartDesktop({ t, locale, emptyContext, awaitingPayment }: CartVi
   // Okuma DÜŞTÜYSE boş ekran çizilmez: sepet boş değil, ulaşılamıyor (`CartUnreachable`).
   if (failed) return <CartUnreachable t={t} />;
 
-  // Boş sepet KENDİ ekranıdır: "Sepetim" başlığı ve "alışverişe devam" bağlantısı da düşer, çünkü
-  // kahramanın başlığı zaten sayfanın başlığıdır ve iki düğme zaten devam etme yoludur.
-  //
-  // Ölçüt "çözülmüş satır yok" DEĞİL, "niyet de yok": tekrar siparişten hemen sonra satırlar henüz
-  // sunucudan dönmemişken ekranın ortası "Sepetiniz şu an boş" derken üstteki rozet "3" gösteriyordu
-  // (29.07 denetimi). Tasarımın sözleşmesi geçişin TEK ADIM olmasını istiyor — arada iskelet var,
-  // boş ekran yok.
+  // Boş sepet kendi ekranıdır; ölçüt niyetin de olmaması, çünkü satırlar sunucudan dönmeden "sepetiniz boş" yazılsaydı üstteki
+  // rozetle çelişirdi, arada iskelet durur.
   if (view.lines.length === 0) {
     return view.itemCount > 0 ? <CartSkeleton t={t} /> : <EmptyCart t={t} locale={locale} context={emptyContext} />;
   }
@@ -50,9 +39,8 @@ export function CartDesktop({ t, locale, emptyContext, awaitingPayment }: CartVi
   const grouped = groups.route.length > 0 && groups.shipping.length > 0;
 
   return (
-    // Başlık ve uyarı SOL SÜTUNUN İÇİNDEDİR, ızgaranın üstünde değil (tasarım): özet kartı sayfanın
-    // en tepesinden başlar ve "Sepetim" ile aynı hizada durur. Üste alınınca sağ sütun başlık kadar
-    // aşağı kayıyor ve tepede boş bir şerit kalıyordu.
+    // Başlık ve uyarı sol sütunun içinde: özet kartı sayfanın tepesinden başlar ve "Sepetim" ile aynı hizada durur, üste
+    // alınsaydı sağ sütun başlık kadar aşağı kayardı.
     <section className="grid grid-cols-[1.6fr_1fr] items-start gap-10 px-12 pt-9 pb-12">
       <div className="flex flex-col gap-3.5">
         <div className="flex items-baseline justify-between gap-4">
@@ -62,14 +50,12 @@ export function CartDesktop({ t, locale, emptyContext, awaitingPayment }: CartVi
           </Link>
         </div>
 
-        {/* Ödemesi beklenen kart siparişi (07.18) — bantların İLKİ: sepet yalnız onayda boşalır, sonucu
-            gelmemiş ödemenin kalemleri hâlâ burada. Aşağıdaki bantlar yeniden ödemeye hazırlanan müşteriye
-            konuşuyor; önce öncekinin ne olduğunu bilmeli. */}
+        {/* Ödemesi beklenen kart siparişi bantların ilkidir: sepet yalnız onayda boşalır ve yeniden ödemeye hazırlanan müşteri önce
+            öncekinin ne olduğunu bilmeli. */}
         {awaitingPayment && <AwaitingPaymentNotice t={t} locale={locale} awaiting={awaitingPayment} />}
 
-        {/* Yer değişimi bildirimi LİSTENİN ÜSTÜNDE, kalem uyarılarının ilki (kullanıcı isteği 14.09): değişen
-            şey kalemler ve bildirim onların üstünde okunur; aşağıdaki engel ve kısıt blokları çoğu
-            zaman onun sonucu. Önce sağ sütunda, özetin üstünde duruyordu. */}
+        {/* Yer değişimi bildirimi listenin üstünde, kalem uyarılarının ilki: aşağıdaki engel ve kısıt blokları çoğu zaman onun
+            sonucudur. */}
         <PlaceChangeCard t={t} locale={locale} />
 
         {/* Stok uyarısı BAL tonundadır, terracotta değil: müşteri hata yapmadı, dünya değişti.
@@ -88,10 +74,8 @@ export function CartDesktop({ t, locale, emptyContext, awaitingPayment }: CartVi
           </div>
         )}
 
-        {/* K32 · Teslimat kısıtı — satırların ÜSTÜNDE: hangi kalemlerin etkilendiğini ve çıkışı,
-            müşteri listeyi gezmeden görmeli. Kısıt yoksa (ya da yer bilinmiyorsa) hiç çizilmez.
-            Posta kodu burada SORULMAZ (kullanıcı kararı 14.09): tek soru yeri başlıktaki hap —
-            girişsiz müşteri sepette zaten giriş bloğunu görüyor, girişten sonra yer adresinden gelir. */}
+        {/* Teslimat kısıtı satırların üstünde, müşteri etkilenen kalemleri listeyi gezmeden görsün diye; kısıt yoksa çizilmez.
+            Posta kodu burada sorulmaz, tek soru yeri başlıktaki haptır. */}
         <PlaceRestriction locale={locale} lines={view.lines} minBasketCents={view.minBasketCents} freeShippingCents={view.freeShippingCents} />
 
         {/* Sepet iki yola bölündüyse her grup kendi başlığı, toplamı ve eylemiyle durur; tek yol
@@ -110,8 +94,7 @@ export function CartDesktop({ t, locale, emptyContext, awaitingPayment }: CartVi
       </div>
 
       <div className="sticky top-5 flex flex-col gap-3.5">
-        {/* KİM ve NEREYE — özetin en üstünde (kullanıcı kararı 13.09): ödemeye geçmenin iki ön
-            şartı, tutardan önce okunur. Girişsizde giriş bloğu, girişlide seçili adres. */}
+        {/* Kim ve nereye özetin en üstünde: ödemeye geçmenin iki ön şartı tutardan önce okunur. */}
         <CartIdentity t={t} locale={locale} />
         <CartSummary view={view} t={t} locale={locale} grouped={grouped} />
         <CartCoupon t={t} locale={locale} />
