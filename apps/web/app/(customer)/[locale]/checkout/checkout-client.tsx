@@ -1,10 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-// Router next-intl'in kendisinden: `next/navigation`'ınki dilsiz bir yol üretiyordu
-// (`/checkout/<id>`) ve middleware onu her seferinde `/tr/odeme/<id>`'ye 307 ile yönlendiriyordu —
-// istemci-taraflı geçiş bir sunucu turuna dönüşüyor, `NEXT_LOCALE` çerezi URL diliyle ayrışırsa
-// yanlış dile düşme riski doğuyordu (proje kuralı: `@/i18n/navigation`).
+// Router next-intl'den: `next/navigation` dilsiz yol üretir, middleware onu 307 ile dilli yola çevirir ve çerez dili URL diliyle
+// ayrışınca müşteri yanlış dile düşer.
 import { useRouter } from '@/i18n/navigation';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
@@ -23,23 +21,16 @@ import { checkCheckoutAddressAction, confirmCheckoutAction, loadCheckoutAction }
 import { checkoutBlocker, isSeparateOrder, servicePointMissing, type CheckoutState, type CheckoutViewProps, type Messages } from './checkout-types';
 
 /**
- * Checkout'un karar merkezi (08.13) — durum ve sunucu turları burada, yerleşim iki ekran dosyasında.
- *
- * **Adres SEPETTE seçilir, burada yalnız okunur** (kullanıcı kararı 13.09): anlık görüntü seçili
- * (varsayılan) adresle çözülür; teslimat türü, uygun günler, kargo ücreti, açık ödeme yöntemleri ve
- * toplam hepsi onun cevabı. Adresi değiştirmek isteyen sepete döner — iki ekranın iki ayrı adresle
- * konuşması (ölçüldü 11.09: sepet "kapıya teslim", ödeme "kargo") böyle bitti.
+ * Durum ve sunucu turları burada, yerleşim iki ekran dosyasında. Adres sepette seçilir ve burada yalnız okunur, çünkü teslimat
+ * türü, günler, kargo ücreti, ödeme yöntemleri ve toplam o adresin cevabıdır; iki ekran iki ayrı adresle konuşmamalı.
  */
 interface CheckoutClientProps {
   t: Messages;
   locale: Locale;
   device: Device;
   /**
-   * Sepetin KARGO grubundan açılan ikinci sipariş mi (19.7 · `?group=shipping`).
-   *
-   * İki şeyi birden belirler: hangi kalemlerin siparişe gireceği ve siparişin TÜRÜ. İkisi ayrı
-   * ayrı türetilseydi ayrışabilirlerdi — kalemler kargo grubundan, tür adresten gelirdi ve rota
-   * içindeki müşteride ekran "kapıya teslim" derken taslak kargo siparişi açardı.
+   * Sepetin kargo grubundan açılan sipariş mi (`?group=shipping`). Kalemler de tür de bu tek bayraktan seçilir; ayrı türetilseydi
+   * rota içindeki müşteride ekran "kapıya teslim" derken taslak kargo siparişi açardı.
    */
   shippingOrder: boolean;
   /** Girişli müşterinin künyesi — sayfa girişsizi sepete çevirdiği için hep dolu. */
@@ -55,10 +46,8 @@ function newAttemptKey(): string {
 
 export function CheckoutClient({ t, locale, device, shippingOrder, customer }: CheckoutClientProps) {
   /**
-   * Cihaz İSTEMCİDE doğrulanır (03.08 · denetim bulgusu) — sunucunun UA tahmini bir başlangıç
-   * değeri, son söz değil. Bu dosya yüzeydeki 13 istemciden **tek**i olarak `device` prop'unu
-   * doğrudan okuyordu; tahmin yanılırsa ya da müşteri ekranı döndürürse checkout tek başına yanlış
-   * düzende kalıyordu — hem de dönüşümün en pahalı ekranında.
+   * Cihaz istemcide doğrulanır: sunucunun UA tahmini yalnız başlangıçtır, yanılırsa ya da ekran dönerse checkout yanlış düzende
+   * kalırdı.
    */
   const resolved = useDevice(device);
   const router = useRouter();
@@ -82,33 +71,21 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Bu siparişe girecek kalemler — sepetin TAMAMI değil, **bu grubun** kalemleri (19.7).
-   *
-   * Kargo checkout'u yalnız kargo grubunu alır; normal checkout ise kargo grubunu DIŞARIDA bırakır.
-   * Bırakmasaydı kapıya siparişi, o adrese araçla gidemeyecek kalemleri de taşırdı ve taslak
-   * "bu siparişin deposunda karşılanamayan kalem" diye reddederdi — müşteri sepetinde gördüğü
-   * kalemin neden siparişe girmediğini ancak ödemeye geçince öğrenirdi.
-   *
-   * Yol bilinmiyorken (`route === null`: yer sorulmamış ya da satır bir paket) kalem HER ZAMAN ana
-   * gruptadır: bilmediğimiz bir satırı asıl akıştan çıkarmak, siparişten sessizce kalem düşürmek
-   * olurdu.
+   * Bu siparişe girecek kalemler: sepetin tamamı değil, bu grubun kalemleri. Kapı siparişi araçla gidemeyecek kalemi de taşısaydı
+   * taslak onu siparişin deposunda karşılanamayan kalem diye reddederdi.
    */
   const cartEntries = useMemo(() => {
     const groups = splitByRoute(view.lines);
     return (shippingOrder ? groups.shipping : groups.route).map(entryOf);
   }, [view.lines, shippingOrder]);
   /**
-   * Anlık görüntü okumasının SIRA BİLETİ. Sepet bağlamında zaten vardı, burada yoktu: art arda iki
-   * okuma ters sırada dönerse geç gelen ESKİ cevap yeniyi eziyordu (29.07 denetimi). Kilit yerine
-   * bilet: arayüz açık kalır, sonuncu okuma kazanır.
+   * Okumanın sıra bileti: art arda iki okuma ters sırada dönerse geç gelen eski cevap yeniyi ezerdi. Kilit yerine bilet, arayüz açık
+   * kalsın diye.
    */
   const seq = useRef(0);
   /**
-   * Bu checkout denemesinin kimliği — çift sipariş kalkanı (0015).
-   *
-   * Sayfa monte olurken bir kez üretilir: çift tıklama ve ağın yeniden denemesi AYNI anahtarla
-   * gider, sunucu ikinci siparişi açmaz. Sipariş verildikten sonra yenilenir — müşteri geri dönüp
-   * ikinci bir sipariş vermek İSTEYEBİLİR ve o artık farklı bir istektir.
+   * Çift sipariş kalkanı: çift tıklama ve ağın yeniden denemesi aynı anahtarla gider, sunucu ikinci siparişi açmaz. Sipariş verilince
+   * yenilenir, çünkü sonraki sipariş bilerek verilen ayrı bir istektir.
    */
   const attemptKey = useRef(newAttemptKey());
 
@@ -140,21 +117,15 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
         // Gün SEÇİMİ korunmaz: adres değişince eski gün başka bölgenin günü olabilir. Tek gün
         // varsa seçim sunulmadığı için o gün doğrudan yazılır — ekran boş seçimle kilitlenmesin.
         const dates = data.delivery?.availableDates ?? [];
-        // Komşu daveti varsa o gün ÖNSEÇİLİ gelir (17.10): davetin tek işlevi o güne denk gelmek
-        // ve davetliyi günü kendi bulmaya bırakmak, daveti sessizce işlevsiz kılardı. Müşterinin
-        // KENDİ seçimi yine üstte: `prev.deliveryDate` geçerliyse ona dokunulmuyor.
-        // Davet artık LİSTE (MB-61): önseçim EN YAKIN davetli gündür — liste sunucuda zaten gün
-        // sırasında geliyor, yani baştaki. Ötekiler kaybolmuyor, gün seçicide kendi adlarıyla
-        // duruyor (aşağıdaki bant künyesi).
+        // Komşu daveti varsa en yakın davetli gün önseçili gelir, çünkü davetin işlevi o güne denk gelmektir; liste sunucudan gün
+        // sırasıyla gelir. Müşterinin kendi geçerli seçimi yine önce gelir, öteki davetler gün seçicide kendi adlarıyla durur.
         const invited = data.delivery?.neighborInvites[0]?.deliveryDate ?? null;
         const keepDate =
           prev.deliveryDate && dates.includes(prev.deliveryDate)
             ? prev.deliveryDate
             : (invited ?? (dates.length === 1 ? dates[0]! : null));
-        /* KARGO SERVİSİ — seçimi SUNUCU yapıyor, ekran onu yansıtıyor. Burada kendi önseçimimizi
-           kursaydık ilk açılışta liste seçili görünür ama ücret sabit tarifeden hesaplanmış olurdu
-           (kapının künyesi). Adres değişince eski kod başka taşıyıcının kodu olabilir; sunucu onu
-           da zaten süzüyor. */
+        /* Kargo servisini sunucu seçer, ekran yansıtır: burada önseçim kursaydık liste seçili görünür ama ücret sabit tarifeden
+           hesaplanmış olurdu. Adres değişince başka taşıyıcıya ait eski kodu da sunucu süzer. */
         const selectedCode = data.shipping?.selectedCode ?? null;
         // Nokta ancak aynı adreste ve servisi hâlâ seçiliyken kalır; ücretsiz kargoya geçişte sunucu eve giden servisi seçer.
         const keepPoint =
@@ -181,11 +152,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   const selectedAddress = snapshot.addresses.find((a) => a.id === state.addressId) ?? null;
 
   /**
-   * **Adres doğrulamasının sonucu** (11.11) — sipariş anında sorulur, ekranda gösterilir.
-   *
-   * `checkedFor` hangi adres için sorulduğunu tutuyor: müşteri cevabını verdikten sonra AYNI adres
-   * için ikinci kez tutulmuyor. Tutulsaydı "Benim yazdığım doğru" diyen müşteri sonsuz döngüye
-   * girerdi — ret bir vazgeçiş değil bir BEYAN ve bir kez alınır.
+   * Sipariş anında sorulan adres doğrulamasının sonucu; `checkedFor` aynı adres ikinci kez sorulmasın diye sorulan adresi tutar.
+   * Sorulsaydı "benim yazdığım doğru" diyen müşteri döngüye girerdi, çünkü ret bir beyandır ve bir kez alınır.
    */
   const [addressNotice, setAddressNotice] = useState<AddressCheckOutcome | null>(null);
   const checkedFor = useRef<string | null>(null);
@@ -194,11 +162,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   const confirm = async () => {
     if (!state.addressId || !state.paymentMethod) return;
 
-    /* ADRES DOĞRULAMASI SİPARİŞ ANINDA (11.11, kullanıcı kararı 02.09) — ve BİR KEZ. Söylenecek bir
-       şey varsa akış burada DURUR; müşteri görür, kararını verir, ikinci tıklamada sipariş geçer.
-       `confirmed` ve `unknown` hiç göstermez: birincisinde söylenecek şey yok, ikincisinde
-       söyleyecek bilgimiz yok — "doğrulayamadık" demek müşteriyi her siparişte görünen ve hiçbir
-       şey söylemeyen bir satıra alıştırırdı. */
+    /* Söylenecek bir şey varsa akış durur; müşteri görür, karar verir, ikinci tıklamada sipariş geçer. `confirmed` ve `unknown`
+       gösterilmez, çünkü "doğrulayamadık" her siparişte görünen ve hiçbir şey söylemeyen bir satır olurdu. */
     if (checkedFor.current !== state.addressId) {
       setBusy(true);
       const check = await checkCheckoutAddressAction(state.addressId);
@@ -225,10 +190,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       shippingOrder,
       shippingOptionCode: state.shippingOptionCode,
       servicePointId: state.servicePoint?.id ?? null,
-      /* Ekranın gösterdiği sepetin imzası (21.08) — sunucunun verdiği değer, olduğu gibi geri
-         gidiyor. Sepet iki yüzeyde paylaşıldığı için son okumamızla bu tıklama arasında değişmiş
-         olabilir; değiştiyse kapı `cart_changed` ile reddeder ve müşteri yeni özeti görüp bilerek
-         onaylar. */
+      /* Ekranın gösterdiği sepetin imzası sunucudan geldiği gibi geri gider. Sepet iki yüzeyde paylaşıldığı için bu arada
+         değiştiyse kapı `cart_changed` ile reddeder ve müşteri yeni özeti görüp onaylar. */
       expectedCartFingerprint: snapshot.summary?.fingerprint ?? null,
     });
 
@@ -240,8 +203,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       setBusy(false);
       return setError(rejectionMessage(t, data.reason, data.detail));
     }
-    // Önceki kart ödemesi geçti ya da işleniyor (07.18): yeni sipariş açılmadı — müşteri o siparişin
-    // sayfasına gider ve sonucu orada görür. Sepet tazelenir: ödeme geçtiyse kalemleri düşmüştür.
+    // Önceki kart ödemesi geçti ya da işleniyor: yeni sipariş açılmadı, müşteri sonucu o siparişin sayfasında görür. Sepet
+    // tazelenir, çünkü ödeme geçtiyse kalemleri düşmüştür.
     if (data.status === 'open_payment') {
       router.push({ pathname: '/checkout/[reference]', params: { reference: data.orderId } });
       reloadCart();
@@ -249,13 +212,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     }
 
     /**
-     * **Önce GİT, sonra sepeti tazele.** Ters sırada yapılıyordu ve ekran gözümüzün önünde
-     * sıfırlanıyordu: `reloadCart` sunucudaki (artık boş) sepeti okuyor → `cartEntries` boşalıyor →
-     * `refresh` yeniden koşup kalemsiz bir anlık görüntü çekiyordu. Müşteri yönlendirme tamamlanana
-     * kadar kalemsiz bir özet ve 0,00 € toplam görüyordu (29.07 denetimi + kullanıcı bildirimi).
-     *
-     * `busy` de AÇIK bırakılır: yanıt döndükten sonra gezinme bitene kadar düğme yeniden
-     * etkinleşiyordu ve sabırsız ikinci tıklama gerçek bir İKİNCİ sipariş açabiliyordu.
+     * Önce gidilir, sonra sepet tazelenir: ters sırada boşalan sepet yönlendirme bitene kadar kalemsiz bir özet ve 0,00 € toplam
+     * çizerdi. `busy` açık kalır, yoksa gezinme bitmeden ikinci tıklama gerçek bir ikinci sipariş açabilirdi.
      */
     router.push({ pathname: '/checkout/[reference]', params: { reference: data.orderId } });
     reloadCart();
@@ -283,7 +241,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     });
     if (errorKey || !data) return { ok: false, error: errorText(t.errors, errorKey) };
     if (data.status === 'rejected') return { ok: false, error: rejectionMessage(t, data.reason, data.detail) };
-    // Kart formu yeni ödeme açmaz (07.18): önceki ödeme geçti ya da işleniyor, müşteri o siparişe gider.
+    // Kart formu yeni ödeme açmaz: önceki ödeme geçti ya da işleniyor, müşteri o siparişe gider.
     if (data.status === 'open_payment') {
       router.push({ pathname: '/checkout/[reference]', params: { reference: data.orderId } });
       reloadCart();
@@ -318,9 +276,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
           returnUrlBase={returnUrlBase}
           onPrepare={prepare}
           onError={setError}
-          // Özet kartıyla AYNI kapıdan: burası üç koşula bakıyordu, özet beşe — sepette
-          // gönderilemeyen kalem varken kart formu açık kalıyor, müşteri reddi ancak
-          // bastıktan sonra öğreniyordu.
+          // Özet kartıyla aynı kapıdan, yoksa sepette gönderilemeyen kalem varken kart formu açık kalır ve müşteri reddi ancak
+          // bastıktan sonra öğrenirdi.
           disabled={busy || checkoutBlocker({ cartFailed, cartHasBlocked: view.hasBlocked, snapshot, addressId: state.addressId, pointMissing: servicePointMissing(state) }) !== null}
           labels={{
             submit: t.summary.submit,
@@ -355,14 +312,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     paymentSlot,
     addressNotice,
     /**
-     * **Teklif kabul edildi** — hem siparişin adresi hem KAYIT düzelir (kullanıcı kararı 02.09).
-     * Tek yazım yeter: sipariş henüz açılmadı ve seçili adres kaydın kendisi.
-     *
-     * Değişen YALNIZ kod ve şehir: `wrong_postal_code`ın tanımı zaten bu — sokak ve numara aynı,
-     * kapı başka kodda. Satırın geri kalanına (alıcı, telefon, etiket) dokunmuyoruz.
-     *
-     * Yazım yer BAĞLAMINDAN geçer (`saveAddress`): kod değişince site genelindeki yer de değişir
-     * (bölge, kargo ücreti, gün) — bağlam yeni kareyi benimseyip sunucuyu tazeler.
+     * Teklif kabulü kaydın kendisini düzeltir ve yalnız kod ile şehir değişir, çünkü `wrong_postal_code` sokağın aynı, kodun farklı
+     * olduğu hâldir. Yazım yer bağlamından geçer, çünkü kod değişince site genelindeki bölge, kargo ücreti ve gün de değişir.
      */
     onAcceptAddressFix: async () => {
       if (!selectedAddress || addressNotice?.status !== 'wrong_postal_code') return;
@@ -419,12 +370,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
 }
 
 /**
- * Ret sebebi → müşteri diline. Sunucu kodu döner, metin ekranın sorumluluğudur.
- *
- * **Yarış hâlinin İKİ metni var** (08.13): kalem adı çözülebildiyse adlı cümle, çözülemediyse
- * bugünkü genel cümle. Ayrımı EKRAN yapıyor, sunucu değil — sebep kodu davranışı belirler
- * (`checkoutBlocker`, ret ölçümü) ve onu metnin varlığına göre ikiye bölmek, aynı gerçeğe iki kod
- * vermek olurdu. Ürün silinmişse ad boş döner; o zaman eksik ama doğru bir cümle kalır.
+ * Ret sebebi müşteri diline; stok yarışında kalem adı çözüldüyse adlı cümle, çözülmediyse genel cümle yazılır. Ayrımı ekran yapar,
+ * çünkü sebep kodu davranışı ve ölçümü belirler ve onu metnin varlığına göre bölmek aynı gerçeğe iki kod vermek olurdu.
  */
 function rejectionMessage(t: Messages, reason: string, detail?: string[] | string): string {
   const list = Array.isArray(detail) ? detail.join(', ') : (detail ?? '');
