@@ -65,9 +65,8 @@ export function CheckoutMobile(props: CheckoutViewProps) {
   const pickedWarehouse = snapshot.pickup?.warehouses.find((w) => w.id === snapshot.pickup?.selectedWarehouseId) ?? null;
   const dates = delivery?.availableDates ?? [];
 
-  // Döküm ve toplam aynı okumadan: özet varsa satırlar da indirim de ondan, yoksa ikisi de sepetten, asla karışık. Adres
-  // seçilmeden özet yoktur ve o hâlde sepete düşmek doğrudur.
-  // Sunucu cevap vermeden özet sepetten kurulmaz: sepet bu siparişin grubunu bilmez ve bölünmüş sepette bütün sepeti yazardı.
+  // Döküm ve toplam aynı okumadan gelir: özet varsa ikisi de ondan, adres seçilmediği için özet yoksa ikisi de sepetten, asla karışık.
+  // Sunucu cevap vermeden özet sepetten kurulmaz, çünkü sepet bu siparişin grubunu bilmez ve bölünmüş sepette bütün sepeti yazardı.
   const settled = cartReady && snapshotReady;
   const orderedCartLines = cart.lines.filter((line) => line.group !== 'undeliverable');
   const summaryLines: SummaryLine[] = !settled

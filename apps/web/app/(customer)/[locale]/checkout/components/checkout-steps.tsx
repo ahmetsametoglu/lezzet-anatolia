@@ -425,7 +425,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
                           .filter(Boolean)
                           .join(' · ')}
                       </span>
-                      {/* Liste sunucuda en ucuz + en hızlı diye kısaltıldı (`homeShortlist`); iki kart varsa neden o ikisi olduğu söylenir. */}
+                      {/* Liste sunucuda en ucuz ve en hızlı diye kısaltılır (`homeShortlist`); iki kart varsa nedeni söylenir. */}
                       {homeOptions.length === 2 && (
                         <span className="font-sans text-helper font-semibold text-olive">
                           {index === 0 ? copy.carrier.cheapest : copy.carrier.fastest}

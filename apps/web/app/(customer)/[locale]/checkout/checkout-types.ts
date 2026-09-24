@@ -142,7 +142,10 @@ export function selectableShippingOptions<T extends { needsServicePoint: boolean
   return options.filter((o) => !o.needsServicePoint);
 }
 
-/** Haritanın noktaları; `off` = sağlayıcı yapılandırılmamış, harita açılmaz. Tip `'use server'` dosyasında durmaz: Turbopack oradaki tip ihracını değer sanıyor. */
+/**
+ * Haritanın noktaları; `off` = sağlayıcı yapılandırılmamış, harita açılmaz. Tip `'use server'` dosyasında durmaz: Turbopack oradaki
+ * tip ihracını değer sanıyor.
+ */
 export type ServicePointsResult = CheckoutServicePoints;
 
 /** Sunucunun döndürdüğü teslim noktası. */

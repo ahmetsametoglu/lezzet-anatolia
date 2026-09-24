@@ -1,15 +1,9 @@
 import type { ReactNode } from 'react';
 
 /*
-  SEÇENEK SATIRI — ödeme ekranının listeleri (teslimat yolu · ödeme yolu · kargo servisi) aynı satırı çizer; native
-  müşteri kitinin seçenek satırıyla aynı ölçüler.
-
-  KAPALI SEÇENEK SOLDURULUR ama GİZLENMEZ: kapalı yolun SEBEBİ alt satırda, hata kırmızısıyla
-  (`descriptionTone="danger"`) — soluk gri bir cümleyi müşteri fark etmiyor.
-
-  Eylemsiz satır DÜĞME DEĞİLDİR: teslimat yolu adresin cevabıdır, ona dokunmak bir şey değiştirmez ve basılabilir
-  görünüp iş yapmayan öğe yazılmaz — `onClick` verilmezse satır düz kutu çizilir. Seçililik ekran okuyucuya
-  `aria-pressed` ile gider; renk ve çerçeve farkı ulaşmaz.
+  Ödeme ekranının seçenek satırı, native müşteri kitinin seçenek satırıyla aynı ölçüde; kapalı seçenek gizlenmez, sebebi alt satırda
+  hata kırmızısıyla yazılır, çünkü soluk gri cümleyi müşteri fark etmiyor. `onClick` verilmeyen satır düğme değil düz kutudur:
+  basılabilir görünüp iş yapmayan öğe yazılmaz; seçililik ekran okuyucuya `aria-pressed` ile gider.
 */
 
 interface PhoneOptionRowProps {
