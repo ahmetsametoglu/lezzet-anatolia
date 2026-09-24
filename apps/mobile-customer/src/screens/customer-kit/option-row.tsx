@@ -5,15 +5,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 
 /*
-  SEÇENEK SATIRI — checkout'un üç listesi (adres · teslimat yolu · ödeme yolu) aynı satırı
-  kullanıyor (v3:510, 525, 538): başlık + alt satır, seçiliyken kum zemin ve mürekkep çerçeve.
-
-  SEÇİLİ OLMA A11Y'YE DE GİDER (`selected`): renk ve çerçeve farkı ekran okuyucuya ulaşmaz —
-  kitin `PressableSurface`ı bu bilgiyi taşıyor, burada yalnız geçiriliyor.
-
-  ENGELLİ SEÇENEK SOLDURULUR ama GİZLENMEZ (şablonun `opacity` kalıbı): "bu ürünler kargoya
-  verilemiyor" bilgisini ancak seçeneği görerek anlayabilirsiniz; listeden çıkarmak sebebi de
-  görünmez yapardı.
+  Checkout listelerinin ortak satırı; seçililik ekran okuyucuya `PressableSurface` ile gider, çünkü renk ve çerçeve farkı ulaşmaz.
+  Kapalı seçenek soldurulur ama gizlenmez: listeden çıkarmak kapalı olmanın sebebini de görünmez yapardı.
 */
 
 interface OptionRowProps {
@@ -22,24 +15,12 @@ interface OptionRowProps {
   description?: string;
   selected: boolean;
   onPress: () => void;
-  /**
-   * UZUN BASMA — satırın ikincil eylemi (21.215: checkout'ta kayıtlı adresi düzenlemek). Kısa
-   * dokunuş seçer, uzun basma düzenler; iki ayrı hareket olduğu için titreşimleri de ayrı
-   * (`PressableSurface` künyesi: uzun basma `hapticCommit`).
-   */
+  /** Satırın ikincil eylemi (kayıtlı adresi düzenlemek): kısa dokunuş seçer, uzun basma düzenler ve titreşimi ayrıdır. */
   onLongPress?: () => void;
-  /**
-   * Köşedeki silik ipucu — uzun basmanın VARLIĞINI söyler (kullanıcı isteği 21.215). Uzun basma
-   * görünmez bir harekettir; ipucusuz yalnız bilen bulur. Ekran okuyucuya da ipucu olarak gider.
-   */
+  /** Köşedeki silik ipucu: uzun basma görünmez bir harekettir, ipucusuz yalnız bilen bulur; ekran okuyucuya da ipucu olarak gider. */
   hint?: string;
   disabled?: boolean;
-  /**
-   * Alt satır SEBEP bildiriyor mu (kullanıcı kararı 10.08). Kapalı bir seçeneğin sadece
-   * SOLUKLAŞMASI yetmiyordu: müşteri neden kapalı olduğunu okumak için soluk gri bir cümleyi
-   * fark etmek zorunda kalıyordu. Sebep sistemin hata kırmızısıyla yazılınca göz oraya gidiyor.
-   * Ton `error` token'ından gelir — ham hex ve Tailwind sabiti YASAK (CLAUDE §3).
-   */
+  /** Alt satır kapalı yolun sebebini mi bildiriyor: sebep hata kırmızısıyla yazılır, çünkü soluk gri cümleyi müşteri fark etmiyor. */
   descriptionTone?: 'muted' | 'danger';
   /** Başlığın sağındaki rozet ("varsayılan"). */
   trailing?: ReactNode;
@@ -121,7 +102,7 @@ const styles = StyleSheet.create((theme) => ({
     lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.muted,
   },
-  /** Silik ipucu — sağ alt köşe, yardımcı kademe (MB-46: `helper` yalnız gerçek yardımcı rolde). */
+  /** Silik ipucu — sağ alt köşe, yardımcı kademe; `helper` yalnız gerçek yardımcı rolde. */
   hint: {
     alignSelf: 'flex-end',
     fontFamily: theme.font.body[400],

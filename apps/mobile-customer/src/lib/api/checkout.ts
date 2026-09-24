@@ -14,11 +14,8 @@ import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetc
 import { queryString, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
-  Checkout ekranının okuması, sipariş açan yazma ve onay ekranının durum sorusu. Şema `@lezzet/types`ta ve uç da onunla üretir, alan
-  değişirse iki taraf derlemede kırılır. Üç uç da oturum ister; oturum yoksa çağrı ağa çıkmaz, `401` döner ve ekran giriş kapısı çizer.
-
-  Sipariş açma ucunun retleri `200` ile `data`da döner: `result.error === null` "sipariş açıldı" demek değildir, çağıran `data.status`u
-  okur. `error` yalnız taşıma arızasıdır (ağ, bozuk gövde, kimliksizlik).
+  Şema `@lezzet/types`ta ve uç da onunla üretir, alan değişirse iki taraf derlemede kırılır; oturum yoksa çağrı ağa çıkmaz ve `401` döner.
+  Sipariş açma ucunun retleri `200` ile `data`da döner, `error` yalnız taşıma arızasıdır (ağ, bozuk gövde, kimliksizlik).
 */
 
 /** Okumanın bağlamı: aynı sepet başka adreste başka yolla, ücretle ve ödeme yollarıyla döner. */
@@ -36,8 +33,6 @@ interface CheckoutQuery {
 
 /** `z.input`: varsayılanlı alanlar isteğe bağlı. */
 type CheckoutOrderBody = z.input<typeof CheckoutOrderBodySchema>;
-
-/** Verilmemiş parametre sorgu dizesine yazılmaz. */
 
 /** Boş dize = "yok" ile aynı kapıya çıkar: sunucuyu boş bir parametreyle meşgul etmeyiz. */
 function present(value: string | null): string | undefined {

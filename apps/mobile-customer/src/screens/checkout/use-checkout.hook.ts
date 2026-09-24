@@ -5,29 +5,9 @@ import type { Locale } from '@lezzet/i18n';
 import { fetchCheckout } from '@/lib/api/checkout';
 
 /*
-  CHECKOUT ANLIK GÖRÜNTÜSÜ (21.22) — ekranın TEK okuması.
-
-  ── EKRAN SEÇER, SUNUCU KARAR VERİR ─────────────────────────────────────────
-  Uygun günler, açık ödeme yolları, kargo ücreti ve toplam SUNUCUDAN gelir; ekran kendi listesini
-  UYDURMAZ. Bu yüzden okumanın bağlamı (adres · kupon · kargo grubu) hook'un parametresidir:
-  adres değişince teslimat da ücret de ödeme yolları da değişir ve hepsi TEK turda tazelenir.
-
-  ── ESKİMİŞ CEVAP KORUMASI (`generation`) ───────────────────────────────────
-  Katalog hook'unun aynı kuralı: her yük sayacı artırır, uçuşta kalan eski istekler döndüğünde
-  sayacı tutmadıkları için sonuçları YAZILMAZ. Burada zorunluluk daha da açık — iki adrese arka
-  arkaya dokunan parmak, ilk isteğin geç gelen cevabıyla YANLIŞ adresin ücretini görürdü ve
-  onaya bastığında sunucu başka bir hesap uygulardı.
-
-  ── ADRES DEĞİŞİMİNDE EKRAN BOŞALMAZ ────────────────────────────────────────
-  İlk yük `loading`tir; sonraki yükler `refreshing` bayrağıyla döner ve önceki anlık görüntü
-  ekranda kalır. Boşaltmak, seçim yapan müşteriyi her dokunuşta boş bir ekrana bakmaya zorlardı.
-  Onay düğmesi yine de tazeleme boyunca KAPALIDIR (ekran kararı): eski ücretle onaylanan bir
-  sipariş, gösterilenden başka bir tutarla açılırdı.
-
-  ── MİSAFİR HÂLİ HATA DEĞİL ─────────────────────────────────────────────────
-  Uç Bearer'ın arkasında ve oturumsuz çağrı ağa hiç çıkmadan `401` döner (`authorizedFetch`).
-  O hâl `guest`tir ve ekran giriş kapısı çizer; `error` yalnız oturum VARKEN okunamamaktır
-  (`use-me.hook` ile aynı ayrım).
+  Ekranın tek okuması: günler, ödeme yolları, ücret ve toplam sunucudan gelir, okumanın bağlamı hook'un parametresidir ve biri değişince
+  hepsi tek turda tazelenir. Geç dönen eski cevap `generation` sayacıyla düşer, yoksa arka arkaya iki adrese dokunan müşteri yanlış
+  adresin ücretini görürdü; sonraki yükler ekranı boşaltmadan `refreshing`le döner.
 */
 
 type CheckoutStatus = 'loading' | 'guest' | 'ready' | 'error';
