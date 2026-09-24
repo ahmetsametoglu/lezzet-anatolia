@@ -1,27 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
 import { orderServicePoints } from '@lezzet/domain-core';
-import { pointCarriers } from '@lezzet/helper';
-import type { CheckoutShippingOption } from '@lezzet/types';
+import { carrierToneOf, pointCarriers, type CarrierTone, type ServicePointEntry } from '@lezzet/helper';
+import type { CheckoutServicePoints, CheckoutShippingOption } from '@lezzet/types';
 import { loadServicePointsAction } from './actions';
-import type { CheckoutServicePoint } from './checkout-types';
 
-/** Listedeki nokta ve onu taşıyacak servis. */
-export type PointEntry = { point: CheckoutServicePoint; option: CheckoutShippingOption };
+type LoadState =
+  | { phase: 'loading' }
+  | (Pick<Extract<CheckoutServicePoints, { status: 'ok' }>, 'failedCarriers' | 'origin'> & { phase: 'ready'; entries: ServicePointEntry[] })
+  | { phase: 'failed' };
 
-type LoadState = { phase: 'loading' } | { phase: 'ready'; entries: PointEntry[]; failedCarriers: string[] } | { phase: 'failed' };
+/** Renk token'ının sınıfı; Tailwind sınıfı kaynakta tam adıyla görmeli, token adından kurulan sınıf derlenmezdi. */
+const TONE_CLASS: Record<CarrierTone, string> = {
+  'brand-google': 'bg-brand-google',
+  terracotta: 'bg-terracotta',
+  star: 'bg-star',
+  'olive-light': 'bg-olive-light',
+};
 
-/**
- * Taşıyıcı renkleri, fiyat sırasıyla; tonca birbirinden uzak seçildi ki yan yana noktalar karışmasın. Zeytin seçili, mürekkep
- * üzerine gelinen nokta ve adres için ayrıldığından burada yok.
- */
-const CARRIER_TONES = ['bg-brand-messenger', 'bg-terracotta', 'bg-star', 'bg-brand-instagram', 'bg-olive-light'];
+const NO_ENTRIES: ServicePointEntry[] = [];
 
-const NO_ENTRIES: PointEntry[] = [];
-
-/** Taşıyıcının renk sınıfı; sıra en düşük nokta fiyatından gelir, böylece seçici ve seçilen noktanın kartı aynı rengi verir. */
-export function carrierToneOf(pointOptions: readonly CheckoutShippingOption[]): (carrierCode: string) => string {
-  const tones = new Map(pointCarriers(pointOptions).map((c, i) => [c.carrierCode, CARRIER_TONES[i % CARRIER_TONES.length]!]));
-  return (carrierCode) => tones.get(carrierCode) ?? CARRIER_TONES[0]!;
+/** Taşıyıcının renk sınıfı (`carrierToneOf`); seçici ve seçilen noktanın kartı aynı rengi verir. */
+export function carrierToneClassOf(pointOptions: readonly CheckoutShippingOption[]): (carrierCode: string) => string {
+  const toneOf = carrierToneOf(pointOptions);
+  return (carrierCode) => TONE_CLASS[toneOf(carrierCode)];
 }
 
 /**
@@ -31,7 +32,7 @@ export function carrierToneOf(pointOptions: readonly CheckoutShippingOption[]): 
 export function useServicePoints(addressId: string, options: readonly CheckoutShippingOption[]) {
   const pointOptions = useMemo(() => options.filter((o) => o.needsServicePoint), [options]);
   const carriers = useMemo(() => pointCarriers(pointOptions), [pointOptions]);
-  const toneOf = useMemo(() => carrierToneOf(pointOptions), [pointOptions]);
+  const toneOf = useMemo(() => carrierToneClassOf(pointOptions), [pointOptions]);
   const [load, setLoad] = useState<LoadState>({ phase: 'loading' });
 
   useEffect(() => {
@@ -43,7 +44,12 @@ export function useServicePoints(addressId: string, options: readonly CheckoutSh
       );
       if (cancelled) return;
       if (!data || data.status !== 'ok') return setLoad({ phase: 'failed' });
-      setLoad({ phase: 'ready', entries: orderServicePoints(data.points, pointOptions), failedCarriers: data.failedCarriers });
+      setLoad({
+        phase: 'ready',
+        entries: orderServicePoints(data.points, pointOptions),
+        failedCarriers: data.failedCarriers,
+        origin: data.origin,
+      });
     })();
     return () => {
       cancelled = true;

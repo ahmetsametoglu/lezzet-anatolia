@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { OrderSchema, ServicePointSnapshotSchema } from '../entities/order.schema';
 import { DeliveryTypeEnum, PaymentMethodEnum } from '../primitives/enums.schema';
-import { MeAddressSchema } from './address-api.schema';
+import { AddressLookupPointSchema, MeAddressSchema } from './address-api.schema';
 import { CartDiscountReasonSchema } from './cart-api.schema';
 
 /**
@@ -181,7 +181,13 @@ export type CheckoutServicePoint = z.infer<typeof CheckoutServicePointSchema>;
  * düşen taşıyıcılardır, ötekilerin noktaları yine gelir.
  */
 export const CheckoutServicePointsSchema = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('ok'), points: z.array(CheckoutServicePointSchema), failedCarriers: z.array(z.string()) }),
+  z.object({
+    status: z.literal('ok'),
+    points: z.array(CheckoutServicePointSchema),
+    failedCarriers: z.array(z.string()),
+    /** Aramanın merkezi, müşterinin adresi: haritanın "Adresiniz" işareti; koordinatı çözülmemiş adreste `null`. */
+    origin: AddressLookupPointSchema.pick({ lat: true, lng: true }).nullable(),
+  }),
   z.object({ status: z.literal('address_not_found') }),
   z.object({ status: z.literal('off') }),
 ]);

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { captureError, SOURCES } from '@lezzet/observability';
+import { MAP_STYLE } from '@lezzet/helper';
 import { INTL_LOCALE, type Locale } from '@lezzet/i18n';
 
 /** Tarayıcının karo isteğine koyduğu iki değer; ikisi de karo adresinde açıkta gider. */
@@ -14,9 +15,6 @@ const CREATE_SESSION_URL = 'https://tile.googleapis.com/v1/createSession';
 // Oturum iki hafta geçerli ve bütün ziyaretçilerde ortak kullanılabiliyor; bitmesine bir gün kala yenilenir ki açık bir harita süresi
 // dolmuş jetonla karo istemesin.
 const RENEW_BEFORE_MS = 24 * 60 * 60 * 1000;
-
-// İşletme yerleşimleri kapalı: teslim noktaları da birer dükkân ve haritanın kendi dükkânlarıyla yarışmamalı.
-const STYLES = [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }];
 
 const sessions = new Map<string, { tiles: MapTiles; renewAt: number }>();
 const inFlight = new Map<string, Promise<MapTiles | null>>();
@@ -60,7 +58,7 @@ async function createSession(
         language: INTL_LOCALE[language],
         region: 'FR',
         ...(highDpi ? { scale: 'scaleFactor2x', highDpi: true } : {}),
-        styles: STYLES,
+        styles: MAP_STYLE,
       }),
     });
     if (!response.ok) {

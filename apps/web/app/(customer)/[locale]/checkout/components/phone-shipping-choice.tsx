@@ -7,7 +7,7 @@ import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CheckoutViewProps } from '../checkout-types';
-import { carrierToneOf } from '../use-service-points.hook';
+import { carrierToneClassOf } from '../use-service-points.hook';
 import { PhoneOptionRow } from './phone-option-row';
 import { PhonePointCard } from './phone-point-card';
 import { PhoneServicePointPicker } from './phone-service-point-picker';
@@ -51,7 +51,7 @@ function PhoneModeCard({ icon, title, from, selected, onClick }: PhoneModeCardPr
  * düzeni çizer; seçim sunucuya gider ve ücret yeniden çözülür.
  */
 export function PhoneShippingChoice(props: CheckoutViewProps) {
-  const { locale, snapshot, state, selectedAddress, onSelectShipping, onSelectServicePoint, onSelectShippingMode } = props;
+  const { locale, snapshot, state, onSelectShipping, onSelectServicePoint, onSelectShippingMode } = props;
   const copy = checkoutMessages[locale];
   const [pickerOpen, setPickerOpen] = useState(false);
   const shipping = snapshot.shipping;
@@ -123,7 +123,7 @@ export function PhoneShippingChoice(props: CheckoutViewProps) {
             <PhonePointCard
               entry={{ point, option: pointOption }}
               locale={locale}
-              tone={carrierToneOf(view.point)(point.carrierCode)}
+              tone={carrierToneClassOf(view.point)(point.carrierCode)}
               selected
               onClick={openPicker}
             />
@@ -145,7 +145,6 @@ export function PhoneShippingChoice(props: CheckoutViewProps) {
         <PhoneServicePointPicker
           locale={locale}
           addressId={state.addressId}
-          home={selectedAddress?.lat != null && selectedAddress.lng != null ? { lat: selectedAddress.lat, lng: selectedAddress.lng } : null}
           options={view.point}
           selected={point}
           onSelect={onSelectServicePoint}

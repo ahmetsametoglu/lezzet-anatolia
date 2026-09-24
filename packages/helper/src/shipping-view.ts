@@ -1,3 +1,11 @@
+import type { CheckoutServicePoint, CheckoutShippingOption } from '@lezzet/types';
+
+/** Seçicinin satırı: nokta ve onu taşıyacak, türünü kabul eden servis (`orderServicePoints`). */
+export type ServicePointEntry = { point: CheckoutServicePoint; option: CheckoutShippingOption };
+
+/** Haritanın Google stili; işletme yerleşimleri kapalı, çünkü teslim noktaları da dükkân ve haritanın kendi dükkânlarıyla yarışmamalı. */
+export const MAP_STYLE = [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }];
+
 /**
  * Kargo seçiminin ekran hâli: eve teslim ve teslim noktası servisleri, çizilecek tür ve her türün en düşük fiyatı. Masaüstü, telefon
  * görünümü ve native uygulama aynı kuraldan çizer.
@@ -15,10 +23,35 @@ export function shippingChoiceView<O extends { needsServicePoint: boolean; price
   return { home, point, hasModes, mode, homeFromCents: fromCents(home), pointFromCents: fromCents(point) };
 }
 
+/**
+ * Ekran nokta istiyor mu: tür, kayıtlı seçim değil ekranın çizdiği türdür, çünkü yalnız nokta servisi kaldıysa kayıtlı seçim `home`
+ * olsa da nokta istenir. Eşik üstünde nokta istenmez, seçici çizilmez ve koliyi sunucu eve gönderir.
+ */
+export function servicePointRequired(
+  shipping: { mode: 'customer' | 'auto'; options: readonly { needsServicePoint: boolean; priceCents: number }[] } | null,
+  requestedMode: 'home' | 'point',
+): boolean {
+  if (shipping === null || shipping.mode === 'auto') return false;
+  return shippingChoiceView(shipping.options, requestedMode).mode === 'point';
+}
+
+/**
+ * Taşıyıcı renkleri, fiyat sırasıyla: web ve native aynı müşteri token'larını çizer, tonca uzak seçildi ki yan yana noktalar
+ * karışmasın. Zeytin seçili nokta, mürekkep adres için ayrıldığından listede yok.
+ */
+export const CARRIER_TONES = ['brand-google', 'terracotta', 'star', 'olive-light'] as const;
+export type CarrierTone = (typeof CARRIER_TONES)[number];
+
 /** Haritanın taşıyıcıları: her birinin en ucuz nokta servisi, fiyata göre sıralı; lejant ve renk sırası buradan gelir. */
 export function pointCarriers<O extends { carrierCode: string; priceCents: number }>(pointOptions: readonly O[]): O[] {
   const byPrice = [...pointOptions].sort((a, b) => a.priceCents - b.priceCents);
   return byPrice.filter((o, i) => byPrice.findIndex((x) => x.carrierCode === o.carrierCode) === i);
+}
+
+/** Taşıyıcının renk token'ı; seçici ve seçilen noktanın kartı aynı listeden okur, renk ikisinde de aynı çıkar. */
+export function carrierToneOf(pointOptions: readonly { carrierCode: string; priceCents: number }[]): (carrierCode: string) => CarrierTone {
+  const tones = new Map(pointCarriers(pointOptions).map((c, i) => [c.carrierCode, CARRIER_TONES[i % CARRIER_TONES.length]!]));
+  return (carrierCode) => tones.get(carrierCode) ?? CARRIER_TONES[0];
 }
 
 /** "820 m" · "1,4 km"; ondalık ayracı dile göre. */

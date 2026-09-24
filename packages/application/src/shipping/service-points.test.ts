@@ -24,6 +24,7 @@ beforeAll(async () => {
   addressId = (
     await new AddressService(db).addForCustomer({
       customerId, recipient: 'Claire', phone: '+33600000000', line1: '17 avenue Jean Jaurès', postalCode: '69007', city: 'Lyon', country: 'FR',
+      lat: 45.7497, lng: 4.8416,
     })
   ).id;
 });
@@ -43,8 +44,13 @@ describe('searchCheckoutServicePoints', () => {
     });
 
     const sonuc = await searchCheckoutServicePoints(db, provider, { customerId, addressId, carrierCodes: ['mondial_relay', 'dhl', 'colissimo'] });
-    // Yakından uzağa tek liste: taşıyıcı sırası değil müşterinin mesafesi.
-    expect(sonuc).toEqual({ status: 'ok', points: [nokta('col-yakin', 'colissimo', 120), nokta('mr-uzak', 'mondial_relay', 900)], failedCarriers: ['dhl'] });
+    // Yakından uzağa tek liste: taşıyıcı sırası değil müşterinin mesafesi; merkez adresin kendisi, iki yüzey "Adresiniz"i ondan çizer.
+    expect(sonuc).toEqual({
+      status: 'ok',
+      points: [nokta('col-yakin', 'colissimo', 120), nokta('mr-uzak', 'mondial_relay', 900)],
+      failedCarriers: ['dhl'],
+      origin: { lat: 45.7497, lng: 4.8416 },
+    });
     const { data } = await db.from('error_log').select('id').eq('source', 'application-shipping').eq('context->>addressId', addressId);
     expect(data).toHaveLength(1);
   });

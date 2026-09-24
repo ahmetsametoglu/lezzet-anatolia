@@ -46,7 +46,12 @@ export async function searchCheckoutServicePoints(
     // Taşıyıcı hesapta etkin değilse sağlayıcı 400 döner: bu bir yapılandırma işidir ve sistem ekranında görünmeli.
     await captureError(result.reason, { source: SOURCES.applicationShipping, context: { carrierCode, addressId: input.addressId } });
   }
-  return { status: 'ok', points: points.sort((a, b) => (a.distanceM ?? Infinity) - (b.distanceM ?? Infinity)), failedCarriers };
+  return {
+    status: 'ok',
+    points: points.sort((a, b) => (a.distanceM ?? Infinity) - (b.distanceM ?? Infinity)),
+    failedCarriers,
+    origin: address.lat === null || address.lng === null ? null : { lat: address.lat, lng: address.lng },
+  };
 }
 
 /** Ödeme ekranının nokta araması; web eylemi ve mobil uç bu kapıdan geçer. Sağlayıcı yapılandırılmamışsa `off`. */

@@ -15,8 +15,6 @@ import { ServicePointMap } from './service-point-map';
 interface ServicePointPickerProps {
   locale: Locale;
   addressId: string;
-  /** Müşterinin adresinin konumu; yoksa harita noktalara göre açılır. */
-  home: { lat: number; lng: number } | null;
   options: readonly CheckoutShippingOption[];
   selected: SelectedServicePoint | null;
   onSelect: (point: SelectedServicePoint) => void;
@@ -27,7 +25,7 @@ interface ServicePointPickerProps {
  * Bütün noktaya teslim servislerinin noktaları tek haritada; müşteri önce servis seçmez, noktayı seçer ve servis noktadan gelir.
  * Her nokta, türünü kabul eden servisin fiyatıyla görünür; fiyat anlık görüntünün teklifidir, sipariş anında yeniden doğrulanır.
  */
-export function ServicePointPicker({ locale, addressId, home, options, selected, onSelect, onClose }: ServicePointPickerProps) {
+export function ServicePointPicker({ locale, addressId, options, selected, onSelect, onClose }: ServicePointPickerProps) {
   const copy = checkoutMessages[locale];
   const { load, entries, pins, carriers, toneOf } = useServicePoints(addressId, options);
   const [pendingId, setPendingId] = useState<string | null>(selected?.id ?? null);
@@ -121,7 +119,7 @@ export function ServicePointPicker({ locale, addressId, home, options, selected,
             pins={pins}
             selectedId={pendingId}
             highlightId={hoverId}
-            home={home ? { ...home, label: copy.point.yourAddress } : null}
+            home={load.phase === 'ready' && load.origin ? { ...load.origin, label: copy.point.yourAddress } : null}
             onPick={(id) => {
               pendingFromMap.current = true;
               setPendingId(id);

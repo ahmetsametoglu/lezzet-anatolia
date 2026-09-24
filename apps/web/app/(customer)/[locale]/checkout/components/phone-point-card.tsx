@@ -1,11 +1,10 @@
-import { distanceLabel, openingLines, pointAddress, pointText } from '@lezzet/helper';
+import { distanceLabel, openingLines, pointAddress, pointText, type ServicePointEntry } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { formatPrice } from '@/lib/storefront/format';
-import type { PointEntry } from '../use-service-points.hook';
 
 interface PhonePointCardProps {
-  entry: PointEntry;
+  entry: ServicePointEntry;
   locale: Locale;
   /** Taşıyıcının renk sınıfı (`carrierToneOf`). */
   tone: string;

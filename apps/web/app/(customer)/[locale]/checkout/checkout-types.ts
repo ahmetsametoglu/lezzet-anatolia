@@ -1,6 +1,6 @@
 import type { AddressCheckOutcome, CheckoutSnapshot } from '@lezzet/application';
-import type { Address, CheckoutServicePoints, PaymentMethod } from '@lezzet/types';
-import { shippingChoiceView } from '@lezzet/helper';
+import type { Address, CheckoutServicePoint, CheckoutServicePoints, PaymentMethod } from '@lezzet/types';
+import { servicePointRequired } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 // Telefon görünümü native ödeme ekranıyla aynı metni kullanır (CLAUDE §2).
 import type checkoutMessages from '@lezzet/i18n/customer/checkout';
@@ -144,20 +144,13 @@ export function isSeparateOrder(shippingOrder: boolean, cart: Pick<CartView, 'li
  */
 export type ServicePointsResult = CheckoutServicePoints;
 
-/** Sunucunun döndürdüğü teslim noktası. */
-export type CheckoutServicePoint = Extract<ServicePointsResult, { status: 'ok' }>['points'][number];
-
 /** Haritada seçilen nokta: nokta + türünü kabul eden servisin kodu. */
 export type SelectedServicePoint = CheckoutServicePoint & { optionCode: string };
 
-/**
- * Ekran nokta istiyor ama nokta seçilmemiş mi: tür, kayıtlı seçim değil ekranın çizdiği türdür, çünkü yalnız nokta servisi kaldıysa
- * kayıtlı seçim `home` olsa da nokta istenir. Eşik üstünde nokta istenmez, seçici çizilmez ve koliyi sunucu eve gönderir.
- */
+/** Ekran nokta istiyor ama nokta seçilmemiş mi (`servicePointRequired`); onay düğmesi ve kart uyarısı aynı sorudan okur. */
 export function servicePointMissing(
   state: Pick<CheckoutState, 'shippingMode' | 'servicePoint'>,
   shipping: CheckoutSnapshot['shipping'],
 ): boolean {
-  if (state.servicePoint !== null || shipping === null || shipping.mode === 'auto') return false;
-  return shippingChoiceView(shipping.options, state.shippingMode).mode === 'point';
+  return state.servicePoint === null && servicePointRequired(shipping, state.shippingMode);
 }

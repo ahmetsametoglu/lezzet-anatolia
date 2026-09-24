@@ -474,7 +474,6 @@ export function DeliveryStep(props: CheckoutViewProps) {
                     <ServicePointPicker
                       locale={locale}
                       addressId={state.addressId}
-                      home={selectedAddress?.lat != null && selectedAddress.lng != null ? { lat: selectedAddress.lat, lng: selectedAddress.lng } : null}
                       options={snapshot.shipping.options}
                       selected={state.servicePoint}
                       onSelect={onSelectServicePoint}
@@ -513,7 +512,7 @@ export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, onTo
   if (!payment) return null;
 
   const options: { method: PaymentMethod; onAccount: boolean; title: string; body: string; blocked: string | null }[] = [
-    // `online` Stripe yoludur (peşin, sayfa içinde); `card`/`cheque` kapıda kullanılan araçlardır ve hangisinin kullanıldığını
+    // `online` Stripe yoludur (peşin, sayfa içinde); `card` kapıda kullanılan bir araçtır ve kullanılıp kullanılmadığını
     // kurye kapanışta yazar.
     { method: 'online', onAccount: false, title: t.payment.card, body: t.payment.cardBody, blocked: null },
     {

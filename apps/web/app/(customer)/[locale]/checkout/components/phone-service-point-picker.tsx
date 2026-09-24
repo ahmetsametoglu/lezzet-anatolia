@@ -15,8 +15,6 @@ import { ServicePointMap } from './service-point-map';
 interface PhoneServicePointPickerProps {
   locale: Locale;
   addressId: string;
-  /** Müşterinin adresinin konumu; yoksa harita noktalara göre açılır. */
-  home: { lat: number; lng: number } | null;
   options: readonly CheckoutShippingOption[];
   selected: SelectedServicePoint | null;
   onSelect: (point: SelectedServicePoint) => void;
@@ -27,7 +25,7 @@ interface PhoneServicePointPickerProps {
  * Telefonun nokta seçicisi: harita tam ekran, dokunulan noktanın kartı altta; liste mevcut çekmecede, en ucuz başta. Seçim üstteki
  * düğmeyle yapılır; native ödeme ekranı aynı düzeni çizer.
  */
-export function PhoneServicePointPicker({ locale, addressId, home, options, selected, onSelect, onClose }: PhoneServicePointPickerProps) {
+export function PhoneServicePointPicker({ locale, addressId, options, selected, onSelect, onClose }: PhoneServicePointPickerProps) {
   const copy = checkoutMessages[locale];
   const { load, entries, pins, carriers, toneOf } = useServicePoints(addressId, options);
   const [pendingId, setPendingId] = useState<string | null>(selected?.id ?? null);
@@ -85,7 +83,7 @@ export function PhoneServicePointPicker({ locale, addressId, home, options, sele
             pins={pins}
             selectedId={pendingId}
             highlightId={null}
-            home={home ? { ...home, label: copy.point.yourAddress } : null}
+            home={load.phase === 'ready' && load.origin ? { ...load.origin, label: copy.point.yourAddress } : null}
             onPick={setPendingId}
           />
         </div>
