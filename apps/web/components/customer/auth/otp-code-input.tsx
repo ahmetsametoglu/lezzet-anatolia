@@ -29,8 +29,8 @@ const LABELS: Record<
   Record<'verifying' | 'success' | 'resendPrompt' | 'resend' | 'resending' | 'resent', string> & { sentTo: (email: string) => string }
 > = {
   tr: {
-    verifying: 'Doğrulanıyor…',
-    success: 'Doğrulandı',
+    verifying: 'Kod kontrol ediliyor…',
+    success: 'Kod onaylandı',
     resendPrompt: 'Kod gelmedi mi?',
     resend: 'Yeniden gönder',
     resending: 'Gönderiliyor…',
@@ -58,9 +58,8 @@ const LABELS: Record<
 };
 
 /**
- * Yeniden-kullanılabilir 6 haneli OTP girişi. Paste, son hanede otomatik gönderim,
- * backspace/ok navigasyonu ve geri-sayımlı yeniden-gönderim içerir. Alan-özel aksiyon
- * `onVerify`/`onResend` callback'leriyle sağlanır (checkout, e-posta değişimi vb. paylaşır).
+ * 6 haneli kod girişi: yapıştırma, son hanede kendiliğinden gönderim, geri sayımlı yeniden gönderim.
+ * Alana özel iş `onVerify`/`onResend`le çağırandan gelir, çünkü giriş, sepet ve profesyonel başvurusu aynı kutuyu paylaşır.
  */
 export function OtpCodeInput({ email, locale, initialCooldownSec = 45, onVerify, onResend, onSuccess }: Props) {
   const t = LABELS[locale];

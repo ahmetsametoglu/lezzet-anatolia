@@ -5,14 +5,14 @@ const NAV = { waitUntil: 'domcontentloaded' as const };
 
 /** Telefon girişi yalnız `mobile-web`de anlamlı (masaüstü aynı adreste kendi girişini çizer); kod gönderilmez, veritabanına yazılmaz. */
 test.describe('telefon girişi — ziyaretçi', () => {
-  test('Hızlı Doğrulama: Google ve e-posta yolları, e-posta adımı', async ({ page }) => {
+  test('Giriş: Google ve e-posta yolları, e-posta adımı', async ({ page }) => {
     test.skip(test.info().project.name !== 'mobile-web', 'telefon görünümüne özgü');
 
     const res = await page.goto('/fr/connexion', NAV);
     expect(res?.ok()).toBeTruthy();
 
     await expect(page.locator('h1')).toHaveCount(1);
-    await expect(page.getByRole('heading', { level: 1, name: 'Vérifiez-vous en quelques secondes' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Connectez-vous en quelques secondes' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Retour' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'notre politique de confidentialité' })).toBeVisible();
 
@@ -35,7 +35,7 @@ test.describe('telefon girişi — ziyaretçi', () => {
     await expect(page).toHaveURL(/\/fr\/connexion$/);
   });
 
-  test('Bildirimler: misafir sayfada kalır, doğrulama daveti girişe götürür', async ({ page }) => {
+  test('Bildirimler: misafir sayfada kalır, giriş daveti girişe götürür', async ({ page }) => {
     test.skip(test.info().project.name !== 'mobile-web', 'telefon görünümüne özgü');
 
     const res = await page.goto('/fr/compte/notifications', NAV);
@@ -43,7 +43,7 @@ test.describe('telefon girişi — ziyaretçi', () => {
     await expect(page).toHaveURL(/\/fr\/compte\/notifications$/);
     await expect(page.getByText('Vos notifications arrivent ici', { exact: true })).toBeVisible();
 
-    await page.getByRole('link', { name: 'Vérification rapide' }).click();
+    await page.getByRole('link', { name: 'Se connecter', exact: true }).click();
     await expect(page).toHaveURL(/\/fr\/connexion\?next=/);
   });
 });

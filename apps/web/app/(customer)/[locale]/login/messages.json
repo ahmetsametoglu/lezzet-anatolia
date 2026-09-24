@@ -1,14 +1,14 @@
 {
   "tr": {
     "back": "← Geri",
-    "title": "Birkaç saniyede doğrulanın",
+    "title": "Birkaç saniyede giriş yapın",
     "googleCta": "Google ile devam et",
     "orEmail": "veya e-posta ile",
     "emailPlaceholder": "E-posta adresiniz",
     "sendCta": "Tek kullanımlık kod gönder",
     "sending": "Gönderiliyor…",
     "codeTitle": "Kodu girin",
-    "consentBefore": "Hangi yolla doğrulanırsanız doğrulanın aynı hesabınıza ulaşırsınız. Devam ederek ",
+    "consentBefore": "Hangi yolu seçerseniz seçin aynı hesabınıza ulaşırsınız. Devam ederek ",
     "consentLink": "gizlilik politikasını",
     "consentAfter": " kabul etmiş olursunuz.",
     "heroPill": "Soğuk zincirle taptaze",
@@ -17,18 +17,18 @@
     "testimonialAuthor": "Ayşe · Strasbourg",
     "heroCodeText": "Neredeyse hazır — kod yolda.",
     "reasons": {
-      "default": "Devam etmek için birkaç saniye. Şifre yok — hiç olmadı.",
-      "checkout": "Siparişinizi tamamlamak için. Şifre yok — hiç olmadı.",
-      "talepler": "Taleplerinizi görmek için. Şifre yok — hiç olmadı.",
-      "hesap": "Hesabınıza ulaşmak için. Şifre yok — hiç olmadı.",
-      "geribildirim": "Değerlendirmenizi kaydetmek için. Şifre yok — hiç olmadı.",
-      "sepet": "Sohbette hazırladığınız sepeti görmek için. Şifre yok — hiç olmadı.",
-      "baglanti": "Sohbetinizi hesabınıza bağlamak için. Şifre yok — hiç olmadı."
+      "default": "Devam etmek için birkaç saniye. Şifre gerekmez.",
+      "checkout": "Siparişinizi tamamlamak için. Şifre gerekmez.",
+      "talepler": "Taleplerinizi görmek için. Şifre gerekmez.",
+      "hesap": "Hesabınıza ulaşmak için. Şifre gerekmez.",
+      "geribildirim": "Değerlendirmenizi kaydetmek için. Şifre gerekmez.",
+      "sepet": "Sohbette hazırladığınız sepeti görmek için. Şifre gerekmez.",
+      "baglanti": "Sohbetinizi hesabınıza bağlamak için. Şifre gerekmez."
     }
   },
   "fr": {
     "back": "← Retour",
-    "title": "Vérifiez-vous en quelques secondes",
+    "title": "Connectez-vous en quelques secondes",
     "googleCta": "Continuer avec Google",
     "orEmail": "ou par e-mail",
     "emailPlaceholder": "Votre adresse e-mail",
@@ -44,18 +44,18 @@
     "testimonialAuthor": "Ayşe · Strasbourg",
     "heroCodeText": "Presque prêt — le code arrive.",
     "reasons": {
-      "default": "Quelques secondes pour continuer. Pas de mot de passe — jamais.",
-      "checkout": "Pour finaliser votre commande. Pas de mot de passe — jamais.",
-      "talepler": "Pour voir vos demandes. Pas de mot de passe — jamais.",
-      "hesap": "Pour accéder à votre compte. Pas de mot de passe — jamais.",
-      "geribildirim": "Pour enregistrer votre avis. Pas de mot de passe — jamais.",
-      "sepet": "Pour retrouver le panier préparé dans la conversation. Pas de mot de passe — jamais.",
-      "baglanti": "Pour relier votre conversation à votre compte. Pas de mot de passe — jamais."
+      "default": "Quelques secondes pour continuer. Sans mot de passe.",
+      "checkout": "Pour finaliser votre commande. Sans mot de passe.",
+      "talepler": "Pour voir vos demandes. Sans mot de passe.",
+      "hesap": "Pour accéder à votre compte. Sans mot de passe.",
+      "geribildirim": "Pour enregistrer votre avis. Sans mot de passe.",
+      "sepet": "Pour retrouver le panier préparé dans la conversation. Sans mot de passe.",
+      "baglanti": "Pour relier votre conversation à votre compte. Sans mot de passe."
     }
   },
   "de": {
     "back": "← Zurück",
-    "title": "In wenigen Sekunden bestätigen",
+    "title": "In wenigen Sekunden anmelden",
     "googleCta": "Mit Google fortfahren",
     "orEmail": "oder per E-Mail",
     "emailPlaceholder": "Ihre E-Mail-Adresse",
@@ -71,13 +71,13 @@
     "testimonialAuthor": "Ayşe · Straßburg",
     "heroCodeText": "Fast fertig — der Code ist unterwegs.",
     "reasons": {
-      "default": "Nur ein paar Sekunden, um fortzufahren. Kein Passwort — nie.",
-      "checkout": "Um Ihre Bestellung abzuschließen. Kein Passwort — nie.",
-      "talepler": "Um Ihre Anfragen zu sehen. Kein Passwort — nie.",
-      "hesap": "Um auf Ihr Konto zuzugreifen. Kein Passwort — nie.",
-      "geribildirim": "Um Ihre Bewertung zu speichern. Kein Passwort — nie.",
-      "sepet": "Um den im Chat vorbereiteten Warenkorb zu öffnen. Kein Passwort — nie.",
-      "baglanti": "Um Ihren Chat mit Ihrem Konto zu verbinden. Kein Passwort — nie."
+      "default": "Nur ein paar Sekunden, um fortzufahren. Ganz ohne Passwort.",
+      "checkout": "Um Ihre Bestellung abzuschließen. Ganz ohne Passwort.",
+      "talepler": "Um Ihre Anfragen zu sehen. Ganz ohne Passwort.",
+      "hesap": "Um auf Ihr Konto zuzugreifen. Ganz ohne Passwort.",
+      "geribildirim": "Um Ihre Bewertung zu speichern. Ganz ohne Passwort.",
+      "sepet": "Um den im Chat vorbereiteten Warenkorb zu öffnen. Ganz ohne Passwort.",
+      "baglanti": "Um Ihren Chat mit Ihrem Konto zu verbinden. Ganz ohne Passwort."
     }
   }
 }

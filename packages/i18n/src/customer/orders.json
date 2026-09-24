@@ -13,9 +13,9 @@
       "ready_for_pickup": "Teslime hazır"
     },
     "guest": {
-      "title": "Siparişleriniz için hızlı doğrulama",
-      "body": "Şifre yok — e-posta ya da Google ile birkaç saniyede doğrulanın.",
-      "cta": "Hızlı doğrulama"
+      "title": "Siparişlerinizi görmek için giriş yapın",
+      "body": "Şifre yok — e-posta ya da Google ile birkaç saniyede girersiniz.",
+      "cta": "Giriş yap"
     },
     "empty": {
       "title": "Henüz siparişiniz yok",
@@ -117,9 +117,9 @@
       "ready_for_pickup": "Prête au retrait"
     },
     "guest": {
-      "title": "Vérification rapide pour vos commandes",
+      "title": "Connectez-vous pour voir vos commandes",
       "body": "Pas de mot de passe — e-mail ou Google en quelques secondes.",
-      "cta": "Vérification rapide"
+      "cta": "Se connecter"
     },
     "empty": {
       "title": "Aucune commande pour l'instant",
@@ -221,9 +221,9 @@
       "ready_for_pickup": "Abholbereit"
     },
     "guest": {
-      "title": "Schnelle Verifizierung für Ihre Bestellungen",
+      "title": "Melden Sie sich an, um Ihre Bestellungen zu sehen",
       "body": "Kein Passwort — mit E-Mail oder Google in Sekunden.",
-      "cta": "Schnelle Verifizierung"
+      "cta": "Anmelden"
     },
     "empty": {
       "title": "Noch keine Bestellungen",

@@ -5,14 +5,8 @@ import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 import { AuthCallbackScreen } from './auth-callback-screen';
 
 /*
-  OAUTH DÖNÜŞ EKRANI — derin bağlantının işlendiği tek yer olduğunun kanıtı: kod başarıyla
-  değişirse hesaba `replace` + karşılama toast'ı; ret adlı anahtarla login'e döner; kod hiç
-  yoksa değişim DENENMEZ (elle açılmış URL'e istek harcanmaz). Künyesi eksik müşteride hesap
-  yerine tamamlama akışına gidilir (kullanıcı kararı 10.08).
-
-  OTURUM VE `/me` MOCK'U ŞART: ekran hesaba geçmeden ÖNCE profili okuyor (yarış künyesi kaynak
-  dosyada) ve o yol jetonu supabase'den alıyor. Mock eksik bırakılınca test gerçek akışı değil,
-  kendi kurgusunun patlamasını ölçüyordu.
+  Oturum ve `/me` mock'u şart: ekran hesaba geçmeden önce profili okur, jetonu da supabase'den alır.
+  Mock eksik kalırsa test gerçek akışı değil kendi kurgusunun patlamasını ölçer.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
@@ -36,12 +30,12 @@ jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
-/* Ekran evi uygulamadan alır — müşteri uygulamasında hesap sekmesi (operasyonun dönüşü kendi girişinde, 21.312). */
+/* Ekran evi uygulamadan alır: müşteri uygulamasında hesap sekmesi, operasyonun dönüşü kendi girişinde. */
 const ROUTES = {
   homeRoute: '/account' as const,
 };
 
-/** `/me` cevabı — fixture ORTAK (`screens/operations/me-fixture`); ikinci bir `Me` yazılmaz. */
+/** `/me` cevabı — fixture ortak (`mobile-kit/src/testing/me-fixture`); ikinci bir `Me` yazılmaz. */
 function meReply(overrides: Partial<Me> = {}): Response {
   return {
     status: 200,
@@ -70,12 +64,10 @@ describe('AuthCallbackScreen', () => {
     expect(screen.getByTestId('auth-callback-busy')).toBeOnTheScreen();
     await waitFor(() => expect(mockExchange).toHaveBeenCalledWith('pkce-kodu-1'));
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/account'));
-    expect(mockToast).toHaveBeenCalledWith('Doğrulandı — hoş geldiniz ✓');
+    expect(mockToast).toHaveBeenCalledWith('Hoş geldiniz ✓');
   });
 
-  /* Kardeş dosyadaki OTP testiyle AYNI karar (kullanıcı kararı 15.08): künye eksikliği girişin
-     yolunu değiştirmez. İddia tersine çevrildi — müşteri hesap sekmesine gider, tamamlama akışına
-     değil; ad ve telefon ilk siparişte isteniyor. */
+  /* Künye eksikliği girişin yolunu değiştirmez: ad ve telefon ilk siparişte istenir. Kardeş OTP testiyle aynı karar. */
   it('künyesi eksik müşteri de doğrudan hesaba gider — tamamlama akışına yollanmaz', async () => {
     fetchMock.mockResolvedValue(meReply({ phone: null }));
     await render(<AuthCallbackScreen {...ROUTES} code="pkce-kodu-1" />);

@@ -22,8 +22,8 @@
     },
     "guest": {
       "title": "Hoş geldiniz",
-      "body": "Hesabınıza ulaşmak için birkaç saniyede doğrulanın — şifre yok.",
-      "cta": "Hızlı doğrulama"
+      "body": "Hesabınıza birkaç saniyede girin — şifre gerekmez.",
+      "cta": "Giriş yap"
     },
     "error": {
       "title": "Şu an hizmet veremiyoruz",
@@ -180,8 +180,8 @@
     },
     "guest": {
       "title": "Bienvenue",
-      "body": "Vérifiez-vous en quelques secondes pour accéder à votre compte — sans mot de passe.",
-      "cta": "Vérification rapide"
+      "body": "Connectez-vous en quelques secondes pour accéder à votre compte — sans mot de passe.",
+      "cta": "Se connecter"
     },
     "error": {
       "title": "Service momentanément indisponible",
@@ -338,8 +338,8 @@
     },
     "guest": {
       "title": "Willkommen",
-      "body": "Verifizieren Sie sich in Sekunden, um auf Ihr Konto zuzugreifen — ohne Passwort.",
-      "cta": "Schnelle Verifizierung"
+      "body": "Melden Sie sich in wenigen Sekunden an — ganz ohne Passwort.",
+      "cta": "Anmelden"
     },
     "error": {
       "title": "Derzeit nicht verfügbar",

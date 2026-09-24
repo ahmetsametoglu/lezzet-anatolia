@@ -36,7 +36,7 @@
       "contactTitle": "İletişim",
       "contactName": "Ad soyad",
       "resultTo": "Başvurunun sonucunu hesabınızın e-posta adresine göndereceğiz:",
-      "resultToGuest": "Başvurunun sonucunu, gönderirken doğrulayacağınız e-posta adresine göndereceğiz.",
+      "resultToGuest": "Başvurunun sonucunu, gönderirken kodla onaylayacağınız e-posta adresine göndereceğiz.",
       "phone": "Telefon (WhatsApp)",
       "submit": "Başvuruyu gönder",
       "submitting": "Gönderiliyor…"
@@ -65,7 +65,7 @@
       "codePlaceholder": "• • • • • •",
       "resend": "Kod gelmedi mi? Yeniden gönder",
       "resendWait": "Yeniden gönder ({s} sn)",
-      "verifying": "Doğrulanıyor…"
+      "verifying": "Kod kontrol ediliyor…"
     },
     "status": {
       "pendingTitle": "Başvurunuz inceleniyor",

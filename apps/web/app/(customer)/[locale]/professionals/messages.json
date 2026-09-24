@@ -66,7 +66,7 @@
       "submitting": "Gönderiliyor…",
       "note": "Gönderince e-postanıza tek kullanımlık kod gelir — hesabınız onunla açılır; şifre yok. Zaten hesabınız varsa aynı hesapla başvurursunuz.",
       "noteSignedIn": "Başvurunuz mevcut hesabınıza bağlanır.",
-      "verifyTitle": "E-postanızı doğrulayın",
+      "verifyTitle": "E-postanıza gelen kodu girin",
       "back": "Forma dön"
     },
     "aside": {
@@ -168,7 +168,7 @@
       "submitting": "Envoi…",
       "note": "Après l'envoi, vous recevez un code à usage unique par e-mail — votre compte s'ouvre avec ce code, sans mot de passe. Si vous avez déjà un compte, la demande y sera rattachée.",
       "noteSignedIn": "Votre demande sera rattachée à votre compte actuel.",
-      "verifyTitle": "Vérifiez votre e-mail",
+      "verifyTitle": "Saisissez le code reçu par e-mail",
       "back": "Revenir au formulaire"
     },
     "aside": {
@@ -270,7 +270,7 @@
       "submitting": "Wird gesendet…",
       "note": "Nach dem Senden erhalten Sie einen Einmalcode per E-Mail — damit wird Ihr Konto eröffnet, ganz ohne Passwort. Wenn Sie bereits ein Konto haben, wird die Anfrage damit verknüpft.",
       "noteSignedIn": "Ihre Anfrage wird mit Ihrem bestehenden Konto verknüpft.",
-      "verifyTitle": "Bestätigen Sie Ihre E-Mail",
+      "verifyTitle": "Geben Sie den Code aus Ihrer E-Mail ein",
       "back": "Zurück zum Formular"
     },
     "aside": {

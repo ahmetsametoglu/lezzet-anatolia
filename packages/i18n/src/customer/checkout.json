@@ -8,9 +8,9 @@
     "meUnreadable": "Hesabınızı okuyamadık — bağlantınızı kontrol edip tekrar deneyin.",
     "meRetry": "Tekrar dene",
     "guest": {
-      "title": "Siparişinizi tamamlamak için hızlı doğrulama",
-      "body": "Şifre yok — birkaç saniyede doğrulanın, kaldığınız yerden devam edin.",
-      "cta": "Doğrulan ve devam et"
+      "title": "Siparişi tamamlamak için giriş yapın",
+      "body": "Şifre yok — birkaç saniyede giriş yapın, kaldığınız yerden devam edin.",
+      "cta": "Giriş yap ve devam et"
     },
     "state": {
       "loading": "Sipariş seçenekleriniz getiriliyor…",
@@ -102,7 +102,7 @@
       }
     },
     "block": {
-      "login": "Devam etmek için hızlı doğrulama gerekli.",
+      "login": "Devam etmek için giriş yapın.",
       "contact": "Size ulaşabilmemiz için ad ve telefon bilgisi gerekli.",
       "address": "Teslimat adresi ekleyin.",
       "loading": "Seçenekleriniz güncelleniyor…",
@@ -194,9 +194,9 @@
     "meUnreadable": "Nous n'avons pas pu lire votre compte — vérifiez votre connexion et réessayez.",
     "meRetry": "Réessayer",
     "guest": {
-      "title": "Vérification rapide pour finaliser",
-      "body": "Pas de mot de passe — vérifiez-vous en quelques secondes et reprenez où vous en étiez.",
-      "cta": "Se vérifier et continuer"
+      "title": "Connectez-vous pour finaliser votre commande",
+      "body": "Pas de mot de passe — connectez-vous en quelques secondes et reprenez où vous en étiez.",
+      "cta": "Se connecter et continuer"
     },
     "state": {
       "loading": "Chargement de vos options de commande…",
@@ -288,7 +288,7 @@
       }
     },
     "block": {
-      "login": "Une vérification rapide est nécessaire pour continuer.",
+      "login": "Connectez-vous pour continuer.",
       "contact": "Votre nom et votre téléphone sont nécessaires pour vous joindre.",
       "address": "Ajoutez une adresse de livraison.",
       "loading": "Mise à jour de vos options…",
@@ -380,9 +380,9 @@
     "meUnreadable": "Wir konnten Ihr Konto nicht laden — prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "meRetry": "Erneut versuchen",
     "guest": {
-      "title": "Schnelle Verifizierung zum Abschluss",
-      "body": "Kein Passwort — in Sekunden verifizieren und weitermachen.",
-      "cta": "Verifizieren und fortfahren"
+      "title": "Melden Sie sich an, um die Bestellung abzuschließen",
+      "body": "Kein Passwort — in wenigen Sekunden anmelden und weitermachen.",
+      "cta": "Anmelden und fortfahren"
     },
     "state": {
       "loading": "Ihre Bestelloptionen werden geladen…",
@@ -474,7 +474,7 @@
       }
     },
     "block": {
-      "login": "Zum Fortfahren ist eine schnelle Verifizierung nötig.",
+      "login": "Bitte melden Sie sich an, um fortzufahren.",
       "contact": "Für die Kontaktaufnahme benötigen wir Namen und Telefonnummer.",
       "address": "Fügen Sie eine Lieferadresse hinzu.",
       "loading": "Ihre Optionen werden aktualisiert…",

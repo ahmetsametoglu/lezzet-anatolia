@@ -2,9 +2,9 @@
   "tr": {
     "back": "Geri",
     "guest": {
-      "title": "Talepleriniz için hızlı doğrulama",
-      "body": "Şifre yok — e-posta ya da Google ile birkaç saniyede doğrulanın.",
-      "cta": "Hızlı doğrulama"
+      "title": "Taleplerinizi görmek için giriş yapın",
+      "body": "Şifre yok — e-posta ya da Google ile birkaç saniyede girersiniz.",
+      "cta": "Giriş yap"
     },
     "error": {
       "title": "Bağlantı kurulamadı",
@@ -108,7 +108,7 @@
       "sentToast": "Talebiniz alındı — cevabı e-posta ile bildireceğiz",
       "errors": {
         "order": "Bu siparişi hesabınıza bağlayamadık. Genel talep olarak da yazabilirsiniz.",
-        "guest": "Oturumunuz kapanmış görünüyor — tekrar doğrulanıp gönderin.",
+        "guest": "Oturumunuz kapanmış görünüyor — yeniden giriş yapıp gönderin.",
         "generic": "Talebiniz gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin."
       }
     }
@@ -116,9 +116,9 @@
   "fr": {
     "back": "Retour",
     "guest": {
-      "title": "Vérification rapide pour vos demandes",
+      "title": "Connectez-vous pour voir vos demandes",
       "body": "Pas de mot de passe — e-mail ou Google en quelques secondes.",
-      "cta": "Vérification rapide"
+      "cta": "Se connecter"
     },
     "error": {
       "title": "Connexion impossible",
@@ -222,7 +222,7 @@
       "sentToast": "Demande bien reçue — nous répondrons par e-mail",
       "errors": {
         "order": "Nous n'avons pas pu relier cette commande à votre compte. Écrivez-nous en demande générale.",
-        "guest": "Votre session semble expirée — vérifiez-vous puis renvoyez.",
+        "guest": "Votre session semble expirée — reconnectez-vous puis renvoyez.",
         "generic": "Votre demande n'a pas pu être envoyée. Vérifiez votre connexion et réessayez."
       }
     }
@@ -230,9 +230,9 @@
   "de": {
     "back": "Zurück",
     "guest": {
-      "title": "Schnelle Verifizierung für Ihre Anfragen",
+      "title": "Melden Sie sich an, um Ihre Anfragen zu sehen",
       "body": "Kein Passwort — mit E-Mail oder Google in Sekunden.",
-      "cta": "Schnelle Verifizierung"
+      "cta": "Anmelden"
     },
     "error": {
       "title": "Keine Verbindung",
@@ -336,7 +336,7 @@
       "sentToast": "Anfrage erhalten — wir antworten per E-Mail",
       "errors": {
         "order": "Wir konnten diese Bestellung Ihrem Konto nicht zuordnen. Schreiben Sie uns als allgemeine Anfrage.",
-        "guest": "Ihre Sitzung ist wohl abgelaufen — bitte erneut verifizieren und senden.",
+        "guest": "Ihre Sitzung ist wohl abgelaufen — bitte erneut anmelden und senden.",
         "generic": "Ihre Anfrage konnte nicht gesendet werden. Prüfen Sie die Verbindung und versuchen Sie es erneut."
       }
     }
