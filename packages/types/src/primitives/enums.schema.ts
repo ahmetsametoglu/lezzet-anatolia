@@ -1,10 +1,6 @@
 import { z } from 'zod';
 
-// Proje-geneli enum'lar — DATA_MODEL "Enum'lar (özet)" listesinin karşılığı (01-types görevi 01.2).
-// Ölçüt: birden çok varlık kullanıyorsa BURAYA; tek varlığa özgüyse o varlığın şemasında kalır
-// (ör. ProductAllergen yalnız üründe → product.schema.ts).
-//
-// Liste artımlı büyür: bir enum, onu kullanan ilk varlık yazılırken eklenir.
+// Proje geneli enum'lar: birden çok varlığın kullandığı enum burada, tek varlığa özgü olan o varlığın şemasında durur.
 
 /** Kanal — *kim* alıyor. `Price`, `Order`, `Customer` türetimi ve `Discount` kapsamı kullanır. */
 export const ChannelEnum = z.enum(['b2b', 'b2c']);
@@ -29,12 +25,8 @@ export const OrderStatusEnum = z.enum([
 export type OrderStatus = z.infer<typeof OrderStatusEnum>;
 
 /**
- * Sipariş durumunun OPERASYON yüzeyindeki adı — personel ekranları yalnız Türkçedir (CLAUDE.md §2),
- * bu yüzden düz metin (çok dilli değil). Enum'la aynı dosyada durur ki yeni bir durum eklenince
- * karşılığının da yazılması unutulmasın: `Record` eksik anahtarda derlemeyi durdurur.
- *
- * Müşteri yüzeyi bu haritayı KULLANMAZ — orada durum adı i18n mesaj dosyasından gelir ve zaten daha
- * az ayrıntılıdır (müşteri "hazırlanıyor" ile "hazır" arasındaki iç ayrımı görmez).
+ * Sipariş durumunun operasyon yüzeyindeki adı (personel ekranları yalnız Türkçe); enum'la aynı dosyada durur ki yeni durumda `Record` eksik anahtarı derlemede söylesin.
+ * Müşteri yüzeyi bu haritayı kullanmaz, orada durum adı i18n mesaj dosyasından gelir.
  */
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   draft: 'Taslak',
@@ -49,12 +41,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 };
 
 /**
- * Ödeme durumunun OPERASYON yüzeyindeki adı — `ORDER_STATUS_LABELS` ile aynı gerekçe: enum'la aynı
- * yerde durur ki yeni bir durum eklendiğinde karşılığı unutulmasın.
- *
- * Proje geneli olmasının sebebi somut: sipariş ekranı, müşteri ekranı ve sipariş özeti diyaloğu aynı
- * dört kelimeyi yazıyor. Sayfa klasöründe durduğu sürece ikinci ekran onu kopyalıyordu ve kopyalar
- * AYRIŞIYORDU ("İade" ↔ "İade edildi").
+ * Ödeme durumunun operasyon yüzeyindeki adı; proje genelidir, çünkü sipariş, müşteri ve özet ekranları aynı kelimeleri yazar ve kopyalar ayrışıyordu.
  */
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   pending: 'Bekliyor',
@@ -64,16 +51,8 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
 };
 
 /**
- * Sipariş durumunun MÜŞTERİ yüzeyindeki hâli — **kapalı ve dar bir küme** (tasarım: "iç durum
- * adları asla sızmaz"). Dokuz iç durum yediye iner: müşteri `preparing` ile `ready` arasındaki
- * operasyon ayrımını da, `delivered` ile `completed` arasındaki muhasebe ayrımını da görmez. Tek
- * istisna gel-al: orada `ready` müşterinin eylemini bekler ("gelip alın"), o yüzden ayrı hâldir.
- *
- * Burası yalnız KATEGORİdir, metin değil: adı üç dilde sayfanın `messages.json`'undan gelir
- * (operasyon haritası düz Türkçe metin tutar, çünkü o yüzey tek dillidir). Kategori ile metni
- * ayırmasaydık, çeviri dosyası iç durum adlarını taşımak zorunda kalırdı.
- *
- * Eşleme `domain-core/order/customer-status` — saf karar, DB'siz ve testli.
+ * Sipariş durumunun müşteri yüzeyindeki kategorisi: iç durum adları sızmaz, dokuz iç durum yediye iner (gel-alda `ready` ayrı hâldir, çünkü müşterinin eylemini bekler).
+ * Metin değil kategori: adı üç dilde sayfanın `messages.json`'undan gelir; eşleme `domain-core/order/customer-status`tadır.
  */
 export const CustomerOrderStatusEnum = z.enum([
   'received',
@@ -88,9 +67,7 @@ export const CustomerOrderStatusEnum = z.enum([
 export type CustomerOrderStatus = z.infer<typeof CustomerOrderStatusEnum>;
 
 /**
- * Sipariş kaynağı — *nereden kapandı*. Kanaldan BAĞIMSIZ eksen (DOMAIN §3, CHANNELS §2).
- * `messenger`/`instagram` (15.23 · 07.09): sohbette kurulup sitede ödenen sipariş sohbetin kanalını
- * taşır — "kapandığı yer" sepetin netleştiği yerdir, ödemenin alındığı yer değil.
+ * Sipariş kaynağı (nereden kapandı), kanaldan bağımsız eksen; sohbette kurulup sitede ödenen sipariş sohbetin kanalını taşır, çünkü kapandığı yer sepetin netleştiği yerdir.
  */
 export const OrderSourceEnum = z.enum(['web', 'whatsapp', 'messenger', 'instagram', 'door', 'manual']);
 export type OrderSource = z.infer<typeof OrderSourceEnum>;
@@ -113,66 +90,39 @@ export const COUNTRY_LABELS: Record<Country, string> = {
   DE: 'Almanya',
 };
 
-/** Teslimat tipi — rota içi kapı teslimi / kargo (DOMAIN §6). */
 /**
- * "Mal müşteriye NASIL ulaşır" — bizim aracımız · taşıyıcı · müşterinin kendisi.
- *
- * `pickup` yerinde satıştır (depo kapısı ya da kuryenin arabası): mal hiç gitmez, müşteri alır.
- * Adres, bölge, kurye ve kargo künyesi ÜÇÜNÜN DE dışındadır — bu yüzden ayrı bir değer; `route`
- * yazılsaydı aracımızın gitmediği bir teslimat rota teslimatı sayılırdı (0012 künyesi).
+ * Mal müşteriye nasıl ulaşır: bizim aracımız, taşıyıcı ya da müşterinin kendisi.
+ * `pickup` yerinde satıştır ve adres, bölge, kurye dışındadır; `route` yazılsaydı aracın gitmediği teslimat rota teslimatı sayılırdı.
  */
 export const DeliveryTypeEnum = z.enum(['route', 'shipping', 'pickup']);
 export type DeliveryType = z.infer<typeof DeliveryTypeEnum>;
 
 /**
- * Bir ADRESİN çözülebildiği teslimat türleri — `pickup` hariç, TÜRETİLMİŞ (26.08).
- *
- * Yerinde satışın adresi yoktur: müşteri tezgâhın ya da arabanın önündedir, posta kodu → bölge →
- * depo zinciri hiç çalışmaz. Bu yüzden checkout, adres çözümü ve kargo ücreti bu dar kümeyi
- * konuşur; siparişin kendisi (`Order.deliveryType`) geniş kümeyi taşır.
- *
- * Checkout sözleşmesi BU KÜMEYİ KULLANMAZ: gel-al (`pickup`) izinli müşteriye checkout'tan
- * açıldığından beri sipariş açma sonucu üç türü de taşır. Dar küme yalnız adresten çözülen
- * sorulara kaldı — bölge/depo çözümü ve kargo ücreti.
- *
- * `.exclude()` ile TÜRETİLİYOR, ikinci bir liste yazılmıyor: küme büyürse tek yer değişir. Elle
- * yazılmış dar birleşimler tam bu yüzden 26.08'de kırıldı.
+ * Bir adresin çözülebildiği teslimat türleri (`pickup` hariç): yerinde satışın adresi yoktur, bölge ve kargo ücreti bu dar kümeyi konuşur.
+ * `.exclude()` ile türer ki küme büyüyünce tek yer değişsin; elle yazılmış dar birleşimler bu yüzden kırılmıştı.
  */
 export const AddressDeliveryTypeEnum = DeliveryTypeEnum.exclude(['pickup']);
 export type AddressDeliveryType = z.infer<typeof AddressDeliveryTypeEnum>;
 
 /**
- * Depo türü — tesis mi, kurye aracı mı (0031). Araç bir YERDİR: yüklenir, sayılır, transfer alır.
- * Türün üç sonucu var ve üçü de veride zorlanıyor: araç bölgeye bağlanamaz (tetikleyici), kargo
- * deposu olamaz (kısıt), depo-üstü toplama girmez (`available_stock_total`).
+ * Depo türü: tesis ya da kurye aracı; araç da bir yerdir (yüklenir, sayılır, transfer alır).
+ * Türün sonuçları veride zorlanır: araç bölgeye bağlanamaz, kargo deposu olamaz, depo-üstü toplama girmez.
  */
 export const WarehouseKindEnum = z.enum(['facility', 'vehicle']);
 export type WarehouseKind = z.infer<typeof WarehouseKindEnum>;
 
 /**
- * Kargo taşıyıcısı (07.12) — **tanımlı küme, serbest metin değil.**
- *
- * Takip bağlantısı taşıyıcının URL kalıbından üretilir ve serbest metinden çıkmaz; o zaman
- * tasarımın "Kargoyu takip et ↗" düğmesinin karşılığı olmazdı. `other` kümeyi kapatmamak için
- * var — yeni bir taşıyıcıyla çalışmaya başlamak bir migration beklememeli; o seçilince bağlantı
- * gösterilmez, numara düz metin durur.
+ * Kargo taşıyıcısı tanımlı bir kümedir, çünkü takip bağlantısı taşıyıcının URL kalıbından üretilir.
+ * `other` yeni taşıyıcı migration beklemesin diye var; seçilince bağlantı gösterilmez, numara düz metin durur.
  */
 export const CarrierEnum = z.enum(['colissimo', 'chronopost', 'dhl', 'ups', 'other']);
 export type Carrier = z.infer<typeof CarrierEnum>;
 
-/**
- * Ödeme yöntemi. **`on_account` (vadeli) BU LİSTEDE DEĞİLDİR** — vade bir yöntem değil, siparişin
- * bir özelliğidir (`Order.on_account`); tahsilat sonradan havaleyle yapılır (DOMAIN §7).
- */
+/** Ödeme yöntemi; `on_account` (vadeli) bu listede değildir, çünkü vade bir yöntem değil siparişin bayrağıdır (DOMAIN §7). */
 export const PaymentMethodEnum = z.enum(['online', 'cash', 'card', 'cheque', 'bank_transfer']);
 export type PaymentMethod = z.infer<typeof PaymentMethodEnum>;
 
-/**
- * Yöntemin OPERASYON yüzeyindeki adı — `ORDER_STATUS_LABELS` ile aynı gerekçe: enum'la aynı
- * dosyada durur ki yeni bir yöntem eklendiğinde `Record` derlemede eksik anahtarı söylesin.
- * (23.7'de etiket önizlemesi için merkezîleşti; kurye sözlüğündeki `method` haritası aynı
- * kelimeleri taşıyor — oradaki JSON copy dosyası types'a bakamadığı için bilinçli ikiz.)
- */
+/** Yöntemin operasyon yüzeyindeki adı; enum'la aynı dosyada durur ki yeni yöntemde `Record` eksik anahtarı derlemede söylesin. */
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   online: 'online',
   cash: 'nakit',
@@ -182,9 +132,8 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 /**
- * İçerik dili. `packages/i18n` aynı üçlüyü ARAYÜZ tarafı için `LOCALES` olarak tutar — bilerek
- * ayrı: `types` hiçbir iç pakete bağlanmaz (STACK §4), bu yüzden ikisi birbirinden import edemez.
- * Değerler değişirse İKİSİ birden güncellenir.
+ * İçerik dili; `packages/i18n` aynı üçlüyü arayüz için `LOCALES` olarak tutar, çünkü `types` hiçbir iç pakete bağlanmaz.
+ * Değerler değişirse ikisi birden güncellenir.
  */
 export const PreferredLanguageEnum = z.enum(['tr', 'fr', 'de']);
 export type PreferredLanguage = z.infer<typeof PreferredLanguageEnum>;
@@ -224,25 +173,15 @@ export const DISCOUNT_SCOPE_LABELS: Record<DiscountScope, string> = {
 };
 
 /**
- * Ödeme durumu — **türetilir, elle set edilmez** (DOMAIN §7): net tahsilat (tahsil − iade) ile
- * karşılanan tutar karşılaştırılır. `partial` PARA eksenidir ("net, karşılanandan az"); siparişin
- * eksik karşılanması ayrı eksendir (`fulfilled_qty`). Fazla tahsilat yeni değer açmaz — durum
- * `paid` kalır, fark iade borcu olarak türetilir.
+ * Ödeme durumu türetilir, elle yazılmaz: net tahsilat karşılanan tutarla karşılaştırılır; `partial` para eksenidir, eksik karşılanma ayrı eksendir.
+ * Fazla tahsilat yeni değer açmaz: durum `paid` kalır, fark iade borcu olarak türer.
  */
 export const PaymentStatusEnum = z.enum(['pending', 'paid', 'partial', 'refunded']);
 export type PaymentStatus = z.infer<typeof PaymentStatusEnum>;
 
 /**
- * **İptalin SEBEBİ** (07.14) — `null` = iptal edilmedi.
- *
- * Ayrım paranın yolunu izler, çünkü müşteriye kurulacak cümlenin dayanağı budur:
- *   · `payment_failed` · `superseded` → para ÇEKİLMEDİ
- *   · `out_of_stock` → para ÇEKİLDİ ve İADE EDİLDİ (ödeme geçti, mal kalmadı)
- *   · `customer` · `staff` → iptali kim istedi
- *
- * Neden bir `refundIssued` bayrağı değil: o yalnız onay ekranının sorusunu cevaplardı. Sebep iki
- * soruyu birden cevaplıyor — müşteriye hangi cümle kurulacak VE operasyonun iptal listesinde
- * "neden" sütunu (bugün sipariş kaydından hiç cevaplanamıyor).
+ * İptalin sebebi (`null` = iptal edilmedi); ayrım paranın yolunu izler: `payment_failed`/`superseded` para çekilmedi, `out_of_stock` çekildi ve iade edildi, `customer`/`staff` iptali kim istedi.
+ * Bayrak değil sebep, çünkü hem müşteriye kurulacak cümleyi hem operasyonun iptal listesindeki "neden" sütununu cevaplar.
  */
 export const OrderCancelReasonEnum = z.enum(['payment_failed', 'superseded', 'out_of_stock', 'customer', 'staff']);
 export type OrderCancelReason = z.infer<typeof OrderCancelReasonEnum>;
@@ -266,28 +205,15 @@ export const TicketTypeEnum = z.enum(['damaged', 'missing', 'question', 'other']
 export type TicketType = z.infer<typeof TicketTypeEnum>;
 
 /**
- * Talebin durumu — üç hâl, karmaşık ticket mekaniği YOK (atama/öncelik/SLA yok). Çözülen talep
- * müşteri dönerse yeniden açılır (`resolved → open`).
- *
- * Bu adlar **iç dildir**: müşteri "Aldık, sıradayız / İlgileniyoruz / Çözüldü" okur. Çeviri yüzeyin
- * işidir — iki ayrı durum alanı, aynı gerçeği iki kez yazmak olurdu.
+ * Talebin durumu: üç hâl, atama/öncelik/SLA yok; çözülen talep müşteri dönerse yeniden açılır.
+ * Bu adlar iç dildir; müşterinin okuduğu metin yüzeyin çevirisidir.
  */
 export const TicketStatusEnum = z.enum(['open', 'in_progress', 'resolved']);
 export type TicketStatus = z.infer<typeof TicketStatusEnum>;
 
 /**
- * Talep tür/durumunun OPERASYON yüzeyindeki adı — `ORDER_STATUS_LABELS` ile aynı gerekçe: enum'la
- * aynı dosyada durur ki yeni bir değer eklenince karşılığı da yazılsın. Müşteriye giden metin
- * BURADAN gelmez (yukarıdaki not: iç dil ≠ müşteri dili).
- *
- * **Kelimeler ÇİZİMİN kelimeleridir** (`Operasyon - Talepler.dc.html` script bloğu, 03.08 · operasyon
- * şeridinin talebi). Üçü kodda ayrışmıştı ve biri görünür bir bozulma üretiyordu: `İlgileniliyor`,
- * `MultiToggle`'ın eşit genişlikteki üç segmentine sığmayıp komşusunun üstüne taşıyordu.
- *
- * `Hasarlı geldi` → `Bozuk` değişiminde bir nüans kaybı var ve talebi açan bunu kendisi sordu:
- * "Bozuk" ürünü, "Hasarlı geldi" olayı anlatır. Kısa olanı seçildi çünkü **ayrımı zaten enum
- * anahtarı taşıyor** (`damaged` ≠ `defective`) ve etiket bir çipte okunuyor — dar sütunda iki
- * kelime satırı büyütüyordu. Kaybedilen nüans kodda duruyor, kazanılan yer ekranda.
+ * Talep tür ve durumunun operasyon yüzeyindeki adı; kelimeler tasarım çiziminin kelimeleridir ve dar çip sütununa sığacak kadar kısadır.
+ * Müşteriye giden metin buradan gelmez; kısa etiketin kaybettiği ayrımı (`damaged` ≠ `defective`) enum anahtarı taşır.
  */
 export const TICKET_TYPE_LABELS: Record<TicketType, string> = {
   damaged: 'Bozuk',
@@ -311,48 +237,15 @@ export const TicketSourceEnum = z.enum(['order', 'form', 'whatsapp', 'admin']);
 export type TicketSource = z.infer<typeof TicketSourceEnum>;
 
 /**
- * Talebi/sohbeti kim yürütüyor (16.5 · kullanıcı kararı 16.08). Alan baştan var — sonradan
- * eklenseydi o güne kadarki taleplerin geçmişi belirsiz kalırdı.
- *
- * `hybrid`: AI cevap yazmaz, TASLAK yazar (`aiDraftReply`) — operatör onaylamadan hiçbir şey
- * müşteriye gitmez. `ai`: özerk — cevap kendiliğinden gider, operatör izler/devralır. Devralmada
- * `ai/hybrid → human` döner ve AI o talepte susar. `conversation.handledBy` de bu enum'u kullanır.
+ * Talebi/sohbeti kim yürütüyor: `hybrid`te AI taslak yazar ve operatör onaylamadan hiçbir şey gitmez, `ai` özerktir ve operatör izler.
+ * Devralmada `human`a döner ve AI o talepte susar; `conversation.handledBy` de bu enum'u kullanır.
  */
 export const TicketHandlerEnum = z.enum(['human', 'hybrid', 'ai']);
 export type TicketHandler = z.infer<typeof TicketHandlerEnum>;
 
 /**
- * Sohbette OPERATÖRÜN seçebileceği modlar — **29.08'den beri talepteki ÜÇÜN aynısı**.
- *
- * ── DARALTMA KALKTI, ÇÜNKÜ ŞARTI KARŞILANDI (kullanıcı kararı 29.08) ────────
- * Bu enum bir tur boyunca `exclude(['ai'])` idi ve gerekçesi sağlamdı: seçenek duruyordu ama
- * **hiçbir şey koşmuyordu** — operatör "AI" diyor, kuyruk "AI" rozeti takıyor, başlık `N AI'da`
- * sayıyor, sohbet ise cevapsız bekliyordu. Sessiz ve en pahalı arıza türü.
- *
- * Daraltmanın kendi künyesi çıkış şartını da yazmıştı: *"Motor doğduğu gün bu satır silinir."*
- * Üç parça da ölçülerek doğrulandı, o yüzden silindi:
- *   1. **Motor var** — `runAutonomousConversationReply` (15.8).
- *   2. **Cron o modu tarıyor** — `support-ai.ts` `rows.filter((r) => r.handledBy === 'ai')`;
- *      daraltma konduğu gün cron yalnız hibriti tarıyordu, artık ikisini de tarıyor.
- *   3. **Gönderim kanalı açık** — Meta Cloud API jetonu yapılandırıldı ve gerçek bir WhatsApp
- *      mesajı uçtan uca gönderildi (15.11, 28.08). Şartın son parçası buydu.
- *
- * ── AD KORUNDU, LİSTE TALEPTEN TÜRÜYOR ──────────────────────────────────────
- * Ayrı ad iki sebeple duruyor: mobil sözleşme onu adıyla tüketiyor (`ConversationHandler` —
- * `apps/mobile-customer` sosyal ekranı `.options`tan türetiyor, yani bu satır değişince orası da
- * kendiliğinden açıldı) ve "sohbette hangi modlar" sorusunun tek adresi olması, gelecekte ayrışma
- * gerekirse tek dosyayı değiştirmeyi yeterli kılıyor.
- *
- * **Liste ELLE YAZILMIYOR, `TicketHandlerEnum.options`tan türüyor** — iki liste yan yana yazılsaydı
- * biri gün gelip ötekinden sapardı ve sapma sessiz olurdu. Doğrudan atama (`= TicketHandlerEnum`)
- * da denendi ve `knip` haklı olarak "aynı değer iki adla export ediliyor" dedi: o gerçekten tek
- * nesneydi. `z.enum(...options)` ayrı bir şema üretir ama kaynağı tektir — kavramsal ayrım korunur,
- * duplikasyon doğmaz.
- *
- * ── OKUMA HİÇ DARALMAMIŞTI ──────────────────────────────────────────────────
- * Kolon (`conversation.handled_by`) baştan beri `ticket_handler` ve `ai` değeri geçerliydi;
- * daralan yalnız girdi tarafıydı. Bu yüzden açılış **migration istemedi** — veri zaten bu değeri
- * taşıyabiliyordu.
+ * Sohbette operatörün seçebileceği modlar: talepteki üçün aynısı, liste `TicketHandlerEnum.options`tan türer ki iki liste ayrışmasın.
+ * Ayrı ad, çünkü mobil sözleşme onu adıyla tüketir ve "sohbette hangi modlar" sorusunun tek adresidir.
  */
 export const ConversationHandlerEnum = z.enum(TicketHandlerEnum.options);
 export type ConversationHandler = z.infer<typeof ConversationHandlerEnum>;
@@ -364,7 +257,7 @@ export type ConversationHandler = z.infer<typeof ConversationHandlerEnum>;
 export const ConversationLinkProofEnum = z.enum(['order_ref', 'email', 'phone', 'cart_link', 'chat_code']);
 export type ConversationLinkProof = z.infer<typeof ConversationLinkProofEnum>;
 
-/** Mod anahtarının etiketleri — Talepler ve WhatsApp ekranı aynı üçlüyü okur (16.08). */
+/** Mod anahtarının etiketleri; Talepler ve WhatsApp ekranı aynı üçlüyü okur. */
 export const TICKET_HANDLER_LABELS: Record<TicketHandler, string> = {
   human: 'İnsan',
   hybrid: 'Hibrit',
@@ -372,19 +265,15 @@ export const TICKET_HANDLER_LABELS: Record<TicketHandler, string> = {
 };
 
 /**
- * Yazışmada kim konuştu. `ai` ÜÇÜNCÜ bir göndericidir: "AI yazdı" bilgisini `admin` içine gömmek,
- * sonradan "bunu kim söyledi" sorusunu cevapsız bırakırdı. Müşteriye giden metin aynıdır; ayrım
- * iç izlenebilirliktir ve operasyon ekranında görünür.
+ * Yazışmada kim konuştu: `ai` üçüncü göndericidir, çünkü `admin` içine gömülseydi "bunu kim söyledi" sorusu cevapsız kalırdı.
+ * Müşteriye giden metin aynıdır; ayrım iç izlenebilirliktir.
  */
 export const TicketSenderEnum = z.enum(['customer', 'admin', 'ai']);
 export type TicketSender = z.infer<typeof TicketSenderEnum>;
 
 /**
- * Yorum moderasyonu — ÜÇ hâl (DOMAIN §14). Boolean olsaydı "bekliyor" ile "reddedildi" aynı kovaya
- * düşer, reddedilen yorum her açılışta kuyruğa geri gelirdi. Yayınlanan geri çekilebilir.
- *
- * Metin hiçbir hâlde DÜZENLENMEZ: onay/ret vardır, sansürlü yeniden yazım yoktur. **Moderasyon
- * yalnız metne uygulanır** — metinsiz kayıt (yalnız yıldız ya da yalnız beğeni) `approved` doğar.
+ * Yorum moderasyonu üç hâldir, çünkü boolean olsaydı reddedilen yorum her açılışta kuyruğa geri gelirdi; metin hiçbir hâlde düzenlenmez.
+ * Moderasyon yalnız metne uygulanır: metinsiz kayıt `approved` doğar.
  */
 export const ReviewStatusEnum = z.enum(['pending', 'approved', 'rejected']);
 export type ReviewStatus = z.infer<typeof ReviewStatusEnum>;
@@ -402,13 +291,8 @@ export const FeedbackVoteEnum = z.enum(['like', 'dislike']);
 export type FeedbackVote = z.infer<typeof FeedbackVoteEnum>;
 
 /**
- * Puan kazanımının/harcamasının sebebi (DOMAIN §14). Bağlam adları `ProductFeedback.context` ile
- * HİZALI (`feedback_purchase`/`feedback_candidate`): aynı olayı iki ayrı sözlükle adlandırmak,
- * "hangi aksiyona kaç puan" ayarını okurken her seferinde çeviri yapmak olurdu.
- *
- * `review` ayrı bir sebeptir ve bu bilinçli: müşteri önce beğeni verip sonra yorum yazabilir —
- * ikisi ayrı beyanlar, ayrı puanlar. Defterdeki tekillik `(müşteri, sebep, kaynak)` üzerinde
- * olduğu için ikisi çakışmadan yan yana durur.
+ * Puan kazanımının/harcamasının sebebi; bağlam adları `ProductFeedback.context` ile hizalıdır ki ayar okunurken çeviri gerekmesin.
+ * `review` ayrı sebeptir: beğeni ve yorum ayrı beyanlardır ve tekillik `(müşteri, sebep, kaynak)` üzerinde olduğu için çakışmaz.
  */
 export const PointsReasonEnum = z.enum([
   'review',
@@ -417,20 +301,13 @@ export const PointsReasonEnum = z.enum([
   'order',
   'referral',
   /**
-   * **Komşu daveti** (17.10) — `referral`dan AYRI ve ayrılması şart, çünkü ölçtükleri şey farklı:
-   * `referral` yeni bir MÜŞTERİ kazandırır, `neighbor` var olan bir SEFERE ikinci bir sipariş
-   * ekler (aynı bölge + aynı gün → durak başına maliyet düşer). Davet edilen kişi zaten müşterimiz
-   * olabilir; o hâlde `referral` hiç doğmaz ama komşu ödülü doğar. Tek sebebe yığılsalardı "davet
-   * bize ne kazandırdı" sorusunun iki farklı cevabı tek sayının içinde kaybolurdu.
-   *
-   * `ref_id` komşunun SİPARİŞİDİR: tekillik "aynı siparişten iki kez ödül yok" demeli.
+   * Komşu daveti `referral`dan ayrıdır: `referral` yeni müşteri, `neighbor` var olan sefere ikinci sipariş kazandırır; tek sebepte iki cevap kaybolurdu.
+   * `ref_id` komşunun siparişidir, tekillik "aynı siparişten iki kez ödül yok" der.
    */
   'neighbor',
   /**
-   * Günlük ziyaret — günde bir kez. Öteki sebeplerden AYRI ve ayrılması şart: onlar **veri
-   * bedeli**dir (müşteri bir beyanda bulundu), bu **gelme bedeli**dir (müşteri geri döndü).
-   * Aynı sebebe yığılsalardı aday panosunu okuyan kişi ziyaretle beslenen puanı ürün sinyali
-   * sanardı. Tekillik gün bazlı kısmi unique indekste (`points_entry_visit_day`).
+   * Günlük ziyaret, günde bir kez; öteki sebepler veri bedeli, bu gelme bedelidir ve karışsaydı ziyaret puanı ürün sinyali sanılırdı.
+   * Tekillik gün bazlı kısmi unique indekstedir (`points_entry_visit_day`).
    */
   'visit',
   'redemption',
@@ -446,13 +323,8 @@ export const FeedbackChannelEnum = z.enum(['email', 'whatsapp']);
 export type FeedbackChannel = z.infer<typeof FeedbackChannelEnum>;
 
 /**
- * Hata kaydı önem seviyesi (18.5 · `0008_observability.sql`).
- *
- * `warning` = beklenen ama izlenmeli (dış servis geçici hata döndü, yeniden denendi) ·
- * `error` = beklenmeyen istisna · `fatal` = akış tamamen koptu, kullanıcı sonuç alamadı.
- *
- * Seviye ekranın sıralama ölçütü DEĞİL (sıra son görülmeye göredir): taze bir uyarı, üç gün önceki
- * bir hatadan daha çok şey söyler.
+ * Hata kaydı önem seviyesi: `warning` beklenen ama izlenmeli, `error` beklenmeyen istisna, `fatal` akış koptu.
+ * Seviye ekranın sıralama ölçütü değildir (sıra son görülmeye göre), çünkü taze bir uyarı eski bir hatadan çok şey söyler.
  */
 export const ErrorLogLevelEnum = z.enum(['warning', 'error', 'fatal']);
 export type ErrorLogLevel = z.infer<typeof ErrorLogLevelEnum>;
@@ -465,26 +337,15 @@ export const HealthStatusEnum = z.enum(['ok', 'warn', 'crit']);
 export type HealthStatus = z.infer<typeof HealthStatusEnum>;
 
 /**
- * Depolar arası transfer durumu (DOMAIN §17 · `0031_warehouse.sql`).
- *
- * `draft` YOK: hazırlık ekranı henüz yok ve kullanılmayan bir enum değeri yalan söyler — sevk anı
- * ilk kalıcı andır. Bu yüzden `cancelled`'ın anlamı da dardır: iptal edilen şey her zaman **zaten
- * sevk edilmiş** bir kayıttır ve yalnız TEK hâli kapsar — "sevk kaydı hatalıydı, mal hiç çıkmadı"
- * (`cancel_transfer`, 19.6). Mal çıkıp geri döndüyse cevap bu değer değil, ters yönlü yeni bir
- * transferdir: mal fiilen iki kez yol gitti, tek kayda indirmek soğuk zincir geçmişini silerdi.
+ * Depolar arası transfer durumu; `draft` yoktur, çünkü sevk anı ilk kalıcı andır ve `cancelled` yalnız "sevk kaydı hatalıydı, mal hiç çıkmadı" demektir.
+ * Mal çıkıp döndüyse cevap ters yönlü yeni transferdir; tek kayda indirmek soğuk zincir geçmişini silerdi.
  */
 export const TransferStatusEnum = z.enum(['in_transit', 'received', 'cancelled']);
 export type TransferStatus = z.infer<typeof TransferStatusEnum>;
 
 /**
- * Katalog sıralama seçenekleri (K18 · terfi 21.6).
- *
- * Burada, çünkü **üç yüzey birden okuyor**: web'in süzgeç bileşenleri (`CATALOG_SORTS`), mobil
- * API'nin sorgu şeması ve terfi eden orkestrasyon. Terfiden önce her biri kendi kopyasını
- * taşıyordu; kopyalar bir gün ayrışır ve ayrıştığında hiçbiri patlamaz — yalnız bir yüzey
- * ötekinden farklı sıralar. Değer kümesi bir DOMAIN sözlüğüdür, yüzey ayrıntısı değil.
- *
- * Sıra ANLAMLIDIR: `featured` varsayılan (tanınmayan değer buna düşer, `.catch('featured')`).
+ * Katalog sıralama seçenekleri burada, çünkü web süzgeci, mobil API ve orkestrasyon aynı kümeyi okur ve kopyalar sessizce ayrışırdı.
+ * Sıra anlamlıdır: `featured` varsayılandır, tanınmayan değer ona düşer.
  */
 export const CatalogSortEnum = z.enum(['featured', 'priceAsc', 'priceDesc']);
 export type CatalogSort = z.infer<typeof CatalogSortEnum>;
@@ -497,50 +358,22 @@ export type CatalogSort = z.infer<typeof CatalogSortEnum>;
 export const CATALOG_SORTS = CatalogSortEnum.options;
 
 /**
- * Ürünün/varyantın YERE göre stok hâli (19.10) — dört cevap, dört ayrı cümle.
- *
- * Tek bir `soldOut` bayrağı bu soruyu cevaplayamıyor. 19.9 yeri sunucuya taşıyınca `availableQty`
- * depo süzgeçli hâle geldi ve `soldOut = availableQty <= 0` sessizce anlam değiştirdi: "hiçbir
- * depoda yok"tan "senin deponda yok"a. Sonuç bir GERİLEMEYDİ — posta kodunu giren müşteri,
- * kargoyla gönderebileceğimiz ürünü "Tükendi" ve pasif bir düğme olarak görüyordu. Sistem
- * müşteriyi tanıdıkça daha az satıyordu, ki C3 tam olarak bunu yasaklıyor: "tükendi" yalnız ürün
- * HİÇBİR depoda yokken söylenebilir.
- *
- *   `available`    — yerel depoda var (yer bilinmiyorsa: ağda var). Normal satış.
- *   `shipping`     — yerelde yok ama kargo deposunda var ve ürün kargolanabilir.
- *   `elsewhere`    — ağda var ama ne yerelde ne kargoda (soğuk zincir başka bölgede).
- *   `out_of_stock` — hiçbir depoda yok. Tek meşru "Tükendi".
+ * Ürünün yere göre stok hâli: `available` yerelde var, `shipping` kargo deposunda var, `elsewhere` ağda var ama ne yerelde ne kargoda, `out_of_stock` hiçbir depoda yok.
+ * Tek bir `soldOut` bayrağı yetmez, çünkü "tükendi" yalnız ürün hiçbir depoda yokken söylenebilir.
  */
 export const StockStatusEnum = z.enum(['available', 'shipping', 'elsewhere', 'out_of_stock']);
 export type StockStatus = z.infer<typeof StockStatusEnum>;
 
 /**
- * Sepet KALEMİNİN hangi yoldan geleceği (19.11) — `StockStatus`un sepetteki karşılığı, ama aynı
- * şey DEĞİL: stok hâli "var mı" sorusunu, yol "nasıl gelir" sorusunu cevaplar. Kararı
- * `decideCartAgainstWarehouse` motoru verir; ekran da uç da yalnız taşır.
- *
- *   `local`             — kendi deposundan araçla; ücretsiz kapı teslimi.
- *   `shipping`          — kargo deposundan; AYRI ödemeli ayrı sipariş (sepet ikiye bölünür).
- *   `unavailable`       — hiçbir depoda yok; satır çıkarılmadan devam edilemez.
- *   `not_shippable_here`— soğuk zincir: kargolanamaz ve bu adresin deposunda da yok.
- *
- * **Zod tanımı burada, tip domain-core'da TÜRER** (`StockStatusEnum` ile aynı yol): mobil sözleşme
- * şeması aynı birliği zod olarak ifade etmek zorunda, iki ayrı tanım bir gün ayrışırdı — ayrıştığı
- * gün uç bir yol adı gönderir, istemci onu tanımaz ve sepet cevabın tamamını reddeder.
+ * Sepet kaleminin hangi yoldan geleceği (`local`, `shipping` ayrı sipariş, `unavailable`, `not_shippable_here`); kararı `decideCartAgainstWarehouse` verir.
+ * Zod tanımı burada, tip domain-core'da türer, çünkü mobil sözleşme aynı birliği zod olarak ifade etmek zorunda ve iki tanım ayrışırdı.
  */
 export const CartLineRouteEnum = z.enum(['local', 'shipping', 'unavailable', 'not_shippable_here']);
 export type CartLineRoute = z.infer<typeof CartLineRouteEnum>;
 
 /**
- * Kuponun neden geçmediği (motorun kararı). Müşteriye **sebep** söylenir, "geçersiz kod" denip
- * geçilmez: süresi dolmuş kuponla asgari sepeti tutmayan kupon farklı şeylerdir ve ikincisinde
- * müşteri sepetine ürün ekleyerek kuponu kullanabilir.
- *
- * `not_yours` müşteriye **sızdırılmaz**: kişisel kupon başkasının elindeyse "bu kupon var ama senin
- * değil" demek, kodun varlığını doğrulamak olurdu — kapı onu `unknown_code` gibi sunar.
- *
- * **Zod tanımı burada, tip domain-core'da TÜRER** (`CartLineRouteEnum` ile aynı gerekçe): sebep iki
- * yüzeyin ekranına birden çıkıyor ve mobil sözleşmesi onu zod olarak ifade etmek zorunda.
+ * Kuponun neden geçmediği: müşteriye sebep söylenir, çünkü asgari sepeti tutmayan kupon sepete ürün eklenerek kullanılabilir.
+ * `not_yours` sızdırılmaz ve `unknown_code` gibi sunulur, yoksa kodun varlığı doğrulanmış olurdu.
  */
 export const CouponRejectionEnum = z.enum([
   'inactive',
@@ -554,14 +387,8 @@ export const CouponRejectionEnum = z.enum([
 export type CouponRejection = z.infer<typeof CouponRejectionEnum>;
 
 /**
- * Konuşmanın kaynağı (15.1 · üç kanala genişledi 21.08, ADR-006). Tekillik anahtarının hangi uzayda
- * olduğunu SÖYLEYEN alan: `externalRef` WhatsApp'ta E.164 telefon, Messenger'da PSID (sayfa-kapsamlı
- * kişi kimliği), Instagram'da IGSID. Üç uzay ayrı dizelerdir ve `source` olmadan aynı dize iki
- * farklı kişiyi gösterebilirdi.
- *
- * **`messenger` ile `instagram` AYRI değerler, tek "meta" kovası DEĞİL:** aynı kişinin FB ve IG
- * kimlikleri farklı dizelerdir — tek kova PSID↔IGSID uzaylarını karıştırırdı. Webhook tarafında da
- * ikisi ayrı objeyle gelir (`object: "page"` / `object: "instagram"`).
+ * Konuşmanın kaynağı, tekillik anahtarının hangi uzayda olduğunu söyler: `externalRef` WhatsApp'ta telefon, Messenger'da PSID, Instagram'da IGSID.
+ * `messenger` ile `instagram` ayrı değerlerdir, çünkü aynı kişinin iki kimliği farklı dizelerdir.
  */
 export const ConversationSourceEnum = z.enum(['whatsapp', 'messenger', 'instagram']);
 export type ConversationSource = z.infer<typeof ConversationSourceEnum>;
@@ -583,79 +410,46 @@ export const MessageKindEnum = z.enum(['text', 'interactive', 'template', 'media
 export type MessageKind = z.infer<typeof MessageKindEnum>;
 
 /**
- * Şablonun Meta kategorisi — **fiyatı belirleyen alan.** Adlar Meta'nındır, uydurulmadı.
- *
- *   · `marketing`      — kampanya/duyuru. Her hâlde ücretli; ayrıca izin ister (`DOMAIN §11`).
- *   · `utility`        — sipariş onayı, kargo bildirimi. Servis penceresi İÇİNDE ücretsizdir ve
- *     ADR-005 zaten "pencere içinde önceliklidir" diyor. Dayanağı izin değil, siparişin kendisidir
- *     (sözleşmenin ifası) — bu yüzden `opt_in` şartı yalnız `marketing` içindir.
- *   · `authentication` — güvenlik kodu.
- *
- * Ayrım muhasebeden ibaret değil: kategori olmadan "bu ay WhatsApp bize ne yazdı" sorusu üç farklı
- * fiyatı tek toplama atar ve cevap sessizce yanlış çıkar.
+ * Şablonun Meta kategorisi fiyatı belirler: `marketing` her hâlde ücretli ve izin ister, `utility` servis penceresinde ücretsizdir ve dayanağı siparişin kendisidir, `authentication` güvenlik kodudur.
+ * Kategori olmadan "WhatsApp bize ne yazdı" sorusu üç fiyatı tek toplama atardı.
  */
 export const TemplateCategoryEnum = z.enum(['marketing', 'utility', 'authentication']);
 export type TemplateCategory = z.infer<typeof TemplateCategoryEnum>;
 
 /**
- * Adresin koordinatı ne KADAR ince ölçüldü (11.9). Kademeler BAN'ın kendi dört değerinin aynası —
- * yeniden adlandırmak bir eşleme tablosu ve o tablonun bir gün ayrışması demekti.
- *
- *   · `housenumber`  — kapı numarası eşleşti. Rota sıralamasının istediği incelik budur.
- *   · `street`       — sokak eşleşti, kapı numarası değil. Şehir içinde birkaç yüz metre sapar.
- *   · `locality`     — mahalle/semt.
- *   · `municipality` — BELEDİYE MERKEZİ. Bir kapıyı değil, bir yerleşimin ortalamasını gösterir.
- *
- * Kademe SAKLANIYOR çünkü ölçüm her zaman aynı değil ve farkı gizlemek kaba bir ölçümü kesinmiş gibi
- * okuturdu (`CLAUDE §1`): liste dolu ve makul görünür, yalnız kurye yanlış sıraya dizilir.
- */
-/**
- * **Durağın kapısı doğrulandı mı** (11.11) — sevkiyat masası ve kurye ekranının ORTAK kelimesi.
- *
- * Enum burada, `packages/types`ta: sözleşme (`CourierStopSchema`) taşıyor ve iki operasyon yüzeyi
- * aynı dört hâli okuyor. Ayrı ayrı tanımlansaydı biri bir gün beşinci bir hâl öğrenir, öteki
- * öğrenmezdi — ve ekranlar aynı durak için farklı şey söylerdi.
- *
- * Sertlik sırasına göre: `elsewhere` en sert (doğrusu elimizde), `unknown` hiç uyarı üretmez.
+ * Durağın kapısı doğrulandı mı: sevkiyat masası ve kurye ekranının ortak kelimesi, iki yüzey aynı hâlleri okusun diye burada.
+ * Sertlik sırasıyla: `elsewhere` en serttir (doğrusu elimizde), `unknown` hiç uyarı üretmez.
  */
 export const DoorCheckEnum = z.enum(['confirmed', 'elsewhere', 'unverified', 'unknown']);
 export type DoorCheck = z.infer<typeof DoorCheckEnum>;
 
+/**
+ * Adresin koordinatının inceliği; kademeler BAN'ın kendi değerleridir: `housenumber` kapı, `street` sokak, `locality` semt, `municipality` belediye merkezi.
+ * Kademe saklanır, çünkü farkı gizlemek kaba bir ölçümü kesin gibi okuturdu ve kurye yanlış sıraya dizilirdi.
+ */
 export const AddressGeoPrecisionEnum = z.enum(['housenumber', 'street', 'locality', 'municipality']);
 export type AddressGeoPrecision = z.infer<typeof AddressGeoPrecisionEnum>;
 
 /**
- * Koordinatı kim koydu: Fransız adres servisi (BAN), Google (Almanya — 13.09) ya da insan.
- * Kaynak yaşlanma kuralını belirler: `google` noktası 30 günden uzun saklanmaz (Google politikası),
- * `ban` süresiz (Licence Ouverte) — `geocode-scan` künyesi.
+ * Koordinatı kim koydu: BAN, Google (Almanya) ya da insan; kaynak yaşlanma kuralını belirler (`google` noktası 30 günden uzun saklanmaz, `ban` süresiz).
  */
 export const AddressGeoSourceEnum = z.enum(['ban', 'google', 'manual']);
 export type AddressGeoSource = z.infer<typeof AddressGeoSourceEnum>;
 
 /**
- * Durak sırasını kim koydu (11.9). `manual` bir KİLİTTİR: `set_run_stop_order` motor yazımını
- * zorlanmadıkça reddeder — kuryenin/operatörün dizdiği sıra, uçuşta olan bir yeniden hesapla
- * sessizce ezilmesin. (Elle sıra yüzeyi bugün yok — kullanıcı kararı 31.08: önce motor izlenir.)
+ * Durak sırasını kim koydu: `manual` bir kilittir, `set_run_stop_order` motor yazımını zorlanmadıkça reddeder ki elle dizilen sıra yeniden hesapla ezilmesin.
  */
 export const StopOrderSourceEnum = z.enum(['engine', 'manual']);
 export type StopOrderSource = z.infer<typeof StopOrderSourceEnum>;
 
 /**
- * Sıra hangi ÖLÇÜYLE dizildi. Kuş uçuşu turun makro şeklini (git-dön) doğru kurar ama bariyerin iki
- * yakasını — nehir, demiryolu, tek yön — "200 m" sayar; araç 4 km sürer. Ölçü veriye yazılır, yalnız
- * log'a değil: log'a bakan yok, ekrandaki sıraya bakan var.
+ * Sıra hangi ölçüyle dizildi: kuş uçuşu bariyerin iki yakasını yakın sayar; ölçü veriye yazılır, çünkü ekrandaki sıraya bakan var, günlüğe bakan yok.
  */
 export const StopOrderMetricEnum = z.enum(['haversine', 'matrix']);
 export type StopOrderMetric = z.infer<typeof StopOrderMetricEnum>;
 
 /**
- * Sıra hangi İNCELİKTE hesaplandı. Bir rotanın posta kodlarının bir kısmı yoğun, bir kısmı tek
- * duraklı (kullanıcı ölçümü 31.08) — yani aynı seferde iki çözünürlük bir arada olabilir:
- *
- *   · `address`         — her durak kendi kapısından dizildi.
- *   · `postal_centroid` — duraklar posta kodu merkezinden dizildi; aynı koddaki duraklar arasında
- *     sıra KEYFİDİR ve ekran bunu söylemeli.
- *   · `mixed`           — ikisi bir arada.
+ * Sıra hangi incelikte hesaplandı: `address` her durak kendi kapısından, `postal_centroid` posta kodu merkezinden (aynı koddaki duraklar arasında sıra keyfidir), `mixed` ikisi bir arada.
  */
 export const StopOrderPrecisionEnum = z.enum(['address', 'postal_centroid', 'mixed']);
 export type StopOrderPrecision = z.infer<typeof StopOrderPrecisionEnum>;

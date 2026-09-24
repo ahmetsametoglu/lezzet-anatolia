@@ -6,14 +6,8 @@ import {
   StopOrderSourceEnum,
 } from '../primitives/enums.schema';
 
-// SEFER — gerçekleşen teslimat rotası (11.7 · kullanıcı kararları 18.08 · `docs/feature/sefer.md`).
-//
-// İki "sefer" var; bu şema yalnız GERÇEKLEŞENİ taşır. Planlanan sefer `(deliveryZoneId,
-// deliveryDate)` ikilisidir ve türetilmiş kalır (0044 kararı) — davet, checkout ve kesim penceresi
-// (`deliveryRunWindow`, adı planlanan pencereyi ölçer) ona bakmaya devam eder.
-//
-// Durum makinesi YOK: hâl üç damgadan türetilir (`departedAt` dolu = yolda, `returnedAt` dolu =
-// döndü). Projenin yerleşik deseni — teslim anı loglardan, `reconciled` generated.
+// Sefer: gerçekleşen teslimat rotası; planlanan sefer `(deliveryZoneId, deliveryDate)` ikilisidir ve türetilmiş kalır.
+// Durum makinesi yok: hâl damgalardan türer (`departedAt` dolu = yolda, `returnedAt` dolu = döndü).
 
 export const DeliveryRunSchema = z.object({
   id: z.string().uuid(),
@@ -33,12 +27,8 @@ export const DeliveryRunSchema = z.object({
   note: z.string().nullable(),
 
   /**
-   * Durak sırası (11.9) — **turun özelliği, siparişin değil.** `order.stopSeq` bir kolon olsaydı
-   * paydasız bir sayı olurdu ve sipariş başka güne taşındığı an sessizce yalana dönerdi.
-   *
-   * **Dizi SIRALAMADIR, ÜYELİK DEĞİL:** üyelik `order.deliveryRunId`de kalır. Okuma dizideki yere
-   * göre dizer ve dizide olmayan durak DÜŞMEZ, sırasız olarak sona gider — bayat bir dizi hiçbir
-   * durağı gizleyemez.
+   * Durak sırası turun özelliğidir, siparişin değil; sipariş başka güne taşınınca kolon olarak sessizce yalana dönerdi.
+   * Dizi sıralamadır, üyelik değil: dizide olmayan durak düşmez, sırasız olarak sona gider.
    */
   stopOrder: z.array(z.string().uuid()),
   /** Sırayı kim koydu; `manual` motor yazımını kilitler. `null` = hiç hesaplanmadı. */
@@ -57,9 +47,7 @@ export const DeliveryRunSchema = z.object({
 export type DeliveryRun = z.infer<typeof DeliveryRunSchema>;
 
 /**
- * `set_run_stop_order` dönüşü. `manual_order_kept` bir hata değil bir KORUMA: elle dizilmiş sıra,
- * uçuşta olan bir yeniden hesapla ezilmez. `run_closed` de öyle — kapanmış seferin sırası donar,
- * "o gün hangi sırayla gidildi" geçmişe dönük değişmemeli.
+ * `set_run_stop_order` dönüşü; `manual_order_kept` ve `run_closed` hata değil korumadır: elle dizilen sıra yeniden hesapla ezilmez, kapanmış seferin sırası donar.
  */
 export const SetStopOrderResultSchema = z.object({
   ok: z.boolean(),
@@ -70,12 +58,8 @@ export const SetStopOrderResultSchema = z.object({
 export type SetStopOrderResult = z.infer<typeof SetStopOrderResultSchema>;
 
 /**
- * Sefer kapanışı — mutabakat kaydı (0025'teki `CourierDayClose`un halefi; eksen kurye×gün → SEFER,
- * kullanıcı kararı 18.08: "fark hangi seferde doğdu" cevaplanabilmeli).
- *
- * `expected_*` türetilebilirken SAKLANIR — kapanış anının fotoğrafı: sonradan bir hareket
- * düzeltilse de "o gün ne konuşuldu" değişmez. `reconciled` saklanmaz, veritabanında TÜRETİLİR
- * (generated). Para alanları CENT (02.9); DB kolonları euro `numeric`, dönüşüm servis sınırında.
+ * Sefer kapanışı, mutabakat kaydı; `expected_*` türetilebilirken saklanır, çünkü sonradan bir hareket düzeltilse de "o gün ne konuşuldu" değişmemeli.
+ * `reconciled` veritabanında türer; para alanları cent, dönüşüm servis sınırında.
  */
 export const DeliveryRunCloseSchema = z.object({
   id: z.string().uuid(),
@@ -113,23 +97,13 @@ export const DeliveryRunCollectionSchema = z.object({
 export type DeliveryRunCollection = z.infer<typeof DeliveryRunCollectionSchema>;
 
 /**
- * `open_delivery_run` dönüşü — **sefer KURULUR, başlamaz** (31.08). `departedAt` bu dalda NULL'dur
- * ve bu bir eksiklik değil tanımdır: kurulmuş sefer "araçta bekleyen" seferdir, kutuları
- * okutulabilir ama durakları açılmamıştır. Yola çıkaran `depart_delivery_run`.
- *
- * `already_started` bir hata değil bir GERÇEKTİR: rota+gün başına tek sefer (18.08) — ikinci çağrı
- * ezmez, mevcut künyeyi bildirir. `reference_collision` yalnız üretilen kodun çakışması: çağıran
- * yeni kodla dener (sipariş referansının deseni).
- *
- * `claimed` durum GEÇİŞİ değil damgalamadır: hangi siparişler bu sefere bağlandı, o anki
- * durumlarıyla. `ready → out_for_delivery` geçişini motor izniyle uygulama katmanı yazar.
+ * `open_delivery_run` dönüşü: sefer kurulur, başlamaz (`departedAt` null); yola çıkaran `depart_delivery_run`dır.
+ * `already_started` ikinci çağrının ezmediğini söyler; `claimed` durum geçişi değil damgalamadır, `ready → out_for_delivery`yi uygulama katmanı yazar.
  */
 export const OpenDeliveryRunResultSchema = z.object({
   ok: z.boolean(),
   /**
-   * `vehicle_taken` / `vehicle_mismatch` (21.249 · 04.09): araç bir yerdedir ve araçtaki yük tek
-   * araca aittir. Birincisi "araç başka kuryenin açık seferinde", ikincisi "senin öteki açık
-   * seferin başka araçta" — ayrı retler, çünkü çareleri ayrı.
+   * `vehicle_taken` araç başka kuryenin açık seferinde, `vehicle_mismatch` kuryenin öteki açık seferi başka araçta demektir; çareleri ayrı olduğu için ayrı retlerdir.
    */
   reason: z
     .enum(['already_started', 'zone_not_found', 'reference_collision', 'vehicle_taken', 'vehicle_mismatch'])
@@ -140,25 +114,19 @@ export const OpenDeliveryRunResultSchema = z.object({
   referenceNo: z.string().optional(),
   /** `already_started` dalında: seferi kim sürüyor — ekran "rota bugün X'te" diyebilsin. */
   courierId: z.string().uuid().optional(),
-  /* NULL = sefer KURULDU ama başlamadı (31.08) — `optional` yetmiyor, RPC alanı her dalda döndürüyor
-     ve değeri null olabiliyor. "Alan yok" ile "damga yok" ayrı iki gerçek. */
+  /* `null` = sefer kuruldu ama başlamadı; `optional` yetmez, çünkü RPC alanı her dalda döndürür ve "alan yok" ile "damga yok" ayrı gerçeklerdir. */
   departedAt: z.string().nullable().optional(),
   claimed: z.array(z.object({ orderId: z.string().uuid(), status: OrderStatusEnum })).optional(),
 });
 export type OpenDeliveryRunResult = z.infer<typeof OpenDeliveryRunResultSchema>;
 
 /**
- * `depart_delivery_run` dönüşü — kurulmuş seferin yola çıkma damgası (31.08).
- *
- * İkinci basış HATA DEĞİL: damga zaten varsa `already_departed` ile aynı künye döner. Kurye
- * "yola çık"a iki kez basabilir ve bunun cevabı "olmadı" değil "zaten olmuştu"dur.
+ * `depart_delivery_run` dönüşü: kurulmuş seferin yola çıkma damgası; ikinci basış hata değil, `already_departed` ile aynı künye döner.
  */
 export const DepartDeliveryRunResultSchema = z.object({
   ok: z.boolean(),
   /**
-   * `another_running` (31.08 · kullanıcı kararı): araç birden çok seferi TAŞIR ama kurye birini
-   * SÜRER. İkincisi reddedilir ve künyesiyle birlikte HANGİSİNİN sürüldüğü döner — ekran
-   * "önce şunu kapat" diyebilsin diye; çıplak bir ret, kuryeye ne yapacağını söylemez.
+   * `another_running`: araç birden çok seferi taşır ama kurye birini sürer; ret sürülen seferin künyesini taşır ki ekran "önce şunu kapat" diyebilsin.
    */
   reason: z.enum(['not_found', 'not_mine', 'already_departed', 'another_running']).optional(),
   departedAt: z.string().optional(),
@@ -169,9 +137,7 @@ export const DepartDeliveryRunResultSchema = z.object({
 export type DepartDeliveryRunResult = z.infer<typeof DepartDeliveryRunResultSchema>;
 
 /**
- * **Seferi ARAÇTAN ÇIKAR** (`discard_delivery_run` · 31.08) — kurulmuş ama başlamamış seferin
- * geri alınması. Sayılar döner çünkü ekran onayında ne olduğunu SÖYLEMELİ: kaç sipariş serbest
- * kaldı, kaç kutu rampaya geri indi.
+ * Seferi araçtan çıkar (`discard_delivery_run`): kurulmuş ama başlamamış seferin geri alınması; ekran kaç siparişin serbest kaldığını ve kaç kutunun indiğini söylesin diye sayılar döner.
  */
 export const DiscardDeliveryRunResultSchema = z.object({
   ok: z.boolean(),
@@ -188,7 +154,7 @@ export type DiscardDeliveryRunResult = z.infer<typeof DiscardDeliveryRunResultSc
  */
 export const CloseDeliveryRunResultSchema = z.object({
   ok: z.boolean(),
-  /* `not_departed` (31.08): sefer kurulmuş ama yola çıkmamış — araçta bekliyor, kapatılamaz. */
+  /* `not_departed`: sefer kurulmuş ama yola çıkmamış, araçta bekliyor ve kapatılamaz. */
   reason: z.enum(['already_closed', 'not_found', 'not_departed']).optional(),
   id: z.string().uuid().optional(),
   runId: z.string().uuid().optional(),
@@ -207,7 +173,7 @@ export const CloseDeliveryRunResultSchema = z.object({
   deliveredCount: z.number().int().optional(),
   returnedCount: z.number().int().optional(),
   pendingCount: z.number().int().optional(),
-  /** Kapanışın `ready`ye düşürdüğü takılı durak sayısı (K4, 18.08) — ekran "N durak yeniden planlanacak" der. */
+  /** Kapanışın `ready`ye düşürdüğü takılı durak sayısı; ekran "N durak yeniden planlanacak" der. */
   releasedCount: z.number().int().optional(),
   returnedAt: z.string().optional(),
 });

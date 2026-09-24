@@ -3,22 +3,15 @@ import { AccountTypeEnum } from '../entities/money.schema';
 import { OrderStatusEnum, PaymentMethodEnum } from '../primitives/enums.schema';
 
 /**
- * `/api/v1/money/*` SÖZLEŞME şemaları (21.12) — Para bölümünün (M1 tahsilat izleme · M2 gün sonu)
- * uçlarıyla ekranlarının ortak dili.
- *
- * PARA EKRANLARI SALT OKUNURDUR (tasarımın altın kuralı: "'bakiye düzeltme' diye bir kavram yok")
- * — bu dosyada hiçbir istek gövdesi şeması yoktur ve bu bir eksik değil, tasarım kararının
- * sözleşmedeki karşılığıdır: yazma ucu açılacaksa önce o karar değişmeli.
+ * `/api/v1/money/*` sözleşme şemaları: Para bölümünün (tahsilat izleme, gün sonu) uçlarıyla ekranlarının ortak dili.
+ * Para ekranları salt okunurdur, bu yüzden istek gövdesi şeması yoktur; yazma ucu açılacaksa önce o karar değişmeli.
  */
 
 /* ── M1 · TAHSİLAT İZLEME (v2:358-363, 721-750) ─────────────────────────────── */
 
 /**
- * Bekleyen tahsilat satırı. `kind` cümlenin şeklini seçer (v2:735):
- * - `door`    → kapıda ödenecek; tahsil edilecek tutar ve yöntem bilinir.
- * - `partial` → kısmen ödenmiş; kalan tutar yazılır.
- * Vadeli (B2B term) satır BİLEREK yok: modelde vade alanı yok, uydurulmaz — alan doğduğu gün
- * buraya artımlı eklenir (tipler artımlı, CLAUDE §1).
+ * Bekleyen tahsilat satırı; `kind` cümlenin şeklini seçer: `door` kapıda ödenecek (tutar ve yöntem bilinir), `partial` kısmen ödenmiş (kalan yazılır).
+ * Vadeli satır yoktur, çünkü modelde vade alanı yok ve uydurulmaz.
  */
 export const PendingCollectionSchema = z.object({
   orderId: z.string().uuid(),
@@ -49,15 +42,8 @@ export const AccountBalanceRowSchema = z.object({
 export type AccountBalanceRow = z.infer<typeof AccountBalanceRowSchema>;
 
 /**
- * Kuryenin üstündeki para — **SEFER BAŞINA** (v3:23, kullanıcı bulgusu 30.08).
- *
- * Önce tek toplam taşınıyordu ve ekran onu yöntem kırılımıyla yazıyordu; tasarım ise kartı kurye
- * kurye çiziyor ("Marc Lemoine · SF-26-YRNWV9 · 186,00 €"). Toplam, muhasebecinin soramadığı
- * soruyu cevapsız bırakıyordu: **kimde**. Para birinin cebindeyse o kişinin adı bilginin kendisidir;
- * "186,00 € kuryelerde" ile "186,00 € Marc'ta" aynı cümle değildir.
- *
- * Veri zaten defterdeydi: `delivery_run` künyeyi (`referenceNo` · `courierId`), `delivery_run`ın
- * tahsilat satırı da beklenen tutarları taşıyor — eksik olan yalnız zarftı.
+ * Kuryenin üstündeki para, sefer başına: para birinin cebindeyse o kişinin adı bilginin kendisidir ("186,00 € Marc'ta").
+ * Künye `delivery_run`dan, beklenen tutarlar seferin tahsilat görünümünden gelir.
  */
 export const CourierFloatRowSchema = z.object({
   runId: z.string().uuid(),
@@ -78,18 +64,12 @@ export const MoneyOverviewSchema = z.object({
   pending: z.array(PendingCollectionSchema),
   todayByMethod: z.array(MethodTotalSchema),
   /**
-   * Bugün deftere düşen tahsilat ADEDİ (v3:23 rozeti — "14 tahsilat").
-   *
-   * Tutarın yanında DURAN ama ondan türetilEMEYEN sayı: 1.286,50 € iki tahsilattan da gelebilir,
-   * kırktan da; muhasebecinin "gün yoğun muydu" sorusunun cevabı adettedir. `todayByMethod`
-   * yöntem başına yalnız tutar taşır, dolayısıyla adet oradan çıkarılamaz — kendi alanı olmak
-   * zorunda.
+   * Bugün deftere düşen tahsilat adedi: tutardan türetilemez ("gün yoğun muydu" sorusunun cevabı adettir) ve `todayByMethod` yalnız tutar taşır.
    */
   todayCount: z.number().int().nonnegative(),
   /**
-   * Kuryelerin üstündeki para: bugünün HENÜZ KAPANMAMIŞ seferlerinde kapıda toplanan tutarlar,
-   * **sefer başına**. Online/havale bu dökümde YOKTUR (v2:744) — o para hiç kuryenin eline değmez.
-   * Küme bugünün açık seferleriyle sınırlı olduğu için doğal tavanlı (tek tur, sayfalama yok).
+   * Bugünün kapanmamış seferlerinde kapıda toplanan tutarlar, sefer başına; online ve havale burada yoktur, çünkü kuryenin eline değmez.
+   * Küme bugünün açık seferleriyle sınırlıdır, tek turda gelir.
    */
   courierFloat: z.array(CourierFloatRowSchema),
   accounts: z.array(AccountBalanceRowSchema),
@@ -108,13 +88,8 @@ export const MoneyDayEndSchema = z.object({
   /** Kapanan seferlerde sayılıp teslim edilen nakit (cent). */
   courierHandoverCents: z.number().int(),
   /**
-   * Beklenen ↔ sayılan nakit farkı, bugünün KAPANMIŞ seferleri üzerinden.
-   * `null` = bugün kapanan sefer yok; mutabakat sorusu henüz sorulmadı (0 "fark yok" derdi — yalan).
-   *
-   * `runs` KÜNYEDİR, toplam değil (v3:24, kullanıcı bulgusu 30.08): şablon uyuşmazlığın altına
-   * "SF-26-YRNWV9 · Marc Lemoine · 17:42" yazıyor. Bir eksiğin peşine düşen muhasebeci **hangi
-   * seferi** arayacağını bilmeli; toplam tek başına "bir yerde 4,50 € eksik" demekten öteye
-   * gitmiyordu. Yalnız FARKI OLAN seferler girer — tutan sefer bir künye değil, sessiz bir onaydır.
+   * Bugünün kapanmış seferlerinde beklenen ile sayılan nakit farkı; `null` = bugün kapanan sefer yok (0 "fark yok" derdi).
+   * `runs` künyedir, toplam değil: muhasebeci hangi seferi arayacağını bilmeli; yalnız farkı olan seferler girer.
    */
   discrepancy: z
     .object({
@@ -132,12 +107,7 @@ export const MoneyDayEndSchema = z.object({
       ),
     })
     .nullable(),
-  /**
-   * Defterde İZAH EDİLMEMİŞ hareket sayısı (13.09) — sipariş/mal kabul/tedarikçi bağı, belge,
-   * etiket ya da transferden hiçbiri olmayan satırlar. Eski adı `unmatchedMovementCount` idi ve
-   * banka mutabakat bayrağını sayıyordu; o bayrak yalnız ekstre satırında anlam taşır, sistemin
-   * kendi yazdığı her tahsilat "eşleşmemiş" görünüyordu.
-   */
+  /** Defterde izah edilmemiş hareket sayısı: sipariş, mal kabul, tedarikçi, belge, etiket ya da transfer bağı olmayan satırlar. */
   unexplainedMovementCount: z.number().int().nonnegative(),
 });
 export type MoneyDayEnd = z.infer<typeof MoneyDayEndSchema>;
