@@ -419,12 +419,12 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   - Ürünün aktif olmamasına sebep olan eksikler diyalogda bir yerde yazmalı.
   - Alerjenlerde "alerjen eklenmez" düğmesiyle alerjen listesi aynı anda görünüyor; varsayılan boş hâlden olabilir, incelenecek.
 - [ ] (K.33) [hedef: müşteri] "Yapay zekâya sor" kutusu (ürün detayı) yalnız masaüstü web'de var; telefon görünümünde ve native'de
-  yok. Kodda ChatGPT, Gemini ve Claude düğmeleri var; kararın kaydında yalnız `chatgpt.com/?q=` doğrulanmıştı (Claude'un mobil
-  şeması Claude Code erişimi istiyordu, Gemini'de resmî `?q=` bulunamamıştı) ve kural "açılmayan düğme konmaz". Düğmeler cihazda
-  denenecek; marka düğmeleri yerine işletim sisteminin paylaşım tepsisi tarafsızlık açısından daha güçlü. Soru kategorinin
-  şablonundan kurulur (`category.ai_question`, K.23); kimlik ya da servis sorar, amaç sormaz ("ne işe yarar" sağlık beyanı ima
-  eder, 1924/2006 md. 2(1)). Metin bir kez sabitlenir, "daha iyi cevap alsın" diye ayarlanmaz: ayarlandığı an içeriği seçmiş
-  oluruz ve üçüncü taraf savunması düşer.
+  yok. Kutu yalnız soru şablonu dolu kategoride çiziliyor ve bugün hiçbir kategoride şablon yok (alanı K.23 açacak). Düğmeler:
+  ChatGPT soruyu kutuya dolu açıyor; Gemini `?q=`yu yok saydığı için kaldırıldı; Claude oturumsuz ziyaretçiyi giriş sayfasına
+  gönderiyor ve bot koruması yüzünden otomatik ölçülemedi — girişli bir tarayıcıda elle denenecek, soruyu taşımıyorsa kalkar.
+  Marka düğmeleri yerine işletim sisteminin paylaşım tepsisi tarafsızlık açısından daha güçlü. Soru kimlik ya da servis sorar,
+  amaç sormaz ("ne işe yarar" sağlık beyanı ima eder, 1924/2006 md. 2(1)); metin bir kez sabitlenir, "daha iyi cevap alsın" diye
+  ayarlanmaz: ayarlandığı an içeriği seçmiş oluruz ve üçüncü taraf savunması düşer.
 - [ ] (K.34) [hedef: operasyon] Ülkeye göre ürün etiketi: bazı ürünlerin üzerinde satıldığı ülkenin zorunlu bilgisi yok. Ürünün
   hangi ülkeler için yeterli bilgi taşıdığı tutulacak; yetersiz olduğu ülkeler için önceden çevrilmiş etiket metni hazır olacak ve
   kargoda paketlemeden önce yazıcıdan basılıp yapıştırılacak (satış anında çeviri yapılmaz, etiket yeterliyse çıktı alınmaz).

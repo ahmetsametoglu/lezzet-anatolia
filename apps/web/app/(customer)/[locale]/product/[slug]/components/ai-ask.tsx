@@ -6,11 +6,10 @@ import type { Messages } from '../product-types';
  */
 
 /**
- * Servisler ve soruyu adres satırında taşıma biçimleri. Ad markanın kendi yazımıdır, çevrilmez;
- * bu yüzden sözlükte değil burada durur.
+ * Servisler ve soruyu adres satırında taşıma biçimleri; ad markanın kendi yazımıdır, çevrilmediği için sözlükte değil burada durur.
+ * Listede yalnız soruyu adres satırından alan servis durur: Gemini `?q=`yu yok sayıp boş kutuyla açılıyor.
  */
 const SERVICES: { name: string; url: (question: string) => string }[] = [
-  { name: 'Gemini', url: (q) => `https://gemini.google.com/app?q=${encodeURIComponent(q)}` },
   { name: 'Claude', url: (q) => `https://claude.ai/new?q=${encodeURIComponent(q)}` },
   { name: 'ChatGPT', url: (q) => `https://chatgpt.com/?q=${encodeURIComponent(q)}` },
 ];
