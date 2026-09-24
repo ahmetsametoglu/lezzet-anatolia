@@ -78,7 +78,7 @@
       "someone": "Ihre Nachbarin oder Ihr Nachbar",
       "body": "Unser Fahrzeug ist an diesem Tag ohnehin in Ihrer Nähe. Bestellen Sie für denselben Tag, dann werden Sie zusammen beliefert — ohne Unterbrechung der Kühlkette, bis vor Ihre Tür.",
       "primary": "Katalog ansehen",
-      "secondary": "Konto eröffnen"
+      "secondary": "Konto erstellen"
     },
     "self": {
       "title": "Das ist Ihr Einladungslink",
@@ -87,12 +87,12 @@
     },
     "runClosed": {
       "title": "Für die Lieferung am {day} ist es zu spät",
-      "body": "Die Bestellungen für diesen Tag sind geschlossen. Für die kommenden Termine können Sie den Katalog ansehen.",
+      "body": "Für diesen Tag nehmen wir keine Bestellungen mehr an. Für die kommenden Termine können Sie den Katalog ansehen.",
       "primary": "Katalog ansehen"
     },
     "full": {
-      "title": "Die Nachbarplätze für den {day} sind belegt",
-      "body": "Diese Einladung hat ihre Anzahl an Nachbarinnen und Nachbarn erreicht. Bestellen können Sie trotzdem; den Liefertag wählen Sie beim Bezahlen.",
+      "title": "Für {day} sind alle Plätze dieser Einladung vergeben",
+      "body": "Über diese Einladung können keine weiteren Nachbarn bestellen. Sie können trotzdem bestellen — den Liefertag wählen Sie an der Kasse.",
       "primary": "Katalog ansehen"
     },
     "unknown": {

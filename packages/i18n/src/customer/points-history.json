@@ -97,11 +97,11 @@
     "eyebrow": "Mein Konto",
     "empty": {
       "title": "Noch keine Punktebewegungen",
-      "body": "Ihre Bewegungen erscheinen hier, sobald Sie Punkte sammeln.",
+      "body": "Hier erscheinen Ihre Punktebewegungen, sobald Sie Punkte sammeln.",
       "cta": "Wie sammle ich Punkte?"
     },
     "error": {
-      "title": "Verlauf nicht ladbar",
+      "title": "Verlauf konnte nicht geladen werden",
       "body": "Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
       "retry": "Erneut versuchen"
     },
@@ -112,7 +112,7 @@
     },
     "denied": {
       "title": "Das Punkteprogramm gilt nicht für Geschäftskonten",
-      "body": "Für Ihr Firmenkonto gelten bereits eigene Preise."
+      "body": "Für Ihr Geschäftskundenkonto gelten bereits eigene Preise."
     },
     "count": "{n} Bewegungen",
     "tailRetry": "Mehr laden",
@@ -134,7 +134,7 @@
     "pending": {
       "title": "Punkte unterwegs",
       "one": "{name} hat bestellt — {points} Punkte, sobald die Zahlung eingegangen ist.",
-      "balance": "Ihr Guthaben"
+      "balance": "Ihr Punktestand"
     }
   }
 }

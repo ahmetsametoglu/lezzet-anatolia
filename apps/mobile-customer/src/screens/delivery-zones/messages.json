@@ -60,9 +60,9 @@
       "title": "Noch keine Postleitzahl veröffentlicht",
       "body": "Die von unserem Fahrzeug belieferten Postleitzahlen veröffentlichen wir hier in Kürze."
     },
-    "tryCode": "Meine Postleitzahl ausprobieren",
+    "tryCode": "Meine Postleitzahl prüfen",
     "tryCodeHint": "Geben Sie Ihre Postleitzahl ein, wir nennen Ihnen die Lieferart",
     "closing": "Alle übrigen Produkte versenden wir nach {countries} — Sie können also auch bestellen, wenn Sie nicht auf der Liste stehen.",
-    "closingNoShipping": "Alle übrigen Produkte versenden wir auch per Paket — Sie können also auch bestellen, wenn Sie nicht auf der Liste stehen."
+    "closingNoShipping": "Alle übrigen Produkte verschicken wir auch — Sie können also auch bestellen, wenn Sie nicht auf der Liste stehen."
   }
 }

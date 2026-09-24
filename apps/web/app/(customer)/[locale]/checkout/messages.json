@@ -98,8 +98,8 @@
       "customer_not_found": "Hesabınızı tanıyamadık, lütfen yeniden giriş yapın.",
       "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin.",
       "warehouse_unresolved": "Adresiniz için teslimat noktası belirlenemedi. Ekibimize haber verildi — lütfen bizimle iletişime geçin.",
-      "price_changed": "Siz ekrandayken bazı fiyatlar değişti: {detail}. Sipariş vermeden önce görmenizi istedik — onaylıyorsanız tekrar \"Siparişi tamamla\"ya basın.",
-      "cart_changed": "Siz ekrandayken sepetiniz değişti — sipariş verilmedi. Yandaki özet güncellendi; uygunsa tekrar \"Siparişi tamamla\"ya basın.",
+      "price_changed": "Siz ekrandayken bazı fiyatlar değişti: {detail}. Sipariş vermeden önce görmenizi istedik — onaylıyorsanız tekrar \"Siparişi onayla\"ya basın.",
+      "cart_changed": "Siz ekrandayken sepetiniz değişti — sipariş verilmedi. Yandaki özet güncellendi; uygunsa tekrar \"Siparişi onayla\"ya basın.",
       "shipping_option_unavailable": "Seçtiğiniz kargo servisi bu sepet için artık sunulmuyor. Lütfen kargo seçimini yeniden yapın.",
       "service_point_invalid": "Bu kargo servisi bir teslim noktasına teslim ediyor. Lütfen açık bir teslim noktası seçin.",
       "pickup_not_allowed": "Depodan teslim hesabınız için açık değil — adresinize teslimi seçin.",
@@ -173,7 +173,7 @@
       "pickup": "Retrait à l’entrepôt · offert",
       "pickupBody": "Nous vous prévenons dès que la commande est prête ; vous convenez de l’heure du retrait avec l’entrepôt par téléphone.",
       "pickupPhone": "Pour convenir de l’heure : {phone}",
-      "titlePickup": "Livraison"
+      "titlePickup": "Retrait"
     },
     "payment": {
       "step": "3",
@@ -232,8 +232,8 @@
       "customer_not_found": "Votre compte n'a pas pu être identifié, reconnectez-vous.",
       "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer.",
       "warehouse_unresolved": "Nous n'avons pas pu organiser la livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter.",
-      "price_changed": "Certains prix ont changé pendant que vous étiez sur cette page : {detail}. Nous tenions à vous le montrer avant de valider — si cela vous convient, appuyez à nouveau sur « Finaliser la commande ».",
-      "cart_changed": "Votre panier a changé pendant que vous étiez sur cette page — la commande n'a pas été passée. Le récapitulatif est à jour ; si cela vous convient, appuyez à nouveau sur « Finaliser la commande ».",
+      "price_changed": "Certains prix ont changé pendant que vous étiez sur cette page : {detail}. Nous tenions à vous le montrer avant de valider — si cela vous convient, appuyez à nouveau sur « Confirmer la commande ».",
+      "cart_changed": "Votre panier a changé pendant que vous étiez sur cette page — la commande n'a pas été passée. Le récapitulatif est à jour ; si cela vous convient, appuyez à nouveau sur « Confirmer la commande ».",
       "shipping_option_unavailable": "Le mode de livraison choisi n'est plus proposé pour ce panier. Merci de choisir à nouveau.",
       "service_point_invalid": "Ce mode de livraison livre en point relais. Merci de choisir un point relais ouvert.",
       "pickup_not_allowed": "Le retrait à l’entrepôt n’est pas ouvert pour votre compte — choisissez la livraison à votre adresse.",
@@ -272,7 +272,7 @@
     "backToCart": "← Zurück zum Warenkorb",
     "backLabel": "Zurück",
     "verify": {
-      "accountAs": "Sie fahren fort als {email}",
+      "accountAs": "Angemeldet als {email}",
       "notYou": "Nicht Sie?",
       "notYouConfirm": "Abmelden?",
       "notYouYes": "Ja, abmelden",
@@ -294,20 +294,20 @@
       "step": "2",
       "title": "Liefertag",
       "route": "Lieferung an die Tür · kostenlos",
-      "routeBody": "Ihre Adresse liegt in unserem Liefergebiet — unser Fahrzeug bringt es zu Ihnen.",
+      "routeBody": "Ihre Adresse liegt in unserem Liefergebiet — unser Fahrzeug bringt Ihre Bestellung bis an die Haustür.",
       "shipping": "Versand",
-      "shippingBody": "Diese Adresse liegt außerhalb unseres Liefergebiets — unser Fahrzeug fährt nicht dorthin, die Bestellung wird per Paket verschickt.",
+      "shippingBody": "Diese Adresse liegt außerhalb unseres Liefergebiets — unser Fahrzeug fährt nicht dorthin, die Bestellung wird verschickt.",
       "shippingDays": "2–4 Werktage nach der Vorbereitung",
       "single": "Am {date} bei Ihnen",
       "neighborInvite": "{name} aus Ihrer Nachbarschaft hat Sie zur Lieferung am {date} eingeladen — dieser Tag ist vorausgewählt.",
-      "blocked": "Kühlkettenartikel können wir nicht an diese Adresse senden. Gehen Sie zum Warenkorb, um sie für später zu merken, oder ändern Sie die Adresse.",
+      "blocked": "Kühlkettenartikel können wir nicht an diese Adresse senden. Gehen Sie zum Warenkorb, um sie für später zu speichern, oder ändern Sie die Adresse.",
       "shippingFee": "{fee}",
       "shippingFree": "Ab {threshold} kostenlos.",
-      "shippingScope": "Nur versandfähige Artikel. Kühlkettenprodukte gehen nicht per Paket.",
+      "shippingScope": "Nur versandfähige Artikel. Kühlkettenprodukte können nicht verschickt werden.",
       "pickup": "Abholung im Lager · kostenlos",
       "pickupBody": "Wir melden uns, sobald die Bestellung bereit ist; die Abholzeit vereinbaren Sie telefonisch mit dem Lager.",
       "pickupPhone": "Für die Terminabsprache: {phone}",
-      "titlePickup": "Lieferung"
+      "titlePickup": "Abholung"
     },
     "payment": {
       "step": "3",
@@ -336,17 +336,17 @@
     },
     "summary": {
       "submit": "Bestellung bestätigen",
-      "terms": "Mit der Bestätigung akzeptieren Sie die Verkaufsbedingungen.",
+      "terms": "Mit Ihrer Bestellung akzeptieren Sie unsere AGB.",
       "termsLink": "Allgemeine Geschäftsbedingungen lesen",
       "coldChain": "Ihre Bestellung kommt am {date} ohne Unterbrechung der Kühlkette zu Ihnen.",
-      "minBasket": "Mindestbestellwert für {place}: {min} — fügen Sie Ihrer Zwischensumme noch {missing} hinzu.",
-      "packageSuffix": "(Paket)",
+      "minBasket": "Mindestbestellwert für {place}: {min} — es fehlen noch {missing}.",
+      "packageSuffix": "(Genusspaket)",
       "blockedTotal": "Die Summe steht fest, sobald die nicht lieferbaren Artikel oben geklärt sind.",
       "cartUnreachable": "Ihr Warenkorb konnte nicht geladen werden. Bitte Seite neu laden und erneut versuchen."
     },
     "pay": {
       "validating": "Karte wird geprüft…",
-      "preparing": "Bestellung wird vorbereitet…",
+      "preparing": "Bestellung wird angelegt…",
       "confirming": "Zahlung wird bestätigt…",
       "error": "Zahlung nicht abgeschlossen"
     },
@@ -365,9 +365,9 @@
       "stale": "Diese Bestellung wird bereits bearbeitet.",
       "customer_not_found": "Ihr Konto konnte nicht ermittelt werden, bitte erneut anmelden.",
       "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
-      "warehouse_unresolved": "Für Ihre Adresse konnte kein Lieferpunkt bestimmt werden. Unser Team wurde benachrichtigt — bitte kontaktieren Sie uns.",
-      "price_changed": "Während Sie auf dieser Seite waren, haben sich einige Preise geändert: {detail}. Wir wollten es Ihnen vor der Bestellung zeigen — wenn das für Sie in Ordnung ist, tippen Sie erneut auf „Bestellung abschließen“.",
-      "cart_changed": "Ihr Warenkorb hat sich geändert, während Sie auf dieser Seite waren — die Bestellung wurde nicht aufgegeben. Die Übersicht ist aktualisiert; wenn das für Sie in Ordnung ist, tippen Sie erneut auf „Bestellung abschließen“.",
+      "warehouse_unresolved": "Für Ihre Adresse können wir die Lieferung gerade nicht einplanen. Unser Team wurde benachrichtigt — bitte kontaktieren Sie uns.",
+      "price_changed": "Während Sie auf dieser Seite waren, haben sich einige Preise geändert: {detail}. Wir wollten es Ihnen vor der Bestellung zeigen — wenn das für Sie in Ordnung ist, wählen Sie erneut „Bestellung bestätigen“.",
+      "cart_changed": "Ihr Warenkorb hat sich geändert, während Sie auf dieser Seite waren — die Bestellung wurde nicht aufgegeben. Die Übersicht ist aktualisiert; wenn das für Sie in Ordnung ist, wählen Sie erneut „Bestellung bestätigen“.",
       "shipping_option_unavailable": "Die gewählte Versandart ist für diesen Warenkorb nicht mehr verfügbar. Bitte wählen Sie erneut.",
       "service_point_invalid": "Diese Versandart liefert an einen Abholpunkt. Bitte wählen Sie einen geöffneten Abholpunkt.",
       "pickup_not_allowed": "Die Abholung im Lager ist für Ihr Konto nicht freigeschaltet — wählen Sie die Lieferung an Ihre Adresse.",
@@ -375,7 +375,7 @@
     },
     "eyebrow": "Ihr Warenkorb · Kasse",
     "shippingEyebrow": "Versandbestellung · separate Zahlung",
-    "shippingNote": "Dies ist eine separate Bestellung für die Artikel Ihres Warenkorbs, die als Paket gehen — Ihre Artikel für die Lieferung an die Tür bleiben im Warenkorb. Die Versandkosten werden aus dieser Bestellung berechnet und die Zahlung erfolgt nur online.",
+    "shippingNote": "Dies ist eine separate Bestellung für die Artikel Ihres Warenkorbs, die verschickt werden — Ihre Artikel für die Lieferung an die Tür bleiben im Warenkorb. Die Versandkosten werden aus dieser Bestellung berechnet und die Zahlung erfolgt nur online.",
     "secure": "Stripe · 3D Secure · verschlüsselt",
     "progress": {
       "cart": "Warenkorb",
@@ -387,10 +387,10 @@
     "review": {
       "title": "Ihr Warenkorb",
       "edit": "Warenkorb bearbeiten",
-      "package": "Paket · {n} Produkte"
+      "package": "Genusspaket · {n} Artikel"
     },
     "errors": {
-      "unexpected": "Etwas ist schiefgelaufen. Bitte erneut versuchen; wenn es bleibt, schreiben Sie uns.",
+      "unexpected": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut. Besteht das Problem weiter, schreiben Sie uns.",
       "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden."
     },
     "addressCheck": {

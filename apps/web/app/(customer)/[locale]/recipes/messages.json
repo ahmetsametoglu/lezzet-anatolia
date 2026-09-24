@@ -37,7 +37,7 @@
     "heroTitle": "Was kommt heute auf den Tisch?",
     "heroBody": "Kleine Rezepte, große Tafeln: Jedes Rezept zeigt, wie unsere Produkte verwendet werden — legen Sie die Zutaten mit einem Griff in den Warenkorb, den Rest erledigt der Ofen.",
     "items": "{n} Produkte",
-    "pantry": "+ {n} Zutaten von zuhause",
+    "pantry": "+ {n} aus Ihrer Küche",
     "soldOut": "Zutaten derzeit nicht erhältlich",
     "soldOutShort": "Nicht erhältlich",
     "cta": "Rezept ansehen",

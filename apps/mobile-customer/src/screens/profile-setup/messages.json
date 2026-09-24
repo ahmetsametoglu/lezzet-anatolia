@@ -70,12 +70,12 @@
     }
   },
   "de": {
-    "step": "Schritt {n} / {total}",
+    "step": "Schritt {n} von {total}",
     "back": "Zurück",
     "next": "Weiter",
     "finish": "Fertig",
     "saving": "Wird gespeichert…",
-    "loading": "Ihr Profil wird gelesen…",
+    "loading": "Ihr Profil wird geladen…",
     "doneToast": "Danke — Ihr Profil ist vollständig ✓",
     "name": {
       "kicker": "LERNEN WIR UNS KENNEN",
@@ -87,14 +87,14 @@
     "address": {
       "kicker": "LIEFERUNG",
       "title": "Wohin liefern wir?",
-      "body": "Ihre Adresse bestimmt Liefertag und Liefergebühr. Ohne sie fragen wir beim Bestellen danach.",
+      "body": "Ihre Adresse bestimmt Liefertag und Liefergebühr. Wenn Sie sie jetzt nicht angeben, fragen wir beim Bestellen danach.",
       "save": "Speichern und weiter",
       "later": "Später hinzufügen"
     },
     "phone": {
       "kicker": "KONTAKT",
       "title": "Ihre Telefonnummer",
-      "body": "Hier erreichen wir Sie, wenn der Kurier fast da ist oder sich an Ihrer Bestellung etwas ändert.",
+      "body": "Hier erreichen wir Sie, wenn unser Fahrer fast da ist oder sich an Ihrer Bestellung etwas ändert.",
       "field": "Telefon",
       "placeholder": "Telefon (WhatsApp)"
     },

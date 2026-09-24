@@ -78,14 +78,14 @@
   "de": {
     "meta": {
       "title": "Einladung von nebenan — Lezzet Anatolie",
-      "description": "Ihre Nachbarin oder Ihr Nachbar lädt Sie zur selben Liefertour ein. Bestellen Sie für denselben Tag."
+      "description": "Ihre Nachbarin oder Ihr Nachbar lädt Sie ein, sich am selben Tag beliefern zu lassen. Bestellen Sie für denselben Tag."
     },
     "ok": {
       "eyebrow": "Einladung von nebenan",
       "title": "{name} lädt Sie zur Lieferung am {date} ein",
       "someone": "Ihre Nachbarin oder Ihr Nachbar",
-      "description": "Gleicher Tag, gleiches Fahrzeug, gleiche Straße. Bestellen Sie für diese Tour und Sie werden zusammen beliefert.",
-      "primary": "Für diese Tour bestellen",
+      "description": "Gleicher Tag, gleiches Fahrzeug, gleiche Straße. Bestellen Sie für diesen Liefertag und Sie werden zusammen beliefert.",
+      "primary": "Für diesen Liefertag bestellen",
       "secondary": "Erst den Katalog ansehen"
     },
     "unknown": {
@@ -96,20 +96,20 @@
     },
     "runClosed": {
       "eyebrow": "Einladung von nebenan",
-      "title": "Für die Tour am {date} ist es zu spät",
-      "description": "Die eingeladene Lieferung ist geschlossen. Der nächste Liefertag Ihres Gebiets erscheint beim Bestellen — Sie können fortfahren.",
+      "title": "Für die Lieferung am {date} ist es zu spät",
+      "description": "Für diese Lieferung ist Bestellschluss. Den nächsten Liefertag für Ihr Gebiet sehen Sie beim Bestellen — Sie können weiter bestellen.",
       "primary": "Katalog entdecken"
     },
     "full": {
       "eyebrow": "Einladung von nebenan",
       "title": "Diese Einladung ist ausgeschöpft",
-      "description": "Für die Tour am {date} sind bereits genug Nachbarn eingeladen. Bestellen können Sie trotzdem; den Tag wählen Sie beim Bestellen.",
+      "description": "Für die Lieferung am {date} sind bereits genug Nachbarn eingeladen. Bestellen können Sie trotzdem; den Liefertag wählen Sie beim Bestellen.",
       "primary": "Katalog entdecken"
     },
     "self": {
       "eyebrow": "Einladung von nebenan",
       "title": "Das ist Ihr eigener Einladungslink",
-      "description": "Der Link funktioniert. Schicken Sie ihn Ihren Nachbarn — Ihre Punkte kommen, sobald deren Bestellung zu dieser Tour gehört.",
+      "description": "Der Link funktioniert. Schicken Sie ihn Ihren Nachbarn — Ihre Punkte kommen, sobald eine Bestellung für diesen Tag bezahlt ist.",
       "primary": "Zurück zu meinen Bestellungen"
     }
   }

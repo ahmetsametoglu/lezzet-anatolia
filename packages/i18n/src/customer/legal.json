@@ -148,7 +148,7 @@
           {
             "id": "toptan",
             "question": "Restoranım için toptan fiyat alabilir miyim?",
-            "answer": "Evet. \"Profesyoneller\" sayfasından SIRET numaranızla başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür. İşletme hesaplarında havale ile ödeme de açılır; ödeme koşullarınız hesabınıza tanımlanır."
+            "answer": "Evet. \"Profesyoneller\" sayfasından SIRET numaranızla (Fransa) ya da KDV numaranızla (Almanya) başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür. İşletme hesaplarında havale ile ödeme de açılır; ödeme koşullarınız hesabınıza tanımlanır."
           },
           {
             "id": "alerjen",
@@ -679,7 +679,7 @@
           {
             "id": "toptan",
             "question": "Puis-je obtenir des tarifs professionnels pour mon restaurant ?",
-            "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence. Les comptes professionnels ont également accès au paiement par virement ; vos conditions de règlement sont définies sur votre compte."
+            "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET (France) ou votre numéro de TVA (Allemagne) ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence. Les comptes professionnels ont également accès au paiement par virement ; vos conditions de règlement sont définies sur votre compte."
           },
           {
             "id": "alerjen",
@@ -1094,8 +1094,8 @@
             "id": "yollar",
             "heading": "Welches Produkt kommt auf welchem Weg",
             "paragraphs": [
-              "Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Sie können nicht als Paket verschickt werden: Unter Versandbedingungen können wir die Kühlkette nicht sicher gewährleisten, und was wir nicht gewährleisten können, transportieren wir nicht.",
-              "Alle übrigen Produkte versenden wir per Paket — ob Sie in unserem Liefergebiet wohnen oder nicht. Außerhalb des Gebiets zu wohnen heißt also nicht, dass Sie nicht bestellen können: Nur Produkte mit Kühlkette können Sie nicht erreichen.",
+              "Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Diese Produkte können wir nicht verschicken: Unter Versandbedingungen können wir die Kühlkette nicht sicher gewährleisten, und was wir nicht gewährleisten können, transportieren wir nicht.",
+              "Alle übrigen Produkte verschicken wir — ob Sie in unserem Liefergebiet wohnen oder nicht. Außerhalb des Gebiets zu wohnen heißt also nicht, dass Sie nicht bestellen können: Nur Kühlkettenprodukte können wir Ihnen dann nicht liefern.",
               "Im Katalog und auf jeder Produktseite steht, auf welchem Weg das Produkt zu Ihnen kommt. Wählen Sie eine Adresse außerhalb des Gebiets, werden Kühlkettenartikel nicht in die Bestellung aufgenommen — sie bleiben in Ihrem Warenkorb."
             ],
             "bullets": []
@@ -1106,7 +1106,7 @@
             "paragraphs": [
               "Nach der Vorbereitung Ihres Pakets rechnen Sie in Frankreich und Deutschland mit 2 bis 4 Werktagen.",
               "Enthält Ihr Warenkorb sowohl versandfähige als auch nur per Fahrzeug lieferbare Artikel, wird er geteilt: Haustürlieferung und Versand werden zu zwei getrennten Bestellungen mit getrennter Zahlung. Die Versandbestellung ist nicht verpflichtend — sonst bleiben diese Artikel im Warenkorb.",
-              "Versandkosten und Freigrenze stehen unten unter „Aktuelle Beträge“; dieselben Zahlen sehen Sie auch im Warenkorb, vor dem Abschluss der Bestellung."
+              "Versandkosten und die Grenze für kostenlosen Versand stehen unten unter „Aktuelle Beträge“; dieselben Zahlen sehen Sie auch im Warenkorb, vor dem Abschluss der Bestellung."
             ],
             "bullets": []
           },
@@ -1127,10 +1127,10 @@
               "In den folgenden Fällen erstatten wir Ihnen den Betrag oder senden erneut — die Wahl liegt bei Ihnen:"
             ],
             "bullets": [
-              "Fehlender Artikel: Der Betrag des in Ihrem Paket fehlenden Produkts wird automatisch erstattet, ohne dass Sie etwas tun müssen.",
+              "Fehlender Artikel: Der Betrag des in Ihrer Lieferung fehlenden Produkts wird automatisch erstattet, ohne dass Sie etwas tun müssen.",
               "Beschädigtes oder aufgetautes Produkt: Melden Sie es innerhalb von 48 Stunden nach der Lieferung mit einem Foto.",
               "Falsch geliefertes Produkt: Wir senden das richtige Produkt oder erstatten den Betrag.",
-              "Nicht zugestellte Bestellung: Konnte aus einem von uns zu vertretenden Grund nicht zugestellt werden, erfolgt kein Einzug beziehungsweise eine Erstattung.",
+              "Nicht zugestellte Bestellung: Können wir aus einem von uns zu vertretenden Grund nicht liefern, berechnen wir nichts; bereits Gezahltes erstatten wir.",
               "Niemand an der Adresse angetroffen: Wir versuchen die Zustellung ein zweites Mal, kostenfrei. Können wir auch dann nicht zustellen, sind die tiefgekühlten Produkte nicht mehr verkehrsfähig und der Betrag wird nicht erstattet."
             ]
           },
@@ -1139,7 +1139,7 @@
             "heading": "Wie und wann erstattet wird",
             "paragraphs": [
               "Die Erstattung erfolgt auf das von Ihnen genutzte Zahlungsmittel. Bei Kartenzahlung wird der Betrag Ihrer Karte gutgeschrieben; je nach Bank kann es einige Werktage dauern, bis er auf Ihrem Konto erscheint.",
-              "Haben Sie Zahlung bei Lieferung gewählt und noch nicht bezahlt, gibt es keine Erstattung: Der Betrag des fehlenden Artikels wird bereits von der bei der Lieferung fälligen Summe abgezogen.",
+              "Haben Sie Zahlung bei Lieferung gewählt und noch nicht bezahlt, ist keine Erstattung nötig: Der Betrag des fehlenden Artikels wird bereits von der bei der Lieferung fälligen Summe abgezogen.",
               "Eine Anfrage können Sie im Bereich „Kundenservice“ eröffnen; wenn Sie im Formular Ihre Bestellung und die betroffenen Artikel auswählen, erfahren wir direkt, was fehlt oder beschädigt ist."
             ],
             "bullets": []
@@ -1154,13 +1154,13 @@
           "minBasketShipping": "Für Versandbestellungen beträgt der Mindestbestellwert {amount}.",
           "minBasketShippingNone": "Für Versandbestellungen gibt es keinen Mindestbestellwert — die Versandkosten tragen Sie ohnehin.",
           "cod": "Zahlung bei Lieferung ist bei Bestellungen im Liefergebiet bis {amount} möglich; darüber wird die Zahlung bei der Bestellung eingezogen.",
-          "countries": "Länder, in die wir per Paket versenden: {countries}.",
+          "countries": "Länder, in die wir versenden: {countries}.",
           "and": " und ",
           "countryNames": {
             "FR": "Frankreich",
             "DE": "Deutschland"
           },
-          "unavailable": "Die aktuellen Versandkosten, die Freigrenze und den Mindestbestellwert sehen Sie in Ihrem Warenkorb und im Zahlungsschritt.",
+          "unavailable": "Die aktuellen Versandkosten, die Grenze für kostenlosen Versand und den Mindestbestellwert sehen Sie in Ihrem Warenkorb und im Zahlungsschritt.",
           "note": "Diese Beträge sind die allgemeine Regel für Privatkunden und die aktuell im System gültigen Werte; ändern sie sich, ändert sich diese Seite mit. In einzelnen Gebieten und bei Geschäftskonten kann eine andere Grenze gelten — den für Sie geltenden Betrag sehen Sie immer in Ihrem Warenkorb."
         },
         "notice": {
@@ -1185,12 +1185,12 @@
           {
             "id": "donmus",
             "question": "Kommen die Produkte gefroren an?",
-            "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an. Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug an Adressen in unserem Liefergebiet; sie können nicht als Paket verschickt werden. Alle übrigen Produkte versenden wir dagegen nach Frankreich und Deutschland."
+            "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an. Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug an Adressen in unserem Liefergebiet; sie können nicht verschickt werden. Alle übrigen Produkte versenden wir dagegen nach Frankreich und Deutschland."
           },
           {
             "id": "asgari-sepet",
             "question": "Gibt es einen Mindestbestellwert?",
-            "answer": "Nur für die Lieferung in unserem Gebiet: Bestellungen, die wir mit unserem eigenen Fahrzeug an Ihre Tür bringen, haben einen Mindestbestellwert; liegen Sie darunter, sehen Sie den fehlenden Betrag im Warenkorb. Beim Versand gibt es keinen Mindestbestellwert — die Versandkosten tragen Sie ohnehin. Die aktuellen Beträge stehen auf der Seite Lieferung und Rückgabe."
+            "answer": "Nur für die Lieferung in unserem Gebiet: Bestellungen, die wir mit unserem eigenen Fahrzeug an Ihre Tür bringen, haben einen Mindestbestellwert; liegt Ihre Bestellung darunter, sehen Sie den fehlenden Betrag im Warenkorb. Beim Versand gibt es keinen Mindestbestellwert — die Versandkosten tragen Sie ohnehin. Die aktuellen Beträge stehen auf der Seite Lieferung und Rücksendung."
           },
           {
             "id": "teslimat-gunu",
@@ -1200,17 +1200,17 @@
           {
             "id": "kapida-odeme",
             "question": "Kann ich bei Lieferung bezahlen?",
-            "answer": "Bei Lieferungen in unserem Gebiet ist Zahlung bei Lieferung bis zu einem bestimmten Bestellwert möglich — bar oder mit Karte; die aktuelle Obergrenze steht auf der Seite Lieferung und Rückgabe. Darüber hinaus und bei allen Versandbestellungen wird die Zahlung bei der Bestellung eingezogen. Fehlt bei Zahlung bei Lieferung ein Artikel, wird sein Betrag bereits bei der Lieferung abgezogen — Sie warten nicht auf eine Erstattung."
+            "answer": "Bei Lieferungen in unserem Gebiet ist Zahlung bei Lieferung bis zu einem bestimmten Bestellwert möglich — bar oder mit Karte; die aktuelle Obergrenze steht auf der Seite Lieferung und Rücksendung. Darüber hinaus und bei allen Versandbestellungen wird die Zahlung bei der Bestellung eingezogen. Fehlt bei Zahlung bei Lieferung ein Artikel, wird sein Betrag bereits bei der Lieferung abgezogen — Sie warten nicht auf eine Erstattung."
           },
           {
             "id": "eksik-kalem",
             "question": "Ein Produkt fehlt in meiner Bestellung, was tun?",
-            "answer": "Sie müssen nichts tun: Der Betrag des in Ihrem Paket fehlenden Artikels wird automatisch berechnet und erstattet. Möchten Sie uns dennoch davon berichten, eröffnen Sie unter „Kundenservice“ eine Anfrage und wählen Ihre Bestellung aus."
+            "answer": "Sie müssen nichts tun: Der Betrag des in Ihrer Lieferung fehlenden Artikels wird automatisch berechnet und erstattet. Möchten Sie uns dennoch davon berichten, eröffnen Sie unter „Kundenservice“ eine Anfrage und wählen Ihre Bestellung aus."
           },
           {
             "id": "toptan",
             "question": "Bekomme ich Großhandelspreise für mein Restaurant?",
-            "answer": "Ja. Sie können sich über die Seite „Geschäftskunden“ mit Ihrer SIRET-Nummer bewerben; sobald Ihre Anfrage bestätigt ist, wird Ihr Konto zu einem Geschäftskonto und die Preise werden entsprechend angezeigt. Geschäftskonten können zusätzlich per Überweisung bezahlen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt."
+            "answer": "Ja. Sie können sich über die Seite „Geschäftskunden“ mit Ihrer SIRET-Nummer (Frankreich) oder Ihrer USt-IdNr. (Deutschland) registrieren; sobald Ihre Anfrage angenommen ist, wird Ihr Konto zu einem Geschäftskundenkonto und die Preise werden entsprechend angezeigt. Geschäftskundenkonten können zusätzlich per Überweisung bezahlen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt."
           },
           {
             "id": "alerjen",
@@ -1280,7 +1280,7 @@
             "heading": "Warum wir sie erheben",
             "paragraphs": [
               "Ohne Ihren Namen und Ihre Adresse kann eine Bestellung nicht zugestellt werden; ohne Ihre E-Mail-Adresse können wir Ihnen den Status Ihrer Bestellung nicht mitteilen. Diese Daten werden zur Erfüllung des Vertrags verarbeitet.",
-              "Ihre Nachrichten werden mithilfe künstlicher Intelligenz verarbeitet: Sie werden übersetzt, damit wir Ihnen in Ihrer Sprache antworten können, Sprachnachrichten werden verschriftlicht, und bei der Vorbereitung der Antwort hilft künstliche Intelligenz.",
+              "Ihre Nachrichten werden mithilfe künstlicher Intelligenz verarbeitet: Wir übersetzen sie, damit wir Ihnen in Ihrer Sprache antworten können, Sprachnachrichten werden verschriftlicht, und bei der Vorbereitung der Antwort hilft künstliche Intelligenz.",
               "Werbenachrichten senden wir nur, wenn Sie ausdrücklich eingewilligt haben, und Sie können die Einwilligung jederzeit widerrufen. Die Einwilligung wird nicht als bloßes Kennzeichen gespeichert, sondern mit Zeitpunkt und Herkunft — das ist der Nachweis, den wir vorlegen können, wenn die Einwilligung bestritten wird.",
               "Für Buchhaltung und gesetzliche Pflichten sind wir verpflichtet, Bestell- und Zahlungsunterlagen aufzubewahren; diese hängen nicht von einer Einwilligung ab."
             ],
@@ -1291,7 +1291,7 @@
             "heading": "Wie lange wir sie speichern",
             "paragraphs": [
               "Ihre Kontodaten werden gespeichert, solange Ihr Konto besteht. Sie können Ihr Konto jederzeit selbst über Ihre Kontoseite löschen: Ihr Name, Ihre E-Mail-Adresse und Telefonnummer, Ihre gespeicherten Adressen, Ihre Anfragen, Ihre Punkte und persönlichen Gutscheine werden entfernt, Ihre Anmeldedaten gelöscht, und eine Anmeldung ist nicht mehr möglich.",
-              "Bestell- und Rechnungsunterlagen werden für die nach französischem Handels- und Steuerrecht vorgeschriebene Dauer aufbewahrt; sie bleiben bis zum Ablauf dieser Frist erhalten, auch wenn das Konto gelöscht wurde. Dazu gehören auch der Name und die Adresse auf der Rechnung: Die Vorschriften verlangen, dass die Rechnung diese Angaben enthält, sie können daher nicht entfernt werden. Auch Ihre Produktbewertung bleibt bestehen, ist aber nicht mehr mit Ihrem Namen verknüpft.",
+              "Bestell- und Rechnungsunterlagen werden für die nach französischem Handels- und Steuerrecht vorgeschriebene Dauer aufbewahrt; sie bleiben bis zum Ablauf dieser Frist erhalten, auch wenn das Konto gelöscht wurde. Dazu gehören auch der Name und die Adresse auf der Rechnung: Die Vorschriften verlangen, dass die Rechnung diese Angaben enthält, sie können daher nicht entfernt werden. Ihre Produktbewertungen bleiben ohne Kommentartext erhalten, sind aber nicht mehr mit Ihrem Namen verknüpft.",
               "Unsere technischen Protokolle enthalten keine personenbezogenen Daten. Wo es zur Fehlersuche erforderlich ist, erscheinen Angaben wie E-Mail oder Telefon dort nur maskiert (zum Beispiel a***@example.com); der Zweck ist allein, zu unterscheiden, um welchen Datensatz es geht, nicht, wer dahintersteht."
             ],
             "bullets": []
@@ -1334,7 +1334,7 @@
             "id": "haklariniz",
             "heading": "Ihre Rechte",
             "paragraphs": [
-              "Nach der DSGVO (EU 2016/679) stehen Ihnen die folgenden Rechte zu. Um sie auszuüben, genügt eine Nachricht an {email}; wir antworten spätestens innerhalb eines Monats."
+              "Nach der DSGVO (Verordnung (EU) 2016/679) stehen Ihnen die folgenden Rechte zu. Um sie auszuüben, genügt eine Nachricht an {email}; wir antworten spätestens innerhalb eines Monats."
             ],
             "bullets": [
               "Auskunft über Ihre Daten und eine Kopie davon verlangen",
@@ -1367,7 +1367,7 @@
                 "app": "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb vom Gerät in Ihr Konto übernommen und vom Gerät gelöscht."
               },
               {
-                "app": "Wir messen, wie die App genutzt wird: welche Produkte angesehen werden, wonach gesucht wird, was in den Warenkorb gelegt wird und an welcher Stelle eine Bestellung abbricht. Für diese Messung wird nichts auf Ihrem Gerät gespeichert und keine Werbe-ID verwendet — der Eintrag entsteht auf unseren Servern, sobald Ihre Anfrage dort ankommt. Weder Ihr Name noch Ihre E-Mail-Adresse noch Ihre Kontonummer stehen darin: Der Schlüssel, der Anfragen gruppiert, wird aus einem Wert abgeleitet, der täglich wechselt und am Folgetag nicht aufbewahrt wird, er lässt sich also nachträglich nicht mehr berechnen. Auch der in der Suche eingegebene Text wird gespeichert — damit wir sehen, welche Suchen ohne Ergebnis bleiben."
+                "app": "Wir messen, wie die App genutzt wird: welche Produkte angesehen werden, wonach gesucht wird, was in den Warenkorb gelegt wird und an welcher Stelle eine Bestellung abbricht. Für diese Messung wird nichts auf Ihrem Gerät gespeichert und keine Werbe-ID verwendet — der Eintrag entsteht auf unseren Servern, sobald Ihre Anfrage dort ankommt. Weder Ihr Name noch Ihre E-Mail-Adresse noch Ihre Kundennummer stehen darin: Der Schlüssel, der Anfragen gruppiert, wird aus einem Wert abgeleitet, der täglich wechselt und am Folgetag nicht aufbewahrt wird, er lässt sich also nachträglich nicht mehr berechnen. Auch der in der Suche eingegebene Text wird gespeichert — damit wir sehen, welche Suchen ohne Ergebnis bleiben."
               }
             ],
             "bullets": []
@@ -1407,13 +1407,13 @@
             "paragraphs": [
               "Die von uns verkauften Produkte sind tiefgekühlte und lagerfähige Lebensmittel. Wir stellen sie nicht selbst her, sondern beziehen sie von ausgewählten Herstellern. Zutaten, Allergene und Nettomenge stehen auf der Seite jedes Produkts; diese Angaben stammen aus der Deklaration des Herstellers.",
               "Produktfotos dienen der Veranschaulichung; Aufmachung und Aussehen des gelieferten Produkts können von der Abbildung abweichen. Verbindlich sind allein die schriftlichen Angaben auf der Produktseite.",
-              "Produkte mit Kühlkette (Tiefkühl- und Frischware) können nur innerhalb unseres Liefergebiets verkauft werden: Da wir die Kühlkette unter Versandbedingungen nicht sicher gewährleisten können, versenden wir sie nicht als Paket. Sie sind im Katalog gekennzeichnet und können bei Auswahl einer Adresse außerhalb des Gebiets nicht bestellt werden."
+              "Produkte mit Kühlkette (Tiefkühl- und Frischware) können nur innerhalb unseres Liefergebiets verkauft werden: Da wir die Kühlkette unter Versandbedingungen nicht sicher gewährleisten können, versenden wir sie nicht. Sie sind im Katalog gekennzeichnet und können bei Auswahl einer Adresse außerhalb des Gebiets nicht bestellt werden."
             ],
             "bullets": []
           },
           {
             "id": "siparis",
-            "heading": "Zustandekommen der Bestellung",
+            "heading": "Vertragsschluss",
             "paragraphs": [
               "Die Bestellung kommt zustande, wenn Sie Ihren Warenkorb bestätigen und den Zahlungsschritt abschließen — bei Zahlung bei Lieferung genügt es, in diesem Schritt das Zahlungsmittel zu bestätigen. Mit der Bestätigungsseite und der Bestätigungs-E-Mail gilt die Bestellung auch von unserer Seite als angenommen.",
               "Der Preis in Ihrem Warenkorb wird mit Ihrer Bestellung verbindlich. Steigt der Preis eines Artikels, während er im Warenkorb liegt, zeigen wir Ihnen vor der Bestellung den neuen Preis und bitten um Ihre Bestätigung; sinkt er, gilt der niedrigere Preis. Nach der Bestellung ändert sich der Betrag nicht mehr, auch wenn sich der Katalogpreis ändert.",
@@ -1436,7 +1436,7 @@
             "heading": "Zahlung",
             "paragraphs": [
               "Kartenzahlungen werden über einen sicheren Zahlungsdienstleister eingezogen. Ihre Kartendaten erreichen uns zu keinem Zeitpunkt und werden von uns nicht gespeichert.",
-              "Innerhalb unseres Liefergebiets ist Zahlung bei Lieferung bis zu einem bestimmten Bestellwert möglich — bar oder mit Karte; die aktuelle Obergrenze steht auf der Seite Lieferung und Rückgabe. Dabei entspricht der eingezogene Betrag den tatsächlich gelieferten Artikeln: Ein fehlender Artikel wird von vornherein abgezogen.",
+              "Innerhalb unseres Liefergebiets ist Zahlung bei Lieferung bis zu einem bestimmten Bestellwert möglich — bar oder mit Karte; die aktuelle Obergrenze steht auf der Seite Lieferung und Rücksendung. Dabei entspricht der eingezogene Betrag den tatsächlich gelieferten Artikeln: Ein fehlender Artikel wird von vornherein abgezogen.",
               "Die Überweisung steht ausschließlich bestätigten Geschäftskonten offen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt.",
               "Im Voraus bezahlte Bestellungen werden erst nach Abschluss der Zahlung in Vorbereitung genommen. Bei Zahlung bei Lieferung erfolgt der Einzug bei der Übergabe, und die Bestellung geht unmittelbar nach ihrer Bestätigung in Vorbereitung."
             ],
@@ -1446,8 +1446,8 @@
             "id": "teslimat",
             "heading": "Lieferung",
             "paragraphs": [
-              "Produkte mit Kühlkette (Tiefkühl- und Frischware) liefern wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Alle übrigen Produkte gehen per Paket — im Gebiet wie außerhalb. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
-              "Mindestbestellwert, Versandkosten und Freigrenze werden in ihrer aktuellen Höhe auf der Seite Lieferung und Rückgabe veröffentlicht; dieselben Beträge werden beim Bestellen im Warenkorb angezeigt. Nach der Vorbereitung des Pakets rechnen Sie mit 2 bis 4 Werktagen in Frankreich und Deutschland.",
+              "Produkte mit Kühlkette (Tiefkühl- und Frischware) liefern wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Alle übrigen Produkte verschicken wir — im Gebiet wie außerhalb. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
+              "Mindestbestellwert, Versandkosten und die Grenze für kostenlosen Versand werden in ihrer aktuellen Höhe auf der Seite Lieferung und Rücksendung veröffentlicht; dieselben Beträge werden beim Bestellen im Warenkorb angezeigt. Nach der Vorbereitung des Pakets rechnen Sie mit 2 bis 4 Werktagen in Frankreich und Deutschland.",
               "Die angegebenen Liefertage sind Schätzungen. Wetter, Verkehr oder Verzögerungen des Versanddienstleisters können die Lieferung verschieben; in diesem Fall informieren wir Sie.",
               "Kann nicht zugestellt werden, weil an der Adresse niemand angetroffen wird, versuchen wir die Zustellung ein zweites Mal kostenfrei. Scheitert auch dieser zweite Versuch, sind die tiefgekühlten Produkte nicht mehr verkehrsfähig und der Betrag wird nicht erstattet. Einzelheiten finden Sie auf der Seite Lieferung und Rücksendung."
             ],
@@ -1466,8 +1466,8 @@
             "id": "garanti",
             "heading": "Gesetzliche Gewährleistung",
             "paragraphs": [
-              "Für unsere Produkte gelten die im französischen Recht vorgesehene Konformitätsgarantie und die Gewährleistung für versteckte Mängel.",
-              "Diese Gewährleistungen sind gesetzlich, verursachen keine zusätzlichen Kosten und können nicht durch eine kommerzielle Zusage eingeschränkt werden."
+              "Für unsere Produkte gelten nach französischem Recht die gesetzliche Gewährleistung für die Vertragsmäßigkeit (garantie légale de conformité) und die Gewährleistung für versteckte Mängel (garantie des vices cachés).",
+              "Diese Gewährleistungen sind gesetzlich, verursachen keine zusätzlichen Kosten und können durch eine gewerbliche Garantie nicht eingeschränkt werden."
             ],
             "bullets": []
           },
@@ -1475,7 +1475,7 @@
             "id": "kisisel-veri",
             "heading": "Personenbezogene Daten",
             "paragraphs": [
-              "Wie die für Ihre Bestellung erforderlichen personenbezogenen Daten verarbeitet werden, ist auf der Seite zur Datenschutzerklärung ausführlich beschrieben."
+              "Wie die für Ihre Bestellung erforderlichen personenbezogenen Daten verarbeitet werden, ist in unserer Datenschutzerklärung ausführlich beschrieben."
             ],
             "bullets": []
           },
@@ -1518,7 +1518,7 @@
               "Firma: {denomination}",
               "Handelsname: Lezzet Anatolie",
               "Rechtsform: SAS — société par actions simplifiée",
-              "Stammkapital: 500 €",
+              "Grundkapital: 500 €",
               "SIREN: {siren}",
               "SIRET (Sitz): {siret}",
               "USt-IdNr.: {vatId}",
@@ -1543,7 +1543,7 @@
               "Die Website wird von der Hetzner Online GmbH in Rechenzentren innerhalb der Europäischen Union gehostet."
             ],
             "bullets": [
-              "Hoster: Hetzner Online GmbH",
+              "Hosting-Anbieter: Hetzner Online GmbH",
               "Anschrift: Industriestr. 25, 91710 Gunzenhausen, Deutschland",
               "Telefon: +49 (0)9831 505-0"
             ]
@@ -1570,7 +1570,7 @@
             "id": "uyusmazlik",
             "heading": "Anwendbares Recht",
             "paragraphs": [
-              "Dieses Impressum unterliegt französischem Recht. Für die Bedingungen des Kaufs sehen Sie bitte die Seite mit den allgemeinen Geschäftsbedingungen ein."
+              "Dieses Impressum unterliegt französischem Recht. Die Kaufbedingungen finden Sie in unseren Allgemeinen Geschäftsbedingungen."
             ],
             "bullets": []
           }

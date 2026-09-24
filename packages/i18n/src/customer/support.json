@@ -261,7 +261,7 @@
       "open": "Anfrage „{type}“ öffnen",
       "loading": "Wird geladen…",
       "end": "Alle Ihre Anfragen werden angezeigt.",
-      "tailRetry": "Fortsetzung fehlt — erneut versuchen",
+      "tailRetry": "Weitere Einträge konnten nicht geladen werden — erneut versuchen",
       "empty": {
         "title": "Noch keine Anfragen",
         "body": "Bei Fragen oder Problemen schreiben Sie uns einfach hier.",
@@ -281,7 +281,7 @@
         "label": "Nachricht schreiben",
         "send": "Senden",
         "sending": "Wird gesendet…",
-        "sent": "Ihre Nachricht ist unterwegs",
+        "sent": "Ihre Nachricht wurde gesendet",
         "failed": "Nachricht nicht gesendet — Ihr Text bleibt stehen, bitte erneut versuchen."
       },
       "notFound": "Anfrage nicht gefunden",
@@ -307,7 +307,7 @@
         "eyebrow": "Bestellung {reference}",
         "question": "Um welche Artikel geht es?",
         "line": "{quantity}× {name}",
-        "bundleNote": "Pakete lassen sich nicht einzeln markieren — beschreiben Sie das Problem unten.",
+        "bundleNote": "Die Produkte eines Genusspakets lassen sich nicht einzeln auswählen — beschreiben Sie das Problem unten.",
         "error": "Die Artikel konnten nicht geladen werden; schreiben Sie uns trotzdem."
       },
       "typeTitle": "Thema",

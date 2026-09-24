@@ -259,7 +259,7 @@
       "coldChain": "Lieferung in der Kühlkette",
       "doorstep": "Lieferung an die Haustür im Liefergebiet",
       "shippable": "Versandfähig",
-      "notShippable": "Nur Lieferung an die Haustür in Straßburg & Umgebung — dieses Produkt kann nicht versandt werden.",
+      "notShippable": "Nur Lieferung an die Haustür in Straßburg und Umgebung — dieses Produkt kann nicht versandt werden.",
       "coldChainShort": "Kühlkette",
       "doorstepShort": "Lieferung an die Haustür",
       "seeShippable": "Versandfähige Alternativen",
@@ -278,7 +278,7 @@
     "nutrition": {
       "energy": "Energie",
       "fat": "Fett",
-      "fatSat": "Fett (davon gesättigte)",
+      "fatSat": "Fett (davon gesättigte Fettsäuren)",
       "saturated": "Gesättigte Fettsäuren",
       "carbohydrate": "Kohlenhydrate",
       "carbSugar": "Kohlenhydrate (davon Zucker)",
@@ -345,7 +345,7 @@
     "errors": {
       "unexpected": "Ihre Bewertung konnte nicht gesendet werden. Bitte gleich noch einmal versuchen.",
       "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden.",
-      "review_empty": "Vergeben Sie eine Note oder schreiben Sie ein paar Sätze.",
+      "review_empty": "Vergeben Sie Sterne oder schreiben Sie ein paar Sätze.",
       "purchase_required": "Sie müssen dieses Produkt gekauft haben, um es zu bewerten."
     },
     "size": {

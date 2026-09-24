@@ -199,28 +199,28 @@
       "eyebrow": "Genusspakete",
       "title": "Gedeckte Tische zum Festpreis",
       "all": "Alle Pakete →",
-      "badge": "Paket",
+      "badge": "Genusspaket",
       "items": "{n} Produkte",
       "cta": "Paket ansehen",
       "ctaShort": "Ansehen"
     },
     "recipes": {
-      "eyebrow": "Ideen vom Tisch",
+      "eyebrow": "Ideen für den Tisch",
       "title": "Was kommt heute auf den Tisch?",
       "all": "Alle Rezepte →",
-      "items": "{n} Produkte",
-      "pantry": "{n} von zu Hause",
+      "items": "{n} Zutaten",
+      "pantry": "{n} aus Ihrer Küche",
       "soldOutShort": "Zutaten derzeit nicht verfügbar",
       "cta": "Zutaten in den Warenkorb →"
     },
     "discover": {
-      "title": "Neue Sorten als Erste probieren",
+      "title": "Neue Sorten als Erste entdecken",
       "body": "Sehen Sie sich neue Produkte an und sagen Sie uns, was Ihnen gefällt — jeder Beitrag bringt Punkte.",
       "cta": "Entdecken"
     },
     "pro": {
-      "title": "Restaurant oder Markt?",
-      "body": "Eröffnen Sie ein Geschäftskonto für Großhandelspreise und regelmäßige Lieferungen.",
+      "title": "Restaurant oder Lebensmittelgeschäft?",
+      "body": "Registrieren Sie sich als Geschäftskunde — für Großhandelspreise und regelmäßige Lieferungen.",
       "cta": "Geschäftskunden →"
     }
   }

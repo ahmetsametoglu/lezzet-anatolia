@@ -220,7 +220,7 @@
     },
     "zip": {
       "kicker": "LIEFERGEBIET",
-      "title": "Wie dürfen wir liefern?",
+      "title": "Wie kommt Ihre Bestellung zu Ihnen?",
       "body": "Geben Sie Ihre Postleitzahl ein — wir sagen Ihnen, wie wir liefern."
     },
     "back": "Zurück",
@@ -233,7 +233,7 @@
         "body": "Tiefkühl- und Frischware bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug — an Adressen in unserem Liefergebiet."
       },
       "shipping": {
-        "title": "Alle übrigen Produkte: per Paket",
+        "title": "Alle übrigen Produkte: per Versand",
         "body": "Produkte ohne Kühlkette versenden wir nach Frankreich und Deutschland — ob Sie in unserem Liefergebiet wohnen oder nicht."
       },
       "note": "Deshalb fragen wir nach der Postleitzahl: damit neben jedem Produkt steht, wie es zu Ihnen kommt."
@@ -257,14 +257,14 @@
     },
     "points": {
       "kicker": "PUNKTE",
-      "title": "Sammeln Sie beim Einkaufen",
+      "title": "Punkte sammeln — ganz nebenbei",
       "body": "Sie sammeln Punkte, wenn Sie in der App vorbeischauen, erhaltene Produkte bewerten und Ihr Umfeld einladen. Punkte werden zu Rabattgutscheinen.",
       "rate": "{points} Punkte = Gutschein über {value}",
-      "highlight": "Allein eine Freundschaftseinladung bringt {value}.",
+      "highlight": "Schon eine geworbene Freundin oder ein geworbener Freund bringt Ihnen {value}.",
       "how": "Wie sammle ich Punkte?",
       "signUp": "Konto erstellen und loslegen",
       "later": "Später",
-      "unavailable": "Die Punkteinformationen konnten nicht geladen werden — Sie finden sie jederzeit in der App.",
+      "unavailable": "Die Punkteinformationen können gerade nicht angezeigt werden. Sie finden sie unter „Mein Konto“, sobald Sie ein Konto erstellt haben.",
       "groups": {
         "invite": {
           "title": "Durch Einladen",
@@ -272,11 +272,11 @@
         },
         "review": {
           "title": "Durch Bewerten",
-          "body": "Hat Ihnen ein Produkt geschmeckt? Das zu sagen hilft dem nächsten Gast genauso wie uns — und bringt Ihnen Punkte."
+          "body": "Hat Ihnen ein Produkt geschmeckt? Ihre Bewertung hilft anderen Kundinnen und Kunden und uns — und bringt Ihnen Punkte."
         },
         "visit": {
           "title": "Durch Vorbeischauen",
-          "body": "Sie sammeln auch ohne Einkauf. Beides gibt es täglich: vorbeischauen und über neue Sorten abstimmen."
+          "body": "Sie sammeln auch ohne Einkauf: Einmal am Tag gibt es Punkte fürs Öffnen der App — und zusätzlich für jede Stimme zu neuen Sorten."
         }
       }
     }

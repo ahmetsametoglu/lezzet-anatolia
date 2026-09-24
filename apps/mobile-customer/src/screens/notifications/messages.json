@@ -45,21 +45,21 @@
   },
   "de": {
     "back": "Zurück",
-    "title": "Mitteilungen",
+    "title": "Benachrichtigungen",
     "eyebrow": "Mein Konto",
     "markAll": "Alle als gelesen markieren",
-    "dismiss": "Mitteilung entfernen",
+    "dismiss": "Benachrichtigung entfernen",
     "empty": {
       "title": "Im Moment ist alles ruhig",
       "body": "Neuigkeiten zu Ihren Bestellungen und Anfragen erscheinen hier."
     },
     "guest": {
-      "title": "Mitteilungen gehören zu Ihrem Konto",
+      "title": "Benachrichtigungen gehören zu Ihrem Konto",
       "body": "Melden Sie sich an, um Neuigkeiten zu Bestellungen und Anfragen hier zu sehen.",
       "cta": "Anmelden"
     },
     "error": {
-      "title": "Mitteilungen konnten nicht geladen werden",
+      "title": "Benachrichtigungen konnten nicht geladen werden",
       "body": "Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
       "retry": "Erneut versuchen"
     },

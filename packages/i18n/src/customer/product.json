@@ -200,7 +200,7 @@
     "nutrition": {
       "energy": "Energie",
       "fat": "Fett",
-      "saturatedFat": "davon gesättigte",
+      "saturatedFat": "davon gesättigte Fettsäuren",
       "carbohydrate": "Kohlenhydrate",
       "sugars": "davon Zucker",
       "protein": "Eiweiß",
@@ -226,9 +226,9 @@
     },
     "stockNotice": {
       "sheetTitle": "Benachrichtigung bei Verfügbarkeit",
-      "sheetIntro": "Wir senden einen sechsstelligen Code an Ihre E-Mail. Sobald Sie ihn eingeben, wird Ihr Konto angelegt und Sie gehören zu denen, die diesen Artikel erwarten.",
-      "recorded": "Notiert — Sie gehören zu denen, die diesen Artikel für {code} erwarten.",
-      "alreadyRecorded": "Sie erwarten diesen Artikel bereits für {code}.",
+      "sheetIntro": "Wir senden einen sechsstelligen Code an Ihre E-Mail. Sobald Sie ihn eingeben, wird Ihr Konto angelegt und Sie sind für diesen Artikel vorgemerkt.",
+      "recorded": "Vorgemerkt — wir benachrichtigen Sie, sobald der Artikel für {code} verfügbar ist.",
+      "alreadyRecorded": "Für diesen Artikel sind Sie für {code} bereits vorgemerkt.",
       "emailRequired": "Ihr Konto hat keine E-Mail-Adresse; die Anfrage wurde nicht erfasst."
     },
     "error": {

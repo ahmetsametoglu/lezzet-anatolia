@@ -196,9 +196,9 @@
       "notifications": "Benachrichtigungen",
       "notificationsUnread": "Benachrichtigungen, {n} ungelesen",
       "location": "{postal} ▾",
-      "locationLabel": "Liefergebiet: {postal}",
-      "locationEmpty": "Liefergebiet wählen ▾",
-      "locationEmptyLabel": "Ihr Liefergebiet wählen"
+      "locationLabel": "Lieferort: {postal}",
+      "locationEmpty": "Lieferort wählen ▾",
+      "locationEmptyLabel": "Ihren Lieferort wählen"
     },
     "liveOrder": {
       "title": "Ihre Bestellung ist {status} · {reference}",
@@ -219,7 +219,7 @@
     },
     "offers": {
       "discount": "−{n} %",
-      "limited": "SOLANGE VORRAT REICHT",
+      "limited": "SOLANGE DER VORRAT REICHT",
       "lastFew": "NUR NOCH {n}"
     },
     "collections": {
@@ -257,15 +257,15 @@
       "guestBody": "Ihre Vorlieben bestimmen unser nächstes Sortiment — melden Sie sich an, dann bringt jede Runde auch Punkte."
     },
     "professional": {
-      "title": "Sind Sie Restaurant oder Markt?",
-      "body": "Eröffnen Sie ein Geschäftskonto für Großhandelspreise."
+      "title": "Sie führen ein Restaurant oder ein Lebensmittelgeschäft?",
+      "body": "Registrieren Sie sich als Geschäftskunde — für Großhandelspreise."
     },
     "cart": {
       "open": "Warenkorb öffnen, {n} Artikel"
     },
     "error": {
       "title": "Derzeit nicht verfügbar",
-      "body": "Die Auslage konnte nicht geladen werden. Prüfen Sie Ihre Verbindung — sobald sie wieder da ist, geht es weiter.",
+      "body": "Die Startseite konnte nicht geladen werden. Prüfen Sie Ihre Verbindung — sobald sie wieder da ist, geht es weiter.",
       "retry": "Erneut versuchen"
     },
     "card": {

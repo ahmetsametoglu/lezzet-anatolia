@@ -89,15 +89,15 @@
     "paidNote": "Einladungspunkte werden gutgeschrieben, sobald die Zahlung der eingeladenen Person eingegangen ist.",
     "ways": {
       "referral": {
-        "title": "Bringen Sie Freunde mit",
+        "title": "Freunde werben",
         "cadence": "je Person",
         "body": "Teilen Sie Ihren Einladungslink. Sie erhalten die Punkte, wenn eine Person ohne Konto ihre erste Bestellung aufgibt und bezahlt.",
         "cta": "Meinen Link teilen"
       },
       "neighbor": {
         "title": "Laden Sie Ihre Nachbarn ein",
-        "cadence": "je für diesen Tag eingeladenem Nachbarn · höchstens {max}",
-        "body": "Laden Sie Ihre Nachbarn für den Tag ein, an dem unser Wagen in Ihre Straße kommt. Jeder Nachbar, der für diesen Tag bestellt und bezahlt, bringt Ihnen Punkte. Bei jeder Tour öffnet sich eine neue Einladung.",
+        "cadence": "pro Nachbarbestellung für diesen Tag · höchstens {max}",
+        "body": "Laden Sie Ihre Nachbarn zu dem Tag ein, an dem unser Fahrzeug in Ihre Straße kommt. Für jede bezahlte Bestellung aus Ihrer Nachbarschaft für diesen Tag erhalten Sie Punkte. Für jeden Liefertag gibt es eine neue Einladung.",
         "cta": "Meine Bestellungen"
       },
       "review": {
@@ -115,7 +115,7 @@
       "feedback_purchase": {
         "title": "Gefällt mir für ein erhaltenes Produkt",
         "cadence": "einmal je Produkt",
-        "body": "Keine Zeit zum Schreiben? Ein Gefällt mir genügt. Mit einer Bewertung erhalten Sie beides."
+        "body": "Keine Zeit zum Schreiben? Ein „Gefällt mir“ genügt. Mit einem Kommentar erhalten Sie beides."
       },
       "feedback_candidate": {
         "title": "Stimmen Sie über neue Sorten ab",

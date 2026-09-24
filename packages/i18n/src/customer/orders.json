@@ -238,23 +238,23 @@
     "row": {
       "meta": "{date} · {count} Artikel",
       "more": "+{n}",
-      "detail": "Detail ›",
-      "open": "Detail der Bestellung {reference}"
+      "detail": "Details ›",
+      "open": "Details zur Bestellung {reference}"
     },
     "list": {
       "loading": "Wird geladen…",
       "end": "Alle Ihre Bestellungen werden angezeigt.",
-      "tailRetry": "Fortsetzung fehlt — erneut versuchen"
+      "tailRetry": "Weitere Einträge konnten nicht geladen werden — erneut versuchen"
     },
     "detail": {
       "notFound": "Bestellung nicht gefunden",
       "notFoundBody": "Der Link ist womöglich veraltet. Öffnen Sie sie aus Ihrer Bestellliste.",
       "notFoundCta": "Meine Bestellungen",
-      "tracking": "Kurier unterwegs",
+      "tracking": "Fahrer unterwegs",
       "trackingLive": "Fahrer unterwegs",
       "itemsEyebrow": "Bestellinhalt",
       "line": "{quantity}× {name}",
-      "bundlePill": "Paket · {count} Produkte",
+      "bundlePill": "Genusspaket · {count} Artikel",
       "shortfallLine": "{missing} Stück nicht geliefert",
       "subtotal": "Zwischensumme",
       "discount": "Rabatt",
@@ -272,7 +272,7 @@
       "carrierLabel": "Versand",
       "trackingNumber": "Sendungsnummer",
       "trackingCta": "Sendung verfolgen ↗",
-      "trackingCtaBox": "Paket {ordinal} · verfolgen ↗",
+      "trackingCtaBox": "Sendung {ordinal} · verfolgen ↗",
       "carrier": {
         "colissimo": "Colissimo",
         "chronopost": "Chronopost",
@@ -299,12 +299,12 @@
       "note": {
         "received": "Ihre Bestellung ist bestätigt",
         "prepared": "Ihre Bestellung wurde sorgfältig verpackt",
-        "on_the_way": "Der Kurier ist in Ihrer Nähe",
+        "on_the_way": "Der Fahrer ist in Ihrer Nähe",
         "ready_for_pickup": "Ihre Bestellung liegt im Lager bereit — vereinbaren Sie die Uhrzeit telefonisch"
       },
       "feedback": {
         "title": "Bewerten Sie Ihre Produkte",
-        "body": "Wenige Handgriffe genügen — sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",
+        "body": "Ein paar Fingertipps genügen — sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",
         "cta": "Bewertung starten"
       },
       "deliveryPickup": "Abholung im Lager",

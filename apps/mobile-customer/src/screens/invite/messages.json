@@ -66,18 +66,18 @@
     "ok": {
       "title": "{name} lädt Sie zu Lezzet Anatolie ein",
       "someone": "Jemand, den Sie kennen",
-      "body": "Anatolische Spezialitäten bis vor Ihre Tür. Sehen Sie sich zuerst den Katalog an; Ihr Konto eröffnen Sie, wann Sie möchten.",
+      "body": "Anatolische Spezialitäten bis vor Ihre Tür. Sehen Sie sich zuerst den Katalog an; Ihr Konto erstellen Sie, wann Sie möchten.",
       "primary": "Katalog ansehen",
-      "secondary": "Konto eröffnen"
+      "secondary": "Konto erstellen"
     },
     "self": {
       "title": "Das ist Ihr Einladungslink",
-      "body": "Ihr Link funktioniert. Ihre Punkte werden gutgeschrieben, sobald die eingeladene Person ein Konto eröffnet und ihre erste Bestellung bezahlt hat.",
+      "body": "Ihr Link funktioniert. Ihre Punkte werden gutgeschrieben, sobald die eingeladene Person ein Konto erstellt und ihre erste Bestellung bezahlt hat.",
       "primary": "Zurück zu meinem Konto"
     },
     "alreadyCustomer": {
       "title": "Sie sind schon dabei",
-      "body": "Die Einladung gilt für neue Kundinnen und Kunden. Setzen Sie Ihren Einkauf dort fort, wo Sie waren.",
+      "body": "Die Einladung gilt für neue Kundinnen und Kunden. Setzen Sie Ihren Einkauf dort fort, wo Sie aufgehört haben.",
       "primary": "Zurück zum Katalog"
     },
     "unknown": {

@@ -36,20 +36,20 @@
     "loading": "Chargement…"
   },
   "de": {
-    "title": "Mitteilungen",
+    "title": "Benachrichtigungen",
     "back": "← Mein Konto",
     "markAll": "Alle als gelesen markieren",
-    "dismiss": "Mitteilung entfernen",
+    "dismiss": "Benachrichtigung entfernen",
     "empty": {
       "title": "Im Moment ist alles ruhig",
       "body": "Neuigkeiten zu Ihren Bestellungen und Anfragen erscheinen hier."
     },
     "guest": {
-      "title": "Hier sammeln sich Ihre Mitteilungen",
-      "body": "Melden Sie sich an, um Bestellstatus, Angebote und Lagermeldungen zu erhalten.",
+      "title": "Hier sammeln sich Ihre Benachrichtigungen",
+      "body": "Melden Sie sich an, um Bestellstatus, Angebote und Hinweise zu wieder verfügbaren Produkten zu erhalten.",
       "cta": "Anmelden"
     },
-    "prefsNote": "Werbenachrichten verwalten Sie in Ihrem Konto unter „Werbekommunikation“.",
+    "prefsNote": "Werbenachrichten verwalten Sie in Ihrem Konto unter „Werbenachrichten“.",
     "loadMore": "Mehr laden",
     "loading": "Wird geladen…"
   }

@@ -279,19 +279,19 @@
     "soldOutBadge": "Ausverkauft",
     "closed": "dieses Produkt ist nicht mehr im Verkauf — bitte entfernen",
     "closedBadge": "Nicht im Verkauf",
-    "gone": "dieses Produkt existiert nicht mehr — bitte entfernen",
+    "gone": "dieses Produkt ist nicht mehr erhältlich — bitte entfernen",
     "goneBadge": "Entfernt",
     "remove": "Aus dem Warenkorb entfernen",
     "summary": "Übersicht",
     "singleRule": "Rabatte sind nicht kombinierbar — wir haben den höchsten für Sie angewendet.",
-    "reachable": "Noch {missing} und {label} greift: {amount} Rabatt.",
+    "reachable": "Noch {missing}, dann gilt „{label}“: {amount} Rabatt.",
     "reachableAnon": "Noch {missing} und Sie erhalten {amount} Rabatt.",
     "subtotal": "Zwischensumme",
     "deliveryRow": "Lieferung an die Tür",
     "vatShort": "inkl. MwSt.",
     "checkout": "Zur Kasse",
     "checkoutBlocked": "Entfernen Sie den ausverkauften Artikel, um fortzufahren",
-    "minBasket": "Mindestbestellwert {min} — fügen Sie Ihrer Zwischensumme noch {missing} hinzu.",
+    "minBasket": "Mindestbestellwert {min} — es fehlen noch {missing}.",
     "empty": {
       "title": "Ihr Warenkorb ist leer",
       "titleEmptied": "Ihr Warenkorb wurde geleert",
@@ -304,7 +304,7 @@
       "repeatCta": "Alles in den Warenkorb",
       "repeatItems": "{n} Artikel",
       "skipped": "{n} Artikel derzeit nicht verfügbar — nicht hinzugefügt.",
-      "packagesChip": "Pakete",
+      "packagesChip": "Genusspakete",
       "showcaseTitle": "Diese Woche besonders beliebt",
       "showcaseAll": "Alle ansehen →",
       "card": {
@@ -322,7 +322,7 @@
       "apply": "Einlösen",
       "applied": "Eingelöst",
       "remove": "Code entfernen",
-      "note": "Der Gutschein gilt nicht für Pakete und Angebotsartikel; für die übrigen Artikel bleibt er gültig.",
+      "note": "Der Gutschein gilt nicht für Genusspakete und Angebotsartikel; für die übrigen Artikel bleibt er gültig.",
       "rejected": {
         "invalid": "Dieser Code ist ungültig.",
         "expired": "Dieser Gutschein ist abgelaufen.",
@@ -336,7 +336,7 @@
       "reached": "Ihr Versand ist kostenlos",
       "remaining": "Noch {amount} bis zum kostenlosen Versand"
     },
-    "packageBadge": "Paket · {n} Produkte",
+    "packageBadge": "Genusspaket · {n} Artikel",
     "packageContents": "Inhalt:",
     "packagePrice": "Paketpreis {price}",
     "packageWhole": "wird als Ganzes geändert/entfernt",
@@ -348,7 +348,7 @@
     "group": {
       "routeTitle": "Lieferung an die Tür",
       "routeTitleDated": "Lieferung an die Tür · {date}",
-      "shippingTitle": "Versand als Paket",
+      "shippingTitle": "Per Versand",
       "routeTotal": "Summe für die Lieferung: {amount}",
       "routeNote": "Lieferung kostenlos · Zahlung bei Lieferung möglich",
       "shippingTotal": "Summe für den Versand: {amount}",
@@ -358,7 +358,7 @@
       "shippingPayment": "nur Online-Zahlung",
       "shippingCta": "Versandartikel separat bestellen",
       "shippingCtaShort": "Separat bestellen",
-      "shippingFootnote": "Die Versandgrenze wird aus dieser Summe berechnet — die beiden Gruppen zählen nicht zusammen. Die zweite Bestellung ist freiwillig: ohne sie bleiben die Artikel im Warenkorb und Ihre Lieferung an die Tür bleibt unberührt.",
+      "shippingFootnote": "Die Grenze für kostenlosen Versand gilt nur für die Versandartikel — die Beträge beider Bestellungen werden nicht zusammengerechnet. Die Versandbestellung ist freiwillig: Ohne sie bleiben die Artikel im Warenkorb, Ihre Lieferung an die Haustür ist nicht betroffen.",
       "summaryScope": "Gesamter Warenkorb"
     },
     "awaitingPayment": {
@@ -368,7 +368,7 @@
     },
     "identity": {
       "loginTitle": "Zum Fortfahren anmelden",
-      "loginBody": "Kein Passwort. Mit Google fortfahren oder einen Einmalcode per E-Mail erhalten.",
+      "loginBody": "Ganz ohne Passwort: Mit Google fortfahren oder einen Einmalcode per E-Mail erhalten.",
       "google": "Mit Google fortfahren",
       "or": "oder per E-Mail",
       "email": "Ihre E-Mail-Adresse",
@@ -384,7 +384,7 @@
       "addressEdit": "Bearbeiten",
       "stripInRoute": "{place} — {date} an Ihrer Haustür, kostenlos",
       "stripInRouteNoDate": "{place} — Lieferung an die Haustür, kostenlos",
-      "stripShipping": "{place} — Versand per Paket",
+      "stripShipping": "{place} — Versand",
       "stripUnreachable": "{place} — derzeit keine Lieferung an diese Adresse",
       "pickupTitle": "Im Lager abholen",
       "pickupNote": "Warenkorb und Zahlung richten sich nach dem Lager {name}; die Abholzeit vereinbaren Sie telefonisch."

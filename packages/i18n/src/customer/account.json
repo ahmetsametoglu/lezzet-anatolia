@@ -326,7 +326,7 @@
       "emailPlaceholder": "E-Mail",
       "phoneLabel": "Telefon",
       "phonePlaceholder": "Telefon (WhatsApp)",
-      "phoneNote": "Diese Nummer wird beim Anlegen einer Adresse vorgeschlagen. WhatsApp verknüpfen Sie über die WhatsApp-Karte in Ihrem Konto.",
+      "phoneNote": "Diese Nummer wird beim Anlegen einer Adresse vorgeschlagen. WhatsApp verknüpfen Sie in Ihrem Konto unter „Verknüpfte Kanäle“.",
       "save": "Speichern",
       "saved": "Profil aktualisiert ✓",
       "errors": {
@@ -373,7 +373,7 @@
       "open": "{channel} öffnen"
     },
     "company": {
-      "eyebrow": "Bestätigtes Geschäftskonto",
+      "eyebrow": "Freigeschaltetes Geschäftskundenkonto",
       "identifiers": "{siret} · {vat}",
       "note": "Für Änderungen an den Firmendaten schreiben Sie uns."
     },
@@ -382,22 +382,22 @@
       "value": "✦ {n}",
       "body": "Gesammelt durch Bewertungen, Empfehlungen und Entdeckungsrunden. {threshold} Punkte = Gutschein über {value}.",
       "gap": "Noch {n} Punkte bis zum Gutschein.",
-      "convert": "{threshold} Punkte in {value}-Gutschein umwandeln",
+      "convert": "{threshold} Punkte in einen Gutschein über {value} umwandeln",
       "couponValue": "{value} Rabatt",
       "converting": "Wird umgewandelt…",
       "converted": "Gutschein Ihrem Konto gutgeschrieben ✓",
-      "failed": "Die Punkteaktion ist fehlgeschlagen — bitte erneut versuchen.",
+      "failed": "Das hat leider nicht geklappt — bitte erneut versuchen.",
       "couponPercent": "{n} % Rabatt",
       "couponMinBasket": "Mindestbestellwert {amount}",
       "couponCopy": "Kopieren",
       "couponCopied": "Kopiert",
       "howTo": "Wie sammle ich Punkte?",
       "history": "Mein Punkteverlauf",
-      "howToTitle": "Wege zu Punkten"
+      "howToTitle": "So sammeln Sie Punkte"
     },
     "referral": {
       "title": "Freunde werben",
-      "body": "Teilen Sie Ihren Link. Ihre Punkte werden gutgeschrieben, sobald die eingeladene Person ein Konto eröffnet und ihre erste Bestellung bezahlt.",
+      "body": "Teilen Sie Ihren Link. Ihre Punkte werden gutgeschrieben, sobald die eingeladene Person ein Konto erstellt und ihre erste Bestellung bezahlt.",
       "share": "Teilen",
       "shareLabel": "Einladungslink teilen",
       "shareMessage": "Lezzet Anatolie bringt anatolische Köstlichkeiten bis an die Haustür. Meine Einladung: {url}"
@@ -439,15 +439,15 @@
       "large": "Groß"
     },
     "marketing": {
-      "title": "Werbekommunikation",
+      "title": "Werbenachrichten",
       "email": "E-Mail",
       "whatsapp": "WhatsApp",
-      "note": "Ausgeschaltet erhalten Sie keinerlei Werbekommunikation. Bestellbenachrichtigungen sind davon nicht betroffen.",
+      "note": "Wenn diese Option ausgeschaltet ist, erhalten Sie keine Werbenachrichten. Bestellbenachrichtigungen sind davon nicht betroffen.",
       "zone": {
-        "title": "Sie liegen außerhalb unseres Gebiets",
-        "body": "Für {place} können wir derzeit nur versandfähige Produkte zeigen. Sollen wir hier die Lieferung mit unserem Kühlfahrzeug öffnen? Ihre Anfrage zählt bei der Wahl der nächsten Gebiete — und bei Eröffnung melden wir uns per E-Mail.",
-        "cta": "Ich möchte Lieferung hierher",
-        "done": "Anfrage aufgenommen — wir melden uns bei Eröffnung ✓",
+        "title": "Diese Adresse liegt außerhalb unseres Liefergebiets",
+        "body": "Für {place} können wir derzeit nur versandfähige Produkte zeigen. Sollen wir künftig auch hierher mit unserem Kühlfahrzeug liefern? Ihre Anfrage zählt bei der Wahl der nächsten Gebiete — sobald wir hierher liefern, informieren wir Sie per E-Mail.",
+        "cta": "Lieferung hierher wünschen",
+        "done": "Anfrage erfasst — wir melden uns, sobald wir hierher liefern ✓",
         "sent": "Anfrage aufgenommen ✓"
       },
       "saveFailed": "Ihre Einstellung konnte nicht gespeichert werden — bitte erneut versuchen."
@@ -464,7 +464,7 @@
       "goesTitle": "Was gelöscht wird",
       "goes": "Ihr Name, Ihre E-Mail-Adresse und Telefonnummer, Ihre gespeicherten Adressen, Ihre Anfragen und deren Verlauf, Ihre Benachrichtigungswünsche, Ihre Punkte und persönlichen Gutscheine, der Text Ihrer Bewertungen und Ihre Anmeldedaten.",
       "staysTitle": "Was aus rechtlichen Gründen bleibt",
-      "stays": "Ihre bisherigen Bestellungen und Rechnungen — einschließlich des Namens und der Adresse auf der Rechnung. Das französische Recht schreibt vor, dass die Rechnung diese Angaben enthält; sie können daher nicht gelöscht werden. Auch Ihre Produktbewertung bleibt bestehen, ist aber nicht mehr mit Ihrem Namen verknüpft.",
+      "stays": "Ihre bisherigen Bestellungen und Rechnungen — einschließlich des Namens und der Adresse auf der Rechnung. Das französische Recht schreibt vor, dass die Rechnung diese Angaben enthält; sie können daher nicht gelöscht werden. Ihre Produktbewertungen bleiben ohne Kommentartext erhalten, sind aber nicht mehr mit Ihrem Namen verknüpft.",
       "irreversible": "Dieser Vorgang kann nicht rückgängig gemacht werden.",
       "cancel": "Abbrechen",
       "confirm": "Konto löschen",

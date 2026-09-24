@@ -131,9 +131,9 @@
       "online": "Online-Zahlung",
       "cod": "Zahlung bei Lieferung",
       "credit": "Zahlungsziel",
-      "deliveryNoteBody": "Die Übersicht, Artikel für Artikel, über den Inhalt des Pakets senden wir nach der Vorbereitung per E-Mail; sie liegt auch im Paket. Es ist keine Rechnung; wenn Sie eine benötigen, schreiben Sie uns.",
+      "deliveryNoteBody": "Den Lieferschein mit allen gelieferten Artikeln erhalten Sie nach der Vorbereitung per E-Mail; er liegt auch der Lieferung bei. Er ist keine Rechnung; wenn Sie eine benötigen, schreiben Sie uns.",
       "card": "Mit Karte",
-      "deliveryNote": "Lieferübersicht herunterladen (PDF) ↓",
+      "deliveryNote": "Lieferschein herunterladen (PDF) ↓",
       "deliveryNoteWhen": "Nach der Vorbereitung Ihrer Bestellung",
       "duePickup": "Im Lager zu zahlen · {amount}",
       "codPickup": "Zahlung im Lager"
@@ -147,7 +147,7 @@
       "note": "Für Änderungen oder Stornierung schreiben Sie uns vor Beginn der Vorbereitung — danach lässt sich die Bestellung nicht mehr ändern.",
       "placedAt": "Heute {time}",
       "preparingAt": "Am Vortag der Lieferung",
-      "onTheWayAt": "{date} morgens",
+      "onTheWayAt": "{date}, vormittags",
       "deliveredAt": "{date}",
       "readyForPickup": "Abholbereit"
     },
@@ -162,11 +162,11 @@
     },
     "neighbor": {
       "title": "Laden Sie Ihre Nachbarn zu dieser Lieferung ein",
-      "body": "Gleicher Tag, gleiches Fahrzeug: bestellt jemand aus Ihrer Nachbarschaft für denselben Tag, werden Sie zusammen beliefert — und Sie sammeln Punkte.",
+      "body": "Gleicher Tag, gleiches Fahrzeug: Bestellt jemand aus Ihrer Nachbarschaft für denselben Tag, werden Sie zusammen beliefert — und Sie sammeln Punkte.",
       "cta": "Link kopieren",
       "copied": "Kopiert",
       "remaining": "Noch {n} Nachbarn können diese Einladung nutzen (höchstens {max}).",
-      "full": "Diese Einladung ist voll — {max} Nachbarn haben teilgenommen. Bei Ihrer nächsten Bestellung öffnet sich eine neue."
+      "full": "Diese Einladung ist ausgeschöpft — {max} Nachbarn haben mitbestellt. Mit Ihrer nächsten Bestellung erhalten Sie eine neue Einladung."
     },
     "track": "Bestellung verfolgen"
   }

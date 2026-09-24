@@ -266,7 +266,7 @@
       "local": "Lieferung an die Haustür",
       "shipping": "Versand per Paketdienst",
       "undeliverable": "An diese Adresse nicht lieferbar",
-      "split": "Dieser Warenkorb wird zu zwei getrennten Bestellungen: die Artikel für die Haustürlieferung und die Versandartikel werden separat bezahlt. Die Versandbestellung ist nicht verpflichtend — sonst bleiben diese Artikel im Warenkorb.",
+      "split": "Dieser Warenkorb wird zu zwei getrennten Bestellungen: Die Artikel für die Haustürlieferung und die Versandartikel werden separat bezahlt. Die Versandbestellung ist freiwillig: Ohne sie bleiben diese Artikel im Warenkorb.",
       "routeTotal": "Summe für die Lieferung: {amount}",
       "routeNote": "Lieferung kostenlos · Zahlung bei Lieferung möglich",
       "shippingTotal": "Summe für den Versand: {amount}",
@@ -279,8 +279,8 @@
       "free": "Kostenlos"
     },
     "undeliverable": {
-      "title": "Einige Artikel erreichen {place} nicht",
-      "body": "Kühlkettenware liefern wir ausschließlich mit unserem eigenen Kühlfahrzeug, und {place} liegt außerhalb unserer Tour. Mit einer Adresse im Liefergebiet kommen sie in Ihre Bestellung.",
+      "title": "Einige Artikel können wir nicht nach {place} liefern",
+      "body": "Kühlkettenprodukte liefern wir ausschließlich mit unserem eigenen Kühlfahrzeug, und {place} liegt außerhalb unseres Liefergebiets. Mit einer Adresse im Liefergebiet kommen sie in Ihre Bestellung.",
       "change": "Postleitzahl ändern",
       "changeAddress": "Lieferadresse ändern"
     },
@@ -314,7 +314,7 @@
       "subtotal": "Zwischensumme",
       "discount": "Rabatt",
       "singleRule": "Rabatte sind nicht kombinierbar — wir haben den höchsten für Sie angewendet.",
-      "reachable": "Noch {missing} und {label} greift: {amount} Rabatt.",
+      "reachable": "Noch {missing}, dann gilt „{label}“: {amount} Rabatt.",
       "reachableAnon": "Noch {missing} und Sie erhalten {amount} Rabatt.",
       "undeliverable": "Nicht in der Bestellung",
       "total": "Gesamt",
@@ -340,13 +340,13 @@
       "eyebrow": "LIEFERADRESSE",
       "change": "Ändern",
       "note": "Ihr Warenkorb wurde für Ihre Lieferadresse berechnet.",
-      "none": "Sie haben noch keine Adresse — wir zeigen vorerst anhand der Postleitzahl {code}.",
+      "none": "Sie haben noch keine Adresse gespeichert — vorerst rechnen wir mit der Postleitzahl {code}.",
       "pickupLine": "Abholung im Lager · {name}",
-      "pickupNote": "Ihr Warenkorb wurde anhand des Lagerbestands bewertet. Vereinbaren Sie die Abholzeit telefonisch."
+      "pickupNote": "Ihr Warenkorb wurde anhand des Lagerbestands berechnet. Vereinbaren Sie die Abholzeit telefonisch."
     },
     "placeChange": {
       "title": "{n} Artikel haben sich mit Ihrem neuen Ort geändert",
-      "toShipping": "{name} geht jetzt als Paket",
+      "toShipping": "{name} wird jetzt verschickt",
       "toRoute": "{name} wird jetzt an die Tür geliefert",
       "noDelivery": "{name} kann derzeit nicht an diese Adresse geliefert werden",
       "unavailable": "{name} ist an Ihrem neuen Ort derzeit nicht erhältlich",

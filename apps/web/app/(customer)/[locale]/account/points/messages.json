@@ -75,10 +75,10 @@
     "earnNote": "Ab {points} Punkten tauschen Sie sie gegen einen Gutschein über {amount} ein.",
     "earnPoints": "+{points} Punkte",
     "earnWay": {
-      "review": "Bewerten Sie ein gekauftes Produkt",
+      "review": "Schreiben Sie einen Kommentar zu einem gekauften Produkt",
       "feedback_purchase": "Bewerten Sie Ihre Produkte nach der Bestellung",
-      "feedback_candidate": "Stimmen Sie unter Entdecken über neue Sorten ab",
-      "referral": "Werben Sie Freunde — ab der ersten Bestellung",
+      "feedback_candidate": "Stimmen Sie unter „Entdecken“ über neue Sorten ab",
+      "referral": "Werben Sie Freunde — Punkte für deren erste Bestellung",
       "neighbor": "Laden Sie Ihre Nachbarn zu Ihrem Liefertag ein — sobald deren Bestellung bezahlt ist",
       "visit": "Schauen Sie täglich vorbei"
     },
@@ -89,7 +89,7 @@
       "order": "Bestellung",
       "referral": "Geworbene Freundin oder Freund",
       "neighbor": "Nachbarn eingeladen",
-      "visit": "Tagesbesuch",
+      "visit": "Täglicher Besuch",
       "redemption": "In Gutschein umgewandelt",
       "manual": "Manuelle Korrektur"
     },

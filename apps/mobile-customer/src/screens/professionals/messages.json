@@ -177,25 +177,25 @@
     "back": "Zurück",
     "title": "Geschäftskunden",
     "hero": {
-      "eyebrow": "Restaurant · Markt · Großküche",
+      "eyebrow": "Restaurant · Lebensmittelhandel · Großküche",
       "title": "Großhandelspreise, regelmäßige Lieferung",
-      "body": "Große Mengen einfach bestellen, regelmäßige Lieferung im Gebiet und Nachbestellung mit einer Geste. Stellen Sie Ihre Anfrage — wir melden uns zügig."
+      "body": "Große Mengen bequem bestellen, regelmäßige Lieferung im Liefergebiet und Nachbestellung mit einem Fingertipp. Stellen Sie Ihre Anfrage — wir melden uns zügig."
     },
     "steps": {
-      "signUp": "Anmelden — in einer Minute mit Ihrer USt-IdNr.; die Angaben tragen Sie einmal ein",
+      "signUp": "Registrieren — in einer Minute mit Ihrer USt-IdNr.; die Angaben tragen Sie einmal ein",
       "review": "Wir prüfen Ihre Anfrage — Antwort per E-Mail",
-      "priceList": "Mit der Freigabe öffnet sich Ihre Preisliste"
+      "priceList": "Mit der Freischaltung sehen Sie Ihre Großhandelspreise"
     },
     "form": {
       "tabSiret": "Französische Firma",
       "tabVat": "Deutsche Firma",
       "siret": "SIRET (14 Ziffern)",
-      "siretNote": "Geben Sie Ihre SIRET-Nummer ein und tippen Sie auf Abrufen — Ihre Firmenangaben kommen aus dem amtlichen Register. Wird kein Eintrag gefunden, können Sie die Angaben manuell eintragen.",
+      "siretNote": "Geben Sie Ihre SIRET-Nummer ein und tippen Sie auf „Abrufen“ — Ihre Firmenangaben kommen aus dem amtlichen Register. Wird kein Eintrag gefunden, können Sie die Angaben manuell eintragen.",
       "fetch": "Abrufen",
       "fetching": "Wird gesucht…",
       "vatNumber": "USt-IdNr. (DE + 9 Ziffern)",
-      "vatNote": "Ihre Nummer wird über das EU-Register (VIES) geprüft. Eine nicht mögliche Prüfung verhindert Ihre Anfrage nicht.",
-      "vatUseSiret": "Französische Unternehmen bewerben sich mit ihrer SIRET-Nummer.",
+      "vatNote": "Ihre Nummer wird über das EU-Register (VIES) geprüft. Ist die Prüfung gerade nicht möglich, können Sie Ihre Anfrage trotzdem senden.",
+      "vatUseSiret": "Französische Unternehmen registrieren sich mit ihrer SIRET-Nummer.",
       "vatUnsupported": "Derzeit arbeiten wir nur mit Unternehmen in Frankreich und Deutschland.",
       "vatChecking": "Wird geprüft…",
       "vatValid": "✓ Gültig",
@@ -222,14 +222,14 @@
       "registryDown": "Das amtliche Register ist derzeit nicht erreichbar — Sie können die Angaben manuell eintragen.",
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
       "network": "Keine Verbindung. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
-      "accountEmail": "Wir konnten die E-Mail-Adresse Ihres Kontos nicht lesen; die Antwort könnte Sie nicht erreichen. Melden Sie sich ab und mit Ihrer E-Mail-Adresse erneut an."
+      "accountEmail": "Wir konnten die E-Mail-Adresse Ihres Kontos nicht abrufen und können Ihnen die Antwort daher nicht senden. Bitte melden Sie sich ab und mit Ihrer E-Mail-Adresse erneut an."
     },
     "identity": {
-      "sheetTitle": "Auf welchen Namen sollen wir die Anfrage erfassen?",
-      "intro": "Die Anfrage wird einem Konto zugeordnet. Ihre E-Mail-Adresse fragen wir nur einmal: Dorthin senden wir den Code, an dieselbe Adresse kommt auch die Antwort, und nach der Freigabe öffnen sich dort Ihre Preise.",
+      "sheetTitle": "Mit welcher E-Mail-Adresse sollen wir Ihre Anfrage verknüpfen?",
+      "intro": "Die Anfrage wird einem Konto zugeordnet. Nach Ihrer E-Mail-Adresse fragen wir nur einmal: Dorthin senden wir den Code und später die Antwort; nach der Freischaltung sehen Sie dort Ihre Großhandelspreise.",
       "emailPrompt": "Welche E-Mail-Adresse verwenden wir?",
       "emailLabel": "Ihre E-Mail-Adresse",
-      "emailPlaceholder": "beispiel@email.com",
+      "emailPlaceholder": "name@beispiel.de",
       "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
       "send": "Code senden",
       "sending": "Wird gesendet…",
@@ -243,10 +243,10 @@
     },
     "status": {
       "pendingTitle": "Ihre Anfrage wird geprüft",
-      "pending": "Die Antwort senden wir Ihnen per E-Mail. Bis zur Freigabe bleibt der Katalog zu Einzelhandelspreisen offen.",
+      "pending": "Die Antwort senden wir Ihnen per E-Mail. Bis zur Freischaltung sehen Sie den Katalog zu Einzelhandelspreisen.",
       "approvedTitle": "Freigegeben",
-      "approved": "Freigegeben! Ihre Großhandelspreise sind offen.",
-      "rejectedTitle": "Ihre Anfrage konnte nicht freigegeben werden",
+      "approved": "Freigeschaltet! Ihre Großhandelspreise sind jetzt sichtbar.",
+      "rejectedTitle": "Ihre Anfrage konnte nicht angenommen werden",
       "rejected": "Sie können mit Ihrem Konto weiter einkaufen. Sie können Ihre Angaben auch korrigieren und die Anfrage erneut senden.",
       "reasonTitle": "Prüfhinweis",
       "translated": "automatisch übersetzt",
@@ -256,7 +256,7 @@
     "whatsapp": "Noch Fragen? Schreiben Sie uns auf WhatsApp",
     "sent": {
       "title": "Ihre Anfrage ist eingegangen",
-      "body": "Wir prüfen sie — die Antwort erhalten Sie per E-Mail. Ihre Großhandelspreise werden mit der Freigabe sichtbar; in der Zwischenzeit bleibt der Katalog zu Einzelhandelspreisen offen.",
+      "body": "Wir prüfen sie — die Antwort erhalten Sie per E-Mail. Ihre Großhandelspreise werden mit der Freischaltung sichtbar; bis dahin sehen Sie den Katalog zu Einzelhandelspreisen.",
       "cta": "Zum Katalog"
     }
   }

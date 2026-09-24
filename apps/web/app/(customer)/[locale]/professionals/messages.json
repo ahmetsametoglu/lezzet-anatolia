@@ -206,33 +206,33 @@
   "de": {
     "meta": {
       "title": "Geschäftskunden — Großhandel für Restaurants und Lebensmittelgeschäfte",
-      "description": "Türkische Lebensmittel für Restaurants, Märkte und Cafés. In einer Minute anmelden; Ihre Großhandelspreise werden nach der Freigabe sichtbar."
+      "description": "Türkische Lebensmittel für Restaurants, Lebensmittelgeschäfte und Cafés. In einer Minute registrieren; Ihre Großhandelspreise werden nach der Freischaltung sichtbar."
     },
     "hero": {
-      "eyebrow": "Für Restaurants & Märkte",
-      "title": "Der türkische Lieferant Ihrer Küche",
+      "eyebrow": "Für Restaurants & Lebensmittelgeschäfte",
+      "title": "Ihr Lieferant für türkische Spezialitäten",
       "benefits": [
-        "Großhandelspreise — sichtbar nach der Freigabe",
+        "Großhandelspreise — sichtbar nach der Freischaltung",
         "Regelmäßige Lieferung im Gebiet, mit eigenem Kühlfahrzeug",
         "Große Mengen einfach bestellen + Nachbestellung mit einem Klick",
         "Bestellung und direkter Kontakt über WhatsApp"
       ],
       "cta": "Jetzt anfragen",
-      "whatsapp": "Frage über WhatsApp",
+      "whatsapp": "Per WhatsApp fragen",
       "imageAlt": "Restaurantküche und Lieferfahrzeug"
     },
     "steps": [
       {
-        "title": "Anmelden",
+        "title": "Registrieren",
         "body": "Mit Ihrer USt-IdNr. in einer Minute — die Angaben tragen Sie einmal ein."
       },
       {
-        "title": "Freigabe",
+        "title": "Freischaltung",
         "body": "Wir prüfen Ihre Anfrage und melden uns zügig; die Antwort kommt per E-Mail."
       },
       {
-        "title": "Großhandel bestellen",
-        "body": "Ihre Preisliste öffnet sich; Sie bestellen über den Kanal Ihrer Wahl."
+        "title": "Zu Großhandelspreisen bestellen",
+        "body": "Ihre Großhandelspreise werden sichtbar; Sie bestellen über den Kanal Ihrer Wahl."
       }
     ],
     "form": {
@@ -253,7 +253,7 @@
       "vatValid": "Bestätigt",
       "vatInvalid": "Diese Nummer konnte nicht bestätigt werden — bitte prüfen",
       "vatUnknown": "Derzeit nicht prüfbar — Ihre Anfrage bleibt möglich",
-      "vatUseSiret": "Französische Unternehmen bewerben sich mit ihrer SIRET-Nummer (Reiter „Französisches Unternehmen“).",
+      "vatUseSiret": "Französische Unternehmen registrieren sich mit ihrer SIRET-Nummer (Reiter „Französisches Unternehmen“).",
       "vatUnsupported": "Derzeit arbeiten wir nur mit Unternehmen in Frankreich und Deutschland.",
       "line1": "Straße und Hausnummer",
       "postalCode": "Postleitzahl",
@@ -268,7 +268,7 @@
       "email": "E-Mail",
       "submit": "Anfrage senden",
       "submitting": "Wird gesendet…",
-      "note": "Nach dem Senden erhalten Sie einen Einmalcode per E-Mail — damit wird Ihr Konto eröffnet, ganz ohne Passwort. Wenn Sie bereits ein Konto haben, wird die Anfrage damit verknüpft.",
+      "note": "Nach dem Senden erhalten Sie einen Einmalcode per E-Mail — damit wird Ihr Konto erstellt, ganz ohne Passwort. Wenn Sie bereits ein Konto haben, wird die Anfrage damit verknüpft.",
       "noteSignedIn": "Ihre Anfrage wird mit Ihrem bestehenden Konto verknüpft.",
       "verifyTitle": "Geben Sie den Code aus Ihrer E-Mail ein",
       "back": "Zurück zum Formular"
@@ -277,8 +277,8 @@
       "title": "Noch Fragen?",
       "body": "Die meisten Partnerschaften beginnen mit einem Gespräch. Schreiben Sie uns:",
       "whatsapp": "WhatsApp: {phone}",
-      "noticeLead": "Bis zur Freigabe können Sie den Katalog zu Einzelhandelspreisen ansehen.",
-      "noticeStrong": "Ihre Großhandelspreise werden mit der Freigabe sichtbar."
+      "noticeLead": "Bis zur Freischaltung können Sie den Katalog zu Einzelhandelspreisen ansehen.",
+      "noticeStrong": "Ihre Großhandelspreise werden mit der Freischaltung sichtbar."
     },
     "sent": {
       "eyebrow": "Anfrage gesendet",
@@ -288,8 +288,8 @@
     },
     "status": {
       "pending": "Ihre Anfrage wird geprüft — Antwort per E-Mail.",
-      "approved": "Freigegeben! Ihre Großhandelspreise sind offen.",
-      "rejected": "Ihre Anfrage konnte derzeit nicht freigegeben werden — Sie können mit Ihrem Konto weiter einkaufen. Sie können Ihre Angaben auch korrigieren und die Anfrage erneut senden."
+      "approved": "Freigeschaltet! Ihre Großhandelspreise sind jetzt sichtbar.",
+      "rejected": "Ihre Anfrage konnte derzeit nicht angenommen werden — Sie können mit Ihrem Konto weiter einkaufen. Sie können Ihre Angaben auch korrigieren und die Anfrage erneut senden."
     },
     "rejectReasonTitle": "Prüfhinweis",
     "translation": {

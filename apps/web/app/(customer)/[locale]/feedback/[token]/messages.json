@@ -83,11 +83,11 @@
   },
   "de": {
     "welcomeTitle": "Wie war Ihre Bestellung?",
-    "welcomeBody": "{order} — wir fragen Sie Produkt für Produkt, das dauert weniger als eine Minute. Zum Abschluss gehören {points} Ihnen.",
+    "welcomeBody": "{order} — wir fragen Sie Produkt für Produkt, das dauert weniger als eine Minute. Am Ende erhalten Sie {points}.",
     "welcomePoints": "+{n} Punkte",
     "start": "Los geht's",
     "progress": "{current} / {total}",
-    "finishLater": "Später beenden",
+    "finishLater": "Später weitermachen",
     "liked": "Hat mir gefallen",
     "disliked": "Hat mir nicht gefallen",
     "writeInvite": "Möchten Sie ein paar Worte schreiben?",
@@ -115,10 +115,10 @@
     "alreadyBody": "Vielen Dank! Ihre Punkte wurden bereits gutgeschrieben.",
     "myPoints": "Mein Punktestand →",
     "errors": {
-      "unexpected": "Etwas ist schiefgelaufen. Bitte erneut versuchen; wenn es bleibt, schreiben Sie uns.",
+      "unexpected": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut. Besteht das Problem weiter, schreiben Sie uns.",
       "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden.",
       "invalid_link": "Dieser Link ist nicht mehr gültig.",
-      "vote_failed": "Ihre Antwort konnte nicht gespeichert werden. Bitte erneut versuchen.",
+      "vote_failed": "Ihre Bewertung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
       "review_empty": "Vergeben Sie eine Bewertung oder schreiben Sie ein paar Worte."
     }
   }

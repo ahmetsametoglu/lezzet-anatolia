@@ -136,8 +136,8 @@
     },
     "guestDone": {
       "title": "Danke für Ihre Bewertungen!",
-      "body": "Ihre Bewertungen sind in unsere Auswahl eingeflossen. Wenn Sie möchten, eröffnen Sie ein Konto — wir schreiben Ihnen die gesammelten {points} Punkte ({money}) gut.",
-      "cta": "Konto eröffnen und Punkte sichern",
+      "body": "Ihre Bewertungen sind in unsere Auswahl eingeflossen. Wenn Sie möchten, erstellen Sie ein Konto — wir schreiben Ihnen die gesammelten {points} Punkte ({money}) gut.",
+      "cta": "Konto erstellen und Punkte sichern",
       "catalog": "Zum Katalog"
     },
     "claimed": "{points} Punkte wurden Ihrem Konto gutgeschrieben.",
@@ -149,7 +149,7 @@
     "errors": {
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
       "session_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
-      "swipe_failed": "Diese Karte konnte nicht gespeichert werden."
+      "swipe_failed": "Ihre Stimme konnte nicht gespeichert werden."
     }
   }
 }
