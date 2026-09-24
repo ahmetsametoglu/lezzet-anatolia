@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.41). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.43). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
 `docs/GELECEK.md`'dedir.
@@ -31,6 +31,21 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
   diyor (mobil web ve native ortak metni, `packages/i18n/src/customer/checkout.json` `confirmed.note`); `packages/notify` WhatsApp
   API sürücüsü her gönderimi `skipped` döndürüyor. Yayından önce ya metinden WhatsApp çıkar ya da gönderim açılır (`15.11`in
   sürücü yarısı).
+- [ ] (K.42) [hedef: web] Yasal metinlerin içeriği avukata (dil düzeltmesi yapıldı, içerik değişmedi — `packages/i18n/src/customer/legal.json`):
+  sipariş düğmesi ödeme yükümlülüğünü söylemiyor (L221-14 · BGB §312j: "Commander et payer" / "Zahlungspflichtig bestellen") ·
+  cayma hakkı bütün gıdalara kapalı yazılı, istisna yalnız çabuk bozulana; raf ömürlü kargoda 14 gün, bilgilendirme ve örnek form
+  (L221-28 4°, L221-5 · BGB §312g) · tüketici arabulucusu yok (L612-1) · Almanya'daki tüketiciye Rome I md. 6 şerhi · yasal garanti
+  kutusu (D211-2) ve tahmini süre maddesi (L216-1) · CGV sözleri: 48 saat bildirim, ikinci başarısız teslimatta iade yok, "çözümsüz
+  talep kapatmayız", stok yetmezse "iptal edilmez" (uygulama ödeme sonrası iptal edip iade ediyor) · CGV kapsamı taze ürünü saymıyor ·
+  künyede RCS yok · gizlilik: girişte "kabul edersiniz" (bilgilendirme olmalı), itiraz (md. 21) ve ölüm sonrası talimat hakkı,
+  ikamet ülkesi otoritesi (md. 77), yapay zekâ ve ölçümün hukuki dayanağı, saklama süreleri, "traceurs", maskeli e-posta da kişisel
+  veridir · pazarlama izni e-posta ve WhatsApp'a tek kutu (UWG §7) · Google yorumu yalnız memnun müşteriden isteniyor ve "doğrulanmış
+  yorum" bilgisi (L111-7-2) · B2B e-postasında "Reverse-Charge/autoliquidation" ibaresi (muhasebeci) · alerjen adları INCO/LMIV Ek II
+  resmî adıyla mı · "kenarları hafif yumuşamış olabilir" cümlesi (üretici teyidi).
+- [ ] (K.43) [hedef: web] Doğrulanamayan müşteri sözleri kullanıcı teyidi bekliyor; teyit gelmezse metinden çıkar: davet sayfasında
+  "Türkiye'nin dört bir yanından" menşe sözü · sipariş durumu yola çıkışta başlarken "Kurye bölgenizde" notu · eksik ürün
+  e-postasında "kalanı sonraki teslimata ekleriz ya da iptal ederiz" sözü · e-postalarda talebe "aynı gün cevap" sözü (karar
+  WhatsApp içindi) · ödeme tanıtımında "bankanızla aynı koruma".
 - [~] (21.310) **Operasyon uygulamasının (`apps/mobile-operations`, "Lezzet Operasyonu") kurulabilir sürümü** — personelin
   telefonuna kurulur; müşteri uygulamasıyla ortak çekirdek `packages/mobile-kit`.
   - Eksik: Expo proje kimliği (`extra.eas.projectId`) ve Firebase `google-services.json` (kayıt kullanıcının; ikisi yokken push
