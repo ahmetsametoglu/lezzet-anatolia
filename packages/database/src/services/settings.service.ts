@@ -12,103 +12,37 @@ import {
 import { BaseDbService } from '../core/base.service';
 
 /**
- * Ayar önbelleğinin ÖMRÜ — aynı zamanda ekranın operatöre verebileceği SÖZ.
- *
- * Dışa açık, çünkü Ayarlar ekranı bu sayıyı yazacak ("değişiklik en geç 30 saniye içinde tüm
- * süreçlerde geçerli olur"). Sayı iki yerde ayrı yaşasaydı ekran bir gün tutulmayan bir söz verirdi.
- *
- * 30 sn: ayarlar sıcak yolda okunuyor (checkout), yani süre başına anahtar başına iki sorgu — ihmal
- * edilebilir; ve operatörün kaydedip etkisini görmek için beklediği süre bir sayfa yenilemesi
- * kadar. Ayarın kendisi ayardan okunamaz (kendi kendine bağımlılık), o yüzden sabit.
+ * Ayar önbelleğinin ömrü, aynı zamanda Ayarlar ekranının operatöre verdiği söz ("en geç 30 saniye içinde her yerde geçerli"); sayı iki
+ * yerde yaşasaydı ekran tutulmayan bir söz verirdi. Ayarın kendisi ayardan okunamaz (kendi kendine bağımlılık), o yüzden sabittir.
  */
 export const SETTINGS_CACHE_TTL_MS = 30_000;
 
-/** Özgüllük sırası: en dar kapsam kazanır, hiçbiri yoksa global'e düşülür. */
 /**
- * Kapsam önceliği — **en özgülden en genele.** İlk eşleşen kazanır.
- *
- * `warehouse` EN BAŞTA (03.08): depo, bir ayarın farklılaşabileceği en dar eksendir ve bölgeden de
- * dardır — bir bölge tek bir depoya bağlıdır ama bir depo birden çok bölgeye hizmet eder. Sıra ters
- * olsaydı bölge satırı depo satırını ezerdi ve "bu deponun paketleme maliyeti" hiçbir zaman
- * uygulanmazdı; operatör değeri girer, sistem yok sayardı — sessizce.
- *
- * `country` en sonda (global'den önce): ülke bir kapsam eksenidir ama en geniş olanıdır.
+ * Kapsam önceliği, en özgülden en genele; ilk eşleşen kazanır, hiçbiri yoksa global'e düşülür. Depo en baştadır, çünkü bir depo birden
+ * çok bölgeye hizmet eder ve sıra ters olsaydı bölge satırı deponun kendi değerini sessizce ezerdi.
  */
 const SCOPE_PRIORITY: readonly SettingScope[] = ['warehouse', 'zone', 'channel', 'country', 'global'];
 
 /**
- * **EN KATISI KAZANAN anahtarlar** — "en dar kazanır" kuralının İSTİSNASI (kullanıcı kararı 09.08).
- *
- * ── SORUN NASIL GÖRÜLDÜ ─────────────────────────────────────────────────────
- * `min_basket_cents`in iki satırı var ve **ikisi ayrı sorulara cevap veriyor**:
- *   `channel: b2b` 120 € → TİCARİ ŞART. Toptan fiyat vermenin karşılığı; mesafeyle ilgisi yok.
- *   `zone: <bölge>`  45 € → LOJİSTİK TABAN. Aracın o tura çıkması anlamlı olsun diye.
- *
- * "En dar kazanır" bunları rakip sayıyordu ve bölge kanalı eziyordu: o bölgedeki işletme müşterisi
- * 120 € yerine 45 € ile toptan fiyat alabiliyordu. Kural bugüne dek görünmedi çünkü `zoneId` hiçbir
- * çağırandan geçmiyordu (07.15); bağlandığı gün ortaya çıktı.
- *
- * Bunlar rakip değil, **birlikte karşılanması gereken iki koşul** — o yüzden eşleşen kapsamların
- * EN YÜKSEĞİ uygulanır. Kısa bir tur, kimseye toptan şartları hediye etmez.
- *
- * ── ÖDÜNLEŞME AÇIKÇA YAZILI ─────────────────────────────────────────────────
- * Bu kuralla bir eşiği dar kapsamda **YÜKSELTEBİLİR ama DÜŞÜREMEZSİNİZ**. Bugün kayıp yok (global
- * satır 0), ama bir gün "merkez bölgede eşiği düşürelim" istenirse bu kural onu engeller ve o gün
- * yeni bir karar gerekir — sessizce çalışmayan bir ayar bırakmamak için yazıyor.
- *
- * **Yalnız KOŞUL ayarları burada.** `shipping_fee_cents` bilerek DIŞARIDA: o bir koşul değil FİYAT
- * — Alman müşteri Almanya tarifesini öder, "en pahalısı" değil. Bir ücreti buraya koymak, kapsamın
- * anlamını sessizce değiştirirdi.
+ * "En dar kazanır"ın istisnası: bu anahtarlarda eşleşen kapsamların en yükseği uygulanır, çünkü satırları rakip değil birlikte
+ * karşılanacak koşullardır (kanalın ticari şartı ve bölgenin lojistik tabanı). Bedeli bilinir: eşik dar kapsamda yükseltilebilir ama
+ * düşürülemez.
  */
 const STRICTEST_WINS: ReadonlySet<string> = new Set(['min_basket_cents']);
 
 /**
- * Okumayı BELİRLİ kapsam türleriyle sınırlar — küresel satır dahil ötekiler hiç sayılmaz.
- *
- * **Neden gerekti (kullanıcı kararı 10.08).** `min_basket_cents` iki ayrı soruya cevap veriyor
- * (yukarıdaki künye) ve biri teslimat yoluna bağlı: **kargo siparişinde LOJİSTİK taban yoktur** —
- * araç çıkmıyor, taşıyıcı gidiyor ve ücretini müşteri zaten ödüyor. Ticari şart (kanal satırı) ise
- * her yolda geçerli; toptan fiyat vermenin karşılığıdır, mesafeyle ilgisi yoktur.
- *
- * Kapsam düşürerek çözülemiyordu: `zoneId`yi boş geçmek bölge satırını eler ama **küresel satır her
- * zaman eşleşir**. Yani operatör küresel bir eşik yazdığı gün kargo siparişleri sessizce o eşiğe
- * takılırdı — kimsenin vermediği bir karar, kimsenin fark etmediği bir yerde. `only: ['channel']`
- * bunu yapısal olarak imkânsız kılıyor: kargo yolunda okunan tek satır kanalın kendisidir.
- *
- * Sınır **çağrı yerinde** duruyor, anahtar listesinde değil: hangi okumanın hangi kapsamı
- * dinleyeceği çağıranın bağlamına (teslimat yolu) bağlı, anahtarın kendisine değil.
+ * Okumayı belirli kapsam türleriyle sınırlar ve küresel satır bile sayılmaz: kargo siparişinde lojistik taban yoktur, ama global satır
+ * her zaman eşleştiği için kapsam düşürmek operatörün yazdığı eşiği kargoya sessizce uygulardı. Sınır çağrı yerindedir, çünkü hangi
+ * kapsamın dinleneceği teslimat yoluna bağlıdır, anahtara değil.
  */
 export interface ScopeLimit {
   only?: readonly SettingScope[];
 }
 
 /**
- * İşletme ayarı servisi (02.6) — DATA_MODEL "Setting", STACK §10.
- *
- * **Ayar env'e/koda gömülmez.** Kesim saati, minimum sepet, kapıda ödeme tavanı gibi değerler işin
- * sahibinin kararıdır; dağıtım beklemeden değişebilmelidir.
- *
- * **Önbellekli, ve önbellek SÜRELİ.** Ayarlar her istekte okunur ama neredeyse hiç değişmez; her
- * checkout için tur atmak gereksizdir.
- *
- * ── SÜRE NEDEN ŞART (operasyon şeridinin bulgusu, 02.08) ─────────────────────
- * Önceki hâlde önbellek süreç ömrü boyunca yaşıyordu ve yalnız `set()` düşürüyordu — yani yalnız
- * YAZAN sürecinki. Buradaki künye bunu "çok instance'ta gecikmeli yayılır" diye anlatıyordu ve
- * **o cümle yanlıştı**: gecikme değil, hiç yayılmama. Operatör Ayarlar ekranından bir değeri
- * değiştirir, ekran "kaydedildi" der, kararı veren öteki süreç bir sonraki dağıtıma kadar eski
- * değeri okurdu. Ayar ekranının var olma sebebi tam da bunun tersi.
- *
- * ── NEDEN TTL, NEDEN `LISTEN/NOTIFY` DEĞİL ───────────────────────────────────
- * Yayın (notify) anında yansıtır ama bir kalıcı bağlantı ister: PostgREST `LISTEN` bilmez, yani ya
- * doğrudan `pg` bağlantısı ya Realtime aboneliği gerekir. İkisi de yeni bir arıza yüzeyi getirir ve
- * o arıza SESSİZDİR — abonelik koparsa önbellek bir daha hiç düşmez, üstelik çalışırken anında
- * yansıdığı için kimse süreyi izlemez. TTL sınırlıdır, kendi kendini onarır, bağımlılık istemez.
- *
- * Ve asıl fark şu: TTL **söylenebilir bir sözleşmedir.** Ekran "değişiklik en geç N saniye içinde
- * her yerde geçerli olur" diye yazabilir; yayın kurulumunda söylenebilecek şey "genelde anında,
- * bozulursa bilinmiyor"dur — belirsiz bir vaat, yanlış bir vaatten kötüdür.
- *
- * Yazan süreç beklemez: `set()` kendi kopyasını hemen düşürür. Süre yalnız ÖTEKİ süreçler için.
+ * İşletme ayarı servisi: kesim saati, asgari sepet gibi değerler işin sahibinin kararıdır ve dağıtım beklemeden değişir. Önbellek
+ * süreli, çünkü süre sınırlı ve kendi kendini onaran, söylenebilir bir sözleşmedir; yayın (`LISTEN/NOTIFY`) koparsa önbellek bir daha
+ * hiç düşmezdi ve bunu kimse fark etmezdi.
  */
 export class SettingsService extends BaseDbService<Setting, SettingInsert, SettingUpdate> {
   /** key → o anahtarın TÜM kapsam satırları + okuma anı. Çözüm bellekte, sorgu anahtar başına tek. */
@@ -137,11 +71,8 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
   }
 
   /**
-   * Sayısal ayar — jsonb'den gelen değer metin olabilir; sayı değilse `fallback`'e düşer.
-   *
-   * `STRICTEST_WINS` anahtarlarında çözüm farklıdır: ilk eşleşen değil, eşleşen kapsamların EN
-   * YÜKSEĞİ döner. Gerekçe o sabitin künyesinde — birlikte karşılanması gereken iki koşulu rakip
-   * saymamak için.
+   * Sayısal ayar: jsonb'den gelen değer metin olabilir, sayı değilse `fallback`'e düşer. `STRICTEST_WINS` anahtarlarında ilk eşleşen
+   * değil eşleşen kapsamların en yükseği döner (gerekçe o sabitte).
    */
   async getNumber(key: string, fallback: number, scope: SettingScopeContext = {}, opts: ScopeLimit = {}): Promise<number> {
     if (STRICTEST_WINS.has(key)) return this.strictestNumber(key, fallback, scope, opts);
@@ -150,12 +81,8 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
   }
 
   /**
-   * Eşleşen TÜM kapsamların en katısı (en yükseği). Sayıya çevrilemeyen satır sayılmaz — bozuk bir
-   * değer eşiği sessizce `NaN`'a çevirmemeli; hiç satır yoksa `fallback`.
-   *
-   * `only` verilirse **yalnız o kapsam türleri katılır ve küresel satır bile dışarıda kalır**.
-   * Sebebi `ScopeLimit` künyesinde: bir eşiğin hangi kapsamdan geldiği bazen değerin kendisi kadar
-   * anlamlıdır ve o hâlde "hepsini oku, en katısını al" yanlış cevap verir.
+   * Eşleşen tüm kapsamların en katısı; sayıya çevrilemeyen satır sayılmaz, çünkü bozuk değer eşiği sessizce `NaN`'a çevirmemeli. `only`
+   * verilirse yalnız o kapsam türleri katılır (gerekçe `ScopeLimit`te).
    */
   private async strictestNumber(
     key: string,
@@ -181,12 +108,8 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
   }
 
   /**
-   * Ayarı yazar/günceller (admin ekranı). Aynı anahtar+kapsam ikinci kez açılmaz — üzerine yazılır.
-   *
-   * `actorId` — değişikliğin izini bırakan alan (09.16). **Opsiyonel, çünkü her yazan bir insan
-   * değil:** tohum/göç ve iş süreçleri de ayar yazabilir ve onlara uydurma bir aktör atamak, izi
-   * güvenilir sanılan bir yalana çevirirdi. Verilmediğinde alan `null` kalır ve ekran bunu "sistem"
-   * diye okur — "bilinmiyor" diye değil.
+   * Ayarı yazar ya da günceller; aynı anahtar+kapsam ikinci kez açılmaz. `actorId` opsiyoneldir, çünkü tohum ve iş süreçleri de yazar
+   * ve onlara uydurma aktör atamak izi yalana çevirirdi; `null`u ekran "sistem" diye okur.
    */
   async set(
     key: string,
@@ -211,16 +134,8 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
   }
 
   /**
-   * TÜM ayar satırları — Ayarlar ekranının (09.16) tek okuması.
-   *
-   * **Sayfalanmaz ve bu ölçülü bir karar** (`CLAUDE.md §1`): küme veriyle büyümez, operatörün elle
-   * kurduğu bir sözlüktür ve doğal tavanı vardır — anahtar sayısı kadar, kapsam satırlarıyla birkaç
-   * katı. Sipariş ya da stok gibi sınırsız büyüyen bir küme değil.
-   *
-   * İki gerçek bedeli kapatıyor (operasyon şeridinin talebi, 03.08): ekran sözlükteki 27 anahtar
-   * için 27 ayrı sorgu atıyordu, ve — daha önemlisi — **sözlükte olmayan bir satır ekranda hiç
-   * görünmüyordu.** Elle açılmış ya da sözlüğe henüz eklenmemiş bir ayarın sistemde çalışan bir
-   * değeri olabilir; yönetim ekranının onu göstermemesi, "ayarı buradan yönetiyorum" vaadini deler.
+   * Tüm ayar satırları, Ayarlar ekranının tek okuması; sayfalanmaz, çünkü küme operatörün kurduğu bir sözlüktür ve veriyle büyümez
+   * (`CLAUDE.md §1`). Sözlükte olmayan satır da gelir, çünkü çalışan bir değeri göstermeyen yönetim ekranı kendi vaadini delerdi.
    */
   listAll(): Promise<Setting[]> {
     return this.getAll(undefined, { orderBy: 'key' });
@@ -234,10 +149,8 @@ export class SettingsService extends BaseDbService<Setting, SettingInsert, Setti
 
   private async rowsFor(key: string): Promise<Setting[]> {
     const cached = SettingsService.cache.get(key);
-    // Süresi dolan kayıt SİLİNMEZ, yenilenir: silmek ile yenilemek arasındaki fark, aradaki
-    // sorgu düşerse eski değerin mi yoksa `fallback`'in mi kullanılacağıdır. Burada yenileme
-    // atılıyor ve hata yukarı gidiyor — sessizce varsayılana düşmek, ayarı hiç yazmamış gibi
-    // davranmak olurdu (`CLAUDE.md §1`: ölçülemeyen değer sıfır değildir).
+    // Süresi dolan kayıt yenilenir ve sorgu düşerse hata yukarı gider: sessizce varsayılana düşmek ayarı hiç yazılmamış saymak olurdu
+    // (`CLAUDE.md §1`).
     if (cached && Date.now() - cached.at < SETTINGS_CACHE_TTL_MS) return cached.rows;
 
     const rows = await this.getAll({ key });

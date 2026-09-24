@@ -148,12 +148,11 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     // Depo ekseni yok: depo bölgeden daha özgül olduğu için depoya yazılan saat bölgenin saatini hata vermeden öldürürdü; her rota
     // kendi saatini taşır.
     exceptionScopes: ZONE_ONLY,
-    // Fabrika değeri `lib/settings/day-hours`ten geliyor — bu dört saati panelin gün akışı ve rota
-    // kurulumu da okuyor, değer üç yerde ayrı yazılıydı. Nöbet testi migration'a karşı doğrulamaya
-    // devam ediyor; zincir artık migration ↔ day-hours ↔ sözlük.
+    // Fabrika değeri `lib/settings/day-hours`ten: bu dört saati panelin gün akışı ve rota kurulumu da okur. Nöbet testi zinciri
+    // migration ↔ day-hours ↔ sözlük olarak doğrular.
     fallback: DAY_HOUR_FALLBACK.order_cutoff_time,
   },
-  // ── GÜNÜN EŞİK SAATLERİ (09.3 paneli) ──────────────────────────────────────
+  // ── GÜNÜN EŞİK SAATLERİ ─────────────────────────────────────────────────────
   // Üçü de YALNIZ rota ekseninde: kesim rotanın gerçeğidir, deponun değil. Çok günlü tur geldiğinde
   // (`docs/feature/cok-gunluk-sefer.md`) kesimin turun ÇIKIŞ gününe bağlanması ancak bu eksenle
   // ifade edilebilir — depo ekseninde imkânsızdı.

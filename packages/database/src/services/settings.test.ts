@@ -3,8 +3,8 @@ import { serviceDb } from '../client';
 import { SETTINGS_CACHE_TTL_MS, SettingsService } from './settings.service';
 
 /**
- * İşletme ayarı (02.6) — kapsamlı çözüm: EN ÖZGÜL kapsam kazanır, yoksa global'e düşer.
- * Ayarların env'e/koda gömülmemesinin karşılığı budur (STACK §10).
+ * İşletme ayarı: kapsamlı çözümde en özgül kapsam kazanır, yoksa global'e düşülür; ayarların env'e ve koda gömülmemesinin karşılığı
+ * budur (STACK §10).
  */
 const db = serviceDb();
 const settings = new SettingsService(db);
@@ -152,24 +152,15 @@ describe('seed varsayılanları (02.7)', () => {
   });
 
   it('teslim onayı kapsamı kanal bazında: B2B zorunlu, B2C kapalı', async () => {
-    /* İMZA KALKTI (kullanıcı kararı 30.08) — fabrika değeri iki kanalda da kapalı. Kanıt artık
-       kutu okutmasının kendisi (`box_scan`); ayar duruyor çünkü kapsam yine açılabilir. */
+    /* Teslim kanıtı kutu okutmasıdır (`box_scan`), fabrika değeri iki kanalda da kapalı; ayar kapsam yine açılabilsin diye durur. */
     expect(await settings.get('delivery_proof_required', {})).toEqual({ b2b: false, b2c: false });
   });
 });
 
 /**
- * **EN KATISI KAZANAN çözüm** (`STRICTEST_WINS`, kullanıcı kararı 09.08) — yalnız koşul ayarları.
- *
- * Kural neden var: `min_basket_cents`in iki satırı iki AYRI soruya cevap veriyor — `channel: b2b`
- * bir ticari şart (toptan fiyatın karşılığı, mesafeyle ilgisi yok), bölge satırı bir lojistik taban
- * (aracın o tura çıkması anlamlı olsun). "En dar kazanır" bunları rakip sayıp bölgeyi kanalın önüne
- * geçiriyordu: o bölgedeki işletme müşterisi 120 € yerine 45 € ile toptan fiyat alabiliyordu.
- *
- * Test SAHTE kapsam kimlikleriyle koşar (`zone-<damga>` · `wh-<damga>`): paylaşılan veritabanında
- * gerçek `channel: b2b` satırına dokunmak, TÜM suite'in okuduğu bir satırı kirletmek olurdu
- * (`CLAUDE §4b`). Ayrım için DAR kapsama düşük, GENİŞ kapsama yüksek değer yazılıyor — eski kural
- * dar olanı, yeni kural yüksek olanı döndürür.
+ * En katısı kazanan çözüm (`STRICTEST_WINS`) yalnız koşul ayarlarında geçer: kanalın ticari şartı ve bölgenin lojistik tabanı birlikte
+ * karşılanır. Test sahte kapsam kimlikleriyle koşar ki paylaşılan veritabanındaki gerçek satırlar kirlenmesin (`CLAUDE §4b`); dar kapsama
+ * düşük, geniş kapsama yüksek değer yazılır.
  */
 describe('en katısı kazanan koşul ayarları (09.08)', () => {
   const zoneId = `zone-${stamp}`;

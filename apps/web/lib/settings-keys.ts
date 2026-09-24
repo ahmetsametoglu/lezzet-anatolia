@@ -1,32 +1,8 @@
 /**
- * Ayar anahtarları ve varsayılanları — **kısmi geçiş köprüsü** (terfi aşama 2/3, denetim K5-1).
- *
- * Üç sepet/kargo ANAHTARI `@lezzet/application/cart/settings-keys`ten geliyor; künyelerin tamamı
- * orada (eşiğin neden koda gömülmediği, varsayılanın neden ayar okunamadığında devreye girdiği).
- *
- * ── NEDEN İKİZ TEHLİKELİYDİ ─────────────────────────────────────────────────
- * Bunlar "yalnızca sabit" değil, İKİ YÜZEYİN AYNI SAYIYI okuma sözü: ücretsiz kargo eşiği web
- * sepetinde bir dosyadan, mobil sepette başkasından okunuyordu. Biri güncellenip öteki unutulsa
- * müşteri web'de "6,90 € kargo", uygulamada "ücretsiz" görürdü — ve iki dosyanın da testi yeşil
- * kalırdı.
- *
- * ── İKİ ANAHTAR HÂLÂ BURADA VE BU BİLİNÇLİ ──────────────────────────────────
- * `POINTS_*` pakete taşınmadı: puan kuralı sepetin değil sadakat modülünün (17.x) ve paket tarafında
- * karşılığı yok. Buraya sahte bir köprü yazmak — pakette olmayan bir şeyi varmış gibi göstermek —
- * ikizden kötü olurdu. Taşınma sırası geldiğinde bu dosya tamamen köprüye iner.
- *
- * ── ADRES BARREL DEĞİL, DERİN YOL (10.08) ───────────────────────────────────
- * Bu dosyayı operasyonun ayarlar ve depolar ekranları (istemci komponentleri) okuyor. Barrel'dan
- * açılınca paketin tamamı — `@lezzet/database` ve `node:crypto` dahil — tarayıcı paketine giriyor;
- * sepet köprüsünde aynı şey ödeme sayfasını 500'e düşürdü. Kaynak modül saf (hiç importu yok), o
- * yüzden derin yol hem doğru hem bedelsiz.
+ * Ayar anahtarları: sepet ve kargo anahtarları `@lezzet/application/cart/settings-keys`ten gelir, çünkü iki yüzey aynı sayıyı okumak
+ * zorunda; istemci komponentleri de okuduğu için barrel değil derin yol kullanılır, barrel paketin tamamını tarayıcı paketine sokardı.
  */
-/*
-  KÖPRÜ YALNIZ WEB'İN OKUDUĞUNU GEÇİRİR (26.08, knip). Üç `_DEFAULT` sabiti de buradan
-  re-export ediliyordu ve web'de tek bir çağıranı yoktu — varsayılanı okuyan taraf sunucudaki
-  ayar çözümü, o da paketi doğrudan çağırıyor. Kimsenin almadığı bir re-export, köprüyü
-  olduğundan geniş gösterir; ihtiyaç doğduğu gün satır geri gelir (paket onları hâlâ veriyor).
-*/
+/* Köprü yalnız web'in okuduğunu geçirir; varsayılanları sunucudaki ayar çözümü paketten doğrudan okur. */
 export {
   FREE_SHIPPING_THRESHOLD_KEY,
   MIN_BASKET_KEY,
@@ -34,23 +10,14 @@ export {
 } from '@lezzet/application/cart/settings-keys';
 
 /**
- * Puanı kupona çevirme kuralı — **hesap ekranı ile motor aynı sayıyı okumak zorunda.**
- *
- * Yaşandı (29.07 · tasarım denetimi): ekran eşiği koda `300` diye gömmüştü, ayar `500` idi. 340
- * puanlı müşteri "300 puan = 5 € kuponu" cümlesini okuyup düğmeye basacak, motor reddedecekti —
- * ekranın söylediği kural sistemin kuralı değildi.
- *
- * Anahtarlar `0028_points.sql`'de tanımlı; `lib/feedback/points.ts` de aynı satırları okur (bugün
- * dize sabitiyle). İkisi buluşturulmalı — kapı 17.5 ile açılırken buradan okumalı.
+ * Puanı kupona çevirme kuralı: hesap ekranı ile motor aynı sayıyı okumak zorunda, eşik ekrana gömülürse ekranın söylediği kural sistemin
+ * kuralı olmaz.
  */
 export const POINTS_REDEEM_MIN_KEY = 'points_redeem_min';
 export const POINTS_CENT_VALUE_KEY = 'points_cent_value';
 
 /**
- * Depolar arası ulaşım süresi (gün) — sevk önerisinin ömür uyarısı ve "gecikmiş" rozeti bunu okur (19.6).
- *
- * Tanım 30.08'de `@lezzet/application`a TAŞINDI ve burası köprü (üstteki sepet anahtarlarının
- * aynı deseni): mobil uç `apps/web`ten okuyamıyor ve aynı satırı okuması ŞART — iki nüsha,
- * operatör süreyi değiştirdiği gün web'in rozetiyle telefonun tahmini varışını ayrıştırırdı.
+ * Depolar arası ulaşım süresi (gün): sevk önerisinin ömür uyarısı ve "gecikmiş" rozeti okur. Tanım pakette, çünkü mobil uç da aynı satırı
+ * okumak zorunda ve iki nüsha operatör süreyi değiştirdiği gün web ile telefonu ayrıştırırdı.
  */
 export { TRANSFER_TRANSIT_DAYS_DEFAULT, TRANSFER_TRANSIT_DAYS_KEY } from '@lezzet/application/warehouse/settings-keys';

@@ -12,36 +12,16 @@ import {
   ZoneNoticeService,
   serviceDb,
 } from '@lezzet/database';
-// `warehousePostalCode`/`warehousePoint` burada DOĞMUŞTU; 11.9'da motora terfi ettiler (ikinci
-// tüketici doğdu — sıra hesabı da deponun noktasını soruyor) ve kopya söküldü (`CLAUDE §1`).
 import { distanceKm, routeFitOf, warehousePoint, warehousePostalCode } from '@lezzet/domain-core';
 import { resolveLocalizedText } from '@lezzet/types';
 
 /**
- * REFERANS OKUMALARI (22.7) — asistanın "kör dene, hatadan öğren"den kurtulduğu yer.
- *
- * ── BULUNAN DESEN ───────────────────────────────────────────────────────────
- * Öneri araçlarının çoğu bir kaydı ADLA ya da KODLA seçtiriyor (depo kodu, bölge adı, hesap adı,
- * kategori, koleksiyon, tedarikçi) — ama o adların listesini okuyabildiği tek yer HATA MESAJIYDI:
- * *"Bölge bulunamadı: 'X'. Mevcutlar: …"*. Sekiz ayrı yerde aynı desen, üstelik tutarsız (bazısı
- * mevcutları sayıyor, bazısı saymıyor).
- *
- * Görünmeyen zararı daha büyüktü: **model hiç denemediği şeyi öneremez.** *"Şu koleksiyonu vitrine
- * çıkaralım"* cümlesi hiç kurulmuyordu, çünkü o koleksiyonun varlığından haberi yoktu. Boşluğun
- * ölçülemeyen kısmı yapılmayan önerilerdi.
- *
- * ── AYARLAR BEYAZ LİSTEYLE ──────────────────────────────────────────────────
- * `settings` tablosunda iş parametreleriyle birlikte **`analytics_session_salt`** duruyor: oturum
- * anonimleştirmesinin dayanağı. Kara liste yazsaydık yarın eklenen hassas bir ayar sessizce
- * sızardı; beyaz listede ise yeni ayar sessizce GÖRÜNMEZ — ikinci hata ucuz, birincisi geri
- * alınamaz.
+ * Referans okumaları: öneri araçları kaydı adla ya da kodla seçtirir ve model hiç görmediği kaydı öneremez, bu yüzden adların listesi
+ * hata mesajından değil buradan okunur. Ayarlar beyaz listeyle verilir, çünkü tabloda oturum tuzu gibi hassas satırlar da durur ve kara
+ * liste yeni hassas ayarı sessizce sızdırırdı.
  */
 
-/**
- * Asistanın görmesi ANLAMLI olan ayarlar. Liste iş parametreleriyle sınırlı: eşikler, oranlar,
- * süreler. Kimlik taşıyanlar (hesap uuid'leri), tuz/anahtar cinsinden değerler ve büyük türetilmiş
- * JSON'lar (haftalık içgörü) bilerek dışarıda.
- */
+/** Asistanın görmesi anlamlı olan iş parametreleri (eşikler, oranlar, süreler); kimlik, tuz/anahtar ve büyük türetilmiş JSON bilerek dışarıda. */
 const VISIBLE_SETTING_KEYS = [
   'min_basket_cents',
   'free_shipping_threshold_cents',
@@ -61,19 +41,8 @@ const VISIBLE_SETTING_KEYS = [
 ] as const;
 
 /**
- * Teslimat haritası — **bölge önerisinin dayanağı** (kullanıcı sorusu 09.08: *"hangi depo hangi
- * bölgeye tavsiyede bulunacağı ile ilgili bir yol haritası var mı, mevcut bölgeleri ve posta
- * kodlarını veriyor muyuz?"*). Cevap hayırdı; bu araç onu kapatıyor.
- *
- * Üç şeyi birlikte verir çünkü karar üçünü birden ister:
- * ① hangi depolar var (ve nerede) ② hangi bölge hangi depoya bağlı, hangi günler gidiyor, hangi
- * kodları kapsıyor ③ kapsanmayan talep kodları — ve her biri için **hangi hatta uyduğu**.
- *
- * Üçüncüsü ilk yazımda "en yakın bölge" idi; kullanıcı düzeltti (09.08) ve ölçüt **mesafeden
- * güzergâha** döndü: *"araba ana yol üzerinde ilerlerken sağındaki solundaki kodlara dağıtım
- * yapabilir, ama ters yöndeki bir noktaya gidip de dağıtım yapamaz."* Artık her aday hat için
- * motorun kararı geliyor (`routeFitOf`) — hattın üzerinde mi, uzantısında mı, sapma mı, ters yön
- * mü. Sayılar kuş uçuşudur ve yaklaşıktır: bir ELEME girdisi, bir rota hesabı değil.
+ * Teslimat haritası, bölge önerisinin dayanağı: depolar, bölgelerin depo, gün ve kodları ile kapsanmayan talep kodlarının her aday hatta
+ * uyumu birlikte verilir, çünkü karar üçünü birden ister. Ölçüt mesafe değil güzergâhtır (`routeFitOf`); sayılar kuş uçuşu ve yaklaşıktır.
  */
 export async function deliveryMap(demandLimit: number) {
   const clamped = Math.max(1, Math.min(50, Math.floor(demandLimit)));
@@ -89,10 +58,8 @@ export async function deliveryMap(demandLimit: number) {
   const warehouseById = new Map(warehouses.map((w) => [w.id, w]));
   const covered = new Set(zones.flatMap((z) => z.postalCodes.map((c) => c.postalCode)));
 
-  // Koordinatlar TEK turda: hem bölge kodları hem talep kodları için (referans tablosu 16 binden
-  // fazla satır — kod kod sorgu atmak bu aracı yavaşlatırdı).
-  // DEPO kodları da listede: hattın başlangıcı deponun konumudur, o çözülmezse güzergâh uyumu
-  // hiç hesaplanamaz (ilk yazımda unutulmuştu — araç sessizce boş aday listesi dönüyordu).
+  // Koordinatlar tek turda okunur (referans tablosu 16 binden fazla satır); depo kodları da listede, çünkü hattın başlangıcı deponun
+  // konumudur ve o çözülmezse güzergâh uyumu hesaplanamaz.
   const warehouseCodes = warehouses.flatMap((w) => { const c = warehousePostalCode(w.address); return c ? [c] : []; });
   const wantedCodes = [...new Set([...covered, ...demand.map((d) => d.postalCode), ...warehouseCodes])];
   const places = new PostalCodePlaceService(db);
@@ -131,16 +98,8 @@ export async function deliveryMap(demandLimit: number) {
     })),
     zones: zoneRows,
     /**
-     * Kapsanmayan talep kodları — `demand_signals`in ham sayısının KARAR HÂLİ.
-     *
-     * ── MESAFE DEĞİL GÜZERGÂH (kullanıcı düzeltmesi 09.08) ────────────────────
-     * İlk yazımda yalnız "en yakın bölge" vardı. Kullanıcı düzeltti: *"araba ana yol üzerinde
-     * ilerlerken sağındaki solundaki kodlara dağıtım yapabilir, ama ters yöndeki bir noktaya
-     * gidip de dağıtım yapamaz."* Mesafe yanıltıyor — hattın 5 km ötesindeki ters yön, hattın
-     * üzerindeki 15 km'den pahalıdır, çünkü araç zaten oraya gidiyor.
-     *
-     * Her aday bölge için motorun kararı geliyor (`routeFitOf`): `on_route` · `extends_route` ·
-     * `detour` · `opposite`. Adaylar **uyum sırasına** göre dizili, mesafeye göre değil.
+     * Kapsanmayan talep kodları, `demand_signals`in karar hâli: her aday bölge için motorun güzergâh kararı gelir (`on_route` ·
+     * `extends_route` · `detour` · `opposite`) ve adaylar uyuma göre dizilir, çünkü ters yöndeki yakın kod hattın üzerindeki uzak koddan pahalıdır.
      */
     uncoveredDemand: demand
       .filter((d) => !covered.has(d.postalCode))
@@ -160,9 +119,8 @@ export async function deliveryMap(demandLimit: number) {
         });
 
         /**
-         * Yönü ölçülemeyen bölgeler — yalnız mesafeyle. Merkez bölgeleri böyledir: kodları deponun
-         * üstünde durduğu için hattın istikameti yoktur. **"Uymuyor" DEĞİL, "yön bilinmiyor"** —
-         * karar yine patronun, ama asistan bu bölgeyi hiç görmemiş olmasın.
+         * Yönü ölçülemeyen bölgeler (kodları deponun üstünde duran merkez bölgeleri) yalnız mesafeyle verilir: "uymuyor" değil "yön
+         * bilinmiyor"dur ve asistan bu bölgeyi yine görmelidir.
          */
         const withoutDirection = zoneRows.flatMap((z) => {
           const origin = z.warehousePoint;
@@ -208,13 +166,8 @@ function nearestFarthest(origin: { lat: number; lng: number } | null, points: ({
 }
 
 /**
- * Kurulum referansı — öneri araçlarının ADLA seçtirdiği kurulum kayıtlarının listesi; TEDARİKÇİ VE
- * CARİ HARİÇ (22.42 · kullanıcı kararı 14.09: kritik kayıt toplu verilmez, faturadaki kimlikle
- * nokta atışı bulunur — `tools-propose.resolveSupplier` künyesi).
- *
- * Tek araçta toplanmaları bilinçli: hepsi küçük ve veriyle büyümeyen kümeler (operatörün elle
- * kurduğu kayıtlar — `CLAUDE §1` sayfalama ölçütü). Ayrı ayrı araç olsalardı model dört çağrı
- * yapıp bağlamını harcardı.
+ * Kurulum referansı: öneri araçlarının adla seçtirdiği küçük, veriyle büyümeyen kümeler tek araçta verilir ki model birkaç çağrıda
+ * bağlamını harcamasın. Tedarikçi ve cari hariçtir, çünkü kritik kayıt toplu verilmez, faturadaki kimlikle nokta atışı bulunur.
  */
 export async function referenceData() {
   const db = serviceDb();
@@ -222,12 +175,9 @@ export async function referenceData() {
     new AccountService(db).list({ activeOnly: true }),
     new CategoryService(db).list({ activeOnly: true }),
     new CollectionService(db).list({ activeOnly: true }),
-    // Tür sözlüğü (22.42): `propose_money_movement.nature` buradaki slug ya da adı ister — 12.16'dan
-    // beri defterin tek sınıflandırması bu sözlük ve model onu hiçbir yerden göremiyordu.
+    // Tür sözlüğü: `propose_money_movement.nature` buradaki slug ya da adı ister ve model onu başka yerden göremez.
     new MovementNatureService(db).list({ activeOnly: true }),
-    // Paketler de vitrine çıkarılabilen üç şeyden biri (11.08 · denetim raporu madde 12) ve hiçbir
-    // okuma aracında listelenmiyordu: `propose_featured_flag`ın `bundle` hedefi bu yüzden
-    // kullanılamıyordu — model paketin adını bile göremiyordu.
+    // Paketler de vitrine çıkarılabilir; `propose_featured_flag`ın `bundle` hedefi paketin adını buradan okur.
     new BundleService(db).listAll({ activeOnly: true }),
   ]);
 
@@ -236,18 +186,11 @@ export async function referenceData() {
 
   return {
     accounts: accounts.map((a) => ({ name: a.name, type: a.type })),
-    // ── ADLAR YAZMA ARAÇLARININ ANAHTARIDIR ────────────────────────────────
-    // Buradaki her ad bir `propose_*` girdisine BİREBİR verilebilir (kategori → `categoryName`,
-    // hesap → `accountName`, tür → `nature`, vitrin hedefi → `name`). Kimlik
-    // yazılmıyor ve bilerek: uuid modelin bağlamında yer kaplar, ezberlenemez ve bir kez yanlış
-    // hatırlandığında panelde "(silinmiş kayıt)" diye çizilecek bir kalem doğurur. Çözüm sunucuda.
+    // Her ad bir `propose_*` girdisine birebir verilebilir; kimlik yazılmaz, çünkü uuid modelin bağlamında yer kaplar ve yanlış
+    // hatırlandığında panelde "(silinmiş kayıt)" diye çizilecek bir kalem doğurur.
     categories: categories.map((c) => ({ name: resolveLocalizedText(c.name, 'tr'), isFeatured: c.isFeatured })),
     collections: collections.map((c) => ({ name: resolveLocalizedText(c.name, 'tr'), isFeatured: c.isFeatured })),
     bundles: bundles.map((b) => ({ name: resolveLocalizedText(b.name, 'tr'), isFeatured: b.isFeatured })),
-    // ── TEDARİKÇİ VE CARİ LİSTELENMEZ (22.42 · kullanıcı kararı 14.09) ──────
-    // Bir tur burada tedarikçi adları vardı. Kritik kayıt toplu verilmez: yazma araçları tedarikçiyi
-    // faturadaki kimlikle (vergi no · telefon · tam ad), cariyi tam adla ya da eşleşme kelimesiyle
-    // nokta atışı bulur; bulamayınca aday listesi de dönmez.
     natures: natures.map((n) => ({ slug: n.slug, label: n.label, direction: n.direction })),
     /**
      * İş parametreleri — BEYAZ listeyle (künye yukarıda). `null` = ayar hiç girilmemiş, yani kod
