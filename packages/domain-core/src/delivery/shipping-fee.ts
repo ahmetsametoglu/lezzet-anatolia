@@ -72,14 +72,8 @@ export interface ShippingVatPart {
 }
 
 /**
- * **Kargo ücretinin KDV'si tek bir orana bağlı değildir:** taşıma bedeli, taşıdığı malın oranını
- * izler (FR uygulaması). Sepette hem %5,5 hem %20 ürün varsa ücret kalem tutarlarına **oransal**
- * bölünür ve her parça kendi oranından vergilenir.
- *
- * Kuruş kaybı olmaz: paylaştırma `distributeDiscount` ile yapılır, artan kuruş en büyük paya gider
- * (Σ parça = ücret — STACK §8).
- *
- * Tek oranlı sepette sonuç tek parçadır; oran bilinmiyorsa (kalemsiz) boş döner.
+ * Kargo ücretinin KDV'si taşıdığı malın oranını izler: karışık oranlı sepette ücret kalem tutarlarına oransal bölünür ve her parça kendi
+ * oranından vergilenir. Artan kuruş en büyük paya gider (Σ parça = ücret); kalemsiz sepette boş döner.
  */
 export function apportionShippingVat(feeCents: number, lines: readonly VatLine[]): ShippingVatPart[] {
   if (feeCents <= 0 || lines.length === 0) return [];

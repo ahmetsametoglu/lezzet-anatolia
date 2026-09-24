@@ -7,14 +7,8 @@ import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 import { PlaceNoticeBand } from './place-notice-band';
 
 /*
-  BÖLGE DIŞI BİLGİ BANDI — bandın TEK BLOK olduğu (kutunun altına taşan parça yok) ve iki
-  eyleminin ikisinin de birer ÇEKMECE açtığı buradan doğrulanır.
-
-  ÇEKMECELER TAKLİT EDİLMEDİ: bant içinden gerçekten kitin ortak çekmeceleri açılıyor
-  (`PostalCodeSheet` · `PlaceNoticeSheet`) — ikinci bir nüsha yazılmadığının kanıtı bu.
-
-  Talep akışının kendi hâlleri (yanlış kod, `already`, `place_unknown`) çekmecenin kendi
-  testinde; burada yalnız bandın akıştan SONRAKİ hâli ölçülür: kayıt alınınca eylem kalkar.
+  Bölge dışı bilgi bandı tek bloktur ve iki eylemi de kitin gerçek ortak çekmecelerini açar; taklit edilmemesi ikinci bir nüsha yazılmadığının
+  kanıtıdır. Talep akışının hâlleri çekmecenin kendi testinde, burada yalnız kayıt alınınca eylemin kalkması ölçülür.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
@@ -54,8 +48,7 @@ jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   }),
 }));
 
-/* İlan edilen tutarlar gerçek uçtan (18.08): posta kodu çekmecesi kargo ücretini oradan yazıyor.
-   Bandın konusu bu değil ama çekmece onun içinde kuruluyor — mock'lanmazsa çağrı ağa çıkardı. */
+/* İlan edilen tutarlar gerçek uçtan gelir; bandın konusu değil ama çekmece bandın içinde kurulduğu için sahtelenmezse çağrı ağa çıkardı. */
 jest.mock('@/lib/api/delivery-terms', () => ({
   fetchDeliveryTerms: () =>
     Promise.resolve({
@@ -153,7 +146,7 @@ describe('PlaceNoticeBand', () => {
     expect(screen.getByText(t.body)).toBeOnTheScreen();
     expect(screen.getByTestId('band-cta')).toBeOnTheScreen();
     expect(screen.getByTestId('band-change-zip')).toBeOnTheScreen();
-    // "Nerelere gidiyorsunuz?" banttan kalktı — yeri posta kodu çekmecesi (kullanıcı kararı).
+    // "Nerelere gidiyorsunuz?" bantta değil, yeri posta kodu çekmecesi.
     expect(screen.queryByText(t.zones)).toBeNull();
   });
 
@@ -181,9 +174,8 @@ describe('PlaceNoticeBand', () => {
     expect(screen.getByTestId('band-notice-email')).toBeOnTheScreen();
   });
 
-  /* GİRİŞLİ MÜŞTERİ ÇEKMECE GÖRMEZ (kullanıcı kararı 10.08): e-postasını sormak, sunucunun zaten
-     bildiği bir şeyi sormaktır. Test iki şeyi birden tutuyor — katman AÇILMIYOR ve sonuç toast'ta
-     müşterinin adresi geçiyor (haberin nereye gideceğini bilsin). */
+  /* Girişli müşteri çekmece görmez, çünkü e-postasını sormak sunucunun bildiğini sormaktır; sonuç toast'ta adresiyle yazılır ki haberin
+     nereye gideceğini bilsin. */
   it('girişli müşteride çekmece AÇILMAZ: talep tek dokunuşta bırakılır, sonuç toast olur', async () => {
     mockSignedIn('ok');
     await renderBand();
@@ -192,7 +184,7 @@ describe('PlaceNoticeBand', () => {
 
     await waitFor(() => expect(mockToast).toHaveBeenCalledWith(t.toastRecorded.replace('{email}', 'girisli@musteri.fr')));
     expect(screen.queryByTestId('band-notice-sheet')).toBeNull();
-    // Kayıt alındı: düğme KOMPLE kalkar, yerine bir cümle geçmez (kullanıcı kararı 11.08).
+    // Kayıt alınınca düğme komple kalkar, yerine bir cümle geçmez.
     await waitFor(() => expect(screen.queryByTestId('band-cta')).toBeNull());
     expect(screen.queryByText(t.recorded)).toBeNull();
     expect(screen.queryByText(t.alreadyRecorded)).toBeNull();
@@ -231,15 +223,14 @@ describe('PlaceNoticeBand', () => {
     await fireEvent.changeText(await screen.findByTestId('band-notice-code'), '123456');
 
     await waitFor(() => expect(screen.queryByTestId('band-cta')).toBeNull());
-    /* "Kaydınız zaten var" satırı KUTUYA YAZILMAZ (kullanıcı kararı 11.08). Metin ÇEKMECENİN
-       kendi başarı ekranında hâlâ var ve orada doğru — bu yüzden iddia kutunun yuvasına bakar. */
+    /* "Kaydınız zaten var" satırı kutuya yazılmaz; metin çekmecenin kendi başarı ekranında durur, bu yüzden iddia kutunun yuvasına
+       bakar. */
     expect(screen.queryByTestId('band-result')).toBeNull();
     // Posta kodu yerinde kalır: kayıt bırakmak, kodun yanlış olma ihtimalini kapatmaz.
     expect(screen.getByTestId('band-change-zip')).toBeOnTheScreen();
   });
 
-  /* POSTA KODU BİR METİN EYLEMİ DEĞİL, VİTRİNDEKİ HAPIN AYNISI (kullanıcı kararı 11.08): kutu
-     müşterinin bugünkü cevabını GÖSTERİR ve dokununca aynı ortak çekmeceyi açar. */
+  /* Posta kodu bir metin eylemi değil, vitrindeki hapın aynısı: kutu müşterinin cevabını gösterir ve dokununca aynı çekmeceyi açar. */
   it('posta kodu kutunun içinde YAZILI ve tıklanınca ortak çekmeceyi açar', async () => {
     await renderBand();
 
@@ -251,12 +242,8 @@ describe('PlaceNoticeBand', () => {
     expect(await screen.findByTestId('band-zip-sheet')).toBeOnTheScreen();
   });
 
-  /* İKİ LİSTE TEK HAFIZA (kullanıcı bulgusu 11.08) — bandın "kayıt alındığında düğme kalkar" sözü
-     ekranlar ARASINDA da geçerli olmalı. Hafıza bandın `useState`indeyken bu iddia kırmızıydı:
-     katalogda kaydını bırakan müşteri paketler sekmesinde aynı düğmeyi yeniden görüyordu.
-
-     Test iki AYRI render ile kurulur (aynı ağacın iki bandı değil): sekme değişimi bileşeni
-     söküp yeniden kuruyor ve arıza tam da orada doğuyordu. */
+  /* İki liste tek hafıza: bandın "kayıt alınınca düğme kalkar" sözü ekranlar arasında da geçerli olmalı. Test iki ayrı render ile kurulur,
+     çünkü sekme değişimi bileşeni söküp yeniden kurar. */
   it('katalogda bırakılan kaydı PAKETLER sekmesindeki bant da bilir — düğme geri gelmez', async () => {
     mockSignedIn('ok');
     const catalog = await renderBand();

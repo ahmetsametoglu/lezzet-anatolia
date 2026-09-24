@@ -9,13 +9,8 @@ import { cartPayableCents } from '@/lib/cart/cart-types';
 import { useCart } from './cart-context';
 
 /**
- * Masaüstü başlığının sepet hapı (v1, 13.09) — koyu hap, içinde adet ve ÖDENECEK tutar
- * ("8 ürün · 103,20 €"), boşken "Sepet boş".
- *
- * Tutar `cartPayableCents`ten: mobil sepet çubuğunun kuralı (kullanıcı kararı 19.08 — *"nereye
- * bakarsanız bakın ödenecek tutarı görürsünüz"*). İlk okuma bitmeden sayı yazılmaz — sunucudaki
- * sepeti görmeden "Sepet boş" demek girişli müşteriye sepetini kaybetmiş gibi bir an yaşatır
- * (`CartBadge` künyesi); o arada hap yalnız adını taşır.
+ * Masaüstü başlığının sepet hapı: adet ve ödenecek tutar ("8 ürün · 103,20 €"), boşken "Sepet boş". İlk okuma bitmeden sayı yazılmaz, çünkü
+ * sunucudaki sepeti görmeden "Sepet boş" demek girişli müşteriye sepetini kaybetmiş gibi bir an yaşatırdı.
  */
 interface CartPillProps {
   locale: Locale;

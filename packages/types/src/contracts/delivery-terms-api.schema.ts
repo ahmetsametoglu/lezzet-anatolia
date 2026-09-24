@@ -2,23 +2,9 @@ import { z } from 'zod';
 import { CountryEnum } from '../primitives/enums.schema';
 
 /**
- * İLAN EDİLEN TESLİMAT TUTARLARI — mobil `GET /api/v1/delivery-terms` ucunun sözleşmesi (18.08).
- *
- * ── NEDEN BİR UÇ, NEDEN SÖZLÜKTE DURMUYOR ───────────────────────────────────
- * Kargo ücreti, ücretsiz kargo eşiği, asgari sepet ve kapıda ödeme tavanı `settings` satırıdır;
- * operatör Ayarlar'dan değiştirir. Bugüne kadar bu sayılar bilgi metinlerinin İÇİNE yazılıydı
- * ("Kargo ücreti 7,90 €'dur ve 60 € üzeri siparişlerde alınmaz") — yani sözlükte donmuştu. Ayar
- * değiştiği gün sepet yeni sayıyı keser, yasal sayfa eski sayıyı ilan etmeye devam ederdi.
- *
- * ── SEPET ZARFININ TUTARLARIYLA KARIŞTIRILMAZ ───────────────────────────────
- * `CartViewSchema` de `freeShippingCents`/`minBasketCents` taşıyor ama o BİR SEPETİN kapsamıdır
- * (bölge, depo, ülke satırları konuşur). Bu uç sepet bilmez: bilgi sayfasında anlatılan **genel
- * kuraldır** ve kapsamı yalnız kanaldan doğar (`readPublicDeliveryTerms` künyesi).
- *
- * ── ASGARİ SEPET İKİ ALAN ───────────────────────────────────────────────────
- * Kargo siparişinin asgari sepeti yoktur (kullanıcı kararı 10.08 · `min-basket.ts`). Tek alana
- * indirilseydi metin hangi yola hangi sınırın geçerli olduğunu uydurmak zorunda kalırdı — nitekim
- * eski yasal metin *"her iki gönderim yolunda da geçerlidir"* diyordu ve bu yanlıştı.
+ * İlan edilen teslimat tutarları, mobil `GET /api/v1/delivery-terms` ucunun sözleşmesi: tutarlar ayar satırıdır ve sözlüğe yazılsa ayar
+ * değiştiği gün yasal sayfa eski sayıyı ilan ederdi. Sepetin tutarlarıyla karışmaz, çünkü burada anlatılan genel kuraldır ve kapsamı
+ * kanaldan doğar.
  */
 export const DeliveryTermsSchema = z.object({
   /** Kapıya teslimde asgari sepet (cent). */
@@ -32,11 +18,8 @@ export const DeliveryTermsSchema = z.object({
   /** Kapıda ödemenin üst sınırı (cent) — üstünde ödeme sipariş sırasında alınır. */
   codMaxCents: z.number().int().nonnegative(),
   /**
-   * Kargonun gidebildiği ülkeler — ayar değil VERİ (ülke başına bir kargo deposu). Metne elle
-   * yazılıydı ve iki yüzey iki farklı şey söylüyordu; artık depolardan türüyor.
-   *
-   * **Boş olabilir**: hiç kargo deposu yoksa bölge dışına satış da yok. Ekran o hâlde kargo
-   * cümlesini hiç kurmaz — "hiçbir yere" diye yazmaz, susar.
+   * Kargonun gidebildiği ülkeler; ayar değil veridir ve depolardan türer. Boş olabilir: hiç kargo deposu yoksa ekran kargo cümlesini
+   * kurmaz.
    */
   shippingCountries: z.array(CountryEnum),
 });

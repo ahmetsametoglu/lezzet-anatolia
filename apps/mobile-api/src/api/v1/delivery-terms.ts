@@ -7,18 +7,8 @@ import { ok } from '../../lib/respond';
 import { optionalCustomerId } from './auth';
 
 /**
- * `GET /delivery-terms` — bilgi metinlerinin İLAN ETTİĞİ tutarlar (18.08 · kullanıcı kararı).
- *
- * ── NEDEN AÇIK UÇ ───────────────────────────────────────────────────────────
- * `pointsRules`ın birebir gerekçesi: bunlar program kurallarıdır, kişisel hiçbir şey taşımaz.
- * Okuyan ekranların ikisi de hesapsız açılıyor — onboarding'in posta kodu adımı ve yasal
- * "Teslimat ve iade" sayfası. Bearer'ın arkasına konsaydı, hesabı olmayan ziyaretçi kargo ücretini
- * göremez ve sözlükteki donmuş sayıya geri dönmek zorunda kalırdık.
- *
- * ── KİMLİK İSTEĞE BAĞLI, AMA OKUNUYOR ───────────────────────────────────────
- * Kapsamın kanal ekseni müşteriden çıkıyor (`readPublicDeliveryTerms` künyesi): onaylı bir
- * toptancının asgari sepeti perakendeninkinden farklıdır ve SSS'te kendi şartını okumalı.
- * Ziyaretçide `null` — perakende kuralı.
+ * `GET /delivery-terms`: bilgi metinlerinin ilan ettiği tutarlar; kişisel bir şey taşımadığı için açık uçtur ve hesapsız açılan ekranlar da
+ * okur. Kimlik isteğe bağlıdır ama okunur, çünkü kapsamın kanal ekseni müşteriden çıkar.
  */
 export const deliveryTerms = new Hono<AppEnv>();
 

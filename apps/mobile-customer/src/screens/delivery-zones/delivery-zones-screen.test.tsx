@@ -4,12 +4,8 @@ import { DeliveryZonesScreen } from './delivery-zones-screen';
 import messages from './messages.json';
 
 /*
-  EKRAN TESTİ — üç hâlin ÜÇÜ (yükleniyor · dolu liste · boş liste) + hata ve tekrar deneme, bir
-  de posta kodu çekmecesinin açılışı. Hook TAKLİT EDİLMEZ: gerçek hook + taklit `fetch` ile
-  koşuyor, yani ekranın gördüğü veri gerçekten sözleşmeden (`DeliveryAreaListSchema`) geçiyor.
-
-  BOŞ LİSTE ile HATA'nın AYRI test edilmesi bilinçli: ikisi tek dala indirilseydi ekran, çalışan
-  bir sistemi arızalı gösterir ya da düşen bir okumayı "bölge yok" diye okuturdu.
+  Ekranın üç hâli (yükleniyor, dolu, boş), hata ve tekrar deneme ile posta kodu çekmecesi gerçek hook ve taklit `fetch` ile sınanır ki veri
+  sözleşmeden geçsin. Boş liste ile hata ayrı sınanır, çünkü tek dala inseler ekran çalışan sistemi arızalı ya da arızayı "bölge yok" gösterirdi.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
@@ -32,8 +28,8 @@ jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   }),
 }));
 
-/* İlan edilen tutarlar da gerçek uçtan (18.08): kapanış cümlesinin ülkeleri oradan geliyor.
-   Mock'lanmasaydı `apiFetch` env arar ve testte patlardı — puan kurallarının aynı deseni. */
+/* İlan edilen tutarlar da gerçek uçtan gelir, kapanış cümlesinin ülkeleri oradan okunur; sahtelenmezse `apiFetch` env arar ve testte
+   patlar. */
 jest.mock('@/lib/api/delivery-terms', () => ({
   fetchDeliveryTerms: () =>
     Promise.resolve({
@@ -80,8 +76,7 @@ beforeEach(() => {
 });
 
 describe('DeliveryZonesScreen', () => {
-  // Gösterge 10.08'de halkadan SKELETON'a döndü (ekranın künyesi); ekran okuyucuya giden ses
-  // değişmedi — rol + ad + meşgul — ve test onu tutuyor.
+  // Gösterge iskelettir; ekran okuyucuya giden ses (rol, ad, meşgul) testin tuttuğu şeydir.
   it('ilk yükte listenin skeletonını çizer ve bölge ucunu çağırır', async () => {
     fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
 
@@ -91,9 +86,8 @@ describe('DeliveryZonesScreen', () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe('http://api.test/api/v1/places/zones');
   });
 
-  /* Liste ÜLKE → YER → KODLAR diye öbekli (kullanıcının ölçek sorusu 10.08: 200 kodun ellisi
-     Almanya'da). Test üç şeyi birden tutuyor: ülke başlığı ekranın sözlüğünden geliyor (uç KOD
-     gönderiyor), yer adı öbeği başlıklıyor, kodlar rozet olarak basılıyor. */
+  /* Liste ülke, yer ve kodlar diye öbeklidir: ülke başlığı ekranın sözlüğünden gelir (uç kod gönderir), yer adı öbeği başlıklar, kodlar
+     rozet olarak basılır. */
   it('kodları ÜLKE ve YER adına göre öbekli listeler; kapanış cümlesi durur', async () => {
     fetchMock.mockResolvedValue(
       okResponse({
@@ -109,11 +103,10 @@ describe('DeliveryZonesScreen', () => {
     expect(await screen.findByTestId('zones-list')).toBeOnTheScreen();
     expect(screen.getByText(t.countries.FR)).toBeOnTheScreen();
     expect(screen.getByText(t.countries.DE)).toBeOnTheScreen();
-    // Satır başına TEK yer: ad + parantez içinde kodları (kullanıcı kararı 10.08).
+    // Satır başına tek yer: ad ve parantez içinde kodları.
     expect(screen.getByText('Strasbourg (67000 · 67100)')).toBeOnTheScreen();
     expect(screen.getByText('Kehl (77694)')).toBeOnTheScreen();
-    // Kapanış cümlesinin ÜLKELERİ veriden (18.08): metne "Fransa ve Almanya" yazılıydı, artık
-    // kargo depolarından türüyor — ekran yalnız yer tutucuyu dolduruyor.
+    // Kapanış cümlesinin ülkeleri kargo depolarından türer; ekran yalnız yer tutucuyu doldurur.
     expect(await screen.findByText(closingWith('Fransa ve Almanya'))).toBeOnTheScreen();
   });
 

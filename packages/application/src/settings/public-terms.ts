@@ -11,26 +11,9 @@ import {
 } from '../cart/settings-keys';
 
 /**
- * **MÜŞTERİYE İLAN EDİLEN TUTARLAR** — bilgi sayfalarının okuduğu tek kapı (18.08 · kullanıcı kararı).
- *
- * Sepet ve checkout bu ayarları zaten okuyordu; ilan eden metinler okumuyordu. Yasal "Teslimat ve
- * iade" sayfası, SSS ve posta kodu notu sayıları CÜMLENİN İÇİNE yazmıştı: *"Kargo ücreti 7,90 €'dur
- * ve 60 € üzeri siparişlerde alınmaz"*. İkisi de `settings` satırıdır ve operatör Ayarlar'dan
- * değiştirebilir — değiştirdiği gün sepet yeni sayıyı keser, bu üç metin eski sayıyı ilan etmeye
- * devam ederdi. Kimse fark etmezdi çünkü metin bir hesap yapmıyor, sadece yazıyor.
- *
- * ── NEDEN AYRI BİR KAPI, NEDEN SEPETİN OKUMASI DEĞİL ────────────────────────
- * Sepetin okuması bir SEPETİN kapsamıdır: bölge, depo, ülke satırları da konuşur. Bilgi sayfasında
- * sepet yok — orada anlatılan **genel kuraldır**. Kapsam bu yüzden yalnız KANALDAN doğuyor
- * (`settingScopeOf(viewer, {})`): B2B müşterisi kendi şartını okur, ziyaretçi perakende kuralını.
- * Bölge satırı olan bir eşiği "genel kural" diye ilan etmek, o bölgede olmayan müşteriye tutmayacak
- * bir söz vermek olurdu.
- *
- * ── ASGARİ SEPET İKİ DEĞER, ÇÜNKÜ İKİ KURAL VAR ────────────────────────────
- * `min-basket.ts` künyesi (kullanıcı kararı 10.08): **kargo siparişinin asgari sepeti yoktur** —
- * alt sınır aracın tura çıkması için konan lojistik bir tabandır, kargoda araç çıkmaz. Yasal metin
- * bugüne kadar *"her iki gönderim yolunda da geçerlidir"* diyordu ve bu KODUN SÖYLEDİĞİNİN TERSİYDİ.
- * İki değer ayrı taşınıyor ki metin hangisini yazacağını uydurmasın.
+ * Müşteriye ilan edilen tutarların tek kapısı: bilgi sayfaları sayıları ayardan okur ki operatör değiştirdiğinde ilan eski sayıda kalmasın.
+ * Kapsam yalnız kanaldan doğar, çünkü bilgi sayfasında sepet yoktur ve bölgeye bağlı bir eşiği genel kural diye ilan etmek tutmayacak
+ * söz olurdu.
  */
 export interface PublicDeliveryTerms {
   /** Kapıya teslimde asgari sepet (cent). */
@@ -43,12 +26,7 @@ export interface PublicDeliveryTerms {
   shippingFeeCents: number;
   /** Kapıda ödemenin üst sınırı (cent) — üstünde ödeme sipariş sırasında alınır. */
   codMaxCents: number;
-  /**
-   * Kargonun gidebildiği ülkeler — *"nereye gönderiyoruz"* cümlesinin konusu.
-   *
-   * **Bir AYAR değil, VERİ** (`listShippingCountries` künyesi): ülke başına bir kargo deposu vardır
-   * ve küme o depolardan türer. Metne elle yazılıydı, iki yüzey iki farklı şey söylüyordu.
-   */
+  /** Kargonun gidebildiği ülkeler; ayar değil veridir, ülke başına bir kargo deposu vardır ve küme depolardan türer. */
   shippingCountries: Country[];
 }
 

@@ -5,17 +5,8 @@ import { getCartView } from './read';
 import { shippingGroupFee } from './cart-types';
 
 /**
- * Sepetin YOL ayrımı (19.11) — `decideCartAgainstWarehouse` motorunun kablosu.
- *
- * Motorun kendi kararı birim testlerinde sınanıyor (`domain-core/delivery/cart-warehouse.test.ts`);
- * burada sınanan şey okumanın onu **doğru beslediği**: yerel depo ile kargo deposu ayrı haritalardan
- * geliyor mu, ve ücretsiz kargo eşiği KARGO GRUBUNUN tutarından mı hesaplanıyor.
- *
- * Eşik ayrımı K37'nin kuralı ve bir para sorusu: bölünmeseydi 80 €'luk bir rota siparişi 5 €'luk
- * kargo kalemini bedava taşıtırdı — kendi aracımızla giden malın tutarı, bir kargo firmasına
- * ödediğimiz ücreti karşılamaz.
- *
- * Terfiyle birlikte web'den geldi (aşama 1/3); tek fark kapının artık `db`yi çağırandan alması.
+ * Sepetin yol ayrımı: okumanın motoru doğru beslediği, yerel ve kargo deposunun ayrı haritalardan geldiği ve ücretsiz kargo eşiğinin kargo
+ * grubunun tutarından hesaplandığı sınanır. Eşik bölünmeseydi 80 €'luk bir rota siparişi 5 €'luk kargo kalemini bedava taşıtırdı.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -70,11 +61,7 @@ const entry = (qty: number) => [{ kind: 'variant' as const, variantId, qty, stoc
 
 describe('satır ÖLÇÜM kimliğini taşır (24.08)', () => {
   it('varyant satırı ÜRÜN kimliğini taşır — `add_to_cart` onu yazacak', async () => {
-    /* Bu alanın tek tüketicisi ölçüm kapısı (`measureWrite`). Taşınmadığı sürece olay
-       `product_id = null` doğuyordu ve ürün kırılımı özeti o satırları GRUPLAMADAN ÖNCE eliyordu
-       (`product_id is not null`) — `cart_count` yapısal olarak hep sıfırdı ve hiçbir yerde hata
-       vermiyordu (mobil şeridin gözlemi 24.08). Kırılması gereken yer burası: değer kaybolursa
-       ölçüm sessizce yalan söyler. */
+    /* Bu alanın tek tüketicisi ölçüm kapısıdır; değer kaybolursa ürün kırılımı o satırları eler ve ölçüm sessizce yalan söyler. */
     const view = await getCartView(db, 'tr', entry(1), { warehouseId: localWarehouseId, shippingWarehouseId });
     expect(view.lines[0]?.productId).toBe(productId);
   });
@@ -134,14 +121,8 @@ describe('sepetin yol ayrımı', () => {
   });
 
   /**
-   * ── ROTA DIŞI ADRES: "rota deposu yok" ≠ "yer bilinmiyor" (10.08) ──────────
-   *
-   * Arıza mobil şeridin cihaz ölçümüyle çıktı ve iki yüzeyi birden kapsıyordu: `decideRoutes` yalnız
-   * rota deposunu alıyor, o boşsa BOŞ harita dönüyordu. Satırlar kuruluş değerinde kalıyor
-   * (`route: null` → `group: 'local'`), yani rota dışındaki her adreste sepet her kalemi "kapıya
-   * teslim ediyoruz" diye gösteriyordu — soğuk zincir kalemi de dahil, o adrese hiç gelemezken.
-   *
-   * Test yerin İKİ hâlini ayırıyor, çünkü arızanın kökü tam olarak ikisinin tek sayılmasıydı.
+   * Rota dışı adres: "rota deposu yok" ile "yer bilinmiyor" ayrı hâllerdir; tek sayılırsa rota dışındaki her adreste sepet her kalemi,
+   * soğuk zincir kalemi de dahil, "kapıya teslim" gösterir.
    */
   it('ROTA DIŞI adreste kargolanabilir kalem KARGO yolunu alır — rota deposu yok diye yol düşmez', async () => {
     const view = await getCartView(db, 'tr', entry(1), { shippingWarehouseId });

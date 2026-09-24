@@ -4,19 +4,8 @@ import { fireEvent } from '@testing-library/react-native';
 import { renderShell } from '@lezzet/mobile-kit/src/testing/render-shell';
 
 /*
-  KABUK SMOKE TESTİ — komponent testlerinden farkı: rota dosyaları GERÇEK (`./src/app` diskten
-  taranır), yani kök yığın + sekme grubu + `BottomTabBar` bağlaması birlikte ayağa kalkar. Sekme
-  çubuğu birim testi çubuğu tek başına doğruluyor; burada doğrulanan, `_layout`ların onu router'a
-  DOĞRU bağladığıdır (rota → etiket sözlüğü, dokunuş → navigasyon).
-
-  Dosya `src/app/` İÇİNE konamaz: expo-router o klasördeki her `.tsx`'i ROTA sayar, test dosyası
-  sekme çubuğunda "app-shell" diye belirirdi. Kabuğun testi bu yüzden `src/` kökünde durur.
-
-  AĞ MOCK'SUZ: vitrin artık `/home` ucunu ÇAĞIRIR (21.14b) ama bu ortamda `fetch` yoktur —
-  istemci bunu ağ hatası olarak yutmaz, taşır; vitrin de o iki bölümü (bant/tarif) çizmez ve
-  ekranın kalanı fixture'la ayakta kalır. Kabuk testinin konusu sekmeler olduğundan bu yeterli;
-  vitrinin kendi veri hâlleri kendi testinin işi. Katalog ekranı tembel navigatörde hiç MOUNT
-  olmaz. (`catalog-screen.test.tsx` kendi durumlarını kendisi kurar.)
+  Kabuk smoke testi: rota dosyaları diskten taranır ve `_layout`ların sekme çubuğunu router'a doğru bağladığı sınanır; dosya `src/app/`
+  içine konamaz, çünkü expo-router orada her `.tsx`'i rota sayar. Ağ sahtelenmez, vitrinin veri bölümleri çizilmese de konu sekmelerdir.
 */
 
 // Cihaz dili sabitlenir ki assert edilen etiketler koşulan makinenin diline bağlı olmasın.
@@ -26,8 +15,7 @@ jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR
 // bayraksız ortamda kök layout '/' açılışını onboarding'e çevirirdi; bu testin konusu o değil.
 jest.mock('@/lib/onboarding/onboarding-store');
 
-// Vitrin artık oturumu dinliyor (`useMe`, 21.14c); bu ortamda Supabase env'i yok — istemci
-// mock'lanır, oturumsuz hâl döner ("oturumsuz kullanım = müşteri"). Kabuk testinin konusu sekmeler.
+// Vitrin oturumu dinler (`useMe`) ve bu ortamda Supabase env'i yoktur; istemci sahtelenir ve oturumsuz hâl döner.
 jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
@@ -38,8 +26,7 @@ jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   }),
 }));
 
-// İlan edilen tutarlar gerçek uçtan (18.08): vitrin başlığındaki posta kodu çekmecesi onu okuyor.
-// Kabuk testinin konusu sekmeler; çağrı mock'lanmazsa ağa çıkar ve bu ortamda env yok.
+// İlan edilen tutarlar gerçek uçtan gelir ve vitrin başlığındaki posta kodu çekmecesi onu okur; sahtelenmezse çağrı ağa çıkar.
 jest.mock('@/lib/api/delivery-terms', () => ({
   fetchDeliveryTerms: () =>
     Promise.resolve({

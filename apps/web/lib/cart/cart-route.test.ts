@@ -5,15 +5,8 @@ import { getCartView } from './read';
 import { shippingGroupFee } from './cart-types';
 
 /**
- * Sepetin YOL ayrımı (19.11) — `decideCartAgainstWarehouse` motorunun kablosu.
- *
- * Motorun kendi kararı birim testlerinde sınanıyor (`domain-core/delivery/cart-warehouse.test.ts`);
- * burada sınanan şey okumanın onu **doğru beslediği**: yerel depo ile kargo deposu ayrı haritalardan
- * geliyor mu, ve ücretsiz kargo eşiği KARGO GRUBUNUN tutarından mı hesaplanıyor.
- *
- * Eşik ayrımı K37'nin kuralı ve bir para sorusu: bölünmeseydi 80 €'luk bir rota siparişi 5 €'luk
- * kargo kalemini bedava taşıtırdı — kendi aracımızla giden malın tutarı, bir kargo firmasına
- * ödediğimiz ücreti karşılamaz.
+ * Sepetin yol ayrımı: okumanın motoru doğru beslediği, yerel ve kargo deposunun ayrı haritalardan geldiği ve ücretsiz kargo eşiğinin kargo
+ * grubunun tutarından hesaplandığı sınanır. Eşik bölünmeseydi 80 €'luk bir rota siparişi 5 €'luk kargo kalemini bedava taşıtırdı.
  */
 const db = serviceDb();
 const stamp = Date.now();
