@@ -81,16 +81,16 @@ const COPY: Record<PreferredLanguage, Copy> = {
     footerNotice: 'Cet e-mail concerne votre demande de compte professionnel (B2B).',
   },
   de: {
-    previewApproved: 'Ihr Geschäftskonto ist freigeschaltet.',
+    previewApproved: 'Ihr Geschäftskundenkonto ist freigeschaltet.',
     previewRejected: 'Eine Aktualisierung zu Ihrem Antrag.',
-    subjectApproved: 'Ihr Geschäftskonto ist freigeschaltet',
+    subjectApproved: 'Ihr Geschäftskundenkonto ist freigeschaltet',
     subjectRejected: 'Zu Ihrem Geschäftskundenantrag',
-    titleApproved: (who) => (who ? `Geschäftskonto für ${who} freigeschaltet` : 'Ihr Geschäftskonto ist freigeschaltet'),
+    titleApproved: (who) => (who ? `Geschäftskundenkonto für ${who} freigeschaltet` : 'Ihr Geschäftskundenkonto ist freigeschaltet'),
     titleRejected: (who) => (who ? `Im Antrag von ${who} fehlt etwas` : 'In Ihrem Antrag fehlt etwas'),
     introApproved:
-      'Ihr Geschäftskundenantrag wurde bestätigt. Ab sofort sehen Sie Großhandelspreise und die Mindestbestellbedingungen für Unternehmen.',
+      'Ihr Geschäftskundenantrag wurde angenommen. Ab sofort sehen Sie Großhandelspreise und die Mindestbestellbedingungen für Unternehmen.',
     introRejected:
-      'Wir haben Ihren Antrag geprüft und können ihn so noch nicht bestätigen. Sobald der folgende Punkt ergänzt ist, können Sie ihn erneut stellen — Ihr Konto bleibt bestehen.',
+      'Wir haben Ihren Antrag geprüft und können ihn so noch nicht annehmen. Sobald der folgende Punkt ergänzt ist, können Sie ihn erneut stellen — Ihr Konto bleibt bestehen.',
     ctaApproved: 'Zu den Großhandelspreisen',
     ctaRejected: 'Zu meinem Konto',
     reasonTitle: 'Was fehlt',

@@ -116,7 +116,7 @@ export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => str
       ? say(d.locale, {
           tr: `Toptan hesabınız açıldı. Toptan fiyatlar: ${d.actionUrl}`,
           fr: `Votre compte professionnel est ouvert. Tarifs pros : ${d.actionUrl}`,
-          de: `Ihr Geschäftskonto ist freigeschaltet. Großhandelspreise: ${d.actionUrl}`,
+          de: `Ihr Geschäftskundenkonto ist freigeschaltet. Großhandelspreise: ${d.actionUrl}`,
         })
       : say(d.locale, {
           tr: `Toptan başvurunuzda bir eksik var; ayrıntı hesabınızda: ${d.actionUrl}`,

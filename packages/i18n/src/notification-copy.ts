@@ -115,19 +115,19 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
   b2b_application_result: {
     title: (p, l) =>
       p.approved === true
-        ? say(l, { tr: 'Kurumsal başvurunuz onaylandı', fr: 'Demande pro approuvée', de: 'Geschäftsantrag genehmigt' })
-        : say(l, { tr: 'Kurumsal başvurunuz sonuçlandı', fr: 'Demande pro traitée', de: 'Geschäftsantrag bearbeitet' }),
+        ? say(l, { tr: 'Kurumsal başvurunuz onaylandı', fr: 'Demande pro approuvée', de: 'Antrag als Geschäftskunde angenommen' })
+        : say(l, { tr: 'Kurumsal başvurunuz sonuçlandı', fr: 'Demande pro traitée', de: 'Antrag als Geschäftskunde bearbeitet' }),
     sentence: (p, l) =>
       p.approved === true
         ? say(l, {
             tr: 'Kurumsal başvurunuz onaylandı — toptan fiyatlar açıldı.',
             fr: 'Votre demande professionnelle a été approuvée — les tarifs pro sont actifs.',
-            de: 'Ihr Geschäftsantrag wurde genehmigt — Großhandelspreise sind aktiv.',
+            de: 'Ihr Antrag als Geschäftskunde wurde angenommen — Ihre Großhandelspreise sind freigeschaltet.',
           })
         : say(l, {
             tr: 'Kurumsal başvurunuz sonuçlandı — ayrıntı hesabınızda.',
             fr: 'Votre demande professionnelle a été traitée — détails dans votre compte.',
-            de: 'Ihr Geschäftsantrag wurde bearbeitet — Details in Ihrem Konto.',
+            de: 'Ihr Antrag als Geschäftskunde wurde bearbeitet — Details in Ihrem Konto.',
           }),
   },
 };
@@ -136,7 +136,7 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
 const FALLBACK_TITLE: Record<Locale, string> = {
   tr: 'Yeni bildirim',
   fr: 'Nouvelle notification',
-  de: 'Neue Mitteilung',
+  de: 'Neue Benachrichtigung',
 };
 
 const FALLBACK: Record<Locale, string> = {
@@ -203,7 +203,7 @@ const VISUAL_FALLBACK: NotificationVisual = {
   symbol: 'bell',
   icon: '🔔',
   tone: 'neutral',
-  label: etiket({ tr: 'Bildirim', fr: 'Notification', de: 'Mitteilung' }),
+  label: etiket({ tr: 'Bildirim', fr: 'Notification', de: 'Benachrichtigung' }),
 };
 
 export function notificationVisual(row: { kind: string; payload: Record<string, unknown> }): NotificationVisual {

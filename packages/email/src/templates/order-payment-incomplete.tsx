@@ -71,7 +71,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
     itemsTitle: 'Artikel in Ihrem Warenkorb',
     retry: 'Zum Warenkorb',
     helpTitle: 'Gab es ein Problem bei der Zahlung?',
-    helpText: 'Falls ein Betrag auf Ihrem Konto erscheint oder der Zahlungsschritt nicht geöffnet wurde, schreiben Sie uns — Antwort am selben Tag.',
+    helpText: 'Falls Ihnen trotzdem ein Betrag abgebucht wurde oder der Zahlungsschritt nicht geöffnet wurde, schreiben Sie uns — Antwort am selben Tag.',
     helpLink: 'Schreiben Sie uns →',
     footerNotice: 'Diese E-Mail betrifft Ihre nicht abgeschlossene Kartenzahlung.',
   },

@@ -7,21 +7,13 @@ import type { Locale } from '@lezzet/i18n';
 void React;
 
 /**
- * Kodun NE İÇİN olduğu — kabuk aynı, CÜMLE farklı (04.10).
- *
- * `login`  → tarayıcıda açık duran `/connexion` sayfasına girilir.
- * `anchor` → **WhatsApp sohbetine geri yazılır** (kimlik çapası): kod e-postaya gider, cevap
- *            başka bir kanaldan döner ve kanıtın gücü tam olarak o çaprazlıktan gelir (DOMAIN §10).
- *
- * Ayrı bir şablon dosyası AÇILMADI (CLAUDE §1): görsel kabuk birebir aynı, ayrışan yalnız metin.
- * İki dosya olsaydı marka rengi bir gün birinde değişir, ötekinde kalırdı. Ama tek metinle de
- * yapılamazdı: giriş maili *"tarayıcınızda açık sayfaya girin"* diyor ve çapa kodunda bu cümle
- * DÜPEDÜZ YANLIŞ — müşteri açık bir sayfa aramaya başlardı.
+ * Kodun ne için olduğu: `login` giriş ekranına (web ya da uygulama), `anchor` WhatsApp sohbetine geri yazılır.
+ * Kabuk tek, cümle amaca göre ayrışır, çünkü giriş cümlesi çapa kodunda müşteriyi olmayan bir ekranı aramaya yollardı.
  */
 export type OtpCodePurpose = 'login' | 'anchor';
 
 export interface OtpCodeEmailProps {
-  /** 6-haneli plain kod (örn. "482917"). DB'de yalnız SHA-256 hash saklanır. */
+  /** 6 haneli düz kod (482917 gibi); veritabanında yalnız SHA-256 özeti saklanır. */
   code: string;
   locale: Locale;
   brandName: string;
@@ -36,30 +28,25 @@ type Copy = { heading: string; intro: string; expires: (m: number) => string; ig
 const COPY: Record<Locale, Copy> = {
   tr: {
     heading: 'Giriş kodunuz',
-    intro: 'Tarayıcınızda açık sayfaya girmeniz için tek kullanımlık kodunuz:',
+    intro: 'Tek kullanımlık kodunuz — uygulamada ya da açık sayfada girin:',
     expires: (m) => `seçmek için dokunun · ${m} dakika geçerli`,
     ignore: 'Bu girişi siz başlatmadıysanız bu mesajı yok sayabilirsiniz — hesabınızda bir işlem yapılmaz.',
   },
   fr: {
     heading: 'Votre code de connexion',
-    intro: 'Voici votre code à usage unique. Saisissez-le sur la page ouverte dans votre navigateur :',
+    intro: 'Voici votre code à usage unique. Saisissez-le dans l’application ou sur la page ouverte :',
     expires: (m) => `appuyez pour sélectionner · expire dans ${m} minutes`,
     ignore: 'Si vous n’êtes pas à l’origine de cette connexion, ignorez ce message — aucune action ne sera effectuée.',
   },
   de: {
     heading: 'Ihr Anmeldecode',
-    intro: 'Hier ist Ihr Einmalcode. Geben Sie ihn auf der geöffneten Seite in Ihrem Browser ein:',
+    intro: 'Hier ist Ihr Einmalcode. Geben Sie ihn in der App oder auf der geöffneten Seite ein:',
     expires: (m) => `zum Auswählen tippen · gültig für ${m} Minuten`,
     ignore: 'Falls Sie diese Anmeldung nicht veranlasst haben, ignorieren Sie diese Nachricht — es wird nichts unternommen.',
   },
 };
 
-/**
- * Kimlik ÇAPASI metni (04.10) — kod WhatsApp sohbetine geri yazılır.
- *
- * Cümle bunu açıkça söylüyor, çünkü müşteri bu maili **başka bir uygulamadayken** alıyor ve nereye
- * yazacağını bilmesi gerekiyor. "Tarayıcınızda açık sayfa" cümlesi burada onu boş yere aratırdı.
- */
+/** Kimlik çapası metni: müşteri bu e-postayı başka bir uygulamadayken okur, kodu nereye yazacağını cümle söyler. */
 const ANCHOR_COPY: Record<Locale, Copy> = {
   tr: {
     heading: 'Hesap bağlama kodunuz',
@@ -98,10 +85,7 @@ export function otpSubject(locale: Locale, brandName: string, purpose: OtpCodePu
   return map[purpose][locale];
 }
 
-/**
- * Passwordless giriş için 6-haneli kod maili. Link İÇERMEZ (anti-phishing): kod,
- * kullanıcının zaten açık olduğu /connexion sayfasına elle girilir. İçerik seçili dilde.
- */
+/** Parolasız girişin kod e-postası; bağlantı içermez (oltalamaya karşı), kod açık giriş ekranına elle girilir. */
 export function OtpCodeEmail({ code, locale, brandName, ttlMinutes = 15, purpose = 'login' }: OtpCodeEmailProps) {
   const t = purpose === 'anchor' ? ANCHOR_COPY[locale] : COPY[locale];
 

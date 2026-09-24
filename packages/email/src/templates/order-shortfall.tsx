@@ -81,7 +81,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
     helpLink: 'Nous écrire →',
   },
   de: {
-    pill: '⚠ Artikel unvollständig versandt',
+    pill: '⚠ Artikel nicht vollständig lieferbar',
     title: 'Es gibt eine Änderung an Ihrer Bestellung.',
     intro: (ref) => (
       <>
@@ -90,14 +90,14 @@ const COPY: Record<PreferredLanguage, Copy> = {
       </>
     ),
     subject: (ref) => `Änderung an Ihrer Bestellung — ${ref}`,
-    preview: (amount) => (amount ? `Ein Artikel unvollständig versandt, ${amount} werden erstattet.` : 'Ein Artikel unvollständig versandt.'),
+    preview: (amount) => (amount ? `Ein Artikel ist nicht vollständig lieferbar, ${amount} werden erstattet.` : 'Ein Artikel ist nicht vollständig lieferbar.'),
     blockHeadline: 'Unvollständig versandter Artikel',
     totalsTitle: 'Aktualisierter Betrag',
     previousTotal: 'Vorheriger Gesamtbetrag',
     difference: 'Differenz fehlender Artikel',
     currentTotal: 'Aktueller Gesamtbetrag',
     refundNote: (amount) => `Da Sie online bezahlt haben, wird die Differenz (${amount}) auf Ihr Zahlungsmittel erstattet; die Dauer hängt von Ihrer Bank ab.`,
-    collectNote: (amount) => `Der Einzug erfolgt direkt auf ${amount}; der fehlende Artikel wird nicht berechnet.`,
+    collectNote: (amount) => `Bei der Lieferung zahlen Sie nur ${amount}; der fehlende Artikel wird nicht berechnet.`,
     fullItems: 'Vollständig versandte Artikel',
     cta: 'Meine Bestellung ansehen',
     helpTitle: 'Passt Ihnen das nicht?',

@@ -68,14 +68,14 @@ const COPY: Record<PreferredLanguage, Copy> = {
   },
   de: {
     preview: (reference) => `Bewerten Sie Ihre Bestellung ${reference}`,
-    subject: 'Wie waren Ihre Produkte?',
-    title: (name) => (name ? `${name}, wie waren Ihre Produkte?` : 'Wie waren Ihre Produkte?'),
+    subject: 'Wie hat es Ihnen geschmeckt?',
+    title: (name) => (name ? `${name}, wie hat es Ihnen geschmeckt?` : 'Wie hat es Ihnen geschmeckt?'),
     intro: (count) =>
       count === 1
         ? 'Hat Ihnen das Produkt aus Ihrer Bestellung gefallen? Ein Tippen genügt — es dauert weniger als eine Minute.'
         : `Sagen Sie uns, ob Ihnen die ${count} Produkte Ihrer Bestellung gefallen haben — es dauert nur wenige Minuten.`,
     orderMeta: (deliveredOn) => `am ${deliveredOn} zugestellt`,
-    statusLabel: 'Zugestellt',
+    statusLabel: 'Geliefert',
     cta: 'Jetzt bewerten',
     rewardTitle: 'Ihre Meinung zeigt uns den Weg',
     rewardText:

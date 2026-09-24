@@ -67,8 +67,8 @@ const COPY: Record<PreferredLanguage, Copy> = {
     helpLink: 'Signaler un problème →',
   },
   de: {
-    pill: '✓ Zugestellt',
-    status: '✓ Zugestellt',
+    pill: '✓ Geliefert',
+    status: '✓ Geliefert',
     title: (name) => (name ? `Guten Appetit, ${name}.` : 'Guten Appetit.'),
     intro: (ref) => (
       <>
@@ -77,10 +77,10 @@ const COPY: Record<PreferredLanguage, Copy> = {
     ),
     subject: (ref) => `Ihre Bestellung wurde zugestellt — ${ref}`,
     preview: (ref) => `${ref} zugestellt — guten Appetit!`,
-    summaryTitle: 'Lieferübersicht',
+    summaryTitle: 'Lieferschein',
     countLabel: (lines, qty) => `${lines} Artikel · ${qty} Stück`,
     notInvoice: 'Das Dokument zeigt Artikel und gelieferte Mengen; es ist keine offizielle Rechnung. Wenn Sie eine benötigen, schreiben Sie uns.',
-    summaryLink: '📄 Lieferübersicht ansehen →',
+    summaryLink: '📄 Lieferschein ansehen →',
     helpTitle: 'Gibt es ein Problem?',
     helpText: 'Fehlt etwas, ist etwas beschädigt oder nicht wie erwartet — schreiben Sie uns direkt, wir antworten am selben Tag.',
     helpLink: 'Problem melden →',

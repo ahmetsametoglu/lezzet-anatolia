@@ -43,9 +43,9 @@ export const SHARED_COPY: Record<OrderCopyLocale, SharedCopy> = {
   },
   de: {
     ...BRAND_COPY.de,
-    steps: { received: 'Eingegangen', prepared: 'Vorbereitet', on_the_way: 'Unterwegs', delivered: 'Zugestellt' },
+    steps: { received: 'Eingegangen', prepared: 'Vorbereitet', on_the_way: 'Unterwegs', delivered: 'Geliefert' },
     itemsTitle: 'Artikel',
-    sentItemsTitle: 'Versandte Artikel',
+    sentItemsTitle: 'Gelieferte Artikel',
     totalsTitle: 'Betrag',
     currentTotal: 'Aktueller Gesamtbetrag',
     viewOrder: 'Meine Bestellung ansehen',

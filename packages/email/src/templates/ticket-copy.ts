@@ -138,13 +138,13 @@ export const TICKET_COPY: Record<PreferredLanguage, TicketCopy> = {
 
     receivedTitle: 'Wir haben Ihre Anfrage erhalten',
     receivedIntro:
-      'Ihre Nachricht ist bei uns eingegangen und steht in der Warteschlange unseres Teams. Sobald wir geantwortet haben, benachrichtigen wir Sie erneut per E-Mail.',
+      'Ihre Nachricht ist bei uns eingegangen, unser Team kümmert sich darum. Sobald wir geantwortet haben, benachrichtigen wir Sie erneut per E-Mail.',
     repliedTitle: 'Wir haben auf Ihre Anfrage geantwortet',
     repliedIntro: 'Die vollständige Antwort finden Sie unten; Sie können an derselben Stelle weiterschreiben.',
     resolvedTitle: 'Ihre Anfrage ist gelöst',
     resolvedIntro: 'Besteht das Problem weiterhin, schreiben Sie uns — die Anfrage wird automatisch wieder geöffnet.',
     reopenedTitle: 'Ihre Anfrage wurde wieder geöffnet',
-    reopenedIntro: 'Ihre Anfrage steht erneut in der Warteschlange unseres Teams.',
+    reopenedIntro: 'Ihre Anfrage wird erneut von unserem Team bearbeitet.',
 
     requestLabel: 'Anfrage',
     openedOn: (date) => `Eröffnet am ${date}`,
