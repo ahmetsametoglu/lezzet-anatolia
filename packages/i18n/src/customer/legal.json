@@ -44,7 +44,7 @@
             "paragraphs": [
               "Paketiniz hazırlandıktan sonra Fransa ve Almanya'da 2–4 iş gününde elinizde olur.",
               "Sepetinizde hem kargoya uygun hem yalnız araçla gidebilen ürünler varsa sepet iki gruba ayrılır: kapıya gidenler ve kargoya gidenler ayrı sipariş, ayrı ödeme olur. Kargolu siparişi vermek zorunlu değildir — vermezseniz o ürünler sepette bekler.",
-              "Kargo ücreti ve ücretsiz kargo sınırı aşağıda, \"Güncel tutarlar\" bölümündedir; aynı sayıları sepette de, siparişi tamamlamadan önce görürsünüz."
+              "Ücretsiz kargo sınırı ve asgari sepet tutarları aşağıda, \"Güncel tutarlar\" bölümündedir; kargo ücretini ödeme adımında, seçtiğiniz taşıyıcı servisiyle birlikte, siparişi tamamlamadan önce görürsünüz."
             ],
             "bullets": []
           },
@@ -98,7 +98,7 @@
             "FR": "Fransa",
             "DE": "Almanya"
           },
-          "unavailable": "Güncel kargo ücretini, ücretsiz kargo sınırını ve asgari sepet tutarını sepetinizde ve ödeme adımında görürsünüz.",
+          "unavailable": "Ücretsiz kargo sınırını ve asgari sepet tutarını sepetinizde, kargo ücretini ödeme adımında görürsünüz.",
           "note": "Bu tutarlar perakende alışverişin genel kuralıdır ve sistemin bugün uyguladığı değerlerdir; değiştiklerinde bu sayfa da onlarla birlikte değişir. Bazı bölgelerde ve profesyonel hesaplarda farklı bir sınır geçerli olabilir — size uygulanan tutarı her zaman sepetinizde görürsünüz."
         },
         "notice": {
@@ -385,7 +385,7 @@
             "heading": "Teslimat",
             "paragraphs": [
               "Soğuk zincir gerektiren ürünleri (donuk ve soğutulmuş) yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere teslim ediyoruz. Diğer bütün ürünler kargoyla gönderilir — bölge içinde de, bölge dışında da. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
-              "Asgari sepet tutarı, kargo ücreti ve ücretsiz kargo sınırı güncel hâliyle Teslimat ve iade sayfasında yayımlanır; aynı tutarlar sipariş verilirken sepette de gösterilir. Paket hazırlandıktan sonra Fransa ve Almanya'da 2–4 iş gününde teslim edilir.",
+              "Asgari sepet tutarı ve ücretsiz kargo sınırı güncel hâliyle Teslimat ve iade sayfasında yayımlanır ve sipariş verilirken sepette de gösterilir; kargo ücreti ödeme adımında seçilen taşıyıcı servisine göre hesaplanır ve sipariş onaylanmadan önce gösterilir. Paket hazırlandıktan sonra Fransa ve Almanya'da 2–4 iş gününde teslim edilir.",
               "Belirtilen teslimat günleri tahminidir. Hava koşulları, trafik ya da kargo firmasından kaynaklanan gecikmeler teslimatı öteleyebilir; bu durumda sizi bilgilendiririz.",
               "Adreste bulunulmaması nedeniyle teslim edilemeyen siparişlerde teslimatı bir kez daha, ücretsiz deneriz. İkinci denemede de teslim edemezsek dondurulmuş ürünler satılamaz hâle geldiği için bedel iade edilmez. Ayrıntılar teslimat ve iade sayfasındadır."
             ],
@@ -575,7 +575,7 @@
             "paragraphs": [
               "Une fois votre colis préparé, comptez 2 à 4 jours ouvrés en France comme en Allemagne.",
               "Si votre panier contient à la fois des articles expédiables et des articles réservés au camion, il est scindé en deux : la livraison à domicile et l'expédition deviennent deux commandes et deux paiements distincts. Passer la commande expédiée est facultatif : si vous ne la passez pas, ces articles restent dans votre panier.",
-              "Les frais d'expédition et le seuil de franco de port figurent ci-dessous, dans « Montants en vigueur » ; vous retrouvez les mêmes chiffres dans le panier, avant la validation."
+              "Le seuil de franco de port et les montants minimums figurent ci-dessous, dans « Montants en vigueur » ; les frais d'expédition s'affichent à l'étape du paiement, selon le service de transport choisi, avant la validation."
             ],
             "bullets": []
           },
@@ -629,7 +629,7 @@
             "FR": "France",
             "DE": "Allemagne"
           },
-          "unavailable": "Vous retrouvez les frais d'expédition, le seuil de franco de port et le montant minimum en vigueur dans votre panier et à l'étape du paiement.",
+          "unavailable": "Vous retrouvez le seuil de franco de port et le montant minimum en vigueur dans votre panier, et les frais d'expédition à l'étape du paiement.",
           "note": "Ces montants constituent la règle générale pour les achats particuliers et correspondent aux montants actuellement appliqués ; s'ils changent, cette page change avec eux. Certaines zones et les comptes professionnels peuvent relever d'un seuil différent — le montant qui vous est appliqué est toujours affiché dans votre panier."
         },
         "notice": {
@@ -916,7 +916,7 @@
             "heading": "Livraison",
             "paragraphs": [
               "Les produits sous chaîne du froid (surgelés et frais) ne sont livrés qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison. Tous les autres produits partent par transporteur — dans la zone comme en dehors. Le jour et les options de livraison sont affichés au moment de la commande selon le code postal de votre adresse.",
-              "Le montant minimum de commande, les frais d'expédition et le seuil de franco de port sont publiés, à jour, sur la page livraison et retours ; les mêmes montants sont affichés dans le panier au moment de commander. Une fois le colis préparé, comptez 2 à 4 jours ouvrés en France comme en Allemagne.",
+              "Le montant minimum de commande et le seuil de franco de port sont publiés, à jour, sur la page livraison et retours ; ils sont affichés dans le panier au moment de commander, et les frais d'expédition dépendent du service de transport choisi à l'étape du paiement, affichés avant la validation. Une fois le colis préparé, comptez 2 à 4 jours ouvrés en France comme en Allemagne.",
               "Les jours de livraison indiqués sont estimatifs. Les conditions météorologiques, la circulation ou un retard du transporteur peuvent décaler la livraison ; le cas échéant, nous vous en informons.",
               "Si la livraison ne peut être effectuée parce que personne n'est présent à l'adresse, nous présentons la commande une seconde fois, sans frais. Si ce second passage échoue également, les produits surgelés ne sont plus commercialisables et le montant n'est pas remboursé. Les détails figurent sur la page livraison et retours."
             ],
@@ -1106,7 +1106,7 @@
             "paragraphs": [
               "Nach der Vorbereitung Ihres Pakets rechnen Sie in Frankreich und Deutschland mit 2 bis 4 Werktagen.",
               "Enthält Ihr Warenkorb sowohl versandfähige als auch nur per Fahrzeug lieferbare Artikel, wird er geteilt: Haustürlieferung und Versand werden zu zwei getrennten Bestellungen mit getrennter Zahlung. Die Versandbestellung ist nicht verpflichtend – sonst bleiben diese Artikel im Warenkorb.",
-              "Versandkosten und die Grenze für kostenlosen Versand stehen unten unter „Aktuelle Beträge“; dieselben Zahlen sehen Sie auch im Warenkorb, vor dem Abschluss der Bestellung."
+              "Die Grenze für kostenlosen Versand und die Mindestbestellwerte stehen unten unter „Aktuelle Beträge“; die Versandkosten sehen Sie im Bezahlschritt je nach gewähltem Versanddienst, vor dem Abschluss der Bestellung."
             ],
             "bullets": []
           },
@@ -1160,7 +1160,7 @@
             "FR": "Frankreich",
             "DE": "Deutschland"
           },
-          "unavailable": "Die aktuellen Versandkosten, die Grenze für kostenlosen Versand und den Mindestbestellwert sehen Sie in Ihrem Warenkorb und im Zahlungsschritt.",
+          "unavailable": "Die Grenze für kostenlosen Versand und den Mindestbestellwert sehen Sie in Ihrem Warenkorb, die Versandkosten im Zahlungsschritt.",
           "note": "Diese Beträge sind die allgemeine Regel für Privatkunden und die aktuell im System gültigen Werte; ändern sie sich, ändert sich diese Seite mit. In einzelnen Gebieten und bei Geschäftskonten kann eine andere Grenze gelten – den für Sie geltenden Betrag sehen Sie immer in Ihrem Warenkorb."
         },
         "notice": {
@@ -1447,7 +1447,7 @@
             "heading": "Lieferung",
             "paragraphs": [
               "Produkte mit Kühlkette (Tiefkühl- und Frischware) liefern wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Alle übrigen Produkte verschicken wir – im Gebiet wie außerhalb. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
-              "Mindestbestellwert, Versandkosten und die Grenze für kostenlosen Versand werden in ihrer aktuellen Höhe auf der Seite Lieferung und Rücksendung veröffentlicht; dieselben Beträge werden beim Bestellen im Warenkorb angezeigt. Nach der Vorbereitung des Pakets rechnen Sie mit 2 bis 4 Werktagen in Frankreich und Deutschland.",
+              "Mindestbestellwert und die Grenze für kostenlosen Versand werden in ihrer aktuellen Höhe auf der Seite Lieferung und Rücksendung veröffentlicht und beim Bestellen im Warenkorb angezeigt; die Versandkosten richten sich nach dem im Bezahlschritt gewählten Versanddienst und werden vor dem Abschluss angezeigt. Nach der Vorbereitung des Pakets rechnen Sie mit 2 bis 4 Werktagen in Frankreich und Deutschland.",
               "Die angegebenen Liefertage sind Schätzungen. Wetter, Verkehr oder Verzögerungen des Versanddienstleisters können die Lieferung verschieben; in diesem Fall informieren wir Sie.",
               "Kann nicht zugestellt werden, weil an der Adresse niemand angetroffen wird, versuchen wir die Zustellung ein zweites Mal kostenfrei. Scheitert auch dieser zweite Versuch, sind die tiefgekühlten Produkte nicht mehr verkehrsfähig und der Betrag wird nicht erstattet. Einzelheiten finden Sie auf der Seite Lieferung und Rücksendung."
             ],
