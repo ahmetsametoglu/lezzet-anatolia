@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { splitVatNumber, type B2bApplicationField, type B2bApplicationInput, type B2bCompanyFacts } from '@lezzet/domain-core';
+import { splitVatNumber, vatNumberProblem, type B2bApplicationField, type B2bApplicationInput, type B2bCompanyFacts } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
 
 import { CLIENT_ERROR } from '@lezzet/mobile-kit/src/lib/api/client';
@@ -91,7 +91,8 @@ export function useProfessionals(locale: Locale, vatNumber: string): UseProfessi
   /* Vergi numarası: biçim tuttuğu anda TEK istek (künye). Biçim bozulunca işaret düşer — eski
      cevabı yeni numaranın yanında bırakmak, doğrulanmamış bir numarayı doğrulanmış göstermekti. */
   useEffect(() => {
-    const parsed = splitVatNumber(vatNumber);
+    // Kabul edilmeyen ülkenin numarası servise sorulmaz; "Doğrulandı" demek başvurunun geçeceğini sandırırdı.
+    const parsed = vatNumberProblem(vatNumber) === null ? splitVatNumber(vatNumber) : null;
     const run = (vatRun.current += 1);
     if (!parsed) {
       setVatValid(undefined);

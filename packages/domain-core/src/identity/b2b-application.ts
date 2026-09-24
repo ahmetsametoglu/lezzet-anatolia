@@ -1,6 +1,6 @@
 import { isValidPostalCode } from '@lezzet/address';
 import { isValidEmail, normalizePhone } from '@lezzet/helper';
-import type { CompanyInfo } from '@lezzet/types';
+import type { CompanyInfo, Country } from '@lezzet/types';
 
 /*
   Müşterinin gönderdiği B2B formunun biçim kuralları; başvurunun iyi olup olmadığına onay kartı bakar (`b2b-approval`). Form ile
@@ -9,9 +9,30 @@ import type { CompanyInfo } from '@lezzet/types';
 
 /**
  * `siret` yolunda künye resmî kayıttan gelir; `eu_vat` yolunda açık kayıt olmadığı için elle girilir ve AB vergi numarasıyla
- * doğrulanır. Yollar ülkeyle değil yöntemle adlandı, çünkü başka bir AB ülkesinden alıcı da vergi numarasıyla başvurabilir.
+ * doğrulanır. Yollar ülkeyle değil yöntemle adlandı; vergi yolunun bugün kabul ettiği ülke `B2B_VAT_PATH_COUNTRY`.
  */
 export type B2bApplicationKind = 'siret' | 'eu_vat';
+
+/**
+ * Vergi numarası yolunun kabul ettiği tek ülke: Fransız işletme SIRET yolundan gelir ve numarası resmî kayıttan okunur. Başka
+ * ülkeler AB satışı açılana kadar (`docs/GELECEK.md`) reddedilir; kabul edilseydi işletme adresi yanlış ülkeyle yazılırdı.
+ */
+export const B2B_VAT_PATH_COUNTRY = 'DE' satisfies Country;
+
+/** Vergi numarasının neden kabul edilmediği; `null` = kabul. Form cümlesini bu cevaba göre seçer. */
+export type VatNumberProblem = 'format' | 'use_siret' | 'unsupported_country';
+
+export function vatNumberProblem(raw: string): VatNumberProblem | null {
+  const split = splitVatNumber(raw);
+  if (!split) return 'format';
+  if (split.country === B2B_VAT_PATH_COUNTRY) return null;
+  return split.country === 'FR' ? 'use_siret' : 'unsupported_country';
+}
+
+/** Başvuran işletmenin ülkesi; adres ve telefon bu ülkeye göre yazılır. */
+export function b2bApplicantCountry(kind: B2bApplicationKind): Country {
+  return kind === 'eu_vat' ? B2B_VAT_PATH_COUNTRY : 'FR';
+}
 
 export function normalizeSiret(raw: string): string {
   return raw.replace(/\D/g, '');
@@ -107,7 +128,7 @@ export function b2bApplicationIssues(input: B2bApplicationInput): B2bApplication
 
   if (input.kind === 'siret') {
     if (!isValidSiret(input.siret)) issues.push('siret');
-  } else if (!splitVatNumber(input.vatNumber)) {
+  } else if (vatNumberProblem(input.vatNumber) !== null) {
     issues.push('vatNumber');
   }
 
@@ -115,7 +136,7 @@ export function b2bApplicationIssues(input: B2bApplicationInput): B2bApplication
   if (input.contactName.trim().length < 2) issues.push('contactName');
   if (!isValidEmail(input.email)) issues.push('email');
   // Ayrı bir telefon deseni aynı kuralın ikinci kopyası olurdu; kaydedilen değeri de bu fonksiyon üretiyor.
-  if (!normalizePhone(input.phone, input.kind === 'eu_vat' ? 'DE' : 'FR')) issues.push('phone');
+  if (!normalizePhone(input.phone, b2bApplicantCountry(input.kind))) issues.push('phone');
   if (input.line1.trim().length < 3) issues.push('line1');
   if (!isValidPostalCode(input.postalCode)) issues.push('postalCode');
   if (input.city.trim().length < 2) issues.push('city');

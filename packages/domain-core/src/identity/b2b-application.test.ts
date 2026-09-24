@@ -7,6 +7,7 @@ import {
   normalizeSiret,
   normalizeVatNumber,
   splitVatNumber,
+  vatNumberProblem,
   type B2bApplicationInput,
 } from './b2b-application';
 
@@ -168,5 +169,26 @@ describe('başvuru durumu', () => {
   it('onay ret damgasını yener — geçmişte reddedilmiş olmak bugünkü hâli değiştirmez', () => {
     // Kayıt hem onaylı hem "kuyrukta değil"; okuma sırası önemli, çünkü ikisi aynı anda doğrudur.
     expect(b2bStatusOf({ companyInfo: company, b2bApproved: true, b2bPending: false })).toBe('approved');
+  });
+});
+
+// Vergi yolu yalnız Alman işletmeyi kabul etmezse başka ülkeden bir işletme Almanya adresiyle kaydedilir; bu dosya o hâlde kırmızıya döner.
+describe('vergi numarası yolunun ülkesi', () => {
+  it('Alman numarası kabul edilir', () => {
+    expect(vatNumberProblem('DE812345678')).toBeNull();
+  });
+
+  it('Fransız numarası SIRET yoluna yönlendirilir, başka AB ülkesi reddedilir', () => {
+    expect(vatNumberProblem('FR50907496640')).toBe('use_siret');
+    expect(vatNumberProblem('BE0123456789')).toBe('unsupported_country');
+    expect(vatNumberProblem('IE6388047V')).toBe('unsupported_country');
+  });
+
+  it('biçimi bozuk numara ülkeden önce biçimden reddedilir', () => {
+    expect(vatNumberProblem('812345678')).toBe('format');
+  });
+
+  it('desteklenmeyen ülkenin numarası başvuruyu geçersiz kılar', () => {
+    expect(b2bApplicationIssues({ ...DE_BASE, vatNumber: 'BE0123456789' })).toContain('vatNumber');
   });
 });

@@ -4,6 +4,7 @@ import {
   formatSiret,
   normalizeSiret,
   normalizeVatNumber,
+  vatNumberProblem,
   type B2bApplicationInput,
   type B2bApplicationKind,
 } from '@lezzet/domain-core';
@@ -95,6 +96,11 @@ export function ApplicationForm({
   const isSiret = input.kind === 'siret';
   const showCompany = companyOpen || !isSiret;
 
+  // Ülkesi kabul edilmeyen numaranın cümlesi yazarken görünür; o hâlde doğrulama işareti çizilmez.
+  const vatProblem = input.vatNumber.trim() ? vatNumberProblem(input.vatNumber) : null;
+  const vatError =
+    vatProblem === 'use_siret' ? t.form.vatUseSiret : vatProblem === 'unsupported_country' ? t.form.vatUnsupported : undefined;
+
   /** VIES'in üç cevabı + "hiç sorulmadı" — dördüncüsünde işaret HİÇ çizilmez. */
   const vatMark = vatChecking
     ? t.form.vatChecking
@@ -149,8 +155,9 @@ export function ApplicationForm({
             label={t.form.vatNumber}
             placeholder={t.form.vatNumber}
             shape="pill"
+            errorText={vatError}
             trailing={
-              vatMark === null ? null : (
+              vatMark === null || vatError ? null : (
                 <Text style={[styles.vatMark, vatValid === false ? styles.vatMarkBad : null]} testID="pro-vat-mark">
                   {vatMark}
                 </Text>

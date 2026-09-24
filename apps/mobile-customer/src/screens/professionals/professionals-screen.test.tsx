@@ -152,6 +152,20 @@ describe('ProfessionalsScreen', () => {
     expect(callsTo('/b2b/company/')).toHaveLength(0);
   });
 
+  // Başka ülkenin numarası sessizce kabul edilir ya da doğrulama servisine sorulup "Doğrulandı" denirse bu test kırmızıya döner.
+  it('Fransa ve Almanya dışındaki numara sebebiyle reddedilir ve doğrulamaya sorulmaz', async () => {
+    await renderScreen();
+    await fireEvent.press(screen.getByTestId('pro-tab-vat'));
+
+    await fireEvent.changeText(screen.getByTestId('pro-vat'), 'BE0123456789');
+    expect(screen.getByText(t.form.vatUnsupported)).toBeOnTheScreen();
+
+    await fireEvent.changeText(screen.getByTestId('pro-vat'), 'FR34387904527');
+    expect(screen.getByText(t.form.vatUseSiret)).toBeOnTheScreen();
+
+    expect(callsTo('/b2b/vat/')).toHaveLength(0);
+  });
+
   it('eksik form UCA GİTMEZ; eksik alanlar adıyla söylenir', async () => {
     await renderScreen();
 

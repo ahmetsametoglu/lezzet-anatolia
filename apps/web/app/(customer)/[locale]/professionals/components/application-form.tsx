@@ -6,6 +6,7 @@ import {
   b2bApplicationIssues,
   formatSiret,
   normalizeSiret,
+  vatNumberProblem,
   type B2bApplicationField,
   type B2bApplicationInput,
   type B2bApplicationKind,
@@ -72,6 +73,10 @@ export function ApplicationForm({ t, locale, signedIn, defaults, compact = false
   const [checkingVat, startVat] = useTransition();
 
   const isSiret = input.kind === 'siret';
+  // Ülkesi kabul edilmeyen numaranın cümlesi yazarken görünür; biçim hatası ise gönderimde işaretlenir.
+  const vatProblem = input.vatNumber.trim() ? vatNumberProblem(input.vatNumber) : null;
+  const vatError =
+    vatProblem === 'use_siret' ? t.form.vatUseSiret : vatProblem === 'unsupported_country' ? t.form.vatUnsupported : undefined;
   const say = (key: string | null): string => t.errors[key as keyof typeof t.errors] ?? t.errors.unexpected;
   const set = (patch: Partial<B2bApplicationInput>) => setInput((prev) => ({ ...prev, ...patch }));
   /**
@@ -125,7 +130,9 @@ export function ApplicationForm({ t, locale, signedIn, defaults, compact = false
   }
 
   function verifyVat(value: string) {
-    if (!value.trim()) {
+    // Kabul edilmeyen ülkenin numarası doğrulama servisine sorulmaz; "Doğrulandı" demek başvurunun geçeceğini sandırırdı.
+    const problem = value.trim() ? vatNumberProblem(value) : null;
+    if (!value.trim() || problem === 'use_siret' || problem === 'unsupported_country') {
       setVatValid(undefined);
       return;
     }
@@ -259,12 +266,13 @@ export function ApplicationForm({ t, locale, signedIn, defaults, compact = false
             inputMode="text"
             autoComplete="off"
             invalid={invalid('vatNumber')}
+            error={vatError}
             onChange={(e) => {
               set({ vatNumber: e.target.value });
               setVatValid(undefined);
             }}
             onBlur={(e) => verifyVat(e.target.value)}
-            labelAside={<VatSignal t={t} checking={checkingVat} valid={vatValid} />}
+            labelAside={vatError ? null : <VatSignal t={t} checking={checkingVat} valid={vatValid} />}
           />
           {/* ── ÜÇ DÜZ ALAN GİTTİ, ORTAK DAVRANIŞ GELDİ ───────────────────────────────────────
               Buradaki `line1 / postalCode / city` üçlüsü adres formunun aynısıydı ama üç düz

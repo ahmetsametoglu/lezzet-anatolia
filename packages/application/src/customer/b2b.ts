@@ -2,6 +2,7 @@ import { AddressService, UserProfileService } from '@lezzet/database';
 import { normalizePostalCode } from '@lezzet/address';
 import { normalizePhone } from '@lezzet/helper';
 import {
+  b2bApplicantCountry,
   b2bApplicationIssues,
   b2bStatusOf,
   normalizeSiret,
@@ -67,7 +68,8 @@ export async function submitB2bApplication(
 
   // Numara başka bir kayıtta dursa da yazılır: kolon kimlik anahtarı değil iletişim numarasıdır; mükerrer kayıt şüphesini onay
   // kartı gösterir.
-  const phone = normalizePhone(input.phone, isEuVat ? 'DE' : 'FR');
+  const country = b2bApplicantCountry(input.kind);
+  const phone = normalizePhone(input.phone, country);
 
   const updated = await profiles.update({
     id: profile.id,
@@ -119,7 +121,7 @@ export async function submitB2bApplication(
       /* Kapıda aranacak numara adrese aittir. `normalizePhone` tanıyamazsa başvuranın yazdığı metin geçer: kolon boş kalamaz ve
          kurye numarasız kalmamalı. */
       phone: phone ?? input.phone.trim(),
-      country: isEuVat ? 'DE' : 'FR',
+      country,
     });
     /* İşaret eklemeden sonra konur: gövdede `isBilling: true` eski işaret temizlenmeden ikinci işaretli satırı yazar ve tekillik
        indeksine çarpar. */
