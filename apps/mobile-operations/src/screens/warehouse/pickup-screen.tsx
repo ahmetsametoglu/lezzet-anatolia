@@ -22,13 +22,8 @@ import { usePickup, type PickupMethod } from './use-pickup.hook';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
-  GEL-AL TESLİM (D9, 22.09) — izinli müşteri hazır siparişini tezgâhtan alır.
-
-  Rampanın (D8) aynası ama bir LİSTE: orada elindeki kutuyu okutursun ve gönderi kendini çözer; burada karşında bir müşteri
-  var ve önce hangi sipariş olduğu seçilir (referans + ad), sonra kutuları okutulur, borç varsa para alınır, teslim yazılır.
-  Kural sunucuda: tüm kutular okutulmadan teslim yazılmaz; tahsilat kurye kapısıyla aynı şekil.
-
-  Tasarım dosyasında D9 yok — ekran D8'in başlık/liste iskeletiyle kuryenin tahsilat bloğundan kuruldu (kararlar kodda).
+  Gel-al teslimi: izinli müşteri hazır siparişini tezgâhtan alır; önce sipariş seçilir, sonra kutular okutulur, borç varsa para alınır ve teslim yazılır.
+  Kural sunucudadır (bütün kutular okutulmadan teslim yazılmaz); ekran rampa ekranının iskeletiyle kuryenin tahsilat bloğundan kuruldu.
 */
 
 const t = warehouseCopy;

@@ -29,17 +29,8 @@ import type {
 } from './new-order-types';
 
 /**
- * **Elle sipariş girişi** (09.8) — telefonla/DM'den gelen siparişin masada yazıldığı ekran.
- *
- * Akış SIRALI ve bu bilinçli: müşteri → adres → kalemler. Sıra bir tercih değil bir bağımlılık —
- * fiyat müşteriye göre çözülüyor (özel → grup → kanal) ve depo adresten çıkıyor, yani kalem
- * seçicisi ikisi belli olmadan doğru cevap veremez. Adımları aynı anda açsaydık operatör önce
- * ürünü seçer, sonra müşteriyi değiştirir ve fiyatların sessizce değiştiğini fark etmezdi.
- *
- * **Yerinde satış BURADA DEĞİL** (26.08): depo kapısı ve kuryenin aracı native uygulamanın işi
- * (`DOMAIN §17` — "Admin yerinde satış yapmaz"). Bu ekranın müşterisi telefonda.
- *
- * Operasyon yüzeyi YALNIZ MASAÜSTÜ (CLAUDE §2) — `*.mobile` forku yok.
+ * Elle sipariş girişi: akış sıralıdır (müşteri → adres → kalemler), çünkü fiyat müşteriye, depo adrese göre çözülür ve kalem seçicisi ikisi belli olmadan doğru cevap veremez.
+ * Yerinde satış burada değil native uygulamadadır; operasyon yüzeyi yalnız masaüstüdür.
  */
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
@@ -51,11 +42,8 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
 };
 
 /**
- * Sohbet köprüsünün taşıdığı iki şey (15.4): önseçili müşteri ve konuşmanın kimliği.
- *
- * Kimlik ekranda HİÇ kullanılmıyor, yalnız kaydederken geri gönderiliyor — kaynağı (`order_source`)
- * sunucu ondan çözüyor. Ekranın kaynağı kendisi göndermesi, istemciye "bu sipariş WhatsApp'tan
- * geldi" dedirtmek olurdu; o iddiayı adres çubuğunu düzenleyen biri de yazabilirdi.
+ * Sohbet köprüsünün taşıdığı iki şey: önseçili müşteri ve konuşmanın kimliği.
+ * Kimlik yalnız kaydederken geri gönderilir ve kaynağı sunucu çözer, çünkü istemcinin kaynağı kendisi söylemesi adres çubuğunu düzenleyen birine de "WhatsApp'tan geldi" dedirtirdi.
  */
 interface NewOrderDesktopProps {
   conversationId: string | null;
@@ -377,12 +365,8 @@ interface LineRowProps {
 }
 
 /**
- * Tek kalem satırı — adet, fiyat ve **marj-altı uyarısı**.
- *
- * Uyarı ENGELLEMEZ (tasarım sözleşmesi §3: "karar satıcının"). Kararı motor veriyor
- * (`isBelowTargetMargin`) ve üç değerli: `true` altında, `false` üstünde, **`null` bilinmiyor** —
- * maliyet ölçülemediyse ya da hedef marj tanımlı değilse uyarı SUSAR. Sıfır varsaymak, ölçülmemiş
- * bir maliyeti "bedava" gibi okutup her fiyatı kârlı gösterirdi.
+ * Tek kalem satırı: adet, fiyat ve marj altı uyarısı; uyarı engellemez, karar satıcınındır.
+ * Motorun kararı üç değerlidir: `null` (maliyet ya da hedef marj bilinmiyor) uyarıyı susturur, çünkü sıfır varsaymak her fiyatı kârlı gösterirdi.
  */
 function LineRow({ line, channel, onPatch, onRemove }: LineRowProps) {
   const revenueHt = revenueHtOf(channel, line.unitPriceCents, line.vatRate);
@@ -415,10 +399,7 @@ function LineRow({ line, channel, onPatch, onRemove }: LineRowProps) {
         value={String(line.qty)}
         onChange={(e) => onPatch(line.variantId, { qty: Math.max(1, Number(e.target.value.replace(/\D/g, '')) || 1) })}
       />
-      {/* **KUTU EURO KONUŞUR, DURUM KURUŞ** (STACK §8) — çevrim tam burada, sınırda.
-          Ölçüldü 26.08 (tarayıcıda): kuruş geçildiğinde 4,57 €'luk ürün kutuda **457,00** çıkıyordu
-          ve operatör "gerçek" bir fiyat yazsa 100 kat yanlış bir sayı kaydedilirdi. Hiçbir yerde
-          hata çıkmıyordu — kutu geçerli bir sayı gösteriyordu, yalnız yanlışını. */}
+      {/* Kutu euro konuşur, durum kuruş (STACK §8): çevrim burada, sınırda; kuruş geçilseydi kutu 100 kat büyük bir sayı gösterir ve o kaydedilirdi. */}
       <MoneyInput
         value={fromCents(line.unitPriceCents)}
         onChange={(v) => onPatch(line.variantId, { unitPriceCents: v == null ? 0 : toCents(v) })}

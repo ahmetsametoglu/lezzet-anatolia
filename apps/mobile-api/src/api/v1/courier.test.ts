@@ -180,12 +180,7 @@ async function dispatched(
     return order.id;
   }
 
-  /*
-    HAZIRLIK KUTUYLA (kullanıcı kararı 30.08) — kutusuz sipariş ne `ready` olur ne yola çıkar.
-    Mühür siparişi HAZIR yapar. Kutu HER HÂLDE araca bindirilir: 31.08'den beri yükleme siparişi
-    yola ÇIKARMIYOR, yalnız malı araca geçiriyor — `ready` durak da yüklenmiş olabilir ve gerçekte
-    de öyledir. `out_for_delivery` istendiğinde geçiş AYRICA yazılır.
-  */
+  /* Hazırlık kutuyla yapılır, mühür siparişi hazır yapar; kutu araca da bindirilir, çünkü yükleme siparişi yola çıkarmaz ve `out_for_delivery` istendiğinde geçiş ayrıca yazılır. */
   await advance(order.id, ['confirmed', 'preparing']);
   const box = await openBox(db, { orderId: order.id, warehouseId });
   if (box.status !== 'ok') throw new Error(`fikstür: kutu açılamadı (${box.status})`);
@@ -212,14 +207,8 @@ beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'KAPI' })).id;
 
   /*
-    ROTA FİKSTÜRÜN ZEMİNİNE GİRDİ (18.08): sefer `(rota, gün)` ikilisiyle doğuyor ve seferin deposu
-    rotadan snapshot'lanıyor (`delivery_zone.warehouse_id` `not null` + FK) — yani rotasız bir
-    kurulumda "seferi başlat" hiç denenemez. Depo `createTestWarehouse`tan geliyor, elle uydurulmuş
-    bir kimlikten değil.
-
-    `weekdays` YEDİ GÜNÜ de içeriyor ve bu bilinçli: rota "o gün koşuyor mu" diye süzülüyor, yani
-    tek güne yazılmış bir fikstür koşuyu haftanın altı günü kırmızıya çevirirdi — sınanan şey
-    taşımadır, takvim değil.
+    Rota fikstürün zeminindedir: sefer `(rota, gün)` ikilisiyle doğar ve deposu rotadan alınır, rotasız kurulumda "seferi başlat" denenemez.
+    `weekdays` yedi günü de içerir, çünkü sınanan şey taşımadır, takvim değil.
   */
   zoneId = (
     await new DeliveryZoneService(db).insert({
@@ -281,9 +270,7 @@ beforeAll(async () => {
   ).id;
   accountId = (await new AccountService(db).insert({ name: `Kapı kasası ${stamp}`, type: 'cash' })).id;
 
-  /* ARAÇ BİR DEPODUR (`kind='vehicle'`) ve aracını SÖYLEMEK zorunda — `createTestWarehouse` araç
-     kaydını kendisi açıp bağlıyor (21.249). Tesis olarak kurulsaydı `vanWarehouseIdOf` onu bulamaz
-     ve testin zemini sessizce yanlış olurdu. Temizliği purge biliyor (`cleanup.ts` araç adımı). */
+  /* Araç bir depodur (`kind='vehicle'`) ve `createTestWarehouse` araç kaydını kendisi açar; tesis olarak kurulsaydı `vanWarehouseIdOf` onu bulamaz ve zemin sessizce yanlış olurdu. */
   const van = await createTestWarehouse(db, { label: 'ARAC', kind: 'vehicle', homeWarehouseId: warehouseId });
   vanWarehouseId = van.id;
   vanVehicleId = van.vehicleId ?? '';
@@ -296,18 +283,8 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   /*
-    Her test kendi siparişlerini kurar: gün listesi ve kapanış taslağı GÜNÜN TAMAMINI okur, önceki
-    testin bıraktığı durak sessizce sonraki testin sayımına girerdi.
-
-    SİLME ARTIK GÜRÜLTÜLÜ (27.08 · 06.14). Bu üç satır `db.from(...).delete()` idi ve o çağrı
-    hatayı FIRLATMAZ, sonuç nesnesinde döndürür — kimse bakmadığı için teardown sessizce yarım
-    kalıyordu. Defter gelmeden önce satırlar yine de çalışıyordu; artık her teslim partiye bir
-    `stock_movement` çıpalıyor ve o satır hem partiyi hem siparişi `restrict` ile tutuyor.
-
-    Belirtisi düşen teardown DEĞİL, ÇİFT SAYIMDI: her test bir öncekinin malını da sayıyordu
-    (ölçüldü 27.08: kalan adet `18` yerine `137`). Testlerin iddiaları doğruydu; yalan söyleyen
-    zemin temizliğiydi. Sıra zorunlu: `purgeVariantStock` partinin bütün hareketlerini topladığı
-    için sipariş de aynı anda serbest kalıyor — tersi çalışmaz.
+    Her test kendi siparişlerini kurar, çünkü gün listesi ve kapanış taslağı günün tamamını okur.
+    Silme hatayı gösterir ve sıra zorunludur: `purgeVariantStock` partinin hareketlerini toplayıp siparişi de serbest bırakır; sessiz silme çift sayıma yol açıyordu.
   */
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
@@ -507,16 +484,8 @@ describe('GET /api/v1/courier/day', () => {
 
   it('kurye AKIBET yazamaz — gövdeye konsa bile kaleme geçmez (21.272)', async () => {
     /*
-      KAPIDAKİ İKİ KARAR AYRI ELLERDE (DOMAIN §8): adedi KURYE söyler ("2'si geri geldi"), akıbeti
-      (`restock` · `discard` · `goodwill`) mal depoya dönünce DEPOCU seçer — kurye kapıda o malın
-      hâlâ satılabilir olup olmadığını bilemez ve `restock` için sebep beyanı zorunludur.
-      Kurye ekranı bu alanı zaten hiç doldurmuyordu; açık ŞEMADAYDI, `adjustments` ortak kalem
-      şeklini olduğu gibi taşıyıp alana kapı açık bırakıyordu. Alan `omit` ile çıkarıldı.
-
-      İDDİA "400 döner" DEĞİL, "yazılmaz": şema bilinmeyen anahtarı reddetmez, DÜŞÜRÜR — ve bizim
-      istediğimiz de tam bu, çünkü ölçüt reddin biçimi değil malın gerçeği. Gövdeye akıbet konsa
-      bile kalemin `returnDisposition`ı BOŞ kalmalı; kalırsa depocunun kararı elinden alınmamış
-      demektir.
+      Kapıdaki iki karar ayrı ellerdedir: adedi kurye söyler, akıbeti mal depoya dönünce depocu seçer; akıbet alanı kurye şemasından `omit` ile çıkarıldı.
+      İddia "400 döner" değil "yazılmaz": şema bilinmeyen anahtarı düşürür ve kalemin `returnDisposition`ı boş kalmalı.
     */
     const orderId = await dispatched({ qty: 2, orderedTotalCents: 2000 });
     await startRun();
@@ -586,9 +555,7 @@ describe('POST /api/v1/courier/day/start — seferi başlat', () => {
     const bugun = await startRun();
     expect(bugun.started).not.toContain(yarin);
 
-    /* Aynı rota, BAŞKA gün: kısıt gün bazlı olduğu için ikinci sefer AÇILABİLİR. Yola ÇIKMAZ —
-       "aynı anda tek sefer sürülür" güne bakmıyor (31.08); ölçülen şey burada da gün süzgeci:
-       hangi durak hangi sefere claim ediliyor. */
+    /* Aynı rota, başka gün: kısıt gün bazlıdır, ikinci sefer açılabilir ama yola çıkmaz; ölçülen gün süzgecidir, hangi durak hangi sefere bağlanıyor. */
     const result = await openRun({ date: dayOffset(3) });
     expect(result.date).toBe(dayOffset(3));
     const { data: claimed } = await db.from('order').select('id').eq('delivery_run_id', result.run.runId);
@@ -966,12 +933,7 @@ describe('araç stoğu uçları (21.278)', () => {
   });
 
   it('gövdedeki `targetQty` motorun HEDEFİNE bağlanıyor — araç sayısı mutlak yazılıyor', async () => {
-    /*
-      KABLOLAMANIN ASIL İDDİASI. Uç `targetQty`yi `setVanQty`nin `targetQty`sine geçiriyor; bir gün
-      `observedQty` ile yer değiştirse motor testi bunu GÖREMEZ (o fonksiyonu doğru argümanlarla
-      çağırıyor) ve ekran testi de göremez (kapıyı taklit ediyor). Ölçüt sonucun kendisi: araçta 0
-      iken hedef 3 yazılınca fark +3 olmalı, 3 değil de başka bir şey çıkarsa bağlantı yanlıştır.
-    */
+    /* Kablolamanın asıl iddiası: uç `targetQty`yi motorun `targetQty`sine geçirir; araçta 0 iken hedef 3 yazılınca fark +3 çıkmazsa bağlantı yanlıştır. */
     await vanRun();
 
     const ilk = await dataOf<CourierVanStockMoveResponse>(
@@ -988,16 +950,7 @@ describe('araç stoğu uçları (21.278)', () => {
   });
 
   it('`observedQty` BAYATLIK KALKANI olarak motora ulaşıyor — yanlış taban yazım yapmıyor', async () => {
-    /*
-      TESTİ YAZARKEN ÖĞRENİLDİ (07.09): ilk denemede gövdelere `observedQty` konmamıştı ve uç
-      `invalid_body` döndü — yani alan ZORUNLU ve doğrulama çalışıyor. Ama asıl soru bir sonrakiydi:
-      alan uçtan motora GEÇİYOR mu? Motor onu bir kalkan olarak kullanıyor (`van-stock.ts:516`):
-      istemcinin gördüğü taban araçtakiyle uyuşmuyorsa hiçbir şey yazmıyor, `stale` diyor.
-
-      Uç bu alanı düşürse ya da sabit bir değer geçirse kalkan SESSİZCE devre dışı kalırdı: motor
-      testi bunu göremez (fonksiyonu doğru argümanla çağırıyor), ekran testi de göremez (kapıyı
-      taklit ediyor). Belirtisi de olmazdı — yalnız bayat ekrandan yapılan yazımlar geçmeye başlardı.
-    */
+    /* `observedQty` zorunludur ve uçtan motora geçmelidir: motor onu kalkan olarak kullanır (taban uyuşmazsa `stale`), uç düşürseydi kalkan sessizce devre dışı kalırdı. */
     await vanRun();
     await araca(4, 0);
 

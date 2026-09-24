@@ -3,11 +3,8 @@ import { paymentTone, type OpsTone } from '@/components/operation/ui/tone';
 import { shortDate } from '@/components/operation/ui/format';
 import type { OrderCountsView, OrderRow } from './orders-types';
 
-// Sipariş satırının SÖZLERİ — durum rengi, tahsilat cümlesi, teslim yazısı. Tek yerde durur ki
-// masaüstü tablosu ile mobil kart aynı satıra aynı şeyi desin.
-//
-// Durum ADLARI burada yeniden yazılmaz: `ORDER_STATUS_LABELS` (types) tek kaynaktır. Buradaki tek
-// karar RENK — yani "bu durum iyi mi, bekliyor mu, sorunlu mu".
+// Sipariş satırının sözleri (durum rengi, tahsilat cümlesi, teslim yazısı) tek yerde durur ki masaüstü tablosu ile mobil kart aynı şeyi desin.
+// Durum adları `ORDER_STATUS_LABELS`tan gelir; burada verilen tek karar renktir.
 
 /**
  * Durumun tonu. Yolculuğun neresinde olduğunu söyler: mavi = başladı/onaylandı, amber = elimizde iş
@@ -42,11 +39,8 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 /**
- * Tahsilat cümlesi — tasarımın sağdaki sütunu. Üç hâl vardır ve üçü farklı bir şey söyler:
- * para geldi · kapıda alınacak · vadesi var (ve belki geçti).
- *
- * Tutar YALNIZ tahsil edilecekse yazılır: ödenmiş siparişte rakam tekrar etmek, sütunu okunmaz
- * yapardı — o satırda karar yok.
+ * Tahsilat cümlesi, üç hâl: para geldi, kapıda alınacak, vadesi var (belki geçti).
+ * Tutar yalnız tahsil edilecekse yazılır: ödenmiş siparişte rakamı tekrar etmek sütunu okunmaz yapardı.
  */
 export function paymentText(row: OrderRow, money: (cents: number) => string): string {
   const { status, method, onAccount, dueDate, openCents } = row.payment;
@@ -54,7 +48,7 @@ export function paymentText(row: OrderRow, money: (cents: number) => string): st
 
   if (status === 'refunded') return 'İade edildi';
   if (status === 'paid') return `Ödendi${methodText}`;
-  // Vade tarihi OKUNUR biçimde ("29 Ağu 2026") — ham ISO dar kolonda kırpılıyordu (15.08).
+  // Vade tarihi okunur biçimde ("29 Ağu 2026"), çünkü ham ISO dar kolonda kırpılıyordu.
   if (onAccount) return `Vade${row.payment.overdue ? ' geçti' : ''} · ${dueDate ? shortDate(dueDate) : '—'}`;
   // Gel-al'da tahsilat kapıda değil depoda: kurye değil tezgâh alır.
   const prefix = status === 'partial' ? 'Kalan' : row.deliveryType === 'pickup' ? 'Depoda' : 'Kapıda';
@@ -62,10 +56,8 @@ export function paymentText(row: OrderRow, money: (cents: number) => string): st
 }
 
 /**
- * Tahsilat tonu — kural ORTAK (`ui/tone.ts`), burada yalnız satırdan girdi çıkarılıyor.
- *
- * Gecikme bu ekranda BİLİNİYOR (`payment.overdue`) ve geçiliyor; müşteri panelinde bilinmiyor ve
- * orada varsayılan `false` işliyor. Kuralın kendisi tek yerde durduğu için ikisi ayrışamaz.
+ * Tahsilat tonu: kural ortaktır (`ui/tone.ts`), burada yalnız satırdan girdi çıkarılır.
+ * Gecikme bu ekranda bilinir ve geçilir, müşteri panelinde varsayılan `false` işler; kural tek yerde olduğu için ikisi ayrışamaz.
  */
 const rowPaymentTone = (row: OrderRow): OpsTone => paymentTone(row.payment.status, row.payment.overdue);
 
@@ -111,11 +103,8 @@ export function contentText(row: OrderRow): string {
 }
 
 /**
- * Başlık altı özeti — tasarımın cümlesi: kaç sipariş, kaçı elimizde, kaçı para bekliyor. Üçüncüsü
- * "yolda" değil TAHSİLAT: yolda olan zaten kuryenin işi, tahsilat bekleyen buranın.
- *
- * Masaüstü ve mobil AYNI cümleyi kurar — iki yerde yazılsaydı biri "depoda", öteki "hazırlanıyor"
- * derdi ve aynı ekran iki dil konuşurdu.
+ * Başlık altı özeti: kaç sipariş, kaçı elimizde, kaçı para bekliyor (yolda olan kuryenin işi, tahsilat bekleyen buranın).
+ * Masaüstü ve mobil aynı cümleyi kurar ki aynı ekran iki dil konuşmasın.
  */
 export function summaryText(counts: OrderCountsView): string {
   const preparing = (counts.byStatus.preparing ?? 0) + (counts.byStatus.ready ?? 0);

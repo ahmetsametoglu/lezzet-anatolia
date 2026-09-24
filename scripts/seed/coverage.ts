@@ -10,30 +10,8 @@ import { AssistantProposalKindEnum, STAFF_NOTIFICATION_KINDS } from '@lezzet/typ
 type Db = ReturnType<typeof createServiceRoleClient>;
 
 /**
- * **SEED KAPSAM DENETİMİ** — "hangi senaryo seed'de HİÇ doğmuyor?" (kullanıcı kararı 09.08)
- *
- * ── NEDEN VAR ────────────────────────────────────────────────────────────────
- * Seed'in çeşitliliği bugüne dek **reaktif** düzeltildi: bir şerit ekranı yazarken bir hâlin hiç
- * doğmadığını fark ediyor, talep açıyor, biz o hâli ekliyoruz. Üç kez böyle oldu (kargolanabilirlik
- * dağılımı, karma paket, kapaksız kategori) ve üçünde de bedeli aynıydı — **ekran, sınanamadığı
- * için yanlış yazıldı ve yanlışlığı ancak canlıya benzeyen veri gelince görüldü.**
- *
- * Daha kötüsü tersi de yaşandı: 05.19'da "bilinçli çeşitlilik örnekleri test verisiydi" denip boş
- * koleksiyon · pasif taslak · kapaksız kayıt seed'den ÇIKARILDI. Yani kapsam sessizce daraldı ve
- * kimse fark etmedi, çünkü kapsamı ÖLÇEN bir şey yoktu.
- *
- * Bu dosya o ölçüm. Bir liste değil bir KAPI: zorunlu işaretli bir kova boş kalırsa çıkış kodu 1.
- *
- * ── KOVA "ZORUNLU" NE DEMEK ──────────────────────────────────────────────────
- * Zorunlu = **bu hâlin bir ekranı ya da bir iş kuralı var** ve o hâl seed'de doğmuyorsa o ekran
- * fiilen sınanmamış demektir. Zorunlu OLMAYAN kovalar bilgi içindir (dağılım sağlıklı mı).
- *
- * Bir kovayı zorunludan çıkarmak serbesttir — ama **gerekçesi buraya yazılır**, sessizce silinmez.
- * Kapsamın daralması bir karar olmalı, bir kaza değil.
- *
- * ── ÖLÇÜM SEED'İN KENDİSİNİ DEĞİL, SONUCUNU OKUR ─────────────────────────────
- * Kaynağı seed kodu değil VERİTABANI: seed'in ne yazmayı amaçladığı değil, ne yazdığı önemli.
- * Guard'a takılıp yarım kalan bir bölüm (yaşandı 08.08, `seedBankQueue`) kodda doğru görünür.
+ * Seed kapsam denetimi: "hangi senaryo seed'de hiç doğmuyor?" sorusunun ölçümü ve bir kapı: zorunlu bir kova boş kalırsa çıkış kodu 1.
+ * Zorunlu = bu hâlin ekranı ya da iş kuralı var; kovayı zorunludan çıkarmak serbesttir ama gerekçesi burada yazılır ve ölçüm seed kodunu değil veritabanını okur.
  */
 
 interface KapsamKovasi {
@@ -51,16 +29,8 @@ interface KapsamAlani {
   tablo?: string;
   kovalar: KapsamKovasi[];
   /**
-   * **BU ALAN SİPARİŞ İSTİYOR ve besleme artık sipariş yazmıyor** (kullanıcı kararı 01.09).
-   *
-   * Kovalar SİLİNMEDİ ve bu bilinçli: dosyanın kendi kuralı *"bir kovayı zorunludan çıkarmak
-   * serbesttir — ama gerekçesi buraya yazılır, sessizce silinmez"*. Silinseydi bu ekranların
-   * hangi hâllere ihtiyaç duyduğu kayıttan düşer, ve sipariş bir gün beslemeye geri gelse kimse
-   * neyi geri açacağını bilemezdi.
-   *
-   * İşaretli alanın kovaları RAPORLANIR ama koşuyu KIRMIZIYA ÇEVİRMEZ: boş olmaları bir eksik
-   * değil, beslemenin kararının sonucudur. Kullanıcı bir sipariş oluşturduğu anda dolmaya
-   * başlarlar ve rapor yine doğruyu söyler.
+   * Bu alan sipariş ister ve besleme sipariş yazmaz: kovalar raporlanır ama koşuyu kırmızıya çevirmez.
+   * Silinmezler, çünkü sipariş beslemeye dönerse hangi hâllerin geri açılacağı buradan okunur.
    */
   siparisGerektirir?: boolean;
 }
@@ -90,12 +60,7 @@ async function say(db: Db, tablo: string, filtre?: KapsamKovasi['filtre']): Prom
 }
 
 /**
- * **Hedefi TESİS olan transferler** (kusur, ölçüldü 04.09).
- *
- * Transfer kovaları DEPOLAR ARASI sevkiyatı ölçüyor ve ekranı (D5) da odur. Ama aynı tabloya
- * araca yükleme de yazıyor (`takeToVan` → depodan araca transfer, aynı anda kabul) ve ölçüt
- * daraltılmadığı için `transfer` ve `transfer kabul edilmiş` kovaları o iki satırla **yanlış
- * yeşil** veriyordu: tesis sevkiyatı hiç doğmamışken kova dolu görünüyordu.
+ * Hedefi tesis olan transferler: aynı tabloya araca yükleme de yazar, ölçüt daraltılmasa tesis sevkiyatı hiç doğmamışken transfer kovaları dolu görünürdü.
  */
 async function tesisTransferi(db: Db, durum?: string): Promise<number> {
   const { data, error } = await db.from('warehouse').select('id').eq('kind', 'vehicle');
@@ -131,13 +96,8 @@ async function iliskisizSay(db: Db, tablo: string, kolon: string, hedefTablo: st
 }
 
 /**
- * Parti bazında marj dağılımı — **alış fiyatı liste fiyatını tanıyor mu** sorusunun ölçümü.
- *
- * Karşılaştırma KDV HARİÇ yapılır (`liste / (1 + kdv/100)`): alış zaten hariç ve ikisini ham
- * karşılaştırmak her partiyi yapay olarak kârlı gösterirdi.
- *
- * Tek turda üç okuma; küme sınırlı (parti sayısı) ve gün başına değil TOPLAM sorulduğu için
- * sayfalama gerekmiyor.
+ * Parti bazında marj dağılımı: alış fiyatı liste fiyatını tanıyor mu; karşılaştırma KDV hariç yapılır, çünkü alış zaten hariçtir.
+ * Tek turda üç okuma; küme parti sayısıyla sınırlıdır.
  */
 async function marjDagilimi(db: Db): Promise<{ zarar: number; kar: number }> {
   const [{ data: partiler }, { data: fiyatlar }, { data: varyantlar }, { data: urunler }] = await Promise.all([
@@ -173,15 +133,8 @@ const KAPSAM: KapsamAlani[] = [
       // Aday ürün yalnız keşif akışında görünür (DOMAIN §13) — o akışın tek sınanma yolu bu.
       { ad: 'aday', zorunlu: true, filtre: (q) => q.eq('status', 'candidate') },
       {
-        // ── "TÜKENDİ" HÂLİ GEÇMİŞİYLE BİRLİKTE VAR MI (16.08) ────────────────────────────────
-        // 16.08'e kadar aktif ürünlerin yarısı (53/116) "tükendi" görünüyordu ve hiçbirinin stok
-        // partisi YOKTU — yani hâl yoklukan doğuyordu. Artık tersi: stoklanmayacak ürün aday
-        // doğuyor, tükeniş ise bilinçli olarak BİTMİŞ partiyle kuruluyor.
-        //
-        // Bu kova o dengeyi kilitliyor. Çünkü düzeltmenin kendi riski var: aday sayısı artarken
-        // "tükendi" hâli sıfıra da inebilirdi ve o zaman rozet, pasif sepet düğmesi ve "gelince
-        // haber ver" akışı seed'de hiç sınanmazdı. Ölçüt SATIRIN VARLIĞI — partisi olmayan bir
-        // varyant bu kovaya giremez, çünkü aranan tam olarak "geçmişi olan tükeniş".
+        // "Tükendi" hâli geçmişiyle birlikte var mı: tükeniş bilinçli olarak bitmiş partiyle kurulur ve kova aday sayısı artarken bu hâlin sıfıra inmesini engeller.
+        // Ölçüt satırın varlığıdır: partisi olmayan varyant bu kovaya giremez.
         ad: 'TÜKENMİŞ aktif ürün (partisi VAR, miktarı 0)',
         zorunlu: true,
         sayac: async (db) => {
@@ -225,19 +178,8 @@ const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
-    // ── SAKLAMA REJİMİ — `shippable`IN KOVASI DEĞİL (16.08, `product.storage_type`) ─────────────
-    // Ayrı bir alan olmasının sebebi migration `0005`te yazılı: `shippable` bir TESLİMAT olgusu
-    // ("kargoya verilemez"), bu bir SAKLAMA olgusu. İkisi çoğu üründe birlikte hareket eder ama
-    // aynı şey değildir — ve tam olarak bu yüzden ayrı ölçülmeleri gerekir: `shippable` kovaları
-    // dolu görünürken üç saklama değerinden ikisi hiç doğmamış olabilir.
-    //
-    // Üçü de ZORUNLU, çünkü üçünün de ayrı bir ekran sonucu var:
-    //   frozen  → iade varsayılanı İMHA (`ReturnDispositionEnum`) + vitrin soğuk zincir işareti
-    //   chilled → vitrin işareti çıkar ama iade imhaya düşmez — ikisini ayıran tek kayıt bu
-    //   ambient → işaret HİÇ çıkmaz; "işaret yok" hâli de ancak böyle bir ürünle sınanır
-    //
-    // `base` katmanında ikisi boş kalır ve bu beklenendir: kaynakta yalnız `frozen` kanıtı var
-    // (belgesi olan altı ürünün altısı da "-18°C"). Kapsam vaadi zaten yalnız `full` içindir.
+    // Saklama rejimi `shippable`dan ayrı ölçülür: biri teslimat, öteki saklama olgusudur ve üç değerin her birinin ayrı ekran sonucu vardır (iade varsayılanı, vitrin işareti).
+    // `base` katmanında ikisi boş kalır, çünkü kaynakta yalnız `frozen` kanıtı var; kapsam vaadi `full` içindir.
     baslik: 'Ürün — saklama rejimi (soğuk zincir)',
     tablo: 'product',
     kovalar: [
@@ -311,13 +253,7 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'miktarsız', zorunlu: true, filtre: (q) => q.is('net_quantity', null) },
       // Sıvı boy: birim fiyatı LİTRE başına yazılır; gramla aynı gövdeden geçtiği için kovası ayrı.
       { ad: 'mililitreli', filtre: (q) => q.eq('net_unit', 'ml') },
-      /*
-        AMBALAJ ÖLÇÜSÜ — ÜÇ HÂL, üçü de zorunlu (28.08). Kargo kanalının girdisi ve her hâlin
-        ekranda ayrı bir karşılığı var; biri hiç doğmazsa o karşılık sınanmamış olur:
-          ölçülü  → canlı teklif alınabilir
-          yarım   → tartılmış ama ölçülmemiş; kısıt buna İZİN veriyor ve ekran ayırt etmeli
-          ölçüsüz → "ölçüsü eksik" süzgecinin ve teklif reddinin tek kaynağı
-      */
+      /* Ambalaj ölçüsünün üç hâli de zorunludur (ölçülü, yarım, ölçüsüz), çünkü her biri kargo teklifinde ayrı bir ekran karşılığı taşır. */
       { ad: 'ambalajı ölçülü', zorunlu: true, filtre: (q) => q.not('packed_length_mm', 'is', null) },
       {
         ad: 'ambalajı yarım ölçülü (tartıldı, ölçülmedi)',
@@ -329,9 +265,7 @@ const KAPSAM: KapsamAlani[] = [
         ad: 'paket içi adet bildirilmiş',
         zorunlu: true,
         /**
-         * `pieces_count` (05.14) — *"12'li baklava"*. Alan yokken adet adın içinde kalıyordu ve
-         * slug ayrıştığı için **tek baklava dört ayrı ürüne bölünüyordu** (ölçüldü 08.08: 10 kayıt,
-         * 2 ürün olmalı). Üreteç düzeltildi; kova ölçümün SONUCUNU sorar — kolon dolduruluyor mu.
+         * `pieces_count` ("12'li baklava"): kova kolonun dolduğunu sorar, çünkü adet adın içinde kalınca tek ürün slug'lara bölünüyordu.
          */
         filtre: (q) => q.not('pieces_count', 'is', null),
       },
@@ -348,10 +282,10 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'vitrinde', zorunlu: true, filtre: (q) => q.eq('is_featured', true) },
       { ad: 'vitrin dışı', zorunlu: true, filtre: (q) => q.eq('is_featured', false) },
       { ad: 'kapaklı', zorunlu: true, filtre: (q) => q.not('image_key', 'is', null) },
-      // Kapaksız kategori kartı baş harfe düşer (08.26 kararı) — sınanacak tek yer burası.
+      // Kapaksız kategori kartı baş harfe düşer; sınanacak tek yer burası.
       { ad: 'kapaksız', zorunlu: true, filtre: (q) => q.is('image_key', null) },
       { ad: 'altyazılı', zorunlu: true, filtre: (q) => q.not('tagline', 'is', null) },
-      // Altyazısız kategori altyazısız çizilir; yedek metin UYDURULMAZ (05.17).
+      // Altyazısız kategori altyazısız çizilir; yedek metin uydurulmaz.
       { ad: 'altyazısız', zorunlu: true, filtre: (q) => q.is('tagline', null) },
     ],
   },
@@ -360,7 +294,7 @@ const KAPSAM: KapsamAlani[] = [
     tablo: 'collection',
     kovalar: [
       { ad: 'aktif', zorunlu: true, filtre: (q) => q.eq('is_active', true) },
-      // Pasif koleksiyon = hazırlanan kampanya; vitrin sayacı bunu AYRI söylüyor (05.18).
+      // Pasif koleksiyon hazırlanan kampanyadır; vitrin sayacı onu ayrı söyler.
       { ad: 'pasif', zorunlu: true, filtre: (q) => q.eq('is_active', false) },
       { ad: 'vitrinde', zorunlu: true, filtre: (q) => q.eq('is_featured', true) },
       { ad: 'kapaklı', zorunlu: true, filtre: (q) => q.not('image_key', 'is', null) },
@@ -437,9 +371,7 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'tekliflsiz', zorunlu: true, filtre: (q) => q.is('offer_price', null) },
       { ad: 'lot no var', zorunlu: true, filtre: (q) => q.not('lot_number', 'is', null) },
       { ad: 'SKT yok', filtre: (q) => q.is('expiry_date', null) },
-      // Raf artık TANIMLI alan (19.29), serbest metin değil. İki hâl de zorunlu: rafı bilinen parti
-      // "bu alanda ne var" sorusunu, rafsız parti `null` yolunu sınıyor (kabulde alan seçmek
-      // zorunlu değil ve ekranlar o hâli de çiziyor).
+      // Raf tanımlı alandır; iki hâl de zorunlu: rafı bilinen parti "bu alanda ne var" sorusunu, rafsız parti `null` yolunu sınar.
       { ad: 'alanı olan parti', zorunlu: true, filtre: (q) => q.not('storage_area_id', 'is', null) },
       { ad: 'rafı bilinmeyen parti', zorunlu: true, filtre: (q) => q.is('storage_area_id', null) },
       { ad: 'alış fiyatı GİRİLMEMİŞ', zorunlu: true, filtre: (q) => q.is('purchase_price', null) },
@@ -447,16 +379,8 @@ const KAPSAM: KapsamAlani[] = [
         ad: 'MARJ ALTI parti (bilinçli istisna)',
         zorunlu: true,
         /**
-         * **Alış fiyatı listeden TÜRÜYOR mu, yoksa uydurma mı** (denetim bulgusu 09.08).
-         *
-         * Seed alışı sabit bir formülle üretiyordu (2,10-4,50 €) ve varyantın gerçek fiyatına HİÇ
-         * bakmıyordu. Katalogda liste 1,49-78,24 € arasında; sonuç **44 varyant zararına satılıyor
-         * görünüyordu** (en kötüsü −2,07 €). Gürültü değil: MCP asistanına maliyet okuması açılınca
-         * (22.5) bu veriye bakıp **zararına bir paket önerdi** — araç doğru, model doğru, veri yalan.
-         *
-         * Kova iki yönlü çalışır: marj altı parti **hiç yoksa** kârlılık uyarısının ekranı sınanmaz;
-         * ama sayı yükselirse (eski hâl) alışın listeden türemediği anlaşılır. İkinci kova kârlı
-         * tarafı tutuyor — ikisi birlikte "hem var hem kural değil" demeye yarıyor.
+         * Alış fiyatı listeden türüyor mu: sabit formülle üretilen alış varyantları zararına satılıyor gösterirdi.
+         * Kova iki yönlüdür: marj altı parti hiç yoksa kârlılık uyarısı sınanmaz, çok çıkarsa alışın listeden türemediği anlaşılır.
          */
         sayac: async (db) => (await marjDagilimi(db)).zarar,
       },
@@ -470,15 +394,8 @@ const KAPSAM: KapsamAlani[] = [
         ad: 'fırsat kartı üretebilen',
         zorunlu: true,
         /**
-         * **Ham kolon DEĞİL, ekranın göreceği SONUÇ ölçülüyor** (kullanıcı bildirimi 09.08).
-         *
-         * "Stok — parti / teklifli" kovası doluydu (2 parti) ve rapor YEŞİL diyordu; ana sayfanın
-         * fırsat bandı ise BOŞTU. Sebep iki katmerliydi ve ikisi de kovanın göremediği yerdeydi:
-         * teklif tutarı liste fiyatından PAHALIYDI (`isOffer` haklı olarak eliyor) ve iki teklifin
-         * biri PASİF bir ürüne düşmüştü (`status: 'active'` eliyor).
-         *
-         * Ders kovanın kendisinden büyük: **bir alanın dolu olması o alanın işe yaradığı anlamına
-         * gelmiyor.** Sonuç ölçen kova, ara katmandaki her süzgeci de sınamış olur.
+         * Ham kolon değil ekranın göreceği sonuç ölçülür: teklif tutarı liste fiyatından pahalıysa ya da ürün pasifse fırsat bandı boş kalır.
+         * Sonuç ölçen kova ara katmandaki her süzgeci de sınamış olur.
          */
         sayac: async (db) => {
           const { data: partiler } = await db
@@ -529,19 +446,11 @@ const KAPSAM: KapsamAlani[] = [
     tablo: 'warehouse',
     kovalar: [
       { ad: 'aktif', zorunlu: true, filtre: (q) => q.eq('is_active', true) },
-      /*
-        Pasif depo: kapsam seçicisi ve "depo kapandı" hâli.
-
-        **ZORUNLUDAN ÇIKTI (kullanıcı kararı 01.09):** bu hâli MULHOUSE (kapalı pilot depo)
-        taşıyordu ve besleme iki depoya inince kalktı. Kova SİLİNMEDİ — dosyanın kuralı bu: bir
-        kovayı zorunludan çıkarmak serbest, gerekçesi buraya yazılır. Ölçmeye devam ediyor, çünkü
-        operatör ekrandan bir depoyu kapattığı an dolar ve o gün rapor yine doğruyu söyler.
-      */
+      /* Pasif depo (kapsam seçicisi ve "depo kapandı" hâli) zorunlu değildir: beslemede kapalı depo yok; operatör bir depoyu kapattığında dolar. */
       { ad: 'pasif', zorunlu: false, filtre: (q) => q.eq('is_active', false) },
       { ad: 'kargo çıkışlı', zorunlu: true, filtre: (q) => q.eq('ships_online', true) },
       { ad: 'yalnız rota', zorunlu: true, filtre: (q) => q.eq('ships_online', false) },
-      // Araç deposu (26.08): türün üç kuralı — bölge bağlanamaz · kargo çıkışı olamaz ·
-      // depo-üstü toplama girmez — ancak ortada bir araç satırı varsa koşar.
+      // Araç deposu: türün üç kuralı (bölgeye bağlanamaz, kargo çıkışı olamaz, depo-üstü toplamaya girmez) ancak bir araç satırı varsa koşar.
       { ad: 'tesis', zorunlu: true, filtre: (q) => q.eq('kind', 'facility') },
       { ad: 'araç', zorunlu: true, filtre: (q) => q.eq('kind', 'vehicle') },
     ],
@@ -563,14 +472,8 @@ const KAPSAM: KapsamAlani[] = [
   },
   {
     /*
-      ── KARGO GÖNDERİSİ (07.12) ────────────────────────────────────────────────────────────────
-      Üç ekranın görünürlüğü buna bağlı: müşteri sipariş detayının takip bloğu, operasyon sipariş
-      detayının gönderi künyesi ve "yolda" mailinin takip kutusu. Kova açılmadan önce `shipment`
-      tablosunda TEK satır yoktu — üçü de yalnız testlerde görülebiliyordu.
-
-      **ÇOK KOLİ ayrı kova ve zorunlu:** "her kolinin AYRI takip numarası var" kuralı tek kolili
-      veride hiçbir ekranda görünmez — ve o kural bir kez tam bu yüzden yanlış yazıldı (tek numara
-      varsayılmıştı, çok kutulu siparişin ikisi görünmez kalıyordu).
+      Kargo gönderisi: müşteri ve operasyon sipariş detayının takip blokları ile "yolda" e-postasının takip kutusu buna bağlıdır.
+      Çok koli ayrı ve zorunlu kovadır, çünkü "her kolinin ayrı takip numarası" kuralı tek kolili veride görünmez.
     */
     baslik: 'Kargo gönderisi',
     tablo: 'shipment',
@@ -598,17 +501,7 @@ const KAPSAM: KapsamAlani[] = [
         sayac: (db) => say(db, 'order_box', (q) => q.not('sealed_at', 'is', null).is('loaded_at', null)),
       },
       {
-        /*
-          ARAÇTA olan kutu — ZORUNLUDAN ÇIKTI (kullanıcı kararı 01.09).
-
-          Seed bu kovayı `loadBox` çağırarak dolduruyordu, yani kuryenin işini önceden yapıyordu.
-          Kullanıcı cihazda gördü: *"Sefer açıyorum, 'araçta kutu var' diyor — hâlbuki ben hiçbir
-          şey okutmadım."* Yeni kural: **seed sipariş üretir, kutuyu depo üretir, yüklemeyi kurye
-          yapar.** Yüklenmiş kutu artık bir SEED hâli değil, akışın sonucu.
-
-          Kova raporlanmaya devam ediyor: kurye bir kutu okuttuğunda dolar ve o an görünür. Boşken
-          de hangi hâlin seed'de sınanmadığı yazılı kalır.
-        */
+        /* Araçtaki kutu zorunlu değildir: yüklemeyi kurye yapar, seed değil; kova kurye bir kutu okuttuğunda dolar. */
         ad: 'araçta (yüklenmiş) kutu',
         zorunlu: false,
         sayac: (db) => say(db, 'order_box', (q) => q.not('loaded_at', 'is', null)),
@@ -629,13 +522,7 @@ const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
-    // ── ÖLÇÜM NOKTALARI (19.28) ───────────────────────────────────────────────────────────────
-    // Ölçüm noktası serbest metinden tanımlı kayda geçti; kapsam da onunla birlikte doğdu.
-    // Dördü de ZORUNLU çünkü dördü de AYRI bir ekran hâlini açıyor:
-    //   hedefli alan   → sapma "beklenen aralık dışı" (kesin ölçüt) diye yazılır
-    //   hedefsiz alan  → sapma alışkanlıktan tahmin edilir; ilk günlerde SUSAR
-    //   hiç ölçülmemiş → Depolar'daki "tanımlı ama tura girmemiş" uyarısı
-    //   araç           → soğuk zincirin yoldaki yeri; ayrı tablo, aynı liste
+    // Ölçüm noktalarının dördü de zorunludur, çünkü her biri ayrı bir ekran hâli açar: hedefli, hedefsiz, hiç ölçülmemiş nokta ve araç.
     baslik: 'Ölçüm noktası (soğuk zincir)',
     kovalar: [
       {
@@ -649,9 +536,7 @@ const KAPSAM: KapsamAlani[] = [
         sayac: (db) => say(db, 'storage_area', (q) => q.is('target_min_c', null)),
       },
       { ad: 'araç', zorunlu: true, sayac: (db) => say(db, 'vehicle', (q) => q) },
-      // Takvimin "eksik gün" ölçütü (19.30) İKİ YÖNLÜ sınanmalı: günlük ölçüm bekleyen nokta
-      // boş günlerini eksik gösterir, beklemeyen nokta göstermez. Yalnız biri seed'de olsaydı
-      // öteki yolun hiç koşmadığı fark edilmezdi.
+      // Takvimin "eksik gün" ölçütü iki yönlü sınanmalı: günlük ölçüm bekleyen nokta boş günlerini eksik gösterir, beklemeyen göstermez.
       {
         ad: 'günlük ölçüm bekleyen nokta',
         zorunlu: true,
@@ -686,7 +571,7 @@ const KAPSAM: KapsamAlani[] = [
       {
         ad: 'tek depoda olan varyant',
         zorunlu: true,
-        // 19.22'nin çekirdek senaryosu: kalemleri iki depoya DAĞILMIŞ paket ancak böyle doğar.
+        // Kalemleri iki depoya dağılmış paket ancak böyle doğar.
         sayac: async (db) => {
           const { data } = await db.from('stock').select('variant_id,warehouse_id').gt('physical_qty', 0);
           const depolar = new Map<string, Set<string>>();
@@ -714,22 +599,8 @@ const KAPSAM: KapsamAlani[] = [
         ad: 'karma sepet üretebilen varyant (kargo deposunda VAR, rota deposunda YOK)',
         zorunlu: true,
         /**
-         * **19.25'in ölçülebilir karşılığı.** Senaryo iki kez (10.08 · 15.08) "üretilemiyor" diye
-         * raporlandı ve sebebi kod değil VERİYDİ: her rota STR'ye bağlıydı, STR aynı zamanda kargo
-         * çıkışıydı, dolayısıyla `decideCartAgainstWarehouse` iki havuzu tek yerden okuyordu ve
-         * `shipping` yolu rota içi bir adres için doğamıyordu.
-         *
-         * Ölçüt kalemin kendisi: kargolanabilir, kargo deposunda var, müşterinin rota deposunda yok.
-         *
-         * Kova o boşluğun geri gelmesini engelliyor: sayı sıfıra düşerse **iki gruplu sepet artık
-         * üretilemiyor** demektir — ve o zaman iki grup başlığı, "kargolu ürünleri ayrıca sipariş
-         * ver" akışı, `shippingSubtotalCents` matrahı ve kargo KDV'sinin oransal bölünmesi yine
-         * hiçbir koşuda koşmaz. Sessizce kaybolmasın diye ZORUNLU.
-         *
-         * **Hâli var eden depo 01.09'da COLMAR'dan BORDEAUX'ya taşındı** (kullanıcı kararı — 60 km
-         * "uzak depo" değildi ve Güney Hattının kendi durağıydı). Kova bundan etkilenmiyor ve tam
-         * da bu yüzden doğru yazılmış: ölçtüğü şey deponun ADI değil, İLİŞKİ — kargo deposunda var,
-         * rota deposunda yok. Depo taşındı, sayı yerinde kaldı.
+         * İki gruplu sepet: kalem kargolanabilir, kargo deposunda var, müşterinin rota deposunda yok; ölçüt deponun adı değil bu ilişkidir.
+         * Sayı sıfıra düşerse iki gruplu sepet üretilemiyor demektir, bu yüzden zorunludur.
          */
         sayac: async (db) => {
           const [{ data: depoSatirlari }, { data: bolgeSatirlari }, { data: stokSatirlari }, { data: varyantSatirlari }, { data: urunSatirlari }] =
@@ -776,24 +647,12 @@ const KAPSAM: KapsamAlani[] = [
     kovalar: [
       { ad: 'bölge aktif', zorunlu: true, sayac: (db) => say(db, 'delivery_zone', (q) => q.eq('is_active', true)) },
       /**
-       * **ZORUNLULUKTAN ÇIKARILDI (kullanıcı kararı 16.08: "rota sayısını bire indirelim").**
-       *
-       * Seed tek bölge kuruyor ve o aktif; pasif bölge artık doğmuyor. Kovanın kendisi DURUYOR —
-       * silinmedi, çünkü ölçmeye devam etmesi gerek: bir gün ikinci bir bölge eklenirse pasif hâlin
-       * yeniden doğduğu buradan görülür. Zorunluluğu kalkan tek şey, boşken koşuyu kırması.
-       *
-       * **Kapsam kaybı kayda geçsin ve küçümsenmesin:** "bölge kapalı, talep birikiyor" hâli artık
-       * seed'de doğmuyor. O hâli okuyan ekranlar (bölge listesinde pasif rozeti, `zone_notice`'ın
-       * "bölge açılınca haber ver" kuyruğu) yerelde elle bölge kapatılmadan görülemez. `zone_notice`
-       * kuyruğunun kendisi yaşıyor (77694 Kehl kaydı bekliyor) — kopan yalnız bölge tarafı.
+       * Pasif bölge zorunlu değildir, çünkü seed tek ve aktif bölge kurar; kova ölçmeye devam eder ki ikinci bölge eklenince pasif hâl buradan görülsün.
+       * Bedeli: "bölge kapalı, talep birikiyor" hâli yerelde elle bölge kapatılmadan görülemez.
        */
       { ad: 'bölge pasif', zorunlu: false, sayac: (db) => say(db, 'delivery_zone', (q) => q.eq('is_active', false)) },
       { ad: 'transfer', zorunlu: true, sayac: (db) => tesisTransferi(db) },
-      /**
-       * Transferin DÖRT hâli ayrı kovadır (19.6): ekran her hâli başka çizer — yoldaki liste,
-       * gecikmiş amber şerit, geçmişte "Tam/Kısmi kabul" ve "Sevk geri alındı" rozetleri. Toplam
-       * sayı dördü birden 0 olmadan da tutar; hâl kovası olmasa biri sessizce kaybolurdu.
-       */
+      /** Transferin dört hâli ayrı kovadır, çünkü ekran her hâli başka çizer; toplam sayı biri kaybolsa da tutardı. */
       { ad: 'transfer yolda', zorunlu: true, sayac: (db) => tesisTransferi(db, 'in_transit') },
       {
         ad: 'transfer yolda GECİKMİŞ',
@@ -817,16 +676,8 @@ const KAPSAM: KapsamAlani[] = [
   },
   {
     /**
-     * **BİLDİRİM — kova 04.09'da açıldı, çünkü bu alan BELİRTİSİZ kırılmıştı.**
-     *
-     * `seedNotifications` muhafızı "tablo dolu mu" diye soruyordu ve tabloya canlı akış da yazıyor:
-     * kurye sahnesi seferi kapatınca `run_close_pending` zili çalıyor, dört personel satırı doğuyor
-     * ve blok komple atlanıyordu — müşteri bildirimlerinin tamamı (sipariş · davet · bölge · talep)
-     * hiç doğmadan. Kapsam denetimi bunu GÖREMİYORDU çünkü tablonun kovası yoktu; arıza ancak
-     * bildirim ekranı elle açılınca fark edilirdi.
-     *
-     * Muhafız düzeltildi; kova bu düzeltmenin BEKÇİSİ: aynı sınıf bir sonraki hata (başka bir blok
-     * canlı akışı tetikler, muhafız yine yanılır) sessiz kalmasın.
+     * Bildirim kovası: `seedNotifications` muhafızı canlı akışın yazdığı satırla yanılıp müşteri bildirimlerini atlıyordu ve bunu gösterecek kova yoktu.
+     * Kova bu sınıf hatanın bekçisidir.
      */
     baslik: 'Bildirim',
     tablo: 'notification',
@@ -858,17 +709,7 @@ const KAPSAM: KapsamAlani[] = [
         },
       },
       { ad: 'okunmamış bildirim', zorunlu: false, sayac: (db) => say(db, 'notification', (q) => q.is('read_at', null)) },
-      /* BÖLÜM BAŞINA ZORUNLU (05.09, kullanıcı bulgusu) — "personele bildirim var mı" sorusu
-         yetmiyormuş: dört bölümün üçü BOŞken de o kova doluydu ve kapı yeşil geçiyordu. Kullanıcı
-         tüm yetkilerle girip *"sadece yönetimle alakalı bildirimler var"* dedi; ekran doğruydu,
-         besleme eksikti.
-
-         Kovalar TÜRLE adlandırılıyor, bölümle değil: bölüm eşlemesi mobilin dosyasında yaşıyor
-         (`notification-map.ts`) ve onu buraya kopyalamak aynı gerçeği iki yerde tutmak olurdu
-         (CLAUDE §1). Tür adı zaten sözleşmede.
-
-         KURYE bölümü İÇİN KOVA YOK ve bu bir eksiklik değil: hiçbir tür kuryeye düşmüyor. Kurye
-         bildirimi doğduğu gün (sefer devri) buraya kendi kovası gelir. */
+      /* Personel bildirimi bölüm başına zorunludur, çünkü tek kova üç bölüm boşken de doluydu; kovalar türle adlandırılır (bölüm eşlemesi mobildedir) ve kuryeye düşen tür henüz yoktur. */
       {
         ad: 'depo bölümüne düşen bildirim (transfer eksik/fazla)',
         zorunlu: true,
@@ -902,19 +743,8 @@ const KAPSAM: KapsamAlani[] = [
         ad: 'rota DIŞI ama hizmette',
         zorunlu: true,
         /**
-         * **Rota dışı müşteri — 19.23'ün kaçırıldığı hâl.**
-         *
-         * "Dört stok hâli" (available · shipping · elsewhere · out_of_stock) yazıldı, test edildi
-         * ve ÇALIŞIYOR — ama hep KEHL müşterisiyle denendi: rota İÇİNDE olup kendi deposunda mal
-         * bulunmayan müşteri. O senaryoda iki depo farklı, sistem ayırt edebiliyor.
-         *
-         * **Rota DIŞI müşteri hiç denenmedi** ve orada iki depo aynı kimliğe düşüyordu (rota
-         * çözümü kargo deposunu `warehouseId` alanında döndürüyor). Sonuç: 75011 ile 67000 birebir
-         * aynı çıktıyı veriyordu — sistem Parisli müşterinin Strasbourg'da olduğuna inanıyordu.
-         *
-         * Kova bunu doğrudan soramaz (çözüm bir fonksiyon, tablo değil) ama ÖN KOŞULUNU sorar:
-         * hizmet verdiğimiz ülkede, hiçbir rota bölgesine ait OLMAYAN bir posta kodu var mı?
-         * Yoksa rota dışı senaryo hiçbir ölçümde doğamaz.
+         * Rota dışı müşteri: hizmet verilen ülkede hiçbir rota bölgesine ait olmayan posta kodu var mı; yoksa rota dışı senaryo hiçbir ölçümde doğamaz.
+         * Kova çözümü değil ön koşulunu sorar, çünkü çözüm bir fonksiyondur.
          */
         sayac: async (db) => {
           const [{ data: rotaKodlari }, { data: referans }] = await Promise.all([
@@ -950,16 +780,11 @@ const KAPSAM: KapsamAlani[] = [
         ad: 'ALMAN kayıt (ülke ayrımı)',
         zorunlu: true,
         /**
-         * **21.16'nın tek denek taşı.** Ülke kolonu eklenmeden önce haber işi iki ülkeyi de deneyip
-         * *"biri tutarsa kapsanmış say"* diyordu — ölçüldü (09.08): kod tablosundaki 610 kod iki
-         * ülkeye birden çözülüyor, yani Fransa'da açılan bir bölge aynı kodu yazmış Alman müşteriye
-         * gidebilirdi. Yanlış gönderim geri alınamaz (damga yazılır, satır bir daha görünmez).
-         *
-         * Tüm kayıtlar FR olsaydı ayrımın çalıştığı hiçbir koşuda görülmezdi.
+         * Ülke kolonunun denek taşı: aynı posta kodu iki ülkede de var; tüm kayıtlar FR olsaydı ayrımın çalıştığı hiçbir koşuda görülmezdi.
          */
         filtre: (q) => q.eq('country', 'DE'),
       },
-      // 14.10 dil kolonu: dolu ve BOŞ hâli birlikte — boşta haber işi profile, sonra fr'ye düşer.
+      // Dil kolonu dolu ve boş hâliyle birlikte: boşta haber işi profile, sonra fr'ye düşer.
       { ad: 'dili kayıtlı', zorunlu: true, filtre: (q) => q.not('locale', 'is', null) },
       { ad: 'dili bilinmiyor', zorunlu: true, filtre: (q) => q.is('locale', null) },
       // Yüzey izi: hepsi 'web' olsaydı native uygulamadan gelen kaydın hiç örneği olmazdı.
@@ -1001,14 +826,8 @@ const KAPSAM: KapsamAlani[] = [
         ad: 'mesajları ayrık damgalı',
         zorunlu: true,
         /**
-         * **Sohbet bir ZAMAN DİZİSİDİR** — mesajları aynı damgayı taşıyan konuşma, gerçekte
-         * olmayan bir hâldir ve iki şeyi birden sınanamaz kılar (ölçüldü 09.08):
-         *   · ekran "önce/sonra" ayrımını gösteremez,
-         *   · `created_at` üzerindeki keyset sayfalamanın YÖNÜ doğrulanamaz — `listPage` (eskiden
-         *     yeniye) ile `listRecent` (yeniden eskiye) aynı satırları aynı sırada döndürür.
-         *     Sıralama bozuk olduğu için değil, veri ayırt edilemez olduğu için.
-         *
-         * Kova "en az bir konuşmanın mesajları farklı damgalı mı" diye sorar.
+         * Sohbet bir zaman dizisidir: aynı damgalı mesajlarla ekran önce/sonra ayrımını, keyset sayfalama da yönünü gösteremez.
+         * Kova en az bir konuşmanın mesajları farklı damgalı mı diye sorar.
          */
         sayac: async (db) => {
           const { data } = await db.from('message').select('conversation_id,created_at');
@@ -1038,8 +857,7 @@ const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
-    // SEFER (0046 · 18.08): üç ekranın verisi — kurye rota seçimi, sevkiyat sefer şeridi, geçmiş
-    // seferler sekmesi. Kapanışın üç hâli (mutabık · farklı · sayılmamış) ekranda üç ayrı görünüm.
+    // Sefer: kurye rota seçimi, sevkiyat sefer satırı ve geçmiş seferler sekmesinin verisi; kapanışın üç hâli ekranda üç ayrı görünümdür.
     baslik: 'Sefer (delivery_run)',
     tablo: 'delivery_run',
     siparisGerektirir: true,
@@ -1050,23 +868,8 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'FARKLI kapanış', zorunlu: true, sayac: (db) => say(db, 'delivery_run_close', (q) => q.eq('reconciled', false)) },
       { ad: 'sayılmamış (açık) sefer', zorunlu: true, sayac: sayilmamisSefer },
       /*
-        BUGÜNE ait iki hâl (30.08) — para ekranlarının GÜN ölçütü buna bakıyor: gün sonu
-        mutabakatı yalnız bugünün kapanışlarını okuyor (`readMoneyDayEnd`), kuryenin üstündeki
-        para ise yalnız bugünün KAPANMAMIŞ seferlerinden türüyor (`readMoneyOverview`).
-
-        ── AÇIK SEFER ZORUNLUDAN ÇIKTI (kullanıcı kararı 31.08) ─────────────────────────────
-        Kullanıcı seed'in bugünü SIFIRDAN bırakmasını istedi: *"kurye ekranı açıldığı zaman
-        sahiplenilmiş bir rota ortaya çıkmasın."* Seed bugünün rotasını kurup sürüyordu ve kurye
-        ekranı açılır açılmaz durak listesine düşüyordu — akışın ilk dört adımı (rehber · sefer
-        ve araç seçimi · yükleme · sefer başlatma) hiç denenemiyordu.
-
-        Kova bu yüzden boş kalıyor ve boş kalması BİR EKSİK DEĞİL: açık sefer yoksa kuryenin
-        üstünde para da yoktur. `readMoneyOverview`ın o satırı sıfır gösterir ve sıfır burada
-        DOĞRUDUR — "ölçülemedi" değil, "kurye henüz yola çıkmadı". Hâl yine üretilebiliyor,
-        yalnız seed'in değil AKIŞIN eliyle: kurye seferi başlattığı anda doğuyor.
-
-        `zorunlu` KALDIRILMADI, `false`a çekildi: kova hâlâ RAPORLANIYOR — dolduğunda görünsün,
-        boşken de ekranın hangi hâlinin sınanmadığı yazılı kalsın.
+        Bugüne ait iki hâl: gün sonu mutabakatı yalnız bugünün kapanışlarını, kuryenin üstündeki para bugünün kapanmamış seferlerini okur.
+        Açık sefer zorunlu değildir, çünkü seed bugünü sıfırdan bırakır ki kurye akışı baştan denenebilsin; kova kurye seferi başlatınca dolar.
       */
       { ad: 'bugüne ait açık sefer', zorunlu: false, sayac: (db) => bugunSeferleri(db, false) },
       /* Kapanış ZORUNLU KALIYOR: seed bugünün BİTMİŞ gününü (bütün durakları sonuçlanmış grup)
@@ -1075,27 +878,13 @@ const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
-    /*
-      EKSİK TOPLAMA (Y2 · 30.08) — yönetimin "sipariş istisnaları" ekranı ve hub'ın karar kutusu.
-
-      **KOVA MOTORU ÇAĞIRIR, KURALI KOPYALAMAZ.** İstisna saklanmıyor, TÜRETİLİYOR: raftaki gerçeğin
-      karşılayamadığı kalem (`shortfallQty > 0`) VE müşteriye henüz sorulmamış olan
-      (`!awaitingAnswer`). İkinci koşulu ham SQL'e kopyalamak kuralı ikinci bir yerde yaşatmak
-      olurdu — ve tam da o koşul yüzünden ekran bir kez sessizce boş kaldı: seed'in eksik kalemi,
-      seed'in TALEBİ ile çakışmış, kalem "soruldu" sayılıp kuyruktan düşmüştü. Sayı bu yüzden
-      ekranın okuduğu fonksiyonun kendisinden geliyor; çakışma tekrarlarsa kova kırmızı döner.
-    */
+    /* Eksik toplama istisnaları: kova kuralı kopyalamaz, ekranın okuduğu motoru çağırır, çünkü ikinci bir koşul kopyası ekranın boş kaldığı çakışmayı gizlemişti. */
     baslik: 'Sipariş istisnası (eksik toplama)',
     siparisGerektirir: true,
     kovalar: [{ ad: 'karar bekleyen istisna', zorunlu: true, sayac: eksikToplamaSay }],
   },
   {
-    /*
-      PARA — BUGÜNÜN DEFTERİ (30.08). Para bölümünün iki ekranı da "bugün" ölçütüyle okuyor ve
-      seed'in bütün tahsilatları dün tarihliydi: ekranlar boş değil YANLIŞ doluyordu ("bugün hiç
-      para girmedi"). Kovalar o günü savunuyor — yöntem kırılımı üç sütunlu olduğu için üç yöntem
-      ayrı ayrı sorulur, tek yöntemli bir gün kırılımı hiç göstermez.
-    */
+    /* Para, bugünün defteri: para ekranları "bugün" ölçütüyle okur; yöntem kırılımı her yöntem için ayrı sorulur, çünkü tek yöntemli gün kırılımı göstermez. */
     baslik: 'Para — bugünün defteri',
     tablo: 'money_movement',
     /* Beşinci kova (`eşleşmemiş hareket`) siparişsiz de doluyor — gider hareketleri var. Ama alan
@@ -1107,21 +896,13 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'bugün NAKİT tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'cash') },
       { ad: 'bugün KART tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'card') },
       { ad: 'bugün ÇEK tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'cheque') },
-      // İZAH sayacı (13.09): ekranın saydığı şey — bağı, belgesi, etiketi ya da karşı hesabı olmayan
-      // hareket. Eski `reconciled` sayımı banka mutabakat bayrağıydı ve sistemin yazdığı her
-      // tahsilatı da sayıyordu.
+      // İzah sayacı: ekranın saydığı şey bağı, belgesi, etiketi ya da karşı hesabı olmayan harekettir.
       { ad: 'izah edilmemiş hareket', zorunlu: true, sayac: (db) => say(db, 'money_movement', (q) => q.eq('explained', false)) },
     ],
   },
   {
-    // ASİSTAN KUYRUĞU (Modül 22 · 26.08): öneri tiplerinin HER BİRİNİN kendi gövdesi var ve
-    // gövde ancak o tipten bir dilekçe kuyruktayken ekranda açılabiliyor. Kova tip sayısının
-    // altına düşerse bir gövde gözle hiç sınanamaz — modülün ekran doğrulamaları tam bu yüzden
-    // aylarca takılı kaldı (kuyruk her `db:refresh`te boşalıyordu).
-    //
-    // Karar geçmişi de zorunlu: kuyruğun üç sekmesinden ikisi ona bağlı ve iki davranış yalnız
-    // orada görünür — karar verilmiş öneride formun KİLİTLİ çizilmesi (22.19) ve tip süzgecinin
-    // geçmiş üzerinde çalışması (22.37).
+    // Asistan kuyruğu: her öneri tipinin kendi gövdesi vardır ve gövde ancak o tipten dilekçe kuyruktayken açılabilir; tip sayısının altına düşen kova bir gövdeyi sınanamaz kılar.
+    // Karar geçmişi de zorunludur: kuyruğun iki sekmesi ona bağlıdır ve kilitli form ile geçmiş süzgeci yalnız orada görünür.
     baslik: 'Asistan onay kuyruğu (assistant_proposal)',
     tablo: 'assistant_proposal',
     kovalar: [
@@ -1133,13 +914,8 @@ const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
-    // ── KDV DOĞRULAMASININ YAŞI (27.08) ──────────────────────────────────────────────────────
-    // Onay kartı bu bayrağın yaşını üç ayrı hâlde çiziyor ve **hiçbiri koddan uydurulamıyor** —
-    // veriden geliyor. Kovalar bu yüzden zorunlu: yaş ayrımı yazıldığı gün seed'de yalnız "taze"
-    // hâli vardı, yani "bayat" rozeti hiçbir ekranda görülemezdi.
-    //
-    // Ayrımın bedeli kartta değil vergide: bayrak ters yükümlülüğü (%0 KDV) açıyor
-    // (`domain-core/tax/vat-treatment`), yani bayat bir "Geçerli" bir vergi hatasıdır.
+    // KDV doğrulamasının yaşı: onay kartı bayrağın yaşını üç hâlde çizer ve hiçbiri koddan uydurulamaz.
+    // Bedeli vergidedir: bayrak ters yükümlülüğü açar, bayat bir "Geçerli" vergi hatasıdır.
     baslik: 'B2B — KDV doğrulamasının yaşı (user_profiles)',
     tablo: 'user_profiles',
     kovalar: [
@@ -1154,8 +930,7 @@ const KAPSAM: KapsamAlani[] = [
         filtre: (q) => q.eq('vat_number_valid', true).lt('vat_number_checked_at', gunOnce(30)),
       },
       {
-        // Numarası var ama VIES cevap vermemiş: Fransa'nın düğümü sık sık meşgul (ölçüldü 27.08),
-        // yani bu hâl istisna değil GÜNLÜK — kartın en sık çizeceği KDV satırı bu.
+        // Numarası var ama VIES cevap vermemiş: Fransa'nın düğümü sık meşgul, bu hâl kartın en sık çizeceği KDV satırıdır.
         ad: 'SORULMAMIŞ (numara var, cevap yok)',
         zorunlu: true,
         filtre: (q) => q.not('vat_number', 'is', null).is('vat_number_valid', null),
@@ -1165,12 +940,8 @@ const KAPSAM: KapsamAlani[] = [
 ];
 
 /**
- * Bekleyen dilekçelerin kaç FARKLI tip taşıdığı — enumdaki tiplerin HEPSİ beklenir
- * (`AssistantProposalKindEnum`; sayı buraya yazılmaz, 22.44'te "onbir" bayat kalmıştı).
- *
- * Sayı değil KAPSAM ölçüyor: elli dilekçe olsa ama hepsi aynı tipten olsa öteki gövdeler yine
- * ekranda açılamazdı. Eksik tipler adlarıyla basılır, çünkü yalnız bir oran görüp hangisinin
- * eksik olduğunu aramak teşhisi uzatır.
+ * Bekleyen dilekçelerin kaç farklı tip taşıdığı; enumdaki tiplerin hepsi beklenir ve sayı buraya yazılmaz.
+ * Sayı değil kapsam ölçülür, eksik tipler adlarıyla basılır ki teşhis uzamasın.
  */
 async function tumTiplerKuyrukta(db: Db): Promise<number> {
   const { data, error } = await db.from('assistant_proposal').select('kind').eq('status', 'pending');
@@ -1192,8 +963,7 @@ async function sayilmamisSefer(db: Db): Promise<number> {
 }
 
 /**
- * BUGÜNÜN seferleri, kapanış durumuna göre (30.08). Anti-join `sayilmamisSefer` ile aynı desende
- * ama gün süzgeçli: para ekranlarının ölçütü GÜNDÜR, "hiç var mı" değil.
+ * Bugünün seferleri, kapanış durumuna göre: anti-join `sayilmamisSefer` ile aynı desende ama gün süzgeçli, çünkü para ekranlarının ölçütü gündür.
  */
 async function bugunSeferleri(db: Db, kapali: boolean): Promise<number> {
   const { data: runs, error: runErr } = await db.from('delivery_run').select('id').eq('delivery_date', bugun());
@@ -1205,13 +975,7 @@ async function bugunSeferleri(db: Db, kapali: boolean): Promise<number> {
   const closed = new Set((data ?? []).map((row) => row.delivery_run_id as string));
   return idler.filter((id) => closed.has(id) === kapali).length;
 }
-/**
- * Bugün deftere giren sipariş tahsilatı, YÖNTEME göre.
- *
- * Yöntem hareketin kendisinde YOK, siparişindedir (hareket hesabı taşır) — para ekranının okuması
- * da tam olarak bu zinciri kuruyor (`readMoneyOverview`). Kova aynı zinciri sorar; başka türlü
- * "kırılım dolu" iddiası ölçülemez.
- */
+/** Bugün deftere giren sipariş tahsilatı, yönteme göre; yöntem hareketin değil siparişin alanıdır ve para ekranı da bu zinciri kurar. */
 async function bugunYontemliTahsilat(db: Db, yontem: 'cash' | 'card' | 'cheque'): Promise<number> {
   const { data, error } = await db
     .from('money_movement')
@@ -1269,11 +1033,7 @@ export async function kapsamOl(db: Db): Promise<KapsamSonucu> {
     }
   }
 
-  /*
-    Sipariş durumları — dokuzunun da örneği OLMALIYDI: her biri ayrı bir ekran hâli ve ayrı geçiş.
-    Besleme 01.09'dan beri hiç sipariş yazmıyor, dolayısıyla dokuzu da boş; satırlar raporda
-    kalıyor (hangi hâllerin sınanmadığı yazılı kalsın) ama zorunlu DEĞİL.
-  */
+  /* Sipariş durumları: dokuzunun da ayrı ekran hâli var ama besleme sipariş yazmadığı için satırlar raporda kalır, zorunlu değildir. */
   for (const durum of SIPARIS_DURUMLARI) {
     const sayi = await say(db, 'order', (q) => q.eq('status', durum));
     satirlar.push({ alan: 'Sipariş — durum', kova: durum, sayi, zorunlu: false });

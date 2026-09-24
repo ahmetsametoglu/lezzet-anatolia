@@ -28,11 +28,8 @@ const createdProfiles: string[] = [];
 const LINES = [{ totalCents: 4000, vatRate: 5.5 }];
 
 /**
- * Kapının girdisi İKİ tutar taşıyor (11.08 · mobil şeridin ölçümü): `basketCents` indirim SONRASI
- * (kargo, bedava kargo eşiği, tahsil edilecek toplam), `subtotalCents` indirim ÖNCESİ (yalnız
- * asgari sepet eşiği). Bu dosyadaki senaryoların çoğunda indirim YOK, yani ikisi eşit — yardımcı
- * o hâli kısaltıyor. **Varsayılan testte, kapıda DEĞİL:** kapıda `subtotalCents` zorunlu, çünkü
- * unutulduğunda düzeltmeye çalıştığımız arıza sessizce geri gelirdi.
+ * Kapının girdisi iki tutar taşır: `basketCents` indirim sonrası (kargo ve toplam), `subtotalCents` indirim öncesi (yalnız asgari sepet eşiği).
+ * Yardımcı indirimsiz hâli kısaltır; varsayılan testte durur, kapıda değil, çünkü kapıda `subtotalCents` zorunludur.
  */
 type OdemeGirdisi = Parameters<typeof resolveCheckoutPayment>[0];
 const odemeCozumle = (input: Omit<OdemeGirdisi, 'subtotalCents'> & { subtotalCents?: number }) =>
@@ -80,7 +77,7 @@ describe('kargo ücreti ve KDV (07.3)', () => {
 
   it('kargoda eşik altı sipariş ücret öder ve ücret toplama eklenir', async () => {
     const r = await odemeCozumle({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES });
-    // Ayar varsayılanı 19.08'de piyasadan ölçüldü (05.30): ücret 7,90 → **11,90 €**, eşik 60 → **100 €**.
+    // Ayar varsayılanı: ücret 11,90 €, eşik 100 €.
     expect(r.shippingFeeCents).toBe(1190);
     expect(r.orderTotalCents).toBe(5190);
     expect(r.remainingForFreeShippingCents).toBe(6000);
@@ -106,9 +103,7 @@ describe('kargo ücreti ve KDV (07.3)', () => {
 });
 
 describe('ödeme yöntemleri', () => {
-  // `customerId` BİREYSEL bir müşteri: havale ve çek ona kapalı (kullanıcı kararı 04.08). Beklenti
-  // 05.08'de değişti — eskiden `bank_transfer` misafire bile açıktı, yani ödeme alınmadan hazırlığa
-  // geçilebiliyordu ve tahsilat riski tümüyle bizdeydi.
+  // `customerId` bireysel bir müşteri: ertelenmiş tahsilat ona kapalıdır, çünkü ödeme alınmadan hazırlığa geçilir ve risk tümüyle bize kalırdı.
   it('rota içi + tavan altı → kapıda ödeme açık (bireysel: havale/çek yok)', async () => {
     const r = await odemeCozumle({ customerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r.methods).toEqual(['online', 'cash', 'card']);
@@ -192,15 +187,8 @@ describe('vade freni — açık bakiye TÜRETİLİR', () => {
 
 describe('asgari sepet', () => {
   /**
-   * **"Asgari YOK" hâli artık KURULMASI gereken bir hâl** (10.08 kural değişimi · düzeltildi 15.08).
-   *
-   * Test beş gün kırmızıydı ve kod haklıydı: kullanıcı kararıyla kapıya teslime **40 € lojistik
-   * taban** geldi ve taban KÜRESEL satıra yazıldı (`0013_settings.sql`). O günden beri "asgari yok"
-   * diye bir hâl kendiliğinden var olmuyor — testin varsayımı ortadan kalkmıştı, iddiası değil.
-   *
-   * Bu yüzden eşik sıfırlanıp geri konuyor, iddia aynen korunuyor. **Sıfıra çekmek bir varsayım
-   * değil, snapshot'ın kendisi** (`settingsSnapshot`, CLAUDE §4b): önce okunur, sonra geri konur —
-   * "boşa çek" deseydik küresel satırı bir gün yanlış değerde bırakırdık.
+   * "Asgari yok" hâli kurulması gereken bir hâldir, çünkü kapıya teslimin lojistik tabanı küresel satırdadır.
+   * Eşik sıfırlanıp geri konur: snapshot önce okunur, sonra geri yazılır ki küresel satır yanlış değerde kalmasın.
    */
   it('asgari yoksa her sepet geçer', async () => {
     const settings = settingsSnapshot(db);
@@ -225,13 +213,8 @@ describe('asgari sepet', () => {
   });
 
   /**
-   * **Eşik İNDİRİM ÖNCESİNE bakar** (kullanıcı kararı 11.08) — teslimatın ekonomisi taşınan malın
-   * değerine bağlıdır, kampanya eşiği düşürmez.
-   *
-   * Bu iddia bir regresyon çivisi: kapı bir tur eşiği `basketCents`ten (indirim SONRASI) ölçüyordu
-   * ve taslak kapısı aynı soruyu `subtotalCents`ten ölçüyordu. Sonucu sessiz bir çelişkiydi —
-   * eşiğin sınırında sepet "tamam" derken ödeme adımı "eksik" diyebilirdi ve müşteri kasada
-   * duvara çarpardı (mobil şeridin 11.08 ölçümü). Tek satır geri alınırsa bu test kırmızıya döner.
+   * Eşik indirim öncesine bakar: teslimatın ekonomisi taşınan malın değerine bağlıdır, kampanya eşiği düşürmez.
+   * Regresyon çivisi: kapı eşiği `basketCents`ten ölçerse bu test kırmızıya döner.
    */
   it('KAMPANYA eşiği düşürmez — eşik indirim ÖNCESİ tutarı ölçer', async () => {
     const settings = settingsSnapshot(db);

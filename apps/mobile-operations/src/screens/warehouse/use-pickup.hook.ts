@@ -7,13 +7,8 @@ import { newRequestKey } from '@/lib/request-key';
 import { trackWarehouse } from './warehouse-status';
 
 /*
-  GEL-AL TESLİM (D9) — kancanın işi üç şey: kuyruğu okumak, seçili siparişin kutu okutmalarını ve tahsilatını tutmak,
-  teslimi yazmak. Kural sunucuda (`deliverPickupOrder`): tüm kutular okutulmadan teslim yazılmaz, tahsilat kapıdakiyle aynı
-  şekil. Ekran seçimi ve girdiyi taşır, karar vermez.
-
-  ── ÇEVRİMDIŞI: KİLİT VAR, KUYRUK YOK ─────────────────────────────────────
-  Teslim anında yazılır (kargo devri ve toplamanın aynı kararı): müşteriye verilen malın sistemde "sırada" beklemesi, malın
-  kimde olduğunu belirsiz bırakır.
+  Gel-al teslimi: kanca kuyruğu okur, seçili siparişin kutu okutmalarını ve tahsilatını tutar, teslimi yazar; kural sunucudadır (`deliverPickupOrder`).
+  Teslim anında yazılır, kuyruğa alınmaz, çünkü müşteriye verilen malın sistemde "sırada" beklemesi malın kimde olduğunu belirsiz bırakır.
 */
 
 export type PickupMethod = 'cash' | 'card' | 'cheque';
