@@ -22,44 +22,15 @@ import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-addr
 import { PhotoSurface } from '@/screens/customer-kit/photo-surface';
 import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
-// Metin ortak pakette (14.09): web'in telefon paket listesi aynı sözlüğü okur.
+// Metin ortak pakette, çünkü web'in telefon paket listesi aynı sözlüğü okur.
 import messages from '@lezzet/i18n/customer/packages';
 import { PackagesListSkeleton } from './packages-list-skeleton';
 import { usePackagesList } from './use-packages-list.hook';
 
 /*
-  PAKETLER (v3 `vPkgs`) — üçüncü sekmenin ekranı: hazır paketlerin tam listesi. Vitrindeki
-  şeritten farkı SÜZGEÇ: orada yalnız işaretli paketler var, burada yayındakilerin tamamı
-  (karar uçta — `PackageListSchema` künyesi).
-
-  ── TASARIMIN KARTINDAN BUGÜN ÇİZİLEBİLEN ───────────────────────────────────
-  v3'ün kartı fotoğraf bölgesinin ALTINDA beyaz bir gövde taşıyor: kısa açıklama · içerik çipleri
-  (paketin kalem adları) · soğuk zincir notu · "Paketi incele ›". İlk ikisi hâlâ sözleşmede YOK ve
-  çizilmediler: uydurulacak bir açıklama ya da hayalî bir çip listesi, boş bırakmaktan kötüdür
-  (CLAUDE §0 — kanıtsız bilgi basma). Eksik alanlar terfi ihtiyacı olarak raporlandı.
-
-  ── "TÜKENDİ" ROZETİ VE YER NOTU ARTIK VAR (10.08) ──────────────────────────
-  Bu künye 10.08'e kadar şöyle diyordu: *"'Tükendi — yakında yeniden' rozeti de yok: paket
-  sözleşmesi stok TAŞIMIYOR."* Taşıyor artık (`HomePackageSchema` → `soldOut` · `route`) ve sayfa
-  yere kör olmaktan çıktı: rota dışındaki müşteri, o adrese hiç gidemeyecek paketi normal bir kart
-  olarak görüyordu. Kart kataloğun ürün kartıyla AYNI dili konuşur (kullanıcı kararı 10.08):
-    1. Gidemeyeceğimiz kartın yalnız FOTOĞRAFI solar; rozet ve künye tam opak kalır — yoksa
-       solmanın sebebini açıklayan cümle tam da gerektiği anda okunaksızlaşır.
-    2. "Bu adrese gönderemiyoruz" ROZET İÇİNDE DEĞİL, künyenin son satırında düz yazı; okunurluk
-       alt gradyandan gelir ("her şey rozet içindeymiş gibi görünüyor, hoş olmuyor"). Rengi 11.08'de
-       kremden VURGU tonuna geçti (`terracotta`) — gerekçe stil künyesinde.
-    3. "Kargoyla gelir" işareti KARTA YAZILMAZ — rota dışında kartların çoğu onu taşırdı ve bilgi
-       olmaktan çıkardı; cümlenin genel hâli listenin başındaki bantta.
-  Cümleyi kuran yer ekran değil `stockMarkOf` (`lib/places/place-view.ts`); paketin kendi gerçeği
-  (`soldOut` + `route`) o sözlüğe `packageStockStatus` ile çevrilir. İkinci bir cümle sözlüğü YOK.
-
-  FOTOĞRAF BÖLGESİ KİTİN YÜZEYİNDEN (`PhotoSurface`): "foto varsa foto, yoksa baş harf" + skrim
-  tek kopya durur. `PhotoTile` kullanılMADI çünkü o BASILABİLİR bir karttır ve burada basılabilir
-  olan kartın TAMAMIDIR (fotoğraf + beyaz gövde) — iç içe iki basılabilir yüzey doğardı.
-
-  YÜKLEME: iskelet gelecek yerleşimin AYNISI (fotoğraf bloğu + gövde satırı) ve "yükleniyor"
-  halkasıyla AYNI ANDA çizilmez (kullanıcı bulgusu 09.08). Aşağı çekerek yenileme ise ekranı
-  iskelete DÜŞÜRMEZ: satırlar yerinde kalır, hareketin kendi göstergesi yeter.
+  Paketler sekmesi yayındaki paketlerin tamamını listeler; vitrindeki şerit yalnız işaretli paketleri taşır. Kart katalogdaki ürün
+  kartının dilini konuşur: gidemeyeceğimiz paketin yalnız fotoğrafı solar, yer notu künyenin son satırında düz yazıdır ve "kargoyla
+  gelir" karta yazılmaz, çünkü listenin başındaki bant onu bir kez söyler.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -128,9 +99,8 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
           .join(' · ')}
         testID={`packages-card-${pack.slug}`}
       >
-        {/* SOLAN GRUP yalnız fotoğraf ve gradyanı; rozet/künye onun KARDEŞİ ve tam opak
-            (`ProductPhotoCard`ın 10.08 düzeltmesi birebir). Konumlar değişmedi: yüzey zaten
-            bloğun tamamını kaplıyor. */}
+        {/* Solan grup yalnız fotoğraf ve gradyanıdır; rozet ve künye onun kardeşidir ve tam opak kalır, yoksa solmanın sebebini
+            açıklayan cümle okunaksızlaşır. */}
         <View style={styles.photo}>
           <PhotoSurface
             image={pack.image}
@@ -214,8 +184,7 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
           <PlaceNoticeBand
             country={noticePlace.country}
             postalCode={noticePlace.postalCode}
-            /* Şehir de hapta yazılır (kullanıcı isteği 11.08); `null` olabilir, bant o hâlde
-               yalnız kodu basar. Katalogla AYNI çağrı — iki liste tek bandı besliyor. */
+            /* Şehir de hapta yazılır; `null` olabilir ve bant o hâlde yalnız kodu basar. */
             placeName={noticePlace.placeName}
             source="app-packages"
             testID="packages-place-notice"
@@ -349,17 +318,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors['olive-light'],
   },
-  /* YER NOTU — künye ailesinin içinde, kare ürün kartıyla AYNI karar: zemin/kenarlık YOK
-     (okunurluk gradyandan gelir).
-
-     RENK VURGU TONU (kullanıcı kararı 11.08): `on-image` krem, adın ve altyazının rengiydi — not
-     onların arasında ÜÇÜNCÜ bir künye satırı gibi okunuyordu, oysa taşıdığı şey künye değil bir
-     UYARI. Vurgu ailesi (`terracotta`) markanın kendi aksanı ve bu sayfada zaten konuşuyor
-     (üstbaşlık, fiyat çipi) — yeni bir görsel dil üretilmedi.
-     Okunurluk bakımından da krem'den güvenli: kart gönderilemez hâlde SOLUYOR (`fadedPhoto`) ve
-     solan şey fotoğrafla birlikte onun karartma gradyanıdır — açık bir fotoğrafın üstünde krem
-     yazı zemine karışıyordu (kare kartın 10.08 künyesindeki `on-image` ↔ `sand-50` ölçümü).
-     Terracotta orta tonlu: hem açılmış hem koyu kalmış zeminde ayrışıyor. */
+  /* Yer notu zeminsizdir ve vurgu tonuyla (`terracotta`) yazılır, çünkü taşıdığı şey künye değil uyarıdır ve krem yazı solan kartın
+     açık fotoğrafında zemine karışır. */
   placeNote: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text['body-sm'],

@@ -24,29 +24,9 @@ import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { useSheet } from './use-sheet.hook';
 
 /*
-  BÖLGE DIŞI BİLGİ BANDI — müşteri listelerinin BAŞINDA tek blok: "kamyonumuz buraya gelmiyor,
-  gönderebildiklerimiz kargoyla gelir". Kart başına tekrarlanan "Kargoyla gelir" işareti bu yüzden
-  kalktı; kartta kalan tek yer işareti gönderemediğimiz ürünün şeridi (o da solmayla birlikte).
-
-  İKİ LİSTE ÇİZER (katalog · paketler): paketler sekmesine alt çubuktan doğrudan gelinebiliyor ve
-  katalogdan geçmeyen müşteri, adresinin gerçeğini hiç okumadan bir listeye bakıyordu. Bandın ikinci
-  nüshası yazılmadı — ekranın adı bir prop oldu (`source`).
-
-  KUTU KİTİN, DÜZEN TASARIMIN: tasarım bandı artık kendisi çiziyor (kod satırı · başlık + cümle ·
-  kesik çizgiyle ayrılmış anahtar satırı). Kutu için yeni bileşen yazılmadı — kitin bilgi kutusunun
-  terracotta tonu tasarımın zemini ve çerçevesiyle aynı değerleri taşıyor.
-
-  BANT TEK BLOKTUR: eylem de anahtar da kutunun İÇİNDE durur, çünkü kutunun altına taşan parçalar
-  ürün kartlarını ekranın yarısına itiyordu (ölçülmüş arıza). Eylem yuvası bu iş için kite eklendi;
-  banda tek kullanımlık ikinci bir kutu çizilmedi, kitin öteki çağıranları değişmedi.
-
-  BANDIN İKİ EYLEMİ: kod hapı yanlış kodu bandın gördüğü yerde düzelttirir (`PostalCodeSheet`, vitrin
-  başlığındaki çekmecenin ta kendisi), "Buraya da gelin" ise bölgeyi talep olarak kaydeder — girişlide
-  tek dokunuş, misafirde kendi çekmecesi (e-posta + kodla doğrulanmış hesap).
-
-  KAYIT ALINDIĞINDA DÜĞME KALKAR: alınmış kaydı ikinci kez isteten düğme "sayılmadım mı?" sorusunu
-  doğururdu. Hafıza bandın kendi örneğinde değil depoda (`lib/places/place-notice-store`), çünkü iki
-  liste iki ayrı örnektir: katalogda kaydını bırakan müşteri paketler sekmesinde düğmeyi yeniden görürdü.
+  Bölge dışı bilgi bandı listelerin başında tek bloktur ("aracımız buraya gelmiyor, gönderebildiklerimiz kargoyla gelir"), bu yüzden
+  kartlara tek tek "kargoyla gelir" yazılmaz; eylemler kutunun içindedir, çünkü dışarı taşan parçalar kartları ekranın yarısına iter.
+  Alınan kaydın hafızası depodadır, çünkü iki liste iki ayrı örnektir ve katalogda kaydını bırakan müşteri paketlerde düğmeyi görmemeli.
 */
 
 type Messages = LocalizedCopy<typeof messages>;

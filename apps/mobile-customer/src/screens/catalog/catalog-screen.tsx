@@ -65,7 +65,7 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
      kaydı. Kök kapı kayıt okunmadan ağacı çizmez, `?.` yine de kapının kararını bu ekranın varsayımı yapmaz. */
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const postalCode = onboarding?.postalCode ?? null;
-  // Gel-al seçiliyken liste seçilen depodan okunur; ürün detayı aynı seçimi taşır (09.08 tutarlılık kuralı).
+  // Gel-al seçiliyken liste seçilen depodan okunur; ürün detayı aynı seçimi taşır.
   const pickupWarehouseId = useSelectedPickupWarehouse();
   const catalog = useCatalog(locale, postalCode, pickupWarehouseId);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);

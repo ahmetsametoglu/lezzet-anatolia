@@ -75,9 +75,7 @@ export function resetDeliveryAddress(): void {
   selectDeliveryAddress(null);
 }
 
-/* OTURUM KAPANINCA DÜŞER (21.310): kapanış kapısı ortak çekirdekte ve bu depoyu adıyla tanımaz; depo
-   kendini kaydeder. Modül yüklenmediyse seçim de yoktur (disk yok, bellek boş) — kaydın yalnız
-   yüklenince yapılması bu yüzden eksik değil, tam. */
+/* Oturum kapanınca seçim düşer; kapanış kapısı bu depoyu adıyla tanımadığı için depo kendini kaydeder. */
 registerSessionCleanup(resetDeliveryAddress);
 
 /** Seçili adres kimliği; `null` = varsayılan geçerli (künye). Ekranların okuma seam'i. */
