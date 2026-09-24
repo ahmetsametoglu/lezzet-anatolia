@@ -465,7 +465,7 @@
                 <span style="font:700 13px 'Karla';color:#4a6121">{{ kv.likesLabel }}</span>
                 <span style="font:400 13.5px/1.55 'Karla';color:#6d7261">Beğenileriniz hangi lezzetleri getireceğimize yön veriyor. Bir aday satışa çıktığında beğendiyseniz haber veriyoruz.</span>
                 <sc-if value="{{ kv.ptsShow }}"><span style="background:#f9ede2;color:#b05c2e;font:700 14px 'Karla';padding:9px 18px;border-radius:18px">{{ kv.award }}</span></sc-if>
-                <sc-if value="{{ kv.loginHint }}"><span style="font:400 12.5px 'Karla';color:#8a8270">Giriş yaparsanız keşif turları puan kazandırır.</span><span style="border:1.5px solid #cddbb0;color:#4a6121;font:700 13px 'Karla';padding:10px 20px;border-radius:20px" onClick="{{ kv.loginGo }}">Hızlı doğrulama</span></sc-if>
+                <sc-if value="{{ kv.loginHint }}"><span style="font:400 12.5px 'Karla';color:#8a8270">Giriş yaparsanız keşif turları puan kazandırır.</span><span style="border:1.5px solid #cddbb0;color:#4a6121;font:700 13px 'Karla';padding:10px 20px;border-radius:20px" onClick="{{ kv.loginGo }}">Giriş yap</span></sc-if>
                 <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:24px;margin-top:6px" onClick="{{ kv.goCat }}">Kataloğa dön</span>
               </div>
             </sc-if>
@@ -552,7 +552,7 @@
                 <div style="background:#fff;border:2px solid #5f7a2c;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:9px">
                   <span style="font:600 18px 'Lora';color:#343b41">Önce hesabınıza girin</span>
                   <span style="font:400 13px/1.55 'Karla';color:#6d7261">Adresinizi seçip siparişi takip edebilmeniz için e-posta ya da telefonunuza tek kullanımlık kod göndeririz. Sepetiniz olduğu gibi kalır.</span>
-                  <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:50px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ cv.loginGo }}">Doğrulan</div>
+                  <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:50px;display:flex;align-items:center;justify-content:center;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ cv.loginGo }}">Giriş yap</div>
                 </div>
               </sc-if>
               <sc-if value="{{ cv.hasAcc }}" hint-placeholder-val="{{ true }}">
@@ -622,7 +622,7 @@
                 <div style="border:2px dashed #b05c2e;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:8px">
                   <span style="font:700 14px 'Karla';color:#343b41">Sepete dönüp hesabınıza girin</span>
                   <span style="font:400 12.5px 'Karla';color:#8a8270">Giriş ve adres seçimi sepette yapılıyor — bu adım yalnız onay içindir.</span>
-                  <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:12px 22px;border-radius:22px;width:max-content" onClick="{{ ck.loginGo }}">Doğrulan ve devam et</span>
+                  <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:12px 22px;border-radius:22px;width:max-content" onClick="{{ ck.loginGo }}">Giriş yap ve devam et</span>
                 </div>
               </sc-if>
               <div style="display:flex;flex-direction:column;gap:8px">
@@ -735,7 +735,7 @@
         <sc-if value="{{ vConfirm }}">
           <div data-screen-label="Sipariş Onayı" style="animation:pageIn .28s ease;display:flex;flex-direction:column;align-items:center;gap:14px;padding:70px 30px 30px;text-align:center">
             <div style="width:92px;height:92px;border-radius:50%;background:#5f7a2c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:42px;animation:pop .5s ease">✓</div>
-            <h1 style="margin:0;font:600 26px 'Lora';color:#343b41">Siparişiniz alındı!</h1>
+            <h1 style="margin:0;font:600 26px 'Lora';color:#343b41">Teşekkürler, siparişiniz alındı!</h1>
             <span style="font:600 14px 'Karla';color:#8a8270">Sipariş no: <span style="color:#343b41">{{ cf.ref }}</span></span>
             <div style="background:#efdfc2;border-radius:16px;padding:14px 18px;display:flex;flex-direction:column;gap:6px;width:100%">
               <div style="display:flex;justify-content:space-between;font:600 13px 'Karla';color:#343b41"><span>Teslimat</span><span>{{ cf.day }}</span></div>
@@ -762,9 +762,9 @@
             <sc-if value="{{ ov.guest }}">
               <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 30px;text-align:center">
                 <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3h11v18l-1.9-1.5L13.7 21l-1.8-1.5L10 21l-1.8-1.5L6.5 21zM9.5 8h5M9.5 12h4"></path></svg>
-                <span style="font:600 18px 'Lora';color:#343b41">Siparişleriniz için hızlı doğrulama</span>
-                <span style="font:400 13px/1.5 'Karla';color:#8a8270">Şifre yok — e-posta ya da Google ile birkaç saniyede doğrulanın.</span>
-                <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:24px" onClick="{{ ov.loginGo }}">Hızlı doğrulama</span>
+                <span style="font:600 18px 'Lora';color:#343b41">Siparişlerinizi görmek için giriş yapın</span>
+                <span style="font:400 13px/1.5 'Karla';color:#8a8270">Şifre yok — e-posta ya da Google ile birkaç saniyede girersiniz.</span>
+                <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:24px" onClick="{{ ov.loginGo }}">Giriş yap</span>
               </div>
             </sc-if>
             <sc-if value="{{ ov.show }}">
@@ -890,7 +890,7 @@
             <div style="padding:20px 26px;display:flex;flex-direction:column;gap:16px">
               <img src="../00-marka/logo-isaret.png" style="height:76px;align-self:flex-start" alt="Lezzet Anatolie">
               <h1 style="margin:0;font:600 26px/1.25 'Lora';color:#343b41">Birkaç saniyede<br>doğrulanın</h1>
-              <span style="font:400 13.5px/1.5 'Karla';color:#6d7261">Şifre yok, form yok. İster yeni ister dönen müşteri olun — aynı yoldan devam edersiniz.</span>
+              <span style="font:400 13.5px/1.5 'Karla';color:#6d7261">Şifre yok, form yok. İster ilk siparişiniz olsun ister yüzüncüsü, giriş hep aynı.</span>
               <sc-if value="{{ lg.mNull }}">
                 <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
                   <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #d8cfb6;border-radius:26px;height:54px;padding:0 20px" onClick="{{ lg.g }}"><span style="font:700 16px 'Karla';color:#4285f4">G</span><span style="font:700 14px 'Karla';color:#343b41">Google ile devam et</span></div>
@@ -914,10 +914,10 @@
               <sc-if value="{{ lg.busy }}">
                 <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 0">
                   <div style="width:40px;height:40px;border-radius:50%;border:4px solid #eef2e2;border-top-color:#5f7a2c;animation:spin .8s linear infinite"></div>
-                  <span style="font:600 13.5px 'Karla';color:#6d7261">Doğrulanıyor…</span>
+                  <span style="font:600 13.5px 'Karla';color:#6d7261">Giriş yapılıyor…</span>
                 </div>
               </sc-if>
-              <span style="font:400 11.5px/1.5 'Karla';color:#9a917c;margin-top:10px">Doğrulanarak <span style="color:#5f7a2c;text-decoration:underline" onClick="{{ goGizlilik }}">gizlilik politikamızı</span> kabul etmiş olursunuz. Hangi yolu seçerseniz seçin aynı hesabınıza ulaşırsınız.</span>
+              <span style="font:400 11.5px/1.5 'Karla';color:#9a917c;margin-top:10px">Devam ederek <span style="color:#5f7a2c;text-decoration:underline" onClick="{{ goGizlilik }}">gizlilik politikamızı</span> kabul etmiş olursunuz. Hangi yolu seçerseniz seçin aynı hesabınıza ulaşırsınız.</span>
             </div>
           </div>
         </sc-if>
@@ -997,8 +997,8 @@
               <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 30px;text-align:center">
                 <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 20c1.5-3.8 5.5-4.8 7.5-4.8s6 1 7.5 4.8"></path></svg>
                 <span style="font:600 18px 'Lora';color:#343b41">Hoş geldiniz</span>
-                <span style="font:400 13px/1.5 'Karla';color:#8a8270">Hesabınıza ulaşmak için birkaç saniyede doğrulanın — şifre yok.</span>
-                <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:24px" onClick="{{ hv.loginGo }}">Hızlı doğrulama</span>
+                <span style="font:400 13px/1.5 'Karla';color:#8a8270">Hesabınıza birkaç saniyede girin — şifre gerekmez.</span>
+                <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:24px" onClick="{{ hv.loginGo }}">Giriş yap</span>
               </div>
             </sc-if>
             <sc-if value="{{ hv.show }}">
@@ -1034,7 +1034,7 @@
               </sc-if>
               <sc-if value="{{ hv.refOn }}">
                 <div style="background:#efdfc2;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:8px">
-                  <span style="font:600 15px 'Lora';color:#343b41">Arkadaşını getir, ikiniz de kazanın</span>
+                  <span style="font:600 15px 'Lora';color:#343b41">Arkadaşınızı getirin, ikiniz de kazanın</span>
                   <span style="font:400 12px/1.5 'Karla';color:#6d7261">Kodunuzla ilk siparişini veren arkadaşınız 5 € indirim kazanır; teslimattan sonra size de 5 € kupon yüklenir.</span>
                   <div style="display:flex;gap:8px;align-items:center">
                     <span style="flex:1;background:#fff;border:1.5px dashed #cdc4a8;border-radius:14px;padding:12px 14px;font:700 14px 'Karla';color:#343b41;letter-spacing:.06em;text-align:center">{{ hv.refCode }}</span>
@@ -1044,7 +1044,7 @@
               </sc-if>
               <div style="background:#ece3c8;border-radius:18px;overflow:hidden">
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px" onClick="{{ hv.goOrders }}"><span style="font:700 13.5px 'Karla';color:#343b41"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:8px"><path d="M6.5 3h11v18l-1.9-1.5L13.7 21l-1.8-1.5L10 21l-1.8-1.5L6.5 21zM9.5 8h5M9.5 12h4"></path></svg>Siparişlerim</span><span style="color:#b3ab97">›</span></div>
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-top:1.5px dashed #d8cfb6" onClick="{{ hv.goTaleps }}"><span style="font:700 13.5px 'Karla';color:#343b41"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.7" stroke-linejoin="round" style="vertical-align:-3px;margin-right:8px"><path d="M21 11.5c0 3.9-4 7-9 7-1.1 0-2.1-.15-3.1-.42L4.5 19.5l1.3-3.1C4.3 15.1 3 13.4 3 11.5c0-3.9 4-7 9-7s9 3.1 9 7z"></path></svg>Taleplerim</span><span style="color:#b3ab97">›</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-top:1.5px dashed #d8cfb6" onClick="{{ hv.goTaleps }}"><span style="font:700 13.5px 'Karla';color:#343b41"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.7" stroke-linejoin="round" style="vertical-align:-3px;margin-right:8px"><path d="M21 11.5c0 3.9-4 7-9 7-1.1 0-2.1-.15-3.1-.42L4.5 19.5l1.3-3.1C4.3 15.1 3 13.4 3 11.5c0-3.9 4-7 9-7s9 3.1 9 7z"></path></svg>Destek</span><span style="color:#b3ab97">›</span></div>
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-top:1.5px dashed #d8cfb6" onClick="{{ hv.write }}"><span style="font:700 13.5px 'Karla';color:#343b41"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.7" stroke-linejoin="round" style="vertical-align:-3px;margin-right:8px"><rect x="3" y="5.5" width="18" height="13" rx="2"></rect><path d="m4 7.5 8 6 8-6"></path></svg>Bize yazın</span><span style="color:#b3ab97">›</span></div>
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-top:1.5px dashed #d8cfb6" onClick="{{ hv.teslimat }}"><span style="display:flex;align-items:center;gap:10px;font:700 13.5px 'Karla';color:#343b41"><svg width="17" height="14" viewBox="0 0 24 19" fill="none" stroke="#8a8270" stroke-width="1.8"><path d="M1 1h13v12H1zM14 5h5l4 4v4h-9"></path><circle cx="6" cy="16" r="2.2"></circle><circle cx="18" cy="16" r="2.2"></circle></svg>Teslimat &amp; soğuk zincir</span><span style="color:#b3ab97">›</span></div>
               </div>
@@ -1095,7 +1095,7 @@
           <div data-screen-label="Talepler" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
             <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
-              <span style="font:600 17px 'Lora';color:#343b41;flex:1">Taleplerim</span>
+              <span style="font:600 17px 'Lora';color:#343b41;flex:1">Destek</span>
               <span style="font:700 12.5px 'Karla';color:#5f7a2c" onClick="{{ tv.nw }}">＋ Yeni</span>
             </div>
             <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px">
@@ -1254,7 +1254,7 @@
           <div data-screen-label="Professionnels" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
             <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
-              <span style="font:600 17px 'Lora';color:#343b41">Professionnels</span>
+              <span style="font:600 17px 'Lora';color:#343b41">Profesyoneller</span>
             </div>
             <sc-if value="{{ pr.notSent }}">
               <div style="padding:18px;display:flex;flex-direction:column;gap:16px">
@@ -1354,8 +1354,8 @@
                 <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 30px;text-align:center">
                   <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5c0-3.3-2.7-5.5-6-5.5S6 5.2 6 8.5c0 6-2.5 7-2.5 7h17s-2.5-1-2.5-7"></path><path d="M10 19.5a2.2 2.2 0 0 0 4 0"></path></svg>
                   <span style="font:600 18px 'Lora';color:#343b41">Bildirimleriniz burada toplanır</span>
-                  <span style="font:400 13px/1.5 'Karla';color:#8a8270">Sipariş durumu, fırsatlar ve stok haberleri için birkaç saniyede doğrulanın.</span>
-                  <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:16px;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ nv.loginGo }}">Hızlı doğrulama</span>
+                  <span style="font:400 13px/1.5 'Karla';color:#8a8270">Sipariş durumu, fırsatlar ve stok haberleri için giriş yapın.</span>
+                  <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:16px;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ nv.loginGo }}">Giriş yap</span>
                 </div>
               </sc-if>
               <sc-for list="{{ nv.rows }}" as="n" hint-placeholder-count="3">
@@ -1694,7 +1694,7 @@
           </div>
           <div style="flex:1;min-height:0;display:flex;flex-direction:column;justify-content:{{ ob.jc }};padding:0 26px;gap:13px">
             <sc-if value="{{ ob.s1 }}">
-              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">HOŞ GELDİNİZ · BIENVENUE</span>
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">HOŞ GELDİNİZ · BIENVENUE · WILLKOMMEN</span>
               <span style="font:600 30px/1.12 'Lora';color:#343b41">Hangi dilde devam edelim?</span>
               <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
                 <sc-for list="{{ ob.langs }}" as="l" hint-placeholder-count="3">
@@ -1934,7 +1934,7 @@ class Component extends DCLogic {
       const cp=[...s.cartPkgs]; addP.forEach(a=>{ const i=cp.findIndex(c=>c.kid===a.kid); if(i>=0)cp[i]={...cp[i],qty:cp[i].qty+a.qty}; else cp.push({...a}); });
       return {cart,cartPkgs:cp,stack:[{n:'cart'}]};
     },()=>this.st0());
-    this.toastM(skipped.length?skipped.join(', ')+' eklenemedi (tükendi)':'Kalemler güncel fiyatlarla sepete eklendi ✓');
+    this.toastM(skipped.length?skipped.join(', ')+' eklenemedi (tükendi)':'Ürünler güncel fiyatlarla sepete eklendi ✓');
   }
   kDown(e){ if(this.state.kAnim)return; this._kp={x:e.clientX,y:e.clientY}; try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){} this.setState({kDrag:true}); }
   kMove(e){ if(!this._kp||this.state.kAnim)return; this.setState({kD:{x:e.clientX-this._kp.x,y:e.clientY-this._kp.y}}); }
@@ -1950,7 +1950,7 @@ class Component extends DCLogic {
   }
   loginOpen(){ this.setState({login:{m:null,email:'',sent:false,code:'',busy:false}}); this.go({n:'login'}); }
   gLogin(){ this.setState(s=>({login:{...s.login,busy:true}})); setTimeout(()=>this.finishLogin(),1100); }
-  finishLogin(){ this.setState(s=>({li:true,login:{m:null,email:'',sent:false,code:'',busy:false},stack:s.stack.filter(p=>p.n!=='login')})); this.toastM('Doğrulandı — hoş geldiniz ✓'); }
+  finishLogin(){ this.setState(s=>({li:true,login:{m:null,email:'',sent:false,code:'',busy:false},stack:s.stack.filter(p=>p.n!=='login')})); this.toastM('Hoş geldiniz ✓'); }
   sendCode(){ const e=this.state.login.email; if(!/.+@.+\..+/.test(e)){ this.toastM('Geçerli bir e-posta girin'); return; } this.setState(s=>({login:{...s.login,sent:true}})); }
   onCode(e){ const v=e.target.value.replace(/\D/g,'').slice(0,6); this.setState(s=>({login:{...s.login,code:v}})); if(v.length===6)setTimeout(()=>this.finishLogin(),400); }
   logout(){ this.setState({li:false,tab:'home',stack:[]}); this.toastM('Çıkış yapıldı'); }
