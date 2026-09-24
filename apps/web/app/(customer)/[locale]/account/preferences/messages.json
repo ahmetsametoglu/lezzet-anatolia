@@ -4,7 +4,7 @@
     "title": "Bildirim tercihleri",
     "intro": "Hangi bildirimleri almak istediğinizi buradan seçersiniz. Değişiklik anında geçerli olur.",
     "campaignTitle": "Kampanya iletişimi",
-    "campaignNote": "Kapalı kanaldan hiçbir kampanya iletişimi gitmez.",
+    "campaignNote": "Kapattığınız kanaldan kampanya mesajı göndermeyiz.",
     "campaignEmail": "E-posta",
     "campaignWhatsapp": "WhatsApp",
     "reviewTitle": "Değerlendirme daveti",

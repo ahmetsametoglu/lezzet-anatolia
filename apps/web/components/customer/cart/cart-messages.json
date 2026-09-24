@@ -1,7 +1,7 @@
 {
   "tr": {
     "removed": "{name} sepetten çıkarıldı",
-    "removedFallback": "Kalem sepetten çıkarıldı",
+    "removedFallback": "Ürün sepetten çıkarıldı",
     "undo": "Geri al",
     "writeFailed": "Değişiklik kaydedilemedi, sepet eski hâline döndü",
     "retry": "Tekrar dene",

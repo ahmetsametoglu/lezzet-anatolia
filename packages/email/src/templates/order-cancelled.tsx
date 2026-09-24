@@ -7,10 +7,8 @@ import type { OrderEmailProps } from './order-confirmed';
 void React;
 
 /**
- * **Sipariş iptal edildi** (14.5) — `design/project/Email - Siparis Iptal.html`.
- *
- * İSTİSNA bildirimi: zaman çizgisi YOKTUR, yerine tek durum bloğu vardır (tasarım kuralı — yolculuk
- * bitmedi, kesildi). Para çözümü ilk karttadır: müşterinin ilk sorusu "param ne olacak".
+ * Sipariş iptal edildi — yolculuk bitmedi, kesildi; bu yüzden zaman çizgisi yerine tek durum bloğu vardır.
+ * Para çözümü ilk karttadır, çünkü müşterinin ilk sorusu "param ne olacak".
  */
 
 interface Copy {
@@ -46,13 +44,13 @@ const COPY: Record<PreferredLanguage, Copy> = {
     subject: (ref) => `Siparişiniz iptal edildi — ${ref}`,
     preview: (ref, amount) => (amount ? `${ref} iptal edildi, ${amount} iade sürecinde.` : `${ref} iptal edildi.`),
     blockHeadline: (at) => (at ? `İptal edildi · ${at}` : 'İptal edildi'),
-    blockDetail: 'Sipariş hazırlığa girmedi, hiçbir kalem yola çıkmadı. Bu sipariş için başka bir işlem yapmanız gerekmiyor.',
+    blockDetail: 'Sipariş hazırlığa girmedi, hiçbir ürün yola çıkmadı. Bu sipariş için başka bir işlem yapmanız gerekmiyor.',
     refundTitle: 'İade',
     orderAmount: 'Sipariş tutarı',
     refunded: 'İade edilen',
     refundNote: 'Ödeme yaptığınız yönteme iade edilir · bankaya bağlı olarak 3–5 iş günü içinde hesabınızda görünür.',
     collectNote: 'Bu sipariş için tahsilat yapılmamıştı — iade edilecek bir tutar yok.',
-    itemsTitle: 'İptal edilen kalemler',
+    itemsTitle: 'İptal edilen ürünler',
     reorder: 'Aynı siparişi tekrar oluştur',
     helpTitle: 'İptal beklediğiniz gibi değil miydi?',
     helpText: 'Siparişi siz iptal etmediyseniz ya da bir yanlışlık olduğunu düşünüyorsanız yazın — aynı gün dönüyoruz.',

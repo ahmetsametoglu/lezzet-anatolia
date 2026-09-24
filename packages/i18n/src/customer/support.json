@@ -79,8 +79,8 @@
         "eyebrow": "Sipariş {reference}",
         "question": "Hangi ürünlerle ilgili?",
         "line": "{quantity}× {name}",
-        "bundleNote": "Paket satırları tek tek işaretlenemiyor — paketle ilgili bir sorunu aşağıya yazın.",
-        "error": "Sipariş kalemleri getirilemedi; yine de yazabilirsiniz."
+        "bundleNote": "Paketin içindeki ürünler tek tek seçilemiyor — paketle ilgili sorunu aşağıya yazın.",
+        "error": "Siparişin ürünleri yüklenemedi; yine de yazabilirsiniz."
       },
       "typeTitle": "Konu",
       "message": {

@@ -15,7 +15,7 @@
       "saved": "Profil güncellendi ✓",
       "errors": {
         "name_required": "Ad boş olamaz.",
-        "phone_invalid": "Telefon numarası çözülemedi — kontrol edin.",
+        "phone_invalid": "Telefon numarasını tanıyamadık — kontrol edin.",
         "unexpected": "Kaydedilemedi — yeniden deneyin."
       },
       "saving": "Kaydediliyor…"
@@ -129,7 +129,7 @@
       "note": "Kapalıyken hiçbir kampanya iletişimi almazsınız. Sipariş bildirimleri bundan etkilenmez.",
       "zone": {
         "title": "Bölgemizin dışındasınız",
-        "body": "{place} için şu an yalnız kargolanabilir ürünleri gösterebiliyoruz. Buraya kendi soğutuculu aracımızla teslimat açmamızı ister misiniz? Talebiniz, hattı nereye açacağımıza karar verirken sayılır — hat açıldığında e-postayla haber veririz.",
+        "body": "{place} için şu an yalnız kargolanabilir ürünleri gösterebiliyoruz. Buraya kendi soğutuculu aracımızla teslimat açmamızı ister misiniz? Talebiniz, aracımızın gideceği yeni bölgeleri seçerken sayılır — teslimat başladığında e-postayla haber veririz.",
         "cta": "Buraya teslimat açılsın istiyorum",
         "done": "Talebiniz alındı — hat açıldığında haber vereceğiz ✓",
         "sent": "Talebiniz alındı ✓"
@@ -173,7 +173,7 @@
       "saved": "Profil mis à jour ✓",
       "errors": {
         "name_required": "Le nom ne peut pas être vide.",
-        "phone_invalid": "Le numéro n'a pas pu être interprété — vérifiez-le.",
+        "phone_invalid": "Nous n'avons pas reconnu ce numéro — vérifiez-le.",
         "unexpected": "Impossible d'enregistrer — réessayez."
       },
       "saving": "Enregistrement…"

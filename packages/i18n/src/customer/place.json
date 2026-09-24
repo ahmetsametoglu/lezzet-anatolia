@@ -34,7 +34,7 @@
       "toastRecorded": "Talebiniz alındı, bilgilendirme listesindesiniz — {email}",
       "toastAlready": "Bu bölge için zaten kayıtlısınız — {email}",
       "placeUnknown": "Adresinizi çözemedik, kaydı alamadık. Posta kodunuzu kontrol edin.",
-      "emailRequired": "Kaydı işleyemedik: oturumunuz çözülemedi. Tekrar deneyin.",
+      "emailRequired": "Kaydınızı alamadık: oturumunuzu tanıyamadık. Tekrar deneyin.",
       "failed": "Kaydınızı alamadık. Bağlantınızı kontrol edip tekrar deneyin.",
       "close": "Kapat"
     },

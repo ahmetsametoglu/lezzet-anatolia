@@ -20,7 +20,7 @@
       "shelfLife": "Çözdükten sonra tüketim",
       "shelfLifeValue": "En geç {n} gün içinde",
       "allergens": "Pakette bulunan alerjenler",
-      "allergensNote": "Kalem kalem içindekiler ve tam beyan, her ürünün kendi sayfasındadır."
+      "allergensNote": "Her ürünün içindekiler listesi ve tam beyanı kendi sayfasındadır."
     },
     "fixedNote": "Paket bütün olarak satılır; içerik değiştirilemez. Ürünleri tek tek almak isterseniz kataloğa göz atın.",
     "contents": {
@@ -30,7 +30,7 @@
       "qtyPlain": "{n} adet",
       "link": "Ürün bilgisi →",
       "linkShort": "Bilgi →",
-      "legal": "Yasal beyan ürün başına yapılır: her kalemin içindekiler, alerjen ve besin değeri bilgisi kendi ürün sayfasındadır — yukarıdaki kartlardan ulaşabilirsiniz. Paketin toplu alerjen listesi ve tüketim süresi satın alma alanında özetlenmiştir.",
+      "legal": "Yasal beyan ürün başına yapılır: her ürünün içindekiler, alerjen ve besin değeri bilgisi kendi ürün sayfasındadır — yukarıdaki kartlardan ulaşabilirsiniz. Paketin toplu alerjen listesi ve tüketim süresi satın alma alanında özetlenmiştir.",
       "legalShort": "Tam içindekiler ve yasal beyan her ürünün kendi sayfasında. Paketin toplu alerjen listesi yukarıda."
     },
     "seeShippablePackages": "Kargolanabilir paketleri gör",

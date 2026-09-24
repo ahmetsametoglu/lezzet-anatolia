@@ -2,12 +2,8 @@ import type { NotificationStep, PreferredLanguage } from '@lezzet/types';
 import { BRAND_COPY } from './brand-copy';
 
 /**
- * Üç sipariş e-postasının PAYLAŞILAN metinleri — zaman çizgisi adımları, alt bilgi, ortak kart
- * başlıkları. Şablon başına tekrarlansaydı "Bildirim tercihleri" üç yerde durur, biri değişince
- * ikisi eskirdi.
- *
- * Metin üç dilde: müşterinin `preferred_language`'ı (DOMAIN §10). Operasyon yüzeyi Türkçedir ama
- * bu maller MÜŞTERİYE gider — dil onun tercihidir.
+ * Sipariş e-postalarının paylaşılan metinleri: şablon başına tekrarlansaydı biri değişince ötekiler eskirdi.
+ * Dil müşterinin `preferred_language`'ıdır, çünkü operasyon Türkçe olsa da bu e-postalar müşteriye gider.
  */
 
 type OrderCopyLocale = PreferredLanguage;
@@ -28,8 +24,8 @@ export const SHARED_COPY: Record<OrderCopyLocale, SharedCopy> = {
   tr: {
     ...BRAND_COPY.tr,
     steps: { received: 'Alındı', prepared: 'Hazırlandı', on_the_way: 'Yolda', delivered: 'Teslim edildi' },
-    itemsTitle: 'Kalemler',
-    sentItemsTitle: 'Gönderilen kalemler',
+    itemsTitle: 'Ürünler',
+    sentItemsTitle: 'Gönderilen ürünler',
     totalsTitle: 'Tutar',
     currentTotal: 'Güncel toplam',
     viewOrder: 'Siparişimi görüntüle',

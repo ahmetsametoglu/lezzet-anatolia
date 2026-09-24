@@ -5,8 +5,8 @@
     "next": "Devam",
     "finish": "Bitir",
     "saving": "Kaydediliyor…",
-    "loading": "Künyeniz okunuyor…",
-    "doneToast": "Teşekkürler — künyeniz tamam ✓",
+    "loading": "Bilgileriniz yükleniyor…",
+    "doneToast": "Teşekkürler — bilgileriniz tamam ✓",
     "name": {
       "kicker": "TANIŞALIM",
       "title": "Adınız ve soyadınız",
@@ -30,7 +30,7 @@
     },
     "errors": {
       "name_required": "Ad boş olamaz.",
-      "phone_invalid": "Telefon numarası çözülemedi — kontrol edin.",
+      "phone_invalid": "Telefon numarasını tanıyamadık — kontrol edin.",
       "unexpected": "Kaydedilemedi — yeniden deneyin."
     }
   },
@@ -65,7 +65,7 @@
     },
     "errors": {
       "name_required": "Le nom ne peut pas être vide.",
-      "phone_invalid": "Le numéro n'a pas pu être interprété — vérifiez-le.",
+      "phone_invalid": "Nous n'avons pas reconnu ce numéro — vérifiez-le.",
       "unexpected": "Impossible d'enregistrer — réessayez."
     }
   },

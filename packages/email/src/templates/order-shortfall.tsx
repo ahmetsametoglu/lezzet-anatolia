@@ -7,13 +7,8 @@ import type { OrderEmailProps } from './order-confirmed';
 void React;
 
 /**
- * **Eksik karşılanma** (14.5) — `design/project/Email - Siparis Eksik Karsilanma.html`.
- *
- * Teslimattan ÖNCE gider: müşteri kapıda sürprizle karşılaşmasın. Zaman çizgisi yok; eksik kalem
- * amber bir blokta, para çözümü hemen altında.
- *
- * **Sebep yazılmaz** (tasarım kuralı). Stok mu bitti, tedarik mi gecikti — bu bizim sorunumuz;
- * müşterinin bilmesi gereken şey miktar ve paradır.
+ * Eksik karşılanma — teslimattan önce gider ki müşteri kapıda sürprizle karşılaşmasın. Sebep yazılmaz: stok mu bitti,
+ * tedarik mi gecikti bizim sorunumuz; müşterinin bilmesi gereken miktar ve paradır.
  */
 
 interface Copy {
@@ -38,27 +33,27 @@ interface Copy {
 
 const COPY: Record<PreferredLanguage, Copy> = {
   tr: {
-    pill: '⚠ Kalem eksik gönderildi',
+    pill: '⚠ Bir ürün eksik gönderildi',
     title: 'Siparişinizde bir değişiklik var.',
     intro: (ref) => (
       <>
-        <strong style={{ color: '#3a4147' }}>{ref}</strong> siparişinizin bir kaleminden sipariş ettiğiniz miktarın tamamını
+        <strong style={{ color: '#3a4147' }}>{ref}</strong> siparişinizdeki bir üründen sipariş ettiğiniz miktarın tamamını
         gönderemedik. Siparişin kalanı planlandığı gibi yolda.
       </>
     ),
     subject: (ref) => `Siparişinizde bir değişiklik var — ${ref}`,
-    preview: (amount) => (amount ? `Bir kalem eksik gönderildi, ${amount} iade edilecek.` : 'Bir kalem eksik gönderildi.'),
-    blockHeadline: 'Eksik gönderilen kalem',
+    preview: (amount) => (amount ? `Bir ürün eksik gönderildi, ${amount} iade edilecek.` : 'Bir ürün eksik gönderildi.'),
+    blockHeadline: 'Eksik gönderilen ürün',
     totalsTitle: 'Güncellenen tutar',
     previousTotal: 'Önceki toplam',
-    difference: 'Eksik kalem farkı',
+    difference: 'Eksik ürün tutarı',
     currentTotal: 'Güncel toplam',
     refundNote: (amount) => `Online ödediğiniz için fark (${amount}) ödeme yönteminize iade edilir — 3–5 iş günü.`,
-    collectNote: (amount) => `Tahsilat doğrudan ${amount} üzerinden yapılır; eksik kalem için ödeme almayız.`,
-    fullItems: 'Tam gönderilen kalemler',
+    collectNote: (amount) => `Tahsilat doğrudan ${amount} üzerinden yapılır; eksik ürün için ödeme almayız.`,
+    fullItems: 'Eksiksiz gönderilen ürünler',
     cta: 'Siparişimi görüntüle',
     helpTitle: 'Bu haliyle olmaz mı?',
-    helpText: 'Eksik kalem sizin için önemliyse yazın: kalan adedi bir sonraki teslimatınıza ekleyelim ya da siparişi iptal edelim.',
+    helpText: 'Eksik ürün sizin için önemliyse yazın: kalan adedi bir sonraki teslimatınıza ekleyelim ya da siparişi iptal edelim.',
     helpLink: 'Bize yazın →',
   },
   fr: {

@@ -78,7 +78,7 @@
         "pickup": "Depoda ödenecek",
         "paidOnHandover": "Teslimde ödendi",
         "transfer": "Havale bekleniyor",
-        "credit": "Vadeli (B2B)",
+        "credit": "Vadeli ödeme",
         "refunded": "İade edildi"
       },
       "milestone": {
@@ -182,7 +182,7 @@
         "pickup": "À régler à l’entrepôt",
         "paidOnHandover": "Payé à la remise",
         "transfer": "Virement en attente",
-        "credit": "À terme (B2B)",
+        "credit": "Paiement à terme",
         "refunded": "Remboursé"
       },
       "milestone": {
@@ -286,7 +286,7 @@
         "pickup": "Im Lager zu zahlen",
         "paidOnHandover": "Bei Übergabe bezahlt",
         "transfer": "Überweisung ausstehend",
-        "credit": "Auf Rechnung (B2B)",
+        "credit": "Auf Rechnung",
         "refunded": "Erstattet"
       },
       "milestone": {

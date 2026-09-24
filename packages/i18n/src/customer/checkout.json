@@ -35,7 +35,7 @@
       "notFound": "Bu adresi bulamadık. Yazımını kontrol eder misiniz?"
     },
     "undeliverable": {
-      "title": "Bazı kalemler bu siparişe girmiyor",
+      "title": "Bazı ürünler bu siparişe girmiyor",
       "body": "Soğuk zincir gerektiren ürünleri bu adrese götüremiyoruz; onlar sepetinizde bekliyor ve bu siparişe eklenmiyor. Bölge içi bir adres seçerseniz aynı siparişe dahil olurlar.",
       "items": "Bekleyenler: {items}."
     },
@@ -121,12 +121,12 @@
       "session": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın.",
       "warehouse_unresolved": "Adresiniz için teslimat noktası belirlenemedi. Ekibimize haber verildi — lütfen bizimle iletişime geçin.",
       "empty_cart": "Sepetiniz boş görünüyor.",
-      "blocked_lines": "Sepetinizde artık satın alınamayan kalemler var: {detail}. Sepete dönüp çıkarın.",
+      "blocked_lines": "Sepetinizde artık satın alınamayan ürünler var: {detail}. Sepete dönüp çıkarın.",
       "insufficient_here": "Bazı ürünlerden istediğiniz adet bu adrese gönderilemiyor — parantezdeki sayı şu an mümkün olan en fazla adet: {detail}. Sepette düzeltebilirsiniz.",
       "min_basket": "Sipariş alt sınırının altındasınız — {missing} daha ekleyin.",
       "address_not_found": "Seçilen adres bulunamadı.",
       "address_city_mismatch": "{postalCode} posta kodu {city} ile eşleşmiyor. Şu yerlerden biri olmalı: {places}. Adresi hesabınızdan düzeltin.",
-      "cold_chain_unshippable": "Soğuk zincir kalemleri bu adrese gönderilemiyor.",
+      "cold_chain_unshippable": "Soğuk zincir ürünleri bu adrese gönderilemiyor.",
       "date_unavailable": "Seçtiğiniz gün artık uygun değil — lütfen yeniden seçin.",
       "payment_not_allowed": "Bu ödeme yöntemi şu an kullanılamıyor — açık yollardan birini seçin.",
       "price_changed": "Siz ekrandayken bazı fiyatlar değişti: {detail}. Sipariş vermeden önce görmenizi istedik — onaylıyorsanız tekrar onaylayın.",
@@ -180,7 +180,7 @@
       "refunded": "Siparişiniz iptal edildi, paranız iade edildi",
       "refundedBody": "Ödemeniz alındıktan sonra ürünlerden biri tükendi ve siparişi tamamlayamadık. Tahsil edilen tutarın tamamı kartınıza iade edildi — bankanıza göre 3-5 iş günü içinde hesabınıza döner. Özür dileriz.",
       "incomplete": "Siparişiniz tamamlanmadı",
-      "incompleteBody": "Sipariş kaydedildi ama kesinleşmedi. Sepetiniz duruyor — checkout'a dönüp yeniden deneyebilirsiniz.",
+      "incompleteBody": "Sipariş kaydedildi ama kesinleşmedi. Sepetiniz duruyor — ödeme adımına dönüp yeniden deneyebilirsiniz.",
       "retry": "Ödemeyi tekrar dene",
       "pickup": "Depodan teslim"
     }

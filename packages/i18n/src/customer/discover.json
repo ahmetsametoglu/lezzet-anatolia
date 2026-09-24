@@ -23,7 +23,7 @@
     },
     "done": {
       "title": "Hepsi bu kadardı — teşekkürler!",
-      "body": "Beğenileriniz hangi lezzetleri getireceğimize yön veriyor. Yeni adaylar geldikçe burası yeniden dolar."
+      "body": "Beğenileriniz hangi lezzetleri getireceğimize yön veriyor. Yeni lezzetler geldikçe burası yeniden dolar."
     }
   },
   "fr": {
@@ -50,7 +50,7 @@
     },
     "done": {
       "title": "C'était tout — merci !",
-      "body": "Vos avis orientent les saveurs que nous ferons venir. De nouveaux candidats rempliront cette page."
+      "body": "Vos avis orientent les saveurs que nous ferons venir. De nouvelles saveurs rempliront cette page."
     }
   },
   "de": {
@@ -77,7 +77,7 @@
     },
     "done": {
       "title": "Das war alles — vielen Dank!",
-      "body": "Ihre Bewertungen lenken, welche Spezialitäten wir holen. Sobald neue Kandidaten da sind, füllt sich diese Seite wieder."
+      "body": "Ihre Bewertungen lenken, welche Spezialitäten wir holen. Sobald neue Sorten da sind, füllt sich diese Seite wieder."
     }
   }
 }

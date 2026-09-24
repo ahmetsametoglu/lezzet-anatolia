@@ -27,14 +27,14 @@
     "toast": "Tur tamamlandı — teşekkürler ✓",
     "done": {
       "title": "Hepsi bu kadardı — teşekkürler!",
-      "body": "Beğenileriniz hangi lezzetleri getireceğimize yön veriyor. Yeni adaylar geldikçe burası yeniden dolar.",
+      "body": "Beğenileriniz hangi lezzetleri getireceğimize yön veriyor. Yeni lezzetler geldikçe burası yeniden dolar.",
       "loginHint": "Giriş yaparsanız keşif turları puan kazandırır.",
       "loginCta": "Giriş yap",
       "catalog": "Kataloğa dön"
     },
     "empty": {
       "title": "Şu an değerlendirecek yenilik yok",
-      "body": "Yeni adaylar geldikçe burası dolar.",
+      "body": "Yeni lezzetler geldikçe burası dolar.",
       "catalog": "Kataloğa dön"
     },
     "loading": "Yükleniyor…",
@@ -72,14 +72,14 @@
     "toast": "Tour terminé — merci ✓",
     "done": {
       "title": "C'était tout — merci !",
-      "body": "Vos avis orientent les saveurs que nous ferons venir. De nouveaux candidats rempliront cette page.",
+      "body": "Vos avis orientent les saveurs que nous ferons venir. De nouvelles saveurs rempliront cette page.",
       "loginHint": "Connectez-vous et vos tours de découverte vous rapportent des points.",
       "loginCta": "Se connecter",
       "catalog": "Voir le catalogue"
     },
     "empty": {
       "title": "Rien de nouveau à évaluer pour l'instant",
-      "body": "De nouveaux candidats rempliront cette page.",
+      "body": "De nouvelles saveurs rempliront cette page.",
       "catalog": "Voir le catalogue"
     },
     "loading": "Chargement…",
@@ -117,14 +117,14 @@
     "toast": "Runde abgeschlossen — danke ✓",
     "done": {
       "title": "Das war alles — vielen Dank!",
-      "body": "Ihre Bewertungen lenken, welche Spezialitäten wir holen. Sobald neue Kandidaten da sind, füllt sich diese Seite wieder.",
+      "body": "Ihre Bewertungen lenken, welche Spezialitäten wir holen. Sobald neue Sorten da sind, füllt sich diese Seite wieder.",
       "loginHint": "Mit Anmeldung bringen Ihnen Entdeckungsrunden Punkte.",
       "loginCta": "Anmelden",
       "catalog": "Zum Katalog"
     },
     "empty": {
       "title": "Derzeit gibt es nichts Neues zu bewerten",
-      "body": "Sobald neue Kandidaten da sind, füllt sich diese Seite.",
+      "body": "Sobald neue Sorten da sind, füllt sich diese Seite.",
       "catalog": "Zum Katalog"
     },
     "loading": "Wird geladen…",

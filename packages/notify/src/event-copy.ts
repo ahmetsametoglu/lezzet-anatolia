@@ -2,11 +2,8 @@ import type { PreferredLanguage } from '@lezzet/types';
 import type { NotifyEventName, NotifyPayloads } from './types';
 
 /*
-  ── OLAYIN TEK CÜMLELİK ÖZETİ — İKİ SÜRÜCÜNÜN ORTAK SÖZLÜĞÜ (14.16) ────────────────────────────
-  Kaynağı `wa-link.driver.ts`ti; push sürücüsü doğduğunda buraya TERFİ etti (CLAUDE §1): wa.me
-  metni ile push gövdesi aynı cümledir — iki kopya olsaydı biri gün gelip "yola çıktı"yı öteki
-  "hazırlanıyor" derken söylerdi. Mail bu sözlüğü KULLANMAZ: mailin işi özet değil, belgenin
-  kendisi (şablonlar `packages/email`de).
+  Olayın tek cümlelik özeti: wa.me metni ile push gövdesi aynı cümle olsun diye iki sürücü bu sözlüğü paylaşır.
+  E-posta bunu kullanmaz, çünkü onun işi özet değil belgenin kendisidir (şablonlar `packages/email`de).
 */
 
 /**
@@ -18,9 +15,8 @@ function say(locale: PreferredLanguage, phrases: Record<PreferredLanguage, strin
 }
 
 /**
- * **Talep mesajları konuyu TAŞIMAZ.** Sipariş referansı zaten müşterinin elindeki bir numaradır,
- * ama talep başlığı şikâyetin kendisidir ("bozuk et geldi") ve WhatsApp önizlemesi kilit ekranında
- * görünür. Bağlantı yeterli: ayrıntı talebin kendi sayfasında durur.
+ * Talep mesajları konuyu taşımaz: talep başlığı şikâyetin kendisidir ("bozuk et geldi") ve WhatsApp önizlemesi kilit
+ * ekranında görünür. Ayrıntı talebin kendi sayfasında durur, bağlantı yeterlidir.
  */
 export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => string } = {
   order_confirmed: (d) =>
@@ -55,7 +51,7 @@ export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => str
     }),
   order_shortfall: (d) =>
     say(d.locale, {
-      tr: `${d.referenceNo} numaralı siparişinizde bir kalem eksik gönderildi.`,
+      tr: `${d.referenceNo} numaralı siparişinizde bir ürün eksik gönderildi.`,
       fr: `Un article de votre commande ${d.referenceNo} a été livré en quantité incomplète.`,
       de: `Ein Artikel Ihrer Bestellung ${d.referenceNo} wurde unvollständig geliefert.`,
     }),
@@ -112,11 +108,8 @@ export const MESSAGE: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => str
       de: `Wir liefern jetzt nach ${d.postalCode}. Katalog: ${d.catalogUrl}`,
     }),
   /**
-   * Başvuru sonucu.
-   *
-   * **RET GEREKÇESİ WhatsApp'a YAZILMIYOR ve bu bilinçli:** gerekçe operatörün serbest metnidir,
-   * uzunluğu belirsizdir ve bağlantı öncesinde kesilirse müşteri yarım bir cümle okur. Mesaj
-   * "bir eksik var" der ve hesaba yönlendirir; gerekçenin tam hâli mailde ve ekranda durur.
+   * Ret gerekçesi WhatsApp'a yazılmaz: operatörün serbest metnidir ve bağlantıdan önce kesilirse müşteri yarım cümle okur.
+   * Mesaj yalnız hesaba yönlendirir; gerekçenin tamamı e-postada ve ekranda durur.
    */
   b2b_application_result: (d) =>
     d.approved

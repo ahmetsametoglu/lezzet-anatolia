@@ -27,7 +27,7 @@
       "per100g": "100 g için",
       "netQuantity": "Net miktar: {quantity}",
       "storage": "Saklama ve hazırlama",
-      "title": "Ürün künyesi",
+      "title": "Ürün bilgileri",
       "note": "yasal beyanlar"
     },
     "nutrition": {
@@ -119,7 +119,7 @@
     "similarAll": "Tüm katalog →",
     "ai": {
       "title": "Bu ürünü yapay zekâya sorun",
-      "note": "Cevap üçüncü tarafa aittir; alerjen, saklama ve besin bilgisi için yukarıdaki künye geçerlidir."
+      "note": "Cevap üçüncü tarafa aittir; alerjen, saklama ve besin bilgisi için yukarıdaki ürün bilgileri geçerlidir."
     }
   },
   "fr": {

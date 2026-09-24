@@ -7,11 +7,8 @@ import type { OrderEmailProps } from './order-confirmed';
 void React;
 
 /**
- * **Teslim edildi** (14.5) — kurye teslimi işaretleyince. `design/project/Email - Siparis Teslim Edildi.html`.
- *
- * Sorusu artık "ne geliyor" değil: mal geldi. Bu yüzden kalem listesi yerine **teslimat özeti**
- * (kaç kalem, kaç adet, ne tuttu) ve bir belge bağlantısı var. Belgenin üstündeki *"resmî fatura
- * değildir"* ibaresi tasarımın zorunlu maddesidir — özet fatura yerine geçmez (DOMAIN §6).
+ * Teslim edildi — mal geldiği için ürün listesi yerine teslimat özeti ve belge bağlantısı gösterilir.
+ * Belgedeki "resmî fatura değildir" ibaresi zorunludur, çünkü özet fatura yerine geçmez (DOMAIN §6).
  */
 
 interface Copy {
@@ -43,8 +40,8 @@ const COPY: Record<PreferredLanguage, Copy> = {
     subject: (ref) => `Siparişiniz teslim edildi — ${ref}`,
     preview: (ref) => `${ref} teslim edildi — afiyet olsun!`,
     summaryTitle: 'Teslimat özeti',
-    countLabel: (lines, qty) => `${lines} kalem · ${qty} adet`,
-    notInvoice: 'Belge kalemleri ve teslim edilen miktarları gösterir; resmî fatura değildir.',
+    countLabel: (lines, qty) => `${lines} ürün · ${qty} adet`,
+    notInvoice: 'Belge teslim edilen ürünleri ve miktarlarını gösterir; resmî fatura değildir.',
     summaryLink: '📄 Teslimat özetini görüntüle →',
     helpTitle: 'Bir sorun mu var?',
     helpText: 'Eksik, hasarlı ya da beklediğiniz gibi olmayan bir şey varsa doğrudan bize iletin — aynı gün dönüş yapıyoruz.',

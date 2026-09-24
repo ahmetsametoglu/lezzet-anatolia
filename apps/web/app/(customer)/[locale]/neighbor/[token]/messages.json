@@ -2,14 +2,14 @@
   "tr": {
     "meta": {
       "title": "Komşu daveti — Lezzet Anatolie",
-      "description": "Komşunuz sizi aynı gün teslimatına çağırıyor. Aynı sefere sipariş verin, birlikte teslim alın."
+      "description": "Komşunuz sizi aynı gün teslimatına çağırıyor. Aynı güne sipariş verin, birlikte teslim alın."
     },
     "ok": {
       "eyebrow": "Komşu daveti",
       "title": "{name} sizi {date} teslimatına çağırıyor",
       "someone": "Komşunuz",
-      "description": "Aynı gün, aynı araç, aynı sokak. Siparişinizi bu sefere verirseniz komşunuzla birlikte teslim alırsınız.",
-      "primary": "Bu sefere sipariş ver",
+      "description": "Aynı gün, aynı araç, aynı sokak. Siz de aynı güne sipariş verirseniz komşunuzla birlikte teslim alırsınız.",
+      "primary": "Aynı güne sipariş ver",
       "secondary": "Önce katalogu göreyim"
     },
     "unknown": {
@@ -20,20 +20,20 @@
     },
     "runClosed": {
       "eyebrow": "Komşu daveti",
-      "title": "{date} seferi için geç kalındı",
+      "title": "{date} teslimatı için artık geç",
       "description": "Bu davetin çağırdığı teslimat kapandı. Bölgenizin bir sonraki teslimat günü ödeme adımında görünür — sipariş vermeye devam edebilirsiniz.",
       "primary": "Katalogu keşfet"
     },
     "full": {
       "eyebrow": "Komşu daveti",
       "title": "Bu davetin kontenjanı doldu",
-      "description": "{date} seferi için davet edilebilecek komşu sayısına ulaşıldı. Siz yine sipariş verebilirsiniz; teslimat günü ödeme adımında seçilir.",
+      "description": "{date} teslimatı için davet edilebilecek komşu sayısına ulaşıldı. Siz yine sipariş verebilirsiniz; teslimat gününü ödeme adımında seçersiniz.",
       "primary": "Katalogu keşfet"
     },
     "self": {
       "eyebrow": "Komşu daveti",
       "title": "Bu sizin davet bağlantınız",
-      "description": "Bağlantı çalışıyor. Komşularınıza gönderin; onların siparişi bu sefere düştüğünde puanınız hesabınıza geçer.",
+      "description": "Bağlantınız çalışıyor. Komşularınıza gönderin; siparişleri aynı güne düştüğünde puanınız hesabınıza geçer.",
       "primary": "Siparişlerime dön"
     }
   },

@@ -22,7 +22,7 @@
             "paragraphs": [
               "Strasbourg ve çevresindeki adreslere siparişlerinizi kendi soğuk zincir aracımızla, kapınıza kadar getiriyoruz. Adresinizin bölgede olup olmadığını sipariş sırasında posta kodunuzla otomatik görürsünüz; teslimat gününüz bölgenizin takvimine göre sunulur.",
               {
-                "web": "Posta kodunuzu sitenin üst şeridinde her an değiştirebilirsiniz. Bölge dışındaki bir kod girdiğinizde kataloğun size gönderilebilen kısmı işaretlenir — sepete koyup checkout'ta sürprizle karşılaşmazsınız.",
+                "web": "Posta kodunuzu sitenin üst şeridinde her an değiştirebilirsiniz. Bölge dışındaki bir kod girdiğinizde kataloğun size gönderilebilen kısmı işaretlenir — sepete koyup ödeme adımında sürprizle karşılaşmazsınız.",
                 "app": "Posta kodunuzu vitrinin üstündeki bölge hapından her an değiştirebilirsiniz. Bölge dışındaki bir kod girdiğinizde kataloğun size gönderilebilen kısmı işaretlenir — sepete koyup \"Siparişi tamamla\" adımında sürprizle karşılaşmazsınız."
               }
             ],
@@ -34,7 +34,7 @@
             "paragraphs": [
               "Soğuk zincir gerektiren ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz. Bu ürünler kargoya verilemez: soğuk zinciri kargo koşullarında güvenle koruyamayız, koruyamadığımız bir şeyi de taşımayız.",
               "Diğer bütün ürünleri kargoyla gönderiyoruz — teslimat bölgemizde olun ya da olmayın. Yani bölge dışında olmanız alışveriş yapamayacağınız anlamına gelmez; yalnız soğuk zincir gerektiren ürünler size ulaşamaz.",
-              "Hangi ürünün hangi yolla geleceğini katalogda ve ürün sayfasında yazıyoruz. Bölge dışı bir adres seçtiğinizde soğuk zincir kalemleri siparişe eklenmez, sepetinizde bekler."
+              "Hangi ürünün hangi yolla geleceğini katalogda ve ürün sayfasında yazıyoruz. Bölge dışı bir adres seçtiğinizde soğuk zincir ürünleri siparişe eklenmez, sepetinizde bekler."
             ],
             "bullets": []
           },
@@ -43,8 +43,8 @@
             "heading": "Kargo ile gönderim",
             "paragraphs": [
               "Paketiniz hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında elinizde olur.",
-              "Sepetinizde hem kargoya uygun hem yalnız araçla gidebilen kalemler varsa sepet iki gruba ayrılır: kapıya gidenler ve kargoya gidenler ayrı sipariş, ayrı ödeme olur. Kargolu siparişi vermek zorunlu değildir — vermezseniz o kalemler sepette bekler.",
-              "Kargo ücreti ve ücretsiz kargo eşiği aşağıda, \"Güncel tutarlar\" bölümündedir; aynı sayıları sepette de, siparişi tamamlamadan önce görürsünüz."
+              "Sepetinizde hem kargoya uygun hem yalnız araçla gidebilen ürünler varsa sepet iki gruba ayrılır: kapıya gidenler ve kargoya gidenler ayrı sipariş, ayrı ödeme olur. Kargolu siparişi vermek zorunlu değildir — vermezseniz o ürünler sepette bekler.",
+              "Kargo ücreti ve ücretsiz kargo sınırı aşağıda, \"Güncel tutarlar\" bölümündedir; aynı sayıları sepette de, siparişi tamamlamadan önce görürsünüz."
             ],
             "bullets": []
           },
@@ -65,7 +65,7 @@
               "Buna karşılık şu durumlarda siparişinizin bedelini iade ediyoruz ya da yeniden gönderiyoruz — seçim sizindir:"
             ],
             "bullets": [
-              "Eksik gelen kalem: kutunuzdan çıkmayan ürünün bedeli otomatik olarak iade edilir, ayrıca talep açmanız gerekmez.",
+              "Eksik gelen ürün: kutunuzdan çıkmayan ürünün bedeli otomatik olarak iade edilir, ayrıca talep açmanız gerekmez.",
               "Hasarlı ya da çözülmüş gelen ürün: teslimattan sonraki 48 saat içinde fotoğrafla bildirin.",
               "Yanlış gönderilen ürün: doğrusunu gönderir ya da bedelini iade ederiz.",
               "Teslim edilemeyen sipariş: bizden kaynaklı bir sebeple teslim edilemediyse tahsilat yapılmaz, yapılmışsa iade edilir.",
@@ -77,8 +77,8 @@
             "heading": "İade nasıl ve ne zaman yapılır",
             "paragraphs": [
               "İade, ödemeyi yaptığınız yönteme yapılır. Kartla ödediyseniz tutar kartınıza geçer; bankanıza bağlı olarak hesabınızda görünmesi birkaç iş günü sürebilir.",
-              "Kapıda ödeme seçtiyseniz ve henüz ödeme yapmadıysanız iade diye bir şey olmaz — eksik kalemin bedeli teslimat anındaki tutardan zaten düşülür.",
-              "Talebinizi \"Taleplerim\" bölümünden açabilirsiniz; siparişinizi ve ilgili kalemleri formda seçtiğinizde bize neyin eksik ya da hasarlı olduğu doğrudan ulaşır."
+              "Kapıda ödeme seçtiyseniz ve henüz ödeme yapmadıysanız iade diye bir şey olmaz — eksik ürünün bedeli teslimat anındaki tutardan zaten düşülür.",
+              "Talebinizi \"Taleplerim\" bölümünden açabilirsiniz; siparişinizi ve ilgili ürünleri formda seçtiğinizde bize neyin eksik ya da hasarlı olduğu doğrudan ulaşır."
             ],
             "bullets": []
           }
@@ -98,8 +98,8 @@
             "FR": "Fransa",
             "DE": "Almanya"
           },
-          "unavailable": "Güncel kargo ücretini, ücretsiz kargo eşiğini ve asgari sepet tutarını sepetinizde ve ödeme adımında görürsünüz.",
-          "note": "Bu tutarlar perakende alışverişin genel kuralıdır ve sistemin bugün uyguladığı değerlerdir; değiştiklerinde bu sayfa da onlarla birlikte değişir. Bazı bölgelerde ve profesyonel hesaplarda farklı bir eşik geçerli olabilir — size uygulanan tutarı her zaman sepetinizde görürsünüz."
+          "unavailable": "Güncel kargo ücretini, ücretsiz kargo sınırını ve asgari sepet tutarını sepetinizde ve ödeme adımında görürsünüz.",
+          "note": "Bu tutarlar perakende alışverişin genel kuralıdır ve sistemin bugün uyguladığı değerlerdir; değiştiklerinde bu sayfa da onlarla birlikte değişir. Bazı bölgelerde ve profesyonel hesaplarda farklı bir sınır geçerli olabilir — size uygulanan tutarı her zaman sepetinizde görürsünüz."
         },
         "notice": {
           "text": "Aklınızdaki soruya burada cevap bulamadıysanız",
@@ -138,12 +138,12 @@
           {
             "id": "kapida-odeme",
             "question": "Kapıda ödeyebilir miyim?",
-            "answer": "Bölge içi teslimatlarda, belirli bir tutara kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla; üst sınır Teslimat ve iade sayfasında yazar. Daha yüksek tutarlarda ve tüm kargo gönderimlerinde ödeme sipariş sırasında alınır. Kapıda ödemede bir kalem eksik çıkarsa o kalemin bedeli teslimat anında zaten düşülür — sonradan iade beklemezsiniz."
+            "answer": "Bölge içi teslimatlarda, belirli bir tutara kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla; üst sınır Teslimat ve iade sayfasında yazar. Daha yüksek tutarlarda ve tüm kargo gönderimlerinde ödeme sipariş sırasında alınır. Kapıda ödemede bir ürün eksik çıkarsa o ürünün bedeli teslimat anında zaten düşülür — sonradan iade beklemezsiniz."
           },
           {
             "id": "eksik-kalem",
             "question": "Bir ürün eksik geldi, ne yapmalıyım?",
-            "answer": "Bir şey yapmanız gerekmez: kutunuzdan çıkmayan kalemin bedeli otomatik olarak hesaplanır ve iade edilir. Yine de durumu bize anlatmak isterseniz \"Taleplerim\" bölümünden siparişinizi seçip yazabilirsiniz."
+            "answer": "Bir şey yapmanız gerekmez: kutunuzdan çıkmayan ürünün bedeli otomatik olarak hesaplanır ve iade edilir. Yine de durumu bize anlatmak isterseniz \"Taleplerim\" bölümünden siparişinizi seçip yazabilirsiniz."
           },
           {
             "id": "toptan",
@@ -202,10 +202,10 @@
                 "web": "Teslimat: kayıtlı adresleriniz ve posta kodunuz. Posta kodu, hesabınız olmasa da tarayıcınızda saklanır — kataloğun size gönderilebilir kısmını gösterebilmek için.",
                 "app": "Teslimat: kayıtlı adresleriniz ve posta kodunuz. Posta kodu, hesabınız olmasa da cihazınızda saklanır — kataloğun size gönderilebilir kısmını gösterebilmek için."
               },
-              "Sipariş: verdiğiniz siparişler, kalemleri, tutarları ve durumları.",
+              "Sipariş: verdiğiniz siparişler, içerdikleri ürünler, tutarları ve durumları.",
               "İletişim tercihleri: kampanya izinleri ve tercih ettiğiniz dil.",
               "Talepleriniz: bize yazdığınız mesajlar ve eklediğiniz fotoğraflar.",
-              "İşletme müşterisiyseniz: SIRET numaranız ve şirket künyeniz.",
+              "İşletme müşterisiyseniz: SIRET numaranız ve şirket bilgileriniz.",
               "Mesajlarınız: WhatsApp, Messenger ya da Instagram'dan bize yazdıklarınız; gönderdiğiniz fotoğraflar ve sesli mesajlar dâhil.",
               "Google ile giriş yaparsanız: Google'ın bize ilettiği adınız ve e-posta adresiniz.",
               {
@@ -355,7 +355,7 @@
             "paragraphs": [
               "Sipariş, sepetinizi onaylayıp ödeme adımını tamamladığınızda kurulur — kapıda ödemeyi seçtiyseniz bu adımda ödeme yöntemini onaylamanız yeterlidir. Onay ekranını gördüğünüz ve onay e-postanız ulaştığı anda sipariş bizim tarafımızdan da kabul edilmiş sayılır.",
               "Fiyatlar sepette gösterildiği anda sabitlenir. Sipariş verdikten sonra katalogdaki fiyat değişse de siparişinizin tutarı değişmez.",
-              "Stokta olmadığı sonradan anlaşılan bir kalem varsa siparişiniz iptal edilmez: eksik kalem çıkarılır, bedeli tahsil edilmez ya da iade edilir ve durum size bildirilir."
+              "Stokta olmadığı sonradan anlaşılan bir ürün varsa siparişiniz iptal edilmez: eksik ürün çıkarılır, bedeli tahsil edilmez ya da iade edilir ve durum size bildirilir."
             ],
             "bullets": []
           },
@@ -374,7 +374,7 @@
             "heading": "Ödeme",
             "paragraphs": [
               "Kartla ödeme, güvenli bir ödeme sağlayıcısı üzerinden alınır. Kart bilgileriniz bize hiçbir aşamada ulaşmaz ve tarafımızca saklanmaz.",
-              "Teslimat bölgemiz içinde, belirli bir tutara kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla; üst sınır güncel hâliyle Teslimat ve iade sayfasındadır. Kapıda ödemede tahsil edilecek tutar, teslim edilen kalemlerin tutarıdır; eksik çıkan kalem baştan düşülür.",
+              "Teslimat bölgemiz içinde, belirli bir tutara kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla; üst sınır güncel hâliyle Teslimat ve iade sayfasındadır. Kapıda ödemede tahsil edilecek tutar, teslim edilen ürünlerin tutarıdır; eksik çıkan ürün baştan düşülür.",
               "Havale ve çekle ödeme yalnız onaylı işletme hesaplarına açıktır; ödeme koşullarınız hesabınıza tanımlanır.",
               "Peşin ödemeli siparişler, ödeme tamamlanmadan hazırlığa alınmaz. Kapıda ödemede tahsilat teslimat anında yapılır ve sipariş onaylandığı anda hazırlığa girer."
             ],
@@ -385,7 +385,7 @@
             "heading": "Teslimat",
             "paragraphs": [
               "Soğuk zincir gerektiren ürünleri (donuk ve soğutulmuş) yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere teslim ediyoruz. Diğer bütün ürünler kargoyla gönderilir — bölge içinde de, bölge dışında da. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
-              "Asgari sepet tutarı, kargo ücreti ve ücretsiz kargo eşiği güncel hâliyle Teslimat ve iade sayfasında yayımlanır; aynı tutarlar sipariş verilirken sepette de gösterilir. Paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında teslim edilir.",
+              "Asgari sepet tutarı, kargo ücreti ve ücretsiz kargo sınırı güncel hâliyle Teslimat ve iade sayfasında yayımlanır; aynı tutarlar sipariş verilirken sepette de gösterilir. Paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında teslim edilir.",
               "Belirtilen teslimat günleri tahminidir. Hava koşulları, trafik ya da kargo firmasından kaynaklanan gecikmeler teslimatı öteleyebilir; bu durumda sizi bilgilendiririz.",
               "Adreste bulunulmaması nedeniyle teslim edilemeyen siparişlerde teslimatı bir kez daha, ücretsiz deneriz. İkinci denemede de teslim edemezsek dondurulmuş ürünler satılamaz hâle geldiği için bedel iade edilmez. Ayrıntılar teslimat ve iade sayfasındadır."
             ],

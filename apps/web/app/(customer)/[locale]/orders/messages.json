@@ -6,7 +6,7 @@
     "navAccount": "Hesabım",
     "navOrders": "Siparişlerim",
     "navSupport": "Taleplerim",
-    "itemCount": "{count} kalem",
+    "itemCount": "{count} ürün",
     "detail": "Detay",
     "detailArrow": "Detay →",
     "loadMore": "Daha eski siparişler ↓",
@@ -32,13 +32,13 @@
       "cta": "Kataloğa göz at"
     },
     "reorderResult": {
-      "added": "{count} kalem sepete eklendi",
-      "addedToast": "Kalemler güncel fiyatlarla sepete eklendi ✓",
-      "skipped": "{count} kalem eklenemedi: {names}.",
+      "added": "{count} ürün sepete eklendi",
+      "addedToast": "Ürünler güncel fiyatlarla sepete eklendi ✓",
+      "skipped": "{count} ürün eklenemedi: {names}.",
       "none": "Bu siparişteki ürünlerin hiçbiri şu an satışta değil.",
       "goToCart": "Sepete git",
       "dismiss": "Kapat",
-      "note": "Kalemler güncel fiyatlarla kopyalanır."
+      "note": "Ürünler güncel fiyatlarla sepete eklenir."
     }
   },
   "fr": {

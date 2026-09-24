@@ -2,7 +2,7 @@
   "tr": {
     "meta": {
       "title": "Keşif — yakında gelebilecek ürünler",
-      "description": "Henüz satışta olmayan aday ürünleri değerlendirin; beğenileriniz ne getireceğimize karar verirken bize yol gösterir."
+      "description": "Henüz satışta olmayan yeni lezzetleri değerlendirin; beğenileriniz ne getireceğimize karar verirken bize yol gösterir."
     },
     "title": "Keşif",
     "counter": "{index} / {total}",
@@ -11,15 +11,15 @@
     "dislike": "Geç",
     "guestInvite": "Giriş yaparsanız değerlendirmeleriniz puan kazandırır",
     "guestInviteCta": "Giriş yap",
-    "progress": "{index}/{total} aday",
+    "progress": "{index}/{total} lezzet",
     "guestChip": "Giriş yapın, puan kazanın",
-    "candidate": "Aday ürün · {index}/{total}",
+    "candidate": "Yeni lezzet · {index}/{total}",
     "notice": "Beğeniler satın alma sözü değil: yalnız hangi ürünleri getireceğimize karar verirken sayılır.",
     "likeLong": "Beğendim",
     "dislikeLong": "Bana göre değil",
     "keySkip": "geç",
     "keyLike": "beğen · klavyeyle de karar verebilirsiniz",
-    "round": "Bu turdaki adaylar",
+    "round": "Bu turdaki lezzetler",
     "likedTitle": "Beğendikleriniz",
     "likedCount": "{n} ürünü beğendiniz.",
     "noLikes": "Bu turda beğeni işaretlemediniz — sorun değil, “hayır” da bilgidir.",
@@ -28,7 +28,7 @@
     "done": {
       "title": "Hepsini değerlendirdiniz!",
       "earned": "+{points} puan kazandınız",
-      "body": "Beğendikleriniz \"ne getirelim\" kararımıza katıldı. Yeni adaylar geldikçe burası yeniden dolar.",
+      "body": "Beğendikleriniz \"ne getirelim\" kararımıza katıldı. Yeni lezzetler geldikçe burası yeniden dolar.",
       "catalog": "Kataloğa dön",
       "balance": "Puan bakiyem →"
     },
@@ -41,7 +41,7 @@
     "claimed": "{points} puan hesabınıza yüklendi.",
     "empty": {
       "title": "Şu an değerlendirecek yenilik yok",
-      "body": "Yeni adaylar geldikçe burası dolar.",
+      "body": "Yeni lezzetler geldikçe burası dolar.",
       "catalog": "Kataloğa dön"
     },
     "errors": {
@@ -62,15 +62,15 @@
     "dislike": "Passer",
     "guestInvite": "Connectez-vous et vos avis vous rapportent des points",
     "guestInviteCta": "Se connecter",
-    "progress": "{index}/{total} candidats",
+    "progress": "{index}/{total} saveurs",
     "guestChip": "Connectez-vous pour gagner des points",
-    "candidate": "Produit candidat · {index}/{total}",
+    "candidate": "Nouvelle saveur · {index}/{total}",
     "notice": "Un « j’aime » n’est pas un engagement d’achat : il compte seulement quand nous choisissons les produits à ajouter à notre gamme.",
     "likeLong": "J’aime",
     "dislikeLong": "Pas pour moi",
     "keySkip": "passer",
     "keyLike": "j’aime · vous pouvez aussi décider au clavier",
-    "round": "Candidats de cette sélection",
+    "round": "Saveurs de cette sélection",
     "likedTitle": "Vos coups de cœur",
     "likedCount": "Vous avez aimé {n} produits.",
     "noLikes": "Aucun « j’aime » cette fois — ce n’est pas grave, un « non » nous renseigne aussi.",
@@ -79,7 +79,7 @@
     "done": {
       "title": "Vous avez tout évalué !",
       "earned": "+{points} points gagnés",
-      "body": "Vos avis ont rejoint notre choix de produits. De nouveaux candidats arriveront ici.",
+      "body": "Vos avis ont rejoint notre choix de produits. De nouvelles saveurs arriveront ici.",
       "catalog": "Voir le catalogue",
       "balance": "Mon solde de points →"
     },
@@ -92,7 +92,7 @@
     "claimed": "{points} points ont été crédités sur votre compte.",
     "empty": {
       "title": "Rien de nouveau à évaluer pour l'instant",
-      "body": "De nouveaux candidats arriveront ici.",
+      "body": "De nouvelles saveurs arriveront ici.",
       "catalog": "Voir le catalogue"
     },
     "errors": {
@@ -113,15 +113,15 @@
     "dislike": "Weiter",
     "guestInvite": "Mit Anmeldung bringen Ihre Bewertungen Punkte",
     "guestInviteCta": "Anmelden",
-    "progress": "{index}/{total} Kandidaten",
+    "progress": "{index}/{total} Sorten",
     "guestChip": "Anmelden und Punkte sammeln",
-    "candidate": "Produktkandidat · {index}/{total}",
+    "candidate": "Neue Sorte · {index}/{total}",
     "notice": "Ein Like ist keine Kaufzusage: Es zählt nur, wenn wir entscheiden, welche Produkte wir ins Sortiment aufnehmen.",
     "likeLong": "Gefällt mir",
     "dislikeLong": "Nichts für mich",
     "keySkip": "weiter",
     "keyLike": "gefällt mir · Sie können auch per Tastatur entscheiden",
-    "round": "Kandidaten dieser Runde",
+    "round": "Sorten dieser Runde",
     "likedTitle": "Ihre Favoriten",
     "likedCount": "Ihnen haben {n} Produkte gefallen.",
     "noLikes": "Diesmal kein Like — kein Problem, auch ein „Nein“ hilft uns weiter.",
@@ -130,7 +130,7 @@
     "done": {
       "title": "Sie haben alles bewertet!",
       "earned": "+{points} Punkte erhalten",
-      "body": "Ihre Bewertungen sind in unsere Auswahl eingeflossen. Sobald neue Kandidaten da sind, füllt sich diese Seite wieder.",
+      "body": "Ihre Bewertungen sind in unsere Auswahl eingeflossen. Sobald neue Sorten da sind, füllt sich diese Seite wieder.",
       "catalog": "Zum Katalog",
       "balance": "Mein Punktestand →"
     },
@@ -143,7 +143,7 @@
     "claimed": "{points} Punkte wurden Ihrem Konto gutgeschrieben.",
     "empty": {
       "title": "Derzeit gibt es nichts Neues zu bewerten",
-      "body": "Sobald neue Kandidaten da sind, füllt sich diese Seite.",
+      "body": "Sobald neue Sorten da sind, füllt sich diese Seite.",
       "catalog": "Zum Katalog"
     },
     "errors": {

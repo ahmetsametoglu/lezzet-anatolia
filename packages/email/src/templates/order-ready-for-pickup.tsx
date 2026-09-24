@@ -7,9 +7,8 @@ import type { OrderEmailProps } from './order-confirmed';
 void React;
 
 /**
- * **Hazır, depodan alabilirsiniz** (gel-al) — "yola çıktı"nın gel-al karşılığı: mal yola çıkmaz, müşteri gelir.
- * Aynı iskelet; sorusu "**nereye ve ne zaman geleyim?**". Teslimat bloğu depoyu ve aranacak numarayı yazar, randevu
- * telefonla kararlaştırılır (sistem saat vaat etmez). Tasarım dosyasında karşılığı yok; yola çıktı düzeni aynen.
+ * Hazır, depodan alabilirsiniz — "yola çıktı"nın gel-al karşılığı; teslimat bloğu depoyu ve aranacak numarayı yazar.
+ * Saat telefonla kararlaştırılır, çünkü sistem saat vaat etmez.
  */
 
 interface Copy {
@@ -34,7 +33,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
     intro: <>Siparişiniz depoda sizi bekliyor. Teslim saatini kararlaştırmak için aşağıdaki numaradan bize ulaşın.</>,
     subject: (ref) => `Siparişiniz hazır — ${ref}`,
     preview: 'Siparişiniz depodan teslim alınmaya hazır.',
-    itemsTitle: 'Hazırlanan kalemler',
+    itemsTitle: 'Hazırlanan ürünler',
     cta: 'Siparişi gör',
     helpTitle: 'Gelemeyecek misiniz?',
     helpText: 'Bize yazın ya da arayın; sipariş sizin için bekletilir.',

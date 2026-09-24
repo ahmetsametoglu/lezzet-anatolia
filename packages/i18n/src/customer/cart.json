@@ -18,7 +18,7 @@
       "noPrice": "Fiyat yok",
       "priceUp": "Fiyat güncellendi — önceki {price}",
       "undeliverable": "❄ Bu adrese teslim edemiyoruz",
-      "readOnly": "Bu satır uygulamadan düzenlenemiyor",
+      "readOnly": "Bu ürün uygulamadan değiştirilemiyor",
       "remove": "kaldır",
       "removeLabel": "{name} ürününü sepetten kaldır",
       "decrease": "{name} adedini azalt",
@@ -28,7 +28,7 @@
       "local": "Kapıya teslim",
       "shipping": "Kargoyla gönderilir",
       "undeliverable": "Bu adrese gelemeyenler",
-      "split": "Bu sepet iki ayrı siparişe bölünecek: kapıya getirilenler ve kargoyla gönderilenler ayrı ödenir. Kargolu siparişi vermek zorunlu değil — vermezseniz o kalemler sepette bekler.",
+      "split": "Bu sepet iki ayrı siparişe bölünecek: kapıya getirilenler ve kargoyla gönderilenler ayrı ödenir. Kargolu siparişi vermek zorunlu değil — vermezseniz o ürünler sepette bekler.",
       "routeTotal": "Kapıya gidecek toplam: {amount}",
       "routeNote": "Teslimat ücretsiz · kapıda ödeme mümkün",
       "shippingTotal": "Kargoyla gidecek toplam: {amount}",
@@ -39,7 +39,7 @@
       "shippingCta": "Kargolu ürünleri ayrıca sipariş ver"
     },
     "undeliverable": {
-      "title": "{place} için bazı kalemler gelemiyor",
+      "title": "{place} için bazı ürünler gelemiyor",
       "body": "Soğuk zincir ürünlerini yalnız kendi soğutuculu aracımızla götürüyoruz; {place} rotamızın dışında. Bölge içi bir adres seçerseniz siparişinize girerler.",
       "change": "Posta kodunu değiştir",
       "changeAddress": "Teslimat adresini değiştir"
@@ -68,7 +68,7 @@
     },
     "freeShipping": {
       "remaining": "Ücretsiz kargoya {amount} kaldı.",
-      "reached": "Ücretsiz kargo eşiğini geçtiniz."
+      "reached": "Ücretsiz kargo kazandınız."
     },
     "summary": {
       "subtotal": "Ara toplam",
@@ -82,14 +82,14 @@
       "undeliverableNote": "Bu adrese gelemeyen ürünler toplama dahil değildir; siparişe girmez, sepetinizde bekler."
     },
     "minimum": "Asgari sepet {minimum}. Sipariş verebilmek için birkaç ürün daha ekleyin.",
-    "blocked": "Devam etmek için tükenen ya da satışa kapanan kalemi sepetten çıkarın.",
+    "blocked": "Devam etmek için tükenen ya da satışa kapanan ürünü sepetten çıkarın.",
     "barBlock": {
       "minimum": "Asgari sepete {missing} eksik",
-      "blocked": "Sepette şu an satılamayan bir kalem var"
+      "blocked": "Sepette şu an satılamayan bir ürün var"
     },
     "unresolved": {
       "loading": "Sepetiniz getiriliyor",
-      "failed": "Sepetiniz şu an getirilemedi. Kalemleriniz duruyor, tutarlarını gösteremiyoruz."
+      "failed": "Sepetiniz şu an yüklenemedi. Ürünleriniz duruyor ama tutarlarını gösteremiyoruz."
     },
     "sync": {
       "failed": "Sepet sunucuyla eşitlenemedi; son değişiklik geri alındı."
@@ -102,7 +102,7 @@
       "note": "Sepetiniz teslimat adresinize göre değerlendirildi.",
       "none": "Henüz adres eklemediniz — şimdilik {code} posta koduna göre gösteriyoruz.",
       "pickupLine": "Depodan teslim · {name}",
-      "pickupNote": "Sepetiniz depodaki stoğa göre değerlendirildi. Teslim saatini telefonla kararlaştırın."
+      "pickupNote": "Sepetiniz bu deponun stoğuna göre hesaplandı. Teslim saatini telefonla kararlaştırın."
     }
   },
   "fr": {
@@ -124,7 +124,7 @@
       "noPrice": "Prix indisponible",
       "priceUp": "Prix mis à jour — précédemment {price}",
       "undeliverable": "❄ Non livrable à cette adresse",
-      "readOnly": "Cette ligne ne se modifie pas depuis l'application",
+      "readOnly": "Cet article ne se modifie pas depuis l'application",
       "remove": "retirer",
       "removeLabel": "Retirer {name} du panier",
       "decrease": "Diminuer la quantité de {name}",
@@ -174,7 +174,7 @@
     },
     "freeShipping": {
       "remaining": "Encore {amount} pour la livraison offerte.",
-      "reached": "Vous avez atteint la livraison offerte."
+      "reached": "La livraison vous est offerte."
     },
     "summary": {
       "subtotal": "Sous-total",
@@ -230,7 +230,7 @@
       "noPrice": "Preis nicht verfügbar",
       "priceUp": "Preis aktualisiert — zuvor {price}",
       "undeliverable": "❄ An diese Adresse nicht lieferbar",
-      "readOnly": "Diese Zeile lässt sich in der App nicht ändern",
+      "readOnly": "Dieser Artikel lässt sich in der App nicht ändern",
       "remove": "entfernen",
       "removeLabel": "{name} aus dem Warenkorb entfernen",
       "decrease": "Menge von {name} verringern",
@@ -280,7 +280,7 @@
     },
     "freeShipping": {
       "remaining": "Noch {amount} bis zum kostenlosen Versand.",
-      "reached": "Sie haben die Grenze für kostenlosen Versand erreicht."
+      "reached": "Ihr Versand ist kostenlos."
     },
     "summary": {
       "subtotal": "Zwischensumme",

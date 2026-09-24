@@ -1,7 +1,7 @@
 {
   "tr": {
     "pickerTitle": "Teslimat adresi",
-    "pickerBody": "Siparişiniz seçili adrese gider. Sepet ve ödeme ekranı bu adrese göre kurulur.",
+    "pickerBody": "Siparişiniz seçtiğiniz adrese gelir. Sepetiniz ve ödeme adımı bu adrese göre hesaplanır.",
     "selected": "seçili",
     "edit": "Düzenle",
     "add": "+ Yeni adres",

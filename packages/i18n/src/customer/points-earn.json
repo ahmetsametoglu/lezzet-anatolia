@@ -13,7 +13,7 @@
       "neighbor": {
         "title": "Komşunuzu çağırın",
         "cadence": "o güne çağırdığınız her komşu için · en fazla {max}",
-        "body": "Aracımız sokağınıza geldiği gün için komşunuzu davet edin. O güne sipariş verip ödeyen her komşu size puan kazandırır. Her sefer için yeni bir davet açılır.",
+        "body": "Aracımız sokağınıza geldiği gün için komşunuzu davet edin. O güne sipariş verip ödeyen her komşu size puan kazandırır. Her teslimat günü için yeni bir davet açılır.",
         "cta": "Siparişlerim"
       },
       "review": {
@@ -36,7 +36,7 @@
       "feedback_candidate": {
         "title": "Yeni lezzetleri oylayın",
         "cadence": "her kartta",
-        "body": "Henüz satışta olmayan adayları beğenin ya da geçin.",
+        "body": "Henüz satışta olmayan yeni lezzetleri beğenin ya da geçin.",
         "cta": "Keşfet"
       }
     }
@@ -78,7 +78,7 @@
       "feedback_candidate": {
         "title": "Votez pour les nouvelles saveurs",
         "cadence": "par carte",
-        "body": "Aimez ou passez les candidats pas encore en vente.",
+        "body": "Aimez ou passez les nouvelles saveurs pas encore en vente.",
         "cta": "Découvrir"
       }
     }
@@ -120,7 +120,7 @@
       "feedback_candidate": {
         "title": "Stimmen Sie über neue Sorten ab",
         "cadence": "je Karte",
-        "body": "Bewerten Sie Kandidaten, die noch nicht im Verkauf sind.",
+        "body": "Bewerten Sie neue Sorten, die noch nicht im Verkauf sind.",
         "cta": "Entdecken"
       }
     }

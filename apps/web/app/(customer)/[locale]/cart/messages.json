@@ -5,7 +5,7 @@
     "backLabel": "Geri",
     "count": "{n} ürün",
     "countOne": "1 ürün",
-    "blockedNotice": "Bir üründe stok değişti — işaretli kalemi çıkarmadan devam edilemez.",
+    "blockedNotice": "Bir üründe stok değişti — devam etmek için işaretli ürünü çıkarın.",
     "unitPrice": "birim {price}",
     "offerBadge": "Fırsat",
     "limitReached": "Bu fiyattan en fazla {n} adet — sınıra ulaştınız",
@@ -26,7 +26,7 @@
     "deliveryRow": "Teslimat",
     "vatShort": "KDV dahil",
     "checkout": "Ödemeye geç",
-    "checkoutBlocked": "Devam etmek için tükenen kalemi çıkarın",
+    "checkoutBlocked": "Devam etmek için tükenen ürünü çıkarın",
     "minBasket": "Sipariş için en az {min} gerekir — ara toplamınıza {missing} daha ekleyin.",
     "empty": {
       "title": "Sepetiniz şu an boş",
@@ -38,8 +38,8 @@
       "delivery": "Strasbourg ve çevresinde kapıya teslim ücretsiz · Fransa genelinde kargo — soğuk zincir ürünler hariç",
       "repeatTitle": "Son siparişinizi tekrarlayın",
       "repeatCta": "Aynısını sepete ekle",
-      "repeatItems": "{n} kalem",
-      "skipped": "{n} kalem şu an mevcut değil, eklenmedi.",
+      "repeatItems": "{n} ürün",
+      "skipped": "{n} ürün şu an mevcut değil, eklenmedi.",
       "packagesChip": "Paketler",
       "showcaseTitle": "Bu hafta çok sevilenler",
       "showcaseAll": "Tümünü gör →",
@@ -57,7 +57,7 @@
       "apply": "Uygula",
       "applied": "Uygulandı",
       "remove": "Kuponu kaldır",
-      "note": "Kupon; paket ve fırsat kalemlerine uygulanmaz, kalan kalemlerde geçerlidir.",
+      "note": "Kupon, paketlerde ve fırsat ürünlerinde geçmez; sepetin geri kalanında geçerlidir.",
       "rejected": {
         "invalid": "Bu kod geçerli değil.",
         "expired": "Bu kuponun süresi dolmuş.",
@@ -68,7 +68,7 @@
       }
     },
     "freeShipping": {
-      "reached": "Ücretsiz kargo eşiğini geçtiniz",
+      "reached": "Ücretsiz kargo kazandınız",
       "remaining": "Ücretsiz kargoya {amount} kaldı"
     },
     "packageBadge": "Paket · {n} ürün",
@@ -77,7 +77,7 @@
     "packageWhole": "bütün olarak artırılır/silinir",
     "unreachable": {
       "title": "Sepetiniz şu an getirilemedi",
-      "body": "Kalemleriniz duruyor — şu an gösteremiyoruz.",
+      "body": "Ürünleriniz duruyor — şu an gösteremiyoruz.",
       "retry": "Tekrar dene"
     },
     "group": {
@@ -95,12 +95,12 @@
       "shippingPayment": "yalnız online ödeme",
       "shippingCta": "Kargolu ürünleri ayrıca sipariş ver",
       "shippingCtaShort": "Ayrıca sipariş ver",
-      "shippingFootnote": "Kargo eşiği kendi tutarından hesaplanır — iki grup birbirinin eşiğini beslemez. İkinci siparişi vermek zorunlu değildir: vermezseniz kalemler sepette bekler, kapıya siparişinizi etkilemez.",
+      "shippingFootnote": "Ücretsiz kargo sınırı yalnız kargoyla gidecek ürünlerin tutarına bakar; iki siparişin tutarı toplanmaz. Kargo siparişini vermek zorunlu değildir: vermezseniz bu ürünler sepette bekler, kapıya teslim siparişiniz etkilenmez.",
       "summaryScope": "Sepetin tamamı",
-      "discountSplit": "İndirim her siparişe, o siparişin kalemlerine düşen payıyla uygulanır."
+      "discountSplit": "İndirim iki siparişe, tutarlarıyla orantılı olarak bölünür."
     },
     "placeChange": {
-      "title": "Yeni yerinize göre {n} kalem değişti",
+      "title": "Yeni teslimat yerinize göre {n} üründe değişiklik var",
       "toShipping": "{name} artık kargoyla gidiyor",
       "toRoute": "{name} kapıya teslime geçti",
       "noDelivery": "{name} bu adrese şu an gönderilemiyor",
@@ -108,7 +108,7 @@
       "reduced": "{name} — sepette {qty} adet, bu yere en fazla {max} adet getirebiliyoruz",
       "price": "{name} fiyatı değişti — {from} yerine {to}",
       "dismiss": "Anladım",
-      "note": "Hiçbir kalem silinmedi. Fırsat fiyatı bir partiye bağlıdır ve yere göre değişebilir; liste fiyatı ise yere göre asla değişmez."
+      "note": "Hiçbir ürün silinmedi. Fırsat fiyatları bölgedeki stoğa bağlıdır ve teslimat yerine göre değişebilir; normal fiyatlar ise her yerde aynıdır."
     },
     "awaitingPayment": {
       "title": "Kart ödemeniz henüz onaylanmadı",
@@ -126,7 +126,7 @@
       "otherMethod": "← Başka bir yöntem",
       "googleUnavailable": "Google ile giriş şu an açılamadı.",
       "addressTitle": "Teslimat adresi",
-      "addressBody": "Sepet ve ödeme bu adrese göre kurulur.",
+      "addressBody": "Sepetiniz ve ödemeniz bu adrese göre hesaplanır.",
       "addressEmpty": "Nereye getirelim? Sipariş için bir teslimat adresi gerekir.",
       "addressAdd": "+ Adres ekle",
       "addressChange": "Değiştir",
@@ -136,7 +136,7 @@
       "stripShipping": "{place} — kargoyla gönderiyoruz",
       "stripUnreachable": "{place} — buraya şu an gönderemiyoruz",
       "pickupTitle": "Depodan teslim al",
-      "pickupNote": "Sepet ve ödeme {name} deposuna göre kurulur; teslim saatini telefonla kararlaştırın."
+      "pickupNote": "Sepetiniz ve ödemeniz {name} deposuna göre hesaplanır; teslim saatini telefonla kararlaştırın."
     },
     "gate": {
       "login": "Devam etmek için giriş yapın",
@@ -213,7 +213,7 @@
       }
     },
     "freeShipping": {
-      "reached": "Vous avez atteint la livraison offerte",
+      "reached": "La livraison vous est offerte",
       "remaining": "Encore {amount} pour la livraison offerte"
     },
     "packageBadge": "Coffret · {n} produits",
@@ -253,7 +253,7 @@
       "reduced": "{name} — {qty} au panier, nous pouvons en apporter {max} au maximum à ce lieu",
       "price": "{name} a changé de prix — {to} au lieu de {from}",
       "dismiss": "J'ai compris",
-      "note": "Aucun article n'a été supprimé. Un prix promotionnel dépend d'un lot et peut varier selon le lieu ; le prix courant, lui, ne change jamais selon le lieu."
+      "note": "Aucun article n'a été supprimé. Les prix promotionnels dépendent du stock local et peuvent varier selon le lieu de livraison ; les prix normaux, eux, sont partout les mêmes."
     },
     "awaitingPayment": {
       "title": "Votre paiement par carte n'est pas encore confirmé",
@@ -358,7 +358,7 @@
       }
     },
     "freeShipping": {
-      "reached": "Sie haben die Grenze für kostenlosen Versand erreicht",
+      "reached": "Ihr Versand ist kostenlos",
       "remaining": "Noch {amount} bis zum kostenlosen Versand"
     },
     "packageBadge": "Paket · {n} Produkte",
@@ -398,7 +398,7 @@
       "reduced": "{name} — {qty} im Warenkorb, an diesen Ort können wir höchstens {max} bringen",
       "price": "{name} hat einen anderen Preis — {to} statt {from}",
       "dismiss": "Verstanden",
-      "note": "Es wurde kein Artikel entfernt. Ein Aktionspreis hängt an einer Charge und kann sich mit dem Ort ändern; der Listenpreis ändert sich nie nach Ort."
+      "note": "Es wurde kein Artikel entfernt. Aktionspreise hängen vom Bestand vor Ort ab und können sich mit dem Lieferort ändern; die normalen Preise sind überall gleich."
     },
     "awaitingPayment": {
       "title": "Ihre Kartenzahlung ist noch nicht bestätigt",
