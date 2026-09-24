@@ -88,8 +88,8 @@ interface UseDeliveryResult {
   setAmountText: (value: string) => void;
   changeAmount: (deltaCents: number) => void;
   amountCents: number | null;
-  method: 'cash' | 'card' | 'cheque';
-  setMethod: (method: 'cash' | 'card' | 'cheque') => void;
+  method: 'cash' | 'card';
+  setMethod: (method: 'cash' | 'card') => void;
   partialPayment: boolean;
   cashLimitWarning: boolean;
   /** Kapı kasası hesabı yok (ayar boş) — panel çalışır, teslim kapısı kapalıdır. */
@@ -163,7 +163,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const [boxScanOpen, setBoxScanOpen] = useState(false);
 
   const [amountText, setAmountText] = useState('');
-  const [method, setMethod] = useState<'cash' | 'card' | 'cheque'>('cash');
+  const [method, setMethod] = useState<'cash' | 'card'>('cash');
 
   const [outcome, setOutcome] = useState<'unreachable' | 'refused' | null>(null);
   const [outcomeNote, setOutcomeNote] = useState('');
@@ -219,8 +219,8 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     // Tutar alanı MOTORUN tutarıyla açılır (K4: "alan onunla açılır"); kurye gerçekleşeni düzeltir.
     setAmountText(found.payment.dueAmountCents === null ? '' : centsToAmountText(found.payment.dueAmountCents));
     const expected = found.payment.expectedMethod;
-    // Kuryenin eline yalnız üç yöntem girer; `online`/`bank_transfer` beklentisi segmenti değiştirmez.
-    if (expected === 'cash' || expected === 'card' || expected === 'cheque') setMethod(expected);
+    // Kuryenin eline yalnız nakit ve kart girer; `online`/`bank_transfer` beklentisi segmenti değiştirmez.
+    if (expected === 'cash' || expected === 'card') setMethod(expected);
   }, [orderId]);
 
   useEffect(() => {

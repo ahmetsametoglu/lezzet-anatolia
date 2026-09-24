@@ -119,7 +119,7 @@ export const CarrierEnum = z.enum(['colissimo', 'chronopost', 'dhl', 'ups', 'oth
 export type Carrier = z.infer<typeof CarrierEnum>;
 
 /** Ödeme yöntemi; `on_account` (vadeli) bu listede değildir, çünkü vade bir yöntem değil siparişin bayrağıdır (DOMAIN §7). */
-export const PaymentMethodEnum = z.enum(['online', 'cash', 'card', 'cheque', 'bank_transfer']);
+export const PaymentMethodEnum = z.enum(['online', 'cash', 'card', 'bank_transfer']);
 export type PaymentMethod = z.infer<typeof PaymentMethodEnum>;
 
 /** Yöntemin operasyon yüzeyindeki adı; enum'la aynı dosyada durur ki yeni yöntemde `Record` eksik anahtarı derlemede söylesin. */
@@ -127,7 +127,6 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   online: 'online',
   cash: 'nakit',
   card: 'kart',
-  cheque: 'çek',
   bank_transfer: 'havale',
 };
 

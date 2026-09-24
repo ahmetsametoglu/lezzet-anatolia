@@ -88,7 +88,7 @@ export async function readMoneyOverview(db: Db, input: { date?: string } = {}): 
   const courierFloat = openRuns.flatMap((run) => {
     const row = floatOf.get(run.id);
     if (row === undefined) return [];
-    const total = row.expectedCashCents + row.expectedCardCents + row.expectedChequeCents;
+    const total = row.expectedCashCents + row.expectedCardCents;
     if (total === 0) return [];
     return [
       {
@@ -97,7 +97,6 @@ export async function readMoneyOverview(db: Db, input: { date?: string } = {}): 
         courierName: courierNameOf.get(run.courierId) ?? null,
         cashCents: row.expectedCashCents,
         cardCents: row.expectedCardCents,
-        chequeCents: row.expectedChequeCents,
       },
     ];
   });

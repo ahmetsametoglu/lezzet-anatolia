@@ -23,7 +23,7 @@ export interface DayCloseDraft {
   /** Reddedilenler — getirilen mal; depoya fiziksel teslim edilir. */
   returned: CourierStop[];
   /** Beklenen tahsilat, yöntem başına (**cent** — 02.9). */
-  expected: { cashCents: number; cardCents: number; chequeCents: number };
+  expected: { cashCents: number; cardCents: number };
 }
 
 /**
@@ -41,7 +41,7 @@ export async function openDayClose(
     : await readCourierRun(db, { courierId: input.courierId, date });
 
   if (!run) {
-    return { date, run: null, closed: null, delivered: [], pending: [], returned: [], expected: { cashCents: 0, cardCents: 0, chequeCents: 0 } };
+    return { date, run: null, closed: null, delivered: [], pending: [], returned: [], expected: { cashCents: 0, cardCents: 0 } };
   }
 
   const [stops, collection, closed] = await Promise.all([
@@ -60,7 +60,6 @@ export async function openDayClose(
     expected: {
       cashCents: collection?.expectedCashCents ?? 0,
       cardCents: collection?.expectedCardCents ?? 0,
-      chequeCents: collection?.expectedChequeCents ?? 0,
     },
   };
 }
@@ -77,7 +76,6 @@ export async function closeCourierDay(
     /** Kuryenin teslim ettiği tutarlar — **cent** (02.9). */
     countedCashCents?: number;
     countedCardCents?: number;
-    countedChequeCents?: number;
     /** Fark çıktığında kısa açıklama — fark gizlenmez, açıklanır (tasarım §3). */
     note?: string | null;
   },
@@ -89,15 +87,11 @@ export async function closeCourierDay(
 
   const sonuc = await new DeliveryRunService(db).close({ ...input, actorId: input.courierId });
   // Fark çıkan kapanış para tarafının zilini çalar; kapanış yazıldıktan sonra ve sonucu değiştirmeden, çünkü kapanış geri dönmez.
-  if (
-    sonuc.ok &&
-    ((sonuc.differenceCashCents ?? 0) !== 0 || (sonuc.differenceCardCents ?? 0) !== 0 || (sonuc.differenceChequeCents ?? 0) !== 0)
-  ) {
+  if (sonuc.ok && ((sonuc.differenceCashCents ?? 0) !== 0 || (sonuc.differenceCardCents ?? 0) !== 0)) {
     await notifyRunCloseMismatch(db, {
       runReferenceNo: run.referenceNo,
       differenceCashCents: sonuc.differenceCashCents ?? 0,
       differenceCardCents: sonuc.differenceCardCents ?? 0,
-      differenceChequeCents: sonuc.differenceChequeCents ?? 0,
     });
   }
   /* Kapanış fotoğrafında bekleyen durak varsa sevkiyat masası dürtülür; gün burada seçilmez, seferin deposu kimin göreceğini süzer. */

@@ -600,10 +600,10 @@ export const DeliveryProofInputSchema = z.object({
 export type DeliveryProofInputContract = z.infer<typeof DeliveryProofInputSchema>;
 
 /**
- * Kapıda tahsilat (K4). Yöntem üçle sınırlı: online ve havale kuryenin eline hiç girmez.
+ * Kapıda tahsilat (K4). Yöntem ikiyle sınırlı (nakit, kart): online ve havale kuryenin eline hiç girmez.
  */
 export const DoorCollectionInputSchema = z.object({
-  method: z.enum(['cash', 'card', 'cheque']),
+  method: z.enum(['cash', 'card']),
   /** **Cent**. */
   amountCents: z.number().int().positive(),
   /** Paranın gireceği hesap (kurye kasası / kapı tahsilatı). */
@@ -705,7 +705,6 @@ export const DayCloseDraftSchema = z.object({
   expected: z.object({
     cashCents: z.number().int(),
     cardCents: z.number().int(),
-    chequeCents: z.number().int(),
   }),
 });
 export type DayCloseDraftContract = z.infer<typeof DayCloseDraftSchema>;
@@ -718,7 +717,6 @@ export const CloseDeliveryRunRequestSchema = z.object({
   runId: z.string().uuid(),
   countedCashCents: z.number().int().nonnegative().optional(),
   countedCardCents: z.number().int().nonnegative().optional(),
-  countedChequeCents: z.number().int().nonnegative().optional(),
   note: z.string().nullish(),
 });
 export type CloseDeliveryRunRequest = z.infer<typeof CloseDeliveryRunRequestSchema>;

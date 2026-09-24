@@ -59,12 +59,9 @@ export function resolveCheckoutOptions(input: CheckoutOptionsInput): CheckoutOpt
   if (codBlockedReason === null) {
     // Nakit ve kart mal ile aynı anda el değiştirir — iki kanalda da açık.
     methods.push('cash', 'card');
-    // Çek kapıda ALINIR ama tahsilatı sonra gerçekleşir: karşılıksız çıkarsa mal gitmiştir.
-    // Bu yüzden kapıda ödeme açık olsa bile kanala bakar.
-    if (isBusiness) methods.push('cheque');
   }
 
-  // Nakit yasal sınırı: engel değil, uyarı. Kart/çek ayrı değerlendirilir.
+  // Nakit yasal sınırı: engel değil, uyarı. Kart ayrı değerlendirilir.
   const cashWarning =
     codBlockedReason === null &&
     input.cashLegalLimitCents != null &&

@@ -13,9 +13,9 @@ const base = (over: Partial<CheckoutOptionsInput> = {}): CheckoutOptionsInput =>
 });
 
 describe('kapıda ödeme (03.8)', () => {
-  it('rota içi, tavan altı, izinli müşteri → nakit/kart/çek açık', () => {
+  it('rota içi, tavan altı, izinli müşteri → nakit ve kart açık', () => {
     const r = resolveCheckoutOptions(base());
-    expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card', 'cheque']);
+    expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card']);
     expect(r.codBlockedReason).toBeNull();
   });
 
@@ -28,7 +28,7 @@ describe('kapıda ödeme (03.8)', () => {
   it('gel-al\'da tezgâhta ödeme kapıda ödemeyle AYNI kurala tabidir — kargo gibi kapanmaz', () => {
     // `shipping` dalına düşseydi müşteri depoda nakit/kart ödeyemezdi; tavan da uygulanmalı.
     const r = resolveCheckoutOptions(base({ deliveryType: 'pickup' }));
-    expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card', 'cheque']);
+    expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card']);
     expect(r.codBlockedReason).toBeNull();
     expect(resolveCheckoutOptions(base({ deliveryType: 'pickup', orderTotalCents: TAVAN + 1 })).codBlockedReason).toBe('over_limit');
   });
@@ -53,15 +53,7 @@ describe('ertelenmiş tahsilat yalnız işletmeye (kullanıcı kararı 04.08)', 
   it('bireysel müşteride havale YOK — kart ve kapıda ödeme açık kalır', () => {
     const r = resolveCheckoutOptions(base({ channel: 'b2c' }));
     expect(r.methods).toEqual(['online', 'cash', 'card']);
-    expect(r.codBlockedReason).toBeNull(); // kapıda ödeme kapanmıyor, yalnız havale/çek düşüyor
-  });
-
-  it('bireysel müşteride çek YOK — kapıda ödeme açık olsa bile', () => {
-    // Ayrımın kendisi: çek kapıda ALINIR ama karşılığı sonra tahsil edilir. Nakit/kartla aynı
-    // kovaya konsaydı "kapıda ödeme açık" kararı sessizce bir vade kararına dönerdi.
-    const r = resolveCheckoutOptions(base({ channel: 'b2c' }));
-    expect(r.methods).toContain('cash');
-    expect(r.methods).not.toContain('cheque');
+    expect(r.codBlockedReason).toBeNull(); // kapıda ödeme kapanmıyor, yalnız havale düşüyor
   });
 
   it('kargoda bireysel müşteriye YALNIZ kart kalır', () => {
@@ -69,10 +61,10 @@ describe('ertelenmiş tahsilat yalnız işletmeye (kullanıcı kararı 04.08)', 
     expect(r.methods).toEqual(['online']);
   });
 
-  it('aynı sipariş işletmede havale ve çeki açar — fark yalnız kanal', () => {
+  it('aynı sipariş işletmede havaleyi açar — fark yalnız kanal', () => {
     const b2c = resolveCheckoutOptions(base({ channel: 'b2c' }));
     const b2b = resolveCheckoutOptions(base({ channel: 'b2b' }));
-    expect(b2b.methods.filter((m) => !b2c.methods.includes(m))).toEqual(['bank_transfer', 'cheque']);
+    expect(b2b.methods.filter((m) => !b2c.methods.includes(m))).toEqual(['bank_transfer']);
   });
 });
 

@@ -73,7 +73,7 @@ function deliveryLabel(copy: CheckoutCopy, view: ConfirmationView, locale: Local
 }
 
 /**
- * Ödeme satırı: vadeli bir yöntem değil siparişin bayrağı; kart ve çek KAPIDA kullanılan araçlardır (kurye kapanışta
+ * Ödeme satırı: vadeli bir yöntem değil siparişin bayrağı; kart KAPIDA kullanılan bir araçtır (kurye kapanışta
  * yazar), müşterinin seçtiği yol kapıda ödemedir. Yöntem henüz seçilmemişse "bilinmiyor" — "kapıda" DEĞİL.
  */
 function paymentLabel(copy: CheckoutCopy, view: ConfirmationView): string {
@@ -83,7 +83,6 @@ function paymentLabel(copy: CheckoutCopy, view: ConfirmationView): string {
       return copy.payment.online;
     case 'cash':
     case 'card':
-    case 'cheque':
       return copy.payment.onDelivery;
     case 'bank_transfer':
       return copy.payment.transfer;

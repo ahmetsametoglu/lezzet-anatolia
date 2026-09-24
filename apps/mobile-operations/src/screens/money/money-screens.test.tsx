@@ -70,7 +70,6 @@ function overviewData(overrides: Partial<MoneyOverview> = {}): MoneyOverview {
         courierName: 'Marc Lemoine',
         cashCents: 7800,
         cardCents: 2250,
-        chequeCents: 0,
       },
     ],
     accounts: [
@@ -197,7 +196,7 @@ describe('M1 · tahsilat izleme', () => {
     await renderScreen(<MoneyTrackingScreen />, 'money-tracking-loading');
 
     expect(screen.getByText('Marc Lemoine · SF-26-TESTRUN')).toBeOnTheScreen();
-    // 7800 nakit + 2250 kart + 0 çek = 10050 → "100,50 €" (toplam satırdan TÜRER)
+    // 7800 nakit + 2250 kart = 10050 → "100,50 €" (toplam satırdan TÜRER)
     expect(screen.getByTestId('money-courier-float')).toHaveTextContent(/100,50\s?€/u);
   });
 
@@ -214,7 +213,6 @@ describe('M1 · tahsilat izleme', () => {
               courierName: null,
               cashCents: 5000,
               cardCents: 0,
-              chequeCents: 0,
             },
           ],
         }),

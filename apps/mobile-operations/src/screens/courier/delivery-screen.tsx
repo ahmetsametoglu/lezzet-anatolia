@@ -415,7 +415,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               </Text>
             ) : null}
             <View style={styles.methodRow}>
-              {(['cash', 'card', 'cheque'] as const).map((option) => (
+              {(['cash', 'card'] as const).map((option) => (
                 <OperationsChoiceChip
                   key={option}
                   label={t.method[option]}

@@ -139,7 +139,7 @@ async function depart(): Promise<string> {
 }
 
 /** Kapıda tahsilat: kapanışın beklenen toplamını besleyen tek yol; teslim kapısı kutusuz teslimi reddettiği için kutu kodu şarttır. */
-async function collect(orderId: string, qty: number, method: 'cash' | 'card' | 'cheque', boxCode: string) {
+async function collect(orderId: string, qty: number, method: 'cash' | 'card', boxCode: string) {
   await confirmDoorDelivery(db, {
     orderId,
     courierId,
@@ -162,7 +162,7 @@ describe('kapanış taslağı', () => {
 
     // Yöntemler karışırsa mutabakat yapılamaz: nakit sayımla, kart cihaz raporuyla karşılaşır.
     expect(draft.run?.runId).toBe(runId);
-    expect(draft.expected).toEqual({ cashCents: 5000, cardCents: 4000, chequeCents: 0 });
+    expect(draft.expected).toEqual({ cashCents: 5000, cardCents: 4000 });
     expect(draft.delivered).toHaveLength(3);
   });
 
@@ -203,7 +203,7 @@ describe('kapanış taslağı', () => {
     const draft = await openDayClose(db, { courierId, date: day });
 
     expect(draft.run).toBeNull();
-    expect(draft.expected).toEqual({ cashCents: 0, cardCents: 0, chequeCents: 0 });
+    expect(draft.expected).toEqual({ cashCents: 0, cardCents: 0 });
     expect(draft.closed).toBeNull();
   });
 });

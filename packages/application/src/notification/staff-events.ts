@@ -67,7 +67,7 @@ export async function notifyStockLowAfterReserve(
 /** Gün kapanışında sayım farkı — para tarafına. İstisna gibi DEDUPESİZ: her kapanış ayrı gerçek. */
 export async function notifyRunCloseMismatch(
   db: SupabaseClient,
-  input: { runReferenceNo?: string | null; differenceCashCents: number; differenceCardCents: number; differenceChequeCents: number },
+  input: { runReferenceNo?: string | null; differenceCashCents: number; differenceCardCents: number },
 ): Promise<void> {
   try {
     await dispatchStaffNotification(db, {
@@ -78,7 +78,6 @@ export async function notifyRunCloseMismatch(
         ...(input.runReferenceNo ? { referenceNo: input.runReferenceNo } : {}),
         differenceCashCents: input.differenceCashCents,
         differenceCardCents: input.differenceCardCents,
-        differenceChequeCents: input.differenceChequeCents,
       },
       dedupeKey: null,
     });

@@ -696,10 +696,8 @@ Kapanış bir **mutabakattır**, para hareketi değil: para kapıda tahsil edili
 | `delivery_run_id` | uuid |  |  |
 | `expected_cash` | numeric(12, 2) |  | `0` |
 | `expected_card` | numeric(12, 2) |  | `0` |
-| `expected_cheque` | numeric(12, 2) |  | `0` |
 | `counted_cash` | numeric(12, 2) |  | `0` |
 | `counted_card` | numeric(12, 2) |  | `0` |
-| `counted_cheque` | numeric(12, 2) |  | `0` |
 | `delivered_orders` | uuid[] |  | `'{}'` |
 | `returned_orders` | uuid[] |  | `'{}'` |
 | `pending_orders` | uuid[] |  | `'{}'` |
@@ -712,8 +710,8 @@ Kapanış bir **mutabakattır**, para hareketi değil: para kapıda tahsil edili
 **Kararlar**
 
 - **`delivery_run_id`** — `restrict` + **tekil**: bir sefer bir kez kapanır
-- **`expected_cash`** / **`expected_card`** / **`expected_cheque`** — sistemin hesabı — kapanış anında DONDURULUR
-- **`counted_cash`** / **`counted_card`** / **`counted_cheque`** — kuryenin fiilen teslim ettiği (sayım / cihaz raporu / yapraklar)
+- **`expected_cash`** / **`expected_card`** — sistemin hesabı — kapanış anında DONDURULUR
+- **`counted_cash`** / **`counted_card`** — kuryenin fiilen teslim ettiği (sayım / cihaz raporu)
 - **`delivered_orders`** — seferin teslim edilenleri (`delivered` + `completed`) — fotoğraf ÇÖZÜMDEN ÖNCE çekilir
 - **`returned_orders`** — reddedilenler — getirilen mal
 - **`pending_orders`** — kapanış ANINDA sonuçlanmamışlar; kapanış bunları `ready`ye çözer (K4), yeni günü sevkiyatçı yazar

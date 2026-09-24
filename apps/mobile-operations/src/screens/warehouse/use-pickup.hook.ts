@@ -11,7 +11,7 @@ import { trackWarehouse } from './warehouse-status';
   Teslim anında yazılır, kuyruğa alınmaz, çünkü müşteriye verilen malın sistemde "sırada" beklemesi malın kimde olduğunu belirsiz bırakır.
 */
 
-export type PickupMethod = 'cash' | 'card' | 'cheque';
+export type PickupMethod = 'cash' | 'card';
 
 export interface UsePickupResult {
   status: 'loading' | 'ready' | 'error';

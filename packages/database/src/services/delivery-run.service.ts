@@ -36,13 +36,10 @@ import { rpcMoneyToCents } from '../utils/rpc-money';
 const CLOSE_RPC_EURO_FIELDS = [
   'expectedCash',
   'expectedCard',
-  'expectedCheque',
   'countedCash',
   'countedCard',
-  'countedCheque',
   'differenceCash',
   'differenceCard',
-  'differenceCheque',
 ] as const;
 
 export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never> {
@@ -167,7 +164,6 @@ export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never>
     runId: string;
     countedCashCents?: number;
     countedCardCents?: number;
-    countedChequeCents?: number;
     note?: string | null;
     actorId?: string | null;
   }): Promise<CloseDeliveryRunResult> {
@@ -175,7 +171,6 @@ export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never>
       p_run_id: input.runId,
       p_counted_cash: fromCents(input.countedCashCents ?? 0),
       p_counted_card: fromCents(input.countedCardCents ?? 0),
-      p_counted_cheque: fromCents(input.countedChequeCents ?? 0),
       p_note: input.note ?? null,
       p_actor_id: input.actorId ?? null,
     });
@@ -220,10 +215,8 @@ export class DeliveryRunCloseService extends BaseDbService<DeliveryRunClose, nev
   protected override readonly moneyFields = [
     'expectedCashCents',
     'expectedCardCents',
-    'expectedChequeCents',
     'countedCashCents',
     'countedCardCents',
-    'countedChequeCents',
   ];
 
   /** Seferin kapanışı — yoksa sefer henüz açık (ya da hiç sayılmadı). */
@@ -253,7 +246,7 @@ export class DeliveryRunCollectionService extends BaseDbService<DeliveryRunColle
     );
   }
 
-  protected override readonly moneyFields = ['expectedCashCents', 'expectedCardCents', 'expectedChequeCents'];
+  protected override readonly moneyFields = ['expectedCashCents', 'expectedCardCents'];
 
   /** Seferin beklenen tahsilatı; hiç kapıda ödeme yoksa satır doğmaz → sıfır kabul edilir. */
   getByRun(runId: string): Promise<DeliveryRunCollection | null> {

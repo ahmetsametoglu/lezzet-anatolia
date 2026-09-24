@@ -127,7 +127,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
   const methods = payment?.methods ?? [];
   const codReason = payment?.codBlockedReason ?? null;
   const paymentOptions: PaymentOption[] = [
-    // `online` Stripe yolu (peşin, sayfanın içinde); `cash` KAPIDA ödemedir — aracı (nakit/kart/çek) kurye kapanışta yazar.
+    // `online` Stripe yolu (peşin, sayfanın içinde); `cash` KAPIDA ödemedir — aracı (nakit ya da kart) kurye kapanışta yazar.
     { key: 'online', method: 'online', onAccount: false, label: copy.payment.online, body: copy.payment.onlineBody, available: methods.includes('online') },
     {
       key: 'cod',

@@ -47,7 +47,7 @@ beforeAll(async () => {
   customerId = customer.id;
   const vadeli = await profiles.insert({ name: `Vadeli müşteri ${stamp}`, creditEnabled: true, creditLimitCents: 10000 });
   creditCustomerId = vadeli.id;
-  // ONAYLI işletme: havale/çek kapısının açılması için şirket olmak YETMEZ, başvurunun onaylanmış
+  // ONAYLI işletme: havale kapısının açılması için şirket olmak YETMEZ, başvurunun onaylanmış
   // olması gerekir — onaysız şirket kaydı zaten perakende fiyat görüyor.
   const isletme = await profiles.insert({ name: `İşletme ${stamp}`, type: 'company', b2bApproved: true });
   businessCustomerId = isletme.id;
@@ -104,7 +104,7 @@ describe('kargo ücreti ve KDV (07.3)', () => {
 
 describe('ödeme yöntemleri', () => {
   // `customerId` bireysel bir müşteri: ertelenmiş tahsilat ona kapalıdır, çünkü ödeme alınmadan hazırlığa geçilir ve risk tümüyle bize kalırdı.
-  it('rota içi + tavan altı → kapıda ödeme açık (bireysel: havale/çek yok)', async () => {
+  it('rota içi + tavan altı → kapıda ödeme açık (bireysel: havale yok)', async () => {
     const r = await odemeCozumle({ customerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r.methods).toEqual(['online', 'cash', 'card']);
     expect(r.codBlockedReason).toBeNull();
@@ -116,16 +116,15 @@ describe('ödeme yöntemleri', () => {
     expect(r.codBlockedReason).toBe('shipping');
   });
 
-  it('ONAYLI işletmede havale ve çek açılır', async () => {
+  it('ONAYLI işletmede havale açılır', async () => {
     const r = await odemeCozumle({ customerId: businessCustomerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
-    expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card', 'cheque']);
+    expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card']);
   });
 
   it('ONAYSIZ şirket kaydına havale AÇILMAZ — yoksa kapı kendi kendini onaylardı', async () => {
     // "Şirketim" yazan herkes ödemeden sipariş açabilseydi onay sürecinin bir anlamı kalmazdı.
     const r = await odemeCozumle({ customerId: pendingBusinessId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r.methods).not.toContain('bank_transfer');
-    expect(r.methods).not.toContain('cheque');
   });
 
   it('tavan aşan sipariş kapıda ödemeyi kapatır (ayardan okunur)', async () => {

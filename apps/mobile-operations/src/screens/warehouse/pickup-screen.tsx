@@ -27,7 +27,7 @@ import { useWarehouseStatus } from './warehouse-status';
 */
 
 const t = warehouseCopy;
-const METHODS: readonly PickupMethod[] = ['cash', 'card', 'cheque'];
+const METHODS: readonly PickupMethod[] = ['cash', 'card'];
 
 interface ResultRow {
   tone: 'done' | 'error';

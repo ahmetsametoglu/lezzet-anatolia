@@ -159,7 +159,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const methods = payment?.methods ?? [];
   const codBlockedReason = payment?.codBlockedReason ?? null;
   const paymentOptions: PaymentOption[] = [
-    // `online` Stripe yoludur; `cash` kapıda ödemedir ve aracı (nakit, kart, çek) kurye kapanışta yazar.
+    // `online` Stripe yoludur; `cash` kapıda ödemedir ve aracı (nakit ya da kart) kurye kapanışta yazar.
     {
       key: 'online',
       method: 'online',

@@ -52,7 +52,6 @@ export const CourierFloatRowSchema = z.object({
   courierName: z.string().nullable(),
   cashCents: z.number().int(),
   cardCents: z.number().int(),
-  chequeCents: z.number().int(),
 });
 export type CourierFloatRow = z.infer<typeof CourierFloatRowSchema>;
 

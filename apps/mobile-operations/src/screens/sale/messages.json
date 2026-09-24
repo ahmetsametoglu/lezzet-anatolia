@@ -134,7 +134,6 @@
       "cash": "Nakit",
       "card": "Kart",
       "online": "Online",
-      "cheque": "Çek",
       "bank_transfer": "Havale"
     }
   }

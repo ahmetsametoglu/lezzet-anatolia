@@ -34,7 +34,6 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   online: 'online',
   cash: 'nakit',
   card: 'kart',
-  cheque: 'çek',
   bank_transfer: 'havale',
 };
 

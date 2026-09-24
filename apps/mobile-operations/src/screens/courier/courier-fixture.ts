@@ -189,7 +189,7 @@ export function dayCloseDraft(overrides: Partial<DayCloseDraftContract> = {}): D
     delivered: [],
     pending: [],
     returned: [],
-    expected: { cashCents: 0, cardCents: 0, chequeCents: 0 },
+    expected: { cashCents: 0, cardCents: 0 },
     ...overrides,
   };
 }
@@ -203,10 +203,8 @@ export function closedDayRecord(
     deliveryRunId: uuid(800),
     expectedCashCents: 4200,
     expectedCardCents: 0,
-    expectedChequeCents: 0,
     countedCashCents: 4000,
     countedCardCents: 0,
-    countedChequeCents: 0,
     deliveredOrders: [uuid(1)],
     returnedOrders: [],
     pendingOrders: [],

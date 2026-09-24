@@ -17,7 +17,6 @@
     "online": "online",
     "cash": "nakit",
     "card": "kart",
-    "cheque": "çek",
     "bank_transfer": "havale"
   },
   "channel": {
@@ -487,7 +486,7 @@
     "ctaClosed": "Sefer zaten kapalı",
     "sending": "Kapanıyor…",
     "alreadyClosed": "Sefer zaten kapalıydı — ikinci kapanış kaydı EZMEDİ.",
-    "done": "Sefer kapandı — fark: nakit {cash} · kart {card} · çek {cheque}.",
+    "done": "Sefer kapandı — fark: nakit {cash} · kart {card}.",
     "released": " {n} takılı durak çözüldü — yeniden planlama sevkiyatın.",
     "failed": "Kapanış gönderilemedi ({error})."
   },

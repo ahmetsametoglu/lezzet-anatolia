@@ -271,7 +271,7 @@ function rejectionMessage(outcome: Exclude<Awaited<ReturnType<typeof placeOrder>
      * "Sipariş açılamadı." mesajı arızayı gözden saklar.
      */
     case 'payment_unavailable':
-      return 'Bu ekranda online ödeme alınamaz — masada kart çekilmiyor. Nakit, kart (kapıda), çek ya da havale seçin.';
+      return 'Bu ekranda online ödeme alınamaz — masada kart çekilmiyor. Nakit, kart (kapıda) ya da havale seçin.';
     case 'order_not_placed':
       return 'Sipariş açıldı ama kesinleşmedi — kayıt okunamadı ya da durum geçişi reddedildi. Tekrar deneyin.';
     /**

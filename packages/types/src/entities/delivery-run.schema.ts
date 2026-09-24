@@ -66,10 +66,8 @@ export const DeliveryRunCloseSchema = z.object({
   deliveryRunId: z.string().uuid(),
   expectedCashCents: z.number().int(),
   expectedCardCents: z.number().int(),
-  expectedChequeCents: z.number().int(),
   countedCashCents: z.number().int(),
   countedCardCents: z.number().int(),
-  countedChequeCents: z.number().int(),
   /**
    * Seferin üç akıbeti — sayı değil KİMLİK: kapanıştan sonra "hangi sipariş" sorusu cevaplanabilsin.
    * Fotoğraf ÇÖZÜMDEN ÖNCE çekilir: kapanışın `ready`ye düşürdüğü duraklar burada `pending` görünür.
@@ -92,7 +90,6 @@ export const DeliveryRunCollectionSchema = z.object({
   deliveryRunId: z.string().uuid(),
   expectedCashCents: z.number().int(),
   expectedCardCents: z.number().int(),
-  expectedChequeCents: z.number().int(),
 });
 export type DeliveryRunCollection = z.infer<typeof DeliveryRunCollectionSchema>;
 
@@ -161,14 +158,11 @@ export const CloseDeliveryRunResultSchema = z.object({
   closedAt: z.string().optional(),
   expectedCashCents: z.number().int().optional(),
   expectedCardCents: z.number().int().optional(),
-  expectedChequeCents: z.number().int().optional(),
   countedCashCents: z.number().int().optional(),
   countedCardCents: z.number().int().optional(),
-  countedChequeCents: z.number().int().optional(),
   /** Sayılan − beklenen. İşaret anlamlıdır: eksi eksik teslim, artı fazla para. */
   differenceCashCents: z.number().int().optional(),
   differenceCardCents: z.number().int().optional(),
-  differenceChequeCents: z.number().int().optional(),
   reconciled: z.boolean().optional(),
   deliveredCount: z.number().int().optional(),
   returnedCount: z.number().int().optional(),

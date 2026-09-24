@@ -15,7 +15,7 @@ create type payment_status as enum ('pending', 'paid', 'partial', 'refunded');
  */
 create type order_cancel_reason as enum ('payment_failed', 'superseded', 'out_of_stock', 'customer', 'staff');
 -- `on_account` (vadeli) BU LİSTEDE DEĞİL: vade bir yöntem değil, siparişin bayrağıdır (DOMAIN §7).
-create type payment_method as enum ('online', 'cash', 'card', 'cheque', 'bank_transfer');
+create type payment_method as enum ('online', 'cash', 'card', 'bank_transfer');
 -- Mal müşteriye nasıl ulaşır: bizim aracımız · taşıyıcı · müşterinin kendisi (`pickup`: yerinde satışta mal
 -- gitmez). Varsayılana düşen yerinde satış rota sayılsaydı teslimat tipine göre kırılan her rapor yanılırdı.
 create type delivery_type as enum ('route', 'shipping', 'pickup');

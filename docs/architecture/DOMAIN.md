@@ -129,7 +129,7 @@ Rezervasyonun serbest bırakılması **yalnızca mal fiziksel olarak depoya geri
 ### Rezervasyon ↔ ödeme sırası
 
 - **Online ödemede** (web / WhatsApp): kural **"önce ayır, sonra tahsil et."** Stok atomik olarak ayrılır, *sonra* tahsilat başlar. Ayrılamazsa ödeme **hiç başlamaz** — müşteriden karşılığı olmayan tahsilat yapılmaz, "önce çektik sonra stok yoktu" durumu imkânsızdır. Bu sıra `domain-core` sözleşmesidir (rezervasyon → ödeme), uygulama katmanında ters çevrilemez.
-- **Kapıda ödemede** (nakit / kart / çek): rezervasyon yine `confirmed`'de yapılır; tahsilat teslim anındadır, sonra gelir — sıra sorunu doğmaz.
+- **Kapıda ödemede** (nakit / kart): rezervasyon yine `confirmed`'de yapılır; tahsilat teslim anındadır, sonra gelir — sıra sorunu doğmaz.
 
 ### DLC / DDM, raf ömrü ve FEFO
 
@@ -322,7 +322,7 @@ gösterilen sıra aslında **siparişin verilme sırasıydı** — ekran olmayan
 Üç para havuzu ayrı izlenir:
 
 1. **Online** (kart) — ödeme sağlayıcı üzerinden.
-2. **Kapıda** — nakit / kart / çek. Kurye toplar.
+2. **Kapıda** — nakit / kart. Kurye toplar. Çek hiçbir koşulda kabul edilmez.
 3. **Banka** — hesap hareketleri Excel ile içe alınır.
 
 > **Depo ağı (01.08):** her depo aynı zamanda bir kapıda-tahsilat kasasıdır — depo başına ayrı
@@ -332,7 +332,7 @@ gösterilen sıra aslında **siparişin verilme sırasıydı** — ekran olmayan
 
 | Müşteri / teslimat | Seçenekler |
 | --- | --- |
-| Rota-içi B2C | Online öde / Kapıda öde (nakit/kart/çek) |
+| Rota-içi B2C | Online öde / Kapıda öde (nakit/kart) |
 | Gel-al (izinli müşteri) | Online öde / Depoda öde (kapıda ödeme kurallarıyla) |
 | Kargo (rota-dışı) B2C | Sadece online öde (peşin) |
 | B2B (credit yok) | Online öde / havale (peşin) |
@@ -346,7 +346,7 @@ Kapıda ödeme tüm rota-içi müşterilere sunulur, ama peşin taahhüt olmadı
 
 - **Değer tavanı (parametrik `Setting`):** kapıda ödeme yalnız sipariş toplamı tavana kadar mümkün; üstü **online peşin** ister. "Tüm ürünleri sipariş edip kapıda öderim" senaryosunu otomatik keser; normal siparişler tavanın altında kalır, kimse takılmaz. Tavan değeri işletmeye göre admin ayarı.
 - **Müşteri bazlı kapı (`Customer.cod_allowed`, varsayılan true):** geçmişte ödememiş / tekrar tekrar reddetmiş müşteride kapıda ödeme kapatılır (admin veya no-pay olayında). Tekrar eden art niyeti engeller.
-- **Nakit yasal sınır uyarısı (yöntem bazında, parametrik):** Fransa'da mukim müşterinin işletmeye **nakit** ödemesi yasal olarak ~1.000€ ile sınırlıdır. Kapıda nakit tahsilat bu sınırı aşarsa sistem **uyarır ama engellemez** (karar sahada; kart/çek ayrı değerlendirilir). Sefer kapanışı zaten yöntem bazında toplar — model değişikliği yok.
+- **Nakit yasal sınır uyarısı (yöntem bazında, parametrik):** Fransa'da mukim müşterinin işletmeye **nakit** ödemesi yasal olarak ~1.000€ ile sınırlıdır. Kapıda nakit tahsilat bu sınırı aşarsa sistem **uyarır ama engellemez** (karar sahada; kart ayrı değerlendirilir). Sefer kapanışı zaten yöntem bazında toplar — model değişikliği yok.
 - Amaç: normal kullanıcı hiçbirine takılmaz, art niyetli hem tavana hem bloğa takılır.
 
 ### Sefer kapanışı (kullanıcı kararı 18.08 — eksen kurye/günden SEFERE indi)
@@ -367,7 +367,7 @@ Her siparişin ödeme durumu **ayrı bir eksendir** ve **türetilir**: `amount_c
 
 ### B2B vadeli satış (hesaba) — istisna, varsayılan değil
 
-- **Varsayılan peşin.** Hem B2C hem B2B siparişleri kural olarak peşin ödenir (online / kart / nakit / çek / havale). Vadeli tahsilat operasyonel olarak dertli olduğu için **standart değildir** — ilke: "ödeyebilen alır."
+- **Varsayılan peşin.** Hem B2C hem B2B siparişleri kural olarak peşin ödenir (online / kart / nakit / havale). Vadeli tahsilat operasyonel olarak dertli olduğu için **standart değildir** — ilke: "ödeyebilen alır."
 - **Vade bir müşteri yetkisidir, elle açılır.** `Customer.credit_enabled` yalnızca güvenilen müşteride admin tarafından açılır (varsayılan **kapalı**). Kapalıysa o müşteri vadeli sipariş veremez; checkout'ta yalnızca peşin yöntemler görünür.
 - **Vadeli sipariş akışı:** sipariş `on_account=true` işaretlenir; peşin ödeme olmadan `confirmed` olur (stok yine `confirmed`'de ayrılır — "önce ayır" kuralı bozulmaz), `payment_status` `pending` kalır; sonra **banka havalesiyle** ödenir ve banka import eşleştirmesinde `paid` olur (bkz. §9).
 - **Limit ve vade süresi — müşteri bazında:** her müşterinin **kendi** limiti vardır (`Customer.credit_limit`, €) — tek genel limit yoktur; güven müşteriden müşteriye farklıdır ve admin limiti **her an değiştirebilir**. **Vade süresi** de müşteri bazında `payment_term_days` (girilmezse varsayılan 30 gün — sektör standardı, `Setting`'ten parametrik). **Açık bakiye ve gecikme saklanmaz, türetilir**: açık bakiye = ödenmemiş `on_account` siparişlerin toplamı; gecikmiş = vade süresini aşmış ödenmemiş sipariş.

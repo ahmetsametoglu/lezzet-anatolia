@@ -730,12 +730,12 @@ function hasVisualProof(order: Order): boolean {
 }
 
 /**
- * `delivery_run_collection` görünümüyle aynı kural: yalnız `cash`, `card` ve `cheque` kuryenin eline girer. Net alınır, çünkü iade
+ * `delivery_run_collection` görünümüyle aynı kural: yalnız `cash` ve `card` kuryenin eline girer. Net alınır, çünkü iade
  * edilen para kuryenin cebinde değildir.
  */
 function collectedAtDoorCents(order: Order): number | null {
   const method = order.paymentMethod;
-  if (method !== 'cash' && method !== 'card' && method !== 'cheque') return null;
+  if (method !== 'cash' && method !== 'card') return null;
   const netCents = order.amountCollectedCents - order.amountRefundedCents;
   return netCents > 0 ? netCents : null;
 }

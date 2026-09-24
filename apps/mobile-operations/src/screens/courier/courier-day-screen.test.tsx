@@ -240,7 +240,7 @@ describe('K1 · günün seferi', () => {
   it('cepteki para kapanış taslağının beklenen tahsilatından toplanır', async () => {
     mockDay(
       courierDay([courierStop(1)]),
-      dayCloseDraft({ expected: { cashCents: 4200, cardCents: 1000, chequeCents: 0 } }),
+      dayCloseDraft({ expected: { cashCents: 4200, cardCents: 1000 } }),
     );
 
     await renderDay();

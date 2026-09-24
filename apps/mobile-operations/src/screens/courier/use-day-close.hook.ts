@@ -14,12 +14,8 @@ import { centsToAmountText, money, parseAmountToCents, signedMoney } from './cou
 
 const t = courierCopy;
 
-/**
- * Üç yöntemin TEK sırası — ekran satırları, fark hesabı ve istek gövdesi (`countedCash…`,
- * `countedCard…`, `countedCheque…`) aynı sıradan okur. İhraç EDİLMİYOR: dışarıdan kimse bu sırayı
- * bilmek zorunda değil, hook zaten sıralı satırlar döndürüyor.
- */
-const CLOSE_METHODS = ['cash', 'card', 'cheque'] as const;
+/** Yöntemlerin tek sırası: ekran satırları, fark hesabı ve istek gövdesi (`countedCash…`, `countedCard…`) aynı sıradan okur. */
+const CLOSE_METHODS = ['cash', 'card'] as const;
 /** Kapanışta sayılan kasalar; ihraç edilir, çünkü ekran hangi kasanın tuş takımının açık olduğunu bu tiple tutar. */
 export type CloseMethod = (typeof CLOSE_METHODS)[number];
 
@@ -106,29 +102,15 @@ export function useDayClose(onClosed?: () => void, runId?: string): UseDayCloseR
 
   const expectedOf = (method: CloseMethod): number => {
     if (closedRecord !== null) {
-      return method === 'cash'
-        ? closedRecord.expectedCashCents
-        : method === 'card'
-          ? closedRecord.expectedCardCents
-          : closedRecord.expectedChequeCents;
+      return method === 'cash' ? closedRecord.expectedCashCents : closedRecord.expectedCardCents;
     }
     if (draft === null) return 0;
-    return method === 'cash'
-      ? draft.expected.cashCents
-      : method === 'card'
-        ? draft.expected.cardCents
-        : draft.expected.chequeCents;
+    return method === 'cash' ? draft.expected.cashCents : draft.expected.cardCents;
   };
 
   const countedOf = (method: CloseMethod): string => {
     if (closedRecord !== null) {
-      return centsToAmountText(
-        method === 'cash'
-          ? closedRecord.countedCashCents
-          : method === 'card'
-            ? closedRecord.countedCardCents
-            : closedRecord.countedChequeCents,
-      );
+      return centsToAmountText(method === 'cash' ? closedRecord.countedCashCents : closedRecord.countedCardCents);
     }
     return counted[method] ?? centsToAmountText(expectedOf(method));
   };
@@ -177,7 +159,6 @@ export function useDayClose(onClosed?: () => void, runId?: string): UseDayCloseR
         runId,
         countedCashCents: amounts[0],
         countedCardCents: amounts[1],
-        countedChequeCents: amounts[2],
         note: note.trim().length === 0 ? null : note.trim(),
       });
       setSending(false);
@@ -202,7 +183,6 @@ export function useDayClose(onClosed?: () => void, runId?: string): UseDayCloseR
           fillCopy(t.dayClose.done, {
             cash: signedMoney(result.data.differenceCashCents ?? 0),
             card: signedMoney(result.data.differenceCardCents ?? 0),
-            cheque: signedMoney(result.data.differenceChequeCents ?? 0),
           }) +
           // Kapanışın çözdüğü takılı durak SESSİZ geçmez (K4): kurye onların yarına devrolduğunu
           // burada okur. Sıfırsa cümle hiç kurulmaz — "0 durak çözüldü" bir bilgi değil gürültüdür.

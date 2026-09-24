@@ -37,7 +37,6 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   online: 'Online',
   cash: 'Nakit',
   card: 'Kart',
-  cheque: 'Çek',
   bank_transfer: 'Havale',
 };
 

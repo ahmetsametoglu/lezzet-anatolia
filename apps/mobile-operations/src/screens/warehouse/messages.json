@@ -1248,8 +1248,7 @@
       "blocked": "Tahsilat YAZILAMIYOR: bu deponun kapı kasası ayarlanmamış. Para alınırsa defterde görünmez — önce ayarı düzeltin.",
       "method": {
         "cash": "nakit",
-        "card": "kart",
-        "cheque": "çek"
+        "card": "kart"
       },
       "cta": "Müşteriye teslim et",
       "busy": "Yazılıyor…",

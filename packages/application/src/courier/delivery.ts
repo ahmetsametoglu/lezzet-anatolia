@@ -19,9 +19,9 @@ export interface DeliveryProofInput {
   receivedBy?: string | null;
 }
 
-/** Kapıda tahsilat. Yöntem üçle sınırlıdır: online ve havale kuryenin eline hiç girmez. */
+/** Kapıda tahsilat. Yöntem ikiyle sınırlıdır (nakit, kart): online ve havale kuryenin eline hiç girmez. */
 export interface DoorCollectionInput {
-  method: 'cash' | 'card' | 'cheque';
+  method: 'cash' | 'card';
   /** **Cent** (02.9 · STACK §8). */
   amountCents: number;
   /** Paranın gireceği hesap (kurye kasası / kapı tahsilatı). */

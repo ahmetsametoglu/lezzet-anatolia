@@ -113,7 +113,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `order_cancel_reason`: payment_failed, superseded, out_of_stock, customer, staff
 - `order_source`: web, whatsapp, messenger, instagram, door, manual
 - `order_status`: draft, confirmed, preparing, ready, out_for_delivery, delivered, completed, cancelled, returned
-- `payment_method`: online, cash, card, cheque, bank_transfer
+- `payment_method`: online, cash, card, bank_transfer
 - `payment_status`: pending, paid, partial, refunded
 - `points_reason`: review, feedback_purchase, feedback_candidate, order, referral, neighbor, visit, redemption, manual
 - `net_unit`: g, ml *(net miktarın birimi — katı gram, sıvı mililitre; birim fiyat buradan seçilir)*

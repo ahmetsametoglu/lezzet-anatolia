@@ -128,11 +128,7 @@ function OverviewBody({ overview, header }: OverviewBodyProps) {
             <View style={styles.todayCells}>
               {overview.todayByMethod.map((row) => (
                 <View key={row.method} style={styles.todayCell} testID={`money-today-${row.method}`}>
-                  {/* ÇEK AMBER (v3:23) — koyu kartın öteki sayıları krem, çek `on-ink-warn`.
-                      Çek bir DURUMDUR, bir tutar değil: elde duran, henüz tahsil edilmemiş kâğıt. */}
-                  <Text style={row.method === 'cheque' ? styles.todayCellWarn : styles.todayCellValue}>
-                    {money(row.cents)}
-                  </Text>
+                  <Text style={styles.todayCellValue}>{money(row.cents)}</Text>
                   <Text style={styles.todayCellLabel}>{t.common.method[row.method]}</Text>
                 </View>
               ))}
@@ -216,7 +212,7 @@ function OverviewBody({ overview, header }: OverviewBodyProps) {
                   <Text style={styles.rowMeta}>{t.track.float.state}</Text>
                 </View>
                 <Text style={styles.floatTotal}>
-                  {money(row.cashCents + row.cardCents + row.chequeCents)}
+                  {money(row.cashCents + row.cardCents)}
                 </Text>
               </View>
             </OperationsSurface>
@@ -349,11 +345,6 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text.body,
     color: operationsTheme.colors['on-image'],
-  },
-  todayCellWarn: {
-    fontFamily: operationsTheme.font.body[700],
-    fontSize: operationsTheme.text.body,
-    color: operationsTheme.colors['on-ink-warn'],
   },
   todayCellLabel: {
     fontFamily: operationsTheme.font.body[400],

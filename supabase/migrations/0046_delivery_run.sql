@@ -73,16 +73,15 @@ create index order_delivery_run_idx on public.order (delivery_run_id) where deli
 
 -- ── Beklenen tahsilat — sefer bazında ────────────────────────────────────────
 -- Fark hangi seferde doğduysa orada görünsün diye; `delivery_run_id` teslimle donduğu için yeniden atama kaydırmaz.
--- Yalnız kapıda toplanan üç yöntem sayılır, çünkü online ve havale kuryenin eline girmez.
+-- Yalnız kapıda toplanan iki yöntem sayılır, çünkü online ve havale kuryenin eline girmez.
 create or replace view public.delivery_run_collection with (security_invoker = true) as
 select o.delivery_run_id,
-       coalesce(sum(m.amount) filter (where o.payment_method = 'cash'), 0)::numeric(12, 2)   as expected_cash,
-       coalesce(sum(m.amount) filter (where o.payment_method = 'card'), 0)::numeric(12, 2)   as expected_card,
-       coalesce(sum(m.amount) filter (where o.payment_method = 'cheque'), 0)::numeric(12, 2) as expected_cheque
+       coalesce(sum(m.amount) filter (where o.payment_method = 'cash'), 0)::numeric(12, 2) as expected_cash,
+       coalesce(sum(m.amount) filter (where o.payment_method = 'card'), 0)::numeric(12, 2) as expected_card
   from public.order o
   join public.money_movement m on m.order_id = o.id and m.type = 'order_payment'
  where o.delivery_run_id is not null
-   and o.payment_method in ('cash', 'card', 'cheque')
+   and o.payment_method in ('cash', 'card')
  group by o.delivery_run_id;
 
 -- ── Sefer kapanışı — mutabakat kaydı ────────────────────────────────────────
@@ -96,11 +95,9 @@ create table public.delivery_run_close (
   -- bir hareket düzeltilirse geçmiş mutabakat değişmemeli — "o gün ne konuşuldu" sabit kalır.
   expected_cash numeric(12, 2) not null default 0,
   expected_card numeric(12, 2) not null default 0,
-  expected_cheque numeric(12, 2) not null default 0,
-  -- Kuryenin fiilen teslim ettiği: nakit sayımı, kart cihaz raporu, çek yaprakları.
+  -- Kuryenin fiilen teslim ettiği: nakit sayımı ve kart cihaz raporu.
   counted_cash numeric(12, 2) not null default 0,
   counted_card numeric(12, 2) not null default 0,
-  counted_cheque numeric(12, 2) not null default 0,
 
   -- Kapanış anının resmi, kimlik olarak: sonradan "hangi sipariş" cevapsız kalmasın. Çözümden önce çekilir,
   -- bu yüzden kapanışın `ready`ye düşürdüğü duraklar burada `pending` görünür.
@@ -115,7 +112,7 @@ create table public.delivery_run_close (
 
   -- TÜRETİLİR, yazılmaz: saklansaydı bir gün kolonlarla çelişirdi.
   reconciled boolean generated always as (
-    expected_cash = counted_cash and expected_card = counted_card and expected_cheque = counted_cheque
+    expected_cash = counted_cash and expected_card = counted_card
   ) stored
 );
 
@@ -367,7 +364,6 @@ create or replace function public.close_delivery_run(
   p_run_id uuid,
   p_counted_cash numeric default 0,
   p_counted_card numeric default 0,
-  p_counted_cheque numeric default 0,
   p_note text default null,
   p_actor_id uuid default null
 ) returns jsonb
@@ -403,9 +399,8 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'already_closed', 'id', v_existing.id, 'closed_at', v_existing.closed_at);
   end if;
 
-  select coalesce(c.expected_cash, 0)   as cash,
-         coalesce(c.expected_card, 0)   as card,
-         coalesce(c.expected_cheque, 0) as cheque
+  select coalesce(c.expected_cash, 0) as cash,
+         coalesce(c.expected_card, 0) as card
     into v_expected
     from (select 1) dummy
     left join public.delivery_run_collection c on c.delivery_run_id = p_run_id;
@@ -439,13 +434,13 @@ begin
 
   insert into public.delivery_run_close (
     delivery_run_id,
-    expected_cash, expected_card, expected_cheque,
-    counted_cash, counted_card, counted_cheque,
+    expected_cash, expected_card,
+    counted_cash, counted_card,
     delivered_orders, returned_orders, pending_orders, note, closed_by
   ) values (
     p_run_id,
-    v_expected.cash, v_expected.card, v_expected.cheque,
-    coalesce(p_counted_cash, 0), coalesce(p_counted_card, 0), coalesce(p_counted_cheque, 0),
+    v_expected.cash, v_expected.card,
+    coalesce(p_counted_cash, 0), coalesce(p_counted_card, 0),
     v_delivered, v_returned, v_pending, p_note, p_actor_id
   )
   returning * into v_row;
@@ -456,14 +451,11 @@ begin
     'run_id', p_run_id,
     'expected_cash', v_row.expected_cash,
     'expected_card', v_row.expected_card,
-    'expected_cheque', v_row.expected_cheque,
     'counted_cash', v_row.counted_cash,
     'counted_card', v_row.counted_card,
-    'counted_cheque', v_row.counted_cheque,
     -- Fark = sayılan − beklenen. İşaret anlamlıdır: eksi eksik teslim, artı fazla para.
     'difference_cash', v_row.counted_cash - v_row.expected_cash,
     'difference_card', v_row.counted_card - v_row.expected_card,
-    'difference_cheque', v_row.counted_cheque - v_row.expected_cheque,
     'reconciled', v_row.reconciled,
     'delivered_count', coalesce(array_length(v_row.delivered_orders, 1), 0),
     'returned_count', coalesce(array_length(v_row.returned_orders, 1), 0),
@@ -474,7 +466,7 @@ begin
 end;
 $$;
 
-revoke execute on function public.close_delivery_run(uuid, numeric, numeric, numeric, text, uuid)
+revoke execute on function public.close_delivery_run(uuid, numeric, numeric, text, uuid)
   from public, anon, authenticated;
 
 -- ── Seferi devret ────────────────────────────────────────────────────────────

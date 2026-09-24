@@ -806,7 +806,7 @@ describe('sefer kapanışı (K7)', () => {
     expect(draft.pending.map((s) => s.orderId)).toEqual([bekleyen]);
     expect(draft.returned.map((s) => s.orderId)).toEqual([donen]);
     // Beklenen tutar görünümden okunur; kapıda nakit tahsil edilen tek sipariş bu.
-    expect(draft.expected).toEqual({ cashCents: 2000, cardCents: 0, chequeCents: 0 });
+    expect(draft.expected).toEqual({ cashCents: 2000, cardCents: 0 });
   });
 
   it('seferi kapat: fark TÜRER ve işareti anlamlıdır', async () => {

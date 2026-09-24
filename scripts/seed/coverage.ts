@@ -895,7 +895,6 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'bugün sipariş tahsilatı', zorunlu: true, sayac: (db) => say(db, 'money_movement', (q) => q.eq('value_date', bugun()).eq('type', 'order_payment')) },
       { ad: 'bugün NAKİT tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'cash') },
       { ad: 'bugün KART tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'card') },
-      { ad: 'bugün ÇEK tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'cheque') },
       // İzah sayacı: ekranın saydığı şey bağı, belgesi, etiketi ya da karşı hesabı olmayan harekettir.
       { ad: 'izah edilmemiş hareket', zorunlu: true, sayac: (db) => say(db, 'money_movement', (q) => q.eq('explained', false)) },
     ],
@@ -976,7 +975,7 @@ async function bugunSeferleri(db: Db, kapali: boolean): Promise<number> {
   return idler.filter((id) => closed.has(id) === kapali).length;
 }
 /** Bugün deftere giren sipariş tahsilatı, yönteme göre; yöntem hareketin değil siparişin alanıdır ve para ekranı da bu zinciri kurar. */
-async function bugunYontemliTahsilat(db: Db, yontem: 'cash' | 'card' | 'cheque'): Promise<number> {
+async function bugunYontemliTahsilat(db: Db, yontem: 'cash' | 'card'): Promise<number> {
   const { data, error } = await db
     .from('money_movement')
     .select('order_id')

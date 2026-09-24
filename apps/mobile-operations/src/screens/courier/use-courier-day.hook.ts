@@ -251,9 +251,7 @@ export function useCourierDay(): UseCourierDayResult {
     setCollectedCents(
       draftResult === null || draftResult.error !== null
         ? null
-        : draftResult.data.expected.cashCents +
-            draftResult.data.expected.cardCents +
-            draftResult.data.expected.chequeCents,
+        : draftResult.data.expected.cashCents + draftResult.data.expected.cardCents,
     );
     setStatus('ready');
   }, []);

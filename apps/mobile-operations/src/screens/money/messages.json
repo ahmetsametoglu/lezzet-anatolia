@@ -6,7 +6,6 @@
       "cash": "nakit",
       "card": "kart",
       "online": "online",
-      "cheque": "çek",
       "bank_transfer": "havale"
     },
     "error": {

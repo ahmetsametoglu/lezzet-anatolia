@@ -3,7 +3,7 @@ import { ToastHost } from '@lezzet/mobile-kit/src/components/ui/toast-host';
 import { resetToast } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 
 /* Sayım tuş takımıyla yazılır, bu yüzden testler kapıdaki gerçek yolu izler: alana dokun, rakamlara bas, "Yaz". */
-async function typeAmount(method: 'cash' | 'card' | 'cheque', amount: string) {
+async function typeAmount(method: 'cash' | 'card', amount: string) {
   await fireEvent.press(screen.getByTestId(`courier-money-input-${method}`));
   for (const key of amount) {
     await fireEvent.press(screen.getByTestId(`courier-money-keypad-key-${key}`));
@@ -55,7 +55,6 @@ function mockDraft(draft: unknown, closeResult?: unknown) {
             id: '00000000-0000-4000-8000-000000000099',
             differenceCashCents: 0,
             differenceCardCents: 0,
-            differenceChequeCents: 0,
           },
         ),
       );
@@ -135,7 +134,7 @@ describe('K7 · sefer kapanışı', () => {
   });
 
   it('sayım alanları BEKLENENLE açılır ve fark sıfırdır', async () => {
-    mockDraft(dayCloseDraft({ expected: { cashCents: 4200, cardCents: 1000, chequeCents: 0 } }));
+    mockDraft(dayCloseDraft({ expected: { cashCents: 4200, cardCents: 1000 } }));
 
     await renderClose();
 
@@ -145,7 +144,7 @@ describe('K7 · sefer kapanışı', () => {
   });
 
   it('fark İŞARETLİDİR: eksik teslim eksi, fazla para artı', async () => {
-    mockDraft(dayCloseDraft({ expected: { cashCents: 4200, cardCents: 1000, chequeCents: 0 } }));
+    mockDraft(dayCloseDraft({ expected: { cashCents: 4200, cardCents: 1000 } }));
 
     await renderClose();
 
@@ -157,7 +156,7 @@ describe('K7 · sefer kapanışı', () => {
   });
 
   it('SAYILMAMIŞ kasada fark SIFIR gösterilmez, "bilinmiyor" çizgisi çıkar', async () => {
-    mockDraft(dayCloseDraft({ expected: { cashCents: 4200, cardCents: 0, chequeCents: 0 } }));
+    mockDraft(dayCloseDraft({ expected: { cashCents: 4200, cardCents: 0 } }));
 
     await renderClose();
     /* Tuş takımıyla "bozuk metin" yazılamaz ama alan BOŞALTILABİLİR — ve boş bir kasa
@@ -172,7 +171,7 @@ describe('K7 · sefer kapanışı', () => {
   });
 
   it('kapanış İKİ ADIMLIDIR: onay kutusu çıkmadan uca hiçbir şey gitmez', async () => {
-    mockDraft(dayCloseDraft({ expected: { cashCents: 4200, cardCents: 0, chequeCents: 0 } }));
+    mockDraft(dayCloseDraft({ expected: { cashCents: 4200, cardCents: 0 } }));
 
     await renderClose();
     await fireEvent.press(screen.getByTestId('courier-day-close-cta'));
@@ -187,11 +186,10 @@ describe('K7 · sefer kapanışı', () => {
   });
 
   it('onaylanınca SEFER kimliği + sayılan tutarlar ve not uca CENT olarak gider; sonuç farkı yazılır', async () => {
-    mockDraft(dayCloseDraft({ expected: { cashCents: 4200, cardCents: 0, chequeCents: 0 } }), {
+    mockDraft(dayCloseDraft({ expected: { cashCents: 4200, cardCents: 0 } }), {
       ok: true,
       differenceCashCents: -200,
       differenceCardCents: 0,
-      differenceChequeCents: 0,
       releasedCount: 1,
     });
 
@@ -207,7 +205,6 @@ describe('K7 · sefer kapanışı', () => {
       runId: courierRunBrief().runId,
       countedCashCents: 4000,
       countedCardCents: 0,
-      countedChequeCents: 0,
       note: 'Krutenau kolisi araçta kaldı',
     });
     const notice = screen.getByTestId('toast-message');
@@ -236,7 +233,7 @@ describe('K7 · sefer kapanışı', () => {
     mockDraft(
       dayCloseDraft({
         closed: closedDayRecord({ expectedCashCents: 4200, countedCashCents: 4000 }),
-        expected: { cashCents: 9900, cardCents: 0, chequeCents: 0 },
+        expected: { cashCents: 9900, cardCents: 0 },
       }),
     );
 
