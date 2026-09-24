@@ -6,10 +6,8 @@ import { SHARED_COPY } from './order-copy';
 void React;
 
 /**
- * **Sipariş onaylandı** (14.5) — ödeme sonrası anında. `design/project/Email - Siparis Onaylandi.html`.
- *
- * Sorusu: "aldınız mı, ne zaman gelecek?" Bu yüzden kalemler ve tutar TAM gösterilir; zaman
- * çizgisinin yalnız ilk adımı doludur.
+ * Sipariş onaylandı — ödeme sonrası anında gider. Sorusu "aldınız mı, ne zaman gelecek?" olduğu için ürünler ve tutar
+ * tam gösterilir, zaman çizgisinin yalnız ilk adımı doludur.
  */
 
 export interface OrderEmailProps {
@@ -35,8 +33,8 @@ const COPY: Record<PreferredLanguage, Copy> = {
     title: (name) => (name ? `Siparişiniz alındı, ${name}.` : 'Siparişiniz alındı.'),
     intro: (ref) => (
       <>
-        <strong style={{ color: '#3a4147' }}>{ref}</strong> numaralı siparişiniz mutfağımıza ulaştı. Soğuk zincirle hazırlanıp
-        kapınıza teslim edilecek.
+        <strong style={{ color: '#3a4147' }}>{ref}</strong> numaralı siparişiniz bize ulaştı, teşekkür ederiz. Siparişinizin
+        ayrıntıları aşağıda.
       </>
     ),
     subject: (ref) => `Siparişiniz alındı — ${ref}`,
@@ -48,8 +46,8 @@ const COPY: Record<PreferredLanguage, Copy> = {
     title: (name) => (name ? `Votre commande est enregistrée, ${name}.` : 'Votre commande est enregistrée.'),
     intro: (ref) => (
       <>
-        Votre commande <strong style={{ color: '#3a4147' }}>{ref}</strong> est arrivée dans notre atelier. Elle sera préparée en
-        chaîne du froid et livrée chez vous.
+        Votre commande <strong style={{ color: '#3a4147' }}>{ref}</strong> nous est bien parvenue, merci. Le détail de votre
+        commande figure ci-dessous.
       </>
     ),
     subject: (ref) => `Votre commande est enregistrée — ${ref}`,
@@ -61,8 +59,8 @@ const COPY: Record<PreferredLanguage, Copy> = {
     title: (name) => (name ? `Ihre Bestellung ist eingegangen, ${name}.` : 'Ihre Bestellung ist eingegangen.'),
     intro: (ref) => (
       <>
-        Ihre Bestellung <strong style={{ color: '#3a4147' }}>{ref}</strong> ist bei uns eingegangen. Sie wird gekühlt vorbereitet
-        und zu Ihnen geliefert.
+        Ihre Bestellung <strong style={{ color: '#3a4147' }}>{ref}</strong> ist bei uns eingegangen, vielen Dank. Die Details Ihrer
+        Bestellung finden Sie unten.
       </>
     ),
     subject: (ref) => `Ihre Bestellung ist eingegangen — ${ref}`,
