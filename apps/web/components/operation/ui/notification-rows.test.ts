@@ -3,12 +3,8 @@ import { opsNotificationHref, toOpsNotificationRow } from './notification-rows';
 import type { MeNotification } from '@lezzet/types';
 
 /*
-  OPERASYON ZİL EŞLEMESİ (14.15) — çivilenenler:
-  · `document_undeliverable` alert tonuyla, başlıkta referans ve sebep, hedefi SİPARİŞ DETAYI
-    (dispatch hedefi aynen taşır — operatör "hangi belge" sorusunu oradan okur)
-  · bilinmeyen tür sessizce düşmez: genel başlık + quiet; "uygulamayı güncelleyin" tavsiyesi YOK
-    (o mobile özgü — web her dağıtımda sunucuyla eşzamanlı)
-  · talep hedefi kuyruğun `?t=` sözleşmesine gider; hedefsiz satır tıklanmaz (`href: null`)
+  Operasyon zil eşlemesi: ulaştırılamayan belge alert tonuyla sipariş detayına açılır, bilinmeyen tür genel başlıkla çizilir (mobilin
+  "güncelleyin" tavsiyesi webe sızmaz), talep kuyruğun `?t=` sözleşmesine gider ve hedefsiz satır tıklanmaz.
 */
 
 const row = (over: Partial<MeNotification> = {}): MeNotification => ({
@@ -27,7 +23,7 @@ describe('toOpsNotificationRow', () => {
     const sonuc = toOpsNotificationRow(row());
     expect(sonuc.tone).toBe('alert');
     expect(sonuc.title).toContain('LA-26-X1');
-    /* Sebep 05.09'da ALT SATIRA indi (sözlük başlığı dikişinden ayırdı) — panel ikisini de çiziyor. */
+    /* Sebep alt satırdadır; panel ikisini de çizer. */
     expect(sonuc.subtitle).toContain('e-postası yok');
     expect(sonuc.href).toBe('/operations/orders/00000000-0000-4000-8000-000000000002');
   });
