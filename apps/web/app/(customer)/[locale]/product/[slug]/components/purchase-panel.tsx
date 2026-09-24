@@ -15,52 +15,14 @@ import { PlaceGate } from '@/components/customer/delivery/place-gate';
 import type { Messages } from '../product-types';
 
 /**
- * Satın alma — İKİ parça: boy seçimi (`VariantPicker`, içerik akışında) ve adet + ana aksiyon
- * (`PurchaseBar`).
- *
- * Ayrı olmalarının sebebi mobil: tasarım adet+ekle çubuğunu EKRANIN ALTINA SABİTLER — "sayfa
- * kaydırılırken hep görünür, WhatsApp/sosyal medyadan gelen trafik için tek dokunuş mesafesinde".
- * Boy seçimi ise akışta kalır. Tek bileşen olsalardı çubuk boy kartlarını da aşağı taşırdı.
- * Masaüstünde ikisi arka arkaya, sağ sütunda akar.
- *
- * Seçim SAHİBİ burası değil (`product-client`): boy değişince başlıktaki stok rozeti ve besin
- * tablosundaki net ağırlık da değişir.
- *
- * Sepete ekleme GERÇEKTİR (08.4): sepet servisi ve niyet deposu hazır. Ödeme adımı hâlâ yok
- * (07.4/07.5) ama o checkout'un işi — sepete atmak için ödemenin çalışması gerekmiyor.
- *
- * ── Tasarımdan BİLİNÇLİ SAPMA (28.07, kullanıcı kararı) ──────────────────────────────────────
- * Tasarım burada adet seçici + "Sepete ekle — {toplam}" düğmesini YAN YANA gösteriyor; ekleme
- * sonrası düğme 1,5 sn "Eklendi ✓" olup eski hâline dönüyor. İki sorunu var:
- *
- *   1. Dönen hâl yine "Sepete ekle" ve seçici hâlâ aynı sayıda duruyor — ikinci kez basan müşteri
- *      adedi İKİYE KATLIYOR ve bunu göremiyor (sepet adetleri toplar). "3 ekledim, hâlâ 3 yazıyor,
- *      olmadı galiba" refleksi tam bu tuzağa basıyor.
- *   2. Sepette olmayan bir şeyin "3 adedi" hiçbir yerde karşılığı olmayan bir sayı — ekleme öncesi
- *      adet sormak, henüz var olmayan bir şeyi ölçmek.
- *
- * Yerine TEK KONTROL modeli (katalog kartıyla aynı): önce yalnız "Sepete ekle" düğmesi vardır ve
- * her zaman 1 adet ekler. Kalem sepete girince düğme yerini AYNI KUTUYU dolduran adet seçicisine
- * bırakır; seçici artık gerçek adedi gösterir ve doğrudan onu düzenler (B2B elle giriş burada da
- * açık). 0'a inmek satırı çıkarır ve düğmeyi geri getirir.
- *
- * İki kontrol de satırın tamamını kaplar ve **piksel piksel aynı kutudur** — geçiş, bir düğmenin
- * başka bir düğmeye dönüşmesi gibi görünür. Çerçeve farkı düğmeye şeffaf kenarlık verilerek kapanır.
- *
- * Düğmenin yerine "Sepete git" KONMAZ: sepete gitmenin yolu başlıkta zaten var, çubuğa ikinci bir
- * kapı koymak aynı işi iki kez sunmaktır. "Eklendi ✓" de kaldırıldı — kalıcı mod değişimi 1,5
- * sn'lik bir etiketten güçlü bir onaydır, ikisi birlikte gürültü olurdu.
+ * Satın alma iki parçadır, boy seçimi (`VariantPicker`) ve adet ile ana eylem (`PurchaseBar`), çünkü telefonda eylem akıştan ayrılır;
+ * seçimin sahibi `product-client`tır. Tek kontrol modeli: önce yalnız 1 adet ekleyen "Sepete ekle", kalem sepete girince aynı kutuyu
+ * dolduran adet seçicisi; iki ayrı kontrol ikinci basışta adedi fark ettirmeden katlardı.
  */
 
 /**
- * Boy kartlarının sütun sayısı — masaüstü (kullanıcı kararı 20.09).
- *
- * İki kural: seçim EN FAZLA İKİ SATIR sürer ve bir satırda ÜÇTEN fazla kart olmaz. Dört boy bu
- * yüzden ikiye iki bölünür — üçlü ızgarada son kart tek başına kalıyor ve dolmamış bir seçim
- * hücresi gibi duruyordu. Beş boy 3+2, altı boy 3+3 olur.
- *
- * Yediden itibaren ızgara üçüncü satıra taşardı; orada seçim tek satırlık yatay şeride geçer
- * (kartlar sabit genişlikte, kesilen kart "devamı var" der).
+ * Boy kartlarının masaüstü sütun sayısı: seçim en fazla iki satır sürer ve bir satırda üçten fazla kart olmaz, dört boy bu yüzden ikiye
+ * iki bölünür. Yediden itibaren seçim tek satırlık yatay şeride geçer.
  */
 function sizeColumns(count: number): number {
   if (count <= 3) return count;
@@ -73,7 +35,7 @@ const SIZE_SCROLL_AT = 7;
 /** Adet tavanı: teklifte partide kalan miktar, aksi halde makul bir üst sınır (B2B hacmi sığar). */
 const MAX_QTY = 99;
 
-/** Boyun adet tavanı — telefon görünümünün yapışkan barı da okur (14.09): iki görünüm aynı tavanda durur. */
+/** Boyun adet tavanı; telefon görünümünün yapışkan barı da okur ki iki görünüm aynı tavanda dursun. */
 export const capOf = (v: StorefrontVariant) => (v.limitLabel ? Number(v.limitLabel) : MAX_QTY);
 
 interface VariantPickerProps {
@@ -93,15 +55,11 @@ interface VariantPickerProps {
   compact?: boolean;
 }
 
-// Boyun müşteriye görünen adı (kullanıcı kararı 19.08) `lib/storefront/variant-name.ts`te — telefon görünümünün
-// boy çipleri de aynı kuralı okuyor (14.09).
+// Boyun müşteriye görünen adı `lib/storefront/variant-name.ts`te; telefon görünümünün boy çipleri de aynı kuralı okur.
 
 /**
- * K22 · Boy seçimi. Fiyatın nerede gösterildiği varyant SAYISINA bağlıdır ve bu tasarımın kararıdır:
- *   çok boylu → fiyat her boy kartının içinde (kıyas kartlar arasında yapılır)
- *   tek boylu → seçilecek bir şey yok, fiyat tek başına durur ("7,50 € / 500 g · 15,00 €/kg")
- * İkisini birden göstermek fiyatı iki kez yazardı; hiçbirini göstermemek tek boylu ürünü fiyatsız
- * bırakırdı (ilk kodlamada bu oldu).
+ * Boy seçimi: çok boylu üründe fiyat her boy kartının içindedir, çünkü kıyas kartlar arasında yapılır; tek boylu üründe seçilecek bir
+ * şey yoktur ve fiyat kendi kutusunda durur.
  */
 export function VariantPicker({ t, locale, variants, selected, onSelect, familyLabel = null, compact = false }: VariantPickerProps) {
   const multi = variants.length > 1;
@@ -120,7 +78,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Tek boylu üründe seçim adımı HİÇ gösterilmez (`musteri-urun-detay.md §2`) — yerine fiyat. */}
+      {/* Tek boylu üründe seçim adımı hiç gösterilmez; yerine fiyat. */}
       {multi ? (
         <div className="flex flex-col gap-2.5">
           <span className="flex flex-col gap-0.5">
@@ -129,10 +87,8 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
               <span className="font-sans text-micro text-muted">{t.family.sizesOf.replace('{label}', familyLabel)}</span>
             )}
           </span>
-          {/* Mobilde kartlar İKİ SÜTUNLU IZGARADA — tasarım iki boyla çizmişti (`flex:1` yan yana),
-              katalog dört boyla geldi ve sarmasız satır 390px viewport'ta 410'a TAŞIYORDU (ölçüldü
-              20.08, cevizli-baklava). Izgara kıyası bozmaz: komşu kartlar yine yan yana, fazlası
-              alt satıra iner. */}
+          {/* Telefonda kartlar iki sütunlu ızgarada, çünkü dört boy tek satırda 390 px ekranı taşırır; komşu kartlar yine yan
+              yana kıyaslanır. */}
           <div
             className={compact ? 'grid grid-cols-2 gap-2.5' : scrolls ? `${SCROLL_STRIP} gap-2.25` : 'grid gap-2.25'}
             // Sütun sayısı kart sayısından türer (`sizeColumns`): satır sayısı ikiyi, satırdaki kart
@@ -148,8 +104,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
                 aria-pressed={v.id === selected.id}
                 className={[
                   'flex cursor-pointer flex-col gap-0.5 bg-card text-left transition-colors',
-                  // 194 = tasarımın 150px İÇERİK genişliği + 40 ped + 4 çerçeve. Tasarım `content-box`,
-                  // Tailwind `border-box` — aynı sayıyı yazmak kartı 44 px dar bırakıyordu (yaşandı).
+                  // 194 = tasarımın 150 px içerik genişliği + 40 ped + 4 çerçeve: tasarım `content-box`, Tailwind `border-box` ölçer.
                   compact ? 'rounded-soft px-3.5 py-2.5' : 'rounded-soft px-3.25 py-2.75',
                   // Şeritte kart sabit 158 px ve bu ölçü KASITLI: 470 px'lik rafta üçüncü kart
                   // kenarda kesilir, yani "devamı var" görünür. 150 px'te üç kart rafı tam
@@ -196,20 +151,16 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
         </div>
       )}
 
-      {/* Adet sınırı KENDİ SATIRINDA durur (tasarım "İndirimli teklif" durumu): fiyatın altında tek
-          bir çip. Fırsat rozetiyle yan yana dizilince iki kırmızı etiket birbirini bastırıyordu.
-          Masaüstünde çip fiyat kutusunun altındadır (`LimitNote`) — fiyat da orada. */}
+      {/* Adet sınırı fiyatın altında kendi satırında tek çiptir, çünkü fırsat rozetiyle yan yana iki kırmızı etiket birbirini
+          bastırır; masaüstünde çip fiyat kutusunun altındadır (`LimitNote`). */}
       {compact && selected.limitLabel && <Badge tone="offer">{t.limit.replace('{n}', selected.limitLabel)}</Badge>}
     </div>
   );
 }
 
 /**
- * **Fiyat kutusu** (tasarım 20.09) — fiyat, birim satırı ve satın alma kontrolü TEK kutuda.
- *
- * Fiyat eskiden boy seçicisinin içinde yaşıyordu ve tek boylu üründe seçici yalnız fiyat göstermek
- * için çiziliyordu. Kutu ikisini ayırdı: seçici yalnız SEÇİLECEK bir şey varken çizilir, fiyat her
- * hâlde burada durur ve yanındaki kontrolle aynı hizada kalır.
+ * Fiyat kutusu: fiyat, birim satırı ve satın alma kontrolü tek kutuda; seçici yalnız seçilecek bir şey varken çizilir, fiyat her hâlde
+ * burada ve kontrolle aynı hizada durur.
  */
 export function PriceBox({ t, locale, selected, children }: { t: Messages; locale: Locale; selected: StorefrontVariant; children?: React.ReactNode }) {
   /** "500 g tepsi · 15,00 €/kg" — boy adı ve kıyas fiyatı; ikisi de yoksa satır hiç çizilmez. */
@@ -240,7 +191,7 @@ export function PriceBox({ t, locale, selected, children }: { t: Messages; local
   );
 }
 
-/** Adet sınırı çipi — kutunun ALTINDA, kendi satırında (iki uyarı yan yana birbirini bastırıyordu). */
+/** Adet sınırı çipi kutunun altında kendi satırındadır, çünkü iki uyarı yan yana birbirini bastırır. */
 export function LimitNote({ t, selected }: { t: Messages; selected: StorefrontVariant }) {
   if (!selected.limitLabel) return null;
   return (
@@ -255,18 +206,11 @@ interface PurchaseBarProps {
   locale: Locale;
   selected: StorefrontVariant;
   /**
-   * Ürün YALNIZ kapıya teslim edilebiliyor mu (`!product.shippable` — soğuk zincir).
-   *
-   * Yer bilinmiyorken bu ürünün satın alınabilirliğini söyleyemeyiz: rota deposundan gidiyor ve
-   * müşterinin rota içinde olup olmadığını bilmiyoruz. O hâlde eylem yerini posta kodu isteğine
-   * bırakır (`PlaceGate`).
+   * Ürün yalnız kapıya teslim edilebiliyor mu (`!product.shippable`, soğuk zincir); yer bilinmiyorken satın alınabilirliği söylenemez
+   * ve eylem yerini posta kodu isteğine bırakır (`PlaceGate`).
    */
   routeOnly?: boolean;
-  /**
-   * Mobil AKIŞ yerleşimi: kontrol tam genişlik — karar bölgesinin son satırı. Eskiden mobilde
-   * ekranın altına sabit koyu çubuk vardı; SÖKÜLDÜ (kullanıcı kararı 20.08, sekizinci tur) —
-   * yerini bu satır + çerçevenin yüzen sepet düğmesi (`CartFab`, native deseni) aldı.
-   */
+  /** Telefon akış yerleşimi: kontrol tam genişlik, karar bölgesinin son satırıdır. */
   flow?: boolean;
   /**
    * **Üçüncül hâl — "Yine de sepete ekle"** (tasarım `.dc.html`, kullanıcı kararı 19.08).
@@ -289,13 +233,8 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, flow = fal
   const sellable = selected.priceCents !== null && !selected.soldOut;
 
   /**
-   * Yer sorulmadan satın alma eylemi çizilmez — ama YALNIZ rota-only üründe.
-   *
-   * Kargolanabilen ürün Fransa'nın her yerine gidiyor; orada kodu sormanın bu aşamada bir sonucu
-   * yok ve karşılıksız bir soru olurdu.
-   *
-   * `ready` beklenir: ilk karede yer henüz okunmamışken kapıyı göstermek, kodu zaten kayıtlı olan
-   * müşteriye bir an "önce posta kodu" demek olurdu.
+   * Yer sorulmadan satın alma eylemi yalnız rota-only üründe çizilmez, çünkü kargolanabilen ürün her yere gider. `ready` beklenir ki
+   * kodu kayıtlı müşteri bir an "önce posta kodu" görmesin.
    */
   const gated = routeOnly && ready && !place;
 
@@ -303,15 +242,11 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, flow = fal
   // ürüne değil BOYA aittir: 500 g'dan 3 alıp 1 kg'a geçen müşteriye hâlâ 3 göstermek yalan olur.
   const inCart = sellable ? lineOf({ variantId: selected.id }) : null;
 
-  // Ekleme HER ZAMAN 1 adettir; ayarlama eklendikten sonra yapılır. Öncesinde adet sormanın anlamı
-  // yok: sepette olmayan bir şeyin "3 adedi" hiçbir yerde karşılığı olmayan bir sayıdır. Sepete
-  // girdikten sonra ise aynı seçici gerçek adedi düzenler (B2B elle giriş orada da açık).
+  // Ekleme her zaman 1 adettir ve adet sonra aynı seçicide düzenlenir; sepette olmayan bir şeyin adedi karşılıksız bir sayıdır.
   const qty = inCart ? inCart.qty : 1;
   const setQty = (next: number) => inCart && setCartQty({ kind: 'variant', variantId: selected.id, stockId: inCart.stockId }, next);
 
-  // Düğme TOPLAM YAZMAZ. Tasarımda yazıyordu çünkü ekleme öncesi adet seçilebiliyordu ("2 × 16,90"
-  // gerçek bir hesaptı). Adet artık hep 1 olduğu için toplam birim fiyata eşit — yani düğme, hemen
-  // üstündeki fiyatı ikinci kez basıyordu. Aynı sayıyı iki kez yazmak hiyerarşiyi de bozuyordu.
+  // Düğme toplam yazmaz: adet hep 1 olduğu için toplam birim fiyata eşittir ve hemen üstündeki fiyatı ikinci kez basardı.
   const label = !sellable ? (selected.priceCents === null ? t.closed : t.soldOut) : deemphasized ? t.addToCartAnyway : t.addToCart;
 
   // Tek kontrol, tek kutu. İkisi de satırın tamamını kaplar ve aynı yüksekliktedir; çerçeve farkı

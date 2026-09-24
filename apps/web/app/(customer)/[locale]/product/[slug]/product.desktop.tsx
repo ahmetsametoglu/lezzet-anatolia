@@ -109,10 +109,8 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
             <ShareButton label={t.share} subject={{ subjectType: 'product', subjectId: product.id, productId: product.id }} />
           </div>
 
-          {/* Stok rozeti SEÇİLİ boyu anlatır: bir boy tükenmişken "Stokta" yazmak, düğmesi "Tükendi"
-              olan aynı ekranda kendi kendini yalanlar. Yere bağlı iki hâlde rozetin yerini yer
-              işareti alır — orada yeşil "Stokta" hemen altındaki teslimat kutusuyla çelişirdi.
-              Soğuk zincir işareti rozetin yanında (16.08): teslimatın değil ÜRÜNÜN künyesi. */}
+          {/* Stok rozeti seçili boyu anlatır ve yere bağlı iki hâlde yerini yer işaretine bırakır, yoksa yeşil "Stokta" teslimat
+              kutusuyla çelişirdi; soğuk zincir işareti rozetin yanındadır, çünkü teslimatın değil ürünün künyesidir. */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Puan adın altında; yorumu olmayan üründe satır rozetlerle başlar. Sayı yorumlara götürür. */}
             {reviews.score.average !== null && (
@@ -166,8 +164,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
         </div>
       </div>
 
-      {/* Künye kendi bandında ve üç eşit kart: sol sütunda dururken sayfanın en uzun bloğuydu ve
-          rafın bittiği yerde sayfayı tek sütuna düşürüyordu (tasarım 20.09). */}
+      {/* Künye kendi bandında ve üç eşit kart, çünkü sol sütunda sayfanın en uzun bloğu olur ve sayfayı tek sütuna düşürürdü. */}
       {/* Zemin ve çizgi EKRANIN İKİ KENARINA uzanır (`Band`), içerik kabukta kalır: geniş ekranda
           kabuk genişliğinde kesilen kum blok, bandın yarıda bittiği izlenimi veriyordu. */}
       <Band surface="border-t border-sand-300 bg-sand-100" className="flex flex-col gap-4.5 px-12 py-8.5">
@@ -191,9 +188,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
 
       {product.similar.length > 0 && (
         <Band surface="border-t border-sand-275 bg-sand-50" className="flex flex-col gap-4 px-12 pt-8.5 pb-10.5">
-          {/* Açıklama satırı YOK. Bir süre "aile üyeleri burada tekrar edilmez" yazıyordu; kural
-              değişti (04.08 — her aileden bir temsilci gelebilir) ve cümle yalan oldu. Yerine
-              yenisi konmadı: karışık bir liste kendini anlatır, kuralını anlatmasına gerek yok. */}
+          {/* Açıklama satırı yok: karışık bir liste kendini anlatır, kuralını anlatmasına gerek yok. */}
           {/* Başlık satırı `SectionHeading` DEĞİL: ürün detayın bant başlıkları tasarımda 25 px ve
               bağlantı altı çizili bir metin — ortak başlık 28 px'lik ana sayfa ölçüsünü taşıyor. */}
           <div className="flex items-baseline justify-between gap-3">

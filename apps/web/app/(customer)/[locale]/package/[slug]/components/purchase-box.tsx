@@ -9,44 +9,17 @@ import { PlaceGate } from '@/components/customer/delivery/place-gate';
 import type { Messages } from '../package-types';
 
 /**
- * Paketin satın alma kontrolü — ürün detayıyla AYNI mantık (`purchase-panel.tsx`).
- *
- * Paket BÜTÜN olarak eklenir: içerik tek tek seçilemez, kalem çıkarılamaz (`musteri-paket-detay.md
- * §3`). Bu yüzden burada varyant seçimi yoktur — ürün detayındaki "boy seçin" adımının paketteki
- * karşılığı yok, seçilecek bir şey kalmamış.
- *
- * **Tek kontrol, tek kutu.** Sepette değilken "Paketi sepete ekle" düğmesi, sepetteyken AYNI YERDE
- * adet seçicisi durur — iki ayrı öğe değil, tek bir kutunun iki hâli. İkisi de satırın tamamını
- * kaplar ve aynı yüksekliktedir; çerçeve farkı düğmeye şeffaf kenarlık verilerek kapanır, yoksa
- * geçişte kutu birkaç piksel zıplıyor.
- *
- * Ekleme HER ZAMAN 1 adettir; ayarlama eklendikten sonra yapılır. Sepette olmayan bir şeyin "3
- * adedi" hiçbir yerde karşılığı olmayan bir sayıdır. "−" ile 1'den 0'a inmek paketi sepetten
- * ÇIKARIR ve düğme geri gelir (silme onayı yok, 5 sn'lik geri alma şeridi var).
- *
- * Adet tavanı YOK: teklif partisi kavramı pakette yoktur, indirim de pakete uygulanmaz (DOMAIN §13).
- *
- * Düğme TOPLAM YAZMAZ ve masaüstünde sütunun YARISINI kaplar — ürün detayıyla birebir aynı karar.
- * Toplam yazmıyor çünkü ekleme hep 1 adet: yazılan sayı hemen üstündeki fiyatın ikinci kopyası
- * olurdu. Yarım genişlik çünkü tam genişlikte hem düğme gereğinden iri duruyor hem de yerini aldığı
- * seçicinin üç bölgesi birbirinden kopuyor; kutu daralınca oran kendiliğinden düzeliyor.
+ * Paketin satın alma kontrolü ürün detayıyla aynı tek kontrol modelidir (`purchase-panel.tsx`): paket bütün eklenir, sepette değilken
+ * düğme, sepetteyken aynı kutuda adet seçicisi durur. Adet tavanı yoktur, çünkü teklif partisi ve indirim pakete uygulanmaz (DOMAIN §13).
  */
 interface PurchaseBoxProps {
   t: Messages;
   locale: Locale;
   bundleId: string;
   soldOut: boolean;
-  /**
-   * Paket YALNIZ kapıya teslim edilebiliyor mu (`pack.inRouteOnly` — içinde kargolanamayan kalem
-   * var). Yer bilinmiyorken satın alınabilirliğini söyleyemeyiz; eylem posta kodu isteğine bırakır.
-   * Gerekçenin tamamı `PlaceGate` künyesinde.
-   */
+  /** Paket yalnız kapıya teslim edilebiliyor mu (`pack.inRouteOnly`); yer bilinmiyorken eylem posta kodu isteğine bırakır. */
   routeOnly?: boolean;
-  /**
-   * Mobil AKIŞ yerleşimi: kontrol tam genişlik — dar ekranda yarım düğme küçük bir yetim olurdu.
-   * Eskiden koyu zeminli sabit çubuk (`onDark`) vardı; SÖKÜLDÜ (kullanıcı kararı 20.08, sekizinci
-   * tur) — yerini bu satır + çerçevenin yüzen sepet düğmesi (`CartFab`) aldı.
-   */
+  /** Telefon akış yerleşimi: kontrol tam genişlik, çünkü dar ekranda yarım düğme küçük bir yetim olurdu. */
   flow?: boolean;
 }
 

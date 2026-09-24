@@ -15,16 +15,11 @@ import { PurchaseBox } from './components/purchase-box';
 import type { PackageViewProps } from './package-types';
 
 /**
- * Paket detay — masaüstü düzeni (tasarım: `Musteri - Paket Detay.dc.html`, "Paket Detay Web").
- * Breadcrumb → iki sütun (görsel | satın alma) → "Pakette neler var?" → yasal not.
- *
- * Sağ sütunun sırası tasarımın kararı ve satın alma mantığını izler: künye → ad → fiyat/stok →
- * açıklama → aksiyon → teslim koşulu → güven künyesi. Kargo kısıtı aksiyonun ALTINDA ama sepete
- * eklemeden ÖNCE görünür (`musteri-paket-detay.md §2`).
+ * Paket detayının masaüstü düzeni: iki sütun (görsel | satın alma), "Pakette neler var?" ve yasal not. Sağ sütun satın alma mantığını
+ * izler ve kargo kısıtı eylemin altında ama sepete eklemeden önce görünür.
  */
 export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
-  // Yol → stok dili eşlemesi KARTLA AYNI kaynaktan (19.22 ekran ucu; kural 14.09'dan beri native ile ortak,
-  // `packageRouteStatusOf`): kart ile detay aynı pakete iki farklı hâl söyleyemez.
+  // Yol → stok dili eşlemesi kartla aynı kaynaktan (`packageRouteStatusOf`): kart ile detay aynı pakete iki farklı hâl söyleyemez.
   const stockStatus = packageRouteStatusOf(pack.route);
   return (
     <div className="flex flex-col">
