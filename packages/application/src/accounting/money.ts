@@ -11,15 +11,8 @@ import {
 import type { MethodTotal, MoneyDayEnd, MoneyOverview, PaymentMethod, PendingCollection } from '@lezzet/types';
 
 /*
-  PARA BÖLÜMÜ OKUMALARI (21.12 · M1 tahsilat izleme · M2 gün sonu mutabakat özeti).
-
-  SALT OKUMA — tasarımın altın kuralı ("'bakiye düzeltme' diye bir kavram yok"): bu dosyada tek
-  bir yazım yoktur ve para hesaplanmaz, DEFTERDEN toplanır. Tahsilat kapıda yazıldı (11.3), sefer
-  mutabakatı kapanışta yazıldı (11.7); burada yalnız o kayıtlar günün sorusu etrafında birleşir.
-
-  KURYENİN ÜSTÜNDEKİ PARA bir hesap DEĞİLDİR: kapıda toplanan tutar deftere hesaba girer, ama
-  fiziken kuryededir — K7 devrine (sefer kapanışına) dek. Bu yüzden float, "bugünün KAPANMAMIŞ
-  seferlerinin beklenen tahsilatı"ndan türetilir; ayrı bir "kurye kasası" satırı uydurulmaz.
+  Para bölümü okumaları salt okumadır: para hesaplanmaz, defterden toplanır; tahsilat kapıda, mutabakat kapanışta yazılır.
+  Kuryenin üstündeki para bir hesap değildir: kapanmamış seferlerin beklenen tahsilatından türer, ayrı bir "kurye kasası" satırı uydurulmaz.
 */
 
 function isoDate(date: Date): string {
@@ -83,9 +76,7 @@ export async function readMoneyOverview(db: Db, input: { date?: string } = {}): 
   const openRuns = todayRuns.filter((run) => !closedRunIds.has(run.id));
   const collections = await new DeliveryRunCollectionService(db).listByRuns(openRuns.map((run) => run.id));
 
-  /* PARA KİMDE — sefer başına künye (v3:23). Kurye adı ikinci bir profil turu ister; bekleyen
-     satırların adlarıyla AYNI kapıdan okunur ve **tek turda** (iki ayrı `listByIds` çağrısı aynı
-     tabloya iki kez gitmek olurdu). Profili okunamayan kurye `null` kalır — uydurulmaz. */
+  /* Para kimde, sefer başına: kurye adları bekleyen satırların adlarıyla aynı kapıdan tek turda okunur; profili okunamayan kurye `null` kalır. */
   const courierNames = await new UserProfileService(db).listByIds([
     ...new Set(openRuns.map((run) => run.courierId)),
   ]);
@@ -149,11 +140,10 @@ export async function readMoneyDayEnd(db: Db, input: { date?: string } = {}): Pr
   const counted = closes.reduce((sum, close) => sum + close.countedCashCents, 0);
   const expected = closes.reduce((sum, close) => sum + close.expectedCashCents, 0);
 
-  /* UYUŞMAZLIĞIN KÜNYESİ (v3:24) — hangi sefer, kim, ne zaman. Yalnız FARKI OLAN kapanışlar:
-     tutan sefer bir künye değil, sessiz bir onaydır ve listeye girseydi muhasebeci farkı olanı
-     aramak zorunda kalırdı. Kurye adı seferden gelir (kapanış yalnız `closedBy` taşır ve o
-     kapatan kişidir — çoğu zaman kurye ama kural değil; para KİMİN üstündeydi sorusunun cevabı
-     seferi süren kuryedir). */
+  /*
+    Uyuşmazlığın künyesi yalnız farkı olan kapanışlardır, çünkü tutan sefer sessiz bir onaydır.
+    Kurye adı seferden gelir: kapanışın `closedBy`ı kapatan kişidir, paranın kimde olduğu değil.
+  */
   const mismatched = closes.filter((close) => close.countedCashCents !== close.expectedCashCents);
   const runOf = new Map(todayRuns.map((run) => [run.id, run]));
   const mismatchNames = await new UserProfileService(db).listByIds([

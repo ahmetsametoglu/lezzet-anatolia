@@ -5,16 +5,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { dispatchStaffNotification } from './dispatch';
 
 /*
-  PERSONEL OLAY ÜRETİCİLERİ (kullanıcı kararı 26.08) — dört kapı zili.
-
-  "Bildirim ≠ kuyruk" ilkesi BOZULMADI: kuyruğun kendisi (şikâyet listesi, eşik-altı listesi,
-  mutabakat ekranı, onay kuyruğu) ekranlarda yaşamaya devam eder; buradaki satırlar kuyruğa
-  DÜŞME ÂNININ haberidir — operatör ekranı açık tutmadan "az önce ne oldu"yu zilden okur.
-
-  ── HEPSİ SESSİZ-KÜNYELİDİR ─────────────────────────────────────────────────
-  Bildirim, taşıdığı işin kaydından asla daha önemli değildir (`ringBell` kuralının aynısı):
-  talep kaydedildi, kapanış yazıldı, rezervasyon kesinleşti — zil düşerse iş DURMAZ; iz
-  `captureError` ile düşer, akış devam eder. Bu yüzden dört üretici de fırlatmaz.
+  Personel olay üreticileri: kuyruğun kendisi ekranlarda yaşar, buradaki satırlar kuyruğa düşme anının haberidir ki operatör "az önce ne oldu"yu zilden okusun.
+  Hepsi sessiz künyelidir: zil düşerse iş durmaz, iz `captureError` ile düşer ve üreticiler fırlatmaz.
 */
 
 const yut = (err: unknown, kind: string): void => {

@@ -103,24 +103,9 @@ export async function confirmDoorDelivery(
     return { status: 'proof_required', channel: order.channel };
   }
 
-  // ── Mal + teslim: TEK YAZIM ────────────────────────────────────────────────
   /*
-    İKİSİ BÖLÜNMEZ (21.271 · denetim bulgusu 8). Bir tur burada ARDIŞIK iki çağrı vardı — önce
-    `adjustFulfillment`, sonra `deliverOrder` — ve ikincisi `stale` dönerse birincisi geri
-    alınmıyordu: karşılanan adet düşmüş, rezervasyon serbest kalmış, müşteriye "eksik karşılandı"
-    haberi gitmiş, ama teslim yazılmamış oluyordu. Ekran kuryeye "olmadı" diyordu; oysa yarısı
-    olmuştu ve haber geri alınamıyordu.
-
-    Sırayı ters çevirmek çare değildi: düzeltmenin anlamı malın fiili stoktan düşüp düşmediğine
-    bağlı (`0020` künyesi) — teslimden önce "rezervasyonu küçült", sonra "düşmüş stoğu geri koy".
-    Çare ikisini tek transaction'a almaktı; künye `deliverOrderWithAdjustments`ta.
-
-    Kapıda reddedilen mal fiili stoktan HİÇ düşmemiştir: kalem–parti kaydı ve rezervasyon azalır,
-    mal araçta kalır ve depoya döner (0026).
-
-    Kutulu siparişte okutulan kodlar KANITA yazılır (etüt 2.5): görselli kanıt varsa onun içine,
-    yoksa görselsiz `box_scan` kaydı doğar — B2C'nin bugün hiç kanıt istemeyen teslimi böylece
-    bedava bir kanıt kazanır.
+    Düzeltme ve teslim tek yazımdır (`deliverOrderWithAdjustments`), çünkü ardışık iki çağrıda teslim `stale` dönünce düzeltme ve müşteriye giden "eksik" haberi geri alınamıyordu.
+    Okutulan kutu kodları kanıta yazılır: görselli kanıt varsa onun içine, yoksa görselsiz `box_scan` kaydı olarak.
   */
   const adjustments = input.adjustments ?? [];
   const boxCodes = boxes.length > 0 ? boxes.map((box) => box.code) : null;
@@ -136,24 +121,8 @@ export async function confirmDoorDelivery(
   if (written.status === 'stale') return { status: 'stale', currentStatus: written.currentStatus };
   if (written.status === 'not_found') return { status: 'not_found' };
   /*
-    `already_marked` BU YOLDAN DOĞAMAZ — ve bu artık sözleşmenin garantisi (21.272 · 07.09).
-
-    Bir tur burada *"kurye yolunda da doğabilir"* yazıyordu ve `BEKLEYEN(21.272)` ile sözleşmeye
-    ayrı bir dal açılması bekleniyordu. Ölçüldü, öyle değilmiş: veritabanının koşulu gelen isteğin
-    bir AKIBET taşımasını şart koşuyor (`0020_order_return.sql:127` —
-    `v_disposition is not null and v_disposition <> v_existing`), kurye ise akıbeti hiç göndermiyor.
-    Yani ret kurye kapısında hiç tetiklenmiyordu; "kuryeye yanlış sebep söyleniyor" teşhisi
-    yanlıştı.
-
-    Gerçek açık ŞEMADAYDI: `ConfirmDoorDeliveryRequestSchema.adjustments` ortak kalem şeklini
-    olduğu gibi taşıyor ve akıbet alanına kapı açık bırakıyordu — yani sözleşme, şeridin kuralından
-    fazlasına izin veriyordu. Alan `omit` ile çıkarıldı; artık kurye isteği akıbet TAŞIYAMIYOR ve
-    bu dal ulaşılamaz.
-
-    Dal yine de SİLİNMEDİ: `deliverOrderWithAdjustments` paylaşılan bir kapı ve depo yolu o cevabı
-    üretiyor, yani tip birleşimi onu taşımaya devam ediyor. Ulaşılamayan bir dalı sessizce düşürmek,
-    tip bir gün genişlediğinde cevabı kaybetmek olurdu. En yakın doğru cevap `stale`: kapı hiçbir
-    şey YAZMADI ve durak hâlâ yolda.
+    `already_marked` bu yoldan doğamaz: veritabanı koşulu isteğin bir akıbet taşımasını şart koşar ve kurye sözleşmesi akıbeti `omit` ile dışarıda bırakır.
+    Dal yine de durur, çünkü paylaşılan kapıda depo yolu bu cevabı üretir; en yakın doğru cevap `stale`dir, kapı hiçbir şey yazmadı.
   */
   if (written.status === 'already_marked') {
     return { status: 'stale', currentStatus: 'out_for_delivery' };

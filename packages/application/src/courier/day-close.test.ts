@@ -114,10 +114,8 @@ async function atTheDoor(qty: number) {
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   /*
-    HAZIRLIK KUTUYLA (kullanıcı kararı 30.08): kutusuz sipariş `ready` olamaz, yola çıkamaz ve
-    kapıdan geçemez. Mühür siparişi HAZIR yapar; kutu araca da bindirilir, çünkü `startCourierDay`
-    kutuları binmemiş durağı yola çıkarmıyor (kutulu siparişte "yolda"nın tek kapısı son okutma).
-    Kutu KODU dönüyor — teslim çağrısı onu istiyor.
+    Hazırlık kutuyla yapılır: kutusuz sipariş `ready` olamaz ve yola çıkamaz.
+    Kutu araca da bindirilir, çünkü `startCourierDay` kutusu binmemiş durağı yola çıkarmaz; kodu da teslim çağrısı ister.
   */
   await advanceOrder(db, order.id, ['confirmed', 'preparing']);
   const box = await openBox(db, { orderId: order.id, warehouseId });
@@ -187,14 +185,8 @@ describe('kapanış taslağı', () => {
 
   it('İKİ SEFER ARAÇTAYKEN kapanış SÜRÜLENİ açar — kurulmuş ama başlamamış olanı değil', async () => {
     /*
-      ── CİHAZDA ÖLÇÜLEN ARIZA (01.09 · kullanıcı bulgusu) ────────────────────
-      Seçim "kapanmamış İLK sefer"di ve iki seferli günde yanlış kaydı veriyordu: kurye Doğu
-      Hattı'nı sürerken "Seferi kapat" dediğinde ekran, hiç yola çıkmamış Batı Hattı'nın
-      mutabakatını açtı. Bedeli para ve durak — sürülmemiş bir seferi kapatmak onun siparişlerini
-      serbest bırakır ve gerçekten sürülen sefer açık kalır.
-
-      Ölçüt artık `/day` ucunun `run` alanıyla BİREBİR aynı: yola çıkmış ve kapanmamış olan.
-      "Hangi seferi sürüyorum" sorusuna iki okuma iki farklı cevap veremez (CLAUDE §1).
+      Kapatılan sefer `/day` ucunun `run` alanıyla aynı ölçütle seçilir (yola çıkmış ve kapanmamış olan), çünkü "hangi seferi sürüyorum" sorusuna iki okuma iki cevap veremez.
+      İlk kapanmamış sefer seçilseydi sürülmemiş seferin siparişleri serbest kalır, sürülen sefer açık kalırdı.
     */
     const kurulan = await startCourierDay(db, { courierId, zoneId: ikinciZoneId, date: day, depart: false });
     expect(kurulan.status).toBe('ok');
