@@ -138,9 +138,8 @@ checkout.get('/', async (c) => {
     // Teslimat dilimi kapıdan olduğu gibi geçer; seçilemeyen davet günü kapıda zaten `null`a iner.
     delivery: snapshot.delivery,
     payment: snapshot.payment === null ? null : { ...snapshot.payment, codBlockedReason: codReasonOf(snapshot.payment.codBlockedReason) },
-    // Döküm de kapıdan OLDUĞU GİBİ geçer: ekranın çizeceği küme ile taslağın tahsil edeceği küme
-    // aynı hesaptan çıktı (`summary` künyesi), burada yeniden şekillendirilmesi ikinci bir kaynak
-    // açardı — düzeltilen arıza tam olarak buydu.
+    // Döküm de kapıdan olduğu gibi geçer: ekranın çizeceği küme ile taslağın tahsil edeceği küme aynı hesaptan çıkar, burada
+    // yeniden şekillendirilmesi ikinci bir kaynak açardı.
     summary: snapshot.summary,
     pickup: snapshot.pickup,
   };

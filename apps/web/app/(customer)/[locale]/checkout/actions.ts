@@ -32,56 +32,29 @@ import { recordEvent } from '@/lib/analytics/record';
 import { routing } from '@/i18n/routing';
 
 /**
- * Checkout server action'ları (08.13).
- *
- * **Müşteri kimliği TEK yerde çözülür** — burada, oturumdan. Giriş SEPETTE yapılır (13.09,
- * `CartIdentity`): e-posta kodu ya da Google giriş akışının kendisi (04) auth kullanıcısını açıp
- * oturumu kuruyor. DOMAIN §10 "hesapsız sipariş yoktur" kuralının karşılığı budur: ayrı bir misafir
- * kimliği taşımıyoruz. Adres de sepette seçilir; buradaki tek adres eylemi doğrulama (11.11).
- *
- * **İstemci hiçbir tutar göndermez.** Sepet niyeti (`entries`) ve seçimler (adres, gün, yöntem)
- * gelir; fiyat, kargo ücreti, indirim ve toplam her turda sunucuda yeniden çözülür.
- *
- * **Hata kapısı müşteriye ait** (`customerErrorKey`, denetim H1/H2 · 03.08): dönen şey metin değil
- * ANAHTAR. Bilinen tek hâl oturumun düşmesi (`session_expired`); geri kalan her şey `unexpected`e
- * iner ve ham mesaj yalnız `error_log`'a gider. Sipariş REDLERİ buradan geçmez — onlar bir hata
- * değil bir cevaptır ve kendi sözlüğünde yaşar (`t.rejected.*`, `ConfirmOutcome.rejected`).
+ * Checkout server action'ları: müşteri kimliği yalnız burada, oturumdan çözülür; istemci tutar göndermez, fiyat ve ücret her
+ * turda sunucuda yeniden çözülür. Dönen hata metin değil anahtardır (`customerErrorKey`), sipariş retleri kendi sözlüğünde yaşar.
  */
 
 /**
- * Adım verisini çözer. Adres seçilmeden de çağrılır (liste gelsin diye) — o zaman teslimat ve
- * ödeme null döner, çünkü ikisi de adresin cevabıdır ve adres yokken uydurulamaz.
- *
- * **Köprü** (sipariş zinciri terfisi, aşama 2/3): birleştirme kuralı `@lezzet/application`'a
- * taşındı — mobilin "Siparişi tamamla" ekranı tam da bu birleşimi istiyor ve `'use server'`
- * dosyası bir UÇTUR, orkestrasyon barındırmaz (CLAUDE §2). Uçta kalanlar: dil doğrulaması,
- * müşteri kimliğinin oturumdan çözülmesi (girişsizde boş cevap) ve müşteri hata zarfı.
+ * Adım verisini çözer; adres seçilmeden de çağrılır ki liste gelsin, o zaman teslimat ve ödeme `null` döner. Birleştirme kuralı
+ * `@lezzet/application`da, uç dili doğrular, kimliği oturumdan çözer ve müşteri hata zarfını kurar.
  */
 export async function loadCheckoutAction(
   locale: string,
   entries: CartEntry[],
   addressId: string | null,
   /**
-   * Sepette girilen kupon kodu — checkout'a KADAR taşınmalı. Taşınmadığında ekran kendisiyle
-   * çelişiyordu: kalem satırları ve indirim sepet bağlamından (kuponlu), toplam ise buradan
-   * (kuponsuz) geliyordu; üstelik siparişe yazılan tutar da kuponsuz oluyordu — müşteri kuponu
-   * kullanmış görünüp TAM FİYAT ödüyordu (29.07 denetimi).
+   * Sepette girilen kupon; taşınmazsa kalemler kuponlu, toplam ve siparişe yazılan tutar kuponsuz olurdu.
    */
   couponCode: string | null = null,
   /**
-   * Sepetin KARGO grubundan açılan ikinci sipariş mi (19.7 · `/checkout?group=shipping`).
-   *
-   * Taslakla AYNI bayrak, aynı gerekçe (`createCheckoutDraft` künyesi): tür türetilmez, açık
-   * seçilir. Burada da geçmesi şart — geçmezse ekran adresin cevabını gösterir ("kapıya teslim,
-   * kapıda ödeme mümkün, şu günler"), taslak ise kargo siparişi açar. Müşteri ekranda gördüğü
-   * ödeme yöntemini seçer, onaylar ve kasada reddedilirdi.
+   * Sepetin kargo grubundan açılan ikinci sipariş mi (`/checkout?group=shipping`); taslakla aynı açık bayrak. Geçmezse ekran
+   * adresin cevabını gösterir, taslak kargo siparişi açar ve müşteri ekranda seçtiği yöntemle kasada reddedilir.
    */
   shippingOrder = false,
   /**
-   * Müşterinin seçtiği kargo servisi (07.12) — **YALNIZ KOD, tutar değil.**
-   *
-   * Fiyat sunucudaki teklif listesinden okunur; istemcinin gönderdiği bir tutar hiç sorulmaz.
-   * Referans projede bunun tersi kayda geçmiş bir sömürü kapısıydı (`priceEur=0` yükü).
+   * Müşterinin seçtiği kargo servisi, yalnız kod: fiyat sunucudaki teklif listesinden okunur, istemciden tutar alınmaz.
    */
   shippingOptionCode: string | null = null,
 ): Promise<CustomerResult<CheckoutSnapshot>> {
@@ -104,8 +77,7 @@ export async function loadCheckoutAction(
       shippingOptionCode,
       // Gel-al seçimi ekrandan değil yerden gelir: adres seçicideki depo kartı → çerez → teklif kapısı.
       pickupWarehouseId: await readSelectedPickupWarehouseId(),
-      // Paket türetmesi hâlâ web'te (`lib/storefront/packages.ts`), terfisi ayrı bir adım — kapı
-      // geçiliyor ki bugünkü paket davranışı birebir korunsun.
+      // Paket türetmesi web'te (`lib/storefront/packages.ts`); kapı buradan geçer.
       bundles: getPackagesByIds,
     });
     return { data, errorKey: null };
@@ -136,20 +108,9 @@ export async function loadServicePointsAction(addressId: string, carrierCodes: s
 }
 
 /**
- * **Seçilen adresin kapısı gerçekten var mı** (11.11) — SİPARİŞ ANINDA sorulur.
- *
- * ── NEDEN BURADA, ADRES KAYDEDİLİRKEN DEĞİL ─────────────────────────────────
- * Kullanıcı kararı (02.09): müşteri on adres ekleyebilir; her birini kaydederken doğrulamak, hiç
- * kullanılmayacak adresler için servise gitmek olurdu. Hangisini seçerse SİPARİŞ ANINDA o
- * doğrulanır — ve teklif kabul edilirse hem siparişin adresi hem KAYIT düzelir.
- *
- * ── ENGEL DEĞİL ─────────────────────────────────────────────────────────────
- * Dönüş bir ret değil bir bilgidir; ekran onu gösterir, müşteri kararını verir. Kapı hiçbir hâlde
- * fırlatmıyor (`checkAddress` FAIL-OPEN) — servis düşerse `unknown` döner ve ekran SUSAR. Bir dış
- * servisin kesintisi satışı durduramaz.
- *
- * **Sahiplik doğrulanır:** kimlik istemciden geliyor ve müşterinin kendi listesinde aranıyor —
- * yoksa başkasının adresi hakkında bilgi sızardı (adres ailesinin ortak kuralı).
+ * Seçilen adresin kapısı gerçekten var mı: sipariş anında sorulur, çünkü her kayıtta doğrulamak kullanılmayacak adresler için
+ * servise gitmek olurdu. Dönüş ret değil bilgidir ve kapı fırlatmaz; servis düşerse `unknown` döner, dış servisin kesintisi
+ * satışı durdurmaz.
  */
 export async function checkCheckoutAddressAction(addressId: string): Promise<CustomerResult<AddressCheckOutcome>> {
   try {
@@ -166,30 +127,17 @@ export async function checkCheckoutAddressAction(addressId: string): Promise<Cus
 }
 
 /**
- * "Siparişi onayla" — taslağı açar, stoğu ayırır, ödeme niyetini doğurur.
- *
- * **Tek turda** olması bilinçli: taslağı ayrı bir çağrıda açsaydık, ödeme adımına hiç gelmeyen
- * müşteriler ardında yetim taslaklar bırakırdı. Burada üçü tek karar: ya hepsi olur ya hiçbiri.
- *
- * Online ödemede `clientSecret` döner ve kart onayı **istemcide** verilir (Stripe iframe'i);
- * sipariş ödeme onayına kadar `draft` kalır ("önce ayır, sonra tahsil et").
- * Kapıda/vadeli ödemede sağlayıcıya hiç gidilmez ve sipariş kesinleşir (`confirmed`): beklenen bir
- * ödeme yok, bekletmenin de anlamı yok.
- *
- * **Köprü** (sipariş zinciri terfisi, aşama 3/3): zincirin tamamı `@lezzet/application`'ın
- * `order/place-order`ında — mobilin "Siparişi tamamla" ekranı aynı kapıyı çağıracak ve `'use
- * server'` dosyası bir UÇTUR, orkestrasyon barındırmaz (CLAUDE §2). Uçta kalanlar: dil doğrulaması,
- * kimliğin oturumdan çözülmesi, müşteri hata zarfı, **reddin ekran diline çevrilmesi**
- * (`rejectionOutcome` — para biçimi dile bağlı, bir görünüm kararı) ve dört yüzey portu (Stripe
- * üreteci · paket çözümü · edinim çerezi · huni defteri).
+ * "Siparişi onayla": taslağı açar, stoğu ayırır, ödeme niyetini doğurur; tek turda, çünkü ayrı çağrılar yetim taslak bırakırdı.
+ * Zincir `@lezzet/application`ın `order/place-order`ında; uç dil, kimlik, hata zarfı, reddin ekran diline çevrilmesi ve yüzey
+ * portlarını taşır.
  */
 type ConfirmOutcome =
   | { status: 'payment_required'; orderId: string; clientSecret: string; totalCents: number }
   /** Kapıda/vadeli: ödeme sağlayıcısı yok, sipariş açıldı. */
   | { status: 'placed'; orderId: string; totalCents: number }
   /**
-   * Önceki kart ödemesi GEÇTİ ya da bankada işleniyor (07.18) — yeni sipariş AÇILMADI, müşteri o
-   * siparişin sayfasına gider. Aynı sepet için ikinci bir ödeme iki kez çekim olurdu.
+   * Önceki kart ödemesi geçti ya da bankada işleniyor: yeni sipariş açılmadı, müşteri o siparişin sayfasına gider. Aynı sepet için
+   * ikinci bir ödeme iki kez çekim olurdu.
    */
   | { status: 'open_payment'; orderId: string; state: 'paid' | 'processing' }
   | { status: 'rejected'; reason: string; detail?: string[] | string };
@@ -205,12 +153,8 @@ export async function confirmCheckoutAction(input: {
   /** Sepetteki kupon kodu; siparişin indirimi bunsuz hesaplanamaz. */
   couponCode?: string | null;
   /**
-   * Çift sipariş kalkanı — istemcinin bu checkout denemesi için ürettiği anahtar.
-   *
-   * Kapsam BİLEREK dar: yalnız kart DIŞI yollarda işler. Orada sipariş bu çağrıda kesinleşiyor,
-   * yani ikinci bir çağrı **kalıcı ve gerçek** bir çift sipariş demek. Kart yolunda ise çağrı
-   * yalnız taslak açıyor; oradaki koruma açık taslakların süpürülmesi (kapının kendi adımı) ve
-   * düğmenin gezinme bitene kadar kapalı kalması.
+   * Çift sipariş kalkanı, istemcinin bu deneme için ürettiği anahtar; yalnız kart dışı yollarda işler, çünkü orada sipariş bu
+   * çağrıda kesinleşir. Kart yolunda koruma açık taslakların süpürülmesi ve düğmenin gezinme bitene kadar kapalı kalmasıdır.
    */
   idempotencyKey?: string | null;
   /** Sepetin kargo grubundan açılan ikinci sipariş mi — `loadCheckoutAction` ile aynı bayrak. */
@@ -219,10 +163,8 @@ export async function confirmCheckoutAction(input: {
   shippingOptionCode?: string | null;
   servicePointId?: string | null;
   /**
-   * **Ekranın gösterdiği sepetin imzası** — anlık görüntünün `summary.fingerprint`ı, olduğu gibi
-   * geri gelir (21.08). Sepet iki yüzeyde paylaşıldığı için son okuma ile bu dokunuş arasında
-   * değişmiş olabilir; değiştiyse kapı `cart_changed` ile reddeder ve müşteri yeni özeti görüp
-   * bilerek onaylar. Boşsa kontrol atlanır.
+   * Ekranın gösterdiği sepetin imzası (`summary.fingerprint`), olduğu gibi geri gelir. Sepet arada değiştiyse kapı `cart_changed`
+   * ile reddeder ve müşteri yeni özeti görüp bilerek onaylar; boşsa kontrol atlanır.
    */
   expectedCartFingerprint?: string | null;
 }): Promise<CustomerResult<ConfirmOutcome>> {
@@ -232,10 +174,8 @@ export async function confirmCheckoutAction(input: {
     if (!customerId) throw new CustomerError('session_expired');
 
     /*
-      ÖNCEKİ ÖDEME AÇIK MI (07.18). Müşteri "onaylanıyor" ekranını kapatıp sepetine dönebiliyor ve sepet
-      ödeme onaylanana kadar bilerek dolu duruyor. Önceki ödeme geçtiyse ya da bankada işleniyorsa yeni bir
-      ödeme aynı sepet için iki kez çekim demek: yeni sipariş açılmaz, müşteri o siparişe gider. Ödenmemişse
-      yeni deneme sürer ve eski ödeme sağlayıcıda iptal edilir (`paymentGateway`).
+      Önceki ödeme geçtiyse ya da bankada işleniyorsa aynı sepet için yeni ödeme iki kez çekim demek: yeni sipariş açılmaz, müşteri o
+      siparişe gider. Ödenmemişse yeni deneme sürer ve eski ödeme sağlayıcıda iptal edilir (`paymentGateway`).
     */
     const gateway = stripePaymentGateway();
     const open = await openPaymentBefore(serviceDb(), customerId, { gateway, effects: webPaymentEffects });
@@ -261,19 +201,18 @@ export async function confirmCheckoutAction(input: {
       servicePointId: input.servicePointId,
       pickupWarehouseId: await readSelectedPickupWarehouseId(),
       expectedCartFingerprint: input.expectedCartFingerprint,
-      // Paket türetmesi hâlâ web'te (`lib/storefront/packages.ts`), terfisi ayrı bir adım.
+      // Paket türetmesi web'te (`lib/storefront/packages.ts`).
       bundles: getPackagesByIds,
       // Edinim kaynağı oturumun kampanya ÇEREZİNİ okur — taşıma ayrıntısı, pakette yaşayamaz.
       onCustomerAcquired: (id) => void rememberAcquisition(id),
       // Sağlayıcı istemcisi pakete GİRMEZ (`stripe` npm bağımlılığı): üreteç buradan geçer.
       createPaymentSession: stripeSessionCreator(),
-      // Eski taslağın ödemesini sağlayıcıda kapatmak için (07.18) — yukarıdaki soruyla aynı port.
+      // Eski taslağın ödemesini sağlayıcıda kapatmak için; yukarıdaki soruyla aynı port.
       paymentGateway: gateway,
       // Durum geçişinin iki yan etkisi (müşteri haberi + sipariş puanı) de web modüllerinde.
       effects: webOrderEffects,
       onRejected: measureRejection,
-      // Huninin son adımı (08.9). Tutar ve müşteri TAŞINMAZ — olay yalnız "bu oturum siparişle
-      // bitti" der (`ANALYTICS §1`, İlke 2'nin bilinçli istisnası).
+      // Huninin son adımı. Tutar ve müşteri taşınmaz: olay yalnız "bu oturum siparişle bitti" der (`ANALYTICS §1`).
       onPlaced: () => void recordEvent({ type: 'order_placed' }),
     });
 
@@ -298,16 +237,8 @@ export async function confirmCheckoutAction(input: {
 }
 
 /**
- * Yapısal reddi EKRANIN diline çevirir — **ve bu bir görünüm kararıdır, o yüzden burada.**
- *
- * Kapı adlı ve yapısal döner (`{ status: 'price_changed', lines: [{ name, fromCents, toCents }] }`);
- * müşterinin gördüğü şey ise tek bir dize listesidir. Çeviri iki sebeple yüzeye ait: para biçimi
- * DİLE bağlı (`formatPrice` — "12,50 €" ile "€12.50" ayrımı bir kez tanımlı) ve mobil aynı reddi
- * kendi bileşenleriyle gösterecek. Şekil kapıda dursaydı iki yüzey aynı dizeyi paylaşmak zorunda
- * kalırdı.
- *
- * `detail`in tek biçim (dize listesi) olması bilinçli: ekran dört ayrı ret için tek bir liste
- * bileşeni gösteriyor (`rejectionMessage`).
+ * Yapısal reddi ekranın diline çevirir; bu bir görünüm kararı, çünkü para biçimi dile bağlı ve mobil aynı reddi kendi bileşenleriyle
+ * gösterir. `detail` tek biçimdir (dize listesi), ekran dört ayrı ret için tek bir liste bileşeni gösterir.
  */
 async function rejectionOutcome(rejection: PlaceOrderRejection, locale: Locale): Promise<ConfirmOutcome> {
   switch (rejection.status) {
@@ -325,9 +256,8 @@ async function rejectionOutcome(rejection: PlaceOrderRejection, locale: Locale):
       return { status: 'rejected', reason: rejection.status, detail: rejection.lines.map((l) => `${l.name} (${l.available})`) };
     case 'date_unavailable':
       return { status: 'rejected', reason: rejection.status, detail: rejection.availableDates };
-    // Zamda ESKİ ve YENİ tutar BİRLİKTE taşınır (07.13): yalnız yeniyi göstermek müşteriyi "ne
-    // kadar arttı" diye sepete geri döndürürdü. Biçimlendirici ekranınkiyle AYNI (`formatPrice`,
-    // dile duyarlı), yani "12,50 €" ile "€12.50" ayrımı bir kez tanımlı.
+    // Zamda eski ve yeni tutar birlikte taşınır: yalnız yeniyi göstermek müşteriyi "ne kadar arttı" diye sepete geri döndürürdü.
+    // Biçimlendirici ekranınkiyle aynı (`formatPrice`, dile duyarlı).
     case 'price_changed':
       return {
         status: 'rejected',
@@ -339,10 +269,9 @@ async function rejectionOutcome(rejection: PlaceOrderRejection, locale: Locale):
     case 'insufficient_stock':
       return { status: 'rejected', reason: rejection.status, detail: await raceDetail(rejection, locale) };
     /**
-     * Ödeme oturumu açılamadı. Ekranın sözlüğü sağlayıcı hâllerini adıyla tanıyor
-     * (`rejected.provider_unavailable`, `rejected.stale`); tanımayanlar genel hata cümlesine düşer
-     * (`rejectionMessage`'ın `?? t.pay.error` dalı) — `no_client_secret` de oraya düşüyor ve bu
-     * doğru: "sağlayıcı jeton vermedi" müşteriye anlatılacak bir şey değil, bize kalan bir izdir.
+     * Ödeme oturumu açılamadı: ekranın sözlüğü sağlayıcı hâllerini adıyla tanır (`rejected.provider_unavailable`, `rejected.stale`),
+     * tanımadıkları genel hata cümlesine düşer. `no_client_secret` de oraya düşer, çünkü "sağlayıcı jeton vermedi" müşteriye
+     * anlatılacak bir şey değildir.
      */
     case 'payment_unavailable':
       return { status: 'rejected', reason: rejection.reason };
@@ -352,21 +281,8 @@ async function rejectionOutcome(rejection: PlaceOrderRejection, locale: Locale):
 }
 
 /**
- * YARIŞ HÂLİNİN künyesi: hangi kalem, kaç tane kaldı (08.13'ün son kalanı).
- *
- * Sepet okumasıyla rezervasyon arasında stok düşerse — başka müşteri aldı — ekran *"Ürünlerden biri
- * bu arada tükendi"* diyordu. **Sepetinde on kalem olan müşteri hangisi olduğunu bulamıyor.**
- * Motor kimliği ve kalan adedi ZATEN döndürüyordu (`{ variantId, available }`); ekrana taşınmıyordu.
- *
- * Kardeşi `insufficient_here` bunu 19.7'de çözmüştü ve künyesi aynı cümleyi kuruyor: *"ürünün adı
- * YETMEZ, sayısı da gerekir."* Aynı biçim burada da geçerli — `Kayseri Mantısı (2)`.
- *
- * **Ad SEPETTEN değil VARYANTTAN çözülüyor** ve mecburen: bu hâl sepet okumasından SONRA doğuyor,
- * elde yalnız varyant kimliği var. `resolveOrderLines` müşteri yüzeyinin kendi kapısı — seçili dile
- * göre çözer (operasyonun `readVariantTitles`'ı Türkçe sabittir, o kullanılamazdı).
- *
- * **Ad bulunamazsa BOŞ liste** döner, uydurma bir metin değil: ürün silinmiş olabilir. Ekran o zaman
- * bugünkü genel cümleye düşer — eksik bilgi, yanlış bilgiden iyidir (`CLAUDE §1`).
+ * Yarış hâlinin künyesi: hangi kalem ve kaç tane kaldı, çünkü sepetinde on kalem olan müşteri "biri tükendi" cümlesinden
+ * hangisi olduğunu bulamaz. Ad seçili dile göre varyanttan çözülür; bulunamazsa boş liste döner ve ekran genel cümleye düşer.
  */
 async function raceDetail(outcome: { variantId: string; available: number }, locale: string): Promise<string[] | undefined> {
   if (!hasLocale(routing.locales, locale)) return undefined;
@@ -376,24 +292,11 @@ async function raceDetail(outcome: { variantId: string; available: number }, loc
 }
 
 /**
- * Checkout REDDİNİN ölçüm karşılığı (08.9 · `ANALYTICS §3`).
- *
- * **Her ret ölçülmez** ve bu bir eksiklik değil, sınırın kendisi: defterin sebep kümesi müşterinin
- * SÜRTÜNMESİNİ anlatır, bizim arızalarımızı değil. Ölçülmeyen üçü —
- *   · `warehouse_unresolved` (aynı kod iki bölgede / kargo deposu yok) bizim yapılandırma
- *     hatamızdır ve zaten `captureError` ile `error_log`'a gidiyor; huniye yazılsaydı müşteri
- *     vazgeçmiş gibi görünürdü, oysa biz cevap verememişiz.
- *   · `order_not_placed` iç bir arıza, aynı gerekçe.
- *   · `date_unavailable` gerçek bir sürtünme ama enum'da karşılığı YOK; uydurmak yerine
- *     ölçmüyoruz. Karşılığı açılırsa tek satır (13.1'e bildirildi).
- *
- * **Kapının `onRejected` PORTU budur** (terfi 3/3): paket hangi ret olduğunu söyler, neyin
- * sayılacağına yüzey karar verir. Defter çerez + oturum + istek başlığı okuyor, yani bir taşıma
- * ayrıntısı — mobil bu kapıyı hiç geçmeyecek.
+ * Checkout reddinin ölçüm karşılığı; defter müşterinin sürtünmesini anlatır, bizim arızalarımızı değil, bu yüzden
+ * `warehouse_unresolved`, `order_not_placed` ve enum'da karşılığı olmayan `date_unavailable` sayılmaz.
  */
 function measureRejection(reason: string): void {
-  // Eşleme ORTAK PAKETTE (24.08 · MB-63): native de aynı retleri sayıyor ve iki kopya bir gün
-  // ayrışırdı. Neyin ölçülmediği ve NEDEN ölçülmediği künyesiyle birlikte oraya taşındı.
+  // Eşleme ortak pakette, çünkü native de aynı retleri sayar ve iki kopya bir gün ayrışırdı.
   const mapped = checkoutBlockedAnalyticsReason(reason);
   if (mapped) void recordEvent({ type: 'checkout_blocked', reason: mapped });
 }
