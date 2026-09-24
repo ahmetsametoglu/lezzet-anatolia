@@ -1,19 +1,8 @@
 import type { ReactNode } from 'react';
 
 /*
-  BİLGİ KUTUSU — native `Note`un (`apps/mobile/src/components/ui/note.tsx`) web telefon ikizi (14.09).
-
-  Beş ton native'in beşi: `olive` olumlu / yolunda (zeytin bant) · `terracotta` fırsat ve uyarı (asgari tutar) ·
-  `error` hata — native'in kendi ailesi (`error` + `error-bg`, çerçeve terracotta çizgisiyle) ve ekran okuyucuya
-  duyurulur (`role="alert"`) · `warm` nötr sıcak panel (`sand-150`, saydam çerçeve) · `warm-accent` vurgulu zemin
-  ama nötr yazı (bölge dışı bandı). Çerçeve her tonda ince (native
-  `hairline`). Varsayılan `warm`: telefonun ilk çağıranları (bölge dışı bandı) nötr paneldi; native'in varsayılanı
-  zeytindir — ton her çağrıda açıkça yazılırsa fark kalmaz. Başlık `note` (13/700), açıklama `body-sm` (14, satır
-  1,6) — MB-46: müşterinin karar için okuduğu metin 14'ün altına inmez.
-
-  Yuvalar kutunun İÇİNDE (native 10.08 ölçümü: kutunun altına taşan eylemler kartları ekranın yarısına itiyordu):
-  `header` başlıktan ÖNCE — cümlenin ön koşulu ("hangi yer için konuşuyoruz"); `action` metnin ALTINDA. `children`
-  web'e özgü: başlıkla açıklama arasına giren liste (sepetin yer değişimi kalemleri — native'de o kutu yok).
+  Native `Note`un web telefon ikizi: beş ton native'in beşidir ve açıklama `body-sm` (14) yazılır, çünkü müşterinin karar için
+  okuduğu metin 14'ün altına inmez. Yuvalar kutunun içindedir, çünkü dışarı taşan eylemler kartları ekranın yarısına iter.
 */
 
 type NoteTone = 'olive' | 'terracotta' | 'error' | 'warm' | 'warm-accent';

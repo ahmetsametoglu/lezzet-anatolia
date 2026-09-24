@@ -133,8 +133,8 @@ describe('asgari sepet — teslim edilemeyen tutar SAYILMAZ', () => {
 });
 
 /*
-  Sipariş yalnız kendi şeridini alır: uygulama bütün sepeti gönderdiğinde kapı siparişine kargo kalemi girerse sipariş reddedilir,
-  kargo siparişine kapı kalemi girerse kapıya ücretsiz gelecek mal ücretli kargoya biner (ikisi de cihazda ölçüldü).
+  Sipariş yalnız kendi grubunu alır: uygulama bütün sepeti gönderdiğinde kapı siparişine kargo kalemi girerse sipariş reddedilir,
+  kargo siparişine kapı kalemi girerse kapıya ücretsiz gelecek mal ücretli kargoya biner.
 */
 describe('siparişin şeridi', () => {
   const kapi = line('local');

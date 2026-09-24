@@ -6,26 +6,15 @@ import { cartView, cartViewBundleLine, cartViewLine } from './cart-view-fixture'
 import messages from '@lezzet/i18n/customer/cart';
 
 /*
-  SEPETİN ÜÇ GRUBU — ölçülmüş bir arızanın testi (10.08, cihazda görüldü).
-
-  Ekran `route !== 'shipping'` diye elle süzüyordu ve bu adrese HİÇ gelemeyen kalemi "kapıya
-  teslim" grubuna sokuyordu: sepette üç satır, 38,36 € ve YEŞİL bir "Siparişi tamamla" duruyor,
-  engel ancak checkout'ta çıkıyordu. Buradaki dört ölçüm o arızanın geri gelmesini engelliyor:
-  gruplama sözleşmeden okunuyor · tek gruplu sepette başlık çizilmiyor · gelemeyen kalem uyarısı
-  satırların ÜSTÜNDE duruyor · düğme yine de AÇIK kalıyor (müşteri gelebilecekleri sipariş eder).
-
-  DEPO TAKLİT EDİLDİ, KURALLARI DEĞİL: yalnız `useCart` sahtelendi (görünümü sunucu çözüyor, testin
-  kuracağı şey o cevaptır); `cartLineId`/`cartCount` gerçek kalıyor — satır kimliğini uyduran bir
-  test, ekranın gerçekten çizdiğini ölçmezdi.
+  Sepetin üç grubu sözleşmeden okunur: bu adrese gelemeyen kalem kapı grubuna girerse sepet yeşil "Siparişi tamamla" gösterir ve
+  engel ancak checkout'ta çıkar. Yalnız `useCart` sahtelenir; `cartLineId` ve `cartCount` gerçek kalır ki ekranın çizdiği ölçülsün.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
 
-/* Bant artık POSTA KODUNU adıyla söylüyor (kullanıcı kararı 10.08) ve kodu gezinme deposundan
-   okuyor — depo sahtelenmezse ekran boş bir kod yazar ve uyarı denetlenemez hâle gelir. */
+/* Bant posta kodunu adıyla söyler ve kodu gezinme deposundan okur; depo sahtelenmezse ekran boş kod yazar. */
 jest.mock('@/lib/onboarding/onboarding-store', () => {
-  // Referans SABİT olmak zorunda: `useSyncExternalStore` her okumada yeni nesne görürse anlık
-  // görüntü değişti sayar ve sonsuz yeniden çizime girer (ölçüldü — "Maximum update depth").
+  // Referans sabit, çünkü `useSyncExternalStore` her okumada yeni nesne görürse sonsuz yeniden çizime girer.
   const snapshot = { locale: 'tr', postalCode: '67380' };
   return {
     subscribeOnboarding: () => () => undefined,
@@ -86,10 +75,8 @@ describe('CartScreen — üç gruplu sepet', () => {
     expect(screen.getByText('Kaymak')).toBeOnTheScreen();
   });
 
-  /* ÜRÜNLER ÜSTTE, PAKETLER ALTTA (kullanıcı kararı 28.08: *"paketlerin arasına ürün girmesi çok
-     hoş görünmüyor"*). Sunucu satırları eklenme sırasında veriyor — burada bilerek KARIŞIK geliyor
-     ve ekranın onları ayırması bekleniyor. İki şey birden tutuluyor: tür sınırı (paketler sonda) ve
-     sıranın KARARLILIĞI (iki ürün ile iki paket kendi aralarında eklenme sırasını korur). */
+  /* Ürünler üstte, paketler altta; sunucu satırları eklenme sırasıyla verir ve burada bilerek karışık gelir. Tür sınırı ile sıranın
+     kararlılığı birlikte tutulur: iki ürün ile iki paket kendi aralarında eklenme sırasını korur. */
   it('grup içinde ürünleri paketlerin ÜSTÜNE alır, eklenme sırasını bozmadan', async () => {
     mockCart = cartWith(
       cartView([
@@ -125,9 +112,7 @@ describe('CartScreen — üç gruplu sepet', () => {
     expect(cizilen).toEqual(['Yerel Baklava', 'Kargo Paketi']);
   });
 
-  /* ADI OLMAYAN SATIRA AD VERİLİR (28.08). Sunucu çözemediği kalemi boş adla döndürüyor — kimlik
-     kataloğun gerisinde kalmış. Kaynağı kesildi (`CartService.existingOnly`), ama ondan ÖNCE
-     yazılmış satırlar duruyor ve adsız bir kutu müşteriye neyi çıkaracağını söylemiyordu. */
+  /* Adı çözülemeyen satıra ad verilir, çünkü adsız bir kutu müşteriye neyi çıkaracağını söylemez. */
   it('adı çözülemeyen satır adsız kalmaz', async () => {
     // Çözülemeyen satırın gerçek hâli: ad boş, fiyat `null`, engelli.
     mockCart = cartWith(cartView([cartViewLine(1, '', 'local', { blocked: true, unitPriceCents: null })]));
@@ -150,7 +135,7 @@ describe('CartScreen — üç gruplu sepet', () => {
 
     expect(screen.getByTestId('cart-undeliverable')).toBeOnTheScreen();
     expect(screen.getByText(t.undeliverable.title.replace('{place}', '67380'))).toBeOnTheScreen();
-    // Uyarı çıkış yolunu söyler; "ürünü kaldırın" DEMEZ (kullanıcı kararı 10.08).
+    // Uyarı çıkış yolunu söyler; "ürünü kaldırın" demez.
     expect(screen.getByText(t.undeliverable.body.replace(/\{place\}/g, '67380'))).toBeOnTheScreen();
     expect(screen.getByText(t.line.undeliverable)).toBeOnTheScreen();
   });
@@ -162,8 +147,8 @@ describe('CartScreen — üç gruplu sepet', () => {
 
     await render(<CartScreen />);
 
-    // `hasBlocked` fikstürde satırların kendi hâlinden türüyor ve gelemeyen kalem onu DOLDURMAZ:
-    // teslim edilebilirlik ile satılabilirlik ayrı sorulardır (sözleşmenin 10.08 hükmü).
+    // `hasBlocked` satırların kendi hâlinden türer ve gelemeyen kalem onu doldurmaz: teslim edilebilirlik ile satılabilirlik ayrı
+    // sorulardır.
     expect(mockCart.view.hasBlocked).toBe(false);
     expect(screen.getByRole('button', { name: t.checkout })).toBeEnabled();
   });
@@ -198,11 +183,6 @@ describe('CartScreen — üç gruplu sepet', () => {
 });
 
 describe('CartScreen — İKİ GRUP, İKİ SİPARİŞ', () => {
-  /* Bu hâl BESLEME VERİSİYLE ÜRETİLEMİYOR (ölçüldü 10.08): aktif FR bölgelerinin hepsi STR'den
-     hizmet alıyor ve STR aynı zamanda FR kargo çıkışı, yani rota deposu = kargo deposu; motor iki
-     havuzu aynı yerden okuyunca `shipping` yolu rota içi bir adres için hiç doğmuyor. Talep açıldı
-     (`docs/talep/arka-uc-seed-rota-disi-kargo-deposu.md`). O gün gelene kadar davranışın TEK
-     doğrulaması burasıdır — elle test etmek mümkün değil. */
   it('kargo grubuna KENDİ eylemini verir; rota grubunun düğmesi yapışkan barda kalır', async () => {
     mockCart = cartWith(
       cartView([
@@ -262,14 +242,8 @@ describe('CartScreen — tek gruplu sepet', () => {
 });
 
 /*
-  DÜĞMENİN AÇTIĞI SİPARİŞ TÜRÜ (27.08 · eski `BEKLEYEN(21.14)`).
-
-  Bölünmüş sepetin kargo yarısının kendi düğmesi vardı; açık kalan hâl SALT-KARGO sepetti — orada
-  `split` false olduğu için o kart hiç çizilmiyor ve tek düğme düz `/checkout`a, yani ROTA taslağına
-  gidiyordu. Ekran "kargoyla gönderilir" derken açılan sipariş kapıya teslim siparişi oluyordu.
-
-  Bayrak TÜRETİLMEZ, ROTADAN gelir (`checkout-screen` künyesi): burada ölçülen tam olarak o —
-  ekranın hangi adresi açtığı, ne gösterdiği değil.
+  Salt-kargo sepetin tek düğmesi kargo taslağını açar; düz `/checkout`a gitseydi ekran "kargoyla gönderilir" derken kapıya teslim
+  siparişi açılırdı. Bayrak türetilmez, rotadan gelir ve burada ölçülen ekranın hangi adresi açtığıdır.
 */
 describe('CartScreen — düğme hangi siparişi açıyor', () => {
   beforeEach(() => mockPush.mockReset());

@@ -9,29 +9,8 @@ import type { CartLineChange } from '@/lib/cart/place-change';
 import type { Messages } from '../cart-types';
 
 /**
- * "Yer değişti — sepet yeniden değerlendirildi" kartı (tasarım `Musteri - Sepet.dc.html`).
- *
- * **Sessiz daralma yok.** Yer değişince her kalem hâline yeniden oturuyor ve bunun görünmesi
- * tasarımın açık kuralı: *"hiçbir kalem silinmez, her değişiklik tek tek söylenir"*. Fark tek
- * satırda özetlenmez ("bazı kalemler değişti") — müşteri HANGİ kalemi sorar ve cevabı listeyi
- * gezerek aramak zorunda kalır.
- *
- * ── TASARIMDAN SAPMA (kayıt: `design/BACKLOG §3`) ────────────────────────────
- * Tasarımın kartında iki eylem var: "Anladım, sepeti göster" ve "Fiyat değişimini gözden geçir".
- * İkisi de kartın zaten içinde olduğu ekrana götürüyor — kart sepette çiziliyor ve fiyat farkı
- * satırın kendisinde yazılı. Bir tek "Anladım" bırakıldı; ikinci düğme müşteriyi bulunduğu yere
- * göndermiş olurdu.
- *
- * "Sonraya kaydedildi" satırı da yok ve bu bilinçli: kalemi otomatik taşımıyoruz. Taşıma kısıt
- * bloğunun (K32) işi ve orada asgari sepet ile ücretsiz kargo sonuçları da söyleniyor; buradan
- * sessizce taşımak müşteriyi o uyarılardan mahrum bırakırdı. Kart durumu bildirir, bloğu değil.
- *
- * ── YERİ VE ÇİZİMİ (kullanıcı isteği 14.09) ─────────────────────────────────
- * Masaüstünde SOL sütunda, kalem listesinin üstünde; sağ sütunda özetin arasında duruyordu.
- * Yeni yerinin dili v1'in liste üstü uyarı bandı (`Musteri Web.dc.html` sepet uyarısı — stok
- * uyarısıyla aynı kabuk): bal zemin, bal çizgi, 14px köşe. "Anladım" başlığın yanında metin eylemi:
- * bant bir bildirim, sayfanın asıl eylemi değil. Mobil web kendi kartını koruyor (özetin üstünde;
- * telefon görünümünün tasarım kaynağı native uygulama).
+ * "Yer değişti" kartı: her kalemin yeni hâli tek tek söylenir, hiçbir kalem silinmez ve fark tek satıra özetlenmez, çünkü müşteri
+ * hangi kalemin değiştiğini sorar. Tek eylem "Anladım"dır; tasarımdaki ikinci eylem müşteriyi zaten bulunduğu sepete götürürdü.
  */
 interface PlaceChangeCardProps {
   t: Messages;
@@ -64,7 +43,7 @@ export function placeChangeText(change: CartLineChange, t: Messages, locale: Loc
   }
 }
 
-/** Değişimin simgesi — yol değişimi teslim şeklini, adet sınırı dikkati çizer (14.09: emoji yerine). */
+/** Değişimin simgesi: yol değişimi teslim şeklini, adet sınırı dikkati çizer. */
 const KIND_ICON: Partial<Record<CartLineChange['kind'], IconName>> = { to_shipping: 'box', to_route: 'truck', reduced: 'warning', no_delivery: 'warning' };
 
 export function PlaceChangeCard({ t, locale, compact = false }: PlaceChangeCardProps) {
@@ -88,7 +67,7 @@ export function PlaceChangeCard({ t, locale, compact = false }: PlaceChangeCardP
     </ul>
   );
 
-  // Mobil web: özetin üstündeki kart — o şeridin çizimi, dokunulmadı.
+  // Mobil web: özetin üstündeki kart.
   if (compact) {
     return (
       <div className="flex flex-col gap-2 rounded-card border border-sand-300 bg-card px-3.5 py-3">

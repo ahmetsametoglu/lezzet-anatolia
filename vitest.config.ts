@@ -1,117 +1,59 @@
 import { fileURLToPath } from 'node:url';
 import { configDefaults, defineConfig } from 'vitest/config';
 
-// Monorepo geneli test yapılandırması — **iki proje**, çünkü iki farklı gerçek var:
-//
-//   • `unit`        — DB'siz saf fonksiyonlar (motor, yardımcılar, şablonlar). PARALEL koşar,
-//                     saniyeler sürer. Kurulumu `.env` yüklemez ve DB env'ini siler: yanlış
-//                     projeye düşen bir test sessizce değil, anlaşılır bir istisnayla patlar.
-//   • `integration` — yerel Supabase'e vuran servisler ve kapılar. SERİ koşar (aynı satırlara
-//                     girerler) ve tam paket kilit altında çalışır (`pnpm test`).
-//
-// **Neden bölündü (29.07):** 104 dosyanın 52'si DB'ye vuruyor ve `fileParallelism: false` hepsini
-// birden yavaşlatıyordu — oysa saf yarının asıl test süresi 224 ms, kalanı kurulum ve sıra bekleme.
-// Ayrıca üç ajan aynı yerel veritabanını paylaşıyor; ayrım olmadan her koşu ötekini kirletme
-// riskini taşıyordu.
-//
-// **Sınır dizinle çizilir, isimle değil:** 52 dosyayı yeniden adlandırmak diğer ajanların işine
-// dokunurdu. `apps/web/lib`, `packages/database` ve `apps/backend` entegrasyon kökleridir.
-//
-// **Ama "birkaç saf dosya ihmal edilebilir" varsayımı ÖLÇÜLDÜ ve yanlış çıktı (K8-1, 10.08):**
-// `apps/web/lib`in 68 test dosyasının **19'u** DB'ye hiç vurmuyor. Bedel de artık yalnız hız değil:
-// 08.08'den beri `CLAUDE §4b` DB'ye vuran koşuyu şeritlere kapatıyor, yani `cart-blocker`ı yazan
-// şerit kendi testini KOŞAMIYOR. Dizin ölçütü burada işlemiyor çünkü klasörler karışık —
-// `cart/discount.ts` (DB) ile `cart/discount-label.ts` (saf) aynı yerde durur.
-//
-// Çözüm yeniden adlandırma DEĞİL (yukarıdaki gerekçe hâlâ geçerli: dosyalar başka şeritlerin),
-// **yolların tek yerde sayılması**. Liste ikiye bölünmez: birim projesi bunu `include`a ekler,
-// entegrasyon `exclude`a — aynı sabitten. Çürümesini `docs:check §3i` engelliyor: DB'siz olup
-// listede olmayan bir test dosyası commit'ten geçmez.
+// İki proje: `unit` DB'siz saf testler (paralel; kurulum `.env` yüklemez ve DB env'ini siler ki yanlış projeye düşen test anlaşılır
+// biçimde patlasın), `integration` yerel Supabase'e vuranlar (seri, tam paket kilit altında). Sınır dizinle çizilir ve entegrasyon
+// köklerindeki saf testler aşağıdaki listelerde tek yerde sayılır; `docs:check §3i` web listesini denetler.
+
 /**
- * `packages/database` de entegrasyon köküdür ama `utils/` altındaki dönüştürücüler **saf**: DB
- * istemcisi hiç kurulmuyor, dosya kendinden başka hiçbir şey import etmiyor.
- *
- * **Ayrı sabit ve bu bilinçli:** `WEB_LIB_DBSIZ`i `docs:check §3i` **adıyla** okuyor ve içindeki
- * yolları `'apps/…'` önekiyle tarıyor; oraya bir paket yolu koymak denetimin kapsamını sessizce
- * bulandırırdı (liste ile taranan ağaç birbirini tutmaz hâle gelirdi). Yukarıdaki *"liste ikiye
- * bölünmez"* kuralı **kök başına** geçerli: aynı kökün iki listesi olmaz, ayrı köklerin ayrı
- * listesi olur.
+ * `packages/database` entegrasyon köküdür ama bu dosyalar saftır. Kök başına ayrı sabit, çünkü `docs:check §3i` `WEB_LIB_DBSIZ`i
+ * adıyla okuyup `apps/` önekiyle tarar ve oraya konan paket yolu denetimin kapsamını bulandırırdı.
  */
 const PAKET_DBSIZ = [
   'packages/database/src/utils/case-transformers.test.ts',
-  // Test posta kodu üreteci — saf (dize + sayaç), DB istemcisi kurmuyor. Yardımcının kendisi
-  // `testing/` altında ama testi entegrasyonda koşsaydı, kararsızlığı önleyen kuralın testi de
-  // kilitli tam pakete ertelenirdi.
+  // Test posta kodu üreteci saf (dize ve sayaç); entegrasyonda koşsaydı kararsızlığı önleyen kuralın testi tam pakete ertelenirdi.
   'packages/database/src/testing/postal-code.test.ts',
 ];
 
 /**
- * `packages/application` de entegrasyon köküdür (orkestrasyonlar servislerle DB'ye vurur) ama
- * içinde SAF karar fonksiyonları da var: sepet engelleri, ölçüm kovaları, kampanya üstünlüğü.
- * Hiçbiri istemci kurmuyor.
- *
- * **Neden ayrı liste, neden bugün doğdu (24.08):** `CLAUDE §4b` entegrasyon koşusunu şeritlere
- * KAPATIYOR — yani bu dosyalar entegrasyon projesinde kaldığı sürece, onları yazan şerit kendi
- * testini koşamıyor ve doğrulaması commit öncesi tam pakete erteleniyor. `WEB_LIB_DBSIZ`in K8-1
- * ölçümüyle çözdüğü sorunun aynısı, ikinci kökte.
- *
- * **Kök başına ayrı sabit** (üstteki künyenin kuralı): `docs:check §3i` `WEB_LIB_DBSIZ`i ADIYLA
- * okuyup `'apps/…'` önekiyle tarıyor, buraya paket yolu koymak denetimin kapsamını bulandırırdı.
- *
- * **BU LİSTE MAKİNEYLE DENETLENMİYOR ve bilerek yazılıyor:** §3i yalnız `apps/` ağacını tarar,
- * yani buraya girmeyi hak eden yeni bir saf dosya sessizce entegrasyonda kalabilir. Bedeli
- * yavaşlık ve şeridin koşamaması; yanlış sonuç değil. Tersi — DB'ye vuran bir dosyayı buraya
- * yazmak — GÜRÜLTÜLÜ patlar: birim projesi `.env` yüklemez ve DB env'ini siler, dosya ilk
- * satırında "Supabase env eksik" der.
+ * `packages/application` entegrasyon köküdür ama saf karar fonksiyonları da taşır; burada sayılmazlarsa testleri yalnız tam pakette
+ * koşar. Liste makineyle denetlenmez: eksik satır yalnız yavaşlık doğurur, DB'ye vuran satır birim projesinde gürültüyle patlar.
  */
 const UYGULAMA_DBSIZ = [
   'packages/application/src/analytics/availability.test.ts',
-  // Coğrafi kodlama taramasının KARARI (11.9) — servis ne dediyse satıra ne yazılacağı. Saf:
-  // sayaç muhasebesi ve "yarım nokta yazılmaz" kuralı DB'siz sınanabiliyor; yazma tarafı
-  // (`geocodeAddressesScan`) entegrasyonda kalıyor.
+  // Coğrafi kodlama taramasının kararı saf: sayaç muhasebesi ve "yarım nokta yazılmaz" kuralı; yazma tarafı entegrasyonda kalır.
   'packages/application/src/delivery/geocode-scan.test.ts',
-  /*
-    BAN adaptörünün SÖZLEŞMESİ (11.11) — servise ne gönderdiğimiz. DB'siz ve AĞSIZ: `fetch` taklit
-    ediliyor ve ölçülen şey istenen URL'nin kendisi. Adaptörün iki metodu bilerek FARKLI soruyor
-    (`locate` posta kodunu pinler, `elsewhere` pinlemez) ve bu fark hiçbir çıktıdan anlaşılmaz —
-    ikisi de makul görünen bir cevap döner. O yüzden sınanacak yer istek, cevap değil.
-  */
+  // BAN adaptörünün isteği `fetch` taklidiyle ölçülür, çünkü iki metodun farkı (`locate` posta kodunu pinler) yalnız URL'de görünür.
   'packages/application/src/delivery/geocode-provider.test.ts',
-  // Tek adres kapısının DAĞITIMI (21.313) — ülke → sağlayıcı ve cevabın çevirisi; BAN taklit, Google anahtarsız.
+  // Tek adres kapısının dağıtımı: ülke → sağlayıcı ve cevabın çevirisi; BAN taklit, Google anahtarsız.
   'packages/application/src/delivery/address-suggest.test.ts',
-  // Matris → maliyet çevirisi (11.9): simetrikleştirme ve "tek null tüm matrisi reddeder" kuralı
-  // saf; sağlayıcının kendisi ağa çıkar ve o elle provadır.
+  // Matris → maliyet çevirisi saf (simetrikleştirme, "tek null tüm matrisi reddeder"); sağlayıcının kendisi ağa çıkar.
   'packages/application/src/delivery/route-matrix-port.test.ts',
-  // Hızlı giriş kapısının ret KARARI (27.08) — saf ve zorunlu olarak saf: sınadığı hâl "hiç
-  // yönetici yok" ve o hâl kurulu bir veritabanında üretilemez (dosya künyesi).
+  // Hızlı giriş kapısının ret kararı saf olmak zorunda: sınadığı "hiç yönetici yok" hâli kurulu veritabanında üretilemez.
   'packages/application/src/auth/dev-login.test.ts',
-  // Etiket ŞABLONU (23.7 · 06.09): saf metin üretimi — SVG string. DB'siz olduğu dosyanın kendi
-  // künyesinde yazılı ("bu dosya SAF metin üretir"), rasterize uç katmanın işi. Listeye 06.09'da
-  // girdi: şablon o gün kâğıdın boyunda çizmeye geçti ve şeridin kendi ölçümünü koşabilmesi gerekti.
+  // Etiket şablonu saf metin üretir (SVG); rasterize uç katmanın işidir.
   'packages/application/src/warehouse/label-svg.test.ts',
   'packages/application/src/warehouse/karla-metrics.test.ts',
   'packages/application/src/cart/cart-blocker.test.ts',
-  // Sepet bağlantısının cevaba eklenmesi (15.21) — saf metin kuralı; DB'siz olduğu için ayrı dosyada.
+  // Sepet bağlantısının cevaba eklenmesi saf metin kuralıdır; DB'siz olduğu için ayrı dosyada.
   'packages/application/src/cart/link-text.test.ts',
   'packages/application/src/catalog/campaign.test.ts',
-  // CDN çerçeve kaynakları ve küçük resim (05.37) — saf adres kurucular; env'i test kendisi kuruyor.
+  // CDN çerçeve kaynakları ve küçük resim saf adres kurucular; env'i test kendisi kurar.
   'packages/application/src/catalog/frame-sources.test.ts',
-  // Ürün kartının kanal gövdeleri (08.09) — saf kurucu; Meta sınırları burada zorlanıyor.
+  // Ürün kartının kanal gövdeleri saf kurucudur; Meta sınırları burada zorlanır.
   'packages/application/src/catalog/product-card.test.ts',
-  // Seçkinin SIRALAMASI — `apps/web/lib/storefront/showcase-rank.test.ts` idi, okuma pakete terfi
-  // edince testi de birlikte taşındı (27.08). Üç fonksiyon da saf: dizi girer, dizi çıkar.
+  // Seçkinin sıralaması saf: dizi girer, dizi çıkar.
   'packages/application/src/catalog/showcase.test.ts',
-  // Telefon vitrininin bant karışımı (08.08 kuralı) — `apps/mobile-api/src/lib/home.test.ts` idi,
-  // okuma pakete terfi edince testi de taşındı (14.09). Seçim, karıştırma, konum: dizi girer, dizi çıkar.
+  // Telefon vitrininin bant karışımı saf: seçim, karıştırma ve konum; dizi girer, dizi çıkar.
   'packages/application/src/catalog/home.test.ts',
-  // Ajanın ürün araçlarının yere göre ayıklaması (10.09) — hangi ürün bu adrese gider, gitmeyenin sebebi.
+  // Ajanın ürün araçlarının yere göre ayıklaması: hangi ürün bu adrese gider, gitmeyenin sebebi ne.
   'packages/application/src/ticket/product-reach.test.ts',
-  // AI kullanım satırı (15.27) — kayıttan satıra, tarifeden maliyete saf dönüşüm; yazım entegrasyonda.
+  // AI kullanım satırı: kayıttan satıra, tarifeden maliyete saf dönüşüm; yazım entegrasyonda.
   'packages/application/src/ai/usage-row.test.ts',
-  // Ödeme sağlayıcısı portunun uyarlaması (07.18) — sahte istemciyle: ağsız, DB'siz. Sınanan şey
-  // tanımadığı durumda karar VERMEMESİ ve tutarın alınan paradan okunması.
+  // Ödeme sağlayıcısı portunun uyarlaması sahte istemciyle koşar; tanımadığı durumda karar vermemesi ve tutarı alınan paradan
+  // okuması sınanır.
   'packages/application/src/order/payment-gateway.test.ts',
-  // Durum → müşteri haberi seçimi (22.09): gel-al'da "hazır" haberdir, rota/kargoda sessiz. Saf, DB'siz.
+  // Durum → müşteri haberi seçimi saf: gel-al'da "hazır" haberdir, rota ve kargoda sessizdir.
   'packages/application/src/order/notify-event.test.ts',
 ];
 
@@ -120,57 +62,41 @@ const WEB_LIB_DBSIZ = [
   'apps/web/lib/analytics/session-key.test.ts',
   'apps/web/lib/analytics/utm.test.ts',
   'apps/web/lib/assistant/economics.test.ts',
-  // Fırsat kararının yasakları (22.41) — saf: motoru (`expiryFlagOf`) çağırıyor, DB'ye gitmiyor.
+  // Fırsat kararının yasakları saf: motoru (`expiryFlagOf`) çağırır, DB'ye gitmez.
   'apps/web/lib/assistant/offer-block.test.ts',
-  // Sepet bağlantısının ara katman yönlendirmesi (15.21 · 08.09) — saf: URL alır, URL verir.
+  // Sepet bağlantısının ara katman yönlendirmesi saf: URL alır, URL verir.
   'apps/web/lib/cart-link-redirect.test.ts',
   'apps/web/lib/auth/post-login-target.test.ts',
-  // Sohbet bağlantısının kapı kararı (15.16 · 15.21) — saf: amaç + oturum → yol; DB'ye gitmiyor.
+  // Sohbet bağlantısının kapı kararı saf: amaç ve oturum → yol.
   'apps/web/lib/identity/cart-link-landing.test.ts',
   'apps/web/lib/cart/cart-blocker.test.ts',
   'apps/web/lib/cart/discount-label.test.ts',
   'apps/web/lib/cart/place-change.test.ts',
   'apps/web/lib/customer/name.test.ts',
   'apps/web/lib/customer/scorecard.test.ts',
-  // `delivery/map-codes.test.ts` BURAYA GİRMEZ — denetimin K8-1 listesinde vardı, ölçünce düştü:
-  // kendi metninde DB izi yok ama `./map-codes` → `serviceDb` çağırıyor ve birim projesinde 7 test
-  // birden patlıyor. Listeyi grep'le değil koşuyla doğrulamanın sebebi bu tek dosya.
+  // `delivery/map-codes.test.ts` buraya girmez: kendi metninde DB izi yok ama `./map-codes` `serviceDb` çağırır.
   'apps/web/lib/delivery/place-filter.test.ts',
-  // `order/carrier.test.ts` YOK ARTIK — kural pakete terfi etmişti, web nüshası köprü bile olmadan
-  // sahipsiz kalmıştı (K5-1 benimsemesi 10.08). Dosya ve testi silindi, test pakete taşındı.
-  // `verifyMetaSignature` saf: node:crypto + dize. Modül `serviceDb`i import ediyor ama ÇAĞIRMIYOR
-  // (istemci fonksiyon içinde kuruluyor) — bu yüzden birim projesinde güvenle koşuyor. Ölçüldü 23.08;
-  // `delivery/map-codes.test.ts`in listeye ALINMAMA gerekçesi tam da bunun tersiydi.
-  // 29.08: dosya `apps/web/lib/messaging/`den pakete taşındı (webhook backend'e geçti) — yol da
-  // taşındı. Eski yol bırakılsaydı SESSİZ kalırdı: vitest olmayan bir dosyayı hata vermeden atlar
-  // ve imza testi bir daha hiç koşmazdı.
+  // `verifyMetaSignature` saf: modül `serviceDb`i import eder ama çağırmaz, istemci fonksiyonun içinde kurulur.
   'packages/application/src/messaging/meta-signature.test.ts',
-  // Görsel yükleme kapısı (05.7) — saf: gerçek `File`/`FormData` kurar, biçim ve tavan sorar.
-  // Ne DB'ye ne R2'ye gider; modül `server-only` taşıyor ama koşucu onu boş modüle bağlıyor.
+  // Görsel yükleme kapısı saf: gerçek `File`/`FormData` kurar, biçim ve tavan sorar. Modül `server-only` taşır ama koşucu onu boş
+  // modüle bağlar.
   'apps/web/lib/media/upload.test.ts',
   'apps/web/lib/order/order-id.test.ts',
-  // Paylaşım kartının görseli (05.37) — saf: künye alır, adres verir.
+  // Paylaşım kartının görseli saf: künye alır, adres verir.
   'apps/web/lib/seo/open-graph.test.ts',
   'apps/web/lib/storefront/featured.test.ts',
   // Boyun müşteriye görünen adı — saf türetme (alanlar + sözlük → dize), DB'ye gitmiyor.
   'apps/web/lib/storefront/variant-name.test.ts',
   'apps/web/lib/use-load-more.hook.test.ts',
-  // Bağlam kapısı (27.08) — DB'siz ama §3i'nin STATİK İZİ bunu göremez: dosya `@lezzet/database`
-  // dizgesini taşıyor, çünkü depo servisini `vi.mock` ile TAKLİT ediyor. Yani iz "DB'ye vuruyor"
-  // der, gerçek tam tersidir — üç sınır da (çerez · guard · servis) taklit, hiçbir istemci
-  // kurulmuyor. Denetimin kendi künyesi bu yanılmayı yazıyor ("statik iz orada YANILIR"); liste
-  // elle tutulmasının sebebi de bu. Koşuyla doğrulandı: birim projesinde 12/12.
+  // Bağlam kapısı DB'sizdir ama §3i'nin statik izi onu göremez: depo servisini `vi.mock` ile taklit ettiği için `@lezzet/database`
+  // dizgesini taşır.
   'apps/web/lib/warehouse/context.test.ts',
   'apps/web/lib/warehouse/filter.test.ts',
 ];
 
 const alias = {
-  // `@/…` — apps/web'in tsconfig takma adı. Test koşucusu bunu bilmezse web tarafındaki saf
-  // fonksiyonlar (yönlendirme kararı gibi) yalnız göreli yolla test edilebilirdi.
-  // `server-only` bir PAKETLEYİCİ korumasıdır: "bu modül istemci paketine girmesin" der ve
-  // içeri girildiğinde fırlatır. Node test koşucusunda istemci paketi diye bir şey yok, dolayısıyla
-  // koruma yalnız sunucu okumalarının test edilmesini engelliyordu. Boş modüle bağlanır — koruma
-  // gerçek yerinde (Next derlemesi) aynen durur.
+  // `@/…` web'in tsconfig takma adıdır. `server-only` paketleyici korumasıdır ve Node koşucusunda istemci paketi olmadığı için boş
+  // modüle bağlanır; koruma Next derlemesinde aynen durur.
   '@': fileURLToPath(new URL('./apps/web', import.meta.url)),
   'server-only': fileURLToPath(new URL('./vitest.server-only.ts', import.meta.url)),
 };
@@ -181,17 +107,8 @@ export default defineConfig({
       {
         resolve: { alias },
         /*
-          JSX'İ KOŞUCU ÇEVİRİR, TSCONFIG DEĞİL (06.09).
-
-          `apps/web`in tsconfig'i `jsx: "preserve"` diyor ve demek ZORUNDA — çeviriyi Next yapar.
-          Ama Vite tsconfig'e bakıp JSX'i olduğu gibi bırakıyordu, yani web'in JSX yazan HİÇBİR
-          dosyası birim projesinde import EDİLEMİYORDU: "content contains invalid JS syntax".
-          Sonucu sessizdi çünkü kimse denememişti — depodaki dört komponent testi de saf mantık
-          sınıyor, hiçbiri çizmiyor.
-          İlk çizim testi (`components/text/chat-text.test.tsx`) duvara ilk çarpan oldu.
-
-          Burada verilen `jsx` seçeneği tsconfig'i EZER ve yalnız test koşusunda geçerlidir; Next
-          derlemesi kendi yolundan gider. Otomatik çalışma zamanı: dosyalar `React` import etmiyor.
+          JSX'i koşucu çevirir, tsconfig değil: web'in tsconfig'i `jsx: "preserve"` der ve Vite onu izlerse JSX yazan hiçbir web
+          dosyası birim projesinde import edilemez. Seçenek yalnız test koşusunda geçerlidir; Next kendi yolundan derler.
         */
         oxc: { jsx: { runtime: 'automatic' } },
         test: {
@@ -209,47 +126,24 @@ export default defineConfig({
             // Adres paketi saf: `fetch` taklit edilir, test ağa çıkmaz; React kancasını çizen test bu node ortamında koşamaz.
             'packages/address/src/**/*.test.ts?(x)',
             'packages/ai/src/**/*.test.ts?(x)',
-            /*
-              Sendcloud istemcisi (07.12) — saf: sahte `fetch` enjekte edilir, test AĞA ÇIKMAZ.
-              **Bu satır olmadan paketin bütün testleri sessizce hiç koşmazdı** (`mask.test.ts`
-              tuzağı, künyesi aşağıda). Yeni paket doğduğu gün ilk yazılan satır budur.
-            */
+            // Sendcloud istemcisi saf, sahte `fetch` enjekte edilir; paketin testleri bu satır olmadan sessizce hiç koşmaz.
             'packages/sendcloud/src/**/*.test.ts?(x)',
-            // Maskeleme saf metin işi, DB'siz (05.08). Liste eksik olsaydı `mask.test.ts` sessizce
-            // hiç koşmazdı — "test yazdım" ile "test koşuyor" arasındaki fark tam olarak budur.
+            // Maskeleme saf metin işidir; satır eksik olsaydı `mask.test.ts` sessizce hiç koşmazdı.
             'packages/observability/src/**/*.test.ts?(x)',
-            // Token paritesi saf dosya-okuma, DB'siz (21.3): globals.css ↔ design-tokens modülü.
+            // Token paritesi saf dosya okumasıdır: globals.css ↔ design-tokens modülü.
             'packages/design-tokens/src/**/*.test.ts?(x)',
-            /*
-              `scripts` KÖKÜ — yalnız kökteki dosyalar, `scripts/seed/**` DEĞİL (25.08).
-              Kök dosyalar araçtır ve içlerinde saf mantık var (barkod kodlaması, sağlama basamağı);
-              `seed/` ise DB'ye vurur ve oraya bir test yazılırsa entegrasyona alınmalı — dar desen
-              o ayrımı şimdiden kuruyor.
-              Bu satır olmadan `scripts/*.test.ts` HİÇBİR projede olmuyordu, yani oraya yazılacak
-              test sessizce hiç koşmazdı (yukarıdaki `mask.test.ts` tuzağının aynısı).
-            */
+            // `scripts` kökünün yalnız kendi dosyaları: araçlar saf mantık taşır, `seed/` ise DB'ye vurur ve oraya yazılan test
+            // entegrasyona alınır.
             'scripts/*.test.ts',
-            /*
-              `scripts/seed` — YALNIZ DB'siz olanlar (26.08). Yukarıdaki ayrım "seed DB'ye vurur"
-              diyordu ve genelde doğru; ama asistan kuyruğu seed'inin dilekçe ÜRETİCİLERİ saf
-              fonksiyonlar (çapa + varyant alır, dizi döndürür) ve sınanacak şey yazımın kendisi
-              değil üretilen payload'ın ŞEKLİ — onu şemadan geçirmek DB istemez.
-              Desen dar tutuldu (`assistant.test.ts`), çünkü buraya DB'ye vuran bir test yazılırsa
-              entegrasyona alınmalı; geniş bir `seed/**` deseni o ayrımı sessizce silerdi.
-            */
+            // `scripts/seed`ten yalnız DB'siz olanlar, dar desenle: geniş bir `seed/**` deseni DB'ye vuran testi de birim projesine alırdı.
             'scripts/seed/assistant.test.ts',
-            /*
-              Ambalaj ölçüsü üreteci (28.08) — saf: sayı girer, künye çıkar. DB istemcisi yok.
-              **Satır UNUTULURSA test sessizce hiç koşmaz** ve yukarıdaki `mask.test.ts` tuzağı
-              tekrar eder; dar desen (`assistant.test.ts`) bilerek seçildiği için her yeni saf
-              seed testi kendi satırını ister.
-            */
+            // Ambalaj ölçüsü üreteci saf; dar desen yüzünden her yeni saf seed testi kendi satırını ister.
             'scripts/seed/packing.test.ts',
-            // Görsel künyesi (14.09) — saf: JSON girer, künye çıkar. R2 ve DB istemcisi yok.
+            // Görsel künyesi saf: JSON girer, künye çıkar.
             'scripts/seed/image-manifest.test.ts',
             'apps/web/app/**/*.test.ts?(x)',
             'apps/web/components/**/*.test.ts?(x)',
-            // `apps/web/lib` entegrasyon köküdür ama içindeki bu 19 dosya DB'ye vurmuyor (K8-1).
+            // `apps/web/lib` entegrasyon köküdür ama bu dosyalar DB'ye vurmaz.
             ...WEB_LIB_DBSIZ,
             ...PAKET_DBSIZ,
             ...UYGULAMA_DBSIZ,
@@ -266,30 +160,21 @@ export default defineConfig({
             'apps/web/lib/**/*.test.ts?(x)',
             'packages/database/src/**/*.test.ts?(x)',
             'apps/backend/src/**/*.test.ts?(x)',
-            // Mobile-api entegrasyon köküdür (21.1): auth testleri yerel Supabase'e vurur.
+            // Mobile-api entegrasyon köküdür: auth testleri yerel Supabase'e vurur.
             'apps/mobile-api/src/**/*.test.ts?(x)',
-            // Application da entegrasyon köküdür (21.4a): orkestrasyonlar servislerle DB'ye vurur.
+            // Application da entegrasyon köküdür: orkestrasyonlar servislerle DB'ye vurur.
             'packages/application/src/**/*.test.ts?(x)',
           ],
-          // Birim projesine alınan 19 dosya buradan DÜŞER, yoksa İKİ projede birden koşarlardı.
-          // `configDefaults.exclude` korunuyor: `exclude` verildiğinde vitest varsayılanı EZER ve
-          // `node_modules` yeniden taranmaya başlardı.
+          // Birim projesine alınan dosyalar buradan düşer, yoksa iki projede birden koşarlardı; `configDefaults.exclude` korunur,
+          // çünkü `exclude` vitest varsayılanını ezer ve `node_modules` yeniden taranırdı.
           exclude: [...configDefaults.exclude, ...WEB_LIB_DBSIZ, ...PAKET_DBSIZ, ...UYGULAMA_DBSIZ],
           setupFiles: ['./vitest.setup.ts'],
           // Aynı satırlara giren testler paralel koşamaz; suite küçük, seri kalması sorun değil.
           fileParallelism: false,
-          // Varsayılan 5 sn/10 sn tavanları paylaşılan yerel Supabase için DAR (ölçüldü 08.08):
-          // üç şerit aynı DB'ye vururken tam paket koşusunda testler tam 5000 ms'te, kancalar
-          // 10000 ms'te kesiliyordu — hep FARKLI dosyalarda, izole koşuda hepsi <200 ms. Bu bir
-          // kod yavaşlığı değil sıra bekleme; tavanı kaldırmak değil genişletmek doğru: asılı
-          // kalan sorgu yine düşer, yalnız yalancı kırmızı üretmez.
+          // Varsayılan tavanlar paylaşılan yerel Supabase için dardır: eşzamanlı koşularda testler sıra bekler ve yalancı kırmızı
+          // üretir; asılı kalan sorgu genişletilmiş tavanda yine düşer.
           testTimeout: 15_000,
-          // Kanca tavanı testinkinden AYRI ve daha geniş (ölçüldü 09.08): refresh'in hemen
-          // ardındaki koşuda stock.test'in beforeAll VE afterAll'ı 30 sn'de kesildi — 23 test hiç
-          // koşamadı (yalancı kırmızı) ve kesilen afterAll purge'ü yarıda bıraktı: depo + kategori
-          // artığı kaldı, başka şeridin ölçümünü yanlış yöne çekti. Aynı dosya sakin pencerede
-          // 1,7 sn. Kesilen bir TEST kirlilik bırakmaz (afterAll yine koşar); kesilen bir KANCA
-          // bırakır — o yüzden kancaya sabır, teste değil. Gerçek kilitlenme 120 sn'de yine düşer.
+          // Kanca tavanı testinkinden geniştir, çünkü kesilen bir kanca (afterAll purge) kirlilik bırakır, kesilen bir test bırakmaz.
           hookTimeout: 120_000,
         },
       },

@@ -3,33 +3,10 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 /*
-  BİLGİ KUTUSU — v3'te ~10 kullanım: "yalnız bölge içi teslim", "asgari sepet tutarı", "ödeme
-  alınamadı", "✓ sonuç". Dört ton:
-  · `olive`      — olumlu / yolunda (zeytin bant)
-  · `terracotta` — fırsat ve uyarı (asgari tutar, adet limiti)
-  · `error`      — hata; uygulamanın KENDİ ailesi (`error` + `error-bg`), terracotta'ya
-                   katılmadı çünkü terracotta "fırsat" demek ve aynı ailede iki zıt anlam
-                   rozetin bilgi değerini sıfırlar (customer-app.ts kararı)
-  · `warm`       — nötr sıcak panel (`sand-150`), çerçevesiz
-  · `warm-accent`— vurgulu zemin (`terracotta-bg`) ama NÖTR yazı: bölge dışı bandının kutusu.
-                   Zemin dikkat çeker, cümle bir uyarı değil adresin gerçeğidir — yazıyı da
-                   terracottaya boyamak kutuyu fırsat rozetiyle aynı sesle konuşturuyordu.
-
-  HATA tonu ekran okuyucuya `alert` rolüyle gider: hata görsel bir renk değil, duyurulması
-  gereken bir olaydır.
-
-  ── EYLEM YUVASI (10.08, ölçülmüş arıza) ────────────────────────────────────
-  Kutunun ALTINA eylem koymak, kutuyu bir cümleye indirip eylemleri sayfaya döküyordu: katalogda
-  bölge dışı bandın altında yan yana iki bağlantı ve onların da altında bir form açılıyordu; ürün
-  kartları ekranın yarısına iniyordu (kullanıcı bulgusu: "üç metin butonu alt alta, gerçekten kötü
-  görünüyor"). Eylem artık kutunun İÇİNDE, açıklamanın altında duruyor.
-
-  YUVA, VARYANT DEĞİL: kutu hangi kontrolün geleceğini bilmez (`ReactNode`) — düğme, bağlantı
-  satırı ya da ikisi birden. Ton/kademe kararı yine çağıranın kontrolünde kalır; kutu yalnız
-  boşluğu garanti eder. Yuvayı kullanmayan çağıranlar (10 kullanım) hiç değişmedi.
-
-  Yuva a11y kapsamının DIŞINDADIR: kutu tek okuma birimidir (`accessible`) ama içindeki düğme
-  kendi başına odaklanabilmeli — sarmalayıcı onu yutarsa ekran okuyucu eylemi hiç göremez.
+  Bilgi kutusu; `error` kendi ailesindedir, çünkü terracotta "fırsat" der ve aynı ailede iki zıt anlam rozetin bilgi değerini
+  sıfırlar, `warm-accent` ise zemini vurgular ama yazıyı nötr bırakır, çünkü bölge dışı cümlesi uyarı değil adresin gerçeğidir.
+  Yuvalar kutunun içindedir ve metnin a11y kapsamı dışında kalır: dışarı taşan eylemler kartları ekranın yarısına iter, sarmalayıcı
+  düğmeyi yutarsa da ekran okuyucu eylemi göremez.
 */
 
 type NoteTone = 'olive' | 'terracotta' | 'error' | 'warm' | 'warm-accent';
@@ -42,14 +19,7 @@ interface NoteProps {
   title?: string;
   /** Eylem yuvası: kutunun İÇİNDE, metnin altında çizilir (düğme / bağlantı satırı). */
   action?: ReactNode;
-  /**
-   * ÜST yuva — kutunun İÇİNDE ama başlığın ÜSTÜNDE (11.08, bölge dışı bandın posta kodu hapı).
-   *
-   * `action`ın ikizi ve aynı gerekçeyle var: bir kontrolü kutunun DIŞINA koymak, kutuyu bir cümleye
-   * indirip parçaları sayfaya döküyor (yuvanın 10.08 künyesi). Fark yalnız SIRA: buraya konan şey
-   * cümlenin ÖN KOŞULUdur — "hangi yer için konuşuyoruz" sorusunun cevabı başlıktan önce gelir.
-   * Metin bloğunun a11y kapsamı dışındadır, `action` gibi: içindeki denetim kendi başına odaklanır.
-   */
+  /** Üst yuva: kutunun içinde, başlığın üstünde, çünkü cümlenin ön koşulu ("hangi yer için konuşuyoruz") başlıktan önce gelir. */
   header?: ReactNode;
   testID?: string;
 }
@@ -77,7 +47,7 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: theme.radius.control,
     borderWidth: theme.border.hairline,
   },
-  /** Başlık ↔ açıklama aralığı — kutunun eski `gap`i buraya indi, görünüm değişmedi. */
+  /** Başlık ile açıklama arasındaki aralık. */
   text: {
     gap: theme.space.xs,
   },
@@ -124,10 +94,7 @@ const styles = StyleSheet.create((theme) => ({
   description: {
     // Ağırlıksız gövde — RN'in varsayılanı da 400; aile o ağırlıkla indekslenir.
     fontFamily: theme.font.body[400],
-    /* `helper` (12) DEĞİL `body-sm` (14) — MB-46'nın kuralı: müşterinin KARAR için okuduğu metin
-       14'ün altına inmez; `helper`/`micro` yalnız gerçek yardımcı role kalır (form ipucu, birim,
-       sayaç, zaman damgası). Ölçüm: `helper` yazı boyutu "Büyük"te bile 13,8'de kalıyordu. Bu
-       kutu uyarı ve hata taşıyor, yani tanım gereği içerik — kural burada en görünür hâliyle. */
+    /* `helper` (12) değil `body-sm` (14): müşterinin karar için okuduğu metin 14'ün altına inmez ve bu kutu uyarı ile hata taşır. */
     fontSize: theme.text['body-sm'],
     // Gövde satır aralığı: oran da token (`lead--line-height`) — ham çarpan yazılmadı.
     lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],

@@ -27,46 +27,25 @@ import { CartWriteFailed } from './cart-write-failed';
 const UNDO_MS = 5000;
 
 /**
- * Sepet bağlamı (08.4) — sepet durumunun TEK sahibi.
- *
- * Neden bağlam: sepet üç ayrı yerde birden görünür ve hepsi aynı anda doğru olmalı — başlıktaki
- * sayaç, kart üstündeki "+", ürün detayın sabit çubuğu ve sepet sayfası. Her biri kendi state'ini
- * tutsaydı ekle-çıkar sonrası sayaç ile sayfa ayrışırdı.
- *
- * **Niyet ve görünüm ayrı ilerler.** `entries` (ne istendiği) anında güncellenir, `view` (bugünkü
- * karşılığı) sunucudan gelir. Böylece "+" basınca sayaç beklemeden artar; fiyat ve tükendi bilgisi
- * yanıtla birlikte tazelenir. Sunucu cevabı gecikse de arayüz donmaz.
- *
- * **Depo oturuma göre değişir, arayüz bilmez:** girişli müşteride sunucu (`Cart`), ziyaretçide
- * tarayıcı. Hangisi olduğunu action söyler; bileşenler yalnız `add`/`setQty` görür.
+ * Sepet durumunun tek sahibi: sayaç, kart üstündeki "+", ürün detayının çubuğu ve sepet sayfası aynı anda doğru olmalı. Niyet
+ * (`entries`) anında, görünüm (`view`) sunucudan ilerler; deponun oturuma göre tarayıcı ya da sunucu olduğunu bileşenler bilmez.
  */
 interface CartContextValue {
   /**
-   * Ekranın gördüğü görünüm: sunucunun çözdüğü satırlar + BUGÜNKÜ niyetin adetleri. Adet değişimi
-   * sunucu turunu beklemez (tasarım: "anında güncellenir").
-   *
-   * `pending` diye bir bayrak YOK ve olmamalı: bir satırın adedi değişirken bütün satırların
-   * düğmelerini kilitlemek, tek bir kalemin sunucu turunu bütün sepete ödetmekti (28.07). Yarışı
-   * kilit değil, yanıt bileti çözer — geç dönen eski cevap sessizce düşer.
+   * Sunucunun çözdüğü satırlar ve bugünkü niyetin adetleri; adet değişimi sunucu turunu beklemez. `pending` bayrağı yoktur, çünkü
+   * tek kalemin turu bütün sepetin düğmelerini kilitlerdi; yarışı yanıt bileti çözer.
    */
   view: CartView;
   /** İlk okuma tamamlanana kadar sayaç gösterilmez — yanlış sayı göstermektense hiç göstermemek. */
   ready: boolean;
   /**
-   * İlk okuma BAŞARISIZ oldu mu (sunucu yanıtı gelmedi ya da hata döndü).
-   *
-   * Ayrı bir bayrak olması şart: `view` boş, `entries` dolu kalıyor — yani rozet niyetten sayıp
-   * "4" derken sayfa çözülmüş satır bulamayıp "sepetiniz boş" çiziyordu. İki ekran aynı durumdan
-   * iki farklı sonuç çıkarıyordu ve arada kimse hatayı görmüyordu; action `{data, error}` döndüğü
-   * için tarayıcı konsolunda da bir iz yoktu (28.07 — sepetin kaybolduğu hata).
-   *
-   * Boş sepet ile ULAŞILAMAYAN sepet farklı şeylerdir: birincisi bir durum, ikincisi bir arıza.
+   * İlk okuma başarısız mı; ayrı bayrak, çünkü `view` boşken `entries` dolu kalır ve rozet "4" derken sayfa "sepetiniz boş" çizerdi.
+   * Boş sepet bir durum, ulaşılamayan sepet bir arızadır.
    */
   failed: boolean;
   /**
-   * Sepeti sunucudan YENİDEN okur. İki yerde kullanılır: başarısız okumanın "tekrar dene"si ve
-   * sipariş verildikten sonra tazeleme — sipariş kesinleşince sunucudaki sepet boşalıyor, ekrandaki
-   * sayaç da onu görmeli. Yoksa müşteri sipariş verip sepetinde hâlâ kalem görüyordu.
+   * Sepeti sunucudan yeniden okur: başarısız okumanın "tekrar dene"si ve sipariş sonrası tazeleme, çünkü sipariş sunucudaki sepeti
+   * boşaltır ve sayaç da onu görmeli.
    */
   reload: () => void;
   /** Girilen kupon kodu (niyet). Sonucu `view.discount`tadır — ikisi karıştırılmamalı. */
@@ -82,20 +61,13 @@ interface CartContextValue {
    */
   addMany: (entries: readonly CartEntry[], skipped?: number) => void;
   /**
-   * "N kalem şu an mevcut değil, eklenmedi" — tekrar siparişin sessizce eksik geldiğini söyler.
-   *
-   * Sağlayıcıda durmasının sebebi: uyarıyı doğuran ekran (boş sepet) eklemeden hemen sonra
-   * SÖKÜLÜYOR. Kendi state'inde tutulduğu sürece cümle ekranla birlikte kayboluyor ve müşteri hiç
-   * okumuyordu — oysa tasarım onu **sepette** göstermeyi söylüyor. Bir sonraki sepet değişikliğinde
-   * temizlenir: o noktada müşteri artık kendi eylemine bakıyor.
+   * Tekrar siparişte eklenemeyen kalem sayısı ("N kalem şu an mevcut değil"); sağlayıcıda durur, çünkü uyarıyı doğuran boş sepet
+   * ekranı eklemeden hemen sonra sökülür. Bir sonraki sepet değişikliğinde temizlenir.
    */
   addSkipped: number | null;
   /**
-   * Bu varyant/paket sepette mi, kaç adet? Katalog kartı, ürün detayı ve paket detayı buna bakar:
-   * sepetteyse "Sepete ekle" yerine adet seçicisi çizer (K19).
-   *
-   * Varyantta eşleşme YALNIZ varyantla kurulur — sorusu "bu üründen sepette kaç var", "hangi
-   * partiden" değil; azaltma da o satırın kendi çıpasına gider. Pakette çıpa zaten yok.
+   * Bu varyant ya da paket sepette mi, kaç adet: sepetteyse kartlar "Sepete ekle" yerine adet seçicisi çizer. Varyantta eşleşme
+   * yalnız varyantla kurulur, çünkü soru "hangi partiden" değil "bu üründen kaç".
    */
   lineOf: (ref: { variantId: string } | { bundleId: string }) => { qty: number; stockId: string | null; limitCap: number | null } | null;
   /** 0 verilirse satır SİLİNİR ve 5 sn'lik geri alma penceresi açılır (tasarım: onay istenmez). */
@@ -106,23 +78,18 @@ interface CartContextValue {
    * müşterinin az önce yaptığı işin sonucu.
    */
   justRemoved: boolean;
-  /** Sonraya kaydedilenler (K33) — çözülmüş satırlar; toplamları anlamsızdır, liste gösterilir. */
+  /** Sonraya kaydedilenler, çözülmüş satırlar; toplamları anlamsızdır, liste gösterilir. */
   saved: CartView;
   /**
-   * Kalemi sepetten listeye TAŞIR. Silmez: teslimat yerine gönderilemeyen ürün vazgeçilmiş değildir,
-   * yalnız bugün alınamıyordur (tasarım §7: "alışveriş ölmez, sepet bölünür").
-   *
-   * Geri alma şeridi AÇILMAZ — silme değil taşıma; kalem gözden kaybolmuyor, hemen altta duruyor.
+   * Kalemi sepetten listeye taşır, silmez: gönderilemeyen ürün vazgeçilmiş değildir, yalnız bugün alınamıyordur. Geri alma şeridi
+   * açılmaz, çünkü kalem gözden kaybolmaz.
    */
   saveForLater: (refs: readonly CartRef[]) => void;
   /** Listeden sepete geri alır (aynı adetle). Liste tarafındaki tek aksiyon budur. */
   restoreToCart: (ref: CartRef) => void;
   /**
-   * Yer değişince sepette ne değişti (19.7) — kalem kalem, `null` iken bildirilecek bir şey yok.
-   *
-   * Sağlayıcıda durur çünkü yer sepet sayfasında DEĞİL, başlıktaki haptan da değiştirilebiliyor:
-   * anasayfada kodunu giren müşteri sepete geldiğinde farkı görmeli. Ekranın kendi state'inde
-   * tutulsaydı, sepet o sırada monte olmadığı için fark hiç hesaplanmazdı.
+   * Yer değişince sepette ne değişti, kalem kalem; `null` iken söylenecek bir şey yok. Sağlayıcıda durur, çünkü yer başlıktaki
+   * haptan da değişir ve sepet o sırada monte değilse fark hiç hesaplanmazdı.
    */
   placeChange: CartLineChange[] | null;
   /** Kartı kapatır — "anladım". Bir sonraki yer değişimine kadar bir daha çizilmez. */
@@ -147,8 +114,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   // tersi mümkün değildi ve olması da gerekmiyor: sepet yeri izler, yer sepeti değil.
   const { place, ready: placeReady, unresolved, pickup } = useDeliveryPlace();
   /**
-   * Yer karşılanamıyor mu — yer değişiminin farkında `no_delivery` kararı için (14.09). `ref`, çünkü
-   * farkı okuma DÖNÜNCE hesaplanıyor ve o an geçerli olan değer lazım; okumayı yeniden kurmamalı.
+   * Yer karşılanamıyor mu; farkın `no_delivery` kararı okuma dönünce verilir ve o anki değer gerekir. `ref`, çünkü okumayı yeniden
+   * kurmamalı.
    */
   const unresolvedNow = useRef(unresolved);
   useEffect(() => {
@@ -160,24 +127,16 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   const [savedView, setSavedView] = useState<CartView>(EMPTY_CART);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  /**
-   * Girilen kupon kodu. Sonucu (uygulandı / reddedildi / geçildi) BURADA tutulmaz — o `view.discount`
-   * ile sunucudan gelir. Burada yalnız niyet var; kodu değiştirmek okumayı yeniden tetikler
-   * (`load` bağımlılığı), yani ekran cevabı her zaman sunucudan alır.
-   */
+  /** Girilen kupon kodu, yalnız niyet: sonucu `view.discount` ile sunucudan gelir ve kod değişince okuma yeniden koşar. */
   const [coupon, setCoupon] = useState<string | null>(null);
   /**
-   * Sepet sunucuda mı yaşıyor. Sunucu söyler (`serverCart`) — istemci "kimin sepeti" sorusunu
-   * kendi cevaplayamaz. `ref`, çünkü `sync` içinde OKUNUYOR ve state olsaydı her yazmada
-   * yeniden kurulan bir bağımlılık zinciri doğardı.
+   * Sepet sunucuda mı yaşıyor; bunu sunucu söyler (`serverCart`), istemci "kimin sepeti" sorusunu cevaplayamaz. `ref`, çünkü `sync`
+   * içinde okunur ve state olsaydı her yazmada bağımlılık zinciri yeniden kurulurdu.
    */
   const serverCart = useRef(false);
   /**
-   * Sunucunun ONAYLADIĞI son niyet — yazma düşünce iyimser adetin geri sarılacağı yer.
-   *
-   * `ref`, çünkü `sync` bunu okumak zorunda ve state olsaydı her okuma yeni bir `sync` doğurup
-   * bağımlılık zincirini kırardı. `view`den türetilemezdi: `view` çözülmüş SATIRLARI taşır, geri
-   * sarılacak olan ise niyet listesi.
+   * Sunucunun onayladığı son niyet, yazma düşünce iyimser adetin geri sarılacağı yer; `view`den türetilemez, çünkü o çözülmüş
+   * satırları taşır. `ref`, çünkü `sync` onu okur ve state olsaydı her okuma yeni bir `sync` doğururdu.
    */
   const serverEntries = useRef<{ cart: CartEntry[]; saved: CartEntry[] }>({ cart: [], saved: [] });
   /** Yazma düştü mü — şerit bunu gösterir. Okumanın `failed`'i ile AYRI: o blok, bu haber. */
@@ -187,25 +146,19 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   /** Tekrar siparişte eklenemeyen kalem sayısı — uyarıyı doğuran ekran sökülse de yaşar. */
   const [addSkipped, setAddSkipped] = useState<number | null>(null);
   /**
-   * Yer değişimi bildirimi (19.7). `compareTo` bir sonraki okumanın kıyaslanacağı ESKİ görünümü
-   * taşır; yalnız yer değiştiğinde dolar, okuma dönünce boşalır. Ref çünkü okumanın içinden
-   * okunuyor ve değişmesi yeni bir render doğurmamalı.
+   * Yer değişimi bildirimi; `compareTo` bir sonraki okumanın kıyaslanacağı eski görünümü taşır, yalnız yer değişince dolar ve okuma
+   * dönünce boşalır. Ref, çünkü okumanın içinden okunur ve değişmesi yeni bir çizim doğurmamalı.
    */
   const [placeChange, setPlaceChange] = useState<CartLineChange[] | null>(null);
   const compareTo = useRef<CartView | null>(null);
   /**
-   * Son okumada geçerli olan kupon kodu — ölçüm için (08.9).
-   *
-   * `ref`, çünkü okunması yeni bir okuma doğurmamalı: state olsaydı `load`'un bağımlılığı olur ve
-   * her kupon denemesi iki tur koşardı. "Kod değişti mi" sorusunun cevabı yalnız bu turda lazım.
+   * Son okumada geçerli olan kupon kodu, ölçüm için. `ref`, çünkü state olsaydı `load`un bağımlılığı olur ve her kupon denemesi iki
+   * tur koşardı.
    */
   const couponAtLastRead = useRef<string | null>(null);
   /**
-   * Sepet ŞU AN bölünmüş mü — ölçüm için (08.9).
-   *
-   * `ref` ve state DEĞİL, iki sebeple: `load` bunu okumak zorunda ve state olsaydı bağımlılığına
-   * girerdi — `load` her okumada `view`i güncellediği için bu **sonsuz bir okuma döngüsü** olurdu.
-   * Bağımlılığa eklemeseydik de kapanış bayatlar ve geçiş yanlış ölçülürdü.
+   * Sepet şu an bölünmüş mü, ölçüm için. `ref`, çünkü `load` onu okur ve her okumada `view`i güncellediği için state bir okuma
+   * döngüsü doğururdu.
    */
   const splitNow = useRef(false);
   // Yarışı kesmek için: geç dönen eski yanıt yeni durumu ezmesin.
@@ -213,16 +166,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
-   * Yazma düştü → iyimser adet GERİ SARILIR (akış denetimi #12).
-   *
-   * Öncesinde yazma sessizce düşüyordu: ekran "3 kg" gösteriyor, sunucuda 2 kg duruyordu ve müşteri
-   * bunu ancak checkout'ta görüyordu. Ekranın söylediği ile sunucudakinin ayrıştığı yerde doğru
-   * davranış, sunucuyu göstermektir.
-   *
-   * **Yalnız GİRİŞLİ müşteride.** Ziyaretçide sepet tarayıcıda yaşar ve niyet oraya `sync`in ilk
-   * satırında zaten yazılmıştır; sunucudan istenen tek şey fiyatın çözülmesiydi. Orada geri sarmak,
-   * gerçekte kaybolmamış bir değişikliği silmek olurdu — ekran yalnız fiyatı bir tur eski gösterir,
-   * adet doğrudur.
+   * Yazma düşünce iyimser adet geri sarılır, çünkü ekranla sunucu ayrıştığında doğru olan sunucuyu göstermektir. Yalnız girişli
+   * müşteride: ziyaretçide niyet tarayıcıya zaten yazılmıştır ve geri sarmak kaybolmamış bir değişikliği silerdi.
    */
   const rollback = useCallback(() => {
     if (!serverCart.current) return;
@@ -234,18 +179,16 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   /** Niyeti yazar ve çözülmüş görünümü alır. Ziyaretçide tarayıcıya, girişlide sunucuya gider. */
   const sync = useCallback(
     /**
-     * `added` YALNIZ ölçüm için (08.9): uç eşitleme ucudur, "neyi eklediğim" bilgisi yalnız burada
-     * var. Geri alma (`undo`) ve "sonraya kaydedilenden geri taşıma" bunu GEÇMİYOR — ikisi de yeni
-     * bir ekleme değil, bir düzeltme; sayılsalardı aynı ürün defterde iki kez eklenmiş görünürdü.
+     * `added` yalnız ölçüm içindir, çünkü "neyi eklediğim" bilgisi yalnız burada vardır. Geri alma ve listeden geri taşıma onu geçmez;
+     * ikisi yeni ekleme değil düzeltmedir.
      */
     (next: CartEntry[], nextSaved: CartEntry[], added?: AddToCartIntent[]) => {
       // Bölünme GEÇİŞİNİ ölçebilmek için turun ÖNCESİNDEKİ hâl gerekiyor; sunucu onu bilemez.
       const wasSplit = splitNow.current;
       setEntries(next);
       setSavedEntries(nextSaved);
-      // Tarayıcı deposu YALNIZ ziyaretçide yazılır. Girişli müşteride de yazılıyordu: depo
-      // yeniden doluyor, bir sonraki açılışta `readCartAction` onu misafir sepeti sanıp
-      // sunucudakinin ÜSTÜNE ekliyordu — her yenilemede adetler katlanıyordu (29.07).
+      // Tarayıcı deposu yalnız ziyaretçide yazılır: girişlide dolan depo bir sonraki açılışta misafir sepeti sanılıp sunucudakinin
+      // üstüne eklenir ve adetler katlanırdı.
       if (!serverCart.current) {
         writeGuestCart(next);
         writeSaved(nextSaved);
@@ -286,29 +229,20 @@ export function CartProvider({ locale, children }: CartProviderProps) {
     [],
   );
 
-  // İlk yükleme: tarayıcıdaki niyet sunucuya sorulur. Girişli müşteride kalemler sunucudakinin
-  // üstüne EKLENİR (devralma) — action oturuma bakar, istemci "kimin sepeti" sorusunu cevaplamaz.
-  //
-  // Okuma DÜŞERSE tarayıcı depoları KORUNUR ve `failed` kalkar: niyet elimizdeki tek gerçek, onu
-  // silmek müşterinin sepetini gerçekten kaybettirirdi. Ekran boş sepet değil arıza gösterir.
+  // İlk yükleme niyeti sunucuya sorar; girişlide kalemler sunucudakinin üstüne eklenir ve bunu action oturuma bakarak bilir. Okuma
+  // düşerse tarayıcı depoları korunur ve `failed` kalkar, çünkü niyet elimizdeki tek gerçektir.
   const load = useCallback(() => {
     const guest = readGuestCart();
     const guestSaved = readSaved();
     /**
-     * Kod depodan İLK okumada alınır ve **state'e de yazılır**. Yazılmasaydı `sync` (adet değişimi)
-     * `coupon` state'ini `null` görüp sunucuya kodsuz gidiyordu: sayfayı yenileyen müşteri
-     * indirimini görüyor, sonra bir adet değiştirdiğinde indirim sessizce kayboluyordu (29.07
-     * denetimi). Değer aynıysa `setCoupon` çağrılmaz — aksi hâlde `load` kendini tetiklerdi.
+     * Kod depodan ilk okumada alınır ve state'e de yazılır, yoksa `sync` kodsuz gider ve adet değişince indirim sessizce kaybolurdu.
+     * Değer aynıysa `setCoupon` çağrılmaz, çünkü `load` kendini tetiklerdi.
      */
     const code = coupon ?? readCoupon();
     if (code !== coupon) setCoupon(code);
     /**
-     * Niyet tarayıcı deposundan YALNIZ sepet tarayıcıda yaşarken kurulur. Sunucudaki sepette depo
-     * bilerek boştur (aşağıda boşaltılıyor); ondan kurmak niyeti okuma dönene dek `[]` yapıyordu ve
-     * görünüm niyetten süzüldüğü için (`viewWithEntries`) bütün satırlar düşüyordu: yer ya da kupon
-     * değişince koşan her okumada sepet sayfası bir an "sepetiniz boş"a dönüp yeniden kuruluyor,
-     * içindeki durum da gidiyordu — sepette açılan adres penceresi adres kaydedilemeden kapanıyordu
-     * (yaşandı 14.09). Okuma dönünce niyet sunucunun onayladığıyla değişir.
+     * Niyet tarayıcı deposundan yalnız sepet tarayıcıda yaşarken kurulur: sunucu sepetinde depo bilerek boştur ve ondan kurmak her
+     * okumada satırları bir an düşürüp sepet sayfasındaki durumu (açık adres penceresi dahil) sıfırlardı.
      */
     if (!serverCart.current) {
       setEntries(guest);
@@ -319,9 +253,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
     setWriteFailed(false);
     const ticket = ++seq.current;
     /**
-     * Turun künyesi (08.9): okuma üç sebeple koşuyor ve sürtünme yalnız KENDİ turunda sayılıyor —
-     * ilk açılış · kupon denemesi (`coupon` state değişti) · yer değişimi (`compareTo` dolu).
-     * Sebebi taşımasaydık reddedilmiş bir kupon her sayfa açılışında yeniden sayılırdı.
+     * Turun sebebi ölçüm içindir: okuma ilk açılışta, kupon denemesinde ve yer değişiminde koşar, sürtünme yalnız kendi turunda
+     * sayılır. Sebep taşınmasaydı reddedilmiş kupon her açılışta yeniden sayılırdı.
      */
     const trigger = compareTo.current ? ('place' as const) : code !== couponAtLastRead.current ? ('coupon' as const) : undefined;
     couponAtLastRead.current = code;
@@ -330,9 +263,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         if (ticket !== seq.current) return;
         if (!data) return setFailed(true);
         serverCart.current = data.serverCart;
-        // Sepet sunucuda yaşıyorsa tarayıcı deposu BOŞALTILIR — devralma yapılmış olsun ya da
-        // olmasın. Yalnız `merged` hâlinde temizlemek yetmiyordu: sonraki yazmalar depoyu
-        // yeniden dolduruyor ve bir sonraki açılışta o kalemler ikinci kez devralınıyordu.
+        // Sepet sunucuda yaşıyorsa tarayıcı deposu devralma olsun olmasın boşaltılır, yoksa sonraki yazmalar onu doldurur ve bir
+        // sonraki açılışta aynı kalemler ikinci kez devralınır.
         if (data.serverCart) {
           clearGuestCart();
           clearSaved();
@@ -366,12 +298,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
   useEffect(() => load(), [load]);
 
   /**
-   * **Yer değişti → sepet yeniden okunur.** Şart: satırların yolu (`route`) ve fiyatı müşterinin
-   * deposundan çözülüyor; okunmazsa ekran eski yerin gruplarını göstermeye devam eder ve müşteri
-   * checkout'a kadar öyle sanır.
-   *
-   * İLK KARE atlanır: sayfa açılırken yer "yok"tan "var"a geçiyor ve bu bir değişim değil, cevabın
-   * gelmesi. Atlanmasaydı her açılışta bir tazeleme turu ve boş bir bildirim doğardı.
+   * Yer değişince sepet yeniden okunur, çünkü satırların yolu ve fiyatı yerden çözülür. İlk kare atlanır: açılışta yerin gelmesi bir
+   * değişim değil cevaptır.
    */
   // Gel-al da bir yer değişimidir: depo seçilince sepet deponun stoğuyla yeniden okunmalı, yoksa satırlar adresin yolunu gösterir.
   const placeKey = pickup?.selectedWarehouseId ? `pickup:${pickup.selectedWarehouseId}` : place ? `${place.country}:${place.postalCode}` : '';
@@ -505,10 +433,8 @@ export function CartProvider({ locale, children }: CartProviderProps) {
 }
 
 /**
- * Ekleme niyetinin ölçüm karşılığı (08.9) — istemcinin elindeki tek gerçek bu.
- *
- * `CartEntry` ürünü değil varyantı tanıyor; defterin `subjectId`'si de o varyant. Ürün kırılımı
- * gerektiğinde varyant tablosundan çözülür (gerekçe `writeCartAction` künyesinde).
+ * Ekleme niyetinin ölçüm karşılığı: `CartEntry` ürünü değil varyantı tanır ve defterin `subjectId`si de o varyanttır; ürün kırılımı
+ * gerektiğinde varyant tablosundan çözülür.
  */
 function intentOf(entry: CartEntry): AddToCartIntent {
   return entry.kind === 'bundle'
