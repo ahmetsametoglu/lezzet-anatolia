@@ -20,8 +20,9 @@ import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import { AccountLine } from './components/checkout-steps';
 import { PhoneCheckoutSkeleton } from './components/phone-checkout-skeleton';
+import { PhoneShippingChoice } from './components/phone-shipping-choice';
 import { ShippingOrderNote } from './components/shipping-order-note';
-import { checkoutBlocker, selectableShippingOptions, type CheckoutCopy, type CheckoutViewProps } from './checkout-types';
+import { checkoutBlocker, servicePointMissing, type CheckoutCopy, type CheckoutViewProps } from './checkout-types';
 
 /**
  * Ödemenin telefon görünümü, native "Siparişi tamamla" ekranının web ikizi: metin ortak sözlükten, durum ve sunucu turları
@@ -153,7 +154,13 @@ export function CheckoutMobile(props: CheckoutViewProps) {
 
   // Engel TEK yerde kararlaşır (`checkoutBlocker` — kart formu da aynı cevabı okur); telefon native'in iki ek şartını da
   // söyler: gün seçilmedi · ödeme yolu seçilmedi. Okuma düştüyse "güncelleniyor" DENMEZ — bitmeyecek bir bekleyiş olurdu.
-  const blocker = checkoutBlocker({ cartFailed, cartHasBlocked: cart.hasBlocked, snapshot, addressId: state.addressId });
+  const blocker = checkoutBlocker({
+    cartFailed,
+    cartHasBlocked: cart.hasBlocked,
+    snapshot,
+    addressId: state.addressId,
+    pointMissing: servicePointMissing(state, snapshot.shipping),
+  });
   const blockText = !snapshotReady
     ? copy.block.loading
     : blocker === 'cart_unreachable'
@@ -168,11 +175,13 @@ export function CheckoutMobile(props: CheckoutViewProps) {
           ? copy.block.shipping
           : blocker === 'min_basket' && payment !== null
             ? copy.block.minBasket.replace('{place}', payment.placeLabel).replace('{missing}', formatPrice(payment.missingForMinBasketCents, locale))
-            : isRoute && delivery?.requiresDateChoice && state.deliveryDate === null
-              ? copy.block.day
-              : state.paymentMethod === null
-                ? copy.block.payment
-                : null;
+            : blocker === 'service_point_missing'
+              ? copy.point.none
+              : isRoute && delivery?.requiresDateChoice && state.deliveryDate === null
+                ? copy.block.day
+                : state.paymentMethod === null
+                  ? copy.block.payment
+                  : null;
 
   // Küçük resimler siparişin kendisini gösterir — kapsam dışı kalemin fotoğrafı "bunlar geliyor" diye okunurdu.
   // Paketler önce (native'in sırası).
@@ -301,7 +310,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                       {copy.delivery.dayLabel.replace('{day}', formatDeliveryDate(dates[0] ?? '', locale))}
                     </p>
                   ))}
-                {!isRoute && !isPickup && !delivery.blocked && <CarrierChoice {...props} />}
+                {!isRoute && !isPickup && !delivery.blocked && <PhoneShippingChoice {...props} />}
               </section>
             )}
 
@@ -406,46 +415,4 @@ function lineLabel(copy: CheckoutCopy, line: SummaryLine): string {
 /** Fiyatı çözülememiş satır SIFIR yazılmaz (CLAUDE §1): satışa kapanmış kalem "bedava" değildir. */
 function lineValue(copy: CheckoutCopy, line: SummaryLine, locale: CheckoutViewProps['locale']): string {
   return line.lineTotalCents === null ? copy.summary.noPrice : formatPrice(line.lineTotalCents, locale);
-}
-
-/**
- * Kargo servisi seçimi web'e özgü: seçenekler taşıyıcıdan canlı gelir, fiyat istemcide hesaplanmaz. Eşik üstünde seçim
- * sorulmaz, çünkü ücreti biz ödüyoruz ve koli eve gider; teklif alınamadıysa sebebi ve sabit tarife söylenir.
- */
-function CarrierChoice({ locale, snapshot, state, onSelectShipping }: CheckoutViewProps) {
-  const copy = checkoutMessages[locale];
-  const shipping = snapshot.shipping;
-  if (shipping?.mode === 'auto') return <p className="font-sans text-body-sm leading-[1.6] text-muted">{copy.carrier.freeHome}</p>;
-  if (shipping === null || selectableShippingOptions(shipping.options).length === 0) {
-    return (
-      <p className="font-sans text-body-sm leading-[1.6] text-muted">
-        {shipping?.status === 'unmeasured' ? copy.carrier.unmeasured : shipping?.status === 'ok' ? copy.carrier.none : copy.carrier.off}
-      </p>
-    );
-  }
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="font-sans text-note font-bold text-ink">
-        {copy.carrier.title}
-        {shipping.parcelCount > 1 && ` · ${copy.carrier.parcels.replace('{count}', String(shipping.parcelCount))}`}
-      </span>
-      {selectableShippingOptions(shipping.options).map((option) => {
-        const details = [
-          option.leadTimeHours ? copy.carrier.days.replace('{hours}', String(option.leadTimeHours)) : null,
-          option.tracked ? copy.carrier.tracked : null,
-        ].filter((part): part is string => part !== null);
-        return (
-          <PhoneOptionRow
-            key={option.code}
-            label={option.carrierName}
-            description={details.length > 0 ? details.join(' · ') : undefined}
-            selected={state.shippingOptionCode === option.code}
-            onClick={() => onSelectShipping(option.code)}
-            trailing={<span className="flex-none font-sans text-control text-ink">{formatPrice(option.priceCents, locale)}</span>}
-          />
-        );
-      })}
-      <p className="font-sans text-helper text-muted">{copy.carrier.hint}</p>
-    </div>
-  );
 }

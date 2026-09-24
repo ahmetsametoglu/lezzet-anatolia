@@ -1,53 +1,26 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { orderServicePoints } from '@lezzet/domain-core';
-import { openingLines } from '@lezzet/helper';
+import { useRef, useState } from 'react';
+import { distanceLabel, openingLines, pointAddress, pointText } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
+import type { CheckoutShippingOption } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
 import { Dialog } from '@/components/customer/ui/dialog';
 import { formatPrice } from '@/lib/storefront/format';
-import { loadServicePointsAction } from '../actions';
-import { type CheckoutServicePoint, type CheckoutViewProps, type SelectedServicePoint } from '../checkout-types';
-
-const ServicePointMap = dynamic(() => import('./service-point-map-leaflet').then((mod) => mod.ServicePointMapLeaflet), {
-  ssr: false,
-  loading: () => <div className="size-full bg-sand-100" />,
-});
-
-type ShippingOption = NonNullable<CheckoutViewProps['snapshot']['shipping']>['options'][number];
-
-/**
- * Taşıyıcı renkleri, fiyat sırasıyla; tonca birbirinden uzak seçildi ki yan yana noktalar karışmasın. Zeytin seçili, mürekkep
- * üzerine gelinen nokta ve adres için ayrıldığından burada yok.
- */
-const CARRIER_TONES = ['bg-brand-messenger', 'bg-terracotta', 'bg-star', 'bg-brand-instagram', 'bg-olive-light'];
+import type { SelectedServicePoint } from '../checkout-types';
+import { useServicePoints } from '../use-service-points.hook';
+import { ServicePointMap } from './service-point-map';
 
 interface ServicePointPickerProps {
   locale: Locale;
   addressId: string;
   /** Müşterinin adresinin konumu; yoksa harita noktalara göre açılır. */
   home: { lat: number; lng: number } | null;
-  options: readonly ShippingOption[];
+  options: readonly CheckoutShippingOption[];
   selected: SelectedServicePoint | null;
   onSelect: (point: SelectedServicePoint) => void;
   onClose: () => void;
-}
-
-/** Listedeki nokta ve onu taşıyacak servis. */
-type PointEntry = { point: CheckoutServicePoint; option: ShippingOption };
-
-type LoadState =
-  | { phase: 'loading' }
-  | { phase: 'ready'; entries: PointEntry[]; failedCarriers: string[] }
-  | { phase: 'failed' };
-
-/** "820 m" · "1,4 km" — dile göre ondalık. */
-function distanceLabel(meters: number, locale: Locale): string {
-  if (meters < 1000) return `${Math.round(meters)} m`;
-  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(meters / 1000)} km`;
 }
 
 /**
@@ -56,49 +29,12 @@ function distanceLabel(meters: number, locale: Locale): string {
  */
 export function ServicePointPicker({ locale, addressId, home, options, selected, onSelect, onClose }: ServicePointPickerProps) {
   const copy = checkoutMessages[locale];
-  const pointOptions = useMemo(() => options.filter((o) => o.needsServicePoint), [options]);
-  // Lejant ve renk sırası: taşıyıcının en düşük nokta fiyatı.
-  const carriers = useMemo(() => {
-    const byPrice = [...pointOptions].sort((a, b) => a.priceCents - b.priceCents);
-    return byPrice.filter((o, i) => byPrice.findIndex((x) => x.carrierCode === o.carrierCode) === i);
-  }, [pointOptions]);
-  const toneByCarrier = useMemo(
-    () => new Map(carriers.map((c, i) => [c.carrierCode, CARRIER_TONES[i % CARRIER_TONES.length]!])),
-    [carriers],
-  );
-  const toneOf = (carrierCode: string) => toneByCarrier.get(carrierCode) ?? CARRIER_TONES[0]!;
-  const [load, setLoad] = useState<LoadState>({ phase: 'loading' });
+  const { load, entries, pins, carriers, toneOf } = useServicePoints(addressId, options);
   const [pendingId, setPendingId] = useState<string | null>(selected?.id ?? null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   // Haritadan seçilen nokta listede görünür alana kaydırılır; listeden seçilende kaydırma yok, kart zaten gözün önünde.
   const pendingFromMap = useRef(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const { data } = await loadServicePointsAction(
-        addressId,
-        carriers.map((c) => c.carrierCode),
-      );
-      if (cancelled) return;
-      if (!data || data.status !== 'ok') return setLoad({ phase: 'failed' });
-      setLoad({ phase: 'ready', entries: orderServicePoints(data.points, pointOptions), failedCarriers: data.failedCarriers });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [addressId, carriers, pointOptions]);
-
-  const entries = load.phase === 'ready' ? load.entries : [];
-  const pins = useMemo(
-    () =>
-      entries.flatMap(({ point, option }) => {
-        if (point.latitude === null || point.longitude === null) return [];
-        const tone = toneByCarrier.get(point.carrierCode) ?? CARRIER_TONES[0]!;
-        return [{ id: point.id, lat: point.latitude, lng: point.longitude, tone, title: `${point.name} · ${option.carrierName}` }];
-      }),
-    [entries, toneByCarrier],
-  );
   const pending = entries.find((e) => e.point.id === pendingId) ?? null;
   const hours = pending ? openingLines(pending.point.openingTimes, locale, copy.point.closed) : null;
   const carrierNames = (codes: string[]) => codes.map((c) => carriers.find((o) => o.carrierCode === c)?.carrierName ?? c).join(', ');
@@ -158,12 +94,10 @@ export function ServicePointPicker({ locale, addressId, home, options, selected,
                   ].join(' ')}
                 >
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="font-sans text-body-sm font-bold text-ink capitalize">{point.name.toLowerCase()}</span>
+                    <span className="font-sans text-body-sm font-bold text-ink">{pointText(point.name)}</span>
                     <span className="flex-none font-sans text-body-sm font-bold text-ink">{formatPrice(option.priceCents, locale)}</span>
                   </span>
-                  <span className="font-sans text-note text-body capitalize">
-                    {[point.street, point.houseNumber].filter(Boolean).join(' ').toLowerCase()}, {point.postalCode} {point.city.toLowerCase()}
-                  </span>
+                  <span className="font-sans text-note text-body">{pointAddress(point)}</span>
                   <span className="flex items-center gap-1.5 font-sans text-note text-muted">
                     <span className={`size-2.5 flex-none rounded-full ${toneOf(point.carrierCode)}`} />
                     {[

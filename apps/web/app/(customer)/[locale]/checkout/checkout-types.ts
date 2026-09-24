@@ -1,5 +1,6 @@
 import type { AddressCheckOutcome, CheckoutSnapshot } from '@lezzet/application';
 import type { Address, CheckoutServicePoints, PaymentMethod } from '@lezzet/types';
+import { shippingChoiceView } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 // Telefon görünümü native ödeme ekranıyla aynı metni kullanır (CLAUDE §2).
 import type checkoutMessages from '@lezzet/i18n/customer/checkout';
@@ -34,7 +35,7 @@ export interface CheckoutState {
   shippingOptionCode: string | null;
   /** Haritadan seçilen teslim noktası ve onun servisi; eve teslimde `null`. */
   servicePoint: SelectedServicePoint | null;
-  /** Müşterinin seçtiği teslim türü; `point` iken nokta seçilmeden sipariş onaylanmaz. */
+  /** Müşterinin seçtiği teslim türü; iki tür de sunulurken ekran bunu çizer (`shippingChoiceView`). */
   shippingMode: 'home' | 'point';
   paymentMethod: PaymentMethod | null;
   /** Vadeli satın alma işaretlendi mi — ödeme yöntemi değil, siparişin bayrağı. */
@@ -108,8 +109,8 @@ export function checkoutBlocker(input: {
   cartHasBlocked: boolean;
   snapshot: CheckoutSnapshot;
   addressId: string | null;
-  /** Teslim noktası seçildi ama nokta yok; verilmezse sorulmaz (telefon görünümünde nokta seçimi yok). */
-  pointMissing?: boolean;
+  /** Ekran nokta istiyor ama nokta seçilmemiş (`servicePointMissing`). */
+  pointMissing: boolean;
 }): CheckoutBlockReason | null {
   if (input.cartFailed) return 'cart_unreachable';
   // Ödeme bloğu adresin cevabıdır: adres yokken `null` gelir ve o hâl bir engel DEĞİL, henüz
@@ -137,11 +138,6 @@ export function isSeparateOrder(shippingOrder: boolean, cart: Pick<CartView, 'li
   return shippingOrder && isSplitCart(cart);
 }
 
-/** Listede seçilebilen servisler: noktaya gidenler listede değil haritada seçilir. BEKLEYEN(K.28): telefon görünümünde harita yok. */
-export function selectableShippingOptions<T extends { needsServicePoint: boolean }>(options: readonly T[]): T[] {
-  return options.filter((o) => !o.needsServicePoint);
-}
-
 /**
  * Haritanın noktaları; `off` = sağlayıcı yapılandırılmamış, harita açılmaz. Tip `'use server'` dosyasında durmaz: Turbopack oradaki
  * tip ihracını değer sanıyor.
@@ -154,7 +150,14 @@ export type CheckoutServicePoint = Extract<ServicePointsResult, { status: 'ok' }
 /** Haritada seçilen nokta: nokta + türünü kabul eden servisin kodu. */
 export type SelectedServicePoint = CheckoutServicePoint & { optionCode: string };
 
-/** Teslim noktası türü seçili ama nokta seçilmemiş mi — onay düğmesi ve kart uyarısı aynı sorudan okur. */
-export function servicePointMissing(state: Pick<CheckoutState, 'shippingMode' | 'servicePoint'>): boolean {
-  return state.shippingMode === 'point' && state.servicePoint === null;
+/**
+ * Ekran nokta istiyor ama nokta seçilmemiş mi: tür, kayıtlı seçim değil ekranın çizdiği türdür, çünkü yalnız nokta servisi kaldıysa
+ * kayıtlı seçim `home` olsa da nokta istenir. Eşik üstünde nokta istenmez, seçici çizilmez ve koliyi sunucu eve gönderir.
+ */
+export function servicePointMissing(
+  state: Pick<CheckoutState, 'shippingMode' | 'servicePoint'>,
+  shipping: CheckoutSnapshot['shipping'],
+): boolean {
+  if (state.servicePoint !== null || shipping === null || shipping.mode === 'auto') return false;
+  return shippingChoiceView(shipping.options, state.shippingMode).mode === 'point';
 }

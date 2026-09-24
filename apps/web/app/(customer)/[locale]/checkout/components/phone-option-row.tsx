@@ -8,6 +8,8 @@ import type { ReactNode } from 'react';
 
 interface PhoneOptionRowProps {
   label: string;
+  /** Başlığın yanındaki kısa vurgu ("En uygun fiyat"). */
+  badge?: string;
   /** Alt satır — açıklama, ücret notu ya da kapalı yolun sebebi. */
   description?: string;
   selected: boolean;
@@ -20,7 +22,16 @@ interface PhoneOptionRowProps {
   trailing?: ReactNode;
 }
 
-export function PhoneOptionRow({ label, description, selected, onClick, disabled = false, descriptionTone = 'muted', trailing }: PhoneOptionRowProps) {
+export function PhoneOptionRow({
+  label,
+  badge,
+  description,
+  selected,
+  onClick,
+  disabled = false,
+  descriptionTone = 'muted',
+  trailing,
+}: PhoneOptionRowProps) {
   const className = [
     'flex w-full flex-col gap-0.5 rounded-control border-[1.5px] px-4 py-3 text-left',
     selected ? 'border-ink bg-sand-150' : 'border-sand-400 bg-sand-250',
@@ -36,7 +47,17 @@ export function PhoneOptionRow({ label, description, selected, onClick, disabled
   const body = (
     <>
       <span className="flex items-center justify-between gap-2">
-        <span className="min-w-0 flex-1 font-sans text-control text-ink">{label}</span>
+        <span className="min-w-0 flex-1 font-sans text-control text-ink">
+          {label}
+          {badge !== undefined && (
+            <>
+              {' '}
+              <span className="ml-0.5 inline-block rounded-pill bg-olive-bg px-2 py-0.5 align-[1px] font-sans text-badge-sm font-bold text-olive">
+                {badge}
+              </span>
+            </>
+          )}
+        </span>
         {trailing}
       </span>
       {description !== undefined && (

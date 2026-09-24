@@ -143,6 +143,7 @@ export const CheckoutShippingSchema = z.object({
   mode: z.enum(['customer', 'auto']),
 });
 export type CheckoutShipping = z.infer<typeof CheckoutShippingSchema>;
+export type CheckoutShippingOption = CheckoutShipping['options'][number];
 
 /**
  * Ekranın tek okuma sonucu; dilimlerin `null` olması anlamlıdır: adres listesi boşsa teslimat, ödeme ve özet sorulamaz, ekran

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckoutSnapshot } from '@lezzet/application';
+import type { CheckoutShippingOption } from '@lezzet/types';
 import { checkoutBlocker, servicePointMissing } from './checkout-types';
 
 /**
@@ -37,7 +38,7 @@ function snapshotOf(over: Partial<CheckoutSnapshot> = {}): CheckoutSnapshot {
   return { addresses: [], delivery, shipping: null, payment, summary: null, pickup: null, ...over };
 }
 
-const OK = { cartFailed: false, cartHasBlocked: false, snapshot: snapshotOf(), addressId: 'adr-1' };
+const OK = { cartFailed: false, cartHasBlocked: false, snapshot: snapshotOf(), addressId: 'adr-1', pointMissing: false };
 
 describe('checkoutBlocker', () => {
   it('her şey yerindeyse null döner', () => {
@@ -73,8 +74,43 @@ describe('checkoutBlocker', () => {
     expect(checkoutBlocker({ ...OK, cartHasBlocked: true, snapshot })).toBe('undeliverable_line');
   });
 
+});
+
+describe('servicePointMissing', () => {
+  const secenek = (code: string, needsServicePoint: boolean): CheckoutShippingOption => ({
+    code,
+    carrierCode: 'colissimo',
+    carrierName: 'Colissimo',
+    name: code,
+    priceCents: 500,
+    leadTimeHours: null,
+    lastMile: needsServicePoint ? 'service_point' : 'home_delivery',
+    needsServicePoint,
+    tracked: true,
+  });
+  const kargo = (options: CheckoutShippingOption[], mode: 'customer' | 'auto' = 'customer'): CheckoutSnapshot['shipping'] => ({
+    status: 'ok',
+    options,
+    parcelCount: 1,
+    selectedCode: null,
+    mode,
+  });
+  const ikiTur = kargo([secenek('eve', false), secenek('nokta', true)]);
+  const engel = (shippingMode: 'home' | 'point', shipping: CheckoutSnapshot['shipping']) =>
+    checkoutBlocker({ ...OK, pointMissing: servicePointMissing({ shippingMode, servicePoint: null }, shipping) });
+
   it('teslim noktası seçilip nokta seçilmediyse onaylanamaz — sipariş sessizce eve gitmez', () => {
-    expect(checkoutBlocker({ ...OK, pointMissing: servicePointMissing({ shippingMode: 'point', servicePoint: null }) })).toBe('service_point_missing');
-    expect(checkoutBlocker({ ...OK, pointMissing: servicePointMissing({ shippingMode: 'home', servicePoint: null }) })).toBeNull();
+    expect(engel('point', ikiTur)).toBe('service_point_missing');
+    expect(engel('home', ikiTur)).toBeNull();
+  });
+
+  // Ekran bu adreste nokta türünü çizer; engel kayıtlı seçime bakarsa düğme açık kalır ve sipariş sunucuda düşer.
+  it('yalnız nokta servisi varsa kayıtlı seçim "home" olsa da nokta istenir', () => {
+    expect(engel('home', kargo([secenek('nokta', true)]))).toBe('service_point_missing');
+  });
+
+  // Eşik aşılınca sunucu eve giden servisi seçer ve nokta düşer; engel sürerse seçicisi olmayan ekranda onay kilitlenir.
+  it('eşik üstünde nokta istenmez, tür "point" kalmış olsa da', () => {
+    expect(engel('point', kargo([secenek('eve', false), secenek('nokta', true)], 'auto'))).toBeNull();
   });
 });

@@ -278,7 +278,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
           onError={setError}
           // Özet kartıyla aynı kapıdan, yoksa sepette gönderilemeyen kalem varken kart formu açık kalır ve müşteri reddi ancak
           // bastıktan sonra öğrenirdi.
-          disabled={busy || checkoutBlocker({ cartFailed, cartHasBlocked: view.hasBlocked, snapshot, addressId: state.addressId, pointMissing: servicePointMissing(state) }) !== null}
+          disabled={busy || checkoutBlocker({ cartFailed, cartHasBlocked: view.hasBlocked, snapshot, addressId: state.addressId, pointMissing: servicePointMissing(state, snapshot.shipping) }) !== null}
           labels={{
             submit: t.summary.submit,
             validating: t.pay.validating,

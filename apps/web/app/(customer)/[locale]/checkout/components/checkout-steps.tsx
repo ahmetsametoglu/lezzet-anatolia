@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { addressTitle } from '@lezzet/address';
 import { brand } from '@lezzet/brand';
+import { pointAddress, pointText, shippingChoiceView } from '@lezzet/helper';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import type { PaymentMethod } from '@lezzet/types';
 import { Link, useRouter } from '@/i18n/navigation';
@@ -16,7 +17,7 @@ import { Skeleton } from '@/components/customer/ui/skeleton';
 import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
-import { checkoutBlocker, selectableShippingOptions, servicePointMissing, type CheckoutViewProps } from '../checkout-types';
+import { checkoutBlocker, servicePointMissing, type CheckoutViewProps } from '../checkout-types';
 import { ServicePointPicker } from './service-point-picker';
 
 /**
@@ -40,9 +41,6 @@ export function StepShell({ step, title, compact, children }: { step: string; ti
     </section>
   );
 }
-
-/** Seçeneklerin en düşük fiyatı — "… €'dan başlayan fiyatlarla" cümlesinin sayısı. */
-const minPriceOf = (options: readonly { priceCents: number }[]): number => Math.min(...options.map((o) => o.priceCents));
 
 /** Seçilebilir kart — adres, gün ve ödeme yöntemi aynı görsel dili konuşur (tasarım). */
 function ChoiceCard({
@@ -224,11 +222,14 @@ export function DeliveryStep(props: CheckoutViewProps) {
   const copy = checkoutMessages[locale];
   const router = useRouter();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const homeOptions = selectableShippingOptions(snapshot.shipping?.options ?? []);
-  // BEKLEYEN(K.28): telefon görünümünde nokta seçimi yok, orada yalnız eve teslim servisleri listelenir.
-  const pointOptions = compact ? [] : (snapshot.shipping?.options ?? []).filter((o) => o.needsServicePoint);
-  const hasModes = homeOptions.length > 0 && pointOptions.length > 0;
-  const mode: 'home' | 'point' = homeOptions.length === 0 && pointOptions.length > 0 ? 'point' : hasModes ? state.shippingMode : 'home';
+  const {
+    home: homeOptions,
+    point: pointOptions,
+    hasModes,
+    mode,
+    homeFromCents,
+    pointFromCents,
+  } = shippingChoiceView(snapshot.shipping?.options ?? [], state.shippingMode);
   // Fiyat taşıyıcıdan değil noktanın kendi servisinden okunur: aynı taşıyıcının dolabı ve dükkânı ayrı servistir.
   const chosenPointOption = pointOptions.find((o) => o.code === state.servicePoint?.optionCode);
   const delivery = snapshot.delivery;
@@ -381,14 +382,14 @@ export function DeliveryStep(props: CheckoutViewProps) {
                   <ModeCard
                     icon="building"
                     title={copy.carrier.point}
-                    from={copy.carrier.from.replace('{price}', formatPrice(minPriceOf(pointOptions), locale))}
+                    from={copy.carrier.from.replace('{price}', formatPrice(pointFromCents!, locale))}
                     selected={mode === 'point'}
                     onClick={() => onSelectShippingMode('point')}
                   />
                   <ModeCard
                     icon="home"
                     title={copy.carrier.home}
-                    from={copy.carrier.from.replace('{price}', formatPrice(minPriceOf(homeOptions), locale))}
+                    from={copy.carrier.from.replace('{price}', formatPrice(homeFromCents!, locale))}
                     selected={mode === 'home'}
                     onClick={() => onSelectShippingMode('home')}
                   />
@@ -442,15 +443,12 @@ export function DeliveryStep(props: CheckoutViewProps) {
                     {state.servicePoint ? (
                       <>
                         <span className="flex items-baseline justify-between gap-2">
-                          <span className="font-sans text-body-sm font-bold text-ink capitalize">{state.servicePoint.name.toLowerCase()}</span>
+                          <span className="font-sans text-body-sm font-bold text-ink">{pointText(state.servicePoint.name)}</span>
                           {chosenPointOption && (
                             <span className="font-sans text-body-sm font-bold text-ink">{formatPrice(chosenPointOption.priceCents, locale)}</span>
                           )}
                         </span>
-                        <span className="font-sans text-note text-body capitalize">
-                          {[state.servicePoint.street, state.servicePoint.houseNumber].filter(Boolean).join(' ').toLowerCase()}, {state.servicePoint.postalCode}{' '}
-                          {state.servicePoint.city.toLowerCase()}
-                        </span>
+                        <span className="font-sans text-note text-body">{pointAddress(state.servicePoint)}</span>
                         <span className="font-sans text-note font-semibold text-olive">
                           {[
                             chosenPointOption?.carrierName,
@@ -471,7 +469,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
                       </>
                     )}
                   </ChoiceCard>
-                  {servicePointMissing(state) && <span className="font-sans text-note font-semibold text-honey">{copy.point.none}</span>}
+                  {servicePointMissing(state, snapshot.shipping) && <span className="font-sans text-note font-semibold text-honey">{copy.point.none}</span>}
                   {pickerOpen && state.addressId && (
                     <ServicePointPicker
                       locale={locale}
@@ -632,7 +630,7 @@ export function OrderSummary(props: CheckoutViewProps) {
   // Engel tek yerde kararlaşır (`checkoutBlocker`): burada ve kart ödemesinin formunda aynı cevap okunur. Sepet okunamadıysa da
   // sipariş verilemez, çünkü ekrandaki 0,00 € bir toplam değil cevapsızlıktır.
   const blocked =
-    checkoutBlocker({ cartFailed, cartHasBlocked: cart.hasBlocked, snapshot, addressId: state.addressId, pointMissing: servicePointMissing(state) }) !== null;
+    checkoutBlocker({ cartFailed, cartHasBlocked: cart.hasBlocked, snapshot, addressId: state.addressId, pointMissing: servicePointMissing(state, snapshot.shipping) }) !== null;
 
   return (
     // Tasarım künyesi `radius 18 · ped 22/24 · gap 12`: adım kartlarıyla aynı aile, bir tık dar; `snug` tam olarak bu.
