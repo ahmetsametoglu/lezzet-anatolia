@@ -34,6 +34,8 @@ export function useCheckout(
   shippingOrder: boolean,
   /** Gel-al seçimi — adres gibi bir girdi: değişince anlık görüntü yeniden okunur. */
   pickupWarehouseId: string | null,
+  /** Müşterinin seçtiği kargo servisi; ücret ve toplam ona bağlı olduğu için değişince okuma yenilenir. */
+  shippingOptionCode: string | null,
 ): UseCheckoutResult {
   const [status, setStatus] = useState<CheckoutStatus>('loading');
   const [snapshot, setSnapshot] = useState<CheckoutSnapshot | null>(null);
@@ -49,7 +51,7 @@ export function useCheckout(
     if (loaded.current) setRefreshing(true);
     else setStatus('loading');
 
-    const result = await fetchCheckout({ locale, addressId, coupon, shippingOrder, pickupWarehouseId });
+    const result = await fetchCheckout({ locale, addressId, coupon, shippingOrder, pickupWarehouseId, shippingOptionCode });
     if (run !== generation.current) return;
 
     setRefreshing(false);
@@ -65,7 +67,7 @@ export function useCheckout(
     setSnapshot(result.data);
     setStatus('ready');
     loaded.current = true;
-  }, [addressId, coupon, locale, shippingOrder, pickupWarehouseId]);
+  }, [addressId, coupon, locale, shippingOrder, pickupWarehouseId, shippingOptionCode]);
 
   useEffect(() => {
     void load();

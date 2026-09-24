@@ -1,8 +1,8 @@
-import { UNKNOWN_AMOUNT, formatPrice } from '@lezzet/helper';
+import { UNKNOWN_AMOUNT, formatPrice, servicePointRequired, type ServicePointEntry } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { AddressCheckResult, PaymentMethod } from '@lezzet/types';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -40,6 +40,8 @@ import { isNameMissing, isPhoneMissing } from '@/screens/customer-kit/profile-ga
 import { newOrderKey } from './order-key';
 import { deliveryLabelOf, paymentFailureMessage, rejectionMessage } from './order-result-copy';
 import { CheckoutSkeleton } from './checkout-skeleton';
+import { ServicePointPicker } from './service-point-picker';
+import { ShippingChoice } from './shipping-choice';
 import { brand } from '@lezzet/brand';
 import { useCheckout } from './use-checkout.hook';
 import messages from '@lezzet/i18n/customer/checkout';
@@ -108,7 +110,15 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /* Tekrar anahtarı açılışta bir kez üretilir ve seçimler değişse de korunur: çift dokunuş ve ağın yeniden denemesi aynı niyettir. */
   const [orderKey] = useState(newOrderKey);
 
-  const checkout = useCheckout(locale, addressId, cart.couponCode, shippingOrder, pickupWarehouseId);
+  /* Kargo seçimi: istenen servis okumaya gider ve ücret onunla çözülür, işaretli satır sunucunun seçtiğidir. Nokta, seçildiği adreste
+     ve servisi hâlâ seçiliyken kalır. */
+  const [shippingCode, setShippingCode] = useState<string | null>(null);
+  const [shippingMode, setShippingMode] = useState<'home' | 'point'>('home');
+  const [chosenPoint, setChosenPoint] = useState<{ entry: ServicePointEntry; addressId: string } | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const closePicker = useCallback(() => setPickerOpen(false), []);
+
+  const checkout = useCheckout(locale, addressId, cart.couponCode, shippingOrder, pickupWarehouseId, shippingCode);
   const snapshot = checkout.snapshot;
   const addresses = snapshot?.addresses ?? [];
   const delivery = snapshot?.delivery ?? null;
@@ -123,6 +133,41 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     checkedFor.current = null;
     setAddressNotice(null);
   }, [selectedAddressId]);
+
+  const shipping = snapshot?.shipping ?? null;
+  const selectedCode = shipping?.selectedCode ?? null;
+  const pointOptions = useMemo(() => (shipping?.options ?? []).filter((option) => option.needsServicePoint), [shipping]);
+  /* Tazeleme sürerken sunucunun eski seçimi görünür; nokta istenen servisle tutuyorsa kalır ki kart gidip gelmesin. */
+  const pointOption = pointOptions.find((option) => option.code === chosenPoint?.entry.option.code);
+  const servicePoint: ServicePointEntry | null =
+    chosenPoint !== null &&
+    pointOption !== undefined &&
+    chosenPoint.addressId === selectedAddressId &&
+    pointOption.code === shippingCode &&
+    (checkout.refreshing || pointOption.code === selectedCode)
+      ? { point: chosenPoint.entry.point, option: pointOption }
+      : null;
+  const pointMissing = servicePoint === null && servicePointRequired(shipping, shippingMode);
+
+  const selectShipping = (code: string): void => {
+    setShippingCode(code);
+    setShippingMode('home');
+    setChosenPoint(null);
+  };
+  /** Eve dönülünce nokta bırakılır ve eve giden en ucuzu sunucu seçer; noktaya geçmek ücreti değiştirmez, nokta seçilince değişir. */
+  const selectShippingMode = (next: 'home' | 'point'): void => {
+    setShippingMode(next);
+    if (next === 'home' && chosenPoint !== null) {
+      setChosenPoint(null);
+      setShippingCode(null);
+    }
+  };
+  const selectServicePoint = (entry: ServicePointEntry): void => {
+    if (selectedAddressId === null) return;
+    setChosenPoint({ entry, addressId: selectedAddressId });
+    setShippingCode(entry.option.code);
+    setShippingMode('point');
+  };
 
   /**
    * Yazılan adres seçilir ve anlık görüntü onunla yeniden okunur, çünkü günler, ücret ve ödeme yolları adrese bağlıdır. Silinen
@@ -371,6 +416,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         .replace('{place}', payment.placeLabel)
         .replace('{missing}', formatPrice(payment.missingForMinBasketCents, locale));
     }
+    if (pointMissing) return t.point.none;
     if (isRoute && chosenDate === null) return t.block.day;
     if (selectedPayment === null) return t.block.payment;
     return null;
@@ -443,6 +489,9 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       shippingOrder,
       // Gel-al: seçilen depo; sunucu izni ve depoyu yeniden doğrular.
       pickupWarehouseId: isPickup ? pickupWarehouseId : null,
+      // Ekranın işaretlediği servis ve nokta; sunucu ikisini de teklif listesinden ve sağlayıcıdan yeniden doğrular.
+      shippingOptionCode: selectedCode,
+      servicePointId: servicePoint?.point.id ?? null,
       /* Ekranın gösterdiği sepetin imzası, sunucunun verdiği gibi geri gider; sepet arada değiştiyse sunucu `cart_changed` ile
          reddeder ve müşteri yeni listeyi bilerek onaylar. */
       expectedCartFingerprint: summary?.fingerprint ?? null,
@@ -794,6 +843,18 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                     </Text>
                   )
                 ) : null}
+                {!isRoute && !isPickup && !delivery.blocked ? (
+                  <ShippingChoice
+                    locale={locale}
+                    shipping={shipping}
+                    mode={shippingMode}
+                    selectedCode={selectedCode}
+                    point={servicePoint}
+                    onSelectShipping={selectShipping}
+                    onSelectMode={selectShippingMode}
+                    onOpenPicker={() => setPickerOpen(true)}
+                  />
+                ) : null}
               </View>
             )}
 
@@ -921,6 +982,18 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         defaults={addressDefaultsOf(me)}
         testID="checkout-address-sheet"
       />
+
+      {/* Seçici ekranın üstünde katman: liste çekmecesi kökte açıldığı için ayrı pencereye (`Modal`) konsaydı onun altında kalırdı. */}
+      {pickerOpen && selectedAddressId !== null ? (
+        <ServicePointPicker
+          locale={locale}
+          addressId={selectedAddressId}
+          pointOptions={pointOptions}
+          selectedId={servicePoint?.point.id ?? null}
+          onSelect={selectServicePoint}
+          onClose={closePicker}
+        />
+      ) : null}
     </View>
   );
 }

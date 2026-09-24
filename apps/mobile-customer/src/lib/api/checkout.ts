@@ -2,10 +2,12 @@ import type { z } from 'zod';
 import {
   CheckoutOrderResultSchema,
   CheckoutOrderStatusSchema,
+  CheckoutServicePointsSchema,
   CheckoutSnapshotSchema,
   type CheckoutOrderBodySchema,
   type CheckoutOrderResult,
   type CheckoutOrderStatus,
+  type CheckoutServicePoints,
   type CheckoutSnapshot,
 } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
@@ -29,6 +31,8 @@ interface CheckoutQuery {
   shippingOrder: boolean;
   /** Gel-al seçimi (depo kimliği); `null` = adrese teslim. Sunucu izni ve depoyu doğrular. */
   pickupWarehouseId: string | null;
+  /** Müşterinin seçtiği kargo servisi; `null` = sunucu eve giden en ucuzu seçer. Ücret servise bağlı, okuma onunla yenilenir. */
+  shippingOptionCode: string | null;
 }
 
 /** `z.input`: varsayılanlı alanlar isteğe bağlı. */
@@ -52,8 +56,21 @@ export function fetchCheckout(query: CheckoutQuery): Promise<ApiResult<CheckoutS
     // Uç bayrağı `group=shipping` diye okuyor; kapalıyken parametre yazılmaz.
     group: query.shippingOrder ? 'shipping' : undefined,
     pickupWarehouseId: present(query.pickupWarehouseId),
+    shippingOptionCode: present(query.shippingOptionCode),
   })}`;
   return authorizedFetch(path, CheckoutSnapshotSchema);
+}
+
+/** Adrese yakın teslim noktaları, istenen taşıyıcıların hepsi için; seçici açılınca bir kez okunur. Uç her yolda dili ister. */
+export function fetchServicePoints(
+  locale: Locale,
+  addressId: string,
+  carrierCodes: readonly string[],
+): Promise<ApiResult<CheckoutServicePoints>> {
+  return authorizedFetch(
+    `/api/v1/me/checkout/service-points${queryString({ locale, addressId, carriers: carrierCodes.join(',') })}`,
+    CheckoutServicePointsSchema,
+  );
 }
 
 /**

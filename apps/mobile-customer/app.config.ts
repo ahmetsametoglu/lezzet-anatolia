@@ -148,6 +148,14 @@ const config: ExpoConfig = {
     ],
     'expo-secure-store',
     [
+      // Harita altlığı iki platformda Google, web'in karolarıyla aynı görünüm; anahtarlar ortamdan gelir, repoya ve JS paketine girmez.
+      'react-native-maps',
+      {
+        iosGoogleMapsApiKey: process.env.GOOGLE_MAPS_IOS_API_KEY,
+        androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_ANDROID_API_KEY,
+      },
+    ],
+    [
       // Talep fotoğrafı için galeri ve kamera; galeri metni yalnız iOS'ta sorulur. Mikrofon izni istenmez ve Android'de `RECORD_AUDIO`
       // kaldırılır, çünkü kullanılmayan izin mağaza incelemesinde sorulan izindir.
       'expo-image-picker',

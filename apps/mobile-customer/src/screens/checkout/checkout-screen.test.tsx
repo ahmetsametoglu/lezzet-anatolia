@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import type * as ReactModule from 'react';
+import type * as ReactNativeModule from 'react-native';
 import type { CheckoutSnapshot } from '@lezzet/types';
 
 import type { CartState } from '@/screens/customer-kit/cart-store';
@@ -35,6 +37,14 @@ jest.mock('@lezzet/mobile-kit/src/lib/me/use-me.hook', () => ({
     refresh: () => undefined,
   }),
 }));
+
+/* Harita yerel modüldür ve testte köprüsü yok; ikiz yalnız çocuklarını çizer, kamera çağrıları boşa düşer. */
+jest.mock('react-native-maps', () => {
+  const { createElement } = jest.requireActual<typeof ReactModule>('react');
+  const { View } = jest.requireActual<typeof ReactNativeModule>('react-native');
+  const Pass = ({ children }: { children?: ReactModule.ReactNode }) => createElement(View, null, children);
+  return { __esModule: true, default: Pass, Marker: Pass, PROVIDER_GOOGLE: 'google' };
+});
 
 /* Stripe'ın Jest mock'u `PaymentSheetError`ı taşımadığı için modül yüklenirken düşer; bu dosya ödemeyi değil siparişin
    kapsamını ölçtüğü için kapı sahtelenir. */
@@ -127,6 +137,11 @@ const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
 function reply(body: unknown): Response {
   return { status: 200, headers: { get: () => null }, json: async () => ({ data: body, error: null }) } as unknown as Response;
+}
+
+/** Ucun ret zarfı; ödeme ucu dilsiz isteği `invalid_locale` ile reddeder. */
+function rejectWith(status: number, error: string): Response {
+  return { status, headers: { get: () => null }, json: async () => ({ data: null, error }) } as unknown as Response;
 }
 
 beforeAll(() => {
@@ -430,5 +445,143 @@ describe('CheckoutScreen — adres teklifi ve düzenleme', () => {
     await fireEvent(row, 'longPress');
 
     expect(await screen.findByText(addressCopy.tr.editTitle)).toBeOnTheScreen();
+  });
+});
+
+/*
+  Kargo seçimi siparişe gider: seçilen servis okumayı ve siparişi yönetir, noktaya teslimde nokta seçilmeden onay kapalıdır ve seçilen
+  nokta kimliğiyle gider. Okuma istenen kodu cevabın `selectedCode`una yansıtır, sunucunun yaptığı gibi.
+*/
+describe('CheckoutScreen — kargo servisi ve teslim noktası', () => {
+  const secenek = (
+    code: string,
+    carrierName: string,
+    priceCents: number,
+    needsServicePoint: boolean,
+    leadTimeHours: number | null = null,
+  ) => ({
+    code,
+    carrierCode: carrierName.toLowerCase().replace(' ', '_'),
+    carrierName,
+    name: code,
+    priceCents,
+    leadTimeHours,
+    lastMile: needsServicePoint ? 'service_point' : 'home_delivery',
+    needsServicePoint,
+    tracked: true,
+  });
+  const OPTIONS = [
+    secenek('mr-eve', 'Mondial Relay', 532, false),
+    secenek('chrono-eve', 'Chronopost', 1502, false, 24),
+    secenek('chrono-nokta', 'Chronopost', 320, true),
+  ];
+  const NOKTA = {
+    id: 'sp-1',
+    carrierCode: 'chronopost',
+    name: 'VIVAL PLACE JULES GUESDE',
+    street: 'PLACE JULES GUESDE',
+    houseNumber: '4',
+    postalCode: '69007',
+    city: 'LYON',
+    country: 'FR',
+    latitude: 45.75,
+    longitude: 4.84,
+    distanceM: 357,
+    active: true,
+    kind: 'servicepoint',
+    openingTimes: null,
+  };
+  const TUR_NOKTA = `${t.carrier.point} · ${t.carrier.from.replace('{price}', '3,20 €')}`;
+  let orderBody: Record<string, unknown> | null;
+
+  function kargoSnapshot(selectedCode: string): CheckoutSnapshot {
+    const base = snapshot(false, 2000);
+    return {
+      ...base,
+      payment: { ...base.payment!, methods: ['bank_transfer'] },
+      shipping: { status: 'ok', options: OPTIONS, parcelCount: 1, selectedCode, mode: 'customer' },
+    };
+  }
+
+  beforeEach(() => {
+    orderBody = null;
+    mockReplace.mockReset();
+    mockCart = cartWith(cartView([cartViewLine(2, 'Ceviz', 'shipping', { unitPriceCents: 2000 })]));
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = String(input);
+      // Ucun kuralı: ödeme yollarının hepsi dili ister, dilsiz istek boş seçici olarak dönerdi.
+      if (url.includes('/me/checkout') && !url.includes('locale=')) return rejectWith(400, 'invalid_locale');
+      if (url.includes('/checkout/service-points')) {
+        return reply({ status: 'ok', points: [NOKTA], failedCarriers: [], origin: { lat: 45.7497, lng: 4.8416 } });
+      }
+      if (url.includes('/checkout/order')) {
+        orderBody = JSON.parse(String((init as RequestInit).body)) as Record<string, unknown>;
+        return reply({
+          status: 'placed',
+          orderId: '22222222-2222-4222-8222-222222222222',
+          totalCents: 2000,
+          deliveryType: 'shipping',
+          referenceNo: 'LA-26-7K4M2P',
+        });
+      }
+      if ((init as RequestInit | undefined)?.method === 'POST') return reply({ status: 'confirmed' });
+      // Sunucu istenen servisi seçer, istenmediyse eve giden en ucuzu.
+      return reply(kargoSnapshot(new URL(url).searchParams.get('shippingOptionCode') ?? 'mr-eve'));
+    });
+  });
+
+  async function onayla(): Promise<void> {
+    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    await fireEvent.press(screen.getByTestId('checkout-confirm'));
+    await waitFor(() => expect(orderBody).not.toBeNull());
+  }
+
+  // Seçilen servis siparişe gitmezse sipariş ekranda gösterilenden başka taşıyıcıyla ve ücretle açılır.
+  it('seçilen eve teslim servisi okumaya ve siparişe gider', async () => {
+    await render(<CheckoutScreen />);
+    await waitFor(() => expect(screen.getByTestId('checkout-shipping-choice')).toBeOnTheScreen());
+
+    await fireEvent.press(
+      screen.getByRole('button', {
+        name: `Chronopost · ${t.carrier.fastest} · ${t.carrier.days.replace('{hours}', '24')} · ${t.carrier.tracked}`,
+      }),
+    );
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('shippingOptionCode=chrono-eve'), expect.anything()),
+    );
+    await onayla();
+
+    expect(orderBody).toMatchObject({ shippingOptionCode: 'chrono-eve', servicePointId: null });
+  });
+
+  // Nokta seçilmeden onay açılırsa sipariş sunucuda reddedilir ya da müşterinin seçmediği bir yere gider.
+  it('teslim noktası türünde nokta seçilmeden onay kapalıdır', async () => {
+    await render(<CheckoutScreen />);
+    await waitFor(() => expect(screen.getByTestId('checkout-shipping-choice')).toBeOnTheScreen());
+
+    await fireEvent.press(screen.getByRole('button', { name: TUR_NOKTA }));
+    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+
+    expect(screen.getByText(t.point.none)).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: t.confirm.replace('{total}', '20,00 €') })).toBeDisabled();
+  });
+
+  // Seçilen nokta siparişe gitmezse sunucu siparişi `service_point_invalid` ile reddeder.
+  it('listeden seçilen nokta, onu taşıyan servisle birlikte siparişe gider', async () => {
+    await render(<CheckoutScreen />);
+    await waitFor(() => expect(screen.getByTestId('checkout-shipping-choice')).toBeOnTheScreen());
+
+    await fireEvent.press(screen.getByRole('button', { name: TUR_NOKTA }));
+    await fireEvent.press(screen.getByRole('button', { name: `${t.point.choose} · ${t.point.mapHint}` }));
+    await fireEvent.press(await screen.findByText(t.point.showList.replace('{count}', '1')));
+    await fireEvent.press(
+      screen.getByRole('button', { name: `Vival Place Jules Guesde · Chronopost · ${t.point.kind.servicepoint} · 3,20 €` }),
+    );
+    await fireEvent.press(screen.getByRole('button', { name: t.point.select }));
+
+    await waitFor(() => expect(screen.getByTestId('checkout-shipping-point')).toBeOnTheScreen());
+    await onayla();
+
+    expect(orderBody).toMatchObject({ shippingOptionCode: 'chrono-nokta', servicePointId: 'sp-1' });
   });
 });

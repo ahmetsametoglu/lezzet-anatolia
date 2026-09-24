@@ -421,11 +421,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   taşınacak. Ayrım ölçütü: koşul, uyarı ve "doğaldır" gözlemi saklamada kalır; yalnız müşterinin SIRAYLA yaptığı
   hareket adım olur. Raf ürünlerinin çoğunda (pekmez, sirke, macun) dizi boş kalır — beklenen hâl, kutu çizilmez.
   Zorunlu takviye ibareleri (Bromelain: "ilaç değildir", doz) adım YAPILMAZ: onlar beyan, `storage`ta kalır.
-- [ ] (K.28) [hedef: müşteri] Teslim noktası ve kargo servisi seçimi native checkout'ta; web'in telefon görünümü örnek ve aynı
-  tasarım. Native'de eşik altındaki müşteri ne servis ne nokta seçebiliyor. Taşınacak: "Teslim noktası · Eve teslim" tür kartları,
-  eve teslimde en uygun ve en hızlı servis, noktada tam ekran harita ve mevcut `BottomSheet`te en ucuz başta liste, nokta seçilmeden
-  onay yok. Sunucu hazır (mobile-api `GET /checkout?shippingOptionCode`, `GET /checkout/service-points`), ortak karar ve metin
-  `@lezzet/helper` `shippingChoiceView` ile `@lezzet/i18n/customer/checkout`ta.
 - [ ] (K.31) [hedef: operasyon] Asistan onay kuyruğundaki öneri kartları (`operations/assistant`): kart tipe göre değişiyor ama
   her kartta ortak bilgiler (doldurulan ve üzerine yazılan alanlar, dil, belirsiz okuma) kartın içinde kötü duruyor; ortak
   bölümler gözetilerek kart yeniden düzenlenecek. Karttan açılan diyalogda öneri kabul ya da reddedilince sıradaki öneri

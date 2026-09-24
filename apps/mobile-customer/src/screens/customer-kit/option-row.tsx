@@ -11,6 +11,8 @@ import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable
 
 interface OptionRowProps {
   label: string;
+  /** Başlığın yanındaki kısa vurgu ("En uygun fiyat"). */
+  badge?: string;
   /** Alt satır — açıklama, adres, ücret notu. */
   description?: string;
   selected: boolean;
@@ -29,6 +31,7 @@ interface OptionRowProps {
 
 export function OptionRow({
   label,
+  badge,
   description,
   selected,
   onPress,
@@ -47,12 +50,19 @@ export function OptionRow({
       disabled={disabled}
       selected={selected}
       style={[styles.row, selected ? styles.selected : styles.idle, disabled ? styles.disabled : undefined]}
-      accessibilityLabel={description === undefined ? label : `${label} · ${description}`}
+      accessibilityLabel={[label, badge, description].filter((part) => part !== undefined).join(' · ')}
       accessibilityHint={hint}
       testID={testID}
     >
       <View style={styles.head}>
-        <Text style={styles.label}>{label}</Text>
+        <View style={styles.labelLine}>
+          <Text style={styles.label}>{label}</Text>
+          {badge === undefined ? null : (
+            <View style={styles.badge}>
+              <Text style={styles.badgeLabel}>{badge}</Text>
+            </View>
+          )}
+        </View>
         {trailing}
       </View>
       {description === undefined ? null : (
@@ -87,11 +97,29 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: 'space-between',
     gap: theme.space.md,
   },
-  label: {
+  labelLine: {
     flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: theme.space.sm,
+  },
+  label: {
+    flexShrink: 1,
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.control,
     color: theme.colors.ink,
+  },
+  badge: {
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors['olive-bg'],
+    paddingVertical: theme.space['2xs'],
+    paddingHorizontal: theme.space.md,
+  },
+  badgeLabel: {
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
+    fontSize: theme.text['badge-sm'],
+    color: theme.colors.olive,
   },
   dangerDescription: {
     color: theme.colors.error,
