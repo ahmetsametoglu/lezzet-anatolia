@@ -51,6 +51,8 @@ export interface CheckoutSnapshot {
     neighborInvites: { inviteId: string; inviterName: string; deliveryDate: string }[];
     /** Rota dışı + soğuk zincir: sipariş verilemez, sepet bölünmeli. */
     blocked: boolean;
+    /** Adres bir teslimat bölgesinde mi; bölge içindeki kargo siparişinde kapı yolunun kapalı olma sebebi başkadır. */
+    addressInRoute: boolean;
   } | null;
   /**
    * Canlı kargo teklifi, yalnız kargo kulvarında dolu. Fiyat istemciden alınmaz: istemci yalnız `code`u söyler, tutar sipariş
@@ -297,6 +299,7 @@ export async function readCheckoutSnapshot(
       // Kargo siparişi soğuk zincir kalemi TAŞIYAMAZ — adres rota içinde olsa bile. Taslak
       // bunu ayrıca reddediyor (`cold_chain_unshippable`); ekran aynı gerçeği önce söyler.
       blocked: input.shippingOrder ? scope.lines.some((l) => !l.shippable) : delivery.shippingBlockedReason === 'cold_chain',
+      addressInRoute: !addressOutOfRoute,
     },
     /* Kargo bloğu YALNIZ kargo kulvarında dolu (yukarıdaki künye). `off` = sağlayıcı
        yapılandırılmamış: ekran "canlı fiyat kapalı, sabit tarife geçerli" der. */
@@ -369,7 +372,14 @@ async function pickupSnapshot(
   });
   return {
     addresses: ctx.addresses,
-    delivery: { deliveryType: 'pickup', availableDates: [], requiresDateChoice: false, neighborInvites: [], blocked: false },
+    delivery: {
+      deliveryType: 'pickup',
+      availableDates: [],
+      requiresDateChoice: false,
+      neighborInvites: [],
+      blocked: false,
+      addressInRoute: false,
+    },
     shipping: null,
     payment: paymentSlice(options, ctx.warehouse.name),
     summary: summarySlice(cart, scope, input.entries, locale),

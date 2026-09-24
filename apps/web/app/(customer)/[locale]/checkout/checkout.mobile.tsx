@@ -58,6 +58,8 @@ export function CheckoutMobile(props: CheckoutViewProps) {
   const payment = snapshot.payment;
   const summary = snapshot.summary;
   const isRoute = delivery?.deliveryType === 'route';
+  // Bölge içindeki kargo siparişinde kapı yolu bölge dışı olduğu için değil, ürünler bölgenin deposunda olmadığı için kapalıdır.
+  const doorClosedHere = !isRoute && delivery?.addressInRoute === true;
   // Gel-al adres seçicide seçilir (sepet); burada depo, telefon ve fatura adresi olarak kalan adres gösterilir (native ikizi).
   const isPickup = delivery?.deliveryType === 'pickup';
   const pickedWarehouse = snapshot.pickup?.warehouses.find((w) => w.id === snapshot.pickup?.selectedWarehouseId) ?? null;
@@ -240,10 +242,16 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                   <>
                     <PhoneOptionRow
                       label={copy.delivery.door}
-                      description={isRoute ? copy.delivery.doorBody.replace('{fee}', feeLabel) : copy.delivery.doorUnavailable}
+                      description={
+                        isRoute
+                          ? copy.delivery.doorBody.replace('{fee}', feeLabel)
+                          : doorClosedHere
+                            ? copy.delivery.shippingInZone
+                            : copy.delivery.doorUnavailable
+                      }
                       selected={isRoute}
                       disabled={!isRoute}
-                      descriptionTone={isRoute ? 'muted' : 'danger'}
+                      descriptionTone={isRoute || doorClosedHere ? 'muted' : 'danger'}
                     />
                     <PhoneOptionRow
                       label={copy.delivery.shipping}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { addressTitle } from '@lezzet/address';
 import { brand } from '@lezzet/brand';
+import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import type { PaymentMethod } from '@lezzet/types';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Button } from '@/components/customer/ui/button';
@@ -278,7 +279,13 @@ export function DeliveryStep(props: CheckoutViewProps) {
           )}
         </div>
         <span className="font-sans text-body-sm leading-relaxed text-body">
-          {pickup ? t.delivery.pickupBody : inRoute ? t.delivery.routeBody : t.delivery.shippingBody}
+          {pickup
+            ? t.delivery.pickupBody
+            : inRoute
+              ? t.delivery.routeBody
+              : delivery.addressInRoute
+                ? checkoutMessages[locale].delivery.shippingInZone
+                : t.delivery.shippingBody}
         </span>
         {/* Randevu sistem dışı (telefonla): numara marka künyesinden, depo başına telefon alanı yok. */}
         {pickup && (

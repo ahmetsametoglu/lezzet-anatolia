@@ -32,6 +32,11 @@ export const CheckoutDeliverySchema = z.object({
    * dolgusu ona açılmaz (DOMAIN §6) — sipariş verilemez, sepet bölünmeli.
    */
   blocked: z.boolean(),
+  /**
+   * Adres bir teslimat bölgesinde mi. Kargo siparişinde kapı yolu kapalıdır; bölge içindeki adreste sebep bölge dışı olmak değil,
+   * ürünlerin bölgenin deposunda olmamasıdır ve ekran bunu ayırt etmeli.
+   */
+  addressInRoute: z.boolean(),
 });
 
 /**

@@ -29,6 +29,7 @@ const delivery: NonNullable<CheckoutSnapshot['delivery']> = {
   // Komşu daveti engel kararına girmez: davet bir kolaylıktır, sipariş verilebilirliğin koşulu değil.
   neighborInvites: [],
   blocked: false,
+  addressInRoute: true,
 };
 
 function snapshotOf(over: Partial<CheckoutSnapshot> = {}): CheckoutSnapshot {

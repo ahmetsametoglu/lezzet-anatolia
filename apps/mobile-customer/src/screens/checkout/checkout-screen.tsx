@@ -135,6 +135,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   };
 
   const isRoute = delivery?.deliveryType === 'route';
+  // Bölge içindeki kargo siparişinde kapı yolu bölge dışı olduğu için değil, ürünler bölgenin deposunda olmadığı için kapalıdır.
+  const doorClosedHere = !isRoute && delivery?.addressInRoute === true;
   const isPickup = delivery?.deliveryType === 'pickup';
   const pickupOffer = snapshot?.pickup ?? null;
   const dates = delivery?.availableDates ?? [];
@@ -705,11 +707,17 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   <>
                     <OptionRow
                       label={t.delivery.door}
-                      description={isRoute ? t.delivery.doorBody.replace('{fee}', shippingFeeLabel) : t.delivery.doorUnavailable}
+                      description={
+                        isRoute
+                          ? t.delivery.doorBody.replace('{fee}', shippingFeeLabel)
+                          : doorClosedHere
+                            ? t.delivery.shippingInZone
+                            : t.delivery.doorUnavailable
+                      }
                       selected={isRoute}
                       disabled={!isRoute}
-                      /* Sebep yalnız kapalı hâlde kırmızı: soluk griyle yazılınca müşteri onu fark etmiyordu. */
-                      descriptionTone={isRoute ? 'muted' : 'danger'}
+                      /* Bölge dışı kırmızıdır, çünkü müşterinin adresi değişmeden kapı açılmaz; ürünün deposu ise bir bilgidir. */
+                      descriptionTone={isRoute || doorClosedHere ? 'muted' : 'danger'}
                       onPress={keepDelivery}
                       testID="checkout-mode-door"
                     />

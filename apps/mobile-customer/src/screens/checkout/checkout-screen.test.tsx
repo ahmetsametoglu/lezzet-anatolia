@@ -75,7 +75,14 @@ function snapshot(blocked: boolean, orderTotalCents: number, shippingFeeCents = 
   return {
     addresses: [ADDRESS],
     // Kargo siparişinde komşu daveti açılmaz.
-    delivery: { deliveryType: 'shipping', availableDates: [], requiresDateChoice: false, neighborInvites: [], blocked },
+    delivery: {
+      deliveryType: 'shipping',
+      availableDates: [],
+      requiresDateChoice: false,
+      neighborInvites: [],
+      blocked,
+      addressInRoute: false,
+    },
     // Gel-al teklifi yok: bu senaryonun müşterisi izinsiz (kartın çizilmediği hâl).
     pickup: null,
     payment: {
