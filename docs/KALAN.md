@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.30). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.36). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 
 Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin andığı 25
@@ -403,3 +403,29 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   kullanıyor (yoğun trafiğe açık değil ve görünümü kalabalık). Tercih yeni sağlayıcı değil, kullandığımız Google: Map Tiles API'nin
   2D "roadmap" karosu JSON stille sadeleştirilebiliyor ve Leaflet'e bağlanabiliyor; oturum jetonu (sunucuda) ve anahtar kısıtı
   gerekiyor, istek başına ücretli. Kota/fiyat ölçülüp kullanıcıya sunulacak; karar kullanıcıda. CARTO anahtarsız çalışmıyor (ölçüldü).
+- [ ] (K.31) [hedef: operasyon] Asistan onay kuyruğundaki öneri kartları (`operations/assistant`): kart tipe göre değişiyor ama
+  her kartta ortak bilgiler (doldurulan ve üzerine yazılan alanlar, dil, belirsiz okuma) kartın içinde kötü duruyor; ortak
+  bölümler gözetilerek kart yeniden düzenlenecek. Karttan açılan diyalogda öneri kabul ya da reddedilince sıradaki öneri
+  diyalog kapanmadan gelebilmeli; önce altyapının buna ne kadar hazır olduğu ölçülecek.
+- [ ] (K.32) [hedef: operasyon] Ürün düzenleme (öneri) diyaloğu — öneriyi incelerken görülen açıklar:
+  - Asistanın birden fazla uyarısı madde madde gösterilebilmeli; önerinin görünümü ve üst bilgisi yorucu, diyalogda daha uygun
+    bir bölüme alınmalı. Asistan önerisi bölümündeki JSON görünümü uygun bir kütüphaneyle yeniden kurulmalı.
+  - Asistandan gelen bazı bölümlerde asistan işareti yok ve rozet dikkat çekmiyor; ilgili bölümlere mor arka plan daha iyi olabilir.
+  - Diyalog açılırken bir süre bekleyip birden açılıyor ("takıldı mı?" izlenimi); onay düğmesine (ürünü güncelle, kaydet)
+    basınca yükleniyor hâli yok. "Sonra bak" düğmesinin işlevi belirsiz, açtığı diyalog çalışmıyor.
+  - Ambalaj ve barkod satırları düzgün değil: barkod için "etiket dizisi" gibi bir komponent (çipler ve yazma alanı tek kutuda)
+    kullanılmalı, ambalaj için bütüncül bir komponent tasarımı Claude Design'dan istenmeli. "Porsiyon" alanının yeri de ele alınır: ambalajın kendisini
+    değil içindekini anlatıyor (kutuda kaç parça, dilim mi adet mi) ve ikizi "adet" kolonu tabloda duruyor.
+  - Ürünün aktif olmamasına sebep olan eksikler diyalogda bir yerde yazmalı.
+  - Alerjenlerde "alerjen eklenmez" düğmesiyle alerjen listesi aynı anda görünüyor; varsayılan boş hâlden olabilir, incelenecek.
+- [ ] (K.33) [hedef: müşteri] "Yapay zekâya sor" kutusu (ürün detayı) yalnız masaüstü web'de var; telefon görünümünde ve native'de
+  yok. Kodda ChatGPT, Gemini ve Claude düğmeleri var; kararın kaydında yalnız `chatgpt.com/?q=` doğrulanmıştı (Claude'un mobil
+  şeması Claude Code erişimi istiyordu, Gemini'de resmî `?q=` bulunamamıştı) ve kural "açılmayan düğme konmaz". Düğmeler cihazda
+  denenecek; marka düğmeleri yerine işletim sisteminin paylaşım tepsisi tarafsızlık açısından daha güçlü. Soru kategorinin
+  şablonundan kurulur (`category.ai_question`, K.23); kimlik ya da servis sorar, amaç sormaz ("ne işe yarar" sağlık beyanı ima
+  eder, 1924/2006 md. 2(1)). Metin bir kez sabitlenir, "daha iyi cevap alsın" diye ayarlanmaz: ayarlandığı an içeriği seçmiş
+  oluruz ve üçüncü taraf savunması düşer.
+- [ ] (K.34) [hedef: operasyon] Ülkeye göre ürün etiketi: bazı ürünlerin üzerinde satıldığı ülkenin zorunlu bilgisi yok. Ürünün
+  hangi ülkeler için yeterli bilgi taşıdığı tutulacak; yetersiz olduğu ülkeler için önceden çevrilmiş etiket metni hazır olacak ve
+  kargoda paketlemeden önce yazıcıdan basılıp yapıştırılacak (satış anında çeviri yapılmaz, etiket yeterliyse çıktı alınmaz).
+  Veri modelini (ürün × ülke) ve operasyon mobil uygulamasının hazırlık adımını birlikte etkiler.
