@@ -649,7 +649,7 @@ Parametrik değerler **env'e veya koda gömülmez** (blueprint STACK §10): kesi
 
 **İSTİSNA — KOŞUL ayarlarında en KATISI kazanır** (kullanıcı kararı 09.08, `SettingsService.STRICTEST_WINS`; bugün tek üye `min_basket_cents`). Sebebi bir ölçümle görüldü: bu anahtarın iki satırı **rakip değil, birlikte karşılanması gereken iki koşul**tur — `channel: b2b` 120 € bir **ticari şarttır** (toptan fiyat vermenin karşılığı; mesafeyle ilgisi yok), bölge satırı ise bir **lojistik tabandır** (aracın o tura çıkması anlamlı olsun). "En dar kazanır" bunları rakip sayıp bölgeyi kanalın önüne geçiriyordu ve o bölgedeki işletme müşterisi 120 € yerine 45 € ile toptan fiyat alabiliyordu. Kural bugüne dek görünmüyordu, çünkü `zoneId` hiçbir çağırandan geçmiyordu (07.15); bağlandığı gün ortaya çıktı.
 
-Ödünleşme açıkça yazılı: bu anahtarlarda bir eşiği dar kapsamda **yükseltebilir ama düşüremezsiniz**. **Fiyat ayarları listede DEĞİL** (`shipping_fee_cents`): orada kapsam "hangi tarife" sorusunun cevabıdır — Alman müşteri Almanya tarifesini öder, "en pahalısını" değil.
+Ödünleşme açıkça yazılı: bu anahtarlarda bir eşiği dar kapsamda **yükseltebilir ama düşüremezsiniz**.
 
 **İKİNCİ İSTİSNA — kargo siparişinde okuma KANALLA sınırlıdır** (kullanıcı kararı 10.08, `ScopeLimit.only`). Yukarıdaki iki koşuldan biri teslimat yoluna bağlı: **lojistik taban kargoda yoktur** (araç çıkmaz, taşıyıcı gider ve ücretini müşteri öder), **ticari şart ise her yolda geçerlidir**. Kapsam düşürerek çözülemiyordu — `zoneId`yi boş geçmek bölge satırını eler ama **küresel satır her zaman eşleşir**, yani operatör küresel bir eşik yazdığı gün kargo siparişleri sessizce ona takılırdı. Kural artık kodda: kargo yolunda okunan tek satır kanalın kendisidir (`application/cart/min-basket.ts`, dört birim testi). Bu güvence sayesinde taban küresel satıra yazılabildi — bölge bölge tekrarlanması gerekmiyor.
 
@@ -661,7 +661,6 @@ Parametrik değerler **env'e veya koda gömülmez** (blueprint STACK §10): kesi
 | `order_cutoff_time` | `"16:00"` | Sonrasında gelen sipariş bir SONRAKİ rota gününe yazılır |
 | `min_basket_cents` | 4000 | Asgari sepet — **yalnız kapıya teslim** için lojistik taban; kargoda uygulanmaz (0 = alt sınır yok) |
 | `free_shipping_threshold_cents` | 6000 | Ücretsiz kargo eşiği |
-| `shipping_fee_cents` | 790 | Eşik altı kargo ücreti (KDV'ye tabi) |
 | `cod_max_cents` | 30000 | Kapıda ödeme genel tavanı (kötüye kullanım freni) |
 | `cash_legal_limit_cents` | 100000 | Nakit yasal sınırı — aşımda UYARI, engel değil |
 | `payment_term_days` | 30 | Vade süresi varsayılanı |

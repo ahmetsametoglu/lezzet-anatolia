@@ -189,13 +189,11 @@ describe('en katısı kazanan koşul ayarları (09.08)', () => {
     expect(await settings.getNumber('min_basket_cents', -1, { zoneId: 'yok', warehouseId: 'yok' })).toBe(global);
   });
 
-  it('FİYAT ayarı bu kuralın DIŞINDA — Alman müşteri Almanya tarifesini öder, en pahalısını değil', async () => {
-    // `shipping_fee_cents` bilerek listede yok: kapsam orada "hangi tarife" sorusunun cevabı.
-    // Seedli satırlar: global **1190** · country DE **990**. En dar (ülke) kazanmalı.
-    // Sayılar 19.08'de piyasadan ölçüldü (05.30) ve YÖN de değişti: Almanya artık Fransa'dan UCUZ
-    // (Strasbourg deposuna sınır komşusu). Test tam bu yüzden değerli — kural "en pahalısı" değil
-    // "en dar kapsam" olduğu için, ucuz bir ülke tarifesi de globali ezmeli.
-    expect(await settings.getNumber('shipping_fee_cents', 0, { country: 'DE' })).toBe(990);
-    expect(await settings.getNumber('shipping_fee_cents', 0, { country: 'FR' })).toBe(1190);
+  // Kural yalnız listedeki koşul anahtarlarında geçer; öteki anahtarlara da uygulanırsa ucuz bir dar kapsam globali ezemezdi.
+  it('listede olmayan anahtarda en dar kapsam kazanır, değeri düşük olsa bile', async () => {
+    await settings.set(key, 1190);
+    await settings.set(key, 990, { scopeType: 'country', scopeId: 'DE' });
+    expect(await settings.getNumber(key, 0, { country: 'DE' })).toBe(990);
+    expect(await settings.getNumber(key, 0, { country: 'FR' })).toBe(1190);
   });
 });

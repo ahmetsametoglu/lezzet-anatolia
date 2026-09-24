@@ -49,7 +49,6 @@ insert into public.settings (key, value, description) values
   -- Ücretsiz kargo eşiği piyasaya göre konuldu (rakip Fransa'ya 125 € eşikle gönderiyor); kendi taşıyıcı maliyetimiz ölçülmeden doğru
   -- konamaz. BEKLEYEN(BACKLOG §2): donuk kargo birim maliyeti ölçülmedi.
   ('free_shipping_threshold_cents','10000',  'Ücretsiz kargo eşiği (cent). Piyasa ölçümü 19.08: rakip 125 €; biz 100 €.'),
-  ('shipping_fee_cents',           '1190',   'Eşik altı kargo ücreti (cent). KDV''ye tabidir. Piyasa ölçümü 19.08: rakip FR 12,50 €.'),
   ('cod_max_cents',                '30000',  'Kapıda ödeme genel tavanı (cent) — kötüye kullanım freni.'),
   ('cash_legal_limit_cents',       '100000', 'Nakit yasal sınırı (FR ~1.000 €). Aşımda UYARI verir, engellemez.'),
   ('payment_term_days',            '30',     'Vade süresi varsayılanı (gün); müşteri kartında boşsa bu geçerli.'),
@@ -66,23 +65,3 @@ insert into public.settings (key, value, description) values
   ('door_packaging_unit_cost_cents','0',     'Kapı önü satışta paketleme birim maliyeti (cent). Varsayılan 0: mal elden gidiyor, soğuk zincir paketi yok.'),
   -- Gel-al siparişinde randevu sistem dışıdır (telefon); ayrılmış mal süresiz bekleyemez, süre dolunca ofis görür ve karar verir.
   ('pickup_wait_days',             '7',      'Gel-al siparişinin hazır bekleyebileceği süre (gün); dolunca ofis listesine düşer, iptal kararı ofisin.');
-
--- ── ÜLKE TARİFESİ — kargo ücreti ülkeye göre değişir (19.08) ──────────────────────────────────────
--- Bu satırlar **seed'de değil migration'da** duruyor ve sebebi katman: `base` katmanı üretime
--- çıkacak gerçek veridir ve kapsamlı ayar seed'i (`scripts/seed/settings.ts`) `extend`+ katmanında
--- koşuyor. Almanya tarifesi orada kalsaydı, üretim kurulumunda **hiç var olmazdı** — Alman müşteri
--- sessizce Fransa tarifesini öderdi. Kanal ve bölge kapsamları seed'de kalabilir: onlar mekanizmayı
--- gösteren örneklerdir, ülke tarifesi ise gerçek bir ticari şart.
---
--- **YÖN ÖLÇÜLMEDİ, VARSAYIM (kullanıcı kararı 19.08).** Almanya'yı Fransa'dan UCUZ yazıyoruz çünkü
--- depo Strasbourg'da ve Kehl 5 km ötede; Fransa içi ise Brest'e kadar gidiyor. Ama taşıyıcılar
--- kilometreye değil **ülkeye** fiyat verir ve yurt dışı tarifesi genellikle yurt içinden pahalıdır —
--- bu satırın yönü gerçek sözleşme gelince ilk doğrulanacak şeydir. (Ölçülen rakip tarifesi bu soruya
--- cevap VERMİYOR: o Belçika'dan gönderiyor, orada Almanya zaten yakın.)
--- **TEK SATIR, ÇÜNKÜ TEK FARK VAR.** Fransa tarifesi küresel satırdır (11,90 € / 100 €); ona ayrıca
--- bir `country = 'FR'` satırı yazmak aynı sayıyı iki yere koymak olurdu ve bir gün ayrışırlardı.
--- Ücretsiz eşik iki ülkede de 100 € — o yüzden eşiğin ülke satırı da YOK. Ayrıca ekran eşikte ülke
--- istisnası sunmuyor (`settings-catalog.ts` → `CHANNEL_ONLY`); yazılsaydı operatörün göremediği,
--- düzenleyemediği ama yürürlükte olan bir satır bırakırdı.
-insert into public.settings (key, scope_type, scope_id, value, description) values
-  ('shipping_fee_cents', 'country', 'DE', '990', 'DE kargo ücreti (cent) — Strasbourg deposuna sınır komşusu. YÖN VARSAYIM; yukarıdaki künyeye bak.');

@@ -25,7 +25,6 @@ import { resolveLocalizedText } from '@lezzet/types';
 const VISIBLE_SETTING_KEYS = [
   'min_basket_cents',
   'free_shipping_threshold_cents',
-  'shipping_fee_cents',
   'cod_max_cents',
   'cash_legal_limit_cents',
   'order_cutoff_time',

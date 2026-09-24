@@ -479,14 +479,7 @@ export { readLastOrderSuggestion } from './cart/last-order';
 export type { LastOrderSuggestion } from './cart/last-order';
 // Ayar kapsamı: sepet ve checkout müşteriye söz veren ayarı aynı kapsamla okumak zorunda.
 export { settingScopeOf } from './cart/setting-scope';
-export {
-  FREE_SHIPPING_THRESHOLD_DEFAULT,
-  FREE_SHIPPING_THRESHOLD_KEY,
-  MIN_BASKET_DEFAULT,
-  MIN_BASKET_KEY,
-  SHIPPING_FEE_DEFAULT,
-  SHIPPING_FEE_KEY,
-} from './cart/settings-keys';
+export { FREE_SHIPPING_THRESHOLD_DEFAULT, FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_DEFAULT, MIN_BASKET_KEY } from './cart/settings-keys';
 // Bilgi sayfalarının ilan ettiği tutarlar aynı `settings` satırından okunur.
 export { COD_MAX_DEFAULT, COD_MAX_KEY, readPublicDeliveryTerms } from './settings/public-terms';
 export type { PublicDeliveryTerms } from './settings/public-terms';

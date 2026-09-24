@@ -16,25 +16,6 @@ export const MIN_BASKET_KEY = 'min_basket_cents';
 export const MIN_BASKET_DEFAULT = 4_000;
 
 /**
- * Kargo ücreti (cent). Checkout'ta kesilen tutar; sepette **kargo grubunun** blokunda yazılır.
- *
- * Sepet uzun süre ücreti hiç yazmadı ve bu doğruydu: ücret teslimat türüne bağlı, tür de adresten
- * çıkıyordu. Kargo grubunda o belirsizlik YOK — grubun tanımı zaten "kargoyla gidecek": türü
- * biliniyor, tutarı biliniyor. Bilinen bir sayıyı saklamak, müşteriyi checkout'ta sürprizle
- * karşılamaktır.
- */
-export const SHIPPING_FEE_KEY = 'shipping_fee_cents';
-
-/**
- * Kargo ücretinin varsayılanı (cent) — ayar satırı yoksa geçerli.
- *
- * 11,90 € · kullanıcı kararı 19.08 (eski değer 7,90 €). **`0013_settings.sql` ile aynı sayı olmak
- * ZORUNDA** — biri güncellenip öteki unutulursa ayar satırını silen bir el sistemi sessizce eski
- * tarifeye düşürür. Sayının nereden geldiği migration künyesinde: rakip tarifesi ölçüldü.
- */
-export const SHIPPING_FEE_DEFAULT = 1_190;
-
-/**
  * Ücretsiz kargo eşiğinin varsayılanı (cent), yalnız ayar satırı yoksa okunur; gerçek değeri operatör Ayarlar'dan belirler, gerekçesi
  * `0013_settings.sql` künyesindedir. Kargo soğuk zincir taşımaz: bölge dışına yalnız raf ömürlü ürünler çıkar (`Product.shippable`).
  */

@@ -282,7 +282,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 
 ### BACKLOG §1 · Tasarımı hazır, başka modül bekliyor
 
-- [ ] **Sepet teslimat satırı** ("Teslimat: Ücretsiz" / "6,90 €") — bekleyen: ücret teslimat türüne, tür ADRESE bağlı → checkout adres adımı. Ücretsiz kargo ilerleme çubuğu bundan AYRI ve yapıldı (eşik `Setting`'ten, ilerleme ara toplamdan)
 - [ ] **"Checkout'a geç" düğmesi** — girişli müşteri doğrudan, ziyaretçi önce hızlı doğrulamaya — bekleyen: **ENGEL KALKTI (28.07):** `07.4`/`07.5` indi. Kapı hazır — `lib/order/checkout-session.ts` `createCheckoutSession` (rezervasyon → Stripe oturumu, TTL'li), webhook `api/webhooks/stripe`. Kalan iş yüzeyin: düğmeyi kapıya b…
 - [ ] **Sipariş kalemi düzenleme** — hazırlanmamış siparişte kalem ekleme/çıkarma/adet değiştirme (`design/pages/admin-siparisler.md` §4 "İşlemler"), stok yeniden ayrılır/bırakılır — bekleyen: **09.8 kapandı ama bunu KAPSAMADI (26.08).** Elle giriş siparişi AÇIYOR; açılmış bir siparişin kalemini değiştirmek ayrı bir iş ve ayrı bir risk: rezervasyon geri bırakılıp yeniden alınmalı, indirim payları (`discount_am…
 - [ ] **"Fiyat değişti" bildirimi** — `DOMAIN §5`: fiyat arttıysa müşteriye açıkça söylenir ve onay istenir (kabul et / çıkar); düştüyse sessizce uygulanır — bekleyen: `CartItem.unitPrice` okuma tarafına bağlanmalı — alan yazılıyor, karşılaştırılmıyor

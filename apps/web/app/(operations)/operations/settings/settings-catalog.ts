@@ -20,7 +20,7 @@ import {
   POINTS_SETTING_KEYS,
 } from '@lezzet/domain-core';
 import { TICKET_HANDLER_LABELS, TicketHandlerEnum } from '@lezzet/types';
-import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY, SHIPPING_FEE_KEY } from '@/lib/settings-keys';
+import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY } from '@/lib/settings-keys';
 import { DAY_HOUR_FALLBACK } from '@/lib/settings/day-hours';
 
 /**
@@ -127,16 +127,6 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     impact: 'Sepette müşteriye söz olarak yazılır ("şu kadar daha ekleyin"). Düşürmek kargo ücretini üstlenmek demektir.',
     exceptionScopes: CHANNEL_ONLY,
     fallback: 10_000,
-  },
-  {
-    key: SHIPPING_FEE_KEY,
-    label: 'Kargo ücreti',
-    help: 'Ücretsiz kargo eşiğinin altında kesilen tutar. KDV’ye tabidir.',
-    group: 'order',
-    kind: 'money',
-    min: 0,
-    exceptionScopes: ['channel', 'country'],
-    fallback: 1_190,
   },
   {
     key: 'order_cutoff_time',

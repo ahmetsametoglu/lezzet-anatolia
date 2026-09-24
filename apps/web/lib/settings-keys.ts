@@ -3,11 +3,7 @@
  * zorunda; istemci komponentleri de okuduğu için barrel değil derin yol kullanılır, barrel paketin tamamını tarayıcı paketine sokardı.
  */
 /* Köprü yalnız web'in okuduğunu geçirir; varsayılanları sunucudaki ayar çözümü paketten doğrudan okur. */
-export {
-  FREE_SHIPPING_THRESHOLD_KEY,
-  MIN_BASKET_KEY,
-  SHIPPING_FEE_KEY,
-} from '@lezzet/application/cart/settings-keys';
+export { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY } from '@lezzet/application/cart/settings-keys';
 
 /**
  * Puanı kupona çevirme kuralı: hesap ekranı ile motor aynı sayıyı okumak zorunda, eşik ekrana gömülürse ekranın söylediği kural sistemin
