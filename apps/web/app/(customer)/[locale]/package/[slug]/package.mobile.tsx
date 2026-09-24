@@ -100,7 +100,7 @@ export function PackageMobile({ locale, pack }: PackageViewProps) {
 
       {/* Yapışkan barın payı (native `productBarSpace` 108). */}
       <div aria-hidden className="h-27 flex-none" />
-      <PhonePackageBar copy={copy} locale={locale} pack={pack} />
+      <PhonePackageBar copy={copy} locale={locale} pack={pack} placeNote={placeMark === null ? null : placeMark.label.replace('\n', ' ')} />
     </div>
   );
 }

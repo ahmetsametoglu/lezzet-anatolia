@@ -212,21 +212,9 @@ interface PurchaseBarProps {
   routeOnly?: boolean;
   /** Telefon akış yerleşimi: kontrol tam genişlik, karar bölgesinin son satırıdır. */
   flow?: boolean;
-  /**
-   * **Üçüncül hâl — "Yine de sepete ekle"** (tasarım `.dc.html`, kullanıcı kararı 19.08).
-   *
-   * Ürün bu adrese gönderilemiyorken satın alma yolu KAPANMAZ (*"müşteri bölge içindeki birine
-   * gönderiyor olabilir"*) ama BİRİNCİL de olamaz: o hâlde ekranın birincil eylemi "kargolanabilir
-   * benzerleri gör"dür. Düğme nötr çerçeveye iner ve adı değişir — çünkü artık farklı bir şey
-   * yapıyor: bir uyarıya rağmen devam etmek.
-   *
-   * İki dolu yeşil düğme yan yana durduğunda hiçbiri birincil olmuyordu (kullanıcı bildirimi,
-   * ekran görüntüsüyle); tasarım bu sırayı zaten çizmişti, uygulama sapmıştı.
-   */
-  deemphasized?: boolean;
 }
 
-export function PurchaseBar({ t, locale, selected, routeOnly = false, flow = false, deemphasized = false }: PurchaseBarProps) {
+export function PurchaseBar({ t, locale, selected, routeOnly = false, flow = false }: PurchaseBarProps) {
   const { add, setQty: setCartQty, lineOf } = useCart();
   const { place, ready } = useDeliveryPlace();
   const cap = capOf(selected);
@@ -247,7 +235,7 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, flow = fal
   const setQty = (next: number) => inCart && setCartQty({ kind: 'variant', variantId: selected.id, stockId: inCart.stockId }, next);
 
   // Düğme toplam yazmaz: adet hep 1 olduğu için toplam birim fiyata eşittir ve hemen üstündeki fiyatı ikinci kez basardı.
-  const label = !sellable ? (selected.priceCents === null ? t.closed : t.soldOut) : deemphasized ? t.addToCartAnyway : t.addToCart;
+  const label = !sellable ? (selected.priceCents === null ? t.closed : t.soldOut) : t.addToCart;
 
   // Tek kontrol, tek kutu. İkisi de satırın tamamını kaplar ve aynı yüksekliktedir; çerçeve farkı
   // düğmeye ŞEFFAF kenarlık verilerek kapanır — yoksa geçişte kutu birkaç piksel zıplıyor.
@@ -269,9 +257,7 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, flow = fal
       onClick={() => add({ kind: 'variant', variantId: selected.id, qty: 1, stockId: selected.stockId })}
       disabled={!sellable}
       className={buttonClass({
-        // Üçüncül hâlde NÖTR çerçeve (tasarım: gri kenar, koyu metin) — yeşilin hiçbir tonu
-        // değil, çünkü yeşil bu kutuda zaten iki kez konuşuyor (birincil + ikincil).
-        variant: deemphasized ? 'secondary' : 'primary',
+        variant: 'primary',
         size: 'lg',
         fullWidth: true,
         // `text-lead`in 1.6 satır aralığı bir düğme etiketinde ~9 px fazladan yükseklik demek
@@ -283,12 +269,7 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, flow = fal
     </button>
   );
 
-  // Masaüstünde kontrol sütunun YARISINI kaplar. Tam genişlik hem düğmeyi gereğinden iri yapıyor
-  // hem de seçicinin üç bölgesini birbirinden koparıyordu — kutu daralınca oran kendiliğinden
-  // düzeliyor. `min-w-56` dar sütunda kontrolün ezilmesini engeller.
-  //
-  // Üçüncül hâlde TAM GENİŞLİK: düğme artık sütunda değil karar kutusunun içinde ve üstündeki iki
-  // düğmeyle aynı genişlikte olmalı — yarım kalan bir üçüncü düğme, sıralı bir yığını bozar.
-  // Akış yerleşimi de tam genişlik: dar ekranda yarım düğme, dokunması küçük bir yetimdir.
-  return <div className={flow || deemphasized ? 'w-full' : 'w-1/2 min-w-56'}>{control}</div>;
+  // Masaüstünde kontrol sütunun yarısını kaplar, çünkü tam genişlik düğmeyi iri yapar ve seçicinin üç bölgesini koparır; telefon
+  // akışında tam genişliktir, çünkü dar ekranda yarım düğme küçük bir yetimdir.
+  return <div className={flow ? 'w-full' : 'w-1/2 min-w-56'}>{control}</div>;
 }

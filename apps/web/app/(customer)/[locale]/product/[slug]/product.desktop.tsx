@@ -39,8 +39,8 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
       : null;
 
   /**
-   * Teslimat satırı boy seçiminin ÜSTÜNDE durur (çeşitlerin altı, çeşit yoksa açıklamanın altı): kargo kısıtı sepete eklemeden
-   * önce görünür. Bu adrese gönderilemeyen üründe kutu "yine de sepete ekle" düğmesini taşıdığı için boy seçiminin altına iner.
+   * Teslimat satırı boy seçiminin üstünde durur ki kargo kısıtı sepete eklemeden önce görünsün; bu adrese gelemeyen üründe kutu karar
+   * kutusudur (alternatif ve haber ver) ve boy seçiminin altına iner.
    */
   const delivery = (
     <DeliveryLine
@@ -51,10 +51,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
       fallback={t.assurance}
       blockedActions={
         away && selected ? (
-          /**
-           * Müşteri bu ürünü bu adrese alamıyor, o yüzden en güçlü teklif alternatiftir. Satın alma kapanmaz ama adı değişir,
-           * çünkü artık uyarıya rağmen devam etmektir.
-           */
+          /* Yer biliniyorken bu adrese gelemeyen ürün sepete eklenemez; en güçlü teklif alternatiftir. */
           <span className="flex w-full flex-col gap-2">
             <Link
               href={{ pathname: '/catalog', query: { shippable: '1' } }}
@@ -63,9 +60,6 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
               {t.assurance.seeShippable}
             </Link>
             <StockNoticeButton variantId={selected.id} productName={product.name} locale={locale} emphasis="panel" />
-            {/* Üçüncül: nötr çerçeve + "Yine de sepete ekle". `w-full` sarmalayıcı, düğmenin
-                kendi `w-1/2` kutusunu kutunun genişliğine açıyor. */}
-            <PurchaseBar t={t} locale={locale} selected={selected} routeOnly={!product.shippable} deemphasized />
           </span>
         ) : selected?.stockStatus === 'shipping' ? undefined : (
           /**

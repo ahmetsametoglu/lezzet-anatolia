@@ -68,7 +68,10 @@ export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
 
           {pack.description && <p className="font-sans text-lead text-body">{pack.description}</p>}
 
-          <PurchaseBox t={t} locale={locale} bundleId={pack.id} soldOut={pack.soldOut} routeOnly={pack.inRouteOnly} />
+          {/* Yer biliniyorken bu adrese gelemeyen paket sepete eklenemez; sebebi fiyatın yanındaki yer işareti ve teslimat kutusu söyler. */}
+          {stockStatus !== 'elsewhere' && (
+            <PurchaseBox t={t} locale={locale} bundleId={pack.id} soldOut={pack.soldOut} routeOnly={pack.inRouteOnly} />
+          )}
 
           {/* Kargolanamayan pakette şerit UYARIYA döner: üç ferah vaat yerine tek kısıt cümlesi —
               "kargoya uygun" ile "kargoya verilemez" aynı kutuda yan yana duramaz. */}

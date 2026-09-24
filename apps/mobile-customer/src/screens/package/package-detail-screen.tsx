@@ -252,11 +252,15 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
       {/* ── Yapışkan alt bar: krem cam, ürün barıyla aynı yüzey ── */}
       <BlurView intensity={theme.glassBlurIntensity} tint="light" style={styles.bar} testID="package-bar">
         <View style={styles.barGlass} pointerEvents="none" />
-        {/* Tükendi barında sayaç ve ekleme düğmesi hiç çizilmez: karşılayamayacağımız bir teklif müşteriyi sepette ya da
-            ödemede duvara götürürdü. "Bu adrese gönderemiyoruz" burayı değiştirmez, kararı sepet ve ödeme adımı verir. */}
+        {/* Tükendide ve yer biliniyorken bu adrese gelemeyen pakette sayaç ve ekleme düğmesi çizilmez: karşılayamayacağımız bir
+            teklif müşteriyi sepette ya da ödemede duvara götürürdü. */}
         {detail.soldOut ? (
           <Text style={styles.barSoldOut} testID="package-soldout">
             {t.soldOutBar.text}
+          </Text>
+        ) : placeMark !== null ? (
+          <Text style={styles.barSoldOut} testID="package-place-bar">
+            {placeMark.label.replace('\n', ' ')}
           </Text>
         ) : (
         <View style={styles.barRow}>
