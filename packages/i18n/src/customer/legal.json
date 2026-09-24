@@ -23,7 +23,7 @@
               "Strasbourg ve çevresindeki adreslere siparişlerinizi kendi soğuk zincir aracımızla, kapınıza kadar getiriyoruz. Adresinizin bölgede olup olmadığını sipariş sırasında posta kodunuzla otomatik görürsünüz; teslimat gününüz bölgenizin takvimine göre sunulur.",
               {
                 "web": "Posta kodunuzu sitenin üst şeridinde her an değiştirebilirsiniz. Bölge dışındaki bir kod girdiğinizde kataloğun size gönderilebilen kısmı işaretlenir — sepete koyup ödeme adımında sürprizle karşılaşmazsınız.",
-                "app": "Posta kodunuzu vitrinin üstündeki bölge hapından her an değiştirebilirsiniz. Bölge dışındaki bir kod girdiğinizde kataloğun size gönderilebilen kısmı işaretlenir — sepete koyup \"Siparişi tamamla\" adımında sürprizle karşılaşmazsınız."
+                "app": "Posta kodunuzu vitrinin üstündeki bölge düğmesinden her an değiştirebilirsiniz. Bölge dışındaki bir kod girdiğinizde kataloğun size gönderilebilen kısmı işaretlenir — sepete koyup \"Siparişi tamamla\" adımında sürprizle karşılaşmazsınız."
               }
             ],
             "bullets": []
@@ -554,7 +554,7 @@
               "Nous livrons les adresses de Strasbourg et de ses environs avec notre propre véhicule frigorifique, jusqu'à votre porte. Vous voyez automatiquement, au moment de la commande, si votre adresse est dans la zone ; votre jour de livraison dépend du calendrier de votre secteur.",
               {
                 "web": "Vous pouvez changer votre code postal à tout moment dans le bandeau en haut du site. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement.",
-                "app": "Vous pouvez changer votre code postal à tout moment depuis la pastille de zone en haut de la vitrine. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement."
+                "app": "Vous pouvez changer votre code postal à tout moment depuis le bouton de zone en haut de la vitrine. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement."
               }
             ],
             "bullets": []
@@ -1085,7 +1085,7 @@
               "Adressen in Straßburg und Umgebung beliefern wir mit unserem eigenen Kühlfahrzeug bis vor die Haustür. Ob Ihre Adresse im Liefergebiet liegt, sehen Sie bei der Bestellung automatisch anhand Ihrer Postleitzahl; Ihr Liefertag richtet sich nach dem Kalender Ihres Gebiets.",
               {
                 "web": "Sie können Ihre Postleitzahl jederzeit oben auf der Seite ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet — Sie erleben also an der Kasse keine Überraschung.",
-                "app": "Sie können Ihre Postleitzahl jederzeit über die Gebiets-Pille oben in der Vitrine ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet — beim Schritt „Bestellung abschließen“ erleben Sie also keine Überraschung."
+                "app": "Sie können Ihre Postleitzahl jederzeit über die Gebietsanzeige oben auf der Startseite ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet — beim Schritt „Bestellung abschließen“ erleben Sie also keine Überraschung."
               }
             ],
             "bullets": []

@@ -134,7 +134,7 @@
     "limit": "{n} maximum",
     "closed": "Ce produit n'est pas en vente actuellement",
     "assurance": {
-      "coldChain": "Livré en chaîne du froid",
+      "coldChain": "Chaîne du froid respectée",
       "doorstep": "Livraison à domicile dans la zone",
       "shippable": "Expédiable",
       "notShippable": "Uniquement livraison à domicile à Strasbourg & environs — ce produit ne peut pas être expédié.",
@@ -215,7 +215,7 @@
     "card": {
       "addToCart": "Ajouter",
       "options": "Options →",
-      "priceFrom": "prix de départ — le format se choisit en détail",
+      "priceFrom": "prix de départ — format au choix sur la fiche produit",
       "offer": "Offre",
       "soldOut": "Épuisé — bientôt de retour"
     },
@@ -251,7 +251,7 @@
     "inStock": "● Auf Lager",
     "soldOut": "Ausverkauft — bald wieder da",
     "chooseSize": "Größe wählen",
-    "addToCart": "In den Korb",
+    "addToCart": "In den Warenkorb",
     "addToCartAnyway": "Trotzdem hinzufügen",
     "offer": "Angebot",
     "limit": "Maximal {n} Stück",
@@ -268,7 +268,7 @@
     },
     "declaration": {
       "ingredients": "Zutaten und Allergene",
-      "traces": "Wird im selben Betrieb verarbeitet wie {list}.",
+      "traces": "Hergestellt in einem Betrieb, der auch {list} verarbeitet.",
       "nutrition": "Nährwerte",
       "per100g": "pro 100 g",
       "netQuantity": "Nettofüllmenge: {quantity}",
@@ -336,9 +336,9 @@
     },
     "similar": "Das könnte Ihnen auch gefallen",
     "card": {
-      "addToCart": "In den Korb",
+      "addToCart": "In den Warenkorb",
       "options": "Optionen →",
-      "priceFrom": "Startpreis — Größe wird im Detail gewählt",
+      "priceFrom": "Ab-Preis — Größe auf der Produktseite wählen",
       "offer": "Angebot",
       "soldOut": "Ausverkauft — bald wieder da"
     },
@@ -352,8 +352,8 @@
       "pieces": "{n} Stück",
       "piecesOf": "{n} Stück · {weight}",
       "perPiece": "{price}/Stück",
-      "slices": "{n} Scheiben",
-      "slicesOf": "{n} Scheiben · {weight}",
+      "slices": "{n} Stück",
+      "slicesOf": "{n} Stück · {weight}",
       "packs": "{n} Packungen",
       "packsOf": "{n} Packungen · {weight}"
     },

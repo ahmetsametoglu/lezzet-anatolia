@@ -28,7 +28,7 @@
   },
   "fr": {
     "eyebrow": "Coffrets",
-    "title": "Nous dressons la table, vous n'avez qu'à inviter",
+    "title": "Nous garnissons la table, vous n'avez plus qu'à inviter",
     "body": "Une fête, un petit-déjeuner ou un grand dîner — nos coffrets arrivent à prix unique, contenu annoncé.",
     "meta": "{n} produits · PRIX UNIQUE",
     "item": "{label} (×{qty})",
@@ -54,8 +54,8 @@
     }
   },
   "de": {
-    "eyebrow": "Fertige Pakete",
-    "title": "Wir decken den Tisch, Sie laden ein",
+    "eyebrow": "Genusspakete",
+    "title": "Wir sorgen für den gedeckten Tisch, Sie laden ein",
     "body": "Fest, Frühstück oder ein großer Abend — unsere Pakete kommen zum Festpreis, mit klarem Inhalt.",
     "meta": "{n} Sorten · FESTPREIS",
     "item": "{label} (×{qty})",
@@ -75,7 +75,7 @@
       "retry": "Erneut versuchen"
     },
     "empty": {
-      "title": "Derzeit keine fertigen Pakete",
+      "title": "Derzeit keine Genusspakete",
       "body": "Neue Pakete sind in Vorbereitung. Bis dahin stellen Sie Ihre Tafel im Katalog selbst zusammen.",
       "cta": "Katalog ansehen"
     }

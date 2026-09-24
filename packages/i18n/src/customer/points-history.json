@@ -122,14 +122,14 @@
       "feedback_candidate": "Stimme für neue Sorte",
       "order": "Bestellpunkte",
       "referral": "Geworbener Kunde",
-      "neighbor": "Nachbarschaftseinladung",
+      "neighbor": "Nachbarn eingeladen",
       "visit": "Täglicher Besuch",
       "redemption": "In Gutschein umgewandelt",
       "manual": "Manuelle Korrektur"
     },
     "reasonReverted": {
       "referral": "Geworbener Kunde — storniert",
-      "neighbor": "Nachbarschaftseinladung — storniert"
+      "neighbor": "Nachbarn eingeladen — storniert"
     },
     "pending": {
       "title": "Punkte unterwegs",

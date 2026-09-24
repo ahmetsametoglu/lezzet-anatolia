@@ -61,7 +61,7 @@
       "review": {
         "title": "Donnez votre avis sur un produit reçu",
         "cadence": "une fois par produit",
-        "body": "Après la livraison, racontez le produit.",
+        "body": "Après la livraison, donnez votre avis sur le produit.",
         "cta": "Mes commandes"
       },
       "visit": {
@@ -103,7 +103,7 @@
       "review": {
         "title": "Bewerten Sie ein erhaltenes Produkt",
         "cadence": "einmal je Produkt",
-        "body": "Erzählen Sie nach der Lieferung von dem Produkt.",
+        "body": "Bewerten Sie das Produkt nach der Lieferung.",
         "cta": "Meine Bestellungen"
       },
       "visit": {

@@ -129,7 +129,7 @@
     },
     "recipes": {
       "eyebrow": "Idées de table",
-      "title": "Comment dresser cette table ?",
+      "title": "Comment composer ce repas ?",
       "all": "Toutes les recettes →",
       "items": "{n} produits",
       "pantry": "{n} de chez vous",
@@ -158,7 +158,7 @@
       "titleAccent": "vor Ihrer Tür.",
       "body": "Wir beziehen beliebte türkische Spezialitäten von ausgewählten Herstellern und liefern sie Ihnen ohne Unterbrechung der Kühlkette. Wir sind Ihre Brücke zu den Aromen Anatoliens.",
       "ctaCatalog": "Zum Katalog",
-      "ctaPackages": "Fertige Pakete ansehen",
+      "ctaPackages": "Genusspakete ansehen",
       "imageAlt": "Dampfender Börek und eine reich gedeckte Familientafel"
     },
     "categories": {
@@ -187,13 +187,13 @@
     "featured": {
       "title": "Unsere Auswahl",
       "all": "Ganzer Katalog →",
-      "addToCart": "In den Korb",
+      "addToCart": "In den Warenkorb",
       "options": "Optionen →",
       "offer": "Angebot",
       "soldOut": "Ausverkauft — bald wieder da"
     },
     "packages": {
-      "eyebrow": "Fertige Pakete",
+      "eyebrow": "Genusspakete",
       "title": "Gedeckte Tische zum Festpreis",
       "all": "Alle Pakete →",
       "badge": "Paket",
@@ -203,7 +203,7 @@
     },
     "recipes": {
       "eyebrow": "Ideen vom Tisch",
-      "title": "Wie deckt man diesen Tisch?",
+      "title": "Was kommt heute auf den Tisch?",
       "all": "Alle Rezepte →",
       "items": "{n} Produkte",
       "pantry": "{n} von zu Hause",

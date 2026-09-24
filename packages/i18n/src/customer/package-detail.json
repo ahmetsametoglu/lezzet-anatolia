@@ -84,7 +84,7 @@
     }
   },
   "de": {
-    "header": "Fertiges Paket",
+    "header": "Genusspaket",
     "back": "Zurück",
     "addedToast": "Paket zum Warenkorb hinzugefügt ✓",
     "share": "Teilen",
@@ -105,7 +105,7 @@
       "note": "Zutaten und Allergene finden Sie auf der Seite jedes Produkts. Das Paket wird als Ganzes hinzugefügt; der Inhalt kann nicht geändert werden."
     },
     "cta": {
-      "add": "Paket in den Korb"
+      "add": "Paket in den Warenkorb"
     },
     "stepper": {
       "decrease": "Menge von {name} verringern",

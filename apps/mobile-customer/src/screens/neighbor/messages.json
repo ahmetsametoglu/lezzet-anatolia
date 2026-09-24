@@ -69,20 +69,20 @@
   },
   "de": {
     "back": "Zurück",
-    "title": "Nachbarschaftseinladung",
+    "title": "Einladung von nebenan",
     "loading": "Einladung wird geöffnet",
     "errorBody": "Die Einladung konnte nicht geöffnet werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "retry": "Erneut versuchen",
     "ok": {
       "title": "{name} lädt Sie zur Lieferung am {day} ein",
       "someone": "Ihre Nachbarin oder Ihr Nachbar",
-      "body": "Unser Fahrzeug ist an diesem Tag in der Straße Ihrer Nachbarschaft. Bestellen Sie für denselben Tag, dann werden Sie zusammen beliefert — ohne Unterbrechung der Kühlkette, bis vor Ihre Tür.",
+      "body": "Unser Fahrzeug ist an diesem Tag ohnehin in Ihrer Nähe. Bestellen Sie für denselben Tag, dann werden Sie zusammen beliefert — ohne Unterbrechung der Kühlkette, bis vor Ihre Tür.",
       "primary": "Katalog ansehen",
       "secondary": "Konto eröffnen"
     },
     "self": {
       "title": "Das ist Ihr Einladungslink",
-      "body": "Ihr Link funktioniert. Ihre Punkte werden gutgeschrieben, sobald Ihre Nachbarschaft für diesen Tag bestellt und bezahlt hat.",
+      "body": "Ihr Link funktioniert. Ihre Punkte werden gutgeschrieben, sobald jemand aus Ihrer Nachbarschaft für diesen Tag bestellt und bezahlt hat.",
       "primary": "Zu meinen Bestellungen"
     },
     "runClosed": {

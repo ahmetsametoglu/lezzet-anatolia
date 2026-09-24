@@ -108,7 +108,7 @@
       "body": "Même jour, même véhicule : si votre voisin commande pour cette tournée, vous êtes livrés ensemble — et vous gagnez des points.",
       "cta": "Copier le lien",
       "copied": "Lien copié",
-      "remaining": "Encore {n} voisin(s) peuvent profiter de cette invitation (maximum {max}).",
+      "remaining": "Places encore disponibles sur cette invitation : {n} (maximum {max}).",
       "full": "Cette invitation est complète — {max} voisins y ont participé. Une nouvelle invitation s'ouvrira à votre prochaine commande."
     },
     "track": "Suivre ma commande"
@@ -161,8 +161,8 @@
       "prefillPlain": "Hallo Lezzet Anatolie, ich habe eine Frage zu meiner Bestellung."
     },
     "neighbor": {
-      "title": "Laden Sie Ihre Nachbarschaft zu dieser Lieferung ein",
-      "body": "Gleicher Tag, gleiches Fahrzeug: bestellt Ihre Nachbarschaft für diese Tour, werden Sie zusammen beliefert — und Sie sammeln Punkte.",
+      "title": "Laden Sie Ihre Nachbarn zu dieser Lieferung ein",
+      "body": "Gleicher Tag, gleiches Fahrzeug: bestellt jemand aus Ihrer Nachbarschaft für denselben Tag, werden Sie zusammen beliefert — und Sie sammeln Punkte.",
       "cta": "Link kopieren",
       "copied": "Kopiert",
       "remaining": "Noch {n} Nachbarn können diese Einladung nutzen (höchstens {max}).",

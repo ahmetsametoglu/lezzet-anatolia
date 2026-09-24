@@ -360,7 +360,7 @@
       "route": "Lieferung an die Tür · kostenlos",
       "routeBody": "Ihre Adresse liegt in unserem Liefergebiet — unser Fahrzeug bringt es zu Ihnen.",
       "shipping": "Versand",
-      "shippingBody": "Diese Adresse liegt außerhalb unseres Liefergebiets — Lieferung frei Haus ist nicht möglich, die Bestellung geht per Spedition raus.",
+      "shippingBody": "Diese Adresse liegt außerhalb unseres Liefergebiets — unser Fahrzeug fährt nicht dorthin, die Bestellung wird per Paket verschickt.",
       "shippingDays": "Versand in 2-3 Werktagen",
       "single": "Am {date} bei Ihnen",
       "neighborInvite": "{name} aus Ihrer Nachbarschaft hat Sie zur Lieferung am {date} eingeladen — dieser Tag ist vorausgewählt.",

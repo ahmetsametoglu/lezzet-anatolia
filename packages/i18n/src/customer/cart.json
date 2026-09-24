@@ -221,7 +221,7 @@
       "cta": "Katalog ansehen"
     },
     "line": {
-      "bundle": "Fertiges Paket",
+      "bundle": "Genusspaket",
       "unknown": "Nicht mehr im Verkauf",
       "unit": "{variant} · {price}",
       "discounted": "Reduzierter Preis",
@@ -264,7 +264,7 @@
       "sheetTitle": "Gutscheincode",
       "field": "Gutscheincode",
       "placeholder": "Code eingeben",
-      "apply": "Anwenden",
+      "apply": "Einlösen",
       "empty": "Bitte zuerst einen Code eingeben.",
       "rejected": {
         "inactive": "Dieser Gutschein ist derzeit nicht aktiv.",

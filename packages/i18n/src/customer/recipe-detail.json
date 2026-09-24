@@ -70,11 +70,11 @@
       "steps": "ZUBEREITUNG"
     },
     "row": {
-      "add": "{name} in den Korb legen",
+      "add": "{name} in den Warenkorb legen",
       "open": "{name} öffnen",
       "soldOut": "Ausverkauft"
     },
-    "addAll": "Zutaten in den Korb",
+    "addAll": "Zutaten in den Warenkorb",
     "error": {
       "title": "Keine Verbindung",
       "body": "Prüfen Sie Ihre Internetverbindung. Sobald sie wieder da ist, geht es weiter.",

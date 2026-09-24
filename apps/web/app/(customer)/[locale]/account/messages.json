@@ -250,7 +250,7 @@
     "consentTitle": "Marketing-Kommunikation",
     "consentEmail": "E-Mail",
     "consentWhatsapp": "WhatsApp",
-    "consentNote": "Über einen deaktivierten Kanal geht keine Marketing-Kommunikation raus; Bestellbenachrichtigungen sind davon unabhängig.",
+    "consentNote": "Über einen deaktivierten Kanal senden wir keine Werbung; Bestellbenachrichtigungen sind davon nicht betroffen.",
     "dataTitle": "Ihre Daten",
     "dataBody": "Welche Daten wir speichern, steht in unserer Datenschutzerklärung. Ihr Konto und Ihre personenbezogenen Daten können Sie unten selbst löschen.",
     "dataLink": "Datenschutzerklärung →",
@@ -279,14 +279,14 @@
       "feedback_candidate": "Stimme für eine neue Sorte",
       "order": "Bestellung",
       "referral": "Geworbene Freundin oder Freund",
-      "neighbor": "Eingeladene Nachbarschaft",
+      "neighbor": "Nachbarn eingeladen",
       "visit": "Tagesbesuch",
       "redemption": "In Gutschein umgewandelt",
       "manual": "Manuelle Korrektur"
     },
     "pointsReasonReversed": {
       "referral": "Geworbene Freundin oder Freund — storniert",
-      "neighbor": "Eingeladene Nachbarschaft — storniert"
+      "neighbor": "Nachbarn eingeladen — storniert"
     },
     "pointsPendingTitle": "Punkte unterwegs",
     "pointsPendingRow": "{name} hat bestellt — {points} Punkte, sobald die Zahlung eingegangen ist.",

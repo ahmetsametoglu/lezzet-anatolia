@@ -73,7 +73,7 @@
     "card": {
       "addToCart": "Ajouter",
       "options": "Options →",
-      "priceFrom": "prix de départ — le format se choisit en détail",
+      "priceFrom": "prix de départ — format au choix sur la fiche produit",
       "offer": "Offre",
       "soldOut": "Épuisé — bientôt de retour"
     },
@@ -112,9 +112,9 @@
       "cta": "Zurück zum Katalog"
     },
     "card": {
-      "addToCart": "In den Korb",
+      "addToCart": "In den Warenkorb",
       "options": "Optionen →",
-      "priceFrom": "Startpreis — Größe wird im Detail gewählt",
+      "priceFrom": "Ab-Preis — Größe auf der Produktseite wählen",
       "offer": "Angebot",
       "soldOut": "Ausverkauft — bald wieder da"
     },

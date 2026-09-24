@@ -45,7 +45,7 @@
     "share": "Partager",
     "addToCart": "Ajouter le coffret",
     "assurance": {
-      "coldChain": "Livré en chaîne du froid",
+      "coldChain": "Chaîne du froid respectée",
       "doorstep": "Livraison à domicile en zone",
       "shippable": "Expédiable",
       "inRouteOnly": "Ce coffret est livré uniquement à Strasbourg et sa région — il ne peut pas être expédié."
@@ -63,8 +63,8 @@
     "contents": {
       "title": "Que contient le coffret ?",
       "subtitle": "{n} produits · touchez un produit pour voir sa fiche",
-      "qty": "{label} · {n} unité(s)",
-      "qtyPlain": "{n} unité(s)",
+      "qty": "{label} · × {n}",
+      "qtyPlain": "× {n}",
       "link": "Fiche produit →",
       "linkShort": "Fiche →",
       "legal": "La déclaration légale se fait par produit : ingrédients, allergènes et valeurs nutritionnelles figurent sur chaque fiche produit — accessibles depuis les cartes ci-dessus. La liste groupée des allergènes et la durée de consommation sont résumées dans la zone d'achat.",
@@ -75,14 +75,14 @@
   },
   "de": {
     "back": "← Pakete",
-    "eyebrow": "Fertiges Paket",
+    "eyebrow": "Genusspaket",
     "serves": "Für {n} Personen",
     "inStock": "● Auf Lager",
     "soldOut": "Ausverkauft — bald wieder",
     "share": "Teilen",
     "addToCart": "Paket in den Warenkorb",
     "assurance": {
-      "coldChain": "Kommt gekühlt",
+      "coldChain": "In der Kühlkette geliefert",
       "doorstep": "Lieferung bis an die Tür im Gebiet",
       "shippable": "Versandfähig",
       "inRouteOnly": "Dieses Paket wird nur in Straßburg und Umgebung geliefert — Versand ist nicht möglich."

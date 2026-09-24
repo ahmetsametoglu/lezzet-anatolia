@@ -37,7 +37,7 @@
     }
   },
   "fr": {
-    "title": "{n} article(s) ne peuvent pas être envoyés à cette adresse",
+    "title": "Articles non livrables à cette adresse : {n}",
     "reason": "Transportés en chaîne du froid ; ces articles sont livrés uniquement à Strasbourg et alentours.",
     "reasonHere": "Ces articles voyagent en chaîne du froid et ne sont pas en stock près de chez vous en ce moment ; ils ne peuvent pas non plus partir en colis.",
     "splitCta": "Garder pour plus tard et commander le reste",
@@ -79,7 +79,7 @@
     "reasonHere": "Diese Artikel werden in der Kühlkette transportiert und sind derzeit in Ihrer Region nicht vorrätig; per Versand können sie ebenfalls nicht gehen.",
     "splitCta": "Für später merken und Rest bestellen",
     "changeCta": "Lieferort ändern",
-    "noticeCta": "Benachrichtigen, wenn ihr hierher liefert",
+    "noticeCta": "Benachrichtigen, wenn Sie hierher liefern",
     "noticeCtaShort": "Benachrichtigen",
     "noticeCtaHere": "Benachrichtigen",
     "allBlocked": "Ihr Warenkorb besteht nur aus diesen Artikeln — es bleibt nichts zum Bestellen. Sie können den Lieferort ändern oder sich vormerken lassen.",

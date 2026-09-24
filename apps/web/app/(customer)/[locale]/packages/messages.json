@@ -34,7 +34,7 @@
   },
   "fr": {
     "title": "Coffrets prêts",
-    "heroTitle": "Nous dressons la table, vous n'avez qu'à servir",
+    "heroTitle": "Nous garnissons la table, vous n'avez plus qu'à inviter",
     "heroBody": "Une fête, un petit-déjeuner ou un dîner nombreux — nos coffrets arrivent à prix unique, contenu connu. Une table complète, sans avoir à choisir.",
     "subtitle": "Des tables composées à prix unique — contenu connu, aucun choix à faire.",
     "promise": {
@@ -66,8 +66,8 @@
     "soldOutShort": "Épuisé"
   },
   "de": {
-    "title": "Fertige Pakete",
-    "heroTitle": "Wir decken den Tisch, Sie bitten zu Tisch",
+    "title": "Genusspakete",
+    "heroTitle": "Wir sorgen für den gedeckten Tisch, Sie laden ein",
     "heroBody": "Ob Fest, Frühstück oder ein Abend mit vielen Gästen — unsere Pakete kommen zum Festpreis, der Inhalt steht fest. Ein voller Tisch, ganz ohne Auswählen.",
     "subtitle": "Zusammengestellte Tafeln zum Festpreis — Inhalt bekannt, keine Auswahl nötig.",
     "promise": {
@@ -92,7 +92,7 @@
       "cta": "Katalog ansehen"
     },
     "empty": {
-      "title": "Derzeit keine fertigen Pakete",
+      "title": "Derzeit keine Genusspakete",
       "body": "Neue Pakete sind in Vorbereitung. Bis dahin stellen Sie Ihre Tafel im Katalog zusammen.",
       "cta": "Zum Katalog"
     },

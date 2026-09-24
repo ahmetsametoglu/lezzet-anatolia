@@ -101,7 +101,7 @@
     "header": {
       "points": "✦ {n}",
       "pointsLabel": "Vos {n} points — aller au compte",
-      "wholesale": "GROS",
+      "wholesale": "PRO",
       "notifications": "Notifications",
       "notificationsUnread": "Notifications, {n} non lues",
       "location": "{postal} ▾",
@@ -149,7 +149,7 @@
     },
     "recipes": {
       "eyebrow": "Idées de table",
-      "title": "Comment dresser cette table ?",
+      "title": "Comment composer ce repas ?",
       "meta": "{n} ingrédients · Voir la recette ›",
       "moreTitle": "Toutes les recettes",
       "moreAction": "Tout voir",
@@ -233,26 +233,26 @@
       "withMinimum": "ab {minimum}: {value}"
     },
     "featured": {
-      "eyebrow": "Im Schaufenster",
+      "eyebrow": "Unsere Auswahl",
       "title": "Die Auswahl der Woche",
       "allCatalog": "Ganzer Katalog",
       "allCatalogLabel": "Ganzen Katalog öffnen"
     },
     "recipes": {
       "eyebrow": "Ideen für den Tisch",
-      "title": "Wie deckt man diesen Tisch?",
+      "title": "Was kommt heute auf den Tisch?",
       "meta": "{n} Zutaten · Rezept ansehen ›",
       "moreTitle": "Alle Rezepte",
       "moreAction": "Alle ansehen",
       "moreLabel": "Alle Rezepte ansehen"
     },
     "packages": {
-      "eyebrow": "Fertige Pakete",
-      "badge": "FERTIGES PAKET · {n} Sorten",
+      "eyebrow": "Genusspakete",
+      "badge": "GENUSSPAKET · {n} Sorten",
       "soldOut": "Ausverkauft"
     },
     "discover": {
-      "title": "Entdecken — stimmen Sie zuerst ab ✦",
+      "title": "Entdecken — stimmen Sie als Erste über neue Sorten ab ✦",
       "body": "Ihre Bewertungen lenken unsere Auswahl — eine abgeschlossene Runde bringt Punkte.",
       "guestBody": "Ihre Vorlieben bestimmen unser nächstes Sortiment — melden Sie sich an, dann bringt jede Runde auch Punkte."
     },

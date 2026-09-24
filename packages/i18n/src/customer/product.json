@@ -191,7 +191,7 @@
     "accordion": {
       "ingredients": "Zutaten & Allergene",
       "allergens": "Allergene: {list}",
-      "traces": "Wird im selben Betrieb verarbeitet wie {list}.",
+      "traces": "Hergestellt in einem Betrieb, der auch {list} verarbeitet.",
       "nutrition": "Nährwerte & Nettogewicht",
       "per100": "pro 100 g: {rows}",
       "netQuantity": "Nettofüllmenge: {quantity}",
@@ -212,7 +212,7 @@
     },
     "related": "Das könnte Ihnen auch schmecken",
     "cta": {
-      "add": "In den Korb",
+      "add": "In den Warenkorb",
       "closed": "Dieses Produkt ist derzeit nicht im Verkauf"
     },
     "stepper": {

@@ -183,15 +183,15 @@
       "delivery": "Livraison à domicile offerte à Strasbourg et alentours · expédition partout en France — hors produits en chaîne du froid",
       "repeatTitle": "Reprenez votre dernière commande",
       "repeatCta": "Tout remettre au panier",
-      "repeatItems": "{n} article(s)",
-      "skipped": "{n} article(s) indisponible(s) — non ajouté(s).",
+      "repeatItems": "Articles : {n}",
+      "skipped": "Articles indisponibles non ajoutés : {n}.",
       "packagesChip": "Coffrets",
       "showcaseTitle": "Les préférés de la semaine",
       "showcaseAll": "Voir tout →",
       "card": {
         "addToCart": "Ajouter",
         "options": "Options →",
-        "priceFrom": "prix de départ — le format se choisit en détail",
+        "priceFrom": "prix de départ — format au choix sur la fiche produit",
         "offer": "Offre",
         "soldOut": "Épuisé — bientôt de retour"
       }
@@ -245,7 +245,7 @@
       "discountSplit": "La remise s’applique à chaque commande au prorata de ses articles."
     },
     "placeChange": {
-      "title": "{n} article(s) ont changé avec votre nouveau lieu",
+      "title": "Articles modifiés par votre nouveau lieu de livraison : {n}",
       "toShipping": "{name} passe en envoi colis",
       "toRoute": "{name} passe en livraison à domicile",
       "noDelivery": "{name} ne peut pas être livré à cette adresse pour le moment",
@@ -321,10 +321,10 @@
     "empty": {
       "title": "Ihr Warenkorb ist leer",
       "titleEmptied": "Ihr Warenkorb wurde geleert",
-      "body": "Die Aromen Anatoliens warten auf Sie. Sehen Sie sich den Katalog an oder wählen Sie ein fertiges Paket — um den Rest kümmern wir uns.",
-      "bodyShort": "Die Aromen Anatoliens warten auf Sie — Katalog ansehen oder ein fertiges Paket wählen.",
+      "body": "Die Aromen Anatoliens warten auf Sie. Sehen Sie sich den Katalog an oder wählen Sie ein Genusspaket — um den Rest kümmern wir uns.",
+      "bodyShort": "Die Aromen Anatoliens warten auf Sie — Katalog ansehen oder ein Genusspaket wählen.",
       "cta": "Katalog ansehen",
-      "packagesCta": "Fertige Pakete ansehen",
+      "packagesCta": "Genusspakete ansehen",
       "delivery": "Lieferung an die Haustür in Straßburg und Umgebung kostenlos · Versand in ganz Frankreich — ausgenommen Kühlkettenprodukte",
       "repeatTitle": "Letzte Bestellung wiederholen",
       "repeatCta": "Alles in den Warenkorb",
@@ -334,9 +334,9 @@
       "showcaseTitle": "Diese Woche besonders beliebt",
       "showcaseAll": "Alle ansehen →",
       "card": {
-        "addToCart": "In den Korb",
+        "addToCart": "In den Warenkorb",
         "options": "Optionen →",
-        "priceFrom": "Startpreis — Größe wird im Detail gewählt",
+        "priceFrom": "Ab-Preis — Größe auf der Produktseite wählen",
         "offer": "Angebot",
         "soldOut": "Ausverkauft — bald wieder da"
       }

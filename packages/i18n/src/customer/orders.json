@@ -151,7 +151,7 @@
       "itemsEyebrow": "Contenu de la commande",
       "line": "{quantity}× {name}",
       "bundlePill": "Coffret · {count} produits",
-      "shortfallLine": "{missing} non livré(s)",
+      "shortfallLine": "Non livrés : {missing}",
       "subtotal": "Sous-total",
       "discount": "Remise",
       "shipping": "Frais de livraison",
