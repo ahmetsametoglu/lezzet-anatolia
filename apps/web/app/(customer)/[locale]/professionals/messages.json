@@ -104,15 +104,15 @@
   "fr": {
     "meta": {
       "title": "Professionnels — approvisionnement en gros pour restaurants et épiceries",
-      "description": "Produits turcs pour restaurants, épiceries et cafés. Inscrivez-vous en une minute avec votre SIRET ; vos tarifs de gros s'ouvrent après validation."
+      "description": "Produits turcs pour restaurants, épiceries et cafés. Inscrivez-vous en une minute avec votre SIRET ; vos tarifs professionnels sont activés dès la validation."
     },
     "hero": {
       "eyebrow": "Pour restaurants & épiceries",
-      "title": "Le fournisseur turc de votre cuisine",
+      "title": "Votre fournisseur de spécialités turques",
       "benefits": [
-        "Tarifs de gros — ouverts après validation",
-        "Livraisons régulières dans la zone, avec notre propre camion frigorifique",
-        "Commandes en volume + recommande en un clic",
+        "Tarifs professionnels — activés dès la validation",
+        "Livraisons régulières dans notre zone, avec notre propre camion réfrigéré",
+        "Commandes en volume + réassort en un clic",
         "Commande et contact direct par WhatsApp"
       ],
       "cta": "Faire une demande",
@@ -130,7 +130,7 @@
       },
       {
         "title": "Commande en gros",
-        "body": "Vos tarifs s'ouvrent ; vous commandez par le canal de votre choix."
+        "body": "Vos tarifs professionnels sont activés ; vous commandez par le canal de votre choix."
       }
     ],
     "form": {
@@ -141,7 +141,7 @@
       "fetch": "Rechercher",
       "fetching": "Recherche…",
       "found": "Informations du registre officiel — vérifiez-les",
-      "legalNameLabel": "Dénomination",
+      "legalNameLabel": "Dénomination sociale",
       "addressLabel": "Adresse",
       "activityLabel": "Activité",
       "activityUnknown": "Non précisée",
@@ -176,7 +176,7 @@
       "body": "La plupart des collaborations commencent par une conversation. Écrivez-nous :",
       "whatsapp": "WhatsApp : {phone}",
       "noticeLead": "En attendant la validation, vous pouvez parcourir le catalogue aux prix de détail.",
-      "noticeStrong": "Vos tarifs de gros s'ouvrent avec la validation."
+      "noticeStrong": "Vos tarifs professionnels sont activés dès la validation."
     },
     "sent": {
       "eyebrow": "Demande envoyée",
@@ -186,10 +186,10 @@
     },
     "status": {
       "pending": "Votre demande est à l'étude — réponse par e-mail.",
-      "approved": "Validée ! Vos tarifs de gros sont ouverts.",
+      "approved": "Validée ! Vos tarifs professionnels sont désormais actifs.",
       "rejected": "Votre demande n'a pas pu être validée pour le moment — vous pouvez continuer vos achats avec votre compte. Vous pouvez aussi corriger vos informations et renvoyer la demande."
     },
-    "rejectReasonTitle": "Note d'examen",
+    "rejectReasonTitle": "Commentaire de notre équipe",
     "translation": {
       "badge": "traduit automatiquement"
     },

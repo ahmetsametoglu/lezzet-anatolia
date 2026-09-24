@@ -66,24 +66,24 @@
     },
     "denied": {
       "title": "Le programme de points n'est pas ouvert aux comptes professionnels",
-      "body": "Votre compte entreprise bénéficie déjà de tarifs dédiés."
+      "body": "Votre compte professionnel bénéficie déjà de tarifs dédiés."
     },
     "count": "{n} mouvements",
     "tailRetry": "Charger la suite",
     "reason": {
       "review": "Avis produit",
-      "feedback_purchase": "Évaluation de commande",
+      "feedback_purchase": "Évaluation d'un produit",
       "feedback_candidate": "Vote nouvelle saveur",
       "order": "Points de commande",
       "referral": "Ami parrainé",
-      "neighbor": "Invitation voisin",
+      "neighbor": "Invitation entre voisins",
       "visit": "Visite du jour",
       "redemption": "Converti en bon",
       "manual": "Ajustement manuel"
     },
     "reasonReverted": {
       "referral": "Ami parrainé — annulé",
-      "neighbor": "Invitation voisin — annulée"
+      "neighbor": "Invitation entre voisins — annulée"
     },
     "pending": {
       "title": "Points en attente",

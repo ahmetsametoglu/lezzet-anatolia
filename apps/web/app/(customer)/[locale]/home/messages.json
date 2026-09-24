@@ -117,12 +117,12 @@
       "addToCart": "Ajouter",
       "options": "Options →",
       "details": "Détails",
-      "offer": "Offre",
+      "offer": "Bon plan",
       "soldOut": "Épuisé — bientôt de retour"
     },
     "packages": {
       "eyebrow": "Coffrets",
-      "title": "Des tables composées à prix unique",
+      "title": "Des coffrets pour toute la tablée, à prix unique",
       "all": "Tous les coffrets →",
       "badge": "Coffret",
       "items": "{n} produits",
@@ -131,10 +131,10 @@
     },
     "recipes": {
       "eyebrow": "Idées de table",
-      "title": "Comment composer ce repas ?",
+      "title": "Comment composer votre repas ?",
       "all": "Toutes les recettes →",
       "items": "{n} produits",
-      "pantry": "{n} de chez vous",
+      "pantry": "{n} de votre cuisine",
       "soldOutShort": "Ingrédients indisponibles",
       "cta": "Ajouter les ingrédients →"
     },

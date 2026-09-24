@@ -75,8 +75,8 @@
       "addToCart": "Ajouter",
       "options": "Options →",
       "details": "Détails",
-      "priceFrom": "prix de départ — format au choix sur la fiche produit",
-      "offer": "Offre",
+      "priceFrom": "à partir de ce prix — format au choix sur la fiche produit",
+      "offer": "Bon plan",
       "soldOut": "Épuisé — bientôt de retour"
     },
     "onlyShippable": "Livrable chez moi",

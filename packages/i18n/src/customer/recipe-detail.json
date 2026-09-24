@@ -35,7 +35,7 @@
     "addAllToast": "{n} ingrédients ajoutés au panier ✓",
     "eyebrow": "IDÉES DE TABLE",
     "sections": {
-      "ours": "INGRÉDIENTS — DE CHEZ NOUS",
+      "ours": "INGRÉDIENTS — À COMMANDER",
       "pantry": "DE VOTRE CUISINE",
       "steps": "PRÉPARATION"
     },
@@ -47,7 +47,7 @@
     "addAll": "Ajouter les ingrédients au panier",
     "error": {
       "title": "Connexion impossible",
-      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez où vous en étiez.",
+      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez là où vous en étiez.",
       "retry": "Réessayer"
     },
     "notFound": {

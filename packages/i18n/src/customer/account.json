@@ -168,7 +168,7 @@
       "emailPlaceholder": "E-mail",
       "phoneLabel": "Téléphone",
       "phonePlaceholder": "Téléphone (WhatsApp)",
-      "phoneNote": "Ce numéro est proposé lors de l'ajout d'une adresse. Pour WhatsApp, utilisez la carte WhatsApp de votre compte.",
+      "phoneNote": "Ce numéro est proposé lors de l'ajout d'une adresse. Pour WhatsApp, utilisez la rubrique WhatsApp de votre compte.",
       "save": "Enregistrer",
       "saved": "Profil mis à jour ✓",
       "errors": {
@@ -284,10 +284,10 @@
       "title": "Communications commerciales",
       "email": "E-mail",
       "whatsapp": "WhatsApp",
-      "note": "Désactivé, vous ne recevez aucune communication commerciale. Les notifications de commande ne sont pas concernées.",
+      "note": "Lorsque ce réglage est désactivé, vous ne recevez aucune communication commerciale. Les notifications de commande ne sont pas concernées.",
       "zone": {
         "title": "Vous êtes hors de notre zone",
-        "body": "Pour {place}, nous ne pouvons afficher que les produits expédiables. Souhaitez-vous que nous ouvrions la livraison par notre véhicule réfrigéré ici ? Votre demande compte dans le choix des prochaines zones — et nous vous préviendrons par e-mail à l’ouverture.",
+        "body": "Pour {place}, nous ne pouvons afficher que les produits expédiables. Souhaitez-vous que nous ouvrions la livraison par notre camion réfrigéré ici ? Votre demande compte dans le choix des prochaines zones — et nous vous préviendrons par e-mail à l’ouverture.",
         "cta": "Je veux la livraison ici",
         "done": "Demande enregistrée — nous vous préviendrons à l’ouverture ✓",
         "sent": "Demande enregistrée ✓"

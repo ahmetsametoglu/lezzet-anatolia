@@ -18,10 +18,10 @@
   "fr": {
     "title": "Recettes",
     "eyebrow": "Idées de table",
-    "heroTitle": "Comment composer ce repas ?",
+    "heroTitle": "Comment composer votre repas ?",
     "heroBody": "Petites recettes, grandes tablées : chaque recette raconte comment utiliser nos produits — ajoutez les ingrédients au panier en un geste, le reste se passe au four.",
     "items": "{n} produits",
-    "pantry": "+ {n} ingrédients maison",
+    "pantry": "+ {n} de votre cuisine",
     "soldOut": "Ingrédients indisponibles pour le moment",
     "soldOutShort": "Indisponible",
     "cta": "Voir la recette",

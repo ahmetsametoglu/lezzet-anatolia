@@ -113,8 +113,8 @@
       "on_the_way": "En route",
       "delivered": "Livrée",
       "cancelled": "Annulée",
-      "returning": "En retour",
-      "ready_for_pickup": "Prête au retrait"
+      "returning": "Retour en cours",
+      "ready_for_pickup": "Prête pour le retrait"
     },
     "guest": {
       "title": "Connectez-vous pour voir vos commandes",
@@ -140,11 +140,11 @@
     "list": {
       "loading": "Chargement…",
       "end": "Toutes vos commandes sont affichées.",
-      "tailRetry": "La suite n'est pas arrivée — réessayer"
+      "tailRetry": "Impossible de charger la suite — réessayer"
     },
     "detail": {
       "notFound": "Commande introuvable",
-      "notFoundBody": "Le lien est peut-être périmé. Ouvrez-la depuis votre liste de commandes.",
+      "notFoundBody": "Le lien est peut-être périmé. Ouvrez la commande depuis votre liste de commandes.",
       "notFoundCta": "Mes commandes",
       "tracking": "Livreur en route",
       "trackingLive": "Livreur en route",
@@ -158,7 +158,7 @@
       "shippingFree": "Offerte",
       "delivery": "Livraison",
       "deliveryRoute": "Livraison à domicile",
-      "deliveryShipping": "Par colis",
+      "deliveryShipping": "Expédition par transporteur",
       "address": "Adresse",
       "payment": "Paiement",
       "total": "Total",
@@ -180,9 +180,9 @@
         "online": "Payé en ligne",
         "door": "À régler à la livraison",
         "pickup": "À régler à l’entrepôt",
-        "paidOnHandover": "Payé à la remise",
+        "paidOnHandover": "Payé à la réception",
         "transfer": "Virement en attente",
-        "credit": "Paiement à terme",
+        "credit": "Paiement différé",
         "refunded": "Remboursé"
       },
       "milestone": {

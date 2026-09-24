@@ -60,7 +60,7 @@
   "fr": {
     "shipMark": "📦 Envoyé par transporteur",
     "awayMark": "Indisponible dans votre zone",
-    "lineBlocked": "Produit chaîne du froid —\nnon livrable à cette adresse",
+    "lineBlocked": "Produit sous chaîne du froid —\nnon livrable à cette adresse",
     "cardBlocked": "Non livrable ici",
     "placeNotice": {
       "title": "Notre camion ne dessert pas cette zone",

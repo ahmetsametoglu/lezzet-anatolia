@@ -42,15 +42,15 @@
     }
   },
   "fr": {
-    "header": "Coffret prêt",
+    "header": "Coffret",
     "back": "Retour",
     "addedToast": "Coffret ajouté au panier ✓",
     "share": "Partager",
-    "priceSuffix": "prix du coffret complet · TVA incluse",
+    "priceSuffix": "prix du coffret complet · TTC",
     "gallery": {
       "photo": "Photo du coffret {n} / {total}"
     },
-    "noShip": "Uniquement livraison à domicile en zone locale — pas d'expédition",
+    "noShip": "Uniquement livraison à domicile dans notre zone — pas d'expédition",
     "badge": {
       "soldOut": "Épuisé"
     },
@@ -71,7 +71,7 @@
     },
     "error": {
       "title": "Connexion impossible",
-      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez où vous en étiez.",
+      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez là où vous en étiez.",
       "retry": "Réessayer"
     },
     "notFound": {

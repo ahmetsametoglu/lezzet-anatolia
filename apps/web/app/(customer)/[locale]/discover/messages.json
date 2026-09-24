@@ -60,7 +60,7 @@
     "points": "+{points} points",
     "like": "J'aime",
     "dislike": "Passer",
-    "guestInvite": "Connectez-vous et vos avis vous rapportent des points",
+    "guestInvite": "Connectez-vous et vos avis vous rapporteront des points",
     "guestInviteCta": "Se connecter",
     "progress": "{index}/{total} saveurs",
     "guestChip": "Connectez-vous pour gagner des points",
@@ -79,13 +79,13 @@
     "done": {
       "title": "Vous avez tout évalué !",
       "earned": "+{points} points gagnés",
-      "body": "Vos avis ont rejoint notre choix de produits. De nouvelles saveurs arriveront ici.",
+      "body": "Vos avis comptent dans le choix de nos prochains produits. De nouvelles saveurs arriveront ici.",
       "catalog": "Voir le catalogue",
       "balance": "Mon solde de points →"
     },
     "guestDone": {
       "title": "Merci pour vos avis !",
-      "body": "Vos avis ont rejoint notre choix de produits. Si vous le souhaitez, ouvrez un compte et nous y créditons les {points} points ({money}) accumulés.",
+      "body": "Vos avis comptent dans le choix de nos prochains produits. Si vous le souhaitez, créez un compte et nous y créditerons les {points} points ({money}) accumulés.",
       "cta": "Ouvrir un compte et récupérer les points",
       "catalog": "Voir le catalogue"
     },
@@ -98,7 +98,7 @@
     "errors": {
       "unexpected": "Une erreur est survenue. Merci de réessayer.",
       "session_expired": "Votre session a expiré. Reconnectez-vous.",
-      "swipe_failed": "Cette carte n'a pas pu être enregistrée."
+      "swipe_failed": "Votre vote n'a pas pu être enregistré."
     }
   },
   "de": {

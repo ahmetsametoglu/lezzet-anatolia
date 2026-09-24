@@ -30,7 +30,7 @@
   },
   "fr": {
     "back": "Retour",
-    "title": "Invitation",
+    "title": "Parrainage",
     "loading": "Ouverture de l'invitation",
     "errorBody": "Impossible d'ouvrir l'invitation. Vérifiez votre connexion et réessayez.",
     "retry": "Réessayer",
@@ -53,7 +53,7 @@
     },
     "unknown": {
       "title": "Nous ne reconnaissons pas ce lien",
-      "body": "Le lien a peut-être été copié partiellement. Entrez quand même : le catalogue se visite sans invitation.",
+      "body": "Le lien a peut-être été copié partiellement. Bienvenue tout de même : le catalogue est ouvert à tous.",
       "primary": "Voir le catalogue"
     }
   },

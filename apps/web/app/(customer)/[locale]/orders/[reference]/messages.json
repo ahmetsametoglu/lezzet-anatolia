@@ -62,7 +62,7 @@
       "prepared": "Préparée",
       "on_the_way": "En route",
       "delivered": "Livrée",
-      "ready_for_pickup": "Prête au retrait"
+      "ready_for_pickup": "Prête pour le retrait"
     },
     "lineFormula": "{qty} × {unit} = ",
     "bundlePill": "Coffret · {count} produits",
@@ -75,13 +75,13 @@
       "online": "Payé en ligne",
       "door": "À régler à la livraison",
       "pickup": "À régler à l’entrepôt",
-      "paidOnHandover": "Payé à la remise",
+      "paidOnHandover": "Payé à la réception",
       "transfer": "Virement en attente",
-      "credit": "Paiement à terme",
+      "credit": "Paiement différé",
       "refunded": "Remboursé"
     },
     "routeLine": "Livraison à domicile",
-    "shippingLine": "Par colis",
+    "shippingLine": "Expédition par transporteur",
     "trackingLabel": "N° de suivi",
     "trackingCta": "Suivre mon colis",
     "carrier": {

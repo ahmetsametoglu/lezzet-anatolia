@@ -46,12 +46,12 @@
       "feedback_purchase": "Évaluez vos produits après la commande",
       "feedback_candidate": "Votez pour les nouvelles saveurs dans Découverte",
       "referral": "Parrainez un ami — dès sa première commande",
-      "neighbor": "Invitez un voisin sur votre tournée — dès que sa commande est payée",
-      "visit": "Passez nous voir chaque jour"
+      "neighbor": "Invitez un voisin le jour de votre livraison — dès que sa commande est payée",
+      "visit": "Revenez chaque jour"
     },
     "reason": {
       "review": "Avis sur un produit",
-      "feedback_purchase": "J’aime sur un produit",
+      "feedback_purchase": "Évaluation d’un produit",
       "feedback_candidate": "Vote pour une nouvelle saveur",
       "order": "Commande",
       "referral": "Ami parrainé",

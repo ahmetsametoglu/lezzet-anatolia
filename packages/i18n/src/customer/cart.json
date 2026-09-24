@@ -128,7 +128,7 @@
       "cta": "Parcourir le catalogue"
     },
     "line": {
-      "bundle": "Coffret prêt",
+      "bundle": "Coffret",
       "unknown": "Produit retiré de la vente",
       "unit": "{variant} · {price}",
       "discounted": "Prix remisé",
@@ -145,23 +145,23 @@
     },
     "group": {
       "local": "Livraison à domicile",
-      "shipping": "Envoi par transporteur",
+      "shipping": "Expédition par transporteur",
       "undeliverable": "Non livrables à cette adresse",
-      "split": "Ce panier donnera deux commandes distinctes : les articles livrés à votre porte et ceux envoyés par transporteur se règlent séparément. La commande transporteur n'est pas obligatoire — sinon ces articles restent dans votre panier.",
-      "routeTotal": "Total à domicile : {amount}",
+      "split": "Ce panier donnera deux commandes distinctes : les articles livrés à votre porte et ceux expédiés par transporteur se règlent séparément. La commande expédiée est facultative : si vous ne la passez pas, ces articles restent dans votre panier.",
+      "routeTotal": "Total livraison à domicile : {amount}",
       "routeNote": "Livraison offerte · paiement à la livraison possible",
-      "shippingTotal": "Total en colis : {amount}",
+      "shippingTotal": "Total expédition : {amount}",
       "shippingFee": "{items} + livraison {fee}",
       "shippingFeeFree": "{items} · livraison offerte",
       "shippingRemaining": "encore {amount} et la livraison est offerte",
       "shippingPayment": "paiement en ligne uniquement",
-      "shippingCta": "Commander les articles en colis séparément",
+      "shippingCta": "Commander séparément les articles expédiés",
       "shippingRow": "Livraison",
       "free": "Offerte"
     },
     "undeliverable": {
       "title": "Certains articles ne peuvent pas être livrés à {place}",
-      "body": "Les produits sous chaîne du froid partent uniquement dans notre véhicule réfrigéré, et {place} est hors de notre tournée. Avec une adresse dans la zone, ils rejoindront votre commande.",
+      "body": "Les produits sous chaîne du froid voyagent uniquement dans notre camion réfrigéré, et {place} est hors de notre zone de livraison. Avec une adresse dans la zone, ils rejoindront votre commande.",
       "change": "Changer de code postal",
       "changeAddress": "Changer d’adresse de livraison"
     },
@@ -227,7 +227,7 @@
     },
     "placeChange": {
       "title": "Articles modifiés par votre nouveau lieu de livraison : {n}",
-      "toShipping": "{name} passe en envoi colis",
+      "toShipping": "{name} sera expédié par transporteur",
       "toRoute": "{name} passe en livraison à domicile",
       "noDelivery": "{name} ne peut pas être livré à cette adresse pour le moment",
       "unavailable": "{name} n'est pas disponible à votre nouveau lieu pour le moment",

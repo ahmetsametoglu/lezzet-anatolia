@@ -21,7 +21,7 @@
     "notFound": {
       "eyebrow": "404 · Page introuvable",
       "title": "La page que vous cherchez n'est pas au menu",
-      "description": "Le lien est peut-être obsolète ou mal orthographié. Notre catalogue est bien là — continuez ici.",
+      "description": "Le lien est peut-être obsolète ou mal saisi. Notre catalogue est bien là — continuez ici.",
       "primaryCta": "Retour au catalogue"
     },
     "serverError": {

@@ -152,7 +152,7 @@
       "missingCta": "Choisir une adresse dans le panier",
       "change": "Modifier",
       "inCartNote": "L'adresse a été choisie dans le panier — ici, vous confirmez seulement.",
-      "pickupTitle": "Vous retirerez à l'entrepôt",
+      "pickupTitle": "Vous retirerez votre commande à l'entrepôt",
       "pickupNote": "Appelez l'entrepôt pour convenir de l'heure : {phone}",
       "billing": "Adresse de facturation : {address}"
     },
@@ -160,8 +160,8 @@
       "step": "2",
       "title": "Jour de livraison",
       "route": "Livraison à domicile · offerte",
-      "routeBody": "Votre adresse est dans notre zone — notre véhicule vous livre en main propre.",
-      "shipping": "Envoi postal",
+      "routeBody": "Votre adresse est dans notre zone de livraison — notre camion réfrigéré vous livre jusqu'à votre porte.",
+      "shipping": "Expédition",
       "shippingBody": "Cette adresse est hors de notre zone — la livraison à domicile n'est pas possible, la commande part par transporteur.",
       "shippingDays": "2 à 4 jours ouvrés après préparation",
       "single": "Chez vous le {date}",
@@ -169,7 +169,7 @@
       "blocked": "Nous ne pouvons pas envoyer les articles en chaîne du froid à cette adresse. Retournez au panier pour les garder pour plus tard, ou changez d'adresse.",
       "shippingFee": "{fee}",
       "shippingFree": "Offerte au-delà de {threshold}.",
-      "shippingScope": "Uniquement les articles expédiables. Les produits en chaîne du froid ne partent pas en colis.",
+      "shippingScope": "Uniquement les articles expédiables. Les produits sous chaîne du froid ne peuvent pas être expédiés.",
       "pickup": "Retrait à l’entrepôt · offert",
       "pickupBody": "Nous vous prévenons dès que la commande est prête ; vous convenez de l’heure du retrait avec l’entrepôt par téléphone.",
       "pickupPhone": "Pour convenir de l’heure : {phone}",
@@ -182,12 +182,12 @@
       "cardBody": "Vos données de carte sont chiffrées par Stripe",
       "cod": "Payer à la livraison",
       "codBody": "Espèces ou carte",
-      "credit": "Sur compte",
-      "creditBody": "Paiement différé — sur facture",
+      "credit": "Paiement différé",
+      "creditBody": "Réglé sur facture, à échéance",
       "codBlocked": {
         "over_limit": "Le paiement à la livraison n'est pas disponible au-delà de ce montant.",
         "customer_blocked": "Le paiement à la livraison est désactivé sur votre compte.",
-        "shipping": "Le paiement à la livraison n'existe que pour les adresses que nous livrons nous-mêmes."
+        "shipping": "Le paiement à la livraison n'est possible que pour les livraisons effectuées par notre camion."
       },
       "cashWarning": "La loi interdit l'encaissement en espèces à ce montant — réglez par carte à la livraison.",
       "consent": "Je souhaite recevoir les offres et nouveautés par e-mail",
@@ -204,10 +204,10 @@
       "submit": "Confirmer la commande",
       "terms": "En confirmant, vous acceptez les conditions de vente.",
       "termsLink": "Lire les conditions générales de vente",
-      "coldChain": "Votre commande arrive chez vous le {date}, chaîne du froid préservée.",
+      "coldChain": "Votre commande arrive chez vous le {date}, chaîne du froid respectée.",
       "minBasket": "Minimum de commande pour {place} : {min} — ajoutez encore {missing} au sous-total.",
       "packageSuffix": "(coffret)",
-      "blockedTotal": "Le total sera définitif une fois les articles non livrables réglés ci-dessus.",
+      "blockedTotal": "Le total sera définitif une fois votre choix fait ci-dessus pour les articles non livrables.",
       "cartUnreachable": "Votre panier n’a pas pu être chargé. Actualisez la page et réessayez."
     },
     "pay": {
@@ -227,11 +227,11 @@
       "payment_not_allowed": "Ce moyen de paiement n'est pas disponible.",
       "insufficient_stock": "Un article vient d'être épuisé. Vérifiez votre panier.",
       "insufficient_stock_named": "Pendant que vous étiez sur cette page, la quantité restante a baissé : {detail}. Le nombre entre parenthèses est ce qu'il nous reste — corrigez votre panier et réessayez.",
-      "provider_unavailable": "Le prestataire de paiement est injoignable. Vous pouvez choisir le paiement à la livraison.",
+      "provider_unavailable": "Le paiement en ligne est momentanément indisponible. Vous pouvez choisir le paiement à la livraison.",
       "stale": "Cette commande est déjà en cours de traitement.",
       "customer_not_found": "Votre compte n'a pas pu être identifié, reconnectez-vous.",
       "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer.",
-      "warehouse_unresolved": "Nous n'avons pas pu déterminer le point de livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter.",
+      "warehouse_unresolved": "Nous n'avons pas pu organiser la livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter.",
       "price_changed": "Certains prix ont changé pendant que vous étiez sur cette page : {detail}. Nous tenions à vous le montrer avant de valider — si cela vous convient, appuyez à nouveau sur « Finaliser la commande ».",
       "cart_changed": "Votre panier a changé pendant que vous étiez sur cette page — la commande n'a pas été passée. Le récapitulatif est à jour ; si cela vous convient, appuyez à nouveau sur « Finaliser la commande ».",
       "shipping_option_unavailable": "Le mode de livraison choisi n'est plus proposé pour ce panier. Merci de choisir à nouveau.",
@@ -240,8 +240,8 @@
       "pickup_warehouse_unavailable": "L’entrepôt choisi n’accepte pas le retrait pour le moment. Rechargez la page et choisissez à nouveau."
     },
     "eyebrow": "votre panier · commande",
-    "shippingEyebrow": "commande en colis · paiement séparé",
-    "shippingNote": "Ceci est une commande séparée pour les articles de votre panier envoyés en colis — vos articles livrés à domicile restent au panier. Les frais de livraison se calculent sur cette commande et le paiement se fait uniquement en ligne.",
+    "shippingEyebrow": "commande expédiée · paiement séparé",
+    "shippingNote": "Ceci est une commande séparée pour les articles de votre panier expédiés par transporteur — vos articles livrés à domicile restent dans le panier. Les frais de livraison se calculent sur cette commande et le paiement se fait uniquement en ligne.",
     "secure": "Stripe · 3D Secure · connexion chiffrée",
     "progress": {
       "cart": "Panier",
@@ -261,7 +261,7 @@
     },
     "addressCheck": {
       "foundElsewhere": "Nous avons trouvé cette adresse ici :",
-      "useIt": "Corriger",
+      "useIt": "Utiliser cette adresse",
       "keepMine": "Mon adresse est correcte",
       "streetOnly": "Nous n'avons pas pu vérifier le numéro. Si votre adresse est correcte, vous pouvez continuer.",
       "notFound": "Nous n'avons pas trouvé cette adresse. Pouvez-vous vérifier l'orthographe ?"

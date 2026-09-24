@@ -79,7 +79,7 @@
       "change": "Noktayı değiştir",
       "none": "Siparişi onaylamadan önce haritadan bir teslim noktası seçin.",
       "title": "Teslim noktası seçin",
-      "body": "Adresinize yakın noktalar, taşıyıcısı ve kargo ücretiyle. Noktaya dokunun, sonra seçin.",
+      "body": "Adresinize yakın noktalar, taşıyıcısı ve kargo ücretiyle. Bir nokta işaretleyin, sonra seçiminizi onaylayın.",
       "close": "Kapat",
       "loading": "Noktalar yükleniyor…",
       "empty": "Adresinizin çevresinde teslim noktası bulunamadı.",
@@ -94,7 +94,9 @@
         "servicepoint": "Dükkân",
         "locker": "Dolap",
         "post_office": "Postane"
-      }
+      },
+      "showList": "Listeyi göster · {count} nokta",
+      "listTitle": "Noktalar · en ucuz başta"
     },
     "payment": {
       "eyebrow": "Ödeme",
@@ -232,11 +234,11 @@
     "hero": "Presque fini — dressons la table",
     "signedIn": "✓ {name}",
     "signedInAnon": "✓ Vous continuez avec votre compte",
-    "meUnreadable": "Nous n'avons pas pu lire votre compte — vérifiez votre connexion et réessayez.",
+    "meUnreadable": "Nous n'avons pas pu charger vos informations — vérifiez votre connexion et réessayez.",
     "meRetry": "Réessayer",
     "guest": {
       "title": "Connectez-vous pour finaliser votre commande",
-      "body": "Pas de mot de passe — connectez-vous en quelques secondes et reprenez où vous en étiez.",
+      "body": "Pas de mot de passe — connectez-vous en quelques secondes et reprenez là où vous en étiez.",
       "cta": "Se connecter et continuer"
     },
     "state": {
@@ -248,15 +250,15 @@
       "eyebrow": "Adresse de livraison",
       "default": "par défaut",
       "add": "＋ Ajouter une adresse",
-      "empty": "Vous n'avez pas encore d'adresse enregistrée. Où livrons-nous ?",
+      "empty": "Vous n'avez pas encore d'adresse enregistrée. Où souhaitez-vous être livré ?",
       "emptyBody": "Ajoutez votre adresse ici — pas besoin de quitter votre commande.",
       "editHint": "Maintenez appuyé pour modifier",
-      "pickupOption": "Retirer à l'entrepôt",
+      "pickupOption": "Retrait à l'entrepôt",
       "billing": "Adresse de facturation : {address}"
     },
     "addressCheck": {
       "foundElsewhere": "Nous avons trouvé cette adresse ici :",
-      "useIt": "Corriger",
+      "useIt": "Utiliser cette adresse",
       "keepMine": "Mon adresse est correcte",
       "streetOnly": "Nous n'avons pas pu vérifier le numéro. Si votre adresse est correcte, vous pouvez continuer.",
       "notFound": "Nous n'avons pas trouvé cette adresse. Pouvez-vous vérifier l'orthographe ?"
@@ -271,10 +273,10 @@
       "door": "Livraison à domicile",
       "doorBody": "Avec notre camion réfrigéré — vous choisissez le jour. Livraison : {fee}",
       "doorUnavailable": "Cette adresse est hors de notre zone de livraison.",
-      "shippingInZone": "Les articles de cette commande ne sont pas livrés par notre véhicule ; ils partent par transporteur.",
-      "shipping": "Envoi par transporteur",
+      "shippingInZone": "Les articles de cette commande ne sont pas livrés par notre camion ; ils sont expédiés par transporteur.",
+      "shipping": "Expédition par transporteur",
       "shippingBody": "2–4 jours ouvrés. Livraison : {fee}",
-      "shippingUnavailable": "Cette adresse est dans notre zone — notre véhicule vous livre.",
+      "shippingUnavailable": "Cette adresse est dans notre zone de livraison — notre camion vous livre.",
       "dayLabel": "Jour de livraison : {day}",
       "neighborInvite": "{name} vous invite à la livraison du {day} — cette date est présélectionnée.",
       "neighborInviteOtherDay": "{name} vous invite à la livraison du {day}. Choisissez cette date pour être livrés ensemble et gagner des points.",
@@ -290,9 +292,9 @@
       "days": "sous {hours} h",
       "tracked": "suivi",
       "parcels": "{count} colis",
-      "off": "Les frais de port ont été calculés au tarif fixe — le prix en direct du transporteur n'a pas pu être obtenu pour cette commande.",
-      "unmeasured": "Les frais de port de cette commande sont calculés au tarif fixe.",
-      "none": "Aucune option de transporteur pour cette adresse — tarif fixe appliqué.",
+      "off": "Frais de livraison calculés selon notre tarif forfaitaire.",
+      "unmeasured": "Les frais de livraison de cette commande sont calculés selon notre tarif forfaitaire.",
+      "none": "Aucun transporteur ne propose d'offre pour cette adresse — frais calculés selon notre tarif forfaitaire.",
       "home": "Livraison à domicile",
       "point": "Point relais",
       "from": "À partir de {price}",
@@ -306,7 +308,7 @@
       "change": "Changer de point",
       "none": "Choisissez un point relais sur la carte avant de valider la commande.",
       "title": "Choisir un point relais",
-      "body": "Les points proches de votre adresse, avec transporteur et frais de livraison. Touchez un point, puis choisissez-le.",
+      "body": "Les points proches de votre adresse, avec transporteur et frais de livraison. Sélectionnez un point, puis confirmez votre choix.",
       "close": "Fermer",
       "loading": "Chargement des points…",
       "empty": "Aucun point relais trouvé autour de votre adresse.",
@@ -321,7 +323,9 @@
         "servicepoint": "Commerçant",
         "locker": "Consigne",
         "post_office": "Bureau de poste"
-      }
+      },
+      "showList": "Voir la liste · {count} points",
+      "listTitle": "Points · du moins cher au plus cher"
     },
     "payment": {
       "eyebrow": "Paiement",
@@ -331,12 +335,12 @@
       "onDeliveryBody": "Espèces ou carte.",
       "transfer": "Payer par virement",
       "transferBody": "Sur notre compte, avec facture.",
-      "credit": "Sur compte",
-      "creditBody": "Paiement différé — sur facture.",
+      "credit": "Paiement différé",
+      "creditBody": "Réglé sur facture, à échéance.",
       "codBlocked": {
         "over_limit": "Le paiement à la livraison n'est pas disponible au-delà de ce montant.",
         "customer_blocked": "Le paiement à la livraison est désactivé sur votre compte.",
-        "shipping": "Le paiement à la livraison n'existe que pour les adresses que nous livrons nous-mêmes."
+        "shipping": "Le paiement à la livraison n'est possible que pour les livraisons effectuées par notre camion."
       },
       "onlineRequired": "À ce montant, le paiement en ligne est requis.",
       "cashWarning": "La loi interdit l'encaissement en espèces à ce montant — réglez par carte à la livraison.",
@@ -355,7 +359,7 @@
       "total": "Total général",
       "undeliverableNote": "Les articles barrés ne sont pas livrables à ce code postal ; ils ne font pas partie de la commande ni du paiement."
     },
-    "marketing": "Je souhaite être informé(e) des offres et nouveautés par e-mail/WhatsApp. (Facultatif — sans effet sur votre commande.)",
+    "marketing": "Je souhaite être informé des offres et nouveautés par e-mail/WhatsApp. (Facultatif — sans effet sur votre commande.)",
     "contact": {
       "eyebrow": "Contact",
       "reason": "Nous avons besoin de votre nom et de votre numéro de téléphone pour vous contacter au sujet de votre commande et vous envoyer les notifications de livraison. Notre livreur vous joindra également à ce numéro.",
@@ -387,7 +391,7 @@
     "reject": {
       "transport": "La commande n'a pas pu être envoyée — vérifiez votre connexion et réessayez.",
       "session": "Votre session semble expirée. Reconnectez-vous.",
-      "warehouse_unresolved": "Nous n'avons pas pu déterminer le point de livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter.",
+      "warehouse_unresolved": "Nous n'avons pas pu organiser la livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter.",
       "empty_cart": "Votre panier semble vide.",
       "blocked_lines": "Certains articles ne sont plus disponibles : {detail}. Retournez au panier pour les retirer.",
       "insufficient_here": "Pour certains articles, la quantité demandée ne peut pas être livrée à cette adresse — le nombre entre parenthèses est le maximum possible actuellement : {detail}. Vous pouvez corriger depuis le panier.",
@@ -404,9 +408,9 @@
       "insufficient_stock_named": "Pendant que vous étiez sur cette page, la quantité restante a baissé : {detail}. Le nombre entre parenthèses est ce qu'il nous reste — corrigez votre panier et réessayez.",
       "payment_unavailable": {
         "stale": "Cette commande est déjà en cours de traitement.",
-        "not_found": "La session de paiement n'a pas pu être ouverte. Choisissez le paiement à la livraison ou réessayez dans un instant.",
-        "provider_unavailable": "Le prestataire de paiement est injoignable. Vous pouvez choisir le paiement à la livraison.",
-        "no_client_secret": "La session de paiement n'a pas pu être ouverte. Choisissez le paiement à la livraison ou réessayez dans un instant."
+        "not_found": "Le paiement en ligne n'a pas pu démarrer. Choisissez le paiement à la livraison ou réessayez dans un instant.",
+        "provider_unavailable": "Le paiement en ligne est momentanément indisponible. Vous pouvez choisir le paiement à la livraison.",
+        "no_client_secret": "Le paiement en ligne n'a pas pu démarrer. Choisissez le paiement à la livraison ou réessayez dans un instant."
       },
       "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer.",
       "shipping_option_unavailable": "Le mode de livraison choisi n'est plus proposé pour ce panier. Merci de choisir à nouveau.",
@@ -418,14 +422,14 @@
       "canceled": "Paiement interrompu — votre commande vous attend, réessayez quand vous voulez.",
       "configuration_missing": "Le paiement par carte est indisponible pour le moment. Vous pouvez choisir le paiement à la livraison.",
       "setup_failed": "La fenêtre de paiement n'a pas pu s'ouvrir. Réessayez ou choisissez un autre moyen de paiement.",
-      "timeout": "Le prestataire de paiement n'a pas répondu. Réessayez.",
+      "timeout": "Le service de paiement n'a pas répondu. Réessayez.",
       "declined": "Le paiement n'a pas abouti — aucun montant n'a été débité. Vérifiez vos informations et réessayez, ou payez autrement."
     },
     "confirmed": {
       "title": "Merci, commande reçue !",
       "reference": "N° de commande : {reference}",
       "delivery": "Livraison",
-      "shipping": "Envoi par transporteur",
+      "shipping": "Expédition par transporteur",
       "payment": "Paiement",
       "total": "Total",
       "unknown": "Indisponible pour le moment",
@@ -433,11 +437,11 @@
       "orders": "Voir mes commandes",
       "home": "Retour aux achats",
       "neighborTitle": "🚚 Invitez votre voisin pour ce jour-là",
-      "neighborBody": "Notre camion sera déjà dans votre rue ce jour-là. Si votre voisin commande pour la même date, vous serez livrés ensemble — et vous gagnez des points.",
+      "neighborBody": "Notre camion sera déjà dans votre rue ce jour-là. Si votre voisin commande pour la même date, vous serez livrés ensemble — et vous gagnerez des points.",
       "neighborShare": "Partager le lien d'invitation",
       "neighborRemaining": "Places encore disponibles sur cette invitation : {n} (maximum {max}).",
       "neighborFull": "Cette invitation est complète — {max} voisins y ont participé. Une nouvelle invitation s'ouvrira à votre prochaine commande.",
-      "neighborMessage": "Le camion Lezzet Anatolie passe dans notre rue — commande pour la date indiquée dans le lien et nous serons livrés ensemble : {url}",
+      "neighborMessage": "Le camion Lezzet Anatolie passe dans notre rue — commandez pour la date indiquée dans le lien et nous serons livrés ensemble : {url}",
       "pending": "Paiement en cours de validation",
       "pendingBody": "Nous attendons la confirmation de votre banque. Cela prend généralement quelques secondes et le résultat s'affiche sur cette page. Si vous la fermez, suivez-le dans Mes commandes ; nous vous écrirons aussi par e-mail dès que le paiement sera confirmé.",
       "paid": "Paiement reçu",
@@ -548,7 +552,9 @@
         "servicepoint": "Paketshop",
         "locker": "Paketstation",
         "post_office": "Postfiliale"
-      }
+      },
+      "showList": "Liste anzeigen · {count} Punkte",
+      "listTitle": "Punkte · günstigste zuerst"
     },
     "payment": {
       "eyebrow": "Zahlung",

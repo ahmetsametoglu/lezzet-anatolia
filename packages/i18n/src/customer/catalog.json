@@ -85,12 +85,12 @@
     },
     "error": {
       "title": "Connexion impossible",
-      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez où vous en étiez.",
+      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez là où vous en étiez.",
       "retry": "Réessayer"
     },
     "card": {
       "soldOut": "Épuisé",
-      "offer": "Offre",
+      "offer": "Bon plan",
       "options": "{n} options"
     },
     "cart": {

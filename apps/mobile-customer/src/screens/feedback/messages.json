@@ -48,7 +48,7 @@
   },
   "fr": {
     "back": "Retour",
-    "title": "Comment était votre commande ?",
+    "title": "Comment s'est passée votre commande ?",
     "progress": "{current} / {total}",
     "vote": {
       "eyebrow": "COMMENT ÉTAIT CE PRODUIT ?",
@@ -73,7 +73,7 @@
       "home": "Retour à la vitrine"
     },
     "already": {
-      "title": "Vous avez déjà complété cette évaluation",
+      "title": "Vous avez déjà répondu à cette évaluation",
       "body": "Merci ! Vos points ont déjà été ajoutés."
     },
     "notFound": {
@@ -83,7 +83,7 @@
     },
     "error": {
       "title": "Connexion impossible",
-      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez où vous en étiez.",
+      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez là où vous en étiez.",
       "retry": "Réessayer"
     },
     "errors": {

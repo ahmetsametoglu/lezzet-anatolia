@@ -96,11 +96,11 @@
     },
     "meta": {
       "perKg": "{price} / kg",
-      "vat": "TVA incluse",
+      "vat": "TTC",
       "was": "au lieu de {price}"
     },
     "limit": "À ce prix, {n} maximum",
-    "noShip": "Uniquement livraison à domicile en zone locale — pas d'expédition",
+    "noShip": "Uniquement livraison à domicile dans notre zone — pas d'expédition",
     "family": {
       "browse": "{name} — À DÉCOUVRIR",
       "current": "Vous consultez"
@@ -117,7 +117,7 @@
     "nutrition": {
       "energy": "Énergie",
       "fat": "Matières grasses",
-      "saturatedFat": "dont saturés",
+      "saturatedFat": "dont acides gras saturés",
       "carbohydrate": "Glucides",
       "sugars": "dont sucres",
       "protein": "Protéines",
@@ -150,7 +150,7 @@
     },
     "error": {
       "title": "Connexion impossible",
-      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez où vous en étiez.",
+      "body": "Vérifiez votre connexion internet. Dès qu'elle revient, vous reprenez là où vous en étiez.",
       "retry": "Réessayer"
     },
     "notFound": {
@@ -162,7 +162,7 @@
       "open": "Ouvrir le panier, {n} articles"
     },
     "card": {
-      "offer": "Offre"
+      "offer": "Bon plan"
     }
   },
   "de": {

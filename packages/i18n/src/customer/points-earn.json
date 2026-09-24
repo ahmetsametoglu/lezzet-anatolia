@@ -65,19 +65,19 @@
         "cta": "Mes commandes"
       },
       "visit": {
-        "title": "Passez nous voir chaque jour",
+        "title": "Revenez chaque jour",
         "cadence": "chaque jour",
         "claimedToday": "obtenu aujourd’hui",
         "body": "Une fois par jour, crédités sans rien avoir à faire."
       },
       "feedback_purchase": {
-        "title": "Aimez un produit reçu",
+        "title": "Évaluez un produit reçu",
         "cadence": "une fois par produit",
-        "body": "Pas le temps d'écrire ? Un simple j'aime suffit. Avec un avis écrit, vous gagnez les deux."
+        "body": "Pas le temps d'écrire ? Un simple « J'ai aimé » ou « Je n'ai pas aimé » suffit. Avec un avis écrit, vous gagnez les deux."
       },
       "feedback_candidate": {
         "title": "Votez pour les nouvelles saveurs",
-        "cadence": "par carte",
+        "cadence": "par vote",
         "body": "Aimez ou passez les nouvelles saveurs pas encore en vente.",
         "cta": "Découvrir"
       }

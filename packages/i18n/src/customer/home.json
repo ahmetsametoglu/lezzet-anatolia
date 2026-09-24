@@ -118,12 +118,12 @@
         "on_the_way": "en route",
         "delivered": "livrée",
         "cancelled": "annulée",
-        "returning": "en retour",
+        "returning": "en cours de retour",
         "ready_for_pickup": "prête au retrait"
       }
     },
     "lastOrder": {
-      "title": "Recommandez votre dernière commande",
+      "title": "Renouvelez votre dernière commande",
       "summary": "{reference} · {total}"
     },
     "offers": {
@@ -149,7 +149,7 @@
     },
     "recipes": {
       "eyebrow": "Idées de table",
-      "title": "Comment composer ce repas ?",
+      "title": "Comment composer votre repas ?",
       "meta": "{n} ingrédients · Voir la recette ›",
       "moreTitle": "Toutes les recettes",
       "moreAction": "Tout voir",
@@ -166,7 +166,7 @@
       "guestBody": "Vos goûts orientent nos prochaines nouveautés — connectez-vous et chaque tour terminé rapporte des points."
     },
     "professional": {
-      "title": "Vous êtes restaurant ou épicerie ?",
+      "title": "Vous êtes restaurateur ou commerçant ?",
       "body": "Ouvrez un compte professionnel pour les tarifs de gros."
     },
     "cart": {
@@ -174,11 +174,11 @@
     },
     "error": {
       "title": "Service momentanément indisponible",
-      "body": "Impossible de charger la vitrine. Vérifiez votre connexion — dès qu'elle revient, vous reprenez où vous en étiez.",
+      "body": "Impossible de charger la vitrine. Vérifiez votre connexion — dès qu'elle revient, vous reprenez là où vous en étiez.",
       "retry": "Réessayer"
     },
     "card": {
-      "offer": "Offre"
+      "offer": "Bon plan"
     }
   },
   "de": {

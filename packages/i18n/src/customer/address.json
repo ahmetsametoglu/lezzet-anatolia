@@ -20,7 +20,7 @@
     },
     "form": {
       "searchLabel": "Sokak ve kapı numarası",
-      "searchPlaceholderFR": "ör. 12 Rue des Orfèvres",
+      "searchPlaceholderFR": "ör. 12 rue des Orfèvres",
       "searchPlaceholderDE": "ör. Hauptstraße 12",
       "searchHint": "Öneriler için en az {n} karakter yazın.",
       "suggestLabel": "Adres önerileri",
@@ -77,11 +77,11 @@
     "errors": {
       "unexpected": "Une erreur est survenue. Réessayez ; si cela persiste, écrivez-nous.",
       "session_expired": "Votre session semble expirée. Reconnectez-vous.",
-      "pickup_unavailable": "Ce dépôt n'est pas disponible pour le retrait en ce moment."
+      "pickup_unavailable": "Cet entrepôt n'est pas ouvert au retrait pour le moment."
     },
     "form": {
       "searchLabel": "Rue et numéro",
-      "searchPlaceholderFR": "ex. 12 Rue des Orfèvres",
+      "searchPlaceholderFR": "ex. 12 rue des Orfèvres",
       "searchPlaceholderDE": "ex. Hauptstraße 12",
       "searchHint": "Saisissez au moins {n} caractères pour voir les suggestions.",
       "suggestLabel": "Suggestions d'adresses",
@@ -119,7 +119,7 @@
       "deleted": "Adresse supprimée",
       "saving": "Enregistrement…"
     },
-    "pickupOption": "Retirer à l'entrepôt"
+    "pickupOption": "Retrait à l'entrepôt"
   },
   "de": {
     "pickerTitle": "Lieferadresse",
@@ -142,7 +142,7 @@
     },
     "form": {
       "searchLabel": "Straße und Hausnummer",
-      "searchPlaceholderFR": "z. B. 12 Rue des Orfèvres",
+      "searchPlaceholderFR": "z. B. 12 rue des Orfèvres",
       "searchPlaceholderDE": "z. B. Hauptstraße 12",
       "searchHint": "Für Vorschläge mindestens {n} Zeichen eingeben.",
       "suggestLabel": "Adressvorschläge",

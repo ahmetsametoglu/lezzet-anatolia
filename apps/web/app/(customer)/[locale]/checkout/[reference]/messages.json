@@ -70,13 +70,13 @@
     "payment": {
       "paid": "Payé · {amount}",
       "due": "À payer à la livraison · {amount}",
-      "onAccount": "Porté au compte · {amount}",
+      "onAccount": "Paiement différé · {amount}",
       "online": "Paiement en ligne",
       "cod": "Paiement à la livraison",
-      "credit": "Différé",
-      "deliveryNoteBody": "Le récapitulatif, article par article, de ce que contient le colis vous est envoyé par e-mail après la préparation ; il se trouve aussi dans le colis. Ce n'est pas une facture ; si vous en souhaitez une, écrivez-nous.",
+      "credit": "Paiement différé",
+      "deliveryNoteBody": "Le bon de livraison détaille le contenu du colis article par article ; il vous est envoyé par e-mail après la préparation et se trouve aussi dans le colis. Ce n'est pas une facture ; si vous en souhaitez une, écrivez-nous.",
       "card": "Par carte",
-      "deliveryNote": "Télécharger le récapitulatif de livraison (PDF) ↓",
+      "deliveryNote": "Télécharger le bon de livraison (PDF) ↓",
       "deliveryNoteWhen": "Après la préparation de votre commande",
       "duePickup": "À régler à l'entrepôt · {amount}",
       "codPickup": "Paiement à l'entrepôt"
@@ -92,7 +92,7 @@
       "preparingAt": "La veille de la livraison",
       "onTheWayAt": "{date} au matin",
       "deliveredAt": "{date}",
-      "readyForPickup": "Prête à retirer"
+      "readyForPickup": "Prête pour le retrait"
     },
     "continue": "Continuer mes achats",
     "notFound": "Commande introuvable.",
@@ -105,7 +105,7 @@
     },
     "neighbor": {
       "title": "Invitez votre voisin à cette livraison",
-      "body": "Même jour, même véhicule : si votre voisin commande pour cette tournée, vous êtes livrés ensemble — et vous gagnez des points.",
+      "body": "Même jour, même camion : si votre voisin commande pour le même jour, vous serez livrés ensemble — et vous gagnerez des points.",
       "cta": "Copier le lien",
       "copied": "Lien copié",
       "remaining": "Places encore disponibles sur cette invitation : {n} (maximum {max}).",

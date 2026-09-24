@@ -33,16 +33,16 @@
       "passTitle": "Glissez à gauche",
       "passBody": "une autre fois",
       "likeTitle": "Glissez à droite",
-      "likeBody": "je le veux"
+      "likeBody": "j'en veux"
     },
     "stamp": {
-      "like": "Je le veux",
+      "like": "J'en veux !",
       "pass": "Une autre fois"
     },
     "likes": {
       "zero": "Aucun coup de cœur pour l'instant",
-      "one": "1 saveur aimée",
-      "other": "{count} saveurs aimées"
+      "one": "1 coup de cœur",
+      "other": "{count} coups de cœur"
     },
     "wanted": {
       "one": "1 personne l'a demandé",

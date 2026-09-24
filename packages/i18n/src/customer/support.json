@@ -147,7 +147,7 @@
       "open": "Ouvrir la demande « {type} »",
       "loading": "Chargement…",
       "end": "Toutes vos demandes sont affichées.",
-      "tailRetry": "La suite n'est pas arrivée — réessayer",
+      "tailRetry": "Impossible de charger la suite — réessayer",
       "empty": {
         "title": "Aucune demande pour l'instant",
         "body": "Une question ou un souci ? Écrivez-nous ici.",

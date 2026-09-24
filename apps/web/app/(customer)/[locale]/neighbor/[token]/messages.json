@@ -39,39 +39,39 @@
   },
   "fr": {
     "meta": {
-      "title": "Invitation voisin — Lezzet Anatolie",
-      "description": "Votre voisin vous invite à la même tournée de livraison. Commandez pour le même jour et recevez ensemble."
+      "title": "Invitation entre voisins — Lezzet Anatolie",
+      "description": "Votre voisin vous invite à vous faire livrer le même jour que lui. Commandez pour ce jour-là et soyez livrés ensemble."
     },
     "ok": {
-      "eyebrow": "Invitation voisin",
+      "eyebrow": "Invitation entre voisins",
       "title": "{name} vous invite à la livraison du {date}",
       "someone": "Votre voisin",
-      "description": "Même jour, même véhicule, même rue. Commandez pour cette tournée et vous serez livrés ensemble.",
-      "primary": "Commander pour cette tournée",
+      "description": "Même jour, même camion, même rue. Commandez pour ce jour-là et vous serez livrés ensemble.",
+      "primary": "Commander pour ce jour",
       "secondary": "Voir d'abord le catalogue"
     },
     "unknown": {
-      "eyebrow": "Invitation voisin",
+      "eyebrow": "Invitation entre voisins",
       "title": "Ce lien d'invitation n'est pas reconnu",
       "description": "Le lien a peut-être été copié en partie. Bienvenue tout de même — nos jours de livraison s'affichent au catalogue.",
       "primary": "Découvrir le catalogue"
     },
     "runClosed": {
-      "eyebrow": "Invitation voisin",
-      "title": "La tournée du {date} est déjà bouclée",
-      "description": "La livraison visée par cette invitation est close. Le prochain jour de livraison de votre secteur apparaît à l'étape de commande — vous pouvez continuer.",
+      "eyebrow": "Invitation entre voisins",
+      "title": "Trop tard pour la livraison du {date}",
+      "description": "La livraison visée par cette invitation est close. Le prochain jour de livraison dans votre zone apparaît à l'étape du paiement — vous pouvez continuer à commander.",
       "primary": "Découvrir le catalogue"
     },
     "full": {
-      "eyebrow": "Invitation voisin",
+      "eyebrow": "Invitation entre voisins",
       "title": "Cette invitation a atteint sa limite",
-      "description": "Le nombre de voisins invités pour la tournée du {date} est atteint. Vous pouvez tout de même commander ; le jour se choisit à l'étape de commande.",
+      "description": "Le nombre maximal de voisins invités pour la livraison du {date} est atteint. Vous pouvez tout de même commander ; vous choisirez le jour de livraison à l'étape du paiement.",
       "primary": "Découvrir le catalogue"
     },
     "self": {
-      "eyebrow": "Invitation voisin",
+      "eyebrow": "Invitation entre voisins",
       "title": "C'est votre lien d'invitation",
-      "description": "Le lien fonctionne. Envoyez-le à vos voisins : vos points arrivent dès que leur commande rejoint cette tournée.",
+      "description": "Le lien fonctionne. Envoyez-le à vos voisins : vos points arrivent dès qu'un voisin commande pour ce jour et règle sa commande.",
       "primary": "Retour à mes commandes"
     }
   },

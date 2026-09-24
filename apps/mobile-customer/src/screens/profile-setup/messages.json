@@ -35,23 +35,23 @@
     }
   },
   "fr": {
-    "step": "Étape {n} / {total}",
+    "step": "Étape {n} sur {total}",
     "back": "Retour",
     "next": "Continuer",
     "finish": "Terminer",
     "saving": "Enregistrement…",
-    "loading": "Lecture de votre profil…",
+    "loading": "Chargement de votre profil…",
     "doneToast": "Merci — votre profil est complet ✓",
     "name": {
       "kicker": "FAISONS CONNAISSANCE",
-      "title": "Votre nom et prénom",
+      "title": "Votre prénom et votre nom",
       "body": "Pour savoir pour qui nous préparons la commande : ce nom figure sur le bon de livraison et dans nos messages.",
       "field": "Nom et prénom",
       "placeholder": "Nom et prénom"
     },
     "address": {
       "kicker": "LIVRAISON",
-      "title": "Où livrons-nous ?",
+      "title": "Où souhaitez-vous être livré ?",
       "body": "Votre adresse détermine le jour et les frais de livraison. Sans elle, nous vous la demanderons au moment de commander.",
       "save": "Enregistrer et continuer",
       "later": "Je l'ajouterai plus tard"

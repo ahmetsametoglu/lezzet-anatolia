@@ -54,16 +54,16 @@
       "passTitle": "Glissez à gauche",
       "passBody": "une autre fois",
       "likeTitle": "Glissez à droite",
-      "likeBody": "je le veux"
+      "likeBody": "j'en veux"
     },
     "stamp": {
-      "like": "Je le veux",
+      "like": "J'en veux !",
       "pass": "Une autre fois"
     },
     "likes": {
       "zero": "Aucun coup de cœur pour l'instant",
-      "one": "1 saveur aimée",
-      "other": "{count} saveurs aimées"
+      "one": "1 coup de cœur",
+      "other": "{count} coups de cœur"
     },
     "vote": {
       "like": "J'aime",
@@ -73,7 +73,7 @@
     "done": {
       "title": "C'était tout — merci !",
       "body": "Vos avis orientent les saveurs que nous ferons venir. De nouvelles saveurs rempliront cette page.",
-      "loginHint": "Connectez-vous et vos tours de découverte vous rapportent des points.",
+      "loginHint": "Connectez-vous et vos tours de découverte vous rapporteront des points.",
       "loginCta": "Se connecter",
       "catalog": "Voir le catalogue"
     },

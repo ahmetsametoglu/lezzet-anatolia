@@ -35,14 +35,14 @@
   },
   "fr": {
     "back": "Retour",
-    "title": "Invitation voisin",
+    "title": "Invitation entre voisins",
     "loading": "Ouverture de l'invitation",
     "errorBody": "Impossible d'ouvrir l'invitation. Vérifiez votre connexion et réessayez.",
     "retry": "Réessayer",
     "ok": {
       "title": "{name} vous invite à la livraison du {day}",
       "someone": "Votre voisin",
-      "body": "Notre camion sera dans la rue de votre voisin ce jour-là. Commandez pour la même date et vous serez livrés ensemble — chaîne du froid préservée, jusqu'à votre porte.",
+      "body": "Notre camion sera dans la rue de votre voisin ce jour-là. Commandez pour la même date et vous serez livrés ensemble — chaîne du froid respectée, jusqu'à votre porte.",
       "primary": "Voir le catalogue",
       "secondary": "Créer mon compte"
     },
@@ -57,13 +57,13 @@
       "primary": "Voir le catalogue"
     },
     "full": {
-      "title": "Le nombre de voisins pour le {day} est atteint",
-      "body": "Cette invitation a atteint son nombre de voisins. Vous pouvez tout de même commander ; la date de livraison se choisit au moment du paiement.",
+      "title": "Invitation complète pour le {day}",
+      "body": "Le nombre maximal de voisins pour cette invitation est atteint. Vous pouvez tout de même commander ; vous choisirez la date de livraison au moment du paiement.",
       "primary": "Voir le catalogue"
     },
     "unknown": {
       "title": "Nous ne reconnaissons pas ce lien",
-      "body": "Le lien a peut-être été copié partiellement. Entrez quand même : le catalogue se visite sans invitation.",
+      "body": "Le lien a peut-être été copié partiellement. Bienvenue tout de même : le catalogue est ouvert à tous.",
       "primary": "Voir le catalogue"
     }
   },

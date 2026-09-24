@@ -25,7 +25,7 @@
     "fixedNote": "Paket bütün olarak satılır; içerik değiştirilemez. Ürünleri tek tek almak isterseniz kataloğa göz atın.",
     "contents": {
       "title": "Pakette neler var?",
-      "subtitle": "{n} ürün · her ürünün bilgisine dokunarak ulaşabilirsiniz",
+      "subtitle": "{n} ürün · her ürünün bilgisine tıklayarak ulaşabilirsiniz",
       "qty": "{label} · {n} adet",
       "qtyPlain": "{n} adet",
       "link": "Ürün bilgisi →",
@@ -38,7 +38,7 @@
   },
   "fr": {
     "back": "← Coffrets",
-    "eyebrow": "Coffret prêt",
+    "eyebrow": "Coffret",
     "serves": "Pour {n} personnes",
     "inStock": "● En stock",
     "soldOut": "Épuisé — bientôt de retour",
@@ -48,7 +48,7 @@
       "coldChain": "Chaîne du froid respectée",
       "doorstep": "Livraison à domicile en zone",
       "shippable": "Expédiable",
-      "inRouteOnly": "Ce coffret est livré uniquement à Strasbourg et sa région — il ne peut pas être expédié."
+      "inRouteOnly": "Ce coffret est livré uniquement à domicile, à Strasbourg et ses environs — il ne peut pas être expédié."
     },
     "facts": {
       "weight": "Poids net total",
@@ -62,7 +62,7 @@
     "fixedNote": "Le coffret est vendu tel quel ; son contenu ne peut pas être modifié. Pour acheter les produits séparément, parcourez le catalogue.",
     "contents": {
       "title": "Que contient le coffret ?",
-      "subtitle": "{n} produits · touchez un produit pour voir sa fiche",
+      "subtitle": "{n} produits · cliquez sur un produit pour voir sa fiche",
       "qty": "{label} · × {n}",
       "qtyPlain": "× {n}",
       "link": "Fiche produit →",

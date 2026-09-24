@@ -33,10 +33,10 @@
     "soldOutShort": "Tükendi"
   },
   "fr": {
-    "title": "Coffrets prêts",
+    "title": "Nos coffrets",
     "heroTitle": "Nous garnissons la table, vous n'avez plus qu'à inviter",
-    "heroBody": "Une fête, un petit-déjeuner ou un dîner nombreux — nos coffrets arrivent à prix unique, contenu connu. Une table complète, sans avoir à choisir.",
-    "subtitle": "Des tables composées à prix unique — contenu connu, aucun choix à faire.",
+    "heroBody": "Une fête, un petit-déjeuner ou un grand dîner — nos coffrets ont un prix unique et un contenu défini. Une table complète, sans avoir à choisir.",
+    "subtitle": "Des coffrets pour toute la tablée, à prix unique — contenu défini, rien à choisir.",
     "promise": {
       "coldChain": "Chaîne du froid",
       "shippable": "Coffrets expédiables",

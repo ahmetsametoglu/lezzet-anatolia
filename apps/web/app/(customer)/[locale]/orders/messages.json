@@ -66,7 +66,7 @@
       "delivered": "Livrée",
       "cancelled": "Annulée",
       "returning": "Retour en cours",
-      "ready_for_pickup": "● Prête au retrait"
+      "ready_for_pickup": "● Prête pour le retrait"
     },
     "empty": {
       "title": "Vous n'avez pas encore de commande",
@@ -80,7 +80,7 @@
       "none": "Aucun produit de cette commande n'est disponible actuellement.",
       "goToCart": "Aller au panier",
       "dismiss": "Fermer",
-      "note": "Les articles sont copiés aux prix actuels."
+      "note": "Les articles sont ajoutés au panier aux prix actuels."
     }
   },
   "de": {

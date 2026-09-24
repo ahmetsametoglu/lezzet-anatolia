@@ -24,6 +24,6 @@ test.describe('telefon paketleri — ziyaretçi', () => {
     await expect(page.locator('h1')).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Retour' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Partager' })).toBeVisible();
-    await expect(page.getByText('Coffret prêt', { exact: true })).toBeVisible();
+    await expect(page.getByText('Coffret', { exact: true })).toBeVisible();
   });
 });

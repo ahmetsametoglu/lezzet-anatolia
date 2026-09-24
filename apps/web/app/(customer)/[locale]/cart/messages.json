@@ -138,8 +138,8 @@
     "count": "{n} produits",
     "countOne": "1 produit",
     "blockedNotice": "Le stock d'un produit a changé — retirez l'article signalé pour continuer.",
-    "unitPrice": "unité {price}",
-    "offerBadge": "Offre",
+    "unitPrice": "{price} l'unité",
+    "offerBadge": "Bon plan",
     "limitReached": "{n} maximum à ce prix — vous avez atteint la limite",
     "placeCap": "Nous pouvons en apporter au maximum {n} à cette adresse pour le moment",
     "placeCapFix": "Réduire à {n}",
@@ -148,7 +148,7 @@
     "closed": "ce produit n'est plus en vente — retirez-le pour continuer",
     "closedBadge": "Plus en vente",
     "gone": "ce produit n'existe plus — retirez-le du panier",
-    "goneBadge": "Retiré",
+    "goneBadge": "Plus disponible",
     "remove": "Retirer du panier",
     "summary": "Récapitulatif",
     "singleRule": "Les remises ne se cumulent pas — nous avons appliqué la plus avantageuse pour vous.",
@@ -179,8 +179,8 @@
         "addToCart": "Ajouter",
         "options": "Options →",
         "details": "Détails",
-        "priceFrom": "prix de départ — format au choix sur la fiche produit",
-        "offer": "Offre",
+        "priceFrom": "à partir de ce prix — format au choix sur la fiche produit",
+        "offer": "Bon plan",
         "soldOut": "Épuisé — bientôt de retour"
       }
     },
@@ -216,15 +216,15 @@
     "group": {
       "routeTitle": "Livraison à domicile",
       "routeTitleDated": "Livraison à domicile · {date}",
-      "shippingTitle": "Envoi en colis",
-      "routeTotal": "Total à domicile : {amount}",
+      "shippingTitle": "Expédition par transporteur",
+      "routeTotal": "Total livraison à domicile : {amount}",
       "routeNote": "Livraison offerte · paiement à la livraison possible",
-      "shippingTotal": "Total en colis : {amount}",
+      "shippingTotal": "Total expédition : {amount}",
       "shippingFee": "{items} + livraison {fee}",
       "shippingFeeFree": "{items} · livraison offerte",
       "shippingRemaining": "encore {amount} et la livraison est offerte",
       "shippingPayment": "paiement en ligne uniquement",
-      "shippingCta": "Commander les articles en colis séparément",
+      "shippingCta": "Commander séparément les articles expédiés",
       "shippingCtaShort": "Commander séparément",
       "shippingFootnote": "Le seuil de livraison offerte se calcule sur ce total — les deux groupes ne s'additionnent pas. Cette seconde commande n'est pas obligatoire : sans elle, les articles restent au panier et votre commande à domicile n'est pas affectée.",
       "summaryScope": "Panier complet"
@@ -246,7 +246,7 @@
       "googleUnavailable": "La connexion Google n'a pas pu s'ouvrir.",
       "addressTitle": "Adresse de livraison",
       "addressBody": "Le panier et la commande se calculent pour cette adresse.",
-      "addressEmpty": "Où livrons-nous ? Une adresse de livraison est nécessaire pour commander.",
+      "addressEmpty": "Où souhaitez-vous être livré ? Une adresse de livraison est nécessaire pour commander.",
       "addressAdd": "+ Ajouter une adresse",
       "addressChange": "Changer",
       "addressEdit": "Modifier",
@@ -254,13 +254,13 @@
       "stripInRouteNoDate": "{place} — livraison à domicile, offerte",
       "stripShipping": "{place} — expédié par transporteur",
       "stripUnreachable": "{place} — livraison impossible à cette adresse pour le moment",
-      "pickupTitle": "Retirer à l'entrepôt",
+      "pickupTitle": "Retrait à l'entrepôt",
       "pickupNote": "Le panier et le paiement sont établis pour l'entrepôt {name} ; convenez de l'heure par téléphone."
     },
     "gate": {
       "login": "Connectez-vous pour continuer",
       "address": "Choisissez une adresse de livraison pour continuer",
-      "unreachable": "Nous ne livrons pas cette adresse pour le moment — choisissez une autre adresse de livraison"
+      "unreachable": "Nous ne pouvons pas livrer à cette adresse pour le moment — choisissez une autre adresse de livraison"
     }
   },
   "de": {

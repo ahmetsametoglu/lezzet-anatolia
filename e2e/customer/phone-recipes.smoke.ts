@@ -1,14 +1,11 @@
 import { expect, test } from '@playwright/test';
 
-/** Gezinme sözleşmesi `storefront.smoke.ts`teki gibi `domcontentloaded` — gerekçesi orada (04.08). */
+/** Gezinme sözleşmesi `storefront.smoke.ts`teki gibi `domcontentloaded` — gerekçesi orada. */
 const NAV = { waitUntil: 'domcontentloaded' as const };
 
 /**
- * TELEFON TARİFLERİ (08.58 · kullanıcı kararı 14.09) — native tarif listesinin ve tarif detayının web ikizi. Yalnız
- * `mobile-web` projesinde anlamlı: masaüstü aynı adreslerde v1 sayfalarını çizer.
- *
- * Seed'e bağlanmamak için tarif listeden seçilir (ilk kart). İddialar kaba: listede TEK `h1` (native'in başlığı) ve
- * geri düğmesi; detayda TEK `h1` (tarifin adı), kahramanın üstündeki geri düğmesi ve malzeme bölümünün üstbaşlığı.
+ * Telefon tarifleri — native tarif listesi ve detayının web ikizi; yalnız `mobile-web`de anlamlı, çünkü masaüstü aynı
+ * adreslerde kendi sayfasını çizer. Seed'e bağlanmamak için tarif listeden seçilir (ilk kart).
  */
 test.describe('telefon tarifleri — ziyaretçi', () => {
   test('liste ve detay native tarif ekranlarının düzeninde', async ({ page }) => {
@@ -27,6 +24,6 @@ test.describe('telefon tarifleri — ziyaretçi', () => {
 
     await expect(page.locator('h1')).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Retour' })).toBeVisible();
-    await expect(page.getByText('INGRÉDIENTS — DE CHEZ NOUS', { exact: true })).toBeVisible();
+    await expect(page.getByText('INGRÉDIENTS — À COMMANDER', { exact: true })).toBeVisible();
   });
 });

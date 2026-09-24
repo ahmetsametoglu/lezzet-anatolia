@@ -18,7 +18,7 @@
     },
     "tryCode": "Kendi posta kodumu deneyeyim",
     "tryCodeHint": "Posta kodunuzu girin, teslimat şeklini söyleyelim",
-    "closing": "Diğer bütün ürünleri {countries} genelinde her adrese kargoyla gönderiyoruz — listede olmasanız da alışveriş yapabilirsiniz.",
+    "closing": "Diğer bütün ürünleri {countries} adreslerine kargoyla gönderiyoruz — listede olmasanız da alışveriş yapabilirsiniz.",
     "closingNoShipping": "Diğer bütün ürünleri kargoyla da gönderiyoruz — listede olmasanız da alışveriş yapabilirsiniz."
   },
   "fr": {
@@ -30,7 +30,7 @@
       "FR": "France",
       "DE": "Allemagne"
     },
-    "and": " et ",
+    "and": " et en ",
     "loading": "Chargement",
     "errorBody": "Nous n'avons pas pu charger la liste des codes postaux. Vérifiez votre connexion et réessayez.",
     "retry": "Réessayer",
@@ -40,7 +40,7 @@
     },
     "tryCode": "Essayer mon code postal",
     "tryCodeHint": "Saisissez votre code postal, nous vous indiquons le mode de livraison",
-    "closing": "Tous les autres produits partent par transporteur, à n'importe quelle adresse en {countries} — vous pouvez commander même si vous n'êtes pas sur la liste.",
+    "closing": "Tous les autres produits sont expédiés par transporteur en {countries} — vous pouvez commander même si vous n'êtes pas sur la liste.",
     "closingNoShipping": "Tous les autres produits partent aussi par transporteur — vous pouvez commander même si vous n'êtes pas sur la liste."
   },
   "de": {
@@ -62,7 +62,7 @@
     },
     "tryCode": "Meine Postleitzahl ausprobieren",
     "tryCodeHint": "Geben Sie Ihre Postleitzahl ein, wir nennen Ihnen die Lieferart",
-    "closing": "Alle übrigen Produkte versenden wir an jede Adresse in {countries} — Sie können also auch bestellen, wenn Sie nicht auf der Liste stehen.",
+    "closing": "Alle übrigen Produkte versenden wir nach {countries} — Sie können also auch bestellen, wenn Sie nicht auf der Liste stehen.",
     "closingNoShipping": "Alle übrigen Produkte versenden wir auch per Paket — Sie können also auch bestellen, wenn Sie nicht auf der Liste stehen."
   }
 }

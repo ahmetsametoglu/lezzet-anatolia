@@ -123,7 +123,7 @@
           {
             "id": "donmus",
             "question": "Ürünler donmuş mu geliyor?",
-            "answer": "Donuk ürünlerimiz üreticisinden şoklanmış olarak gelir ve soğuk zincir bozulmadan kapınıza ulaşır. Soğuk zincir gerektiren ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz; bu ürünler kargoya verilemez. Diğer bütün ürünleri ise Fransa ve Almanya'daki her adrese kargoyla gönderiyoruz."
+            "answer": "Donuk ürünlerimiz üreticisinden şoklanmış olarak gelir ve soğuk zincir bozulmadan kapınıza ulaşır. Soğuk zincir gerektiren ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz; bu ürünler kargoya verilemez. Diğer bütün ürünleri ise Fransa ve Almanya'ya kargoyla gönderiyoruz."
           },
           {
             "id": "asgari-sepet",
@@ -167,8 +167,8 @@
               "app": "Uygulamanın ve e-postaların dilini nasıl değiştiririm?"
             },
             "answer": {
-              "web": "Sitenin üst şeridinden ya da hesap sayfanızdaki dil satırından değiştirebilirsiniz. Bildirim e-postalarınız da aynı dile geçer — siteyi Türkçe gezen birinin maillerinin Fransızca gelmesi anlamsız olurdu.",
-              "app": "Hesabım sayfasındaki dil satırından değiştirebilirsiniz. Bildirim e-postalarınız da aynı dile geçer — uygulamayı Türkçe kullanan birinin maillerinin Fransızca gelmesi anlamsız olurdu."
+              "web": "Sitenin üst şeridinden ya da hesap sayfanızdaki dil satırından değiştirebilirsiniz. Bildirim e-postalarınız da aynı dile geçer.",
+              "app": "Hesabım sayfasındaki dil satırından değiştirebilirsiniz. Bildirim e-postalarınız da aynı dile geçer."
             }
           }
         ],
@@ -545,13 +545,13 @@
     "pages": {
       "delivery": {
         "title": "Livraison et retours",
-        "updatedAt": "Dernière mise à jour : 1 juillet 2026",
+        "updatedAt": "Dernière mise à jour : 1er juillet 2026",
         "sections": [
           {
             "id": "bolge",
             "heading": "Notre zone de livraison",
             "paragraphs": [
-              "Nous livrons les adresses de Strasbourg et de ses environs avec notre propre véhicule frigorifique, jusqu'à votre porte. Vous voyez automatiquement, au moment de la commande, si votre adresse est dans la zone ; votre jour de livraison dépend du calendrier de votre secteur.",
+              "Nous livrons à Strasbourg et dans ses environs avec notre propre camion réfrigéré, jusqu'à votre porte. Vous voyez automatiquement, au moment de la commande, si votre adresse est dans la zone ; votre jour de livraison dépend du calendrier de votre secteur.",
               {
                 "web": "Vous pouvez changer votre code postal à tout moment dans le bandeau en haut du site. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement.",
                 "app": "Vous pouvez changer votre code postal à tout moment depuis le bouton de zone en haut de la vitrine. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement."
@@ -574,7 +574,7 @@
             "heading": "Expédition",
             "paragraphs": [
               "Une fois votre colis préparé, comptez 2 à 4 jours ouvrés en France comme en Allemagne.",
-              "Si votre panier contient à la fois des articles expédiables et des articles réservés au camion, il est scindé en deux : la livraison à domicile et l'expédition deviennent deux commandes et deux paiements distincts. Passer la commande expédiée n'est pas obligatoire — sinon ces articles restent dans votre panier.",
+              "Si votre panier contient à la fois des articles expédiables et des articles réservés au camion, il est scindé en deux : la livraison à domicile et l'expédition deviennent deux commandes et deux paiements distincts. Passer la commande expédiée est facultatif : si vous ne la passez pas, ces articles restent dans votre panier.",
               "Les frais d'expédition et le seuil de franco de port figurent ci-dessous, dans « Montants en vigueur » ; vous retrouvez les mêmes chiffres dans le panier, avant la validation."
             ],
             "bullets": []
@@ -584,7 +584,7 @@
             "heading": "Chaîne du froid",
             "paragraphs": [
               "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant ; la chaîne du froid n'est rompue ni dans notre entrepôt ni dans notre véhicule. À la réception, il vous suffit de les placer directement au congélateur. Les produits frais font partie de la même chaîne : la plage 0–4 °C est maintenue pendant tout le trajet, et à la réception ils vont au réfrigérateur.",
-              "Comme nous livrons ces produits nous-mêmes, le trajet est court. Les bords des produits peuvent tout de même être légèrement ramollis à la réception : c'est normal et sans effet sur la qualité. Si le contenu est entièrement décongelé, ne le congelez pas et signalez-le nous comme indiqué ci-dessous."
+              "Comme nous livrons ces produits nous-mêmes, le trajet est court. Les bords des produits peuvent tout de même être légèrement ramollis à la réception : c'est normal et sans effet sur la qualité. Si le contenu est entièrement décongelé, ne le recongelez pas et signalez-le-nous comme indiqué ci-dessous."
             ],
             "bullets": []
           },
@@ -592,7 +592,7 @@
             "id": "iade",
             "heading": "Conditions de retour",
             "paragraphs": [
-              "Pour les denrées alimentaires, le droit de rétractation général ne s'applique pas aux produits livrés et acceptés, en raison du risque de rupture de la chaîne du froid (exception des biens périssables, code de la consommation).",
+              "Pour les denrées alimentaires, le droit de rétractation général ne s'applique pas aux produits livrés et acceptés, en raison du risque de rupture de la chaîne du froid (exception des biens périssables, Code de la consommation).",
               "En revanche, nous vous remboursons ou réexpédions votre commande dans les cas suivants — le choix vous appartient :"
             ],
             "bullets": [
@@ -608,7 +608,7 @@
             "heading": "Comment et quand le remboursement est effectué",
             "paragraphs": [
               "Le remboursement est effectué sur le moyen de paiement utilisé. Si vous avez payé par carte, le montant est recrédité sur votre carte ; selon votre banque, quelques jours ouvrés peuvent être nécessaires avant qu'il apparaisse sur votre compte.",
-              "Si vous avez choisi le paiement à la livraison et que vous n'avez pas encore payé, il n'y a pas de remboursement : le montant de l'article manquant est déjà déduit de la somme réclamée à la livraison.",
+              "Si vous avez choisi le paiement à la livraison et que vous n'avez pas encore payé, il n'y a rien à rembourser : le montant de l'article manquant est déjà déduit de la somme réclamée à la livraison.",
               "Vous pouvez ouvrir une demande depuis la rubrique « Assistance » ; en sélectionnant votre commande et les articles concernés dans le formulaire, nous savons directement ce qui manque ou ce qui est abîmé."
             ],
             "bullets": []
@@ -630,7 +630,7 @@
             "DE": "Allemagne"
           },
           "unavailable": "Vous retrouvez les frais d'expédition, le seuil de franco de port et le montant minimum en vigueur dans votre panier et à l'étape du paiement.",
-          "note": "Ces montants constituent la règle générale pour les achats particuliers et correspondent à ce que le système applique aujourd'hui ; s'ils changent, cette page change avec eux. Certaines zones et les comptes professionnels peuvent relever d'un seuil différent — le montant qui vous est appliqué est toujours affiché dans votre panier."
+          "note": "Ces montants constituent la règle générale pour les achats particuliers et correspondent aux montants actuellement appliqués ; s'ils changent, cette page change avec eux. Certaines zones et les comptes professionnels peuvent relever d'un seuil différent — le montant qui vous est appliqué est toujours affiché dans votre panier."
         },
         "notice": {
           "text": "Vous ne trouvez pas la réponse à votre question ici ?",
@@ -648,13 +648,13 @@
       },
       "faq": {
         "title": "Questions fréquentes",
-        "updatedAt": "Dernière mise à jour : 1 juillet 2026",
+        "updatedAt": "Dernière mise à jour : 1er juillet 2026",
         "sections": [],
         "questions": [
           {
             "id": "donmus",
             "question": "Les produits arrivent-ils surgelés ?",
-            "answer": "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant et arrivent chez vous sans rupture de la chaîne du froid. Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison ; ils ne peuvent pas partir en colis. Tous les autres produits, eux, partent par transporteur partout en France et en Allemagne."
+            "answer": "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant et arrivent chez vous sans rupture de la chaîne du froid. Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison ; ils ne peuvent pas partir en colis. Tous les autres produits, eux, sont expédiés par transporteur en France et en Allemagne."
           },
           {
             "id": "asgari-sepet",
@@ -664,7 +664,7 @@
           {
             "id": "teslimat-gunu",
             "question": "Quand ma commande arrive-t-elle ?",
-            "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, comptez 2 à 4 jours ouvrés en France une fois le colis préparé comme en Allemagne. Vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail aux étapes clés (confirmation, départ, livraison)."
+            "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, comptez 2 à 4 jours ouvrés en France comme en Allemagne une fois le colis préparé. Vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail aux étapes clés (confirmation, départ, livraison)."
           },
           {
             "id": "kapida-odeme",
@@ -689,7 +689,7 @@
           {
             "id": "hesap-gerekli",
             "question": "Dois-je créer un compte pour commander ?",
-            "answer": "Vous n'avez pas besoin de créer un mot de passe : remplissez votre panier et finalisez la commande avec votre adresse e-mail — en saisissant le code que nous vous envoyons, votre compte est ouvert en arrière-plan et votre commande y est rattachée. Vos commandes, vos adresses et vos points y sont conservés : vous ne ressaisissez plus votre adresse et vous pouvez relancer une commande passée en un clic depuis « Mes commandes »."
+            "answer": "Vous n'avez pas besoin de créer un mot de passe : remplissez votre panier et finalisez la commande avec votre adresse e-mail — en saisissant le code que nous vous envoyons, votre compte est créé automatiquement et votre commande y est rattachée. Vos commandes, vos adresses et vos points y sont conservés : vous ne ressaisissez plus votre adresse et vous pouvez relancer une commande passée en un clic depuis « Mes commandes »."
           },
           {
             "id": "dil",
@@ -698,8 +698,8 @@
               "app": "Comment changer la langue de l'application et des e-mails ?"
             },
             "answer": {
-              "web": "Depuis le bandeau en haut du site ou depuis la ligne « Langue » de votre compte. Vos e-mails de notification passent dans la même langue — il serait absurde que quelqu'un qui navigue en français reçoive ses messages en turc.",
-              "app": "Depuis la ligne « Langue » de votre compte. Vos e-mails de notification passent dans la même langue — il serait absurde que quelqu'un qui utilise l'application en français reçoive ses messages en turc."
+              "web": "Depuis le bandeau en haut du site ou depuis la ligne « Langue » de votre compte. Vos e-mails de notification vous parviennent dans la même langue.",
+              "app": "Depuis la ligne « Langue » de votre compte. Vos e-mails de notification vous parviennent dans la même langue."
             }
           }
         ],
@@ -750,7 +750,7 @@
             "paragraphs": [
               "Sans votre nom et votre adresse, une commande ne peut pas être livrée ; sans votre adresse e-mail, nous ne pouvons pas vous informer de l'état de votre commande. Ces données sont traitées pour l'exécution du contrat.",
               "Vos messages sont traités à l'aide de l'intelligence artificielle : ils sont traduits pour que nous puissions vous répondre dans votre langue, les messages vocaux sont transcrits et la réponse est préparée avec l'aide de l'intelligence artificielle.",
-              "Les messages promotionnels ne sont envoyés que si vous y avez expressément consenti, et vous pouvez retirer ce consentement à tout moment. Le consentement n'est pas enregistré comme un simple indicateur mais avec la date et l'origine — c'est la preuve que nous pouvons produire si le consentement est contesté.",
+              "Les messages promotionnels ne sont envoyés que si vous y avez expressément consenti, et vous pouvez retirer ce consentement à tout moment. Nous conservons la date et l'origine de votre consentement, afin de pouvoir en apporter la preuve.",
               "Pour la comptabilité et nos obligations légales, nous sommes tenus de conserver les enregistrements de commande et de paiement ; ceux-ci ne dépendent pas du consentement."
             ],
             "bullets": []
@@ -803,7 +803,7 @@
             "id": "haklariniz",
             "heading": "Vos droits",
             "paragraphs": [
-              "Au titre du RGPD (UE 2016/679), vous disposez des droits suivants. Pour les exercer, il vous suffit d'écrire à {email} ; une réponse vous est apportée dans un délai maximal d'un mois."
+              "Au titre du RGPD (règlement (UE) 2016/679), vous disposez des droits suivants. Pour les exercer, il vous suffit d'écrire à {email} ; une réponse vous est apportée dans un délai maximal d'un mois."
             ],
             "bullets": [
               "Accéder à vos données et en demander une copie",
@@ -859,7 +859,7 @@
       },
       "sales": {
         "title": "Conditions générales de vente",
-        "updatedAt": "Dernière mise à jour : 1 juillet 2026",
+        "updatedAt": "Dernière mise à jour : 1er juillet 2026",
         "sections": [
           {
             "id": "kapsam",
@@ -882,9 +882,9 @@
           },
           {
             "id": "siparis",
-            "heading": "Formation de la commande",
+            "heading": "Formation du contrat",
             "paragraphs": [
-              "La commande est formée lorsque vous validez votre panier et finalisez l'étape de paiement — si vous avez choisi le paiement à la livraison, il vous suffit de confirmer le moyen de paiement à cette étape. Dès l'affichage de la page de confirmation et la réception de votre e-mail de confirmation, la commande est également acceptée par nos soins.",
+              "Le contrat est conclu lorsque vous validez votre panier et finalisez l'étape de paiement — si vous avez choisi le paiement à la livraison, il vous suffit de confirmer le moyen de paiement à cette étape. Dès l'affichage de la page de confirmation et la réception de votre e-mail de confirmation, la commande est également acceptée par nos soins.",
               "Le prix de votre panier devient définitif au moment où vous passez commande. Si le prix d'un article augmente pendant qu'il est dans votre panier, nous vous montrons le nouveau prix et vous demandons de le confirmer avant la commande ; s'il baisse, le prix le plus bas s'applique. Une fois la commande passée, son montant ne change plus, même si le prix du catalogue évolue.",
               "Si un article s'avère indisponible après coup, votre commande n'est pas annulée : l'article manquant est retiré, son montant n'est pas encaissé ou vous est remboursé, et vous en êtes informé."
             ],
@@ -926,7 +926,7 @@
             "id": "cayma",
             "heading": "Droit de rétractation",
             "paragraphs": [
-              "Conformément au code de la consommation (art. L221-28), le droit de rétractation de 14 jours applicable à la vente à distance NE S'APPLIQUE PAS aux denrées alimentaires susceptibles de se détériorer rapidement.",
+              "Conformément au Code de la consommation (art. L221-28), le droit de rétractation de 14 jours applicable à la vente à distance NE S'APPLIQUE PAS aux denrées alimentaires susceptibles de se détériorer rapidement.",
               "Cela ne supprime pas vos droits en cas de livraison non conforme : en cas d'article manquant, endommagé, décongelé ou erroné, le montant est remboursé ou le produit réexpédié. Les conditions et les délais sont précisés sur la page livraison et retours."
             ],
             "bullets": []
@@ -975,7 +975,7 @@
       },
       "terms": {
         "title": "Mentions légales",
-        "updatedAt": "Dernière mise à jour : 1 juillet 2026",
+        "updatedAt": "Dernière mise à jour : 1er juillet 2026",
         "sections": [
           {
             "id": "isletme",
@@ -1021,7 +1021,7 @@
             "id": "fikri-mulkiyet",
             "heading": "Propriété intellectuelle",
             "paragraphs": [
-              "Les textes, photographies de produits, le logo et les éléments graphiques de ce site appartiennent à l'éditeur et sont protégés par le code de la propriété intellectuelle.",
+              "Les textes, photographies de produits, le logo et les éléments graphiques de ce site appartiennent à l'éditeur et sont protégés par le Code de la propriété intellectuelle.",
               "Toute reproduction, publication ou exploitation commerciale, totale ou partielle, sans autorisation est interdite. La consultation et l'impression dans un cadre privé et non commercial restent libres."
             ],
             "bullets": []
@@ -1185,7 +1185,7 @@
           {
             "id": "donmus",
             "question": "Kommen die Produkte gefroren an?",
-            "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an. Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug an Adressen in unserem Liefergebiet; sie können nicht als Paket verschickt werden. Alle übrigen Produkte versenden wir dagegen an jede Adresse in Frankreich und Deutschland."
+            "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an. Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug an Adressen in unserem Liefergebiet; sie können nicht als Paket verschickt werden. Alle übrigen Produkte versenden wir dagegen nach Frankreich und Deutschland."
           },
           {
             "id": "asgari-sepet",
@@ -1229,8 +1229,8 @@
               "app": "Wie ändere ich die Sprache der App und der E-Mails?"
             },
             "answer": {
-              "web": "Oben auf der Seite oder über die Zeile „Sprache“ in Ihrem Konto. Ihre Benachrichtigungs-E-Mails wechseln in dieselbe Sprache — es wäre unsinnig, wenn jemand die Seite auf Deutsch nutzt und seine Nachrichten auf Französisch bekommt.",
-              "app": "Über die Zeile „Sprache“ in Ihrem Konto. Ihre Benachrichtigungs-E-Mails wechseln in dieselbe Sprache — es wäre unsinnig, wenn jemand die App auf Deutsch nutzt und seine Nachrichten auf Französisch bekommt."
+              "web": "Oben auf der Seite oder über die Zeile „Sprache“ in Ihrem Konto. Ihre Benachrichtigungs-E-Mails wechseln in dieselbe Sprache.",
+              "app": "Über die Zeile „Sprache“ in Ihrem Konto. Ihre Benachrichtigungs-E-Mails wechseln in dieselbe Sprache."
             }
           }
         ],

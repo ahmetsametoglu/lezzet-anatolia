@@ -129,14 +129,14 @@
     "soldOut": "Épuisé — bientôt de retour",
     "chooseSize": "Choisissez le format",
     "addToCart": "Ajouter au panier",
-    "offer": "Offre",
+    "offer": "Bon plan",
     "limit": "{n} maximum",
     "closed": "Ce produit n'est pas en vente actuellement",
     "assurance": {
       "coldChain": "Chaîne du froid respectée",
       "doorstep": "Livraison à domicile dans la zone",
       "shippable": "Expédiable",
-      "notShippable": "Uniquement livraison à domicile à Strasbourg & environs — ce produit ne peut pas être expédié.",
+      "notShippable": "Uniquement livraison à domicile à Strasbourg et ses environs — ce produit ne peut pas être expédié.",
       "coldChainShort": "Chaîne du froid",
       "doorstepShort": "Livraison à domicile",
       "seeShippable": "Voir des produits expédiables",
@@ -150,12 +150,12 @@
       "netQuantity": "Quantité nette : {quantity}",
       "storage": "Conservation et préparation",
       "title": "Fiche produit",
-      "note": "mentions légales"
+      "note": "informations réglementaires"
     },
     "nutrition": {
       "energy": "Énergie",
       "fat": "Matières grasses",
-      "fatSat": "Matières grasses (dont saturés)",
+      "fatSat": "Matières grasses (dont acides gras saturés)",
       "saturated": "Acides gras saturés",
       "carbohydrate": "Glucides",
       "carbSugar": "Glucides (dont sucres)",
@@ -215,8 +215,8 @@
       "addToCart": "Ajouter",
       "options": "Options →",
       "details": "Détails",
-      "priceFrom": "prix de départ — format au choix sur la fiche produit",
-      "offer": "Offre",
+      "priceFrom": "à partir de ce prix — format au choix sur la fiche produit",
+      "offer": "Bon plan",
       "soldOut": "Épuisé — bientôt de retour"
     },
     "errors": {
@@ -242,7 +242,7 @@
     "similarAll": "Tout le catalogue →",
     "ai": {
       "title": "Posez la question à une IA",
-      "note": "La réponse appartient à un tiers ; pour les allergènes, la conservation et les valeurs nutritionnelles, la fiche ci-dessus fait foi."
+      "note": "La réponse est générée par un service tiers ; pour les allergènes, la conservation et les valeurs nutritionnelles, seule la fiche ci-dessus fait foi."
     }
   },
   "de": {

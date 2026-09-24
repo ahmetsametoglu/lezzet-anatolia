@@ -46,7 +46,7 @@
       },
       "shipping": {
         "title": "Diğer bütün ürünler: kargoyla",
-        "body": "Diğer ürünlerin hepsini Fransa ve Almanya'daki her adrese kargoyla gönderiyoruz — teslimat bölgemizde olun ya da olmayın."
+        "body": "Diğer ürünlerin hepsini Fransa ve Almanya'ya kargoyla gönderiyoruz — teslimat bölgemizde olun ya da olmayın."
       },
       "note": "Posta kodunuzu bu yüzden soruyoruz: her ürünün yanında size nasıl ulaşacağını yazabilelim diye."
     },
@@ -119,7 +119,7 @@
       "sampleCard": {
         "eyebrow": "BÖREKS",
         "name": "Börek aux épinards",
-        "meta": "17,80 € / kg · TVA incluse",
+        "meta": "17,80 € / kg · TTC",
         "price": "8,90 €",
         "body": "Pâte fine, épinards et fromage (beyaz peynir) — le su böreği classique."
       }
@@ -133,14 +133,14 @@
     "delivery": {
       "kicker": "COMMENT NOUS LIVRONS",
       "title": "Deux modes de livraison",
-      "body": "Nous montrons le catalogue entier à tout le monde ; c'est le produit lui-même qui détermine par quel moyen il vous parvient.",
+      "body": "Tout le catalogue est visible par tous : c'est le produit qui détermine comment il vous est livré.",
       "route": {
         "title": "Produits sous chaîne du froid : notre camion",
         "body": "Les surgelés et les produits frais ne voyagent qu'avec notre camion réfrigéré, aux adresses de notre zone de livraison."
       },
       "shipping": {
-        "title": "Tous les autres produits : par colis",
-        "body": "Les produits sans chaîne du froid partent par transporteur, partout en France et en Allemagne — que vous soyez dans notre zone ou non."
+        "title": "Tous les autres produits : par transporteur",
+        "body": "Les produits sans chaîne du froid sont expédiés par transporteur en France et en Allemagne — que vous soyez dans notre zone ou non."
       },
       "note": "C'est pourquoi nous demandons votre code postal : pour indiquer à côté de chaque produit comment il vous parviendra."
     },
@@ -168,9 +168,9 @@
       "rate": "{points} points = bon de {value}",
       "highlight": "Parrainer un ami rapporte à lui seul {value}.",
       "how": "Comment gagner des points ?",
-      "signUp": "Créer un compte et commencer",
+      "signUp": "Créer un compte et commencer à gagner",
       "later": "Plus tard",
-      "unavailable": "Les informations sur les points n'ont pas pu être chargées — vous les retrouverez dans l'application.",
+      "unavailable": "Les informations sur les points ne peuvent pas être affichées pour le moment. Vous les retrouverez dans « Mon compte » une fois votre compte créé.",
       "groups": {
         "invite": {
           "title": "En invitant",
@@ -181,8 +181,8 @@
           "body": "Un produit vous a plu ? Le dire aide le prochain client autant que nous — et vous rapporte des points."
         },
         "visit": {
-          "title": "En passant nous voir",
-          "body": "Vous gagnez aussi sans acheter. Les deux sont quotidiens : venir, et voter pour les nouvelles saveurs."
+          "title": "En revenant chaque jour",
+          "body": "Vous gagnez aussi sans acheter : ouvrir l'application rapporte des points une fois par jour, et chaque vote pour une nouvelle saveur en rapporte aussi."
         }
       }
     }
@@ -234,7 +234,7 @@
       },
       "shipping": {
         "title": "Alle übrigen Produkte: per Paket",
-        "body": "Produkte ohne Kühlkette versenden wir an jede Adresse in Frankreich und Deutschland — ob Sie in unserem Liefergebiet wohnen oder nicht."
+        "body": "Produkte ohne Kühlkette versenden wir nach Frankreich und Deutschland — ob Sie in unserem Liefergebiet wohnen oder nicht."
       },
       "note": "Deshalb fragen wir nach der Postleitzahl: damit neben jedem Produkt steht, wie es zu Ihnen kommt."
     },

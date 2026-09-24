@@ -92,12 +92,12 @@
     "hero": {
       "eyebrow": "Restaurant · Épicerie · Cuisine collective",
       "title": "Tarifs de gros, livraisons régulières",
-      "body": "Commandes en volume, livraisons régulières dans la zone et recommande en un geste. Faites votre demande, nous revenons vers vous rapidement."
+      "body": "Commandes en volume, livraisons régulières dans notre zone et réassort en un geste. Faites votre demande, nous revenons vers vous rapidement."
     },
     "steps": {
       "signUp": "Inscrivez-vous — en une minute avec votre SIRET ; les informations viennent du registre officiel",
       "review": "Nous étudions votre demande — réponse par e-mail",
-      "priceList": "Vos tarifs s'ouvrent avec la validation"
+      "priceList": "Vos tarifs professionnels sont activés dès la validation"
     },
     "form": {
       "tabSiret": "Société française",
@@ -119,7 +119,7 @@
       "line1": "Rue et numéro",
       "postalCode": "Code postal",
       "city": "Ville",
-      "addressNote": "Nous ajoutons aussi cette adresse à vos adresses de livraison — vous la retrouverez dans la liste, sous la raison sociale de votre entreprise.",
+      "addressNote": "Nous ajoutons aussi cette adresse à vos adresses de livraison — vous la retrouverez dans la liste, sous la dénomination sociale de votre entreprise.",
       "contactTitle": "Contact",
       "contactName": "Nom et prénom",
       "resultTo": "Nous enverrons la réponse à l'adresse e-mail de votre compte :",
@@ -135,11 +135,11 @@
       "registryDown": "Le registre officiel est injoignable pour le moment — vous pouvez saisir les informations manuellement.",
       "unexpected": "Une erreur est survenue. Merci de réessayer.",
       "network": "Connexion impossible. Vérifiez votre connexion et réessayez.",
-      "accountEmail": "Nous n'avons pas pu lire l'adresse e-mail de votre compte ; la réponse ne pourrait pas vous parvenir. Déconnectez-vous et reconnectez-vous avec votre adresse e-mail."
+      "accountEmail": "Nous n'avons pas pu récupérer l'adresse e-mail de votre compte ; nous ne pourrions pas vous envoyer la réponse. Déconnectez-vous et reconnectez-vous avec votre adresse e-mail."
     },
     "identity": {
       "sheetTitle": "À quel nom rattacher la demande ?",
-      "intro": "La demande est rattachée à un compte. Nous vous demandons votre adresse e-mail une seule fois : nous y envoyons le code, la réponse arrive à la même adresse et, après validation, vos tarifs s'y ouvrent.",
+      "intro": "La demande est rattachée à un compte. Nous vous demandons votre adresse e-mail une seule fois : nous y envoyons le code, la réponse arrive à la même adresse et, après validation, vos tarifs professionnels y deviennent accessibles.",
       "emailPrompt": "Quelle adresse e-mail utilisons-nous ?",
       "emailLabel": "Votre adresse e-mail",
       "emailPlaceholder": "exemple@email.com",
@@ -158,10 +158,10 @@
       "pendingTitle": "Votre demande est à l'étude",
       "pending": "Nous vous enverrons la réponse par e-mail. En attendant la validation, le catalogue reste accessible aux prix de détail.",
       "approvedTitle": "Validée",
-      "approved": "Validée ! Vos tarifs de gros sont ouverts.",
+      "approved": "Validée ! Vos tarifs professionnels sont désormais actifs.",
       "rejectedTitle": "Votre demande n'a pas pu être validée",
       "rejected": "Vous pouvez continuer vos achats avec votre compte. Vous pouvez aussi corriger vos informations et renvoyer la demande.",
-      "reasonTitle": "Note d'examen",
+      "reasonTitle": "Commentaire de notre équipe",
       "translated": "traduit automatiquement",
       "reapply": "Renvoyer une demande",
       "toCatalog": "Voir le catalogue"
@@ -169,7 +169,7 @@
     "whatsapp": "Une question ? Écrivez-nous sur WhatsApp",
     "sent": {
       "title": "Nous avons bien reçu votre demande",
-      "body": "Nous l'étudions — vous recevrez la réponse par e-mail. Vos tarifs de gros s'ouvrent avec la validation ; en attendant, le catalogue reste accessible aux prix de détail.",
+      "body": "Nous l'étudions — vous recevrez la réponse par e-mail. Vos tarifs professionnels seront activés dès la validation ; en attendant, le catalogue reste accessible aux prix de détail.",
       "cta": "Voir le catalogue"
     }
   },
