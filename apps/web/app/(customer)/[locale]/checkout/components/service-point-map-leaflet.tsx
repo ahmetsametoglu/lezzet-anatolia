@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useLocale } from 'next-intl';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { TILE_ATTRIBUTION, TILE_MAX_ZOOM, TILE_URL } from '@/lib/map/leaflet-base';
+import { attachGoogleTiles } from '@/lib/map/leaflet-base';
 
 /** Haritadaki nokta: konum, taşıyıcının renk sınıfı ve erişilebilir başlık. Fiyat haritada değil, listede durur. */
 export interface ServicePointMapPin {
@@ -44,6 +45,7 @@ const homeIcon = (label: string): L.DivIcon =>
 
 /** Leaflet modül düzeyinde `window`a dokunur; bu dosya yalnız `next/dynamic` ile, sunucu çizimi kapalı yüklenir. */
 export function ServicePointMapLeaflet({ pins, selectedId, highlightId, home, onPick }: ServicePointMapLeafletProps) {
+  const locale = useLocale();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
@@ -53,14 +55,15 @@ export function ServicePointMapLeaflet({ pins, selectedId, highlightId, home, on
   useEffect(() => {
     if (!containerRef.current) return;
     const map = L.map(containerRef.current, { zoomControl: true });
-    L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: TILE_MAX_ZOOM }).addTo(map);
+    const detachTiles = attachGoogleTiles(L, map, { language: locale });
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
     return () => {
+      detachTiles();
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [locale]);
 
   // Görüş alanı yalnız nokta kümesi değişince kurulur; seçim değişince kullanıcının yakınlığı korunur.
   useEffect(() => {

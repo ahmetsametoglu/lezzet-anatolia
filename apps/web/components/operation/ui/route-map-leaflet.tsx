@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { mapToken, TILE_ATTRIBUTION, TILE_MAX_ZOOM, TILE_URL } from '@/lib/map/leaflet-base';
+import { attachGoogleTiles, mapToken } from '@/lib/map/leaflet-base';
 import { allPoints, metricNote, tourPath, type RouteMapProps } from './route-map-model';
 
 /**
@@ -28,7 +28,7 @@ export function RouteMapLeaflet({ origin, stops, metric, precision, className }:
       const card = mapToken('--color-ops-card', '#ffffff');
 
       const map = L.map(boxRef.current, { attributionControl: true, scrollWheelZoom: false });
-      L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: TILE_MAX_ZOOM, className: 'ops-map-tiles' }).addTo(map);
+      const detachTiles = attachGoogleTiles(L, map, { language: 'tr', className: 'ops-map-tiles' });
 
       const path = tourPath({ origin, stops });
       if (path.length > 1) {
@@ -82,7 +82,10 @@ export function RouteMapLeaflet({ origin, stops, metric, precision, className }:
         map.setView([48.5839, 7.7455], 11);
       }
 
-      cleanup = () => map.remove();
+      cleanup = () => {
+        detachTiles();
+        map.remove();
+      };
     });
 
     return () => {

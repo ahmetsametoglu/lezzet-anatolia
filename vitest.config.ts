@@ -75,6 +75,7 @@ const WEB_LIB_DBSIZ = [
   'apps/web/lib/customer/scorecard.test.ts',
   // `delivery/map-codes.test.ts` buraya girmez: kendi metninde DB izi yok ama `./map-codes` `serviceDb` çağırır.
   'apps/web/lib/delivery/place-filter.test.ts',
+  'apps/web/lib/map/tiles-session.test.ts',
   // `verifyMetaSignature` saf: modül `serviceDb`i import eder ama çağırmaz, istemci fonksiyonun içinde kurulur.
   'packages/application/src/messaging/meta-signature.test.ts',
   // Görsel yükleme kapısı saf: gerçek `File`/`FormData` kurar, biçim ve tavan sorar. Modül `server-only` taşır ama koşucu onu boş

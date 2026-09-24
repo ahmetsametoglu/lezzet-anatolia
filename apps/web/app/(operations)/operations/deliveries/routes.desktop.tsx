@@ -209,8 +209,8 @@ export function RoutesDesktop(props: RoutesViewProps) {
           />
         </div>
 
-        {/* `z-10`: harita `isolation: isolate` ile kendi sayılarını hapseder; yüksek sayı raydan açılan menüyü rayın altında bırakıyordu.
-            Alt boşluk `bottom-8`, çünkü sağ alttaki OSM atıf yazısı lisans gereği görünür kalmalı. */}
+        {/* `z-10`: harita `isolation: isolate` ile kendi sayılarını hapseder; yüksek sayı raydan açılan menüyü rayın altında bırakır.
+            Alt boşluk `bottom-8`, çünkü sağ alttaki Google telif satırı kullanım şartı gereği görünür kalmalı. */}
         <aside
           className={`absolute right-3 top-3 z-10 flex w-[320px] flex-col rounded-ops-card border border-ops-line bg-ops-card/95 shadow-[0_8px_24px_rgba(20,22,18,0.12)] backdrop-blur-sm ${
             railOpen ? 'bottom-8 overflow-y-auto' : 'overflow-hidden'

@@ -39,8 +39,9 @@ const STRIPE_FRAME = 'https://js.stripe.com https://*.js.stripe.com https://hook
 const STRIPE_API = 'https://api.stripe.com';
 const STRIPE_IMG = 'https://*.stripe.com';
 
-// Leaflet karoları `<img>` olarak yüklediği için karo host'u yalnız `img-src`te; giden istek yalnız karo koordinatıdır.
-const MAP_TILES = 'https://tile.openstreetmap.org';
+// Google karoları `<img>` olarak (`img-src`), görünen alanın telif satırı `fetch` ile (`connect-src`) aynı host'tan gelir; giden istek
+// karo koordinatı, oturum jetonu ve herkese açık tarayıcı anahtarıdır.
+const MAP_TILES = 'https://tile.googleapis.com';
 
 // Adres önerisi tarayıcıdan çağrılır: servisin sınırı IP başınadır ve sunucudan geçseydi bütün müşteriler tek IP'yi paylaşırdı.
 // Açılan yüzey yalnız `connect-src`; giden tek şey müşterinin yazdığı adres metnidir, kimlik ve çerez gitmez.
@@ -57,7 +58,7 @@ function securityHeaders(): Array<{ key: string; value: string }> {
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline' ${STRIPE_SCRIPT}${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
-    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${R2_S3_HOST} ${STRIPE_API} ${BAN_API}`.replace(/\s+/g, ' ').trim(),
+    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${R2_S3_HOST} ${STRIPE_API} ${BAN_API} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
     // Leaflet karoları `<img>` olarak yükler; private kovadaki fotoğraflar da imzalı adresle buradan gelir.
     `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS} ${R2_S3_HOST} ${STRIPE_IMG} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
     // Sesli mesaj `<audio>`: yönerge yoksa `default-src 'self'` devreye girer ve kaydı keser.

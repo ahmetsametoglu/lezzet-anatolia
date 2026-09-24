@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { placesLabel } from './labels';
-import { mapToken, TILE_ATTRIBUTION, TILE_MAX_ZOOM, TILE_URL } from '@/lib/map/leaflet-base';
+import { attachGoogleTiles, mapToken } from '@/lib/map/leaflet-base';
 import {
   FREE_CODE_MIN_ZOOM,
   type ZoneCodeState,
@@ -201,10 +201,10 @@ export function ZoneMapLeaflet({
       zoomControl: false,
       renderer: L.canvas(),
     });
-    L.control.zoom({ position: 'bottomleft' }).addTo(map);
     // `className` tasarımın soluklaştırmasını taşıyor (`globals.css` → `.ops-map-tiles`): zemin
     // sönükleşir, noktalar öne çıkar. Raster olduğu için tek CSS filtresi yetiyor.
-    L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: TILE_MAX_ZOOM, className: 'ops-map-tiles' }).addTo(map);
+    const detachTiles = attachGoogleTiles(L, map, { language: 'tr', className: 'ops-map-tiles' });
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
@@ -243,6 +243,7 @@ export function ZoneMapLeaflet({
       clearTimeout(timer);
       observer.disconnect();
       map.off('moveend', announce);
+      detachTiles();
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
