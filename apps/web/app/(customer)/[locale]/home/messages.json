@@ -41,6 +41,7 @@
       "all": "Tüm katalog →",
       "addToCart": "Sepete ekle",
       "options": "Seçenekler →",
+      "details": "Detay",
       "offer": "Fırsat",
       "soldOut": "Tükendi — yakında yeniden"
     },
@@ -115,6 +116,7 @@
       "all": "Tout le catalogue →",
       "addToCart": "Ajouter",
       "options": "Options →",
+      "details": "Détails",
       "offer": "Offre",
       "soldOut": "Épuisé — bientôt de retour"
     },
@@ -189,6 +191,7 @@
       "all": "Ganzer Katalog →",
       "addToCart": "In den Warenkorb",
       "options": "Optionen →",
+      "details": "Details",
       "offer": "Angebot",
       "soldOut": "Ausverkauft — bald wieder da"
     },

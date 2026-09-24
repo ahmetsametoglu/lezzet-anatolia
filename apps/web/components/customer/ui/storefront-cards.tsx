@@ -135,6 +135,8 @@ interface ProductCardLabels {
   addToCart: string;
   /** Çok varyantlı ürün: listeden eklenemez, detayda seçilir. */
   options: string;
+  /** Sepete eklenemeyen (tükenmiş ya da satışa kapanmış) ürünün detay bağlantısı; sebebi ve seçenekleri detay sayfası söyler. */
+  details: string;
   /** Çok varyantlıda fiyatın altındaki not ("başlangıç fiyatı — boy detayda seçilir"); verilmezse satır çizilmez. */
   priceFrom?: string;
   offer: string;
@@ -239,12 +241,13 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
 interface ProductCardActionProps {
   product: StorefrontProduct;
   locale: Locale;
-  labels: Pick<ProductCardLabels, 'addToCart' | 'options'>;
+  labels: Pick<ProductCardLabels, 'addToCart' | 'options' | 'details'>;
   compact?: boolean;
 }
 
 /**
- * Kartın sepet eylemi — ürün ve fırsat kartı aynı denetimi kullanır: tükendi · haber ver · seçenekler · adet seçici · sepete ekle.
+ * Kartın sepet eylemi, ürün ve fırsat kartında ortak: detay · haber ver · seçenekler · adet seçici · sepete ekle. Eklenemeyen ürünün
+ * eylemi pasif düğme değil detay bağlantısıdır, çünkü müşteri sebebi ve seçenekleri orada okur.
  */
 function ProductCardAction({ product, locale, labels, compact = false }: ProductCardActionProps) {
   const { add, setQty, lineOf } = useCart();
@@ -258,17 +261,22 @@ function ProductCardAction({ product, locale, labels, compact = false }: Product
     add({ kind: 'variant', variantId: buyableVariantId, qty: 1, stockId: product.stockId });
   };
   const inCart = product.variantId ? lineOf({ variantId: product.variantId }) : null;
-  return product.soldOut ? (
-    <span
-      aria-disabled
+  /* `nowrap` şart: etiket ile ok iki satıra bölünürse düğme kartı dikey olarak şişirir. */
+  const detailLink = (label: string) => (
+    <Link
+      href={productHref(product.slug)}
       className={buttonClass({
+        variant: 'secondary',
         size: compact ? 'cardSm' : 'card',
         fullWidth: compact,
-        className: '!bg-disabled-fill !text-white cursor-not-allowed',
+        className: `!border-olive !text-olive whitespace-nowrap ${compact ? '' : 'flex-none'}`,
       })}
     >
-      {labels.addToCart}
-    </span>
+      {label}
+    </Link>
+  );
+  return product.soldOut ? (
+    detailLink(labels.details)
   ) : away ? (
     /* Kartta tek eylem "haber ver": dar kartta iki düğme sığmaz ve müşterinin sorusu "ne zaman alabilirim". Haberin kalem
          mi bölge mi olduğunu düğme kendisi seçer. */
@@ -280,18 +288,9 @@ function ProductCardAction({ product, locale, labels, compact = false }: Product
       productHref={productHref(product.slug)}
     />
   ) : product.purchaseMode === 'options' ? (
-    /* `nowrap` şart: "Seçenekler" ile "→" iki satıra bölünürse düğme kartı dikey olarak şişirir. */
-    <Link
-      href={productHref(product.slug)}
-      className={buttonClass({
-        variant: 'secondary',
-        size: compact ? 'cardSm' : 'card',
-        fullWidth: compact,
-        className: `!border-olive !text-olive whitespace-nowrap ${compact ? '' : 'flex-none'}`,
-      })}
-    >
-      {labels.options}
-    </Link>
+    detailLink(labels.options)
+  ) : !buyableVariantId ? (
+    detailLink(labels.details)
   ) : inCart ? (
     /* Buton yerine adet seçici: 1'deyken "−" ürünü sepetten çıkarır ve düğme geri gelir; tavan sunucunun çözdüğü fırsat
          sınırı. */
@@ -306,21 +305,11 @@ function ProductCardAction({ product, locale, labels, compact = false }: Product
   ) : compact ? (
     /* Dar kartta eylem satırın tamamı: adlı düğme okunur ve 44px'i iki eksende sağlar; eklemede aynı kutuyu dolduran
          seçiciye döner, kart zıplamaz. */
-    <button
-      type="button"
-      onClick={addToCart}
-      disabled={!buyableVariantId}
-      className={buttonClass({ size: 'cardSm', fullWidth: true, className: 'disabled:cursor-not-allowed disabled:opacity-50' })}
-    >
+    <button type="button" onClick={addToCart} className={buttonClass({ size: 'cardSm', fullWidth: true })}>
       {labels.addToCart}
     </button>
   ) : (
-    <button
-      type="button"
-      onClick={addToCart}
-      disabled={!buyableVariantId}
-      className={buttonClass({ size: 'card', className: 'disabled:cursor-not-allowed disabled:opacity-50' })}
-    >
+    <button type="button" onClick={addToCart} className={buttonClass({ size: 'card' })}>
       {labels.addToCart}
     </button>
   );
@@ -331,7 +320,7 @@ interface OfferCardProps {
   locale: Locale;
   /** Rozet metni — sınır varsa "En fazla {n} adet", yoksa bölümün "Stokla sınırlı" notu; çağıran çözer. */
   limitLabel: string;
-  actionLabels: Pick<ProductCardLabels, 'addToCart' | 'options'>;
+  actionLabels: Pick<ProductCardLabels, 'addToCart' | 'options' | 'details'>;
 }
 
 export function OfferCard({ offer, locale, limitLabel, actionLabels }: OfferCardProps) {
