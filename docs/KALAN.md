@@ -36,10 +36,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
   veridir · pazarlama izni e-posta ve WhatsApp'a tek kutu (UWG §7) · Google yorumu yalnız memnun müşteriden isteniyor ve "doğrulanmış
   yorum" bilgisi (L111-7-2) · B2B e-postasında "Reverse-Charge/autoliquidation" ibaresi (muhasebeci) · alerjen adları INCO/LMIV Ek II
   resmî adıyla mı · "kenarları hafif yumuşamış olabilir" cümlesi (üretici teyidi).
-- [ ] (K.43) [hedef: web] Doğrulanamayan müşteri sözleri kullanıcı teyidi bekliyor; teyit gelmezse metinden çıkar: davet sayfasında
-  "Türkiye'nin dört bir yanından" menşe sözü · sipariş durumu yola çıkışta başlarken "Kurye bölgenizde" notu · eksik ürün
-  e-postasında "kalanı sonraki teslimata ekleriz ya da iptal ederiz" sözü · e-postalarda talebe "aynı gün cevap" sözü (karar
-  WhatsApp içindi) · ödeme tanıtımında "bankanızla aynı koruma".
 - [~] (21.310) **Operasyon uygulamasının (`apps/mobile-operations`, "Lezzet Operasyonu") kurulabilir sürümü** — personelin
   telefonuna kurulur; müşteri uygulamasıyla ortak çekirdek `packages/mobile-kit`.
   - Eksik: Expo proje kimliği (`extra.eas.projectId`) ve Firebase `google-services.json` (kayıt kullanıcının; ikisi yokken push
