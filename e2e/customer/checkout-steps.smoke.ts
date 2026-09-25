@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { createStampedProduct, type StampedProduct } from '../fixtures/product-fixture';
 import { createGuestOtp, OTP_TEST_CODE, type GuestOtpFixture } from '../fixtures/otp-fixture';
 import { ANA_SEPETE_EKLE } from '../fixtures/selectors';
+import { addAddressManually } from '../fixtures/address-dialog';
 
 /**
  * Checkout'un mutlu yolu tek yolculukta: sepette kimlik ve adres, sonra gün, kapıda ödeme (Stripe'sız tek yol) ve
@@ -85,21 +86,16 @@ test.describe('kademe 2 · checkout adımları: adres → gün → kapıda ödem
     const confirm = page.getByRole('button', { name: /vérif|valid|confirm/i }).first();
     if (await confirm.isVisible().catch(() => false)) await confirm.click();
 
-    // ── Adres, SEPETTE: yeni misafirde kayıt yok — panel "adres ekle" der, form pencerede açılır,
-    //    damgalı adres yazılır. Kaydetmek = seçmek (sepetten eklenen adres teslimat adresi olur).
-    await page.getByRole('button', { name: /ajouter une adresse/i }).first().click({ timeout: 25_000 });
-    await page.getByLabel(/titre de l/i).fill(`E2E adresi ${product.stamp}`);
-    await page.getByLabel(/nom du destinataire/i).fill('E2E Musteri');
-    await page.getByLabel(/rue et numéro/i).fill('1 rue du Test');
-    // Posta kodu FİKSTÜRÜN kodu: adres rota bölgesinde kalmalı ki teslimat "rota" çözülsün ve
-    // kapıda ödeme açık olsun (kargo adresinde COD blokludur — codBlocked.shipping).
-    await page.getByLabel(/code postal/i).fill(product.postalCode!);
-    await page.getByLabel(/ville/i).fill('Testville');
-    // Telefon damgadan: sabit numara paralel koşuda çakışır.
-    await page.getByLabel(/téléphone/i).fill(`06${String(product.stamp).slice(-8)}`);
-    const saveAddress = page.getByRole('button', { name: /enregistrer l.adresse/i });
-    await expect(saveAddress).toBeEnabled();
-    await saveAddress.click();
+    // ── Adres, SEPETTE: yeni misafirde kayıt yok; sepetten eklenen adres teslimat adresi olur.
+    // Posta kodu fikstürün kodu, çünkü teslimat rota çözülmeli ve kapıda ödeme açık kalmalı (kargo adresinde kapalı);
+    // telefon damgadan, çünkü sabit numara paralel koşuda çakışır.
+    await addAddressManually(page, product.stamp, {
+      label: `E2E adresi ${product.stamp}`,
+      line1: '1 rue du Test',
+      postalCode: product.postalCode!,
+      city: 'Testville',
+      phone: `06${String(product.stamp).slice(-8)}`,
+    });
 
     // Panel seçili adresi gösterir; "ödemeye geç" artık açıktır (kimlik + adres kapısı geçildi).
     await expect(page.getByText(new RegExp(`E2E adresi ${product.stamp}`)).first()).toBeVisible({ timeout: 20_000 });
