@@ -1,16 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import type { CartLineRoute } from '@lezzet/domain-core';
+import { minBasketBaseOf, undeliverableTotalOf, type CartLineRoute } from '@lezzet/domain-core';
 import {
   EMPTY_CART,
   cartGroupOf,
   entryOf,
   laneEntriesOf,
-  minBasketBaseOf,
   orderLaneOf,
   orderableLines,
   shippingGroupFree,
   splitByRoute,
-  undeliverableTotalOf,
   viewWithEntries,
   type CartEntry,
   type CartLine,

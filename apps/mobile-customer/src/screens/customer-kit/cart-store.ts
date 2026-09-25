@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
-import { applyBestDiscount, diffCartByPlace, meetsMinBasket } from '@lezzet/domain-core';
+import { applyBestDiscount, diffCartByPlace, meetsMinBasket, minBasketBaseOf, undeliverableTotalOf } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
 import type { CartLineChange, CatalogImage, MeCartView, MeCartViewLine } from '@lezzet/types';
 
@@ -359,9 +359,11 @@ function viewWithQty(view: MeCartView, ref: CartLineRef | null, quantity: number
         : line,
     );
 
-  const subtotalCents = lines.reduce((total, line) => total + (line.lineTotalCents ?? 0), 0);
-  /* Eşik kuralı motordan sorulur (`meetsMinBasket`), web'in `viewWithEntries`i gibi. */
-  const basket = meetsMinBasket(subtotalCents - view.undeliverableSubtotalCents, view.minBasketCents);
+  /* Gelemeyen kalem ara toplama, indirime ve eşiğe sayılmaz; tutar ve eşik matrahı sunucu okumasının fonksiyonlarından, yoksa anlık
+     hesap sunucunun cevabından başka bir sayı gösterirdi. */
+  const undeliverableSubtotalCents = undeliverableTotalOf(lines);
+  const subtotalCents = lines.reduce((total, line) => total + (line.lineTotalCents ?? 0), 0) - undeliverableSubtotalCents;
+  const basket = meetsMinBasket(minBasketBaseOf(lines), view.minBasketCents);
   const settled = settleDiscount(view, lines, subtotalCents);
 
   return {
@@ -369,6 +371,7 @@ function viewWithQty(view: MeCartView, ref: CartLineRef | null, quantity: number
     lines,
     itemCount: lines.reduce((total, line) => total + line.qty, 0),
     subtotalCents,
+    undeliverableSubtotalCents,
     ...settled,
     minBasketOk: view.minBasketCents > 0 ? basket.ok : view.minBasketOk,
     missingForMinBasketCents: view.minBasketCents > 0 ? basket.missingCents : view.missingForMinBasketCents,
@@ -397,7 +400,8 @@ function settleDiscount(
     lines.map((line) => ({
       variantId: line.kind === 'variant' ? line.variantId : '',
       qty: line.qty,
-      unitPriceCents: line.unitPriceCents ?? 0,
+      // Gelemeyen satır sunucudaki gibi sıfır fiyatla katılır: siparişe girmeyen kalem indirim kazandırmaz.
+      unitPriceCents: line.group === 'undeliverable' ? 0 : (line.unitPriceCents ?? 0),
       categoryId: line.kind === 'variant' ? line.categoryId : null,
       collectionIds: line.kind === 'variant' ? line.collectionIds : [],
       bundleId: line.kind === 'bundle' ? line.bundleId : null,

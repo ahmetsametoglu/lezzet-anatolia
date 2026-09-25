@@ -1,4 +1,4 @@
-import { freeShippingOf } from '@lezzet/domain-core';
+import { freeShippingOf, undeliverableTotalOf } from '@lezzet/domain-core';
 import type { CartLineGroup, MeCartView, MeCartViewLine } from '@lezzet/types';
 
 import type { CartState } from '@/screens/customer-kit/cart-store';
@@ -89,7 +89,8 @@ const FREE_SHIPPING_CENTS = 10_000;
  * Satırlardan tam görünüm; toplamlar satırlardan türetilir, sunucu da öyle yapar.
  */
 export function cartView(lines: MeCartViewLine[], overrides: Partial<MeCartView> = {}): MeCartView {
-  const subtotalCents = lines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0);
+  const undeliverableSubtotalCents = undeliverableTotalOf(lines);
+  const subtotalCents = lines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0) - undeliverableSubtotalCents;
   const shippingSubtotalCents = lines.reduce((sum, line) => (line.group === 'shipping' ? sum + (line.lineTotalCents ?? 0) : sum), 0);
   // Eşik ayarın varsayılanı; cevap sunucunun kuralıyla (`shippingGroupFree`) kurulur ki fikstür sunucunun üretemeyeceği bir hâlde olmasın.
   const threshold =
@@ -104,10 +105,7 @@ export function cartView(lines: MeCartViewLine[], overrides: Partial<MeCartView>
     totalCents: subtotalCents,
     itemCount: lines.reduce((sum, line) => sum + line.qty, 0),
     hasBlocked: lines.some((line) => line.blocked),
-    undeliverableSubtotalCents: lines.reduce(
-      (sum, line) => (line.group === 'undeliverable' ? sum + (line.lineTotalCents ?? 0) : sum),
-      0,
-    ),
+    undeliverableSubtotalCents,
     minBasketOk: true,
     missingForMinBasketCents: 0,
     minBasketCents: 2500,

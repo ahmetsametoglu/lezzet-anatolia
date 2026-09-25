@@ -1,4 +1,4 @@
-import { checkoutButtonCents, freeShippingOf, meetsMinBasket } from '@lezzet/domain-core';
+import { checkoutButtonCents, freeShippingOf, meetsMinBasket, minBasketBaseOf, undeliverableTotalOf } from '@lezzet/domain-core';
 import type { CouponRejection, DiscountRule } from '@lezzet/domain-core';
 import type { AnalyticsBlockedReason, CartItem, CartLineGroup } from '@lezzet/types';
 import type { LocalizedText } from '@lezzet/types';
@@ -362,24 +362,6 @@ export function splitByRoute(lines: readonly CartLine[]): { route: CartLine[]; s
     shipping: lines.filter((l) => cartGroupOf(l) === 'shipping'),
     undeliverable: lines.filter((l) => cartGroupOf(l) === 'undeliverable'),
   };
-}
-
-/**
- * Teslim edilemeyen kalemlerin toplamı, asgari sepete sayılmayan tutar. Fiyatı çözülememiş satır 0 katar, çünkü toplamaya
- * zaten girmediği için eksiltecek bir şey yoktur.
- */
-export function undeliverableTotalOf(lines: readonly CartLine[]): number {
-  return lines.reduce((sum, l) => (cartGroupOf(l) === 'undeliverable' ? sum + (l.lineTotalCents ?? 0) : sum), 0);
-}
-
-/**
- * Asgari sepetin ölçtüğü tutar (indirim öncesi): iki gruplu sepette kapı siparişinin kendi tutarı, çünkü kargo kalemleri o
- * siparişe girmez; öteki hâlde bu adrese gelemeyenler hariç sepet.
- */
-export function minBasketBaseOf(lines: readonly CartLine[]): number {
-  const total = (keep: (l: CartLine) => boolean) => lines.reduce((sum, l) => (keep(l) ? sum + (l.lineTotalCents ?? 0) : sum), 0);
-  if (lines.some((l) => l.route === 'local') && lines.some((l) => l.route === 'shipping')) return total((l) => l.route === 'local');
-  return total(() => true) - undeliverableTotalOf(lines);
 }
 
 /**

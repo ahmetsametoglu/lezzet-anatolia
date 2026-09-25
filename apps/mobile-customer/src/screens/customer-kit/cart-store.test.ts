@@ -36,8 +36,14 @@ const mockViews: Record<string, MeCartView> = {
   '67000': cartView([cartViewLine(1, 'Baklava', 'shipping')]),
   '33000': cartView([cartViewLine(1, 'Baklava', 'local')]),
   '75011': cartView([cartViewLine(1, 'Baklava', 'shipping')]),
+  // Lyon'da baklava kapıya gelir, sucuk bu adrese hiç gelemez.
+  '69007': cartView([cartViewLine(1, 'Baklava', 'local'), cartViewLine(2, 'Sucuk', 'undeliverable')]),
 };
-const mockAddresses: MeAddress[] = [addressFixture('adres-bordeaux', '33000', true), addressFixture('adres-paris', '75011', false)];
+const mockAddresses: MeAddress[] = [
+  addressFixture('adres-bordeaux', '33000', true),
+  addressFixture('adres-paris', '75011', false),
+  addressFixture('adres-lyon', '69007', false),
+];
 jest.mock('@/lib/api/addresses', () => ({
   fetchAddresses: async () => ({ data: mockAddresses, error: null, status: 200, retryAfterSec: null }),
 }));
@@ -56,7 +62,8 @@ jest.mock('@/lib/api/cart', () => ({
   setCartItemQty: jest.fn(),
 }));
 
-import { dismissPlaceChange, useCart, useCartSync } from './cart-store';
+import { setCartItemQty } from '@/lib/api/cart';
+import { cartLineId, dismissPlaceChange, setProductQuantity, useCart, useCartSync } from './cart-store';
 import { selectDeliveryAddress } from './delivery-address-store';
 
 describe('yer değişimi kartı', () => {
@@ -76,5 +83,25 @@ describe('yer değişimi kartı', () => {
 
     await act(async () => dismissPlaceChange());
     expect(result.current.placeChange).toBeNull();
+  });
+});
+
+describe('adet değişiminin anlık görünümü', () => {
+  // Sunucu gelemeyen kalemi ara toplamdan düşer; anlık hesap saysaydı cevap gelene kadar ekran başka bir toplam gösterirdi.
+  it('gelemeyen kalem ara toplama ve toplama sayılmaz', async () => {
+    const { result } = await renderHook(() => {
+      useCartSync();
+      return useCart();
+    });
+    await act(async () => mockAuthCallback?.('INITIAL_SESSION', { user: { id: 'musteri' } }));
+    await act(async () => selectDeliveryAddress('adres-lyon'));
+    await waitFor(() => expect(result.current.view.lines).toHaveLength(2));
+
+    // Sunucu cevabı bekletilir ki ölçülen şey yalnız anlık görünüm olsun.
+    jest.mocked(setCartItemQty).mockReturnValue(new Promise(() => undefined));
+    const baklava = result.current.view.lines.find((line) => line.group === 'local')!;
+    await act(async () => setProductQuantity(cartLineId(baklava), 2));
+
+    expect(result.current.view).toMatchObject({ subtotalCents: 2000, totalCents: 2000, undeliverableSubtotalCents: 1000 });
   });
 });
