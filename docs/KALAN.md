@@ -13,12 +13,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 
 Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en sonda.
 
-- [ ] (K.30) [hedef: web] Harita altlığı Google'a geçecek: müşteri haritası kamusal `tile.openstreetmap.org` karosunu kullanıyor;
-  bu sunucu yoğun trafiğe açık değil ve görünümü kalabalık. Map Tiles API'nin 2D "roadmap" karosu JSON stille sadeleştirilip
-  Leaflet'e bağlanır; oturum jetonunu tarayıcı aynı anahtarla alır, haritada Google logosu ve görünür alanın telif satırı zorunludur. Ücret: ayda
-  100.000 karo ücretsiz, sonrası 1.000 karo başına 0,60 $; proje başına günde 15.000 karo sınırı var. Önce kullanıcı: Google Cloud
-  projesinde Map Tiles API açılır ve yalnız bu API'ye ve alan adlarımıza kısıtlı bir tarayıcı anahtarı üretilir (bugünkü anahtarda
-  bu API kapalı).
 - [ ] (K.33) [hedef: müşteri] "Yapay zekâya sor" kutusu (ürün detayı) yalnız masaüstü web'de var; telefon görünümünde ve native'de
   yok. Kutu yalnız soru şablonu dolu kategoride çiziliyor; gerçek beslemede Fırın, Tatlı ve Et & Tavuk'ta şablon var, yani kutu
   yayında görünür (operatörün dolduracağı alanı K.23 açacak). Düğmeler: ChatGPT soruyu kutuya dolu açıyor; Gemini `?q=`yu yok
