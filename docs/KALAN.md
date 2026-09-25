@@ -13,14 +13,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 
 Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en sonda.
 
-- [ ] (K.33) [hedef: müşteri] "Yapay zekâya sor" kutusu (ürün detayı) yalnız masaüstü web'de var; telefon görünümünde ve native'de
-  yok. Kutu yalnız soru şablonu dolu kategoride çiziliyor; gerçek beslemede Fırın, Tatlı ve Et & Tavuk'ta şablon var, yani kutu
-  yayında görünür (operatörün dolduracağı alanı K.23 açacak). Düğmeler: ChatGPT soruyu kutuya dolu açıyor; Gemini `?q=`yu yok
-  saydığı için kaldırıldı; Claude oturumsuz ziyaretçiyi giriş sayfasına gönderiyor ve bot koruması yüzünden otomatik ölçülemedi —
-  girişli bir tarayıcıda elle denenecek, soruyu taşımıyorsa kalkar. Marka düğmeleri yerine işletim sisteminin paylaşım tepsisi
-  tarafsızlık açısından daha güçlü. Soru kimlik ya da servis sorar, amaç sormaz ("ne işe yarar" sağlık beyanı ima eder, 1924/2006
-  md. 2(1)); metin bir kez sabitlenir, "daha iyi cevap alsın" diye ayarlanmaz: ayarlandığı an içeriği seçmiş oluruz ve üçüncü
-  taraf savunması düşer.
 - [ ] (K.21) [hedef: web] Sipariş onayı müşteriye "sipariş durumunuzu e-posta ve WhatsApp bildirimlerinden takip edebilirsiniz"
   diyor (mobil web ve native ortak metni, `packages/i18n/src/customer/checkout.json` `confirmed.note`); `packages/notify` WhatsApp
   API sürücüsü her gönderimi `skipped` döndürüyor. Yayından önce ya metinden WhatsApp çıkar ya da gönderim açılır (`15.11`in
@@ -426,6 +418,8 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
     değil içindekini anlatıyor (kutuda kaç parça, dilim mi adet mi) ve ikizi "adet" kolonu tabloda duruyor.
   - Ürünün aktif olmamasına sebep olan eksikler diyalogda bir yerde yazmalı.
   - Alerjenlerde "alerjen eklenmez" düğmesiyle alerjen listesi aynı anda görünüyor; varsayılan boş hâlden olabilir, incelenecek.
+- [ ] (K.33) [hedef: müşteri] "Yapay zekâya sor" kutusu (ürün detayı, yalnız ChatGPT düğmesi) yalnız masaüstü web'de var; telefon
+  görünümüne ve native'e alınıp alınmayacağı tek yüzeyli bölümlerle birlikte sorulacak.
 - [ ] (K.34) [hedef: operasyon] Ülkeye göre ürün etiketi: bazı ürünlerin üzerinde satıldığı ülkenin zorunlu bilgisi yok. Etiketin
   hangi ülke için yeterli olduğu ürün ürün, gerekirse varyant varyant tutulacak; önce Fransa ve Almanya, satış açılan her ülke
   sonra eklenir. Yetersiz olduğu ülke için önceden çevrilmiş etiket metni hazır olacak ve kargoda paketlemeden önce yazıcıdan
