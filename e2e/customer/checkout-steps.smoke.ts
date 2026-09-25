@@ -4,19 +4,9 @@ import { createGuestOtp, OTP_TEST_CODE, type GuestOtpFixture } from '../fixtures
 import { ANA_SEPETE_EKLE } from '../fixtures/selectors';
 
 /**
- * KADEME 2 · CHECKOUT ADIM DUMANLARI — adres → gün → ödeme → sipariş (denetim, 08.08).
- *
- * OTP dumanı (3b) kimlik SINIRINDA durmuştu; burası sınırın ötesini tek yolculukta yürür ve
- * huninin sonunda GERÇEK bir sipariş açar (kapıda ödeme — Stripe'sız tek yol). Onaylı uç
- * senaryoların (bayat sekme · OTP beklerken tükenme · adres değişimi) ön şartı bu duman:
- * adımların mutlu yolu yeşil olmadan uç hâllerini yazmak, düşüşü senaryoya değil zemine borçlu
- * bırakırdı (kör yazılmaz — 00.9).
- *
- * §4b: her satır damgalı (ürün + bölge + misafir + adres), sipariş `purgeTestData`nın YENİ
- * `orderIds` hedefiyle toplanır (rezervasyonun `order_id` bağı FK'sız — cascade toplamaz).
- * Ön koşul: dev server `.env`'inde `OTP_TEST_CODE=123456` (3b ile aynı kapı).
- *
- * Gezinme sözleşmesi: `storefront.smoke.ts` başındaki gerekçe.
+ * Checkout'un mutlu yolu tek yolculukta: sepette kimlik ve adres, sonra gün, kapıda ödeme (Stripe'sız tek yol) ve
+ * gerçek sipariş. Sipariş `orderIds` ile ayrıca toplanır, çünkü rezervasyonun `order_id` bağı FK'sız ve cascade onu
+ * silmez; dev server'da `OTP_TEST_CODE=123456` gerekir.
  */
 const NAV = { waitUntil: 'domcontentloaded' as const };
 
@@ -24,22 +14,8 @@ let product: StampedProduct;
 let guest: GuestOtpFixture;
 
 /**
- * Fiyat KÜRESEL ASGARİ SEPETİN ÜSTÜNDE (19.08, ölçülmüş düşüş).
- *
- * Kapıya teslimin lojistik tabanı 10.08'de **40,00 €** oldu ve küresel satıra yazıldı; fikstürün
- * varsayılan fiyatı ise 12,90 €. Tek kalemlik sepet tabanın altında kalınca *"Confirmer la
- * commande"* HAKLI OLARAK kilitleniyordu — ekran sebebini de yazıyordu: *"Minimum de commande
- * pour … : 40,00 € — ajoutez encore 27,10 € au sous-total."* Yani arıza üründe ya da akışta
- * değil, senaryonun eskimiş varsayımındaydı.
- *
- * Eşiği bölgeye YAZIP DÜŞÜREMEYİZ: `min_basket_cents` **STRICTEST_WINS** üyesi, dar kapsam tabanı
- * yükseltebilir ama düşüremez (`SettingsService` künyesi). Fikstür bu yüzden `priceCents`
- * parametresini taşıyor ve künyesinde tek yolu yazıyor — tutarı tabanın üstüne taşımak.
- * Kardeş senaryo `edge-min-basket` aynı çözümü kullanıyor.
- *
- * 45,00 € seçildi: tabanı tek kalemle rahatça aşar, taban bir gün 40'ın biraz üstüne çıkarsa da
- * pay bırakır. Bu duman TUTAR sınamıyor (hiçbir iddiası € içermiyor) — sayı yalnız kapıyı açmak
- * için var, akışın kendisi değişmiyor.
+ * Fiyat küresel asgari sepetin (40 €) üstünde olmalı, yoksa onay düğmesi haklı olarak kilitlenir; eşik bölgede
+ * düşürülemez, çünkü `min_basket_cents` en sıkı değeri alır. 45 € eşiği tek kalemle aşar, duman tutar sınamaz.
  */
 const PRICE_CENTS = 4500;
 
@@ -50,10 +26,8 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  // Sipariş PROFİLDEN ÖNCE: `order.customer_id` restrict — sipariş dururken profil silinemez.
-  // Kimlik zinciri e-postadan: auth → profil `auth_user_id` İLE (04.11 dersi: auth id ≠ profil id;
-  // ilk sürüm `customer_id = auth.id` arıyordu ve siparişi HİÇ bulamıyordu — ölçüldü 08.08,
-  // teardown ürün silmede FK'ye çarpınca çıktı) → siparişler profil kimliğiyle.
+  // Sipariş profilden önce silinir, çünkü `order.customer_id` restrict'tir. Siparişler auth kimliğiyle değil profil
+  // kimliğiyle aranır (ikisi farklıdır); profil e-postadan `auth_user_id` ile bulunur.
   const { serviceDb } = await import('@lezzet/database');
   const { purgeTestData } = await import('@lezzet/database/testing');
   const db = serviceDb();
@@ -94,7 +68,7 @@ test.describe('kademe 2 · checkout adımları: adres → gün → kapıda ödem
       await expect(stepper).toBeVisible({ timeout: 2_500 });
     }).toPass({ timeout: 30_000 });
 
-    // ── Kimlik: misafir OTP, SEPETTE (13.09 — 3b dumanının deseni; orada gerekçeli, burada tekrarlanmaz).
+    // ── Kimlik: misafir OTP, sepette (3b dumanının deseni; gerekçesi orada).
     await page.goto('/fr/panier', NAV);
     const emailBox = page.getByRole('textbox', { name: /e-mail|adresse e-mail/i }).first();
     await expect(emailBox).toBeVisible({ timeout: 15_000 });
@@ -121,7 +95,7 @@ test.describe('kademe 2 · checkout adımları: adres → gün → kapıda ödem
     // kapıda ödeme açık olsun (kargo adresinde COD blokludur — codBlocked.shipping).
     await page.getByLabel(/code postal/i).fill(product.postalCode!);
     await page.getByLabel(/ville/i).fill('Testville');
-    // Telefon damgadan: sabit numara paralel koşuda çakışır (kurye fikstüründe yaşandı, 08.08).
+    // Telefon damgadan: sabit numara paralel koşuda çakışır.
     await page.getByLabel(/téléphone/i).fill(`06${String(product.stamp).slice(-8)}`);
     const saveAddress = page.getByRole('button', { name: /enregistrer l.adresse/i });
     await expect(saveAddress).toBeEnabled();
@@ -159,13 +133,9 @@ test.describe('kademe 2 · checkout adımları: adres → gün → kapıda ödem
     const submit = page.getByRole('button', { name: /confirmer la commande/i });
     await expect(submit).toBeEnabled({ timeout: 15_000 });
     await submit.click();
-    /* ADRES DOĞRULAMASI ARAYA GİRER (11.11 · 06.09'dan beri): ilk tıklama kapıyı sorar ve söyleyecek
-       bir şey varsa akış DURUR — müşteri kararını verir, İKİNCİ tıklama siparişi geçirir
-       (`checkout-client` `confirm`). Fikstür adresi uydurma ("1 rue du Test, Testville"), BAN onu
-       hep başka bir kapıda bulur; gerçek müşteri de burada iki kez tıklar. Test adresini KORUR —
-       "Corriger" fikstürün posta kodunu bölgenin dışına taşırdı. Kapı `confirmed`/`unknown` dönerse
-       teklif hiç çıkmaz ve ilk tıklama siparişi geçirir: ikisi de meşru, ikisi de doğrulanır.
-       Ölçüldü 07.09: teklif çıkınca `confirmCheckoutAction` hiç çağrılmıyordu, test 45 sn boşa bekliyordu. */
+    /* Adres kontrolü araya girebilir: söyleyecek bir şey varsa ilk tıklama durur, siparişi ikinci tıklama geçirir.
+       Test "Mon adresse est correcte" ile adresini korur, çünkü önerilen adres posta kodunu bölgenin dışına
+       taşırdı; kontrol sessiz geçerse ilk tıklama yeter. */
     const keepMine = page.getByRole('button', { name: /mon adresse est correcte/i });
     const noticed = await keepMine.waitFor({ state: 'visible', timeout: 15_000 }).then(() => true, () => false);
     if (noticed) {
@@ -173,11 +143,9 @@ test.describe('kademe 2 · checkout adımları: adres → gün → kapıda ödem
       await expect(submit).toBeEnabled({ timeout: 15_000 });
       await submit.click();
     }
-    // Sonrası tek tıklamayla yürür: yazım sürerken düğme `busy` kilitlenir; fazladan tıklama çift
-    // sipariş riskine girer (idempotencyKey korur ama dumanın işi onu kurcalamak değil).
-    // `waitUntil` GEZİNME SÖZLEŞMESİNDEN (`domcontentloaded`): varsayılan `load` dev'de asılı
-    // kalıyor — ölçüldü 08.08: sipariş 18:12:08'de confirmed YAZILMIŞTI, test yönlendirmeyi
-    // "load" beklerken 45 sn'de düştü. Adres eylemi de soğuk pencerede 20 sn'yi aşabiliyor.
+    // Sonrası tek tıklamayla yürür: yazım sürerken düğme kilitlenir, fazladan tıklama çift sipariş riski taşır.
+    // Bekleme `domcontentloaded` ile, çünkü dev'de varsayılan `load` asılı kalır; adres eylemi soğuk açılışta 20 sn'yi
+    // aşabildiği için süre 45 sn.
     await page.waitForURL(/\/commande\/[^/]+/, { timeout: 45_000, waitUntil: 'domcontentloaded' });
     await expect(page.getByText(/votre commande est confirmée/i).first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/n° de commande/i).first()).toBeVisible();
