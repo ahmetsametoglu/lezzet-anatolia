@@ -2626,7 +2626,7 @@ class Component extends DCLogic {
     const gunData = kargoyla ? [] : [{ gun:'Perşembe', tarih:'24 Temmuz' }, { gun:'Salı', tarih:'29 Temmuz' }];
     const odemeData = kargoyla
       ? [{ n:'Online öde', alt:'Kart · tek seçenek' }]
-      : [{ n:'Online öde', alt:'Kart ile güvenli ödeme sayfasında' }, { n:'Kapıda öde', alt:'Nakit, kart veya çek' }];
+      : [{ n:'Online öde', alt:'Kart ile güvenli ödeme sayfasında' }, { n:'Kapıda öde', alt:'Nakit ya da kart' }];
     const bolgeKalem = kalem.filter(k => k.zone === 'bolge');
     return {
       misafir: this.persona() === 'misafir',

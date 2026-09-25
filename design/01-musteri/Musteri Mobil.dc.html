@@ -1733,7 +1733,7 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1.5px dashed #d8cfb6">
                   <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 11.5 12 4l9 7.5M5.5 10V20h13v-10"></path></svg>
-                  <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 13.5px 'Karla';color:#343b41">Kapıda ödeme</span><span style="font:400 12px/1.45 'Karla';color:#8a8270">Bölge içi teslimatlarda nakit, kart veya çekle</span></div>
+                  <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 13.5px 'Karla';color:#343b41">Kapıda ödeme</span><span style="font:400 12px/1.45 'Karla';color:#8a8270">Nakit ya da kart.</span></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:13px;padding:12px 0">
                   <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" style="flex:none"><path d="M3 21V8l9-5 9 5v13M9 21v-8h6v8M3 21h18"></path></svg>
@@ -1898,7 +1898,7 @@ class Component extends DCLogic {
   minGap(){ return Math.max(0,25-(this.subT()-this.discount())); }
   payOpts(){
     if(this.isB2B())return [['online','Online ödeme','Kart ile güvenli ödeme'],['havale','Banka havalesi','IBAN bilgileri e-posta ile gelir'],['vade','Hesaba (vadeli)','Ay sonu faturalandırma']];
-    if(this.mode()==='kapi'){ const o=[['online','Online ödeme','Kart ile güvenli ödeme']]; if(this.grandCo()<=150)o.push(['kapida','Kapıda ödeme','Nakit, kart veya çek']); return o; }
+    if(this.mode()==='kapi'){ const o=[['online','Online ödeme','Kart ile güvenli ödeme']]; if(this.grandCo()<=150)o.push(['kapida','Kapıda ödeme','Nakit ya da kart.']); return o; }
     return [['online','Online ödeme','Kart ile güvenli ödeme']];
   }
   confirmBlock(){

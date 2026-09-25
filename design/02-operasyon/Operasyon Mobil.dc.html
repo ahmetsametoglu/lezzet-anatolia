@@ -2110,7 +2110,6 @@
             <div style="display:flex;gap:8px">
               <span onClick="{{ pick.yontem_nakit }}" style="flex:1;height:46px;border-radius:15px;border:1.5px solid {{ c.yontem_nakit.bd }};background:{{ c.yontem_nakit.bg }};color:{{ c.yontem_nakit.fg }};display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">nakit</span>
               <span onClick="{{ pick.yontem_kart }}" style="flex:1;height:46px;border-radius:15px;border:1.5px solid {{ c.yontem_kart.bd }};background:{{ c.yontem_kart.bg }};color:{{ c.yontem_kart.fg }};display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">kart</span>
-              <span onClick="{{ pick.yontem_cek }}" style="flex:1;height:46px;border-radius:15px;border:1.5px solid {{ c.yontem_cek.bd }};background:{{ c.yontem_cek.bg }};color:{{ c.yontem_cek.fg }};display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">çek</span>
             </div>
             <span style="font:400 11.5px/1.55 'Karla';color:#8a8270">Ödeme durumu tahsilattan türetilir; "tekrar dene" güvenlidir, para iki kez yazılmaz.</span>
           </div>
@@ -2171,13 +2170,9 @@
                 <div style="display:flex;flex-direction:column;flex:1"><span style="font:700 13.5px 'Karla'">nakit</span><span style="font:400 11px 'Karla';color:#8a8270">beklenen 0,00 €</span></div>
                 <span onClick="{{ kpOpen.nakit }}" style="min-width:96px;height:48px;border:1.5px solid #ddd6c4;border-radius:14px;background:#fff;padding:0 12px;display:flex;align-items:center;justify-content:flex-end;font:700 15px 'Karla';cursor:pointer">{{ kasa.nakit }}</span>
               </div>
-              <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1.5px dashed #e2ddcc">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 0">
                 <div style="display:flex;flex-direction:column;flex:1"><span style="font:700 13.5px 'Karla'">kart</span><span style="font:400 11px 'Karla';color:#8a8270">beklenen 60,00 €</span></div>
                 <span onClick="{{ kpOpen.kart }}" style="min-width:96px;height:48px;border:1.5px solid #ddd6c4;border-radius:14px;background:#fff;padding:0 12px;display:flex;align-items:center;justify-content:flex-end;font:700 15px 'Karla';cursor:pointer">{{ kasa.kart }}</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:12px;padding:12px 0">
-                <div style="display:flex;flex-direction:column;flex:1"><span style="font:700 13.5px 'Karla'">çek</span><span style="font:400 11px 'Karla';color:#8a8270">beklenen 0,00 €</span></div>
-                <span onClick="{{ kpOpen.cek }}" style="min-width:96px;height:48px;border:1.5px solid #ddd6c4;border-radius:14px;background:#fff;padding:0 12px;display:flex;align-items:center;justify-content:flex-end;font:700 15px 'Karla';cursor:pointer">{{ kasa.cek }}</span>
               </div>
             </div>
             <span style="font:400 11.5px/1.6 'Karla';color:#a8a191">Fark işaretlidir: eksi = eksik teslim, artı = fazla para. Nakit teslimi para defterine düşer.</span>
@@ -2353,7 +2348,6 @@
             <div style="display:flex;gap:8px">
               <span style="flex:1;height:46px;border-radius:15px;border:1.5px solid #2f353a;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla'">nakit</span>
               <span style="flex:1;height:46px;border-radius:15px;border:1.5px solid #ddd6c4;background:#fff;color:#2f353a;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla'">kart</span>
-              <span style="flex:1;height:46px;border-radius:15px;border:1.5px solid #ddd6c4;background:#fff;color:#2f353a;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla'">çek</span>
             </div>
             <span style="font:400 11.5px/1.55 'Karla';color:#8a8270">Depoda ödeme = kapıda ödeme kuralları (tavan, nakit uyarısı 1.000 €); para deponun kapı kasasına yazılır. Ödenmiş siparişte bu blok "ödendi" satırına iner; vadeli B2B'de "hesaba".</span>
           </div>
@@ -2580,10 +2574,9 @@
             </div>
             <span style="background:#3a4249;color:#e8dcc9;font:700 11px 'Karla';border-radius:11px;padding:6px 11px">14 tahsilat</span>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding-top:12px;border-top:1px solid #464e55">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:12px;border-top:1px solid #464e55">
             <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 15px 'Karla';color:#f5f1e6">276,00 €</span><span style="font:400 10px 'Karla';color:#8f9aa2">nakit</span></div>
             <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 15px 'Karla';color:#f5f1e6">1.010,50 €</span><span style="font:400 10px 'Karla';color:#8f9aa2">kart</span></div>
-            <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 15px 'Karla';color:#e0b487">0,00 €</span><span style="font:400 10px 'Karla';color:#8f9aa2">çek</span></div>
           </div>
         </div>
 
@@ -4122,7 +4115,7 @@ const B2B_KUYRUK = { 'tek başvuru':['temiz'], 'üç başvuru':['temiz','dikkat'
 const TOGGLES = ['kutuAcik','eksik','scanner','yabanci','etiket','kimlikSheet','boySheet','urunAraSheet','imzaOpen','imzaCizildi','ulasilamadi','kabulEtmedi','hasarNotu','sepetVar','maSatir','imzaAlindi','navSheet'];
 const GROUPS = {
   sebep: ['imha','hasar','kayip','fark'],
-  yontem: ['nakit','kart','cek'],
+  yontem: ['nakit','kart'],
   tahsilat: ['nakit','kart'],
   kanal: ['tum','wa','ms','ig'],
   durum: ['tumu','bekleyen'],
@@ -4301,7 +4294,7 @@ class Component extends DCLogic {
     chips: {},
     basimSayisi: 1,
     kargoVerildi: false,
-    kasa: { nakit: '0,00', kart: '0,00', cek: '0,00' },
+    kasa: { nakit: '0,00', kart: '0,00' },
     taslakAlindi: false,
     sosyalSel: 0,
     sosyalCh: null,
@@ -5760,7 +5753,6 @@ class Component extends DCLogic {
         tahsilat: () => this.setState({ keypad: { acik:true, temiz:true, baslik:'Tahsil edilen', beklenen:'60,00', deger: st.tahsilatTutar, hedef:'tahsilat' } }),
         nakit: () => this.setState({ keypad: { acik:true, temiz:true, baslik:'Sayılan nakit', beklenen:'0,00', deger: st.kasa.nakit, hedef:'nakit' } }),
         kart: () => this.setState({ keypad: { acik:true, temiz:true, baslik:'Sayılan kart', beklenen:'60,00', deger: st.kasa.kart, hedef:'kart' } }),
-        cek: () => this.setState({ keypad: { acik:true, temiz:true, baslik:'Sayılan çek', beklenen:'0,00', deger: st.kasa.cek, hedef:'cek' } }),
         gunSonu: () => this.setState({ keypad: { acik:true, temiz:true, baslik:'Sayılan nakit — gün sonu', beklenen:'412,50', deger: st.gunSonuSayim, hedef:'gunSonu' } })
       },
       kpSil: () => this.setState(s => ({ keypad: Object.assign({}, s.keypad, { deger: s.keypad.deger.length > 1 ? s.keypad.deger.slice(0, -1) : '0', temiz: false }) })),
