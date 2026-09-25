@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.43). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.44). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
 `docs/GELECEK.md`'dedir.
@@ -78,6 +78,7 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 
 ## 07 · Sipariş, Checkout ve Ödeme
 
+- [ ] (K.44) **Paketin kargo ölçüsü kurgulanmamış:** paket (`bundle`) kendi kutusuyla mı gider, bir kargo kutusunun içine mi konur, karar yok; ikisinde de paketin ambalaj ölçüsü ve ağırlığı gerekir ama `bundle` tablosunda böyle bir alan yok. Ödeme adımındaki kargo teklifi paket satırını koli planına hiç koymuyor (`checkout-snapshot.ts`, `checkout-draft.ts`: yalnız varyant satırları), sevk ise paketi içindeki varyantlar olarak tartıyor (`shipping/dispatch.ts`); iki hesap ayrışıyor. Bugünkü etki: ücretsiz kargo eşiğinin altındaki yalnız-paket kargo sepeti sipariş edilemiyor ("kargo servisi bulunamadı"), paket + ürün sepetinde kargo fiyatı eksik ağırlıktan çıkıyor.
 - [~] (07.12) **Taşıyıcı + kargo takip numarası:** `order.carrier` (tanımlı küme: `colissimo · chronopost · dhl · ups · other`) + `order.tracking_number`; ikisi de yalnız `delivery_type = 'shipping'` siparişlerde anlamlı — kısıt veride (rota siparişine takip numarası yazılamaz). Numarayı hazırlık ekranı girer (paketi kapatan kişi etiketi elinde tutar), ayrı sevk adımı açılmaz. Takip bağlantısı taşıyıcının URL kalıbından üretilir; `other` seçilirse bağlantı gösterilmez, numara düz metin durur
 
 ## 08 · Müşteri Web Uygulaması (Vitrin)

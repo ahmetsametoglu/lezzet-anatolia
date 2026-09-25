@@ -220,6 +220,7 @@ export async function readCheckoutSnapshot(
       ? await quoteShipping(db, rateProvider, {
           warehouseId: quoteWarehouseId,
           to: { countryCode: selected.country, postalCode: selected.postalCode, city: selected.city ?? undefined },
+          // BEKLEYEN(K.44): paket satırı koli planına girmiyor; paketin kargo ölçüsü kurgulanmadı.
           items: scope.lines.flatMap((l) => (l.variantId ? [{ variantId: l.variantId, qty: l.qty }] : [])),
         })
       : null;

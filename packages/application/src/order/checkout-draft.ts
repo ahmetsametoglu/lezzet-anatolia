@@ -323,6 +323,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       ? await quoteShipping(db, rateProvider, {
           warehouseId: orderWarehouseId,
           to: { countryCode: address.country, postalCode: address.postalCode, city: address.city ?? undefined },
+          // BEKLEYEN(K.44): paket satırı koli planına girmiyor; paketin kargo ölçüsü kurgulanmadı.
           items: orderedLines.flatMap((l) => (l.variantId ? [{ variantId: l.variantId, qty: l.qty }] : [])),
         })
       : null;
