@@ -5,10 +5,7 @@
     "undo": "Geri al",
     "writeFailed": "Değişiklik kaydedilemedi, sepet eski hâline döndü",
     "retry": "Tekrar dene",
-    "dismiss": "Kapat",
-    "summary": "{n} ürün · {total}",
-    "deliveryNote": "Kapıya teslim seçenekleri sepette",
-    "goToCart": "Sepete git"
+    "dismiss": "Kapat"
   },
   "fr": {
     "removed": "{name} retiré du panier",
@@ -16,10 +13,7 @@
     "undo": "Annuler",
     "writeFailed": "Modification non enregistrée, le panier a été rétabli",
     "retry": "Réessayer",
-    "dismiss": "Fermer",
-    "summary": "{n} produits · {total}",
-    "deliveryNote": "Options de livraison dans le panier",
-    "goToCart": "Voir le panier"
+    "dismiss": "Fermer"
   },
   "de": {
     "removed": "{name} aus dem Warenkorb entfernt",
@@ -27,9 +21,6 @@
     "undo": "Rückgängig",
     "writeFailed": "Änderung nicht gespeichert, der Warenkorb wurde zurückgesetzt",
     "retry": "Erneut versuchen",
-    "dismiss": "Schließen",
-    "summary": "{n} Produkte · {total}",
-    "deliveryNote": "Lieferoptionen im Warenkorb",
-    "goToCart": "Zum Warenkorb"
+    "dismiss": "Schließen"
   }
 }

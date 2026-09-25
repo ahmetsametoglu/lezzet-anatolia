@@ -115,8 +115,7 @@
       "cart": "Sepet",
       "address": "Adres",
       "delivery": "Teslimat",
-      "payment": "Ödeme",
-      "count": "{n} ürün"
+      "payment": "Ödeme"
     },
     "review": {
       "title": "Sepetiniz",
@@ -251,8 +250,7 @@
       "cart": "Panier",
       "address": "Adresse",
       "delivery": "Livraison",
-      "payment": "Paiement",
-      "count": "{n} articles"
+      "payment": "Paiement"
     },
     "review": {
       "title": "Votre panier",
@@ -387,8 +385,7 @@
       "cart": "Warenkorb",
       "address": "Adresse",
       "delivery": "Lieferung",
-      "payment": "Zahlung",
-      "count": "{n} Artikel"
+      "payment": "Zahlung"
     },
     "review": {
       "title": "Ihr Warenkorb",
