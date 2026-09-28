@@ -142,6 +142,7 @@ interface WaMessage {
   text?: { body?: string };
   interactive?: { button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } } & Record<string, unknown>;
   button?: { text?: string; payload?: string };
+  revoke?: { original_message_id?: string };
   [key: string]: unknown;
 }
 
@@ -248,6 +249,22 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally,
       // Tepki bir mesaj değil, mesaja düşülmüş bir işarettir: defter satırı açmaz.
       if (message.type === 'reaction') {
         tally.ignored += 1;
+        continue;
+      }
+      // Geri alma yeni mesaj değildir: yazılsaydı boş bir medya balonu açar ve ajanı tetiklerdi.
+      if (message.type === 'revoke') {
+        const original = message.revoke?.original_message_id;
+        if (!original) {
+          tally.ignored += 1;
+          continue;
+        }
+        await ingestOne(tally, {
+          provider: 'meta',
+          eventId: message.id,
+          type: 'whatsapp.revoke',
+          payload: { id: message.id, revoke: { original_message_id: original } },
+          write: () => forgetUnsentMessage(original),
+        });
         continue;
       }
       await ingestOne(tally, {
@@ -633,14 +650,14 @@ async function ingestMessengerEntry(
 }
 
 /**
- * Meta Platform Şartları, müşterinin geri aldığı mesajın bizde de silinmesini ister. Medya satırdan önce silinir: satır önce gitseydi
- * düşen silmenin tekrarı anahtarı bulamaz ve dosya kovada sahipsiz kalırdı.
+ * Meta Platform Şartları, müşterinin geri aldığı mesajın içeriğinin bizde de silinmesini ister. Medya satırdan önce silinir: satır önce
+ * boşalsaydı düşen silmenin tekrarı anahtarı bulamaz ve dosya kovada sahipsiz kalırdı.
  */
 async function forgetUnsentMessage(mid: string): Promise<void> {
   const messages = new MessageService(serviceDb());
   const mesaj = await messages.findByProviderMessageId(mid);
   if (mesaj?.mediaKey) await getR2Private()?.deleteFile(mesaj.mediaKey);
-  await messages.deleteUnsent(mid);
+  await messages.markUnsent(mid);
   // Ham yük asıl mesajın metnini ve ek adreslerini taşır.
   await new WebhookEventService(serviceDb()).clearPayload('meta', mid);
   if (mesaj) await ringConversationBell(mesaj.conversationId);

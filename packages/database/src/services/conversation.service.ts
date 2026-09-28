@@ -226,9 +226,21 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
     return this.getOneBy({ providerMessageId });
   }
 
-  /** Defterin tek silme kapısı: Meta, müşterinin geri aldığı mesajın içeriğinin silinmesini şart koşar. */
-  deleteUnsent(providerMessageId: string): Promise<void> {
-    return this.deleteWhere({ providerMessageId });
+  /**
+   * Defterin içerik silen tek kapısı: Meta, müşterinin geri aldığı mesajın içeriğinin silinmesini şart koşar. Satır `unsent` izi olarak
+   * kalır; çeviri damgası atılır ki kuyruk içeriksiz satırı almasın.
+   */
+  markUnsent(providerMessageId: string): Promise<void> {
+    return this.updateWhereIn('providerMessageId', [providerMessageId], {
+      kind: 'unsent',
+      body: { text: null },
+      mediaKey: null,
+      mediaMime: null,
+      mediaTranscript: null,
+      language: null,
+      translations: null,
+      translatedAt: new Date().toISOString(),
+    });
   }
 
   /**

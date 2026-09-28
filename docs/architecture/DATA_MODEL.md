@@ -106,7 +106,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `health_status`: ok, warn, crit
 - `mcp_scope`: read, propose *(MCP anahtarının araç ailesi — `propose` `read`i kapsar)*
 - `message_direction`: inbound, outbound
-- `message_kind`: text, interactive, template, media
+- `message_kind`: text, interactive, template, media, unsent
 - `movement_direction`: in, out
 - `movement_source`: manual, bank_import, system *(`system` = webhook, kapıda tahsilat, hızlı satış, payout — sistemin kendi yazdığı satır)*
 - `movement_type`: order_payment, order_refund, purchase, expense, transfer, capital, misc

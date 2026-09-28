@@ -217,6 +217,23 @@ describe('WhatsApp — üç tuzak tek gövdede', () => {
     expect((await messages.listByConversation(konuOnce!.id)).length).toBe(oncekiSayi);
   });
 
+  it('REVOKE yeni mesaj açmaz, geri alınan mesajı içeriksiz `unsent` izine çevirir', async () => {
+    // `revoke` tanınmasaydı boş bir medya satırı olarak yazılır, asıl mesajın metni ekranda kalırdı.
+    const asil = eventId('wamid', 6);
+    await handleMetaWebhook(whatsappBody({ id: asil, type: 'text', text: { body: 'Yanlış numaraya yazdım' } }));
+    const konu = await konusma('whatsapp', `+${WA_PERSON}`);
+    const oncekiSayi = (await messages.listByConversation(konu!.id)).length;
+
+    const sonuc = await handleMetaWebhook(
+      whatsappBody({ id: eventId('wamid', 7), type: 'revoke', revoke: { original_message_id: asil } }),
+    );
+
+    expect(sonuc).toMatchObject({ written: 1, duplicates: 0 });
+    const satirlar = await messages.listByConversation(konu!.id);
+    expect(satirlar.length).toBe(oncekiSayi);
+    expect(satirlar.find((m) => m.providerMessageId === asil)).toMatchObject({ kind: 'unsent', body: { text: null } });
+  });
+
   it('`failed` statüsü numaranın KİMLİK künyesine yazılır — erken tetiğin yakıtı', async () => {
     // Taşıyıcının "ulaşamadım" beyanı kimlik şüphesinin erken tetiğidir; tetik ölçülemezse motorun o dalı hiç çalışmaz.
     const musteri = await profiles.insert({ name: `Ulaşılamayan ${stamp}` });
@@ -420,19 +437,19 @@ describe('Messenger / Instagram — kişi hangi alanda?', () => {
     expect(await conversations.findByExternalRef('messenger', IG_PERSON)).toBeNull();
   });
 
-  it('müşterinin GERİ ALDIĞI mesaj defterden silinir, ham yükü boşaltılır', async () => {
+  it('müşterinin GERİ ALDIĞI mesaj içeriksiz `unsent` izine döner, ham yükü boşaltılır', async () => {
     // Geri alma bildirimi asıl mesajın `mid`ini taşır: aynı anahtarla sahiplenilseydi çift sayılıp atılır, metin ekranda kalırdı.
     const id = eventId('m_ig', 2);
     webhookEventIds.push(`${id}:deleted`);
     const kisi = { sender: { id: IG_PERSON }, recipient: { id: IG_ACCOUNT } };
     await handleMetaWebhook(messengerBody('instagram', { ...kisi, message: { mid: id, text: 'Yanlış kişiye yazdım' } }));
     const konu = await konusma('instagram', IG_PERSON);
-    expect((await messages.listByConversation(konu!.id)).some((m) => m.providerMessageId === id)).toBe(true);
 
     const sonuc = await handleMetaWebhook(messengerBody('instagram', { ...kisi, message: { mid: id, is_deleted: true } }));
 
     expect(sonuc).toMatchObject({ written: 1, duplicates: 0 });
-    expect((await messages.listByConversation(konu!.id)).some((m) => m.providerMessageId === id)).toBe(false);
+    const satir = (await messages.listByConversation(konu!.id)).find((m) => m.providerMessageId === id);
+    expect(satir).toMatchObject({ kind: 'unsent', body: { text: null }, translations: null });
     const { data: olay } = await db.from('webhook_event').select('payload').eq('provider', 'meta').eq('event_id', id).single();
     expect(olay?.payload).toBeNull();
   });

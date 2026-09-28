@@ -14,6 +14,7 @@ export const MESSAGE_KIND_LABELS: Record<MessageKind, string> = {
   interactive: '[etkileşimli kart]',
   template: '[kalıp mesaj]',
   media: '[görsel / dosya]',
+  unsent: '[bu mesaj silindi]',
 };
 
 /** Kategori ücret sınıfıdır: pazarlama en pahalısı, işlem kalıbı pencere içinde ücretsiz. */

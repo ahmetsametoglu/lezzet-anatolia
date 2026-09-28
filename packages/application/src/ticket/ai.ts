@@ -239,6 +239,7 @@ function mediaPlaceholder(
   message: { kind: string; mediaMime: string | null; mediaTranscript: string | null },
   sonMu: boolean,
 ): string {
+  if (message.kind === 'unsent') return '[bu mesaj geri alındı]';
   if (message.kind !== 'media') return '[metinsiz mesaj]';
   const mime = message.mediaMime ?? '';
   /* Çözülmüş ses "müşterinin sözü" diye değil işaretle verilir: model kaynağı görünce önce "şunu mu demek istediniz" diye teyit eder. */

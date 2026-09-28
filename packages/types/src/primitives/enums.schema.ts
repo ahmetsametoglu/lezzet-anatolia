@@ -401,11 +401,10 @@ export const MessageDirectionEnum = z.enum(['inbound', 'outbound']);
 export type MessageDirection = z.infer<typeof MessageDirectionEnum>;
 
 /**
- * Mesajın taşıdığı biçim. `template` bir SÜS değil ÜCRET sınıfıdır: 24 saatlik servis penceresi
- * dışında yalnız Meta-onaylı şablon gönderilebilir ve ücretlidir (~€0,13 FR/DE) — ADR-005'in
- * "önce müşteri yazsın" ilkesi tam olarak bu satırdan doğuyor.
+ * `template` bir süs değil ücret sınıfıdır: 24 saatlik pencere dışında yalnız Meta onaylı kalıp gider. `unsent` müşterinin geri
+ * aldığı mesajın içeriksiz izidir.
  */
-export const MessageKindEnum = z.enum(['text', 'interactive', 'template', 'media']);
+export const MessageKindEnum = z.enum(['text', 'interactive', 'template', 'media', 'unsent']);
 export type MessageKind = z.infer<typeof MessageKindEnum>;
 
 /**

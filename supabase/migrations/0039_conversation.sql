@@ -5,8 +5,9 @@
 create type conversation_source as enum ('whatsapp', 'messenger', 'instagram');
 -- Yön gönderenden ayrı eksendir: bizim adımıza yapay zekâ da personel de aynı numaradan yazar, taşıma açısından tek yöndür.
 create type message_direction as enum ('inbound', 'outbound');
--- `template` bir ücret sınıfıdır: 24 saatlik pencere dışında yalnız Meta onaylı kalıp gönderilebilir.
-create type message_kind as enum ('text', 'interactive', 'template', 'media');
+-- `template` bir ücret sınıfıdır: 24 saatlik pencere dışında yalnız Meta onaylı kalıp gönderilebilir. `unsent` müşterinin geri
+-- aldığı mesajın içeriksiz izidir: Meta içeriğin silinmesini şart koşar, operatör yine de orada bir mesaj olduğunu görür.
+create type message_kind as enum ('text', 'interactive', 'template', 'media', 'unsent');
 -- Fiyatı belirleyen alan, adlar Meta'nındır. Mesajda saklanır, şablon tablosunda değil: kategori Meta'da sonradan değişebilir
 -- ve geçmiş fatura bugünün sınıflandırmasıyla yeniden yazılırdı.
 create type template_category as enum ('marketing', 'utility', 'authentication');
@@ -138,6 +139,10 @@ create table public.message (
   -- mesajını kaybettirirdi.
   constraint message_media_kind check (
     (media_key is null and media_mime is null and media_transcript is null) or kind = 'media'
+  ),
+  -- Kural veride, çünkü geç biten bir yazım (ses çözümü, çeviri) silinmiş içeriği geri getirmemeli.
+  constraint message_unsent_empty check (
+    kind <> 'unsent' or (body = '{"text": null}'::jsonb and language is null and translations is null)
   )
 );
 
@@ -275,4 +280,4 @@ revoke all on function public.record_message(uuid, message_direction, message_ki
 comment on table public.conversation is
   'Mesajlaşma konuşması: kaynak (whatsapp/messenger/instagram), kimlik bağı, izin, 24 saatlik servis penceresi, son hareket.';
 comment on table public.message is
-  'Konuşmanın mesajları: yön, tür, gövde. Defterdir; yazılır, güncellenmez.';
+  'Konuşmanın mesajları: yön, tür, gövde. Defterdir; yazılır, güncellenmez. Müşterinin geri aldığı mesaj içeriksiz unsent izine döner.';

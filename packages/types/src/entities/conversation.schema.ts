@@ -99,7 +99,7 @@ export const MessageBodySchema = z.object({
 });
 export type MessageBody = z.infer<typeof MessageBodySchema>;
 
-/** Defterdir, yazılır ve güncellenmez: gönderilmiş mesaj değişmez. */
+/** Defterdir, yazılır ve güncellenmez; tek istisna müşterinin geri aldığı mesajın içeriksiz `unsent` izine dönmesidir. */
 export const MessageSchema = z.object({
   id: z.string().uuid(),
   conversationId: z.string().uuid(),

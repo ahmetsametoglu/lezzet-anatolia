@@ -396,7 +396,8 @@
       "text": "[boş mesaj]",
       "interactive": "[etkileşimli kart]",
       "template": "[kalıp mesaj]",
-      "media": "[görsel / dosya]"
+      "media": "[görsel / dosya]",
+      "unsent": "[bu mesaj silindi]"
     },
     "empty": {
       "title": "Gelen kutusu boş",

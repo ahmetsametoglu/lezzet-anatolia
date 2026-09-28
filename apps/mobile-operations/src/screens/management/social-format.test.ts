@@ -11,6 +11,7 @@ const KIND_LABELS: Record<MessageKind, string> = {
   interactive: '[etkileşimli kart]',
   template: '[kalıp mesaj]',
   media: '[görsel / dosya]',
+  unsent: '[bu mesaj silindi]',
 };
 
 describe('socialTitle — müşteri > profil > ham anahtar', () => {
