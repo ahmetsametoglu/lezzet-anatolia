@@ -27,32 +27,16 @@ import { customerSupportTools, type PendingProductCard } from './support-tools';
 import { queueTicketReplyMail } from './reply-mail';
 
 /**
- * **AI DESTEK ÇEKİRDEĞİ** (16.5 · 20.4) — hibrit taslak üretimi ve özerk cevap; iki uygulama da
- * (web'in "Taslak öner" düğmesi · backend'in cron'u) BURADAN çağırır, iki kopya doğmaz.
- *
- * ── TİCARİ DEĞER İKİ YOLDAN: GİRDİ VE DAR ARAÇ SETİ ─────────────────────────
- * Sınıf 4'ün kırmızı çizgisi ("stok/fiyat/durum domain-core'dan") iki mekanizmayla korunuyor.
- * Talebin KENDİ bağlamı (sipariş durumu, teslim günü, kalemler) burada DB'den okunup girdiye
- * yazılır. Talebin bağlamında olmayan ama müşterinin sorabileceği şeyler (adresine hangi günler
- * geliniyor, son siparişleri) 16.9'dan beri ARAÇLA cevaplanıyor: `customerSupportTools` müşteri
- * kimliğine kapatılmış, salt okur bir set döndürür ve `runOpts` onu koşuya geçirir. Araçların
- * gövdesi yine motorlara dayanır — model hesaplamaz, okur (`support-tools.ts` künyesi).
- *
- * ── ÖNBELLEK KURALI (20.4) ──────────────────────────────────────────────────
- * Taslak satıra yazılır (`ai_draft_reply` + damga). Son mesajdan SONRA üretilmiş bir taslak varsa
- * model HİÇ çağrılmaz — aynı soruya ikinci kez para ödenmez. `force` yalnız operatörün düğmesi
- * içindir: insan "yeniden üret" diyorsa sebep ondadır.
+ * Hibrit taslak ve özerk cevabın tek çekirdeği: web'in "Taslak öner" düğmesi de backend'in taraması da buradan çağırır. Model
+ * hesaplamaz, okur: talebin bağlamı girdiye yazılır, gerisi müşteri kimliğine kapatılmış salt okur araçlarla cevaplanır.
  */
 
 /** Modele giden yazışmanın tavanı — bağlam freni: kırk mesajlık talepte son 12 mesaj yeter. */
 const THREAD_LIMIT = 12;
 
 /**
- * Koşunun araç ayarı (16.9) — **kimlik burada kapanır.**
- *
- * Araçlar müşteri kimliğine kapatılmış hâlde kuruluyor; model onları yalnız çağırabilir, kime ait
- * olduklarını değiştiremez (`support-tools.ts` künyesi). Enjekte model verildiğinde (test) araç
- * geçilmiyor: sahte model araç çağırmaz ve geçmek testi ağa açardı.
+ * Araçlar müşteri kimliğine kapatılmış kurulur; model onları çağırabilir ama kime ait olduklarını değiştiremez. Enjekte model (test)
+ * araç çağırmaz, araç geçmek testi ağa açardı.
  */
 async function runOpts(
   db: SupabaseClient,
@@ -60,16 +44,13 @@ async function runOpts(
   opts: SupportAiOpts,
   known: AnchorGate | null = null,
   /**
-   * SOHBET turunda sepet araçları da verilir (15.20 · 15.22): kimlik kapısından BAĞIMSIZ, çünkü
-   * sepet kapılı üç yetkiden biri değil (`cart/agent-tools.ts` künyesi). Kimliksiz sohbette sepet
-   * sohbetin kendisine yazılır; fiyat kademesi ve kayıtlı adres yine kapıya bağlı (`identity`).
-   * Talep yolunda (e-posta) sohbet yok, sepet aracı da yok.
+   * Sepet araçları kimlik kapısından bağımsızdır: kimliksiz sohbette sepet sohbetin kendisine yazılır, fiyat kademesi ve kayıtlı adres
+   * yine kapıya bağlıdır. E-posta talebinde sohbet olmadığı için sepet aracı da yok.
    */
   cart: { conversation: Conversation; sink: CartLinkSink } | null = null,
 ) {
   if (opts.model) return { model: opts.model };
-  /* Sohbetin teslimat yeri (10.09): iki araç seti AYNI hafızayı paylaşır — urun_ara'da söylenen posta
-     kodu aynı turda sepete_ekle'de de bilinir ve sohbete yazılır (`cart/chat-place.ts`). */
+  /* İki araç seti aynı yer hafızasını paylaşır: ürün aramada söylenen posta kodu aynı turda sepete eklemede de bilinir. */
   const place = cart ? chatPlaceMemory(db, cart.conversation) : null;
   const cartTools = (identity: string | null, gate: AnchorGate | null) =>
     cart
@@ -80,8 +61,7 @@ async function runOpts(
           place,
           accountLink: accountLinkOffered(cart.conversation, gate),
           onLink: (link) => {
-            // Sepet bağlantısı hesap bağlantısını EZER (o da hesabı bağlar, üstelik sepete götürür);
-            // tersi olmaz — aynı turda ikisi çağrılırsa sohbette tek düğme kalır ve o sepetinki.
+            // Sepet bağlantısı hesap bağlantısını ezer (o da hesabı bağlar, üstelik sepete götürür); sohbette tek düğme kalır.
             if (link.purpose === 'cart' || !cart.sink.link) cart.sink.link = link;
           },
           onCartWrite: (hazir) => {
@@ -90,21 +70,10 @@ async function runOpts(
           },
         })
       : {};
-  // ── KİMLİK KAPISI ÜÇLÜDÜR (04.10 · DOMAIN §10 · 28.08'de genişledi) ───────
-  // Kapı GEÇMİŞ araçlarını korur (siparişler, adrese gelinen günler): *"kimliği bilmeden ne
-  // açtığımız asıl sorudur."* Ama kapatılan şey bir tur boyunca **araç setinin tamamıydı** ve bu
-  // fazlaydı — katalog, fiyat listesi, teslimat şartları ve "şu posta koduna geliyor musunuz"
-  // kimseye ait değil; cevapları sitede ziyaretçiye zaten açık. Kimliksiz sohbette (Messenger/IG'de
-  // KURAL, WhatsApp'ta kanıtsız numarada) ajan bunları bile okuyamıyordu (`CHANNELS §3b`).
-  //
-  // Üç hâl: kimlik yok → kamusal set · kimlik var ama çapa kapalı → yine kamusal set (kimliğe
-  // GÜVENİLMEDİĞİ için fiyat kapsamı da ziyaretçiye düşer, B2B kademesi sızmaz) · çapa açık → tam
-  // set. Kapı ARAÇTA, prompt'ta değil: modele "söyleme" demek bir ricadır, aracı vermemek kısıttır.
-  //
-  // `known` sohbet yolundan gelir: orada kapı zaten okundu (soruyu da o okuma söylüyor) — iki kez
-  // okumak aynı cevabı iki sorguya mal ederdi.
-  // Ürün kartı kancası yalnız SOHBET turunda (kart kanala göre çizilir; e-posta talebinde kanal yok).
+  // Ürün kartı kancası yalnız sohbet turunda: kart kanala göre çizilir, e-posta talebinde kanal yok.
   const cardHook = cart ? { conversation: cart.conversation, onCard: (card: PendingProductCard) => cart.sink.cards.push(card) } : null;
+  // Kimlik kapısı yalnız geçmiş araçlarını kapatır; katalog, fiyat ve teslimat şartları sitede ziyaretçiye zaten açık. Kapı araçta,
+  // prompt'ta değil: modele "söyleme" demek ricadır, aracı vermemek kısıttır.
   if (!customerId) return { tools: { ...customerSupportTools(db, null, cardHook, place), ...cartTools(null, null) } };
   const gate = known ?? (await anchorGateOf(db, customerId));
   if (!gate.open) logger.info({ customerId, anchor: gate.state }, 'ai: kimlik kapısı kapalı — yalnız kamusal araçlar verildi');
@@ -112,25 +81,17 @@ async function runOpts(
   return { tools: { ...customerSupportTools(db, identity, cardHook, place), ...cartTools(identity, gate) } };
 }
 
-/**
- * Sohbet turunun bağlantısı — araç üretir (`sepet_baglantisi` · `hesap_baglantisi`), kabı doldurur;
- * cevabın sonuna `withCartLink` ekler (kural ve gerekçesi `cart/link-text.ts`te, saf ve birim testli).
- */
+/** Sohbet turunun kabı: araçlar bağlantıyı ve kartları buraya bırakır, cevabın sonuna `withCartLink` ekler. */
 interface CartLinkSink {
   link: ChatLink | null;
-  /** Bu turda sepete yazıldı mı — yazıldıysa bağlantı modelin sözünü beklemeden eklenir (08.09). */
+  /** Bu turda sepete yazıldıysa bağlantı modelin sözünü beklemeden eklenir. */
   wrote: boolean;
   /**
-   * Son yazımdan sonra sepet SİPARİŞ VERİLEBİLİR mi (10.09): yer biliniyor, asgari sepet dolu,
-   * satın alınamayan ya da gönderilemeyen kalem yok. Değilse yazım bağlantıyı kendiliğinden
-   * getirmez — canlı turda 22,84 €'luk sepete (asgari 40 €) "Sepetiniz hazır… ödemek için" gitmişti.
+   * Son yazımdan sonra sepet sipariş verilebilir mi: yer biliniyor, asgari tutar dolu, gönderilemeyen kalem yok. Değilse yazım bağlantıyı
+   * kendiliğinden getirmez, asgarinin altındaki sepete "ödemek için" bağlantısı gitmesin.
    */
   ready: boolean;
-  /**
-   * Bu turda üretilen ÜRÜN KARTLARI (`urun_karti`, 08.09) — özerk yolda metin cevabından ÖNCE
-   * gönderilir; taslak yolunda GÖNDERİLMEZ (operatör görmediği bir şeyi onaylamış olurdu), yalnız
-   * loglanır. Kurucu ve gerekçe `catalog/product-card.ts`.
-   */
+  /** Özerk yolda metinden önce gönderilir; taslak yolunda gönderilmez, çünkü operatör onları görmedi. */
   cards: PendingProductCard[];
 }
 
@@ -140,28 +101,16 @@ function bosKap(): CartLinkSink {
 }
 
 /**
- * Araç seti hangi kimliğe kapatılacak — `null` demek "kamusal set" demektir, "araç yok" değil.
- *
- * Karar saf tutuldu ve export edildi çünkü **sessiz bir regresyonun tam yeri burası**: koşul
- * yanlışlıkla `customerId ?? null` olsaydı çapası kapalı müşterinin geçmişi açılırdı ve hiçbir yerde
- * hata görünmezdi — ajan yalnız fazla şey bilirdi. Gövdesi tek satır, ama sınandığı için öyle.
+ * `null` "araç yok" değil, "kamusal set" demektir. Saf ve sınanıyor, çünkü koşul yalnız `customerId`e bakmaya kaysa çapası kapalı
+ * müşterinin geçmişi sessizce açılırdı.
  */
 export function toolsIdentityOf(customerId: string | null, gate: AnchorGate | null): string | null {
   return customerId && gate?.open ? customerId : null;
 }
 
 /**
- * **Hesap bağlantısı aracı verilsin mi** (15.16) — kimlik kapısını müşterinin kendi eliyle açmanın
- * yolu; yalnız işe yarayacağı yerde verilir, çünkü aracı vermemek kısıttır, "çağırma" demek ricadır.
- *
- *   · Sohbette müşteri YOK → ver. Messenger/IG'nin olağan hâli; WhatsApp'ta çakışmada da olur.
- *   · Messenger/IG sohbeti bir kayda BAĞLI → verme. O bağı operatör kurdu; bağlantıyı başka hesapla
- *     açan kişi `foreign_identity` alırdı — iki gerçek kaydı buluşturmak insanın kararıdır (DOMAIN §10).
- *   · WhatsApp, kapı KAPALI ve bekleyen kimlik sorusu YOK (taslak ya da çapasız kayıt) → ver: giriş
- *     numarayı hesaba bağlar (taslak birleşir, çapasız kayıttan devralınır — `bindPhoneToAccount`).
- *     Kimlik sorusu bekliyorsa verme: o sohbette geçerli yol sorunun kendisi (04.10); iki yol aynı
- *     anda açılırsa müşteri hangisini izleyeceğini bilemez.
- *   · Kapı AÇIK → verme: bağlanacak bir şey yok.
+ * Hesap bağlantısı aracı yalnız işe yarayacağı yerde verilir: sohbette müşteri yokken ya da WhatsApp'ta kapı kapalı ve bekleyen kimlik
+ * sorusu yokken. Operatörün kurduğu Messenger/IG bağı başka hesapla ezilemez, bekleyen kimlik sorusu varken ikinci yol açılmaz.
  */
 export function accountLinkOffered(conversation: Pick<Conversation, 'customerId' | 'source'>, gate: AnchorGate | null): boolean {
   if (!conversation.customerId) return true;
@@ -174,21 +123,15 @@ export type SupportAiOutcome =
   | { status: 'cached' }
   | { status: 'replied' }
   | { status: 'handoff'; reason: string }
-  /**
-   * `in_flight` (06.09) — aynı sohbetin cevabı ZATEN üretiliyor. Öteki sebeplerden farkı, bunun
-   * bir eksiklik değil bir YARIŞ işareti olması: iki çağıran (dakikalık tarama + webhook tetiği)
-   * aynı satıra denk geldi ve ikincisi geri çekildi. Sayaçta "atlandı" görünür; arıza değildir.
-   */
+  /** `in_flight`: aynı sohbetin cevabı zaten üretiliyor; eksiklik değil yarış işaretidir. */
   | { status: 'skipped'; reason: 'not_found' | 'wrong_mode' | 'nothing_to_answer' | 'empty_thread' | 'in_flight' }
   /**
-   * `not_configured` **AI anahtarının** yokluğudur; `send_not_configured` **gönderim jetonunun**.
-   * İkisi ayrı, çünkü çağıranın tepkisi ayrı: ilkinde tüm tur anlamsızdır (her tarama model
-   * çağıracak), ikincisinde yalnız özerk sohbet taraması anlamsızdır — taslak üretimi çalışmalı.
-   * Tek kovaya atmak, jeton eksikken operatörün taslağını da sessizce durdururdu.
+   * `not_configured` AI anahtarının, `send_not_configured` gönderim jetonunun yokluğudur. Ayrı, çünkü jeton eksikken taslak üretimi
+   * çalışmaya devam etmeli.
    */
   | { status: 'failed'; reason: 'not_configured' | 'send_not_configured' | 'provider_error' | 'invalid_output' };
 
-/** Test/enjeksiyon: model verilirse env ve ağ atlanır (`translate-user-text` deseniyle aynı). */
+/** Model verilirse env ve ağ atlanır (test). */
 export interface SupportAiOpts {
   model?: AiModel;
   /** Önbelleği atla — operatörün "yeniden üret" kararı. */
@@ -212,8 +155,7 @@ async function orderContextOf(db: SupabaseClient, orderId: string | null): Promi
     referenceNo: order.referenceNo,
     statusLabel: ORDER_STATUS_LABELS[order.status],
     deliveryDate: order.deliveryDate ? formatShortDate(order.deliveryDate, 'tr') : null,
-    // Tutar BİLEREK yok (görev künyesi): para konuşulacaksa insan konuşur. Vade bilgisi ise
-    // "faturayı ne zaman öderim" sorusunun cevabı ve güvenle verilebilir.
+    // Tutar bilerek yok: para konuşulacaksa insan konuşur. Vade ise "faturayı ne zaman öderim" sorusunun güvenle verilebilen cevabı.
     paymentLabel: order.onAccount ? 'vadeli (açık hesap)' : null,
     items: items.map((item) => {
       const variant = variantOf.get(item.variantId);
@@ -224,12 +166,8 @@ async function orderContextOf(db: SupabaseClient, orderId: string | null): Promi
 }
 
 /**
- * İşletme künyesinin görev girdisine giren hâli — TEK yerde kuruluyor.
- *
- * İki bağlam kurucusu (talep · sohbet) aynı değeri geçmek zorunda: ayrı ayrı yazılsaydı biri gün
- * gelip makine biçimini (`+33616990681`) geçer ve müşteriye okunaksız bir numara söylenirdi.
- * `phoneDisplay` bilinçli tercih — bu numara müşterinin OKUYACAĞI hâlidir, `wa.me`'nin istediği
- * biçim değil (marka künyesi ikisini ayrı alanda tutuyor, tam da bu yüzden).
+ * Tek yerde, çünkü iki bağlam kurucusu aynı değeri geçmeli; biri makine biçimini geçse müşteriye okunaksız numara söylenirdi.
+ * `phoneDisplay` müşterinin okuyacağı biçimdir.
  */
 const BUSINESS_CARD: SupportContextInput['business'] = {
   whatsapp: brand.contact.phoneDisplay,
@@ -252,11 +190,8 @@ async function ticketContextOf(db: SupabaseClient, ticket: Ticket): Promise<Supp
 }
 
 /**
- * **Hibrit taslağı üret ve satıra yaz** (sınıf 1 — 20.4).
- *
- * Mod kapısı içeride: `hybrid` değilse üretmez — cron ile operatör düğmesi aynı kuralı iki kez
- * yazmasın. Başarısızlıkta satıra HİÇBİR ŞEY yazılmaz: bozuk bir taslağı "hazır" göstermektense
- * taslaksız kalmak yeğdir; bir sonraki tur yeniden dener.
+ * Mod kapısı içeride, cron ile operatör düğmesi aynı kuralı iki kez yazmasın. Başarısızlıkta satıra hiçbir şey yazılmaz: bozuk taslağı
+ * "hazır" göstermektense taslaksız kalmak yeğdir.
  */
 export async function generateTicketDraft(db: SupabaseClient, ticketId: string, opts: SupportAiOpts = {}): Promise<SupportAiOutcome> {
   const tickets = new TicketService(db);
@@ -269,8 +204,7 @@ export async function generateTicketDraft(db: SupabaseClient, ticketId: string, 
   // Son söz bizdeyse cevaplanacak bir şey yok — müşteriye durduk yerde yazdırmayız.
   if (context.messages[context.messages.length - 1]?.who !== 'customer') return { status: 'skipped', reason: 'nothing_to_answer' };
 
-  // Önbellek: taslak son mesajdan taze ise model çağrılmaz (20.4). Kıyas son mesajın ANI ile —
-  // mesajlar eskiden yeniye geldi, damga sonuncusundan yeniyse taslak o mesajı görmüş demektir.
+  // Taslak son mesajdan tazeyse model çağrılmaz; aynı soruya ikinci kez para ödenmez.
   if (!opts.force && ticket.aiDraftReply && ticket.aiDraftGeneratedAt) {
     const lastMessageAt = (await new TicketMessageService(db).listByTicket(ticket.id)).at(-1)?.createdAt;
     if (lastMessageAt && ticket.aiDraftGeneratedAt >= lastMessageAt) return { status: 'cached' };
@@ -279,76 +213,39 @@ export async function generateTicketDraft(db: SupabaseClient, ticketId: string, 
   const result = await runTask(ticketDraftTask, context, { ...(await runOpts(db, ticket.customerId, opts)), usageContext: { ticketId: ticket.id } });
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
-  /* Taslak HAM yazılır — sökme 06.09'da KALKTI, kendi künyesinin şartı gerçekleştiği için.
-     Buraya *"ekran çizmeyi öğrendiği gün bu çağrı kalkar"* yazılmıştı; talebi gösteren yüzeylerin
-     hepsi artık çiziyor: web'de `components/text/chat-text` (operasyon talep, sosyal, müşteri talep
-     detayı) ile `@lezzet/email` bildirim şablonu, native'de `components/ui/chat-text` (yönetim
-     şikâyet ekranı, müşteri talebi). Sökme sürseydi kazananı olmayan bir kayıp olurdu: ajan biçimli
-     yazmaya devam ediyor ve burada silinen vurgu geri getirilemiyor.
-     Ölçüt YÜZEY değil KANAL olduğu için sohbet yolu ayrı kalır (`formatForChannel`): orada
-     Messenger/IG bu söz dizimini render etmiyor ve sökme sürüyor. */
+  /* Taslak ham yazılır: talebi gösteren bütün yüzeyler biçimi çiziyor ve silinen vurgu geri getirilemez. Sohbet yolunda ölçüt kanal
+     olduğu için orada `formatForChannel` söker. */
   await tickets.update({
     id: ticket.id,
     aiDraftReply: result.data.reply,
     aiDraftGeneratedAt: new Date().toISOString(),
   });
-  // Taslağı çoğu zaman CRON yazıyor (5 dakikada bir tur) — yani ekranda hiçbir şey olmadan beliriyor.
-  // Zil çalmazsa operatör taslağı ancak sayfayı elle yenileyince görürdü (16.8).
+  // Taslağı çoğu zaman tarama yazar; zil çalmazsa operatör onu ancak sayfayı elle yenileyince görürdü.
   await ringTicketsBell();
   return { status: 'generated' };
 }
 
-/**
- * Sosyal konuşmanın yazışması → görev girdisi. Sipariş bağı yok — konuşma siparişe bağlanmaz.
- *
- * Kanal KONUŞMADAN okunur, sabit değil (21.08): sabit `'whatsapp'` yazılıydı ve Messenger'dan yazan
- * müşteriye ajan "WhatsApp" diyordu. Kanal adı modele söyleniyor çünkü müşteri onu görüyor.
- */
-/**
- * Metinsiz mesajın modele NE OLARAK anlatılacağı (15.26).
- *
- * ── DÜZELTİLEN ARIZA ────────────────────────────────────────────────────────
- * Buraya kadar her metinsiz mesaj modele `[metinsiz mesaj]` diye geçiyordu: ajan bir SES kaydı mı
- * bir FOTOĞRAF mı geldiğini bilmiyordu, üstelik onu ALGILAYAMADIĞINI da bilmiyordu. Eline anlamsız
- * bir dize geçiyor ve üzerine cevap kuruyordu — saha turunda adını koyduğumuz desenin aynısı:
- * *araç susunca model uyduruyor.*
- *
- * Çözüm modele daha çok bilgi vermek değil, **ne bilmediğini söylemek**: hem türü hem sınırı aynı
- * cümlede duruyor. Model artık "duyamıyorum, dinleyip döneceğiz" diyebiliyor; bu, uydurulmuş bir
- * cevaptan hem dürüst hem ucuz.
- *
- * Transkripsiyon geldiğinde (15.26'nın asıl yarısı) ses satırı metnini KAZANIR ve bu yer tutucuya
- * hiç düşmez; fotoğraf ve belge burada kalır.
- */
 /**
  * Geçmişteki bir transkriptin bağlamda kaplayabileceği en fazla karakter. Cevaplanan SON mesaj bu
  * sınıra girmez — orada eksik bilgi, yanlış cevabın ta kendisidir.
  */
 const TRANSCRIPT_CONTEXT_LIMIT = 400;
 
+/**
+ * Metinsiz mesaj modele türü ve sınırıyla birlikte anlatılır: model ne bilmediğini bilince "duyamıyorum, dinleyip döneceğiz" der,
+ * uydurmaz.
+ */
 function mediaPlaceholder(
   message: { kind: string; mediaMime: string | null; mediaTranscript: string | null },
   sonMu: boolean,
 ): string {
   if (message.kind !== 'media') return '[metinsiz mesaj]';
   const mime = message.mediaMime ?? '';
-  /*
-    ÇÖZÜLMÜŞ SES: metin modele veriliyor ama "müşterinin sözü" diye DEĞİL. İşaret bilerek metnin
-    başında duruyor — model cümleyi okumadan önce kaynağını görüyor ve 15.26'nın teyit kuralı
-    (önce "şunu mu demek istediniz") ancak böyle tetiklenebilir. Metni işaretsiz vermek, konuşma
-    dilinin tutarsızlığını yazılı bir beyan gibi okutmak olurdu.
-  */
+  /* Çözülmüş ses "müşterinin sözü" diye değil işaretle verilir: model kaynağı görünce önce "şunu mu demek istediniz" diye teyit eder. */
   const cozum = message.mediaTranscript?.trim();
   if (cozum) {
-    /*
-      SON MESAJ TAM, GEÇMİŞ KIRPIK (07.09 · kullanıcı senaryosu). Müşteri iki dakika anlatıp talebi
-      SONDA söyleyebilir — cevaplanan mesajı kırpmak, tam da cevaplanacak cümleyi atmak olurdu. Ama
-      geçmişteki uzun transkriptler 12 mesajlık pencereyi doldurur ve yeni soruyu bağlamdan iter.
-      Ölçüt bu yüzden konum: sondaki tam, öncekiler kısaltılmış.
-
-      Kırpma MEKANİKTİR, özetleme değil — özetleyen bir model uydurabilir; kırpma yalnız eksiltir ve
-      eksilttiğini SÖYLER.
-    */
+    /* Son mesaj tam, geçmiş kırpık: talep çoğu zaman uzun anlatımın sonunda söylenir, geçmişin uzun dökümleri ise yeni soruyu
+       bağlamdan iter. Kırpma mekaniktir, özetleme değil: yalnız eksiltir ve eksilttiğini söyler. */
     const kirp = !sonMu && cozum.length > TRANSCRIPT_CONTEXT_LIMIT;
     const govde = kirp ? `${cozum.slice(0, TRANSCRIPT_CONTEXT_LIMIT)}… [kısaltıldı]` : cozum;
     return `[müşterinin SESLİ MESAJININ makine çözümü — birebir doğru olmayabilir]: ${govde}`;
@@ -359,15 +256,12 @@ function mediaPlaceholder(
 }
 
 /**
- * Yeniden selam eşiği (saat) — PARAMETRİK (üslup kararı 07.09, araştırmalı).
- *
- * Model zamanı görmez; "uzun aradan sonra" kararını sistem verir ve son müşteri mesajına işaret
- * koyar. On iki saat: Fransız kuralı "günde bir bonjour" (aynı gün ikinci selam kabalık), WhatsApp'ın
- * kendi karşılama mesajı 14 gün sessizlikten sonra; ikisinin arasında bir sohbet oturumu ölçüsü —
- * sabah yazıp akşam dönen müşteri yeniden selam alır, on dakika sonra dönen almaz.
+ * Yeniden selam eşiği (saat), parametrik. Fransız görgüsünde aynı gün ikinci "bonjour" kabalıktır; sabah yazıp akşam dönen yeniden
+ * selam alır, on dakika sonra dönen almaz.
  */
 const SESSION_GAP_HOURS = 12;
 
+/** Sosyal konuşmanın yazışması → görev girdisi. Kanal konuşmadan okunur, çünkü müşteri kanal adını görüyor. */
 async function conversationContextOf(db: SupabaseClient, conversation: Conversation): Promise<SupportContextInput | null> {
   const messages = await new MessageService(db).listByConversation(conversation.id);
   if (messages.length === 0) return null;
@@ -375,12 +269,7 @@ async function conversationContextOf(db: SupabaseClient, conversation: Conversat
     channel: conversation.source,
     business: BUSINESS_CARD,
     messages: messages.slice(-THREAD_LIMIT).map((message, i, dizi) => {
-      /*
-        UZUN ARA İŞARETİ (üslup 07.09): selam yalnız ilk cevapta — ama günler sonra dönen müşteriye
-        selamsız girmek de tuhaf. Zamanı model değil sistem bilir; son GELEN mesaj bir önceki
-        mesajdan `SESSION_GAP_HOURS`ten geç geldiyse metnin başına işaret düşer, istem o işarete
-        bakar. Medya yer tutucusuyla aynı desen: karar veride, cümle modelde.
-      */
+      /* Model zamanı görmez: son gelen mesaj öncekinden `SESSION_GAP_HOURS` geç geldiyse başına işaret düşer, selam kararını istem verir. */
       const onceki = dizi[i - 1];
       const sonMu = i === dizi.length - 1;
       const araSaat =
@@ -390,12 +279,8 @@ async function conversationContextOf(db: SupabaseClient, conversation: Conversat
       const araIsareti = araSaat >= SESSION_GAP_HOURS ? `[uzun aradan sonra yazdı — ${Math.round(araSaat)} saat] ` : '';
       return {
         who: message.direction === 'inbound' ? 'customer' : message.author === 'ai' ? 'ai' : 'staff',
-        /*
-          MÜŞTERİ ORİJİNALİYLE, BİZ TÜRKÇEMİZLE (15.28). Giden mesajın `body.text`i müşteriye GİDEN
-          çeviridir (Fransızca); yazılan Türkçe torbada durur. Model kendi önceki turlarını Fransızca
-          görseydi "Türkçe yaz" kuralı her turda biraz daha aşınırdı. Müşterinin sözü ise olduğu gibi
-          gider: çeviri bir yorum katmanıdır ve model üç dili de okuyor.
-        */
+        /* Müşterinin sözü orijinaliyle, bizimki Türkçemizle: model kendi turlarını Fransızca görseydi "Türkçe yaz" kuralı her turda
+           aşınırdı. */
         text:
           araIsareti +
           ((message.direction === 'outbound' ? message.translations?.tr?.trim() : undefined) ||
@@ -426,9 +311,7 @@ export async function generateConversationDraft(
     if (conversation.aiDraftGeneratedAt >= conversation.lastMessageAt) return { status: 'cached' };
   }
 
-  // Kimliği ÇÖZÜLMEMİŞ konuşmada GEÇMİŞ araçları verilmez (16.9): tanımadığımız bir numaranın
-  // "benim siparişlerim" sorusu kimin siparişi olduğu belirsizken cevaplanamaz. Kamusal araçlar
-  // (katalog, teslimat şartları, posta kodu) yine verilir — `runOpts`un üçlü kapısı.
+  // Kimliği çözülmemiş konuşmada geçmiş araçları verilmez, kamusal araçlar verilir (`runOpts`un kapısı).
   const gate = conversation.customerId ? await anchorGateOf(db, conversation.customerId) : null;
   const cartLink = bosKap();
   const result = await runTask(
@@ -438,14 +321,12 @@ export async function generateConversationDraft(
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
-  /* Taslak KANALA GÖRE biçimlendirilir (06.09): operatör kutuya aldığı metni olduğu gibi
-     gönderiyor, yani taslakta duran işaret müşteriye gidecek işarettir. WhatsApp'ta kalır,
-     Messenger/IG'de sökülür — orada çizilmiyor ve müşteri çıplak yıldız görürdü.
-     Sepet bağlantısı da taslağa BURADA girer: operatör onu görür, isterse siler. */
-  // Söz verilen bağlantı (08.09): model "bağlantı" deyip aracı çağırmadıysa sistem üretir (`cartLinkIfPromised`).
+  /* Taslak kanala göre biçimlenir, çünkü operatör kutudaki metni olduğu gibi gönderir. Sepet bağlantısı da taslağa burada girer;
+     operatör görür, isterse siler. */
+  // Model bağlantı vaat edip aracı çağırmadıysa sistem üretir.
   cartLink.link ??= await cartLinkIfDue(db, conversation, { reply: result.data.reply, cartWritten: cartLink.wrote && cartLink.ready });
   if (cartLink.cards.length > 0) {
-    // Taslak yolunda kart GÖNDERİLMEZ: operatör onaylamadığı bir şeyi göndermiş olurdu (`CartLinkSink.cards`).
+    // Taslak yolunda kart gönderilmez: operatör onaylamadığı bir şeyi göndermiş olurdu.
     logger.info({ context: 'application/conversation-ai', conversationId: conversation.id, cards: cartLink.cards.length }, 'taslak yolunda ürün kartı gönderilmedi');
   }
   await conversations.update({
@@ -453,120 +334,35 @@ export async function generateConversationDraft(
     aiDraftReply: withCartLink(formatForChannel(result.data.reply, conversation.source), cartLink.link),
     aiDraftGeneratedAt: new Date().toISOString(),
   });
-  /* İKİ ZİL, İKİ EKRAN (21.291): çoğul olan kuyruğu, tekil olan AÇIK yazışmayı uyandırır. Taslak
-     satırda yaşıyor ve iki yüzeyde birden görünüyor — biri "rozet belirdi", öteki "cevap kutusunun
-     üstünde kart belirdi". Tek zil ikisini birden yapamaz: kuyruk zili açık yazışmayı her hareket
-     için yeniden çizdirirdi. */
+  /* Taslak iki yüzeyde görünür: çoğul zil kuyruğun rozetini, tekil zil açık yazışmadaki kartı tazeler. */
   await ringConversationsBell();
   await ringConversationBell(conversation.id);
   return { status: 'generated' };
 }
 
 /**
- * **Özerk cevap** (sınıf 4 — 16.5): modu `ai` olan talepte müşterinin son mesajını cevaplar YA DA
- * insana devreder.
- *
- * ── GÜVENLİ TARAF DAİMA DEVİR ───────────────────────────────────────────────
- * `action='reply'` ama metin boş → devir. Model şemaya uymadı → cevap YAZILMAZ, bir sonraki tur
- * dener. Devirde mod `human`a iner (taslak da düşer — `setMode` sözleşmesi) ve talep kuyrukta
- * "cevap bekliyor" olarak insana görünür; ayrıca sebep log'a düşer. Yanlış cevap, geç cevaptan
- * pahalıdır ve geri alınamaz — müşteri okumuştur.
- *
- * Gönderen `ai`dır (`ticket_sender='ai'`): "bunu kim söyledi" sorusu sonradan da cevaplanabilmeli
- * (kuyruğun `answeredByAi` süzgeci tam bu kümeye bakıyor). Durum kararı personel cevabıyla aynı
- * motordan (`statusAfterStaffReply`) — AI'a özel bir durum kuralı YOK.
- */
-/**
- * **OTOMATİK ASISTAN BEYANI** — özerk cevabın müşteriye kendini tanıttığı cümle.
- *
- * ── NEDEN PROMPT'TA DEĞİL, BURADA ───────────────────────────────────────────
- * Bu bir hukuki yükümlülük (AB Yapay Zekâ Yasası md. 50; Meta mesajlaşma politikası: *"automated
- * chat experiences must disclose that a person is interacting with an automated service"*) ve
- * modelin unutabileceği bir talimat, yükümlülük olamaz. Prompt'a yazılsaydı beyan sıcaklığa, bağlam
- * uzunluğuna ve modelin o günkü hâline bağlı kalırdı; burada deterministik.
- *
- * ── KISA VE AJANDA TUTAN (kullanıcı kararı 10.09) ───────────────────────────
- * Eski metin iki cümleydi ve ikincisi müşteriyi daha ilk mesajda insana yönlendiriyordu
- * ("Dilediğiniz an bir yetkiliye bağlanmak isterseniz yazmanız yeterli"): müşteri "zaten robot"
- * deyip hemen insana geçmesin. Beyan KALDI — zorunlu, ve "yapay zekâ asistanı" otomatik bir hizmet
- * olduğunu açıkça söylüyor (Meta dokümanı, 10.09'da MCP'den okundu: *"disclose that a person is
- * interacting with an automated service … at the beginning of any conversation"*). İnsana geçiş
- * YOLU ise ilk mesajda duyurulmak zorunda değil, VAR olmak zorunda (*"must have a way for users to
- * chat with a human agent as needed"*): müşteri isteyince ajan devreder (talimatın devir listesi)
- * ve operatör Devral'la alır.
- *
- * Marka adı `@lezzet/brand`ten ve iyelik eki YOK ("X yapay zekâ asistanıyım"): ek markanın okunuşuna
- * göre değişir, sabit bir ek adı değiştiğinde yanlış kalırdı.
- *
- * ── TÜRKÇE, ÇÜNKÜ ÇEVİRİ SONRA ──────────────────────────────────────────────
- * Cevap gövdesine EKLENİYOR ve gövdeyle birlikte `translateTicketMessageNow`den geçiyor: müşteri
- * beyanı da kendi dilinde okuyor. Ayrı bir kanaldan gönderilseydi çeviri kuralını ikinci bir yerde,
- * denetimsiz yaşatırdık (20.2'nin kararı).
- *
- * 15.8'in özerk SOHBET motoru doğduğunda aynı cümleyi kullanır — kanal değişse de yükümlülük aynı.
+ * Beyan hukuki yükümlülüktür (AB Yapay Zekâ Yasası madde 50, Meta politikası), bu yüzden modele bırakılmaz, cevaba koddan eklenir. İnsana
+ * geçiş yolu ilk mesajda duyurulmaz ama vardır: müşteri isteyince ajan devreder.
  */
 const AI_DISCLOSURE = `Merhaba! Ben ${brand.name} yapay zekâ asistanıyım; ürünler, fiyatlar ve siparişiniz için 7/24 buradayım.`;
 
-/**
- * **DEVİR HABERİ** (15.8) — ajan susarken müşteriye söylenen tek cümle.
- *
- * Sebep YAZILMAZ ve bu bilinçli: *"stok verisine ulaşamadım"* ya da *"bu soruyu anlamadım"* gibi bir
- * cümle, iç arızayı müşterinin sorunu hâline getirir. Sebep log'a ve kuyruğa gider — operatör görür,
- * müşteri beklemesi gerektiğini bilir. İkisi ayrı bilgi ve ayrı yerlere aittir (`CLAUDE §1`).
- */
+/** Devirde müşteriye sebep yazılmaz, iç arıza müşterinin sorunu hâline gelmesin; sebep log'a ve kuyruğa gider. */
 const HANDOFF_NOTICE = 'Bu konuda size bir yetkilimiz yardımcı olacak — en kısa sürede dönüş yapacağız.';
 
 /**
- * **İZİN SORUSU** (15.12) — cevabın sonuna eklenir, ayrı mesaj olarak gönderilmez.
- *
- * ── NEDEN AYRI MESAJ DEĞİL ──────────────────────────────────────────────────
- * İkinci bir mesaj ikinci bir bildirim demek: müşteri sorusuna cevap alır, telefonu bir kez daha
- * titrer ve karşısında pazarlama sorusu bulur. Aynı baloncuğun sonuna eklenen bir cümle ise
- * konuşmanın doğal kapanışı gibi okunur. (Pencere içinde ücret farkı yok — ikisi de ücretsiz.)
- *
- * ── METİN OTOMATİK İŞLEME VAAT ETMİYOR ──────────────────────────────────────
- * *"Evet yazmanız yeterli"* diyor ve orada duruyor; kaydı OPERATÖR yapıyor (bugünkü tek yol —
- * `recordConversationOptIn`). Model müşterinin cevabını yorumlayıp izni kendi kaydetseydi, GDPR'ın
- * *"açık ve tereddüde yer bırakmayan"* (md. 4/11) şartını bir tahmine dayandırmış olurduk.
- * İnteraktif düğmeler (15.9) geldiğinde cevap tahmin değil PAYLOAD olur; kayıt o gün otomatikleşir.
- *
- * ── İSTEMEYENE HİÇBİR ŞEY YAPTIRMIYOR ───────────────────────────────────────
- * "İstemezseniz bir şey yapmanıza gerek yok" cümlesi sessizliği RET saymıyor — sessizlik cevapsızdır
- * ve `optIn` false kalır. Söylediği tek şey müşterinin kendini savunmak zorunda olmadığı.
+ * Soru cevabın sonuna eklenir, ayrı mesaj ikinci bir bildirim olurdu. Kaydı ajan yapmaz ve metin bunu vaat etmez: modelin "evet mi
+ * dedi" yorumu GDPR'ın açık rıza şartını bir tahmine dayandırırdı, müşteri izni tercihler sayfasından kendi açar.
  */
-/*
-  ── METİN 07.09'DA DEĞİŞTİ: TUTAMADIĞIMIZ SÖZÜ VERMİYORUZ ──────────────────
-  Eski cümle *"'Evet' yazmanız yeterli"* diyordu ve bu bir VAATTİ — sistemin tutmadığı bir vaat.
-  Ölçüldü: müşteri "Evet" yazdı, ajan *"Sizi kampanya listemize ekledik"* dedi, veritabanında
-  `opt_in` false kaldı ve `marketing_consent` boştu. Yani müşteriye yanlış beyanda bulunuldu —
-  üstelik GDPR'a konu bir mesele hakkında.
-
-  Kaydı ajanın yapmaması doğru karardır (aşağıdaki künye): modelin "evet mi dedi" yorumu, GDPR'ın
-  *"açık ve tereddüde yer bırakmayan"* şartını bir tahmine dayandırırdı. Yanlış olan kayıt değil,
-  CÜMLEYDİ: sistemin yapamadığı bir şeyi yapacakmış gibi anlatıyordu.
-
-  Yeni cümle müşteriyi KENDİ açabileceği yere yolluyor (hesap → tercihler; anahtar orada duruyor,
-  `preferences-client.tsx`). Böylece izin yine müşterinin açık eyleminden doğuyor, arada yorumlayan
-  bir model yok, ve kimseye tutulmayacak bir söz verilmiyor. İnteraktif düğmeler (15.9) geldiğinde
-  cevap tahmin değil PAYLOAD olur; o gün sohbet içi kayıt yeniden açılabilir.
-*/
 const OPT_IN_QUESTION =
   'Bu arada: kampanyalarımızdan haberdar olmak isterseniz hesabınızın tercihler sayfasından açabilirsiniz — istemezseniz bir şey yapmanıza gerek yok.';
 
-/**
- * İzin sorusunun sorulacağı EN ERKEN tur — parametrik ve varsayılanı bilinçli (15.12).
- *
- * İlk mesajda sormak, daha yardım etmeden pazarlama istemektir; müşterinin gözünde cevabın kendisi
- * de o isteğin bahanesi hâline gelir. Sayı bir tercih olduğu için sabit: veriye bakarak seçilmedi
- * (yerel veri sahtedir — `CLAUDE`).
- *
- * **2 → 4 (üslup kararı 07.09, canlı turda ölçüldü):** ikinci mesaj *"sipariş vermek istiyorum"*du
- * ve soru, sepet bağlantısıyla aynı cevaba eklendi — müşteri daha ürün seçmemişken kampanya izni
- * istendi. Dört müşteri mesajı, "iş gerçekten yürüdü" eşiğidir; bağlantılı mesaja ise hiç eklenmez
- * (`izinSorulacak`): o mesajın tek işi var, ödeme bağlantısı.
- */
+/** İzin sorusunun en erken turu, parametrik: önce yardım, sonra istek. */
 const OPT_IN_MIN_TURNS = 4;
 
+/**
+ * Güvenli taraf daima devirdir: boş cevap devredilir, şemaya uymayan cevap yazılmaz. Yanlış cevap geç cevaptan pahalıdır ve geri
+ * alınamaz.
+ */
 export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: string, opts: SupportAiOpts = {}): Promise<SupportAiOutcome> {
   const tickets = new TicketService(db);
   const ticket = await tickets.getById(ticketId);
@@ -577,18 +373,8 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   if (!context) return { status: 'skipped', reason: 'empty_thread' };
   if (context.messages[context.messages.length - 1]?.who !== 'customer') return { status: 'skipped', reason: 'nothing_to_answer' };
 
-  /*
-    Beyan YAZIŞMANIN BAŞINDA ve uzun sessizlikten sonra tekrar — politikanın kendi üç anı: *"at the
-    beginning of any conversation or message thread, after a significant lapse of time, or when a
-    chat moves from human interaction to automated experience"*.
-
-    Ölçüt olarak PENCEREYİ (son N mesaj) kullanıyoruz, yazışmanın tamamını değil ve bu bilinçli: AI
-    otuz mesaj önce konuşmuşsa müşteri o beyanı çoktan unutmuştur — pencereden düşmesi tam olarak
-    "uzun aralık" demektir. Tamamına bakan bir ölçüt, bir kez beyan edip ömür boyu susmak olurdu.
-
-    Karar model ÇAĞRILMADAN verilir (10.09): beyan selamla açılıyor ve eklenecekse modele "selam
-    verme" denir (`greeting`) — iki "Merhaba" üst üste gitmesin.
-  */
+  /* Beyan yazışmanın başında ve uzun sessizlikten sonra tekrarlanır; pencereden düşen beyan müşteri için yapılmamış beyandır. Karar
+     model çağrılmadan verilir ki model ayrıca selam vermesin. */
   const alreadyDisclosed = context.messages.some((message) => message.who === 'ai');
   const result = await runTask(
     ticketAgentTask,
@@ -597,15 +383,14 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
-  // Cevap HAM gider — sökme 06.09'da kalktı (taslak yolunun aynı gerekçesi, künyesi orada).
+  // Cevap ham gider; gerekçe taslak yolundaki yorumda.
   const reply = result.data.action === 'reply' ? (result.data.reply ?? '').trim() || null : null;
   if (!reply) {
     // Devir: sebep KAYDA geçer ama müşteri metnine sızmaz — operatör kuyrukta görür.
     const reason = result.data.handoffReason?.trim() || 'AI cevap veremedi — sebep bildirmedi.';
     await tickets.setMode(ticket.id, 'human');
     logger.info({ context: 'application/ticket-ai', ticketId: ticket.id }, `özerk ajan insana devretti: ${reason}`);
-    // Devir de EKRANA yansımalı: talep az önce AI'daydı, artık operatörü bekliyor. Zil çalmazsa
-    // kuyruk hâlâ "AI yürütüyor" yazar ve kimse o talebe bakmaz (16.8).
+    // Zil çalmazsa kuyruk hâlâ "AI yürütüyor" yazar ve kimse o talebe bakmaz.
     await ringTicketsBell();
     return { status: 'handoff', reason };
   }
@@ -616,48 +401,19 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
     body: alreadyDisclosed ? reply : `${AI_DISCLOSURE}\n\n${reply}`,
     newStatus: statusAfterStaffReply(ticket.status),
   });
-  /* ÇEVİRİ HABERDEN VE ZİLDEN ÖNCE (17.08): müşteri bu cevabı ilk görüşte kendi dilinde okusun.
-     Düşerse hiçbir şey olmaz, satır çeviri kuyruğunda kalır (kapının künyesi). */
+  /* Çeviri haberden ve zilden önce: müşteri cevabı ilk görüşte kendi dilinde okusun. */
   await translateTicketMessageNow(db, written, opts.model ? { model: opts.model } : {});
-  /* Mail ANINDA gitmez, kuyruğa girer — personel cevabıyla aynı kural (künyesi `reply-mail.ts`de).
-     AI cevabı da karşı taraftır ve aynı gürültüyü üretir; hatta özerk ajan arka arkaya cevap
-     verebildiği için burada erteleme daha da gerekli. */
+  /* Mail anında gitmez, kuyruğa girer: özerk ajan arka arkaya cevap verebildiği için erteleme burada daha da gerekli. */
   await queueTicketReplyMail(db, ticket);
   await ringTicketsBell();
-  // Müşteri de yazışmayı açık tutuyor olabilir — onun kanalı AYRI (künyesi `ringTicketBell`de).
+  // Müşteri de yazışmayı açık tutuyor olabilir; onun kanalı ayrı.
   await ringTicketBell(ticket.id);
   return { status: 'replied' };
 }
 
 /**
- * **ÖZERK SOHBET CEVABI** (15.8) — `runAutonomousTicketReply`ın sohbet karşılığı.
- *
- * ── NEDEN AYRI BİR FONKSİYON, AMA AYNI DOSYA ────────────────────────────────
- * İki kanal aynı işi yapmıyor: talep cevabı deftere yazılıp mail kuyruğuna girer, sohbet cevabı
- * SAĞLAYICIYA GİDER ve gidemediği anlar vardır (pencere kapandı, hesap kimliği yok). Ama beyan,
- * devir kuralı ve bağlam kurulumu ortaktır — bu yüzden ayrı dosya değil, aynı dosyada ikinci giriş:
- * `AI_DISCLOSURE` ve `conversationContextOf` tek kopya kalsın.
- *
- * ── SAĞLAYICI PARAMETRE, ÇÜNKÜ UYGULAMA KATMANI HTTP BİLMEZ ─────────────────
- * `sender` dışarıdan geçiliyor (`STACK §4`): cron gerçek Cloud API sürücüsünü verir, test sahte
- * Meta'yı. Motor ikisini ayırt etmez ve etmemeli — ayırt etseydi testte koşan kod, canlıda koşan
- * kod olmazdı.
- *
- * ── "REDDEDİLDİ" İLE "DÜŞTÜ" AYRI SONUÇ DOĞURUR ────────────────────────────
- * Gönderim kapısı bu ikisini bilerek ayırıyor (`send.ts`) ve ajan da öyle davranmalı:
- *
- * · **`refused` → İNSANA DEVİR.** Bu BİZİM kuralımızdır (pencere kapandı, hesap kimliği yok);
- *   tekrar denemek aynı sonucu verir ve müşteri cevapsız kalır. İnsan ise yapabileceği başka
- *   şeyler bilir — onaylı şablon göndermek, aramak. Devretmemek, müşteriyi sessizce beklemede
- *   bırakmak olurdu.
- * · **`failed` → MOD DEĞİŞMEZ.** Bu sağlayıcı ya da YAPILANDIRMA tarafıdır (`not_configured`, ağ
- *   hatası). Jeton eksik diye her sohbeti insana devretmek, bir yapılandırma boşluğunu geri
- *   alınması zor bir VERİ değişikliğine çevirirdi: kuyruktaki her satır "insanda" damgası yer ve
- *   kanal açıldığında hiçbiri geri dönmez. Bir sonraki tur yeniden dener.
- *
- * ── DEFTER YAZIMI BURADA DEĞİL, KAPIDA ──────────────────────────────────────
- * `sendOutboundMessage` gönderimi ve defter yazımını tek kapıda tutuyor; ajan ikinci bir kayıt
- * yazmaz. Yazsaydı, gönderilmemiş bir cevabın deftere düşmesi ihtimali geri gelirdi.
+ * `refused` (bizim kuralımız: pencere kapalı, hesap kimliği yok) insana devredilir; geçici `failed` modu değiştirmez ki yapılandırma
+ * boşluğu kalıcı bir veri değişikliğine dönmesin. Defter yazımı gönderim kapısındadır, ajan ikinci kayıt yazmaz.
  */
 export async function runAutonomousConversationReply(
   db: SupabaseClient,
@@ -665,20 +421,8 @@ export async function runAutonomousConversationReply(
   conversationId: string,
   opts: SupportAiOpts = {},
 ): Promise<SupportAiOutcome> {
-  /*
-    ── AYNI SOHBETE İKİ CEVAP YAZILAMAZ (06.09) ──────────────────────────────
-    Bu kapının artık İKİ çağıranı var: dakikalık tarama ve gelen mesajın kendisi (webhook, olay
-    tetikli). Model çağrısı saniyeler sürüyor ve `awaiting_reply` ancak giden mesaj YAZILDIĞINDA
-    kapanıyor — yani tetik koşarken araya giren bir tarama aynı sohbeti "cevap bekliyor" görür ve
-    ikinci bir cevap üretir. Müşteriye arka arkaya iki mesaj gider, ikisi de faturalanır.
-
-    Kilit ÇAĞIRANDA değil BURADA, çünkü değişmez bu fonksiyonun: üçüncü bir çağıran doğduğunda
-    (ekrandan "şimdi cevapla" düğmesi gibi) korumayı yeniden yazmak ya da unutmak gerekmesin.
-
-    Bellekte tutuluyor — backend tek instance (`STACK §13`) ve bu bir dayanıklılık kaydı değil,
-    aynı süreç içindeki bir yarışın siperi. Kaybı zararsız: kilit düşerse bir sonraki tur zaten
-    yeniden dener.
-  */
+  /* Aynı sohbete iki cevap yazılamaz: tarama ile gelen mesajın tetiği aynı satıra denk gelebilir ve müşteriye iki mesaj gider. Kilit
+     bellekte, çünkü backend tek süreç ve kaybı zararsız: sonraki tur yeniden dener. */
   if (inFlightConversations.has(conversationId)) return { status: 'skipped', reason: 'in_flight' };
   inFlightConversations.add(conversationId);
   try {
@@ -688,7 +432,7 @@ export async function runAutonomousConversationReply(
   }
 }
 
-/** Aynı anda cevabı üretilen sohbetler — kilidin kendisi (`runAutonomousConversationReply` künyesi). */
+/** Cevabı üretilmekte olan sohbetler. */
 const inFlightConversations = new Set<string>();
 
 async function autonomousConversationReply(
@@ -706,21 +450,12 @@ async function autonomousConversationReply(
   if (!context) return { status: 'skipped', reason: 'empty_thread' };
   if (context.messages[context.messages.length - 1]?.who !== 'customer') return { status: 'skipped', reason: 'nothing_to_answer' };
 
-  /* Beyan penceredeki AI mesajına bakar, yazışmanın tamamına değil — gerekçesi talep eşinin
-     künyesinde: otuz mesaj önceki beyan, müşteri için hiç yapılmamış beyandır. */
+  /* Beyan penceredeki AI mesajına bakar; otuz mesaj önceki beyan müşteri için yapılmamış beyandır. */
   const alreadyDisclosed = context.messages.some((message) => message.who === 'ai');
 
   /**
-   * Devir tek yerde: iki farklı sebeple (cevap üretilemedi · gönderilemedi) aynı sonuca varılıyor.
-   *
-   * ── SESSİZ DEVİR YASAK — BEKLEYEN(15.8) BURADA KAPANIYOR ────────────────────
-   * Meta mesajlaşma politikası: *"Automated bots must respond to any and all input"*. Modu insana
-   * çevirip müşteriye hiçbir şey söylememek, müşteri açısından **cevapsız kalmakla aynı şeydir** —
-   * ajan sustu, operatör henüz bakmadı, arada geçen süre müşteri için sessizlik.
-   *
-   * `notify` parametresi bir kaçamak değil, bir OLGU: devir zaten *gönderemediğimiz için* olduysa
-   * (pencere kapandı, hesap kimliği yok) haber de gidemez. O hâlde ikinci kez denemek, aynı reddi
-   * bir kez daha yemek ve log'u iki kat gürültüyle doldurmaktır. Devrin kendisi yine kayda geçer.
+   * Sessiz devir yok: Meta politikası otomatik hizmetin her girdiye cevap vermesini ister. `notify` false ise devir gönderemediğimiz
+   * için olmuştur ve haber de gidemez.
    */
   const handOff = async (reason: string, notify: boolean): Promise<SupportAiOutcome> => {
     if (notify) {
@@ -740,29 +475,20 @@ async function autonomousConversationReply(
     }
     await conversations.setMode(conversation.id, 'human');
     logger.info({ context: 'application/conversation-ai', conversationId: conversation.id }, `özerk ajan insana devretti: ${reason}`);
-    /* SEBEP SOHBETİN İÇ NOTUNA (15.29 · kullanıcı kararı 10.09): operatör sohbeti açınca "AI neden
-       bıraktı"yı akışın içinde, devrin olduğu yerde okur — eskiden yalnız üstteki log satırındaydı ve
-       bir yanlış devri teşhis etmek için karar yeniden üretiliyordu. Zilden ÖNCE: tazelenen ekran notu da
-       görsün. Yazılamazsa devir YİNE olur — not bir iz, devrin şartı değil. */
+    /* Sebep sohbetin iç notuna da yazılır: operatör "AI neden bıraktı"yı devrin olduğu yerde okur. Not bir izdir, devrin şartı değil. */
     await new ConversationNoteService(db)
       .insert({ conversationId: conversation.id, author: 'ai', body: `AI devretti — ${reason}` })
       .catch((err: unknown) =>
         logger.warn({ context: 'application/conversation-ai', conversationId: conversation.id, err: String(err) }, 'devir notu yazılamadı'),
       );
-    // Zil şart: kuyruk hâlâ "AI yürütüyor" yazarsa kimse o sohbete bakmaz (16.8). Tekil zil de
-    // çalınır (21.291): sohbeti AÇMIŞ operatörün ekranındaki mod çipi ve devir haberi tazelensin.
+    // Kuyruk hâlâ "AI yürütüyor" yazarsa kimse bakmaz; tekil zil açık ekrandaki mod çipini tazeler.
     await ringConversationsBell();
     await ringConversationBell(conversation.id);
     return { status: 'handoff', reason };
   };
 
-  /* Kimliği ÇÖZÜLMEMİŞ sohbette GEÇMİŞ araçları verilmez — taslak yolunun kuralının aynısı (16.9).
-     Messenger/IG'de PSID telefon taşımaz, yani kimliksiz sohbet istisna değil KURAL; ajan o hâlde
-     de konuşur ve **yalnız herkese açık bilgiyle** — bu künye 28.08'e kadar bir VAATTİ, araç seti
-     tümüyle kapatıldığı için ajan herkese açık bilgiyi de okuyamıyordu (`CHANNELS §3b`). */
-  /* Kimlik sorusu YALNIZ sohbet yolunda soruluyor (04.10): çapanın cevabı müşterinin KENDİ
-     numarasından gelmek zorunda (`verifySecurityCode` imzası), yani e-posta talebinde sormak
-     cevaplanamayacak bir soru sormaktır. Kapı orada da kapalı — ama soru burada. */
+  /* Kimliği çözülmemiş sohbette ajan yalnız kamusal bilgiyle konuşur. Kimlik sorusu yalnız sohbette sorulur, çünkü çapanın cevabı
+     müşterinin kendi numarasından gelmek zorunda. */
   const gate = conversation.customerId ? await anchorGateOf(db, conversation.customerId) : null;
   const cartLink = bosKap();
   const result = await runTask(
@@ -770,47 +496,31 @@ async function autonomousConversationReply(
     {
       ...context,
       ...(gate?.ask ? { identity: { ask: gate.ask } } : {}),
-      // Karşılamayı sistem veriyor (10.09): model selam vermez, kendini tanıtmaz — iki "Merhaba" gitmez.
+      // Karşılamayı sistem verir: model selam vermez, iki "Merhaba" gitmez.
       ...(alreadyDisclosed ? {} : { greeting: true as const }),
     },
     { ...(await runOpts(db, conversation.customerId, opts, gate, { conversation, sink: cartLink })), usageContext: { conversationId: conversation.id } },
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
-  /* Kanal kararı gönderimden ÖNCE, tek yerde: WhatsApp işaretleri kendi çizer, Messenger/IG
-     çizmez ve müşteri `*Fıstıklı Baklava*` diye okurdu (`chat-formatting` künyesi).
-     Sepet bağlantısı biçimlendirmeden SONRA eklenir: sökücü bağlantının alt çizgisine dokunmasın. */
+  /* Kanal biçimi gönderimden önce: Messenger/IG işaretleri çizmez. Sepet bağlantısı biçimlendirmeden sonra eklenir ki sökücü
+     bağlantının alt çizgisine dokunmasın. */
   const govdeMetni = result.data.action === 'reply' ? formatForChannel(result.data.reply ?? '', conversation.source).trim() || null : null;
-  /* SÖZ VERİLEN BAĞLANTI (08.09, canlıda ölçüldü): model "aşağıdaki bağlantıdan…" yazıp aracı
-     çağırmadı, kap boş kaldı, müşteri boş bir söz okudu. Sepet doluysa sistem bağlantıyı yine
-     üretir — kural ve gerekçesi `cartLinkIfPromised`te; burası yalnız kabı doldurur. */
+  /* Model bağlantı vaat edip aracı çağırmasa da sepet doluysa sistem bağlantıyı üretir; kural `cartLinkIfDue`da. */
   cartLink.link ??= await cartLinkIfDue(db, conversation, { reply: govdeMetni, cartWritten: cartLink.wrote && cartLink.ready });
   const reply = govdeMetni ? withCartLink(govdeMetni, cartLink.link) : null;
   if (!reply) return handOff(result.data.handoffReason?.trim() || 'AI cevap veremedi — sebep bildirmedi.', true);
 
-  /*
-    İZİN SORUSU (15.12) — üç şart, üçü de deterministik; modele sorulmuyor.
-
-    Kanal WhatsApp olmalı: müşteri kartındaki izin şeması bugün yalnız `email` ve `whatsapp`
-    taşıyor, Messenger/IG izni Meta'nın kendi mekanizmasıyla gelecek (`opt-in.ts` künyesi).
-    Olmayan bir kanal için izin sormak, dayanağı olmayan bir kayıt üretmekti.
-
-    `optInAskedAt` boş olmalı — bir kez sorulur. Cevap gelmese bile tekrar sorulmaz: ısrar,
-    reddin kendisinden daha kötü bir izlenim bırakır ve müşteri sohbeti kapatır.
-
-    Ve yeterince tur geçmiş olmalı (`OPT_IN_MIN_TURNS`) — önce yardım, sonra istek.
-  */
+  /* İzin sorusu üç deterministik şarta bağlı: kanal WhatsApp (izin şeması yalnız e-posta ve WhatsApp taşır), daha önce sorulmamış,
+     yeterince tur geçmiş. Cevap gelmese de tekrar sorulmaz: ısrar retten kötü izlenim bırakır. */
   const musteriMesaji = context.messages.filter((m) => m.who === 'customer').length;
-  // Sepet bağlantısı taşıyan cevaba izin sorusu EKLENMEZ (07.09): o mesajın tek işi ödeme bağlantısı;
-  // altına pazarlama paragrafı koymak hem uzatır hem müşteriyi bağlantıdan uzaklaştırır.
+  // Sepet bağlantısı taşıyan cevaba izin sorusu eklenmez: o mesajın tek işi ödeme bağlantısı.
   const izinSorulacak =
     conversation.source === 'whatsapp' && conversation.optInAskedAt === null && musteriMesaji >= OPT_IN_MIN_TURNS && !cartLink.link;
 
   const govde = izinSorulacak ? `${reply}\n\n${OPT_IN_QUESTION}` : reply;
 
-  /* ÜRÜN KARTLARI METİNDEN ÖNCE (08.09): kart görsel + fiyat + düğmedir, metin onu bağlar ("bu boyu
-     seçebilirsiniz"). Kart gidemezse metin YİNE gider ve düşüş kimlikle loglanır — kartsız cevap,
-     cevapsız müşteriden iyidir. Kart metni müşteri dilinde üretildi (`language`), çeviri dokunmaz. */
+  /* Ürün kartları metinden önce, çünkü metin onlara atıf yapar. Kart gidemezse metin yine gider: kartsız cevap cevapsız müşteriden iyidir. */
   for (const kart of cartLink.cards) {
     const kartSonucu = await sendOutboundMessage(db, sender, {
       conversationId: conversation.id,
@@ -831,25 +541,14 @@ async function autonomousConversationReply(
   const outcome = await sendOutboundMessage(db, sender, {
     conversationId: conversation.id,
     text: alreadyDisclosed ? govde : `${AI_DISCLOSURE}\n\n${govde}`,
-    /* Yazar `ai` — "bunu kim söyledi" sorusu sonradan da cevaplanabilmeli (talep eşiyle aynı
-       karar). Boş bırakılsaydı RPC gideni `admin` sayardı: ekranın AI tonu ve kuyruğun AI süzgeci
-       sessizce yanlış kümeyi gösterirdi. */
+    /* Yazar `ai`: boş kalsaydı RPC gideni `admin` sayar, ekranın AI tonu ve kuyruğun AI süzgeci yanlış kümeyi gösterirdi. */
     author: 'ai',
   });
 
   if (outcome.status === 'refused') return handOff(`gönderilemedi: ${outcome.reason}`, false);
   if (outcome.status === 'failed') {
-    /*
-      ── KALICI SAĞLAYICI REDDİ DE DEVİRDİR (08.09, ölçüldü) ────────────────────
-      `retryable` sağlayıcı hatasının SINIFIDIR (`cloud-api` künyesi): geçersiz alıcı, izin yok,
-      yanlış hesap kimliği, geçersiz jeton tekrar denemekle düzelmez. Bu dal bir tur her hatada
-      "sonraki tur yeniden denenecek" diyordu ve tarama iki sahte sohbete (smoke Messenger + Instagram)
-      72 saniyede dört kez yazmayı denedi — her deneme bir model turu + Meta'ya bir çağrı. İş
-      katmanının katlanan freni (1 → 30 dk) döngüyü yavaşlatır, bitirmez: pencere kapanana kadar
-      sohbet başına onlarca deneme. Aynı reddi Meta'ya ısrarla yedirmek hesabın kendisini riske atar.
-      Yapılandırma boşluğu (`not_configured`) bu sınıfa GİRMEZ: jeton gelince aynı tur gider, veri
-      bozulmasın diye mod değişmez. Haber gönderilmez — gidemezdi (`refused` dalıyla aynı gerekçe).
-    */
+    /* Kalıcı sağlayıcı reddi de devirdir: geçersiz alıcı ya da jeton tekrar denemekle düzelmez, aynı reddi Meta'ya ısrarla yedirmek
+       hesabı riske atar. Yapılandırma boşluğu (`not_configured`) bu sınıfa girmez; jeton gelince aynı tur gider. */
     if (outcome.reason !== 'not_configured' && !outcome.retryable) {
       return handOff(`gönderilemedi (kalıcı sağlayıcı reddi): ${outcome.reason}`, false);
     }
@@ -860,13 +559,10 @@ async function autonomousConversationReply(
     return { status: 'failed', reason: outcome.reason === 'not_configured' ? 'send_not_configured' : 'provider_error' };
   }
 
-  /* Damga GÖNDERİM BAŞARILI olduktan SONRA: önce işaretlenseydi, gönderim düşen bir turda soru
-     "sorulmuş" sayılır ve müşteriye hiç ulaşmayan bir izin talebi bir daha asla sorulmazdı.
-     Koşullu yazım (`markOptInAsked`) ilk anı koruyor — künyesi serviste. */
+  /* Damga gönderim başarılı olduktan sonra: önce atılsaydı müşteriye hiç ulaşmayan soru bir daha sorulmazdı. */
   if (izinSorulacak) await conversations.markOptInAsked(conversation.id);
 
-  /* Ajan MÜŞTERİYE cevap yazdı — operatör o sohbeti açık tutuyorsa baloncuğu görmeli (21.291).
-     Kullanıcının ölçtüğü arıza tam buydu: mesajlar deftere düşüyor, ekranda görünmüyordu. */
+  /* Operatör sohbeti açık tutuyorsa ajanın cevabını görmeli. */
   await ringConversationsBell();
   await ringConversationBell(conversation.id);
   return { status: 'replied' };
