@@ -18,6 +18,7 @@ import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import { checkoutBlocker, servicePointMissing, type CheckoutViewProps } from '../checkout-types';
+import { PayProgress } from './payment-element';
 import { ServicePointPicker } from './service-point-picker';
 
 /**
@@ -502,7 +503,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
   );
 }
 
-export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, onToggleConsent, paymentSlot }: CheckoutViewProps) {
+export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, paymentSlot }: CheckoutViewProps) {
   const payment = snapshot.payment;
   if (!payment) return null;
 
@@ -561,29 +562,43 @@ export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, onTo
       {/* Kart alanı yalnız online ödeme seçiliyken monte edilir: Stripe iframe'ini görünmez de olsa
           baştan yüklemek, ödemeyi seçmeyen müşteriye üçüncü tarafa istek attırmak olurdu. */}
       {state.paymentMethod === 'online' && paymentSlot}
-
-      {/* İzin kutusu BAŞTAN İŞARETSİZ (AB açık eylem şartı, DOMAIN §11). */}
-      <label className="flex cursor-pointer items-start gap-2.5">
-        {/* Tasarım: 20×20, 2px kum-400 kenar, radius 6 — envanterin dokunma tablosu da 22px diyor. */}
-        <input
-          type="checkbox"
-          checked={state.marketingConsent}
-          onChange={(e) => onToggleConsent(e.target.checked)}
-          className="mt-px size-5 flex-none cursor-pointer rounded-[6px] border-2 border-sand-400 accent-olive"
-        />
-        <span className="font-sans text-body-sm leading-relaxed text-body">
-          {t.payment.consent} <span className="text-muted">{t.payment.consentOptional}</span>
-        </span>
-      </label>
     </StepShell>
   );
 }
 
-/** Sağdaki (mobil webde alttaki) özet — kalemler, indirim, kargo, toplam ve onay düğmesi. */
+interface CheckRowProps {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+  /** Etiketin altındaki bağ; etiketin dışında durur ki bağa tıklamak kutuyu işaretlemesin. */
+  link?: React.ReactNode;
+}
+
+/** Kabul bloğunun kutusu; işaretsiz başlar, çünkü izin de kabul de açık eylem ister (DOMAIN §11). */
+function CheckRow({ checked, onChange, label, link }: CheckRowProps) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="flex cursor-pointer items-start gap-2.5">
+        {/* Tasarım: 20×20, 2px kum-400 kenar, radius 6 — envanterin dokunma tablosu da 22px diyor. */}
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          className="mt-px size-5 flex-none cursor-pointer rounded-[6px] border-2 border-sand-400 accent-olive"
+        />
+        <span className="font-sans text-note leading-relaxed text-body">{label}</span>
+      </label>
+      {link && <span className="pl-7.5">{link}</span>}
+    </div>
+  );
+}
+
+/** Sağdaki özet: kalemler, indirim, kargo, toplam, altında kabul bloğu ve her ödeme yolunun tek sipariş düğmesi. */
 export function OrderSummary(props: CheckoutViewProps) {
   const { t, locale, cart, cartReady, cartFailed, snapshot, snapshotReady, state, compact, busy, error, onConfirm, selectedAddress } =
     props;
-  const { addressNotice, onAcceptAddressFix, onDismissAddressNotice } = props;
+  const { addressNotice, onAcceptAddressFix, onDismissAddressNotice, onToggleConsent, onToggleTerms, payStage, payReady } = props;
+  const copy = checkoutMessages[locale];
   const payment = snapshot.payment;
   const delivery = snapshot.delivery;
   // Özetin ortak sözcükleri: aynı blok sepette, onay ekranında ve sipariş detayında da çiziliyor ve dört sözlükte ayrı tutulunca
@@ -620,13 +635,12 @@ export function OrderSummary(props: CheckoutViewProps) {
         ? cart.discount.amountCents
         : 0;
 
-  // Onay düğmesi kart ödemesinde ÇİZİLMEZ: orada onayı Stripe formunun kendi düğmesi veriyor
-  // (önce kartı valide etmesi gerekiyor). İki düğme müşteriye hangisinin bitirdiğini sordururdu.
-  const showConfirm = state.paymentMethod !== null && state.paymentMethod !== 'online';
-  // Engel tek yerde kararlaşır (`checkoutBlocker`): burada ve kart ödemesinin formunda aynı cevap okunur. Sepet okunamadıysa da
-  // sipariş verilemez, çünkü ekrandaki 0,00 € bir toplam değil cevapsızlıktır.
+  // Engel tek yerde kararlaşır (`checkoutBlocker`), telefon görünümü de aynı cevabı okur. Sepet okunamadıysa da sipariş verilemez,
+  // çünkü ekrandaki 0,00 € bir toplam değil cevapsızlıktır.
   const blocked =
     checkoutBlocker({ cartFailed, cartHasBlocked: cart.hasBlocked, snapshot, addressId: state.addressId, pointMissing: servicePointMissing(state, snapshot.shipping) }) !== null;
+  const totalLabel = settled && totalCents !== null ? formatPrice(totalCents, locale) : UNKNOWN_AMOUNT;
+  const confirmLabel = payStage ? t.pay[payStage] : busy ? copy.submitting : copy.confirm.replace('{total}', totalLabel);
 
   return (
     // Tasarım künyesi `radius 18 · ped 22/24 · gap 12`: adım kartlarıyla aynı aile, bir tık dar; `snug` tam olarak bu.
@@ -738,20 +752,37 @@ export function OrderSummary(props: CheckoutViewProps) {
         </p>
       ) : null}
 
-      {showConfirm && (
-        <Button size="md" compact={compact} fullWidth disabled={busy || blocked} onClick={onConfirm}>
-          {t.summary.submit}
-        </Button>
-      )}
+      {/* Kabul bloğu toplamın ve düğmenin arasında, çünkü müşteri neyi kabul ettiğini siparişi verdiği yerde görmeli. Bağ yeni
+          sekmede açılır ki koşulları okuyan müşterinin seçimleri ve kart bilgisi kaybolmasın. */}
+      <div className="flex flex-col gap-3 border-t border-sand-200 pt-3.5">
+        <CheckRow checked={state.marketingConsent} onChange={onToggleConsent} label={copy.marketing} />
+        <CheckRow
+          checked={state.termsAccepted}
+          onChange={onToggleTerms}
+          label={copy.terms}
+          link={
+            <Link
+              href="/legal/sales"
+              target="_blank"
+              rel="noopener"
+              className="cursor-pointer font-sans text-note font-bold text-olive transition-colors hover:text-olive-dark"
+            >
+              {copy.termsLink}
+            </Link>
+          }
+        />
+      </div>
 
-      {/* Onay isteyen cümlenin okunacak bir karşılığı olmalı; bağ ayrı satırda, çünkü yerelleştirilmiş cümleye bağ gömmek üç
-          dilde kırılgan olurdu. */}
-      <span className="font-sans text-micro leading-relaxed text-muted">
-        {t.summary.terms}{' '}
-        <Link href="/legal/sales" className="cursor-pointer font-bold text-olive transition-colors hover:text-olive-dark">
-          {t.summary.termsLink}
-        </Link>
-      </span>
+      <Button
+        size="md"
+        compact={compact}
+        fullWidth
+        disabled={busy || blocked || state.paymentMethod === null || !payReady || !state.termsAccepted}
+        onClick={onConfirm}
+      >
+        {confirmLabel}
+      </Button>
+      {payStage && <PayProgress stage={payStage} />}
 
       {/* Soğuk zincir güvencesi: kapıya teslimde ve gün belliyken. Kargoda söylenmez — o zincire
           biz kefil olamayız, zaten soğuk zincir kalemi kargoya hiç girmiyor. */}

@@ -93,6 +93,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const pickupWarehouseId = useSelectedPickupWarehouse();
   const [paymentKey, setPaymentKey] = useState<string | null>(null);
   const [marketing, setMarketing] = useState(false);
+  /** Satış koşulları kabul edildi mi; kutu işaretsiz başlar ve işaretlenmeden sipariş düğmesi kapalıdır. */
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   /** Sunucunun ya da ödeme kartının söylediği son şey. `warm` = hata değil (vazgeçilen ödeme). */
   const [notice, setNotice] = useState<{ tone: 'error' | 'warm'; text: string } | null>(null);
@@ -423,6 +425,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     if (payment.orderTotalCents === null) return shippingNotice(shipping, t.carrier);
     if (isRoute && chosenDate === null) return t.block.day;
     if (selectedPayment === null) return t.block.payment;
+    if (!termsAccepted) return t.block.terms;
     return null;
   };
   const blocked = blockReason();
@@ -581,7 +584,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     applyAddressWrite(result.data, selectedAddress.id);
   };
 
-  const confirmLabel = (selectedPayment?.method === 'online' ? t.confirmPay : t.confirm).replace('{total}', grandTotalLabel);
+  // Her ödeme yolunda aynı yazı: basınca ödeme yükümlülüğü doğar, kart yolunda ödeme kartı bu kararın arkasından açılır.
+  const confirmLabel = t.confirm.replace('{total}', grandTotalLabel);
 
   return (
     <View style={styles.screen}>
@@ -902,19 +906,23 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           testID="checkout-summary"
         />
 
-        <PressableSurface
-          onPress={() => setMarketing(!marketing)}
-          feedback="opacity"
-          selected={marketing}
-          style={styles.consentRow}
-          accessibilityLabel={t.marketing}
-          testID="checkout-marketing"
-        >
-          <View style={[styles.checkbox, marketing ? styles.checkboxOn : styles.checkboxOff]}>
-            <Text style={styles.checkboxMark}>{marketing ? '✓' : ' '}</Text>
+        {/* Kabul bloğu özetle düğmenin arasında; koşulların bağı kutunun dışında, ki bağa dokunmak kutuyu işaretlemesin. */}
+        <CheckRow checked={marketing} onToggle={() => setMarketing(!marketing)} label={t.marketing} testID="checkout-marketing" />
+        <View style={styles.termsBlock}>
+          <CheckRow
+            checked={termsAccepted}
+            onToggle={() => setTermsAccepted(!termsAccepted)}
+            label={t.terms}
+            testID="checkout-terms-accept"
+          />
+          <View style={styles.termsLink}>
+            <TextAction
+              label={t.termsLink}
+              onPress={() => router.push({ pathname: '/legal/[page]', params: { page: 'sales' } })}
+              testID="checkout-terms"
+            />
           </View>
-          <Text style={styles.consentLabel}>{t.marketing}</Text>
-        </PressableSurface>
+        </View>
 
         {/* Adres teklifi onay düğmesinin hemen üstünde, çünkü soru o anda doğar. İki hâl ayrı yapı: başka kodda bulunan kapıda iki
             düğme, doğrulanamayan kapıda tek yumuşak satır; metin servisin etiketidir. */}
@@ -959,17 +967,6 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           disabled={blocked !== null || submitting}
           testID="checkout-confirm"
         />
-
-        {/* Satış koşulları düğmenin altında, web'le aynı yerde ve cümlede. Cümle ile bağ ayrı satır: yerelleştirilmiş cümleye bağ
-            gömmek üç dilde kırılgan olurdu. */}
-        <View style={styles.termsBlock}>
-          <Text style={styles.termsLine}>{t.terms}</Text>
-          <TextAction
-            label={t.termsLink}
-            onPress={() => router.push({ pathname: '/legal/[page]', params: { page: 'sales' } })}
-            testID="checkout-terms"
-          />
-        </View>
       </FormScroll>
 
       {/* Adres çekmecesi — hesap ekranının kullandığı KİT bileşeni. Sipariş akışı kesilmez:
@@ -1009,6 +1006,32 @@ function signedInLabel(t: Messages, customer: Me): string {
 /** Teslimat satırlarının dokunuşu — yol adresin cevabı olduğu için bir şey DEĞİŞTİRMEZ. */
 function keepDelivery(): void {
   return undefined;
+}
+
+interface CheckRowProps {
+  checked: boolean;
+  onToggle: () => void;
+  label: string;
+  testID: string;
+}
+
+/** Kabul bloğunun kutusu; işaretsiz başlar, çünkü izin de kabul de açık eylem ister. */
+function CheckRow({ checked, onToggle, label, testID }: CheckRowProps) {
+  return (
+    <PressableSurface
+      onPress={onToggle}
+      feedback="opacity"
+      selected={checked}
+      style={styles.consentRow}
+      accessibilityLabel={label}
+      testID={testID}
+    >
+      <View style={[styles.checkbox, checked ? styles.checkboxOn : styles.checkboxOff]}>
+        <Text style={styles.checkboxMark}>{checked ? '✓' : ' '}</Text>
+      </View>
+      <Text style={styles.consentLabel}>{label}</Text>
+    </PressableSurface>
+  );
 }
 
 const styles = StyleSheet.create((theme, rt) => ({
@@ -1127,16 +1150,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.body,
   },
   termsBlock: {
-    alignItems: 'center',
     gap: theme.space.xs,
   },
-  /* `body-sm`: müşterinin karar için okuduğu metin 14'ün altına inmez; bu satır siparişin hukuki çerçevesini söyler. */
-  termsLine: {
-    textAlign: 'center',
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text['body-sm'],
-    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
-    color: theme.colors.body,
+  /** Bağ etiketin hizasında: kutunun genişliği ve kutuyla etiket arasındaki boşluk kadar içeride. */
+  termsLink: {
+    alignItems: 'flex-start',
+    paddingLeft: theme.size.markBox + theme.space.lg,
   },
   blockLine: {
     textAlign: 'center',

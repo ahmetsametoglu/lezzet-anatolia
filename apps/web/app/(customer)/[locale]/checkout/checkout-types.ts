@@ -5,6 +5,7 @@ import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 // Telefon görünümü native ödeme ekranıyla aynı metni kullanır (CLAUDE §2).
 import type checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { entryOf, isSplitCart, type CartEntry, type CartLine, type CartView } from '@/lib/cart/cart-types';
+import type { PayStage } from './components/payment-element';
 import type messages from './messages.json';
 
 /** Sayfa metinleri — şekli JSON'un kendisinden TÜRER, elle interface yazılmaz (CLAUDE.md §2). */
@@ -41,6 +42,8 @@ export interface CheckoutState {
   /** Vadeli satın alma işaretlendi mi — ödeme yöntemi değil, siparişin bayrağı. */
   onAccount: boolean;
   marketingConsent: boolean;
+  /** Satış koşulları kabul edildi mi; kutu işaretsiz başlar ve işaretlenmeden sipariş düğmesi kapalıdır. */
+  termsAccepted: boolean;
 }
 
 export interface CheckoutViewProps extends StepProps {
@@ -68,6 +71,7 @@ export interface CheckoutViewProps extends StepProps {
   onSelectShippingMode: (mode: 'home' | 'point') => void;
   onSelectPayment: (method: PaymentMethod, onAccount: boolean) => void;
   onToggleConsent: (value: boolean) => void;
+  onToggleTerms: (value: boolean) => void;
   /**
    * Sepetin ilk okuması bitti mi: özet kalem satırlarını sepetten çizer ve okuma bitmeden boş özet "siparişiniz yok" gibi
    * okunur.
@@ -82,9 +86,14 @@ export interface CheckoutViewProps extends StepProps {
    * Adım verisinin (adres · teslimat · ödeme) ilk okuması bitti mi: bitmeden adım çizmek henüz bilinmeyen bir hüküm verdirir.
    */
   snapshotReady: boolean;
+  /** Tek sipariş düğmesinin işi: kart yolunda formu doğrulayıp öder, öteki yollarda siparişi açar. */
   onConfirm: () => void;
-  /** Kart ödemesi seçiliyse ekranın ödeme bloğuna yerleştireceği düğüm; değilse null. */
+  /** Kart ödemesi seçiliyse ödeme bölümüne yerleşen kart alanları; değilse null. */
   paymentSlot: React.ReactNode;
+  /** Kart ödemesinin aşaması, `null` boşta; düğme yazısı ve ilerleme çubuğu bunu çizer. */
+  payStage: PayStage | null;
+  /** Seçili ödeme yolu onaya hazır mı: kart yolunda form yüklenmeden düğme kapalıdır. */
+  payReady: boolean;
   /** Seçili adresin künyesi — adres adımı, özetteki soğuk zincir cümlesi ve fatura bilgisi için. */
   selectedAddress: Address | null;
   /**

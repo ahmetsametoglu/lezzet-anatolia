@@ -56,8 +56,6 @@
         "shipping": "Kapıda ödeme yalnız kendi aracımızla getirdiğimiz adreslerde."
       },
       "cashWarning": "Yasal sınır nedeniyle bu tutar nakit tahsil edilemez — kapıda kartla ödeyebilirsiniz.",
-      "consent": "Kampanya ve fırsatlardan e-posta ile haberdar olmak istiyorum",
-      "consentOptional": "(isteğe bağlı)",
       "unavailable": "Online ödeme şu an açılamıyor. Kapıda ödemeyi seçebilir ya da biraz sonra tekrar deneyebilirsiniz.",
       "openPayment": "Önceki ödemeniz alındı ya da bankada işleniyor — sizi o siparişin sayfasına götürüyoruz.",
       "transfer": "Havale ile öde",
@@ -67,9 +65,6 @@
       "codPickupBody": "Teslim alırken nakit ya da kart"
     },
     "summary": {
-      "submit": "Siparişi onayla",
-      "terms": "Onaylayarak satış koşullarını kabul etmiş olursunuz.",
-      "termsLink": "Satış koşullarını okuyun",
       "coldChain": "Siparişiniz soğuk zincir bozulmadan, {date} günü kapınıza gelir.",
       "minBasket": "{place} için sipariş alt sınırı {min} — ara toplamınıza {missing} daha ekleyin.",
       "packageSuffix": "(paket)",
@@ -98,8 +93,8 @@
       "customer_not_found": "Hesabınızı tanıyamadık, lütfen yeniden giriş yapın.",
       "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin.",
       "warehouse_unresolved": "Adresiniz için teslimat noktası belirlenemedi. Ekibimize haber verildi — lütfen bizimle iletişime geçin.",
-      "price_changed": "Siz ekrandayken bazı fiyatlar değişti: {detail}. Sipariş vermeden önce görmenizi istedik — onaylıyorsanız tekrar \"Siparişi onayla\"ya basın.",
-      "cart_changed": "Siz ekrandayken sepetiniz değişti — sipariş verilmedi. Yandaki özet güncellendi; uygunsa tekrar \"Siparişi onayla\"ya basın.",
+      "price_changed": "Siz ekrandayken bazı fiyatlar değişti: {detail}. Sipariş vermeden önce görmenizi istedik — onaylıyorsanız tekrar \"Siparişi Ver ve Öde\"ye basın.",
+      "cart_changed": "Siz ekrandayken sepetiniz değişti — sipariş verilmedi. Yandaki özet güncellendi; uygunsa tekrar \"Siparişi Ver ve Öde\"ye basın.",
       "shipping_option_unavailable": "Seçtiğiniz kargo servisi bu sepet için artık sunulmuyor. Lütfen kargo seçimini yeniden yapın.",
       "shipping_unpriced_carrier": "Kargo fiyatını şu an alamıyoruz — sipariş verilmedi. Birkaç dakika sonra tekrar deneyin.",
       "shipping_unpriced_data": "Bu sipariş şu an kargoyla gönderilemiyor — sipariş verilmedi.",
@@ -191,8 +186,6 @@
         "shipping": "Le paiement à la livraison n'est possible que pour les livraisons effectuées par notre camion."
       },
       "cashWarning": "La loi interdit l'encaissement en espèces à ce montant — réglez par carte à la livraison.",
-      "consent": "Je souhaite recevoir les offres et nouveautés par e-mail",
-      "consentOptional": "(facultatif)",
       "unavailable": "Le paiement en ligne est momentanément indisponible. Choisissez le paiement à la livraison ou réessayez dans un instant.",
       "openPayment": "Votre paiement précédent a été reçu ou est en cours de traitement — nous vous emmenons vers cette commande.",
       "transfer": "Payer par virement",
@@ -202,9 +195,6 @@
       "codPickupBody": "Espèces ou carte au retrait"
     },
     "summary": {
-      "submit": "Confirmer la commande",
-      "terms": "En confirmant, vous acceptez les conditions de vente.",
-      "termsLink": "Lire les conditions générales de vente",
       "coldChain": "Votre commande arrive chez vous le {date}, chaîne du froid respectée.",
       "minBasket": "Minimum de commande pour {place} : {min} — ajoutez encore {missing} au sous-total.",
       "packageSuffix": "(coffret)",
@@ -233,8 +223,8 @@
       "customer_not_found": "Votre compte n'a pas pu être identifié, reconnectez-vous.",
       "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer.",
       "warehouse_unresolved": "Nous n'avons pas pu organiser la livraison pour votre adresse. Notre équipe a été prévenue — merci de nous contacter.",
-      "price_changed": "Certains prix ont changé pendant que vous étiez sur cette page : {detail}. Nous tenions à vous le montrer avant de valider — si cela vous convient, appuyez à nouveau sur « Confirmer la commande ».",
-      "cart_changed": "Votre panier a changé pendant que vous étiez sur cette page — la commande n'a pas été passée. Le récapitulatif est à jour ; si cela vous convient, appuyez à nouveau sur « Confirmer la commande ».",
+      "price_changed": "Certains prix ont changé pendant que vous étiez sur cette page : {detail}. Nous tenions à vous le montrer avant de valider — si cela vous convient, appuyez à nouveau sur « Commander et Payer ».",
+      "cart_changed": "Votre panier a changé pendant que vous étiez sur cette page — la commande n'a pas été passée. Le récapitulatif est à jour ; si cela vous convient, appuyez à nouveau sur « Commander et Payer ».",
       "shipping_option_unavailable": "Le mode de livraison choisi n'est plus proposé pour ce panier. Merci de choisir à nouveau.",
       "shipping_unpriced_carrier": "Nous ne parvenons pas à obtenir le tarif de livraison — la commande n'a pas été passée. Réessayez dans quelques minutes.",
       "shipping_unpriced_data": "Cette commande ne peut pas être expédiée pour le moment — elle n'a pas été passée.",
@@ -326,8 +316,6 @@
         "shipping": "Zahlung bei Lieferung gibt es nur für Adressen, die wir selbst beliefern."
       },
       "cashWarning": "Gesetzlich ist Barzahlung in dieser Höhe nicht zulässig – an der Tür können Sie mit Karte zahlen.",
-      "consent": "Ich möchte Angebote und Neuigkeiten per E-Mail erhalten",
-      "consentOptional": "(optional)",
       "unavailable": "Online-Zahlung ist gerade nicht verfügbar. Wählen Sie Zahlung bei Lieferung oder versuchen Sie es gleich noch einmal.",
       "openPayment": "Ihre vorherige Zahlung ist eingegangen oder wird bearbeitet – wir bringen Sie zu dieser Bestellung.",
       "transfer": "Per Überweisung",
@@ -337,9 +325,6 @@
       "codPickupBody": "Bar oder Karte bei der Abholung"
     },
     "summary": {
-      "submit": "Bestellung bestätigen",
-      "terms": "Mit Ihrer Bestellung akzeptieren Sie unsere AGB.",
-      "termsLink": "Allgemeine Geschäftsbedingungen lesen",
       "coldChain": "Ihre Bestellung kommt am {date} ohne Unterbrechung der Kühlkette zu Ihnen.",
       "minBasket": "Mindestbestellwert für {place}: {min} – es fehlen noch {missing}.",
       "packageSuffix": "(Genusspaket)",
@@ -368,8 +353,8 @@
       "customer_not_found": "Ihr Konto konnte nicht ermittelt werden, bitte erneut anmelden.",
       "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
       "warehouse_unresolved": "Für Ihre Adresse können wir die Lieferung gerade nicht einplanen. Unser Team wurde benachrichtigt – bitte kontaktieren Sie uns.",
-      "price_changed": "Während Sie auf dieser Seite waren, haben sich einige Preise geändert: {detail}. Wir wollten es Ihnen vor der Bestellung zeigen – wenn das für Sie in Ordnung ist, wählen Sie erneut „Bestellung bestätigen“.",
-      "cart_changed": "Ihr Warenkorb hat sich geändert, während Sie auf dieser Seite waren – die Bestellung wurde nicht aufgegeben. Die Übersicht ist aktualisiert; wenn das für Sie in Ordnung ist, wählen Sie erneut „Bestellung bestätigen“.",
+      "price_changed": "Während Sie auf dieser Seite waren, haben sich einige Preise geändert: {detail}. Wir wollten es Ihnen vor der Bestellung zeigen – wenn das für Sie in Ordnung ist, wählen Sie erneut „Zahlungspflichtig bestellen“.",
+      "cart_changed": "Ihr Warenkorb hat sich geändert, während Sie auf dieser Seite waren – die Bestellung wurde nicht aufgegeben. Die Übersicht ist aktualisiert; wenn das für Sie in Ordnung ist, wählen Sie erneut „Zahlungspflichtig bestellen“.",
       "shipping_option_unavailable": "Die gewählte Versandart ist für diesen Warenkorb nicht mehr verfügbar. Bitte wählen Sie erneut.",
       "shipping_unpriced_carrier": "Wir können den Versandpreis gerade nicht abrufen – die Bestellung wurde nicht aufgegeben. Bitte versuchen Sie es in einigen Minuten erneut.",
       "shipping_unpriced_data": "Diese Bestellung kann derzeit nicht versendet werden – sie wurde nicht aufgegeben.",

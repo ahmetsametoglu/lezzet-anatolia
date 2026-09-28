@@ -11,21 +11,13 @@ import { useCart } from '@/components/customer/cart/cart-context';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { clientStripe } from '@/lib/stripe-client';
 import { errorText } from '@/lib/customer-error-text';
-import { PaymentSection } from './components/payment-element';
+import { CardFields, CardPaymentScope, type CardFieldsHandle, type PayStage } from './components/payment-element';
 import { CheckoutDesktop } from './checkout.desktop';
 import { CheckoutMobile } from './checkout.mobile';
 import type { AddressCheckOutcome } from '@lezzet/application';
 import type { CheckoutSnapshot } from '@lezzet/application';
 import { checkCheckoutAddressAction, confirmCheckoutAction, loadCheckoutAction } from './actions';
-import {
-  checkoutBlocker,
-  checkoutEntriesOf,
-  isSeparateOrder,
-  servicePointMissing,
-  type CheckoutState,
-  type CheckoutViewProps,
-  type Messages,
-} from './checkout-types';
+import { checkoutEntriesOf, isSeparateOrder, type CheckoutState, type CheckoutViewProps, type Messages } from './checkout-types';
 
 /**
  * Durum ve sunucu turları burada, yerleşim iki ekran dosyasında. Adres sepette seçilir ve burada yalnız okunur, çünkü teslimat
@@ -72,10 +64,16 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     paymentMethod: null,
     onAccount: false,
     marketingConsent: false,
+    termsAccepted: false,
   });
   const [busy, setBusy] = useState(false);
   const [snapshotReady, setSnapshotReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const cardRef = useRef<CardFieldsHandle>(null);
+  const [cardReady, setCardReady] = useState(false);
+  const [payStage, setPayStage] = useState<PayStage | null>(null);
+  // Stripe ödeme grubu ancak kart yolu ilk kez seçilince kurulur ve bir kez verilen sağlayıcı geri alınamaz, bu yüzden bayrak inmez.
+  const [cardOpened, setCardOpened] = useState(false);
 
   const cartEntries = useMemo(() => checkoutEntriesOf(view.lines), [view.lines]);
   /**
@@ -258,10 +256,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   const paymentSlot =
     state.paymentMethod === 'online' && snapshot.payment && selectedAddress ? (
       stripe ? (
-        <PaymentSection
-          stripe={stripe}
-          locale={locale}
-          amountCents={snapshot.payment.orderTotalCents}
+        <CardFields
+          ref={cardRef}
           billing={{
             name: customer.name,
             email: customer.email,
@@ -276,16 +272,9 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
           returnUrlBase={returnUrlBase}
           onPrepare={prepare}
           onError={setError}
-          // Özet kartıyla aynı kapıdan, yoksa sepette gönderilemeyen kalem varken kart formu açık kalır ve müşteri reddi ancak
-          // bastıktan sonra öğrenirdi.
-          disabled={busy || checkoutBlocker({ cartFailed, cartHasBlocked: view.hasBlocked, snapshot, addressId: state.addressId, pointMissing: servicePointMissing(state, snapshot.shipping) }) !== null}
-          labels={{
-            submit: t.summary.submit,
-            validating: t.pay.validating,
-            preparing: t.pay.preparing,
-            confirming: t.pay.confirming,
-            unavailable: t.payment.unavailable,
-          }}
+          onStage={setPayStage}
+          onReady={setCardReady}
+          labels={{ validating: t.pay.validating, confirming: t.pay.confirming, unavailable: t.payment.unavailable }}
         />
       ) : (
         // Anahtar yok: sessiz başarısızlık yerine açık cevap — kapıda ödeme hâlâ seçilebilir.
@@ -306,10 +295,12 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     // Ekrana giden "ayrı sipariş mi" SEPETTEN türer, bayraktan değil (`isSeparateOrder` künyesi).
     separateOrder: isSeparateOrder(shippingOrder, view),
     customerEmail: customer.email,
-    busy,
+    busy: busy || payStage !== null,
     error,
     selectedAddress,
     paymentSlot,
+    payStage,
+    payReady: state.paymentMethod !== 'online' || cardReady,
     addressNotice,
     /**
      * Teklif kabulü kaydın kendisini düzeltir ve yalnız kod ile şehir değişir, çünkü `wrong_postal_code` sokağın aynı, kodun farklı
@@ -361,12 +352,25 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       setState((prev) => ({ ...prev, shippingMode: 'home', servicePoint: null, shippingOptionCode: hadPoint ? null : prev.shippingOptionCode }));
       if (hadPoint) void refresh(state.addressId, null);
     },
-    onSelectPayment: (method, onAccount) => setState((prev) => ({ ...prev, paymentMethod: method, onAccount })),
+    onSelectPayment: (method, onAccount) => {
+      if (method === 'online') setCardOpened(true);
+      setState((prev) => ({ ...prev, paymentMethod: method, onAccount }));
+    },
     onToggleConsent: (value) => setState((prev) => ({ ...prev, marketingConsent: value })),
-    onConfirm: () => void confirm(),
+    onToggleTerms: (value) => setState((prev) => ({ ...prev, termsAccepted: value })),
+    onConfirm: () => {
+      // Düğme koşullar kabul edilmeden kapalı; sipariş yine de kabulsüz açılmasın diye kapı burada da durur.
+      if (!state.termsAccepted) return;
+      if (state.paymentMethod === 'online') void cardRef.current?.submit();
+      else void confirm();
+    },
   };
 
-  return resolved === 'mobile' ? <CheckoutMobile {...props} /> : <CheckoutDesktop {...props} />;
+  return (
+    <CardPaymentScope stripe={cardOpened ? stripe : null} locale={locale} amountCents={snapshot.payment?.orderTotalCents ?? null}>
+      {resolved === 'mobile' ? <CheckoutMobile {...props} /> : <CheckoutDesktop {...props} />}
+    </CardPaymentScope>
+  );
 }
 
 /**

@@ -19,7 +19,9 @@ import { addressLine, addressTitle } from '@lezzet/address';
 import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
+import { getPathname } from '@/i18n/navigation';
 import { AccountLine } from './components/checkout-steps';
+import { PayProgress } from './components/payment-element';
 import { PhoneCheckoutSkeleton } from './components/phone-checkout-skeleton';
 import { PhoneShippingChoice } from './components/phone-shipping-choice';
 import { ShippingOrderNote } from './components/shipping-order-note';
@@ -27,8 +29,8 @@ import { checkoutBlocker, servicePointMissing, type CheckoutCopy, type CheckoutV
 
 /**
  * Ödemenin telefon görünümü, native "Siparişi tamamla" ekranının web ikizi: metin ortak sözlükten, durum ve sunucu turları
- * `checkout-client.tsx`te masaüstüyle ortak. Web'e özgü farklar: adres sepette seçilir ve burada salt okunur, kart ödemesi
- * sayfanın içinde kendi düğmesiyle onaylanır, kargoda taşıyıcı seçenekleri çıkar.
+ * `checkout-client.tsx`te masaüstüyle ortak. Web'e özgü farklar: adres sepette seçilir ve burada salt okunur, kart alanları
+ * sayfanın içinde durur (native'de ödeme kartı düğmeden sonra açılır), kargoda taşıyıcı seçenekleri çıkar.
  */
 
 /** Kahraman satırının küçük resimleri — en fazla dört; yığın kitte (`ThumbStack`, native `AvatarThumb` `stacked`). */
@@ -156,8 +158,8 @@ export function CheckoutMobile(props: CheckoutViewProps) {
       : []),
   ];
 
-  // Engel TEK yerde kararlaşır (`checkoutBlocker` — kart formu da aynı cevabı okur); telefon native'in iki ek şartını da
-  // söyler: gün seçilmedi · ödeme yolu seçilmedi. Okuma düştüyse "güncelleniyor" DENMEZ — bitmeyecek bir bekleyiş olurdu.
+  // Engel tek yerde kararlaşır (`checkoutBlocker`, masaüstü de aynı cevabı okur); telefon native'in ek şartlarını da söyler: gün,
+  // ödeme yolu ve satış koşulları. Okuma düştüyse "güncelleniyor" denmez, çünkü bitmeyecek bir bekleyiş olurdu.
   const blocker = checkoutBlocker({
     cartFailed,
     cartHasBlocked: cart.hasBlocked,
@@ -187,7 +189,9 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                   ? copy.block.day
                   : state.paymentMethod === null
                     ? copy.block.payment
-                    : null;
+                    : !state.termsAccepted
+                      ? copy.block.terms
+                      : null;
 
   // Küçük resimler siparişin kendisini gösterir — kapsam dışı kalemin fotoğrafı "bunlar geliyor" diye okunurdu.
   // Paketler önce (native'in sırası).
@@ -349,19 +353,15 @@ export function CheckoutMobile(props: CheckoutViewProps) {
 
         <SummaryPanel eyebrow={copy.summary.eyebrow} rows={rows} totalLabel={copy.summary.total} totalValue={totalLabel} totalTone="terracotta" />
 
-        {/* İzin kutusu BAŞTAN İŞARETSİZ (AB açık eylem şartı, DOMAIN §11). Kutu native'in: 26'lık kare, rozet köşe. */}
-        <label className="group flex cursor-pointer items-start gap-2.5">
-          <input type="checkbox" checked={state.marketingConsent} onChange={(e) => props.onToggleConsent(e.target.checked)} className="peer sr-only" />
-          <span
-            aria-hidden
-            className="grid size-6.5 flex-none place-items-center rounded-badge border-[1.5px] border-sand-500 bg-card font-sans text-note font-bold text-transparent transition-colors group-hover:border-olive peer-checked:border-olive peer-checked:bg-olive peer-checked:text-card peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-olive"
-          >
-            ✓
-          </span>
-          <span className="font-sans text-helper leading-[1.6] text-body">
-            {t.payment.consent} <span className="text-muted">{t.payment.consentOptional}</span>
-          </span>
-        </label>
+        {/* Kabul bloğu özetle düğmenin arasında, native'deki sırayla. Bağ yeni sekmede açılır ki koşulları okuyan müşterinin seçimleri
+            ve kart bilgisi kaybolmasın. */}
+        <PhoneCheckRow checked={state.marketingConsent} onChange={props.onToggleConsent} label={copy.marketing} />
+        <PhoneCheckRow
+          checked={state.termsAccepted}
+          onChange={props.onToggleTerms}
+          label={copy.terms}
+          link={<TextAction label={copy.termsLink} externalHref={getPathname({ href: '/legal/sales', locale })} />}
+        />
 
         {/* Adres teklifi onay düğmesinin hemen üstünde, çünkü soru o anda doğar; iki hâl ayrı yapıdır: başka kodda bulunduysa
             iki eylem, doğrulanamadıysa tek cümle. Metin servisin etiketidir, biz cümle kurmayız. */}
@@ -385,20 +385,13 @@ export function CheckoutMobile(props: CheckoutViewProps) {
 
         {blockText !== null && <p className="text-center font-sans text-body-sm font-semibold text-terracotta">{blockText}</p>}
 
-        {state.paymentMethod !== 'online' && (
-          <PrimaryButton
-            shape="block"
-            label={busy ? copy.submitting : copy.confirm.replace('{total}', totalLabel)}
-            onClick={props.onConfirm}
-            disabled={busy || blockText !== null}
-          />
-        )}
-
-        {/* Satış koşulları düğmenin ALTINDA; cümle ile bağ ayrı satır — cümleyi parçalayıp bağ gömmek üç dilde kırılgan. */}
-        <div className="flex flex-col items-center gap-1">
-          <p className="text-center font-sans text-body-sm leading-[1.6] text-body">{copy.terms}</p>
-          <TextAction label={copy.termsLink} href="/legal/sales" />
-        </div>
+        <PrimaryButton
+          shape="block"
+          label={props.payStage ? t.pay[props.payStage] : busy ? copy.submitting : copy.confirm.replace('{total}', totalLabel)}
+          onClick={props.onConfirm}
+          disabled={busy || blockText !== null || !props.payReady}
+        />
+        {props.payStage && <PayProgress stage={props.payStage} />}
 
         <span className="flex items-center justify-center gap-1.5 font-sans text-micro font-semibold text-muted">
           <Icon name="lock" size={13} />
@@ -412,6 +405,33 @@ export function CheckoutMobile(props: CheckoutViewProps) {
 /** Bölüm üstbaşlığı — native `eyebrow` (terracotta, geniş aralık); tutar özetinin ve sepetin künyesiyle aynı kademe. */
 function Eyebrow({ text }: { text: string }) {
   return <span className="font-sans text-eyebrow-xs text-terracotta uppercase">{text}</span>;
+}
+
+interface PhoneCheckRowProps {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+  /** Etiketin altındaki bağ; etiketin dışında durur ki bağa dokunmak kutuyu işaretlemesin. */
+  link?: React.ReactNode;
+}
+
+/** Kabul bloğunun kutusu, native'in kutusu (26'lık kare, rozet köşe); işaretsiz başlar, çünkü izin de kabul de açık eylem ister. */
+function PhoneCheckRow({ checked, onChange, label, link }: PhoneCheckRowProps) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="group flex cursor-pointer items-start gap-2.5">
+        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
+        <span
+          aria-hidden
+          className="grid size-6.5 flex-none place-items-center rounded-badge border-[1.5px] border-sand-500 bg-card font-sans text-note font-bold text-transparent transition-colors group-hover:border-olive peer-checked:border-olive peer-checked:bg-olive peer-checked:text-card peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-olive"
+        >
+          ✓
+        </span>
+        <span className="font-sans text-helper leading-[1.6] text-body">{label}</span>
+      </label>
+      {link && <span className="pl-9">{link}</span>}
+    </div>
+  );
 }
 
 function lineLabel(copy: CheckoutCopy, line: SummaryLine): string {

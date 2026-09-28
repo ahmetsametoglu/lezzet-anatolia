@@ -196,11 +196,29 @@ describe('CheckoutScreen — siparişin kapsamı', () => {
     expect(screen.getByText(`${t.undeliverable.body} ${t.undeliverable.items.replace('{items}', 'Kaymak')}`)).toBeOnTheScreen();
     // Engel cümlesi yazılmaz: sunucu siparişi reddetmez, kapsamını daraltır.
     expect(screen.queryByText(t.block.shipping)).toBeNull();
-    /* Kalan tek engel ÖDEME SEÇİMİDİR; seçilince onay açılır — gelemeyen kalem kapıyı kapatmıyor.
-       Dokunuş ERİŞİLEBİLİR öğeye yapılır (kitin kendi testinin kalıbı): `testID` görsel yüzeyde
-       durur, işleyici ise onu saran `Pressable`da. */
+    /* Kalan engeller ödeme seçimi ve satış koşullarıdır; ikisi verilince onay açılır, gelemeyen kalem kapıyı kapatmıyor. Dokunuş
+       erişilebilir öğeye yapılır (kitin kendi testinin kalıbı): `testID` görsel yüzeyde durur, işleyici onu saran `Pressable`da. */
     await fireEvent.press(screen.getByRole('button', { name: `${t.payment.online} · ${t.payment.onlineBody}` }));
-    expect(screen.getByRole('button', { name: t.confirmPay.replace('{total}', '20,00 €') })).toBeEnabled();
+    await fireEvent.press(screen.getByRole('button', { name: t.terms }));
+    expect(screen.getByRole('button', { name: t.confirm.replace('{total}', '20,00 €') })).toBeEnabled();
+  });
+
+  // Kutu işaretlenmeden düğme açılırsa sipariş, kabul edilmemiş koşullarla ödeme yükümlülüğü doğurur.
+  it('satış koşulları işaretlenmeden sipariş düğmesi kapalıdır ve sebebi yazılır', async () => {
+    mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local')]));
+    fetchMock.mockResolvedValue(reply(snapshot(false, 2000)));
+
+    await render(<CheckoutScreen />);
+    await waitFor(() => expect(screen.getByTestId('checkout-summary')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.online} · ${t.payment.onlineBody}` }));
+
+    const confirm = () => screen.getByRole('button', { name: t.confirm.replace('{total}', '20,00 €') });
+    expect(confirm()).toBeDisabled();
+    expect(screen.getByText(t.block.terms)).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByRole('button', { name: t.terms }));
+    expect(confirm()).toBeEnabled();
+    expect(screen.queryByText(t.block.terms)).toBeNull();
   });
 
   it('adres bölge içiyse hiçbir kalem düşmez: engel yok, özet sepetin tamamını yazar', async () => {
@@ -265,6 +283,7 @@ describe('CheckoutScreen — sipariş numarası', () => {
     await render(<CheckoutScreen />);
     await waitFor(() => expect(screen.getByTestId('checkout-summary')).toBeOnTheScreen());
     await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    await fireEvent.press(screen.getByRole('button', { name: t.terms }));
     await fireEvent.press(screen.getByTestId('checkout-confirm'));
     await waitFor(() => expect(mockReplace).toHaveBeenCalled());
   }
@@ -361,6 +380,7 @@ describe('CheckoutScreen — adres teklifi ve düzenleme', () => {
   async function openAndConfirm(): Promise<void> {
     await openCheckout();
     await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    await fireEvent.press(screen.getByRole('button', { name: t.terms }));
     await fireEvent.press(screen.getByTestId('checkout-confirm'));
   }
 
@@ -533,6 +553,7 @@ describe('CheckoutScreen — kargo servisi ve teslim noktası', () => {
 
   async function onayla(): Promise<void> {
     await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    await fireEvent.press(screen.getByRole('button', { name: t.terms }));
     await fireEvent.press(screen.getByTestId('checkout-confirm'));
     await waitFor(() => expect(orderBody).not.toBeNull());
   }
@@ -562,6 +583,8 @@ describe('CheckoutScreen — kargo servisi ve teslim noktası', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: TUR_NOKTA }));
     await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    // Koşullar işaretli: düğmeyi kapalı tutan tek sebep nokta olsun.
+    await fireEvent.press(screen.getByRole('button', { name: t.terms }));
 
     expect(screen.getByText(t.point.none)).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: t.confirm.replace('{total}', '20,00 €') })).toBeDisabled();
@@ -579,6 +602,8 @@ describe('CheckoutScreen — kargo servisi ve teslim noktası', () => {
     );
     await render(<CheckoutScreen />);
     await fireEvent.press(await screen.findByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    // Koşullar işaretli: düğmeyi kapalı tutan tek sebep fiyatsızlık olsun.
+    await fireEvent.press(screen.getByRole('button', { name: t.terms }));
 
     expect(screen.getAllByText(t.carrier.unavailable)).toHaveLength(2);
     expect(screen.getByRole('button', { name: t.confirm.replace('{total}', UNKNOWN_AMOUNT) })).toBeDisabled();

@@ -14,14 +14,13 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en sonda.
 
 - [ ] (K.42) [hedef: web] Yasal metinlerin içeriği avukata (dil düzeltmesi yapıldı, içerik değişmedi — `packages/i18n/src/customer/legal.json`):
-  sipariş düğmesi ödeme yükümlülüğünü söylemiyor (L221-14 · BGB §312j: "Commander et payer" / "Zahlungspflichtig bestellen") ·
   cayma hakkı bütün gıdalara kapalı yazılı, istisna yalnız çabuk bozulana; raf ömürlü kargoda 14 gün, bilgilendirme ve örnek form
   (L221-28 4°, L221-5 · BGB §312g) · tüketici arabulucusu yok (L612-1) · Almanya'daki tüketiciye Rome I md. 6 şerhi · yasal garanti
   kutusu (D211-2) ve tahmini süre maddesi (L216-1) · CGV sözleri: 48 saat bildirim, ikinci başarısız teslimatta iade yok, "çözümsüz
   talep kapatmayız", stok yetmezse "iptal edilmez" (uygulama ödeme sonrası iptal edip iade ediyor) · CGV kapsamı taze ürünü saymıyor ·
   künyede RCS yok · gizlilik: girişte "kabul edersiniz" (bilgilendirme olmalı), itiraz (md. 21) ve ölüm sonrası talimat hakkı,
   ikamet ülkesi otoritesi (md. 77), yapay zekâ ve ölçümün hukuki dayanağı, saklama süreleri, "traceurs", maskeli e-posta da kişisel
-  veridir · pazarlama izni e-posta ve WhatsApp'a tek kutu (UWG §7) · Google yorumu yalnız memnun müşteriden isteniyor ve "doğrulanmış
+  veridir · Google yorumu yalnız memnun müşteriden isteniyor ve "doğrulanmış
   yorum" bilgisi (L111-7-2) · B2B e-postasında "Reverse-Charge/autoliquidation" ibaresi (muhasebeci) · alerjen adları INCO/LMIV Ek II
   resmî adıyla mı · "kenarları hafif yumuşamış olabilir" cümlesi (üretici teyidi).
 - [~] (21.310) **Operasyon uygulamasının (`apps/mobile-operations`, "Lezzet Operasyonu") kurulabilir sürümü** — personelin

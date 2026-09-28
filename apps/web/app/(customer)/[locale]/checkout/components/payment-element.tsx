@@ -1,22 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useImperativeHandle, useMemo, useState, type ReactNode, type Ref } from 'react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import type { Appearance, Stripe as StripeClient, StripeElementsOptions } from '@stripe/stripe-js';
 import type { Locale } from '@lezzet/i18n';
-import { Button } from '@/components/customer/ui/button';
 import { Skeleton, SkeletonBlock } from '@/components/customer/ui/skeleton';
-import { UNKNOWN_AMOUNT, formatPrice } from '@/lib/storefront/format';
 
 /**
  * Sayfa içi kart ödemesi: kart alanları Stripe'ın iframe'inde kalır ve ödeme niyeti ancak onayda doğar (ertelenmiş Elements), böylece
  * açık bırakılan form stok kilitlemez. Önce kart doğrulanır, sonra sipariş açılır, çünkü tersi her yazım hatasında yetim taslak bırakırdı.
  */
-interface PaymentSectionProps {
-  stripe: Promise<StripeClient | null>;
+
+export type PayStage = 'validating' | 'preparing' | 'confirming';
+
+/** Kart formunun dışarı açtığı tek iş; onay düğmesi formda değil, kabul bloğunun sonunda durur. */
+export interface CardFieldsHandle {
+  submit: () => Promise<void>;
+}
+
+interface CardPaymentScopeProps {
+  /** `null` = müşteri kart yolunu henüz seçmedi; Stripe o zamana kadar ödeme grubu kurmaz. */
+  stripe: Promise<StripeClient | null> | null;
   locale: Locale;
-  /** `null` = kargo ücreti bilinmiyor; o hâlde sipariş açılmaz ve form kapalıdır. */
+  /** `null` = kargo ücreti bilinmiyor; o hâlde sipariş açılmaz. */
   amountCents: number | null;
+  children: ReactNode;
+}
+
+interface CardFieldsProps {
+  ref: Ref<CardFieldsHandle>;
   /** Fatura bilgisi ilk adımda seçilen adresten gelir; Stripe'ın adres formu kapalı olduğu için elle geçer. */
   billing: BillingDetails;
   /**
@@ -27,8 +39,11 @@ interface PaymentSectionProps {
   /** Kart geçerliyse çağrılır: taslağı açar, stoğu ayırır, `clientSecret` döndürür. */
   onPrepare: () => Promise<{ ok: true; clientSecret: string; orderId: string } | { ok: false; error: string }>;
   onError: (message: string) => void;
-  disabled: boolean;
-  labels: { submit: string; validating: string; preparing: string; confirming: string; unavailable: string };
+  /** Ödeme turunun aşaması, `null` boşta; düğme yazısı ve ilerleme çubuğu bunu çizer. */
+  onStage: (stage: PayStage | null) => void;
+  /** Form kart almaya hazır mı; hazır olmadan basılan düğme boş formu doğrulamaya gönderirdi. */
+  onReady: (ready: boolean) => void;
+  labels: { validating: string; confirming: string; unavailable: string };
 }
 
 interface BillingDetails {
@@ -90,23 +105,27 @@ const APPEARANCE: Appearance = {
   },
 };
 
-export function PaymentSection(props: PaymentSectionProps) {
-  const options: StripeElementsOptions = {
-    mode: 'payment',
-    // Stripe sıfır tutarlı niyeti reddeder; tutar ekranın gösterimidir, çekilecek tutarı sunucu siparişten çözer.
-    amount: Math.max(1, props.amountCents ?? 0),
-    currency: 'eur',
-    locale: props.locale,
-    // Kart yeterli: Apple/Google Pay de kart yöntemidir. Açık bırakılsaydı sepete uymayan
-    // seçenekler (taksit, sonra öde) sekme olarak belirirdi.
-    paymentMethodTypes: ['card'],
-    paymentMethodCreation: 'manual',
-    appearance: APPEARANCE,
-  };
+/** Kart alanı ödeme bölümünde, onay düğmesi kabul bloğunda durur; ikisi aynı Stripe bağlamını paylaşsın diye sağlayıcı ekranı sarar. */
+export function CardPaymentScope({ stripe, locale, amountCents, children }: CardPaymentScopeProps) {
+  const options = useMemo<StripeElementsOptions>(
+    () => ({
+      mode: 'payment',
+      // Stripe sıfır tutarlı niyeti reddeder; tutar ekranın gösterimidir, çekilecek tutarı sunucu siparişten çözer.
+      amount: Math.max(1, amountCents ?? 0),
+      currency: 'eur',
+      locale,
+      // Kart yeterli: Apple/Google Pay de kart yöntemidir. Açık bırakılsaydı sepete uymayan
+      // seçenekler (taksit, sonra öde) sekme olarak belirirdi.
+      paymentMethodTypes: ['card'],
+      paymentMethodCreation: 'manual',
+      appearance: APPEARANCE,
+    }),
+    [amountCents, locale],
+  );
 
   return (
-    <Elements stripe={props.stripe} options={options}>
-      <PayForm {...props} />
+    <Elements stripe={stripe} options={options}>
+      {children}
     </Elements>
   );
 }
@@ -133,74 +152,81 @@ function CardFieldsSkeleton() {
   );
 }
 
-type Stage = 'idle' | 'validating' | 'preparing' | 'confirming';
-
-function PayForm({ locale, amountCents, billing, returnUrlBase, onPrepare, onError, disabled, labels }: PaymentSectionProps) {
+export function CardFields({ ref, billing, returnUrlBase, onPrepare, onError, onStage, onReady, labels }: CardFieldsProps) {
   const stripe = useStripe();
   const elements = useElements();
-  const [stage, setStage] = useState<Stage>('idle');
   const [ready, setReady] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
-  const busy = stage !== 'idle';
 
-  const submit = async () => {
-    if (!stripe || !elements || disabled) return;
-    // Üç adımın tamamı tek sarmalda: herhangi birinde beklenmedik hata (ağ, entegrasyon) ekranı
-    // "işleniyor"da asılı bırakmamalı — müşteri ne olduğunu bilmeden bekler.
-    try {
-      setStage('validating');
-      const validation = await elements.submit();
-      if (validation.error) {
-        onError(validation.error.message ?? labels.validating);
-        setStage('idle');
-        return;
-      }
+  const usable = ready && !loadFailed && stripe !== null && elements !== null;
+  // Form sökülünce (başka ödeme yolu seçildi) düğme hâlâ hazır sanmasın.
+  useEffect(() => {
+    onReady(usable);
+    return () => onReady(false);
+  }, [usable, onReady]);
 
-      setStage('preparing');
-      const prepared = await onPrepare();
-      if (!prepared.ok) {
-        onError(prepared.error);
-        setStage('idle');
-        return;
-      }
+  useImperativeHandle(
+    ref,
+    () => ({
+      submit: async () => {
+        if (!stripe || !elements) return;
+        // Üç adımın tamamı tek sarmalda: herhangi birinde beklenmedik hata (ağ, entegrasyon) ekranı
+        // "işleniyor"da asılı bırakmamalı — müşteri ne olduğunu bilmeden bekler.
+        try {
+          onStage('validating');
+          const validation = await elements.submit();
+          if (validation.error) {
+            onError(validation.error.message ?? labels.validating);
+            onStage(null);
+            return;
+          }
 
-      setStage('confirming');
-      const { error } = await stripe.confirmPayment({
-        elements,
-        clientSecret: prepared.clientSecret,
-        confirmParams: {
-          return_url: `${returnUrlBase}/${prepared.orderId}`,
-          payment_method_data: {
-            billing_details: {
-              name: billing.name,
-              email: billing.email,
-              phone: billing.phone ?? '',
-              address: {
-                line1: billing.line1,
-                line2: billing.line2 ?? '',
-                postal_code: billing.postalCode,
-                city: billing.city,
-                country: billing.country.toUpperCase(),
-                // Fransa'da eyalet yok ama Stripe alanın GEÇMESİNİ istiyor; `undefined`
-                // entegrasyon hatası veriyor, boş dize kabul ediliyor.
-                state: '',
+          onStage('preparing');
+          const prepared = await onPrepare();
+          if (!prepared.ok) {
+            onError(prepared.error);
+            onStage(null);
+            return;
+          }
+
+          onStage('confirming');
+          const { error } = await stripe.confirmPayment({
+            elements,
+            clientSecret: prepared.clientSecret,
+            confirmParams: {
+              return_url: `${returnUrlBase}/${prepared.orderId}`,
+              payment_method_data: {
+                billing_details: {
+                  name: billing.name,
+                  email: billing.email,
+                  phone: billing.phone ?? '',
+                  address: {
+                    line1: billing.line1,
+                    line2: billing.line2 ?? '',
+                    postal_code: billing.postalCode,
+                    city: billing.city,
+                    country: billing.country.toUpperCase(),
+                    // Fransa'da eyalet yok ama Stripe alanın GEÇMESİNİ istiyor; `undefined`
+                    // entegrasyon hatası veriyor, boş dize kabul ediliyor.
+                    state: '',
+                  },
+                },
               },
             },
-          },
-        },
-      });
-      // Buraya yalnız HATA hâlinde gelinir: başarılıysa tarayıcı `return_url`'e gitmiştir.
-      if (error) {
-        onError(error.message ?? labels.confirming);
-        setStage('idle');
-      }
-    } catch (err) {
-      onError(err instanceof Error ? err.message : labels.confirming);
-      setStage('idle');
-    }
-  };
-
-  const stageLabel = stage === 'validating' ? labels.validating : stage === 'preparing' ? labels.preparing : labels.confirming;
+          });
+          // Buraya yalnız HATA hâlinde gelinir: başarılıysa tarayıcı `return_url`'e gitmiştir.
+          if (error) {
+            onError(error.message ?? labels.confirming);
+            onStage(null);
+          }
+        } catch (err) {
+          onError(err instanceof Error ? err.message : labels.confirming);
+          onStage(null);
+        }
+      },
+    }),
+    [stripe, elements, billing, returnUrlBase, onPrepare, onError, onStage, labels],
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -233,19 +259,19 @@ function PayForm({ locale, amountCents, billing, returnUrlBase, onPrepare, onErr
       </div>
 
       {loadFailed && <p className="font-sans text-note leading-relaxed font-semibold text-honey">{labels.unavailable}</p>}
+    </div>
+  );
+}
 
-      <Button size="md" fullWidth onClick={() => void submit()} disabled={!stripe || busy || disabled || loadFailed}>
-        {busy ? stageLabel : `${labels.submit} · ${amountCents === null ? UNKNOWN_AMOUNT : formatPrice(amountCents, locale)}`}
-      </Button>
+const STAGES: readonly PayStage[] = ['validating', 'preparing', 'confirming'];
 
-      {busy && (
-        <div aria-live="polite" className="flex gap-1.5">
-          {(['validating', 'preparing', 'confirming'] as const).map((s, i) => {
-            const current = ['validating', 'preparing', 'confirming'].indexOf(stage);
-            return <div key={s} className={['h-1 flex-1 rounded-pill', i <= current ? 'bg-olive' : 'bg-sand-200'].join(' ')} />;
-          })}
-        </div>
-      )}
+export function PayProgress({ stage }: { stage: PayStage }) {
+  const current = STAGES.indexOf(stage);
+  return (
+    <div aria-live="polite" className="flex gap-1.5">
+      {STAGES.map((s, i) => (
+        <div key={s} className={['h-1 flex-1 rounded-pill', i <= current ? 'bg-olive' : 'bg-sand-200'].join(' ')} />
+      ))}
     </div>
   );
 }

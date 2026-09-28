@@ -131,7 +131,7 @@
       "total": "Genel toplam",
       "undeliverableNote": "Üstü çizili ürünler bu posta koduna teslim edilemiyor; siparişe eklenmedi ve ödemeye girmiyor."
     },
-    "marketing": "Kampanya ve yeni ürünlerden e-posta/WhatsApp ile haberdar olmak istiyorum. (İsteğe bağlı — siparişinizi etkilemez.)",
+    "marketing": "Kampanya ve yeni ürünlerden e-posta ile haberdar olmak istiyorum. (İsteğe bağlı — siparişinizi etkilemez.)",
     "contact": {
       "eyebrow": "İletişim",
       "reason": "Siparişinizle ilgili sizinle iletişime geçebilmemiz ve teslimat bildirimlerini iletebilmemiz için adınıza ve telefon numaranıza ihtiyacımız var. Kuryemiz de kapıda size bu numaradan ulaşır.",
@@ -153,12 +153,12 @@
       "shipping": "Sepetinizdeki bazı ürünler bu adrese gönderilemiyor.",
       "minBasket": "{place} teslimatı için sepetinize {missing} daha ekleyin.",
       "day": "Teslimat günü seçin.",
-      "payment": "Ödeme yolu seçin."
+      "payment": "Ödeme yolu seçin.",
+      "terms": "Sipariş vermek için satış koşullarını kabul edin."
     },
-    "confirm": "Siparişi onayla · {total}",
-    "confirmPay": "Ödemeye geç · {total}",
+    "confirm": "Siparişi Ver ve Öde · {total}",
     "submitting": "Siparişiniz açılıyor…",
-    "terms": "Onaylayarak satış koşullarını kabul etmiş olursunuz.",
+    "terms": "Satış koşullarını, cayma hakkı bilgisi dahil, okudum ve kabul ediyorum.",
     "termsLink": "Satış koşullarını okuyun",
     "reject": {
       "transport": "Sipariş gönderilemedi — bağlantınızı kontrol edip tekrar deneyin.",
@@ -365,7 +365,7 @@
       "total": "Total général",
       "undeliverableNote": "Les articles barrés ne sont pas livrables à ce code postal ; ils ne font pas partie de la commande ni du paiement."
     },
-    "marketing": "Je souhaite être informé des offres et nouveautés par e-mail/WhatsApp. (Facultatif — sans effet sur votre commande.)",
+    "marketing": "Je souhaite être informé des offres et nouveautés par e-mail. (Facultatif — sans effet sur votre commande.)",
     "contact": {
       "eyebrow": "Contact",
       "reason": "Nous avons besoin de votre nom et de votre numéro de téléphone pour vous contacter au sujet de votre commande et vous envoyer les notifications de livraison. Notre livreur vous joindra également à ce numéro.",
@@ -387,12 +387,12 @@
       "shipping": "Certains produits de votre panier ne peuvent pas être livrés à cette adresse.",
       "minBasket": "Pour une livraison à {place}, ajoutez encore {missing} à votre panier.",
       "day": "Choisissez un jour de livraison.",
-      "payment": "Choisissez un mode de paiement."
+      "payment": "Choisissez un mode de paiement.",
+      "terms": "Pour commander, acceptez les conditions générales de vente."
     },
-    "confirm": "Confirmer la commande · {total}",
-    "confirmPay": "Passer au paiement · {total}",
+    "confirm": "Commander et Payer · {total}",
     "submitting": "Création de votre commande…",
-    "terms": "En confirmant, vous acceptez les conditions de vente.",
+    "terms": "J'ai lu et j'accepte les conditions générales de vente, y compris l'information sur le droit de rétractation.",
     "termsLink": "Lire les conditions générales de vente",
     "reject": {
       "transport": "La commande n'a pas pu être envoyée — vérifiez votre connexion et réessayez.",
@@ -599,7 +599,7 @@
       "total": "Gesamtsumme",
       "undeliverableNote": "Durchgestrichene Artikel sind an diese Postleitzahl nicht lieferbar; sie gehören weder zur Bestellung noch zur Zahlung."
     },
-    "marketing": "Ich möchte per E-Mail/WhatsApp über Angebote und Neuheiten informiert werden. (Optional – ohne Einfluss auf Ihre Bestellung.)",
+    "marketing": "Ich möchte per E-Mail über Angebote und Neuheiten informiert werden. (Optional – ohne Einfluss auf Ihre Bestellung.)",
     "contact": {
       "eyebrow": "Kontakt",
       "reason": "Wir benötigen Ihren Namen und Ihre Telefonnummer, um Sie zu Ihrer Bestellung zu erreichen und Ihnen Lieferbenachrichtigungen zu senden. Auch unser Fahrer erreicht Sie an der Tür unter dieser Nummer.",
@@ -621,12 +621,12 @@
       "shipping": "Einige Produkte in Ihrem Warenkorb können nicht an diese Adresse geliefert werden.",
       "minBasket": "Für die Lieferung nach {place} fügen Sie noch {missing} hinzu.",
       "day": "Wählen Sie einen Liefertag.",
-      "payment": "Wählen Sie eine Zahlungsart."
+      "payment": "Wählen Sie eine Zahlungsart.",
+      "terms": "Um zu bestellen, akzeptieren Sie bitte die AGB."
     },
-    "confirm": "Bestellung bestätigen · {total}",
-    "confirmPay": "Weiter zur Zahlung · {total}",
+    "confirm": "Zahlungspflichtig bestellen · {total}",
     "submitting": "Ihre Bestellung wird angelegt…",
-    "terms": "Mit Ihrer Bestellung akzeptieren Sie unsere AGB.",
+    "terms": "Ich habe die AGB gelesen und akzeptiere sie. Die Widerrufsbelehrung habe ich zur Kenntnis genommen.",
     "termsLink": "Allgemeine Geschäftsbedingungen lesen",
     "reject": {
       "transport": "Die Bestellung konnte nicht gesendet werden – prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
