@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
 import type { z } from 'zod';
-import { claimDiscoverSwipes, openDiscoverDeck, recordDiscoverSwipe } from '@lezzet/application';
+import { claimDiscoverSwipes, openDiscoverDeck, readDiscoverReward, recordDiscoverSwipe } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import {
   DiscoverClaimBodySchema,
@@ -32,12 +32,12 @@ discover.get('/discover', async (c) => {
 
   const db = serviceDb();
   const customerId = await optionalCustomerId(db, c.req.header('authorization'));
-  const cards = await openDiscoverDeck(db, locale.data, customerId);
+  const [cards, reward] = await Promise.all([openDiscoverDeck(db, locale.data, customerId), readDiscoverReward(db)]);
 
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
   // Gövde `z.input<…>` ile TİPLENİR: kapının döndürdüğü şekil sözleşmeye alan alan uymak zorunda ve
   // uymadığı gün burası DERLENMEZ. `parse` ayrıca SÜZGEÇTİR — fazla alan zarfa sızamaz.
-  const body: z.input<typeof DiscoverDeckSchema> = { cards };
+  const body: z.input<typeof DiscoverDeckSchema> = { cards, reward };
   return ok(c, DiscoverDeckSchema.parse(body));
 });
 

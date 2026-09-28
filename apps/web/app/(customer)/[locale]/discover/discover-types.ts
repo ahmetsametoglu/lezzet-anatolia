@@ -11,6 +11,7 @@ export type DiscoverVote = 'like' | 'dislike';
 /** Masaüstü görünümün props'u — tur ve bitiş aynı sayfada, üst satır ikisinde de durur. */
 export interface DiscoverViewProps {
   t: Messages;
+  locale: Locale;
   cards: DiscoverCard[];
   /** Sıradaki kartın destedeki yeri (0'dan); deste boyuna eşitse tur bitti. */
   current: number;
@@ -24,8 +25,8 @@ export interface DiscoverViewProps {
   busy: boolean;
   /** Giriş dönüşünde hesaba yüklenen puan; talep yoksa `null`. */
   claimed: number | null;
-  /** Biriken puanın para karşılığı, sunucuda biçimlendi. */
-  earnedMoney: string;
+  /** Biriken puanın para karşılığı; puan değeri ayardan okunamadıysa `null`, teklif çizilmez. */
+  earnedMoney: string | null;
 }
 
 /** Telefon görünümünün props'u: tur ve bitiş aynı ekranda, başlık çubuğu ikisinde de durur. */
@@ -41,6 +42,9 @@ export interface DiscoverMobileProps {
   awarded: number | null;
   /** Son yazımın taşıdığı güncel bakiye; bilinmiyorsa `null`. */
   balance: number | null;
+  /** Ziyaretçinin biriken puanı ve para karşılığı; hesap açarsa yüklenecek teklif. */
+  earned: number;
+  earnedMoney: string | null;
   /** Bu turda beğenilen kart sayısı. */
   likes: number;
   /** Geri alma penceresinde ya da yolda oy var: puan toplamı henüz eksik, bitiş sayıyı onu beklemeden yazmaz. */

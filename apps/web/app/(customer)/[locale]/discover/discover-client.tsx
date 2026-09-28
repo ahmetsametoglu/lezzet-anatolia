@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { DISCOVER_UNDO_WINDOW_MS } from '@lezzet/helper';
+import { DISCOVER_UNDO_WINDOW_MS, formatPrice } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
+import type { DiscoverReward } from '@lezzet/types';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import type { DiscoverCard } from '@/lib/feedback/discover';
@@ -22,10 +23,8 @@ interface DiscoverClientProps {
   device: Device;
   cards: DiscoverCard[];
   signedIn: boolean;
-  /** Kart başına puan (ayardan) — sayacın adımı. */
-  pointsPerCard: number;
-  /** Biriken puanın para karşılığı ("0,12 €") — sunucuda hesaplandı. */
-  moneyOf: string;
+  /** Kart başına puan ve puanın cent karşılığı; ayar okunamadıysa `null`. */
+  reward: DiscoverReward | null;
 }
 
 /** Sunucuya yazılmayı bekleyen kaydırma; penceresi dolunca gider, geri alınırsa hiç gitmez. */
@@ -36,7 +35,7 @@ interface QueuedSwipe {
   timer: number | null;
 }
 
-export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCard, moneyOf }: DiscoverClientProps) {
+export function DiscoverClient({ t, locale, device, cards, signedIn, reward }: DiscoverClientProps) {
   const [decisions, setDecisions] = useState<DiscoverVote[]>([]);
   const [earned, setEarned] = useState(0);
   /** Sunucunun yazdığı puanların toplamı; girişsiz turda hiç sayı dönmez ve `null` kalır. */
@@ -81,13 +80,13 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCa
           if (!signedIn && res.data.feedbackId) addSwipeId(res.data.feedbackId);
           // Girişliye sunucunun yazdığı puan eklenir (günlük tavan, ikinci oy); ziyaretçinin sayısı hesap açınca alacağı teklif.
           const points = res.data.pointsAwarded;
-          setEarned((p) => p + (points ?? pointsPerCard));
+          setEarned((p) => p + (points ?? reward?.pointsPerCard ?? 0));
           if (points !== null) setAwarded((p) => (p ?? 0) + points);
           if (res.data.balance !== null) setBalance(res.data.balance);
         })
         .finally(() => setPending((n) => n - 1));
     },
-    [signedIn, pointsPerCard],
+    [signedIn, reward],
   );
 
   // Geri alma yalnız telefonda: masaüstünde "Geri al" yok, bekletmek yalnız sinyali geciktirirdi.
@@ -157,6 +156,9 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCa
     return () => window.removeEventListener('keydown', onKey);
   }, [resolved, card, vote, pending]);
 
+  // Teklifin parası biriken puandan; puan değeri okunamadıysa teklif sayısız kalır.
+  const earnedMoney = reward ? formatPrice(earned * reward.centValue, locale) : null;
+
   if (resolved === 'mobile') {
     return (
       <DiscoverMobile
@@ -167,6 +169,8 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCa
         total={cards.length}
         awarded={awarded}
         balance={balance}
+        earned={earned}
+        earnedMoney={earnedMoney}
         likes={likes}
         settling={pending + queued > 0}
         signedIn={signedIn}
@@ -182,6 +186,7 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCa
   return (
     <DiscoverDesktop
       t={t}
+      locale={locale}
       cards={cards}
       current={index}
       decisions={decisions}
@@ -190,7 +195,7 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCa
       onVote={vote}
       busy={pending > 0}
       claimed={claimed}
-      earnedMoney={moneyOf}
+      earnedMoney={earnedMoney}
     />
   );
 }

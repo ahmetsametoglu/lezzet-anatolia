@@ -31,11 +31,8 @@
     },
     "guestDone": {
       "title": "Paylaştığınız için teşekkürler!",
-      "body": "Değerlendirmeleriniz \"ne getirelim\" kararımıza katıldı. Dilerseniz hesap açın, biriken {points} puanı ({money}) hesabınıza yükleyelim.",
-      "cta": "Hesap açın ve puanı alın",
       "catalog": "Kataloğa dön"
     },
-    "claimed": "{points} puan hesabınıza yüklendi.",
     "empty": {
       "title": "Şu an değerlendirecek yenilik yok",
       "body": "Yeni lezzetler geldikçe burası dolar.",
@@ -79,11 +76,8 @@
     },
     "guestDone": {
       "title": "Merci pour vos avis !",
-      "body": "Vos avis comptent dans le choix de nos prochains produits. Si vous le souhaitez, créez un compte et nous y créditerons les {points} points ({money}) accumulés.",
-      "cta": "Ouvrir un compte et récupérer les points",
       "catalog": "Voir le catalogue"
     },
-    "claimed": "{points} points ont été crédités sur votre compte.",
     "empty": {
       "title": "Rien de nouveau à évaluer pour l'instant",
       "body": "De nouvelles saveurs arriveront ici.",
@@ -127,11 +121,8 @@
     },
     "guestDone": {
       "title": "Danke für Ihre Bewertungen!",
-      "body": "Ihre Bewertungen sind in unsere Auswahl eingeflossen. Wenn Sie möchten, erstellen Sie ein Konto – wir schreiben Ihnen die gesammelten {points} Punkte ({money}) gut.",
-      "cta": "Konto erstellen und Punkte sichern",
       "catalog": "Zum Katalog"
     },
-    "claimed": "{points} Punkte wurden Ihrem Konto gutgeschrieben.",
     "empty": {
       "title": "Derzeit gibt es nichts Neues zu bewerten",
       "body": "Sobald neue Sorten da sind, füllt sich diese Seite.",

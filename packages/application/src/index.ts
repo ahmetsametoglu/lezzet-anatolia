@@ -240,7 +240,7 @@ export type { FeedbackWriteOutcome } from './feedback/write';
 export { POINTS_DEFAULTS, awardFeedbackPoints, awardPoints, feedbackCompletionPoints, getPointsBalance } from './feedback/points';
 
 // ── Keşif turu; kimlik çağırandan gelir, istemcinin iddiasından değil ──
-export { claimDiscoverSwipes, countDiscoverDeck, openDiscoverDeck, recordDiscoverSwipe } from './feedback/discover';
+export { claimDiscoverSwipes, countDiscoverDeck, openDiscoverDeck, readDiscoverReward, recordDiscoverSwipe } from './feedback/discover';
 export type {
   DiscoverCard,
   DiscoverClaimResult,

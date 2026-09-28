@@ -46,7 +46,12 @@
       "title": "Bağlantı kurulamadı",
       "body": "Keşif turu getirilemedi. Bağlantınızı kontrol edip yeniden deneyin.",
       "retry": "Tekrar dene"
-    }
+    },
+    "offer": {
+      "body": "Değerlendirmeleriniz \"ne getirelim\" kararımıza katıldı. Dilerseniz hesap açın, biriken {points} puanı ({money}) hesabınıza yükleyelim.",
+      "cta": "Hesap açın ve puanı alın"
+    },
+    "claimed": "{points} puan hesabınıza yüklendi."
   },
   "fr": {
     "back": "Retour",
@@ -95,7 +100,12 @@
       "title": "Connexion impossible",
       "body": "Le tour de découverte n'a pas pu être chargé. Vérifiez votre connexion et réessayez.",
       "retry": "Réessayer"
-    }
+    },
+    "offer": {
+      "body": "Vos avis comptent dans le choix de nos prochains produits. Si vous le souhaitez, créez un compte et nous y créditerons les {points} points ({money}) accumulés.",
+      "cta": "Ouvrir un compte et récupérer les points"
+    },
+    "claimed": "{points} points ont été crédités sur votre compte."
   },
   "de": {
     "back": "Zurück",
@@ -144,6 +154,11 @@
       "title": "Keine Verbindung",
       "body": "Die Entdeckungsrunde konnte nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
       "retry": "Erneut versuchen"
-    }
+    },
+    "offer": {
+      "body": "Ihre Bewertungen sind in unsere Auswahl eingeflossen. Wenn Sie möchten, erstellen Sie ein Konto – wir schreiben Ihnen die gesammelten {points} Punkte ({money}) gut.",
+      "cta": "Konto erstellen und Punkte sichern"
+    },
+    "claimed": "{points} Punkte wurden Ihrem Konto gutgeschrieben."
   }
 }

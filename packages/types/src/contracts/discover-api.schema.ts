@@ -32,7 +32,15 @@ export type DiscoverCard = z.infer<typeof DiscoverCardSchema>;
  * `GET /discover` cevabı, turun tamamı tek turda; boş deste geçerlidir (aday yok ya da hepsi oylandı). Aday kümesi operatörün
  * elinde büyüdüğü için sayfalanmaz, tavanı uygulama katmanı koyar.
  */
-export const DiscoverDeckSchema = z.object({ cards: z.array(DiscoverCardSchema) });
+export const DiscoverDeckSchema = z.object({
+  cards: z.array(DiscoverCardSchema),
+  /**
+   * Kart başına keşif puanı ve bir puanın cent karşılığı; ziyaretçinin bitişi biriken puanı parasıyla teklif eder. `null` = ayar
+   * okunamadı, teklif sayısız söylenir.
+   */
+  reward: z.object({ pointsPerCard: z.number().int().positive(), centValue: z.number().nonnegative() }).nullable(),
+});
+export type DiscoverReward = NonNullable<z.infer<typeof DiscoverDeckSchema>['reward']>;
 
 /**
  * `POST /discover/vote` gövdesi. `dwellMs` sinyal kalitesinin girdisidir, puanın değil; ölçemeyen istemci alanı göndermez, sıfır

@@ -60,6 +60,7 @@ beforeEach(() => {
       String(url).includes('/vote')
         ? okResponse({ id: null, pointsAwarded: CANDIDATE_POINTS, balance: BALANCE_AFTER })
         : okResponse({
+            reward: null,
             cards: [
               {
                 productId: '00000001-0000-4000-8000-000000000000',
@@ -107,6 +108,7 @@ describe('DiscoverScreen — bitişteki puan çipi', () => {
         String(url).includes('/vote')
           ? okResponse({ id: '00000002-0000-4000-8000-000000000000', pointsAwarded: null, balance: null })
           : okResponse({
+              reward: null,
               cards: [
                 {
                   productId: '00000001-0000-4000-8000-000000000000',

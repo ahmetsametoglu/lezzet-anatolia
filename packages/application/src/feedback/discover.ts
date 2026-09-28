@@ -1,9 +1,10 @@
 import { ProductFeedbackService, ProductService } from '@lezzet/database';
 import { initialFeedbackStatus } from '@lezzet/domain-core';
-import { resolveLocalizedText, type FeedbackVote, type PreferredLanguage, type ProductFeedback } from '@lezzet/types';
+import { resolveLocalizedText, type DiscoverReward, type FeedbackVote, type PreferredLanguage, type ProductFeedback } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { imageOf } from '../catalog/map';
 import type { StorefrontImage } from '../catalog/storefront-types';
+import { readPointsRules } from '../customer/points';
 import { awardFeedbackPoints, getPointsBalance } from './points';
 
 /*
@@ -52,6 +53,13 @@ async function remainingCandidates(db: SupabaseClient, customerId: string | null
 
   const seen = customerId ? await votedProductIds(db, customerId) : new Set<string>();
   return candidates.filter((p) => !seen.has(p.id)).slice(0, DECK_SIZE);
+}
+
+/** Keşfin kart başına puanı ve puanın cent karşılığı; ayar okunamazsa `null`, sıfır değil. */
+export async function readDiscoverReward(db: SupabaseClient): Promise<DiscoverReward | null> {
+  const rules = await readPointsRules(db);
+  const way = rules.earnWays.find((earn) => earn.key === 'feedback_candidate');
+  return way ? { pointsPerCard: way.points, centValue: rules.centValue } : null;
 }
 
 /** Vitrinin sorusu, tur açılırsa kart çıkar mı; sayı döner, çünkü karar için kartın kendisi gereksiz. */

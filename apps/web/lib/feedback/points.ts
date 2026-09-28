@@ -27,12 +27,6 @@ import type { KeysetCursor, Page, PointsBalance, PointsEntry, ProductFeedback, R
  * aksiyonu teşvik eder, ona şart koşmaz; tavana takılan müşterinin yorumu yine kaydedilmeli.
  */
 
-/** Bir aksiyonun kaç puan ettiği ve puanın kuruş değeri; ekran ayarı kendisi okusaydı varsayılan iki yerde durup ayrışırdı. */
-export async function pointsValueOf(reason: EarnablePointsReason): Promise<{ points: number; centValue: number }> {
-  const settings = await pointsSettings();
-  return { points: settings.values[reason] ?? 0, centValue: settings.centValue };
-}
-
 /** Puan ayarları tek turda — her aksiyonda ayrı ayar sorguları atmamak için. */
 async function pointsSettings(): Promise<{ values: Record<string, number>; dailyCap: number; minimum: number; maximum: number; centValue: number }> {
   const settings = new SettingsService(serviceDb());

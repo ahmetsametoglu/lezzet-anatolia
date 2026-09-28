@@ -1,3 +1,4 @@
+import discoverCopy from '@lezzet/i18n/customer/discover';
 import { RATIO_SOURCE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Band } from '@/components/customer/ui/section';
@@ -12,7 +13,19 @@ import type { DiscoverViewProps } from './discover-types';
  * Keşif, masaüstü: üst satırda ilerleme ve puan, altında iki sütunlu aday ve bu turun adayları; tur bitince aynı yerde bitiş
  * kutusu. Fotoğraf 3:2 çizilir, tasarımın 4:3'ü kırpma önizlemesinde karşılıksız kalırdı.
  */
-export function DiscoverDesktop({ t, cards, current, decisions, earned, signedIn, onVote, busy, claimed, earnedMoney }: DiscoverViewProps) {
+export function DiscoverDesktop({
+  t,
+  locale,
+  cards,
+  current,
+  decisions,
+  earned,
+  signedIn,
+  onVote,
+  busy,
+  claimed,
+  earnedMoney,
+}: DiscoverViewProps) {
   const total = cards.length;
   const card = cards[current] ?? null;
   const position = Math.min(current + 1, total);
@@ -105,10 +118,18 @@ export function DiscoverDesktop({ t, cards, current, decisions, earned, signedIn
           <>
             {claimed !== null && (
               <p className="w-max rounded-pill bg-card px-4 py-2 font-sans text-note font-semibold text-olive-dark" role="status">
-                {t.claimed.replace('{points}', String(claimed))}
+                {discoverCopy[locale].claimed.replace('{points}', String(claimed))}
               </p>
             )}
-            <DesktopOutcome t={t} cards={cards} decisions={decisions} earned={earned} earnedMoney={earnedMoney} signedIn={signedIn} />
+            <DesktopOutcome
+              t={t}
+              locale={locale}
+              cards={cards}
+              decisions={decisions}
+              earned={earned}
+              earnedMoney={earnedMoney}
+              signedIn={signedIn}
+            />
           </>
         )
       )}

@@ -32,6 +32,8 @@ export function DiscoverMobile({
   total,
   awarded,
   balance,
+  earned,
+  earnedMoney,
   likes,
   settling,
   signedIn,
@@ -52,6 +54,13 @@ export function DiscoverMobile({
   }, [finished]);
   // Bitiş son kartın uçuşunu bekler, puanı beklemez: yolda oy varken blok sayı yerine bekleme cümlesi yazar.
   const showDone = finished && landed;
+  // Ziyaretçiye teklif ancak biriken puan ve parası biliniyorsa; sunucu ödül yazdıysa tur zaten birine aittir.
+  const offer = !signedIn && awarded === null && earned > 0 && earnedMoney !== null;
+  const claimedNote = claimed !== null && (
+    <p className="mx-auto w-max rounded-pill bg-olive-bg px-4 py-2 font-sans text-note font-semibold text-olive-dark" role="status">
+      {copy.claimed.replace('{points}', String(claimed))}
+    </p>
+  );
 
   return (
     <div className="flex flex-1 flex-col bg-sand-50">
@@ -77,42 +86,55 @@ export function DiscoverMobile({
       />
 
       {emptyDeck ? (
-        <EmptyState
-          fill
-          title={copy.empty.title}
-          description={copy.empty.body}
-          action={<PrimaryButton label={copy.empty.catalog} shape="pill" href="/catalog" />}
-        />
+        <>
+          {/* Giriş dönüşünde oylanmış deste boş gelir; yüklenen puan burada söylenir. */}
+          {claimedNote && <div className="px-4.5 pt-6">{claimedNote}</div>}
+          <EmptyState
+            fill
+            title={copy.empty.title}
+            description={copy.empty.body}
+            action={<PrimaryButton label={copy.empty.catalog} shape="pill" href="/catalog" />}
+          />
+        </>
       ) : showDone ? (
         <div className="flex flex-1 flex-col overflow-y-auto px-7.5 pt-17.5 pb-[calc(4.375rem+env(safe-area-inset-bottom))]">
           {/* Üst ve alt pay 4:6: blok optik merkeze çekilir, native bitişin ve boş hâlin aynı oranı. */}
           <div className="flex-[4]" />
           <div className="flex flex-col items-center gap-3.5 text-center">
-            {claimed !== null && (
-              <p className="rounded-pill bg-olive-bg px-4 py-2 font-sans text-note font-semibold text-olive-dark" role="status">
-                {t.claimed.replace('{points}', String(claimed))}
-              </p>
-            )}
+            {claimedNote}
             <PointsSpark size={88} className="text-terracotta" />
             <h1 className="font-serif text-card-title text-ink">{copy.done.title}</h1>
             <p className="font-sans text-note font-bold text-olive-dark">{likesLabel(copy, likes)}</p>
-            <p className="font-sans text-note leading-[1.55] text-body">{copy.done.body}</p>
+            <p className="font-sans text-note leading-[1.55] text-body">
+              {offer ? copy.offer.body.replace('{points}', String(earned)).replace('{money}', earnedMoney) : copy.done.body}
+            </p>
             <PointsAward locale={locale} points={awarded} balance={balance} settling={signedIn && settling} />
-            {/* Davet turun sahibi yokken: sunucu ödül yazdıysa tur birine aittir. */}
-            {!signedIn && awarded === null && (
+            {/* Teklif varken ana eylem hesap açmaktır: değer gösterildikten sonraki davet reklam değil tekliftir. */}
+            {offer ? (
+              <div className="mt-1.5 flex flex-col items-center gap-2.5">
+                <PrimaryButton label={copy.offer.cta} shape="pill" href="/login" />
+                <SecondaryButton label={copy.done.catalog} shape="pill" href="/catalog" />
+              </div>
+            ) : (
               <>
-                <p className="font-sans text-helper leading-[1.55] text-muted">{copy.done.loginHint}</p>
-                <SecondaryButton label={copy.done.loginCta} tone="olive" shape="pill" href="/login" />
+                {!signedIn && awarded === null && (
+                  <>
+                    <p className="font-sans text-helper leading-[1.55] text-muted">{copy.done.loginHint}</p>
+                    <SecondaryButton label={copy.done.loginCta} tone="olive" shape="pill" href="/login" />
+                  </>
+                )}
+                <div className="mt-1.5">
+                  <PrimaryButton label={copy.done.catalog} shape="pill" href="/catalog" />
+                </div>
               </>
             )}
-            <div className="mt-1.5">
-              <PrimaryButton label={copy.done.catalog} shape="pill" href="/catalog" />
-            </div>
           </div>
           <div className="flex-[6]" />
         </div>
       ) : (
         <>
+          {/* Giriş dönüşünde puan desteyi beklemeden söylenir; deste sunucudan bağlamadan önce okunmuş olabilir. */}
+          {claimedNote && <div className="px-4.5 pt-3">{claimedNote}</div>}
           <div className="flex flex-1 flex-col gap-3 px-4.5 pt-3 pb-[max(1.125rem,env(safe-area-inset-bottom))]">
             <div className="flex items-center gap-2.5">
               <div className="flex min-w-0 flex-1 gap-1" aria-hidden>

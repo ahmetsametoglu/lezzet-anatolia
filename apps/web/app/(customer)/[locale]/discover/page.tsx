@@ -3,13 +3,13 @@ import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@lezzet/i18n';
+import { readDiscoverReward } from '@lezzet/application';
+import { serviceDb } from '@lezzet/database';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { detectDevice } from '@/lib/device';
 import { localeAlternates } from '@/lib/seo/alternates';
 import { currentCustomerId } from '@/lib/guard';
 import { openDiscoverDeck } from '@/lib/feedback/discover';
-import { pointsValueOf } from '@/lib/feedback/points';
-import { formatPrice } from '@/lib/storefront/format';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { DiscoverClient } from './discover-client';
@@ -44,10 +44,10 @@ export default async function DiscoverPage({ params, searchParams }: DiscoverPag
 
   const t: Messages = messages[locale];
   const customerId = await currentCustomerId();
-  const [device, cards, points] = await Promise.all([
+  const [device, cards, reward] = await Promise.all([
     detectDevice(),
     openDiscoverDeck(locale as Locale, customerId),
-    pointsValueOf('feedback_candidate'),
+    readDiscoverReward(serviceDb()),
   ]);
 
   return (
@@ -59,16 +59,7 @@ export default async function DiscoverPage({ params, searchParams }: DiscoverPag
       mobileChrome="bare"
       thinChrome={{ title: t.title, fallback: '/catalog' }}
     >
-      <DiscoverClient
-        t={t}
-        locale={locale as Locale}
-        device={device}
-        cards={cards}
-        signedIn={customerId !== null}
-        pointsPerCard={points.points}
-        // Para karşılığı sunucuda biçimlenir: iki cihaz dalı aynı cümleyi alsın, biçimleyici istemciye taşınmasın.
-        moneyOf={formatPrice(cards.length * points.points * points.centValue, locale as Locale)}
-      />
+      <DiscoverClient t={t} locale={locale as Locale} device={device} cards={cards} signedIn={customerId !== null} reward={reward} />
     </SiteFrame>
   );
 }

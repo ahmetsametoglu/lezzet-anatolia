@@ -1,3 +1,5 @@
+import type { Locale } from '@lezzet/i18n';
+import discoverCopy from '@lezzet/i18n/customer/discover';
 import { buttonClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
 import { Link } from '@/i18n/navigation';
@@ -6,10 +8,11 @@ import type { DiscoverVote, Messages } from '../discover-types';
 
 interface DesktopOutcomeProps {
   t: Messages;
+  locale: Locale;
   cards: DiscoverCard[];
   decisions: DiscoverVote[];
   earned: number;
-  earnedMoney: string;
+  earnedMoney: string | null;
   signedIn: boolean;
 }
 
@@ -17,14 +20,18 @@ interface DesktopOutcomeProps {
  * Turun sonu: solda özet ve eylemler, sağda beğenilenler. Girişsizde puan birikmişse ana eylem hesap açmaktır ve cümle puanın
  * para karşılığını söyler, çünkü değer gösterildikten sonraki davet reklam değil tekliftir.
  */
-export function DesktopOutcome({ t, cards, decisions, earned, earnedMoney, signedIn }: DesktopOutcomeProps) {
+export function DesktopOutcome({ t, locale, cards, decisions, earned, earnedMoney, signedIn }: DesktopOutcomeProps) {
+  const offer = discoverCopy[locale].offer;
   const emptyDeck = cards.length === 0;
   const liked = cards.filter((_, i) => decisions[i] === 'like');
-  const guestOffer = !signedIn && !emptyDeck && earned > 0;
+  const guestOffer = !signedIn && !emptyDeck && earned > 0 && earnedMoney !== null;
   const copy = emptyDeck ? t.empty : signedIn ? t.done : t.guestDone;
   const summary = liked.length > 0 ? t.likedCount.replace('{n}', String(liked.length)) : t.noLikesSummary;
-  const body =
-    emptyDeck || signedIn ? copy.body : t.guestDone.body.replace('{points}', String(earned)).replace('{money}', earnedMoney);
+  const body = guestOffer
+    ? offer.body.replace('{points}', String(earned)).replace('{money}', earnedMoney)
+    : emptyDeck
+      ? t.empty.body
+      : t.done.body;
 
   return (
     <div className="grid grid-cols-[1fr_auto] items-center gap-10 rounded-card border border-olive-line bg-card px-12 py-11">
@@ -35,7 +42,7 @@ export function DesktopOutcome({ t, cards, decisions, earned, earnedMoney, signe
         <div className="mt-1.5 flex flex-wrap gap-2.5">
           {guestOffer && (
             <Link href="/login" className={buttonClass()}>
-              {t.guestDone.cta}
+              {offer.cta}
             </Link>
           )}
           <Link href="/catalog" className={buttonClass({ variant: guestOffer ? 'secondary' : 'primary' })}>

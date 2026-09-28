@@ -68,7 +68,7 @@ beforeEach(() => {
     Promise.resolve(
       String(url).includes('/vote')
         ? okResponse({ id: null, pointsAwarded: awardPerVote, balance: balanceAfterVote })
-        : okResponse({ cards: [1, 2, 3, 4].map(card) }),
+        : okResponse({ cards: [1, 2, 3, 4].map(card), reward: null }),
     ),
   );
 });
@@ -128,7 +128,7 @@ describe('useDiscover — turun puan toplamı', () => {
         ? new Promise<Response>((resolve) => {
             releaseVote = () => resolve(okResponse({ id: null, pointsAwarded: CANDIDATE_POINTS, balance: 42 }));
           })
-        : Promise.resolve(okResponse({ cards: [1].map(card) })),
+        : Promise.resolve(okResponse({ cards: [1].map(card), reward: null })),
     );
 
     const result = await openTour();
