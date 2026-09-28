@@ -7,20 +7,13 @@ import { currentCustomerId } from '@/lib/guard';
 import { customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 
 /**
- * Keşif akışının yazma kapıları (08.7 · 17.3).
- *
- * **Kimlik SUNUCUDA çözülür, istemciden alınmaz** — yüzeyin her yerinde olduğu gibi. Girişsizde
- * `currentCustomerId` `null` döner ve kaydırma kimliksiz yazılır; ekranın "girişli miyim" bilgisini
- * göndermesine gerek yok, zaten güvenilmezdi.
+ * Keşif akışının yazma kapıları; kimlik sunucuda çözülür, çünkü ekranın "girişliyim" bilgisi güvenilmezdi. Girişsizde kaydırma
+ * kimliksiz yazılır.
  */
 
 /**
- * Bir kart kaydırması. Dönen kimlik ziyaretçinin tarayıcısında saklanır — turu sonradan hesaba
- * bağlayacak olan o (`discover-store`). Girişli müşteride kimlik döner ama kullanılmaz: puanı
- * `recordVote` zaten anında yazdı.
- *
- * `dwellMs` sinyal KALİTESİNİN girdisi (`signal-quality`: 400 ms altı kart görülmemiş sayılır) —
- * müşterinin puanını etkilemez (ödül ≠ güven, DOMAIN §14). Ekran ölçer, motor değerlendirir.
+ * Bir kart kaydırması; dönen kimliği ziyaretçinin tarayıcısı saklar ki tur giriş sonrası hesaba bağlansın. `dwellMs` sinyal
+ * kalitesinin girdisidir, puanı etkilemez.
  */
 export async function swipeAction(
   productId: string,
@@ -30,8 +23,7 @@ export async function swipeAction(
   try {
     const customerId = await currentCustomerId();
     const result = await recordVote({ customerId, productId, context: 'candidate', vote, dwellMs });
-    // Motorun iç sebebi müşteriye anlatılmaz (`not_candidate` sistemin iç yapısını söyler ve
-    // müşterinin düzeltebileceği bir şey değil — kart listesi zaten sunucudan geldi).
+    // Motorun iç sebebi müşteriye anlatılmaz: düzeltebileceği bir şey değil.
     if (!result.ok) return { data: null, errorKey: 'swipe_failed' };
     return { data: { feedbackId: result.data?.id ?? null }, errorKey: null };
   } catch (err) {
@@ -40,8 +32,7 @@ export async function swipeAction(
 }
 
 /**
- * Girişten sonra turu hesaba bağlar. Girişsizde sessizce boş döner — kapı kimliği kendisi
- * çözdüğü için ekranın "artık girişliyim" iddiasına güvenilmiyor.
+ * Girişten sonra turu hesaba bağlar; girişsizde boş döner, çünkü kapı kimliği kendisi çözer.
  */
 export async function claimSwipesAction(feedbackIds: string[]): Promise<CustomerResult<{ linked: number; points: number }>> {
   try {
