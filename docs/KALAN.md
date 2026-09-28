@@ -36,11 +36,9 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
   Instagram'da 24 saat dışında otomatik mesaj yolu yok. Açık: Meta uygulaması canlı ama sayfa izinlerinin gelişmiş erişimi
   "REJECTED" görünüyor; rolü olmayan müşteriyle Messenger yazışmasının bizim sistemimizden çalıştığı ölçülecek (Supabase MCP ya da
   canlı deneme).
-- [ ] (K.45) [hedef: deploy] Test sunucusunun Meta env'i yerel `apps/web/.env.local`'e eşitlenip backend yeniden başlatılacak:
-  `META_PAGE_ACCESS_TOKEN` yenilendi (süresiz sayfa jetonu, Instagram mesaj izinleriyle; eskisiyle Instagram'a cevap gitmiyordu),
-  `META_WEBHOOK_VERIFY_TOKEN` sunucuda yereldekinden farklı (Meta'nın `instagram` aboneliği doğrulaması 403 aldı). Eşitlenince
-  uygulama `instagram` webhook konusuna abone edilir (aynı adres; `messages` · `messaging_postbacks` · `message_reactions`);
-  kurulu Messenger ve WhatsApp abonelikleri yeniden doğrulanmadığı için etkilenmez.
+- [ ] (K.45) [hedef: deploy] Test sunucusuna `f48be7ab` dağıtılacak: bugünkü sürümde Instagram cevabı Instagram hesabının kimliğine
+  gidiyor ve Meta `(#3)` ile reddediyor, özerk cevap `provider_error` ile düşüyor (düzeltme cevabı sayfa ucundan gönderir). Sunucudaki
+  `META_PAGE_ACCESS_TOKEN` yerel `apps/web/.env.local`dekiyle aynı olmalı (süresiz, Instagram mesaj izinli sayfa jetonu).
 - [ ] **Fiyat listesi (B2B/B2C)** — kullanıcı bekliyor (kendi notlarında); gelince gerçek beslemeye girer.
 
 ## 00 · Monorepo İskeleti
