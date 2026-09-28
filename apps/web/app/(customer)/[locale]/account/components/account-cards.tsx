@@ -186,9 +186,8 @@ export function PointsCard({
         <span className="font-sans text-h1-sm font-bold text-olive-light">{points.balance}</span>
       </div>
 
-      {/* İç panel koyu kartın ÜSTÜNDE bir kademe açık. Ayrı bir gri token açmak yerine mevcut
-          `cream` saydamla katmanlanıyor — palet değişirse burası da onunla değişir; Tailwind'in
-          kendi `neutral-700`'ü ise soğuk ve paletimizin dışında (envanter §0, 29.07 denetimi). */}
+      {/* İç panel koyu kartın üstünde bir kademe açık: ayrı gri token yerine `cream` saydamla katmanlanır ki palet değişince o da
+          değişsin; Tailwind'in `neutral-700`ü soğuk ve paletimizin dışında. */}
       <div className="flex flex-col gap-1.5 rounded-soft bg-cream/10 px-4 py-3">
         <span className="font-sans text-note leading-relaxed font-semibold text-olive-light">
           {enough ? rule : `${t.pointsShort.replace('{missing}', String(minimumPoints - points.balance))} (${rule})`}
@@ -213,19 +212,8 @@ export function PointsCard({
         {points.history.length === 0 && <span className="font-sans text-note text-neutral-400">{t.pointsEmpty}</span>}
         {points.history.map((entry) => (
           <div key={entry.id} className="flex items-baseline justify-between gap-3 font-sans text-note text-neutral-400">
-            {/* Sebep MÜŞTERİ CÜMLESİNE çevrilir — burada `entry.reason` HAM basılıyordu ve Fransız
-                müşteri hesap sayfasında `feedback_candidate` okuyordu (mobil şeridin ölçümü, 15.08).
-                Gözden kaçmasının sebebi de kayıtlı: liste yalnız masaüstü kartta çiziliyor ve yalnız
-                puan hareketi olan hesapta doluyor.
-
-                Bilinmeyen sebep ham dizeye DÜŞER, boş bırakılmaz: defter yeni bir sebep öğrendiğinde
-                satırın kendisi kaybolmamalı — eksik olan çeviridir, hareket değil. Müşterinin gördüğü
-                tuhaf bir kelime, kaybolmuş bir puan hareketinden iyidir.
-
-                Eksi işaretli ÖDÜL ters etiket alır ("… — iptal edildi"): iptal aynı sebeple ve ters
-                işaretle yazılır (★ karar 7d), ham adıyla basılsa müşteri aynı satırı hem +100 hem
-                −100 görürdü. Yalnız neighbor/referral: redemption doğası gereği eksi ("Kupona
-                çevrildi"), manual iki yönlü — ikisine ters etiket uydurmak olmayan olayı adlandırmak. */}
+            {/* Sebep müşteri cümlesine çevrilir; bilinmeyen sebep ham dizeye düşer, çünkü eksik olan çeviridir, hareket değil. Eksi
+                işaretli ödül (neighbor/referral iptali) ters etiket alır, yoksa aynı satır hem + hem − okunurdu. */}
             <span className="min-w-0 truncate">{reversedReasonLabel(t, entry.reason, entry.points) ?? t.pointsReason[entry.reason] ?? entry.reason}</span>
             {/* İşaret RENKTEN de okunur: kazanım açık yeşil, harcama sıcak ton. */}
             <span className={['flex-none font-bold', entry.points >= 0 ? 'text-olive-light' : 'text-terracotta-line'].join(' ')}>
