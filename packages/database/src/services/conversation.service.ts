@@ -222,6 +222,15 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
     return this.getAll({ conversationId }, { orderBy: 'createdAt' });
   }
 
+  findByProviderMessageId(providerMessageId: string): Promise<Message | null> {
+    return this.getOneBy({ providerMessageId });
+  }
+
+  /** Defterin tek silme kapısı: Meta, müşterinin geri aldığı mesajın içeriğinin silinmesini şart koşar. */
+  deleteUnsent(providerMessageId: string): Promise<void> {
+    return this.deleteWhere({ providerMessageId });
+  }
+
   /**
    * Çözümü gelmemiş ses kuyruğa girmez: kuyruk metinsiz satırı damgalar ve transkript saniyeler sonra geldiğinde satır kapanmış
    * olurdu. Süzgeç DB'de: çağıranda süzülse çözümsüz sesler `limit`i doldurup kuyruğu tıkardı.

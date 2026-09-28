@@ -420,6 +420,23 @@ describe('Messenger / Instagram — kişi hangi alanda?', () => {
     expect(await conversations.findByExternalRef('messenger', IG_PERSON)).toBeNull();
   });
 
+  it('müşterinin GERİ ALDIĞI mesaj defterden silinir, ham yükü boşaltılır', async () => {
+    // Geri alma bildirimi asıl mesajın `mid`ini taşır: aynı anahtarla sahiplenilseydi çift sayılıp atılır, metin ekranda kalırdı.
+    const id = eventId('m_ig', 2);
+    webhookEventIds.push(`${id}:deleted`);
+    const kisi = { sender: { id: IG_PERSON }, recipient: { id: IG_ACCOUNT } };
+    await handleMetaWebhook(messengerBody('instagram', { ...kisi, message: { mid: id, text: 'Yanlış kişiye yazdım' } }));
+    const konu = await konusma('instagram', IG_PERSON);
+    expect((await messages.listByConversation(konu!.id)).some((m) => m.providerMessageId === id)).toBe(true);
+
+    const sonuc = await handleMetaWebhook(messengerBody('instagram', { ...kisi, message: { mid: id, is_deleted: true } }));
+
+    expect(sonuc).toMatchObject({ written: 1, duplicates: 0 });
+    expect((await messages.listByConversation(konu!.id)).some((m) => m.providerMessageId === id)).toBe(false);
+    const { data: olay } = await db.from('webhook_event').select('payload').eq('provider', 'meta').eq('event_id', id).single();
+    expect(olay?.payload).toBeNull();
+  });
+
   it('postback `interactive` yazılır ve KENDİ mid\'i olmadığı hâlde tekrarı yakalanır', async () => {
     // Anahtar timestamp'i içermeseydi iki ayrı tıklama tek olay sayılırdı; hiç türetilmeseydi tekrar teslimat defteri çiftlerdi.
     const anMs = Date.now();

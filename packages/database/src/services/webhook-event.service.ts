@@ -37,4 +37,10 @@ export class WebhookEventService extends BaseDbService<WebhookEvent, WebhookEven
   markFailed(id: string, error: string): Promise<WebhookEvent> {
     return this.update({ id, error });
   }
+
+  /** Satır kalır, içerik gider: satır silinseydi sağlayıcının geç gelen tekrarı olayı yeniden işlerdi. */
+  async clearPayload(provider: string, eventId: string): Promise<void> {
+    const event = await this.getOneBy({ provider, eventId });
+    if (event) await this.update({ id: event.id, payload: null });
+  }
 }

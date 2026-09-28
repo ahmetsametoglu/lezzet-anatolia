@@ -13,6 +13,7 @@ import { ConversationService, CustomerPhoneService, MessageService, WebhookEvent
 import { maskSecretsInText, sixDigitCodeIn } from '@lezzet/domain-core';
 import { normalizePhone } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
+import { getR2Private } from '@lezzet/storage';
 import type { Conversation, ConversationSource, Message, MessageKind, PreferredLanguage } from '@lezzet/types';
 import { resolveOutboundLanguage, translateConversationMessageNow } from './translate';
 import { defaultConversationHandler } from './default-handler';
@@ -152,6 +153,7 @@ interface MessengerEvent {
     mid?: string;
     text?: string;
     is_echo?: boolean;
+    is_deleted?: boolean;
     attachments?: unknown[];
     quick_reply?: { payload?: string };
     [key: string]: unknown;
@@ -512,7 +514,17 @@ async function ingestMessengerEntry(
   }
 
   for (const event of events) {
-    if (event.message?.mid) {
+    if (event.message?.mid && event.message.is_deleted === true) {
+      const mid = event.message.mid;
+      await ingestOne(tally, {
+        provider: 'meta',
+        // Bildirim asıl mesajın `mid`ini taşır ve o kimlik gelişte sahiplenildi; aynı anahtarla çift sayılıp atılırdı.
+        eventId: `${mid}:deleted`,
+        type: `${source}.deleted`,
+        payload: { mid, is_deleted: true },
+        write: () => forgetUnsentMessage(mid),
+      });
+    } else if (event.message?.mid) {
       const echo = event.message.is_echo === true;
       // Echo'da sender sayfadır, kişi recipient'tadır: ters okumak iki kişiyi tek sohbette birleştirir.
       const personId = echo ? event.recipient?.id : event.sender?.id;
@@ -618,6 +630,20 @@ async function ingestMessengerEntry(
       tally.ignored += 1;
     }
   }
+}
+
+/**
+ * Meta Platform Şartları, müşterinin geri aldığı mesajın bizde de silinmesini ister. Medya satırdan önce silinir: satır önce gitseydi
+ * düşen silmenin tekrarı anahtarı bulamaz ve dosya kovada sahipsiz kalırdı.
+ */
+async function forgetUnsentMessage(mid: string): Promise<void> {
+  const messages = new MessageService(serviceDb());
+  const mesaj = await messages.findByProviderMessageId(mid);
+  if (mesaj?.mediaKey) await getR2Private()?.deleteFile(mesaj.mediaKey);
+  await messages.deleteUnsent(mid);
+  // Ham yük asıl mesajın metnini ve ek adreslerini taşır.
+  await new WebhookEventService(serviceDb()).clearPayload('meta', mid);
+  if (mesaj) await ringConversationBell(mesaj.conversationId);
 }
 
 /** Messenger/Instagram damgası milisaniye cinsindendir. */
