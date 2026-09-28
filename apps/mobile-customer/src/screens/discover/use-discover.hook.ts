@@ -12,49 +12,11 @@ import {
 import { appendPendingSwipe, clearPendingSwipes, readPendingSwipes } from '@/lib/discover/pending-swipes-store';
 
 /*
-  KEŞİF TURU DURUMU (21.19) — ekranın tek veri kapısı: desteyi okur, oyu yazar, girişsiz turu
-  hesaba bağlar. Vitrin hook'unun iskeleti (`use-home.hook`): tek durum + eskimiş cevap koruması.
-
-  BOŞ DESTE HATA DEĞİL, AYRI BİR HÂLDİR: `ready` + sıfır kart demek "tur bitmedi, hiç başlamadı"
-  demektir ve ekranın bunun için ayrı bir bloğu var. `error`a düşürseydik, aday ürünü olmayan bir
-  günü arıza gibi gösterirdik (sözleşme künyesi: `{ cards: [] }` geçerli cevaptır).
-
-  PUAN TOPLAMI MOTORDAN, EKRANDAN DEĞİL: bitiş cümlesinin sayısı her kaydırmanın cevabındaki
-  `pointsAwarded` değerlerinin TOPLAMIDIR — kart sayısı × ayar DEĞİL. İkisi ayrışırsa (günlük
-  tavan, B2B, aynı ürüne ikinci oy) müşteri gelmeyecek bir ödül için hareket ederdi. Hiç sayı
-  dönmediyse toplam `null`dır: girişsiz kaydırmanın ödülü henüz sahipsizdir, SIFIR DEĞİLDİR
-  (CLAUDE §1) — ekran o hâlde çip çizmez.
-
-  …AMA TOPLAM ANCAK YOLDA OY KALMAYINCA TAMDIR (MB-16, ölçüm aşağıdaki `writingCount` künyesinde):
-  turun son oyu bitiş ekranı çizildiğinde hâlâ geri alma penceresinde bekliyor. `pointsSettling`
-  bunu söyler; sayının kendisi değil, "sayı oturdu mu" bilgisi eksikti.
-
-  YAZIM DÜŞERSE KART YİNE İLERLER (web kararı): müşteriyi düzeltemeyeceği bir arızada turun
-  ortasında kilitlemeyiz. Düşen yazım yutulmuyor — sonucu burada okunuyor ve tek karşılığı var:
-  o kaydırma sayılmaz (puanı eklenmez, kimliği saklanmaz), tur devam eder.
-
-  ── "GERİ AL" NEDEN GECİKMELİ YAZIMLA KURULDU ───────────────────────────────
-  Tasarımın yeni sürümü başlık çubuğuna bir "Geri al" eylemi koyuyor. Sunucuda oyu GERİ ALAN bir
-  uç YOK ve olmayan bir ucu varmış gibi çağırmak yasak; desteyi sessizce geri sarıp müşteriye
-  "geri aldık" demek ise düpedüz YANILTICI olurdu — oy yazılmış olurdu ve talep sinyalinde
-  kalırdı. O yüzden geri alınabilirlik yazımın KENDİSİNDEN doğar: bir kaydırma önce burada
-  bekler, `UNDO_WINDOW_MS` dolunca yazılır. Pencere içinde geri alınan oy hiç GÖNDERİLMEZ, yani
-  geri alma gerçektir.
-
-  Bekleyen oy KAYBOLMAZ: ekran kapanırken (unmount) ve uygulama arka plana düşerken kuyruk
-  ANINDA boşaltılır. Kalan tek açık, pencere doluyken uygulamanın öldürülmesidir — o hâlde o tek
-  oy yazılmaz ve bu bilinçli bedeldir: alternatifi, geri alınamayan bir "geri al" düğmesiydi.
+  Keşif turunun tek veri kapısı: desteyi okur, oyu yazar, girişsiz turu hesaba bağlar. Puan toplamı kart sayısından değil
+  sunucunun yazdığından kurulur; kaydırma geri alma penceresi dolana kadar bekler ki "Geri al" gerçek olsun.
 */
 
-/**
- * GERİ ALMA PENCERESİ (ms) — bir kaydırmanın sunucuya yazılmadan önce beklediği süre.
- *
- * Tasarımda karşılığı YOK (şablon oyu hiç göndermiyor, yerel bir diziyi ilerletiyor); değer
- * PARAMETRİK bir varsayılan (CLAUDE §4). 6 sn, yanlış yöne kaydırdığını fark edip başlık
- * çubuğuna uzanacak kadar uzun; turun sinyalini anlamlı biçimde geciktirmeyecek kadar kısa.
- * Pencere kart başına ayrı işler — hızlı kaydıran müşteride birkaç oy aynı anda bekleyebilir ve
- * "Geri al" onları sondan başa doğru tek tek çözer (şablonun `kHist` davranışı).
- */
+/** Bir kaydırmanın yazılmadan beklediği süre (ms); pencere içinde geri alınan oy hiç gönderilmez. */
 const UNDO_WINDOW_MS = 6000;
 
 type DiscoverStatus = 'loading' | 'ready' | 'error';
@@ -69,25 +31,9 @@ interface UseDiscoverResult {
   status: DiscoverStatus;
   /** Yalnız `ready` hâlinde anlamlı; boş dizi geçerli bir sonuçtur (aday yok). */
   cards: DiscoverCard[];
-  /**
-   * Bu turda GERÇEKTEN yazılan puanların toplamı. `null` = hiç puan yazılmadı ve yazılamazdı
-   * (girişsiz tur) — ekran o hâlde puan çipi çizmez.
-   *
-   * TAM OLDUĞU AN `pointsSettling === false` ANIDIR: yolda bir oy varken bu sayı turun toplamı
-   * değil, o ana kadar CEVABI GELMİŞ oyların toplamıdır.
-   */
+  /** Bu turda gerçekten yazılan puan; `null` = girişsiz tur. `pointsSettling` doluyken eksiktir, sayı olarak gösterilmez. */
   awardedPoints: number | null;
-  /**
-   * Müşterinin GÜNCEL bakiyesi — bitiş ekranının *"Toplam ✦ N puan"* satırı (kullanıcı isteği 15.08).
-   *
-   * Cevabı gelmiş SON oydan alınır, toplanarak kurulmaz: her yazım kendisinden sonraki bakiyeyi
-   * taşıyor (`DiscoverSwipeSchema.balance`) ve sonuncusu en günceli. "Açılıştaki bakiye + bu turda
-   * kazanılan" diye kursaydık defterle ayrışırdı — bakiye turun dışında da değişiyor (günlük giriş
-   * puanı, davet ödülü, kupona çevirme).
-   *
-   * `null` = girişsiz tur (hiçbir cevap bakiye taşımadı) ya da hiç yazım oturmadı; ekran o hâlde
-   * toplam satırını çizmez, sıfır yazmaz (CLAUDE §1).
-   */
+  /** Güncel bakiye; cevabı gelen son oydan alınır, çünkü bakiye turun dışında da değişir. `null` = bilinmiyor. */
   balance: number | null;
   /**
    * Toplam henüz oturmadı mı — yazılmayı bekleyen (geri alma penceresindeki) ya da cevabı
@@ -139,18 +85,8 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
     setAwardedPoints((current) => (current ?? 0) + points);
   }, []);
 
-  /*
-    CEVABI BEKLENEN YAZIM SAYISI — puan toplamının "tam mı" sorusunun ikinci yarısı.
-
-    ÖLÇÜLDÜ (MB-16, cihaz 11.08): 4 oy verildi, deftere 8 puan yazıldı, bitiş ekranı "+6" dedi.
-    Sebep toplamada bir cevabın kaçması DEĞİL — dördüncü oy o an hâlâ geri alma penceresindeydi,
-    yani sunucuya hiç gitmemişti; pencere dolunca toplam kendiliğinden 8 oluyor. Yani sayı yanlış
-    hesaplanmıyor, HENÜZ TAMAMLANMAMIŞ bir sayı tam gibi gösteriliyordu.
-
-    Çare toplamı değiştirmek olamaz (sayı motorundur) ve kuyruğu turun sonunda zorla boşaltmak da
-    olamaz: bitiş ekranında "Geri al" hâlâ duruyor ve boşaltma onu yalana çevirirdi. Kalan doğru
-    davranış hâli SÖYLEMEK: yolda oy varken ekran sayı yazmaz.
-  */
+  /* Cevabı beklenen yazım sayısı: son oy hâlâ geri alma penceresindeyken toplam eksiktir, ekran o hâlde sayı değil bekleme
+     söyler. */
   const [writingCount, setWritingCount] = useState(0);
 
   /** Oyun SUNUCUYA gidişi — kuyruğun tek çıkışı; hem pencere dolunca hem toplu boşaltmada burası. */
@@ -206,12 +142,7 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
     return entry.input;
   }, []);
 
-  /*
-    KUYRUĞUN ACİL ÇIKIŞI — ekran kapanırken ve uygulama arka plana düşerken bekleyen oylar
-    pencerelerini beklemeden yazılır. İkisi de aynı gerekçenin iki hâli: müşteri artık ekranda
-    değilse geri alamaz, dolayısıyla beklemenin bir karşılığı kalmamıştır ve beklemeye devam
-    etmek yalnızca sinyali kaybetme riski üretir.
-  */
+  /* Ekran kapanırken ve uygulama arka plana düşerken bekleyen oylar hemen yazılır, çünkü müşteri geri alamaz. */
   useEffect(() => {
     const flushAll = () => {
       const queued = pending.current.splice(0);
@@ -231,14 +162,8 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
     };
   }, [send]);
 
-  /*
-    TALEP KAPISI — girişsizken biriken kaydırmalar hesaba bağlanır. `signedIn` true olduğu ANDA
-    çalışır: hem turu bitirip giriş yapan müşteri (ekran açıkken oturum değişir) hem de başka bir
-    yerden giriş yapıp keşfe dönen müşteri aynı kapıdan geçer.
-
-    BİR KEZ: kuyruk temizlenmeden ikinci bir çağrı gitmesin diye kilit ref'te; oturum değişirse
-    kilit açılır (çıkış → yeni giriş, yeni kuyruk).
-  */
+  /* Girişsiz biriken kaydırmalar oturum açıldığı an hesaba bağlanır; kilit ref'te ki kuyruk temizlenmeden ikinci çağrı gitmesin,
+     oturum değişince açılır. */
   const claimed = useRef(false);
   useEffect(() => {
     if (!signedIn) {
