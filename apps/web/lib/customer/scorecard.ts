@@ -3,14 +3,8 @@ import { creditPosition, isOverdue } from '@lezzet/domain-core';
 import type { MoneyMovement, Order } from '@lezzet/types';
 
 /**
- * ÖDEME KARNESİ (09.9) — vade/limit kararının dayanağı.
- *
- * **Karar desteğidir, otomasyon değildir** (tasarım §6): ekran "önerilen limit" dayatmaz, sayıyı
- * gösterir ve kararı admin verir. Bu yüzden burada bir puan/skor üretilmez — ölçüm üretilir.
- *
- * Kuralların hiçbiri BURADA yazılmaz: açık bakiye `creditPosition`'dan, gecikme ölçütü
- * `isOverdue`'dan gelir. Bu dosyanın işi motorun istediği girdiyi toplamak, ölçümü yapmak ve
- * ölçülemeyen yerde `null` dönmek.
+ * Ödeme karnesi — vade ve limit kararının dayanağı; karar desteğidir, otomasyon değil: ölçüm üretir, kararı admin verir. Kurallar
+ * motordan gelir (`creditPosition`, `isOverdue`), burası girdiyi toplar ve ölçülemeyen yerde `null` döner.
  */
 
 /** Vade süresi ayarı — checkout, sipariş detayı ve bu karne AYNI anahtarı okur. */
@@ -18,13 +12,8 @@ const PAYMENT_TERM_KEY = 'payment_term_days';
 const PAYMENT_TERM_DEFAULT = 30;
 
 /**
- * Karnenin baktığı sipariş penceresi.
- *
- * Tavan var ve GÖRÜNÜR: ekran "son 50 siparişte" diye yazar. Sessiz bir tavan, kaydırılmayan bir
- * listenin kuyruğunu yutmakla aynı hata olurdu (CLAUDE.md §1). Pencere ayrıca doğru olan: iki yıl
- * önceki ödeme alışkanlığı bugünün limit kararına girdi değildir.
- *
- * Açık bakiye bu pencereye BAĞLI DEĞİL — o, borcun tamamından okunur (`listOpenCreditByCustomer`).
+ * Karnenin baktığı sipariş penceresi; tavan ekranda yazılır ("son 50 siparişte"), çünkü iki yıl önceki alışkanlık bugünün limit
+ * kararına girdi değildir. Açık bakiye pencereye bağlı değil, borcun tamamından okunur.
  */
 export const SCORECARD_WINDOW = 50;
 
@@ -36,19 +25,15 @@ interface CustomerScorecard {
   /** Vadesi geçmiş açık sipariş sayısı. */
   overdueCount: number;
   /**
-   * Ortalama ödeme günü: sipariş tarihinden tahsilat gününe kaç gün geçmiş (pozitif = o kadar gün
-   * sonra ödedi). **`null` = ölçülemedi** — tahsilat hareketi hiç yoksa. Sıfır YAZILMAZ: "0 gün"
-   * "anında ödüyor" diye okunur ve vade kararını tam ters yöne çekerdi (CLAUDE.md §1).
+   * Ortalama ödeme günü: sipariş tarihinden tahsilat gününe geçen gün. `null` = ölçülemedi; sıfır yazılmaz, çünkü "0 gün" anında
+   * ödüyor diye okunurdu.
    */
   avgPaymentDays: number | null;
   /** Ortalamanın kaç siparişten çıktığı — tek siparişlik bir ortalama karar dayanağı değildir. */
   paidOrderCount: number;
   /**
-   * Vadeyi AŞARAK ödenmiş sipariş sayısı (pencere içinde) — "kaç kez geciktirdi".
-   *
-   * `overdueCount`tan AYRI ve ikisi de gerekli: o "şu an vadesi geçmiş açık borç", bu "geçmişte
-   * geciktirme alışkanlığı". Yalnız ilki gösterilirse 20 gün geç ödeyip borcunu kapatmış kronik
-   * gecikmeli müşteri "gecikme: yok" görünür ve limiti yükseltilir.
+   * Vadeyi aşarak ödenmiş sipariş sayısı — geçmişteki geciktirme alışkanlığı. `overdueCount`tan ayrı, çünkü o yalnız şu anki açık
+   * borcu sayar ve borcunu geç kapatan müşteri "gecikme yok" görünürdü.
    */
   latePaymentCount: number;
   /** Yürürlükteki vade süresi (gün): müşteriye özel, yoksa ayardan. */
@@ -60,19 +45,8 @@ interface CustomerScorecard {
 type Db = ReturnType<typeof serviceDb>;
 
 /**
- * Vadesi geçmiş açık borcu olan MÜŞTERİ kimlikleri (09.9).
- *
- * İki tüketen var ve ikisi de aynı kümeyi istiyor: başlığın "N gecikmiş vade" sayacı ve listedeki
- * kırmızı "Gecikmiş" rozeti. Sayfa ile sonraki-sayfa action'ı ayrı hesaplasaydı rozet bir sayfada
- * görünüp diğerinde kaybolurdu.
- *
- * Müşteri başına sorgu YOK: açık vadeli siparişlerin TAMAMI tek turda okunur (küme açık borçtur,
- * doğal tavanı vardır) ve gecikme ölçütü motora sorulur. Sayılan şey SİPARİŞ değil MÜŞTERİ — üç
- * siparişi geciken bir firma "3 gecikme" diye okunursa operatör üç ayrı iş sanır.
- *
- * Müşteriye özel vade süresi burada OKUNMUYOR ve bu bilinçli bir yaklaşıklık: 312 müşterinin
- * profilini yalnız bir rozet için çekmek listenin okumasını ikiye katlardı. Genel varsayılan
- * kullanılıyor; kesin sayı müşteri kartında (özel süresiyle) duruyor.
+ * Vadesi geçmiş açık borcu olan müşteri kimlikleri; açık vadeli siparişlerin tamamı tek turda okunur ve sayılan şey sipariş değil
+ * müşteridir. Müşteriye özel vade burada okunmaz, genel varsayılan kullanılır; kesin sayı müşteri kartında durur.
  */
 export async function readOverdueCustomerIds(db: Db): Promise<Set<string>> {
   const [open, termDays] = await Promise.all([
@@ -126,19 +100,8 @@ export async function readCustomerScorecard(
 }
 
 /**
- * "Ne zaman ödedi" ölçümü: siparişin tarihi ile İLK tahsilat hareketinin `value_date`'i arası.
- *
- * `value_date` seçildi, `created_at` değil: paranın gerçekten hareket ettiği gün odur (şemanın kendi
- * notu). Kayıt günü geriden gelebilir ve ödeme alışkanlığını olduğundan kötü gösterirdi.
- *
- * İLK tahsilat alınıyor: kısmi ödenen siparişte müşteri ödemeye o gün başlamıştır. Son tahsilatı
- * almak, taksitle ödeyen müşteriyi "çok geç ödedi" diye damgalardı.
- *
- * Vade süresi ORTALAMAYA girmez ama gecikme SAYIMINA girer: ortalama "kaç günde ödedi"dir, sayım
- * "kaç kez vadeyi aştı". İkisi ayrı sorular ve tek sayıya sıkıştırılamaz.
- *
- * Tahsilat hareketi olmayan sipariş ORTALAMAYA GİRMEZ — henüz ödenmemiş bir siparişi "0 gün" sayarak
- * ortalamayı aşağı çekmek, karneyi olduğundan iyi gösterirdi.
+ * "Ne zaman ödedi": sipariş tarihi ile ilk tahsilatın `value_date`'i arası; ilk tahsilat, çünkü taksitle ödeyen müşteri ödemeye o gün
+ * başlamıştır. Tahsilatı olmayan sipariş ortalamaya girmez, yoksa karneyi olduğundan iyi gösterirdi.
  */
 export function paymentTiming(
   orders: readonly Pick<Order, 'id' | 'createdAt'>[],
@@ -162,9 +125,7 @@ export function paymentTiming(
     gunler.push(Math.max(0, gun));
   }
 
-  // Vadeyi aşarak ödenenler AYRI sayılır: ortalama "kaç günde ödedi", bu "kaç kez geciktirdi". İkisi
-  // tek sayıya sıkıştırılamaz — 40 gün gecikmiş bir sipariş, dokuz zamanında ödemenin ortalamasında
-  // kaybolur ama alışkanlık olarak kaybolmamalı.
+  // Vadeyi aşarak ödenenler ayrı sayılır: geç ödenmiş tek sipariş, zamanında ödemelerin ortalamasında kaybolurdu.
   const latePaymentCount = gunler.filter((g) => g > termDays).length;
   if (gunler.length === 0) return { avgPaymentDays: null, paidOrderCount: 0, latePaymentCount: 0 };
   return {
