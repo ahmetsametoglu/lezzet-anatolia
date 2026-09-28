@@ -13,35 +13,8 @@ import type { Messages } from './preferences-types';
 import messages from './messages.json';
 
 /**
- * BİLDİRİM TERCİHLERİ (22.08) — **on mail şablonunun altbilgisindeki bağın hedefi.**
- *
- * ── NEDEN AÇILDI ────────────────────────────────────────────────────────────
- * Yol `PATHNAMES`te tanımlıydı, `robots.txt`'te dışlanmıştı ve altı kod yolu onu giden postaya
- * yazıyordu — ama SAYFASI hiç yazılmamıştı. Ölçüldü (22.08): üç dilde de **404**. Yani müşteriye
- * gönderdiğimiz her mailin "tercihlerinizi yönetin" satırı ölü bir bağdı; ticari e-postada o satır
- * hem nezaket hem yasal gerekliliktir.
- *
- * ── JETON: GİRİŞ ZORUNLU DEĞİL (kullanıcı kararı 22.08) ─────────────────────
- * Bağ `?t=` ile gelir. Sebebi ölçülmüş bir hâl: `zone_available` maili `zone_notice.email`e
- * gidiyor ve o kaydın `customer_id`si ÇOĞU ZAMAN YOK (ziyaretçi bıraktı). Sayfa oturum isteseydi,
- * "haber ver" diyen ziyaretçi hesabı olmayan bir giriş ekranında kalırdı — vazgeçmenin önüne
- * konmuş ikinci bir engel. GDPR'ın ölçütü de bu: izni geri almak, vermek kadar kolay olmalı.
- *
- * **Oturum jetonu EZER:** girişli müşteri kendi hesabına bakar, mailde hangi jeton olursa olsun.
- * Aksi hâlde paylaşılmış bir bağ, giriş yapmış başka birinin ekranında başkasının tercihlerini
- * açardı.
- *
- * ── ÜÇ HÂL ──────────────────────────────────────────────────────────────────
- * (1) girişli → tam sayfa · (2) jetonlu ziyaretçi → yalnız bölge haberi satırı · (3) ne oturum ne
- * geçerli jeton → **girişe yönlendirilmez, "bağlantı geçerli değil" denir**. Yönlendirme, mailden
- * gelen kişiye kendi tercihini değiştirmeye çalışırken bir giriş duvarı göstermek olurdu ve
- * geçersiz jetonun sebebini de söylemezdi.
- *
- * ── TASARIM ─────────────────────────────────────────────────────────────────
- * Bu sayfanın çizimi YOK: `design/pages/musteri-hesap.md` izinleri hesap sayfasının içinde
- * tanımlıyor, ayrı bir tercih sayfası hiç çizilmedi — URL mail altbilgisinden doğdu. Yerleşim
- * hesap kartlarının kendi diliyle kuruldu (aynı `Card` · `ConsentSwitch` ölçüleri), improvise
- * edilen bir görsel karar yok. `BEKLEYEN(08.5)`
+ * Her mailin altbilgisindeki bağın hedefi; oturum istemez, çünkü mailin alıcısı çoğu zaman girişli değildir ve izni geri almak
+ * vermek kadar kolay olmalı. Oturum jetonu ezer ki paylaşılmış bir bağ girişli başka birine yabancı tercihleri açmasın.
  */
 interface PreferencesPageProps {
   params: Promise<{ locale: string }>;

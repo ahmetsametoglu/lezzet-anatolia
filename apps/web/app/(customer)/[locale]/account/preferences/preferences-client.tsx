@@ -12,17 +12,8 @@ import { cancelZoneNoticesAction, setCampaignConsentAction, setKindConsentAction
 import type { Messages } from './preferences-types';
 
 /**
- * Bildirim tercihleri — **iki cihazda AYNI düzen** (tek sütun kart listesi). Fork açılmadı çünkü
- * ayrışan bir yerleşim kararı yok; `md:` de kullanılmıyor (CLAUDE §2, puan sayfasının aynı hükmü).
- *
- * Kartlar hesap sayfasının kendi kabuğunu kullanıyor (`Card` · `CardHead` · `ConsentSwitch`) —
- * ikinci bir görsel dil kurulmadı. Anahtar hesap sayfasındakinin AYNISI: kopyalanmadı,
- * genelleştirildi (yazma eylemi artık dışarıdan geliyor).
- *
- * **"Kapatılamayan bildirimler" kartı bilinçli olarak ANAHTARSIZ.** Bu sayfaya sipariş mailinden
- * gelen müşteri büyük olasılıkla o maili kesmek istiyor ve kesemiyoruz. Kartı hiç çizmemek onu
- * "demek ki kapattım" sanısıyla bırakırdı; pasif bir anahtar çizmek ise dokunulabilir görünen bir
- * ölü denetim olurdu. Doğrusu cümleyle söylemek.
+ * İki cihazda aynı tek sütun: ayrışan bir yerleşim kararı olmadığı için fork yok. "Kapatılamayan bildirimler" kartı anahtarsızdır;
+ * hiç çizilmese müşteri kapattığını sanır, pasif anahtar ise dokunulabilir görünen ölü bir denetim olurdu.
  */
 interface PreferencesClientProps {
   t: Messages;
