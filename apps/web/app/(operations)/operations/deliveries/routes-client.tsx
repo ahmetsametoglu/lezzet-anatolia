@@ -10,6 +10,8 @@ import {
 } from '@/components/operation/ui/zone-map-model';
 import { placesLabel } from '@/components/operation/ui/labels';
 import { readMapCodesAction, saveZoneAction } from './routes-actions';
+import { RoutesBulkDialog } from './routes-bulk-dialog';
+import { boxPick, routeHolding } from './routes-pick';
 import { RoutesDesktop } from './routes.desktop';
 import { ROUTE_NOTES } from './deliveries-labels';
 import type { RoutesData, RouteView } from './routes-read';
@@ -88,6 +90,7 @@ export function RoutesClient({
    */
   const [freePoints, setFreePoints] = useState<ZoneMapPoint[] | null>(null);
   const [truncated, setTruncated] = useState(false);
+  const [bulk, setBulk] = useState<ReturnType<typeof boxPick> | null>(null);
 
   const selected: RouteView | null = routeId ? (data.routes.find((route) => route.id === routeId) ?? null) : null;
   /**
@@ -147,9 +150,7 @@ export function RoutesClient({
       return;
     }
 
-    const holder = data.routes.find(
-      (route) => route.id !== routeId && route.postalCodes.some((code) => keyOfPoint(code) === key),
-    );
+    const holder = routeHolding(data.routes, routeId, key);
     if (holder) {
       setHint(null);
       setError(
@@ -160,6 +161,28 @@ export function RoutesClient({
 
     setDraft({ ...draft, codes: [...draft.codes, { country: point.country, postalCode: point.postalCode }] });
     setHint(ROUTE_NOTES.added(point.postalCode, placesLabel(point.places ?? [], HINT_MAX_PLACES) ?? undefined));
+  };
+
+  /** Kutuyla seçim yalnız ekler, çıkarmaz: yanlışlıkla büyük çizilen kutu rotadan kod düşürmemeli. Liste onaydan sonra taslağa girer. */
+  const pickMany = (inside: ZoneMapPoint[]) => {
+    if (!draft) return;
+    setError(null);
+    const result = boxPick(inside, draft.codes, data.routes, routeId);
+    if (result.add.length === 0) {
+      setHint(ROUTE_NOTES.bulkEmpty(result.held));
+      return;
+    }
+    setBulk(result);
+  };
+
+  const confirmBulk = () => {
+    if (!draft || !bulk) return;
+    setDraft({
+      ...draft,
+      codes: [...draft.codes, ...bulk.add.map((point) => ({ country: point.country, postalCode: point.postalCode }))],
+    });
+    setHint(ROUTE_NOTES.addedMany(bulk.add.length));
+    setBulk(null);
   };
 
   const save = () => {
@@ -242,24 +265,28 @@ export function RoutesClient({
   }, [viewport]);
 
   return (
-    <RoutesDesktop
-      tooFar={tooFar}
-      freePoints={freePoints}
-      truncated={truncated}
-      data={data}
-      contextWarehouseId={contextWarehouseId}
-      selected={selected}
-      draft={draft}
-      onSelect={select}
-      onDraft={(patch) => setDraft((current) => (current ? { ...current, ...patch } : current))}
-      onPick={pick}
-      onSave={save}
-      onViewport={setViewport}
-      viewport={viewport}
-      hint={hint}
-      homeCountry={(home?.countryCode ?? 'FR') as Country}
-      busy={busy}
-      error={error}
-    />
+    <>
+      <RoutesDesktop
+        tooFar={tooFar}
+        freePoints={freePoints}
+        truncated={truncated}
+        data={data}
+        contextWarehouseId={contextWarehouseId}
+        selected={selected}
+        draft={draft}
+        onSelect={select}
+        onDraft={(patch) => setDraft((current) => (current ? { ...current, ...patch } : current))}
+        onPick={pick}
+        onPickMany={pickMany}
+        onSave={save}
+        onViewport={setViewport}
+        viewport={viewport}
+        hint={hint}
+        homeCountry={(home?.countryCode ?? 'FR') as Country}
+        busy={busy}
+        error={error}
+      />
+      {bulk ? <RoutesBulkDialog codes={bulk.add} held={bulk.held} onClose={() => setBulk(null)} onConfirm={confirmBulk} /> : null}
+    </>
   );
 }

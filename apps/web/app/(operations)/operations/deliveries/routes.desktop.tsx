@@ -57,6 +57,8 @@ interface RoutesViewProps {
   onSelect: (routeId: string | null) => void;
   onDraft: (patch: Partial<NonNullable<RoutesViewProps['draft']>>) => void;
   onPick: (point: ZoneMapPoint) => void;
+  /** Shift + sürükle ile çizilen kutudaki noktalar. */
+  onPickMany: (points: ZoneMapPoint[]) => void;
   onSave: () => void;
   /** Haritanın görüş alanı oturunca — yakınlık eşiği buradan hesaplanıyor. */
   onViewport: (viewport: MapViewport) => void;
@@ -196,6 +198,7 @@ export function RoutesDesktop(props: RoutesViewProps) {
             points={points}
             stateOf={stateOf}
             onPick={props.onPick}
+            onPickMany={props.onPickMany}
             onViewport={props.onViewport}
             focus={focus}
             note={

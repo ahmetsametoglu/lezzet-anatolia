@@ -162,10 +162,87 @@ function labelOf(point: ZoneMapPoint, permanent: boolean): HTMLElement {
   return box;
 }
 
+/** Birkaç piksellik titreme sürükleme sayılmaz: Shift'le yapılan sıradan tıklama tek noktayı açıp kapatmaya devam etmeli. */
+const BOX_MIN_PX = 4;
+
+/**
+ * Shift + sürükle ile kutu seçimi — Leaflet'in `BoxZoom`ının seçim karşılığı, aynı hareketle ve yalnız açık API'yle. Bırakıştan
+ * hemen sonra gelen tıklama `moved` bayrağıyla yutulur, yoksa kutunun bittiği yerdeki nokta açılıp kapanırdı.
+ */
+function attachBoxSelect(map: L.Map, onSelect: (bounds: L.LatLngBounds) => void, moved: { current: boolean }): () => void {
+  const container = map.getContainer();
+  let start: L.Point | null = null;
+  let end: L.Point | null = null;
+  let box: HTMLDivElement | null = null;
+
+  const stop = () => {
+    start = null;
+    end = null;
+    box?.remove();
+    box = null;
+    L.DomUtil.removeClass(container, 'leaflet-crosshair');
+    L.DomUtil.enableTextSelection();
+    L.DomUtil.enableImageDrag();
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('keydown', onKey);
+  };
+
+  const onMove = (event: MouseEvent) => {
+    if (!start) return;
+    end = map.mouseEventToContainerPoint(event);
+    if (!box) {
+      if (start.distanceTo(end) < BOX_MIN_PX) return;
+      // `leaflet-zoom-box` konum ve katmanı verir; renk token'dan, kutu seçimin rengiyle (zeytin) çizilir.
+      box = L.DomUtil.create('div', 'leaflet-zoom-box', container);
+      box.style.border = '2px dashed var(--color-ops-olive)';
+      box.style.background = 'color-mix(in srgb, var(--color-ops-olive) 12%, transparent)';
+      L.DomUtil.addClass(container, 'leaflet-crosshair');
+    }
+    L.DomUtil.setPosition(box, L.point(Math.min(start.x, end.x), Math.min(start.y, end.y)));
+    box.style.width = `${Math.abs(end.x - start.x)}px`;
+    box.style.height = `${Math.abs(end.y - start.y)}px`;
+  };
+
+  const onUp = (event: MouseEvent) => {
+    if (event.button !== 0) return;
+    const corners = box && start && end ? [start, end] : null;
+    stop();
+    if (!corners) return;
+    moved.current = true;
+    setTimeout(() => {
+      moved.current = false;
+    }, 0);
+    onSelect(L.latLngBounds(corners.map((corner) => map.containerPointToLatLng(corner))));
+  };
+
+  const onKey = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') stop();
+  };
+
+  const onDown = (event: MouseEvent) => {
+    if (!event.shiftKey || event.button !== 0) return;
+    start = map.mouseEventToContainerPoint(event);
+    end = start;
+    L.DomUtil.disableTextSelection();
+    L.DomUtil.disableImageDrag();
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('keydown', onKey);
+  };
+
+  container.addEventListener('mousedown', onDown);
+  return () => {
+    stop();
+    container.removeEventListener('mousedown', onDown);
+  };
+}
+
 export function ZoneMapLeaflet({
   points,
   stateOf,
   onPick,
+  onPickMany,
   onViewport,
   note,
   hint,
@@ -181,6 +258,11 @@ export function ZoneMapLeaflet({
   pickRef.current = onPick;
   const viewportRef = useRef(onViewport);
   viewportRef.current = onViewport;
+  const pickManyRef = useRef(onPickMany);
+  pickManyRef.current = onPickMany;
+  const pointsRef = useRef(points);
+  pointsRef.current = points;
+  const boxMovedRef = useRef(false);
   const [visibleHint, setVisibleHint] = useState<string | null>(null);
 
   // Lejantta hangi satırların çizileceği — haritada FİİLEN bulunan hâller. Tek geçiş; nokta kümesi
@@ -195,10 +277,13 @@ export function ZoneMapLeaflet({
      * Yakınlaştırma denetimi sol altta: öteki köşelerde lejant, ipucu şeridi ve atıf yazısı duruyor, sağ üstte de Rotalar
      * sekmesinin yüzen paneliyle çakışır. Çakışma sıra değil konum sorunu; z değeri büyütmek düğmeleri panelin altına gömer.
      */
+    // Toplu seçim kurulumda bir kez okunur: Shift + sürükle ya yakınlaştırır ya seçer, ikisini birden yapamaz.
+    const boxSelect = pickManyRef.current !== undefined;
     const map = L.map(box, {
       center: center ? [center.lat, center.lng] : [48.583, 7.75],
       zoom: 11,
       zoomControl: false,
+      boxZoom: !boxSelect,
       renderer: L.canvas(),
     });
     // `className` tasarımın soluklaştırmasını taşıyor (`globals.css` → `.ops-map-tiles`): zemin
@@ -207,6 +292,13 @@ export function ZoneMapLeaflet({
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
+    const detachBoxSelect = boxSelect
+      ? attachBoxSelect(
+          map,
+          (bounds) => pickManyRef.current?.(pointsRef.current.filter((point) => bounds.contains([point.lat, point.lng]))),
+          boxMovedRef,
+        )
+      : () => {};
 
     /**
      * Görüş alanı bildirimi GECİKMELİ: `moveend` kaydırma bitince bir kez atar, ama operatör
@@ -243,6 +335,7 @@ export function ZoneMapLeaflet({
       clearTimeout(timer);
       observer.disconnect();
       map.off('moveend', announce);
+      detachBoxSelect();
       detachTiles();
       map.remove();
       mapRef.current = null;
@@ -278,7 +371,9 @@ export function ZoneMapLeaflet({
             // seçiliyor — `facts` o an biliniyor, içeriğin geç kurulması bunu değiştirmiyor.
             className: point.facts && point.facts.length > 0 ? 'ops-map-tip ops-map-tip-wide' : 'ops-map-tip',
           })
-          .on('click', () => pickRef.current(point))
+          .on('click', () => {
+            if (!boxMovedRef.current) pickRef.current(point);
+          })
           .addTo(layer);
       }
     };
@@ -338,6 +433,9 @@ export function ZoneMapLeaflet({
         <span className="border-t border-ops-line-soft pt-1.5 font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
           {note ?? 'Noktaya tıkla → ekle / çıkar. Karar “bu yol üstünde mi” olduğu için taban harita yol ağını gösterir.'}
         </span>
+        {onPickMany ? (
+          <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-muted">Shift + sürükle → alandaki kodları topluca seç.</span>
+        ) : null}
       </div>
 
       {visibleHint ? (

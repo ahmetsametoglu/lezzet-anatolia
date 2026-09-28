@@ -69,6 +69,11 @@ export interface ZoneMapProps {
   stateOf: (point: ZoneMapPoint) => ZoneCodeState;
   /** Tıklanan nokta — çağıran ekler ya da çıkarır; harita karar vermez, bildirir. */
   onPick: (point: ZoneMapPoint) => void;
+  /**
+   * Shift + sürükle ile çizilen kutunun içindeki noktalar. Verilirse bu hareket Leaflet'in kutuyla yakınlaştırmasının yerine geçer;
+   * verilmezse harita eskisi gibi yakınlaşır.
+   */
+  onPickMany?: (points: ZoneMapPoint[]) => void;
   /** Görünen alan oturunca (kaydırma/yakınlaşma bitince). "Boşta" kod okumasının tetiği. */
   onViewport?: (viewport: MapViewport) => void;
   /** Lejantın altındaki DEĞİŞKEN satır: kaç boşta kod var, yakınlaşmak gerekiyor mu. */

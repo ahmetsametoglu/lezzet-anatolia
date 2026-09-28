@@ -196,4 +196,14 @@ export const ROUTE_NOTES = {
   /** Çıkarmanın SONUCU yazılır: kod düşünce o adresler kargo yoluna geçer — sessiz bir çıkarma bunu saklardı. */
   removed: (code: string, place?: string): string =>
     `${place ? `${code} ${place}` : code} rotadan çıkarıldı — bu adresler kargo yoluna geçer`,
+
+  // ── Kutuyla toplu seçim (Shift + sürükle) ─────────────────────────────────
+  bulkTitle: 'Kodları topluca ekle',
+  bulkQuestion: (count: number): string => `Aşağıdaki ${count} posta kodunu bu rotaya eklemek istiyor musunuz?`,
+  bulkConfirm: (count: number): string => `${count} kodu ekle`,
+  /** Dışarıda kalan kodun sebebi yazılır, yoksa operatör kutudaki kodların neden eksik geldiğini bilemezdi. */
+  bulkHeld: (count: number): string => `${count} kod başka rotada tanımlı olduğu için listede yok.`,
+  bulkEmpty: (held: number): string =>
+    held > 0 ? `Seçilen alanda eklenebilir kod yok — ${held} kod başka rotada tanımlı.` : 'Seçilen alanda eklenebilir kod yok.',
+  addedMany: (count: number): string => `${count} kod rotaya eklendi`,
 } as const;
