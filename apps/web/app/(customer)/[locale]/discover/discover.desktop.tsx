@@ -9,10 +9,8 @@ import { DesktopOutcome } from './components/desktop-outcome';
 import type { DiscoverViewProps } from './discover-types';
 
 /**
- * Keşif — masaüstü (`Musteri Web.dc.html`, "Web · Keşif"): üst satırda ilerleme ve puan, altında iki sütunlu aday
- * (fotoğraf · ad, açıklama, karar) ve bu turun adayları; tur bitince aynı yerde bitiş kutusu. Klavye ←/→ istemcide.
- *
- * Fotoğraf 3:2 çizilir, tasarımın 4:3'ü envanterde yok ve ürünün kırpma önizlemesinde karşılığı olmazdı.
+ * Keşif, masaüstü: üst satırda ilerleme ve puan, altında iki sütunlu aday ve bu turun adayları; tur bitince aynı yerde bitiş
+ * kutusu. Fotoğraf 3:2 çizilir, tasarımın 4:3'ü kırpma önizlemesinde karşılıksız kalırdı.
  */
 export function DiscoverDesktop({ t, cards, current, decisions, earned, signedIn, onVote, busy, claimed, earnedMoney }: DiscoverViewProps) {
   const total = cards.length;

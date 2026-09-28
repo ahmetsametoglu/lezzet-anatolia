@@ -4,22 +4,8 @@ import { ProductFeedbackSchema } from '../entities/product-feedback.schema';
 import { FeedbackVoteEnum } from '../primitives/enums.schema';
 
 /**
- * KEŞİF TURU SÖZLEŞMESİ (21.19) — mobil `/api/v1/discover` uçlarının ve onları tüketen keşif
- * ekranının (v3 `vKesif`) ORTAK dili. Terfi gerekçesi `feedback-api.schema.ts` ile aynı (02-mimari
- * §3.2 "sözleşme tek kaynak"): üreten ve tüketen aynı şemayı çağırır, alan adı değişirse iki taraf
- * birden DERLEME anında kırılır.
- *
- * ── ADAY ÜRÜN SATILABİLİR ÜRÜN DEĞİLDİR ─────────────────────────────────────
- * Kart `CatalogProductSchema`dan TÜRETİLMEDİ ve bu şemanın en önemli kararı bu. Katalog kartı fiyat,
- * stok hâli, `variantId` ve `purchaseMode` taşıyor; aday üründe bunların hiçbiri yok ve tasarımın
- * yasağı tam bu (`musteri-kesif.md §6`: *"aday ürünler satın alınabilir gibi sunulmaz — fiyat,
- * stok, sepete ekleme yoktur"*). Katalog kartını `.pick` ile daraltmak da yetmezdi: daraltma bir
- * gün geri açılabilir, ayrı bir şekil açılamaz. **Taşınmayan alan, yanlışlıkla gösterilemez.**
- *
- * ── KİMLİK ZARFA GİRMEZ ─────────────────────────────────────────────────────
- * Hiçbir gövde `customerId` almaz ve hiçbir cevap taşımaz: kimlik SUNUCUDA çözülür (Bearer varsa
- * müşteri, yoksa ziyaretçi — `feedback-api.schema.ts`in token kararıyla aynı ilke, kaynağı farklı).
- * İstemciden kimlik kabul etmek, başkasının adına oy yazdırmaktı.
+ * Keşif uçlarının ve ekranının ortak sözleşmesi. Kart katalog kartından türetilmez: aday ürün satılamaz, taşınmayan fiyat ve stok
+ * yanlışlıkla gösterilemez; kimlik sunucuda çözülür, gövdeye girmez.
  */
 
 /**
@@ -43,28 +29,14 @@ export const DiscoverCardSchema = z.object({
 export type DiscoverCard = z.infer<typeof DiscoverCardSchema>;
 
 /**
- * `GET /discover` cevabı — turun tamamı tek turda.
- *
- * SATIR şeması yetmez, zarf da sözleşmedir (`CatalogCategoryListSchema` emsali): uç yarın
- * `{ items: [...] }` yazsa satır şeması bunu yakalamaz ve istemci derlemede değil çalışma zamanında
- * kırılırdı.
- *
- * **Boş deste GEÇERLİ bir cevaptır** ve `min(1)` bilerek YOK — davet akışının tersine (orada kartsız
- * davet 404). Aday ürün olmaması bir arıza değil normal bir hâl: operatör henüz aday açmamıştır ya
- * da müşteri hepsini oylamıştır. Ekranın bunun için ayrı bir hâli var (boş deste ≠ tamamlanan tur).
- *
- * Sayfalama YOK: aday kümesi veriyle değil operatörün eliyle büyür — doğal tavanı olan küme tek
- * turda çekilir (`CLAUDE §1`). Tavanı uygulama katmanı koyar (`DECK_SIZE`), istemci istemez.
+ * `GET /discover` cevabı, turun tamamı tek turda; boş deste geçerlidir (aday yok ya da hepsi oylandı). Aday kümesi operatörün
+ * elinde büyüdüğü için sayfalanmaz, tavanı uygulama katmanı koyar.
  */
 export const DiscoverDeckSchema = z.object({ cards: z.array(DiscoverCardSchema) });
 
 /**
- * `POST /discover/vote` gövdesi — bir kartın kaydırılması.
- *
- * `dwellMs` KARTTA GEÇİRİLEN SÜRE ve isteğe bağlıdır: sinyal KALİTESİNİN girdisidir, puanın değil
- * (DOMAIN §14 "ödül ≠ güven") — ekran ölçer, motor değerlendirir. Ölçemeyen bir istemci alanı hiç
- * göndermez; **sıfır göndermez** (`CLAUDE §1`: ölçülemeyen değer sıfır değildir — 0 ms "kart hiç
- * görülmedi" demektir ve o kaydırmayı motor gürültü sayar).
+ * `POST /discover/vote` gövdesi. `dwellMs` sinyal kalitesinin girdisidir, puanın değil; ölçemeyen istemci alanı göndermez, sıfır
+ * göndermez, çünkü 0 ms "kart hiç görülmedi" demektir.
  */
 export const DiscoverVoteBodySchema = z.object({
   productId: ProductFeedbackSchema.shape.productId,
@@ -82,42 +54,20 @@ export const DiscoverSwipeSchema = z.object({
    */
   id: ProductFeedbackSchema.shape.id.nullable(),
   /**
-   * Bu kaydırma için GERÇEKTEN yazılan puan. **`null` = girişsiz** — ödülün henüz sahibi yok ve bu
-   * SIFIR DEĞİLDİR (`CLAUDE §1`): puan giriş dönüşünde talep kapısında doğar. `0` ise gerçekten
-   * yazılmadı (günlük tavan · B2B · aynı ürüne ikinci oy) ve bu da doğru cevaptır.
-   *
-   * Ekranın bitiş cümlesi ("+N puan kazandınız") bu sayıların TOPLAMIDIR, kart sayısı × ayar değil:
-   * ekranın vaat ettiği ile motorun yazdığı ayrışırsa müşteri gelmeyecek bir ödül için hareket eder
-   * (29.07 denetiminin kapattığı arıza sınıfı).
+   * Bu kaydırma için gerçekten yazılan puan; `null` = girişsiz, ödülün sahibi yok (sıfır değil), `0` = yazılmadı (günlük tavan,
+   * B2B, ikinci oy). Bitişin sayısı bunların toplamıdır, kart sayısı × ayar değil.
    */
   pointsAwarded: z.number().int().nonnegative().nullable(),
   /**
-   * Bu yazımdan SONRAKİ bakiye — turun bitiş ekranı *"Toplam ✦ N puan"* diyebilsin diye
-   * (kullanıcı isteği 15.08: *"ne kadar kazandı ve şu ana kadar ne oldu?"*).
-   *
-   * **İstemcide HESAPLANAMAZ** ve bu `pointsAwarded`ın künyesindeki gerekçenin aynısı: müşterinin
-   * bakiyesi bu turun dışında da değişiyor (günlük giriş puanı sessizce yazılıyor, davet ettiği
-   * kişi o sırada siparişini ödemiş olabilir, kupona çevirmiş olabilir). "Açılıştaki bakiye +
-   * bu turda kazanılan" toplamı ekranın kendi tuttuğu bir sayı olurdu ve defterle ayrışırdı.
-   *
-   * **Her oyda taşınır, tur sonunda ayrı bir okumayla değil:** bitişte `/me/points`e gitmek bir
-   * gidiş-dönüş daha eklerdi ve o uç kart+kupon+kural okuyup davet kodu ÜRETİYOR — bakiyeyi
-   * öğrenmek için tetiklenecek bir yan etki değil. Sayı zaten yazımın yapıldığı yerde, tek satır
-   * okumayla elde. Ekran son cevabı tutar; turun son oyu oturduğunda toplam da oturur.
-   *
-   * `null` = kimliksiz kaydırma (`pointsAwarded` ile aynı koşul, aynı sebep): bakiyenin sahibi yok.
+   * Bu yazımdan sonraki bakiye; istemcide hesaplanamaz, çünkü bakiye turun dışında da değişir. Her oyda taşınır ki bitiş ayrı bir
+   * okuma beklemesin; `null` = kimliksiz kaydırma.
    */
   balance: z.number().int().nullable(),
 });
 
 /**
- * `POST /me/discover/claim` gövdesi — girişsizken yapılan turun hesaba bağlanması.
- *
- * Kimlikler İSTEMCİDEN gelir ama sunucuda üç kapıdan geçer (kimliksiz olmalı · `candidate`
- * bağlamında olmalı · oy taşımalı) — kural `@lezzet/application`ın talep kapısında, burada değil.
- *
- * Tavan bir turun kart sayısının birkaç katı: sınırsız bir liste hem cihazı şişirir hem tek istekte
- * yüzlerce satır okutur. Web'in tarayıcı deposu da aynı sayıda duruyor (`discover-store.ts` MAX).
+ * `POST /me/discover/claim` gövdesi; kimlikler istemciden gelir ama kuralı uygulama katmanının talep kapısı uygular. Tavan bir
+ * turun birkaç katı, sınırsız liste tek istekte yüzlerce satır okuturdu.
  */
 export const DiscoverClaimBodySchema = z.object({
   swipeIds: z.array(ProductFeedbackSchema.shape.id).min(1).max(200),

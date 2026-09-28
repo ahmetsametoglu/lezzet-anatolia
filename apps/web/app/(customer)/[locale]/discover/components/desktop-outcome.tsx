@@ -14,8 +14,8 @@ interface DesktopOutcomeProps {
 }
 
 /**
- * Turun sonu — tasarımın kutusu: solda özet ve eylemler, sağda beğenilenler. Girişsizde puan birikmişse ana eylem
- * hesap açmaktır ve cümle puanın para karşılığını söyler (kullanıcı kararı 03.08); deste hiç dolmadıysa "aday yok".
+ * Turun sonu: solda özet ve eylemler, sağda beğenilenler. Girişsizde puan birikmişse ana eylem hesap açmaktır ve cümle puanın
+ * para karşılığını söyler, çünkü değer gösterildikten sonraki davet reklam değil tekliftir.
  */
 export function DesktopOutcome({ t, cards, decisions, earned, earnedMoney, signedIn }: DesktopOutcomeProps) {
   const emptyDeck = cards.length === 0;

@@ -7,31 +7,8 @@ import type { StorefrontImage } from '../catalog/storefront-types';
 import { awardFeedbackPoints, getPointsBalance } from './points';
 
 /*
-  KEŞİF TURU (08.7 · 17.3 · terfi 21.19) — web'de üç dosyaya dağılmış olan aday ürün akışının paket
-  hâli: deste okuması (`apps/web/lib/feedback/discover.ts`), kaydırmanın yazımı
-  (`apps/web/lib/feedback/product-feedback.ts` → `recordVote`in `candidate` DALI) ve ziyaretçi
-  turunun hesaba bağlanması (`apps/web/lib/feedback/discover-claim.ts`). Web dosyaları KÖPRÜ olarak
-  duruyor; benimsemeleri web şeridinin işi (`invite.ts`/`write.ts` terfilerinin aynı sözleşmesi).
-
-  ── NEDEN ŞİMDİ, NEDEN AYRI DOSYA ───────────────────────────────────────────
-  `write.ts` künyesi keşfi bilerek dışarıda bırakmıştı: *"`candidate` bağlamı, ziyaretçi (kimliksiz)
-  kaydı ve `dwellMs` sinyali — bunlar keşif yüzeyinin işi ve bugün tek yüzeyde (web) yaşıyor."*
-  İkinci yüzey doğdu (mobil keşif ekranı + `/api/v1/discover`), yani terfi ölçütü karşılandı.
-  `write.ts`e eklenmedi çünkü o dosyanın tek kuralı *"kimlik TOKEN'dan çözülür"*dür ve keşifte token
-  yoktur — kimlik ya oturumdan gelir ya HİÇ yoktur. İki farklı kimlik rejimini tek dosyaya koymak,
-  bir gün birinin ötekinin kapısından geçmesi demekti.
-
-  ── ADAY ÜRÜN SATILABİLİR ÜRÜN DEĞİLDİR ─────────────────────────────────────
-  Kart `StorefrontProduct` DEĞİL: vitrin sözleşmesi fiyat, stok, varyant ve "sepete ekle" taşır;
-  aday üründe bunların hiçbiri yok ve tasarımın yasağı tam bu (`design/pages/musteri-kesif.md §6`:
-  *"aday ürünler satın alınabilir gibi sunulmaz"*). Vitrin tipini yeniden kullansaydık kart
-  doldurulmamış fiyat alanlarıyla gelir ve bir gün biri onları çizerdi. Taşınmayan alan,
-  yanlışlıkla gösterilemez.
-
-  ── ZİYARETÇİ DE KAYDIRIR; TEKİLLEŞTİRME YALNIZ GİRİŞLİDE ───────────────────
-  Tasarım *"daha önce oyladığı kartlar tekrar sorulmaz"* diyor; girişsizde bunun yolu yok ve
-  olmaması bilinçli — tekilleştirmek kimlik tutmak demektir. Ziyaretçi turu yenilerse aynı kartları
-  görür: kusur değil, kimlik tutmamanın (daha ucuz olan) bedeli.
+  Keşif turu: deste okuması, kaydırmanın yazımı ve ziyaretçi turunun hesaba bağlanması. Kart vitrin ürünü değildir, çünkü aday
+  ürün satılamaz; tekilleştirme yalnız girişlide yapılır, ziyaretçide kimlik tutmamanın bedeli aynı kartları yeniden görmektir.
 */
 
 /** Turun tek kartı — fiyat/stok/varyant YOK ve olmayacak. */
@@ -43,14 +20,7 @@ export interface DiscoverCard {
   image: StorefrontImage;
 }
 
-/**
- * Deste boyu. Tavan var çünkü keşif bir LİSTE değil bir TUR: tasarım "kartlar tükenince bitiş
- * durumu" diyor, yani turun bitmesi akışın parçası. Sınırsız bir deste bitiş ekranını hiç göstermez
- * ve tur "bitmeyen bir görev"e döner.
- *
- * Sayfalama YOK ve `CLAUDE.md §1`'in ölçütüyle uyumlu: aday kümesi veriyle değil operatörün eliyle
- * büyür (ürünü aday yapan admin) — doğal tavanı olan küme tek turda çekilir.
- */
+/** Deste boyu; keşif bir liste değil bir tur, bitmeyen deste bitişi hiç göstermezdi. */
 const DECK_SIZE = 20;
 
 /**
@@ -84,14 +54,7 @@ async function remainingCandidates(db: SupabaseClient, customerId: string | null
   return candidates.filter((p) => !seen.has(p.id)).slice(0, DECK_SIZE);
 }
 
-/**
- * **Vitrinin sorusu: tur açılırsa kart çıkar mı?** (MB-58b) Kartı DEĞİL sayıyı döndürür — vitrin
- * yalnız "bölümü çizeyim mi" diye soruyor ve kartların adı/görseli o karar için gereksiz.
- *
- * ZİYARETÇİDE TEK SORGU: oylanmışları elemek için geçmiş gerekir, ziyaretçide geçmiş yoktur ve
- * `remainingCandidates` o okumayı zaten atlıyor. Yani asıl sıcak yol (oturumsuz vitrin) aday
- * listesinden ibaret; ikinci sorgu yalnız girişlide koşar.
- */
+/** Vitrinin sorusu, tur açılırsa kart çıkar mı; sayı döner, çünkü karar için kartın kendisi gereksiz. */
 export async function countDiscoverDeck(db: SupabaseClient, customerId: string | null): Promise<number> {
   return (await remainingCandidates(db, customerId)).length;
 }
@@ -128,40 +91,15 @@ export interface DiscoverSwipeRecord {
    * biriktirirdi ve o listeyi bir gün kapıya götürüp sessizce sıfır sonuç alırdı.
    */
   id: string | null;
-  /**
-   * Bu kaydırma için GERÇEKTEN yazılan puan. `null` = kimliksiz kaydırma, yani ödülün henüz sahibi
-   * yok (SIFIR DEĞİL — `CLAUDE §1`: ölçülemeyen değer sıfır değildir; puan giriş dönüşünde talep
-   * kapısında doğar). `0` ise gerçekten yazılmadı: günlük tavan, B2B ya da aynı ürüne ikinci oy.
-   *
-   * Taşınıyor çünkü ekran turun sonunda *"+N puan kazandınız"* diyor ve bu cümlenin sayısı
-   * ayardan/tavandan bağımsız uydurulamaz (29.07 denetiminin dersi: ekranın vaat ettiği ile motorun
-   * yazdığı ayrışırsa müşteri gelmeyecek bir ödül için hareket eder).
-   */
+  /** Gerçekten yazılan puan; `null` = kimliksiz kaydırma, ödülün sahibi yok (sıfır değil), `0` = tavan, B2B ya da ikinci oy. */
   pointsAwarded: number | null;
-  /**
-   * Yazımdan SONRAKİ bakiye — bitiş ekranının *"Toplam ✦ N puan"* satırı (kullanıcı isteği 15.08).
-   *
-   * Ekran bunu kendisi TOPLAYAMAZ: bakiye turun dışında da değişiyor (günlük giriş puanı, davet
-   * ödülü, kupona çevirme). Sözleşme künyesinde tam gerekçe.
-   *
-   * `pointsAwarded` ile AYNI koşulda `null` olur (kimliksiz kaydırma) — ikisi de aynı şeyi söyler:
-   * ödülün henüz sahibi yok.
-   */
+  /** Yazımdan sonraki bakiye; ekran toplayamaz, çünkü bakiye turun dışında da değişir. `null` = kimliksiz kaydırma. */
   balance: number | null;
 }
 
 /**
- * **Bir kartın kaydırılması** (👍 beğen / ✕ geç).
- *
- * Adaylık DOĞRULANIR: aday olmayan ürün keşif kartlarına düşmez, oradan gelen bir oy tutarsızdır.
- * Adaylık ayrı bir bayrak değil bir DURUMDUR (`product.status`) — satılabilir ürün aynı anda aday
- * olamaz, ikisi aynı eksenin iki değeridir.
- *
- * `dwellMs` sinyal KALİTESİNİN girdisidir, puanın değil (DOMAIN §14 "ödül ≠ güven"): ekran ölçer,
- * motor değerlendirir (`weighSwipesByProduct`). Kalitesiz kaydırma da ödülünü alır, yalnız aday
- * panosundaki iş kararını bozmaz.
- *
- * Puan SESSİZ yazılır: tavana takılmak ya da B2B olmak kaydırmayı geri çevirmez.
+ * Bir kartın kaydırılması; adaylık doğrulanır, çünkü aday olmayan ürüne gelen oy tutarsızdır. `dwellMs` sinyal kalitesinin
+ * girdisidir, puanın değil; puan sessiz yazılır, tavan ya da B2B kaydırmayı geri çevirmez.
  */
 export async function recordDiscoverSwipe(
   db: SupabaseClient,
@@ -232,31 +170,8 @@ export interface DiscoverClaimResult {
 }
 
 /**
- * **Turun HESABA BAĞLANMASI** — ziyaretçinin kaydırmaları, sonradan açtığı hesaba puan olarak
- * yazılır (kullanıcı kararı 03.08). Böylece hem veri hem müşteri kazanılıyor: kaydırmalar boşa
- * gitmiyor ve giriş daveti, değerin gösterildiği anda geliyor.
- *
- * ── SAHİPLİK İSTEMCİDEN GELİR AMA DOĞRULANIR ────────────────────────────────
- * Cihaz kendi satır kimliklerini saklıyor (uuid; tahmin edilemez). Yine de her satır burada üç
- * kapıdan geçer: **kimliksiz olmalı** (başkasının kaydını devralmak yok), **`candidate` bağlamında
- * olmalı** (alım-sonrası anket bu yoldan puan alamaz) ve **oy taşımalı**. Kimliksizlik şartı yalnız
- * güvenlik değil, ikinci kez ödemeyi de imkânsız kılıyor: bir kez bağlanan satır artık kimliksiz
- * değildir.
- *
- * ── TEKRAR TEKRAR PUAN KAPALI ───────────────────────────────────────────────
- * Girişli müşteride tekilliği upsert sağlıyor; ziyaretçide kimlik olmadığı için her kaydırma YENİ
- * satır açıyor. Bu yüzden bağlama **ürün başına** yapılır, satır başına değil: aynı ürünün birden
- * çok kaydırmasından yalnız EN YENİSİ bağlanır ve müşterinin o ürüne ait bir `candidate` kaydı
- * ZATEN varsa hiç bağlanmaz. İkincisi turu tekrarlayarak puan biriktirme yolunu kapatıyor.
- *
- * Üstüne mevcut korumalar duruyor ve burada YENİDEN YAZILMADI: günlük tavan ve B2C sınırı
- * `awardPoints` içinde, defterin tekilliği veritabanı indeksinde.
- *
- * ── BAĞLANMAYAN SATIRLAR SİLİNMEZ ───────────────────────────────────────────
- * Aynı ürünün fazla kaydırmaları kimliksiz kalır; aday panosunda tek kişinin tekrarları hâlâ birden
- * çok sayılır. Bu bugün de böyle (ziyaretçi kaydırması hiç tekilleştirilmiyordu), yeni bir açık
- * değil — geri bildirim satırı silmek/birleştirmek yazma katmanının sahibinin kararı
- * (`docs/talep/not-arka-uc-kesif-mukerrer-kaydirma.md`).
+ * Ziyaretçi turunun sonradan açılan hesaba puan olarak bağlanması. Her satır kimliksiz, `candidate` bağlamında ve oylu olmalı;
+ * bağlama ürün başına yapılır (en yeni kaydırma), müşterinin o ürüne kaydı varsa hiç yapılmaz ki tur tekrarlanarak puan birikmesin.
  */
 export async function claimDiscoverSwipes(
   db: SupabaseClient,
@@ -294,13 +209,7 @@ export async function claimDiscoverSwipes(
   return { linked, points };
 }
 
-/**
- * Ürün başına EN YENİ kaydırma — müşterinin son fikri neyse o.
- *
- * İlkini almak da bir seçenekti; sonuncusu seçildi çünkü girişli akışta upsert de aynısını yapıyor
- * (son oy öncekini eziyor). İki yolun aynı davranması, "ziyaretçiyken başka, girişliyken başka"
- * diyen bir fark bırakmıyor.
- */
+/** Ürün başına en yeni kaydırma; girişli akışta da son oy öncekini ezer, iki yol aynı davranır. */
 function newestPerProduct(rows: readonly ProductFeedback[]): ProductFeedback[] {
   const byProduct = new Map<string, ProductFeedback>();
   for (const row of rows) {
