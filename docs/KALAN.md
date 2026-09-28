@@ -37,8 +37,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
   ancak iş bittikten sonra geçer (izinle başarılı API çağrısı + kullanım videosu), bu yüzden mesajlaşma başvurusundan ayrı gider.
   Rolü olmayan müşterinin Messenger/Instagram mesajı mesajlaşma izinleri onaylanana kadar bize hiç gelmez (Meta belgesi; Graph'ta
   rolsüz kullanıcının konuşması görünmüyor).
-- [ ] (K.45) [hedef: deploy] Test sunucusuna `a3be5ca4` dağıtılacak: bugünkü sürümde müşterinin geri aldığı Instagram/Messenger
-  mesajı silinmiyor, operasyon ekranında kalıyor. Meta bunu şart koşuyor ve `instagram_manage_messages` inceleme videosu bu sürümle çekilecek.
 - [ ] **Fiyat listesi (B2B/B2C)** — kullanıcı bekliyor (kendi notlarında); gelince gerçek beslemeye girer.
 
 ## 00 · Monorepo İskeleti
