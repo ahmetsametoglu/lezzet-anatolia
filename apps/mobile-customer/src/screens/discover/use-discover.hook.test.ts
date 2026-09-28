@@ -4,19 +4,8 @@ import { CROP_CENTER } from '@lezzet/types';
 import { useDiscover } from './use-discover.hook';
 
 /*
-  KEŞİF TURUNUN PUAN TOPLAMI — MB-16'nın ölçüm dosyası.
-
-  ÖLÇÜLEN ARIZA (cihazda 11.08): 4 oy verildi, deftere 4 × 2 = 8 puan yazıldı, bitiş ekranı
-  "+6 puan" dedi. Buradaki ilk test o farkı ÜRETİYOR ve sebebi adlandırıyor: son oy hâlâ geri
-  alma penceresinde bekliyor, yani sunucuya HİÇ gitmemiş; toplam eksik değil, HENÜZ TAM DEĞİL.
-  Fark bir hesap hatası olsaydı pencere dolduktan sonra da 6 kalırdı — kalmıyor, 8 oluyor.
-
-  GERÇEK AĞ YOK ama zarf istemcisi (`apiFetch`) ve Zod sözleşmesi GERÇEK (`use-catalog.hook.test`
-  deseni): taklit edilen tek şey `fetch`. Kaydırma deposu (SecureStore) taklit — cihaz deposu bu
-  dosyanın konusu değil ve gerçeği yerel köprü ister.
-
-  SAHTE ZAMANLAYICI + `await act`: geri alma penceresi bir `setTimeout`; `waitFor` kullanılsaydı
-  RNTL kendi bekleme döngüsünde zamanı ilerletir ve pencereyi TESTİN İSTEMEDİĞİ bir anda doldururdu.
+  Keşif turunun puan toplamı: son oy geri alma penceresindeyken toplam eksik değil, henüz tam değildir; pencere dolunca tamamlanır.
+  Sahte zamanlayıcı kullanılır, çünkü `waitFor` zamanı kendisi ilerletip pencereyi testin istemediği anda doldururdu.
 */
 
 /* Oturum kapısı taklit (`account-screen.test` deseni): keşif uçları `maybeAuthorizedFetch`ten
