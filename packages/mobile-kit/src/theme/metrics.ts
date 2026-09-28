@@ -1,15 +1,7 @@
 /*
-  ÖLÇÜ KATMANI — boşluk · yükseklik · çerçeve kalınlığı · basılı geri bildirim katsayıları.
-
-  NEDEN BURADA, `@lezzet/design-tokens`TA DEĞİL: paket renk · yazı · yarıçap · gölge · gradyan
-  taşır; boşluk/ölçü ailesi YOKTUR. Web tarafında bu rolü Tailwind'in kendi ölçeği üstleniyor
-  (`px-4`, `h-13`), RN'de karşılığı yok. Değerler `design/project/Mobil - Musteri v3.dc.html`
-  içinden ÖLÇÜLDÜ ve TEK yerde durur — komponent dosyalarına ham piksel yazılmaz. Paketin
-  ölçü ailesi açıldığı gün bu dosya oraya terfi eder (rapor edildi).
-
-  YUVARLAMA: tasarımın tek-piksel ara değerleri (9 · 11 · 13 · 15) ölçeğin en yakın basamağına
-  çekildi (±1 dp). Web'de Tailwind ölçeği zaten aynısını yapıyor. YAPISAL ölçüler (kontrol
-  yüksekliği, daire çapı, dokunma hedefi) yuvarlanMAdı — orada bir piksel hizayı bozar.
+  Boşluk, yükseklik, çerçeve ve basılı geri bildirim ölçüleri burada, çünkü `@lezzet/design-tokens`ın ölçü ailesi yok ve RN'de
+  Tailwind ölçeğinin karşılığı yok; komponent dosyalarına ham piksel yazılmaz. Tasarımın tek-piksel ara değerleri ölçeğin en yakın
+  basamağına çekilir, yapısal ölçüler (kontrol yüksekliği, daire çapı, dokunma hedefi) yuvarlanmaz, çünkü orada bir piksel hizayı bozar.
 */
 
 import { customerAppShadowOffset } from '@lezzet/design-tokens';
@@ -28,13 +20,8 @@ export const appMetrics = {
     '3xl': 16,
     '4xl': 18,
     /**
-     * IZGARA SATIR ARASI — Token Kararlari #22 ile açıldı ve ölçeğin ORTASINA girdi.
-     * Katalog ızgarası `gap:20px 14px` diyor; 20 daha önce ölçekte yoktu ve 22'ye yukarı
-     * yuvarlanmıştı. Karar "boşluklar gerçek listeyle aynı (20/14)" diyerek 20'yi resmîleştirdi,
-     * yani yuvarlamanın kapanmasını değil DURAĞIN AÇILMASINI istedi.
-     * Ölçeğe ortadan girdiği için sonraki adların hepsi bir basamak kaydı (22→6xl · 26→7xl ·
-     * 30→8xl · 70→9xl); ad kaydırmak, ölçeği artan sırada tutmanın bedelidir — 20'yi sona
-     * eklemek ölçeği okunmaz yapardı.
+     * Izgara satır arası (tasarım: `gap:20px 14px`). Ölçeğin ortasına girdiği için sonraki adlar bir basamak kaydı; sona eklemek
+     * ölçeği artan sırada okunmaz yapardı.
      */
     '5xl': 20,
     '6xl': 22,
@@ -53,15 +40,8 @@ export const appMetrics = {
     /** Blok düğme ve tek satırlı girdi (tasarım: 52). */
     controlLg: 52,
     /**
-     * **İKİ SATIRLI blok düğmenin TABAN yüksekliği** — etiket + altındaki ipucu (v3:16 satır 37:
-     * `min-height:58px`, `flex-direction:column`, `gap:2px`).
-     *
-     * `controlLg`den (52) ayrı bir durak ve ayrı olmak zorunda: tek satırlık düğme SABİT yükseklikte
-     * (52), iki satırlık ise TABANI olan bir kutudur — tasarım da `height` değil `min-height`
-     * yazıyor. İkisini aynı sayıya bağlamak, ipucu iki satıra kırıldığı gün metni kırpardı.
-     *
-     * Kullanıcı bulgusu 02.09: *"butonun yüksekliği bile farklı"* — ipuçlu düğme 52'ye
-     * sıkıştırılıyordu, tasarım 58 diyor.
+     * İki satırlı blok düğmenin taban yüksekliği — etiket ve altındaki ipucu (tasarım: `min-height:58px`). `controlLg`den ayrı,
+     * çünkü tek satırlık düğme sabit, bu ise tabanı olan bir kutu; aynı sayı ipucu iki satıra kırılınca metni kırpardı.
      */
     controlStack: 58,
     /** Form girdisi, hap düğme (tasarım: 50). */
@@ -73,50 +53,26 @@ export const appMetrics = {
     /** Başlık çubuğundaki yuvarlak ikon düğmesi (tasarım: 40). */
     iconButton: 40,
     /**
-     * **KARAR KARTININ İKON KUTUSU** (v3:28 — 42×42, 07.09) ve içindeki ikon (21).
-     *
-     * `iconButton`dan (40) AYRI bir durak ve fark rol: o BASILABİLİR bir kontroldür ve dokunma
-     * hedefi kuralına uyar; bu ise kartın içinde duran, tek başına basılamayan bir İŞARETTİR —
-     * kartın tamamı zaten bir dokunma hedefi. İkisini tek durağa indirmek, bir gün dokunma hedefi
-     * büyütülünce kart ikonunu da büyütürdü ve kartın dikey ritmi kayardı.
-     *
-     * İkon 21, kutunun yarısı: tasarımın oranı ve ölçüsü (`text.icon` 22 ödünç alınmadı — o metin
-     * hizasındaki bir ok, bu kutunun içinde ortalanan bir sembol).
+     * Karar kartının ikon kutusu ve içindeki ikon (tasarım: 42 · 21). `iconButton`dan ayrı, çünkü o basılabilir bir kontrol, bu
+     * kartın içinde basılamayan bir işaret; dokunma hedefi büyüyünce kartın ritmi kaymamalı.
      */
     decisionIconBox: 42,
     decisionIcon: 21,
     /**
-     * **YÜZEN OKUTMA DÜĞMESİ (FAB)** — sayfanın üstünde duran daire (v3:03 · `topFab`, 66×66).
-     *
-     * `iconButton`dan (40) ayrı bir durak ve fark ROL: o başlık çubuğunun içinde, hizaya giren
-     * bir kontroldür; bu ekranın her yerinden erişilmesi gereken TEK eylemdir ve elin altında,
-     * bakmadan basılabilecek kadar büyük olmalı. Ölçü yuvarlanmadı — daire küçüldükçe "bakmadan
-     * bas" özelliği ölçülemez şekilde kaybolur, ve 66 tasarımın kendi ölçümü.
+     * Yüzen okutma düğmesi (tasarım: 66). Ekranın her yerinden erişilen tek eylem olduğu için bakmadan basılacak kadar büyük kalır
+     * ve yuvarlanmaz.
      */
     fab: 66,
-    /**
-     * FAB'ın içindeki ikon (v3:03 — 28×28). `text.icon` (22) ödünç ALINMADI: 66'lık dairede 22
-     * optik olarak kaybolur ve daire boş görünür. Yapısal ölçü — `tileIcon`/`rowIcon`/`stripIcon`
-     * ile aynı aile (dosyanın kuralı: yapısal ölçüler yuvarlanmaz).
-     */
+    /** Yüzen düğmenin ikonu (tasarım: 28); 66'lık dairede `text.icon` (22) kaybolur ve daire boş görünür. */
     fabIcon: 28,
     /**
-     * **Kutu içeriği satırının ürün karesi** (v3:03 — 28 kapanan kutuda, 30 açık kutuda → 30).
-     *
-     * `thumb`ın (44) küçük kardeşi ve ondan AYRI durak: fark ölçü değil ROL. 44'lük kare bir
-     * SEÇİM satırındadır (arama çekmecesi — depocu fotoğrafa bakarak 225 g ile 450 g'ı ayırır),
-     * bu ise bir KAYIT satırındadır ("kutuya 2 kondu") ve orada kare tanıtmaz, yalnız hangi ürün
-     * olduğunu hatırlatır. 44'ü ödünç almak kayıt satırlarını iki kademe uzatırdı.
-     * Tasarımın 48'i ise `thumb`a (44) bağlandı — Δ4, dosyanın "yakın ölçü ayrı ad almaz" kuralı.
+     * Kutu içeriği satırının ürün karesi (tasarım: 28–30). `thumb`dan ayrı, çünkü kayıt satırında kare ürünü tanıtmaz yalnız
+     * hatırlatır; 44'ü ödünç almak kayıt satırlarını iki kademe uzatırdı.
      */
     thumbSm: 30,
     /**
-     * Metinsiz ikon düğmesinin GENİŞLİĞİ — kuryenin kapıdaki "Ara" ve "WhatsApp" kareleri.
-     *
-     * Tasarımda 56 × 52 (hafif yatay dikdörtgen); burada TAM KARE (52 × 52, yükseklik
-     * `controlLg`den). Fark kullanıcı isteği (30.08): asıl eylem NAVİGASYONDUR ve kareler ondan
-     * çaldığı her dp'de o baskınlığı azaltıyor. Kare hem 8 dp kazandırıyor hem de iki ikonun
-     * kutusunu tek ölçüye indiriyor — 56×52 ekranda "biraz ezilmiş kare" gibi okunuyordu.
+     * Kuryenin kapıdaki "Ara" ve "WhatsApp" kareleri; tasarımın 56 × 52'si yerine tam kare. Asıl eylem navigasyon olduğu için kareler
+     * ondan yer çalmamalı.
      */
     contactIcon: 52,
     /** Kapıdaki tahsilat tutarı alanı — büyük rakam + tuş takımı rozeti (tasarım: 56). */
@@ -126,17 +82,8 @@ export const appMetrics = {
     /** Fotoğraf üstündeki geri düğmesi (tasarım: 42). */
     iconButtonOnPhoto: 42,
     /**
-     * Ürün dairesi İKİ boyutu (tasarım: vitrin 146 · benzerler 96).
-     * Izgaranın 138'lik dairesi EMEKLİ (kullanıcı kararı 07.08): katalog kare karta geçti
-     * (`ProductPhotoCard`), dolayısıyla o çapın tek tüketicisi kalmadı. Şablonun iskeleti de
-     * Token Kararlari #22 ile kareye çekildi — 138 artık tasarımda da yok.
-     *
-     * **KÜÇÜK ÇAP 96 → 120 (kullanıcı kararı 27.08 · tasarımdan bilinçli sapma).** Şikâyet ürün
-     * detayının "Bunları da sevebilirsiniz" şeridiydi: 96 dp dairede yemek fotoğrafı ne olduğu
-     * anlaşılacak kadar büyük değil ve şerit bir davet olmaktan çıkıyor. Tarihçe ölçüldü — çap
-     * KÜÇÜLMEDİ, 07.08'den beri 96'ydı, yani bir gerileme değil şablonun kendi değeri. Sapma
-     * `design/KARARLAR.md`'ye yazıldı; 146'ya çıkarılmadı çünkü vitrin rayının dairesiyle eşitlemek
-     * iki farklı kademeyi tek kademeye indirirdi (öneri şeridi ikincil bir şerittir).
+     * Ürün dairesinin iki boyu: vitrin 146, benzer ürünler 120. Küçük çap tasarımın 96'sından büyük, çünkü 96'da yemek fotoğrafı
+     * ne olduğu anlaşılacak kadar büyük değil; 146'ya çıkmaz ki iki kademe ayrı kalsın.
      */
     circleLg: 146,
     circleSm: 120,
@@ -144,38 +91,18 @@ export const appMetrics = {
     avatarLg: 56,
     avatarMd: 46,
     avatarSm: 40,
-    /* TARİH SEÇİCİNİN SÜTUN BOYU — dördüncü hücre YARIM görünsün diye (cihazda ölçüldü 30.08).
-       Tam üç hücrelik bir boy, listeyi kaydırılmaz gibi gösteriyordu: kullanıcı 4. günü aramak
-       yerine yok sanıyordu. Yarım hücre, kaydırmanın tek dürüst işaretidir. */
+    /* Tarih seçicinin sütun boyu: dördüncü hücre yarım görünür, çünkü tam üç hücre listeyi kaydırılmaz gösteriyor. */
     wheelColumn: 176,
     /** Yükleniyor halkası (tasarım: satır içi 18 · giriş 40 · ödeme 44). */
     spinnerLg: 44,
     spinnerMd: 40,
     spinnerSm: 18,
     /**
-     * **Boş durumun ikonu — 44'ten 80'e çıktı (kullanıcı kararı 16.08).**
-     *
-     * Tasarım 40–46 çiziyordu ve uygulama ona uyuyordu; yani bu bir sapma düzeltmesi DEĞİL,
-     * tasarımın kendisinin değişmesi. Gerekçe cihazda ölçüldü: ikon sayfanın TEK görseli olduğu
-     * hâlde 19px'lik serif başlıkla neredeyse aynı ağırlıkta duruyor — üç ekranda birden
-     * (sepet · siparişler · talepler) kullanıcı *"ikon küçük"* dedi. Tasarım tuvalinde kısa bir
-     * çerçeveye çizildiği için orada dengeliydi; 2400 px'lik gerçek ekranda değil.
-     *
-     * 80 seçildi, 120 değil: 120 KAHRAMAN ölçüsüdür ve zaten kullanımda (puan yıldızı, sonuç
-     * sayfası) — boş hâlin ikonu bir kahraman değil, "burada bir şey yok" diyen bir denge işareti.
-     * İkisi aynı ölçüye çıksaydı ödül anı ile boşluk anı aynı sesle konuşurdu.
-     *
-     * `errorIcon` (34) BİLEREK dokunulmadı — künyesi aşağıda: o ikon dar bir kutunun içinde.
+     * Boş durumun ikonu; sayfanın tek görseli olduğu için tasarımın 40–46'sı başlıkla aynı ağırlıkta kalıyordu. 120 değil, çünkü o
+     * ödül anının kahraman ölçüsü ve boşluk anı onunla aynı sesle konuşmamalı.
      */
     emptyIcon: 80,
-    /**
-     * Dekoratif ikon — bir çerçevenin/dairenin İÇİNDE duran, sayfanın konusu olmayan ikon.
-     *
-     * `emptyIcon`den ayrıldı (16.08): vitrindeki katalog daveti bu ölçüyü sabit bir dairenin
-     * içinde kullanıyor (`catalogCircle`) ve boş durum ikonu 80'e çıkınca o daireyi taşırdı.
-     * İki kavram bir sayıyı paylaşıyordu; ayrılmalarının sebebi sayı değil ANLAM — biri sayfanın
-     * tek öğesi, öteki bir kutunun süsü.
-     */
+    /** Çerçevenin içinde duran süs ikonu; `emptyIcon`den ayrı, çünkü sabit bir dairenin içinde yaşıyor ve büyürse daireyi taşırır. */
     decorIcon: 44,
     /**
      * Toast'un alt kenardan yüksekliği (tasarım: `bottom:104` — tab çubuğu 88 + 16 nefes).
@@ -183,138 +110,86 @@ export const appMetrics = {
      */
     toastBottom: 104,
     /**
-     * Hata bloğunun ikonu (tasarım: 34). Boş durumdan AYRI bir durak çünkü tasarım onu bilerek
-     * küçük çiziyor: hata bloğu kesikli çerçevenin içinde dar bir kutudur ve 44'lük bir ikon
-     * orada başlığın önüne geçiyor. Boş durumdaki ikon ise sayfanın tek öğesi.
+     * Hata bloğunun ikonu (tasarım: 34). Boş durumdan ayrı, çünkü hata bloğu kesikli çerçeveli dar bir kutu ve büyük ikon orada
+     * başlığın önüne geçer.
      */
     errorIcon: 34,
-    /**
-     * Sekme çubuğu ikonu — MÜŞTERİ yüzeyi (v3: 23).
-     *
-     * Eskiden iki yüzeyin tek durağıydı ve gerekçesi yazılıydı: "operasyon v2: 22 — ±1 kuralıyla
-     * aynı durak; 1 dp fark ekranda ölçülemez". Operasyon Mobil v3 o dayanağı kaldırdı: şablonun
-     * dört sekmesi de 20 çiziyor (ölçüldü 30.08), yani fark artık 3 dp ve ±1'in dışında. Durak
-     * bölündü — birleştiren argüman düştüğü an ad da ayrılır.
-     */
+    /** Sekme çubuğu ikonu, müşteri yüzeyi (tasarım: 23); operasyonunkiyle 3 dp fark olduğu için ayrı durak. */
     tabIcon: 23,
     /**
-     * Sekme çubuğu ikonu — OPERASYON yüzeyi (v3: 20). Değeri `headerIcon` ile aynı ama durağı
-     * ayrı: biri kalıcı gezinmenin ikonu, öteki başlık satırındaki yuvarlak düğmenin içi. Ölçü
-     * değil ANLAM ayrı durak açtırır (dosyanın kendi kuralı) — biri kayarsa öteki kaymamalı.
+     * Sekme çubuğu ikonu, operasyon yüzeyi (tasarım: 20). Değeri `headerIcon` ile aynı ama anlamı ayrı; biri kayarsa öteki
+     * kaymamalı.
      */
     tabIconOperations: 20,
-    /** Başlık satırındaki yuvarlak düğmenin ikonu — operasyon zil düğmesi (v2: 20). */
+    /** Başlık satırındaki yuvarlak düğmenin ikonu — operasyon zil düğmesi (tasarım: 20). */
     headerIcon: 20,
     /** Girdi/düğme içinde satıra giren ikon (tasarım: arama büyüteci 17 · süzgeç çizgileri 19×17). */
     inlineIcon: 17,
     /**
-     * ROZET İÇİNDEKİ ikon — kart şeridinin "bu adrese gelmiyor" işareti (tasarım: 11).
-     *
-     * `inlineIcon`(17) ile aynı durağa konmadı: o girdi/düğme satırının ikonudur ve yanındaki yazı gövde
-     * kademesindedir; bu ise rozet yazısının (`badge-sm`, 10) komşusu — 17 dp orada satırı ikiye böler.
+     * Rozet içindeki ikon (tasarım: 11). `inlineIcon`dan ayrı, çünkü komşusu rozet yazısı (10) ve 17 dp orada satırı ikiye böler.
      */
     badgeIcon: 11,
     /** Yüzen sayfanın tutamağı (tasarım: 44×5). */
     sheetHandle: 44,
     /**
-     * KÜÇÜK KONTROLLER — 44 dp'nin altında kalan dokunulabilir kare/daireler; hepsi `compact`
-     * işaretiyle `touchSlop` payını alır ve eşiğe böyle tamamlanır (21.10, Operasyon Mobil v2'den
-     * ölçüldü). Boşluk ölçeğinden ALINMADILAR: `space` dolgu/aralık ailesidir, bunlar ise öğenin
-     * KENDİ ölçüsüdür ve yuvarlanamaz — bir piksel kayması işaret kutusu ile durak dairesini
-     * birbirine yaklaştırır ve o ikisi bu ekranda farklı ŞEY demektir (kare = kalem, daire = durak).
+     * 44 dp'nin altındaki kontroller `touchSlop` payıyla eşiğe tamamlanır ve yapısal oldukları için yuvarlanmaz: bir piksel kayma
+     * kalem karesini durak dairesine yaklaştırır.
      */
-    /** Mal kaleminin ✓/✕ işaret kutusu (v2:151 — 26×26). */
+    /** Mal kaleminin ✓/✕ işaret kutusu (tasarım: 26×26). */
     markBox: 26,
-    /** Durak sırası dairesi ve iade adedi ±/− düğmesi (v2:78, 158 — 30×30). */
+    /** Durak sırası dairesi ve iade adedi ±/− düğmesi (tasarım: 30×30). */
     dotButton: 30,
-    /**
-     * **Çekmece radyo işareti** — tek seçimli listenin dairesi (v3 `03-Sefer-ve-Arac/02`; tasarım
-     * görüntüsünden piksel ölçüldü 01.09: 56 cihaz px @2× → 28).
-     *
-     * `markBox`(26) ve `dotButton`(30) ile Δ2 ama AYRI durak, çünkü rolü ayrı: kare = kalem
-     * işareti, daire = durak sırası, bu = SEÇİM. Aynı ekranda ikisi yan yana gelirse aynı ölçüde
-     * olmaları "aynı şey" der; dosyanın kendi kuralı da yapısal ölçülerin yuvarlanmamasını istiyor.
-     */
+    /** Çekmecedeki tek seçimli listenin radyo dairesi (tasarım: 28); kare ve durak dairesiyle aynı ölçü "aynı şey" derdi. */
     radioMark: 28,
-    /** Tahsilat tutarının ±/− düğmesi (v2:174 — 34×34). */
+    /** Tahsilat tutarının ±/− düğmesi (tasarım: 34×34). */
     stepButton: 34,
     /**
-     * Sayacın ORTASINDAKİ rakam kolonu — `stepButton`dan (34) ayrı ve ondan GENİŞ (kullanıcı
-     * bulgusu 03.09: *"ortaya tıklamak isterken artı ve eksiye tıklanıyor"*).
-     *
-     * Ölçüldü: ± hücreleri `iconButtonOnPhoto` (42), rakam kolonu ise 34'tü — yani ekranın tek
-     * DOKUNMALI orta hedefi, yanındaki iki düğmeden dardı. Rakam bir tuş değil bir ALAN: çekmeceyi
-     * ya da tuş takımını o açıyor, dolayısıyla en geniş hedef o olmalı. 60, ± ikilisinin toplamına
-     * yaklaşmadan parmağı ortada tutar; tasarımın kendi D4b'si de rakamı `flex:1` ile en geniş
-     * öğe yapıyordu (v3 `dusum`).
+     * Sayacın ortasındaki rakam kolonu; rakam çekmeceyi ya da tuş takımını açan bir alan olduğu için ± düğmelerinden geniştir. Dar
+     * kalınca ortaya basmak isteyen parmak artıya ya da eksiye değiyor.
      */
     stepValue: 60,
-    /* ── v3 depo hub'ı (v3:35-174) ─────────────────────────────────────────
-       Izgara kutucuğunun ikonu 32, alt şeritlerin ikonu 18, önizleme işareti 5×26, kutucuğun
-       asgari yüksekliği 104. Dördü de YAPISAL ölçüdür (dosyanın kendi kuralı: yapısal ölçüler
-       yuvarlanmaz) — kutucuk yüksekliği ızgaranın iki satırının hizasını tutar, işaretin eni bir
-       piksel oynarsa satır kayar. */
-    /** Izgara kutucuğunun ikonu (v3: 32×32). */
+    /* Depo hub'ının ölçüleri yapısaldır: kutucuk yüksekliği ızgaranın iki satırının hizasını tutar, işaretin eni bir piksel oynarsa
+       satır kayar. */
+    /** Izgara kutucuğunun ikonu (tasarım: 32×32). */
     tileIcon: 32,
-    /** Liste satırının solundaki ikon — mal kabul sevkiyatı (v3: 25×25). */
+    /** Liste satırının solundaki ikon — mal kabul sevkiyatı (tasarım: 25×25). */
     rowIcon: 25,
     /**
-     * Transfer kartının solundaki İKON KARESİ — gelen kartta ok, yoldakinde araç (v3 transfer
-     * listesi: 36×36, yarıçap `badge`). `thumb`a (44) bağlanamaz: o ürün karesidir ve satırın
-     * içeriğini gösterir; bu kare kartın TÜRÜNÜ söyler ve daha küçüktür. İçindeki çizim 18.
+     * Transfer kartının solundaki ikon karesi ve içindeki çizim (tasarım: 36 · 18). `thumb`a bağlanamaz: o ürünü gösterir, bu kartın
+     * türünü söyler.
      */
     cardTile: 36,
     cardTileIcon: 18,
-    /** Alt şeritlerin satır içi ikonu — yazıcı dişlisi (v3: 18×18). */
+    /** Alt bantların satır içi ikonu — yazıcı dişlisi (tasarım: 18×18). */
     stripIcon: 18,
-    /** D1 önizleme satırının sol işareti — en (v3: 5). */
+    /** Önizleme satırının sol işareti — en (tasarım: 5). */
     previewMark: 5,
-    /** D1 önizleme satırının sol işareti — boy (v3: 26). */
+    /** Önizleme satırının sol işareti — boy (tasarım: 26). */
     previewMarkHeight: 26,
-    /** Izgara kutucuğunun asgari yüksekliği (v3: 104). */
-    /* HUB KUTUCUĞU — **SABİT** yükseklik, taban değil (kullanıcı bulgusu 30.08, iki kez).
-       `minHeight` iken alt metni iki satıra taşan kutucuk komşusundan uzun kalıyordu ve ızgara
-       kayıyordu; tasarım sekizini de eşit çiziyor. Değer en uzun hâle göre: baş satırı (ikon +
-       kod) + başlık + İKİ satır alt metin + iç boşluklar. Alt metin `numberOfLines={2}` ile
-       kırpılıyor — üçüncü satır artık kutucuğu değil, cümleyi kısaltır. */
+    /** Izgara kutucuğunun yüksekliği. */
+    /* Taban değil sabit, çünkü alt metni iki satıra taşan kutucuk komşusundan uzun kalıp ızgarayı kaydırıyordu; değer en uzun hâle
+       göre, alt metin iki satırda kırpılır. */
     tile: 132,
     /**
-     * YÖNETİMİN "GÜNÜN NABZI" KUTUCUĞU (v3:2130 — `min-height:96`). Depo hub'ının 132'sinden AYRI
-     * durak ve ölçü farkı değil ROL farkı: depo kutucuğu bir İŞ KAPISIDIR (ikon + kod + başlık +
-     * iki satır alt metin, sekizi eşit boyda), nabız kutucuğu bir SAYIDIR (tek satır rakam +
-     * başlık + künye). 132'yi ödünç almak, üç satırlık içeriği dört satırlık kutuya koyup ortada
-     * boşluk bırakıyordu (görsel ajanının 30.08 ölçümü: kart tasarımdakinden yüksek, sayı ile
-     * etiketin arası açık).
+     * Yönetimin "günün nabzı" kutucuğu (tasarım: `min-height:96`). Depo kutucuğundan ayrı, çünkü bu tek bir sayı taşır ve 132'lik
+     * kutuda sayı ile etiketin arası açılıyordu.
      */
     pulseTile: 96,
     /**
-     * Liste satırının baş harf karesi — sosyal gelen kutusu (v3: 34×34).
-     * `avatarSm`e (40) bağlanamaz: o KİŞİ avatarıdır ve satırın başında tek başına durur; bu kare
-     * bir satırın içinde, ad ve önizlemeyle aynı bloğun solunda yaşıyor — 40 dp orada satırı
-     * ikinci bir kademeye zorluyor. `stepButton` (34) değeri tutuyor ama o bir ±  DÜĞMESİDİR;
-     * dosyanın kendi kuralı gereği ölçü değil ANLAM ayrı durak açtırır.
+     * Liste satırının baş harf karesi — sosyal gelen kutusu (tasarım: 34). Kişi avatarının 40'ı satırı ikinci kademeye zorlar;
+     * `stepButton` değeri tutsa da o bir düğme, anlam ayrı durak açtırır.
      */
     listAvatar: 34,
     /**
-     * Liste satırındaki KARE ÜRÜN ÖN İZLEMESİ — arama çekmecesi (kullanıcı isteği 30.08).
-     *
-     * Tasarımda yok: v3'ün arama satırı yalnız ad + künye. İstek cihazda doğdu — aynı ürünün
-     * 225 g ve 450 g boyları alt alta gelince metin ayırt etmeye yetmiyor, fotoğraf yetiyor.
-     *
-     * 44 seçildi: satırın iki metni (13,5 ad + 11 künye + 2 aralık ≈ 30) ile dolgusunun toplamına
-     * en yakın kare, yani görsel satırı BÜYÜTMÜYOR. `listAvatar` (34) küçük kalıyor — o bir baş
-     * harf karesidir, fotoğraf değil; `avatarSm` (40) ise kişi avatarının durağı ve dosyanın kendi
-     * kuralı ölçü değil ANLAM ayrı durak açtırır der. Kare kırpma: ürün fotoğrafları 3:2
-     * yükleniyor ve kareye ortadan oturuyor (`Komponent Envanteri` oran künyesi).
+     * Arama çekmecesindeki kare ürün önizlemesi; aynı ürünün iki boyu alt alta gelince metin ayırt etmeye yetmiyor. 44, satırın iki
+     * metniyle dolgusuna en yakın kare, yani satırı büyütmüyor.
      */
     thumb: 44,
   },
 
   /**
-   * Küçük dokunulabilir öğelere her kenardan eklenen dokunma payı. Kitin en KÜÇÜK görsel
-   * yüksekliği metin eylemidir (~20 dp); 12 dp pay onu 44 dp'ye çıkarır, dolayısıyla daha
-   * büyük olan rozet · çip · yuvarlak ikon düğmesi de eşiği kendiliğinden aşar. Tek değer
-   * bilerek: öğe başına pay hesaplamak, eşiğin bir gün birinde unutulması demekti.
+   * Küçük dokunulabilir öğelere her kenardan eklenen dokunma payı; en küçük öğe olan metin eylemini (~20 dp) 44 dp'ye çıkarır. Tek
+   * değer, çünkü öğe başına pay eşiğin bir gün birinde unutulması demek.
    */
   touchSlop: 12,
 
@@ -323,10 +198,7 @@ export const appMetrics = {
     hairline: 1,
     /** Standart çerçeve — girdi, çip, başlık çubuğu altı (tasarım: 1.5px). */
     base: 1.5,
-    /**
-     * Vurgulu girdi — "şimdi burayı doldur" alanının zeytin çerçevesi (tasarım: 2px; Musteri Mobil
-     * `shAddr` arama kutusu ve "Diğer" adı, 21.313).
-     */
+    /** Vurgulu girdi — "şimdi burayı doldur" alanının zeytin çerçevesi (tasarım: 2px). */
     accent: 2,
     /** Yığın avatarının krem halkası (tasarım: 2.5px). */
     ring: 2.5,
@@ -334,9 +206,8 @@ export const appMetrics = {
     spinner: 4,
     spinnerSm: 3,
     /*
-      İKON ÇİZGİSİ durakları — değerler ve tasarım gerekçeleri `@lezzet/design-tokens/icons`ta
-      (`ICON_STROKE`): web'in telefon görünümü de aynı duraklardan çizer, iki yüzey tek kaynaktan
-      okur (15.09). Tema adları (`iconStroke*`) çizicilerin sözleşmesi olduğu için değişmedi.
+      İkon çizgisi durakları `@lezzet/design-tokens/icons`tan gelir, ki web'in telefon görünümü ile aynı kaynaktan çizilsin. Tema
+      adları (`iconStroke*`) çizicilerin sözleşmesidir.
     */
     iconStroke: ICON_STROKE.base,
     iconStrokeLarge: ICON_STROKE.large,
@@ -346,12 +217,8 @@ export const appMetrics = {
   },
 
   /**
-   * BASILI GERİ BİLDİRİM — Token Kararlari #8. Web'in `cursor-pointer` + hover kuralının RN
-   * karşılığı budur: etkileşimli her öğe basıldığında görünür biçimde cevap verir.
-   * · sert gölgeli yüzey → `translate(2,2)` (gölge öğenin kutusuna ait olduğu için birlikte
-   *   kayar; tasarımın kendi davranışı da bu)
-   * · gölgesiz yüzey → `scale(.97)`, küçük öğede `.9`
-   * · metin eylemi → opaklık (tasarımda `.55`); küçültme metin bağlantısında titrek durur
+   * Basılı geri bildirim — web'in `cursor-pointer` + hover kuralının RN karşılığı: sert gölgeli yüzey gölgesiyle birlikte kayar,
+   * gölgesiz yüzey küçülür, metin eylemi solar. Küçültme metin bağlantısında titrek durduğu için metinde opaklık kullanılır.
    */
   press: {
     translate: 2,
@@ -361,19 +228,8 @@ export const appMetrics = {
   },
 
   /**
-   * SERT GÖLGENİN YERİ — gölge öğenin kutusunun DIŞINA taşar (sağa ve aşağı 3 dp). Web'de bunun
-   * bir bedeli yok: CSS `box-shadow` düzeni etkilemez ve taşan kısım serbestçe çizilir. RN'de
-   * öyle değil — kaydırma alanı çocuklarını kendi sınırında KIRPAR, dolayısıyla kabın kenarındaki
-   * öğenin gölgesi sessizce yok olur.
-   *
-   * ÖLÇÜLDÜ (cihaz, 09.08 · talep çekmecesi): kabın son çocuğu olan çerçeveli düğmenin alt ve sağ
-   * gölge bandı hiç çizilmiyordu; geriye yalnız köşe yaylarındaki kırıntılar kalıyor ve düğme
-   * "kenarı kirlenmiş" görünüyordu. Kırpma tek bir ekranın değil, sert gölgeli HER öğenin sorunu.
-   *
-   * ÇÖZÜM ÖĞENİN KENDİSİNDE: sert gölge çizen yüzey, kendi düzen kutusunda gölgesi kadar yer
-   * ayırır (`PressableSurface`, `feedback="shadow"`). Böylece kırpan kap ne olursa olsun gölge
-   * kutunun içinde kalır ve ekran başına yama gerekmez. Değer token'dan gelir, burada yeniden
-   * yazılmaz — gölge kayması değişirse ayrılan yer de değişir.
+   * Sert gölge öğenin kutusunun dışına taşar ve RN'de kaydırma alanı çocuklarını kendi sınırında kırptığı için kenardaki gölge
+   * sessizce kaybolur. Bu yüzden gölgeli yüzey kendi kutusunda gölgesi kadar yer ayırır (`PressableSurface`); değer token'dan gelir.
    */
   shadowRoom: customerAppShadowOffset,
 
@@ -391,10 +247,8 @@ export const appMetrics = {
   sheetMaxHeightRatio: 0.82,
 
   /**
-   * ARAMA GECİKMESİ (ms) — her tuşa basışta uca gitmemek için. Tasarımda karşılığı YOK (şablon
-   * yerel bir dizide süzüyor, ağ yok); değer PARAMETRİK bir varsayılan (CLAUDE §4): 350 ms,
-   * ortalama bir yazma temposunda kelimenin bitmesini bekleyecek kadar uzun, yazmayı bırakan
-   * parmağın altında listenin durduğu hissini vermeyecek kadar kısa.
+   * Arama gecikmesi (ms) — her tuşta uca gitmemek için; tasarımda karşılığı yok, parametrik varsayılan. Kelimenin bitmesini
+   * bekleyecek kadar uzun, yazmayı bırakan parmağa listenin durduğu hissini vermeyecek kadar kısa.
    */
   searchDebounceMs: 350,
 
@@ -402,9 +256,8 @@ export const appMetrics = {
   soldOutOpacity: 0.45,
 
   /**
-   * SEÇİLİ SEKME ikonunun vurgusu (tasarım: `transform:translateY(-2px) scale(1.12)`).
-   * Basılı geri bildirimden AYRI: o dokunma ANINI anlatır ve bırakınca geçer, bu ise DURUMU
-   * anlatır ve seçili kaldığı sürece durur. Aynı sözlüğe koymak ikisini karıştırırdı.
+   * Seçili sekme ikonunun vurgusu (tasarım: `translateY(-2px) scale(1.12)`). Basılı geri bildirimden ayrı, çünkü o dokunma anını,
+   * bu seçili kaldığı sürece durumu anlatır.
    */
   tabSelected: {
     lift: -2,
@@ -412,18 +265,8 @@ export const appMetrics = {
   },
 
   /**
-   * KREM CAMIN BULANIKLIĞI — `customerAppBlur.glass` token'ının RN karşılığı.
-   *
-   * Token CSS yarıçapı taşır (`blur(8px)`); `expo-blur` ise 1–100 arası bir YOĞUNLUK ister ve
-   * ikisi arasında TANIMLI BİR DÖNÜŞÜM YOK — iOS'ta değer sistem materyalinin ilerleme yüzdesi,
-   * Android'de kütüphanenin kendi ölçeği; belgelerin hiçbirinde px karşılığı verilmiyor
-   * (ölçülemedi, bkz. docs.expo.dev/versions/v57.0.0/sdk/blur-view). Uydurma bir çarpan yazmak
-   * ("8 × 3 = 24") ölçülmemiş bir şeyi ölçülmüş gibi gösterirdi.
-   *
-   * O yüzden PARAMETRİK bir varsayılan (CLAUDE §4): 20 = hafif buğu. Gerekçesi yüzeyin kendisi —
-   * krem cam zaten %96 opak, yani bulanıklığın görebildiği alan yüzeyin %4'ü; ağır bir yoğunluk
-   * orada görünmez ama iOS'ta gereksiz bir çizim maliyeti olurdu. Tek yerde durur; tasarımla
-   * cihaz üstünde karşılaştırıldığında buradan ayarlanır.
+   * Krem camın bulanıklığı: token CSS yarıçapı taşır, `expo-blur` ise tanımlı bir px karşılığı olmayan 1–100 yoğunluk ister, bu yüzden
+   * değer parametrik bir varsayılan. Cam zaten %96 opak; ağır yoğunluk görünmez ama iOS'ta çizim maliyeti olur.
    */
   glassBlurIntensity: 20,
 } as const;

@@ -6,28 +6,13 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from './icon';
 
 /*
-  METİN ALANI — v3'te ~18 kullanım. İki köşe kademesi (hap ⟷ yumuşak), sayısal ve çok satırlı
-  türler, alanın SONUNDA düğme yuvası (SIRET "Bul", mesaj "gönder", kupon "Uygula").
-
-  ETİKET: tasarım mobilde görünür etiket kullanmıyor, yalnız yer tutucu (placeholder) var —
-  ama yer tutucu ekran okuyucu için ad DEĞİLDİR ve yazmaya başlayınca kaybolur. O yüzden
-  `accessibilityLabel` ZORUNLU; görünür etiket isteyen ekran ayrıca `label` verir.
-
-  HATA: kenarlık `terracotta-line`e döner ve mesaj hata renginde yazılır; `accessibilityRole`
-  değişmez, mesaj alanla birlikte okunsun diye `accessibilityHint`e de geçer.
+  Tasarım mobilde yalnız yer tutucu çiziyor, ama yer tutucu ekran okuyucu için ad değildir ve yazmaya başlayınca kaybolur; bu yüzden
+  `accessibilityLabel` zorunlu. Hata mesajı `accessibilityHint`e de geçer ki alanla birlikte okunsun.
 */
 
 /*
-  ALANIN İÇERİK TÜRÜ — işletim sistemine "burada ne yazılacak" demenin TEK yeri.
-
-  Bunu söylemeyen alan, cihazın KAYITLI BİLGİLERİNİ (adres, ad, telefon) hiç önermez: Android
-  Autofill ve iOS AutoFill yalnız beyan edilmiş alanları tanır (kullanıcı bulgusu 09.08 — adres
-  çekmecesinde hiçbir öneri çıkmıyordu; alanlar türsüzdü). Kavram TEK, üç RN prop'una açılır
-  (`autoComplete` + iOS `textContentType` + klavye/büyük harf/düzeltme) — çağıran üçünü ayrı ayrı
-  bilmek zorunda kalmasın ve biri bir gün ötekinden ayrılmasın.
-
-  Not: bu OS-içi otomatik doldurmadır (cihazda kayıtlı adresi tek dokunuşla basar). Yazarken
-  arama sonucu öneren ADRES SERVİSİ ayrı bir konudur (dış API kararı — açık madde).
+  İşletim sistemi kayıtlı adres, ad ve telefonu yalnız türü beyan edilmiş alana önerir. Tür tek kavramdır ve üç RN prop'una açılır, ki
+  çağıran üçünü ayrı bilmek zorunda kalmasın ve biri ötekinden ayrılmasın.
 */
 type FieldTraits = {
   autoComplete?: TextInputProps['autoComplete'];
@@ -79,40 +64,19 @@ interface TextFieldProps {
   /** Köşe kademesi: hap (22) ⟷ yumuşak/kontrol (16). */
   shape?: 'pill' | 'soft';
   /**
-   * BİLGİ YOĞUNLUĞU — alanın hangi yüzeyde durduğunun görsel karşılığı (ölçüldü 30.08).
-   *
-   * · `comfortable` (varsayılan) — müşteri vitrini: `body-sm` punto, `sand-400` çerçeve.
-   *   Alan sayfanın kendi zemininde tek başına durur, çerçevenin belirgin olması gerekir.
-   * · `compact` — operasyon mobil: `note` punto, `sand-300` çerçeve. Ölçüm ikisini birlikte
-   *   söylüyor (tasarımda 5 alanın 5'i `1.5px #ddd6c4` + 12,5–13 px) ve sebebi tek: operasyonun
-   *   alanı bir KARTIN İÇİNDE durur, kartın kendi çerçevesi de `sand-300`tür. Daha koyu bir
-   *   çerçeve, alanı taşıyan kartın önüne geçerdi.
-   *
-   * Tek prop, çünkü ölçümde ikisi hiç ayrışmıyor: yoğunlaşan alan aynı anda sessizleşiyor.
-   * Ayrı iki prop, olmayan bir kombinasyonu (küçük punto + kalın çerçeve) mümkün gösterirdi.
+   * `compact` operasyonun kart içindeki alanıdır: punto küçülür ve çerçeve kartınki kadar sessizleşir, ki alan kartın önüne geçmesin.
+   * Tek prop, çünkü punto ve çerçeve hep birlikte değişir; iki prop olmayan bir birleşimi mümkün gösterirdi.
    */
   density?: 'comfortable' | 'compact';
-  /**
-   * Alanın İÇERİK TÜRÜ — işletim sistemine otomatik doldurma/öneri için söylenir (kullanıcı
-   * bulgusu 08.08: e-posta alanı klavye önerisi vermiyordu). Tek kavram, üç RN prop'una açılır
-   * (`autoComplete` + iOS `textContentType` + uygun klavye/büyük harf) — çağıran üçünü ayrı
-   * ayrı bilmek zorunda kalmasın.
-   */
+  /** Otomatik doldurma ve klavye önerisi için alanın türü (`CONTENT_TRAITS`). */
   content?: FieldContent;
   numeric?: boolean;
   multiline?: boolean;
   /** Alanın sonundaki yuva — genellikle bir düğme. */
   trailing?: ReactNode;
-  /**
-   * Alanın BAŞINDAKİ ikon (21.313 — adres çekmecesinin arama kutusu: büyüteç). İkon alanın İÇİNDE
-   * durur ve dokunmayı almaz; metin ikonun sağından başlar. Ölçü satır içi ikon durağından
-   * (`size.inlineIcon`), renk sessiz metin rengi.
-   */
+  /** Alanın başındaki ikon; dokunmayı almaz ve metin ikonun sağından başlar. */
   icon?: IconName;
-  /**
-   * VURGULU ÇERÇEVE (21.313) — tasarımın "şimdi burayı doldur" alanı: zeytin ve kalın (Musteri Mobil
-   * `shAddr`: arama kutusu ve "Diğer" adı `border:2px solid olive`). Hata çerçevesi bunu EZER.
-   */
+  /** Tasarımın "şimdi burayı doldur" alanı: zeytin, kalın çerçeve. Hata çerçevesi bunu ezer. */
   accent?: boolean;
   helperText?: string;
   errorText?: string;
