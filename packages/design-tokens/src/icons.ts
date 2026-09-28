@@ -202,6 +202,10 @@ export const ICON_PATHS = {
   star: { paths: ['M12 3l2.7 5.8 6.3.7-4.7 4.3 1.3 6.2-5.6-3.2-5.6 3.2 1.3-6.2L3 9.5l6.3-.7z'] },
 } as const satisfies Record<string, IconGeometry>;
 
+/** Puan kazanma anının yıldızı; çizgi değil dolgu olduğu için sözlüğün dışında, iki yüzeyin çizicisi `fill` ile basar. */
+export const POINTS_SPARK_PATH =
+  'M12 2c.6 5.2 4.2 8.8 9.4 9.4C16.2 12 12.6 16.2 12 22c-.6-5.8-4.2-10-9.4-10.6C7.8 10.8 11.4 7.2 12 2z';
+
 /** Çizicilerin tanıdığı ikon adları; yanlış ad derlemede yakalanır. */
 export type IconName = keyof typeof ICON_PATHS;
 

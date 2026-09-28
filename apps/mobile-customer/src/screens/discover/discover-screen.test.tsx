@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { CROP_CENTER } from '@lezzet/types';
 
-import awardMessages from '@/screens/customer-kit/points-award-messages.json';
+import awardMessages from '@lezzet/i18n/customer/points-award';
 import { DiscoverScreen } from './discover-screen';
 
 /*

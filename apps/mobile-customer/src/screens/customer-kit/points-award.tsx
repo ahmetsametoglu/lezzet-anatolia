@@ -2,9 +2,10 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import { Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { StyleSheet } from 'react-native-unistyles';
+import { POINTS_SPARK_PATH } from '@lezzet/design-tokens/icons';
 
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
-import messages from './points-award-messages.json';
+import messages from '@lezzet/i18n/customer/points-award';
 
 /*
   Puan kazanımının sonucu, her kazanma anının ortak bloğu: kazanılanı ve toplamı tek biçimde söyler, çünkü ayrı yazılan iki biçim bir
@@ -13,10 +14,6 @@ import messages from './points-award-messages.json';
 */
 
 type Messages = LocalizedCopy<typeof messages>;
-
-/** Puan yıldızının geometrisi — künyesi `PointsSpark`ta. */
-const SPARK_PATH =
-  'M12 2c.6 5.2 4.2 8.8 9.4 9.4C16.2 12 12.6 16.2 12 22c-.6-5.8-4.2-10-9.4-10.6C7.8 10.8 11.4 7.2 12 2z';
 
 interface PointsSparkProps {
   /** Kenar uzunluğu (dp) — kahraman ölçeği çağıranın kararı. */
@@ -38,7 +35,7 @@ export function PointsSpark({ size, color }: PointsSparkProps) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Path d={SPARK_PATH} fill={color} />
+      <Path d={POINTS_SPARK_PATH} fill={color} />
     </Svg>
   );
 }
