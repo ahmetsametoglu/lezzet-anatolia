@@ -1,3 +1,4 @@
+import { DISCOVER_UNDO_WINDOW_MS } from '@lezzet/helper';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { CROP_CENTER } from '@lezzet/types';
 
@@ -34,7 +35,6 @@ jest.mock('@/lib/discover/pending-swipes-store', () => ({
 const CANDIDATE_POINTS = 2;
 /** Yazımdan sonraki bakiye — turun kazancından BAĞIMSIZ bir sayı (uçtan geliyor, toplanmıyor). */
 const BALANCE_AFTER = 42;
-const UNDO_WINDOW_MS = 6000;
 const t = awardMessages.tr;
 
 function okResponse(data: unknown): Response {
@@ -91,7 +91,7 @@ describe('DiscoverScreen — bitişteki puan çipi', () => {
     expect(screen.queryByTestId('discover-award')).toBeNull();
 
     await act(async () => {
-      jest.advanceTimersByTime(UNDO_WINDOW_MS);
+      jest.advanceTimersByTime(DISCOVER_UNDO_WINDOW_MS);
     });
 
     expect(screen.queryByTestId('discover-award-settling')).toBeNull();

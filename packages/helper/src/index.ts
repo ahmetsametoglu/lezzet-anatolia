@@ -5,6 +5,7 @@ export * from './csv';
 export * from './date';
 export * from './delivery';
 export * from './delivery-terms';
+export * from './discover';
 export * from './format';
 export * from './home-copy';
 export * from './identity';

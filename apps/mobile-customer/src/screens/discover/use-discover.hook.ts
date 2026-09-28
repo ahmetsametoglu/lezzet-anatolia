@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { DISCOVER_UNDO_WINDOW_MS } from '@lezzet/helper';
 import { AppState } from 'react-native';
 import type { Locale } from '@lezzet/i18n';
 
@@ -15,9 +16,6 @@ import { appendPendingSwipe, clearPendingSwipes, readPendingSwipes } from '@/lib
   Keşif turunun tek veri kapısı: desteyi okur, oyu yazar, girişsiz turu hesaba bağlar. Puan toplamı kart sayısından değil
   sunucunun yazdığından kurulur; kaydırma geri alma penceresi dolana kadar bekler ki "Geri al" gerçek olsun.
 */
-
-/** Bir kaydırmanın yazılmadan beklediği süre (ms); pencere içinde geri alınan oy hiç gönderilmez. */
-const UNDO_WINDOW_MS = 6000;
 
 type DiscoverStatus = 'loading' | 'ready' | 'error';
 
@@ -127,7 +125,7 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
         pending.current.splice(at, 1);
         setPendingCount(pending.current.length);
         send(entry.input);
-      }, UNDO_WINDOW_MS);
+      }, DISCOVER_UNDO_WINDOW_MS);
       pending.current.push(entry);
       setPendingCount(pending.current.length);
     },

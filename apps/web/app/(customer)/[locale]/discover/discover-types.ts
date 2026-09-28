@@ -37,17 +37,21 @@ export interface DiscoverMobileProps {
   /** Sıradaki kartın destedeki yeri (0'dan) ve deste boyu — ilerleme dilimleri ve sayaç. */
   current: number;
   total: number;
-  earned: number;
+  /** Sunucunun bu turda yazdığı puan; girişsiz turda `null`, ödülün sahibi yok. */
+  awarded: number | null;
+  /** Son yazımın taşıdığı güncel bakiye; bilinmiyorsa `null`. */
+  balance: number | null;
   /** Bu turda beğenilen kart sayısı. */
   likes: number;
-  /** Yazımı süren oy var: puan toplamı henüz eksik, bitiş sayıyı onu beklemeden yazmaz. */
+  /** Geri alma penceresinde ya da yolda oy var: puan toplamı henüz eksik, bitiş sayıyı onu beklemeden yazmaz. */
   settling: boolean;
   signedIn: boolean;
   onVote: (vote: 'like' | 'dislike') => void;
+  /** Henüz sunucuya yazılmamış bir kaydırma var mı; "Geri al"ın tek koşulu. */
+  canUndo: boolean;
+  onUndo: () => void;
   /** Giriş dönüşünde hesaba yüklenen puan; talep yoksa `null`. */
   claimed: number | null;
   /** Deste hiç dolmadı: tur bitmedi, hiç başlamadı. */
   emptyDeck: boolean;
-  /** Biriken puanın para karşılığı, sunucuda biçimlendi. */
-  earnedMoney: string;
 }

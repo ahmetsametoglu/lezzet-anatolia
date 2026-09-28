@@ -1,3 +1,4 @@
+import { DISCOVER_UNDO_WINDOW_MS } from '@lezzet/helper';
 import { act, renderHook } from '@testing-library/react-native';
 import { CROP_CENTER } from '@lezzet/types';
 
@@ -28,7 +29,6 @@ jest.mock('@/lib/discover/pending-swipes-store', () => ({
 
 /** Ayardaki kart başına keşif puanı (`points_feedback_candidate`) — ölçümdeki değer. */
 const CANDIDATE_POINTS = 2;
-const UNDO_WINDOW_MS = 6000;
 
 const productId = (index: number): string => `0000000${index}-0000-4000-8000-000000000000`;
 
@@ -95,7 +95,7 @@ async function swipe(
   });
   if (!settle) return;
   await act(async () => {
-    jest.advanceTimersByTime(UNDO_WINDOW_MS);
+    jest.advanceTimersByTime(DISCOVER_UNDO_WINDOW_MS);
   });
 }
 
@@ -114,7 +114,7 @@ describe('useDiscover — turun puan toplamı', () => {
     expect(result.current.pointsSettling).toBe(true);
 
     await act(async () => {
-      jest.advanceTimersByTime(UNDO_WINDOW_MS);
+      jest.advanceTimersByTime(DISCOVER_UNDO_WINDOW_MS);
     });
 
     expect(result.current.awardedPoints).toBe(4 * CANDIDATE_POINTS);
@@ -155,7 +155,7 @@ describe('useDiscover — turun puan toplamı', () => {
       result.current.undoLastVote();
     });
     await act(async () => {
-      jest.advanceTimersByTime(UNDO_WINDOW_MS);
+      jest.advanceTimersByTime(DISCOVER_UNDO_WINDOW_MS);
     });
 
     expect(result.current.awardedPoints).toBe(CANDIDATE_POINTS);
