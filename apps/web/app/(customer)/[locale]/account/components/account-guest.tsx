@@ -8,10 +8,8 @@ import { LanguageCard } from './language-card';
 import { LegalDirectory } from './legal-directory';
 
 /**
- * Misafirin hesap ekranı — telefon görünümü, native hesabın misafir hâli (14.09): boş durum (hesap ikonu · karşılama ·
- * tek cümle · "hızlı doğrulama" hap düğmesi) ve altında bilgi ve koşullar (native'in misafir duvarının altındaki
- * bilgi kapısı). Araya web'e özgü dil kartı girer: native'de dil cihazdan gelir, web'de adresin kendisidir ve telefon
- * görünümünde footer yok. Masaüstünde misafir hâlâ girişe yönleniyor (`page.tsx`).
+ * Misafirin hesap ekranı, native hesabın misafir hâli: boş durum ve altında bilgi ve koşullar. Araya web'e özgü dil kartı girer,
+ * çünkü web'de dil adresin kendisidir ve telefon görünümünde altbilgi yok; masaüstünde misafir girişe yönlenir (`page.tsx`).
  */
 interface AccountGuestProps {
   locale: Locale;
