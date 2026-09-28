@@ -1,23 +1,7 @@
 /*
-  `globals.css` token bölümünün ÜRETİLMİŞ karşılığı (21.3). Web şeridi ileride `@theme`
-  bloğunu bu modülden türetecek (küçük bir üretim adımı; talep dosyasını yönetici açar) —
-  o güne kadar parite testi (`parity.test.ts`) iki kaynağın birebir aynı kaldığını zorlar.
-
-  Üretim DETERMİNİSTİKTİR: grup sırası aşağıdaki listede sabit (globals.css dosya sırası),
-  grup içi sıra nesnenin tanım sırasıdır; girinti/noktalama sabittir. Aynı modül her
-  çağrıda bayt-bayt aynı CSS'i verir.
-
-  FONT SATIRLARI BİLEREK YOK: `--font-*` token'ları next/font değişkenlerine bağlı
-  (bkz. customer.ts / operations.ts başlık yorumları) — web'deki üretim adımı o satırları
-  kendi tarafında tutar.
-
-  `customer-app.ts` DE BİLEREK YOK: mobil uygulamanın token'ları CSS'in ikizi değildir, web
-  tarafında üretilecek bir karşılıkları YOKTUR (kullanıcı kararı 07.08 — ayrım dosyayla).
-  Buraya eklenirlerse `globals.css` mobil kararlarla büyümeye başlar; tam da kaçınılan şey.
-
-  TELEFON ÖLÇEĞİ BLOĞU (14.09): müşterinin yazı kademeleri telefon görünümünde bir adım büyük
-  (`customerPhoneTextStepPx`). O blok YENİ token açmaz — tabandaki kademelerden TÜRER ve telefon
-  çerçevesinin kökünde (`[data-type-scale='phone']`) aynı değişkenleri yeniden tanımlar.
+  `globals.css` token bölümünün üretilmiş karşılığı; parite testi iki kaynağın birebir aynı kaldığını zorlar ve üretim
+  deterministiktir. Fontlar (next/font değişkenleri) ve `customer-app.ts` (mobil uygulamanın, web ikizi olmayan token'ları) bilerek
+  yoktur.
 */
 import {
   customerColors,
@@ -34,11 +18,8 @@ import {
   operationsText,
 } from './operations';
 
-/* Token ailesi → CSS custom property öneki. Anahtar + önek = tam CSS adı; adlandırma
-   kayıpsız geri üretilir (`--color-` + `ink` → `--color-ink`).
-   `--animate-` ve `--shadow-` web v1'le geldi (13.09 — panel, bildirim ve çekmece hareketi,
-   yüzen yüzey gölgeleri). Mobil uygulamanın gölge ve fotoğraf gradyanı aileleri AYRI kalır
-   (`customer-app.ts`; adlar çakışmaz) ve bu üretim onları basmaz. */
+/* Token ailesi → CSS custom property öneki; anahtar + önek tam CSS adıdır. Mobil uygulamanın gölge ve gradyan aileleri
+   `customer-app.ts`te ayrı kalır ve bu üretim onları basmaz. */
 type TokenGroup = readonly [
   prefix: '--color-' | '--text-' | '--radius-' | '--animate-' | '--shadow-',
   tokens: Record<string, string>,
@@ -61,10 +42,8 @@ const lightGroups: readonly TokenGroup[] = [
 ];
 
 /**
- * Yazı kademesinin WEB'deki adı, paketteki adından farklıysa. Tailwind `--color-X` ile `--text-X`in
- * ikisinden de `text-X` sınıfını türetir ve yalnız rengi üretir: `--text-body` boyu hiçbir sınıftan
- * ulaşılamıyordu, boy diye yazılan her `text-body` 16 px çiziliyordu. Native aynı kademeyi `text.body`
- * diye okumaya devam eder — çakışma yalnız web'in sınıf ad alanında.
+ * Yazı kademesinin web'deki adı, paketteki adından farklıysa: Tailwind `--color-body` ile `--text-body`den aynı `text-body` sınıfını
+ * türetir ve yalnız rengi üretirdi. Native aynı kademeyi `text.body` diye okumaya devam eder.
  */
 export const WEB_TEXT_NAMES: Readonly<Record<string, string>> = { body: 'copy' };
 
@@ -102,10 +81,8 @@ export function flattenDarkTokens(): Record<string, string> {
 }
 
 /**
- * TELEFON GÖRÜNÜMÜNÜN YAZI ÖLÇEĞİ (14.09) — müşterinin yazı kademeleri `customerPhoneTextStepPx`
- * kadar büyük. Yalnız BOYUT anahtarları: satır yüksekliği · ağırlık · harf aralığı alt anahtarları
- * (`--` sonekliler) oranlardır ve adımdan etkilenmez — native temanın `customerStops`u da yalnız boyut
- * durağına ekler. Operasyon kademeleri de bu bloğa girmez: büyütme müşteri yüzeyinin kararıdır.
+ * Telefon görünümünün yazı ölçeği: müşteri kademeleri `customerPhoneTextStepPx` kadar büyük. Yalnız boyut anahtarları girer; alt
+ * anahtarlar oran olduğu için adımdan etkilenmez, operasyon kademeleri de girmez.
  */
 export function flattenPhoneTextTokens(): Record<string, string> {
   const out: Record<string, string> = {};

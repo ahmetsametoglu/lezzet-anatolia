@@ -7,22 +7,9 @@ import { lightTheme, operationsTheme } from '../../theme/unistyles';
 import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
 
 /*
-  YAZI BOYUTU AYARI (kullanıcı kararı 09.08) — müşteri yazıları büyütüp küçültebilsin: seçim
-  onboarding'in yeni adımında yapılır, Hesabım'dan da değiştirilir; cihazda kalıcıdır.
-
-  ÖLÇEK YALNIZ YAZI DURAKLARINA uygulanır: `theme.text` içinde adı `--` İÇERMEYEN anahtarlar
-  boyut duraklarıdır (note, micro, body-sm…); `--` içerenler alt-özelliktir (font-weight,
-  line-height, letter-spacing) ve ÇARPILMAZ — ağırlık da sayı tutulduğu için (parse künyesi)
-  "tüm sayıları çarp" 700'ü 805 yapardı. Boşluk/ölçü katmanı (`space`, `size`) bilerek
-  ölçeklenmez: ayar yazıyı büyütür, sayfanın iskeletini değil.
-
-  UYGULAMA `UnistylesRuntime.updateTheme` ile ve HER ZAMAN BAZDAN çarparak yapılır (temanın
-  içindeki güncel değerden değil) — art arda seçimlerde çarpan birikmez.
-
-  KNIP GİRİŞİ (21.310): modül iki temayı birden ölçekler ve kitte durur, ama bugün onu yalnız müşteri
-  uygulaması okuyor. knip 5.88.1 derin importla tüketilen çalışma alanı dosyasını dosya düzeyinde tek
-  tüketiciden sayıyor: iki uygulama varken dosyayı "kullanılmıyor" diye gösterdi, operasyon çalışma alanı
-  dışlanınca bayrak kalktı (ölçüldü 14.09). Bu yüzden `knip.json`da kitin girişleri arasında yazılı.
+  Yazı boyutu ayarı cihazda kalıcıdır ve yalnız yazı duraklarını çarpar: `--` içeren alt anahtarlar (ağırlık, satır, aralık) ve
+  boşluk katmanı çarpılmaz, çünkü ayar yazıyı büyütür, sayfanın iskeletini değil. Çarpım her seferinde baz temadan yapılır ki art
+  arda seçimlerde birikmesin; modül `knip.json`da kitin girişleri arasında, çünkü derin importla tek uygulama tüketiyor.
 */
 
 /** Depo anahtarı — ham dizge burada YAZILMAZ, `lezzet.*` ailesinin sahibinden gelir. */
@@ -38,9 +25,7 @@ const FACTOR: Record<FontScale, number> = { small: 0.9, normal: 1, large: 1.15 }
 /** Seçimi iki temaya birden uygular — operasyon yüzeyi de aynı gözle okusun. */
 export function applyFontScale(scale: FontScale): void {
   const factor = FACTOR[scale];
-  /* "Hangi anahtar boyut durağıdır" kuralı `theme/parse`ta, TEK yerde (18.08): müşteri teması
-     kuruluşta bir kademe eklerken de aynı kuralı kullanıyor. Burada ikinci bir kopya vardı;
-     yeni bir alt-özellik soneki doğduğu gün ikisinden biri onu tanımayacaktı (CLAUDE §1). */
+  /* "Hangi anahtar boyut durağıdır" kuralı `theme/parse`ta tek yerde; müşteri teması kuruluşta da aynı kuralı kullanır. */
   // Güncelleyici parametresi BİLEREK kullanılmıyor: dönen nesne her seferinde BAZ temadan kurulur
   // (birikme yok) ve tip, birleşim yerine ilgili temanın kendisiyle birebir oturur.
   UnistylesRuntime.updateTheme('light', () => ({
