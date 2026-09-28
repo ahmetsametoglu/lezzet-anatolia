@@ -72,7 +72,7 @@ export default function AccountRoute() {
         name: me.name.trim(),
         email: me.email ?? '',
         phone: me.phone ?? '',
-        company: null,
+        company: me.companyInfo ? { ...me.companyInfo, vatNumber: me.vatNumber } : null,
         referralCode: me.referralCode,
         /* Dil buradan geçmez: tek kaynağı `lib/i18n/app-locale`; ikinci yol çipin arayüzden farklı bir dili işaretlemesine kapı açardı. */
         marketingEmail: me.marketingConsent?.email?.granted ?? false,

@@ -29,6 +29,8 @@ export function meFixture(roles: UserRole[], overrides: Partial<Me> = {}): Me {
     b2bPending: false,
     marketingConsent: {},
     referralCode: null,
+    companyInfo: null,
+    vatNumber: null,
     createdAt: '2026-08-08T09:00:00.000Z',
     ...overrides,
   });

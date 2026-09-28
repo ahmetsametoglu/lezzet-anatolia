@@ -1,5 +1,5 @@
 import { addressTitle } from '@lezzet/address';
-import { formatCompactEuro } from '@lezzet/helper';
+import { companyIdentifiers, formatCompactEuro } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import type { Country } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -62,7 +62,7 @@ interface AccountScreenProps {
   signedIn?: boolean;
   /** Ekran `/me`yi kendi okumaz, rota okur; bu yüzden kimliği tazeleyen kapı da rotanın elinde. */
   onRefreshIdentity?: () => void;
-  /** Fatura adresi rolünün tek ölçütü `/me`nin `type`ı; `company` künyesinin okuma ucu yok ve rota onu `null` geçiyor. */
+  /** Fatura adresi rolünün tek ölçütü `/me`nin `type`ı; şirket künyesi onay beklerken de dolu olabilir. */
   companyAccount?: boolean;
 }
 
@@ -74,6 +74,7 @@ export function AccountScreen({
 }: AccountScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
+  const companyLine = data.company && companyIdentifiers(data.company, t.company.identifiers);
   const { theme } = useUnistyles();
   const router = useRouter();
 
@@ -360,10 +361,8 @@ export function AccountScreen({
         {data.company === null ? null : (
           <View style={styles.companyCard} testID="account-company">
             <Text style={styles.companyEyebrow}>{upperIn(t.company.eyebrow, locale)}</Text>
-            <Text style={styles.companyName}>{data.company.name}</Text>
-            <Text style={styles.companyMeta}>
-              {t.company.identifiers.replace('{siret}', data.company.siret).replace('{vat}', data.company.vatNumber)}
-            </Text>
+            <Text style={styles.companyName}>{data.company.legalName}</Text>
+            {companyLine === null ? null : <Text style={styles.companyMeta}>{companyLine}</Text>}
             <Text style={styles.companyNote}>{t.company.note}</Text>
           </View>
         )}

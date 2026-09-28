@@ -21,3 +21,4 @@ export * from './slug';
 export * from './ticket';
 export * from './variant';
 export * from './channel-link';
+export * from './company';

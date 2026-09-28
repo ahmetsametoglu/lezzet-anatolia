@@ -59,4 +59,6 @@ export const MeSchema = UserProfileSchema.pick({
   marketingConsent: true,
   referralCode: true,
   createdAt: true,
+  companyInfo: true,
+  vatNumber: true,
 });

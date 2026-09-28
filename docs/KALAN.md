@@ -89,16 +89,15 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
     - [ ] Sipariş Onayı `checkout/[reference]` ↔ native `checkout`
     - [ ] Siparişler `orders` ↔ native `orders`
     - [ ] Sipariş Detay `orders/[reference]` ↔ native `orders`
-    - [ ] Hesap `account` ↔ native `account`
     - [ ] Bildirimler `account/notifications` ↔ native `notifications`
     - [ ] Tarifler `recipes` ↔ native `recipes-list`
     - [ ] Tarif `recipe/[slug]` ↔ native `recipe`
     - [ ] Geri Bildirim `feedback/[token]` ↔ native `feedback`
     - [ ] Professionnels `professionals` ↔ native `professionals`
     - [ ] Bilgi Sayfası `legal/*` ↔ native `legal`
-    - [ ] Tasarımda karesi yok, ölçü native ikizinden: `account/points` (native `points-history`) · `account/preferences` · `invite/[code]` (native `invite`) · `neighbor/[token]` (native `neighbor`)
+    - [ ] Tasarımda karesi yok, ölçü native ikizinden: `account/points` (native `points-history`) · `invite/[code]` (native `invite`) · `neighbor/[token]` (native `neighbor`)
     - [ ] En son, kullanıcı inceler (müşteriyle yoğun etkileşen sayfalar): Talepler `support` · Talep Detay `support/[ticket]` · Yeni Talep `support/new` ↔ native `support`
-  - Şu sayfaların ayrı telefon gövdesi yok, telefonda masaüstü gövdesinin `compact` dalı çiziliyor: `support/new` · `feedback/[token]` · `account/preferences` · `invite/[code]` · `neighbor/[token]`. Sırası gelen ekranda ilk iş fork.
+  - Şu sayfaların ayrı telefon gövdesi yok, telefonda masaüstü gövdesinin `compact` dalı çiziliyor: `support/new` · `feedback/[token]` · `invite/[code]` · `neighbor/[token]`. Sırası gelen ekranda ilk iş fork.
 - [~] (08.59) **MASAÜSTÜ WEB v1 — başlık, yer paneli ve adres penceresi `Musteri Web v1.dc.html`'in birebir aynısı; ikon seti müşterinin gördüğü her ekranda** *(kullanıcı isteği 13.09: "Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."; ikon seti kullanıcı kararı 14.09 — ikon deseni her yerde aynı; mobil web aynı anda `08.58`, iki şeridin işi birbirine bağlı olduğu için tek commit — kullanıcı kararı 13.09 + 14.09)*
 
 ## 09 · Admin Yüzeyi: Komponentler ve Sayfalar
@@ -344,11 +343,9 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 
 - [ ] **OB-09 · Aynı üründen çoklu adet içeren siparişlerde İade (Return) ve İmha (Disposal/Waste) işlemlerinin veritabanında tutarsızlığa yol açması** _(1. Bloke Edici Bulgular / Hatalar)_
 - [ ] **OB-02 · Harita üzerinde Shift + Sürükle ile çoklu posta kodu seçimi (alan seçimi)** _(2. Geliştirme ve İyileştirme Talepleri)_
-- [~] **OB-03 · Posta kodu arama kutusunda yerleşim/şehir adına göre arama yapılabilmesi** _(2. Geliştirme ve İyileştirme Talepleri)_
 - [ ] **OB-06 · Sipariş detay panelinde müşteri güvenilirlik geçmişi ve güven puanı gösterimi** _(2. Geliştirme ve İyileştirme Talepleri)_
 - [ ] **OB-07 · Operasyon panelindeki küçük yazı tipleri (Font Size) ve token yapısı uyumluluğu** _(2. Geliştirme ve İyileştirme Talepleri)_
 - [ ] **OB-10 · İade başlatıldığında açılan talebin (Request) iade tamamlandıktan sonra açık kalması** _(2. Geliştirme ve İyileştirme Talepleri)_
-- [ ] **OB-11 · Talepler sayfasında mesaj yazıldıktan sonra klavye kısayolu ile (Enter veya Shift+Enter) gönderim yapılması** _(2. Geliştirme ve İyileştirme Talepleri)_
 - [ ] **OB-12 · Talepler sayfasında Yapay Zeka destekli (AI-assisted) mesaj cevaplama özelliği** _(2. Geliştirme ve İyileştirme Talepleri)_
 
 ## Kullanıcı bulguları (eski docs/kullanici-bulgulari.md)
@@ -391,9 +388,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
 - [ ] (K.18) [hedef: mobil] Profesyoneller ekranının başlığı her dilin kendi sözcüğü olsun: TR "Profesyoneller", DE
   "Geschäftskunden" (FR "Professionnels" kalır) — web menüsü ve sayfası bu sözcüklere geçti, native
   `screens/professionals/messages.json` üç dilde hâlâ "Professionnels" diyor.
-- [ ] (K.19) [hedef: mobil] Hesap ekranının şirket kartı gerçek kullanımda hiç çizilmiyor: rota `company: null` geçiyor
-  (`app/(tabs)/account.tsx`), çünkü `/me` şirket künyesini taşımıyor. Web telefon görünümü kartı "SIRET · KDV" ile
-  çiziyor (`companyInfo` + `vatNumber`); native de aynı veriyi okumalı.
 - [ ] (K.27) [hedef: mobil] Müşteri uygulamasının sepeti ayarları ülkesiz ve bölgesiz okuyor: `mobile-api` `readCartView`
   yalnız depo kimliğini geçiyor (`api/v1/cart-view.ts`), istemci de yalnız posta kodu gönderiyor. Almanya'daki müşteri
   sepette FR kargo ücretini görür, checkout DE ücretini keser; bölge asgari sepeti sepette görünmez. Web `readPlaceScope`

@@ -1,21 +1,17 @@
+import type { Me } from '@lezzet/mobile-kit/src/lib/api/me';
+
 /*
   Hesap ekranının test verisi ve kimlik kartının başlangıç değeri; ekranın gerisi gerçek uçlardan okur. Alan adları
   sözleşmedekilerle aynı ki bağlanırken çeviri gerekmesin.
 */
-
-export interface AccountCompanyView {
-  name: string;
-  siret: string;
-  vatNumber: string;
-}
 
 export interface AccountData {
   /** Girilmemişse boş gelir; kartın e-postaya düşmesi ekranın kararı. */
   name: string;
   email: string;
   phone: string;
-  /** Onaylı profesyonel hesap; yoksa `null` (B2C). Okuma ucu YOK — girişli hesapta `null` taşınır. */
-  company: AccountCompanyView | null;
+  /** Şirket künyesi `/me`den; B2C hesapta `null`. */
+  company: (NonNullable<Me['companyInfo']> & Pick<Me, 'vatNumber'>) | null;
   /** Arkadaş getirme kodu; `/me`den gelir, kapalıysa `null`. */
   referralCode: string | null;
   marketingEmail: boolean;

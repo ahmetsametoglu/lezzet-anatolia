@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { formatCompactEuro } from '@lezzet/helper';
+import { companyIdentifiers, formatCompactEuro } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import accountMessages from '@lezzet/i18n/customer/account';
 import { SignOutLink } from '@/components/customer/account/sign-out-link';
@@ -133,13 +133,6 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
       </div>
     </div>
   );
-}
-
-/** Native "SIRET · KDV" kalıbı; ikisinden biri eksikse yalnız olan yazılır. */
-function companyIdentifiers(company: NonNullable<AccountView['company']>, template: string): string | null {
-  const { siret, vatNumber } = company;
-  if (siret && vatNumber) return template.replace('{siret}', siret).replace('{vat}', vatNumber);
-  return siret || vatNumber || null;
 }
 
 interface ProfileSectionProps {
