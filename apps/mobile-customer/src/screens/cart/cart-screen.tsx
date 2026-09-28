@@ -92,6 +92,8 @@ export function CartScreen() {
   const [couponSheetOpen, setCouponSheetOpen] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState<string | null>(null);
+  // Bar engel yazısıyla ve cihazın alt güvenli alanıyla uzar; dipteki pay sabit olsaydı son satır barın arkasında kalırdı.
+  const [barHeight, setBarHeight] = useState(0);
 
   const count = cartCount(cart);
   const isEmpty = count === 0;
@@ -359,7 +361,7 @@ export function CartScreen() {
   return (
     <View style={styles.screen}>
       {header}
-      <ScrollView contentContainerStyle={styles.content} testID="cart-scroll">
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: barHeight + theme.space['4xl'] }]} testID="cart-scroll">
         {/* Sessiz daralma yok: yer değişince her kalemin yeni hâli tek tek söylenir, hiçbir kalem silinmez. */}
         {cart.placeChange === null ? null : (
           <Note
@@ -532,7 +534,7 @@ export function CartScreen() {
       </ScrollView>
 
       {/* Yapışkan bar kaydırma alanının DIŞINDA (RN'de `position: sticky` yok — kitin kendi kalıbı). */}
-      <View style={styles.stickyBar}>
+      <View style={styles.stickyBar} onLayout={(event) => setBarHeight(event.nativeEvent.layout.height)}>
         {/* Engelin sebebi düğmenin yanında, çünkü uzun sepette dipteki açıklama ekranın çok altında kalır; sebep `cartBlockReason`dan
             gelir, dipteki uzun açıklama "ne yapmalıyım"ı anlatır. */}
         {barBlockText === null ? null : (
@@ -666,8 +668,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   content: {
     padding: theme.space['4xl'],
     gap: theme.space.xl,
-    // Yapışkan barın altında kalan son satır için nefes (şablon: 120 px'lik boşluk bloğu).
-    paddingBottom: theme.space['9xl'] + theme.space['5xl'],
   },
   lines: { gap: theme.space.lg },
 
@@ -716,7 +716,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     bottom: 0,
     paddingTop: theme.space.lg,
     paddingHorizontal: theme.space['4xl'],
-    paddingBottom: rt.insets.bottom + theme.space['6xl'],
+    /* Alt güvenli alan barın içinde ve dolguyla toplanmaz, ikisinin büyüğü alınır. */
+    paddingBottom: Math.max(rt.insets.bottom, theme.space['6xl']),
     borderTopWidth: theme.border.base,
     borderTopColor: theme.colors.ink,
     backgroundColor: theme.colors['cream-glass'],
