@@ -43,6 +43,10 @@ bağlanmaz. Satır = kimlik + ne + neden; ele alınmaya karar verilince satır `
 
 - (K.35) **Kendi kurduğumuz formlar Claude Design ile yeniden tasarlanacak** (ör. ürün düzenleme diyaloğu): tasarım dosyasında
   karşılığı olmadan kodda kurgulanmış formlar.
+- (OB-07) **Operasyon sayfalarında yazı boyu** — yayından sonra, kullanıcı bir süre kullandıktan sonra yeniden konuşulacak.
+  Bulgu: yazılar küçük, örneği sipariş detayındaki "Bağlı talepler" kartı (12–13px); istek operasyonun geneli. Ölçek iki kez
+  bir kademe büyütüldü; ölçek dışı yazı boyu kalmadı. Genel +1px yoğun tablolarda sütun kırıyor (sipariş no iki satır). Kişisel
+  yazı boyu seçimi yalnız müşteri tarafında var; operasyona kurulabilir.
 
 ## İçerik
 
