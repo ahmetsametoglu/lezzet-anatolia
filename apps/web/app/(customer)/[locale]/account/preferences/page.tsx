@@ -50,7 +50,7 @@ export default async function PreferencesPage({ params, searchParams }: Preferen
       locale={locale}
       accountChrome={{ back: { label: t.back, href: '/account' }, title: t.title }}
     >
-      <PreferencesClient t={t} locale={locale} view={view} token={token} />
+      <PreferencesClient t={t} locale={locale} device={device} view={view} token={token} />
     </SiteFrame>
   );
 }
