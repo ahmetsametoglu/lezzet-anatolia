@@ -29,6 +29,7 @@ import { PhoneCouponList } from './components/phone-coupon-list';
 import { PhoneDeleteAccount } from './components/phone-delete-account';
 import { PhonePointsEarnList, type PhoneEarnActions } from './components/phone-points-earn-list';
 import { PhoneProfileSheet } from './components/phone-profile-sheet';
+import { PhoneZoneInterest } from './components/phone-zone-interest';
 import { useRedeemPoints } from './use-redeem-points.hook';
 
 /**
@@ -112,6 +113,7 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
           />
         </div>
         <p className="font-sans text-body-sm leading-[1.6] text-sand-600">{copy.marketing.note}</p>
+        <PhoneZoneInterest copy={copy.marketing.zone} locale={locale} recorded={account.zoneNotices.map((notice) => notice.postalCode)} />
       </SettingsCard>
 
       <section className="flex flex-col gap-1 rounded-control bg-sand-150 p-3.5">
