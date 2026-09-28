@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { DISCOVER_UNDO_WINDOW_MS } from '@lezzet/helper';
 import { AppState } from 'react-native';
 import type { Locale } from '@lezzet/i18n';
+import type { DiscoverReward } from '@lezzet/types';
 
 import {
   claimDiscoverSwipes,
@@ -33,6 +34,12 @@ interface UseDiscoverResult {
   awardedPoints: number | null;
   /** Güncel bakiye; cevabı gelen son oydan alınır, çünkü bakiye turun dışında da değişir. `null` = bilinmiyor. */
   balance: number | null;
+  /** Kart başına puan ve puanın cent karşılığı; ziyaretçi teklifinin girdisi, ayar okunamadıysa `null`. */
+  reward: DiscoverReward | null;
+  /** Bu turda kimliksiz yazılan kaydırma sayısı; hesap açılırsa puana dönecek olanlar. */
+  guestSwipes: number;
+  /** Giriş dönüşünde hesaba yüklenen puan; talep yoksa ya da puan doğmadıysa `null`. */
+  claimedPoints: number | null;
   /**
    * Toplam henüz oturmadı mı — yazılmayı bekleyen (geri alma penceresindeki) ya da cevabı
    * gelmemiş bir oy var demektir. `true` iken `awardedPoints` EKSİKTİR ve sayı olarak
@@ -57,6 +64,9 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
   const [awardedPoints, setAwardedPoints] = useState<number | null>(null);
   /** Son cevabın taşıdığı bakiye — biriktirilmez, ÜZERİNE YAZILIR (arayüz künyesi). */
   const [balance, setBalance] = useState<number | null>(null);
+  const [reward, setReward] = useState<DiscoverReward | null>(null);
+  const [guestSwipes, setGuestSwipes] = useState(0);
+  const [claimedPoints, setClaimedPoints] = useState<number | null>(null);
   const generation = useRef(0);
 
   const load = useCallback(() => {
@@ -70,6 +80,7 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
         return;
       }
       setCards(result.data.cards);
+      setReward(result.data.reward);
       setStatus('ready');
     });
   }, [locale]);
@@ -100,7 +111,10 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
           if (result.data.balance !== null) setBalance(result.data.balance);
           // `id` YALNIZ girişsiz kaydırmada dolu: giriş dönüşünde talep kapısına götürülmek üzere
           // cihazda saklanır. Girişli müşteride `null` gelir ve saklanacak bir şey yoktur.
-          if (result.data.id !== null) void appendPendingSwipe(result.data.id);
+          if (result.data.id !== null) {
+            void appendPendingSwipe(result.data.id);
+            setGuestSwipes((count) => count + 1);
+          }
         })
         // DÜŞEN YAZIM DA BEKLEMEYİ BİTİRİR: o kaydırma sayılmaz (yukarıdaki künye) ve sayının
         // sonsuza kadar "hesaplanıyor" kalması, gelmeyecek bir puanı bekletmek olurdu.
@@ -189,20 +203,24 @@ export function useDiscover(locale: Locale, signedIn: boolean): UseDiscoverResul
           // Hiçbiri bağlanamasa bile (`linked: 0`) kuyruk temizlenir: aynı kimlikler her açılışta
           // boşuna taşınırdı — sunucu onları zaten değerlendirdi.
           void clearPendingSwipes();
-          if (result.data.points > 0) addAwarded(result.data.points);
+          // Yüklenen puan turun kazancına katılmaz, ayrı söylenir: müşteri önceki turunun karşılığını görmeli.
+          if (result.data.points > 0) setClaimedPoints(result.data.points);
         });
       })
       .finally(() => setWritingCount((count) => count - 1));
     return () => {
       alive = false;
     };
-  }, [signedIn, addAwarded]);
+  }, [signedIn]);
 
   return {
     status,
     cards,
     awardedPoints,
     balance,
+    reward,
+    guestSwipes,
+    claimedPoints,
     // Bekleyen kuyruk + cevabı gelmemiş yazım: ikisinden biri doluysa toplam henüz turun toplamı değil.
     pointsSettling: pendingCount > 0 || writingCount > 0,
     vote,

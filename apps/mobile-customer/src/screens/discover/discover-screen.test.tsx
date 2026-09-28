@@ -1,7 +1,8 @@
-import { DISCOVER_UNDO_WINDOW_MS } from '@lezzet/helper';
+import { DISCOVER_UNDO_WINDOW_MS, formatPrice } from '@lezzet/helper';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { CROP_CENTER } from '@lezzet/types';
 
+import discoverMessages from '@lezzet/i18n/customer/discover';
 import awardMessages from '@lezzet/i18n/customer/points-award';
 import { DiscoverScreen } from './discover-screen';
 
@@ -131,5 +132,39 @@ describe('DiscoverScreen — bitişteki puan çipi', () => {
     expect(screen.queryByTestId('discover-award')).toBeNull();
     // Girişsizin karşılığı puan çipi değil, giriş daveti.
     expect(screen.getByTestId('discover-login')).toBeTruthy();
+  });
+
+  // Ziyaretçinin bitişi biriken puanı parasıyla teklif etmezse ya da hesap açmayı ana eylem yapmazsa kırmızıya döner.
+  it('girişsiz turun bitişi biriken puanı parasıyla teklif eder, ana eylem hesap açmak', async () => {
+    fetchMock.mockImplementation((url) =>
+      Promise.resolve(
+        String(url).includes('/vote')
+          ? okResponse({ id: '00000002-0000-4000-8000-000000000000', pointsAwarded: null, balance: null })
+          : okResponse({
+              reward: { pointsPerCard: CANDIDATE_POINTS, centValue: 5 },
+              cards: [
+                {
+                  productId: '00000001-0000-4000-8000-000000000000',
+                  name: 'Aday',
+                  description: null,
+                  image: { url: null, crop: CROP_CENTER, frames: null },
+                },
+              ],
+            }),
+      ),
+    );
+
+    await render(<DiscoverScreen signedIn={false} locale="tr" />);
+    await act(async () => {});
+    await fireEvent.press(screen.getByTestId('discover-like'));
+    await act(async () => {
+      jest.advanceTimersByTime(DISCOVER_UNDO_WINDOW_MS);
+    });
+
+    const offer = discoverMessages.tr.offer;
+    const money = formatPrice(CANDIDATE_POINTS * 5, 'tr');
+    expect(screen.getByText(offer.body.replace('{points}', String(CANDIDATE_POINTS)).replace('{money}', money))).toBeTruthy();
+    expect(screen.getByTestId('discover-offer')).toBeTruthy();
+    expect(screen.queryByTestId('discover-login')).toBeNull();
   });
 });

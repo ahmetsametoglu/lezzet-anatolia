@@ -1,3 +1,4 @@
+import { formatPrice } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type { DiscoverCard, FeedbackVote } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -574,6 +575,13 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
   }, [discover, dragX, dragY, exitProgress, locked]);
 
   const showUndo = discover.status === 'ready' && cards.length > 0;
+  /* Giriş dönüşünde yüklenen puan her hâlde söylenir; deste bağlamadan önce okunmuş olabilir, yalnız bitişte çizilse görünmezdi. */
+  const claimedNote =
+    discover.claimedPoints === null ? null : (
+      <View style={styles.claimed} testID="discover-claimed">
+        <Text style={styles.claimedLabel}>{t.claimed.replace('{points}', String(discover.claimedPoints))}</Text>
+      </View>
+    );
   const bar = (
     <AppBar
       title={t.title}
@@ -671,6 +679,7 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
     return (
       <View style={styles.screen} testID="discover-screen">
         {bar}
+        {claimedNote === null ? null : <View style={styles.claimedSlot}>{claimedNote}</View>}
         <EmptyState
           fill
           title={t.empty.title}
@@ -690,6 +699,12 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
   }
 
   if (card === null) {
+    // Ziyaretçiye biriken puan parasıyla teklif edilir; ödül yazıldıysa tur zaten birine aittir.
+    const offerPoints = discover.reward === null ? 0 : discover.guestSwipes * discover.reward.pointsPerCard;
+    const offerMoney =
+      discover.reward === null || signedIn || discover.awardedPoints !== null || offerPoints === 0
+        ? null
+        : formatPrice(offerPoints * discover.reward.centValue, locale);
     /* ── Bitiş: ✦ · teşekkür · beğeni sayısı · puan çipi · giriş daveti · katalog (v3:435-444) ── */
     return (
       <View style={styles.screen} testID="discover-screen">
@@ -700,6 +715,7 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
           {/* Üst ve alt pay 4:6: blok optik merkeze çekilir, başlık çubuğu onu aşağı itmez. */}
           <View style={styles.spacerTop} />
           <View style={styles.doneBlock}>
+          {claimedNote}
           {/* Geri bildirim sonucunun aynı işareti: her puan kazanma anı aynı sonucu çizer. */}
           <PointsSpark size={discoverMetrics.thanksMark} color={theme.colors.terracotta} />
           <Text style={styles.doneTitle} accessibilityRole="header">
@@ -708,7 +724,11 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
           <Text style={styles.doneLikes} testID="discover-done-likes">
             {likesLabel(t, likes)}
           </Text>
-          <Text style={styles.doneBody}>{t.done.body}</Text>
+          <Text style={styles.doneBody}>
+            {offerMoney === null
+              ? t.done.body
+              : t.offer.body.replace('{points}', String(offerPoints)).replace('{money}', offerMoney)}
+          </Text>
 
           {/* Yolda oy varken toplam tam değil: son oy hâlâ geri alma penceresinde olabilir, sayı yerine bekleme söylenir. Bekleme
               yalnız girişliye, girişsiz turun ödülü sahipsizdir. */}
@@ -721,7 +741,18 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
 
           {/* Giriş daveti "turun sahibi var mı"ya bakar: ödül yazıldıysa sahibi vardır, arayüz misafire düşmüş olsa bile davet
               yanlış olurdu. */}
-          {signedIn || discover.awardedPoints !== null ? null : (
+          {/* Teklif varken ana eylem hesap açmaktır: değer gösterildikten sonraki davet reklam değil tekliftir. */}
+          {offerMoney !== null ? (
+            <View style={styles.offerActions}>
+              <PrimaryButton label={t.offer.cta} shape="pill" onPress={() => router.push('/login')} testID="discover-offer" />
+              <SecondaryButton
+                label={t.done.catalog}
+                shape="pill"
+                onPress={() => router.replace('/catalog')}
+                testID="discover-catalog"
+              />
+            </View>
+          ) : signedIn || discover.awardedPoints !== null ? null : (
             <>
               <Text style={styles.loginHint}>{t.done.loginHint}</Text>
               <SecondaryButton
@@ -734,14 +765,16 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
             </>
           )}
 
-          <View style={styles.catalogSlot}>
-            <PrimaryButton
-              label={t.done.catalog}
-              shape="pill"
-              onPress={() => router.replace('/catalog')}
-              testID="discover-catalog"
-            />
-          </View>
+          {offerMoney !== null ? null : (
+            <View style={styles.catalogSlot}>
+              <PrimaryButton
+                label={t.done.catalog}
+                shape="pill"
+                onPress={() => router.replace('/catalog')}
+                testID="discover-catalog"
+              />
+            </View>
+          )}
           </View>
           <View style={styles.spacerBottom} />
         </ScrollView>
@@ -753,6 +786,7 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
     <View style={styles.screen} testID="discover-screen">
       {bar}
       <View style={styles.body}>
+        {claimedNote}
         {/* ── Dilimli ilerleme (v3:383-389): geçilen · güncel · gelecek + "3 / 20" ── */}
         <View style={styles.progressRow}>
           <View style={styles.segments} testID="discover-segments">
@@ -1274,5 +1308,27 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   catalogSlot: {
     marginTop: theme.space.sm,
+  },
+  offerActions: {
+    alignItems: 'center',
+    gap: theme.space.lg,
+    marginTop: theme.space.sm,
+  },
+  claimed: {
+    alignSelf: 'center',
+    backgroundColor: theme.colors['olive-bg'],
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: theme.space['3xl'],
+    paddingVertical: theme.space.md,
+  },
+  claimedLabel: {
+    fontFamily: theme.font.body[600],
+    fontSize: theme.text.note,
+    color: theme.colors['olive-dark'],
+    textAlign: 'center',
+  },
+  claimedSlot: {
+    paddingTop: theme.space['3xl'],
+    paddingHorizontal: theme.space['4xl'],
   },
 }));
