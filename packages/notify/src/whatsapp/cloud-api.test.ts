@@ -3,19 +3,8 @@ import { sendCloudApiMessage, type CloudApiMessage } from './cloud-api';
 import { fakeCloudApiConfig, fakeMeta } from './testing';
 
 /**
- * CLOUD API İSTEMCİSİ (15.11) — gönderimin HTTP yarısı.
- *
- * ── NEDEN BU TESTLER GERÇEK BİR ŞEY SÖYLÜYOR ────────────────────────────────
- * Sağlayıcı bugün kapalı (numaranın Cloud API kaydı Meta kısıtı yüzünden bekliyor), yani "mesaj
- * gitti mi" sorusunu kimse cevaplayamaz. Ama **cevaplanabilir olan** başka bir soru var ve asıl
- * arıza kaynağı o: *isteği Meta'nın istediği şekilde mi kuruyoruz?*
- *
- * Sahte Meta bir taklit değil HAKEM: eksik `messaging_product`, alıcısız istek, tanınmayan tip,
- * dilsiz şablon — hepsini Meta'nın kendi hata koduyla (`100`) düşürüyor. Yani bu dosya "kodumuz
- * çalışıyor" demiyor, **"kodumuz sözleşmeye uyuyor"** diyor.
- *
- * Doğrulanmayan tek şey son sıçrama: gerçek Meta'nın kabul edip TESLİM ettiği. O, hesap açıldığı
- * gün tek bir gönderimle bilinir (`CLAUDE §0`).
+ * Gönderimin HTTP yarısı: sahte Meta eksik `messaging_product`, alıcısız istek, tanınmayan tip ve dilsiz şablonu Meta'nın kendi
+ * koduyla (`100`) düşürür, yani bu dosya isteğin sözleşmeye uyduğunu sınar. Gerçek Meta'nın teslim ettiği ancak canlı gönderimle bilinir.
  */
 const wa = (over: Partial<CloudApiMessage> = {}): CloudApiMessage => ({
   accountRef: '1227633040438008',
@@ -61,10 +50,8 @@ describe('WhatsApp gövdesi Meta sözleşmesine uyar', () => {
   });
 
   it('şablon dili ÇAĞIRANDAN gelir — sabit "tr" varsayımı `en_US` şablonlarını gönderemiyordu', async () => {
-    /* 28.08'de ölçülen sessiz arıza: dil hiç geçirilmiyordu ve varsayılan sabit `tr`ydi. Meta
-       şablonu ad + dil ÇİFTİYLE arıyor, yani `en_US`te onaylanmış hiçbir şablon — Meta'nın kendi
-       `hello_world`ü dahil — gönderilemiyordu. Hata `132001` ("şablon bulunamadı") diye geliyordu:
-       şablon VARDI, dili başkaydı. Sebep bizdeyken sağlayıcı arızası gibi okunacaktı. */
+    /* Meta şablonu ad ve dil çiftiyle arar: dil geçirilmezse başka dilde onaylı şablon `132001` ("şablon bulunamadı") ile düşer ve
+       sebep bizdeyken sağlayıcı arızası gibi okunur. */
     const meta = fakeMeta();
     const sonuc = await sendCloudApiMessage(
       fakeCloudApiConfig(meta),

@@ -1,27 +1,7 @@
 /**
- * **META CLOUD API İSTEMCİSİ** (15.11) — üç kanala mesaj gönderen tek HTTP kapısı.
- *
- * ── NEDEN BURADA ────────────────────────────────────────────────────────────
- * Uygulama katmanı HTTP bilmez (`STACK §4`): gönderim kararlarını `application/messaging/send.ts`
- * veriyor, teli buradan çekiyoruz. `@lezzet/notify` zaten OUTBOUND sağlayıcı paketidir ve
- * `whatsapp_api` sürücüsünün boş gövdesi 14'ten beri burada bekliyordu.
- *
- * ── SAĞLAYICI CANLI DEĞİLKEN NASIL YAZILDI ──────────────────────────────────
- * Numaranın Cloud API kaydı Meta tarafındaki portföy kısıtı yüzünden bekliyor (15.6/15.7), yani
- * bugün gerçek bir gönderim yapılamıyor. İstek şekilleri Meta'nın belgelediği sözleşmeden yazıldı
- * ve **sahte Meta** (`./testing`) o sözleşmeyi MAKİNEYLE zorluyor: eksik `messaging_product`,
- * bilinmeyen `type`, dilsiz şablon — üçü de sahte tarafından reddediliyor. Böylece "belgeye göre
- * yazılmış kod" değil, "belgeye uyduğu sınanan kod" oluyor.
- *
- * **Yine de DOĞRULANMAMIŞ sayılır** ve bu künye onu açıkça söylüyor: gerçek Meta'nın isteği kabul
- * edip mesajı teslim ettiği ancak canlı bir gönderimle bilinir (`CLAUDE §0` — ölçülmemiş varsayım).
- * Hesap açıldığı gün yapılacak iş bu dosyayı YAZMAK değil, DOĞRULAMAK.
- *
- * ── KANAL FARKI TEK YERDE ───────────────────────────────────────────────────
- * WhatsApp `POST /{phone_number_id}/messages` ve alıcıyı `to` alanında ister; Messenger/Instagram
- * `POST /{page_id}/messages` ve alıcıyı `recipient.id` içinde ister. İkisi ayrı uç gibi görünüyor
- * ama aynı karar zincirinin sonu — ayrı iki istemci, aynı jetonu ve aynı hata eşlemesini iki kez
- * yaşatırdı.
+ * Üç kanala mesaj gönderen tek HTTP kapısı: kararı `application/messaging/send.ts` verir, tel burada çekilir, çünkü uygulama katmanı
+ * HTTP bilmez ve istek şekli sahte Meta'da (`./testing`) sözleşmeye karşı sınanır. Kanal farkı (WhatsApp `to`, Messenger/Instagram
+ * `recipient.id`) tek istemcide durur, yoksa jeton ve hata eşlemesi iki istemcide ayrı ayrı yaşardı.
  */
 
 /** Graph sürümü sabit ve AÇIK: "en son" diye bir sürüm yok, Meta eskisini bir gün kapatır. */
@@ -54,10 +34,8 @@ export interface CloudApiMessage {
    */
   interactive?: Record<string, unknown> | null;
   /**
-   * **İNSAN TEMSİLCİ ETİKETİ** (yalnız Messenger/Instagram) — 24 saat kapandıktan sonra 7 güne
-   * kadar cevap yazmanın Meta'daki tek yolu. Kararı `send.ts` verir (pencere hesabı orada); burası
-   * yalnız çevirir. WhatsApp gövdesinde karşılığı YOK ve olmamalı: orada kapalı pencerenin çaresi
-   * ücretli şablondur, etiket değil.
+   * İnsan temsilci etiketi, yalnız Messenger/Instagram: 24 saat kapandıktan sonra 7 güne kadar cevap yazmanın Meta'daki tek yolu;
+   * kararı pencereyi hesaplayan `send.ts` verir. WhatsApp'ta karşılığı yoktur, orada kapalı pencerenin çaresi ücretli şablondur.
    */
   humanAgent?: boolean;
 }
@@ -72,11 +50,8 @@ export type CloudApiResult =
   | { ok: false; reason: string; retryable: boolean };
 
 /**
- * Meta hata kodlarının bizim sınıfımıza eşlenmesi.
- *
- * Kodlar Meta'nındır, biz uydurmuyoruz — ve eşleme BURADA duruyor çünkü çağıranın "yeniden dene"
- * düğmesini doğru yere koyması buna bağlı. Tanınmayan kod **denenebilir** sayılıyor: bilinmeyen bir
- * hatayı kalıcı ilan etmek, geçici bir kesintide mesajı sessizce çöpe atmak olurdu.
+ * Meta hata kodunu "yeniden denenebilir mi" sorusuna eşler; çağıranın yeniden deneme kararı buna bağlı. Tanınmayan kod denenebilir
+ * sayılır, çünkü bilinmeyen hatayı kalıcı ilan etmek geçici bir kesintide mesajı sessizce çöpe atardı.
  */
 function retryableOf(httpStatus: number, code: number | undefined): boolean {
   if (code === 190) return false; // geçersiz/expired jeton — tekrar aynı sonucu verir
@@ -112,15 +87,9 @@ function whatsappBody(message: CloudApiMessage): Record<string, unknown> {
 }
 
 /**
- * Messenger/Instagram gövdesi — alıcı `recipient.id`de, metin `message.text`te.
- *
- * `messaging_type: 'RESPONSE'`: bu bir CEVAPTIR, işletme-başlatan bir mesaj değil. Alan boş
- * bırakılırsa Meta isteği reddediyor; yanlış değer ("UPDATE") ise pencere dışında ücret/etiket
- * kurallarına takılır. Şablon kavramı bu kanallarda YOK — gönderim kapısı zaten öyle reddediyor.
- *
- * **İki zarf, tek gövde:** pencere kapandıktan sonra aynı mesaj `MESSAGE_TAG` + `HUMAN_AGENT` ile
- * gider (Meta'nın belgelediği alan adları; 7 günlük aralık). `messaging_type` ile `tag` BİRLİKTE
- * yazılır — etiketsiz `MESSAGE_TAG` da, `RESPONSE` yanında duran bir `tag` de reddedilir.
+ * Messenger/Instagram gövdesi: `messaging_type: 'RESPONSE'` şart, çünkü alan boşsa Meta reddeder, yanlış değer ise pencere dışında
+ * ücret ve etiket kurallarına takılır. Pencere kapandıktan sonra aynı gövde `MESSAGE_TAG` + `HUMAN_AGENT` ile gider ve iki alan
+ * birlikte yazılır, çünkü Meta biri tek başına duran isteği reddeder.
  */
 function messengerBody(message: CloudApiMessage): Record<string, unknown> {
   return {
