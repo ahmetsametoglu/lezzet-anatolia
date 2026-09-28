@@ -1,10 +1,5 @@
-// Sipariş DETAYI view-model'leri (09.7 · tasarım "Operasyon - Siparis Detay").
-//
-// Sözleşmenin ilk maddesi burada karşılığını bulur: **türetilmiş alan yazılmaz**. Satır tutarı,
-// kalan, ödeme durumu, iade tutarı — hepsi hesaplanır ve view-model'e hesaplanmış hâliyle girer;
-// ekranda formül yoktur, operatör onaylar.
-//
-// Para her yerde KURUŞ (STACK §8).
+// Sipariş detayının view-model'leri: satır tutarı, kalan, ödeme durumu ve iade tutarı hesaplanmış hâliyle girer, ekranda formül
+// yoktur. Para her yerde kuruş.
 import type { OrderBoxTrace } from '@lezzet/application';
 import type { OrderDecision } from '@lezzet/domain-core';
 import type {
@@ -44,12 +39,8 @@ export interface OrderLineView {
   /** Satır tutarı — SİPARİŞ EDİLEN adet üzerinden, indirim düşülmüş. Eksik gitmişse ÜSTÜ ÇİZİLİR. */
   lineTotalCents: number;
   /**
-   * Satırın ÖDENECEK tutarı — karşılanan adet üzerinden, indirim payı o orana bölünmüş (01.09).
-   *
-   * Eksiksiz kalemde `lineTotalCents` ile aynıdır. Ayrı alan olmasının sebebi ekranın iki sayıyı da
-   * göstermesi: sipariş edilenin üstü çizilir, ödenecek onun yanında durur. Tek sayı gösterilseydi
-   * operatör ya "ne sipariş edildi"yi ya "ne ödenecek"i kaybederdi — ve eksik giden kalemde ekranda
-   * duran tek sayı (38,19) tahsil edilecek olan DEĞİLDİ.
+   * Satırın ödenecek tutarı — karşılanan adet üzerinden, indirim payı o orana bölünmüş. Ayrı alan, çünkü ekran sipariş edileni
+   * üstü çizili ve ödeneceği yanında gösterir; tek sayı ikisinden birini kaybettirirdi.
    */
   payableCents: number;
   /** Paketten geldiyse paketin kimliği; tek tek alınmış kalemde `null` (DOMAIN §13). */
@@ -57,16 +48,8 @@ export interface OrderLineView {
   /** İade edildiyse malın akıbeti — stok hareketini besleyen karar. */
   returnDisposition: ReturnDisposition | null;
   /**
-   * **Teslim sonrası iadede varsayılan İMHA mı** (16.08) — `product.storage_type === 'frozen'`.
-   *
-   * `DOMAIN §8` bunu baştan yazıyordu (*"teslim edilmiş ve sonra iade edilen donuk ürün, soğuk
-   * zinciri belgelenemediği için varsayılan olarak imha edilir — restok yalnız admin istisnasıdır"*)
-   * ama kural UYGULANAMIYORDU: hangi ürünün donuk olduğunu söyleyen bir alan yoktu ve iade penceresi
-   * her kalemde `restock`tan başlıyordu — kuralın tam tersi. Saklama rejimi alanı (`0005`) o boşluğu
-   * kapattı.
-   *
-   * Karar motorun (`defaultsToDiscardOnReturn`), ekranın değil: eşiğin `frozen` olduğu tek yerde
-   * yazılı kalsın.
+   * Teslim sonrası iadede varsayılan imha mı: donuk ürünün soğuk zinciri belgelenemediği için imha edilir (DOMAIN §8). Karar
+   * motorun (`defaultsToDiscardOnReturn`), ki eşiğin `frozen` olduğu tek yerde yazılı kalsın.
    */
   defaultsToDiscard: boolean;
   /** Hangi partilerden çıktı (geri çağırma izi); hazırlanmamış siparişte boş. */
@@ -86,10 +69,8 @@ export interface OrderTotalLine {
   label: string;
   amountCents: number;
   /**
-   * `sum` = ara toplam · `deduction` = düşülen (eksi, amber) · `note` = hesaba GİRMEYEN bilgi
-   * satırı (içindeki KDV) · `grand` = sipariş toplamı · `refund` = toplamdan sonra geri ödenen
-   * (eksi, kırmızı). Sonuncusu bilinçli olarak toplamın ALTINDA: iade siparişin tutarını değil,
-   * paranın akıbetini anlatır.
+   * `sum` ara toplam · `deduction` düşülen · `note` hesaba girmeyen bilgi (içindeki KDV) · `grand` sipariş toplamı · `refund`
+   * geri ödenen. İade toplamın altında, çünkü siparişin tutarını değil paranın akıbetini anlatır.
    */
   kind: 'sum' | 'deduction' | 'note' | 'grand' | 'refund';
 }
@@ -107,11 +88,8 @@ export interface OrderMovementView {
 }
 
 /**
- * Zaman çizelgesi adımı. `skipped` olan gerçekleşmemiştir ama görünür kalır.
- *
- * Çizelge yalnız DURUM geçişlerinden ibaret değil: siparişe açılan talep de kaydın başına gelen bir
- * şeydir ve zaman içinde yerini bulmalı — "teslim edildi"nin bir gün sonrasına düşen bir şikâyet,
- * ayrı bir kartta durduğunda sıradan koparılmış olurdu.
+ * Zaman çizelgesi adımı; `skipped` olan gerçekleşmemiştir ama görünür kalır. Siparişe açılan talep de çizelgeye girer, ki
+ * teslimden sonra gelen şikâyet sırasından koparılmasın.
  */
 export interface OrderTimelineStep {
   key: string;
@@ -130,11 +108,8 @@ export interface OrderTimelineStep {
 }
 
 /**
- * "Bağlar" kartının satırı — bu siparişin BAŞKA bir kayda değdiği yer: açılmış talep, çıkmış parti.
- *
- * İki ayrı kart yerine tek kart, çünkü operatörün sorusu tek: "bu siparişin başka nereye dokunduğu
- * var mı?" Talep ile parti izi ayrı kartlarda dursaydı, ikisi de boşken sağ rayda iki boşluk kalır,
- * ikisi de doluyken hangisine önce bakılacağı ekranın değil kartların sırasına bağlı olurdu.
+ * "Bağlar" kartının satırı — bu siparişin başka bir kayda değdiği yer. Tek kart, çünkü operatörün sorusu tek: bu sipariş başka
+ * nereye dokunuyor.
  */
 export interface OrderLinkView {
   key: string;
@@ -151,10 +126,7 @@ export interface OrderLinkView {
   cta: string;
 }
 
-/**
- * "Finansal" kartının satırı — satış, gider, kâr. Rol kapılı kart (bkz. `OrderFinanceView`).
- * Gider satırları POZİTİF taşınır; eksi işareti gösterimin işidir.
- */
+/** "Finansal" kartının satırı (rol kapılı, `OrderFinanceView`); gider satırları pozitif taşınır, eksi işareti gösterimin işidir. */
 export interface OrderFinanceRow {
   label: string;
   amountCents: number;
@@ -166,9 +138,8 @@ export interface OrderFinanceRow {
 }
 
 /**
- * Tek siparişin kâr okuması — **merkezî kârlılık motorunun (`orderContribution`, 12.6) ekran
- * karşılığı**. Sipariş detayı kendi kâr formülünü YAZMAZ: yazsaydı aynı siparişin kârı bu sayfada
- * bir, kârlılık raporunda başka çıkardı ve hangisinin doğru olduğu tartışılırdı.
+ * Tek siparişin kâr okuması — merkezî kârlılık motorunun (`orderContribution`) ekran karşılığı. Sipariş detayı kendi kâr formülünü
+ * yazmaz, yoksa aynı siparişin kârı bu sayfada ve raporda ayrı çıkardı.
  */
 export interface OrderFinanceView {
   rows: OrderFinanceRow[];
@@ -181,28 +152,16 @@ export interface OrderFinanceView {
 }
 
 /**
- * Teslim kanıtı — "eksik geldi" ihtilafının dayanağı.
- *
- * **Alanlar 07.08'de DEĞİŞTİ ve sebebi bir arızaydı** (arka uç şeridinin ölçümü): bu görünüm
- * `signature` · `photos[]` · `note` · `by` okuyordu, yazan taraf ise `kind` · `imageKey` ·
- * `receivedBy` · `courierId` yazıyordu. Ortak tek alan `at` idi — yani `parts` her zaman boş,
- * `by` her zaman `null` ve **kanıt görseli hiç açılamıyordu.** İki taraf da kendi içinde tutarlı
- * olduğu için hiçbir yerde hata vermiyordu; ekran "kanıt var" diyor, neyin var olduğunu
- * söyleyemiyordu. Açılamayan bir sigorta, olmayan sigortadır.
- *
- * Şekil artık tek kaynakta (`DeliveryProofRecordSchema`) ve okuma tek kapıdan (`readDeliveryProof`);
- * yanlış alan adı bugün derleme hatası.
+ * Teslim kanıtı — "eksik geldi" ihtilafının dayanağı. Şekil tek kaynakta (`DeliveryProofRecordSchema`), okuma tek kapıdan
+ * (`readDeliveryProof`), ki yazan ile okuyan alan adlarında ayrışamasın.
  */
 export interface DeliveryProofView {
   when: string | null;
   /** Kapıda teslim ALAN kişi — B2B'de "kim imzaladı" ihtilafın asıl cevabıdır. */
   receivedBy: string | null;
-  /** Kanıt türü — imza çizimi · kapı fotoğrafı · kutu okutması (23.8: görselsiz, kodların kendisi kanıt). */
+  /** Kanıt türü — imza çizimi · kapı fotoğrafı · kutu okutması (görselsiz, kodların kendisi kanıt). */
   kind: 'signature' | 'photo' | 'box_scan';
-  /**
-   * SÜRELİ imzalı adres (15 dk, private kova). `null` = kova yapılandırılmamış ya da anahtar ölü.
-   * Kalıcı bir bağlantı DEĞİL: ekranda saklanmaz, paylaşılmaz.
-   */
+  /** Süreli imzalı adres (15 dk, private kova); kalıcı bağlantı değil, saklanmaz. `null` = kova yok ya da anahtar ölü. */
   imageUrl: string | null;
 }
 
@@ -276,12 +235,8 @@ export interface OrderDetailView {
     dueDate: string | null;
     overdue: boolean;
     /**
-     * Siparişin KDV rejimi — **tutarın hangi tabanda okunacağını söyler** (01.09).
-     *
-     * Ekran "Sipariş toplamı" hücresinin altına sabit `KDV dahil` yazıyordu ve bu B2B'de YANLIŞTI:
-     * işletme fiyatları KDV hariçtir (`vatBaseOf`), yani müşterinin ödeyeceği tutar ekranda yazandan
-     * büyüktür. Ters yükümlülükte ise ne "dahil" ne "hariç" doğrudur — vergi hiç yoktur.
-     * Karar kanal + rejim ikilisinden çıkar; etiketi `moneyCells` kuruyor.
+     * Siparişin KDV rejimi — tutarın hangi tabanda okunacağını söyler: B2B fiyatı KDV hariçtir, ters yükümlülükte vergi hiç
+     * yoktur. Etiket kanal ve rejim ikilisinden `moneyCells`te kurulur.
      */
     vatTreatment: VatTreatment;
   };
@@ -297,62 +252,39 @@ export interface OrderDetailView {
 
   delivery: {
     /**
-     * GENİŞ küme — `pickup` burada GÖRÜLÜR (26.08): yerinde satış da bir sipariştir ve operasyon
-     * onu bu ekranda açar. Dar bırakılsaydı ekran tezgâhtan satılan malı rota teslimatı diye
-     * yazar, olmayan bir teslimat günü ve kurye alanı gösterirdi.
+     * Geniş küme, `pickup` dahil: yerinde satış da bir sipariştir. Dar bırakılsaydı ekran tezgâh satışına olmayan bir teslimat günü
+     * ve kurye alanı gösterirdi.
      */
     type: DeliveryType;
     date: string | null;
     address: string;
     /**
-     * **Adresin kapısı doğrulandı mı** (11.11) — sipariş anındaki kopyadan okunur
-     * (`geo_precision`/`geo_alt_label`), adres kaydından DEĞİL: müşteri adresini sonradan düzeltmiş
-     * olabilir ama bu sipariş eski hâliyle yola çıktı ve operatörün baktığı şey o.
-     *
-     * Sevkiyat masası aynı olguyu SAYI olarak gösteriyor ("2 durak başka posta kodunda"); burası
-     * tek siparişin cümlesidir ve **eylemin yeri burası** — operatör telefonu bu ekrandan açıyor.
+     * Adresin kapısı doğrulandı mı — sipariş anındaki kopyadan okunur, adres kaydından değil, çünkü sipariş eski hâliyle yola
+     * çıktı. Sevkiyat masası aynı olguyu sayı olarak gösterir; eylemin yeri burası, operatör telefonu buradan açar.
      */
     doorCheck: DoorCheck;
     /**
-     * Adrese GİDEN kişi — sipariş anındaki kopyadan (`address_snapshot.recipient`), hesap sahibi
-     * DEĞİL. Kargo künyesi adsız üretilemez (taşıyıcıların hepsinde zorunlu alan) ve teslim
-     * noktasında kimlik BU adla karşılaştırılır; hediye ya da iş adresinde o ad hesabınkinden
-     * başkasıdır ve yanlış ad paketi iade ettirir.
-     *
-     * `fromAccount: true` = adreste alıcı yazılı değil, hesap sahibinin adına düşüldü. Bayrak
-     * EKRANDA yazılır: geri düşüşü sessizce yapmak, tahmin edilmiş bir adı ölçülmüş gibi
-     * okuturdu (CLAUDE §1). `phone` yalnız ADRESİN telefonudur — hesabınkine düşmez, çünkü kapıda
-     * aranacak numara hesap sahibininki olmak zorunda değil; yoksa satır hiç çizilmez.
-     *
-     * Tümü `null`: ne kopyada alıcı var ne hesabın adı çözülebildi.
+     * Adrese giden kişi, sipariş anındaki kopyadan; hesap sahibi değil, çünkü kapıda kimlik bu adla karşılaştırılır. `fromAccount`
+     * hesap adına düşüldüğünü ekranda söyler; `phone` yalnız adresin telefonudur, `null` = ad çözülemedi.
      */
     recipient: { name: string; phone: string | null; fromAccount: boolean } | null;
     courierName: string | null;
-    /** Hangi GERÇEKLEŞEN seferle gitti (18.08) — SF kodu; `null` = henüz sefere bağlanmadı. */
+    /** Hangi gerçekleşen seferle gitti — SF kodu; `null` = henüz sefere bağlanmadı. */
     runReference: string | null;
     proof: DeliveryProofView | null;
     /**
-     * Siparişin çıktığı depo — KÜNYE bilgisidir, kontrol değil (19.5): sipariş tek depodan çıkar ve
-     * o depo adresten türemiştir, buradan değiştirilmez. `null` yalnız ad çözülemediğinde.
+     * Siparişin çıktığı depo — künye bilgisidir, kontrol değil: depo adresten türemiştir, buradan değiştirilmez. `null` yalnız ad
+     * çözülemediğinde.
      */
     warehouse: { code: string; name: string } | null;
     /**
-     * **KUTU İZİ** (07.09) — "bu siparişin hangi kutuları çıktı": mühür, araca yükleme ya da
-     * taşıyıcıya devir, kapıda okutma. Kaynak paketin `listOrderBoxes` kapısı — mobilin de
-     * okuyabileceği tek yer; web kendi kompozisyonunu kurmaz (`BACKLOG §17`). Boş dizi = kutu
-     * açılmadı (henüz hazırlanmadı ya da kutusuz eski akış); ekran bunu bir cümleyle söyler.
-     * İşlem burada YOK: kutu mobilde açılır, kapanır, yüklenir (`design/KARARLAR.md §4`).
+     * Kutu izi — mühür, yükleme ya da devir, kapıda okutma; kaynak paketin `listOrderBoxes` kapısı, ki mobil de aynı yerden okusun.
+     * Boş dizi = kutu açılmadı; işlem burada yok, kutu mobilde açılır ve kapanır.
      */
     boxes: OrderBoxTrace[];
     /**
-     * **KARGO GÖNDERİSİ** (07.12) — `null` = rota siparişi ya da henüz duyurulmamış kargo.
-     *
-     * Kaynak müşteri yüzeyiyle AYNI kapı (`readOrderTracking`): operatörün gördüğü numara ile
-     * müşteriye gösterilen numara aynı olmak zorunda — ikisi ayrı sorgudan gelseydi bir gün
-     * ayrışır ve destek konuşması "bende başka görünüyor"a dönerdi.
-     *
-     * `parcels` BOŞ olabilir ve `null`dan farklıdır: gönderi duyuruldu ama taşıyıcı takip
-     * numarasını henüz atamadı. Ekran o hâlde taşıyıcıyı söyleyip numarayı bekler.
+     * Kargo gönderisi, müşteri yüzeyiyle aynı kapıdan (`readOrderTracking`), ki iki taraf aynı numarayı görsün; `null` = rota
+     * siparişi ya da duyurulmamış kargo. Boş `parcels` = duyuruldu ama taşıyıcı numarayı henüz atamadı.
      */
     shipment: {
       carrierName: string | null;
@@ -365,9 +297,8 @@ export interface OrderDetailView {
   customer: CustomerContextView;
   links: OrderLinkView[];
   /**
-   * Kâr okuması — **rol kapılı**. Bugün sayfanın kendi kapısı `requireAdmin` olduğu için kart
-   * yönetici dışına zaten çıkmıyor; sayfa depo/kurye rollerine açıldığı gün kapı BURAYA taşınır
-   * (alan `null` gelir, ekran kartı hiç çizmez).
+   * Kâr okuması, rol kapılı: bugün sayfanın kendisi yalnız yöneticiye açık. Sayfa başka rollere açılırsa kapı buraya taşınır, alan
+   * `null` gelir ve kart çizilmez.
    */
   finance: OrderFinanceView | null;
 }

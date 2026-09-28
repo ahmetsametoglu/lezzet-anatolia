@@ -1,6 +1,5 @@
-// @lezzet/database — Supabase erişimi (ORM yok, supabase-js). Yalnız types + helper bilir.
-// Artımlı büyür: her modül kendi tablolarının servisini ekler. İçerik: docs/build/02-database.md
-// Not: BaseDbService ve case-transformers paket-içi altyapıdır; dışa yalnız kamu API'si (istemci + servisler) verilir.
+// Supabase erişimi (ORM yok, supabase-js); yalnız types ve helper bilir. BaseDbService ve case-transformers paket içidir, dışa
+// yalnız istemci ve servisler verilir.
 
 // İstemci
 export { createServiceRoleClient, serviceDb, createAnonClient, anonDb, type Db } from './client';
@@ -13,12 +12,11 @@ export { constraintOf } from './core/constraint';
 // Servisler
 export { UserProfileService } from './services/user-profile.service';
 export { EmailVerificationService, type RequestCodeResult, type VerifyCodeResult } from './services/email-verification.service';
-// Kimlik anahtarı (04.10): DOĞRULANMIŞ numara. `UserProfileService.findByPhone` bunun yerine geçmez
-// — o kolon iletişim numarasıdır ve kimlik çözümünde okunmaz.
-// Bildirim kaydı + teslim defteri (14.12) — karar tek kapıda (application/notification/dispatch).
+// Bildirim kaydı ve teslim defteri; gönderim kararı tek kapıda (application/notification/dispatch).
 export { AppNotificationService, NotificationDeliveryService, type NotificationAudience } from './services/app-notification.service';
-// Push cihaz jetonu (14.14) — kayıt sahip devriyle RPC'de; izin süzgeci `listSendable`da.
+// Push cihaz jetonu — kayıt sahip devriyle RPC'de; izin süzgeci `listSendable`da.
 export { PushDeviceService } from './services/push-device.service';
+// Kimlik anahtarı doğrulanmış numaradır; `UserProfileService.findByPhone` iletişim numarasını okur, kimlik çözümünde kullanılmaz.
 export { CustomerPhoneService } from './services/customer-phone.service';
 export { CategoryService, type CreateCategoryInput } from './services/category.service';
 export { CategoryImageService } from './services/category-image.service';

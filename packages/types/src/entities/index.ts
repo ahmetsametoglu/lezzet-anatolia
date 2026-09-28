@@ -1,21 +1,11 @@
-// VARLIK şemaları — veritabanı satırının (ya da görünümünün) aynası. Her domain entity'si için bir
-// dosya eklenir (artımlı; docs/build/01-types.md envanter).
-//
-// SIRA, `export *` için teknik bir zorunluluk değil OKUMA sırasıdır: aile aile ilerler (kimlik →
-// katalog → sipariş → yer/depo → stok/tedarik → para → operasyon → iletişim → geri bildirim →
-// analitik). Yeni dosya kendi ailesinin sonuna eklenir, listenin dibine değil.
-//
-// Bu barrel yalnız `entities/` altını toplar; yapı taşları `../primitives`, yüzey sözleşmeleri
-// `../contracts` barrel'ındadır (01.12). Üçünü de kök `src/index.ts` birleştirir — paketin dışa
-// görünümü tek kapıdır, derin import yoktur.
+// Varlık şemaları, veritabanı satırının ya da görünümünün aynası. Sıra okuma sırasıdır (aile aile); yeni dosya kendi ailesinin
+// sonuna eklenir, dışa görünüm kök `src/index.ts`ten tek kapıdır.
 export * from './user-profile.schema';
 export * from './email-verification.schema';
-// Bildirim KAYDI (14.12) — giden kanal yükleriyle (contracts/notification.schema) karışmasın diye
-// `app-` önekli; ayrımın gerekçesi dosyada.
+// Bildirim kaydı — giden kanal yükleriyle (contracts/notification.schema) karışmasın diye `app-` önekli.
 export * from './app-notification.schema';
 export * from './push-device.schema';
-// Kimlik anahtarı: DOĞRULANMIŞ numara (04.10). `UserProfile.phone` yalnız iletişimdir — ayrımın
-// gerekçesi dosyada.
+// Kimlik anahtarı doğrulanmış numaradır; `UserProfile.phone` yalnız iletişimdir.
 export * from './customer-phone.schema';
 export * from './category.schema';
 export * from './category-image.schema';
@@ -58,12 +48,12 @@ export * from './job-run.schema';
 export * from './webhook-event.schema';
 export * from './ticket.schema';
 export * from './conversation.schema';
-// AI kullanım defteri (15.27) — koşu başına jeton ve yaklaşık maliyet (USD).
+// AI kullanım defteri — koşu başına jeton ve yaklaşık maliyet (USD).
 export * from './ai-usage.schema';
 export * from './product-feedback.schema';
 export * from './points.schema';
 export * from './feedback-request.schema';
-// Komşu daveti (17.10) — davetin İKİNCİ türü: kimliğe değil SEFERE bağlıdır (gerekçe dosyada).
+// Komşu daveti — davetin ikinci türü: kimliğe değil sefere bağlıdır.
 export * from './neighbor-invite.schema';
 export * from './error-log.schema';
 export * from './system-health.schema';
