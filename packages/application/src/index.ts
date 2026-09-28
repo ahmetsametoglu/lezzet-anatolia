@@ -206,7 +206,7 @@ export {
 // Sohbet çevirisi; gönderim anındaki çeviri `sendOutboundMessage` içinde kalır ki ikinci çağıran doğmasın.
 export { resolveOutboundLanguage, saveMessageTranslation } from './messaging/translate';
 // Yeni sohbetin varsayılan yürütücüsü.
-export { defaultConversationHandler, setDefaultConversationHandler } from './messaging/default-handler';
+export { defaultConversationHandler, defaultTicketHandler, setDefaultConversationHandler, setDefaultTicketHandler } from './messaging/default-handler';
 // Müşterinin sohbet kanalları: operasyon web'i ve kurye ekranı aynı son kanalı okur.
 export { readCustomerChannels } from './messaging/customer-channels';
 export type { MessageTranslationPatch } from './messaging/translate';

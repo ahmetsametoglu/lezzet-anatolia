@@ -54,6 +54,8 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
     /** Personelin elle açtığı talepte ilk mesajın sahibi. */
     authorId?: string | null;
     sender?: TicketMessage['sender'];
+    /** Verilmezse talep insan modunda doğar; açılış kapıları ayardaki varsayılanı geçer. */
+    handledBy?: TicketHandler;
   }): Promise<Ticket> {
     const raw = await this.executeRpc('create_ticket', {
       p_customer_id: input.customerId,
@@ -67,6 +69,7 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
       p_attachments: input.attachments ?? [],
       p_author_id: input.authorId ?? null,
       p_sender: input.sender ?? 'customer',
+      p_handled_by: input.handledBy ?? null,
     });
     return TicketSchema.parse(dbToApp(raw));
   }

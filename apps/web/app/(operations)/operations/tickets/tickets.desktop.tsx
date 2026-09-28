@@ -1,6 +1,8 @@
 'use client';
 
 import { TICKET_TYPE_LABELS } from '@lezzet/types';
+import { MultiToggle } from '@/components/operation/form/multi-toggle';
+import { handlerOptions } from '@/components/operation/ui/ai-handling';
 import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
 import { chatContext } from '@/components/operation/ui/customer-channel-model';
@@ -28,6 +30,7 @@ export function TicketsDesktop({
   onReply,
   onStatus,
   onMode,
+  onDefaultMode,
   onConsumeDraft,
   onSuggestDraft,
   onTakeOver,
@@ -42,6 +45,9 @@ export function TicketsDesktop({
         // Üçüncü sayı yalnız sıfırdan büyükken yazılır: 0 "AI yok" mu "AI'da iş yok" mu, başlık bilemez.
         subtitle={`${data.counts.open} açık · ${data.counts.in_progress} işlemde${data.aiCount > 0 ? ` · ${data.aiCount} AI'da` : ''} · kuyruk son mesaja göre sıralı`}
       >
+        {/* Operatör kuyruktayken Ayarlar'a gitmesin diye burada da; açık talepleri değiştirmez. */}
+        <span className="font-ops-body text-ops-micro text-ops-faint">Yeni talep:</span>
+        <MultiToggle size="sm" label="Yeni talebin yürütücüsü" value={data.defaultHandler} options={handlerOptions(busy)} onChange={onDefaultMode} />
         <Button variant="dark" size="sm" onClick={onNewTicket}>
           + Elle talep
         </Button>

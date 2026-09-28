@@ -1,4 +1,5 @@
-import { ticketsChannelName } from '@lezzet/application';
+import { defaultTicketHandler, ticketsChannelName } from '@lezzet/application';
+import { serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
 import { LiveRefresh } from '@/components/operation/ui/live-refresh';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
@@ -32,10 +33,11 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
   const urlState = parseTicketsUrl(await searchParams);
 
-  const [queue, counts, aiCount] = await Promise.all([
+  const [queue, counts, aiCount, defaultHandler] = await Promise.all([
     listTicketQueue(OPERATIONS_LOCALE, toTicketFilter(urlState.f), undefined, DEFAULT_PAGE_SIZE),
     countTicketsByStatus(),
     countTicketsHandledByAi(),
+    defaultTicketHandler(serviceDb()),
   ]);
 
   /**
@@ -62,6 +64,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     nextCursor: queue.nextCursor,
     counts,
     aiCount,
+    defaultHandler,
     // Ölçülemeyen damga bu ekranın sözleşmesinde sayıdır; kararı `toRowViews` ile aynı yerde
     // duruyor (ortak `ageMinutesOf` `null` döner — bkz. `ui/format`).
     detail: detail && { ...detail, openedAgoMinutes: ageMinutesOf(detail.ticket.createdAt, now) ?? 0 },

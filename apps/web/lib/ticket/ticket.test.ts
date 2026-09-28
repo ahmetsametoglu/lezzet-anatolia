@@ -16,7 +16,7 @@ import { countOpenTickets, getCustomerTicket, getStaffTicketDetail, listCustomer
 import { changeTicketStatus, openTicket, replyAsCustomer, replyAsStaff, takeOverTicket, triggerReturnFromTicket, type TicketWriteResult } from './write';
 
 /**
- * Talep akışının uçtan uca sınanması (16.1) — iki yüzeyin ortak kapısı.
+ * Talep akışının uçtan uca sınanması — iki yüzeyin ortak kapısı.
  *
  * Sınanan şey **davranış**, alan değil: müşteri kapanmış talebe yazınca ne olur, başkasının
  * talebini açmaya çalışınca ne görür, iade iki kez tetiklenebilir mi.
@@ -317,10 +317,8 @@ describe('diğer yüzeylerin okumaları', () => {
 });
 
 /**
- * **Yazışmanın İKİ YÖNÜ de çevrilir** (20.2) — sınanan şey tek bir alan değil, yönün kendisi.
- *
- * Tek yön çevirmek yazışmanın yarısını anlaşılmaz bırakırdı ve bu hiçbir yerde hata vermezdi: ham
- * metin de geçerli bir metindir, ekran onu sorunsuz basar. O yüzden sınama iki yöne de bakar.
+ * Yazışmanın iki yönü de çevrilir; tek yön çevirmek hiçbir yerde hata vermezdi, çünkü ham metin de ekranda sorunsuz basılır. O
+ * yüzden sınama iki yöne de bakar.
  */
 describe('talep yazışmasının çevirisi', () => {
   /** Çeviri işi API anahtarı ister; test onu beklemez — satırı doğrudan kurar (işin ÇIKTISI taklit). */
@@ -413,6 +411,8 @@ describe('operasyon kuyruğu', () => {
 
   it('zaten insanda olan talep devralınmaz', async () => {
     const ticket = await openPlainTicket();
+    // Yeni talebin modu ayardan gelir; bu senaryo insan modunu kendisi kurar.
+    await tickets.setMode(ticket.id, 'human');
     expect(await takeOverTicket(ticket.id)).toEqual({ ok: false, reason: 'already_human' });
   });
 });

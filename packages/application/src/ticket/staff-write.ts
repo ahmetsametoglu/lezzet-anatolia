@@ -3,6 +3,7 @@ import { OrderItemService, OrderService, TicketService } from '@lezzet/database'
 import { canTransitionTicket, canTriggerReturn, checkTicketDraft, statusAfterStaffReply } from '@lezzet/domain-core';
 import { ticketAttachmentScope } from '@lezzet/storage';
 import type { Ticket, TicketHandler, TicketMessage, TicketStatus, TicketType } from '@lezzet/types';
+import { defaultTicketHandler } from '../messaging/default-handler';
 import { notifyTicketReceived, notifyTicketStatusChanged } from './notify';
 import { queueTicketReplyMail } from './reply-mail';
 import { ringTicketBell } from '../realtime/bell';
@@ -95,6 +96,7 @@ export async function openTicket(
     body: input.body.trim(),
     // Personelin elle açtığı talepte ilk sözü o söyler; müşterinin kendi açtığında müşteri.
     sender: input.authorId ? 'admin' : 'customer',
+    handledBy: await defaultTicketHandler(db),
   });
   // Teyit maili — talep kaydedildikten SONRA ve beklenerek: gönderim kendi içinde sessiz, ama
   // beklemezsek çağıran süreç mail gitmeden sonlanabilir.

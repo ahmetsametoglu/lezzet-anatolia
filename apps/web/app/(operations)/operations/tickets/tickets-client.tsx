@@ -9,6 +9,7 @@ import {
   consumeTicketDraftAction,
   loadMoreTicketsAction,
   replyToTicketAction,
+  setDefaultTicketModeAction,
   setTicketModeAction,
   suggestTicketDraftAction,
   takeOverTicketAction,
@@ -111,6 +112,10 @@ export function TicketsClient({ data, urlState }: TicketsClientProps) {
     void run(() => setTicketModeAction(detail.ticket.id, mode));
   };
 
+  const onDefaultMode = (mode: TicketHandler) => {
+    void run(() => setDefaultTicketModeAction(mode));
+  };
+
   /** Hibrit taslağı tüket — `send=false` dönen metni ekran cevap kutusuna taşır. */
   const onConsumeDraft = async (send: boolean): Promise<string | null> => {
     if (!detail) return null;
@@ -152,6 +157,7 @@ export function TicketsClient({ data, urlState }: TicketsClientProps) {
     onReply,
     onStatus,
     onMode,
+    onDefaultMode,
     onConsumeDraft,
     onSuggestDraft,
     onTakeOver: () => setConfirm('takeover'),

@@ -11,6 +11,9 @@ import {
   CONVERSATION_DEFAULT_HANDLER_FALLBACK,
   CONVERSATION_DEFAULT_HANDLER_HELP,
   CONVERSATION_DEFAULT_HANDLER_KEY,
+  TICKET_DEFAULT_HANDLER_FALLBACK,
+  TICKET_DEFAULT_HANDLER_HELP,
+  TICKET_DEFAULT_HANDLER_KEY,
   PICKUP_WAIT_DAYS_DEFAULT,
   PICKUP_WAIT_DAYS_KEY,
   POINTS_DAILY_CAP_DEFAULT,
@@ -29,7 +32,7 @@ import { DAY_HOUR_FALLBACK } from '@/lib/settings/day-hours';
  */
 
 /** Ayarın ekranda hangi sekmede durduğu. */
-export type SettingGroup = 'order' | 'payment' | 'stock' | 'points' | 'cost' | 'feedback' | 'social';
+export type SettingGroup = 'order' | 'payment' | 'stock' | 'points' | 'cost' | 'feedback' | 'social' | 'tickets';
 
 export const SETTING_GROUPS: readonly { key: SettingGroup; label: string }[] = [
   { key: 'order', label: 'Sipariş & teslimat' },
@@ -40,6 +43,7 @@ export const SETTING_GROUPS: readonly { key: SettingGroup; label: string }[] = [
   { key: 'feedback', label: 'Geri bildirim' },
   // Sosyal mesajlaşma: ilk ayarı yeni sohbetin yürütücüsü; ajan ve kanal ayarları buraya gelir.
   { key: 'social', label: 'Sosyal mesajlar' },
+  { key: 'tickets', label: 'Talepler' },
 ] as const;
 
 /**
@@ -104,6 +108,18 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     impact: 'Geniş etkili: AI seçiliyse her yeni müşteriye ilk cevap onaysız, ajandan gider. Açık sohbetler etkilenmez; her sohbette anahtar ayrıca çevrilebilir.',
     exceptionScopes: NONE,
     fallback: CONVERSATION_DEFAULT_HANDLER_FALLBACK,
+  },
+  // ── Talepler ──────────────────────────────────────────────────────────────
+  {
+    key: TICKET_DEFAULT_HANDLER_KEY,
+    label: 'Yeni talebin yürütücüsü',
+    help: TICKET_DEFAULT_HANDLER_HELP,
+    group: 'tickets',
+    kind: 'choice',
+    choices: TicketHandlerEnum.options.map((mode) => ({ value: mode, label: TICKET_HANDLER_LABELS[mode] })),
+    impact: 'Geniş etkili: AI seçiliyse her yeni talebe ilk cevap onaysız, ajandan gider; Hibrit her müşteri mesajında bir AI taslağı üretir. Açık talepler etkilenmez; her talepte anahtar ayrıca çevrilebilir.',
+    exceptionScopes: NONE,
+    fallback: TICKET_DEFAULT_HANDLER_FALLBACK,
   },
   // ── Sipariş & teslimat ────────────────────────────────────────────────────
   {

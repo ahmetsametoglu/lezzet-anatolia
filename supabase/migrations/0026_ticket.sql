@@ -184,7 +184,9 @@ create or replace function public.create_ticket(
   p_attachments text[] default '{}',
   -- Personelin elle açtığı talepte ilk mesajın sahibi odur; müşteri kendi açtığında boş kalır.
   p_author_id uuid default null,
-  p_sender ticket_sender default 'customer'
+  p_sender ticket_sender default 'customer',
+  -- Yeni talebin yürütücüsü `ticket_default_handler` ayarından gelir; kararı RPC değil uygulama katmanı okur.
+  p_handled_by ticket_handler default null
 ) returns public.ticket
 language plpgsql
 security invoker
@@ -193,8 +195,9 @@ as $$
 declare
   v_ticket public.ticket;
 begin
-  insert into public.ticket (customer_id, order_id, order_item_ids, conversation_id, source, type, subject)
-  values (p_customer_id, p_order_id, coalesce(p_order_item_ids, '{}'), p_conversation_id, p_source, p_type, p_subject)
+  insert into public.ticket (customer_id, order_id, order_item_ids, conversation_id, source, type, subject, handled_by)
+  values (p_customer_id, p_order_id, coalesce(p_order_item_ids, '{}'), p_conversation_id, p_source, p_type, p_subject,
+          coalesce(p_handled_by, 'human'::ticket_handler))
   returning * into v_ticket;
 
   -- İlk açıklama BİR MESAJDIR — ayrı bir `description` kolonu, müşterinin anlatımını sonraki
@@ -239,7 +242,7 @@ begin
 end;
 $$;
 
-revoke all on function public.create_ticket(uuid, ticket_source, ticket_type, text, uuid, uuid[], uuid, text, text[], uuid, ticket_sender) from anon;
+revoke all on function public.create_ticket(uuid, ticket_source, ticket_type, text, uuid, uuid[], uuid, text, text[], uuid, ticket_sender, ticket_handler) from anon;
 revoke all on function public.reply_ticket(uuid, ticket_sender, text, text[], uuid, ticket_status) from anon;
 
 -- ── Ürün başına şikâyet yoğunluğu ───────────────────────────────────────────────

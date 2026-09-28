@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { generateTicketDraft } from '@lezzet/application';
+import { generateTicketDraft, setDefaultTicketHandler } from '@lezzet/application';
 import { OrderService, serviceDb } from '@lezzet/database';
 import {
   DEFAULT_PAGE_SIZE,
@@ -112,6 +112,19 @@ export async function setTicketModeAction(ticketId: string, mode: TicketHandler)
     if (!result.ok) return { data: null, error: readable(result.reason) };
     refresh();
     return { data: { mode: result.data.handledBy }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/** Ayara yazar, talebe değil: yürütücü yalnız talep doğarken yazılır, açık talepler değişmez. */
+export async function setDefaultTicketModeAction(mode: unknown): Promise<ActionResult<{ mode: TicketHandler }>> {
+  try {
+    const actor = await requireAdmin();
+    const parsed = TicketHandlerEnum.parse(mode);
+    await setDefaultTicketHandler(serviceDb(), parsed, actor.profileId);
+    refresh();
+    return { data: { mode: parsed }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

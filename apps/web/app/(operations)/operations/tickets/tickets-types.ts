@@ -30,6 +30,8 @@ export interface TicketsData {
   counts: Record<TicketStatus, number>;
   /** Çizimin "N AI'da" sayısı: cevabı insanın yazmadığı (ai + hibrit) kapanmamış talepler. */
   aiCount: number;
+  /** Yeni talebin hangi modda açılacağı — `ticket_default_handler` ayarı. */
+  defaultHandler: TicketHandler;
   /** Seçili talebin detayı; seçim yoksa ya da talep silinmişse null. */
   detail: TicketDetailView | null;
   /**
@@ -68,6 +70,8 @@ export interface TicketsViewProps {
   onStatus: (to: TicketStatus) => void;
   /** Yürütücü modu: human · hybrid · ai. */
   onMode: (mode: TicketHandler) => void;
+  /** Yeni talebin varsayılan modu; açık talepleri değiştirmez. */
+  onDefaultMode: (mode: TicketHandler) => void;
   /** Hibrit taslağı tüket — `send=false` metni döndürür, ekran cevap kutusuna taşır. */
   onConsumeDraft: (send: boolean) => Promise<string | null>;
   /** Taslağı istek üzerine üret — hibritte taslak yokken. */

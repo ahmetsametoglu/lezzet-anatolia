@@ -33,6 +33,8 @@ insert into public.settings (key, value, description) values
   ('reservation_ttl_minutes',      '30',     'Checkout rezervasyon penceresi (dk). Stripe oturum asgarisi 30 dk — altına inilemez; ödeme penceresi buna eşitlenir.'),
   -- Yeni sohbetin yürütücüsü; yalnız yeni sohbete uygulanır (`open_conversation` çakışmada dokunmaz).
   ('conversation_default_handler', '"ai"',   'Yeni sohbetin yürütücüsü: human | hybrid | ai. Açık sohbetleri değiştirmez; Ayarlar ve Sosyal Mesajlar ekranından değiştirilir.'),
+  -- Yeni talebin yürütücüsü; talep çoğu zaman şikâyet taşıdığı için fabrika değeri hibrit (AI taslak yazar, operatör onaylar).
+  ('ticket_default_handler',       '"hybrid"', 'Yeni talebin yürütücüsü: human | hybrid | ai. Açık talepleri değiştirmez; Ayarlar ve Talepler ekranından değiştirilir.'),
   -- AI model tarifesi, milyon jeton başına dolar (sağlayıcının faturası dolar); kullanım defterinin (`ai_usage.cost_usd`) tek girdisidir.
   -- Anahtar env'deki model adıdır: model değişince satır eklenir, eklenmezse o modelin maliyeti sıfır değil boş yazılır.
   ('ai_model_prices_usd',          '{"gemini-3.5-flash-lite": {"inputPerMillion": 0.30, "outputPerMillion": 2.50}, "gemini-3.5-flash": {"inputPerMillion": 1.50, "outputPerMillion": 9.00}}', 'AI model tarifesi — milyon jeton başına USD (girdi/çıktı). Kullanım defterinin maliyeti buradan hesaplanır; listede olmayan modelin maliyeti boş kalır.'),

@@ -4,6 +4,7 @@ import { logger } from '@lezzet/observability';
 import { ticketAttachmentScope } from '@lezzet/storage';
 import type { Order, PreferredLanguage, Ticket, TicketType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { defaultTicketHandler } from '../messaging/default-handler';
 import type { CustomerOrderLookup } from '../order/customer-orders';
 import { notifyTicketOpened } from '../notification/staff-events';
 import { ringTicketsBell } from '../realtime/bell';
@@ -152,6 +153,7 @@ export async function openCustomerTicket(
     subject: input.subject ?? null,
     attachments: input.attachments ? [...input.attachments] : undefined,
     sender: 'customer',
+    handledBy: await defaultTicketHandler(db),
   });
 
   // Teyit maili talep KAYDEDİLDİKTEN SONRA ve beklenerek: beklemezsek çağıran süreç (server action /

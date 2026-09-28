@@ -350,7 +350,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [ ] **OB-06 · Sipariş detay panelinde müşteri güvenilirlik geçmişi ve güven puanı gösterimi** _(2. Geliştirme ve İyileştirme Talepleri)_
 - [ ] **OB-07 · Operasyon panelindeki küçük yazı tipleri (Font Size) ve token yapısı uyumluluğu** _(2. Geliştirme ve İyileştirme Talepleri)_
 - [ ] **OB-10 · İade başlatıldığında açılan talebin (Request) iade tamamlandıktan sonra açık kalması** _(2. Geliştirme ve İyileştirme Talepleri)_
-- [ ] **OB-12 · Talepler sayfasında Yapay Zeka destekli (AI-assisted) mesaj cevaplama özelliği** _(2. Geliştirme ve İyileştirme Talepleri)_
 
 ## Kullanıcı bulguları (eski docs/kullanici-bulgulari.md)
 
@@ -359,7 +358,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [ ] (B.6) Native uygulamada online ödeme "henüz açık değil" — anahtar eksik, kod değil
 - [ ] (B.7) Native uygulama · kapsam bilgisi bayat kalıyor — uygulama kapatılmadan tazelenmiyor ⟶ MOBİL ŞERİT
 - [ ] (B.9) Stripe çekmecesinde test kartı otomatik doldurma ⟶ MOBİL ŞERİT · araştırma gerekiyor
-- [ ] (B.11) Talebin varsayılan modu `human` — AI taslağı hiç üretilmiyor
 - [ ] (B.12) AI cevap yazdı, müşteriye hiçbir bildirim gitmedi — bildirim mailin bastırma kuralına asılı
 
 ## Şeritler arası (eski `docs/talep/` — arşiv: `.arsiv/2026-09-15/talep/`)
