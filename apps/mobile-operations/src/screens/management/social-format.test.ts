@@ -2,13 +2,8 @@ import type { MessageKind } from '@lezzet/types';
 import { socialInitials, socialPreview, socialStamp, socialTitle, socialWindowOf } from './social-format';
 
 /*
-  Sosyal ekranların metin türetmeleri (15.17 · test dalgası 15.18).
-
-  Bu dört fonksiyon "sunum" gibi görünür ama üçü KARAR taşıyor ve üçü de sessizce yanlış olabilir:
-  başlık zinciri (yanlış sıra → operatör kimin yazdığını bilemez), metinsiz mesajın etiketi (boş
-  balon "mesaj kayboldu" okutur) ve pencere hâli (`never` ile `closed` aynı değildir).
-
-  Testler MOBİLİN jest paketinde: `packages/*` vitest'te koşar, `apps/mobile` kendi koşucusunda.
+  Sunum gibi görünen üç karar sessizce yanlış olabilir: başlık zinciri (yanlış sıra → operatör kimin yazdığını bilemez), metinsiz
+  mesajın etiketi (boş balon "mesaj kayboldu" okutur) ve pencere hâli (`never` ile `closed` aynı değildir).
 */
 
 const KIND_LABELS: Record<MessageKind, string> = {
@@ -54,9 +49,8 @@ describe('socialPreview — metinsiz mesaj BOŞ görünmez', () => {
     expect(socialPreview({ lastMessageText: null, lastMessageKind: null }, KIND_LABELS)).toBe('');
   });
 
-  /* BİÇİM İŞARETLERİ SÖKÜLÜR (21.281). Gövde defterde HAM durur çünkü WhatsApp onu çiziyor;
-     sohbet balonu da çizer. Ama liste satırı tek satırlık bir TARAMA dizesidir — sökülmezse
-     operatör kuyrukta çıplak yıldız görür. Talep kuyruğunda aynısı cihazda ölçülmüştü. */
+  /* Gövde defterde ham durur çünkü WhatsApp ve sohbet balonu biçimi çizer; liste satırı ise tek satırlık bir tarama dizesidir ve
+     sökülmezse operatör kuyrukta çıplak yıldız görür. */
   it('biçimlendirme işaretleri SÖKÜLÜR — kuyrukta çıplak yıldız kalmaz', () => {
     expect(
       socialPreview({ lastMessageText: 'Yarın *09:00* gibi kapınızda oluruz', lastMessageKind: 'text' }, KIND_LABELS),
