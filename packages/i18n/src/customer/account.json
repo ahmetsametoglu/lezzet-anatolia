@@ -110,6 +110,17 @@
       "loadError": "Adresler yüklenemedi — sayfayı yeniden açın.",
       "defaultFailed": "Teslimat adresi seçilemedi — yeniden deneyin."
     },
+    "saved": {
+      "title": "Sonraya kaydedilenler",
+      "note": "Teslimat yerinize gönderemediğimiz ya da sonraya bıraktığınız ürünler burada durur.",
+      "add": "Sepete al",
+      "addAll": "Sepete al",
+      "empty": "Kaydedilmiş ürün yok.",
+      "routeOnly": "yalnız bölge içi",
+      "zoneTitle": "Bölge haberi",
+      "zoneWaiting": "{code} — bölgeye gelince haber vereceğiz",
+      "zoneCancel": "Vazgeç"
+    },
     "language": {
       "title": "Dil tercihi",
       "tr": "Türkçe",
@@ -268,6 +279,17 @@
       "loadError": "Impossible de charger les adresses — rouvrez la page.",
       "defaultFailed": "L'adresse de livraison n'a pas pu être définie — réessayez."
     },
+    "saved": {
+      "title": "Enregistrés pour plus tard",
+      "note": "Les articles que nous ne pouvons pas livrer chez vous ou que vous avez mis de côté restent ici.",
+      "add": "Ajouter au panier",
+      "addAll": "Ajouter au panier",
+      "empty": "Aucun article enregistré.",
+      "routeOnly": "zone de livraison uniquement",
+      "zoneTitle": "Alerte de zone",
+      "zoneWaiting": "{code} — nous vous préviendrons dès que la zone ouvre",
+      "zoneCancel": "Annuler"
+    },
     "language": {
       "title": "Langue",
       "tr": "Türkçe",
@@ -425,6 +447,17 @@
       "defaultDone": "{label} ist jetzt Ihre Lieferadresse.",
       "loadError": "Adressen konnten nicht geladen werden – Seite erneut öffnen.",
       "defaultFailed": "Lieferadresse konnte nicht festgelegt werden – bitte erneut versuchen."
+    },
+    "saved": {
+      "title": "Für später gespeichert",
+      "note": "Artikel, die wir nicht zu Ihnen liefern können oder die Sie zurückgestellt haben, bleiben hier.",
+      "add": "In den Warenkorb",
+      "addAll": "In den Warenkorb",
+      "empty": "Keine gespeicherten Artikel.",
+      "routeOnly": "nur im Liefergebiet",
+      "zoneTitle": "Benachrichtigung zum Liefergebiet",
+      "zoneWaiting": "{code} – wir melden uns, sobald wir dorthin liefern",
+      "zoneCancel": "Abbrechen"
     },
     "language": {
       "title": "Sprache",

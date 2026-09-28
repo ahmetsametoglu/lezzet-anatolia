@@ -1,3 +1,4 @@
+import accountMessages from '@lezzet/i18n/customer/account';
 import { Link } from '@/i18n/navigation';
 import type { AccountViewProps } from './account-types';
 import { statusPillClass } from '@/components/customer/ui/badge';
@@ -18,6 +19,7 @@ import { ProfileCard } from './components/profile-card';
  */
 export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewProps) {
   const compact = false;
+  const saved = accountMessages[locale].saved;
   return (
     <div className="flex flex-col gap-5 px-12 pt-8 pb-12">
       <h1 className="font-serif text-page-title leading-tight text-ink">{t.title}</h1>
@@ -96,12 +98,12 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
           {account.points && <InviteCard t={t} points={account.points} compact={compact} />}
 
           <Card compact={compact}>
-            <CardHead title={t.savedTitle} compact={compact} action={<SavedAddAll label={t.savedAddAll} saved={account.saved} />} />
-            <span className="font-sans text-micro leading-relaxed text-muted">{t.savedNote}</span>
-            <SavedList t={t} locale={locale} saved={account.saved} compact={compact} />
+            <CardHead title={saved.title} compact={compact} action={<SavedAddAll label={saved.addAll} saved={account.saved} />} />
+            <span className="font-sans text-micro leading-relaxed text-muted">{saved.note}</span>
+            <SavedList copy={saved} locale={locale} saved={account.saved} compact={compact} />
 
             {/* Bölge haberi ayrı kart değil, kaydedilenlerin alt bloğu: ikisi de "bugün alamadığım şey". */}
-            <ZoneNoticeList t={t} notices={account.zoneNotices} />
+            <ZoneNoticeList copy={saved} notices={account.zoneNotices} />
           </Card>
 
           {/* Kupon kartı boşken de durur ki puan zincirinin nereye çıktığı görünsün. */}

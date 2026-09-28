@@ -80,9 +80,9 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
       />
 
       {(account.saved.length > 0 || account.zoneNotices.length > 0) && (
-        <SettingsCard title={t.savedTitle} aside={<SavedAddAll label={t.savedAddAll} saved={account.saved} />}>
-          <SavedList t={t} locale={locale} saved={account.saved} compact />
-          <ZoneNoticeList t={t} notices={account.zoneNotices} />
+        <SettingsCard title={copy.saved.title} aside={<SavedAddAll label={copy.saved.addAll} saved={account.saved} />}>
+          <SavedList copy={copy.saved} locale={locale} saved={account.saved} compact />
+          <ZoneNoticeList copy={copy.saved} notices={account.zoneNotices} />
         </SettingsCard>
       )}
 

@@ -11,7 +11,7 @@ import { Note } from '@/components/customer/phone-kit/note';
 import { ToggleSwitch } from '@/components/customer/phone-kit/toggle-switch';
 import type { AccountView } from '@/lib/account/read';
 import { cancelZoneNoticeAction } from '../actions';
-import type { Messages } from '../account-types';
+import type { AccountCopy, Messages } from '../account-types';
 import { RedeemPoints } from './redeem-points';
 
 // Hesap sayfasının kart ailesi: bulunmayan veri için kart hiç çizilmez, çünkü boş kart olmayan bir özelliği varmış gibi gösterir.
@@ -273,13 +273,23 @@ export function InviteCard({ t, points, compact }: { t: Messages; points: NonNul
  * "Sepete al" kalemi güncel fiyatla sepete taşır ve listeden düşer; taşımayı sepet bağlamı yapar,
  * bu bileşenin kendi listesi yoktur.
  */
-export function SavedList({ t, locale, saved, compact }: { t: Messages; locale: Locale; saved: AccountView['saved']; compact: boolean }) {
+export function SavedList({
+  copy,
+  locale,
+  saved,
+  compact,
+}: {
+  copy: AccountCopy['saved'];
+  locale: Locale;
+  saved: AccountView['saved'];
+  compact: boolean;
+}) {
   const { restoreToCart } = useCart();
   return (
     <div className="flex flex-col gap-2">
       {/* Kaydedilenler sepetle AYNI veridir; taşıma da aynı kapıdan geçer (`restoreToCart`).
           İkinci bir yol yazmak, aynı listenin iki farklı biçimde boşalabildiği bir sistem olurdu. */}
-      {saved.length === 0 && <span className="font-sans text-note text-muted">{t.savedEmpty}</span>}
+      {saved.length === 0 && <span className="font-sans text-note text-muted">{copy.empty}</span>}
       {saved.map((line) => (
         <div
           key={line.kind === 'bundle' ? line.bundleId : line.variantId}
@@ -291,7 +301,7 @@ export function SavedList({ t, locale, saved, compact }: { t: Messages; locale: 
               {line.unitLabel && ` · ${line.unitLabel}`}
             </span>
             <span className="font-sans text-micro text-muted">
-              {!line.shippable && `${t.routeOnly} · `}
+              {!line.shippable && `${copy.routeOnly} · `}
               {line.unitPriceCents === null ? '—' : formatPrice(line.unitPriceCents, locale)}
             </span>
           </div>
@@ -306,7 +316,7 @@ export function SavedList({ t, locale, saved, compact }: { t: Messages; locale: 
             }
             className={['flex-none cursor-pointer font-sans font-bold text-olive transition-colors hover:text-olive-dark', compact ? 'text-micro' : 'text-note'].join(' ')}
           >
-            {t.savedAdd}
+            {copy.add}
           </button>
         </div>
       ))}
@@ -353,17 +363,17 @@ export function SavedAddAll({ label, saved }: { label: string; saved: AccountVie
  * Bekleyen bölge haberi kayıtları; pazarlama izninden bağımsız tek seferlik bir bekleyiştir, vazgeçmek onay istemez. Kayıt
  * yoksa blok çizilmez.
  */
-export function ZoneNoticeList({ t, notices }: { t: Messages; notices: AccountView['zoneNotices'] }) {
+export function ZoneNoticeList({ copy, notices }: { copy: AccountCopy['saved']; notices: AccountView['zoneNotices'] }) {
   const [busy, setBusy] = useState<string | null>(null);
 
   if (notices.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-2 border-t border-sand-100 pt-2.5">
-      <span className="font-sans text-body-sm font-bold text-ink">{t.zoneNoticeTitle}</span>
+      <span className="font-sans text-body-sm font-bold text-ink">{copy.zoneTitle}</span>
       {notices.map((notice) => (
         <div key={notice.postalCode} className="flex items-center justify-between gap-3">
-          <span className="font-sans text-note text-body">{t.zoneNoticeWaiting.replace('{code}', notice.postalCode)}</span>
+          <span className="font-sans text-note text-body">{copy.zoneWaiting.replace('{code}', notice.postalCode)}</span>
           <button
             type="button"
             disabled={busy === notice.postalCode}
@@ -374,7 +384,7 @@ export function ZoneNoticeList({ t, notices }: { t: Messages; notices: AccountVi
             }}
             className="flex-none cursor-pointer font-sans text-note font-bold text-muted transition-colors hover:text-terracotta disabled:cursor-progress"
           >
-            {t.zoneNoticeCancel}
+            {copy.zoneCancel}
           </button>
         </div>
       ))}
