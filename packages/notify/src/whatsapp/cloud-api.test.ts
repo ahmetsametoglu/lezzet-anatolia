@@ -109,6 +109,13 @@ describe('Messenger/Instagram gövdesi AYRI — alıcı `recipient.id`de', () =>
     expect(meta.calls[0]!.body).toMatchObject({ recipient: { id: 'IGSID-9' } });
   });
 
+  // Instagram hesabının kimliğine gönderim Meta'da `(#3) Application does not have the capability` ile düşer.
+  it('Instagram cevabı kayıttaki Instagram hesabına değil sayfa jetonunun sayfasına (`/me`) gider', async () => {
+    const meta = fakeMeta();
+    await sendCloudApiMessage(fakeCloudApiConfig(meta), fb({ channel: 'instagram', accountRef: '17841400000000000', to: 'IGSID-9' }));
+    expect(new URL(meta.calls[0]!.url).pathname).toMatch(/\/me\/messages$/);
+  });
+
   it('insan-temsilci etiketi İKİ alanı birden değiştirir (28.08)', async () => {
     /* `messaging_type` ile `tag` birlikte yazılır: etiketsiz `MESSAGE_TAG` da, `RESPONSE` yanında
        duran bir `tag` de Meta tarafında reddedilir. Yarım yazım en tehlikelisi — istek gider,

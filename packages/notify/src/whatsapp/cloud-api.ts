@@ -18,7 +18,7 @@ export interface CloudApiConfig {
 
 /** Gönderilecek mesajın kanal-bağımsız hâli — kararı veren taraf bunu kurar. */
 export interface CloudApiMessage {
-  /** WhatsApp: `phone_number_id` · Messenger/Instagram: Sayfa kimliği. */
+  /** WhatsApp: `phone_number_id` · Messenger: sayfa kimliği · Instagram: okunmaz, cevap sayfa jetonunun sayfasından çıkar. */
   accountRef: string;
   /** WhatsApp: E.164 telefon · Messenger/Instagram: PSID/IGSID. */
   to: string;
@@ -102,7 +102,10 @@ function messengerBody(message: CloudApiMessage): Record<string, unknown> {
 export async function sendCloudApiMessage(config: CloudApiConfig, message: CloudApiMessage): Promise<CloudApiResult> {
   const doFetch = config.fetchImpl ?? fetch;
   const base = config.baseUrl ?? `https://graph.facebook.com/${GRAPH_VERSION}`;
-  const url = `${base}/${encodeURIComponent(message.accountRef)}/messages`;
+  // Instagram'da kayıttaki hesap Instagram hesabının kimliğidir ve Meta o uca gönderimi `(#3)` ile reddeder; cevap sayfa jetonunun
+  // sayfasından (`/me`) çıkar.
+  const account = message.channel === 'instagram' ? 'me' : message.accountRef;
+  const url = `${base}/${encodeURIComponent(account)}/messages`;
   const body = message.channel === 'whatsapp' ? whatsappBody(message) : messengerBody(message);
 
   let response: Response;
