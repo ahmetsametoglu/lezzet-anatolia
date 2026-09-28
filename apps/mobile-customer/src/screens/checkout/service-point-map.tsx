@@ -68,6 +68,8 @@ export function ServicePointMap({ pins, selectedId, home, bottomInset, onPick }:
       provider={PROVIDER_GOOGLE}
       style={styles.map}
       customMapStyle={MAP_STYLE}
+      // Uygulama telefon koyu temadayken de açık çizilir; harita sistemi izleseydi krem ekranın ortasında koyu kalırdı.
+      userInterfaceStyle="light"
       mapPadding={{ top: 0, right: 0, bottom: bottomInset, left: 0 }}
       toolbarEnabled={false}
       rotateEnabled={false}
@@ -80,7 +82,8 @@ export function ServicePointMap({ pins, selectedId, home, bottomInset, onPick }:
       testID="service-point-map"
     >
       {home ? (
-        <Marker coordinate={{ latitude: home.lat, longitude: home.lng }} tracksViewChanges={false} zIndex={2} tappable={false}>
+        // Etiket dondurulmaz: Android işaretin resmini metin çizilmeden alırsa hap boş kalır; tek işaret, bedeli yok.
+        <Marker coordinate={{ latitude: home.lat, longitude: home.lng }} zIndex={2} tappable={false}>
           <View style={styles.home}>
             <Text style={styles.homeLabel}>{home.label}</Text>
           </View>
