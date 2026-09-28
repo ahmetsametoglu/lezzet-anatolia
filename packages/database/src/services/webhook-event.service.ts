@@ -9,21 +9,15 @@ import {
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 
-/**
- * Dış sağlayıcı olayları (07.5). Tek işi **aynı olayın iki kez işlenmesini engellemek**.
- */
+/** Dış sağlayıcı olayları: aynı olayın iki kez işlenmesini engeller. */
 export class WebhookEventService extends BaseDbService<WebhookEvent, WebhookEventInsert, WebhookEventUpdate> {
   constructor(supabase: SupabaseClient) {
     super(supabase, 'webhook_event', WebhookEventSchema, WebhookEventInsertSchema, WebhookEventUpdateSchema);
   }
 
   /**
-   * Olayı **sahiplen**: ilk gelişte satır yazılır ve `fresh:true` döner, tekrarında yazım
-   * benzersizlik kısıtına takılır ve `fresh:false` döner.
-   *
-   * Kontrol ile yazım TEK ifadede olmalı — "önce sorgula, yoksa yaz" arasında ikinci webhook
-   * girerse iki işleyici birden "yeni" der ve tahsilat iki kez yazılır. `ignoreDuplicates` bunu
-   * veritabanına havale eder: yarışın kazananı bir tanedir.
+   * Kontrol ile yazım tek ifadede: "önce sorgula, yoksa yaz" arasında ikinci webhook girerse iki işleyici birden "yeni" der ve
+   * tahsilat iki kez yazılır.
    */
   async claim(input: WebhookEventInsert): Promise<{ fresh: boolean; event: WebhookEvent }> {
     const inserted = await this.bulkUpsertIgnoring([input], 'provider,event_id');
