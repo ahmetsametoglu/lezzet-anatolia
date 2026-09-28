@@ -50,6 +50,7 @@ export * from './warehouse-api.schema';
 // Sepet gövdesi fiyat taşımaz, çünkü istemcinin yazabildiği tutar siparişin parasını belirleyemez. Cevap görünüm değil satırdır:
 // toplam iki yerde hesaplanırsa bir gün iki farklı sayı gösterir.
 export * from './cart-api.schema';
+export * from './saved-api.schema';
 // Checkout — "Siparişi tamamla" ekranının anlık görüntüsü (adres · teslimat · ödeme) + siparişi
 // açan gövde ve ADLI retleri. Gövde yalnız SEÇİM taşır: tutar, kargo ücreti, indirim ve teslimat
 // türü istemciden hiç kabul edilmez, hepsi sunucuda çözülür.

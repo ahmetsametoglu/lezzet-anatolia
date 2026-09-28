@@ -438,6 +438,7 @@ export * from './assistant/kind-meta';
 // Girdi yalnız `{variantId, qty, stockId}`: ad, fiyat ve stok kapıda yeniden çözülür ki istemci siparişin parasını belirleyemesin.
 export { getCartView } from './cart/read';
 export type { CartBundlePort, CartBundleSource } from './cart/read';
+export { restoreSavedItems } from './cart/saved';
 export {
   EMPTY_CART,
   cartBlockReason,

@@ -119,7 +119,8 @@
       "routeOnly": "yalnız bölge içi",
       "zoneTitle": "Bölge haberi",
       "zoneWaiting": "{code} — bölgeye gelince haber vereceğiz",
-      "zoneCancel": "Vazgeç"
+      "zoneCancel": "Vazgeç",
+      "failed": "İşlem tamamlanamadı, lütfen tekrar deneyin."
     },
     "language": {
       "title": "Dil tercihi",
@@ -288,7 +289,8 @@
       "routeOnly": "zone de livraison uniquement",
       "zoneTitle": "Alerte de zone",
       "zoneWaiting": "{code} — nous vous préviendrons dès que la zone ouvre",
-      "zoneCancel": "Annuler"
+      "zoneCancel": "Annuler",
+      "failed": "L'opération n'a pas abouti, veuillez réessayer."
     },
     "language": {
       "title": "Langue",
@@ -457,7 +459,8 @@
       "routeOnly": "nur im Liefergebiet",
       "zoneTitle": "Benachrichtigung zum Liefergebiet",
       "zoneWaiting": "{code} – wir melden uns, sobald wir dorthin liefern",
-      "zoneCancel": "Abbrechen"
+      "zoneCancel": "Abbrechen",
+      "failed": "Das hat nicht geklappt – bitte versuchen Sie es erneut."
     },
     "language": {
       "title": "Sprache",

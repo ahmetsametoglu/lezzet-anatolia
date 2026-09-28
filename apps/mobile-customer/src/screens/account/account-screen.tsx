@@ -39,6 +39,8 @@ import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { LegalLinks } from '@/screens/legal/legal-links';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { AddressCard } from './address-card';
+import { SavedCard } from './saved-card';
+import { useSaved } from './use-saved.hook';
 import { ChannelsCard } from './channels-card';
 import { CouponRow } from './coupon-row';
 import { AccountAddressesSkeleton, AccountPointsSkeleton } from './account-skeleton';
@@ -169,6 +171,7 @@ export function AccountScreen({
      sinyaldir ve ikisi aynı sayılırsa yatırım kararı yanlış veriden çıkar. */
   const defaultAddress = addressBook.addresses.find((a) => a.isDefault) ?? addressBook.addresses[0];
   const zipOfDefault = defaultAddress?.postalCode;
+  const saved = useSaved(signedIn, locale, zipOfDefault, t.saved.failed);
   /** Yalnız rota dışındaysa dolu; kaydın anahtarı ülke ve kod. */
   const [zonePlace, setZonePlace] = useState<{ country: Country; postalCode: string } | null>(null);
   useEffect(() => {
@@ -514,6 +517,17 @@ export function AccountScreen({
             <TextAction label={t.addresses.add} onPress={() => setAddressSheet({ editing: null })} testID="account-address-add" />
           </View>
         </View>
+
+        {saved.view ? (
+          <SavedCard
+            copy={t.saved}
+            locale={locale}
+            view={saved.view}
+            busy={saved.busy}
+            onRestore={saved.restore}
+            onCancelNotice={saved.cancelNotice}
+          />
+        ) : null}
 
         {/* Dil ve yazı boyutu tek kartta: ikisi de "nasıl okuyorum" sorusunun cevabı. */}
         <View style={styles.settingsCard}>

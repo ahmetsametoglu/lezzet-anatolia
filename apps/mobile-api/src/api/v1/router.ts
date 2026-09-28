@@ -23,6 +23,7 @@ import { payments } from './payments';
 import { deliveryTerms } from './delivery-terms';
 import { places } from './places';
 import { stockNotices } from './stock-notices';
+import { saved } from './saved';
 import { notifications, pushDevices } from './notifications';
 import { points, pointsRules } from './points';
 import { preferences } from './preferences';
@@ -159,6 +160,8 @@ v1.route('/me/b2b', b2b);
 
 // "Gelince haber ver" kapalı: misafir kayıttan önce çekmecede hesabını doğrular ve e-posta profilden çözülür.
 v1.route('/me/stock-notices', stockNotices);
+// Hesaptaki "Sonraya kaydedilenler" kartı: web'de ayrılan kalemler ve bekleyen bölge haberleri.
+v1.route('/me/saved', saved);
 
 /**
  * Personel bölümlerinin rol kapısı rota dosyalarının içinde. Önekler burada verilir ki uçların adresi tek yerden okunsun.
