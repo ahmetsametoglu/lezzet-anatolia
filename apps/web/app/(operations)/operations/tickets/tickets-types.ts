@@ -4,11 +4,8 @@ import type { CustomerContextData } from '@/lib/customer/context';
 import type { StaffTicketDetail, TicketQueueItem } from '@/lib/ticket/ticket-types';
 import type { TicketFilterKey, TicketsUrlState } from './tickets-url';
 
-// Talepler ekranının SAYFAYA-ÖZEL tipleri (16.3).
-//
-// Kuyruk satırı ve detay TİPLERİ burada YENİDEN yazılmaz: veri kapısının sözleşmesi
-// (`lib/ticket/ticket-types`) iki yüzeyin ortak tanımıdır ve ekran onun üstüne yalnız SUNUM
-// bilgisini ekler (CLAUDE.md §1: view-model şemadan türer).
+// Kuyruk satırı ve detay tipleri burada yeniden yazılmaz: `lib/ticket/ticket-types` iki yüzeyin ortak sözleşmesidir, ekran
+// üstüne yalnız sunum bilgisini ekler.
 
 /** Kuyruk satırı + yalnızca ekranın ihtiyacı olan tek türetme: satırın yaşı. */
 export interface TicketRowView extends TicketQueueItem {
@@ -31,11 +28,7 @@ export interface TicketsData {
    * yerde (kalabalık kuyrukta) yalan söylerdi.
    */
   counts: Record<TicketStatus, number>;
-  /**
-   * Çizimin üçüncü sayısı ("N AI'da") — 16.08'e kadar bilerek yoktu (16.5 inene dek daima 0
-   * gösterir, "AI çalışmıyor" değil "AI yok" diye okunurdu). Mod anahtarıyla veri gerçek oldu:
-   * cevabı insanın yazmadığı (ai + hibrit) kapanmamış talepler.
-   */
+  /** Çizimin "N AI'da" sayısı: cevabı insanın yazmadığı (ai + hibrit) kapanmamış talepler. */
   aiCount: number;
   /** Seçili talebin detayı; seçim yoksa ya da talep silinmişse null. */
   detail: TicketDetailView | null;
@@ -73,11 +66,11 @@ export interface TicketsViewProps {
   /** Cevabı gönderir; `true` dönerse yazma kutusu temizlenir (gönderilmiş metni silmemek için). */
   onReply: (body: string) => Promise<boolean>;
   onStatus: (to: TicketStatus) => void;
-  /** Yürütücü modu (16.08): human · hybrid · ai. */
+  /** Yürütücü modu: human · hybrid · ai. */
   onMode: (mode: TicketHandler) => void;
   /** Hibrit taslağı tüket — `send=false` metni döndürür, ekran cevap kutusuna taşır. */
   onConsumeDraft: (send: boolean) => Promise<string | null>;
-  /** Taslağı istek üzerine üret (20.4) — hibritte taslak yokken. */
+  /** Taslağı istek üzerine üret — hibritte taslak yokken. */
   onSuggestDraft: () => void;
   onTakeOver: () => void;
   onTriggerReturn: () => void;
@@ -85,12 +78,8 @@ export interface TicketsViewProps {
 }
 
 /**
- * Elle talep açma formu (`admin-talepler.md §3`).
- *
- * Alanlar arka ucun beklediğinden TÜRETİLDİ (`openTicket`), çünkü pencerenin içi çizilmemiş —
- * karar `design/BACKLOG.md`'de bekliyor. İşaretli kalemler bilerek yok: brief "müşteri + varsa
- * sipariş" diyor, kalem işaretlemek müşterinin şikâyetini somutlaştırma aracıdır ve operatör
- * telefonda konuşurken kalem kimliğiyle uğraşmaz — gerekirse siparişten görülür.
+ * Elle talep açma formu; pencerenin içi çizilmediği için alanlar `openTicket`in beklediğinden türetildi. Kalem işaretleme yok,
+ * çünkü telefonda konuşan operatör kalem kimliğiyle uğraşmaz; gerekirse siparişten görülür.
  */
 export const ManualTicketSchema = z.object({
   customerId: z.string().uuid(),
@@ -103,14 +92,8 @@ export const ManualTicketSchema = z.object({
 });
 
 /**
- * Elle talep penceresindeki sipariş seçicisinin kapı sınırı.
- *
- * Seçici SAYFALI DEĞİL ve bilerek: bu bir liste ekranı değil, telefonda konuşurken açılan bir
- * seçicidir — operatör "geçen haftaki sipariş" diyor, üç ay öncesini aramıyor.
- *
- * Sayı BURADA duruyor çünkü iki taraf da onu kullanıyor: kapı listeyi bu sayıyla kesiyor, pencere
- * de "son 20 sipariş" diye YAZIYOR. Ayrı ayrı yazılsalardı biri değiştiğinde ekrandaki cümle sessizce
- * yalan olurdu (`CLAUDE.md §1`).
+ * Elle talep penceresindeki sipariş seçicisinin sınırı; seçici sayfalı değil, çünkü telefondaki operatör son siparişleri arar. Sayı
+ * burada, çünkü kapı listeyi bununla keser ve pencere "son 20 sipariş" diye yazar.
  */
 export const TICKET_ORDER_OPTION_LIMIT = 20;
 

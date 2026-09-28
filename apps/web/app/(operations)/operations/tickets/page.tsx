@@ -12,20 +12,8 @@ import { toRowViews, toTicketFilter } from './tickets-read';
 import { parseTicketsUrl } from './tickets-url';
 import type { TicketsData } from './tickets-types';
 
-// Talepler / şikâyetler (16.3) — müşteri talebinin tek kuyruğu, yazışması ve iade köprüsü.
-//
-// ── KAPI: YALNIZ YÖNETİCİ ────────────────────────────────────────────────────
-// `admin-talepler.md §6` bu ekranı yalnız admin rolüne açıyor. Depo ve kurye görmez: yazışma
-// müşteriye AYNEN gidiyor ve iade kararının zemini burada kuruluyor.
-//
-// ── DEPO BAĞLAMI BU SAYFAYI DARALTMAZ ────────────────────────────────────────
-// Talep bir müşteri ilişkisidir, bir depo işi değil: aynı müşterinin iki deposundan gelen iki
-// siparişi tek bir şikâyette anılabilir. Depo süzgeci konsaydı, kuyruk deposu olmayan talepleri
-// (genel soru) sessizce yutardı.
-//
-// ── DETAY SUNUCUDA OKUNUR ────────────────────────────────────────────────────
-// Seçili talep adreste (`?t=`), yani okuması burada. İstemcide tutulsaydı her tıklama bir istemci
-// turu + ikinci bir yazışma çağrısı olurdu; üstelik bir talebin bağlantısı paylaşılamazdı.
+// Yalnız yönetici görür, çünkü yazışma müşteriye aynen gider ve iade kararının zemini burada kurulur. Depo süzgeci uygulanmaz:
+// talep bir müşteri ilişkisidir ve deposu olmayan genel soruyu kuyruk sessizce yutardı.
 
 interface TicketsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -47,8 +35,6 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   const [queue, counts, aiCount] = await Promise.all([
     listTicketQueue(OPERATIONS_LOCALE, toTicketFilter(urlState.f), undefined, DEFAULT_PAGE_SIZE),
     countTicketsByStatus(),
-    // Çizimin üçüncü sayısı ("1 AI yürütüyor") — 16.08'e kadar bilerek yoktu (daima 0 gösterirdi
-    // ve "AI yok" diye okunurdu); mod anahtarı ve seed'le veri gerçek oldu.
     countTicketsHandledByAi(),
   ]);
 
@@ -58,22 +44,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
    */
   const selectedId = urlState.t || (queue.rows[0]?.id ?? '');
 
-  // Ürün adları TÜRKÇE çözülür — operasyon yüzeyinin dili (CLAUDE.md §2) ve öteki ekranların da
-  // yaptığı bu (Fiyatlar, Stok: `resolveLocalizedText` kanonik sırayla, TR önce).
-  //
-  // Burada bir tur `DEFAULT_LOCALE` yazılıydı ve künyesi "yüzeyin geri kalanıyla aynı dil" diyordu;
-  // ikisi de yanlıştı — o sabit `'fr'`, yani MÜŞTERİ yüzeyinin varsayılanı. Sonuç: aynı ürün
-  // Talepler'de Fransızca, Fiyatlar'da Türkçe görünüyordu. Sabitin adı "varsayılan" olduğu için
-  // doğru duruyordu; hangi yüzeyin varsayılanı olduğu sorulmamıştı (03.08).
+  // Ürün adları operasyonun dilinde çözülür; `DEFAULT_LOCALE` müşteri yüzeyinin varsayılanıdır (`fr`).
   const detail = selectedId ? await getStaffTicketDetail(OPERATIONS_LOCALE, selectedId) : null;
 
   /**
-   * Müşteri bağlamı — sağ pano (08.08). **Talep okumasının İÇİNE konmadı ve konmamalı:**
-   * `getStaffTicketDetail` talebin kendi sözleşmesidir ve müşteri geçmişini oraya sokmak, talebin
-   * her okumasını (mobil, e-posta işi, ileride AI bağlamı) genişletirdi. Ayrı okuma, ayrı tüketici.
-   *
-   * Okuma ORTAK (`lib/customer/context`): WhatsApp ekranı da aynısını çağırıyor — "bu kişi kim, ne
-   * aldı, neye izin verdi" sorusunun tek cevabı olsun diye.
+   * Müşteri bağlamı talep okumasının içine konmaz, çünkü müşteri geçmişi talebin her okumasını (mobil, e-posta, AI) genişletirdi.
+   * Okuma ortaktır: sosyal ekran da aynı soruyu aynı kapıdan sorar.
    */
   const context = detail ? await readCustomerContext(detail.customer.id) : null;
 
@@ -94,10 +70,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
   return (
     <>
-      {/* CANLI BAĞ (16.8): müşteri mobilden ya da web `/support`tan yazınca, AI cron'u taslak/cevap
-          yazınca zil çalar ve bu sayfa SUNUCUDAN yeniden istenir — kuyruk da, açık yazışma da tek
-          turda tazelenir. Kanal adı guard'ın arkasında üretiliyor (`ticketsChannelName` künyesi):
-          tahmin edilebilir bir ad, oturumsuz birine "desteğe şu an mesaj düştü" derdi. */}
+      {/* Müşteri ya da AI yazınca zil çalar ve sayfa sunucudan yeniden istenir. Kanal adı guard'ın arkasında üretilir, çünkü
+          tahmin edilebilir bir ad oturumsuz birine desteğe mesaj düştüğünü söylerdi. */}
       <LiveRefresh channel={ticketsChannelName()} />
       <TicketsClient data={data} urlState={{ ...urlState, t: selectedId }} />
     </>

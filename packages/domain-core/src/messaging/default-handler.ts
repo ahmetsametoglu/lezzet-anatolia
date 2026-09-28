@@ -1,26 +1,8 @@
 import { TicketHandlerEnum, type TicketHandler } from '@lezzet/types';
 
 /**
- * **Yeni sohbetin VARSAYILAN yürütücüsü** (15.30 · kullanıcı kararı 07.09) — anahtar, fabrika
- * değeri ve çözücü tek yerde.
- *
- * ── NEDEN BİR AYAR ──────────────────────────────────────────────────────────
- * Sohbetin modu (`conversation.handled_by`) tabloda `human` varsayılanıyla doğuyordu: her yeni
- * müşteri operatörün elini bekliyordu, ajan ancak operatör anahtarı çevirince konuşuyordu.
- * Kullanıcı kararı: *"varsayılan olarak AI modunda açılsın; ayarlardan seçilebilsin; sosyal
- * mesajlar sayfasından da değiştirilebilsin."* Karar bir İŞLETME TERCİHİDİR (bugün AI, yarın
- * hibrit olabilir) — koda gömülmez, `settings`te durur ve iki yüzey (Ayarlar · Sosyal Mesajlar)
- * aynı satırı okur/yazar.
- *
- * ── YALNIZ YENİ SOHBET ──────────────────────────────────────────────────────
- * Açık bir sohbetin modu bu ayarla DEĞİŞMEZ: `open_conversation` değeri yalnız satır doğarken
- * yazar, çakışmada dokunmaz. Operatörün "Devral"ı ya da hibrite çevirdiği sohbet, ayar sonradan
- * oynasa da yerinde kalır — tersi, bir operatör kararını genel bir ayarla sessizce ezmek olurdu.
- *
- * ── ÇÖZÜCÜ SAF ──────────────────────────────────────────────────────────────
- * Ayar tablosu `jsonb` tutar; satır bozuk ya da eski bir değer taşıyorsa (`"robot"`) sohbet modsuz
- * doğamaz. Tanınmayan değer fabrika değerine düşer — ve bu SESSİZ bir düşüş değil, çağıranın
- * loglayabileceği bir karardır (`resolveDefaultHandler` saf, DB'siz, testli).
+ * Yeni sohbetin yürütücüsü bir işletme tercihidir, bu yüzden koda değil `settings`e yazılır ve Ayarlar ile Sosyal Mesajlar aynı
+ * satırı okur. Yalnız satır doğarken uygulanır, ki operatörün açık bir sohbet için verdiği karar genel ayarla sessizce ezilmesin.
  */
 
 export const CONVERSATION_DEFAULT_HANDLER_KEY = 'conversation_default_handler';

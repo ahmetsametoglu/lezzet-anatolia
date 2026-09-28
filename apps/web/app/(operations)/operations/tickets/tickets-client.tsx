@@ -20,11 +20,8 @@ import { TicketsDesktop } from './tickets.desktop';
 import { ticketsUrl, type TicketFilterKey, type TicketsUrlState } from './tickets-url';
 import type { TicketRowView, TicketsData } from './tickets-types';
 
-// Talepler ekranı client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız; mobil
-// deneyim native uygulamada (`docs/uygulama`).
-//
-// SÜZGEÇ ve SEÇİM gerçek gezinmedir (`?f=…&t=…`): detay sunucuda okunuyor ve bir talebin bağlantısı
-// paylaşılabilir olmalı ("şuna bir bak").
+// Süzgeç ve seçim gerçek gezinmedir (`?f=…&t=…`), çünkü detay sunucuda okunuyor ve bir talebin bağlantısı paylaşılabilir
+// olmalı.
 
 interface TicketsClientProps {
   data: TicketsData;
@@ -108,21 +105,20 @@ export function TicketsClient({ data, urlState }: TicketsClientProps) {
     void run(() => takeOverTicketAction(detail.ticket.id)).then(() => setConfirm(null));
   };
 
-  // Mod anahtarı (16.08) — onaysız: anahtar kararın kendisi, ikinci bir pencere aynı soruyu iki
-  // kez sormak olurdu. (Devral şeridi ONAYLI kalıyor: o tek düğme ve dönüşü olmayan bir susturma.)
+  // Mod anahtarı onaysız, çünkü anahtar kararın kendisi. Devral onaylı kalır: o dönüşü olmayan bir susturma.
   const onMode = (mode: TicketHandler) => {
     if (!detail) return;
     void run(() => setTicketModeAction(detail.ticket.id, mode));
   };
 
-  /** Hibrit taslağı tüket — `send=false` dönen metni ekran cevap kutusuna taşır (16.08). */
+  /** Hibrit taslağı tüket — `send=false` dönen metni ekran cevap kutusuna taşır. */
   const onConsumeDraft = async (send: boolean): Promise<string | null> => {
     if (!detail) return null;
     const result = await run(() => consumeTicketDraftAction(detail.ticket.id, send));
     return result?.draft ?? null;
   };
 
-  /** Taslağı istek üzerine üret (20.4) — başarıda `refresh` taslak kartını getirir. */
+  /** Taslağı istek üzerine üret — başarıda `refresh` taslak kartını getirir. */
   const onSuggestDraft = () => {
     if (!detail) return;
     void run(() => suggestTicketDraftAction(detail.ticket.id));

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONVERSATION_DEFAULT_HANDLER_FALLBACK, resolveDefaultHandler } from './default-handler';
 
-// 15.30 — ayar satırı jsonb tutar; sohbet modsuz doğamaz, bozuk değer fabrika değerine düşer.
+// Ayar satırı jsonb tutar; sohbet modsuz doğamaz, bozuk değer fabrika değerine düşer.
 describe('resolveDefaultHandler', () => {
   it('üç mod aynen geçer', () => {
     expect(resolveDefaultHandler('human')).toBe('human');

@@ -32,23 +32,10 @@ import { toRowViews, toTicketFilter } from './tickets-read';
 import { ManualTicketSchema, TICKET_ORDER_OPTION_LIMIT, type TicketOrderOption, type TicketRowView } from './tickets-types';
 import { parseTicketsUrl, TICKETS_PATH } from './tickets-url';
 
-// Talepler ekranının yazma kapıları (16.3) — guard ilk, servise devret, `{ data, error }` DÖNER.
-//
-// **Hepsi `requireAdmin`.** Ekran yalnız yöneticiye açık (`admin-talepler.md §6`) ve kapı burada
-// durur: düğmeyi çizmemek bir güvence değildir, action doğrudan da çağrılabilir.
-//
-// **İş kuralı burada YOK.** Hangi geçişin geçerli olduğunu, iadenin tetiklenip tetiklenemeyeceğini,
-// cevabın durumu değiştirip değiştirmediğini `lib/ticket/write` kapıları motora sorarak biliyor
-// (STACK §4). Buradaki tek çeviri, kapının `{ ok:false, reason }` sözleşmesini ekranın
-// `{ data, error }` sözleşmesine döndürmek.
+// Hepsi `requireAdmin`, çünkü düğmeyi çizmemek güvence değildir ve action doğrudan çağrılabilir. İş kuralı burada yok: kapının
+// `{ ok:false, reason }` sözleşmesi yalnız ekranın `{ data, error }` sözleşmesine çevrilir.
 
-/**
- * Kapı reddinin OPERATÖRE söylenecek hâli.
- *
- * Ham `reason` bir anahtardır ("not_found") ve ekranda gösterilirse operatör ne yapacağını
- * bilemez. Tanınmayan anahtar için elde ne varsa o gösterilir — yeni bir sebep eklendiğinde
- * ekranın sessizce boş bir uyarı vermesindense ham anahtarı görmesi yeğdir.
- */
+/** Kapı reddinin operatöre söylenecek hâli; tanınmayan anahtar ham gösterilir, ki yeni bir sebep boş uyarıya dönmesin. */
 const REJECTION: Record<string, string> = {
   not_found: 'Talep bulunamadı — bu sırada silinmiş olabilir. Ekranı tazeleyin.',
   empty_body: 'Boş cevap gönderilemez.',
@@ -71,10 +58,8 @@ function refresh(): void {
 }
 
 /**
- * Personelin cevabı. **Durumu kendiliğinden değiştirmez** — kararı kapı verir (`statusAfterStaffReply`);
- * ekran yalnız yazdığını gönderir.
- *
- * Müşteriye e-posta bildirimi kapının içinde gider (16.4) ve düşerse cevabı geri almaz.
+ * Personelin cevabı; durumu kapı belirler (`statusAfterStaffReply`), ekran yalnız yazdığını gönderir. Müşteriye e-posta kapının
+ * içinde gider ve düşerse cevabı geri almaz.
  */
 export async function replyToTicketAction(ticketId: string, body: string): Promise<ActionResult<{ id: string }>> {
   try {
@@ -105,7 +90,7 @@ export async function changeTicketStatusAction(ticketId: string, to: TicketStatu
   }
 }
 
-/** AI'dan devralma (16.5'in ucu) — `ai`'dan da `hybrid`'den de insana indirir, bekleyen taslağı düşürür. */
+/** AI'dan devralma — `ai`'dan da `hybrid`'den de insana indirir, bekleyen taslağı düşürür. */
 export async function takeOverTicketAction(ticketId: string): Promise<ActionResult<{ id: string }>> {
   try {
     await requireAdmin();
@@ -118,11 +103,7 @@ export async function takeOverTicketAction(ticketId: string): Promise<ActionResu
   }
 }
 
-/**
- * Yürütücü modu (kullanıcı kararı 16.08): human · hybrid · ai. Hedef enum'dan DOĞRULANIR — action
- * doğrudan çağrılabilir ve uydurma bir dizge servise kadar gitmemeli (`changeTicketStatusAction`
- * ile aynı gerekçe).
- */
+/** Yürütücü modu; hedef enum'dan doğrulanır, çünkü action doğrudan çağrılabilir ve uydurma dizge servise gitmemeli. */
 export async function setTicketModeAction(ticketId: string, mode: TicketHandler): Promise<ActionResult<{ mode: TicketHandler }>> {
   try {
     await requireAdmin();
@@ -148,8 +129,8 @@ const DRAFT_FAILURE: Record<string, string> = {
 };
 
 /**
- * **Taslak öner** (20.4): hibrit talepte AI taslağını İSTEK üzerine üretir — cron'u beklemeden.
- * `force`: operatör düğmeye bastıysa sebep ondadır; önbellek kuralı ezilir, model çağrılır.
+ * Hibrit talepte AI taslağını cron'u beklemeden üretir. `force`, çünkü operatör düğmeye bastıysa sebep ondadır ve önbellek kuralı
+ * ezilir.
  */
 export async function suggestTicketDraftAction(ticketId: string): Promise<ActionResult<{ generated: true }>> {
   try {
@@ -166,9 +147,8 @@ export async function suggestTicketDraftAction(ticketId: string): Promise<Action
 }
 
 /**
- * Hibrit taslağı tüket (16.08) — iki çıkışın tek kapısı: `send=true` taslak olduğu gibi personel
- * cevabı olur (gönderen `admin`, AI değil — 20-yapay-zeka §75); `send=false` taslak satırdan düşer
- * ve dönen metni ekran cevap kutusuna taşır.
+ * Hibrit taslağı tüket: `send=true` taslak olduğu gibi personel cevabı olur (gönderen `admin`, AI değil). `send=false` taslak
+ * satırdan düşer ve ekran dönen metni cevap kutusuna taşır.
  */
 export async function consumeTicketDraftAction(ticketId: string, send: boolean): Promise<ActionResult<{ draft: string }>> {
   try {
@@ -183,11 +163,8 @@ export async function consumeTicketDraftAction(ticketId: string, send: boolean):
 }
 
 /**
- * İade akışını bu talepten başlat — **yalnız damga** (DOMAIN §8). Para ve stok siparişte hareket
- * eder.
- *
- * Dönen `orderId` ekranın operatörü oraya götürmesi için: damga tek başına hiçbir şey bitirmiyor
- * ve operatörü damgayla baş başa bırakmak, iadenin yarım kalmasının en kolay yolu olurdu.
+ * İade akışını bu talepten başlatır, yalnız damgayla; para ve stok siparişte hareket eder. Dönen `orderId` operatörü siparişe
+ * götürmek içindir, yoksa iade damgada yarım kalırdı.
  */
 export async function triggerReturnAction(ticketId: string): Promise<ActionResult<{ orderId: string }>> {
   try {

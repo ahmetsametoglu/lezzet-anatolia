@@ -29,11 +29,8 @@ import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
 
 /**
- * Talep / şikâyet servisleri (16.1) — **karar vermez, satır getirir/yazar** (STACK §4).
- *
- * Hangi durum geçişinin geçerli olduğu burada DEĞİL, motorda (`domain-core/support`): servis
- * geçişe izin verip vermemeyi bilseydi aynı kural iki yerde yaşar ve WhatsApp'tan gelen talep
- * başka, formdan gelen başka davranabilirdi.
+ * Talep servisleri karar vermez, satır getirir ve yazar. Durum geçişinin geçerliliği motordadır, yoksa aynı kural iki yerde
+ * yaşar ve farklı kanaldan gelen talepler farklı davranabilirdi.
  */
 export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpdate> {
   constructor(supabase: SupabaseClient) {
@@ -41,10 +38,8 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
-   * **Talep + ilk mesaj tek turda** (`create_ticket`). İki ayrı yazım, ikincisi düştüğünde
-   * anlatımsız bir talep bırakırdı — kuyrukta duran ama açanın ne dediği bilinmeyen bir satır.
-   *
-   * Bu yüzden `insert` bu serviste açık DEĞİL (`allowDelete=false` gibi, tek yazma yolu RPC).
+   * Talep ve ilk mesaj tek turda (`create_ticket`), çünkü ikinci yazım düşerse anlatımsız bir talep kalırdı. Bu yüzden `insert` bu
+   * serviste açık değil; tek yazma yolu RPC.
    */
   async createWithMessage(input: {
     customerId: string;
@@ -77,10 +72,7 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
-   * Cevap + (gerekiyorsa) durum değişimi, tek turda (`reply_ticket`).
-   *
-   * `newStatus` KARAR DEĞİL, kararın taşınmasıdır: hangi cevabın durumu değiştirdiğini motor
-   * söyler (`statusAfterCustomerReply`). Servis kuralı bilseydi aynı karar iki yerde yaşardı.
+   * Cevap ve gerekiyorsa durum değişimi tek turda (`reply_ticket`). `newStatus` karar değil, motorun kararının taşınmasıdır.
    */
   async reply(input: {
     ticketId: string;
@@ -102,10 +94,8 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
-   * **Cevap maili kuyruğu** (17.08) — okunmamış cevabı `cutoff`tan eskiye dayanmış talepler.
-   *
-   * Süpürge dakikada bir koşuyor ve kümenin normal hâli BOŞ; kısmi indeks (`ticket_reply_pending_idx`)
-   * birebir bu sorgunun şeklidir. En eski önce: gecikmesi en çok büyümüş müşteri ilk haberi alsın.
+   * Cevap maili kuyruğu: okunmamış cevabı `cutoff`tan eskiye dayanmış talepler, kısmi indeksin (`ticket_reply_pending_idx`)
+   * şeklinde. En eski önce, ki gecikmesi en çok büyümüş müşteri ilk haberi alsın.
    */
   listReplyPendingBefore(cutoff: string, limit = 50): Promise<Ticket[]> {
     return this.getAll(
@@ -120,18 +110,8 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
-   * **Bu sipariş kalemine açık bir soru var mı** (10.3) — eksik kararının çift talep koruması.
-   *
-   * Depo ekranı "müşteriye sorulsun" düğmesini iki kez gördüğünde (yenilenmemiş sayfa, iki depocu,
-   * çift tıklama) aynı soru iki kez sorulur ve ikisi de ayrı kuyruk satırı olarak yaşar — müşteri
-   * aynı soruyu iki kez alır, operasyon hangisinin cevaplandığını bilemez.
-   *
-   * **`contains`, eşitlik değil:** `order_item_ids` bir dizi kolonu (junction tablosu yok) ve bir
-   * talep birden çok kalem işaretleyebilir. `@>` operatörü "bu kalem o dizinin içinde mi" diye
-   * sorar; eşitlik yalnız TEK kalemli talepleri bulurdu ve iki kalemli bir soru görünmez kalırdı.
-   *
-   * **Çözülmüş talep engel DEĞİL:** cevabı alınmış bir soru geçmiştir; aynı kalem yeniden eksik
-   * kalırsa yeniden sorulabilmeli.
+   * Bu sipariş kalemine açık bir soru var mı — aynı sorunun iki kez sorulmasını önler. `contains`, çünkü talep birden çok kalem
+   * işaretleyebilir; çözülmüş talep engel değil, aynı kalem yeniden eksik kalırsa yeniden sorulabilmeli.
    */
   async findOpenByOrderItem(orderItemId: string): Promise<Ticket | null> {
     const { data, error } = await this.supabase
@@ -147,14 +127,8 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
-   * **Bu siparişlerde hangi kalemler cevap bekliyor** (10.3) — hazırlık kuyruğunun izi.
-   *
-   * Soru sorulduktan sonra ekranda hiçbir iz kalmazsa depocu o kalemi ya unutur ya ikinci kez
-   * sorar; kuyruk bu yüzden "cevap bekleniyor" diyebilmeli. **Sipariş başına sorgu YOK** — sayfanın
-   * tamamı tek turda okunur (N+1 kırılır), dönen küme yalnız kalem kimlikleri.
-   *
-   * Dar seçim (`order_item_ids`): kuyruğun sorusu "bu kalem bekliyor mu", talebin kendisi değil —
-   * talep satırını taşımak, depo ekranına müşteri yazışması getirmek olurdu (`DOMAIN §2`).
+   * Bu siparişlerde hangi kalemler cevap bekliyor — hazırlık kuyruğunun izi, sayfanın tamamı tek turda. Yalnız kalem kimlikleri
+   * seçilir, ki depo ekranına müşteri yazışması taşınmasın.
    */
   async awaitingItemIds(orderIds: readonly string[]): Promise<Set<string>> {
     const awaiting = new Set<string>();
@@ -174,10 +148,8 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
-   * Müşterinin "Taleplerim" listesi — yeniden eskiye, keyset sayfalı.
-   *
-   * Sayfalı, çünkü talep sayısı veriyle büyür (CLAUDE.md: sınırsız büyüyen küme → keyset). Sıralama
-   * `createdAt`'tir, son mesaj değil: müşteri kendi listesinde talebi ne zaman AÇTIĞINI hatırlar.
+   * Müşterinin "Taleplerim" listesi, keyset sayfalı çünkü veriyle büyür. Sıralama açılış anına göre, çünkü müşteri talebi ne zaman
+   * açtığını hatırlar.
    */
   listByCustomer(customerId: string, cursor?: KeysetCursor, limit = DEFAULT_PAGE_SIZE): Promise<Page<Ticket>> {
     return this.getPage({ customerId }, { orderBy: 'createdAt', orderDirection: 'desc', limit, keysetAfter: cursor });
@@ -188,36 +160,27 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
     return this.getAll({ orderId }, { orderBy: 'createdAt', orderDirection: 'desc' });
   }
 
-  /** Konuşmadan açılmış talepler (15.x) — WhatsApp izlemeden talebe köprü. */
+  /** Konuşmadan açılmış talepler — sohbetten talebe köprü. */
   listByConversation(conversationId: string): Promise<Ticket[]> {
     return this.getAll({ conversationId }, { orderBy: 'createdAt', orderDirection: 'desc' });
   }
 
   /**
-   * Durum yazımı. `resolvedAt` damgası duruma BAĞLI yazılır — ikisi ayrışamaz (DB kısıtı da bunu
-   * zorlar): "ne zaman çözüldü" sorusunun cevabı hâlâ açık bir talepte olamaz.
-   *
-   * Geçişin geçerliliği çağırana aittir (`domain-core/support.canTransition`).
+   * Durum yazımı; `resolvedAt` damgası duruma bağlı yazılır ve ikisi ayrışamaz (DB kısıtı da zorlar). Geçişin geçerliliği
+   * çağırana aittir.
    */
   async setStatus(id: string, status: TicketStatus): Promise<Ticket> {
     return this.update({ id, status, resolvedAt: status === 'resolved' ? new Date().toISOString() : null });
   }
 
-  /**
-   * AI'dan devralma (16.5) — talep insana geçer ve AI o talepte susar. `ai`'dan da `hybrid`'den
-   * de iner; bekleyen taslak varsa birlikte düşer (devralan taslağı değil sohbeti istedi).
-   */
+  /** AI'dan devralma — talep insana geçer; bekleyen taslak birlikte düşer, çünkü devralan taslağı değil sohbeti istedi. */
   takeOver(id: string): Promise<Ticket> {
     return this.update({ id, handledBy: 'human', aiDraftReply: null, aiDraftGeneratedAt: null });
   }
 
   /**
-   * Yürütücü modunu değiştir (kullanıcı kararı 16.08): human · hybrid · ai — üçü de operatörün
-   * AÇIK kararıyla seçilir; ilk yazımdaki "insandan AI'a geri verilmez" duruşu, mod anahtarı
-   * ekrana çıkınca kalktı (kararı veren zaten muhatabın kendisi, sessiz bir değişim yok).
-   *
-   * Moddan düşerken taslak temizlenir: `human`/`ai` modunda bekleyen taslağın tüketicisi yoktur —
-   * kalsaydı hibride bir sonraki dönüşte BAYAT bir cevap "hazır" diye sunulurdu.
+   * Yürütücü modunu değiştir. Hibritten çıkarken taslak temizlenir, yoksa hibride bir sonraki dönüşte bayat bir cevap "hazır" diye
+   * sunulurdu.
    */
   setMode(id: string, mode: TicketHandler): Promise<Ticket> {
     return mode === 'hybrid'
@@ -226,24 +189,15 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
-   * Talebin TÜRÜNÜ düzeltir (aksiyon çekmecesi, 21.276 · kullanıcı onayı 06.09).
-   *
-   * Müşterinin seçtiği tür operatörün okuduğuyla tutmayabilir: "soru" diye açılmış bir kayıt
-   * fotoğraflar gelince "bozuk" çıkar. Sütun (`ticket.type`) baştan beri var, yazanı yoktu.
-   *
-   * **Geçiş kuralı YOK ve bu bilinçli:** tür bir SINIFLANDIRMADIR, bir durum değil. İş akışını
-   * `status` yürütüyor (`canTransitionTicket`); tür yalnız kuyruğun süzgeçlerini ve raporun
-   * kümelerini besliyor. Yanlış sınıflandırılmış bir kayıt düzeltilemez olsaydı o sayılar kalıcı
-   * olarak yanlış kalırdı — ve düzeltmenin bozacağı bir akış yok.
+   * Talebin türünü düzeltir; tür bir sınıflandırmadır ve geçiş kuralı yoktur. Yanlış sınıflandırılmış kayıt düzeltilemeseydi
+   * süzgeç ve rapor sayıları kalıcı olarak yanlış kalırdı.
    */
   setType(id: string, type: TicketType): Promise<Ticket> {
     return this.update({ id, type });
   }
 
   /**
-   * Bekleyen AI taslağını tüket (16.08) — gönderilmiş ya da düzenlemeye alınmış taslak satırdan
-   * düşer. Cevabın kendisi buradan YAZILMAZ (`reply` ayrı kapı): tüketmek ile göndermek ayrı
-   * işler ve gönderim düşerse taslak yerinde kalmalıydı — sıra bu yüzden çağıranda.
+   * Bekleyen AI taslağını satırdan düşürür. Cevap buradan yazılmaz, çünkü gönderim düşerse taslak yerinde kalmalı; sıra çağırandadır.
    */
   clearDraft(id: string): Promise<Ticket> {
     return this.update({ id, aiDraftReply: null, aiDraftGeneratedAt: null });
@@ -263,30 +217,16 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
-   * Cevabı insanın yazmadığı KAPANMAMIŞ talep sayısı (16.5) — başlığın "N AI'da" sayacı.
-   *
-   * `ai` + `hybrid` birlikte: soru "kaç talep AI'ın elinde", modun alt türü değil. Kapanmışlar
-   * sayılmaz — sayaç bir İŞ YÜKÜ göstergesi, tarihsel istatistik değil.
+   * Cevabı insanın yazmadığı (`ai` + `hybrid`) kapanmamış talep sayısı — başlığın "N AI'da" sayacı. Kapanmışlar sayılmaz, çünkü
+   * sayaç bir iş yükü göstergesi.
    */
   countHandledByAi(): Promise<number> {
     return this.count({ handledBy: ['ai', 'hybrid'] }, OPEN_TICKET_FILTER);
   }
 
   /**
-   * Durum başına talep sayısı — Talepler ekranının (16.3) başlık satırı: *"3 açık · 2 işlemde"*.
-   *
-   * **Yüklenmiş sayfadan sayılamaz** ve talep bunu doğru tespit etmişti: kuyruk keyset sayfalı, yani
-   * oradan türetilen "2 işlemde" aslında "ilk SAYFADA 2 işlemde" olurdu — ve sayı tam da anlam
-   * kazandığı yerde (kalabalık kuyrukta) yalan söylerdi. `CLAUDE.md §1`: sayfalayan okumanın sayacı
-   * sayfadan türetilmez.
-   *
-   * Her durum için AYRI bir sayım turu atılıyor; tek `group by` daha zarif olurdu ama PostgREST onu
-   * ancak bir RPC ile verir ve `STACK §13` okuma-RPC eşiği burada karşılanmıyor: küme üç değerli ve
-   * sayımlar indeksli — üç ucuz tur için şemaya fonksiyon eklemek, kazancından pahalı bir bağ olurdu.
-   *
-   * **`handledBy` kırılımı BİLEREK yok.** Talep de aynısını söylüyordu: `16.5` (AI işletme) inene
-   * kadar her talep `human`, yani üçüncü sayı daima 0 çıkardı. Sıfır gösteren bir sayaç, ekranda
-   * "AI çalışmıyor" değil "AI yok" der ve ikisi ayrı şeydir; kırılım 16.5 ile birlikte gelir.
+   * Durum başına talep sayısı; kuyruk sayfalı olduğu için yüklenmiş sayfadan sayılamaz. Durum başına ayrı ve indeksli tur atılır,
+   * çünkü tek `group by` ancak bir RPC ile gelir ve üç ucuz tur için şemaya fonksiyon eklemek kazancından pahalı.
    */
   async countByStatus(): Promise<Record<TicketStatus, number>> {
     const statuses = TicketStatusEnum.options;
@@ -295,14 +235,8 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
-   * **Ürün başına şikâyet yoğunluğu** (16.6 · operasyon talebi 03.08) — Geri Bildirim ekranının
-   * skor tablosunda, ürünün skorunun yanında okunur.
-   *
-   * **Neden RPC:** zincir `order_item_ids` DİZİSİNDEN geçiyor (talep → kalem → varyant → ürün) ve
-   * dizi açımı (`unnest`) + join PostgREST'ten sorulamaz; ekranda satır satır kurmak N+1 olurdu.
-   * `STACK §13`'ün RPC eşiği burada karşılanıyor — "üç ucuz tur" değil, yapılamayan bir sorgu.
-   *
-   * `productIds` boşsa TÜM ürünler döner; kapsam vermek okumayı daraltır, zorunlu değil.
+   * Ürün başına şikâyet yoğunluğu — Geri Bildirim ekranında ürün skorunun yanında okunur. RPC, çünkü zincir `order_item_ids`
+   * dizisinden geçiyor ve `unnest` + join PostgREST'ten sorulamaz; `productIds` boşsa tüm ürünler döner.
    */
   async listComplaintSignals(productIds: readonly string[] = [], since?: string): Promise<ProductComplaintSignal[]> {
     const rows = await this.executeRpc<unknown[]>('product_complaint_signal', {
@@ -312,22 +246,12 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
     return (rows ?? []).map((row) => ProductComplaintSignalSchema.parse(dbToApp(row)));
   }
 
-  /**
-   * Müşterinin KAPANMAMIŞ talep sayısı (09.9) — SAYIM, sayfa uzunluğu değil.
-   *
-   * Sayfayı çekip satırları saymak, tam da sayının anlam kazandığı yerde (çok talep açmış müşteride)
-   * tavana takılıp yalan söylerdi.
-   */
+  /** Müşterinin kapanmamış talep sayısı — sayım, çünkü sayfa uzunluğu çok talep açmış müşteride tavana takılırdı. */
   countOpenByCustomer(customerId: string): Promise<number> {
     return this.count({ customerId }, OPEN_TICKET_FILTER);
   }
 
-  /**
-   * Müşterinin toplam talep sayısı — operatörün "sürekli şikâyet eden mi" bakışı.
-   *
-   * SAYIM'dır, sayfa uzunluğu değil: bir sayfanın satır sayısını "toplam" diye göstermek, sayıyı
-   * tam da anlam kazandığı yerde (çok talep açmış müşteride) yalancı yapardı.
-   */
+  /** Müşterinin toplam talep sayısı — sayım, sayfa uzunluğu değil; operatörün "sürekli şikâyet eden mi" bakışı. */
   countByCustomer(customerId: string): Promise<number> {
     return this.count({ customerId });
   }
@@ -350,26 +274,18 @@ export interface TicketQueueFilter {
   /** Kapanmışları gizle — kuyruğun varsayılan hâli. */
   openOnly?: boolean;
   /**
-   * Tek müşterinin talepleri — müşterinin kendi "Taleplerim" listesi (08.6).
-   *
-   * Görünüm zaten `customer_id` taşıyor; süzgeç eksikti. Müşteri listesi bu görünümden okunuyor
-   * çünkü tasarımın istediği iki alan (son mesajın anı, siparişin numarası) yalnız burada türetilmiş
-   * hâlde duruyor — ham `ticket` satırından okumak sayfa başına iki ek tur demekti.
+   * Tek müşterinin talepleri; müşteri listesi bu görünümden okunur, çünkü son mesajın anı ve siparişin numarası yalnız burada
+   * türetilmiş hâlde durur.
    */
   customerId?: string;
   /**
-   * Talebi ŞU AN kim yürütüyor (16.5) — satır rozetinin süzgeci.
-   *
-   * `answeredByAi` ile karıştırılmamalı ve fark kalıcı: bu "şu an", öteki "hiç" sorusudur.
-   * Dizi = "şunlardan biri" (`in`): ekranın "AI'da" çipi `['ai','hybrid']` geçer — ikisi de
-   * "cevabı insan yazmıyor" kümesidir ve iki ayrı çip şeridi kalabalıklaştırırdı (16.08).
+   * Talebi şu an kim yürütüyor; `answeredByAi` "hiç" sorusudur, bu "şu an". Dizi "şunlardan biri" demek: "AI'da" çipi
+   * `['ai','hybrid']` geçer.
    */
   handledBy?: TicketHandler | TicketHandler[];
   /**
-   * AI bu talepte HİÇ konuştu mu (16.5 · operasyon talebi 03.08) — kalite denetiminin kümesi.
-   *
-   * `handledBy: 'ai'` ile süzmek bu soruyu sessizce yanlış cevaplardı: devralınmış talepler dışarıda
-   * kalırdı, oysa denetim en çok onlara bakar — devralma zaten bir şeyin ters gittiğinin işareti.
+   * AI bu talepte hiç konuştu mu — kalite denetiminin kümesi. `handledBy: 'ai'` devralınmış talepleri dışarıda bırakırdı, oysa
+   * denetim en çok onlara bakar.
    */
   answeredByAi?: boolean;
 }
@@ -390,31 +306,14 @@ export class TicketQueueService extends BaseDbService<TicketQueueRow, never, nev
     return this.getById(id);
   }
 
-  /**
-   * Cevap bekleyen AÇIK taleplerin SAYIMI — yönetim karar kutusunun rozeti (21.12).
-   * Sayfa uzunluğundan sayılmaz (`countAwaitingReply` künyesiyle aynı gerekçe): kalabalık kuyrukta
-   * "ilk sayfada N" ile "N bekliyor" aynı cümle değildir.
-   */
+  /** Cevap bekleyen açık taleplerin sayımı — yönetim karar kutusunun rozeti; sayfa uzunluğundan sayılmaz. */
   countAwaiting(): Promise<number> {
     return this.count({ awaitingReply: true, status: ['open', 'in_progress'] });
   }
 
   /**
-   * Talep listesi süzgeç şeridinin SAYAÇLARI (21.281) — çipin üstünde yazan sayı.
-   *
-   * Sayımlar sayfadan türetilmez, `countByStatus` künyesindeki gerekçenin aynısı: çip "bozuk · 3"
-   * derken ilk sayfada üç bozuk olması "üç bozuk var" demek değildir.
-   *
-   * **`all` ayrı bir tur DEĞİL, türlerin toplamı** — `type` zorunlu ve enum, yani dört küme açık
-   * kuyruğu tam olarak BÖLER; yedinci bir sayım aynı sayıyı ikinci kez sorardı ve iki sayının bir
-   * gün ayrışması mümkün olurdu.
-   *
-   * `resolved` burada çünkü ekranın kapanmışlar çipi de bir SAYIM ister; `awaiting` kuyruğun
-   * içinden bir daralmadır (açık + son sözü müşteride), o yüzden `all`ın parçasıdır ve toplamı
-   * bozmaz — çipler bir bölüntü değil, aynı kümeye bakan farklı sorulardır.
-   *
-   * Her sayım AYRI ve indeksli bir tur; tek `group by` ancak RPC ile gelirdi ve `STACK §13`
-   * eşiği burada da karşılanmıyor (`countByStatus`ün ölçtüğü karar).
+   * Talep listesi süzgeç çiplerinin sayaçları; `all` ayrı tur değil türlerin toplamıdır, çünkü tür açık kuyruğu tam olarak böler ve
+   * ayrı sayım bir gün ayrışabilirdi. `awaiting` ve `resolved` aynı kümeye bakan başka sorulardır, toplamı bozmaz.
    */
   async countForFilters(): Promise<{ all: number; byType: Record<TicketType, number>; awaiting: number; resolved: number }> {
     const types = TicketTypeEnum.options;
@@ -444,13 +343,8 @@ export class TicketQueueService extends BaseDbService<TicketQueueRow, never, nev
         answeredByAi: filter.answeredByAi,
       },
       {
-        /* SIRA `queueSortAt`TEN (21.281 · kullanıcı kararı 07.09) — "cevap bekleyenler ÜSTTE,
-           kendi içlerinde en taze önce", tasarımın kendi dipnotunun kuralı (v3:29).
-
-           `lastMessageAt` TERSİNİ yapıyordu: personel cevap verince kart en üste çıkıyor, cevap
-           bekleyen aşağı düşüyordu — oysa kuyruğun tek işi bekleyeni bekletmemek. Sıralama tek
-           sütunda çünkü keyset imleci tek alana dayanıyor; iki `order by` üç parçalı bir imleç
-           isterdi ve o değişiklik projedeki HER sayfalanan listenin altından geçerdi. */
+        /* Sıra `queueSortAt`ten: cevap bekleyenler üstte, kendi içlerinde en taze önce. Tek sütun, çünkü keyset imleci tek alana
+           dayanıyor ve iki `order by` her sayfalanan listenin imlecini değiştirirdi. */
         orderBy: 'queueSortAt',
         orderDirection: 'desc',
         limit,
@@ -464,30 +358,21 @@ export class TicketQueueService extends BaseDbService<TicketQueueRow, never, nev
 }
 
 /**
- * Talep yazışması (16.1). Talebin ilk açıklaması da bir mesajdır — ayrı bir `description` alanı
- * olsaydı "müşterinin anlatımı" ile sonraki cevapları iki ayrı yerde dururdu.
+ * Talep yazışması. Talebin ilk açıklaması da bir mesajdır, yoksa müşterinin anlatımı ile sonraki cevapları iki ayrı yerde dururdu.
  */
 export class TicketMessageService extends BaseDbService<TicketMessage, TicketMessageInsert, TicketMessageTranslationUpdate> {
   constructor(supabase: SupabaseClient) {
     super(supabase, 'ticket_message', TicketMessageSchema, TicketMessageInsertSchema, TicketMessageTranslationUpdateSchema, false);
   }
 
-  /**
-   * Bir talebin yazışması — eskiden yeniye, TAMAMI.
-   *
-   * Sayfalanmaz ve bu bilinçli: yazışma sınırsız büyüyen bir küme değil, tek bir konuşmadır
-   * (üç durumlu sade döngü, DOMAIN §15). Ortasından okunmaz — baştan okunur.
-   */
+  /** Bir talebin yazışması, eskiden yeniye ve tamamı; sayfalanmaz, çünkü sınırsız büyüyen bir küme değil tek bir konuşmadır. */
   listByTicket(ticketId: string): Promise<TicketMessage[]> {
     return this.getAll({ ticketId }, { orderBy: 'createdAt' });
   }
 
   /**
-   * **Çeviri kuyruğu** (20.2) — çevirisi henüz koşmamış mesajlar, en eski önce.
-   * Kısmi indeksle birebir (`ticket_message_untranslated_idx`).
-   *
-   * Yazışmanın İKİ yönü de kuyruktadır: müşterinin mesajını personel Türkçe okuyacak, personelin
-   * mesajını müşteri kendi dilinde okuyacak. Gönderene göre süzmek yarısını dilsiz bırakırdı.
+   * Çeviri kuyruğu: çevirisi koşmamış mesajlar, en eski önce, kısmi indeksle birebir. İki yön de kuyruktadır; gönderene göre
+   * süzmek yazışmanın yarısını dilsiz bırakırdı.
    */
   listUntranslated(limit = 20): Promise<TicketMessage[]> {
     return this.getAll({}, { isNullFields: ['translatedAt'], orderBy: 'createdAt', limit });

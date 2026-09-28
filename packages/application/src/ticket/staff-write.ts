@@ -9,28 +9,15 @@ import { ringTicketBell } from '../realtime/bell';
 import { translateTicketMessageNow } from './translate';
 
 /*
-  PERSONEL TALEP YAZIMLARI — terfi 21.12 (kaynağı `apps/web/lib/ticket/write.ts`in personel yarısı,
-  birebir; web köprüyle çağırır). Ölçüt doldu: `openTicket`ı artık üç kapı çağırıyor (web hazırlık
-  "müşteriye sor" · web destek · mobil Y1/Y2), `replyAsStaff`i iki yüzey.
-
-  Her kapı `{ ok }` biçiminde bir sonuç döner, fırlatmaz: reddin sebebi ekranın kullanıcıya
-  söyleyeceği cümledir; exception'a çevrilirse o cümle kaybolur ve geriye "bir hata oluştu" kalır.
-
-  **Sahiplik ve rol burada kontrol edilmez, imzada durur:** personel kapıları `authorId` ister ve
-  çağıran onu guard'dan alır. Kapı kendi başına oturum okusaydı cron'dan gelen çağrı hiç çalışmazdı.
+  Kapılar fırlatmaz, `{ ok }` döner, çünkü reddin sebebi ekranın kullanıcıya söyleyeceği cümledir. Rol burada okunmaz, imzada
+  durur: personel kapıları `authorId` ister, ki cron'dan gelen çağrı da oturumsuz çalışabilsin.
 */
 
 export type TicketWriteResult<T> = { ok: true; data: T } | { ok: false; reason: string };
 
 /**
- * **Ekler yalnız çağıranın kendi alanından gelebilir.**
- *
- * Anahtar istemciden geliyor ve okuma kapısı onu imzalı adrese çeviriyor. Sahiplik kontrolü TALEP
- * üzerinde yapılıp anahtar üzerinde yapılmasaydı, müşteri private kovadaki herhangi bir dosyayı
- * kendi talebine iliştirip okutabilirdi — yetki doğrulanmış olurdu ama yanlış nesnenin.
- *
- * `null` scope = biçimi tanınmayan anahtar; kabul edilmez. (Web'in müşteri kapıları da buradan
- * okur — kural tek yerde.)
+ * Ekler yalnız çağıranın kendi alanından gelebilir; sahiplik talepte değil anahtarda sorulur, yoksa müşteri private kovadaki
+ * herhangi bir dosyayı kendi talebine iliştirip okutabilirdi. Biçimi tanınmayan anahtar kabul edilmez.
  */
 export function ticketAttachmentsBelongTo(
   attachments: readonly string[] | undefined,
@@ -68,12 +55,8 @@ async function checkOrderOwnership(
 }
 
 /**
- * Talep açılışı — müşteri kendi açar ya da personel müşteri adına açar; talep ve ilk mesaj **tek
- * turda** yazılır (açan kişinin ne dediği bilinmeyen bir talep kuyruğa düşmemeli).
- *
- * AÇAN MESAJ ANINDA ÇEVRİLMEZ, KUYRUĞA BIRAKILIR (ölçülmüş karar, 25.08): çeviri bir LLM turudur
- * ve açanın ekranını 3-6 sn bekletiyordu. `replyAsStaff`teki aciliyetin sebebi ZİLDİR; burada zil
- * yok — personelin açtığı talepte müşteriye teyit maili de gitmiyor (16.4).
+ * Talep ve ilk mesaj tek turda yazılır, ki anlatımı olmayan talep kuyruğa düşmesin. Açan mesaj anında çevrilmez, kuyruğa bırakılır,
+ * çünkü çeviri bir LLM turudur ve burada onu bekletecek bir zil yok.
  */
 export async function openTicket(
   db: SupabaseClient,
@@ -143,12 +126,10 @@ export async function replyAsStaff(
     newStatus: statusAfterStaffReply(ticket.status),
   });
 
-  /* ÇEVİRİ HABERDEN VE ZİLDEN ÖNCE (kullanıcı bulgusu 17.08): operatör Türkçe yazıyor; müşteri
-     mesajı İLK görüşte kendi dilinde görmeli. Künyesi `translateTicketMessageNow`da. */
+  // Çeviri haberden ve zilden önce: müşteri operatörün Türkçe yazdığını ilk görüşte kendi dilinde görmeli.
   await translateTicketMessageNow(db, message);
 
-  /* MAİL ANINDA GİTMEZ, KUYRUĞA GİRER (16.08 — künyesi `reply-mail.ts`de): müşteri ekranı açıksa
-     cevabı zil sayesinde zaten anında görüyor; o an giden mail gürültüdür. */
+  // Mail anında gitmez, kuyruğa girer: ekranı açık müşteri cevabı zil sayesinde zaten görüyor.
   await queueTicketReplyMail(db, ticket);
   /* MÜŞTERİNİN KANALI — operasyon zilinden ayrı (künyesi `ringTicketBell`de). Zil sessizdir:
      çalmazsa cevap yine yazılmıştır, ekran biraz geç görür. */
@@ -180,28 +161,14 @@ export async function changeTicketStatus(
 
   const updated = await service.setStatus(ticket.id, input.to);
   // Yalnız "çözüldü" ve "yeniden açıldı" haber doğurur, ve yalnız PERSONEL yaptığında — kararı
-  // bildirim katmanı verir (16.4), burası olayı bildirmekle yetinir.
+  // bildirim katmanı verir, burası olayı bildirmekle yetinir.
   await notifyTicketStatusChanged(db, updated, ticket.status, input.by);
   return { ok: true, data: updated };
 }
 
 /**
- * Talebin TÜRÜNÜ düzelt (aksiyon çekmecesi, 21.276) — "soru" diye açılmış kayıt fotoğraflar
- * gelince "bozuk" çıkabilir.
- *
- * Durum makinesinin aksine geçiş kuralı YOK: tür bir sınıflandırmadır, iş akışını `status`
- * yürütür (servis künyesi). Aynı türe "geçmek" yine de reddediliyor — ekran o düğmeyi zaten
- * seçili gösterir, gelen çağrı bir yarışın işaretidir ve sessizce yutulmamalı (`setTicketMode`
- * ile aynı gerekçe).
- *
- * ── "SONRADAN TÜR DEĞİŞTİRMEK GEÇMİŞİ TUTARSIZ BIRAKIR MI?" — ÖLÇÜLDÜ, HAYIR ─
- * Soru şerit dışından geldi (06.09) ve haklıydı: türe bakan bir iş kuralı varsa, sonradan
- * değiştirmek o kararı geçmişe dönük yanlış yapardı. Ölçüm: türü okuyan TEK karar noktası
- * `isReturnBound` / `RETURN_BOUND_TYPES` ve künyesi zaten *"bir YASAK değil bir İŞARET'tir —
- * `canTriggerReturn` tipe bakmaz"* diyor; üstelik `isReturnBound`ın bugün hiç tüketicisi yok.
- * İade tetiği türe değil siparişin varlığına ve damgaya bakıyor. Kalan tek okuma bildirim
- * gövdesi (`notify.ts`) — o da olayın anındaki fotoğrafı, geçmişe dönük hesaplanan bir şey değil.
- * Yani tür düzeltmesi hiçbir kararı geriye dönük bozmuyor.
+ * Talebin türünü düzelt; tür bir sınıflandırmadır ve geçiş kuralı yoktur, iade tetiği türe değil siparişe ve damgaya bakar. Aynı
+ * türe geçmek reddedilir, çünkü ekran o düğmeyi zaten seçili gösterir ve gelen çağrı bir yarışın işaretidir.
  */
 export async function setTicketType(
   db: SupabaseClient,
@@ -214,16 +181,7 @@ export async function setTicketType(
   return { ok: true, data: await service.setType(ticket.id, input.type) };
 }
 
-/**
- * Yürütücü modunu değiştir (kullanıcı kararı 16.08): human · hybrid · ai.
- *
- * **TERFİ (06.09):** gövdesi `apps/web/lib/ticket/write.ts`te duruyordu ve web'e özgü sayılmıştı;
- * mobilin aksiyon çekmecesi ikinci yüzey olunca ölçüt karşılandı (paketin kuralı: "en az iki
- * yüzeyin çağırdığı orkestrasyon"). Web tarafı köprüye döndü — öteki beşiyle aynı desen.
- *
- * Aynı moda "geçmek" reddedilir: ekran o düğmeyi zaten seçili gösterir, yine de gelen çağrı bir
- * yarışın işaretidir ve sessizce yutulmamalı.
- */
+/** Yürütücü modunu değiştir; aynı moda geçmek reddedilir, çünkü gelen çağrı bir yarışın işaretidir. */
 export async function setTicketMode(
   db: SupabaseClient,
   input: { ticketId: string; mode: TicketHandler },
@@ -236,15 +194,8 @@ export async function setTicketMode(
 }
 
 /**
- * İade akışını bu talepten başlat — **yalnız damga** (TERFİ 06.09, gerekçe `setTicketMode`de).
- *
- * Para ve stok burada HİÇ hareket etmez: iade siparişte yaşar (`adjustFulfillment` +
- * `recordForOrder`, 07.9) ve operatör oraya yönlendirilir. Bu kapı yalnız "iadeyi hangi talep
- * doğurdu" sorusunu cevaplanabilir kılar; ikinci bir iade arayüzü kurmaz (DOMAIN §8).
- *
- * **Akıbet (`restock` · `discard` · `goodwill`) BURADA SEÇİLMEZ** ve bu ayrım tasarımla açık bir
- * fark: v3'ün çekmecesi karar setini talebe koyuyor, sistem ise siparişe. Talep tarafında iki
- * ayrı düğme (ör. "iade" ve "jest") aynı damgayı yazardı — tek kapı, tek ad.
+ * İade akışını bu talepten başlatır, yalnız damgayla: para, stok ve akıbet siparişte seçilir, burada ikinci bir iade arayüzü
+ * kurulmaz. Kapı yalnız "iadeyi hangi talep doğurdu" sorusunu cevaplanabilir kılar.
  */
 export async function triggerReturnFromTicket(
   db: SupabaseClient,
@@ -261,8 +212,8 @@ export async function triggerReturnFromTicket(
 }
 
 /**
- * AI'dan devralma (16.5'in arka ucu) — `ai`'dan da `hybrid`'den de iner; bekleyen taslak servis
- * katında birlikte düşer (devralan taslağı değil sohbeti istedi).
+ * AI'dan devralma — `ai`'dan da `hybrid`'den de iner; bekleyen taslak servis katında birlikte düşer (devralan taslağı değil
+ * sohbeti istedi).
  */
 export async function takeOverTicket(db: SupabaseClient, ticketId: string): Promise<TicketWriteResult<Ticket>> {
   const service = new TicketService(db);
@@ -273,15 +224,8 @@ export async function takeOverTicket(db: SupabaseClient, ticketId: string): Prom
 }
 
 /**
- * Hibrit taslağı tüket (16.08) — mobildeki desenin arka ucu (`complaint-screen` v2:548).
- *
- * İki çıkış, tek kapı:
- *   · `send=true` — "Cevaba çevir": taslak OLDUĞU GİBİ personel cevabı olur. Gönderen `admin`dir,
- *     `ai` değil (20-yapay-zeka §75: insanın onayladığı taslak insanın cevabıdır).
- *   · `send=false` — "Düzenleyerek gönder": taslak satırdan düşer, metni ekran cevap kutusuna taşır.
- *
- * Sıra bilinçli: önce gönder, SONRA temizle — gönderim düşerse taslak yerinde kalır ve operatör
- * yeniden deneyebilir. Ters sıra, düşen gönderimde taslağı sessizce yutardı.
+ * Hibrit taslağı tüket: `send=true` taslak olduğu gibi personel cevabı olur (insanın onayladığı taslak insanın cevabıdır),
+ * `send=false` taslak düşer ve metni cevap kutusuna taşınır. Önce gönderilir sonra temizlenir, ki düşen gönderim taslağı yutmasın.
  */
 export async function consumeTicketDraft(
   db: SupabaseClient,

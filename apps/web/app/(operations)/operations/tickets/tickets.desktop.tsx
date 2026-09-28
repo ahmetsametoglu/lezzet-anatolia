@@ -91,7 +91,7 @@ export function TicketsDesktop({
             <TicketContextPane
               context={data.context}
               customerName={data.detail.customer.name}
-              // Konusuz talepte tür yazılır: şerit boş kalırsa operatör hangi talepten yazdığını göremez.
+              // Konusuz talepte tür yazılır: bant boş kalırsa operatör hangi talepten yazdığını göremez.
               chat={chatContext('Talepten', [
                 data.detail.ticket.subject?.trim() || TICKET_TYPE_LABELS[data.detail.ticket.type],
                 data.detail.order?.referenceNo,

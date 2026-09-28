@@ -12,23 +12,8 @@ import type { CustomerTicketView } from './ticket-types';
 import { translateTicketMessageNow } from './translate';
 
 /*
-  MÜŞTERİ TALEP YAZIMI — terfi 21.14. Kaynağı `apps/web/lib/ticket/write.ts`in müşteri yarısıdır;
-  köprü notu `ticket-types.ts` başlığında.
-
-  ── YALNIZ MÜŞTERİ KAPILARI GELDİ ───────────────────────────────────────────
-  `replyAsStaff` · `changeTicketStatus` · `takeOverTicket` · `triggerReturnFromTicket` web'de kaldı:
-  paketin kabul ölçütü "en az iki yüzeyin çağırdığı orkestrasyon" (`index.ts`) ve dördünün de tek
-  yüzeyi var (operasyon web ekranı). Personelin MÜŞTERİ ADINA talep açması da öyle — bu dosyadaki
-  kapı `customerId`'nin talebin sahibi OLDUĞUNU varsayar ve adı bunu söyler.
-
-  ── HER KAPI GÖRÜNÜR RETLE DÖNER, FIRLATMAZ ─────────────────────────────────
-  Reddin sebebi ekranın müşteriye söyleyeceği cümledir; exception'a çevrilirse o cümle kaybolur ve
-  geriye "bir hata oluştu" kalır (`CustomerAddressOutcome` emsali).
-
-  ── SAHİPLİK İMZADA ─────────────────────────────────────────────────────────
-  Kapı kendi başına oturum OKUMAZ: `customerId`'yi çağıran guard'dan alır (`currentCustomerId`,
-  Bearer middleware). Kapı oturum okusaydı taşımaya bağlanır, WhatsApp gibi oturumsuz bir akıştan
-  hiç çağrılamazdı.
+  Müşteri kapıları `customerId`'nin talebin sahibi olduğunu varsayar ve onu çağıranın guard'ından alır, ki oturumsuz bir akıştan da
+  çağrılabilsin. Kapılar fırlatmaz, sonuç döner, çünkü reddin sebebi ekranın müşteriye söyleyeceği cümledir.
 */
 
 /** Motorun taslak reddi — kapının ret kümesine AYNEN girer, ikinci kez yazılmaz (CLAUDE §1). */
@@ -52,7 +37,7 @@ export type ReplyToTicketOutcome =
  * okutmak boşuna bir tur olurdu.
  */
 export interface TicketEffects {
-  /** Talep açıldı teyidi (16.4 · şablon 14.7) — web karşılığı `notifyTicketReceived(ticket, 'customer')`. */
+  /** Talep açıldı teyidi — web karşılığı `notifyTicketReceived(ticket, 'customer')`. */
   notifyReceived?: (ticket: Ticket) => Promise<unknown>;
 }
 
@@ -60,11 +45,8 @@ export interface TicketEffects {
 const warnedEffects = new Set<string>();
 
 /**
- * Etkiyi koşturur; yoksa UYARIR, patlarsa kaydeder — ama işi geri almaz.
- *
- * Sessiz no-op olmaz (CLAUDE §1): "talep açıldı ama teyit maili gitmiyor" arızasını aylarca
- * görünmez kılardı. Fırlatma da olmaz: mail sağlayıcısı düştü diye kaydedilmiş bir talebi
- * "başarısız" göstermek, müşteriye ikinci kez yazdırmak olurdu.
+ * Etkiyi koşturur; yoksa uyarır, çünkü sessiz atlama gitmeyen teyit mailini görünmez kılardı. Patlarsa kaydeder ama fırlatmaz:
+ * kaydedilmiş talebi başarısız göstermek müşteriye ikinci kez yazdırırdı.
  */
 async function runEffect(effect: string, ticketId: string, run: (() => Promise<unknown>) | undefined): Promise<void> {
   if (!run) {
@@ -88,13 +70,8 @@ async function runEffect(effect: string, ticketId: string, run: (() => Promise<u
 }
 
 /**
- * **Ekler yalnız çağıranın kendi alanından gelebilir.**
- *
- * Anahtar istemciden geliyor ve okuma kapısı onu imzalı adrese çeviriyor. Sahiplik kontrolü TALEP
- * üzerinde yapılıp ANAHTAR üzerinde yapılmasaydı, müşteri private kovadaki herhangi bir dosyayı
- * kendi talebine iliştirip okutabilirdi — yetki doğrulanmış olurdu ama yanlış nesnenin.
- *
- * `null` scope = biçimi tanınmayan anahtar; kabul edilmez.
+ * Ekler yalnız çağıranın kendi alanından gelebilir; sahiplik talepte değil anahtarda sorulur, yoksa müşteri private kovadaki
+ * herhangi bir dosyayı kendi talebine iliştirip okutabilirdi. Biçimi tanınmayan anahtar kabul edilmez.
  */
 function attachmentsBelongTo(attachments: readonly string[] | undefined, owner: { customerId: string; ticketId?: string }): boolean {
   return (attachments ?? []).every((key) => {
@@ -105,14 +82,8 @@ function attachmentsBelongTo(attachments: readonly string[] | undefined, owner: 
 }
 
 /**
- * Siparişi çözer ve SAHİPLİĞİ doğrular; ikisi tek kapıda çünkü ayrılırlarsa biri unutulur.
- *
- * Bunu ne DB ne motor bilebilir: motor siparişleri görmez, DB'de `ticket.customer_id` ile
- * `order.customer_id` arasında bir kısıt YOKTUR (olsaydı personelin elle açtığı talep de bozulurdu).
- * Kontrol edilmeseydi müşteri başkasının sipariş numarasını, ürünlerini ve iade tutarını kendi
- * talebi üzerinden okurdu — üstelik operatör de yanlış siparişte iade başlatırdı.
- *
- * "Yok" ile "senin değil" AYNI cevabı verir (`null`): olmayan bir siparişin varlığı doğrulanmaz.
+ * Siparişi çözer ve sahipliği doğrular; DB'de talep ile sipariş müşterisi arasında kısıt yok, yoksa müşteri başkasının siparişini
+ * kendi talebinden okurdu. "Yok" ile "senin değil" aynı cevabı verir (`null`), ki olmayan bir siparişin varlığı doğrulanmasın.
  */
 async function resolveOwnOrder(db: SupabaseClient, customerId: string, lookup: CustomerOrderLookup): Promise<Order | null> {
   const service = new OrderService(db);
@@ -126,14 +97,8 @@ async function resolveOwnOrder(db: SupabaseClient, customerId: string, lookup: C
 }
 
 /**
- * Müşterinin talep açması. Talep ve ilk mesaj **tek turda** yazılır (`create_ticket`) — açan kişinin
- * ne dediği bilinmeyen bir talep kuyruğa düşmemeli.
- *
- * ── KONTROL SIRASI WEB'DEN FARKLI, GEREKÇESİYLE ─────────────────────────────
- * Web `checkTicketDraft`i ilk çalıştırıyor çünkü elinde zaten `orderId` vardı. Burada sipariş bir
- * REFERANSTAN çözülebiliyor, yani taslak kontrolü bir DB turunun ardına düşerdi. Sıra bu yüzden
- * "ucuzdan pahalıya" kuruldu: DB'ye hiç gitmeden reddedilebilen her şey önce reddedilir. Kural
- * kümesi değişmedi, yalnız sırası.
+ * Müşterinin talep açması; talep ve ilk mesaj tek turda yazılır. Sipariş burada referanstan çözülebildiği için kontroller ucuzdan
+ * pahalıya sıralanır: DB'ye gitmeden reddedilebilen her şey önce reddedilir.
  */
 export async function openCustomerTicket(
   db: SupabaseClient,
@@ -192,24 +157,16 @@ export async function openCustomerTicket(
   // Teyit maili talep KAYDEDİLDİKTEN SONRA ve beklenerek: beklemezsek çağıran süreç (server action /
   // Hono isteği) mail gitmeden sonlanabilir. Etki kendi içinde sessiz — hata yukarı çıkmaz.
   await runEffect('notifyReceived', ticket.id, effects?.notifyReceived && (() => effects.notifyReceived!(ticket)));
-  // Yeni talep kuyruğa düştü — operatörün ekranı elle yenilenmeden görsün (16.8). Zil PORT DEĞİL:
-  // teyit maili gibi paket bağımlılığı istemiyor, tek `fetch` ve sessiz.
+  // Operatörün ekranı yenilenmeden görsün. Zil port değil, çünkü paket bağımlılığı istemiyor: tek `fetch` ve sessiz.
   await ringTicketsBell();
-  // Yönetimin zili de duysun (26.08): kuyruğa düşme ÂNI haberdir — üretici kendi içinde sessiz.
+  // Yönetimin zili de duysun: kuyruğa düşme anı haberdir, üretici kendi içinde sessiz.
   await notifyTicketOpened(db, { ticketId: ticket.id, type: input.type, referenceNo: order?.referenceNo ?? null });
   return { status: 'ok', ticket };
 }
 
 /**
- * Müşterinin cevabı. **Kapanmış talep kendiliğinden yeniden açılır** (motorun kararı): "yeniden aç"
- * ile "yaz" ayrı iki düğme olsaydı müşteri yazar, düğmeye basmayı unutur ve mesajı kimsenin
- * bakmadığı kapalı bir talebin içinde kalırdı.
- *
- * **Cevap GÜNCEL GÖRÜNÜMÜ döndürür** (adres kapılarının "cevap hep güncel liste" kararı): tek bir
- * yazım komşu gerçekleri de oynatıyor — durum `resolved`dan `open`a dönebilir, `lastMessageAt`
- * kayar. Yalnız yeni mesajı dönmek, ekranı kendi durumunu TAHMİN etmeye zorlardı; tahmin de bir gün
- * sunucudan ayrışır. Bildirim YOKTUR ve bilinçli: kimse kendi cümlesini mailde okumak istemez —
- * haber karşı taraf konuştuğunda gider (16.4).
+ * Müşterinin cevabı kapanmış talebi kendiliğinden yeniden açar ve güncel görünümü döndürür, çünkü yazım durumu da oynatır ve ekran
+ * onu tahmin etmemeli. Bildirim yoktur: haber karşı taraf konuştuğunda gider.
  */
 export async function replyToCustomerTicket(
   db: SupabaseClient,
@@ -240,14 +197,10 @@ export async function replyToCustomerTicket(
     newStatus: statusAfterCustomerReply(ticket.status),
   });
 
-  /* ÇEVİRİ ZİLDEN ÖNCE (17.08) — ve yön burada TERS: müşteri Fransızca yazıyor, operatör Türkçe
-     okuyor. Kırpışma iki yüzeyde de aynı arızadır (kapının künyesi); yalnız birini düzeltmek,
-     ötekini "bir gün de o yaşanır" diye bırakmak olurdu. */
+  // Çeviri zilden önce: operatör müşterinin mesajını ilk görüşte Türkçe görmeli.
   await translateTicketMessageNow(db, written);
 
-  // Müşterinin mesajı YAZILDI — kuyruğu izleyen operatör ekranı zili duyup sunucudan yeniden
-  // istesin (16.8). Kullanıcının istediği asıl akış budur: mobilden yazılan mesaj, açık duran
-  // Talepler ekranında hem kuyruk satırında hem yazışmada kendiliğinden belirir.
+  // Açık duran Talepler ekranı zili duyup kuyruğu ve yazışmayı sunucudan yeniden istesin.
   await ringTicketsBell();
 
   const view = await getCustomerTicket(db, { customerId: input.customerId, ticketId: ticket.id, locale: input.locale });
