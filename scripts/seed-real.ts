@@ -704,9 +704,11 @@ async function seedCollections(db: Db): Promise<void> {
     // Kuru koşuda ürünler HENÜZ YAZILMADIĞI için hiçbiri bulunamaz; orada uyarı basmak yanlış alarm
     // olur ve gerçek eksikliği içinde kaybederdi (`seedPurchases` aynı ayrımı yapıyor).
     if (eksik.length > 0 && !DRY_RUN) console.log(`  ⚠ ${col.name.tr} — ${eksik.length} üye bulunamadı: ${eksik.join(' · ')}`);
-    plan(`${col.name.tr} · ${DRY_RUN ? col.skus.length + col.drafts.length : new Set(ids).size} ürün`);
+    plan(`${col.name.tr} · ${DRY_RUN ? col.skus.length + col.drafts.length : new Set(ids).size} ürün${col.featured ? ' · vitrinde' : ''}`);
     if (DRY_RUN) continue;
-    await collections.create({ name: col.name, description: col.description, sortOrder: i + 1, productIds: [...new Set(ids)] });
+    const created = await collections.create({ name: col.name, description: col.description, sortOrder: i + 1, productIds: [...new Set(ids)] });
+    // Vitrin işareti servisin ayrı kapısından yazılır (`setFeatured` künyesi).
+    if (col.featured) await collections.setFeatured(created.id, true);
   }
 }
 

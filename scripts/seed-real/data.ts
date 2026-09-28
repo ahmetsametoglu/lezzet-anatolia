@@ -850,6 +850,8 @@ interface SeedCollection {
   description: UcDil;
   skus: string[];
   drafts: string[];
+  /** Ana sayfa vitrini — işletmecinin panelden verdiği karar; sıfırlamada kaybolmasın diye burada. */
+  featured?: boolean;
 }
 
 export const COLLECTIONS: SeedCollection[] = [
@@ -862,6 +864,7 @@ export const COLLECTIONS: SeedCollection[] = [
     },
     skus: ['700101', '700301', '700201', '700402'],
     drafts: ['Druivenmelasse', 'Johannesbroodmelasse', 'Tahini', 'Olijfolie'],
+    featured: true,
   },
   {
     name: { tr: 'Bitki Rafı', fr: 'Herboristerie', de: 'Kräuterregal' },
@@ -888,6 +891,7 @@ export const COLLECTIONS: SeedCollection[] = [
       'Appel azijn',
       'Honing azijn',
     ],
+    featured: true,
   },
 ];
 
