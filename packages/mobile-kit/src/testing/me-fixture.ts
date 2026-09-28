@@ -4,14 +4,8 @@ import type { UserRole } from '@lezzet/types';
 import type { Me } from '../lib/api/me';
 
 /*
-  `/api/v1/me` cevabı — TESTLER İÇİN. Ekranın gördüğü tek değişken `roles` olduğu için geri kalan
-  alanlar nötr doldurulur; ama gövde ŞEMADAN GEÇİRİLİR (`MeSchema.parse`), yani sözleşme değişince
-  fixture derlemede değil KOŞUDA da kırılır ve testler yanlış bir cevabı doğruymuş gibi taşımaz.
-
-  Fixture kaynak dosyada (test dosyasında değil): bugünkü tek tüketicisi kabuk testi
-  (`operations-shell.test.tsx` — bildirim ekranı testi /me kurmaz, bölümleri doğrudan sağlayıcıyla
-  verir); yine de burada durur çünkü gövde ŞEMANIN yanında yaşamalı — /me cevabı kuran her yeni
-  test (21.10+ dilimleri) aynı fixture'ı çağırır, kendi kopyasını yazmaz.
+  Testler için `/api/v1/me` cevabı; gövde şemadan geçirilir ki sözleşme değişince fixture koşuda da kırılsın ve testler
+  yanlış bir cevabı doğruymuş gibi taşımasın. /me kuran her test bunu çağırır, kendi kopyasını yazmaz.
 */
 
 /**

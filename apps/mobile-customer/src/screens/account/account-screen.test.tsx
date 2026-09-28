@@ -381,7 +381,7 @@ describe('AccountScreen', () => {
     // Gövdede YER ve KAYNAK var, e-posta YOK: adresi sunucu oturumdan çözer (sözleşme künyesi).
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({ postalCode: '67000', country: 'FR', source: 'app-account' });
     expect(mockToast).toHaveBeenCalledWith(messages.tr.marketing.zone.sent);
-    // Kampanya izni artık yan etki DEĞİL: tercih ucuna hiçbir yazım gitmedi.
+    // Kampanya izni yan etki değil: tercih ucuna hiçbir yazım gitmedi.
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/me/preferences'))).toBe(false);
   });
 });

@@ -1,12 +1,6 @@
 /*
-  HESAP TEST/DEMO VERİSİ — artık yalnız KİMLİK KARTININ ve henüz ucu olmayan iki bloğun
-  başlangıç değeri. Ekranın gerisi gerçek uçlardan okuyor ve fixture o alanları TAŞIMIYOR:
-  adresler 21.15'te (`use-addresses.hook`), dil/izinler 21.16'da (`/me` + `/me/preferences`),
-  puan ve kuponlar 21.17'de (`use-points.hook`) bağlandı — her biri kalktıkça bu dosya küçüldü.
-
-  KALAN İKİSİ: `company` (B2B künyesi — okuma ucu yok) ve `points`in eski alanı DEĞİL, yalnız
-  `referralCode`ün geldiği `/me`. Tipler sayfaya özel; alan adları sözleşmedekilerle aynı ki
-  bağlanma günü çeviri gerekmesin.
+  Hesap ekranının test verisi ve kimlik kartının başlangıç değeri; ekranın gerisi gerçek uçlardan okur. Alan adları
+  sözleşmedekilerle aynı ki bağlanırken çeviri gerekmesin.
 */
 
 export interface AccountCompanyView {
@@ -16,7 +10,7 @@ export interface AccountCompanyView {
 }
 
 export interface AccountData {
-  /** Girilmemişse BOŞ gelir — kartın e-postaya düşmesi ekranın kararı (MB-66, `account-screen`). */
+  /** Girilmemişse boş gelir; kartın e-postaya düşmesi ekranın kararı. */
   name: string;
   email: string;
   phone: string;
