@@ -5,25 +5,14 @@ import awardMessages from '@/screens/customer-kit/points-award-messages.json';
 import { DiscoverScreen } from './discover-screen';
 
 /*
-  KEŞİF BİTİŞİNİN PUAN BLOĞU (MB-16) — hook'un `pointsSettling` hâli ekranda ne çiziyor.
-
-  Metinler ARTIK KİTİN sözlüğünde (`points-award-messages.json`): blok 15.08'de ortaklaştı, keşif
-  ve geri bildirim aynı üç satırı çiziyor. Test o yüzden kitin sözlüğünü okuyor — ekranın kendi
-  `messages.json`'unda bu anahtarlar yok.
-
-  Neden ayrı bir ekran testi: arıza cihazda EKRANDA görüldü ("+6 puan"), hook'un dönüşünde değil.
-  Hook testi sayının ne zaman tamamlandığını kilitler; burada kilitlenen şey ekranın o hâlde
-  EKSİK BİR SAYI YAZMAMASI.
-
-  Kaydırma jesti değil OY DÜĞMESİ kullanılıyor: ikisi de aynı `commit` yolundan geçiyor (ekranın
-  kendi künyesi), jestin taklidi ise Reanimated mock'unun ötesine geçmez.
+  Keşif bitişinin puan bloğu: yolda oy varken ekran eksik bir sayı yazmamalı. Oy düğmesi kullanılır, çünkü jest de düğme de
+  aynı yoldan geçer ve jestin taklidi Reanimated mock'unun ötesine geçmez.
 */
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), push: jest.fn(), replace: jest.fn() }) }));
 
-/* Ekranın `locale` PROP'u bir test/demo kapısı; kitin bloğu ise uygulamanın dilini (`useAppLocale`)
-   okuyor — gerçek uygulamada ikisi aynı kaynak. Cihaz dili sabitlenmezse test iki dil birden çizer
-   (ölçüldü: ekran tr, blok fr). Geri bildirim ekranının testi de aynı mock'u kuruyor. */
+/* Ekranın `locale` prop'u bir test kapısı, puan bloğu ise uygulamanın dilini okur; cihaz dili sabitlenmezse test iki dil
+   birden çizer. */
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
 jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
@@ -108,7 +97,7 @@ describe('DiscoverScreen — bitişteki puan çipi', () => {
     expect(screen.queryByTestId('discover-award-settling')).toBeNull();
     expect(screen.getByTestId('discover-award')).toBeTruthy();
     expect(screen.getByText(t.points.replace('{points}', String(CANDIDATE_POINTS)))).toBeTruthy();
-    // Kullanıcı isteği 15.08: "ne kadar kazandı" tek başına yetmiyor, "şu an ne kadar oldu" da yazmalı.
+    // "Ne kadar kazandı" tek başına yetmez, güncel toplam da yazılır.
     expect(screen.getByText(t.total.replace('{points}', String(BALANCE_AFTER)))).toBeTruthy();
   });
 

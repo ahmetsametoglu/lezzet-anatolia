@@ -36,48 +36,8 @@ import messages from './messages.json';
 import { useDiscover } from './use-discover.hook';
 
 /*
-  KEŞİF TURU (v3 `vKesif` — YENİ SÜRÜM, v3:371-447 + `kv` kurucusu v3:2052-2070 + jest
-  işleyicileri `kDown/kMove/kUp/kGo/kBack` v3:1805-1815) — aday ürünler kart kart gösterilir,
-  müşteri beğenir ya da geçer; deste bitince teşekkür ve puan. Vitrinin kesikli davet kutusu ve
-  hesap kartının "puan kazanma yolları" satırı buraya basıyor.
-
-  ── YENİ SÜRÜMÜN GETİRDİKLERİ (bu turda uygulandı) ──────────────────────────
-  1. **Gerçek kaydırma fiziği**: kart parmağı yatayda birebir, dikeyde %35 takip eder; eğim
-     `x/16` derecedir ve gölgesi yöne göre RENK değiştirip mesafeyle koyulaşır (`kv.glow`).
-  2. **Basılı rozetler**: "İSTERİM" (sol üst, zeytin, −13°) ve "BAŞKA SEFER" (sağ üst,
-     terracotta, +13°); opaklıkları `min(1, |x|/92)`.
-  3. **Yön ipuçları**: kartın üstünde iki kutu — sola/sağa kaydırmanın ne demek olduğunu ilk
-     kartta söyler (öğrenilince de yer kaplamaya devam eder; tasarımın kararı).
-  4. **Dilimli ilerleme çubuğu**: her aday bir dilim; geçilen zeytin, güncel terracotta ve iki
-     kat geniş, gelecek kum.
-  5. **Kart artık FOTOĞRAF**: ad ve tanıtım fotoğrafın ÜSTÜNDE, koyu gradyanın içinde durur —
-     eski sürümde beyaz kartın altındaki künye bandındaydı.
-  6. **"Geri al"**: başlık çubuğunun sağ yuvasında; sayaç oradan ilerleme çubuğuna taşındı.
-  7. **Beğeni sayacı**: düğmelerin altında ve bitiş ekranında "N lezzet beğendiniz".
-
-  ── "GERİ AL" DÜRÜSTLÜĞÜ ────────────────────────────────────────────────────
-  Sunucuda oyu geri alan bir uç YOK. Bu yüzden geri alınabilirlik yazımın kendisinden doğuyor:
-  bir kaydırma önce hook'un kuyruğunda bekler (`UNDO_WINDOW_MS`), pencere içinde geri alınırsa
-  sunucuya HİÇ gitmez. Düğme yalnız gerçekten geri alınabilir bir oy varken etkindir; pencere
-  dolunca soluklaşır (şablonun kendi `undoCol` ayrımı). Desteyi sessizce geri sarıp müşteriye
-  "geri aldık" demek yanıltıcı olurdu — oy yazılmış ve talep sinyalinde kalmış olurdu.
-
-  ── VERİ SÖZLEŞMESİNİN ÇİZİLEMEYEN İKİ ÖĞESİ (raporlandı) ───────────────────
-  Şablonun kartında KATEGORİ rozeti (`kv.cur.c`) ve "N kişi istedi" çipi (`kv.cur.votes`) var;
-  `DiscoverCardSchema` ikisini de TAŞIMIYOR (ad · tanıtım · görsel · ürün kimliği). Uydurma bir
-  kategori ya da sayı yazmak olmayan bir veriyi varmış gibi göstermekti — çizilmediler ve
-  sözleşme ihtiyacı yöneticiye raporlandı.
-
-  ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
-  1. **Deste yüksekliği ESNEK**: şablon 486 çiziyor; küçük telefonda sabit yükseklik düğmeleri
-     ekranın dışına iter. Kart alanı kalan boşluğu alır, tavanı 486'da durur.
-  2. **Boş deste hâli EKLENDİ** (şablonda yok, web'de var): aday kalmadığında tur BİTMEDİ, hiç
-     başlamadı — iki hâl ayrı cümle ister.
-  3. **İskelet ve ağ hatası hâlleri EKLENDİ**: gerçek uçtan okuyan her ekranın üç hâli olmalı.
-  4. **Hızlı fırlatma da karardır**: şablon yalnız mesafeye bakıyor (92 px). Dokunmatikte kısa
-     ama hızlı bir fırlatma da nettir; mesafe eşiğinin yanına hız eşiği eklendi (kaldırılsaydı
-     parmağını çabuk çeken müşterinin kararı yok sayılırdı).
-  5. **Kalp ikonu geri bildirim ekranından**: `vKesif` kalbi ile `vFb` kalbi AYNI geometri.
+  Keşif turu: aday ürünler kart kart gösterilir, müşteri beğenir ya da geçer, deste bitince teşekkür ve puan. "Geri al" oyu
+  sunucudan silmez, çünkü öyle bir uç yok; kaydırma geri alma penceresi dolana kadar yazılmaz (`use-discover.hook`).
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -85,11 +45,7 @@ type Messages = LocalizedCopy<typeof messages>;
 /** Bekleme dalının ilerleme dilimleri — destenin tipik uzunluğu (uç 10 kart veriyor). */
 const SKELETON_SEGMENTS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-/*
-  v3'te ölçülmüş, EKRANA-ÖZEL duraklar. Ölçü katmanları (`theme/metrics` + `customer-metrics`)
-  bu görevde yazıya kapalı — ham değerler stillere DAĞITILMADI, tek yerde durur; katman
-  açıldığında oraya terfi eder (raporlandı).
-*/
+/* Ekrana özel ölçüler tek yerde; tasarımın ölçüleridir ve ham değerler stillere dağıtılmaz. */
 const discoverMetrics = {
   /** Deste alanının yüksekliği (v3:403 — 486). Sapma 1: tavan olarak uygulanır. */
   deckHeight: 486,
@@ -111,18 +67,14 @@ const discoverMetrics = {
   hintLineHeight: 1.3,
   /** Basılı rozetin eğimi (v3:418-419 — ∓13°) ve satır yüksekliği. */
   stampRotateDeg: 13,
-  /** Kart adının satır yüksekliği (v3:421 — `27px/1.08`). */
+  /** Kart adının satır yüksekliği. */
   cardNameLineHeight: 1.08,
   /** Oy düğmeleri (v3:429-430 — 60 ve 72) ve ikonları (24 · 30). */
   passButton: 60,
   passIcon: 24,
   likeButton: 72,
   likeIcon: 30,
-  /**
-   * Bitişin kahraman işareti — şablonda 88'lik bir DAİRE ve içinde 38'lik `✦` vardı (v3:437).
-   * Daire kaldırıldı (kullanıcı kararı 15.08, geri bildirim sonucundaki aynı gerekçe); ölçü
-   * dairenin dış çapında KALDI, çünkü bloğun çevresindeki boşluk ona göre kurulmuştu.
-   */
+  /** Bitiş işaretinin boyu; çevresindeki boşluk bu ölçüye göre kurulu. */
   thanksMark: 88,
   /** Kartın çıkışı (v3:24-25 `kOutL/kOutR` + `kGo`): 330 ms, %130 yol, 9° dönüş. */
   exitMs: 330,
@@ -168,10 +120,8 @@ const SWIPE_VELOCITY = 900;
 const EXIT_EASING = Easing.in(Easing.ease);
 
 /**
- * Halenin opaklığı — şablonun alfa hesabının (`0.12 + oran*0.3`) opaklığa çevrilmiş hâli:
- * katman en yüksek alfayla çizildiği için istenen alfa "istenen/azami" oranıyla elde edilir.
- * UI iş parçacığında koştuğu için `worklet` — modül düzeyinde durur ki her karede yeniden
- * kurulmasın.
+ * Halenin opaklığı: hale en yüksek alfasıyla çizilir, istenen alfa "istenen/azami" oranıyla elde edilir. Worklet modül
+ * düzeyinde durur ki her karede yeniden kurulmasın.
  */
 function glowOpacity(ratio: number): number {
   'worklet';
@@ -203,15 +153,8 @@ function CardPhoto({ card }: CardPhotoProps) {
 }
 
 /**
- * Uçuşun UI-THREAD kapanışı — jest ve düğme yolunun ortak sonu.
- *
- * MODÜL DÜZEYİNDE ve tekil bir worklet: bileşenin içinde kurulan bir worklet, animasyonun
- * tamamlanma çağrısına kapanışıyla birlikte taşınır ve her çizimde kimliği değişir. Modül
- * düzeyindeki bir bildirimde dönüşüm tartışmasız ve kimlik sabittir — iki giriş kapısının (jest ·
- * düğme) aynı kapanışı paylaşmasının da tek ucuz yolu bu.
- *
- * Sıra önemli: parmak izi ve kilit React'ten ÖNCE temizlenir. `finishExit`in commit'i geldiğinde
- * öne geçen kart ne eski izi okur ne kilidi açık görür.
+ * Uçuşun UI thread kapanışı, jest ve düğme yolunun ortak sonu; modül düzeyinde durur ki kimliği sabit kalsın. Parmak izi ve
+ * kilit React'ten önce temizlenir, öne geçen kart ne eski izi okur ne kilidi açık görür.
  */
 function clearFlight(
   flyingId: SharedValue<string | null>,
@@ -235,11 +178,7 @@ interface DeckLayerProps {
   dragY: SharedValue<number>;
   /** Parmağı izlesin mi: üstteki kart, ve yalnız uçan bir kart yokken. */
   interactive: boolean;
-  /*
-    UÇUŞ DEĞERLERİ — üstteki kart, kendisini uçan katmana taşıyan React commit'ini BEKLEMEDEN yola
-    çıksın diye. Kart uçtuğunu `flyingId`den anlar; bayrak değil KİMLİK, çünkü bayrak olsaydı öne
-    geçen yeni kart da onu okur ve o da uçardı. Uçan katman commit gelince aynı formülü devralır.
-  */
+  /** Uçan kartın kimliği; bayrak değil kimlik, çünkü bayrak olsaydı öne geçen kart da onu okur ve o da uçardı. */
   flyingId: SharedValue<string | null>;
   exitProgress: SharedValue<number>;
   exitStartX: SharedValue<number>;
@@ -253,23 +192,8 @@ interface DeckLayerProps {
 }
 
 /**
- * DESTEDEKİ bir kart — kendi derinliğini bilir ve derinlik değişince oraya ANİMASYONLA gider.
- *
- * ── NEDEN (kullanıcı bulgusu 16.08, ikinci tur) ─────────────────────────────
- * Arkadaki kart tasarım gereği 30 px aşağıda, %94 ölçekte ve %55 krem tülün altında duruyor
- * (`discoverMetrics`). Öne geçtiğinde bu üçü birden ANİMASYONSUZ sıfırlanıyordu: resim tek karede
- * 30 px yukarı fırlıyor, %6 büyüyor, tülü kalkıyordu. Kullanıcının tarifi: *"anlık resimde bir
- * oynama oluyor sanki"* — yabancı bir resim değil, aynı resmin bir karede yer ve boyut
- * değiştirmesi. İlk turda düzeltilen "kart merkeze geri geliyor" arızasının ARDINDA duran ikinci
- * kusurdu; ikisi birlikte tek bir göz kırpması gibi okunuyordu.
- *
- * `progress` MOUNT ANINDA `depth`e eşitlenir, sonra `withTiming` ile takip eder — yani yeni doğan
- * arka kart animasyonsuz yerinde başlar, öne geçen kart yumuşakça yükselir. Sıralama yarışı YOK:
- * başlangıç değeri prop'tan gelir, paylaşılan bir değere sonradan yazılmaz.
- *
- * **Kart LİSTEDE ve `key={productId}` ile çizilir** (çağıranın sorumluluğu): derinlik değişince
- * React aynı örneği korur. Korumasaydı `<Image>` yeniden bağlanır ve fotoğraf bir kare yeniden
- * yüklenirdi — aynı kırpmanın başka bir kaynağı.
+ * Destedeki bir kart; derinliği değişince oraya animasyonla gider, yoksa öne geçen kart tek karede zıplardı. Çağıran
+ * `key={productId}` vermeli ki React aynı örneği korusun ve fotoğraf yeniden yüklenmesin.
  */
 function DeckLayer({
   card,
@@ -293,16 +217,8 @@ function DeckLayer({
   }, [depth, progress]);
 
   const style = useAnimatedStyle(() => {
-    /*
-      ── HER PAYLAŞILAN DEĞER KOŞULSUZ OKUNUR ──────────────────────────────────
-      Reanimated, worklet'in hangi değerlere ABONE olacağını onu bir kez koşturup OKUDUKLARINA
-      bakarak belirler. Okumalar `if (uçuyor)` dalının içinde kalsaydı, kart uçmazken o dal hiç
-      girilmez, `exitProgress` hiç okunmaz ve ABONE OLUNMAZDI: uçuş başlayınca stil bir kez
-      hesaplanır, sonra ilerleyen `exitProgress` bir daha çalıştırmazdı — kart bırakıldığı yerde
-      donup kalırdı. Kitaplığın belgelenmiş davranışı; sessiz olduğu için de en pahalısı.
-
-      Değerler bu yüzden dalların DIŞINDA, en başta okunuyor. Ucuz: hepsi tek sayı.
-    */
+    /* Paylaşılan değerler koşulsuz, en başta okunur: Reanimated aboneliği okunanlara bakarak kurar ve dalın içinde kalan değer
+       izlenmezse uçan kart bırakıldığı yerde donar. */
     const flying = flyingId.value === card.productId;
     const flightProgress = exitProgress.value;
     const startX = exitStartX.value;
@@ -375,13 +291,8 @@ interface DeckCardProps {
 }
 
 /**
- * Kartın GÖVDESİ — üç katmanın da çizdiği tek kaynak (16.08): üstteki, arkadaki ve uçan. Ayrı bir
- * bileşene çıkarılmasının sebebi bu üçlü: aynı yüzeyi ikinci kez elle yazmak, bir gün birinin
- * ötekinden ayrışması demekti (CLAUDE §1). Ayrışan şeyler PROP olarak dışarıda kaldı — hareket,
- * hale, rozet, tül; çünkü üstteki kart parmağı okur, arkadaki ve uçan okumaz.
- *
- * **Kimlik (`key`) çağıranın sorumluluğu ve KRİTİK:** kart derinlik değiştirdiğinde React aynı
- * örneği korumalı, yoksa `<Image>` yeniden bağlanır ve fotoğraf bir kare boyunca yeniden yüklenir.
+ * Kartın gövdesi, üstteki, arkadaki ve uçan kartın tek kaynağı; ayrışan şeyler (hareket, hale, rozet, tül) prop olarak dışarıda.
+ * Çağıran `key` vermeli ki derinlik değişince fotoğraf yeniden yüklenmesin.
  */
 function DeckCard({ card, style, glow, stamp, veil, decorative = false, testID }: DeckCardProps) {
   const { theme } = useUnistyles();
@@ -412,14 +323,7 @@ function DeckCard({ card, style, glow, stamp, veil, decorative = false, testID }
   );
 }
 
-/**
- * Uçmakta olan kartın künyesi — desteden ÇIKMIŞ, ekrandan henüz çıkmamış kart.
- *
- * Başlangıç yeri (`startX/startY`) DURUMDA taşınır, paylaşılan değerde değil: katman mount olduğu
- * İLK karede parmağın bıraktığı yerde durmak zorunda. Paylaşılan değere yazsaydık o yazım UI
- * thread'e bir kare sonra düşerdi ve kart bir kare merkezde görünürdü — düzeltilen arızanın ta
- * kendisi (künye `DiscoverScreen` gövdesinde).
- */
+/** Desteden çıkmış, ekrandan henüz çıkmamış kart. */
 interface ExitingCard {
   card: DiscoverCard;
   choice: FeedbackVote;
@@ -457,55 +361,18 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
   const dragY = useSharedValue(0);
   /** Uçan kartın ilerlemesi: 0 bırakıldığı yer, 1 ekrandan tamamen çıkmış. */
   const exitProgress = useSharedValue(0);
-  /*
-    UÇUŞUN BAŞLANGICI PAYLAŞILAN DEĞERDE, REACT DURUMUNDA DEĞİL (kullanıcı bulgusu 16.08, dördüncü
-    tur). Önce `exiting.startX` durumundan okunuyordu ve kullanıcı şunu gördü: *"anlık olarak orta
-    noktaya gidiyor, sonra parmağımın olduğu yere geri gelip oradan dışarı gidiyor."*
-
-    Sebep animasyonlu stilin JS KAPANIŞI: `useAnimatedStyle` içindeki `startX` bir React değeri ve
-    katman mount olduğu karede worklet hâlâ ESKİ kapanışla (startX = 0) koşuyor — kart bir kare
-    merkezde çiziliyor, kapanış yenilenince yerine sıçrıyor. Değerler artık jest bırakılırken
-    DOĞRUDAN UI thread'de yazılıyor: worklet'in yeniden bağlanmasını bekleyen hiçbir şey kalmadı.
-  */
+  /* Uçuşun başlangıcı paylaşılan değerde: React durumunda olsaydı katman doğduğu karede worklet eski değeri okur ve kart bir
+     kare merkezde çizilirdi. */
   const exitStartX = useSharedValue(0);
   const exitStartY = useSharedValue(0);
   const exitDirection = useSharedValue(1);
-  /*
-    UÇAN KARTIN KİMLİĞİ — ve uçuşun BIRAKMA ANINDA başlamasının anahtarı (kullanıcı bulgusu 16.08,
-    altıncı tur). Uçuş önce bir React etkisiyle, yani katman doğduktan SONRA başlıyordu; kullanıcı
-    *"kartı kenarda bıraktığım anda birkaç saniye bekliyor, sonra hareket ediyor"* dedi. Beklenen
-    şey React'in gidiş-dönüşüydü.
-
-    Artık animasyon jest bırakılırken UI thread'de başlıyor. Hangi kartın uçtuğunu da React değil
-    BU DEĞER söylüyor: her katman kendi `cardId`siyle karşılaştırır. Bayrak yerine KİMLİK olması
-    şart — bayrak olsaydı, öne geçen yeni kart da onu okur ve o da uçardı.
-  */
+  /* Uçan kartın kimliği; uçuş jest bırakılırken UI thread'de başlar, her katman kendini bu kimlikle karşılaştırır. */
   const flyingId = useSharedValue<string | null>(null);
   /** Çıkış sürerken ikinci karar YUTULUR (v3 `kGo`nun ilk satırı) — iki kart birden geçmesin. */
   const locked = useSharedValue(0);
 
-  /*
-    ── UÇAN KART AYRI KATMAN (kullanıcı bulgusu + kararı 16.08) ────────────────
-    Önceki kurgu TEK kart çiziyordu ve çıkış animasyonunun sonunda onu merkeze geri alıyordu:
-
-        exit.value = withTiming(±1, timing, () => {
-          exit.value = 0;             // UI thread — kart ANINDA merkeze döner
-          runOnJS(advance)(choice);   // JS thread — içerik 1-3 kare SONRA değişir
-        });
-
-    Kartın opaklığı `1 - |exit|` olduğu için sıfırlama, kartı TAM OPAKLIKLA ve HÂLÂ ESKİ ÜRÜNLE
-    merkeze basıyordu; `setIndex` ancak birkaç kare sonra yetişiyordu. Kullanıcının gördüğü:
-    *"beğenme bittiği anda araya bir resim giriyor, sonra arkadan görünen resim yeniden geliyor"* —
-    araya giren yabancı bir kart değil, az önce kaydırılan kartın kendisiydi. Sıralama yarışı
-    `runOnJS`in TANIMI gereği kaçınılmazdı: UI thread'in sıfırlaması ile JS thread'in içerik
-    değişimi aynı kareye hiçbir zaman düşemez.
-
-    Yeni kurgu yarışı ortadan kaldırır, geciktirmez: kaydırılan kart AYRI bir katmana kopyalanır ve
-    orada uçar; alttaki deste aynı React commit'inde ilerler. Üstteki kart artık geri alınacak bir
-    yere hiç gitmediği için sıfırlanacak bir şey de yok — `exiting` doluyken üst kart parmağı HİÇ
-    okumaz, durgun çizilir (aşağıda `cardStyle`). Katman ile içerik tek commit'te değiştiği için
-    ikisi arasında kare farkı olamaz.
-  */
+  /* Uçan kart ayrı katmanda: tek kart çizilip sonunda merkeze alınsaydı UI thread'in sıfırlaması ile JS'in içerik değişimi aynı
+     kareye düşmez, kaydırılan kart bir an merkezde görünürdü. */
   const [exiting, setExiting] = useState<ExitingCard | null>(null);
 
   const cards = discover.cards;
@@ -520,28 +387,16 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
     shownAt.current = Date.now();
   }, [index, cards]);
 
-  /**
-   * Kart desteden ÇIKAR: uçan katmana kopyalanır, oy kuyruğa girer, deste ilerler. Hepsi TEK React
-   * commit'inde — uçan katmanın mount'u ile üstteki kartın içerik değişimi aynı kareye düşsün diye.
-   * JS tarafı; jest worklet'inden `runOnJS` ile, düğmeden doğrudan çağrılır.
-   */
+  /** Kart desteden çıkar: uçan katmana kopyalanır, oy kuyruğa girer, deste ilerler; hepsi tek commit'te. */
   const beginExit = useCallback(
     (choice: FeedbackVote) => {
       const current = cards[index];
       if (current === undefined) return;
-      /* KARARIN FİZİKSEL KARŞILIĞI — jest de düğme de buradan geçtiği için titreşim TEK yerde
-         duruyor. Kaydırmada `runOnJS` yüzünden bir-iki kare gecikir; alternatifi worklet'ten
-         `runOnJS(hapticCommit)` çağırmaktı, o da AYNI thread sıçramasını yapar — yani kazanç yok,
-         ikinci bir çağrı yeri var. Tur bitişinin toast'ı bilerek SESSİZ (`toastInfo`): son kartın
-         kararı zaten titreştirdi, üstüne ikinci bir titreşim koymak tek harekete iki cevap olurdu. */
+      /* Titreşim tek yerde, çünkü jest de düğme de buradan geçer. Tur bitişinin toast'ı sessiz: son kararın titreşimine ikinci
+         bir cevap eklemezdi. */
       hapticCommit();
       setExiting({ card: current, choice });
-      /* ÇIKIŞ SÜRESİ ARTIK DÜŞÜLMÜYOR — ve bu bir sadeleştirme değil, düzeltme (16.08). Kural
-         aynı: `dwellMs` DÜŞÜNME süresidir, kartın uçtuğu 330 ms ona dahil değil. Değişen şey bu
-         satırın KOŞTUĞU AN: eski kurguda burası çıkış animasyonu BİTTİKTEN sonra çalışıyordu, yani
-         geçen süre uçuşu da içeriyordu ve `exitMs` geri çıkarılmak zorundaydı. Artık karar anında
-         (jest bırakıldığında / düğmeye basıldığında) çalışıyor — uçuş henüz BAŞLAMADI. Çıkarma
-         kalsaydı her kaydırma 330 ms EKSİK ölçülür, motorun "hızlı kaydırma" eşiği kayardı. */
+      /* Süre karar anında ölçülür, uçuş henüz başlamadı: `dwellMs` düşünme süresidir ve 330 ms'lik uçuşu içermemeli. */
       const dwellMs = Math.max(0, Date.now() - shownAt.current);
       /* Yazım DÜŞSE BİLE kart ilerler (web kararı): müşteriyi düzeltemeyeceği bir arızada turun
          ortasında kilitlemeyiz. Düşen yazımın karşılığı hook'ta: o kaydırma sayılmaz. */
@@ -551,22 +406,8 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
       /* Tur bitişi tek onay noktası — v3'te toast yok ama akışın sonu sessiz kalmamalı
          (kitin toast katmanı tam bu iş için var). */
       if (index + 1 >= cards.length) toastInfo(t.toast);
-      /* ── PARMAK İZİ BURADA SİLİNMEZ (kullanıcı bulgusu 16.08, üçüncü tur) ──────
-         Siliniyordu ve ölçülen sonuç şuydu (yavaşlatılmış uçuşla görüldü): kullanıcı kartı sağa
-         çekip bırakıyor, kart ÖNCE MERKEZE ATLIYOR, uçuş oradan başlıyor. Kullanıcının cümlesi:
-         *"parmağımı bıraktığım konumdan hareket etmiyor, orta noktaya geliyor ve oradan gidiyor."*
-
-         Sebep yine iki thread: bu yazım UI thread'e ANINDA düşüyor, ama uçan katmanı doğuran
-         `setExiting` bir React commit'i bekliyor. O aradaki 1-2 karede ESKİ kart hâlâ ekranda ve
-         hâlâ parmağı okuyor — izi silinince merkeze snap ediyor.
-
-         Silme artık uçuşun BİTİŞİNDE, `exiting` hâlâ doluyken yapılıyor: o anda destedeki kart
-         parmağı zaten okumuyor (`interactive` false), yani sıfırlama görünmez. Kod aşağıda,
-         `exitProgress`in tamamlanma çağrısında.
-
-         Uçuşun BAŞLANGIÇ değerleri de burada yazılmaz: onları iki giriş kapısı (jest bırakma ·
-         düğme) katman doğmadan önce kendi thread'inde yazıyor. Burada tekrarlamak, aynı gerçeği
-         iki yere yazmak olurdu. */
+      /* Parmak izi burada silinmez: uçan katman bir React commit'i bekler ve arada eski kart izi silinmiş görüp merkeze
+         atlardı. İz uçuşun bitişinde temizlenir. */
     },
     [cards, discover, exitProgress, index, t.toast],
   );
@@ -576,24 +417,8 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
     setExiting(null);
   }, []);
 
-  /*
-    UÇUŞ BIRAKMA ANINDA BAŞLAR — React'in commit'i beklenmez (kullanıcı bulgusu 16.08).
-    Animasyon önce `exiting` durumuna bağlı bir etkide kuruluyordu, yani jest bırakıldıktan sonra
-    bir JS gidiş-dönüşü geçiyordu: kart bırakıldığı yerde bekliyor, sonra hareket ediyordu
-    (kullanıcı: *"bıraktığım yerde birkaç saniye bekliyor"*). Artık iki giriş kapısı da uçuşu kendi
-    thread'inde başlatıyor (jest: UI · düğme: JS) ve üstteki kart `flyingId` sayesinde commit'i
-    beklemeden yola çıkıyor.
-
-    Kapanış animasyonun KENDİ geri çağrısında: paylaşılan değerler React'ten önce temizlenir, sonra
-    katmanı sökecek olan `finishExit` çağrılır.
-
-    ── BU EKRAN SICAK YENİDEN YÜKLEMEYLE DOĞRULANMAZ (ders 16.08) ──────────────
-    Metro sıcak yeniden yükleme yaptığında UÇMAKTA olan `withTiming` ölür ama React durumu ayakta
-    kalır: `exiting` dolu, `locked` 1. Kilidi açacak olan tamamlanma çağrısı hiç gelmez, yani deste
-    KALICI olarak taşlaşır. Bu, saatlerce koda yüklenen bir hayalet arızaydı; kod hiç sebep
-    olmamıştı. Kural: bu ekranın her ölçümü uygulama KOMPLE yeniden başlatıldıktan sonra ve EN AZ
-    BEŞ ARDIŞIK kaydırmayla yapılır — tek kaydırma kilidi hiçbir zaman göstermez.
-  */
+  /* Uçuş bırakma anında, kendi thread'inde başlar (jest: UI · düğme: JS); React commit'i beklenseydi kart bırakıldığı yerde
+     beklerdi. Sıcak yeniden yükleme uçan animasyonu öldürüp kilidi açık bırakmaz, bu ekran tam yeniden başlatmayla ölçülür. */
 
   /* Jest de düğme de buradan geçer — iki ayrı yol yazılsaydı biri bir gün ötekinden farklı
      davranırdı (yüzen sayfanın `animateClose` dersi). Düğmede parmak izi yok, o yüzden başlangıç
@@ -673,11 +498,7 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
       runOnJS(beginExit)(forward > 0 ? 'like' : 'dislike');
     });
 
-  /**
-   * DESTENİN KATMANLARI — arkadan öne. Tek liste, `key={productId}`: kart derinlik değiştirdiğinde
-   * React aynı örneği korur, yani hem fotoğraf yeniden yüklenmez hem derinlik animasyonla çözülür
-   * (`DeckLayer` künyesi). Ayrı JSX yuvalarında dursalardı ikisi de olmazdı.
-   */
+  /** Destenin katmanları arkadan öne, tek listede ve `key={productId}` ile: derinlik animasyonla çözülür, fotoğraf yüklenmez. */
   const deckLayers = [
     ...(nextCard === null ? [] : [{ card: nextCard, depth: 1 }]),
     ...(card === null ? [] : [{ card, depth: 0 }]),
@@ -710,21 +531,8 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
 
   /* Basılı rozetler ve gölge halesi — üçü de AYNI oranı okur (`min(1, |x|/92)`), yani karar
      eşiğine yaklaşan kartın üç işareti birlikte koyulaşır. */
-  /*
-    PARMAK İZİ UÇUŞ BOYUNCA SUSAR (16.08). `dragX` bırakma anındaki değerini uçuş bitene kadar
-    korur — sıfırlamak eski kartı merkeze atlatıyordu (künye `beginExit`te). Ama o değer rozet ve
-    haleyi de besliyor, yani öne geçen YENİ kart bir anda "İSTERİM" rozetiyle çiziliyordu.
-
-    ── KAPI `locked`, BİR REACT DEĞERİ DEĞİL (kullanıcı bulgusu 16.08, beşinci tur) ──
-    Kapı önce `exiting === null` idi ve kullanıcı şunu gördü: *"merkeze gelen artık resim değil,
-    İSTERİM yazısı geliyor."* Sebep, uçuşun başlangıç noktasında düzeltilen hatanın İKİZİ: React
-    değeri worklet'in KAPANIŞINDA yaşıyor, katmanın doğduğu karede kapanış hâlâ eski — yani kapı
-    bir kare boyunca "açık" kalıyor ve rozet, merkezdeki kartın üstünde parlıyordu.
-
-    `locked` paylaşılan bir değer ve tam bu soruyu cevaplıyor: 1 = uçuş sürüyor. Jest bırakılırken
-    UI thread'de yazılır, uçuş bitince yine UI thread'de silinir — arada React'i bekleyen tek bir
-    kare yok. Kararı taşıyan rozet zaten uçan kartın üstünde, sabit opaklıkla duruyor.
-  */
+  /* Rozet ve hale kapısı `locked` paylaşılan değeri: React değeri worklet'in kapanışında bir kare eski kalır ve öne geçen kart
+     bir an "İSTERİM" rozetiyle çizilirdi. */
   const likeStampStyle = useAnimatedStyle(() => ({
     opacity: dragX.value > 0 ? Math.min(1, dragX.value / SWIPE_THRESHOLD) : 0,
   }));
@@ -794,17 +602,8 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
     />
   );
 
-  /* İLK YÜK: dönen halka yerine DESTENİN KENDİSİ bekler (kullanıcı kararı 10.08 — halka bir
-     YERLEŞİM bekleyen ekranda yer tutmuyordu; deste gelince ekran bir anda doluyor ve ilerleme
-     çubuğuyla ipuçları aşağıdan zıplıyordu).
-
-     SKELETON EKRANIN İÇİNDE, ayrı dosyada değil: ölçüleri `discoverMetrics` veriyor ve o blok bu
-     dosyada yaşıyor (kendi künyesi: ölçü katmanları bu görevde yazıya kapalı). Ayrı dosya, ya
-     dairesel bağımlılık ya 40 satırlık bir taşıma isterdi — kusur zaten gömülülük değil, yanlış
-     göstergeydi.
-
-     SABİT YAPI GERÇEK ÇİZİLİR: ilerleme dilimleri, destenin alt iki katmanı ve ipucu kutularının
-     kabuğu veriye bağlı değil. Gri kalan yalnız üstteki kart, sayaç ve ipucu yazıları. */
+  /* İlk yükte deste kendisi bekler; dönen halka yerleşimi tutmaz ve deste gelince ekran zıplardı. Veriye bağlı olmayan yapı
+     gerçek çizilir, gri kalan yalnız üstteki kart, sayaç ve ipucu yazıları. */
   if (discover.status === 'loading') {
     return (
       <View style={styles.screen} testID="discover-screen">
@@ -854,8 +653,7 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
     return (
       <View style={styles.screen} testID="discover-screen">
         {bar}
-        {/* `fill`: bu ekranda boş hâl SAYFANIN TAMAMIDIR (liste içi bir boşluk değil), o yüzden
-            içerik dikeyde ortalanır — kullanıcı gözlemi 15.08. */}
+        {/* `fill`: bu ekranda boş hâl sayfanın tamamıdır, içerik dikeyde ortalanır. */}
         <EmptyState
           fill
           icon={<Icon name="connection-off" size={theme.size.errorIcon} color={theme.colors['sand-600']} />}
@@ -899,18 +697,10 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
         {/* Bitiş bloğu KAYDIRILABİLİR: v3'ün 80'lik dikey nefesi + çip + giriş daveti küçük
             telefonda ekranı taşırıyor; kaydırma payı olmasa "Kataloğa dön" erişilemez kalırdı. */}
         <ScrollView contentContainerStyle={styles.done} testID="discover-done">
-          {/* ÜST PAY — bloğu optik merkeze çeker (kullanıcı bulgusu 16.08). Kap `justifyContent:
-              'center'` ile ORTALIYORDU ve hesabı doğruydu, ama göz sayfaya bakıyor: başlık
-              çubuğunun yüksekliği bloğu yarısı kadar aşağı itiyordu. Kural `EmptyState` ve geri
-              bildirim sonucuyla AYNI, tek yerde yazılı (`design/KARARLAR.md`): kalan boşluk **4:6**
-              — üstte %40, altta %60; oran başlık boyuna göre kendini ayarlar. */}
+          {/* Üst ve alt pay 4:6: blok optik merkeze çekilir, başlık çubuğu onu aşağı itmez. */}
           <View style={styles.spacerTop} />
           <View style={styles.doneBlock}>
-          {/* KAHRAMAN İŞARET, geri bildirim sonucununkiyle AYNI (kullanıcı isteği 15.08 — "her puan
-              kazanma durumunun sonucunda aynı sayfa"). Eskiden solgun zeytin bir DAİRE içinde metin
-              `✦` vardı; daire aynı gerekçeyle orada da kaldırıldı (15.08): düşük karşıtlıklı büyük
-              daire şekil değil leke gibi okunuyor ve içindeki işareti boş bir halkanın ortasında
-              bırakıyor. Artık tek, çizili bir geometri var. */}
+          {/* Geri bildirim sonucunun aynı işareti: her puan kazanma anı aynı sonucu çizer. */}
           <PointsSpark size={discoverMetrics.thanksMark} color={theme.colors.terracotta} />
           <Text style={styles.doneTitle} accessibilityRole="header">
             {t.done.title}
@@ -920,22 +710,8 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
           </Text>
           <Text style={styles.doneBody}>{t.done.body}</Text>
 
-          {/* ÇİP ÜÇ HÂLLİ, ve orta hâl MB-16'nın kendisidir (ölçüldü 11.08: 4 oy → deftere 8 puan,
-              ekran "+6"). Turun son oyu bitiş ekranı çizildiğinde hâlâ geri alma penceresinde
-              bekliyor; o oy sunucuya gitmeden toplam TAM DEĞİL. Kuyruğu burada zorla boşaltmak
-              çare olamazdı — "Geri al" bu ekranda da duruyor ve boşaltma onu yalana çevirirdi.
-              Yolda oy varken sayı YAZILMAZ, bekleme SÖYLENİR (aynı çip, aynı biçim).
-
-              Bekleme cümlesi yalnız GİRİŞLİ müşteriye: girişsiz turun ödülü sahipsizdir, ona
-              "puanların hesaplanıyor" demek olmayan bir ödülü vaat etmek olurdu (o hâlde altta
-              zaten giriş daveti var). Oturmuş toplamda `null` = ödülün sahibi yok · `0` = motor
-              gerçekten yazmadı (günlük tavan · B2B · ikinci oy); ikisinde de blok çizilmez.
-
-              BİÇİM ARTIK KİTİN (kullanıcı isteği 15.08): burada tek satırlık bir hap çip vardı ve
-              TOPLAMI HİÇ SÖYLEMİYORDU — geri bildirim sonucu ise üç satır yazıyordu. Aynı sistemin
-              iki ödülü iki ayrı biçimle anlatılıyordu; ortak blok o ikiliği kapatıyor
-              (`customer-kit/points-award.tsx`). Üç hâlin kapısı da oraya taşındı, burada kalan
-              yalnız "bekliyor muyuz" sorusu. */}
+          {/* Yolda oy varken toplam tam değil: son oy hâlâ geri alma penceresinde olabilir, sayı yerine bekleme söylenir. Bekleme
+              yalnız girişliye, girişsiz turun ödülü sahipsizdir. */}
           <PointsAward
             points={discover.awardedPoints}
             balance={discover.balance}
@@ -943,26 +719,8 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
             testID="discover-award"
           />
 
-          {/*
-            GİRİŞ DAVETİ, `signedIn`e DEĞİL "turun sahibi var mı"ya bakar (MB-14, 14.08).
-
-            **Ölçülen çelişki (11.08):** ekran aynı anda hem *"+6 puan kazandınız"* hem *"Giriş
-            yaparsanız…"* diyordu. Sebep bulundu ve tek cümlelik: **"giriş yaptım mı" sorusunun
-            uygulamada İKİ AYRI KAYNAĞI var.** Ekran `useMe`nin `signedIn`ini okuyor; ağ katmanı
-            ise Supabase'e kendisi soruyor (`maybeAuthorizedFetch` → `auth.getSession()`). İkisi
-            ayrıştığı an — jeton hâlâ geçerliyken arayüzün misafire düşmesi, yani MB-13'ün
-            belirtisi — sunucu oyu müşterinin üstüne yazıp puanı döndürüyor, ekran ise davet
-            gösteriyor. Yani çelişki bir çizim hatası değil, iki doğruluk kaynağının sonucu.
-
-            **Çare, davetin KENDİ ölçütünü kullanması.** Davetin söylediği şey *"bu turun sahibi
-            yok, giriş yaparsan sana yazılır"*dır. Bunun gerçek kanıtı `signedIn` değil, ödülün
-            yazılıp yazılmadığıdır: sunucu kimliksiz oya puan YAZMIYOR ve `pointsAwarded: null`
-            dönüyor (`application/feedback/discover.ts:158`). Yani `awardedPoints` bir sayıysa
-            turun sahibi VARDIR — ekran ne sanıyorsa sansın, davet o hâlde yanlıştır.
-
-            MB-13'ü bu KAPATMAZ (iki kaynak hâlâ ayrışabilir) ama yalanı kapatır: bir daha aynı
-            karede hem ödül hem davet görünmez.
-          */}
+          {/* Giriş daveti "turun sahibi var mı"ya bakar: ödül yazıldıysa sahibi vardır, arayüz misafire düşmüş olsa bile davet
+              yanlış olurdu. */}
           {signedIn || discover.awardedPoints !== null ? null : (
             <>
               <Text style={styles.loginHint}>{t.done.loginHint}</Text>
@@ -1045,11 +803,7 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
                 GİRMEZ — kimliği olmayan bir süstür, öne geçen bir kartı temsil etmez. */}
             {!hasThirdCard ? null : <View style={styles.thirdCard} pointerEvents="none" testID="discover-third" />}
 
-            {/* ÜSTTEKİ VE ARKADAKİ KART TEK LİSTEDE, `key={productId}` ile (16.08). Ayrı JSX
-                yuvalarında dursalardı React onları FARKLI öğe sayardı: arkadaki kart öne geçerken
-                yeniden bağlanır, fotoğrafı yeniden yüklenir ve derinliği animasyonla çözülemezdi.
-                Sıra ARKADAN ÖNE; üst üste binme yine de `zIndex`ten okunur (liste yeniden
-                sıralandığında görsel sıra yerinden oynamasın). */}
+            {/* Üstteki ve arkadaki kart tek listede, `key={productId}` ile; ayrı yuvalarda olsalar öne geçerken yeniden bağlanırlardı. */}
             {deckLayers.map((layer) => (
               <DeckLayer
                 key={layer.card.productId}
@@ -1081,11 +835,7 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
                   )
                 }
                 stamp={
-                  /* ROZET, UÇUŞ SÜRERKEN ÖNDEKİ KARTTA ÇİZİLMEZ (kullanıcı bulgusu 16.08).
-                     `dragX` bırakma değerini uçuş boyunca koruyor (kartın merkeze atlamaması için),
-                     ama o değer rozeti de besliyor — öne geçen YENİ kart "İSTERİM" damgasıyla
-                     çiziliyordu. Kapı worklet'te DEĞİL burada: React commit'iyle uygulanınca
-                     arada bir kare kalmıyor. Uçan kartın kendi rozeti aşağıda, sabit opaklıkta. */
+                  /* Uçuş sürerken öndeki kartta rozet çizilmez: parmak izi uçuş boyunca korunur ve yeni kartı damgalardı. */
                   layer.depth !== 0 || !dragDecor ? null : (
                     <>
                       <Animated.View
@@ -1093,9 +843,7 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
                         pointerEvents="none"
                         testID="discover-stamp-like"
                       >
-                        {/* Damga metni dilin kuralıyla büyür (`upperIn`); stilin `textTransform`u
-                            Android'de CİHAZIN dilini kullanıyor (ölçüldü 28.08 — `cart-line-row`
-                            künyesi). "J'aime" tam da `i` taşıyan metinlerden. */}
+                        {/* Damga dilin kuralıyla büyür (`upperIn`), çünkü `textTransform` Android'de cihazın dilini kullanır. */}
                         <Text style={[styles.stampLabel, styles.stampLikeLabel]}>{upperIn(t.stamp.like, locale)}</Text>
                       </Animated.View>
                       <Animated.View
@@ -1111,12 +859,8 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
               />
             ))}
 
-            {/* UÇAN KART — desteden çıkmış KOPYA, kendi katmanında ve hepsinin ÜSTÜNDE.
-                Kopya, çünkü deste `key={productId}` ile çiziliyor: aynı kartı desteden uçan
-                katmana TAŞIMAK, React'in o elemanı sökülmüş sayması demek. Fotoğraf yeniden
-                bağlanır ve tam uçuşun başında bir kare boşluk doğar. Kopya bir `<Image>` daha
-                yaratıyor ama görsel önbellekte, bedeli yok.
-                Rozeti ve halesi SABİT: kart eşiği geçtiği için uçuyor, kararı zaten belli. */}
+            {/* Uçan kart desteden bir kopya: aynı kartı taşımak React'e onu sökülmüş saydırır ve uçuşun başında bir kare boşluk
+                doğardı. Rozeti ve halesi sabit, karar belli. */}
             {exiting === null ? null : (
               <DeckCard
                 card={exiting.card}
@@ -1286,9 +1030,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     lineHeight: theme.text.helper * discoverMetrics.hintLineHeight,
     color: theme.colors.terracotta,
   },
-  /* İkinci satır ailenin AÇIK tonunda (#a97a55 / #6f8a44). Zeytin tarafın karşılığı token
-     setinde var (`olive`), terracotta tarafın YOK — en yakın durak `muted` alındı ve hiyerarşi
-     korundu (başlık koyu+kalın, alt satır açık+normal). Eksik token raporlandı. */
+  /* İkinci satır ailenin açık tonunda; terracotta tarafta açık ton token'ı yok, en yakın durak `muted`. */
   hintPassBody: {
     fontFamily: theme.font.body[400],
     color: theme.colors.muted,
@@ -1428,7 +1170,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   stampPassLabel: {
     color: theme.colors.terracotta,
   },
-  /* Künye artık fotoğrafın ÜSTÜNDE (v3:420-424). */
+  /* Ad ve tanıtım fotoğrafın üstünde. */
   cardText: {
     position: 'absolute',
     left: theme.space['5xl'],
@@ -1487,10 +1229,7 @@ const styles = StyleSheet.create((theme, rt) => ({
 
   /* ── Bitiş hâli (v3:435-444) — geri bildirim ekranının teşekkür bloğuyla aynı kalıp ── */
   done: {
-    /* İÇERİK OPTİK MERKEZDE — puan kazanma anının DESENİ, bu ekranın tercihi değil (kullanıcı
-       kararı 15.08: *"biz puan verdiğimiz zaman ekran ortalanıyor… bu bir tasarım desenidir"*).
-       Yerleşim `spacerTop`/`spacerBottom` ile 4:6 (16.08 düzeltmesi — künye orada); kap yalnız
-       kalan yüksekliği alır. `flexGrow` kaydırmayı BOZMAZ: içerik ekrandan uzunsa kap büyür. */
+    /* İçerik optik merkezde, puan kazanma anının deseni; `flexGrow` kaydırmayı bozmaz, içerik uzunsa kap büyür. */
     flexGrow: 1,
     paddingTop: theme.space['9xl'],
     /* Alt güvenli alan kaydırma payına EKLENİR (bloğun kendi nefesi 70): kaydırılabilir içerikte
@@ -1503,7 +1242,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignItems: 'center',
     gap: theme.space['2xl'],
   },
-  /* 4:6 — `EmptyState` ve geri bildirim sonucuyla AYNI oran (`design/KARARLAR.md`). */
+  /* 4:6, `EmptyState` ve geri bildirim sonucuyla aynı oran. */
   spacerTop: { flex: 4 },
   spacerBottom: { flex: 6 },
   doneTitle: {
