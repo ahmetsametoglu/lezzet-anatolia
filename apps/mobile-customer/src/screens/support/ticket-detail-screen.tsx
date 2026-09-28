@@ -176,6 +176,7 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
             accessibilityLabel={t.detail.reply.label}
             placeholder={t.detail.reply.placeholder}
             shape="pill"
+            multiline="grow"
             editable={!ticket.sending}
             testID="ticket-reply"
           />
@@ -319,9 +320,10 @@ const styles = StyleSheet.create((theme, rt) => ({
     borderTopColor: theme.colors['sand-200'],
     backgroundColor: theme.colors['sand-50'],
   },
+  // Alan uzayınca gönder düğmesi başparmağın yerinde, dipte kalır.
   composerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: theme.space.md,
   },
   composerField: { flex: 1 },
@@ -335,6 +337,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     width: theme.size.controlSm,
     height: theme.size.controlSm,
     borderRadius: theme.size.controlSm / 2,
+    // Satır dibe hizalı; tek satırda düğme alanın ortasında kalsın.
+    marginBottom: (theme.size.controlMd - theme.size.controlSm) / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

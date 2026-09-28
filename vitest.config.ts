@@ -88,6 +88,7 @@ const WEB_LIB_DBSIZ = [
   // Boyun müşteriye görünen adı — saf türetme (alanlar + sözlük → dize), DB'ye gitmiyor.
   'apps/web/lib/storefront/variant-name.test.ts',
   'apps/web/lib/use-load-more.hook.test.ts',
+  'apps/web/lib/use-composer-field.hook.test.ts',
   // Bağlam kapısı DB'sizdir ama §3i'nin statik izi onu göremez: depo servisini `vi.mock` ile taklit ettiği için `@lezzet/database`
   // dizgesini taşır.
   'apps/web/lib/warehouse/context.test.ts',

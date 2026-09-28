@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { AnchorSnapshot } from '@lezzet/application';
 import type { ConversationSource, CustomerInboxThread, TicketHandler } from '@lezzet/types';
 import type { CustomerContextData } from '@/lib/customer/context';
+import { useComposerField } from '@/lib/use-composer-field.hook';
 import { AiDraftCard, handlerOptions } from '@/components/operation/ui/ai-handling';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button, buttonClass } from '@/components/operation/ui/button';
@@ -449,6 +450,11 @@ export function ReplyBox({ conversationId, source, window: win, language, busy, 
     if (await onSendReply(text)) setText('');
   };
 
+  // Düğme `busy` iken kapalı; Enter'ın da aynı kapıdan geçmesi gerekir, yoksa aynı cevap iki kez gider.
+  const field = useComposerField(text, () => {
+    if (!busy) void submit();
+  });
+
   if (!humanCanReply(win)) {
     return (
       <div className="flex flex-none border-t border-ops-line bg-ops-card px-5 py-3">
@@ -466,9 +472,11 @@ export function ReplyBox({ conversationId, source, window: win, language, busy, 
     <div className="flex flex-none flex-col gap-1.5 border-t border-ops-line bg-ops-card px-5 py-3">
       <div className="flex items-end gap-2.5">
         <Textarea
-          className="flex-1"
+          textareaRef={field.ref}
+          className="max-h-40 flex-1"
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onKeyDown={field.onKeyDown}
           rows={1}
           placeholder="Cevabınızı yazın…"
         />

@@ -1,10 +1,10 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import type { KeyboardEvent } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { CustomerTicketView } from '@/lib/ticket/ticket-types';
 import { errorText } from '@/lib/customer-error-text';
+import { useComposerField } from '@/lib/use-composer-field.hook';
 import { Icon } from '@/components/customer/ui/icons';
 import { replyToTicketAction } from '../actions';
 import { useTicketPhoto } from '../use-ticket-photo.hook';
@@ -49,11 +49,7 @@ export function DesktopReplyBox({ t, locale, ticketId, onReplied }: DesktopReply
       .finally(() => setBusy(false));
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== 'Enter' || event.shiftKey) return;
-    event.preventDefault();
-    send();
-  };
+  const field = useComposerField(body, send);
 
   return (
     <div className="flex flex-col gap-2">
@@ -78,13 +74,14 @@ export function DesktopReplyBox({ t, locale, ticketId, onReplied }: DesktopReply
 
       <div className="flex items-center gap-2.5 rounded-[22px] border border-sand-300 bg-card py-2.5 pr-2.5 pl-4.5">
         <textarea
+          ref={field.ref}
           rows={1}
           value={body}
           disabled={busy}
           onChange={(e) => setBody(e.target.value)}
-          onKeyDown={onKeyDown}
+          onKeyDown={field.onKeyDown}
           placeholder={busy ? t.reply.sending : t.reply.placeholder}
-          className="flex-1 resize-none bg-transparent font-sans text-body-sm leading-relaxed text-ink outline-none placeholder:text-muted"
+          className="max-h-40 flex-1 resize-none bg-transparent font-sans text-body-sm leading-relaxed text-ink outline-none placeholder:text-muted"
         />
 
         {/* Mobilde kamerayı doğrudan açar (tasarım §7: bozuk ürün fotoğrafı o an çekilir). */}

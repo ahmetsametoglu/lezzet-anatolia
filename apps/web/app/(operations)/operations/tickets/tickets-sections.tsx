@@ -26,6 +26,7 @@ import { agoLabel, agoShort, money, shortDateTime } from '@/components/operation
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { CustomerContextData } from '@/lib/customer/context';
 import type { TicketMessageView } from '@/lib/ticket/ticket-types';
+import { useComposerField } from '@/lib/use-composer-field.hook';
 // Başka ekranların URL sözleşmesi: adres elle kurulmaz, sahibinden alınır.
 import { customersUrl } from '../customers/customers-url';
 import { ORDERS_PATH } from '../orders/orders-url';
@@ -449,16 +450,20 @@ function ReplyBar({ busy, returnAllowed, returnReason, prefill, onReply, onTrigg
     });
   };
 
-  // Kutu tek satır yüksekliğinde ve düğmelerle aynı boyda; `Textarea`, çünkü cevap paragraf uzunluğunda yazılır ve taşınca kendi içinde kayar.
+  const field = useComposerField(body, send);
+
+  // Kutu boşken düğmelerle aynı boyda, cevap paragraf uzunluğunda yazıldığı için metinle uzar; tavandan sonra kendi içinde kayar.
   const box = (
     <Textarea
+      textareaRef={field.ref}
       value={body}
       onChange={(e) => setBody(e.target.value)}
+      onKeyDown={field.onKeyDown}
       rows={1}
       placeholder="Müşteriye cevap yaz… (aynen müşteriye görünür)"
       disabled={busy}
       aria-label="Müşteriye cevap"
-      className={`flex-1 ${CONTROL_H.md} py-[7px]`}
+      className={`max-h-40 flex-1 ${CONTROL_H.md} py-[7px]`}
     />
   );
 
@@ -474,7 +479,7 @@ function ReplyBar({ busy, returnAllowed, returnReason, prefill, onReply, onTrigg
   );
 
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-end gap-2.5">
       {box}
       {iade}
       {gonder}
