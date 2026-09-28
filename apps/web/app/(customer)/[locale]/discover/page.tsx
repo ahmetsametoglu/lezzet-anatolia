@@ -3,13 +3,12 @@ import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@lezzet/i18n';
-import { readDiscoverReward } from '@lezzet/application';
+import { openDiscoverDeck, readDiscoverReward } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { detectDevice } from '@/lib/device';
 import { localeAlternates } from '@/lib/seo/alternates';
 import { currentCustomerId } from '@/lib/guard';
-import { openDiscoverDeck } from '@/lib/feedback/discover';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { DiscoverClient } from './discover-client';
@@ -46,7 +45,7 @@ export default async function DiscoverPage({ params, searchParams }: DiscoverPag
   const customerId = await currentCustomerId();
   const [device, cards, reward] = await Promise.all([
     detectDevice(),
-    openDiscoverDeck(locale as Locale, customerId),
+    openDiscoverDeck(serviceDb(), locale as Locale, customerId),
     readDiscoverReward(serviceDb()),
   ]);
 

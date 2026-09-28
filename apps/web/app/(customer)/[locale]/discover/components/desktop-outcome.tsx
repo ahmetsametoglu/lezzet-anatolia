@@ -3,7 +3,7 @@ import discoverCopy from '@lezzet/i18n/customer/discover';
 import { buttonClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
 import { Link } from '@/i18n/navigation';
-import type { DiscoverCard } from '@/lib/feedback/discover';
+import type { DiscoverCard } from '@lezzet/application';
 import type { DiscoverVote, Messages } from '../discover-types';
 
 interface DesktopOutcomeProps {

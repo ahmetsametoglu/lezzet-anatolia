@@ -4,7 +4,7 @@ import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties, typ
 import { RATIO_PORTRAIT } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Icon } from '@/components/customer/ui/icons';
-import type { DiscoverCard } from '@/lib/feedback/discover';
+import type { DiscoverCard } from '@lezzet/application';
 
 /** Kartın yana uçuşu (ms); bitiş ekranı da bu kadar bekler ki son kart uçarken kaybolmasın. */
 export const EXIT_MS = 330;
@@ -46,8 +46,6 @@ interface SwipeDeckLabels {
   pass: string;
   stampLike: string;
   stampPass: string;
-  wantedOne: string;
-  wantedOther: string;
 }
 
 type DragHandlers = Pick<HTMLAttributes<HTMLElement>, 'onPointerDown' | 'onPointerMove' | 'onPointerUp' | 'onPointerCancel'>;
@@ -272,29 +270,18 @@ interface CardFaceProps {
   labels: SwipeDeckLabels;
 }
 
-/** Fotoğrafın üstündeki her şey: okunurluk gradyanı, kategori rozeti, damgalar ve künye. */
+/** Fotoğrafın üstündeki her şey: okunurluk gradyanı, damgalar ve künye. */
 function CardFace({ card, x, shown, live, labels }: CardFaceProps) {
   const reach = reachOf(x);
   return (
     <div className={['pointer-events-none absolute inset-0 transition-opacity duration-280', shown ? 'opacity-100' : 'opacity-0'].join(' ')}>
       {/* Koyuluk yalnız altta, yazının okunması için; üst yarı fotoğrafın kendi aydınlığında kalır. */}
       <span aria-hidden className="absolute inset-0 bg-linear-to-b from-ink-deep/0 from-40% via-ink-deep/35 via-68% to-ink-deep/88" />
-      {card.category !== null && (
-        <span className="absolute top-4 left-4 rounded-badge bg-sand-50/92 px-2.75 py-1.5 font-sans text-badge-sm font-bold tracking-[0.1em] text-body uppercase">
-          {card.category}
-        </span>
-      )}
       <Stamp label={labels.stampLike} like opacity={x > 0 ? reach : 0} live={live} />
       <Stamp label={labels.stampPass} like={false} opacity={x < 0 ? reach : 0} live={live} />
       <div className="absolute inset-x-5 bottom-5 flex flex-col gap-1.75">
         <h2 className="font-serif text-page-title-sm leading-[1.08] text-on-image">{card.name}</h2>
         {card.description !== null && <p className="font-sans text-note leading-normal text-on-image-soft">{card.description}</p>}
-        {card.likedBy > 0 && (
-          <span className="flex items-center gap-1.5 self-start rounded-soft border border-sand-50/30 bg-sand-50/16 px-2.75 py-1.25 font-sans text-micro font-bold text-olive-light">
-            <Icon name="heart" size={11} />
-            {card.likedBy === 1 ? labels.wantedOne : labels.wantedOther.replace('{count}', String(card.likedBy))}
-          </span>
-        )}
       </div>
     </div>
   );

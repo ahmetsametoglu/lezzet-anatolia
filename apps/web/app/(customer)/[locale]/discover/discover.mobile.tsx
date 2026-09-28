@@ -183,8 +183,6 @@ export function DiscoverMobile({
                 pass: t.dislike,
                 stampLike: copy.stamp.like,
                 stampPass: copy.stamp.pass,
-                wantedOne: copy.wanted.one,
-                wantedOther: copy.wanted.other,
               }}
             />
 

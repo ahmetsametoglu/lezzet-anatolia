@@ -397,11 +397,3 @@ export async function listCandidateDemand(limit = 20, since?: string): Promise<C
     .sort((a, b) => b.signal.weightedLikes - a.signal.weightedLikes)
     .slice(0, limit);
 }
-
-/** Aday ürünleri kaç kişinin beğendiği — keşif kartının "N kişi istedi" satırı, panoyla aynı ölçü. */
-export async function countCandidateLikers(productIds: readonly string[]): Promise<Map<string, number>> {
-  if (productIds.length === 0) return new Map();
-  const rows = await new ProductFeedbackService(serviceDb()).listVotesByProducts(productIds, 'candidate');
-  const byProduct = weighSwipesByProduct(rows.map(toRawSwipe));
-  return new Map([...byProduct.entries()].map(([productId, swipes]) => [productId, identifiedLikes(dedupeBySwiper(swipes))]));
-}

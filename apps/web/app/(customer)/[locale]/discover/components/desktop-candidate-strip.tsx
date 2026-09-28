@@ -1,7 +1,7 @@
 import { RATIO_SQUARE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Icon } from '@/components/customer/ui/icons';
-import type { DiscoverCard } from '@/lib/feedback/discover';
+import type { DiscoverCard } from '@lezzet/application';
 import type { DiscoverVote } from '../discover-types';
 
 interface DesktopCandidateStripProps {

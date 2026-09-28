@@ -17,10 +17,6 @@
       "one": "1 lezzet beğendiniz",
       "other": "{count} lezzet beğendiniz"
     },
-    "wanted": {
-      "one": "1 kişi istedi",
-      "other": "{count} kişi istedi"
-    },
     "done": {
       "title": "Hepsi bu kadardı — teşekkürler!",
       "body": "Beğenileriniz hangi lezzetleri getireceğimize yön veriyor. Yeni lezzetler geldikçe burası yeniden dolar.",
@@ -71,10 +67,6 @@
       "one": "1 coup de cœur",
       "other": "{count} coups de cœur"
     },
-    "wanted": {
-      "one": "1 personne l'a demandé",
-      "other": "{count} personnes l'ont demandé"
-    },
     "done": {
       "title": "C'était tout — merci !",
       "body": "Vos avis orientent les saveurs que nous ferons venir. De nouvelles saveurs rempliront cette page.",
@@ -124,10 +116,6 @@
       "zero": "Noch keine Favoriten",
       "one": "1 Spezialität gefällt Ihnen",
       "other": "{count} Spezialitäten gefallen Ihnen"
-    },
-    "wanted": {
-      "one": "1 Person wünscht sich das",
-      "other": "{count} Personen wünschen sich das"
     },
     "done": {
       "title": "Das war alles – vielen Dank!",

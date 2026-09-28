@@ -2,7 +2,7 @@ import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir).
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import messages from './messages.json';
-import type { DiscoverCard } from '@/lib/feedback/discover';
+import type { DiscoverCard } from '@lezzet/application';
 
 export type Messages = LocalizedCopy<typeof messages>;
 

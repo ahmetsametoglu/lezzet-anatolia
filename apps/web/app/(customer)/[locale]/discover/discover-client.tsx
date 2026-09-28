@@ -6,7 +6,7 @@ import type { Locale } from '@lezzet/i18n';
 import type { DiscoverReward } from '@lezzet/types';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
-import type { DiscoverCard } from '@/lib/feedback/discover';
+import type { DiscoverCard } from '@lezzet/application';
 import { addSwipeId, clearSwipeIds, readSwipeIds } from '@/lib/feedback/discover-store';
 import { claimSwipesAction, swipeAction } from './actions';
 import { DiscoverDesktop } from './discover.desktop';
