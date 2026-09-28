@@ -80,11 +80,6 @@ export function awardVisitPoints(customerId: string): Promise<PointsEntry | null
   return awardPoints({ customerId, reason: 'visit' });
 }
 
-// KÖPRÜ KALKTI (17.9): `rewardCompletedOrder` artık YOK — sipariş puanı kaldırıldı, getirenin
-// ödülü de ödeme durumunun türetildiği yerde doğuyor (`application/order/payment.ts` → `finalize`).
-// Ödül ortak paketin İÇİNDEN çağrıldığı için web'in bir köprüye ihtiyacı kalmadı; köprüyü
-// bırakmak, hiç çağrılmayan bir kapıyı bakımda tutmak olurdu.
-
 /** Müşterinin bakiyesi; hiç hareketi yoksa sıfır (null dolaştırılmaz). */
 export async function getPointsBalance(customerId: string): Promise<PointsBalance> {
   const row = await new PointsBalanceService(serviceDb()).getByCustomer(customerId);
