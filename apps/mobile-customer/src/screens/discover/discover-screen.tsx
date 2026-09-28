@@ -32,7 +32,7 @@ import { toastInfo } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { PointsAward, PointsSpark } from '@/screens/customer-kit/points-award';
 import { HeartIcon } from '@/screens/feedback/feedback-icons';
 import { emToDp, withAlpha } from '@lezzet/mobile-kit/src/theme/parse';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/discover';
 import { useDiscover } from './use-discover.hook';
 
 /*
