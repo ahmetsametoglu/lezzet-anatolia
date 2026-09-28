@@ -24,8 +24,8 @@ export const brand = {
     email: 'lezzetanatolie@gmail.com',
     /** Sayfanın kullanıcı adı yok; `m.me` sayısal kimliği de çözüyor. */
     messengerUrl: 'https://m.me/61593784978310' as string | null,
-    /** BEKLEYEN(K.29): Instagram kullanıcı adı girilecek; boşken kanal satırı bağlantısız kalır. */
-    instagramUrl: null as string | null,
+    /** `ig.me/m/` profili değil sohbeti açar; kanal bağlarken kodlu mesaj oraya yapıştırılır. */
+    instagramUrl: 'https://ig.me/m/lezzet_anatolie' as string | null,
   },
   /**
    * Resmî kayıttaki tüzel kişi. `name` (marka) ile `legalName` (unvan) ayrı, çünkü ziyaretçi markayı arar, yasal kayıt unvanı taşır.

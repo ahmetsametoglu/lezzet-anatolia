@@ -24,7 +24,7 @@ Bu doküman işletmenin künyesini ve ürün kataloğunu tek yerde toplar. Katal
 | Web | www.lezzetanatolie.com |
 | E-posta | lezzetanatolie@gmail.com |
 | Telefon | +33 (0)6 16 99 06 81 |
-| Instagram | LezzetAnatolie |
+| Instagram | @lezzet_anatolie |
 | Pazar | Fransa ve Almanya |
 | Diller | Türkçe, Fransızca, Almanca |
 | Barındırıcı | Hetzner Online GmbH · Industriestr. 25, 91710 Gunzenhausen, Almanya · +49 (0)9831 505-0 |
