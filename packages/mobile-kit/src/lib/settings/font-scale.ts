@@ -1,4 +1,5 @@
 import { UnistylesRuntime } from 'react-native-unistyles';
+import { FONT_SCALES, FONT_SCALE_FACTOR, type FontScale } from '@lezzet/design-tokens';
 import { z } from 'zod';
 
 import { mapTextStops } from '../../theme/parse';
@@ -15,16 +16,12 @@ import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
 /** Depo anahtarı — ham dizge burada YAZILMAZ, `lezzet.*` ailesinin sahibinden gelir. */
 const STORE_KEY = DEVICE_STORE_KEYS.fontScale;
 
-export const FONT_SCALES = ['small', 'normal', 'large'] as const;
+export { FONT_SCALES, type FontScale };
 const FontScaleSchema = z.enum(FONT_SCALES);
-export type FontScale = z.infer<typeof FontScaleSchema>;
-
-/** Çarpanlar parametrik ve tek yerde — %90 · %100 · %115 (büyük adım, gözle seçilir fark). */
-const FACTOR: Record<FontScale, number> = { small: 0.9, normal: 1, large: 1.15 };
 
 /** Seçimi iki temaya birden uygular — operasyon yüzeyi de aynı gözle okusun. */
 export function applyFontScale(scale: FontScale): void {
-  const factor = FACTOR[scale];
+  const factor = FONT_SCALE_FACTOR[scale];
   /* "Hangi anahtar boyut durağıdır" kuralı `theme/parse`ta tek yerde; müşteri teması kuruluşta da aynı kuralı kullanır. */
   // Güncelleyici parametresi BİLEREK kullanılmıyor: dönen nesne her seferinde BAZ temadan kurulur
   // (birikme yok) ve tip, birleşim yerine ilgili temanın kendisiyle birebir oturur.

@@ -14,14 +14,17 @@ interface RootShellProps {
    * işletim sistemi koyu temadayken devreye girer.
    */
   surface: 'customer' | 'operations';
+  /** Kökün stil değişkenleri; müşterinin seçtiği yazı boyu (`--font-scale`) buradan iner. */
+  style?: Record<string, string>;
   children: ReactNode;
 }
 
-export function RootShell({ lang, className, surface, children }: RootShellProps) {
+export function RootShell({ lang, className, surface, style, children }: RootShellProps) {
   return (
     <html
       lang={lang}
       className={className}
+      style={style}
       data-surface={surface}
       /**
        * `data-theme`i sunucu değil `ThemeScript` yazar, çünkü tercih `localStorage`da ve ilk boyamadan önce uygulanmazsa koyu panel

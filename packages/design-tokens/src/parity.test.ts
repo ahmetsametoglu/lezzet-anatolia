@@ -139,9 +139,11 @@ describe('telefon görünümünün yazı ölçeği', () => {
   it('her boyut durağı tabanın bir adım üstü; alt anahtarlar (satır · ağırlık · aralık) bloğa girmez', () => {
     const phone = flattenPhoneTextTokens();
     expect(Object.keys(phone)).toHaveLength(EXPECTED_PHONE_COUNT);
-    expect(phone['--text-body-sm']).toBe(`${Number.parseFloat(customerText['body-sm']) + customerPhoneTextStepPx}px`);
+    expect(phone['--text-body-sm']).toBe(
+      `calc(${Number.parseFloat(customerText['body-sm']) + customerPhoneTextStepPx}px * var(--font-scale, 1))`,
+    );
     // Yarım piksel kademeler korunur — sabit ekleme aralıkları bozmaz (11,5 → 12,5).
-    expect(phone['--text-micro']).toBe(`${Number.parseFloat(customerText.micro) + customerPhoneTextStepPx}px`);
+    expect(phone['--text-micro']).toBe(`calc(${Number.parseFloat(customerText.micro) + customerPhoneTextStepPx}px * var(--font-scale, 1))`);
     expect(Object.keys(phone).filter((name) => name.slice('--text-'.length).includes('--'))).toEqual([]);
   });
 

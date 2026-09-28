@@ -86,7 +86,7 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
         </SettingsCard>
       )}
 
-      <LanguageCard copy={copy.language} locale={locale} stored={account.profile.preferredLanguage} />
+      <LanguageCard copy={copy.language} fontCopy={copy.fontSize} locale={locale} stored={account.profile.preferredLanguage} />
 
       <ChannelsCard t={t} locale={locale} channels={account.channels} compact />
 

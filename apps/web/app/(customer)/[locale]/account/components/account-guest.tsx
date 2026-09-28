@@ -26,7 +26,7 @@ export function AccountGuest({ locale, legal }: AccountGuestProps) {
         description={copy.guest.body}
         action={<PrimaryButton href="/login" label={copy.guest.cta} />}
       />
-      <LanguageCard copy={copy.language} locale={locale} stored={locale} />
+      <LanguageCard copy={copy.language} fontCopy={copy.fontSize} locale={locale} stored={locale} />
       <LegalDirectory directory={legal} />
     </div>
   );

@@ -388,38 +388,39 @@ body {
 }
 
 /* Telefon görünümünün yazı ölçeği: müşteri kademeleri telefon çerçevesinin kökünde (`data-type-scale="phone"`) bir adım
-   büyük yeniden tanımlanır. Değerler `@lezzet/design-tokens`ten türer (`flattenPhoneTextTokens`), parite testi bloğu iki yönlü kilitler. */
+   büyük yeniden tanımlanır ve müşterinin seçtiği yazı boyuyla (`--font-scale`, kökte) çarpılır. Değerler `@lezzet/design-tokens`ten
+   türer (`flattenPhoneTextTokens`), parite testi bloğu iki yönlü kilitler. */
 [data-type-scale='phone'] {
-  --text-h1: 53px;
-  --text-h1-sm: 31px;
-  --text-h1-md: 45px;
-  --text-page-title: 39px;
-  --text-page-title-sm: 27px;
-  --text-h2: 29px;
-  --text-h2-sm: 21px;
-  --text-card-title: 25px;
-  --text-card-title-sm: 19px;
-  --text-lead: 19px;
-  --text-copy: 16px;
-  --text-body-sm: 15px;
-  --text-note: 14px;
-  --text-micro: 12.5px;
-  --text-chip: 15px;
-  --text-field-label: 13.5px;
-  --text-control: 14.5px;
-  --text-button: 15.5px;
-  --text-step: 17px;
-  --text-step-sm: 16px;
-  --text-icon: 23px;
-  --text-icon-sm: 21px;
-  --text-eyebrow: 15px;
-  --text-eyebrow-sm: 12px;
-  --text-eyebrow-xs: 11px;
-  --text-caps-label: 13px;
-  --text-badge: 13.5px;
-  --text-badge-sm: 11px;
-  --text-helper: 13px;
-  --text-screen-title: 18px;
+  --text-h1: calc(53px * var(--font-scale, 1));
+  --text-h1-sm: calc(31px * var(--font-scale, 1));
+  --text-h1-md: calc(45px * var(--font-scale, 1));
+  --text-page-title: calc(39px * var(--font-scale, 1));
+  --text-page-title-sm: calc(27px * var(--font-scale, 1));
+  --text-h2: calc(29px * var(--font-scale, 1));
+  --text-h2-sm: calc(21px * var(--font-scale, 1));
+  --text-card-title: calc(25px * var(--font-scale, 1));
+  --text-card-title-sm: calc(19px * var(--font-scale, 1));
+  --text-lead: calc(19px * var(--font-scale, 1));
+  --text-copy: calc(16px * var(--font-scale, 1));
+  --text-body-sm: calc(15px * var(--font-scale, 1));
+  --text-note: calc(14px * var(--font-scale, 1));
+  --text-micro: calc(12.5px * var(--font-scale, 1));
+  --text-chip: calc(15px * var(--font-scale, 1));
+  --text-field-label: calc(13.5px * var(--font-scale, 1));
+  --text-control: calc(14.5px * var(--font-scale, 1));
+  --text-button: calc(15.5px * var(--font-scale, 1));
+  --text-step: calc(17px * var(--font-scale, 1));
+  --text-step-sm: calc(16px * var(--font-scale, 1));
+  --text-icon: calc(23px * var(--font-scale, 1));
+  --text-icon-sm: calc(21px * var(--font-scale, 1));
+  --text-eyebrow: calc(15px * var(--font-scale, 1));
+  --text-eyebrow-sm: calc(12px * var(--font-scale, 1));
+  --text-eyebrow-xs: calc(11px * var(--font-scale, 1));
+  --text-caps-label: calc(13px * var(--font-scale, 1));
+  --text-badge: calc(13.5px * var(--font-scale, 1));
+  --text-badge-sm: calc(11px * var(--font-scale, 1));
+  --text-helper: calc(13px * var(--font-scale, 1));
+  --text-screen-title: calc(18px * var(--font-scale, 1));
 }
 
 /* Operasyon gövdesi kendi zeminini taşır — token'lar tema ile değiştiği için koyu modda

@@ -17,6 +17,7 @@ import {
   operationsRadius,
   operationsText,
 } from './operations';
+import { FONT_SCALE_VAR } from './font-scale';
 
 /* Token ailesi → CSS custom property öneki; anahtar + önek tam CSS adıdır. Mobil uygulamanın gölge ve gradyan aileleri
    `customer-app.ts`te ayrı kalır ve bu üretim onları basmaz. */
@@ -88,7 +89,7 @@ export function flattenPhoneTextTokens(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(customerText)) {
     if (key.includes('--')) continue;
-    out[`--text-${webTextKey(key)}`] = `${Number.parseFloat(value) + customerPhoneTextStepPx}px`;
+    out[`--text-${webTextKey(key)}`] = `calc(${Number.parseFloat(value) + customerPhoneTextStepPx}px * var(${FONT_SCALE_VAR}, 1))`;
   }
   return out;
 }

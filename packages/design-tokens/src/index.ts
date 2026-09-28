@@ -77,3 +77,4 @@ export {
   operationsDarkColors,
 } from './operations';
 export { renderThemeCss, flattenThemeTokens, flattenDarkTokens } from './render-theme-css';
+export { FONT_SCALES, FONT_SCALE_FACTOR, FONT_SCALE_VAR, type FontScale } from './font-scale';

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { Lora, Karla } from 'next/font/google';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
@@ -17,6 +18,7 @@ import { getDeliveryZones } from '@/lib/delivery/read';
 import { readPlaceSnapshot } from '@/lib/delivery/read-place';
 import { currentCustomer } from '@/lib/guard';
 import { detectDevice } from '@/lib/device';
+import { FONT_SCALE_COOKIE, fontScaleOf, fontScaleStyle } from '@/lib/storefront/font-scale';
 import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { TITLE_TEMPLATE } from '@/lib/seo/title';
 import layoutMessages from './layout-messages.json';
@@ -67,16 +69,19 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
   // Bölgeler, oturum künyesi, yerin ilk karesi, cihaz ipucu ve fiyat kapısı KÖKTE okunur: başlık ve
   // çerçeve birer istemci bileşeni, sunucuya kendileri soramaz. Her sayfanın ayrı tur atması aynı
   // cevabı tekrarlardı — okumalar önbellekli, istek başına tek çözüm.
-  const [zones, account, placeSnapshot, device, viewer] = await Promise.all([
+  const [zones, account, placeSnapshot, device, viewer, cookieStore] = await Promise.all([
     getDeliveryZones(),
     currentCustomer(),
     readPlaceSnapshot(),
     detectDevice(),
     readPricingViewer(),
+    cookies(),
   ]);
+  // Yazı boyu ilk karede doğru çizilsin diye kökte; telefon görünümünün yazı durakları bu değişkenle çarpılır.
+  const fontScale = fontScaleOf(cookieStore.get(FONT_SCALE_COOKIE)?.value);
 
   return (
-    <RootShell lang={locale} surface="customer" className={`${lora.variable} ${karla.variable}`}>
+    <RootShell lang={locale} surface="customer" className={`${lora.variable} ${karla.variable}`} style={fontScaleStyle(fontScale)}>
       {/* Client component'ler (Link vb.) için locale bağlamı; mesajlar boş — metinler sayfa JSON'undan. */}
       <NextIntlClientProvider>
         {/* Sepet, teslimat yeri ve hesap künyesi KÖKTE ve birbirinden ayrı: sayaç başlıkta, kısıt
