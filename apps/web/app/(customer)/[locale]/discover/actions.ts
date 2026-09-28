@@ -1,8 +1,8 @@
 'use server';
 
+import { claimDiscoverSwipes, recordDiscoverSwipe } from '@lezzet/application';
+import { serviceDb } from '@lezzet/database';
 import type { FeedbackVote } from '@lezzet/types';
-import { recordVote } from '@/lib/feedback/product-feedback';
-import { claimDiscoverSwipes } from '@/lib/feedback/discover-claim';
 import { currentCustomerId } from '@/lib/guard';
 import { customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 
@@ -19,13 +19,14 @@ export async function swipeAction(
   productId: string,
   vote: FeedbackVote,
   dwellMs: number,
-): Promise<CustomerResult<{ feedbackId: string | null }>> {
+): Promise<CustomerResult<{ feedbackId: string | null; pointsAwarded: number | null; balance: number | null }>> {
   try {
     const customerId = await currentCustomerId();
-    const result = await recordVote({ customerId, productId, context: 'candidate', vote, dwellMs });
+    const result = await recordDiscoverSwipe(serviceDb(), { customerId, productId, vote, dwellMs });
     // Motorun iç sebebi müşteriye anlatılmaz: düzeltebileceği bir şey değil.
-    if (!result.ok) return { data: null, errorKey: 'swipe_failed' };
-    return { data: { feedbackId: result.data?.id ?? null }, errorKey: null };
+    if (result.status !== 'ok') return { data: null, errorKey: 'swipe_failed' };
+    const { id, pointsAwarded, balance } = result.swipe;
+    return { data: { feedbackId: id, pointsAwarded, balance }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
@@ -38,7 +39,7 @@ export async function claimSwipesAction(feedbackIds: string[]): Promise<Customer
   try {
     const customerId = await currentCustomerId();
     if (!customerId) return { data: { linked: 0, points: 0 }, errorKey: null };
-    return { data: await claimDiscoverSwipes(customerId, feedbackIds), errorKey: null };
+    return { data: await claimDiscoverSwipes(serviceDb(), customerId, feedbackIds), errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }

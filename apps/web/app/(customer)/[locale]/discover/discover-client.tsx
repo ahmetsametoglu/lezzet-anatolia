@@ -69,7 +69,9 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCa
           if (!res.data) return;
           // Ziyaretçinin kimliği tarayıcıda saklanır; girişlide puan zaten yazıldı.
           if (!signedIn && res.data.feedbackId) addSwipeId(res.data.feedbackId);
-          setEarned((p) => p + pointsPerCard);
+          // Girişliye sunucunun yazdığı puan eklenir (günlük tavan, ikinci oy); ziyaretçinin sayısı hesap açınca alacağı teklif.
+          const awarded = res.data.pointsAwarded;
+          setEarned((p) => p + (awarded ?? pointsPerCard));
         })
         .finally(() => setPending((n) => n - 1));
     },
