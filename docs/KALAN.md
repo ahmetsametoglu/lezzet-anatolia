@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.44). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.45). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
 `docs/GELECEK.md`'dedir.
@@ -36,6 +36,11 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
   Instagram'da 24 saat dışında otomatik mesaj yolu yok. Açık: Meta uygulaması canlı ama sayfa izinlerinin gelişmiş erişimi
   "REJECTED" görünüyor; rolü olmayan müşteriyle Messenger yazışmasının bizim sistemimizden çalıştığı ölçülecek (Supabase MCP ya da
   canlı deneme).
+- [ ] (K.45) [hedef: deploy] Test sunucusunun Meta env'i yerel `apps/web/.env.local`'e eşitlenip backend yeniden başlatılacak:
+  `META_PAGE_ACCESS_TOKEN` yenilendi (süresiz sayfa jetonu, Instagram mesaj izinleriyle; eskisiyle Instagram'a cevap gitmiyordu),
+  `META_WEBHOOK_VERIFY_TOKEN` sunucuda yereldekinden farklı (Meta'nın `instagram` aboneliği doğrulaması 403 aldı). Eşitlenince
+  uygulama `instagram` webhook konusuna abone edilir (aynı adres; `messages` · `messaging_postbacks` · `message_reactions`);
+  kurulu Messenger ve WhatsApp abonelikleri yeniden doğrulanmadığı için etkilenmez.
 - [ ] **Fiyat listesi (B2B/B2C)** — kullanıcı bekliyor (kendi notlarında); gelince gerçek beslemeye girer.
 
 ## 00 · Monorepo İskeleti
