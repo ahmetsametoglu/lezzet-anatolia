@@ -22,6 +22,7 @@ import { readOrderSummary, type OrderSummaryView } from '@/lib/order/summary';
 import { priceRuleError } from '@/lib/pricing/price-rule-label';
 import { notifyB2bDecision } from '@/lib/b2b/application';
 import { readCustomerScorecard, readOverdueCustomerIds, SCORECARD_WINDOW } from '@/lib/customer/scorecard';
+import { readCustomerTrust, readTrustPage, type TrustRowView } from '@/lib/customer/trust';
 import {
   acquisitionLabel,
   toConsentView,
@@ -79,7 +80,7 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
     const orders = new OrderService(db);
     const discounts = new DiscountService(db);
 
-    const [totals, recent, scorecard, addresses, coupons, points, ticketCount, openTicketCount, referrer, priceGroups] = await Promise.all([
+    const [totals, recent, scorecard, addresses, coupons, points, ticketCount, openTicketCount, referrer, priceGroups, trust] = await Promise.all([
       // `counts({ customerIds })` değil, çünkü orada müşteri süzgeci terimsiz uygulanmaz ve kart işletmenin tüm cirosunu
       // gösterirdi; bu RPC dar soruyu sorar ve iptali ciroya katmaz.
       orders.customerTotals(customerId),
@@ -97,6 +98,7 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
       profile.referredBy ? profiles.getById(profile.referredBy) : Promise.resolve(null),
       // Fiyat grubu seçenekleri; üyelik müşteri kartından atanır.
       new PriceGroupService(db).listAll(),
+      readCustomerTrust(db, customerId),
     ]);
 
     // Kupon kodları ve kullanım sayıları kupon VARSA okunur — kuponsuz müşteride iki boş tur atmanın
@@ -140,9 +142,23 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
         openTicketCount,
         ticketCount,
         lastOrders: toCustomerOrderRows(recent.rows),
+        trust,
       },
       error: null,
     };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/** Güven geçmişinin sonraki sayfası — önizlemenin "daha fazla" düğmesi. */
+export async function loadTrustPageAction(
+  customerId: string,
+  cursor: KeysetCursor,
+): Promise<ActionResult<{ rows: TrustRowView[]; nextCursor: KeysetCursor | null }>> {
+  try {
+    await requireAdmin();
+    return { data: await readTrustPage(serviceDb(), customerId, cursor), error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

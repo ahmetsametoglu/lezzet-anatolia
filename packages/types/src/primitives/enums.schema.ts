@@ -452,3 +452,35 @@ export type StopOrderMetric = z.infer<typeof StopOrderMetricEnum>;
  */
 export const StopOrderPrecisionEnum = z.enum(['address', 'postal_centroid', 'mixed']);
 export type StopOrderPrecision = z.infer<typeof StopOrderPrecisionEnum>;
+
+/** Güven defterinin sebebi; ilk altısı artı, kalanı eksi puan taşır (ağırlık ayardan). */
+export const TrustReasonEnum = z.enum([
+  'order_delivered',
+  'referral',
+  'neighbor',
+  'review',
+  'feedback',
+  'visit',
+  'order_cancelled',
+  'delivery_refused',
+  'order_returned',
+  'delivery_unreachable',
+  'payment_uncollected',
+  'payment_overdue',
+]);
+export type TrustReason = z.infer<typeof TrustReasonEnum>;
+
+export const TRUST_REASON_LABELS: Record<TrustReason, string> = {
+  order_delivered: 'Teslim edilen sipariş',
+  referral: 'Davet ettiği arkadaş müşteri oldu',
+  neighbor: 'Komşu daveti sefere sipariş ekledi',
+  review: 'Ürün yorumu',
+  feedback: 'Ankete cevap',
+  visit: 'Ziyaret günü',
+  order_cancelled: 'Siparişini kendisi iptal etti',
+  delivery_refused: 'Siparişi kapıda reddetti',
+  order_returned: 'Teslim sonrası iade',
+  delivery_unreachable: 'Kapıda ulaşılamadı',
+  payment_uncollected: 'Kapıda tahsil edilemedi',
+  payment_overdue: 'Vadesi geçti',
+};

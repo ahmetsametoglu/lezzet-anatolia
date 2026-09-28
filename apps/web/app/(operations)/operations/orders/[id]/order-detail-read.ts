@@ -28,6 +28,8 @@ import {
   type Ticket,
 } from '@lezzet/types';
 import {
+  PAYMENT_TERM_DAYS_DEFAULT,
+  PAYMENT_TERM_DAYS_KEY,
   allowedDecisions,
   creditPosition,
   derivePaymentStatusForOrder,
@@ -48,6 +50,7 @@ import { listOrderBoxes, readDeliveryProof, readOrderTracking, thumbnailImageUrl
 import { toCents } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
+import { readCustomerTrust } from '@/lib/customer/trust';
 import { ticketsLink } from '../../tickets/tickets-url';
 import type {
   OrderBundleGroup,
@@ -66,11 +69,10 @@ import type {
   satır sayısıyla çarpmaz: her şey kimlik kümesi üzerinden tek turda gelir.
 */
 
-/** Ödeme ve liste ekranıyla aynı anahtar. */
-const PAYMENT_TERM_KEY = 'payment_term_days';
-const PAYMENT_TERM_DEFAULT = 30;
-
 type Db = ReturnType<typeof serviceDb>;
+
+/** Sağ raydaki güven kartının son hareket sayısı; tam geçmiş müşteri önizlemesinde. */
+const TRUST_PREVIEW_ROWS = 5;
 
 export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDetailView | null> {
   const orderSvc = new OrderService(db);
@@ -79,15 +81,16 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
   const { order, items } = found;
 
-  const [logs, movements, accounts, batches, tickets, termDays, warehouseLabels] = await Promise.all([
+  const [logs, movements, accounts, batches, tickets, termDays, warehouseLabels, trust] = await Promise.all([
     new OrderStatusLogService(db).listByOrder(orderId),
     new MoneyMovementService(db).listByOrder(orderId),
     new AccountService(db).list(),
     new OrderItemBatchService(db).listByOrder(orderId),
     new TicketService(db).listByOrder(orderId),
-    new SettingsService(db).getNumber(PAYMENT_TERM_KEY, PAYMENT_TERM_DEFAULT),
+    new SettingsService(db).getNumber(PAYMENT_TERM_DAYS_KEY, PAYMENT_TERM_DAYS_DEFAULT),
     // Kapalı depolar dahil: eski bir sipariş tesisi kapandı diye deposunu unutmaz.
     readWarehouseLabels(),
+    readCustomerTrust(db, order.customerId, TRUST_PREVIEW_ROWS),
   ]);
 
   const variantIds = [...new Set(items.map((i) => i.variantId))];
@@ -287,6 +290,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
           }
         : null,
     },
+    trust,
     links: linksOf(tickets),
     finance: financeOf(order, items),
   };

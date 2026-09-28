@@ -36,6 +36,7 @@ import { SWEEP_UNPAID_DRAFTS, sweepUnpaidDraftsJob } from './jobs/sweep-unpaid-d
 import { SHIPMENT_WATCH, shipmentWatchJob } from './jobs/shipment-watch';
 import { SHIPMENT_ORPHAN, shipmentOrphanJob } from './jobs/shipment-orphan';
 import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user-text';
+import { SCAN_TRUST, scanTrustJob } from './jobs/trust-scan';
 
 /**
  * Süreç düzeyi emniyet ağı: sarmalın dışında doğan bir promise reddi ne `runJob`a ne `onError`a düşer ve süreci kayıtsız
@@ -144,6 +145,11 @@ cron.schedule(`*/${HEALTH_COLLECT_INTERVAL_MIN} * * * *`, () => {
 cron.schedule('20 3 * * *', () => {
   void runJob(PURGE_OBSERVABILITY, purgeObservabilityJob);
 }, { timezone: 'Europe/Paris' });
+
+// Güven taraması saatte bir: puan tavsiyedir ve anlık olması gerekmez; tarama idempotent olduğu için kaçan tur sonrakinde telafi olur.
+cron.schedule('40 * * * *', () => {
+  void runJob(SCAN_TRUST, scanTrustJob);
+});
 
 // Personel bildirim saklaması günde bir, ayrı işte (ayrı `job_run` izi): görülmüş personel satırı 90 günde düşer, görülmemiş
 // süpürülmez, müşteri satırına dokunulmaz.

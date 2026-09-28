@@ -536,6 +536,33 @@ Puan bakiyesi = Σ `points` (saklanmaz, türetilir). Kupona çevirme: `redemptio
 
 **İki davet, iki sebep ve ikisi AYNI turda doğabilir** (17.10): hesapsız bir komşu, komşu bağlantısından gelip kaydolur ve sipariş verirse davet eden hem `referral` (bir müşteri kazandırdı) hem `neighbor` (bir sefere sipariş ekletti) kazanır. Çift ödeme değildir — iki farklı şey oldu. Kaynakları da ayrı: `referral`ın `ref_id`si yeni MÜŞTERİ, `neighbor`ınki komşunun SİPARİŞİ.
 
+## TrustEntry (güven hareketi)
+
+Müşterinin sadakatini ve işletmeye faydasını ölçen **tavsiye** puanının defteri. Puan Σ `points`tır ve saklanmaz (`customer_trust_score` görünümü). Müşteriye görünmez, B2B'yi de kapsar, eksi hareket taşır; sistem bu puanla hiçbir şeyi engellemez.
+
+<!-- alanlar:trust_entry -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `customer_id` | uuid |  |  |
+| `points` | int |  |  |
+| `reason` | trust_reason |  |  |
+| `ref_id` | uuid |  |  |
+| `occurred_at` | timestamptz |  |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`points`** — yazım anındaki ağırlık (ayar `trust_weight_*`); ağırlık sonradan değişirse geçmiş yeniden yazılmaz
+- **`reason`** — olayın sınıfı; sıfır ağırlıklı sebep deftere girmez
+- **`ref_id`** — olayı doğuran kayıt (sipariş, durum kaydı, puan satırı); FK yok, bir izdir
+- **`occurred_at`** — olayın kendi anı; geçmiş bu sırayla okunur
+
+**Sadakat defterinden ayrı:** `points_entry` müşterinin harcayabildiği bir değerdir; güven puanı iç değerlendirmedir. Davet, yorum, anket ve ziyaret olayları yine de sadakat defterinden okunur, "bu davranış gerçekleşti" kararı ikinci kez yazılmaz.
+
+**Mevcut akışlara dokunmadan dolar:** saatlik iş (`scan_trust`) `trust_fact` görünümünden yazılmamış olayları okur, ağırlığı motordan alır ve yazar; aynı olayın ikinci satırını `(customer_id, reason, ref_id)` tekilliği yutar. Vade gecikmesi görünümde değil, açık vade okuması ve `isOverdue` kuralıyla türetilir.
+
 ## Ticket (müşteri talebi / şikâyet)
 
 Basit yaşam döngüsü; siparişe ve ürünlere isteğe bağlı bağlanır (bkz. `DOMAIN.md §15`).

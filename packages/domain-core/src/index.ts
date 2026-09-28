@@ -80,6 +80,7 @@ export * from './messaging/secret-masking';
 export * from './messaging/service-window';
 export * from './feedback/feedback-score';
 export * from './feedback/points';
+export * from './feedback/trust';
 export * from './feedback/invite';
 export * from './feedback/signal-quality';
 export * from './catalog/barcode';

@@ -35,6 +35,21 @@ insert into public.settings (key, value, description) values
   ('conversation_default_handler', '"ai"',   'Yeni sohbetin yürütücüsü: human | hybrid | ai. Açık sohbetleri değiştirmez; Ayarlar ve Sosyal Mesajlar ekranından değiştirilir.'),
   -- Yeni talebin yürütücüsü; talep çoğu zaman şikâyet taşıdığı için fabrika değeri hibrit (AI taslak yazar, operatör onaylar).
   ('ticket_default_handler',       '"hybrid"', 'Yeni talebin yürütücüsü: human | hybrid | ai. Açık talepleri değiştirmez; Ayarlar ve Talepler ekranından değiştirilir.'),
+  -- Güven puanı ağırlıkları: ödül artı, ceza eksi, sıfır sayılmaz. Teslim sonrası iade fabrikada sayılmaz, çünkü çoğu zaman ürün
+  -- şikâyetinden doğar ve kusur bizde olabilir.
+  ('trust_weight_order_delivered',       '10',    'Güven puanı ağırlığı — teslim edilen sipariş.'),
+  ('trust_weight_referral',              '15',    'Güven puanı ağırlığı — davet ettiği arkadaş müşteri oldu.'),
+  ('trust_weight_neighbor',              '10',    'Güven puanı ağırlığı — komşu daveti sefere sipariş ekledi.'),
+  ('trust_weight_review',                '3',     'Güven puanı ağırlığı — ürün yorumu.'),
+  ('trust_weight_feedback',              '1',     'Güven puanı ağırlığı — ankete cevap.'),
+  ('trust_weight_visit',                 '1',     'Güven puanı ağırlığı — ziyaret günü.'),
+  ('trust_weight_order_cancelled',       '-5',    'Güven puanı ağırlığı — siparişini kendisi iptal etti.'),
+  ('trust_weight_delivery_refused',      '-5',    'Güven puanı ağırlığı — siparişi kapıda reddetti.'),
+  ('trust_weight_order_returned',        '0',     'Güven puanı ağırlığı — teslim sonrası iade.'),
+  ('trust_weight_delivery_unreachable',  '-10',   'Güven puanı ağırlığı — kapıda ulaşılamadı.'),
+  ('trust_weight_payment_uncollected',   '-15',   'Güven puanı ağırlığı — kapıda tahsil edilemedi.'),
+  ('trust_weight_payment_overdue',       '-10',   'Güven puanı ağırlığı — vadesi geçti.'),
+  ('trust_uncollected_grace_days',        '2',     'Teslim edilen peşin siparişin parası bu kadar günde kapanmazsa "kapıda tahsil edilemedi" sayılır.'),
   -- AI model tarifesi, milyon jeton başına dolar (sağlayıcının faturası dolar); kullanım defterinin (`ai_usage.cost_usd`) tek girdisidir.
   -- Anahtar env'deki model adıdır: model değişince satır eklenir, eklenmezse o modelin maliyeti sıfır değil boş yazılır.
   ('ai_model_prices_usd',          '{"gemini-3.5-flash-lite": {"inputPerMillion": 0.30, "outputPerMillion": 2.50}, "gemini-3.5-flash": {"inputPerMillion": 1.50, "outputPerMillion": 9.00}}', 'AI model tarifesi — milyon jeton başına USD (girdi/çıktı). Kullanım defterinin maliyeti buradan hesaplanır; listede olmayan modelin maliyeti boş kalır.'),

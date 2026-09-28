@@ -2,6 +2,7 @@
 // yoktur. Para her yerde kuruş.
 import type { OrderBoxTrace } from '@lezzet/application';
 import type { OrderDecision } from '@lezzet/domain-core';
+import type { TrustView } from '@/lib/customer/trust';
 import type {
   DeliveryType,
   DoorCheck,
@@ -295,6 +296,8 @@ export interface OrderDetailView {
   };
 
   customer: CustomerContextView;
+  /** Müşterinin güven puanı ve son hareketleri — tavsiyedir, hiçbir kararı kendisi vermez. */
+  trust: TrustView;
   links: OrderLinkView[];
   /**
    * Kâr okuması, rol kapılı: bugün sayfanın kendisi yalnız yöneticiye açık. Sayfa başka rollere açılırsa kapı buraya taşınır, alan

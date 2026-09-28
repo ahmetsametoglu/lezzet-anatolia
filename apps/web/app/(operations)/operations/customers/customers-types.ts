@@ -1,5 +1,6 @@
 import type { B2bApplicationStatus } from '@lezzet/domain-core';
 import type { Address, Consent, CustomerPriceBasis, CustomerType, KeysetCursor, OrderStatus, PaymentStatus, UserProfile } from '@lezzet/types';
+import type { TrustView } from '@/lib/customer/trust';
 import type { CustomerScope, CustomersUrlState, MarketingChannelFilter } from './customers-url';
 
 // Müşteri ekranının view-model'i: veride duran alan `Pick`lenir, hesaplanan alan yazılır (CLAUDE §1).
@@ -140,6 +141,8 @@ export interface CustomerDetail {
   openTicketCount: number;
   ticketCount: number;
   lastOrders: CustomerOrderRow[];
+  /** Güven puanı ve geçmişin ilk sayfası — tavsiyedir, hiçbir kararı kendisi vermez. */
+  trust: TrustView;
 }
 
 /**

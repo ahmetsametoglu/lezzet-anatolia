@@ -238,6 +238,7 @@ export { reviewFeedbackInvite, voteOnFeedbackInvite } from './feedback/write';
 export type { FeedbackWriteOutcome } from './feedback/write';
 // `POINTS_DEFAULTS`: ayar satırı yokken geçerli puanlar tek yerde, yoksa ekran ile motor ayrışırdı.
 export { POINTS_DEFAULTS, awardFeedbackPoints, awardPoints, feedbackCompletionPoints, getPointsBalance } from './feedback/points';
+export { scanTrust } from './customer/trust';
 
 // ── Keşif turu; kimlik çağırandan gelir, istemcinin iddiasından değil ──
 export { claimDiscoverSwipes, countDiscoverDeck, openDiscoverDeck, readDiscoverReward, recordDiscoverSwipe } from './feedback/discover';

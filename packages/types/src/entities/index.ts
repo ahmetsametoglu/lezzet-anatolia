@@ -52,6 +52,7 @@ export * from './conversation.schema';
 export * from './ai-usage.schema';
 export * from './product-feedback.schema';
 export * from './points.schema';
+export * from './trust.schema';
 export * from './feedback-request.schema';
 // Komşu daveti — davetin ikinci türü: kimliğe değil sefere bağlıdır.
 export * from './neighbor-invite.schema';

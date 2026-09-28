@@ -14,6 +14,7 @@ import { priceRuleLabel } from '@/lib/pricing/price-rule-label';
 import { B2B_STATUS_VIEW, GDPR_NOTES, paymentTone, statusHint, statusOf, typeTone } from '../customers-labels';
 import { TYPE_LABEL } from '../customers-url';
 import type { ConsentView, CustomerDetail, CustomerOrderRow, CustomerRow } from '../customers-types';
+import { TrustSection } from './trust-section';
 
 /**
  * Seçili müşterinin önizleme paneli: kart ritminde, panel okur ve yazmaz; yazma yolu `Düzenle` ile `Vade / limit` düğmeleri.
@@ -375,6 +376,11 @@ export function CustomerPreview({
                   ))}
                 </div>
               )}
+            </Section>
+
+            {/* ── Güven puanı ── */}
+            <Section title="Güven puanı">
+              {!detail ? <SkeletonRows rows={2} /> : <TrustSection key={detail.customerId} customerId={detail.customerId} initial={detail.trust} />}
             </Section>
 
             {/* ── Pazarlama izinleri — SALT GÖRÜNÜM, tasarımda iki ÇİP ── */}

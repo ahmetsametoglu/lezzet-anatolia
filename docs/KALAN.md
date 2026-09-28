@@ -344,7 +344,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 ## backlog-operasyon-web.md (eski docs/denetim/backlog-operasyon-web.md)
 
 - [ ] **OB-09 · Aynı üründen çoklu adet içeren siparişlerde İade (Return) ve İmha (Disposal/Waste) işlemlerinin veritabanında tutarsızlığa yol açması** _(1. Bloke Edici Bulgular / Hatalar)_
-- [ ] **OB-06 · Sipariş detay panelinde müşteri güvenilirlik geçmişi ve güven puanı gösterimi** _(2. Geliştirme ve İyileştirme Talepleri)_
 
 ## Kullanıcı bulguları (eski docs/kullanici-bulgulari.md)
 

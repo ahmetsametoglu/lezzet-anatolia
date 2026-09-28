@@ -14,6 +14,9 @@ import {
   TICKET_DEFAULT_HANDLER_FALLBACK,
   TICKET_DEFAULT_HANDLER_HELP,
   TICKET_DEFAULT_HANDLER_KEY,
+  TRUST_UNCOLLECTED_GRACE_DAYS_DEFAULT,
+  TRUST_UNCOLLECTED_GRACE_DAYS_KEY,
+  TRUST_WEIGHTS,
   PICKUP_WAIT_DAYS_DEFAULT,
   PICKUP_WAIT_DAYS_KEY,
   POINTS_DAILY_CAP_DEFAULT,
@@ -22,7 +25,7 @@ import {
   POINTS_REDEEM_MAX_KEY,
   POINTS_SETTING_KEYS,
 } from '@lezzet/domain-core';
-import { TICKET_HANDLER_LABELS, TicketHandlerEnum } from '@lezzet/types';
+import { TICKET_HANDLER_LABELS, TRUST_REASON_LABELS, TicketHandlerEnum, TrustReasonEnum } from '@lezzet/types';
 import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY } from '@/lib/settings-keys';
 import { DAY_HOUR_FALLBACK } from '@/lib/settings/day-hours';
 
@@ -32,7 +35,7 @@ import { DAY_HOUR_FALLBACK } from '@/lib/settings/day-hours';
  */
 
 /** Ayarın ekranda hangi sekmede durduğu. */
-export type SettingGroup = 'order' | 'payment' | 'stock' | 'points' | 'cost' | 'feedback' | 'social' | 'tickets';
+export type SettingGroup = 'order' | 'payment' | 'stock' | 'points' | 'cost' | 'feedback' | 'social' | 'tickets' | 'trust';
 
 export const SETTING_GROUPS: readonly { key: SettingGroup; label: string }[] = [
   { key: 'order', label: 'Sipariş & teslimat' },
@@ -44,6 +47,7 @@ export const SETTING_GROUPS: readonly { key: SettingGroup; label: string }[] = [
   // Sosyal mesajlaşma: ilk ayarı yeni sohbetin yürütücüsü; ajan ve kanal ayarları buraya gelir.
   { key: 'social', label: 'Sosyal mesajlar' },
   { key: 'tickets', label: 'Talepler' },
+  { key: 'trust', label: 'Güven puanı' },
 ] as const;
 
 /**
@@ -120,6 +124,38 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     impact: 'Geniş etkili: AI seçiliyse her yeni talebe ilk cevap onaysız, ajandan gider; Hibrit her müşteri mesajında bir AI taslağı üretir. Açık talepler etkilenmez; her talepte anahtar ayrıca çevrilebilir.',
     exceptionScopes: NONE,
     fallback: TICKET_DEFAULT_HANDLER_FALLBACK,
+  },
+  // ── Güven puanı ───────────────────────────────────────────────────────────
+  // Ağırlıklar sebep listesinden üretilir, ki yeni bir sebep ayarsız kalmasın; işaret sınırı cezayı ödüle çevirmeyi engeller.
+  ...TrustReasonEnum.options.map(
+    (reason): SettingDef => ({
+      key: TRUST_WEIGHTS[reason].key,
+      label: TRUST_REASON_LABELS[reason],
+      help: TRUST_WEIGHTS[reason].penalty
+        ? 'Bu olay müşterinin güven puanından düşülür; 0 yazılırsa sayılmaz.'
+        : 'Bu olay müşterinin güven puanına eklenir; 0 yazılırsa sayılmaz.',
+      group: 'trust',
+      kind: 'integer',
+      unit: 'puan',
+      ...(TRUST_WEIGHTS[reason].penalty ? { max: 0 } : { min: 0 }),
+      limitReason: TRUST_WEIGHTS[reason].penalty
+        ? 'Ceza eksi ya da sıfır olur; artı yazmak cezayı ödüle çevirirdi.'
+        : 'Ödül artı ya da sıfır olur; eksi yazmak ödülü cezaya çevirirdi.',
+      impact: 'Yalnız bundan sonra yazılan hareketleri etkiler; geçmiş hareketler yazıldıkları ağırlıkla kalır.',
+      exceptionScopes: NONE,
+      fallback: TRUST_WEIGHTS[reason].fallback,
+    }),
+  ),
+  {
+    key: TRUST_UNCOLLECTED_GRACE_DAYS_KEY,
+    label: 'Tahsil bekleme süresi',
+    help: 'Teslim edilen peşin siparişin parası bu kadar günde kapanmazsa "kapıda tahsil edilemedi" sayılır.',
+    group: 'trust',
+    kind: 'integer',
+    unit: 'gün',
+    min: 0,
+    exceptionScopes: NONE,
+    fallback: TRUST_UNCOLLECTED_GRACE_DAYS_DEFAULT,
   },
   // ── Sipariş & teslimat ────────────────────────────────────────────────────
   {

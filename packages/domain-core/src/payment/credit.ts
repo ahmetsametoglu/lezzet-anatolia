@@ -5,6 +5,10 @@ import type { Order } from '@lezzet/types';
  * sipariş listesi ve müşteri kartı aynı cevabı versin. Vade süresi girdidir: müşteri bazındadır, yoksa ayardan gelir.
  */
 
+/** Genel vade süresi ayarı; müşteriye özel süre (`payment_term_days` kolonu) boşsa geçerlidir. */
+export const PAYMENT_TERM_DAYS_KEY = 'payment_term_days';
+export const PAYMENT_TERM_DAYS_DEFAULT = 30;
+
 /** Vade kapsamındaki sipariş için gereken asgari alanlar. */
 export type CreditOrder = Pick<
   Order,

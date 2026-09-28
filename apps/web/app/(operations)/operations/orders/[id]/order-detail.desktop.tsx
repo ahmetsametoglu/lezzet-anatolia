@@ -30,6 +30,7 @@ import type { OrderDetailView } from './order-detail-types';
 import type { OrderDecision } from '@lezzet/domain-core';
 import type { OrderSource, OrderStatus } from '@lezzet/types';
 import { cardClass } from '@/components/operation/ui/card';
+import { TrustHistory } from '@/components/operation/ui/trust-history';
 
 // Bölüm sırası yoğun ve sade siparişte aynıdır, verisi olmayan blok hiç çizilmez: operatör aynı ekranda hep aynı yere bakar.
 
@@ -343,6 +344,15 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                 ) : null}
               </div>
             ) : null}
+          </div>
+
+          <div className={cardClass()}>
+            <div className="border-b border-ops-line-soft px-3.5 py-2.5 font-ops-display text-ops-sm font-semibold text-ops-ink">
+              Güven puanı
+            </div>
+            <div className="px-3.5 py-[11px]">
+              <TrustHistory score={order.trust.score} rows={order.trust.rows} />
+            </div>
           </div>
 
           {/* Finansal kart rol kapılı: sayfa bugün `requireAdmin` ister; başka rollere açıldığı gün `finance` `null` gelir ve kart

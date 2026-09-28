@@ -1,15 +1,11 @@
 import { MoneyMovementService, OrderService, SettingsService, type serviceDb } from '@lezzet/database';
-import { creditPosition, isOverdue } from '@lezzet/domain-core';
+import { PAYMENT_TERM_DAYS_DEFAULT, PAYMENT_TERM_DAYS_KEY, creditPosition, isOverdue } from '@lezzet/domain-core';
 import type { MoneyMovement, Order } from '@lezzet/types';
 
 /**
  * Ödeme karnesi — vade ve limit kararının dayanağı; karar desteğidir, otomasyon değil: ölçüm üretir, kararı admin verir. Kurallar
  * motordan gelir (`creditPosition`, `isOverdue`), burası girdiyi toplar ve ölçülemeyen yerde `null` döner.
  */
-
-/** Vade süresi ayarı — checkout, sipariş detayı ve bu karne AYNI anahtarı okur. */
-const PAYMENT_TERM_KEY = 'payment_term_days';
-const PAYMENT_TERM_DEFAULT = 30;
 
 /**
  * Karnenin baktığı sipariş penceresi; tavan ekranda yazılır ("son 50 siparişte"), çünkü iki yıl önceki alışkanlık bugünün limit
@@ -51,7 +47,7 @@ type Db = ReturnType<typeof serviceDb>;
 export async function readOverdueCustomerIds(db: Db): Promise<Set<string>> {
   const [open, termDays] = await Promise.all([
     new OrderService(db).listOpenCredit(),
-    new SettingsService(db).getNumber(PAYMENT_TERM_KEY, PAYMENT_TERM_DEFAULT),
+    new SettingsService(db).getNumber(PAYMENT_TERM_DAYS_KEY, PAYMENT_TERM_DAYS_DEFAULT),
   ]);
   const now = new Date();
   const gecikenler = new Set<string>();
@@ -71,7 +67,7 @@ export async function readCustomerScorecard(
   const [openCredit, recent, termSetting] = await Promise.all([
     orders.listOpenCreditByCustomer(customerId),
     orders.listByCustomer(customerId, { limit: SCORECARD_WINDOW }),
-    new SettingsService(db).getNumber(PAYMENT_TERM_KEY, PAYMENT_TERM_DEFAULT),
+    new SettingsService(db).getNumber(PAYMENT_TERM_DAYS_KEY, PAYMENT_TERM_DAYS_DEFAULT),
   ]);
 
   // Müşteriye özel vade süresi ayarı EZER: "bu firmaya 45 gün" bir anlaşmadır, genel varsayılan değil.

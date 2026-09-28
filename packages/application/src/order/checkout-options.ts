@@ -1,5 +1,7 @@
 import { OrderService, SettingsService, UserProfileService, type Db } from '@lezzet/database';
 import {
+  PAYMENT_TERM_DAYS_DEFAULT,
+  PAYMENT_TERM_DAYS_KEY,
   apportionShippingVat,
   creditPosition,
   deriveChannel,
@@ -120,7 +122,7 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
   const { openBalanceCents, hasOverdue } = await deriveCreditPosition(
     db,
     input.customerId,
-    customer.paymentTermDays ?? (await settings.getNumber('payment_term_days', 30)),
+    customer.paymentTermDays ?? (await settings.getNumber(PAYMENT_TERM_DAYS_KEY, PAYMENT_TERM_DAYS_DEFAULT)),
   );
 
   /**
