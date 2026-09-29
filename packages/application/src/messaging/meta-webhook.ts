@@ -161,6 +161,7 @@ interface MessengerEvent {
   };
   postback?: { title?: string; payload?: string; [key: string]: unknown };
   reaction?: { reaction?: string; emoji?: string; action?: string; mid?: string; [key: string]: unknown };
+  message_edit?: { mid?: string; text?: string; num_edit?: number | string };
   [key: string]: unknown;
 }
 
@@ -541,6 +542,17 @@ async function ingestMessengerEntry(
         payload: { mid, is_deleted: true },
         write: () => forgetUnsentMessage(mid),
       });
+    } else if (event.message_edit?.mid && typeof event.message_edit.text === 'string') {
+      const { mid, text } = event.message_edit;
+      const count = Number(event.message_edit.num_edit) || 1;
+      await ingestOne(tally, {
+        provider: 'meta',
+        // Metin ham yüke yazılmaz: mesaj sonra geri alınırsa silinemeyecek bir kopya kalırdı.
+        eventId: `${mid}:edit:${count}`,
+        type: `${source}.edit`,
+        payload: { mid, num_edit: count },
+        write: () => applyCustomerEdit(mid, text, count),
+      });
     } else if (event.message?.mid) {
       const echo = event.message.is_echo === true;
       // Echo'da sender sayfadır, kişi recipient'tadır: ters okumak iki kişiyi tek sohbette birleştirir.
@@ -661,6 +673,21 @@ async function forgetUnsentMessage(mid: string): Promise<void> {
   // Ham yük asıl mesajın metnini ve ek adreslerini taşır.
   await new WebhookEventService(serviceDb()).clearPayload('meta', mid);
   if (mesaj) await ringConversationBell(mesaj.conversationId);
+}
+
+/** Geç gelen eski düzenleme yenisini ezmez; geri alınmış mesaj düzenlenmez. Ajan yeniden tetiklenmez, sıradaki turda son metni okur. */
+async function applyCustomerEdit(mid: string, text: string, count: number): Promise<void> {
+  const messages = new MessageService(serviceDb());
+  const mesaj = await messages.findByProviderMessageId(mid);
+  if (!mesaj || mesaj.kind === 'unsent' || !text.trim() || (mesaj.body.edited?.count ?? 0) >= count) return;
+  const duzenlenen = await messages.recordEdit(mesaj.id, {
+    ...mesaj.body,
+    text: maskSecretsInText(text, [waLinkTokenIn(text)]),
+    edited: { count },
+  });
+  if (!duzenlenen) return;
+  await translateConversationMessageNow(serviceDb(), duzenlenen);
+  await ringConversationBell(duzenlenen.conversationId);
 }
 
 /** Messenger/Instagram damgası milisaniye cinsindendir. */

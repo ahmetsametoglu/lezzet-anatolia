@@ -360,7 +360,7 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
 
   const captionOf = (message: SocialMessage) => {
     const stamp = socialStamp(message.createdAt);
-    if (message.direction === 'inbound') return stamp;
+    if (message.direction === 'inbound') return message.body.edited ? `${stamp} · ${td.edited}` : stamp;
 
     const parts = [message.author === 'ai' ? td.ai : td.you, stamp];
     if (message.templateName) parts.push(fillCopy(td.template, { name: message.templateName }));

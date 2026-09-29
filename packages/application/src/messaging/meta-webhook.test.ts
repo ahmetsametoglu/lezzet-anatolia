@@ -454,6 +454,38 @@ describe('Messenger / Instagram — kişi hangi alanda?', () => {
     expect(olay?.payload).toBeNull();
   });
 
+  it('müşterinin DÜZENLEDİĞİ mesaj son metnine döner ve düzenlendi diye işaretlenir', async () => {
+    // Düzenleme bildirimi `message` değil `message_edit` taşır; tanınmasaydı ekran ve ajan eski metni okurdu.
+    const id = eventId('m_ig', 3);
+    webhookEventIds.push(`${id}:edit:1`);
+    const kisi = { sender: { id: IG_PERSON }, recipient: { id: IG_ACCOUNT } };
+    await handleMetaWebhook(messengerBody('instagram', { ...kisi, message: { mid: id, text: 'Yarın gelebilir misiniz' } }));
+
+    const sonuc = await handleMetaWebhook(
+      messengerBody('instagram', { ...kisi, message_edit: { mid: id, text: 'Cuma gelebilir misiniz', num_edit: 1 } }),
+    );
+
+    expect(sonuc).toMatchObject({ written: 1 });
+    const konu = await konusma('instagram', IG_PERSON);
+    const satir = (await messages.listByConversation(konu!.id)).find((m) => m.providerMessageId === id);
+    expect(satir?.body).toMatchObject({ text: 'Cuma gelebilir misiniz', edited: { count: 1 } });
+  });
+
+  it('geç gelen ESKİ düzenleme yenisini ezmez', async () => {
+    // Meta teslimat sırası garanti değil; sıra sayısına bakılmasaydı müşterinin son sözü eski hâline dönerdi.
+    const id = eventId('m_ig', 4);
+    webhookEventIds.push(`${id}:edit:1`, `${id}:edit:2`);
+    const kisi = { sender: { id: IG_PERSON }, recipient: { id: IG_ACCOUNT } };
+    await handleMetaWebhook(messengerBody('instagram', { ...kisi, message: { mid: id, text: 'İki kutu' } }));
+    await handleMetaWebhook(messengerBody('instagram', { ...kisi, message_edit: { mid: id, text: 'Dört kutu', num_edit: 2 } }));
+
+    await handleMetaWebhook(messengerBody('instagram', { ...kisi, message_edit: { mid: id, text: 'Üç kutu', num_edit: 1 } }));
+
+    const konu = await konusma('instagram', IG_PERSON);
+    const satir = (await messages.listByConversation(konu!.id)).find((m) => m.providerMessageId === id);
+    expect(satir?.body).toMatchObject({ text: 'Dört kutu', edited: { count: 2 } });
+  });
+
   it('postback `interactive` yazılır ve KENDİ mid\'i olmadığı hâlde tekrarı yakalanır', async () => {
     // Anahtar timestamp'i içermeseydi iki ayrı tıklama tek olay sayılırdı; hiç türetilmeseydi tekrar teslimat defteri çiftlerdi.
     const anMs = Date.now();

@@ -96,10 +96,12 @@ export type ConversationUpdate = z.infer<typeof ConversationUpdateSchema>;
 export const MessageBodySchema = z.object({
   text: z.string().nullable(),
   payload: z.record(z.unknown()).nullish(),
+  /** Müşteri metni düzenlediyse kaçıncı düzenleme; gövde yalnız son metni taşır. */
+  edited: z.object({ count: z.number().int().positive() }).optional(),
 });
 export type MessageBody = z.infer<typeof MessageBodySchema>;
 
-/** Defterdir, yazılır ve güncellenmez; tek istisna müşterinin geri aldığı mesajın içeriksiz `unsent` izine dönmesidir. */
+/** Defterdir, yazılır ve güncellenmez; istisnalar müşterinin geri aldığı (`unsent` izi) ve düzenlediği (son metin) mesajdır. */
 export const MessageSchema = z.object({
   id: z.string().uuid(),
   conversationId: z.string().uuid(),

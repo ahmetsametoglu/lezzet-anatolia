@@ -165,7 +165,7 @@ export function toMessageViews(messages: readonly MessageWithMedia[]): MessageVi
       kind: m.kind,
       // Medyada yer tutucu yok: dosyanın kendisi çiziliyor, alınamadıysa sebebini balon yazıyor (`MediaBody`).
       text: sesli ? m.body.text?.trim() || '' : shown.text || (m.kind === 'media' ? '' : MESSAGE_KIND_LABELS[m.kind]),
-      stamp: shortDateTime(m.createdAt),
+      stamp: m.body.edited ? `${shortDateTime(m.createdAt)} · düzenlendi` : shortDateTime(m.createdAt),
       templateLabel: m.templateName
         ? `${m.templateName}${m.templateCategory ? ` · ${TEMPLATE_CATEGORY_LABELS[m.templateCategory]}` : ''}`
         : null,

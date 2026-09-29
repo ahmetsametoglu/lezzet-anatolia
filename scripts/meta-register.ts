@@ -21,7 +21,9 @@ const GRAPH = 'https://graph.facebook.com/v21.0';
   Liste sabit ve açık, çünkü alansız abonelik panelde yeşil görünür ama hiçbir olay getirmez.
 */
 const WHATSAPP_FIELDS = ['messages'];
-const PAGE_FIELDS = ['messages', 'messaging_postbacks', 'message_echoes', 'message_reactions'];
+const PAGE_FIELDS = ['messages', 'messaging_postbacks', 'message_echoes', 'message_reactions', 'message_edits'];
+// Instagram'da alan adı tekil (`message_edit`) ve yankılar `messages` içinde gelir.
+const INSTAGRAM_FIELDS = ['messages', 'messaging_postbacks', 'message_reactions', 'message_edit'];
 
 const [, , urlArg] = process.argv;
 const onlyArg = process.argv.find((a) => a.startsWith('--only='))?.split('=')[1];
@@ -179,6 +181,19 @@ async function messengerKaydet(): Promise<boolean> {
     return false;
   }
   console.log(`  ✓ uygulama aboneliği — alanlar: ${PAGE_FIELDS.join(', ')}`);
+
+  const igAbone = await graph(`/${appId}/subscriptions`, 'POST', {
+    object: 'instagram',
+    callback_url: callbackUrl,
+    verify_token: verifyToken!,
+    fields: INSTAGRAM_FIELDS.join(','),
+    access_token: appToken,
+  });
+  if (!igAbone.ok) {
+    console.error(`  ✗ Instagram uygulama aboneliği: ${hataMetni(igAbone.body)}`);
+    return false;
+  }
+  console.log(`  ✓ Instagram uygulama aboneliği — alanlar: ${INSTAGRAM_FIELDS.join(', ')}`);
 
   /* 2) SAYFA jetonu: env'de varsa gönderimin jetonu o (`META_PAGE_ACCESS_TOKEN`) — burada başka bir
      jeton kullanmak "kayıt geçti, gönderim düştü" diye ayrışan iki gerçek üretirdi. Yoksa sistem

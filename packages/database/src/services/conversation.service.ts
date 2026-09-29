@@ -226,6 +226,12 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
     return this.getOneBy({ providerMessageId });
   }
 
+  /** Çeviri boşaltılır ki düzenlenen metin yeniden çevrilsin; eski çeviri eski cümleyi gösterirdi. */
+  async recordEdit(id: string, body: MessageBody): Promise<Message | null> {
+    await this.updateWhereIn('id', [id], { body, language: null, translations: null, translatedAt: null });
+    return this.getById(id);
+  }
+
   /**
    * Defterin içerik silen tek kapısı: Meta, müşterinin geri aldığı mesajın içeriğinin silinmesini şart koşar. Satır `unsent` izi olarak
    * kalır; çeviri damgası atılır ki kuyruk içeriksiz satırı almasın.
