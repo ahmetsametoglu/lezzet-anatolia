@@ -15,6 +15,12 @@ describe('customerOrderStatus', () => {
     expect(customerOrderStatus('draft', 'route')).toBeNull();
   });
 
+  // Ödemesi açılmış kart taslağı listede görünmezse kalemleri sepetten çıkmış müşteri siparişini hiçbir yerde bulamaz.
+  it('ödemesi açılmış kart taslağı "ödeme bekleniyor" görünür ve aktif sayılmaz', () => {
+    expect(customerOrderStatus('draft', 'route', true)).toBe('awaiting_payment');
+    expect(isActiveForCustomer('awaiting_payment')).toBe(false);
+  });
+
   it('operasyonun "hazır" ayrımı müşteriye sızmaz', () => {
     expect(customerOrderStatus('preparing', 'route')).toBe('preparing');
     expect(customerOrderStatus('ready', 'route')).toBe('preparing');
@@ -63,8 +69,7 @@ describe('isActiveForCustomer', () => {
 
 describe('isFulfilmentKnown', () => {
   it('hazırlık onayından ÖNCE ölçüm yoktur — `fulfilled_qty=0` "gönderilmedi" demez', () => {
-    // 30.07'de yaşanan hata: yeni onaylanmış siparişte 0 okundu, "0 gönderildi" yazıldı ve
-    // tutarlar eksiye düştü. CLAUDE.md §1: ölçülemeyen değer sıfır değildir.
+    // Yeni onaylanmış siparişte `0` okunursa ekran "0 gönderildi" yazar ve tutarlar eksiye düşer.
     expect(isFulfilmentKnown('confirmed')).toBe(false);
     expect(isFulfilmentKnown('preparing')).toBe(false);
     expect(isFulfilmentKnown('draft')).toBe(false);
@@ -105,9 +110,7 @@ describe('orderTimeline', () => {
   });
 
   it('atlanan adım GEÇİLMİŞ sayılır ama DAMGASI uydurulmaz', () => {
-    // İlk yazdığım test bunun tersini bekliyordu ve yanlıştı: hazırlanmamış sipariş yola çıkmaz,
-    // yani `ready` kaydı yoksa bile fiziksel olarak geçilmiştir. Ortada boş halka bırakmak
-    // müşteriye bozuk bir çizgi gösterirdi. Çıkarsanamayan tek şey ZAMAN.
+    // Hazırlanmamış sipariş yola çıkmaz, yani `ready` kaydı yoksa da adım geçilmiştir; çıkarsanamayan tek şey zamandır.
     const steps = orderTimeline('out_for_delivery', log(['confirmed', 'a']), 'route');
     expect(steps?.[1]?.state).toBe('done');
     expect(steps?.[1]?.at).toBeNull();

@@ -1,15 +1,12 @@
 import type { CustomerOrderStatus } from '@lezzet/types';
 
 /*
-  SİPARİŞ DURUM ROZETİ — native `OrderStatusTag`in (`apps/mobile/src/screens/customer-kit/order-status-tag.tsx`) web
-  telefon ikizi (14.09): yumuşak zemin, koyu yazı, 2° eğik; `micro` · 700, rozet köşe, 6/12 dolgu.
-
-  Durum kümesi şemadan (`CustomerOrderStatus`): bir durak eklendiğinde bu dosya derlemede kırılır (`satisfies`). Tonlar
-  native'in tablosu — alındı zeytin · hazırlanıyor, yolda ve iade terracotta (süreç işliyor; iadeyi kapanmış ailesine
-  koymak bitmiş gibi okuturdu) · teslim edildi kapanmış · iptal hata. Metin çağırandan gelir.
+  Sipariş durum rozeti, native `OrderStatusTag`in web telefon ikizi: yumuşak zemin, koyu yazı, 2° eğik. Durum kümesi şemadan gelir
+  ve `satisfies` yeni durağı derlemede yakalar; tonlar native'in tablosu, metin çağırandan.
 */
 
 const TONE = {
+  awaiting_payment: 'bg-honey-bg text-honey',
   received: 'bg-olive-bg text-olive-dark',
   preparing: 'bg-terracotta-bg text-terracotta',
   ready_for_pickup: 'bg-terracotta-bg text-terracotta',

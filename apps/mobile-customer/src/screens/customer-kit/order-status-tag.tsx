@@ -3,31 +3,15 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 /*
-  SİPARİŞ DURUM ROZETİ — sipariş listesinde ve sipariş detayının başlığında (v3:669, 698).
-
-  DURUM KÜMESİ ŞEMADAN (`CustomerOrderStatus`), ekrandan değil: müşteriye görünen altı durak
-  `@lezzet/types`ta kapalı bir küme olarak duruyor ve METİN sayfanın `messages.json`'undan gelir
-  (enum'un kendi künyesinin hükmü). Böylece bir durak eklendiğinde bu dosya DERLEMEDE kırılır —
-  `satisfies Record<CustomerOrderStatus, …>` onu zorluyor.
-
-  NEDEN KİTTEKİ `Tag` DEĞİL: `Tag`in dört tonu (terracotta · ink · cream · sand) durum ailesini
-  taşımıyor — durum rozeti YUMUŞAK zeminli ve KOYU yazılıdır (zeytin zemin/koyu zeytin yazı),
-  `Tag` ise dolu zeminli ve ters yazılı. İkisini tek komponentte birleştirmek `Tag`e "yumuşak"
-  diye ikinci bir eksen eklemek olurdu.
-
-  ZEMİN/YAZI ÇİFTLERİ tasarımın kendi tablosundan (v3:1961 `stC`) token karşılıklarıyla:
-  · alındı        → zeytin ailesi (olumlu, başladı)
-  · hazırlanıyor  → terracotta ailesi (devam ediyor, dikkat)
-  · yolda         → terracotta ailesi (aynı aile: ikisi de "süreç işliyor")
-  · teslim edildi → kapanmış ailesi (nötr; iş bitti, vurgu istemiyor)
-  · iptal         → hata ailesi
-  · iade sürüyor  → ŞABLONDA YOK (v3 bu durağı hiç çizmiyor). Terracotta ailesine bağlandı çünkü
-    devam eden bir süreçtir; kapanmış ailesine koymak bitmiş gibi okuturdu.
+  Sipariş durum rozeti, liste ve detay başlığında; durum kümesi şemadan gelir ve `satisfies` yeni durağı derlemede yakalar. Kitteki
+  `Tag` kullanılmaz, çünkü durum rozeti yumuşak zeminli ve koyu yazılıdır; bekleyen durum bal, süren süreç terracotta ailesindedir.
 */
 
-type StatusTone = 'olive' | 'terracotta' | 'closed' | 'error';
+type StatusTone = 'honey' | 'olive' | 'terracotta' | 'closed' | 'error';
 
 const STATUS_TONES = {
+  // Bekleyen durum ailesi: sıradaki hareket müşterinin, ödemeyi tamamlaması.
+  awaiting_payment: 'honey',
   received: 'olive',
   preparing: 'terracotta',
   ready_for_pickup: 'terracotta',
@@ -70,6 +54,8 @@ const styles = StyleSheet.create((theme) => ({
     // Şablon 11,5 yazıyor — ölçekte tam karşılığı `micro`.
     fontSize: theme.text.micro,
   },
+  honey: { backgroundColor: theme.colors['honey-bg'] },
+  honeyLabel: { color: theme.colors.honey },
   olive: { backgroundColor: theme.colors['olive-bg'] },
   oliveLabel: { color: theme.colors['olive-dark'] },
   terracotta: { backgroundColor: theme.colors['terracotta-bg'] },

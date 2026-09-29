@@ -95,11 +95,6 @@
       "shippingFootnote": "Ücretsiz kargo sınırı yalnız kargoyla gidecek ürünlerin tutarına bakar; iki siparişin tutarı toplanmaz. Kargo siparişini vermek zorunlu değildir: vermezseniz bu ürünler sepette bekler, kapıya teslim siparişiniz etkilenmez.",
       "summaryScope": "Sepetin tamamı"
     },
-    "awaitingPayment": {
-      "title": "Kart ödemeniz henüz onaylanmadı",
-      "body": "{amount} tutarındaki ödemenin sonucu henüz bize ulaşmadı.",
-      "cta": "Ödemenin durumunu gör →"
-    },
     "identity": {
       "loginTitle": "Devam etmek için giriş yapın",
       "loginBody": "Şifre yok. Google ile devam edin ya da e-postanıza tek kullanımlık bir kod gönderelim.",
@@ -219,11 +214,6 @@
       "shippingFootnote": "Le seuil de livraison offerte se calcule sur ce total — les deux groupes ne s'additionnent pas. Cette seconde commande n'est pas obligatoire : sans elle, les articles restent au panier et votre commande à domicile n'est pas affectée.",
       "summaryScope": "Panier complet"
     },
-    "awaitingPayment": {
-      "title": "Votre paiement par carte n'est pas encore confirmé",
-      "body": "Le résultat de votre paiement de {amount} ne nous est pas encore parvenu.",
-      "cta": "Voir l'état du paiement →"
-    },
     "identity": {
       "loginTitle": "Connectez-vous pour continuer",
       "loginBody": "Pas de mot de passe. Continuez avec Google ou recevez un code à usage unique par e-mail.",
@@ -342,11 +332,6 @@
       "shippingCtaShort": "Separat bestellen",
       "shippingFootnote": "Die Grenze für kostenlosen Versand gilt nur für die Versandartikel – die Beträge beider Bestellungen werden nicht zusammengerechnet. Die Versandbestellung ist freiwillig: Ohne sie bleiben die Artikel im Warenkorb, Ihre Lieferung an die Haustür ist nicht betroffen.",
       "summaryScope": "Gesamter Warenkorb"
-    },
-    "awaitingPayment": {
-      "title": "Ihre Kartenzahlung ist noch nicht bestätigt",
-      "body": "Das Ergebnis Ihrer Zahlung über {amount} liegt uns noch nicht vor.",
-      "cta": "Zahlungsstatus ansehen →"
     },
     "identity": {
       "loginTitle": "Zum Fortfahren anmelden",

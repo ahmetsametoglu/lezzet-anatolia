@@ -118,9 +118,8 @@ export {
 } from './customer/neighbor';
 export type { NeighborWelcome, OpenNeighborInviteOutcome, PendingNeighborAward, PendingNeighborInvite } from './customer/neighbor';
 // ── Müşteri sipariş okuması ──
-export { getCustomerAwaitingPayment, getCustomerOrderDetail, listCustomerOrders } from './order/customer-orders';
+export { getCustomerOrderDetail, listCustomerOrders } from './order/customer-orders';
 export type {
-  CustomerAwaitingPayment,
   CustomerOrderDetail,
   CustomerOrderDetailInput,
   CustomerOrderDetailLine,

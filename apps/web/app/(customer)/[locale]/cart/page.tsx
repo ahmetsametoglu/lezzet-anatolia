@@ -4,8 +4,6 @@ import { setRequestLocale } from 'next-intl/server';
 import { CART_LINK_PARAM } from '@lezzet/application/cart/link';
 import { detectDevice } from '@/lib/device';
 import { getEmptyCartContext } from '@/lib/cart/empty-cart';
-import { currentCustomerId } from '@/lib/guard';
-import { getAwaitingPayment } from '@/lib/order/customer-orders';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
@@ -36,14 +34,12 @@ export default async function CartPage({ params, searchParams }: CartPageProps) 
   void recordPageView('/cart');
 
   const t: Messages = messages[locale];
-  const [device, emptyContext, customerId] = await Promise.all([detectDevice(), getEmptyCartContext(locale), currentCustomerId()]);
-  // Ödemesi beklenen kart siparişi sepetin içeriği değil müşterinin durumu; bu yüzden sunucuda okunur.
-  const awaitingPayment = customerId ? await getAwaitingPayment(customerId) : null;
+  const [device, emptyContext] = await Promise.all([detectDevice(), getEmptyCartContext(locale)]);
 
   return (
     // Mobilde çıplak kabuk: tasarımın karesi logosuz tek satır çiziyor, o satırı sayfa kurar.
     <SiteFrame device={device} locale={locale} mobileChrome="bare" footer="slim">
-      <CartClient t={t} locale={locale} device={device} emptyContext={emptyContext} awaitingPayment={awaitingPayment} />
+      <CartClient t={t} locale={locale} device={device} emptyContext={emptyContext} />
     </SiteFrame>
   );
 }

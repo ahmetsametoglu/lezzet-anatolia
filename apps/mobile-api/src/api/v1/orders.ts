@@ -96,6 +96,8 @@ orders.get('/', async (c) => {
 
   const withReference = page.orders.filter((order): order is CustomerOrderSummary & { referenceNo: string } => {
     if (order.referenceNo) return true;
+    // BEKLEYEN(K.48): ödeme bekleyen siparişin native'de açılacak ödeme ekranı yok, satır o gelene kadar gönderilmez.
+    if (order.status === 'awaiting_payment') return false;
     logger.warn({ orderId: order.id, status: order.status }, 'referanssız sipariş listeden düşürüldü');
     return false;
   });

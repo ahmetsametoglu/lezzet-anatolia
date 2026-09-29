@@ -52,7 +52,7 @@ const CHECKOUT = 'flex h-13 w-full items-center justify-between rounded-control 
 /** Grubun künyesi — satırların kartından ayrı, kum kutu (native `groupCard`). */
 const GROUP_CARD = 'flex flex-col gap-1.5 rounded-card border-[1.5px] border-sand-300 bg-sand-100 p-4';
 
-export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
+export function CartMobile({ t, locale }: CartViewProps) {
   const copy = cartMessages[locale];
   const { view, ready, failed, reload, applyCoupon, clearCoupon, addSkipped, placeChange, dismissPlaceChange } = useCart();
   const { address, place, setPanelOpen } = useDeliveryPlace();
@@ -209,14 +209,6 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
       {header}
 
       <div className="flex flex-col gap-3 px-4.5 pt-4.5">
-        {awaitingPayment && (
-          <Note
-            tone="warm"
-            title={t.awaitingPayment.title}
-            description={t.awaitingPayment.body.replace('{amount}', formatPrice(awaitingPayment.totalCents, locale))}
-            action={<TextAction label={t.awaitingPayment.cta} href={{ pathname: '/checkout/[reference]', params: { reference: awaitingPayment.orderId } }} />}
-          />
-        )}
         {/* Sessiz daralma yok: yer değişince her kalemin yeni hâli tek tek söylenir, hiçbir kalem silinmez. */}
         {placeChange !== null && placeChange.length > 0 && (
           <Note

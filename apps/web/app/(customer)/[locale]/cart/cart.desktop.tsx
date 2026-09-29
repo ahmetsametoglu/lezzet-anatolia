@@ -10,7 +10,6 @@ import { CartGroup } from './components/cart-group';
 import { CartSummary } from './components/cart-summary';
 import { CartIdentity } from './components/cart-identity';
 import { PlaceChangeCard } from './components/place-change-card';
-import { AwaitingPaymentNotice } from './components/awaiting-payment-notice';
 import { CartCoupon } from './components/cart-coupon';
 import { EmptyCart } from './components/empty-cart';
 import { CartUnreachable } from './components/cart-unreachable';
@@ -21,7 +20,7 @@ import type { CartViewProps } from './cart-types';
  * Sepetin masaüstü düzeni: kalemler solda, özet sağda ve yapışkan, çünkü uzun sepette toplam ve tek eylem ekrandan çıkmamalı.
  * İlk okuma bitmeden boş durum gösterilmez, yoksa müşteri sepetini kaybettiğini sanırdı.
  */
-export function CartDesktop({ t, locale, emptyContext, awaitingPayment }: CartViewProps) {
+export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
   const { view, ready, failed, addSkipped } = useCart();
   // İlk kare BOŞ bırakılmaz: iskelet gerçek yerleşimin ölçüsünü taşır, içerik gelince zıplama olmaz.
   if (!ready) return <CartSkeleton t={t} />;
@@ -49,10 +48,6 @@ export function CartDesktop({ t, locale, emptyContext, awaitingPayment }: CartVi
             {t.back}
           </Link>
         </div>
-
-        {/* Ödemesi beklenen kart siparişi bantların ilkidir: sepet yalnız onayda boşalır ve yeniden ödemeye hazırlanan müşteri önce
-            öncekinin ne olduğunu bilmeli. */}
-        {awaitingPayment && <AwaitingPaymentNotice t={t} locale={locale} awaiting={awaitingPayment} />}
 
         {/* Yer değişimi bildirimi listenin üstünde, kalem uyarılarının ilki: aşağıdaki engel ve kısıt blokları çoğu zaman onun
             sonucudur. */}

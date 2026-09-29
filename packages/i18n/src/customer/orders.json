@@ -4,6 +4,7 @@
     "title": "Siparişlerim",
     "back": "Geri",
     "status": {
+      "awaiting_payment": "Ödeme bekleniyor",
       "received": "Alındı",
       "preparing": "Hazırlanıyor",
       "on_the_way": "Yolda",
@@ -31,7 +32,10 @@
       "meta": "{date} · {count} ürün",
       "more": "+{n}",
       "detail": "Detay ›",
-      "open": "{reference} siparişinin detayı"
+      "open": "{reference} siparişinin detayı",
+      "pendingTitle": "Sipariş",
+      "pay": "Ödemeyi tamamla ›",
+      "openPending": "Ödemesi bekleyen siparişin ödeme sayfası"
     },
     "list": {
       "loading": "Yükleniyor…",
@@ -108,6 +112,7 @@
     "title": "Mes commandes",
     "back": "Retour",
     "status": {
+      "awaiting_payment": "Paiement en attente",
       "received": "Reçue",
       "preparing": "En préparation",
       "on_the_way": "En route",
@@ -135,7 +140,10 @@
       "meta": "{date} · Articles : {count}",
       "more": "+{n}",
       "detail": "Détail ›",
-      "open": "Détail de la commande {reference}"
+      "open": "Détail de la commande {reference}",
+      "pendingTitle": "Commande",
+      "pay": "Finaliser le paiement ›",
+      "openPending": "Page de paiement de la commande en attente"
     },
     "list": {
       "loading": "Chargement…",
@@ -212,6 +220,7 @@
     "title": "Meine Bestellungen",
     "back": "Zurück",
     "status": {
+      "awaiting_payment": "Zahlung ausstehend",
       "received": "Eingegangen",
       "preparing": "In Vorbereitung",
       "on_the_way": "Unterwegs",
@@ -239,7 +248,10 @@
       "meta": "{date} · {count} Artikel",
       "more": "+{n}",
       "detail": "Details ›",
-      "open": "Details zur Bestellung {reference}"
+      "open": "Details zur Bestellung {reference}",
+      "pendingTitle": "Bestellung",
+      "pay": "Zahlung abschließen ›",
+      "openPending": "Zahlungsseite der ausstehenden Bestellung"
     },
     "list": {
       "loading": "Wird geladen…",

@@ -55,6 +55,8 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
  * Metin değil kategori: adı üç dilde sayfanın `messages.json`'undan gelir; eşleme `domain-core/order/customer-status`tadır.
  */
 export const CustomerOrderStatusEnum = z.enum([
+  /** Kart ödemesi açıldı ama tamamlanmadı: sipariş taslaktır ve numarası yok; müşteri ödemeyi tamamlar ya da iptal eder. */
+  'awaiting_payment',
   'received',
   'preparing',
   /** Gel-al siparişi hazır, müşteri depodan alabilir — "yolda" hiç olmaz, bu hâl onun yerini tutar. */

@@ -13,17 +13,8 @@ import type { Messages } from '../support-types';
 import messages from '../messages.json';
 
 /**
- * Talep açma (08.6) — iki yoldan gelinir ve ekran o yola göre AÇILIR:
- *
- * - **Siparişten** (`?order=…`): sipariş detayındaki "Sorun bildir". Kalemler hazır listelenir,
- *   müşteri işaretler. Başlık siparişin numarasına geri döner.
- * - **Genel** ("+ Bize yazın"): önce tek soru — "bir siparişle mi ilgili?". Evetse sipariş seçtirilir
- *   ve aynı akışa bağlanır, hayırsa doğrudan serbest mesaj. Amaç tasarımın kendi cümlesi: müşteriyi
- *   düşündürmeden doğru yola sokmak.
- *
- * **Cihaz çatalı YOK ve bu tasarımın kararı** (etkileşim sözleşmesi: "web biçimi → aynı akış, 560px
- * ortalanmış tek sütun"). Fark yalnız sütunun genişliği; iki ayrı görünüm dosyası yazmak aynı formu
- * iki kez bakımda tutmak olurdu.
+ * Talep açma; siparişten gelinirse (`?order=`) kalemler hazır listelenir, genel yoldan gelinirse önce "bir siparişle mi ilgili"
+ * sorulur. Cihaz çatalı yok, çünkü tasarım iki cihazda aynı tek sütunlu formu istiyor ve fark yalnız genişlik.
  */
 interface NewTicketPageProps {
   params: Promise<{ locale: string }>;
@@ -42,8 +33,7 @@ export default async function NewTicketPage({ params, searchParams }: NewTicketP
   const customerId = await currentCustomerId();
   // Segment tablosu yolu BAŞINDA bölü ile taşıyor; ikinci bir bölü eklenmez.
   if (!customerId) {
-    /* Girişten sonra BU forma dönülür (15.14): sohbette ajanın verdiği talep bağlantısını açan müşteri
-       giriş yapınca formu kaybetmesin. Siparişten gelindiyse sipariş de korunur. */
+    /* Girişten sonra bu forma dönülür, ki sohbetteki talep bağlantısını açan müşteri formu kaybetmesin; sipariş de korunur. */
     const buraya = `/${locale}${routing.pathnames['/support/new'][locale]}${orderId ? `?order=${encodeURIComponent(orderId)}` : ''}`;
     redirect(`/${locale}${routing.pathnames['/login'][locale]}?next=${encodeURIComponent(buraya)}`);
   }
@@ -72,7 +62,14 @@ export default async function NewTicketPage({ params, searchParams }: NewTicketP
         title: order ? t.new.title : t.new.generalTitle,
       }}
     >
-      <NewTicketForm t={t} locale={locale as Locale} device={device} order={order} orders={orders?.orders ?? []} />
+      <NewTicketForm
+        t={t}
+        locale={locale as Locale}
+        device={device}
+        order={order}
+        // Ödeme bekleyen siparişin numarası yok; talep numaralı siparişe bağlanır.
+        orders={orders?.orders.filter((row) => row.status !== 'awaiting_payment') ?? []}
+      />
     </SiteFrame>
   );
 }

@@ -12,14 +12,8 @@ import { OrdersDesktop } from './orders.desktop';
 import { OrdersMobile } from './orders.mobile';
 
 /**
- * Siparişler sayfasının cihaz çatalı (Sapma 3) ve **durum sahibi**: sayfalama imleci + tekrar
- * sipariş sonucu. İki görünüm de aynı durumu okur — mantığı ikiye kopyalamak, bir gün ayrışan iki
- * davranış demekti.
- *
- * **Tekrar sipariş sepete BURADAN yazılır**, action'dan değil: sepet ziyaretçide tarayıcıda,
- * girişli müşteride sunucuda yaşıyor ve ikisini `CartProvider` birleştiriyor. Sunucu doğrudan
- * yazsaydı ekrandaki sepet sayısı eski kalırdı. Boş sepetteki "hepsini sepete al" da aynı kapıyı
- * (`addMany`) kullanıyor.
+ * Siparişler sayfasının cihaz çatalı ve durum sahibi (sayfalama imleci, tekrar sipariş sonucu); iki görünüm aynı durumu okur.
+ * Tekrar sipariş sepete buradan yazılır, çünkü sepeti `CartProvider` tutar ve sunucu doğrudan yazsaydı ekrandaki sayı eski kalırdı.
  */
 interface OrdersClientProps {
   t: Messages;
@@ -76,8 +70,6 @@ export function OrdersClient({ t, locale, first, device }: OrdersClientProps) {
     t,
     locale,
     orders,
-    // Yalnız ilk sayfada gelir ve orada kalır: "daha eski siparişler" onu yeniden sormaz.
-    awaitingPayment: first.awaitingPayment,
     nextCursor: cursor,
     loadingMore,
     onLoadMore,

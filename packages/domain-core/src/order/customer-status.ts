@@ -1,29 +1,19 @@
 import type { CustomerOrderStatus, DeliveryType, OrderStatus } from '@lezzet/types';
 
 /**
- * Sipariş durumunun müşteriye görünen karşılığı (08.5) — saf karar, DB'siz.
- *
- * Dokuz iç durum altı kategoriye iner. Daraltma bilinçlidir ve tasarımın kuralıdır: *"iç durum
- * adları ve durum makinesinin ara halleri görünmez — müşteri dilinde az sayıda hal yeter."*
- *
- * Birleşen iki çift:
- * - `preparing` + `ready` → **hazırlanıyor.** "Hazır" depo için bir aşamadır (paket toplandı,
- *   araca bekliyor); müşteri için henüz değişen bir şey yok — siparişi hâlâ yola çıkmamıştır.
- * - `delivered` + `completed` → **teslim edildi.** `completed` bir MUHASEBE kapanışıdır (tahsilat
- *   mutabık). Müşteriye "tamamlandı" demek, elindeki paketi aldıktan sonra bir şey daha
- *   beklediğini düşündürürdü.
- *
- * **`draft` için `null` döner ve bu bir hata değil, cevabın kendisidir:** taslak henüz bir sipariş
- * değil (checkout yarıda kalmış). Ona uydurma bir müşteri hâli vermek — "alındı" demek — müşteriye
- * vermediği bir siparişi göstermek olurdu. Çağıran onu listeden düşürür.
- *
- * Teslimat türü girdidir, çünkü gel-al'da `ready` bir operasyon aşaması değil müşterinin beklediği andır:
- * mal depoda hazır, gelip alacak. Rota ve kargoda aynı durum "hazırlanıyor" kalır.
+ * Sipariş durumunun müşteriye görünen karşılığı; `preparing`+`ready` ve `delivered`+`completed` birleşir, gel-al'da `ready`
+ * müşterinin beklediği an olduğu için teslimat türü girdidir. Taslak `null`dır, ama ödemesi açılmış kart taslağı müşterinin
+ * verdiği siparişin kendisidir ve `awaiting_payment` görünür.
  */
-export function customerOrderStatus(status: OrderStatus, deliveryType: DeliveryType): CustomerOrderStatus | null {
+export function customerOrderStatus(
+  status: OrderStatus,
+  deliveryType: DeliveryType,
+  /** Kart ödemesi açıldı mı: taslak online ödemeli ve ödeme kimliği yazılmış. */
+  cardPaymentOpen = false,
+): CustomerOrderStatus | null {
   switch (status) {
     case 'draft':
-      return null;
+      return cardPaymentOpen ? 'awaiting_payment' : null;
     case 'confirmed':
       return 'received';
     case 'preparing':
@@ -43,32 +33,16 @@ export function customerOrderStatus(status: OrderStatus, deliveryType: DeliveryT
 }
 
 /**
- * Sipariş müşteri için hâlâ "akıyor" mu — liste bunu en üstte ve yeşil çerçeveyle ayırır
- * (tasarım: *"aktif sipariş listenin en üstünde, yeşil çerçeveyle ayrışır"*).
- *
- * Ölçüt "kapanmış mı" değil **"beklediğim bir şey var mı"**: teslim edilmiş sipariş de iptal de
- * iade de kapanmıştır — müşterinin takip edeceği bir hareket kalmamıştır. İade sürecini aktif
- * saymadık: orada topu müşteri değil biz taşıyoruz, ve listede yeşil çerçeve "yolda" beklentisi
- * yaratırdı.
+ * Sipariş müşteri için hâlâ "akıyor" mu: liste onu yeşil çerçeveyle ayırır. Ölçüt müşterinin takip edeceği bir hareket; iade,
+ * iptal ve ödeme bekleyen sipariş aktif sayılmaz, çünkü top bizde ya da müşterinin kendi eylemindedir.
  */
 export function isActiveForCustomer(status: CustomerOrderStatus): boolean {
   return status === 'received' || status === 'preparing' || status === 'ready_for_pickup' || status === 'on_the_way';
 }
 
 /**
- * **`fulfilled_qty` anlamlı mı** — yani o sayı bir ÖLÇÜM mü, yoksa henüz yazılmamış varsayılan mı?
- *
- * Kolonun varsayılanı `0` ve hazırlık onaylanana kadar (06.5, `setFulfilled`) öyle kalır. Yani yeni
- * onaylanmış bir siparişte `fulfilled_qty = 0` **"hiçbiri gönderilmedi" DEMEZ**, "daha bakılmadı"
- * der. İkisini karıştıran ekran, müşteriye siparişinin boş gittiğini söyler ve tutarları eksiye
- * düşürür — bu gerçekten yaşandı (30.07, kullanıcı ekran görüntüsüyle yakaladı).
- *
- * CLAUDE.md §1'in kuralı: *ölçülemeyen değer sıfır değildir.* Bu fonksiyon o kuralın sipariş
- * tarafındaki karşılığı: ölçüm var mı yok mu sorusunu TEK yerde cevaplar, okuyan taraf da
- * yoksa `qty`ye düşer.
- *
- * Eşik `ready`: hazırlık onayı tam olarak orada yazılıyor. `preparing` henüz mutfakta demek —
- * kalemler sayılmamıştır.
+ * `fulfilled_qty` bir ölçüm mü: hazırlık onayına kadar kolon yazılmamış bir `0`dır ve "hiçbiri gönderilmedi" demez. Eşik
+ * `ready`, çünkü onay orada yazılır; ölçüm yoksa okuyan taraf `qty`ye düşer.
  */
 export function isFulfilmentKnown(status: OrderStatus): boolean {
   switch (status) {
@@ -125,18 +99,8 @@ const PICKUP_MILESTONE_STATUSES: readonly (readonly [OrderMilestone, readonly Or
 ];
 
 /**
- * Sipariş zaman çizgisi (08.5) — dört adımın hangisi geçildi, hangisi şu an, hangisi bekliyor.
- *
- * **Girdi durum GEÇMİŞİDİR, anlık durum değil.** Sipariş `out_for_delivery` iken "Hazırlandı"nın
- * da geçildiğini yalnız geçmiş söyleyebilir; anlık durumdan çıkarmaya çalışmak, atlanan geçişleri
- * (hızlı satış yolu) uydurmak olurdu.
- *
- * **`null` = çizgi çizilmez.** İptal ve iade için tasarım açıkça *"çizgi yerine tek durum bloğu"*
- * diyor ve haklı: iptal bir yolculuğun adımı değil, yolculuğun kendisinin sonlanması. Taslak da
- * müşteriye hiç görünmez.
- *
- * `prepared` adımı `ready` iç durumuna bakar, `preparing`e DEĞİL: müşteri "hazırlandı" gördüğünde
- * işin bittiğini anlar — mutfakta olmayı adım saymak, aynı adımı iki kez göstermek olurdu.
+ * Sipariş zaman çizgisi: girdi anlık durum değil durum geçmişidir, çünkü atlanan geçişleri yalnız geçmiş söyler. `null` çizgi
+ * çizilmez demek (iptal, iade, taslak); `prepared` adımı `ready`e bakar, mutfakta olmak adım sayılmaz.
  */
 export function orderTimeline(
   current: OrderStatus,

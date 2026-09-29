@@ -9,15 +9,12 @@
     "itemCount": "{count} ürün",
     "detail": "Detay",
     "detailArrow": "Detay →",
+    "pendingTitle": "Sipariş",
+    "payArrow": "Ödemeyi tamamla →",
     "loadMore": "Daha eski siparişler ↓",
     "loading": "Yükleniyor…",
-    "awaitingPayment": {
-      "title": "Ödemesi bekleniyor",
-      "note": "Kart ödemesinin sonucu henüz bize ulaşmadı.",
-      "cta": "Durumu gör",
-      "ctaArrow": "Durumu gör →"
-    },
     "status": {
+      "awaiting_payment": "Ödeme bekleniyor",
       "received": "Alındı",
       "preparing": "Hazırlanıyor",
       "on_the_way": "● Yolda",
@@ -51,15 +48,12 @@
     "itemCount": "Articles : {count}",
     "detail": "Détail",
     "detailArrow": "Détail →",
+    "pendingTitle": "Commande",
+    "payArrow": "Finaliser le paiement →",
     "loadMore": "Commandes plus anciennes ↓",
     "loading": "Chargement…",
-    "awaitingPayment": {
-      "title": "Paiement en attente",
-      "note": "Le résultat du paiement par carte ne nous est pas encore parvenu.",
-      "cta": "Voir l'état",
-      "ctaArrow": "Voir l'état →"
-    },
     "status": {
+      "awaiting_payment": "Paiement en attente",
       "received": "Reçue",
       "preparing": "En préparation",
       "on_the_way": "● En route",
@@ -93,15 +87,12 @@
     "itemCount": "{count} Artikel",
     "detail": "Details",
     "detailArrow": "Details →",
+    "pendingTitle": "Bestellung",
+    "payArrow": "Zahlung abschließen →",
     "loadMore": "Ältere Bestellungen ↓",
     "loading": "Wird geladen…",
-    "awaitingPayment": {
-      "title": "Zahlung ausstehend",
-      "note": "Das Ergebnis der Kartenzahlung liegt uns noch nicht vor.",
-      "cta": "Status ansehen",
-      "ctaArrow": "Status ansehen →"
-    },
     "status": {
+      "awaiting_payment": "Zahlung ausstehend",
       "received": "Eingegangen",
       "preparing": "In Vorbereitung",
       "on_the_way": "● Unterwegs",

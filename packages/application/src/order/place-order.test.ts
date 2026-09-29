@@ -17,6 +17,7 @@ import type { PaymentIntentStatus } from '@lezzet/domain-core';
 import type { PaymentMethod } from '@lezzet/types';
 import type { CheckoutSessionCreator } from './checkout-session';
 import type { PaymentGateway } from './payment-gateway';
+import { listCustomerOrders } from './customer-orders';
 import { cancelPendingOrder, resumePendingPayment } from './pending-payment';
 import { placeOrder } from './place-order';
 import { reconcileDraftPayment } from './reconcile-payment';
@@ -220,6 +221,19 @@ describe('ödemesi bekleyen sipariş', () => {
     expect(odemeler.get(order!.paymentRef!)?.status).toBe('canceled');
     expect(await sepet()).toEqual([{ variantId, qty: 1 }]);
     expect(haberler).toEqual([]);
+  });
+
+  // Liste ödemesi açılmış taslağı göstermezse kalemleri sepetten çıkmış müşteri siparişini hiçbir yerde bulamaz.
+  it('siparişler listesinde "ödeme bekleniyor" satırıdır, iptal edilince listeden çıkar', async () => {
+    const { orderId } = await kartla(`liste-${stamp}`);
+
+    const once = await listCustomerOrders(db, { customerId, locale: 'fr' });
+    expect(once.orders.map((row) => ({ id: row.id, status: row.status, referenceNo: row.referenceNo }))).toEqual([
+      { id: orderId, status: 'awaiting_payment', referenceNo: null },
+    ]);
+
+    await cancelPendingOrder(db, { orderId, customerId }, deps);
+    expect((await listCustomerOrders(db, { customerId, locale: 'fr' })).orders).toEqual([]);
   });
 
   it('ödemeye dönüş aynı ödemenin anahtarını verir; başkasının siparişi bulunamaz', async () => {

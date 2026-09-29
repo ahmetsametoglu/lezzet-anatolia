@@ -12,40 +12,20 @@ import { ThumbStack } from '@/components/customer/phone-kit/thumb-stack';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { formatOrderDate, formatPrice } from '@/lib/storefront/format';
 import { useLoadMore } from '@/lib/use-load-more.hook';
-import { metaOf } from './orders.desktop';
 import type { OrdersViewProps } from './orders-types';
 
 /**
- * Siparişlerim'in telefon görünümü, native sipariş listesinin ikizi; kartın tamamı detaya gider, çünkü native'de de tek dokunma
- * hedefi. Ödemesi beklenen kart siparişi ve otomatik tur sınırından sonraki "daha eski siparişler" düğmesi web'e özgü.
+ * Siparişlerim'in telefon görünümü, native sipariş listesinin ikizi; kartın tamamı tek dokunma hedefidir. Ödeme bekleyen sipariş
+ * ödeme sayfasına, öteki detaya gider; otomatik tur sınırından sonraki "daha eski siparişler" düğmesi web'e özgü.
  */
-export function OrdersMobile({ t, locale, orders, awaitingPayment, nextCursor, loadingMore, onLoadMore, tailFailed }: OrdersViewProps) {
+export function OrdersMobile({ t, locale, orders, nextCursor, loadingMore, onLoadMore, tailFailed }: OrdersViewProps) {
   const copy = ordersMessages[locale];
   // Kuyruk düştüyse otomatik yol kapanır: aynı düşen sayfa art arda istenmesin, söz "tekrar dene"ye geçer.
   const { ref, autoActive, loadMore } = useLoadMore({ hasMore: nextCursor !== null && !tailFailed, loading: loadingMore, onLoadMore });
 
-  // Ödemesi beklenen kart siparişi dikkat tonunda, tek eylemi ödemenin sayfası.
-  const awaiting = awaitingPayment && (
-    <section className="flex flex-col gap-2.5 rounded-card border border-honey-line bg-honey-bg px-4 py-3.5">
-      <div className="flex items-center justify-between gap-2.5">
-        <span className="min-w-0 truncate font-sans text-body-sm font-bold text-honey">{t.awaitingPayment.title}</span>
-        <span className="flex-none font-sans text-step-sm text-ink">{formatPrice(awaitingPayment.totalCents, locale)}</span>
-      </div>
-      <p className="font-sans text-helper leading-[1.6] text-muted">
-        {[...metaOf(awaitingPayment, t, locale, true), t.awaitingPayment.note].join(' · ')}
-      </p>
-      <PrimaryButton
-        shape="block"
-        label={t.awaitingPayment.cta}
-        href={{ pathname: '/checkout/[reference]', params: { reference: awaitingPayment.orderId } }}
-      />
-    </section>
-  );
-
   if (orders.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-3 px-4.5 pb-5">
-        {awaiting}
         <EmptyState
           fill
           icon={<MobileIcon name="orders" size={80} className="text-sand-600" />}
@@ -59,9 +39,10 @@ export function OrdersMobile({ t, locale, orders, awaitingPayment, nextCursor, l
 
   return (
     <div className="flex flex-col gap-3 px-4.5 pb-5">
-      {awaiting}
       {orders.map((order) => {
-        const reference = order.referenceNo ?? '—';
+        // Ödeme bekleyen siparişin numarası yok; kart ödeme sayfasına gider, çünkü tek eylemi ödemesi.
+        const pending = order.status === 'awaiting_payment';
+        const reference = order.referenceNo ?? copy.row.pendingTitle;
         return (
           <article
             key={order.id}
@@ -71,8 +52,8 @@ export function OrdersMobile({ t, locale, orders, awaitingPayment, nextCursor, l
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 {/* Kartın tamamı bu bağın dokunma alanı (`after` katmanı); ekran okuyucuya tek satır gider. */}
                 <Link
-                  href={{ pathname: '/orders/[reference]', params: { reference: order.id } }}
-                  aria-label={copy.row.open.replace('{reference}', reference)}
+                  href={{ pathname: pending ? '/checkout/[reference]' : '/orders/[reference]', params: { reference: order.id } }}
+                  aria-label={pending ? copy.row.openPending : copy.row.open.replace('{reference}', reference)}
                   className="cursor-pointer font-sans text-body-sm font-bold text-ink after:absolute after:inset-0 after:rounded-card after:content-['']"
                 >
                   {reference}
@@ -95,7 +76,7 @@ export function OrdersMobile({ t, locale, orders, awaitingPayment, nextCursor, l
               <span className="font-sans text-step-sm text-ink">{formatPrice(order.totalCents, locale)}</span>
               {/* Kart zaten basılabilir; bu yazı düğme değil, nereye gidileceğini söyleyen işaret. */}
               <span aria-hidden className="font-sans text-control text-terracotta">
-                {copy.row.detail}
+                {pending ? copy.row.pay : copy.row.detail}
               </span>
             </div>
           </article>

@@ -20,8 +20,8 @@ export function orderOutcomeOf(order: { status: OrderStatus; paymentMethod: Paym
 }
 
 /**
- * Parası iade edilmiş bir iptal mi: soru sebebe değil iade damgasına sorulur, çünkü iade eden iki yoldan biri sebebi
- * `superseded` bırakır.
+ * Parası iade edilmiş bir iptal mi: soru sebebe değil iade damgasına sorulur, çünkü iptal edilmiş taslağa geç gelen ödeme iade
+ * edilir ve sebep taslağın kendi iptal sebebi olarak kalır.
  */
 export function isRefundedCancellation(view: { cancelled: boolean; refundedAt: string | null }): boolean {
   return view.cancelled && view.refundedAt !== null;

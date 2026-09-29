@@ -3,18 +3,12 @@ import { statusPillClass } from '@/components/customer/ui/badge';
 import type { Messages } from '../orders-types';
 
 /**
- * Durum rozeti — tasarımın "kapalı liste"si. Masaüstü ve mobil AYNI parçayı kullanır; iki kopya,
- * bir gün ayrışan iki renk paleti demekti.
- *
- * Renkler jetondan geliyor ve envanterin kendi tarifleriyle örtüşüyor: `closed-*` "kapanmış durum
- * etiketi", `terracotta-bright` "hata/iptal metni", `honey-*` "bekleyen durum etiketi" diye
- * tanımlı — yani bu ekran için zaten düşünülmüşler.
- *
- * **Aktif üçlü yeşil ailededir** (tasarım notu): alındı · hazırlanıyor · yolda. Kapanmışlar nötr,
- * iptal kırmızımsı, iade bal rengi. Ayrım renkle YALNIZ değil metinle de var — renk körü müşteri
- * rozeti okuyarak da ayırt eder.
+ * Masaüstü durum rozeti; renkler jetonlardan: aktif üçlü yeşil, kapanmış nötr, iptal kırmızımsı, bekleyen ve iade bal rengi. Ayrım
+ * metinle de var, renk körü müşteri rozeti okuyarak ayırt eder.
  */
 const BADGE_CLASS: Record<CustomerOrderStatus, string> = {
+  // Ödeme bekleyen sipariş bekleyen durum ailesinde: sıradaki hareket müşterinin.
+  awaiting_payment: 'bg-honey-bg text-honey',
   received: 'bg-olive-bg text-olive',
   preparing: 'bg-olive-bg text-olive',
   // Gel-al'ın "hazır"ı da aktif ailede: müşterinin yapacağı iş var (gidip almak).

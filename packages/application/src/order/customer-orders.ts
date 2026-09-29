@@ -50,7 +50,7 @@ export interface CustomerOrderThumb {
 
 export interface CustomerOrderSummary {
   id: string;
-  /** Referans numarası — sipariş onaylanınca doğar; taslakta yok ama taslak zaten listede yok. */
+  /** Referans numarası onayla doğar; `awaiting_payment` satırında `null`dır ve satır sipariş kimliğiyle açılır. */
   referenceNo: string | null;
   createdAt: string;
   status: CustomerOrderStatus;
@@ -65,23 +65,9 @@ export interface CustomerOrderSummary {
   moreCount: number;
 }
 
-/** Ödemesi beklenen kart siparişi. */
-export interface CustomerAwaitingPayment {
-  /** Sayfanın kimliği: numara ancak onayla doğar, ödeme sayfası sipariş kimliğiyle açılır. */
-  orderId: string;
-  createdAt: string;
-  totalCents: number;
-  itemCount: number;
-}
-
 export interface CustomerOrderPage {
   orders: readonly CustomerOrderSummary[];
   nextCursor: KeysetCursor | null;
-  /**
-   * Ödemesi beklenen kart siparişi, yalnız ilk sayfada; ödemesi açılmış taslak müşterinin yaptığı bir şeydir ve göstermemek
-   * "siparişim nerede" dedirtir.
-   */
-  awaitingPayment: CustomerAwaitingPayment | null;
 }
 
 export interface CustomerOrderListInput {
@@ -92,8 +78,8 @@ export interface CustomerOrderListInput {
 }
 
 /**
- * "Siparişlerim" listesi; keyset sayfalı, imleç URL'e yazılmaz. Taslaklar listede yok, süzme durum kararının kendisinden gelir; bu
- * yüzden bir sayfa istenenden az satır dönebilir, `nextCursor` yine doğrudur.
+ * "Siparişlerim" listesi; keyset sayfalı, imleç URL'e yazılmaz. Ödemesi açılmamış taslak listede yok ve süzme durum kararının
+ * kendisinden gelir; bu yüzden bir sayfa istenenden az satır dönebilir, `nextCursor` yine doğrudur.
  */
 export async function listCustomerOrders(
   db: SupabaseClient,
@@ -117,8 +103,8 @@ export async function listCustomerOrders(
 
   const orders: CustomerOrderSummary[] = [];
   for (const order of page.rows) {
-    const status = customerOrderStatus(order.status, order.deliveryType);
-    if (!status) continue; // Taslak — müşterinin siparişi değil.
+    const status = customerOrderStatus(order.status, order.deliveryType, cardPaymentOpen(order));
+    if (!status) continue;
     /* Hiç kesinleşmemiş iptal listede yok: numarası doğmadı, para hareket etmedi. Parası çekilip iade edilmiş olan kalır. */
     if (order.status === 'cancelled' && !order.referenceNo && !order.providerRefundedAt) continue;
 
@@ -153,26 +139,12 @@ export async function listCustomerOrders(
     });
   }
 
-  return {
-    orders,
-    nextCursor: page.nextCursor,
-    awaitingPayment: input.cursor ? null : await getCustomerAwaitingPayment(db, input.customerId, itemsByOrder),
-  };
+  return { orders, nextCursor: page.nextCursor };
 }
 
-/**
- * Ödemesi beklenen kart siparişi: ödemesi açılmış ve hâlâ taslak olan sipariş. `itemsByOrder` listenin o sayfada okuduğu
- * kalemlerdir, taslak oradaysa yeniden sorulmaz.
- */
-export async function getCustomerAwaitingPayment(
-  db: SupabaseClient,
-  customerId: string,
-  itemsByOrder: ReadonlyMap<string, readonly OrderItem[]> = new Map(),
-): Promise<CustomerAwaitingPayment | null> {
-  const draft = await new OrderService(db).findOpenOnlineDraft(customerId);
-  if (!draft) return null;
-  const items = itemsByOrder.get(draft.id) ?? (await new OrderItemService(db).listByOrders([draft.id]));
-  return { orderId: draft.id, createdAt: draft.createdAt, totalCents: draft.orderedTotalCents, itemCount: items.length };
+/** Ödemesi açılmış kart taslağı müşterinin verdiği siparişin kendisidir; açılmamış taslak yarıda kalmış checkout'tur. */
+function cardPaymentOpen(order: { paymentMethod: PaymentMethod | null; paymentRef: string | null }): boolean {
+  return order.paymentMethod === 'online' && order.paymentRef !== null;
 }
 
 /** Detayın satırı; paket tek satırdır, çünkü müşteri onu bütün olarak aldı ve kalem fiyat kırılımını hiç görmedi. */

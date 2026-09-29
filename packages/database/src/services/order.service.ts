@@ -446,18 +446,6 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * Müşterinin ödemesi beklenen kart taslağı (ödemesi açılmış, ne onaylı ne iptal); müşteri sonucu görmeden
-   * yeniden ödeyip iki kez çekim yaşamasın.
-   */
-  async findOpenOnlineDraft(customerId: string): Promise<Order | null> {
-    const rows = await this.getAll(
-      { customerId, status: 'draft', paymentMethod: 'online' },
-      { isNotNullFields: ['paymentRef'], orderBy: 'createdAt', orderDirection: 'desc', limit: 1 },
-    );
-    return rows[0] ?? null;
-  }
-
-  /**
    * Ödemesi beklenen kart taslakları, eskiden yeniye: zamanlayıcının kuyruğu (`before`) ve müşterinin bekleyen siparişleri
    * (`customerId`). Tavan emniyettir, çünkü her satır sağlayıcıya bir soru demek.
    */
