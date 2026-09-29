@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.46). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.47). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
 `docs/GELECEK.md`'dedir.
@@ -37,6 +37,8 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
   ancak iş bittikten sonra geçer (izinle başarılı API çağrısı + kullanım videosu), bu yüzden mesajlaşma başvurusundan ayrı gider.
   Rolü olmayan müşterinin Messenger/Instagram mesajı mesajlaşma izinleri onaylanana kadar bize hiç gelmez (Meta belgesi; Graph'ta
   rolsüz kullanıcının konuşması görünmüyor).
+- [ ] (K.47) [hedef: deploy] Test sunucusuna `f94e5a5e` dağıtılacak (şema değişmedi): müşterinin Messenger/Instagram'da düzenlediği mesaj
+  bugünkü sürümde eski metniyle kalıyor. Dağıtımdan sonra Meta aboneliğine düzenleme alanları eklenecek (web şeridi, kullanıcı onayıyla).
 - [ ] **Fiyat listesi (B2B/B2C)** — kullanıcı bekliyor (kendi notlarında); gelince gerçek beslemeye girer.
 
 ## 00 · Monorepo İskeleti
