@@ -6,15 +6,8 @@ import { app } from '../../app';
 import { createSignedInUser } from '../../lib/testing';
 
 /**
- * `/api/v1/me/push-devices` (14.14) — çivilenen kurallar kurgu incelemesinin iki bulgusu:
- *
- *   1. **SAHİP DEVRİ (8. bulgu):** aynı jetonu ikinci hesap kaydettiğinde cihaz EL DEĞİŞTİRİR —
- *      son giren kazanır, çünkü cihaz fiziksel olarak onun elindedir. Devir olmasaydı aile
- *      telefonunda önceki hesabın bildirimi sonrakine düşerdi: kişisel veri ifşası.
- *   2. **İZİN KARASI (10. bulgu):** OS'ta bildirimi kapatan kullanıcının jetonu canlı kalır ve
- *      Expo "gönderdim" der — `enabled:false` raporu cihazı gönderilebilir listesinden düşürür.
- *
- * Çıkışın sahiplik süzgeci de burada: devrolmuş cihazın GECİKMİŞ çıkışı yeni sahbin kaydını sökemez.
+ * Aynı jetonu ikinci hesap kaydedince cihaz el değiştirir, `enabled:false` raporu cihazı gönderilebilir listesinden düşürür.
+ * Devrolmuş cihazın gecikmiş çıkışı yeni sahibin kaydını sökemez.
  */
 const db = serviceDb();
 const devices = new PushDeviceService(db);
@@ -79,8 +72,7 @@ describe('kayıt ve sahip devri', () => {
     expect(await devices.findByToken(t)).not.toBeNull();
   });
 
-  /* HANGİ UYGULAMA (21.311): aynı kişinin müşteri ve operasyon uygulamasındaki jetonları ayrı süzülür —
-     müşteri bildirimi personelin operasyon uygulamasına düşmez. */
+  /* Aynı kişinin müşteri ve operasyon uygulamasındaki jetonları ayrı süzülür; müşteri bildirimi personelin operasyon uygulamasına düşmez. */
   it('iki uygulamanın jetonu ayrı süzülür — müşteri listesi operasyon jetonunu içermez', async () => {
     const musteriJetonu = jeton(4);
     const operasyonJetonu = jeton(5);
@@ -119,7 +111,7 @@ describe('zarf ve kapı', () => {
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toBe('invalid_body');
 
-    // Uygulamasını söylemeyen kayıt yazılmaz (21.311) — varsayılan yok.
+    // Uygulamasını söylemeyen kayıt yazılmaz; varsayılan yok.
     const appsiz = await app.request('/api/v1/me/push-devices', post(aToken, { token: jeton(6), platform: 'android', enabled: true }));
     expect(appsiz.status).toBe(400);
   });
