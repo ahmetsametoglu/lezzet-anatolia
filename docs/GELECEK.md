@@ -26,11 +26,6 @@ bağlanmaz. Satır = kimlik + ne + neden; ele alınmaya karar verilince satır `
 
 ## Bildirim ve kanal
 
-- (14.17) **Tarayıcı bildirimi (web push) ve "uygulama önce" kuralı:** müşteri web yüzeyinde (masaüstü + mobil web) tarayıcı
-  aboneliği; bir haber tek cihaz bildirimine gider — native uygulama (son 30 gün içinde görülmüş; parametrik) → tarayıcı →
-  e-posta; belgede e-posta daima + tek push. Parçalar: `app/manifest.ts` (iOS 16.4+ ana ekran şartı `display: standalone`) ·
-  service worker · VAPID anahtarları (web + backend + mobile-api) · abonelik kaydı (`push_device`a `web` platformu +
-  aboneliğin iki anahtarı) · `packages/notify` tarayıcı sürücüsü (`web-push`; 404/410'da abonelik budanır).
 - (15.24) **Sohbet hunisi — platform verimliliği:** hangi sosyal platformun daha verimli olduğunu görmek için gün × platform
   özeti — açılan sohbet · sepet kurulan sohbet · gönderilen bağlantı · açılan bağlantı · sipariş · ciro; analitik ekranına bölüm.
 - (MB-44) **B2B'de fatura e-postasının ayrı verilebilmesi:** bugün hesap e-postası her şeye gidiyor (karar maili, fatura,

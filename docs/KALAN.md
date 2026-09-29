@@ -31,14 +31,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
     jetonu alınmaz) · operasyon ikonu (tasarım bekliyor; bugünkü ikon yolu artık olmayan `apps/mobile` klasörünü gösteriyor) ·
     Supabase dönüş izin listesi (`supabase/config.toml`): `lezzetoperasyonu://**` yok, müşteri uygulamasının satırı eski adla
     (`lezzetanatolia://**`) duruyor, uygulamanın şeması `lezzetanatolie`.
-- [ ] (K.21) [hedef: web] Sipariş durumu bağlı mesaj kanalından da gidecek. Onay ekranı "e-posta ve WhatsApp
-  bildirimlerinden takip edebilirsiniz" diyor (`packages/i18n/src/customer/checkout.json` `confirmed.note`); bugün yalnız e-posta ve
-  uygulama bildirimi gidiyor. Karar: sipariş olaylarında e-posta daima, yanında müşterinin bağlı kanallarından ilk mümkün olan —
-  Instagram/Messenger (24 saat içinde serbest mesaj, dışında Messenger işlem şablonu), en son WhatsApp (şablonlar onaylı).
-  Instagram'da 24 saat dışında otomatik mesaj yolu yok. Messenger işlem şablonu `pages_utility_messaging` ister; izin App Review'dan
-  ancak iş bittikten sonra geçer (izinle başarılı API çağrısı + kullanım videosu), bu yüzden mesajlaşma başvurusundan ayrı gider.
-  Rolü olmayan müşterinin Messenger/Instagram mesajı mesajlaşma izinleri onaylanana kadar bize hiç gelmez (Meta belgesi; Graph'ta
-  rolsüz kullanıcının konuşması görünmüyor).
 - [ ] **Fiyat listesi (B2B/B2C)** — kullanıcı bekliyor (kendi notlarında); gelince gerçek beslemeye girer.
 
 ## 00 · Monorepo İskeleti

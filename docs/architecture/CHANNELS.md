@@ -139,14 +139,14 @@ INBOUND  (müşteri → biz)                 OUTBOUND  (biz → müşteri)
   WhatsApp mesajı                          sipariş onayı, kargo bildirimi,
     → 360dialog webhook                      "yola çıktık", kampanya
     → apps/backend                         packages/notify (soyut katman)
-    → AI ajanı (packages/ai)                 ├─ e-posta sürücüsü      (Faz 1)
-    → domain-core (stok/fiyat/sipariş)       ├─ wa.me deep-link       (Faz 1)
-    → yanıt/kart/Stripe link                 ├─ WhatsApp API (360dialog) (Faz 1, canlı)
-                                             └─ mobil push            (Faz 2)
+    → AI ajanı (packages/ai)                 ├─ e-posta sürücüsü
+    → domain-core (stok/fiyat/sipariş)       ├─ wa.me bağlantısı (e-postasız belgede, operatör eliyle)
+    → yanıt/kart/Stripe link                 ├─ native push (Expo)
+                                             └─ tarayıcı bildirimi (Web Push)
 ```
 
 - **Inbound** (müşterinin başlattığı sohbet) `apps/backend`'de webhook olarak alınır — web uygulamasının dağıtımından bağımsız (bkz. `INTEGRATIONS.md`, STACK §7).
-- **Outbound** (bizim gönderdiğimiz bildirim) `packages/notify` soyut katmanının arkasındadır; `wa.me` ile WhatsApp API aynı arayüzün iki sürücüsüdür.
+- **Outbound** (bizim gönderdiğimiz bildirim) `packages/notify` soyut katmanının arkasındadır. Sipariş durumu sosyal kanaldan gitmez: WhatsApp 24 saat dışında ücretli şablon ister, Instagram otomatik mesaja hiç izin vermez; haber e-posta ve cihaz bildirimiyle (etkin native uygulama, yoksa tarayıcı) gider.
 - İkisi de **aynı** `domain-core`'dan beslenir; ticari gerçek tek yerdedir.
 
 ---
@@ -167,7 +167,6 @@ Akış: `müşteri mesajı → 360dialog webhook → apps/backend → packages/a
 - **"Önce müşteri yazsın."** Kullanıcı-başlatan 24 saatlik servis penceresinde mesajlar ücretsiz; işletme-başlatan template mesajı FR/DE'de pahalı (~€0,13–0,14).
 - `wa.me` click-to-chat girişleri her yere serpilir (IG bio, site, QR, broşür) — müşteri sohbeti başlatır.
 - Proaktif pazarlama şablonları **seyrek, segmentli ve yalnızca double opt-in ile** (Faz 2).
-- Utility şablonları (sipariş onayı, kargo bildirimi) ücretsiz servis penceresi içinde önceliklidir.
 - Hem maliyet hem GDPR aynı yöne işaret eder: inbound-öncelik altın kuraldır.
 
 ---
