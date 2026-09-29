@@ -23,8 +23,6 @@ bağlanmaz. Satır = kimlik + ne + neden; ele alınmaya karar verilince satır `
 
 - (K.41) **Hediye kartı / hediye çeki** (bakiye taşıyan): kavramın kendisi kararlaştırılmadı. `order.is_gift_order` var ama o
   "siparişi hediye olarak gönder"dir, bakiye taşıyan bir araç değil.
-- (OB-16) **Müşteri grubu bazlı genel yüzde indirimi (iskonto).**
-- (OB-17) **Müşteriye özel, tek ürün kapsamlı, tek seferlik indirim.**
 
 ## Bildirim ve kanal
 
