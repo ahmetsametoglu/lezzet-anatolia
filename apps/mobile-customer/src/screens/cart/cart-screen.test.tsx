@@ -60,9 +60,15 @@ jest.mock('@/screens/customer-kit/purchase-place', () => ({
   usePurchasePlace: () => ({ address: mockAddress, postalCode: mockAddress?.postalCode ?? null }),
 }));
 jest.mock('@/screens/customer-kit/use-pickup-points.hook', () => ({ usePickupPoints: () => [] }));
+let mockAddressesStatus: 'ready' | 'error' = 'ready';
+jest.mock('@/screens/customer-kit/use-addresses.hook', () => ({
+  ...jest.requireActual<object>('@/screens/customer-kit/use-addresses.hook'),
+  useAddresses: () => ({ status: mockAddressesStatus, addresses: [], publish: () => undefined, reload: async () => undefined }),
+}));
 
 beforeEach(() => {
   mockMeStatus = 'ready';
+  mockAddressesStatus = 'ready';
   mockAddress = addressFixture('adres-1', '67380', true);
 });
 
@@ -351,5 +357,17 @@ describe('CartScreen — giriş ve adres sepette sorulur', () => {
     expect(screen.getByTestId('cart-address-empty')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: t.checkout })).toBeDisabled();
     expect(screen.getByTestId('cart-bar-block')).toHaveTextContent(t.barBlock.address);
+  });
+
+  // Adres listesi okunamadığında müşteriye "adresiniz yok" denirse ya da düğme açılırsa kırmızıya döner.
+  it('adres listesi okunamadıysa "adres ekle" demez, düğme kilitli kalır', async () => {
+    mockAddress = null;
+    mockAddressesStatus = 'error';
+    mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local')]));
+
+    await render(<CartScreen />);
+
+    expect(screen.queryByTestId('cart-address-empty')).toBeNull();
+    expect(screen.getByRole('button', { name: t.checkout })).toBeDisabled();
   });
 });

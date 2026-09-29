@@ -37,6 +37,7 @@ jest.spyOn(AppState, 'addEventListener').mockImplementation(((_event: string, cb
 const mockApplyProfileLocale = jest.fn();
 jest.mock('../i18n/app-locale', () => ({ applyProfileLocale: (l: string) => mockApplyProfileLocale(l) }));
 
+import { recoverFailedReads } from '../auth/recover-reads';
 import { publishMe, useWholesale, useMe } from './use-me.hook';
 
 const ok = (overrides = {}) => ({ data: meFixture([], overrides), error: null, status: 200, retryAfterSec: null });
@@ -95,6 +96,23 @@ describe('müşteri kimliği', () => {
     });
 
     await waitFor(() => expect(result.current.status).toBe('ready'));
+  });
+
+  // Hesap okuması düştükten sonra oturumla başka bir istek başarılı olduğunda hesap yeniden okunmazsa kırmızıya döner.
+  it('oturumla BAŞARILI bir istekten sonra düşen okuma toparlanır — öne gelmeyi beklemez', async () => {
+    mockFetchMe.mockResolvedValueOnce(fail(null)).mockResolvedValue(ok());
+    const { result } = await renderHook(() => useMe());
+    await waitFor(() => expect(result.current.status).toBe('error'));
+    const before = mockFetchMe.mock.calls.length;
+
+    await act(async () => {
+      recoverFailedReads();
+      // Uçuştaki okuma ikinci kez başlatılmaz.
+      recoverFailedReads();
+    });
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(mockFetchMe.mock.calls.length - before).toBe(1);
   });
 
   it('HAZIR hâlde öne gelmek tazeleme TETİKLEMEZ — her sekme dönüşü bir ağ turu olmasın', async () => {

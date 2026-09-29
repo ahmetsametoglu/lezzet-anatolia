@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { fetchMe, type Me } from '../api/me';
+import { recoverFailedReads, registerReadRecovery } from '../auth/recover-reads';
 import { getSupabase } from '../auth/supabase';
 import { applyProfileLocale } from '../i18n/app-locale';
 
@@ -21,6 +22,8 @@ interface MeState {
 let state: MeState = { status: 'loading', me: null };
 const listeners = new Set<() => void>();
 let generation = 0;
+/** Okuma uçuşta mı; kurtarma aynı okumayı ikinci kez başlatmasın. */
+let loading = false;
 let authSubscription: { unsubscribe: () => void } | null = null;
 
 function setState(next: MeState): void {
@@ -32,8 +35,10 @@ function setState(next: MeState): void {
 
 function load(): void {
   const run = ++generation;
+  loading = true;
   void fetchMe().then((result) => {
     if (run !== generation) return;
+    loading = false;
     if (result.error !== null) {
       // Yerel kısa devre 401'i (oturum yok) misafirdir; kalanı gerçek arızadır.
       setState({ status: result.status === 401 ? 'guest' : 'error', me: null });
@@ -49,14 +54,20 @@ export function publishMe(me: Me): void {
 }
 
 /**
- * Düşen okuma öne gelişte yeniden denenir, çünkü oturumu duran müşteri aksi hâlde uygulamayı çıkış yapmış gibi görür. Yalnız
- * `error` hâlinde koşar: sağlıklı durumda her öne gelişte `/me` çekmek pahalı bir yoklama olurdu.
+ * Düşen okuma yeniden denenir, çünkü oturumu duran müşteri aksi hâlde uygulamayı çıkış yapmış gibi görür. Yalnız `error` hâlinde
+ * koşar: sağlıklı durumda `/me`yi yeniden çekmek pahalı bir yoklama olurdu.
  */
+function recoverMe(): void {
+  if (state.status === 'error' && !loading) load();
+}
+
+/** Öne geliş de kurtarma tetiğidir: bağlantısını düzeltip geri dönen müşteri başka bir işlem yapmadan toparlanmalı. */
 function retryOnForeground(appState: AppStateStatus): void {
-  if (appState === 'active' && state.status === 'error') load();
+  if (appState === 'active') recoverFailedReads();
 }
 
 let appStateSubscription: { remove: () => void } | null = null;
+let unregisterRecovery: (() => void) | null = null;
 
 function subscribe(listener: () => void): () => void {
   if (listeners.size === 0) {
@@ -64,6 +75,7 @@ function subscribe(listener: () => void): () => void {
     const { data } = getSupabase().auth.onAuthStateChange(() => load());
     authSubscription = data.subscription;
     appStateSubscription = AppState.addEventListener('change', retryOnForeground);
+    unregisterRecovery = registerReadRecovery(recoverMe);
   }
   listeners.add(listener);
   return () => {
@@ -73,6 +85,8 @@ function subscribe(listener: () => void): () => void {
       authSubscription = null;
       appStateSubscription?.remove();
       appStateSubscription = null;
+      unregisterRecovery?.();
+      unregisterRecovery = null;
     }
   };
 }

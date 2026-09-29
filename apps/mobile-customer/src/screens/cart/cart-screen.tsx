@@ -38,6 +38,7 @@ import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-addr
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { NewAddressSheet, PlaceSheet } from '@/screens/customer-kit/place-sheet';
 import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
+import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { usePickupPoints } from '@/screens/customer-kit/use-pickup-points.hook';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
@@ -96,9 +97,12 @@ export function CartScreen() {
   // Bar engel yazısıyla ve cihazın alt güvenli alanıyla uzar; dipteki pay sabit olsaydı son satır barın arkasında kalırdı.
   const [barHeight, setBarHeight] = useState(0);
   const [addingAddress, setAddingAddress] = useState(false);
-  /* Ödemeye giriş yapmış ve adresi belli müşteri geçer; ikisi de burada sorulur, ödeme ekranı yalnız gösterir. */
+  const { status: addressesStatus } = useAddresses(false);
+  /* Ödemeye giriş yapmış ve adresi belli müşteri geçer; ikisi de burada sorulur, ödeme ekranı yalnız gösterir. Adres ancak liste
+     okunduysa ve boşsa istenir, okunamamış liste "adresiniz yok" demek değildir. */
+  const placeKnown = deliveryAddress !== null || pickupPoint !== null;
   const needsLogin = meStatus !== 'ready';
-  const needsAddress = meStatus === 'ready' && deliveryAddress === null && pickupPoint === null;
+  const needsAddress = meStatus === 'ready' && addressesStatus === 'ready' && !placeKnown;
 
   const count = cartCount(cart);
   const isEmpty = count === 0;
@@ -132,7 +136,7 @@ export function CartScreen() {
   const discount = view.discount;
   /* Düğmeyi gelemeyen kalem kapatmaz, müşteri gelebilecekleri sipariş eder. Kapatan üç hâl: görünüm çözülemedi, satılamaz kalem var
      (`hasBlocked`) ve asgari sepet tutmuyor. */
-  const checkoutBlocked = unresolved || view.hasBlocked || !view.minBasketOk || needsLogin || needsAddress;
+  const checkoutBlocked = unresolved || view.hasBlocked || !view.minBasketOk || needsLogin || !placeKnown;
 
   /*
     Kilitli düğmenin kısa gerekçesi: satılamayan kalem asgari sepetten önce, giriş ve adres en son söylenir, çünkü kalem çıkarılınca
@@ -326,7 +330,7 @@ export function CartScreen() {
       <SecondaryButton
         label={t.group.shippingCta}
         onPress={() => router.push('/checkout?group=shipping')}
-        disabled={view.hasBlocked || needsLogin || needsAddress}
+        disabled={view.hasBlocked || needsLogin || !placeKnown}
         testID="cart-shipping-checkout"
       />
     </View>

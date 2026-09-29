@@ -17,6 +17,7 @@ import {
 import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
+import { registerReadRecovery } from '@lezzet/mobile-kit/src/lib/auth/recover-reads';
 import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
 import { getSelectedPickupWarehouse, subscribeDeliverySelection } from './delivery-address-store';
 import { purchaseAddressNow } from './purchase-place';
@@ -613,12 +614,19 @@ let sessionActive = false;
 /** Adres listesi ve seçim dinleyicilerinin sökülmesi; oturum dinleyicisiyle birlikte kurulur. */
 let placeSubscriptions: (() => void)[] = [];
 let watchers = 0;
+let unregisterRecovery: (() => void) | null = null;
+
+/** Düşen sunucu okuması oturumla başarılı bir istekte yeniden okunur; yazma cevabını bekleyen sepet müşteriye boş görünmesin. */
+function recoverCart(): void {
+  if (sessionActive && state.error !== null && !state.resolving) refreshView();
+}
 
 function startWatching(): void {
   watchers += 1;
   if (authSubscription !== null) return;
 
   placeSubscriptions = [subscribeAddresses(syncPurchasePlace), subscribeDeliverySelection(syncPurchasePlace)];
+  unregisterRecovery = registerReadRecovery(recoverCart);
   const { data } = getSupabase().auth.onAuthStateChange((_event, session) => {
     sessionActive = session !== null;
     if (session === null) {
@@ -646,6 +654,8 @@ function stopWatching(): void {
   sessionActive = false;
   for (const unsubscribe of placeSubscriptions) unsubscribe();
   placeSubscriptions = [];
+  unregisterRecovery?.();
+  unregisterRecovery = null;
 }
 
 /**

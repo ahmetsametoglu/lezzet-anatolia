@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import { apiFetch, type ApiFetchInit, type ApiResult } from '../api/client';
+import { recoverFailedReads } from './recover-reads';
 import { endRejectedSession, isDeadSessionAnswer } from './session-end';
 import { getSupabase } from './supabase';
 
@@ -29,6 +30,7 @@ export async function authorizedFetch<TSchema extends z.ZodTypeAny>(
     apiFetch(path, schema, { ...init, headers: { ...init.headers, Authorization: `Bearer ${accessToken}` } });
 
   const first = await attempt(token);
+  if (first.error === null) recoverFailedReads();
   if (first.error === null || first.status !== 401) return first;
 
   const refreshed = await supabase.auth.refreshSession();
@@ -38,7 +40,9 @@ export async function authorizedFetch<TSchema extends z.ZodTypeAny>(
     return first;
   }
 
-  return attempt(freshToken);
+  const second = await attempt(freshToken);
+  if (second.error === null) recoverFailedReads();
+  return second;
 }
 
 /**
