@@ -181,10 +181,10 @@ export const PaymentStatusEnum = z.enum(['pending', 'paid', 'partial', 'refunded
 export type PaymentStatus = z.infer<typeof PaymentStatusEnum>;
 
 /**
- * İptalin sebebi (`null` = iptal edilmedi); ayrım paranın yolunu izler: `payment_failed`/`superseded` para çekilmedi, `out_of_stock` çekildi ve iade edildi, `customer`/`staff` iptali kim istedi.
+ * İptalin sebebi (`null` = iptal edilmedi); ayrım paranın yolunu izler: `payment_failed` para çekilmedi, `out_of_stock` çekildi ve iade edildi, `customer`/`staff` iptali kim istedi.
  * Bayrak değil sebep, çünkü hem müşteriye kurulacak cümleyi hem operasyonun iptal listesindeki "neden" sütununu cevaplar.
  */
-export const OrderCancelReasonEnum = z.enum(['payment_failed', 'superseded', 'out_of_stock', 'customer', 'staff']);
+export const OrderCancelReasonEnum = z.enum(['payment_failed', 'out_of_stock', 'customer', 'staff']);
 export type OrderCancelReason = z.infer<typeof OrderCancelReasonEnum>;
 
 /**

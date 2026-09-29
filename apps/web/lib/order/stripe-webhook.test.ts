@@ -7,11 +7,8 @@ import type { StripeEffects } from './stripe-effects';
 import { handleStripeEvent, type VerifiedEvent } from './stripe-webhook';
 
 /**
- * Stripe webhook'u (07.5). Üç şey doğrulanır: **aynı olay iki kez işlenmiyor**, ödeme onayı siparişi
- * `confirmed` yapıp referans üretiyor, ve **geç ödeme** dallanması motorun dediği gibi işliyor
- * (rezervasyon düşmüşse yeniden ayır; mal yoksa iade et).
- *
- * İmza doğrulaması burada değil: o HTTP kabuğunun işi (ham gövde ister). Buraya doğrulanmış olay gelir.
+ * Stripe webhook'u: aynı olay iki kez işlenmez, ödeme onayı siparişi `confirmed` yapıp numara üretir ve geç ödeme motorun dediği gibi
+ * dallanır (ayırma düşmüşse yeniden ayır, mal yoksa iade et). İmza doğrulaması HTTP kabuğunun işi, buraya doğrulanmış olay gelir.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -26,7 +23,7 @@ let variantId: string;
 let productId: string;
 let categoryId: string;
 let stripeAccount: string;
-/** Payout'un gittiği banka (12.14) — ayar bu hesabı gösterir. */
+/** Payout'un gittiği banka; ayar bu hesabı gösterir. */
 let bankAccount: string;
 const createdProfiles: string[] = [];
 
@@ -40,7 +37,7 @@ function paidEvent(orderId: string, amountCents: number, overrides: Partial<Veri
   eventSeq += 1;
   return {
     id: `evt_${stamp}_${eventSeq}`,
-    // Varsayılan olay adı artık niyet ailesinden: ödeme sayfa içine alındı (28.07).
+    // Varsayılan olay adı niyet ailesinden, çünkü ödeme sayfa içinde alınır.
     type: 'payment_intent.succeeded',
     orderId,
     paymentIntentId: `pi_${stamp}_${eventSeq}`,
@@ -65,7 +62,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await db.from('money_movement').delete().eq('account_id', stripeAccount);
-  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  // Sıra: defter → parti → sipariş; gerekçe `packages/application/src/courier/day.test.ts`te.
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
@@ -164,10 +161,8 @@ describe('geç ödeme — rezervasyon düşmüşken onay gelirse (DOMAIN §4)', 
     expect(outcome).toMatchObject({ status: 'ok', action: 'refunded' });
     const cancelled = await orders.getById(orderId);
     expect(cancelled?.status).toBe('cancelled');
-    // **SEBEP YAZILIR (07.14) ve müşteriye kurulan cümle buna bağlı:** bu dalda para GERÇEKTEN
-    // çekildi ve geri verildi. Sebep gelmeden onay ekranı "tahsilat yapılmadı" diyordu — üç yolun
-    // ikisinde doğru, burada yanlış. `paymentStatus` ayırt etmiyor, çünkü bu dalda tahsilat hiç
-    // yazılmıyor ve durum `pending` kalıyor; test o ayrımın sebepten geldiğini çiviliyor.
+    // Sebep yazılır, çünkü bu dalda para gerçekten çekilip geri verildi; `paymentStatus` ayırt etmez, tahsilat hiç yazılmadığı
+    // için durum `pending` kalır ve ayrım sebepten gelir.
     expect(cancelled?.cancelReason).toBe('out_of_stock');
     expect(cancelled?.paymentStatus).toBe('pending');
     // İade DAMGASI da düşer: ekranın "para geri verildi mi" sorusu buradan cevaplanıyor.
@@ -175,18 +170,16 @@ describe('geç ödeme — rezervasyon düşmüşken onay gelirse (DOMAIN §4)', 
   });
 
   it('ZATEN İPTAL siparişe geç gelen ödeme de damgalanır — sebep DEĞİŞMEZ', async () => {
-    // 07.14'ün kapanmayan yarısı buydu: bu dal parayı iade ediyor ama hiçbir iz bırakmıyordu.
-    // Sipariş `superseded` diye iptal edilmiş; sebebi `out_of_stock`a çevirmek YALAN olurdu
-    // (stok kalmıştı), sebepsiz bırakmak da ekrana "tahsilat yapılmadı" dedirtiyordu — oysa para
-    // çekilmiş ve geri verilmişti. İki soru ayrı, iki kolon ayrı.
+    // Ödeme penceresi kapanınca iptal edilen taslağa geç ödeme gelir: sebebi `out_of_stock`a çevirmek yalan, sebepsiz bırakmak
+    // "tahsilat yapılmadı" dedirtirdi; para geri verildiğini damga söyler.
     const orderId = await pendingOrder(2, { reserve: false });
-    await orders.cancel(orderId, 'draft', null, 'superseded');
+    await orders.cancel(orderId, 'draft', null, 'payment_failed');
 
     const outcome = await handleStripeEvent(paidEvent(orderId, 2000), stripeAccount, noFees);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'refunded' });
     const after = await orders.getById(orderId);
-    expect(after?.cancelReason).toBe('superseded');
+    expect(after?.cancelReason).toBe('payment_failed');
     expect(after?.providerRefundedAt).not.toBeNull();
   });
 });
@@ -240,9 +233,8 @@ describe('oturum süresi dolarsa', () => {
 });
 
 /*
-  STRIPE MUHASEBESİ (12.14 · kullanıcı kararı 13.09: ücret ödeme başına, payout otomatik).
-  Sınanan kural: havuza brüt girer, komisyon oradan çıkar, payout bankaya transferdir — üçü yazılınca
-  defterdeki havuz bakiyesi gerçek Stripe bakiyesine eşittir. Sağlayıcıya sorulan iki şey sahte port.
+  Stripe muhasebesi: havuza brüt girer, komisyon oradan çıkar, payout bankaya transferdir; üçü yazılınca defterdeki havuz bakiyesi
+  gerçek Stripe bakiyesine eşittir. Sağlayıcıya sorulan iki şey sahte port.
 */
 describe('Stripe muhasebesi — ücret ve payout (12.14)', () => {
   const movements = new MoneyMovementService(db);
@@ -311,7 +303,7 @@ describe('Stripe muhasebesi — ücret ve payout (12.14)', () => {
     expect((await feeRows()).map((row) => row.amountCents).sort()).toEqual([25, 61]);
     // +2000 − 61 − 25 − 1914 = 0: defterdeki havuz, Stripe'ın gerçek bakiyesi.
     expect((await new AccountService(db).balance(stripeAccount)).balanceCents).toBe(0);
-    // Banka ekstresi bu ucu karşılayabilir (12.13): uç bekliyor.
+    // Banka ekstresi bu ucu karşılayabilir: uç bekliyor.
     expect((await movements.listTransferLegsAwaiting(bankAccount)).map((leg) => leg.id)).toContain(transfers[0]!.id);
 
     // Aynı payout yeni bir olay kimliğiyle gelirse hiçbir satır tekrarlanmaz — karar veritabanının.

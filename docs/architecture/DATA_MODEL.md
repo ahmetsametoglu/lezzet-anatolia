@@ -110,7 +110,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `movement_direction`: in, out
 - `movement_source`: manual, bank_import, system *(`system` = webhook, kapıda tahsilat, hızlı satış, payout — sistemin kendi yazdığı satır)*
 - `movement_type`: order_payment, order_refund, purchase, expense, transfer, capital, misc
-- `order_cancel_reason`: payment_failed, superseded, out_of_stock, customer, staff
+- `order_cancel_reason`: payment_failed, out_of_stock, customer, staff
 - `order_source`: web, whatsapp, messenger, instagram, door, manual
 - `order_status`: draft, confirmed, preparing, ready, out_for_delivery, delivered, completed, cancelled, returned
 - `payment_method`: online, cash, card, bank_transfer

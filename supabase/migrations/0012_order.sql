@@ -10,10 +10,10 @@ create type order_status as enum (
 create type order_source as enum ('web', 'whatsapp', 'messenger', 'instagram', 'door', 'manual');
 create type payment_status as enum ('pending', 'paid', 'partial', 'refunded');
 /**
- * İptalin sebebi serbest metin değildir, çünkü ekran ona göre farklı cümle kurar; ayrım paranın yolunu izler: `payment_failed` ve `superseded` para çekilmedi, `out_of_stock` çekildi ve iade edildi.
+ * İptalin sebebi serbest metin değildir, çünkü ekran ona göre farklı cümle kurar; ayrım paranın yolunu izler: `payment_failed` para çekilmedi, `out_of_stock` çekildi ve iade edildi.
  * `customer` müşterinin, `staff` operasyonun iptalidir.
  */
-create type order_cancel_reason as enum ('payment_failed', 'superseded', 'out_of_stock', 'customer', 'staff');
+create type order_cancel_reason as enum ('payment_failed', 'out_of_stock', 'customer', 'staff');
 -- `on_account` (vadeli) BU LİSTEDE DEĞİL: vade bir yöntem değil, siparişin bayrağıdır (DOMAIN §7).
 create type payment_method as enum ('online', 'cash', 'card', 'bank_transfer');
 -- Mal müşteriye nasıl ulaşır: bizim aracımız · taşıyıcı · müşterinin kendisi (`pickup`: yerinde satışta mal
@@ -41,7 +41,7 @@ create table public.order (
   -- iade edilen siparişte para çekilip geri verilmiştir ve `payment_status` bunu ayırmaz.
   cancel_reason order_cancel_reason,
   -- Sağlayıcıya iade damgası: sebepten ayrı soru ("para çekilip geri verildi mi"), webhook'un geç ödeme iadesinde
-  -- sebep `superseded` kalırken para dönmüştür. Tarih, çünkü destek konuşmasının ilk sorusu "ne zaman"dır.
+  -- sebep `payment_failed` kalırken para dönmüştür. Tarih, çünkü destek konuşmasının ilk sorusu "ne zaman"dır.
   provider_refunded_at timestamptz,
   -- Sağlayıcıdaki ödeme kimliği (Stripe PaymentIntent): webhook gelmezse ödeme sayfası ve zamanlayıcı "ödendi mi"
   -- diye bununla sorar, yeni denemede eski ödeme iptal edilir. Kısmi unique: bir ödeme tek siparişe bağlanır.
