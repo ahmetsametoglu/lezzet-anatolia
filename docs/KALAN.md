@@ -13,10 +13,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 
 Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en sonda.
 
-- [ ] (K.49) [hedef: deploy] Tarayıcı bildiriminin VAPID anahtar çifti (`NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY` · `WEB_PUSH_PRIVATE_KEY`)
-  sunucuda web, backend ve mobile-api ortamlarına aynı değerle yazılacak; kaynak yerel `apps/web/.env.local`, değer görülmeden
-  taşınır. Açık anahtar derlemede sayfaya gömüldüğü için web derlemesinden önce ortamda olmalı; yoksa hesap sayfasında bildirim
-  kartı çizilmez, tarayıcı kanalı yeteneksiz kalır ve sipariş haberi yalnız e-postayla gider.
 - [ ] (K.42) [hedef: web] Yasal metinlerin içeriği avukata (dil düzeltmesi yapıldı, içerik değişmedi — `packages/i18n/src/customer/legal.json`):
   cayma hakkı bütün gıdalara kapalı yazılı, istisna yalnız çabuk bozulana; raf ömürlü kargoda 14 gün, bilgilendirme ve örnek form
   (L221-28 4°, L221-5 · BGB §312g) · tüketici arabulucusu yok (L612-1) · Almanya'daki tüketiciye Rome I md. 6 şerhi · yasal garanti
