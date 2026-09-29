@@ -12,7 +12,7 @@ import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { AppNotificationKind, NotificationTargetType, StaffRole } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ringNotificationsBell, ringStaffNotificationsBell } from '../realtime/bell';
-import { listSendablePushTokens } from './devices';
+import { listSendablePushTargets, prunePushTargets } from './devices';
 
 /*
   Her olay önce kayda yazılır (zil, okundu hâli ve teslim defteri onun öznesidir), sonra kanala gider; gönderim düşerse satır kalır,
@@ -72,15 +72,17 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
   }
 
   /*
-    Jetonlar tek yerde doldurulur, çünkü sürücü DB bilmez ve her çağırana jeton getirtmek unutulan gün push'u sessizce düşürürdü.
+    Cihazlar tek yerde doldurulur, çünkü sürücü DB bilmez ve her çağırana cihaz getirtmek unutulan gün push'u sessizce düşürürdü.
     Zile düşmeyen olayda sorgu hiç atılmaz: push da bir zildir.
   */
+  // Müşteri bildirimi yalnız müşteri uygulamasının cihazlarına gider.
+  const targets = meta.inApp && input.customerId ? await listSendablePushTargets(db, input.customerId, 'customer') : null;
   const recipient: NotifyRecipient =
-    meta.inApp && input.customerId
+    targets
       ? {
           ...input.recipient,
-          // Müşteri bildirimi yalnız müşteri uygulamasının jetonlarına gider.
-          pushTokens: await listSendablePushTokens(db, input.customerId, 'customer'),
+          pushTokens: targets.native,
+          webPush: targets.web,
           // Dokunuşun adresi — bildirime basan kullanıcı doğru ekrana insin (sürücü künyesi).
           pushData: {
             kind: input.event,
@@ -92,6 +94,16 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
       : input.recipient;
 
   const results = await (opts.notifier ?? defaultNotifier()).send(input.event, recipient, input.data);
+
+  const gone = results.flatMap((result) => (result.status === 'skipped' ? [] : (result.gone ?? [])));
+  if (gone.length > 0) {
+    try {
+      await prunePushTargets(db, gone);
+    } catch (err) {
+      // Silinemeyen abonelik bir sonraki haberde yine 410 döner ve yine denenir; haber bu yüzden geri alınmaz.
+      await captureError(err, { source: SOURCES.applicationNotification, level: 'warning', context: { flow: 'notification/prune', count: gone.length } });
+    }
+  }
 
   if (rowId) {
     const deliveries = new NotificationDeliveryService(db);

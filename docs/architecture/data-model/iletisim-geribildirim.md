@@ -220,16 +220,16 @@ Bildirim OLGUsu ile kanala TESLİMİ ayrı kayıtlardır: BELGE sınıfı "e-pos
 **Kararlar**
 
 - **`notification_id`** — **cascade**
-- **`channel`** — küme `NotifyChannel`dan türer (+ ileride `push`); `whatsapp_api` 15.11 kapanana dek yazılamaz — sürücü `supports=false`
+- **`channel`** — küme `NotifyChannel`dan türer: `email` · `wa_link` · `whatsapp_api` · `push` (native) · `web_push` (tarayıcı); `whatsapp_api` sürücüsü `supports=false` olduğu için yazılamaz
 - **`status`** — sent · skipped · error (NotifyResult üçlüsü)
 - **`reason`** — skipped/error sebebi; sent'te null
-- **`ref`** — sağlayıcı referansı — "gerçekten ne gitti"nin izi. Push'ta JSON eşleme `[{token, ticket}]`: makbuz turu hangi biletin hangi CİHAZA ait olduğunu bilmek zorunda (çürük jetonu silecek olan o)
-- **`receipt_status`** — MAKBUZ (14.16): Expo teslimi asenkron söyler — gönderimde dönen BİLETTİR, tutanak sonradan sorulur. `ok` · hata adı (`DeviceNotRegistered`…) · `expired` (24s pencere kaçtı) · `unparseable`. `null` = henüz sorulmadı
+- **`ref`** — sağlayıcı referansı — "gerçekten ne gitti"nin izi. Push'ta JSON eşleme `[{token, ticket}]`: makbuz turu hangi biletin hangi CİHAZA ait olduğunu bilmek zorunda (çürük jetonu silecek olan o). `web_push`ta boş: tarayıcı servisi cevabı gönderim anında verir, 404/410 dönen abonelik aynı anda silinir
+- **`receipt_status`** — MAKBUZ (yalnız `push`): Expo teslimi asenkron söyler — gönderimde dönen BİLETTİR, tutanak sonradan sorulur. `ok` · hata adı (`DeviceNotRegistered`…) · `expired` (24s pencere kaçtı) · `unparseable`. `null` = henüz sorulmadı
 - **`receipt_checked_at`** — teslim satırının değişebilen TEK yüzü — gönderim gerçeği donuk kalır (update şeması yalnız makbuzu açar)
 
 ## PushDevice (cihaz jetonu)
 
-Push'un tek DB ayağı (14.14, migration 0050): "bu kişiye hangi cihazlardan ulaşılır". Sürücü ve makbuz cron'u 14.16'da; izin akışı/yönlendirme mobil şeritte. **Jeton bir ADRES değil YETKİDİR** (o cihaza bildirim gösterme) — hiçbir uçtan geri okutulmaz, URL'e yazılmaz (uçlar POST, jeton gövdede).
+Cihaz bildiriminin tek DB ayağı (migration 0050): "bu kişiye hangi cihazlardan ulaşılır" — native uygulamanın Expo jetonu ya da tarayıcı aboneliği. **Jeton bir ADRES değil YETKİDİR** (o cihaza bildirim gösterme) — hiçbir uçtan geri okutulmaz, URL'e yazılmaz (uçlar POST, jeton gövdede).
 
 <!-- alanlar:push_device -->
 | Kolon | Tip | Null | Varsayılan |
@@ -240,6 +240,8 @@ Push'un tek DB ayağı (14.14, migration 0050): "bu kişiye hangi cihazlardan ul
 | `platform` | text |  |  |
 | `app` | text |  |  |
 | `disabled_at` | timestamptz | • |  |
+| `p256dh` | text | • |  |
+| `auth` | text | • |  |
 | `last_seen_at` | timestamptz |  | `now()` |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
@@ -247,13 +249,14 @@ Push'un tek DB ayağı (14.14, migration 0050): "bu kişiye hangi cihazlardan ul
 **Kararlar**
 
 - **`profile_id`** — sahip — müşteri de personel de (operasyon kabuğu da push alacak; ad bu yüzden `customer_id` değil); **cascade**
-- **`token`** — **unique, TABLO GENELİ** — cihaz başına tek sahip. Kayıt RPC'si (`register_push_device`) çakışmada SAHİBİ DEVREDER: son giren kazanır, cihaz fiziksel olarak onun elindedir. Devir olmasaydı aile telefonunda önceki hesabın bildirimi sonrakine düşerdi
-- **`platform`** — `ios` · `android` — `web` BİLEREK yok (KARARLAR 26.08: müşteri yüzeyinde web push yapılmıyor); kısıt veride
-- **`app`** — `customer` · `operations` — jetonun geldiği native uygulama (21.311). Aynı kişi iki uygulamayı da kurabilir ve her kurulumun jetonu ayrıdır; müşteri gönderimi yalnız `customer` jetonlarını okur, yoksa müşteri bildirimi personelin operasyon uygulamasına da düşerdi. Varsayılan yok: uygulamasını söylemeyen kayıt yazılamaz
+- **`token`** — Expo jetonu ya da tarayıcı aboneliğinin adresi (endpoint); **unique, TABLO GENELİ** — cihaz başına tek sahip. Kayıt RPC'si (`register_push_device`) çakışmada SAHİBİ DEVREDER: son giren kazanır, cihaz fiziksel olarak onun elindedir. Devir olmasaydı aile telefonunda önceki hesabın bildirimi sonrakine düşerdi
+- **`platform`** — `ios` · `android` · `web`; kısıt veride. Native kayıt ucu yalnız ilk ikisini kabul eder (`PushPlatformEnum`)
+- **`app`** — `customer` · `operations` — jetonun geldiği uygulama. Aynı kişi iki uygulamayı da kurabilir ve her kurulumun jetonu ayrıdır; müşteri gönderimi yalnız `customer` jetonlarını okur, yoksa müşteri bildirimi personelin operasyon uygulamasına da düşerdi. Varsayılan yok: uygulamasını söylemeyen kayıt yazılamaz
 - **`disabled_at`** — OS bildirim İZNİ kapalı (uygulamanın açılış raporu) — dolu ise sürücü cihazı yeteneksiz sayar ve sıra maile düşer. İzin karası: kapalı cihaza "gönderdim" demek sessiz kara deliktir
-- **`last_seen_at`** — bakım damgası ("kayıt bayat mı") — karşılaştırılan bir ölçüt değil
+- **`p256dh`** · **`auth`** — tarayıcı aboneliğinin iki şifreleme anahtarı; bildirim gövdesi yalnız o tarayıcının açabileceği biçimde şifrelenir. Yalnız `web` satırında dolu (`push_device_web_keys` kısıtı)
+- **`last_seen_at`** — uygulama her açılışta tazeler. Bir haber tek cihaz sınıfına gider: son 30 günde görülmüş native uygulama varsa ona, yoksa tarayıcı aboneliklerine (`choosePushTargets`, gün sayısı parametrik)
 
-**Çıkış (logout) ZORUNLU adım:** jeton silinmezse önceki hesabın bildirimi sonraki oturum sahibine düşer. Silme sahiplik süzgeçli (`token + profile_id`): devrolmuş cihazın gecikmiş çıkışı yeni sahbin kaydını sökemez. 0037 silme akışına dahil.
+**Çıkış (logout) ZORUNLU adım:** jeton silinmezse önceki hesabın bildirimi sonraki oturum sahibine düşer. Silme sahiplik süzgeçli (`token + profile_id`): devrolmuş cihazın gecikmiş çıkışı yeni sahibin kaydını sökemez. Web'de çıkış eylemi tarayıcının aboneliğini `lz_web_push` çerezinden bulup siler. 0037 silme akışına dahil.
 
 ## AnalyticsEvent (analitik olayı)
 

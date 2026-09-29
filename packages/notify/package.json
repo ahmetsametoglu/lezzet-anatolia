@@ -15,12 +15,14 @@
   "dependencies": {
     "@lezzet/brand": "workspace:*",
     "@lezzet/email": "workspace:*",
-    "@lezzet/types": "workspace:*"
+    "@lezzet/types": "workspace:*",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@lezzet/typescript-config": "workspace:*",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.7",
+    "@types/web-push": "^3.6.4",
     "react": "^19.0.0",
     "typescript": "^5.7.2"
   }

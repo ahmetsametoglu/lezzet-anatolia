@@ -76,6 +76,7 @@ export * from './messaging/message-alert';
 export * from './messaging/default-handler';
 export * from './messaging/mcp-redirect';
 export * from './messaging/notification-preferences';
+export * from './messaging/push-targets';
 export * from './messaging/secret-masking';
 export * from './messaging/service-window';
 export * from './feedback/feedback-score';

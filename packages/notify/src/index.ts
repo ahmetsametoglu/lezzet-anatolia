@@ -15,6 +15,7 @@ export { createNotifier, defaultNotifier, type Notifier } from './notifier';
 export { formatMessageDate } from './format';
 export { emailDriver } from './drivers/email.driver';
 export { pushDriver, type PushDriverOptions } from './drivers/push.driver';
+export { webPushDriver, type WebPushDriverOptions } from './drivers/web-push.driver';
 export { waLinkDriver, type WaLinkDriverOptions } from './drivers/wa-link.driver';
 export { whatsappApiDriver } from './drivers/whatsapp-api.driver';
 // Cloud API istemcisi: gönderimin HTTP yarısı. Sahtesi `@lezzet/notify/testing`de.

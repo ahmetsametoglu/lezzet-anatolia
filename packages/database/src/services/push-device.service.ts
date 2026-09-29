@@ -3,11 +3,12 @@ import {
   PushDeviceInsertSchema,
   PushDeviceSchema,
   PushDeviceUpdateSchema,
+  type DevicePlatform,
   type PushApp,
   type PushDevice,
   type PushDeviceInsert,
   type PushDeviceUpdate,
-  type PushPlatform,
+  type WebPushSubscription,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 
@@ -21,13 +22,22 @@ export class PushDeviceService extends BaseDbService<PushDevice, PushDeviceInser
    * Çakışmada sahip devreder (son giren kazanır, cihaz onun elindedir). Önce silip sonra yazmak iki deyimdi ve arada düşen süreç
    * jetonu sahipsiz bırakırdı.
    */
-  async register(input: { profileId: string; token: string; platform: PushPlatform; app: PushApp; enabled: boolean }): Promise<PushDevice> {
+  async register(input: {
+    profileId: string;
+    token: string;
+    platform: DevicePlatform;
+    app: PushApp;
+    enabled: boolean;
+    keys?: WebPushSubscription['keys'] | null;
+  }): Promise<PushDevice> {
     const rows = await this.executeRpc<unknown[]>('register_push_device', {
       p_profile_id: input.profileId,
       p_token: input.token,
       p_platform: input.platform,
       p_app: input.app,
       p_enabled: input.enabled,
+      p_p256dh: input.keys?.p256dh ?? null,
+      p_auth: input.keys?.auth ?? null,
     });
     const row = this.parseRows(rows ?? [])[0];
     if (!row) throw new Error('register_push_device boş döndü');

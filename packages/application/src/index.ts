@@ -158,7 +158,7 @@ export {
 } from './notification/read';
 export type { NotificationFeed } from './notification/read';
 // Cihaz jetonu: kayıt sahip devriyle, çıkışta silme zorunlu.
-export { listSendablePushTokens, registerPushDevice, unregisterPushDevice } from './notification/devices';
+export { listSendablePushTargets, registerPushDevice, registerWebPushSubscription, unregisterPushDevice } from './notification/devices';
 
 // ── Talep bildirimleri + AI destek çekirdeği: özerk AI cevabı personel cevabıyla aynı maili doğurur ──
 export { notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './ticket/notify';

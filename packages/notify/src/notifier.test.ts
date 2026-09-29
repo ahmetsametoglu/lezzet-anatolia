@@ -142,6 +142,17 @@ describe('sınıf planı — push geldikten sonra', () => {
     expect(calls).toEqual(['push']);
   });
 
+  it('BELGE: tarayıcı bildirimi de e-postanın yanına eklenir', async () => {
+    const webFake = {
+      channel: 'web_push' as const,
+      supports: (_event: NotifyEventName, r: NotifyRecipient) => (r.webPush?.length ?? 0) > 0,
+      send: async () => ({ status: 'sent' as const, channel: 'web_push' as const, ref: null }),
+    };
+    const abonelikliMail: NotifyRecipient = { ...withEmail, webPush: [{ endpoint: 'https://fcm.googleapis.com/fcm/send/x', keys: { p256dh: 'p', auth: 'a' } }] };
+    const results = await createNotifier([pushFake([]), webFake, ...drivers]).send('order_confirmed', abonelikliMail, data);
+    expect(results.map((r) => r.channel).sort()).toEqual(['email', 'web_push']);
+  });
+
   it('BELGE + e-postasız: wa_link yedeği KORUNUR, push ilave', async () => {
     const results = await createNotifier([pushFake([]), ...drivers]).send('order_confirmed', jetonluTelefon, data);
     expect(results.map((r) => r.channel).sort()).toEqual(['push', 'wa_link']);

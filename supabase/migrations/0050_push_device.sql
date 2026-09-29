@@ -5,19 +5,24 @@
 create table public.push_device (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid not null references public.user_profiles (id) on delete cascade,
-  -- Expo jetonu. Tekillik kişi başına değil tablo geneli, çünkü aynı fiziksel cihaz ancak bir hesabın kulağı olabilir.
+  -- Expo jetonu ya da tarayıcı aboneliğinin adresi. Tekillik kişi başına değil tablo geneli, çünkü aynı fiziksel cihaz ancak bir
+  -- hesabın kulağı olabilir.
   token text not null unique,
-  -- Yalnız native platformlar; kısıt veride, yanlış platform sessizce yazılamaz.
-  platform text not null check (platform in ('ios', 'android')),
+  -- Kısıt veride, yanlış platform sessizce yazılamaz.
+  platform text not null check (platform in ('ios', 'android', 'web')),
   -- Müşteri ve operasyon iki ayrı uygulama; kolon olmasaydı müşteri bildirimi personelin operasyon uygulamasına da düşerdi.
   -- Varsayılan yok, çünkü sessiz yanlış sınıflama kolonun hiç olmamasından kötüdür.
   app text not null check (app in ('customer', 'operations')),
   -- İzin kapatılınca jeton canlı kalır ve Expo "gönderdim" der; uygulama her açılışta izni raporlar ve kapalı cihaz yeteneksiz
   -- sayılır. `null` = açık.
   disabled_at timestamptz,
-  -- Son görülme anı; uygulama her açılışta tazeler.
+  -- Tarayıcı aboneliğinin iki şifreleme anahtarı: bildirim gövdesi yalnız o tarayıcının açabileceği biçimde şifrelenir.
+  p256dh text,
+  auth text,
+  -- Son görülme anı; uygulama her açılışta tazeler. Uzun süre görülmeyen native cihaz yerine haber tarayıcıya gider.
   last_seen_at timestamptz not null default now(),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint push_device_web_keys check ((platform = 'web') = (p256dh is not null and auth is not null))
 );
 
 -- "Bu kişinin kulakları" — gönderim anının tek okuması.
@@ -41,26 +46,30 @@ create or replace function public.register_push_device(
   p_token text,
   p_platform text,
   p_app text,
-  p_enabled boolean
+  p_enabled boolean,
+  p_p256dh text default null,
+  p_auth text default null
 )
 returns setof public.push_device
 language sql
 security definer
 set search_path = public
 as $$
-  insert into public.push_device (profile_id, token, platform, app, disabled_at)
-  values (p_profile_id, p_token, p_platform, p_app, case when p_enabled then null else now() end)
+  insert into public.push_device (profile_id, token, platform, app, disabled_at, p256dh, auth)
+  values (p_profile_id, p_token, p_platform, p_app, case when p_enabled then null else now() end, p_p256dh, p_auth)
   on conflict (token) do update
     set profile_id  = excluded.profile_id,
         platform    = excluded.platform,
         app         = excluded.app,
         disabled_at = excluded.disabled_at,
+        p256dh      = excluded.p256dh,
+        auth        = excluded.auth,
         last_seen_at = now()
   returning *;
 $$;
 
-revoke all on function public.register_push_device(uuid, text, text, text, boolean) from public, anon, authenticated;
-grant execute on function public.register_push_device(uuid, text, text, text, boolean) to service_role;
+revoke all on function public.register_push_device(uuid, text, text, text, boolean, text, text) from public, anon, authenticated;
+grant execute on function public.register_push_device(uuid, text, text, text, boolean, text, text) to service_role;
 
-comment on function public.register_push_device(uuid, text, text, text, boolean) is
+comment on function public.register_push_device(uuid, text, text, text, boolean, text, text) is
   'Jeton kaydı ve tazelemesi; çakışmada sahip devreder (son giren kazanır, cihaz onun elindedir).';

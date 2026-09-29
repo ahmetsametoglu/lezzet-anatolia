@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { AppNotificationService, NotificationDeliveryService, UserProfileService, serviceDb } from '@lezzet/database';
+import { AppNotificationService, NotificationDeliveryService, PushDeviceService, UserProfileService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { createNotifier, type NotifyDriver, type NotifyRecipient } from '@lezzet/notify';
-import { registerPushDevice } from './devices';
+import { registerPushDevice, registerWebPushSubscription } from './devices';
 import type { TicketNotification, ZoneAvailableNotification } from '@lezzet/types';
 import { dispatchCustomerNotification, dispatchStaffNotification } from './dispatch';
 
@@ -229,6 +229,30 @@ describe('jeton doldurma (14.16)', () => {
     );
 
     expect(goren[0]).toEqual([`ExponentPushToken[disp-${stamp}]`]); // kapalı cihaz da operasyon jetonu da görünmedi
+  });
+
+  it('tarayıcı aboneliği anahtarlarıyla sürücüye ulaşır; taşıyıcının "yok" dediği abonelik silinir', async () => {
+    const id = await musteri('Tarayıcılı', `bild-web-${stamp}@ornek.test`);
+    const subscription = { endpoint: `https://fcm.googleapis.com/fcm/send/disp-${stamp}`, keys: { p256dh: 'p', auth: 'a' } };
+    await registerWebPushSubscription(db, { profileId: id, subscription, app: 'customer' });
+
+    const goren: NotifyRecipient['webPush'][] = [];
+    const casus: NotifyDriver = {
+      channel: 'web_push',
+      supports: () => true,
+      send: async (_e, recipient) => {
+        goren.push(recipient.webPush);
+        return { status: 'error', channel: 'web_push', error: 'gone', gone: [subscription.endpoint] };
+      },
+    };
+    await dispatchCustomerNotification(
+      db,
+      { event: 'ticket_replied', customerId: id, recipient: alici(`bild-web-${stamp}@ornek.test`), data: ticketData },
+      { notifier: createNotifier([casus]) },
+    );
+
+    expect(goren[0]).toEqual([subscription]);
+    expect(await new PushDeviceService(db).findByToken(subscription.endpoint)).toBeNull();
   });
 });
 

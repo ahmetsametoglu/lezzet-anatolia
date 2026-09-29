@@ -1,9 +1,10 @@
 import { brand, companyAddressLine } from '@lezzet/brand';
 import { emailDriver } from './drivers/email.driver';
 import { pushDriver } from './drivers/push.driver';
+import { webPushDriver } from './drivers/web-push.driver';
 import { waLinkDriver } from './drivers/wa-link.driver';
 import { whatsappApiDriver } from './drivers/whatsapp-api.driver';
-import { NOTIFY_EVENT_META } from './types';
+import { DEVICE_CHANNELS, NOTIFY_EVENT_META } from './types';
 import type { NotifyDriver, NotifyEventName, NotifyPayloads, NotifyRecipient, NotifyResult } from './types';
 
 /**
@@ -39,9 +40,9 @@ export function createNotifier(drivers: readonly NotifyDriver[]): Notifier {
       if (opts.all) {
         chosen = usable;
       } else if (NOTIFY_EVENT_META[event].class === 'document') {
-        const push = usable.filter((driver) => driver.channel === 'push');
-        const primary = usable.find((driver) => driver.channel === 'email') ?? usable.find((driver) => driver.channel !== 'push');
-        chosen = [...push, ...(primary ? [primary] : [])];
+        const device = usable.filter((driver) => DEVICE_CHANNELS.includes(driver.channel));
+        const primary = usable.find((driver) => driver.channel === 'email') ?? usable.find((driver) => !DEVICE_CHANNELS.includes(driver.channel));
+        chosen = [...device, ...(primary ? [primary] : [])];
       } else {
         chosen = [usable[0]!];
       }
@@ -59,8 +60,9 @@ const POSTAL_ADDRESS = `${brand.name} · ${companyAddressLine}, France`;
  */
 export function defaultNotifier(): Notifier {
   return createNotifier([
-    // Jetonsuz alıcıda push sürücüsü yeteneksizdir, HABER kendiliğinden maile düşer. BELGE'de sıranın önemi yok, planı sınıf kurar.
+    // Cihazsız alıcıda iki cihaz sürücüsü de yeteneksizdir, HABER kendiliğinden maile düşer. BELGE'de sıranın önemi yok, planı sınıf kurar.
     pushDriver(),
+    webPushDriver(),
     emailDriver({ brandName: brand.name, postalAddress: POSTAL_ADDRESS }),
     waLinkDriver(),
     whatsappApiDriver(),

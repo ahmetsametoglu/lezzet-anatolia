@@ -4,6 +4,7 @@ import type {
   OrderNotification,
   PreferredLanguage,
   TicketNotification,
+  WebPushSubscription,
   ZoneAvailableNotification,
 } from '@lezzet/types';
 
@@ -12,8 +13,12 @@ import type {
  * yetenek bakmasıdır; eşik ve izin hesabı çağıranın işidir.
  */
 
-// Push sırada başta durur: HABER tek kanaldan gider ve en ucuz, en hızlı kanal kazanmalı. BELGE'de e-postanın yerine geçmez, yanına eklenir.
-export type NotifyChannel = 'email' | 'wa_link' | 'whatsapp_api' | 'push';
+// Cihaz bildirimleri (`push` native, `web_push` tarayıcı) sırada başta durur: HABER tek kanaldan gider ve en ucuz, en hızlı kanal
+// kazanmalı. BELGE'de e-postanın yerine geçmez, yanına eklenir.
+export type NotifyChannel = 'email' | 'wa_link' | 'whatsapp_api' | 'push' | 'web_push';
+
+/** Cihaz bildirimi kanalları: BELGE'de e-postanın yanına bunlardan biri eklenir. */
+export const DEVICE_CHANNELS: readonly NotifyChannel[] = ['push', 'web_push'];
 
 /** Olay adı → o olayın taşıdığı veri. Yeni olay buraya eklenir; sürücüler eksik olayı reddeder. */
 export interface NotifyPayloads {
@@ -51,18 +56,20 @@ export interface NotifyRecipient {
   locale: PreferredLanguage;
   /** Gönderilebilir Expo jetonları; izni kapalı cihaz listeye hiç girmez. Sürücü DB bilmediği için jetonu dağıtım kapısı doldurur. */
   pushTokens?: string[];
+  /** Gönderilebilir tarayıcı abonelikleri; dağıtım kapısı native jetonla birlikte doldurmaz, bir haber tek cihaz sınıfına gider. */
+  webPush?: WebPushSubscription[];
   /** Bildirime dokununca açılacak yerin adresi (`kind`, hedef, payload); kişisel içerik girmez. */
   pushData?: Record<string, unknown>;
 }
 
 /**
- * `skipped` gönderilecek bir şey yoktu demektir (adres ya da sağlayıcı anahtarı yok) ve hata değildir, yoksa yerelde her akış kırmızı
- * yanardı. `error`da çağıran loglar ama işi geri almaz: kaydedilmiş sipariş mail yüzünden iptal edilmez.
+ * `skipped` gönderilecek bir şey yoktu demektir (adres ya da sağlayıcı anahtarı yok) ve hata değildir; `error`da çağıran loglar ama
+ * işi geri almaz. `gone` taşıyıcının "bu cihaz artık yok" dediği adreslerdir: sürücü DB bilmediği için silmek çağıranın işidir.
  */
 export type NotifyResult =
-  | { status: 'sent'; channel: NotifyChannel; ref: string | null }
+  | { status: 'sent'; channel: NotifyChannel; ref: string | null; gone?: string[] }
   | { status: 'skipped'; channel: NotifyChannel; reason: string }
-  | { status: 'error'; channel: NotifyChannel; error: string };
+  | { status: 'error'; channel: NotifyChannel; error: string; gone?: string[] };
 
 export interface NotifyDriver {
   channel: NotifyChannel;
