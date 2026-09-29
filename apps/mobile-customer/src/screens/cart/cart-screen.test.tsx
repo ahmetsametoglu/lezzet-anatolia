@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 
+import type { MeAddress } from '@/lib/api/addresses';
+import { addressFixture } from '@/screens/customer-kit/address-fixture';
 import type { CartState } from '@/screens/customer-kit/cart-store';
 import { CartScreen } from './cart-screen';
 import { cartView, cartViewBundleLine, cartViewLine, cartWith } from './cart-view-fixture';
@@ -46,6 +48,23 @@ jest.mock('@/screens/customer-kit/cart-store', () => ({
   ...jest.requireActual<object>('@/screens/customer-kit/cart-store'),
   useCart: () => mockCart,
 }));
+
+/* Ödemeye giriş yapmış ve adresi belli müşteri geçer; testler varsayılan olarak o müşteriyi kurar, kapının hâllerini ayrı testler değiştirir. */
+let mockMeStatus: 'ready' | 'guest' = 'ready';
+let mockAddress: MeAddress | null = null;
+jest.mock('@lezzet/mobile-kit/src/lib/me/use-me.hook', () => ({
+  useMe: () => ({ status: mockMeStatus, me: null, refresh: () => undefined }),
+}));
+jest.mock('@/screens/customer-kit/purchase-place', () => ({
+  ...jest.requireActual<object>('@/screens/customer-kit/purchase-place'),
+  usePurchasePlace: () => ({ address: mockAddress, postalCode: mockAddress?.postalCode ?? null }),
+}));
+jest.mock('@/screens/customer-kit/use-pickup-points.hook', () => ({ usePickupPoints: () => [] }));
+
+beforeEach(() => {
+  mockMeStatus = 'ready';
+  mockAddress = addressFixture('adres-1', '67380', true);
+});
 
 const t = messages.tr;
 
@@ -306,5 +325,31 @@ describe('CartScreen — düğme hangi siparişi açıyor', () => {
     await fireEvent.press(screen.getByTestId('cart-checkout'));
 
     expect(mockPush).toHaveBeenCalledWith('/checkout');
+  });
+});
+
+// Giriş yapmamış ya da adresi belli olmayan müşteri ödemeye geçebilirse kırmızıya döner.
+describe('CartScreen — giriş ve adres sepette sorulur', () => {
+  it('misafire giriş kartı çıkar, düğme kilitli ve sebebi barda yazılı', async () => {
+    mockMeStatus = 'guest';
+    mockAddress = null;
+    mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local')]));
+
+    await render(<CartScreen />);
+
+    expect(screen.getByTestId('cart-guest')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: t.checkout })).toBeDisabled();
+    expect(screen.getByTestId('cart-bar-block')).toHaveTextContent(t.barBlock.login);
+  });
+
+  it('adresi olmayan girişli müşteriye adres kartı çıkar, düğme kilitli', async () => {
+    mockAddress = null;
+    mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local')]));
+
+    await render(<CartScreen />);
+
+    expect(screen.getByTestId('cart-address-empty')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: t.checkout })).toBeDisabled();
+    expect(screen.getByTestId('cart-bar-block')).toHaveTextContent(t.barBlock.address);
   });
 });

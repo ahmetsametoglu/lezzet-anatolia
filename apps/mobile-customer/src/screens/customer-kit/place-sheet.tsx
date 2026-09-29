@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { addressDefaultsOf } from './address-form';
 import { AddressPickerSheet } from './address-picker-sheet';
-import { AddressSheet, type AddressSheetTarget } from './address-sheet';
+import { AddressSheet } from './address-sheet';
 import { selectDeliveryAddress, selectPickupWarehouse, useSelectedPickupWarehouse } from './delivery-address-store';
 import { PostalCodeSheet } from './postal-code-sheet';
 import { usePurchasePlace } from './purchase-place';
@@ -24,12 +24,12 @@ interface PlaceSheetProps {
  * çünkü girişli müşterinin yeri adresidir ve serbest bir posta kodu onu ikinci bir yere bölerdi.
  */
 export function PlaceSheet({ visible, onClose, showZonesLink = false, testID }: PlaceSheetProps) {
-  const { status, me } = useMe();
-  const { addresses, publish } = useAddresses(false);
+  const { status } = useMe();
+  const { addresses } = useAddresses(false);
   const { address, postalCode } = usePurchasePlace();
   const pickupPoints = usePickupPoints(status === 'ready' && address !== null);
   const selectedPickupId = useSelectedPickupWarehouse();
-  const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
+  const [adding, setAdding] = useState(false);
   const idOf = (part: string) => (testID === undefined ? undefined : `${testID}-${part}`);
 
   if (address === null) {
@@ -48,24 +48,38 @@ export function PlaceSheet({ visible, onClose, showZonesLink = false, testID }: 
         onSelectPickup={selectPickupWarehouse}
         onAddNew={() => {
           onClose();
-          setAddressSheet({ editing: null });
+          setAdding(true);
         }}
         onClose={onClose}
         testID={idOf('picker')}
       />
-      {/* Yazılan adres hem listeye girer hem seçili olur: müşteri onu az önce yeri için yazdı. */}
-      <AddressSheet
-        target={addressSheet}
-        addresses={addresses}
-        onClose={() => setAddressSheet(null)}
-        onSaved={(next, savedId) => {
-          publish(next);
-          selectDeliveryAddress(savedId);
-          setAddressSheet(null);
-        }}
-        defaults={addressDefaultsOf(me)}
-        testID={idOf('address')}
-      />
+      <NewAddressSheet visible={adding} onClose={() => setAdding(false)} testID={idOf('address')} />
     </>
+  );
+}
+
+interface NewAddressSheetProps {
+  visible: boolean;
+  onClose: () => void;
+  testID?: string;
+}
+
+/** Yeni adres çekmecesi: yazılan adres hem listeye girer hem seçili olur, çünkü müşteri onu az önce yeri için yazdı. */
+export function NewAddressSheet({ visible, onClose, testID }: NewAddressSheetProps) {
+  const { me } = useMe();
+  const { addresses, publish } = useAddresses(false);
+  return (
+    <AddressSheet
+      target={visible ? { editing: null } : null}
+      addresses={addresses}
+      onClose={onClose}
+      onSaved={(next, savedId) => {
+        publish(next);
+        selectDeliveryAddress(savedId);
+        onClose();
+      }}
+      defaults={addressDefaultsOf(me)}
+      testID={testID}
+    />
   );
 }

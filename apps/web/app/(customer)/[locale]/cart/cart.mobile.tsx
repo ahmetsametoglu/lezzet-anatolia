@@ -56,7 +56,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
   const copy = cartMessages[locale];
   const { view, ready, failed, reload, applyCoupon, clearCoupon, addSkipped, placeChange, dismissPlaceChange } = useCart();
   const { address, place, setPanelOpen } = useDeliveryPlace();
-  const gate = useCheckoutGate(t);
+  const gate = useCheckoutGate(locale);
   const [couponOpen, setCouponOpen] = useState(false);
   // Kapanış SABİT bir işlev: `Dialog` odak ve kaydırma kilidini ona bağlı kuruyor; her karede yeni işlev kurulumu tazelerdi.
   const closeCoupon = useCallback(() => setCouponOpen(false), []);

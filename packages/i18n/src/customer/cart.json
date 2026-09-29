@@ -89,7 +89,10 @@
     "blocked": "Devam etmek için tükenen ya da satışa kapanan ürünü sepetten çıkarın.",
     "barBlock": {
       "minimum": "Asgari sepete {missing} eksik",
-      "blocked": "Sepette şu an satılamayan bir ürün var"
+      "blocked": "Sepette şu an satılamayan bir ürün var",
+      "login": "Devam etmek için giriş yapın",
+      "address": "Devam etmek için bir teslimat adresi seçin",
+      "unreachable": "Bu adrese şu an gönderemiyoruz — başka bir teslimat adresi seçin"
     },
     "unresolved": {
       "loading": "Sepetiniz getiriliyor",
@@ -104,7 +107,6 @@
       "eyebrow": "TESLİMAT ADRESİ",
       "change": "Değiştir",
       "note": "Sepetiniz teslimat adresinize göre hesaplandı.",
-      "none": "Henüz adres eklemediniz — şimdilik {code} posta koduna göre gösteriyoruz.",
       "pickupLine": "Depodan teslim · {name}",
       "pickupNote": "Sepetiniz bu deponun stoğuna göre hesaplandı. Teslim saatini telefonla kararlaştırın."
     },
@@ -118,6 +120,16 @@
       "price": "{name} fiyatı değişti — {from} yerine {to}",
       "dismiss": "Anladım",
       "note": "Hiçbir ürün silinmedi. Fırsat fiyatları bölgedeki stoğa bağlıdır ve teslimat yerine göre değişebilir; normal fiyatlar ise her yerde aynıdır."
+    },
+    "guest": {
+      "title": "Siparişi tamamlamak için giriş yapın",
+      "body": "Şifre yok — birkaç saniyede giriş yapın, kaldığınız yerden devam edin.",
+      "cta": "Giriş yap ve devam et"
+    },
+    "addressEmpty": {
+      "title": "Henüz kayıtlı adresiniz yok. Nereye getirelim?",
+      "body": "Adresinizi buradan ekleyin — siparişinizden çıkmanıza gerek yok.",
+      "cta": "＋ Yeni adres ekle"
     }
   },
   "fr": {
@@ -210,7 +222,10 @@
     "blocked": "Retirez l'article épuisé ou retiré de la vente pour continuer.",
     "barBlock": {
       "minimum": "Il manque {missing} pour le panier minimum",
-      "blocked": "Un article de votre panier n'est pas disponible"
+      "blocked": "Un article de votre panier n'est pas disponible",
+      "login": "Connectez-vous pour continuer",
+      "address": "Choisissez une adresse de livraison pour continuer",
+      "unreachable": "Nous ne pouvons pas livrer à cette adresse pour le moment — choisissez une autre adresse de livraison"
     },
     "unresolved": {
       "loading": "Chargement de votre panier",
@@ -225,7 +240,6 @@
       "eyebrow": "ADRESSE DE LIVRAISON",
       "change": "Modifier",
       "note": "Votre panier est calculé pour votre adresse de livraison.",
-      "none": "Vous n'avez pas encore d'adresse — nous affichons pour l'instant selon le code postal {code}.",
       "pickupLine": "Retrait à l'entrepôt · {name}",
       "pickupNote": "Votre panier a été évalué selon le stock de l'entrepôt. Convenez de l'heure de retrait par téléphone."
     },
@@ -239,6 +253,16 @@
       "price": "{name} a changé de prix — {to} au lieu de {from}",
       "dismiss": "J'ai compris",
       "note": "Aucun article n'a été supprimé. Les prix promotionnels dépendent du stock local et peuvent varier selon le lieu de livraison ; les prix normaux, eux, sont partout les mêmes."
+    },
+    "guest": {
+      "title": "Connectez-vous pour finaliser votre commande",
+      "body": "Pas de mot de passe — connectez-vous en quelques secondes et reprenez là où vous en étiez.",
+      "cta": "Se connecter et continuer"
+    },
+    "addressEmpty": {
+      "title": "Vous n'avez pas encore d'adresse enregistrée. Où souhaitez-vous être livré ?",
+      "body": "Ajoutez votre adresse ici — pas besoin de quitter votre commande.",
+      "cta": "＋ Ajouter une adresse"
     }
   },
   "de": {
@@ -331,7 +355,10 @@
     "blocked": "Bitte entfernen Sie den ausverkauften oder nicht mehr verkäuflichen Artikel, um fortzufahren.",
     "barBlock": {
       "minimum": "Zum Mindestbestellwert fehlen {missing}",
-      "blocked": "Ein Artikel im Warenkorb ist nicht verfügbar"
+      "blocked": "Ein Artikel im Warenkorb ist nicht verfügbar",
+      "login": "Zum Fortfahren anmelden",
+      "address": "Wählen Sie zum Fortfahren eine Lieferadresse",
+      "unreachable": "An diese Adresse liefern wir derzeit nicht – wählen Sie eine andere Lieferadresse"
     },
     "unresolved": {
       "loading": "Ihr Warenkorb wird geladen",
@@ -346,7 +373,6 @@
       "eyebrow": "LIEFERADRESSE",
       "change": "Ändern",
       "note": "Ihr Warenkorb wurde für Ihre Lieferadresse berechnet.",
-      "none": "Sie haben noch keine Adresse gespeichert – vorerst rechnen wir mit der Postleitzahl {code}.",
       "pickupLine": "Abholung im Lager · {name}",
       "pickupNote": "Ihr Warenkorb wurde anhand des Lagerbestands berechnet. Vereinbaren Sie die Abholzeit telefonisch."
     },
@@ -360,6 +386,16 @@
       "price": "{name} hat einen anderen Preis – {to} statt {from}",
       "dismiss": "Verstanden",
       "note": "Es wurde kein Artikel entfernt. Aktionspreise hängen vom Bestand vor Ort ab und können sich mit dem Lieferort ändern; die normalen Preise sind überall gleich."
+    },
+    "guest": {
+      "title": "Melden Sie sich an, um die Bestellung abzuschließen",
+      "body": "Kein Passwort – in wenigen Sekunden anmelden und weitermachen.",
+      "cta": "Anmelden und fortfahren"
+    },
+    "addressEmpty": {
+      "title": "Sie haben noch keine gespeicherte Adresse. Wohin liefern wir?",
+      "body": "Fügen Sie Ihre Adresse hier hinzu – Sie müssen Ihre Bestellung nicht verlassen.",
+      "cta": "＋ Neue Adresse"
     }
   }
 }

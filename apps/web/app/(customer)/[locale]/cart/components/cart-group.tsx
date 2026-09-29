@@ -100,7 +100,7 @@ interface RouteActionProps {
  */
 function RouteAction({ view, t, locale, compact, totalCents }: RouteActionProps) {
   // Kimlik ve adres kapısı sepetin engelinden sonra, özet kartıyla aynı sıra ve aynı kanca.
-  const gate = useCheckoutGate(t);
+  const gate = useCheckoutGate(locale);
   const reason = checkoutBlockReason(view, t, locale) ?? gate;
   const blocked = reason !== null;
 
@@ -153,7 +153,7 @@ interface ShippingActionProps {
 function ShippingAction({ view, t, locale, compact, itemsCents, free, remainingCents }: ShippingActionProps) {
   const g = t.group;
   // Kargo siparişi de kimlik ve adres ister; tükenen kalem sepetin tamamını durdurur, kapı ondan sonra okunur.
-  const gate = useCheckoutGate(t);
+  const gate = useCheckoutGate(locale);
   const reason = view.hasBlocked ? t.checkoutBlocked : gate;
   const blocked = reason !== null;
 

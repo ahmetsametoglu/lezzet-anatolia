@@ -218,17 +218,17 @@ export function CheckoutMobile(props: CheckoutViewProps) {
               {pickedWarehouse ? (
                 <div className="flex flex-col gap-2" data-testid="checkout-pickup-place">
                   <PhoneOptionRow
-                    label={t.address.pickupTitle}
+                    label={copy.address.pickupTitle}
                     description={`${pickedWarehouse.name} · ${pickedWarehouse.addressLine}`}
                     selected
-                    trailing={<TextAction label={t.address.change} href="/cart" />}
+                    trailing={<TextAction label={copy.address.change} href="/cart" />}
                   />
                   <p className="font-sans text-micro leading-[1.45] text-muted">
-                    {t.address.pickupNote.replace('{phone}', brand.contact.phoneDisplay)}
+                    {copy.address.pickupNote.replace('{phone}', brand.contact.phoneDisplay)}
                   </p>
                   {selectedAddress && (
                     <p className="font-sans text-micro leading-[1.45] text-muted">
-                      {t.address.billing.replace('{address}', `${addressTitle(selectedAddress)} · ${addressLine(selectedAddress)}`)}
+                      {copy.address.billing.replace('{address}', `${addressTitle(selectedAddress)} · ${addressLine(selectedAddress)}`)}
                     </p>
                   )}
                 </div>
@@ -237,13 +237,13 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                   label={addressTitle(selectedAddress)}
                   description={addressLine(selectedAddress)}
                   selected
-                  trailing={<TextAction label={t.address.change} href="/cart" />}
+                  trailing={<TextAction label={copy.address.change} href="/cart" />}
                 />
               ) : (
                 // Buraya adressiz gelinmez (sepetin kapısı) — derin bağlantıyla gelen için cümle + çıkış.
-                <Note description={t.address.missing} action={<TextAction label={t.address.missingCta} href="/cart" />} />
+                <Note description={copy.address.missing} action={<TextAction label={copy.address.missingCta} href="/cart" />} />
               )}
-              {selectedAddress && !pickedWarehouse && <p className="font-sans text-micro leading-[1.45] text-muted">{t.address.inCartNote}</p>}
+              {selectedAddress && !pickedWarehouse && <p className="font-sans text-micro leading-[1.45] text-muted">{copy.address.inCartNote}</p>}
             </section>
 
             {/* Engel değil bilgi: o kalemler bu siparişe girmiyor, sepette bekliyor. */}

@@ -35,7 +35,8 @@ import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
 import { addressLine } from '@lezzet/address';
 import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
-import { PlaceSheet } from '@/screens/customer-kit/place-sheet';
+import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
+import { NewAddressSheet, PlaceSheet } from '@/screens/customer-kit/place-sheet';
 import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
 import { usePickupPoints } from '@/screens/customer-kit/use-pickup-points.hook';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
@@ -94,6 +95,10 @@ export function CartScreen() {
   const [couponError, setCouponError] = useState<string | null>(null);
   // Bar engel yazısıyla ve cihazın alt güvenli alanıyla uzar; dipteki pay sabit olsaydı son satır barın arkasında kalırdı.
   const [barHeight, setBarHeight] = useState(0);
+  const [addingAddress, setAddingAddress] = useState(false);
+  /* Ödemeye giriş yapmış ve adresi belli müşteri geçer; ikisi de burada sorulur, ödeme ekranı yalnız gösterir. */
+  const needsLogin = meStatus !== 'ready';
+  const needsAddress = meStatus === 'ready' && deliveryAddress === null && pickupPoint === null;
 
   const count = cartCount(cart);
   const isEmpty = count === 0;
@@ -127,11 +132,11 @@ export function CartScreen() {
   const discount = view.discount;
   /* Düğmeyi gelemeyen kalem kapatmaz, müşteri gelebilecekleri sipariş eder. Kapatan üç hâl: görünüm çözülemedi, satılamaz kalem var
      (`hasBlocked`) ve asgari sepet tutmuyor. */
-  const checkoutBlocked = unresolved || view.hasBlocked || !view.minBasketOk;
+  const checkoutBlocked = unresolved || view.hasBlocked || !view.minBasketOk || needsLogin || needsAddress;
 
   /*
-    Kilitli düğmenin kısa gerekçesi: satılamayan kalem asgari sepetten önce söylenir, çünkü kalem çıkarılınca tutar da değişir (sıra
-    sunucunun `cartBlockReason`ındakiyle aynı). Sepet çözülemediyse susar, çünkü ortada engel değil bilinmezlik vardır.
+    Kilitli düğmenin kısa gerekçesi: satılamayan kalem asgari sepetten önce, giriş ve adres en son söylenir, çünkü kalem çıkarılınca
+    tutar da değişir. Sepet çözülemediyse ya da kimlik henüz okunmadıysa susar, çünkü ortada engel değil bilinmezlik vardır.
   */
   const barBlockText = ((): string | null => {
     if (unresolved) return null;
@@ -139,6 +144,8 @@ export function CartScreen() {
     if (!view.minBasketOk) {
       return t.barBlock.minimum.replace('{missing}', formatPrice(view.missingForMinBasketCents, locale));
     }
+    if (meStatus === 'guest') return t.barBlock.login;
+    if (needsAddress) return t.barBlock.address;
     return null;
   })();
 
@@ -319,7 +326,7 @@ export function CartScreen() {
       <SecondaryButton
         label={t.group.shippingCta}
         onPress={() => router.push('/checkout?group=shipping')}
-        disabled={view.hasBlocked}
+        disabled={view.hasBlocked || needsLogin || needsAddress}
         testID="cart-shipping-checkout"
       />
     </View>
@@ -380,7 +387,15 @@ export function CartScreen() {
         )}
         {/* Teslimat adresi sepetin neye göre değerlendirildiğini söyler; posta kodu düzenleyicisi sepette yok, çünkü iki ayrı yer
             tutmak kapattığımız ayrışmayı geri açardı. */}
-        {pickupPoint !== null ? (
+        {meStatus === 'guest' ? (
+          <DashedInvite
+            layout="stack"
+            title={t.guest.title}
+            description={t.guest.body}
+            action={<PrimaryButton label={t.guest.cta} shape="pill" onPress={() => router.push('/login')} testID="cart-login" />}
+            testID="cart-guest"
+          />
+        ) : pickupPoint !== null ? (
           <View style={styles.place}>
             <Text style={styles.placeEyebrow}>{t.address.eyebrow}</Text>
             <Text style={styles.placeLine} testID="cart-place-pickup">
@@ -390,13 +405,17 @@ export function CartScreen() {
             <TextAction label={t.address.change} onPress={() => setPlaceSheetOpen(true)} testID="cart-place-address" />
           </View>
         ) : deliveryAddress === null ? (
-          browsingCode === '' ? null : (
-            <View style={styles.place}>
-              <Text style={styles.placeEyebrow}>{t.address.eyebrow}</Text>
-              <Text style={styles.placeNote}>{t.address.none.replace('{code}', browsingCode)}</Text>
-              <TextAction label={t.undeliverable.change} onPress={() => setPlaceSheetOpen(true)} testID="cart-place-code" />
-            </View>
-          )
+          needsAddress ? (
+            <DashedInvite
+              layout="stack"
+              title={t.addressEmpty.title}
+              description={t.addressEmpty.body}
+              action={
+                <PrimaryButton label={t.addressEmpty.cta} shape="pill" onPress={() => setAddingAddress(true)} testID="cart-address-add" />
+              }
+              testID="cart-address-empty"
+            />
+          ) : null
         ) : (
           <View style={styles.place}>
             <Text style={styles.placeEyebrow}>{t.address.eyebrow}</Text>
@@ -586,6 +605,7 @@ export function CartScreen() {
 
       {/* Yer kapısı ekranı terk etmeden açılır: adresli müşteride adres seçici, adressizde posta kodu çekmecesi. */}
       <PlaceSheet visible={placeSheetOpen} onClose={() => setPlaceSheetOpen(false)} showZonesLink testID="cart-place-sheet" />
+      <NewAddressSheet visible={addingAddress} onClose={() => setAddingAddress(false)} testID="cart-new-address" />
     </View>
   );
 }

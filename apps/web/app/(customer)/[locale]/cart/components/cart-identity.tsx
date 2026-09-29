@@ -1,11 +1,14 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { isValidEmail } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import cartMessages from '@lezzet/i18n/customer/cart';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Button, focusRingClass } from '@/components/customer/ui/button';
+import { DashedInvite } from '@/components/customer/phone-kit/dashed-invite';
+import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { cardClass } from '@/components/customer/ui/card';
 import { FormInputField } from '@/components/customer/form/form-input-field';
@@ -45,11 +48,24 @@ interface CartIdentityProps {
 
 export function CartIdentity({ t, locale, compact = false }: CartIdentityProps) {
   const account = useAccount();
-  if (!account) return <CartLogin t={t} locale={locale} compact={compact} />;
-  return compact ? <CartAddress t={t} locale={locale} /> : <CartAccountDesktop t={t} locale={locale} account={account} />;
+  if (!account) return compact ? <PhoneLoginInvite locale={locale} /> : <CartLogin t={t} locale={locale} />;
+  return compact ? <CartAddress locale={locale} /> : <CartAccountDesktop t={t} locale={locale} account={account} />;
 }
 
-function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
+/** Telefonda giriş native'in kartıyla sorulur: davet ve düğme, giriş kendi sayfasında yapılır ve müşteri sepetine döner. */
+function PhoneLoginInvite({ locale }: { locale: Locale }) {
+  const copy = cartMessages[locale].guest;
+  const pathname = usePathname();
+  return (
+    <DashedInvite
+      title={copy.title}
+      description={copy.body}
+      action={<PrimaryButton label={copy.cta} shape="pill" href={{ pathname: '/login', query: { next: pathname } }} />}
+    />
+  );
+}
+
+function CartLogin({ t, locale }: Pick<CartIdentityProps, 't' | 'locale'>) {
   const c = t.identity;
   const router = useRouter();
   const { reload } = useCart();
@@ -109,14 +125,8 @@ function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
 
   // Masaüstünde dikkat tonu: ödemeye geçmenin ilk şartı bu kart ve eksik adım sepetin geri kalanından ayrışmalı.
   return (
-    <div
-      className={
-        compact
-          ? 'flex flex-col gap-2.5 rounded-card border-[1.5px] border-sand-300 bg-sand-100 p-4'
-          : cardClass({ pad: 'snug', gap: 'md', tone: 'attention' })
-      }
-    >
-      <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{c.loginTitle}</span>
+    <div className={cardClass({ pad: 'snug', gap: 'md', tone: 'attention' })}>
+      <span className="font-serif text-h2-sm text-ink">{c.loginTitle}</span>
       <p className="font-sans text-note leading-relaxed text-body">{c.loginBody}</p>
 
       {sent ? (
@@ -130,7 +140,7 @@ function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <Button variant="secondary" compact={compact} fullWidth onClick={() => void google()}>
+          <Button variant="secondary" fullWidth onClick={() => void google()}>
             <GoogleIcon /> {c.google}
           </Button>
 
@@ -152,7 +162,7 @@ function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
               onKeyDown={(e) => e.key === 'Enter' && void send()}
               placeholder={c.email}
             />
-            <Button compact={compact} fullWidth disabled={!validEmail || busy} onClick={() => void send()}>
+            <Button fullWidth disabled={!validEmail || busy} onClick={() => void send()}>
               {busy ? c.sending : c.send}
             </Button>
           </div>
@@ -168,12 +178,27 @@ function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
  * Telefon görünümünün adres künyesi, native sepetinkinin ikizi: sepetin neye göre değerlendirildiğini söyler ve adresi
  * değiştirmek sepeti terk ettirmez.
  */
-function CartAddress({ t, locale }: Pick<CartIdentityProps, 't' | 'locale'>) {
+function CartAddress({ locale }: Pick<CartIdentityProps, 'locale'>) {
   const copy = cartMessages[locale].address;
-  const c = t.identity;
   const { address, pickup } = useDeliveryPlace();
   const pickedWarehouse = pickup?.warehouses.find((w) => w.id === pickup.selectedWarehouseId) ?? null;
   const [open, setOpen] = useState<'list' | 'new' | null>(null);
+  const dialog = open && <AddressPickerDialog locale={locale} compact initialMode={open} onClose={() => setOpen(null)} />;
+
+  // Adres yokken ödemeye geçilemez; native'in kartı davet eder ve adres sepetten ayrılmadan yazılır.
+  if (!pickedWarehouse && !address) {
+    const empty = cartMessages[locale].addressEmpty;
+    return (
+      <>
+        <DashedInvite
+          title={empty.title}
+          description={empty.body}
+          action={<PrimaryButton label={empty.cta} shape="pill" onClick={() => setOpen('new')} />}
+        />
+        {dialog}
+      </>
+    );
+  }
 
   return (
     <div className="flex flex-col items-start gap-0.5 px-4 pb-2.5">
@@ -184,20 +209,17 @@ function CartAddress({ t, locale }: Pick<CartIdentityProps, 't' | 'locale'>) {
           <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.pickupNote}</span>
           <TextAction label={copy.change} onClick={() => setOpen('list')} />
         </>
-      ) : address ? (
-        <>
-          <span className="font-sans text-copy font-semibold text-ink">{addressLine(address)}</span>
-          <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.note}</span>
-          <TextAction label={copy.change} onClick={() => setOpen('list')} />
-        </>
       ) : (
-        <>
-          <span className="font-sans text-body-sm leading-[1.6] text-muted">{c.addressEmpty}</span>
-          <TextAction label={c.addressAdd} onClick={() => setOpen('new')} />
-        </>
+        address && (
+          <>
+            <span className="font-sans text-copy font-semibold text-ink">{addressLine(address)}</span>
+            <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.note}</span>
+            <TextAction label={copy.change} onClick={() => setOpen('list')} />
+          </>
+        )
       )}
 
-      {open && <AddressPickerDialog locale={locale} compact initialMode={open} onClose={() => setOpen(null)} />}
+      {dialog}
     </div>
   );
 }

@@ -113,7 +113,6 @@
       "addressTitle": "Teslimat adresi",
       "addressBody": "Sepetiniz ve ödemeniz bu adrese göre hesaplanır.",
       "addressEmpty": "Nereye getirelim? Sipariş için bir teslimat adresi gerekir.",
-      "addressAdd": "+ Adres ekle",
       "addressChange": "Değiştir",
       "addressEdit": "Düzenle",
       "stripInRoute": "{place} — {date} kapınızda, ücretsiz",
@@ -122,11 +121,6 @@
       "stripUnreachable": "{place} — buraya şu an gönderemiyoruz",
       "pickupTitle": "Depodan teslim al",
       "pickupNote": "Sepetiniz ve ödemeniz {name} deposuna göre hesaplanır; teslim saatini telefonla kararlaştırın."
-    },
-    "gate": {
-      "login": "Devam etmek için giriş yapın",
-      "address": "Devam etmek için bir teslimat adresi seçin",
-      "unreachable": "Bu adrese şu an gönderemiyoruz — başka bir teslimat adresi seçin"
     }
   },
   "fr": {
@@ -243,7 +237,6 @@
       "addressTitle": "Adresse de livraison",
       "addressBody": "Le panier et la commande se calculent pour cette adresse.",
       "addressEmpty": "Où souhaitez-vous être livré ? Une adresse de livraison est nécessaire pour commander.",
-      "addressAdd": "+ Ajouter une adresse",
       "addressChange": "Changer",
       "addressEdit": "Modifier",
       "stripInRoute": "{place} — livré chez vous {date}, livraison offerte",
@@ -252,11 +245,6 @@
       "stripUnreachable": "{place} — livraison impossible à cette adresse pour le moment",
       "pickupTitle": "Retrait à l'entrepôt",
       "pickupNote": "Le panier et le paiement sont établis pour l'entrepôt {name} ; convenez de l'heure par téléphone."
-    },
-    "gate": {
-      "login": "Connectez-vous pour continuer",
-      "address": "Choisissez une adresse de livraison pour continuer",
-      "unreachable": "Nous ne pouvons pas livrer à cette adresse pour le moment — choisissez une autre adresse de livraison"
     }
   },
   "de": {
@@ -373,7 +361,6 @@
       "addressTitle": "Lieferadresse",
       "addressBody": "Warenkorb und Kasse richten sich nach dieser Adresse.",
       "addressEmpty": "Wohin liefern wir? Zum Bestellen ist eine Lieferadresse nötig.",
-      "addressAdd": "+ Adresse hinzufügen",
       "addressChange": "Ändern",
       "addressEdit": "Bearbeiten",
       "stripInRoute": "{place} – {date} an Ihrer Haustür, kostenlos",
@@ -382,11 +369,6 @@
       "stripUnreachable": "{place} – derzeit keine Lieferung an diese Adresse",
       "pickupTitle": "Im Lager abholen",
       "pickupNote": "Warenkorb und Zahlung richten sich nach dem Lager {name}; die Abholzeit vereinbaren Sie telefonisch."
-    },
-    "gate": {
-      "login": "Zum Fortfahren anmelden",
-      "address": "Wählen Sie zum Fortfahren eine Lieferadresse",
-      "unreachable": "An diese Adresse liefern wir derzeit nicht – wählen Sie eine andere Lieferadresse"
     }
   }
 }

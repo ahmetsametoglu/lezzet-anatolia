@@ -7,11 +7,6 @@
     "signedInAnon": "✓ Hesabınızla devam ediyorsunuz",
     "meUnreadable": "Hesabınızı okuyamadık — bağlantınızı kontrol edip tekrar deneyin.",
     "meRetry": "Tekrar dene",
-    "guest": {
-      "title": "Siparişi tamamlamak için giriş yapın",
-      "body": "Şifre yok — birkaç saniyede giriş yapın, kaldığınız yerden devam edin.",
-      "cta": "Giriş yap ve devam et"
-    },
     "state": {
       "loading": "Sipariş seçenekleriniz getiriliyor…",
       "failed": "Sipariş seçenekleriniz şu an okunamadı.",
@@ -19,13 +14,13 @@
     },
     "address": {
       "eyebrow": "Teslimat adresi",
-      "default": "varsayılan",
-      "add": "＋ Yeni adres ekle",
-      "empty": "Henüz kayıtlı adresiniz yok. Nereye getirelim?",
-      "emptyBody": "Adresinizi buradan ekleyin — siparişinizden çıkmanıza gerek yok.",
-      "editHint": "Düzenlemek için basılı tutun",
-      "pickupOption": "Depodan teslim al",
-      "billing": "Fatura adresi: {address}"
+      "billing": "Fatura adresi: {address}",
+      "change": "Değiştir",
+      "pickupTitle": "Depodan teslim alacaksınız",
+      "pickupNote": "Teslim saati için depoyu arayın: {phone}",
+      "missing": "Bu sipariş için henüz bir teslimat adresi seçilmedi.",
+      "missingCta": "Sepette adres seç",
+      "inCartNote": "Adres sepette seçildi — burada yalnız onaylıyorsunuz."
     },
     "addressCheck": {
       "foundElsewhere": "Bu adresi şurada bulduk:",
@@ -241,11 +236,6 @@
     "signedInAnon": "✓ Vous continuez avec votre compte",
     "meUnreadable": "Nous n'avons pas pu charger vos informations — vérifiez votre connexion et réessayez.",
     "meRetry": "Réessayer",
-    "guest": {
-      "title": "Connectez-vous pour finaliser votre commande",
-      "body": "Pas de mot de passe — connectez-vous en quelques secondes et reprenez là où vous en étiez.",
-      "cta": "Se connecter et continuer"
-    },
     "state": {
       "loading": "Chargement de vos options de commande…",
       "failed": "Vos options de commande n'ont pas pu être chargées.",
@@ -253,13 +243,13 @@
     },
     "address": {
       "eyebrow": "Adresse de livraison",
-      "default": "par défaut",
-      "add": "＋ Ajouter une adresse",
-      "empty": "Vous n'avez pas encore d'adresse enregistrée. Où souhaitez-vous être livré ?",
-      "emptyBody": "Ajoutez votre adresse ici — pas besoin de quitter votre commande.",
-      "editHint": "Maintenez appuyé pour modifier",
-      "pickupOption": "Retrait à l'entrepôt",
-      "billing": "Adresse de facturation : {address}"
+      "billing": "Adresse de facturation : {address}",
+      "change": "Modifier",
+      "pickupTitle": "Vous retirerez votre commande à l'entrepôt",
+      "pickupNote": "Appelez l'entrepôt pour convenir de l'heure : {phone}",
+      "missing": "Aucune adresse de livraison n'est encore choisie pour cette commande.",
+      "missingCta": "Choisir une adresse dans le panier",
+      "inCartNote": "L'adresse a été choisie dans le panier — ici, vous confirmez seulement."
     },
     "addressCheck": {
       "foundElsewhere": "Nous avons trouvé cette adresse ici :",
@@ -475,11 +465,6 @@
     "signedInAnon": "✓ Angemeldet",
     "meUnreadable": "Wir konnten Ihr Konto nicht laden – prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "meRetry": "Erneut versuchen",
-    "guest": {
-      "title": "Melden Sie sich an, um die Bestellung abzuschließen",
-      "body": "Kein Passwort – in wenigen Sekunden anmelden und weitermachen.",
-      "cta": "Anmelden und fortfahren"
-    },
     "state": {
       "loading": "Ihre Bestelloptionen werden geladen…",
       "failed": "Ihre Bestelloptionen konnten nicht geladen werden.",
@@ -487,13 +472,13 @@
     },
     "address": {
       "eyebrow": "Lieferadresse",
-      "default": "Standard",
-      "add": "＋ Neue Adresse",
-      "empty": "Sie haben noch keine gespeicherte Adresse. Wohin liefern wir?",
-      "emptyBody": "Fügen Sie Ihre Adresse hier hinzu – Sie müssen Ihre Bestellung nicht verlassen.",
-      "editHint": "Zum Bearbeiten gedrückt halten",
-      "pickupOption": "Im Lager abholen",
-      "billing": "Rechnungsadresse: {address}"
+      "billing": "Rechnungsadresse: {address}",
+      "change": "Ändern",
+      "pickupTitle": "Sie holen im Lager ab",
+      "pickupNote": "Rufen Sie das Lager für die Abholzeit an: {phone}",
+      "missing": "Für diese Bestellung ist noch keine Lieferadresse gewählt.",
+      "missingCta": "Adresse im Warenkorb wählen",
+      "inCartNote": "Die Adresse wurde im Warenkorb gewählt – hier bestätigen Sie nur."
     },
     "addressCheck": {
       "foundElsewhere": "Wir haben diese Adresse hier gefunden:",

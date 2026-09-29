@@ -6,7 +6,6 @@ import type { CheckoutSnapshot } from '@lezzet/types';
 
 import type { CartState } from '@/screens/customer-kit/cart-store';
 import { cartView, cartViewLine, cartWith } from '@/screens/cart/cart-view-fixture';
-import addressCopy from '@lezzet/i18n/customer/address';
 import { CheckoutScreen } from './checkout-screen';
 import messages from '@lezzet/i18n/customer/checkout';
 
@@ -19,7 +18,8 @@ jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR
 /* `replace` CASUSU sabit: onay ekranına NE TAŞINDIĞI (özellikle sipariş numarası) bu ekranın
    kararlarından biri ve her çağrıda yeni `jest.fn()` üreten bir mock onu ölçülemez kılardı. */
 const mockReplace = jest.fn();
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: jest.fn(), replace: mockReplace }) }));
+const mockBack = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: mockBack, replace: mockReplace }) }));
 
 // Ad `mock` ile başlamak ZORUNDA: `jest.mock` fabrikası dosyanın tepesine kaldırılıyor.
 let mockCart: CartState;
@@ -456,16 +456,17 @@ describe('CheckoutScreen — adres teklifi ve düzenleme', () => {
     await waitFor(() => expect(mockReplace).toHaveBeenCalled());
   });
 
-  it('adres satırı UZUN BASINCA çekmeceyi DÜZENLEME hâlinde açar ve ipucunu taşır (21.215)', async () => {
+  // Ödemede adres seçilebilir ya da düzenlenebilir hâle gelirse (iki ekran iki ayrı adresle konuşur) kırmızıya döner.
+  it('adres ödemede SALT OKUNUR: seçili adres çizilir, "Değiştir" sepete döner', async () => {
     routeFetch({ status: 'confirmed' });
     await openCheckout();
 
-    const row = screen.getByTestId(`checkout-address-${ADDRESS.id}`);
-    expect(within(row).getByText(t.address.editHint)).toBeOnTheScreen();
+    expect(screen.getByTestId('checkout-address-selected')).toBeOnTheScreen();
+    expect(screen.queryByTestId(`checkout-address-${ADDRESS.id}`)).toBeNull();
 
-    await fireEvent(row, 'longPress');
+    await fireEvent.press(screen.getByTestId('checkout-address-change'));
 
-    expect(await screen.findByText(addressCopy.tr.editTitle)).toBeOnTheScreen();
+    expect(mockBack).toHaveBeenCalled();
   });
 });
 

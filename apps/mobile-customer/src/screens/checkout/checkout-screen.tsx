@@ -26,11 +26,8 @@ import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { hapticError, hapticSuccess } from '@lezzet/mobile-kit/src/lib/haptics/haptics';
 import { presentPayment } from '@/lib/payment/payment-sheet';
 import { addressLine, addressTitle } from '@lezzet/address';
-import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
-import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
 import { cartLineId, refreshCart, useCart } from '@/screens/customer-kit/cart-store';
-import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
-import { selectDeliveryAddress, selectPickupWarehouse, useSelectedDeliveryAddress, useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
+import { selectDeliveryAddress, useSelectedDeliveryAddress, useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { discountSummaryOf, orderDiscountSummaryOf } from '@/screens/customer-kit/discount-label';
 import { OptionRow } from '@/screens/customer-kit/option-row';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
@@ -81,13 +78,15 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
    * ayrı karşılar.
    */
   const customer = meStatus === 'ready' ? me : null;
+  /* Giriş sepette sorulur; buraya misafir ancak derin bağlantıyla gelir ve sepete döner. */
+  useEffect(() => {
+    if (meStatus === 'guest') router.replace('/cart');
+  }, [meStatus, router]);
 
   /** Seçili adres; `null` sunucunun karar vermesi demektir (varsayılan, yoksa ilk adres). */
   /* Seçim ortak depoda: sepet de aynı adresi okur ve değiştirebilir, iki ekran ayrı durum tutsaydı ayrışırlardı. */
   const addressId = useSelectedDeliveryAddress();
   const setAddressId = selectDeliveryAddress;
-  /** Hesap ekranıyla aynı ortak form; kapalıyken `null`. */
-  const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
   const [deliveryDate, setDeliveryDate] = useState<string | null>(null);
   /* Gel-al seçimi ORTAK depoda (sepetin adres seçicisiyle aynı): depo bir adres gibi seçilir, tür sunucudan döner. */
   const pickupWarehouseId = useSelectedPickupWarehouse();
@@ -186,6 +185,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const doorClosedHere = !isRoute && delivery?.addressInRoute === true;
   const isPickup = delivery?.deliveryType === 'pickup';
   const pickupOffer = snapshot?.pickup ?? null;
+  const pickedWarehouse = pickupOffer?.warehouses.find((w) => w.id === pickupOffer.selectedWarehouseId) ?? null;
   const dates = delivery?.availableDates ?? [];
 
   /* Komşu daveti cihazdan değil kişiden gelir; süzgeç sunucuda, seçilemeyen gün hiç görünmez. */
@@ -626,16 +626,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
             <Note tone="error" description={t.meUnreadable} testID="checkout-me-error-note" />
             <TextAction label={t.meRetry} onPress={refreshMe} testID="checkout-me-retry" />
           </View>
-        ) : meStatus === 'guest' ? (
-          <DashedInvite
-            layout="stack"
-            title={t.guest.title}
-            description={t.guest.body}
-            action={<PrimaryButton label={t.guest.cta} shape="pill" onPress={() => router.push('/login')} testID="checkout-login" />}
-            testID="checkout-guest"
-          />
-        ) : /* `loading`: hiçbir şey çizilmez — cevabı gelmemiş bir soruyu ekrana yazmak, kimliği
-              olan müşteriye bir an için "misafirsiniz" demektir. */ null}
+        ) : /* Misafir sepete döner; yüklenirken hiçbir şey çizilmez, cevabı gelmemiş soruyu yazmak kimliği olan müşteriye bir an
+              "misafirsiniz" demek olurdu. */ null}
 
         {/* Seçenekler okunamadıysa ekran hâlini söyler ve yeniden deneme yolu verir. Yüklenirken üç bölümün yeri tutulur ki cevap
             gelince tutar özeti ve onay aşağı zıplamasın. */}
@@ -695,60 +687,43 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
               </View>
             ) : null}
 
+            {/* Adres sepette seçilir, burada yalnız gösterilir: iki ekran iki ayrı adresle konuşmasın. Değiştirmek sepete döner. */}
             <View style={styles.section}>
               <Text style={styles.eyebrow}>{upperIn(t.address.eyebrow, locale)}</Text>
-              {/* Hiç adres yoksa burası bir davettir, uyarı değil; düğme aynı çekmeceyi burada açar. */}
-              {addresses.map((candidate) => (
-                <OptionRow
-                  key={candidate.id}
-                  label={addressTitle(candidate)}
-                  description={addressLine(candidate)}
-                  // Depo seçiliyken varsayılan adres fatura adresidir, seçili çizilmez — tek seçim, tek çerçeve.
-                  selected={!isPickup && candidate.id === selectedAddress?.id}
-                  onPress={() => setAddressId(candidate.id)}
-                  /* Uzun basma düzenler: kayıtlı adresi düzeltmek için sipariş akışından çıkmak gerekmesin. */
-                  onLongPress={() => setAddressSheet({ editing: candidate })}
-                  hint={t.address.editHint}
-                  trailing={candidate.isDefault ? <Text style={styles.defaultBadge}>{t.address.default}</Text> : undefined}
-                  testID={`checkout-address-${candidate.id}`}
-                />
-              ))}
-              {/* Gel-al (izinli müşteri): depo bir adres gibi seçilir; adres fatura adresi olarak kalır, seçim ortak depoda. */}
-              {pickupOffer?.warehouses.map((warehouse) => (
-                <OptionRow
-                  key={warehouse.id}
-                  label={t.address.pickupOption}
-                  description={`${warehouse.name} · ${warehouse.addressLine}`}
-                  selected={isPickup && pickupOffer.selectedWarehouseId === warehouse.id}
-                  descriptionTone="muted"
-                  onPress={() => selectPickupWarehouse(warehouse.id)}
-                  testID={`checkout-pickup-${warehouse.id}`}
-                />
-              ))}
-              {isPickup && selectedAddress !== null ? (
-                <Text style={styles.dayLine} testID="checkout-pickup-billing">
-                  {t.address.billing.replace('{address}', `${addressTitle(selectedAddress)} · ${addressLine(selectedAddress)}`)}
-                </Text>
-              ) : null}
-              {/* Adres YAZIMI kitin ortak çekmecesinde (tek form, tek doğrulama) — hesap
-                  ekranıyla aynı dosya; burada ikinci bir kopyası yok. */}
-              {addresses.length === 0 ? (
-                <DashedInvite
-                  layout="stack"
-                  title={t.address.empty}
-                  description={t.address.emptyBody}
-                  action={
-                    <PrimaryButton
-                      label={t.address.add}
-                      shape="pill"
-                      onPress={() => setAddressSheet({ editing: null })}
-                      testID="checkout-address-add"
-                    />
-                  }
-                  testID="checkout-address-empty"
-                />
+              {isPickup && pickedWarehouse !== null ? (
+                <>
+                  <OptionRow
+                    label={t.address.pickupTitle}
+                    description={`${pickedWarehouse.name} · ${pickedWarehouse.addressLine}`}
+                    selected
+                    onPress={router.back}
+                    trailing={<TextAction label={t.address.change} onPress={router.back} testID="checkout-address-change" />}
+                    testID="checkout-pickup-place"
+                  />
+                  {selectedAddress === null ? null : (
+                    <Text style={styles.dayLine} testID="checkout-pickup-billing">
+                      {t.address.billing.replace('{address}', `${addressTitle(selectedAddress)} · ${addressLine(selectedAddress)}`)}
+                    </Text>
+                  )}
+                </>
+              ) : selectedAddress !== null ? (
+                <>
+                  <OptionRow
+                    label={addressTitle(selectedAddress)}
+                    description={addressLine(selectedAddress)}
+                    selected
+                    onPress={router.back}
+                    trailing={<TextAction label={t.address.change} onPress={router.back} testID="checkout-address-change" />}
+                    testID="checkout-address-selected"
+                  />
+                  <Text style={styles.dayLine}>{t.address.inCartNote}</Text>
+                </>
               ) : (
-                <TextAction label={t.address.add} onPress={() => setAddressSheet({ editing: null })} testID="checkout-address-add" />
+                <Note
+                  description={t.address.missing}
+                  action={<TextAction label={t.address.missingCta} onPress={router.back} testID="checkout-address-missing" />}
+                  testID="checkout-address-missing-note"
+                />
               )}
             </View>
 
@@ -968,18 +943,6 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           testID="checkout-confirm"
         />
       </FormScroll>
-
-      {/* Adres çekmecesi — hesap ekranının kullandığı KİT bileşeni. Sipariş akışı kesilmez:
-          müşteri adresini burada yazar, seçili hâle gelir ve görüntü onunla yenilenir. */}
-      <AddressSheet
-        target={addressSheet}
-        addresses={addresses}
-        onClose={() => setAddressSheet(null)}
-        onSaved={applyAddressWrite}
-        /* Yeni adres hesabın künyesiyle dolu açılır; `me` bu ekranda zaten okunuyor. */
-        defaults={addressDefaultsOf(me)}
-        testID="checkout-address-sheet"
-      />
 
       {/* Seçici ekranın üstünde katman: liste çekmecesi kökte açıldığı için ayrı pencereye (`Modal`) konsaydı onun altında kalırdı. */}
       {pickerOpen && selectedAddressId !== null ? (

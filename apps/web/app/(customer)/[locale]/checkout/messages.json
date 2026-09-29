@@ -13,14 +13,7 @@
     "address": {
       "step": "1",
       "title": "Teslimat adresi",
-      "changeInCart": "Adresi sepette değiştir",
-      "missing": "Bu sipariş için henüz bir teslimat adresi seçilmedi.",
-      "missingCta": "Sepette adres seç",
-      "change": "Değiştir",
-      "inCartNote": "Adres sepette seçildi — burada yalnız onaylıyorsunuz.",
-      "pickupTitle": "Depodan teslim alacaksınız",
-      "pickupNote": "Teslim saati için depoyu arayın: {phone}",
-      "billing": "Fatura adresi: {address}"
+      "changeInCart": "Adresi sepette değiştir"
     },
     "delivery": {
       "step": "2",
@@ -143,14 +136,7 @@
     "address": {
       "step": "1",
       "title": "Adresse de livraison",
-      "changeInCart": "Changer d'adresse dans le panier",
-      "missing": "Aucune adresse de livraison n'est encore choisie pour cette commande.",
-      "missingCta": "Choisir une adresse dans le panier",
-      "change": "Modifier",
-      "inCartNote": "L'adresse a été choisie dans le panier — ici, vous confirmez seulement.",
-      "pickupTitle": "Vous retirerez votre commande à l'entrepôt",
-      "pickupNote": "Appelez l'entrepôt pour convenir de l'heure : {phone}",
-      "billing": "Adresse de facturation : {address}"
+      "changeInCart": "Changer d'adresse dans le panier"
     },
     "delivery": {
       "step": "2",
@@ -273,14 +259,7 @@
     "address": {
       "step": "1",
       "title": "Lieferadresse",
-      "changeInCart": "Adresse im Warenkorb ändern",
-      "missing": "Für diese Bestellung ist noch keine Lieferadresse gewählt.",
-      "missingCta": "Adresse im Warenkorb wählen",
-      "change": "Ändern",
-      "inCartNote": "Die Adresse wurde im Warenkorb gewählt – hier bestätigen Sie nur.",
-      "pickupTitle": "Sie holen im Lager ab",
-      "pickupNote": "Rufen Sie das Lager für die Abholzeit an: {phone}",
-      "billing": "Rechnungsadresse: {address}"
+      "changeInCart": "Adresse im Warenkorb ändern"
     },
     "delivery": {
       "step": "2",

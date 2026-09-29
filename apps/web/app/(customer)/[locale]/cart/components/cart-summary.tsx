@@ -40,13 +40,14 @@ export function checkoutBlockReason(view: CartView, t: Messages, locale: Locale)
  * Ödemeye geçmenin kapısı: giriş yapılmış ve teslimat adresi seçilmiş olmalı. Özet kartı, mobil çubuk ve grup eylemleri aynı kancayı
  * okur ki biri kapıyı unutup müşteriyi ödeme sayfasından geri yollamasın.
  */
-export function useCheckoutGate(t: Messages): string | null {
+export function useCheckoutGate(locale: Locale): string | null {
   const account = useAccount();
   const { address, unresolved } = useDeliveryPlace();
-  if (!account) return t.gate.login;
-  if (!address) return t.gate.address;
+  const gate = cartMessages[locale].barBlock;
+  if (!account) return gate.login;
+  if (!address) return gate.address;
   // Karşılanamayan adres siparişin onayında reddedilir; müşteri bütün adımları geçmeden sebebi burada görür.
-  if (unresolved) return t.gate.unreachable;
+  if (unresolved) return gate.unreachable;
   return null;
 }
 
@@ -93,7 +94,7 @@ interface CartSummaryProps {
 export function CartSummary({ view, t, locale, compact = false, grouped = false }: CartSummaryProps) {
   // Sepetin engeli önce, kimlik/adres kapısı sonra: tükenen kalem varken "giriş yapın" demek müşteriyi giriş yaptıktan sonra ikinci
   // bir duvara çarptırırdı.
-  const gate = useCheckoutGate(t);
+  const gate = useCheckoutGate(locale);
   const reason = checkoutBlockReason(view, t, locale) ?? gate;
   const blocked = reason !== null;
   // Özetin ortak sözcükleri (toplam, KDV notu, indirim) ödeme sayfasıyla aynı kaynaktan gelir.

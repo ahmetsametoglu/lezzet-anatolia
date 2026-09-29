@@ -172,7 +172,8 @@ export function AccountLine({ t, email, compact }: { t: CheckoutViewProps['t']; 
  * Adres adımı salt okunur: seçim, ekleme ve düzenleme sepette (`CartIdentity` → `AddressPickerDialog`), iki ekran iki ayrı
  * adresle konuşmasın diye. Çıkış bağlantısı şart, çünkü yanlış adresi ödeme adımında fark eden müşteri nereye gideceğini aramamalı.
  */
-export function AddressStep({ t, compact, selectedAddress, snapshot }: CheckoutViewProps) {
+export function AddressStep({ t, locale, compact, selectedAddress, snapshot }: CheckoutViewProps) {
+  const shared = checkoutMessages[locale].address;
   // Gel-al adres seçicide seçilir (sepet); burada yalnız gösterilir: depo, telefon ve fatura adresi olarak kalan varsayılan adres.
   const pickedWarehouse = snapshot.pickup?.warehouses.find((w) => w.id === snapshot.pickup?.selectedWarehouseId) ?? null;
   return (
@@ -181,15 +182,15 @@ export function AddressStep({ t, compact, selectedAddress, snapshot }: CheckoutV
         <div className="flex w-max max-w-full flex-col gap-[3px] rounded-soft border-2 border-olive bg-olive-bg px-[18px] py-3.5" data-testid="checkout-pickup-place">
           <span className="flex items-center gap-1.5 font-sans text-body-sm font-bold text-ink">
             <Icon name="pin" size={14} />
-            {t.address.pickupTitle}
+            {shared.pickupTitle}
           </span>
           <span className="font-sans text-note leading-relaxed text-body">
             {pickedWarehouse.name} · {pickedWarehouse.addressLine}
           </span>
-          <span className="font-sans text-note leading-relaxed text-muted">{t.address.pickupNote.replace('{phone}', brand.contact.phoneDisplay)}</span>
+          <span className="font-sans text-note leading-relaxed text-muted">{shared.pickupNote.replace('{phone}', brand.contact.phoneDisplay)}</span>
           {selectedAddress && (
             <span className="font-sans text-note leading-relaxed text-muted">
-              {t.address.billing.replace('{address}', `${addressTitle(selectedAddress)} · ${selectedAddress.line1}, ${selectedAddress.postalCode} ${selectedAddress.city}`)}
+              {shared.billing.replace('{address}', `${addressTitle(selectedAddress)} · ${selectedAddress.line1}, ${selectedAddress.postalCode} ${selectedAddress.city}`)}
             </span>
           )}
         </div>
@@ -208,10 +209,10 @@ export function AddressStep({ t, compact, selectedAddress, snapshot }: CheckoutV
         </div>
       ) : (
         // Buraya adressiz gelinmez (sepet kapısı) — derin bağlantıyla gelen için cümle + çıkış.
-        <p className="font-sans text-note leading-relaxed text-body">{t.address.missing}</p>
+        <p className="font-sans text-note leading-relaxed text-body">{shared.missing}</p>
       )}
       <Link href="/cart" className="w-max cursor-pointer font-sans text-note font-semibold text-olive underline hover:text-olive-dark">
-        {selectedAddress ? t.address.changeInCart : t.address.missingCta}
+        {selectedAddress ? t.address.changeInCart : shared.missingCta}
       </Link>
     </StepShell>
   );
