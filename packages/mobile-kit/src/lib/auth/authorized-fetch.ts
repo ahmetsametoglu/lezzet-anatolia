@@ -10,17 +10,8 @@ import { getSupabase } from './supabase';
 const UNAUTHORIZED = 'unauthorized';
 
 /**
- * Korunan `/api/v1` çağrısı — Bearer'ı ekler; 401'de oturumu BİR KEZ tazeleyip BİR KEZ yeniden
- * dener (autoRefresh sayacının uyuduğu aralıkta süresi dolan token'ın tek meşru kurtarışı).
- * Tazeleme de düşerse ilk 401 sonucu döner — girişe yönlendirme kabuk/ekran kararıdır, veri
- * katmanı karar vermez (02-mimari §4).
- *
- * ÖLÜ OTURUM CİHAZDA BIRAKILMAZ (21.304): tazelemeyi auth sunucusu KESİN reddettiyse (jeton yok,
- * iptal edilmiş, oturumun süresi geçmiş, kullanıcı engelli) oturum kapatılır; sonuç yine ilk 401
- * olarak döner. supabase-js bunu kendisi yapmıyor: erişim jetonunun saati dolmamışsa ölü oturumu
- * koruyor — sunucunun o jetonu az önce reddettiğini yalnız bu fonksiyon biliyor (ölçüm ve gerekçe
- * `session-end.ts` künyesinde). Kapatmak da yönlendirme değildir: oturum düşer, kabuk bunu kendi
- * dinleyicisiyle duyar ve nereye gideceğine kendisi karar verir.
+ * Korunan `/api/v1` çağrısı: Bearer ekler, 401'de oturumu bir kez tazeleyip bir kez yeniden dener; yönlendirme ekranın kararıdır.
+ * Tazelemeyi auth sunucusu kesin reddettiyse ölü oturum kapatılır, çünkü supabase-js saati dolmamış jetonu kendisi bırakmaz.
  */
 export async function authorizedFetch<TSchema extends z.ZodTypeAny>(
   path: string,
@@ -51,14 +42,8 @@ export async function authorizedFetch<TSchema extends z.ZodTypeAny>(
 }
 
 /**
- * ZİYARETÇİYE AÇIK ama kimlikten YARARLANAN çağrı — `authorizedFetch`in tersi: oturum yoksa istek
- * yine de atılır, yalnız Bearer'sız. Keşif turunun iki ucu böyle (`GET /discover` · `POST
- * /discover/vote`): giriş duvarı yok, ama token varsa sunucu oyu müşterinin üstüne yazar ve daha
- * önce oylanan kartları desteden eler.
- *
- * "Token var mı" sorusu İKİ KEZ sorulur (burada ve `authorizedFetch` içinde) ama tazeleme/yeniden
- * deneme mantığı TEK yerde kalır — o mantığı buraya kopyalamak duplikasyon olurdu (CLAUDE §1);
- * `getSession` yerel okumadır, ağa çıkmaz.
+ * Ziyaretçiye açık ama kimlikten yararlanan çağrı: oturum yoksa istek Bearer'sız gider, varsa `authorizedFetch`ten geçer ki
+ * tazeleme mantığı tek yerde kalsın.
  */
 export async function maybeAuthorizedFetch<TSchema extends z.ZodTypeAny>(
   path: string,
