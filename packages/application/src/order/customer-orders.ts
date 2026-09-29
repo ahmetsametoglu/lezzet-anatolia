@@ -35,23 +35,8 @@ import { parcelOrdinal, readOrderTracking } from '../shipping/tracking';
 import type { StorefrontImage } from '../catalog/storefront-types';
 
 /*
-  MÜŞTERİ SİPARİŞ OKUMASI — "Siparişlerim" listesi + sipariş detayı. Terfi 21.18.
-
-  Kaynağı `apps/web/lib/order/{customer-orders,customer-lines,carrier}.ts`tı. Ölçüt karşılandı:
-  aynı kuralları artık İKİ yüzey istiyor (web sipariş sayfaları + mobil `vOrders`/`vOrder`) ve
-  kopyalamak yasak (CLAUDE §1). Web dosyaları kendi yüzeylerinde KÖPRÜ olarak duruyor; benimsemesi
-  web şeridinin işi (`customer/profile.ts` ve `customer/addresses.ts` terfilerinin aynı yolu).
-
-  ── PARA SÖZLEŞMESİ ─────────────────────────────────────────────────────────
-  Motor ve ekran CENT ile çalışır, DB `numeric` (euro) tutar, dönüşüm servis katmanında yapılır
-  (`OrderService` cent döndürüyor). Alan adları sözleşmenin parçasıdır: `…Cents` ile bitmeyen bir
-  para alanı YOKTUR. Bu kural bir hatanın ardından yazıldı (30.07): euro değerleri cent sanılıp
-  biçimlendi, 74,17 € ekranda "0,74 €" göründü — `total` denince satıra bakınca görünmüyordu,
-  `totalCents` deyince görünüyor.
-
-  ── BU KAPI "SERVER-ONLY" DEĞİL, DB'Yİ ÇAĞIRANDAN ALIR ──────────────────────
-  Web kopyası `serviceDb()`yi kendi içinde kuruyordu ve `import 'server-only'` taşıyordu; ikisi de
-  Next'e özgü. Paket taşıma-bağımsızdır: istemciyi çağıran verir (adres/profil kapılarının imzası).
+  Müşteri sipariş okuması: "Siparişlerim" listesi ve detay, iki yüzeyin ortak kapısı. Para alanları cent'tir ve adı `…Cents` ile
+  biter; DB istemcisini çağıran verir, çünkü paket taşımadan bağımsızdır.
 */
 
 /** Özette adı/görseli taşınan kalem sayısı — v3 kartı dört ürün + bir paket halkası çiziyor. */
@@ -80,7 +65,7 @@ export interface CustomerOrderSummary {
   moreCount: number;
 }
 
-/** Ödemesi beklenen kart siparişi — listenin üstündeki ayrı satır (07.18). */
+/** Ödemesi beklenen kart siparişi. */
 export interface CustomerAwaitingPayment {
   /** Sayfanın kimliği: numara ancak onayla doğar, ödeme sayfası sipariş kimliğiyle açılır. */
   orderId: string;
@@ -93,12 +78,8 @@ export interface CustomerOrderPage {
   orders: readonly CustomerOrderSummary[];
   nextCursor: KeysetCursor | null;
   /**
-   * **Ödemesi beklenen kart siparişi** (07.18) — varsa yalnız İLK sayfada dolu.
-   *
-   * Taslaklar listede yok (künye aşağıda), ama ÖDEMESİ AÇILMIŞ taslak müşterinin yaptığı bir şeydir: ödedi
-   * ve sonucu bekliyor. Onu göstermemek "siparişim nerede" dedirtiyordu (kullanıcı bildirimi 14.09 — ödeme
-   * olayı gelmedi, sepet dolu kaldı, Siparişlerim boştu). **Liste satırı değil ayrı alan:** müşteri sipariş
-   * durumlarına yeni bir değer eklemek, aynı listeyi okuyan native uygulamanın eşlemesini kırardı.
+   * Ödemesi beklenen kart siparişi, yalnız ilk sayfada; ödemesi açılmış taslak müşterinin yaptığı bir şeydir ve göstermemek
+   * "siparişim nerede" dedirtir.
    */
   awaitingPayment: CustomerAwaitingPayment | null;
 }
@@ -111,19 +92,8 @@ export interface CustomerOrderListInput {
 }
 
 /**
- * "Siparişlerim" listesi.
- *
- * **Sayfalama keyset ve imleç URL'e YAZILMAZ** (CLAUDE §1): sipariş sayısı veriyle sınırsız büyür,
- * ama süzgeç yok — paylaşılabilecek bir seçim de yok. Liste kaydırdıkça uzar.
- *
- * **Taslaklar listede YOKTUR.** Yarıda kalmış bir checkout müşterinin verdiği bir sipariş değildir;
- * göstermek "bir siparişim daha varmış" dedirtirdi. Süzme durum kararının KENDİSİNDEN geliyor
- * (`customerOrderStatus` → `null`), ayrı bir liste tutulmuyor: iki yerde yaşayan bir kural, bir gün
- * ayrışan bir kuraldır.
- *
- * Taslak süzmesi sayfa DOLDURULDUKTAN sonra olduğu için bir sayfa istenenden az satır dönebilir —
- * bu kabul edilir; `nextCursor` yine doğrudur ve kaydırma devam eder. Alternatifi, sorguya durum
- * süzgeci koyup keyset'i bozmaktı.
+ * "Siparişlerim" listesi; keyset sayfalı, imleç URL'e yazılmaz. Taslaklar listede yok, süzme durum kararının kendisinden gelir; bu
+ * yüzden bir sayfa istenenden az satır dönebilir, `nextCursor` yine doğrudur.
  */
 export async function listCustomerOrders(
   db: SupabaseClient,
@@ -149,12 +119,7 @@ export async function listCustomerOrders(
   for (const order of page.rows) {
     const status = customerOrderStatus(order.status, order.deliveryType);
     if (!status) continue; // Taslak — müşterinin siparişi değil.
-    /*
-      Hiç KESİNLEŞMEMİŞ iptal de listede yok (07.18): süpürülen taslak ya da ödemesi gelmeyen taslak —
-      numarası doğmadı ve para hareket etmedi. Göstermek, verilmemiş bir siparişi "iptal edildi" diye
-      listelemekti; zamanlayıcı ödemesi gelmeyen taslakları kapattıkça bu satırlar çoğalacaktı. Parası
-      çekilip iade edilmiş olan KALIR (`providerRefundedAt`): müşterinin hesabında hareket var.
-    */
+    /* Hiç kesinleşmemiş iptal listede yok: numarası doğmadı, para hareket etmedi. Parası çekilip iade edilmiş olan kalır. */
     if (order.status === 'cancelled' && !order.referenceNo && !order.providerRefundedAt) continue;
 
     const own = itemsByOrder.get(order.id) ?? [];
@@ -196,11 +161,8 @@ export async function listCustomerOrders(
 }
 
 /**
- * **Ödemesi beklenen kart siparişi** (07.18) — Siparişlerim'in üst satırı ve sepetin bandı AYNI kapıdan
- * okur: iki yüzeyin iki ayrı "bekleyen ödeme" tanımı, bir gün ayrışan iki cevap olurdu. Tanım veride:
- * ödemesi açılmış (`paymentRef`) ve hâlâ taslak olan kart siparişi (`findOpenOnlineDraft`).
- *
- * `itemsByOrder`: listenin o sayfada zaten okuduğu kalemler — taslak oradaysa yeniden sorulmaz.
+ * Ödemesi beklenen kart siparişi: ödemesi açılmış ve hâlâ taslak olan sipariş. `itemsByOrder` listenin o sayfada okuduğu
+ * kalemlerdir, taslak oradaysa yeniden sorulmaz.
  */
 export async function getCustomerAwaitingPayment(
   db: SupabaseClient,
@@ -213,21 +175,10 @@ export async function getCustomerAwaitingPayment(
   return { orderId: draft.id, createdAt: draft.createdAt, totalCents: draft.orderedTotalCents, itemCount: items.length };
 }
 
-/**
- * Detayın SATIRI — künye + sipariş anındaki para (cent).
- *
- * **Paket TEK satırdır.** Sipariş anında paket kalemlerine açılıyor ama müşteri onu bir bütün
- * olarak satın aldı; kalemleri ayrı ayrı fiyatlarıyla dizmek, hiç görmediği bir fiyat kırılımını
- * ona göstermek olurdu (DOMAIN §13). Bu yüzden gruplama KAPIDA yapılır, ekranda değil.
- */
+/** Detayın satırı; paket tek satırdır, çünkü müşteri onu bütün olarak aldı ve kalem fiyat kırılımını hiç görmedi. */
 export interface CustomerOrderDetailLine {
   id: string;
-  /**
-   * Satırın ARKASINDAKİ gerçek sipariş kalemleri. Varyant satırında tek eleman (`id`nin kendisi);
-   * PAKET satırında birden çok — paket ekranda tek satıra katlanıyor ama veride kendi kalemleridir
-   * ve `id` orada sentetik (`bundle:…`). Talep formu "hangi ürünlerle ilgili" sorusunu bu kümeyle
-   * cevaplıyor; katlama geri döndürülemez olduğu için ekranın kendi başına türetemeyeceği tek bilgi.
-   */
+  /** Satırın arkasındaki gerçek kalemler; paket satırında birden çok, talep formu "hangi ürünler" sorusunu bununla cevaplar. */
   orderItemIds: readonly string[];
   /** `bundle` satırında paket adı, `variant` satırında ürün adı. */
   name: string;
@@ -260,12 +211,7 @@ export interface CustomerOrderDetail {
   createdAt: string;
   status: CustomerOrderStatus;
   active: boolean;
-  /**
-   * GENİŞ küme — checkout'un aksine burada `pickup` GÖRÜLÜR (26.08): müşteri tezgâhtan ya da
-   * kuryenin arabasından kendi hesabıyla alışveriş yapabilir ve o sipariş "Siparişlerim"e düşer.
-   * Dar bırakılsaydı ekran yerinde satışı rota teslimatı diye yazar, olmayan bir teslimat günü
-   * ve adresi gösterirdi.
-   */
+  /** Geniş küme: gel-al da görülür, yerinde satış "Siparişlerim"e düşer ve rota teslimatı gibi yazılmamalı. */
   deliveryType: DeliveryType;
   deliveryDate: string | null;
   address: { line1?: string; line2?: string; postalCode?: string; city?: string } | null;
@@ -290,17 +236,8 @@ export interface CustomerOrderDetail {
   /** Vadeli (B2B) — ödeme hapının ayrı bir hâli. */
   onAccount: boolean;
   /**
-   * **Kargo künyesi** — `null` iki ayrı hâlde: rota siparişi ve takibi henüz olmayan kargo
-   * siparişi. İkisini ayırmıyoruz çünkü ekranda ikisi de aynı şeyi yapar: blok çizilmez.
-   *
-   * **`parcels` DİZİ, çünkü çok kolili gönderide her kolinin ayrı takip numarası var**
-   * (multicollo, 07.12). Tek numara taşıyan eski şekil üç kutulu bir siparişin ikisini görünmez
-   * kılıyordu.
-   *
-   * `carrierName` ya sağlayıcının verdiği özel isimdir ("Chronopost") ya da elle girişte taşıyıcı
-   * enum'unun anahtarı — ekran tanıdığı anahtarı çevirir, tanımadığını olduğu gibi basar. İkisini
-   * ayrı alanlara bölmek, "tam olarak biri dolu" diyen ve derleyicinin doğrulayamadığı bir
-   * sözleşme kurardı.
+   * Kargo künyesi; `null` rota siparişi ya da takibi olmayan kargo. `parcels` dizidir, çünkü çok kolili gönderide her kolinin
+   * ayrı takip numarası var.
    */
   shipment: {
     carrierName: string | null;
@@ -309,13 +246,8 @@ export interface CustomerOrderDetail {
 }
 
 /**
- * Siparişe HANGİ ANAHTARLA ulaşıldığı — iki yüzey iki anahtar kullanıyor ve kural tek.
- *
- * Web `/orders/[reference]` segmentinde aslında sipariş UUID'sini taşıyor (segment adı öyle kalmış,
- * `orderIdOrNull` künyesi); mobil gerçekten REFERANS numarasını taşır — müşteriye gösterilen ve
- * destekle konuşurken kullanılan numara odur (`/support/new?order=LA-…` bağı da onu bekliyor).
- * Ayrık birlik, kapının GÖVDESİNİ ikiye bölmeden ikisini de karşılar; iki ayrı fonksiyon yazmak
- * aynı 80 satırı iki kez bakıma mahkûm etmekti.
+ * Siparişe hangi anahtarla ulaşıldığı: web segmentte sipariş kimliğini, mobil referans numarasını taşır. Ayrık birlik tek gövdeyle
+ * ikisini de karşılar.
  */
 export type CustomerOrderLookup = { orderId: string } | { reference: string };
 
@@ -326,18 +258,8 @@ export interface CustomerOrderDetailInput {
 }
 
 /**
- * Tek siparişin detayı.
- *
- * **Sahiplik sunucuda doğrulanır** ve bulunamayan ile başkasına ait olan AYNI cevabı alır (`null`):
- * ayrım söylenirse, deneme yanılmayla başkasının sipariş kimliği doğrulatılabilirdi.
- *
- * **Taslak burada da görünmez** — listede olmayan bir siparişin detayına doğrudan adresle
- * girilebilmesi, listenin kuralını arkadan delerdi.
- *
- * **Satır toplamı sipariş anındaki paradan hesaplanır** (`unit_price` × giden miktar − indirim
- * payı), bugünkü fiyattan değil: burası bir KAYITTIR, vitrin değil. Ürün ADI ise canlı okunur —
- * para donar, isim donmaz (ürün yeniden adlandırıldığında eski siparişte eski ad kalsaydı müşteri
- * ne aldığını bulamazdı).
+ * Tek siparişin detayı; bulunamayan ile başkasına ait olan aynı cevabı alır, ayrım kimlik doğrulatırdı. Taslak burada da görünmez,
+ * para sipariş anındaki kayıttan ve ürün adı canlı okunur.
  */
 export async function getCustomerOrderDetail(
   db: SupabaseClient,
@@ -364,21 +286,8 @@ export async function getCustomerOrderDetail(
 
   const [history, bundles] = await Promise.all([
     new OrderStatusLogService(db).listByOrder(order.id),
-    /*
-      ── PAKET KÜNYESİ: SATILABİLİRLİK SÜZGECİ YOK (web'den bilinçli sapma) ───────────────
-      Web bu künyeyi vitrin kapısından (`getPackagesByIds` → `listSellable`) okuyor ve o kapı
-      pasif/kalemi satıştan kalkmış paketi ELER; web künyesi de sonucu kabullenip "paket artık
-      satılmıyorsa kalemler tek tek gösterilir" diyor. Ama burası bir SATIŞ ekranı değil, bir
-      KAYITTIR: müşteri o paketi aldı ve faturasında tek satır olarak gördü. Satılabilirlik
-      süzgeci o kapının kendi işiydi — sipariş geçmişine sızması, ürünlerden biri pasife
-      alındığında geçmiş bir siparişin görünümünü değiştirirdi (aynı sipariş dün tek satır,
-      bugün beş satır). Kural değişmedi, kuralın yanlış kapıdan geçmesi düzeldi.
-      Vitrinin stok/tükenme zinciri zaten HÂLÂ web'de ve buraya gerekmiyor: tükendi bilgisi
-      geçmiş bir siparişin sorusu değil.
-
-      Paket kataloğu DOĞAL TAVANLI bir küme (operatör elle kurar — CLAUDE §1 "tek turda" dalı):
-      tek sorguda gelir, kimlikler bellekte süzülür (mobil `packages.ts` ucunun aynı deseni).
-    */
+    /* Paket künyesi satılabilirlik süzgecinden geçmez: burası kayıt, satışı biten paket geçmiş siparişin görünümünü değiştirmemeli.
+       Paket kataloğu doğal tavanlı, tek sorguda gelir. */
     bundleIds.length === 0
       ? Promise.resolve([])
       : new BundleService(db).listWithItems().then((all) => all.filter((b) => bundleIds.includes(b.id))),
@@ -392,22 +301,12 @@ export async function getCustomerOrderDetail(
     input.locale,
   );
 
-  /**
-   * Ölçüm var mı? Hazırlık onaylanana kadar `fulfilled_qty` yazılmamış bir `0`dır — onu "gönderilen
-   * miktar" saymak, yeni siparişte tüm kalemleri boş ve tutarları EKSİ gösterir (30.07 hatası).
-   */
+  /** Hazırlık onaylanana kadar `fulfilled_qty` yazılmamış bir `0`dır; gönderilen miktar sayılırsa kalemler boş görünür. */
   const measured = isFulfilmentKnown(order.status);
   const billedOf = (item: OrderItem) => (measured ? item.fulfilledQty : item.qty);
 
-  /*
-    SATIR PARASI ÖDEME MOTORUNDAN (kullanıcı bulgusu 01.09) — burada ikinci kez çarpılmıyor.
-
-    Burada bir tur kendi çarpması vardı (`birim × karşılanan − satır indirimi`) ve motorunkinden
-    AYRIŞMIŞTI: motor indirimi karşılanan orana böler (`lineDiscountCents × karşılanan / sipariş`),
-    bu satır ise indirimin TAMAMINI düşürüyordu. Sonuç, müşteriye 1 adet için 2 adetlik indirim
-    yazmaktı — ölçüldü: aynı kalem ekranda 15,72 €, kuryenin kapıda tahsil ettiği hesapta 19,09 €.
-    İki ekran aynı siparişe iki fiyat söylüyordu ve ayrım kimsenin bakmadığı bir çarpmadaydı.
-  */
+  /* Satır parası ödeme motorundan, burada ikinci kez çarpılmaz; kendi çarpması indirimi karşılanan orana bölmediği için ekranla
+     kapıdaki tahsilatı ayrıştırıyordu. */
   const moneyLine = (item: OrderItem) => ({
     fulfilledQty: item.fulfilledQty,
     orderedQty: item.qty,
@@ -515,33 +414,12 @@ export async function getCustomerOrderDetail(
     lines,
     timeline: orderTimeline(order.status, history, order.deliveryType),
     pickup,
-    /*
-      ARA TOPLAM VE İNDİRİM DE TÜRETİLİR — siparişte ayrı bir alan yok ve olmamalı: iki kaynak bir
-      gün ayrışır (ve ayrıştı, künye aşağıda `totalCents`ta).
-
-      İNDİRİM DE KARŞILANANIN PAYIDIR (kullanıcı bulgusu 01.09): `order.discount_amount` sipariş
-      ANINDA anlaşılan indirimdir, eksik gönderimden haberi yoktur. Ham okunduğunda özet paneli
-      kendi içinde çelişiyordu — ölçüldü: ara toplam 32,10, indirim 8,18, toplam 27,29; oysa
-      32,10 − 8,18 = 23,92. Doğrusu satırların indirim paylarının toplamı (4,81), ve o zaman üç
-      satır birbirini tutuyor.
-    */
+    /* Ara toplam ve indirim türetilir; indirim de karşılananın payıdır, ham `discount_amount` eksik gönderimden habersizdir. */
     subtotalCents: lines.reduce((sum, l) => sum + l.lineTotalCents, 0) + discountCents,
     discountCents,
     discountLabel: order.discountLabel ? resolveLocalizedText(order.discountLabel, input.locale) : '',
     shippingFeeCents: order.shippingFeeCents,
-    /*
-      TOPLAM DA TÜRETİLİR — `order.total` HAM OKUNMAZ (kullanıcı bulgusu 01.09).
-
-      Ekran kendi içinde çelişiyordu: ara toplam eksik karşılamayı görüp düşüyor (üstteki künye),
-      toplam ise siparişin ANLAŞILAN tutarını yazıyordu. Cihazda ölçüldü — kalemler 23,92 € ederken
-      Toplam 46,39 € diyordu; kapıda ödemeli bir siparişte müşteri kapıya yanlış parayla hazırlanır.
-
-      Sayı ÖDEME MOTORUNDAN alınıyor, burada ikinci kez çarpılmıyor: `fulfilledAmountCents` zaten
-      kargoyu ve satır indirimlerini içeriyor ve hazırlık kesinleşmediyse siparişin kendi toplamına
-      düşüyor (`payment-status.ts` künyesi). Kuryenin kapıda tahsil ettiği tutar da aynı motordan
-      geliyor (`courier/delivery.ts`) — iki ekran artık aynı hesabı okuyor, ayrışamaz. Üstteki ara
-      toplam künyesinin "iki kaynak bir gün ayrışır" cümlesi tam olarak burada gerçekleşmişti.
-    */
+    /* Toplam ödeme motorundan türetilir, `order.total` ham okunmaz: eksik karşılamada kuryenin tahsil ettiği tutarla aynı olmalı. */
     totalCents: derivePaymentStatusForOrder(order, items, {
       collectedCents: order.amountCollectedCents,
       refundedCents: order.amountRefundedCents,
@@ -549,14 +427,7 @@ export async function getCustomerOrderDetail(
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     onAccount: order.onAccount,
-    /*
-      Künye TEK KAPIDAN geliyor (`readOrderTracking`, 07.12): duyurulan gönderi varsa o konuşur,
-      yoksa hazırlık panelinden ELLE girilen numaraya düşülür. İkisi de meşru yol — sağlayıcının
-      kapsamadığı taşıyıcı elle giriliyor.
-
-      Numarası olmayan gönderi künye AÇMAZ: taşıyıcı belli ama numara henüz gelmemişse ekranın
-      söyleyeceği bir şey yok ve boş bir "Takip no:" satırı müşteriye bilgi değil kaygı verir.
-    */
+    /* Künye tek kapıdan: duyurulan gönderi, yoksa elle girilen numara. Numarası olmayan gönderi künye açmaz. */
     shipment:
       tracking && tracking.parcels.length > 0
         ? {
@@ -575,18 +446,8 @@ export async function getCustomerOrderDetail(
 
 
 /**
- * Sipariş kaleminin MÜŞTERİ künyesi — ürün adı, boy etiketi, görsel.
- *
- * Neden ayrı bir çözüm: `order_item` satırı yalnız `variant_id` taşır, ürün adının anlık
- * görüntüsünü TUTMAZ. Yani "Baklava" yazısını ekrana getirmek her seferinde varyant → ürün
- * zincirini çözmek demek — ve bu zincir üç okumada birden gerekiyor (liste, detay, paket içeriği).
- *
- * **İsim neden siparişte saklanmıyor?** Saklansaydı ürün yeniden adlandırıldığında eski siparişler
- * eski adı gösterirdi. Bugünkü karar: ad CANLI okunur. Fiyat ve indirim ise siparişte donmuş
- * (`unit_price`, `discount_label`) — onlar paranın kaydıdır, ad değil.
- *
- * Sorgu sayısı kalemle DEĞİL, benzersiz varyant/ürün sayısıyla artar: iki toplu okuma
- * (`listByIds`), kalem başına sorgu yok.
+ * Sipariş kaleminin müşteri künyesi: kalem yalnız varyant kimliği taşır, ad canlı okunur ki yeniden adlandırılan ürün bulunabilsin.
+ * Sorgu sayısı benzersiz varyant sayısıyla artar, kalem başına sorgu yok.
  */
 interface CustomerOrderLine {
   /** Ürün kimliği — liste küçük resimlerinin tekilleştirme anahtarı. */
@@ -598,12 +459,7 @@ interface CustomerOrderLine {
   image: StorefrontImage;
 }
 
-/**
- * Verilen kalemlerin varyant kimliğine göre künye haritası.
- *
- * Haritada OLMAYAN varyant çağıranı patlatmaz — ürün ya da varyant silinmişse kalem adsız görünür.
- * Siparişi hiç göstermemektense adsız göstermek daha doğru: müşteri parasının karşılığını görmeli.
- */
+/** Varyant kimliğine göre künye haritası; haritada olmayan varyant kalemi adsız bırakır, sipariş yine gösterilir. */
 async function resolveOrderLines(
   db: SupabaseClient,
   items: readonly { variantId: string }[],

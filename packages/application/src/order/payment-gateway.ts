@@ -1,12 +1,8 @@
 import { PAYMENT_INTENT_STATUSES, type PaymentIntentStatus } from '@lezzet/domain-core';
 
 /**
- * **Sağlayıcıya soran port** (07.18) — ödemenin durumu, iptali ve iadesi.
- *
- * Paket `stripe` npm'ine bağlanamaz (bağımlılık ağacını React Native de okuyor — `checkout-session`
- * künyesi); istemci çağırandan gelir. Bu dosya istemcinin KULLANDIĞIMIZ yüzünü yapısal olarak tarif
- * eder (`StripeLike`) ve uyarlamayı TEK yerde tutar: web de arka uç da aynı uyarlamayı çağırır, iki
- * uygulamanın kendi kopyası olmaz.
+ * Sağlayıcıya soran port: ödemenin durumu, iptali ve iadesi. Paket `stripe`e bağlanamaz (bağımlılık ağacını React Native de okur),
+ * bu yüzden kullandığımız yüz `StripeLike` ile tarif edilir ve uyarlama web ile arka ucun ortak tek yeridir.
  */
 
 /** Sağlayıcıdaki ödemenin bize yeten yüzü. */

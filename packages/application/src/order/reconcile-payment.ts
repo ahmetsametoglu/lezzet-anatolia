@@ -54,11 +54,8 @@ export async function reconcileDraftPayment(db: Db, orderId: string, deps: Confi
   }
 
   /*
-    ÖDEME GELMEYECEK — önce sağlayıcıdaki ödeme kapatılır, sonra taslak. Sıra şart: taslak önce kapansa
-    ve müşteri tam o an ödemeyi bitirse, para iptal edilmiş bir siparişe gelirdi (webhook onu iade eder
-    ama müşteri boşuna bekler). İptal reddedilirse sebebi büyük ihtimalle tam o yarıştır: ödeme az önce
-    geçti — yeniden sorulur ve geçtiyse onay yoluna gidilir. Başka bir sebepse hata YUTULMAZ, fırlar:
-    ödemesi açık kalmış bir taslağı iptal etmek, sonradan gelen parayı sahipsiz bırakırdı.
+    Ödeme gelmeyecek: önce sağlayıcıdaki ödeme, sonra taslak kapanır; tersi sırada o an biten ödeme iptal edilmiş siparişe gelirdi.
+    İptal reddedilirse sebep çoğunlukla o yarıştır ve ödeme yeniden sorulur; başka sebepte hata fırlar, açık ödemeli taslak iptal edilmez.
   */
   if (payment.status !== 'canceled') {
     try {

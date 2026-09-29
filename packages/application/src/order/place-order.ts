@@ -12,70 +12,16 @@ import { transitionOrder } from './transition';
 import type { OrderEffects } from './effects';
 
 /**
- * "Siparişi onayla" — **taslağı açar, stoğu ayırır, ödeme niyetini doğurur** (uygulama katmanı
- * orkestrasyonu).
- *
- * **Tek turda** olması bilinçli: taslağı ayrı bir çağrıda açsaydık, ödeme adımına hiç gelmeyen
- * müşteriler ardında yetim taslaklar bırakırdı. Burada üçü tek karar: ya hepsi olur ya hiçbiri.
- *
- * Online ödemede `clientSecret` döner ve kart onayı **istemcide** verilir (Stripe iframe'i);
- * sipariş ödeme onayına kadar `draft` kalır ("önce ayır, sonra tahsil et").
- * Kapıda/vadeli ödemede sağlayıcıya hiç gidilmez ve sipariş BURADA kesinleşir (`confirmed`):
- * beklenen bir ödeme yok, bekletmenin de anlamı yok.
- *
- * ── TERFİ (aşama 3/3) · WEB'DEN FARKLARI ─────────────────────────────────────
- * Kaynağı `apps/web/app/(customer)/[locale]/checkout/actions.ts`'in `confirmCheckoutAction`ıydı;
- * web tarafı KÖPRÜ olarak duruyor. İki gerekçe: mobilin "Siparişi tamamla" ekranı tam bu zinciri
- * çağıracak ve **iki yüzeyde iki sipariş kuralı olamaz**; ayrıca `'use server'` dosyası bir UÇTUR,
- * orkestrasyon barındırmaz (CLAUDE §2). Kural tarafında hiçbir şey değişmedi — değişen, kapının
- * taşımaya ve YÜZEYE bağını kesen dört şey:
- *
- * · **Sağlayıcı istemcisi PORT** (`createPaymentSession`): `stripe` npm paketi bu paketin
- *   bağımlılığı olamaz (React Native tarafından da okunabilen bir ağaçta yaşıyoruz). Web köprüsü
- *   bugünkü Stripe üretecini geçer, mobil arka uç kendi istemcisini geçecek. `null` = anahtar yok.
- *
- * · **Ret DETAYININ biçimlenmesi ÇAĞIRANDA.** Burası ADLI ve YAPISAL sonuç döner
- *   (`{ status: 'price_changed', lines: [{ name, fromCents, toCents }] }`); onu *"Baklava: 12,50 €
- *   → 13,00 €"* dizesine çeviren şey bir GÖRÜNÜM kararıdır — para biçimi dile bağlı (`formatPrice`)
- *   ve iki yüzeyde iki farklı bileşen. Şekil mobil sözleşmesine (`CheckoutOrderResultSchema`)
- *   bilerek yakın tutuldu: taslağın ret hâlleri oraya birebir düşüyor.
- *
- * · **Ölçüm PORT** (`onRejected` / `onPlaced`): web'in huni defteri çerez + oturum + istek başlığı
- *   okuyor (`analytics/record`), yani bir taşıma ayrıntısı. Kapılar opsiyonel ve **beklenmez**:
- *   ölçüm akışı kesmez (`ANALYTICS §4`). Web köprüsü bugünkü iki çağrıyı geçer; mobil geçmez —
- *   uydurulmuş bir oturum, huniyi sessizce bozardı.
- *
- * · **Durum geçişinin yan etkileri PORT** (`effects`, `transitionOrder` üstünden): müşteri haberi
- *   ve sipariş puanı başka modüllerin dosyaları, gerekçesi `effects.ts` künyesinde.
+ * "Siparişi onayla": taslağı açar, stoğu ayırır, ödemeyi başlatır; tek turda, ki ödemeye gelmeyen müşteri ardında yetim taslak
+ * bırakmasın. Kartta sipariş ödeme onayına kadar taslak kalır; kapıda ve vadeli ödemede burada kesinleşir.
  */
 
-/**
- * Sipariş açılamadı — ve **her ret müşteriden BAŞKA bir şey ister**: `blocked_lines` satır
- * çıkarmayı, `insufficient_here` adet düşürmeyi, `price_changed` yeni fiyatı onaylamayı,
- * `date_unavailable` başka gün seçmeyi. Tek "olmadı"ya indirgenseydi müşteri neyi düzelteceğini
- * bilemez, çoğu sepeti büsbütün terk ederdi.
- *
- * Taslağın ret hâlleri OLDUĞU GİBİ taşınır (`CheckoutDraftOutcome` eksi `ok`) — burada yeniden
- * sayılsalardı iki liste bir gün ayrışırdı. Üstüne bu zincirin kendi üç hâli biner.
- */
+/** Sipariş açılamadı; her ret müşteriden başka bir düzeltme ister, taslağın ret hâlleri olduğu gibi taşınır. */
 export type PlaceOrderRejection =
   | Exclude<CheckoutDraftOutcome, { status: 'ok' }>
-  /**
-   * YARIŞ HÂLİ: sepet okumasıyla rezervasyon arasında stok düştü — başka müşteri aldı. Kalem
-   * kimliği ve kalan adet taşınır; ADI çağıran çözer (dil onun, sözlüğü onun). İki daldan da
-   * doğabilir: kapıda/vadeli ödemede `confirmed` ayırmasından, kartta ödeme oturumundan.
-   */
+  /** Sepet okumasıyla ayırma arasında stok düştü; kalem kimliği ve kalan adet taşınır, adı çağıran çözer. */
   | { status: 'insufficient_stock'; variantId: string; available: number }
-  /**
-   * Ödeme oturumu açılamadı — müşteri her şeyi doğru yaptı, kasa açılmadı. Huninin son adımındaki
-   * kayıpların en pahalısı bu.
-   *
-   * `no_client_secret` ayrı bir hâl: sağlayıcı "oldu" dedi ama istemcinin ödemeyi tamamlaması için
-   * gereken jetonu vermedi. Ödeme başlatılamaz, yani sonucu ötekilerle aynı.
-   *
-   * **Kartın REDDİ burada DEĞİL** ve bilerek: o karar sağlayıcının kendi arayüzünde veriliyor,
-   * sunucuya hiç uğramıyor.
-   */
+  /** Ödeme oturumu açılamadı; kartın reddi burada değil, o karar sağlayıcının kendi arayüzünde verilir. */
   | { status: 'payment_unavailable'; reason: 'stale' | 'not_found' | 'provider_unavailable' | 'no_client_secret' }
   /** Taslak açıldı ama kesinleşemedi (sipariş okunamadı ya da geçişi motor reddetti) — iç arıza. */
   | { status: 'order_not_placed' };
@@ -84,14 +30,8 @@ export type PlaceOrderOutcome =
   /** Kart yolu: sipariş `draft`, ödeme istemcide tamamlanacak. */
   | { status: 'payment_required'; orderId: string; totalCents: number; deliveryType: DeliveryType; clientSecret: string }
   /**
-   * Kapıda/vadeli: ödeme sağlayıcısı yok, sipariş AÇILDI ve kesinleşti.
-   *
-   * **`referenceNo` müşteriye gösterilen numaradır** (`LA-26-…`) ve BU DALA ÖZGÜ: numara ilk kalıcı
-   * durumda doğuyor (`confirmed` — `transition.ts` kuralı), yani kart yolunda sipariş henüz
-   * taslakken numara YOKTUR. Geçişin kendi cevabından geliyor (`transitionOrder` → `referenceNo`),
-   * ek okuma yok. `null` kalabilir — motor geçişi yazdı ama numara üretmediyse uydurulmaz;
-   * "bilinmiyor" yazan bir sipariş numarası, olmayan numaradan kötüdür (27.08 · eski
-   * `BEKLEYEN(21.14)`: native onay ekranı numarayı çizemiyordu çünkü cevapta hiç yoktu).
+   * Kapıda ya da vadeli: sipariş açıldı ve kesinleşti. Numara ilk kalıcı durumda doğar, bu yüzden bu dala özgüdür; üretilmediyse
+   * `null` kalır, uydurulmaz.
    */
   | { status: 'placed'; orderId: string; totalCents: number; deliveryType: DeliveryType; referenceNo: string | null }
   | PlaceOrderRejection;
@@ -117,74 +57,40 @@ export interface PlaceOrderInput {
   marketingConsent?: boolean;
   /** Sepetteki kupon kodu; siparişin indirimi bunsuz hesaplanamaz. */
   couponCode?: string | null;
-  /**
-   * **Müşteriye gösterilen sepetin imzası** (21.08) — taslağa OLDUĞU GİBİ geçer ve orada
-   * karşılaştırılır (`cart_changed`). Burada bir kural YOK, yalnız taşıma.
-   *
-   * Alanların tek tek kopyalandığı bir kapıdır bu (aşağıdaki `createCheckoutDraft` çağrısı):
-   * eklenip de geçirilmeyen bir alan, kapıyı sessizce etkisiz bırakır — yazıldığı gün ölçüldü,
-   * web'in tip denetimi yakaladı ve mobil taraf `spread` yüzünden hiç şikâyet etmemişti.
-   */
+  /** Müşteriye gösterilen sepetin imzası; taslakta karşılaştırılır (`cart_changed`). */
   expectedCartFingerprint?: string | null;
-  /**
-   * Çift sipariş kalkanı — istemcinin bu checkout denemesi için ürettiği anahtar.
-   *
-   * Kapsam BİLEREK dar: yalnız kart DIŞI yollarda işler. Orada sipariş bu çağrıda kesinleşiyor,
-   * yani ikinci bir çağrı **kalıcı ve gerçek** bir çift sipariş demek. Kart yolunda ise çağrı
-   * yalnız taslak açıyor; oradaki koruma açık taslakların süpürülmesi ve düğmenin gezinme bitene
-   * kadar kapalı kalması.
-   */
+  /** Çift sipariş kalkanı: istemcinin bu deneme için ürettiği anahtar. */
   idempotencyKey?: string | null;
-  /** Sepetin kargo grubundan açılan ikinci sipariş mi — anlık görüntüyle AYNI bayrak (19.15). */
+  /** Sepetin kargo grubundan açılan ikinci sipariş mi. */
   shippingOrder?: boolean;
   /** Kargo servisi ve teslim noktası seçimi; taslak doğrular (`CheckoutDraftInput`). */
   shippingOptionCode?: string | null;
   servicePointId?: string | null;
   /** Gel-al deposu; taslak izni ve depoyu doğrular (`CheckoutDraftInput.pickupWarehouseId`). */
   pickupWarehouseId?: string | null;
-  // Komşu davetinin belirteci girdi DEĞİL (12.08): davet kişiye yazılı, taslak onu müşterinin
-  // kendi kaydından okuyor. Yüzeyin taşıyacak bir şeyi kalmadı.
+  // Komşu davetinin belirteci girdi değil: davet kişiye yazılı, taslak onu müşterinin kaydından okur.
   /** Paket çözümünün kapısı — taslağa olduğu gibi geçilir (aşama 1'in `CartBundlePort`u). */
   bundles?: CartBundlePort;
   /** Edinim kaynağı kapısı (13.2) — taslağa olduğu gibi geçilir; web'de çerez okur. */
   onCustomerAcquired?: (customerId: string) => void;
-  /**
-   * Ödeme niyetini açan sağlayıcı. **Zorunlu ve varsayılansız**: `null` "anahtar yok" demektir ve
-   * cevabı `provider_unavailable`dır. Varsayılan verseydik paketin `stripe`a bağımlı olması
-   * gerekirdi — bu zincirin taşınmasının tek teknik kısıtı buydu.
-   */
+  /** Ödeme oturumunu açan sağlayıcı; `null` "anahtar yok" demektir, varsayılan verilseydi paket `stripe`a bağlanırdı. */
   createPaymentSession: CheckoutSessionCreator | null;
-  /**
-   * Sağlayıcıya soran port (07.18) — yeni deneme eski taslağı süpürürken eski ÖDEMEYİ de sağlayıcıda
-   * iptal etmek için. Verilmezse eski davranış: taslak kapanır, ödemesi sağlayıcıda açık kalır.
-   */
+  /** Sağlayıcıya soran port; açılan taslağın ödemesini okur ve gerekirse iptal eder. */
   paymentGateway?: PaymentGateway | null;
   /** Durum geçişinin yan etkileri (müşteri haberi + sipariş puanı) — `transitionOrder`a geçer. */
   effects?: OrderEffects;
-  /**
-   * Huni ölçümü: sipariş REDDEDİLDİ. Değer, ret hâlinin adıdır; ödeme oturumu düşmesinde
-   * `payment_failed`. Çağıran neyin sayılacağına kendi karar verir (bazı retler bizim
-   * yapılandırma hatamızdır ve huniye yazılmamalıdır — müşteri vazgeçmedi, biz cevap veremedik).
-   */
+  /** Huni ölçümü: sipariş reddedildi; çağıran hangi retlerin sayılacağına kendisi karar verir. */
   onRejected?: (reason: string) => void;
   /** Huni ölçümü: müşteri siparişi verdi (kart yolunda "ödemeye bastı" niyeti de buraya sayılır). */
   onPlaced?: () => void;
 }
 
 export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceOrderOutcome> {
-  /**
-   * Aynı istek İKİNCİ kez geldiyse (çift tıklama, ağın yeniden denemesi) ikinci sipariş AÇILMAZ:
-   * var olanın kimliği döner. Kart dışı yollarda sipariş bu çağrıda kesinleştiği için buradaki
-   * tekrar, kalıcı bir çift sipariş demekti.
-   *
-   * Huni ölçümü BURADA atılmaz ve bu doğru: ölçülen şey müşterinin NİYETİdir, o niyet ilk çağrıda
-   * zaten sayıldı — ikinci kez saymak aynı siparişi iki niyet göstermek olurdu.
-   */
+  /** Aynı istek ikinci kez geldiyse ikinci sipariş açılmaz; huni ölçümü de ilk çağrıda sayıldığı için atılmaz. */
   if (input.idempotencyKey) {
     const already = await new OrderService(db).findByIdempotencyKey(input.idempotencyKey, input.customerId);
     if (already && already.status !== 'draft' && already.status !== 'cancelled') {
-      // Numara SATIRDAN: bu dal zaten kesinleşmiş bir siparişi geri veriyor, numarası yazılı. Tür de satırdan — checkout
-      // artık üç türü de açabiliyor (gel-al dahil), daraltacak bir şey kalmadı.
+      // Numara ve tür satırdan: bu dal kesinleşmiş bir siparişi geri veriyor.
       return {
         status: 'placed',
         orderId: already.id,
@@ -240,15 +146,8 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
   }
 
   /**
-   * Kapıda ya da vadeli: para şimdi geçmiyor, sağlayıcıya hiç gidilmiyor — ama sipariş
-   * **KESİNLEŞİR**. Önce yalnız taslak açılıp öyle bırakılıyordu; müşteri "tamamla" dediği hâlde
-   * sipariş `draft` kalıyor, referans numarası doğmuyor ve onay sayfası siparişi ödemesi
-   * beklenen bir kart siparişi sanıp "Ödemeniz onaylanıyor · bankanızdan onay bekliyoruz"
-   * diyordu (29.07). Kapıda ödemede beklenen bir banka yok.
-   *
-   * Sıra ORDER_LIFECYCLE'ın kuralı: kapıda/vadeli ödemede rezervasyon `confirmed` geçişinde
-   * yapılır ve **süresizdir** — düşmesini bekleyeceğimiz bir ödeme penceresi yok. Referans
-   * numarası da ilk kalıcı durumda (`confirmed`) doğar.
+   * Kapıda ya da vadeli: para şimdi geçmez ama sipariş kesinleşir. Ayırma `confirmed` geçişinde ve süresizdir, çünkü düşmesini
+   * bekleyeceğimiz bir ödeme penceresi yok.
    */
   if (input.paymentMethod !== 'online') {
     // Kalemler TASLAKTAN değil SİPARİŞTEN okunur: paket açılımı, parti seçimi ve fiyat
@@ -259,10 +158,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
 
     const reserved = await reserveOrderStock(db, { orderId: draft.orderId, items: placed.items, expiring: false });
     if (!reserved.ok) {
-      // Ayrılamadıysa sipariş taslak kalır ve kapatılır: müşteriye söz verilmemiş olur.
-      // Sebep `out_of_stock` — gerçekten mal kalmadı. **Bu yolda PARA HİÇ ÇEKİLMEDİ** (kapıda/vadeli
-      // ödeme, sipariş `draft`): ekranın "iade edildi" cümlesi bu sebebi tek başına okuyarak
-      // kurulamaz, ödeme yöntemiyle birlikte okunur (`confirmation-types` künyesi, 07.14).
+      // Ayrılamadıysa taslak kapanır, sebep `out_of_stock`; bu yolda para hiç çekilmedi.
       await cancelDraft(db, draft.orderId, 'out_of_stock');
       input.onRejected?.('insufficient_stock');
       return { status: 'insufficient_stock', variantId: reserved.variantId, available: reserved.available };
@@ -301,13 +197,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
     input.createPaymentSession,
   );
   if (session.status !== 'ok' || !session.clientSecret) {
-    // Ödeme oturumu açılamadı: müşteri her şeyi doğru yaptı, kasa açılmadı. Huninin son
-    // adımındaki kayıpların en pahalısı bu — sepet ve adres tamam, ödeme yolu yok.
-    //
-    // **Kartın REDDİ burada değil** ve bilerek: o karar sağlayıcının kendi arayüzünde veriliyor,
-    // sunucuya hiç uğramıyor. Ölçmek için istemciden çağrılabilir ikinci bir yazma ucu açmak
-    // gerekirdi (haritanın tek istisnası paylaşma) — üstelik red sebepleri zaten sağlayıcının
-    // panosunda, bizden daha ayrıntılı duruyor.
+    // Ödeme oturumu açılamadı: müşteri her şeyi doğru yaptı, kasa açılmadı.
     input.onRejected?.('payment_failed');
     // Yarış hâli bu dalda da doğabilir (`createCheckoutSession` ayırmayı kendi içinde yapıyor) ve
     // künyesi kapıda ödeme yoluyla AYNI: kalem kimliği elimizde, adı çağıranın işi.
@@ -321,15 +211,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
       reason: session.status === 'ok' ? 'no_client_secret' : session.status,
     };
   }
-  // Kart yolunun huni adımı BURADA kapanır (08.9 · kullanıcı kararı 04.08). Buraya gelinmesi
-  // müşterinin ödeme düğmesine bastığı anlamına gelir — sipariş henüz `draft`, ama huni bir
-  // NİYET ölçüyor, muhasebe değil: bankadan dönmeyen bir onay müşterinin kararını değiştirmez.
-  // Sipariş ve ciro SAYISI zaten defterin değil `order` tablosunun yetkisinde (`ANALYTICS §4`).
-  //
-  // Alternatifleri elemek: webhook'ta atmak imkânsız (orada ziyaretçinin oturumu yok, anahtar
-  // istekten türüyor), dönüş sayfasında atmak yenilemede çift sayardı ve kapıdan tekilleştirme
-  // beklemek gerekirdi. Kart reddedilip müşteri tekrar denerse ikinci olay yazılır — o da ikinci
-  // bir niyettir, düzeltilecek bir sapma değil.
+  // Kart yolunun huni adımı: müşteri ödeme düğmesine bastı; huni niyeti ölçer, muhasebeyi değil.
   input.onPlaced?.();
   return {
     status: 'payment_required',
@@ -341,23 +223,8 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
 }
 
 /**
- * Müşterinin ÖNCEKİ açık taslaklarını kapatır ve stoklarını geri bırakır.
- *
- * **Neden şart.** Kart reddedildiğinde ekran hatayı gösterip müşteriyi aynı sayfada bırakıyor;
- * "tekrar dene" her seferinde YENİ bir taslak sipariş ve YENİ bir rezervasyon açıyordu. Eski
- * rezervasyon TTL'i boyunca (30 dk) malı tutmaya devam ettiği için müşteri **kendi ilk denemesi
- * yüzünden** ikinci denemede "stok yetersiz" alabiliyordu — az stoklu üründe ürünü hiç alamıyordu.
- * Ve tutulan mal yalnız ona kapalı değildi: **başka müşterilere de yok görünüyordu** (29.07
- * denetimi + kullanıcı tespiti).
- *
- * Kapsam bilerek geniş: yöntem değiştiren müşterinin (karttan kapıda ödemeye geçen) ardında da
- * taslak kalmamalı. Yalnız `draft` olanlara dokunulur — kesinleşmiş sipariş buraya hiç girmez.
- *
- * **Süpürülen taslağın ödemesi de sağlayıcıda iptal edilir** (07.18 — kimliği artık siparişte,
- * `payment_ref`). Önce edilemiyordu: onaylanmamış bir niyet kendiliğinden tahsil etmese de 3-D Secure
- * penceresinden sonradan onaylanabiliyordu. Geçmiş ya da işlenen bir ödeme buraya hiç gelmez — çağıran
- * yeni ödemeyi açmadan önce `openPaymentBefore`la sordu. Webhook'taki emniyet de yerinde: iptal edilmiş
- * bir siparişe ödeme gelirse para iade edilir.
+ * Müşterinin önceki açık taslaklarını kapatır ve stoklarını bırakır, ki eski deneme malı tutup yenisine "stok yetersiz" dedirtmesin.
+ * Süpürülen taslağın ödemesi sağlayıcıda da iptal edilir; geçmiş ya da işlenen ödeme buraya gelmez.
  */
 async function supersedeOpenDrafts(db: Db, customerId: string, gateway: PaymentGateway | null): Promise<void> {
   const orders = new OrderService(db);
@@ -377,18 +244,12 @@ async function supersedeOpenDrafts(db: Db, customerId: string, gateway: PaymentG
     // Sıra ÖNEMLİ: önce mal geri bırakılır, sonra sipariş kapanır. Tersi olsaydı iptal edilmiş bir
     // siparişin rezervasyonu ortada kalabilirdi.
     await releaseOrderStock(db, order.id);
-    // Müşteri yeni bir denemeye geçti; bu taslak onun YERİNE geçildiği için kapanıyor (07.14).
+    // Müşteri yeni bir denemeye geçti; bu taslak onun yerine geçildiği için kapanıyor.
     await cancelDraft(db, order.id, 'superseded');
   }
 }
 
-/**
- * Ayrılamayan siparişin taslağı kapatılır: ortada söz verilmemiş yarım bir sipariş kalmaz.
- *
- * **Sebep ZORUNLU parametre** (07.14): `null` "sebep yazılmadı" demektir, "sebep yok" değil — ve
- * onay ekranı iptalin sebebine göre farklı cümle kuruyor. Varsayılan bıraksaydık yeni bir kapatma
- * yolu sessizce sebepsiz yazar, ekran da müşteriye yanlış cümleyi gösterirdi.
- */
+/** Ayrılamayan siparişin taslağı kapatılır; sebep zorunludur, çünkü onay ekranı cümlesini sebebe göre kurar. */
 async function cancelDraft(db: Db, orderId: string, reason: OrderCancelReason | null): Promise<void> {
   await new OrderService(db).cancel(orderId, 'draft', null, reason);
 }
