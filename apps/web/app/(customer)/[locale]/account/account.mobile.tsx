@@ -27,6 +27,7 @@ import { LegalDirectory } from './components/legal-directory';
 import { ChannelsCard, ChatLinkNoticeBanner } from './components/channels-card';
 import { PhoneCouponList } from './components/phone-coupon-list';
 import { PhoneDeleteAccount } from './components/phone-delete-account';
+import { PhoneInstallCard } from './components/phone-install-card';
 import { PhonePointsEarnList, type PhoneEarnActions } from './components/phone-points-earn-list';
 import { PhoneProfileSheet } from './components/phone-profile-sheet';
 import { PhoneZoneInterest } from './components/phone-zone-interest';
@@ -68,6 +69,8 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
         <NavRow label={copy.menu.write} href="/support/new" icon={<MobileIcon name="mail" size={17} className="text-muted" />} divider />
         <NavRow label={copy.menu.delivery} href="/legal/delivery" icon={<MobileIcon name="truck" size={17} className="text-muted" />} divider />
       </nav>
+
+      <PhoneInstallCard t={t} />
 
       <AddressesCard
         t={t}

@@ -104,7 +104,12 @@
       "name_required": "Adınızı boş bırakamayız.",
       "phone_invalid": "Numarayı anlayamadık — ülke koduyla yazmayı deneyin (+33…).",
       "redeem_unavailable": "Puanınız şu anda kupona çevrilemiyor. Bakiyenizi kontrol edin."
-    }
+    },
+    "installTitle": "Uygulamayı yükle",
+    "installBody": "Lezzet Anatolie'yi ana ekranınıza ekleyin; uygulama mağazasına gerek kalmadan tek dokunuşla açılır.",
+    "installButton": "Yükle",
+    "installStepShare": "Paylaş simgesine dokunun",
+    "installStepAdd": "“Ana Ekrana Ekle”yi seçin"
   },
   "fr": {
     "title": "Mon compte",
@@ -211,7 +216,12 @@
       "name_required": "Le nom ne peut pas être vide.",
       "phone_invalid": "Numéro non reconnu — essayez avec l'indicatif du pays (+33…).",
       "redeem_unavailable": "Vos points ne peuvent pas être convertis pour le moment. Vérifiez votre solde."
-    }
+    },
+    "installTitle": "Installer l'application",
+    "installBody": "Ajoutez Lezzet Anatolie à votre écran d'accueil : elle s'ouvre d'un geste, sans passer par une boutique d'applications.",
+    "installButton": "Installer",
+    "installStepShare": "Touchez l'icône Partager",
+    "installStepAdd": "Choisissez « Sur l'écran d'accueil »"
   },
   "de": {
     "title": "Mein Konto",
@@ -318,6 +328,11 @@
       "name_required": "Der Name darf nicht leer sein.",
       "phone_invalid": "Nummer nicht erkannt – bitte mit Ländervorwahl versuchen (+33…).",
       "redeem_unavailable": "Ihre Punkte können derzeit nicht umgewandelt werden. Bitte prüfen Sie Ihren Punktestand."
-    }
+    },
+    "installTitle": "App installieren",
+    "installBody": "Fügen Sie Lezzet Anatolie Ihrem Home-Bildschirm hinzu: Sie öffnet sich mit einem Tipp, ganz ohne App-Store.",
+    "installButton": "Installieren",
+    "installStepShare": "Tippen Sie auf das Teilen-Symbol",
+    "installStepAdd": "Wählen Sie „Zum Home-Bildschirm“"
   }
 }

@@ -11,6 +11,7 @@ import { ChannelsCard, ChatLinkNoticeBanner } from './components/channels-card';
 import { addressDefaultsOf } from '@/components/customer/delivery/address-form';
 import { DesktopCouponsCard } from './components/desktop-coupons-card';
 import { DesktopDeleteAccount } from './components/desktop-delete-account';
+import { DesktopInstallCard } from './components/desktop-install-card';
 import { ProfileCard } from './components/profile-card';
 
 /**
@@ -129,6 +130,8 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
               <span className="text-olive">→</span>
             </Link>
           </Card>
+
+          <DesktopInstallCard t={t} />
 
           {/* Bağlı sohbetler, sohbetten gelen siparişlerin neden burada göründüğünü anlatır. */}
           <ChannelsCard t={t} locale={locale} channels={account.channels} compact={compact} />

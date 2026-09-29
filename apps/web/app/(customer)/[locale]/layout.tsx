@@ -14,7 +14,7 @@ import { PlaceProvider } from '@/components/customer/delivery/place-context';
 import { ToastProvider } from '@/components/customer/ui/toast';
 import { AccountProvider } from '@/components/customer/account/account-context';
 import { VisitPing } from '@/components/customer/account/visit-ping';
-import { ServiceWorkerRegistration } from '@/components/customer/pwa/service-worker-registration';
+import { PwaSetup } from '@/components/customer/pwa/pwa-setup';
 import { getDeliveryZones } from '@/lib/delivery/read';
 import { readPlaceSnapshot } from '@/lib/delivery/read-place';
 import { currentCustomer } from '@/lib/guard';
@@ -96,7 +96,7 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
               turu atılmaz. Yazmayı istemci efekti yapar — render yan etkisiz olmalı, buraya konan
               defter yazımı her prefetch'te tetiklenirdi. */}
           {account && <VisitPing />}
-          <ServiceWorkerRegistration />
+          <PwaSetup />
           {/* Bildirim kökte: kim çıkarırsa çıkarsın tek hap, aynı yerde. */}
           <ToastProvider device={device}>
             <PlaceProvider
