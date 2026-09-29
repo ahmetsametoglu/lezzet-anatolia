@@ -28,6 +28,7 @@ import { ChannelsCard, ChatLinkNoticeBanner } from './components/channels-card';
 import { PhoneCouponList } from './components/phone-coupon-list';
 import { PhoneDeleteAccount } from './components/phone-delete-account';
 import { PhoneInstallCard } from './components/phone-install-card';
+import { PhoneNotifyCard } from './components/phone-notify-card';
 import { PhonePointsEarnList, type PhoneEarnActions } from './components/phone-points-earn-list';
 import { PhoneProfileSheet } from './components/phone-profile-sheet';
 import { PhoneZoneInterest } from './components/phone-zone-interest';
@@ -71,6 +72,7 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
       </nav>
 
       <PhoneInstallCard t={t} />
+      <PhoneNotifyCard t={t} failedText={copy.marketing.saveFailed} />
 
       <AddressesCard
         t={t}

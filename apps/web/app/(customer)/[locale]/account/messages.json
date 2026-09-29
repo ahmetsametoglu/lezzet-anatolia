@@ -109,7 +109,11 @@
     "installBody": "Lezzet Anatolie'yi ana ekranınıza ekleyin; uygulama mağazasına gerek kalmadan tek dokunuşla açılır.",
     "installButton": "Yükle",
     "installStepShare": "Paylaş simgesine dokunun",
-    "installStepAdd": "“Ana Ekrana Ekle”yi seçin"
+    "installStepAdd": "“Ana Ekrana Ekle”yi seçin",
+    "notifyTitle": "Bildirimler",
+    "notifyLabel": "Bu cihazda bildirim",
+    "notifyBody": "Siparişiniz yola çıkınca ya da talebinize cevap gelince bu cihaza haber veririz.",
+    "notifyDenied": "Tarayıcınız bu sitenin bildirimlerini engelliyor. Açmak için tarayıcı ayarlarından izin verin."
   },
   "fr": {
     "title": "Mon compte",
@@ -221,7 +225,11 @@
     "installBody": "Ajoutez Lezzet Anatolie à votre écran d'accueil : elle s'ouvre d'un geste, sans passer par une boutique d'applications.",
     "installButton": "Installer",
     "installStepShare": "Touchez l'icône Partager",
-    "installStepAdd": "Choisissez « Sur l'écran d'accueil »"
+    "installStepAdd": "Choisissez « Sur l'écran d'accueil »",
+    "notifyTitle": "Notifications",
+    "notifyLabel": "Notifications sur cet appareil",
+    "notifyBody": "Nous vous prévenons sur cet appareil quand votre commande est en route ou qu'une demande reçoit une réponse.",
+    "notifyDenied": "Votre navigateur bloque les notifications de ce site. Pour les activer, autorisez-les dans les réglages du navigateur."
   },
   "de": {
     "title": "Mein Konto",
@@ -333,6 +341,10 @@
     "installBody": "Fügen Sie Lezzet Anatolie Ihrem Home-Bildschirm hinzu: Sie öffnet sich mit einem Tipp, ganz ohne App-Store.",
     "installButton": "Installieren",
     "installStepShare": "Tippen Sie auf das Teilen-Symbol",
-    "installStepAdd": "Wählen Sie „Zum Home-Bildschirm“"
+    "installStepAdd": "Wählen Sie „Zum Home-Bildschirm“",
+    "notifyTitle": "Benachrichtigungen",
+    "notifyLabel": "Benachrichtigungen auf diesem Gerät",
+    "notifyBody": "Wir benachrichtigen Sie auf diesem Gerät, wenn Ihre Bestellung unterwegs ist oder eine Anfrage beantwortet wird.",
+    "notifyDenied": "Ihr Browser blockiert die Benachrichtigungen dieser Website. Erlauben Sie sie in den Browsereinstellungen."
   }
 }
