@@ -1,48 +1,7 @@
 /**
- * Meta webhook KAYIT aracı (15.7) — `pnpm meta:register <genel-url> [--only=whatsapp|page]`
- *
- * Uygulamanın webhook adresini ve dinlediği ALANLARI Meta'ya yazar; panele hiç girilmez.
- *
- * ── NEDEN VAR: ADRES HER TÜNEL AÇILIŞINDA DEĞİŞİYOR ─────────────────────────
- * Geliştirmede genel adres `cloudflared` hızlı tüneliyle açılıyor ve o adres kalıcı DEĞİL — tünel
- * kapanınca ölüyor, yeni açılışta başka bir ad geliyor. Meta'daki kayıt ise olduğu yerde kalıyor.
- * Sonuç 06.09'da ölçüldü: kayıtlı adres `sherman-gauge-drinks-newly.trycloudflare.com` yanıt
- * vermiyordu, yani **hiçbir olay bize ulaşmıyordu** — ve arıza SESSİZDİ. Kod doğru, uç sağlam,
- * testler yeşil; yalnız kimse yazmıyor. Bu araç o adımı tek komuta indiriyor.
- *
- * Kalıcı adres (üretim) gelince araç gereksizleşmez, seyrekleşir: aynı komut bir kez koşar.
- *
- * ── ÖNCE ADRESİ YOKLAR, SONRA KAYDEDER ──────────────────────────────────────
- * Kaydetmeden önce el sıkışma GET'i kendimiz atılıyor ve `hub.challenge` yankısı aranıyor. Sebep
- * bugünün arızasının ta kendisi: ölü bir adres kayıtlıyken her şey "kurulu" görünüyordu. Meta da
- * kayıt anında bir kez yokluyor, ama başarısızlığı panelde bir satır olarak bırakıyor; burada
- * başarısızlık komutun çıkışıdır ve gözden kaçmaz.
- *
- * ── `fields` ZORUNLU: EN SİNSİ HÂL "AKTİF AMA SESSİZ" ───────────────────────
- * 06.09'da ölçülen ikinci arıza: abonelik kaydı vardı, `active: true` diyordu ve **hiç alan
- * içermiyordu**. Alan abone edilmemiş bir abonelik, Meta'ya "beni haberdar etme" demektir; panelde
- * yeşil görünür, defterde sessizlik olur. O yüzden alan listesi burada SABİT ve açıkça yazılı —
- * kaydı elle atan birinin unutabileceği tek şey buydu.
- *
- * ── ÜÇ AYRI JETON TÜRÜ — KARIŞTIRMAK `#200` VERİR ───────────────────────────
- * Meta aynı işin üç adımında üç ayrı jeton türü istiyor ve bu 22.08'de bir kez öğrenildi:
- *   1. `POST /{app_id}/subscriptions`    → UYGULAMA jetonu (`app_id|app_secret`)
- *   2. `POST /{waba_id}/subscribed_apps` → KULLANICI/sistem jetonu  (Sayfa jetonu `#200` verir)
- *   3. `POST /{page_id}/subscribed_apps` → SAYFA jetonu             (sistem jetonu yetmez)
- * Üçü de burada adıyla ayrılmış; hangisinin nereye gittiği okunabilsin diye tek satırda tutulmadı.
- * Sayfa jetonu env'den de gelir (`META_PAGE_ACCESS_TOKEN`, 08.09) — gönderimin kullandığı jetonla
- * aynı; türetim (`GET /{page_id}?fields=access_token`) yalnız yedek ve `pages_show_list` ister.
- *
- * ── SIRA: UYGULAMA ABONELİĞİ, SAYFA JETONUNDAN ÖNCE (08.09) ────────────────
- * Ölçülen arıza: WhatsApp kaydı güncel adresteyken `page` kaydı üç tünel önceki adreste kalmıştı.
- * Sebep bu dosyanın eski sırasıydı — uygulama aboneliği (yalnız uygulama jetonu ister) Sayfa jetonu
- * türetiminin ARKASINDA duruyordu; türetim izin yüzünden düşünce adres hiç yazılmıyor ve Messenger
- * olayları ölü adrese gidiyordu. Bağımsız adım bağımlı adımın arkasında beklemez.
- *
- * ── INSTAGRAM BİLEREK YOK ───────────────────────────────────────────────────
- * Kullanıcı kararı 06.09: Instagram en sona. Kanal eklendiğinde buraya bir dal daha gelir
- * (`object=instagram`, aynı alanlar) — bugün yazılsaydı, uygulamada Instagram ürünü olmadığı için
- * her koşuda `Invalid Permissions (1929002)` verirdi ve gürültüden başka bir şey üretmezdi.
+ * Webhook adresini ve dinlenen alanları Meta'ya yazar (`pnpm meta:register <genel-url> [--only=whatsapp|page]`); kayıttan önce adresi
+ * kendisi yoklar, çünkü ölü bir adres kayıtlıyken her şey kurulu görünür. Üç adım üç ayrı jeton ister (uygulama aboneliği: uygulama
+ * jetonu · WABA: sistem jetonu · sayfa: sayfa jetonu) ve karıştırmak `#200` verir.
  */
 const load = (process as { loadEnvFile?: (path: string) => void }).loadEnvFile;
 // SIRA ÖNEMLİ (öteki Meta betikleriyle aynı gerekçe): Node var olan değişkeni ezmez, ilk yükleyen
@@ -58,15 +17,8 @@ for (const dosya of ['apps/backend/.env.local', 'apps/web/.env.local', '.env']) 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 
 /*
-  Dinlenecek alanlar. WhatsApp'ta yalnız `messages`: işleyicimizin TANIDIĞI tek alan bu
-  (`handleMetaWebhook`). `message_template_status_update` cazip görünüyor (şablon onayı 15.11'in
-  bekleyen işi) ama işleyici onu tanımıyor — abone etmek, anlamadığımız bir gövdeyi uca yollamak
-  olurdu. Şablon izleme yazıldığı gün buraya bir satır eklenir.
-
-  Messenger'da dördü de işleyicide KARŞILIĞI OLAN alanlar:
-  `messages` (gelen), `messaging_postbacks` (buton cevabı → interactive), `message_echoes`
-  (bizim/telefondan giden → defterin kendiliğinden dolması), `message_reactions` (balona 👍 → müşterinin
-  cevabı; 08.09'da ölçüldü: abone değilken müşterinin "parmak"ı bize hiç düşmüyordu).
+  Yalnız işleyicinin (`handleMetaWebhook`) tanıdığı alanlar abone edilir; tanımadığı alan, anlamadığımız bir gövdeyi uca yollamaktır.
+  Liste sabit ve açık, çünkü alansız abonelik panelde yeşil görünür ama hiçbir olay getirmez.
 */
 const WHATSAPP_FIELDS = ['messages'];
 const PAGE_FIELDS = ['messages', 'messaging_postbacks', 'message_echoes', 'message_reactions'];

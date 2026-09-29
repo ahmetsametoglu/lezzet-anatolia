@@ -172,20 +172,8 @@ function threadItemsOf(messages: readonly SocialMessage[]): ThreadItem[] {
 const PHOTO_GAP = operationsTheme.space.sm;
 
 /**
- * Karonun DP ÖLÇÜSÜ — cihaz genişliğinden hesaplanır, yüzdeyle verilmez.
- *
- * ── ÇÖZÜLEN ARIZA: BOŞ BALONCUK (cihaz turu 07.09) ──────────────────────────
- * İlk turda karo `flexBasis: '31%'`, tek fotoğraf `width: '100%'` idi ve ekranda **boş, minik bir
- * baloncuk** çıktı. Sebep bir ölçüm döngüsü: baloncuk (`line`) genişliğini İÇERİĞİNDEN alıyor
- * (`maxWidth: 86%` bir tavan, bir genişlik değil), içerik ise genişliğini yüzdeyle baloncuktan
- * istiyordu. Referansı olmayan yüzde sıfıra çöküyor.
- *
- * Tek fotoğrafın çalışıyor görünmesi bir RASTLANTIYDI: o baloncukta alt yazı vardı ve genişliği
- * METİN veriyordu. Alt yazısız tek fotoğraf da aynı şekilde çökerdi — yani arıza "ızgarada" değil,
- * yüzdeli ölçünün kendisindeydi.
- *
- * Hesap `thread`/`line`/`bubble` ölçüleriyle AYNI kaynaklardan kurulur; sabit bir sayı yazılsaydı
- * dar ekranda taşar, geniş ekranda boşluk bırakırdı.
+ * Karonun ölçüsü cihaz genişliğinden hesaplanır, yüzdeyle verilmez: baloncuk genişliğini içeriğinden alıyor ve yüzdeli içerik
+ * referanssız kalıp sıfıra çöküyordu. Hesap `thread`/`line`/`bubble` ölçüleriyle aynı kaynaktan kurulur.
  */
 function photoFrame(screenWidth: number, solo: boolean): { width: number; height: number } {
   const available = screenWidth - operationsTheme.space['6xl'] * 2; // `thread.paddingHorizontal`
@@ -197,16 +185,8 @@ function photoFrame(screenWidth: number, solo: boolean): { width: number; height
 }
 
 /**
- * Fotoğraf ızgarası — dokunuş UYGULAMA İÇİNDE tam ekran görüntüleyiciyi açar (kullanıcı kararı
- * 07.09: *"Uygulama dışına çıkışlar olmamalı."*).
- *
- * Bir tur boyunca `Linking.openURL` ile sistem tarayıcısı açılıyordu ve cihazda çalışıyordu — ama
- * operatörü yazışmadan çıkarıyordu. Görüntüleyici kitte (`components/ui/photo-viewer`) çünkü talep
- * ekleri de aynı kapıyı kullanıyor; ekranın içine yazılsaydı ikinci bir görüntüleyici doğardı.
- *
- * Görüntüleyiciye YALNIZ adresi olan fotoğraflar girer: indirmesi düşmüş bir karo tam ekranda
- * gösterilecek hiçbir şey taşımıyor. Bu yüzden karonun ızgaradaki sırası ile görüntüleyicideki
- * sırası AYRI hesaplanır — ikisini eşit saymak, boş karodan sonra yanlış fotoğrafı açardı.
+ * Dokunuş fotoğrafı uygulama içindeki tam ekran görüntüleyicide açar, operatör yazışmadan çıkmasın. Görüntüleyiciye yalnız adresi
+ * olan fotoğraflar girer; bu yüzden karonun ızgaradaki ve görüntüleyicideki sırası ayrı hesaplanır.
  */
 function PhotoGroup({ messages }: { messages: readonly SocialMessage[] }) {
   const [opened, setOpened] = useState<number | null>(null);
@@ -260,21 +240,8 @@ function PhotoGroup({ messages }: { messages: readonly SocialMessage[] }) {
 }
 
 /**
- * Sesli mesaj — UYGULAMA İÇİ çalar + TRANSKRİPT.
- *
- * ── ÇALMA ARTIK İÇERİDE ─────────────────────────────────────────────────────
- * Bir tur boyunca dokunuş sesi sistem tarayıcısında açıyordu. Cihazda ölçüldü ve çalıştı, ama
- * operatörü yazışmadan çıkarıyordu — bir sesli mesaj, cevabı yazarken dinlenmek ister. Kullanıcı
- * kararıyla `expo-audio` eklendi (natif modül; dev client yeniden derlendi) ve çalar kite girdi.
- *
- * Çalar YALNIZ adres varken çizilir: dosyası olmayan bir kayıt için oynatıcı çizmek, basılınca
- * hiçbir şey olmayan bir düğme göstermek olurdu — o hâlde sebebi yazan tek satır kalır.
- *
- * ── ASIL İÇERİK TRANSKRİPT ──────────────────────────────────────────────────
- * Ses çalınamasa bile operatör ne söylendiğini okuyabilmeli. Transkript `body.text`ten AYRI
- * çiziliyor ve makine çıktısı olduğu YAZIYOR (varlık künyesi 15.26): operatör hangi cümlenin
- * insandan geldiğini bilmek zorunda — makine çözümünü müşterinin kesin sözü sanmak, yanlış
- * cevabın en sessiz yoludur.
+ * Ses uygulama içinde çalınır, çalar yalnız dosya varken çizilir. Transkript `body.text`ten ayrı ve makine çıktısı olduğu yazılarak
+ * çizilir: operatör makine çözümünü müşterinin kesin sözü sanmamalı.
  */
 function VoiceCard({ message }: { message: SocialMessage }) {
   const url = message.mediaUrl;
@@ -326,10 +293,7 @@ function FileCard({ message }: { message: SocialMessage }) {
             demesi demekti — mime en azından operatöre ne beklediğini söyler. */}
         <Text style={styles.voiceLabel}>{url === null ? td.media.fileMissing : mimeOf(message) || td.media.file}</Text>
       </PressableSurface>
-      {/* TEK KALAN DIŞ ÇIKIŞ ve operatöre SÖYLENİYOR (21.287): fotoğraf ve ses artık uygulama
-          içinde açılıyor, video/belge için içeride bir görüntüleyici YOK — video ayrı bir natif
-          modül (`expo-video`), belge ise hiç. Sessizce dışarı atmak yerine cümlesi yazılıyor;
-          `BEKLEYEN(BACKLOG §1)` orada. */}
+      {/* BEKLEYEN(BACKLOG §1): video ve belge için uygulama içi görüntüleyici yok; dışarı atmak sessiz olmasın diye cümlesi yazılır. */}
       {url === null ? null : <Text style={styles.mediaNote}>{td.media.fileNote}</Text>}
       {failed ? (
         <Text style={styles.mediaNote} testID="management-social-file-error">
@@ -356,8 +320,7 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
   const router = useRouter();
   const chat = useSocialConversation(conversationId);
   const [reply, setReply] = useState('');
-  /* Orijinal/çeviri geçişi BALONCUĞUN kendi durumu (talep ekranının aynı kararı, 21.297): tek
-     mesajın düğmesi bütün yazışmayı çevirmez — operatör genelde tek bir cümlenin aslını merak eder. */
+  /* Orijinal/çeviri geçişi baloncuğun kendi durumu: operatör genelde tek bir cümlenin aslını merak eder. */
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
 
   /*
@@ -391,12 +354,7 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
     if (draft !== null) setReply(draft);
   };
 
-  /**
-   * Bir mesajın SATIRI — baloncuk + altındaki künye (v3:2246-2250).
-   *
-   * Künye baloncuğun DIŞINDA ve kendi tarafına hizalı; sarmalayıcı `View` yalnız o hizayı tutar.
-   * Gelen mesajın künyesi damgadır, giden mesajınki "kim yazdı · ne zaman · hangi kalıp".
-   */
+  /** Künye baloncuğun dışında ve kendi tarafına hizalı; gelen mesajın künyesi damgadır, gidenin "kim yazdı · ne zaman · hangi kalıp". */
   const toneOf = (message: SocialMessage) =>
     message.direction === 'inbound' ? 'customer' : message.author === 'ai' ? 'ai' : 'operator';
 
@@ -411,15 +369,11 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
 
   const bubbleOf = (message: SocialMessage) => {
     const content = contentOf(message);
-    /* GÖSTERİLEN METİN OPERASYON DİLİNDE (21.297) — `body.text` DEĞİL.
-       `body.text` kanaldan geçen metindir: Fransızca konuşulan bir sohbette giden mesajın gövdesi
-       Fransızcadır ve operatörün yazdığı Türkçe torbadadır. Baloncuk `shownText`i çizer; asıl
-       metin bir dokunuş ötede (aşağıdaki dipnot). Çeviri kararı sunucuda, motorla verildi. */
+    /* Baloncuk operasyon dilindeki metni (`shownText`) çizer: `body.text` kanaldan geçen metindir, Fransızca sohbette operatörün
+       Türkçesi torbadadır. */
     const asil = showOriginal[message.id] === true;
     const text = (asil ? message.body.text : message.shownText)?.trim() ?? '';
-    /* YER TUTUCU YALNIZ ÇİZİLECEK ŞEY YOKKEN (21.287). `[görsel / dosya]` yazısı medyanın kendisi
-       çizilemediği sürece doğruydu; artık çiziliyor. Geriye yalnız gövdesi boş METİN-DIŞI mesaj
-       kalıyor (etkileşimli kart, kalıp) — orada yer tutucu hâlâ tek doğru cevap. */
+    /* Yer tutucu yalnız çizilecek bir şey yokken: medya çiziliyor, geriye gövdesi boş metin dışı mesaj (kart, kalıp) kalıyor. */
     const body = text || (content === undefined ? t.kind[message.kind] : '');
 
     return (
@@ -504,7 +458,7 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
     );
   }
 
-  /** Kaydırıcının ÜSTÜNDE sabit duran şeritler — kaçınmanın içinde ama yazışmayla kaymazlar. */
+  /** Kaydırıcının üstünde sabit duran bantlar: klavyeden kaçınmanın içinde ama yazışmayla kaymazlar. */
   const above = (
     <>
       <View style={styles.modeRow}>
@@ -531,11 +485,6 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
         {conversation.awaitingReply ? <Text style={styles.ourTurn}>{managementCopy.common.ourTurn}</Text> : null}
       </View>
 
-      {/* ÇIKIŞ UYARISI KALDIRILDI (29.08): `ai` modu artık seçilebiliyor ve arkasında koşan bir
-          motor var (`ConversationHandlerEnum` künyesi). Uyarı *"AI modunda ama sohbette ajan yok"*
-          diyordu — o cümle bugünden itibaren YALAN olurdu ve operatörü çalışan bir modu terk
-          etmeye iterdi. Üçüncü çip zaten `MODES`ten kendiliğinden doğdu (enum'dan türüyor). */}
-
       <View style={[styles.windowBand, styles[`windowBand_${window.state}`]]} testID="management-social-window">
         <Text style={[styles.windowText, styles[`windowText_${window.state}`]]}>
           {window.state === 'open'
@@ -554,11 +503,7 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
   const draftSlot = conversation.aiDraftReply ? (
     <View style={styles.draft} testID="management-social-draft">
       <Text style={styles.draftEyebrow}>{td.draftEyebrow}</Text>
-      {/* Taslak, ajanın YAZDIĞI hâliyle çizilir (07.09) — talep ekranının aynı kararı. Buradaki
-          metin defterde biçim işareti taşıma ihtimali EN YÜKSEK metindir: onu yapay zekâ üretiyor
-          ve biçimli üretiyor. Ham işaretle gösterilirse operatör, gönderilecek metnin görüneceği
-          hâli GÖRMEDEN onaylamış olur. Mesaj baloncukları 21.279'da çizdirilmişti; taslak ayrı bir
-          kutu olduğu için o turda atlanmıştı. */}
+      {/* Taslak biçim işaretleriyle çizilir: operatör gönderilecek metnin görüneceği hâlini görmeden onaylamasın. */}
       <ChatText style={styles.draftBody}>{conversation.aiDraftReply}</ChatText>
       <PressableSurface
         onPress={() => void takeDraft()}
@@ -592,11 +537,7 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
   const composer = (
     <View style={styles.footer}>
       {draftSlot}
-      {/* SEBEP TEK YERDE YAZILIR (21.287 düzeltmesi). 21.286'da gönderim reddi için İKİNCİ bir
-          satır eklenmişti ve ikisi de `lastError`a bakıyordu: aynı sebep alt alta iki kez
-          çiziliyordu, üstelik alttaki HAM ANAHTARI ("Gönderilemedi (window_closed)") operatöre
-          gösteriyordu. Sözlük zaten anahtarı cümleye çeviren yer — gönderim sebepleri oraya
-          eklendi, ikinci satır kaldırıldı. */}
+      {/* Hata tek satırda ve sözlükten yazılır: ham anahtar operatöre gösterilmez. */}
       {chat.lastError === null ? null : (
         <Text style={styles.errorNote} testID="management-social-action-error">
           {failureText(chat.lastError)}
@@ -622,13 +563,8 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
       >
         <Text style={styles.recordLabel}>{chat.sending ? td.sending : td.record}</Text>
       </PressableSurface>
-      {/* GÖNDERİM REDDİ BİR CÜMLEDİR, HTTP hatası değil (21.286): pencere kapalıysa ya da sağlayıcı
-          düştüyse uç 200 döner ama mesaj gitmez. Operatör bunu yukarıdaki tek hata satırında okur
-          — ve metin kutuda DURUR, çünkü gitmeyen bir cevabı silmek onu yeniden yazdırmak olurdu. */}
-      {/* NOT KANAL-DUYARLI (21.292 · cihazda görüldü 08.09): metin sabit "WhatsApp" diyordu ve
-          Messenger sohbetinde YANLIŞ bir cümle kuruyordu — operatöre mesajın hangi kanaldan
-          gideceğini söyleyen tek satır bu. Pencere bandı zaten kanal başına konuşuyor; bu satır
-          geride kalmıştı. */}
+      {/* Gönderim reddi bir cümledir, HTTP hatası değil; metin kutuda durur ki gitmeyen cevap yeniden yazılmasın. Not kanala göre
+          kurulur, çünkü mesajın hangi kanaldan gideceğini söyleyen tek satır bu. */}
       <Text style={styles.recordNote}>{fillCopy(td.recordNote, { channel: t.channel[conversation.source] })}</Text>
     </View>
   );
@@ -852,7 +788,7 @@ const styles = StyleSheet.create({
     paddingVertical: operationsTheme.space['2xl'],
     borderRadius: operationsTheme.radius.control,
   },
-  /* Gölgesiz — v3'te sert gölge yok (ölçüm 30.08). */
+  /* Gölgesiz: tasarımda sert gölge yok. */
   recordEnabled: {
     backgroundColor: operationsTheme.colors.olive,
   },
@@ -878,10 +814,7 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.olive,
   },
 
-  /* ── MEDYA (21.287) ──────────────────────────────────────────────────────
-     Ölçüler talep eklerinin ızgarasından devralındı (`complaint-screen`): aynı işi iki yerde iki
-     ayrı ölçüyle çizmek, ikisini bir gün ayrıştırırdı. Tek fark tek fotoğrafın kendi karosu —
-     sohbette yalnız bir kare geldiğinde ızgara ölçüsü onu gereksiz küçültüyordu. */
+  /* Medya ölçüleri talep eklerinin ızgarasından (`complaint-screen`) gelir ki iki yerde ayrışmasın; tek fotoğrafın kendi karosu var. */
   mediaWrap: { gap: operationsTheme.space.md },
   photoRow: {
     flexDirection: 'row',
