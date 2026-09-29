@@ -11,19 +11,15 @@ import {
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 
-/**
- * **Push cihaz jetonu** (14.14, migration 0050). Servis karar vermez, satır getirir/yazar
- * (STACK §4): "kime gönderilir" sorusu sürücünün (14.16), "izin/devir" kuralı RPC'nin işi.
- */
+/** Servis karar vermez: "kime gönderilir" sorusu dağıtım kapısının, izin ve devir kuralı RPC'nin işidir. */
 export class PushDeviceService extends BaseDbService<PushDevice, PushDeviceInsert, PushDeviceUpdate> {
   constructor(supabase: SupabaseClient) {
     super(supabase, 'push_device', PushDeviceSchema, PushDeviceInsertSchema, PushDeviceUpdateSchema, false);
   }
 
   /**
-   * **Kayıt/tazeleme — sahip devriyle** (`register_push_device`). Çakışmada son giren kazanır:
-   * jeton fiziksel cihazı temsil eder ve cihaz şu an son girenin elindedir. "Önce sil sonra yaz"
-   * iki deyimdi ve arada düşen süreç jetonu sahipsiz bırakırdı; RPC kısıtın üstünde atomik.
+   * Çakışmada sahip devreder (son giren kazanır, cihaz onun elindedir). Önce silip sonra yazmak iki deyimdi ve arada düşen süreç
+   * jetonu sahipsiz bırakırdı.
    */
   async register(input: { profileId: string; token: string; platform: PushPlatform; app: PushApp; enabled: boolean }): Promise<PushDevice> {
     const rows = await this.executeRpc<unknown[]>('register_push_device', {
@@ -41,7 +37,7 @@ export class PushDeviceService extends BaseDbService<PushDevice, PushDeviceInser
   /**
    * **Sahiplik süzgeçli silme** (çıkış ucu) — jeton VE sahip birlikte eşleşmezse hiçbir şey
    * silinmez. Süzgeç pazarlık konusu değil: cihaz bu arada başka hesaba devrolduysa, eski sahibin
-   * gecikmiş çıkış isteği YENİ sahbin kaydını söküp onu sağır bırakırdı.
+   * gecikmiş çıkış isteği YENİ sahibin kaydını söküp onu sağır bırakırdı.
    */
   async removeOwned(token: string, profileId: string): Promise<boolean> {
     const { data, error } = await this.supabase
@@ -55,10 +51,8 @@ export class PushDeviceService extends BaseDbService<PushDevice, PushDeviceInser
   }
 
   /**
-   * **Sistem budaması** — makbuz turunun silmesi (14.16): SAHİPSİZ, çünkü kanıt sahiplikten
-   * üstün. `DeviceNotRegistered` taşıyıcının beyanıdır — cihaz uygulamayı silmiş; kim tutarsa
-   * tutsun o jetona bir daha gönderilmez (gönderilirse taşıyıcı bizi kısıtlar). Kullanıcı
-   * eylemi DEĞİLDİR: çıkış ucu `removeOwned` kullanır, bu kapı yalnız cron'undur.
+   * Sahipsiz silme, çünkü taşıyıcının "cihaz kayıtlı değil" beyanı sahiplikten üstündür. Kullanıcı eylemi değildir; çıkış ucu
+   * `removeOwned` kullanır.
    */
   async pruneByToken(token: string): Promise<boolean> {
     const { data, error } = await this.supabase.from('push_device').delete().eq('token', token).select('id');
@@ -72,9 +66,8 @@ export class PushDeviceService extends BaseDbService<PushDevice, PushDeviceInser
   }
 
   /**
-   * Kişinin bir uygulamadaki GÖNDERİLEBİLİR cihazları — izni kapalı olanlar dışarıda (sürücünün tek
-   * okuması). İzni kapalı cihaza "gönderdim" demek sessiz kara deliktir: Expo kabul eder, kimse görmez.
-   * Uygulama süzgeci (21.311): müşteri bildirimi personelin operasyon uygulamasına düşmez.
+   * İzni kapalı cihaz dışarıda, çünkü Expo onu da kabul eder ve kimse görmez. Uygulama süzgeci müşteri bildiriminin operasyon
+   * uygulamasına düşmesini önler.
    */
   listSendable(profileId: string, app: PushApp): Promise<PushDevice[]> {
     return this.getAll({ profileId, app }, { isNullFields: ['disabled_at'], orderBy: 'lastSeenAt', orderDirection: 'desc' });

@@ -7,11 +7,8 @@ import { NOTIFY_EVENT_META } from './types';
 import type { NotifyDriver, NotifyEventName, NotifyPayloads, NotifyRecipient, NotifyResult } from './types';
 
 /**
- * Sürücü kaydı + gönderim (14.4). Sürücüler **sırayla denenir**, ilk destekleyen gönderir —
- * "tercih sırası" listenin kendisidir, ayrı bir kural tablosu yoktur.
- *
- * `all: true` verilirse destekleyen HER sürücü gönderir (aynı haber hem mailde hem WhatsApp'ta).
- * Varsayılan tek kanaldır: aynı haberi iki kez almak müşteri için gürültüdür.
+ * Sürücüler sırayla denenir ve tercih sırası listenin kendisidir, ayrı bir kural tablosu yoktur. `all: true` destekleyen her sürücüye
+ * gönderir; varsayılan tek kanaldır, çünkü aynı haberi iki kez almak gürültüdür.
  */
 
 export interface Notifier {
@@ -28,24 +25,15 @@ export function createNotifier(drivers: readonly NotifyDriver[]): Notifier {
     async send(event, recipient, payload, opts = {}) {
       const usable = drivers.filter((driver) => driver.supports(event, recipient));
 
-      // Hiçbir kanal ulaşamıyorsa bu bir hata değil, bir OLGUDUR: telefonla girilmiş müşterinin
-      // e-postası yoktur. Çağıran bunu görüp karar verir (ör. operasyona düşür).
+      // Hiçbir kanalın ulaşamaması hata değil olgudur (telefonla girilmiş müşterinin e-postası yoktur); çağıran görüp karar verir.
       if (usable.length === 0) {
         return [{ status: 'skipped', channel: drivers[0]?.channel ?? 'email', reason: 'no_reachable_channel' }];
       }
 
       /*
-        SEÇİM PLANI OLAYIN SINIFINDAN (14.16 — kurgu incelemesi 2/7): sınıf bilgisi TEK yerde
-        (`NOTIFY_EVENT_META`) ve plan BURADA kurulur; uygulama katmanında if/else olarak ikinci
-        kez yazılsaydı "sıra tek kaynak" ilkesi ölürdü.
-
-          HABER (ping)     → TEK kanal, sıra listenin kendisi (push başta: en ucuz, en hızlı).
-          BELGE (document) → e-posta DAİMA (dayanıklı ortam); e-posta YOKSA e-posta-dışı ilk
-                             yedek (bugünkü davranış — wa.me operatör eliyle). Push İLAVE gider,
-                             YERİNE GEÇMEZ: bildirim çubuğundan silinen bir onay, onay değildir.
-
-        `all` olduğu gibi duruyor ama BELGE için KULLANILMAZ: "destekleyen herkes" telefonu olan
-        her müşteriye wa_link'i de "gönderir"di — alt küme seçimi sınıfın işi.
+        Plan olayın sınıfından kurulur: HABER tek kanala, BELGE e-postaya (yoksa e-posta dışı ilk yedeğe) ve cihaz bildirimi yanına
+        eklenerek gider, çünkü bildirim çubuğundan silinen onay onay değildir. `all` BELGE'de kullanılmaz, yoksa telefonu olan her
+        müşteriye wa_link de giderdi.
       */
       let chosen: NotifyDriver[];
       if (opts.all) {
@@ -62,31 +50,16 @@ export function createNotifier(drivers: readonly NotifyDriver[]): Notifier {
   };
 }
 
-/**
- * Yasal alt bilgi — mail her ülkede gönderenin adresini taşımak zorundadır. Adres satırı şirket
- * künyesinden (`companyAddressLine` — yasal metinler de aynı satırı okur); ülke adı bütün dillerde
- * "France", çünkü alt satır bugün tek dilli.
- */
+/** Mail her ülkede gönderenin adresini taşımak zorundadır; ülke adı her dilde "France", çünkü alt satır tek dilli. */
 const POSTAL_ADDRESS = `${brand.name} · ${companyAddressLine}, France`;
 
 /**
- * Projenin standart bildirim kurulumu — **sürücü sırasının tek kaynağı.**
- *
- * Sıra TERCİH sırasıdır: e-posta önce denenir. WhatsApp API'si bağlanınca (modül 15) o sürücünün
- * `supports`'u dolar ve sıralama burada bir kez gözden geçirilir; çağıran taraf değişmez.
- *
- * İki uygulama da bunu kullanır: `apps/web` istekten doğan bildirimleri (sipariş, talep),
- * `apps/backend` saatten doğanları (değerlendirme daveti) yollar. Her biri kendi listesini
- * kursaydı sıra bir gün ayrışır ve aynı olay iki yüzeyden farklı kanaldan giderdi.
- *
- * Fonksiyon, sabit değil: sürücüler ortam değişkeni okuyor ve modül yüklenme anında donmuş bir
- * liste, testin ortamı kurmasından önce oluşurdu.
+ * Sürücü sırasının tek kaynağı: web istekten, backend saatten doğan bildirimleri buradan yollar ki aynı olay iki yüzeyden farklı
+ * kanala gitmesin. Sabit değil fonksiyon, çünkü sürücüler ortam değişkeni okur ve yüklenme anında donan liste testin ortamını görmezdi.
  */
 export function defaultNotifier(): Notifier {
   return createNotifier([
-    // Push BAŞTA (14.16): HABER tek kanaldan gider ve en ucuz/en hızlı kanal kazanmalı — jetonsuz
-    // alıcıda sürücü zaten yeteneksiz, sıra kendiliğinden maile düşer. BELGE'de sıranın önemi yok:
-    // planı sınıf kurar (send içindeki künye).
+    // Jetonsuz alıcıda push sürücüsü yeteneksizdir, HABER kendiliğinden maile düşer. BELGE'de sıranın önemi yok, planı sınıf kurar.
     pushDriver(),
     emailDriver({ brandName: brand.name, postalAddress: POSTAL_ADDRESS }),
     waLinkDriver(),

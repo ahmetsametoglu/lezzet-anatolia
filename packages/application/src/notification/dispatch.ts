@@ -15,23 +15,8 @@ import { ringNotificationsBell, ringStaffNotificationsBell } from '../realtime/b
 import { listSendablePushTokens } from './devices';
 
 /*
-  ── BİLDİRİMİN TEK KAPISI (14.12) ────────────────────────────────────────────────────────────────
-  Bugüne kadar olay doğduğu an maile dönüşüyor ve HİÇBİR İZ KALMIYORDU. Artık her olay önce KAYDA
-  yazılır (uygulama içi zilin, okundu hâlinin ve teslim defterinin öznesi), sonra kanala gider.
-
-  İki iş TEK kapıda, çünkü iki ayrı yerde "hem satır hem mail" yazılsaydı biri bir gün unutulur ve
-  "mailde var, uygulamada yok" hâli doğardı (mobil şeridin defterdeki uyarısı). Beş yayım noktası
-  da (sipariş · talep · davet · bölge · B2B) buradan geçer.
-
-  ── SIRA: ÖNCE SATIR, SONRA KANAL ────────────────────────────────────────────────────────────────
-  Satır olgudur ("şu oldu"), kanal teslimi ise o olgunun taşınması. Gönderim düşerse satır KALIR —
-  uygulama içi liste kendi başına bir kanaldır ve olay gerçekten olmuştur; teslim defteri düşüşü
-  `error` olarak yazar. Ters sıra, maili gitmiş ama satırı yazılamamış olay üretirdi: müşteri
-  posta kutusunda gördüğünü uygulamada bulamazdı.
-
-  ── TEKRAR = SATIR DA KANAL DA YOK ───────────────────────────────────────────────────────────────
-  `dedupe_key` çakışan olay bütünüyle yutulur (sessizce değil: sonuç `duplicate` der). Satırı
-  yutup maili göndermek defter ile posta kutusunu ayrıştırırdı; formülü OLAY tanımlar (0049).
+  Her olay önce kayda yazılır (zil, okundu hâli ve teslim defteri onun öznesidir), sonra kanala gider; gönderim düşerse satır kalır,
+  çünkü olay gerçekten olmuştur. `dedupe_key` çakışan olayda satır da kanal da atlanır, yoksa defter ile posta kutusu ayrışırdı.
 */
 
 export interface NotificationTargetRef {
@@ -41,11 +26,7 @@ export interface NotificationTargetRef {
 
 export interface CustomerNotificationInput<E extends NotifyEventName> {
   event: E;
-  /**
-   * Satırın öznesi — `null` = satır YAZILMAZ, yalnız kanal denenir. Bilinçli bir kapı: bazı
-   * alıcıların hesabı yok (`zone_available` çoğunlukla ziyaretçi e-postası) ve profilsiz satır
-   * uygulama içi hiçbir zile düşemez; onlara bildirim maili bugüne kadar nasılsa öyle gider.
-   */
+  /** `null` = satır yazılmaz, yalnız kanal denenir: hesabı olmayan alıcının (çoğunlukla bölge haberi) satırı hiçbir zile düşemez. */
   customerId: string | null;
   recipient: NotifyRecipient;
   data: NotifyPayloads[E];
@@ -62,20 +43,8 @@ export interface DispatchOpts {
 }
 
 /**
- * **Müşteriye haber ver** — kaydı yazar, kanala gönderir, teslimi deftere işler, zili çalar.
- *
- * Dönüş `NotifyResult[]` ve bu bilinçli: beş çağıran bugün `notifier.send`in dönüşünü okuyor
- * (davet damgası `sent` arıyor, bölge işi `delivered` sayıyor); sözleşme değişseydi hepsi birden
- * elden geçerdi. Tekrarda tek elemanlı `skipped/duplicate` döner — çağıranların "gönderilmedi"
- * okuması doğru kalır.
- *
- * ── BELGE GÜVENCESİ (karşı-inceleme 2 + ölçüm) ──────────────────────────────
- * `document` sınıfı bir olay, alıcının E-POSTASI YOKSA insana düşer: `document_undeliverable`
- * satırı yöneticiye yazılır. Ölçülen gerçek şuydu: e-postasız müşterinin sipariş onayı `wa_link`
- * "sent" raporluyor ama üretimde bağlantı HİÇBİR YERE gitmiyordu (`onLink` boş) — dayanıklı
- * ortam yükümlülüğü olan belge sessizce kayboluyordu. Eşik bilerek "adres yok"tur, "gönderim
- * düştü" değil: sağlayıcı arızası teslim defterinde `error` olarak zaten görünür ve geçicidir;
- * adressizlik ise kalıcıdır ve ancak insan çözer (telefonla ister, elden verir).
+ * Dönüş `NotifyResult[]`, çünkü çağıranlar gönderim sonucunu okuyor; tekrarda tek elemanlı `skipped/duplicate` döner. BELGE sınıfı
+ * olayda alıcının e-postası yoksa yöneticiye `document_undeliverable` yazılır, çünkü adressizlik kalıcıdır ve ancak insan çözer.
  */
 export async function dispatchCustomerNotification<E extends NotifyEventName>(
   db: SupabaseClient,
@@ -103,16 +72,14 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
   }
 
   /*
-    JETONLAR BURADA DOLDURULUR — TEK YERDE (14.16). Sürücü DB bilmez (STACK §4); beş çağıranın
-    her birine "jetonu da getir" dedirtmek, birinin unuttuğu gün push'un o olaydan sessizce
-    düşmesi demekti. Süzgeç kapının değil servisin: izni kapalı cihaz listeye HİÇ girmez.
-    Zile düşmeyen olayda (meta.inApp=false) sorgu hiç atılmaz — push da bir zildir.
+    Jetonlar tek yerde doldurulur, çünkü sürücü DB bilmez ve her çağırana jeton getirtmek unutulan gün push'u sessizce düşürürdü.
+    Zile düşmeyen olayda sorgu hiç atılmaz: push da bir zildir.
   */
   const recipient: NotifyRecipient =
     meta.inApp && input.customerId
       ? {
           ...input.recipient,
-          // Müşteri bildirimi yalnız MÜŞTERİ uygulamasının jetonlarına gider (21.311).
+          // Müşteri bildirimi yalnız müşteri uygulamasının jetonlarına gider.
           pushTokens: await listSendablePushTokens(db, input.customerId, 'customer'),
           // Dokunuşun adresi — bildirime basan kullanıcı doğru ekrana insin (sürücü künyesi).
           pushData: {
@@ -169,9 +136,8 @@ export interface StaffNotificationInput {
   /** Kimlere — rol kesişimi (çoklu rol olağan, DOMAIN §2). */
   roles: StaffRole[];
   /**
-   * Depo-bağlamlı olayda ZORUNLU süzgeç (CLAUDE: depo bir boyut değil, DEĞİŞMEZ): depocu/kurye
-   * yalnız kendi deposunun olayını alır. Admin/muhasebe depo-ÜSTÜdür ve süzgeçten muaftır — kapsam
-   * kolonları onlar için hiç okunmaz (0001 kararının aynısı). `null` = depo-bağımsız olay.
+   * Depo bağlamlı olayda zorunlu süzgeç: depocu ve kurye yalnız kendi deposunun olayını alır, admin ve muhasebe depo üstüdür.
+   * `null` = depoya bağlı olmayan olay.
    */
   warehouseId?: string | null;
   target?: NotificationTargetRef | null;
@@ -184,15 +150,8 @@ export interface StaffNotificationInput {
 const WAREHOUSE_EXEMPT: readonly StaffRole[] = ['admin', 'accounting'];
 
 /**
- * **Personele haber ver** — yazarken dağıt (fan-out): uyan her personel için birer satır.
- *
- * Fan-out okuma-anı join'ine bilerek tercih edildi: rozet sayacı her ekran açılışında okunur
- * (sıcak yol) ve satır zaten kişiye ait bir "okundu" hâli taşımak zorunda. Bedeli biliniyor:
- * rolü SONRADAN verilen personel eski bildirimleri görmez — kabul, çünkü bildirim bir AN'dır,
- * arşiv değil; işin kendisi kuyruklarda durur (bildirim ≠ kuyruk).
- *
- * Kanala gitmez: personelin kanalı bugün uygulama içi zildir (push 14.16 ile gelir, e-posta
- * bilerek yok — personel zaten ekranda ve posta kutusu operasyon aracı değil).
+ * Yazarken dağıtılır, çünkü rozet sayacı sıcak yoldur ve satır kişiye ait okundu hâli taşır; rolü sonradan verilen personel eski
+ * bildirimleri görmez. Kanala gitmez: personelin kanalı bugün uygulama içi zildir.
  */
 export async function dispatchStaffNotification(db: SupabaseClient, input: StaffNotificationInput): Promise<string[]> {
   const staff = await new UserProfileService(db).listStaff();

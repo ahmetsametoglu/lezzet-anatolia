@@ -6,10 +6,7 @@ import { waLinkDriver } from './drivers/wa-link.driver';
 import { whatsappApiDriver } from './drivers/whatsapp-api.driver';
 import type { NotifyEventName, NotifyRecipient } from './types';
 
-/**
- * Soyut bildirim katmanı (14.4). Doğrulanan tek şey: **aynı olay çağrısı, alıcının ulaşılabildiği
- * kanala göre farklı sürücüye düşüyor mu.** Çağıran taraf hiçbir yerde kanal seçmiyor.
- */
+/** Sınanan tek şey: aynı olay çağrısı alıcının ulaşılabildiği kanala göre farklı sürücüye düşüyor mu; çağıran hiçbir yerde kanal seçmiyor. */
 
 const data: OrderNotification = {
   referenceNo: 'LZA-1234',
@@ -44,8 +41,7 @@ describe('sürücü seçimi — çağıran kanal bilmez', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0]?.channel).toBe('email');
-    // Yerelde sağlayıcı anahtarı yok → `skipped`. Bu "başarısız" değil; şablon render edildi,
-    // gönderim atlandı. `sent` deseydik anahtarsız ortamda her mail başarılı görünürdü.
+    // Yerelde sağlayıcı anahtarı yok, gönderim atlanır ve bu başarısızlık değildir. `sent` deseydik anahtarsız ortamda her mail başarılı görünürdü.
     expect(results[0]?.status).toBe('skipped');
   });
 
@@ -91,10 +87,7 @@ describe('sürücü seçimi — çağıran kanal bilmez', () => {
   });
 });
 
-/**
- * Talep bildirimleri (14.7) — sipariş bildirimlerinden farklı VERİ taşırlar ama aynı sözleşmeden
- * geçerler. Sınanan iki şey: kanal seçimi bozulmuyor ve wa.me metni talebin konusunu sızdırmıyor.
- */
+/** Talep olayları başka veri taşır ama aynı sözleşmeden geçer: kanal seçimi bozulmamalı ve wa.me metni talebin konusunu sızdırmamalı. */
 describe('talep bildirimleri', () => {
   const ticket: TicketNotification = {
     ticketId: '11111111-1111-1111-1111-111111111111',
@@ -126,13 +119,7 @@ describe('talep bildirimleri', () => {
   });
 });
 
-/**
- * SINIF PLANI (14.16 — kurgu incelemesinin 3. ve 7. düzeltmesi): seçim artık olayın sınıfından.
- * Çivilenenler tam olarak incelemenin kırılma senaryoları:
- *   · BELGE: push MAİLİN YERİNE GEÇMEZ — bildirim çubuğundan silinen onay, onay değildir
- *   · BELGE + e-postasız: bugünkü wa_link yedeği korunur, push İLAVE
- *   · HABER: tek kanal ve push kazanır — aynı haberi iki kanaldan almak gürültü
- */
+/** BELGE'de push mailin yerine geçmez, e-postasızda wa_link yedeği korunur; HABER tek kanaldan gider ve push kazanır. */
 describe('sınıf planı — push geldikten sonra', () => {
   const pushFake = (calls: string[]) =>
     ({

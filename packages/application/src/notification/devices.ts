@@ -2,23 +2,11 @@ import { PushDeviceService } from '@lezzet/database';
 import type { PushApp, PushPlatform } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-/*
-  ── CİHAZ JETONU KAPISI (14.14) — push'un kayıt yarısı ──────────────────────────────────────────
-  Sürücü (14.16) ve izin/yönlendirme (mobil şerit, 21.13) burada DEĞİL; burada yalnız üç soru:
-  kim kaydoluyor, kim çıkıyor, kime gönderilebilir.
-
-  `profileId` HER ZAMAN guard'dan (okuma kapısının aynı ilkesi). İstemciden gelen tek şey jetonun
-  kendisi — ve o bir YETKİ olduğu için hiçbir uçtan geri okutulmaz.
-*/
+// Profil kimliği her zaman guard'dan gelir. İstemciden gelen tek şey jetondur ve o bir yetki olduğu için hiçbir uçtan geri okutulmaz.
 
 /**
- * **Kaydol/tazele** — uygulama her açılışta çağırır ve İZİN DURUMUNU da raporlar.
- *
- * İzin raporu kurgu incelemesinin 10. bulgusunun cevabı: OS'ta bildirimi kapatan kullanıcının
- * jetonu CANLI kalır, Expo "gönderdim" der, kimse görmez — sessiz kara delik. `enabled: false`
- * raporlanan cihaz gönderilebilir listesinden düşer ve kanal sırası maile iner.
- *
- * Çakışmada SAHİP DEVRİ (RPC): aile telefonunda A çıkar B girer — cihaz artık B'nin kulağı.
+ * Uygulama her açılışta izin durumunu da raporlar: izni kapalı cihazın jetonu canlı kalır ve Expo "gönderdim" der, bu yüzden o cihaz
+ * gönderilebilir listesinden düşer.
  */
 export async function registerPushDevice(
   db: SupabaseClient,
@@ -28,20 +16,14 @@ export async function registerPushDevice(
 }
 
 /**
- * **Çıkış** — logout ucunun ZORUNLU adımı (14.14): jeton silinmezse önceki hesabın bildirimi
- * sonraki oturum sahibinin ekranına düşer. Sahiplik süzgeçli: cihaz bu arada devrolduysa eski
- * sahibin gecikmiş isteği yeni sahbin kaydını sökemez — `false` döner, hata değil (çıkış
- * idempotenttir).
+ * Çıkışın zorunlu adımı, yoksa önceki hesabın bildirimi sonraki oturum sahibine düşer. Cihaz bu arada devrolduysa silmez ve `false`
+ * döner; çıkış idempotenttir.
  */
 export function unregisterPushDevice(db: SupabaseClient, input: { profileId: string; token: string }): Promise<boolean> {
   return new PushDeviceService(db).removeOwned(input.token, input.profileId);
 }
 
-/**
- * Bir uygulamanın gönderilebilir jetonları — 14.16 sürücüsünün tek okuması (izni kapalı cihaz
- * DIŞARIDA). Uygulama ZORUNLU (21.311): müşteri gönderimi `customer` ister; aynı kişinin operasyon
- * uygulamasındaki jetonu o bildirimi almaz.
- */
+/** Uygulama zorunlu, çünkü aynı kişinin operasyon uygulamasındaki jetonu müşteri bildirimini almaz. */
 export async function listSendablePushTokens(db: SupabaseClient, profileId: string, app: PushApp): Promise<string[]> {
   return (await new PushDeviceService(db).listSendable(profileId, app)).map((device) => device.token);
 }

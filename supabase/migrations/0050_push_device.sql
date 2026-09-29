@@ -1,33 +1,21 @@
--- Modül 14 — Cihaz jetonu (14.14): push'un tek DB ayağı. Sürücü/izin/yönlendirme mobil şeritte
--- (21.13); teslim hattı ve makbuz cron'u 14.16'da. Bu tablo yalnız "bu kişiye HANGİ cihazlardan
--- ulaşılır" sorusunun kaydı.
---
--- ── KOLON `profile_id`, `customer_id` DEĞİL — ve bu ad bir karar (kurgu incelemesi 26.08) ───────
--- Operasyon mobil kabuğu var ve personel de push alacak; "customer_id" adı personel jetonuna ikinci
--- bir tablo doğururdu. Kimlik zaten tek tabloda (0001), jeton da tek tabloda.
+-- Cihaz jetonu: "bu kişiye hangi cihazlardan ulaşılır" kaydı. Kolon `profile_id`, çünkü personel de push alır ve `customer_id`
+-- adı personel jetonuna ikinci bir tablo doğururdu.
 -- ============================================================================
 
 create table public.push_device (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid not null references public.user_profiles (id) on delete cascade,
-  -- Expo push jetonu. TEKİL ve tekillik TABLO GENELİ — kişi başına değil: aynı fiziksel cihaz
-  -- ancak bir hesabın kulağı olabilir. Upsert bu kısıtın üstünde SAHİP DEĞİŞTİRİR (aşağıda).
+  -- Expo jetonu. Tekillik kişi başına değil tablo geneli, çünkü aynı fiziksel cihaz ancak bir hesabın kulağı olabilir.
   token text not null unique,
-  -- 'ios' | 'android' — 'web' BİLEREK yok (KARARLAR 26.08: müşteri yüzeyinde web push yapılmıyor;
-  -- gün gelir açılırsa değer eklemek yeter). Kısıt veride: yanlış platform sessizce yazılamaz.
+  -- Yalnız native platformlar; kısıt veride, yanlış platform sessizce yazılamaz.
   platform text not null check (platform in ('ios', 'android')),
-  -- HANGİ UYGULAMANIN jetonu (21.311): müşteri ve operasyon iki ayrı native uygulama. Aynı kişi ikisini
-  -- de kurabilir ve her kurulumun jetonu ayrıdır; kolon olmasaydı müşteri bildirimi personelin
-  -- operasyon uygulamasına da düşerdi. Varsayılan YOK: hangi uygulamadan geldiğini söylemeyen kayıt
-  -- yazılamaz (sessiz yanlış sınıflama, kolonun hiç olmamasından kötüdür).
+  -- Müşteri ve operasyon iki ayrı uygulama; kolon olmasaydı müşteri bildirimi personelin operasyon uygulamasına da düşerdi.
+  -- Varsayılan yok, çünkü sessiz yanlış sınıflama kolonun hiç olmamasından kötüdür.
   app text not null check (app in ('customer', 'operations')),
-  -- Uygulamanın OS bildirim İZNİ raporu (kurgu incelemesi 10. bulgu): izin kapatıldığında jeton
-  -- CANLI kalır ve Expo "gönderdim" der ama kullanıcı hiçbir şey görmez — sessiz kara delik.
-  -- Uygulama her açılışta izni raporlar; kapalıysa sürücü bu cihazı YETENEKSİZ sayar ve sıra
-  -- maile düşer. `null` = açık.
+  -- İzin kapatılınca jeton canlı kalır ve Expo "gönderdim" der; uygulama her açılışta izni raporlar ve kapalı cihaz yeteneksiz
+  -- sayılır. `null` = açık.
   disabled_at timestamptz,
-  -- Cihazın son görülme anı (uygulama açılışı jeton tazeler). Karşılaştırılan bir damga DEĞİL
-  -- (customer_phone'un iki-saat dersi oraya aitti) — yalnız "bu kayıt bayat mı" bakımı için.
+  -- Son görülme anı; uygulama her açılışta tazeler.
   last_seen_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
@@ -40,19 +28,14 @@ create index push_device_profile_idx on public.push_device (profile_id);
 alter table public.push_device enable row level security;
 
 comment on table public.push_device is
-  'Push cihaz jetonu (14.14): kişi başına ÇOK cihaz, cihaz başına TEK sahip. Upsert sahibi '
-  'değiştirir (logout devri — önceki hesabın bildirimi sonrakine düşmesin). Kişisel veri: 0037 siler.';
+  'Push cihaz jetonu: kişi başına çok cihaz, cihaz başına tek sahip; upsert sahibi değiştirir. Kişisel veri, 0037 siler.';
 comment on column public.push_device.disabled_at is
   'OS bildirim izni kapalı (uygulamanın açılış raporu). Dolu ise sürücü cihazı yeteneksiz sayar.';
 comment on column public.push_device.app is
-  'Jetonun geldiği native uygulama (21.311): customer · operations. Müşteri gönderimi yalnız customer jetonlarını okur.';
+  'Jetonun geldiği uygulama: customer · operations. Müşteri gönderimi yalnız customer jetonlarını okur.';
 
--- ─── Kayıt/tazeleme — SAHİP DEVRİ tek deyimde ────────────────────────────────
--- Aile telefonunda A çıkar B girer: B'nin kaydı aynı jetonu getirir. "Önce sil sonra yaz" iki
--- deyimdi ve arada düşen süreç jetonu sahipsiz bırakırdı; upsert kısıtın üstünde atomiktir.
--- SON GİREN KAZANIR — bu bir yarış kuralı değil GERÇEĞİN kendisi: jeton fiziksel cihazı temsil
--- eder ve cihaz şu an son girenin elindedir. Devir olmasaydı A'nın "talebinize cevap geldi"
--- bildirimi B'nin ekranına düşerdi — gecikme değil, kişisel veri ifşası.
+-- Çakışmada sahip devreder: jeton fiziksel cihazı temsil eder ve cihaz son girenin elindedir. Önce silip sonra yazmak iki deyimdi
+-- ve arada düşen süreç jetonu sahipsiz bırakırdı; upsert kısıtın üstünde atomiktir.
 create or replace function public.register_push_device(
   p_profile_id uuid,
   p_token text,
@@ -80,4 +63,4 @@ revoke all on function public.register_push_device(uuid, text, text, text, boole
 grant execute on function public.register_push_device(uuid, text, text, text, boolean) to service_role;
 
 comment on function public.register_push_device(uuid, text, text, text, boolean) is
-  'Jeton kaydı/tazelemesi (14.14) — çakışmada SAHİBİ DEVREDER (son giren kazanır: cihaz onun elinde).';
+  'Jeton kaydı ve tazelemesi; çakışmada sahip devreder (son giren kazanır, cihaz onun elindedir).';

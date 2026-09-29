@@ -1,25 +1,15 @@
 import { z } from 'zod';
 
 /**
- * **Push cihaz jetonu** (14.14, migration 0050) — "bu kişiye hangi cihazlardan ulaşılır" kaydı.
- *
- * ── CİHAZ BAŞINA TEK SAHİP, SAHİP DEVRİYLE ──────────────────────────────────
- * `token` tablo geneli tekildir ve kayıt RPC'si çakışmada SAHİBİ DEĞİŞTİRİR (son giren kazanır —
- * cihaz fiziksel olarak onun elindedir). Devir olmasaydı aile telefonunda önceki hesabın
- * bildirimi sonrakinin ekranına düşerdi: gecikme değil, kişisel veri ifşası.
- *
- * Jeton bir ADRES değil YETKİDİR — istemciye hiçbir uçtan geri okutulmaz; şemanın `token` alanı
- * yalnız sunucu içi akışta yaşar.
+ * Jeton tablo genelinde tekildir ve kayıt RPC'si çakışmada sahibi değiştirir: cihaz son girenin elindedir, devir olmasaydı önceki
+ * hesabın bildirimi sonrakinin ekranına düşerdi. Jeton bir yetkidir, istemciye hiçbir uçtan geri okutulmaz.
  */
 
-/** 'web' BİLEREK yok — müşteri yüzeyinde web push yapılmıyor (KARARLAR 26.08). */
+/** Yalnız native platformlar; tarayıcı bildirimi yapılmıyor. */
 export const PushPlatformEnum = z.enum(['ios', 'android']);
 export type PushPlatform = z.infer<typeof PushPlatformEnum>;
 
-/**
- * Jetonun geldiği native uygulama (21.311) — müşteri ve operasyon ayrı uygulamalar; aynı kişinin iki
- * kurulumu iki ayrı jetondur. Müşteri gönderimi yalnız `customer` jetonlarını okur.
- */
+/** Müşteri ve operasyon ayrı uygulamalardır, aynı kişinin iki kurulumu iki ayrı jetondur; müşteri gönderimi yalnız `customer` jetonlarını okur. */
 export const PushAppEnum = z.enum(['customer', 'operations']);
 export type PushApp = z.infer<typeof PushAppEnum>;
 
@@ -29,7 +19,7 @@ export const PushDeviceSchema = z.object({
   profileId: z.string().uuid(),
   token: z.string(),
   platform: PushPlatformEnum,
-  /** Jetonun geldiği uygulama (21.311); varsayılanı yok — kayıt uygulamasını söylemek zorunda. */
+  /** Varsayılanı yok: kayıt hangi uygulamadan geldiğini söylemek zorunda. */
   app: PushAppEnum,
   /** OS bildirim izni kapalı (uygulamanın açılış raporu) — dolu ise sürücü cihazı yeteneksiz sayar. */
   disabledAt: z.string().datetime({ offset: true }).nullable(),

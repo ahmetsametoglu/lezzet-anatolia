@@ -7,21 +7,8 @@ import type { TicketNotification, ZoneAvailableNotification } from '@lezzet/type
 import { dispatchCustomerNotification, dispatchStaffNotification } from './dispatch';
 
 /**
- * **Bildirimin tek kapısı** (14.12) — kurgu incelemesinin (26.08) beş düzeltmesi burada çivili:
- *
- *   1. Önce SATIR, sonra kanal — teslim defteri kanal-başına ayrı kayıt (tek kolon diziyi ezemez).
- *   2. Tekrar = satır DA kanal DA yok — dedupe çakışan olayın maili de tekrarlanmaz.
- *   3. `ticket_received` satır yazmaz — teyit, müşterinin kendi eyleminin yankısıdır.
- *   4. Hesapsız alıcı satırsız kalır ama maili gider (`zone_available`ın çoğu alıcısı ziyaretçi).
- *   5. E-postasız müşterinin BELGESİ insana düşer — ölçülen açık: `wa_link` "sent" der, bağlantı
- *      hiçbir yere gitmez; dayanıklı ortam yükümlülüğü olan belge sessizce kayboluyordu.
- *
- * Personel fan-out'unda DEPO süzgeci ayrıca çivili: süzgeci unutulan dağıtım tek depolu veride
- * DOĞRU çalışır (CLAUDE'un tarif ettiği tuzak) — test bu yüzden İKİ ayrı depo kurar.
- *
- * Sahte sürücüyle koşar (ağa çıkmaz); sürücü sayacı "kaç kez gönderildi" sorusunu ayrı sorar.
- * Personel satırları GERÇEK personel profillerine yazılır (seed yöneticileri dahil) — kapının
- * döndürdüğü kimlikler purge'e taşınır, paylaşılan DB'de iz kalmaz (CLAUDE §4b).
+ * Sahte sürücüyle koşar, ağa çıkmaz; sürücü sayacı "kaç kez gönderildi" sorusunu ayrı sorar. Personel satırları gerçek personel
+ * profillerine yazıldığı için kapının döndürdüğü kimlikler purge'e taşınır.
  */
 const db = serviceDb();
 const profiles = new UserProfileService(db);
@@ -170,9 +157,7 @@ describe('müşteri kapısı', () => {
   });
 
   it('E-POSTASIZ müşterinin BELGESİ insana düşer — document_undeliverable yöneticiye yazılır', async () => {
-    // Ölçülen açık (26.08): e-postasız müşterinin sipariş onayı `wa_link` "sent" raporluyordu ama
-    // üretimde bağlantı hiçbir yere gitmiyordu — dayanıklı ortam yükümlülüğü olan belge sessizce
-    // kayboluyordu. Artık kaybolmuyor: yönetici satırdan görüyor.
+    // `wa_link` "sent" der ama bağlantı hiçbir yere gitmez; dayanıklı ortam yükümlülüğü olan belge yöneticinin satırında görünmeli.
     const id = await musteri('Adressiz', null);
     const anahtar = `test-belge:${stamp}`;
 
@@ -225,7 +210,7 @@ describe('jeton doldurma (14.16)', () => {
     await registerPushDevice(db, { profileId: id, token: `ExponentPushToken[disp-${stamp}]`, platform: 'android', app: 'customer', enabled: true });
     // İzni kapalı ikinci cihaz LİSTEYE HİÇ GİRMEMELİ (süzgeç serviste, kapıda değil).
     await registerPushDevice(db, { profileId: id, token: `ExponentPushToken[disp-${stamp}-kapali]`, platform: 'ios', app: 'customer', enabled: false });
-    // Aynı kişinin OPERASYON uygulamasındaki jetonu müşteri bildirimini ALMAZ (21.311).
+    // Aynı kişinin OPERASYON uygulamasındaki jetonu müşteri bildirimini ALMAZ.
     await registerPushDevice(db, { profileId: id, token: `ExponentPushToken[disp-${stamp}-operasyon]`, platform: 'android', app: 'operations', enabled: true });
 
     const goren: string[][] = [];
