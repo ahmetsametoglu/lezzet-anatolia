@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.48). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.49). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
 `docs/GELECEK.md`'dedir.
@@ -15,6 +15,10 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 
 - [ ] (K.48) [hedef: mobil] Native sipariş listesinde ödeme bekleyen satır ve o siparişin ödeme ekranı (ödemeyi tamamla ·
   iptal et); mobil uç satırı o ekran gelene kadar göndermiyor.
+- [ ] (K.49) [hedef: deploy] Tarayıcı bildiriminin VAPID anahtar çifti (`NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY` · `WEB_PUSH_PRIVATE_KEY`)
+  sunucuda web, backend ve mobile-api ortamlarına aynı değerle yazılacak; kaynak yerel `apps/web/.env.local`, değer görülmeden
+  taşınır. Açık anahtar derlemede sayfaya gömüldüğü için web derlemesinden önce ortamda olmalı; yoksa hesap sayfasında bildirim
+  kartı çizilmez, tarayıcı kanalı yeteneksiz kalır ve sipariş haberi yalnız e-postayla gider.
 - [ ] (K.42) [hedef: web] Yasal metinlerin içeriği avukata (dil düzeltmesi yapıldı, içerik değişmedi — `packages/i18n/src/customer/legal.json`):
   cayma hakkı bütün gıdalara kapalı yazılı, istisna yalnız çabuk bozulana; raf ömürlü kargoda 14 gün, bilgilendirme ve örnek form
   (L221-28 4°, L221-5 · BGB §312g) · tüketici arabulucusu yok (L612-1) · Almanya'daki tüketiciye Rome I md. 6 şerhi · yasal garanti
