@@ -86,11 +86,16 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
    * yenilenir, çünkü sonraki sipariş bilerek verilen ayrı bir istektir.
    */
   const attemptKey = useRef(newAttemptKey());
+  /** Kart yolunda açılan taslak; ödeme düşerse müşteri onun sayfasına gider. */
+  const preparedOrder = useRef<string | null>(null);
+  /** Siparişin sayfasına geçildi: boşalan sepet bu ekranın okumasını yeniden koşturmasın, istek yeni sayfaya düşerdi. */
+  const leaving = useRef(false);
 
 
   /** Adım verisini tazeler. Seçili adres (sepetten), sepet ve gel-al seçimi değiştikçe koşar. */
   const refresh = useCallback(
     async (addressId: string | null, shippingOptionCode: string | null = null) => {
+      if (leaving.current) return;
       const ticket = ++seq.current;
       const { data, errorKey } = await loadCheckoutAction(
         locale,
@@ -201,27 +206,21 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       setBusy(false);
       return setError(rejectionMessage(t, data.reason, data.detail));
     }
-    // Önceki kart ödemesi geçti ya da işleniyor: yeni sipariş açılmadı, müşteri sonucu o siparişin sayfasında görür. Sepet
-    // tazelenir, çünkü ödeme geçtiyse kalemleri düşmüştür.
+    // Aynı basışın ödemesi işleniyor: yeni sipariş açılmadı, müşteri sonucu o siparişin sayfasında görür.
     if (data.status === 'open_payment') {
-      router.push({ pathname: '/checkout/[reference]', params: { reference: data.orderId } });
-      reloadCart();
+      leaveTo(data.orderId);
       return;
     }
 
-    /**
-     * Önce gidilir, sonra sepet tazelenir: ters sırada boşalan sepet yönlendirme bitene kadar kalemsiz bir özet ve 0,00 € toplam
-     * çizerdi. `busy` açık kalır, yoksa gezinme bitmeden ikinci tıklama gerçek bir ikinci sipariş açabilirdi.
-     */
-    router.push({ pathname: '/checkout/[reference]', params: { reference: data.orderId } });
-    reloadCart();
+    // `busy` açık kalır, yoksa gezinme bitmeden ikinci tıklama gerçek bir ikinci sipariş açabilirdi.
+    leaveTo(data.orderId);
     // Sonraki sipariş AYRI bir istektir: anahtar tazelenir.
     attemptKey.current = newAttemptKey();
   };
 
   /**
-   * Kart yolunda "hazırla" adımı: Stripe formu kartı valide ettikten SONRA çağrılır, taslağı açar
-   * ve `clientSecret` döner. Sıra bilinçli — kartını yanlış yazan müşteri için sipariş açılmaz.
+   * Kart yolunda "hazırla" adımı: Stripe formu kartı doğruladıktan sonra taslağı açar ve `clientSecret` döner, ki kartını yanlış
+   * yazan müşteri için sipariş açılmasın. Anahtar basışın kendisidir: ikinci basış aynı taslağın aynı ödemesine döner.
    */
   const prepare = async (): Promise<{ ok: true; clientSecret: string; orderId: string } | { ok: false; error: string }> => {
     if (!state.addressId) return { ok: false, error: t.rejected.address_not_found };
@@ -233,20 +232,38 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       paymentMethod: 'online',
       marketingConsent: state.marketingConsent,
       couponCode: coupon,
+      idempotencyKey: attemptKey.current,
       shippingOrder,
       shippingOptionCode: state.shippingOptionCode,
       servicePointId: state.servicePoint?.id ?? null,
     });
     if (errorKey || !data) return { ok: false, error: errorText(t.errors, errorKey) };
     if (data.status === 'rejected') return { ok: false, error: rejectionMessage(t, data.reason, data.detail) };
-    // Kart formu yeni ödeme açmaz: önceki ödeme geçti ya da işleniyor, müşteri o siparişe gider.
+    // Aynı basışın ödemesi bankada işleniyor: yeni ödeme açılmaz, müşteri o siparişe gider.
     if (data.status === 'open_payment') {
-      router.push({ pathname: '/checkout/[reference]', params: { reference: data.orderId } });
-      reloadCart();
+      leaveTo(data.orderId);
       return { ok: false, error: t.payment.openPayment };
     }
     if (data.status !== 'payment_required') return { ok: false, error: t.payment.unavailable };
+    preparedOrder.current = data.orderId;
     return { ok: true, clientSecret: data.clientSecret, orderId: data.orderId };
+  };
+
+  /** Siparişin sayfasına gidilir, sonra sepet tazelenir: ters sırada boşalan sepet gezinme bitene kadar kalemsiz bir özet çizerdi. */
+  const leaveTo = (orderId: string) => {
+    leaving.current = true;
+    router.push({ pathname: '/checkout/[reference]', params: { reference: orderId } });
+    reloadCart();
+  };
+
+  /**
+   * Taslak açıldıktan sonra düşen kart ödemesinde kalemler siparişte bekler: müşteri o siparişin sayfasına gider, orada başka
+   * kartla öder ya da iptal eder. Taslak açılmadan önceki hata bu ekranda kalır.
+   */
+  const onCardError = (message: string) => {
+    const orderId = preparedOrder.current;
+    if (!orderId) return setError(message);
+    leaveTo(orderId);
   };
 
   const stripe = clientStripe();
@@ -271,7 +288,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
           // Dönüş adresi 3-D Secure için: banka doğrulaması müşteriyi götürüp geri getirebiliyor.
           returnUrlBase={returnUrlBase}
           onPrepare={prepare}
-          onError={setError}
+          onError={onCardError}
           onStage={setPayStage}
           onReady={setCardReady}
           labels={{ validating: t.pay.validating, confirming: t.pay.confirming, unavailable: t.payment.unavailable }}

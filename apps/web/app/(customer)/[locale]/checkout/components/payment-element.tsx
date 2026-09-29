@@ -46,7 +46,7 @@ interface CardFieldsProps {
   labels: { validating: string; confirming: string; unavailable: string };
 }
 
-interface BillingDetails {
+export interface BillingDetails {
   name: string;
   email: string;
   phone: string | null;

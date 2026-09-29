@@ -42,10 +42,12 @@ describe('onay ekranının sipariş hâli', () => {
 describe('onay ekranının söylediği hâl', () => {
   const taslak = { placed: false, cancelled: false, awaitingCard: true, refunded: false };
 
-  it('kart taslağında sağlayıcının cevabı: alındı onay, işleniyor bekleme, tamamlanmadı ret', () => {
+  // Tamamlanmayan ödeme ret sayılırsa ekran ödenebilir siparişi "olmadı" diye kapatır, müşteri ödemeye dönemez.
+  it('kart taslağında sağlayıcının cevabı: alındı onay, işleniyor bekleme, tamamlanmadı ödenmeyi bekler', () => {
     expect(confirmationPhaseOf({ ...taslak, paymentState: 'paid' })).toBe('paid');
     expect(confirmationPhaseOf({ ...taslak, paymentState: 'processing' })).toBe('processing');
-    expect(confirmationPhaseOf({ ...taslak, paymentState: 'incomplete' })).toBe('failed');
+    expect(confirmationPhaseOf({ ...taslak, paymentState: 'incomplete' })).toBe('unpaid');
+    expect(confirmationToneOf('unpaid')).toBe('waiting');
     expect(confirmationPhaseOf({ ...taslak, paymentState: null })).toBe('pending');
   });
 

@@ -8,7 +8,14 @@ import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
 import { getSessionUser } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
-import { imageOf, neighborInviteUrl, remainingNeighborInviteUses, tryOpenNeighborInvite, warehouseAddressLine } from '@lezzet/application';
+import {
+  imageOf,
+  neighborInviteUrl,
+  paymentDeadlineOf,
+  remainingNeighborInviteUses,
+  tryOpenNeighborInvite,
+  warehouseAddressLine,
+} from '@lezzet/application';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { orderIdOrNull } from '@/lib/order/order-id';
 import { routing } from '@/i18n/routing';
@@ -17,6 +24,7 @@ import { ConfirmationClient } from './confirmation-client';
 import { stripePaymentGateway } from '@/lib/stripe';
 import { orderOutcomeOf, paymentStateOf } from '@lezzet/domain-core';
 import type { ConfirmationView } from './confirmation-types';
+import type { BillingDetails } from '../components/payment-element';
 import messages from './messages.json';
 // Aile kökünün sözlüğü: özetin ortak sözcükleri orada yaşıyor (`confirmation-types`).
 import checkoutMessages from '../messages.json';
@@ -104,6 +112,8 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     refundedAt: order.providerRefundedAt,
     awaitingCard,
     paymentState: payment ? paymentStateOf(payment.status) : null,
+    payBy: awaitingCard ? await paymentDeadlineOf(db, order.id) : null,
+    billing: awaitingCard ? billingOf(profile, order.addressSnapshot) : null,
     onRoute: order.deliveryType === 'route',
     pickup: pickupWarehouse
       ? { warehouseName: pickupWarehouse.name, addressLine: warehouseAddressLine(pickupWarehouse), phoneDisplay: brand.contact.phoneDisplay }
@@ -144,4 +154,24 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
       <ConfirmationClient t={t} shared={checkoutMessages[locale]} locale={locale as Locale} view={view} device={device} />
     </SiteFrame>
   );
+}
+
+/** Fatura bilgisi profilden ve siparişin adres görüntüsünden; ülke yoksa kart formu açılmaz, uydurulmaz. */
+function billingOf(
+  profile: { name: string | null; email: string | null; phone: string | null },
+  snapshot: Record<string, unknown> | null,
+): BillingDetails | null {
+  const text = (key: string) => (typeof snapshot?.[key] === 'string' ? (snapshot[key] as string) : null);
+  const country = text('country');
+  if (!country) return null;
+  return {
+    name: profile.name ?? '',
+    email: profile.email ?? '',
+    phone: profile.phone,
+    line1: text('line1') ?? '',
+    line2: text('line2'),
+    postalCode: text('postalCode') ?? '',
+    city: text('city') ?? '',
+    country,
+  };
 }

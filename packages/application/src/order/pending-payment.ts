@@ -1,4 +1,4 @@
-import { OrderService, type Db } from '@lezzet/database';
+import { OrderService, ReservationService, type Db } from '@lezzet/database';
 import { paymentStateOf } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { DeliveryType, Order } from '@lezzet/types';
@@ -73,6 +73,15 @@ export async function settlePendingPayments(db: Db, customerId: string, deps: Co
       await captureError(error, { source: SOURCES.applicationOrder, context: { flow: 'settle_pending_payments', orderId: order.id } });
     }
   }
+}
+
+/**
+ * Ödemenin son anı: ayırmanın en erken bittiği an; sonra zamanlayıcı siparişi kapatır ve kalemler sepete döner. `null` = pencere
+ * kapanmış ya da süresiz ayırma, ekran saat yazmaz.
+ */
+export async function paymentDeadlineOf(db: Db, orderId: string): Promise<string | null> {
+  const ends = (await new ReservationService(db).listActiveByOrder(orderId)).map((row) => row.expiresAt).filter((at) => at != null);
+  return ends.length > 0 ? ends.reduce((first, at) => (at < first ? at : first)) : null;
 }
 
 async function ownOrder(db: Db, input: PendingOrderInput): Promise<Order | null> {

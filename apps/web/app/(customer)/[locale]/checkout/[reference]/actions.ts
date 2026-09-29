@@ -1,6 +1,6 @@
 'use server';
 
-import { reconcileDraftPayment } from '@lezzet/application';
+import { cancelPendingOrder, reconcileDraftPayment, resumePendingPayment } from '@lezzet/application';
 import { OrderService, serviceDb } from '@lezzet/database';
 import { currentCustomerId } from '@/lib/guard';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
@@ -9,12 +9,8 @@ import { webPaymentEffects } from '@/lib/order/transition';
 import { stripePaymentGateway } from '@/lib/stripe';
 
 /**
- * **Onay sayfasının "sağlayıcıya sor" eylemi** (07.18) — ödeme olayı gelmediğinde siparişi webhook'la AYNI
- * yoldan netleştirir (`reconcileDraftPayment`): ödendiyse onaylar, ödeme gelmeyecekse kapatır, banka
- * işliyorsa bekler. Canlı bağ (`OrderWatch`) birkaç saniyede bir çağırır.
- *
- * Kimlik yoldan gelir, sahiplik burada sınanır: başkasının siparişi için sağlayıcıya soru sorulmaz ve cevap
- * "netleşti" döner — canlı bağ sussun, siparişin varlığı da doğrulanmasın.
+ * Onay sayfasının "sağlayıcıya sor" eylemi: ödeme olayı gelmediğinde siparişi webhook'la aynı yoldan netleştirir; canlı bağ
+ * (`OrderWatch`) birkaç saniyede bir çağırır. Başkasının siparişi "netleşti" cevabı alır, ki canlı bağ sussun ve varlık doğrulanmasın.
  */
 export async function verifyPaymentAction(orderId: string): Promise<CustomerResult<{ settled: boolean }>> {
   try {
@@ -26,12 +22,55 @@ export async function verifyPaymentAction(orderId: string): Promise<CustomerResu
     if (!order || order.customerId !== customerId) return { data: { settled: true }, errorKey: null };
 
     const outcome = await reconcileDraftPayment(db, order.id, { gateway: stripePaymentGateway(), effects: webPaymentEffects });
-    // "Netleşti": onaylandı, kapandı ya da artık sorulacak bir taslak değil. Sorulamayan hâllerde de
-    // (anahtar yok) sormayı sürdürmenin anlamı yok — webhook ve zamanlayıcı yine çalışıyor. Tanınmayan bir
-    // sağlayıcı durumunda sorular sürer: bir sonraki cevap tanıdık olabilir.
+    // Sorulamayan hâllerde de (anahtar yok) sormayı sürdürmenin anlamı yok; tanınmayan sağlayıcı durumunda sorular sürer.
     const settled =
-      outcome.status === 'confirmed' || outcome.status === 'cancelled' || (outcome.status === 'skipped' && outcome.reason !== 'unknown_status');
+      outcome.status === 'confirmed' ||
+      outcome.status === 'cancelled' ||
+      (outcome.status === 'skipped' && outcome.reason !== 'unknown_status');
     return { data: { settled }, errorKey: null };
+  } catch (err) {
+    return { data: null, errorKey: customerErrorKey(err) };
+  }
+}
+
+/** Ödemeye dönüş: aynı siparişin aynı ödemesinin anahtarı döner; ödeme geçmiş, işleniyor ya da sipariş kapanmışsa sayfa yenilenir. */
+type ResumeResult = { status: 'payment_required'; orderId: string; clientSecret: string } | { status: 'settled' };
+
+export async function resumePaymentAction(orderId: string): Promise<CustomerResult<ResumeResult>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+    const id = orderIdOrNull(orderId);
+    if (!id) throw new CustomerError('not_found');
+    const outcome = await resumePendingPayment(
+      serviceDb(),
+      { orderId: id, customerId },
+      { gateway: stripePaymentGateway(), effects: webPaymentEffects },
+    );
+    if (outcome.status === 'not_found') throw new CustomerError('not_found');
+    if (outcome.status === 'provider_unavailable') throw new CustomerError('payment_unavailable');
+    if (outcome.status !== 'payment_required') return { data: { status: 'settled' }, errorKey: null };
+    return { data: { status: 'payment_required', orderId: outcome.orderId, clientSecret: outcome.clientSecret }, errorKey: null };
+  } catch (err) {
+    return { data: null, errorKey: customerErrorKey(err) };
+  }
+}
+
+/** Müşteri vazgeçti: ödeme ve sipariş kapanır, kalemler sepete döner. Geçmiş ya da işlenen ödeme iptal edilmez, sayfa yenilenir. */
+export async function cancelPendingOrderAction(orderId: string): Promise<CustomerResult<{ cancelled: boolean }>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+    const id = orderIdOrNull(orderId);
+    if (!id) throw new CustomerError('not_found');
+    const outcome = await cancelPendingOrder(
+      serviceDb(),
+      { orderId: id, customerId },
+      { gateway: stripePaymentGateway(), effects: webPaymentEffects },
+    );
+    if (outcome.status === 'not_found') throw new CustomerError('not_found');
+    if (outcome.status === 'provider_unavailable') throw new CustomerError('payment_unavailable');
+    return { data: { cancelled: outcome.status === 'cancelled' || outcome.status === 'closed' }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }

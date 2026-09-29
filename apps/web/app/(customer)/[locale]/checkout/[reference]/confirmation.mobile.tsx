@@ -10,6 +10,7 @@ import { formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import type { CheckoutCopy } from '../checkout-types';
 import { useShareLink } from '@/lib/use-share-link.hook';
 import { confirmationPhaseOf, confirmationToneOf, isRefundedCancellation } from '@lezzet/domain-core';
+import { PendingPayment } from './components/pending-payment';
 import type { ConfirmationView, ConfirmationViewProps, Messages } from './confirmation-types';
 
 /**
@@ -23,7 +24,8 @@ const MARK: Record<ReturnType<typeof confirmationToneOf>, string> = {
   failed: 'bg-terracotta-bright',
 };
 
-export function ConfirmationMobile({ t, locale, view }: ConfirmationViewProps) {
+export function ConfirmationMobile(props: ConfirmationViewProps) {
+  const { t, locale, view } = props;
   const copy = checkoutMessages[locale];
   const c = copy.confirmed;
   const phase = confirmationPhaseOf({ ...view, refunded: isRefundedCancellation(view) });
@@ -56,11 +58,15 @@ export function ConfirmationMobile({ t, locale, view }: ConfirmationViewProps) {
       {view.placed && <p className="font-sans text-body-sm leading-[1.6] text-muted">{c.note}</p>}
       {view.placed && view.neighborInvite && <NeighborInvite t={t} invite={view.neighborInvite} />}
 
-      <div className="mt-2 flex w-full flex-col gap-2.5">
-        {/* Olmadıysa çıkış sepete: yeni deneme eski taslağı ve eski ödemeyi kapatır (masaüstünün aynı yolu). */}
-        {failed ? <PrimaryButton shape="block" label={c.retry} href="/cart" /> : <PrimaryButton shape="block" label={c.orders} href="/orders" />}
-        <SecondaryButton label={c.home} href="/" />
-      </div>
+      {phase === 'unpaid' ? (
+        <PendingPayment {...props} />
+      ) : (
+        <div className="mt-2 flex w-full flex-col gap-2.5">
+          {/* Olmadıysa çıkış sepete: iptal edilen siparişin kalemleri oraya döndü. */}
+          {failed ? <PrimaryButton shape="block" label={c.retry} href="/cart" /> : <PrimaryButton shape="block" label={c.orders} href="/orders" />}
+          <SecondaryButton label={c.home} href="/" />
+        </div>
+      )}
     </div>
   );
 }

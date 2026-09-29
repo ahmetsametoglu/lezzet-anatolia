@@ -11,6 +11,7 @@ const PHASE_KEYS = {
   processing: ['pending', 'processingBody'],
   pending: ['pending', 'pendingBody'],
   incomplete: ['incomplete', 'incompleteBody'],
+  unpaid: ['unpaid', 'unpaidBody'],
 } as const satisfies Record<string, readonly [keyof ConfirmedCopy, keyof ConfirmedCopy]>;
 
 /** Onay ekranının kesinleşmemiş hâl metni; hâl `confirmationPhaseOf`tan (domain-core) gelir, web ve native aynı cümleyi okur. */

@@ -13,6 +13,7 @@ import { formatDeliveryDate, formatPrice, formatShortDate, formatTime } from '@/
 import { confirmationPhaseOf, confirmationToneOf, isRefundedCancellation } from '@lezzet/domain-core';
 import { confirmationCopy } from '@lezzet/i18n';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
+import ordersMessages from '@lezzet/i18n/customer/orders';
 import type { ConfirmationViewProps } from '../confirmation-types';
 
 import { useShareLink } from '@/lib/use-share-link.hook';
@@ -145,7 +146,11 @@ export function PaymentCard({ t, shared, locale, view, compact }: ConfirmationVi
         {view.onAccount
           ? t.payment.onAccount.replace('{amount}', total)
           : view.paymentMethod === 'online'
-            ? (view.placed ? t.payment.paid : checkoutMessages[locale].confirmed.pending).replace('{amount}', total)
+            ? view.placed
+              ? t.payment.paid.replace('{amount}', total)
+              : view.paymentState === 'incomplete'
+                ? ordersMessages[locale].status.awaiting_payment
+                : checkoutMessages[locale].confirmed.pending
             : (view.pickup ? t.payment.duePickup : t.payment.due).replace('{amount}', total)}
       </span>
       {/* Gel-al'da kapıda ödeme depoda ödemedir: aynı kural, başka yer. */}
@@ -242,25 +247,15 @@ export function HelpBand({
       <div className="flex flex-1 flex-col gap-0.5">
         <span className="font-sans text-body-sm font-bold text-ink">{t.help.title}</span>
         <span className="font-sans text-note leading-relaxed text-body">{t.help.body}</span>
-        {/* Dar ekranda düğme yerine bu satır: dokunma hedefi ŞERİDİN TAMAMI ama görünmez değil —
-            eylemin adı yazılı durur. Görünmez bir dokunma hedefi, olmayan bir düğmeden kötüdür. */}
+        {/* Dar ekranda düğme yerine bu satır: dokunma hedefi şeridin tamamı, eylemin adı yine yazılı durur. */}
         {compact && <span className="font-sans text-note font-bold text-olive underline">{t.help.cta}</span>}
       </div>
     </>
   );
 
   /*
-    DAR EKRANDA ŞERİDİN TAMAMI TIKLANABİLİR (23.08 · kullanıcı kararı) — düğme ikinci satıra
-    alınmadı.
-
-    ~~Karar Claude Design'a bırakılmıştı~~: `!compact` çizimin kararıydı ama o karar düğme ÖLÜYKEN
-    (`disabled` + "· yakında") verilmişti. 15.3 düğmeyi canlandırınca gerilim tersine döndü —
-    **WhatsApp'ın doğal cihazı telefondur**, yani düğmenin en değerli olduğu yer mobil ve tam orada
-    yoktu. Kullanıcı 23.08'de "gerekli gördüğünü yap" dedi.
-
-    İki seçenekten bu seçildi çünkü YENİ BİR DÜZEN İCAT ETMİYOR (`CLAUDE §3`): kutu, boşluklar ve
-    tipografi aynen kalıyor; değişen tek şey sarmalayıcı öğe. Düğmeyi ikinci satıra almak, dar
-    ekranda çizimde olmayan bir yerleşim kurmak olurdu.
+    Dar ekranda şeridin tamamı tıklanabilir, çünkü WhatsApp'ın doğal cihazı telefondur; düğmeyi ikinci satıra almak çizimde olmayan
+    bir yerleşim kurmak olurdu.
   */
   return compact ? (
     <a {...link} className={`${box} cursor-pointer`}>
@@ -360,12 +355,12 @@ export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps)
         <span className="font-sans text-micro text-muted">{summary.vatIncluded}</span>
       </div>
 
-      {/* Tamamlanmamış ödemede de müşteri sepetine döner: yeni deneme eski taslağı ve ödemeyi kapatır. */}
-      {view.cancelled || view.paymentState === 'incomplete' ? (
+      {/* İptal edilen siparişin kalemleri sepete döndü; ödemesi bekleyen siparişin eylemleri kendi bloğunda. */}
+      {view.cancelled ? (
         <Link href="/cart" className={buttonClass({ size: 'md', compact, fullWidth: true })}>
           {checkoutMessages[locale].confirmed.retry}
         </Link>
-      ) : (
+      ) : view.paymentState === 'incomplete' ? null : (
         /** Sipariş detayı kimlikle açılır, çünkü numara ancak onayla doğar. */
         <Link href={{ pathname: '/orders/[reference]', params: { reference: view.orderId } }} className={buttonClass({ size: 'md', compact, fullWidth: true })}>
           {t.track}
@@ -388,12 +383,7 @@ export function shellClass(compact: boolean): string {
   return ['mx-auto w-full max-w-[1360px]', compact ? 'px-4' : 'px-12'].join(' ');
 }
 
-/**
- * "Onay e-postasını **X** adresine gönderdik" — adres KALIN.
- *
- * Metin çeviri dosyasından tek parça geliyor ve kalınlığı oraya HTML olarak gömmedik: çeviri
- * dosyasına işaretleme girdiği an üç dil birbirinden kayar ve metin artık düz metin olmaktan çıkar.
- */
+/** "Onay e-postasını X adresine gönderdik" cümlesinde adres kalın; kalınlık çeviriye HTML olarak gömülmez, üç dil kayardı. */
 function Mailed({ template, email }: { template: string; email: string }) {
   const [before, after] = template.split('{email}');
   return (

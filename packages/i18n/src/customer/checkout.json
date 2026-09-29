@@ -218,14 +218,20 @@
       "paid": "Ödemeniz alındı",
       "paidBody": "Siparişiniz onaylanıyor — bu sayfa birkaç saniye içinde kendini güncelleyecek.",
       "processingBody": "Bankanız ödemeyi işliyor; bu bazen birkaç dakika sürer. Sonuç bu sayfada ve Siparişlerim'de görünür, ödeme onaylanınca e-postayla da bildiririz.",
-      "failed": "Ödeme tamamlanmadı",
-      "failedBody": "Kartınızdan tahsilat yapılmadı. Sepetiniz duruyor; dilerseniz başka bir kartla ya da kapıda ödeme ile tekrar deneyebilirsiniz.",
+      "failed": "Sipariş oluşmadı",
+      "failedBody": "Kartınızdan tahsilat yapılmadı ve sipariş iptal edildi. Ürünler sepetinizde; dilerseniz başka bir kartla ya da kapıda ödeme ile yeniden sipariş verebilirsiniz.",
       "refunded": "Siparişiniz iptal edildi, paranız iade edildi",
       "refundedBody": "Ödemeniz alındıktan sonra ürünlerden biri tükendi ve siparişi tamamlayamadık. Tahsil edilen tutarın tamamı kartınıza iade edildi — hesabınıza geçiş süresi bankanıza bağlıdır. Özür dileriz.",
       "incomplete": "Siparişiniz tamamlanmadı",
       "incompleteBody": "Sipariş kaydedildi ama kesinleşmedi. Sepetiniz duruyor — ödeme adımına dönüp yeniden deneyebilirsiniz.",
-      "retry": "Ödemeyi tekrar dene",
-      "pickup": "Depodan teslim"
+      "retry": "Sepete dön",
+      "pickup": "Depodan teslim",
+      "unpaid": "Bu siparişin ödemesi gerçekleşmedi",
+      "unpaidBody": "Kartınızdan tahsilat yapılmadı. Başka bir kartla ödemeyi tamamlayabilir ya da siparişi iptal edebilirsiniz.",
+      "unpaidDeadline": "{time} saatine kadar ödenmezse sipariş iptal edilir ve ürünler sepetinize döner.",
+      "payNow": "Ödemeyi tamamla",
+      "cancelOrder": "Siparişi iptal et",
+      "cancelFailed": "Sipariş iptal edilemedi. Birazdan tekrar deneyin."
     }
   },
   "fr": {
@@ -447,14 +453,20 @@
       "paid": "Paiement reçu",
       "paidBody": "Votre commande est en cours de confirmation — cette page se mettra à jour dans quelques secondes.",
       "processingBody": "Votre banque traite le paiement ; cela peut prendre quelques minutes. Le résultat s'affiche sur cette page et dans Mes commandes, et nous vous écrirons par e-mail dès sa confirmation.",
-      "failed": "Paiement non abouti",
-      "failedBody": "Aucun montant n'a été débité. Votre panier est intact ; réessayez avec une autre carte ou choisissez le paiement à la livraison.",
+      "failed": "Commande non passée",
+      "failedBody": "Aucun montant n'a été débité et la commande a été annulée. Les articles sont dans votre panier ; vous pouvez recommander avec une autre carte ou payer à la livraison.",
       "refunded": "Commande annulée, vous avez été remboursé",
       "refundedBody": "Après votre paiement, l'un des produits s'est retrouvé en rupture et nous n'avons pas pu honorer la commande. La totalité du montant débité a été remboursée sur votre carte — le délai de réception dépend de votre banque. Nous vous prions de nous en excuser.",
       "incomplete": "Votre commande n'a pas abouti",
       "incompleteBody": "La commande a été enregistrée mais non confirmée. Votre panier est intact — revenez au paiement pour réessayer.",
-      "retry": "Réessayer le paiement",
-      "pickup": "Retrait à l'entrepôt"
+      "retry": "Retour au panier",
+      "pickup": "Retrait à l'entrepôt",
+      "unpaid": "Le paiement de cette commande n'a pas abouti",
+      "unpaidBody": "Aucun montant n'a été débité. Vous pouvez finaliser le paiement avec une autre carte ou annuler la commande.",
+      "unpaidDeadline": "Sans paiement avant {time}, la commande est annulée et les articles reviennent dans votre panier.",
+      "payNow": "Finaliser le paiement",
+      "cancelOrder": "Annuler la commande",
+      "cancelFailed": "La commande n'a pas pu être annulée. Réessayez dans un instant."
     }
   },
   "de": {
@@ -676,14 +688,20 @@
       "paid": "Zahlung eingegangen",
       "paidBody": "Ihre Bestellung wird bestätigt – diese Seite aktualisiert sich in wenigen Sekunden.",
       "processingBody": "Ihre Bank bearbeitet die Zahlung; das kann einige Minuten dauern. Das Ergebnis erscheint auf dieser Seite und unter Meine Bestellungen, nach der Bestätigung schreiben wir Ihnen auch per E-Mail.",
-      "failed": "Zahlung nicht abgeschlossen",
-      "failedBody": "Es wurde nichts abgebucht. Ihr Warenkorb bleibt bestehen; versuchen Sie es mit einer anderen Karte oder wählen Sie Zahlung bei Lieferung.",
+      "failed": "Bestellung nicht zustande gekommen",
+      "failedBody": "Es wurde nichts abgebucht und die Bestellung wurde storniert. Die Artikel liegen in Ihrem Warenkorb; Sie können mit einer anderen Karte oder mit Zahlung bei Lieferung neu bestellen.",
       "refunded": "Bestellung storniert, Ihr Geld wurde erstattet",
       "refundedBody": "Nach Ihrer Zahlung war eines der Produkte nicht mehr verfügbar und wir konnten die Bestellung nicht ausführen. Der gesamte abgebuchte Betrag wurde auf Ihre Karte erstattet – wann er gutgeschrieben wird, hängt von Ihrer Bank ab. Wir bitten um Entschuldigung.",
       "incomplete": "Ihre Bestellung wurde nicht abgeschlossen",
       "incompleteBody": "Die Bestellung wurde gespeichert, aber nicht bestätigt. Ihr Warenkorb ist erhalten – gehen Sie zurück zur Kasse und versuchen Sie es erneut.",
-      "retry": "Zahlung erneut versuchen",
-      "pickup": "Abholung im Lager"
+      "retry": "Zum Warenkorb",
+      "pickup": "Abholung im Lager",
+      "unpaid": "Die Zahlung für diese Bestellung ist nicht erfolgt",
+      "unpaidBody": "Es wurde nichts abgebucht. Sie können die Zahlung mit einer anderen Karte abschließen oder die Bestellung stornieren.",
+      "unpaidDeadline": "Ohne Zahlung bis {time} Uhr wird die Bestellung storniert und die Artikel kommen zurück in Ihren Warenkorb.",
+      "payNow": "Zahlung abschließen",
+      "cancelOrder": "Bestellung stornieren",
+      "cancelFailed": "Die Bestellung konnte nicht storniert werden. Bitte versuchen Sie es gleich noch einmal."
     }
   }
 }

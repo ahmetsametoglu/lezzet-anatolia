@@ -513,7 +513,7 @@ export type { ConfirmPaymentDeps, ConfirmPaymentInput, ConfirmPaymentOutcome } f
 export { reconcileDraftPayment, sweepUnpaidDrafts } from './order/reconcile-payment';
 export { readCheckoutOrderStatus } from './order/order-status';
 export type { ReconcileOutcome } from './order/reconcile-payment';
-export { cancelPendingOrder, resumePendingPayment, settlePendingPayments } from './order/pending-payment';
+export { cancelPendingOrder, paymentDeadlineOf, resumePendingPayment, settlePendingPayments } from './order/pending-payment';
 export type { CancelPendingOutcome, ResumePaymentOutcome } from './order/pending-payment';
 export { stripeGateway } from './order/payment-gateway';
 export type { PaymentGateway, PaymentSnapshot, StripeLike } from './order/payment-gateway';

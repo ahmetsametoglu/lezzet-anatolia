@@ -43,10 +43,16 @@ export function paymentStateOf(status: PaymentIntentStatus): CardPaymentState {
   }
 }
 
-/** Onay ekranının söylediği tek hâl; kesinleşmemiş her hâlin kendi cümlesi var. */
-export type ConfirmationPhase = 'placed' | 'refunded' | 'failed' | 'paid' | 'processing' | 'pending' | 'incomplete';
+/**
+ * Onay ekranının söylediği tek hâl; kesinleşmemiş her hâlin kendi cümlesi var. `unpaid`: kart ödemesi gerçekleşmedi ama sipariş
+ * hâlâ ödenebilir ya da iptal edilebilir.
+ */
+export type ConfirmationPhase = 'placed' | 'refunded' | 'failed' | 'paid' | 'processing' | 'pending' | 'incomplete' | 'unpaid';
 
-/** Onay ekranının hâli: iptal ve tamamlanmayan ödeme ret, alınmış ödeme onay, sağlayıcı sorulamadıysa (`null`) "onaylanıyor". */
+/**
+ * Onay ekranının hâli: iptal ret, alınmış ödeme onay, sağlayıcı sorulamadıysa (`null`) "onaylanıyor". Tamamlanmayan kart ödemesi
+ * ret değildir, çünkü sipariş ödeme penceresi boyunca ödenmeyi bekler.
+ */
 export function confirmationPhaseOf(view: OrderOutcome & { refunded: boolean; paymentState: CardPaymentState | null }): ConfirmationPhase {
   if (view.cancelled) return view.refunded ? 'refunded' : 'failed';
   if (view.placed) return 'placed';
@@ -57,7 +63,7 @@ export function confirmationPhaseOf(view: OrderOutcome & { refunded: boolean; pa
     case 'processing':
       return 'processing';
     case 'incomplete':
-      return 'failed';
+      return 'unpaid';
     case null:
       return 'pending';
   }
