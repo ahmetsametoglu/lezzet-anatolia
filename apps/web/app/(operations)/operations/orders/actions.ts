@@ -38,12 +38,8 @@ export async function loadMoreOrdersAction(search: string, cursor: KeysetCursor)
 }
 
 /**
- * Hızlı bakışın derinliği — satır açıldığında çekilir.
- *
- * Liste sorgusu bunları TAŞIMAZ ve taşımamalı: elli satırın kalemlerini, adreslerini ve
- * telefonlarını peşinen çekmek, biri açılsın diye ellisinin bedelini ödemektir. Okuma DETAY
- * SAYFASININ okumasıdır (`readOrderDetail`) — pencere için ikinci bir okuma yazılsaydı, aynı
- * siparişi iki farklı gerçekle gösteren iki yol açılırdı.
+ * Hızlı bakışın derinliği — satır açıldığında çekilir, çünkü elli satırın kalemlerini peşinen çekmek biri açılsın diye
+ * ellisinin bedelini ödemektir. Okuma detay sayfasınınkidir (`readOrderDetail`); ikinci bir okuma aynı siparişi iki gerçekle gösterirdi.
  */
 export async function loadOrderPeekAction(orderId: string): Promise<ActionResult<OrderPeek>> {
   try {
@@ -58,12 +54,8 @@ export async function loadOrderPeekAction(orderId: string): Promise<ActionResult
 }
 
 /**
- * Karar penceresinin ÖNİZLEMESİ — "bunu onaylarsam ne olur?".
- *
- * Sayı ekranda HESAPLANMAZ: aynı motor fonksiyonu (`derivePaymentStatusForOrder`), yalnız kalem
- * adetleri operatörün önerdiği hâlle değiştirilerek çalıştırılır. Client kendi hesabını yapsaydı
- * pencerede yazan tutar ile kaydedildikten sonra oluşan tutar bir gün ayrışırdı — hem de tam para
- * konuşurken.
+ * Karar penceresinin önizlemesi: aynı motor fonksiyonu (`derivePaymentStatusForOrder`) önerilen adetlerle çalışır.
+ * İstemci kendi hesabını yapsaydı pencerede yazan tutar ile kaydedilen tutar ayrışabilirdi.
  */
 export async function previewFulfillmentAction(
   orderId: string,
@@ -95,10 +87,8 @@ export async function previewFulfillmentAction(
 }
 
 /**
- * **Kısmi karşılama / iade** — karar penceresinin yazma yolu (07.8).
- *
- * Burada iş kuralı YOK: uygulama kapısı `lib/order/refund` zaten üç katmanı sırayla birleştiriyor
- * (mal → türetim → para hareketi). Action'ın işi guard, çeviri ve tazeleme.
+ * Kısmi karşılama / iade — karar penceresinin yazma yolu. İş kuralı uygulama kapısında (mal → türetim → para); action'ın
+ * işi guard, çeviri ve tazeleme.
  */
 export async function adjustFulfillmentAction(
   orderId: string,
@@ -120,9 +110,8 @@ export async function adjustFulfillmentAction(
         `Sipariş bu sırada "${ORDER_STATUS_LABELS[result.currentStatus]}" durumuna geçmiş — ekranı tazeleyin.`,
       );
     }
-    /* Kalemin akıbeti ZATEN yazılmış ve gelen istek başkasını söylüyor (04.09 · kapıya eklendi).
-       `stale`den ayrı bir cevap: orada sipariş değişmiştir, burada KALEM karara bağlanmıştır ve
-       operatörün yapacağı şey aynı — ekranı tazeleyip yazılı hâli görmek. Hiçbir satır yazılmadı. */
+    /* Kalemin akıbeti zaten yazılmış ve istek başkasını söylüyor; hiçbir satır yazılmadı. Operatörün yapacağı şey ekranı
+       tazeleyip yazılı hâli görmek. */
     if (result.status === 'already_marked') {
       throw new Error('Bu kalemin akıbeti zaten yazılmış — ekranı tazeleyip yazılı hâlini görün.');
     }
@@ -150,8 +139,8 @@ export async function cancelOrderAction(
 ): Promise<ActionResult<{ refundedAmountCents: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
   try {
     const actor = await requireAdmin();
-    // Sebep `staff` (07.14): iptali operasyon istedi. Müşterinin kendi iptali ayrı bir sebeptir ve
-    // ayrı bir kapıdan gelir — ikisini tek kovaya koymak "neden iptal oldu" sorusunu geri alırdı.
+    // Sebep `staff`: iptali operasyon istedi; müşterinin kendi iptali ayrı sebep ve ayrı kapıdır, tek kova "neden" sorusunu
+    // cevapsız bırakırdı.
     const result = await cancelOrder(orderId, { actorId: actor.profileId, reason: 'staff', ...opts });
 
     if (result.status === 'not_found') throw new Error('Sipariş bulunamadı.');
@@ -184,10 +173,8 @@ export async function cancelOrderAction(
 }
 
 /**
- * **İadeyi yeniden dene** (07.11) — sağlayıcı çağrısı düştüğünde tek çıkış yolu.
- *
- * Düzeltme/iptal zaten yazıldığı için onları tekrar çalıştırmak yanlış olurdu (adetler ikinci kez
- * uygulanır). Bu action yalnız para ayağını tekrar dener; borcu da yeniden türetir, saklamaz.
+ * İadeyi yeniden dene — sağlayıcı çağrısı düştüğünde tek çıkış: düzeltme/iptal zaten yazıldığı için yalnız para ayağı
+ * tekrar denenir. Borç yeniden türetilir, saklanmaz.
  */
 export async function retryRefundAction(
   orderId: string,
@@ -214,13 +201,8 @@ export async function retryRefundAction(
 }
 
 /**
- * İade YAZILAMADIYSA operatöre söylenecek cümle (07.11).
- *
- * Bu bir hata değil — düzeltme/iptal geçerli, kaydedildi; eksik olan yalnız paranın çıkışı. Hata
- * gibi gösterilseydi operatör işlemi tekrar dener ve düzeltmeyi ikinci kez uygulardı. Ama sessiz de
- * kalınamaz: sıfır iade "borç yoktu" ile aynı görünürdü ve müşteri parasını beklerdi.
- *
- * Her cümle **ne yapılacağını** söyler; sebebi tekrarlamak operatörün işine yaramaz.
+ * İade yazılamadıysa operatöre söylenecek cümle: hata değil, çünkü düzeltme kaydedildi ve tekrar denenirse ikinci kez
+ * uygulanırdı; sessiz de değil, çünkü sıfır iade "borç yoktu" gibi görünürdü. Her cümle ne yapılacağını söyler.
  */
 function refundNotice(reason: RefundBlockReason | undefined): string | null {
   if (!reason) return null;
@@ -230,8 +212,8 @@ function refundNotice(reason: RefundBlockReason | undefined): string | null {
     provider_ref_missing:
       'İade yazılamadı: kart ödemesinin sağlayıcı künyesi kayıtlı değil, hangi ödemenin üzerinden dönüleceği bilinmiyor. Stripe panelinden iade edin.',
     provider_unavailable: 'İade yazılamadı: ödeme sağlayıcısı bu ortamda tanımlı değil.',
-    /* 21.265: para birden çok hesaba girmiş. Otomatik bölme YAPILMIYOR — parayı hiç almamış
-       hesaptan iade yazmak o hesabın bakiyesini sessizce bozardı. Çare "tekrar dene" değil. */
+    /* Para birden çok hesaba girmiş: otomatik bölme yok, parayı almamış hesaptan iade yazmak o hesabın bakiyesini bozardı.
+       Çare "tekrar dene" değil. */
     split_payment:
       'İade yazılamadı: bu siparişin parası birden çok hesaba girmiş (ör. kartla kapora + kapıda nakit). İadeyi hesap başına, o hesabı seçerek yazın.',
     provider_failed: 'İade yazılamadı: sağlayıcı çağrısı başarısız oldu. Para ÇIKMADI — tekrar deneyin ya da Stripe panelinden iade edin.',
@@ -240,29 +222,9 @@ function refundNotice(reason: RefundBlockReason | undefined): string | null {
 }
 
 /**
- * Durum ilerletme — **uygulama katmanının kapısından** (`transitionOrder`).
- *
- * ── NEDEN ARTIK SERVİSE DOĞRUDAN GİTMİYOR (denetim 26.08) ────────────────────
- * Burası `OrderService.transition`ı doğrudan çağırıyordu, yani `transitionOrder`ın kurduğu
- * orkestrasyonu ATLIYORDU. Sonucu iki katlıydı:
- *
- *   · **Kapı denetimi hiç uygulanmıyordu.** Şerit `cancelled` ve `delivered` düğmelerini de
- *     çiziyor ve düz yazıma yolluyordu — iptal edilen siparişin ayrılmış malı serbest kalmıyor,
- *     teslim edilenin fiili stoğu hiç düşmüyordu.
- *   · **Test edilen yol ile operatörün yürüdüğü yol farklıydı.** `transitionOrder` on test
- *     dosyasında sınanıyor; bu ekran onu çağırmadığı için o testlerin hiçbiri buraya bakmıyordu.
- *     Bulgunun kökü buydu: her parça test edilmişti, aradaki dikiş edilmemişti.
- *
- * Ekran zaten yalnız ofisin geçişlerini sunuyor (`officeTransitions` — izinli, düz kapıdan geçen,
- * anı ofisin olan; `order-detail-read`); buradaki kontrol ikinci kattır — eski bir sekmeden gelen
- * istek, ekranın sunmadığı bir geçişi yazmasın. Karar tek yerde (motor + `transitionOrder`), burada
- * yalnız operatöre söylenecek cümle seçiliyor.
- *
- * **Müşteri haberi artık BU ekrandan da gider** ve bu bilinçli: `webOrderEffects` geçiyor. Aynı
- * geçiş teslimat ekranından yapıldığında (`deliveries/[orderId]/actions.ts`) haber zaten
- * gidiyordu — müşterinin "yolda" maili alıp almaması personelin hangi ekranı kullandığına bağlıydı.
- * Haber veren üç durum var (`confirmed` · `out_for_delivery` · `delivered`) ve tekrarı `notifyOrderStatus`
- * durum kaydından zaten engelliyor.
+ * Durum ilerletme — uygulama kapısından (`transitionOrder`), ki test edilen yol operatörün yürüdüğü yolla aynı olsun ve
+ * kapı denetimi atlanmasın. Ekran yalnız ofisin geçişlerini sunar; buradaki kontrol bayat sekmeye karşı ikinci kattır ve
+ * müşteri haberi `webOrderEffects` ile teslimat ekranındakiyle aynı gider.
  */
 export async function advanceOrderStatusAction(
   orderId: string,
@@ -272,9 +234,8 @@ export async function advanceOrderStatusAction(
   try {
     const actor = await requireAdmin();
 
-    // SAHİPLİK (09.29): kurallara uyan ve düz kapıdan geçen ama anı sahanın ya da sistemin olan
-    // geçiş burada durur. Kurallara aykırı ya da başka kapıdan geçen istek kapıya gider — sebebini
-    // orası söyler, cümlesini aşağıdaki `gecisReddiCumlesi` seçer.
+    // Sahiplik: kurallara uyan ve düz kapıdan geçen ama anı sahanın ya da sistemin olan geçiş burada durur; kurallara aykırı
+    // istek kapıya gider, cümlesini `gecisReddiCumlesi` seçer.
     const owner = transitionOwner(from, to);
     if (owner !== 'office' && canTransition(from, to).allowed && !needsDedicatedGate(from, to)) {
       throw new Error(sahiplikReddiCumlesi(owner));
@@ -299,9 +260,8 @@ export async function advanceOrderStatusAction(
 }
 
 /**
- * Reddin operatöre söylenecek hâli. **"Yapılamaz" ile "başka kapıdan" ayrı cümlelerdir**: birincisi
- * yolun kapalı olduğunu, ikincisi yolun BAŞKA olduğunu söyler. Aynı cümleyi kurmak, operatöre
- * elindeki işi yapamayacağını söylemek olurdu — oysa yapabilir, doğru düğme ekranın altında duruyor.
+ * Reddin operatöre söylenecek hâli: "yapılamaz" yolun kapalı olduğunu, "başka kapıdan" yolun başka olduğunu söyler. Aynı
+ * cümle operatöre işi yapamayacağını söylerdi, oysa doğru düğme ekranın altında duruyor.
  */
 function gecisReddiCumlesi(reason: 'same_status' | 'terminal' | 'not_allowed' | 'needs_dedicated_gate', gate?: string): string {
   if (reason === 'terminal') return 'Bu sipariş kapandı, durumu değişmez.';
@@ -315,9 +275,8 @@ function gecisReddiCumlesi(reason: 'same_status' | 'terminal' | 'not_allowed' | 
 }
 
 /**
- * Anı sahanın ya da sistemin olan geçişin reddi (09.29) — "yapılamaz" değil "başka yerde yazılır":
- * cümle, o anı hangi uygulamanın yazdığını söyler. Web'deki saha ekranları 07.09'da söküldü; bu
- * geçişlerin yazıldığı yer depo ve kurye uygulamaları, kargoda taşıyıcının takibi.
+ * Anı sahanın ya da sistemin olan geçişin reddi: cümle o anı hangi uygulamanın yazdığını söyler (depo ve kurye
+ * uygulamaları, kargoda taşıyıcının takibi).
  */
 function sahiplikReddiCumlesi(owner: Exclude<TransitionOwner, 'office'>): string {
   return owner === 'field'

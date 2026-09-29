@@ -245,7 +245,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     timeline: timelineOf(logs, new Map(actors.map((a) => [a.id, a.name])), tickets, order.status),
     /*
       Şerit yalnız ofisin geçişlerini sunar: iptal ve teslim düz durum yazımıyla stok ve rezervasyonu atlardı, hazırlık ve kapıdaki
-      sonuç ise sahanın işidir. Eski sekmeden gelen istek eylem tarafında da reddedilir.
+      sonuç ise sahanın işidir. Bayat sekmeden gelen istek eylem tarafında da reddedilir.
     */
     allowedNext: officeTransitions(order.status),
     decisions: [...allowedDecisions(order.status)],

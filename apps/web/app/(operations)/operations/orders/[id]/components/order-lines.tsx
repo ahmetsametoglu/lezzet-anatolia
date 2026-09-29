@@ -6,30 +6,22 @@ import type { OrderBundleGroup, OrderLineView, OrderTotalLine } from '../order-d
 import { cardClass } from '@/components/operation/ui/card';
 
 /**
- * Kalem tablosu — Komponent Envanteri O16 (`Table`'ın kayıt içi hâli).
- *
- * Genel `Table`'dan farkı, tablonun kendisinden çok SATIRIN ALTINA düşen anlatım: bir kalem eksik
- * gitmiş ya da iade edilmiş olabilir ve bu, sütuna sığmaz — kendi şeridinde, sebebiyle yazılır.
- *
- * **Sipariş ve karşılanan adet İKİ AYRI sütundur.** Tek sütuna indirilseydi "3 yazan sipariş neden
- * 2 kalem parası ödedi" sorusu ekrandan cevaplanamazdı; eksik giden adet kırmızıdır.
- *
- * **Paketten gelen kalemler kendi başlığı altında girintili durur** (DOMAIN §13): tek tek alınmış
- * gibi okunmaları, müşterinin aldığı şeyi yanlış anlatmak olurdu.
+ * Kalem tablosu (Komponent Envanteri O16): sipariş ve karşılanan adet iki ayrı sütundur, eksik giden adet kırmızıdır;
+ * paketten gelen kalemler başlığı altında girintili durur (DOMAIN §13). Sütuna sığmayan anlatım (iade) satırın altındaki
+ * şeritte yazılır.
  */
 interface OrderLinesProps {
   lines: OrderLineView[];
   bundles: OrderBundleGroup[];
   totals: OrderTotalLine[];
   /**
-   * Hazırlık kesinleşti mi. **`false` iken `fulfilledQty` bir EKSİKLİK DEĞİLDİR** — hazırlıkta
-   * yazılmamış bir sayıdır (varsayılanı 0). Bu ayrım gözetilmezse yeni onaylanmış her sipariş
-   * "her kalemi eksik gitti" görünür; ekran olmayan bir sorunu haber verir.
+   * Hazırlık kesinleşti mi; `false` iken `fulfilledQty` bir eksiklik değil, hazırlıkta yazılmamış bir sayıdır. Bu ayrım
+   * olmadan yeni onaylanmış her sipariş "her kalemi eksik gitti" görünürdü.
    */
   settled: boolean;
 }
 
-// İlk kolonun asgarisi görselle birlikte büyüdü (44px görsel + boşluk, 15.08 — "biraz daha büyük").
+// İlk kolonun asgarisi 44px görsel ve boşluğu taşır.
 const GRID = 'grid grid-cols-[minmax(172px,1fr)_46px_58px_78px_54px_46px_86px] gap-x-2';
 
 export function OrderLines({ lines, bundles, totals, settled }: OrderLinesProps) {
@@ -151,15 +143,13 @@ function Line({ line, indented, settled }: LineProps) {
   return (
     <div className="border-b border-ops-line-soft last:border-b-0">
       <div className={`${GRID} items-center px-3.5 py-2.5`}>
-        {/* Tek tek alınan kalem KOYU, paketten gelen normal ağırlıkta (tasarım): girinti neyin
-            içinde olduğunu, ağırlık neyin satın alındığını söyler. Görsel satır başında (15.08,
-            kullanıcı isteği — fiyatlar emsali): operatör ürünü adından önce yüzünden tanır. */}
+        {/* Tek tek alınan kalem koyu, paketten gelen normal ağırlıkta: girinti neyin içinde olduğunu, ağırlık neyin satın
+            alındığını söyler. Görsel satır başında, çünkü operatör ürünü adından önce yüzünden tanır. */}
         <div className={`flex min-w-0 items-center gap-2.5 ${indented ? 'pl-3.5' : ''}`}>
           <Thumbnail src={line.imageUrl} alt={line.title} size={44} />
           <div className="flex min-w-0 flex-col gap-px">
-            {/* Ad, MÜŞTERİNİN GÖRDÜĞÜ ürün sayfasına gider (15.08, kullanıcı isteği) — yeni sekmede:
-                operatör sipariş kaydından kopmaz. Yol TR: operasyon yüzeyinin dili Türkçe, dış URL
-                dile göre (`/tr/urun/…`). Ürün silinmişse (slug yok) ad köprüsüz düz metin kalır. */}
+            {/* Ad, müşterinin gördüğü ürün sayfasına yeni sekmede gider ki operatör sipariş kaydından kopmasın; yol dile göre
+                (`/tr/urun/…`), ürün silinmişse ad düz metin kalır. */}
             {line.productSlug ? (
               <a
                 href={`/tr/urun/${line.productSlug}`}
@@ -175,9 +165,8 @@ function Line({ line, indented, settled }: LineProps) {
               </span>
             )}
             {line.batchNos.length > 0 ? (
-              // LOT TIKLANIR (16.08, kullanıcı kararı — sağ raydaki "parti izi" kartının yerine):
-              // köprü ürün adıyla stok aramasına gider, çünkü stok ekranı ADLA arar (parti
-              // numarası sorgu olarak boş sayfa açardı). Geri çağırma izi artık tek yerde, kalemde.
+              // Lot tıklanır ve ürün adıyla stok aramasına gider, çünkü stok ekranı adla arar; parti numarası sorgusu boş
+              // sayfa açardı.
               <span className="flex flex-wrap items-center gap-x-1.5 font-ops-mono text-ops-micro text-ops-faint">
                 Lot
                 {line.batchNos.map((lot) =>
@@ -222,10 +211,8 @@ function Line({ line, indented, settled }: LineProps) {
             : '—'}
         </span>
         <span className="text-right font-ops-mono text-ops-micro text-ops-muted">{percent(line.vatRate, 1)}</span>
-        {/* SATIR TUTARI İKİ SAYIDIR (01.09, kullanıcı isteği): eksik giden kalemde sipariş
-            edilenin ÜSTÜ ÇİZİLİR, ödenecek onun altında durur. Tek sayı yazıldığında ekranda duran
-            38,19 tahsil edilecek tutar DEĞİLDİ ve operatör farkı ancak alttaki bloktan çıkarabiliyordu.
-            Müşteri yüzeyi de aynı deseni kullanıyor (`customer-orders`), iki yüzey ayrışmıyor. */}
+        {/* Satır tutarı iki sayıdır: eksik giden kalemde sipariş edilenin üstü çizilir, ödenecek altında durur; tek sayı
+            operatöre tahsil edilecek tutarı göstermezdi. Müşteri yüzeyi de aynı deseni kullanıyor (`customer-orders`). */}
         <span className="text-right font-ops-mono text-ops-sm text-ops-ink">
           {settled && line.payableCents !== line.lineTotalCents ? (
             <span className="flex flex-col items-end leading-tight">
@@ -238,11 +225,8 @@ function Line({ line, indented, settled }: LineProps) {
         </span>
       </div>
 
-      {/* İADE ŞERİDİ KALDI, "EKSİK GİTTİ" ŞERİDİ KALKTI (kullanıcı kararı 01.09).
-          Eksiklik artık satırın kendisinde görünüyor: SİP./KARŞIL. sütunları ve üstü çizili tutar.
-          Şerit aynı gerçeği üçüncü kez söylüyor, üstelik bir satır yüksekliğinde yer kaplayarak.
-          İade şeridi KALIYOR çünkü o farklı bir şey söylüyor: malın AKIBETİ (rafa döndü / imha /
-          jest) sütunlardan okunamaz ve stok hareketi ona bağlıdır. */}
+      {/* Eksiklik satırın kendisinde (SİP./KARŞIL. ve üstü çizili tutar) göründüğü için ayrı eksik şeridi yok. İade şeridi
+          kalır, çünkü malın akıbeti sütunlardan okunamaz ve stok hareketi ona bağlıdır. */}
       {line.returnDisposition ? (
         <div className={`mx-3.5 mb-2.5 rounded-ops-card border border-ops-red-line bg-ops-red-bg px-3 py-2 ${indented ? 'ml-7' : ''}`}>
           <span className="font-ops-display text-ops-micro font-semibold text-ops-red">İADE EDİLDİ</span>

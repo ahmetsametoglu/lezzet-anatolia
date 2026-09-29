@@ -17,14 +17,8 @@ import {
 import type { BatchView, ReturnDropView, StockViewProps } from '../stock-types';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 
-// Yaklaşan tarihli — KARAR kuyruğu. Ekranın en çok bakılan yeri: "hangi partiye bugün ne yapacağım".
-//
-// ÜÇ GRUP, tek liste değil (tasarım kararı): satılamaz · DLC yaklaşıyor · DDM yaklaşıyor. Ayrım tarih
-// TİPİNDEN doğar ve sonucu tamamen farklıdır. Hepsi alt alta dursaydı en pahalı hata yapılırdı —
-// satılamaz partiyi indirime sokmak ya da hâlâ satılabilir malı imhaya göndermek.
-//
-// Liste SAYFALANMAZ (bkz. page.tsx): karar bekleyen bir partiyi kuyruğun dibinde bırakmak, imha
-// edilecek malı satmak ya da satılabilecek malı çöpe atmak demektir.
+// Yaklaşan tarihli partilerin karar kuyruğu: satılamaz · DLC yaklaşıyor · DDM yaklaşıyor ayrı gruplardır, çünkü tarih
+// tipinin sonucu farklıdır. Sayfalanmaz: karar bekleyen partiyi kuyruğun dibinde bırakmak yanlış mala yanlış iş yaptırır.
 
 export function AttentionTab({ data, search, onOpenOffer }: StockViewProps) {
   const term = search.trim().toLocaleLowerCase('tr');
@@ -42,8 +36,7 @@ export function AttentionTab({ data, search, onOpenOffer }: StockViewProps) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <MixedLotLine count={data.mixedLotCount} />
-        {/* Parti kuyruğu temizken de çizilir — ve tam bu dal 23.13'te bir kez unutulmuştu: iki dallı
-            bir ekranda ikinci dalı atlamak, işi olan ekranı sessizce boş bırakır. */}
+        {/* Parti kuyruğu temizken de çizilir: iki dallı ekranda ikinci dalı atlamak işi olan ekranı boş bırakırdı. */}
         {drops.length > 0 ? (
           <div className="flex flex-col gap-5 px-6 pb-[22px] pt-[18px]">
             <ReturnsGroup drops={drops} />
@@ -58,8 +51,8 @@ export function AttentionTab({ data, search, onOpenOffer }: StockViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Başlık şeridi: kaç parti, ne kadar para riskte, hangi eşikle. Eşik ekranda YAZILI durur —
-          operatör "neden bu parti listede" sorusunu ayarlara gitmeden yanıtlayabilmeli. */}
+      {/* Başlık bandı: kaç parti, ne kadar para riskte, hangi eşikle; eşik yazılı durur ki operatör "neden bu parti listede"
+          sorusunu ayarlara gitmeden yanıtlasın. */}
       <div className="flex flex-wrap items-center gap-3.5 border-b border-ops-line bg-ops-subtle px-6 py-3">
         <div className="mr-auto flex flex-col gap-0.5">
           <span className="font-ops-display text-ops-base font-semibold text-ops-ink">
@@ -97,11 +90,8 @@ export function AttentionTab({ data, search, onOpenOffer }: StockViewProps) {
 }
 
 /**
- * PARTİ KARIŞMA SİNYALİ (23.9 · etüt §1.10) — tek satır, karar kuyruğunun altında değil ÜSTÜNDE
- * bir bant değil, sakin bir izleme satırı. Lot etiketi BİLİNÇLE ertelendi; bu sayı o kararın
- * sayısal ölçütü: sıfırda kaldıkça problem hiç doğmadı, tırmanıyorsa lot etiketinin günü rakamla
- * gelir ("hissedilirse" değil "ölçülürse"). Sıfırda da ÇİZİLİR — sinyalin yokluğu ile ölçümün
- * yokluğu karışmasın (CLAUDE §1).
+ * Parti karışma sinyali — sakin bir izleme satırı; lot etiketi kararının sayısal ölçütüdür. Sıfırda da çizilir ki
+ * sinyalin yokluğu ile ölçümün yokluğu karışmasın.
  */
 function MixedLotLine({ count }: { count: number }) {
   return (
@@ -119,19 +109,8 @@ function MixedLotLine({ count }: { count: number }) {
 }
 
 /**
- * **DEPOYA DÖNENLER — akıbeti bekleyen koliler** (10.5). Kuyruğun dördüncü grubu.
- *
- * ── KARAR BURADA VERİLMEZ, GÖRÜNÜR OLUR ─────────────────────────────────────
- * Akıbetin (stoğa dön · imha · jest) iki yazma yolu zaten var: telefonda depocu (koli elinde),
- * masaüstünde sipariş detayının karar diyaloğu (para tarafıyla birlikte). Bu grup üçüncü bir yol
- * AÇMAZ — satır siparişin detayına götürür. Stok ekranına bir karar formu daha koymak, aynı kararı
- * üç yerden verdirmek ve üçünü ayrı ayrı güncellemek olurdu.
- *
- * Eksik olan hiç yazma değil, GÖRÜNÜRLÜKTÜ: depocu telefonda işaretlemezse sipariş `returned`'da
- * asılı kalıyor, mal rampada duruyor ve hiçbir masaüstü ekranı bunu söylemiyordu.
- *
- * **Tutar YOK ve olmayacak** — depo kapılarının kuralı (`returns.ts` künyesi): iade tutarını okuyan
- * yönetim akışıdır, koliyi karşılayan değil.
+ * Depoya dönenler — akıbeti bekleyen koliler, kuyruğun dördüncü grubu. Karar burada verilmez, satır siparişin detayına
+ * götürür; tutar yok, iade tutarını yönetim akışı okur.
  */
 function ReturnsGroup({ drops }: { drops: ReturnDropView[] }) {
   const pending = drops.reduce((sum, drop) => sum + drop.pendingLineCount, 0);
@@ -157,11 +136,8 @@ function ReturnsGroup({ drops }: { drops: ReturnDropView[] }) {
 }
 
 /**
- * Dönen kolinin kartı. Kuryenin kapıdaki notu KARARIN TEK BAĞLAMIDIR (`returns.ts`) — "araç bozuldu"
- * ile "müşteri açtı, beğenmedi" aynı malı iki farklı akıbete götürür; not gizlenirse karar körleşir.
- *
- * Kabuk karar kartıyla AYNI (sol kenar şeridi dahil): aynı kuyruğun iki satırı iki ayrı görsel dille
- * konuşursa göz onları iki ayrı iş sanır. Şerit kırmızı — mal rampada duruyor ve karar bekliyor.
+ * Dönen kolinin kartı: kuryenin kapıdaki notu kararın tek bağlamıdır, gizlenirse karar körleşir. Kabuk karar kartıyla
+ * aynıdır ki aynı kuyruğun iki satırı iki ayrı iş sanılmasın; kenar kırmızı, mal rampada karar bekliyor.
  */
 function ReturnCard({ drop }: { drop: ReturnDropView }) {
   const router = useRouter();
@@ -259,14 +235,8 @@ interface DecisionCardProps {
 }
 
 /**
- * Karar kartı — dört şeyi yan yana koyar: parti kim, ne kadar ömrü kaldı, ne kadar para riskte,
- * ne yapılabilir.
- *
- * Sol kenar rengi kararı taşır. Öneri metni SİSTEMİN sesidir ve öyle yazılır: "öneri" der, "indirim
- * uygulandı" demez — karar operatörün (design/pages/admin-stok §6).
- *
- * **Dışa verilmiyor** (22.30): seviyeler sekmesinin "en acil partiler" önizlemesi bu kartı kullanıyordu
- * ve o panel kalktı. Kart kuyruğun kendi sekmesinde yaşıyor.
+ * Karar kartı: parti kim, ne kadar ömrü kaldı, ne kadar para riskte, ne yapılabilir. Öneri metni sistemin sesidir, "öneri"
+ * der, "uygulandı" demez — karar operatörün (design/pages/admin-stok §6).
  */
 function DecisionCard({ batch, onOpenOffer }: DecisionCardProps) {
   const router = useRouter();
@@ -372,14 +342,8 @@ function DecisionCard({ batch, onOpenOffer }: DecisionCardProps) {
           <span className="flex-none font-ops-body text-ops-xs font-semibold text-ops-red">Depo ekranından</span>
         ) : (
           <>
-            {/* Teklifi kapatmak AYRI bir düğme ve İŞİ KENDİ YAPAR: açık teklifte en sık istenen iki
-                iş fiyatı değiştirmek ve teklifi geri almaktır; ikincisini diyaloğun içine gömmek bir
-                tık daha uzağa iterdi.
-
-                Düğme eskiden diyaloğu açıyordu — yani etiketi yaptığı işi YANLIŞ söylüyordu: basan
-                kişi teklifin kapandığını sanıyor, aslında pencere açılıyor ve orada bir kez daha
-                aynı düğmeye basmak gerekiyordu. Kapatma hiçbir koşulda engellenmez (yanlışlıkla
-                açılmış bir teklif her zaman geri alınabilmeli). */}
+            {/* Teklifi kapatmak ayrı bir düğmedir ve işi kendi yapar: açık teklifte en sık iş fiyatı değiştirmek ve teklifi
+                geri almaktır. Kapatma hiçbir koşulda engellenmez, yanlışlıkla açılmış teklif her zaman geri alınabilmeli. */}
             {batch.offerPriceCents !== null ? (
               <button
                 type="button"
@@ -415,9 +379,8 @@ interface CleanStateProps {
 }
 
 /**
- * "Temiz hâl" — tasarımın açıkça istediği durum. Boş listeyi sessiz bırakmak yerine ne olduğunu
- * söyler: bu bir eksiklik değil, iyi haberdir. Eşik de burada yazılıdır ki operatör "acaba uyarı mı
- * çalışmıyor" diye düşünmesin.
+ * Temiz hâl: boş liste sessiz bırakılmaz, bunun iyi haber olduğunu söyler. Eşik de yazılıdır ki operatör uyarının
+ * çalışmadığını sanmasın.
  */
 function CleanState({ filtered, inStock, nearExpiryPercent }: CleanStateProps) {
   if (filtered) {

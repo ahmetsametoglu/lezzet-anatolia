@@ -11,26 +11,10 @@ import { StepButton } from '@/components/operation/ui/step-button';
 import { previewFulfillmentAction } from '../../actions';
 import type { OrderDetailView, OrderLineView, RefundRouteView } from '../order-detail-types';
 
-// Karar penceresi — Komponent Envanteri O18. **Tek bileşen, iki kip.**
-//
-// Kısmi karşılama ile iade aynı hareketi yapar (kalem başına adet DÜŞÜRMEK) ama farklı gerçeklere
-// dayanır: biri mal ÇIKMADAN ("eksik gidiyor"), öteki mal ÇIKTIKTAN sonra ("geri geldi"). İkisini
-// iki ayrı pencere yazmak, adet seçicinin ve tutar hesabının iki kopyasını doğururdu; farkı ton,
-// sütun başlıkları ve ikinci sütunun sorduğu soru taşır:
-//   · kısmi (amber) → ikinci sütun STOK ETKİSİ: eksik kalan ayrılmıştan serbest bırakılır
-//   · iade (kırmızı) → ikinci sütun MALIN AKIBETİ (DOMAIN §8) + ayrıca PARA YOLU
-//
-// **Adet yalnız DÜŞER.** `adjust_fulfillment` artırmayı reddeder ve haklıdır: karşılananı artırmak
-// "mal nereden çıktı" sorusunu cevapsız bırakır — çıkan mal hazırlıkta yazılır. Sayaç bu yüzden
-// bugünkü karşılanan adetten yukarı çıkmaz.
-//
-// **Jest iadesi (`goodwill`) ayrı bir hâldir:** mal müşteride kalır, miktar DEĞİŞMEZ, bu yüzden
-// motor iade borcunu türetemez — tutarı operatör söyler. Pencere bunu kutu açarak ister, sessizce
-// sıfır iade yazmaz.
-//
-// **Tutar burada hesaplanmaz.** Toplamı motorun kendi türetimi verir (`previewFulfillmentAction` →
-// `derivePaymentStatusForOrder`, yalnız adetler önerilen hâliyle). Satır başına yazan tutar bu
-// toplamın DAĞILIMIDIR, ayrı bir hesap değil.
+// Karar penceresi (Komponent Envanteri O18): kısmi karşılama ve iade aynı hareketi (kalem başına adet düşürmek) yapar,
+// farkı ton, sütun başlıkları ve ikinci sütunun sorusu taşır — kısmide stok etkisi, iadede malın akıbeti ve para yolu.
+// Adet yalnız düşer ve tutar burada hesaplanmaz: toplam motorun türetimidir (`previewFulfillmentAction`), jest iadesinde
+// ise mal müşteride kaldığı için tutarı operatör söyler.
 
 /** İptal BURADA YOK: onun penceresi ayrı (`cancel-dialog`) — seçilecek adet ya da yol yok. */
 type DecisionKind = 'partial_fulfillment' | 'refund';
@@ -58,14 +42,8 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
   const [fate, setFate] = useState<Record<string, ReturnDisposition>>({});
 
   /**
-   * **Kalemin varsayılan akıbeti** — kural `DOMAIN §8`, eşiği motorda (`defaultsToDiscardOnReturn`).
-   *
-   * Pencere her kalemde `restock`tan başlıyordu ve bu kuralın TERSİYDİ: *"teslim edilmiş ve sonra
-   * iade edilen donuk ürün, soğuk zinciri belgelenemediği için varsayılan olarak imha edilir —
-   * restok yalnız admin istisnasıdır."* Kural yazılamıyordu çünkü hangi ürünün donuk olduğunu
-   * söyleyen bir alan yoktu; `product.storage_type` (16.08) onu getirdi.
-   *
-   * Varsayılan bir YASAK değil: üç seçenek de açık kalır, yalnız başlangıç noktası doğru olur.
+   * Kalemin varsayılan akıbeti (DOMAIN §8, eşik motorda: `defaultsToDiscardOnReturn`): iade edilen donuk ürün soğuk zinciri
+   * belgelenemediği için varsayılan olarak imha edilir. Varsayılan bir yasak değil; üç seçenek de açık kalır.
    */
   const fateOf = (line: OrderLineView): ReturnDisposition =>
     fate[line.id] ?? (line.defaultsToDiscard ? 'discard' : 'restock');

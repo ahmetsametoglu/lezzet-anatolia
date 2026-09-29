@@ -246,7 +246,7 @@ export interface OrderDetailView {
   timeline: OrderTimelineStep[];
   /** Motorun izin verdiği geçişler — ekran YALNIZ bunları sunar. */
   allowedNext: OrderStatus[];
-  /** Motorun izin verdiği KARARLAR (`allowedDecisions`) — geçişten ayrı eksen. */
+  /** Motorun izin verdiği kararlar (`allowedDecisions`) — geçişten ayrı eksen. */
   decisions: OrderDecision[];
   /** İade kararının para yolları; iade açık değilse boş. */
   refundRoutes: RefundRouteView[];
