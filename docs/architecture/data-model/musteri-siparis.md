@@ -350,6 +350,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | `variant_id` | uuid |  |  |
 | `qty` | int |  |  |
 | `fulfilled_qty` | int |  | `0` |
+| `goodwill_qty` | int |  | `0` |
 | `stock_id` | uuid | • |  |
 | `bundle_id` | uuid | • |  |
 | `unit_price` | numeric(10, 2) |  |  |

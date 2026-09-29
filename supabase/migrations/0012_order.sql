@@ -46,7 +46,7 @@ create table public.order (
   -- Sağlayıcıdaki ödeme kimliği (Stripe PaymentIntent): webhook gelmezse ödeme sayfası ve zamanlayıcı "ödendi mi"
   -- diye bununla sorar, yeni denemede eski ödeme iptal edilir. Kısmi unique: bir ödeme tek siparişe bağlanır.
   payment_ref text,
-  -- TÜRETİLİR (net tahsilat vs karşılanan tutar) — elle set edilmez, motor hesaplar (03.6).
+  -- TÜRETİLİR (net tahsilat vs karşılanan tutar) — elle set edilmez, motor hesaplar.
   payment_status payment_status not null default 'pending',
   payment_method payment_method,
   -- Vadeli mi: yalnız `credit_enabled` müşteride true; peşin ödemesiz `confirmed` olur (DOMAIN §7).
@@ -57,7 +57,7 @@ create table public.order (
   warehouse_id uuid not null,
 
   delivery_type delivery_type not null default 'route',
-  -- FK YOK: `delivery_zone` tablosu 07.2'de açılıyor. Zone düzenlenebilir olduğu için bu alan
+  -- FK yok: `delivery_zone` 0014'te açılır. Bölge düzenlenebilir olduğu için bu alan
   -- aynı zamanda SNAPSHOT'tır — sonradan bölge sınırı değişse sipariş bozulmaz.
   delivery_zone_id uuid,
   delivery_date date,                                -- rota günü; kargoda null
@@ -178,6 +178,10 @@ create table public.order_item (
   -- FİZİKSEL olarak müşteriye giden miktar (varsayılan = qty; eksikte düşer, 0 olabilir).
   -- `goodwill` iadesinde DÜŞMEZ — mal müşteride kalmıştır (DOMAIN §8).
   fulfilled_qty int not null default 0 check (fulfilled_qty >= 0),
+  -- Karşılanan adetlerden müşteride kalıp parası iade edilen adet; olayları `order_item_return`da, ödeme türetimi ve ciro
+  -- bu toplamı okur. Müşteride kalan mal geri iade edilemez, bu yüzden karşılananı aşamaz.
+  goodwill_qty int not null default 0 check (goodwill_qty >= 0),
+  constraint order_item_goodwill_within_fulfilled check (goodwill_qty <= fulfilled_qty),
   -- Partiye çıpalı teklif satırıysa hangi parti; fiilen çıkan partiler `order_item_batch`'te.
   stock_id uuid references public.stock (id) on delete set null,
   -- Kalem hangi paketten geldi (DOMAIN §13): müşteriye "Bayram Paketi" olarak gruplu göstermek ve
@@ -205,7 +209,8 @@ create index order_item_variant_idx on public.order_item (variant_id);
 
 /*
   Ciro kalemlerden türer: `order.revenue_total` bir önbellektir, artırılmaz, `order_item.fulfilled_qty`den yeniden hesaplanır; tetikleyicidir, çünkü `fulfilled_qty`yi yazan bütün yollar SQL'dedir ve uygulama katmanı bazılarını atlardı.
-  Formül motorunkiyle (`fulfilledLineAmountCents`) aynıdır: indirim payı karşılanan orana bölünür, hiçbir kalem gitmediyse kargo da ciroya girmez.
+  Formül motorunkiyle (`fulfilledLineAmountCents`) aynıdır: ücretlenen adet karşılanandan jest adedinin çıkmasıdır, indirim payı o
+  orana bölünür, ücretlenen kalem yoksa kargo da ciroya girmez.
 */
 create or replace function public.resync_order_revenue(p_order_id uuid)
 returns void
@@ -215,13 +220,13 @@ set search_path = public
 as $$
   update public.order o
      set revenue_total = coalesce(k.tutar, 0)
-                       + case when coalesce(k.giden, 0) > 0 then o.shipping_fee else 0 end
+                       + case when coalesce(k.ucretlenen, 0) > 0 then o.shipping_fee else 0 end
     from (
       select coalesce(sum(
-               oi.fulfilled_qty * oi.unit_price
-               - round(oi.line_discount_amount * oi.fulfilled_qty / greatest(oi.qty, 1), 2)
+               (oi.fulfilled_qty - oi.goodwill_qty) * oi.unit_price
+               - round(oi.line_discount_amount * (oi.fulfilled_qty - oi.goodwill_qty) / greatest(oi.qty, 1), 2)
              ), 0) as tutar,
-             coalesce(sum(oi.fulfilled_qty), 0) as giden
+             coalesce(sum(oi.fulfilled_qty - oi.goodwill_qty), 0) as ucretlenen
         from public.order_item oi
        where oi.order_id = p_order_id
     ) k
@@ -245,7 +250,7 @@ $$;
 -- `after` ve `for each row`: yazım tamamlandıktan sonra okuyup toplar. `statement` düzeyi tek
 -- turda birden çok siparişin kalemi yazıldığında hangisini tazeleyeceğini bilemezdi.
 create trigger order_item_revenue_sync_trg
-after insert or update of fulfilled_qty, qty, unit_price, line_discount_amount or delete
+after insert or update of fulfilled_qty, goodwill_qty, qty, unit_price, line_discount_amount or delete
 on public.order_item
 for each row execute function public.order_item_revenue_sync();
 

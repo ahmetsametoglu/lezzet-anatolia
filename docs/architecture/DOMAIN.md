@@ -362,8 +362,8 @@ Her siparişin ödeme durumu **ayrı bir eksendir** ve **türetilir**: `amount_c
 
 - **`partial` para eksenidir** — net, karşılanandan az demektir. "Sipariş eksik karşılandı" ayrı bir eksendir (`fulfilled_qty`) ve bu alana karışmaz: 2 adet sipariş edilip 1 adet gitmişse ve o 1 adedin parası ödenmişse durum **`paid`**'dir, borç yoktur.
 - **Fazla tahsilat yeni durum açmaz** — durum `paid` kalır, fark **iade borcu** olarak türetilir ve panelde "iade bekliyor" görünür. Enum dört değerde kalır.
-- **Kargo ücreti:** hiçbir kalem gitmediyse (Σ `fulfilled_qty` = 0) kargo hizmeti de verilmemiştir → karşılanan tutara girmez, iade edilir. En az bir kalem gittiyse iade edilmez.
-- **İade** kalem bazından türer: iade edilen kalemin `fulfilled_qty`'si düşünce karşılanan kendiliğinden iner. **İstisnası jest iadesi** (akıbeti `goodwill` olan iade olayı — "ürün sizde kalsın"): mal müşteride kaldığı için miktar düşmez, ama net 0'a indiği için durum yine `refunded` olur (bkz. §8).
+- **Kargo ücreti:** ücretlenen kalem yoksa (hiçbir kalem gitmediyse ya da gidenin tamamı jestse) kargo da karşılanan tutara girmez, iade edilir. En az bir kalem ücretleniyorsa iade edilmez.
+- **İade** kalem bazından türer: iade edilen kalemin `fulfilled_qty`'si düşünce karşılanan kendiliğinden iner. **Jest iadesinde** (akıbeti `goodwill` olan iade olayı — "ürün sizde kalsın") miktar düşmez, müşteride kalan adet `goodwill_qty`'ye yazılır ve ücretlenmez: iade borcu o adedin ödenen değeri olarak türer, tahsil edilecek kalan doğmaz (bkz. §8).
 - **İptal edilen siparişte karşılanan 0'dır** — tahsil edilmişse tamamı iade borcudur.
 
 ### B2B vadeli satış (hesaba) — istisna, varsayılan değil
@@ -389,7 +389,7 @@ Kurallar birlikte netleşecek (iş kararı), ama sistem şunları desteklemeli:
 - **İade edilen mala ne olduğu üç yoldan biridir** (`OrderItemReturn.disposition`) — akıbet adet başına olaydır, aynı kalemin adetleri farklı akıbet alabilir ve kalan adet sonradan da iade edilebilir; para tarafı üçünde de aynı (iade hareketi), ayrışan stok ve maliyet:
   - `restock` — mal depoya girdi, tekrar satılabilir (kapıda reddedilip frigo araçtan hiç çıkmamış mal).
   - `discard` — mal döndü ama satılamaz. **Kaybın nerede sayılacağı malın fiilen çıkıp çıkmadığına bağlıdır** (07.9): teslim edildiyse fiili stok o an düşmüştür, ikinci kez düşülemez — maliyet `OrderItemBatch` kaydında kalır ve o siparişin kârında görünür. Hiç çıkmadan bozulduysa (araçta) fiiliden burada düşülür + imha kaydı (`StockAdjustment`) yazılır. Teslim edilmiş donuk üründe **varsayılan** budur (soğuk zincir belgelenemez).
-  - `goodwill` — **mal müşteride kaldı**: "paranızı iade ettik, ürün sizde kalsın". Stok ve `fulfilled_qty` **değişmez**; mal tüketilmiştir, maliyeti kayıtlarda kalır ve kâr raporunda **jest gideri** olarak görünür. `fulfilled_qty`'yi düşürmek burada YANLIŞTIR — malın hiç gitmediğini söyler, stok ve COGS bozulur.
+  - `goodwill` — **mal müşteride kaldı**: "paranızı iade ettik, ürün sizde kalsın". Stok ve `fulfilled_qty` **değişmez**; mal tüketilmiştir, maliyeti kayıtlarda kalır ve kâr raporunda **jest gideri** olarak görünür. `fulfilled_qty`'yi düşürmek burada YANLIŞTIR — malın hiç gitmediğini söyler, stok ve COGS bozulur. Tutarı operatör yazmaz: jest adedi ücretlenmediği için borç türetilir. Müşteride kalan adet sonradan iade edilemez.
 - İade/hasarın kâr ve kasa mutabakatına yansıması
 
 Bu alan Faz 1'de temel haliyle bulunur; detay kuralları parametrik ve genişletilebilir tasarlanır.

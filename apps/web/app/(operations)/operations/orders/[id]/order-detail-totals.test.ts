@@ -19,6 +19,7 @@ const line = (over: Partial<OrderLineView> = {}): OrderLineView => {
     productName: 'Mantı',
     qty: 2,
     fulfilledQty: 2,
+    goodwillQty: 0,
     unitPriceCents: 1000,
     lineDiscountCents: 0,
     vatRate: 5.5,
@@ -36,6 +37,7 @@ const line = (over: Partial<OrderLineView> = {}): OrderLineView => {
       over.payableCents ??
       fulfilledLineAmountCents({
         fulfilledQty: base.fulfilledQty,
+        goodwillQty: base.goodwillQty,
         orderedQty: base.qty,
         unitPriceCents: base.unitPriceCents,
         lineDiscountCents: base.lineDiscountCents,
@@ -68,6 +70,7 @@ function karsilanan(o: Order, lines: OrderLineView[], settled: boolean): number 
   return derivePaymentStatus({
     lines: lines.map((l) => ({
       fulfilledQty: l.fulfilledQty,
+      goodwillQty: l.goodwillQty,
       orderedQty: l.qty,
       unitPriceCents: l.unitPriceCents,
       lineDiscountCents: l.lineDiscountCents,
@@ -138,6 +141,15 @@ describe('taban: hazırlık kesinleşti mi', () => {
 
     expect(satir(rows, 'Kalemler')?.amountCents).toBe(1000);
     expect(satir(rows, 'Ödenecek')).toMatchObject({ amountCents: 1000, kind: 'grand' });
+  });
+
+  it('jestle müşteride kalan adet Kalemler ve KDV tabanından düşer, sepet indirimi gibi görünmez', () => {
+    const rows = blok(order(), [line({ qty: 2, fulfilledQty: 2, goodwillQty: 1 })], true);
+
+    expect(satir(rows, 'Kalemler')?.amountCents).toBe(1000);
+    expect(satir(rows, 'Sepet indirimi')).toBeUndefined();
+    expect(satir(rows, 'Ödenecek')?.amountCents).toBe(1000);
+    expect(satir(rows, 'İçindeki KDV')?.amountCents).toBe(52);
   });
 
   it('ARA TOPLAM yalnız ardında bir şey varken yazılır', () => {

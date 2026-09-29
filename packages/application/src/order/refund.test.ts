@@ -5,7 +5,7 @@ import {
 import { purgeTestData, createTestWarehouse, purgeVariantStock } from '@lezzet/database/testing';
 import { recordOrderPayment } from './payment';
 import { deliverOrder } from './fulfillment';
-import { adjustFulfillment, cancelOrder } from './refund';
+import { adjustFulfillment, cancelOrder, retryRefund } from './refund';
 import { buildOrderNotification } from './notification-data';
 import type { OrderExceptionDetail } from './effects';
 import { advanceOrder, prepareOrderToReady } from './advance.testkit';
@@ -32,6 +32,7 @@ let productId: string;
 let categoryId: string;
 let batchId: string;
 let cashAccount: string;
+let providerAccount: string;
 const createdProfiles: string[] = [];
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
@@ -47,10 +48,11 @@ beforeAll(async () => {
   customerId = profile.id;
   createdProfiles.push(profile.id);
   cashAccount = (await new AccountService(db).insert({ name: `İade kasası ${stamp}`, type: 'cash' })).id;
+  providerAccount = (await new AccountService(db).insert({ name: `İade sağlayıcısı ${stamp}`, type: 'provider' })).id;
 });
 
 beforeEach(async () => {
-  await db.from('money_movement').delete().eq('account_id', cashAccount);
+  await db.from('money_movement').delete().in('account_id', [cashAccount, providerAccount]);
   // Defter siparişten önce silinir: `stock_movement.order_id` `restrict`, teslim satırları siparişi tutar.
   await purgeVariantStock(db, [variantId]);
   await db.from('order').delete().eq('customer_id', customerId);
@@ -64,7 +66,7 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
-    accountIds: [cashAccount],
+    accountIds: [cashAccount, providerAccount],
     warehouseIds: [warehouseId],
   });
 });
@@ -252,22 +254,17 @@ describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOM
     expect((await orders.getById(orderId))?.cogsAmountCents).toBe(1200); // 3 × 4 — kayıp kârda görünür
   });
 
-  it('goodwill: mal müşteride kalır — miktar da stok da değişmez, tutarı operatör verir', async () => {
+  it('goodwill: mal müşteride kalır — miktar da stok da değişmez, parası türetilir', async () => {
     const { orderId, itemId } = await sendOut(2);
     await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
     await deliverOrder(db, orderId);
 
-    const outcome = await adjustFulfillment(
-      db,
-      orderId,
-      [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill' }],
-      { refundAmountCents: 2000 },
-    );
+    const outcome = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill' }]);
 
     expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 2000, paymentStatus: 'refunded' });
     expect((await stocks.getById(batchId))?.physicalQty).toBe(8); // mal geri gelmedi
     const items = await orders.getWithItems(orderId);
-    expect(items?.items[0]).toMatchObject({ fulfilledQty: 2 });
+    expect(items?.items[0]).toMatchObject({ fulfilledQty: 2, goodwillQty: 2 });
     expect(await returns.listByOrders([orderId])).toMatchObject([{ qty: 2, disposition: 'goodwill' }]);
   });
 
@@ -516,5 +513,51 @@ describe('iade e-postası', () => {
       previousTotal: expect.stringMatching(/^10,00/),
       currentTotal: expect.stringMatching(/^0,00/),
     });
+  });
+});
+
+describe('jest iadesi ve iade haberi', () => {
+  it('aynı onayda jest ve rafa dönüş: ikisinin parası da türetilir, tahsil edilecek kalan doğmaz', async () => {
+    const { orderId, itemId } = await sendOut(3);
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 3000 });
+    await deliverOrder(db, orderId);
+
+    const outcome = await adjustFulfillment(db, orderId, [
+      { orderItemId: itemId, fulfilledQty: 3, returnDisposition: 'goodwill', goodwillQty: 1 },
+      { orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'restock', note: 'ambalaj sağlam' },
+    ]);
+
+    expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 2000, paymentStatus: 'paid', amountToCollectCents: 0 });
+    expect(await orders.getById(orderId)).toMatchObject({ revenueTotalCents: 1000 });
+  });
+
+  it('müşteride kalan adet yeniden iade edilemez ve ikinci kez jestlenemez', async () => {
+    const { orderId, itemId } = await sendOut(2);
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
+    await deliverOrder(db, orderId);
+    await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill', goodwillQty: 1 }]);
+
+    const iade = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'restock', note: 'geri geldi' }]);
+    const jest = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill', goodwillQty: 2 }]);
+
+    expect(iade).toEqual({ status: 'already_marked', orderItemId: itemId });
+    expect(jest).toEqual({ status: 'already_marked', orderItemId: itemId });
+    expect(await orders.getById(orderId)).toMatchObject({ amountRefundedCents: 1000 });
+  });
+
+  it('para iade edilemediyse "iade işlendi" haberi gitmez; yeniden deneme jestin parasını da türetip çıkarır', async () => {
+    const { orderId, itemId } = await sendOut(2);
+    await recordOrderPayment(db, { orderId, accountId: providerAccount, amountCents: 2000, meta: { providerRef: `pi_${stamp}` } });
+    await deliverOrder(db, orderId);
+    const notifyException = vi.fn(async () => undefined);
+
+    const ilk = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill', goodwillQty: 1 }], {
+      effects: { notifyException, refunder: async () => ({ status: 'failed', error: 'card_declined' }) },
+    });
+    expect(ilk).toMatchObject({ status: 'ok', refundedAmountCents: 0, refundBlocked: 'provider_failed' });
+    expect(notifyException).not.toHaveBeenCalled();
+
+    await retryRefund(db, orderId, { effects: { notifyException, refunder: async () => ({ status: 'ok', refundId: `re_${stamp}` }) } });
+    expect(notifyException).toHaveBeenCalledWith(orderId, 'order_refunded', { refundedAmountCents: 1000 });
   });
 });

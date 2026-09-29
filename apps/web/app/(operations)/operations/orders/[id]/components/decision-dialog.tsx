@@ -6,7 +6,6 @@ import type { FulfillmentAdjustment, ReturnDisposition } from '@lezzet/types';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { Button } from '@/components/operation/ui/button';
 import { Input } from '@/components/operation/form/input';
-import { MoneyInput } from '@/components/operation/form/money-input';
 import { money } from '@/components/operation/ui/format';
 import { StepButton } from '@/components/operation/ui/step-button';
 import { previewFulfillmentAction } from '../../actions';
@@ -14,8 +13,8 @@ import type { OrderDetailView, OrderLineView, RefundRouteView } from '../order-d
 
 // Karar penceresi (Komponent Envanteri O18): kısmi karşılama ve iade aynı hareketi (kalem başına adet düşürmek) yapar,
 // farkı ton, sütun başlıkları ve ikinci sütunun sorusu taşır — kısmide stok etkisi, iadede malın akıbeti ve para yolu.
-// Adet yalnız düşer ve tutar burada hesaplanmaz: toplam motorun türetimidir (`previewFulfillmentAction`), jest iadesinde
-// ise mal müşteride kaldığı için tutarı operatör söyler.
+// Adet yalnız düşer ve tutar burada hesaplanmaz: toplam, jestle müşteride kalan adet dahil motorun türetimidir
+// (`previewFulfillmentAction`).
 
 /** İptal BURADA YOK: onun penceresi ayrı (`cancel-dialog`) — seçilecek adet ya da yol yok. */
 type DecisionKind = 'partial_fulfillment' | 'refund';
@@ -24,7 +23,7 @@ interface DecisionDialogProps {
   order: OrderDetailView;
   kind: DecisionKind;
   onClose: () => void;
-  onConfirm: (lines: FulfillmentAdjustment[], opts: { refundAccountId: string | null; refundAmount: number | null }) => void;
+  onConfirm: (lines: FulfillmentAdjustment[], opts: { refundAccountId: string | null }) => void;
   busy: boolean;
   error: string | null;
 }
@@ -48,8 +47,9 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
   const updateParts = (line: OrderLineView, next: (list: Part[]) => Part[]) =>
     setParts((prev) => ({ ...prev, [line.id]: next(prev[line.id] ?? partsOf(line)) }));
   const movedOf = (line: OrderLineView) => partsOf(line).reduce((sum, part) => sum + part.qty, 0);
+  /** Akıbet alabilecek adet: müşteride kalan (jest) adet geri iade edilemez. */
+  const openQtyOf = (line: OrderLineView) => line.fulfilledQty - line.goodwillQty;
   const [note, setNote] = useState('');
-  const [goodwillAmount, setGoodwillAmount] = useState<number | null>(null);
   // Seçim paranın GİRDİĞİ hesaptan başlar; hiç tahsilat olmamışsa ilk yol seçili gelir — o durumda
   // iade borcu da doğmayacağı için seçim zaten hareketsiz kalır.
   const [routeId, setRouteId] = useState<string | null>(
@@ -60,7 +60,6 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
   const [previewError, setPreviewError] = useState<string | null>(null);
 
   const touched = order.lines.filter((line) => movedOf(line) > 0);
-  const needsAmount = refund && touched.some((line) => partsOf(line).some((part) => part.fate === 'goodwill' && part.qty > 0));
   const returnPartsOf = (line: OrderLineView): ReturnPart[] =>
     partsOf(line).map((part) => ({ disposition: part.fate, qty: part.qty, note }));
 
@@ -73,6 +72,8 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
       order.lines.map((line) => ({
         orderItemId: line.id,
         fulfilledQty: refund ? keptQtyAfter(line.fulfilledQty, returnPartsOf(line)) : line.fulfilledQty - movedOf(line),
+        goodwillQty:
+          line.goodwillQty + (refund ? partsOf(line).reduce((sum, part) => (part.fate === 'goodwill' ? sum + part.qty : sum), 0) : 0),
       })),
     [order.lines, parts, refund],
   );
@@ -90,8 +91,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
 
   const route = order.refundRoutes.find((r) => r.accountId === routeId) ?? null;
   // Önizleme gelmeden onay AÇILMAZ: tutarını görmediğin bir iadeyi onaylamak, kararı kör vermektir.
-  const blocked =
-    busy || touched.length === 0 || preview === null || previewError !== null || (needsAmount && (goodwillAmount ?? 0) <= 0);
+  const blocked = busy || touched.length === 0 || preview === null || previewError !== null;
 
   // İadede paylar sıralı düzeltmelere motorda çevrilir; rampa ekranı da aynı fonksiyonu kullanır.
   const submit = () => {
@@ -100,10 +100,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
         ? (returnAdjustments(line.id, line.fulfilledQty, returnPartsOf(line)) ?? [])
         : [{ orderItemId: line.id, fulfilledQty: line.fulfilledQty - movedOf(line), returnDisposition: null, note: note.trim() || null }],
     );
-    onConfirm(lines, {
-      refundAccountId: refund ? routeId : null,
-      refundAmount: needsAmount ? goodwillAmount : null,
-    });
+    onConfirm(lines, { refundAccountId: refund ? routeId : null });
   };
 
   return (
@@ -124,7 +121,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
             Vazgeç
           </Button>
           <Button variant={refund ? 'destructive' : 'warning'} onClick={submit} disabled={blocked}>
-            {refund ? `İadeyi onayla${refundLabel(preview, needsAmount, goodwillAmount)}` : 'Kısmi karşılamayı kaydet'}
+            {refund ? `İadeyi onayla${refundLabel(preview)}` : 'Kısmi karşılamayı kaydet'}
           </Button>
         </>
       }
@@ -159,14 +156,14 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
           const list = partsOf(line);
           const moved = movedOf(line);
           // Ayırma yalnız iadede ve iki adetten itibaren: tek adetin bölünecek payı yok, akıbet sayısı da üçle sınırlı.
-          const canSplit = refund && line.fulfilledQty >= 2 && list.length < DISPOSITIONS.length && moved < line.fulfilledQty;
+          const canSplit = refund && openQtyOf(line) >= 2 && list.length < DISPOSITIONS.length && moved < openQtyOf(line);
           return list.map((part, index) => (
             <LineRow
               key={`${line.id}-${index}`}
               line={line}
               refund={refund}
               part={part}
-              max={line.fulfilledQty - (moved - part.qty)}
+              max={openQtyOf(line) - (moved - part.qty)}
               lead={index === 0}
               onQty={(qty) => updateParts(line, (items) => items.map((item, at) => (at === index ? { ...item, qty } : item)))}
               onFate={(fate) => updateParts(line, (items) => items.map((item, at) => (at === index ? { ...item, fate } : item)))}
@@ -186,7 +183,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
       </div>
 
       {/* Sebep notu — tasarımda yok, bilinçli ekleme: stoğa dönüş ve imha kayıtları SEBEPSİZ
-          yazılmaz (06). Boş bırakılırsa motor kendi varsayılan metnini yazar. */}
+          yazılmaz. Boş bırakılırsa motor kendi varsayılan metnini yazar. */}
       <Input
         inputSize="sm"
         value={note}
@@ -231,29 +228,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
           />
         )}
 
-        {needsAmount ? (
-          <div className="flex flex-col gap-1.5 border-t border-ops-line-soft pt-2">
-            <div className="flex items-center gap-2.5">
-              <span className="mr-auto font-ops-display text-ops-sm font-semibold text-ops-ink">
-                Jest iadesi — tutarı siz söylersiniz
-              </span>
-              <MoneyInput
-                value={goodwillAmount}
-                onChange={setGoodwillAmount}
-                // Satır içi: kabuğun `w-full`'ü kapalı, yoksa yanındaki cümleyi ezer.
-                fullWidth={false}
-                className="w-28 flex-none text-right"
-                placeholder="0,00"
-                ariaLabel="Jest iadesi tutarı"
-              />
-            </div>
-            <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
-              Mal müşteride kalıyor: miktar ve stok değişmez, bu yüzden sistem borcu türetemez (DOMAIN §8).
-            </span>
-          </div>
-        ) : null}
-
-        {preview && refund && !needsAmount && preview.refundDueCents === 0 && touched.length > 0 ? (
+        {preview && refund && preview.refundDueCents === 0 && touched.length > 0 ? (
           <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-muted">
             Tahsil edilmiş para yok — iade borcu doğmuyor. Kayıt yine de düşer: mal geri geldi.
           </span>
@@ -263,13 +238,8 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
   );
 }
 
-/** Onay düğmesinin tutarı: jestte operatörün yazdığı, aksi halde motorun türettiği. */
-function refundLabel(
-  preview: { refundDueCents: number } | null,
-  needsAmount: boolean,
-  goodwillAmount: number | null,
-): string {
-  if (needsAmount) return goodwillAmount ? ` · ${money(Math.round(goodwillAmount * 100))}` : '';
+/** Onay düğmesinin tutarı: motorun türettiği, kapı da aynısını öder. */
+function refundLabel(preview: { refundDueCents: number } | null): string {
   return preview && preview.refundDueCents > 0 ? ` · ${money(preview.refundDueCents)}` : '';
 }
 
@@ -305,7 +275,10 @@ function LineRow({ line, refund, part, max, lead, onQty, onFate, onSplit, onRemo
         <div className="flex min-w-0 flex-col gap-px">
           <span className="truncate font-ops-body text-ops-sm font-semibold text-ops-ink">{line.title}</span>
           <span className="font-ops-mono text-ops-micro text-ops-muted">
-            {refund ? `teslim ${line.fulfilledQty}` : `sipariş ${line.qty} · karşılanan ${line.fulfilledQty}`} · birim{' '}
+            {refund
+              ? `teslim ${line.fulfilledQty}${line.goodwillQty > 0 ? ` · ${line.goodwillQty} müşteride` : ''}`
+              : `sipariş ${line.qty} · karşılanan ${line.fulfilledQty}`}{' '}
+            · birim{' '}
             {money(unitCents)}
           </span>
           {onSplit ? (

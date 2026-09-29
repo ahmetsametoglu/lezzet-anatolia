@@ -186,27 +186,25 @@ function buildLines(items: readonly OrderItem[], names: Map<string, string>, loc
 }
 
 /**
- * İade mailinin dökümü: yalnız bu iadenin kalemleri, iade edilen adet ve o adedin değeriyle; müşteride kalanın değeri
- * yazılsaydı tam iade edilen kalem "0,00 €" görünürdü. Jest adedi düşürmediği için tutarı satırda değil toplamdadır.
+ * İade mailinin dökümü: yalnız bu iadenin kalemleri, parası dönen adet ve o adedin değeriyle; müşteride kalanın değeri
+ * yazılsaydı tam iade edilen kalem "0,00 €" görünürdü. Jest adedi de parası dönen adettir.
  */
 function buildRefundLines(items: readonly OrderItem[], names: Map<string, string>, returns: readonly WrittenReturn[], locale: PreferredLanguage) {
   return items.flatMap((item) => {
-    const own = returns.filter((entry) => entry.orderItemId === item.id);
-    const returned = own.filter((entry) => entry.disposition !== 'goodwill').reduce((sum, entry) => sum + entry.qty, 0);
-    const kept = own.filter((entry) => entry.disposition === 'goodwill').reduce((sum, entry) => sum + entry.qty, 0);
-    if (returned + kept === 0) return [];
+    const qty = returns.filter((entry) => entry.orderItemId === item.id).reduce((sum, entry) => sum + entry.qty, 0);
+    if (qty === 0) return [];
     const value = fulfilledLineAmountCents({
       unitPriceCents: item.unitPriceCents,
       orderedQty: item.qty,
-      fulfilledQty: returned,
+      fulfilledQty: qty,
       lineDiscountCents: item.lineDiscountAmountCents,
     });
     return [
       {
         name: names.get(item.id) ?? '—',
         meta: `${item.qty} × ${formatPrice(item.unitPriceCents, locale)}`,
-        qty: returned + kept,
-        amount: returned > 0 ? formatPrice(value, locale) : null,
+        qty,
+        amount: formatPrice(value, locale),
         shortfall: null,
       },
     ];

@@ -215,6 +215,8 @@ export const OrderItemSchema = z.object({
   qty: z.number().int(),
   /** Fiziksel olarak giden miktar; `goodwill` iadesinde DÜŞMEZ — mal müşteride kalmıştır. */
   fulfilledQty: z.number().int(),
+  /** Karşılanandan müşteride kalıp parası iade edilen adet; ücretlenmez (DOMAIN §8), olayları `OrderItemReturn`da. */
+  goodwillQty: z.number().int(),
   stockId: z.string().uuid().nullable(),
   bundleId: z.string().uuid().nullable(),
   unitPriceCents: z.number().int(),
@@ -307,7 +309,7 @@ export type OrderStatusLogInsert = z.infer<typeof OrderStatusLogInsertSchema>;
 export const OrderStatusLogUpdateSchema = OrderStatusLogSchema.partial().required({ id: true });
 export type OrderStatusLogUpdate = z.infer<typeof OrderStatusLogUpdateSchema>;
 
-/** Hazırlıkta bir kalemin hangi partilerden çıktığı — `record_preparation` girdisi (06.5). */
+/** Hazırlıkta bir kalemin hangi partilerden çıktığı — `record_preparation` girdisi. */
 export const PreparationPickSchema = z.object({
   orderItemId: z.string().uuid(),
   /** Boş dizi = kalem hiç hazırlanamadı (kısmi karşılama, `fulfilled_qty` 0 olur). */
@@ -352,9 +354,9 @@ export const FulfillmentAdjustmentSchema = z.object({
   fulfilledQty: z.number().int().nonnegative(),
   /** Mal geri geldiyse ne olduğu; `goodwill`'de miktar DEĞİŞMEZ (mal müşteride kaldı, DOMAIN §8). */
   returnDisposition: ReturnDispositionEnum.nullish(),
-  /** Jestle kapanan adet — miktar düşmediği için hedeften türetilemez; verilmezse kalemin karşılanan adedinin tamamı. */
+  /** Jestle kapanan adet — miktar düşmediği için hedeften türetilemez; verilmezse müşteride henüz kalmamış adedin tamamı. */
   goodwillQty: z.number().int().positive().nullish(),
-  /** Stoğa dönüş/imha kaydına düşen sebep notu — geri ekleme sebepsiz yazılmaz (06). */
+  /** Stoğa dönüş/imha kaydına düşen sebep notu — geri ekleme sebepsiz yazılmaz. */
   note: z.string().nullish(),
 });
 export type FulfillmentAdjustment = z.infer<typeof FulfillmentAdjustmentSchema>;
@@ -404,7 +406,7 @@ export const CancelResultSchema = z.object({
 });
 export type CancelResult = z.infer<typeof CancelResultSchema>;
 
-/** `transition_order_status` RPC'sinin dönüşü — `ok:false` + `stale` = araya biri girdi (07.6). */
+/** `transition_order_status` RPC'sinin dönüşü — `ok:false` + `stale` = araya biri girdi. */
 export const TransitionResultSchema = z.object({
   ok: z.boolean(),
   reason: z.literal('stale').optional(),

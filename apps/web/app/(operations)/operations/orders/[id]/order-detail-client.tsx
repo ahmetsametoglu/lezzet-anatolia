@@ -10,26 +10,16 @@ import { DecisionDialog } from './components/decision-dialog';
 import { OrderDetailDesktop } from './order-detail.desktop';
 import type { OrderDetailView } from './order-detail-types';
 
-// Detay client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08); mobil deneyim
-// native uygulamada — `docs/uygulama`.
-// Durum ilerletme LİSTEYLE AYNI action'ı çağırır — iki ekran aynı kapıdan geçmezse biri motorun
-// izin kontrolünü atlayabilirdi.
-//
-// Üç kararın ikisi TABLOLU pencere ister (kalem başına adet + akıbet), iptal ise yalnız onay:
-// seçilecek adet, akıbet ya da yol yoktur. Bu yüzden iptalin kendi penceresi var (`CancelDialog`) —
-// ama yine de BİR PENCERE: tarayıcının `confirm()` kutusu ne operasyonun görsel dilini taşır, ne
-// kararın üç ayrı sonucunu (hazırlık · stok · para) yazabilir, ne de işlem düşerse hatayı gösterir.
+// Detay client kökü: tek durum ağacı burada; durum ilerletme listeyle aynı action'ı çağırır ki motorun izin kontrolü atlanmasın.
+// İptal adet ve akıbet sormadığı için kendi penceresindedir, tarayıcının `confirm()` kutusu kararın sonuçlarını ve hatayı yazamazdı.
 
 interface OrderDetailClientProps {
   order: OrderDetailView;
 }
 
 /**
- * Action sonucundan iade uyarısını çeker — yalnız iade yolları taşır, durum ilerletme taşımaz.
- *
- * `retryable` yalnız SAĞLAYICI DÜŞTÜĞÜNDE true — o geçici bir hâldir. Künye eksikliği ya da hesap
- * bulunamaması tekrarla düzelmez (veri yok, bir daha bakınca da olmayacak); orada düğme göstermek
- * operatörü boşuna uğraştırır, cümle zaten ne yapılacağını söylüyor.
+ * Action sonucundan iade uyarısını çeker — yalnız iade yolları taşır. `retryable` yalnız sağlayıcı düştüğünde true: künye ya
+ * da hesap eksikliği tekrarla düzelmez ve düğme operatörü boşuna uğraştırırdı.
  */
 function noticeOf(data: unknown): { text: string; retryable: boolean } | null {
   if (!data || typeof data !== 'object' || !('refundNotice' in data)) return null;
@@ -42,17 +32,13 @@ export function OrderDetailClient({ order }: OrderDetailClientProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /** İşlem geçti ama iade yazılamadı — hata değil, tamamlanmamış bir sonuç (07.11). */
+  /** İşlem geçti ama iade yazılamadı — hata değil, tamamlanmamış bir sonuç. */
   const [notice, setNotice] = useState<{ text: string; retryable: boolean } | null>(null);
   const [dialog, setDialog] = useState<OrderDecision | null>(null);
 
   /**
-   * Her yazma yolu aynı kapıdan döner: hata ekranda kalır, başarı sayfayı tazeler.
-   *
-   * **Üçüncü bir sonuç var: işlem oldu ama iade yazılamadı** (07.11). Hata değil — düzeltme/iptal
-   * kaydedildi, tekrar denenmemeli; ama sessiz de geçilemez, paranın çıkmadığını yalnız bu satır
-   * söylüyor. Bu yüzden ayrı bir uyarı olarak duruyor ve sayfa tazelendiğinde silinmiyor: operatör
-   * okumadan kaybolan bir uyarı, hiç gösterilmemiş sayılır.
+   * Her yazma yolu aynı kapıdan döner: hata ekranda kalır, başarı sayfayı tazeler. İade yazılamadıysa ayrı ve kalıcı bir uyarı
+   * durur: düzeltme kaydedildi, tekrar denenmemeli, ama paranın çıkmadığını yalnız bu satır söyler.
    */
   const run = (call: Promise<{ error: string | null; data?: unknown }>, onDone?: () => void) => {
     setBusy(true);
@@ -82,7 +68,7 @@ export function OrderDetailClient({ order }: OrderDetailClientProps) {
 
   const onConfirmDecision = (
     lines: FulfillmentAdjustment[],
-    opts: { refundAccountId: string | null; refundAmount: number | null },
+    opts: { refundAccountId: string | null },
   ) => run(adjustFulfillmentAction(order.id, lines, opts), () => setDialog(null));
 
   return (

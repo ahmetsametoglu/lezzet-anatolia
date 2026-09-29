@@ -9,26 +9,9 @@ import { adjustFulfillment, cancelOrder } from '../order/refund';
 import { advanceOrder, prepareOrderToReady } from '../order/advance.testkit';
 
 /**
- * **DAVET ÖDÜLÜNÜN ÖMRÜ — para geri giderse ödül ne olur** (17.11 · kullanıcı kararları 25.08).
- *
- * ── NEDEN BU DOSYA VAR ──────────────────────────────────────────────────────
- * Kural paraya dokunuyor ve **hiç testi yoktu**: `revokeReferralOnUnpaidOrder` ile `revokePoints`
- * 17.08'de yazıldı, 25.08'de kullanıcı kararıyla DEĞİŞTİ ve iki tarihte de hiçbir iddia onları
- * çivilemedi. Ölçüm elle yapıldı, sonuçları `17.11`in Durum notunda; burası o ölçümün kalıcı hâli.
- *
- * ── ÇİVİLENEN İKİ KARAR ─────────────────────────────────────────────────────
- * **1 · Kısmî iade ödüle DOKUNMAZ** (*"kısmî aslında kısmî sipariş de demektir"*). Bu, 17.08'in
- * *"kısmi iade de kapsanır"* kararını yürürlükten kaldırdı. Ölçülen sebep: 30 €'luk siparişte 1 €
- * iade, getirenin 500 puanını siliyordu ve geri dönüşü yoktu.
- * **2 · Geri alma bakiyeyle KIRPILIR**, bakiye eksiye düşmez; kalan af edilir.
- *
- * ── SINANAN ŞEY MOTOR DEĞİL, KAPININ KARARI ─────────────────────────────────
- * `derivePaymentStatus`ün kendi testleri var. Buradaki iddia bir katman üstte: **hangi ödeme
- * durumunda ödüle dokunulur.** Ayrım önemli çünkü kural iki dosyaya yayılmış — koşul
- * `order/payment.ts`te (`finalize`), kırpma `feedback/points.ts`te (`revokePoints`).
- *
- * §4b: her satır damgalı, sayımlar KENDİ kurduğu müşterinin defteri üzerinden (küresel sayaç yok),
- * teardown `purgeTestData`.
+ * Davet ödülünün ömrü — para geri giderse ödül ne olur: kısmî iade ödüle dokunmaz, geri alma bakiyeyle kırpılır ve bakiye
+ * eksiye düşmez. Sınanan şey kapının kararıdır (koşul `order/payment.ts`te, kırpma `feedback/points.ts`te); sayımlar dosyanın
+ * kendi müşterisinin defteri üzerinden, teardown `purgeTestData` (CLAUDE §4b).
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -43,8 +26,7 @@ let accountId: string;
 const createdProfiles: string[] = [];
 const createdInvites: string[] = [];
 
-/** Getiren ödülü — `POINTS_DEFAULTS.referral`. Sayı fikstüre değil AYARA ait, o yüzden okunmuyor:
-    testin iddiası "ne kadar" değil, "duruyor mu / gitti mi". Sabit yazmak, ayar değişince testi
+/** Getiren ödülü — sayı ayara ait, okunmaz: iddia "ne kadar" değil "duruyor mu / gitti mi"; sabit yazmak ayar değişince testi
     yalancı kırmızıya çevirirdi. */
 let referralPoints: number;
 
@@ -150,26 +132,24 @@ describe('KISMÎ iade ödüle dokunmaz (kullanıcı kararı 25.08)', () => {
     expect(await balanceOf(senaryo.inviter)).toBe(referralPoints);
   });
 
-  it('JEST İADESİ ödülü götürmez — mal müşteride KALIR, yalnız gönül alınır', async () => {
-    // Operasyonun gerçek düğmesi (`adjustFulfillmentAction`, `refundAmountCents` dolu): adet
-    // düşmez, tutarı operatör söyler. Eski kural burada da 500 puanı siliyordu.
+  it('KISMÎ JEST İADESİ ödülü götürmez — mal müşteride kalır, o adedin parası döner, durum `paid` kalır', async () => {
+    // Operasyonun gerçek düğmesi (`adjustFulfillmentAction`): jest akıbeti adedi düşürmez, parasını motor türetir.
     const senaryo = await paidOrderWithReward('jest', 3);
 
     const outcome = await adjustFulfillment(
       db,
       senaryo.orderId,
-      [{ orderItemId: senaryo.itemId, fulfilledQty: 3 }],
-      { refundAccountId: accountId, refundAmountCents: 500 },
+      [{ orderItemId: senaryo.itemId, fulfilledQty: 3, returnDisposition: 'goodwill', goodwillQty: 1 }],
+      { refundAccountId: accountId },
     );
 
-    expect(outcome).toMatchObject({ status: 'ok' });
+    expect(outcome).toMatchObject({ status: 'ok', paymentStatus: 'paid' });
     expect(await balanceOf(senaryo.inviter)).toBe(referralPoints);
   });
 
   it('KISMÎ KARŞILAMA ödülü götürmez ve durum `paid` KALIR', async () => {
-    // Burada beklenen tutar da düşüyor (depo 3 yerine 2 gönderdi), yani elde tutulan para hâlâ
-    // borcu karşılıyor. Bu hâl 25.08 kararından ÖNCE de doğru çalışıyordu; kararın yanlışlıkla
-    // bozmadığını çivilemek için duruyor.
+    // Beklenen tutar da düşüyor (depo 3 yerine 2 gönderdi), elde tutulan para hâlâ borcu karşılıyor; kısmî karşılama ödülü
+    // götürmemeli.
     const senaryo = await paidOrderWithReward('eksik-gönderim', 3);
 
     await adjustFulfillment(db, senaryo.orderId, [{ orderItemId: senaryo.itemId, fulfilledQty: 2 }]);
@@ -187,7 +167,7 @@ describe('TAM iade ödülü geri alır', () => {
 
     expect(await paymentStatusOf(senaryo.orderId)).toBe('refunded');
     expect(await balanceOf(senaryo.inviter)).toBe(0);
-    // Satır SİLİNMEZ, karşı kayıt yazılır (17.4): "neden puanım eksildi" defterden okunabilmeli.
+    // Satır SİLİNMEZ, karşı kayıt yazılır: "neden puanım eksildi" defterden okunabilmeli.
     expect(await ledgerOf(senaryo.inviter)).toEqual([
       { points: -referralPoints, reason: 'referral' },
       { points: referralPoints, reason: 'referral' },

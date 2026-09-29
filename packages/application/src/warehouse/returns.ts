@@ -94,24 +94,20 @@ export async function listWarehouseReturns(
 
 /**
  * Kalem → döküm satırı; ad çözümü kuyruğun ortak okumasından (`names.ts`) gelir. İade ve imha karşılanan adedi zaten
- * düşürdüğü için bekleyen adet, karşılanandan jestle kapanan adedin çıkmasıdır (jest adedi düşürmez).
+ * düşürdüğü için bekleyen adet, karşılanandan müşteride kalan (jest) adedin çıkmasıdır.
  */
 function toDropLine(names: Awaited<ReturnType<typeof variantNames>>, returns: readonly OrderItemReturn[]) {
-  return (item: OrderItem): ReturnDropLine => {
-    const decided = returns.flatMap((entry) =>
+  return (item: OrderItem): ReturnDropLine => ({
+    orderItemId: item.id,
+    name: displayName(names.get(item.variantId)),
+    fulfilledQty: item.fulfilledQty,
+    pendingQty: item.fulfilledQty - item.goodwillQty,
+    returns: returns.flatMap((entry) =>
       entry.orderItemId === item.id && entry.disposition !== null
         ? [{ qty: entry.qty, disposition: entry.disposition, note: entry.note }]
         : [],
-    );
-    const goodwillQty = decided.reduce((sum, entry) => (entry.disposition === 'goodwill' ? sum + entry.qty : sum), 0);
-    return {
-      orderItemId: item.id,
-      name: displayName(names.get(item.variantId)),
-      fulfilledQty: item.fulfilledQty,
-      pendingQty: Math.max(0, item.fulfilledQty - goodwillQty),
-      returns: decided,
-    };
-  };
+    ),
+  });
 }
 
 // ── RAMPA LİSTESİ (D6) ────────────────────────────────────────────────────────

@@ -42,6 +42,8 @@ export interface OrderLineView {
   qty: number;
   /** Fiziksel olarak giden adet — `qty`'den azsa eksik gitmiştir. */
   fulfilledQty: number;
+  /** Gidenden müşteride kalıp parası iade edilen (jest) adet; yeniden iade edilemez, ücretlenmez. */
+  goodwillQty: number;
   unitPriceCents: number;
   /** Sepet indiriminin bu kaleme düşen payı (kalemin TAMAMI için, kuruş). */
   lineDiscountCents: number;

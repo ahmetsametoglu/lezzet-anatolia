@@ -37,12 +37,14 @@ declare
   v_item_id uuid;
   v_ordered int;
   v_current int;
+  v_kept int;                                        -- müşteride kalan (jestle kapanmış) adet
   v_target int;
   v_delta int;                                       -- geri gelen / hiç gitmeyen adet
   v_disposition return_disposition;
   v_goodwill_qty int;
   v_note text;
   v_planned jsonb := '{}'::jsonb;                    -- doğrulama turunda kalemin sıradaki karşılanan adedi
+  v_planned_kept jsonb := '{}'::jsonb;               -- doğrulama turunda kalemin sıradaki jest adedi
   v_returns jsonb := '[]'::jsonb;
   v_batch record;
   v_take int;
@@ -76,7 +78,7 @@ begin
     );
 
   -- Önce bütün istek doğrulanır, çünkü ret ancak hiçbir satır yazılmadan dönerse bütündür. Akıbetli bir satırın düşüreceği
-  -- adet kalmadıysa ekran bayattır ya da istek tekrarıdır; "oldu" demek yerine sebep adıyla döner.
+  -- adet kalmadıysa ya da müşteride kalan adede uzanıyorsa ekran bayattır veya istek tekrarıdır; sebep adıyla döner.
   for v_line in select * from jsonb_array_elements(p_lines)
   loop
     v_item_id := (v_line ->> 'order_item_id')::uuid;
@@ -84,7 +86,7 @@ begin
     v_disposition := nullif(v_line ->> 'return_disposition', '')::return_disposition;
     v_goodwill_qty := (v_line ->> 'goodwill_qty')::int;
 
-    select qty, fulfilled_qty into v_ordered, v_current
+    select qty, fulfilled_qty, goodwill_qty into v_ordered, v_current, v_kept
       from public.order_item
      where id = v_item_id and order_id = p_order_id
      for update;
@@ -92,11 +94,19 @@ begin
       raise exception 'adjust_fulfillment: kalem bu siparişe ait değil (%)', v_item_id;
     end if;
     v_current := coalesce((v_planned ->> v_item_id::text)::int, v_current);
+    v_kept := coalesce((v_planned_kept ->> v_item_id::text)::int, v_kept);
 
     if v_disposition = 'goodwill' then
-      if coalesce(v_goodwill_qty, v_current) not between 1 and v_current then
-        raise exception 'adjust_fulfillment: kalem % için geçersiz jest adedi (% / karşılanan %)', v_item_id, v_goodwill_qty, v_current;
+      if v_goodwill_qty is not null and v_goodwill_qty < 1 then
+        raise exception 'adjust_fulfillment: kalem % için geçersiz jest adedi (%)', v_item_id, v_goodwill_qty;
       end if;
+      v_goodwill_qty := coalesce(v_goodwill_qty, v_current - v_kept);
+      if v_goodwill_qty < 1 or v_goodwill_qty > v_current - v_kept then
+        return jsonb_build_object(
+          'ok', false, 'reason', 'already_marked', 'current_status', v_status, 'order_item_id', v_item_id
+        );
+      end if;
+      v_planned_kept := v_planned_kept || jsonb_build_object(v_item_id::text, v_kept + v_goodwill_qty);
       continue;
     end if;
 
@@ -106,7 +116,7 @@ begin
     if v_target > v_current then
       raise exception 'adjust_fulfillment: karşılanan miktar artırılamaz (kalem %, % → %)', v_item_id, v_current, v_target;
     end if;
-    if v_target = v_current and v_disposition is not null then
+    if (v_target = v_current and v_disposition is not null) or v_target < v_kept then
       return jsonb_build_object(
         'ok', false, 'reason', 'already_marked', 'current_status', v_status, 'order_item_id', v_item_id
       );
@@ -122,11 +132,12 @@ begin
     v_goodwill_qty := (v_line ->> 'goodwill_qty')::int;
     v_note := nullif(v_line ->> 'note', '');
 
-    select fulfilled_qty into v_current from public.order_item where id = v_item_id;
+    select fulfilled_qty, goodwill_qty into v_current, v_kept from public.order_item where id = v_item_id;
 
-    -- Jest iadesi: mal müşteride kaldı, miktar düşürülmez (DOMAIN §8); satır kaç adedin jestle kapandığını taşır.
+    -- Jest iadesi: mal müşteride kaldı, karşılanan düşmez (DOMAIN §8); o adetler ücretlenmez, parasını motor türetir.
     if v_disposition = 'goodwill' then
-      v_goodwill_qty := coalesce(v_goodwill_qty, v_current);
+      v_goodwill_qty := coalesce(v_goodwill_qty, v_current - v_kept);
+      update public.order_item set goodwill_qty = goodwill_qty + v_goodwill_qty where id = v_item_id;
       insert into public.order_item_return (order_id, order_item_id, qty, disposition, note, stage, actor_id)
       values (p_order_id, v_item_id, v_goodwill_qty, 'goodwill', v_note, v_status, p_actor_id);
       v_returns := v_returns || jsonb_build_object('order_item_id', v_item_id, 'qty', v_goodwill_qty, 'disposition', 'goodwill');
@@ -243,7 +254,7 @@ begin
    where order_item_id in (select id from public.order_item where order_id = p_order_id);
 
   -- İptalde karşılanan tutar 0'dır (ORDER_LIFECYCLE); kalem gerçeği de sıfırlanır ki iki kaynak aynı şeyi söylesin.
-  update public.order_item set fulfilled_qty = 0 where order_id = p_order_id;
+  update public.order_item set fulfilled_qty = 0, goodwill_qty = 0 where order_id = p_order_id;
 
   -- Sebep AYNI güncellemede yazılır: ayrı bir `update` olsaydı ikisinin arasında sebepsiz bir
   -- iptal hâli doğardı ve o aralıkta okuyan ekran yanlış cümleyi kurardı.

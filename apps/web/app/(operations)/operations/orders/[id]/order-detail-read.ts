@@ -177,6 +177,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     productName: variantProducts.get(item.variantId) ?? '',
     qty: item.qty,
     fulfilledQty: item.fulfilledQty,
+    goodwillQty: item.goodwillQty,
     unitPriceCents: item.unitPriceCents,
     lineDiscountCents: item.lineDiscountAmountCents,
     vatRate: item.vatRate,
@@ -427,6 +428,7 @@ function lineTotalOf(item: OrderItem): number {
 function payableLineOf(item: OrderItem) {
   return {
     fulfilledQty: item.fulfilledQty,
+    goodwillQty: item.goodwillQty,
     orderedQty: item.qty,
     unitPriceCents: item.unitPriceCents,
     lineDiscountCents: item.lineDiscountAmountCents,
@@ -444,10 +446,13 @@ export function totalsOf(
   fulfilledAmountCents: number,
 ): OrderTotalLine[] {
   /*
-    Blok giden malı anlatır, sipariş edileni değil: indirim de karşılanan orana göre sayılır, muhasebe ve kâr paneli de öyle bilir.
-    Sipariş edilen, kalem tablosunun sütunlarında durur.
+    Blok ücretlenen malı anlatır, sipariş edileni değil: jestle müşteride kalan adet düşer, indirim de o orana göre sayılır.
+    Sipariş edilen ve müşteride kalan, kalem tablosunda durur.
   */
-  const gross = lines.reduce((sum, l) => sum + (settled ? l.unitPriceCents * l.fulfilledQty : l.unitPriceCents * l.qty), 0);
+  const gross = lines.reduce(
+    (sum, l) => sum + l.unitPriceCents * (settled ? l.fulfilledQty - l.goodwillQty : l.qty),
+    0,
+  );
   const shipping = order.shippingFeeCents;
   // Brüt − indirim + kargo = ödenecek; ikisi de motorun kalem formülünden türediği için kimlik korunur.
   const discount = Math.max(0, gross + shipping - fulfilledAmountCents);
@@ -480,7 +485,13 @@ function vatInsideOf(order: Pick<Order, 'channel' | 'vatTreatment'>, lines: Orde
   const zeroRated = isZeroRated(order.vatTreatment);
   return lines.reduce((sum, l) => {
     const base = fulfilledLineAmountCents(
-      { fulfilledQty: l.fulfilledQty, orderedQty: l.qty, unitPriceCents: l.unitPriceCents, lineDiscountCents: l.lineDiscountCents },
+      {
+        fulfilledQty: l.fulfilledQty,
+        goodwillQty: l.goodwillQty,
+        orderedQty: l.qty,
+        unitPriceCents: l.unitPriceCents,
+        lineDiscountCents: l.lineDiscountCents,
+      },
       settled,
     );
     return sum + vatSplitOf(base, order.channel, l.vatRate, zeroRated).vatCents;

@@ -68,10 +68,7 @@ export type CancelOutcome =
 export interface RefundOptions {
   /** İadenin çıkacağı hesap — verilmezse paranın girdiği hesaptan türetilir. */
   refundAccountId?: string | null;
-  /**
-   * Tutarı elle vermek. Tek gerçek kullanımı **jest iadesidir** (`goodwill`): mal müşteride kaldığı
-   * için karşılanan tutar düşmez, borç türetilemez — tutarı operatör söyler (DOMAIN §8).
-   */
+  /** Tutarı elle vermek — türetilen borcun YERİNE geçer (ör. stok yokluğu iptalinde `0`: para sağlayıcıda kalır). */
   refundAmountCents?: number | null;
   valueDate?: string;
   description?: string | null;
@@ -119,9 +116,10 @@ export async function adjustFulfillment(
 
   // Haberin hangisi olduğunu malın nerede olduğu belirler: mal daha çıkmadıysa bu bir EKSİK
   // KARŞILANMA (müşteri kapıda sürprizle karşılaşmasın), çıktıysa bir İADE (para geri döndü).
-  // Hiçbir olay yazılmadıysa müşteriye haber gitmez: "iadeniz işlendi" yalnız gerçekten yazılan iade için söylenir.
+  // "İadeniz işlendi" yalnız olay yazıldıysa ve para gerçekten döndüyse söylenir; yazılamayan iadenin haberi, yeniden
+  // deneme parayı çıkardığında `retryRefund`tan gider.
   const delivered = result.currentStatus === 'delivered' || result.currentStatus === 'completed';
-  if ((result.lines ?? 0) > 0) {
+  if ((result.lines ?? 0) > 0 && (!delivered || settled.refundedAmountCents > 0)) {
     await notifyExceptionEffect(opts.effects, orderId, delivered ? 'order_refunded' : 'order_shortfall', {
       refundedAmountCents: settled.refundedAmountCents,
       returns: result.returns ?? [],
@@ -205,7 +203,7 @@ export async function deliverOrderWithAdjustments(
 }
 
 /**
- * **İptal** (07.9). Ayrılmış mal geri bırakılır ve tahsil edilmiş para varsa TAMAMI iade edilir —
+ * **İptal**. Ayrılmış mal geri bırakılır ve tahsil edilmiş para varsa TAMAMI iade edilir —
  * iptal edilen siparişte karşılanan tutar 0'dır (ORDER_LIFECYCLE), gerisi türetimden gelir.
  */
 export async function cancelOrder(
@@ -251,24 +249,26 @@ export async function retryRefund(
   orderId: string,
   opts: RefundOptions = {},
 ): Promise<({ status: 'ok' } & RefundOutcome) | { status: 'not_found' }> {
-  if (!(await new OrderService(db).getById(orderId))) return { status: 'not_found' };
+  const order = await new OrderService(db).getById(orderId);
+  if (!order) return { status: 'not_found' };
 
   const settled = await settleRefund(db, orderId, opts);
   if (!settled) return { status: 'not_found' };
+  // Teslim sonrası iadenin haberi ilk denemede para çıkmadığı için gitmemişti; para şimdi döndüyse söylenir.
+  if (settled.refundedAmountCents > 0 && (order.status === 'delivered' || order.status === 'completed')) {
+    await notifyExceptionEffect(opts.effects, orderId, 'order_refunded', { refundedAmountCents: settled.refundedAmountCents });
+  }
   return { status: 'ok', ...settled };
 }
 
 /**
- * Ödeme durumunu tazeler, borç varsa iadeyi yazar ve hareketten sonraki hâli döner; tutar türetimden gelir, tek istisnası
- * jest iadesinin açık tutarıdır. Önce sağlayıcı çağrısı, sonra hareket: para dönmeden hareket yazılsa defter kapanmış
- * görünürdü, çağrı düşerse sebep `refundBlocked` ile döner.
+ * Ödeme durumunu tazeler, borç varsa iadeyi yazar ve hareketten sonraki hâli döner; tutar türetimden gelir, elle verilen tutar
+ * yerine geçer. Önce sağlayıcı çağrısı, sonra hareket: para dönmeden hareket yazılsa defter kapanmış görünürdü.
  */
 async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOptions): Promise<RefundOutcome | null> {
   const before = await syncOrderPaymentStatus(db, orderId);
   if (before.status !== 'ok') return null;
 
-  // Motor zaten cent veriyordu; `/ 100` ile euro'ya inip sonra tekrar `* 100` ile çıkmak, aynı
-  // sayının iki kez çevrilmesiydi — birim karışıklığının tipik izi (02.9).
   const dueCents = opts.refundAmountCents ?? before.derivation.refundDueCents;
   const unsettled = (refundBlocked?: RefundBlockReason): RefundOutcome => ({
     refundedAmountCents: 0,
@@ -323,7 +323,7 @@ async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOpt
   });
   if (after.status !== 'ok') {
     // Para SAĞLAYICIDAN ÇIKTI ama deftere geçmedi — sessiz kalınamaz. Hangi iade olduğunu ancak bu
-    // satır söyleyebilir; çağıranın hata funnel'ı bunu `error_log`'a düşürür (18.5).
+    // satır söyleyebilir; çağıranın hata funnel'ı bunu `error_log`'a düşürür.
     throw new Error(
       `[refund] sağlayıcı iadesi yapıldı ama hareket yazılamadı — sipariş ${orderId}, iade ${String(refundMeta?.['refundId'] ?? '-')}`,
     );

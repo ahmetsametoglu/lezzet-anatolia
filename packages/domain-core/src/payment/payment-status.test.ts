@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { derivePaymentStatus, type FulfilledLine, type PaymentDerivationInput } from './payment-status';
+import { derivePaymentStatus, fulfilledLineAmountCents, type FulfilledLine, type PaymentDerivationInput } from './payment-status';
 
 /** 2 adet × 10 € = 20 € — tamamı gitmiş kalem. */
 const line = (over: Partial<FulfilledLine> = {}): FulfilledLine => ({
@@ -98,16 +98,26 @@ describe('iade senaryoları (03.6)', () => {
     expect(r.refundDueCents).toBe(0);
   });
 
-  it('jest iadesi (goodwill): mal müşteride kalır, miktar DÜŞMEZ ama net 0 → refunded', () => {
-    const r = derivePaymentStatus(input({ collectedCents: 2000, refundedCents: 2000 }));
-    expect(r.fulfilledAmountCents).toBe(2000); // ürün gitti, karşılanan duruyor
-    expect(r.status).toBe('refunded'); // yine de para geri döndü
-    expect(r.amountToCollectCents).toBe(2000); // muhasebe farkı görünür kalır
+  it('jest iadesi: müşteride kalan adet ücretlenmez, borcu türer ve kargo dahil her şey dönünce refunded olur', () => {
+    const lines = [line({ goodwillQty: 2 })];
+    expect(derivePaymentStatus(input({ lines, shippingFeeCents: 500, collectedCents: 2500 })).refundDueCents).toBe(2500);
+
+    const r = derivePaymentStatus(input({ lines, shippingFeeCents: 500, collectedCents: 2500, refundedCents: 2500 }));
+    expect(r.status).toBe('refunded');
+    expect(r.amountToCollectCents).toBe(0);
   });
 
-  it('kısmi jest iadesi: net karşılananın altına iner → partial', () => {
-    const r = derivePaymentStatus(input({ collectedCents: 2000, refundedCents: 500 }));
-    expect(r.status).toBe('partial');
+  it('kısmi jest iadesi: parası dönen adet tahsil edilecek kalan doğurmaz, kargo ücretlenen adetle durur', () => {
+    const r = derivePaymentStatus(
+      input({ lines: [line({ goodwillQty: 1 })], shippingFeeCents: 500, collectedCents: 2500, refundedCents: 1000 }),
+    );
+    expect(r.status).toBe('paid');
+    expect(r.fulfilledAmountCents).toBe(1500);
+    expect(r.amountToCollectCents).toBe(0);
+  });
+
+  it('jest adedinin indirim payı da düşer', () => {
+    expect(fulfilledLineAmountCents(line({ goodwillQty: 1, lineDiscountCents: 400 }))).toBe(800);
   });
 });
 

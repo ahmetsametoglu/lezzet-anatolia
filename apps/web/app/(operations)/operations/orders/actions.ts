@@ -19,7 +19,7 @@ import { readOrdersPage } from './orders-page-read';
 import { ORDERS_PATH, parseOrdersUrl } from './orders-url';
 import type { OrderPeek, OrdersData } from './orders-types';
 
-// Sipariş ekranı server action'ları (09.7) — 'use server' + requireAdmin ilk + servise devret +
+// Sipariş ekranı server action'ları — 'use server' + requireAdmin ilk + servise devret +
 // `{ data, error }` DÖNER (throw yok) + revalidatePath.
 
 /**
@@ -59,17 +59,20 @@ export async function loadOrderPeekAction(orderId: string): Promise<ActionResult
  */
 export async function previewFulfillmentAction(
   orderId: string,
-  lines: ReadonlyArray<{ orderItemId: string; fulfilledQty: number }>,
+  lines: ReadonlyArray<{ orderItemId: string; fulfilledQty: number; goodwillQty: number }>,
 ): Promise<ActionResult<{ refundDueCents: number; amountToCollectCents: number; fulfilledAmountCents: number }>> {
   try {
     await requireAdmin();
     const found = await new OrderService(serviceDb()).getWithItems(orderId);
     if (!found) throw new Error('Sipariş bulunamadı.');
 
-    const proposed = new Map(lines.map((l) => [l.orderItemId, l.fulfilledQty]));
+    const proposed = new Map(lines.map((l) => [l.orderItemId, l]));
     const derivation = derivePaymentStatusForOrder(
       found.order,
-      found.items.map((item) => ({ ...item, fulfilledQty: proposed.get(item.id) ?? item.fulfilledQty })),
+      found.items.map((item) => {
+        const next = proposed.get(item.id);
+        return next ? { ...item, fulfilledQty: next.fulfilledQty, goodwillQty: next.goodwillQty } : item;
+      }),
       { collectedCents: found.order.amountCollectedCents, refundedCents: found.order.amountRefundedCents },
     );
 
@@ -93,12 +96,7 @@ export async function previewFulfillmentAction(
 export async function adjustFulfillmentAction(
   orderId: string,
   lines: readonly FulfillmentAdjustment[],
-  /**
-   * `refundAmount` YALNIZ jest iadesinde dolu gelir: mal müşteride kaldığı için miktar düşmez,
-   * motor borcu türetemez ve tutarı operatör söyler (DOMAIN §8). Diğer her durumda `null` — tutarı
-   * ekranın söylemesi, türetimi ekrandan ezmek olurdu.
-   */
-  opts: { refundAccountId?: string | null; refundAmountCents?: number | null } = {},
+  opts: { refundAccountId?: string | null } = {},
 ): Promise<ActionResult<{ refundedAmountCents: number; amountToCollectCents: number; refundNotice: string | null; refundBlocked: RefundBlockReason | null }>> {
   try {
     const actor = await requireAdmin();
@@ -132,7 +130,7 @@ export async function adjustFulfillmentAction(
   }
 }
 
-/** **İptal** (07.9) — ayrılan mal serbest kalır, tahsil edilmişse tamamı iadeye devrolur. */
+/** **İptal** — ayrılan mal serbest kalır, tahsil edilmişse tamamı iadeye devrolur. */
 export async function cancelOrderAction(
   orderId: string,
   opts: { refundAccountId?: string | null } = {},

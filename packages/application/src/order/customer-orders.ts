@@ -275,12 +275,14 @@ export async function getCustomerOrderDetail(
 
   /** Hazırlık onaylanana kadar `fulfilled_qty` yazılmamış bir `0`dır; gönderilen miktar sayılırsa kalemler boş görünür. */
   const measured = isFulfilmentKnown(order.status);
-  const billedOf = (item: OrderItem) => (measured ? item.fulfilledQty : item.qty);
+  // Jestle müşteride kalan adedin parası iade edilmiştir; müşteri tutarı iade edilen öteki adetlerle aynı dilden okur.
+  const billedOf = (item: OrderItem) => (measured ? item.fulfilledQty - item.goodwillQty : item.qty);
 
   /* Satır parası ödeme motorundan, burada ikinci kez çarpılmaz; kendi çarpması indirimi karşılanan orana bölmediği için ekranla
      kapıdaki tahsilatı ayrıştırıyordu. */
   const moneyLine = (item: OrderItem) => ({
     fulfilledQty: item.fulfilledQty,
+    goodwillQty: item.goodwillQty,
     orderedQty: item.qty,
     unitPriceCents: item.unitPriceCents,
     lineDiscountCents: item.lineDiscountAmountCents,
@@ -343,7 +345,7 @@ export async function getCustomerOrderDetail(
       bundle: null,
       qty: item.qty,
       billedQty: billedOf(item),
-      shortfall: measured && item.fulfilledQty < item.qty,
+      shortfall: measured && billedOf(item) < item.qty,
       /* Fark, İKİ TUTARIN farkıdır — "eksik adet × birim fiyat" DEĞİL. İndirim payı da eksik adetle
          birlikte düştüğü için ham çarpım gerçek kaybı olduğundan büyük gösteriyordu; ekran bu sayıyı
          üstü çizili tutarı geri hesaplamakta kullanıyor (`lineTotal + shortfall = sipariş edilen`),

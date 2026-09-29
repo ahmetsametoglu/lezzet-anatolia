@@ -9,6 +9,8 @@ import { isFulfillmentSettled } from '../order/status-machine';
 export interface FulfilledLine {
   /** Fiziksel olarak müşteriye giden miktar. */
   fulfilledQty: number;
+  /** Gidenden müşteride kalıp parası iade edilen adet (jest); ücretlenmez, verilmezse 0. */
+  goodwillQty?: number;
   /** Sabitlenmiş birim fiyat (kanal tabanında, cent). */
   unitPriceCents: number;
   /** Sepet indiriminin bu kaleme düşen payı (cent, kalemin TAMAMI için). */
@@ -52,12 +54,13 @@ export interface PaymentDerivation {
  */
 export function derivePaymentStatusForOrder(
   order: Pick<Order, 'shippingFeeCents' | 'status' | 'orderedTotalCents'>,
-  items: readonly Pick<OrderItem, 'fulfilledQty' | 'qty' | 'unitPriceCents' | 'lineDiscountAmountCents'>[],
+  items: readonly Pick<OrderItem, 'fulfilledQty' | 'goodwillQty' | 'qty' | 'unitPriceCents' | 'lineDiscountAmountCents'>[],
   amounts: { collectedCents: number; refundedCents: number },
 ): PaymentDerivation {
   return derivePaymentStatus({
     lines: items.map((item) => ({
       fulfilledQty: item.fulfilledQty,
+      goodwillQty: item.goodwillQty,
       orderedQty: item.qty,
       unitPriceCents: item.unitPriceCents,
       lineDiscountCents: item.lineDiscountAmountCents,
@@ -92,19 +95,18 @@ export function derivePaymentStatus(input: PaymentDerivationInput): PaymentDeriv
 }
 
 function statusOf(net: number, fulfilled: number, refunded: number): PaymentStatus {
-  // Para geri gitmiş ve elde bir şey kalmamışsa iade edilmiştir — karşılanan tutara bakılmaz
-  // (jest iadesinde mal müşteride kalır ama para tamamen geri döner).
+  // Para geri gitmiş ve elde bir şey kalmamışsa iade edilmiştir — karşılanan tutara bakılmaz.
   if (net <= 0) return refunded > 0 ? 'refunded' : 'pending';
   if (net >= fulfilled) return 'paid'; // fazlalık refundDueCents'te görünür
   return 'partial';
 }
 
 /**
- * Bir kalemin karşılanan tutarı (cent), indirim payı karşılanan orana bölünmüş; sipariş detayının KDV satırı da bunu kullanır,
- * çünkü vergi tabanı motorun "ödenecek" dediği tutarla aynı olmalı. `settled = false` iken ölçü sipariş edilen adettir.
+ * Bir kalemin ücretlenen tutarı (cent): giden adetten jest adedi çıkar, indirim payı o orana bölünür; sipariş detayının KDV
+ * satırı da bunu kullanır, çünkü vergi tabanı motorun "ödenecek" dediğiyle aynı olmalı. `settled = false` iken ölçü sipariş edilen adettir.
  */
 export function fulfilledLineAmountCents(line: FulfilledLine, settled = true): number {
-  const qty = settled ? line.fulfilledQty : line.orderedQty;
+  const qty = settled ? chargedQty(line) : line.orderedQty;
   if (qty <= 0) return 0;
   const gross = line.unitPriceCents * qty;
   const discountShare = line.lineDiscountCents
@@ -113,7 +115,12 @@ export function fulfilledLineAmountCents(line: FulfilledLine, settled = true): n
   return gross - discountShare;
 }
 
-/** Karşılanan tutar: kalemlerin giden kısmı, en az bir kalem gittiyse kargo da. */
+/** Müşteride kalan mal jestse parası iade edilmiştir; o adet stokta ve maliyette gitmiş sayılır ama ücretlenmez (DOMAIN §8). */
+function chargedQty(line: FulfilledLine): number {
+  return line.fulfilledQty - (line.goodwillQty ?? 0);
+}
+
+/** Karşılanan tutar: kalemlerin ücretlenen kısmı, ücretlenen kalem varsa kargo da. */
 function fulfilledAmount({ lines, shippingFeeCents = 0, fulfillmentSettled = true, orderTotalCents }: PaymentDerivationInput): number {
   // Hazırlık kesinleşmediyse cevap siparişin ANLAŞILAN toplamıdır — indirim ve kargo zaten içinde.
   // Kalemlerden yeniden toplamak, aynı gerçeği ikinci bir yoldan hesaplamak olurdu.
@@ -123,12 +130,12 @@ function fulfilledAmount({ lines, shippingFeeCents = 0, fulfillmentSettled = tru
   let anyFulfilled = false;
 
   for (const line of lines) {
-    const qty = fulfillmentSettled ? line.fulfilledQty : line.orderedQty;
+    const qty = fulfillmentSettled ? chargedQty(line) : line.orderedQty;
     if (qty <= 0) continue;
     anyFulfilled = true;
     total += fulfilledLineAmountCents(line, fulfillmentSettled);
   }
 
-  // Hiçbir kalem gitmediyse kargo hizmeti de değersizdir → karşılanan tutara girmez, iade edilir.
+  // Ücretlenen kalem yoksa kargo da ücretlenmez: hiçbir şey gitmediyse hizmet verilmemiştir, her şey jestse para tamamen döner.
   return anyFulfilled ? total + shippingFeeCents : total;
 }
