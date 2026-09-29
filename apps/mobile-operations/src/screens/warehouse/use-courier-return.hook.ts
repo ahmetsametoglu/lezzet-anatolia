@@ -9,33 +9,11 @@ import { warehouseCopy } from './copy';
 import { trackWarehouse } from './warehouse-status';
 
 /*
-  D6 · KURYE DÖNÜŞÜ KABULÜ — `/courier-return`. Tasarım: v3:14 + "D6 Rampa Listesi" (04.09).
+  D6 · Kurye dönüşü kabulü — `/courier-return`. Liste kurye eksenlidir: para sefer başına, mal kurye başına kapanır ve
+  araç bir kez boşalır; satır sefere bağlansaydı aynı aracın serbest ürünü iki kez sayılırdı.
 
-  ── LİSTE KURYE EKSENLİ, SEFER EKSENLİ DEĞİL ────────────────────────────────
-  Para SEFER başına kapanır (kuryenin kendi ekranından, her sefer ayrı); MAL kurye başına teslim
-  alınır. Ayrım fiziksel: araç bir yerdedir ve o gün tek kuryenin yükünü taşır, yani iki sefer
-  sürmüş kurye rampaya BİR KEZ döner ve araç BİR KEZ boşalır. Satırı sefere bağlasaydık aynı aracın
-  serbest ürünü iki satırda iki kez sayılırdı.
-
-  ── FIXTURE ÖLDÜ (04.09) ────────────────────────────────────────────────────
-  Ekran 08.08'den 04.09'a kadar kod içine yazılmış TEK bir dökümle açılıyordu (`Musa K.`,
-  `LZA-26-9Q2B`): sunucudaki okuma ucu aynı gün yazılmıştı ama istemci onu hiç çağırmıyordu. Kayıt
-  gerçekti, döküm değildi — uydurma kimlik yüzünden kapı `not_found` dönüyordu ve ekran o reddi
-  gösteriyordu. Şimdi üçü de gerçek: liste, döküm, kayıt.
-
-  ── MİKTAR HEDEF DEĞERDİR, FARK DEĞİL ───────────────────────────────────────
-  v2 birebir: *"Miktar hedef değer olarak girilir; fark sistemde hesaplanır."* Sözleşme bunu taşıyor
-  (`FulfillmentAdjustment.fulfilledQty` = kalemin KALAN karşılanan adedi) ve bu ekran ondan çıkarma
-  YAPMAZ — yapsaydı aynı hesap iki yerde olurdu ve ikisi bir gün ayrışırdı. Hedef değer akıbetten
-  TÜRER: `restock`/`discard` → mal geri geldi, karşılanan adet **0**; `goodwill` → mal müşteride
-  KALDI, adet **değişmez**.
-
-  ── TEK DOKUNUŞ, İKİ YAZIM VE SIRASI ────────────────────────────────────────
-  CTA önce AKIBETLERİ yazar (sipariş başına `POST /returns/:orderId`), sonra MALI devreder
-  (`POST /courier-return/:courierId`). Sıra bilinçli: akıbet yazımı stoktan bağımsızdır ve
-  düşmez; devir düşerse (`not_enough`/`stuck`) akıbetler yazılmış kalır — mal zaten rampada ve
-  kaydı geciktirmenin bir faydası yok. Ters sırada, tek bir sipariş yüzünden bütün devri geri
-  almak gerekirdi.
+  Miktar hedef değerdir, fark değil; hedef akıbetten türer ve bu ekran çıkarma yapmaz. CTA önce akıbetleri (sipariş başına),
+  sonra malı yazar: devir düşerse akıbetler yazılı kalır, tek sipariş yüzünden bütün devri geri almak gerekmez.
 */
 
 const t = warehouseCopy;
@@ -75,8 +53,8 @@ interface UseCourierReturnResult {
 }
 
 /**
- * Akıbet → HEDEF adet. Jestte mal müşteride kaldığı için karşılanan adet değişmez; iade ve imhada
- * mal geri geldiği için sıfırlanır. Tek satır ama kaydın anlamı bu satırda — kendi testi var.
+ * Akıbet → hedef adet: jestte mal müşteride kaldığı için karşılanan adet değişmez, iade ve imhada mal geri geldiği için
+ * sıfırlanır. Kaydın anlamı bu satırda, kendi testi var.
  */
 export function targetQtyOf(disposition: ReturnDisposition, deliveredQty: number): number {
   return disposition === 'goodwill' ? deliveredQty : 0;
@@ -144,10 +122,8 @@ export function useCourierReturn(): UseCourierReturnResult {
       setCounts({});
       setNotice(null);
 
-      // `select(null)` LİSTEYE DÖNÜŞTÜR. Kuryesiz küme de bir seçimdir ama kimliği `null` olduğu
-      // için bu imzayla ifade edilemez — onun kapısı `UNASSIGNED_RETURNS` dizgesi (dışarıya açılan
-      // `select` onu ayırıyor). İki ayrı niyeti tek `null`a bindirmek, geri tuşuyla kuryesiz kümeyi
-      // aynı çağrı yapardı.
+      // `select(null)` listeye dönüştür; kuryesiz kümenin kapısı `UNASSIGNED_RETURNS` dizgesidir. İki niyeti tek `null`a
+      // bindirmek geri tuşuyla kuryesiz kümeyi aynı çağrı yapardı.
       if (courierId === null) {
         selectedRef.current = null;
         setDetail(null);
@@ -190,16 +166,8 @@ export function useCourierReturn(): UseCourierReturnResult {
   }, []);
 
   /*
-    Sayaç ARAÇTA KAYITLI adetle açılır (para satırlarının deseni, v3:14): normal günde fark sıfırdır
-    ve depocuya kutuları elle doldurtmak, doğru olanı yazmak için emek isteyip yanlış olanı sessizce
-    geçirir.
-
-    ── SÜRÜLEN SEFERDE VARSAYILAN SIFIR (kusur, ölçüldü 04.09) ─────────────────
-    Kurye bir seferi SÜRÜYORSA araç bugün boşalmaz: araçtaki malın çoğu yola devam edecek. Kutular
-    yine de araçtaki her şeyle dolu açılıyordu, yani tek dokunuş yola çıkacak kuryenin malını
-    elinden alıyordu — ekran uyarıyor ama varsayılan uyarının tersini yapıyordu. Artık sıfırdan
-    başlar: depocu FİİLEN indirileni sayar. Sayılmayan mal araçta kalır (devir yazılmaz), ki
-    doğrusu da odur.
+    Sayaç araçta kayıtlı adetle açılır, normal günde fark sıfırdır. Kurye bir seferi sürüyorsa araç bugün boşalmaz ve sayaç
+    sıfırdan açılır: depocu fiilen indirileni sayar, sayılmayan mal araçta kalır.
   */
   const countOf = useCallback(
     (variantId: string): number => {
@@ -270,10 +238,8 @@ export function useCourierReturn(): UseCourierReturnResult {
                 ? t.common.networkError
                 : fillCopy(t.common.serverError, { error: written.error }),
           });
-          /* EKRAN BAYAT KALMAZ (kusur, ölçüldü 04.09): yarıda kesilen turda ÖNCEKİ siparişler
-             yazılmıştır ama ekran onları hâlâ işaretsiz gösterir; ikinci denemede aynı satırlar
-             yeniden gönderilir ve depocu akıbeti değiştirirse kayıt kendi kendini yalanlar.
-             Tazeleme yazılmış satırları salt-okunur yapar. */
+          /* Ekran bayat kalmaz: yarıda kesilen turda önceki siparişler yazılmıştır ve tazeleme onları salt-okunur yapar,
+             yoksa ikinci denemede aynı satırlar farklı akıbetle yeniden gönderilebilirdi. */
           void openDetail(detail.courierId);
           return;
         }
@@ -357,8 +323,8 @@ export function useCourierReturn(): UseCourierReturnResult {
 
       setSending(false);
       setNotice({ tone, text: parts.join(' ') });
-      // Teslim alınan kurye GERİDE BIRAKILIR: ekran yerinde kalırsa depocu kapattığı işi karşısında
-      // görmeye devam eder ve "yazıldı mı" sorusu ekranla çelişir (kapanış ekranının 01.09 dersi).
+      // Teslim alınan kurye geride bırakılır: ekran yerinde kalırsa depocu kapattığı işi görmeye devam eder ve "yazıldı mı"
+      // sorusu ekranla çelişir.
       selectedRef.current = null;
       setDetail(null);
       setDetailStatus('idle');
@@ -402,8 +368,8 @@ export function useCourierReturn(): UseCourierReturnResult {
 }
 
 /**
- * Akıbet yazımının REDDİ → ekrandaki cümle. Reddin kendisi bir cevaptır, hata değil: `stale` sipariş
- * artık o durumda değildir, `forbidden` kapsam dışıdır, `not_found` kayıt yoktur.
+ * Akıbet yazımının reddi → ekrandaki cümle. Ret bir cevaptır, hata değil: `stale` sipariş o durumda değil, `forbidden`
+ * kapsam dışı, `not_found` kayıt yok.
  */
 function refusalOf(outcome: {
   status: 'forbidden' | 'stale' | 'not_found' | 'already_marked';

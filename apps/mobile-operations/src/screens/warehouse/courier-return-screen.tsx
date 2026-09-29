@@ -26,27 +26,11 @@ import { useSubjectBack } from './use-subject-back.hook';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
-  D6 · KURYE DÖNÜŞÜ KABULÜ (v3:14 + tasarım "D6 Rampa Listesi", 04.09).
+  D6 · Kurye dönüşü kabulü: rampa listesi → bir kuryenin dönüşü; eksen kuryedir, çünkü mal kurye başına devredilir ve
+  araç bir kez boşalır. Araçta kalan yalnız listelenir, dokunulabilir çizmek olmayan bir eylemi varmış gibi gösterirdi.
 
-  ── EKRAN İKİ KATMAN: RAMPA LİSTESİ → BİR KURYENİN DÖNÜŞÜ ───────────────────
-  Liste 04.09'da doğdu. Öncesinde ekran doğrudan TEK kuryeyle açılıyordu ve o kurye kodun içine
-  yazılmıştı — aynı gün iki kurye döndüğünde ekranın verecek cevabı yoktu. Eksen kurye: para sefer
-  başına kapanır, MAL kurye başına devredilir (araç bir yerdedir ve bir kez boşalır).
-
-  ── ÜÇ AKIBET, ÜÇ FARKLI GERÇEK ─────────────────────────────────────────────
-  `restock` malı stoğa geri koyar (**sebep notu zorunlu** — soğuk zincir beyanı, kuralı veri
-  zorlar), `discard` fiiliden düşer, `goodwill` mala DOKUNMAZ (müşteride kaldı) ve yalnız kayıt
-  düşer. Üçü aynı listede satır satır seçilebilir — bir kolinin yarısı iade, yarısı jest olabilir.
-
-  ── ARAÇTA KALAN KABUL EDİLMEZ ──────────────────────────────────────────────
-  Ulaşılamayan durağın kutusu ve araçtaki başka seferlerin yükü yalnız LİSTELENİR: dokunulabilir
-  çizmek, olmayan bir eylemi varmış gibi göstermek olurdu (v2:505 · v3:14).
-
-  ── TASARIMDAN BİLİNÇLİ SAPMA: "alınan · satılan" YAZILMAZ ──────────────────
-  v3:14 her serbest ürün satırında *"araca alınan X · kapıda satılan Y"* yazıyor. Sistem o iki
-  sayıyı ayrı tutmuyor — araç deposundaki adet zaten ikisinin FARKI (`courier/return.ts` künyesi:
-  *"ikinci bir hesap bir gün birincisinden ayrılırdı"*). Satır bu yüzden yalnız araçta KAYITLI
-  adedi söyler. Ekrana yazılamayan bir sayı uydurulmaz (CLAUDE §1).
+  Serbest ürün satırı yalnız araçta kayıtlı adedi söyler: tasarımdaki "alınan · satılan" ikilisini sistem ayrı tutmuyor
+  ve ekrana yazılamayan sayı uydurulmaz (CLAUDE §1).
 */
 
 const t = warehouseCopy;
@@ -63,8 +47,7 @@ export function CourierReturnScreen() {
   const { offline } = useWarehouseStatus();
   const [qtyVariantId, setQtyVariantId] = useState<string | null>(null);
 
-  /* BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI; toast'a
-     basan köprü de 07.09'da BURADAN KALKTI ve `useNotice`ın içine girdi. Gerekçesi orada. */
+  /* Bildirimler toast'a gider; köprü `useNotice`ın içinde, gerekçesi orada. */
 
   const detail = returnState.detail;
   /* Geri: DETAYDAN LİSTEYE, listeden hub'a. Android tuşu ve iOS kaydırması da aynı yolu izler
@@ -143,8 +126,8 @@ export function CourierReturnScreen() {
 
   return (
     <View style={styles.screen} testID="warehouse-courier-return">
-      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — `FormScroll` sarılamadığı için KROM kapısı.
-          Başlık kaydırıcının İÇİNDE: dışarıda kalsaydı mikro şerit inince altında asılı kalırdı. */}
+      {/* Kabuk davranışları tek kapıdan: `FormScroll` sarılamadığı için krom kapısı. Başlık kaydırıcının içinde, dışarıda
+          kalsaydı mikro şerit inince altında asılı kalırdı. */}
       <OperationsScreenChrome
         title={detail === null ? t.return.title : (detail.courierName ?? t.return.orphanName)}
         caption={operationsCopy.sections.warehouse.tab}
@@ -182,9 +165,8 @@ export function CourierReturnScreen() {
                     <Text style={styles.written} testID={`warehouse-return-written-${line.orderItemId}`}>
                       {fillCopy(t.return.written, { disposition: t.return.disposition[written] })}
                     </Text>
-                    {/* BEYAN GERİ OKUNUR (04.09): "stoğa dön"de zorunlu tutulan soğuk zincir cümlesi
-                        artık kaleme yazılıyor. Görünmezse zorunluluk bir forma doldurma töreni olur;
-                        depocu ne beyan ettiğini kendi satırında görmeli. */}
+                    {/* Beyan geri okunur: görünmezse zorunlu not bir form töreni olurdu, depocu ne beyan ettiğini satırda
+                        görmeli. */}
                     {line.note === null || line.note.length === 0 ? null : (
                       <Text style={styles.rowSub} testID={`warehouse-return-written-note-${line.orderItemId}`}>
                         {fillCopy(t.return.writtenNote, { note: line.note })}
@@ -206,12 +188,8 @@ export function CourierReturnScreen() {
                       ))}
                     </View>
 
-                    {/*
-                      SONUÇLAR SEÇİMDEN ÖNCE (v3:1244) — üç akıbetin bedeli düğmelerin ALTINDA, her
-                      zaman yazılı. Eskiden ipucu ancak seçildikten SONRA çıkıyordu ve "İmha: parti
-                      düşer" hiç yazmıyordu: depocu partinin düşeceğini öğrenmeden imhayı
-                      seçebiliyordu.
-                    */}
+                    {/* Üç akıbetin bedeli seçimden önce, düğmelerin altında her zaman yazılı: depocu partinin düşeceğini
+                        öğrenmeden imhayı seçmemeli. */}
                     <View style={styles.hintBlock} testID={`warehouse-return-hint-${line.orderItemId}`}>
                       <Text style={styles.rowSub}>{t.return.dispositionHint.rules}</Text>
                       <Text style={styles.rowSub}>{t.return.dispositionHint.goodwill}</Text>
@@ -241,8 +219,7 @@ export function CourierReturnScreen() {
         {detail.freeGoods.length === 0 ? null : (
           <>
             <Text style={styles.heading}>{t.return.freeGoodsHeading}</Text>
-            {/* SÜRÜLEN SEFERDE DEVİR YOK (04.09): araç bugün boşalmıyor, sayaçlar sıfırdan açılıyor
-                ve sebebi burada yazılı — uyarı varken varsayılanın tersini yapması kusurdu. */}
+            {/* Sürülen seferde devir yok: araç bugün boşalmıyor, sayaçlar sıfırdan açılıyor ve sebebi burada yazılı. */}
             {detail.drivingRuns === 0 ? null : (
               <Text style={[styles.rowSub, styles.holdNote]} testID="warehouse-return-driving-hold">
                 {t.return.drivingHold}
@@ -293,13 +270,8 @@ export function CourierReturnScreen() {
               ))}
               {detail.boxesStay.map((card) => (
                 <View key={card.orderId} style={[styles.boxRow, styles.boxStay]} testID={`warehouse-return-box-stay-${card.orderId}`}>
-                  {/*
-                    KİMLİK SEBEBE GÖRE DEĞİŞİR (cihazda görüldü 04.09) — satır sefer kodunu yazıyordu
-                    ve ULAŞILAMAYAN kutuda bu yanlış: o kutu bir MÜŞTERİNİN, depocunun rampada
-                    ayırması gereken şey de o. Sefer kodu yalnız "başka seferin yükü" satırında
-                    doğru cevap, çünkü orada ayırt edici olan sefer (v3:14 de ikisini böyle çiziyor:
-                    ulaşılamayanı sipariş referansıyla, öteki seferi `SF-…` ile anıyor).
-                  */}
+                  {/* Kimlik sebebe göre değişir: ulaşılamayan kutu bir müşterinindir ve sipariş referansıyla anılır, sefer
+                      kodu yalnız "başka seferin yükü" satırında ayırt edicidir. */}
                   <Text style={styles.boxName}>
                     {card.reason === 'other_run' && card.runReferenceNo !== null
                       ? card.runReferenceNo
@@ -426,9 +398,8 @@ function listCaptionOf(couriers: readonly ReturningCourierContract[]): string | 
 }
 
 /**
- * Detay künyesi: plaka ve sürülen sefer. ~~"rota kapandı"~~ KALKTI (04.09) — teslim alma kurye
- * eksenli, kapanış sefer eksenli; kapanmamış seferi olan kurye de mal teslim eder, yani o cümle
- * ekranda her zaman doğru değildi (CLAUDE §1: doğrulanamayan bilgi yazılmaz).
+ * Detay künyesi: plaka ve sürülen sefer. "Rota kapandı" yazılmaz: teslim alma kurye eksenli, kapanış sefer eksenli;
+ * kapanmamış seferi olan kurye de mal teslim eder.
  */
 function detailSubtitleOf(detail: { vehicleLabel: string | null; drivingRuns: number }): string | undefined {
   const parts = [
@@ -536,7 +507,7 @@ const styles = StyleSheet.create({
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
   },
-  /** Detayın satırı da KART (D5'in 04.09 kararı): çizgiyle ayrılan satır künyeye karışıyordu. */
+  /** Detayın satırı da kart: çizgiyle ayrılan satır künyeye karışıyordu. */
   lineRow: {
     gap: operationsTheme.space.sm,
     backgroundColor: operationsTheme.colors.panel,
@@ -661,7 +632,7 @@ const styles = StyleSheet.create({
   },
   ctaReady: {
     backgroundColor: operationsTheme.colors.ink,
-    // Gölge YOK: v3'te sert gölge sıfır kez geçiyor (ölçüldü — v2'de 3, v3'te 0).
+    // Gölge yok: tasarımda sert gölge kullanılmıyor.
   },
   ctaIdle: { backgroundColor: operationsTheme.colors['disabled-fill'] },
   ctaLabel: {
