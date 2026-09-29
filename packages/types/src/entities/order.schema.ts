@@ -304,7 +304,7 @@ export type PreparationPick = z.infer<typeof PreparationPickSchema>;
 export const PreparationResultSchema = z.object({ ok: z.boolean(), items: z.number().int() });
 export type PreparationResult = z.infer<typeof PreparationResultSchema>;
 
-/** `deliver_order` dönüşü (07.7) — `ok:false` + `stale` = sipariş artık yolda değil. */
+/** `deliver_order` dönüşü — `ok:false` + `stale` = sipariş yolda değil. */
 export const DeliverResultSchema = z.object({
   ok: z.boolean(),
   reason: z.literal('stale').optional(),
@@ -376,7 +376,7 @@ export const DeliverWithAdjustmentsResultSchema = FulfillmentResultSchema.extend
 });
 export type DeliverWithAdjustmentsResult = z.infer<typeof DeliverWithAdjustmentsResultSchema>;
 
-/** `cancel_order` dönüşü (07.9) — `stale` = sipariş artık o durumda değil. */
+/** `cancel_order` dönüşü — `stale` = sipariş o durumda değil. */
 export const CancelResultSchema = z.object({
   ok: z.boolean(),
   reason: z.literal('stale').optional(),

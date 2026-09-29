@@ -21,34 +21,10 @@ import {
 } from '../primitives/enums.schema';
 
 /**
- * Depo SÖZLEŞME şemaları (21.11) — mobil `/api/v1/warehouse/*` uçlarının ve onları tüketen "Depo"
- * bölümünün (D1 · D2 · D4 · D5 · D6) ORTAK dili.
- *
- * Gerekçe `courier-api.schema.ts` ile aynı (02-mimari §3.2 "sözleşme tek kaynak"): şema uçta
- * yaşarken istemci ya kendi tipini elle yazar (ikinci sözleşme) ya da hiç doğrulamaz.
- *
- * ── ALANLAR `@lezzet/application`IN DEPO KAPILARININ AYNASIDIR ────────────────
- * Kaynak `packages/application/src/warehouse/{preparation,intake,adjustment,transfer}.ts` ve D6
- * için `order/refund.ts`. Uç, orkestrasyonun döndürdüğü şekli **indirgemez, yeniden adlandırmaz,
- * alan eklemez**. Buradaki her alanın bugün gerçekten taşınan bir davranışı vardır; ileride
- * gerekebilecek hiçbir alan şimdiden açılmadı — hub sayaçları ve D3 (yakın-SKT) listesi burada
- * YOK, çünkü karşılıkları henüz bir kapıda değil.
- *
- * ── `warehouseId` HİÇBİR İSTEK GÖVDESİNDE YOK, VE BU BİR KARAR ───────────────
- * Kapıların hepsi depo kimliğini ZORUNLU parametre alır (CLAUDE.md §1: varsayılan depo YOKTUR) ama
- * o kimlik **jetondan/personelin sabit deposundan** gelir, gövdeden değil. Gövdeye konsaydı depocu
- * başka deponun kimliğini yazıp onun malını düşebilirdi — yetkilendirme, doğrulanmamış bir girdiye
- * dayanamaz. (Sevkin HEDEF deposu istisnadır: o bir iş verisi, kimlik değil.)
- *
- * ── PARA BU DOSYADAN GEÇMEZ (D6 hariç, ve gerekçesiyle) ─────────────────────
- * Depo şemalarında tutar, maliyet, kâr alanı YOKTUR — tasarımın altın kuralı burada veri şeklinde
- * duruyor (v2: *"Depo ekranları fiyat/tutar görmez"*). Tek istisna D6'nın yanıtıdır: kurye dönüşü
- * bir SİPARİŞ düzeltmesidir ve iade tutarını çağıran (yönetim akışı) okur.
- *
- * ── OLUMSUZ SONUÇLAR DA SÖZLEŞMENİN İÇİNDE ──────────────────────────────────
- * `forbidden` / `stale` / `incomplete` / `pinned_violation` birer HATA DEĞİL, cevabın kendisidir ve
- * ekranın göstermesi gerekir. Bu yüzden yanıtlar ayrımlı birleşim (`discriminatedUnion`): taşıdıkları
- * bilgi (hangi parti, hangi satır, hangi durum) bir HTTP koduna indirgenirse kaybolur.
+ * Depo sözleşme şemaları — mobil `/api/v1/warehouse/*` uçlarının ortak dili, alanlar depo kapılarının aynasıdır; `warehouseId`
+ * hiçbir istek gövdesinde yok, çünkü kimlik jetondan gelir ve gövdeden gelseydi depocu başka deponun malını düşebilirdi.
+ * Depo şemalarında tutar yok (tek istisna D6 yanıtı, iade tutarını yönetim akışı okur) ve olumsuz sonuçlar hata değil
+ * cevaptır, bu yüzden yanıtlar ayrımlı birleşimdir.
  */
 
 // ── D1 · Hazırlık (toplama) ─────────────────────────────────────────────────
@@ -59,11 +35,8 @@ export const PreparationSuggestionSchema = z.object({
   qty: z.number().int(),
   expiryDate: z.string(),
   /**
-   * Partinin alanının ADI ("Derin dondurucu 2") — kimliği DEĞİL (19.29).
-   *
-   * Alan artık tanımlı bir kayıt (`storage_area`) ama sözleşme adı taşıyor: depocu rafta bir uuid
-   * aramıyor, tabelayı okuyor. Kimliği göndermek telefona ikinci bir okuma yaptırırdı; ad zaten
-   * sunucuda elimizde. Alan adı depo içinde benzersiz, yani ad burada da tekil bir işaret.
+   * Partinin alanının adı ("Derin dondurucu 2"), kimliği değil: depocu rafta uuid aramıyor, tabelayı okuyor. Alan adı depo
+   * içinde benzersizdir.
    */
   areaName: z.string().nullable(),
 });
@@ -77,47 +50,22 @@ export const PreparationLineSchema = z.object({
   /** "500 g" gibi boy etiketi; tek boylu üründe boş dize. */
   variantLabel: z.string(),
   /**
-   * **Ürün kapağının public URL'i** (kullanıcı isteği 31.08) — `null` = kapaksız ürün, ekran iki
-   * harflik monograma düşer.
-   *
-   * EK OKUMA İSTEMİYOR: kuyruk zaten `variantNames`i çağırıyor ve o fonksiyon `imageUrl`i çoktan
-   * çözüyor (mal kabulün okutma çekmecesi için yazılmıştı, `names.ts`). Alan yalnız taşınmıyordu.
-   *
-   * Niçin gerekli: toplama artık OKUTMA eksenli — depocu satırı listede aramıyor, okutuyor. Ama
-   * kontrol listesinde "ne kaldı" sorusuna bakarken aynı ürünün iki boyu (225 g / 450 g) yan yana
-   * duruyor ve metin ayırt etmeye yetmiyor; arama çekmecesinde ölçülen ihtiyacın aynısı (30.08).
+   * Ürün kapağının public URL'i — `null` = kapaksız ürün, ekran monograma düşer. Okutma eksenli toplamada aynı ürünün iki
+   * boyu yan yana durur ve metin ayırt etmeye yetmez.
    */
   imageUrl: z.string().nullable(),
   /**
-   * Kalemin PAKET barkodu; `null` = barkodu girilmemiş ürün.
-   *
-   * Kamerasız turun simülasyon çiplerini bu siparişin ÜRÜNLERİNE bağlar (kullanıcı isteği 31.08):
-   * okutucu açıldığında çipler ürün adıyla ve GERÇEK kodla çiziliyor. Kısa devre yok — çipe basmak
-   * `/codes/resolve`'un aynı yolundan geçiyor, yani simülasyonla bulunan arıza cihazda da tekrar
-   * eder (`dev-scan-pool.ts` künyesinin kuralı).
+   * Kalemin paket barkodu; `null` = barkodu girilmemiş ürün. Kamerasız turun simülasyon çipleri siparişin gerçek kodlarıyla
+   * çizilir ve `/codes/resolve`ın aynı yolundan geçer, simülasyonda bulunan arıza cihazda da tekrar eder.
    */
   barcode: z.string().nullable(),
   orderedQty: z.number().int(),
   /** Daha önce toplanmış adet — **yarım iş sürer**, ekran kaldığı yerden devam eder. */
   pickedQty: z.number().int(),
   /**
-   * Kalemin ŞU ANDA yazılı parti dağılımı (21.11d) — boş dizi = henüz hiç toplanmamış.
-   *
-   * ── NEDEN ŞEKİL YAZIM ŞEMASININ AYNISI ──────────────────────────────────────
-   * Alan `PreparationPickSchema.shape.batches`ten TÜRER, elle yazılmaz: yazım sözleşmesi absolüttür
-   * (`record_preparation`, 0015 künyesi — *"önceki parti kaydı tamamen yenisiyle değişir"*), yani
-   * ekranın göndereceği dizi bu dizinin devamıdır. İki şekli ayrı tanımlamak, aynı kalemi iki dilde
-   * konuşmak ve bir gün ayrışmalarına izin vermek olurdu.
-   *
-   * ── NE ÇÖZÜYOR ──────────────────────────────────────────────────────────────
-   * Bu alan olmadan yarım kalmış bir kalemin eski dağılımı ekrandan yeniden ÜRETİLEMİYORDU: adet
-   * alanı "toplam kaç topladım"ı değil "bu kayıtla kaç yazıyorum"u sormak zorunda kalıyor,
-   * varsayılanı 0 oluyordu (mobil `use-preparation.hook.ts` künyesi). Dağılım gelince alan
-   * kümülatife döner — ve kritik olan şu: eksik kalanı "ilk öneri partisine" eklemek parti atamasını
-   * TAHMİN etmek olurdu; geri çağırmanın dayandığı kayıt tahminle yazılmaz.
-   *
-   * `suggestion` ile karıştırılmaz: o motorun ÖNERİSİ (ne alınmalı), bu depocunun YAZDIĞI gerçek
-   * (ne alınmış). İkisi çakışmak zorunda değil — depocu öneriden sapabilir (DOMAIN §4).
+   * Kalemin şu anda yazılı parti dağılımı — boş dizi = henüz toplanmamış; şekil yazım şemasından türer, çünkü yazım
+   * absolüttür ve ekranın göndereceği dizi bunun devamıdır. Yarım kalmış kalemin dağılımı tahminle yeniden kurulmaz;
+   * `suggestion` motorun önerisidir, bu ise depocunun yazdığı gerçek.
    */
   pickedBatches: PreparationPickSchema.shape.batches,
   /** Doluysa öneri değil ZORUNLULUK: indirimli teklif kalemi yalnız bu partiden verilebilir. */
@@ -129,9 +77,8 @@ export const PreparationLineSchema = z.object({
 export type PreparationLineContract = z.infer<typeof PreparationLineSchema>;
 
 /**
- * Siparişin bir kutusu — kuyrukla birlikte gelir (23.6). `sealedAt null` = açık kutu (masada
- * dolduruluyor). `items` kutuya KONMUŞ kalemlerdir: mobil ekran "bu kalemden kaç adet zaten
- * kutulandı"yı bundan türetir, web paneli yalnız sayar ("2 kutu · 1 kapalı").
+ * Siparişin bir kutusu — `sealedAt null` = açık kutu. `items` kutuya konmuş kalemlerdir; mobil "bu kalemden kaç adet
+ * kutulandı"yı bundan türetir, web yalnız sayar.
  */
 export const PreparationBoxSchema = z.object({
   boxId: z.string().uuid(),
@@ -141,10 +88,8 @@ export const PreparationBoxSchema = z.object({
   sealedAt: z.string().nullable(),
   items: z.array(z.object({ orderItemId: z.string().uuid(), qty: z.number().int().positive() })),
   /**
-   * Hangi KARGO KUTUSU tipiyle açıldı (07.12) — `null` = tip seçilmedi (rota kulvarı ya da
-   * seçimden önce açılmış kutu). Yalnız kimlik taşınır, ADI değil: ekran zaten kutu tipleri
-   * listesini okuyor (`GET /warehouse/shipping-boxes`) ve adı ikinci kez göndermek aynı bilgiyi
-   * iki kaynaktan taşımak olurdu — biri bir gün ötekiyle çelişirdi.
+   * Hangi kargo kutusu tipiyle açıldı — `null` = tip seçilmedi. Yalnız kimlik taşınır: ekran kutu tiplerini zaten okuyor,
+   * adı ikinci kez göndermek aynı bilgiyi iki kaynaktan taşımak olurdu.
    */
   shippingBoxId: z.string().uuid().nullable(),
 });
@@ -156,20 +101,14 @@ export const PreparationOrderSchema = z.object({
   referenceNo: z.string().nullable(),
   /** Koli etiketi için AD; iletişim ve adres okunmaz. */
   customerName: z.string(),
-  /**
-   * Adrese GİDEN kişi — koliye yazılacak ad (kullanıcı kararı 21.08; kapı künyesi
-   * `preparation.ts:recipientName`). `null` = adreste alıcı yazılı değil, ekran müşteri adını
-   * kullanır. Kapı alanı zaten dolduruyordu; sözleşmeye 23.3 turunda girdi (mobil şeridin
-   * işareti: alan yazılıyor ama D1'e hiç ulaşmıyordu).
-   */
+  /** Adrese giden kişi — koliye yazılacak ad; `null` = adreste alıcı yazılı değil, ekran müşteri adını kullanır. */
   recipientName: z.string().nullable(),
   channel: ChannelEnum,
   status: OrderStatusEnum,
   deliveryDate: z.string().nullable(),
   /**
-   * Hangi kulvar — `shipping` ise sipariş taşıyıcıya verilecek (07.12). Ekran bunu kutu tipi
-   * SORULACAK MI sorusu için okuyor: rota siparişinde kargo kutusu seçimi anlamsızdır (kutu
-   * araca biner, taşıyıcıya değil) ve sormak depocuya cevabı olmayan bir soru sormaktır.
+   * Hangi kulvar — ekran bunu kutu tipi sorulacak mı diye okur: rota siparişinde kutu araca biner ve kargo kutusu sormak
+   * cevabı olmayan bir sorudur.
    */
   deliveryType: DeliveryTypeEnum,
   lineCount: z.number().int(),
@@ -198,12 +137,8 @@ export const ConfirmPreparationRequestSchema = z.object({
 export type ConfirmPreparationRequest = z.infer<typeof ConfirmPreparationRequestSchema>;
 
 /**
- * Eksik kalan kalemin motor tavsiyesi — **tutar taşımaz** (depocu parayı görmez; motor tutarı yalnız
- * KARAR girdisi olarak alır).
- *
- * Değerler `domain-core/stock/shortfall`ın aynası. Zod karşılığı burada yeniden yazılıyor çünkü
- * `@lezzet/types` motoru BİLMEZ (bağımlılık tek yönlü: domain-core → types). Ayrışma riski
- * ölçülebilir: iki liste de küçük ve ikisi de tek yerde duruyor.
+ * Eksik kalan kalemin motor tavsiyesi — tutar taşımaz, depocu parayı görmez. Değerler `domain-core/stock/shortfall`ın
+ * aynasıdır; `@lezzet/types` motoru bilmediği için burada yeniden yazılır.
  */
 export const ShortfallSuggestionSchema = z.object({
   action: z.enum(['ask_customer', 'send_rest']),
@@ -224,10 +159,7 @@ export const ConfirmPreparationResponseSchema = z.discriminatedUnion('status', [
   }),
   /** Kilitli kalem başka partiden verilmek istendi — HİÇBİR yazım yapılmadı. */
   z.object({ status: z.literal('pinned_violation'), itemId: z.string().uuid(), requiredStockId: z.string().uuid() }),
-  /**
-   * **Kargo siparişi kutusuz onaylanamaz** (kullanıcı kararı 28.08). Ölçü ve ağırlık kutu
-   * tipinden geliyor; kutusuz kapanan sipariş "hazır" görünüp sevk edilemez hâlde kalırdı.
-   */
+  /** Kargo siparişi kutusuz onaylanamaz: ölçü ve ağırlık kutu tipinden gelir, kutusuz sipariş sevk edilemez kalırdı. */
   z.object({ status: z.literal('box_required') }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   z.object({ status: z.literal('not_found') }),
@@ -237,15 +169,8 @@ export type ConfirmPreparationResponse = z.infer<typeof ConfirmPreparationRespon
 // ── D1 · Kutu döngüsü (23.6 — karar §1.4) ───────────────────────────────────
 
 /**
- * **KARGO KUTUSU SEÇENEĞİ** (07.12) — deponun benimsediği dış kutu tiplerinden biri.
- *
- * Varyantın kendi ambalajıyla karıştırılmaz: `packed_*` "bu ürün paketiyle ne kadar yer kaplar"
- * der, bu ise "onları içine koyduğumuz kutu ne" der (`ShippingBoxSchema` künyesi).
- *
- * Ölçüler depocuya BİLGİ olarak taşınıyor, karar olarak değil: liste kısa ve fiziksel kutular
- * birbirine benziyor — "40×30×25" satırı, adı ezberlememiş depocunun elindekini tanımasını
- * sağlar. Sözleşme sistem şablonlarını HİÇ taşımaz (yalnız deponun benimsedikleri gelir);
- * şablon seçilemez, benimsenir (Depolar ekranının işi).
+ * Kargo kutusu seçeneği — deponun benimsediği dış kutu tiplerinden biri; varyantın ambalajıyla karışmaz. Ölçüler depocuya
+ * bilgi olarak taşınır ki elindeki kartonu tanısın; sistem şablonları gelmez, yalnız benimsenenler.
  */
 export const ShippingBoxOptionSchema = z.object({
   id: z.string().uuid(),
@@ -265,16 +190,8 @@ export const ShippingBoxesResponseSchema = z.object({ boxes: z.array(ShippingBox
 export type ShippingBoxesResponse = z.infer<typeof ShippingBoxesResponseSchema>;
 
 /**
- * Kutu açılış gövdesi — TEK alan ve o da isteğe bağlı.
- *
- * Gövde 23.6'da bilerek YOKTU (*"kutunun içeriği doğumda yoktur"*) ve o gerekçe hâlâ geçerli:
- * burada gelen şey içerik değil, kutunun FİZİKSEL KİMLİĞİ — depocunun eline aldığı karton.
- * Kargo kulvarında gönderi ağırlığı ve ölçüsü bundan çıkıyor, yani seçim sipariş açılışında
- * yapılmazsa duyuru anında tahmine düşülürdü (§4.4).
- *
- * `null` meşru: rota siparişinde kutu tipi sorulmaz ve kargo siparişinde de depo hiç kutu
- * benimsememiş olabilir. Eksik ölçü SIFIR değildir — duyuru kapısı ölçüsüz kutuyu ön koşulda
- * durdurur ve sebebini söyler.
+ * Kutu açılış gövdesi — tek, isteğe bağlı alan: kutunun fiziksel kimliği; kargo ağırlık ve ölçüsü bundan çıkar. `null`
+ * meşrudur: rota siparişinde tip sorulmaz, depo hiç kutu benimsememiş olabilir.
  */
 export const OpenBoxRequestSchema = z.object({
   shippingBoxId: z.string().uuid().nullable().default(null),
@@ -282,13 +199,8 @@ export const OpenBoxRequestSchema = z.object({
 export type OpenBoxRequest = z.infer<typeof OpenBoxRequestSchema>;
 
 /**
- * Kutu açılışının cevabı. `stale` bir hata değil cevabın kendisidir: sipariş artık toplanabilir
- * durumda değil (araya biri girdi — teslim edildi, iptal oldu) ve ekran hangi durumda olduğunu
- * söyleyebilmeli.
- *
- * `unknown_box` ayrı bir daldır ve `not_found`a katlanmaz: sipariş duruyor, KUTU TİPİ geçersiz
- * (başka deponun kutusu ya da kapatılmış bir tip). İkisi tek cevaba indirgenseydi depocu var olan
- * bir siparişi yok sanardı — ve gerçek çare listeyi tazelemek olurdu.
+ * Kutu açılışının cevabı: `stale` sipariş toplanabilir durumda değil demektir, ekran hangi durumda olduğunu söyler.
+ * `unknown_box` `not_found`a katlanmaz: sipariş duruyor, geçersiz olan kutu tipidir.
  */
 export const OpenBoxResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('ok'), box: PreparationBoxSchema }),
@@ -299,14 +211,11 @@ export const OpenBoxResponseSchema = z.discriminatedUnion('status', [
 ]);
 export type OpenBoxResponse = z.infer<typeof OpenBoxResponseSchema>;
 
-// ── D1 · Sevk: teklif + duyuru (07.12) ──────────────────────────────────────
+// ── D1 · Sevk: teklif + duyuru ─────────────────────────────────────────────
 
 /**
- * **SEVKİN ÖN KOŞULU TUTMADI** — teklif ve duyuru AYNI kümeyi paylaşır.
- *
- * Hepsi adlı, çünkü depocunun sorusu "olmadı" değil **"neden olmadı"**: ölçüsüz mal tartıya
- * gider, tipsiz kutu ekrandan seçilir, adressiz sipariş yönetime sorulur. Tek bir `error`a
- * indirgemek, üç ayrı işi tek bir çıkmaza çevirirdi.
+ * Sevkin ön koşulu tutmadı — teklif ve duyuru aynı kümeyi paylaşır. Hepsi adlıdır, çünkü depocunun sorusu "neden olmadı":
+ * ölçüsüz mal tartıya, tipsiz kutu seçime, adressiz sipariş yönetime gider.
  */
 export const DispatchBlockSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('not_found') }),
@@ -333,7 +242,7 @@ export const DispatchOptionSchema = z.object({
   carrierName: z.string(),
   name: z.string(),
   priceCents: z.number().int().positive(),
-  /** Teslim süresi; **`null` yaygın bir hâl** — bazı taşıyıcılar bildirmiyor (ölçüldü 28.08). */
+  /** Teslim süresi; `null` yaygındır, bazı taşıyıcılar bildirmiyor. */
   leadTimeHours: z.number().int().nullable(),
   lastMile: z.string().nullable(),
   tracked: z.boolean(),
@@ -341,10 +250,8 @@ export const DispatchOptionSchema = z.object({
 export type DispatchOptionContract = z.infer<typeof DispatchOptionSchema>;
 
 /**
- * `GET /warehouse/orders/:orderId/dispatch-options` — GERÇEK kolilere göre teklif.
- *
- * Checkout'un teklifinden farkı girdisi: orası sepetten bir plan kurar, burası depoda
- * MÜHÜRLENMİŞ kutuları ölçer. Sevk anında bağlayıcı olan ikincisidir.
+ * `GET /warehouse/orders/:orderId/dispatch-options` — gerçek kolilere göre teklif; checkout sepetten plan kurar, burası
+ * mühürlenmiş kutuları ölçer ve sevkte bağlayıcı olan budur.
  */
 export const DispatchOptionsResponseSchema = z.discriminatedUnion('status', [
   z.object({
@@ -354,15 +261,8 @@ export const DispatchOptionsResponseSchema = z.discriminatedUnion('status', [
     /** Koli + dara toplamı (g) — ekran "3 koli · 7,4 kg" diyebilsin diye. */
     totalWeightG: z.number().int().nonnegative(),
     /**
-     * **Liste "yalnız adrese teslim"e DARALTILDI mı** (kullanıcı kararı 29.08 · Faz 2).
-     *
-     * Ücretsiz kargoda parayı biz ödüyoruz, koli EVE gider ve teslimat noktası seçenekleri
-     * `quoteOrderShipment` içinde eleniyor. Bayrak o eleme yapıldığında `true`.
-     *
-     * **Sözleşmeye taşınmasının sebebi ölçülmüş bir sessizlik:** motor bu bayrağı 29.08'den beri
-     * üretiyordu ama şemada karşılığı yoktu ve `.parse` onu her cevapta siliyordu — depocu
-     * daraltılmış listeye TAM liste diye bakıyordu. Eksik listenin en kötü hâli, eksik olduğunu
-     * söylemeyendir: liste boş kaldığında sebep "multicollo eledi" sanılırdı.
+     * Liste "yalnız adrese teslim"e daraltıldı mı: ücretsiz kargoda teslimat noktaları elenir. Bayrak taşınmazsa depocu
+     * daraltılmış listeye tam liste diye bakardı.
      */
     homeOnly: z.boolean(),
     /** Servis ödeme anında seçildi: liste tek satırdır, depocu değiştiremez. */
@@ -372,7 +272,7 @@ export const DispatchOptionsResponseSchema = z.discriminatedUnion('status', [
     /** Checkout'un planladığı koli sayısı; plan yoksa `null`. */
     plannedParcelCount: z.number().int().positive().nullable(),
   }),
-  /** Siparişin servisi gerçek kolilerle alınamıyor: artık sunulmuyor ya da çok koli taşımıyor. */
+  /** Siparişin servisi gerçek kolilerle alınamıyor: sunulmuyor ya da çok koli taşımıyor. */
   z.object({
     status: z.literal('selection_unusable'),
     reason: z.enum(['not_offered', 'multicollo']),
@@ -419,20 +319,15 @@ export const AnnounceShipmentResponseSchema = z.discriminatedUnion('status', [
 export type AnnounceShipmentResponse = z.infer<typeof AnnounceShipmentResponseSchema>;
 
 /**
- * **DEVİR OKUTMASI** (07.12) — kutu fiziksel olarak taşıyıcıya verildi.
- *
- * Gövde tek alan: okutulan kod. Hangi kutu olduğunu SUNUCU çözüyor — telefon kodun taşıyıcı
- * numarası mı bizim kodumuz mu olduğunu bilmek zorunda değil (iki kolonda da aranıyor).
+ * Devir okutması — kutu fiziksel olarak taşıyıcıya verildi. Gövde yalnız okutulan kod; kodun taşıyıcı numarası mı bizim
+ * kodumuz mu olduğunu sunucu çözer.
  */
 export const HandoverRequestSchema = z.object({ code: z.string().trim().min(1).max(64) });
 export type HandoverRequest = z.infer<typeof HandoverRequestSchema>;
 
 /**
- * Devir cevabı — olumsuz dallar da 200 ve ADLI.
- *
- * `already_handed` bir hata DEĞİL: ikinci okutma "zaten verildi" demektir ve sayaç kıpırdamaz.
- * Depocu rampada aynı kutuyu iki kez okutabilir; hata cümlesi onu saymanın doğruluğundan
- * şüphelendirirdi.
+ * Devir cevabı — olumsuz dallar da 200 ve adlı. `already_handed` hata değil: ikinci okutma "zaten verildi" der ve sayaç
+ * kıpırdamaz, hata cümlesi depocuyu saymanın doğruluğundan şüphelendirirdi.
  */
 export const HandoverResponseSchema = z.discriminatedUnion('status', [
   z.object({
@@ -458,13 +353,8 @@ export const HandoverResponseSchema = z.discriminatedUnion('status', [
   /** Gönderi duyurulmadı: satın alınmamış etiketle kutu taşıyıcıya verilemez. */
   z.object({ status: z.literal('not_announced'), boxNo: z.number().int().positive() }),
   /**
-   * **Sipariş artık gönderilebilir değil** (21.265) — en sık hâli İPTAL. Kurye kulvarının
-   * `not_loadable` dalının kargo karşılığı; o kural vardı, bunun yoktu ve iptal edilmiş, parası
-   * iade edilmiş siparişin kolisi taşıyıcıya veriliyordu.
-   *
-   * Üç alan da ekranın cümlesi için: referans depocunun elindeki koliyi tanıması, `currentStatus`
-   * sebebi söylemesi ("bu sipariş iptal edilmiş") içindir — çıplak bir ret depocuya ne yapacağını
-   * söylemez.
+   * Sipariş gönderilebilir değil (en sık hâli iptal) — iptal edilmiş, parası iade edilmiş siparişin kolisi taşıyıcıya
+   * verilmez. Referans ve `currentStatus` ekranın cümlesi içindir; çıplak ret depocuya ne yapacağını söylemez.
    */
   z.object({
     status: z.literal('not_shippable'),
@@ -476,15 +366,8 @@ export const HandoverResponseSchema = z.discriminatedUnion('status', [
 export type HandoverResponse = z.infer<typeof HandoverResponseSchema>;
 
 /**
- * `GET /warehouse/handover/pending` — **rampada bekleyen kutu sayısı** (07.12 · tasarım §8.6).
- *
- * Hub rozetinin ve devir ekranı başlığının tek kaynağı. **Liste değil sayı** olması bilinçli:
- * devir ekranı bir okutucudur, depocu elindeki kutuyu okutur ve "hangi siparişi vereyim" diye bir
- * seçim yoktur. Sayı bir seçim davet etmiyor, bir BİTİŞ ölçüsü veriyor — sıfıra inince rampa
- * boşalmıştır.
- *
- * Sayaç devir kapısının reddettikleriyle **birebir aynı** süzgeci kullanıyor (mühürsüz ve
- * duyurulmamış kutu sayılmaz): gevşek bir sayaç, yapılamayacak bir işi varmış gibi gösterirdi.
+ * `GET /warehouse/handover/pending` — rampada bekleyen kutu sayısı; devir ekranı bir okutucudur, sayı seçim değil bitiş
+ * ölçüsü verir. Sayaç devir kapısının süzgecinin aynısını kullanır, gevşek sayaç yapılamayacak işi varmış gibi gösterirdi.
  */
 export const AwaitingHandoverBoxSchema = z.object({
   boxId: z.string().uuid(),
@@ -502,28 +385,16 @@ export const HandoverPendingResponseSchema = z.object({
   /** Mühürlü + duyurulmuş + henüz verilmemiş kutu adedi. Sıfır meşru bir cevap: rampa boş. */
   boxes: z.number().int().nonnegative(),
   /**
-   * Rampada bekleyen kutuların KENDİSİ (kullanıcı kararı 05.09) — üstteki sayının satır hâli.
-   *
-   * Ekranın *"liste değil okutucu"* kuralıyla çelişmiyor: bu liste SEÇİM değil ENVANTERDİR,
-   * dokunulamaz. Sayaç zaten aynı soruyu tek sayıyla cevaplıyordu, liste onu somutlaştırıyor.
-   *
-   * **Tavanlı ve tavanı sessiz değil:** `boxes` gerçek toplamı taşımaya devam ediyor, ekran
-   * ikisini karşılaştırıp listenin kırpıldığını söylüyor.
+   * Rampada bekleyen kutuların kendisi — seçim değil envanter, dokunulamaz. Tavanlıdır ama sessiz değil: `boxes` gerçek
+   * toplamı taşır ve ekran listenin kırpıldığını söyler.
    */
   waiting: z.array(AwaitingHandoverBoxSchema),
 });
 export type HandoverPendingResponse = z.infer<typeof HandoverPendingResponseSchema>;
 
 /**
- * `GET /warehouse/boxes/:boxId/shipping-label` — TAŞIYICININ etiketi (bizimki değil).
- *
- * **İmzalı adres dönüyor, dosyanın kendisi değil:** PDF özel kovada duruyor ve telefon onu
- * doğrudan indiriyor. Sunucudan akıtmak, ödenmiş bir etiketin her basımında VPS'i aradaki boru
- * yapardı — ve kova zaten imzalı okuma veriyor.
- *
- * ⚠ **Bizim kutu etiketimizle (`/label.png`) KARIŞTIRILMAZ.** Kargo kulvarında bizim QR'lı
- * etiketimiz BASILMAZ (tasarım §4.6): kutunun üstünde iki barkod taşıyıcının tarayıcısını
- * şaşırtır. Bu uç taşıyıcının kendi A6 etiketini verir.
+ * `GET /warehouse/boxes/:boxId/shipping-label` — taşıyıcının etiketi, imzalı adres olarak; PDF özel kovada durur ve telefon
+ * doğrudan indirir. Bizim QR'lı kutu etiketimizle (`/label.png`) karışmaz: kargo kutusunda iki barkod taşıyıcıyı şaşırtır.
  */
 export const ShippingLabelResponseSchema = z.discriminatedUnion('status', [
   z.object({
@@ -578,9 +449,8 @@ export const SealBoxResponseSchema = z.discriminatedUnion('status', [
   /** Boş kutu kapatılamaz — etiketi basılacak içerik yok. */
   z.object({ status: z.literal('empty') }),
   /**
-   * **Sipariş artık toplanabilir kümede değil** (21.265) — kutu açıldıktan SONRA iptal edilmiş
-   * olabilir. `openBox`un aynı dalı: kapıyı açan kural kapıyı kapatan kuralla eş olmalı, yoksa
-   * mühür iptal edilmiş siparişte karşılanan adedi diriltir.
+   * Sipariş toplanabilir kümede değil — kutu açıldıktan sonra iptal edilmiş olabilir. `openBox`un aynı dalı: kapıyı kapatan
+   * kural açanla eş olmalı, yoksa mühür iptal edilmiş siparişte karşılanan adedi diriltirdi.
    */
   z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
@@ -591,12 +461,8 @@ export const SealBoxResponseSchema = z.discriminatedUnion('status', [
 export type SealBoxResponse = z.infer<typeof SealBoxResponseSchema>;
 
 /**
- * **Siparişi eksik kapat** (kullanıcı bulgusu 31.08) — kutuya HİÇ dokunmayan sipariş kararı.
- *
- * Beyan `sealBox`ın dalı olarak doğmuştu ve orada kalamazdı: kapanış bir KUTU işlemi, beyan bir
- * SİPARİŞ kararı. Depocunun gerçek hareketi son kutuyu kapatıp SONRA "kalanı bulamadım" demektir
- * ve o anda açık kutu yoktur — `sealBox` orada `empty` döner, yani düğme sessizce ölüdür (cihazda
- * ölçüldü). Gövde YOK: karar siparişin kimliğinden ve depodan türüyor.
+ * Siparişi eksik kapat — kutuya dokunmayan sipariş kararı; depocu son kutuyu kapattıktan sonra "kalanı bulamadım" der ve
+ * o anda açık kutu yoktur. Gövde yok, karar siparişin kimliğinden ve depodan türer.
  */
 export const DeclareShortResponseSchema = z.discriminatedUnion('status', [
   z.object({
@@ -606,7 +472,7 @@ export const DeclareShortResponseSchema = z.discriminatedUnion('status', [
   }),
   /** Açık kutuda ürün var: önce o kutu kapanmalı, yoksa içindekiler kayda geçmez. */
   z.object({ status: z.literal('open_box_not_empty'), boxNo: z.number().int().positive() }),
-  /** Sipariş artık toplanabilir kümede değil (21.265) — mührün aynı dalı, aynı gerekçe. */
+  /** Sipariş toplanabilir kümede değil — mührün aynı dalı, aynı gerekçe. */
   z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   z.object({ status: z.literal('failed'), message: z.string() }),
@@ -615,41 +481,23 @@ export const DeclareShortResponseSchema = z.discriminatedUnion('status', [
 export type DeclareShortResponse = z.infer<typeof DeclareShortResponseSchema>;
 
 /**
- * **Kutuyu geri aç** (kullanıcı isteği 01.09) — kapanış tersine çevrilebilir bir kayıttır.
- *
- * Gövde YOK: karar kutunun kimliğinden ve depodan türüyor. Olumsuz dallar da 200 — `not_sealed`
- * çift dokunuştur, `failed` RPC'nin okunur reddidir (araca binmiş kutu · hazırlıktan çıkmış
- * sipariş) ve mesajı depocuya AYNEN gösterilir.
+ * Kutuyu geri aç — kapanış tersine çevrilebilir bir kayıttır; gövde yok. `not_sealed` çift dokunuştur, `failed` RPC'nin
+ * okunur reddidir (araca binmiş kutu, hazırlıktan çıkmış sipariş) ve mesajı depocuya aynen gösterilir.
  */
 export const UnsealBoxResponseSchema = z.discriminatedUnion('status', [
   z.object({
     status: z.literal('ok'),
     boxNo: z.number().int().positive(),
     /**
-     * **Kutudan ÇIKAN döküm** (kullanıcı bulgusu 01.09) — geri açılan kutunun kapanışta yazılmış
-     * içeriği, kalem kimliği + adet.
-     *
-     * ── NİÇİN CEVAPTA TAŞINIYOR ─────────────────────────────────────────────
-     * Sistemin değişmezi *"açık kutu = taslak"*: bir kutunun dökümü veritabanına ancak KAPANIŞTA
-     * yazılır (`seal_order_box` `insert` eder ve `unique (box_id, order_item_id)` ikinci yazımı
-     * reddeder). Geri açma bu yüzden satırları serbest bırakmak zorunda — bırakmasaydı kutu bir
-     * daha kapanamazdı ve karşılanan adet çift sayılırdı (`sealBox`ın birleşimi mevcut izin
-     * ÜSTÜNE ekliyor).
-     *
-     * Ama serbest bırakmak, İÇERİĞİ KAYBETMEK değildir: döküm burada geri veriliyor ve telefon
-     * onu açık kutunun taslağına yazıyor. Depocunun gördüğü şey "kutu boşaldı" değil, *"kutu
-     * açıldı, içindekiler duruyor, istediğini çıkarabilirsin"* — kullanıcının cümlesi buydu
-     * (*"neden sadece kutuyu açıp içinden birkaç şey çıkartamıyorum"*).
-     *
-     * Kayıt açısından bu bir kayıp değil çünkü açık kutunun dökümü zaten hiçbir zaman kayıtta
-     * yaşamıyordu; doldurulmakta olan HER kutu bu hâlde.
+     * Kutudan çıkan döküm (kalem + adet): açık kutu taslaktır ve dökümü kayda ancak kapanışta yazılır, geri açma satırları
+     * serbest bırakmak zorundadır. İçerik kaybolmasın diye döküm burada geri verilir ve telefon taslağa yazar.
      */
     items: z.array(z.object({ orderItemId: z.string().uuid(), qty: z.number().int().positive() })),
   }),
   z.object({ status: z.literal('not_sealed') }),
   /**
-   * Siparişin BAŞKA kutusu açık (ölçüldü 01.09) — geri açma reddedilir, hiçbir şey değişmez.
-   * Ekran açık kutuyu tekil biliyor; ikincisi çizilmez ve erişilemez bir kayda dönüşür (0048).
+   * Siparişin başka kutusu açık — geri açma reddedilir, hiçbir şey değişmez. Ekran açık kutuyu tekil biliyor; ikincisi
+   * erişilemez bir kayda dönüşürdü.
    */
   z.object({ status: z.literal('other_box_open'), boxNo: z.number().int().positive() }),
   z.object({ status: z.literal('failed'), message: z.string() }),
@@ -659,10 +507,8 @@ export const UnsealBoxResponseSchema = z.discriminatedUnion('status', [
 export type UnsealBoxResponse = z.infer<typeof UnsealBoxResponseSchema>;
 
 /**
- * 4×6 etiketin içeriği (23.7 · karar §1.5/§1.9) — İÇERİK SUNUCUDAN, telefon gösterir/basar.
- * **Fiyat/tutar alanı YOK ve olamaz** (karar §1.5): tahsilatın yalnız YÖNTEMİ yazılır; kurye
- * tutarı QR'ı okutunca kendi ekranında görür. Bugünkü tüketici kapanış önizlemesi; Brother SDK
- * bağlanınca (23.5) aynı içerik basılır.
+ * 4×6 etiketin içeriği — sunucudan gelir, telefon gösterir/basar. Fiyat/tutar alanı yok: tahsilatın yalnız yöntemi yazılır,
+ * kurye tutarı QR'ı okutunca kendi ekranında görür.
  */
 export const BoxLabelSchema = z.object({
   /** QR'ın içeriği — kutu kodu; sipariş referansı DEĞİL (Netleşecek 4). */
@@ -681,20 +527,8 @@ export const BoxLabelSchema = z.object({
 export type BoxLabelContract = z.infer<typeof BoxLabelSchema>;
 
 /**
- * Deponun etiket yazıcısı (23.7) — `settings` warehouse kapsamından (`label_printer_*`).
- * `labelSize` Brother SDK'nın boy adıdır (23.5 ölçümü: takılı kâğıt SDK'dan okunamıyor —
- * ör. `DieCutW103H164`, `RollW62`). `null` = yazıcı tanımsız; telefon basmayı hiç denemez.
- */
-/**
- * **DEPONUN BİR YAZICISI** (07.12 · `0054`).
- *
- * `purpose` iki değerli ve ayrım FİZİKSEL: `box` bizim 4×6 QR'lı kutu etiketimiz, `shipping`
- * taşıyıcının A6 yatay etiketi. Yanlış yazıcıya giden etiket ya reddedilir ya küçültülür
- * (ölçüldü, tasarım §4.6) — küçülen barkod okunmaz.
- *
- * **SEÇİM BU SÖZLEŞMEDE YOK ve olmayacak:** hangi yazıcının kullanıldığı cihazın kendi bilgisi
- * (kullanıcı kararı 29.08) ve telefonun yerel deposunda yaşıyor. Aynı depodaki iki telefon iki
- * ayrı yazıcıya basabilir — biri rampada, biri masada; bu bir çelişki değil kurulumun kendisi.
+ * Deponun bir yazıcısı: `box` bizim 4×6 QR'lı etiketimiz, `shipping` taşıyıcının A6 etiketi; yanlış yazıcıda küçülen barkod
+ * okunmaz. Hangi yazıcının kullanıldığı cihazın kendi bilgisidir ve bu sözleşmede yok, aynı depodaki iki telefon iki yazıcıya basabilir.
  */
 export const BoxPrinterSchema = z.object({
   id: z.string().uuid(),
@@ -714,23 +548,8 @@ export const WarehousePrintersResponseSchema = z.object({ printers: z.array(BoxP
 export type WarehousePrintersResponse = z.infer<typeof WarehousePrintersResponseSchema>;
 
 /**
- * **YAZICI TANITMA** (`POST /warehouse/printers`, 05.09) — telefonun ağda bulduğu yazıcıyı bu
- * deponun envanterine yazar.
- *
- * ── NEDEN TELEFONDAN ────────────────────────────────────────────────────────
- * Envanter 29.08'den beri yalnız web'deki Depolar ekranından doluyordu ve telefon onu okuyordu.
- * Bu, yazıcının önünde duran depocuyu çıkmaza sokuyordu: ekran "Tanımlı değil" deyip "Depolar
- * ekranından tanımlanır" diye başka bir yüzeye yolluyordu (ölçüldü 05.09, cihazda).
- *
- * ── ADRES YAZILMIYOR, ÖLÇÜLÜYOR ─────────────────────────────────────────────
- * İstek adresi ELLE değil KEŞİFTEN taşıyor — depocu bir IP yazmıyor, gördüğü yazıcıya dokunuyor.
- * Yazılan adresin yanlış olma ihtimali böylece sıfırlanıyor: seed'in uydurduğu `.91` ile gerçek
- * `.169` arasındaki fark tam da bu yüzden doğmuştu.
- *
- * ── KÂĞIT MODELDEN TÜRETİLİYOR (kullanıcı kararı 05.09) ─────────────────────
- * Takılı kâğıt SDK'dan OKUNAMIYOR (23.5 ölçümü). İstek onu taşımıyor; sunucu modelin rulo
- * sınıfından türetiyor. Tanınmayan model REDDEDİLİYOR — bilmediğimiz bir kâğıdı varsaymak,
- * basımı `SetLabelSizeError`a göndermek olurdu.
+ * Yazıcı tanıtma (`POST /warehouse/printers`) — telefonun ağda bulduğu yazıcıyı deponun envanterine yazar; adres keşiften
+ * gelir, elle yazılmaz. Takılı kâğıt SDK'dan okunamadığı için sunucu modelden türetir ve tanınmayan model reddedilir.
  */
 export const RegisterPrinterRequestSchema = z.object({
   purpose: PrinterPurposeEnum,
@@ -756,11 +575,8 @@ export const RegisterPrinterResponseSchema = z.discriminatedUnion('status', [
 export type RegisterPrinterResponse = z.infer<typeof RegisterPrinterResponseSchema>;
 
 /**
- * Etiket içeriği cevabı (23.7).
- *
- * ⚠ **`printer` alanı 29.08'de KALDIRILDI.** Tek yazıcı varsayımının kalıntısıydı: cevap deponun
- * tek ayarlı yazıcısını iliştiriyordu. Artık depoda N yazıcı var ve hangisinin kullanılacağı
- * CİHAZIN bilgisi — sunucunun cevaba iliştirdiği bir yazıcı, cihazın seçimini sessizce ezerdi.
+ * Etiket içeriği cevabı. Yazıcı cevaba iliştirilmez: hangisinin kullanılacağı cihazın bilgisidir ve sunucunun iliştirdiği
+ * yazıcı cihazın seçimini ezerdi.
  */
 export const BoxLabelResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('ok'), label: BoxLabelSchema }),
@@ -782,70 +598,32 @@ export type MarkBoxPrintedResponse = z.infer<typeof MarkBoxPrintedResponseSchema
 
 // ── D2 · Mal kabul ──────────────────────────────────────────────────────────
 
-/** PO'dan dolu gelen form satırı — beklenen adet + ad. **Fiyat alanı YOK ve olamaz.** */
 /**
- * **KAYITLI KOLİ BOYU** — "bu üründe koli deyince kaç paket anlaşılır" (v3 · `sheetAdet`,
- * *"Boylar ürün kartındaki kutu tiplerinden gelir"*).
- *
- * Kaynak `variant_barcode`ın `kind='case'` satırlarıdır ve şema ondan TÜRETİLİR: çarpan kodun
- * kendi alanıdır (`qtyPerCode`), varyantta ya da tedarikçide durmaz — iki tedarikçinin kolisi
- * farklı boyda olabilir (entity künyesi §1.2).
- *
- * Adet çekmecesi bu listeyi ÇARPAN TABLOSU olarak kullanır: depocu "3 koli geldi" der, ekran
- * paketi kendi çarpar. Liste BOŞSA çekmece yalnız tek paket sayar — uydurma bir varsayılan koli
- * boyu (12'lik) stok sayımını sessizce bozardı (CLAUDE §1).
+ * Kayıtlı koli boyu — "bu üründe koli kaç paket"; kaynak `variant_barcode`ın `kind='case'` satırlarıdır, çarpan kodun kendi
+ * alanıdır. Liste boşsa adet çekmecesi yalnız tek paket sayar; uydurma bir koli boyu stok sayımını bozardı (CLAUDE §1).
  */
 export const CaseSizeSchema = VariantBarcodeSchema.pick({ code: true, qtyPerCode: true });
 export type CaseSizeContract = z.infer<typeof CaseSizeSchema>;
 
+/** PO'dan dolu gelen form satırı — beklenen adet + ad; fiyat alanı yok ve olamaz. */
 export const IntakeFormRowSchema = z.object({
   variantId: z.string().uuid(),
   productName: z.string(),
   variantLabel: z.string(),
   expectedQty: z.number().int(),
   /**
-   * **Tedarikçinin bu kaleme verdiği kod** ("GAZ-7120") — `supplier_product.supplier_code`, kalemin
-   * `supplier_product_id` bağından çözülür.
-   *
-   * Depocunun elinde bizim adımız değil TEDARİKÇİNİN irsaliyesi vardır ve orada bu kod yazar;
-   * satırı kâğıtla eşleştirmenin tek kesin anahtarı odur (ürün adı çevrilmiş, boy etiketi bizim
-   * dilimizde). `null` = kalem bir eşlemeye bağlanmadan açılmış — uydurma bir kod yerine görünür
-   * boşluk.
-   *
-   * **Para değildir ve para taşımaz:** `supplier_product` satırında alış fiyatı da var, buraya
-   * yalnız KOD geliyor (09.14 sınırı).
+   * Tedarikçinin bu kaleme verdiği kod — depocunun elinde tedarikçinin irsaliyesi vardır ve satırı kâğıtla eşleştirmenin
+   * kesin anahtarı budur. `null` = kalem eşlemesiz açılmış; alış fiyatı buraya gelmez, yalnız kod.
    */
   supplierCode: z.string().nullable(),
   /**
-   * Varyantın kendi kodu (`product_variant.sku`) — plansız kabulün satırında görünen şey.
-   *
-   * PO'lu kabulde satırın anahtarı TEDARİKÇİNİN kodudur (elde onun irsaliyesi var); plansızda
-   * sipariş yoktur, yani tedarikçi kodu da yoktur ve satırı tanıtan tek kod bizim SKU'muzdur.
-   * Satır aramadan da okutmadan da açılabiliyor ve ikisi aynı alanı göstermeli — biri kodlu, öteki
-   * kodsuz bir liste depocuya "bu ürünün kodu yok mu" diye sordururdu (23.13 eleştirisi).
-   *
+   * Varyantın kendi kodu (`sku`) — plansız kabulde satırı tanıtan tek kod; arama ve okutma aynı alanı göstermeli.
    * `null` = varyanta SKU girilmemiş.
    */
   sku: z.string().nullable(),
   /**
-   * **BU VARYANTIN DEPODA DURAN LOT KODLARI** — lot çekmecesinin ikinci öneri kaynağı (21.175).
-   *
-   * Depocu lot kodunu elle yazıyor ve aynı tedarikçiden gelen mal çoğunlukla ya aynı lottan ya da
-   * bir öncekine çok benzeyen bir lottan geliyor. Öneri listesinin İLK kaynağı aynı kabuldeki
-   * öteki satırlar (`lotsUsedBy`), ama o liste ilk satırda boştur — ilk satırı yazan depocu hiçbir
-   * öneri görmez. Bu alan o boşluğu dolduruyor: varyantın halihazırda depoda duran partilerinin
-   * kodları.
-   *
-   * ÖNERİ, DOĞRULAMA DEĞİL: listede olmayan bir kod da yazılabilir ve yazılmalıdır — yeni lot her
-   * zaman mümkün. Kapalı bir liste yapmak, sahayı var olmayan bir kodu seçmeye zorlardı.
-   *
-   * SIRA YENİDEN ESKİYE ve sayı SINIRLI (motorun künyesi): en son giren parti, elindeki koliyle
-   * en çok benzeşme ihtimali olan koddur.
-   *
-   * TASARIMIN KAYNAĞI BAŞKA ve bugün kurulamıyor: şablon *"okunan koliden gelen adaylar"* diyor,
-   * yani kolinin üstündeki lot etiketinden. Okutma cevabı lot taşımıyor ve kolinin lot kodunu
-   * okuyacak bir alan yok. Kaynağın farklı olduğu ekranda SAKLANMIYOR — listeye olmayan bir
-   * kesinlik atfetmemek için künyeye yazılı.
+   * Bu varyantın depoda duran lot kodları — lot çekmecesinin ikinci öneri kaynağı, ilk satırı yazan depocu da öneri görsün
+   * diye; sıra yeniden eskiye ve sınırlıdır. Öneridir, doğrulama değil: listede olmayan yeni lot da yazılabilir.
    */
   lotCandidates: z.array(z.string()),
   /**
@@ -856,10 +634,8 @@ export const IntakeFormRowSchema = z.object({
    */
   dateType: ProductDateTypeEnum,
   /**
-   * Ürünün toplam raf ömrü (gün). **`null` = girilmemiş → kalan ömür HESAPLANAMAZ** ve ekran uyarı
-   * üretmez (CLAUDE §1: ölçülemeyen değer sıfır değildir; `remainingShelfLifePercent` aynı kararı
-   * veriyor). Yüzdeyi sunucu hesaplayamaz çünkü girdisi olan son tarih henüz YAZILMAMIŞTIR —
-   * depocu SKT'yi girdiği anda, telefonda, `meetsMlor` ile hesaplanır.
+   * Ürünün toplam raf ömrü (gün); `null` = girilmemiş, kalan ömür hesaplanamaz ve ekran uyarı üretmez (CLAUDE §1). Yüzdeyi
+   * telefon hesaplar, çünkü girdisi olan son tarih depocu SKT'yi girdiği an yazılır.
    */
   shelfLifeDays: z.number().int().nullable(),
   /** Ürünün kayıtlı koli boyları — adet çekmecesinin çarpan tablosu (`CaseSizeSchema` künyesi). */
@@ -868,18 +644,8 @@ export const IntakeFormRowSchema = z.object({
 export type IntakeFormRowContract = z.infer<typeof IntakeFormRowSchema>;
 
 /**
- * Tedarik siparişinin KÜNYESİ (21.11d) — ekranın başlığı: *"TS-26-0114 · Gaziantep Gıda"*.
- *
- * ── NEDEN SATIRLARDAN AYRI ──────────────────────────────────────────────────
- * `IntakeFormRowSchema` kalemin şeklidir ve künye kalem başına DEĞİL sipariş başına tekildir; satıra
- * kopyalansaydı aynı iki dize N kez taşınır ve "satırın tedarikçisi başka olabilir" diye yanlış bir
- * beklenti kurardı (kurye ucundaki `doorAccountId` kararının aynısı).
- *
- * **Para YOK ve olamaz:** sipariş tutarı, birim alış, beklenen toplam — hiçbiri burada değil. Depocu
- * hangi belgeyi elinde tuttuğunu bilmeli, o belgenin kaç para olduğunu değil.
- *
- * `referenceNo` taslakta `null`dır (numara gönderimde doğar) ve `supplierName` silinmiş/erişilemeyen
- * tedarikçide `null` döner — uydurma bir ad yerine görünür bir boşluk.
+ * Tedarik siparişinin künyesi — ekran başlığı (*"TS-26-0114 · Gaziantep Gıda"*); sipariş başına tekildir, satıra
+ * kopyalanmaz. Para yok: depocu hangi belgeyi tuttuğunu bilmeli, kaç para olduğunu değil; `null` alanlar uydurulmaz.
  */
 export const IntakePurchaseOrderSchema = z.object({
   purchaseOrderId: z.string().uuid(),
@@ -889,10 +655,8 @@ export const IntakePurchaseOrderSchema = z.object({
 export type IntakePurchaseOrderContract = z.infer<typeof IntakePurchaseOrderSchema>;
 
 /**
- * `GET /warehouse/intake/:purchaseOrderId` yanıtı. Boş `rows` = plansız alım (form elle doldurulur).
- *
- * `purchaseOrder` `null` ise sipariş HİÇ YOK: boş satır listesiyle karıştırılmaz — biri "kalemsiz
- * sipariş", öteki "olmayan sipariş"tir ve ekranın kuracağı cümle farklıdır.
+ * `GET /warehouse/intake/:purchaseOrderId` yanıtı; boş `rows` = plansız alım. `purchaseOrder` `null` ise sipariş hiç yok:
+ * "kalemsiz sipariş" ile "olmayan sipariş" ayrı cümledir.
  */
 export const IntakeFormResponseSchema = z.object({
   purchaseOrder: IntakePurchaseOrderSchema.nullable(),
@@ -909,45 +673,29 @@ export const IntakeFormResponseSchema = z.object({
 export type IntakeFormResponse = z.infer<typeof IntakeFormResponseSchema>;
 
 /**
- * Bekleyen sevkiyat satırı (D2'nin konusuz açılışı, 21.11d) — künye + satır sayısı.
- *
- * Künyeden TÜRER (`.extend`): liste ile detay aynı üç alanı gösteriyor ve ikisini ayrı yazmak, bir
- * gün listede tedarikçi adı, detayda tedarikçi kodu göstermenin önünü açardı.
- *
- * `lineCount` "kaç KALEM ısmarlandı"dır, "kaç adet" DEĞİL: depocu kaç satır sayacağını bilmek ister;
- * toplam adet siparişin büyüklüğünü söyler ve o bir satın alma sorusudur.
+ * Bekleyen sevkiyat satırı — künyeden türer ki liste ile detay aynı alanları göstersin. `lineCount` kalem sayısıdır, adet
+ * değil: depocu kaç satır sayacağını bilmek ister.
  */
 export const PendingIntakeSchema = IntakePurchaseOrderSchema.extend({
   lineCount: z.number().int(),
   /**
-   * Siparişin DURUMU — liste iki durumu birden taşır (`listPendingIntakes` künyesi: `sent` **ve**
-   * `partially_received`) ve ikisi depocu için ayrı cümledir: birinde koli hiç açılmadı, ötekinde
-   * ikinci turdur ve beklenen adetler KALANDIR. Ekranın sabit "gönderildi" yazması listenin
-   * yarısı için yanlış olurdu.
-   *
-   * Küme varlık enum'undan DARALTILARAK türer (`.extract`), elle yazılmaz: `draft` hiç girmez
-   * (tedarikçi habersiz), `received`/`cancelled` kapandı — üçünden biri buraya düşerse tip tutmaz.
+   * Siparişin durumu: ilk kabulde koli hiç açılmamıştır, kısmi kabulde beklenen adetler kalandır ve ekran iki ayrı cümle
+   * kurar. Küme varlık enum'undan daraltılarak türer, elle yazılmaz.
    */
   status: PurchaseOrderStatusEnum.extract(['sent', 'partially_received']),
 });
 export type PendingIntakeContract = z.infer<typeof PendingIntakeSchema>;
 
 /**
- * `GET /warehouse/intake` yanıtı — "hangi sevkiyatı bekliyorum".
- *
- * Sayfalanmaz ve gerekçesi ölçüldü: açık tedarik siparişi kümesi veriyle BÜYÜMEZ, kabul edildikçe
- * kapanır (`PurchaseOrderService.openProgress` künyesi) — CLAUDE.md §1'in "doğal tavanı olan küme"
- * dalı. Tavan yine de var (kapının `limit`i), çünkü tavansız bir okuma bir gün sessizce kesilir.
+ * `GET /warehouse/intake` yanıtı — "hangi sevkiyatı bekliyorum". Sayfalanmaz, çünkü açık tedarik siparişi kümesi kabul
+ * edildikçe kapanır; tavan yine de var, tavansız okuma bir gün sessizce kesilir.
  */
 export const PendingIntakesResponseSchema = z.object({ intakes: z.array(PendingIntakeSchema) });
 export type PendingIntakesResponse = z.infer<typeof PendingIntakesResponseSchema>;
 
 /**
- * Depocunun gönderdiği kabul satırı. **Maliyet alanı YOKTUR** — bu bir ekran kuralı değil, tip
- * sınırı: depo yolu fiyat gönderemez (09.14). Fiyatlı giriş admin'in ayrı kapısıdır ve mobil depo
- * ucunda karşılığı yok.
- *
- * `expiryDate` zorunlu ve bu v2'nin cümlesi: *"SKT her satırda zorunlu — girilmeden kabul kapanmaz."*
+ * Depocunun gönderdiği kabul satırı — maliyet alanı yok, depo yolu fiyat gönderemez; fiyatlı giriş yöneticinin ayrı
+ * kapısıdır. `expiryDate` zorunlu: SKT girilmeden kabul kapanmaz.
  */
 export const IntakeFormLineSchema = z.object({
   variantId: z.string().uuid(),
@@ -956,9 +704,8 @@ export const IntakeFormLineSchema = z.object({
   /** Geri çağırma anahtarı; boş bırakmak BİLİNÇLİ bir karar olmalı (v2 notu). */
   lotNumber: z.string().nullish(),
   /**
-   * Partinin konacağı alan — **kimlik** (19.29). Öneride ad gider, yazmada KİMLİK gelir ve asimetri
-   * kasıtlı: okurken depocu tabelayı okur, yazarken listeden seçer. Ad kabul etseydik yazım hatası
-   * yeni bir "alan" uydurur ve serbest metne geri dönerdik.
+   * Partinin konacağı alan — kimlik; okurken ad, yazarken kimlik ve asimetri kasıtlı: ad kabul etseydik yazım hatası yeni
+   * bir "alan" uydururdu.
    */
   storageAreaId: z.string().uuid().nullish(),
 });
@@ -997,9 +744,8 @@ export const ReceiveGoodsResponseSchema = z.discriminatedUnion('status', [
     warnings: z.array(IntakeWarningSchema),
     differences: z.array(IntakeDifferenceSchema),
     /**
-     * Hedefe çekilen otomatik fiyat sayısı. **`null` = ÖLÇÜLEMEDİ** (fiyat portu kayıtlı değil),
-     * sıfır değil — bozuk bir ölçümü sağlıklı gibi okutmamak için (CLAUDE.md §1). Depocuya
-     * gösterilmez; kabul kaydında görünür kalması içindir.
+     * Hedefe çekilen otomatik fiyat sayısı; `null` = ölçülemedi (fiyat portu yok), sıfır değil (CLAUDE §1). Depocuya
+     * gösterilmez, kabul kaydında görünür kalır.
      */
     repricedCount: z.number().int().nullable(),
   }),
@@ -1011,31 +757,19 @@ export type ReceiveGoodsResponse = z.infer<typeof ReceiveGoodsResponseSchema>;
 // ── D4 · Sayım / düzeltme ───────────────────────────────────────────────────
 
 /**
- * Depocunun seçebileceği sebepler — **`return_restock` YOK** (v2: *"'İade stoğa döndü' depocuya
- * açılmaz — yönetim istisnasıdır"*). Kural tipte duruyor, ekranda değil.
- *
- * ── TEK LİSTE, İKİ SEVİYE (06.14) ───────────────────────────────────────────
- * Veride bunlar artık iki ayrı şey: imhanın kendisi bir hareket TİPİ (`write_off`), DLC/hasar/kayıp
- * ise onun SEBEBİ; sayım farkı ise ayrı bir tip. Depocunun ekranında ise tek bir seçim listesi
- * olmalı — "tarihi geçti / hasar / kayıp / sayım farkı" diye seçer, tip-sebep ayrımı onun sorunu
- * değil. Çeviriyi sunucu sınırı yapıyor (`recordAdjustment`).
- *
- * Liste yine TÜRETİLİR, elle yazılmaz: imha sebepleri varlık enum'undan geliyor, sayım farkı tek
- * ek değer. Yarın yeni bir imha sebebi eklenirse depo kapısı onu kendiliğinden görür.
+ * Depocunun seçebileceği sebepler — `return_restock` yok, iade stoğa dönüşü yönetim istisnasıdır; kural tipte durur.
+ * Depocu tek listeden seçer, tip-sebep çevirisini sunucu yapar (`recordAdjustment`); liste imha sebeplerinden türer.
  */
 export const WarehouseAdjustmentReasonEnum = z.enum([...StockWriteOffReasonEnum.options, 'count_diff']);
 export type WarehouseAdjustmentReason = z.infer<typeof WarehouseAdjustmentReasonEnum>;
 
 export const AdjustmentLineSchema = z.object({
   stockId: z.string().uuid(),
-  /** DAİMA pozitif — yön ayrı alanda (06.14; `money_movement` kuralı, işaret miktara gömülmez). */
+  /** Daima pozitif — yön ayrı alanda; işaret miktara gömülmez. */
   qty: z.number().int().positive(),
   /**
-   * `out` = stoktan düş, `in` = stoğa ekle (yalnız sayım FAZLASI).
-   *
-   * Eskiden `qty` işaretliydi ve fazla çıkan mal negatif adetle gönderiliyordu. Yön açık alana
-   * çıktı çünkü aynı gömülülük rapor tarafında ölçülmüş bir arızaya yol açmıştı: "Çıkışlar"
-   * sekmesi dönem toplamını eksi gösteriyordu.
+   * `out` = stoktan düş, `in` = stoğa ekle (yalnız sayım fazlası). Yön açık alanda, çünkü işarete gömülü yön raporda
+   * dönem toplamlarını eksi gösteriyordu.
    */
   direction: StockDirectionEnum,
 });
@@ -1050,14 +784,8 @@ export const RecordAdjustmentRequestSchema = z.object({
 export type RecordAdjustmentRequest = z.infer<typeof RecordAdjustmentRequestSchema>;
 
 /**
- * **Yazımdan SONRAKİ iki sayı** (v3:08/09'un sonuç kartı), 02.09.
- *
- * Sonuç kartı *"partide 12 → 9"* diyor ve o ikinci sayı ÖLÇÜLEN olmalı, hesaplanan değil: ekran
- * `eski − düşülen` diye kendi çıkarmasını yapsaydı, aynı partiye o sırada dokunan başka bir
- * yazım (kabul, toplama) sessizce yok sayılırdı — tutanağa yanlış sayı yazılırdı.
- *
- * **`null` = ölçülemedi** (yazım tuttu ama okuma düştü) ve sıfır değildir (CLAUDE §1): ekran o
- * hâlde "yeni değer" yerine bir şey göstermez, uydurmaz.
+ * Yazımdan sonraki iki sayı — ölçülen, hesaplanan değil: ekranın kendi çıkarması aynı partiye o sırada dokunan başka
+ * yazımı yok sayardı. `null` = ölçülemedi ve sıfır değildir; ekran bir şey uydurmaz (CLAUDE §1).
  */
 export const AdjustmentAfterSchema = z.object({
   /** Partinin yazımdan sonraki fiili adedi. */
@@ -1090,31 +818,20 @@ export type RecordAdjustmentResponse = z.infer<typeof RecordAdjustmentResponseSc
 export const InboundTransferLineSchema = z.object({
   lineId: z.string().uuid(),
   sourceStockId: z.string().uuid(),
-  /**
-   * Ürün adı ve boy etiketi AYRI (04.09, 21.254): satır mal kabuldeki gibi "Ürün · boy" yazar
-   * (`productLabel`), ekran kalıbı ortak. Tek boylu üründe `variantLabel` boş dize.
-   */
+  /** Ürün adı ve boy etiketi ayrı: satır mal kabuldeki gibi "Ürün · boy" yazar; tek boylu üründe `variantLabel` boş dize. */
   productName: z.string(),
   variantLabel: z.string(),
-  /**
-   * Ürün kapağı (kullanıcı isteği 04.09): rampada satır, mal kabuldeki gibi resmiyle tanınır;
-   * `null` = kapak yok, ekran monogram çizer. EK OKUMA İSTEMİYOR — `variantNames` kapağı zaten taşır.
-   */
+  /** Ürün kapağı — rampada satır resmiyle tanınır; `null` = kapak yok, ekran monogram çizer. */
   imageUrl: z.string().nullable(),
-  /**
-   * Kaynak partinin lotu ve tarihi (04.09): rampadaki koli satırla BUNLARLA eşlenir — aynı üründen
-   * iki parti aynı sevkiyatta gelebilir ve ad ikisini ayırmaz. Uygulama katmanı zaten taşıyordu,
-   * sözleşme düşürüyordu (cihazda ölçüldü 03.09).
-   */
+  /** Kaynak partinin lotu ve tarihi: aynı üründen iki parti aynı sevkiyatta gelebilir ve ad ikisini ayırmaz. */
   lotNumber: z.string().nullable(),
   expiryDate: z.string(),
   dispatchedQty: z.number().int(),
   /** **`null` = henüz sayılmadı, `0` = geldi ama kayıp.** İkisi ayrı şeydir (0042). */
   receivedQty: z.number().int().nullable(),
   /**
-   * Ürünün kayıtlı KOLİ BOYLARI — rampada sayım koli koli yapılır ve adet çekmecesi çarpanı
-   * buradan alır (kullanıcı kararı 02.09: koli sorulan yerde çekmece, çarpan ürün kartından).
-   * Boş dizi = kayıtlı koli boyu yok; çekmece "başka koli boyu" ile sahada ölçtürür.
+   * Ürünün kayıtlı koli boyları — rampada sayım koli koli yapılır ve adet çekmecesi çarpanı buradan alır. Boş dizi =
+   * kayıtlı koli boyu yok.
    */
   caseSizes: z.array(CaseSizeSchema),
 });
@@ -1126,9 +843,8 @@ export const InboundTransferSchema = z.object({
   referenceNo: z.string(),
   fromWarehouseId: z.string().uuid(),
   /**
-   * Kaynak deponun ADI (04.09): künye "Kehl → Strasbourg" diyebilsin. Eskiden yalnız kimlik geliyordu
-   * ve ekran alan deponun adını yazıyordu — "TRF-KEHL … Strasbourg" okunuşta "Strasbourg'dan geldi"
-   * gibi duruyordu (cihazda ölçüldü 03.09). Depo silinmişse `null`; ekran o zaman yalnız referansı yazar.
+   * Kaynak deponun adı — künye "Kehl → Strasbourg" diyebilsin, yalnız alan deponun adı "oradan geldi" gibi okunurdu. Depo
+   * silinmişse `null`, ekran yalnız referansı yazar.
    */
   fromWarehouseName: z.string().nullable(),
   dispatchedAt: z.string(),
@@ -1138,13 +854,8 @@ export const InboundTransferSchema = z.object({
 export type InboundTransferContract = z.infer<typeof InboundTransferSchema>;
 
 /**
- * **Bu depodan ÇIKMIŞ, hâlâ yolda** — transferin öteki yüzü.
- *
- * Satırları YOK ve bu bilinçli: gelen transferin satırları rampada SAYILACAK şeydir, çıkanınki ise
- * çoktan sayılıp yola çıkmıştır — gönderen depoda yapılacak bir iş kalmadı. Bölüm "unuttuğum bir
- * sevkiyat yolda mı" sorusunun cevabıdır, ikinci bir kabul ekranı değil; satırları taşımak telefona
- * hiç açılmayacak bir ağaç indirtirdi. Tekil kaydın satırları gerekiyorsa kapısı ayrı
- * (`readTransferDetail`).
+ * Bu depodan çıkmış, hâlâ yolda — transferin öteki yüzü; satırları yok, çünkü gönderen depoda yapılacak iş kalmadı. Tekil
+ * kaydın satırları gerekiyorsa kapısı ayrıdır (`readTransferDetail`).
  */
 export const OutboundTransferSchema = z.object({
   transferId: z.string().uuid(),
@@ -1158,12 +869,11 @@ export const OutboundTransferSchema = z.object({
    * Bir SÖZ değil bir beklentidir: taşıyıcıdan gelen gerçek bir tarih değil, deponun kendi ayarı.
    */
   etaDate: z.string(),
-  /** Hedef deponun adı (04.09) — "Strasbourg → Bordeaux" cümlesinin sağ yarısı; depo silinmişse `null`. */
+  /** Hedef deponun adı — "Strasbourg → Bordeaux" cümlesinin sağ yarısı; depo silinmişse `null`. */
   toWarehouseName: z.string().nullable(),
   /**
-   * Sevkten bu yana geçen GÜN ve tonu (04.09) — web'in transfer sekmesiyle aynı üç hâl:
-   * `ok` ayarın içinde · `warn` bir gün aştı · `late` daha fazla. Gecikmiş sevkiyat bugüne dek
-   * telefonda "tahmini 31.08" diye sessizce duruyordu (cihazda ölçüldü 03.09: üç gün geçmiş, uyarı yok).
+   * Sevkten bu yana geçen gün ve tonu — web'in transfer sekmesiyle aynı üç hâl: `ok` ayarın içinde · `warn` bir gün aştı ·
+   * `late` daha fazla. Gecikmiş sevkiyat sessizce durmasın.
    */
   ageDays: z.number().int().nonnegative(),
   ageTone: z.enum(['ok', 'warn', 'late']),
@@ -1173,12 +883,8 @@ export const OutboundTransferSchema = z.object({
 export type OutboundTransferContract = z.infer<typeof OutboundTransferSchema>;
 
 /**
- * **Son kapananlar** — kabul edilmiş ya da geri alınmış sevkiyatlar, iki yön birden.
- *
- * ── NEDEN İKİ YÖN TEK LİSTEDE ───────────────────────────────────────────────
- * Depocunun sorusu "bu hafta ne kapandı"dır; gönderdiğinin kapanışı da aldığınınki kadar onun işi
- * (eksik kabul edilen bir sevkiyatın gönderen tarafı da farkı görmeli). `direction` o yüzden alan:
- * ekran kendi deposunun kimliğini BİLMEZ — kimlik jetonda, sunucuda çözülüyor.
+ * Son kapananlar — kabul edilmiş ya da geri alınmış sevkiyatlar, iki yön birden; gönderdiğinin kapanışı da depocunun işi.
+ * `direction` alandır, çünkü ekran kendi deposunun kimliğini bilmez.
  */
 export const ClosedTransferSchema = z.object({
   transferId: z.string().uuid(),
@@ -1197,38 +903,23 @@ export const ClosedTransferSchema = z.object({
    * (CLAUDE §1 — ölçülemeyen değer sıfır değildir).
    */
   shortLineCount: z.number().int().nullable(),
-  /**
-   * Eksik gelen TOPLAM ADET (04.09) — satır sayısı değil; rozet "−5 adet" der. Cihazda ölçüldü
-   * (03.09): "2 eksik" satır sayısıydı, kayıp beş birimdi ve kimse okuyamıyordu. Geri alınmışta `null`.
-   */
+  /** Eksik gelen toplam adet — satır sayısı değil, rozet "−5 adet" der; geri alınmışta `null`. */
   shortQty: z.number().int().nonnegative().nullable(),
   /** Eksiğin IMH belgesi; eksik yoksa ya da beyan öncesi kayıtsa `null`. */
   shortfallReferenceNo: z.string().nullable(),
-  /** Fazla gelen TOPLAM ADET (04.09, 21.253) — rozet "+2 adet"; geri alınmışta `null`. */
+  /** Fazla gelen toplam adet — rozet "+2 adet"; geri alınmışta `null`. */
   excessQty: z.number().int().nonnegative().nullable(),
   /** Fazlanın SAY belgesi (`count_diff · in`, transfere bağlı); fazla yoksa `null`. */
   excessReferenceNo: z.string().nullable(),
-  /**
-   * Karşı taraf tesis mi araç mı (04.09): araç yüklemeleri geçmişte "araca / araçtan" diye ayrılır.
-   * Ölçüldü: on satırın sekizi depodan araca yüklemeydi ve depolar arası geçmiş altında kayboluyordu.
-   */
+  /** Karşı taraf tesis mi araç mı: araç yüklemeleri geçmişte "araca / araçtan" diye ayrılır, yoksa depolar arası kaybolur. */
   counterpartKind: WarehouseKindEnum,
   counterpartName: z.string().nullable(),
 });
 export type ClosedTransferContract = z.infer<typeof ClosedTransferSchema>;
 
 /**
- * `GET /warehouse/transfers` yanıtı — şablonun ÜÇ bölümü tek turda (v3 · 11).
- *
- * ── NEDEN TEK UÇ, ÜÇ LİSTE ──────────────────────────────────────────────────
- * Üçü aynı ekranın aynı anda çizdiği şey ve üçü de aynı depo kimliğinden süzülüyor. Üç ayrı uç,
- * rampadaki telefona üç tur attırır ve bölümlerden biri geç gelirse ekran yarım bir gerçeklik
- * gösterirdi ("yolda hiçbir şey yok" — henüz gelmediği için).
- *
- * `transfers` ve `outbound` sayfalanmaz: küme fiziksel gerçekle sınırlı (aynı anda yolda olan
- * sevkiyat kadar) ve TAM olması gerekir — bir sevkiyatı kaçırmak iki depoda da görünmeyen mal
- * demektir. `closed` ise veriyle BÜYÜR; o yüzden liste değil PENCEREDİR: sabit sınırlı bir
- * "son kapananlar" seçkisi (CLAUDE §1'in editoryal seçki dalı), geçmişin tamamı değil.
+ * `GET /warehouse/transfers` yanıtı — üç bölüm tek turda, yoksa geç gelen bölüm yarım bir gerçeklik gösterirdi.
+ * `transfers` ve `outbound` sayfalanmaz, küme fiziksel gerçekle sınırlı ve tam olmalı; `closed` veriyle büyür, sabit sınırlı pencere.
  */
 export const WarehouseTransfersResponseSchema = z.object({
   transfers: z.array(InboundTransferSchema),
@@ -1238,20 +929,8 @@ export const WarehouseTransfersResponseSchema = z.object({
 export type WarehouseTransfersResponse = z.infer<typeof WarehouseTransfersResponseSchema>;
 
 /**
- * `GET /warehouse/transfers/:transferId` — **TEK KAYDIN İÇİ, SALT OKUMA** (kullanıcı isteği 05.09).
- *
- * Liste satırı yalnız `lineCount` taşıyor; "8 kalem" yazan bir satırın ARKASINI görmenin telefonda
- * tek yolu *"kabule başla"* düğmesiydi — yani yalnız KABUL BEKLEYEN transferin. Yoldaki ve kapanmış
- * kayıtlar açılamıyordu. Bu uç o boşluğu kapatıyor ve adı gereği hiçbir şey yazmıyor.
- *
- * **Kalemler liste yanıtına KOYULMADI.** Kapanan pencere on satır ve her biri N kalem taşıyor;
- * hepsini her açılışta indirmek, nadiren açılan bir şey için her seferinde ödemek olurdu. Detay
- * kendi turunu ister — mal kabul detayının aynı kararı.
- *
- * Şema `InboundTransferLineSchema`yı YENİDEN KULLANIR: rampada sayılan satırla geçmişte okunan satır
- * aynı şeydir (ad · boy · kapak · lot · SKT · sevk edilen · sayılan). İkinci bir kalem şekli açmak,
- * aynı gerçeğin iki sözleşmesi olurdu (CLAUDE §1). `receivedQty` geçmişte "ne sayılmış" sorusunun
- * cevabıdır ve `null` ("hiç sayılmadı") ile `0` ("geldi ama kayıp") orada da ayrı kalır.
+ * `GET /warehouse/transfers/:transferId` — tek kaydın içi, salt okuma; kalemler liste yanıtına konmaz, nadiren açılan şey
+ * için her seferinde ödenmesin. Şema `InboundTransferLineSchema`yı yeniden kullanır: sayılan satırla geçmişte okunan aynıdır.
  */
 export const TransferDetailResponseSchema = z.object({
   transferId: z.string().uuid(),
@@ -1269,24 +948,23 @@ export type TransferDetailResponse = z.infer<typeof TransferDetailResponseSchema
 export type TransferDetailContract = TransferDetailResponse;
 
 /**
- * Transfer kabulü isteği (D5). Satır tipi VARLIK şemasından (`ReceiveLineSchema`) — `receivedQty`
- * sıfır olabilir ve bu bir BEYANDIR ("sevk edildi ama gelmedi"); satırı hiç göndermemek ise kabulü
- * bloklar (v2: *"boş satır kabulü bloklar, ikisi ayrı şeydir"*).
- */
-/**
- * EKSİK BEYANI (kullanıcı kararı 04.09, 21.248) — yalnız eksik varken okunur. Sebep iki çipten biri:
- * `transfer_shortfall` (koli eksik geldi — nakliyede kayıp) · `damaged` (hasarlı geldi — imha).
- * Not isteğe bağlı: beyanın kendisi kayıttır, cümle zorunlu tutulsaydı rampada uydurulurdu.
+ * Eksik beyanı — yalnız eksik varken okunur; sebep `transfer_shortfall` (nakliyede kayıp) ya da `damaged` (imha). Not
+ * isteğe bağlı: zorunlu tutulsaydı rampada uydurulurdu.
  */
 export const TransferShortfallDeclarationSchema = z.object({
   /**
-   * Eksiğin sebebi; FAZLA-yalnız beyanda anlamsız ve gönderilmez (04.09, 21.253) — fazlanın sebebi
-   * yok, sayımın kendisi kayıttır. Eksik varken boş geçilirse kapı `transfer_shortfall` sayar.
+   * Eksiğin sebebi; fazla-yalnız beyanda gönderilmez, fazlanın sebebi yok. Eksik varken boş geçilirse kapı
+   * `transfer_shortfall` sayar.
    */
   reason: StockWriteOffReasonEnum.extract(['transfer_shortfall', 'damaged']).nullish(),
   note: z.string().max(500).nullish(),
 });
 export type TransferShortfallDeclaration = z.infer<typeof TransferShortfallDeclarationSchema>;
+
+/**
+ * Transfer kabulü isteği; satır tipi varlık şemasından (`ReceiveLineSchema`). `receivedQty` sıfır olabilir ve bu bir
+ * beyandır ("sevk edildi ama gelmedi"), satırı hiç göndermemek ise kabulü bloklar.
+ */
 export const ReceiveTransferRequestSchema = z.object({
   lines: z.array(ReceiveLineSchema),
   /** Verilmezse ve eksik varsa kapı `transfer_shortfall` sayar, notsuz — web'in kabul formu böyle çağırır. */
@@ -1309,20 +987,18 @@ export const ReceiveTransferResponseSchema = z.discriminatedUnion('status', [
     transferId: z.string().uuid(),
     createdBatches: z.number().int(),
     /**
-     * Eksik beyanı yazıldıysa (04.09): toplam adet, IMH belgesi ve satır satır fark — toast
-     * "5 birim eksik kayıp yazıldı · IMH-STR-26-0013" diyebilsin. Tam kabulde `null`: "0 eksik"
-     * yazmak, hiç beyan edilmemiş bir şeyi beyan gibi okuturdu.
+     * Eksik beyanı yazıldıysa: toplam adet, IMH belgesi ve satır satır fark, toast bunları söylesin. Tam kabulde `null`:
+     * "0 eksik" yazmak beyan edilmemiş şeyi beyan gibi okuturdu.
      */
     shortfall: TransferDiscrepancySchema.nullable(),
     /**
-     * Fazla beyanı yazıldıysa (04.09, 21.253): sevk edilenden fazlası SAY belgesiyle partiye eklendi —
-     * toast "1 birim fazla yazıldı · SAY-KEHL-26-0003" der. Fazla yoksa `null`. Eksikle aynı biçim:
-     * ikisi aynı sayımın iki yüzü, bir satır eksik öteki fazla gelebilir.
+     * Fazla beyanı yazıldıysa: sevk edilenden fazlası SAY belgesiyle partiye eklendi; fazla yoksa `null`. Eksikle aynı biçim,
+     * ikisi aynı sayımın iki yüzü.
      */
     excess: TransferDiscrepancySchema.nullable(),
   }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
-  /** Araya biri girdi: transfer artık yolda değil. Ekran bunu GÖSTERİR, yutmaz. */
+  /** Araya biri girdi: transfer yolda değil. Ekran bunu gösterir, yutmaz. */
   z.object({ status: z.literal('stale'), currentStatus: TransferStatusEnum }),
   /** Sayılmamış (ya da tanınmayan) satır var — kabul YAPILMADI, hangileri olduğu döner. */
   z.object({
@@ -1336,8 +1012,7 @@ export const ReceiveTransferResponseSchema = z.discriminatedUnion('status', [
 export type ReceiveTransferResponse = z.infer<typeof ReceiveTransferResponseSchema>;
 
 /**
- * Sevk isteği (D5'in "ver" yarısı). **Kaynak depo gövdede YOK** — partiler zaten bir depoda duruyor
- * ve ayrıca sorulan bir kaynak onlarla çelişebilirdi; kimlik jetondan gelir. Hedef ise iş verisidir.
+ * Sevk isteği — kaynak depo gövdede yok: partiler zaten bir depoda duruyor ve kimlik jetondan gelir. Hedef ise iş verisidir.
  */
 export const DispatchTransferRequestSchema = z.object({
   toWarehouseId: z.string().uuid(),
@@ -1378,16 +1053,8 @@ export type CancelTransferResponse = z.infer<typeof CancelTransferResponseSchema
 // parametresini taşıyor. Burada yalnız o kapının uç ZARFI tanımlanıyor — ikinci bir davranış değil.
 
 /**
- * Dönen kolinin tek satırı (21.11d okuma ayağı).
- *
- * ── ÖLÇÜ `fulfilledQty`, `qty` DEĞİL — VE BU BİR YAZIM KISITI ────────────────
- * `adjust_fulfillment` (0020) hedef değeri MEVCUT karşılanan adedin üstüne çıkaramaz: *"karşılanan
- * miktar artırılamaz"*. Ekranın tavanı bu yüzden sipariş edilen adet değil, hâlihazırda karşılanmış
- * adettir — sipariş adedini göstermek depocuya kapının reddedeceği bir sayı girdirirdi.
- *
- * `disposition` dolu = bu satırın akıbeti ZATEN işaretlenmiş. Alan gösterilmeseydi ekran aynı satırı
- * ikinci kez gönderir, `restock` ikinci kez stoğa yazılırdı; boş bırakmak da "hiç dokunulmadı"
- * demenin tek yolu olurdu ve ikisi ayrı şeydir.
+ * Dönen kolinin tek satırı. Ölçü `fulfilledQty`dir, `qty` değil: `adjust_fulfillment` hedefi karşılanan adedin üstüne
+ * çıkaramaz; `disposition` dolu = satırın akıbeti zaten işaretli, ekran onu ikinci kez göndermez.
  */
 export const ReturnDropLineSchema = z.object({
   orderItemId: z.string().uuid(),
@@ -1395,26 +1062,14 @@ export const ReturnDropLineSchema = z.object({
   name: z.string(),
   fulfilledQty: z.number().int(),
   disposition: ReturnDispositionEnum.nullable(),
-  /**
-   * Akıbetle birlikte YAZILMIŞ beyan (soğuk zincir notu) — yalnız işaretlenmiş satırda dolu.
-   *
-   * Okumaya 04.09'da eklendi: ekran "stoğa dön"de notu ZORUNLU tutuyor ama not hiçbir yere
-   * yazılmıyordu (kusur). Not artık kaleme yazılıyor ve yazılmış satırda GERİ OKUNUYOR — zorunlu
-   * tutulan bir beyanın nereye gittiği görünmezse, zorunluluk bir forma doldurma törenidir.
-   */
+  /** Akıbetle birlikte yazılmış beyan (soğuk zincir notu) — yalnız işaretli satırda dolu; depocu ne beyan ettiğini görür. */
   note: z.string().nullable(),
 });
 export type ReturnDropLineContract = z.infer<typeof ReturnDropLineSchema>;
 
 /**
- * Depoya geri gelen bir sipariş — D6'nın "döküm"ü.
- *
- * **Para YOK** (D6'nın YANITINDAKİ istisna buraya taşınmaz): dönüşü karşılayan depocu iade tutarını
- * görmez; tutar yalnız işaretleme YAZILDIKTAN sonraki cevapta, yönetim akışı için döner.
- *
- * `note` kuryenin kapıdaki serbest notudur (`order_status_log.note` — `returned`'a geçiş satırı);
- * depocunun akıbet kararının tek bağlamı odur. `courierName` `null` olabilir: sipariş bir kuryeye
- * hiç atanmamış olabilir (kargo/mağaza yolu) — uydurma bir ad yerine görünür boşluk.
+ * Depoya geri gelen bir sipariş — D6'nın dökümü; para yok, depocu iade tutarını görmez. `note` kuryenin kapıdaki notudur
+ * ve akıbet kararının tek bağlamıdır; kuryesiz siparişte `courierName` `null` kalır, ad uydurulmaz.
  */
 export const ReturnDropSchema = z.object({
   orderId: z.string().uuid(),
@@ -1434,33 +1089,15 @@ export const ReturnDropSchema = z.object({
 export type ReturnDropContract = z.infer<typeof ReturnDropSchema>;
 
 /**
- * `GET /warehouse/returns` yanıtı — "bu depoya ne geri geldi, hangisinin akıbeti belirsiz".
- *
- * ── ANAHTAR KURYENİN GÜNÜ DEĞİL, DEPONUN RAMPASI ────────────────────────────
- * Bir `courierDayCloseId` süzgeci ölçüldü ve ELENDİ: siparişin kapanış kaydına bağı YOK (bağ
- * kurye + gün üzerinden dolaylı kurulurdu) ve bir kuryenin günü deponun listesi değildir — aynı
- * rampaya iki kurye dönebilir, biri günü kapatmamış olabilir. Deponun sorusu "bugün kim kapattı"
- * değil, "elimde akıbeti belirsiz ne var".
- *
- * **Ulaşılamayanlar bu listede YOK ve olmamalı:** o mal araca yüklenmiş, kabul EDİLMEMİŞ ve yarına
- * devrolmuştur (v2:505) — sipariş `ready`'e döner, deponun rampasına hiç girmez.
+ * `GET /warehouse/returns` yanıtı — bu depoya ne geri geldi, hangisinin akıbeti belirsiz; anahtar deponun rampasıdır,
+ * kuryenin günü değil. Ulaşılamayanlar burada yok: mal araçta kalır, sipariş `ready`e döner.
  */
 export const WarehouseReturnQueueResponseSchema = z.object({ drops: z.array(ReturnDropSchema) });
 export type WarehouseReturnQueueResponse = z.infer<typeof WarehouseReturnQueueResponseSchema>;
 
 /**
- * **RAMPA LİSTESİNİN SATIRI** (D6 · tasarım "D6 Rampa Listesi", 04.09) — rampada teslim vermeyi
- * bekleyen BİR KURYE.
- *
- * ── EKSEN KURYE, SEFER DEĞİL — VE BU BİR SADELEŞTİRME DEĞİL ─────────────────
- * Para sefer başına kapanır (`delivery_run_close`, 18.08 K1); MAL kurye başına teslim alınır. Sebep
- * fiziksel: araç bir yerdedir ve o gün tek kuryenin yükünü taşır (`assert_vehicle_single_courier`),
- * yani iki sefer sürmüş kurye rampaya BİR KEZ döner ve araç bir kez boşalır. Satırı sefere
- * bağlasaydık aynı aracın malı iki satıra bölünür, ikisi de aynı araç deposunu sayardı.
- *
- * ── `courierId` NULL OLABİLİR ───────────────────────────────────────────────
- * Kargo ya da tezgâh yoluyla dönen siparişin kuryesi yoktur ama akıbeti yine işaretlenir. O
- * dönüşler tek bir kümede toplanır: kimliksiz satırın aracı, kutusu ve serbest ürünü olmaz.
+ * Rampa listesinin satırı — teslim vermeyi bekleyen bir kurye; para sefer başına, mal kurye başına kapanır ve araç bir kez
+ * boşalır. `courierId` `null` olabilir: kargo ya da tezgâh yoluyla dönen siparişler tek kümede toplanır.
  */
 export const ReturningCourierSchema = z.object({
   courierId: z.string().uuid().nullable(),
@@ -1485,15 +1122,8 @@ export const WarehouseReturningCouriersResponseSchema = z.object({ couriers: z.a
 export type WarehouseReturningCouriersResponse = z.infer<typeof WarehouseReturningCouriersResponseSchema>;
 
 /**
- * **TEK KURYENİN DÖNÜŞÜ** — D6 detayının tamamı, tek okumada.
- *
- * İki kapının cevabı BİRLEŞTİRİLİYOR (`listWarehouseReturns` + `readCourierReturn`) çünkü ekran
- * tek CTA ile ikisini birden yazıyor: iki ayrı istek, kullanıcının tek gördüğü işi iki yarım
- * fotoğraftan kurmak olurdu ve biri düşerse ekran hangi yarısının eksik olduğunu söyleyemezdi.
- *
- * **Kuryesiz küme aynı şekli taşır**, ayrı bir tip DEĞİL: `courierId` boş, araç ve kutu listeleri
- * boş, `drops` dolu. Ayrık birleşim yazmak ekrana iki ayrı çizim yolu açardı; oysa fark yalnız
- * hangi bölümlerin boş olduğudur ve ekran zaten boş bölümü çizmiyor.
+ * Tek kuryenin dönüşü — ekran tek CTA ile iki kapının işini yazdığı için iki cevap tek okumada birleşir. Kuryesiz küme aynı
+ * şekli taşır: araç ve kutu listeleri boş, `drops` dolu.
  */
 export const WarehouseCourierReturnResponseSchema = z.object({
   courierId: z.string().uuid().nullable(),
@@ -1533,12 +1163,9 @@ export const WarehouseReturnResponseSchema = z.discriminatedUnion('status', [
     paymentStatus: PaymentStatusEnum,
     amountToCollectCents: z.number().int(),
     /**
-     * Borç vardı ama iade YAZILAMADI — sebebiyle. Yokluğu "iade tamam" demektir; sessizce sıfır
-     * dönmek operatöre iadeyi yapılmış gibi gösterirdi.
+     * Borç vardı ama iade yazılamadı — sebebiyle; yokluğu "iade tamam" demektir. `split_payment`da ekranın cümlesi "tekrar
+     * dene" değil hesap başına elle iadedir, çünkü tek hesaptan yazmak parayı almamış hesabın bakiyesini bozardı.
      */
-    /* `split_payment` (21.265): para birden çok hesaba girmiş — iade tek hesaptan yazılamaz, çünkü
-       parayı almamış hesabın bakiyesi sessizce yanlış olurdu. Ekran bunu ayrı bir cümleyle söylemeli:
-       çare "tekrar dene" değil, hesap başına elle iade. */
     refundBlocked: z
       .enum(['no_account', 'provider_ref_missing', 'provider_unavailable', 'provider_failed', 'split_payment'])
       .optional(),
@@ -1546,9 +1173,8 @@ export const WarehouseReturnResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
   /**
-   * Kalemin akıbeti ZATEN yazılmış ve gelen istek BAŞKASINI söylüyor — ekran bayat (04.09).
-   * `stale`den ayrı: orada SİPARİŞ değişmiştir, burada KALEM karara bağlanmıştır ve ekranın
-   * yapacağı şey farklıdır (tazele, yazılı hâli göster). Hiçbir satır yazılmamıştır.
+   * Kalemin akıbeti zaten yazılmış ve istek başkasını söylüyor — ekran bayat, hiçbir satır yazılmadı. `stale`den ayrı:
+   * orada sipariş değişmiştir, burada kalem karara bağlanmıştır.
    */
   z.object({
     status: z.literal('already_marked'),
@@ -1570,10 +1196,8 @@ export const ResolveCodeRequestSchema = z.object({ code: z.string().min(1) });
 export type ResolveCodeRequest = z.infer<typeof ResolveCodeRequestSchema>;
 
 /**
- * Arama zinciri TEK kapıda ve öncelik sırası sözleşmenin parçası: `barcode → sku → supplier_code`
- * (etüt §4). `source` o yüzden dönüyor — SKU'dan bulunan bir eşleşme barkod eşleşmesi kadar kesin
- * değildir ve ekran "SKU'dan bulundu" diyebilmeli. `unknown` bir hata değil ÖĞRENME davetidir:
- * ekran "bu kod hangi ürün?" diye sorar (karar §1.3).
+ * Arama zinciri tek kapıda ve sırası sözleşmenin parçası: `barcode → sku → supplier_code`; `source` döner, çünkü SKU
+ * eşleşmesi barkod kadar kesin değildir. `unknown` hata değil öğrenme davetidir.
  */
 export const ResolveCodeResponseSchema = z.discriminatedUnion('status', [
   z.object({
@@ -1587,13 +1211,8 @@ export const ResolveCodeResponseSchema = z.discriminatedUnion('status', [
     qtyPerCode: z.number().int().positive(),
     source: z.enum(['barcode', 'sku', 'supplier_code']),
     /**
-     * Varyantın KENDİ kodu (`product_variant.sku`) — okutulan kod DEĞİL.
-     *
-     * Aramadan eklenen satır bunu zaten taşıyordu (`VariantSearchRowSchema.sku`), okutmadan eklenen
-     * taşımıyordu; aynı listede bir satırda kod olup ötekinde olmaması depocuya "bu ürünün kodu yok
-     * mu" diye sordururdu. Kaynak tek: iki yol da aynı varyantın aynı alanını gösteriyor.
-     *
-     * `null` = varyanta SKU girilmemiş (alan `product_variant`ta nullable) — boş dize değil.
+     * Varyantın kendi kodu (`sku`), okutulan kod değil — arama ve okutma aynı alanı göstermeli. `null` = varyanta SKU
+     * girilmemiş, boş dize değil.
      */
     sku: z.string().nullable(),
     /**
@@ -1618,62 +1237,43 @@ export const ResolveCodeResponseSchema = z.discriminatedUnion('status', [
 export type ResolveCodeResponse = z.infer<typeof ResolveCodeResponseSchema>;
 
 /**
- * **PARTİ kodunun çözümü** — `codes/resolve`in İKİZİ DEĞİL, kardeşi (D4'ün ikinci çıkış yolu).
- *
- * ── NEDEN AYRI KAPI ─────────────────────────────────────────────────────────
- * `codes/resolve` bir kodu **varyanta** çevirir: "bu hangi mal". Sayım ekranının sorusu başkadır —
- * "bu RAFTAKİ hangi parti": düzeltme daima bir partiye yazılır ve aynı varyantın aynı depoda birden
- * çok partisi olabilir. İki soruyu tek kapıya yükleseydik cevabın tipi ya varyant ya parti olurdu
- * ve çağıranların yarısı ötekinin dalını hiç kullanmazdı.
- *
- * ── EŞLEŞME ÇOĞULDUR ────────────────────────────────────────────────────────
- * Lot numarası benzersiz DEĞİL (`stock.lot_number` üzerinde tekillik kısıtı yok; aynı lot iki ayrı
- * son tarihle ya da iki ayrı alanda durabilir). Tekile indirseydik sistem depocunun görmediği bir
- * partiyi seçerdi — sayım yanlış partiden düşerdi.
+ * Parti kodunun çözümü — `codes/resolve` kodu varyanta çevirir, sayımın sorusu ise "raftaki hangi parti"dir. Eşleşme
+ * çoğuldur, çünkü lot numarası benzersiz değil; tekile indirmek sayımı depocunun görmediği partiden düşürürdü.
  */
 export const ResolveBatchRequestSchema = z.object({ code: z.string().min(1) });
 export type ResolveBatchRequest = z.infer<typeof ResolveBatchRequestSchema>;
 
-/** Çözülen parti — sayım ekranının konusu. **Para YOK**: partinin alışı depo yolundan geçmez (09.14). */
+/** Çözülen parti — sayım ekranının konusu; para yok, partinin alışı depo yolundan geçmez. */
 export const ResolvedBatchSchema = z.object({
   stockId: z.string().uuid(),
   variantId: z.string().uuid(),
   /** "Ürün (boy)" — operasyon dilinde; ekranın üstbaşlığında görünen ad. */
   name: z.string(),
   /**
-   * PARTİ NUMARASI (`PRT-STR-26-0031`) — partinin BİZİM kimliğimiz, her partide var (kullanıcı
-   * kararı 03.09). Ekran partiyi bununla anar; lot (tedarikçinin numarası, boş olabilir) yanına yazılır.
-   * Okutma ikisini de tanır: parti numarası tek satıra düşer, lot birden çoğa düşebilir.
+   * Parti numarası (`PRT-STR-26-0031`) — partinin bizim kimliğimiz, her partide var; lot (tedarikçinin numarası) yanına
+   * yazılır. Okutma ikisini de tanır.
    */
   batchNo: z.string(),
   /**
-   * Partinin lot numarası — **`null` olabilir** ve bu ölçülmüş bir gerçektir (02.09).
-   *
-   * OKUTMA yolunda daima dolu (eşleşme onun üzerinden kuruluyor). RAF LİSTESİ yolunda değil:
-   * mal kabulde lot boş bırakmak meşru (`stock.lot_number` nullable) ve lotsuz partiyi listeden
-   * DÜŞÜRMEK, tam da sayımın en çok gerektiği partiyi görünmez yapardı — etiketi olmayan parti,
-   * kaydı da en şüpheli olandır. Ekran o hâlde "lot yazılmamış" der, bir kod uydurmaz.
+   * Partinin lot numarası; raf listesinde `null` olabilir, çünkü mal kabulde lot boş bırakmak meşrudur. Lotsuz partiyi
+   * düşürmek sayımın en çok gerektiği partiyi gizlerdi; ekran "lot yazılmamış" der, kod uydurmaz.
    */
   lotNumber: z.string().nullable(),
   expiryDate: z.string(),
   /**
-   * Tarih REJİMİ — `DLC` (son tüketim, geçince satılamaz) / `DDM` (kalite tarihi, geçince satılır).
-   *
-   * Bağlam kartında tarihin YANINDA duruyor (v3:08/09 · "{rejim} {tarih}") ve süsleme değil: D3'te
-   * ölçülen arızanın aynısı burada da mümkündü — rejimi söylenmeyen bir tarih, depocuya satılabilir
-   * malı imha ettirebilir (21.191'in DLC/DDM ayrımı).
+   * Tarih rejimi — `DLC` (geçince satılamaz) / `DDM` (geçince satılır); tarihin yanında durur, çünkü rejimi söylenmeyen
+   * tarih satılabilir malı imha ettirebilir.
    */
   dateType: ProductDateTypeEnum,
   /** Kayıttaki fiili adet — sayımın karşılaştıracağı sayı. */
   physicalQty: z.number().int(),
-  /** Partinin alanının ADI ("Derin dondurucu 2"); rafı seçilmemiş partide `null` (19.29). */
+  /** Partinin alanının adı ("Derin dondurucu 2"); rafı seçilmemiş partide `null`. */
   storageAreaName: z.string().nullable(),
   /**
-   * Alanın KİMLİĞİ — adın yanında, 03.09. Ekran "depocunun aktif alanı bu partinin alanı mı"
-   * sorusunu adla soramaz: iki tesiste aynı ad olabilir ve ad değişebilir. `null` = rafı bilinmiyor.
+   * Alanın kimliği — "depocunun aktif alanı bu partinin alanı mı" adla sorulamaz, ad değişebilir. `null` = rafı bilinmiyor.
    */
   storageAreaId: z.string().uuid().nullable(),
-  /** Ürün kapağı (public URL) — seçici satırının solundaki kare (kullanıcı isteği 03.09); kapaksız üründe `null`. */
+  /** Ürün kapağı (public URL) — seçici satırının solundaki kare; kapaksız üründe `null`. */
   imageUrl: z.string().nullable(),
   /**
    * Kalan raf ömrü yüzdesi. **`null` = ölçülemedi** (ürünün toplam ömrü girilmemiş) ve sıfır
@@ -1681,18 +1281,11 @@ export const ResolvedBatchSchema = z.object({
    */
   lifePercent: z.number().nullable(),
   /**
-   * **Ürünün bu depodaki TOPLAM fiili stoğu** — partinin kendi adedinin yanındaki ikinci sayı
-   * (v3:08/09'un iki kolonlu bağlam kartı), 02.09'da eklendi.
-   *
-   * Neden gerekli: depocu 12 yazan bir partiden 3 düşerken "ürün bitiyor mu" sorusunu soramıyordu.
-   * Parti adedi tek başına o soruyu cevaplamaz — aynı ürünün rafta üç partisi olabilir. İki sayı
-   * yan yana durunca karar bağlamıyla veriliyor: *bu partide 12, üründe toplam 46*.
-   *
-   * **Depo süzgeçli** ve öyle kalmalı (CLAUDE §1): depo-üstü toplam, başka şehrin malını burada
-   * varmış gibi gösterirdi.
+   * Ürünün bu depodaki toplam fiili stoğu — parti adedinin yanında durur ki "ürün bitiyor mu" sorusu kararın bağlamında
+   * cevaplansın. Depo süzgeçli (CLAUDE §1): depo-üstü toplam başka şehrin malını burada varmış gibi gösterirdi.
    */
   variantWarehouseQty: z.number().int(),
-  /** Ürünün kayıtlı koli boyları — rafta koli de durur, sayım çekmecesi çarpanı buradan alır (02.09). */
+  /** Ürünün kayıtlı koli boyları — rafta koli de durur, sayım çekmecesi çarpanı buradan alır. */
   caseSizes: z.array(CaseSizeSchema),
 });
 export type ResolvedBatchContract = z.infer<typeof ResolvedBatchSchema>;
@@ -1709,47 +1302,22 @@ export const ResolveBatchResponseSchema = z.discriminatedUnion('status', [
 export type ResolveBatchResponse = z.infer<typeof ResolveBatchResponseSchema>;
 
 /**
- * **RAF LİSTESİ** — `GET /warehouse/batches?q=…` (v3:08/09'un *"ya da raf listesinden seç"* yolu),
- * 02.09'da açıldı.
- *
- * ── NEDEN AÇILDI ────────────────────────────────────────────────────────────
- * D4'ün konusu (parti) bugüne kadar YALNIZ dışarıdan geliyordu: ya D3 turundan taşınıyor ya rafta
- * bir etiket okutuluyordu. Okunamayan etiket — yırtılmış, silinmiş, hiç yapıştırılmamış — depocuyu
- * çıkışsız bırakıyordu ve ekran bunu kendi de yazıyordu (*"depo partilerini listeleyen bir okuma
- * kapısı henüz yok"*). Sayım tam da o partide gerekir: kaydı şüpheli olan parti, etiketi de
- * şüpheli olandır.
- *
- * ── PENCERE, SAYFA DEĞİL — VE KIRPMA SÖYLENİR ───────────────────────────────
- * Küme veriyle büyür (CLAUDE §1) ama bu bir LİSTE ekranı değil, bir SEÇİCİ: depocu aradığı partiyi
- * bilir, gözüyle tarar. Bu yüzden sabit tavan + arama (`q`) — `/warehouse/variants`in deseni.
- * Tavana dayanıldığında `truncated` bunu SÖYLER; sessiz kırpma, depocunun "listede yok" diye
- * yanlış partiye gitmesi demekti.
- *
- * Sıra SON KULLANMA TARİHİNE göre: rafta ilk elden çıkacak parti listenin de başındadır.
+ * Raf listesi — `GET /warehouse/batches?q=…`; okunamayan etiketli partinin de sayılabilmesi için. Sıra son kullanma
+ * tarihine göre: rafta ilk elden çıkacak parti listenin başındadır.
  */
 export const WarehouseBatchesResponseSchema = z.object({
   batches: z.array(ResolvedBatchSchema),
   /**
-   * Sonraki sayfanın imleci — **opak dize**, istemci yorumlamaz, `?cursor=` diye geri verir
-   * (katalog/bildirim uçlarının aynı sözleşmesi). `null` = liste bitti.
-   *
-   * 03.09'da `truncated`ın yerini aldı: liste eskiden PENCEREYDİ (ilk 60 satır) ve tavana
-   * dayanınca ekran *"aramayla daralt"* diyordu — depoda 154 parti varken tel hepsini taşıyor,
-   * ekran 60'ını gösteriyordu. Kullanıcı bulgusu: *"tüm stok yükleniyor, parça parça yüklenmesi
-   * gerekir."* Artık `CLAUDE §1`'in kuralı uygulanıyor: veriyle büyüyen küme → keyset + sonsuz
-   * kaydırma.
+   * Sonraki sayfanın imleci — opak dize, istemci `?cursor=` diye geri verir; `null` = liste bitti. Küme veriyle büyüdüğü
+   * için keyset + sonsuz kaydırma (CLAUDE §1).
    */
   nextCursor: z.string().nullable(),
 });
 export type WarehouseBatchesResponse = z.infer<typeof WarehouseBatchesResponseSchema>;
 
 /*
-  ══ DEPONUN ALANLARI + "PARTİ BURADA GÖRÜLDÜ" (kullanıcı kararı 03.09) ════════
-  Parti TEK alanda durur (`stock.storage_area_id`) ve depo içinde taşıma diye bir işlem YOKTUR —
-  bilinçli: elli paketin onunu dondurucuya götürmek için kayıt açtırmak, tek depocunun sahasını
-  prosedüre çevirirdi. Alan bunun yerine partinin SON GÖRÜLDÜĞÜ YERDİR ve sistem onu zaten
-  yapılan işten öğrenir: depocu sayımda hangi dolabın önünde durduğunu bir kez söyler, o dolapta
-  okuttuğu/seçtiği parti oraya yazılır. Adet bölünmez, hareket defterine satır düşmez.
+  Deponun alanları: parti tek alanda durur ve depo içi taşıma işlemi yoktur; alan partinin son görüldüğü yerdir ve sistem
+  onu sayımda depocunun önünde durduğu dolaptan öğrenir. Adet bölünmez, hareket defterine satır düşmez.
 */
 
 /**
@@ -1778,13 +1346,8 @@ export const MarkBatchSeenResponseSchema = z.discriminatedUnion('status', [
 export type MarkBatchSeenResponse = z.infer<typeof MarkBatchSeenResponseSchema>;
 
 /**
- * **Plansız kabulün ürün araması** (23.13) — `GET /warehouse/variants?q=…`.
- *
- * PO'lu kabulde arama YOKTUR ve olmamalı (satır kümesi siparişten gelir; katalog araması açmak
- * yanlış ürüne öğretmenin kapısıdır — karar §1.3). Plansızda küme yoktur: mal gelmiş, siparişi
- * girilmemiştir; depocu ürünü seçemezse kabul hiç yazılamaz.
- *
- * **Para taşımaz:** satırda fiyat alanı yok — depo yolu fiyat görmez (09.14).
+ * Plansız kabulün ürün araması — `GET /warehouse/variants?q=…`; PO'lu kabulde arama yok, satırlar siparişten gelir.
+ * Satırda fiyat yok, depo yolu fiyat görmez.
  */
 /*
   ══ D3 · YAKIN-SKT TURU ═════════════════════════════════════════════════════
@@ -1794,14 +1357,12 @@ export type MarkBatchSeenResponse = z.infer<typeof MarkBatchSeenResponseSchema>;
 */
 
 /**
- * Yakın-SKT listesinin bir satırı — **bir PARTİ**, bir ürün değil.
- *
- * Ayrım işin kendisi: aynı ürünün iki partisi iki ayrı karar bekler ve depocu rafta partiyi
- * etiketinden bulur. Ürün bazında toplamak, "hangi kutuyu indireceğim" sorusunu cevapsız bırakırdı.
+ * Yakın-SKT listesinin bir satırı — bir parti, bir ürün değil: aynı ürünün iki partisi iki ayrı karar bekler ve depocu
+ * rafta partiyi etiketinden bulur.
  */
 export const NearExpiryBatchSchema = z.object({
   stockId: z.string().uuid(),
-  /** Parti numarası — bizim kimliğimiz, hep var (03.09). Satırın künyesi bununla başlar. */
+  /** Parti numarası — bizim kimliğimiz, hep var; satırın künyesi bununla başlar. */
   batchNo: z.string(),
   /** Tedarikçinin lotu — geri çağırma anahtarı; yazılmamış olabilir, o zaman satırda hiç görünmez. */
   lotNumber: z.string().nullable(),
@@ -1810,17 +1371,13 @@ export const NearExpiryBatchSchema = z.object({
   qty: z.number().int(),
   expiryDate: z.string(),
   /**
-   * Bugünden son kullanma tarihine kalan GÜN; geçmiş partide NEGATİF.
-   *
-   * Aciliyet rengi bundan TÜRETİLİR ve sözleşmede taşınmaz: renk ekranın kararıdır, kapının değil.
-   * Taşısaydık aynı eşik iki yerde yaşar ve biri bir gün ötekiyle çelişirdi (CLAUDE §1).
+   * Bugünden son kullanma tarihine kalan gün; geçmiş partide negatif. Aciliyet rengi bundan türer ve taşınmaz: renk ekranın
+   * kararıdır, taşısaydık aynı eşik iki yerde yaşardı.
    */
   daysLeft: z.number().int(),
   /**
-   * Kalan ömür yüzdesi (0–100) — **`null` = ÖLÇÜLEMEDİ**, sıfır değil (CLAUDE §1).
-   *
-   * Ürünün toplam raf ömrü girilmemişse yüzde hesaplanamaz; "%0" yazmak o partiyi imhalık
-   * gösterirdi. Ekran `null` gelince çubuğu HİÇ çizmiyor.
+   * Kalan ömür yüzdesi (0–100); `null` = ölçülemedi, sıfır değil (CLAUDE §1). Raf ömrü girilmemişse "%0" partiyi imhalık
+   * gösterirdi, ekran çubuğu hiç çizmez.
    */
   remainingPercent: z.number().nullable(),
   /**
@@ -1833,12 +1390,8 @@ export const NearExpiryBatchSchema = z.object({
   /** Kalan ömür işletmenin MLOR eşiğinin altında mı — satılabilirliğin ayrı sorusu. */
   belowMlor: z.boolean(),
   /**
-   * **TARİH REJİMİ — kararın sebebi** (tasarım güncellemesi 31.08).
-   *
-   * Bu alan olmadan ekran doğru kararı gösteriyor ama SEBEBİNİ söyleyemiyordu: "6 gün (geçti)"
-   * yazan bir satırın kararı "teklife girebilir" olabiliyor ve depocu bunu görünce satılabilir malı
-   * imha etmeye kalkabiliyordu. Tasarımın kuralı artık başlıkta yazılı: *"DLC geçti = satılamaz ·
-   * DDM geçti = satılabilir."*
+   * Tarih rejimi — kararın sebebi: "DLC geçti = satılamaz · DDM geçti = satılabilir". Sebep yazılmazsa depocu satılabilir
+   * malı imha etmeye kalkabilirdi.
    */
   dateType: ProductDateTypeEnum,
   /**
@@ -1847,14 +1400,8 @@ export const NearExpiryBatchSchema = z.object({
    */
   shelfLabel: z.string().nullable(),
   /**
-   * **ÜRÜNÜN BU DEPODAKİ TOPLAM STOĞU** — imha çekmecesinin bağlamı (tasarım: *"partide {kalan}
-   * adet · toplam stok {stok}"*).
-   *
-   * Partinin adedi tek başına "kaç düşüyorum" sorusunu cevaplıyor ama "bu ürün bitiyor mu"
-   * sorusunu cevaplamıyor. Depocu 12 adetlik partiyi imha ederken depoda 200 adet daha olduğunu
-   * bilmeli — kararı değiştirmez ama telaşı değiştirir.
-   *
-   * PARA DEĞİL STOK: fiyat yasağı para kararı içindi (CLAUDE §2), stok depocunun işinin kendisi.
+   * Ürünün bu depodaki toplam stoğu — imha çekmecesinin bağlamı: parti adedi "bu ürün bitiyor mu" sorusunu cevaplamaz.
+   * Para değil stok: fiyat yasağı para içindir (CLAUDE §2).
    */
   productStockQty: z.number().int(),
 });
@@ -1881,16 +1428,8 @@ export const VariantSearchRowSchema = z.object({
   shelfLifeDays: z.number().int().nullable(),
   imageUrl: z.string().nullable(),
   /**
-   * **PERSONELİN DEPOSUNDAKİ kullanılabilir adet** — tasarımın satır künyesi *"GAZ-7120 · stok 24"*.
-   *
-   * Depo-ÜSTÜ toplam DEĞİL: birleştirilmiş stok kimsenin stoğu değildir (`AvailableStockTotal`
-   * künyesi) ve depocunun "bu üründen bende var mı" sorusunun cevabı yalnız kendi deposudur.
-   * Rezervasyon düşülmüş `availableQty` okunuyor; rafta duran ama başkasına ayrılmış mal,
-   * depocunun serbestçe kullanabileceği mal değildir.
-   *
-   * `0` GERÇEK BİR CEVAPTIR ve bu alanda ölçüm düşmesi yoktur: kapı personelin deposunu zaten
-   * biliyor, satırı olmayan varyant gerçekten sıfırdır (`listAvailableAcross` sıfır satırları
-   * sorgudan düşürüyor, o yüzden yokluk = sıfır).
+   * Personelin deposundaki kullanılabilir adet ("GAZ-7120 · stok 24") — depo-üstü toplam kimsenin stoğu değildir,
+   * rezervasyon düşülmüştür. `0` gerçek bir cevaptır: kapı personelin deposunu bilir ve satırı olmayan varyant sıfırdır.
    */
   stockQty: z.number().int(),
   /** Kod eşleşmesiyle bulunduysa bir okutmanın kaç adet saydığı; ad aramasında `null`. */

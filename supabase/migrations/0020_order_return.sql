@@ -1,31 +1,8 @@
--- Modül 07 — Kısmi karşılama (07.8) ve iptal/iade (07.9). DOMAIN §8, ORDER_LIFECYCLE.
---
--- İkisi de aynı soruyu sorar: **mal gitmediyse ya da geri geldiyse fiziksel gerçek nasıl düzeltilir?**
--- Paranın cevabı burada DEĞİL: iade borcu motorda türetilir (`domain-core/payment`: net tahsilat −
--- karşılanan tutar), hareketi uygulama katmanı yazar (12.2 `record_order_movement`). Bu dosya yalnız
--- malın gerçeğini yazar — ve o gerçek üç tabloya birden dokunduğu için bölünemez (STACK §13 (b)).
---
--- ── Malın nerede olduğu tek soruya iner: FİİLİ STOKTAN DÜŞTÜ MÜ? ─────────────────
--- Düşüm teslimde olur (0019 `deliver_order`). Bu yüzden iki hâl vardır ve her kayıp TAM BİR KEZ sayılır:
---
---   • **Mal çıkmadı** (`out_for_delivery`'den red, hazırlıkta eksik): fiili stok hiç düşmemiştir.
---     Kalem–parti kaydı ve rezervasyon azalır; mal depoda kalır. `discard` ise (araçta bozuldu)
---     fiiliden BURADA düşülür + fire kaydı yazılır.
---   • **Mal çıktı** (`delivered`/`completed` sonrası iade): fiili stok teslimde düşmüştür.
---     `restock` → mal depoya geri girer (fiili artar, `return_restock` kaydı) ve kalem–parti kaydından
---     düşer. `discard` → fiiliye DOKUNULMAZ (ikinci kez düşülemezdi) ve kalem–parti kaydı KALIR:
---     malın maliyeti siparişin COGS'unda kalır, kâr raporunda kaybı orada görünür. `goodwill` →
---     mal müşterideyken kaldı; ne miktar ne stok değişir (DOMAIN §8).
---
--- `order_item_batch`'in anlamı bu kuralla keskinleşir: **bizden çıkıp GERİ GELMEYEN mal.** COGS de
--- geri çağırma da bu kaydın üstünde durduğu için, geri dönen adedin orada kalması hem maliyeti hem
--- "bu parti kimde" cevabını yanlış yapardı.
+-- Kısmi karşılama, iade ve iptalin mal tarafı; para motorda türetilir, hareketi uygulama katmanı yazar (DOMAIN §8, ORDER_LIFECYCLE).
+-- Mal teslimde fiili stoktan düştüyse iade onu geri koyar ya da maliyeti siparişte bırakır, düşmediyse yalnız ayrılmış ve parti bağı azalır; `order_item_batch` bizden çıkıp geri gelmeyen maldır.
 
--- ── Kısmi karşılama / kalem iadesi (07.8) ─────────────────────────────────────
--- p_lines: [{"order_item_id": uuid, "fulfilled_qty": int, "return_disposition": text|null, "note": text|null}]
---
--- `fulfilled_qty` yalnız AZALIR: artırmak "mal nereden çıktı" sorusunu cevapsız bırakır — çıkan mal
--- hazırlıkta yazılır (0018 `record_preparation`), burada değil.
+-- p_lines: [{"order_item_id": uuid, "fulfilled_qty": int, "return_disposition": text|null, "note": text|null}]; `fulfilled_qty` hedef değerdir ve yalnız azalır.
+-- Artırmak malın nereden çıktığını cevapsız bırakırdı; çıkan mal hazırlıkta yazılır (0018 `record_preparation`).
 create or replace function public.adjust_fulfillment(
   p_order_id uuid,
   p_lines jsonb,
@@ -45,7 +22,7 @@ declare
   v_target int;
   v_delta int;                                       -- geri gelen / hiç gitmeyen adet
   v_disposition return_disposition;
-  /** Kalemde ZATEN yazılı akıbet — "bir kez yazılır" kapısının ölçütü (04.09). */
+  /** Kalemde zaten yazılı akıbet — "bir kez yazılır" kapısının ölçütü. */
   v_existing return_disposition;
   v_note text;
   v_batch record;
@@ -71,20 +48,8 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'stale', 'current_status', v_status);
   end if;
 
-  /*
-    ── "MAL FİİLİ STOKTAN DÜŞTÜ MÜ" GEÇMİŞTEN SORULUR, ANLIK DURUMDAN DEĞİL (kusur, ölçüldü 04.09) ──
-
-    Ölçüt `v_status in ('delivered','completed')` idi ve teslim SONRASI iade yolunda sessizce
-    yanlış cevap veriyordu: sipariş önce `delivered` olur (stok `deliver_order` ile fiilen düşer),
-    sonra `returned`a çevrilir — bu geçiş motorda izinli ve bugün kurye ucundan erişilebilir. O
-    noktada durum artık `returned` olduğu için ölçüt FALSE dönüyordu ve iki dal birden ters
-    çalışıyordu: `restock`ta mal deftere geri girmiyor (kalıcı hayalet kayıp), `discard`ta stok
-    İKİNCİ kez düşüyordu.
-
-    Doğru soru "şu an hangi durumda" değil, "bu sipariş HİÇ teslim edildi mi": stoğu düşüren olay
-    teslimin kendisi (`0016_deliver_order.sql`) ve o olay geri alınmıyor. Cevabı durum GÜNLÜĞÜ
-    taşıyor — anlık durum bir sonraki geçişte değişir, günlük değişmez.
-  */
+  -- Mal fiili stoktan düştü mü sorusu durum günlüğünden sorulur: teslim edilip sonra `returned`a çevrilen siparişte anlık durum yanıltır.
+  -- Stoğu düşüren olay teslimdir ve günlükte kalıcıdır.
   v_consumed := v_status in ('delivered', 'completed')
     or exists (
       select 1 from public.order_status_log l
@@ -107,23 +72,8 @@ begin
       raise exception 'adjust_fulfillment: kalem bu siparişe ait değil (%)', v_item_id;
     end if;
 
-    /*
-      ── AKIBET BİR KEZ YAZILIR (kusur, ölçüldü 04.09) ─────────────────────────────────────────
-
-      Kapının "bu kalem zaten karara bağlanmış" sorusu YOKTU: gelen akıbet `coalesce` ile üzerine
-      yazılıyor, goodwill dalı ise miktar doğrulamalarının ikisini birden atlayıp doğrudan
-      yazıyordu. Tek savunma ekranın salt-okunur çizimiydi ve o çizim BAYAT olabiliyor — iki
-      dönüşlü bir kuryede ikinci sipariş ağ hatasıyla düşerse ekran yerinde kalır, ilk siparişin
-      yazılmış satırları hâlâ işaretsiz görünür ve çipleri yeniden basılabilir.
-
-      Sonuç kendi kendini yalanlayan bir kayıttı: `goodwill` ("mal müşteride kaldı") yazan, ama
-      karşılanan adedi ilk turda 0'a düşürülmüş, parti bağı silinmiş bir kalem. COGS de geri
-      çağırma izi de o kalemde artık yanlış.
-
-      AYNI akıbetin ikinci kez gelmesi hata DEĞİL (ağ tekrarı, ikinci dokunuş) — sessizce geçilir.
-      FARKLI bir akıbet ise çağıranın bayat bir ekrandan yazdığını söyler: istek TAMAMEN reddedilir
-      ve sebebi adıyla döner, çünkü yarısı yazılmış bir düzeltme en kötü sonuçtur.
-    */
+    -- Farklı akıbet bayat bir ekrandan gelir ve istek tamamen reddedilir, çünkü yarısı yazılmış düzeltme en kötü sonuçtur.
+    -- Aynı akıbetin tekrarı ağ tekrarıdır ve atlanır.
     if v_existing is not null and v_disposition is not null and v_disposition <> v_existing then
       return jsonb_build_object(
         'ok', false, 'reason', 'already_marked', 'current_status', v_status,
@@ -135,8 +85,7 @@ begin
       continue;
     end if;
 
-    -- Jest iadesi: mal müşteride KALDI. Miktarı düşürmek malın hiç gitmediğini söylerdi — stok da
-    -- COGS de bozulurdu (DOMAIN §8). Yalnız tasarruf işaretlenir; para tarafı elle girilen iadedir.
+    -- Jest iadesi: mal müşteride kaldı, miktar düşürülmez (DOMAIN §8). Para tarafı elle girilen iadedir.
     if v_disposition = 'goodwill' then
       update public.order_item
          set return_disposition = 'goodwill',
@@ -158,9 +107,7 @@ begin
     update public.order_item
        set fulfilled_qty = v_target,
            return_disposition = coalesce(v_disposition, return_disposition),
-           -- BEYAN KALEME YAZILIR (04.09): "stoğa dön"ün zorunlu tuttuğu soğuk zincir cümlesi
-           -- eskiden yalnız stok hareketinin serbest metnine geçiyordu ve D6 yolunda o dal hiç
-           -- ateşlenmiyordu — yani ekranda zorunlu olan not hiçbir yere yazılmıyordu.
+           -- Beyan kaleme yazılır: "stoğa dön"ün zorunlu soğuk zincir cümlesi malın kendisi hakkındadır.
            return_note = coalesce(v_note, return_note)
      where id = v_item_id;
     v_lines := v_lines + 1;
@@ -180,10 +127,7 @@ begin
         exit when v_left <= 0;
         v_take := least(v_left, v_batch.qty);
 
-        -- Geri dönen mal depoya girer — YALNIZ fiiliden düşmüşse (teslim sonrası iade).
-        -- İmza 06.14'te değişti: yön ayrı parametre, miktar DAİMA pozitif (eskiden `-v_take`
-        -- geçiliyordu). `p_order_id` de veriliyor — defterdeki iade satırı hangi siparişten
-        -- döndüğünü kendi taşısın diye; eskiden bu bağ yalnız serbest metin notta vardı.
+        -- Geri dönen mal yalnız fiiliden düşmüşse depoya girer; `p_order_id` defterdeki satırın hangi siparişten döndüğünü taşır.
         if v_consumed and v_disposition = 'restock' then
           perform public.adjust_stock(
             v_batch.stock_id, v_take, 'in', 'return_restock', null,
@@ -237,19 +181,13 @@ begin
 end;
 $$;
 
--- ── İptal (07.9) ──────────────────────────────────────────────────────────────
--- İzin tablosu motordadır (`domain-core/order/status-machine`); buradaki tek kural fiziksel
--- gerçektir: beklenen kaynaktan ilerletilir, başkası ilerlettiyse `stale` döner.
---
--- İptalde mal MÜŞTERİYE HİÇ GİTMEMİŞTİR (teslim sonrası yol `returned`'dır) — bu yüzden fiili stok
--- değişmez; ayrılmış geri bırakılır ve kalem–parti kaydı silinir: hazırlanan mal depoda kalmıştır,
--- "müşteride kalan mal" kaydında görünmemelidir.
+-- İptal: izin motorda (`domain-core/order/status-machine`); burada beklenen kaynaktan ilerletilir, başkası ilerlettiyse `stale` döner.
+-- İptalde mal müşteriye gitmemiştir: fiili stok değişmez, ayrılmış bırakılır ve kalem–parti kaydı silinir.
 create or replace function public.cancel_order(
   p_order_id uuid,
   p_from order_status,
   p_actor_id uuid default null,
-  -- İptalin SEBEBİ (07.14). Varsayılan `null` — sebep vermeyen eski çağıran kırılmaz, ama sebepsiz
-  -- iptal ekranda "neden" sütununu boş bırakır ve müşteriye kurulacak cümleyi belirsizleştirir.
+  -- İptalin sebebi; sebepsiz iptal ekranda "neden" sütununu boş bırakır ve müşteriye kurulacak cümleyi belirsizleştirir.
   p_reason order_cancel_reason default null
 ) returns jsonb
 language plpgsql
@@ -275,9 +213,7 @@ begin
   delete from public.order_item_batch
    where order_item_id in (select id from public.order_item where order_id = p_order_id);
 
-  -- Karşılanan miktar sıfırlanır: iptal edilen siparişte karşılanan tutar 0'dır (ORDER_LIFECYCLE),
-  -- tahsil edilmişse tamamı iade borcudur. Türetim bunu `cancelled` durumundan da bilir; kalem
-  -- gerçeğini de sıfırlamak iki kaynağın aynı şeyi söylemesini sağlar.
+  -- İptalde karşılanan tutar 0'dır (ORDER_LIFECYCLE); kalem gerçeği de sıfırlanır ki iki kaynak aynı şeyi söylesin.
   update public.order_item set fulfilled_qty = 0 where order_id = p_order_id;
 
   -- Sebep AYNI güncellemede yazılır: ayrı bir `update` olsaydı ikisinin arasında sebepsiz bir
@@ -291,30 +227,8 @@ begin
 end;
 $$;
 
--- ── Kapıda TEK YAZIM: düzeltme + teslim (21.271 · denetim bulgusu 8) ─────────
---
--- ÖLÇÜLEN AÇIK: kurye ekranı ikisini ARDIŞIK iki çağrı olarak yapıyordu — önce `adjust_fulfillment`
--- (kapıda reddedilen kalem), sonra `deliver_order`. İkincisi `stale` dönerse (araya gün kapanışı ya
--- da başka bir cihaz girmişse) BİRİNCİSİ GERİ ALINMIYORDU: karşılanan adet düşmüş, rezervasyon
--- serbest kalmış, müşteriye "siparişiniz eksik karşılandı" haberi gitmiş, ama teslim yazılmamış
--- oluyordu. Ekran kuryeye "olmadı" diyor, oysa yarısı olmuştu.
---
--- SIRA DEĞİŞTİRİLEREK ÇÖZÜLEMEZDİ ve sebebi bu dosyanın kendi künyesinde: düzeltmenin anlamı malın
--- fiili stoktan düşüp düşmediğine bağlı. Teslimden ÖNCE düzeltmek "rezervasyonu küçült"tür,
--- SONRA düzeltmek "düşmüş stoğu geri koy". İki farklı iş, yani sıra bir dikkatsizlik değil kısıt.
--- Geriye tek doğru çare kalıyor: ikisini BÖLÜNMEZ yapmak.
---
--- MANTIK KOPYALANMADI, iki fonksiyon ÇAĞRILDI (CLAUDE §1): plpgsql içinden çağrılan fonksiyon aynı
--- transaction'da koşar, yani bölünmezlik bedava gelir. Kopyalasaydık bir gün biri düzeltilir öteki
--- unutulurdu — bu dosyanın 04.09'da yaşadığı hatanın ta kendisi.
---
--- DURUM ÖNCE SORULUR: teslim edilemeyecek bir siparişte malı düzeltmek, tam da kapatmaya
--- çalıştığımız yarım yazımın kendisi olurdu. `deliver_order` aynı kapıyı bir kez daha soruyor ve
--- bu bir tekrar değil güvenlik: o fonksiyon tek başına da çağrılabiliyor.
---
--- PARA BURADA YAZILMAZ (dosyanın kendi kuralı): iade borcu motorda türetilir, hareketi uygulama
--- katmanı yazar — üstelik kartlı iade DIŞ BİR ÇAĞRIDIR ve transaction'ın içine alınamaz.
--- Aynısı MÜŞTERİ HABERİ için de geçerli: yazım kesinleştikten SONRA gönderilir.
+-- Kapıda tek yazım: düzeltme ve teslim bölünmez, yoksa teslim `stale` döndüğünde düzeltme ve müşteri haberi yarım kalırdı.
+-- İki fonksiyon aynı transaction'da çağrılır, mantık kopyalanmaz; para ve haber yazım kesinleştikten sonra uygulama katmanında yazılır.
 create or replace function public.deliver_order_with_adjustments(
   p_order_id uuid,
   p_lines jsonb default null,
