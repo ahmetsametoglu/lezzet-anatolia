@@ -18,7 +18,8 @@
     },
     "apps/web": {
       "entry": [
-        "lib/guard.ts"
+        "lib/guard.ts",
+        "public/sw.js"
       ],
       "ignoreDependencies": [
         "pino",

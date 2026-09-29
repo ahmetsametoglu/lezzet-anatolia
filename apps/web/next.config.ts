@@ -120,7 +120,11 @@ const config: NextConfig = {
     },
   },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders() }];
+    return [
+      { source: '/:path*', headers: securityHeaders() },
+      // Service worker dosyası hiç önbelleğe girmez: eski kopya, yeni sürümün tarayıcıya ulaşmasını bekletirdi.
+      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }] },
+    ];
   },
   /**
    * İşletim sistemleri ilişkilendirme dosyalarını tam olarak `/.well-known/` altında arar; `app/` altında noktayla başlayan

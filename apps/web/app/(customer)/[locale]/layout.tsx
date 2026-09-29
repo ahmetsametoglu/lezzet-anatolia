@@ -14,6 +14,7 @@ import { PlaceProvider } from '@/components/customer/delivery/place-context';
 import { ToastProvider } from '@/components/customer/ui/toast';
 import { AccountProvider } from '@/components/customer/account/account-context';
 import { VisitPing } from '@/components/customer/account/visit-ping';
+import { ServiceWorkerRegistration } from '@/components/customer/pwa/service-worker-registration';
 import { getDeliveryZones } from '@/lib/delivery/read';
 import { readPlaceSnapshot } from '@/lib/delivery/read-place';
 import { currentCustomer } from '@/lib/guard';
@@ -21,7 +22,7 @@ import { detectDevice } from '@/lib/device';
 import { FONT_SCALE_COOKIE, fontScaleOf, fontScaleStyle } from '@/lib/storefront/font-scale';
 import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { TITLE_TEMPLATE } from '@/lib/seo/title';
-import layoutMessages from './layout-messages.json';
+import siteDescription from '@/lib/seo/site-description.json';
 
 // Müşteri evreni fontları. latin-ext → Türkçe (ş ğ ı) ve Almanca (ä ö ü ß) doğru gösterilir.
 const lora = Lora({ subsets: ['latin', 'latin-ext'], variable: '--font-lora', display: 'swap' });
@@ -35,11 +36,14 @@ const karla = Karla({ subsets: ['latin', 'latin-ext'], variable: '--font-karla',
  */
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  const t = hasLocale(routing.locales, locale) ? layoutMessages[locale] : layoutMessages[routing.defaultLocale];
+  const dil = hasLocale(routing.locales, locale) ? locale : routing.defaultLocale;
   return {
     metadataBase: new URL(siteOrigin()),
     title: { template: TITLE_TEMPLATE, default: brand.name },
-    description: t.description,
+    description: siteDescription[dil].description,
+    manifest: `/${dil}/manifest.webmanifest`,
+    // Ana ekrana eklenen site iPhone'da tarayıcı çubuğu olmadan, uygulama gibi açılsın.
+    appleWebApp: { capable: true, title: brand.name },
   };
 }
 
@@ -92,6 +96,7 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
               turu atılmaz. Yazmayı istemci efekti yapar — render yan etkisiz olmalı, buraya konan
               defter yazımı her prefetch'te tetiklenirdi. */}
           {account && <VisitPing />}
+          <ServiceWorkerRegistration />
           {/* Bildirim kökte: kim çıkarırsa çıkarsın tek hap, aynı yerde. */}
           <ToastProvider device={device}>
             <PlaceProvider
