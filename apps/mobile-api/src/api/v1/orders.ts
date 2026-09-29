@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
 import { z } from 'zod';
 import { getCustomerOrderDetail, listCustomerOrders, readOrderFeedbackInvite } from '@lezzet/application';
-import type { CustomerOrderSummary } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { logger } from '@lezzet/observability';
 import {
@@ -76,8 +75,8 @@ export const orders = new Hono<CustomerEnv>();
 orders.use('*', resolveCustomer);
 
 /**
- * Sipariş listesi — keyset sayfalı, en yeni önce, taslaksız. Numarasız satır zarfa girmez (ekranda açılamazdı) ama kimliğiyle
- * kayda geçer.
+ * Sipariş listesi: keyset sayfalı, en yeni önce. Numaralı satır referansla, ödeme bekleyen satır sipariş kimliğiyle gelir; başka
+ * numarasız satır zarfa girmez ama kimliğiyle kayda geçer.
  */
 orders.get('/', async (c) => {
   const parsed = ListQuerySchema.safeParse(c.req.query());
@@ -94,28 +93,23 @@ orders.get('/', async (c) => {
     limit: parsed.data.limit,
   });
 
-  const withReference = page.orders.filter((order): order is CustomerOrderSummary & { referenceNo: string } => {
-    if (order.referenceNo) return true;
-    // BEKLEYEN(K.48): ödeme bekleyen siparişin native'de açılacak ödeme ekranı yok, satır o gelene kadar gönderilmez.
-    if (order.status === 'awaiting_payment') return false;
-    logger.warn({ orderId: order.id, status: order.status }, 'referanssız sipariş listeden düşürüldü');
-    return false;
-  });
-
-  // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ────────────────────────────────
-  // Gövde `z.input<…>` ile TİPLENİR: kapının döndürdüğü şekil sözleşmeden saparsa burası DERLENMEZ.
-  // `parse` da süzgeçtir — kümede olmayan alan (sipariş UUID'si gibi) zarfa sızamaz.
-  const body: z.input<typeof MeOrderPageSchema> = {
-    orders: withReference.map((order) => ({
-      reference: order.referenceNo,
+  // Gövde `z.input<…>` ile tiplenir: kapının şekli sözleşmeden saparsa burası derlenmez; `parse` kümede olmayan alanı süzer.
+  const rows: z.input<typeof MeOrderPageSchema>['orders'] = [];
+  for (const order of page.orders) {
+    const base = {
       placedAt: order.createdAt,
-      status: order.status,
       active: order.active,
       totalCents: order.totalCents,
       itemCount: order.itemCount,
       thumbs: order.thumbs.map((thumb) => ({ name: thumb.name, image: thumb.image })),
       moreCount: order.moreCount,
-    })),
+    };
+    if (order.status === 'awaiting_payment') rows.push({ ...base, status: order.status, reference: null, orderId: order.id });
+    else if (order.referenceNo) rows.push({ ...base, status: order.status, reference: order.referenceNo });
+    else logger.warn({ orderId: order.id, status: order.status }, 'referanssız sipariş listeden düşürüldü');
+  }
+  const body: z.input<typeof MeOrderPageSchema> = {
+    orders: rows,
     nextCursor: page.nextCursor ? encodeCursor(page.nextCursor) : null,
   };
   return ok(c, MeOrderPageSchema.parse(body));

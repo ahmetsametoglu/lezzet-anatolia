@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { confirmationPhaseOf, confirmationToneOf } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
@@ -20,11 +20,17 @@ function isSettled(status: CheckoutOrderStatus): boolean {
   return phase === 'placed' || confirmationToneOf(phase) === 'failed';
 }
 
+interface OrderStatusResult {
+  status: CheckoutOrderStatus | null;
+  /** Hemen yeniden sorar: ödeme kartı kapandıktan ya da sipariş iptal edildikten sonra ekran sonucu beklemeden görür. */
+  refresh: () => void;
+}
+
 /**
  * Kart ödemesi beklenen siparişin canlı durumu, web `order-watch`ın ikizi: sunucu her soruda sağlayıcıya sorup siparişi netleştirir.
  * Sipariş kanalının zili çalınca yeniden sorulur; `orderId` `null` ise hiç sorulmaz.
  */
-export function useOrderStatus(orderId: string | null, locale: Locale): CheckoutOrderStatus | null {
+export function useOrderStatus(orderId: string | null, locale: Locale): OrderStatusResult {
   const [status, setStatus] = useState<CheckoutOrderStatus | null>(null);
   const [channel, setChannel] = useState<string | null>(null);
 
@@ -54,22 +60,22 @@ export function useOrderStatus(orderId: string | null, locale: Locale): Checkout
     };
   }, [orderId, locale]);
 
+  const refresh = useCallback(() => {
+    if (orderId === null) return;
+    void fetchCheckoutOrderStatus(locale, orderId).then((result) => {
+      if (result.error === null) setStatus(result.data);
+    });
+  }, [orderId, locale]);
+
   // Zil yalnız "değişti" der; durum yine sunucudan okunur.
   useEffect(() => {
     if (orderId === null || channel === null) return;
     const supabase = getSupabase();
-    const subscription = supabase
-      .channel(channel)
-      .on('broadcast', { event: BELL_EVENT }, () => {
-        void fetchCheckoutOrderStatus(locale, orderId).then((result) => {
-          if (result.error === null) setStatus(result.data);
-        });
-      })
-      .subscribe();
+    const subscription = supabase.channel(channel).on('broadcast', { event: BELL_EVENT }, refresh).subscribe();
     return () => {
       void supabase.removeChannel(subscription);
     };
-  }, [orderId, channel, locale]);
+  }, [orderId, channel, refresh]);
 
-  return status;
+  return { status, refresh };
 }

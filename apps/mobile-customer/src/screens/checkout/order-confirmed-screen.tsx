@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { confirmationPhaseOf, confirmationToneOf } from '@lezzet/domain-core';
-import { formatPrice } from '@lezzet/helper';
-import { confirmationCopy, type LocalizedCopy } from '@lezzet/i18n';
+import { formatPrice, formatTime } from '@lezzet/helper';
+import { confirmationCopy, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -10,14 +11,19 @@ import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-butt
 import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-button';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
+import { hapticError, hapticSuccess } from '@lezzet/mobile-kit/src/lib/haptics/haptics';
 import { SummaryPanel } from '@/screens/customer-kit/summary-panel';
+import { refreshCart } from '@/screens/customer-kit/cart-store';
+import { cancelPendingCheckoutOrder, resumeCheckoutPayment } from '@/lib/api/checkout';
+import { presentPayment } from '@/lib/payment/payment-sheet';
 import messages from '@lezzet/i18n/customer/checkout';
+import { deliveryLabelOf, paymentFailureMessage } from './order-result-copy';
 import { useOrderNeighborInvite } from './use-neighbor-invite.hook';
 import { useOrderStatus } from './use-order-status.hook';
 
 /*
-  Sipariş onayı: onay işareti, numara, teslimat/ödeme/toplam özeti ve iki çıkış. Puan satırı yok, sipariş puanı kalktı.
-  Kart yolunda sipariş o an taslaktır ve numarası yoktur: ekran ödemenin sonucunu sunucudan bekler, web onay sayfasıyla aynı hâlleri çizer.
+  Sipariş onayı: işaret, numara, teslimat/ödeme/toplam özeti ve çıkışlar. Kart yolunda sipariş taslaktır ve numarası yoktur: ekran
+  sonucu sunucudan bekler, ödemesi gerçekleşmeyen siparişte aynı ödemeye dönüşü ve iptali sunar (web onay sayfasının hâlleri).
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -29,8 +35,9 @@ interface OrderConfirmedScreenProps {
   reference: string | null;
   /** Genel toplam (cent); `null` = parametre okunamadı — sıfır YAZILMAZ (CLAUDE §1). */
   totalCents: number | null;
-  /** Teslimat satırı: seçilen gün ya da kargo yazısı. */
+  /** Teslimat satırı: seçilen gün ya da kargo yazısı; boşsa (listeden açıldı) sunucunun özetinden kurulur. */
   deliveryLabel: string;
+  /** Ödeme satırı; boşsa kart siparişi olarak yazılır, çünkü listeden yalnız ödeme bekleyen kart siparişi bu ekranı açar. */
   paymentLabel: string;
 }
 
@@ -45,7 +52,7 @@ export function OrderConfirmedScreen({
   const t: Messages = messages[locale];
   const router = useRouter();
   const { theme } = useUnistyles();
-  const status = useOrderStatus(reference === null ? orderId : null, locale);
+  const { status, refresh } = useOrderStatus(reference === null ? orderId : null, locale);
   // Durum gelmeden kart taslağı "onaylanıyor"dur; numarası rota parametresiyle gelen sipariş zaten kesinleşmiştir.
   const phase =
     status !== null ? confirmationPhaseOf(status) : reference === null ? 'pending' : 'placed';
@@ -53,6 +60,14 @@ export function OrderConfirmedScreen({
   const copy = phase === 'placed' ? null : confirmationCopy(locale, phase);
   const shownReference = reference ?? status?.referenceNo ?? null;
   const neighborInvite = useOrderNeighborInvite(phase === 'placed' ? orderId : null, locale);
+  const total = totalCents ?? status?.totalCents ?? null;
+  const delivery =
+    deliveryLabel !== ''
+      ? deliveryLabel
+      : status !== null
+        ? deliveryLabelOf(status.deliveryType, status.deliveryDate, t, locale)
+        : t.confirmed.unknown;
+  const payment = paymentLabel !== '' ? paymentLabel : t.payment.online;
 
   return (
     <View style={styles.screen}>
@@ -80,11 +95,11 @@ export function OrderConfirmedScreen({
 
         <SummaryPanel
           rows={[
-            { key: 'delivery', label: t.confirmed.delivery, value: deliveryLabel },
-            { key: 'payment', label: t.confirmed.payment, value: paymentLabel },
+            { key: 'delivery', label: t.confirmed.delivery, value: delivery },
+            { key: 'payment', label: t.confirmed.payment, value: payment },
           ]}
           totalLabel={t.confirmed.total}
-          totalValue={totalCents === null ? t.confirmed.unknown : formatPrice(totalCents, locale)}
+          totalValue={total === null ? t.confirmed.unknown : formatPrice(total, locale)}
           testID="confirmed-summary"
         />
 
@@ -116,16 +131,122 @@ export function OrderConfirmedScreen({
           </View>
         )}
 
-        <View style={styles.actions}>
-          {/* Olmadıysa çıkış sepete: yeni deneme eski taslağı ve eski ödemeyi kapatır. */}
-          {tone === 'failed' ? (
-            <PrimaryButton label={t.confirmed.retry} onPress={() => router.replace('/cart')} testID="confirmed-retry" />
-          ) : (
-            <PrimaryButton label={t.confirmed.orders} onPress={() => router.replace('/orders')} testID="confirmed-orders" />
-          )}
-          <SecondaryButton label={t.confirmed.home} onPress={() => router.replace('/')} testID="confirmed-home" />
-        </View>
+        {phase === 'unpaid' && orderId !== null ? (
+          <PendingPaymentActions
+            t={t}
+            locale={locale}
+            orderId={orderId}
+            totalCents={total}
+            payBy={status?.payBy ?? null}
+            onSettled={refresh}
+          />
+        ) : (
+          <View style={styles.actions}>
+            {/* Olmadıysa çıkış sepete: iptal edilen siparişin kalemleri oraya döndü. */}
+            {tone === 'failed' ? (
+              <PrimaryButton
+                label={t.confirmed.retry}
+                onPress={() => {
+                  refreshCart();
+                  router.replace('/cart');
+                }}
+                testID="confirmed-retry"
+              />
+            ) : (
+              <PrimaryButton label={t.confirmed.orders} onPress={() => router.replace('/orders')} testID="confirmed-orders" />
+            )}
+            <SecondaryButton label={t.confirmed.home} onPress={() => router.replace('/')} testID="confirmed-home" />
+          </View>
+        )}
       </ScrollView>
+    </View>
+  );
+}
+
+interface PendingPaymentActionsProps {
+  t: Messages;
+  locale: Locale;
+  orderId: string;
+  totalCents: number | null;
+  /** Ödemenin son anı; `null` saat yazılmaz. */
+  payBy: string | null;
+  /** Ödeme geçtiğinde ya da sipariş başka yoldan netleştiğinde ekran durumu yeniden sorar. */
+  onSettled: () => void;
+}
+
+/**
+ * Ödemesi gerçekleşmeyen siparişin eylemleri: aynı ödemeye dönülür (kart yeniden açılır, bilgiler değiştirilebilir) ya da sipariş
+ * iptal edilir ve kalemler sepete döner. Yeni sipariş açılmaz.
+ */
+function PendingPaymentActions({ t, locale, orderId, totalCents, payBy, onSettled }: PendingPaymentActionsProps) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const pay = async () => {
+    setBusy(true);
+    setError(null);
+    const resumed = await resumeCheckoutPayment(locale, orderId);
+    if (resumed.error !== null) {
+      setBusy(false);
+      hapticError();
+      setError(t.reject.transport);
+      return;
+    }
+    if (resumed.data.status !== 'payment_required') {
+      setBusy(false);
+      onSettled();
+      return;
+    }
+    const sheet = await presentPayment({ clientSecret: resumed.data.clientSecret });
+    setBusy(false);
+    if (sheet.status === 'succeeded') {
+      hapticSuccess();
+      onSettled();
+    } else if (sheet.status === 'failed') {
+      hapticError();
+      setError(paymentFailureMessage(sheet, t));
+    }
+  };
+
+  const cancel = async () => {
+    setBusy(true);
+    setError(null);
+    const result = await cancelPendingCheckoutOrder(locale, orderId);
+    setBusy(false);
+    if (result.error !== null) {
+      hapticError();
+      setError(t.confirmed.cancelFailed);
+      return;
+    }
+    // İptal edilemediyse ödeme geçmiş ya da işleniyordur; ekran yeni hâli sunucudan okur.
+    if (result.data.status !== 'cancelled') {
+      onSettled();
+      return;
+    }
+    refreshCart();
+    router.replace('/cart');
+  };
+
+  return (
+    <View style={styles.actions}>
+      {payBy === null ? null : (
+        <Text style={styles.note} testID="confirmed-pay-by">
+          {t.confirmed.unpaidDeadline.replace('{time}', formatTime(payBy, locale))}
+        </Text>
+      )}
+      {error === null ? null : (
+        <Text style={styles.error} testID="confirmed-pending-error">
+          {error}
+        </Text>
+      )}
+      <PrimaryButton
+        label={totalCents === null ? t.confirmed.payNow : `${t.confirmed.payNow} · ${formatPrice(totalCents, locale)}`}
+        onPress={() => void pay()}
+        disabled={busy}
+        testID="confirmed-pay"
+      />
+      <SecondaryButton label={t.confirmed.cancelOrder} onPress={() => void cancel()} disabled={busy} testID="confirmed-cancel" />
     </View>
   );
 }
@@ -173,6 +294,13 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text['body-sm'],
     lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.muted,
+    textAlign: 'center',
+  },
+  error: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors['terracotta-bright'],
     textAlign: 'center',
   },
   actions: {

@@ -157,12 +157,23 @@ describe('onay ekranının durum sorusu', () => {
     expect((await new OrderService(db).getById(ilk.orderId))?.status).toBe('confirmed');
   });
 
-  it('ödeme tamamlanmadıysa taslak kalır ve ekran "tamamlanmadı" okur', async () => {
+  it('ödeme tamamlanmadıysa taslak kalır; ekran "tamamlanmadı", son saati ve özeti okur', async () => {
     const ilk = await kartlaSiparis(`durum-2-${stamp}`);
 
     const res = await istek(`/checkout/order/${ilk.orderId}/status`);
 
-    expect(((await res.json()) as { data: unknown }).data).toMatchObject({ placed: false, awaitingCard: true, paymentState: 'incomplete', referenceNo: null });
+    const { data } = (await res.json()) as { data: { payBy: string | null } };
+    // Özet siparişin kendisinden gelir; tutar ortamın kampanyasına bağlı olduğu için sabit yazılmaz.
+    const order = await new OrderService(db).getById(ilk.orderId);
+    expect(data).toMatchObject({
+      placed: false,
+      awaitingCard: true,
+      paymentState: 'incomplete',
+      referenceNo: null,
+      totalCents: order?.orderedTotalCents,
+      deliveryType: order?.deliveryType,
+    });
+    expect(data.payBy).not.toBeNull();
   });
 
   it('ödeme penceresi kapanmış ve ödeme yoksa taslak iptal edilir, kalemler sepete döner, "siparişiniz oluşmadı" maili gider', async () => {
@@ -182,5 +193,41 @@ describe('onay ekranının durum sorusu', () => {
 
     expect((await istek(`/checkout/order/${ilk.orderId}/status`, {}, yabanciToken)).status).toBe(404);
     expect((await istek('/checkout/order/abc/status')).status).toBe(404);
+  });
+});
+
+describe('ödemesi bekleyen sipariş', () => {
+  // Liste satırı kimliksiz gelseydi native ödeme ekranını açamaz, müşteri kalemleri sepetten çıkmış siparişini bulamazdı.
+  it('siparişler listesinde numarasız, kimlikli "ödeme bekleniyor" satırıdır', async () => {
+    const ilk = await kartlaSiparis(`liste-${stamp}`);
+
+    const { data } = (await (await istek('/orders')).json()) as { data: { orders: unknown[] } };
+
+    expect(data.orders).toEqual([expect.objectContaining({ status: 'awaiting_payment', reference: null, orderId: ilk.orderId })]);
+  });
+
+  // Dönüş başka anahtar verseydi aynı sipariş için ikinci ödeme açılırdı.
+  it('ödemeye dönüş aynı ödemenin anahtarını verir; başkasının siparişi bulunamaz', async () => {
+    const ilk = await kartlaSiparis(`donus-${stamp}`);
+
+    expect((await istek(`/checkout/order/${ilk.orderId}/resume`, { method: 'POST' }, yabanciToken)).status).toBe(404);
+    const res = await istek(`/checkout/order/${ilk.orderId}/resume`, { method: 'POST' });
+    expect(((await res.json()) as { data: unknown }).data).toEqual({
+      status: 'payment_required',
+      orderId: ilk.orderId,
+      clientSecret: ilk.clientSecret,
+    });
+  });
+
+  // İptal kalemleri sepete döndürmeseydi vazgeçen müşterinin ürünleri kaybolurdu.
+  it('iptal ödemeyi ve siparişi kapatır, kalemler sepete döner', async () => {
+    const ilk = await kartlaSiparis(`iptal-${stamp}`);
+
+    expect((await istek(`/checkout/order/${ilk.orderId}/cancel`, { method: 'POST' }, yabanciToken)).status).toBe(404);
+    const res = await istek(`/checkout/order/${ilk.orderId}/cancel`, { method: 'POST' });
+
+    expect(((await res.json()) as { data: unknown }).data).toEqual({ status: 'cancelled' });
+    expect(await new OrderService(db).getById(ilk.orderId)).toMatchObject({ status: 'cancelled', cancelReason: 'customer' });
+    expect((await new CartService(db).get(musteriId)).items.map((row) => row.variantId)).toEqual([variantId]);
   });
 });

@@ -269,10 +269,7 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
     deliveryType: DeliveryTypeEnum,
     clientSecret: z.string().min(1),
   }),
-  /**
-   * Önceki kart ödemesi geçti (`paid`, sipariş onaylandı) ya da bankada işleniyor (`processing`): yeni sipariş açılmadı, müşteri o
-   * siparişe gider. Açılsaydı aynı sepet için ikinci kez para çekilirdi.
-   */
+  /** Aynı basışın ödemesi bankada işleniyor: yeni sipariş açılmadı, müşteri o siparişe gider. */
   z.object({
     status: z.literal('open_payment'),
     state: z.enum(['paid', 'processing']),
@@ -359,7 +356,27 @@ export const CheckoutOrderStatusSchema = z.object({
   awaitingCard: z.boolean(),
   /** Yalnız kart beklenirken dolu; `null` = sağlayıcıya sorulamadı. */
   paymentState: z.enum(['paid', 'processing', 'incomplete']).nullable(),
+  /** Kart ödemesi beklenirken ödemenin son anı; sonra sipariş kapanır ve kalemler sepete döner. `null` saat yazılmaz. */
+  payBy: z.string().nullable(),
   referenceNo: OrderSchema.shape.referenceNo,
   channel: z.string().min(1),
+  /** Özet: listeden açılan ekran rota parametresi taşımaz, satırlarını buradan kurar. */
+  totalCents: z.number().int(),
+  deliveryType: DeliveryTypeEnum,
+  deliveryDate: OrderSchema.shape.deliveryDate,
 });
 export type CheckoutOrderStatus = z.infer<typeof CheckoutOrderStatusSchema>;
+
+/**
+ * Ödeme bekleyen siparişin ödemesine dönüş: aynı ödemenin anahtarı döner, yeni ödeme doğmaz. Ödeme bu arada geçtiyse, bankada
+ * işleniyorsa ya da sipariş kapandıysa anahtar yok, ekran durumu yeniden okur.
+ */
+export const CheckoutResumeResultSchema = z.union([
+  z.object({ status: z.literal('payment_required'), orderId: OrderSchema.shape.id, clientSecret: z.string().min(1) }),
+  z.object({ status: z.enum(['paid', 'processing', 'closed']) }),
+]);
+export type CheckoutResumeResult = z.infer<typeof CheckoutResumeResultSchema>;
+
+/** Müşterinin vazgeçmesi: `cancelled` ise kalemler sepete döndü; öteki hâllerde ödeme geçmiş, işleniyor ya da sipariş zaten kapanmış. */
+export const CheckoutCancelResultSchema = z.object({ status: z.enum(['cancelled', 'paid', 'processing', 'closed']) });
+export type CheckoutCancelResult = z.infer<typeof CheckoutCancelResultSchema>;

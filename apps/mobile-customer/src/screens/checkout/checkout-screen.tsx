@@ -35,7 +35,7 @@ import { publishMe, useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { formatDeliveryDate } from '@/screens/orders/order-format';
 import { isNameMissing, isPhoneMissing } from '@/screens/customer-kit/profile-gaps';
 import { newOrderKey } from './order-key';
-import { deliveryLabelOf, paymentFailureMessage, rejectionMessage } from './order-result-copy';
+import { deliveryLabelOf, rejectionMessage } from './order-result-copy';
 import { CheckoutSkeleton } from './checkout-skeleton';
 import { ServicePointPicker } from './service-point-picker';
 import { ShippingChoice } from './shipping-choice';
@@ -96,7 +96,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   /** Sunucunun ya da ödeme kartının söylediği son şey. `warm` = hata değil (vazgeçilen ödeme). */
-  const [notice, setNotice] = useState<{ tone: 'error' | 'warm'; text: string } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   /** `checkedFor` hangi adres için sorulduğunu tutar: "benim yazdığım doğru" diyen müşteriye aynı adres için ikinci kez sorulmaz. */
   const [addressNotice, setAddressNotice] = useState<AddressCheckResult | null>(null);
   const checkedFor = useRef<string | null>(null);
@@ -431,25 +431,21 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const blocked = blockReason();
 
   /**
-   * Onay ekranına sunucunun tutarı ve sipariş numarası taşınır; kart yolunda numara `null`dur, çünkü sipariş o anda hâlâ taslaktır
-   * ve onayı webhook yazar. `orderId` gösterilmez, yalnız komşu davetini açmak için taşınır.
+   * Siparişin ekranına sunucunun tutarı ve numarası taşınır; kart yolunda numara `null`dur, çünkü sipariş o anda taslaktır. Sepet
+   * yerelde boşaltılmaz, sunucudan tazelenir: `resetCart()` henüz sipariş edilmemiş kargo yarısını da silerdi.
    */
-  const finish = (
+  const openOrder = (
     orderId: string,
     totalCents: number,
     deliveryType: 'route' | 'shipping' | 'pickup',
     referenceNo: string | null,
   ): void => {
-    /* Sepet yerelde boşaltılmaz, sunucudan tazelenir: `resetCart()` henüz sipariş edilmemiş kargo yarısını da silerdi. Ekran
-       değişmeden önce titrer ki onay geçiş animasyonunun altında kaybolmasın. */
-    hapticSuccess();
     refreshCart();
     router.replace({
       pathname: '/checkout/confirmed',
       params: {
         orderId,
-        /* Numarası olmayan geçişte parametre HİÇ YAZILMAZ (boş dize değil): boş dize de bir
-           değerdir ve ekranın "bilinmiyor" dalını kaçırırdı. */
+        // Numarası olmayan geçişte parametre hiç yazılmaz; boş dize de bir değerdir ve ekranın "bilinmiyor" dalını kaçırırdı.
         ...(referenceNo === null ? {} : { reference: referenceNo }),
         total: String(totalCents),
         delivery: deliveryLabelOf(deliveryType, chosenDate, t, locale),
@@ -458,13 +454,16 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     });
   };
 
-  /*
-    Ret ve arızanın titreşimi tek yerde, yoksa yeni bir ret türünde unutulurdu. `warm` sessizdir: ödeme kartını müşteri kendisi
-    kapattıysa bu onun kararıdır, hata değil.
-  */
-  const showNotice = (next: { tone: 'error' | 'warm'; text: string }): void => {
-    if (next.tone === 'error') hapticError();
-    setNotice(next);
+  /** Sipariş verildi: ekran değişmeden önce titrer ki onay geçiş animasyonunun altında kaybolmasın. */
+  const finish = (...order: Parameters<typeof openOrder>): void => {
+    hapticSuccess();
+    openOrder(...order);
+  };
+
+  // Ret ve arızanın titreşimi tek yerde, yoksa yeni bir ret türünde unutulurdu.
+  const showNotice = (text: string): void => {
+    hapticError();
+    setNotice(text);
   };
 
   const confirm = async (): Promise<void> => {
@@ -508,7 +507,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       // TAŞIMA arızası (ağ, bozuk gövde, kimliksizlik) — retlerden ayrı: sipariş açıldı mı
       // BİLİNMİYOR. Anahtar korunduğu için tekrar denemek ikinci sipariş açmaz.
       setSubmitting(false);
-      showNotice({ tone: 'error', text: result.status === 401 ? t.reject.session : t.reject.transport });
+      showNotice(result.status === 401 ? t.reject.session : t.reject.transport);
       return;
     }
 
@@ -523,34 +522,27 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       return;
     }
     if (outcome.status === 'payment_required') {
-      /* YEREL ÖDEME KARTI (sağlayıcının kendi yüzeyi) — ayrı bir ekran YAZILMAZ. Üç sonuç ayrı
-         karşılanır: iptal bir HATA DEĞİLDİR (müşteri vazgeçti, sipariş taslak kalır ve ekran
-         yerinde durur), başarısızlık sebebiyle söylenir. */
+      // Yerel ödeme kartı sağlayıcının kendi yüzeyi; ayrı bir ekran yazılmaz.
       const sheet = await presentPayment({ clientSecret: outcome.clientSecret });
       if (sheet.status === 'succeeded') {
-        /* Numara YOK ve olamaz: sipariş bu anda hâlâ taslak, onayı webhook yazacak (`finish`
-           künyesi). `null` geçiyoruz, ekran satırı çizmiyor. */
+        // Numara yok: sipariş hâlâ taslak, onayı sağlayıcının cevabı yazar.
         finish(outcome.orderId, outcome.totalCents, outcome.deliveryType, null);
         return;
       }
-      setSubmitting(false);
-      showNotice(
-        sheet.status === 'canceled'
-          ? { tone: 'warm', text: t.paymentSheet.canceled }
-          : { tone: 'error', text: paymentFailureMessage(sheet, t) },
-      );
+      /* Ödeme olmadı ama sipariş açıldı ve kalemler sepetten ona geçti: müşteri siparişin ekranında aynı ödemeye döner ya da iptal
+         eder. Vazgeçmek hata değildir, titreşim yalnız düşen ödemede. */
+      if (sheet.status === 'failed') hapticError();
+      openOrder(outcome.orderId, outcome.totalCents, outcome.deliveryType, null);
       return;
     }
 
     setSubmitting(false);
-    showNotice({
-      tone: 'error',
-      // Ürün adı SEPET GÖRÜNÜMÜNDEN çözülür — sunucudan ikinci kez istemek, istemcinin bildiği
-      // bir şeyi ona geri okutmak olurdu (sözleşme künyesi).
-      text: rejectionMessage(outcome, t, locale, (variantId) =>
+    showNotice(
+      // Ürün adı sepet görünümünden çözülür; sunucudan ikinci kez istemek istemcinin bildiğini ona geri okutmak olurdu.
+      rejectionMessage(outcome, t, locale, (variantId) =>
         viewLines.find((line) => line.kind === 'variant' && line.variantId === variantId)?.name ?? null,
       ),
-    });
+    );
     // Her ret "ekrandaki resim eskidi" ihtimalidir (gün düştü, yöntem kapandı, fiyat değişti):
     // anlık görüntü tazelenir ki müşteri düzeltmeyi GÜNCEL seçeneklerle yapsın.
     checkout.reload();
@@ -574,7 +566,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     });
     setSubmitting(false);
     if (result.error !== null) {
-      showNotice({ tone: 'error', text: t.reject.transport });
+      showNotice(t.reject.transport);
       return;
     }
     /* Adres değişti → yeniden sorulacak; ve tazeleme ŞART: kod değişimi bölgeyi, kargo ücretini ve
@@ -932,7 +924,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           />
         ) : null}
 
-        {notice === null ? null : <Note tone={notice.tone} description={notice.text} testID="checkout-notice" />}
+        {notice === null ? null : <Note tone="error" description={notice} testID="checkout-notice" />}
 
         {blocked === null ? null : <Text style={styles.blockLine}>{blocked}</Text>}
 

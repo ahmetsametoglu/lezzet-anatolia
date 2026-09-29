@@ -190,7 +190,6 @@
       "pickup_warehouse_unavailable": "Seçtiğiniz depo şu an gel-al için kapalı — seçenekleri yenileyip yeniden seçin."
     },
     "paymentSheet": {
-      "canceled": "Ödeme yarıda kaldı — siparişiniz duruyor, hazır olduğunuzda tekrar deneyebilirsiniz.",
       "configuration_missing": "Kartla ödeme şu an kullanılamıyor. Kapıda ödemeyi seçebilirsiniz.",
       "setup_failed": "Ödeme ekranı açılamadı. Tekrar deneyin ya da başka bir ödeme yolu seçin.",
       "timeout": "Ödeme sağlayıcısı yanıt vermedi. Tekrar deneyin.",
@@ -425,7 +424,6 @@
       "pickup_warehouse_unavailable": "L'entrepôt choisi n'accepte pas le retrait pour le moment — actualisez les options et choisissez à nouveau."
     },
     "paymentSheet": {
-      "canceled": "Paiement interrompu — votre commande vous attend, réessayez quand vous voulez.",
       "configuration_missing": "Le paiement par carte est indisponible pour le moment. Vous pouvez choisir le paiement à la livraison.",
       "setup_failed": "La fenêtre de paiement n'a pas pu s'ouvrir. Réessayez ou choisissez un autre moyen de paiement.",
       "timeout": "Le service de paiement n'a pas répondu. Réessayez.",
@@ -660,7 +658,6 @@
       "pickup_warehouse_unavailable": "Das gewählte Lager bietet die Abholung derzeit nicht an – Optionen aktualisieren und erneut wählen."
     },
     "paymentSheet": {
-      "canceled": "Zahlung abgebrochen – Ihre Bestellung wartet, Sie können es jederzeit erneut versuchen.",
       "configuration_missing": "Die Kartenzahlung ist derzeit nicht verfügbar. Sie können bei Lieferung zahlen.",
       "setup_failed": "Das Zahlungsfenster konnte nicht geöffnet werden. Versuchen Sie es erneut oder wählen Sie eine andere Zahlungsart.",
       "timeout": "Der Zahlungsanbieter hat nicht geantwortet. Bitte erneut versuchen.",

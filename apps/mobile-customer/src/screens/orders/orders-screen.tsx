@@ -23,38 +23,13 @@ import { OrdersSkeleton } from './orders-skeleton';
 import { useOrders } from './use-orders.hook';
 
 /*
-  SİPARİŞLERİM (v3 `vOrders`) — GERÇEK UÇTAN okur (`GET /api/v1/me/orders`): misafir kapısı,
-  iskelet, ağ hatası, boş durum ve sipariş kartları; hepsi şablonun `ov.` dallarının karşılığı.
-
-  ── ŞABLONUN BEŞ DALI, BEŞİ DE CANLI ────────────────────────────────────────
-  `ov.guest` · `ov.skel` · `ov.netErr` · `ov.emptyL` · `ov.rows`. Önceki etapta iskelet ve ağ
-  hatası ÇİZİLMEMİŞTİ ve gerekçesi doğruydu ("bu ekranda ağ yok, bugün çizilseler ölü kod
-  olurlardı"); ağ geldi, ikisi de açıldı.
-
-  ── SONSUZ KAYDIRMA ─────────────────────────────────────────────────────────
-  Liste veriyle SINIRSIZ büyüyen bir küme → keyset + sonsuz kaydırma; imleç URL'e yazılmaz
-  (CLAUDE §1). Şablonda sayfalama düğmesi de yok. Kuyruk hatası listeyi düşürmez: satırlar yerinde
-  kalır, sona tekrar-dene çıkar (katalogun aynı ayrımı — "hiç veri yok" ≠ "devamı gelmedi").
-
-  ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
-  1. **"↻ Tekrar sipariş" düğmesi ÇİZİLMEDİ** (v3:59). Tekrar sipariş, kalemleri BUGÜNKÜ fiyat ve
-     BUGÜNKÜ satılabilirlikle sepete kopyalayan bir orkestrasyondur (web `lib/order/reorder.ts`:
-     sepet niyet taşır, fiyatı her okumada yeniden çözer) ve o kural henüz `@lezzet/application`a
-     terfi etmedi, uç da yok. Mobil sepet ise fiyat TAŞIYOR — sipariş detayındaki donmuş fiyatla
-     doldurmak müşteriye sessizce eski fiyatı satmak (ya da tükenmiş malı sepete koymak) olurdu.
-     Düğmeyi çizip bir şey yapmaması ise verilmiş bir sözü tutmamaktır. Uç geldiği gün düğme
-     şablondaki yerine, `toastSuccess` onayıyla birlikte döner (paket ekranının aynı deseni).
-  2. **Ağ hatası bloğu kesikli çerçeveli kutu DEĞİL** (v3:20-24), katalog/paket ekranlarının
-     `EmptyState` + `connection-off` kalıbı: aynı arıza üç ekranda üç ayrı görünüme sahip olmasın.
-  3. **Kart bütünüyle basılabilir.** Şablon `o.open`ı üç ayrı bloğa (üst satır, küçük resimler,
-     tutar) tek tek bağlıyor; sonuç aynı ama tek dokunma hedefi ekran okuyucuya da tek satır
-     olarak gider ("LA-26-… siparişinin detayı").
+  Siparişlerim: misafir kapısı, iskelet, ağ hatası, boş durum ve sipariş kartları; liste keyset + sonsuz kaydırmayla büyür ve kuyruk
+  hatası satırları düşürmez. Kart bütünüyle basılabilir; ödeme bekleyen sipariş detay yerine ödeme ekranını açar.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/* Skeleton kart sayısı ve yüksekliği artık BURADA DEĞİL: sayı `orders-skeleton`ın kendi sabiti,
-   yükseklik ise hiç yazılmıyor — kartın yapısı kurulunca kendiliğinden çıkıyor (o dosyanın künyesi). */
+/* İskeletin kart sayısı `orders-skeleton`ın kendi sabiti; yükseklik kartın yapısından kendiliğinden çıkar. */
 
 interface OrdersScreenProps {
   /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili (`useAppLocale`). */
@@ -69,9 +44,7 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
   const router = useRouter();
   const orders = useOrders(locale);
 
-  /* GERİ OKU (v3 yeni sürüm — `ordersPushed`): bu ekran artık HEP yığında açılıyor (sekmeden
-     çıktığı gün, 09.08) ve yığın ekranında sekme çubuğu yok; geri dönüşün tek yolu cihazın kendi
-     hareketi kalmıştı. Tasarım da bu sürümde okla başlıyor. */
+  /* Geri oku: ekran hep yığında açılır ve yığın ekranında sekme çubuğu yok, dönüşün görünür yolu bu. */
   const header = (
     <View style={styles.header}>
       <View style={styles.backRow}>
@@ -138,9 +111,7 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
           icon={<Icon name="orders" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
           title={t.empty.title}
           description={t.empty.body}
-          /* HAP, blok değil (16.08): tasarımın iki düğme biçimi var ve kuralı net — boş hâl çağrısı
-             hap (`radius:22`, gölgesiz), form/seçim eylemi blok (`radius:16` + sert gölge). Burası
-             boş hâl; blok biçim bizim sapmamızdı ve kullanıcı cihazda gördü. */
+          /* Hap biçim, çünkü tasarımda boş hâl çağrısı haptır; blok biçim form ve seçim eylemlerinindir. */
           action={<PrimaryButton label={t.empty.cta} shape="pill" onPress={() => router.push('/catalog')} testID="orders-browse" />}
           testID="orders-empty"
         />
@@ -169,19 +140,23 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
   };
 
   const renderOrder = (order: OrderSummary) => {
-    const open = () => router.push({ pathname: '/order/[reference]', params: { reference: order.reference } });
+    // Ödeme bekleyen siparişin numarası yok; kart ödeme ekranını açar, çünkü tek eylemi ödemesi.
+    const open =
+      order.reference === null
+        ? () => router.push({ pathname: '/checkout/confirmed', params: { orderId: order.orderId, total: String(order.totalCents) } })
+        : () => router.push({ pathname: '/order/[reference]', params: { reference: order.reference } });
 
     return (
       <PressableSurface
         onPress={open}
         feedback="opacity"
         style={styles.card}
-        accessibilityLabel={t.row.open.replace('{reference}', order.reference)}
-        testID={`order-${order.reference}`}
+        accessibilityLabel={order.reference === null ? t.row.openPending : t.row.open.replace('{reference}', order.reference)}
+        testID={`order-${keyOf(order)}`}
       >
         <View style={styles.cardTop}>
           <View style={styles.cardTopText}>
-            <Text style={styles.reference}>{order.reference}</Text>
+            <Text style={styles.reference}>{order.reference ?? t.row.pendingTitle}</Text>
             <Text style={styles.meta}>
               {t.row.meta
                 .replace('{date}', formatOrderDate(order.placedAt, locale))
@@ -216,7 +191,7 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
           <Text style={styles.total}>{formatPrice(order.totalCents, locale)}</Text>
           {/* Kart zaten basılabilir; bu yazı bir DÜĞME değil, nereye gidileceğini söyleyen bir
               işaret — o yüzden kendi dokunma hedefini açmıyor (a11y'de tek satır kalsın). */}
-          <TextAction label={t.row.detail} onPress={open} tone="terracotta" />
+          <TextAction label={order.reference === null ? t.row.pay : t.row.detail} onPress={open} tone="terracotta" />
         </View>
       </PressableSurface>
     );
@@ -226,7 +201,7 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
     <View style={styles.screen}>
       <FlatList
         data={orders.orders}
-        keyExtractor={(order) => order.reference}
+        keyExtractor={keyOf}
         renderItem={({ item }) => renderOrder(item)}
         ListHeaderComponent={header}
         ListFooterComponent={listFooter()}
@@ -243,6 +218,11 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
   );
 }
 
+/** Satırın kimliği: numaralı siparişte numara, ödeme bekleyende sipariş kimliği. */
+function keyOf(order: OrderSummary): string {
+  return order.reference ?? order.orderId;
+}
+
 const styles = StyleSheet.create((theme, rt) => ({
   screen: {
     flex: 1,
@@ -257,27 +237,17 @@ const styles = StyleSheet.create((theme, rt) => ({
   header: {
     // v3:9 `gap:3px` — iki durak arasında; eşitlikte ferah yön (2 yerine 4).
     gap: theme.space.xs,
-    /* v3'ün üst payı İKİ parçadır: sayfa dolgusu (`padding:10px…`) + başlık bloğunun kendi
-       `padding-top:6px`i = 16. Bizde yalnız 6 vardı ve güvenli alanın hemen altına yapışıyordu
-       (kullanıcı bulgusu 09.08: "başlık yukarı kaymış") — telefon çerçevesinin şablondaki nefesi
-       eksikti. `insets.top` durum çubuğunu karşılar, bu dolgu ONUN ÜSTÜNE biner. */
+    /* Üst pay sayfa dolgusu ile başlık bloğunun kendi payının toplamıdır; `insets.top` durum çubuğunu karşılar, bu pay onun üstüne binir. */
     paddingTop: theme.space['3xl'],
     paddingBottom: theme.space.xs,
   },
   /** Geri düğmesinin dairesi sayfanın sol dolgusuna taşar (v3:141 `margin-left:-8px`). */
   backRow: {
     flexDirection: 'row',
-    /* GLİF BAŞLIKLA HİZALANIR (kullanıcı bulgusu 16.08 · tasarım değişikliği).
-       Pay −8'di ve tasarım da öyle çiziyordu; ama ölçünce hizasızlık göründü: daire 40 dp, `‹`
-       glifi ortalı, yani glifin sol kenarı dairenin solundan **16** içeride. −8 ile glif başlığın
-       8 dp sağında kalıyordu — kullanıcı bunu cihazda fark etti ("buton ile başlıklar aynı hizada
-       değil"). −16 glifin sol kenarını başlığın sol kenarına oturtur; dokunma hedefi (40 dp)
-       değişmez, yalnız daire sayfa dolgusunun dışına taşar. */
+    /* Glif başlıkla hizalanır: daire 40 dp ve glif ortalı olduğu için −16 glifin sol kenarını başlığın sol kenarına oturtur. */
     marginLeft: -theme.space['3xl'],
   },
-  /* Başlık LİSTEDE kaydırma kabının dolgusunu alır; misafir/boş/hata dallarında o kap YOK ve
-     başlık sola yapışıyordu (kullanıcı bulgusu 09.08). Dolgu bu dallarda sarmalayıcıdan gelir —
-     başlığın kendisine koymak listede ÇİFT dolgu yapardı. */
+  /* Başlık listede kaydırma kabının dolgusunu alır; kabın olmadığı dallarda dolgu sarmalayıcıdan gelir, başlığa konsa listede çift olurdu. */
   headerPad: { paddingHorizontal: theme.space['4xl'] },
   eyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],

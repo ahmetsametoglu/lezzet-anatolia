@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { SecondaryButton } from '@/components/customer/phone-kit/secondary-button';
@@ -11,6 +11,7 @@ import { useRouter } from '@/i18n/navigation';
 import { formatPrice, formatTime } from '@/lib/storefront/format';
 import { clientStripe } from '@/lib/stripe-client';
 import { CardFields, CardPaymentScope, type CardFieldsHandle, type PayStage } from '../../components/payment-element';
+import { takePaymentError } from '../../payment-error';
 import { cancelPendingOrderAction, resumePaymentAction } from '../actions';
 import type { ConfirmationViewProps } from '../confirmation-types';
 
@@ -27,6 +28,11 @@ export function PendingPayment({ shared, locale, view, compact }: ConfirmationVi
   const [stage, setStage] = useState<PayStage | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Checkout'ta kartın düştüğü anın cümlesi; depo yalnız tarayıcıda olduğu için ilk çizimden sonra okunur, boş okuma notu ezmez.
+  useEffect(() => {
+    const message = takePaymentError(view.orderId);
+    if (message !== null) setError(message);
+  }, [view.orderId]);
   const stripe = clientStripe();
   const busy = stage !== null || cancelling;
   const returnUrlBase = typeof window === 'undefined' ? '' : `${window.location.origin}/${locale}/checkout`;

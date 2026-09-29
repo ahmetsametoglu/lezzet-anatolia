@@ -1,12 +1,16 @@
 import type { z } from 'zod';
 import {
+  CheckoutCancelResultSchema,
   CheckoutOrderResultSchema,
   CheckoutOrderStatusSchema,
+  CheckoutResumeResultSchema,
   CheckoutServicePointsSchema,
   CheckoutSnapshotSchema,
+  type CheckoutCancelResult,
   type CheckoutOrderBodySchema,
   type CheckoutOrderResult,
   type CheckoutOrderStatus,
+  type CheckoutResumeResult,
   type CheckoutServicePoints,
   type CheckoutSnapshot,
 } from '@lezzet/types';
@@ -87,4 +91,22 @@ export function placeCheckoutOrder(locale: Locale, body: CheckoutOrderBody): Pro
 /** Onay ekranının sipariş hâli; kart taslağında sunucu sağlayıcıya sorup ödenmişse siparişi o an onaylar. */
 export function fetchCheckoutOrderStatus(locale: Locale, orderId: string): Promise<ApiResult<CheckoutOrderStatus>> {
   return authorizedFetch(`/api/v1/me/checkout/order/${encodeURIComponent(orderId)}/status${queryString({ locale })}`, CheckoutOrderStatusSchema);
+}
+
+/** Ödeme bekleyen siparişin ödemesine dönüş: aynı ödemenin anahtarı gelir, yeni ödeme açılmaz. */
+export function resumeCheckoutPayment(locale: Locale, orderId: string): Promise<ApiResult<CheckoutResumeResult>> {
+  return authorizedFetch(
+    `/api/v1/me/checkout/order/${encodeURIComponent(orderId)}/resume${queryString({ locale })}`,
+    CheckoutResumeResultSchema,
+    { method: 'POST' },
+  );
+}
+
+/** Ödeme bekleyen siparişten vazgeçiş: ödeme ve sipariş kapanır, kalemler sepete döner. */
+export function cancelPendingCheckoutOrder(locale: Locale, orderId: string): Promise<ApiResult<CheckoutCancelResult>> {
+  return authorizedFetch(
+    `/api/v1/me/checkout/order/${encodeURIComponent(orderId)}/cancel${queryString({ locale })}`,
+    CheckoutCancelResultSchema,
+    { method: 'POST' },
+  );
 }

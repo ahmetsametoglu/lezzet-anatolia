@@ -12,6 +12,7 @@ import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { clientStripe } from '@/lib/stripe-client';
 import { errorText } from '@/lib/customer-error-text';
 import { CardFields, CardPaymentScope, type CardFieldsHandle, type PayStage } from './components/payment-element';
+import { rememberPaymentError } from './payment-error';
 import { CheckoutDesktop } from './checkout.desktop';
 import { CheckoutMobile } from './checkout.mobile';
 import type { AddressCheckOutcome } from '@lezzet/application';
@@ -263,6 +264,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   const onCardError = (message: string) => {
     const orderId = preparedOrder.current;
     if (!orderId) return setError(message);
+    rememberPaymentError(orderId, message);
     leaveTo(orderId);
   };
 

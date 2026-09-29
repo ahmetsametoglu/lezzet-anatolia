@@ -15,17 +15,18 @@ import messages from '@lezzet/i18n/customer/checkout';
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
-/* `replace` CASUSU sabit: onay ekranına NE TAŞINDIĞI (özellikle sipariş numarası) bu ekranın
-   kararlarından biri ve her çağrıda yeni `jest.fn()` üreten bir mock onu ölçülemez kılardı. */
+/* `replace` casusu sabit, çünkü onay ekranına ne taşındığı bu ekranın kararıdır ve her çağrıda yeni `jest.fn()` onu ölçülemez kılardı. */
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: mockBack, replace: mockReplace }) }));
 
 // Ad `mock` ile başlamak ZORUNDA: `jest.mock` fabrikası dosyanın tepesine kaldırılıyor.
 let mockCart: CartState;
+const mockRefreshCart = jest.fn();
 jest.mock('@/screens/customer-kit/cart-store', () => ({
   ...jest.requireActual<object>('@/screens/customer-kit/cart-store'),
   useCart: () => mockCart,
+  refreshCart: () => mockRefreshCart(),
 }));
 
 /* Müşteri girişli sabitlenir ki ölçülen şey sipariş kapsamı olsun; kimliğin dört hâli ekranın kendi testindedir. `phone` dolu
@@ -321,6 +322,39 @@ describe('CheckoutScreen — sipariş numarası', () => {
     expect(params).not.toHaveProperty('reference');
     // Siparişin kimliği de taşınır, çünkü komşu daveti onunla açılır.
     expect(params.orderId).toBe('22222222-2222-4222-8222-222222222222');
+  });
+
+  // Kalemler ödeme açılınca siparişe geçti; müşteri checkout'ta kalsaydı boşalan sepetle siparişini bulamazdı.
+  it('ödeme kartı kapatılınca müşteri siparişin ekranına gider ve sepet tazelenir', async () => {
+    fetchMock.mockImplementation(async (_input, init) =>
+      (init as { method?: string } | undefined)?.method === 'POST'
+        ? reply({
+            status: 'payment_required',
+            orderId: '22222222-2222-4222-8222-222222222222',
+            totalCents: 2000,
+            deliveryType: 'shipping',
+            clientSecret: 'pi_1_secret',
+          })
+        : reply(snapshot(false, 2000)),
+    );
+    mockRefreshCart.mockReset();
+    mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local')]));
+
+    await render(<CheckoutScreen />);
+    await waitFor(() => expect(screen.getByTestId('checkout-summary')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.online} · ${t.payment.onlineBody}` }));
+    await fireEvent.press(screen.getByRole('button', { name: t.terms }));
+    await fireEvent.press(screen.getByTestId('checkout-confirm'));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalled());
+
+    expect(mockReplace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pathname: '/checkout/confirmed',
+        params: expect.objectContaining({ orderId: '22222222-2222-4222-8222-222222222222' }),
+      }),
+    );
+    expect(mockRefreshCart).toHaveBeenCalled();
+    expect(screen.queryByTestId('checkout-notice')).toBeNull();
   });
 });
 

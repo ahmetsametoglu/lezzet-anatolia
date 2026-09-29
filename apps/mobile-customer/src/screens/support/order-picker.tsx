@@ -10,37 +10,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { formatOrderDate } from '@/screens/orders/order-format';
 import type { UseOrdersResult } from '@/screens/orders/use-orders.hook';
+import { isNumbered } from '@/lib/api/orders';
 // Sözlük burada YALNIZ tip için okunuyor (metni ekran veriyor): çalışma zamanında ikinci bir JSON
 // kopyası taşınmasın diye tip-yalnız import.
 import type messages from '@lezzet/i18n/customer/support';
 
 /*
-  YENİ TALEBİN SİPARİŞ SEÇİCİSİ (v3 `vTalepNew` · `tn.orders`) — GERÇEK sipariş listesinden
-  (`GET /api/v1/me/orders`) okur.
-
-  ── LİSTEYİ KENDİ ÇEKMEZ, ÇEKMECEDEN ALIR (09.08) ───────────────────────────
-  Eskiden okumayı bu komponent yapıyordu ve gerekçesi şuydu: liste yalnız "evet, bir siparişimle
-  ilgili" denince gerekir. Gerekçe ARTIK GEÇERSİZ — çekmece kapsam sorusunu sormaya karar vermek
-  için siparişin VAR OLUP OLMADIĞINI zaten bilmek zorunda (kullanıcı bulgusu 09.08: siparişi
-  olmayana "evet" şıkkı gösterilip sonra boş liste denmesi). Okuma yukarı taşındı; burada ikinci
-  kez okumak aynı sayfayı iki kez istemek olurdu.
-
-  ── SAYFALAMA DÜĞMEYLE, SONSUZ KAYDIRMAYLA DEĞİL ────────────────────────────
-  Sipariş sayısı sınırsız büyür, yani ilk sayfa listenin TAMAMI değildir (CLAUDE §1: sayfalayan
-  okumanın tüketeni olmalı). Ama bu liste bir arşiv ekranı değil, formun içinde duran bir seçim
-  adımı ve çevresinde form akıyor — iç içe kaydırma yerine "daha eski siparişler" düğmesi kondu.
-  İmleç yine hook'ta, opak ve hiçbir yere yazılmıyor.
+  Yeni talebin sipariş seçicisi; listeyi çekmeceden alır, çünkü çekmece kapsam sorusunu sormadan önce siparişin varlığını bilmek zorunda.
+  Sipariş sayısı sınırsız büyür ama bu bir form adımı: sonsuz kaydırma yerine "daha eski siparişler" düğmesi var.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/**
- * Bekleme skeleton'ı — üç sipariş satırı (v3 `hint-placeholder-count="3"`).
- *
- * YÜKSEKLİK YAZILMIYOR (10.08): eskiden `52` diye ham bir sayıydı ve satırın kendi dolgusundan
- * bağımsızdı — `orderRow` değiştiğinde sessizce yanlışa düşerdi. Skeleton artık satırın GERÇEK
- * kabuğunu kuruyor (`styles.orderRow`) ve içine iki çubuk koyuyor; yükseklik kendiliğinden çıkıyor.
- */
+/** Bekleme iskeleti: üç sipariş satırı, satırın gerçek kabuğuyla kurulur ki yükseklik kendiliğinden çıksın. */
 const SKELETON_SLOTS = [0, 1, 2];
 
 interface OrderPickerProps {
@@ -93,12 +75,11 @@ export function OrderPicker({ locale, t, orders, onPick, onGeneral }: OrderPicke
     );
   }
 
-  /* BOŞ LİSTE DALI YOK ve olmamalı: siparişi olmayan müşteriye kapsam sorusu hiç sorulmuyor, akış
-     doğrudan genel talebe açılıyor (çekmecenin künyesi). Buraya gelen müşterinin elinde en az bir
-     sipariş VAR — boş bir dal çizmek, artık olamayacak bir hâle bakım borcu ödemek olurdu. */
+  /* Boş liste dalı yok: siparişi olmayan müşteriye kapsam sorusu sorulmaz, akış doğrudan genel talebe açılır. */
   return (
     <View style={styles.block} testID="new-ticket-orders">
-      {orders.orders.map((order) => (
+      {/* Ödeme bekleyen siparişin numarası yok; talep numaralı siparişe bağlanır. */}
+      {orders.orders.filter(isNumbered).map((order) => (
         <PressableSurface
           key={order.reference}
           onPress={() => onPick(order.reference)}

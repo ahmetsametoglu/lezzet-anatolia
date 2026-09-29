@@ -6,43 +6,31 @@ import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetc
 import { queryString, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
-  `/api/v1/me/orders` — "Siparişlerim" listesi + sipariş detayı (21.18).
-
-  ŞEMA BURADA YAZILMAZ (`addresses.ts` ile aynı gerekçe): sözleşme `@lezzet/types`ta ve UÇ DA aynı
-  şemayla üretiyor (02-mimari §3.2) — alan adı değişirse üreten ve tüketen aynı anda derlemede
-  kırılır. Bu dosyanın işi yalnız sorgu dizesini kurmak ve şemayı istemciye vermek.
-
-  KORUNAN ÇAĞRI (`authorizedFetch`), çıplak `apiFetch` değil: uçlar Bearer'ın arkasında ve oturum
-  yoksa çağrı ağa HİÇ çıkmaz, yerel kısa devreyle `401 unauthorized` döner. Sipariş listesi bunu
-  MİSAFİR olarak okur (ekran giriş kapısı çizer) — veri katmanı yönlendirme yapmaz (02-mimari §4).
-
-  `locale` HER İSTEKTE zorunlu: uç dilsiz çağrıyı 400'le reddediyor (ürün adları sessizce Türkçeye
-  düşmesin diye). Değer UYGULAMANIN DİLİDİR (`lib/i18n/app-locale.ts`), ekranların kararı değil.
+  `/api/v1/me/orders`: "Siparişlerim" listesi ve sipariş detayı; şema `@lezzet/types`ta, uç da onunla üretir. Çağrı korunur (oturum
+  yoksa ağa çıkmadan `401`) ve `locale` her istekte zorunludur.
 */
 
 /** Liste satırı — alan kümesi sözleşmenin kendisi. */
 export type OrderSummary = z.infer<typeof MeOrderPageSchema>['orders'][number];
+/** Numaralı satır; ödeme bekleyen sipariş numarasızdır ve detay yerine ödeme ekranını açar. */
+export type NumberedOrderSummary = Exclude<OrderSummary, { reference: null }>;
+
+export function isNumbered(order: OrderSummary): order is NumberedOrderSummary {
+  return order.reference !== null;
+}
 /** Detay — sayfanın tamamı tek turda. */
 export type OrderDetail = z.infer<typeof MeOrderDetailSchema>;
 
 /** Sorgu dizesi — verilmemiş (`undefined`) parametre YAZILMAZ (katalog istemcisinin kuralı). */
 
-/**
- * Sipariş sayfası — keyset imleçli (`nextCursor === null` → liste bitti).
- *
- * İmleç OPAK bir dizedir: yorumlanmaz, aynen geri verilir. İçinin ne olduğu sunucunun bileceği iş;
- * istemci onu okumaya kalksaydı keyset'in şekli sözleşme olurdu.
- */
+/** Sipariş sayfası, keyset imleçli; imleç opaktır ve aynen geri verilir, `nextCursor === null` liste bitti demek. */
 export function fetchOrders(locale: Locale, cursor?: string): Promise<ApiResult<z.infer<typeof MeOrderPageSchema>>> {
   return authorizedFetch(`/api/v1/me/orders${queryString({ locale, cursor })}`, MeOrderPageSchema);
 }
 
 /**
- * Tek siparişin detayı — adres REFERANS numarasıdır (`LA-26-…`), sipariş kimliği değil: müşteriye
- * gösterilen ve destekle konuşurken kullanılan numara odur (sözleşme künyesi).
- *
- * Bulunamayan · başkasına ait · taslak — üçü de 404 alır; ekran "bu sipariş bulunamadı" bloğunu
- * çizer (ayrım söylenirse numara denenerek başkasının siparişi doğrulatılabilirdi).
+ * Tek siparişin detayı, referans numarasıyla adreslenir. Bulunamayan, başkasına ait ve taslak aynı 404'ü alır; ayrım söylenseydi
+ * numara denenerek başkasının siparişi doğrulatılabilirdi.
  */
 export function fetchOrderDetail(reference: string, locale: Locale): Promise<ApiResult<OrderDetail>> {
   return authorizedFetch(

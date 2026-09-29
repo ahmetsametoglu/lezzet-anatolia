@@ -13,8 +13,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 
 Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en sonda.
 
-- [ ] (K.48) [hedef: mobil] Native sipariş listesinde ödeme bekleyen satır ve o siparişin ödeme ekranı (ödemeyi tamamla ·
-  iptal et); mobil uç satırı o ekran gelene kadar göndermiyor.
 - [ ] (K.49) [hedef: deploy] Tarayıcı bildiriminin VAPID anahtar çifti (`NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY` · `WEB_PUSH_PRIVATE_KEY`)
   sunucuda web, backend ve mobile-api ortamlarına aynı değerle yazılacak; kaynak yerel `apps/web/.env.local`, değer görülmeden
   taşınır. Açık anahtar derlemede sayfaya gömüldüğü için web derlemesinden önce ortamda olmalı; yoksa hesap sayfasında bildirim

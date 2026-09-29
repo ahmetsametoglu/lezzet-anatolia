@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
 import type { z } from 'zod';
 import {
+  cancelPendingOrder,
   checkoutBlockedAnalyticsReason,
   checkoutServicePoints,
   effectiveChannelOf,
@@ -10,15 +11,18 @@ import {
   placeOrder,
   readCheckoutOrderStatus,
   readCheckoutSnapshot,
+  resumePendingPayment,
   UNRESOLVED_PLACE,
 } from '@lezzet/application';
 import { CartService, serviceDb, UserProfileService } from '@lezzet/database';
 // Yan etki portu ortak dosyada: kurye uçları da aynı nesneyi geçirir.
 import { mobilePaymentEffects } from '../../lib/order-effects';
 import {
+  CheckoutCancelResultSchema,
   CheckoutOrderBodySchema,
   CheckoutOrderResultSchema,
   CheckoutOrderStatusSchema,
+  CheckoutResumeResultSchema,
   CheckoutServicePointsSchema,
   CheckoutSnapshotSchema,
   type Channel,
@@ -154,6 +158,42 @@ checkout.get('/order/:orderId/status', async (c) => {
   );
   if (!status) return fail(c, 'order_not_found', 404);
   return ok(c, CheckoutOrderStatusSchema.parse(status));
+});
+
+/** Ödeme bekleyen siparişin ödemesine dönüş: aynı ödemenin anahtarı döner. Başkasının siparişi bulunamayan gibi 404 alır. */
+checkout.post('/order/:orderId/resume', async (c) => {
+  const orderId = UuidSchema.safeParse(c.req.param('orderId'));
+  if (!orderId.success) return fail(c, 'order_not_found', 404);
+
+  const db = serviceDb();
+  const outcome = await resumePendingPayment(
+    db,
+    { orderId: orderId.data, customerId: c.get('customerId') },
+    { gateway: paymentGateway(), effects: mobilePaymentEffects(db) },
+  );
+  if (outcome.status === 'not_found') return fail(c, 'order_not_found', 404);
+  if (outcome.status === 'provider_unavailable') return fail(c, 'payment_unavailable', 503);
+  const result: z.input<typeof CheckoutResumeResultSchema> =
+    outcome.status === 'payment_required'
+      ? { status: outcome.status, orderId: outcome.orderId, clientSecret: outcome.clientSecret }
+      : { status: outcome.status };
+  return ok(c, CheckoutResumeResultSchema.parse(result));
+});
+
+/** Müşteri ödeme bekleyen siparişten vazgeçer: ödeme ve sipariş kapanır, kalemler sepete döner. */
+checkout.post('/order/:orderId/cancel', async (c) => {
+  const orderId = UuidSchema.safeParse(c.req.param('orderId'));
+  if (!orderId.success) return fail(c, 'order_not_found', 404);
+
+  const db = serviceDb();
+  const outcome = await cancelPendingOrder(
+    db,
+    { orderId: orderId.data, customerId: c.get('customerId') },
+    { gateway: paymentGateway(), effects: mobilePaymentEffects(db) },
+  );
+  if (outcome.status === 'not_found') return fail(c, 'order_not_found', 404);
+  if (outcome.status === 'provider_unavailable') return fail(c, 'payment_unavailable', 503);
+  return ok(c, CheckoutCancelResultSchema.parse({ status: outcome.status }));
 });
 
 /**

@@ -1,41 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 
-import { fetchOrders, type OrderSummary } from '@/lib/api/orders';
+import { fetchOrders, isNumbered, type NumberedOrderSummary, type OrderSummary } from '@/lib/api/orders';
 import { useLiveRefresh } from '@/lib/app-state/use-live-refresh';
 
 /*
-  VİTRİNİN İKİ SİPARİŞ BANDI — "siparişiniz yolda" ve "geçen siparişinizi tekrarlayın" (09.08).
-  İkisi de fixture'dan besleniyordu (kullanıcı bulgusu: ekranda sabit `LA-2418`); artık GERÇEK
-  uçtan okunuyor: `GET /api/v1/me/orders`, sipariş listesi ekranının kullandığı kapının aynısı
-  (`lib/api/orders`) — vitrin için ikinci bir istemci yazılmadı (CLAUDE §1 duplikasyon).
-
-  TEK İSTEK, İLK SAYFA: liste en yeni önce geliyor ve bandların sorduğu şey "en yeni"dir; imleç
-  takip edilmez. Sayfa boyu 30 (`DEFAULT_PAGE_SIZE`) — geçmişin daha derinine inmek, ekranda iki
-  satır çizmek için ödenecek bedel değil. En uç hâl: son 30 siparişin hepsi iptal/iadeyse bantlar
-  çizilmez; müşterinin bekleyen bir siparişi zaten olmadığı için yanlış bir şey de söylenmez.
-
-  "SÜREN" KARARI EKRANDA TÜRETİLMEZ, `active` alanından okunur: kural motorun
-  (`isActiveForCustomer` — alındı · hazırlanıyor · yolda) ve sözleşme onu taşıyor. Durum listesini
-  buraya kopyalasaydık, motor bir gün değiştiğinde vitrin ile sipariş listesi ayrı şeyler söylerdi.
-  "GEÇEN" ise `delivered`dır — iptal ve iade edilmiş sipariş tekrarlanacak sipariş değildir.
-
-  MİSAFİRDE HİÇ ÇAĞRI YOK: `signedIn` kapısı kapalıyken hook ağa çıkmaz. `authorizedFetch` zaten
-  oturumsuz çağrıyı yerel 401'e kısa devre yapıyor ama kapı ayrıca duruyor çünkü GİRİŞ ANI da bu
-  bayrakla yakalanıyor — oturum açıldığında (`useMe` yeniden okur, `signedIn` true olur) bantlar
-  kendiliğinden gelir; çıkışta aynı yoldan düşer.
-
-  HATA = BANT YOK, ekranda hata hâli yok: vitrin tasarımında bu bandların iskeleti/hatası tanımlı
-  değil ve vitrinin geri kalanı ayakta (`use-home.hook` künyesinin aynı kararı). Sessiz yutma
-  değil — okuma düştüyse gösterilecek bir sipariş de yoktur; uydurma bir bant çizmek, olmayan bir
-  teslimatı vaat etmek olurdu.
+  Vitrinin iki sipariş bandı ("siparişiniz yolda", "geçen siparişinizi tekrarlayın"), sipariş listesinin kapısından ilk sayfayla okunur.
+  "Süren" motorun `active` kararıdır, "geçen" `delivered`; misafirde çağrı yok ve okuma düşerse bant çizilmez.
 */
 
 interface UseHomeOrdersResult {
   /** Süren (teslim edilmemiş) EN YENİ sipariş; yoksa `null` → bant çizilmez. */
-  live: OrderSummary | null;
+  live: NumberedOrderSummary | null;
   /** Teslim edilmiş EN YENİ sipariş; yoksa `null`. */
-  last: OrderSummary | null;
+  last: NumberedOrderSummary | null;
   /** Aşağı çekerek yenileme — vitrinin öteki kaynaklarıyla birlikte tetiklenir. */
   refresh: () => void;
 }
@@ -62,14 +40,14 @@ export function useHomeOrders(locale: Locale, signedIn: boolean): UseHomeOrdersR
     load();
   }, [load]);
 
-  /* Takip şeridi sipariş detayıyla AYNI cümleyi taşıyor ("Siparişiniz alındı · LA-…") ve aynı
-     sebeple bayatlıyordu — ölçüldü 01.09: detay ekranı "Alındı" derken şerit de öyle diyordu,
-     oysa sipariş 31 dakika önce hazırlanmıştı. Kural tek yerde (`use-foreground-refresh`). */
+  // Takip şeridi sipariş detayıyla aynı cümleyi taşır ve aynı sebeple bayatlar; tazeleme kuralı tek yerde.
   useLiveRefresh(load);
 
+  // Ödeme bekleyen sipariş bantlara girmez: numarası yok ve sürmekte olan bir teslimat değil.
+  const numbered = orders.filter(isNumbered);
   return {
-    live: orders.find((order) => order.active) ?? null,
-    last: orders.find((order) => order.status === 'delivered') ?? null,
+    live: numbered.find((order) => order.active) ?? null,
+    last: numbered.find((order) => order.status === 'delivered') ?? null,
     refresh: load,
   };
 }

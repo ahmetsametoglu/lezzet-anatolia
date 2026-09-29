@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { CheckoutOrderStatus } from '@lezzet/types';
 
 import { OrderConfirmedScreen } from './order-confirmed-screen';
@@ -10,11 +10,22 @@ import messages from '@lezzet/i18n/customer/checkout';
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }) }));
+const mockReplace = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), replace: mockReplace, back: jest.fn() }) }));
 jest.mock('./use-neighbor-invite.hook', () => ({ useOrderNeighborInvite: () => null }));
 
 const mockStatus = jest.fn<Promise<unknown>, [string, string]>();
-jest.mock('@/lib/api/checkout', () => ({ fetchCheckoutOrderStatus: (locale: string, id: string) => mockStatus(locale, id) }));
+const mockResume = jest.fn<Promise<unknown>, [string, string]>();
+const mockCancel = jest.fn<Promise<unknown>, [string, string]>();
+jest.mock('@/lib/api/checkout', () => ({
+  fetchCheckoutOrderStatus: (locale: string, id: string) => mockStatus(locale, id),
+  resumeCheckoutPayment: (locale: string, id: string) => mockResume(locale, id),
+  cancelPendingCheckoutOrder: (locale: string, id: string) => mockCancel(locale, id),
+}));
+const mockPresentPayment = jest.fn<Promise<unknown>, [{ clientSecret: string }]>();
+jest.mock('@/lib/payment/payment-sheet', () => ({ presentPayment: (input: { clientSecret: string }) => mockPresentPayment(input) }));
+const mockRefreshCart = jest.fn();
+jest.mock('@/screens/customer-kit/cart-store', () => ({ refreshCart: () => mockRefreshCart() }));
 jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => {
   const channel = { on: () => channel, subscribe: () => channel };
   return { getSupabase: () => ({ channel: () => channel, removeChannel: async () => undefined }) };
@@ -29,8 +40,12 @@ const taslak: CheckoutOrderStatus = {
   refunded: false,
   awaitingCard: true,
   paymentState: null,
+  payBy: null,
   referenceNo: null,
   channel: `order:${ORDER_ID}`,
+  totalCents: 2000,
+  deliveryType: 'shipping',
+  deliveryDate: null,
 };
 const cevap = (data: CheckoutOrderStatus) => mockStatus.mockResolvedValue({ data, error: null, status: 200 });
 
@@ -40,7 +55,9 @@ function kartYolu() {
   );
 }
 
-beforeEach(() => mockStatus.mockReset());
+beforeEach(() => {
+  for (const mock of [mockStatus, mockResume, mockCancel, mockPresentPayment, mockRefreshCart, mockReplace]) mock.mockReset();
+});
 
 describe('OrderConfirmedScreen — numarası belli sipariş', () => {
   it('numarayı çizer ve durumu sormaz', async () => {
@@ -82,8 +99,8 @@ describe('OrderConfirmedScreen — kart ödemesinin sonucu beklenir', () => {
     expect(screen.getByTestId('confirmed-orders')).toBeOnTheScreen();
   });
 
-  it('ödeme tamamlanmadıysa ret çizilir ve çıkış sepete döner', async () => {
-    cevap({ ...taslak, paymentState: 'incomplete' });
+  it('ödemesi kapanan sipariş ret çizer ve çıkış sepete döner', async () => {
+    cevap({ ...taslak, awaitingCard: false, cancelled: true });
     await kartYolu();
 
     expect(await screen.findByText(t.failed)).toBeOnTheScreen();
@@ -98,5 +115,56 @@ describe('OrderConfirmedScreen — kart ödemesinin sonucu beklenir', () => {
 
     expect(await screen.findByText(t.refunded)).toBeOnTheScreen();
     expect(screen.getByText(t.refundedBody)).toBeOnTheScreen();
+  });
+});
+
+describe('OrderConfirmedScreen — ödemesi gerçekleşmeyen sipariş', () => {
+  const eksik = { ...taslak, paymentState: 'incomplete' as const, payBy: '2026-09-29T12:33:00.000Z' };
+
+  // Tamamlanmayan ödeme ret gibi çizilirse müşteri ödenebilir siparişini kapatılmış sanar ve ödemeye dönemez.
+  it('not, son saat, "ödemeyi tamamla" ve "iptal et" çizilir; ret çıkışı yoktur', async () => {
+    cevap(eksik);
+    await kartYolu();
+
+    expect(await screen.findByText(t.unpaid)).toBeOnTheScreen();
+    expect(screen.getByTestId('confirmed-mark-waiting')).toBeOnTheScreen();
+    expect(screen.getByTestId('confirmed-pay-by')).toBeOnTheScreen();
+    expect(screen.getByTestId('confirmed-pay')).toBeOnTheScreen();
+    expect(screen.getByTestId('confirmed-cancel')).toBeOnTheScreen();
+    expect(screen.queryByTestId('confirmed-retry')).toBeNull();
+  });
+
+  // Ödemeye dönüş yeni sipariş açsaydı ya da başka anahtarla ödeseydi aynı sipariş iki kez ödenebilirdi.
+  it('ödemeyi tamamla aynı ödemenin anahtarıyla kartı açar, geçince durum yeniden sorulur', async () => {
+    cevap(eksik);
+    mockResume.mockResolvedValue({
+      data: { status: 'payment_required', orderId: ORDER_ID, clientSecret: 'pi_1_secret' },
+      error: null,
+      status: 200,
+    });
+    mockPresentPayment.mockResolvedValue({ status: 'succeeded' });
+    await kartYolu();
+    await screen.findByText(t.unpaid);
+    const sorular = mockStatus.mock.calls.length;
+
+    await fireEvent.press(screen.getByTestId('confirmed-pay'));
+
+    await waitFor(() => expect(mockStatus.mock.calls.length).toBeGreaterThan(sorular));
+    expect(mockResume).toHaveBeenCalledWith('tr', ORDER_ID);
+    expect(mockPresentPayment).toHaveBeenCalledWith({ clientSecret: 'pi_1_secret' });
+  });
+
+  // İptalden sonra sepete gidilmez ya da sepet tazelenmezse müşteri geri dönen ürünlerini göremez.
+  it('iptal edilen siparişin kalemleri sepete döner: sepet tazelenir ve sepete gidilir', async () => {
+    cevap(eksik);
+    mockCancel.mockResolvedValue({ data: { status: 'cancelled' }, error: null, status: 200 });
+    await kartYolu();
+    await screen.findByText(t.unpaid);
+
+    await fireEvent.press(screen.getByTestId('confirmed-cancel'));
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/cart'));
+    expect(mockCancel).toHaveBeenCalledWith('tr', ORDER_ID);
+    expect(mockRefreshCart).toHaveBeenCalled();
   });
 });
