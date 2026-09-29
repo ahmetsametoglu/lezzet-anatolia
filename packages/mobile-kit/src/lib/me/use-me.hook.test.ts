@@ -4,30 +4,8 @@ import { AppState } from 'react-native';
 import { meFixture } from '../../testing/me-fixture';
 
 /*
-  MÜŞTERİ KİMLİĞİ (21.98) — düşen okumanın kendi başına toparlanması.
-
-  ── ÖLÇÜLEN ARIZA, CİHAZDAN (22.08) ─────────────────────────────────────────
-  Ağ düşünce `status` `error`a geçiyor ve ekran misafir GİBİ çiziliyor: selamlama, sipariş bantları
-  ve toptan rozeti kayboluyor. Sorun o karar değil, ondan ÇIKIŞ yolunun olmamasıydı. Dört yol
-  ölçülmüştü — "Tekrar dene" ✓ · vitrini aşağı çekmek ✓ · sekme değiştirmek ✗ · **ağ geri gelince
-  kendiliğinden ✗**. Yani oturumu yerli yerinde duran müşteri, doğru düğmeyi bulana kadar
-  uygulamayı ÇIKIŞ YAPMIŞ GİBİ görüyordu.
-
-  ── BU DOSYANIN ÇİVİLEDİĞİ İKİ AYRIM ────────────────────────────────────────
-  1. **`guest` ≠ `error`.** 401 KESİN bir cevaptır (oturum yok, yerel kısa devre); ağ/sunucu
-     arızası ise okunamamış bir profildir. Birleştirilirse ekran, oturumu duran müşteriye giriş
-     daveti basar — yani yalan söyler.
-  2. **Tazeleme YALNIZ `error` hâlinde.** `ready`de her öne gelişte `/me` çekmek, düzeltmeye
-     çalıştığı arızadan pahalı bir yoklamadır; `guest`te ise tazelenecek bir eksik yoktur.
-     Koşulu gevşetmek hiçbir yerde patlamaz — yalnız her sekme dönüşünde bir ağ turu doğurur.
-
-  ── MODÜL DURUMU SIFIRLANMIYOR, VE BU BİLİNÇLİ ──────────────────────────────
-  Durum modül düzeyinde (tek doğruluk, sepet deposunun deseni) ve `jest.resetModules()` burada
-  İŞLEMEZ: taze yüklenen modül kendi React nüshasını çeker, `useSyncExternalStore`un dispatcher'ı
-  `null` kalır (`place-name-memory` testinde ölçüldü, 24.08). Üretim modülüne üçüncü bir
-  "test için sıfırla" kapısı EKLENMEDİ — bunun yerine her iddia `waitFor` ile BEKLENEN hâle
-  bakıyor, yani önceki testten sızan bir ilk kare hiçbir iddiayı taşımıyor. Bedeli: geçici
-  `loading` karesi burada sınanmıyor (soğuk modül kurulamıyor), ve bu eksik açıkça yazılı.
+  Müşteri kimliğinin düşen okumadan toparlanması; `guest` ile `error` ayrı tutulur ki oturumu duran müşteriye giriş daveti basılmasın.
+  Modül durumu sıfırlanmaz, her iddia `waitFor` ile beklenen hâle bakar.
 */
 
 const mockFetchMe = jest.fn();
@@ -49,14 +27,8 @@ jest.mock('../auth/supabase', () => ({
 /** Uygulama öne/arkaya alındığında çağrılan dinleyici — testin elle tetiklediği sinyal. */
 let appStateListener: ((s: string) => void) | null = null;
 const mockAppStateRemove = jest.fn();
-/* `react-native` MODÜLÜ SAHTELENMEZ — yalnız tek metodu gözlenir, ve bu iki ölçümün sonucu:
-   · Modülü toptan değiştirmek suite'i daha açılmadan düşürdü: `expo-modules-core`
-     `Platform.select`i yüklenirken çağırıyor ("Cannot read properties of undefined (reading
-     'select')").
-   · `jest.requireActual('react-native')` ile yaymak da düştü — gerçek index yerel modül arıyor
-     ("TurboModuleRegistry … 'DevMenu' could not be found"); preset'in kendi sahtesi böyle atlanmış
-     oluyor.
-   Doğru kapı `spyOn`: preset'in kurduğu dünya yerinde kalır, yalnız dinleyici bize teslim edilir. */
+/* `react-native` modülü sahtelenmez, yalnız `AppState.addEventListener` gözlenir: modülü toptan değiştirmek ya da gerçeğini
+   yaymak suite'i açılmadan düşürüyor, `spyOn` preset'in dünyasını yerinde bırakır. */
 jest.spyOn(AppState, 'addEventListener').mockImplementation(((_event: string, cb: (s: string) => void) => {
   appStateListener = cb;
   return { remove: mockAppStateRemove };
@@ -201,11 +173,8 @@ describe('müşteri kimliği', () => {
 });
 
 /**
- * ONAYLI KURUMSAL MÜŞTERİ — üç koşul birden şart ve üçü de tek tek gevşetilebilir.
- *
- * `b2bApproved` ÜÇ DEĞERLİDİR (`true`/`false`/`null`); `!== false` gibi bir kontrol `null`ı
- * (hiç başvurmamış) onaylı sayar ve toptan fiyatı doğrulanmamış bir kayda açar. Aynı kural fiyat
- * tarafında da sınanıyor (`pricing-viewer.test.ts`) — burada sınanan, EKRANIN aynı kararı vermesi.
+ * Onaylı kurumsal müşteri: üç koşul birden şart. `b2bApproved` üç değerlidir; `!== false` gibi bir kontrol hiç başvurmamış kaydı
+ * onaylı sayar ve toptan fiyatı doğrulanmamış bir kayda açardı.
  */
 describe('onaylı kurumsal müşteri', () => {
   const durum = async (overrides: Record<string, unknown>) => {
