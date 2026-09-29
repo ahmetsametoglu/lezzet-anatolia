@@ -6,6 +6,8 @@ import { purgeTestData, createTestWarehouse, purgeVariantStock } from '@lezzet/d
 import { recordOrderPayment } from './payment';
 import { deliverOrder } from './fulfillment';
 import { adjustFulfillment, cancelOrder } from './refund';
+import { buildOrderNotification } from './notification-data';
+import type { OrderExceptionDetail } from './effects';
 import { advanceOrder, prepareOrderToReady } from './advance.testkit';
 import { transitionOrder } from './transition';
 
@@ -490,5 +492,29 @@ describe('akıbetin değişmezleri', () => {
     ]);
 
     expect((await stocks.getById(batchId))?.physicalQty).toBe(teslimSonrasi);
+  });
+});
+
+describe('iade e-postası', () => {
+  it('ikinci iadenin maili yalnız bu iadenin kalemini ve net ödenenden düşen toplamı yazar', async () => {
+    const { orderId, itemId } = await sendOut(2);
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
+    await deliverOrder(db, orderId);
+    await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'restock', note: 'ambalaj sağlam' }]);
+    let detail: OrderExceptionDetail = {};
+    const notifyException = vi.fn(async (_id: string, _event: string, opts: OrderExceptionDetail) => void (detail = opts));
+
+    await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'discard' }], {
+      effects: { notifyException },
+    });
+    const mail = await buildOrderNotification(db, orderId, 'order_refunded', detail);
+
+    // Satır müşteride kalanın değil iade edilen adedin değerini, toplam ilk iadenin bıraktığından düşüşü yazar.
+    expect(mail?.data.lines).toEqual([expect.objectContaining({ qty: 1, amount: expect.stringMatching(/^10,00/) })]);
+    expect(mail?.data.refund).toMatchObject({
+      amount: expect.stringMatching(/^10,00/),
+      previousTotal: expect.stringMatching(/^10,00/),
+      currentTotal: expect.stringMatching(/^0,00/),
+    });
   });
 });
