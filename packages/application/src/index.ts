@@ -511,9 +511,11 @@ export type { TransitionInput, TransitionOutcome } from './order/transition';
 // ── Kart ödemesinin onayı: webhook, ödeme sayfası ve zamanlayıcı aynı yolu çağırır ──
 export { confirmOnlinePayment, providerAccountId } from './order/confirm-payment';
 export type { ConfirmPaymentDeps, ConfirmPaymentInput, ConfirmPaymentOutcome } from './order/confirm-payment';
-export { openPaymentBefore, reconcileDraftPayment, sweepUnpaidDrafts } from './order/reconcile-payment';
+export { reconcileDraftPayment, sweepUnpaidDrafts } from './order/reconcile-payment';
 export { readCheckoutOrderStatus } from './order/order-status';
-export type { OpenPayment, ReconcileOutcome } from './order/reconcile-payment';
+export type { ReconcileOutcome } from './order/reconcile-payment';
+export { cancelPendingOrder, resumePendingPayment, settlePendingPayments } from './order/pending-payment';
+export type { CancelPendingOutcome, ResumePaymentOutcome } from './order/pending-payment';
 export { stripeGateway } from './order/payment-gateway';
 export type { PaymentGateway, PaymentSnapshot, StripeLike } from './order/payment-gateway';
 // ── Paket (bundle) çözümü ──

@@ -429,6 +429,12 @@ export function storedPrices(items: readonly CartItem[]): Map<string, number> {
   return map;
 }
 
+/** Siparişe girecek her satır sunucudaki sepette aynı adetle duruyor mu; sepetten alınmış satırla ikinci sipariş açılmasın. */
+export function entriesInCart(entries: readonly CartEntry[], stored: readonly CartItem[]): boolean {
+  const qtyByKey = new Map(stored.map((item) => [cartKey(entryOfItem(item)), item.qty] as const));
+  return entries.every((entry) => qtyByKey.get(cartKey(entry)) === entry.qty);
+}
+
 /**
  * Çözülmüş satırdan niyete dönüş; sunucu yanıtında istemcinin listesi buna göre tazelenir. Tek yerde, yoksa paket satırı bir
  * çağrıda varyant satırına dönüşürdü.

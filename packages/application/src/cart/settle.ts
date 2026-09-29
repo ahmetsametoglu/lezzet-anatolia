@@ -1,4 +1,7 @@
-import { CartService, OrderService, type Db } from '@lezzet/database';
+import { BundleItemService, CartService, OrderService, type Db } from '@lezzet/database';
+import { bundleQtyOf } from '@lezzet/domain-core';
+import type { OrderItem } from '@lezzet/types';
+import { itemOfEntry, type CartEntry } from './cart-types';
 
 /**
  * Sepetten yalnız siparişe giren kalemler düşer, çünkü kapı ve kargo grupları ayrı siparişlerdir ve verilmeyen grup sepette bekler.
@@ -28,4 +31,36 @@ export async function clearOrderedLines(db: Db, customerId: string, orderId: str
     return;
   }
   await cart.replace(customerId, remaining);
+}
+
+/**
+ * Ödemesi gelmeyen siparişin kalemleri sepete geri döner, çünkü müşteri o siparişi vermedi ve niyeti kaybolmamalı. Satır sepette
+ * yeniden varsa adet toplanır (`addItems`); paketin adedi içeriğinden türer.
+ */
+export async function restoreOrderedLines(db: Db, customerId: string, orderId: string): Promise<void> {
+  const found = await new OrderService(db).getWithItems(orderId);
+  if (!found || found.items.length === 0) return;
+  const variantRows = found.items
+    .filter((item) => !item.bundleId)
+    .map((item) => itemOfEntry(variantEntryOf(item), item.unitPriceCents / 100));
+  const bundleRows = await bundleRowsOf(db, found.items);
+  await new CartService(db).addItems(customerId, [...variantRows, ...bundleRows]);
+}
+
+/** Parti çıpası korunur: sepetten alınan satır teklif partisine bağlıydıysa aynı satır geri gelir. */
+function variantEntryOf(item: OrderItem): CartEntry {
+  return { kind: 'variant', variantId: item.variantId, qty: item.qty, stockId: item.stockId };
+}
+
+async function bundleRowsOf(db: Db, items: readonly OrderItem[]): Promise<ReturnType<typeof itemOfEntry>[]> {
+  const bundleIds = [...new Set(items.map((item) => item.bundleId).filter((id): id is string => id !== null))];
+  const contents = new BundleItemService(db);
+  return Promise.all(
+    bundleIds.map(async (bundleId) => {
+      const own = items.filter((item) => item.bundleId === bundleId);
+      const qty = bundleQtyOf(await contents.listByBundle(bundleId), own);
+      const totalCents = own.reduce((sum, item) => sum + item.unitPriceCents * item.qty, 0);
+      return itemOfEntry({ kind: 'bundle', bundleId, qty }, totalCents / qty / 100);
+    }),
+  );
 }

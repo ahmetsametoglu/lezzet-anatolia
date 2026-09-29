@@ -294,6 +294,7 @@ function rejectionMessage(outcome: Exclude<Awaited<ReturnType<typeof placeOrder>
      * gelirse sipariş ortada kalmış demektir ve operatör bunu bilmeli.
      */
     case 'payment_required':
+    case 'open_payment':
       return 'Sipariş taslak olarak açıldı ama ödeme adımı bu ekranda tamamlanamaz — siparişler listesinden takip edin.';
     // Elle giriş gel-al seçmez (adres yolu); bu iki ret ancak istek elle kurulursa doğar ve adlandırılır ki sessiz kalmasın.
     case 'pickup_not_allowed':

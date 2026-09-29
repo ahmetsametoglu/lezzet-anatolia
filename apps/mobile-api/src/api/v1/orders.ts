@@ -14,20 +14,12 @@ import {
 import type { MeOrderShipment } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { decodeCursor, encodeCursor } from '../../lib/request';
-import { settleOpenPaymentQuietly } from '../../lib/open-payment';
+import { settlePendingPaymentsQuietly } from '../../lib/pending-payments';
 import type { V1Env } from './auth';
 
 /*
-  `/me/orders` (21.18) — "Siparişlerim" listesi (v3 `vOrders`) + sipariş detayı (v3 `vOrder`).
-
-  KURAL BURADA DEĞİL: taslak süzmesi, durum daraltması, paket katlaması, "ölçüm var mı" (eksik
-  karşılama), zaman çizgisi ve takip adresi `@lezzet/application`ın müşteri sipariş kapısında
-  (`order/customer-orders.ts` künyesi) — yani web sipariş sayfalarının okuduğu kararların TAM
-  AYNISI. Bu dosya TAŞIMA katmanıdır: sorgu dizesini süzer, kimliği çözer, sözleşme şekline
-  indirger, zarflar. Burada hesaplanan hiçbir iş kuralı yok.
-
-  BEARER'IN ARKASINDA ve orada kalacak (adres uçlarının aynı kararı): sipariş müşterinin
-  kendisidir, katalog gibi oturumsuz gezilmez.
+  `/me/orders`: "Siparişlerim" listesi ve sipariş detayı. Kural `@lezzet/application`ın müşteri sipariş kapısında, web ile aynı;
+  bu dosya sorguyu süzer, kimliği çözer ve sözleşme şekline indirger.
 */
 
 /** Sayfa boyutu tavanı — katalogun aynı kararı: tek istekle geçmişi boşaltmak sayfalamayı anlamsız kılar. */
@@ -93,8 +85,8 @@ orders.get('/', async (c) => {
     return fail(c, parsed.error.issues[0]?.path[0] === 'locale' ? 'invalid_locale' : 'invalid_query', 400);
   }
 
-  // Stripe'ın mesajı gelmese de ödenmiş sipariş listede görünsün: taslak numarasızdır ve listeye giremez.
-  await settleOpenPaymentQuietly(serviceDb(), c.get('customerId'));
+  // Ödemesi beklenen siparişler önce netleşir: Stripe'ın mesajı gelmese de ödenen sipariş onaylı, ödenmeyen kapanmış görünür.
+  await settlePendingPaymentsQuietly(serviceDb(), c.get('customerId'));
   const page = await listCustomerOrders(serviceDb(), {
     customerId: c.get('customerId'),
     locale: parsed.data.locale,

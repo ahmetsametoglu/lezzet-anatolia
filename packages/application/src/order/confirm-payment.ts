@@ -1,7 +1,6 @@
 import { AccountService, OrderService, ReservationService, StockService, type Db } from '@lezzet/database';
 import { decideLatePayment } from '@lezzet/domain-core';
 import type { OrderItem } from '@lezzet/types';
-import { clearOrderedLines } from '../cart/settle';
 import { ringBell } from '../realtime/bell';
 import { orderChannelName } from '../realtime/order-channel';
 import type { OrderEffects } from './effects';
@@ -11,20 +10,9 @@ import { cancelOrder } from './refund';
 import { transitionOrder } from './transition';
 
 /**
- * **Kart ödemesinin onay yolu** (07.5 → 07.18) — webhook'un ve "sağlayıcıya sor" kapısının ORTAK ayağı.
- *
- * Kaynağı `apps/web/lib/order/stripe-webhook.ts`teki `confirmPayment`tı. Buraya taşındı çünkü artık iki
- * çağıranı var: webhook (olay geldi) ve `reconcileDraftPayment` (olay gelmedi, sağlayıcıya soruldu). İki
- * kopya bir gün iki ayrı onay kuralı demekti. Sağlayıcı istemcisi pakete GİRMEZ: iade portu
- * (`PaymentGateway.refund`) çağırandan gelir. Ücret yazımı (Stripe'ın komisyonu) webhook'ta kaldı —
- * sağlayıcıya ek bir soru ister ve öğrenilemezse payout'ta zaten tamamlanıyor.
- *
- * Sıra webhook'taki gibi: önce **malın hâlâ bizde olup olmadığı** (geç ödeme kararı), para yazımı ondan
- * sonra — sıra tersse iade edilecek bir siparişte tahsilat kaydı açık kalırdı.
- *
- * **İki kez çağrılabilir, iki kez yazmaz:** tahsilat ödeme kimliğinden türeyen anahtarla yazılır
- * (`stripe-payment:<pi>` — veritabanının tekil indeksi, `payment.ts` künyesi); onaylanmış siparişe ikinci
- * geçişi motor reddeder. Webhook ile sorma kapısı aynı anda koşsa da ikisi aynı sonuca varır.
+ * Kart ödemesinin onay yolu, webhook'un ve sağlayıcıya soran kapının ortak ayağı: önce malın hâlâ bizde olup olmadığı, sonra para
+ * yazılır, çünkü ters sırada iade edilecek siparişte tahsilat açık kalırdı. İki kez çağrılabilir, iki kez yazmaz; tahsilat ödeme
+ * kimliğinden türeyen anahtarla yazılır ve onaylanmış siparişe ikinci geçişi motor reddeder.
  */
 
 export type ConfirmPaymentOutcome = { status: 'ok'; action: 'confirmed' | 'reserved_again' | 'refunded' } | { status: 'not_found' };
@@ -53,10 +41,8 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
   const accountId = input.accountId ?? (await providerAccountId(db));
 
   /**
-   * Sipariş İPTAL EDİLMİŞSE para geri verilir ve iş biter. Dar ama gerçek: müşteri yeniden denerken
-   * eski taslak süpürülür ve süpürülen taslağın ödemesi 3-D Secure penceresinden sonradan onaylanabilir.
-   * Bu emniyet olmasaydı akış `cancelled → confirmed` geçişine girip reddedilir ve **para alınmış,
-   * siparişi olmayan** bir müşteri kalırdı.
+   * İptal edilmiş siparişe gelen para geri verilir: pencere kapandıktan ya da müşteri vazgeçtikten sonra 3-D Secure ödemesi
+   * geçebilir. Bu emniyet olmasa para alınmış ama siparişi olmayan bir müşteri kalırdı.
    */
   if (order.status === 'cancelled') {
     await refundProviderPayment(db, deps.gateway, input.paymentIntentId, order.id);
@@ -65,9 +51,8 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
 
   const decision = await decideForOrder(db, order.id, order.warehouseId, items);
 
-  // Stok kalmadı: para OTOMATİK iade edilir ve sipariş iptal olur (DOMAIN §4). Sağlayıcı iadesi ÖNCE:
-  // iade edilemeyen bir ödemede siparişi iptal etmek müşteriyi hem malsız hem parasız bırakırdı.
-  // Sebep `out_of_stock` — para gerçekten çekildi ve geri verildi (07.14).
+  // Stok kalmadı: para iade edilir ve sipariş `out_of_stock` sebebiyle iptal olur. Sağlayıcı iadesi önce, çünkü iadesi düşen
+  // ödemede siparişi iptal etmek müşteriyi hem malsız hem parasız bırakırdı.
   if (decision === 'refund') {
     await refundProviderPayment(db, deps.gateway, input.paymentIntentId, order.id);
     await cancelOrder(db, order.id, { refundAccountId: accountId, refundAmountCents: 0, reason: 'out_of_stock', effects: deps.effects });
@@ -90,8 +75,8 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
     }
   }
 
-  // Tahsilat: siparişin toplamı değil, sağlayıcının GERÇEKTEN aldığı tutar (ödeme durumu bundan türer).
-  // Künye iadenin yolu (07.11); anahtar ikinci çağrının ikinci hareket yazmasını veride engelliyor.
+  // Tahsilat sağlayıcının gerçekten aldığı tutardır, siparişin toplamı değil; anahtar ikinci çağrının ikinci hareket yazmasını
+  // veride engeller.
   if (accountId && input.amountCents != null) {
     await recordOrderPayment(db, {
       orderId: order.id,
@@ -104,13 +89,8 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
     });
   }
 
-  // Referans numarası ve `confirmed` burada doğar (07.6 kapısı; motor karar verir). Sipariş zaten
-  // onaylanmışsa geçiş reddedilir ve bu bir hata değildir — ikinci çağrının cevabı.
+  // Numara ve `confirmed` burada doğar; sipariş zaten onaylanmışsa geçiş reddedilir ve bu ikinci çağrının cevabıdır.
   await transitionOrder(db, { orderId: order.id, to: 'confirmed', effects: deps.effects });
-
-  // Ödeme geçti: sepetten BU SİPARİŞİN kalemleri düşer (19.7). Temizlik siparişin KESİNLEŞTİĞİ ana
-  // bağlı — taslak açılırken temizlenseydi ödemesi düşen müşteri sepetini de kaybederdi.
-  await clearOrderedLines(db, order.customerId, order.id);
 
   // Onay ekranının ZİLİ: müşteri hâlâ "onaylanıyor" yazısına bakıyor olabilir.
   await ringBell(orderChannelName(order.id));
@@ -125,9 +105,8 @@ export async function providerAccountId(db: Db): Promise<string | null> {
 }
 
 /**
- * **Sağlayıcı ödemesini iade eder ve DAMGALAR** (07.14). Damga iadeden SONRA: önce yazılsaydı iadesi
- * düşen bir ödeme "iade edildi" görünürdü. Port yoksa (anahtarsız ortam) iade iletilemez ama damga
- * yine düşer — webhook'un bugünkü davranışı, taşınırken değiştirilmedi.
+ * Sağlayıcı ödemesini iade eder ve damgalar; damga iadeden sonra, yoksa iadesi düşen ödeme "iade edildi" görünürdü. Port yoksa
+ * iade iletilemez ama damga yine düşer.
  */
 async function refundProviderPayment(db: Db, gateway: PaymentGateway | null, paymentIntentId: string | null, orderId: string): Promise<void> {
   if (gateway && paymentIntentId) await gateway.refund(paymentIntentId);
@@ -135,9 +114,8 @@ async function refundProviderPayment(db: Db, gateway: PaymentGateway | null, pay
 }
 
 /**
- * Geç ödeme kararı — kalem kalem. Motor tek kalem için karar verir; siparişin kararı **en kötü kalemin
- * kararıdır**: bir kalem bile bulunamıyorsa yarım sipariş göndermek yerine para iade edilir. Stok
- * SİPARİŞİN deposunda sorulur — başka depodaki aynı ürün bu siparişi kurtarmaz (DOMAIN §17).
+ * Geç ödeme kararı kalem kalem verilir ve siparişin kararı en kötü kalemin kararıdır: bir kalem bile yoksa yarım sipariş yerine
+ * para iade edilir. Stok siparişin deposunda sorulur, başka depodaki aynı ürün bu siparişi kurtarmaz.
  */
 async function decideForOrder(db: Db, orderId: string, warehouseId: string, items: readonly OrderItem[]): Promise<'proceed' | 'reserve_again' | 'refund'> {
   const active = await new ReservationService(db).listActiveByOrder(orderId);

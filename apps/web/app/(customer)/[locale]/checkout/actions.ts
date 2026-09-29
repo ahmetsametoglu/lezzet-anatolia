@@ -5,7 +5,6 @@ import { hasLocale } from 'next-intl';
 import {
   checkoutBlockedAnalyticsReason,
   checkoutServicePoints,
-  openPaymentBefore,
   placeOrder,
   readCheckoutSnapshot,
   type CheckoutSnapshot,
@@ -22,7 +21,7 @@ import { formatPrice } from '@/lib/storefront/format';
 import type { CartEntry } from '@/lib/cart/cart-types';
 import { getPackagesByIds } from '@/lib/storefront/packages';
 import { resolveOrderLines } from '@/lib/order/customer-lines';
-import { webOrderEffects, webPaymentEffects } from '@/lib/order/transition';
+import { webPaymentEffects } from '@/lib/order/transition';
 import { stripeSessionCreator } from '@/lib/order/checkout-session';
 import { stripePaymentGateway } from '@/lib/stripe';
 import { rememberAcquisition } from '@/lib/analytics/attribution';
@@ -126,10 +125,7 @@ type ConfirmOutcome =
   | { status: 'payment_required'; orderId: string; clientSecret: string; totalCents: number }
   /** Kapıda/vadeli: ödeme sağlayıcısı yok, sipariş açıldı. */
   | { status: 'placed'; orderId: string; totalCents: number }
-  /**
-   * Önceki kart ödemesi geçti ya da bankada işleniyor: yeni sipariş açılmadı, müşteri o siparişin sayfasına gider. Aynı sepet için
-   * ikinci bir ödeme iki kez çekim olurdu.
-   */
+  /** Aynı basışın ödemesi bankada işleniyor: yeni sipariş açılmadı, müşteri o siparişin sayfasına gider. */
   | { status: 'open_payment'; orderId: string; state: 'paid' | 'processing' }
   | { status: 'rejected'; reason: string; detail?: string[] | string };
 
@@ -143,10 +139,7 @@ export async function confirmCheckoutAction(input: {
   marketingConsent?: boolean;
   /** Sepetteki kupon kodu; siparişin indirimi bunsuz hesaplanamaz. */
   couponCode?: string | null;
-  /**
-   * Çift sipariş kalkanı, istemcinin bu deneme için ürettiği anahtar; yalnız kart dışı yollarda işler, çünkü orada sipariş bu
-   * çağrıda kesinleşir. Kart yolunda koruma açık taslakların süpürülmesi ve düğmenin gezinme bitene kadar kapalı kalmasıdır.
-   */
+  /** Çift sipariş kalkanı: istemcinin bu basış için ürettiği anahtar; kart yolunda aynı taslağın ödemesine döndürür. */
   idempotencyKey?: string | null;
   /** Sepetin kargo grubundan açılan ikinci sipariş mi — `loadCheckoutAction` ile aynı bayrak. */
   shippingOrder?: boolean;
@@ -164,18 +157,7 @@ export async function confirmCheckoutAction(input: {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
 
-    /*
-      Önceki ödeme geçtiyse ya da bankada işleniyorsa aynı sepet için yeni ödeme iki kez çekim demek: yeni sipariş açılmaz, müşteri o
-      siparişe gider. Ödenmemişse yeni deneme sürer ve eski ödeme sağlayıcıda iptal edilir (`paymentGateway`).
-    */
-    const gateway = stripePaymentGateway();
-    const open = await openPaymentBefore(serviceDb(), customerId, { gateway, effects: webPaymentEffects });
-    if (open) return { data: { status: 'open_payment', orderId: open.orderId, state: open.state }, errorKey: null };
-
-    // Zincirin TAMAMI kapının içinde (`@lezzet/application`, `order/place-order`): tekrar kalkanı,
-    // açık taslakların süpürülmesi, taslak, çevrimdışı yolun rezervasyon → `confirmed` sırası ve
-    // çevrimiçi yolun ödeme niyeti. Uç yalnız yüzeye ait dört şeyi geçirir — sağlayıcı üreteci,
-    // paket çözümü, edinim çerezi ve ölçüm — sonra sonucu ekranın diline çevirir.
+    // Zincirin tamamı kapının içinde; uç yalnız yüzeye ait portları geçirir ve sonucu ekranın diline çevirir.
     const outcome = await placeOrder(serviceDb(), {
       locale: input.locale as Locale,
       customerId,
@@ -198,10 +180,9 @@ export async function confirmCheckoutAction(input: {
       onCustomerAcquired: (id) => void rememberAcquisition(id),
       // Sağlayıcı istemcisi pakete GİRMEZ (`stripe` npm bağımlılığı): üreteç buradan geçer.
       createPaymentSession: stripeSessionCreator(),
-      // Eski taslağın ödemesini sağlayıcıda kapatmak için; yukarıdaki soruyla aynı port.
-      paymentGateway: gateway,
-      // Durum geçişinin iki yan etkisi (müşteri haberi + sipariş puanı) de web modüllerinde.
-      effects: webOrderEffects,
+      paymentGateway: stripePaymentGateway(),
+      // Ödeme etkileri, çünkü aynı basışın taslağına dönüşte kapanan ödemenin müşteri haberi de gider.
+      effects: webPaymentEffects,
       onRejected: measureRejection,
       // Huninin son adımı. Tutar ve müşteri taşınmaz: olay yalnız "bu oturum siparişle bitti" der (`ANALYTICS §1`).
       onPlaced: () => void recordEvent({ type: 'order_placed' }),
@@ -209,6 +190,9 @@ export async function confirmCheckoutAction(input: {
 
     if (outcome.status === 'placed') {
       return { data: { status: 'placed', orderId: outcome.orderId, totalCents: outcome.totalCents }, errorKey: null };
+    }
+    if (outcome.status === 'open_payment') {
+      return { data: { status: 'open_payment', orderId: outcome.orderId, state: outcome.state }, errorKey: null };
     }
     if (outcome.status === 'payment_required') {
       return {

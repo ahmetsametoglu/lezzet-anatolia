@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   AddressService,
+  CartService,
   CategoryService,
   OrderService,
   PriceService,
@@ -37,6 +38,12 @@ let allowedAddressId = '';
 let deniedAddressId = '';
 
 const entries = () => [{ kind: 'variant' as const, variantId, qty: 1, stockId: null }];
+/** Müşteri siparişi sunucudaki sepetten doğar; sepette olmayan kalemle sipariş açılmaz. */
+const sepeteKoy = (customerId: string, lines: ReturnType<typeof entries>) =>
+  new CartService(db).replace(
+    customerId,
+    lines.map(({ variantId: id, qty }) => ({ variantId: id, qty, stockId: null, unitPrice: 0 })),
+  );
 
 beforeAll(async () => {
   pickupWarehouseId = (await createTestWarehouse(db, { label: 'GLA', pickupEnabled: true })).id;
@@ -106,8 +113,9 @@ describe('gel-al teklifi (anlık görüntü)', () => {
 });
 
 describe('gel-al siparişi (placeOrder)', () => {
-  const place = (customerId: string, addressId: string, warehouseId: string, paymentMethod: 'cash' | 'online' = 'cash') =>
-    placeOrder(db, {
+  const place = async (customerId: string, addressId: string, warehouseId: string, paymentMethod: 'cash' | 'online' = 'cash') => {
+    await sepeteKoy(customerId, entries());
+    return placeOrder(db, {
       locale: 'fr',
       customerId,
       entries: entries(),
@@ -118,6 +126,7 @@ describe('gel-al siparişi (placeOrder)', () => {
       idempotencyKey: `gla-${stamp}-${customerId}-${warehouseId}-${Math.random().toString(36).slice(2, 8)}`,
       createPaymentSession: async () => ({ id: `pi_gla_${stamp}`, clientSecret: `secret_${stamp}` }),
     });
+  };
 
   it('izinsiz müşterinin gel-al isteği reddedilir — kart gizlenmiş olsa da kapı sunucuda', async () => {
     expect((await place(deniedId, deniedAddressId, pickupWarehouseId)).status).toBe('pickup_not_allowed');
@@ -223,6 +232,7 @@ describe('gel-al sepetin grubuna ve kapının asgari sepetine bağlı değildir'
   });
 
   it('adrese gidemeyen kalem de depodan alınır ve depo kapsamlı taban gel-al siparişini durdurmaz', async () => {
+    await sepeteKoy(allowedId, ikiKalem());
     const outcome = await placeOrder(db, {
       locale: 'fr',
       customerId: allowedId,

@@ -2,17 +2,19 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import type * as StripeModule from '../../lib/stripe';
 
 /*
-  Stripe'ın mesajı gelmediği hâl: ödeme Stripe'ta geçti ama sipariş hâlâ taslak. Stripe ve mail gönderimi yalnız bu dosyada sahte;
-  uç, oturum, sepet, bildirim zinciri ve veritabanı gerçek. Stripe'ın "gerçeği" `odenen` kümesidir.
+  Kart taslağının mobil uçtaki yolu: ödeme açılınca kalemler sepetten çıkar, Stripe'ın mesajı gelmese de okumalar sonucu netleştirir.
+  Yalnız Stripe (gerçeği `odenen` kümesi) ve mail gönderimi sahte; uç, oturum, sepet, bildirim zinciri ve veritabanı gerçek.
 */
 const odenen = new Set<string>();
 const niyetSiparisi = new Map<string, string>();
+const niyetAnahtari = new Map<string, string>();
 let n = 0;
 vi.mock('../../lib/stripe', async (orig) => ({
   ...(await orig<typeof StripeModule>()),
   paymentSessionCreator: () => async ({ orderId, amountCents }: { orderId: string; amountCents: number }) => {
     const id = `pi_acik_${Date.now()}_${++n}_${amountCents}`;
     niyetSiparisi.set(id, orderId);
+    niyetAnahtari.set(id, `secret_${n}`);
     return { id, clientSecret: `secret_${n}` };
   },
   paymentGateway: () => ({
@@ -21,6 +23,7 @@ vi.mock('../../lib/stripe', async (orig) => ({
       status: odenen.has(id) ? 'succeeded' : 'requires_payment_method',
       amountReceivedCents: odenen.has(id) ? Number(id.split('_').at(-1)) : 0,
       orderId: niyetSiparisi.get(id) ?? null,
+      clientSecret: niyetAnahtari.get(id) ?? null,
     }),
     cancel: async () => undefined,
     refund: async () => undefined,
@@ -106,34 +109,38 @@ const istek = (path: string, init: RequestInit = {}, bearer = token) =>
   });
 const kartlaSiparis = async (key: string) => {
   const res = await istek('/checkout/order', { method: 'POST', body: JSON.stringify({ addressId, paymentMethod: 'online', idempotencyKey: key, deliveryDate: gun }) });
-  return ((await res.json()) as { data: { status: string; orderId: string; state?: string } }).data;
+  return ((await res.json()) as { data: { status: string; orderId: string; clientSecret?: string } }).data;
 };
 const stripeteOde = async (orderId: string) => {
   const order = await new OrderService(db).getById(orderId);
   odenen.add(order!.paymentRef!);
 };
 
-describe('Stripe mesajı gelmeden ödenmiş sipariş', () => {
-  it('müşteri yeniden öderse ikinci sipariş açılmaz, önceki sipariş onaylanır', async () => {
+describe('kart ödemesi açılınca', () => {
+  // Uç sepeti sunucudan okumazsa ya da kapı kalemleri sepetten almazsa aynı kalemler için ikinci sipariş açılır.
+  it('kalemler sepetten çıkar; yeni anahtarla ikinci basış boş sepetle sipariş açmaz', async () => {
     const ilk = await kartlaSiparis(`acik-1-${stamp}`);
-    await stripeteOde(ilk.orderId);
 
-    const ikinci = await kartlaSiparis(`acik-2-${stamp}`);
-
-    expect(ikinci).toMatchObject({ status: 'open_payment', state: 'paid', orderId: ilk.orderId });
-    const { data } = await db.from('order').select('id, status').eq('customer_id', musteriId);
-    expect(data).toEqual([{ id: ilk.orderId, status: 'confirmed' }]);
+    expect(ilk.status).toBe('payment_required');
+    expect((await new CartService(db).get(musteriId)).items).toHaveLength(0);
+    expect((await kartlaSiparis(`acik-2-${stamp}`)).status).toBe('empty_cart');
   });
 
-  it('sepet okuması ödenmiş siparişi onaylar ve kalemleri sepetten düşer', async () => {
+  // Anahtar gövdeden kapıya geçmezse çift dokunuş ikinci taslak ve ikinci ödeme açar.
+  it('aynı anahtarla ikinci basış aynı siparişin aynı ödemesine döner', async () => {
     const ilk = await kartlaSiparis(`acik-3-${stamp}`);
+    const ikinci = await kartlaSiparis(`acik-3-${stamp}`);
+
+    expect(ikinci).toMatchObject({ status: 'payment_required', orderId: ilk.orderId, clientSecret: ilk.clientSecret });
+  });
+
+  // Liste okuması ödemeyi netleştirmezse Stripe'ın mesajı gelmeyen ödenmiş sipariş pencere kapanana dek "bekliyor" görünür.
+  it('sipariş listesi okuması Stripe mesajı gelmeden ödenmiş siparişi onaylar', async () => {
+    const ilk = await kartlaSiparis(`acik-4-${stamp}`);
     await stripeteOde(ilk.orderId);
 
-    const res = await istek('/cart');
-
-    expect(res.status).toBe(200);
+    expect((await istek('/orders')).status).toBe(200);
     expect((await new OrderService(db).getById(ilk.orderId))?.status).toBe('confirmed');
-    expect((await new CartService(db).get(musteriId)).items).toHaveLength(0);
   });
 });
 
@@ -158,7 +165,7 @@ describe('onay ekranının durum sorusu', () => {
     expect(((await res.json()) as { data: unknown }).data).toMatchObject({ placed: false, awaitingCard: true, paymentState: 'incomplete', referenceNo: null });
   });
 
-  it('ödeme penceresi kapanmış ve ödeme yoksa taslak iptal edilir, müşteriye "siparişiniz oluşmadı" maili gider', async () => {
+  it('ödeme penceresi kapanmış ve ödeme yoksa taslak iptal edilir, kalemler sepete döner, "siparişiniz oluşmadı" maili gider', async () => {
     const ilk = await kartlaSiparis(`durum-4-${stamp}`);
     await new ReservationService(db).releaseByOrder(ilk.orderId);
     gidenMail.length = 0;
@@ -167,6 +174,7 @@ describe('onay ekranının durum sorusu', () => {
 
     expect(((await res.json()) as { data: unknown }).data).toMatchObject({ cancelled: true, refunded: false, referenceNo: null });
     expect(gidenMail).toEqual(['Ödemeniz tamamlanmadı — siparişiniz oluşmadı']);
+    expect((await new CartService(db).get(musteriId)).items.map((row) => row.variantId)).toEqual([variantId]);
   });
 
   it('başkasının siparişi bulunamayan gibi 404', async () => {

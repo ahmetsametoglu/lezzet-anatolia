@@ -1,6 +1,8 @@
 import { OrderService, ReservationService, type Db } from '@lezzet/database';
 import { decideDraftPayment } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
+import type { Order } from '@lezzet/types';
+import { restoreOrderedLines } from '../cart/settle';
 import { ringBell } from '../realtime/bell';
 import { orderChannelName } from '../realtime/order-channel';
 import { confirmOnlinePayment, type ConfirmPaymentDeps } from './confirm-payment';
@@ -18,10 +20,25 @@ export type ReconcileOutcome =
   | { status: 'waiting'; payment: PaymentSnapshot }
   | { status: 'skipped'; reason: 'not_found' | 'not_open' | 'no_payment_ref' | 'provider_unavailable' | 'unknown_status' | 'foreign_payment' };
 
+export interface ReconcileOptions {
+  /** Müşteri kendi siparişini iptal ediyor: pencere beklenmez, sebep `customer` olur ve "sipariş oluşmadı" haberi gitmez. */
+  cancelledByCustomer?: boolean;
+}
+
 export async function reconcileDraftPayment(db: Db, orderId: string, deps: ConfirmPaymentDeps): Promise<ReconcileOutcome> {
-  const orders = new OrderService(db);
-  const order = await orders.getById(orderId);
+  const order = await new OrderService(db).getById(orderId);
   if (!order) return { status: 'skipped', reason: 'not_found' };
+  return reconcileOrder(db, order, deps);
+}
+
+/** Sipariş satırı çağıranda okunmuşsa ikinci kez sorulmaz; sahiplik denetimi çağıranın işidir. */
+export async function reconcileOrder(
+  db: Db,
+  order: Order,
+  deps: ConfirmPaymentDeps,
+  opts: ReconcileOptions = {},
+): Promise<ReconcileOutcome> {
+  const orders = new OrderService(db);
   // Yalnız ödemesi beklenen kart taslağı: onaylanmış ya da iptal edilmiş siparişte sorulacak bir şey yok.
   if (order.status !== 'draft' || order.paymentMethod !== 'online') return { status: 'skipped', reason: 'not_open' };
   if (!order.paymentRef) return { status: 'skipped', reason: 'no_payment_ref' };
@@ -44,7 +61,7 @@ export async function reconcileDraftPayment(db: Db, orderId: string, deps: Confi
   }
 
   const reservations = new ReservationService(db);
-  const windowOpen = (await reservations.listActiveByOrder(order.id)).length > 0;
+  const windowOpen = !opts.cancelledByCustomer && (await reservations.listActiveByOrder(order.id)).length > 0;
   const decision = decideDraftPayment({ status: payment.status, windowOpen });
 
   if (decision === 'wait') return { status: 'waiting', payment };
@@ -71,35 +88,15 @@ export async function reconcileDraftPayment(db: Db, orderId: string, deps: Confi
   }
 
   await reservations.releaseByOrder(order.id);
-  // Sebep `payment_failed`: para çekilmedi, ödeme gelmedi. Ekran bu sebeple "tahsilat yapılmadı" der.
-  await orders.cancel(order.id, 'draft', null, 'payment_failed');
+  // Para çekilmedi; sebep ödemenin gelmemesi ya da müşterinin vazgeçmesidir, ekran cümlesini buna göre kurar.
+  const cancelled = await orders.cancel(order.id, 'draft', null, opts.cancelledByCustomer ? 'customer' : 'payment_failed');
+  // Kalemler yalnız iptali bu çağrı yaptıysa döner; iki kapı aynı anda kapatırsa sepete iki kez eklenmez.
+  if (cancelled.ok) await restoreOrderedLines(db, order.customerId, order.id);
   // İptal maili numaralı sipariş içindir; burada sipariş hiç oluşmadı, müşteri kendi cümlesini alır.
-  await notifyExceptionEffect(deps.effects, order.id, 'order_payment_incomplete');
+  if (cancelled.ok && !opts.cancelledByCustomer) await notifyExceptionEffect(deps.effects, order.id, 'order_payment_incomplete');
   // Açık bir onay ekranı varsa bekleyişi bitsin: sayfa sunucudan yeniden ister ve iptali görür.
   await ringBell(orderChannelName(order.id));
   return { status: 'cancelled', payment };
-}
-
-/** Yeni ödeme açılmadan önce bulunan açık ödeme; `openPaymentBefore`ın cevabı. */
-export interface OpenPayment {
-  orderId: string;
-  /** `paid`: önceki ödeme geçti ve sipariş onaylandı · `processing`: banka hâlâ işliyor. */
-  state: 'paid' | 'processing';
-}
-
-/**
- * Önceki ödeme geçtiyse ya da bankada işleniyorsa yeni ödeme açmak aynı sepet için iki çekim olurdu: geçtiyse sipariş burada
- * onaylanır, işleniyorsa müşteri bekletilir. Ödenmemişse `null`; yeni deneme eski taslağı ve ödemesini kapatır (`placeOrder`).
- */
-export async function openPaymentBefore(db: Db, customerId: string, deps: ConfirmPaymentDeps): Promise<OpenPayment | null> {
-  const draft = await new OrderService(db).findOpenOnlineDraft(customerId);
-  if (!draft) return null;
-  const outcome = await reconcileDraftPayment(db, draft.id, deps);
-  if (outcome.status === 'confirmed') return { orderId: draft.id, state: 'paid' };
-  if (outcome.status === 'waiting' && (outcome.payment.status === 'processing' || outcome.payment.status === 'requires_capture')) {
-    return { orderId: draft.id, state: 'processing' };
-  }
-  return null;
 }
 
 /**
@@ -117,14 +114,14 @@ export async function sweepUnpaidDrafts(
   const now = opts.now ?? new Date();
   // Bir dakikadan taze taslak kuyruğa girmez: ödeme o an açılıyor olabilir.
   const before = new Date(now.getTime() - 60_000).toISOString();
-  const drafts = await new OrderService(db).listOpenOnlineDraftsBefore(before, opts.limit);
+  const drafts = await new OrderService(db).listOpenOnlineDrafts({ before }, opts.limit);
   const reservations = new ReservationService(db);
 
   for (const draft of drafts) {
     if ((await reservations.listActiveByOrder(draft.id)).length > 0) continue;
     counts.checked += 1;
     try {
-      const outcome = await reconcileDraftPayment(db, draft.id, deps);
+      const outcome = await reconcileOrder(db, draft, deps);
       if (outcome.status === 'confirmed') counts.confirmed += 1;
       else if (outcome.status === 'cancelled') counts.cancelled += 1;
       else if (outcome.status === 'waiting') counts.waiting += 1;

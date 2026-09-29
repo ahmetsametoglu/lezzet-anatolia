@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { stripeGateway, type StripeLike } from './payment-gateway';
 
 /** Sağlayıcı istemcisinin sahtesi — yalnız kullandığımız yüz (`StripeLike`); ağa çıkmaz. */
-function fakeClient(intent: { id: string; status: string; amount_received: number; metadata?: Record<string, string> | null }) {
+function fakeClient(intent: Awaited<ReturnType<StripeLike['paymentIntents']['retrieve']>>) {
   return {
     paymentIntents: {
       retrieve: vi.fn(async () => intent),
@@ -17,9 +17,18 @@ describe('stripeGateway (07.18)', () => {
     expect(stripeGateway(null)).toBeNull();
   });
 
-  it('tutarı ALINAN paradan, siparişi ödemenin künyesinden okur', async () => {
-    const gateway = stripeGateway(fakeClient({ id: 'pi_1', status: 'succeeded', amount_received: 14801, metadata: { order_id: 'o-1' } }));
-    await expect(gateway?.read('pi_1')).resolves.toEqual({ id: 'pi_1', status: 'succeeded', amountReceivedCents: 14801, orderId: 'o-1' });
+  // Anahtar düşerse yarım kalan ödemeye dönülemez ve müşteri aynı sipariş için ikinci ödeme açmak zorunda kalır.
+  it('tutarı ALINAN paradan, siparişi ödemenin künyesinden, dönüş anahtarını ödemeden okur', async () => {
+    const gateway = stripeGateway(
+      fakeClient({ id: 'pi_1', status: 'succeeded', amount_received: 14801, metadata: { order_id: 'o-1' }, client_secret: 'pi_1_secret' }),
+    );
+    await expect(gateway?.read('pi_1')).resolves.toEqual({
+      id: 'pi_1',
+      status: 'succeeded',
+      amountReceivedCents: 14801,
+      orderId: 'o-1',
+      clientSecret: 'pi_1_secret',
+    });
   });
 
   it('tanımadığı durumda karar vermez — sağlayıcının yeni bir durumu ödenmiş siparişi iptal ettirmemeli', async () => {

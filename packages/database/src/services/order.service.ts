@@ -458,15 +458,15 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * Verilen andan önce açılmış, ödemesi beklenen kart taslakları; ödeme zamanlayıcısının kuyruğu. Tavan emniyettir:
-   * her satır sağlayıcıya bir soru demek.
+   * Ödemesi beklenen kart taslakları, eskiden yeniye: zamanlayıcının kuyruğu (`before`) ve müşterinin bekleyen siparişleri
+   * (`customerId`). Tavan emniyettir, çünkü her satır sağlayıcıya bir soru demek.
    */
-  listOpenOnlineDraftsBefore(before: string, limit = 50): Promise<Order[]> {
+  listOpenOnlineDrafts(filter: { customerId?: string; before?: string }, limit = 50): Promise<Order[]> {
     return this.getAll(
-      { status: 'draft', paymentMethod: 'online' },
+      { status: 'draft', paymentMethod: 'online', ...(filter.customerId ? { customerId: filter.customerId } : {}) },
       {
         isNotNullFields: ['paymentRef'],
-        rangeFilters: [{ field: 'createdAt', operator: 'lt', value: before }],
+        rangeFilters: filter.before ? [{ field: 'createdAt', operator: 'lt', value: filter.before }] : [],
         orderBy: 'createdAt',
         orderDirection: 'asc',
         limit,

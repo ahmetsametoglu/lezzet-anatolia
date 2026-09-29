@@ -12,9 +12,9 @@ import {
   readCheckoutSnapshot,
   UNRESOLVED_PLACE,
 } from '@lezzet/application';
-import { CartService, OrderService, serviceDb, UserProfileService } from '@lezzet/database';
+import { CartService, serviceDb, UserProfileService } from '@lezzet/database';
 // Yan etki portu ortak dosyada: kurye uçları da aynı nesneyi geçirir.
-import { mobileOrderEffects, mobilePaymentEffects } from '../../lib/order-effects';
+import { mobilePaymentEffects } from '../../lib/order-effects';
 import {
   CheckoutOrderBodySchema,
   CheckoutOrderResultSchema,
@@ -28,37 +28,12 @@ import { readJsonBody, UuidSchema } from '../../lib/request';
 import { fail, ok } from '../../lib/respond';
 import { recordNativeEvent } from '../../lib/analytics';
 import { paymentGateway, paymentSessionCreator } from '../../lib/stripe';
-import { settleOpenPayment } from '../../lib/open-payment';
 import type { V1Env } from './auth';
 import { localeOf } from './cart-view';
 
 /*
-  `/me/checkout` — "SİPARİŞİ TAMAMLA" EKRANININ TEK OKUMASI.
-
-  ── EKRAN SEÇİM YAPAR, SUNUCU KARAR VERİR ───────────────────────────────────
-  Ekranın sorusu tek: *"bu adrese nasıl, ne zaman gelir; ne kadar tutar; nasıl ödenebilir?"*
-  Cevabı üç kapının BELİRLİ BİR SIRAYLA birleşmesi veriyor (adres → teslimat → sepet → ödeme) ve o
-  sıra `@lezzet/application`ın checkout anlık görüntüsünde yaşıyor — web checkout'u da AYNI kapıyı
-  çağırıyor. Burada kural yazılmaz; istek girdiye çevrilir, cevap zarfa konur.
-
-  Sıranın kendisi yaşanmış derslerin toplamı ve künyeleri kapının içinde: yer ÇEREZTEN değil SEÇİLEN
-  ADRESTEN çözülür (yoksa ülke/bölge kapsamlı ayarlar hiç okunmaz), teslimat İKİ KEZ çözülür (kargo
-  kararı ancak sepet bilinince verilebilir), kargo siparişi bir bölgeye ait değildir.
-
-  ── TEK TUR, PARÇA PARÇA DEĞİL ──────────────────────────────────────────────
-  Üç dilim tek cevapta gelir. Bölünseydi ara hâller doğardı: gün listesi yeni adresin, ödeme
-  yolları eskisinin olurdu — ve müşteri ekranda gördüğü yöntemi seçip kasada reddedilirdi.
-
-  ── BEARER'IN ARKASINDA, KATALOGUN AKSİNE ───────────────────────────────────
-  Sepet girişsiz doldurulur (satırları cihaz taşır, tutarı sunucu çözer — `cart-view.ts`), ama
-  SİPARİŞ müşterinin kendisidir: adres, sipariş geçmişi ve ödeme yetkisi hesaba bağlıdır. Misafirin
-  buradaki cevabı bir "boş liste" değil, bir GİRİŞ KAPISIDIR ve onu ekran gösterir (web de öyle:
-  sepet misafirde dolar, ödeme adımında kimlik istenir).
-
-  ── NİYET GÖVDEDEN ALINMAZ ──────────────────────────────────────────────────
-  Sepet SUNUCUDAN okunur (`cart.customer_id`), istemcinin gönderdiği bir kalem listesinden değil.
-  Gövdeden alınsaydı istemci kendi sepetini uydurabilir, checkout başka bir sepetin tutarını
-  gösterebilirdi. İstemcinin söylediği tek şey SEÇİMLERDİR: hangi adres, hangi kupon, hangi grup.
+  `/me/checkout`: "Siparişi tamamla" ekranının okuması ve sipariş açma. Kural `@lezzet/application`da ve web aynı kapıyı çağırır;
+  sepet sunucudan okunur, istemciden yalnız seçimler (adres, kupon, grup) alınır.
 */
 
 interface CustomerEnv {
@@ -192,24 +167,6 @@ checkout.post('/order', async (c) => {
   const db = serviceDb();
   const customerId = c.get('customerId');
 
-  // Önceki kart ödemesi geçtiyse ya da bankada işleniyorsa yeni ödeme açılmaz, yoksa aynı sepet için iki kez para çekilirdi.
-  const open = await settleOpenPayment(db, customerId);
-  if (open) {
-    // Tür daraltılmaz: checkout artık gel-al da açıyor ve açık ödeme o siparişe de ait olabilir.
-    const order = await new OrderService(db).getById(open.orderId);
-    if (order) {
-      const result: z.input<typeof CheckoutOrderResultSchema> = {
-        status: 'open_payment',
-        state: open.state,
-        orderId: order.id,
-        totalCents: order.orderedTotalCents,
-        deliveryType: order.deliveryType,
-        referenceNo: order.referenceNo,
-      };
-      return ok(c, CheckoutOrderResultSchema.parse(result));
-    }
-  }
-
   // NİYET SUNUCUDAN — gövdeden ASLA. İstemcinin gönderdiği bir kalem listesi, siparişin neyi
   // içereceğini istemciye yazdırırdı; sepetin sahibi `cart.customer_id`dir.
   const stored = await new CartService(db).get(customerId);
@@ -219,13 +176,12 @@ checkout.post('/order', async (c) => {
     customerId,
     entries: stored.items.map(entryOfItem),
     ...body.data,
-    // Kapı `db`yi ilk parametreden alıyor (terfi kuralı); portun imzasında `db` YOK çünkü sepet
-    // okuması onu zaten tutuyor. Bağlama burada, sarmalayıcı yazmadan.
+    // Paket kapısı `db`yi ilk parametreden alır; bağlama burada, sarmalayıcı yazmadan.
     bundles: (ids, bundleLocale, place) => getPackagesByIds(db, ids, bundleLocale, place),
     createPaymentSession: paymentSessionCreator(),
-    // Yeni deneme eski, ödenmemiş taslağın ödemesini Stripe'ta da kapatır.
     paymentGateway: paymentGateway(),
-    effects: mobileOrderEffects(db),
+    // Ödeme etkileri, çünkü aynı basışın taslağına dönüşte kapanan ödemenin müşteri haberi de gider.
+    effects: mobilePaymentEffects(db),
   });
 
   /* Kapının birliği `z.input<>` ile tiplenir: kapı yeni bir hâl eklerse burası derlenmez; `parse` ekranın işi olmayan alanları süzer.

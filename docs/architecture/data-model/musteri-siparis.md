@@ -336,9 +336,9 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 
 **`cancel_reason` "para hareket etti mi" DEMEZ ve tek başına okunamaz** (08.08 · müşteri şeridinin ölçümü). Eskiden bu tablo *"`out_of_stock` → para çekildi ve iade edildi"* diyordu; **yalnız kart yolunda doğru.** Aynı sebep ikinci bir yerde de yazılıyor: `paymentMethod !== 'online'` dalında rezervasyon tutmazsa sipariş `draft`ta kapanıyor ve ortada tahsilat hiç yok. Sebebi tek başına okuyan bir ekran orada tam ters yönde bir yalan üretirdi. Para sorusunun cevabı `provider_refunded_at`'tir (yukarıda); sebep "neden iptal oldu"yu cevaplar, o kadar.
 
-**`payment_failed`'i bugün YAZAN YOK** ve bu bir eksiklik değil: kartın reddi Stripe'ın kendi arayüzünde veriliyor, sunucuya hiç uğramıyor (`checkout/actions.ts` künyesi). Reddedilen kartta sipariş `draft` kalıyor, müşteri tekrar denerse `supersedeOpenDrafts` onu `superseded` yapıyor. Değer kümede kalıyor çünkü ileride sağlayıcıdan gelen bir red olayı yazılabilir — ama "yazılıyor" sanılmasın diye burada duruyor.
+**Kart taslağının iptal sebebi paranın değil taslağın akıbetini söyler:** `payment_failed` → ödeme penceresi kapandı ve ödeme gelmedi (`reconcileDraftPayment`), `customer` → müşteri ödemesi bekleyen siparişten vazgeçti (`cancelPendingOrder`). İkisinde de kalemler sepete döner ve para çekilmemiştir. `superseded` yazan yol yok: yeni deneme eski taslağa dokunmaz.
 
-**Ödeme oturumu açılamazsa ayrılmış mal TTL boyunca durur — ve bu bir sızıntı DEĞİL** (08.08, ölçüldü). `createCheckoutSession` önce ayırıyor sonra oturum açıyor (DOMAIN §4: "önce ayır, sonra tahsil et"); oturum açılamazsa rezervasyon serbest bırakılmıyor. Ama süresi var (`reservation_ttl_minutes`) ve süpürücüsü koşuyor (`ReservationService.sweepExpired` ← `apps/backend/src/jobs/sweep-reservations.ts`), yani durum "müşteri ödeme ekranını açtı ve bıraktı" hâliyle aynı yere çıkıyor. Hata dalına ayrıca bir serbest bırakma eklemek, aynı işi yapan ikinci bir mekanizma olurdu — üstelik nadiren koşan, yani bir gün bozulduğunda kimsenin fark etmeyeceği olan.
+**Ödeme oturumu açılamazsa taslak kapanır ve ayrılmış mal hemen bırakılır** (`placeOrder`): yeni deneme eski taslağa dokunmadığı için yarım kalan taslak ardında bırakılmaz; açılmış ama anahtarsız kalan ödeme sağlayıcıda da iptal edilir.
 
 ## OrderItem (sipariş kalemi)
 

@@ -13,6 +13,8 @@ export interface PaymentSnapshot {
   amountReceivedCents: number;
   /** Sağlayıcının künyesindeki sipariş — ödemenin BU siparişe ait olduğunu doğrulamak için. */
   orderId: string | null;
+  /** Yarım kalan ödemeye dönmenin anahtarı: aynı ödeme yeniden açılır, ikinci ödeme doğmaz. */
+  clientSecret: string | null;
 }
 
 export interface PaymentGateway {
@@ -25,7 +27,13 @@ export interface PaymentGateway {
 /** Stripe istemcisinin kullandığımız yüzü — yapısal: `stripe` paketinin tipine bağlanmaz. */
 export interface StripeLike {
   paymentIntents: {
-    retrieve(id: string): Promise<{ id: string; status: string; amount_received: number; metadata?: Record<string, string> | null }>;
+    retrieve(id: string): Promise<{
+      id: string;
+      status: string;
+      amount_received: number;
+      metadata?: Record<string, string> | null;
+      client_secret?: string | null;
+    }>;
     cancel(id: string): Promise<unknown>;
   };
   refunds: {
@@ -48,6 +56,7 @@ export function stripeGateway(client: StripeLike | null): PaymentGateway | null 
         status,
         amountReceivedCents: intent.amount_received,
         orderId: intent.metadata?.['order_id'] ?? null,
+        clientSecret: intent.client_secret ?? null,
       };
     },
     async cancel(intentId) {

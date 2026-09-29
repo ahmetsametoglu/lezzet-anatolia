@@ -1,19 +1,20 @@
-import { OrderService, ReservationService, type Db } from '@lezzet/database';
+import { CartService, OrderService, ReservationService, type Db } from '@lezzet/database';
 import { captureError, SOURCES } from '@lezzet/observability';
-import type { DeliveryType, OrderCancelReason, PaymentMethod, PreferredLanguage } from '@lezzet/types';
+import type { DeliveryType, Order, OrderCancelReason, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { clearOrderedLines } from '../cart/settle';
 import type { CartBundlePort } from '../cart/read';
-import type { CartEntry } from '../cart/cart-types';
+import { entriesInCart, type CartEntry } from '../cart/cart-types';
 import { createCheckoutDraft, type CheckoutDraftInput, type CheckoutDraftOutcome } from './checkout-draft';
-import { createCheckoutSession, type CheckoutSessionCreator } from './checkout-session';
+import { createCheckoutSession, type CheckoutSessionCreator, type CheckoutSessionOutcome } from './checkout-session';
 import type { PaymentGateway } from './payment-gateway';
+import { resumeOrderPayment, type ResumePaymentOutcome } from './pending-payment';
 import { reserveOrderStock } from './reserve';
 import { transitionOrder } from './transition';
 import type { OrderEffects } from './effects';
 
 /**
  * "Siparişi onayla": taslağı açar, stoğu ayırır, ödemeyi başlatır; tek turda, ki ödemeye gelmeyen müşteri ardında yetim taslak
- * bırakmasın. Kartta sipariş ödeme onayına kadar taslak kalır; kapıda ve vadeli ödemede burada kesinleşir.
+ * bırakmasın. Kartta sipariş ödeme onayına kadar taslak kalır ve kalemleri sepetten alır; kapıda ve vadeli ödemede burada kesinleşir.
  */
 
 /** Sipariş açılamadı; her ret müşteriden başka bir düzeltme ister, taslağın ret hâlleri olduğu gibi taşınır. */
@@ -34,32 +35,35 @@ export type PlaceOrderOutcome =
    * `null` kalır, uydurulmaz.
    */
   | { status: 'placed'; orderId: string; totalCents: number; deliveryType: DeliveryType; referenceNo: string | null }
+  /** Aynı basışın ödemesi bankada işleniyor: yeni sipariş açılmaz, müşteri o siparişe gider. */
+  | {
+      status: 'open_payment';
+      state: 'processing';
+      orderId: string;
+      totalCents: number;
+      deliveryType: DeliveryType;
+      referenceNo: string | null;
+    }
   | PlaceOrderRejection;
 
 export interface PlaceOrderInput {
   locale: PreferredLanguage;
-  /**
-   * **Sunucuda çözülmüş** müşteri kimliği — istemciden ASLA alınmaz (`createCheckoutDraft` ile aynı
-   * sözleşme). Web oturumdan çözer, mobil uç Bearer'dan.
-   */
+  /** Sunucuda çözülmüş müşteri kimliği, istemciden alınmaz: web oturumdan, mobil uç Bearer'dan çözer. */
   customerId: string;
   entries: readonly CartEntry[];
   addressId: string;
   deliveryDate: string | null;
   paymentMethod: PaymentMethod;
   onAccount?: boolean;
-  /**
-   * **ELLE GİRİŞ** (09.8) — dolu olduğunda siparişi personel yazıyor demektir; kural farkları ve
-   * gerekçeleri `CheckoutDraftInput.staff` künyesinde. Olduğu gibi taslağa geçer.
-   */
+  /** Doluysa siparişi personel yazıyor; kural farkları `CheckoutDraftInput.staff`ta, müşterinin sepetine dokunulmaz. */
   staff?: CheckoutDraftInput['staff'];
-  /** Bülten/pazarlama izni — checkout kutusundan gelir, baştan işaretsizdir (DOMAIN §11). */
+  /** Bülten izni checkout kutusundan gelir ve baştan işaretsizdir. */
   marketingConsent?: boolean;
   /** Sepetteki kupon kodu; siparişin indirimi bunsuz hesaplanamaz. */
   couponCode?: string | null;
   /** Müşteriye gösterilen sepetin imzası; taslakta karşılaştırılır (`cart_changed`). */
   expectedCartFingerprint?: string | null;
-  /** Çift sipariş kalkanı: istemcinin bu deneme için ürettiği anahtar. */
+  /** Çift sipariş kalkanı: istemcinin bu basış için ürettiği anahtar; kart yolunda aynı taslağın ödemesine döndürür. */
   idempotencyKey?: string | null;
   /** Sepetin kargo grubundan açılan ikinci sipariş mi. */
   shippingOrder?: boolean;
@@ -69,15 +73,15 @@ export interface PlaceOrderInput {
   /** Gel-al deposu; taslak izni ve depoyu doğrular (`CheckoutDraftInput.pickupWarehouseId`). */
   pickupWarehouseId?: string | null;
   // Komşu davetinin belirteci girdi değil: davet kişiye yazılı, taslak onu müşterinin kaydından okur.
-  /** Paket çözümünün kapısı — taslağa olduğu gibi geçilir (aşama 1'in `CartBundlePort`u). */
+  /** Paket çözümünün kapısı, taslağa olduğu gibi geçer. */
   bundles?: CartBundlePort;
-  /** Edinim kaynağı kapısı (13.2) — taslağa olduğu gibi geçilir; web'de çerez okur. */
+  /** Edinim kaynağı kapısı, taslağa olduğu gibi geçer; web'de çerez okur. */
   onCustomerAcquired?: (customerId: string) => void;
   /** Ödeme oturumunu açan sağlayıcı; `null` "anahtar yok" demektir, varsayılan verilseydi paket `stripe`a bağlanırdı. */
   createPaymentSession: CheckoutSessionCreator | null;
-  /** Sağlayıcıya soran port; açılan taslağın ödemesini okur ve gerekirse iptal eder. */
+  /** Sağlayıcıya soran port; aynı basışın taslağının ödemesini okur, açılamayan ödemeyi iptal eder. */
   paymentGateway?: PaymentGateway | null;
-  /** Durum geçişinin yan etkileri (müşteri haberi + sipariş puanı) — `transitionOrder`a geçer. */
+  /** Durum geçişinin ve ödeme netleşmesinin yan etkileri; taslağa dönüşte ödeme kapanırsa müşteri haberi de buradan gider. */
   effects?: OrderEffects;
   /** Huni ölçümü: sipariş reddedildi; çağıran hangi retlerin sayılacağına kendisi karar verir. */
   onRejected?: (reason: string) => void;
@@ -86,23 +90,23 @@ export interface PlaceOrderInput {
 }
 
 export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceOrderOutcome> {
+  const deps = { gateway: input.paymentGateway ?? null, effects: input.effects };
   /** Aynı istek ikinci kez geldiyse ikinci sipariş açılmaz; huni ölçümü de ilk çağrıda sayıldığı için atılmaz. */
   if (input.idempotencyKey) {
     const already = await new OrderService(db).findByIdempotencyKey(input.idempotencyKey, input.customerId);
-    if (already && already.status !== 'draft' && already.status !== 'cancelled') {
-      // Numara ve tür satırdan: bu dal kesinleşmiş bir siparişi geri veriyor.
-      return {
-        status: 'placed',
-        orderId: already.id,
-        totalCents: already.orderedTotalCents,
-        deliveryType: already.deliveryType,
-        referenceNo: already.referenceNo,
-      };
+    // Aynı basışın kart taslağı açıksa aynı ödemeye dönülür: ikinci taslak ikinci ödeme demek olurdu.
+    if (already?.status === 'draft' && already.paymentMethod === 'online' && input.paymentMethod === 'online') {
+      return resumedOutcome(db, await resumeOrderPayment(db, already, deps), already);
     }
+    if (already && already.status !== 'draft' && already.status !== 'cancelled') return placedOf(already);
   }
 
-  // Önceki deneme(ler)den kalan açık taslak KAPATILIR — yenisini açmadan önce.
-  await supersedeOpenDrafts(db, input.customerId, input.paymentGateway ?? null);
+  // Kart siparişi kalemlerini sepetten alır; eski ekrandan gelen ikinci basış sepette olmayan kalemle yeni sipariş açmamalı.
+  // Personel siparişi müşterinin sepetine bakmaz.
+  if (!input.staff && !entriesInCart(input.entries, (await new CartService(db).get(input.customerId)).items)) {
+    input.onRejected?.('cart_changed');
+    return { status: 'cart_changed' };
+  }
 
   const draft = await createCheckoutDraft(db, {
     locale: input.locale,
@@ -112,9 +116,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
     deliveryDate: input.deliveryDate,
     paymentMethod: input.paymentMethod,
     onAccount: input.onAccount,
-    // Elle giriş künyesi (09.8) — alanların TEK TEK kopyalandığı bir kapı bu (yukarıdaki
-    // `expectedCartFingerprint` künyesinin aynı uyarısı): eklenip de geçirilmeyen bir alan kapıyı
-    // sessizce etkisiz bırakır.
+    // Alanlar tek tek geçer; eklenip de geçirilmeyen alan kapıyı sessizce etkisiz bırakır.
     staff: input.staff,
     couponCode: input.couponCode,
     expectedCartFingerprint: input.expectedCartFingerprint,
@@ -128,17 +130,14 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
   });
 
   if (draft.status !== 'ok') {
-    // Depo çözülemedi: iki sebep de siparişi engeller ama biri VERİ hatası (aynı kod iki bölgede),
-    // öteki YAPILANDIRMA eksiği (kargo deposu yok). İkisi de operatörün müdahalesini bekler ve
-    // müşteri bunu "ödeme hatası" olarak görmemeli — sebep çağırana taşınır, iz de bırakılır.
+    // Depo çözülemedi: veri ya da yapılandırma hatasıdır ve operatörü bekler; müşteri bunu ödeme hatası görmemeli, iz bırakılır.
     if (draft.status === 'warehouse_unresolved') {
-      // Log'a KİMLİK yazılır, içerik yazılmaz (CLAUDE.md §1): sebep ve müşteri kimliği yeter —
-      // adres satırı ya da posta kodu kişisel veridir ve teşhis için gerekmez.
+      // Log'a kimlik yazılır: sebep ve müşteri kimliği teşhise yeter, adres kişisel veridir.
       await captureError(new Error(`checkout: yer çözülemedi (${draft.reason})`), {
         source: SOURCES.applicationOrder,
         context: { reason: draft.reason, customerId: input.customerId },
       });
-      // Huniye YAZILMAZ (bilerek): bu bizim yapılandırma hatamız, müşterinin sürtünmesi değil.
+      // Huniye yazılmaz: bu bizim yapılandırma hatamız, müşterinin sürtünmesi değil.
       return draft;
     }
     input.onRejected?.(draft.status);
@@ -150,9 +149,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
    * bekleyeceğimiz bir ödeme penceresi yok.
    */
   if (input.paymentMethod !== 'online') {
-    // Kalemler TASLAKTAN değil SİPARİŞTEN okunur: paket açılımı, parti seçimi ve fiyat
-    // `createCheckoutDraft` içinde yapılıp satırlara yazıldı — ayırma da o yazılmış hâli
-    // ayırmalı. Online yolda `createCheckoutSession` zaten aynı kaynaktan okuyor.
+    // Kalemler siparişten okunur: paket açılımı, parti ve fiyat taslakta satırlara yazıldı, ayırma o hâli ayırmalı.
     const placed = await new OrderService(db).getWithItems(draft.orderId);
     if (!placed) return { status: 'order_not_placed' };
 
@@ -167,21 +164,16 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
     const moved = await transitionOrder(db, { orderId: draft.orderId, to: 'confirmed', effects: input.effects });
     if (moved.status !== 'ok') {
       await releaseOrderStock(db, draft.orderId);
-      // Sebep `null` ve bilerek: geçiş motorca reddedildi — kümedeki beş sebepten hiçbiri bunu
-      // anlatmıyor. Uydurulmuş bir sebep, ekranı yanlış cümleye götürürdü; `null` "sebep
-      // yazılmadı" der ve ekran nötr cümleye düşer.
+      // Sebep yazılmaz: geçişi motor reddetti ve kümedeki sebeplerin hiçbiri bunu anlatmaz, ekran nötr cümleye düşer.
       await cancelDraft(db, draft.orderId, null);
       return { status: 'order_not_placed' };
     }
 
-    // Sipariş kesinleşti → sepetten O SİPARİŞİN kalemleri düşer. Toptan boşaltmak, iki gruplu
-    // sepette kapıya siparişini veren müşterinin kargo grubunu da sessizce silerdi (19.7).
-    await clearOrderedLines(db, input.customerId, draft.orderId);
-    // Huninin son adımı (08.9). Tutar ve müşteri TAŞINMAZ — olay yalnız "bu oturum siparişle
-    // bitti" der (`ANALYTICS §1`, İlke 2'nin bilinçli istisnası).
+    // Sepetten yalnız bu siparişin kalemleri düşer; personel siparişi müşterinin sepetine dokunmaz.
+    if (!input.staff) await clearOrderedLines(db, input.customerId, draft.orderId);
+    // Huninin son adımı; tutar ve müşteri taşınmaz, olay yalnız "bu oturum siparişle bitti" der.
     input.onPlaced?.();
-    /* Numara GEÇİŞİN cevabından — `transitionOrder` onu bu çağrıda üretti ve döndürdü. Siparişi
-       ikinci kez okumak aynı değeri bir tur daha sormak olurdu. */
+    // Numara geçişin cevabından: `transitionOrder` onu bu çağrıda üretti.
     return {
       status: 'placed',
       orderId: draft.orderId,
@@ -191,23 +183,33 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
     };
   }
 
-  const session = await createCheckoutSession(
-    db,
-    { orderId: draft.orderId, marketingConsent: input.marketingConsent },
-    input.createPaymentSession,
-  );
+  /*
+    Kart: ödeme açılınca kalemler sepetten siparişe geçer ve ödeme gelmezse geri döner. Ödeme açılamazsa taslak kapanır, sepete
+    dokunulmaz; yarım kalan her adımda da taslak kapanır, çünkü yeni deneme eski taslağa dokunmaz.
+  */
+  let session: CheckoutSessionOutcome;
+  try {
+    session = await createCheckoutSession(
+      db,
+      { orderId: draft.orderId, marketingConsent: input.marketingConsent },
+      input.createPaymentSession,
+    );
+    if (session.status === 'ok' && session.clientSecret && !input.staff) await clearOrderedLines(db, input.customerId, draft.orderId);
+  } catch (error) {
+    await abandonDraft(db, draft.orderId, deps.gateway, null);
+    throw error;
+  }
   if (session.status !== 'ok' || !session.clientSecret) {
+    await abandonDraft(db, draft.orderId, deps.gateway, session.status === 'insufficient_stock' ? 'out_of_stock' : null);
     // Ödeme oturumu açılamadı: müşteri her şeyi doğru yaptı, kasa açılmadı.
     input.onRejected?.('payment_failed');
-    // Yarış hâli bu dalda da doğabilir (`createCheckoutSession` ayırmayı kendi içinde yapıyor) ve
-    // künyesi kapıda ödeme yoluyla AYNI: kalem kimliği elimizde, adı çağıranın işi.
+    // Yarış hâli bu dalda da doğar, çünkü `createCheckoutSession` ayırmayı kendi içinde yapar; kalemin adı çağıranın işi.
     if (session.status === 'insufficient_stock') {
       return { status: 'insufficient_stock', variantId: session.variantId, available: session.available };
     }
     return {
       status: 'payment_unavailable',
-      // `ok` ama jetonsuz hâl ayrı adlandırılır: "oturum açılamadı" ile "oturum açıldı ama ödeme
-      // başlatılamaz" ayrı arızalardır ve tek ada indirilirse ikincisi hiç görünmez.
+      // Jetonsuz `ok` ayrı adlandırılır: "oturum açılamadı" ile "açıldı ama ödeme başlatılamaz" ayrı arızalardır.
       reason: session.status === 'ok' ? 'no_client_secret' : session.status,
     };
   }
@@ -222,31 +224,56 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
   };
 }
 
-/**
- * Müşterinin önceki açık taslaklarını kapatır ve stoklarını bırakır, ki eski deneme malı tutup yenisine "stok yetersiz" dedirtmesin.
- * Süpürülen taslağın ödemesi sağlayıcıda da iptal edilir; geçmiş ya da işlenen ödeme buraya gelmez.
- */
-async function supersedeOpenDrafts(db: Db, customerId: string, gateway: PaymentGateway | null): Promise<void> {
-  const orders = new OrderService(db);
-  // Taslaklar en yenilerdir: sayfanın başı yeter, tüm geçmişi taramaya gerek yok.
-  const recent = await orders.listByCustomer(customerId, { limit: 20 });
-  for (const order of recent.rows) {
-    if (order.status !== 'draft') continue;
-    // İptal düşerse iz bırakılır ve süpürme SÜRER: yeni deneme eski bir ödemenin arızası yüzünden
-    // durmamalı; ödeme sonradan geçerse yukarıdaki emniyet parayı iade eder.
-    if (gateway && order.paymentRef) {
-      try {
-        await gateway.cancel(order.paymentRef);
-      } catch (error) {
-        await captureError(error, { source: SOURCES.applicationOrder, context: { orderId: order.id, step: 'cancel_superseded_payment' } });
-      }
-    }
-    // Sıra ÖNEMLİ: önce mal geri bırakılır, sonra sipariş kapanır. Tersi olsaydı iptal edilmiş bir
-    // siparişin rezervasyonu ortada kalabilirdi.
-    await releaseOrderStock(db, order.id);
-    // Müşteri yeni bir denemeye geçti; bu taslak onun yerine geçildiği için kapanıyor.
-    await cancelDraft(db, order.id, 'superseded');
+function placedOf(order: Order): PlaceOrderOutcome {
+  return {
+    status: 'placed',
+    orderId: order.id,
+    totalCents: order.orderedTotalCents,
+    deliveryType: order.deliveryType,
+    referenceNo: order.referenceNo,
+  };
+}
+
+/** Aynı basışın taslağına dönüşün cevabı; ödemesi kapanmış taslağın kalemleri sepete döndü, ekran sepeti yeniden okur. */
+async function resumedOutcome(db: Db, resumed: ResumePaymentOutcome, order: Order): Promise<PlaceOrderOutcome> {
+  switch (resumed.status) {
+    case 'payment_required':
+      return resumed;
+    // Numara onayla doğdu; satır yeniden okunur.
+    case 'paid':
+      return placedOf((await new OrderService(db).getById(order.id)) ?? order);
+    case 'processing':
+      return {
+        status: 'open_payment',
+        state: 'processing',
+        orderId: order.id,
+        totalCents: order.orderedTotalCents,
+        deliveryType: order.deliveryType,
+        referenceNo: order.referenceNo,
+      };
+    case 'closed':
+    case 'not_found':
+      return { status: 'cart_changed' };
+    case 'provider_unavailable':
+      return { status: 'payment_unavailable', reason: 'provider_unavailable' };
   }
+}
+
+/**
+ * Ödemesi açılamayan taslak kapanır: sağlayıcıda açılmış ödeme varsa iptal edilir, mal bırakılır. İptal düşerse iz bırakılır ve
+ * kapanış sürer; ödeme sonradan geçerse onay yolu iptal edilmiş siparişin parasını iade eder.
+ */
+async function abandonDraft(db: Db, orderId: string, gateway: PaymentGateway | null, reason: OrderCancelReason | null): Promise<void> {
+  const paymentRef = (await new OrderService(db).getById(orderId))?.paymentRef ?? null;
+  if (gateway && paymentRef) {
+    try {
+      await gateway.cancel(paymentRef);
+    } catch (error) {
+      await captureError(error, { source: SOURCES.applicationOrder, context: { orderId, step: 'cancel_abandoned_payment' } });
+    }
+  }
+  await releaseOrderStock(db, orderId);
+  await cancelDraft(db, orderId, reason);
 }
 
 /** Ayrılamayan siparişin taslağı kapatılır; sebep zorunludur, çünkü onay ekranı cümlesini sebebe göre kurar. */

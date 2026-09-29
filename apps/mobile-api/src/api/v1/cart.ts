@@ -20,44 +20,12 @@ import {
 import type { Cart, Channel, MeCartItemWriteSchema, PreferredLanguage } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { recordNativeEvent } from '../../lib/analytics';
-import { settleOpenPaymentQuietly } from '../../lib/open-payment';
 import type { V1Env } from './auth';
 import { entryOfWrite, localeOf, readCartView, type CartRead } from './cart-view';
 
 /*
-  `/me/cart` — SUNUCU SEPETİ mobilde. Sepet iki yüzeyde PAYLAŞILIR (kullanıcı kararı 09.08):
-  telefonda doldurulan sepet webde açılır. Paylaşımın kabı zaten vardı (`cart` tablosu,
-  `customerId` anahtarlı, 07.1); eksik olan mobilin o kaba açılan kapısıydı.
-
-  BEARER'IN ARKASINDA: sepet müşterinin KENDİSİDİR. Misafirin sepeti sunucuda YAŞAMAZ — ne webde
-  yaşıyor (satırları tarayıcı taşıyor) ne burada; cihazda durur ve girişte `/takeover` ile devralınır.
-  Oturumsuz bir "sepet kimliği" açmak, kimliksiz satırların ömrünü ve sahipliğini yönetmek demekti.
-
-  KURAL BURADA DEĞİL: satır birleştirme ("aynı varyant + parti ikinci kez eklenirse adet toplanır"),
-  sıfır adedin satırı silmesi ve devirdeki birleştirme `CartService`in kendi metotlarında
-  (`cart.service.ts` künyesi — web sepetiyle TEK kural). Bu dosya taşıma katmanıdır: gövdeyi süzer,
-  kimliği çözer, satırları zarfa koyar.
-
-  ── GÖVDE FİYAT TAŞIMAZ (güvenlik kararı) ───────────────────────────────────
-  Yazma uçları satırın yalnız ADRESİNİ ve adedini kabul eder — varyant satırında
-  `{variantId, qty, stockId}`, paket satırında `{bundleId, qty}` (21.21; paketin varyantı yoktur,
-  satılan şey paketin kendisidir — DOMAIN §13). İstemcinin yazabildiği bir tutar,
-  siparişin parasını belirleyemez. Sepete yazılan fiyat bu turda 0'dır ve bu bir eksiklik değil,
-  web'in devir yolunda ZATEN uyguladığı hüküm (`itemOfEntry` varsayılanı): sepetteki fiyat
-  BAĞLAYICI DEĞİLDİR (DOMAIN §5), yalnız "zam oldu mu" karşılaştırmasının çıpasıdır ve o
-  karşılaştırma sıfırı "çıpa yok" diye okur (`priceChangeOf`: `!previousCents` → değişim bildirmez).
-  Bağlayıcı fiyat checkout başlangıcında çözülür; sepette stok da AYRILMAZ (DOMAIN §4).
-
-  ── CEVAP ÇÖZÜLMÜŞ GÖRÜNÜMDÜR VE HESAP İKİ YÜZEYDE ORTAKTIR ─────────────────
-  Beş uç da `MeCartView` döner: ad, fiyat, indirim, yol, tükendi, asgari sepet, ücretsiz kargo
-  eşiği. Hiçbiri burada hesaplanmaz — hepsi `getCartView` kuralından gelir (`@lezzet/application`,
-  terfi 09.08) ve web sepeti AYNI kapıyı çağırır. Değişmez şu: aynı sepet telefonda ve webde aynı
-  tutarı gösterir; iki ayrı yerde hesaplanan bir toplam bir gün iki farklı sayı gösterir ve
-  hangisinin tahsil edileceğini söyleyecek bir yer kalmaz. Eşleme ve misafirin ucu `cart-view.ts`te.
-
-  ── CEVAP HER UÇTA GÜNCEL LİSTEDİR ──────────────────────────────────────────
-  Adres uçlarının kararı birebir: yazma komşu satırı da oynatabilir (aynı satır iki kez eklenince
-  adetler birleşir), tek kaydı dönmek istemciyi ikinci tura mecbur bırakırdı.
+  `/me/cart`: sunucu sepetinin mobil kapısı; sepet iki yüzeyde paylaşılır ve görünüm web ile aynı `getCartView` kuralından gelir.
+  Gövde fiyat taşımaz, çünkü sepetteki fiyat bağlayıcı değildir; misafirin sepeti cihazda durur ve girişte `/takeover` ile devralınır.
 */
 
 /*
@@ -155,8 +123,6 @@ async function viewOf(c: Context<CustomerEnv>, db: Db, stored: Cart): Promise<Ca
 /** Sepetin görünümü. Hiç sepet açılmamışsa BOŞ sepet döner — `CartService.get` boş sepet kurar. */
 cart.get('/', async (c) => {
   const db = serviceDb();
-  // Ödemesi geçmiş ama henüz onaylanmamış sipariş varsa önce netleşir: kalemleri sepetten düşer, müşteri ikinci kez ödemeye yönelmez.
-  await settleOpenPaymentQuietly(db, c.get('customerId'));
   const stored = await new CartService(db).get(c.get('customerId'));
   return ok(c, (await viewOf(c, db, stored)).body);
 });
