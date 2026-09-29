@@ -112,14 +112,8 @@ describe('iade senaryoları (03.6)', () => {
 });
 
 /**
- * **Hazırlık kesinleşmeden beklenen tutar siparişin KENDİ toplamıdır** (29.07 müdahalesi).
- *
- * Gerçek olay: sepet indiriminin kalem payı yazılmayınca (`line_discount_amount = 0`) kalemlerden
- * toplanan tutar indirim kadar yüksek çıkıyordu. Sonuç: tamamı ödenmiş bir sipariş `partial`
- * görünüyor, müşteriye giden mail "kapıda 3,00 € ödenecek" diyordu — LA-26-99C7YN.
- *
- * Yazım yolu düzeltildi; buradaki testler **motorun o hataya artık BAĞIŞIK olduğunu** sabitler.
- * Aynı gerçeği iki yoldan hesaplamamak, birinin bozulmasına açık kapı bırakmamaktır.
+ * Hazırlık kesinleşmeden beklenen tutar siparişin kendi toplamıdır: kaleme yazılmamış indirim payı tamamı ödenmiş siparişi
+ * `partial` göstermemeli.
  */
 describe('hazırlık kesinleşmemişken beklenen tutar', () => {
   const unsettled = { fulfillmentSettled: false, lines: [line({ fulfilledQty: 0 })] };
@@ -147,7 +141,7 @@ describe('hazırlık kesinleşmemişken beklenen tutar', () => {
   });
 
   it('hazırlık KESİNLEŞTİĞİNDE ölçü yine kalemlerdir — eksik giden mal borç yaratmaz', () => {
-    // Burada sipariş toplamı ARTIK cevap değil: yarısı gitmişse yarısı faturalanır.
+    // Hazırlık kesinleşince cevap sipariş toplamı değildir: yarısı gittiyse yarısı faturalanır.
     const r = derivePaymentStatus(input({ lines: [line({ fulfilledQty: 1 })], orderTotalCents: 1700 }));
     expect(r.fulfilledAmountCents).toBe(1000);
   });
