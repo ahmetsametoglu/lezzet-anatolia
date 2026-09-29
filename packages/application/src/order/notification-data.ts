@@ -9,15 +9,16 @@ import {
   type Db,
 } from '@lezzet/database';
 import { brand } from '@lezzet/brand';
-import { derivePaymentStatusForOrder, isFulfillmentSettled } from '@lezzet/domain-core';
+import { derivePaymentStatusForOrder, fulfilledLineAmountCents, isFulfillmentSettled } from '@lezzet/domain-core';
 import { formatPrice, formatShortDate } from '@lezzet/helper';
 import { localizedUrl } from '@lezzet/i18n';
 import type { NotifyEventName, NotifyRecipient } from '@lezzet/notify';
 import { resolveLocalizedText } from '@lezzet/types';
-import type { Order, OrderItem, OrderNotification, NotificationStep, PreferredLanguage, Warehouse } from '@lezzet/types';
+import type { Order, OrderItem, OrderNotification, NotificationStep, PreferredLanguage, Warehouse, WrittenReturn } from '@lezzet/types';
 import { notificationPreferencesUrl } from '../customer/notification-preferences';
 import { parcelOrdinal, readOrderTracking } from '../shipping/tracking';
 import { warehouseAddressLine } from '../warehouse/pickup';
+import type { OrderExceptionDetail } from './effects';
 
 /**
  * Sipariş bildiriminin verisini kurar: sipariş, kalemler ve müşteri okunur, para kararı motora sorulur ve şablonun
@@ -56,7 +57,7 @@ export async function buildOrderNotification(
   db: Db,
   orderId: string,
   event: NotifyEventName,
-  opts: { refundedAmountCents?: number | null } = {},
+  opts: OrderExceptionDetail = {},
 ): Promise<NotificationBundle | null> {
   const found = await new OrderService(db).getWithItems(orderId);
   if (!found) return null;
@@ -72,8 +73,8 @@ export async function buildOrderNotification(
   const settled = isFulfillmentSettled(order.status, items);
   /* Takip yalnız kargo siparişinde sorulur, rota teslimatında gönderi satırı hiç doğmaz. Ayrım `delivery_type`tan gelir,
      olayın adından değil: `order_out_for_delivery` iki kulvarda da kullanılıyor (DOMAIN §6). */
-  const [lines, steps, tracking, pickupWarehouse] = await Promise.all([
-    buildLines(db, items, locale, settled),
+  const [names, steps, tracking, pickupWarehouse] = await Promise.all([
+    lineNames(db, items, locale),
     buildSteps(db, orderId, event, order.deliveryType),
     order.deliveryType === 'shipping'
       ? readOrderTracking(db, orderId, { carrier: order.carrier, trackingNumber: order.trackingNumber })
@@ -81,6 +82,11 @@ export async function buildOrderNotification(
     // Gel-al'da mailin teslimat bloğu müşterinin GİDECEĞİ yeri yazar: deponun adı ve adresi.
     order.deliveryType === 'pickup' ? new WarehouseService(db).getById(order.warehouseId) : Promise.resolve(null),
   ]);
+
+  const lines =
+    event === 'order_refunded'
+      ? buildRefundLines(items, names, opts.returns ?? [], locale)
+      : buildLines(items, names, locale, settled);
 
   const derivation = derivePaymentStatusForOrder(order, items, {
     collectedCents: order.amountCollectedCents,
@@ -120,7 +126,7 @@ export async function buildOrderNotification(
      * metninde zaten görünüyor.
      */
     orderUrl: localizedUrl('/orders/[reference]', locale, { reference: order.id }),
-    deliverySummaryUrl: null, // Teslimat özeti belgesi 14.6'da doğar.
+    deliverySummaryUrl: null, // Teslimat özeti belgesi henüz üretilmiyor.
     supportUrl: localizedUrl('/support', locale),
     /* Jetonlu: sayfa oturum istiyor, mailin alıcısı ise o an çoğu zaman girişli değil. Bağ tek kapıdan üretilir ki bütün
        gönderim yolları jetonu aynı biçimde eklesin. */
@@ -135,11 +141,8 @@ export async function buildOrderNotification(
   };
 }
 
-/**
- * Kalem satırları; ad üründen, paket kaleminde paket adından gelir ve eksik kalemde sebep yazılmaz, yalnız miktar + para.
- * Hazırlık kesinleşmemişse sipariş edilen adet gösterilir, yoksa onaylanmış sipariş maili her kalemi "0 gönderildi" derdi.
- */
-async function buildLines(db: Db, items: readonly OrderItem[], locale: PreferredLanguage, fulfillmentSettled: boolean) {
+/** Kalemin mailde görünen adı: ürünün, paket kaleminde paketin adı. */
+async function lineNames(db: Db, items: readonly OrderItem[], locale: PreferredLanguage): Promise<Map<string, string>> {
   const variants = await new ProductVariantService(db).listByIds(items.map((item) => item.variantId));
   const products = await new ProductService(db).listByIds([...new Set(variants.map((variant) => variant.productId))]);
   const bundleIds = [...new Set(items.map((item) => item.bundleId).filter((id): id is string => Boolean(id)))];
@@ -149,17 +152,28 @@ async function buildLines(db: Db, items: readonly OrderItem[], locale: Preferred
   const variantOf = new Map(variants.map((variant) => [variant.id, variant]));
   const bundleOf = new Map(bundles.map((bundle) => [bundle.id, bundle]));
 
+  return new Map(
+    items.map((item) => {
+      const variant = variantOf.get(item.variantId);
+      const bundle = item.bundleId ? bundleOf.get(item.bundleId) : null;
+      return [item.id, bundle?.name?.[locale] ?? (variant ? productOf.get(variant.productId)?.name?.[locale] : null) ?? '—'];
+    }),
+  );
+}
+
+/**
+ * Kalem satırları; eksik kalemde sebep yazılmaz, yalnız miktar + para. Hazırlık kesinleşmemişse sipariş edilen adet
+ * gösterilir, yoksa onaylanmış sipariş maili her kalemi "0 gönderildi" derdi.
+ */
+function buildLines(items: readonly OrderItem[], names: Map<string, string>, locale: PreferredLanguage, fulfillmentSettled: boolean) {
   return items.map((item) => {
-    const variant = variantOf.get(item.variantId);
-    const bundle = item.bundleId ? bundleOf.get(item.bundleId) : null;
-    const name = bundle?.name?.[locale] ?? (variant ? productOf.get(variant.productId)?.name?.[locale] : null) ?? '—';
     const unit = formatPrice(item.unitPriceCents, locale);
     const shown = fulfillmentSettled ? item.fulfilledQty : item.qty;
     // Eksiklik ancak hazırlık kesinleştiyse BİLİNİR; öncesinde ortada bir fark yoktur.
     const missing = fulfillmentSettled ? item.qty - item.fulfilledQty : 0;
 
     return {
-      name,
+      name: names.get(item.id) ?? '—',
       meta: `${item.qty} × ${unit}`,
       qty: shown,
       amount: formatPrice(item.unitPriceCents * shown, locale),
@@ -172,8 +186,36 @@ async function buildLines(db: Db, items: readonly OrderItem[], locale: Preferred
 }
 
 /**
- * Zaman çizgisi durum LOGUNDAN türetilir — siparişte "hazırlandı" damgası tutulmaz, geçiş kaydı
- * zaten vardır (07.6). Gerçekleşmiş adım zamanını gösterir, gerçekleşmemiş adım soluk kalır.
+ * İade mailinin dökümü: yalnız bu iadenin kalemleri, iade edilen adet ve o adedin değeriyle; müşteride kalanın değeri
+ * yazılsaydı tam iade edilen kalem "0,00 €" görünürdü. Jest adedi düşürmediği için tutarı satırda değil toplamdadır.
+ */
+function buildRefundLines(items: readonly OrderItem[], names: Map<string, string>, returns: readonly WrittenReturn[], locale: PreferredLanguage) {
+  return items.flatMap((item) => {
+    const own = returns.filter((entry) => entry.orderItemId === item.id);
+    const returned = own.filter((entry) => entry.disposition !== 'goodwill').reduce((sum, entry) => sum + entry.qty, 0);
+    const kept = own.filter((entry) => entry.disposition === 'goodwill').reduce((sum, entry) => sum + entry.qty, 0);
+    if (returned + kept === 0) return [];
+    const value = fulfilledLineAmountCents({
+      unitPriceCents: item.unitPriceCents,
+      orderedQty: item.qty,
+      fulfilledQty: returned,
+      lineDiscountCents: item.lineDiscountAmountCents,
+    });
+    return [
+      {
+        name: names.get(item.id) ?? '—',
+        meta: `${item.qty} × ${formatPrice(item.unitPriceCents, locale)}`,
+        qty: returned + kept,
+        amount: returned > 0 ? formatPrice(value, locale) : null,
+        shortfall: null,
+      },
+    ];
+  });
+}
+
+/**
+ * Zaman çizgisi durum logundan türetilir — siparişte "hazırlandı" damgası tutulmaz, geçiş kaydı zaten vardır.
+ * Gerçekleşmiş adım zamanını gösterir, gerçekleşmemiş adım soluk kalır.
  */
 async function buildSteps(db: Db, orderId: string, event: NotifyEventName, deliveryType: Order['deliveryType']): Promise<NotificationStep[]> {
   const log = await new OrderStatusLogService(db).listByOrder(orderId);
@@ -256,6 +298,16 @@ function discountRowLabel(order: Order, generic: string, locale: PreferredLangua
 function buildRefund(order: Order, amountCents: number, event: NotifyEventName, locale: PreferredLanguage) {
   if (!EXCEPTION_EVENTS.includes(event) || amountCents <= 0) return null;
 
+  // İadede toplam müşterinin net ödediğidir (tahsilat − iade): ikinci iadenin maili birincinin bıraktığından düşer.
+  if (event === 'order_refunded') {
+    const netAfterCents = Math.max(0, order.amountCollectedCents - order.amountRefundedCents);
+    return {
+      amount: formatPrice(amountCents, locale),
+      previousTotal: formatPrice(netAfterCents + amountCents, locale),
+      currentTotal: formatPrice(netAfterCents, locale),
+    };
+  }
+
   const previousCents = order.orderedTotalCents;
   return {
     amount: formatPrice(amountCents, locale),
@@ -278,7 +330,7 @@ function refundAmountCents(
   if (event === 'order_shortfall') {
     return items.reduce((sum, item) => sum + item.unitPriceCents * Math.max(0, item.qty - item.fulfilledQty), 0);
   }
-  return refundedAmountCents ?? refundDueCents; // iki taraf da cent (02.9) — çevrim kalmadı
+  return refundedAmountCents ?? refundDueCents;
 }
 
 /** Ödeme hapı: peşin ödenmişse "ödendi", kalan varsa tahsil edilecek tutar (türetimden). */

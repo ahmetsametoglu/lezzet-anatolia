@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { discountPercentOf } from '@lezzet/domain-core';
-import { amount, money, percent } from '@/components/operation/ui/format';
+import { amount, money, percent, shortDateTime } from '@/components/operation/ui/format';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
-import type { OrderBundleGroup, OrderLineView, OrderTotalLine } from '../order-detail-types';
+import type { OrderBundleGroup, OrderLineReturnView, OrderLineView, OrderTotalLine } from '../order-detail-types';
 import { cardClass } from '@/components/operation/ui/card';
 
 /**
@@ -225,21 +225,44 @@ function Line({ line, indented, settled }: LineProps) {
         </span>
       </div>
 
-      {/* Eksiklik satırın kendisinde (SİP./KARŞIL. ve üstü çizili tutar) göründüğü için ayrı eksik şeridi yok. İade şeridi
-          kalır, çünkü malın akıbeti sütunlardan okunamaz ve stok hareketi ona bağlıdır. */}
-      {line.returnDisposition ? (
-        <div className={`mx-3.5 mb-2.5 rounded-ops-card border border-ops-red-line bg-ops-red-bg px-3 py-2 ${indented ? 'ml-7' : ''}`}>
-          <span className="font-ops-display text-ops-micro font-semibold text-ops-red">İADE EDİLDİ</span>
-          <span className="ml-2 font-ops-body text-ops-xs text-ops-red">{DISPOSITION_TEXT[line.returnDisposition]}</span>
+      {/* Hazırlıktaki eksik satırın kendisinde (SİP./KARŞIL., üstü çizili tutar) göründüğü için şerit almaz; iade ve kapıda geri
+          çevrilen adet olay başına şerit alır, çünkü aynı kalemin adetleri farklı akıbet alabilir ve sütunlardan okunmaz. */}
+      {line.returns.filter(isShownReturn).map((entry) => (
+        <div
+          key={entry.id}
+          className={`mx-3.5 mb-2.5 rounded-ops-card border border-ops-red-line bg-ops-red-bg px-3 py-2 ${indented ? 'ml-7' : ''}`}
+        >
+          <span className="font-ops-display text-ops-micro font-semibold text-ops-red">
+            {entry.disposition ? 'İADE EDİLDİ' : 'KAPIDA GERİ ÇEVRİLDİ'}
+          </span>
+          <span className="ml-2 font-ops-body text-ops-xs text-ops-red">{returnSentence(entry)}</span>
         </div>
-      ) : null}
+      ))}
     </div>
   );
 }
 
 /** Malın akıbeti (DOMAIN §8) — para tarafı üçünde aynı, stok tarafı ayrışır. */
-const DISPOSITION_TEXT: Record<NonNullable<OrderLineView['returnDisposition']>, string> = {
+const DISPOSITION_TEXT: Record<NonNullable<OrderLineReturnView['disposition']>, string> = {
   restock: 'rafa döndü — kullanılabilir stoğa eklendi',
-  discard: 'imha edildi — stoktan düştü, fire yazıldı',
+  discard: 'imha edildi',
   goodwill: 'müşteride kaldı — miktar düşmedi, yalnız para iade edildi',
 };
+
+/** Şeride giren olay: akıbeti yazılmış iade ya da kapıda geri çevrilen adet. */
+function isShownReturn(entry: OrderLineReturnView): boolean {
+  return entry.disposition !== null || entry.stage === 'out_for_delivery';
+}
+
+/** "1 adet · rafa döndü … · 29 Eyl 09:16 · Ayşe · “kutu ezik”" — adet, akıbet, an, kişi ve varsa sebep. */
+function returnSentence(entry: OrderLineReturnView): string {
+  return [
+    `${entry.qty} adet`,
+    entry.disposition ? DISPOSITION_TEXT[entry.disposition] : null,
+    shortDateTime(entry.at),
+    entry.actorName,
+    entry.note ? `“${entry.note}”` : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(' · ');
+}

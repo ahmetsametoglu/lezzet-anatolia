@@ -23,6 +23,6 @@ export async function readReturnDrops(warehouseIds: readonly string[] | undefine
     warehouseName: labels.get(drop.warehouseId)?.name ?? null,
     // Kaç satır karar bekliyor — ekranın rozeti. Toplam satır sayısı YANLIŞ olurdu: yarısı
     // işaretlenmiş bir koli listede tamamıyla döner (kapı künyesi), ama işi kalan yarısıdır.
-    pendingLineCount: drop.lines.filter((line) => line.disposition === null).length,
+    pendingLineCount: drop.lines.filter((line) => line.pendingQty > 0).length,
   }));
 }

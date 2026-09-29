@@ -16,17 +16,9 @@ import { deliverOrder } from '../order/fulfillment';
 import { listReturningCouriers, listWarehouseReturns, readReturningCourier, type ReturnDrop } from './returns';
 
 /**
- * **Kurye dönüşü — D6'nın OKUMA yarısı** (21.11d).
- *
- * Sınanan şey tek cümle: *"bu depoya geri gelen, akıbeti henüz işaretlenmemiş mal hangisi?"* — ve
- * yanlış cevabın üç hâli ayrı ayrı sınanıyor, çünkü üçü de sessizce yanlış olurdu:
- *   · başka DEPONUN dönüşünü göstermek (depo değişmezi, CLAUDE.md §1),
- *   · akıbeti ZATEN işaretlenmiş siparişi listede tutmak (bitmiş işi bitmemiş gibi göstermek),
- *   · ULAŞILAMAYAN siparişi dönüş sanmak (mal araçta, rampaya hiç girmedi — v2:505).
- *
- * Paylaşılan DB (CLAUDE.md §4b): zemin bu dosyanın kendi damgalı satırları (iki depo, kendi müşterisi,
- * kendi kuryesi) ve **hiçbir iddia küresel sayıya bakmaz** — kendi sipariş kimliklerimiz aranır.
- * E-posta öneki dosyaya özgü (`depo-donus-`), telefon kullanılmıyor.
+ * Kurye dönüşünün okuma yarısı — "bu depoya geri gelen, akıbeti bekleyen mal hangisi"; yanlış cevabın üç hâli ayrı sınanır:
+ * başka deponun dönüşü, akıbeti yazılmış sipariş ve ulaşılamayan sipariş. Zemin dosyanın kendi damgalı satırlarıdır ve
+ * hiçbir iddia küresel sayıya bakmaz (CLAUDE §4b).
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -78,9 +70,8 @@ beforeAll(async () => {
  * iddialar zaten kendi kimliklerimize bakıyor, küresel sayıya değil.
  */
 beforeEach(async () => {
-  // **DEFTER SİPARİŞTEN ÖNCE** (06.14): iade akışı imha/restok satırları yazıyor ve teslim edilmiş
-  // siparişin `sale` satırı siparişi `restrict` ile tutuyor. Partileri de süpürüyor — her testin
-  // kendi partisi aşağıda yeniden kuruluyor.
+  // Defter siparişten önce silinir: teslim edilmiş siparişin `sale` satırı siparişi `restrict` ile tutar; partiler her
+  // testte yeniden kurulur.
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
@@ -90,10 +81,8 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Sipariş ve rezervasyon AYRICA silinmez: ikisi de `purgeTestData`'nın bildiği bağlar (sipariş
-  // `profileIds`ten, rezervasyon `productIds`ten). Elle yazılan bu satırlar teardown'ı öldürüyordu
-  // (ölçüldü 14.08, `cleanup.ts` künyesi). `beforeEach`teki silme başka iş görür: testler arası
-  // izolasyon, ve orada kimlikler zaten kurulmuş durumda.
+  // Sipariş ve rezervasyon ayrıca silinmez: ikisini de `purgeTestData` biliyor ve elle silme teardown'ı bozuyordu.
+  // `beforeEach`teki silme testler arası izolasyon içindir.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -103,10 +92,8 @@ afterAll(async () => {
 });
 
 /**
- * Kapıdan REDDEDİLMİŞ sipariş — dönüşün doğduğu tek yol (`out_for_delivery → returned`).
- *
- * Hazırlık kaydı ŞART: `fulfilled_qty` oradan doğuyor ve dökümün tavanı o sayı. Hazırlıksız bir
- * sipariş "0 karşılanmış" döner ve D6'nın sınadığı şey hiç kurulmamış olur.
+ * Kapıdan reddedilmiş sipariş — dönüşün doğduğu tek yol (`out_for_delivery → returned`). Hazırlık kaydı şart:
+ * `fulfilled_qty` oradan doğar ve dökümün tavanı o sayıdır.
  */
 async function refusedOrder(
   qty: number,
@@ -155,9 +142,8 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
     expect(drop.note).toBe('kapıda reddetti — koku şüphesi');
     expect(drop.returnedAt).not.toBeNull();
     expect(drop.lines).toEqual([
-      // Tavan KARŞILANMIŞ adettir (3), sipariş adedi değil: `adjust_fulfillment` üstüne çıkamaz.
-      // `note` 04.09'da eklendi: akıbetin gerekçesi kaleme yazılıyor, işaretsiz satırda boş.
-      { orderItemId: itemId, name: expect.stringContaining('Su Böreği'), fulfilledQty: 3, disposition: null, note: null },
+      // Tavan karşılanmış adettir (3), sipariş adedi değil: `adjust_fulfillment` üstüne çıkamaz. İşaretsiz satırda kayıt yok.
+      { orderItemId: itemId, name: expect.stringContaining('Su Böreği'), fulfilledQty: 3, pendingQty: 3, returns: [] },
     ]);
   });
 
@@ -214,8 +200,31 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
     const drop = (await dropOf(order.id))!;
 
     expect(drop.lines).toHaveLength(2);
-    expect(drop.lines.find((line) => line.orderItemId === lines[0]!.id)!.disposition).toBe('goodwill');
-    expect(drop.lines.find((line) => line.orderItemId === lines[1]!.id)!.disposition).toBeNull();
+    expect(drop.lines.find((line) => line.orderItemId === lines[0]!.id)).toMatchObject({
+      pendingQty: 0,
+      returns: [{ qty: 1, disposition: 'goodwill', note: null }],
+    });
+    expect(drop.lines.find((line) => line.orderItemId === lines[1]!.id)).toMatchObject({ pendingQty: 3, returns: [] });
+  });
+
+  it('satırın adetleri akıbetlere bölünür — her pay ayrı kayıt, bekleyen adet ikisini de düşer', async () => {
+    const { orderId, itemId } = await refusedOrder(3);
+
+    // Stoğa dönen adet karşılananı düşürür, jest düşürmez; ikisi de bekleyen sayılmaz.
+    await orders.adjustFulfillment(orderId, [
+      { orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'restock', note: 'ambalaj sağlam' },
+      { orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill', goodwillQty: 1 },
+    ]);
+
+    expect((await dropOf(orderId))!.lines).toEqual([
+      expect.objectContaining({
+        pendingQty: 1,
+        returns: [
+          { qty: 1, disposition: 'restock', note: 'ambalaj sağlam' },
+          { qty: 1, disposition: 'goodwill', note: null },
+        ],
+      }),
+    ]);
   });
 
   it('ULAŞILAMAYAN sipariş dönüş DEĞİLDİR — mal araçta, rampaya hiç girmedi (v2:505)', async () => {
@@ -261,9 +270,7 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
     await advanceOrder(db, order.id, ['confirmed', 'preparing']);
     await orders.recordPreparation(order.id, [{ orderItemId: lines[0]!.id, batches: [{ stockId: batchId, qty: 1 }] }]);
     await advanceOrder(db, order.id, ['ready', 'out_for_delivery']);
-    // Teslim GERÇEK kapıdan (denetim 26.08): düz yazım fiili stoğu düşmez ve fikstür üretimde
-    // oluşamayacak bir sipariş kurardı — "teslim edilmiş sipariş rampaya düşmez" iddiası ancak
-    // gerçekten teslim edilmiş bir sipariş üstünde bir şey kanıtlar.
+    // Teslim gerçek kapıdan: düz yazım fiili stoğu düşmez ve üretimde oluşamayacak bir sipariş kurardı.
     expect(await deliverOrder(db, order.id)).toMatchObject({ ok: true });
 
     expect(await dropOf(order.id)).toBeUndefined();
@@ -315,9 +322,8 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
   });
 
   /**
-   * **Tavan EN YENİDEN dolar** (kusur, düzeltildi 25.08). Liste "en yeni başta" sıralandığı için
-   * tavanın öteki uçtan dolması, tavana dayanan rampada bugün dönen koliyi gizlerdi — ve liste dolu
-   * göründüğü için yokluğu fark edilmezdi. Sessiz kayıpların en pahalısı budur.
+   * Tavan en yeniden dolar: öteki uçtan dolsaydı tavana dayanan rampada bugün dönen koli görünmez ve liste dolu göründüğü
+   * için yokluğu fark edilmezdi.
    */
   it('tavana dayanınca EN YENİ dönüş içeride, en eski dışarıda kalır', async () => {
     const older = await refusedOrder(1);
@@ -332,12 +338,8 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
 });
 
 /**
- * **RAMPA LİSTESİ** (D6 · 04.09) — "kimden teslim alıyorum".
- *
- * Sınanan şey kümeleme: dönüşler KURYE başına toplanıyor, kuryesizler kendi kümesinde. Kapsam
- * kararını `readCourierReturn` veriyor ve bu dosyanın kuryesi bilerek bir DEPO KURYESİ DEĞİL
- * (rolü yok, tesise bağlı değil) — yani listenin en kolay kırılacak dalını, "kapsam dışı kurye
- * sessizce düşmez" dalını sınıyor. Araç ve kutu tarafının kendi testi var (`courier/return.test.ts`).
+ * Rampa listesi — "kimden teslim alıyorum": dönüşler kurye başına, kuryesizler kendi kümesinde toplanır. Bu dosyanın
+ * kuryesi bilerek depo kuryesi değil, yani "kapsam dışı kurye sessizce düşmez" dalı sınanır.
  */
 describe('rampa listesi (D6 · 04.09)', () => {
   const scope = (): WarehouseScope => ({ kind: 'limited', warehouseIds: [warehouseId] });
@@ -384,13 +386,8 @@ describe('rampa listesi (D6 · 04.09)', () => {
   });
 
   /*
-    Bir kuryenin detayı YALNIZ onun dökümünü taşır: karışırsa depocu, hiç görmediği bir kalemi
-    karara bağlamış olur.
-
-    Bu dosyanın kuryesi bilerek DEPO KURYESİ DEĞİL (rolü yok, tesise bağlı değil), yani test aynı
-    anda ikinci bir iddiayı da tutuyor: künye çözülemese bile DÖKÜM reddedilmez. İlk yazımda kapı
-    burada `forbidden` dönüyordu ve liste ile detay çelişiyordu — liste satırı açıyor, satır
-    açılmıyordu; rampadaki koli hiçbir yerden işaretlenemez hâle geliyordu (düzeltildi 04.09).
+    Bir kuryenin detayı yalnız onun dökümünü taşır, karışırsa depocu görmediği kalemi karara bağlardı. Künye çözülemese
+    bile döküm reddedilmez; reddedilseydi liste satırı açılır ama satır açılmazdı.
   */
   it('kurye detayı BAŞKA kuryenin dönüşünü taşımaz; künye çözülemese de döküm gelir', async () => {
     const own = await refusedOrder(1);

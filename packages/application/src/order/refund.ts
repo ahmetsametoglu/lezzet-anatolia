@@ -1,6 +1,6 @@
 import { AccountService, MoneyMovementService, OrderService } from '@lezzet/database';
 import { canTransition } from '@lezzet/domain-core';
-import type { FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus, ReturnDisposition } from '@lezzet/types';
+import type { FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cancelOrderShipment, type ShipmentCancelOutcome } from '../shipping/cancel';
 import { notifyExceptionEffect, notifyStatusEffect, providerRefunder, type OrderEffects } from './effects';
@@ -52,7 +52,7 @@ export type AdjustOutcome =
    * Kalemin akıbeti zaten yazılmış ve istek başka akıbet söylüyor: ekran bayattır, hiçbir satır yazılmaz. `stale`den
    * ayrı, çünkü orada sipariş değişmiştir, burada kalem karara bağlanmıştır.
    */
-  | { status: 'already_marked'; orderItemId: string | null; currentDisposition: ReturnDisposition | null }
+  | { status: 'already_marked'; orderItemId: string | null }
   | { status: 'not_found' };
 
 export type CancelOutcome =
@@ -110,11 +110,7 @@ export async function adjustFulfillment(
 
   const result = await orders.adjustFulfillment(orderId, lines, opts.actorId);
   if (!result.ok && result.reason === 'already_marked') {
-    return {
-      status: 'already_marked',
-      orderItemId: result.orderItemId ?? null,
-      currentDisposition: result.currentDisposition ?? null,
-    };
+    return { status: 'already_marked', orderItemId: result.orderItemId ?? null };
   }
   if (!result.ok) return { status: 'stale', currentStatus: result.currentStatus };
 
@@ -123,10 +119,14 @@ export async function adjustFulfillment(
 
   // Haberin hangisi olduğunu malın nerede olduğu belirler: mal daha çıkmadıysa bu bir EKSİK
   // KARŞILANMA (müşteri kapıda sürprizle karşılaşmasın), çıktıysa bir İADE (para geri döndü).
+  // Hiçbir olay yazılmadıysa müşteriye haber gitmez: "iadeniz işlendi" yalnız gerçekten yazılan iade için söylenir.
   const delivered = result.currentStatus === 'delivered' || result.currentStatus === 'completed';
-  await notifyExceptionEffect(opts.effects, orderId, delivered ? 'order_refunded' : 'order_shortfall', {
-    refundedAmountCents: settled.refundedAmountCents,
-  });
+  if ((result.lines ?? 0) > 0) {
+    await notifyExceptionEffect(opts.effects, orderId, delivered ? 'order_refunded' : 'order_shortfall', {
+      refundedAmountCents: settled.refundedAmountCents,
+      returns: result.returns ?? [],
+    });
+  }
 
   return {
     status: 'ok',
@@ -153,7 +153,7 @@ export type DeliverAdjustOutcome =
       adjustedLines: number;
     } & RefundOutcome)
   | { status: 'stale'; currentStatus: OrderStatus }
-  | { status: 'already_marked'; orderItemId: string | null; currentDisposition: ReturnDisposition | null }
+  | { status: 'already_marked'; orderItemId: string | null }
   | { status: 'not_found' };
 
 export async function deliverOrderWithAdjustments(
@@ -174,11 +174,7 @@ export async function deliverOrderWithAdjustments(
   });
   if (!written.ok) {
     if (written.reason === 'already_marked') {
-      return {
-        status: 'already_marked',
-        orderItemId: written.orderItemId ?? null,
-        currentDisposition: written.currentDisposition ?? null,
-      };
+      return { status: 'already_marked', orderItemId: written.orderItemId ?? null };
     }
     return { status: 'stale', currentStatus: written.currentStatus };
   }

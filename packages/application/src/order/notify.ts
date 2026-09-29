@@ -3,7 +3,7 @@ import { type NotifyEventName, type NotifyResult } from '@lezzet/notify';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { DeliveryType, OrderStatus } from '@lezzet/types';
 import { dispatchCustomerNotification } from '../notification/dispatch';
-import type { OrderExceptionEvent } from './effects';
+import type { OrderExceptionDetail, OrderExceptionEvent } from './effects';
 import { buildOrderNotification } from './notification-data';
 
 /**
@@ -55,7 +55,7 @@ export function notifyOrderException(
   db: Db,
   orderId: string,
   event: OrderExceptionEvent,
-  opts: { refundedAmountCents?: number | null } = {},
+  opts: OrderExceptionDetail = {},
 ): Promise<NotifyResult[]> {
   return notifyOrderEvent(db, orderId, event, opts);
 }
@@ -68,7 +68,7 @@ async function notifyOrderEvent(
   db: Db,
   orderId: string,
   event: NotifyEventName,
-  opts: { refundedAmountCents?: number | null } = {},
+  opts: OrderExceptionDetail = {},
 ): Promise<NotifyResult[]> {
   const bundle = await buildOrderNotification(db, orderId, event, opts);
   if (!bundle) return [{ status: 'skipped', channel: 'email', reason: 'order_not_found' }];

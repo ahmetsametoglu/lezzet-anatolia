@@ -197,11 +197,7 @@ create table public.order_item (
   -- Sepet/kupon indiriminin bu kaleme ORANSAL payı — kısmi iade ve kalem KDV'si indirimli birimden
   -- hesaplanır, sonradan hesap belirsizliği kalmaz (DOMAIN §5).
   line_discount_amount numeric(10, 2) not null default 0,
-  vat_rate numeric(4, 2) not null,
-  return_disposition return_disposition,
-  -- Akıbetin gerekçesi: "stoğa dön"ün zorunlu soğuk zincir beyanı. Kaleme yazılır, çünkü beyan malın kendisi
-  -- hakkındadır ve stok hareketi onun sonucudur.
-  return_note text
+  vat_rate numeric(4, 2) not null
 );
 create index order_item_order_idx on public.order_item (order_id);
 -- "Bu ürün hangi siparişlere gitti" (geri çağırma ve satış analizi).

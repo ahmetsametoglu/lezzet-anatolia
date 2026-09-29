@@ -179,12 +179,9 @@ export class OrderItemService extends BaseDbService<OrderItem, OrderItemInsert, 
     return all;
   }
 
-  /**
-   * Karşılanan miktarı yazar (hazırlıkta/kapıda eksik çıkınca). İade edilen kalemde ayrıca **mala ne
-   * olduğu** işaretlenir: `goodwill`'de miktar DÜŞMEZ — mal müşteride kalmıştır (DOMAIN §8).
-   */
-  setFulfilled(id: string, fulfilledQty: number, returnDisposition?: OrderItem['returnDisposition']): Promise<OrderItem> {
-    return this.update({ id, fulfilledQty, ...(returnDisposition !== undefined ? { returnDisposition } : {}) });
+  /** Karşılanan miktarı doğrudan yazar; iade ve eksik karşılama olay yazdığı için `adjust_fulfillment`tan geçer. */
+  setFulfilled(id: string, fulfilledQty: number): Promise<OrderItem> {
+    return this.update({ id, fulfilledQty });
   }
 }
 
@@ -295,15 +292,11 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
 
     const raw = await this.executeRpc('adjust_fulfillment', {
       p_order_id: orderId,
-      p_lines: lines.map((line) => ({
-        order_item_id: line.orderItemId,
-        fulfilled_qty: line.fulfilledQty,
-        return_disposition: line.returnDisposition ?? null,
-        note: line.note ?? null,
-      })),
+      p_lines: fulfillmentRpcLines(lines),
       p_actor_id: actorId ?? null,
     });
-    return FulfillmentResultSchema.parse(dbToApp(raw));
+    // `returns` iç içe dizi: anahtarları da çevrilsin diye gömülü alan olarak beyan edilir.
+    return FulfillmentResultSchema.parse(dbToApp(raw, new Set(['returns'])));
   }
 
   /**
@@ -317,15 +310,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   ): Promise<DeliverWithAdjustmentsResult> {
     const raw = await this.executeRpc('deliver_order_with_adjustments', {
       p_order_id: orderId,
-      p_lines:
-        lines.length === 0
-          ? null
-          : lines.map((line) => ({
-              order_item_id: line.orderItemId,
-              fulfilled_qty: line.fulfilledQty,
-              return_disposition: line.returnDisposition ?? null,
-              note: line.note ?? null,
-            })),
+      p_lines: lines.length === 0 ? null : fulfillmentRpcLines(lines),
       p_actor_id: opts.actorId ?? null,
       p_delivery_proof: opts.deliveryProof ?? null,
     });
@@ -735,4 +720,15 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     });
     return TransitionResultSchema.parse(dbToApp(raw));
   }
+}
+
+/** Düzeltme satırlarının RPC biçimi — iki kapı aynı gövdeyi gönderir. */
+function fulfillmentRpcLines(lines: readonly FulfillmentAdjustment[]) {
+  return lines.map((line) => ({
+    order_item_id: line.orderItemId,
+    fulfilled_qty: line.fulfilledQty,
+    return_disposition: line.returnDisposition ?? null,
+    goodwill_qty: line.goodwillQty ?? null,
+    note: line.note ?? null,
+  }));
 }

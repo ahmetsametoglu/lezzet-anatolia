@@ -8,6 +8,7 @@ import {
   DeliveryZoneService,
   MoneyMovementService,
   OrderBoxService,
+  OrderItemReturnService,
   OrderService,
   ProductService,
   ReservationService,
@@ -485,7 +486,7 @@ describe('GET /api/v1/courier/day', () => {
   it('kurye AKIBET yazamaz — gövdeye konsa bile kaleme geçmez (21.272)', async () => {
     /*
       Kapıdaki iki karar ayrı ellerdedir: adedi kurye söyler, akıbeti mal depoya dönünce depocu seçer; akıbet alanı kurye şemasından `omit` ile çıkarıldı.
-      İddia "400 döner" değil "yazılmaz": şema bilinmeyen anahtarı düşürür ve kalemin `returnDisposition`ı boş kalmalı.
+      İddia "400 döner" değil "yazılmaz": şema bilinmeyen anahtarı düşürür ve kapıda düşen adetin olayı akıbetsiz kalmalı.
     */
     const orderId = await dispatched({ qty: 2, orderedTotalCents: 2000 });
     await startRun();
@@ -493,7 +494,7 @@ describe('GET /api/v1/courier/day', () => {
     const item = day.stops.find((s) => s.orderId === orderId)!.items[0]!;
 
     const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
-      // Sözleşmede artık olmayan alan — kötü niyet değil, bayat bir istemcinin göndereceği şey.
+      // Sözleşmede olmayan alan — kötü niyet değil, bayat bir istemcinin göndereceği şey.
       adjustments: [{ orderItemId: item.orderItemId, fulfilledQty: 1, returnDisposition: 'discard' }],
       scannedBoxCodes: [await boxCodeOf(orderId)],
     });
@@ -504,8 +505,10 @@ describe('GET /api/v1/courier/day', () => {
     /* Adet yazıldı — kuryenin söylediği şey geçti. */
     const line = (await orders.getWithItems(orderId))!.items[0]!;
     expect(line.fulfilledQty).toBe(1);
-    /* Akıbet YAZILMADI — kuryenin söylemediği şey geçmedi. Karar depocuda kaldı. */
-    expect(line.returnDisposition).toBeNull();
+    /* Akıbet YAZILMADI — kuryenin söylemediği şey geçmedi. Kapıda düşen adet akıbetsiz bir olaydır, karar depocuda kaldı. */
+    expect(await new OrderItemReturnService(db).listByOrders([orderId])).toMatchObject([
+      { qty: 1, disposition: null, stage: 'out_for_delivery' },
+    ]);
   });
 });
 
@@ -834,7 +837,7 @@ describe('sefer kapanışı (K7)', () => {
     expect(result.reconciled).toBe(false);
     expect(result.deliveredCount).toBe(1);
 
-    // Kapanmış sefer SALT-OKUNUR: taslak artık kaydı taşıyor ve ekran onu öyle çizer.
+    // Kapanmış sefer salt-okunur: taslak kaydı taşır ve ekran onu öyle çizer.
     const draft = await dataOf<DayCloseDraftContract>(await asCourier('/api/v1/courier/day-close'));
     expect(draft.closed?.countedCashCents).toBe(1900);
     expect(draft.closed?.note).toBe('1 € eksik çıktı');
@@ -855,8 +858,7 @@ describe('sefer kapanışı (K7)', () => {
   });
 
   it('bozuk sefer kimliğiyle kapanış 400 — RPC\'ye inip 500 üretmez', async () => {
-    // Eski hâli "bozuk GÜN anahtarı"ydı; öznenin sefere inmesiyle kapının süzdüğü değer de değişti.
-    // Kimliksiz gövde de aynı kapıdan döner: `runId` artık zorunlu.
+    // Kapının süzdüğü değer sefer kimliğidir; kimliksiz gövde de aynı kapıdan döner, çünkü `runId` zorunlu.
     expect((await post('/api/v1/courier/day-close', { runId: 'sefer-1' })).status).toBe(400);
 
     const res = await post('/api/v1/courier/day-close', { countedCashCents: 0 });

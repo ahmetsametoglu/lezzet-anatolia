@@ -47,7 +47,7 @@ const order = (patch: Partial<Order> = {}): Order =>
   }) as Order;
 
 const item = (patch: Partial<OrderItem> = {}): OrderItem =>
-  ({ id: 'i1', orderId: 'o1', variantId: 'v1', qty: 2, fulfilledQty: 2, stockId: null, bundleId: null, unitPriceCents: 1000, lineDiscountAmountCents: 0, vatRate: 5.5, returnDisposition: null, ...patch }) as OrderItem;
+  ({ id: 'i1', orderId: 'o1', variantId: 'v1', qty: 2, fulfilledQty: 2, stockId: null, bundleId: null, unitPriceCents: 1000, lineDiscountAmountCents: 0, vatRate: 5.5, ...patch }) as OrderItem;
 
 const customer = (patch: Partial<UserProfile> = {}): UserProfile =>
   ({ id: 'c1', name: 'Café Marceau', phone: '+33612345678', companyInfo: null, paymentTermDays: null, ...patch }) as UserProfile;

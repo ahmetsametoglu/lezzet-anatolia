@@ -26,11 +26,9 @@ import { useSubjectBack } from './use-subject-back.hook';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
-  D6 · Kurye dönüşü kabulü: rampa listesi → bir kuryenin dönüşü; eksen kuryedir, çünkü mal kurye başına devredilir ve
-  araç bir kez boşalır. Araçta kalan yalnız listelenir, dokunulabilir çizmek olmayan bir eylemi varmış gibi gösterirdi.
-
-  Serbest ürün satırı yalnız araçta kayıtlı adedi söyler: tasarımdaki "alınan · satılan" ikilisini sistem ayrı tutmuyor
-  ve ekrana yazılamayan sayı uydurulmaz (CLAUDE §1).
+  D6 · Kurye dönüşü kabulü: rampa listesi → bir kuryenin dönüşü; eksen kuryedir, çünkü mal kurye başına devredilir ve araç
+  bir kez boşalır, araçta kalan yalnız listelenir. Serbest ürün satırı yalnız araçta kayıtlı adedi söyler: tasarımdaki
+  "alınan · satılan" ikilisini sistem ayrı tutmuyor ve ekrana yazılamayan sayı uydurulmaz (CLAUDE §1).
 */
 
 const t = warehouseCopy;
@@ -46,6 +44,12 @@ export function CourierReturnScreen() {
   const returnState = useCourierReturn();
   const { offline } = useWarehouseStatus();
   const [qtyVariantId, setQtyVariantId] = useState<string | null>(null);
+  const [splitTarget, setSplitTarget] = useState<{
+    orderItemId: string;
+    disposition: ReturnDisposition;
+    name: string;
+    qty: number;
+  } | null>(null);
 
   /* Bildirimler toast'a gider; köprü `useNotice`ın içinde, gerekçesi orada. */
 
@@ -140,15 +144,18 @@ export function CourierReturnScreen() {
 
         {detail.drops.flatMap((drop) =>
           drop.lines.map((line) => {
-            // İşaretlenmiş satır SALT-OKUNUR: ikinci kez gönderilirse `restock` stoğa iki kez yazılır.
-            const written = line.disposition;
-            const disposition = written ?? returnState.dispositionOf(line.orderItemId);
+            const pending = line.pendingQty > 0;
+            const split = returnState.isSplit(line.orderItemId);
+            const disposition = returnState.dispositionOf(line.orderItemId);
+            const splitTotal = DISPOSITIONS.reduce((sum, option) => sum + returnState.splitQtyOf(line.orderItemId, option), 0);
+            const needsNote = split ? returnState.splitQtyOf(line.orderItemId, 'restock') > 0 : disposition === 'restock';
+            const writtenNotes = [...new Set(line.returns.flatMap((entry) => (entry.note ? [entry.note] : [])))];
             return (
               <View key={line.orderItemId} style={styles.lineRow} testID={`warehouse-return-line-${line.orderItemId}`}>
                 <Text style={styles.rowTitle}>
                   {fillCopy(t.return.dropLine, {
                     ref: drop.referenceNo ?? '—',
-                    qty: String(line.fulfilledQty),
+                    qty: String(line.pendingQty + line.returns.reduce((sum, entry) => sum + entry.qty, 0)),
                     name: line.name,
                   })}
                 </Text>
@@ -156,48 +163,84 @@ export function CourierReturnScreen() {
                   <Text style={styles.rowSub}>{fillCopy(t.return.courierNote, { note: drop.note })}</Text>
                 )}
 
-                {/* AKIBETİ YAZILMIŞ SATIR SEÇİCİ ÇİZMEZ, SONUCU YAZAR: çipleri kapalı göstermek
-                    dokunulabilir görünen ölü bir kontrol olurdu ve ikinci kez gönderilen `restock`
-                    stoğa iki kez yazardı. Satır listede duruyor çünkü depocu neyi karara bağladığını
-                    görmeden kalanı işaretleyemez (`listWarehouseReturns` künyesi). */}
-                {written !== null ? (
+                {/* Yazılmış akıbet seçici değil kayıttır: ikinci kez gönderilen `restock` stoğa iki kez yazılırdı. Bir satırın
+                    adetleri farklı akıbet alabildiği için kayıt payları adetleriyle sayar. */}
+                {line.returns.length === 0 ? null : (
+                  <Text style={styles.written} testID={`warehouse-return-written-${line.orderItemId}`}>
+                    {fillCopy(t.return.written, {
+                      disposition: line.returns
+                        .map((entry) =>
+                          fillCopy(t.return.writtenPart, { qty: String(entry.qty), disposition: t.return.disposition[entry.disposition] }),
+                        )
+                        .join(' · '),
+                    })}
+                  </Text>
+                )}
+                {/* Beyan geri okunur: görünmezse zorunlu not bir form töreni olurdu, depocu ne beyan ettiğini satırda görmeli. */}
+                {writtenNotes.map((note, index) => (
+                  <Text
+                    key={note}
+                    style={styles.rowSub}
+                    testID={`warehouse-return-written-note-${line.orderItemId}${index === 0 ? '' : `-${index}`}`}
+                  >
+                    {fillCopy(t.return.writtenNote, { note })}
+                  </Text>
+                ))}
+
+                {!pending ? null : split ? (
                   <>
-                    <Text style={styles.written} testID={`warehouse-return-written-${line.orderItemId}`}>
-                      {fillCopy(t.return.written, { disposition: t.return.disposition[written] })}
-                    </Text>
-                    {/* Beyan geri okunur: görünmezse zorunlu not bir form töreni olurdu, depocu ne beyan ettiğini satırda
-                        görmeli. */}
-                    {line.note === null || line.note.length === 0 ? null : (
-                      <Text style={styles.rowSub} testID={`warehouse-return-written-note-${line.orderItemId}`}>
-                        {fillCopy(t.return.writtenNote, { note: line.note })}
+                    {DISPOSITIONS.map((option) => {
+                      const qty = returnState.splitQtyOf(line.orderItemId, option);
+                      return (
+                        <View key={option} style={styles.qtyRow}>
+                          <View style={styles.qtyText}>
+                            <Text style={styles.rowTitle}>{t.return.disposition[option]}</Text>
+                          </View>
+                          <OperationsQuantityBox
+                            value={qty === 0 ? null : qty}
+                            caption={t.return.qtyCaption}
+                            dashed={qty === 0}
+                            onPress={() =>
+                              setSplitTarget({ orderItemId: line.orderItemId, disposition: option, name: line.name, qty: line.pendingQty })
+                            }
+                            accessibilityLabel={`${line.name} · ${t.return.disposition[option]}`}
+                            accessibilityHint={t.common.qtyHint}
+                            testID={`warehouse-return-split-${option}-${line.orderItemId}`}
+                          />
+                        </View>
+                      );
+                    })}
+                    <View style={styles.summary} testID={`warehouse-return-split-summary-${line.orderItemId}`}>
+                      <Text style={[styles.rowTitle, splitTotal === line.pendingQty ? null : styles.holdNote]}>
+                        {fillCopy(t.return.splitSummary, { marked: String(splitTotal), total: String(line.pendingQty) })}
                       </Text>
-                    )}
+                    </View>
                   </>
                 ) : (
-                  <>
-                    <View style={styles.chipRow}>
-                      {DISPOSITIONS.map((option) => (
-                        <OperationsChoiceChip
-                          key={option}
-                          label={t.return.disposition[option]}
-                          selected={disposition === option}
-                          onPress={() => returnState.pick(line.orderItemId, option)}
-                          fill
-                          testID={`warehouse-return-${option}-${line.orderItemId}`}
-                        />
-                      ))}
-                    </View>
-
-                    {/* Üç akıbetin bedeli seçimden önce, düğmelerin altında her zaman yazılı: depocu partinin düşeceğini
-                        öğrenmeden imhayı seçmemeli. */}
-                    <View style={styles.hintBlock} testID={`warehouse-return-hint-${line.orderItemId}`}>
-                      <Text style={styles.rowSub}>{t.return.dispositionHint.rules}</Text>
-                      <Text style={styles.rowSub}>{t.return.dispositionHint.goodwill}</Text>
-                    </View>
-                  </>
+                  <View style={styles.chipRow}>
+                    {DISPOSITIONS.map((option) => (
+                      <OperationsChoiceChip
+                        key={option}
+                        label={t.return.disposition[option]}
+                        selected={disposition === option}
+                        onPress={() => returnState.pick(line.orderItemId, option)}
+                        fill
+                        testID={`warehouse-return-${option}-${line.orderItemId}`}
+                      />
+                    ))}
+                  </View>
                 )}
 
-                {disposition === 'restock' && written === null ? (
+                {/* Üç akıbetin bedeli seçimden önce, düğmelerin altında her zaman yazılı: depocu partinin düşeceğini öğrenmeden
+                    imhayı seçmemeli. */}
+                {!pending ? null : (
+                  <View style={styles.hintBlock} testID={`warehouse-return-hint-${line.orderItemId}`}>
+                    <Text style={styles.rowSub}>{t.return.dispositionHint.rules}</Text>
+                    <Text style={styles.rowSub}>{t.return.dispositionHint.goodwill}</Text>
+                  </View>
+                )}
+
+                {pending && needsNote ? (
                   <View style={styles.noteBlock} testID={`warehouse-return-note-block-${line.orderItemId}`}>
                     <Text style={styles.noteHint}>{t.return.restockNote}</Text>
                     <TextInput
@@ -210,6 +253,19 @@ export function CourierReturnScreen() {
                       testID={`warehouse-return-note-${line.orderItemId}`}
                     />
                   </View>
+                ) : null}
+
+                {/* Ayırma yalnız iki adetten itibaren: tek adetin bölünecek payı yok ve sık yol tek dokunuşla kalır. */}
+                {pending && line.pendingQty >= 2 ? (
+                  <PressableSurface
+                    onPress={() => returnState.setSplit(line.orderItemId, !split)}
+                    feedback="scale"
+                    style={styles.splitLink}
+                    accessibilityLabel={split ? t.return.unsplitLink : t.return.splitLink}
+                    testID={`warehouse-return-split-toggle-${line.orderItemId}`}
+                  >
+                    <Text style={styles.cardOpen}>{split ? t.return.unsplitLink : t.return.splitLink}</Text>
+                  </PressableSurface>
                 ) : null}
               </View>
             );
@@ -229,9 +285,9 @@ export function CourierReturnScreen() {
               const counted = returnState.countOf(line.variantId);
               return (
                 <View key={line.variantId} style={styles.lineRow} testID={`warehouse-return-free-${line.variantId}`}>
-                  <View style={styles.freeRow}>
+                  <View style={styles.qtyRow}>
                     <OperationsProductThumb name={line.name} photoUri={line.imageUrl} />
-                    <View style={styles.freeText}>
+                    <View style={styles.qtyText}>
                       <Text style={styles.rowTitle}>{line.name}</Text>
                       {line.variantLabel.length === 0 ? null : <Text style={styles.rowSub}>{line.variantLabel}</Text>}
                     </View>
@@ -311,6 +367,24 @@ export function CourierReturnScreen() {
           <Text style={styles.ctaLabel}>{cta.label}</Text>
         </PressableSurface>
       </LinearGradient>
+
+      {splitTarget === null ? null : (
+        <OperationsQuantitySheet
+          visible
+          title={fillCopy(t.return.splitSheet.title, { disposition: t.return.disposition[splitTarget.disposition] })}
+          value={{ cases: [], loose: returnState.splitQtyOf(splitTarget.orderItemId, splitTarget.disposition) }}
+          caseSizes={[]}
+          onChange={(next) => returnState.setSplitQty(splitTarget.orderItemId, splitTarget.disposition, quantityTotal(next))}
+          copy={qtySheetCopy({
+            ...t.return.splitSheet,
+            title: fillCopy(t.return.splitSheet.title, { disposition: t.return.disposition[splitTarget.disposition] }),
+            keypadTitle: fillCopy(t.return.splitSheet.keypadTitle, { disposition: t.return.disposition[splitTarget.disposition] }),
+            subject: fillCopy(t.return.splitSheet.subject, { name: splitTarget.name, qty: String(splitTarget.qty) }),
+          })}
+          onClose={() => setSplitTarget(null)}
+          testID="warehouse-return-split-sheet"
+        />
+      )}
 
       {qtyLine === null ? null : (
         <OperationsQuantitySheet
@@ -539,12 +613,15 @@ const styles = StyleSheet.create({
   noteBlock: {
     gap: operationsTheme.space.sm,
   },
-  freeRow: {
+  /** Solda ad, sağda adet kutusu — serbest ürün sayımı ve akıbet payları aynı satır düzenini kullanır. */
+  qtyRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space.xl,
   },
-  freeText: { flex: 1 },
+  qtyText: { flex: 1 },
+  /** Ayırma bağlantısı sağa yaslı, kartın "aç →" diliyle. */
+  splitLink: { alignSelf: 'flex-end' },
   /** Sayımın toplamı — kum zeminli özet, kartlardan bir kademe sessiz. */
   summary: {
     gap: operationsTheme.space['2xs'],

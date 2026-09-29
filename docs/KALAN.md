@@ -341,10 +341,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [ ] **MB-38 · Test defteri boşaltılmadı** (`docs/talep/not-mobil-test-defteri.md`, kullanıcı talimatı 09.08: *"testleri sonra topluca yaz"*). İçinde ölçülmemiş bir düşüş var: `account-routes.test` TAM koşuda düşüyor, tekil koşuda geçiyor — hata metni hâlâ yakalanmadı. **İKİNCİ ÖRNEK ÖLÇÜLDÜ (14.08):** `app-shell.test.tsx` de aynı şekilde davrandı — tam koşuda *"seçili sekmeye tekrar dokunmak rotayı OYNATMAZ"* düştü (`toHavePathname('/')`), tekil koşuda geçti, ve **aynı tam koşu ikinci kez çalıştırıldığında 84/84 · 599/599 yeşil geldi.** Yani düşüş dosyaya değil KOŞUYA bağlı; iki örnek de rota durumu okuyan testler. Ortak şüpheli expo-router'ın modül düzeyinde yaşayan bellek durumu ve testler ara… _(12. Mobil şeridin eklediği kalemler (11.08))_
 - [ ] **MB-78 · FATURANIN NEREDEN ALINACAĞI HİÇBİR YERDE YAZMIYOR — B2B'de yasal ağırlığı var.** ⚑ **BU KALEM GÜNDEME GETİRİLMEZ — kullanıcı kendisi açacak** (kararı 21.08). Kayıt duruyor, hatırlatması yapılmaz; sıradaki işler önerilirken bu madde sayılmaz. Ölçüldü 19.08 (kullanıcı isteğiyle sistem geneli tarandı). Sistemin kararı net ve tutarlı (`DOMAIN §9`: resmî belge üretilmez, fatura muhasebeden gelir) — **eksik olan bu kararın müşteriye söylenmesi.** · **Satış koşullarında (CGV) fatura maddesi YOK** — "fatura" kelimesi hiç geçmiyor; tek ilgili satır *"Fiyatlar KDV dâhildir"*. · **SSS'te fatura sorusu YOK** (dokuz sorunun hiçbiri). · Gizlilik sayfası *"faturanın üzerindeki ad ve adres"*ten ba… _(12. Mobil şeridin eklediği kalemler (11.08))_
 
-## backlog-operasyon-web.md (eski docs/denetim/backlog-operasyon-web.md)
-
-- [ ] **OB-09 · Aynı üründen çoklu adet içeren siparişlerde İade (Return) ve İmha (Disposal/Waste) işlemlerinin veritabanında tutarsızlığa yol açması** _(1. Bloke Edici Bulgular / Hatalar)_
-
 ## Kullanıcı bulguları (eski docs/kullanici-bulgulari.md)
 
 - [ ] (B.3) Native uygulama · sipariş tamamlama — mevcut adres düzenlenemiyor ⟶ MOBİL ŞERİT

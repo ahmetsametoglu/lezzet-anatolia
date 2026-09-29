@@ -974,7 +974,7 @@
       "stuck": "Devir yarım kaldı: mal transferde asılı. Transfer ekranından çözülür.",
       "noVehicle": "Kuryenin aracı yok — serbest ürün devredilemez.",
       "stale": "Sipariş artık bu durumda düzeltilemez ({status}).",
-      "alreadyMarked": "Bu kalemin akıbeti zaten yazılmış ({disposition}) — ekran tazelendi, kalanı işaretle."
+      "alreadyMarked": "Bu kalemin adetleri bu arada başka bir kayıtla yazılmış — hiçbir şey değişmedi; ekran tazelendi, kalanı işaretle."
     },
     "refundBlocked": {
       "no_account": "İade borcu YAZILAMADI: müşterinin hesabı yok.",
@@ -1027,6 +1027,16 @@
       "keypadTitle": "Kaç adet döndü"
     },
     "written": "akıbeti yazıldı: {disposition}",
+    "writtenPart": "{qty} {disposition}",
+    "splitLink": "Adetler farklı mı? Ayrı işaretle →",
+    "unsplitLink": "← Tek akıbete dön",
+    "splitSummary": "{marked} / {total} adet işaretlendi",
+    "splitSheet": {
+      "title": "Kaç adet — {disposition}",
+      "subject": "{name} · dönen {qty}",
+      "casesTitle": "KAÇ KOLİ",
+      "keypadTitle": "Kaç adet — {disposition}"
+    },
     "boxCount": "{n} kutu",
     "writtenNote": "beyan: \"{note}\"",
     "drivingHold": "Sefer sürülüyor — araçta kalan mal devredilmez. Yalnız fiilen indirileni say."

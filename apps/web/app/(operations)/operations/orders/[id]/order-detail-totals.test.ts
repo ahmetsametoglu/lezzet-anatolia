@@ -5,19 +5,8 @@ import { totalsOf } from './order-detail-read';
 import type { OrderLineView } from './order-detail-types';
 
 /**
- * Sipariş detayının TOPLAM BLOĞU — saf dönüşüm (DB'siz), `orders-read.test.ts` emsali.
- *
- * ── NEDEN "İÇİNDEKİ KDV" SATIRININ AYRI TESTİ VAR (denetim 26.08) ────────────
- * O satır motorun (`vatSplitOf`) elle yazılmış bir kopyasıydı ve kopyada motorun ÜÇÜNCÜ dalı
- * eksikti: `zeroRated`. Reverse charge siparişinde (VIES ile doğrulanmış vergi numaralı Alman
- * B2B alıcısı) KDV yasal olarak sıfırdır — müşteri kendi ülkesinde beyan eder — ama ekran
- * `addVat(...) − tutar` yazıyordu. Toplamı bozmuyordu (satır `note`), operatörün mutabakat
- * yaparken okuduğu sayı yanlıştı.
- *
- * Aynı karşılaştırma depoda üç ayrı yerde elle yazılıydı; dördüncü okuyan onu sormayı unuttu.
- * Kural artık motorda tek yerde (`isZeroRated`) ve iddialar aşağıda KURALDAN kuruluyor: "reverse
- * charge siparişinde ekranda vergi görünmez", "b2c'de tutarın içinden çıkar", "b2b'de üstüne
- * eklenir" — bugünkü kodun ne yaptığı değil, ne yapması gerektiği.
+ * Sipariş detayının toplam bloğu — saf dönüşüm (DB'siz). "İçindeki KDV" satırı motorun kuralından (`isZeroRated`) kurulur
+ * ve iddialar kuraldan yazılır: reverse charge'da ekranda vergi görünmez, b2c'de tutarın içinden çıkar, b2b'de üstüne eklenir.
  */
 
 const line = (over: Partial<OrderLineView> = {}): OrderLineView => {
@@ -35,7 +24,7 @@ const line = (over: Partial<OrderLineView> = {}): OrderLineView => {
     vatRate: 5.5,
     lineTotalCents: 2000,
     bundleId: null,
-    returnDisposition: null,
+    returns: [],
     defaultsToDiscard: false,
     batchNos: [],
     ...over,
@@ -163,11 +152,8 @@ describe('taban: hazırlık kesinleşti mi', () => {
 });
 
 /**
- * ── 01.09 · KULLANICI BİLDİRİMİ, GERÇEK SİPARİŞ (`LA-26-93UXKY`) ────────────────────────────────
- *
- * Üç arıza aynı ekranda birden görüldü ve üçü de bu bloktaydı. Rakamlar canlı kayıttan alındı;
- * uydurulmuş bir fikstür aynı hataları göstermezdi (indirim payı ve kısmi karşılama birlikte
- * bulunmalı ki kusur doğsun).
+ * Gerçek bir siparişin (`LA-26-93UXKY`) rakamları: indirim payı ve kısmi karşılama birlikte bulunmalı ki kusur doğsun;
+ * uydurulmuş fikstür aynı hataları göstermezdi.
  */
 describe('LA-26-93UXKY — blok kendi içinde toplanır', () => {
   const b2c = order({ channel: 'b2c', orderedTotalCents: 4639, discountAmountCents: 818, discountLabel: null });
@@ -180,18 +166,15 @@ describe('LA-26-93UXKY — blok kendi içinde toplanır', () => {
   it('kalemler GİDEN malın liste tutarıdır', () => {
     const rows = blok(b2c, kalemler, true);
 
-    // 1×22,47 + 3×1,39 + 6×0,91 = 32,10. Eskiden burada sipariş edilenin brütü (54,57) duruyordu.
+    // 1×22,47 + 3×1,39 + 6×0,91 = 32,10 — sipariş edilenin brütü (54,57) değil.
     expect(satir(rows, 'Kalemler')?.amountCents).toBe(3210);
   });
 
   it('SEPET İNDİRİMİ gerçekten verilen indirimdir — gitmeyen malınki sayılmaz', () => {
     const rows = blok(b2c, kalemler, true);
 
-    /*
-      Ekran 8,18 € yazıyordu; onun 3,37 €'su hiç gitmemiş bir kutu böreğin indirimiydi. Gerçekten
-      verilen 4,81 € — ve sistemin geri kalanı bunu ZATEN böyle biliyor: muhasebe kalemi
-      (`lineAmountCents`) indirim payını karşılanan orana bölüyor. Blok tek başına ayrışıyordu.
-    */
+    /* Gerçekten verilen indirim 4,81 €; hiç gitmemiş kalemin indirimi sayılmaz. Muhasebe kalemi (`lineAmountCents`) de
+       indirim payını karşılanan orana böler. */
     expect(satir(rows, 'Sepet indirimi')).toMatchObject({ amountCents: 481, kind: 'deduction' });
   });
 
@@ -218,7 +201,7 @@ describe('LA-26-93UXKY — blok kendi içinde toplanır', () => {
     const eksikGiden = blok(b2c, kalemler, true);
     const tamamGiden = blok(b2c, kalemler.map((l) => ({ ...l, fulfilledQty: l.qty })), true);
 
-    // Ölçüldü: ekran 2,42 € yazıyordu (46,39'un vergisi), doğrusu teslim edilenin vergisi.
+    // Vergi teslim edilenden hesaplanır, sipariş edilenden değil.
     expect(satir(eksikGiden, 'İçindeki KDV')!.amountCents).toBeLessThan(satir(tamamGiden, 'İçindeki KDV')!.amountCents);
     // Kalem kalem: 19,09 → 1,00 · 3,55 → 0,19 · 4,65 → 0,24.
     expect(satir(eksikGiden, 'İçindeki KDV')?.amountCents).toBe(100 + 19 + 24);

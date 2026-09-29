@@ -41,21 +41,9 @@ import type {
 import { app } from '../../app';
 
 /**
- * Depo uçları uçtan uca (21.11) — `app.request()` ile PORT AÇMADAN (kurye/katalog testleriyle aynı desen).
- *
- * Paylaşılan-DB disiplini (CLAUDE §4b): zeminin TAMAMI bu dosyanın kendi damgalı satırlarıdır — İKİ
- * depo (kapsam iddiaları tek depoyla kurulamaz), bir kategori, bir ürün, bir müşteri, bir tedarikçi
- * ve üç oturum (depocu · rolsüz · yönetici). **Küresel sayıya bakan tek bir iddia yok:** kuyruk,
- * transfer listesi ve fark raporu hep kendi kimliklerimizle daraltılıyor — başka bir ajanın açtığı
- * sipariş bu dosyayı kızartamaz. Teardown `purgeTestData` + `mustDelete` ile toplanır.
- *
- * **Asıl sınanan şey taşımadır:** kapının kararı (`incomplete`, `forbidden/out_of_scope`, `failed`)
- * gövdeye BOZULMADAN çıkıyor mu, depo kimliği profilden mi geliyor, kapsam dışı yazım gerçekten
- * hiç yazmıyor mu. Kararların kendisi `packages/application`ın depo testlerinde sınandı; burada
- * tekrarlanmıyor.
- *
- * **Telefon damgası dosyaya özgü** (`07…`): `user_profiles.phone` benzersiz ve kurye testi `06…`
- * kullanıyor — aynı milisaniyede kurulan iki dosya birbirini kurulum anında düşürmesin.
+ * Depo uçları uçtan uca — `app.request()` ile port açmadan; zemin bu dosyanın kendi damgalı satırlarıdır ve küresel sayıya
+ * bakan iddia yok (CLAUDE §4b). Sınanan şey taşımadır: kapının kararı gövdeye bozulmadan çıkıyor mu, depo kimliği profilden
+ * mi geliyor; telefon damgası dosyaya özgüdür (`07…`), çünkü `user_profiles.phone` benzersizdir.
  */
 const stamp = Date.now();
 const db = serviceDb();
@@ -140,11 +128,8 @@ async function signedInUser(label: string, roles: ('customer' | 'warehouse' | 'a
 }
 
 /**
- * Siparişi durum durum ilerletir — `application/src/order/advance.testkit.ts`in yerel karşılığı.
- *
- * Testkit ÇAĞRILAMIYOR: `@lezzet/application`ın `exports` haritası yalnız `"."` açıyor, yani
- * alt-yol import'u paket sınırında kapalı ve testkit `index.ts`ten dışa verilmiyor. Terfi ihtiyacı
- * (testkit'i dışa açmak) rapora yazıldı; o gün buradaki on satır silinir — kurye testinde de aynısı.
+ * Siparişi durum durum ilerletir — `application/src/order/advance.testkit.ts`in yerel karşılığı; testkit paketin
+ * `exports` haritasından dışa açık değil.
  */
 async function advance(orderId: string, path: readonly OrderStatus[]): Promise<void> {
   for (const to of path) {
@@ -245,7 +230,7 @@ beforeAll(async () => {
   adminToken = (await signedInUser('patron', ['admin'])).token;
 
   addressId = (
-    // Alıcı ve telefon 22.08'de zorunlu oldu (kolonlar `not null`).
+    // Alıcı ve telefon zorunlu (kolonlar `not null`).
     await new AddressService(db).insert({
       customerId,
       recipient: 'Ayşe Yılmaz',
@@ -260,20 +245,8 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   /*
-    Her test kendi zeminini kurar: kuyruk ve transfer listesi DEPONUN TAMAMINI okur, önceki testin
-    bıraktığı sipariş sessizce sonraki testin sayımına girerdi.
-
-    SIRA TERSİNE DÖNDÜ (27.08 · 06.14) VE BU ÖLÇÜLMÜŞ BİR ARIZANIN DÜZELTMESİ. Burada partiyi
-    tutan bağlar elle ve TEK TEK siliniyordu; `stock_adjustment` tablosu kalkıp yerine defter
-    (`stock_movement`) gelince o satır olmayan bir tabloyu silmeye başladı ve **dosyanın 49
-    testini birden düşürdü** — zararı düşen testle de bitmiyordu: teardown patladığı için depo,
-    parti ve sipariş satırları veritabanında kalıyor ve SONRAKİ dosyaların sayımlarını bozuyordu
-    (ölçüm: `supplier-debt` 4000 beklerken 8000 gördü — aynı kabul iki kez sayıldı).
-
-    Artık silme sırası tek yerde: `purgeVariantStock` partiyi tutan DÖRT bağı doğru sırayla
-    topluyor (defter · kalem eşlemesi · sevk satırı iki uçtan · rezervasyon) ve o geçince sipariş
-    de serbest kalıyor. Bu yüzden ÖNCE parti, SONRA sipariş — tersi çalışmaz (CLAUDE §4b: silme
-    sırası `cleanup.ts`te durur, dosya kendi sırasını uydurmaz).
+    Her test kendi zeminini kurar: kuyruk ve transfer listesi deponun tamamını okur, önceki testin siparişi sonrakinin sayımına
+    girerdi. Önce parti, sonra sipariş: `purgeVariantStock` partiyi tutan bağları doğru sırayla toplar (CLAUDE §4b).
   */
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
@@ -396,7 +369,7 @@ describe('D1 · GET /api/v1/warehouse/preparation', () => {
     expect(order.lines[0]!.productName).toContain('Fıstıklı Baklava');
     // Motor önerisi geliyor: depocunun rafta arayacağı parti ve son tarihi.
     expect(order.lines[0]!.suggestion).toEqual([
-      // Alan ADIYLA geliyor (19.29); bu partinin rafı seçilmemiş, yani `null` — meşru hâl.
+      // Alan adıyla gelir; bu partinin rafı seçilmemiş, yani `null` — meşru hâl.
       { stockId, qty: 3, expiryDate: dayOffset(60), areaName: null },
     ]);
     expect(order.lines[0]!.shortfallQty).toBe(0);
@@ -434,13 +407,8 @@ describe('D1 · GET /api/v1/warehouse/preparation', () => {
 
 describe('D1 · POST /api/v1/warehouse/preparation/:orderId/confirm', () => {
   /*
-    KUTUSUZ ONAY KAPANDI (kullanıcı kararı 30.08) — bu ucun eski üç testi (mutlu yol · eksik
-    toplama · parti dağılımı) artık üretilemeyen bir hâli ölçüyordu: `confirmPreparation` `pickup`
-    dışında her siparişe `box_required` diyor, hazırlık da yalnız kutu döngüsünden geçiyor.
-
-    ÖLÇÜM KAYBOLMADI, YER DEĞİŞTİRDİ — üçünün konusu da `warehouse/boxes.test.ts`te duruyor:
-    içerik + parti izi + HAZIR geçişi, çok kutulu birleşimde parti izinin korunması, ve eksik
-    beyanının tavsiye üretmesi. Buraya kalan tek şey KAPININ kendisi.
+    Kutusuz onay kapalıdır: `confirmPreparation` `pickup` dışında her siparişe `box_required` der, hazırlık kutu döngüsünden
+    geçer. İçerik, parti izi ve eksik beyanı `warehouse/boxes.test.ts`te sınanır; burada kalan kapının kendisi.
   */
   it('rota siparişi de kutusuz onaylanmaz — `box_required`, ve HİÇBİR yazım yapılmaz', async () => {
     const order = await pendingOrder({ qty: 2 });
@@ -482,12 +450,8 @@ describe('D1 · POST /api/v1/warehouse/preparation/:orderId/confirm', () => {
 
 describe('D1 · POST /api/v1/warehouse/orders/:orderId/declare-short', () => {
   /*
-    SİPARİŞİ EKSİK KAPAT (kullanıcı bulgusu 31.08) — kutuya HİÇ dokunmayan sipariş kararı.
-
-    Beyan önce `sealBox`ın bir bayrağıydı ve depocunun gerçek anını karşılamıyordu: son kutu
-    kapandıktan sonra mühürlenecek kutu YOKTUR, o yol `empty` döner ve düğme sessizce ölüdür
-    (cihazda ölçüldü: iki kutu mühürlü, sipariş `preparing`de asılı). Burada ölçülen şey kapının
-    kendisi — kapsam kararı, `ready` geçişi ve olmayan sipariş.
+    Siparişi eksik kapat — kutuya dokunmayan sipariş kararı; son kutu kapandıktan sonra mühürlenecek kutu yoktur. Burada
+    ölçülen kapının kendisi: kapsam kararı, `ready` geçişi ve olmayan sipariş.
   */
   it('BAŞKA DEPONUN siparişi 200 + `out_of_scope` ile döner ve durum DEĞİŞMEZ', async () => {
     const order = await pendingOrder({ warehouse: otherWarehouseId });
@@ -517,12 +481,10 @@ describe('D2 · mal kabul', () => {
 
     expect(form.rows).toHaveLength(1);
     expect(form.rows[0]).toMatchObject({ variantId, expectedQty: 20, variantLabel: '1 kg' });
-    /* Liste 21.160'ta dörtten sekize çıktı; dördü de tanıma/karar alanı (`sku` + `supplierCode`
-       depocunun kâğıdıyla eşleştirme, `dateType` + `shelfLifeDays` satırın SKT alanı ve ömür
-       uyarısı). "Fiyat yok" iddiası yine ALAN ADIYLA kuruluyor. Düzeltildi 30.08. */
+    /* Satır alanlarının hepsi tanıma/karar alanıdır (`sku` + `supplierCode` kâğıtla eşleştirme, `dateType` + `shelfLifeDays`
+       SKT ve ömür uyarısı); "fiyat yok" iddiası alan adıyla kurulur. */
     expect(Object.keys(form.rows[0]!).sort()).toEqual([
-      // `caseSizes` (30.08) koli çarpanı, `lotCandidates` (21.175) depodaki parti kodları —
-      // ikisi de tanıma/karar alanı, para değil. Liste onlarla birlikte ona çıktı.
+      // `caseSizes` koli çarpanı, `lotCandidates` depodaki parti kodları — tanıma alanı, para değil.
       'caseSizes',
       'dateType',
       'expectedQty',
@@ -573,16 +535,11 @@ describe('D2 · mal kabul', () => {
       referenceNo: `TS-API-BEKLEYEN-${stamp}`,
       supplierName: `Gaziantep Gıda ${stamp}`,
       lineCount: 1,
-      // Sipariş DURUMU 21.160'ta eklendi: ekran "gönderildi" ile "kısmen geldi"yi ayrı rozetle
-      // gösteriyor. Alan o turda eklenip test güncellenmedi — düzeltildi 30.08.
+      // Siparişin durumu: ekran "gönderildi" ile "kısmen geldi"yi ayrı rozetle gösterir.
       status: 'sent',
     });
-    // Depo ekranına giden listede TUTAR yok — kapı fiyatı okur ama taşımaz. İddiayı üstteki
-    // `toEqual` KURUYOR: tam nesne eşitliği fazladan bir anahtarı da reddeder, yani fiyat alanı
-    // eklenirse bu test kırılır. Burada eskiden ikinci bir tel vardı (`not.toContain('600')`) ve
-    // ALT DİZE arıyordu; 19.08'de yalancı kırmızı üretti — rastgele `purchaseOrderId`in hex'i
-    // (`…db4ba60054ff`) tesadüfen "600" içeriyordu. Yasak olan sayı değil FİYAT ALANI, onu da
-    // şekil eşitliği söyler; damgalı `referenceNo` için her koşuda zar atan tel söküldü.
+    // Depo listesinde tutar yok: üstteki tam nesne eşitliği fazladan anahtarı da reddeder, fiyat alanı eklenirse test kırılır.
+    // Alt dize araması kullanılmaz, rastgele kimliğin içinde tesadüfen sayı geçebilir.
   });
 
   it('bekleyen listesi TASLAĞI göstermez — tedarikçi ondan habersiz', async () => {
@@ -694,10 +651,8 @@ describe('D4 · POST /api/v1/warehouse/adjustments', () => {
     expect((await stocks.getById(stockId))?.physicalQty).toBe(17);
   });
 
-  /* YÖN AYRI ALANDA (06.14): eskiden bu satır `qty: -2` gönderiyordu — adet işaretliydi. Yön açık
-     alana çıktı çünkü işaretin miktara gömülü olması rapor tarafında ölçülmüş bir arızaya yol
-     açıyordu (girişlerle çıkışlar aynı toplamda eriyordu). Adet artık DAİMA pozitif ve sözleşme
-     negatifi reddediyor (`z.number().int().positive()`). */
+  /* Yön ayrı alanda: adet daima pozitif ve sözleşme negatifi reddeder, işaretin miktara gömülmesi raporda girişlerle
+     çıkışları aynı toplamda eritiyordu. */
   it('`in` yönlü adet stoğa geri ekler (sayım fazlası)', async () => {
     const outcome = await dataOf<RecordAdjustmentResponse>(
       await post('/api/v1/warehouse/adjustments', {
@@ -755,12 +710,8 @@ describe('D4 · POST /api/v1/warehouse/adjustments', () => {
     expect(outcome.status).toBe('failed');
     expect((await stocks.getById(stockId))?.physicalQty).toBe(20);
 
-    // **ÖLÇÜLDÜ (08.08), DÜZELTİLDİ (21.11c).** RPC reddi `throw` ile geliyor ama fırlatılan şey bir
-    // `Error` DEĞİL, DÜZ BİR NESNE — `constructor.name === 'Object'`, alanları `{code, details,
-    // hint, message}`. Kapının eski süzgeci (`error instanceof Error ? …`) bu nesneyi yakalamıyordu
-    // ve sözleşmenin vaadi ("mesaj operatöre AYNEN gösterilir") tutmuyordu: operatör hangi partide
-    // kaç adet olduğunu göremiyor, sabit bir "Kayıt yazılamadı" okuyordu. Çıkarım artık tek
-    // yardımcıda (`application/warehouse/rpc-error.ts`) ve dört kapının dördü de onu çağırıyor.
+    // RPC reddi `Error` değil düz bir nesne olarak fırlar; çıkarım tek yardımcıda (`application/warehouse/rpc-error.ts`) ve
+    // mesaj operatöre aynen gösterilir.
     expect(outcome.status === 'failed' ? outcome.message : '').toMatch(/partide 20 adet var, 999 adet düşülemez/);
   });
 
@@ -773,10 +724,8 @@ describe('D4 · POST /api/v1/warehouse/adjustments', () => {
 });
 
 /*
-  "HANGİ DOLABIN ÖNÜNDESİN" (kullanıcı kararı 03.09): partinin alanı son görüldüğü yerdir,
-  taşıma kaydı YOK. Kapının sınırları `batch-area.test.ts`te; burada sınanan şey uçların
-  zarfı — alan listesi depo süzgeçli gelir, `seen` çağrısı partiyi yazar ve raf listesi yeni
-  adresi (kimlik + ad) taşır.
+  "Hangi dolabın önündesin": partinin alanı son görüldüğü yerdir, taşıma kaydı yok. Kapının sınırları `batch-area.test.ts`te;
+  burada uçların zarfı sınanır: alan listesi depo süzgeçli, `seen` partiyi yazar, raf listesi yeni adresi taşır.
 */
 describe('D4 · alanlar ve "parti burada görüldü"', () => {
   let freezerId = '';
@@ -816,8 +765,7 @@ describe('D4 · alanlar ve "parti burada görüldü"', () => {
     ).toEqual({ status: 'forbidden', reason: 'out_of_scope' });
   });
 
-  /* SAYFALAMA (03.09): liste imleçli gelir, `?area=` süzer. Eskiden deponun tamamı tek turda
-     okunup ilk 60 satır veriliyordu (`truncated`); sözleşme künyesi gerekçeyi yazıyor. */
+  /* Raf listesi imleçli gelir, `?area=` süzer; gerekçe sözleşme künyesinde. */
   it('raf listesi SAYFA döner: imleç sonrakini açar, `?area=` süzer', async () => {
     const first = await dataOf<WarehouseBatchesResponse>(await asStaff('/api/v1/warehouse/batches?limit=1'));
     expect(first.batches.length).toBeGreaterThan(0);
@@ -866,7 +814,7 @@ describe('D5 · transfer (gelen)', () => {
     const body = await dataOf<WarehouseTransfersResponse>(res);
     const mine = body.transfers.find((row) => row.transferId === transferId)!;
     expect(mine.fromWarehouseId).toBe(otherWarehouseId);
-    // Kaynak deponun ADI da gelir (04.09): künye "Kehl → Strasbourg" diyebilsin.
+    // Kaynak deponun adı da gelir: künye "Kehl → Strasbourg" diyebilsin.
     expect(mine.fromWarehouseName).toEqual(expect.any(String));
     expect(mine.referenceNo).toMatch(/^TRF-/);
     expect(mine.note).toBe('rampa testi');
@@ -874,12 +822,12 @@ describe('D5 · transfer (gelen)', () => {
       {
         lineId,
         sourceStockId: foreignStockId,
-        // Ad ve boy AYRI (21.254): ekran "Ürün · boy" kalıbını kendisi kurar, mal kabulle aynı.
+        // Ad ve boy ayrı: ekran "Ürün · boy" kalıbını kendisi kurar, mal kabulle aynı.
         productName: `Fıstıklı Baklava ${stamp}`,
         variantLabel: '1 kg',
-        // Ürün kapağı satırda (04.09): fikstür ürününün kapağı yok, `null` gelir (boş dize değil).
+        // Ürün kapağı satırda: fikstür ürününün kapağı yok, `null` gelir (boş dize değil).
         imageUrl: null,
-        // Lot ve SKT satırda (04.09): rampadaki koli satırla bunlarla eşlenir.
+        // Lot ve SKT satırda: rampadaki koli satırla bunlarla eşlenir.
         lotNumber: null,
         expiryDate: dayOffset(70),
         dispatchedQty: 4,
@@ -1002,7 +950,7 @@ describe('D6 · GET /api/v1/warehouse/returns', () => {
     const mine = body.drops.find((drop) => drop.orderId === order.orderId);
     expect(mine?.lines).toEqual([
       // Tavan KARŞILANMIŞ adet: `adjust_fulfillment` hedefi bunun üstüne çıkaramaz.
-      { orderItemId: order.itemId, name: expect.stringContaining('Fıstıklı Baklava'), fulfilledQty: 2, disposition: null, note: null },
+      { orderItemId: order.itemId, name: expect.stringContaining('Fıstıklı Baklava'), fulfilledQty: 2, pendingQty: 2, returns: [] },
     ]);
     expect(mine?.returnedAt).not.toBeNull();
   });
@@ -1048,12 +996,8 @@ describe('D6 · GET /api/v1/warehouse/returns', () => {
 });
 
 /**
- * **RAMPA LİSTESİ** (D6 · 04.09) — "kimden teslim alıyorum".
- *
- * Bu dosyanın siparişleri KURYESİZ kuruluyor (`pendingOrder` `courierId` yazmıyor), yani buradaki
- * iddialar listenin kuryesiz kümesini sınıyor: kargo/tezgâh yolundan dönen malın akıbeti de
- * işaretlenir ama aracı ve kutusu yoktur. Kuryeli dalın kendi testi uygulama katmanında
- * (`warehouse/returns.test.ts` · `courier/return.test.ts`).
+ * Rampa listesi — "kimden teslim alıyorum"; bu dosyanın siparişleri kuryesiz kurulur, yani kuryesiz küme sınanır. Kuryeli
+ * dalın testi uygulama katmanında (`warehouse/returns.test.ts` · `courier/return.test.ts`).
  */
 describe('D6 · GET /api/v1/warehouse/courier-return', () => {
   it('kuryesiz dönüşler kendi kümesinde ve bekleyen kalem sayısıyla gelir', async () => {
@@ -1189,13 +1133,8 @@ describe('D6 · POST /api/v1/warehouse/returns/:orderId', () => {
 });
 
 /*
-  D1 · SEVK UÇLARI (07.12) — bu describe **yalnız UCUN kendi kararlarını** ölçüyor.
-
-  Kapının iş kuralları (ön koşullar, koli kurulumu, çok koli süzgeci, duyurunun tekrarsızlığı)
-  `packages/application/src/shipping/announce.test.ts`te çivili ve burada tekrar edilmiyor —
-  kutu döngüsü uçlarının (23.6/23.7) izlediği çizginin aynısı.
-
-  Ucun KENDİ kararı iki tane: sağlayıcı yapılandırılmamışsa ağa hiç çıkmamak, ve depo kapsamı.
+  D1 · Sevk uçları — yalnız ucun kendi işi: sağlayıcı yapılandırılmamışsa ağa hiç çıkmamak ve depo kapsamı. Kapının iş
+  kuralları `packages/application/src/shipping/announce.test.ts`te sınanır.
 */
 describe('D1 · sevk uçları (teklif + duyuru)', () => {
   it('sağlayıcı yapılandırılmamışken 503 — boş anahtarla ağa çıkılmaz', async () => {
@@ -1233,9 +1172,7 @@ describe('D1 · sevk uçları (teklif + duyuru)', () => {
     // 503 dönmüyor: bu uç sağlayıcıya HİÇ çıkmıyor, kendi tablomuzu sayıyor. Teklif/duyuru
     // uçlarıyla aynı kefeye konsaydı depocu, kargo anahtarı yokken rampasını da göremezdi.
     expect(res.status).toBe(200);
-    /* Cevap 05.09'da genişledi: sayının yanında SATIRLARI da taşıyor (devir ekranının "rampada
-       bekleyen" bölümü). İkisi AYNI süzgeçten geliyor, o yüzden boş rampada ikisi de boş — biri
-       dolu öteki boş çıksaydı ekran kendi kendini yalanlardı. */
+    /* Cevap sayının yanında satırları da taşır; ikisi aynı süzgeçten gelir, boş rampada ikisi de boş olmalı. */
     expect(await dataOf<{ boxes: number; waiting: unknown[] }>(res)).toEqual({ boxes: 0, waiting: [] });
   });
 

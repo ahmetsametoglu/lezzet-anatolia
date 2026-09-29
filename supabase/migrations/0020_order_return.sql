@@ -1,7 +1,25 @@
 -- Kısmi karşılama, iade ve iptalin mal tarafı; para motorda türetilir, hareketi uygulama katmanı yazar (DOMAIN §8, ORDER_LIFECYCLE).
 -- Mal teslimde fiili stoktan düştüyse iade onu geri koyar ya da maliyeti siparişte bırakır, düşmediyse yalnız ayrılmış ve parti bağı azalır; `order_item_batch` bizden çıkıp geri gelmeyen maldır.
 
--- p_lines: [{"order_item_id": uuid, "fulfilled_qty": int, "return_disposition": text|null, "note": text|null}]; `fulfilled_qty` hedef değerdir ve yalnız azalır.
+-- Bir kalemin adetleri farklı akıbet alabilir: her adet düşüşü kendi satırıdır ve kim, ne zaman, hangi sebeple sorusu
+-- satırda cevaplanır. `stage` olay anındaki sipariş durumudur; ekran kapıda geri çevrileni teslim sonrası iadeden bununla ayırır.
+create table public.order_item_return (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.order (id) on delete cascade,
+  order_item_id uuid not null references public.order_item (id) on delete cascade,
+  qty int not null check (qty > 0),
+  disposition return_disposition,                    -- null = akıbet sorulmadan düşen adet (hazırlıkta eksik, kapıda red)
+  note text,
+  stage order_status not null,
+  actor_id uuid references public.user_profiles (id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index order_item_return_order_idx on public.order_item_return (order_id, created_at);
+create index order_item_return_item_idx on public.order_item_return (order_item_id);
+alter table public.order_item_return enable row level security;
+
+-- p_lines: [{"order_item_id": uuid, "fulfilled_qty": int, "return_disposition": text|null, "goodwill_qty": int|null,
+-- "note": text|null}]; `fulfilled_qty` hedef değerdir ve yalnız azalır, aynı kalem sırayla birden çok kez gelebilir.
 -- Artırmak malın nereden çıktığını cevapsız bırakırdı; çıkan mal hazırlıkta yazılır (0018 `record_preparation`).
 create or replace function public.adjust_fulfillment(
   p_order_id uuid,
@@ -22,9 +40,10 @@ declare
   v_target int;
   v_delta int;                                       -- geri gelen / hiç gitmeyen adet
   v_disposition return_disposition;
-  /** Kalemde zaten yazılı akıbet — "bir kez yazılır" kapısının ölçütü. */
-  v_existing return_disposition;
+  v_goodwill_qty int;
   v_note text;
+  v_planned jsonb := '{}'::jsonb;                    -- doğrulama turunda kalemin sıradaki karşılanan adedi
+  v_returns jsonb := '[]'::jsonb;
   v_batch record;
   v_take int;
   v_left int;
@@ -56,65 +75,75 @@ begin
        where l.order_id = p_order_id and l.to_status in ('delivered', 'completed')
     );
 
+  -- Önce bütün istek doğrulanır, çünkü ret ancak hiçbir satır yazılmadan dönerse bütündür. Akıbetli bir satırın düşüreceği
+  -- adet kalmadıysa ekran bayattır ya da istek tekrarıdır; "oldu" demek yerine sebep adıyla döner.
   for v_line in select * from jsonb_array_elements(p_lines)
   loop
     v_item_id := (v_line ->> 'order_item_id')::uuid;
     v_target := (v_line ->> 'fulfilled_qty')::int;
     v_disposition := nullif(v_line ->> 'return_disposition', '')::return_disposition;
-    v_note := nullif(v_line ->> 'note', '');
+    v_goodwill_qty := (v_line ->> 'goodwill_qty')::int;
 
-    select qty, fulfilled_qty, return_disposition into v_ordered, v_current, v_existing
+    select qty, fulfilled_qty into v_ordered, v_current
       from public.order_item
      where id = v_item_id and order_id = p_order_id
      for update;
-
     if not found then
       raise exception 'adjust_fulfillment: kalem bu siparişe ait değil (%)', v_item_id;
     end if;
+    v_current := coalesce((v_planned ->> v_item_id::text)::int, v_current);
 
-    -- Farklı akıbet bayat bir ekrandan gelir ve istek tamamen reddedilir, çünkü yarısı yazılmış düzeltme en kötü sonuçtur.
-    -- Aynı akıbetin tekrarı ağ tekrarıdır ve atlanır.
-    if v_existing is not null and v_disposition is not null and v_disposition <> v_existing then
-      return jsonb_build_object(
-        'ok', false, 'reason', 'already_marked', 'current_status', v_status,
-        'order_item_id', v_item_id, 'current_disposition', v_existing
-      );
-    end if;
-    if v_existing is not null and v_disposition = v_existing then
-      v_lines := v_lines + 1;
-      continue;
-    end if;
-
-    -- Jest iadesi: mal müşteride kaldı, miktar düşürülmez (DOMAIN §8). Para tarafı elle girilen iadedir.
     if v_disposition = 'goodwill' then
-      update public.order_item
-         set return_disposition = 'goodwill',
-             return_note = coalesce(v_note, return_note)
-       where id = v_item_id;
-      v_lines := v_lines + 1;
+      if coalesce(v_goodwill_qty, v_current) not between 1 and v_current then
+        raise exception 'adjust_fulfillment: kalem % için geçersiz jest adedi (% / karşılanan %)', v_item_id, v_goodwill_qty, v_current;
+      end if;
       continue;
     end if;
 
     if v_target is null or v_target < 0 or v_target > v_ordered then
       raise exception 'adjust_fulfillment: kalem % için geçersiz miktar (% / sipariş %)', v_item_id, v_target, v_ordered;
     end if;
-
     if v_target > v_current then
       raise exception 'adjust_fulfillment: karşılanan miktar artırılamaz (kalem %, % → %)', v_item_id, v_current, v_target;
     end if;
+    if v_target = v_current and v_disposition is not null then
+      return jsonb_build_object(
+        'ok', false, 'reason', 'already_marked', 'current_status', v_status, 'order_item_id', v_item_id
+      );
+    end if;
+    v_planned := v_planned || jsonb_build_object(v_item_id::text, v_target);
+  end loop;
+
+  for v_line in select * from jsonb_array_elements(p_lines)
+  loop
+    v_item_id := (v_line ->> 'order_item_id')::uuid;
+    v_target := (v_line ->> 'fulfilled_qty')::int;
+    v_disposition := nullif(v_line ->> 'return_disposition', '')::return_disposition;
+    v_goodwill_qty := (v_line ->> 'goodwill_qty')::int;
+    v_note := nullif(v_line ->> 'note', '');
+
+    select fulfilled_qty into v_current from public.order_item where id = v_item_id;
+
+    -- Jest iadesi: mal müşteride kaldı, miktar düşürülmez (DOMAIN §8); satır kaç adedin jestle kapandığını taşır.
+    if v_disposition = 'goodwill' then
+      v_goodwill_qty := coalesce(v_goodwill_qty, v_current);
+      insert into public.order_item_return (order_id, order_item_id, qty, disposition, note, stage, actor_id)
+      values (p_order_id, v_item_id, v_goodwill_qty, 'goodwill', v_note, v_status, p_actor_id);
+      v_returns := v_returns || jsonb_build_object('order_item_id', v_item_id, 'qty', v_goodwill_qty, 'disposition', 'goodwill');
+      v_lines := v_lines + 1;
+      continue;
+    end if;
 
     v_delta := v_current - v_target;
-    update public.order_item
-       set fulfilled_qty = v_target,
-           return_disposition = coalesce(v_disposition, return_disposition),
-           -- Beyan kaleme yazılır: "stoğa dön"ün zorunlu soğuk zincir cümlesi malın kendisi hakkındadır.
-           return_note = coalesce(v_note, return_note)
-     where id = v_item_id;
-    v_lines := v_lines + 1;
-
     if v_delta = 0 then
       continue;
     end if;
+
+    update public.order_item set fulfilled_qty = v_target where id = v_item_id;
+    insert into public.order_item_return (order_id, order_item_id, qty, disposition, note, stage, actor_id)
+    values (p_order_id, v_item_id, v_delta, v_disposition, v_note, v_status, p_actor_id);
+    v_returns := v_returns || jsonb_build_object('order_item_id', v_item_id, 'qty', v_delta, 'disposition', v_disposition);
+    v_lines := v_lines + 1;
 
     -- Kalem–parti kaydından düşülür: `discard` + mal çıkmış hâli HARİÇ (maliyet siparişte kalır).
     if not (v_consumed and v_disposition = 'discard') then
@@ -175,7 +204,7 @@ begin
   end loop;
 
   return jsonb_build_object(
-    'ok', true, 'current_status', v_status, 'lines', v_lines,
+    'ok', true, 'current_status', v_status, 'lines', v_lines, 'returns', v_returns,
     'restocked_qty', v_restocked, 'discarded_qty', v_discarded, 'released_qty', v_released
   );
 end;

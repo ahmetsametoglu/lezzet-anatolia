@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, MoneyMovementService, OrderItemBatchService, OrderService, ProductService,
+  AccountService, CategoryService, MoneyMovementService, OrderItemBatchService, OrderItemReturnService, OrderService, ProductService,
   ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, settingsSnapshot, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
@@ -104,10 +104,8 @@ async function atTheDoor(opts: { channel?: 'b2b' | 'b2c'; qty?: number; unitPric
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   await advanceOrder(db, order.id, ['confirmed', 'preparing']);
   /*
-    HAZIRLIK KUTUYLA YAPILIR (kullanıcı kararı 30.08) — kutusuz sipariş artık ne `ready` olur ne
-    kapıdan çıkar. Fikstür de gerçek yolu izliyor: kutu açılır, mühürlenir (mühür siparişi HAZIR
-    yapar), sonra yola çıkarılır. Kutu KODU geri dönüyor çünkü teslim çağrısı onu istiyor —
-    kapıda okutulmayan kutu teslimi durdurur (`boxes_missing`).
+    Hazırlık kutuyla yapılır: fikstür gerçek yolu izler, kutu açılır ve mühürlenir (mühür siparişi hazır yapar), sonra yola
+    çıkar. Kutu kodu döner, çünkü kapıda okutulmayan kutu teslimi durdurur (`boxes_missing`).
   */
   const box = await openBox(db, { orderId: order.id, warehouseId });
   if (box.status !== 'ok') throw new Error(`fikstür: kutu açılamadı (${box.status})`);
@@ -123,9 +121,7 @@ async function atTheDoor(opts: { channel?: 'b2b' | 'b2c'; qty?: number; unitPric
 
 describe('teslim onayı (11.2)', () => {
   /*
-    KANIT KAPISI AYARA BAĞLI VE FABRİKA DEĞERİ ARTIK KAPALI (kullanıcı kararı 30.08): imza adımı
-    kuryenin ekranından söküldü, kanıt kutu okutmasının kendisi oldu. Kapının KENDİSİ duruyor ve
-    kapsam yine açılabilir — test onu kendi içinde açıyor, çünkü ölçülen şey ayarın değeri değil
+    Kanıt kapısı ayara bağlı ve fabrika değeri kapalı; test kapsamı kendi içinde açar, çünkü ölçülen şey ayarın değeri değil
     kapının çalışıp çalışmadığı.
   */
   it('kanıt kapsamı AÇIKKEN B2B teslimatı imzasız KAPANMAZ ve hiçbir yazım yapılmaz', async () => {
@@ -218,28 +214,13 @@ describe('eksik/reddedilen kalem (11.2)', () => {
   });
 
   /*
-    ── TESLİM YAZILAMIYORSA DÜZELTME DE YAZILMAZ (21.271 · denetim bulgusu 8) ──────────────────
-
-    ÖLÇÜLEN ARIZA: düzeltme ve teslim ARDIŞIK iki çağrıydı. İkincisi `stale` dönerse (araya gün
-    kapanışı ya da başka bir cihaz girmişse) birincisi geri alınmıyordu — karşılanan adet düşmüş,
-    rezervasyon serbest kalmış, müşteriye "eksik karşılandı" haberi gitmiş, ama teslim yazılmamış
-    oluyordu. Ekran kuryeye "olmadı" diyordu; oysa yarısı olmuştu ve haber geri alınamıyordu.
-
-    YARIŞ KURULMUYOR, SONUCU KURULUYOR. Gerçek arıza iki `await` arasına başka bir aktörün
-    girmesiyle doğuyor ve öyle bir testi tekrarlanabilir yazmak zamanlamaya bahis oynamaktır. Aynı
-    SONUCU belirlenimci biçimde üreten hâl şu: teslimi yazılamayacak bir sipariş. Eski kod bu
-    siparişte düzeltmeyi YAZAR sonra teslimde düşerdi; yenisi hiçbir şey yazmadan `stale` döner.
-
-    Fikstür siparişi `delivered`a çekiyor — kuryenin durağı başka bir cihazdan kapanmış hâli. Eski
-    kodda `adjust_fulfillment` bu siparişte teslim SONRASI dalını koşar (mal depoya geri girer),
-    yani yazım gerçekten olurdu; ölçüt de tam orası.
+    Teslim yazılamıyorsa düzeltme de yazılmaz: ikisi ardışık iki çağrı olsaydı teslim `stale` döndüğünde düzeltme ve müşteri
+    haberi yarım kalırdı. Yarış kurulmaz, sonucu kurulur: fikstür siparişi önceden teslim eder ve kapı hiçbir şey yazmamalı.
   */
   it('TESLİM YAZILAMIYORSA DÜZELTME DE YAZILMAZ — yarım teslim kalmaz', async () => {
     const { orderId, itemId, boxCode } = await atTheDoor({ qty: 4 });
-    /* Durak başka bir cihazdan kapanmış: sipariş artık yolda değil. Geçiş GERÇEK kapıdan yapılıyor
-       (`deliverOrder`) — fikstür düz yazımı bilerek reddediyor ve haklı: `delivered` yalnız stok
-       düşümüyle birlikte doğar, elle yazılan bir durum o düşümü atlar ve testin öncülü uydurma
-       olurdu. Senaryonun kendisi de bu zaten: ikinci cihaz siparişi normal yoldan teslim etti. */
+    /* Durak başka bir cihazdan kapanmış: geçiş gerçek kapıdan (`deliverOrder`) yapılır, çünkü `delivered` yalnız stok
+       düşümüyle doğar ve elle yazılan durum testin öncülünü uydurma yapardı. */
     const oncedenTeslim = await deliverOrder(db, orderId, { actorId: courierId });
     expect(oncedenTeslim.ok).toBe(true);
     const oncekiStok = (await stocks.getAvailable(warehouseId, variantId)).physicalQty;
@@ -261,7 +242,8 @@ describe('eksik/reddedilen kalem (11.2)', () => {
     expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(oncekiStok);
     // 2) KALEM: karşılanan adet düşmedi ve akıbet yazılmadı.
     const items = (await orders.getWithItems(orderId))?.items ?? [];
-    expect(items.every((line) => line.fulfilledQty === 4 && line.returnDisposition === null)).toBe(true);
+    expect(items.every((line) => line.fulfilledQty === 4)).toBe(true);
+    expect(await new OrderItemReturnService(db).listByOrders([orderId])).toEqual([]);
     // 3) HABER: geri alınamayan tek iz — hiç gitmemeli.
     expect(haberler).toEqual([]);
   });

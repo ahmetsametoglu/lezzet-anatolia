@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { CourierReturnBoxSchema, CourierReturnFreeGoodSchema, CourierReturnStayBoxSchema } from './courier-return-api.schema';
 import { DoorCollectionInputSchema } from './courier-api.schema';
-import { FulfillmentAdjustmentSchema, PreparationPickSchema, ServicePointSnapshotSchema } from '../entities/order.schema';
+import {
+  FulfillmentAdjustmentSchema,
+  OrderItemReturnSchema,
+  PreparationPickSchema,
+  ServicePointSnapshotSchema,
+} from '../entities/order.schema';
 import { ProductDateTypeEnum } from '../entities/product.schema';
 import { AdjustBatchResultSchema, StockDirectionEnum, StockWriteOffReasonEnum } from '../entities/stock-movement.schema';
 import { StorageAreaSchema } from '../entities/storage-point.schema';
@@ -1053,17 +1058,17 @@ export type CancelTransferResponse = z.infer<typeof CancelTransferResponseSchema
 // parametresini taşıyor. Burada yalnız o kapının uç ZARFI tanımlanıyor — ikinci bir davranış değil.
 
 /**
- * Dönen kolinin tek satırı. Ölçü `fulfilledQty`dir, `qty` değil: `adjust_fulfillment` hedefi karşılanan adedin üstüne
- * çıkaramaz; `disposition` dolu = satırın akıbeti zaten işaretli, ekran onu ikinci kez göndermez.
+ * Dönen kolinin tek satırı. `fulfilledQty` hedefin tavanıdır, çünkü `adjust_fulfillment` hedefi karşılanan adedin üstüne
+ * çıkaramaz; `pendingQty` akıbeti bekleyen adettir ve sıfırsa ekran satırı ikinci kez göndermez.
  */
 export const ReturnDropLineSchema = z.object({
   orderItemId: z.string().uuid(),
   /** "Ürün (boy)" — operasyon dilinde (Türkçe). */
   name: z.string(),
   fulfilledQty: z.number().int(),
-  disposition: ReturnDispositionEnum.nullable(),
-  /** Akıbetle birlikte yazılmış beyan (soğuk zincir notu) — yalnız işaretli satırda dolu; depocu ne beyan ettiğini görür. */
-  note: z.string().nullable(),
+  pendingQty: z.number().int().nonnegative(),
+  /** Yazılmış akıbetler ve beyanları; bir satırın adetleri farklı akıbet alabilir, depocu ne işaretlediğini satırda görür. */
+  returns: z.array(OrderItemReturnSchema.pick({ qty: true, note: true }).extend({ disposition: ReturnDispositionEnum })),
 });
 export type ReturnDropLineContract = z.infer<typeof ReturnDropLineSchema>;
 
@@ -1173,13 +1178,12 @@ export const WarehouseReturnResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
   /**
-   * Kalemin akıbeti zaten yazılmış ve istek başkasını söylüyor — ekran bayat, hiçbir satır yazılmadı. `stale`den ayrı:
-   * orada sipariş değişmiştir, burada kalem karara bağlanmıştır.
+   * İstenen adetler zaten yazılmış — ekran bayat ya da istek tekrar; hiçbir satır yazılmadı. `stale`den ayrı: orada sipariş
+   * değişmiştir, burada kalemin adetleri.
    */
   z.object({
     status: z.literal('already_marked'),
     orderItemId: z.string().uuid().nullable(),
-    currentDisposition: ReturnDispositionEnum.nullable(),
   }),
   z.object({ status: z.literal('not_found') }),
 ]);

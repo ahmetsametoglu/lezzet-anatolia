@@ -6,14 +6,23 @@ import type { TrustView } from '@/lib/customer/trust';
 import type {
   DeliveryType,
   DoorCheck,
+  OrderItemReturn,
   OrderSource,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
-  ReturnDisposition,
   ShipmentStatus,
   VatTreatment,
 } from '@lezzet/types';
+
+/**
+ * Kalemin bir iade olayı: kaç adet, hangi akıbet, kim, ne zaman ve hangi sebeple. `disposition` `null` ise adet akıbet
+ * sorulmadan düştü — kapıda geri çevrildi.
+ */
+export type OrderLineReturnView = Pick<OrderItemReturn, 'id' | 'qty' | 'disposition' | 'note' | 'stage'> & {
+  actorName: string | null;
+  at: string;
+};
 
 /** Kalem satırı — paket grubunun içindeyse `bundleId` dolu gelir. */
 export interface OrderLineView {
@@ -46,8 +55,8 @@ export interface OrderLineView {
   payableCents: number;
   /** Paketten geldiyse paketin kimliği; tek tek alınmış kalemde `null` (DOMAIN §13). */
   bundleId: string | null;
-  /** İade edildiyse malın akıbeti — stok hareketini besleyen karar. */
-  returnDisposition: ReturnDisposition | null;
+  /** Kalemden düşen adetlerin olayları, eskiden yeniye — şeritte olay başına bir satır. */
+  returns: OrderLineReturnView[];
   /**
    * Teslim sonrası iadede varsayılan imha mı: donuk ürünün soğuk zinciri belgelenemediği için imha edilir (DOMAIN §8). Karar
    * motorun (`defaultsToDiscardOnReturn`), ki eşiğin `frozen` olduğu tek yerde yazılı kalsın.

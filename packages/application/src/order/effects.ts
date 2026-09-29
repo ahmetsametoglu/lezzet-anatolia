@@ -1,5 +1,5 @@
 import { logger } from '@lezzet/observability';
-import type { OrderStatus } from '@lezzet/types';
+import type { OrderStatus, WrittenReturn } from '@lezzet/types';
 
 /**
  * Sipariş orkestrasyonlarının yüzeye bağlı yan etkileri: müşteri haberi ve sağlayıcı iadesi. Port kayıt yeri değil karar yeridir;
@@ -31,11 +31,17 @@ export interface ProviderRefundInput {
 export type ProviderRefunder = (input: ProviderRefundInput) => Promise<ProviderRefundOutcome>;
 
 /** Çağıranın sağladığı etkiler; hepsi opsiyonel ve hata fırlatmamalıdır, yine de `runEffect` yakalar. */
+/** İstisna haberinin ayrıntısı: kapının fiilen yazdığı iade tutarı ve iadede bu düzeltmenin yazdığı olaylar. */
+export interface OrderExceptionDetail {
+  refundedAmountCents?: number | null;
+  returns?: readonly WrittenReturn[];
+}
+
 export interface OrderEffects {
   /** Durum haberi (14.5) — web karşılığı `notifyOrderStatus`. */
   notifyStatus?: (orderId: string, status: OrderStatus) => Promise<unknown>;
   /** İstisna haberi (14.5) — web karşılığı `notifyOrderException`. */
-  notifyException?: (orderId: string, event: OrderExceptionEvent, opts: { refundedAmountCents?: number | null }) => Promise<unknown>;
+  notifyException?: (orderId: string, event: OrderExceptionEvent, opts: OrderExceptionDetail) => Promise<unknown>;
   /** Sağlayıcıya iade; web karşılığı `stripeRefunder()`. */
   refunder?: ProviderRefunder;
 }
@@ -81,7 +87,7 @@ export function notifyExceptionEffect(
   effects: OrderEffects | undefined,
   orderId: string,
   event: OrderExceptionEvent,
-  opts: { refundedAmountCents?: number | null } = {},
+  opts: OrderExceptionDetail = {},
 ): Promise<void> {
   return runEffect('notifyException', orderId, effects?.notifyException && (() => effects.notifyException!(orderId, event, opts)));
 }

@@ -167,7 +167,7 @@ function ReturnCard({ drop }: { drop: ReturnDropView }) {
         {drop.lines.map((line) => (
           <span
             key={line.orderItemId}
-            className={`font-ops-body text-ops-xs ${line.disposition ? 'text-ops-muted line-through' : 'text-ops-body'}`}
+            className={`font-ops-body text-ops-xs ${line.pendingQty === 0 ? 'text-ops-muted line-through' : 'text-ops-body'}`}
           >
             {line.name} · <span className="font-ops-mono">{line.fulfilledQty} ad.</span>
           </span>

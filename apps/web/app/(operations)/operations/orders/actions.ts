@@ -110,10 +110,10 @@ export async function adjustFulfillmentAction(
         `Sipariş bu sırada "${ORDER_STATUS_LABELS[result.currentStatus]}" durumuna geçmiş — ekranı tazeleyin.`,
       );
     }
-    /* Kalemin akıbeti zaten yazılmış ve istek başkasını söylüyor; hiçbir satır yazılmadı. Operatörün yapacağı şey ekranı
-       tazeleyip yazılı hâli görmek. */
+    /* İstenen adetler zaten yazılmış (bayat ekran ya da tekrar); hiçbir satır yazılmadı. Operatörün yapacağı şey sayfayı
+       tazeleyip kalan adetleri görmek. */
     if (result.status === 'already_marked') {
-      throw new Error('Bu kalemin akıbeti zaten yazılmış — ekranı tazeleyip yazılı hâlini görün.');
+      throw new Error('Bu adetler bu arada başka bir kayıtla yazılmış — hiçbir şey değişmedi; sayfayı tazeleyip kalan adetlerle yeniden deneyin.');
     }
 
     revalidatePath(`${ORDERS_PATH}/${orderId}`);

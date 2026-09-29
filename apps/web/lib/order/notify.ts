@@ -19,7 +19,7 @@ export function notifyOrderStatus(orderId: string, status: OrderStatus): Promise
 export function notifyOrderException(
   orderId: string,
   event: OrderExceptionEvent,
-  opts: { refundedAmountCents?: number | null } = {},
+  opts: Parameters<typeof notifyOrderExceptionFor>[3] = {},
 ): Promise<NotifyResult[]> {
   return notifyOrderExceptionFor(serviceDb(), orderId, event, opts);
 }

@@ -1,6 +1,6 @@
-import { OrderItemService, OrderService, OrderStatusLogService, UserProfileService } from '@lezzet/database';
+import { OrderItemReturnService, OrderItemService, OrderService, OrderStatusLogService, UserProfileService } from '@lezzet/database';
 import type { WarehouseScope } from '@lezzet/domain-core';
-import type { CourierReturnDraft, OrderItem, ReturnDisposition } from '@lezzet/types';
+import type { CourierReturnDraft, OrderItem, OrderItemReturn, ReturnDropLineContract } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { readCourierReturn } from '../courier/return';
 import { displayName, variantNames } from './names';
@@ -11,21 +11,8 @@ import { displayName, variantNames } from './names';
  * Karar telefonda verilir, masaüstü yalnız görünürlük sağlar; görünümde tutar yok, iadeyi yönetim akışı okur.
  */
 
-/** Dönen kolinin tek satırı — kimliğiyle, çünkü akıbet satır satır işaretlenir. */
-export interface ReturnDropLine {
-  orderItemId: string;
-  /** "Ürün (boy)" — operasyon dili Türkçe (CLAUDE.md §2). */
-  name: string;
-  /**
-   * Hâlihazırda karşılanmış adet — ekranın tavanı budur, sipariş edilen adet değil. `adjust_fulfillment` hedefi karşılanan
-   * adedin üstüne çıkaramaz; sipariş adedi göstermek depocuya reddedilecek bir sayı girdirirdi.
-   */
-  fulfilledQty: number;
-  /** Doluysa bu satırın akıbeti ZATEN işaretlenmiş — ekran onu ikinci kez göndermez. */
-  disposition: ReturnDisposition | null;
-  /** Akıbetle birlikte yazılmış beyan — "stoğa dön"ün zorunlu soğuk zincir cümlesi; depocu ne beyan ettiğini satırda görür. */
-  note: string | null;
-}
+/** Dönen kolinin tek satırı — şekli uç sözleşmesinden; akıbet satır satır, bir satırın adetleri farklı akıbetlerle işaretlenir. */
+export type ReturnDropLine = ReturnDropLineContract;
 
 /** Depoya geri gelen bir sipariş — D6'nın "dökümü". Tutar, adres, iletişim YOK. */
 export interface ReturnDrop {
@@ -69,21 +56,23 @@ export async function listWarehouseReturns(
   const orderIds = orders.map((order) => order.id);
   const courierIds = [...new Set(orders.map((order) => order.courierId).filter((id): id is string => id !== null))];
 
-  const [items, logs, couriers] = await Promise.all([
+  const [items, logs, couriers, returns] = await Promise.all([
     new OrderItemService(db).listByOrders(orderIds),
     new OrderStatusLogService(db).listByOrders(orderIds),
     // Boş listede servis kendi kısa devresini yapıyor (`listByIds`), ayrı bir dal gerekmiyor.
     new UserProfileService(db).listByIds(courierIds),
+    new OrderItemReturnService(db).listByOrders(orderIds),
   ]);
   const names = await variantNames(db, items.map((item) => item.variantId));
+  const toLine = toDropLine(names, returns);
   const courierOf = new Map(couriers.map((courier) => [courier.id, courier.name]));
 
   const drops: ReturnDrop[] = [];
   for (const order of orders) {
-    const lines = items.filter((item) => item.orderId === order.id);
-    // Ölçüt "hiç kalem var mı" değil, "AKIBETİ BEKLEYEN kalem var mı": tamamı işaretlenmiş sipariş
+    const lines = items.filter((item) => item.orderId === order.id).map(toLine);
+    // Ölçüt "hiç kalem var mı" değil, "AKIBETİ BEKLEYEN adet var mı": tamamı işaretlenmiş sipariş
     // depocunun işi olmaktan çıkmıştır ve listede kalırsa gerçek işi gölgeler.
-    if (!lines.some((line) => line.returnDisposition === null)) continue;
+    if (!lines.some((line) => line.pendingQty > 0)) continue;
 
     const returnedLog = logs.filter((log) => log.orderId === order.id && log.toStatus === 'returned').at(-1);
     drops.push({
@@ -94,7 +83,7 @@ export async function listWarehouseReturns(
       courierName: order.courierId ? (courierOf.get(order.courierId) ?? null) : null,
       note: returnedLog?.note ?? null,
       returnedAt: returnedLog?.createdAt ?? null,
-      lines: lines.map(toDropLine(names)),
+      lines,
     });
   }
 
@@ -103,15 +92,26 @@ export async function listWarehouseReturns(
   return drops.sort((a, b) => (b.returnedAt ?? '').localeCompare(a.returnedAt ?? ''));
 }
 
-/** Kalem → döküm satırı; ad çözümü ve tip kuyruğun ortak okumasından (`names.ts`) gelir, ikinci kez kurulmaz. */
-function toDropLine(names: Awaited<ReturnType<typeof variantNames>>) {
-  return (item: OrderItem): ReturnDropLine => ({
-    orderItemId: item.id,
-    name: displayName(names.get(item.variantId)),
-    fulfilledQty: item.fulfilledQty,
-    disposition: item.returnDisposition,
-    note: item.returnNote,
-  });
+/**
+ * Kalem → döküm satırı; ad çözümü kuyruğun ortak okumasından (`names.ts`) gelir. İade ve imha karşılanan adedi zaten
+ * düşürdüğü için bekleyen adet, karşılanandan jestle kapanan adedin çıkmasıdır (jest adedi düşürmez).
+ */
+function toDropLine(names: Awaited<ReturnType<typeof variantNames>>, returns: readonly OrderItemReturn[]) {
+  return (item: OrderItem): ReturnDropLine => {
+    const decided = returns.flatMap((entry) =>
+      entry.orderItemId === item.id && entry.disposition !== null
+        ? [{ qty: entry.qty, disposition: entry.disposition, note: entry.note }]
+        : [],
+    );
+    const goodwillQty = decided.reduce((sum, entry) => (entry.disposition === 'goodwill' ? sum + entry.qty : sum), 0);
+    return {
+      orderItemId: item.id,
+      name: displayName(names.get(item.variantId)),
+      fulfilledQty: item.fulfilledQty,
+      pendingQty: Math.max(0, item.fulfilledQty - goodwillQty),
+      returns: decided,
+    };
+  };
 }
 
 // ── RAMPA LİSTESİ (D6) ────────────────────────────────────────────────────────
@@ -255,7 +255,7 @@ export async function readReturningCourier(
 
 /** Akıbeti BEKLEYEN kalem sayısı — işaretlenmiş satır işin dışındadır. */
 function pendingLinesOf(drops: readonly ReturnDrop[]): number {
-  return drops.reduce((sum, drop) => sum + drop.lines.filter((line) => line.disposition === null).length, 0);
+  return drops.reduce((sum, drop) => sum + drop.lines.filter((line) => line.pendingQty > 0).length, 0);
 }
 
 /** Sipariş başına gruplu kutuların TOPLAM adedi — kart "kaç kutu" der, "kaç sipariş" değil. */

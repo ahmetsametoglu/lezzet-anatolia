@@ -5,6 +5,7 @@ import {
   AccountService,
   OrderService,
   OrderItemBatchService,
+  OrderItemReturnService,
   OrderStatusLogService,
   ProductService,
   ProductVariantService,
@@ -81,8 +82,9 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
   const { order, items } = found;
 
-  const [logs, movements, accounts, batches, tickets, termDays, warehouseLabels, trust] = await Promise.all([
+  const [logs, returns, movements, accounts, batches, tickets, termDays, warehouseLabels, trust] = await Promise.all([
     new OrderStatusLogService(db).listByOrder(orderId),
+    new OrderItemReturnService(db).listByOrders([orderId]),
     new MoneyMovementService(db).listByOrder(orderId),
     new AccountService(db).list(),
     new OrderItemBatchService(db).listByOrder(orderId),
@@ -95,7 +97,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
   const variantIds = [...new Set(items.map((i) => i.variantId))];
   const bundleIds = [...new Set(items.flatMap((i) => (i.bundleId ? [i.bundleId] : [])))];
-  const actorIds = [...new Set(logs.flatMap((l) => (l.actorId ? [l.actorId] : [])))];
+  const actorIds = [...new Set([...logs, ...returns].flatMap((l) => (l.actorId ? [l.actorId] : [])))];
   const stockIds = [...new Set(batches.map((b) => b.stockId))];
 
   const profileSvc = new UserProfileService(db);
@@ -108,6 +110,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
   ]);
 
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
+  const actorNames = new Map(actors.map((a) => [a.id, a.name]));
   const productNames = new Map(products.map((p) => [p.id, resolveLocalizedText(p.name)]));
   // Kalem görseli üründen gelir ve ürünler zaten çekili; görselsiz üründe ekran yer tutucu çizer.
   const productsById = new Map(products.map((p) => [p.id, p]));
@@ -181,7 +184,17 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     // Hazırlık kesinleşmediyse sipariş edilen okunur: o aşamada `fulfilled_qty` bir karar değil, henüz yazılmamış bir sayıdır.
     payableCents: fulfilledLineAmountCents(payableLineOf(item), isFulfillmentSettled(order.status, items)),
     bundleId: item.bundleId,
-    returnDisposition: item.returnDisposition,
+    returns: returns
+      .filter((entry) => entry.orderItemId === item.id)
+      .map((entry) => ({
+        id: entry.id,
+        qty: entry.qty,
+        disposition: entry.disposition,
+        note: entry.note,
+        stage: entry.stage,
+        actorName: entry.actorId ? (actorNames.get(entry.actorId) ?? null) : null,
+        at: entry.createdAt,
+      })),
     defaultsToDiscard: variantDiscardDefault.get(item.variantId) ?? false,
     batchNos: lotByItem.get(item.id) ?? [],
   }));
@@ -242,7 +255,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       isRefund: m.type === 'order_refund',
     })),
 
-    timeline: timelineOf(logs, new Map(actors.map((a) => [a.id, a.name])), tickets, order.status),
+    timeline: timelineOf(logs, actorNames, tickets, order.status),
     /*
       Şerit yalnız ofisin geçişlerini sunar: iptal ve teslim düz durum yazımıyla stok ve rezervasyonu atlardı, hazırlık ve kapıdaki
       sonuç ise sahanın işidir. Bayat sekmeden gelen istek eylem tarafında da reddedilir.

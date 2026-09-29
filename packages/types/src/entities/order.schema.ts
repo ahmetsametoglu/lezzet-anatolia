@@ -229,9 +229,6 @@ export const OrderItemSchema = z.object({
   lineDiscountAmountCents: z.number().int(),
   /** ORAN, para değil (5.5 = %5,5) — bu yüzden `…Cents` almaz ve `dbNumeric` kalır. */
   vatRate: dbNumeric,
-  returnDisposition: ReturnDispositionEnum.nullable(),
-  /** Akıbetin gerekçesi — "stoğa dön"ün zorunlu soğuk zincir beyanı; malın kendisi hakkında olduğu için kalemin alanı. */
-  returnNote: z.string().nullable(),
 });
 export type OrderItem = z.infer<typeof OrderItemSchema>;
 
@@ -248,7 +245,6 @@ export const OrderItemInsertSchema = z.object({
   priceSetBy: z.string().uuid().nullish(),
   lineDiscountAmountCents: z.number().int().nonnegative().optional(),
   vatRate: z.number().nonnegative(),
-  returnDisposition: ReturnDispositionEnum.nullish(),
 });
 export type OrderItemInsert = z.infer<typeof OrderItemInsertSchema>;
 
@@ -269,6 +265,24 @@ export type OrderItemBatchInsert = z.infer<typeof OrderItemBatchInsertSchema>;
 
 export const OrderItemBatchUpdateSchema = OrderItemBatchSchema.partial().required({ id: true });
 export type OrderItemBatchUpdate = z.infer<typeof OrderItemBatchUpdateSchema>;
+
+/**
+ * Kalemden düşen adetlerin bir olayı — aynı kalemin adetleri farklı akıbet alabildiği için akıbet kalemde değil burada
+ * durur. `disposition` `null` ise adet akıbet sorulmadan düştü (hazırlıkta eksik, kapıda geri çevrildi); `stage` olay
+ * anındaki sipariş durumudur.
+ */
+export const OrderItemReturnSchema = z.object({
+  id: z.string().uuid(),
+  orderId: z.string().uuid(),
+  orderItemId: z.string().uuid(),
+  qty: z.number().int().positive(),
+  disposition: ReturnDispositionEnum.nullable(),
+  note: z.string().nullable(),
+  stage: OrderStatusEnum,
+  actorId: z.string().uuid().nullable(),
+  createdAt: z.string(),
+});
+export type OrderItemReturn = z.infer<typeof OrderItemReturnSchema>;
 
 /** Durum geçiş kaydı — teslim/kapanış anı ve geri bildirim zamanlaması buradan TÜRETİLİR. */
 export const OrderStatusLogSchema = z.object({
@@ -330,23 +344,28 @@ export const QuickSaleResultSchema = z.object({
 export type QuickSaleResult = z.infer<typeof QuickSaleResultSchema>;
 
 /**
- * Kalem düzeltmesi (07.8/07.9) — eksik çıkan ya da geri gelen adet. `fulfilledQty` **hedef**
- * değerdir (kalan miktar), fark değil: çağıran ekranda gördüğü sayıyı gönderir, aradaki değişimi
- * veritabanı hesaplar — iki ekran aynı anda düzeltirse farklar toplanıp mal buharlaşmaz.
+ * Kalem düzeltmesi — eksik çıkan ya da geri gelen adet. `fulfilledQty` hedef değerdir, fark değil: aynı kalem sırayla
+ * birden çok akıbete bölünebilir ve iki ekran aynı anda düzeltirse farklar toplanıp mal buharlaşmaz.
  */
 export const FulfillmentAdjustmentSchema = z.object({
   orderItemId: z.string().uuid(),
   fulfilledQty: z.number().int().nonnegative(),
   /** Mal geri geldiyse ne olduğu; `goodwill`'de miktar DEĞİŞMEZ (mal müşteride kaldı, DOMAIN §8). */
   returnDisposition: ReturnDispositionEnum.nullish(),
+  /** Jestle kapanan adet — miktar düşmediği için hedeften türetilemez; verilmezse kalemin karşılanan adedinin tamamı. */
+  goodwillQty: z.number().int().positive().nullish(),
   /** Stoğa dönüş/imha kaydına düşen sebep notu — geri ekleme sebepsiz yazılmaz (06). */
   note: z.string().nullish(),
 });
 export type FulfillmentAdjustment = z.infer<typeof FulfillmentAdjustmentSchema>;
 
+/** Düzeltmenin yazdığı olay — müşteri haberi bu iadenin kalemlerini buradan kurar. */
+export const WrittenReturnSchema = OrderItemReturnSchema.pick({ orderItemId: true, qty: true, disposition: true });
+export type WrittenReturn = z.infer<typeof WrittenReturnSchema>;
+
 /**
- * `adjust_fulfillment` dönüşü. `stale` düzeltilemez durum, `already_marked` kalemin akıbeti zaten yazılmış ve istek
- * bayat bir ekrandan geliyor demektir; ikisini birleştirmek depocuyu yanlış yere bakmaya gönderirdi.
+ * `adjust_fulfillment` dönüşü. `stale` düzeltilemez durum, `already_marked` istenen adetler zaten yazılmış ve istek
+ * bayat bir ekrandan ya da tekrardan geliyor demektir; ikisinde de hiçbir satır yazılmaz.
  */
 export const FulfillmentResultSchema = z.object({
   ok: z.boolean(),
@@ -354,9 +373,9 @@ export const FulfillmentResultSchema = z.object({
   currentStatus: OrderStatusEnum,
   /** `already_marked`ta hangi kalem — ekran o satırı tazeleyip yazılı hâlini gösterebilsin diye. */
   orderItemId: z.string().uuid().optional(),
-  /** `already_marked`ta kalemde ZATEN yazılı olan akıbet. */
-  currentDisposition: ReturnDispositionEnum.optional(),
+  /** Olay yazılan kalem sayısı; `0` = istek hiçbir şey değiştirmedi. */
   lines: z.number().int().optional(),
+  returns: z.array(WrittenReturnSchema).optional(),
   /** Teslim sonrası iadede depoya geri giren adet. */
   restockedQty: z.number().int().optional(),
   /** Hiç çıkmadan hasarlanıp fiiliden düşülen adet. */

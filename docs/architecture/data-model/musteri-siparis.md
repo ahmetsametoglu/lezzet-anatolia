@@ -357,15 +357,12 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | `price_set_by` | uuid | • |  |
 | `line_discount_amount` | numeric(10, 2) |  | `0` |
 | `vat_rate` | numeric(4, 2) |  |  |
-| `return_disposition` | return_disposition | • |  |
-| `return_note` | text | • |  |
 <!-- /alanlar -->
 
 **Kararlar**
 
 - **`qty`** — sipariş edilen
-- **`fulfilled_qty`** — **fiziksel olarak müşteriye giden** miktar (varsayılan = qty; eksikte düşer, 0 olabilir). Mal geri döndüyse düşer; `goodwill` iadesinde düşmez — mal müşteride kalmıştır
-- **`return_note`** — akıbetin GEREKÇESİ; D6'nın *"stoğa dön"*de ZORUNLU tuttuğu soğuk zincir beyanı (04.09). Kolonun sebebi bir kusurdu: ekran notu zorunlu tutuyor ama `adjust_fulfillment` onu yalnız stok hareketinin serbest metnine geçiriyordu ve o dal dönüş yolunda hiç ateşlenmiyordu — beyan ekrandan çıkıp kayboluyordu. Not **harekete değil KALEME** yazılır: iddia malın kendisi hakkında ("neden yeniden satılabilir sayıldı") ve o soru ileride geri çağırma ya da denetimle yeniden açılır; hareket o beyanın sonucudur
+- **`fulfilled_qty`** — **fiziksel olarak müşteriye giden** miktar (varsayılan = qty; eksikte düşer, 0 olabilir). Mal geri döndüyse düşer; `goodwill` iadesinde düşmez — mal müşteride kalmıştır. Her düşüş bir `OrderItemReturn` olayı yazar
 - **`stock_id`** — partiye bağlı teklif satırıysa hangi parti (batch-pinned); normal satırda null. Fiilen çıkan parti(ler) `OrderItemBatch`'te
 - **`bundle_id`** — bu kalem bir paketten geldiyse hangi paket; normal satırda null
 - **`unit_price`** — **sabitlenmiş** fiyat (sepete eklenince). App: `unitPriceCents`
@@ -373,7 +370,31 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 - **`price_set_by`** — pazarlığı yapan personel (`restrict`). `list_unit_price` ile **birlikte** yaşar — yarım iz yoktur, kısıt veride (`order_item_negotiation_complete`)
 - **`line_discount_amount`** — sepet/kupon indiriminin bu kaleme **oransal payı** (varsayılan 0). App: `lineDiscountAmountCents` — kısmi iade ve kalem KDV'si indirimli birimden hesaplanır (bkz. `DOMAIN.md §5`). **Pazarlık buraya YAZILMAZ:** bu kolon kupon/kampanya havuzunun ve `discount_amount = Σ line_discount_amount` kısıtına girer, yani kotayı tüketir
 - **`vat_rate`** — o anki oran
-- **`return_disposition`** — kalem iade edildiyse **mala ne oldu** (DOMAIN §8). `goodwill` = mal müşteride kaldı: `fulfilled_qty` ve stok DEĞİŞMEZ, yalnız para iade edilir — jestin maliyeti kârda görünür
+
+## OrderItemReturn (kalem iade olayı)
+
+Kalemden düşen adetlerin olayları — `adjust_fulfillment` her adet düşüşünde bir satır yazar (bkz. `DOMAIN.md §8`). Akıbet kalemde değil burada durur, çünkü aynı kalemin adetleri farklı akıbet alabilir: 1 adet rafa döner, 1 adet imha edilir. Sipariş ekranı ve depo rampası geçmişi buradan okur.
+
+<!-- alanlar:order_item_return -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `order_id` | uuid |  |  |
+| `order_item_id` | uuid |  |  |
+| `qty` | int |  |  |
+| `disposition` | return_disposition | • |  |
+| `note` | text | • |  |
+| `stage` | order_status |  |  |
+| `actor_id` | uuid | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`disposition`** — adetlere ne oldu: `restock` · `discard` · `goodwill`. `null` = adet akıbet sorulmadan düştü (hazırlıkta eksik, kapıda geri çevrildi); kapıda reddedilen siparişin akıbetini depo rampada yazar
+- **`qty`** — olayın adedi; `goodwill`de karşılanan adet düşmez ve kaç adedin jestle kapandığını bu alan taşır
+- **`note`** — olayın gerekçesi; "stoğa dön"ün zorunlu soğuk zincir beyanı buraya yazılır
+- **`stage`** — olay anındaki sipariş durumu; ekran kapıda geri çevrileni (`out_for_delivery`) teslim sonrası iadeden bununla ayırır
 
 ## OrderItemBatch (kalem–parti eşlemesi)
 

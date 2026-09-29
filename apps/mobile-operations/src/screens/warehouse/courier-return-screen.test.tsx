@@ -1,22 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { CourierReturnScreen } from './courier-return-screen';
-import { targetQtyOf } from './use-courier-return.hook';
 import { resetWarehouseStatus } from './warehouse-status';
 
 /*
-  D6 EKRAN TESTİ — rampa listesi (04.09) + üç akıbet, HEDEF değer kuralı, "stoğa dön"ün zorunlu
-  notu, ARAÇTA KALANIN kabul edilmemesi ve para alanlarının depocuya GÖSTERİLMEMESİ.
-
-  En kritik iki iddia: (1) hedef değer — jestte mal müşteride kalır (adet DEĞİŞMEZ), iade/imhada
-  geri gelir (adet 0); fark sistemde hesaplanır, ekran çıkarma yapmaz. (2) TEK DOKUNUŞ İKİ YAZIM —
-  önce akıbet (sipariş başına), sonra mal devri (kurye başına) ve bu sıra tesadüf değil.
+  D6 ekran testi: rampa listesi, üç akıbet ve adetlerin akıbetlere ayrılması, "stoğa dön"ün zorunlu notu, araçta kalanın
+  kabul edilmemesi ve para alanlarının depocuya gösterilmemesi; tek dokunuş önce akıbeti, sonra mal devrini yazar.
 */
 
-/*
-  BİLDİRİM KANALI TOAST (01.09) — depo ekranlarında satır içi bildirim satırı kalktı, cümle
-  kökteki tek `ToastHost`a gidiyor (ekran künyesi). Test o yüzden basılan METNİ ölçüyor.
-*/
+/* Bildirimler kökteki tek `ToastHost`a gider; test o yüzden basılan metni ölçer. */
 const mockToast = jest.fn<void, [string]>();
 jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
   toastSuccess: (m: string) => mockToast(m),
@@ -102,7 +94,7 @@ const DETAIL = {
       courierName: 'Marc Lemoine',
       note: 'kapıda reddetti — koku şüphesi',
       returnedAt: '2026-09-04T16:20:00.000Z',
-      lines: [{ orderItemId: ITEM_ID, name: 'Su Böreği (500 g)', fulfilledQty: 2, disposition: null, note: null }],
+      lines: [{ orderItemId: ITEM_ID, name: 'Su Böreği (500 g)', fulfilledQty: 2, pendingQty: 2, returns: [] }],
     },
   ],
 };
@@ -165,19 +157,8 @@ beforeEach(() => {
   resetWarehouseStatus();
 });
 
-describe('D6 · hedef değer kuralı', () => {
-  it('jestte adet DEĞİŞMEZ (mal müşteride), iade ve imhada SIFIRLANIR', () => {
-    expect(targetQtyOf('goodwill', 2)).toBe(2);
-    expect(targetQtyOf('restock', 2)).toBe(0);
-    expect(targetQtyOf('discard', 2)).toBe(0);
-  });
-});
-
 describe('D6 · rampa listesi', () => {
-  /*
-    LİSTE EKRANIN AÇILIŞI (04.09) — eskiden ekran doğrudan TEK kuryeyle açılıyordu ve o kurye kodun
-    içine yazılmıştı. Aynı gün iki kurye döndüğünde ekranın verecek cevabı yoktu.
-  */
+  /* Liste kurye eksenlidir: aynı gün iki kurye dönebilir, ekran tek kuryeyle açılsaydı ikincisine cevap veremezdi. */
   it('kartta İŞ ve ARAÇTAKİLER ayrı satırda, plaka künyede', async () => {
     withGates();
 
@@ -250,10 +231,7 @@ describe('D6 · rampa listesi', () => {
 });
 
 describe('D6 · kurye dönüşü kabulü', () => {
-  /*
-    SONUÇLAR SEÇİMDEN ÖNCE (v3:1244) — üç akıbetin bedeli düğmelerin altında, HER ZAMAN yazılı.
-    Eskiden ipucu ancak seçildikten SONRA çıkıyordu ve "İmha: parti düşer" HİÇ yazmıyordu.
-  */
+  /* Üç akıbetin bedeli seçimden önce, düğmelerin altında her zaman yazılı: depocu partinin düşeceğini seçmeden öğrenmeli. */
   it('üç akıbetin bedeli SEÇİMDEN ÖNCE yazılı — imhanın partiyi düşürdüğü dahil', async () => {
     withGates();
 
@@ -313,7 +291,33 @@ describe('D6 · kurye dönüşü kabulü', () => {
     await fireEvent.press(screen.getByTestId('warehouse-return-cta'));
 
     await waitFor(() => expect(mockToast).toHaveBeenCalled());
-    expect(lastPost(`/returns/${ORDER_ID}`).adjustments[0]?.fulfilledQty).toBe(2);
+    expect(lastPost(`/returns/${ORDER_ID}`).adjustments[0]).toMatchObject({ fulfilledQty: 2, goodwillQty: 2 });
+  });
+
+  it('adetler ayrı işaretlenince tek istek iki payı sıralı taşır; toplam tutmadan CTA kapalı', async () => {
+    withGates();
+
+    await render(<CourierReturnScreen />);
+    await openCourier();
+    await fireEvent.press(screen.getByTestId(`warehouse-return-split-toggle-${ITEM_ID}`));
+    await fireEvent.press(screen.getByTestId(`warehouse-return-split-discard-${ITEM_ID}`));
+    await fireEvent.press(screen.getByTestId('warehouse-return-split-sheet-ruler-1'));
+    await fireEvent.press(screen.getByTestId('warehouse-return-split-sheet-confirm'));
+
+    expect(screen.getByTestId(`warehouse-return-split-summary-${ITEM_ID}`)).toHaveTextContent('1 / 2 adet işaretlendi');
+    expect(screen.getByTestId('warehouse-return-cta')).toBeDisabled();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-return-split-restock-${ITEM_ID}`));
+    await fireEvent.press(screen.getByTestId('warehouse-return-split-sheet-ruler-1'));
+    await fireEvent.press(screen.getByTestId('warehouse-return-split-sheet-confirm'));
+    await fireEvent.changeText(screen.getByTestId(`warehouse-return-note-${ITEM_ID}`), 'ambalaj sağlam');
+    await fireEvent.press(screen.getByTestId('warehouse-return-cta'));
+
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
+    expect(lastPost(`/returns/${ORDER_ID}`).adjustments).toEqual([
+      { orderItemId: ITEM_ID, fulfilledQty: 1, returnDisposition: 'restock', note: 'ambalaj sağlam' },
+      { orderItemId: ITEM_ID, fulfilledQty: 0, returnDisposition: 'discard', note: 'ambalaj sağlam' },
+    ]);
   });
 
   /*
@@ -385,9 +389,8 @@ describe('D6 · kurye dönüşü kabulü', () => {
 
     const stay = screen.getByTestId('warehouse-return-box-stay-00000000-0000-4000-8000-000000000402');
     expect(stay).toHaveTextContent(/1 kutu · ulaşılamadı — araçta kalır/);
-    /* KİMLİK SEBEBE GÖRE (cihazda görüldü 04.09): ULAŞILAMAYAN kutu bir MÜŞTERİNİN ve depocu onu
-       rampada ona göre ayırıyor — satır sefer kodunu yazıyordu, yani hangi koli olduğunu
-       söylemiyordu. Sefer kodu yalnız "başka seferin yükü" satırının doğru cevabı. */
+    /* Kimlik sebebe göre: ulaşılamayan kutu bir müşterinindir ve depocu onu siparişle ayırır; sefer kodu yalnız "başka
+       seferin yükü" satırında ayırt edicidir. */
     expect(stay).toHaveTextContent(/Épicerie Ravanelli · LA-26-7T4D/);
     expect(screen.queryByTestId('warehouse-return-restock-00000000-0000-4000-8000-000000000402')).toBeNull();
 
@@ -397,15 +400,24 @@ describe('D6 · kurye dönüşü kabulü', () => {
     );
   });
 
-  /* AKIBETİ YAZILMIŞ SATIR seçici çizmez: ikinci kez gönderilen `restock` stoğa iki kez yazardı. */
-  it('akıbeti yazılmış satır SALT-OKUNUR — çip yok, sonuç yazılı', async () => {
+  /* Akıbeti yazılmış adet seçici çizmez: ikinci kez gönderilen `restock` stoğa iki kez yazardı. */
+  it('akıbeti yazılmış satır SALT-OKUNUR — çip yok, sonuç adetleriyle yazılı', async () => {
     withGates({
       detail: {
         ...DETAIL,
         drops: [
           {
             ...DETAIL.drops[0],
-            lines: [{ ...DETAIL.drops[0]!.lines[0], disposition: 'restock', note: 'soğuk zincir kesintisiz' }],
+            lines: [
+              {
+                ...DETAIL.drops[0]!.lines[0],
+                pendingQty: 0,
+                returns: [
+                  { qty: 1, disposition: 'restock', note: 'soğuk zincir kesintisiz' },
+                  { qty: 1, disposition: 'discard', note: null },
+                ],
+              },
+            ],
           },
         ],
       },
@@ -415,22 +427,16 @@ describe('D6 · kurye dönüşü kabulü', () => {
     await fireEvent.press(await screen.findByTestId(`warehouse-return-courier-${COURIER_ID}`));
 
     expect(await screen.findByTestId(`warehouse-return-written-${ITEM_ID}`)).toHaveTextContent(
-      'akıbeti yazıldı: Stoğa dön',
+      'akıbeti yazıldı: 1 Stoğa dön · 1 İmha',
     );
     expect(screen.queryByTestId(`warehouse-return-restock-${ITEM_ID}`)).toBeNull();
-    /* BEYAN GERİ OKUNUR (04.09): "stoğa dön"de zorunlu tutulan not artık kaleme yazılıyor ve
-       satırda görünüyor — görünmezse zorunluluk bir forma doldurma töreni olurdu. */
+    // Beyan geri okunur: görünmezse zorunlu not bir form töreni olurdu.
     expect(screen.getByTestId(`warehouse-return-written-note-${ITEM_ID}`)).toHaveTextContent(
       /soğuk zincir kesintisiz/,
     );
   });
 
-  /*
-    SÜRÜLEN SEFERDE DEVİR DURUR (kusur, ölçüldü 04.09) — araç bugün boşalmıyor: araçtaki malın çoğu
-    yola devam edecek. Kutular yine de araçtaki her şeyle DOLU açılıyordu, yani tek dokunuş yola
-    çıkacak kuryenin malını elinden alıyordu. Ekran uyarıyor ama varsayılan uyarının tersini
-    yapıyordu.
-  */
+  /* Sürülen seferde devir durur: araç bugün boşalmıyor ve dolu açılan sayaç yola çıkacak kuryenin malını elinden alırdı. */
   it('sürülen seferde sayaç SIFIRDAN açılır ve sebebi yazılır', async () => {
     withGates({ detail: { ...DETAIL, drivingRuns: 1 } });
 
@@ -443,13 +449,9 @@ describe('D6 · kurye dönüşü kabulü', () => {
     expect(screen.getByTestId('warehouse-return-free-summary')).toHaveTextContent(/araçta kayıtlı 5 · sayılan 0/);
   });
 
-  /*
-    BAYAT EKRAN KAPIDA DURUR (kusur, ölçüldü 04.09) — kalemin akıbeti zaten yazılmışken BAŞKA bir
-    akıbet gönderilirse kapı hiçbir satır yazmadan reddeder ve ekran tazelenir. `stale`den ayrı bir
-    cevap: orada sipariş değişmiştir, burada KALEM karara bağlanmıştır.
-  */
+  /* Bayat ekran kapıda durur: adetler başka kayıtla yazılmışsa kapı hiçbir satır yazmadan reddeder ve ekran tazelenir. */
   it('`already_marked` reddi adıyla söylenir ve ekran tazelenir', async () => {
-    withGates({ adjust: { status: 'already_marked', orderItemId: ITEM_ID, currentDisposition: 'restock' } });
+    withGates({ adjust: { status: 'already_marked', orderItemId: ITEM_ID } });
 
     await render(<CourierReturnScreen />);
     await openCourier();
@@ -457,7 +459,7 @@ describe('D6 · kurye dönüşü kabulü', () => {
     await fireEvent.press(screen.getByTestId('warehouse-return-cta'));
 
     await waitFor(() =>
-      expect(mockToast.mock.calls.some(([m]) => /akıbeti zaten yazılmış \(Stoğa dön\)/.test(m))).toBe(true),
+      expect(mockToast.mock.calls.some(([m]) => /başka bir kayıtla yazılmış/.test(m))).toBe(true),
     );
     // Ekran DETAYDA kalır (listeye kaçmaz) ve detayı yeniden okur — bayat satırlar tazelensin.
     expect(screen.getByTestId(`warehouse-return-line-${ITEM_ID}`)).toBeOnTheScreen();

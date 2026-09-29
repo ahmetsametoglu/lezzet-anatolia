@@ -1,6 +1,6 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  AccountService, CategoryService, OrderItemBatchService, OrderItemService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
+  AccountService, CategoryService, OrderItemBatchService, OrderItemReturnService, OrderItemService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeVariantStock } from '@lezzet/database/testing';
 import { recordOrderPayment } from './payment';
@@ -17,6 +17,7 @@ const db = serviceDb();
 const orders = new OrderService(db);
 const itemBatches = new OrderItemBatchService(db);
 const items = new OrderItemService(db);
+const returns = new OrderItemReturnService(db);
 const stocks = new StockService(db);
 const reservations = new ReservationService(db);
 
@@ -264,7 +265,8 @@ describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOM
     expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 2000, paymentStatus: 'refunded' });
     expect((await stocks.getById(batchId))?.physicalQty).toBe(8); // mal geri gelmedi
     const items = await orders.getWithItems(orderId);
-    expect(items?.items[0]).toMatchObject({ fulfilledQty: 2, returnDisposition: 'goodwill' });
+    expect(items?.items[0]).toMatchObject({ fulfilledQty: 2 });
+    expect(await returns.listByOrders([orderId])).toMatchObject([{ qty: 2, disposition: 'goodwill' }]);
   });
 
   it('iade süreci kapanışı: `returned` durumundan da kapanır (ORDER_LIFECYCLE)', async () => {
@@ -384,55 +386,85 @@ describe('iptal (07.9)', () => {
 });
 
 /**
- * Akıbetin değişmezleri: "stoğa dön" beyanı yazılır, yazılmış akıbet bayat ekrandan değiştirilemez, fiili stok
- * sorusu teslim sonrası iadede de doğru dala gider.
+ * Akıbetin değişmezleri: bir kalemin adetleri farklı akıbet alabilir, kalan adet sonradan da iade edilebilir; bayat ekran
+ * ya da tekrar istek hiçbir şey yazmadan adıyla reddedilir ve müşteriye haber gitmez.
  */
-describe('akıbetin değişmezleri (04.09)', () => {
-  it('BEYAN KALEME YAZILIR — "stoğa dön"ün zorunlu notu kaybolmuyor', async () => {
+describe('akıbetin değişmezleri', () => {
+  it('beyan olayın satırına yazılır — "stoğa dön"ün zorunlu notu kaybolmuyor', async () => {
     const { orderId, itemId } = await sendOut(2);
 
     await adjustFulfillment(db, orderId, [
       { orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'restock', note: 'soğuk zincir kesintisiz' },
     ]);
 
-    const item = (await items.listByOrders([orderId])).find((row) => row.id === itemId);
-    expect(item?.returnDisposition).toBe('restock');
-    expect(item?.returnNote).toBe('soğuk zincir kesintisiz');
+    expect(await returns.listByOrders([orderId])).toMatchObject([
+      { orderItemId: itemId, qty: 2, disposition: 'restock', note: 'soğuk zincir kesintisiz' },
+    ]);
   });
 
-  it('AKIBET BİR KEZ YAZILIR — farklı bir akıbet reddedilir, hiçbir satır değişmez', async () => {
+  it('kalan adet farklı akıbetle sonradan iade edilir — iki olay, stok ve maliyet ikisine göre', async () => {
     const { orderId, itemId } = await sendOut(2);
-    await adjustFulfillment(db, orderId, [
-      { orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'restock', note: 'ambalaj sağlam' },
-    ]);
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
+    await deliverOrder(db, orderId);
 
+    await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'restock', note: 'ambalaj sağlam' }]);
     const ikinci = await adjustFulfillment(db, orderId, [
-      { orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill' },
+      { orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'discard', note: 'kutu ezik' },
     ]);
 
-    expect(ikinci).toMatchObject({ status: 'already_marked', orderItemId: itemId, currentDisposition: 'restock' });
-    // Ret TAMAMEN geri çeviriyor: kalem ilk kararın hâlinde kalmalı, yarısı yazılmış olmamalı.
-    const item = (await items.listByOrders([orderId])).find((row) => row.id === itemId);
-    expect(item?.returnDisposition).toBe('restock');
-    expect(item?.fulfilledQty).toBe(0);
+    expect(ikinci).toMatchObject({ status: 'ok', refundedAmountCents: 1000 });
+    expect(await returns.listByOrders([orderId])).toMatchObject([
+      { qty: 1, disposition: 'restock' },
+      { qty: 1, disposition: 'discard' },
+    ]);
+    expect((await stocks.getById(batchId))?.physicalQty).toBe(9); // 8 + rafa dönen 1; imha edilen stoğa girmez
+    expect((await orders.getById(orderId))?.cogsAmountCents).toBe(400); // imha edilenin maliyeti siparişte kalır
   });
 
-  it('AYNI akıbetin ikinci kez gelmesi hata DEĞİL — ağ tekrarı sessizce geçilir', async () => {
+  it('kalan adet aynı akıbetle ikinci kez iade edilince yazılır ve parası döner', async () => {
     const { orderId, itemId } = await sendOut(2);
-    await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'discard' }]);
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
+    await deliverOrder(db, orderId);
+    await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'discard' }]);
 
-    const tekrar = await adjustFulfillment(db, orderId, [
-      { orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'discard' },
-    ]);
+    const ikinci = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'discard' }]);
 
-    expect(tekrar).toMatchObject({ status: 'ok' });
+    expect(ikinci).toMatchObject({ status: 'ok', refundedAmountCents: 1000, paymentStatus: 'refunded' });
+    expect((await items.listByOrders([orderId]))[0]?.fulfilledQty).toBe(0);
   });
 
-  /*
-    TESLİM SONRASI İADE — sipariş `delivered` olur (stok fiilen düşer), sonra `returned`a çevrilir.
-    Ölçüt anlık duruma baksaydı bu noktada FALSE derdi ve `restock` malı deftere geri koymazdı:
-    kalıcı hayalet kayıp. Ölçüt artık durum GÜNLÜĞÜNDEN geliyor.
-  */
+  it('aynı isteğin tekrarı reddedilir, hiçbir şey yazılmaz ve müşteriye haber gitmez', async () => {
+    const { orderId, itemId } = await sendOut(2);
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
+    await deliverOrder(db, orderId);
+    const istek = [{ orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'discard' as const }];
+    await adjustFulfillment(db, orderId, istek);
+    const notifyException = vi.fn(async () => undefined);
+
+    const tekrar = await adjustFulfillment(db, orderId, istek, { effects: { notifyException } });
+
+    expect(tekrar).toMatchObject({ status: 'already_marked', orderItemId: itemId });
+    expect(notifyException).not.toHaveBeenCalled();
+    expect(await returns.listByOrders([orderId])).toHaveLength(1);
+    expect((await orders.getById(orderId))?.amountRefundedCents).toBe(1000);
+  });
+
+  it('ret bütündür: zincirin bir halkası reddedilirse öncekiler de yazılmaz', async () => {
+    const { orderId, itemId } = await sendOut(2);
+    await deliverOrder(db, orderId);
+
+    const sonuc = await adjustFulfillment(db, orderId, [
+      { orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'restock', note: 'ambalaj sağlam' },
+      { orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'discard' },
+    ]);
+
+    expect(sonuc).toMatchObject({ status: 'already_marked', orderItemId: itemId });
+    expect((await items.listByOrders([orderId]))[0]?.fulfilledQty).toBe(2);
+    expect(await returns.listByOrders([orderId])).toHaveLength(0);
+  });
+
+  /* Teslim sonrası iade: sipariş `delivered` olup sonra `returned`a çevrilir; mal düştü mü sorusu anlık durumdan sorulsaydı
+     `restock` malı deftere geri koymazdı. */
   it('TESLİM SONRASI iade: `returned`a çevrilmiş sipariş de malı stoğa GERİ KOYAR', async () => {
     const { orderId, itemId } = await sendOut(2);
     await deliverOrder(db, orderId);

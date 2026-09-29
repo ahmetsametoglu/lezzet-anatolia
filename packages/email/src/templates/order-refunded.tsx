@@ -20,6 +20,8 @@ interface Copy {
   blockHeadline: (at: string | null) => string;
   blockDetail: string;
   breakdown: string;
+  /** Döküm satırında iade edilen adet — tasarımdaki "Ispanaklı Gözleme — 1 adet". */
+  units: (count: number) => string;
   total: string;
   note: (previous: string, current: string | null) => string;
   onDeliveryTitle: string;
@@ -42,6 +44,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
     blockHeadline: (at) => (at ? `Talep kapandı · ${at}` : 'Talep kapandı'),
     blockDetail: 'İade onaylandı ve işleme alındı. Sizin yapmanız gereken bir şey kalmadı.',
     breakdown: 'İade dökümü',
+    units: (count) => `${count} adet`,
     total: 'İade toplamı',
     note: (previous, current) =>
       current
@@ -65,6 +68,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
     blockHeadline: (at) => (at ? `Demande clôturée · ${at}` : 'Demande clôturée'),
     blockDetail: 'Le remboursement a été validé et traité. Vous n’avez plus rien à faire.',
     breakdown: 'Détail du remboursement',
+    units: (count) => `${count} article${count > 1 ? 's' : ''}`,
     total: 'Total remboursé',
     note: (previous, current) =>
       current
@@ -88,6 +92,7 @@ const COPY: Record<PreferredLanguage, Copy> = {
     blockHeadline: (at) => (at ? `Anfrage abgeschlossen · ${at}` : 'Anfrage abgeschlossen'),
     blockDetail: 'Die Erstattung wurde genehmigt und bearbeitet. Für Sie ist nichts weiter zu tun.',
     breakdown: 'Erstattungsdetails',
+    units: (count) => `${count} Stück`,
     total: 'Erstattet gesamt',
     note: (previous, current) =>
       current
@@ -107,8 +112,6 @@ export function OrderRefundedEmail({ data, brandName, postalAddress }: OrderEmai
   const t = COPY[data.locale];
   const shared = SHARED_COPY[data.locale];
   const amount = data.refund?.amount ?? '—';
-  // Döküm YALNIZ iadeye konu kalemlerden kurulur; el değmemiş kalem müşterinin sorusu değil.
-  const refundedLines = data.lines.filter((line) => line.shortfall);
 
   return (
     <EmailLayout
@@ -129,7 +132,8 @@ export function OrderRefundedEmail({ data, brandName, postalAddress }: OrderEmai
       {data.refund && (
         <TotalsCard
           title={t.breakdown}
-          totals={refundedLines.map((line) => ({ label: line.name, value: line.amount ?? '' }))}
+          // Satırlar yalnız bu iadenin kalemleridir; kurucu iade edilen adedi ve değerini verir.
+          totals={data.lines.map((line) => ({ label: `${line.name} — ${t.units(line.qty)}`, value: line.amount ?? '' }))}
           grandTotal={{ label: t.total, value: data.refund.amount }}
           paymentNote={null}
           footnote={t.note(data.refund.previousTotal, data.refund.currentTotal)}
