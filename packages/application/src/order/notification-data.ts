@@ -20,44 +20,15 @@ import { parcelOrdinal, readOrderTracking } from '../shipping/tracking';
 import { warehouseAddressLine } from '../warehouse/pickup';
 
 /**
- * Sipariş bildiriminin VERİSİNİ kurar (14.5) — **uygulama katmanı orkestrasyonu**.
- *
- * Şablon karar vermez, veri de kendi kendini kurmaz: burada sipariş + kalemler + müşteri okunur,
- * para kararı motora sorulur (`derivePaymentStatus` — eksik karşılanmada iade borcu) ve ortaya
- * şablonun doğrudan basacağı bir görünüm modeli çıkar.
- *
- * Biçimleme (para, tarih) BURADA yapılır: şablon `Intl` bilmez. Sebep pratiktir — mail müşterinin
- * dilinde biçimlenir, şablon ise yalnız yerleştirir; ikisi karışırsa aynı tutar iki yerde iki türlü
- * yuvarlanır.
- *
- * ── TERFİ (21.21) · WEB'DEN FARKLARI ─────────────────────────────────────────
- * Kaynağı `apps/web/lib/order/notification-data.ts`ti; web kopyası KÖPRÜ olarak duruyor. Sebep
- * ÖLÇÜLMÜŞ bir arızadır: mobilden verilen kapıda/vadeli ödemeli siparişte "siparişiniz alındı"
- * maili hiç gitmiyordu — `apps/mobile-api` bu dosyayı import EDEMEZ (`apps/web` içindeydi), o yüzden
- * `placeOrder`a `effects` geçemiyordu. İki yüzeyde iki bildirim verisi olamaz: mailin içeriği
- * siparişin kendisinden türer, siparişi hangi ekranın açtığından değil.
- *
- * Değişen üç şey; kural tarafında hiçbir şey değişmedi:
- *   · `db` çağırandan gelir (`serviceDb()` içeride çağrılmıyor) — paketin ortak deseni.
- *   · `formatShortDate` artık `@lezzet/helper`dan; gövde webden BİREBİR oraya taşındı (o dosyanın
- *     künyesi "ikinci tüketen doğunca iner" diyordu, ikinci tüketen bu dosyadır). `formatPrice`
- *     zaten oradaydı, web yalnız yeniden dışa veriyordu.
- *   · `localizedUrl` `@lezzet/i18n`den doğrudan alınır — webin `lib/notify.ts`i de o paketin
- *     yeniden dışa vereni olduğu için taşınan bir gövde yok.
- *
- * **`@lezzet/notify` + `@lezzet/i18n` bu paketin bağımlılığı OLDU ve bu yeni bir npm bağımlılığı
- * DEĞİL** (`effects.ts`in eski künyesi aksini varsayıyordu, ölçüm onu yanlışladı): `@lezzet/notify`ın
- * npm kapanışı (`resend`, `@react-email/*`, `react`) `@lezzet/email` üzerinden ZATEN buradaydı —
- * paket OTP mailini bu ağaçtan gönderiyor (`auth/otp.ts`). `@lezzet/i18n`ın hiç bağımlılığı yok.
+ * Sipariş bildiriminin verisini kurar: sipariş, kalemler ve müşteri okunur, para kararı motora sorulur ve şablonun
+ * doğrudan basacağı görünüm modeli çıkar. Biçimleme (para, tarih) burada, müşterinin dilinde yapılır; şablon `Intl` bilmez.
  */
 
 const STEP_ORDER: NotificationStep['key'][] = ['received', 'prepared', 'on_the_way', 'delivered'];
 
 /**
- * Olayın zaman çizgisinde nereye denk geldiği — çizginin dolu kısmı buradan çıkar.
- *
- * **İSTİSNA bildirimlerinde (iptal/iade/eksik) zaman çizgisi YOKTUR** (tasarım kuralı): akış
- * bildirimi yolculuğu gösterir, istisna bildirimi tek anı. O yüzden burada yer almazlar.
+ * Olayın zaman çizgisinde nereye denk geldiği — çizginin dolu kısmı buradan çıkar. İstisna bildirimlerinde (iptal/iade/
+ * eksik) zaman çizgisi yoktur, tasarım tek anı gösterir.
  */
 const EVENT_STEP: Partial<Record<NotifyEventName, NotificationStep['key']>> = {
   order_confirmed: 'received',
@@ -73,7 +44,7 @@ const EXCEPTION_EVENTS: readonly NotifyEventName[] = ['order_cancelled', 'order_
 export interface NotificationBundle {
   data: OrderNotification;
   recipient: NotifyRecipient;
-  /** Bildirim SATIRININ öznesi (14.12) — gönderim kapısı ikinci bir sipariş okuması yapmasın. */
+  /** Bildirim satırının öznesi — gönderim kapısı ikinci bir sipariş okuması yapmasın. */
   customerId: string;
 }
 
@@ -92,21 +63,15 @@ export async function buildOrderNotification(
 
   const { order, items } = found;
   const customer = await new UserProfileService(db).getById(order.customerId);
-  // **Dil ÖNCE siparişten** (0015 `locale`): müşteri bu siparişi hangi dilde verdiyse maili o dilde
-  // okumalı. Profil ikinci sıradadır çünkü sonradan değişebilir — hesap dilini değiştiren ya da aynı
-  // şirket hesabından başka biri sipariş veren müşteride, eski siparişin maili dil değiştirirdi.
+  // Dil önce siparişten: müşteri siparişi hangi dilde verdiyse maili o dilde okur, profil sonradan değişebilir.
   // Web dışı kayıtta (hızlı satış, operasyon girişi) sipariş dilsizdir; orada profil doğru cevaptır.
   const locale: PreferredLanguage = order.locale ?? customer?.preferredLanguage ?? 'fr';
 
   // Aynı ayrım hem kalem satırlarını hem para türetimini yönetir — iki yerde farklı okunursa
   // mailin listesi ile toplamı çelişir.
   const settled = isFulfillmentSettled(order.status, items);
-  /*
-    TAKİP YALNIZ KARGO SİPARİŞİNDE SORULUR. Rota teslimatında gönderi satırı hiç doğmaz; her mailde
-    o sorguyu atmak, cevabı baştan belli bir soruyu sormak olurdu. Ayrım `delivery_type`tan gelir,
-    olayın adından değil: aynı mail (`order_out_for_delivery`) iki kulvarda da kullanılıyor ve
-    kargoda kurye penceresi yerine takip gösteriliyor (DOMAIN §6).
-  */
+  /* Takip yalnız kargo siparişinde sorulur, rota teslimatında gönderi satırı hiç doğmaz. Ayrım `delivery_type`tan gelir,
+     olayın adından değil: `order_out_for_delivery` iki kulvarda da kullanılıyor (DOMAIN §6). */
   const [lines, steps, tracking, pickupWarehouse] = await Promise.all([
     buildLines(db, items, locale, settled),
     buildSteps(db, orderId, event, order.deliveryType),
@@ -132,12 +97,8 @@ export async function buildOrderNotification(
     totals: buildTotals(order, locale, event),
     grandTotal: {
       label: event === 'order_confirmed' ? TOTAL_LABEL[locale].grand : TOTAL_LABEL[locale].current,
-      // İki ayrı soru, iki ayrı sayı: ONAYDA müşterinin ödeyeceği SİPARİŞ tutarı yazar (mal henüz
-      // hazırlanmadı, karşılanan 0'dır — onu yazsaydık mail "0,00 €" derdi). Sonraki maillerde
-      // **karşılanan** tutar yazar; eksik çıkan kalem varsa toplam kendiliğinden iner ve müşteri
-      // ödeyeceği/iade alacağı gerçek rakamı görür.
-      // İki taraf da CENT (02.9): eskiden biri euro'ydu ve `/100 * 100` gidip geliyordu — aynı
-      // sayının iki kez çevrildiği bir ifade, birim karışıklığının tipik izi.
+      // Onayda sipariş tutarı yazar, çünkü mal henüz hazırlanmadı ve karşılanan 0'dır; sonraki maillerde karşılanan tutar
+      // yazar ve eksik çıkan kalemde toplam kendiliğinden iner.
       value: formatPrice(event === 'order_confirmed' ? order.orderedTotalCents : derivation.fulfilledAmountCents, locale),
     },
     statusAt: EXCEPTION_EVENTS.includes(event) ? formatShortDate(new Date().toISOString(), locale) : null,
@@ -148,53 +109,35 @@ export async function buildOrderNotification(
     paidOnline: order.amountCollectedCents > 0,
     paymentNote: paymentNote(order, derivation.amountToCollectCents, locale),
     delivery: buildDelivery(order, locale, pickupWarehouse),
-    /*
-      KARGO TAKİBİ — kaynağı 07.12'de bağlandı (önceden `null` sabitti ve şablon takip kutusunu
-      hiç çizemiyordu: alan hazır, kaynağı yoktu).
-
-      **Numarası olmayan gönderi mailde takip kutusu AÇMAZ:** duyurulmuş ama numara henüz
-      yazılmamış olabilir ve boş bir "📦" kutusu, teslimat bilgisinin yerini alıp müşteriyi
-      bilgisiz bırakırdı. Boş dizi `null`a indiriliyor — sözleşmenin künyesi bu ayrımı yazıyor.
-    */
+    /* Numarası olmayan gönderi mailde takip kutusu açmaz: boş bir kutu teslimat bilgisinin yerini alıp müşteriyi bilgisiz
+       bırakırdı. Boş dizi `null`a indirilir, sözleşme bu ayrımı yazıyor. */
     tracking:
       tracking && tracking.parcels.length > 0
         ? tracking.parcels.map((parcel) => ({ ordinal: parcelOrdinal(parcel), number: parcel.trackingNumber, url: parcel.trackingUrl }))
         : null,
     /**
-     * **Bağda KİMLİK taşınır, referans numarası değil** (03.08 düzeltmesi).
-     *
-     * Segment adı `[reference]` ama sayfa siparişi `getWithItems(orderId)` ile çözüyor — yüzeydeki
-     * bütün bağlar (siparişler listesi, talep formu, onay ekranı) kimlik geçiriyor. Burada bir ara
-     * `referenceNo ?? id` yazıyordu: referans numarası olan HER siparişte, yani onaylanmış olan
-     * hepsinde, mailin ana düğmesi 404'e düşüyordu. Numara mailin metninde zaten görünüyor;
-     * müşteriye gösterilen ile adreste taşınan aynı şey olmak zorunda değil.
+     * Bağda kimlik taşınır, referans numarası değil: sayfa siparişi `getWithItems(orderId)` ile çözüyor. Numara mailin
+     * metninde zaten görünüyor.
      */
     orderUrl: localizedUrl('/orders/[reference]', locale, { reference: order.id }),
     deliverySummaryUrl: null, // Teslimat özeti belgesi 14.6'da doğar.
     supportUrl: localizedUrl('/support', locale),
-    /* JETONLU (22.08): sayfa oturum istiyor, mailin alıcısı ise o an çoğu zaman girişli değil.
-       Bağ tek kapıdan üretilir — altı gönderim yolu aynı jetonu aynı biçimde eklesin. */
+    /* Jetonlu: sayfa oturum istiyor, mailin alıcısı ise o an çoğu zaman girişli değil. Bağ tek kapıdan üretilir ki bütün
+       gönderim yolları jetonu aynı biçimde eklesin. */
     notificationPreferencesUrl: await notificationPreferencesUrl(db, locale, { customerId: order.customerId }),
   };
 
   return {
     data,
     recipient: { name: customer?.name ?? null, email: customer?.email ?? null, phone: customer?.phone ?? null, locale },
-    // Bildirim SATIRININ öznesi (14.12) — gönderim kapısı kimliği buradan alır; ikinci bir sipariş
-    // okuması yapmasın diye pakete burada iliştirilir.
+    // Bildirim satırının öznesi — gönderim kapısı kimliği buradan alır, ikinci bir sipariş okuması yapmaz.
     customerId: order.customerId,
   };
 }
 
 /**
- * Kalem satırları. Ad üründen gelir (varyantın kendi adı yoktur), paket kaleminde paket adından.
- * Eksik karşılanan kalemde tasarımın kuralı uygulanır: **sebep yazılmaz**, yalnız miktar + para.
- *
- * **Ölçü, hazırlık kesinleşmişse karşılanan adet; kesinleşmemişse SİPARİŞ EDİLEN adettir**
- * (`isFulfillmentSettled` — motorun zaten bildiği ayrım). Bu ayrım olmadan onaylanmış bir sipariş
- * maili her kalemi "0 gönderildi, tamamı iade edilecek" diye anlatıyordu: `fulfilled_qty` o anda
- * 0'dır ama bu "eksik gitti" değil, "daha hazırlanmadı" demektir. Müşteri, siparişini verir vermez
- * hepsinin iptal edildiğini sanıyordu.
+ * Kalem satırları; ad üründen, paket kaleminde paket adından gelir ve eksik kalemde sebep yazılmaz, yalnız miktar + para.
+ * Hazırlık kesinleşmemişse sipariş edilen adet gösterilir, yoksa onaylanmış sipariş maili her kalemi "0 gönderildi" derdi.
  */
 async function buildLines(db: Db, items: readonly OrderItem[], locale: PreferredLanguage, fulfillmentSettled: boolean) {
   const variants = await new ProductVariantService(db).listByIds(items.map((item) => item.variantId));
@@ -298,12 +241,8 @@ function buildTotals(order: Order, locale: PreferredLanguage, event: NotifyEvent
 }
 
 /**
- * İndirim satırının adı: "İndirim — Hoş geldin indirimi". Kampanyanın müşteriye görünen adı sipariş
- * anında KOPYALANMIŞTIR (`discountLabel`); bugünkü tanıma bakılmaz, çünkü kampanya o günden beri
- * yeniden adlandırılmış ya da silinmiş olabilir ve aynı mailin yeniden basımı başka şey derdi.
- *
- * Ad yoksa satır genel adında kalır — sepetteki tür-temelli açıklama ("kampanya %15") burada
- * TEKRARLANMAZ: sipariş kaydında o türü söyleyecek bir bilgi yok, uydurmak yerine susulur.
+ * İndirim satırının adı: kampanyanın sipariş anında kopyalanan adı (`discountLabel`), çünkü kampanya sonradan değişmiş
+ * olabilir. Ad yoksa satır genel adında kalır; türü söyleyecek bilgi siparişte yok, uydurulmaz.
  */
 function discountRowLabel(order: Order, generic: string, locale: PreferredLanguage): string {
   const named = order.discountLabel ? resolveLocalizedText(order.discountLabel, locale) : '';
@@ -311,11 +250,8 @@ function discountRowLabel(order: Order, generic: string, locale: PreferredLangua
 }
 
 /**
- * Paranın çözümü — istisna bildirimlerinin ilk kartı.
- *
- * Tutar tek yerden gelir: **iade borcu** (net tahsilat − karşılanan). İptalde karşılanan 0 sayıldığı
- * için aynı hesap tahsilatın tamamını verir; ayrı bir "iptal iadesi" formülü yazmaya gerek yoktur.
- * Borç yoksa `null` döner ve kart hiç çıkmaz — "0,00 € iade edildi" diyen bir mail gürültüdür.
+ * Paranın çözümü — istisna bildirimlerinin ilk kartı; iptalde karşılanan 0 sayıldığı için ayrı formül gerekmez. Borç
+ * yoksa `null` döner ve kart çıkmaz: "0,00 € iade edildi" diyen mail gürültüdür.
  */
 function buildRefund(order: Order, amountCents: number, event: NotifyEventName, locale: PreferredLanguage) {
   if (!EXCEPTION_EVENTS.includes(event) || amountCents <= 0) return null;
@@ -330,13 +266,8 @@ function buildRefund(order: Order, amountCents: number, event: NotifyEventName, 
 }
 
 /**
- * İstisna bildiriminde gösterilecek tutar. Üç olayın üçünde de farklı bir soruya cevap verir:
- *
- * - **Eksik karşılanma** → GİTMEYEN MALIN değeri. Peşin ödendiyse iade edilecek tutar budur, kapıda
- *   ödenecekse tahsilattan düşecek tutar. Tek sayı, iki durum — ödeme yöntemine bakan dal yok.
- * - **İptal / iade** → FİİLEN İADE EDİLEN tutar; kapı onu yazdığı için oradan gelir. Türetilen
- *   "iade borcu" bu noktada ZATEN SIFIRDIR (para geri gönderildi) — onu okusaydık mail "iade yok"
- *   derdi. Mail olanı bildirir, kalanı değil.
+ * İstisna bildiriminde gösterilecek tutar: eksik karşılanmada gitmeyen malın değeri, iptal ve iadede fiilen iade edilen
+ * tutar. Türetilen iade borcu yazımdan sonra sıfırdır; onu okusaydık mail "iade yok" derdi.
  */
 function refundAmountCents(
   items: readonly OrderItem[],
@@ -363,8 +294,8 @@ const DELIVERY_COPY: Record<PreferredLanguage, { route: string; shipping: string
 };
 
 /**
- * Teslimat bloğu. Gel-al'da adres MÜŞTERİNİN değil DEPONUN adresidir ve yanına aranacak numara yazılır: randevu sistem
- * dışı, telefonla (DOMAIN §6). Depo kaydı okunamadıysa tür yine yazılır, adres uydurulmaz.
+ * Teslimat bloğu. Gel-al'da adres deponun adresidir ve yanına aranacak numara yazılır (randevu sistem dışı, DOMAIN §6);
+ * depo kaydı okunamadıysa adres uydurulmaz.
  */
 function buildDelivery(order: Order, locale: PreferredLanguage, pickupWarehouse: Warehouse | null) {
   const copy = DELIVERY_COPY[locale];

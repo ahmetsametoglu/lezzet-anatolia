@@ -7,19 +7,8 @@ import type { OrderExceptionEvent } from './effects';
 import { buildOrderNotification } from './notification-data';
 
 /**
- * Sipariş bildirimlerinin tetiklendiği yer (14.5) — **uygulama katmanı orkestrasyonu**.
- *
- * Durum geçişi olur, burası "müşteriye haber ver" der; hangi kanaldan gideceğine `@lezzet/notify`
- * karar verir. Bu dosya kanal bilmez, şablon bilmez — yalnız hangi geçişin hangi olay olduğunu bilir.
- *
- * ── TERFİ (21.21) · WEB'DEN FARKLARI ─────────────────────────────────────────
- * Kaynağı `apps/web/lib/order/notify.ts`ti; web kopyası KÖPRÜ olarak duruyor. Gerekçesi ölçülmüş bir
- * arıza: `apps/mobile-api` bu dosyayı import edemediği için `placeOrder`a `effects` geçiremiyordu ve
- * **mobilden verilen kapıda/vadeli ödemeli siparişte onay maili hiç gitmiyordu**. Aynı sınır
- * `/api/v1/courier/*` teslimatını da sessiz bırakıyor (`effects.ts` künyesi, BEKLEYEN(14.11)).
- *
- * Değişen tek şey `db`nin çağırandan gelmesi (paketin ortak deseni). "Geçiş başına tek mail" kuralı,
- * yutma davranışı ve kayıt künyesi AYNEN korundu.
+ * Sipariş bildirimlerinin tetiklendiği yer: hangi geçişin hangi olay olduğunu bilir, kanalı `@lezzet/notify` seçer.
+ * Paketin içinde durur ki web ve mobil API aynı kuralla haber versin.
  */
 
 /** Hangi geçiş hangi haberi doğurur. Bildirimi olmayan geçiş burada yoktur — sessizlik de karardır. */
@@ -30,8 +19,8 @@ const EVENT_OF_STATUS: Partial<Record<OrderStatus, NotifyEventName>> = {
 };
 
 /**
- * Gel-al'da "hazır" müşteriye HABERDİR: mal depoda onu bekliyor ve randevuyu o ayarlayacak. Rota ve kargoda aynı durum
- * sessizdir — müşterinin yapacağı bir şey yok, haber "yolda"da gelir. Ayrım teslimat türünden, olayın adından değil.
+ * Gel-al'da "hazır" müşteriye haberdir: mal depoda onu bekliyor ve randevuyu o ayarlayacak. Rota ve kargoda aynı durum
+ * sessizdir, haber "yolda"da gelir; ayrım teslimat türünden, olayın adından değil.
  */
 export function notificationEventOf(status: OrderStatus, deliveryType: DeliveryType): NotifyEventName | null {
   if (status === 'ready') return deliveryType === 'pickup' ? 'order_ready_for_pickup' : null;
@@ -42,11 +31,8 @@ export function notificationEventOf(status: OrderStatus, deliveryType: DeliveryT
 const EVENT_OF_STATUS_VALUES: NotifyEventName[] = [...Object.values(EVENT_OF_STATUS), 'order_ready_for_pickup'];
 
 /**
- * Geçiş sonrası bildirim. **Geçiş başına en fazla bir mail**: sipariş bu duruma ikinci kez
- * girerse (kapıdan dönüp yeniden yola çıkmak gibi) haber tekrarlanmaz.
- *
- * Tekrarı önleyen şey ayrı bir "gönderildi" bayrağı DEĞİL, durum kaydının kendisidir — o kayıt
- * zaten tutuluyor (07.6). Bayrak tutsaydık iki kaynak olurdu ve biri kayardı.
+ * Geçiş sonrası bildirim; sipariş bu duruma ikinci kez girerse haber tekrarlanmaz. Tekrarı durum kaydının kendisi önler,
+ * ayrı bir "gönderildi" bayrağı ikinci kaynak olurdu.
  */
 export async function notifyOrderStatus(db: Db, orderId: string, status: OrderStatus): Promise<NotifyResult[]> {
   const order = await new OrderService(db).getById(orderId);
@@ -62,14 +48,8 @@ export async function notifyOrderStatus(db: Db, orderId: string, status: OrderSt
 }
 
 /**
- * İSTİSNA bildirimleri (14.5) — iptal, eksik karşılanma, iade. Durum geçişine değil, PARA
- * ÇÖZÜMÜNE bağlıdırlar: iptal `cancel_order`'dan, diğer ikisi kalem düzeltmesinden doğar.
- *
- * `refundedAmountCents` kapının fiilen yazdığı iade tutarıdır — türetilen borç o anda sıfırlanmış olur.
- *
- * Bunlarda "tek haber" kuralı UYGULANMAZ: her düzeltme ayrı bir olaydır. İki kez eksik çıkarsa
- * müşteri iki kez haber almalıdır; birleştirme kararı gönderim anının değil, tasarımın işidir
- * ("yolda" bildirimi zaten gittiyse tek mailde birleşir — o kural henüz kodlanmadı).
+ * İstisna bildirimleri (iptal, eksik karşılanma, iade) para çözümüne bağlıdır; `refundedAmountCents` kapının fiilen
+ * yazdığı iade tutarıdır. "Tek haber" kuralı uygulanmaz: her düzeltme ayrı bir olaydır.
  */
 export function notifyOrderException(
   db: Db,
@@ -94,10 +74,8 @@ async function notifyOrderEvent(
   if (!bundle) return [{ status: 'skipped', channel: 'email', reason: 'order_not_found' }];
 
   try {
-    // TEK KAPI (14.12): satır + kanal + teslim defteri + zil bir arada. Durum olaylarında
-    // `dedupeKey` bugünkü "geçiş başına tek mail" kuralının satır hâli (yukarıdaki status-log
-    // sayımı ilk savunma olarak duruyor — iki kaynak değil, aynı kuralın kapı ve defter uçları);
-    // İSTİSNA olaylarında anahtar YOK: her düzeltme ayrı haberdir (bu dosyanın kendi kuralı).
+    // Tek kapı: satır + kanal + teslim defteri + zil bir arada. Durum olaylarında `dedupeKey` "geçiş başına tek mail"
+    // kuralının defter ucudur; istisna olaylarında anahtar yok, her düzeltme ayrı haberdir.
     return await dispatchCustomerNotification(db, {
       event,
       customerId: bundle.customerId,
@@ -108,11 +86,8 @@ async function notifyOrderEvent(
       payload: { referenceNo: bundle.data.referenceNo },
     });
   } catch (error) {
-    // Sonuç nesnesi çağırana dönüyor ama ÇOĞU ÇAĞIRAN ONU OKUMUYOR (geçiş kapısı yalnız fırlatılan
-    // hatayı yakalıyordu) — yani gitmeyen mail hiçbir yerde görünmüyordu. Kayıt burada düşülür.
-    // `warning`: sipariş sağlam, eksik olan haber; ama izlenmeli.
-    // Kaynak artık `webAction` DEĞİL `applicationOrder`: kapıyı iki yüzey birden çağırıyor ve arıza
-    // akışın kendisindeyse iki kovaya bölünmemeli (`SOURCES.applicationOrder` künyesi).
+    // Çağıranların çoğu sonucu okumadığı için gitmeyen mail burada kayda düşülür; sipariş sağlam, eksik olan haber.
+    // Kaynak `applicationOrder`: kapıyı iki yüzey çağırıyor ve aynı arıza iki kovaya bölünmemeli.
     void captureError(error, { source: SOURCES.applicationOrder, level: 'warning', context: { orderId, event } });
     return [{ status: 'error', channel: 'email', error: error instanceof Error ? error.message : String(error) }];
   }

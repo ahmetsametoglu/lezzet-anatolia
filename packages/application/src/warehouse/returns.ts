@@ -6,50 +6,9 @@ import { readCourierReturn } from '../courier/return';
 import { displayName, variantNames } from './names';
 
 /**
- * **Kurye dönüşü — D6'nın OKUMA yarısı** (21.11d). Yazma yarısı zaten vardı
- * (`order/refund.adjustFulfillment` + `POST /warehouse/returns/:orderId`); eksik olan tek şey
- * *"bugün rampama ne geri geldi"* sorusunun cevabıydı ve o yokluk ekranda bir fixture'a dönüşmüştü
- * (`apps/mobile-customer/.../courier-return-fixture.ts`).
- *
- * ── ANAHTAR KURYENİN GÜNÜ DEĞİL, DEPONUN RAMPASI (ölçüldü) ──────────────────
- * İlk akla gelen kapı `courier/day-close.openDayClose`ın `returned` listesiydi. ELENDİ, iki ölçümle:
- *   1. O kapı `courierId` ZORUNLU alıyor (imzanın kendisi "yalnız kendi günü" kuralı) ve depocunun
- *      elinde kurye kimliği yok — uydurmak, deponun listesini bir kuryenin gününe daraltmak olurdu.
- *      Aynı rampaya iki kurye döner; biri günü hiç kapatmamış olabilir.
- *   2. `courier_day_close` ile sipariş arasında FK YOK — bağ ancak "aynı kurye + aynı gün" üzerinden
- *      DOLAYLI kurulurdu. Dolaylı bir bağ üstüne kurulan liste, kurye atanmadan dönen bir siparişi
- *      sessizce yutar.
- *
- * Deponun gerçek sorusu tek satır: **`returned` durumunda, BU depoda, akıbeti işaretlenmemiş kalemi
- * olan siparişler.** Üçü de gerçek kolon; hiçbiri türetilmiş bir varsayım değil.
- *
- * ── AYNI KAPI İKİ YÜZEYE BAKAR (25.08) ──────────────────────────────────────
- * Kapı doğduğunda tek okuyanı telefondaki depocuydu ve `warehouseId` tekildi. Masaüstü de aynı
- * soruyu soruyor — ama yöneticinin kapsamı bir LİSTEdir (`ctx.warehouseIds`), tek depo değil. İkinci
- * bir okuma yazmak yerine imza küme kabul ediyor: aynı gerçeği iki kapıdan okutmak, birini bir gün
- * güncellemeyi unutmaktır. Yüzeylerin işi ayrışıyor ve bu bilinçli: **karar telefonda verilir**
- * (depocu koliyi elinde tutar), masaüstü yalnız **görünürlük** sağlar — akıbeti bekleyen dönüş hiçbir
- * ekranda görünmezse `returned` sipariş sessizce asılı kalır, ve tam olarak öyle oluyordu (10.5).
- *
- * Süzgeç sözleşmesi web bağlamının kendisidir (`CLAUDE §1` · `WarehouseContext.warehouseIds`):
- * **tek kimlik ya da dizi = o depo(lar) · boş dizi = hiçbiri · `undefined` = depo-üstü.** Sonuncusu
- * yalnız kapsamı sınırsız yönetici içindir ve bir kestirme DEĞİL: kapsamı olmayan kişiye boş liste
- * göstermek, kapsamı sınırsız olana da boş liste göstermek olurdu — biri doğru, öteki yanlış cevap.
- *
- * ── LİSTE NEDEN SINIRSIZ BÜYÜMEZ ────────────────────────────────────────────
- * `returned` kalıcı bir durum DEĞİL: durum makinesi `returned → completed` diyor (*"depo aksiyonu +
- * para iadesi bitince sipariş kapanır; kalıcı `returned`'da kalmaz"*). Küme, açık iade süreçleri
- * kadardır — transfer listesiyle aynı sınıf (CLAUDE.md §1'in "doğal tavanı olan küme" dalı).
- * **Bilinen sınır:** okuma yine de tavanlı (`limit`) — ama tavan artık EN YENİDEN dolar (25.08).
- * Eskiden en eski satırlardan doluyordu ve bu, tavanın en kötü uygulanışıydı: liste zaten "en yeni
- * başta" sıralanıyor, yani birikmiş bir rampada bugün dönen koli hiç görünmüyor, üstelik liste dolu
- * göründüğü için yokluğu da fark edilmiyordu. Kayan uç şimdi en eskiler; iade süreci kapatılmadan
- * biriken en eski dönüşler pencerenin dışında kalır ve bu doğru ödünleşme — imleç açmak, kümenin
- * büyümemesi gerektiği gerçeğini gizlemek olurdu.
- *
- * ── PARA BU DOSYADAN GEÇMEZ ─────────────────────────────────────────────────
- * Depo kapılarının kuralı burada da geçerli: dönen görünümde tutar YOK. İade tutarı yalnız YAZIM
- * cevabında (`adjustFulfillment`) döner ve onu yönetim akışı okur — dönüşü karşılayan depocu değil.
+ * Kurye dönüşünün okuma yarısı: bu depoda `returned` durumunda ve akıbeti bekleyen kalemi olan siparişler; anahtar
+ * deponun rampasıdır, kuryenin günü değil, çünkü aynı rampaya iki kurye döner ve sipariş kuryesiz de dönebilir.
+ * Karar telefonda verilir, masaüstü yalnız görünürlük sağlar; görünümde tutar yok, iadeyi yönetim akışı okur.
  */
 
 /** Dönen kolinin tek satırı — kimliğiyle, çünkü akıbet satır satır işaretlenir. */
@@ -58,22 +17,13 @@ export interface ReturnDropLine {
   /** "Ürün (boy)" — operasyon dili Türkçe (CLAUDE.md §2). */
   name: string;
   /**
-   * **Hâlihazırda karşılanmış adet** — ekranın tavanı budur, sipariş edilen adet DEĞİL.
-   *
-   * Kural yazımın kendisinde: `adjust_fulfillment` (0020) hedef değeri mevcut karşılanan adedin
-   * üstüne çıkaramaz (*"karşılanan miktar artırılamaz"*). Sipariş adedini göstermek, depocuya
-   * kapının reddedeceği bir sayı girdirirdi.
+   * Hâlihazırda karşılanmış adet — ekranın tavanı budur, sipariş edilen adet değil. `adjust_fulfillment` hedefi karşılanan
+   * adedin üstüne çıkaramaz; sipariş adedi göstermek depocuya reddedilecek bir sayı girdirirdi.
    */
   fulfilledQty: number;
   /** Doluysa bu satırın akıbeti ZATEN işaretlenmiş — ekran onu ikinci kez göndermez. */
   disposition: ReturnDisposition | null;
-  /**
-   * Akıbetle birlikte yazılmış BEYAN — "stoğa dön"ün zorunlu tuttuğu soğuk zincir cümlesi.
-   *
-   * Okumaya 04.09'da eklendi ve sebebi bir kusurdu: ekran notu zorunlu tutuyor, veritabanı onu
-   * saklamıyordu. Not artık kaleme yazılıyor; burada geri okunması zorunluluğu bir törene
-   * dönmekten kurtarıyor — depocu ne beyan ettiğini satırda görür.
-   */
+  /** Akıbetle birlikte yazılmış beyan — "stoğa dön"ün zorunlu soğuk zincir cümlesi; depocu ne beyan ettiğini satırda görür. */
   note: string | null;
 }
 
@@ -99,16 +49,10 @@ export interface ReturnDrop {
 }
 
 /**
- * **Depoya geri gelenler** (D6). Yalnız akıbeti BEKLEYEN kalemi olan siparişler döner.
+ * Depoya geri gelenler: yalnız akıbeti bekleyen kalemi olan siparişler, satırlarının tamamıyla, çünkü depocu neyi karara
+ * bağladığını görmeden kalanı işaretleyemez. Ulaşılamayanlar burada yok: mal araçta kalır, sipariş `ready`e döner.
  *
- * Tamamı işaretlenmiş bir sipariş listeden düşer: depocunun işi bitmiştir, kalanı (iade ve kapanış)
- * yönetim akışının. Ama **yarısı işaretlenmiş sipariş satırlarının TAMAMIYLA** döner — bir kolinin
- * yarısı iade, yarısı jest olabilir ve depocu neyi karara bağladığını görmeden kalanı işaretleyemez.
- *
- * **Ulaşılamayanlar bu listede YOK ve olmamalı:** o mal kabul edilmedi, araçta kaldı ve yarına
- * devroldu (v2:505) — sipariş `ready`'e döner, deponun rampasına hiç girmez.
- *
- * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), `auth/otp` deseni.
+ * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`)
  */
 export async function listWarehouseReturns(
   db: SupabaseClient,
@@ -117,9 +61,7 @@ export async function listWarehouseReturns(
   const orders = await new OrderService(db).listByStatus(['returned'], {
     warehouseId: input.warehouseId,
     limit: input.limit ?? 50,
-    // Tavan EN YENİDEN dolar (düzeltildi 25.08). Varsayılan `asc` ile en eski 50 alınıyordu ve
-    // aşağıdaki sıralama onları "en yeni başta" diye diziyordu — tavana dayanan bir rampada bugün
-    // dönen koli hiç görünmezdi, üstelik liste dolu göründüğü için kimse fark etmezdi.
+    // Tavan en yeniden dolar: en eskiden dolsaydı birikmiş bir rampada bugün dönen koli hiç görünmezdi.
     orderDirection: 'desc',
   });
   if (orders.length === 0) return [];
@@ -161,8 +103,7 @@ export async function listWarehouseReturns(
   return drops.sort((a, b) => (b.returnedAt ?? '').localeCompare(a.returnedAt ?? ''));
 }
 
-/** Kalem → döküm satırı. Ad çözümü kuyruğun ortak okumasından (`names.ts`), ikinci kez kurulmaz —
-    tip de oradan türer: haritanın şekli elle ikinci kez yazılırsa alan eklendiğinde ayrışır (yaşandı 23.08). */
+/** Kalem → döküm satırı; ad çözümü ve tip kuyruğun ortak okumasından (`names.ts`) gelir, ikinci kez kurulmaz. */
 function toDropLine(names: Awaited<ReturnType<typeof variantNames>>) {
   return (item: OrderItem): ReturnDropLine => ({
     orderItemId: item.id,
@@ -173,17 +114,11 @@ function toDropLine(names: Awaited<ReturnType<typeof variantNames>>) {
   });
 }
 
-// ── RAMPA LİSTESİ (D6 · tasarım "D6 Rampa Listesi", 04.09) ───────────────────
+// ── RAMPA LİSTESİ (D6) ────────────────────────────────────────────────────────
 
 /**
- * Rampada teslim vermeyi bekleyen bir kurye — listenin tek satırı.
- *
- * ── NEDEN SATIR KURYE, SEFER DEĞİL ──────────────────────────────────────────
- * Para SEFER başına kapanır (18.08 K1: *"fark hangi seferde doğdu"*), mal ise KURYE başına teslim
- * alınır. Ayrım keyfî değil fiziksel: araç bir yerdedir ve o gün tek kuryenin yükünü taşır (veri
- * kuralı `assert_vehicle_single_courier`), yani iki sefer sürmüş kurye rampaya BİR KEZ döner ve
- * araç BİR KEZ boşalır. Satırı sefere bağlasaydık aynı aracın serbest ürünü iki satırda iki kez
- * sayılırdı — ikisi de aynı araç deposunu okuyor.
+ * Rampada teslim vermeyi bekleyen bir kurye — listenin tek satırı. Satır kuryedir, sefer değil: araç o gün tek kuryenin
+ * yükünü taşır ve bir kez boşalır; sefere bağlasaydık aynı aracın serbest ürünü iki kez sayılırdı.
  */
 export interface ReturningCourier {
   /** `null` = kuryeye hiç atanmamış dönüşlerin kümesi (kargo/tezgâh yolu). */
@@ -199,22 +134,11 @@ export interface ReturningCourier {
 }
 
 /**
- * **Rampada kim bekliyor.** Dönen siparişler + araçtan inecek kutular + araçtaki serbest ürün, tek
- * listede ve kurye başına toplanmış hâlde.
+ * Rampada kim bekliyor: akıbet bekleyen kalem, inecek kutu ya da araçta serbest ürünü olan kuryeler, kurye başına; yalnız
+ * araçta malı olan kurye de listededir, yoksa serbest ürün hiçbir mutabakata girmezdi. Kapsam dışı kuryenin dönen malı da
+ * bu rampadadır, o satır araç bölümü olmadan çizilir.
  *
- * ── LİSTEYE GİRME ÖLÇÜTÜ: YAPILACAK BİR İŞ VAR MI ───────────────────────────
- * Satır yalnız akıbet bekleyen kalem, inecek kutu ya da araçta serbest ürün varsa çizilir. **Yalnız
- * araçta malı olan kurye de listededir** ve bu, listenin en kolay unutulacak yarısı: kurye
- * denetiminin ölçtüğü "kaybolan mal" tam orada doğuyordu (03.09 bulgu 5) — araçtaki serbest ürün
- * hiçbir mutabakata girmiyordu. Yalnız ARAÇTA KALAN kutusu olan kurye ise listede YOK: o kutular
- * tanımı gereği kalıyor, yapılacak bir iş yok.
- *
- * ── KAPSAM DIŞI KURYE SESSİZCE DÜŞMEZ ───────────────────────────────────────
- * Dönen bir siparişin kuryesi bu tesise bağlı olmayabilir (personel taşınmış, sipariş devredilmiş).
- * Mal yine bu rampada duruyor ve akıbeti burada işaretlenir; o satır araç bölümü olmadan çizilir.
- * Kuryeyi listeden atmak, elimizdeki koliyi görünmez yapardı.
- *
- * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), `auth/otp` deseni.
+ * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`)
  */
 export async function listReturningCouriers(
   db: SupabaseClient,
@@ -283,13 +207,8 @@ export interface ReturningCourierDetail extends Omit<ReturningCourier, 'pendingL
 }
 
 /**
- * **Bir kuryenin rampadaki her şeyi.** İki kapının cevabı burada birleşiyor çünkü ekran tek
- * dokunuşla ikisini birden yazıyor; iki ayrı okuma, tek görünen işi iki yarım fotoğraftan kurmak
- * olurdu.
- *
- * `courierId: null` = kuryesiz küme: yalnız döküm döner, araç bölümleri boştur. Ayrı bir tip
- * yazılmadı — fark tipin şeklinde değil, hangi bölümlerin boş olduğunda ve ekran boş bölümü zaten
- * çizmiyor.
+ * Bir kuryenin rampadaki her şeyi: ekran tek dokunuşla iki kapının işini yazdığı için iki cevap burada birleşir.
+ * `courierId: null` kuryesiz kümedir; yalnız döküm döner, araç bölümleri boştur.
  */
 export async function readReturningCourier(
   db: SupabaseClient,
@@ -304,19 +223,8 @@ export async function readReturningCourier(
   }
 
   const draft = await readCourierReturn(db, { courierId: input.courierId, warehouseId: input.warehouseId, scope: input.scope });
-  /*
-    ── ARAÇ REDDEDİLDİ, DÖKÜM REDDEDİLMEZ (kusur, ölçüldü 04.09) ──────────────
-    Kurye künyesi çözülemeyebilir: rolü alınmış, başka tesise taşınmış, ya da sipariş devredilirken
-    kurye bağı eskimiş olabilir. İlk yazımda bu hâlde kapı `forbidden` dönüyordu ve liste ile detay
-    ÇELİŞİYORDU — liste o kuryeye satır açıyor (mal bu rampada duruyor, akıbeti burada işaretlenir)
-    ama satıra dokunulunca ekran "başka deponun" diyordu. Dönen koli o an hiçbir yerden
-    işaretlenemez hâle gelirdi.
-
-    Reddin koruduğu şey ARAÇ verisidir (başka bir tesisin aracının stoğu), döküm değil: döküm zaten
-    `warehouseId` ile süzülmüş, yani bu deponun kendi rampasıdır. O yüzden künye düşerse araç
-    bölümleri BOŞ döner, döküm durur. Gerçekten gösterilecek bir şey yoksa (döküm de boşsa) ret
-    olduğu gibi geçer — orada söylenecek doğru cevap "senin değil"dir.
-  */
+  /* Kurye künyesi çözülemezse araç bölümleri boş döner ama döküm durur: ret araç verisini korur, döküm zaten bu deponun
+     rampasıdır. Döküm de boşsa ret olduğu gibi geçer, orada doğru cevap "senin değil"dir. */
   if ('status' in draft) {
     if (drops.length === 0) return draft;
     return {

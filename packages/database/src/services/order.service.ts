@@ -274,9 +274,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Teslim** (07.7): ayrılmış düşer, fiili stok kayıtlı partilerden düşer, `delivery_proof`
-   * yazılır ve durum `delivered` olur — hepsi tek transaction'da. Sipariş artık yolda değilse
-   * yazmaz, `stale` döner.
+   * **Teslim**: ayrılmış düşer, fiili stok kayıtlı partilerden düşer, `delivery_proof` yazılır ve durum `delivered`
+   * olur — hepsi tek transaction'da. Sipariş yolda değilse yazmaz, `stale` döner.
    */
   async deliver(orderId: string, opts: { actorId?: string | null; deliveryProof?: Record<string, unknown> | null } = {}): Promise<DeliverResult> {
     const raw = await this.executeRpc('deliver_order', {
