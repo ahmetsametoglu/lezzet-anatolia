@@ -483,7 +483,7 @@ class Component extends DCLogic {
       ph: filled ? 'fotoğraf' : 'boş', bd: filled ? 'solid' : 'dashed',
       bg: filled ? 'repeating-linear-gradient(135deg,#eef0ea 0 7px,#e4e7de 7px 14px)' : '#fff',
       state: filled ? 'Yüklü' : 'Boş — sayfa yer tutucusunu çiziyor', stFg: filled ? '#4a6121' : '#6a7065' });
-    const cImages = card('Images', 'Vitrin görselleri', '2 / 4', 'Müşteri yüzeyindeki sabit görseller. Karta tıklayınca kadraj, alternatif metin ve kaldırma penceresi açılır.', {
+    const cImages = card('Images', 'Vitrin görselleri', '2 / 4', 'Müşteri yüzeyindeki sabit görseller. Yüklenmemiş yer arıza değildir, sayfa kendi yer tutucusunu çizer; düzenlemek için karta tıklayın.', {
       span: 'all',
       images: [
         I('Ana sayfa kahramanı', '16:9', '16 / 9', 'Ana sayfanın en üstü — masaüstü ve mobil web aynı görseli kullanır', true),
@@ -508,14 +508,14 @@ class Component extends DCLogic {
     const changedOnly = this.state.changedOnly;
     const active = TABS.find(t => t.key === this.state.tab) || TABS[0];
     const tabs = TABS.map(t => {
-      const on = !changedOnly && t.key === active.key;
+      const on = t.key === active.key;
       return { label: t.label, count: t.count, hasCount: !!t.count, fg: on ? '#22251f' : '#6a7065', edge: on ? '#5f7a2c' : 'transparent',
         cBg: on ? '#eef4e2' : '#eef0ea', cFg: on ? '#4a6121' : '#6a7065',
         select: () => this.setState({ tab: t.key, changedOnly: false }) };
     });
     const chip = changedOnly
-      ? { bg: '#22251f', fg: '#fbfbf9', bd: '#22251f', nBg: '#4a4f45', nFg: '#fbfbf9' }
-      : { bg: '#fff', fg: '#3a3f37', bd: '#d9dbd2', nBg: '#eef0ea', nFg: '#6a7065' };
+      ? { bg: '#5f7a2c', fg: '#fbfbf9', bd: '#5f7a2c', nBg: 'transparent', nFg: '#fbfbf9' }
+      : { bg: '#fff', fg: '#5f7a2c', bd: '#cdd8b6', nBg: 'transparent', nFg: '#5f7a2c' };
 
     return {
       tabs, chip, changedOnly,
