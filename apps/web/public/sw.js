@@ -10,12 +10,18 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(fetch(event.request));
 });
 
-// Gövde sunucunun tarayıcı bildirimi sürücüsünden gelir: `{ title, body, url }`.
+// Gövde sunucunun tarayıcı bildirimi sürücüsünden gelir: `{ title, body, url }`. `badge` Android'in durum çubuğu ve bildirim
+// başlığındaki küçük simgedir; yalnız saydamlığı okunur, verilmezse Chrome kendi zilini koyar.
 self.addEventListener('push', (event) => {
   const message = event.data ? event.data.json() : null;
   if (!message) return;
   event.waitUntil(
-    self.registration.showNotification(message.title, { body: message.body, icon: '/pwa/icon-192.png', data: { url: message.url } }),
+    self.registration.showNotification(message.title, {
+      body: message.body,
+      icon: '/pwa/icon-192.png',
+      badge: '/pwa/badge-96.png',
+      data: { url: message.url },
+    }),
   );
 });
 
