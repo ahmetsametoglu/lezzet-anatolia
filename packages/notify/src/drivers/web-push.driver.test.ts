@@ -59,6 +59,22 @@ describe('webPushDriver', () => {
     expect(JSON.parse(bodies[0]!)).toMatchObject(pushText);
   });
 
+  it('kısmi kabulde silinmeyen hata sonuçta kalır: taşıyıcı ve kod yazılır, abonenin adresi yazılmaz', async () => {
+    const apple = { endpoint: 'https://web.push.apple.com/QGizliAbone', keys: { p256dh: 'p', auth: 'a' } };
+    const sender = (async (sub: webpush.PushSubscription) => {
+      if (sub.endpoint === apple.endpoint) throw new webpush.WebPushError('Received unexpected response code', 403, {}, '{"reason":"BadJwtToken"}', sub.endpoint);
+      return { statusCode: 201, body: '', headers: {} };
+    }) as typeof webpush.sendNotification;
+
+    const sonuc = await webPushDriver({ sender }).send('ticket_replied', { ...alici, webPush: [subscription('canli'), apple] }, data);
+
+    expect(sonuc).toMatchObject({ status: 'sent', gone: [] });
+    const partial = sonuc.status === 'sent' ? sonuc.partial : undefined;
+    expect(partial).toContain('1/2 web.push.apple.com 403');
+    expect(partial).toContain('BadJwtToken');
+    expect(partial).not.toContain('QGizliAbone');
+  });
+
   it('anahtar yoksa sürücü yeteneksizdir, HABER sıradaki kanala düşer', () => {
     delete process.env.WEB_PUSH_PRIVATE_KEY;
     expect(webPushDriver().supports('ticket_replied', alici)).toBe(false);

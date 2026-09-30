@@ -260,6 +260,24 @@ describe('jeton doldurma (14.16)', () => {
     });
     expect(await new PushDeviceService(db).findByToken(subscription.endpoint)).toBeNull();
   });
+
+  it('kısmi kabulün hatası teslim defterinde görünür: "gönderildi" satırı ulaşmayan cihazı saklamaz', async () => {
+    const id = await musteri('Kısmi', `bild-kismi-${stamp}@ornek.test`);
+    const partial = '1/2 web.push.apple.com 403 BadJwtToken';
+    const casus: NotifyDriver = {
+      channel: 'web_push',
+      supports: () => true,
+      send: async () => ({ status: 'sent', channel: 'web_push', ref: null, partial }),
+    };
+    await dispatchCustomerNotification(
+      db,
+      { event: 'ticket_replied', customerId: id, recipient: alici(`bild-kismi-${stamp}@ornek.test`), data: ticketData },
+      { notifier: createNotifier([casus]) },
+    );
+
+    const satir = (await notifications.listByProfile(id)).rows[0]!;
+    expect(await deliveries.listByNotification(satir.id)).toMatchObject([{ channel: 'web_push', status: 'sent', reason: partial }]);
+  });
 });
 
 describe('personel fan-out', () => {

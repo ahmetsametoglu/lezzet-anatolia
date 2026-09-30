@@ -33,6 +33,13 @@ const OPEN_URL: { [E in NotifyEventName]: (data: NotifyPayloads[E]) => string } 
   b2b_application_result: (d) => d.actionUrl,
 };
 
+/** Defterin okuyacağı kadarı: hangi taşıyıcı, hangi kod, taşıyıcının kısa sebebi. Adresin kendisi abonenin kimliğidir, yazılmaz. */
+function failureOf(endpoint: string, reason: unknown): string {
+  const host = new URL(endpoint).host;
+  if (reason instanceof webpush.WebPushError) return `${host} ${reason.statusCode} ${(reason.body || reason.message).slice(0, 120)}`.trim();
+  return `${host} ${reason instanceof Error ? reason.message : String(reason)}`;
+}
+
 export interface WebPushDriverOptions {
   /** Test enjeksiyonu: ağ yerine sahte gönderici. */
   sender?: typeof webpush.sendNotification;
@@ -68,6 +75,7 @@ export function webPushDriver(options: WebPushDriverOptions = {}): NotifyDriver 
       );
 
       const gone: string[] = [];
+      const failures: string[] = [];
       let delivered = 0;
       let firstError: string | null = null;
       outcomes.forEach((outcome, i) => {
@@ -76,13 +84,21 @@ export function webPushDriver(options: WebPushDriverOptions = {}): NotifyDriver 
           return;
         }
         const reason: unknown = outcome.reason;
-        if (reason instanceof webpush.WebPushError && GONE_STATUS.has(reason.statusCode)) gone.push(subscriptions[i]!.endpoint);
         firstError ??= reason instanceof Error ? reason.message : String(reason);
+        if (reason instanceof webpush.WebPushError && GONE_STATUS.has(reason.statusCode)) gone.push(subscriptions[i]!.endpoint);
+        else failures.push(failureOf(subscriptions[i]!.endpoint, reason));
       });
 
-      // Kısmi kabul `sent`tir: bir tarayıcıya ulaşan haber ulaşmıştır, düşen abonelik `gone` ile silinir.
+      // Kısmi kabul `sent`tir: bir tarayıcıya ulaşan haber ulaşmıştır, düşen abonelik `gone` ile silinir. Silinmeyen hata
+      // `partial`da kalır, yoksa bir taşıyıcının (ör. Apple) bütün aboneleri öbürü çalıştıkça sessizce bildirimsiz kalır.
       if (delivered === 0) return { status: 'error', channel: 'web_push', error: firstError ?? 'web push gönderilemedi', gone };
-      return { status: 'sent', channel: 'web_push', ref: null, gone };
+      return {
+        status: 'sent',
+        channel: 'web_push',
+        ref: null,
+        gone,
+        ...(failures.length > 0 ? { partial: `${failures.length}/${subscriptions.length} ${failures.join(' · ')}` } : {}),
+      };
     },
   };
 }

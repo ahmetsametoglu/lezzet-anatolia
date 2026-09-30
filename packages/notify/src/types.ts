@@ -72,7 +72,14 @@ export interface NotifyRecipient {
  * işi geri almaz. `gone` taşıyıcının "bu cihaz artık yok" dediği adreslerdir: sürücü DB bilmediği için silmek çağıranın işidir.
  */
 export type NotifyResult =
-  | { status: 'sent'; channel: NotifyChannel; ref: string | null; gone?: string[] }
+  | {
+      status: 'sent';
+      channel: NotifyChannel;
+      ref: string | null;
+      gone?: string[];
+      /** Kısmi kabulde ulaşılamayan cihazların hatası (taşıyıcı adı + kod); çağıran defterin `reason`ına yazar. */
+      partial?: string;
+    }
   | { status: 'skipped'; channel: NotifyChannel; reason: string }
   | { status: 'error'; channel: NotifyChannel; error: string; gone?: string[] };
 

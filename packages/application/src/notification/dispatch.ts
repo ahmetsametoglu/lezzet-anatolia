@@ -120,7 +120,7 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
           notificationId: rowId,
           channel: result.channel,
           status: result.status,
-          reason: result.status === 'skipped' ? result.reason : result.status === 'error' ? result.error : null,
+          reason: result.status === 'skipped' ? result.reason : result.status === 'error' ? result.error : (result.partial ?? null),
           ref: result.status === 'sent' ? result.ref : null,
         });
       } catch (err) {
