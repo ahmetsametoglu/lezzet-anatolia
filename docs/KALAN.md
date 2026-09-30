@@ -25,8 +25,7 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
   resmî adıyla mı · "kenarları hafif yumuşamış olabilir" cümlesi (üretici teyidi).
 - [~] (21.310) **Operasyon uygulamasının (`apps/mobile-operations`, "Lezzet Operasyonu") kurulabilir sürümü** — personelin
   telefonuna kurulur; müşteri uygulamasıyla ortak çekirdek `packages/mobile-kit`.
-  - Eksik: Expo proje kimliği (`extra.eas.projectId`) ve Firebase `google-services.json` (kayıt kullanıcının; ikisi yokken push
-    jetonu alınmaz) · operasyon ikonu (tasarım bekliyor; bugünkü ikon yolu artık olmayan `apps/mobile` klasörünü gösteriyor) ·
+  - Eksik: operasyon ikonu (tasarım bekliyor; o gelene dek müşteri uygulamasının görselleri okunuyor) ·
     Supabase dönüş izin listesi (`supabase/config.toml`): `lezzetoperasyonu://**` yok, müşteri uygulamasının satırı eski adla
     (`lezzetanatolia://**`) duruyor, uygulamanın şeması `lezzetanatolie`.
 - [ ] **Fiyat listesi (B2B/B2C)** — kullanıcı bekliyor (kendi notlarında); gelince gerçek beslemeye girer.

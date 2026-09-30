@@ -12,15 +12,13 @@ import { customerSand } from '@lezzet/design-tokens/customer';
 
 /* Dış kayıtlar (Expo projesi, Firebase uygulaması, Apple kimliği) kullanıcınındır; değer buraya kayıttan sonra yazılır. */
 
-/* BEKLEYEN(21.310): Expo proje kimliği (`extra.eas.projectId`) ve `google-services.json`; ikisi gelene dek push jetonu alınamaz. */
-
 /* KAMERA İZNİ — yalnız kod okutmak. Dile göre metin `locales/*.json`da; bu cümle desteklenmeyen dildeki
    cihazın gördüğü temel değer, bu yüzden İngilizce. */
 const CAMERA_PERMISSION = 'The camera is used to scan product and parcel codes.';
 
 /* BEKLEYEN(21.310): operasyon ikonu tasarımı. O gelene dek müşteri uygulamasının görselleri okunur —
    kopyalanmaz: tek kaynak, ikon gelince yalnız bu yollar değişir. */
-const SHARED_IMAGES = '../mobile/assets/images';
+const SHARED_IMAGES = '../mobile-customer/assets/images';
 
 const config: ExpoConfig = {
   name: 'Lezzet Operasyonu',
@@ -47,6 +45,7 @@ const config: ExpoConfig = {
       monochromeImage: `${SHARED_IMAGES}/android-icon-monochrome.png`,
     },
     predictiveBackGestureEnabled: false,
+    googleServicesFile: './google-services.json',
   },
   plugins: [
     'expo-router',
@@ -68,6 +67,10 @@ const config: ExpoConfig = {
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
+  },
+  /* Push jetonu proje kimliğiyle alınır; dinamik yapılandırmaya `eas init` yazamadığı için elle. */
+  extra: {
+    eas: { projectId: '247c7b75-82be-4d45-aa2b-928448c9e714' },
   },
 };
 
