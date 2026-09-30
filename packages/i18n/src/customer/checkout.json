@@ -3,8 +3,6 @@
     "title": "Siparişi tamamla",
     "back": "Geri",
     "hero": "Az kaldı — sofra kurulsun",
-    "signedIn": "✓ {name}",
-    "signedInAnon": "✓ Hesabınızla devam ediyorsunuz",
     "meUnreadable": "Hesabınızı okuyamadık — bağlantınızı kontrol edip tekrar deneyin.",
     "meRetry": "Tekrar dene",
     "state": {
@@ -237,8 +235,6 @@
     "title": "Finaliser la commande",
     "back": "Retour",
     "hero": "Presque fini — dressons la table",
-    "signedIn": "✓ {name}",
-    "signedInAnon": "✓ Vous continuez avec votre compte",
     "meUnreadable": "Nous n'avons pas pu charger vos informations — vérifiez votre connexion et réessayez.",
     "meRetry": "Réessayer",
     "state": {
@@ -471,8 +467,6 @@
     "title": "Bestellung abschließen",
     "back": "Zurück",
     "hero": "Fast geschafft – gleich ist der Tisch gedeckt",
-    "signedIn": "✓ {name}",
-    "signedInAnon": "✓ Angemeldet",
     "meUnreadable": "Wir konnten Ihr Konto nicht laden – prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "meRetry": "Erneut versuchen",
     "state": {

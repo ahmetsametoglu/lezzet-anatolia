@@ -20,7 +20,7 @@ import { declineNeighborInvite } from '@/lib/invite/invite-api';
 import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
 import { checkAddress, updateAddress, type MeAddress } from '@/lib/api/addresses';
 import { placeCheckoutOrder } from '@/lib/api/checkout';
-import { updateMe, type Me } from '@lezzet/mobile-kit/src/lib/api/me';
+import { updateMe } from '@lezzet/mobile-kit/src/lib/api/me';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { hapticError, hapticSuccess } from '@lezzet/mobile-kit/src/lib/haptics/haptics';
@@ -607,19 +607,14 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           </View>
         </View>
 
-        {/* Kimlik dört hâllidir: misafir bir cevap, okuma hatası cevapsızlık, yükleme henüz sorulmamış sorudur. Bant ad, yoksa
-            e-posta, o da yoksa kimliksiz cümle yazar; boş işaret müşteriye bir şey söylemez. */}
-        {meStatus === 'ready' && customer !== null ? (
-          <View style={styles.signedIn} testID="checkout-signed-in">
-            <Text style={styles.signedInLabel}>{signedInLabel(t, customer)}</Text>
-          </View>
-        ) : meStatus === 'error' ? (
-          <View style={styles.signedIn} testID="checkout-me-error">
+        {/* Kim olarak devam edildiği sepette yazılır; burada yalnız kimliğin okunamadığı hâl söylenir, çünkü onsuz sipariş kapısı
+            açılamaz ve müşteri yeniden deneme yolu ister. */}
+        {meStatus === 'error' ? (
+          <View style={styles.meError} testID="checkout-me-error">
             <Note tone="error" description={t.meUnreadable} testID="checkout-me-error-note" />
             <TextAction label={t.meRetry} onPress={refreshMe} testID="checkout-me-retry" />
           </View>
-        ) : /* Misafir sepete döner; yüklenirken hiçbir şey çizilmez, cevabı gelmemiş soruyu yazmak kimliği olan müşteriye bir an
-              "misafirsiniz" demek olurdu. */ null}
+        ) : null}
 
         {/* Seçenekler okunamadıysa ekran hâlini söyler ve yeniden deneme yolu verir. Yüklenirken üç bölümün yeri tutulur ki cevap
             gelince tutar özeti ve onay aşağı zıplamasın. */}
@@ -951,13 +946,6 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   );
 }
 
-/** Ölçüt `isNameMissing`ten gelir: "ad = e-posta" hâli de adsızlıktır ve kural iki yerde tutulursa ayrışır. */
-function signedInLabel(t: Messages, customer: Me): string {
-  if (!isNameMissing(customer)) return t.signedIn.replace('{name}', customer.name);
-  const email = customer.email?.trim() ?? '';
-  return email === '' ? t.signedInAnon : t.signedIn.replace('{name}', email);
-}
-
 /** Teslimat satırlarının dokunuşu — yol adresin cevabı olduğu için bir şey DEĞİŞTİRMEZ. */
 function keepDelivery(): void {
   return undefined;
@@ -1020,16 +1008,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     flexDirection: 'row',
     paddingLeft: theme.space.lg,
   },
-  signedIn: {
+  meError: {
     backgroundColor: theme.colors['sand-150'],
     borderRadius: theme.radius.control,
     paddingVertical: theme.space.xl,
     paddingHorizontal: theme.space['2xl'],
-  },
-  signedInLabel: {
-    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
-    fontSize: theme.text.note,
-    color: theme.colors.ink,
   },
   section: { gap: theme.space.md },
   eyebrow: {

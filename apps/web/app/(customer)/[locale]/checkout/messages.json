@@ -3,13 +3,6 @@
     "title": "Siparişi tamamla",
     "backToCart": "← Sepete dön",
     "backLabel": "Geri",
-    "verify": {
-      "accountAs": "{email} olarak devam ediyorsunuz",
-      "notYou": "Siz değil misiniz?",
-      "notYouConfirm": "Oturumu kapatalım mı?",
-      "notYouYes": "Evet, çıkış yap",
-      "notYouCancel": "Vazgeç"
-    },
     "address": {
       "step": "1",
       "title": "Teslimat adresi",
@@ -126,13 +119,6 @@
     "title": "Finaliser la commande",
     "backToCart": "← Retour au panier",
     "backLabel": "Retour",
-    "verify": {
-      "accountAs": "Vous continuez en tant que {email}",
-      "notYou": "Pas vous ?",
-      "notYouConfirm": "Se déconnecter ?",
-      "notYouYes": "Oui, me déconnecter",
-      "notYouCancel": "Annuler"
-    },
     "address": {
       "step": "1",
       "title": "Adresse de livraison",
@@ -249,13 +235,6 @@
     "title": "Bestellung abschließen",
     "backToCart": "← Zurück zum Warenkorb",
     "backLabel": "Zurück",
-    "verify": {
-      "accountAs": "Angemeldet als {email}",
-      "notYou": "Nicht Sie?",
-      "notYouConfirm": "Abmelden?",
-      "notYouYes": "Ja, abmelden",
-      "notYouCancel": "Abbrechen"
-    },
     "address": {
       "step": "1",
       "title": "Lieferadresse",

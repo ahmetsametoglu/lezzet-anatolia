@@ -42,6 +42,7 @@ import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { usePickupPoints } from '@/screens/customer-kit/use-pickup-points.hook';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
+import { AccountBand } from './account-band';
 import { CartLineRow } from './cart-line-row';
 import { CartSkeleton } from './cart-skeleton';
 import messages from '@lezzet/i18n/customer/cart';
@@ -81,7 +82,7 @@ export function CartScreen() {
   const browsingCode = onboarding?.postalCode ?? '';
 
   /* Sepetin yeri girişli müşteride teslimat adresidir (`usePurchasePlace`); yeri sepet deposu kurar, ekran yalnız okur. */
-  const { status: meStatus } = useMe();
+  const { status: meStatus, me } = useMe();
   const { address: deliveryAddress } = usePurchasePlace();
   /* Gel-al (izinli müşteri): depo adres seçicide bir kart; seçim ortak depoda, sepet seçilen deponun stoğuyla okunur. */
   const pickupPoints = usePickupPoints(meStatus === 'ready');
@@ -391,6 +392,7 @@ export function CartScreen() {
         )}
         {/* Teslimat adresi sepetin neye göre değerlendirildiğini söyler; posta kodu düzenleyicisi sepette yok, çünkü iki ayrı yer
             tutmak kapattığımız ayrışmayı geri açardı. */}
+        {meStatus === 'ready' && me !== null ? <AccountBand email={me.email ?? null} /> : null}
         {meStatus === 'guest' ? (
           <DashedInvite
             layout="stack"

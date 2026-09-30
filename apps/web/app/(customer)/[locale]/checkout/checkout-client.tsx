@@ -323,7 +323,6 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     state,
     // Ekrana giden "ayrı sipariş mi" SEPETTEN türer, bayraktan değil (`isSeparateOrder` künyesi).
     separateOrder: isSeparateOrder(shippingOrder, view),
-    customerEmail: customer.email,
     busy: busy || payStage !== null,
     error,
     selectedAddress,

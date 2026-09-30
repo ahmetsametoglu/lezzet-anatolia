@@ -20,7 +20,6 @@ import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import { getPathname } from '@/i18n/navigation';
-import { AccountLine } from './components/checkout-steps';
 import { PayProgress } from './components/payment-element';
 import { PhoneCheckoutSkeleton } from './components/phone-checkout-skeleton';
 import { PhoneShippingChoice } from './components/phone-shipping-choice';
@@ -208,7 +207,6 @@ export function CheckoutMobile(props: CheckoutViewProps) {
         </div>
 
         <ShippingOrderNote {...props} />
-        <AccountLine t={t} email={props.customerEmail} compact />
 
         {/* Üç bölüm seçili adresin cevabı ve istemcide çözülüyor: bitmeden iskelet (native `CheckoutSkeleton`). */}
         {snapshotReady ? (

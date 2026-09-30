@@ -55,8 +55,6 @@ export interface CheckoutViewProps extends StepProps {
    * Yalnız kargo kalemi taşıyan sepette "ayrı sipariş" demek yanlış olur.
    */
   separateOrder: boolean;
-  /** Girişli müşterinin e-postası — kimlik satırı ("… olarak devam ediyorsunuz") bunu yazar. */
-  customerEmail: string;
   busy: boolean;
   error: string | null;
   onSelectDate: (date: string) => void;

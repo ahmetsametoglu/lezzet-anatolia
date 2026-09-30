@@ -51,10 +51,13 @@ jest.mock('@/screens/customer-kit/cart-store', () => ({
 
 /* Ödemeye giriş yapmış ve adresi belli müşteri geçer; testler varsayılan olarak o müşteriyi kurar, kapının hâllerini ayrı testler değiştirir. */
 let mockMeStatus: 'ready' | 'guest' = 'ready';
+let mockMe: { id: string; name: string; email: string | null; phone: string | null } | null = null;
 let mockAddress: MeAddress | null = null;
 jest.mock('@lezzet/mobile-kit/src/lib/me/use-me.hook', () => ({
-  useMe: () => ({ status: mockMeStatus, me: null, refresh: () => undefined }),
+  useMe: () => ({ status: mockMeStatus, me: mockMe, refresh: () => undefined }),
 }));
+const mockSignOut = jest.fn(async () => ({ error: null }));
+jest.mock('@lezzet/mobile-kit/src/lib/auth/sign-out', () => ({ signOut: () => mockSignOut() }));
 jest.mock('@/screens/customer-kit/purchase-place', () => ({
   ...jest.requireActual<object>('@/screens/customer-kit/purchase-place'),
   usePurchasePlace: () => ({ address: mockAddress, postalCode: mockAddress?.postalCode ?? null }),
@@ -68,6 +71,8 @@ jest.mock('@/screens/customer-kit/use-addresses.hook', () => ({
 
 beforeEach(() => {
   mockMeStatus = 'ready';
+  mockMe = null;
+  mockSignOut.mockClear();
   mockAddressesStatus = 'ready';
   mockAddress = addressFixture('adres-1', '67380', true);
 });
@@ -357,6 +362,30 @@ describe('CartScreen — giriş ve adres sepette sorulur', () => {
     expect(screen.getByTestId('cart-address-empty')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: t.checkout })).toBeDisabled();
     expect(screen.getByTestId('cart-bar-block')).toHaveTextContent(t.barBlock.address);
+  });
+
+  // Bant girişli müşteride çizilmezse ya da "Siz değil misiniz?" onay beklemeden çıkış yaparsa kırmızıya döner.
+  it('girişli müşteriye kim olarak devam ettiği yazılır; "Siz değil misiniz?" onayla çıkış yapar', async () => {
+    mockMe = { id: 'customer-1', name: 'Ayşe', email: 'ayse@example.com', phone: null };
+    mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local')]));
+
+    await render(<CartScreen />);
+
+    expect(within(screen.getByTestId('cart-account')).getByText(t.account.as.replace('{email}', 'ayse@example.com'))).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('cart-not-you'));
+    expect(mockSignOut).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('cart-sign-out'));
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('misafirde kimlik bandı çizilmez', async () => {
+    mockMeStatus = 'guest';
+    mockAddress = null;
+    mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local')]));
+
+    await render(<CartScreen />);
+
+    expect(screen.queryByTestId('cart-account')).toBeNull();
   });
 
   // Adres listesi okunamadığında müşteriye "adresiniz yok" denirse ya da düğme açılırsa kırmızıya döner.

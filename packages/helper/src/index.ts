@@ -13,6 +13,7 @@ export * from './money';
 export * from './opening-hours';
 export * from './package';
 export * from './place-change';
+export * from './signed-in';
 export * from './points-history';
 export * from './price-label';
 export * from './recipe';

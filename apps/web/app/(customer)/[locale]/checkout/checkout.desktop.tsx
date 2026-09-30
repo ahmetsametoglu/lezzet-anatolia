@@ -2,7 +2,7 @@
 
 import { Link } from '@/i18n/navigation';
 import { Icon } from '@/components/customer/ui/icons';
-import { AccountLine, AddressStep, DeliveryStep, OrderSummary, PaymentStep } from './components/checkout-steps';
+import { AddressStep, DeliveryStep, OrderSummary, PaymentStep } from './components/checkout-steps';
 import { CheckoutProgress } from './components/checkout-progress';
 import { CheckoutStepsSkeleton } from './components/checkout-skeleton';
 import { ShippingOrderNote } from './components/shipping-order-note';
@@ -44,7 +44,6 @@ export function CheckoutDesktop(props: CheckoutViewProps) {
         <div className="flex min-w-0 flex-col gap-4">
           <ShippingOrderNote {...props} />
           <CheckoutProgress {...props} />
-          <AccountLine t={t} email={props.customerEmail} compact={props.compact} />
           {/* Adım verisi istemcide çözülüyor: bitmeden adımlar çizilmez. Önce hiç çizilmiyordu
               (sayfa yarım görünüyordu) ve adres adımı veri gelmeden "kayıtlı adresiniz yok"
               diyordu — henüz bilinmeyen, üstelik yanlış olabilen bir hüküm. */}

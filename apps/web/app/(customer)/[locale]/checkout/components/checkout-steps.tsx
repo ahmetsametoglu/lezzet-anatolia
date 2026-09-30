@@ -12,7 +12,6 @@ import { Card } from '@/components/customer/ui/card';
 import { Icon } from '@/components/customer/ui/icons';
 import { SummaryRow, summaryCopy } from '@/components/customer/ui/summary-row';
 import { PlaceRestriction, restrictedLines } from '@/components/customer/delivery/place-restriction';
-import { signOutAction } from '@/lib/auth/actions';
 import { Skeleton } from '@/components/customer/ui/skeleton';
 import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
@@ -109,62 +108,6 @@ function ModeCard({ icon, title, from, selected, onClick }: ModeCardProps) {
         </span>
       </span>
     </ChoiceCard>
-  );
-}
-
-/**
- * Girişli müşterinin kimlik satırı adım değil künyedir: doğrulanmış müşteriden ikinci doğrulama sürtünmedir, ama siparişin kime
- * bağlandığı görünmeli, çünkü paylaşılan cihazda bir öncekinin oturumu açık kalmış olabilir.
- */
-export function AccountLine({ t, email, compact }: { t: CheckoutViewProps['t']; email: string; compact?: boolean }) {
-  const [confirming, setConfirming] = useState(false);
-  const [busy, setBusy] = useState(false);
-  if (!email) return null;
-
-  /**
-   * "Siz değil misiniz?" gerçekten çıkış yapar, yoksa paylaşılan cihazda ikinci kişi birincinin hesabıyla sipariş verebilirdi.
-   * Tam yenileme, çünkü oturuma göre kurulmuş her şey (sepet, adresler, seçili adım) sıfırdan kurulmalı.
-   */
-  const signOut = async () => {
-    setBusy(true);
-    await signOutAction();
-    window.location.reload();
-  };
-
-  return (
-    <div
-      className={[
-        'flex flex-wrap items-center gap-x-3 gap-y-1',
-        // Telefonda native ödeme ekranının hesap bandı (kum kutu, kontrol köşe, mürekkep yazı); masaüstünde zeytin künye.
-        compact ? 'rounded-control bg-sand-150 px-3.5 py-3' : 'rounded-soft bg-olive-bg px-4 py-2.5',
-      ].join(' ')}
-    >
-      <span className={['inline-flex items-center gap-1.5 font-sans text-note', compact ? 'font-semibold text-ink' : 'text-olive-dark'].join(' ')}>
-        <Icon name="check" size={14} className="flex-none" />
-        {t.verify.accountAs.replace('{email}', email)}
-      </span>
-      {/* Tek tıkla çıkış YOK: sipariş ortasında yanlışlıkla basan müşteri oturumunu kaybetmesin.
-          Ayrı bir pencere de açılmaz — soru satırın kendi içinde sorulur (sade & sezgisel). */}
-      {confirming ? (
-        <span className="ml-auto flex items-center gap-3">
-          <span className="font-sans text-micro text-olive-dark">{t.verify.notYouConfirm}</span>
-          <Button variant="ghost" size="xs" disabled={busy} onClick={() => void signOut()}>
-            {t.verify.notYouYes}
-          </Button>
-          <Button variant="ghost" size="xs" disabled={busy} onClick={() => setConfirming(false)}>
-            {t.verify.notYouCancel}
-          </Button>
-        </span>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          className="ml-auto cursor-pointer font-sans text-micro font-semibold text-olive underline hover:text-olive-dark"
-        >
-          {t.verify.notYou}
-        </button>
-      )}
-    </div>
   );
 }
 

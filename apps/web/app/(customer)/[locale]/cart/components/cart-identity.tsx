@@ -34,6 +34,7 @@ import type { DeliveryPlace, PlaceAddress } from '@/lib/delivery/place-types';
 import type { CustomerIdentity } from '@/lib/guard';
 import { formatDeliveryDate } from '@/lib/storefront/format';
 import type { Messages } from '../cart-types';
+import { AccountBand, NotYou } from './cart-account';
 
 /**
  * Sepetin kimlik ve adres bloğu: ödemeye geçmeden önce "kim" ve "nereye" burada sorulur, ödeme ekranı yalnız gösterir.
@@ -49,7 +50,13 @@ interface CartIdentityProps {
 export function CartIdentity({ t, locale, compact = false }: CartIdentityProps) {
   const account = useAccount();
   if (!account) return compact ? <PhoneLoginInvite locale={locale} /> : <CartLogin t={t} locale={locale} />;
-  return compact ? <CartAddress locale={locale} /> : <CartAccountDesktop t={t} locale={locale} account={account} />;
+  if (!compact) return <CartAccountDesktop t={t} locale={locale} account={account} />;
+  return (
+    <>
+      <AccountBand locale={locale} email={account.email} />
+      <CartAddress locale={locale} />
+    </>
+  );
 }
 
 /** Telefonda giriş native'in kartıyla sorulur: davet ve düğme, giriş kendi sayfasında yapılır ve müşteri sepetine döner. */
@@ -243,6 +250,7 @@ function CartAccountDesktop({ t, locale, account }: CartAccountDesktopProps) {
           <span className="flex min-w-0 flex-1 flex-col gap-px">
             <span className="truncate font-sans text-body-sm font-bold text-ink">{account.name || account.email}</span>
             {account.name && account.email && <span className="truncate font-sans text-micro text-muted">{account.email}</span>}
+            <NotYou locale={locale} />
           </span>
           <Link href="/account" className={`flex-none cursor-pointer font-sans text-note font-bold text-olive transition-colors hover:text-olive-dark ${focusRingClass}`}>
             {accountMessages[locale].myAccount}
