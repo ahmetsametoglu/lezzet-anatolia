@@ -61,6 +61,13 @@ describe('pushDriver', () => {
     expect((mesajlar[0] as { data?: unknown }).data).toEqual(pushData);
   });
 
+  it('başlık ve gövde dağıtım kapısının metnidir: uygulama içi listeyle ve tarayıcı bildirimiyle aynı', async () => {
+    const { f, calls } = fakeFetch({ json: { data: [{ status: 'ok', id: 'T1' }] } });
+    const pushText = { title: 'Talebinize cevap', body: 'Talebinize cevap geldi.' };
+    await pushDriver({ fetcher: f }).send('ticket_replied', { ...alici(['tok-1']), pushText }, data);
+    expect((calls[0]!.body as Record<string, unknown>[])[0]).toMatchObject(pushText);
+  });
+
   it('jetonsuz alıcıda YETENEKSİZ; teyit olayı jetonla bile desteklenmez (zil kararı tek yerde)', () => {
     const driver = pushDriver();
     expect(driver.supports('ticket_replied', alici())).toBe(false);

@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import { brand } from '@lezzet/brand';
+import type { WebPushSubscription } from '@lezzet/types';
 import type { NotifyDriver, NotifyEventName, NotifyPayloads, NotifyRecipient, NotifyResult } from '../types';
 import { NOTIFY_EVENT_META } from '../types';
 import { MESSAGE } from '../event-copy';
@@ -53,8 +54,55 @@ function vapidDetails(): (webpush.VapidKeys & { subject: string }) | null {
   return { subject: `mailto:${brand.contact.email}`, publicKey, privateKey };
 }
 
+/** Tarayıcıya giden mesaj; service worker `{ title, body, url }`u gösterir, `url` dokunuşun açacağı sayfadır. */
+export interface WebPushMessage {
+  title: string;
+  body?: string;
+  url: string | null;
+}
+
+export async function sendWebPush(
+  subscriptions: readonly WebPushSubscription[],
+  message: WebPushMessage,
+  sendNotification: typeof webpush.sendNotification = webpush.sendNotification,
+): Promise<NotifyResult> {
+  const vapid = vapidDetails();
+  if (subscriptions.length === 0) return { status: 'skipped', channel: 'web_push', reason: 'no_device' };
+  if (!vapid) return { status: 'skipped', channel: 'web_push', reason: 'provider_key_absent' };
+
+  const body = JSON.stringify(message);
+  const outcomes = await Promise.allSettled(
+    subscriptions.map((subscription) => sendNotification(subscription, body, { vapidDetails: vapid, TTL: TTL_SECONDS, timeout: TIMEOUT_MS })),
+  );
+
+  const gone: string[] = [];
+  const failures: string[] = [];
+  let delivered = 0;
+  let firstError: string | null = null;
+  outcomes.forEach((outcome, i) => {
+    if (outcome.status === 'fulfilled') {
+      delivered += 1;
+      return;
+    }
+    const reason: unknown = outcome.reason;
+    firstError ??= reason instanceof Error ? reason.message : String(reason);
+    if (reason instanceof webpush.WebPushError && GONE_STATUS.has(reason.statusCode)) gone.push(subscriptions[i]!.endpoint);
+    else failures.push(failureOf(subscriptions[i]!.endpoint, reason));
+  });
+
+  // Kısmi kabul `sent`tir: bir tarayıcıya ulaşan haber ulaşmıştır, düşen abonelik `gone` ile silinir. Silinmeyen hata
+  // `partial`da kalır, yoksa bir taşıyıcının (ör. Apple) bütün aboneleri öbürü çalıştıkça sessizce bildirimsiz kalır.
+  if (delivered === 0) return { status: 'error', channel: 'web_push', error: firstError ?? 'web push gönderilemedi', gone };
+  return {
+    status: 'sent',
+    channel: 'web_push',
+    ref: null,
+    gone,
+    ...(failures.length > 0 ? { partial: `${failures.length}/${subscriptions.length} ${failures.join(' · ')}` } : {}),
+  };
+}
+
 export function webPushDriver(options: WebPushDriverOptions = {}): NotifyDriver {
-  const sendNotification = options.sender ?? webpush.sendNotification;
   return {
     channel: 'web_push',
 
@@ -62,43 +110,9 @@ export function webPushDriver(options: WebPushDriverOptions = {}): NotifyDriver 
       return NOTIFY_EVENT_META[event].inApp && (recipient.webPush?.length ?? 0) > 0 && vapidDetails() !== null;
     },
 
-    async send(event, recipient, payload): Promise<NotifyResult> {
-      const subscriptions = recipient.webPush ?? [];
-      const vapid = vapidDetails();
-      if (subscriptions.length === 0) return { status: 'skipped', channel: 'web_push', reason: 'no_device' };
-      if (!vapid) return { status: 'skipped', channel: 'web_push', reason: 'provider_key_absent' };
-
+    send(event, recipient, payload): Promise<NotifyResult> {
       const text = recipient.pushText ?? { title: brand.name, body: MESSAGE[event](payload) };
-      const body = JSON.stringify({ title: text.title, body: text.body, url: OPEN_URL[event](payload) });
-      const outcomes = await Promise.allSettled(
-        subscriptions.map((subscription) => sendNotification(subscription, body, { vapidDetails: vapid, TTL: TTL_SECONDS, timeout: TIMEOUT_MS })),
-      );
-
-      const gone: string[] = [];
-      const failures: string[] = [];
-      let delivered = 0;
-      let firstError: string | null = null;
-      outcomes.forEach((outcome, i) => {
-        if (outcome.status === 'fulfilled') {
-          delivered += 1;
-          return;
-        }
-        const reason: unknown = outcome.reason;
-        firstError ??= reason instanceof Error ? reason.message : String(reason);
-        if (reason instanceof webpush.WebPushError && GONE_STATUS.has(reason.statusCode)) gone.push(subscriptions[i]!.endpoint);
-        else failures.push(failureOf(subscriptions[i]!.endpoint, reason));
-      });
-
-      // Kısmi kabul `sent`tir: bir tarayıcıya ulaşan haber ulaşmıştır, düşen abonelik `gone` ile silinir. Silinmeyen hata
-      // `partial`da kalır, yoksa bir taşıyıcının (ör. Apple) bütün aboneleri öbürü çalıştıkça sessizce bildirimsiz kalır.
-      if (delivered === 0) return { status: 'error', channel: 'web_push', error: firstError ?? 'web push gönderilemedi', gone };
-      return {
-        status: 'sent',
-        channel: 'web_push',
-        ref: null,
-        gone,
-        ...(failures.length > 0 ? { partial: `${failures.length}/${subscriptions.length} ${failures.join(' · ')}` } : {}),
-      };
+      return sendWebPush(recipient.webPush ?? [], { ...text, url: OPEN_URL[event](payload) }, options.sender);
     },
   };
 }
