@@ -4,10 +4,7 @@ import type { NotifyDriver, NotifyEventName, NotifyPayloads, NotifyRecipient, No
 import { NOTIFY_EVENT_META } from '../types';
 import { MESSAGE } from '../event-copy';
 
-/*
-  Gövde aboneliğin iki anahtarıyla şifrelenir, tarayıcının bildirim servisine gider ve service worker gösterir. Başlık marka adıdır:
-  tarayıcı bildirimi başlıksız gösterilmez ve native'de işletim sisteminin bastığı uygulama adının karşılığı budur.
-*/
+// Gövde aboneliğin iki anahtarıyla şifrelenir, tarayıcının bildirim servisine gider ve service worker gösterir.
 
 /** Cihaz çevrimdışıysa servis haberi bu kadar tutar; bir günden eski sipariş haberi artık haber değildir. */
 const TTL_SECONDS = 24 * 60 * 60;
@@ -64,7 +61,8 @@ export function webPushDriver(options: WebPushDriverOptions = {}): NotifyDriver 
       if (subscriptions.length === 0) return { status: 'skipped', channel: 'web_push', reason: 'no_device' };
       if (!vapid) return { status: 'skipped', channel: 'web_push', reason: 'provider_key_absent' };
 
-      const body = JSON.stringify({ title: brand.name, body: MESSAGE[event](payload), url: OPEN_URL[event](payload) });
+      const text = recipient.pushText ?? { title: brand.name, body: MESSAGE[event](payload) };
+      const body = JSON.stringify({ title: text.title, body: text.body, url: OPEN_URL[event](payload) });
       const outcomes = await Promise.allSettled(
         subscriptions.map((subscription) => sendNotification(subscription, body, { vapidDetails: vapid, TTL: TTL_SECONDS, timeout: TIMEOUT_MS })),
       );

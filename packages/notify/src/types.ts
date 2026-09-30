@@ -60,6 +60,11 @@ export interface NotifyRecipient {
   webPush?: WebPushSubscription[];
   /** Bildirime dokununca açılacak yerin adresi (`kind`, hedef, payload); kişisel içerik girmez. */
   pushData?: Record<string, unknown>;
+  /**
+   * Cihaz bildiriminin başlık ve gövdesi, uygulama içi listenin sözlüğünden. Başlık olayın adıdır, çünkü iOS başlığın yanına uygulama
+   * adını kendisi ekler; yoksa sürücü marka adına ve olayın kısa cümlesine düşer.
+   */
+  pushText?: { title: string; body: string };
 }
 
 /**

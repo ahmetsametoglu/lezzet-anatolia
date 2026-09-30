@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppNotificationService, NotificationDeliveryService, PushDeviceService, UserProfileService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
+import { notificationSentence, notificationTitle } from '@lezzet/i18n';
 import { createNotifier, type NotifyDriver, type NotifyRecipient } from '@lezzet/notify';
 import { registerPushDevice, registerWebPushSubscription } from './devices';
 import type { TicketNotification, ZoneAvailableNotification } from '@lezzet/types';
@@ -236,12 +237,12 @@ describe('jeton doldurma (14.16)', () => {
     const subscription = { endpoint: `https://fcm.googleapis.com/fcm/send/disp-${stamp}`, keys: { p256dh: 'p', auth: 'a' } };
     await registerWebPushSubscription(db, { profileId: id, subscription, app: 'customer' });
 
-    const goren: NotifyRecipient['webPush'][] = [];
+    const goren: NotifyRecipient[] = [];
     const casus: NotifyDriver = {
       channel: 'web_push',
       supports: () => true,
       send: async (_e, recipient) => {
-        goren.push(recipient.webPush);
+        goren.push(recipient);
         return { status: 'error', channel: 'web_push', error: 'gone', gone: [subscription.endpoint] };
       },
     };
@@ -251,7 +252,12 @@ describe('jeton doldurma (14.16)', () => {
       { notifier: createNotifier([casus]) },
     );
 
-    expect(goren[0]).toEqual([subscription]);
+    expect(goren[0]?.webPush).toEqual([subscription]);
+    // Başlık olayın adı, gövde uygulama içi listenin cümlesi: bildirim ile liste aynı metni okur.
+    expect(goren[0]?.pushText).toEqual({
+      title: notificationTitle({ kind: 'ticket_replied', payload: {} }, 'fr'),
+      body: notificationSentence({ kind: 'ticket_replied', payload: {} }, 'fr'),
+    });
     expect(await new PushDeviceService(db).findByToken(subscription.endpoint)).toBeNull();
   });
 });

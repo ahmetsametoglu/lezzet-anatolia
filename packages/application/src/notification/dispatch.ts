@@ -8,6 +8,7 @@ import {
   type NotifyRecipient,
   type NotifyResult,
 } from '@lezzet/notify';
+import { notificationSentence, notificationTitle } from '@lezzet/i18n';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { AppNotificationKind, NotificationTargetType, StaffRole } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -83,6 +84,10 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
           ...input.recipient,
           pushTokens: targets.native,
           webPush: targets.web,
+          pushText: {
+            title: notificationTitle({ kind: input.event, payload: input.payload ?? {} }, input.recipient.locale),
+            body: notificationSentence({ kind: input.event, payload: input.payload ?? {} }, input.recipient.locale),
+          },
           // Dokunuşun adresi — bildirime basan kullanıcı doğru ekrana insin (sürücü künyesi).
           pushData: {
             kind: input.event,

@@ -46,6 +46,19 @@ describe('webPushDriver', () => {
     expect(JSON.parse(bodies[0]!)).toMatchObject({ url: 'https://example.test/t' });
   });
 
+  it('başlık ve gövde dağıtım kapısının verdiği metindir; marka adı başlıkta tekrarlanmaz', async () => {
+    const bodies: string[] = [];
+    const sender = (async (_sub: webpush.PushSubscription, body?: string | Buffer | null) => {
+      bodies.push(String(body));
+      return { statusCode: 201, body: '', headers: {} };
+    }) as typeof webpush.sendNotification;
+
+    const pushText = { title: 'Réponse à votre demande', body: 'Vous avez reçu une réponse à votre demande.' };
+    await webPushDriver({ sender }).send('ticket_replied', { ...alici, webPush: [subscription('canli')], pushText }, data);
+
+    expect(JSON.parse(bodies[0]!)).toMatchObject(pushText);
+  });
+
   it('anahtar yoksa sürücü yeteneksizdir, HABER sıradaki kanala düşer', () => {
     delete process.env.WEB_PUSH_PRIVATE_KEY;
     expect(webPushDriver().supports('ticket_replied', alici)).toBe(false);
