@@ -75,14 +75,14 @@ export function SettingsDesktop({
         ) : urlState.tab === 'setup' ? (
           data.setup ? (
             <CardGrid>
+              <GridCell wide>
+                <SiteImagesCard images={data.setup.siteImages} />
+              </GridCell>
               <GridCell>
                 <StaffCard staff={data.staff} onNew={onNewStaff} onOpen={onOpenStaff} />
               </GridCell>
               <GridCell>
                 <McpCard data={data.setup.mcp} />
-              </GridCell>
-              <GridCell wide>
-                <SiteImagesCard images={data.setup.siteImages} />
               </GridCell>
             </CardGrid>
           ) : null
