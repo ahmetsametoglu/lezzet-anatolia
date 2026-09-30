@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.51). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.53). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
 `docs/GELECEK.md`'dedir.
@@ -91,6 +91,10 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
     - [ ] En son, kullanıcı inceler (müşteriyle yoğun etkileşen sayfalar): Talepler `support` · Talep Detay `support/[ticket]` · Yeni Talep `support/new` ↔ native `support`
   - Şu sayfaların ayrı telefon gövdesi yok, telefonda masaüstü gövdesinin `compact` dalı çiziliyor: `support/new` · `feedback/[token]` · `invite/[code]` · `neighbor/[token]`. Sırası gelen ekranda ilk iş fork.
 - [~] (08.59) **MASAÜSTÜ WEB v1 — başlık, yer paneli ve adres penceresi `Musteri Web v1.dc.html`'in birebir aynısı; ikon seti müşterinin gördüğü her ekranda** *(kullanıcı isteği 13.09: "Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."; ikon seti kullanıcı kararı 14.09 — ikon deseni her yerde aynı; mobil web aynı anda `08.58`, iki şeridin işi birbirine bağlı olduğu için tek commit — kullanıcı kararı 13.09 + 14.09)*
+- [ ] (K.53) [hedef: web] Ana ekrana kurulan sitede sekme geçişleri akıcı değil: Oppo'da Vitrin ↔ Katalog 0,8–0,9 sn, bunun
+  ~0,65 sn'si sunucunun sayfa verisini bitirmesi; telefonun işlemcisi değil. JS dosyaları zaten bir yıllık önbellekte, service
+  worker önbelleği bu beklemeyi çözmez. Adaylar: alt gezinme sekmelerini önceden yüklemek, sekmeye geri dönüşü kısa süre istemci
+  önbelleğinden vermek (`staleTimes`, Next'te deneysel; bayat veri süresi karar ister), vitrinin sunucu süresini ölçüp kısaltmak.
 
 ## 09 · Admin Yüzeyi: Komponentler ve Sayfalar
 
@@ -406,3 +410,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   kalıyor. Native'de 10'unun iskeleti hazır (vitrin, katalog, paket listesi, paket, ürün, tarif listesi, tarif, talepler, talep
   detayı, değerlendirme); ölçüler oradan, masaüstü deseni sepet ve siparişler iskeletinden. Kalanlar: keşfet, yeni talep, davet,
   komşu, profesyoneller; bildirimler iskeletinin telefon biçimi yok; yasal sayfalar ve giriş için gereği ölçülecek.
+- [ ] (K.52) [hedef: müşteri] Web telefon görünümünde dokunuş titreşimi yok; native'de `mobile-kit/lib/haptics` niyet sözlüğüyle var
+  (onay, hata, başarı). Android Chrome `navigator.vibrate` destekliyor; iOS Safari'de resmî destek yok, gizli "switch" girdisiyle
+  dolaylı yol var ve sürüme bağlı (ölçülmedi). Karar: yalnız Android'de mi açılsın, iOS yolu denensin mi.
