@@ -2,12 +2,12 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import { serviceDb, UserProfileService } from '@lezzet/database';
+import { isStaff } from '@lezzet/domain-core';
 import { localizedUrl, type Locale } from '@lezzet/i18n';
 import { localeAlternates } from '@/lib/seo/alternates';
 import { openGraphOf } from '@/lib/seo/open-graph';
 import { LocalBusinessJsonLd } from '@/lib/seo/json-ld';
-import { getSessionUser } from '@/lib/guard';
+import { readSessionProfile } from '@/lib/guard';
 import { detectDevice } from '@/lib/device';
 import { loadHomeView } from '@/lib/storefront/home-view';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
@@ -48,8 +48,8 @@ export default async function Home({ params, searchParams }: HomeProps) {
   void recordPageView('/', await searchParams);
 
   // Personel ana sayfada karşılanmaz, Operasyon'a yönlenir; yalnız kök yönlendirir, vitrini görmek isteyen kataloğa gidebilir.
-  const user = await getSessionUser();
-  if (user && (await new UserProfileService(serviceDb()).isStaff(user.id))) {
+  const profile = await readSessionProfile();
+  if (profile && isStaff(profile.roles)) {
     redirect('/operations');
   }
 

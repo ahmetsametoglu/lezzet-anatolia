@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { localizedUrl, type Locale } from '@lezzet/i18n';
@@ -29,6 +30,12 @@ import messages from './messages.json';
  */
 const REVIEW_PAGE_SIZE = 6;
 
+/** Başlık bilgisi ile sayfa aynı ürünü okur; `cache` bunu istek başına tek okumaya indirir, yoksa ürün, fiyatları ve stokları iki kez okunurdu. */
+const readProduct = cache(async (locale: Locale, slug: string) => {
+  const [place, viewer] = await Promise.all([readPlaceWarehouses(), readPricingViewer()]);
+  return getProductDetail(serviceDb(), { locale, slug, place, viewer });
+});
+
 interface ProductPageProps {
   params: Promise<{ locale: string; slug: string }>;
   /** Kampanya etiketleri (reklam bağlantısı sıkça doğrudan ürünü açar) ve paket kaleminin istediği boy (`variant`). */
@@ -42,7 +49,7 @@ interface ProductPageProps {
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) return {};
-  const product = await getProductDetail(serviceDb(), { locale, slug, place: await readPlaceWarehouses(), viewer: await readPricingViewer() });
+  const product = await readProduct(locale, slug);
   if (!product) return {};
 
   return {
@@ -72,10 +79,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   void recordPageView('/product/[slug]', query);
 
   const t: Messages = messages[locale];
-  const [product, device] = await Promise.all([
-    getProductDetail(serviceDb(), { locale, slug, place: await readPlaceWarehouses(), viewer: await readPricingViewer() }),
-    detectDevice(),
-  ]);
+  const [product, device] = await Promise.all([readProduct(locale, slug), detectDevice()]);
   if (!product) notFound();
 
   // Prefetch/bot/personel elemesi kapıda: atıcı ne olduğunu söyler, neyin sayılacağına kapı karar verir.

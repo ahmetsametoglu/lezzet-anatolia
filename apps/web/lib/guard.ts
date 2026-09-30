@@ -46,14 +46,18 @@ export const getSessionUser = cache(async (): Promise<AuthUser | null> => {
   return user ? { id: user.id, email: user.email ?? null } : null;
 });
 
+/** Oturumdaki kişinin profil satırı, istek başına bir kez (`cache`); kimlik, künye ve rol kararları bu satırdan okunur. */
+export const readSessionProfile = cache(async (): Promise<UserProfile | null> => {
+  const user = await getSessionUser();
+  return user ? new UserProfileService(serviceDb()).findByAuthUserId(user.id) : null;
+});
+
 /**
  * Oturumdaki kişinin müşteri kimliği (`user_profiles.id`); auth kimliğinden ayrıdır ve profile FK veren her tabloya (`cart`, `order`,
  * `address`) bu yazılır. Dönüşüm tek yerde durur, çünkü çeviriyi atlayan bir kopya müşterinin verisini sessizce kaybettirir.
  */
 export async function currentCustomerId(): Promise<string | null> {
-  const user = await getSessionUser();
-  if (!user) return null;
-  return (await new UserProfileService(serviceDb()).findByAuthUserId(user.id))?.id ?? null;
+  return (await readSessionProfile())?.id ?? null;
 }
 
 /** Oturumdaki müşterinin ekranda gösterilecek künyesi (ad, e-posta); tarayıcıya gittiği için rol ve kredi limiti gibi sırları taşımaz. */
@@ -64,9 +68,7 @@ export interface CustomerIdentity {
 }
 
 export async function currentCustomer(): Promise<CustomerIdentity | null> {
-  const user = await getSessionUser();
-  if (!user) return null;
-  const profile = await new UserProfileService(serviceDb()).findByAuthUserId(user.id);
+  const profile = await readSessionProfile();
   return profile ? { id: profile.id, name: profile.name ?? '', email: profile.email ?? null } : null;
 }
 
@@ -83,7 +85,7 @@ export async function requireAuth(): Promise<AuthUser> {
  */
 async function staffProfile(allowed: (roles: readonly UserRole[]) => boolean): Promise<{ user: StaffUser; profile: UserProfile }> {
   const user = await requireAuth();
-  const profile = await new UserProfileService(serviceDb()).findByAuthUserId(user.id);
+  const profile = await readSessionProfile();
   if (!profile || !allowed(profile.roles)) throw new AuthError('forbidden');
   return { user: { id: user.id, email: user.email, profileId: profile.id }, profile };
 }

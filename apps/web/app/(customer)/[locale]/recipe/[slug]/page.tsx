@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import { localizedUrl } from '@lezzet/i18n';
+import { localizedUrl, type Locale } from '@lezzet/i18n';
 import { localeAlternates } from '@/lib/seo/alternates';
 import { openGraphOf } from '@/lib/seo/open-graph';
 import { RecipeJsonLd } from '@/lib/seo/json-ld';
@@ -17,6 +18,12 @@ import { RecipeClient } from './recipe-client';
 import type { Messages } from './recipe-types';
 import messages from './messages.json';
 
+/** Başlık bilgisi ile sayfa aynı tarifi okur; `cache` bunu istek başına tek okumaya indirir, yoksa tarif ve kalemleri iki kez okunurdu. */
+const readRecipe = cache(async (slug: string, locale: Locale) => {
+  const [place, viewer] = await Promise.all([readPlaceWarehouses(), readPricingViewer()]);
+  return getRecipeDetail(slug, locale, place, viewer);
+});
+
 interface RecipePageProps {
   params: Promise<{ locale: string; slug: string }>;
   /** Yalnız kampanya etiketleri için. */
@@ -30,7 +37,7 @@ interface RecipePageProps {
 export async function generateMetadata({ params }: RecipePageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) return {};
-  const recipe = await getRecipeDetail(slug, locale, await readPlaceWarehouses(), await readPricingViewer());
+  const recipe = await readRecipe(slug, locale);
   if (!recipe) return {};
   return {
     title: recipe.name,
@@ -58,10 +65,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
   setRequestLocale(locale);
 
   const t: Messages = messages[locale];
-  const [recipe, device] = await Promise.all([
-    getRecipeDetail(slug, locale, await readPlaceWarehouses(), await readPricingViewer()),
-    detectDevice(),
-  ]);
+  const [recipe, device] = await Promise.all([readRecipe(slug, locale), detectDevice()]);
   if (!recipe) notFound();
 
   /* Ölçüm tarif çözüldükten sonra atılır: görüntüleme hangi tarife bakıldığını söyler ve bulunamayan
