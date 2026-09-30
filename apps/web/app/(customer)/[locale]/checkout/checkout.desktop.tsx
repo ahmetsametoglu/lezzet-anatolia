@@ -9,24 +9,17 @@ import { ShippingOrderNote } from './components/shipping-order-note';
 import type { CheckoutViewProps } from './checkout-types';
 
 /**
- * Checkout · masaüstü.
- *
- * **Sıra: kim olduğum → nereye (salt okunur) → ne zaman → nasıl ödüyorum.** Kimlik ve adres
- * SEPETTE çözülüyor (13.09); buraya gelen müşteri girişli ve adresli — sayfa girişsizi sepete
- * çeviriyor. Üstte yapışkan şerit yolun tamamını gösterir.
- *
- * Özet YAPIŞKAN: müşteri gün seçerken toplamın gözden kaybolmaması gerekiyor — ödeme kararı tutara
- * bakarak veriliyor. Adımlar tek sütunda ve HEPSİ görünür: akordeon yapmak, müşteriye kendi verdiği
- * kararı görmek için geri tıklatmak olurdu (tasarım sözleşmesi).
+ * Ödeme · masaüstü: kimlik ve adres sepette çözülür, buraya girişli ve adresli müşteri gelir; üstteki yapışkan ilerleme çubuğu yolun tamamını
+ * gösterir. Özet yapışkandır ve adımların hepsi açıktır, çünkü ödeme kararı tutara bakarak verilir ve akordeon müşteriye kendi
+ * kararını görmek için geri tıklatırdı.
  */
 export function CheckoutDesktop(props: CheckoutViewProps) {
   const { t } = props;
 
   return (
     <div className="mx-auto w-full max-w-[1180px]">
-      {/* Tasarımda başlık bir ÇUBUK: `ped 18/48 · alt ayraç 1px` ve başlık `600 22px Lora` —
-          sayfa boyu bir kahraman başlık değil. Checkout'ta başlık yön bildirir, sahne kurmaz;
-          asıl ağırlık adımlarda olmalı. "← Sepete dön" sağa yaslı (tasarım: `margin-left:auto`). */}
+      {/* Tasarımda başlık bir çubuktur, sayfa boyu kahraman başlık değil: ödemede başlık yön bildirir, ağırlık adımlardadır.
+          "← Sepete dön" tasarımdaki gibi sağa yaslı. */}
       <div className="flex flex-wrap items-center gap-x-9 gap-y-2 border-b border-sand-200 px-12 py-4.5">
         <h1 className="font-serif text-card-title text-ink">{t.title}</h1>
         {/* Sepetin bir PARÇASI olan kargo siparişinde üst satır KENDİNİ SÖYLER: iki checkout
