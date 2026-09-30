@@ -1,18 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { brand } from '@lezzet/brand';
-import type { LocalizedCopy } from '@lezzet/i18n';
 import loginMessages from '@lezzet/i18n/customer/login';
-import { Link } from '@/i18n/navigation';
-import { CODE_LENGTH, type OtpResendResult, type OtpVerifyResult } from '@/components/customer/auth/otp-code-input';
-import { CodeField } from '@/components/customer/form/code-field';
+import { LoginLegal, PhoneCodeStep, ProviderChoice, type LoginCopy } from '@/components/customer/auth/phone-login';
 import { FormInputField } from '@/components/customer/form/form-input-field';
-import { LoadingState } from '@/components/customer/phone-kit/loading-state';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
-import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { BackButton } from '@/components/customer/ui/back-button';
-import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import type { LoginViewProps } from './login-types';
 
 /*
@@ -20,13 +14,11 @@ import type { LoginViewProps } from './login-types';
   ilk ekranda açar); kod gönderme, doğrulama ve yönlendirme `login-client`te.
 */
 
-type Copy = LocalizedCopy<typeof loginMessages>;
-
 /** Seçim ekranı ile e-posta formu — kod aşaması `stage`ten gelir. */
 type Step = 'choose' | 'email';
 
 export function LoginMobile({ locale, stage, error, isSending, emailInvalid, emailRef, emailField, onSubmit, onBack, onGoogle, onVerify, onResend }: LoginViewProps) {
-  const copy: Copy = loginMessages[locale];
+  const copy: LoginCopy = loginMessages[locale];
   const [step, setStep] = useState<Step>('choose');
   /** Adım derinliği (seçim 0, e-posta 1, kod 2) — geçmişteki adım kayıtlarıyla eşleşir. */
   const depth = stage.kind === 'code' ? 2 : step === 'email' ? 1 : 0;
@@ -76,26 +68,9 @@ export function LoginMobile({ locale, stage, error, isSending, emailInvalid, ema
         {/* En uzun adım olan kod adımı kadar sabit yer (iki satırlık gönderim cümlesiyle 158px): adımlar arasında ortalanmış blok oynamasın. */}
         <div className="flex min-h-39.5 flex-col">
           {stage.kind === 'code' ? (
-            <CodeStep email={stage.email} copy={copy} onVerify={onVerify} onResend={onResend} />
+            <PhoneCodeStep email={stage.email} copy={copy} onVerify={onVerify} onResend={onResend} />
           ) : step === 'choose' ? (
-            <div className="mt-1.5 flex flex-col gap-2.5">
-              <ProviderButton
-                tone="card"
-                label={copy.google}
-                onClick={onGoogle}
-                mark={
-                  <span aria-hidden className="font-sans text-step font-bold text-brand-google">
-                    G
-                  </span>
-                }
-              />
-              <ProviderButton
-                tone="olive"
-                label={copy.email}
-                onClick={() => setStep('email')}
-                mark={<MobileIcon name="mail" size={17} />}
-              />
-            </div>
+            <ProviderChoice copy={copy} onGoogle={onGoogle} onEmail={() => setStep('email')} />
           ) : (
             <form onSubmit={onSubmit} noValidate className="mt-1.5 flex flex-col gap-2.5">
               <FormInputField
@@ -121,123 +96,8 @@ export function LoginMobile({ locale, stage, error, isSending, emailInvalid, ema
           )}
         </div>
 
-        <p className="mt-2.5 font-sans text-micro leading-normal text-muted">
-          {copy.legalPrefix}
-          <Link href="/legal/privacy" className="cursor-pointer text-olive underline transition-colors hover:text-olive-dark">
-            {copy.privacyInline}
-          </Link>
-          {copy.legalSuffix}
-        </p>
+        <LoginLegal copy={copy} />
       </div>
     </main>
-  );
-}
-
-interface ProviderButtonProps {
-  label: string;
-  /** Sağlayıcının işareti — "G" harfi ya da ikon; renk çağırandan. */
-  mark: ReactNode;
-  /** `card` — beyaz, kum çerçeveli (Google); `olive` — dolu zeytin (E-posta). */
-  tone: 'card' | 'olive';
-  onClick: () => void;
-}
-
-/** Yol düğmesi; ölçüler native girişin `providerButton`ıyla aynı. */
-function ProviderButton({ label, mark, tone, onClick }: ProviderButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        'flex h-13.5 w-full cursor-pointer items-center gap-3 rounded-pill px-5 transition-[scale,border-color,background-color] active:scale-[0.97]',
-        tone === 'card' ? 'border-[1.5px] border-sand-400 bg-card text-ink hover:border-olive' : 'bg-olive text-card hover:bg-olive-dark',
-      ].join(' ')}
-    >
-      {mark}
-      <span className="font-sans text-body-sm font-bold">{label}</span>
-    </button>
-  );
-}
-
-interface CodeStepProps {
-  email: string;
-  copy: Copy;
-  onVerify: (code: string) => Promise<OtpVerifyResult>;
-  onResend: () => Promise<OtpResendResult>;
-}
-
-/** Kod aşaması: tek alan; altı hane girilince doğrulanır. Başarıda yönlendirmeyi `login-client` yapar. */
-function CodeStep({ email, copy, onVerify, onResend }: CodeStepProps) {
-  const [code, setCode] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [phase, setPhase] = useState<'input' | 'verifying' | 'done'>('input');
-  /** Sunucunun bekleme cezası (sn) — yalnız yeniden gönderme etiketinde sayar. */
-  const [cooldownSec, setCooldownSec] = useState(0);
-  const [resending, setResending] = useState(false);
-
-  useEffect(() => {
-    if (cooldownSec <= 0) return;
-    const timer = setTimeout(() => setCooldownSec((s) => s - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [cooldownSec]);
-
-  const change = (digits: string) => {
-    setCode(digits);
-    setError(null);
-    if (digits.length !== CODE_LENGTH) return;
-    setPhase('verifying');
-    void onVerify(digits).then((result) => {
-      if (result.ok) {
-        setPhase('done');
-        return;
-      }
-      // Yanlış kod: alan temizlenir, cümle altında.
-      setPhase('input');
-      setCode('');
-      setError(result.error);
-    });
-  };
-
-  const resend = () => {
-    if (cooldownSec > 0 || resending) return;
-    setResending(true);
-    setCode('');
-    setError(null);
-    void onResend().then((result) => {
-      setResending(false);
-      if (result.ok) {
-        if (result.cooldownSec) setCooldownSec(result.cooldownSec);
-        return;
-      }
-      if (result.retryAfterSec) setCooldownSec(result.retryAfterSec);
-      setError(result.error);
-    });
-  };
-
-  if (phase !== 'input') {
-    return (
-      <div className="flex min-h-15.5 items-center justify-center py-6.5">
-        <LoadingState label={phase === 'done' ? copy.done : copy.verifying} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-1.5 flex flex-col gap-2.5">
-      <p className="font-sans text-control font-semibold text-ink">{copy.sent.replace('{email}', email)}</p>
-      <CodeField value={code} onChange={change} label={copy.codeField} placeholder={copy.codePlaceholder} length={CODE_LENGTH} invalid={error !== null} />
-      {error && (
-        <p role="alert" className="text-center font-sans text-note font-semibold text-terracotta-bright">
-          {error}
-        </p>
-      )}
-      <div className="flex justify-center pt-1">
-        <TextAction
-          label={cooldownSec > 0 ? copy.resendWait.replace('{s}', String(cooldownSec)) : copy.resend}
-          onClick={resend}
-          disabled={cooldownSec > 0 || resending}
-        />
-      </div>
-    </div>
   );
 }

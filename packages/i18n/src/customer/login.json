@@ -1,6 +1,7 @@
 {
   "tr": {
     "back": "Geri",
+    "close": "Kapat",
     "verifiedToast": "Hoş geldiniz ✓",
     "title": "Birkaç saniyede giriş yapın",
     "body": "Şifre yok, form yok. İster ilk siparişiniz olsun ister yüzüncüsü, giriş hep aynı.",
@@ -28,6 +29,7 @@
   },
   "fr": {
     "back": "Retour",
+    "close": "Fermer",
     "verifiedToast": "Bienvenue ✓",
     "title": "Connectez-vous en quelques secondes",
     "body": "Pas de mot de passe, pas de formulaire. Première commande ou centième, la connexion est la même.",
@@ -55,6 +57,7 @@
   },
   "de": {
     "back": "Zurück",
+    "close": "Schließen",
     "verifiedToast": "Willkommen ✓",
     "title": "In wenigen Sekunden anmelden",
     "body": "Kein Passwort, kein Formular. Ob erste oder hundertste Bestellung – die Anmeldung ist immer gleich.",

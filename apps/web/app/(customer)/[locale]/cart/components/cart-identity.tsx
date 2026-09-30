@@ -1,11 +1,9 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { isValidEmail } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import cartMessages from '@lezzet/i18n/customer/cart';
-import { Link, useRouter } from '@/i18n/navigation';
+import { Link } from '@/i18n/navigation';
 import { Button, focusRingClass } from '@/components/customer/ui/button';
 import { DashedInvite } from '@/components/customer/phone-kit/dashed-invite';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
@@ -13,11 +11,10 @@ import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { cardClass } from '@/components/customer/ui/card';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { RadioMark } from '@/components/customer/form/radio-mark';
-import { OtpCodeInput, type OtpResendResult, type OtpVerifyResult } from '@/components/customer/auth/otp-code-input';
+import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
 import { GoogleIcon } from '@/components/customer/auth/provider-icons';
 import { useAccount } from '@/components/customer/account/account-context';
 import accountMessages from '@/components/customer/account/account-messages.json';
-import { useCart } from '@/components/customer/cart/cart-context';
 import { AddressPickerDialog } from '@/components/customer/delivery/address-picker';
 import { DeliveryStrip } from '@/components/customer/delivery/delivery-strip';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
@@ -25,15 +22,14 @@ import { useMyAddresses } from '@/components/customer/delivery/use-my-addresses.
 import addressMessages from '@lezzet/i18n/customer/address';
 import placeMessages from '@/components/customer/delivery/place-messages.json';
 import { addressLine, addressTitle } from '@lezzet/address';
-import { createClient } from '@/lib/supabase/client';
-import { authErrorMessage, type AuthErrorKey } from '@/lib/auth/errors';
-import { sendEmailOtp, verifyEmailOtp } from '@/lib/auth/otp-actions';
 import { errorText } from '@/lib/customer-error-text';
 import type { DeliveryPlace, PlaceAddress } from '@/lib/delivery/place-types';
 import type { CustomerIdentity } from '@/lib/guard';
 import { formatDeliveryDate } from '@/lib/storefront/format';
 import type { Messages } from '../cart-types';
+import { useCartLogin } from '../use-cart-login.hook';
 import { AccountIdentity, PhoneAccountCard } from './cart-account';
+import { PhoneCartLogin } from './phone-cart-login';
 
 /**
  * Sepetin kimlik ve adres bloğu: ödemeye geçmeden önce "kim" ve "nereye" burada sorulur, ödeme ekranı yalnız gösterir.
@@ -48,7 +44,7 @@ interface CartIdentityProps {
 
 export function CartIdentity({ t, locale, compact = false }: CartIdentityProps) {
   const account = useAccount();
-  if (!account) return compact ? <PhoneLoginInvite locale={locale} /> : <CartLogin t={t} locale={locale} />;
+  if (!account) return compact ? <PhoneCartLogin locale={locale} /> : <CartLogin t={t} locale={locale} />;
   if (!compact) return <CartAccountDesktop t={t} locale={locale} account={account} />;
   return (
     <>
@@ -58,76 +54,9 @@ export function CartIdentity({ t, locale, compact = false }: CartIdentityProps) 
   );
 }
 
-/** Telefonda giriş native'in kartıyla sorulur: davet ve düğme, giriş kendi sayfasında yapılır ve müşteri sepetine döner. */
-function PhoneLoginInvite({ locale }: { locale: Locale }) {
-  const copy = cartMessages[locale].guest;
-  const pathname = usePathname();
-  return (
-    <DashedInvite
-      title={copy.title}
-      description={copy.body}
-      action={<PrimaryButton label={copy.cta} shape="pill" href={{ pathname: '/login', query: { next: pathname } }} />}
-    />
-  );
-}
-
 function CartLogin({ t, locale }: Pick<CartIdentityProps, 't' | 'locale'>) {
   const c = t.identity;
-  const router = useRouter();
-  const { reload } = useCart();
-  const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const trimmed = email.trim();
-  const validEmail = isValidEmail(trimmed);
-
-  /** Anahtar → cümle: `authErrorMessage` saf tablo, çeviri ekranda yapılır. */
-  const say = (key: AuthErrorKey | null): string => (key ? authErrorMessage(key, locale) : c.googleUnavailable);
-
-  const google = async () => {
-    setError(null);
-    const supabase = createClient();
-    const next = `${window.location.pathname}${window.location.search}`;
-    const { error: failure } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        // Dönüşte müşteri SEPETE döner, giriş sayfasına savrulmaz.
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-        // Paylaşılan cihazda hesap SEÇTİRİLİR: bir öncekinin oturumu sessizce devralınmasın.
-        queryParams: { prompt: 'select_account' },
-      },
-    });
-    if (failure) setError(c.googleUnavailable);
-  };
-
-  const send = async () => {
-    if (!validEmail || busy) return;
-    setBusy(true);
-    setError(null);
-    const { data, errorKey } = await sendEmailOtp(trimmed);
-    setBusy(false);
-    if (!data) return setError(say(errorKey));
-    setSent(true);
-  };
-
-  /** Yönlendirme adresi KULLANILMAZ: müşteri sepette kalır, sayfa tazelenince blok adrese döner. */
-  const verify = async (code: string): Promise<OtpVerifyResult> => {
-    const { data, errorKey } = await verifyEmailOtp(trimmed, code);
-    return data ? { ok: true } : { ok: false, error: say(errorKey) };
-  };
-
-  const resend = async (): Promise<OtpResendResult> => {
-    const { data, errorKey } = await sendEmailOtp(trimmed);
-    return data ? { ok: true } : { ok: false, error: say(errorKey) };
-  };
-
-  const verified = () => {
-    // Sıra önemli: önce sepet (misafir listesi sunucuya devralınır), sonra sunucu kareleri.
-    reload();
-    router.refresh();
-  };
+  const login = useCartLogin(locale, c.googleUnavailable);
 
   // Masaüstünde dikkat tonu: ödemeye geçmenin ilk şartı bu kart ve eksik adım sepetin geri kalanından ayrışmalı.
   return (
@@ -135,18 +64,18 @@ function CartLogin({ t, locale }: Pick<CartIdentityProps, 't' | 'locale'>) {
       <span className="font-serif text-h2-sm text-ink">{c.loginTitle}</span>
       <p className="font-sans text-note leading-relaxed text-body">{c.loginBody}</p>
 
-      {sent ? (
+      {login.sent ? (
         // Kod gönderildi → odaklı görünüm: seçim kalkar, tek iş var. Kutu GİRİŞ SAYFASININ bileşeni.
         <div className="flex flex-col gap-3">
-          <OtpCodeInput email={trimmed} locale={locale} onVerify={verify} onResend={resend} onSuccess={verified} />
+          <OtpCodeInput email={login.trimmed} locale={locale} onVerify={login.verify} onResend={login.resend} onSuccess={login.verified} />
           {/* Kilitlenmez: yanlış adres yazan ya da Google'a geçmek isteyen geri döner. */}
-          <Button variant="ghost" size="sm" onClick={() => setSent(false)}>
+          <Button variant="ghost" size="sm" onClick={() => login.setSent(false)}>
             {c.otherMethod}
           </Button>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <Button variant="secondary" fullWidth onClick={() => void google()}>
+          <Button variant="secondary" fullWidth onClick={() => void login.google()}>
             <GoogleIcon /> {c.google}
           </Button>
 
@@ -163,19 +92,19 @@ function CartLogin({ t, locale }: Pick<CartIdentityProps, 't' | 'locale'>) {
               type="email"
               inputMode="email"
               autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void send()}
+              value={login.email}
+              onChange={(e) => login.setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void login.send()}
               placeholder={c.email}
             />
-            <Button fullWidth disabled={!validEmail || busy} onClick={() => void send()}>
-              {busy ? c.sending : c.send}
+            <Button fullWidth disabled={!login.validEmail || login.busy} onClick={() => void login.send()}>
+              {login.busy ? c.sending : c.send}
             </Button>
           </div>
         </div>
       )}
 
-      {error && <span className="font-sans text-note font-semibold text-terracotta">{error}</span>}
+      {login.error && <span className="font-sans text-note font-semibold text-terracotta">{login.error}</span>}
     </div>
   );
 }
