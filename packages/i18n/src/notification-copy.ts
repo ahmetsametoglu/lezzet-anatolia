@@ -39,6 +39,15 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
         de: `Ihre Bestellung${refOf(p)} ist unterwegs.`,
       }),
   },
+  order_ready_for_pickup: {
+    title: (_p, l) => say(l, { tr: 'Siparişiniz teslime hazır', fr: 'Commande prête au retrait', de: 'Bestellung abholbereit' }),
+    sentence: (p, l) =>
+      say(l, {
+        tr: `Siparişiniz${refOf(p)} hazır — depodan teslim alabilirsiniz. Saat için bizi arayın.`,
+        fr: `Votre commande${refOf(p)} est prête\u00a0: vous pouvez la retirer à l’entrepôt. Appelez-nous pour convenir de l’heure.`,
+        de: `Ihre Bestellung${refOf(p)} ist abholbereit. Rufen Sie uns an, um die Uhrzeit zu vereinbaren.`,
+      }),
+  },
   order_delivered: {
     title: (_p, l) => say(l, { tr: 'Siparişiniz teslim edildi', fr: 'Commande livrée', de: 'Bestellung zugestellt' }),
     sentence: (p, l) =>
@@ -181,6 +190,7 @@ const etiket = (phrases: Record<Locale, string>) => (locale: Locale) => phrases[
 const VISUAL: Partial<Record<AppNotificationKind, (payload: Record<string, unknown>) => NotificationVisual>> = {
   order_confirmed: () => ({ symbol: 'check', icon: '✅', tone: 'positive', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
   order_out_for_delivery: () => ({ symbol: 'truck', icon: '🚚', tone: 'positive', label: etiket({ tr: 'Teslimat', fr: 'Livraison', de: 'Lieferung' }) }),
+  order_ready_for_pickup: () => ({ symbol: 'box', icon: '📦', tone: 'positive', label: etiket({ tr: 'Depodan teslim', fr: 'Retrait', de: 'Abholung' }) }),
   order_delivered: () => ({ symbol: 'box', icon: '📦', tone: 'positive', label: etiket({ tr: 'Teslimat', fr: 'Livraison', de: 'Lieferung' }) }),
   order_cancelled: () => ({ symbol: 'close', icon: '✖️', tone: 'issue', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
   order_shortfall: () => ({ symbol: 'warning', icon: '⚠️', tone: 'attention', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),

@@ -1,23 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import type { AppNotificationKind } from '@lezzet/types';
+import { AppNotificationKindEnum, STAFF_NOTIFICATION_KINDS, type AppNotificationKind } from '@lezzet/types';
 import { notificationSentence, notificationTitle, notificationVisual, staffNotificationBrief } from './notification-copy';
 
-/* Küme açık (tip bunu zorlayamaz): bilinen her tür üç dilde metin üretmeli, bilinmeyen tür genel metne düşmeli. */
+/*
+  Küme açık (tip bunu zorlayamaz): bilinen her tür üç dilde kendi metnini üretmeli, bilinmeyen tür genel metne düşmeli.
+  Liste şemadan türer; elle yazılan liste yeni türü atlar ve o tür sessizce genel metne düşer.
+*/
 
-const KNOWN: AppNotificationKind[] = [
-  'order_confirmed', 'order_out_for_delivery', 'order_delivered', 'order_cancelled',
-  'order_shortfall', 'order_refunded', 'ticket_replied', 'ticket_status_changed',
-  'feedback_invite', 'zone_available', 'b2b_application_result',
-];
+const STAFF: readonly string[] = STAFF_NOTIFICATION_KINDS;
+const KNOWN: AppNotificationKind[] = AppNotificationKindEnum.options.filter((kind) => !STAFF.includes(kind));
+const LOCALES = ['tr', 'fr', 'de'] as const;
+const UNKNOWN = { kind: 'yarin_gelecek_tur', payload: {} };
 
 describe('notificationTitle', () => {
-  it('bilinen her tür, üç dilde, boş olmayan başlık üretir; bilinmeyen tür genel başlığa düşer', () => {
+  it('bilinen her müşteri türü, üç dilde, genel başlıktan ayrı kendi başlığını üretir', () => {
     for (const kind of KNOWN) {
-      for (const locale of ['tr', 'fr', 'de'] as const) {
-        expect(notificationTitle({ kind, payload: { approved: true } }, locale).trim().length, kind).toBeGreaterThan(3);
+      for (const locale of LOCALES) {
+        expect(notificationTitle({ kind, payload: { approved: true } }, locale), kind).not.toBe(notificationTitle(UNKNOWN, locale));
       }
     }
-    expect(notificationTitle({ kind: 'yarin_gelecek_tur', payload: {} }, 'tr')).toBe('Yeni bildirim');
+    expect(notificationTitle(UNKNOWN, 'tr')).toBe('Yeni bildirim');
   });
 
   it('kurumsal başvurunun başlığı sonuca göre ayrılır', () => {
@@ -29,11 +31,11 @@ describe('notificationTitle', () => {
 });
 
 describe('notificationSentence', () => {
-  it('bilinen her tür, üç dilde, boş olmayan cümle üretir', () => {
+  it('bilinen her müşteri türü, üç dilde, genel cümleden ayrı kendi cümlesini üretir', () => {
     for (const kind of KNOWN) {
-      for (const locale of ['tr', 'fr', 'de'] as const) {
+      for (const locale of LOCALES) {
         const cumle = notificationSentence({ kind, payload: { referenceNo: 'LA-26-TEST', postalCode: '67000', approved: true } }, locale);
-        expect(cumle.trim().length).toBeGreaterThan(5);
+        expect(cumle, kind).not.toBe(notificationSentence(UNKNOWN, locale));
       }
     }
   });
@@ -52,14 +54,14 @@ describe('notificationSentence', () => {
 });
 
 describe('notificationVisual', () => {
-  it('bilinen her tür ikon + ton + üç dilde etiket taşır — "bir bakışta tip" sözleşmesi', () => {
+  it('bilinen her müşteri türü zilden ayrı kendi görselini taşır — "bir bakışta tip" sözleşmesi', () => {
     for (const kind of KNOWN) {
       const visual = notificationVisual({ kind, payload: { approved: true } });
-      expect(visual.icon.length).toBeGreaterThan(0);
-      // Web çizgi setinin adı da her türde var: emoji native'in, ad web'in çizimi.
-      expect(visual.symbol.length).toBeGreaterThan(0);
+      // Emoji native'in, çizgi ikonun adı web'in çizimi; zil bilinmeyen türün işaretidir.
+      expect(visual.icon, kind).not.toBe('🔔');
+      expect(visual.symbol, kind).not.toBe('bell');
       expect(['positive', 'attention', 'issue', 'neutral']).toContain(visual.tone);
-      for (const locale of ['tr', 'fr', 'de'] as const) expect(visual.label(locale).length).toBeGreaterThan(1);
+      for (const locale of LOCALES) expect(visual.label(locale).length).toBeGreaterThan(1);
     }
   });
 
