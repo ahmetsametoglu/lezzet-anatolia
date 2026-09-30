@@ -49,8 +49,7 @@ import {
   TRANSFER_TRANSIT_DAYS_DEFAULT,
   TRANSFER_TRANSIT_DAYS_KEY,
 } from '@lezzet/application';
-// Alt yol (paketin `./*` ihracı): arama kapısı bugün TEK yüzeyin işi — barrel'a ad eklemek, henüz
-// ortak olmayan bir şeyi paketin kamu sözleşmesine yazmak olurdu. İkinci çağıran doğduğunda terfi eder.
+// Alt yol ihracı: arama kapısının tek çağıranı bu yüzey; ikinci çağıran doğunca barrel'a taşınır.
 import { searchVariantsForIntake } from '@lezzet/application/warehouse/variant-search';
 // Teslim haberi ve puan portu — kurye uçlarıyla aynı nesne.
 import { mobileOrderEffects } from '../../lib/order-effects';
@@ -117,128 +116,42 @@ import { fail, ok } from '../../lib/respond';
 import { decodeCursor, encodeCursor, IsoDateSchema, readJsonBody, UuidSchema } from '../../lib/request';
 import { renderLabelPng } from '../../lib/label-png';
 
-/** Kutu yazıcısının kâğıdı (kullanıcı kararı 06.09) — boy bildirilmediğinde varsayılan. */
+/** Kutu yazıcısının kâğıdı — cihaz boy bildirmediğinde varsayılan. */
 const DEFAULT_LABEL_MM = { widthMm: 62, heightMm: null } as const;
 import { requireStaffRole, type StaffEnv } from './auth';
 
 /**
- * Depo uçları (21.11) — mobil "Depo" bölümünün taşıma katmanı (D1 · D2 · D4 · D5 · D6).
- *
- * ── BU DOSYA KURAL HESAPLAMAZ ────────────────────────────────────────────────
- * Kurye ucuyla (`courier.ts`) aynı çizgi: parse → kapı → zarf. FEFO önerisi, çıpalı parti kilidi,
- * eksik tavsiyesi, MLOR uyarısı, beklenen–gelen farkı, olay belgesi, eksik satır reddi ve iade
- * borcunun türetimi — hiçbiri burada YOK. Hepsi `@lezzet/application`ın depo kapılarında
- * (`warehouse/{preparation,intake,adjustment,transfer}` + D6 için `order/refund`), yani operasyon
- * web ekranlarının okuduğu kararların TAM AYNISI.
- *
- * ── HTTP DURUMU İLE KAPI KARARI AYRI SORULARDIR ──────────────────────────────
- * Durum kodu **"isteğin kapıya ulaştı mı"** sorusunu yanıtlar (401 kimliksiz · 403 rolsüz/kapsam
- * dışı depo · 400 biçimsiz gövde ya da belirsiz depo · 404 olmayan depo). Kapının VERDİĞİ karar ne
- * olursa olsun **200**'dür ve gövdedeki sözleşme birleşiminde durur: `pinned_violation`,
- * `incomplete`, `stale`, `failed`, `empty`, `not_found` ve **veri düzeyindeki** `forbidden`.
- *
- * İki `forbidden`ın ayrımı bilinçli ve ölçülebilir (sözleşme künyesi + `refund.ts`): rol kapısı bir
- * YETKİ kararıdır ("sen bu bölüme giremezsin" → 403), kapının `out_of_scope`u bir KAPSAM kararıdır
- * ("bu parti/sipariş/transfer senin deponun değil" → 200 + gövde). İkincisi ekranda gösterilecek bir
- * cevaptır ve hangi `stockIds`in dışarıda kaldığını taşır; bir HTTP koduna indirgenirse operatör
- * hangi satırı sileceğini bilemez.
- *
- * ── DEPO EKRANI PARA GÖRMEZ, VE BU BİR TİP SINIRI ───────────────────────────
- * Tasarımın altın kuralı (v2: *"Depo ekranları fiyat/tutar görmez"*) burada bir arayüz disiplini
- * değil, açılan kapının kendisidir: mal kabul ucu **`receiveGoods`**e bağlı, `receivePurchase`e
- * DEĞİL. İkincisi maliyet taşıyan satır tipini (`PurchaseIntakeLine`) kabul eden admin yoludur
- * (09.14) ve mobilde hiç açılmadı — açılsaydı depocunun ekranına fiyat alanı koymanın önü teknik
- * olarak açık kalırdı. Tek istisna D6'nın YANITIDIR: kurye dönüşü bir sipariş düzeltmesidir ve iade
- * tutarını çağıran (yönetim akışı) okur; depocu ekranı o alanı çizmez.
- *
- * ── AÇILMAYAN KAPILAR: D3, SEVK, GERİ ALMA ──────────────────────────────────
- * Paket üç kapı daha veriyor (`dispatchTransfer`, `cancelTransfer`) ve D3 (yakın-SKT) için hiç kapı
- * YOK (`batch-view` terfisi defterde). Hiçbiri uç olarak açılmadı ve gerekçe ölçüldü, varsayılmadı:
- * v2'nin D5 ekranı **rampada sayım** ekranıdır ("RAMPADA SAY — GELEN ADEDİ GİR"), sevk kurgusu ya da
- * geri alma düğmesi barındırmaz; D3 ekranı ise işaretleme içermeyen bir okuma listesidir ve
- * beslendiği kapı bugün yok. Tüketicisi olmayan bir uç, ilk günden ölü koddur (CLAUDE.md §0).
- *
- * ── YAN ETKİ SINIRI: BU UÇTAN MAİL/PUAN ÇIKMAZ (kurye ucuyla aynı) ──────────
- * D6'nın kapısı (`adjustFulfillment`) müşteri haberini ve sağlayıcı iadesini PORT üzerinden alıyor
- * (`application/order/effects.ts`); portların uygulamaları henüz terfi etmedi. `effects` BİLEREK
- * geçirilmiyor: mal ve stok düzeltilir, iade borcu türetilir — **müşteriye iade maili gitmez ve
- * kart iadesi çağrılmaz.** Sessiz değil: borç yazılamadıysa cevabın `refundBlocked` alanı sebebi
- * söyler (`provider_unavailable`), ekran onu gösterir.
- *
- * ── LOG: KİMLİK EVET, İÇERİK HAYIR (CLAUDE §1) ──────────────────────────────
- * Bu dosya ayrıca kayıt düşmez; `app.ts`in istek satırı yolu ve durumu zaten yazıyor ve yolda yalnız
- * kimlikler var. Gövde HİÇBİR ZAMAN loglanmaz: sayım notu ve "stoğa dön" gerekçesi serbest metindir,
- * gideceği tek yer düzeltme kaydının kendi sütunudur.
+ * Depo uçları (mobil "Depo" bölümü): parse → kapı → zarf; kural hesaplamaz, karar `@lezzet/application`ın depo kapılarında
+ * verilir ve web ile aynıdır. HTTP durumu isteğin kapıya ulaşıp ulaşmadığını, gövde kapının kararını söyler; bu yüzden `out_of_scope` gibi
+ * veri düzeyindeki retler 200 ve adlı gövdedir.
  */
 
 /**
- * **Depo kimliği — kapıların ZORUNLU parametresi, ve buraya koyan tek yer burası.**
- *
- * CLAUDE.md §1: *varsayılan depo YOKTUR.* Sözleşmelerin hiçbir istek gövdesinde `warehouseId` yok
- * (`warehouse-api.schema.ts` künyesi): gövdeye konsaydı depocu başka deponun kimliğini yazıp onun
- * malını düşebilirdi — yetkilendirme doğrulanmamış bir girdiye dayanamaz. Kimlik PROFİLDEN gelir.
- *
- * ── ÜÇ HÂL, TEK KURAL ───────────────────────────────────────────────────────
- * Kural tek cümle: *"kapsamda tek depo varsa o, değilse söylenmeli."*
- *
- *   1. **Kapsamda tam bir depo** → o depo. v2'nin başlığı bu hâli anlatıyor: "DEPO · STRASBOURG
- *      (SABİT)". Depocunun günlük hâli budur.
- *   2. **`?warehouseId=` verildi** → kapsamdaysa kabul; kapsam dışıysa `admin` için serbest,
- *      değilse `403 warehouse_out_of_scope`.
- *   3. **Parametre yok ve kapsam tek değil** → `400 warehouse_required`.
- *
- * ── BOŞ KAPSAM NEDEN 403 DEĞİL (ölçüldü) ────────────────────────────────────
- * `0031_warehouse.sql:151` — `user_profiles_warehouse_scope` kısıtı `warehouse`/`courier` rolüne EN
- * AZ BİR depo şart koşuyor; yani kapsamsız bir depocu veritabanında **var olamaz**. Boş kapsamın tek
- * gerçek sahibi `admin`dir ve admin depo-ÜSTÜdür (kısıtın kendi yorumu: *"kapsamı hiç okunmaz"*).
- * Ona 403 demek yanlış cevaptır — kapı ona açık, eksik olan tek şey hangi depoda çalıştığıdır. Doğru
- * cevap 400: *"hangi depo olduğunu söyle."* Sıfır ile birden fazla aynı anahtarı paylaşıyor
- * (`warehouse_required`), çünkü istemcinin çaresi ikisinde de aynı: parametreyi gönder.
- *
- * ── ADMİNİN VERDİĞİ KİMLİK DOĞRULANIR, KAPSAMDAKİ DOĞRULANMAZ ───────────────
- * Kapsamdaki kimlikler zaten bir tetikleyiciyle sınanıyor (`assert_warehouse_ids_exist`, 0031) —
- * var olmayan bir depo profile YAZILAMAZ. Sorgudan gelen kimliğin böyle bir güvencesi yok ve
- * doğrulanmasaydı yanlış yazılmış tek bir uuid **boş bir hazırlık kuyruğu** döndürürdü: hata değil,
- * geçerli bir cevap — yani sessiz bir yalan. Tek satırlık pk okuması yalnız bu dalda koşar.
+ * Depo kimliği gövdeden değil profilden gelir, yoksa depocu başka deponun kimliğini yazıp onun malını düşebilirdi: kapsamda tek
+ * depo varsa o, `?warehouseId=` kapsam dışıysa yalnız admin'e ve var olduğu doğrulanarak, ikisi de yoksa 400. Kapsamsız tek rol
+ * admin'dir (veride kısıt), ona 403 değil "hangi depo" demek doğru cevaptır.
  */
 const WarehouseQuerySchema = z.object({ warehouseId: UuidSchema.optional() });
 
 /**
- * Depo bölümünün bağlamı — personel profili (rol kapısından) + çözülmüş depo kimliği.
- *
- * **İhraç edildi (21.119):** yerinde satış ucu (`sale.ts`) aynı depo çözümünü kullanıyor ama ROL
- * kümesi farklı — orada kurye de satar, burada satmaz. İkinci bir kopya yazmak, kapsam kuralının
- * (kimliği doğrula · kapsamı kontrol et · belirsizse 400) iki yerde yaşaması olurdu ve ayrıştığı
- * gün biri sessizce zayıflardı.
+ * Depo bölümünün bağlamı — personel profili + çözülmüş depo. Yerinde satış ucu aynı çözümü farklı rol kümesiyle kullandığı için
+ * ihraç edilir; ikinci kopya kapsam kuralını iki yerde yaşatırdı.
  */
 export interface WarehouseEnv {
   Variables: StaffEnv['Variables'] & { warehouseId: string };
 }
 
 /**
- * **Kapsamın TEK BAŞINA çözdüğü depo** — guard'ın üç hâlinden birincisi, tek satırda.
- *
- * Guard'ın kuralı *"kapsamda tek depo varsa o, değilse söylenmeli"* ve `?warehouseId=` yokken bu
- * cümlenin cevabını veren yer burasıdır. **İhraç edildi (30.08):** kabuğun künye ucu
- * (`operations.ts` → `/operations/workplace`) personelin çalıştığı TESİSİN ADINI aynı soruya
- * dayandırıyor — "kapsamın tek başına çözdüğü depo hangisi". İkinci kez yazılsaydı iki yer bir
- * gün ayrışır ve üstbaşlıkta yazan ad, uçların gerçekte okuduğu depo OLMAYABİLİRDİ; bir depocuya
- * yanlış tesisin adını göstermek, ekranın güvenilirliğini kökten kaybetmesidir.
- *
- * `null` = kapsam boş (admin — depo-üstü) ya da birden çok. İkisi de "söylenmeli" dalıdır ve
- * guard orada 400 döner; ad ucu ise `null` döner. Cevaplar farklı çünkü sorular farklı: guard
- * "hangi depoda çalışayım" diye sorar ve cevapsız kalamaz, künye "nerede çalışıyorsun" diye
- * sorar ve cevapsız kalabilir.
+ * Kapsamın tek başına çözdüğü depo; kabuğun künye ucu da tesis adını buna dayandırır ki üstbaşlıktaki ad uçların okuduğu depoyla
+ * ayrışmasın. `null` = kapsam boş (admin) ya da birden çok: guard 400 döner, künye ucu adsız kalır.
  */
 export function soleWarehouseIdOf(scope: readonly string[]): string | null {
   return scope.length === 1 ? (scope[0] ?? null) : null;
 }
 
 /*
-   Bağlam GENERİK (01.09): satış yönlendiricisi aynı guard'ı kendi bağlamıyla çağırıyor
-   (`SaleEnv` = depo değişkenleri + satış yeri) ve Hono'nun `Context.set`i değişken (invariant) —
-   `Context<SaleEnv>` `Context<WarehouseEnv>` yerine geçmiyor. Cast yerine kısıt yazıldı: guard
-   yalnız "warehouseId taşıyan bir bağlam" istiyor, tam olarak o bağlamı istemiyor.
+   Bağlam jenerik, çünkü satış yönlendiricisi aynı guard'ı kendi bağlamıyla çağırıyor ve Hono'nun `Context`i değişmez tiplidir.
+   Guard yalnız "warehouseId taşıyan bir bağlam" ister.
 */
 export async function warehouseGuard<E extends WarehouseEnv>(c: Context<E>, next: Next): Promise<Response | void> {
   const profile = c.get('staff');
@@ -269,28 +182,12 @@ warehouse.use('*', warehouseGuard);
 // ── D1 · Hazırlık (toplama) ─────────────────────────────────────────────────
 
 /**
- * **Hazırlama kuyruğu** (D1). `confirmed` + `preparing` birlikte gelir: ikincisi yarım kalan iştir ve
- * ekranda kaybolmamalıdır.
- *
- * Gün SÜZGEÇTİR, varsayılan DEĞİL — ve bu kurye ucundan (`/day`) bilinçli olarak ayrılıyor. Orada
- * gün verilmezse BUGÜN kastedilir, çünkü kuryenin rotası güne aittir. Burada gün verilmezse süzgeç
- * hiç uygulanmaz ve o deponun bekleyen HER siparişi gelir: depo işi güne değil MALA aittir — dün
- * onaylanmış ama hâlâ toplanmamış sipariş, bugünün ekranından silinemez. Sözleşme bu ayrımı taşıyor
- * (`date: string | null`) ve cevapta gün ZORUNLU döner: istemci "hangi günü gösteriyorum" sorusunu
- * kendi kendine sormaz.
- *
- * **Bilinen sınır:** kapı 50 satırla tavanlı (kendi varsayılanı) ve bu uç tavanı açmıyor — imleç de
- * yok. Kuyruk sınırsız büyüyen bir küme değil (bekleyen sipariş sayısı fiziksel gerçekle sınırlı,
- * CLAUDE §1'in "doğal tavanı olan küme" dalı) ve v2'nin hub'ı sayı değil iş listesi gösteriyor.
- * Tavanı parametreleştirmenin tüketicisi çıkarsa `limit` sorgusu bir satırla açılır.
+ * Hazırlama kuyruğu: `confirmed` + `preparing` birlikte gelir ki yarım kalan iş kaybolmasın. Gün verilmezse süzgeç yoktur, çünkü
+ * depo işi güne değil mala aittir; dün onaylanıp toplanmamış sipariş bugünün ekranından düşmemeli.
  */
 const PreparationQuerySchema = z.object({
   date: IsoDateSchema.optional(),
-  /**
-   * Kuyruğun hangi yüzü (kullanıcı isteği 01.09) — `pending` (varsayılan) bekleyen iş, `done` son
-   * tamamlananlar. Ayrı bir UÇ açılmadı: dönen gövde alan alan AYNI (`PreparationOrder`) ve ikinci
-   * bir uç aynı sözleşmeyi iki yerde tutmak olurdu (CLAUDE §1).
-   */
+  /** Kuyruğun yüzü: `pending` (varsayılan) bekleyen iş, `done` son tamamlananlar; gövde aynı olduğu için ayrı uç yok. */
   scope: z.enum(['pending', 'done']).optional(),
 });
 
@@ -311,16 +208,8 @@ warehouse.get('/preparation', async (c) => {
 });
 
 /**
- * **Hazırlık onayı** (D1). Seçilen partiler yazılır; tamamı toplandıysa sipariş `ready`'e geçer.
- *
- * Dört cevabın dördü de 200 ve bu ucun asıl işi onları BOZMADAN taşımaktır:
- * `ok` + `ready:false` yarım iştir (hata değil — depocu kaldığı yerden devam eder), `pinned_violation`
- * indirimli teklifin partisine dokunulduğunu söyler ve HİÇBİR yazım yapılmamıştır, `forbidden`
- * siparişin başka deponun olduğunu, `not_found` hiç olmadığını söyler.
- *
- * `shortfalls` motorun TAVSİYESİDİR, kararı değil: v2'nin cümlesi *"Eksik bildirildi — karar yönetim
- * ekranında"* (D1 → Y2). Bu uç kimsenin yerine karar vermez, tavsiyeyi taşır — ve tavsiyenin parasal
- * ölçütü motora GİRDİ olarak verildiği için cevapta tutar yoktur.
+ * Hazırlık onayı: seçilen partiler yazılır, tamamı toplandıysa sipariş `ready`e geçer. Olumsuz cevaplar 200 ve adlıdır;
+ * `shortfalls` motorun tavsiyesidir, eksik kararı yönetim ekranında verilir.
  */
 warehouse.post('/preparation/:orderId/confirm', async (c) => {
   const orderId = UuidSchema.safeParse(c.req.param('orderId'));
@@ -342,16 +231,11 @@ warehouse.post('/preparation/:orderId/confirm', async (c) => {
   return ok(c, ConfirmPreparationResponseSchema.parse(body));
 });
 
-// ── D1 · Kutu döngüsü (23.6) ────────────────────────────────────────────────
+// ── D1 · Kutu döngüsü ───────────────────────────────────────────────────────
 
 /**
- * **DEPONUN YAZICILARI** (07.12 · kullanıcı kararı 29.08) — envanter, seçim DEĞİL.
- *
- * *"Sunucu: bu depoda hangi yazıcılar var. Cihaz: hangisini kullanıyor — listeden seçer, elle IP
- * yazmaz."* Bu uç birinci yarıdır; ikinci yarı telefonun yerel deposunda ve buraya HİÇ gelmez.
- *
- * Yalnız açık satırlar: kapalı bir yazıcıyı seçim listesine koymak, sökülmüş bir cihaza basmayı
- * denetmektir. Sayfalama yok — küme operatörün elle kurduğu, doğal tavanı olan bir envanter.
+ * Deponun yazıcı envanteri; hangisinin kullanılacağı cihazın seçimidir ve buraya gelmez. Yalnız açık satırlar döner ki sökülmüş
+ * cihaz seçilemesin; küme elle kurulduğu için sayfalanmaz.
  */
 warehouse.get('/printers', async (c) => {
   const printers = await printersFor(serviceDb(), c.get('warehouseId'));
@@ -360,26 +244,8 @@ warehouse.get('/printers', async (c) => {
 });
 
 /**
- * **YAZICI TANITMA** (05.09) — telefonun ağda BULDUĞU yazıcıyı bu deponun envanterine yazar.
- *
- * ── ENVANTERE İLK YAZAN MOBİL KAPI ──────────────────────────────────────────
- * 29.08'den beri envanteri yalnız web'deki Depolar ekranı dolduruyordu ve telefon onu okuyordu.
- * Cihazda ölçüldü (05.09): yazıcının önünde duran depocu "Tanımlı değil" kartını görüyor ve kart
- * onu başka bir yüzeye yolluyordu — elindeki telefonla yapabileceği hiçbir şey yoktu.
- *
- * ── ADRES İSTEKTEN GELİYOR AMA ELLE YAZILMIYOR ──────────────────────────────
- * Gövdedeki adres SDK'nın ağ keşfinden çıkıyor; depocu bir IP yazmıyor, gördüğü yazıcıya
- * dokunuyor. Yanlış adresin nasıl göründüğünü de ölçtük: seed `.91` uydurmuştu, gerçek yazıcı
- * `.169`daydı ve ekran "ağda görünmüyor" diyordu — kimse yalan söylemiyordu, envanter yanlıştı.
- *
- * ── KÂĞIT GÖVDEDE YOK, SUNUCU TÜRETİYOR ─────────────────────────────────────
- * Takılı kâğıt SDK'dan okunamıyor (23.5) ve istemcinin uydurmasına bırakılamaz: yanlış boy
- * basımı `SetLabelSizeError`a gönderir. Kural tek yerde (`defaultLabelSizeFor`), tanınmayan model
- * REDDEDİLİYOR — o zaman Depolar ekranından boyu seçilerek elle tanıtılır.
- *
- * ── KAPSAM GÖVDEDE DEĞİL, BAĞLAMDA ──────────────────────────────────────────
- * Hangi depoya yazılacağı istekten alınmıyor; `warehouseId` bağlamdan geliyor (aynı guard'ın
- * ötekilerle paylaştığı kapı). Gövdeden alınsaydı bir cihaz başka deponun envanterine yazabilirdi.
+ * Telefonun ağda bulduğu yazıcıyı bu deponun envanterine yazar; adres SDK'nın keşfinden gelir, elle yazılmaz. Kâğıt boyu modelden
+ * sunucuda türetilir (tanınmayan model reddedilir) ve depo bağlamdan alınır ki cihaz başka deponun envanterine yazamasın.
  */
 warehouse.post('/printers', async (c) => {
   const parsed = RegisterPrinterRequestSchema.safeParse(await c.req.json().catch(() => null));
@@ -391,17 +257,8 @@ warehouse.post('/printers', async (c) => {
 });
 
 /**
- * **ÖRNEK ETİKET** (v3:09'un "test bas" eylemi, 30.08) — 4×6 PNG, 300 dpi. Zarfsız BİNARY cevap,
- * kutu etiketiyle aynı gerekçe: tüketicisi `fetch` + dosya yazımı, base64 zarfı yükü %33 şişirirdi.
- *
- * ── NEDEN YAZICI KİMLİĞİ YOLDA ──────────────────────────────────────────────
- * Görsel yazıcıya göre DEĞİŞMİYOR (tek şablon, 4×6) ama kimlik yine isteniyor ve bu bir kapı: uç,
- * istenen yazıcının GERÇEKTEN bu deponun açık envanterinde olduğunu doğruluyor. Kimliksiz bir
- * "örnek etiket ver" ucu, kapsam sorusu hiç sorulmayan bir üretim kapısı olurdu.
- *
- * ── BASIM DAMGASI YOK ───────────────────────────────────────────────────────
- * Bu bir kutunun etiketi değil: `markBoxPrinted` çağrılmaz, hiçbir kayıt güncellenmez. Gerçek bir
- * kutunun etiketini "test" diye bastırmak, o kutunun basım damgasını yalan yere düşürürdü.
+ * "Test bas" için örnek etiket (PNG, zarfsız); yazıcı kimliği, istenen yazıcının bu deponun açık envanterinde olduğunu doğrulamak
+ * için yolda. Gerçek bir kutuya bağlı değildir, basım damgası düşmez.
  */
 warehouse.get('/printers/:printerId/sample-label.png', async (c) => {
   const printerId = UuidSchema.safeParse(c.req.param('printerId'));
@@ -411,23 +268,14 @@ warehouse.get('/printers/:printerId/sample-label.png', async (c) => {
   const printer = printers.find((row) => row.id === printerId.data);
   if (!printer) return fail(c, 'not_found', 404);
 
-  /* Örnek O YAZICININ KÂĞIDINDA üretiliyor (06.09): testin sorusu "bu makineden bizim etiketimiz
-     doğru çıkıyor mu" ve kâğıt boyu cevabın yarısı. Sabit boyda üretilseydi test, gerçek basımın
-     ölçüsünü DENEMEDEN "geçti" derdi. Kimlik zaten yolda — envantere karşı sınanıyor. */
+  /* Örnek o yazıcının kâğıdında üretilir, çünkü testin sorusu bu makineden etiketin doğru çıkıp çıkmadığıdır. */
   const png = renderLabelPng(boxLabelSvg(sampleBoxLabel(), labelSizeMm(printer.labelSize) ?? DEFAULT_LABEL_MM));
   return c.body(new Uint8Array(png), 200, { 'content-type': 'image/png' });
 });
 
 /**
- * **Deponun kargo kutuları** (07.12) — kutu açılırken sorulan tipin listesi.
- *
- * Yalnız AÇIK tipler ve yalnız BU deponun benimsedikleri: sistem şablonu doğrudan seçilemez
- * (kopyalanarak benimsenir — `ShippingBoxSchema` künyesi), kapatılmış tip de yeni kutuya
- * konamaz. Süzgeç sunucuda; istemciye "seçme" diye işaretli bir satır göndermek, ekranın
- * gösterebileceği ama kullanamayacağı bir seçenek üretirdi.
- *
- * Sayfalama YOK ve bu bilinçli (`CLAUDE §1`): küme operatörün elle kurduğu, doğal tavanı olan
- * bir katalog — veriyle büyümüyor.
+ * Kutu açılırken sorulan tipler: yalnız bu deponun benimsediği açık tipler, çünkü sistem şablonu kopyalanarak benimsenir ve
+ * kapatılmış tip yeni kutuya konamaz. Küme elle kurulduğu için sayfalanmaz.
  */
 warehouse.get('/shipping-boxes', async (c) => {
   const boxes = await new ShippingBoxService(serviceDb()).listForWarehouse(c.get('warehouseId'), { onlyActive: true });
@@ -436,13 +284,8 @@ warehouse.get('/shipping-boxes', async (c) => {
 });
 
 /**
- * **Kutu açar** (karar §1.4). Gövdede TEK alan var (`shippingBoxId`) ve o da kutunun içeriği
- * değil FİZİKSEL KİMLİĞİDİR: gönderi ağırlığı ve ölçüsü ondan çıkıyor. Numarası sipariş içi
- * sıradan, kodu üreteçten gelir. `stale` cevabın kendisidir — sipariş artık toplanabilir değilse
- * ekran hangi durumda olduğunu söyler, sessiz 4xx'e indirgemez.
- *
- * **Gövdesiz istek hâlâ geçerli** (`shippingBoxId` varsayılanı `null`): rota kulvarında tip
- * sorulmuyor ve gövde zorunlu olsaydı o akış kırılırdı.
+ * Kutu açar; tek gövde alanı (`shippingBoxId`) kutunun fiziksel tipidir, gönderi ölçüsü ondan çıkar. Rota kulvarında tip
+ * sorulmadığı için gövdesiz istek de geçerlidir.
  */
 warehouse.post('/orders/:orderId/boxes', async (c) => {
   const orderId = UuidSchema.safeParse(c.req.param('orderId'));
@@ -455,8 +298,7 @@ warehouse.post('/orders/:orderId/boxes', async (c) => {
     orderId: orderId.data,
     warehouseId: c.get('warehouseId'),
     shippingBoxId: parsed.data.shippingBoxId,
-    // Kutuyu açan kişi hazırlığı BAŞLATAN kişidir: `confirmed → preparing` geçişinin izi ona
-    // yazılır (21.183'ün aktör kuralı — iz, suçlama değil).
+    // Kutuyu açan hazırlığı başlatan kişidir; `confirmed → preparing` geçişinin izi ona yazılır.
     actorId: c.get('staff').id,
   });
   const body: z.input<typeof OpenBoxResponseSchema> = outcome;
@@ -464,11 +306,8 @@ warehouse.post('/orders/:orderId/boxes', async (c) => {
 });
 
 /**
- * **Kutuyu kapatır** (23.6) — içerik + parti izi + mühür tek transaction (`seal_order_box`).
- * `picks` BU kutunun dağılımıdır; çok kutulu birleşimi kapı kurar (`sealBox` künyesindeki ⚠ —
- * ekran kümülatif göndermeye çalışmaz). Cevabın olumsuz dalları da 200: `already_sealed` çift
- * dokunuştur, `missing` "yeni kutu aç" davetidir, `shortfalls` yalnız `declareShort` beyanıyla
- * dolar ve karar yine yönetim ekranındadır.
+ * Kutuyu kapatır: içerik, parti izi ve mühür tek transaction'da (`seal_order_box`); `picks` bu kutunun dağılımıdır, çok kutulu
+ * birleşimi kapı kurar. Olumsuz dallar 200 ve adlıdır.
  */
 warehouse.post('/boxes/:boxId/seal', async (c) => {
   const boxId = UuidSchema.safeParse(c.req.param('boxId'));
@@ -491,9 +330,8 @@ warehouse.post('/boxes/:boxId/seal', async (c) => {
 });
 
 /**
- * **Kutuyu geri açar** (01.09) — mühür kalkar, döküm silinir, karşılanan adet kalan kutuların
- * birleşimiyle yeniden yazılır. Gövde almaz. Reddin gerekçesi RPC'den gelir ve ekrana aynen yazılır:
- * araca binmiş kutu geri açılmaz, hazırlıktan çıkmış siparişin kutusu da.
+ * Kutuyu geri açar: mühür kalkar, döküm silinir, karşılanan adet kalan kutulardan yeniden yazılır. Reddin gerekçesi RPC'den gelir
+ * ve ekrana aynen yazılır.
  */
 warehouse.post('/boxes/:boxId/unseal', async (c) => {
   const boxId = UuidSchema.safeParse(c.req.param('boxId'));
@@ -510,11 +348,8 @@ warehouse.post('/boxes/:boxId/unseal', async (c) => {
 });
 
 /**
- * **Siparişi eksik kapat** (kullanıcı bulgusu 31.08) — kutu kapatmadan verilen SİPARİŞ kararı.
- *
- * Ayrı uç, çünkü ayrı bir eylem: `/boxes/:id/seal` bir kutuyu mühürler ve beyan orada yalnız bir
- * yan bayraktı; son kutu kapandıktan sonra ("kalanı bulamadım" anı) mühürlenecek kutu YOKTUR.
- * Gövde almaz — hangi kalemlerin eksik olduğu zaten kayıtta, sunucu onu yeniden hesaplar.
+ * Siparişi eksik kapatır; son kutu kapandıktan sonra mühürlenecek kutu kalmadığı için kutu mühründen ayrı bir sipariş kararıdır.
+ * Gövde almaz, eksik kalemler kayıttadır.
  */
 warehouse.post('/orders/:orderId/declare-short', async (c) => {
   const orderId = UuidSchema.safeParse(c.req.param('orderId'));
@@ -531,26 +366,21 @@ warehouse.post('/orders/:orderId/declare-short', async (c) => {
 });
 
 /**
- * **Etiket içeriği** (23.7 · karar §1.9) — içerik SUNUCUDAN: tek şablon, tek yerde test. Bugünkü
- * tüketici kapanış önizlemesi; Brother SDK bağlanınca aynı içerik basılır (dosya biçimi o gün —
- * Netleşecek 2). Tutar taşımaz (karar §1.5); `not_sealed` cevabın kendisidir.
+ * Etiket içeriği sunucudan gelir ki şablon tek yerde olsun; tutar taşımaz ve `not_sealed` cevabın kendisidir.
  */
 warehouse.get('/boxes/:boxId/label', async (c) => {
   const boxId = UuidSchema.safeParse(c.req.param('boxId'));
   if (!boxId.success) return fail(c, 'invalid_box_id', 400);
 
   const outcome = await boxLabelPayload(serviceDb(), { boxId: boxId.data, warehouseId: c.get('warehouseId') });
-  // ⚠ Yazıcı ARTIK BU CEVABA İLİŞTİRİLMİYOR (29.08): tek yazıcı varsayımının kalıntısıydı. Depoda
-  // N yazıcı var ve hangisinin kullanılacağı CİHAZIN bilgisi — sunucunun iliştirdiği bir yazıcı,
-  // cihazın seçimini sessizce ezerdi. Liste kendi ucundan geliyor (`GET /warehouse/printers`).
+  // Yazıcı cevaba iliştirilmez: hangi yazıcının kullanılacağı cihazın seçimidir, liste `GET /warehouse/printers`ten gelir.
   const body: z.input<typeof BoxLabelResponseSchema> = outcome;
   return ok(c, BoxLabelResponseSchema.parse(body));
 });
 
 /**
- * **Etiketin BASILACAK görseli** (23.7) — 4×6 PNG, 300 dpi. Zarfsız BİNARY cevap: tüketicisi
- * `fetch`+dosya yazımı (telefon), JSON zarfına base64 gömmek yükü %33 şişirirdi. İçerik ve görsel
- * tek yerden (`boxLabelPayload` → `boxLabelSvg`) — telefon etiketi ÇİZMEZ, basar (karar §1.9).
+ * Etiketin basılacak görseli (PNG, zarfsız), çünkü JSON zarfına base64 gömmek yükü şişirirdi. Görsel içerikle aynı kaynaktan
+ * (`boxLabelPayload` → `boxLabelSvg`) üretilir; telefon çizmez, basar.
  */
 warehouse.get('/boxes/:boxId/label.png', async (c) => {
   const boxId = UuidSchema.safeParse(c.req.param('boxId'));
@@ -560,14 +390,8 @@ warehouse.get('/boxes/:boxId/label.png', async (c) => {
   if (outcome.status !== 'ok') return fail(c, outcome.status === 'forbidden' ? 'out_of_scope' : outcome.status, outcome.status === 'not_found' ? 404 : 409);
 
   /*
-    KÂĞIT BOYUNU CİHAZ SÖYLÜYOR (06.09) — ve bu, 21.132'nin kapattığı kapıyı AÇMIYOR.
-
-    O gün `BoxLabelResponse.printer` kaldırılmıştı: sunucunun cevaba iliştirdiği yazıcı, cihazın
-    seçimini sessizce ezerdi. Burada yön TERS — sunucu yazıcı seçmiyor, cihaz seçtiği yazıcının
-    kâğıdını BİLDİRİYOR. Karar yine cihazın; sunucu yalnız o kâğıda çiziyor.
-
-    Boy verilmezse ya da tanınmazsa kutu yazıcısının rulosu varsayılıyor (62 mm sürekli, kullanıcı
-    kararı 06.09): sessiz bir yedek değil, bizim kutu etiketimizin evi orası.
+    Kâğıt boyunu cihaz bildirir: yazıcıyı sunucu seçmez, cihazın seçtiği yazıcının kâğıdına çizer. Boy yoksa ya da tanınmazsa
+    kutu yazıcısının rulosu varsayılır.
   */
   const png = renderLabelPng(
     boxLabelSvg(outcome.label, labelSizeMm(c.req.query('labelSize') ?? '') ?? DEFAULT_LABEL_MM),
@@ -575,17 +399,11 @@ warehouse.get('/boxes/:boxId/label.png', async (c) => {
   return c.body(new Uint8Array(png), 200, { 'content-type': 'image/png' });
 });
 
-// ── D1 · Sevk: teklif + duyuru (07.12) ──────────────────────────────────────
+// ── D1 · Sevk: teklif + duyuru ──────────────────────────────────────────────
 
 /**
- * **SEVK SEÇENEKLERİ** — depocunun servis seçtiği liste, GERÇEK kolilere göre fiyatlı.
- *
- * Salt okuma: sağlayıcıya teklif sorar, hiçbir şey yaratmaz, **para harcamaz**. Ön koşullar
- * duyurunun kullandığı kapıdan geçiyor (`resolveDispatch`), yani burada görünen liste satın alma
- * anında da geçerli — iki ayrı hesap olsaydı listedeki seçenek duyuruda reddedilebilirdi.
- *
- * Sağlayıcı yapılandırılmamışsa ağa HİÇ çıkılmaz; ekran "teklif alınamadı" der ve elle giriş
- * yedek şeridi (`setShipment`) açık kalır.
+ * Sevk seçenekleri: sağlayıcıya teklif sorar, para harcamaz; ön koşullar duyurunun kapısından geçer ki listedeki seçenek duyuruda
+ * reddedilmesin. Sağlayıcı yapılandırılmamışsa ağa çıkılmaz ve elle giriş yolu açık kalır.
  */
 warehouse.get('/orders/:orderId/dispatch-options', async (c) => {
   const orderId = UuidSchema.safeParse(c.req.param('orderId'));
@@ -603,18 +421,8 @@ warehouse.get('/orders/:orderId/dispatch-options', async (c) => {
 });
 
 /**
- * **GÖNDERİYİ DUYUR + ETİKETLERİ AL — GERÇEK PARA HARCAR.**
- *
- * Zincirin telefondaki halkası: kutu kapandı → burası etiketi satın alır → telefon PDF'i indirip
- * Brother'a basar. Sunucudan geçmesinin sebebi ağ değil para: satın alma tek yerde, tek kayıtla
- * ve tekrar denemesiz olmalı.
- *
- * **Yeniden deneme YOK** (sağlayıcıda idempotency anahtarı yok — ikinci çağrı ikinci koli açar).
- * Bu yüzden `already_announced` bir hata değil CEVAPTIR: ekran "zaten duyurulmuş" der ve
- * operatör etiketi yeniden basmayı seçer.
- *
- * Olumsuz dalların hepsi **200** ve ADLI: ölçüsüz mal tartıya, tipsiz kutu seçime, adressiz
- * sipariş yönetime gider — tek bir 4xx bunların üçünü aynı çıkmaza çevirirdi.
+ * Gönderiyi duyurur ve etiketi satın alır — gerçek para harcar, bu yüzden sunucudan tek kayıtla geçer. Sağlayıcıda tekrar anahtarı
+ * olmadığından yeniden deneme yoktur; `already_announced` hata değil cevaptır.
  */
 warehouse.post('/orders/:orderId/announce', async (c) => {
   const orderId = UuidSchema.safeParse(c.req.param('orderId'));
@@ -639,15 +447,8 @@ warehouse.post('/orders/:orderId/announce', async (c) => {
 });
 
 /**
- * **DEVİR OKUTMASI** (07.12) — kutu taşıyıcıya verildi.
- *
- * Kurye yükleme ucundan (`courier`) ayrı ve olmak zorunda: orası `order.courierId` şartına bakıyor
- * ve kargo siparişinin kuryesi YOK. Sahiplik sorusu da farklı — orada "bu kutu senin rotanın mı",
- * burada "bu kutu senin deponun mu".
- *
- * Gövde tek alan (okutulan kod); hangi kolonda aranacağını SUNUCU biliyor. Olumsuz dalların hepsi
- * 200 ve adlı: `already_handed` ikinci okutmadır ve sayaç kıpırdamaz — hata cümlesi depocuyu kendi
- * sayımından şüphelendirirdi.
+ * Kutunun taşıyıcıya devri; kurye yükleme ucundan ayrı, çünkü kargo siparişinin kuryesi yoktur ve soru "bu kutu senin deponun mu".
+ * `already_handed` ikinci okutmadır, sayaç kıpırdamaz.
  */
 warehouse.post('/handover', async (c) => {
   const parsed = HandoverRequestSchema.safeParse(await readJsonBody(c));
@@ -663,21 +464,8 @@ warehouse.post('/handover', async (c) => {
 });
 
 /**
- * **RAMPADA BEKLEYEN KUTU SAYISI** (07.12 · tasarım §8.6) — hub rozeti + devir ekranı başlığı.
- *
- * Salt okuma ve **liste değil sayı**: devir ekranı bir okutucudur, depocu elindeki kutuyu okutur
- * ve "hangi siparişi vereyim" diye bir seçim yoktur. Bir bekleyenler listesi, olmayan bir seçimi
- * varmış gibi gösterirdi. Sayının işi başka: rampanın BİTİŞİNİ ölçmek — sıfıra inince yığın
- * boşalmıştır. Bugüne kadar bu soru ancak İLK okutmadan sonra ve yalnız o gönderi için
- * cevaplanabiliyordu.
- *
- * Kapsam depodan (`warehouseId`) geliyor, istemciden değil — depo bir boyut değil DEĞİŞMEZ
- * (`CLAUDE §1`) ve süzgeci istemciye bırakmak, başka deponun yığınını saydırabilirdi.
- */
-/**
- * **GEL-AL KUYRUĞU — D9**: bu depoda müşterisini bekleyen hazır (`ready`) gel-al siparişleri. Hazırlık kuyruğunun
- * "tamamlananlar" yüzünden ayrı: orası taşıyıcıya gidecek kutuları sayar, burada bekleyen müşteridir ve süre karar girdisidir.
- * Kasa kimliği de burada döner (kurye `/day` deseni): tezgâh tahsilatı o kasaya yazılır, ekran kimliği yankılar.
+ * Gel-al kuyruğu: bu depoda müşterisini bekleyen hazır siparişler ve tezgâh tahsilatının yazılacağı kasa. Hazırlığın
+ * "tamamlananlar" yüzünden ayrı, çünkü burada bekleyen taşıyıcı değil müşteridir.
  */
 warehouse.get('/pickup', async (c) => {
   const queue = await listPickupQueue(serviceDb(), { warehouseId: c.get('warehouseId') });
@@ -686,8 +474,7 @@ warehouse.get('/pickup', async (c) => {
 });
 
 /**
- * **MÜŞTERİYE TESLİM** (gel-al). Kutu okutması rota kapısıyla aynı şart, tahsilat kuryenin kapı tahsilatıyla aynı şekil;
- * teslim `ready`den yazılır (`deliver_order` gel-al'da bu kaynağı kabul eder). Olumsuz dallar 200 ve adlı.
+ * Gel-al teslimi: kutu okutması rota kapısıyla, tahsilat kapı tahsilatıyla aynı şarttır; teslim `ready`den yazılır.
  */
 warehouse.post('/pickup/:orderId/deliver', async (c) => {
   const orderId = UuidSchema.safeParse(c.req.param('orderId'));
@@ -706,6 +493,10 @@ warehouse.post('/pickup/:orderId/deliver', async (c) => {
   return ok(c, PickupDeliverResponseSchema.parse(body));
 });
 
+/**
+ * Rampada devir bekleyen kutuların sayısı ve listesi (hub rozeti + devir ekranı); depo bağlamdan gelir ki başka deponun yığını
+ * sayılmasın.
+ */
 warehouse.get('/handover/pending', async (c) => {
   const warehouseId = c.get('warehouseId');
   /* Sayı ve liste TEK turda ve AYNI süzgeçten: ikisi tek gerçeği söylüyor, ayrı turlarda
@@ -718,18 +509,8 @@ warehouse.get('/handover/pending', async (c) => {
 });
 
 /**
- * **TAŞIYICININ ETİKETİ** (07.12) — duyuruda satın alınan PDF'in imzalı adresi.
- *
- * Kutu etiketinden (`/label.png`) AYRI bir uç ve ayrı bir kâğıt: kargo kulvarında bizim QR'lı
- * etiketimiz basılmaz (tasarım §4.6 — iki barkod taşıyıcının tarayıcısını şaşırtır), taşıyıcının
- * A6 etiketi basılır.
- *
- * Dosya AKITILMIYOR, imzalı adres dönüyor: PDF özel kovada ve telefon onu doğrudan indiriyor.
- * Sunucudan geçirmek her basımda VPS'i aradaki boru yapardı.
- *
- * `not_announced` ile `no_label` AYRI: birincisi "henüz satın alınmadı" (çare: duyur), ikincisi
- * "satın alındı ama dosya saklanamadı" (çare: gönderiyi iptal edip yeniden duyur — ve o bir
- * OPERATÖR kararıdır, çünkü ikinci duyuru gerçek para).
+ * Taşıyıcının etiketi için imzalı adres; kargo kulvarında bizim QR'lı etiketimiz basılmaz, iki barkod taşıyıcının tarayıcısını
+ * şaşırtırdı. `no_label` "satın alındı ama dosya saklanamadı" demektir ve yeniden duyuru para harcadığı için operatör kararıdır.
  */
 warehouse.get('/boxes/:boxId/shipping-label', async (c) => {
   const boxId = UuidSchema.safeParse(c.req.param('boxId'));
@@ -748,8 +529,7 @@ warehouse.get('/boxes/:boxId/shipping-label', async (c) => {
 });
 
 /**
- * **Basım damgası** (23.7) — telefon SDK'dan "bastı" cevabını alınca çağırır; damga başarının
- * kaydıdır (05.08 sayaç dersi: niyet sayılmaz). Yeniden basım damgayı günceller.
+ * Basım damgası: telefon SDK'dan "bastı" cevabını alınca çağırır, damga niyetin değil başarının kaydıdır.
  */
 warehouse.post('/boxes/:boxId/printed', async (c) => {
   const boxId = UuidSchema.safeParse(c.req.param('boxId'));
@@ -763,16 +543,7 @@ warehouse.post('/boxes/:boxId/printed', async (c) => {
 // ── D3 · Yakın-SKT turu ─────────────────────────────────────────────────────
 
 /**
- * **Karar bekleyen partiler** (D3) — ömrü azalan mal, en acil önce.
- *
- * KAPI BUGÜN AÇILDI ve gerekçesi bu dosyanın üst künyesinde yazılıydı: motor (`batch-view`) vardı,
- * uç yoktu ve ekran fikstürle çalışıyordu. Künyedeki *"tüketicisi olmayan uç ölü koddur"* kuralı
- * artık tersine dönüyor — tüketici hazır, kapı geldi.
- *
- * DEPO ZORUNLU (kapının kendi süzgeci, `withWarehouse`): parti tek depodadır ve başka deponun
- * ömrü azalan malını burada göstermek, depocuya kendi rafında olmayan bir işi verirdi.
- *
- * PARA ÇIKMAZ: motor fiyat üretiyor, dönen tip taşımıyor (`listNearExpiry` künyesi).
+ * Karar bekleyen partiler, en acil önce; parti tek depoda olduğu için depo süzgeci zorunludur. Dönen tip fiyat taşımaz.
  */
 warehouse.get('/near-expiry', async (c) => {
   const batches = await listNearExpiry(serviceDb(), c.get('warehouseId'));
@@ -784,14 +555,8 @@ warehouse.get('/near-expiry', async (c) => {
 // ── D2 · Mal kabul ──────────────────────────────────────────────────────────
 
 /**
- * **Bekleyen sevkiyatlar** (D2'nin KONUSUZ açılışı — 21.11d). Ekran hangi siparişi kabul edeceğini
- * bilmeden açılıyordu; bu uç o boşluğu kapatıyor: referans · tedarikçi · kaç kalem.
- *
- * Adres neden `/intake` (yani PO'lu formun bir üstü): liste, formun KAPSAYICISI — aynı kaynağın
- * çoğulu. Ayrı bir ad (`/purchase-orders`) aynı şeyin ikinci adı olurdu ve depo bölümünde tedarik
- * siparişi diye ayrı bir kaynak yok; depocunun gördüğü şey "bekleyen kabul"dür.
- *
- * Bu uçtan da PARA çıkmaz: kapı fiyatı okur ama dönen tipte taşımaz (`listPendingIntakes` künyesi).
+ * Bekleyen sevkiyatlar: referans, tedarikçi ve kalem sayısı; depocunun gördüğü "bekleyen kabul" olduğu için adres `/intake`.
+ * Dönen tip fiyat taşımaz.
  */
 warehouse.get('/intake', async (c) => {
   const intakes = await listPendingIntakes(serviceDb());
@@ -801,13 +566,8 @@ warehouse.get('/intake', async (c) => {
 });
 
 /**
- * **Plansız kabulün ürün araması** (23.13) — "elimde mal var, kayıtta hangisi?".
- *
- * Adres `/variants`, `/intake/variants` DEĞİL: aranan şey kabulün değil KATALOĞUN kaydı; kabul
- * yalnız bugünkü tek çağıran. Boş sorgu boş liste döner (400 değil): ekran her tuşta çağırıyor ve
- * "henüz yazmadın" bir hata değil, akışın normal hâli.
- *
- * PARA ÇIKMAZ: satır şeması fiyat taşımıyor (09.14 — depo yolu fiyat görmez).
+ * Plansız kabulün ürün araması; aranan katalog kaydı olduğu için adres `/variants`. Boş sorgu boş liste döner, çünkü ekran her
+ * tuşta çağırır; satır fiyat taşımaz.
  */
 warehouse.get('/variants', async (c) => {
   /* Depo süzgeci satırın STOĞU için: künye "GAZ-7120 · stok 24" diyor ve o sayı personelin
@@ -823,34 +583,18 @@ warehouse.get('/variants', async (c) => {
 });
 
 /**
- * **Tedarik siparişinden dolu form** (D2). Boş `rows` = plansız alım; form elle doldurulur.
- *
- * Depo süzgeci YOK ve olmamalı (kapının künyesi): satın alma depo-üstüdür (K6), mal hangi kapıdan
- * gireceğini kabul anında söyler. Formu depoya süzmek, aynı siparişin ikinci deposundaki kalemleri
- * gizlerdi. Bölümün depo kapısı yine de koşuyor — depo, D2'nin değil BÖLÜMÜN bağlamıdır (v2 başlığı
- * her depo ekranında sabit depoyu yazıyor) ve fail-closed bir çözüm, unutulabilir bir çözümden
- * iyidir.
- *
- * **Künye 21.11d'de eklendi** (`purchaseOrder`): ekran başlığa *"TS-26-0114 · Gaziantep Gıda"*
- * yazamıyordu — cevapta ne referans ne tedarikçi adı vardı ve depocunun elindeki kâğıtla ekranı
- * eşleştirmesinin tek yolu buydu. İki kapı tek turda okunuyor (`Promise.all`), çünkü ikisi de aynı
- * ekranın aynı anındaki ihtiyacı; sıralı çağrı gereksiz bir gidiş-dönüş eklerdi.
- *
- * `purchaseOrder: null` "sipariş YOK" demektir ve boş `rows` ile karıştırılmaz: biri olmayan
- * siparişi, öteki kalemsiz formu anlatır.
+ * Tedarik siparişinden dolu kabul formu; boş `rows` plansız alımdır, `purchaseOrder: null` olmayan siparişi anlatır. Form depoya
+ * süzülmez, çünkü satın alma depo-üstüdür ve süzmek aynı siparişin öteki depodaki kalemlerini gizlerdi.
  */
 warehouse.get('/intake/:purchaseOrderId', async (c) => {
   const purchaseOrderId = UuidSchema.safeParse(c.req.param('purchaseOrderId'));
   if (!purchaseOrderId.success) return fail(c, 'invalid_purchase_order_id', 400);
 
   const db = serviceDb();
-  // MLOR eşiği AYARDIR ve ayarı okumak uç katmanının işi (motor da kapı da ayar okumaz). Cevaba
-  // konuyor çünkü yüzdeyi TELEFON hesaplıyor: girdisi olan son tarih henüz yazılmamıştır, depocu
-  // SKT'yi girdiği anda ekran `meetsMlor`u çağırır — eşiği koda gömseydi ekranın söylediği kural
-  // sistemin kuralı olmaktan çıkardı (`settings-keys` künyesindeki 29.07 dersi).
+  // MLOR eşiği ayardır ve uç katmanı okur; yüzdeyi telefon SKT girildiği anda hesapladığı için cevaba konur.
   const [purchaseOrder, rows, thresholds] = await Promise.all([
     readIntakeHeader(db, purchaseOrderId.data),
-    // Depo VERİLİYOR: lot önerileri o deponun partilerinden okunuyor (21.175 · motorun künyesi).
+    // Depo verilir: lot önerileri o deponun partilerinden okunur.
     openIntakeForm(db, purchaseOrderId.data, c.get('warehouseId')),
     readExpiryThresholds(new SettingsService(db)),
   ]);
@@ -860,17 +604,8 @@ warehouse.get('/intake/:purchaseOrderId', async (c) => {
 });
 
 /**
- * Kabul gövdesi — sözleşmeden **DARALTILARAK** türer, ikinci kez yazılmaz.
- *
- * İki daraltma var, ikisi de taşıma kararı:
- *
- *   • `purchaseOrderId` ÇIKARILDI. Sipariş kimliğinin kaynağı YOLDUR (`/intake/:purchaseOrderId/…`)
- *     ve iki kaynak bir gün çelişirdi — gövdesinde başka bir PO taşıyan istek, yolun söylediğinden
- *     farklı bir siparişi kapatırdı. Ortak sözleşme alanı yerinde duruyor çünkü kapının çağıranı
- *     yalnız bu uç değil (web köprüsü PO'yu parametre olarak veriyor).
- *   • `date` biçime bağlandı: bozuk bir gün anahtarı RPC'de patlayıp çağırana 500 dönmemeli.
- *
- * **Maliyet alanı zaten YOK** ve bu şemanın değil KAPININ kararı: `receiveGoods` fiyat kabul etmez.
+ * Kabul gövdesi sözleşmeden daraltılarak türer: sipariş kimliğinin kaynağı yoldur, gövdedeki ikinci kimlik başka siparişi
+ * kapatabilirdi; `date` biçime bağlıdır ki bozuk gün RPC'de patlamasın. Maliyet alanı yoktur, çünkü `receiveGoods` fiyat almaz.
  */
 const ReceiveGoodsBodySchema = ReceiveGoodsRequestSchema.omit({ purchaseOrderId: true }).extend({
   date: IsoDateSchema.optional(),
@@ -883,14 +618,10 @@ async function receiveIntake(c: Context<WarehouseEnv>, purchaseOrderId: string |
   const outcome = await receiveGoods(serviceDb(), {
     warehouseId: c.get('warehouseId'),
     purchaseOrderId,
-    // **KABULÜ KİM YAPTI** (kullanıcı kararı 31.08): oturumdaki personel belgeye ve doğan her
-    // harekete yazılır. Gövdeden GELMEZ — istemcinin söylediği bir kimlik, kimliğin kendisi değil
-    // bir iddiadır; kapı zaten oturumu doğruladı ve gerçeği o biliyor.
+    // Kabulü yapan oturumdaki personeldir; gövdeden gelen kimlik bir iddia olurdu.
     actorId: c.get('staff').id,
     ...parsed.data,
-    // `reprice` BİLEREK geçirilmiyor: otomatik fiyat modülü fiyat şeridinin işi ve terfi etmedi
-    // (`intake.ts` künyesi). Port kayıtsız olduğu için `repricedCount` **null** döner — sıfır DEĞİL,
-    // çünkü ölçülemeyen değer sıfır değildir (CLAUDE §1) ve kapı süreç başına bir kez uyarı basar.
+    // `reprice` bilerek geçirilmiyor: port kayıtsız olduğu için `repricedCount` null döner, ölçülemeyen değer sıfır değildir.
   });
 
   const body: z.input<typeof ReceiveGoodsResponseSchema> = outcome;
@@ -898,14 +629,8 @@ async function receiveIntake(c: Context<WarehouseEnv>, purchaseOrderId: string |
 }
 
 /**
- * **Mal kabul — PO'lu** (D2). Satırlar partiye dönüşür, sipariş kapanır, maliyet PO'dan eşleşir.
- *
- * SKT zorunluluğu (v2: *"SKT her satırda zorunlu — girilmeden kabul kapanmaz"*) burada bir ekran
- * kuralı değil ŞEMA kuralıdır: `IntakeFormLineSchema.expiryDate` zorunlu alan, yani tarihsiz satır
- * gövde ayrıştırmasında 400 alır ve hiçbir yazım denenmez.
- *
- * Fark ve uyarı cevabın İÇİNDEDİR, engel değil: eksik/fazla gelen mal `differences`, raf ömrü kısa
- * parti `warnings` olarak döner — kabul yine yazılır (DOMAIN §4, parçalı kabul meşrudur).
+ * PO'lu mal kabul: satırlar partiye dönüşür, sipariş kapanır. SKT zorunluluğu şemadadır; fark ve kısa raf ömrü engel değil
+ * cevabın içindedir (DOMAIN §4, parçalı kabul meşrudur).
  */
 warehouse.post('/intake/:purchaseOrderId/receive', async (c) => {
   const purchaseOrderId = UuidSchema.safeParse(c.req.param('purchaseOrderId'));
@@ -915,29 +640,16 @@ warehouse.post('/intake/:purchaseOrderId/receive', async (c) => {
 });
 
 /**
- * **Mal kabul — PLANSIZ** (D2'nin "+ plansız kabul" yolu). Siparişsiz gelen mal da kayda girer;
- * karşılaştırılacak bir beklenti olmadığı için fark raporu üretilmez (kapının kuralı).
- *
- * Ayrı bir uç, çünkü PO'lu kabulün kimliği YOLDA: "siparişsiz" hâli aynı yola boş bir kimlikle
- * girmek olurdu ve `/intake/null/receive` gibi bir adres, olmayan bir kaynağa POST etmektir.
- * Gövde ve davranış birebir aynı (`receiveIntake`) — iki uç, tek gövde.
+ * Plansız mal kabul: siparişsiz gelen mal da kayda girer, karşılaştırılacak beklenti olmadığı için fark raporu üretilmez. PO'lu
+ * kabulün kimliği yolda olduğundan ayrı uçtur; gövde ve davranış aynıdır.
  */
 warehouse.post('/intake/receive', async (c) => receiveIntake(c, null));
 
 // ── D4 · Sayım / düzeltme ───────────────────────────────────────────────────
 
 /**
- * **İmha / sayım kaydı** (D4). Bütün satırlar tek transaction'da yazılır ve tek OLAY belgesini
- * paylaşır (`result.referenceNo` — kâğıt tutanakla eşleşen numara).
- *
- * Depocuya `return_restock` SUNULMAZ ve bu bir ekran disiplini değil, tipin kendisidir: gövde şeması
- * sebebi varlık enum'undan `.exclude(['return_restock'])` ile türetiyor, yani o sebebi taşıyan istek
- * gövde ayrıştırmasında 400 alır — ekran gönderse bile geçmez (v2: *"'İade stoğa döndü' depocuya
- * açılmaz — yönetim istisnasıdır"*).
- *
- * Adet İŞARETLİDİR (+ düşüm, − geri ekleme) ve geri eklemede sebep notunu VERİTABANI zorlar; burada
- * tekrarlanmaz — iki yerde duran bir kural, bir gün tek yerde değişir. Reddi `failed` olarak,
- * mesajıyla birlikte taşınır ("partide 3 var, 5 düşülemez"); operatöre aynen gösterilir.
+ * İmha / sayım kaydı: satırlar tek transaction'da yazılır ve tek olay belgesini paylaşır. Depocuya `return_restock` sunulmaz
+ * (gövde şeması onu dışlar); geri eklemede sebep notunu veritabanı zorlar, ret mesajıyla `failed` döner.
  */
 warehouse.post('/adjustments', async (c) => {
   const parsed = RecordAdjustmentRequestSchema.safeParse(await readJsonBody(c));
@@ -956,10 +668,8 @@ warehouse.post('/adjustments', async (c) => {
 // ── D5 · Transfer (gelen) ───────────────────────────────────────────────────
 
 /**
- * **"Bana ne geliyor"** (D5) — bu depoya yolda olan transferler, satırlarıyla.
- *
- * Sayfalanmaz ve bu bilinçli: küme fiziksel gerçekle sınırlı (aynı anda yolda olan sevkiyat kadar).
- * Bir sevkiyatı kaçırmak, iki depoda da görünmeyen mal demektir — bu listenin TAM olması gerekir.
+ * Bu depoya yolda olan transferler; küme fiziksel gerçekle sınırlı olduğu ve bir sevkiyatı kaçırmak iki depoda da görünmeyen mal
+ * demek olduğu için sayfalanmaz.
  */
 warehouse.get('/transfers', async (c) => {
   const db = serviceDb();
@@ -981,16 +691,8 @@ warehouse.get('/transfers', async (c) => {
 });
 
 /**
- * **Tek transferin içi — SALT OKUMA** (kullanıcı isteği 05.09). Liste "8 kalem" der, bu uç o sekizi
- * söyler; yoldaki ve kapanmış kayıtlar için telefonda başka yol yoktu.
- *
- * **KAPI: kayıt bu depoya DEĞİYOR mu.** İki uçtan biri olmak yeter — gönderen de alan da kendi
- * sevkiyatının içini görebilmeli (eksiği ALAN beyan eder, hesabını GÖNDEREN sorar). Değmiyorsa
- * `not_found`, "yasak" değil: ayrım, kimlik tahmin eden birine kaydın VARLIĞINI söylerdi (bildirim
- * okuma kapısının aynı kuralı).
- *
- * Durum SÜZÜLMEZ — `received`, `cancelled` ve `in_transit` aynı kapıdan okunur. Süzseydik "geçmişte
- * ne olmuş" sorusunun cevabı yine kapalı kalırdı ki bu ucun varlık sebebi tam olarak odur.
+ * Tek transferin içi, salt okuma; iki uçtan biri olan depo görebilir (eksiği alan beyan eder, hesabını gönderen sorar). Değmiyorsa
+ * `not_found` döner ki kimlik tahmin edene kaydın varlığı söylenmesin; durum süzülmez.
  */
 warehouse.get('/transfers/:transferId', async (c) => {
   const transferId = UuidSchema.safeParse(c.req.param('transferId'));
@@ -1007,12 +709,8 @@ warehouse.get('/transfers/:transferId', async (c) => {
 });
 
 /**
- * **Transfer kabulü** (D5) — rampada sayım. Hedefte tarih/lot/alış kopyalanmış YENİ parti doğar.
- *
- * `0` ile boş satır AYRI şeylerdir ve ayrım cevabın kendisinde durur (v2: *"0 = geldi ama kayıp; boş
- * = sayılmadı — boş satır kabulü bloklar"*). Sayılmamış satır varsa kapı `incomplete` döner ve hangi
- * satırların eksik/tanınmaz olduğunu SÖYLER — depocunun rampada arayacağı bilgi tam olarak budur.
- * Bir HTTP koduna indirgenseydi o liste kaybolurdu.
+ * Transfer kabulü, rampada sayım: hedefte yeni parti doğar. `0` "geldi ama kayıp", boş satır "sayılmadı"dır; sayılmamış satır
+ * varsa kapı `incomplete` ile o satırları döner.
  */
 warehouse.post('/transfers/:transferId/receive', async (c) => {
   const transferId = UuidSchema.safeParse(c.req.param('transferId'));
@@ -1026,7 +724,7 @@ warehouse.post('/transfers/:transferId/receive', async (c) => {
     warehouseId: c.get('warehouseId'),
     lines: parsed.data.lines,
     actorId: c.get('staff').id,
-    // Eksik beyanı (04.09): sebep + not; kapı eksik yoksa okumaz, varsa kaybı bu sebeple yazar.
+    // Eksik beyanı: sebep + not; eksik varsa kayıp bu sebeple yazılır.
     declaration: parsed.data.declaration ?? null,
   });
 
@@ -1037,17 +735,8 @@ warehouse.post('/transfers/:transferId/receive', async (c) => {
 // ── D6 · Kurye dönüşü kabulü ────────────────────────────────────────────────
 
 /**
- * **"Rampama ne geri geldi"** (D6'nın okuma yarısı — 21.11d). Yalnız akıbeti BEKLEYEN kalemi olan
- * dönüşler; tamamı işaretlenmiş sipariş listeden düşer (depocunun işi bitmiştir).
- *
- * ── SORGUDA `courierDayCloseId` YOK, VE BU ÖLÇÜLMÜŞ BİR KARAR ───────────────
- * Kurye gün kapanışına bağlamak ilk akla gelendi ve elendi: siparişin kapanış kaydına FK'si YOK
- * (bağ "aynı kurye + aynı gün" üzerinden dolaylı kurulurdu) ve bir kuryenin günü deponun listesi
- * değildir — aynı rampaya iki kurye döner, biri günü hiç kapatmamış olabilir, kurye atanmadan dönen
- * sipariş de hiç görünmezdi. Anahtar bölümün kendi bağlamı: DEPO (`warehouseGuard`).
- *
- * Süzgeç de yok: dönüş güne değil MALA aittir (hazırlık kuyruğuyla aynı ayrım). Dün dönmüş ama
- * akıbeti işaretlenmemiş koli, bugünün ekranından silinemez.
+ * Rampaya dönen, akıbeti bekleyen kalemi olan siparişler; anahtar kurye günü değil depodur, çünkü aynı rampaya iki kurye döner ve
+ * kuryesiz dönen sipariş de görünmeli. Gün süzgeci yoktur: dönüş mala aittir.
  */
 warehouse.get('/returns', async (c) => {
   const drops = await listWarehouseReturns(serviceDb(), { warehouseId: c.get('warehouseId') });
@@ -1057,28 +746,8 @@ warehouse.get('/returns', async (c) => {
 });
 
 /**
- * **Kurye dönüşü kabulü** (D6). Dönen malın akıbeti işaretlenir; sipariş düzeltilir, iade borcu
- * türetilir.
- *
- * ── KAPI YENİ DEĞİL, KAPSAM YENİ ────────────────────────────────────────────
- * `adjustFulfillment` zaten vardı ve operasyon web ekranı da onu çağırıyor; oradaki guard
- * `requireAdmin` olduğu için depo sorusu hiç sorulmuyordu. Bu uç kapıyı DEPOCUYA açıyor ve açarken
- * kapsamı geçiriyor: `warehouseScope: [depo]`. Parametre olmasaydı depocu BÜTÜN siparişleri
- * düzeltebilirdi — depo değişmezinin (CLAUDE §1) sessiz ihlali. Kapsam dışı sipariş `forbidden` /
- * `out_of_scope` ile GÖRÜNÜR döner; yazım hiç yapılmaz.
- *
- * ── MİKTAR HEDEF DEĞERDİR, FARK DEĞİL ───────────────────────────────────────
- * v2'nin cümlesi birebir: *"Miktar hedef değer olarak girilir; fark sistemde hesaplanır."* Şema bunu
- * taşıyor (`fulfilledQty` = kalan adet) ve bu uç ondan bir çıkarma yapmaz — yapsaydı aynı hesap iki
- * yerde olurdu ve ikisi bir gün ayrışırdı.
- *
- * ── ÜÇ AKIBET, ÜÇ FARKLI GERÇEK ─────────────────────────────────────────────
- * `restock` malı stoğa geri koyar (**sebep notu zorunlu** — soğuk zincir beyanı; kuralı veri zorlar),
- * `discard` fiiliden düşer, `goodwill` ise mala DOKUNMAZ (müşteride kaldı) ve yalnız kayıt düşer.
- * Üçü de aynı kalem listesinde, satır satır gelebilir — bir kolinin yarısı iade, yarısı jest olabilir.
- *
- * `effects` geçirilmiyor (dosya künyesindeki yan etki sınırı): iade borcu yazılamazsa cevabın
- * `refundBlocked` alanı sebebini söyler, sessizce sıfır dönülmez.
+ * Rampada dönen malın akıbeti; kapı web iade penceresiyle aynıdır ve depocuya kapsamla (`warehouseScope`) açılır. `effects`
+ * geçirilmez: müşteri haberi ve sağlayıcı iadesi buradan çıkmaz, yazılamayan iade `refundBlocked` ile döner.
  */
 warehouse.post('/returns/:orderId', async (c) => {
   const orderId = UuidSchema.safeParse(c.req.param('orderId'));
@@ -1096,19 +765,11 @@ warehouse.post('/returns/:orderId', async (c) => {
   return ok(c, WarehouseReturnResponseSchema.parse(body));
 });
 
-// ── D6 · Rampa listesi + tek kuryenin dönüşü (04.09) ────────────────────────
+// ── D6 · Rampa listesi + tek kuryenin dönüşü ────────────────────────────────
 
 /**
- * **"Rampada kim bekliyor"** — D6'nın liste yarısı.
- *
- * ── NEDEN ÜSTTEKİ UÇ YETMİYOR ───────────────────────────────────────────────
- * `GET /returns` deponun DÖNEN SİPARİŞLERİNİ veriyor ve o listede araçtan inecek kutu da, araçta
- * duran serbest ürün de yok. Depocunun rampadaki sorusu "hangi sipariş döndü" değil, **"kimden
- * teslim alıyorum"**: aynı rampaya iki kurye döner ve mal kurye başına devredilir (araç bir kez
- * boşalır). Bu uç iki kapının cevabını kurye başına toplar.
- *
- * Kapsam jetondan: `warehouseGuard` deponun kimliğini çözdü, kapsam kararını kapı veriyor
- * (`canAccessWarehouse`) — başka tesisin kuryesi listeye giremez.
+ * Rampada bekleyen kuryeler: depocunun sorusu "hangi sipariş döndü" değil "kimden teslim alıyorum", çünkü mal kurye başına
+ * devredilir. Kapsam kararını kapı verir; başka tesisin kuryesi listeye giremez.
  */
 warehouse.get('/courier-return', async (c) => {
   const staff = c.get('staff');
@@ -1122,11 +783,8 @@ warehouse.get('/courier-return', async (c) => {
 });
 
 /**
- * **Bir kuryenin rampadaki her şeyi** — döküm + serbest ürün + kutular, tek okumada.
- *
- * `:courierId` yerine `unassigned` gelirse kuryeye hiç atanmamış dönüşler döner (kargo/tezgâh
- * yolu): araç bölümleri boş, döküm dolu. Ayrı bir uç açılmadı — soru aynı soru, değişen yalnız
- * hangi bölümlerin boş olduğu.
+ * Bir kuryenin rampadaki her şeyi: döküm, serbest ürün ve kutular tek okumada. `unassigned` kuryesiz dönüşleri verir, araç
+ * bölümleri boş kalır.
  */
 warehouse.get('/courier-return/:courierId', async (c) => {
   const param = c.req.param('courierId');
@@ -1146,18 +804,8 @@ warehouse.get('/courier-return/:courierId', async (c) => {
 });
 
 /**
- * **Dönüşün kabulü** — sayılan serbest ürün araçtan depoya geçer, reddedilen kutuların araç damgası
- * silinir (kurye denetimi bulgu 5, 03.09).
- *
- * ── AKIBET BU UÇTAN GEÇMEZ ──────────────────────────────────────────────────
- * Kalemlerin akıbeti (`restock`/`discard`/`goodwill`) sipariş başına yazılıyor ve kendi kapısı var
- * (`POST /returns/:orderId`): o yazım siparişin karşılanan adedini ve iade borcunu da hareket
- * ettiriyor, yani bir sipariş işlemidir. Buradaki kabul ise MAL DEVRİDİR ve öznesi araçtır. İkisini
- * tek uçta birleştirmek, bir siparişin düşmesi hâlinde bütün devri geri almak demekti — oysa mal
- * fiilen rampada ve kaydı gecikmemeli. Ekran ikisini tek dokunuşta sırayla çağırır.
- *
- * Fark (`shortfalls`) SESSİZ değil: eksik dönen mal araç deposunda açık kalır ve sayım/düşüm
- * kapatır — cevap onu adıyla söyler.
+ * Dönüşün kabulü: sayılan serbest ürün araçtan depoya geçer, reddedilen kutuların araç damgası silinir. Kalemlerin akıbeti sipariş
+ * işlemi olduğu için kendi ucundadır (`POST /returns/:orderId`); tek uçta birleşseler bir siparişin düşmesi bütün devri geri alırdı.
  */
 warehouse.post('/courier-return/:courierId', async (c) => {
   const courierId = UuidSchema.safeParse(c.req.param('courierId'));
@@ -1182,13 +830,8 @@ warehouse.post('/courier-return/:courierId', async (c) => {
 // ── Tarama · kod çözümü + öğrenen eşleme (Modül 23) ─────────────────────────
 
 /**
- * **Okutulan kodun çözümü** — TEK tarama sözleşmesi: mal kabul, toplama, transfer ve tezgâh aynı
- * ucu çağırır, ekran kaynağın ne olduğunu bilmez (etüt 2.3). Kimlik bulur, stok/depo kararı
- * VERMEZ (CLAUDE §1 depo değişmezi) — bu uca stok okuması eklenmez.
- *
- * `unknown` bir hata değil ÖĞRENME davetidir (karar §1.3): ekran "bu kod hangi ürün?" diye sorar
- * ve cevabı aşağıdaki uca yazar. POST çünkü kod gövdede gider — URL'e konsaydı erişim loglarında
- * dolaşırdı ve `/` içeren bir kod yolu bölerdi.
+ * Okutulan kodun çözümü, bütün tarama ekranlarının tek sözleşmesi: kimlik bulur, stok ve depo kararı vermez. POST, çünkü URL'deki
+ * kod erişim loglarına düşer ve `/` içeren kod yolu böler; `unknown` hata değil öğrenme davetidir.
  */
 warehouse.post('/codes/resolve', async (c) => {
   const parsed = ResolveCodeRequestSchema.safeParse(await readJsonBody(c));
@@ -1200,19 +843,8 @@ warehouse.post('/codes/resolve', async (c) => {
 });
 
 /**
- * **Raftaki PARTİ etiketinin çözümü** (D4'ün ikinci çıkış yolu, v3:08 — 30.08).
- *
- * ── ÜSTTEKİ UCUN İKİZİ DEĞİL, KARDEŞİ ───────────────────────────────────────
- * `codes/resolve` kodu VARYANTA çevirir ("bu hangi mal") ve künyesi stok okumasını bilerek dışarıda
- * bırakıyor. Sayımın sorusu başkadır: düzeltme daima bir PARTİYE yazılır ve aynı varyantın aynı
- * depoda birden çok partisi olabilir — varyant cevabı "hangi partiden düşeyim"i cevapsız bırakırdı.
- *
- * ── DEPO SÜZGECİ ZORUNLU ────────────────────────────────────────────────────
- * Kimlik jetondan (`warehouseId`), gövdeden değil — dosyanın değişmezi. Kapsam dışı partiyi
- * göstermek, depocuya `recordAdjustment`ın reddedeceği bir satır seçtirirdi.
- *
- * Eşleşme yoksa `unknown` ve bu bir HATA DEĞİL cevaptır: ekran "bu kodla bu depoda açık parti yok"
- * der. 404'e indirgenseydi ekran ağ arızası ile "böyle bir parti yok"u ayıramazdı.
+ * Raftaki parti etiketinin çözümü: düzeltme daima bir partiye yazıldığı için varyant cevabı yetmez. Depo jetondan gelir; eşleşme
+ * yoksa `unknown` 404 değil cevaptır ki ekran ağ arızasını "böyle parti yok"tan ayırabilsin.
  */
 warehouse.post('/batches/resolve', async (c) => {
   const parsed = ResolveBatchRequestSchema.safeParse(await readJsonBody(c));
@@ -1224,17 +856,8 @@ warehouse.post('/batches/resolve', async (c) => {
 });
 
 /**
- * **RAF LİSTESİ** (D4/D4b) — `GET /warehouse/batches?q=…`, okutmanın ALTERNATİFİ değil YEDEĞİ.
- *
- * Okutma hızlı yoldur ve öyle kalır; bu kapı okunamayan etiket içindir — yırtılmış, silinmiş, hiç
- * yapıştırılmamış. Sayım tam da o partide gerekir: kaydı şüpheli olan parti, etiketi de şüpheli
- * olandır.
- *
- * Depo süzgeci JETONDAN (`warehouseId`), sorgudan değil — dosyanın değişmezi.
- *
- * **SAYFALANIR** (03.09): `?cursor=` ile sonraki sayfa, `?area=` ile dolap süzgeci. Liste eskiden
- * pencereydi (ilk 60) ve tel deponun tamamını taşıyordu; sözleşme künyesi gerekçeyi yazıyor.
- * Bozuk imleç 400 DEĞİL, listeyi baştan verir (`decodeCursor`ın kararı).
+ * Raf listesi, okunamayan etiketin yedeği; depo jetondan gelir. `?cursor=` ile sayfalanır, `?area=` dolap süzgecidir; bozuk
+ * imleç listeyi baştan verir.
  */
 warehouse.get('/batches', async (c) => {
   const area = c.req.query('area');
@@ -1256,9 +879,7 @@ warehouse.get('/batches', async (c) => {
 });
 
 /**
- * **DEPONUN ALANLARI** (kullanıcı kararı 03.09) — sayım/düşüm seçicisinin *"hangi dolabın
- * önündesin"* sorusunun envanteri. Depo süzgeci jetondan; yalnız açık alanlar; sayfalama yok
- * (operatörün elle kurduğu, doğal tavanı olan küme — CLAUDE §1).
+ * Deponun açık alanları, sayım seçicisinin "hangi dolabın önündesin" sorusu için; küme elle kurulduğu için sayfalanmaz.
  */
 warehouse.get('/areas', async (c) => {
   const areas = await listWarehouseAreas(serviceDb(), c.get('warehouseId'));
@@ -1288,9 +909,8 @@ warehouse.post('/batches/:stockId/seen', async (c) => {
 });
 
 /**
- * **Öğrenen eşleme** — tanınmayan kod bir varyanta bağlanır; ikinci gelişte tanınır. Öğreten kişi
- * kayda geçer (`staff.id` — iz, suçlama değil). Kod zaten bağlıysa `already_bound` cevabın
- * kendisidir: ekran kime bağlı olduğunu söyler, düzeltme web varyant editöründen.
+ * Öğrenen eşleme: tanınmayan kod bir varyanta bağlanır ve öğreten kişi kayda geçer. Kod zaten bağlıysa `already_bound` döner;
+ * düzeltme web varyant editöründen.
  */
 warehouse.post('/codes', async (c) => {
   const parsed = LearnCodeRequestSchema.safeParse(await readJsonBody(c));

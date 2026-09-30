@@ -2,20 +2,8 @@ import type { OrderStatus } from '@lezzet/types';
 import { allowedTransitions, isTerminal } from './status-machine';
 
 /**
- * Siparişte **hangi kararın verilebileceği** — SAF karar, DB'siz (09.7 · "Kararlar" bloğu).
- *
- * Durum geçişinden ayrı bir soru: geçiş "sipariş nereye gidebilir"i, karar "operatör ne yapabilir"i
- * söyler. İkisi bazen aynı yere çıkar (iptal hem karar hem geçiştir), bazen çıkmaz — kısmi karşılama
- * durumu HİÇ değiştirmez, yalnız malın ve paranın gerçeğini düzeltir.
- *
- * **Ayıran çizgi teslimdir**, çünkü mal nerede olduğuna göre iki farklı iş yapılıyor:
- * - mal daha çıkmadıysa → **kısmi karşılama**: eksik gideni yazarsın, ayrılan stok serbest kalır,
- *   tahsil edilecek tutar düşer (para henüz alınmamışsa hiç hareket olmaz)
- * - mal çıktıysa → **iade**: para geri gider ve malın akıbeti ayrıca kararlaştırılır (raf/imha/
- *   müşteride, DOMAIN §8)
- *
- * Aynı ekranda ikisini birden sunmak, operatöre "bu mal gitti mi?" sorusunu her seferinde kendi
- * kafasından yanıtlatırdı; kayıt zaten biliyor.
+ * Siparişte operatörün verebileceği karar; durum geçişinden ayrı bir sorudur, çünkü kısmi karşılama durumu hiç değiştirmez.
+ * Ayıran çizgi teslimdir: mal çıkmadıysa kısmi karşılama, çıktıysa iade (DOMAIN §8) — kayıt bunu bildiği için operatöre sorulmaz.
  */
 export type OrderDecision = 'partial_fulfillment' | 'refund' | 'cancel';
 
