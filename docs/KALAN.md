@@ -407,6 +407,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   sonra eklenir. Yetersiz olduğu ülke için önceden çevrilmiş etiket metni hazır olacak ve kargoda paketlemeden önce yazıcıdan
   basılıp yapıştırılacak (satış anında çeviri yapılmaz, etiket yeterliyse çıktı alınmaz). Veri modelini (ürün/varyant × ülke) ve
   operasyon mobil uygulamasının hazırlık adımını birlikte etkiler.
-- [ ] (K.52) [hedef: müşteri] Web telefon görünümünde iPhone titreşimi çalışmıyor (cihazda denendi): Safari'nin titreşim komutu
-  yok ve iOS 26.5 betikten tetiklenen anahtar kutusu dokunuşunu kapattı. Kalan yol dokunulan öğenin içine görünmez anahtar kutusu
-  koymak: yalnız gerçek dokunuşta tek tık verir, sunucu cevabını bekleyen başarı/hata titreşimi iPhone'da verilemez. Karar bekliyor.
+- [ ] (K.52) [hedef: müşteri] Web telefon görünümünde iPhone titreşimi cihazda hissedilerek doğrulanmadı: dokunma yüzeylerine
+  görünmez anahtar kutusu konuyor (`lib/haptics/tap-switch.ts`), iOS 26.5 betikten tetiklemeyi kapattığı için kalan tek yol bu.
+  iPhone'da yalnız dokunuşta tek tık var; sunucu cevabını bekleyen başarı/hata titreşimi verilemez.

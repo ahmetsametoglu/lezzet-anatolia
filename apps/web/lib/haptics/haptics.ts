@@ -26,6 +26,39 @@ export function hapticRouteOf(nav: { vibrate?: unknown; userAgent: string } | un
   return /iPhone|iPod/.test(nav.userAgent) ? 'switch' : 'none';
 }
 
+/** Dokunma yüzeyi: düğme ve kutu bağlantısı. */
+export const TAP_SURFACE = 'button, a, [role="button"]';
+
+/** Bir yüzeyin tıklayıp tıklamayacağına karar veren gözlemler; DOM'dan `surfaceFactsOf` toplar. */
+interface SurfaceFacts {
+  /** Gezinme yüzeyi (sekme, çip, metin eylemi) ya da kendi titreşimini çalan düğme: `data-haptic="off"`. */
+  hapticOff: boolean;
+  disabled: boolean;
+  /** Metin içindeki bağlantı bir sözcüktür, dokunma yüzeyi değil. */
+  inline: boolean;
+}
+
+/** Native'in dokunma yüzeyi kuralı, tek yerde: her düğme ve kutu bağlantısı hafifçe tıklar. */
+function ticksOnTap(facts: SurfaceFacts): boolean {
+  return !facts.hapticOff && !facts.disabled && !facts.inline;
+}
+
+/**
+ * iPhone'da yüzeyin içine görünmez anahtar kutusu konabilir mi (`tap-switch.ts`). İçinde başka dokunma öğesi olan yüzeye konmaz,
+ * çünkü kutu onu örter ve kartın içindeki "sepete ekle" dokunuşu ürüne giderdi; `relative` verilince kayacak iç öğe varsa da konmaz.
+ */
+export function takesTapSwitch(facts: SurfaceFacts & { nestedInteractive: boolean; shiftsLayout: boolean }): boolean {
+  return ticksOnTap(facts) && !facts.nestedInteractive && !facts.shiftsLayout;
+}
+
+export function surfaceFactsOf(surface: Element): SurfaceFacts {
+  return {
+    hapticOff: surface.closest('[data-haptic="off"]') !== null,
+    disabled: surface instanceof HTMLButtonElement && surface.disabled,
+    inline: getComputedStyle(surface).display === 'inline',
+  };
+}
+
 /** Görünmez bir anahtar kutusunu çevirir; kutu yalnız bu an için sayfaya girer. */
 function switchTick(): void {
   const label = document.createElement('label');
@@ -73,4 +106,11 @@ export function hapticCommit(): void {
 /** Hafif dokunuş: düğmeye basış, geri alma. Gezinme yüzeyleri (sekme, çip, metin eylemi) titremez. */
 export function hapticSelect(): void {
   fire('select');
+}
+
+/** Dokunuşun titreşim yolu (çerçevenin tıklama yakalayıcısı). iPhone'da tıkı yüzeydeki anahtar kutusu çalar, burada ikinci kez çalınmaz. */
+export function tickOnTap(target: EventTarget | null): void {
+  if (!(target instanceof Element) || hapticRouteOf(navigator) === 'switch') return;
+  const surface = target.closest(TAP_SURFACE);
+  if (surface !== null && ticksOnTap(surfaceFactsOf(surface))) fire('select');
 }

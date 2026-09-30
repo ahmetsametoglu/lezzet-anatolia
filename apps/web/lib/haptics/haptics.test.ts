@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hapticRouteOf } from './haptics';
+import { hapticRouteOf, takesTapSwitch } from './haptics';
 
 const IPHONE =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 26_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1';
@@ -17,5 +17,23 @@ describe('hapticRouteOf', () => {
   it('komutu olmayan masaüstü sessiz kalır', () => {
     expect(hapticRouteOf({ userAgent: MAC })).toBe('none');
     expect(hapticRouteOf(undefined)).toBe('none');
+  });
+});
+
+describe('takesTapSwitch', () => {
+  const surface = { hapticOff: false, disabled: false, inline: false, nestedInteractive: false, shiftsLayout: false };
+
+  it('içinde düğme olan yüzey kutu almaz, yoksa kartın kutusu "sepete ekle"yi örter ve dokunuş ürüne gider', () => {
+    expect(takesTapSwitch(surface)).toBe(true);
+    expect(takesTapSwitch({ ...surface, nestedInteractive: true })).toBe(false);
+  });
+
+  it('devre dışı düğme ve kapatılmış yüzey kutu almaz, basılamayan düğme tıklamaz', () => {
+    expect(takesTapSwitch({ ...surface, disabled: true })).toBe(false);
+    expect(takesTapSwitch({ ...surface, hapticOff: true })).toBe(false);
+  });
+
+  it('konum verilince iç öğesi kayacak yüzey kutu almaz', () => {
+    expect(takesTapSwitch({ ...surface, shiftsLayout: true })).toBe(false);
   });
 });
