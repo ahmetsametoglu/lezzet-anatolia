@@ -54,6 +54,13 @@
       "remaining": "Bu davetten {n} komşunuz daha yararlanabilir (en fazla {max}).",
       "full": "Bu davet doldu — {max} komşunuz katıldı. Bir sonraki siparişinizde yeni bir davet açılır."
     },
+    "notify": {
+      "title": "Gelişmeleri bildirimle alın",
+      "body": "Siparişiniz yola çıktığında ya da teslim almaya hazır olduğunda bu cihaza haber verelim.",
+      "cta": "Bildirimleri aç",
+      "done": "Bildirimler açık: siparişinizde gelişme olunca bu cihaza haber vereceğiz.",
+      "failed": "Açılamadı, tekrar deneyin."
+    },
     "track": "Siparişi takip et"
   },
   "fr": {
@@ -111,6 +118,13 @@
       "remaining": "Places encore disponibles sur cette invitation : {n} (maximum {max}).",
       "full": "Cette invitation est complète — {max} voisins y ont participé. Une nouvelle invitation s'ouvrira à votre prochaine commande."
     },
+    "notify": {
+      "title": "Suivez votre commande par notification",
+      "body": "Nous vous prévenons sur cet appareil dès que votre commande est en route ou prête à être retirée.",
+      "cta": "Activer les notifications",
+      "done": "Notifications activées : nous vous prévenons sur cet appareil à chaque étape de votre commande.",
+      "failed": "Activation impossible, réessayez."
+    },
     "track": "Suivre ma commande"
   },
   "de": {
@@ -167,6 +181,13 @@
       "copied": "Kopiert",
       "remaining": "Freie Plätze in dieser Einladung: {n} (höchstens {max}).",
       "full": "Diese Einladung ist ausgeschöpft – {max} Nachbarn haben mitbestellt. Mit Ihrer nächsten Bestellung erhalten Sie eine neue Einladung."
+    },
+    "notify": {
+      "title": "Bestellung per Benachrichtigung verfolgen",
+      "body": "Wir benachrichtigen Sie auf diesem Gerät, sobald Ihre Bestellung unterwegs oder abholbereit ist.",
+      "cta": "Benachrichtigungen aktivieren",
+      "done": "Benachrichtigungen aktiv: Wir melden uns auf diesem Gerät, sobald sich bei Ihrer Bestellung etwas tut.",
+      "failed": "Aktivierung fehlgeschlagen, bitte erneut versuchen."
     },
     "track": "Bestellung verfolgen"
   }

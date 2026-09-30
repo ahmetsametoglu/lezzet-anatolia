@@ -11,6 +11,7 @@ import type { CheckoutCopy } from '../checkout-types';
 import { useShareLink } from '@/lib/use-share-link.hook';
 import { confirmationPhaseOf, confirmationToneOf, isRefundedCancellation } from '@lezzet/domain-core';
 import { PendingPayment } from './components/pending-payment';
+import { useNotifyAsk } from './components/use-notify-ask.hook';
 import type { ConfirmationView, ConfirmationViewProps, Messages } from './confirmation-types';
 
 /**
@@ -56,6 +57,7 @@ export function ConfirmationMobile(props: ConfirmationViewProps) {
       </div>
 
       {view.placed && <p className="font-sans text-body-sm leading-[1.6] text-muted">{c.note}</p>}
+      <NotifyInvite t={t} placed={view.placed} />
       {view.placed && view.neighborInvite && <NeighborInvite t={t} invite={view.neighborInvite} />}
 
       {phase === 'unpaid' ? (
@@ -95,6 +97,28 @@ function paymentLabel(copy: CheckoutCopy, view: ConfirmationView): string {
     case null:
       return copy.confirmed.unknown;
   }
+}
+
+interface NotifyInviteProps {
+  t: Messages;
+  placed: boolean;
+}
+
+/** Komşu davetinin kutusu: haber yola çıkınca gelir, istek onu bekleyen müşterinin önünde durur. */
+function NotifyInvite({ t, placed }: NotifyInviteProps) {
+  const { state, busy, ask } = useNotifyAsk(placed);
+  if (state === 'hidden') return null;
+  return (
+    <div className="flex w-full flex-col items-center gap-2 rounded-card bg-olive-bg px-4.5 py-3.5">
+      <span className="flex items-center gap-1.5 font-sans text-body-sm font-semibold text-ink">
+        <Icon name="bell" size={16} className="flex-none text-olive" />
+        {t.notify.title}
+      </span>
+      <span className="font-sans text-note leading-[1.6] text-muted">{state === 'done' ? t.notify.done : t.notify.body}</span>
+      {state === 'failed' && <span className="font-sans text-note font-semibold leading-[1.6] text-terracotta">{t.notify.failed}</span>}
+      {state !== 'done' && <SecondaryButton shape="pill" tone="olive" label={t.notify.cta} disabled={busy} onClick={ask} />}
+    </div>
+  );
 }
 
 interface NeighborInviteProps {

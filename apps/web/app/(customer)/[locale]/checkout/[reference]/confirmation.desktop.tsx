@@ -5,6 +5,7 @@ import {
   DeliveryCard,
   HelpBand,
   NeighborBand,
+  NotifyBand,
   PaymentCard,
   SummaryCard,
   TimelineCard,
@@ -36,6 +37,7 @@ export function ConfirmationDesktop(props: ConfirmationViewProps) {
           </div>
 
           {!unpaid && <TimelineCard {...props} />}
+          <NotifyBand t={props.t} compact={false} view={props.view} />
           {/* Komşu daveti yardımın üstünde: eylem şeridi "ne zaman gelecek" okunduğu anda anlamlıdır. */}
           <NeighborBand t={props.t} compact={false} view={props.view} />
           <HelpBand t={props.t} compact={false} referenceNo={props.view.referenceNo} />

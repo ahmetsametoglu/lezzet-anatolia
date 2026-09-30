@@ -17,6 +17,7 @@ import ordersMessages from '@lezzet/i18n/customer/orders';
 import type { ConfirmationViewProps } from '../confirmation-types';
 
 import { useShareLink } from '@/lib/use-share-link.hook';
+import { useNotifyAsk } from './use-notify-ask.hook';
 
 /**
  * Sipariş alındı ekranının blokları: masaüstü ve mobil aynı parçaları farklı düzende dizer; `compact` bloğa prop olarak iner,
@@ -235,7 +236,7 @@ export function HelpBand({
   referenceNo,
 }: Pick<ConfirmationViewProps, 't' | 'compact'> & { referenceNo: string | null }) {
   const href = whatsappHref(referenceNo ? t.help.prefill.replace('{reference}', referenceNo) : t.help.prefillPlain);
-  const box = ['flex items-center gap-4 rounded-card bg-cream-deep', compact ? 'px-4 py-3.5' : 'px-6.5 py-5'].join(' ');
+  const box = bandClass(compact);
 
   /* `target="_blank"` + `rel`: WhatsApp Web yeni sekmede açılır, mobil cihazda uygulamaya devredilir.
      Sipariş sayfası ARKADA KALIR — müşteri yazışmadan dönünce siparişini kaybetmemeli. */
@@ -289,7 +290,7 @@ export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, '
     .replace('{max}', String(invite.maxUses));
 
   return (
-    <div className={['flex items-center gap-4 rounded-card bg-cream-deep', compact ? 'px-4 py-3.5' : 'px-6.5 py-5'].join(' ')}>
+    <div className={bandClass(compact)}>
       <Icon name="truck" size={24} className="flex-none text-olive" />
       <div className="flex flex-1 flex-col gap-0.5">
         <span className="font-sans text-body-sm font-bold text-ink">{t.neighbor.title}</span>
@@ -304,6 +305,27 @@ export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, '
       {full ? null : (
         <Button variant="secondary" size="sm" className="flex-none" onClick={() => void share(url)}>
           {copied ? t.neighbor.copied : t.neighbor.cta}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** Haber sipariş yola çıkınca ya da teslim almaya hazır olunca gider; istek o haberi bekleyen müşterinin önünde durur. */
+export function NotifyBand({ t, compact, view }: Pick<ConfirmationViewProps, 't' | 'compact' | 'view'>) {
+  const { state, busy, ask } = useNotifyAsk(view.placed);
+  if (state === 'hidden') return null;
+  return (
+    <div className={bandClass(compact)}>
+      <Icon name="bell" size={24} className="flex-none text-olive" />
+      <div className="flex flex-1 flex-col gap-0.5">
+        <span className="font-sans text-body-sm font-bold text-ink">{t.notify.title}</span>
+        <span className="font-sans text-note leading-relaxed text-body">{state === 'done' ? t.notify.done : t.notify.body}</span>
+        {state === 'failed' && <span className="font-sans text-micro font-semibold leading-relaxed text-terracotta">{t.notify.failed}</span>}
+      </div>
+      {state !== 'done' && (
+        <Button variant="secondary" size="sm" className="flex-none" disabled={busy} onClick={ask}>
+          {t.notify.cta}
         </Button>
       )}
     </div>
@@ -379,6 +401,10 @@ export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps)
  * Sayfa kabuğu — bant ile gövde AYNI eksende durmak zorunda; iki dosyada iki kez yazılsaydı biri
  * pedini değiştirdiğinde bandın içeriği gövdeyle hizasını kaybederdi.
  */
+function bandClass(compact: boolean): string {
+  return ['flex items-center gap-4 rounded-card bg-cream-deep', compact ? 'px-4 py-3.5' : 'px-6.5 py-5'].join(' ');
+}
+
 export function shellClass(compact: boolean): string {
   return ['mx-auto w-full max-w-[1360px]', compact ? 'px-4' : 'px-12'].join(' ');
 }
