@@ -2,15 +2,19 @@ import { AppNotificationService, NotificationDeliveryService, UserProfileService
 import {
   defaultNotifier,
   NOTIFY_EVENT_META,
+  sendExpoPush,
+  sendWebPush,
+  type DevicePushMessage,
   type Notifier,
   type NotifyEventName,
   type NotifyPayloads,
   type NotifyRecipient,
   type NotifyResult,
+  type WebPushMessage,
 } from '@lezzet/notify';
-import { notificationSentence, notificationTitle } from '@lezzet/i18n';
+import { notificationSentence, notificationTitle, opsNotificationHref, staffNotificationBrief } from '@lezzet/i18n';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
-import type { AppNotificationKind, NotificationTargetType, StaffRole } from '@lezzet/types';
+import type { AppNotificationKind, NotificationTargetType, StaffRole, WebPushSubscription } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ringNotificationsBell, ringStaffNotificationsBell } from '../realtime/bell';
 import { listSendablePushTargets, prunePushTargets } from './devices';
@@ -100,37 +104,9 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
 
   const results = await (opts.notifier ?? defaultNotifier()).send(input.event, recipient, input.data);
 
-  const gone = results.flatMap((result) => (result.status === 'skipped' ? [] : (result.gone ?? [])));
-  if (gone.length > 0) {
-    try {
-      await prunePushTargets(db, gone);
-    } catch (err) {
-      // Silinemeyen abonelik bir sonraki haberde yine 410 döner ve yine denenir; haber bu yüzden geri alınmaz.
-      await captureError(err, { source: SOURCES.applicationNotification, level: 'warning', context: { flow: 'notification/prune', count: gone.length } });
-    }
-  }
-
+  await pruneGone(db, results);
   if (rowId) {
-    const deliveries = new NotificationDeliveryService(db);
-    for (const result of results) {
-      // Teslim kaydı düşerse bildirim düşmez: defter, olgunun kendisinden önemli değildir
-      // (zilin "sessizce başarısız olur" kararının aynısı).
-      try {
-        await deliveries.insert({
-          notificationId: rowId,
-          channel: result.channel,
-          status: result.status,
-          reason: result.status === 'skipped' ? result.reason : result.status === 'error' ? result.error : (result.partial ?? null),
-          ref: result.status === 'sent' ? result.ref : null,
-        });
-      } catch (err) {
-        await captureError(err, {
-          source: SOURCES.applicationNotification,
-          level: 'warning',
-          context: { flow: 'notification/dispatch', notificationId: rowId, channel: result.channel },
-        });
-      }
-    }
+    await recordDeliveries(db, rowId, results);
     await ringNotificationsBell(input.customerId!);
   }
 
@@ -166,11 +142,26 @@ export interface StaffNotificationInput {
 /** Depo-üstü roller — kapsam süzgeci onlara uygulanmaz (0001: "admin/muhasebe depo-üstüdür"). */
 const WAREHOUSE_EXEMPT: readonly StaffRole[] = ['admin', 'accounting'];
 
+/** Cihaz göndericileri; test ağ yerine sahtesini verir. */
+export interface StaffPushSenders {
+  native: (tokens: readonly string[], message: DevicePushMessage) => Promise<NotifyResult>;
+  web: (subscriptions: readonly WebPushSubscription[], message: WebPushMessage) => Promise<NotifyResult>;
+}
+
+const STAFF_PUSH: StaffPushSenders = {
+  native: (tokens, message) => sendExpoPush(tokens, message),
+  web: (subscriptions, message) => sendWebPush(subscriptions, message),
+};
+
 /**
  * Yazarken dağıtılır, çünkü rozet sayacı sıcak yoldur ve satır kişiye ait okundu hâli taşır; rolü sonradan verilen personel eski
- * bildirimleri görmez. Kanala gitmez: personelin kanalı bugün uygulama içi zildir.
+ * bildirimleri görmez. Yazılan satır zille birlikte kişinin operasyon cihazlarına da gider.
  */
-export async function dispatchStaffNotification(db: SupabaseClient, input: StaffNotificationInput): Promise<string[]> {
+export async function dispatchStaffNotification(
+  db: SupabaseClient,
+  input: StaffNotificationInput,
+  opts: { push?: StaffPushSenders } = {},
+): Promise<string[]> {
   const staff = await new UserProfileService(db).listStaff();
   const alicilar = staff.filter((profile) => {
     const roller = profile.roles.filter((role): role is StaffRole => (input.roles as string[]).includes(role));
@@ -190,7 +181,7 @@ export async function dispatchStaffNotification(db: SupabaseClient, input: Staff
   // Kimlikler ÇAĞIRANA döner — dönüşün asıl tüketicisi test temizliğidir: fan-out satırları
   // GERÇEK personel profillerine yazılır (seed yöneticileri dahil) ve profil-cascade'li purge
   // onları göremez; kimliği elinde tutmayan test, paylaşılan DB'de iz bırakır (CLAUDE §4b).
-  const yazilan: string[] = [];
+  const yazilan: { profileId: string; rowId: string }[] = [];
   for (const profile of alicilar) {
     const row = await notifications.record({
       profileId: profile.id,
@@ -201,9 +192,82 @@ export async function dispatchStaffNotification(db: SupabaseClient, input: Staff
       payload: input.payload ?? {},
       dedupeKey: input.dedupeKey ?? null,
     });
-    if (row) yazilan.push(row.id);
+    if (row) yazilan.push({ profileId: profile.id, rowId: row.id });
   }
 
   if (yazilan.length > 0) await ringStaffNotificationsBell();
-  return yazilan;
+  await pushStaffRows(db, input, yazilan, opts.push ?? STAFF_PUSH);
+  return yazilan.map((row) => row.rowId);
+}
+
+/**
+ * Telefondaki operasyon uygulamasına ve masaüstündeki panele gider; sessiz tondaki satır yalnız zile düşer, çünkü push dikkat çeker.
+ * Tanınmayan tür başlıksız kalacağı için cihaza hiç gitmez.
+ */
+async function pushStaffRows(
+  db: SupabaseClient,
+  input: StaffNotificationInput,
+  rows: readonly { profileId: string; rowId: string }[],
+  senders: StaffPushSenders,
+): Promise<void> {
+  const target = { kind: input.kind, targetType: input.target?.type ?? null, targetId: input.target?.id ?? null, payload: input.payload ?? {} };
+  const brief = staffNotificationBrief(target);
+  if (!brief || brief.tone === 'quiet' || rows.length === 0) return;
+
+  const text = { title: brief.title, ...(brief.subtitle ? { body: brief.subtitle } : {}) };
+  // Hedefsiz satır da bir yere açılır: tıklanan bildirimin hiçbir şey yapmaması, onu bozuk sandırırdı.
+  const url = opsNotificationHref(target) ?? '/operations';
+  await Promise.all(
+    rows.map(async ({ profileId, rowId }) => {
+      try {
+        const devices = await listSendablePushTargets(db, profileId, 'operations');
+        const results = await Promise.all([
+          ...(devices.native.length > 0 ? [senders.native(devices.native, { ...text, data: target })] : []),
+          ...(devices.web.length > 0 ? [senders.web(devices.web, { ...text, url })] : []),
+        ]);
+        await pruneGone(db, results);
+        await recordDeliveries(db, rowId, results);
+      } catch (err) {
+        // Haber zilde kalır; push bir hızlandırıcıdır, olayın kendisi değil.
+        await captureError(err, {
+          source: SOURCES.applicationNotification,
+          level: 'warning',
+          context: { flow: 'notification/staff-push', notificationId: rowId },
+        });
+      }
+    }),
+  );
+}
+
+/** Taşıyıcının "yok" dediği abonelik silinir; silinemezse bir sonraki haberde yine 410 döner ve yine denenir. */
+async function pruneGone(db: SupabaseClient, results: readonly NotifyResult[]): Promise<void> {
+  const gone = results.flatMap((result) => (result.status === 'skipped' ? [] : (result.gone ?? [])));
+  if (gone.length === 0) return;
+  try {
+    await prunePushTargets(db, gone);
+  } catch (err) {
+    await captureError(err, { source: SOURCES.applicationNotification, level: 'warning', context: { flow: 'notification/prune', count: gone.length } });
+  }
+}
+
+/** Teslim kaydı düşerse bildirim düşmez: defter, olgunun kendisinden önemli değildir. */
+async function recordDeliveries(db: SupabaseClient, notificationId: string, results: readonly NotifyResult[]): Promise<void> {
+  const deliveries = new NotificationDeliveryService(db);
+  for (const result of results) {
+    try {
+      await deliveries.insert({
+        notificationId,
+        channel: result.channel,
+        status: result.status,
+        reason: result.status === 'skipped' ? result.reason : result.status === 'error' ? result.error : (result.partial ?? null),
+        ref: result.status === 'sent' ? result.ref : null,
+      });
+    } catch (err) {
+      await captureError(err, {
+        source: SOURCES.applicationNotification,
+        level: 'warning',
+        context: { flow: 'notification/dispatch', notificationId, channel: result.channel },
+      });
+    }
+  }
 }

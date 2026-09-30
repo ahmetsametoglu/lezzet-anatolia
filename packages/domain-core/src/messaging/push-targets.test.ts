@@ -6,20 +6,22 @@ const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 *
 
 const ios = (lastSeenAt: string) => ({ platform: 'ios' as const, token: 'ExponentPushToken[a]', p256dh: null, auth: null, lastSeenAt });
 const web = { platform: 'web' as const, token: 'https://fcm.googleapis.com/fcm/send/x', p256dh: 'p', auth: 'a', lastSeenAt: daysAgo(90) };
+const abonelik = { endpoint: 'https://fcm.googleapis.com/fcm/send/x', keys: { p256dh: 'p', auth: 'a' } };
 
 describe('choosePushTargets', () => {
-  it('etkin native uygulama varken tarayıcıya gitmez', () => {
-    expect(choosePushTargets([ios(daysAgo(2)), web], now)).toEqual({ native: ['ExponentPushToken[a]'], web: [] });
+  it('müşteride etkin native uygulama varken tarayıcıya gitmez', () => {
+    expect(choosePushTargets([ios(daysAgo(2)), web], now, 'customer')).toEqual({ native: ['ExponentPushToken[a]'], web: [] });
   });
 
-  it('native uygulama süreyi aşınca haber tarayıcıya gider', () => {
-    expect(choosePushTargets([ios(daysAgo(31)), web], now)).toEqual({
-      native: [],
-      web: [{ endpoint: 'https://fcm.googleapis.com/fcm/send/x', keys: { p256dh: 'p', auth: 'a' } }],
-    });
+  it('müşteride native uygulama süreyi aşınca haber tarayıcıya gider', () => {
+    expect(choosePushTargets([ios(daysAgo(31)), web], now, 'customer')).toEqual({ native: [], web: [abonelik] });
   });
 
   it('etkin cihaz yoksa ikisi de boş kalır ve sıra kanal listesine düşer', () => {
-    expect(choosePushTargets([ios(daysAgo(31))], now)).toEqual({ native: [], web: [] });
+    expect(choosePushTargets([ios(daysAgo(31))], now, 'customer')).toEqual({ native: [], web: [] });
+  });
+
+  it('operasyonda etkin uygulama varken masaüstü tarayıcısı da haberi alır', () => {
+    expect(choosePushTargets([ios(daysAgo(2)), web], now, 'operations')).toEqual({ native: ['ExponentPushToken[a]'], web: [abonelik] });
   });
 });

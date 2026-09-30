@@ -1,9 +1,9 @@
-import { staffNotificationBrief, type StaffNotificationTone } from '@lezzet/i18n';
+import { opsNotificationHref, staffNotificationBrief, type StaffNotificationTone } from '@lezzet/i18n';
 import type { MeNotification } from '@lezzet/types';
 
 /*
-  Uçtan gelen satır → operasyon zil satırı, mobil kabuğun `notification-map`inin web eşi: başlık ve ton paylaşılan sözlükten gelir,
-  yüzeye özgü olan gidilecek rotadır. Sözlüğün tanımadığı tür genel başlıkla çizilir, çünkü gizlemek eşlemesi yazılmamış türü görünmez kılardı.
+  Uçtan gelen satır → operasyon zil satırı, mobil kabuğun `notification-map`inin web eşi: başlık, ton ve web rotası paylaşılan sözlükten
+  gelir. Sözlüğün tanımadığı tür genel başlıkla çizilir, çünkü gizlemek eşlemesi yazılmamış türü görünmez kılardı.
 */
 
 export interface OpsNotificationRow {
@@ -17,23 +17,6 @@ export interface OpsNotificationRow {
   /** Operasyon rotası — hedefsiz satırda null: satır tıklanmaz, yalnız haber verir. */
   href: string | null;
   createdAt: string;
-}
-
-/**
- * Hedef adresten okunur, içerikten değil: sipariş ve talep kendi kaydına açılır; hedef nesnesi ekranlaşmamış tür işin yapıldığı ekrana
- * gider (eşik düşüşü tedarik önerisine, kapanış uyuşmazlığı teslimat ekranına, kurumsal başvuru müşteri kuyruğuna).
- */
-export function opsNotificationHref(row: Pick<MeNotification, 'kind' | 'targetType' | 'targetId' | 'payload'>): string | null {
-  if (row.targetType === 'order' && row.targetId) return `/operations/orders/${row.targetId}`;
-  if (row.targetType === 'ticket' && row.targetId) return `/operations/tickets?t=${row.targetId}`;
-  if (row.kind === 'stock_low') return '/operations/procurement';
-  if (row.kind === 'run_close_mismatch') return '/operations/deliveries';
-  if (row.kind === 'b2b_application_received') return '/operations/customers';
-  // Ölçü ürün kartında düzeltilir; ürünsüz eksik (kutu, adres) depo ekranındadır.
-  if (row.kind === 'shipping_data_missing') {
-    return typeof row.payload.productId === 'string' ? `/operations/products?productId=${row.payload.productId}` : '/operations/warehouses';
-  }
-  return null;
 }
 
 export function toOpsNotificationRow(row: MeNotification): OpsNotificationRow {

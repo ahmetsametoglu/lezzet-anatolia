@@ -1,4 +1,4 @@
-import type { PushDevice, WebPushSubscription } from '@lezzet/types';
+import type { PushApp, PushDevice, WebPushSubscription } from '@lezzet/types';
 
 /** Native uygulama bu kadar gündür açılmadıysa etkin sayılmaz; uygulama her gün açılışta kaydını tazeler. */
 export const NATIVE_PUSH_ACTIVE_DAYS = 30;
@@ -10,24 +10,25 @@ export interface PushTargets {
 }
 
 /**
- * Bir haber tek cihaz sınıfına gider: etkin native uygulama varsa ona, yoksa tarayıcı aboneliklerine. İkisine birden gitseydi aynı
- * haber telefonda hem uygulamadan hem tarayıcıdan çalardı.
+ * Müşteride haber tek cihaz sınıfına gider: etkin native uygulama varsa ona, yoksa tarayıcı aboneliklerine, çünkü ikisi aynı telefonda
+ * çalardı. Operasyonda ikisine de gider, çünkü operasyon web'i yalnız masaüstündedir ve tarayıcı aboneliği telefonun ikizi değildir.
  */
 export function choosePushTargets(
   devices: readonly Pick<PushDevice, 'platform' | 'token' | 'p256dh' | 'auth' | 'lastSeenAt'>[],
   now: Date,
+  app: PushApp,
   activeDays: number = NATIVE_PUSH_ACTIVE_DAYS,
 ): PushTargets {
   const activeSince = now.getTime() - activeDays * 24 * 60 * 60 * 1000;
   const native = devices
     .filter((device) => device.platform !== 'web' && Date.parse(device.lastSeenAt) >= activeSince)
     .map((device) => device.token);
-  if (native.length > 0) return { native, web: [] };
+  if (app === 'customer' && native.length > 0) return { native, web: [] };
 
   const web = devices.flatMap((device) =>
     device.platform === 'web' && device.p256dh !== null && device.auth !== null
       ? [{ endpoint: device.token, keys: { p256dh: device.p256dh, auth: device.auth } }]
       : [],
   );
-  return { native: [], web };
+  return { native, web };
 }

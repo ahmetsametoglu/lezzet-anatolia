@@ -147,6 +147,7 @@ INBOUND  (müşteri → biz)                 OUTBOUND  (biz → müşteri)
 
 - **Inbound** (müşterinin başlattığı sohbet) `apps/backend`'de webhook olarak alınır — web uygulamasının dağıtımından bağımsız (bkz. `INTEGRATIONS.md`, STACK §7).
 - **Outbound** (bizim gönderdiğimiz bildirim) `packages/notify` soyut katmanının arkasındadır. Sipariş durumu sosyal kanaldan gitmez: WhatsApp 24 saat dışında ücretli şablon ister, Instagram otomatik mesaja hiç izin vermez; haber e-posta ve cihaz bildirimiyle (etkin native uygulama, yoksa tarayıcı) gider.
+- **Personel haberi** (talep, stok eşiği, gün kapanışı…) önce operasyon zilinin satırıdır, sonra kişinin operasyon cihazlarına birlikte gider: telefondaki operasyon uygulaması ve masaüstündeki panelin tarayıcısı. Müşterideki "tek cihaz sınıfı" kuralı burada yok, çünkü operasyon web'i yalnız masaüstündedir; sessiz tondaki satır cihaza gitmez.
 - İkisi de **aynı** `domain-core`'dan beslenir; ticari gerçek tek yerdedir.
 
 ---

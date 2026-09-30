@@ -41,7 +41,7 @@ export function unregisterPushDevice(db: SupabaseClient, input: { profileId: str
 
 /** Uygulama zorunlu, çünkü aynı kişinin operasyon uygulamasındaki jetonu müşteri bildirimini almaz. */
 export async function listSendablePushTargets(db: SupabaseClient, profileId: string, app: PushApp): Promise<PushTargets> {
-  return choosePushTargets(await new PushDeviceService(db).listSendable(profileId, app), new Date());
+  return choosePushTargets(await new PushDeviceService(db).listSendable(profileId, app), new Date(), app);
 }
 
 /** Taşıyıcının "abonelik yok" dediği adresler silinir, yoksa her haberde yeniden denenir ve HABER boşa gider. */

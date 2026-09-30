@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppNotificationService, NotificationDeliveryService, PushDeviceService, UserProfileService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
-import { notificationSentence, notificationTitle } from '@lezzet/i18n';
+import { notificationSentence, notificationTitle, staffNotificationBrief } from '@lezzet/i18n';
 import { createNotifier, type NotifyDriver, type NotifyRecipient } from '@lezzet/notify';
 import { registerPushDevice, registerWebPushSubscription } from './devices';
 import type { TicketNotification, ZoneAvailableNotification } from '@lezzet/types';
-import { dispatchCustomerNotification, dispatchStaffNotification } from './dispatch';
+import { dispatchCustomerNotification, dispatchStaffNotification, type StaffPushSenders } from './dispatch';
 
 /**
  * Sahte sürücüyle koşar, ağa çıkmaz; sürücü sayacı "kaç kez gönderildi" sorusunu ayrı sorar. Personel satırları gerçek personel
@@ -281,6 +281,49 @@ describe('jeton doldurma (14.16)', () => {
 });
 
 describe('personel fan-out', () => {
+  it('personel satırı zille birlikte kişinin operasyon cihazlarına gider: telefon ve masaüstü, zilin başlığı ve adresiyle', async () => {
+    const depocu = await profiles.insert({ name: `Push depocu ${stamp}`, roles: ['warehouse'], warehouseIds: [warehouseA] });
+    profileIds.push(depocu.id);
+    const telefon = `ExponentPushToken[personel-${stamp}]`;
+    const masa = { endpoint: `https://fcm.googleapis.com/fcm/send/personel-${stamp}`, keys: { p256dh: 'p', auth: 'a' } };
+    await registerPushDevice(db, { profileId: depocu.id, token: telefon, platform: 'android', app: 'operations', enabled: true });
+    await registerWebPushSubscription(db, { profileId: depocu.id, subscription: masa, app: 'operations' });
+    // Aynı kişinin müşteri uygulaması personel haberini almaz.
+    const musteriUygulamasi = `ExponentPushToken[musteri-${stamp}]`;
+    await registerPushDevice(db, { profileId: depocu.id, token: musteriUygulamasi, platform: 'ios', app: 'customer', enabled: true });
+
+    const giden: { kanal: 'native' | 'web'; hedef: readonly unknown[]; mesaj: unknown }[] = [];
+    const push: StaffPushSenders = {
+      native: async (tokens, mesaj) => {
+        giden.push({ kanal: 'native', hedef: tokens, mesaj });
+        return { status: 'sent', channel: 'push', ref: '[]' };
+      },
+      web: async (subscriptions, mesaj) => {
+        giden.push({ kanal: 'web', hedef: subscriptions, mesaj });
+        return { status: 'sent', channel: 'web_push', ref: null };
+      },
+    };
+    const payload = { sku: `SKU-PUSH-${stamp}`, availableQty: 2, minStockQty: 10 };
+    const ids = await dispatchStaffNotification(
+      db,
+      { kind: 'stock_low', roles: ['warehouse'], warehouseId: warehouseA, payload, dedupeKey: `test-push:${stamp}` },
+      { push },
+    );
+    notificationIds.push(...ids);
+
+    const brief = staffNotificationBrief({ kind: 'stock_low', payload })!;
+    expect(giden).toContainEqual({
+      kanal: 'native',
+      hedef: [telefon],
+      mesaj: { title: brief.title, body: brief.subtitle, data: { kind: 'stock_low', targetType: null, targetId: null, payload } },
+    });
+    expect(giden).toContainEqual({ kanal: 'web', hedef: [masa], mesaj: { title: brief.title, body: brief.subtitle, url: '/operations/procurement' } });
+    expect(giden.flatMap((g) => g.hedef)).not.toContain(musteriUygulamasi);
+
+    const satir = (await db.from('notification').select('id').in('id', ids).eq('profile_id', depocu.id)).data?.[0]?.id as string;
+    expect((await deliveries.listByNotification(satir)).map((t) => t.channel).sort()).toEqual(['push', 'web_push']);
+  });
+
   it('DEPO süzgeci: olayın deposundaki personel alır, öteki deponunki ALMAZ', async () => {
     // Süzgeci unutulan dağıtım tek depolu veride DOĞRU çalışır — test bu yüzden iki depo kurar.
     const depocuA = await profiles.insert({ name: `Depocu A ${stamp}`, roles: ['warehouse'], warehouseIds: [warehouseA] });

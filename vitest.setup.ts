@@ -13,5 +13,14 @@ if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SECRET_KEY) {
   await waitForRest(serviceDb());
 }
 
+// Personel bildirimi hazır yöneticiler dahil gerçek profillere yazılır; onların cihazı yerelde kayıtlıysa koşu gerçek telefonu ve
+// masaüstünü çaldırırdı. Cihaz taşıyıcısına giden istek testte düşer, gönderimi sınayan testler sahte taşıyıcı verir.
+delete process.env.WEB_PUSH_PRIVATE_KEY;
+const realFetch = globalThis.fetch;
+globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) =>
+  String(input instanceof Request ? input.url : input).startsWith('https://exp.host/')
+    ? Promise.reject(new Error('testte cihaz bildirimi gönderilmez'))
+    : realFetch(input, init)) as typeof fetch;
+
 // Log sessiz, çünkü tekrarlanan uyarılar testin sonucunu gizler; `??=` sayesinde `LOG_LEVEL=debug pnpm test` ayıklamayı açar.
 process.env.LOG_LEVEL ??= 'silent';

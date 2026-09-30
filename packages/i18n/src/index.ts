@@ -44,5 +44,6 @@ export {
   type StaffNotificationBrief,
   type StaffNotificationTone,
 } from './notification-copy';
+export { opsNotificationHref } from './staff-notification-href';
 
 export { confirmationCopy } from './confirmation-copy';
