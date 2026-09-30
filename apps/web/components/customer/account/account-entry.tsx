@@ -13,19 +13,9 @@ import { useUnreadNotifications } from './use-unread-notifications.hook';
 import messages from './account-messages.json';
 
 /**
- * Başlıktaki hesap girişi — v1 (13.09): baş harfli yuvarlak avatar ve açılır hesap menüsü.
- *
- * Misafirde çerçeveli "Giriş yap" hapı. Girişli müşteride avatar; menünün BAŞINDA ad ve e-posta —
- * paylaşılan bir cihazda siparişin kime bağlandığını gösteren yer burası (29.07 kullanıcı isteği:
- * kim olduğu başlıktan okunmalı). Satırlar tasarımın sırasıyla: Hesabım · Siparişlerim · Taleplerim ·
- * Professionnels, ayraç, Çıkış yap. Menü yüzeyi ve satırı kitte (`menu.ts`), kapanma sözleşmesi de
- * (`useDismiss`) — seçim alanıyla ortak.
- *
- * İki bilinçli sapma:
- *  · **"Geri bildirim" yok** — v1'de var, ama değerlendirme sayfası yalnız davetin jetonuyla açılıyor
- *    (`/feedback/[token]`); menüden gidilecek bir adres yok.
- *  · **"Bildirimler" var** — v1'de zil çizilmemiş; bildirim akışı gerçek bir yüzey ve masaüstü
- *    başlığında zil kalmayınca tek girişi burası. Okunmamış varsa sayı satırda ve avatarın rozetinde.
+ * Başlıktaki hesap girişi: misafirde "Giriş yap" hapı, girişli müşteride baş harfli yuvarlak ve açılır menü; menünün başındaki ad
+ * ve e-posta paylaşılan cihazda siparişin kime bağlandığını gösterir. Tasarımdan iki sapma: "Geri bildirim" yok, çünkü değerlendirme
+ * sayfası yalnız davetin jetonuyla açılır; "Bildirimler" var, çünkü masaüstü başlığında zil yokken bildirim akışının tek girişi burası.
  */
 interface AccountEntryProps {
   locale: Locale;
