@@ -23,7 +23,8 @@
       ],
       "ignoreDependencies": [
         "pino",
-        "pino-pretty"
+        "pino-pretty",
+        "@aws-sdk/client-s3"
       ]
     },
     "packages/domain-core": {
