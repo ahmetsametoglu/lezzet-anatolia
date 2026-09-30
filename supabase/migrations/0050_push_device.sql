@@ -5,9 +5,9 @@
 create table public.push_device (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid not null references public.user_profiles (id) on delete cascade,
-  -- Expo jetonu ya da tarayıcı aboneliğinin adresi. Tekillik kişi başına değil tablo geneli, çünkü aynı fiziksel cihaz ancak bir
-  -- hesabın kulağı olabilir.
-  token text not null unique,
+  -- Expo jetonu ya da tarayıcı aboneliğinin adresi. Tekillik kişi başına değil uygulama başına tablo geneli (aşağıdaki kısıt): aynı
+  -- cihaz ancak bir hesabın kulağı olabilir, ama bir tarayıcı aboneliği hem müşteri sitesinin hem operasyon panelinin kulağıdır.
+  token text not null,
   -- Kısıt veride, yanlış platform sessizce yazılamaz.
   platform text not null check (platform in ('ios', 'android', 'web')),
   -- Müşteri ve operasyon iki ayrı uygulama; kolon olmasaydı müşteri bildirimi personelin operasyon uygulamasına da düşerdi.
@@ -22,7 +22,8 @@ create table public.push_device (
   -- Son görülme anı; uygulama her açılışta tazeler. Uzun süre görülmeyen native cihaz yerine haber tarayıcıya gider.
   last_seen_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
-  constraint push_device_web_keys check ((platform = 'web') = (p256dh is not null and auth is not null))
+  constraint push_device_web_keys check ((platform = 'web') = (p256dh is not null and auth is not null)),
+  constraint push_device_token_app_key unique (token, app)
 );
 
 -- "Bu kişinin kulakları" — gönderim anının tek okuması.
@@ -33,7 +34,7 @@ create index push_device_profile_idx on public.push_device (profile_id);
 alter table public.push_device enable row level security;
 
 comment on table public.push_device is
-  'Push cihaz jetonu: kişi başına çok cihaz, cihaz başına tek sahip; upsert sahibi değiştirir. Kişisel veri, 0037 siler.';
+  'Push cihaz jetonu: kişi başına çok cihaz, cihaz ve uygulama başına tek sahip; upsert sahibi değiştirir. Kişisel veri, 0037 siler.';
 comment on column public.push_device.disabled_at is
   'OS bildirim izni kapalı (uygulamanın açılış raporu). Dolu ise sürücü cihazı yeteneksiz sayar.';
 comment on column public.push_device.app is
@@ -57,10 +58,9 @@ set search_path = public
 as $$
   insert into public.push_device (profile_id, token, platform, app, disabled_at, p256dh, auth)
   values (p_profile_id, p_token, p_platform, p_app, case when p_enabled then null else now() end, p_p256dh, p_auth)
-  on conflict (token) do update
+  on conflict (token, app) do update
     set profile_id  = excluded.profile_id,
         platform    = excluded.platform,
-        app         = excluded.app,
         disabled_at = excluded.disabled_at,
         p256dh      = excluded.p256dh,
         auth        = excluded.auth,

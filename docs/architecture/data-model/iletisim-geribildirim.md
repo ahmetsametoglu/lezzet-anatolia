@@ -249,14 +249,14 @@ Cihaz bildiriminin tek DB ayağı (migration 0050): "bu kişiye hangi cihazlarda
 **Kararlar**
 
 - **`profile_id`** — sahip — müşteri de personel de (operasyon kabuğu da push alacak; ad bu yüzden `customer_id` değil); **cascade**
-- **`token`** — Expo jetonu ya da tarayıcı aboneliğinin adresi (endpoint); **unique, TABLO GENELİ** — cihaz başına tek sahip. Kayıt RPC'si (`register_push_device`) çakışmada SAHİBİ DEVREDER: son giren kazanır, cihaz fiziksel olarak onun elindedir. Devir olmasaydı aile telefonunda önceki hesabın bildirimi sonrakine düşerdi
+- **`token`** — Expo jetonu ya da tarayıcı aboneliğinin adresi (endpoint); **`(token, app)` unique, TABLO GENELİ** — cihaz ve uygulama başına tek sahip. Tekillik uygulamayı da kapsar, çünkü bir tarayıcı aboneliği hem müşteri sitesinin hem operasyon panelinin kulağıdır: yalnız jetonla tekil olsaydı iki yüzeyi aynı tarayıcıda kullanan kişinin satırı son açılan yüzeye kayar, öbür yüzeyin bildirimi düşerdi. Kayıt RPC'si (`register_push_device`) çakışmada SAHİBİ DEVREDER: son giren kazanır, cihaz fiziksel olarak onun elindedir. Devir olmasaydı aile telefonunda önceki hesabın bildirimi sonrakine düşerdi
 - **`platform`** — `ios` · `android` · `web`; kısıt veride. Native kayıt ucu yalnız ilk ikisini kabul eder (`PushPlatformEnum`)
 - **`app`** — `customer` · `operations` — jetonun geldiği uygulama. Aynı kişi iki uygulamayı da kurabilir ve her kurulumun jetonu ayrıdır; müşteri gönderimi yalnız `customer` jetonlarını okur, yoksa müşteri bildirimi personelin operasyon uygulamasına da düşerdi. Varsayılan yok: uygulamasını söylemeyen kayıt yazılamaz
 - **`disabled_at`** — OS bildirim İZNİ kapalı (uygulamanın açılış raporu) — dolu ise sürücü cihazı yeteneksiz sayar ve sıra maile düşer. İzin karası: kapalı cihaza "gönderdim" demek sessiz kara deliktir
 - **`p256dh`** · **`auth`** — tarayıcı aboneliğinin iki şifreleme anahtarı; bildirim gövdesi yalnız o tarayıcının açabileceği biçimde şifrelenir. Yalnız `web` satırında dolu (`push_device_web_keys` kısıtı)
-- **`last_seen_at`** — uygulama her açılışta tazeler. Bir haber tek cihaz sınıfına gider: son 30 günde görülmüş native uygulama varsa ona, yoksa tarayıcı aboneliklerine (`choosePushTargets`, gün sayısı parametrik)
+- **`last_seen_at`** — uygulama her açılışta tazeler; son 30 günde görülmemiş native cihaz seçilmez (`choosePushTargets`, gün sayısı parametrik). Müşteri haberi tek cihaz sınıfına gider: etkin native uygulama varsa ona, yoksa tarayıcı aboneliklerine, çünkü ikisi aynı telefonda çalardı. Personel haberi ikisine de gider: operasyon web'i yalnız masaüstünde, tarayıcı aboneliği telefonun ikizi değil
 
-**Çıkış (logout) ZORUNLU adım:** jeton silinmezse önceki hesabın bildirimi sonraki oturum sahibine düşer. Silme sahiplik süzgeçli (`token + profile_id`): devrolmuş cihazın gecikmiş çıkışı yeni sahibin kaydını sökemez. Web'de çıkış eylemi tarayıcının aboneliğini `lz_web_push` çerezinden bulup siler. 0037 silme akışına dahil.
+**Çıkış (logout) ZORUNLU adım:** jeton silinmezse önceki hesabın bildirimi sonraki oturum sahibine düşer. Silme sahiplik süzgeçli (`token + profile_id`): devrolmuş cihazın gecikmiş çıkışı yeni sahibin kaydını sökemez. Web'de çıkış eylemi tarayıcının aboneliğini `lz_web_push` çerezinden bulup siler; aynı aboneliğin müşteri ve operasyon satırı birlikte gider. 0037 silme akışına dahil.
 
 ## AnalyticsEvent (analitik olayı)
 
