@@ -24,6 +24,12 @@ bağlanmaz. Satır = kimlik + ne + neden; ele alınmaya karar verilince satır `
 - (K.41) **Hediye kartı / hediye çeki** (bakiye taşıyan): kavramın kendisi kararlaştırılmadı. `order.is_gift_order` var ama o
   "siparişi hediye olarak gönder"dir, bakiye taşıyan bir araç değil.
 
+## İade ve şikâyet
+
+- (K.50) **Şikâyette yeniden gönderim:** bozuk gelen ürünün yenisini ücretsiz göndermek. Tasarımdaki şikâyet kararı "Jest —
+  bedelsiz yeniden gönderim" adını taşıyor ve kodda çizilmedi; adı "Yeniden gönderim" olmalı, yoksa sistemdeki "müşteride
+  kaldı" ile karışır. Gereken: şikâyete bağlı sıfır tutarlı sevkiyat — stok düşer, taşıma maliyeti doğar, para hareketi olmaz.
+
 ## Bildirim ve kanal
 
 - (15.24) **Sohbet hunisi — platform verimliliği:** hangi sosyal platformun daha verimli olduğunu görmek için gün × platform

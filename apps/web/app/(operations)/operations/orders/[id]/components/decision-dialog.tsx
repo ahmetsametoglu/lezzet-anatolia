@@ -13,7 +13,7 @@ import type { OrderDetailView, OrderLineView, RefundRouteView } from '../order-d
 
 // Karar penceresi (Komponent Envanteri O18): kısmi karşılama ve iade aynı hareketi (kalem başına adet düşürmek) yapar,
 // farkı ton, sütun başlıkları ve ikinci sütunun sorusu taşır — kısmide stok etkisi, iadede malın akıbeti ve para yolu.
-// Adet yalnız düşer ve tutar burada hesaplanmaz: toplam, jestle müşteride kalan adet dahil motorun türetimidir
+// Adet yalnız düşer ve tutar burada hesaplanmaz: toplam, müşteride kalan adet dahil motorun türetimidir
 // (`previewFulfillmentAction`).
 
 /** İptal BURADA YOK: onun penceresi ayrı (`cancel-dialog`) — seçilecek adet ya da yol yok. */
@@ -28,11 +28,11 @@ interface DecisionDialogProps {
   error: string | null;
 }
 
-const DISPOSITIONS: Array<{ value: ReturnDisposition; label: string }> = [
-  { value: 'restock', label: 'rafa döndü' },
-  { value: 'discard', label: 'imha' },
-  { value: 'goodwill', label: 'müşteride' },
-];
+const DISPOSITION_LABELS: Record<ReturnDisposition, string> = {
+  restock: 'rafa döndü',
+  discard: 'imha',
+  goodwill: 'müşteride kaldı',
+};
 
 export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }: DecisionDialogProps) {
   const refund = kind === 'refund';
@@ -47,7 +47,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
   const updateParts = (line: OrderLineView, next: (list: Part[]) => Part[]) =>
     setParts((prev) => ({ ...prev, [line.id]: next(prev[line.id] ?? partsOf(line)) }));
   const movedOf = (line: OrderLineView) => partsOf(line).reduce((sum, part) => sum + part.qty, 0);
-  /** Akıbet alabilecek adet: müşteride kalan (jest) adet geri iade edilemez. */
+  /** Akıbet alabilecek adet: müşteride kalan adet geri iade edilemez. */
   const openQtyOf = (line: OrderLineView) => line.fulfilledQty - line.goodwillQty;
   const [note, setNote] = useState('');
   // Seçim paranın GİRDİĞİ hesaptan başlar; hiç tahsilat olmamışsa ilk yol seçili gelir — o durumda
@@ -64,7 +64,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
     partsOf(line).map((part) => ({ disposition: part.fate, qty: part.qty, note }));
 
   /**
-   * Motora gidecek hâl. Jest satırı miktarı DEĞİŞTİRMEZ — hem önizleme hem yazım için aynı kural,
+   * Motora gidecek hâl. Müşteride kalan pay miktarı DEĞİŞTİRMEZ — hem önizleme hem yazım için aynı kural,
    * yoksa pencerede görünen tutar ile kaydedilen tutar ayrışırdı.
    */
   const proposed = useMemo(
@@ -155,13 +155,14 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
         {order.lines.flatMap((line) => {
           const list = partsOf(line);
           const moved = movedOf(line);
-          // Ayırma yalnız iadede ve iki adetten itibaren: tek adetin bölünecek payı yok, akıbet sayısı da üçle sınırlı.
-          const canSplit = refund && openQtyOf(line) >= 2 && list.length < DISPOSITIONS.length && moved < openQtyOf(line);
+          // Ayırma yalnız iadede ve iki adetten itibaren: tek adetin bölünecek payı yok, pay sayısı da sunulan akıbetlerle sınırlı.
+          const canSplit = refund && openQtyOf(line) >= 2 && list.length < order.returnDispositions.length && moved < openQtyOf(line);
           return list.map((part, index) => (
             <LineRow
               key={`${line.id}-${index}`}
               line={line}
               refund={refund}
+              dispositions={order.returnDispositions}
               part={part}
               max={openQtyOf(line) - (moved - part.qty)}
               lead={index === 0}
@@ -172,7 +173,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
                   ? () =>
                       updateParts(line, (items) => [
                         ...items,
-                        { fate: DISPOSITIONS.find((option) => !items.some((item) => item.fate === option.value))!.value, qty: 0 },
+                        { fate: order.returnDispositions.find((option) => !items.some((item) => item.fate === option))!, qty: 0 },
                       ])
                   : null
               }
@@ -252,6 +253,8 @@ interface Part {
 interface LineRowProps {
   line: OrderLineView;
   refund: boolean;
+  /** Bu siparişte sunulan akıbetler; mal müşteriye ulaşmadıysa "müşteride kaldı" yok. */
+  dispositions: readonly ReturnDisposition[];
   part: Part;
   /** Bu payın tavanı: karşılanan adetten öteki payların aldığı düşülür. */
   max: number;
@@ -263,7 +266,7 @@ interface LineRowProps {
   onRemove: (() => void) | null;
 }
 
-function LineRow({ line, refund, part, max, lead, onQty, onFate, onSplit, onRemove }: LineRowProps) {
+function LineRow({ line, refund, dispositions, part, max, lead, onQty, onFate, onSplit, onRemove }: LineRowProps) {
   const moved = part.qty;
   const goodwill = refund && part.fate === 'goodwill';
   // Satır tutarı toplamın DAĞILIMI: kalemin indirimli birim tutarı × düşen adet.
@@ -314,19 +317,19 @@ function LineRow({ line, refund, part, max, lead, onQty, onFate, onSplit, onRemo
 
       <div className="flex flex-wrap gap-1">
         {refund ? (
-          DISPOSITIONS.map((option) => (
+          dispositions.map((option) => (
             <button
-              key={option.value}
+              key={option}
               type="button"
-              onClick={() => onFate(option.value)}
+              onClick={() => onFate(option)}
               disabled={moved === 0}
               className={`cursor-pointer rounded-[6px] border px-1.5 py-1 font-ops-display text-ops-micro font-semibold outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                moved > 0 && part.fate === option.value
+                moved > 0 && part.fate === option
                   ? 'border-ops-red bg-ops-red text-ops-card'
                   : 'border-ops-line-strong bg-ops-white text-ops-body'
               }`}
             >
-              {option.label}
+              {DISPOSITION_LABELS[option]}
             </button>
           ))
         ) : (
@@ -348,7 +351,7 @@ function LineRow({ line, refund, part, max, lead, onQty, onFate, onSplit, onRemo
         }`}
       >
         {moved > 0 ? `${refund ? '' : '−'}${money(unitCents * moved)}` : '—'}
-        {goodwill ? <span className="ml-1 text-ops-muted">jest</span> : null}
+        {goodwill ? <span className="ml-1 text-ops-muted">müşteride</span> : null}
       </span>
     </div>
   );

@@ -33,8 +33,8 @@ import { useWarehouseStatus } from './warehouse-status';
 
 const t = warehouseCopy;
 
-/** Üç akıbet — sırası TİPTEN gelir (`ReturnDispositionEnum`), ekran kendi listesini yazmaz. */
-const DISPOSITIONS: readonly ReturnDisposition[] = ReturnDispositionEnum.options;
+/** Rampaya dönen mal müşteride kalmamıştır: akıbeti rafa dönüş ya da imhadır; sıra tipten gelir (`ReturnDispositionEnum`). */
+const DISPOSITIONS: readonly ReturnDisposition[] = ReturnDispositionEnum.exclude(['goodwill']).options;
 
 /** İlk yük iskeleti — künye satırı ve iki kurye kartı; ekranın gerçekten çizdiği bloklar. */
 const RETURN_SKELETON = [40, 116, 116];
@@ -231,12 +231,11 @@ export function CourierReturnScreen() {
                   </View>
                 )}
 
-                {/* Üç akıbetin bedeli seçimden önce, düğmelerin altında her zaman yazılı: depocu partinin düşeceğini öğrenmeden
+                {/* Akıbetlerin bedeli seçimden önce, düğmelerin altında her zaman yazılı: depocu partinin düşeceğini öğrenmeden
                     imhayı seçmemeli. */}
                 {!pending ? null : (
                   <View style={styles.hintBlock} testID={`warehouse-return-hint-${line.orderItemId}`}>
                     <Text style={styles.rowSub}>{t.return.dispositionHint.rules}</Text>
-                    <Text style={styles.rowSub}>{t.return.dispositionHint.goodwill}</Text>
                   </View>
                 )}
 

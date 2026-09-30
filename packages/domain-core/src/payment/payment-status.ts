@@ -9,7 +9,7 @@ import { isFulfillmentSettled } from '../order/status-machine';
 export interface FulfilledLine {
   /** Fiziksel olarak müşteriye giden miktar. */
   fulfilledQty: number;
-  /** Gidenden müşteride kalıp parası iade edilen adet (jest); ücretlenmez, verilmezse 0. */
+  /** Gidenden müşteride kalan adet; ücretlenmez, verilmezse 0. */
   goodwillQty?: number;
   /** Sabitlenmiş birim fiyat (kanal tabanında, cent). */
   unitPriceCents: number;
@@ -102,7 +102,7 @@ function statusOf(net: number, fulfilled: number, refunded: number): PaymentStat
 }
 
 /**
- * Bir kalemin ücretlenen tutarı (cent): giden adetten jest adedi çıkar, indirim payı o orana bölünür; sipariş detayının KDV
+ * Bir kalemin ücretlenen tutarı (cent): giden adetten müşteride kalan adet çıkar, indirim payı o orana bölünür; sipariş detayının KDV
  * satırı da bunu kullanır, çünkü vergi tabanı motorun "ödenecek" dediğiyle aynı olmalı. `settled = false` iken ölçü sipariş edilen adettir.
  */
 export function fulfilledLineAmountCents(line: FulfilledLine, settled = true): number {
@@ -115,7 +115,7 @@ export function fulfilledLineAmountCents(line: FulfilledLine, settled = true): n
   return gross - discountShare;
 }
 
-/** Müşteride kalan mal jestse parası iade edilmiştir; o adet stokta ve maliyette gitmiş sayılır ama ücretlenmez (DOMAIN §8). */
+/** Müşteride kalan malın bedeli düşer; o adet stokta ve maliyette gitmiş sayılır ama ücretlenmez (DOMAIN §8). */
 function chargedQty(line: FulfilledLine): number {
   return line.fulfilledQty - (line.goodwillQty ?? 0);
 }
@@ -136,6 +136,6 @@ function fulfilledAmount({ lines, shippingFeeCents = 0, fulfillmentSettled = tru
     total += fulfilledLineAmountCents(line, fulfillmentSettled);
   }
 
-  // Ücretlenen kalem yoksa kargo da ücretlenmez: hiçbir şey gitmediyse hizmet verilmemiştir, her şey jestse para tamamen döner.
+  // Ücretlenen kalem yoksa kargo da ücretlenmez: hiçbir şey gitmediyse hizmet verilmemiştir, her şey müşteride kaldıysa para tamamen döner.
   return anyFulfilled ? total + shippingFeeCents : total;
 }

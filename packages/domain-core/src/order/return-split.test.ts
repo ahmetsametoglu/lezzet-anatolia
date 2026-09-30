@@ -16,7 +16,7 @@ describe('returnAdjustments', () => {
     ]);
   });
 
-  it('jest adedi düşürmez ve kaç adedin jestle kapandığını taşır', () => {
+  it('"müşteride kaldı" adedi düşürmez ve kaç adedin müşteride kaldığını taşır', () => {
     expect(
       returnAdjustments(ITEM, 2, [
         { disposition: 'goodwill', qty: 1 },
@@ -36,7 +36,7 @@ describe('returnAdjustments', () => {
 });
 
 describe('keptQtyAfter', () => {
-  it('müşteride kalan adet jest payını düşmez', () => {
+  it('müşteride kalan adet "müşteride kaldı" payını düşmez', () => {
     expect(keptQtyAfter(3, [{ disposition: 'goodwill', qty: 1 }, { disposition: 'restock', qty: 1 }])).toBe(2);
   });
 });

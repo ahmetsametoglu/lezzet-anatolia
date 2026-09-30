@@ -37,14 +37,14 @@ declare
   v_item_id uuid;
   v_ordered int;
   v_current int;
-  v_kept int;                                        -- müşteride kalan (jestle kapanmış) adet
+  v_kept int;                                        -- müşteride kalan adet
   v_target int;
   v_delta int;                                       -- geri gelen / hiç gitmeyen adet
   v_disposition return_disposition;
   v_goodwill_qty int;
   v_note text;
   v_planned jsonb := '{}'::jsonb;                    -- doğrulama turunda kalemin sıradaki karşılanan adedi
-  v_planned_kept jsonb := '{}'::jsonb;               -- doğrulama turunda kalemin sıradaki jest adedi
+  v_planned_kept jsonb := '{}'::jsonb;               -- doğrulama turunda kalemin sıradaki müşteride kalan adedi
   v_returns jsonb := '[]'::jsonb;
   v_batch record;
   v_take int;
@@ -97,8 +97,12 @@ begin
     v_kept := coalesce((v_planned_kept ->> v_item_id::text)::int, v_kept);
 
     if v_disposition = 'goodwill' then
+      -- Müşteride kalan mal ona ulaşmış maldır; kapıda reddedilip dönen malın akıbeti rafa dönüş ya da imhadır.
+      if not v_consumed then
+        raise exception 'adjust_fulfillment: teslim edilmemiş malda müşteride kaldı akıbeti olmaz (kalem %)', v_item_id;
+      end if;
       if v_goodwill_qty is not null and v_goodwill_qty < 1 then
-        raise exception 'adjust_fulfillment: kalem % için geçersiz jest adedi (%)', v_item_id, v_goodwill_qty;
+        raise exception 'adjust_fulfillment: kalem % için geçersiz müşteride kalan adedi (%)', v_item_id, v_goodwill_qty;
       end if;
       v_goodwill_qty := coalesce(v_goodwill_qty, v_current - v_kept);
       if v_goodwill_qty < 1 or v_goodwill_qty > v_current - v_kept then
@@ -134,7 +138,7 @@ begin
 
     select fulfilled_qty, goodwill_qty into v_current, v_kept from public.order_item where id = v_item_id;
 
-    -- Jest iadesi: mal müşteride kaldı, karşılanan düşmez (DOMAIN §8); o adetler ücretlenmez, parasını motor türetir.
+    -- Müşteride kaldı: karşılanan düşmez (DOMAIN §8); o adetler ücretlenmez, bedelini motor türetir.
     if v_disposition = 'goodwill' then
       v_goodwill_qty := coalesce(v_goodwill_qty, v_current - v_kept);
       update public.order_item set goodwill_qty = goodwill_qty + v_goodwill_qty where id = v_item_id;

@@ -231,8 +231,8 @@ describe('D6 · rampa listesi', () => {
 });
 
 describe('D6 · kurye dönüşü kabulü', () => {
-  /* Üç akıbetin bedeli seçimden önce, düğmelerin altında her zaman yazılı: depocu partinin düşeceğini seçmeden öğrenmeli. */
-  it('üç akıbetin bedeli SEÇİMDEN ÖNCE yazılı — imhanın partiyi düşürdüğü dahil', async () => {
+  /* Akıbetlerin bedeli seçimden önce, düğmelerin altında her zaman yazılı: depocu partinin düşeceğini seçmeden öğrenmeli. */
+  it('akıbetlerin bedeli SEÇİMDEN ÖNCE yazılı — imhanın partiyi düşürdüğü dahil', async () => {
     withGates();
 
     await render(<CourierReturnScreen />);
@@ -241,7 +241,6 @@ describe('D6 · kurye dönüşü kabulü', () => {
     const hint = screen.getByTestId(`warehouse-return-hint-${ITEM_ID}`);
     expect(hint).toHaveTextContent(/Stoğa dön: sebep notu zorunlu/);
     expect(hint).toHaveTextContent(/İmha: parti düşer/);
-    expect(hint).toHaveTextContent(/Jest: mal müşteride kaldı/);
   });
 
   it('akıbet işaretlenmeden CTA kapalıdır', async () => {
@@ -282,16 +281,16 @@ describe('D6 · kurye dönüşü kabulü', () => {
     ]);
   });
 
-  it('jestte adet KORUNUR — mal müşteride kaldı, yalnız kayıt düşer', async () => {
+  it('rampada "müşteride kaldı" sunulmaz — dönen mal müşteride kalmamıştır, ayırmada da yoktur', async () => {
     withGates();
 
     await render(<CourierReturnScreen />);
     await openCourier();
-    await fireEvent.press(screen.getByTestId(`warehouse-return-goodwill-${ITEM_ID}`));
-    await fireEvent.press(screen.getByTestId('warehouse-return-cta'));
+    expect(screen.queryByTestId(`warehouse-return-goodwill-${ITEM_ID}`)).toBeNull();
 
-    await waitFor(() => expect(mockToast).toHaveBeenCalled());
-    expect(lastPost(`/returns/${ORDER_ID}`).adjustments[0]).toMatchObject({ fulfilledQty: 2, goodwillQty: 2 });
+    await fireEvent.press(screen.getByTestId(`warehouse-return-split-toggle-${ITEM_ID}`));
+    expect(screen.getByTestId(`warehouse-return-split-restock-${ITEM_ID}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId(`warehouse-return-split-goodwill-${ITEM_ID}`)).toBeNull();
   });
 
   it('adetler ayrı işaretlenince tek istek iki payı sıralı taşır; toplam tutmadan CTA kapalı', async () => {

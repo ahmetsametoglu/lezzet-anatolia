@@ -1,4 +1,4 @@
-import type { OrderStatus } from '@lezzet/types';
+import { ReturnDispositionEnum, type OrderStatus, type ReturnDisposition } from '@lezzet/types';
 import { allowedTransitions, isTerminal } from './status-machine';
 
 /**
@@ -28,4 +28,16 @@ export function allowedDecisions(status: OrderStatus): readonly OrderDecision[] 
   if (allowedTransitions(status).includes('cancelled')) decisions.push('cancel');
 
   return decisions;
+}
+
+/** Malın müşterinin eline geçtiği durumlar; `returned` yok, çünkü kapıda reddedilen sipariş de o durumdadır. */
+const HANDED_OVER_STATUSES: readonly OrderStatus[] = ['delivered', 'completed'];
+
+/**
+ * İadede sunulan akıbetler: "müşteride kaldı" (`goodwill`) yalnız mal bir kez müşteriye ulaştıysa anlamlıdır. Durum değil geçmiş
+ * okunur, çünkü teslimden sonra iadeye dönen sipariş de `returned`dır; veritabanı aynı kuralı `adjust_fulfillment`ta zorlar.
+ */
+export function allowedReturnDispositions(history: readonly OrderStatus[]): readonly ReturnDisposition[] {
+  const handedOver = history.some((status) => HANDED_OVER_STATUSES.includes(status));
+  return ReturnDispositionEnum.options.filter((disposition) => handedOver || disposition !== 'goodwill');
 }

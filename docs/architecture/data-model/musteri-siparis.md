@@ -393,7 +393,7 @@ Kalemden düşen adetlerin olayları — `adjust_fulfillment` her adet düşüş
 **Kararlar**
 
 - **`disposition`** — adetlere ne oldu: `restock` · `discard` · `goodwill`. `null` = adet akıbet sorulmadan düştü (hazırlıkta eksik, kapıda geri çevrildi); kapıda reddedilen siparişin akıbetini depo rampada yazar
-- **`qty`** — olayın adedi; `goodwill`de karşılanan adet düşmez ve kaç adedin jestle kapandığını bu alan taşır
+- **`qty`** — olayın adedi; `goodwill`de karşılanan adet düşmez ve kaç adedin müşteride kaldığını bu alan taşır
 - **`note`** — olayın gerekçesi; "stoğa dön"ün zorunlu soğuk zincir beyanı buraya yazılır
 - **`stage`** — olay anındaki sipariş durumu; ekran kapıda geri çevrileni (`out_for_delivery`) teslim sonrası iadeden bununla ayırır
 

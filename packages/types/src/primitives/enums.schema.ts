@@ -193,7 +193,7 @@ export type OrderCancelReason = z.infer<typeof OrderCancelReasonEnum>;
  * - `restock`  — mal depoya girdi, tekrar satılabilir → ayrılmıştan serbest
  * - `discard`  — mal döndü ama satılamaz (soğuk zincir belgelenemez) → imha kaydı; donuk üründe VARSAYILAN
  * - `goodwill` — **mal müşteride kaldı** ("paranızı iade ettik, ürün sizde kalsın") → stok ve
- *   `fulfilled_qty` DEĞİŞMEZ; maliyet kayıtlarda kalır, kâr raporunda jest gideri olarak görünür
+ *   `fulfilled_qty` DEĞİŞMEZ; maliyet kayıtlarda kalır, kâr raporunda gider olarak görünür
  */
 export const ReturnDispositionEnum = z.enum(['restock', 'discard', 'goodwill']);
 export type ReturnDisposition = z.infer<typeof ReturnDispositionEnum>;

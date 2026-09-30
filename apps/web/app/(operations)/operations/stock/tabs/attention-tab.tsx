@@ -123,7 +123,7 @@ function ReturnsGroup({ drops }: { drops: ReturnDropView[] }) {
           {drops.length} koli · {pending} kalem
         </Badge>
         <span className="font-ops-body text-ops-xs text-ops-muted">
-          Akıbeti işaretlenmemiş kalemi olan iade — karar siparişin detayında (stoğa dön · imha · jest)
+          Akıbeti işaretlenmemiş kalemi olan iade — karar siparişin detayında (stoğa dön · imha)
         </span>
       </div>
       <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))]">

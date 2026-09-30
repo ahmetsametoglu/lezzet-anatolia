@@ -11,6 +11,7 @@ import type {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
+  ReturnDisposition,
   ShipmentStatus,
   VatTreatment,
 } from '@lezzet/types';
@@ -42,7 +43,7 @@ export interface OrderLineView {
   qty: number;
   /** Fiziksel olarak giden adet — `qty`'den azsa eksik gitmiştir. */
   fulfilledQty: number;
-  /** Gidenden müşteride kalıp parası iade edilen (jest) adet; yeniden iade edilemez, ücretlenmez. */
+  /** Gidenden müşteride kalan adet; bedeli siparişten düşer, yeniden iade edilemez. */
   goodwillQty: number;
   unitPriceCents: number;
   /** Sepet indiriminin bu kaleme düşen payı (kalemin TAMAMI için, kuruş). */
@@ -261,6 +262,8 @@ export interface OrderDetailView {
   decisions: OrderDecision[];
   /** İade kararının para yolları; iade açık değilse boş. */
   refundRoutes: RefundRouteView[];
+  /** İadede sunulan akıbetler (`allowedReturnDispositions`); mal müşteriye ulaşmadıysa "müşteride kaldı" yok. */
+  returnDispositions: ReturnDisposition[];
 
   delivery: {
     /**

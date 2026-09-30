@@ -1149,7 +1149,7 @@ export type WarehouseCourierReturnResponse = z.infer<typeof WarehouseCourierRetu
  * değer olarak girilir; fark sistemde hesaplanır."*
  *
  * `returnDisposition` üç akıbeti taşır: `restock` (stoğa dön — **sebep notu zorunlu**, soğuk zincir
- * beyanı), `discard` (imha), `goodwill` (jest — mal ve stok DEĞİŞMEZ, yalnız kayıt düşer).
+ * beyanı), `discard` (imha), `goodwill` (müşteride kaldı — yalnız teslim edilmiş malda; stok değişmez, bedeli siparişten düşer).
  */
 export const WarehouseReturnRequestSchema = z.object({
   adjustments: z.array(FulfillmentAdjustmentSchema),

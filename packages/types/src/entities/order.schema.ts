@@ -354,7 +354,7 @@ export const FulfillmentAdjustmentSchema = z.object({
   fulfilledQty: z.number().int().nonnegative(),
   /** Mal geri geldiyse ne olduğu; `goodwill`'de miktar DEĞİŞMEZ (mal müşteride kaldı, DOMAIN §8). */
   returnDisposition: ReturnDispositionEnum.nullish(),
-  /** Jestle kapanan adet — miktar düşmediği için hedeften türetilemez; verilmezse müşteride henüz kalmamış adedin tamamı. */
+  /** Müşteride kalan adet — miktar düşmediği için hedeften türetilemez; verilmezse müşteride henüz kalmamış adedin tamamı. */
   goodwillQty: z.number().int().positive().nullish(),
   /** Stoğa dönüş/imha kaydına düşen sebep notu — geri ekleme sebepsiz yazılmaz. */
   note: z.string().nullish(),

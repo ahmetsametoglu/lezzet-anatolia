@@ -98,7 +98,7 @@ describe('iade senaryoları (03.6)', () => {
     expect(r.refundDueCents).toBe(0);
   });
 
-  it('jest iadesi: müşteride kalan adet ücretlenmez, borcu türer ve kargo dahil her şey dönünce refunded olur', () => {
+  it('müşteride kaldı: kalan adet ücretlenmez, borcu türer ve kargo dahil her şey dönünce refunded olur', () => {
     const lines = [line({ goodwillQty: 2 })];
     expect(derivePaymentStatus(input({ lines, shippingFeeCents: 500, collectedCents: 2500 })).refundDueCents).toBe(2500);
 
@@ -107,7 +107,7 @@ describe('iade senaryoları (03.6)', () => {
     expect(r.amountToCollectCents).toBe(0);
   });
 
-  it('kısmi jest iadesi: parası dönen adet tahsil edilecek kalan doğurmaz, kargo ücretlenen adetle durur', () => {
+  it('kısmi müşteride kaldı: parası dönen adet tahsil edilecek kalan doğurmaz, kargo ücretlenen adetle durur', () => {
     const r = derivePaymentStatus(
       input({ lines: [line({ goodwillQty: 1 })], shippingFeeCents: 500, collectedCents: 2500, refundedCents: 1000 }),
     );
@@ -116,7 +116,7 @@ describe('iade senaryoları (03.6)', () => {
     expect(r.amountToCollectCents).toBe(0);
   });
 
-  it('jest adedinin indirim payı da düşer', () => {
+  it('müşteride kalan adedin indirim payı da düşer', () => {
     expect(fulfilledLineAmountCents(line({ goodwillQty: 1, lineDiscountCents: 400 }))).toBe(800);
   });
 });

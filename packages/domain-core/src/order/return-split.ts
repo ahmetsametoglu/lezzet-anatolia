@@ -8,7 +8,7 @@ export interface ReturnPart {
 }
 
 /**
- * Payları sıralı düzeltmelere çevirir: hedef adet her payda bir öncekinden düşer, jest ise adedi düşürmez (DOMAIN §8).
+ * Payları sıralı düzeltmelere çevirir: hedef adet her payda bir öncekinden düşer, "müşteride kaldı" ise adedi düşürmez (DOMAIN §8).
  * Pay yoksa, tam sayı değilse ya da toplamı karşılanan adedi aşıyorsa `null` döner ve ekran onayı açmaz.
  */
 export function returnAdjustments(
@@ -31,7 +31,7 @@ export function returnAdjustments(
   });
 }
 
-/** Paylardan sonra müşteride kalan karşılanan adet — önizleme bunu motora sorar; jest adedi düşürmez. */
+/** Paylardan sonra müşteride kalan karşılanan adet — önizleme bunu motora sorar; "müşteride kaldı" adedi düşürmez. */
 export function keptQtyAfter(fulfilledQty: number, parts: readonly ReturnPart[]): number {
   return fulfilledQty - parts.reduce((sum, part) => (part.disposition === 'goodwill' ? sum : sum + part.qty), 0);
 }

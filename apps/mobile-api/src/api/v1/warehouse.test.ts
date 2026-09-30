@@ -1092,7 +1092,7 @@ describe('D6 · POST /api/v1/warehouse/returns/:orderId', () => {
     expect(outcome.releasedQty).toBe(2);
   });
 
-  it('JEST: mal müşteride kaldı — stok da karşılanan adet de DEĞİŞMEZ', async () => {
+  it('MÜŞTERİDE KALDI: teslim edilmiş malda stok da karşılanan adet de DEĞİŞMEZ', async () => {
     const order = await deliveredOrder(2);
 
     const outcome = await dataOf<WarehouseReturnResponse>(

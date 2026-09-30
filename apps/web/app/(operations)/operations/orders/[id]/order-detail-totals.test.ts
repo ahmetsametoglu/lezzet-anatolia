@@ -143,7 +143,7 @@ describe('taban: hazırlık kesinleşti mi', () => {
     expect(satir(rows, 'Ödenecek')).toMatchObject({ amountCents: 1000, kind: 'grand' });
   });
 
-  it('jestle müşteride kalan adet Kalemler ve KDV tabanından düşer, sepet indirimi gibi görünmez', () => {
+  it('müşteride kalan adet Kalemler ve KDV tabanından düşer, sepet indirimi gibi görünmez', () => {
     const rows = blok(order(), [line({ qty: 2, fulfilledQty: 2, goodwillQty: 1 })], true);
 
     expect(satir(rows, 'Kalemler')?.amountCents).toBe(1000);

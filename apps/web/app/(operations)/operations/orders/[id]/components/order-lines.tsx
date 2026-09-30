@@ -246,7 +246,7 @@ function Line({ line, indented, settled }: LineProps) {
 const DISPOSITION_TEXT: Record<NonNullable<OrderLineReturnView['disposition']>, string> = {
   restock: 'rafa döndü — kullanılabilir stoğa eklendi',
   discard: 'imha edildi',
-  goodwill: 'müşteride kaldı — miktar düşmedi, yalnız para iade edildi',
+  goodwill: 'müşteride kaldı — bedeli siparişten düşüldü',
 };
 
 /** Şeride giren olay: akıbeti yazılmış iade ya da kapıda geri çevrilen adet. */

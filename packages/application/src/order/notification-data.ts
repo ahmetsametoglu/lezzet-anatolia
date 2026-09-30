@@ -187,7 +187,7 @@ function buildLines(items: readonly OrderItem[], names: Map<string, string>, loc
 
 /**
  * İade mailinin dökümü: yalnız bu iadenin kalemleri, parası dönen adet ve o adedin değeriyle; müşteride kalanın değeri
- * yazılsaydı tam iade edilen kalem "0,00 €" görünürdü. Jest adedi de parası dönen adettir.
+ * yazılsaydı tam iade edilen kalem "0,00 €" görünürdü. Müşteride kalan adet de parası dönen adettir.
  */
 function buildRefundLines(items: readonly OrderItem[], names: Map<string, string>, returns: readonly WrittenReturn[], locale: PreferredLanguage) {
   return items.flatMap((item) => {

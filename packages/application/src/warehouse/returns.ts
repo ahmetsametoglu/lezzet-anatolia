@@ -94,7 +94,7 @@ export async function listWarehouseReturns(
 
 /**
  * Kalem → döküm satırı; ad çözümü kuyruğun ortak okumasından (`names.ts`) gelir. İade ve imha karşılanan adedi zaten
- * düşürdüğü için bekleyen adet, karşılanandan müşteride kalan (jest) adedin çıkmasıdır.
+ * düşürdüğü için bekleyen adet, karşılanandan müşteride kalan adedin çıkmasıdır.
  */
 function toDropLine(names: Awaited<ReturnType<typeof variantNames>>, returns: readonly OrderItemReturn[]) {
   return (item: OrderItem): ReturnDropLine => ({

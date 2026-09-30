@@ -209,7 +209,7 @@ create index order_item_variant_idx on public.order_item (variant_id);
 
 /*
   Ciro kalemlerden türer: `order.revenue_total` bir önbellektir, artırılmaz, `order_item.fulfilled_qty`den yeniden hesaplanır; tetikleyicidir, çünkü `fulfilled_qty`yi yazan bütün yollar SQL'dedir ve uygulama katmanı bazılarını atlardı.
-  Formül motorunkiyle (`fulfilledLineAmountCents`) aynıdır: ücretlenen adet karşılanandan jest adedinin çıkmasıdır, indirim payı o
+  Formül motorunkiyle (`fulfilledLineAmountCents`) aynıdır: ücretlenen adet karşılanandan müşteride kalan adedin çıkmasıdır, indirim payı o
   orana bölünür, ücretlenen kalem yoksa kargo da ciroya girmez.
 */
 create or replace function public.resync_order_revenue(p_order_id uuid)

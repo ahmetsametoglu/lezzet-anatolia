@@ -194,15 +194,15 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
     ]);
     await advanceOrder(db, order.id, ['ready', 'out_for_delivery']);
     await orders.transition({ orderId: order.id, from: 'out_for_delivery', to: 'returned', actorId: courierId });
-    // Yalnız BİR satırın akıbeti belli: mal müşteride kaldı (jest).
-    await orders.adjustFulfillment(order.id, [{ orderItemId: lines[0]!.id, fulfilledQty: 1, returnDisposition: 'goodwill' }]);
+    // Yalnız BİR satırın akıbeti belli: imha.
+    await orders.adjustFulfillment(order.id, [{ orderItemId: lines[0]!.id, fulfilledQty: 0, returnDisposition: 'discard' }]);
 
     const drop = (await dropOf(order.id))!;
 
     expect(drop.lines).toHaveLength(2);
     expect(drop.lines.find((line) => line.orderItemId === lines[0]!.id)).toMatchObject({
       pendingQty: 0,
-      returns: [{ qty: 1, disposition: 'goodwill', note: null }],
+      returns: [{ qty: 1, disposition: 'discard', note: null }],
     });
     expect(drop.lines.find((line) => line.orderItemId === lines[1]!.id)).toMatchObject({ pendingQty: 3, returns: [] });
   });
@@ -210,10 +210,10 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
   it('satırın adetleri akıbetlere bölünür — her pay ayrı kayıt, bekleyen adet ikisini de düşer', async () => {
     const { orderId, itemId } = await refusedOrder(3);
 
-    // Stoğa dönen adet karşılananı düşürür, jest düşürmez; ikisi de bekleyen sayılmaz.
+    // Her pay karşılananı sırayla düşürür; bekleyen yalnız akıbet almamış adettir.
     await orders.adjustFulfillment(orderId, [
       { orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'restock', note: 'ambalaj sağlam' },
-      { orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill', goodwillQty: 1 },
+      { orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'discard' },
     ]);
 
     expect((await dropOf(orderId))!.lines).toEqual([
@@ -221,7 +221,7 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
         pendingQty: 1,
         returns: [
           { qty: 1, disposition: 'restock', note: 'ambalaj sağlam' },
-          { qty: 1, disposition: 'goodwill', note: null },
+          { qty: 1, disposition: 'discard', note: null },
         ],
       }),
     ]);

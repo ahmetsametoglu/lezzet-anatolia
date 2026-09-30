@@ -275,7 +275,7 @@ export async function getCustomerOrderDetail(
 
   /** Hazırlık onaylanana kadar `fulfilled_qty` yazılmamış bir `0`dır; gönderilen miktar sayılırsa kalemler boş görünür. */
   const measured = isFulfilmentKnown(order.status);
-  // Jestle müşteride kalan adedin parası iade edilmiştir; müşteri tutarı iade edilen öteki adetlerle aynı dilden okur.
+  // Müşteride kalan adedin bedeli siparişten düşer; müşteri tutarı iade edilen öteki adetlerle aynı dilden okur.
   const billedOf = (item: OrderItem) => (measured ? item.fulfilledQty - item.goodwillQty : item.qty);
 
   /* Satır parası ödeme motorundan, burada ikinci kez çarpılmaz; kendi çarpması indirimi karşılanan orana bölmediği için ekranla

@@ -7,6 +7,7 @@ import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { recordOrderPayment, recordOrderRefund } from '../order/payment';
 import { adjustFulfillment, cancelOrder } from '../order/refund';
 import { advanceOrder, prepareOrderToReady } from '../order/advance.testkit';
+import { deliverOrder } from '../order/fulfillment';
 
 /**
  * Davet ödülünün ömrü — para geri giderse ödül ne olur: kısmî iade ödüle dokunmaz, geri alma bakiyeyle kırpılır ve bakiye
@@ -132,9 +133,10 @@ describe('KISMÎ iade ödüle dokunmaz (kullanıcı kararı 25.08)', () => {
     expect(await balanceOf(senaryo.inviter)).toBe(referralPoints);
   });
 
-  it('KISMÎ JEST İADESİ ödülü götürmez — mal müşteride kalır, o adedin parası döner, durum `paid` kalır', async () => {
-    // Operasyonun gerçek düğmesi (`adjustFulfillmentAction`): jest akıbeti adedi düşürmez, parasını motor türetir.
-    const senaryo = await paidOrderWithReward('jest', 3);
+  it('KISMÎ "MÜŞTERİDE KALDI" İADESİ ödülü götürmez — mal müşteride kalır, o adedin parası döner, durum `paid` kalır', async () => {
+    // Operasyonun gerçek düğmesi (`adjustFulfillmentAction`): "müşteride kaldı" adedi düşürmez, parasını motor türetir.
+    const senaryo = await paidOrderWithReward('musteride-kaldi', 3);
+    await deliverOrder(db, senaryo.orderId);
 
     const outcome = await adjustFulfillment(
       db,

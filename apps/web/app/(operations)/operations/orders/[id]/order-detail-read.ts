@@ -32,6 +32,7 @@ import {
   PAYMENT_TERM_DAYS_DEFAULT,
   PAYMENT_TERM_DAYS_KEY,
   allowedDecisions,
+  allowedReturnDispositions,
   creditPosition,
   derivePaymentStatusForOrder,
   dueDateOf,
@@ -264,6 +265,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     allowedNext: officeTransitions(order.status),
     decisions: [...allowedDecisions(order.status)],
     refundRoutes: allowedDecisions(order.status).includes('refund') ? refundRoutesOf(accounts, movements) : [],
+    returnDispositions: [...allowedReturnDispositions([order.status, ...logs.map((log) => log.toStatus)])],
 
     delivery: {
       type: order.deliveryType,
@@ -446,7 +448,7 @@ export function totalsOf(
   fulfilledAmountCents: number,
 ): OrderTotalLine[] {
   /*
-    Blok ücretlenen malı anlatır, sipariş edileni değil: jestle müşteride kalan adet düşer, indirim de o orana göre sayılır.
+    Blok ücretlenen malı anlatır, sipariş edileni değil: müşteride kalan adet düşer, indirim de o orana göre sayılır.
     Sipariş edilen ve müşteride kalan, kalem tablosunda durur.
   */
   const gross = lines.reduce(

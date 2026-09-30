@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedDecisions } from './decisions';
+import { allowedDecisions, allowedReturnDispositions } from './decisions';
 
 describe('allowedDecisions', () => {
   it('taslakta karar verilmez', () => {
@@ -27,5 +27,16 @@ describe('allowedDecisions', () => {
 
   it('iptal edilmiş siparişte hiçbir karar kalmaz', () => {
     expect(allowedDecisions('cancelled')).toEqual([]);
+  });
+});
+
+describe('allowedReturnDispositions', () => {
+  it('kapıda reddedilip dönen malda "müşteride kaldı" sunulmaz — mal müşteriye hiç ulaşmadı', () => {
+    expect(allowedReturnDispositions(['confirmed', 'preparing', 'ready', 'out_for_delivery', 'returned'])).toEqual(['restock', 'discard']);
+  });
+
+  it('teslimden sonra iadeye dönen siparişte sunulur — durum aynı, geçmiş farklı', () => {
+    expect(allowedReturnDispositions(['out_for_delivery', 'delivered', 'returned'])).toEqual(['restock', 'discard', 'goodwill']);
+    expect(allowedReturnDispositions(['delivered', 'completed'])).toEqual(['restock', 'discard', 'goodwill']);
   });
 });

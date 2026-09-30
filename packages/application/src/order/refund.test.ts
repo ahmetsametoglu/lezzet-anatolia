@@ -516,8 +516,8 @@ describe('iade e-postası', () => {
   });
 });
 
-describe('jest iadesi ve iade haberi', () => {
-  it('aynı onayda jest ve rafa dönüş: ikisinin parası da türetilir, tahsil edilecek kalan doğmaz', async () => {
+describe('müşteride kaldı ve iade haberi', () => {
+  it('aynı onayda müşteride kaldı ve rafa dönüş: ikisinin parası da türetilir, tahsil edilecek kalan doğmaz', async () => {
     const { orderId, itemId } = await sendOut(3);
     await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 3000 });
     await deliverOrder(db, orderId);
@@ -531,21 +531,30 @@ describe('jest iadesi ve iade haberi', () => {
     expect(await orders.getById(orderId)).toMatchObject({ revenueTotalCents: 1000 });
   });
 
-  it('müşteride kalan adet yeniden iade edilemez ve ikinci kez jestlenemez', async () => {
+  it('kapıda reddedilip dönen malda "müşteride kaldı" yazılamaz — mal müşteriye hiç ulaşmadı, hiçbir olay yazılmaz', async () => {
+    const { orderId, itemId } = await sendOut(2);
+
+    await expect(
+      adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill', goodwillQty: 1 }]),
+    ).rejects.toThrow(/teslim edilmemiş malda/);
+    expect(await returns.listByOrders([orderId])).toEqual([]);
+  });
+
+  it('müşteride kalan adet yeniden iade edilemez ve ikinci kez müşteride bırakılamaz', async () => {
     const { orderId, itemId } = await sendOut(2);
     await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
     await deliverOrder(db, orderId);
     await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill', goodwillQty: 1 }]);
 
     const iade = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'restock', note: 'geri geldi' }]);
-    const jest = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill', goodwillQty: 2 }]);
+    const ikinciKez = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill', goodwillQty: 2 }]);
 
     expect(iade).toEqual({ status: 'already_marked', orderItemId: itemId });
-    expect(jest).toEqual({ status: 'already_marked', orderItemId: itemId });
+    expect(ikinciKez).toEqual({ status: 'already_marked', orderItemId: itemId });
     expect(await orders.getById(orderId)).toMatchObject({ amountRefundedCents: 1000 });
   });
 
-  it('para iade edilemediyse "iade işlendi" haberi gitmez; yeniden deneme jestin parasını da türetip çıkarır', async () => {
+  it('para iade edilemediyse "iade işlendi" haberi gitmez; yeniden deneme müşteride kalanın parasını da türetip çıkarır', async () => {
     const { orderId, itemId } = await sendOut(2);
     await recordOrderPayment(db, { orderId, accountId: providerAccount, amountCents: 2000, meta: { providerRef: `pi_${stamp}` } });
     await deliverOrder(db, orderId);
