@@ -79,7 +79,7 @@ describe('choice türü (15.30)', () => {
 
 describe('toSettingRows', () => {
   it('hiç satırı olmayan ayar da listede — çalışan bir değeri var, görünmezse değiştirilemez', () => {
-    const { rows } = toSettingRows({ settings: [], zones: ZONES });
+    const { rows } = toSettingRows({ settings: [], zones: ZONES, warehouses: [] });
     const cutoff = rows.find((r) => r.key === 'order_cutoff_time')!;
     expect(cutoff.value).toBe('16:00');
     expect(cutoff.rowId).toBeNull();
@@ -87,7 +87,7 @@ describe('toSettingRows', () => {
   });
 
   it('global satır fabrika değerini ezer ve "değiştirilmiş" işareti doğar', () => {
-    const { rows } = toSettingRows({ settings: [setting({ key: 'min_basket_cents', value: 2500 })], zones: ZONES });
+    const { rows } = toSettingRows({ settings: [setting({ key: 'min_basket_cents', value: 2500 })], zones: ZONES, warehouses: [] });
     const row = rows.find((r) => r.key === 'min_basket_cents')!;
     expect(row.value).toBe(2500);
     expect(row.display).toBe('25,00 €');
@@ -104,6 +104,7 @@ describe('toSettingRows', () => {
         setting({ key: 'min_basket_cents', scopeType: 'zone', scopeId: 'z-1', value: 3500 }),
       ],
       zones: ZONES,
+      warehouses: [],
     });
     const row = rows.find((r) => r.key === 'min_basket_cents')!;
     expect(row.exceptions.map((e) => `${e.scopeLabel} → ${e.display}`)).toEqual([
@@ -116,6 +117,7 @@ describe('toSettingRows', () => {
     const { rows } = toSettingRows({
       settings: [setting({ key: 'min_basket_cents', scopeType: 'zone', scopeId: 'yok', value: 100 })],
       zones: ZONES,
+      warehouses: [],
     });
     expect(rows.find((r) => r.key === 'min_basket_cents')!.exceptions[0]!.scopeLabel).toBe('Bölge: bilinmeyen bölge');
   });
@@ -124,6 +126,7 @@ describe('toSettingRows', () => {
     const { rows } = toSettingRows({
       settings: [setting({ key: 'min_basket_cents', scopeType: 'channel', scopeId: null, value: 1 })],
       zones: ZONES,
+      warehouses: [],
     });
     expect(rows.find((r) => r.key === 'min_basket_cents')!.exceptions).toHaveLength(0);
   });
@@ -164,7 +167,7 @@ describe('depo ekseni — arka uç açtı, ekran kabloladı (03.08)', () => {
   });
 
   it('depo ekseni HER ayarda açık değil — sözlük `0016`nın adaylarını izler', () => {
-    const rows = toSettingRows({ settings: [], zones: ZONES }).rows;
+    const rows = toSettingRows({ settings: [], zones: ZONES, warehouses: [] }).rows;
     const has = (key: string) => rows.find((r) => r.key === key)!.exceptionScopes.includes('warehouse');
     expect(has('route_delivery_unit_cost_cents')).toBe(true); // adaylardan: rota birim maliyeti
     expect(has('near_expiry_percent')).toBe(false); // "raf ömrü eşikleri global kalır"
@@ -175,7 +178,7 @@ describe('depo ekseni — arka uç açtı, ekran kabloladı (03.08)', () => {
    * saati sessizce yutardı. Nöbet iki yönlü: rota ekseni açık, depo ekseni kapalı kalmalı.
    */
   it('günün eşik saatleri YALNIZ rota ekseninde — depo ekseni kapalı (17.08)', () => {
-    const rows = toSettingRows({ settings: [], zones: ZONES }).rows;
+    const rows = toSettingRows({ settings: [], zones: ZONES, warehouses: [] }).rows;
     const scopesOf = (key: string) => rows.find((r) => r.key === key)!.exceptionScopes;
     for (const key of ['order_cutoff_time', 'prep_cutoff_time', 'route_departure_time', 'courier_close_time']) {
       expect(scopesOf(key)).toContain('zone');
@@ -187,7 +190,7 @@ describe('depo ekseni — arka uç açtı, ekran kabloladı (03.08)', () => {
 describe('fabrika değeri OLMAYAN ayar — kapı önü satış kasası (AÇIK 3)', () => {
   const ACCOUNTS = [{ id: '1dd7ec2f-27bb-462a-9873-cbbf5a16d885', name: 'Kasa' }];
   const row = (settings: Setting[] = [], accounts = ACCOUNTS) =>
-    toSettingRows({ settings, zones: ZONES, accounts }).rows.find((r) => r.key === 'door_cash_account_id')!;
+    toSettingRows({ settings, zones: ZONES, warehouses: [], accounts }).rows.find((r) => r.key === 'door_cash_account_id')!;
 
   it('kimlik değil AD gösterilir — operatör uuid okumaz', () => {
     const view = row([setting({ key: 'door_cash_account_id', value: ACCOUNTS[0]!.id })]);
@@ -216,7 +219,7 @@ describe('fabrika değeri OLMAYAN ayar — kapı önü satış kasası (AÇIK 3)
 });
 
 describe('filterSettingRows', () => {
-  const { rows } = toSettingRows({ settings: [], zones: ZONES });
+  const { rows } = toSettingRows({ settings: [], zones: ZONES, warehouses: [] });
 
   it('ad ve açıklamada arar', () => {
     expect(filterSettingRows(rows, 'kesim').map((r) => r.key)).toEqual(['order_cutoff_time']);

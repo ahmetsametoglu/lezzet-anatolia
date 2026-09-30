@@ -25,12 +25,12 @@ import type {
  * Sayfa onu daima veriyor; gevşeklik yalnız bu saf fonksiyonun kendi başına sınanabilmesi için.
  */
 export function toSettingRows(
-  input: Pick<SettingsReadInput, 'settings' | 'zones'> & Partial<Pick<SettingsReadInput, 'accounts' | 'warehouses'>>,
+  input: Pick<SettingsReadInput, 'settings' | 'zones' | 'warehouses'> & Partial<Pick<SettingsReadInput, 'accounts'>>,
 ): { rows: SettingRowView[] } {
   const zoneNames = new Map(input.zones.map((z) => [z.id, z.name]));
   // Ad sözlüğü TÜM depolardan (aktif süzgeci YOK): kapalı bir depoya yazılmış eski bir istisna
   // adıyla görünmeli — görünmeyen bir istisna kaldırılamaz ve sessizce okunmaya devam eder.
-  const warehouseNames = new Map((input.warehouses ?? []).map((w) => [w.id, `${w.code} · ${w.name}`]));
+  const warehouseNames = new Map(input.warehouses.map((w) => [w.id, `${w.code} · ${w.name}`]));
   // Kimlik taşıyan değerlerin ad sözlüğü — `door_cash_account_id` uuid tutuyor, ekranda "Kasa" yazar.
   const names = { accounts: new Map((input.accounts ?? []).map((a) => [a.id, a.name])) };
   const byKey = new Map<string, Setting[]>();

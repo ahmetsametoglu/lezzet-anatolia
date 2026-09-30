@@ -51,7 +51,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     urlState.tab === 'setup' ? readSetup() : Promise.resolve(null),
   ]);
 
-  const { rows } = toSettingRows({ settings, zones, accounts });
+  const { rows } = toSettingRows({ settings, zones, accounts, warehouses });
 
   const data: SettingsData = {
     rows,
