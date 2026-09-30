@@ -406,6 +406,5 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   sonra eklenir. Yetersiz olduğu ülke için önceden çevrilmiş etiket metni hazır olacak ve kargoda paketlemeden önce yazıcıdan
   basılıp yapıştırılacak (satış anında çeviri yapılmaz, etiket yeterliyse çıktı alınmaz). Veri modelini (ürün/varyant × ülke) ve
   operasyon mobil uygulamasının hazırlık adımını birlikte etkiler.
-- [ ] (K.52) [hedef: müşteri] Web telefon görünümünde dokunuş titreşimi yok; native'de `mobile-kit/lib/haptics` niyet sözlüğüyle var
-  (onay, hata, başarı). Android Chrome `navigator.vibrate` destekliyor; iOS Safari'de resmî destek yok, gizli "switch" girdisiyle
-  dolaylı yol var ve sürüme bağlı (ölçülmedi). Karar: yalnız Android'de mi açılsın, iOS yolu denensin mi.
+- [ ] (K.52) [hedef: müşteri] Web telefon görünümünde iPhone titreşimi cihazda hissedilerek doğrulanmadı: Safari'nin titreşim komutu
+  yok, `lib/haptics` anahtar kutusu yoluyla sistem dokunuşunu çalıyor ve bu yol iOS sürümüne bağlı. Android yolu ve dokunuş kuralı kodda.

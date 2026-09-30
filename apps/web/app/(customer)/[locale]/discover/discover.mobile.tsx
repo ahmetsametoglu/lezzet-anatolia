@@ -72,6 +72,7 @@ export function DiscoverMobile({
             <button
               type="button"
               onClick={onUndo}
+              data-haptic="off"
               disabled={!canUndo}
               className={[
                 'flex items-center gap-1.5 font-sans text-helper font-bold transition-transform',

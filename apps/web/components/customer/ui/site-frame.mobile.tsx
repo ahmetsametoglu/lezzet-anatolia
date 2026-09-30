@@ -1,5 +1,6 @@
 'use client';
 
+import type { MouseEvent } from 'react';
 import tabBarCopy from '@lezzet/i18n/customer/tab-bar';
 import { customerTabBarHomeIndicatorTrimPx } from '@lezzet/design-tokens/customer';
 import type { IconName } from '@lezzet/design-tokens/icons';
@@ -8,6 +9,7 @@ import type { routing } from '@/i18n/routing';
 import { useWholesale } from '@/components/customer/account/account-context';
 import { CartFab } from '@/components/customer/cart/cart-fab';
 import { PlaceSheet } from '@/components/customer/delivery/place-sheet';
+import { hapticSelect } from '@/lib/haptics/haptics';
 import { AppBar } from './app-bar';
 import { BackButton } from './back-button';
 import { FunnelHeader } from './funnel-header';
@@ -95,6 +97,19 @@ function titleOf(route: string, t: Copy): string {
   return TITLES[route as Route]?.(t) ?? '';
 }
 
+/**
+ * Native'in dokunma yüzeyi kuralı, tek yerde: her düğme ve kutu bağlantısı hafifçe tıklar. Gezinme yüzeyleri (sekme, çip, metin
+ * eylemi) ve kendi titreşimini çalan düğmeler `data-haptic="off"` taşır; metin içindeki bağlantı bir sözcüktür, dokunma yüzeyi değil.
+ */
+function tickOnPress(event: MouseEvent<HTMLDivElement>): void {
+  if (!(event.target instanceof Element)) return;
+  const surface = event.target.closest('button, a, [role="button"]');
+  if (surface === null || surface.closest('[data-haptic="off"]') !== null) return;
+  if (surface instanceof HTMLButtonElement && surface.disabled) return;
+  if (getComputedStyle(surface).display === 'inline') return;
+  hapticSelect();
+}
+
 export function SiteFrameMobile({ locale, mobileChrome, accountChrome, fill, children }: SiteFrameMobileProps) {
   const t = messages[locale];
   const route: string = usePathname();
@@ -110,6 +125,7 @@ export function SiteFrameMobile({ locale, mobileChrome, accountChrome, fill, chi
       // Telefon yazı ölçeği: müşteri yazı kademeleri native'deki gibi bir adım büyük okunur; değişkenler `globals.css`te bu
       // öznitelikle yeniden tanımlanıyor. Yatay tutuşta çentik payı kökte, dikey tutuşta yan paylar 0.
       data-type-scale="phone"
+      onClickCapture={tickOnPress}
       className={[
         'flex flex-col bg-sand-50 pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-ink',
         fill ? 'h-dvh overflow-hidden' : 'min-h-dvh',
@@ -172,6 +188,7 @@ function TabBar({ locale, route, tabs, menuLabel, cartLabel, fab }: TabBarProps)
           <Link
             key={tab.key}
             href={tab.href}
+            data-haptic="off"
             aria-current={active ? 'page' : undefined}
             className={[
               'flex flex-1 cursor-pointer flex-col items-center gap-0.5 py-1.5 transition-opacity',

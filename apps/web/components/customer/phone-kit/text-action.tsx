@@ -2,18 +2,8 @@ import type { ComponentProps } from 'react';
 import { Link } from '@/i18n/navigation';
 
 /*
-  METİN EYLEMİ — native kitin `TextAction`ının (`packages/mobile-kit/src/components/ui/text-action.tsx`) web telefon
-  ikizi: zemini olmayan eylem ("Değiştir", "kaldır", "← Alışverişe devam et"). Kontrol kademesi (`control`, 700); iki
-  ton — zeytin (olumlu/nötr) · terracotta (dikkat; koyu paket kartında zeytin okunmuyor). Basılı geri bildirim
-  OPAKLIK — native'in kendi çözümü: zeminsiz bir metnin küçülmesi titrek okunur.
-
-  Dokunma alanı görünmez `after` katmanıyla 44'e tamamlanır. Dikey komşusu olan kullanımda pay yalnız AŞAĞI verilir
-  (`edges="down"`, native `compactEdges`): sepet satırında "kaldır"ın hemen üstünde sayaç duruyor ve iki etek
-  çakışınca "+"ya dokunmak satırı siliyordu (native 20.08).
-
-  Eylem üç türlü, biri verilir: `onClick` (sayfadaki iş) · `href` (başka sayfaya — `<a>` olarak çizilir ki tarayıcı onu
-  bağ olarak okusun) · `externalHref` (sitenin DIŞINA — kargo takibi; yeni sekmede açılır, `rel="noopener"` şart:
-  `_blank` ile açılan sekme `window.opener` üzerinden bu sayfaya erişebilir).
+  Native `TextAction`ın web telefon ikizi: zeminsiz eylem ("Değiştir", "kaldır"), basılı geri bildirimi opaklık ve dokunma alanı görünmez
+  `after` katmanıyla 44'e tamamlanır. Gezinme yüzeyi olduğu için titremez.
 */
 
 interface TextActionProps {
@@ -21,16 +11,14 @@ interface TextActionProps {
   label: string;
   onClick?: () => void;
   href?: ComponentProps<typeof Link>['href'];
-  /** Sitenin dışındaki adres (taşıyıcının takip sayfası) — yeni sekmede açılır. */
+  /** Sitenin dışındaki adres (taşıyıcının takip sayfası); yeni sekmede `noopener` ile açılır ki açılan sekme bu sayfaya erişemesin. */
   externalHref?: string;
   tone?: 'olive' | 'terracotta';
   /** Görünen metinden AYRI ekran okuyucu adı — "kaldır" tek başına hangi satırı söylemez. */
   ariaLabel?: string;
+  /** `down`: pay yalnız aşağı verilir ki üstteki sayacın eteğiyle çakışıp yanlış satıra dokunulmasın. */
   edges?: 'all' | 'down';
-  /**
-   * Kapalı hâl — basılamaz ve soluk (native `TextAction`ın `disabled`ı; girişte yeniden gönderme cezası sürerken).
-   * Yalnız düğme kapanır: kapalı bir bağ çizilmez, verilmişse `href` yok sayılır (`PrimaryButton`ın aynı kuralı).
-   */
+  /** Basılamaz ve soluk; yalnız düğme kapanır, kapalı bir bağ çizilmez ve verilmişse `href` yok sayılır. */
   disabled?: boolean;
 }
 
@@ -48,27 +36,27 @@ export function TextAction({ label, onClick, href, externalHref, tone = 'olive',
   ].join(' ');
   if (disabled) {
     return (
-      <button type="button" disabled aria-label={ariaLabel} className={className}>
+      <button type="button" disabled data-haptic="off" aria-label={ariaLabel} className={className}>
         {label}
       </button>
     );
   }
   if (externalHref !== undefined) {
     return (
-      <a href={externalHref} target="_blank" rel="noopener noreferrer" aria-label={ariaLabel} className={className}>
+      <a href={externalHref} target="_blank" rel="noopener noreferrer" data-haptic="off" aria-label={ariaLabel} className={className}>
         {label}
       </a>
     );
   }
   if (href !== undefined) {
     return (
-      <Link href={href} aria-label={ariaLabel} className={className}>
+      <Link href={href} data-haptic="off" aria-label={ariaLabel} className={className}>
         {label}
       </Link>
     );
   }
   return (
-    <button type="button" onClick={onClick} aria-label={ariaLabel} className={className}>
+    <button type="button" onClick={onClick} data-haptic="off" aria-label={ariaLabel} className={className}>
       {label}
     </button>
   );

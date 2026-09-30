@@ -140,6 +140,7 @@ export function SwipeDeck({ deck, onVote, labels }: SwipeDeckProps) {
           aria-label={labels.pass}
           disabled={!top}
           onClick={() => fly(-1, REST)}
+          data-haptic="off"
           className="grid size-15 flex-none cursor-pointer place-items-center rounded-full border-2 border-sand-300 bg-card text-terracotta shadow-[0_4px_14px_color-mix(in_srgb,var(--color-ink)_9%,transparent)] transition-[transform,border-color] duration-120 hover:border-sand-500 active:scale-[0.88] disabled:cursor-default disabled:opacity-60"
         >
           <Icon name="close" size={24} strokeWidth={2.4} />
@@ -149,6 +150,7 @@ export function SwipeDeck({ deck, onVote, labels }: SwipeDeckProps) {
           aria-label={labels.like}
           disabled={!top}
           onClick={() => fly(1, REST)}
+          data-haptic="off"
           className="grid size-18 flex-none cursor-pointer place-items-center rounded-full bg-olive text-white shadow-[0_8px_22px_color-mix(in_srgb,var(--color-olive)_42%,transparent)] transition-[transform,background-color] duration-120 hover:bg-olive-dark active:scale-[0.88] disabled:cursor-default disabled:opacity-60"
         >
           <Icon name="heart" size={30} />

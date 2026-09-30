@@ -58,6 +58,8 @@ const UYGULAMA_DBSIZ = [
 ];
 
 const WEB_LIB_DBSIZ = [
+  // Titreşim yolunun seçimi saf: tarayıcı kimliği girer, yol çıkar.
+  'apps/web/lib/haptics/haptics.test.ts',
   'apps/web/lib/analytics/route-pattern.test.ts',
   'apps/web/lib/analytics/session-key.test.ts',
   'apps/web/lib/analytics/utm.test.ts',

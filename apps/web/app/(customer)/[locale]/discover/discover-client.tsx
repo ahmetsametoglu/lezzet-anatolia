@@ -8,6 +8,7 @@ import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import type { DiscoverCard } from '@lezzet/application';
 import { addSwipeId, clearSwipeIds, readSwipeIds } from '@/lib/feedback/discover-store';
+import { hapticCommit, hapticSelect } from '@/lib/haptics/haptics';
 import { claimSwipesAction, swipeAction } from './actions';
 import { DiscoverDesktop } from './discover.desktop';
 import { DiscoverMobile } from './discover.mobile';
@@ -95,6 +96,8 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, reward }: D
   const vote = useCallback(
     (choice: DiscoverVote) => {
       if (!card) return;
+      // Jest de düğme de buradan geçer; native'in oy darbesi.
+      hapticCommit();
       // Kart yazımı beklemeden ilerler: kaydırma bir jest, ağ beklemesi akışı keser; düşen yazım yalnız bir sinyal kaybıdır.
       setDecisions((d) => [...d, choice]);
       const swipe: QueuedSwipe = { productId: card.productId, choice, dwellMs: Date.now() - shownAt.current, timer: null };
@@ -119,12 +122,14 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, reward }: D
   const undo = useCallback(() => {
     const swipe = queue.current.pop();
     if (!swipe) return;
+    // Geri alma kararın iptali, karar değil: oydan hafif dokunur ki ikisi ayırt edilsin.
+    hapticSelect();
     if (swipe.timer !== null) window.clearTimeout(swipe.timer);
     setQueued(queue.current.length);
     setDecisions((d) => d.slice(0, -1));
   }, []);
 
-  // Sayfa kapanırken ya da arka plana düşerken bekleyenler hemen yazılır: müşteri artık geri alamaz, beklemek yalnız sinyal kaybettirir.
+  // Sayfa kapanırken ya da arka plana düşerken bekleyenler hemen yazılır: o noktadan sonra geri alma yok, beklemek yalnız sinyal kaybettirir.
   useEffect(() => {
     const flush = () => {
       for (const swipe of queue.current.splice(0)) {

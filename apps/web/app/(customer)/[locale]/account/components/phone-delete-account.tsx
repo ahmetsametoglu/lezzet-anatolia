@@ -7,6 +7,7 @@ import { SecondaryButton } from '@/components/customer/phone-kit/secondary-butto
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { Dialog } from '@/components/customer/ui/dialog';
 import { signOutAction } from '@/lib/auth/actions';
+import { hapticCommit, hapticError } from '@/lib/haptics/haptics';
 import { deleteAccountAction } from '../actions';
 import type { AccountCopy } from '../account-types';
 
@@ -33,8 +34,11 @@ export function PhoneDeleteAccount({ copy, locale }: PhoneDeleteAccountProps) {
     if (errorKey) {
       setDeleting(false);
       setFailed(true);
+      hapticError();
       return;
     }
+    // Başarının tek işareti ekranın değişmesi; kutlama tonu değil karar darbesi, kendi hesabını silene "tebrikler" denmez.
+    hapticCommit();
     await signOutAction();
     // Tam yenileme oturuma göre kurulmuş istemci durumunu siler; dil yolda tutulur ki müşteri başka dilde bir anasayfaya düşmesin.
     window.location.assign(`/${locale}`);

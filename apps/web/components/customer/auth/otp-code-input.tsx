@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
+import { hapticError } from '@/lib/haptics/haptics';
 
 /** Kodun hane sayısı — telefon girişinin tek kod alanı da buradan okur. */
 export const CODE_LENGTH = 6;
@@ -95,6 +96,7 @@ export function OtpCodeInput({ email, locale, initialCooldownSec = 45, onVerify,
           return;
         }
         submittingRef.current = false;
+        hapticError();
         setFeedback({ kind: 'error', message: res.error });
         setDigits(Array(CODE_LENGTH).fill(''));
         inputsRef.current[0]?.focus();

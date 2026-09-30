@@ -8,6 +8,7 @@ import { useCart } from '@/components/customer/cart/cart-context';
 import { Button } from '@/components/customer/ui/button';
 import { Card } from '@/components/customer/ui/card';
 import { useRouter } from '@/i18n/navigation';
+import { hapticError } from '@/lib/haptics/haptics';
 import { formatPrice, formatTime } from '@/lib/storefront/format';
 import { clientStripe } from '@/lib/stripe-client';
 import { CardFields, CardPaymentScope, type CardFieldsHandle, type PayStage } from '../../components/payment-element';
@@ -40,7 +41,10 @@ export function PendingPayment({ shared, locale, view, compact }: ConfirmationVi
 
   const prepare = async (): Promise<{ ok: true; clientSecret: string; orderId: string } | { ok: false; error: string }> => {
     const { data, errorKey } = await resumePaymentAction(view.orderId);
-    if (errorKey || !data) return { ok: false, error: errorOf(errorKey, shared.payment.unavailable) };
+    if (errorKey || !data) {
+      hapticError();
+      return { ok: false, error: errorOf(errorKey, shared.payment.unavailable) };
+    }
     // Ödeme bu arada geçti, işleniyor ya da sipariş kapandı: sayfa sunucudan yeniden okunur ve yeni hâlini söyler.
     if (data.status === 'settled') {
       router.refresh();
@@ -54,7 +58,10 @@ export function PendingPayment({ shared, locale, view, compact }: ConfirmationVi
     setError(null);
     const { data, errorKey } = await cancelPendingOrderAction(view.orderId);
     setCancelling(false);
-    if (errorKey || !data) return setError(errorOf(errorKey, c.cancelFailed));
+    if (errorKey || !data) {
+      hapticError();
+      return setError(errorOf(errorKey, c.cancelFailed));
+    }
     // Kalemler sepete döndü; iptal edilemediyse ödeme geçmiş ya da işleniyordur ve sayfa bunu söyler.
     reloadCart();
     if (data.cancelled) router.push('/cart');
@@ -72,7 +79,11 @@ export function PendingPayment({ shared, locale, view, compact }: ConfirmationVi
         billing={view.billing}
         returnUrlBase={returnUrlBase}
         onPrepare={prepare}
-        onError={(message) => setError(message || null)}
+        onError={(message) => {
+          // Boş mesaj ödemenin bu arada geçtiği hâldir, hata değil.
+          if (message) hapticError();
+          setError(message || null);
+        }}
         onStage={setStage}
         onReady={setCardReady}
         labels={{ validating: shared.pay.validating, confirming: shared.pay.confirming, unavailable: shared.payment.unavailable }}

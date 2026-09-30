@@ -11,6 +11,7 @@ import { useCart } from '@/components/customer/cart/cart-context';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { clientStripe } from '@/lib/stripe-client';
 import { errorText } from '@/lib/customer-error-text';
+import { hapticError, hapticSuccess } from '@/lib/haptics/haptics';
 import { CardFields, CardPaymentScope, type CardFieldsHandle, type PayStage } from './components/payment-element';
 import { rememberPaymentError } from './payment-error';
 import { CheckoutDesktop } from './checkout.desktop';
@@ -201,10 +202,12 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
 
     if (errorKey || !data) {
       setBusy(false);
+      hapticError();
       return setError(errorText(t.errors, errorKey));
     }
     if (data.status === 'rejected') {
       setBusy(false);
+      hapticError();
       return setError(rejectionMessage(t, data.reason, data.detail));
     }
     // Aynı basışın ödemesi işleniyor: yeni sipariş açılmadı, müşteri sonucu o siparişin sayfasında görür.
@@ -214,6 +217,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     }
 
     // `busy` açık kalır, yoksa gezinme bitmeden ikinci tıklama gerçek bir ikinci sipariş açabilirdi.
+    hapticSuccess();
     leaveTo(data.orderId);
     // Sonraki sipariş AYRI bir istektir: anahtar tazelenir.
     attemptKey.current = newAttemptKey();
@@ -224,7 +228,12 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
    * yazan müşteri için sipariş açılmasın. Anahtar basışın kendisidir: ikinci basış aynı taslağın aynı ödemesine döner.
    */
   const prepare = async (): Promise<{ ok: true; clientSecret: string; orderId: string } | { ok: false; error: string }> => {
-    if (!state.addressId) return { ok: false, error: t.rejected.address_not_found };
+    // Ret titreşimi tek yerde, yoksa yeni bir ret dalında unutulurdu.
+    const refuse = (error: string) => {
+      hapticError();
+      return { ok: false as const, error };
+    };
+    if (!state.addressId) return refuse(t.rejected.address_not_found);
     const { data, errorKey } = await confirmCheckoutAction({
       locale,
       entries: cartEntries,
@@ -238,14 +247,14 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       shippingOptionCode: state.shippingOptionCode,
       servicePointId: state.servicePoint?.id ?? null,
     });
-    if (errorKey || !data) return { ok: false, error: errorText(t.errors, errorKey) };
-    if (data.status === 'rejected') return { ok: false, error: rejectionMessage(t, data.reason, data.detail) };
+    if (errorKey || !data) return refuse(errorText(t.errors, errorKey));
+    if (data.status === 'rejected') return refuse(rejectionMessage(t, data.reason, data.detail));
     // Aynı basışın ödemesi bankada işleniyor: yeni ödeme açılmaz, müşteri o siparişe gider.
     if (data.status === 'open_payment') {
       leaveTo(data.orderId);
       return { ok: false, error: t.payment.openPayment };
     }
-    if (data.status !== 'payment_required') return { ok: false, error: t.payment.unavailable };
+    if (data.status !== 'payment_required') return refuse(t.payment.unavailable);
     preparedOrder.current = data.orderId;
     return { ok: true, clientSecret: data.clientSecret, orderId: data.orderId };
   };
@@ -262,6 +271,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
    * kartla öder ya da iptal eder. Taslak açılmadan önceki hata bu ekranda kalır.
    */
   const onCardError = (message: string) => {
+    hapticError();
     const orderId = preparedOrder.current;
     if (!orderId) return setError(message);
     rememberPaymentError(orderId, message);
