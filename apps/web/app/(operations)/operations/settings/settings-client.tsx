@@ -10,12 +10,8 @@ import { filterSettingRows } from './settings-read';
 import { isSettingGroup, settingsUrl, type SettingsTab, type SettingsUrlState } from './settings-url';
 import type { SettingRowView, SettingsData, StaffRowView } from './settings-types';
 
-// Ayarlar ekranı client kökü: durum burada. Operasyon web'i masaüstü-yalnız; mobil deneyim native
-// uygulamada (`docs/uygulama`).
-//
-// SEKME ve ARAMA gerçek gezinmedir (`?tab=…&q=…`): bir ayarın adresi paylaşılabilir olmalı
-// ("kesim saatini şuradan değiştir"). Süzme İSTEMCİDE yapılıyor çünkü küme sözlük kadar — sabit,
-// küçük ve veriyle büyümeyen bir liste; sunucuya tur atmak gecikmeden başka bir şey getirmezdi.
+// Ayarlar ekranının client kökü; sekme ve arama gerçek gezinmedir (`?tab=…&q=…`), çünkü bir ayarın adresi paylaşılabilir olmalı.
+// Süzme istemcide yapılır: küme sözlük kadar ve veriyle büyümez.
 
 interface SettingsClientProps {
   data: SettingsData;
@@ -39,14 +35,8 @@ export function SettingsClient({ data, urlState }: SettingsClientProps) {
     startNav(() => router.replace(settingsUrl({ ...urlState, ...patch }), { scroll: false }));
   };
 
-  // Arama: kutu anında yazar, adres GECİKMELİ — mekanizma ortak (`useSearchDraft`).
-  //
-  // Süzme İSTEMCİDE (küme sözlük kadar: sabit, küçük, veriyle büyümez) ama adres yine de yazılıyor,
-  // çünkü bir ayarın bağlantısı paylaşılabilir olmalı. Gecikme o yazımın bedeli için: her tuşta
-  // `router.replace` bir RSC okuması demek ve bu ekranda okuma anahtar başına sorgu atıyor.
-  //
-  // Süzgeç TASLAKTAN okunuyor, adresten değil: liste elde duran satırlarda süzülüyor, sonucu
-  // beklemenin karşılığı yok. Adres arkadan yetişir.
+  // Kutu anında, adres gecikmeli yazılır (`useSearchDraft`): her tuşta `router.replace` anahtar başına sorgu atan bir RSC okuması
+  // olurdu. Süzgeç taslaktan okunur, çünkü satırlar zaten elde.
   const { draft: search, onDraft: onSearch } = useSearchDraft(urlState.q, (q) => go({ q }));
 
   // Arama TÜM ayarlarda çalışır, yalnız açık sekmede değil: "minimum sepet nerede" sorusunun cevabı
@@ -79,8 +69,6 @@ export function SettingsClient({ data, urlState }: SettingsClientProps) {
           accountOptions={data.accountOptions}
           propagationSeconds={data.propagationSeconds}
           onClose={() => setEditingKey(null)}
-          // Pencere AÇIK kalır ve veri tazelenir: bir istisna kaldırıldıktan sonra ikincisini de
-          // kaldırmak olağan, pencereyi kapatmak operatörü aynı yere iki kez götürürdü.
           onSaved={() => {
             router.refresh();
             setEditingKey(null);

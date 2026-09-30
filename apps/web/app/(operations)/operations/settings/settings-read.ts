@@ -6,18 +6,8 @@ import { formatSettingValue, scopeLabel, STAFF_ROLE_LABELS } from './settings-la
 import type { ExceptionScope, ScopeOptions, SettingExceptionView, SettingRowView, SettingsReadInput, StaffRowView } from './settings-types';
 
 /**
- * Ayarlar ekranının okuma katmanı (09.16) — DB satırları + sözlük → görünüm. Saf: girdi verilir,
- * çıktı alınır; testi bu yüzden DB'siz koşar.
- *
- * **Sözlük LİSTEYİ belirler, tablo değil.** Ekran katalogdaki her ayarı gösterir; tabloda satırı
- * olmayan ayar da görünür ("hiç yazılmamış, kod varsayılanıyla çalışıyor"). Tersi olsaydı — listeyi
- * tablodan üretseydik — hiç yazılmamış bir ayar ekranda YOK görünürdü, oysa sistemde çalışan bir
- * değeri var. Görünmeyen bir değer değiştirilemez.
- *
- * **Bunun bilinen bedeli:** sözlükte karşılığı olmayan bir satır (elle açılmış bir anahtar) bu
- * ekranda hiç görünmez. Okuma zaten anahtar başına yapıldığı için (`page.tsx`) böyle bir satır
- * getirilmiyor da. Kapanması "tüm ayarları getir" ucuna bağlı — arka uç şeridinden istendi
- * (`operasyon-ekranlari-arka-uc-talebi.md §7`). Sessiz bir eksik değil, yazılı bir eksik.
+ * Ayarlar ekranının saf okuma katmanı: DB satırları + sözlük → görünüm. Listeyi sözlük belirler, tablo değil; hiç yazılmamış ayar
+ * fabrika değeriyle görünür, sözlükte karşılığı olmayan satır ise hiç görünmez.
  */
 
 /**
@@ -89,13 +79,8 @@ export function filterSettingRows(rows: SettingRowView[], term: string): Setting
 }
 
 /**
- * Personel listesi — operasyon rolü taşıyan profiller.
- *
- * Rol kümesi boş bırakılamadığı için (DB kısıtı) **pasifleştirme = operasyon rollerini kaldırmak**,
- * kişi `customer`a düşer (`domain-core/identity/roles.withoutRole`). O yüzden bu liste yalnız
- * GÖREVDEKİ personeli gösterir: eski personel burada değil, müşteri kaydında yaşamaya devam eder.
- * Tasarım listede "Pasif" satırı istiyordu; veri modelinde personel-aktiflik ekseni yok — sapma
- * `design/BACKLOG.md`'ye ve arka uç talebine yazıldı.
+ * Personel listesi: yalnız görevdeki personel. Rol kümesi boş bırakılamadığı için pasifleştirme operasyon rollerini kaldırmaktır
+ * ve kişi müşteri kaydına düşer.
  */
 export function toStaffRows(staff: UserProfile[], warehouses: SettingsReadInput['warehouses']): StaffRowView[] {
   const codes = new Map(warehouses.map((w) => [w.id, w.code]));

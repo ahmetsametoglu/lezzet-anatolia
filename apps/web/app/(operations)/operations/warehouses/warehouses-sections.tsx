@@ -24,41 +24,11 @@ import type {
   ZoneCardView,
 } from './warehouses-types';
 
-// Depolar ekranının bölümleri — liste ve kart görünümü AYNI parçaları kullanır. Bölümler burada
-// durur ki "karne başka yerde başka şey sayar" gibi bir ayrışma doğmasın.
-
-// ── `ShippingGapBanner` KALKTI (17.08) ────────────────────────────────────────────────────────
-// "Şu ülkede kargo çıkış deposu yok" uyarısıydı ve tek ülkeli bir kurulumda hiç tetiklenmiyordu.
-// İkinci ülke açıldığı gün bu bir KURULUM kararıdır: künye penceresi kargo çıkışını zaten soruyor
-// ve ülke başına tekliği veritabanı kısıtı reddediyor (`warehouse_single_online`). Uyarı bir
-// eksikliği söylüyordu ama eksikliğin doğduğu yerde değil, ondan uzakta duruyordu.
-
-// `SetupGapNote` ve `SectionHead` BURADAN GİTTİ (19.32) → `@/components/operation/ui/section-head`.
-// İkinci tüketici Hazırlık'ın karşılama ekranı: aynı sarı kutu, aynı bölüm başlığı. Bir sayfanın
-// altında duran komponent ikinci ekranda kopyalanırsa ikisi ayrışır (`CLAUDE.md §2` yerleşim kuralı).
-
-// `WarehouseListRow` SİLİNDİ (16.08) — tek görünüme geçerken liste görünümü kalktı ve satırın
-// çizecek yeri kalmadı. Taşıdığı bilgiler kayıp değil: künye (kod · ad · ülke · rozetler) başlık
-// barına, sayılar Karne bölümüne, kurulum uyarısı detayın en üstündeki `SetupGapNote`a düştü.
-// `RowStats` de onunla gitti — tek tüketicisi oydu.
+// Depolar ekranının durumsuz bölümleri; her bölüm tek yerde çizilir ki iki yerde ayrı sayı saymasın.
 
 /**
- * **Tesis şeridi** — başlığın hemen altında, yatay (kullanıcı kararı 16.08).
- *
- * ── NEDEN SOL RAY DEĞİL ARTIK ────────────────────────────────────────────────
- * Ekran 16.08'e kadar İKİ görünümdü: seçim yokken tesis listesi, seçim varken sol ray + kart. Yani
- * aynı sayfanın iki hâli vardı ve aralarında gidip gelmek gerekiyordu — "tüm depolar"a dönmeden
- * ikinci tesise bakılamıyordu. Kullanıcının tarifi tek cümleydi: *"başlığın hemen altına depo
- * isimlerini koyalım, seçtiği deponun detayı aşağıda görünsün."* Şerit yatay olunca liste
- * görünümüne gerek kalmıyor: tesisler her zaman görünür, detay hep altta.
- *
- * ── SIRA SÜRÜKLENEBİLİR VE BU BİR İŞLEV ──────────────────────────────────────
- * Sıralama liste görünümünden BURAYA taşındı, kaybolmadı: operatörün dizdiği sıra sistemdeki
- * **bütün** depo seçicilerinde geçerli (bağlam seçicisi, tablo süzgeci, transfer hedefi). Şerit onu
- * taşımasaydı sıralama yapılabilecek tek yer yok olurdu.
- *
- * Sürüklemek ile seçmek çakışmıyor: sürükle-bırak 5 px hareket eşiği istiyor, hareketsiz basış
- * normal tıklama olarak işliyor (galeri karesinin ölçülmüş deseni, `image-gallery.tsx`).
+ * Tesis bandı: tesisler hep görünür, seçilenin detayı altta. Sıra sürüklenerek değişir ve bütün depo seçicilerinde geçerlidir;
+ * 5 px hareket eşiği sürüklemeyi tıklamadan ayırır.
  */
 export function FacilityStrip({
   rows,
@@ -97,7 +67,7 @@ export function FacilityStrip({
   );
 }
 
-/** Şeritteki tek tesis. Seçili olan sol kenarından işaretlenir — rozet değil, kenar: sessiz ama net. */
+/** Tesis çipi; seçili olan rozetle değil sol kenarıyla işaretlenir. */
 function FacilityChip({ row, active, onSelect }: { row: WarehouseRowView; active: boolean; onSelect: () => void }) {
   return (
     <button
@@ -123,7 +93,7 @@ function FacilityChip({ row, active, onSelect }: { row: WarehouseRowView; active
   );
 }
 
-/** Şeritteki alt satır: tesisin durumu tek cümlede. Sıralama ağırlığa göre — en kötü hâl kazanır. */
+/** Çipin alt satırı: tesisin durumu tek cümlede, en kötü hâl kazanır. */
 function railNote(row: WarehouseRowView): string {
   if (!row.isActive) return 'kapalı';
   if (row.setupGap) return 'kurulumu eksik';
@@ -133,18 +103,9 @@ function railNote(row: WarehouseRowView): string {
     .join(' · ');
 }
 
-// ── `FactCard` KALKTI (17.08) ─────────────────────────────────────────────────────────────────
-// Künye bölümünün kutusuydu; bölüm kaldırılınca tek tüketicisi kalmadı. Dört karttan üçü başlığın
-// tekrarıydı (kod · ülke · kargo çıkışı), dördüncüsü hemen altındaki personel listesinin sayısı.
-
 /**
- * Bölge kartı — ad + günler + kodlar + **ağırlık** (19.28). Kodlar bölgenin gerçeği, gün onu
- * taşıyan katman, ağırlık ise sonucu.
- *
- * Kart 17.08'e kadar yalnız TANIMI gösteriyordu ("ne kurduk"). Tanım tek başına bir karar
- * verdirmez: teslim günü eklemek mi, kod çıkarmak mı, hiç dokunmamak mı — hepsi bölgenin ne
- * getirdiğine bağlı. Sayılar Rotalar ekranıyla AYNI kaynaktan (`analytics_postal_code_orders` +
- * `zone_notice`); iki ekran aynı soruya iki farklı sayı vermesin.
+ * Bölge kartı: üstte tanım (ad, gün, kodlar), altta sonuç (sipariş, ciro, bekleyen), çünkü bölgeye dokunma kararı ne getirdiğine
+ * bağlı. Sayılar Rotalar ekranıyla aynı kaynaktan gelir ki iki ekran aynı soruya iki sayı vermesin.
  */
 export function ZoneCard({
   zone,
@@ -214,14 +175,8 @@ export function ZoneCard({
 }
 
 /**
- * Karne — **SAYAR, LİSTELEMEZ.** Her sayı Stok'a bu depo bağlamıyla giden bir kapıdır; parti listesi
- * orada yaşar, burada tekrarlanmaz (iki sahipli bir liste, bir gün ayrışan iki liste demektir).
- *
- * **Dört kutu, tek sıra — budandı (17.08).** Beşinci kutu "Yolda bekleyen"di ve depolar arası
- * transferi sayıyordu; tek depolu kurulumda transfer diye bir olay yok, yani kutu kendi tanımı
- * gereği daima `0 / 0`. Sıfırı sabit gösteren bir ölçü, ölçü değildir. Yanındaki üç cümlelik
- * açıklama kutusu da kalktı: eşik altının iki yolu olduğunu ANLATMAK yerine ekran onu zaten
- * yapıyor (sayı Stok'a, tedarik kutusu Tedarik'e gidiyor).
+ * Karne sayar, listelemez: her sayı Stok'a bu depo bağlamıyla giden bir kapıdır. Parti listesi orada yaşar ki iki sahipli bir
+ * liste doğmasın.
  */
 export function Scorecard({ card, code }: { card: ScorecardView; code: string }) {
   // Adresler hedef ekranın kendi sözleşmesinden kurulur (`stockLink` · `ordersLink`): parametre
@@ -241,8 +196,6 @@ export function Scorecard({ card, code }: { card: ScorecardView; code: string })
           note={`yaklaşan tarihli parti${card.expiredCount > 0 ? ` · ${card.expiredCount} süresi geçmiş (yalnız imha yolu)` : ''}`}
           href={stockLink({ depo: code, tab: 'attention', scope: 'expiry' })}
         />
-        {/* "eşik depo bazlıdır" notu düştü: karşılaştırılacak ikinci depo yokken bir ayrım değil,
-            yalnız kuralın tekrarı. Kural veride ve `DOMAIN §17`de yazılı. */}
         <ScoreTile tone="red" label="Eşik altı" value={num(card.belowMinCount)} note="varyant" href="/operations/procurement" />
         <ScoreTile
           label="Açık iş"
@@ -251,7 +204,6 @@ export function Scorecard({ card, code }: { card: ScorecardView; code: string })
           href={ordersLink({ depo: code })}
         />
       </div>
-      {/* Son mal girişi bir VERİDİR, açıklama değil — kutu kalkarken o kalıyor. */}
       <span className="px-0.5 font-ops-body text-ops-xs text-ops-muted">
         Son mal girişi: {card.lastIntakeAt ? shortDateTime(card.lastIntakeAt) : 'hiç giriş yok'}
       </span>
@@ -259,19 +211,9 @@ export function Scorecard({ card, code }: { card: ScorecardView; code: string })
   );
 }
 
-// `ScoreTile` de BURADAN GİTTİ (19.32) → `@/components/operation/ui/score-tile`. Hazırlık'ın
-// karşılama ekranı aynı kutuyu çiziyor; iki kopya, "amber"in bir ekranda uyarı ötekinde dekorasyon
-// olmasına giden yoldu. "Yolda bekleyen"in bilerek kapısız oluşu gibi kutuya özel gerekçeler
-// kutunun kendi künyesinde.
-
 /**
- * **ARAÇTA EK OLARAK** (kullanıcı isteği 02.09) — karnenin dipnotu.
- *
- * Karne deponun İÇİNİ sayıyor ve araç ayrı bir depo olduğu için o sayılara girmiyor; yani "elimde
- * ne var" sorusunun tam cevabı iki satırın toplamı. Operatörün bunu kafasında yapması gerekiyordu.
- *
- * **İki sayı ayrı:** kutu emanettir (satılmış, yolda ve o mal artık müşterinin), adet satılabilir
- * maldır (araçta duruyor, kapıda satılabilir). Tek sayıda toplamak ikisini karıştırırdı.
+ * Karnenin dipnotu: araç ayrı bir depo olduğu için karnede sayılmaz, burada eklenir. Kutu (satılmış, müşterinin malı) ile adet
+ * (araçta, kapıda satılabilir) ayrı yazılır ki karışmasın.
  */
 export function VanLoadRow({ load }: { load: VanLoadCardView }) {
   return (
@@ -298,9 +240,8 @@ export function VanLoadRow({ load }: { load: VanLoadCardView }) {
 }
 
 /**
- * Bağlı personel — **okunur.** Amaç yönetim değil SONUÇ: tek kapsamı burası olan biri varsa kapatma
- * onu kapalı kapı hâline düşürür. Kapsam ataması Ayarlar'daki kişi kartındadır; kişi tek yerden
- * yönetilir, iki ekrandan değil.
+ * Bağlı personel salt okunur: tek kapsamı burası olan kişi, depo kapanırsa kapısız kalacağı için işaretlenir. Kapsam ataması
+ * Ayarlar'daki kişi kartında, tek yerden yapılır.
  */
 export function StaffChips({ staff }: { staff: readonly StaffChipView[] }) {
   if (staff.length === 0) {
@@ -315,9 +256,7 @@ export function StaffChips({ staff }: { staff: readonly StaffChipView[] }) {
       {staff.map((p) => (
         <StaffChip key={p.id} name={p.name} role={p.roleText} note={p.onlyHere ? 'tek kapsamı burası' : null} />
       ))}
-      {/* Kapsam Ayarlar'ın PERSONEL sekmesinde yönetilir — bağlantı doğrudan oraya, ekranın köküne
-          değil: operatörün sorusu "bu kişinin kapsamını nereden değiştiririm" ve cevabı bir sekme
-          uzakta bırakmak, bildiğimiz bir yolu yarım tarif etmek olurdu. */}
+      {/* Bağlantı ekranın köküne değil personelin durduğu sekmeye gider; soru "kapsamı nereden değiştiririm". */}
       <Link
         href={settingsLink({ tab: 'staff' })}
         className="cursor-pointer self-center font-ops-body text-ops-xs text-ops-olive underline-offset-2 hover:underline"
@@ -329,9 +268,8 @@ export function StaffChips({ staff }: { staff: readonly StaffChipView[] }) {
 }
 
 /**
- * **Etiket yazıcısı** (23.7) — kurulum künyesi: kutu kapanışında 4×6 etiketi basan Brother QL.
- * Tanımsızlık bir ARIZA değil bir hâldir (depo etiketsiz çalışabilir) ama amber'le söylenir:
- * kutu akışı kurulmuş bir depoda yazıcısızlık büyük olasılıkla unutulmuş kurulumdur.
+ * Etiket yazıcıları: kutu kapanışında ve sevkte etiket basan cihazlar. Tanımsızlık arıza değil ama amber'le söylenir, çünkü kutu
+ * akışı kurulmuş bir depoda yazıcısızlık büyük olasılıkla unutulmuş kurulumdur.
  */
 export function PrinterCard({
   printers,
@@ -340,13 +278,8 @@ export function PrinterCard({
   printers: Array<{ id: string; name: string; purpose: 'box' | 'shipping'; address: string; model: string; labelSize: string }>;
   onEdit: () => void;
 }) {
-  /*
-    İKİ AMAÇ AYRI SAYILIYOR ve eksik olan SÖYLENİYOR.
-
-    Ayrım fiziksel (tasarım §4.6): kargo etiketi A6 yatay, bizim kutu etiketimiz 4×6 kalıp kesim.
-    Kargo yazıcısı tanımlı olmayan bir depo kutu etiketi basabilir ama kargo etiketi BASAMAZ — ve
-    o eksik yalnız sevk anında, kutu kapandıktan sonra görünürdü. Kart onu burada söylüyor.
-  */
+  // İki amaç ayrı sayılır, çünkü etiketler fiziksel olarak farklıdır (kargo A6 yatay, kutu 4×6). Kargo yazıcısının eksikliği aksi
+  // hâlde ancak sevk anında, kutu kapandıktan sonra görünürdü.
   const kutu = printers.filter((p) => p.purpose === 'box');
   const kargo = printers.filter((p) => p.purpose === 'shipping');
   const sizeOf = (v: string) => LABEL_SIZE_OPTIONS.find((o) => o.value === v)?.label ?? v;
@@ -395,17 +328,8 @@ export function PrinterCard({
 }
 
 /**
- * **KARGO KUTULARI** (07.12) — deponun taşıyıcıya verdiği dış kutuların listesi.
- *
- * Görsel dili `PrinterCard`/`MeasurePoints` ile ortak (aynı satır kabı, aynı ikincil düğme, aynı
- * amber "tanımsız" cümlesi): üçü de deponun KÜNYE bölümleridir, karne değil.
- *
- * **Sistem şablonları listenin ALTINDA ayrı bir şerit** ve bilerek: onlar deponun kutusu DEĞİL,
- * benimsenmeyi bekleyen adaylar. Aynı listede gösterilseydi operatör "listemde on kutu var"
- * sanır, seçtiği an reddedilirdi (şablon `order_box`a bağlanamaz — kural veride).
- *
- * Benimsenmiş şablon şeritten DÜŞER: zaten listesinde olan bir kutuyu "ekle" diye sunmak,
- * tıklandığında reddedilen bir davettir (ad depo içinde benzersiz).
+ * Kargo kutuları: deponun taşıyıcıya verdiği dış kutular. Sistem şablonları ayrı sırada durur, çünkü deponun kutusu değil
+ * benimsenmeyi bekleyen adaylardır; benimsenen şablon o sıradan düşer.
  */
 export function ShippingBoxCard({
   view,
@@ -498,20 +422,8 @@ export function ShippingBoxCard({
 }
 
 /**
- * Gün hapı — bölgenin teslim günü (`Sa` · `Pe` · `Ct`).
- *
- * **`Badge` DEĞİL ve bu bilinçli** (denetim OP2): `Badge` bir *tint* ailesidir (zemin tonun açık
- * hâli, metin koyu hâli) ve anlamı DURUM'dur. Gün hapı bir durum değil **küme üyeliği** — dolu
- * zemin "bu gün seçili" demektir. `Badge`'e "dolu" varyantı eklemek, rozetin tint sözleşmesini iki
- * anlama bölerdi.
- *
- * Tasarım da böyle çiziyor (`Operasyon - Depolar.dc.html`: tam yuvarlak, dolu olive). Adlandırılmış
- * olmasının sebebi ayrı: satır içi bir hap, gün listesi çizen bir sonraki ekranda dördüncü biçimi
- * doğurur.
- *
- * **Terfi eşiği:** Teslimat ekranı (11.x) aynı şeridi çizecek — ikinci tüketici doğduğu gün bu
- * komponent `components/operation/ui/`'ye taşınır (`CLAUDE.md §2` yerleşim kuralı). Bugün tek
- * tüketicisi var, sayfa altında durması doğru.
+ * Gün hapı: dolu zemin bir durum değil küme üyeliği ("bu gün seçili") demektir, bu yüzden `Badge`in tint sözleşmesine girmez. İkinci
+ * tüketici doğduğunda `components/operation/ui/`ye taşınır.
  */
 function DayPill({ label }: { label: string }) {
   return (
@@ -521,13 +433,7 @@ function DayPill({ label }: { label: string }) {
   );
 }
 
-/**
- * Personel çipi — kim bu tesiste çalışıyor. Nötr, çerçeveli, tıklanmaz.
- *
- * `Badge`'den ayrı çünkü bir durum değil bir KAYIT gösteriyor (kişi), ve `Chip`'ten ayrı çünkü
- * `Chip` bir süzgeç kontrolüdür — tıklanır ve seçili hâli vardır. Bu ikisinin de olmadığı üçüncü
- * bir şey: okunur künye.
- */
+/** Personel çipi: durum değil kayıt gösterir ve tıklanmaz, bu yüzden ne `Badge` ne `Chip`. */
 function StaffChip({ name, role, note }: { name: string; role: string; note: string | null }) {
   return (
     <span className="flex items-center gap-1.5 rounded-full border border-ops-line bg-ops-card px-3 py-1.5 font-ops-body text-ops-sm text-ops-strong">
@@ -539,9 +445,3 @@ function StaffChip({ name, role, note }: { name: string; role: string; note: str
     </span>
   );
 }
-
-
-// ── ÖLÇÜM NOKTALARI BU DOSYADAN GİTTİ (19.30) → `measure-points.tsx` ────────────────────────────
-// Bölüm iki sütundu (alanlar | araçlar) ve satırları statikti. Bugün kendi durumunu taşıyor
-// (tür süzgeci, açılan takvim, bugüne kayıt), yani artık bir "bölüm" değil bir EKRAN — ve bu
-// dosyanın sözleşmesi durumsuz bölümler. Nokta satırının gerekçeleri de onunla taşındı.

@@ -1,21 +1,13 @@
 import { one, oneOf, type RawParams } from '@/lib/url-params';
 import { SETTING_GROUPS, type SettingGroup } from './settings-catalog';
 
-// Ayarlar ekranının URL sözleşmesi (09.16) — tek soru: **hangi bölüme bakıyorum**.
-//
-// Sekme adreste taşınır çünkü ayar bir BAĞLANTIDIR: "kesim saatini şuradan değiştir" diye
-// yollanan bir adres doğru sekmede açılmalı (`admin-ayarlar.md §5`: sayfalardan bağlam köprüleri).
-// Arama terimi de yazılır — telefonda acil senaryonun tamamı tek bağlantıya sığsın.
+// Ayarlar ekranının URL sözleşmesi. Sekme ve arama adreste taşınır, çünkü başka bir ekrandan yollanan ayar bağlantısı doğru yerde açılmalı.
 
 const SETTINGS_PATH = '/operations/settings';
 
 /**
- * Ayar grupları + personel + vitrin görselleri + MCP anahtarları.
- *
- * Son ÜÇÜ bir AYAR DEĞİL, bu yüzden sözlükte de yoklar: personel bir kayıt, vitrin görseli bir
- * dosya, MCP anahtarı bir kimlik. Sekme barını paylaşmalarının sebebi hepsinin "kurulum işi"
- * olması — nadiren bakılır, yerini bilmek gerekir ve hepsi yalnız yöneticiye açıktır (ekranın
- * kapısı `requireAdmin`).
+ * Ayar grupları ile personel, vitrin görselleri ve MCP anahtarları. Son üçü ayar değil, ama hepsi yalnız yöneticinin kurulum işi
+ * olduğu için aynı barda durur.
  */
 export const SETTINGS_TABS = [...SETTING_GROUPS.map((g) => g.key), 'images', 'staff', 'mcp'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];

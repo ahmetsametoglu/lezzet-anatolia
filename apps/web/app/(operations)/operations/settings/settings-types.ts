@@ -5,22 +5,16 @@ import type { SiteImageView } from './site-images-read';
 import type { McpPanelData } from './mcp-read';
 import type { SettingsTab, SettingsUrlState } from './settings-url';
 
-// Ayarlar ekranının tipleri (09.16). Şema tek kaynak (`CLAUDE.md §1`): giriş şemaları
-// `packages/types`'ın `Setting`/`UserProfile` şemalarından türer, görünüm modelleri de onlardan.
+// Ayarlar ekranının tipleri; giriş şemaları `packages/types`teki `Setting`/`UserProfile` şemalarından türer.
 
-// `ExceptionScope` SÖZLÜKTE tanımlı (`settings-catalog`) — buradan yalnız yeniden dışa veriliyor ki
-// tüketicilerin import satırı değişmesin. Taşındı çünkü sözlük ona ihtiyaç duyuyor ve bu dosya da
-// sözlükten tip alıyor; iki yönlü bağ `pnpm boundaries`'te döngü hatasıydı.
+// `ExceptionScope` sözlükte tanımlı, burada yalnız yeniden dışa verilir; tersi sözlükle bu dosya arasında döngü kurardı.
 export type { ExceptionScope };
 
 // ── Yazma girişleri ─────────────────────────────────────────────────────────
 
 /**
- * Ayar yazma girişi — değer HAM gelir (metin/mantıksal/nesne), tür dönüşümü sunucuda yapılır.
- *
- * Neden ham: dönüşüm kuralı sözlükte (`SettingDef.kind`) ve sınır denetimiyle aynı yerde durmalı.
- * İstemci "25,00 €"yi cent'e çevirip gönderseydi, sınırı da onun yorumlaması gerekirdi — kuralın
- * iki yerde yaşaması demek olurdu.
+ * Ayar yazma girişi: değer ham gelir, tür dönüşümü ve sınır denetimi sunucuda sözlükle birlikte yapılır. İstemci dönüştürseydi
+ * kural iki yerde yaşardı.
  */
 export const SettingWriteSchema = z.object({
   key: z.string().min(1),
@@ -114,13 +108,7 @@ export interface SettingsData {
   accountOptions: { value: string; label: string }[];
   /** Değişikliğin tüm süreçlerde geçerli olacağı azami süre (sn) — ekranın operatöre verdiği söz. */
   propagationSeconds: number;
-  /**
-   * Vitrin görselleri — DÖRT SLOT DA gelir, boş olanlar dahil (09.16).
-   *
-   * Boş slot listeden düşseydi yükleme yolu da kaybolurdu: operatör "buraya bir görsel koyayım"
-   * diyebilmek için önce o yerin var olduğunu görmeli. Yokluk bir hata değil, henüz yapılmamış
-   * bir iştir.
-   */
+  /** Vitrin görselleri: dört slot da gelir, boş olanlar dahil; boş slot listeden düşerse yükleme yolu da kaybolur. */
   siteImages: SiteImageView[];
   /**
    * MCP bağlantı anahtarları + çağrı izi (22.4) — asistanın kapısının kimlikleri.
