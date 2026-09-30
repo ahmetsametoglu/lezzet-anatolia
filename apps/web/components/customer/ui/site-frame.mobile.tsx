@@ -9,7 +9,6 @@ import { useWholesale } from '@/components/customer/account/account-context';
 import { CartFab } from '@/components/customer/cart/cart-fab';
 import { PlaceSheet } from '@/components/customer/delivery/place-sheet';
 import { tickOnTap } from '@/lib/haptics/haptics';
-import { useTapSwitches } from '@/lib/haptics/use-tap-switches.hook';
 import { AppBar } from './app-bar';
 import { BackButton } from './back-button';
 import { FunnelHeader } from './funnel-header';
@@ -106,7 +105,6 @@ export function SiteFrameMobile({ locale, mobileChrome, accountChrome, fill, chi
   // Geçmiş boşken ‹'nin gideceği üst sayfa (`BackButton` sözleşmesi) — derin bağlantıyla gelen de döner.
   const fallback = accountChrome?.back?.href ?? '/';
   const hero = HERO_PAGES.includes(route);
-  useTapSwitches();
 
   return (
     <div

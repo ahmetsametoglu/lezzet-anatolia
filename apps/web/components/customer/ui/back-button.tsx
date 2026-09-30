@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from '@/i18n/navigation';
+import { HapticTarget } from '@/components/customer/phone-kit/haptic-target';
 import { backStaysInSite } from './back-target';
 
 /** Rota tipi `router.push`tan türer; elle liste tutulmaz. */
@@ -51,11 +52,12 @@ export function BackButton({ label, fallback, variant = 'bar' }: BackButtonProps
       onClick={goBack}
       className={
         variant === 'photo'
-          ? 'flex size-10.5 flex-none cursor-pointer items-center justify-center rounded-full bg-sand-50 font-sans text-icon leading-none text-ink transition-transform active:scale-[0.97]'
+          ? 'relative flex size-10.5 flex-none cursor-pointer items-center justify-center rounded-full bg-sand-50 font-sans text-icon leading-none text-ink transition-transform active:scale-[0.97]'
           : "relative flex size-10 flex-none cursor-pointer items-center justify-center rounded-full font-sans text-icon leading-none text-ink transition-colors after:absolute after:-inset-0.5 after:content-[''] hover:bg-sand-200 active:bg-sand-200"
       }
     >
       ‹
+      <HapticTarget />
     </button>
   );
 }

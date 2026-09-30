@@ -4,6 +4,8 @@
   hemen altta "kaldır" duruyor ve etekler çakışırsa "+"ya dokunmak satırı silerdi.
 */
 
+import { HapticTarget } from './haptic-target';
+
 interface QuantityStepperProps {
   value: number;
   onChange: (next: number) => void;
@@ -18,7 +20,7 @@ interface QuantityStepperProps {
   tone?: 'sand' | 'ink';
 }
 
-const STEP_BASE = 'flex cursor-pointer items-center justify-center font-sans text-icon-sm leading-none transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-40';
+const STEP_BASE = 'relative flex cursor-pointer items-center justify-center font-sans text-icon-sm leading-none transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-40';
 
 const LOOK = {
   bar: { box: 'bg-sand-250', step: 'h-12 w-11 text-olive', value: 'w-7.5 text-copy text-ink' },
@@ -36,10 +38,12 @@ const LOOK = {
 
 export function QuantityStepper({ value, onChange, min = 1, max, decreaseLabel, increaseLabel, size = 'bar', tone = 'sand' }: QuantityStepperProps) {
   const look = LOOK[size === 'bar' ? 'bar' : tone];
+  const atMin = value <= min;
+  const atMax = max !== null && value >= max;
   return (
     <div className={['flex flex-none items-center rounded-control', look.box].join(' ')}>
-      <button type="button" onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min} aria-label={decreaseLabel} className={`${STEP_BASE} ${look.step}`}>
-        −
+      <button type="button" onClick={() => onChange(Math.max(min, value - 1))} disabled={atMin} aria-label={decreaseLabel} className={`${STEP_BASE} ${look.step}`}>
+        −{!atMin && <HapticTarget />}
       </button>
       <span aria-live="polite" className={['text-center font-sans font-bold', look.value].join(' ')}>
         {value}
@@ -47,11 +51,11 @@ export function QuantityStepper({ value, onChange, min = 1, max, decreaseLabel, 
       <button
         type="button"
         onClick={() => onChange(max === null ? value + 1 : Math.min(max, value + 1))}
-        disabled={max !== null && value >= max}
+        disabled={atMax}
         aria-label={increaseLabel}
         className={`${STEP_BASE} ${look.step}`}
       >
-        +
+        +{!atMax && <HapticTarget />}
       </button>
     </div>
   );

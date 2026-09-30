@@ -1,11 +1,11 @@
 /*
-  Titreşim: native `mobile-kit/lib/haptics` sözlüğünün web ikizi; ekran niyeti söyler, dokunuşu bu dosya seçer. Başarısızlık sessiz
-  düşer, çünkü titreşimin yokluğu hiçbir akışı bozmamalı ve kullanıcıya söylenecek bir şey yok.
+  Titreşim: native `mobile-kit/lib/haptics` sözlüğünün web ikizi; ekran niyeti söyler, dokunuşu bu dosya seçer. Android titreşim komutunu
+  çalar; iPhone'da betik titreşim çalamaz, dokunuş tıkı düğmenin içindeki `HapticTarget`ten gelir.
 */
 
 type HapticIntent = 'select' | 'commit' | 'success' | 'warning' | 'error';
 
-/** Android deseni (ms; titreşim, ara, titreşim); iPhone'da desendeki titreşim sayısı kadar sistem tıkı çalınır. */
+/** Android deseni (ms; titreşim, ara, titreşim). */
 const PATTERN: Record<HapticIntent, readonly number[]> = {
   select: [8],
   commit: [18],
@@ -14,12 +14,9 @@ const PATTERN: Record<HapticIntent, readonly number[]> = {
   error: [30, 60, 30, 60, 30],
 };
 
-/** iPhone'da art arda tıkların arası; sistem tıkının süresi sabit olduğu için desenin boşluklarını izleyemez. */
-const TICK_GAP_MS = 120;
+export type HapticRoute = 'vibrate' | 'switch' | 'none';
 
-type HapticRoute = 'vibrate' | 'switch' | 'none';
-
-/** Android tarayıcıları titreşim komutunu tanır; iPhone Safari tanımaz ama anahtar kutusunun değişmesi sistem dokunuşunu çalar. */
+/** Android tarayıcıları titreşim komutunu tanır; iPhone Safari tanımaz, ona gerçek dokunuşun değdiği anahtar kutusu yolu kalır. */
 export function hapticRouteOf(nav: { vibrate?: unknown; userAgent: string } | undefined): HapticRoute {
   if (nav === undefined) return 'none';
   if (typeof nav.vibrate === 'function') return 'vibrate';
@@ -27,64 +24,23 @@ export function hapticRouteOf(nav: { vibrate?: unknown; userAgent: string } | un
 }
 
 /** Dokunma yüzeyi: düğme ve kutu bağlantısı. */
-export const TAP_SURFACE = 'button, a, [role="button"]';
-
-/** Bir yüzeyin tıklayıp tıklamayacağına karar veren gözlemler; DOM'dan `surfaceFactsOf` toplar. */
-interface SurfaceFacts {
-  /** Gezinme yüzeyi (sekme, çip, metin eylemi) ya da kendi titreşimini çalan düğme: `data-haptic="off"`. */
-  hapticOff: boolean;
-  disabled: boolean;
-  /** Metin içindeki bağlantı bir sözcüktür, dokunma yüzeyi değil. */
-  inline: boolean;
-}
-
-/** Native'in dokunma yüzeyi kuralı, tek yerde: her düğme ve kutu bağlantısı hafifçe tıklar. */
-function ticksOnTap(facts: SurfaceFacts): boolean {
-  return !facts.hapticOff && !facts.disabled && !facts.inline;
-}
+const TAP_SURFACE = 'button, a, [role="button"]';
 
 /**
- * iPhone'da yüzeyin içine görünmez anahtar kutusu konabilir mi (`tap-switch.ts`). İçinde başka dokunma öğesi olan yüzeye konmaz,
- * çünkü kutu onu örter ve kartın içindeki "sepete ekle" dokunuşu ürüne giderdi; `relative` verilince kayacak iç öğe varsa da konmaz.
+ * Native'in dokunma yüzeyi kuralı: her düğme ve kutu bağlantısı hafifçe tıklar. Gezinme yüzeyleri (sekme, çip, metin eylemi)
+ * `data-haptic="off"` taşır; metin içindeki bağlantı bir sözcüktür, dokunma yüzeyi değil.
  */
-export function takesTapSwitch(facts: SurfaceFacts & { nestedInteractive: boolean; shiftsLayout: boolean }): boolean {
-  return ticksOnTap(facts) && !facts.nestedInteractive && !facts.shiftsLayout;
-}
-
-export function surfaceFactsOf(surface: Element): SurfaceFacts {
-  return {
-    hapticOff: surface.closest('[data-haptic="off"]') !== null,
-    disabled: surface instanceof HTMLButtonElement && surface.disabled,
-    inline: getComputedStyle(surface).display === 'inline',
-  };
-}
-
-/** Görünmez bir anahtar kutusunu çevirir; kutu yalnız bu an için sayfaya girer. */
-function switchTick(): void {
-  const label = document.createElement('label');
-  label.ariaHidden = 'true';
-  label.style.display = 'none';
-  const input = document.createElement('input');
-  input.type = 'checkbox';
-  input.setAttribute('switch', '');
-  label.append(input);
-  document.head.append(label);
-  label.click();
-  label.remove();
+function ticksOnTap(surface: Element): boolean {
+  if (surface.closest('[data-haptic="off"]') !== null) return false;
+  if (surface instanceof HTMLButtonElement && surface.disabled) return false;
+  return getComputedStyle(surface).display !== 'inline';
 }
 
 function fire(intent: HapticIntent): void {
   try {
-    const route = hapticRouteOf(typeof navigator === 'undefined' ? undefined : navigator);
-    const pattern = PATTERN[intent];
-    if (route === 'vibrate') navigator.vibrate([...pattern]);
-    if (route === 'switch') {
-      const ticks = Math.ceil(pattern.length / 2);
-      switchTick();
-      for (let index = 1; index < ticks; index++) window.setTimeout(switchTick, index * TICK_GAP_MS);
-    }
+    if (hapticRouteOf(typeof navigator === 'undefined' ? undefined : navigator) === 'vibrate') navigator.vibrate([...PATTERN[intent]]);
   } catch {
-    /* Tarayıcı ya da donanım titreşimi desteklemiyor; yokluğu hiçbir akışı bozmamalı. */
+    /* Tarayıcı ya da donanım titreşimi desteklemiyor; yokluğu hiçbir akışı bozmamalı ve kullanıcıya söylenecek bir şey yok. */
   }
 }
 
@@ -108,9 +64,9 @@ export function hapticSelect(): void {
   fire('select');
 }
 
-/** Dokunuşun titreşim yolu (çerçevenin tıklama yakalayıcısı). iPhone'da tıkı yüzeydeki anahtar kutusu çalar, burada ikinci kez çalınmaz. */
+/** Dokunuşun titreşim yolu (telefon çerçevesinin tıklama yakalayıcısı); titreşim komutu olmayan iPhone'da bir şey yapmaz. */
 export function tickOnTap(target: EventTarget | null): void {
-  if (!(target instanceof Element) || hapticRouteOf(navigator) === 'switch') return;
+  if (!(target instanceof Element)) return;
   const surface = target.closest(TAP_SURFACE);
-  if (surface !== null && ticksOnTap(surfaceFactsOf(surface))) fire('select');
+  if (surface !== null && ticksOnTap(surface)) fire('select');
 }

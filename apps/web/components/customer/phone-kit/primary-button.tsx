@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react';
 import { Link } from '@/i18n/navigation';
+import { HapticTarget } from './haptic-target';
 
 /*
   Native kitin `PrimaryButton`ının web telefon ikizi. `href` verilirse bağ (`<a>`) çizilir ki tarayıcı ve arama motoru onu
@@ -38,7 +39,7 @@ const LIVE: Record<NonNullable<PrimaryButtonProps['shape']>, string> = {
 
 export function PrimaryButton({ label, onClick, href, shape = 'pill', disabled = false, type = 'button' }: PrimaryButtonProps) {
   const className = [
-    'items-center justify-center px-6.5 font-sans text-button transition-[scale,translate,box-shadow,background-color]',
+    'relative items-center justify-center px-6.5 font-sans text-button transition-[scale,translate,box-shadow,background-color]',
     SHAPE[shape],
     disabled ? 'cursor-not-allowed bg-disabled-fill text-disabled-text' : LIVE[shape],
   ].join(' ');
@@ -60,6 +61,8 @@ export function PrimaryButton({ label, onClick, href, shape = 'pill', disabled =
   return (
     <button type={type === 'submit' ? 'submit' : 'button'} onClick={onClick} className={className}>
       {label}
+      {/* Form gönderen düğmede yok: etiket etkinleşmeyi üstlenir ve form gönderilmezdi. */}
+      {type === 'button' && <HapticTarget />}
     </button>
   );
 }

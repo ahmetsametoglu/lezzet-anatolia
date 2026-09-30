@@ -3,6 +3,8 @@
   `role="switch"` + `aria-checked` ile gider; native kit bu rolü tanımıyor, web'de doğrudan var.
 */
 
+import { HapticTarget } from './haptic-target';
+
 interface ToggleSwitchProps {
   checked: boolean;
   onChange: () => void;
@@ -19,11 +21,12 @@ export function ToggleSwitch({ checked, onChange, label }: ToggleSwitchProps) {
       aria-label={label}
       onClick={onChange}
       className={[
-        'flex h-7.5 w-12.5 flex-none cursor-pointer items-center rounded-full px-0.75 transition-colors active:scale-[0.97]',
+        'relative flex h-7.5 w-12.5 flex-none cursor-pointer items-center rounded-full px-0.75 transition-colors active:scale-[0.97]',
         checked ? 'justify-end bg-olive' : 'justify-start bg-sand-500',
       ].join(' ')}
     >
       <span className="size-6 rounded-full bg-card shadow-soft" />
+      <HapticTarget />
     </button>
   );
 }

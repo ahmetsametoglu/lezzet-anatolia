@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react';
 import { Link } from '@/i18n/navigation';
+import { HapticTarget } from './haptic-target';
 
 /*
   Native kitin ikincil düğmesinin web telefon ikizi. Basış biçime göre: gölgeli blok gölgesini yutarak kayar, gölgesiz hap küçülür.
@@ -32,7 +33,7 @@ const PRESS: Record<NonNullable<SecondaryButtonProps['shape']>, string> = {
   pill: 'active:scale-[0.97]',
 };
 
-const BASE = 'items-center justify-center border-[1.5px] px-5 text-center font-sans text-button';
+const BASE = 'relative items-center justify-center border-[1.5px] px-5 text-center font-sans text-button';
 
 export function SecondaryButton({ label, onClick, href, tone = 'sand', shape = 'block', disabled = false }: SecondaryButtonProps) {
   // Pasif hâl bir durumdur, bu yüzden bağ olarak değil düğme olarak çizilir.
@@ -54,6 +55,7 @@ export function SecondaryButton({ label, onClick, href, tone = 'sand', shape = '
   return (
     <button type="button" onClick={onClick} className={className}>
       {label}
+      <HapticTarget />
     </button>
   );
 }
