@@ -127,8 +127,6 @@
       "cta": "Giriş yap ve devam et"
     },
     "account": {
-      "as": "{email} olarak devam ediyorsunuz",
-      "anon": "Hesabınızla devam ediyorsunuz",
       "notYou": "Siz değil misiniz?",
       "confirm": "Oturumu kapatalım mı?",
       "yes": "Evet, çıkış yap",
@@ -268,8 +266,6 @@
       "cta": "Se connecter et continuer"
     },
     "account": {
-      "as": "Vous continuez en tant que {email}",
-      "anon": "Vous continuez avec votre compte",
       "notYou": "Pas vous ?",
       "confirm": "Se déconnecter ?",
       "yes": "Oui, me déconnecter",
@@ -409,8 +405,6 @@
       "cta": "Anmelden und fortfahren"
     },
     "account": {
-      "as": "Angemeldet als {email}",
-      "anon": "Angemeldet",
       "notYou": "Nicht Sie?",
       "confirm": "Abmelden?",
       "yes": "Ja, abmelden",

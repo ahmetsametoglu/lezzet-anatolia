@@ -16,7 +16,6 @@ import { RadioMark } from '@/components/customer/form/radio-mark';
 import { OtpCodeInput, type OtpResendResult, type OtpVerifyResult } from '@/components/customer/auth/otp-code-input';
 import { GoogleIcon } from '@/components/customer/auth/provider-icons';
 import { useAccount } from '@/components/customer/account/account-context';
-import { initialsOf } from '@/components/customer/account/account-entry';
 import accountMessages from '@/components/customer/account/account-messages.json';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { AddressPickerDialog } from '@/components/customer/delivery/address-picker';
@@ -34,7 +33,7 @@ import type { DeliveryPlace, PlaceAddress } from '@/lib/delivery/place-types';
 import type { CustomerIdentity } from '@/lib/guard';
 import { formatDeliveryDate } from '@/lib/storefront/format';
 import type { Messages } from '../cart-types';
-import { AccountBand, NotYou } from './cart-account';
+import { AccountIdentity, PhoneAccountCard } from './cart-account';
 
 /**
  * Sepetin kimlik ve adres bloğu: ödemeye geçmeden önce "kim" ve "nereye" burada sorulur, ödeme ekranı yalnız gösterir.
@@ -53,7 +52,7 @@ export function CartIdentity({ t, locale, compact = false }: CartIdentityProps) 
   if (!compact) return <CartAccountDesktop t={t} locale={locale} account={account} />;
   return (
     <>
-      <AccountBand locale={locale} email={account.email} />
+      <PhoneAccountCard locale={locale} account={account} />
       <CartAddress locale={locale} />
     </>
   );
@@ -243,15 +242,7 @@ function CartAccountDesktop({ t, locale, account }: CartAccountDesktopProps) {
     <>
       <div className={cardClass({ pad: 'row' })}>
         <div className="flex items-center gap-2.75">
-          {/* Başlıktaki hesap girişinin yuvarlağıyla aynı baş harfler ve aynı ton. */}
-          <span aria-hidden className="grid size-9 flex-none place-items-center rounded-full bg-honey-line font-sans text-note font-bold text-honey">
-            {initialsOf(account.name, account.email, locale)}
-          </span>
-          <span className="flex min-w-0 flex-1 flex-col gap-px">
-            <span className="truncate font-sans text-body-sm font-bold text-ink">{account.name || account.email}</span>
-            {account.name && account.email && <span className="truncate font-sans text-micro text-muted">{account.email}</span>}
-            <NotYou locale={locale} />
-          </span>
+          <AccountIdentity locale={locale} account={account} />
           <Link href="/account" className={`flex-none cursor-pointer font-sans text-note font-bold text-olive transition-colors hover:text-olive-dark ${focusRingClass}`}>
             {accountMessages[locale].myAccount}
           </Link>

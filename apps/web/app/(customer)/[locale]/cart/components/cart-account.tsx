@@ -1,32 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { signedInText } from '@lezzet/helper';
+import { initialsOf } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import cartMessages from '@lezzet/i18n/customer/cart';
+import { useSignOut } from '@/components/customer/account/use-sign-out.hook';
 import { Button } from '@/components/customer/ui/button';
-import { Icon } from '@/components/customer/ui/icons';
-import { signOutAction } from '@/lib/auth/actions';
-
-interface NotYouProps {
-  locale: Locale;
-}
+import type { CustomerIdentity } from '@/lib/guard';
 
 /**
  * "Siz değil misiniz?" gerçekten çıkış yapar, yoksa paylaşılan cihazda ikinci kişi birincinin hesabıyla sipariş verirdi. Tek dokunuşla
  * değil onayla çıkar, çünkü yanlışlıkla basan müşteri oturumunu kaybetmemeli; soru ayrı pencerede değil satırın içinde sorulur.
  */
-export function NotYou({ locale }: NotYouProps) {
+function NotYou({ locale }: { locale: Locale }) {
   const copy = cartMessages[locale].account;
   const [confirming, setConfirming] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  // Tam yenileme, çünkü oturuma göre kurulmuş her şey (sepet, adresler, yer) sıfırdan kurulmalı.
-  const signOut = async () => {
-    setBusy(true);
-    await signOutAction();
-    window.location.reload();
-  };
+  const { busy, signOut } = useSignOut();
 
   if (!confirming) {
     return (
@@ -52,22 +41,40 @@ export function NotYou({ locale }: NotYouProps) {
   );
 }
 
-interface AccountBandProps {
+interface AccountIdentityProps {
   locale: Locale;
-  email: string | null;
+  account: CustomerIdentity;
+  /** Telefon yuvarlağı tasarımın mobil kartından (kum zemin); masaüstünde başlıktaki hesap girişinin tonu. */
+  compact?: boolean;
 }
 
-/** Telefon sepetinde misafirin giriş kartının yeri: girişli müşteri siparişin kimin adına verileceğini ödemeden önce burada görür. */
-export function AccountBand({ locale, email }: AccountBandProps) {
+/** Sepetin hesap kartının içi; telefon ve masaüstü kartı aynı içi çizer. */
+export function AccountIdentity({ locale, account, compact = false }: AccountIdentityProps) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control bg-sand-150 px-3.5 py-3">
-      <span className="inline-flex max-w-full items-center gap-1.5 font-sans text-note font-semibold text-ink">
-        <Icon name="check" size={14} className="flex-none" />
-        <span className="min-w-0 break-words">{signedInText(email, locale)}</span>
+    <>
+      <span
+        aria-hidden
+        className={[
+          'grid flex-none place-items-center rounded-full font-sans text-note font-bold text-honey',
+          compact ? 'size-9.5 bg-sand-150' : 'size-9 bg-honey-line',
+        ].join(' ')}
+      >
+        {initialsOf(account.name, account.email, locale)}
       </span>
-      <span className="ml-auto">
+      <span className="flex min-w-0 flex-1 flex-col gap-px">
+        <span className="truncate font-sans text-body-sm font-bold text-ink">{account.name || account.email}</span>
+        {account.name && account.email && <span className="truncate font-sans text-micro text-muted">{account.email}</span>}
         <NotYou locale={locale} />
       </span>
+    </>
+  );
+}
+
+/** Telefon sepetinde girişli müşterinin hesap kartı (tasarımın mobil sepet kartı); "Siz değil misiniz?" tasarıma eklendi. */
+export function PhoneAccountCard({ locale, account }: Pick<AccountIdentityProps, 'locale' | 'account'>) {
+  return (
+    <div className="flex items-center gap-2.75 rounded-control border-[1.5px] border-sand-300 bg-card px-3.5 py-3">
+      <AccountIdentity locale={locale} account={account} compact />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
+import { initialsOf } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
 import { focusRingClass } from '@/components/customer/ui/button';
@@ -24,16 +25,6 @@ interface AccountEntryProps {
 }
 
 type MenuItem = { href: ComponentProps<typeof Link>['href']; label: string; count?: number };
-
-/**
- * "Claire Weber" → "CW"; adsız müşteride e-postanın ilk harfi. Sepetin kimlik kartı da bunu çizer
- * (v1 iki yerde aynı yuvarlağı kullanıyor) — iki kopya bir gün iki ayrı baş harf üretirdi.
- */
-export function initialsOf(name: string, email: string | null | undefined, locale: Locale): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length > 0) return parts.slice(0, 2).map((part) => part.charAt(0).toLocaleUpperCase(locale)).join('');
-  return (email?.charAt(0) || '?').toLocaleUpperCase(locale);
-}
 
 export function AccountEntry({ locale, labels }: AccountEntryProps) {
   const t = messages[locale];

@@ -364,21 +364,21 @@ describe('CartScreen — giriş ve adres sepette sorulur', () => {
     expect(screen.getByTestId('cart-bar-block')).toHaveTextContent(t.barBlock.address);
   });
 
-  // Bant girişli müşteride çizilmezse ya da "Siz değil misiniz?" onay beklemeden çıkış yaparsa kırmızıya döner.
-  it('girişli müşteriye kim olarak devam ettiği yazılır; "Siz değil misiniz?" onayla çıkış yapar', async () => {
+  // Kart girişli müşteride çizilmezse ya da "Siz değil misiniz?" onay beklemeden çıkış yaparsa kırmızıya döner.
+  it('girişli müşterinin hesap kartı sepette; "Siz değil misiniz?" onayla çıkış yapar', async () => {
     mockMe = { id: 'customer-1', name: 'Ayşe', email: 'ayse@example.com', phone: null };
     mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local')]));
 
     await render(<CartScreen />);
 
-    expect(within(screen.getByTestId('cart-account')).getByText(t.account.as.replace('{email}', 'ayse@example.com'))).toBeOnTheScreen();
+    expect(within(screen.getByTestId('cart-account')).getByText('ayse@example.com')).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId('cart-not-you'));
     expect(mockSignOut).not.toHaveBeenCalled();
     await fireEvent.press(screen.getByTestId('cart-sign-out'));
     expect(mockSignOut).toHaveBeenCalledTimes(1);
   });
 
-  it('misafirde kimlik bandı çizilmez', async () => {
+  it('misafirde hesap kartı çizilmez', async () => {
     mockMeStatus = 'guest';
     mockAddress = null;
     mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local')]));

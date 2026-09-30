@@ -42,7 +42,7 @@ import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { usePickupPoints } from '@/screens/customer-kit/use-pickup-points.hook';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
-import { AccountBand } from './account-band';
+import { AccountCard } from './account-card';
 import { CartLineRow } from './cart-line-row';
 import { CartSkeleton } from './cart-skeleton';
 import messages from '@lezzet/i18n/customer/cart';
@@ -392,7 +392,7 @@ export function CartScreen() {
         )}
         {/* Teslimat adresi sepetin neye göre değerlendirildiğini söyler; posta kodu düzenleyicisi sepette yok, çünkü iki ayrı yer
             tutmak kapattığımız ayrışmayı geri açardı. */}
-        {meStatus === 'ready' && me !== null ? <AccountBand email={me.email ?? null} /> : null}
+        {meStatus === 'ready' && me !== null ? <AccountCard name={me.name} email={me.email ?? null} /> : null}
         {meStatus === 'guest' ? (
           <DashedInvite
             layout="stack"
