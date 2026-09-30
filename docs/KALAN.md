@@ -411,4 +411,4 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   operasyon mobil uygulamasının hazırlık adımını birlikte etkiler.
 - [ ] (K.52) [hedef: müşteri] Web telefon görünümünde titreşim cihazda hissedilerek doğrulanmadı: iPhone'da kitin eylem düğmeleri
   gizli anahtarı saran şeffaf etiketle tıklar (`phone-kit/haptic-target`), kartlarda tık yok çünkü `Link` tıklamayı iptal ediyor.
-  Android'de Chrome sessiz modda titreşmez; 8 ms'lik dokunuşun hissedildiği sesli modda ölçülmedi.
+  Android'de süreler native'inkiyle aynı (dokunuş 50 ms); Chrome sessiz modda hiç titreşmez.

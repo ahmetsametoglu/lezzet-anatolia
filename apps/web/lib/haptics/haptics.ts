@@ -5,13 +5,16 @@
 
 type HapticIntent = 'select' | 'commit' | 'success' | 'warning' | 'error';
 
-/** Android deseni (ms; titreşim, ara, titreşim). */
+/**
+ * Android deseni (ms; titreşim, ara, titreşim): native'in `expo-haptics` ile Android'de çaldığı süreler. Web genlik seçemez;
+ * genlik denetimi olmayan motorda hissi yalnız süre taşır ve birkaç milisaniyelik darbe hissedilmez.
+ */
 const PATTERN: Record<HapticIntent, readonly number[]> = {
-  select: [8],
-  commit: [18],
-  success: [14, 70, 14],
-  warning: [24, 70, 24],
-  error: [30, 60, 30, 60, 30],
+  select: [50],
+  commit: [43],
+  success: [40, 100, 40],
+  warning: [40, 120, 60],
+  error: [60, 100, 40, 80, 50],
 };
 
 export type HapticRoute = 'vibrate' | 'switch' | 'none';
