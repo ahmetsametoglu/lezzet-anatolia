@@ -27,11 +27,13 @@ export function DesktopInstallCard({ t }: DesktopInstallCardProps) {
         </span>
       ) : (
         <ol className="flex flex-col gap-1 font-sans text-note leading-relaxed text-body">
-          <li className="flex items-center gap-1.75">
+          <li className="flex flex-wrap items-center gap-x-1.75">
             1. {t.installStepShare}
             <Icon name="share" size={16} />
+            <span className="text-muted">{t.installStepShareHint}</span>
           </li>
-          <li>2. {t.installStepAdd}</li>
+          <li>2. {t.installStepMore}</li>
+          <li>3. {t.installStepAdd}</li>
         </ol>
       )}
     </Card>

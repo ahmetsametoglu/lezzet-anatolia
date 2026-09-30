@@ -10,7 +10,10 @@ interface PhoneInstallCardProps {
   t: Messages;
 }
 
-/** iPhone'da site kurulumu tetikleyemez; müşterinin bilmediği menü yolu iki adımla gösterilir. */
+/**
+ * iPhone'da site kurulumu tetikleyemez; menü yolu gösterilir. Yol tarayıcıya ve sürüme göre değişir (Safari'de Paylaş ⋯ içinde
+ * olabilir, iOS 26 "Ana Ekrana Ekle"yi "Daha Fazla"nın altına alır), ikisini de bilemediğimiz için adımlar koşullu yazılır.
+ */
 export function PhoneInstallCard({ t }: PhoneInstallCardProps) {
   const { mode, install } = useAppInstall();
   if (mode === 'hidden') return null;
@@ -21,11 +24,13 @@ export function PhoneInstallCard({ t }: PhoneInstallCardProps) {
         <PrimaryButton shape="block" label={t.installButton} onClick={() => void install()} />
       ) : (
         <ol className="flex flex-col gap-1 font-sans text-body-sm leading-[1.6] text-body">
-          <li className="flex items-center gap-1.5">
+          <li className="flex flex-wrap items-center gap-x-1.5">
             1. {t.installStepShare}
             <MobileIcon name="share" size={17} className="text-muted" />
+            <span className="text-muted">{t.installStepShareHint}</span>
           </li>
-          <li>2. {t.installStepAdd}</li>
+          <li>2. {t.installStepMore}</li>
+          <li>3. {t.installStepAdd}</li>
         </ol>
       )}
     </SettingsCard>
