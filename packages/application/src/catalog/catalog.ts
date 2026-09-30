@@ -9,27 +9,16 @@ import { EMPTY_PRODUCT_CONTEXT, imageOf, toCategory, toProduct, type CatalogCate
 import type { PlaceWarehouses, StorefrontCatalog, StorefrontCollectionHead } from './storefront-types';
 
 /**
- * Katalog okuması (08.10; terfi 21.6 — kaynağı `apps/web/lib/storefront/catalog.ts`).
- *
- * Süzme ve sayfalama SUNUCUDA: `ProductService.list` ad araması (üç dilde birden) ve kategori
- * süzgecini SQL'de çözer, sayfalama keyset'tir (`CLAUDE.md`: sınırsız büyüyen listeler sonsuz
- * kaydırma → servis okumaları cursor'lu). Liste büyüdükçe çağırana taşınan yük artmaz.
- *
- * **Fiyat sıralaması neden bir migration istedi:** uygulanabilir fiyat AYRI tablodadır (kanal +
- * geçerlilik tarihi + müşteriye özel satır) ve "bu ürünün b2c fiyatı" tek bir kolon değil bir
- * SEÇİMDİR. Sayfa çekildikten sonra sıralamak seçenek değil — "artan fiyat" yalnız o 30 satır içinde
- * artan olur ve keyset sayfalama bozulur. Çözüm `available_stock` deseninde bir okuma görünümü
- * (`0043`): seçim SQL'de çözülür, sıralama ve imleç onun üstünde çalışır.
+ * Katalog okuması: süzme ve keyset sayfalama sunucuda, SQL'de çözülür. Fiyat sıralaması okuma görünümünden gelir, çünkü
+ * uygulanabilir fiyat ayrı tabloda bir seçimdir ve sayfa çekildikten sonra sıralamak keyset sayfalamayı bozardı.
  */
 
 export interface CatalogQuery {
   /** Kategori slug'ı — dil-bağımsız, içerikten türer. */
   categorySlug?: string;
   /**
-   * **Koleksiyon slug'ı** (08.26) — katalogun editoryal kesiti (`/catalog?collection=<slug>`).
-   *
-   * Kategoriyle BİRLİKTE verilebilir ve ikisi birbirini daraltır (kesişim): "Bayram koleksiyonunun
-   * tatlıları" anlamlı bir sorudur. Biri ötekini ezmez.
+   * Koleksiyon slug'ı, katalogun editoryal kesiti. Kategoriyle birlikte verilirse ikisi kesişir, çünkü "koleksiyonun tatlıları"
+   * anlamlı bir sorudur.
    */
   collectionSlug?: string;
   search?: string;
@@ -37,27 +26,18 @@ export interface CatalogQuery {
   /** "Yalnız indirimliler" — açık teklifi olan ürünlere daraltır (DOMAIN §5). */
   onlyOffers?: boolean;
   /**
-   * **Yalnız BURADA fiilen duran mal** — `place.warehouseId` deposunda partisi olan ürünlere
-   * daraltır (01.09). Varsayılan KAPALI: vitrinin kuralı süzmek değil işaretlemektir.
-   *
-   * Açan tek yüzey kuryenin yerinde satışı: araç bir vitrin değil, bir yüktür. Gerekçenin tamamı
-   * `listStockedProductIds` künyesinde.
+   * Yalnız `place.warehouseId` deposunda fiilen duran mal; varsayılan kapalı, çünkü vitrinin kuralı süzmek değil işaretlemektir.
+   * Açan tek yüzey kuryenin yerinde satışıdır: araç bir vitrin değil, yüktür.
    */
   onlyStockedHere?: boolean;
   /**
-   * **Belirli ürünler** — kimlik listesine daraltır (02.09). Öteki daraltmalarla KESİŞİR, yani
-   * `productIds` + `onlyStockedHere` "şu ürün, ama yalnız burada duruyorsa" sorusunu sorar.
-   *
-   * Tüketicisi barkod okutma: kod bir varyanta, varyant bir ürüne çözülüyor ve ekranın ihtiyacı
-   * o ürünün TAM KARTI (fiyat · kalan · boy sayısı · kampanya) — kartı üreten motor burası ve
-   * ikinci bir kart yolu açmak, aynı ürünü iki ekranda iki farklı fiyatla göstermek olurdu.
-   * Boş dizi "hiçbiri"dir ve erken çıkışa gider; `undefined` süzgeç yok demektir.
+   * Kimlik listesine daraltır ve öteki daraltmalarla kesişir; barkod okutma ürünün tam kartını buradan alır ki aynı ürün iki ekranda
+   * iki fiyatla görünmesin. Boş dizi "hiçbiri"dir ve erken çıkışa gider, `undefined` süzgeç yok demektir.
    */
   productIds?: readonly string[];
   /**
-   * Yalnız kargolanabilenler — "adresime gönderilebilir" çipi. Çip VARSAYILAN KAPALIDIR (tasarım):
-   * bölge dışı bir posta kodunda soğuk zincir ürünleri gizlenmez, kartta etiketiyle durur. Katalogu
-   * kendiliğinden küçültmek, müşteriye sormadan seçim yapmak olurdu.
+   * Yalnız kargolanabilenler ("adresime gönderilebilir" çipi). Çip varsayılan kapalıdır, çünkü katalogu kendiliğinden küçültmek
+   * müşteriye sormadan onun yerine seçim yapmak olurdu.
    */
   onlyShippable?: boolean;
   cursor?: KeysetCursor;
@@ -67,12 +47,8 @@ export interface CatalogInput {
   locale: PreferredLanguage;
   query?: CatalogQuery;
   /**
-   * Müşterinin yerinden çözülen depolar. **Zorunlu ve varsayılansız**: `warehouseId: null` meşru
-   * bir değerdir ("yer bilinmiyor", posta kodu zorunlu değil — K1) ama VERİLMESİ zorunludur.
-   * Varsayılan bıraksaydık argümanı unutan çağrı derlenir ve sessizce depo-üstü okurdu —
-   * `getAvailableMap`'i kurtaran şey (T8) tam olarak parametrenin zorunluluğuydu.
-   *
-   * `null` → depo-ÜSTÜ okuma: "tükendi" demenin tek dayanağı hiçbir depoda bulunmamasıdır (C3).
+   * Müşterinin yerinden çözülen depolar; zorunlu ve varsayılansız, çünkü argümanı unutan çağrı derlenip sessizce depo-üstü okurdu.
+   * `warehouseId: null` meşrudur: yer bilinmiyor, okuma depo-üstüne düşer ve "tükendi" ancak hiçbir depoda olmamaktır.
    */
   place: PlaceWarehouses;
   /**
@@ -82,52 +58,19 @@ export interface CatalogInput {
    */
   viewer: PricingViewer;
   /**
-   * **Katalog tamamen boşken gösterilecek yedek kategoriler** — çağıranın kararı, paketin değil.
-   *
-   * Web'in `fixtures.ts`i seed atılmamış yerel ortamda vitrinin kabuğu çizilsin diye bu yedeğe
-   * düşüyor; mobil API bilinçle düşmüyor ("boş liste doğru cevaptır; uydurma kimliklerle ürün
-   * isteyen bir istemci üretmek, boş bir şerit çizmekten pahalıya patlar"). İki karar da meşru ve
-   * ikisi de YÜZEYİN kararı — bu yüzden orkestrasyon yedeği kendi içinde tutmaz, PARAMETRE alır.
-   * Verilmezse yedek yoktur; web bugünkü davranışını fixture'ı geçirerek birebir korur.
+   * Katalog tamamen boşken gösterilecek yedek kategoriler; karar yüzeyindir, paketin değil. Web seed'siz yerel ortamda kabuğu
+   * çizmek için fikstür geçirir, mobil API boş listeyi doğru cevap sayıp geçirmez.
    */
   fallbackCategories?: readonly CatalogCategoryRow[];
   /**
-   * **Sayfa boyutu — çağıranın kararı** (varsayılan `DEFAULT_PAGE_SIZE`).
-   *
-   * Web'in katalog sayfası sayfa boyutunu hiç sormuyor (sonsuz kaydırma tek ölçüde akar), o yüzden
-   * sayı buraya sabit yazılmıştı. Mobil uç `?limit=` sunuyor ve sunmak ZORUNDA: HTTP istemcisi ilk
-   * boyayı küçük bir sayfayla açıp gerisini kaydırmayla isteyebilir, tek ölçü dayatmak cihazın
-   * bant genişliği kararını sunucuya taşımak olur.
-   *
-   * Alan **opsiyonel ve varsayılanı eskisiyle aynı**: geçirmeyen çağıran (web köprüsü dâhil) bit
-   * bazında aynı sorguyu atar — davranış değişikliği yok, yalnız kararın yeri açıldı. Tavan
-   * BURADA yok, çağıranda: "en çok kaç" bir taşıma politikasıdır (mobil uçta 50), orkestrasyonun
-   * iş kuralı değil.
+   * Sayfa boyutu (varsayılan `DEFAULT_PAGE_SIZE`). Çağıranın kararıdır, çünkü ilk boyayı küçük sayfayla açmak istemcinin bant
+   * genişliği kararıdır ve tavan da taşıma politikası olarak çağıranda durur.
    */
   limit?: number;
   /**
-   * **Kanalında satılamayan ürünler de gelsin mi** — varsayılan HAYIR (08.46).
-   *
-   * Vitrinin kuralı süzmektir: müşteri alamayacağı ürünü görmez. Ama bu kural yalnız **KEŞİF**
-   * yüzeyleri içindir — birileri katalogu tarıyor ve satın alacak bir şey arıyor.
-   *
-   * **REFERANS okumalarda aynı kural TERS etki yapıyor** ve ölçüldü (24.08, `support-tools` testi
-   * yakaladı): destek aracı `urun_ara` bir ürünü ADIYLA arıyor ("cevizli baklava var mı"). Ürün
-   * süzülünce araç *"katalogda eşleşen ürün yok"* diyor — yani VAR OLAN bir ürün için "yok"
-   * cevabı üretiyor. Doğru cümle *"var ama sizin fiyat kanalınızda satışa kapalı"*; 08.46'nın
-   * kaldırmak istediği güven riskinin (engeli rafta değil kasada öğrenmek) başka bir kapıda geri
-   * dönmesi olurdu.
-   *
-   * **Neden bayrak, ikinci bir kapı değil:** kurulum aynı (aynı süzgeç, aynı bağlam okuması, aynı
-   * kart indirgemesi); ayrışan tek şey satırların hangi kaynaktan geldiği. İkinci bir kapı yazmak,
-   * katalog montajını iki yerde yaşatmak olurdu.
-   *
-   * **Varsayılanın yönü bilinçli:** `false` = vitrin kuralı. Ters varsayılan, bayrağı geçirmeyi
-   * unutan her yeni yüzeyi sessizce süzgeçsiz bırakırdı — ve kural yüzeyde durmayan bir kural olurdu.
-   *
-   * **FİYAT SIRALAMASI bu kipte ÇALIŞMAZ** ve sessizce yok sayılır: sıralama anahtarı yalnız
-   * görünümde var, görünüm ise satılamayanı hiç üretmiyor. Referans okumaların da fiyata göre
-   * sıralamaya ihtiyacı yok — birini adıyla arıyorlar.
+   * Kanalında satılamayan ürünler de gelsin mi; varsayılan hayır, çünkü bayrağı unutan yeni keşif yüzeyi sessizce süzgeçsiz kalırdı.
+   * Referans okumalar (destek aracının adla araması) açar ki ürüne "yok" yerine "var ama kanalınızda satışa kapalı" denebilsin;
+   * fiyat sıralaması bu kipte yok sayılır, çünkü sıralama anahtarı yalnız görünümde var.
    */
   includeUnsellable?: boolean;
 }
@@ -164,8 +107,8 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
 
   const categoryRows = await new CategoryService(db).list({ activeOnly: true });
   const source = categoryRows.length ? categoryRows : (input.fallbackCategories ?? []);
-  // Fotoğraf havuzu TEK turda, kart başına sorgu yok (05.23). Yedek satırlarda (fikstür) kimlikler
-  // gerçek değil → havuz boş döner ve kart kapağa düşer; ikinci bir dal yazmaya gerek yok.
+  // Fotoğraf havuzu tek turda okunur, kart başına sorgu yok. Yedek satırlarda (fikstür) kimlikler gerçek değil; havuz boş döner
+  // ve kart kapağa düşer.
   const pools = await new CategoryImageService(db).listByCategories(source.map((c) => c.id));
   const categories = source.map((c) => toCategory(c, locale, pools.get(c.id)));
   const activeCategory = q.categorySlug ? (categories.find((c) => c.slug === q.categorySlug) ?? null) : null;
@@ -173,13 +116,10 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
   // Slug verilmemişse sorgu HİÇ atılmaz — katalogun sıradan hâli koleksiyon tablosuna uğramaz.
   const activeCollection = q.collectionSlug ? await readCollectionHead(db, q.collectionSlug, locale) : null;
 
-  // "Yalnız indirimliler" ürün kimliklerine çözülüp SORGUYA girer — sayfa çekildikten sonra elemek
-  // keyset sayfalamayı ve toplam sayıyı bozardı. Boş küme erken döner: `ids: []` PostgREST'e
-  // "hiçbiri" diye gitmez, süzgeç düşer ve TÜM katalog gelirdi.
-  /* İKİ DARALTMA da kimliğe çözülür ve birlikte verilebilirler — kesişim burada alınır. Sıra
-     önemsiz, ama "hiçbiri" hâli önemli: boş dizi süzgeci düşürmez, aşağıdaki erken çıkışa gider.
-     `onlyStockedHere` depo-ÜSTÜ okumada (yer bilinmiyor) boş küme demektir: "burada duran mal"
-     sorusunun deposuz bir cevabı yok ve sessizce tüm katalogu döndürmek yanlış cevap olurdu. */
+  // "Yalnız indirimliler" kimliklere çözülüp sorguya girer, çünkü sayfa çekildikten sonra elemek keyset'i ve toplamı bozardı. Boş
+  // küme erken döner: `ids: []` PostgREST'e "hiçbiri" diye gitmez, süzgeç düşer ve tüm katalog gelirdi.
+  /* İki daraltma da kimliğe çözülür ve kesişimi burada alınır. `onlyStockedHere` yer bilinmezken boş kümedir: "burada duran mal"
+     sorusunun deposuz cevabı yok ve tüm katalogu döndürmek yanlış cevap olurdu. */
   const idSets = await Promise.all([
     Promise.resolve(q.productIds === undefined ? null : [...q.productIds]),
     q.onlyOffers ? listOfferProductIds(db, place.warehouseId) : Promise.resolve(null),
@@ -194,9 +134,8 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
     applied.length === 0
       ? undefined
       : applied.reduce((left, right) => left.filter((id) => right.includes(id)));
-  /* Ürünsüz erken çıkışın kampanyası — kesit seçiliyken "hiç ürün yok" da bir cevaptır ve
-     kampanyayı yine söyler. Ana yolun okuması aşağıda, sayfa kimlikleriyle BİRLİKTE yapılıyor
-     (23.08): iki çağrı yeri var ama her istekte yalnız biri koşuyor ve kural tek kapıda. */
+  /* Ürünsüz erken çıkış da kesitin kampanyasını söyler, çünkü "hiç ürün yok" da bir cevaptır. Ana yol kampanyayı sayfa kimlikleriyle
+     birlikte okur; her istekte iki yoldan yalnız biri koşar. */
   if (ids && !ids.length) {
     const only = await readScopeCampaigns(db, {
       categoryIds: activeCategory ? [activeCategory.id] : [],
@@ -211,31 +150,18 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
     categoryId: activeCategory?.id,
     status: 'active' as const,
     ids,
-    // Koleksiyon üyeliği SORGUNUN kendi süzgeci (08.08'de düzeltildi: `productSelect` artık koşullu
-    // `!inner` kuruyor). Kısa bir süre üyelik önden kimliklere çözülüp `ids`e yazılıyordu — süzgeç
-    // sessizce tüm katalogu döndürdüğü için. O köprü söküldü: iki süzgeç birlikte açıkken kesişimi
-    // artık elle almıyoruz, sorgu AND'liyor (ölçüldü 08.08: bayram-sofrasi `!inner` 24 · üstüne
-    // `shippable` 17). Elle kesişim hem ikinci bir tur atıyordu hem de `ids`e son yazanın
-    // ötekini ezmesi riskini taşıyordu.
+    // Koleksiyon üyeliği sorgunun kendi süzgecidir (koşullu `!inner`); kategoriyle birlikte açıkken kesişimi sorgu AND'ler. Elle
+    // kesişim hem ek tur atar hem de bir süzgecin ötekini ezmesi riskini taşır.
     collectionId: activeCollection?.id,
     onlyShippable: q.onlyShippable,
   };
   const listing = new ProductListingService(db);
-  /* **VİTRİNİN ÜÇ OKUMASI DA GÖRÜNÜMDEN** (08.46 · 08.54) — kapsam tek nesnede.
-
-     Eskiden yalnız fiyat sıralaması görünümden geliyordu; varsayılan sıra ve sayaç ham `product`
-     tablosundan okunuyordu. Görünüm kanalında satılamayan ürünü süzmeye başlayınca o bölünme
-     tutarsızlaştı: aynı katalog "artan fiyat"ta süzülmüş, "öne çıkanlar"da süzülmemiş bir küme
-     gösterirdi — ve başlıktaki sayı ikisini de tutmazdı.
-
-     `place` ve `viewer` zaten ÇAĞIRANDAN geliyor (bu modülün kapıları istek bağlamı okumaz);
-     kapsam da onlardan türer, burada yeni bir karar verilmiyor. */
+  /* Liste, fiyat sıralaması ve sayaç aynı görünümden ve aynı kapsam nesnesinden okunur; ayrı kaynaklar aynı katalogda süzülmüş ve
+     süzülmemiş iki küme gösterirdi. Kapsam çağırandan gelen `place` ve `viewer`dan türer. */
   const scope = { warehouseId: place.warehouseId, channel: viewer.channel };
   const direction = q.sort === 'priceAsc' ? 'asc' : q.sort === 'priceDesc' ? 'desc' : null;
-  /* REFERANS kipi (`includeUnsellable`) ham `product` tablosundan okur — görünüm satılamayanı hiç
-     üretmiyor, o yüzden "hepsini getir" görünümden İSTENEMEZ. Süzgeç ve projeksiyon yine ortak
-     (`buildProductQuery` · `productSelect`), yani süzme davranışı iki kaynakta ayrışmaz; ayrışan
-     tek şey satırların nereden geldiği. Fiyat sıralaması bu kipte yok (künyesi `CatalogInput`de). */
+  /* Referans kipi (`includeUnsellable`) ham `product` tablosundan okur, çünkü görünüm satılamayanı hiç üretmiyor. Süzgeç ve
+     projeksiyon ortaktır (`buildProductQuery` · `productSelect`); ayrışan tek şey satırların kaynağı. */
   const referans = input.includeUnsellable === true;
   const products = referans ? new ProductService(db) : null;
   const [page, total] = await Promise.all([
@@ -244,27 +170,13 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
       : direction
         ? listing.listByPrice({ filters, cursor: q.cursor, limit, direction, ...scope })
         : listing.list({ filters, cursor: q.cursor, limit, ...scope }),
-    // **`countMatching`, `counts` DEĞİL** — ve bu bir tercih değil, geri gelmiş bir arızanın
-    // kapatılması (08.26'da ölçüldü). `counts()` operasyon RPC'sini çağırıyor ve süzgeçlerin
-    // yalnız dördünü iletiyor (`query · category · status · onlyIncomplete`); vitrin ise altı-yedi
-    // ile çağırıyor — `ids` (yalnız indirimliler), `onlyShippable` ve artık `collectionId`
-    // SESSİZCE düşüyordu. Tam bu arıza 07.08'de bulunup `countMatching`e taşınmıştı (08.10
-    // künyesi: *"çip açıkken liste 1 satır basarken başlık 131 diyordu"*); okuma bu pakete terfi
-    // ederken eski çağrı geri gelmiş. Hata fırlatmıyor, çünkü çağrı tip olarak kusursuz: tam
-    // nesne veriliyor, içeride üçü atılıyor.
-    //
-    // **Sayaç da artık GÖRÜNÜMDEN** (08.46): `ProductService`inki ham `product` tablosunu sayıyor
-    // ve kanal/depo kapsamını bilmiyor — süzülen listenin yanında süzülmemiş bir sayı yazardı.
-    // Aynı arızanın üçüncü kez doğmasını engelleyen şey, kapsamın süzgeçle aynı nesneden gitmesi.
+    // Sayaç `countMatching`tir, `counts` değil: `counts` operasyon RPC'sidir ve süzgeçlerin yalnız dördünü iletir; `ids`,
+    // `onlyShippable` ve `collectionId` sessizce düşerdi. Sayaç da görünümden okunur, ham tabloyu saymak süzülen listenin yanına
+    // süzülmemiş bir sayı yazardı.
     products ? products.countMatching(filters) : listing.countMatching(filters, scope),
   ]);
-  /* KAMPANYA TEK OKUMADAN, İKİ SORUYA CEVAP (23.08 · kullanıcı kararı).
-     Eskiden yalnız ETKİN kesit soruluyordu ve künyesi haklıydı: kampanya bir kesite aittir. Ama
-     rozet KARIŞIK listede de gerekiyor (arama sonucu, benzer ürünler, vitrin rayı) ve orada
-     başlık diye bir şey yok — kampanyayı söyleyecek tek yer kartın kendisi. Sayfanın kategori ve
-     koleksiyon kimlikleri de sorulur oldu; ek SORGU doğmuyor, çünkü `ProductWithRelations` zaten
-     `collections[]` taşıyor ve `categoryId` ürün satırında. `loadProductContext` ile PARALEL
-     koşuyor: ikisi de sayfa satırlarına bakıyor ama birbirini beklemiyor. */
+  /* Kampanya tek okumayla hem etkin kesite hem karışık listedeki kartlara cevap verir; ek sorgu doğmaz, çünkü satırlar `categoryId`
+     ve `collections[]` taşıyor. `loadProductContext` ile paralel koşar, ikisi birbirini beklemez. */
   const [context, scopeCampaigns] = await Promise.all([
     loadProductContext(db, page.rows, place, viewer),
     readScopeCampaigns(db, {
@@ -278,9 +190,7 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
       ],
     }),
   ]);
-  /* Kesit başlığı kampanyayı ZATEN söylüyorsa kartta tekrarlanmaz (kullanıcı kararı 23.08):
-     kategori ekranında 40 özdeş rozet, rozeti anlamsızlaştırır. Karar "rozet, başlığın
-     söyleyemediği yerde" diye tek cümleye indi — ölçüt de o: kesit seçili mi. */
+  /* Kesit başlığı kampanyayı zaten söylüyorsa kartta tekrarlanmaz: kategori ekranında 40 özdeş rozet rozeti anlamsızlaştırır. */
   const sectionSpeaks = activeCategory !== null || activeCollection !== null;
   const byProduct = sectionSpeaks
     ? new Map<string, ScopeCampaign>()
@@ -295,8 +205,7 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
     activeCategory,
     activeCollection,
     products: page.rows.map((p) =>
-      /* Süzgeç KARTA da iniyor (02.09): liste ürünü araçta duruyor diye seçildi, ama kartın "kaç
-         boy" sayısı katalogun boylarını sayıyordu — araçta olmayan boyu vaat eden bir rozet. */
+      /* Süzgeç karta da iner: liste araçta duran ürünlere daraltılmışken kartın boy sayısı araçta olmayan boyu vaat etmesin. */
       toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT, byProduct.get(p.id) ?? null, q.onlyStockedHere === true),
     ),
     total,
@@ -323,13 +232,8 @@ function sectionCampaignOf(
 }
 
 /**
- * Slug'dan koleksiyon künyesi. **Aktif olmayan koleksiyon `null` döner** — pasife çekilmiş bir
- * koleksiyonun bağlantısı bir gün paylaşılmış olabilir ve onu hâlâ açmak, operatörün "yayından
- * kaldırdım" kararını görmezden gelmek olurdu. Ekran o hâlde sıradan katalogu gösterir.
- *
- * **Dışa VERİLİR** çünkü ikinci bir okuyanı var: `generateMetadata` paylaşım kartını kurarken
- * yalnız künyeye ihtiyaç duyuyor, ürün listesine değil. Sayfanın kendi okumasını (`getCatalogData`)
- * metadata için ikinci kez çağırmak, kartı çizmek için tüm katalog sayfasını sorgulamak olurdu.
+ * Slug'dan koleksiyon künyesi; aktif olmayan koleksiyon `null` döner, çünkü paylaşılmış eski bağlantı operatörün "yayından
+ * kaldırdım" kararını aşmamalı. Dışa verilir: `generateMetadata` paylaşım kartı için tüm katalog sayfasını değil, yalnız künyeyi okur.
  */
 export async function readCollectionHead(
   db: SupabaseClient,

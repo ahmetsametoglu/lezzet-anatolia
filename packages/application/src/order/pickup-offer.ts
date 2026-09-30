@@ -3,9 +3,8 @@ import type { CheckoutPickup, Warehouse } from '@lezzet/types';
 import { warehouseAddressLine } from '../warehouse/pickup';
 
 /**
- * Gel-al teklifi: müşteri izni × gel-al noktası olan tesisler. İki okuma, ikisi de kapı: `pickup_allowed` olmayan müşteriye
- * teklif yok, gel-al deposu olmayan kurulumda da yok. `requested` listede değilse seçim düşer — istemcinin söylediği depo
- * hiçbir zaman olduğu gibi yazılmaz. Adres seçici (web + native), sepet ve checkout aynı teklifi buradan okur.
+ * Gel-al teklifi: müşteri izni (`pickup_allowed`) × gel-al noktası olan tesisler; biri yoksa teklif yok. `requested` listede
+ * değilse seçim düşer, çünkü istemcinin söylediği depo olduğu gibi yazılmaz.
  */
 export async function readPickupOffer(
   db: Db,
