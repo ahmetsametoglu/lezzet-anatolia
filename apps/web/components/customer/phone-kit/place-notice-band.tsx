@@ -14,15 +14,9 @@ import { Note } from './note';
 import { ToggleSwitch } from './toggle-switch';
 
 /*
-  BÖLGE DIŞI BİLGİ BANDI — native `PlaceNoticeBand`ın web telefon ikizi: liste başında TEK blok, kutusu
-  tasarımın terracotta kutusu, en üstte posta kodu hapı, en altta kesik çizgiyle ayrılmış "Gelemeyenleri
-  gizle" anahtarı. Kartlarda "kargoyla gelir" işareti bu yüzden yok — rota dışı müşterinin her kartında
-  yazan bilgi, bilgi olmaktan çıkar.
-
-  WEB'E ÖZGÜ AKIŞLAR (native'le bilinçli ayrışma): hap web'in yer çekmecesini açar (`PlaceSheet`), "Buraya da
-  gelin" web'in kaydını bırakır — girişli müşteri tek dokunuşla, öteki herkes e-posta penceresiyle
-  (`NoticeDialog`); native misafirde kodla hesap açar, web kaydı hesapsız alır. Kayıt hafızası
-  `ZoneNoticeButton`ınkiyle aynı: kartta ya da sepette not bırakan müşteri daveti yeniden görmez.
+  Bölge dışı bilgi bandı, native `PlaceNoticeBand`ın web ikizi: liste başında tek blok, bu yüzden kartlarda "kargoyla gelir" işareti yok;
+  her kartta yazan bilgi, bilgi olmaktan çıkar. Web'e özgü akışlar bilinçli: hap web'in yer çekmecesini açar, "Buraya da gelin" kaydı
+  hesapsız alınır (girişli müşteri tek dokunuşla, öteki e-posta penceresiyle) ve kaydı bırakan müşteri daveti yeniden görmez.
 */
 
 interface PlaceNoticeBandProps {

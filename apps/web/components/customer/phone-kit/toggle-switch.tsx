@@ -1,10 +1,6 @@
 /*
-  AÇMA/KAPAMA ANAHTARI — native `ToggleSwitch`in (`apps/mobile/src/screens/customer-kit/toggle-switch.tsx`)
-  web telefon ikizi (14.09): 50×30 yol (açık zeytin, kapalı `sand-500`), 24'lük kart beyazı topuz, topuzun
-  yükseklik gölgesi (`shadow-soft`), topuz kenardan (30 − 24) / 2 = 3 içeride.
-
-  Durum ekran okuyucuya `role="switch"` + `aria-checked` ile gider; native kit bu rolü henüz tanımıyor
-  (orada `selected`), web'de doğrudan var.
+  Açma/kapama anahtarı, native `ToggleSwitch`in web telefon ikizi: 50×30 yol, 24'lük topuz kenardan 3 içeride. Durum ekran okuyucuya
+  `role="switch"` + `aria-checked` ile gider; native kit bu rolü tanımıyor, web'de doğrudan var.
 */
 
 interface ToggleSwitchProps {

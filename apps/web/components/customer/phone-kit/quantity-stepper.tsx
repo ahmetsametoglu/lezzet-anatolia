@@ -1,14 +1,7 @@
 /*
-  ADET SEÇİCİ — native'in iki sayacının web telefon ikizi (14.09), ikisi de "−" · rakam · "+":
-  · `bar` (varsayılan) — ürün ve paket detayının yapışkan barındaki seçici (`product-detail-screen.tsx` `stepper`): kum
-    (`sand-250`) zemin, hücreler 44 × 48, rakam kolonu 30 (native `customerMetrics`), rakam gövde kademesinde kalın.
-  · `line` — sepet satırının sayacı (`apps/mobile/src/screens/customer-kit/quantity-stepper.tsx`): hücreler 34 × 34
-    (`stepButton`), rakam kolonu en az 22, rakam `body-sm` kalın. İki zemin: `sand` kum kartın üstünde (`sand-300`
-    dolgu, zeytin im) · `ink` koyu paket kartının üstünde (dolgu yerine ince nötr çerçeve, krem im — native'in
-    gerekçesi: o alfada bir krem token'ı yok). Dokunma alanı görünmez `after` katmanıyla yalnız YUKARI 44'e
-    tamamlanır: hemen altta "kaldır" duruyor ve iki etek çakışınca "+"ya dokunmak satırı siliyordu (native 20.08).
-  İmler ikon kademesinde (`icon-sm`) ve normal ağırlıkta — başlık değil imdir. Sınıra varan düğme pasifleşir: tavan ve
-  taban görünür olsun.
+  Adet seçici, native'in iki sayacının web telefon ikizi: `bar` ürün ve paket detayının yapışkan barında, `line` sepet satırında (`sand`
+  kum kartta, `ink` koyu paket kartında). Satır sayacının dokunma alanı görünmez `after` katmanıyla yalnız yukarı 44'e tamamlanır, çünkü
+  hemen altta "kaldır" duruyor ve etekler çakışırsa "+"ya dokunmak satırı silerdi.
 */
 
 interface QuantityStepperProps {
