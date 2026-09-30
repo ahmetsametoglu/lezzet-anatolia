@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.49). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.50). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
 `docs/GELECEK.md`'dedir.
@@ -401,3 +401,8 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   sonra eklenir. Yetersiz olduğu ülke için önceden çevrilmiş etiket metni hazır olacak ve kargoda paketlemeden önce yazıcıdan
   basılıp yapıştırılacak (satış anında çeviri yapılmaz, etiket yeterliyse çıktı alınmaz). Veri modelini (ürün/varyant × ülke) ve
   operasyon mobil uygulamasının hazırlık adımını birlikte etkiler.
+- [ ] (K.50) [hedef: müşteri] Web telefon görünümünde sayfa geçiş iskeleti eksik: müşteri yüzeyinin 31 sayfasının 22'sinde
+  `loading.tsx` yok (alt gezinmenin Vitrin, Katalog, Paketler sekmeleri dahil) ve geçişte ekran 0,8–0,9 sn tepkisiz eski sayfada
+  kalıyor. Native'de 10'unun iskeleti hazır (vitrin, katalog, paket listesi, paket, ürün, tarif listesi, tarif, talepler, talep
+  detayı, değerlendirme); ölçüler oradan, masaüstü deseni sepet ve siparişler iskeletinden. Kalanlar: keşfet, yeni talep, davet,
+  komşu, profesyoneller; bildirimler iskeletinin telefon biçimi yok; yasal sayfalar ve giriş için gereği ölçülecek.
