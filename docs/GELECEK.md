@@ -26,7 +26,7 @@ bağlanmaz. Satır = kimlik + ne + neden; ele alınmaya karar verilince satır `
 
 ## İade ve şikâyet
 
-- (K.50) **Şikâyette yeniden gönderim:** bozuk gelen ürünün yenisini ücretsiz göndermek. Tasarımdaki şikâyet kararı "Jest —
+- (K.51) **Şikâyette yeniden gönderim:** bozuk gelen ürünün yenisini ücretsiz göndermek. Tasarımdaki şikâyet kararı "Jest —
   bedelsiz yeniden gönderim" adını taşıyor ve kodda çizilmedi; adı "Yeniden gönderim" olmalı, yoksa sistemdeki "müşteride
   kaldı" ile karışır. Gereken: şikâyete bağlı sıfır tutarlı sevkiyat — stok düşer, taşıma maliyeti doğar, para hareketi olmaz.
 
