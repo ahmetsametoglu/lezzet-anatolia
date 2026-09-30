@@ -1,9 +1,18 @@
 import { isStaff, isOperationRole } from '@lezzet/domain-core';
 import type { Setting, StaffRole, UserProfile, UserRole } from '@lezzet/types';
 import { COUNTRY_OPTIONS } from '@/components/operation/ui/labels';
-import { SETTING_CATALOG, type SettingValue } from './settings-catalog';
+import { SETTING_CATALOG, type SettingDef, type SettingValue } from './settings-catalog';
 import { formatSettingValue, scopeLabel, STAFF_ROLE_LABELS } from './settings-labels';
-import type { ExceptionScope, ScopeOptions, SettingExceptionView, SettingRowView, SettingsReadInput, StaffRowView } from './settings-types';
+import { SETTING_SECTIONS, type SettingTab } from './settings-layout';
+import type {
+  ExceptionScope,
+  ScopeOptions,
+  SectionRowsView,
+  SettingExceptionView,
+  SettingRowView,
+  SettingsReadInput,
+  StaffRowView,
+} from './settings-types';
 
 /**
  * Ayarlar ekranının saf okuma katmanı: DB satırları + sözlük → görünüm. Listeyi sözlük belirler, tablo değil; hiç yazılmamış ayar
@@ -62,6 +71,7 @@ export function toSettingRows(
       // ayarda her değer kurulumun kendi seçimidir; onu "varsayılandan farklı" diye işaretlemek,
       // olmayan bir normalden sapma uydurmak olurdu.
       changed: def.fallback !== undefined && !sameValue(value, def.fallback),
+      unset: isUnset(def, value),
       rowId: global?.id ?? null,
       updatedAt: global?.updatedAt ?? null,
       exceptions,
@@ -76,6 +86,13 @@ export function filterSettingRows(rows: SettingRowView[], term: string): Setting
   const q = term.trim().toLocaleLowerCase('tr');
   if (!q) return rows;
   return rows.filter((r) => `${r.label} ${r.help}`.toLocaleLowerCase('tr').includes(q));
+}
+
+/** Satırları konu kartlarına dağıtır; sekme verilirse yalnız o sekmenin kartları gelir, satırı kalmayan kart düşer. */
+export function sectionsOf(rows: SettingRowView[], tab?: SettingTab): SectionRowsView[] {
+  return SETTING_SECTIONS.filter((section) => !tab || section.tab === tab)
+    .map((section) => ({ section, rows: rows.filter((r) => r.section === section.key) }))
+    .filter((group) => group.rows.length > 0);
 }
 
 /**
@@ -143,6 +160,12 @@ function initialsOf(name: string): string {
     .map((w) => w[0]!)
     .join('')
     .toLocaleUpperCase('tr');
+}
+
+/** Seçim ya da metin bekleyen türlerde boş değer; sayısal türde boşluk olmaz, fabrika değeri durur. */
+function isUnset(def: SettingDef, value: SettingValue): boolean {
+  if (def.kind !== 'account' && def.kind !== 'text' && def.kind !== 'choice') return false;
+  return String(value ?? '').trim() === '';
 }
 
 /** Nesne değerli ayarlar (kanal bayrakları) için de çalışan eşitlik. */

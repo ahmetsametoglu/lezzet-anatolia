@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { SettingScopeEnum, UserRoleEnum, type Setting, type UserProfile, type UserRole } from '@lezzet/types';
 import type { ExceptionScope, SettingDef, SettingValue } from './settings-catalog';
+import type { SectionDef } from './settings-layout';
 import type { SiteImageView } from './site-images-read';
 import type { McpPanelData } from './mcp-read';
 import type { SettingsTab, SettingsUrlState } from './settings-url';
@@ -61,6 +62,8 @@ export type SettingRowView = Omit<SettingDef, 'exceptionScopes'> & {
   fallbackDisplay: string | null;
   /** Genel değer fabrika değerinden farklı mı — "elle değiştirilmiş" işareti. */
   changed: boolean;
+  /** Seçim ya da metin bekleyen ayarda değer boş mu; satır amberle çizilir. */
+  unset: boolean;
   /** Global satırın kimliği; `null` = ayar hiç yazılmamış, kod varsayılanıyla çalışıyor. */
   rowId: string | null;
   updatedAt: string | null;
@@ -108,15 +111,20 @@ export interface SettingsData {
   accountOptions: { value: string; label: string }[];
   /** Değişikliğin tüm süreçlerde geçerli olacağı azami süre (sn) — ekranın operatöre verdiği söz. */
   propagationSeconds: number;
+  /** Kurulum sekmesinin verisi; yalnız o sekme açıkken okunur, öteki sekmelerde `null`. */
+  setup: SetupData | null;
+}
+
+export interface SetupData {
   /** Vitrin görselleri: dört slot da gelir, boş olanlar dahil; boş slot listeden düşerse yükleme yolu da kaybolur. */
   siteImages: SiteImageView[];
-  /**
-   * MCP bağlantı anahtarları + çağrı izi (22.4) — asistanın kapısının kimlikleri.
-   *
-   * Sekme açık olmasa da okunuyor, `siteImages` ile aynı gerekçe: sekme rozeti geçerli anahtar
-   * sayısını yazıyor ve o sayı ancak veri gelince bilinir.
-   */
   mcp: McpPanelData;
+}
+
+/** Bir konu kartı ve içinde çizilecek satırlar. */
+export interface SectionRowsView {
+  section: SectionDef;
+  rows: SettingRowView[];
 }
 
 /**
@@ -129,12 +137,13 @@ export interface SettingsViewProps {
   data: SettingsData;
   urlState: SettingsUrlState;
   navPending: boolean;
-  /** Açık sekmenin (ya da arama açıkken tüm bölümlerin) gösterilecek satırları. */
-  rows: SettingRowView[];
+  /** Çizilecek kartlar: açık sekmeninkiler; arama ya da süzgeç açıkken bütün sekmelerden yalnız eşleşen satırlarla. */
+  sections: SectionRowsView[];
   /** Arama kutusunun YEREL taslağı — adres gecikmeli yazıldığı için `urlState.q`'dan ileride olabilir. */
   search: string;
   onTab: (tab: SettingsTab) => void;
   onSearch: (q: string) => void;
+  onToggleChanged: () => void;
   onOpenSetting: (row: SettingRowView) => void;
   onNewStaff: () => void;
   onOpenStaff: (row: StaffRowView) => void;

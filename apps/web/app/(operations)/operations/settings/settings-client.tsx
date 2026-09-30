@@ -6,8 +6,8 @@ import { useSearchDraft } from '@/lib/use-search-draft.hook';
 import { SettingDialog } from './setting-dialog';
 import { SettingsDesktop } from './settings.desktop';
 import { StaffDialog } from './staff-dialog';
-import { filterSettingRows } from './settings-read';
-import { isSettingGroup, settingsUrl, type SettingsTab, type SettingsUrlState } from './settings-url';
+import { filterSettingRows, sectionsOf } from './settings-read';
+import { isSettingTab, settingsUrl, type SettingsTab, type SettingsUrlState } from './settings-url';
 import type { SettingRowView, SettingsData, StaffRowView } from './settings-types';
 
 // Ayarlar ekranının client kökü; sekme ve arama gerçek gezinmedir (`?tab=…&q=…`), çünkü bir ayarın adresi paylaşılabilir olmalı.
@@ -39,19 +39,20 @@ export function SettingsClient({ data, urlState }: SettingsClientProps) {
   // olurdu. Süzgeç taslaktan okunur, çünkü satırlar zaten elde.
   const { draft: search, onDraft: onSearch } = useSearchDraft(urlState.q, (q) => go({ q }));
 
-  // Arama TÜM ayarlarda çalışır, yalnız açık sekmede değil: "minimum sepet nerede" sorusunun cevabı
-  // sekmeyi bilmeyi gerektirmemeli (`admin-ayarlar.md §7`: ayar sayısı fazla, bulma işlevsel ihtiyaç).
-  const groupRows = isSettingGroup(urlState.tab) ? data.rows.filter((r) => r.group === urlState.tab) : [];
-  const visibleRows = search ? filterSettingRows(data.rows, search) : groupRows;
+  // Arama ve "Değişenler" süzgeci bütün sekmelerde çalışır: bir ayarı bulmak onun hangi sekmede olduğunu bilmeyi gerektirmemeli.
+  const filtering = search.length > 0 || urlState.changed;
+  const matched = filterSettingRows(urlState.changed ? data.rows.filter((r) => r.changed) : data.rows, search);
+  const sections = filtering ? sectionsOf(matched) : isSettingTab(urlState.tab) ? sectionsOf(data.rows, urlState.tab) : [];
 
   const view = {
     data,
     urlState,
     navPending,
-    rows: visibleRows,
+    sections,
     search,
-    onTab: (tab: SettingsTab) => go({ tab }),
+    onTab: (tab: SettingsTab) => go({ tab, changed: false }),
     onSearch,
+    onToggleChanged: () => go({ changed: !urlState.changed }),
     onOpenSetting: (row: SettingRowView) => setEditingKey(row.key),
     onNewStaff: () => setStaffState('new'),
     onOpenStaff: (row: StaffRowView) => setStaffState(row.id),

@@ -1,37 +1,34 @@
 import { one, oneOf, type RawParams } from '@/lib/url-params';
-import { SETTING_GROUPS, type SettingGroup } from './settings-catalog';
+import { SETTING_TABS, type SettingTab } from './settings-layout';
 
 // Ayarlar ekranının URL sözleşmesi. Sekme ve arama adreste taşınır, çünkü başka bir ekrandan yollanan ayar bağlantısı doğru yerde açılmalı.
 
 const SETTINGS_PATH = '/operations/settings';
 
-/**
- * Ayar grupları ile personel, vitrin görselleri ve MCP anahtarları. Son üçü ayar değil, ama hepsi yalnız yöneticinin kurulum işi
- * olduğu için aynı barda durur.
- */
-export const SETTINGS_TABS = [...SETTING_GROUPS.map((g) => g.key), 'images', 'staff', 'mcp'] as const;
-export type SettingsTab = (typeof SETTINGS_TABS)[number];
+/** Üç ayar sekmesi ve Kurulum; Kurulum ayar değil, personel, vitrin görselleri ve MCP anahtarları gibi yöneticinin kurulum işleri. */
+export const SETTINGS_TABS: readonly (SettingTab | 'setup')[] = [...SETTING_TABS.map((t) => t.key), 'setup'];
+export type SettingsTab = SettingTab | 'setup';
 
-/** Ayar OLMAYAN sekmeler — kurulum işleri. Arama bunları taramaz (arama bir AYAR aramasıdır). */
-const NON_SETTING_TABS = new Set<string>(['staff', 'images', 'mcp']);
-
-export function isSettingGroup(tab: SettingsTab): tab is SettingGroup {
-  return !NON_SETTING_TABS.has(tab);
+export function isSettingTab(tab: SettingsTab): tab is SettingTab {
+  return tab !== 'setup';
 }
 
 export interface SettingsUrlState {
   tab: SettingsTab;
   /** Ayar araması — ad ve açıklamada geçer. */
   q: string;
+  /** Yalnız varsayılandan farklı ayarlar; arama gibi bütün sekmelerde çalışır. */
+  changed: boolean;
 }
 
-const DEFAULTS: SettingsUrlState = { tab: 'order', q: '' };
+const DEFAULTS: SettingsUrlState = { tab: 'order', q: '', changed: false };
 
 /** URL → ekran durumu. Tanınmayan sekme sessizce varsayılana düşer (bozuk link ekranı kırmaz). */
 export function parseSettingsUrl(params: RawParams): SettingsUrlState {
   return {
     tab: oneOf(params.tab, SETTINGS_TABS, DEFAULTS.tab),
     q: one(params.q).trim(),
+    changed: one(params.changed) === '1',
   };
 }
 
@@ -40,6 +37,7 @@ export function settingsUrl(state: SettingsUrlState): string {
   const p = new URLSearchParams();
   if (state.tab !== DEFAULTS.tab) p.set('tab', state.tab);
   if (state.q) p.set('q', state.q);
+  if (state.changed) p.set('changed', '1');
   const qs = p.toString();
   return qs ? `${SETTINGS_PATH}?${qs}` : SETTINGS_PATH;
 }

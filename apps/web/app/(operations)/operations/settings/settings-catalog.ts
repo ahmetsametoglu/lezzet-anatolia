@@ -28,27 +28,12 @@ import {
 import { TICKET_HANDLER_LABELS, TRUST_REASON_LABELS, TicketHandlerEnum, TrustReasonEnum } from '@lezzet/types';
 import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY } from '@/lib/settings-keys';
 import { DAY_HOUR_FALLBACK } from '@/lib/settings/day-hours';
+import type { SettingSection } from './settings-layout';
 
 /**
  * Ayar sözlüğü: iç anahtar adı arayüzde görünmediği için operatöre gösterilecek yüz burada durur, anahtarlar sabitlerinden ithal
  * edilir. `fallback` bilinçli bir kopyadır, çünkü değiştirilen satırda fabrika değeri kalmaz; nöbet testi onu migration'a karşı doğrular.
  */
-
-/** Ayarın ekranda hangi sekmede durduğu. */
-export type SettingGroup = 'order' | 'payment' | 'stock' | 'points' | 'cost' | 'feedback' | 'social' | 'tickets' | 'trust';
-
-export const SETTING_GROUPS: readonly { key: SettingGroup; label: string }[] = [
-  { key: 'order', label: 'Sipariş & teslimat' },
-  { key: 'payment', label: 'Ödeme' },
-  { key: 'stock', label: 'Stok & tazelik' },
-  { key: 'points', label: 'Puan' },
-  { key: 'cost', label: 'Birim maliyet' },
-  { key: 'feedback', label: 'Geri bildirim' },
-  // Sosyal mesajlaşma: ilk ayarı yeni sohbetin yürütücüsü; ajan ve kanal ayarları buraya gelir.
-  { key: 'social', label: 'Sosyal mesajlar' },
-  { key: 'tickets', label: 'Talepler' },
-  { key: 'trust', label: 'Güven puanı' },
-] as const;
 
 /**
  * Değerin türü, gösterimi ve düzenleme kontrolünü belirler. `channelFlags`in kanal ayrımı değerin içinde yaşar, istisna satırı
@@ -65,7 +50,8 @@ export interface SettingDef {
   label: string;
   /** "Bu neyi etkiler" — bir cümle. */
   help: string;
-  group: SettingGroup;
+  /** Ayarın durduğu konu kartı; sekme karttan türer (`settings-layout`). */
+  section: SettingSection;
   kind: SettingKind;
   /** Sayısal değerin birimi (`dk`, `gün`, `puan`, `cent`). Para ve yüzde kendi biçimini taşır. */
   unit?: string;
@@ -78,6 +64,10 @@ export interface SettingDef {
   limitReason?: string;
   /** Geniş etkili ayar: düzenleme penceresi bu cümleyi uyarı olarak gösterir. */
   impact?: string;
+  /** Değer boşken satırda görünen uyarı: boşluğun sistemde neye yol açtığını söyler. */
+  unsetNote?: string;
+  /** Güven puanı ağırlığının yönü; kart ödülleri ve cezaları ayrı sütunda çizer. */
+  polarity?: 'reward' | 'penalty';
   /** `global` dışında istisna açılabilen eksenler; boşsa yalnız genel değer. Tip ekranın sunabildiği eksenlerden gelir. */
   exceptionScopes: readonly ExceptionScope[];
   /**
@@ -104,7 +94,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: CONVERSATION_DEFAULT_HANDLER_KEY,
     label: 'Yeni sohbetin yürütücüsü',
     help: CONVERSATION_DEFAULT_HANDLER_HELP,
-    group: 'social',
+    section: 'handlers',
     kind: 'choice',
     // Seçenekler şemadan (`TicketHandlerEnum` + ortak etiketler): yeni bir mod eklendiğinde burası
     // kendiliğinden genişler, ikinci bir liste yazılmaz.
@@ -118,7 +108,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: TICKET_DEFAULT_HANDLER_KEY,
     label: 'Yeni talebin yürütücüsü',
     help: TICKET_DEFAULT_HANDLER_HELP,
-    group: 'tickets',
+    section: 'handlers',
     kind: 'choice',
     choices: TicketHandlerEnum.options.map((mode) => ({ value: mode, label: TICKET_HANDLER_LABELS[mode] })),
     impact: 'Geniş etkili: AI seçiliyse her yeni talebe ilk cevap onaysız, ajandan gider; Hibrit her müşteri mesajında bir AI taslağı üretir. Açık talepler etkilenmez; her talepte anahtar ayrıca çevrilebilir.',
@@ -134,7 +124,8 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
       help: TRUST_WEIGHTS[reason].penalty
         ? 'Bu olay müşterinin güven puanından düşülür; 0 yazılırsa sayılmaz.'
         : 'Bu olay müşterinin güven puanına eklenir; 0 yazılırsa sayılmaz.',
-      group: 'trust',
+      section: 'trust',
+      polarity: TRUST_WEIGHTS[reason].penalty ? 'penalty' : 'reward',
       kind: 'integer',
       unit: 'puan',
       ...(TRUST_WEIGHTS[reason].penalty ? { max: 0 } : { min: 0 }),
@@ -150,7 +141,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: TRUST_UNCOLLECTED_GRACE_DAYS_KEY,
     label: 'Tahsil bekleme süresi',
     help: 'Teslim edilen peşin siparişin parası bu kadar günde kapanmazsa "kapıda tahsil edilemedi" sayılır.',
-    group: 'trust',
+    section: 'trust',
     kind: 'integer',
     unit: 'gün',
     min: 0,
@@ -162,7 +153,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: MIN_BASKET_KEY,
     label: 'Minimum sepet tutarı (kapıya teslim)',
     help: 'Kendi aracımızla kapıya götürdüğümüz siparişlerin alt sınırı — aracın o tura çıkması anlamlı olsun diye. KARGO siparişine UYGULANMAZ: orada araç çıkmaz, müşteri kargo ücretini zaten öder. 0 = alt sınır yok.',
-    group: 'order',
+    section: 'basket',
     kind: 'money',
     min: 0,
     impact: 'Geniş etkili: yükseltmek küçük sepetli müşterilerin KAPIYA TESLİM siparişini engeller; kargo siparişleri etkilenmez. Tek istisna kanal satırıdır — toptan (b2b) alt sınırı bir ticari şarttır ve kargoda da geçerlidir. Değişiklik geleceğe uygulanır, verilmiş siparişleri etkilemez.',
@@ -173,7 +164,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: FREE_SHIPPING_THRESHOLD_KEY,
     label: 'Ücretsiz kargo eşiği',
     help: 'Bu tutarın üstündeki kargo siparişlerinden ücret alınmaz.',
-    group: 'order',
+    section: 'basket',
     kind: 'money',
     min: 0,
     impact: 'Sepette müşteriye söz olarak yazılır ("şu kadar daha ekleyin"). Düşürmek kargo ücretini üstlenmek demektir.',
@@ -184,7 +175,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'order_cutoff_time',
     label: 'Sipariş kesim saati',
     help: 'Bu saatten sonra gelen sipariş bir SONRAKİ rota gününe yazılır.',
-    group: 'order',
+    section: 'dayHours',
     kind: 'time',
     impact: 'Geniş etkili: kesim saatini öne çekmek, bugüne yetişeceğini sanan siparişleri yarına atar.',
     // Depo ekseni yok: depo bölgeden daha özgül olduğu için depoya yazılan saat bölgenin saatini hata vermeden öldürürdü; her rota
@@ -202,7 +193,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'prep_cutoff_time',
     label: 'Depo hazırlık kapanışı',
     help: 'Bu saate kadar hazırlanmayan sipariş rotaya yetişmez. Panelin gün akışı ve depo nabzı bu saati okur.',
-    group: 'order',
+    section: 'dayHours',
     kind: 'time',
     impact: 'Panelin kesim uyarısı buna göre çalışır; öne çekmek "kesim kaçtı" uyarılarını erkene alır.',
     exceptionScopes: ZONE_ONLY,
@@ -212,7 +203,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: PICKUP_WAIT_DAYS_KEY,
     label: 'Gel-al bekleme süresi',
     help: 'Hazır gel-al siparişi bu kadar gün alınmazsa panoda ve sipariş listesinde "süresi doldu" görünür. Randevu telefonla; karar (arama, iptal) ofisin — ödenmiş sipariş iptalinde tutar tamamen iade edilir.',
-    group: 'order',
+    section: 'delivery',
     kind: 'integer',
     unit: 'gün',
     min: 1,
@@ -224,7 +215,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'route_departure_time',
     label: 'Rota çıkış saati',
     help: 'Kuryenin yola çıkması beklenen an. Panelin gün akışında eşik olarak görünür.',
-    group: 'order',
+    section: 'dayHours',
     kind: 'time',
     exceptionScopes: ZONE_ONLY,
     fallback: DAY_HOUR_FALLBACK.route_departure_time,
@@ -233,7 +224,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'courier_close_time',
     label: 'Kurye kapanışı',
     help: 'Kasanın teslim alınması beklenen an. Panelin gün akışında eşik olarak görünür.',
-    group: 'order',
+    section: 'dayHours',
     kind: 'time',
     exceptionScopes: ZONE_ONLY,
     fallback: DAY_HOUR_FALLBACK.courier_close_time,
@@ -244,7 +235,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     /* Kurye ekranında imza adımı yok, yerine kutu okutması var; ayar durur ki kapsam gerekirse açılabilsin, yardım metni de açıldığında
        alınacak kanıt olmadığını söyler. */
     help: 'Kanıt hangi kanalda zorunlu olsun. Bugün ikisi de kapalı: kanıt kutu okutmasının kendisidir (imza adımı kaldırıldı).',
-    group: 'order',
+    section: 'delivery',
     kind: 'channelFlags',
     exceptionScopes: NONE,
     fallback: { b2b: false, b2c: false },
@@ -253,7 +244,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'delivery_summary_email',
     label: 'Teslimat özeti e-postası',
     help: 'Teslim tamamlanınca müşteriye özet e-postası otomatik gitsin mi.',
-    group: 'order',
+    section: 'delivery',
     kind: 'boolean',
     exceptionScopes: CHANNEL_ONLY,
     fallback: true,
@@ -264,7 +255,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'reservation_ttl_minutes',
     label: 'Online ödeme stok bekletme',
     help: 'Ödeme tamamlanmazsa ayrılan stok bu süre sonunda serbest kalır.',
-    group: 'payment',
+    section: 'paymentLimits',
     kind: 'integer',
     unit: 'dk',
     min: 30,
@@ -277,7 +268,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'cod_max_cents',
     label: 'Kapıda ödeme tavanı',
     help: 'Kapıda ödemeyle alınabilecek azami sipariş tutarı — kötüye kullanım freni.',
-    group: 'payment',
+    section: 'paymentLimits',
     kind: 'money',
     min: 0,
     impact: 'Geniş etkili: düşürmek, üstündeki sepetlerde kapıda ödeme seçeneğini kapatır.',
@@ -288,7 +279,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'cash_legal_limit_cents',
     label: 'Nakit yasal uyarı eşiği',
     help: 'Bu tutarın üstündeki nakit tahsilatta uyarı verilir — engellenmez.',
-    group: 'payment',
+    section: 'paymentLimits',
     kind: 'money',
     min: 0,
     limitReason: 'Yasal sınır ülkeye göre değişir (FR ~1.000 €); ülke istisnası bu yüzden açık.',
@@ -299,7 +290,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'payment_term_days',
     label: 'Vade süresi varsayılanı',
     help: 'Vadeli müşteride kartında ayrı bir süre yazmıyorsa bu geçerli olur.',
-    group: 'payment',
+    section: 'paymentLimits',
     kind: 'integer',
     unit: 'gün',
     min: 0,
@@ -311,7 +302,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'door_cash_account_id',
     label: 'Kapı önü satış kasası',
     help: 'Kapıda/dükkânda alınan paranın hangi hesaba yazılacağı. Satış anında hesap seçilmezse bu kullanılır.',
-    group: 'payment',
+    section: 'accounts',
     kind: 'account',
     // Fabrika değeri YOK ve olamaz: değer bir hesap kimliği, her kurulumda başka. Migration'a uuid
     // gömmek, hiçbir yerde karşılığı olmayan bir hesabı işaret eden bir satır bırakırdı.
@@ -324,12 +315,13 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
   {
     key: 'stripe_payout_account_id',
     label: 'Stripe payout hesabı',
-    help: 'Stripe havuzundaki paranın aktarıldığı banka hesabı. Payout geldiğinde Stripe → bu hesap transferi kendiliğinden yazılır (12.14).',
-    group: 'payment',
+    help: 'Stripe havuzundaki paranın aktarıldığı banka hesabı. Payout geldiğinde Stripe → bu hesap transferi kendiliğinden yazılır.',
+    section: 'accounts',
     kind: 'account',
     // Fabrika değeri YOK (kapı önü kasasıyla aynı gerekçe): değer bir hesap kimliği, her kurulumda başka.
     impact:
       'Ayar boşken payout olayı İŞLENMEZ ve sağlayıcı yeniden dener; ayar girilince işlenir. Yanlış hesap seçilirse banka ekstresinin satırı transferin karşısını bulamaz ve para iki hesapta birden görünür.',
+    unsetNote: 'Boşken payout olayı işlenmez; sağlayıcı yeniden dener.',
     exceptionScopes: [],
   },
 
@@ -338,7 +330,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'near_expiry_percent',
     label: 'Yaklaşan son tarih eşiği',
     help: 'Kalan raf ömrü bu yüzdenin altına düşen parti "yaklaşan" sayılır.',
-    group: 'stock',
+    section: 'stock',
     kind: 'percent',
     min: 0,
     max: 100,
@@ -346,21 +338,10 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     fallback: 25,
   },
   {
-    key: 'transfer_transit_days',
-    label: 'Transfer ulaşım süresi',
-    help: 'Depolar arası sevkiyatın gün cinsinden yol süresi. Sevk önerisi yolda ömrü yanacak partiyi uyarır; bu süreyi belirgin aşan sevkiyat "gecikmiş" görünür.',
-    group: 'stock',
-    kind: 'integer',
-    min: 0,
-    max: 30,
-    exceptionScopes: NONE,
-    fallback: 1,
-  },
-  {
     key: 'near_expiry_discount_percent',
     label: 'Önerilen indirim oranı',
     help: 'Yaklaşan son tarihli parti için önerilen indirim. Öneridir — karar insanın.',
-    group: 'stock',
+    section: 'stock',
     kind: 'percent',
     min: 0,
     max: 100,
@@ -371,12 +352,24 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'mlor_percent',
     label: 'Girişte tazelik kabul eşiği',
     help: 'Mal kabulde asgari kalan raf ömrü. Altında uyarır, kabulü engellemez.',
-    group: 'stock',
+    section: 'stock',
     kind: 'percent',
     min: 0,
     max: 100,
     exceptionScopes: NONE,
     fallback: 75,
+  },
+  {
+    key: 'transfer_transit_days',
+    label: 'Transfer ulaşım süresi',
+    help: 'Depolar arası sevkiyatın gün cinsinden yol süresi. Sevk önerisi yolda ömrü yanacak partiyi uyarır; bu süreyi belirgin aşan sevkiyat "gecikmiş" görünür.',
+    section: 'stock',
+    kind: 'integer',
+    unit: 'gün',
+    min: 0,
+    max: 30,
+    exceptionScopes: NONE,
+    fallback: 1,
   },
 
   // ── Puan ──────────────────────────────────────────────────────────────────
@@ -384,7 +377,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: POINTS_SETTING_KEYS.review,
     label: 'Yazılı yorum puanı',
     help: 'Onaylanan yorum/yıldız başına verilen puan — en değerli beyan.',
-    group: 'points',
+    section: 'pointsEarn',
     kind: 'integer',
     unit: 'puan',
     min: 0,
@@ -395,7 +388,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: POINTS_SETTING_KEYS.feedback_purchase,
     label: 'Alım sonrası beğeni puanı',
     help: 'Müşteri aldığı ürünü değerlendirdiğinde verilen puan.',
-    group: 'points',
+    section: 'pointsEarn',
     kind: 'integer',
     unit: 'puan',
     min: 0,
@@ -406,7 +399,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: POINTS_SETTING_KEYS.feedback_candidate,
     label: 'Keşif beğenisi puanı',
     help: 'Henüz almadığı bir ürünü keşifte değerlendirme — en ucuz aksiyon.',
-    group: 'points',
+    section: 'pointsEarn',
     kind: 'integer',
     unit: 'puan',
     min: 0,
@@ -418,7 +411,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: POINTS_SETTING_KEYS.referral,
     label: 'Getiren müşteri puanı',
     help: 'Hesabı OLMAYAN yeni bir müşteriyi getiren kişiye verilen puan. Ödül, getirilen kişinin ilk siparişinin parası alındığında yazılır.',
-    group: 'points',
+    section: 'pointsEarn',
     kind: 'integer',
     unit: 'puan',
     min: 0,
@@ -430,7 +423,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: POINTS_SETTING_KEYS.neighbor,
     label: 'Komşu daveti puanı',
     help: 'Komşusunu AYNI teslimat gününe çağıran kişiye verilen puan. Ödül, komşunun siparişinin parası alındığında yazılır.',
-    group: 'points',
+    section: 'pointsEarn',
     kind: 'integer',
     unit: 'puan',
     min: 0,
@@ -442,7 +435,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: POINTS_DAILY_CAP_KEY,
     label: 'Günlük puan tavanı',
     help: 'Bir günde kazanılabilecek azami puan. YALNIZ para ödemeden yapılabilen eylemleri kapsar (siteye gelmek, keşifte oy vermek); yorum ve davet ödülleri bu tavanı görmez.',
-    group: 'points',
+    section: 'pointsEarn',
     kind: 'integer',
     unit: 'puan',
     min: 0,
@@ -457,7 +450,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: POINTS_REDEEM_MIN_KEY,
     label: 'Kupona çevirme eşiği',
     help: 'Bu bakiyeye ulaşmadan puan kupona çevrilemez.',
-    group: 'points',
+    section: 'pointsRedeem',
     kind: 'integer',
     unit: 'puan',
     min: 0,
@@ -469,7 +462,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: POINTS_REDEEM_MAX_KEY,
     label: 'Tek kuponun azami puanı',
     help: 'Müşteri bir basışta en fazla bu kadar puanı kupona çevirir; fazlası bakiyede kalır.',
-    group: 'points',
+    section: 'pointsRedeem',
     kind: 'integer',
     unit: 'puan',
     min: 0,
@@ -481,7 +474,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: POINTS_CENT_VALUE_KEY,
     label: 'Puanın değeri',
     help: 'Bir puanın kuruş karşılığı. 1 = 100 puan 1,00 € eder.',
-    group: 'points',
+    section: 'pointsRedeem',
     kind: 'integer',
     unit: 'cent',
     min: 0,
@@ -494,7 +487,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'route_delivery_unit_cost_cents',
     label: 'Rota teslimat birim maliyeti',
     help: 'Kendi rotamızla giden sipariş başına maliyet — kâr hesabına girer.',
-    group: 'cost',
+    section: 'cost',
     kind: 'money',
     min: 0,
     impact: 'Geçmiş siparişlerin sabitlenmiş rakamlarını DEĞİŞTİRMEZ; yalnız bundan sonraki hesaplara girer.',
@@ -507,7 +500,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'packaging_unit_cost_cents',
     label: 'Paketleme (soğuk zincir) maliyeti',
     help: 'Soğuk zincir paketi olan sipariş başına maliyet — kâr hesabına girer.',
-    group: 'cost',
+    section: 'cost',
     kind: 'money',
     min: 0,
     // `0016`'nın dördüncü adayı. Paket malzemesi depoda alınır ve fiyatı tesise göre değişir.
@@ -518,7 +511,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'door_packaging_unit_cost_cents',
     label: 'Kapı önü satış paketleme maliyeti',
     help: 'Kapıdan elden satışta paketleme maliyeti. Varsayılan 0: mal elden gidiyor, soğuk zincir paketi yok.',
-    group: 'cost',
+    section: 'cost',
     kind: 'money',
     min: 0,
     exceptionScopes: NONE,
@@ -530,7 +523,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'feedback_delay_days',
     label: 'Geri bildirim daveti gecikmesi',
     help: 'Teslimden kaç gün sonra davet gider. Erken sormak "daha açmadım", geç sormak unutulmuş bir deneyim getirir.',
-    group: 'feedback',
+    section: 'feedback',
     kind: 'integer',
     unit: 'gün',
     min: 0,
@@ -542,7 +535,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'review_platform_url',
     label: 'Dış değerlendirme bağlantısı',
     help: 'Google İşletme Profili / Trustpilot adresi. BOŞSA akış sonunda davet hiç gösterilmez.',
-    group: 'feedback',
+    section: 'feedback',
     kind: 'text',
     exceptionScopes: ['country'],
     fallback: '',
@@ -551,7 +544,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     key: 'review_platform_name',
     label: 'Değerlendirme platformu adı',
     help: 'Müşteriye gösterilen ad — davet metnindeki "… üzerinde değerlendir".',
-    group: 'feedback',
+    section: 'feedback',
     kind: 'text',
     exceptionScopes: ['country'],
     fallback: 'Google',

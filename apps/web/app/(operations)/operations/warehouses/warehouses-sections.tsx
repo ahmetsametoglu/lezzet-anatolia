@@ -258,7 +258,7 @@ export function StaffChips({ staff }: { staff: readonly StaffChipView[] }) {
       ))}
       {/* Bağlantı ekranın köküne değil personelin durduğu sekmeye gider; soru "kapsamı nereden değiştiririm". */}
       <Link
-        href={settingsLink({ tab: 'staff' })}
+        href={settingsLink({ tab: 'setup' })}
         className="cursor-pointer self-center font-ops-body text-ops-xs text-ops-olive underline-offset-2 hover:underline"
       >
         Kapsam Ayarlar'da yönetilir →
