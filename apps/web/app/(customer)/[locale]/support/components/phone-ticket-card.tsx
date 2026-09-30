@@ -8,6 +8,9 @@ import { PhoneTicketStatusTag } from './phone-ticket-status-tag';
 
 type SupportCopy = LocalizedCopy<typeof supportMessages>;
 
+/** Kartın kabuğu; yükleme iskeleti de bununla çizilir ki veri gelince kart yerinden oynamasın. */
+export const TICKET_CARD_SHELL = 'flex items-center gap-2.5 rounded-card bg-sand-250 px-4 py-3.5';
+
 /** Talep kartı, native liste kartının ikizi: kartın tamamı basılır ve ekran okuyucuya tek satır olarak gider. */
 interface PhoneTicketCardProps {
   copy: SupportCopy;
@@ -23,7 +26,7 @@ export function PhoneTicketCard({ copy, locale, ticket }: PhoneTicketCardProps) 
     <Link
       href={{ pathname: '/support/[ticket]', params: { ticket: ticket.id } }}
       aria-label={copy.list.open.replace('{type}', title)}
-      className="flex cursor-pointer items-center gap-2.5 rounded-card bg-sand-250 px-4 py-3.5 transition-opacity hover:opacity-80"
+      className={`${TICKET_CARD_SHELL} cursor-pointer transition-opacity hover:opacity-80`}
     >
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate font-sans text-note font-bold text-ink">{title}</span>

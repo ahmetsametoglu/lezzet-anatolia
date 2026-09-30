@@ -17,7 +17,9 @@ export default async function PackagesLoading() {
 
   return (
     <SiteFrame device={device} locale={locale} activeNav="packages">
-      <SkeletonRegion>{device === 'mobile' ? <PhonePackagesSkeleton locale={locale} /> : <DesktopPackagesSkeleton locale={locale} />}</SkeletonRegion>
+      <SkeletonRegion>
+        {device === 'mobile' ? <PhonePackagesSkeleton locale={locale} /> : <DesktopPackagesSkeleton locale={locale} />}
+      </SkeletonRegion>
     </SiteFrame>
   );
 }
