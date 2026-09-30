@@ -1,22 +1,26 @@
 import { UserProfileService, WarehouseService, type Db } from '@lezzet/database';
-import type { CheckoutPickup, Warehouse } from '@lezzet/types';
+import type { CheckoutPickup, UserProfile, Warehouse } from '@lezzet/types';
 import { warehouseAddressLine } from '../warehouse/pickup';
 
 /**
  * Gel-al teklifi: müşteri izni (`pickup_allowed`) × gel-al noktası olan tesisler; biri yoksa teklif yok. `requested` listede
  * değilse seçim düşer, çünkü istemcinin söylediği depo olduğu gibi yazılmaz.
  */
-export async function readPickupOffer(
+export async function readPickupOffer(db: Db, customerId: string, requested: string | null): Promise<PickupOffer> {
+  return pickupOfferFor(db, await new UserProfileService(db).getById(customerId), requested);
+}
+
+type PickupOffer = { offer: CheckoutPickup | null; warehouse: Warehouse | null };
+
+/** Profili elinde olan çağıranın yolu; gel-al depoları yalnız izinli müşteride okunur, izin varsayılan olarak kapalıdır. */
+export async function pickupOfferFor(
   db: Db,
-  customerId: string,
+  customer: Pick<UserProfile, 'pickupAllowed'> | null,
   requested: string | null,
-): Promise<{ offer: CheckoutPickup | null; warehouse: Warehouse | null }> {
-  // İki okuma birbirini beklemez: teklif her oturumlu sayfanın yer çözümünde sorulur ve sıralı okuma oraya bir ağ turu eklerdi.
-  const [customer, warehouses] = await Promise.all([
-    new UserProfileService(db).getById(customerId),
-    new WarehouseService(db).list({ activeOnly: true, kind: 'facility', pickupEnabled: true }),
-  ]);
-  if (!customer?.pickupAllowed || warehouses.length === 0) return { offer: null, warehouse: null };
+): Promise<PickupOffer> {
+  if (!customer?.pickupAllowed) return { offer: null, warehouse: null };
+  const warehouses = await new WarehouseService(db).list({ activeOnly: true, kind: 'facility', pickupEnabled: true });
+  if (warehouses.length === 0) return { offer: null, warehouse: null };
   const warehouse = warehouses.find((w) => w.id === requested) ?? null;
   return {
     offer: {

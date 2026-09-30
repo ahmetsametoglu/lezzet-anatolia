@@ -2,11 +2,11 @@ import 'server-only';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { POSTAL_CODE_PATTERN } from '@lezzet/address';
-import { readPickupOffer } from '@lezzet/application';
+import { pickupOfferFor } from '@lezzet/application';
 import { AddressService, PostalCodePlaceService, serviceDb } from '@lezzet/database';
 import { findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
-import type { Address, CheckoutPickup, Warehouse } from '@lezzet/types';
-import { currentCustomerId } from '@/lib/guard';
+import type { Address, CheckoutPickup, UserProfile, Warehouse } from '@lezzet/types';
+import { readSessionProfile } from '@/lib/guard';
 import { describePlace } from './describe-place';
 import { readDeliveryInputs } from './inputs';
 import { readPickupCookie } from './pickup-cookie';
@@ -42,8 +42,7 @@ const getPostalMatches = cache(async (postalCode: string) =>
 );
 
 /** Kayıtlı adresi olan müşteride çerez değil adres konuşur; yoksa sepet ve ödeme aynı müşteriye farklı teslimat yolu gösterirdi. */
-const readDefaultAddress = cache(async (): Promise<Address | null> => {
-  const customerId = await currentCustomerId();
+const readDefaultAddress = cache(async (customerId: string | null): Promise<Address | null> => {
   if (!customerId) return null;
   const rows = await new AddressService(serviceDb()).listByCustomer(customerId);
   return rows.find((row) => row.isDefault) ?? null;
@@ -51,21 +50,18 @@ const readDefaultAddress = cache(async (): Promise<Address | null> => {
 
 /** Kod çözülemezse yer bilinmiyor sayılır ve hata fırlatılmaz: cevaplanmamış soru arıza değildir. */
 /** Çerezdeki gel-al seçimi teklif kapısından geçer (izin × gel-al deposu); misafirde teklif yoktur. */
-const readPickupSelection = cache(async (): Promise<{ offer: CheckoutPickup | null; warehouse: Warehouse | null }> => {
-  const customerId = await currentCustomerId();
-  if (!customerId) return { offer: null, warehouse: null };
-  return readPickupOffer(serviceDb(), customerId, await readPickupCookie());
-});
+const readPickupSelection = cache(
+  async (profile: UserProfile | null): Promise<{ offer: CheckoutPickup | null; warehouse: Warehouse | null }> => {
+    if (!profile) return { offer: null, warehouse: null };
+    return pickupOfferFor(serviceDb(), profile, await readPickupCookie());
+  },
+);
 
 const readPlaceContext = cache(async (): Promise<PlaceContext> => {
-  const [customerId, cookieAnswer] = await Promise.all([currentCustomerId(), readPlaceAnswerFromCookie()]);
-  // Yeri cevaplanmış olabilecek istekte teslim girdileri adresle aynı turda okunur; oturumsuz ve çerezsiz ziyaretçide hiç okunmaz.
-  const [address, pickup] = await Promise.all([
-    readDefaultAddress(),
-    readPickupSelection(),
-    customerId !== null || cookieAnswer !== null ? readDeliveryInputs() : null,
-  ]);
-  const answer = address ? { country: address.country, postalCode: address.postalCode } : cookieAnswer;
+  // Profil bir kez okunup iki okuyucuya geçer: sunucu eyleminde `cache` işlemez ve her okuyucu oturumu yeniden sorardı.
+  const profile = await readSessionProfile();
+  const [address, pickup] = await Promise.all([readDefaultAddress(profile?.id ?? null), readPickupSelection(profile)]);
+  const answer = address ? { country: address.country, postalCode: address.postalCode } : await readPlaceAnswerFromCookie();
   // Adres yokken de gel-al seçilebilir: sepet o zaman deponun stoğuyla okunur, adres yalnız faturadır.
   if (!answer) return { ...EMPTY, pickup: pickup.offer, pickupWarehouse: pickup.warehouse };
 

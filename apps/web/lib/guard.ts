@@ -46,10 +46,14 @@ export const getSessionUser = cache(async (): Promise<AuthUser | null> => {
   return user ? { id: user.id, email: user.email ?? null } : null;
 });
 
+const profileOfAuthUser = cache(async (authUserId: string): Promise<UserProfile | null> =>
+  new UserProfileService(serviceDb()).findByAuthUserId(authUserId),
+);
+
 /** Oturumdaki kişinin profil satırı, istek başına bir kez (`cache`); kimlik, künye ve rol kararları bu satırdan okunur. */
 export const readSessionProfile = cache(async (): Promise<UserProfile | null> => {
   const user = await getSessionUser();
-  return user ? new UserProfileService(serviceDb()).findByAuthUserId(user.id) : null;
+  return user ? profileOfAuthUser(user.id) : null;
 });
 
 /**
@@ -84,8 +88,9 @@ export async function requireAuth(): Promise<AuthUser> {
  * (`domain-core/identity/roles`), guard yalnız satırı getirir ve sorar.
  */
 async function staffProfile(allowed: (roles: readonly UserRole[]) => boolean): Promise<{ user: StaffUser; profile: UserProfile }> {
+  // Profil `requireAuth`un döndürdüğü kimlikle okunur: sunucu eyleminde `cache` işlemez, oturumu ikinci kez sormak Auth'a bir tur daha olurdu.
   const user = await requireAuth();
-  const profile = await readSessionProfile();
+  const profile = await profileOfAuthUser(user.id);
   if (!profile || !allowed(profile.roles)) throw new AuthError('forbidden');
   return { user: { id: user.id, email: user.email, profileId: profile.id }, profile };
 }
