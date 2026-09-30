@@ -10,11 +10,79 @@
 <helmet>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
-<script src="./image-slot.js"></script>
 <style>
   body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
   a { color:#5f7a2c; text-decoration:none; }
   a:hover { color:#4a6121; }
+
+  .hd { padding:16px 24px; border-bottom:1px solid #e6e7e1; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .search { font:500 12.5px 'IBM Plex Mono'; color:#4a4f45; border:1px solid #d9dbd2; border-radius:7px; padding:8px 12px; display:flex; align-items:center; gap:6px; }
+  .tabs { padding:0 24px; border-bottom:1px solid #e6e7e1; display:flex; gap:2px; background:#f8f9f5; align-items:stretch; }
+  .tab { font:600 13px 'Space Grotesk'; padding:12px 14px 11px; margin-bottom:-1px; border-bottom:2px solid transparent; display:flex; align-items:center; gap:7px; cursor:pointer; }
+  .tab-n { font:500 10.5px 'IBM Plex Mono'; border-radius:9px; padding:1px 6px; flex:none; }
+  .chip { margin-left:auto; align-self:center; font:600 12px 'Space Grotesk'; border:1px solid #d9dbd2; border-radius:16px; padding:5px 11px; display:flex; align-items:center; gap:7px; cursor:pointer; white-space:nowrap; }
+  .chip-n { font:500 10.5px 'IBM Plex Mono'; border-radius:9px; padding:1px 6px; }
+
+  .body { flex:1; min-height:0; overflow-y:auto; padding:18px 24px 30px; display:flex; flex-direction:column; gap:12px; }
+  .info { font:400 12px 'Karla'; color:#6a7065; }
+  .cols { columns:2; column-gap:14px; }
+  .cell { break-inside:avoid; padding-bottom:14px; }
+  .card { background:#fff; border:1px solid #e2e3dd; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; }
+  .c-hd { padding:10px 16px; display:flex; align-items:center; gap:8px; background:#f8f9f5; min-height:22px; }
+  .c-t { font:600 13.5px 'Space Grotesk'; color:#22251f; }
+  .c-n { font:500 10.5px 'IBM Plex Mono'; color:#6a7065; background:#e9ebe4; border-radius:9px; padding:1px 7px; }
+  .c-btn { margin-left:auto; font:600 11.5px 'Space Grotesk'; color:#fbfbf9; background:#22251f; border-radius:7px; padding:5px 11px; cursor:pointer; }
+  .c-sub { font:400 11.5px/1.5 'Karla'; color:#6a7065; padding:9px 16px 10px; border-top:1px solid #eceee8; }
+
+  .row { display:flex; align-items:center; gap:14px; padding:11px 16px; border-top:1px solid #eceee8; cursor:pointer; }
+  .row-l { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .row-t { display:flex; align-items:center; gap:8px; }
+  .lbl { font:600 13.5px 'Karla'; color:#22251f; }
+  .tag-a { font:600 9.5px 'Space Grotesk'; color:#9a6416; background:#fdf1e3; border-radius:6px; padding:2px 7px; flex:none; }
+  .help { font:400 11.5px/1.45 'Karla'; color:#6a7065; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .exc { font:500 11.5px/1.45 'Karla'; color:#9a6416; }
+  .row-r { flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:2px; max-width:48%; text-align:right; }
+  .def { font:400 10.5px 'Karla'; color:#8b9086; }
+  .on { display:flex; align-items:center; gap:6px; font:600 12.5px 'Karla'; color:#4a6121; }
+  .on-dot { width:7px; height:7px; border-radius:50%; background:#5f7a2c; }
+  .seg { display:flex; border:1px solid #d9dbd2; border-radius:8px; overflow:hidden; }
+  .seg-i { font:600 11.5px 'Space Grotesk'; padding:5px 10px; }
+
+  .hours { display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid #eceee8; }
+  .hour { padding:15px 0 16px 16px; display:flex; flex-direction:column; gap:3px; cursor:pointer; min-width:0; }
+  .h-rail { display:flex; align-items:center; margin-bottom:9px; height:12px; }
+  .h-dot { width:9px; height:9px; border-radius:50%; background:#5f7a2c; flex:none; }
+  .h-tag { font:600 9.5px 'Space Grotesk'; letter-spacing:.12em; text-transform:uppercase; color:#6a7065; margin-left:8px; flex:none; }
+  .h-bar { flex:1; border-top:2px solid #dfe2d8; margin-left:8px; }
+  .h-time { font:500 24px 'IBM Plex Mono'; color:#22251f; }
+  .h-help { font:400 11.5px/1.45 'Karla'; color:#6a7065; padding-right:16px; }
+
+  .trust { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid #eceee8; }
+  .tr-col { display:flex; flex-direction:column; min-width:0; }
+  .tr-h { padding:11px 16px 9px; display:flex; align-items:baseline; gap:8px; }
+  .tr-ht { font:600 10.5px 'Space Grotesk'; letter-spacing:.12em; text-transform:uppercase; }
+  .tr-hs { font:400 11.5px 'Karla'; color:#6a7065; }
+  .tr-row { display:flex; align-items:center; gap:12px; padding:8px 16px; border-top:1px solid #f0f1ec; cursor:pointer; }
+  .tr-l { flex:1; min-width:0; font:500 13px 'Karla'; color:#22251f; }
+  .tr-v { font:500 13.5px 'IBM Plex Mono'; flex:none; }
+
+  .st-row { display:flex; align-items:center; gap:12px; padding:9px 16px; border-top:1px solid #eceee8; cursor:pointer; }
+  .st-av { width:32px; height:32px; border-radius:50%; color:#fff; font:600 11.5px 'Space Grotesk'; display:grid; place-items:center; flex:none; }
+  .st-m { font:400 11.5px 'Karla'; color:#6a7065; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bdgs { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; flex:none; max-width:52%; }
+  .bdg { font:600 10px 'Space Grotesk'; border-radius:6px; padding:3px 8px; white-space:nowrap; }
+
+  .imgs { display:grid; grid-template-columns:repeat(4,1fr); border-top:1px solid #eceee8; }
+  .img { padding:14px 16px 16px; display:flex; flex-direction:column; gap:5px; cursor:pointer; min-width:0; border-right:1px solid #eceee8; }
+  .img-box { height:104px; display:grid; place-items:center; margin-bottom:5px; background:#f8f9f5; border-radius:8px; }
+  .img-ph { height:84px; border-radius:6px; box-sizing:border-box; display:grid; place-items:center; font:500 10.5px 'IBM Plex Mono'; color:#6a7065; }
+  .g-n { font:500 11.5px 'IBM Plex Mono'; color:#8b9086; }
+
+  .mcp-note { margin:0; padding:9px 16px; font:400 11.5px/1.5 'Karla'; color:#6e4a12; background:#fdf7ec; border-top:1px solid #ecd9b4; }
+  .mcp-h { padding:10px 16px 6px; font:600 10.5px 'Space Grotesk'; letter-spacing:.12em; text-transform:uppercase; color:#6a7065; border-top:1px solid #eceee8; }
+  .calls { max-height:220px; overflow-y:auto; padding:0 0 10px; }
+  .call { display:flex; align-items:baseline; gap:10px; padding:5px 16px; font:500 11.5px 'IBM Plex Mono'; }
+  .call-m { font:400 10.5px 'IBM Plex Mono'; color:#8b9086; }
 </style>
 </helmet>
 
@@ -23,91 +91,145 @@
   <div style="display:flex;flex-direction:column;gap:16px">
     <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
       <span style="font:700 20px 'Space Grotesk';color:#22251f">Ayarlar &amp; kullanıcı/rol · web</span>
-      <span style="font:400 13.5px 'Karla';color:#6a7065">Her değer buradan değişir (koda gömülü yok). Genel değer + istisnalar (kanal/bölge/ülke). Değişiklik geleceğe uygulanır.</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Dört sekme, konu kartları. Genel değer + istisnalar (kanal/bölge/ülke/depo). Değişiklik geleceğe uygulanır.</span>
     </div>
 
-    <div data-screen-label="Ayarlar Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:640px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+    <div data-screen-label="Ayarlar Web" style="width:100%;max-width:1360px;box-sizing:border-box;height:880px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
       <dc-import name="AdminSidebar" active="ayarlar" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
 
       <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
-        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div class="hd">
           <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
             <span style="font:600 22px 'Space Grotesk'">Ayarlar</span>
-            <span style="font:400 12px 'Karla';color:#8b9086">Sistem-geneli parametreler · her değişiklik iz kaydına yazılır</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">49 parametre · 8 personel</span>
           </div>
-          <span style="font:500 12.5px 'IBM Plex Mono';color:#4a4f45;border:1px solid #d9dbd2;border-radius:7px;padding:8px 12px;display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Ayar ara</span>
+          <span class="search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Ayar ara</span>
         </div>
-        <div style="padding:0 24px;border-bottom:1px solid #e6e7e1;display:flex;gap:2px;background:#f8f9f5;flex-wrap:wrap">
-          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
-            <span onClick="{{ t.select }}" style="font:600 12.5px 'Space Grotesk';color:{{ t.fg }};border-bottom:2px solid {{ t.edge }};padding:11px 13px;margin-bottom:-1px;cursor:pointer">{{ t.label }}</span>
+        <div class="tabs">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+            <span class="tab" onClick="{{ t.select }}" style="color:{{ t.fg }};border-bottom-color:{{ t.edge }}">{{ t.label }}<sc-if value="{{ t.hasCount }}" hint-placeholder-val="{{ true }}"><span class="tab-n" style="background:{{ t.cBg }};color:{{ t.cFg }}">{{ t.count }}</span></sc-if></span>
           </sc-for>
+          <span class="chip" onClick="{{ toggleChanged }}" style="background:{{ chip.bg }};color:{{ chip.fg }};border-color:{{ chip.bd }}">Değişenler<span class="chip-n" style="background:{{ chip.nBg }};color:{{ chip.nFg }}">3</span></span>
         </div>
 
-        <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ true }}">
-          <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:11px">
-            <sc-for list="{{ settings }}" as="s" hint-placeholder-count="6">
-              <div onClick="{{ s.edit }}" style="border:1px solid #e6e7e1;background:#fff;border-radius:10px;padding:13px 16px;display:flex;align-items:center;gap:14px;cursor:pointer">
-                <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
-                  <div style="display:flex;align-items:center;gap:8px"><span style="font:600 13.5px 'Karla';color:#22251f">{{ s.name }}</span><sc-if value="{{ s.hasException }}" hint-placeholder-val="{{ false }}"><span style="font:600 9.5px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:6px;padding:2px 7px;flex:none">istisnalı</span></sc-if></div>
-                  <span style="font:400 11.5px 'Karla';color:#8b9086">{{ s.desc }}</span>
-                  <sc-if value="{{ s.hasException }}" hint-placeholder-val="{{ false }}"><span style="font:400 11px 'Karla';color:#9a6416">{{ s.exceptionText }}</span></sc-if>
+        <div class="body">
+          <sc-if value="{{ changedOnly }}" hint-placeholder-val="{{ false }}">
+            <span class="info">Varsayılandan farklı 3 ayar — süzgeç bütün sekmelerde çalışır.</span>
+          </sc-if>
+          <div class="cols">
+            <sc-for list="{{ cards }}" as="c" hint-placeholder-count="3">
+              <div class="cell" style="column-span:{{ c.span }}"><div class="card">
+                <div class="c-hd">
+                  <span class="c-t">{{ c.title }}</span>
+                  <span class="c-n">{{ c.count }}</span>
+                  <sc-if value="{{ c.hasAction }}" hint-placeholder-val="{{ false }}"><span class="c-btn" onClick="{{ c.onAction }}">{{ c.action }}</span></sc-if>
                 </div>
-                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex:none"><span style="font:500 15px 'IBM Plex Mono';color:#22251f">{{ s.value }}</span><span style="font:400 10px 'Karla';color:#9aa094">varsayılan {{ s.default }}</span></div>
-              </div>
+                <sc-if value="{{ c.hasSub }}" hint-placeholder-val="{{ false }}"><span class="c-sub">{{ c.sub }}</span></sc-if>
+
+                <sc-if value="{{ c.isRows }}" hint-placeholder-val="{{ true }}">
+                  <sc-for list="{{ c.rows }}" as="r" hint-placeholder-count="3">
+                    <div class="row" onClick="{{ edit }}" style-hover="background:#f8f9f5">
+                      <div class="row-l">
+                        <div class="row-t"><span class="lbl">{{ r.label }}</span><sc-if value="{{ r.hasExc }}" hint-placeholder-val="{{ false }}"><span class="tag-a">istisnalı</span></sc-if></div>
+                        <span class="help">{{ r.help }}</span>
+                        <sc-if value="{{ r.hasExc }}" hint-placeholder-val="{{ false }}"><span class="exc">{{ r.exc }}</span></sc-if>
+                        <sc-if value="{{ r.hasNote }}" hint-placeholder-val="{{ false }}"><span class="exc">{{ r.note }}</span></sc-if>
+                      </div>
+                      <div class="row-r">
+                        <sc-if value="{{ r.isPlain }}" hint-placeholder-val="{{ true }}"><span style="font:{{ r.vFont }};color:{{ r.vColor }}">{{ r.value }}</span></sc-if>
+                        <sc-if value="{{ r.isOn }}" hint-placeholder-val="{{ false }}"><span class="on"><span class="on-dot"></span>{{ r.value }}</span></sc-if>
+                        <sc-if value="{{ r.isSeg }}" hint-placeholder-val="{{ false }}">
+                          <span class="seg"><sc-for list="{{ r.seg }}" as="sg" hint-placeholder-count="3"><span class="seg-i" style="background:{{ sg.bg }};color:{{ sg.fg }}">{{ sg.label }}</span></sc-for></span>
+                        </sc-if>
+                        <sc-if value="{{ r.changed }}" hint-placeholder-val="{{ false }}"><span class="def">varsayılan {{ r.def }}</span></sc-if>
+                      </div>
+                    </div>
+                  </sc-for>
+                </sc-if>
+
+                <sc-if value="{{ c.isHours }}" hint-placeholder-val="{{ false }}">
+                  <div class="hours">
+                    <sc-for list="{{ c.hours }}" as="h" hint-placeholder-count="4">
+                      <div class="hour" onClick="{{ edit }}" style-hover="background:#f8f9f5">
+                        <div class="h-rail"><span class="h-dot"></span><span class="h-tag">{{ h.tag }}</span><span class="h-bar" style="border-top-style:{{ h.barStyle }};opacity:{{ h.barOp }}"></span></div>
+                        <span class="h-time">{{ h.time }}</span>
+                        <div class="row-t"><span class="lbl">{{ h.label }}</span><sc-if value="{{ h.hasExc }}" hint-placeholder-val="{{ false }}"><span class="tag-a">istisnalı</span></sc-if></div>
+                        <span class="h-help">{{ h.help }}</span>
+                        <sc-if value="{{ h.hasExc }}" hint-placeholder-val="{{ false }}"><span class="exc">{{ h.exc }}</span></sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ c.isTrust }}" hint-placeholder-val="{{ false }}">
+                  <div class="trust">
+                    <div class="tr-col" style="border-right:1px solid #eceee8">
+                      <div class="tr-h"><span class="tr-ht" style="color:#4a6121">Puan ekler</span><span class="tr-hs">0 yazılırsa sayılmaz</span></div>
+                      <sc-for list="{{ c.plus }}" as="p" hint-placeholder-count="6">
+                        <div class="tr-row" onClick="{{ edit }}" style-hover="background:#f8f9f5"><span class="tr-l">{{ p.label }}</span><span class="tr-v" style="color:{{ p.fg }}">{{ p.value }}</span></div>
+                      </sc-for>
+                    </div>
+                    <div class="tr-col">
+                      <div class="tr-h"><span class="tr-ht" style="color:#a5443c">Puan düşer</span><span class="tr-hs">0 yazılırsa sayılmaz</span></div>
+                      <sc-for list="{{ c.minus }}" as="p" hint-placeholder-count="6">
+                        <div class="tr-row" onClick="{{ edit }}" style-hover="background:#f8f9f5"><span class="tr-l">{{ p.label }}</span><span class="tr-v" style="color:{{ p.fg }}">{{ p.value }}</span></div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div class="row" onClick="{{ edit }}" style-hover="background:#f8f9f5">
+                    <div class="row-l"><span class="lbl">{{ c.grace.label }}</span><span class="help">{{ c.grace.help }}</span></div>
+                    <div class="row-r"><span style="font:500 14px 'IBM Plex Mono'">{{ c.grace.value }}</span></div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ c.isStaff }}" hint-placeholder-val="{{ false }}">
+                  <sc-for list="{{ c.staff }}" as="u" hint-placeholder-count="4">
+                    <div class="st-row" onClick="{{ openUser }}" style-hover="background:#f8f9f5">
+                      <span class="st-av" style="background:{{ u.av }}">{{ u.initials }}</span>
+                      <div class="row-l"><span class="lbl">{{ u.name }}</span><span class="st-m">{{ u.meta }}</span></div>
+                      <div class="bdgs">
+                        <sc-for list="{{ u.roles }}" as="rl" hint-placeholder-count="1"><span class="bdg" style="background:#eceef0;color:#4d5560">{{ rl }}</span></sc-for>
+                        <sc-if value="{{ u.pending }}" hint-placeholder-val="{{ false }}"><span class="bdg" style="background:#fdf1e3;color:#9a6416">giriş bekliyor</span></sc-if>
+                      </div>
+                    </div>
+                  </sc-for>
+                </sc-if>
+
+                <sc-if value="{{ c.isMcp }}" hint-placeholder-val="{{ false }}">
+                  <sc-for list="{{ c.keys }}" as="k" hint-placeholder-count="2">
+                    <div class="row" style="cursor:default">
+                      <div class="row-l">
+                        <div class="row-t"><span class="lbl">{{ k.label }}</span><span class="bdg" style="background:{{ k.scBg }};color:{{ k.scFg }}">{{ k.scope }}</span><span class="bdg" style="background:{{ k.stBg }};color:{{ k.stFg }}">{{ k.status }}</span></div>
+                        <span class="help">{{ k.meta }}</span>
+                      </div>
+                      <sc-if value="{{ k.canRevoke }}" hint-placeholder-val="{{ false }}"><span style="font:600 11.5px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:7px;padding:5px 10px;cursor:pointer;flex:none">İptal et</span></sc-if>
+                    </div>
+                  </sc-for>
+                  <p class="mcp-note">{{ c.notice }}</p>
+                  <span class="mcp-h">Son çağrılar</span>
+                  <div class="calls">
+                    <sc-for list="{{ c.calls }}" as="cl" hint-placeholder-count="4">
+                      <div class="call"><span style="color:{{ cl.fg }}">{{ cl.tool }}</span><span class="call-m">{{ cl.ms }}</span><span style="font:400 11px 'Karla';color:#a5443c">{{ cl.err }}</span><span class="call-m" style="margin-left:auto">{{ cl.at }}</span></div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ c.isImages }}" hint-placeholder-val="{{ false }}">
+                  <div class="imgs">
+                    <sc-for list="{{ c.images }}" as="im" hint-placeholder-count="4">
+                      <div class="img" style="border-right-color:{{ im.edge }}" style-hover="background:#f8f9f5">
+                        <div class="img-box"><span class="img-ph" style="aspect-ratio:{{ im.ar }};border:1px {{ im.bd }} #cfd2c8;background:{{ im.bg }}">{{ im.ph }}</span></div>
+                        <div class="row-t"><span class="lbl">{{ im.label }}</span><span class="g-n">{{ im.ratio }}</span></div>
+                        <span class="help">{{ im.where }}</span>
+                        <span style="font:500 11.5px 'Karla';color:{{ im.stFg }}">{{ im.state }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div></div>
             </sc-for>
           </div>
-        </sc-if>
-
-        <sc-if value="{{ isUsers }}" hint-placeholder-val="{{ false }}">
-          <div style="flex:1;min-height:0;display:flex;flex-direction:column">
-            <div style="padding:11px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:10px"><span style="font:400 12px 'Karla';color:#8b9086;flex:1;min-width:0">Roller sabit kalıp: depo fiyat görmez, kurye yalnız kendi teslimatını görür. Burada rol atanır.</span><span onClick="{{ openUser }}" style="font:600 12px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:7px;padding:8px 14px;cursor:pointer;flex:none">+ Kullanıcı</span></div>
-            <div style="overflow-y:auto;flex:1;min-height:0">
-              <sc-for list="{{ users }}" as="u" hint-placeholder-count="4">
-                <div onClick="{{ openUser }}" style="padding:13px 24px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:14px;cursor:pointer">
-                  <span style="width:38px;height:38px;border-radius:10px;background:{{ u.avBg }};color:#fff;font:600 13px 'Space Grotesk';display:grid;place-items:center;flex:none">{{ u.initials }}</span>
-                  <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 13.5px 'Karla';color:#22251f">{{ u.name }}</span><span style="font:400 11px 'Karla';color:#8b9086">{{ u.contact }}</span></div>
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:none"><sc-for list="{{ u.roles }}" as="r" hint-placeholder-count="2"><span style="font:600 10px 'Space Grotesk';color:{{ r.fg }};background:{{ r.bg }};border-radius:6px;padding:3px 8px">{{ r.label }}</span></sc-for></div>
-                  <span style="font:600 10px 'Space Grotesk';color:{{ u.stFg }};background:{{ u.stBg }};border-radius:6px;padding:3px 8px;flex:none">{{ u.status }}</span>
-                </div>
-              </sc-for>
-            </div>
-          </div>
-        </sc-if>
-
-        <sc-if value="{{ isVitrin }}" hint-placeholder-val="{{ false }}">
-          <div style="flex:1;min-height:0;display:flex;flex-direction:column">
-            <div style="padding:11px 24px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:10px">
-              <span style="font:400 12px 'Karla';color:#8b9086;flex:1;min-width:0">Ürüne ait olmayan sayfa görselleri. Ürün, kategori, koleksiyon ve paket fotoğrafları burada değil — kendi formlarında yüklenir (Katalog › Ürünler).</span>
-              <span style="font:500 11px 'IBM Plex Mono';color:#8b9086;flex:none">kaynak oran satırda yazılı</span>
-            </div>
-            <div style="flex:1;min-height:0;overflow-y:auto">
-              <sc-for list="{{ vitrin }}" as="v" hint-placeholder-count="6">
-                <div style="padding:13px 24px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:14px">
-                  <span style="width:104px;flex:none;aspect-ratio:{{ v.ar }};border:1px {{ v.bdStyle }} #e0e2da;border-radius:8px;overflow:hidden;background:#f0f1ec;display:grid;place-items:center">
-                    <sc-if value="{{ v.editable }}" hint-placeholder-val="{{ true }}">
-                      <image-slot id="{{ v.slotId }}" radius="7" placeholder="{{ v.ratio }}"></image-slot>
-                    </sc-if>
-                    <sc-if value="{{ v.static }}" hint-placeholder-val="{{ false }}">
-                      <span style="font:500 10px 'IBM Plex Mono';color:#b3b7ac">{{ v.ratio }}</span>
-                    </sc-if>
-                  </span>
-                  <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
-                    <div style="display:flex;align-items:center;gap:8px">
-                      <span style="font:600 13.5px 'Karla';color:#22251f">{{ v.name }}</span>
-                      <span style="font:600 9.5px 'Space Grotesk';color:{{ v.tagFg }};background:{{ v.tagBg }};border-radius:6px;padding:2px 7px;flex:none">{{ v.tag }}</span>
-                    </div>
-                    <span style="font:400 11.5px 'Karla';color:#8b9086">{{ v.where }}</span>
-                    <span style="font:400 11px 'Karla';color:#9aa094">{{ v.note }}</span>
-                  </div>
-                  <span style="font:500 12px 'IBM Plex Mono';color:#6a7065;flex:none">{{ v.ratio }} · {{ v.min }}</span>
-                </div>
-              </sc-for>
-            </div>
-            <div style="padding:11px 24px;border-top:1px solid #e6e7e1;background:#f8f9f5">
-              <span style="font:400 11.5px/1.6 'Karla';color:#8b9086">Panelden düzenlenen görsel yayına anında girer, sürüm geçmişi tutulur. <strong>Statik</strong> işaretli görseller koda gömülüdür (marka sahnesi, hata sayfası çizimi); değişimi geliştirme işidir — panelde yanlışlıkla bozulmasın diye kilitli.</span>
-            </div>
-          </div>
-        </sc-if>
+        </div>
       </div>
     </div>
   </div>
@@ -223,105 +345,186 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { tab: 'siparis', settingOpen: false, userOpen: false };
+  state = { tab: 'order', changedOnly: false, settingOpen: false, userOpen: false };
   renderVals() {
-    const tab = this.state.tab;
-    const tabDefs = [
-      { key:'siparis', label:'Sipariş & teslimat' }, { key:'odeme', label:'Ödeme' },
-      { key:'stok', label:'Stok & tazelik' }, { key:'puan', label:'Puan' },
-      { key:'maliyet', label:'Birim maliyet' }, { key:'vitrin', label:'Vitrin görselleri' }, { key:'users', label:'Kullanıcı & rol' },
-    ];
-    const tabs = tabDefs.map(t => ({ label:t.label, select:()=>this.setState({tab:t.key}),
-      fg: tab===t.key?'#22251f':'#8b9086', edge: tab===t.key?'#5f7a2c':'transparent' }));
+    const MONO = "500 14px 'IBM Plex Mono'";
+    const TEXT = "600 12.5px 'Karla'";
+    const HANDLERS = ['İnsan', 'Hibrit', 'AI'];
 
-    const edit = () => this.setState({ settingOpen:true });
-    const S = (name,desc,value,def,exc) => ({ name, desc, value, default:def,
-      hasException: !!exc, exceptionText: exc||'', edit });
-    const byTab = {
-      siparis: [
-        S('Minimum sepet tutarı','Bu tutarın altında sipariş tamamlanamaz','25,00 €','20,00 €','İstisna: B2B için 100,00 €'),
-        S('Ücretsiz kargo eşiği','Bu tutar üstü kargo ücretsiz','60,00 €','50,00 €',null),
-        S('Sipariş kesim saati','Sonrası ertesi rota gününe yazılır','17:00','16:00',null), S('Gel-al bekleme süresi','Hazır gel-al siparişi depoda en çok bu kadar bekler','7 gün','7 gün','Dolunca ofis listesine ve pano şeridine düşer'),
-        S('Teslim onayı kapsamı','İmza/foto kimden istenir','B2B zorunlu','B2B zorunlu',null),
-        S('Teslimat özeti e-postası','Otomatik gönderim','Açık','Açık',null),
-        S('Teslimat bölgeleri','Kapıya teslimin gittiği posta kodları','4 bölge · 26 kod','—','Aşağıdaki bölge tablosundan yönetilir'),
-        S('Soğuk zincir kargo kuralı','Soğuk zincir ürünü kargoya verilebilir mi','Hayır','Hayır','Kural kapalıyken bu ürünler yalnız bölge içi satılır'),
-        S('Bölge dışı sepet davranışı','Gönderilemeyen kalem çıkınca','Sonraya kaydet + kalanı sipariş','Sonraya kaydet + kalanı sipariş','Alternatif: yalnız uyarı göster'),
-      ],
-      odeme: [
-        S('Online ödeme stok bekletme','Ödeme tamamlanmazsa stok serbest kalır','30 dk','30 dk','Alt sınır: 30 dk (sağlayıcı asgarisi)'),
-        S('Kapıda ödeme tavanı','Kötüye-kullanım tavanı','500,00 €','500,00 €',null),
-        S('Nakit yasal uyarı eşiği','Bu tutar üstü nakitte uyarı','1.000,00 €','1.000,00 €',null),
-        S('Vade süresi varsayılanı','Vadeli müşteride varsayılan gün','30 gün','30 gün',null),
-      ],
-      stok: [
-        S('Yaklaşan son tarih eşiği','Kalan ömür bu %’nin altındaysa uyarı','%25','%25',null),
-        S('Önerilen indirim oranı','Near-expiry teklif öneri indirimi','%30','%30',null),
-        S('Girişte tazelik kabul eşiği','Kalan ömür bu %’nin altında uyarı','%75','%75',null),
-        S('KDV varsayılanı','Yeni üründe önerilen','%5,5','%5,5',null),
-      ],
-      puan: [
-        S('Yorum puanı','Onaylı yorum başına','20 puan','20 puan',null),
-        S('Beğeni anketi puanı','Swipe/anket başına','5 puan','5 puan',null),
-        S('Sipariş puanı','Her 1 € için','1 puan','1 puan',null),
-        S('Kupona çevrim eşiği','Bu bakiyeden sonra çevrilebilir','200 puan','200 puan',null),
-        S('Çevrim oranı','100 puan = ? €','5,00 €','5,00 €',null),
-      ],
-      maliyet: [
-        S('Rota teslimat birim maliyeti','Sipariş başı rota içi','1,80 €','1,80 €','İstisna: Güney bölge 2,20 €'),
-        S('Paketleme (soğuk zincir) maliyeti','Soğuk zincir sipariş başı','0,90 €','0,90 €',null),
-        S('Ödeme komisyon oranı','Online tahsilat komisyonu','%1,4 + 0,25 €','%1,4 + 0,25 €',null),
-      ],
+    // Ayar satırı. o: def (fabrika değeri, değişmişse) · exc (istisna satırı) · note (uyarı) · text (metin değer) · warn (boş, amber) · on · seg
+    const R = (label, help, value, o) => {
+      o = o || {};
+      return {
+        label, help, value,
+        changed: !!o.def, def: o.def || '',
+        hasExc: !!o.exc, exc: o.exc || '',
+        hasNote: !!o.note, note: o.note || '',
+        isPlain: !o.on && !o.seg, isOn: !!o.on, isSeg: !!o.seg,
+        seg: o.seg ? HANDLERS.map(h => ({ label: h, bg: h === value ? '#22251f' : '#fff', fg: h === value ? '#fbfbf9' : '#6a7065' })) : [],
+        vFont: o.text ? TEXT : MONO,
+        vColor: o.warn ? '#9a6416' : '#22251f',
+      };
     };
-    const settings = byTab[tab] || byTab.siparis;
-    const mobSettings = [
-      { name:'Minimum sepet', desc:'genel + B2B istisna', value:'25,00 €' },
-      { name:'Kesim saati', desc:'sonrası ertesi gün', value:'17:00' },
-      { name:'Ücretsiz kargo', desc:'üstü ücretsiz', value:'60,00 €' },
-      { name:'Tazelik eşiği', desc:'kalan ömür %', value:'%25' },
+
+    const card = (kind, title, count, sub, data) => Object.assign({
+      title, count, sub: sub || '', hasSub: !!sub, span: 'none', hasAction: false, action: '', onAction: () => {},
+      isRows: false, isHours: false, isTrust: false, isStaff: false, isMcp: false, isImages: false,
+      rows: [], hours: [], plus: [], minus: [], grace: {}, staff: [], keys: [], calls: [], notice: '', images: [],
+    }, data, { ['is' + kind]: true });
+
+    const H = (time, label, help, tag, o) => {
+      o = o || {};
+      return { time, label, help, tag, hasExc: !!o.exc, exc: o.exc || '', barStyle: o.dashed ? 'dashed' : 'solid', barOp: o.last ? 0 : 1 };
+    };
+    const cHours = card('Hours', 'Günün saatleri', '4', 'Bir rota gününün dört eşiği, sırasıyla. Dördü de yalnız bölge (rota) bazında istisna alır.', {
+      span: 'all',
+      hours: [
+        H('16:00', 'Sipariş kesim saati', 'Bu saatten sonra gelen sipariş bir SONRAKİ rota gününe yazılır.', 'önceki gün', { dashed: true, exc: 'Bölge: Kuzey hattı → 15:00' }),
+        H('11:00', 'Depo hazırlık kapanışı', 'Bu saate kadar hazırlanmayan sipariş rotaya yetişmez. Panelin gün akışı ve depo nabzı bu saati okur.', 'teslim günü'),
+        H('14:00', 'Rota çıkış saati', 'Kuryenin yola çıkması beklenen an. Panelin gün akışında eşik olarak görünür.', ''),
+        H('18:00', 'Kurye kapanışı', 'Kasanın teslim alınması beklenen an. Panelin gün akışında eşik olarak görünür.', '', { last: true }),
+      ],
+    });
+    const cBasket = card('Rows', 'Sepet eşikleri', '2', '', { rows: [
+      R('Minimum sepet tutarı (kapıya teslim)', 'Kendi aracımızla kapıya götürdüğümüz siparişlerin alt sınırı — aracın o tura çıkması anlamlı olsun diye. KARGO siparişine UYGULANMAZ: orada araç çıkmaz, müşteri kargo ücretini zaten öder. 0 = alt sınır yok.', '40,00 €', { exc: 'Kanal: B2B (toptan) → 120,00 €' }),
+      R('Ücretsiz kargo eşiği', 'Bu tutarın üstündeki kargo siparişlerinden ücret alınmaz.', '100,00 €', { exc: 'Kanal: B2B (toptan) → 250,00 €' }),
+    ] });
+    const cDelivery = card('Rows', 'Teslim', '3', '', { rows: [
+      R('Gel-al bekleme süresi', 'Hazır gel-al siparişi bu kadar gün alınmazsa panoda ve sipariş listesinde "süresi doldu" görünür. Randevu telefonla; karar (arama, iptal) ofisin.', '7 gün'),
+      R('Teslim onayı kapsamı', 'Kanıt hangi kanalda zorunlu olsun. Bugün ikisi de kapalı: kanıt kutu okutmasının kendisidir (imza adımı kaldırıldı).', 'Hiçbir kanalda istenmiyor', { text: true }),
+      R('Teslimat özeti e-postası', 'Teslim tamamlanınca müşteriye özet e-postası otomatik gitsin mi.', 'Açık', { on: true }),
+    ] });
+    const cStock = card('Rows', 'Stok & tazelik', '4', '', { rows: [
+      R('Yaklaşan son tarih eşiği', 'Kalan raf ömrü bu yüzdenin altına düşen parti "yaklaşan" sayılır.', '%25'),
+      R('Önerilen indirim oranı', 'Yaklaşan son tarihli parti için önerilen indirim. Öneridir — karar insanın.', '%30'),
+      R('Girişte tazelik kabul eşiği', 'Mal kabulde asgari kalan raf ömrü. Altında uyarır, kabulü engellemez.', '%75'),
+      R('Transfer ulaşım süresi', 'Depolar arası sevkiyatın gün cinsinden yol süresi. Sevk önerisi yolda ömrü yanacak partiyi uyarır.', '1 gün'),
+    ] });
+
+    const cPayLimits = card('Rows', 'Ödeme sınırları', '4', '', { rows: [
+      R('Online ödeme stok bekletme', 'Ödeme tamamlanmazsa ayrılan stok bu süre sonunda serbest kalır.', '30 dk'),
+      R('Kapıda ödeme tavanı', 'Kapıda ödemeyle alınabilecek azami sipariş tutarı — kötüye kullanım freni.', '250,00 €', { def: '300,00 €' }),
+      R('Nakit yasal uyarı eşiği', 'Bu tutarın üstündeki nakit tahsilatta uyarı verilir — engellenmez.', '1.000,00 €'),
+      R('Vade süresi varsayılanı', 'Vadeli müşteride kartında ayrı bir süre yazmıyorsa bu geçerli olur.', '30 gün'),
+    ] });
+    const cAccounts = card('Rows', 'Para hesapları', '2', 'Paranın yazıldığı hesaplar. Kuruluma özgüdür, fabrika değeri yoktur.', { rows: [
+      R('Kapı önü satış kasası', 'Kapıda/dükkânda alınan paranın hangi hesaba yazılacağı. Satış anında hesap seçilmezse bu kullanılır.', 'Kasa · Strasbourg', { text: true }),
+      R('Stripe payout hesabı', 'Stripe havuzundaki paranın aktarıldığı banka hesabı.', '— seçilmedi', { text: true, warn: true, note: 'Boşken payout olayı işlenmez; sağlayıcı yeniden dener.' }),
+    ] });
+    const cCost = card('Rows', 'Birim maliyet', '3', 'Kâr hesabının girdileri. Geçmiş siparişlerin sabitlenmiş rakamlarını değiştirmez.', { rows: [
+      R('Rota teslimat birim maliyeti', 'Kendi rotamızla giden sipariş başına maliyet — kâr hesabına girer.', '2,50 €'),
+      R('Paketleme (soğuk zincir) maliyeti', 'Soğuk zincir paketi olan sipariş başına maliyet — kâr hesabına girer.', '1,20 €'),
+      R('Kapı önü satış paketleme maliyeti', 'Kapıdan elden satışta paketleme maliyeti. Varsayılan 0: mal elden gidiyor, soğuk zincir paketi yok.', '0,00 €'),
+    ] });
+
+    const cEarn = card('Rows', 'Puan kazanma', '6', '', { rows: [
+      R('Yazılı yorum puanı', 'Onaylanan yorum/yıldız başına verilen puan — en değerli beyan.', '30 puan', { def: '20 puan' }),
+      R('Alım sonrası beğeni puanı', 'Müşteri aldığı ürünü değerlendirdiğinde verilen puan.', '5 puan'),
+      R('Keşif beğenisi puanı', 'Henüz almadığı bir ürünü keşifte değerlendirme — en ucuz aksiyon.', '2 puan'),
+      R('Getiren müşteri puanı', 'Hesabı OLMAYAN yeni bir müşteriyi getiren kişiye verilen puan. Ödül, getirilen kişinin ilk siparişinin parası alındığında yazılır.', '500 puan'),
+      R('Komşu daveti puanı', 'Komşusunu AYNI teslimat gününe çağıran kişiye verilen puan. Ödül, komşunun siparişinin parası alındığında yazılır.', '100 puan'),
+      R('Günlük puan tavanı', 'Bir günde kazanılabilecek azami puan. YALNIZ para ödemeden yapılabilen eylemleri kapsar; yorum ve davet ödülleri bu tavanı görmez.', '270 puan'),
+    ] });
+    const cRedeem = card('Rows', 'Kupona çevirme', '3', '', { rows: [
+      R('Kupona çevirme eşiği', 'Bu bakiyeye ulaşmadan puan kupona çevrilemez.', '500 puan'),
+      R('Tek kuponun azami puanı', 'Müşteri bir basışta en fazla bu kadar puanı kupona çevirir; fazlası bakiyede kalır.', '2.000 puan'),
+      R('Puanın değeri', 'Bir puanın kuruş karşılığı. 1 = 100 puan 1,00 € eder.', '1 cent'),
+    ] });
+    const cFeedback = card('Rows', 'Geri bildirim daveti', '3', '', { rows: [
+      R('Geri bildirim daveti gecikmesi', 'Teslimden kaç gün sonra davet gider. Erken sormak "daha açmadım", geç sormak unutulmuş bir deneyim getirir.', '7 gün', { def: '10 gün' }),
+      R('Dış değerlendirme bağlantısı', 'Google İşletme Profili / Trustpilot adresi. BOŞSA akış sonunda davet hiç gösterilmez.', '— tanımsız', { text: true, warn: true }),
+      R('Değerlendirme platformu adı', 'Müşteriye gösterilen ad — davet metnindeki "… üzerinde değerlendir".', 'Google', { text: true }),
+    ] });
+    const cHandler = card('Rows', 'Yeni yazışmayı kim yürütür', '2', '', { rows: [
+      R('Yeni sohbetin yürütücüsü', 'Müşteri İLK kez yazdığında sohbeti kim yürütsün: İnsan (operatör cevaplar), Hibrit (AI taslak yazar, operatör onaylar), AI (ajan onaysız cevaplar). Açık sohbetlerin modu değişmez.', 'AI', { seg: true }),
+      R('Yeni talebin yürütücüsü', 'Yeni talep açıldığında onu kim yürütsün: İnsan (operatör cevaplar), Hibrit (AI taslak yazar, operatör onaylar), AI (ajan onaysız cevaplar). Açık taleplerin modu değişmez.', 'Hibrit', { seg: true }),
+    ] });
+    const T = (label, value) => ({ label, value, fg: value === '0' ? '#8b9086' : value.charAt(0) === '+' ? '#4a6121' : '#a5443c' });
+    const cTrust = card('Trust', 'Güven puanı', '13', 'Yalnız bundan sonra yazılan hareketleri etkiler; geçmiş hareketler yazıldıkları ağırlıkla kalır.', {
+      span: 'all',
+      plus: [T('Teslim edilen sipariş', '+10'), T('Davet ettiği arkadaş müşteri oldu', '+15'), T('Komşu daveti sefere sipariş ekledi', '+10'), T('Ürün yorumu', '+3'), T('Ankete cevap', '+1'), T('Ziyaret günü', '+1')],
+      minus: [T('Siparişini kendisi iptal etti', '−5'), T('Siparişi kapıda reddetti', '−5'), T('Teslim sonrası iade', '0'), T('Kapıda ulaşılamadı', '−10'), T('Kapıda tahsil edilemedi', '−15'), T('Vadesi geçti', '−10')],
+      grace: R('Tahsil bekleme süresi', 'Teslim edilen peşin siparişin parası bu kadar günde kapanmazsa "kapıda tahsil edilemedi" sayılır.', '2 gün'),
+    });
+
+    const AV = ['#5f7a2c', '#3a6b8a', '#5c6672', '#9a6416'];
+    const U = (name, meta, roles, pending, i) => ({ name, meta, roles, pending: !!pending, av: AV[i % 4],
+      initials: name.split(' ').map(w => w.charAt(0)).join('').slice(0, 2) });
+    const cStaff = card('Staff', 'Kullanıcı & rol', '8', 'Roller sabit kalıptır: depo fiyat görmez, kurye yalnız kendi teslimatını görür. Burada rol atanır, izin detayı icat edilmez.', {
+      hasAction: true, action: '+ Kullanıcı', onAction: () => this.setState({ userOpen: true }),
+      staff: [
+        U('Ayşe Demir', 'muhasebe@lezzetanatolie.com · STR · KEHL', ['Muhasebe', 'Depo sorumlusu'], false, 2),
+        U('Claire Muller', 'depo.bordeaux@lezzetanatolie.com · BDX', ['Depo sorumlusu'], false, 1),
+        U('Deniz Arslan', 'depo@lezzetanatolie.com · STR', ['Depo sorumlusu'], false, 0),
+        U('Emre Yıldız', 'hepsi@lezzetanatolie.com · STR', ['Yönetici', 'Depo sorumlusu', 'Kurye', 'Muhasebe'], false, 1),
+        U('Jonas Weber', 'depo.kehl@lezzetanatolie.com · KEHL', ['Depo sorumlusu'], false, 0),
+        U('Marc Lemoine', 'kurye@lezzetanatolie.com · STR', ['Kurye'], false, 3),
+        U('Selin Kaya', 'yonetim@lezzetanatolie.com · depo-üstü', ['Yönetici'], false, 0),
+        U('Stefan Bauer', 'kurye.kehl@lezzetanatolie.com · KEHL', ['Kurye'], true, 2),
+      ],
+    });
+    const cMcp = card('Mcp', 'MCP anahtarları', '1', 'Asistanın bağlandığı kapının anahtarları. Anahtar tek başına hiçbir şey yazamaz; öneri kapsamlı anahtar yalnız onay kuyruğuna satır düşer.', {
+      hasAction: true, action: '+ Anahtar üret',
+      keys: [
+        { label: 'Ahmet · Claude Desktop', scope: 'Okuma + öneri', scBg: '#ece8f5', scFg: '#5a4a8a', status: 'Geçerli', stBg: '#eef4e2', stFg: '#4a6121',
+          meta: 'Geçerlilik 28.12.2026 · Son kullanım 30.09 14:12 · Son çağrılarda 18', canRevoke: true },
+        { label: 'Deneme bağlantısı', scope: 'Yalnız okuma', scBg: '#eceef0', scFg: '#4d5560', status: 'İptal edildi', stBg: '#fbe9e7', stFg: '#a5443c',
+          meta: 'Geçerlilik 02.11.2026 · hiç kullanılmadı', canRevoke: false },
+      ],
+      notice: 'Sunucudaki ortam anahtarı (MCP_CONNECTION_KEY) bu listede görünmez: doluysa öneri kapsamlı sayılır ve buradan iptal edilemez.',
+      calls: [
+        { tool: 'morning_briefing', ms: '412 ms', err: '', at: '30.09 14:12', fg: '#22251f' },
+        { tool: 'stock_watch', ms: '188 ms', err: '', at: '30.09 14:12', fg: '#22251f' },
+        { tool: 'propose_stock_intake', ms: '96 ms', err: 'lot numarası eksik', at: '30.09 14:10', fg: '#a5443c' },
+        { tool: 'sales_summary', ms: '240 ms', err: '', at: '30.09 09:03', fg: '#22251f' },
+      ],
+    });
+    const I = (label, ratio, ar, where, filled) => ({ label, ratio, ar, where,
+      ph: filled ? 'fotoğraf' : 'boş', bd: filled ? 'solid' : 'dashed',
+      bg: filled ? 'repeating-linear-gradient(135deg,#eef0ea 0 7px,#e4e7de 7px 14px)' : '#fff',
+      state: filled ? 'Yüklü' : 'Boş — sayfa yer tutucusunu çiziyor', stFg: filled ? '#4a6121' : '#6a7065' });
+    const cImages = card('Images', 'Vitrin görselleri', '2 / 4', 'Müşteri yüzeyindeki sabit görseller. Karta tıklayınca kadraj, alternatif metin ve kaldırma penceresi açılır.', {
+      span: 'all',
+      images: [
+        I('Ana sayfa kahramanı', '16:9', '16 / 9', 'Ana sayfanın en üstü — masaüstü ve mobil web aynı görseli kullanır', true),
+        I('Paketler kahramanı', '3:2', '3 / 2', 'Paketler sayfasının başı — yalnız masaüstünde çizilir', false),
+        I('Professionnels kahramanı', '16:9', '16 / 9', 'İşletmelere yönelik sayfanın başı', true),
+        I('Boş sepet çizimi', '13:10', '13 / 10', 'Sepet boşken görünen anlatım görseli', false),
+      ].map((im, i, all) => Object.assign(im, { edge: i === all.length - 1 ? 'transparent' : '#eceee8' })),
+    });
+
+    const TABS = [
+      { key: 'order', label: 'Sipariş & depo', count: '13', cards: [cHours, cBasket, cDelivery, cStock] },
+      { key: 'money', label: 'Para', count: '9', cards: [cPayLimits, cAccounts, cCost] },
+      { key: 'customer', label: 'Müşteri', count: '27', cards: [cEarn, cRedeem, cFeedback, cHandler, cTrust] },
+      { key: 'setup', label: 'Kurulum', count: '', cards: [cStaff, cMcp, cImages] },
     ];
 
-    const rolePal = { 'Yönetici':['#3a6b8a','#e6eef3'], 'Depo':['#9a6416','#fdf1e3'], 'Kurye':['#5a4a8a','#ece8f5'] };
-    const role = l => ({ label:l, fg:rolePal[l][0], bg:rolePal[l][1] });
-    const uStat = on => on ? ['#4a6121','#eef4e2'] : ['#6a7065','#eef0ea'];
-    const U = (name,contact,roles,active,avBg) => ({ name, contact, roles:roles.map(role),
-      status: active?'Aktif':'Pasif', stFg:uStat(active)[0], stBg:uStat(active)[1],
-      initials: name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2), avBg });
-    const users = [
-      U('Selim A.',' selim@lezzet.fr','Yönetici,Depo,Kurye'.split(','),true,'#5f7a2c'),
-      U('Murat Y.','+33 6 51 …','Kurye'.split(','),true,'#5a4a8a'),
-      U('Elif K.','+33 6 22 …','Depo'.split(','),true,'#9a6416'),
-      U('Eski Personel','—','Depo'.split(','),false,'#9aa094'),
-    ];
-
-    const vitrin = [
-      { name:'Ana sayfa hero', slotId:'vitrin-hero', ar:'16/9', ratio:'16:9', min:'2400×1350', editable:true,
-        where:'Müşteri ana sayfa · web ve mobil (aynı dosya)', note:'Metin katmanı üstüne biner; sol üçte bir sakin kalmalı.' },
-      { name:'Haftanın fırsatları bandı', slotId:'vitrin-firsat', ar:'16/9', ratio:'16:9', min:'2400×1350', editable:true,
-        where:'Ana sayfa fırsat bölümü · kampanya e-postası', note:'Kampanya bitince otomatik gizlenir; görsel kalır.' },
-      { name:'Professionnels hero', slotId:'vitrin-pro', ar:'16/9', ratio:'16:9', min:'2400×1350', editable:true,
-        where:'Professionnels (B2B) sayfası başı', note:'Mutfak / teslimat aracı — ürün yakın çekimi değil.' },
-      { name:'Hakkımızda görselleri', slotId:'vitrin-hakkimizda', ar:'3/2', ratio:'3:2', min:'2000×1333', editable:true,
-        where:'Statik sayfalar · Hakkımızda, SSS başı', note:'Sayfa başına en fazla iki görsel.' },
-      { name:'Giriş sahnesi', slotId:'vitrin-giris', ar:'3/4', ratio:'dikey 3:4', min:'1600×2133', editable:false,
-        where:'Giriş / kayıt ekranı yan sahnesi', note:'Marka sahnesi — kod içinde sabit, alıntı metniyle birlikte kurgulanmış.' },
-      { name:'Hata sayfası çizimi', slotId:'vitrin-hata', ar:'3/2', ratio:'3:2', min:'—', editable:false,
-        where:'404 · 500 · bakım sayfaları', note:'Vektör çizim; fotoğraf değil, panelden değiştirilmez.' },
-    ].map(v => Object.assign({}, v, {
-      static: !v.editable,
-      bdStyle: v.editable ? 'solid' : 'dashed',
-      tag: v.editable ? 'panelden' : 'statik',
-      tagFg: v.editable ? '#4a6121' : '#6a7065',
-      tagBg: v.editable ? '#eef4e2' : '#eef0ea',
+    // Değişenler süzgeci sekmeden bağımsız: değişmiş satırı olan bölümler düz kart olarak, yalnız o satırlarla çizilir.
+    const changedCards = [cPayLimits, cEarn, cFeedback].map(c => Object.assign({}, c, {
+      rows: c.rows.filter(r => r.changed), count: String(c.rows.filter(r => r.changed).length), hasSub: false,
     }));
 
+    const changedOnly = this.state.changedOnly;
+    const active = TABS.find(t => t.key === this.state.tab) || TABS[0];
+    const tabs = TABS.map(t => {
+      const on = !changedOnly && t.key === active.key;
+      return { label: t.label, count: t.count, hasCount: !!t.count, fg: on ? '#22251f' : '#6a7065', edge: on ? '#5f7a2c' : 'transparent',
+        cBg: on ? '#eef4e2' : '#eef0ea', cFg: on ? '#4a6121' : '#6a7065',
+        select: () => this.setState({ tab: t.key, changedOnly: false }) };
+    });
+    const chip = changedOnly
+      ? { bg: '#22251f', fg: '#fbfbf9', bd: '#22251f', nBg: '#4a4f45', nFg: '#fbfbf9' }
+      : { bg: '#fff', fg: '#3a3f37', bd: '#d9dbd2', nBg: '#eef0ea', nFg: '#6a7065' };
+
     return {
-      vitrin, isVitrin: tab==='vitrin',
-      tabs, isSettings: tab!=='users' && tab!=='vitrin', isUsers: tab==='users',
-      settings, mobSettings, users,
+      tabs, chip, changedOnly,
+      cards: changedOnly ? changedCards : active.cards,
+      toggleChanged: () => this.setState({ changedOnly: !changedOnly }),
+      edit: () => this.setState({ settingOpen: true }),
       settingOpen: this.state.settingOpen, userOpen: this.state.userOpen,
-      openUser: () => this.setState({ userOpen:true }),
-      closeModal: () => this.setState({ settingOpen:false, userOpen:false }), stop: (e)=>e.stopPropagation(),
+      openUser: () => this.setState({ userOpen: true }),
+      closeModal: () => this.setState({ settingOpen: false, userOpen: false }), stop: (e) => e.stopPropagation(),
     };
   }
 }
