@@ -91,10 +91,11 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
     - [ ] En son, kullanıcı inceler (müşteriyle yoğun etkileşen sayfalar): Talepler `support` · Talep Detay `support/[ticket]` · Yeni Talep `support/new` ↔ native `support`
   - Şu sayfaların ayrı telefon gövdesi yok, telefonda masaüstü gövdesinin `compact` dalı çiziliyor: `support/new` · `feedback/[token]` · `invite/[code]` · `neighbor/[token]`. Sırası gelen ekranda ilk iş fork.
 - [~] (08.59) **MASAÜSTÜ WEB v1 — başlık, yer paneli ve adres penceresi `Musteri Web v1.dc.html`'in birebir aynısı; ikon seti müşterinin gördüğü her ekranda** *(kullanıcı isteği 13.09: "Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."; ikon seti kullanıcı kararı 14.09 — ikon deseni her yerde aynı; mobil web aynı anda `08.58`, iki şeridin işi birbirine bağlı olduğu için tek commit — kullanıcı kararı 13.09 + 14.09)*
-- [ ] (K.53) [hedef: web] Ana ekrana kurulan sitede sekme geçişleri akıcı değil: Oppo'da Vitrin ↔ Katalog 0,8–0,9 sn, bunun
-  ~0,65 sn'si sunucunun sayfa verisini bitirmesi; telefonun işlemcisi değil. JS dosyaları zaten bir yıllık önbellekte, service
-  worker önbelleği bu beklemeyi çözmez. Adaylar: alt gezinme sekmelerini önceden yüklemek, sekmeye geri dönüşü kısa süre istemci
-  önbelleğinden vermek (`staleTimes`, Next'te deneysel; bayat veri süresi karar ister), vitrinin sunucu süresini ölçüp kısaltmak.
+- [ ] (K.53) [hedef: web] Sayfa verisi test sunucusunda yavaş: DB'siz yasal sayfa ~0,17 sn, ürünsüz katalog araması ~0,5 sn, tam
+  katalog ve vitrin 0,7–1,0 sn. Veritabanı barındırılan Supabase'te olduğundan sıralı her okuma bir ağ turu (~100 ms) ekliyor.
+  Kalan: vitrinin (`readHome`) sıralı turları ve çift okumaları (`category`, `bundle`, `discount`, `price`, stok toplamı), ürün
+  detayının zinciri, görsel başına 7 kadraj × 5 genişlik adres taşıyan yük (katalog RSC yükünün %84'ü). Sunucunun kendi payı
+  (işlemci, bellek, Supabase'e gidiş-dönüş) içeriden ölçülmedi.
 
 ## 09 · Admin Yüzeyi: Komponentler ve Sayfalar
 
@@ -406,5 +407,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   sonra eklenir. Yetersiz olduğu ülke için önceden çevrilmiş etiket metni hazır olacak ve kargoda paketlemeden önce yazıcıdan
   basılıp yapıştırılacak (satış anında çeviri yapılmaz, etiket yeterliyse çıktı alınmaz). Veri modelini (ürün/varyant × ülke) ve
   operasyon mobil uygulamasının hazırlık adımını birlikte etkiler.
-- [ ] (K.52) [hedef: müşteri] Web telefon görünümünde iPhone titreşimi cihazda hissedilerek doğrulanmadı: Safari'nin titreşim komutu
-  yok, `lib/haptics` anahtar kutusu yoluyla sistem dokunuşunu çalıyor ve bu yol iOS sürümüne bağlı. Android yolu ve dokunuş kuralı kodda.
+- [ ] (K.52) [hedef: müşteri] Web telefon görünümünde iPhone titreşimi çalışmıyor (cihazda denendi): Safari'nin titreşim komutu
+  yok ve iOS 26.5 betikten tetiklenen anahtar kutusu dokunuşunu kapattı. Kalan yol dokunulan öğenin içine görünmez anahtar kutusu
+  koymak: yalnız gerçek dokunuşta tek tık verir, sunucu cevabını bekleyen başarı/hata titreşimi iPhone'da verilemez. Karar bekliyor.
