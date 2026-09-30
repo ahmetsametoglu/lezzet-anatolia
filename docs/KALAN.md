@@ -406,11 +406,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   sonra eklenir. Yetersiz olduğu ülke için önceden çevrilmiş etiket metni hazır olacak ve kargoda paketlemeden önce yazıcıdan
   basılıp yapıştırılacak (satış anında çeviri yapılmaz, etiket yeterliyse çıktı alınmaz). Veri modelini (ürün/varyant × ülke) ve
   operasyon mobil uygulamasının hazırlık adımını birlikte etkiler.
-- [ ] (K.50) [hedef: müşteri] Web telefon görünümünde sayfa geçiş iskeleti eksik: müşteri yüzeyinin 31 sayfasının 22'sinde
-  `loading.tsx` yok (alt gezinmenin Vitrin, Katalog, Paketler sekmeleri dahil) ve geçişte ekran 0,8–0,9 sn tepkisiz eski sayfada
-  kalıyor. Native'de 10'unun iskeleti hazır (vitrin, katalog, paket listesi, paket, ürün, tarif listesi, tarif, talepler, talep
-  detayı, değerlendirme); ölçüler oradan, masaüstü deseni sepet ve siparişler iskeletinden. Kalanlar: keşfet, yeni talep, davet,
-  komşu, profesyoneller; bildirimler iskeletinin telefon biçimi yok; yasal sayfalar ve giriş için gereği ölçülecek.
 - [ ] (K.52) [hedef: müşteri] Web telefon görünümünde dokunuş titreşimi yok; native'de `mobile-kit/lib/haptics` niyet sözlüğüyle var
   (onay, hata, başarı). Android Chrome `navigator.vibrate` destekliyor; iOS Safari'de resmî destek yok, gizli "switch" girdisiyle
   dolaylı yol var ve sürüme bağlı (ölçülmedi). Karar: yalnız Android'de mi açılsın, iOS yolu denensin mi.

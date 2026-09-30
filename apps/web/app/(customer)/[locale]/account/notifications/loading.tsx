@@ -1,27 +1,50 @@
+import type { Locale } from '@lezzet/i18n';
+import { getLocale } from 'next-intl/server';
+import { PhoneSkeleton } from '@/components/customer/phone-kit/phone-skeleton';
+import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { Skeleton, SkeletonRegion } from '@/components/customer/ui/skeleton';
+import { detectDevice } from '@/lib/device';
+import messages from './messages.json';
 
 /**
- * Bildirim akışının ROTA düzeyinde ilk karesi (Next `loading.tsx`) — sepetin aynı kararı:
- * ilk sayfa SUNUCUDA okunuyor ve iskeletsiz geçiş "sayfa takıldı" gibi duruyordu (kullanıcı
- * bildirimi 26.08: "açılırken bir miktar bekliyor gibi"). İskelet satırı, gelen satırın YENİ
- * anatomisiyle aynı yeri tutar (ikon dairesi + etiket + cümle) — içerik gelince zıplama olmaz.
+ * Akışın ilk sayfası sunucuda okunduğu için bu kare olmadan ekran veri gelene kadar önceki sayfada kalır. Satır, gelen satırın
+ * yerini tutar (ikon dairesi, etiket, cümle); çerçeve sayfanınkiyle aynı ki başlık bekleme boyunca yerinde dursun.
  */
-export default function NotificationsLoading() {
+export default async function NotificationsLoading() {
+  const [device, locale] = await Promise.all([detectDevice(), getLocale() as Promise<Locale>]);
+  const t = messages[locale];
+
   return (
-    <SkeletonRegion>
-      <div className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-6">
-        <div className="flex flex-col divide-y divide-sand-100 rounded-card border border-sand-200 bg-card px-4">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex items-start gap-2.5 py-3">
-              <Skeleton className="h-9 w-9 flex-none !rounded-full" />
-              <div className="flex min-w-0 flex-1 flex-col gap-2 pt-0.5">
-                <Skeleton className="h-2.5 w-24" />
-                <Skeleton className={['h-3.5', i % 2 === 0 ? 'w-4/5' : 'w-3/5'].join(' ')} />
+    <SiteFrame device={device} locale={locale} accountChrome={{ back: { label: t.back, href: '/account' }, title: t.title }}>
+      <SkeletonRegion>
+        {device === 'mobile' ? (
+          <div className="flex flex-col gap-2.5 px-4.5 py-3.5">
+            {[0, 1, 2, 3, 4].map((slot) => (
+              <div key={slot} className="flex items-start gap-3 rounded-card bg-sand-250 py-3.25 pr-1.5 pl-3.75">
+                <PhoneSkeleton tone="deep" className="size-10 flex-none" />
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5 pt-1">
+                  <PhoneSkeleton tone="deep" className="h-3.5 w-[40%]" />
+                  <PhoneSkeleton tone="deep" className={['h-3', slot % 2 === 0 ? 'w-4/5' : 'w-3/5'].join(' ')} />
+                </div>
               </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-6">
+            <div className="flex flex-col divide-y divide-sand-100 rounded-card border border-sand-200 bg-card px-4">
+              {[0, 1, 2, 3, 4, 5].map((slot) => (
+                <div key={slot} className="flex items-start gap-2.5 py-3">
+                  <Skeleton className="h-9 w-9 flex-none !rounded-full" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-2 pt-0.5">
+                    <Skeleton className="h-2.5 w-24" />
+                    <Skeleton className={['h-3.5', slot % 2 === 0 ? 'w-4/5' : 'w-3/5'].join(' ')} />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
-    </SkeletonRegion>
+          </div>
+        )}
+      </SkeletonRegion>
+    </SiteFrame>
   );
 }

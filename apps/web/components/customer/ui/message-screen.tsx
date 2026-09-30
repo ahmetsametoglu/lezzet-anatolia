@@ -1,26 +1,13 @@
 import type { ReactNode } from 'react';
 import { Icon, type IconName } from './icons';
+import { Skeleton, SkeletonRegion } from './skeleton';
 
 /**
- * Müşteri "durum ekranı" gövdesi — simge + üst etiket + Lora başlık + açıklama + aksiyonlar.
- *
- * **Sayfanın KENDİSİ durum ekranı olduğunda** kullanılır: 404, 500 ve gelecekteki kardeşleri. Bu
- * blok gövdesinde `<h1>` çizer ve `eyebrow` ister; ikisi de "bu sayfa şu anda budur" demenin
- * parçası.
- *
- * **Liste-içi boş hâl bu blok DEĞİLDİR** (K1 · 02.08): o hâl, başlığı zaten çizilmiş bir sayfanın
- * içinde durur — buraya bağlanırsa aynı sayfada ikinci bir `<h1>` doğar ve üst etiketi de yoktur.
- * Karşılığı `ui/list-empty.tsx`. Künye önce "ileride boş-durum ekranları da bunu paylaşır" diyordu;
- * iddia daraltıldı, çünkü kod hiçbir zaman öyle olmadı ve okuyan ajanı yanlış yere gönderiyordu.
- *
- * Cihaz forku: masaüstünde daha büyük başlık/boşluk, mobilde sıkışık — `md:` yok.
+ * Sayfanın kendisi bir durum ekranı olduğunda (404, 500, davet karşılaması) gövde: simge, üst etiket, başlık, açıklama, eylemler.
+ * Liste içindeki boş hâl bu blok değildir, `ui/list-empty.tsx`tir: burası `<h1>` çizer ve sayfada ikinci başlık doğardı.
  */
 interface MessageScreenProps {
   device: 'mobile' | 'desktop';
-  /**
-   * Ekranın simgesi — web'in ikon setinden (14.09). Müşteri evreni bir süre dekoratif emoji kullandı;
-   * v1 ile emoji kalktı.
-   */
   icon: IconName;
   /** Küçük büyük-harf üst etiket ("404 · Sayfa bulunamadı"). */
   eyebrow: string;
@@ -28,26 +15,22 @@ interface MessageScreenProps {
   description: string;
   /** Birincil/ikincil butonlar (CTA satırı). */
   actions: ReactNode;
-  /** Ek içerik — güvence şeridi, çipler vb. */
+  /** Ek içerik: güvence bandı, çipler vb. */
   children?: ReactNode;
+}
+
+/** Kap; iskelet de bununla çizilir ki hâl gelince ekran yerinden oynamasın. */
+function screenClass(device: MessageScreenProps['device']): string {
+  return ['flex flex-1 flex-col items-center gap-5 text-center', device === 'mobile' ? 'px-6 py-12' : 'px-12 py-20'].join(' ');
 }
 
 export function MessageScreen({ device, icon, eyebrow, title, description, actions, children }: MessageScreenProps) {
   const isMobile = device === 'mobile';
   return (
-    <div
-      className={[
-        'flex flex-1 flex-col items-center gap-5 text-center',
-        isMobile ? 'px-6 py-12' : 'px-12 py-20',
-      ].join(' ')}
-    >
-      {/* Ölçü emojinin iki kademesinden kaldı (mobil 36, masaüstü 48); renk markanın zeytini. */}
+    <div className={screenClass(device)}>
       <Icon name={icon} size={isMobile ? 36 : 48} className="text-olive" />
       <div className="flex flex-col items-center gap-2.5">
         <span className="font-sans text-eyebrow uppercase text-muted">{eyebrow}</span>
-        {/* Başlık ölçeğe bağlandı: `text-page-title` (38/26) ile buradaki ham 40/27 AYNI ROLÜ
-            taşıyor — sayfanın kendi başlığı. 2px fark için üçüncü bir kademe açmak, ölçeği
-            kalabalıklaştırıp sonraki okuyucuya "hangisi doğru" sorusunu sordururdu. */}
         <h1
           className={[
             'max-w-[660px] text-balance font-serif font-semibold leading-tight text-ink',
@@ -61,5 +44,26 @@ export function MessageScreen({ device, icon, eyebrow, title, description, actio
       <div className="mt-1 flex flex-wrap items-center justify-center gap-3">{actions}</div>
       {children}
     </div>
+  );
+}
+
+/** Hâli veriden gelen durum ekranının yükleme karesi: hangi simge ve cümlenin geleceği bilinmez, yerleşim bilinir. */
+export function MessageScreenSkeleton({ device }: { device: MessageScreenProps['device'] }) {
+  const isMobile = device === 'mobile';
+  return (
+    <SkeletonRegion>
+      <div className={screenClass(device)}>
+        <Skeleton className={isMobile ? 'size-9 !rounded-full' : 'size-12 !rounded-full'} />
+        <div className="flex w-full flex-col items-center gap-2.5">
+          <Skeleton className="h-3.5 w-36" />
+          <Skeleton className={isMobile ? 'h-8 w-4/5' : 'h-11 w-[480px]'} />
+          <Skeleton className="h-4 w-3/5" />
+        </div>
+        <div className="mt-1 flex gap-3">
+          <Skeleton className="h-12 w-40 !rounded-pill" />
+          <Skeleton className="h-12 w-40 !rounded-pill" />
+        </div>
+      </div>
+    </SkeletonRegion>
   );
 }
