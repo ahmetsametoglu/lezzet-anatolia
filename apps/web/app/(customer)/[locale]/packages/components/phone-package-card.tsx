@@ -16,6 +16,10 @@ import { packageNoteOf } from './package-note';
 
 type PackagesCopy = LocalizedCopy<typeof packagesMessages>;
 
+/** Kartın kabuğu; yükleme iskeleti de bununla çizilir ki veri gelince kart yerinden oynamasın. */
+export const PACKAGE_CARD_SHELL =
+  'overflow-hidden rounded-[24px] border-[1.5px] border-sand-200 bg-card shadow-[0_4px_18px_color-mix(in_srgb,var(--color-ink)_7%,transparent)]';
+
 interface PhonePackageCardProps {
   pack: StorefrontPackage;
   copy: PackagesCopy;
@@ -45,7 +49,8 @@ export function PhonePackageCard({ pack, copy, locale, place }: PhonePackageCard
         .filter(Boolean)
         .join(' · ')}
       className={[
-        'block cursor-pointer overflow-hidden rounded-[24px] border-[1.5px] border-sand-200 bg-card shadow-[0_4px_18px_color-mix(in_srgb,var(--color-ink)_7%,transparent)] transition-transform hover:opacity-95 active:scale-[0.985]',
+        'block cursor-pointer transition-transform hover:opacity-95 active:scale-[0.985]',
+        PACKAGE_CARD_SHELL,
         pack.soldOut ? 'opacity-70' : '',
       ]
         .filter(Boolean)

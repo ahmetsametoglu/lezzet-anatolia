@@ -85,9 +85,8 @@ Sayfa yapılırken kimse unutmamıştı; sözleşmede yazmıyordu.
 `title.template` kök layout'ta (`%s · ${brand.name}` → `%s · Lezzet Anatolie`) ve **tek kaynak** `lib/seo/title.ts`.
 Sayfalar markayı elle eklemez; ekleseler aynı dizginin onlarca kopyası olurdu.
 
-⚠ **Next şablonu KENDİ segmentine uygulamaz, yalnız ALT rotalara.** Ana sayfa layout'la aynı
-segmentte olduğu için ekini almıyordu (ölçüldü: ürün sayfasında ek var, ana sayfada yoktu) —
-markasız kalan sayfa sitenin en çok arananıydı. `titleWithBrand` o boşluğu aynı ayırıcıyla kapatır.
+⚠ **Next şablonu layout'la aynı segmentteki sayfaya uygulamaz, yalnız alt rotalara.** Ana sayfa bu yüzden
+`[locale]/(home)/` grubunda durur: orada alt rota sayılır ve eki şablondan alır.
 
 ### Varsayılan açıklama dile göredir
 

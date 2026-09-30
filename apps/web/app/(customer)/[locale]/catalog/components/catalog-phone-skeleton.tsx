@@ -1,15 +1,8 @@
 import { LoadingRegion } from '@/components/loading-region';
 
 /*
-  KATALOG İSKELETİ — native `CatalogSkeleton`ın (`apps/mobile/src/screens/catalog/catalog-skeleton.tsx`) web
-  telefon ikizi: kare kartlar (köşe `card`, zemin `sand-300` — native iskeletin varsayılan tonu), ızgara
-  boşlukları gerçek listeyle aynı (satır 20 · sütun 14 · yan 22 · üst 20).
-
-  · "Yükleniyor…" yalnız ekran okuyucuda (native 09.08: nabız zaten "bekleniyor" diyor, ekranda ikinci kez
-    yazmak gürültü); sesi iki yüzeyin tek sarmalayıcısı verir (`LoadingRegion`).
-  · Ekranı doldurur: kap ekran boyunda ve taşan son satırı kırpar — liste gelince ekran zıplamaz (native 09.08).
-  · Web'de ilk yük sunucuda çözülür; iskelet YALNIZ süzgeç ve arama geçişinde çizilir (native'de her süzgeç
-    değişimi bir ilk yüktür, web'de bir sayfa geçişi).
+  Katalog ızgarasının telefon iskeleti, native `CatalogSkeleton`ın ikizi: kare kartlar ve ızgara boşlukları gerçek listeyle aynı.
+  Ekranı doldurup taşan satırı kırpar ki liste gelince ekran zıplamasın; "Yükleniyor…" yalnız ekran okuyucuya gider.
 */
 
 interface CatalogPhoneSkeletonProps {
