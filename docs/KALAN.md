@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.53). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.54). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
 `docs/GELECEK.md`'dedir.
@@ -287,6 +287,7 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [ ] **Koleksiyonlar bandı** — `pages/musteri-anasayfa.md` içerik envanterinde var, `Musteri - Anasayfa.dc.html` tasarımında **yok**. İmprovize edilmedi. Ya tasarıma bant eklenir ya envanterden düşülür.
 - [ ] **Katalogun "koleksiyon görünümü" varyantı** — `Musteri - Katalog.dc.html`'de üstbaşlıklı başlık bandıyla çizili, ama koleksiyon rotası yok. Rota açılınca yalnız başlık bloğu değişir. **SEO gerekçesi eklendi (denetim 08.08, kullanıcı bilgisinde):** bugün kategori/koleksiyon süzgeci sorgu parametresinde yaşadığı için "baklava" sınıfı aramalara indekslenebilir bir landing üretilmiyor — bu rota açıldığında her koleksiyon kendi URL'i + meta'sı + (operasyonda ZATEN toplanan) 16:9 OG kapağıyla bir arama giriş sayfası olur. Kapsam kararı kullanıcının; iş büyüdüğü için kendiliğinden başlatılmaz.
 - [ ] **Paketler listesinin içerik envanteri** — tasarımı var (`Musteri - Paketler.dc.html`) ama `pages/musteri-paketler.md` **yok**. Diğer 15 müşteri sayfasının hepsinde ikisi de var; bu sayfa envantersiz kaldı, "hangi bilgi neden" yazılı değil.
+- [ ] (K.54) **Kurye dönüşü (rampa) — tasarımdaki "Jest" akıbeti kodda yok:** `Operasyon Mobil.dc.html` rampada Stoğa dön · İmha · Jest çiziyor ve "Jest: mal müşteride kaldı…" ipucunu yazıyor; kod yalnız rafa dönüş ve imhayı sunuyor, çünkü rampaya dönen mal müşteride kalmamıştır (DOMAIN §8). "Müşteride kaldı" yalnız teslim edilmiş siparişte, web iade penceresinde. Şikâyet kararının adı ("Jest — bedelsiz yeniden gönderim") için GELECEK K.51.
 - Talepler kuyruğu — iki gerçek süzgeç hâlâ ekranda yok (03.08 · daraltıldı 23.08, 16.3)
 - Geri Bildirim — üç bilinçli sapma (03.08, 17.1)
 - Talepler — çizimin karşılığı olmayan üç sunum kararı (03.08, 16.3)
