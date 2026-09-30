@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
+import { useListReturn } from '@/lib/use-list-return.hook';
 import type { StorefrontCatalog, StorefrontProduct } from '@lezzet/application';
 import { loadMoreCatalogAction } from './actions';
 import type { PlaceMode } from '@/lib/delivery/read-place';
@@ -12,13 +13,8 @@ import { CatalogDesktop } from './catalog.desktop';
 import { CatalogMobile } from './catalog.mobile';
 
 /**
- * Katalogun cihaz çatalı ve SAYFALAMA sahibi.
- *
- * Süzme sunucuda çözülür ve seçim URL'de yaşar — o yüzden süzgeç state'i burada YOK. Burada olan tek
- * durum, kaydırdıkça eklenen sayfalar: ürün listesi sınırsız büyüyen bir kümedir, tamamı tek turda
- * çekilemez (`CLAUDE.md`: tüm listeler sonsuz kaydırma → okumalar keyset imleçli).
- *
- * Süzgeç değişince eklenen sayfalar SIFIRLANIR; yoksa eski süzgecin ürünleri yeni listede kalır.
+ * Katalogun cihaz çatalı ve sayfalama sahibi: süzgeç adreste yaşar, burada yalnız kaydırdıkça eklenen sayfalar durur. Süzgeç
+ * değişince eklenen sayfalar sıfırlanır; ürüne gidip geri dönülünce aynı geçmiş kaydının sayfaları ve konumu geri kurulur.
  */
 interface CatalogClientProps {
   t: Messages;
@@ -35,13 +31,13 @@ interface CatalogClientProps {
 export function CatalogClient({ t, locale, data, active, placeMode, device, search }: CatalogClientProps) {
   const resolved = useDevice(device);
 
-  const [extraPages, setExtraPages] = useState<StorefrontProduct[]>([]);
-  const [cursor, setCursor] = useState(data.nextCursor);
+  const listReturn = useListReturn<StorefrontProduct, StorefrontCatalog['nextCursor']>(JSON.stringify(['catalog', locale, active, search ?? null]));
+  const [extraPages, setExtraPages] = useState<StorefrontProduct[]>(() => listReturn.restored?.items ?? []);
+  const [cursor, setCursor] = useState(() => (listReturn.restored === null ? data.nextCursor : listReturn.restored.cursor));
   const [loadingMore, setLoadingMore] = useState(false);
   const [tailFailed, setTailFailed] = useState(false);
-  /* Sunucudan YENİ ilk sayfa geldiğinde kuyruk sayfaları RENDER SIRASINDA atılır, efektte değil: efekt bir
-     render geç koşuyor ve o tek karede eski süzgecin ürünleri yeni listeyle birleşiyordu (React "aynı anahtar"
-     uyarısı; bandın "Gelemeyenleri gizle" anahtarıyla üretildi). */
+  /* Yeni ilk sayfa gelince kuyruk sayfaları render sırasında atılır, efektte değil: efekt bir render geç koştuğu için o karede eski
+     süzgecin ürünleri yeni listeyle birleşirdi. */
   const [shown, setShown] = useState(data);
   if (shown !== data) {
     setShown(data);
@@ -52,16 +48,17 @@ export function CatalogClient({ t, locale, data, active, placeMode, device, sear
 
   const products = [...data.products, ...extraPages];
 
+  const { remember } = listReturn;
+  useEffect(() => remember(extraPages, cursor), [remember, extraPages, cursor]);
+
   const onLoadMore = () => {
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
     setTailFailed(false);
-    // Süzgeç TEK TEK sayılmaz, olduğu gibi geçer: alan alan yazmak `onlyShippable`'ı bir kez
-    // düşürmüştü ve sonraki sayfa süzgeçsiz geliyordu. Yayarak geçmek yeni süzgeci de taşır.
+    // Süzgeç alan alan sayılmaz, yayılarak geçer ki eklenen yeni süzgeç sonraki sayfa isteğinden düşmesin.
     void loadMoreCatalogAction(locale, { ...active, search }, cursor)
       .then(({ data: page, errorKey }) => {
-        // Liste olduğu yerde kalır; düşüş görünümlere SÖYLENİR (14.09): telefon görünümünün tetikleyicisi
-        // kendiliğinden yeniden denemez, listenin sonunda "Tekrar dene" çizer (native kuyruk kuralı).
+        // Liste olduğu yerde kalır ve düşüş görünüme söylenir: telefonun tetikleyicisi kendiliğinden yeniden denemez, sonda "Tekrar dene" çizer.
         if (errorKey || !page) {
           setTailFailed(true);
           return;
@@ -72,10 +69,7 @@ export function CatalogClient({ t, locale, data, active, placeMode, device, sear
       .finally(() => setLoadingMore(false));
   };
 
-  /**
-   * Bir süzgeci değiştirir, diğerlerini KORUR — çipe basmak sıralamayı sıfırlamaz. `null` kategori
-   * süzgeci kaldırır ("Tümü"). Sayfa imleci bilerek taşınmaz: süzgeç değişince liste baştan başlar.
-   */
+  /** Bir süzgeci değiştirir, ötekileri korur; `null` kategori süzgecini kaldırır ve imleç taşınmaz, çünkü süzgeç değişince liste baştan başlar. */
   const hrefFor = (patch: CatalogFilterPatch): CatalogHref => {
     const category = patch.category === null ? undefined : (patch.category ?? active.category);
     const collection = patch.collection === null ? undefined : (patch.collection ?? active.collection);
@@ -88,8 +82,7 @@ export function CatalogClient({ t, locale, data, active, placeMode, device, sear
     if (sort !== 'featured') query.sort = sort;
     if (onlyOffers) query.offers = '1';
     if (onlyShippable) query.shippable = '1';
-    // Arama da bir süzgeçtir: kategoriye basmak yazılmış aramayı silmemeli. Yama aramayı değiştirebilir
-    // (telefonun yazdıkça arayan kutusu) ya da `null` ile düşürebilir.
+    // Arama da bir süzgeçtir: kategoriye basmak yazılmış aramayı silmez; yama aramayı değiştirebilir ya da `null` ile düşürebilir.
     const q = patch.search === null ? undefined : (patch.search ?? search);
     if (q) query.q = q;
     return { pathname: '/catalog', query };
