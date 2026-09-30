@@ -5,9 +5,8 @@ import { canAccessWarehouse, isStaff, warehouseScope, type WarehouseScope } from
 import type { UserProfile, UserRole } from '@lezzet/types';
 import { createClient } from './supabase/server';
 
-// Tek yetki kapısı (DOMAIN §2). Oturum çerezden okunur; rol RLS deny-by-default olduğu için
-// service-role ile `user_profiles.roles`'dan okunur. Guard'lar hata FIRLATIR; API/action için {ok}
-// saran yardımcı ayrıdır — böylece izin kuralı tek yerde yaşar.
+// Tek yetki kapısı (DOMAIN §2): oturum çerezden, rol RLS'e takılmadan service-role ile `user_profiles.roles`tan okunur.
+// Guard'lar hata fırlatır; API ve eylem için `{ok}` saran yardımcı ayrıdır ki izin kuralı tek yerde kalsın.
 
 export type AuthErrorCode = 'auth_required' | 'forbidden';
 
@@ -25,26 +24,8 @@ export interface AuthUser {
 }
 
 /**
- * Personel guard'larının dönüşü: auth kimliğinin **yanında** profil kimliği (04.11).
- *
- * ── NEDEN İKİSİ BİRDEN ───────────────────────────────────────────────────────
- * `user_profiles`'a FK veren her kolon (`order.courier_id`, `order_status_log.actor_id`,
- * `settings.updated_by`, `product_feedback.moderated_by`) **profil** kimliğini bekler; oturumun
- * kimliği ise `auth.users`'ındır ve profilde `auth_user_id` sütununda AYRI durur. İkisi farklı
- * uzaylardır ve biri ötekinin yerine yazılırsa **hiçbir yerde hata olmaz** — yalnız sorgu boş döner.
- *
- * ── NEDEN UZUN SÜRE GÖRÜNMEDİ (04.11) ────────────────────────────────────────
- * O gün yerelde bir auth bypass'ı vardı ve verdiği tek kimlik bir PROFİL kimliğiydi — yani
- * geliştirmede `user.id` ile `user.profileId` tesadüfen çakışıktı. Gerçek girişte ayrışırlar.
- * Ölçülen sonuç: kurye günü listesi **sessizce boş** dönüyordu — hata yok, yanlış veri yok, yalnız
- * hiçlik. Ne `typecheck` ne `lint` görebilirdi: iki alan da `string`.
- *
- * Bypass 19.08'de tamamen söküldü (aşağıdaki künye) — bugün yerelde de gerçek oturum var, yani bu
- * sınıf hata artık ilk denemede FK ihlaliyle patlar. Ayrım yine de ADLI kalıyor: nöbeti tutan şey
- * ismin kendisi.
- *
- * Bu yüzden alan ADLI: çağıran hangisini geçtiğini okurken görür (`user.id` mi `user.profileId` mi),
- * ayrı bir çözümleyici fonksiyona güvenmek zorunda kalmaz.
+ * Personel guard'larının dönüşü: auth kimliğinin yanında profil kimliği; profile FK veren her kolon (`order.courier_id`,
+ * `order_status_log.actor_id`) profil kimliğini bekler. İkisi de `string` olduğu için karıştırılınca hata vermez, yalnız sorgu boş döner; ayrımı alanın adı taşır.
  */
 export interface StaffUser extends AuthUser {
   /** **Profil kimliği** (`user_profiles.id`) — FK'li kolonlara yazılacak olan. */
@@ -52,47 +33,11 @@ export interface StaffUser extends AuthUser {
 }
 
 /*
-  ── DEV AUTH BYPASS SÖKÜLDÜ (kullanıcı kararı 19.08) ────────────────────────────────────────────
-  Burada bir bypass vardı: `NODE_ENV !== 'production'` iken personel guard'larını kısa devre yapıp
-  sahte bir admin döndürüyordu (`DEV_AUTH_BYPASS`, yerelde varsayılan AÇIK). Amacı meşruydu — admin
-  girişi olmadan operasyon ekranlarına bakabilmek.
-
-  ── NEDEN GİTTİ ────────────────────────────────────────────────────────────────
-  Guard yalan söylüyordu ve yalanın bedeli tam da guard'ın koruduğu şeydi. ÖLÇÜLDÜ (19.08):
-  oturum HİÇ olmadan `localhost:3000/operations` → **200**; aynı istek production sunucusunda
-  (`prod:web:start`, 3001) → **307 → /tr/giris**. Yani yerelde herkes personeldi ve iki sunucu iki
-  farklı yetki gerçekliği gösteriyordu.
-
-  Somut kayıplar:
-    · Müşteri oturumuyla operasyona girilebiliyordu — layout'un dürüst cevabı `NotStaffScreen`
-      ("bu alan personel içindir") yerelde HİÇ görülemiyordu, yani o dal denenmemiş koddu.
-    · Sahte kimliğin profili okunamadığı için layout rolleri `['admin']`'e düşürüyordu; yetki
-      hatası ekranda yetki GİBİ görünüyordu.
-    · `e2e/README` rol yönlendirmesi senaryosunu bu yüzden kapsam dışı bırakmıştı ("dev bypass TEK
-      kimlik verir").
-    · Kendi ürettiği iki arıza (04.11 iki-kimlik karışması, 07.08 boş kurye ekranları) yine
-      bypass'a eklenen makineyle yamanmıştı — `DEV_AUTH_BYPASS_USER_ID` ve layout'un rol düşüşü.
-
-  Mobil şerit aynı bypass'ı bilerek REDDETMİŞTİ ve gerekçesini ölçmüştü (`apps/mobile/src/lib/auth/
-  dev-login.ts`, 11.08: müşteri jetonuyla `/courier/day` → 403, kurye jetonuyla → 200) —
-  *"bypass'ı mobile taşımak, dev'de yakalanabilen yetki hatalarını görünmez kılardı."*
-
-  ── YERİNE NE VAR ──────────────────────────────────────────────────────────────
-  `/auth/dev-login` (15.08). Mail turunu atlar ama oturum GERÇEKTİR: magic-link jetonu üretilir ve
-  SSR istemcisinde tüketilir, çerez normal girişin yazdığının aynısıdır. Guard'a hiç dokunmaz —
-  ekranlar production'da nasıl davranacaksa öyle davranır. Bypass'ın karşıladığı ihtiyaç bu kapıyla
-  ZATEN karşılanıyordu; ikisini birden tutmak yalnız guard'ı yalancı kılıyordu.
-
-  E2E de artık oradan giriyor (`e2e/setup/operations-auth.setup.ts` → `storageState`).
+  Geliştirmede guard'ı atlayan bir yol yok: `/auth/dev-login` gerçek oturum açar ve ekranlar production'daki gibi davranır.
+  Atlama yolu, yetki hatalarını ancak yerelde yakalanabilecekleri yerde görünmez kılardı.
 */
 
-/**
- * Oturumdaki kullanıcı (yoksa null).
- *
- * **İstek başına bir kez** (`cache`): `getUser` oturumu Auth sunucusunda doğrular, yani her çağrı
- * bir ağ turu. Layout künyeyi okuyor, yer bağlamı varsayılan adresi okuyor, eylemler kimliği
- * çözüyor — aynı istekte üç ayrı tur atılıyordu. Cevap istek boyunca değişmez.
- */
+/** Oturumdaki kullanıcı (yoksa null), istek başına bir kez (`cache`): `getUser` oturumu Auth sunucusunda doğrular, her çağrı bir ağ turudur. */
 export const getSessionUser = cache(async (): Promise<AuthUser | null> => {
   const supabase = await createClient();
   const {
@@ -102,17 +47,8 @@ export const getSessionUser = cache(async (): Promise<AuthUser | null> => {
 });
 
 /**
- * Oturumdaki kişinin **müşteri kimliği** (`user_profiles.id`); oturum ya da profil yoksa null.
- *
- * **Auth kimliği ≠ müşteri kimliği.** Profil satırını auth trigger'ı açar ve kendi `id`'sini üretir;
- * auth kullanıcısının kimliği `auth_user_id` sütununda AYRI durur. `user_profiles`'a FK veren her
- * tablo (`cart`, `order`, `address`, `zone_notice`) profil kimliğini bekler — oraya auth kimliği
- * yazmak FK ihlalidir.
- *
- * Bu dönüşümün tek yerde durması bu yüzden şart: yerel bir kopya olarak yazıldığında üç ayrı çağrı
- * yeri (sepet, boş sepet önerisi, bölge haberi) çeviriyi hiç yapmadı ve giriş yapan müşterinin
- * sepeti **sessizce kayboldu** (28.07). Rol soran guard'lar tersine auth kimliğiyle çalışır
- * (`isStaff`/`hasRole` içeride `auth_user_id`'den arar) — ikisi karıştırılmamalı.
+ * Oturumdaki kişinin müşteri kimliği (`user_profiles.id`); auth kimliğinden ayrıdır ve profile FK veren her tabloya (`cart`, `order`,
+ * `address`) bu yazılır. Dönüşüm tek yerde durur, çünkü çeviriyi atlayan bir kopya müşterinin verisini sessizce kaybettirir.
  */
 export async function currentCustomerId(): Promise<string | null> {
   const user = await getSessionUser();
@@ -120,14 +56,7 @@ export async function currentCustomerId(): Promise<string | null> {
   return (await new UserProfileService(serviceDb()).findByAuthUserId(user.id))?.id ?? null;
 }
 
-/**
- * Oturumdaki müşterinin **ekranda gösterilecek künyesi** — ad ve e-posta. Yoksa null.
- *
- * `currentCustomerId`'den ayrı durur çünkü sorusu farklı: o "hangi satıra yazacağım", bu "kime
- * sesleneceğim". Sorgu aynı olduğu için maliyeti de aynı; ayrı olması çağıranın niyetini
- * okunur kılıyor. **Sırlar taşınmaz:** rol, taslak durumu, kredi limiti burada YOKTUR — bu künye
- * tarayıcıya iniyor.
- */
+/** Oturumdaki müşterinin ekranda gösterilecek künyesi (ad, e-posta); tarayıcıya gittiği için rol ve kredi limiti gibi sırları taşımaz. */
 export interface CustomerIdentity {
   id: string;
   name: string;
@@ -149,13 +78,8 @@ export async function requireAuth(): Promise<AuthUser> {
 }
 
 /**
- * Personel guard'larının ortak gövdesi: oturum → profil → rol kararı → **iki kimlik birden**.
- *
- * Profil BURADA okunuyor ve dışarı veriliyor. Eskiden `isStaff`/`hasRole` çağrılıyordu; ikisi de
- * içeride aynı profili getirip yalnız `boolean` döndürüyordu — yani satır zaten okunuyordu, kimliği
- * atılıyordu. Bu yüzden profil kimliğini eklemek ek bir sorgu GETİRMEDİ; atılan bir değeri geri aldı.
- *
- * Rol kararı motorun (`domain-core/identity/roles`): guard yalnız satırı getirir ve sorar (STACK §4).
+ * Personel guard'larının ortak gövdesi: oturum → profil → rol kararı, iki kimlik birden döner. Rol kararı motorundur
+ * (`domain-core/identity/roles`), guard yalnız satırı getirir ve sorar.
  */
 async function staffProfile(allowed: (roles: readonly UserRole[]) => boolean): Promise<{ user: StaffUser; profile: UserProfile }> {
   const user = await requireAuth();
@@ -177,18 +101,11 @@ export async function requireStaff(): Promise<StaffUser> {
 }
 
 /**
- * Personelin DEPO KAPSAMI (DOMAIN §17) — rolün ikinci ekseni: ne yapar × nerede yapar.
- *
- * `warehouseId` verilirse o depoya erişim de doğrulanır ve yetkisizse `forbidden` atar. Verilmezse
- * yalnız kapsam döner (ekran kendi seçicisini ona göre kurar).
- *
- * **Fail-closed:** kapsamsız depocu/kurye HİÇBİR depoyu göremez — boş kapsam "hepsi" değildir.
- * Karar motorda (`warehouseScope`), guard yalnız kimliği getirip motora sorar (STACK §4).
+ * Personelin depo kapsamı (DOMAIN §17); `warehouseId` verilirse o depoya erişim de doğrulanır, yetkisizse `forbidden`. Kapsamsız depocu
+ * ve kurye hiçbir depoyu göremez, çünkü boş kapsam "hepsi" değildir; karar motordadır (`warehouseScope`).
  */
 export async function requireWarehouseScope(warehouseId?: string): Promise<{ user: StaffUser; scope: WarehouseScope }> {
-  // Profil TEK kez okunuyor: eskiden `requireStaff` bir kez, burası ikinci kez okuyordu ve ikisi de
-  // aynı satırdı. Kapsam kararı için zaten `roles`/`warehouseIds` gerekiyor — aynı satır ikisini de
-  // taşıyor.
+  // Profil tek kez okunur: kapsam kararının istediği `roles` ve `warehouseIds` aynı satırda.
   const { user, profile } = await staffProfile(isStaff);
 
   const scope = warehouseScope(profile.roles, profile.warehouseIds);
@@ -198,11 +115,8 @@ export async function requireWarehouseScope(warehouseId?: string): Promise<{ use
 }
 
 /**
- * Verilen rollerden **en az biri** şart — "yönetici VEYA muhasebeci" gibi kapılar için.
- *
- * `requireRole`'u iki kez çağırmak yerine tek okuma: rol listesi bir kez getirilir ve ilk çağrının
- * `forbidden` fırlatması ikinciyi hiç çalıştırmazdı. Tek rollü kapılar için `requireAdmin` vb.
- * kısayolları durmaya devam eder.
+ * Verilen rollerden en az biri şart ("yönetici veya muhasebeci" gibi kapılar). Rol listesi bir kez getirilir, çünkü `requireRole`u iki
+ * kez çağırmak ilkinin `forbidden`ıyla ikinciyi hiç çalıştırmazdı.
  */
 export async function requireAnyRole(roles: readonly UserRole[]): Promise<StaffUser> {
   return (await staffProfile((owned) => roles.some((r) => owned.includes(r)))).user;
@@ -218,18 +132,10 @@ export const requireAccounting = (): Promise<StaffUser> => requireRole('accounti
 
 // ─── Sarıcı: Server Action / route handler için throw yerine {ok} döndürür ──────
 
-/**
- * Guard'ın kimlik tipi KORUNUR (`T`): personel kapısından geçen çağıran `g.user.profileId`'yi
- * görebilsin diye. Jenerik olmasaydı dönüş `AuthUser`a daralır ve profil kimliği — tam da bu görevin
- * eklediği şey — çağrı yerinde kaybolurdu.
- */
+/** Guard'ın kimlik tipi korunur (`T`) ki personel kapısından geçen çağıran `g.user.profileId`yi görebilsin. */
 export type GuardResult<T extends AuthUser = AuthUser> = { ok: true; user: T } | { ok: false; code: AuthErrorCode };
 
-/**
- * Bir guard'ı çağırıp sonucu {ok} biçiminde döndürür — action'lar hatayı bilinçli
- * ele alır (kullanıcıya {error} döner), exception fırlatmaz.
- * Örn: `const g = await guarded(requireAdmin); if (!g.ok) return { error: g.code };`
- */
+/** Bir guard'ı çağırıp sonucu `{ok}` biçiminde döndürür; eylem hatayı fırlatmadan ele alır: `if (!g.ok) return { error: g.code };`. */
 export async function guarded<T extends AuthUser>(guard: () => Promise<T>): Promise<GuardResult<T>> {
   try {
     const user = await guard();
