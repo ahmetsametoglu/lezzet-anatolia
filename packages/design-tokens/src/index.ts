@@ -1,14 +1,5 @@
-// @lezzet/design-tokens — tasarım token'larının TEK KAYNAĞI (21.3).
-// Bugün kaynak fiilen `apps/web/app/globals.css`; parite testi iki tarafı birebir tutar.
-// Web şeridi `@theme` üretimini benimseyince yön döner: modül kaynak, CSS türev olur.
-// RN tarafı (Unistyles teması) bu modülü doğrudan import eder — sınıf adı değil TOKEN
-// paylaşılır (docs/uygulama/01 §11), "ham hex yasak" kuralı iki platformda da aynı kalır.
-//
-// İKİ AİLE, İKİ DOSYA (kullanıcı kararı 07.08): `customer*` CSS ikizidir (web + ortak taban),
-// `customerApp*` mobil uygulamanın kendi token'larıdır. Uygulama teması ikisini KOMPOZİSYONLA
-// birleştirir ve aynı addaki anahtarda uygulama kazanır:
-//     { ...customerColors, ...customerAppColors }   ·   { ...customerRadius, ...customerAppRadius }
-// Web tarafı `customerApp*` ihraçlarını hiç görmez — ayrım sonekle değil DOSYAYLA kuruludur.
+// @lezzet/design-tokens: tasarım token'larının tek kaynağı; `globals.css` ile parite testi iki tarafı birebir tutar. `customer*` web
+// ve ortak tabandır, `customerApp*` yalnız mobil uygulamanın token'larıdır ve uygulama teması ikisini birleştirir.
 export {
   customerSurface,
   customerSand,
@@ -23,6 +14,7 @@ export {
   customerColors,
   customerText,
   customerPhoneTextStepPx,
+  customerTabBarHomeIndicatorTrimPx,
   customerRadius,
   customerMotion,
   customerShadow,

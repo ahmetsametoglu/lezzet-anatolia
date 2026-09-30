@@ -29,7 +29,7 @@ export const customerSand = {
   'sand-25': '#faf6ec', // sayfa zemini
   'sand-50': '#f3efe2', // ara zemin, gömülü panel, hover
   'sand-100': '#f0e9d6', // vurgulu bölüm, iç ayraç
-  /* Krem zeminde "seçili" ve "kart" yüzeyleri 100 ile 300 arasında iki ayrı sıcaklık istiyor (Token Kararlari #2). */
+  /* Krem zeminde "seçili" ve "kart" yüzeyleri 100 ile 300 arasında iki ayrı sıcaklık ister. */
   'sand-150': '#efdfc2', // seçili kart, özet paneli, bildirim zili zemini
   'sand-200': '#ece5d2', // standart çerçeve, kart kenarı
   /* Kararın "sand-100" dediği ton; o ad zaten #f0e9d6'nın olduğu için skaladaki boş ad verildi. */
@@ -100,9 +100,9 @@ export const customerInteraction = {
   'hero-mid': '#6f7d3f',
 } as const satisfies Record<string, string>;
 
-/* ── Örtü (scrim) — Token Kararlari #5 ────────────────────────────────────────
-   Opaklık ham yazılmaz, kademe adı kullanılır ki "biraz daha koyu" kararı tek yerden verilsin. `.72` `.82`ye yuvarlanmaz:
-   `.82` fotoğraf üstü yazıyı okunur kılar, `.72` fotoğrafı soldurup "alınamaz" bilgisini taşır. */
+/* ── Örtü (scrim) ───────────────────────────────────────────────────────────────
+   Opaklık kademe adıyla yazılır ki "biraz daha koyu" kararı tek yerden verilsin; `.82` fotoğraf üstü yazıyı okunur kılar, `.72`
+   fotoğrafı soldurup "alınamaz" bilgisini taşır. */
 export const customerScrim = {
   'scrim-soft': 'rgba(21, 23, 15, 0.28)', // fotoğrafın üst kenarı, fotoğrafsız bant dairesi
   scrim: 'rgba(21, 23, 15, 0.45)', // sayfa örtüsü, yer işaretinin filigranı
@@ -110,9 +110,9 @@ export const customerScrim = {
   'scrim-heavy': 'rgba(21, 23, 15, 0.82)', // fotoğrafın alt kenarı, üstünde başlık okunur
 } as const satisfies Record<string, string>;
 
-/* ── Marka işaretleri — Token Kararlari #5 ────────────────────────────────────
-   Palete ait değil: üçüncü tarafların kendi renkleri, temayla dönmez. `brand-whatsapp` adı operasyonun koyultulmuş ikon
-   yeşilinde (`operations.ts`) olduğu için kanonik yeşil `brand-whatsapp-pure` adını aldı. */
+/* ── Marka işaretleri ────────────────────────────────────────────────────────────
+   Üçüncü tarafların kendi renkleri, temayla dönmez; kanonik WhatsApp yeşili `brand-whatsapp-pure`, çünkü `brand-whatsapp` operasyonun
+   koyultulmuş ikon yeşili. */
 export const customerBrand = {
   'brand-whatsapp-pure': '#25d366', // WhatsApp'ın kanonik yeşili
   'brand-google': '#4285f4', // giriş: Google düğmesinin "G"si
@@ -210,8 +210,7 @@ export const customerText = {
   'eyebrow-sm': '11px',
   'eyebrow-sm--font-weight': '600',
   'eyebrow-sm--letter-spacing': '0.1em',
-  /* Native'in üstbaşlığı: telefonda üstbaşlık başlıkla aynı sütunda durur ve ondan yalnız harf aralığıyla ayrışır. `eyebrow`
-     adı tabanda masaüstünün 14px'inde olduğu için ara ad; uygulamanın `eyebrow` farkı değerlerini buradan okur.
+  /* Native'in üstbaşlığı: telefonda başlıktan yalnız harf aralığıyla ayrışır; taban `eyebrow` masaüstünün 14px'i olduğu için ara ad.
      BEKLEYEN(08.58): masaüstü `eyebrow` kullanımları yeni ada geçince taban `eyebrow` bu değerleri alır ve bu ara kademe kalkar. */
   'eyebrow-xs': '10px',
   'eyebrow-xs--font-weight': '700',
@@ -229,8 +228,7 @@ export const customerText = {
   'badge-sm': '10px',
   /* Yardımcı satır (sayaç, "KDV dahil"): 13'te dar ekranda gövdeyle karışıyor, 11,5'te okunmuyor. */
   helper: '12px',
-  /* Uygulama ekran başlığı ve paket fiyat çipi: başlık yuvarlama kuralının bilinçli istisnası, çünkü telefon başlık çubuğu
-     17'de tek satıra sığıyor (Token Kararlari #6). */
+  /* Uygulama ekran başlığı ve paket fiyat çipi: başlık yuvarlama kuralının istisnası, çünkü telefon başlık çubuğu 17'de tek satıra sığıyor. */
   'screen-title': '17px',
   'screen-title--font-weight': '600',
 } as const satisfies Record<string, string>;
@@ -241,9 +239,15 @@ export const customerText = {
  */
 export const customerPhoneTextStepPx = 1;
 
+/**
+ * Alt sekme çubuğunun iPhone ev çubuğu payından kırptığı kısım (px = dp): payın tamamı (34) etiketlerin altında belirgin bir boşluk
+ * bırakır, kırpılmış hâl etiketleri ev çubuğunun hemen üstünde tutar. Web ana ekran uygulaması ve native iOS aynı değeri okur.
+ */
+export const customerTabBarHomeIndicatorTrimPx = 18;
+
 /* ── §0.4c Köşe yarıçapları (`--radius-` öneki) ──────────────────────────────
-   Mobilin resmî setinden (Token Kararlari #7) tabanda boş olan rozet ve kontrol kademeleri burada; aynı adı başka değerle
-   taşıyan kart ve hap `customer-app.ts`te kalır, çünkü masaüstünü de değiştirirdi. */
+   Tabanda boş olan rozet ve kontrol kademeleri burada; aynı adı başka değerle taşıyan kart ve hap `customer-app.ts`te kalır,
+   çünkü masaüstünü de değiştirirdi. */
 export const customerRadius = {
   card: '18px', // kart, panel, yüzen sayfa
   soft: '14px', // BEKLEYEN(BACKLOG §5): resmî sette yok; görsel turda 12 ya da 16'ya yuvarlanacak

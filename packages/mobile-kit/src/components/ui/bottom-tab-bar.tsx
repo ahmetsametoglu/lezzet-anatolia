@@ -1,55 +1,16 @@
 import { BlurView } from 'expo-blur';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { operationsTheme } from '../../theme/unistyles';
 import { Icon } from './icon';
+import { customerTabBarHomeIndicatorTrimPx } from '@lezzet/design-tokens/customer';
 import type { IconName } from '@lezzet/design-tokens/icons';
 import { PressableSurface } from './pressable-surface';
 
 /*
-  ALT SEKME ÇUBUĞU — uygulamanın kabuğu (v3 `tabs`, dört sekme: Vitrin · Katalog · Siparişler ·
-  Hesap). Sepet sekme DEĞİLDİR (envanter §4): sepete FAB ve yapışkan barlardan gidilir.
-
-  YÖNLENDİRMEYİ BİLMEZ: girdisi `items` dizisidir (etiket + ikon + seçili mi + basılınca ne
-  olacak), yani navigasyon kütüphanesinin şeklinden bağımsızdır. Router'ın kendi tab bar prop'unu
-  bu komponente doğrudan geçirmek, kiti expo-router sürümüne bağlardı; çeviri kabuk katmanının
-  (`app/(tabs)/_layout.tsx`) işi.
-
-  İKON ARTIK VAR (21.7): tasarımın 23 px'lik çizgi ikonları `react-native-svg` ile, yolları
-  şablondan birebir alınarak çiziliyor (`icon-paths.ts` — v3:1745 `IC` sözlüğü). İkon ADI çağırandan
-  gelir, çünkü hangi rotanın hangi ikonu taşıdığı navigasyonun bilgisidir, çubuğun değil.
-
-  ROZET YOK: tasarımın `t.badge` yuvası ölü (envanter §8.6 — sayaç sepet sekmesi içindi, o sekme
-  de yok). Ölü bir alanı port etmemek envanter §8.13'ün kararı.
-
-  ZEMİN KREM CAM (Token Kararlari #17): %96 krem + `blur(8px)`. Gerekçe ve Android'in
-  `BlurTargetView` açığı `AppBar` künyesinde, tek yerde yazılı — aynı yüzey, aynı karar.
-
-  ── İKİ YÜZEY, TEK ÇUBUK (21.9) ─────────────────────────────────────────────
-  Operasyon yüzeyinin sekme çubuğu İSKELET olarak bunun AYNISIDIR: krem cam + üst çizgi + eşit
-  dört yuva + ikon üstü etiket. Ayrıştığı yer yalnız TON: seçili renk, seçilmeyen renk, üst çizgi,
-  etiket kademesi, ikon ölçüsü, seçili ikonun vurgusu ve basılı geri bildirim.
-  Bu yüzden ikinci bir çubuk YAZILMADI (CLAUDE §1 — komponent duplikasyonu da duplikasyondur);
-  fark tek bir `tone` prop'una indi ve karar KİTİN İÇİNDE kaldı: çağıran renk geçirmez, hangi
-  yüzeyde olduğunu söyler.
-
-  ── OPERASYON TONU v3'E ÇEKİLDİ (ölçüldü 30.08) ─────────────────────────────
-  Şablonun kendi mantığı (`c.tabDepo = tab === 'depo' ? vurgu : '#a8a191'`) üç şey söylüyor:
-  · SEÇİLİ SEKME ARTIK VURGU RENGİ, mürekkep değil — v2'de `#343b41`ti. Karar tek başına değil:
-    v3 bölüm üstbaşlıklarını da dört bölümde birden zeytine çevirdi (`section-header.tsx`
-    künyesi). Yani renk "hangi bölümdeyim" demeyi bıraktı, "operasyondayım" demeye başladı;
-    çubuk da aynı cümleyi kuruyor.
-  · Seçilmeyen ton `tab-inactive` durağının YENİ değeri (#a8a191) — token künyesinde ölçüldü.
-  · İkon 22 → 20 (`tabIconOperations`), etiket 10,5 → 10 (`badge-sm`), yatay dolgu 8 → 6 (`sm`).
-  Krem cam + bulanıklık KORUNDU: v3 çubuğu `#f6f4ec` opak çiziyor ama o değer `cream`e Δ4/4/4
-  uzaklıkta, yani `cream-glass`ın %96 opak hâliyle ekranda ayırt edilemez — ölçülemeyen bir fark
-  için paylaşılan kitin yapısını (BlurView) bölmek, kazanç olmadan risk almaktı.
-
-  OPERASYON DEĞERLERİ `operationsTheme` SABİTİNDEN okunuyor, `theme` argümanından değil: Unistyles
-  geri çağrısındaki tema KAYITLI TEMALARIN BİRLEŞİMİDİR ve TypeScript birleşimde yalnız ortak
-  anahtarları okutur — `tab-inactive` yalnız operasyon temasında var. Ölçüm ve elenmiş
-  alternatifler `theme/unistyles.ts` künyesinde, tek yerde.
+  Alt sekme çubuğu, uygulamanın kabuğu: yönlendirmeyi bilmez, `items` dizisini çizer; sepet sekme değil, rozet yok. Operasyon ve
+  müşteri aynı iskeleti paylaşır, ayrım yalnız `tone`dadır ve operasyon değerleri `operationsTheme` sabitinden okunur.
 */
 
 /** Çubuğun hangi yüzeyde durduğu — renk/kademe kararı bu addan türer, çağırandan değil. */
@@ -102,7 +63,7 @@ export function BottomTabBar({ items, tone = 'customer', testID }: BottomTabBarP
         // `flex: 1` geçirilemez — dördü eşit paylaşsın diye sarmalayıcı burada.
         <View key={item.key} style={styles.slot}>
           <PressableSurface
-      /* Sekme çubuğu saf gezinmedir — her geçişte titremek titreşimin anlamını sıfırlar (16.08 kararı). */
+      /* Sekme çubuğu saf gezinmedir; her geçişte titremek titreşimin anlamını sıfırlar. */
       haptic={false}
             onPress={item.onPress}
             /* Müşteri şablonu sekmede opaklık kullanıyor, operasyon v2 küçültme (`scale(.94)` —
@@ -116,13 +77,7 @@ export function BottomTabBar({ items, tone = 'customer', testID }: BottomTabBarP
             style={styles.item}
             testID={testID === undefined ? undefined : `${testID}-${item.key}`}
           >
-            {/* İkonun rengi etiketle AYNI kaynaktan: şablon ikonu `currentColor` ile boyuyor,
-                yani ikon ile etiket tek bir durum rengini paylaşıyor. RN renk mirası vermediği
-                için değer açıkça geçiliyor — ama seçim yine tek koşuldan okunuyor.
-
-                DÖNÜŞÜM SARMALAYICIDA, ikonun kendisinde değil: `Icon` bir SVG çizer ve stil
-                prop'u YOKTUR (renk/boy dışında bir görünüm kararı ikona ait değildir). Şablon da
-                dönüşümü ikonun kutusuna uyguluyor. */}
+            {/* İkonun rengi etiketle aynı koşuldan okunur; dönüşüm sarmalayıcıda, çünkü `Icon`un stil prop'u yok. */}
             <View style={item.selected && tone === 'customer' ? styles.selectedIcon : undefined}>
               <Icon
                 name={item.icon}
@@ -156,10 +111,9 @@ const styles = StyleSheet.create((theme, rt) => ({
   /** Müşteri: mürekkep üst çizgi + tasarımın 6 px alt dolgusu (v3). */
   customerBar: {
     borderTopColor: theme.colors.ink,
-    /* Alt güvenli alan çubuğun İÇİNDE ama tasarım dolgusuyla TOPLANMAZ — ikisinin büyüğü yeter
-       (kullanıcı ölçümü 08.08: Android'de -inset 0- yükseklik idealdi, iOS'ta toplam çubuğu
-       tasarımdan belirgin yükseltiyordu). Home indicator alanı zaten dolgu görevi görür. */
-    paddingBottom: Math.max(rt.insets.bottom, theme.space.sm),
+    /* Alt güvenli alan tasarım dolgusuyla toplanmaz, büyüğü alınır; iPhone'un ev çubuğu payı ayrıca kırpılır, çünkü tamamı etiketlerin
+       altında belirgin bir boşluk bırakır. Android'in sistem çubuğu kırpılmaz, etiket altında kalırdı. */
+    paddingBottom: Math.max(rt.insets.bottom - (Platform.OS === 'ios' ? customerTabBarHomeIndicatorTrimPx : 0), theme.space.sm),
   },
   /** Operasyon: kum ayracı (`#ddd6c4` → `sand-300`) + 10 px alt, 6 px yan dolgu (v3). */
   operationsBar: {
@@ -183,11 +137,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space['2xs'],
     paddingVertical: theme.space.sm,
   },
-  /**
-   * Seçili sekmenin ikonu bir tık yukarı kalkar ve büyür — MÜŞTERİ tasarımının durum vurgusu.
-   * Operasyon v2'de bu vurgu YOK: orada seçili olma yalnız RENKLE söyleniyor (mürekkep ↔
-   * `tab-inactive`). Vurguyu oraya da taşımak, tasarımın vermediği bir kararı uydurmak olurdu.
-   */
+  /** Seçili sekmenin ikonu bir tık yukarı kalkar ve büyür; müşteri tasarımının vurgusu, operasyonda seçim yalnız renkle söylenir. */
   selectedIcon: {
     transform: [{ translateY: theme.tabSelected.lift }, { scale: theme.tabSelected.scale }],
   },
@@ -198,7 +148,6 @@ const styles = StyleSheet.create((theme, rt) => ({
      (11,5), ağırlık üstbaşlık kademesinden (700) — `eyebrow` (10) sayıca daha yakın ama harf
      aralığı .18em'dir ve büyük harf içindir; sekme etiketi cümle biçimlidir. */
   customerLabel: { fontSize: theme.text.micro },
-  /* Operasyon v3 etiketi TAM 10 px — yuvarlama gerekmiyor, `badge-sm` o ölçünün kendisi.
-     `meta` (10,5) durağı yerinde kalıyor: v3'te 42 kullanımı var, yalnız artık bu satır değil. */
+  /* Operasyon etiketi tam 10 px; `badge-sm` o ölçünün kendisi. */
   operationsLabel: { fontSize: operationsTheme.text['badge-sm'] },
 }));

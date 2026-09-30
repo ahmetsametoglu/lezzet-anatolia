@@ -1,6 +1,7 @@
 'use client';
 
 import tabBarCopy from '@lezzet/i18n/customer/tab-bar';
+import { customerTabBarHomeIndicatorTrimPx } from '@lezzet/design-tokens/customer';
 import type { IconName } from '@lezzet/design-tokens/icons';
 import { Link, usePathname } from '@/i18n/navigation';
 import type { routing } from '@/i18n/routing';
@@ -46,6 +47,8 @@ const TAB_ROOTS: readonly string[] = ['/', '/catalog', '/packages', '/account'] 
 /** Yüzen sepet düğmesi: sekme köklerinde çubuğa bağlı, detayda sabit (native'in beş ekranı). */
 const FAB_ON_TAB_BAR: readonly string[] = ['/', '/catalog'] satisfies Route[];
 const FAB_ON_DETAIL: readonly string[] = ['/product/[slug]', '/package/[slug]', '/recipe/[slug]'] satisfies Route[];
+/** Görseli durum çubuğunun altına uzanan ekranlar (native'in aynı ikisi); durum çubuğu zemini bunlarda yok. */
+const HERO_PAGES: readonly string[] = ['/product/[slug]', '/recipe/[slug]'] satisfies Route[];
 
 /** Hangi başlık: vitrin selamlaması, hesabın yalnız başlığı, bölüm sayfasının büyük başlığı, yapışkan çubuk ya da hiçbiri. */
 type HeaderKind = 'home' | 'title' | 'page' | 'bar' | 'none';
@@ -100,6 +103,7 @@ export function SiteFrameMobile({ locale, mobileChrome, accountChrome, fill, chi
   const title = accountChrome?.title ?? titleOf(route, t);
   // Geçmiş boşken ‹'nin gideceği üst sayfa (`BackButton` sözleşmesi) — derin bağlantıyla gelen de döner.
   const fallback = accountChrome?.back?.href ?? '/';
+  const hero = HERO_PAGES.includes(route);
 
   return (
     <div
@@ -111,6 +115,9 @@ export function SiteFrameMobile({ locale, mobileChrome, accountChrome, fill, chi
         fill ? 'h-dvh overflow-hidden' : 'min-h-dvh',
       ].join(' ')}
     >
+      {/* iOS 26 durum çubuğunu, sayfanın üst kenarına değen sabit öğenin rengiyle boyar; öğe yoksa kaydırılan içerik saatin arkasından
+          görünür. 6px'ten ince öğe örneklenmiyor, zemin 8px. */}
+      {!hero && <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-40 h-2 bg-sand-50" />}
       {kind === 'home' && <HomeHeader locale={locale} />}
       {/* Native hesap başlığı: sekme kökü, geri yolu yok. Paylar native'in aynısı; başlık orada sayfa dolgusunun (18)
           içinde kendi 18'ini de aldığı için kartlardan içeride başlar. */}
@@ -145,17 +152,18 @@ interface TabBarProps {
   fab: boolean;
 }
 
-/**
- * Native'in alt sekme çubuğu: alt dolgu güvenli alanla 6px'in büyüğüdür, çünkü native'de ikisi toplanmaz. Rozet yok, sepet
- * sekme değil yüzen düğme.
- */
+/** Sekme çubuğunun alt payı: güvenli alanın kırpılmış hâliyle 6px'in büyüğü (native'in aynı kuralı); tarayıcıda güvenli alan sıfırdır. */
+const TAB_BAR_PADDING_BOTTOM = `max(6px, calc(env(safe-area-inset-bottom) - ${customerTabBarHomeIndicatorTrimPx}px))`;
+
+/** Native'in alt sekme çubuğu: rozet yok, sepet sekme değil yüzen düğme. */
 function TabBar({ locale, route, tabs, menuLabel, cartLabel, fab }: TabBarProps) {
   const copy = tabBarCopy[locale].tabs;
 
   return (
     <nav
       aria-label={menuLabel}
-      className="sticky bottom-0 z-30 flex flex-none border-t-[1.5px] border-ink bg-sand-50/96 px-2 pt-2 pb-[max(6px,env(safe-area-inset-bottom))] backdrop-blur-sm"
+      className="sticky bottom-0 z-30 flex flex-none border-t-[1.5px] border-ink bg-sand-50/96 px-2 pt-2 backdrop-blur-sm"
+      style={{ paddingBottom: TAB_BAR_PADDING_BOTTOM }}
     >
       {fab && <CartFab label={cartLabel} placement="tab-bar" />}
       {tabs.map((tab) => {
