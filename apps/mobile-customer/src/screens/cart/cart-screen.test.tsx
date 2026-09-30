@@ -378,6 +378,19 @@ describe('CartScreen — giriş ve adres sepette sorulur', () => {
     expect(mockSignOut).toHaveBeenCalledTimes(1);
   });
 
+  // Giriş düğmesi müşteriyi giriş sayfasına götürürse, yani sepetten ayrılırsa kırmızıya döner.
+  it('misafirin giriş düğmesi sepetten ayrılmadan giriş çekmecesini açar', async () => {
+    mockMeStatus = 'guest';
+    mockAddress = null;
+    mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local')]));
+
+    await render(<CartScreen />);
+    await fireEvent.press(screen.getByTestId('cart-login'));
+
+    expect(mockPush).not.toHaveBeenCalledWith('/login');
+    expect(screen.getByTestId('login-google')).toBeOnTheScreen();
+  });
+
   it('misafirde hesap kartı çizilmez', async () => {
     mockMeStatus = 'guest';
     mockAddress = null;

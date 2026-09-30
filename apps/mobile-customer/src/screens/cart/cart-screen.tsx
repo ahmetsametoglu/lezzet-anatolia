@@ -44,6 +44,7 @@ import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { AccountCard } from './account-card';
 import { CartLineRow } from './cart-line-row';
+import { LoginSheet } from './login-sheet';
 import { CartSkeleton } from './cart-skeleton';
 import messages from '@lezzet/i18n/customer/cart';
 
@@ -76,6 +77,8 @@ export function CartScreen() {
   const cart = useCart();
 
   const [placeSheetOpen, setPlaceSheetOpen] = useState(false);
+  // Her açılış yeni anahtarla: kapatılıp yeniden açılan çekmece seçimden başlar, kapanış kayışı yine oynar.
+  const [login, setLogin] = useState({ open: false, key: 0 });
   /* Adres yokken düşülen yer gezinme kodudur; bandın andığı yer ile görünümü çözen yer aynı olmalı, yoksa ekran hesabın dayanmadığı
      bir yeri suçlardı. */
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
@@ -398,7 +401,14 @@ export function CartScreen() {
             layout="stack"
             title={t.guest.title}
             description={t.guest.body}
-            action={<PrimaryButton label={t.guest.cta} shape="pill" onPress={() => router.push('/login')} testID="cart-login" />}
+            action={
+              <PrimaryButton
+                label={t.guest.cta}
+                shape="pill"
+                onPress={() => setLogin((prev) => ({ open: true, key: prev.key + 1 }))}
+                testID="cart-login"
+              />
+            }
             testID="cart-guest"
           />
         ) : pickupPoint !== null ? (
@@ -611,6 +621,7 @@ export function CartScreen() {
 
       {/* Yer kapısı ekranı terk etmeden açılır: adresli müşteride adres seçici, adressizde posta kodu çekmecesi. */}
       <PlaceSheet visible={placeSheetOpen} onClose={() => setPlaceSheetOpen(false)} showZonesLink testID="cart-place-sheet" />
+      <LoginSheet key={login.key} visible={login.open} onClose={() => setLogin((prev) => ({ ...prev, open: false }))} />
       <NewAddressSheet visible={addingAddress} onClose={() => setAddingAddress(false)} testID="cart-new-address" />
     </View>
   );

@@ -13,12 +13,12 @@ import { getSupabase } from './supabase';
 type OAuthResult = { error: AuthErrorKey | null };
 
 /**
- * Tarayıcıda Google girişini başlatır; değişimi `/auth/callback` rotası yapar. Başarı "tarayıcı açıldı" demektir, tarayıcıda vazgeçen
- * müşteri uygulamaya döndüğünde girişi bıraktığı gibi bulur.
+ * Tarayıcıda Google girişini başlatır; değişimi `/auth/callback` rotası yapar ve dönüşte `returnTo`yu (yalnız izinli hedefse) açar.
+ * Başarı "tarayıcı açıldı" demektir, tarayıcıda vazgeçen müşteri uygulamaya döndüğünde girişi bıraktığı gibi bulur.
  */
-export async function signInWithGoogle(): Promise<OAuthResult> {
+export async function signInWithGoogle(returnTo?: string): Promise<OAuthResult> {
   const supabase = getSupabase();
-  const redirectTo = Linking.createURL('auth/callback');
+  const redirectTo = Linking.createURL('auth/callback', returnTo === undefined ? undefined : { queryParams: { next: returnTo } });
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
