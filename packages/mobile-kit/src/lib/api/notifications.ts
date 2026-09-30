@@ -5,22 +5,14 @@ import { authorizedFetch } from '../auth/authorized-fetch';
 import type { ApiResult } from './client';
 
 /*
-  `/api/v1/me/notifications` — zilin veri kaynağı (14.13). KURAL UÇTA DEĞİL, uç da taşıma
-  katmanı: sahiplik süzgeci, "akış ≠ gelen kutusu" ve rozet tanımı `@lezzet/application`ın
-  okuma kapısında. Burada yalnız çağrı + şema doğrulaması var (points.ts kalıbı).
-
-  Satır METİN taşımaz: `kind` + dil-bağımsız `payload` gelir, cümleyi ekran kurar
-  (`notification-copy.ts`) — puan geçmişinin "sebep bir ANAHTAR" kararının aynısı.
+  `/api/v1/me/notifications` zilin veri kaynağıdır; kural uçta değil, sahiplik süzgeci ve rozet tanımı `@lezzet/application`ın
+  okuma kapısında. Satır metin taşımaz: `kind` ve dil-bağımsız `payload` gelir, cümleyi ekran kurar (`notification-copy.ts`).
 */
 
 export type NotificationsPage = z.infer<typeof MeNotificationsPageSchema>;
 export type NotificationRow = NotificationsPage['notifications'][number];
 
-/**
- * KİTLE (26.08 — karma profil dersi, uç künyesi): müşteri ekranı/rozeti varsayılanla (customer)
- * okur; operasyon kabuğu `staff` ister — personel satırı müşteri akışına, müşteri satırı personel
- * akışına düşmez.
- */
+/** Kitle: müşteri ekranı varsayılanla (`customer`) okur, operasyon kabuğu `staff` ister; personel satırı müşteri akışına düşmez. */
 export type NotificationAudience = 'customer' | 'staff';
 
 export function fetchNotifications(cursor?: string, audience: NotificationAudience = 'customer'): Promise<ApiResult<NotificationsPage>> {
@@ -32,12 +24,8 @@ export function fetchNotifications(cursor?: string, audience: NotificationAudien
 }
 
 /**
- * Rozet — zil çalınca (kanal yükü boş) ya da sekmeye dönünce, LİSTE ÇEKMEDEN tazeleme.
- *
- * KİTLE 05.09'DA EKLENDİ: parametre yoktu ve uç varsayılana (`customer`) düşüyordu — operasyon
- * tarafından çağrılsaydı personelin zili MÜŞTERİ sayısını gösterirdi. Kullanılmadığı için
- * görünmemişti; hub zilleri sayıyı 30 satırlık listeden kendileri sayıyordu ve rozet 30'u hiç
- * geçemiyordu.
+ * Rozet: zil çalınca ya da sekmeye dönünce liste çekmeden tazelenir. Kitle parametre olarak gelir, çünkü operasyon zili varsayılana
+ * (`customer`) düşseydi müşteri sayısını gösterirdi.
  */
 export function fetchNotificationBadge(audience: NotificationAudience = 'customer'): Promise<ApiResult<z.infer<typeof MeNotificationBadgeSchema>>> {
   const query = audience === 'customer' ? '' : `?audience=${audience}`;
@@ -51,9 +39,8 @@ export function markNotificationRead(id: string): Promise<ApiResult<z.infer<type
 }
 
 /**
- * "Buraya kadarını gördüm". `since` — çizilen EN ESKİ satırın damgası: beyan yalnız o damgadan
- * yeni satırları kapsar. Sayfalayan bir ekran "hepsini gördüm" DİYEMEZ; sayfanın arkasında kalan
- * satırı okundu yapmak onu rozetten düşürür ve 90 gün sonra saklama süpürmesine yem eder.
+ * "Buraya kadarını gördüm": `since` çizilen en eski satırın damgasıdır ve beyan yalnız ondan yeni satırları kapsar. Sayfanın
+ * arkasında kalan satırı okundu yapmak onu rozetten düşürür ve saklama süpürmesine yem eder.
  */
 export function markAllNotificationsRead(audience: NotificationAudience = 'customer', since?: string): Promise<ApiResult<z.infer<typeof DoneSchema>>> {
   const params = new URLSearchParams();
@@ -68,9 +55,8 @@ export function dismissNotification(id: string): Promise<ApiResult<z.infer<typeo
 }
 
 /*
-  Cihaz jetonu uçları (14.14) — jeton hiçbir cevapta geri okutulmaz ve URL'e yazılmaz (erişim
-  logları): iki uç da POST, jeton gövdede. Kayıt her açılışta tazelenir ve İZİN DURUMUNU da
-  raporlar (izni kapalı cihaza "gönderdim" demek sessiz kara deliktir — sunucu onu listeden düşürür).
+  Cihaz jetonu uçları: jeton hiçbir cevapta geri okutulmaz ve URL'e yazılmaz, iki uç da POST ve jeton gövdede. Kayıt her açılışta
+  tazelenir ve izin durumunu da raporlar, çünkü izni kapalı cihaza "gönderdim" demek sessiz kara deliktir.
 */
 
 const RemovedSchema = z.object({ removed: z.boolean() });

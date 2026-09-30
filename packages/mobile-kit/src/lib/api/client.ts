@@ -2,14 +2,8 @@ import { z } from 'zod';
 import { env } from '../env';
 
 /*
-  `/api/v1` istemcisi — zarf sözleşmesi apps/mobile-api `lib/respond.ts` ile AYNI:
-  `{ data, error }`; başarıda `error: null`, hatada `data: null`; `error` bir ANAHTARDIR, cümle
-  değil (metni ekran kurar). Her cevabın gövdesi ÇAĞIRANIN verdiği Zod şemasıyla parse edilir —
-  sözleşme tek kaynak, elle tip yazılmaz (02-mimari §3.2).
-
-  Hata YUTULMAZ ama FIRLATILMAZ da: sonuç Result desenidir (`ApiResult`) — apps/web server
-  action zarfıyla aynı okuma alışkanlığı. Mobil istemci log altyapısı ayrı iş (01-teknoloji §9
-  açık sorusu); o gelene dek iz, çağıranın elindeki hatanın kendisidir.
+  `/api/v1` istemcisi: zarf sözleşmesi mobile-api `lib/respond.ts` ile aynı (`{ data, error }`, `error` bir anahtardır, cümle değil)
+  ve her cevap çağıranın Zod şemasıyla parse edilir. Hata yutulmaz ama fırlatılmaz da: sonuç `ApiResult` desenidir.
 */
 
 /**
@@ -44,27 +38,9 @@ export interface ApiFail {
 export type ApiResult<T> = ApiOk<T> | ApiFail;
 
 /**
- * Arızanın SINIFI — "ne yüklenemedi" değil "NİÇİN yüklenemedi".
- *
- * ── ÖLÇÜLMÜŞ ARIZA (06.09, sosyal gelen kutusu) ─────────────────────────────
- * Cihazda oturum ölmüştü (yerel veritabanı tazelenince `auth.users` yeniden doğuyor, elde kalan
- * jetonun tazelemesi `refresh_token_not_found` ile düşüyor): `authorizedFetch` ağa HİÇ çıkmadan
- * `401` döndürdü, ekran ise "Bağlantıyı kontrol edip yeniden deneyin" dedi. Operatör wifi'sini
- * kontrol etti; arıza ise oturumdaydı. Uç, şema ve veri yolu boyunca hiçbir şey yanlış değildi —
- * yanlış olan tek şey EKRANIN CÜMLESİYDİ (CLAUDE §1: belirtiyi susturan değil, sebebi söyleyen).
- *
- * Dört sınıf, dördü de bir CEVABIN kanıtı — tahmin yok:
- * · `connection` — istek ağa hiç çıkamadı (`network_error`, `status: null`).
- * · `session`    — 401: ya cihazda oturum yok/ölü (yerel kısa devre) ya uç jetonu reddetti.
- * · `forbidden`  — 403: kimlik doğru, rol kapısı kapalı (`requireStaffRole`).
- * · `unexpected` — gerisi: sözleşmeye uymayan gövde, 5xx, tanınmayan alan anahtarı.
- *
- * 401'i "oturum öldü" diye YORUMLAMAZ, "oturum doğrulanmadı" der: uç, auth sunucusuna
- * ulaşamadığında da 401 üretir (ölçüldü: GoTrue `/user` 504 → mobile-api `unauthorized`). Sınıf
- * ne kadarını biliyorsa onu söyler; oturumu kendiliğinden kapatmak bu kadar bilgiyle yapılamaz.
- * O karar 401'e değil auth sunucusunun TAZELEME cevabına bakar ve `authorizedFetch`te verilir
- * (21.304 — `lib/auth/session-end`): ölü oturum artık kapanıyor, yani bu sınıfı taşıyan ekran ölü
- * bir oturuma değil, o an doğrulanamamış bir oturuma bakıyor.
+ * Arızanın sınıfı, yani niçin yüklenemediği: `connection` istek ağa çıkamadı, `session` 401, `forbidden` 403, `unexpected` gerisi.
+ * 401 "oturum doğrulanmadı" demektir, "öldü" değil: uç auth sunucusuna ulaşamadığında da 401 üretir, kapatma kararı tazeleme
+ * cevabına bakar (`authorizedFetch`).
  */
 export type ApiFailureCause = 'connection' | 'session' | 'forbidden' | 'unexpected';
 
@@ -134,16 +110,8 @@ export async function apiFetch<TSchema extends z.ZodTypeAny>(
 }
 
 /**
- * Sorgu dizesi — `?a=1&b=2`, `undefined` olan atlanır, sonuç boşsa dize de boş.
- *
- * **KİTE TAŞINDI (21.281): dört dosyada KARAKTERİ KARAKTERİNE aynı kopyası vardı** (`sale`,
- * `checkout`, `orders`, `social`) ve beşincisini yazmak üzereydim. Küçük bir yardımcı olması onu
- * duplication olmaktan çıkarmıyor — kaçırılan `encodeURIComponent` ya da "boş dizeyi de atla"
- * gibi bir düzeltme bir gün dört yerden yalnız birine uygulanırdı ve fark hiçbir yerde görünmezdi
- * (CLAUDE §1).
- *
- * `packages.ts`in kendi `queryOf`u BURAYA BAĞLANMADI: onun imzası başka (`locale` zorunlu,
- * `postalCode` opsiyonel) — aynı ada sahip olmak aynı iş olmak değildir.
+ * Sorgu dizesi `?a=1&b=2`: `undefined` olan atlanır, sonuç boşsa dize de boş. Tek kopya, çünkü `encodeURIComponent` gibi bir
+ * düzeltme kopyaların yalnız birine uygulanırdı; `packages.ts`in `queryOf`u imzası başka olduğu için ayrıdır.
  */
 export function queryString(params: Record<string, string | undefined>): string {
   const pairs = Object.entries(params)
