@@ -58,9 +58,14 @@ const readPickupSelection = cache(async (): Promise<{ offer: CheckoutPickup | nu
 });
 
 const readPlaceContext = cache(async (): Promise<PlaceContext> => {
-  const address = await readDefaultAddress();
-  const pickup = await readPickupSelection();
-  const answer = address ? { country: address.country, postalCode: address.postalCode } : await readPlaceAnswerFromCookie();
+  const [customerId, cookieAnswer] = await Promise.all([currentCustomerId(), readPlaceAnswerFromCookie()]);
+  // Yeri cevaplanmış olabilecek istekte teslim girdileri adresle aynı turda okunur; oturumsuz ve çerezsiz ziyaretçide hiç okunmaz.
+  const [address, pickup] = await Promise.all([
+    readDefaultAddress(),
+    readPickupSelection(),
+    customerId !== null || cookieAnswer !== null ? readDeliveryInputs() : null,
+  ]);
+  const answer = address ? { country: address.country, postalCode: address.postalCode } : cookieAnswer;
   // Adres yokken de gel-al seçilebilir: sepet o zaman deponun stoğuyla okunur, adres yalnız faturadır.
   if (!answer) return { ...EMPTY, pickup: pickup.offer, pickupWarehouse: pickup.warehouse };
 

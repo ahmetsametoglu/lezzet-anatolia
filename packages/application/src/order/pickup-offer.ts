@@ -11,10 +11,12 @@ export async function readPickupOffer(
   customerId: string,
   requested: string | null,
 ): Promise<{ offer: CheckoutPickup | null; warehouse: Warehouse | null }> {
-  const customer = await new UserProfileService(db).getById(customerId);
-  if (!customer?.pickupAllowed) return { offer: null, warehouse: null };
-  const warehouses = await new WarehouseService(db).list({ activeOnly: true, kind: 'facility', pickupEnabled: true });
-  if (warehouses.length === 0) return { offer: null, warehouse: null };
+  // İki okuma birbirini beklemez: teklif her oturumlu sayfanın yer çözümünde sorulur ve sıralı okuma oraya bir ağ turu eklerdi.
+  const [customer, warehouses] = await Promise.all([
+    new UserProfileService(db).getById(customerId),
+    new WarehouseService(db).list({ activeOnly: true, kind: 'facility', pickupEnabled: true }),
+  ]);
+  if (!customer?.pickupAllowed || warehouses.length === 0) return { offer: null, warehouse: null };
   const warehouse = warehouses.find((w) => w.id === requested) ?? null;
   return {
     offer: {

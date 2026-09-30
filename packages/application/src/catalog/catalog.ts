@@ -75,19 +75,18 @@ export interface CatalogInput {
   includeUnsellable?: boolean;
 }
 
+/** Ürün kolunun cevabı: kategoriler dışındaki her alan. */
+type CatalogProducts = Omit<StorefrontCatalog, 'categories' | 'activeCategory'>;
+
 /** Ürün bulunmayan katalog cevabı — süzgeç hiçbir şeyi getirmediğinde sorgu boşa atılmasın. */
 const noProducts = (
-  categories: StorefrontCatalog['categories'],
-  activeCategory: StorefrontCatalog['activeCategory'],
   // Koleksiyon boş cevapta da TAŞINIR: başlık bandı ürün listesinden bağımsız — "Bayram · 0 ürün"
   // demek, müşteriyi kimliksiz bir boş sayfada bırakmaktan iyidir.
   activeCollection: StorefrontCatalog['activeCollection'],
   // Kampanya boş cevapta da taşınır: "bu koleksiyonda %15 var ama şu an ürün yok" cümlesi,
   // kampanyayı sessizce yok saymaktan dürüsttür (koleksiyon bandının aynı gerekçesi).
   campaign: StorefrontCatalog['campaign'] = null,
-): StorefrontCatalog => ({
-  categories,
-  activeCategory,
+): CatalogProducts => ({
   activeCollection,
   products: [],
   total: 0,
@@ -101,26 +100,42 @@ const noProducts = (
  * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), `auth/otp` deseni.
  */
 export async function getCatalogData(db: SupabaseClient, input: CatalogInput): Promise<StorefrontCatalog> {
+  const { locale } = input;
+  const categorySlug = input.query?.categorySlug;
+  const categoryRows: Promise<readonly CatalogCategoryRow[]> = new CategoryService(db)
+    .list({ activeOnly: true })
+    .then((rows) => (rows.length ? rows : (input.fallbackCategories ?? [])));
+  // Kategori görselleri ile ürün kolu aynı satırlardan beslenir ama birbirini beklemez: sıralı her okuma sayfaya bir ağ turu ekler.
+  const [categories, products] = await Promise.all([
+    categoryRows.then(async (source) => {
+      // Fotoğraf havuzu tek turda okunur, kart başına sorgu yok. Yedek satırlarda (fikstür) kimlikler gerçek değil; havuz boş
+      // döner ve kart kapağa düşer.
+      const pools = await new CategoryImageService(db).listByCategories(source.map((c) => c.id));
+      return source.map((c) => toCategory(c, locale, pools.get(c.id)));
+    }),
+    readCatalogProducts(db, input, categoryRows),
+  ]);
+  return { categories, activeCategory: categorySlug ? (categories.find((c) => c.slug === categorySlug) ?? null) : null, ...products };
+}
+
+/** Katalogun ürün kolu: süzgeçler, sayfa, sayaç, fiyat/stok bağlamı ve kampanya. Kategori satırlarını yalnız kategori süzgeci varsa bekler. */
+async function readCatalogProducts(
+  db: SupabaseClient,
+  input: CatalogInput,
+  categoryRows: Promise<readonly CatalogCategoryRow[]>,
+): Promise<CatalogProducts> {
   const { locale, place, viewer } = input;
   const q = input.query ?? {};
   const limit = input.limit ?? DEFAULT_PAGE_SIZE;
-
-  const categoryRows = await new CategoryService(db).list({ activeOnly: true });
-  const source = categoryRows.length ? categoryRows : (input.fallbackCategories ?? []);
-  // Fotoğraf havuzu tek turda okunur, kart başına sorgu yok. Yedek satırlarda (fikstür) kimlikler gerçek değil; havuz boş döner
-  // ve kart kapağa düşer.
-  const pools = await new CategoryImageService(db).listByCategories(source.map((c) => c.id));
-  const categories = source.map((c) => toCategory(c, locale, pools.get(c.id)));
-  const activeCategory = q.categorySlug ? (categories.find((c) => c.slug === q.categorySlug) ?? null) : null;
-  // Koleksiyon SLUG'DAN çözülür (kategoriyle aynı sözleşme: dil-bağımsız, paylaşılabilir URL).
-  // Slug verilmemişse sorgu HİÇ atılmaz — katalogun sıradan hâli koleksiyon tablosuna uğramaz.
-  const activeCollection = q.collectionSlug ? await readCollectionHead(db, q.collectionSlug, locale) : null;
 
   // "Yalnız indirimliler" kimliklere çözülüp sorguya girer, çünkü sayfa çekildikten sonra elemek keyset'i ve toplamı bozardı. Boş
   // küme erken döner: `ids: []` PostgREST'e "hiçbiri" diye gitmez, süzgeç düşer ve tüm katalog gelirdi.
   /* İki daraltma da kimliğe çözülür ve kesişimi burada alınır. `onlyStockedHere` yer bilinmezken boş kümedir: "burada duran mal"
      sorusunun deposuz cevabı yok ve tüm katalogu döndürmek yanlış cevap olurdu. */
-  const idSets = await Promise.all([
+  const [activeCategory, activeCollection, ...idSets] = await Promise.all([
+    q.categorySlug ? categoryRows.then((rows) => rows.find((c) => c.slug === q.categorySlug) ?? null) : Promise.resolve(null),
+    // Koleksiyon slug'dan çözülür (kategoriyle aynı sözleşme: dil-bağımsız, paylaşılabilir URL); slug yoksa sorgu hiç atılmaz.
+    q.collectionSlug ? readCollectionHead(db, q.collectionSlug, locale) : Promise.resolve(null),
     Promise.resolve(q.productIds === undefined ? null : [...q.productIds]),
     q.onlyOffers ? listOfferProductIds(db, place.warehouseId) : Promise.resolve(null),
     q.onlyStockedHere
@@ -141,7 +156,7 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
       categoryIds: activeCategory ? [activeCategory.id] : [],
       collectionIds: activeCollection ? [activeCollection.id] : [],
     });
-    return noProducts(categories, activeCategory, activeCollection, sectionCampaignOf(only, activeCategory, activeCollection));
+    return noProducts(activeCollection, sectionCampaignOf(only, activeCategory, activeCollection));
   }
 
   // Aday ürün katalogda GÖRÜNMEZ (`musteri-katalog.md §6`) — `status: 'active'` bunu sağlar.
@@ -201,8 +216,6 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
       );
 
   return {
-    categories,
-    activeCategory,
     activeCollection,
     products: page.rows.map((p) =>
       /* Süzgeç karta da iner: liste araçta duran ürünlere daraltılmışken kartın boy sayısı araçta olmayan boyu vaat etmesin. */

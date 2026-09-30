@@ -69,7 +69,7 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
   const activeSort: CatalogSort = CATALOG_SORTS.includes(sort as CatalogSort) ? (sort as CatalogSort) : 'featured';
   const onlyOffers = offers === '1';
   // Kargo çipi URL'de yaşar: süzülmüş liste paylaşılabilir ve geri tuşu çalışır (offers ile aynı desen).
-  const placeMode = await readPlaceMode();
+  const [placeMode, place, viewer] = await Promise.all([readPlaceMode(), readPlaceWarehouses(), readPricingViewer()]);
   const onlyShippable = shippableFilterApplies(shippable === '1', placeMode);
 
   const t: Messages = messages[locale];
@@ -77,8 +77,8 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
     getCatalogData(serviceDb(), {
       locale,
       query: { categorySlug: category, collectionSlug: collection, search: q, sort: activeSort, onlyOffers, onlyShippable },
-      place: await readPlaceWarehouses(),
-      viewer: await readPricingViewer(),
+      place,
+      viewer,
       // Paketin varsayılanı "yedek yok"; web boş katalogda vitrin fikstürünü göstermek için bunu geçirir.
       fallbackCategories: FIXTURE_CATEGORIES,
     }),
