@@ -58,7 +58,8 @@ export function failureCauseOf(failure: ApiFail | null): ApiFailureCause {
 
 export interface ApiFetchInit {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
-  body?: unknown;
+  /** Nesne verilir, metin değil: istemci kendisi JSON'a çevirir; metin verilseydi iki kez çevrilir ve uç `invalid_body` derdi. */
+  body?: Record<string, unknown> | readonly unknown[];
   headers?: Record<string, string>;
 }
 

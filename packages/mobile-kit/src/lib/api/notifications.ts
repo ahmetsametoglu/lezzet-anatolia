@@ -62,9 +62,9 @@ export function dismissNotification(id: string): Promise<ApiResult<z.infer<typeo
 const RemovedSchema = z.object({ removed: z.boolean() });
 
 export function registerPushDevice(input: { token: string; platform: 'ios' | 'android'; app: PushApp; enabled: boolean }): Promise<ApiResult<z.infer<typeof DoneSchema>>> {
-  return authorizedFetch('/api/v1/me/push-devices', DoneSchema, { method: 'POST', body: JSON.stringify(input), headers: { 'content-type': 'application/json' } });
+  return authorizedFetch('/api/v1/me/push-devices', DoneSchema, { method: 'POST', body: input });
 }
 
 export function removePushDevice(token: string): Promise<ApiResult<z.infer<typeof RemovedSchema>>> {
-  return authorizedFetch('/api/v1/me/push-devices/remove', RemovedSchema, { method: 'POST', body: JSON.stringify({ token }), headers: { 'content-type': 'application/json' } });
+  return authorizedFetch('/api/v1/me/push-devices/remove', RemovedSchema, { method: 'POST', body: { token } });
 }
