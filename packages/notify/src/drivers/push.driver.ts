@@ -3,26 +3,8 @@ import { NOTIFY_EVENT_META } from '../types';
 import { MESSAGE } from '../event-copy';
 
 /**
- * **Expo push sürücüsü** (14.16) — cihaz bildirimi: en ucuz, en hızlı, bizim kanal.
- *
- * ── DB'YE BAKMAZ ────────────────────────────────────────────────────────────
- * Jetonlar `NotifyRecipient.pushTokens` ile GELİR (tek kapı doldurur, izni kapalı cihaz listeye
- * hiç girmez). Sürücünün tek işi Expo'ya POST atmak — paketin sözleşmesi: "sürücü seçimi yeteneğe
- * bakmadır", yetenek burada jetonun varlığıdır.
- *
- * ── YALNIZ UYGULAMA-İÇİ SATIR YAZAN OLAYLAR ─────────────────────────────────
- * `supports` olay-metasının `inApp` bayrağını okur: push da bir ZİLDİR ve zile düşmeyen olay
- * (ticket_received — teyit) cihaza da düşmez. İki liste ayrı tutulsaydı biri gün gelip teyidi
- * gece yarısı bildirimi yapardı.
- *
- * ── BAŞLIK YOK, GÖVDE ORTAK SÖZLÜKTEN ───────────────────────────────────────
- * Başlığı işletim sistemi zaten uygulama adıyla basar; gövde `event-copy`nin tek cümlesi —
- * wa.me metniyle AYNI cümle, iki kopya değil (CLAUDE §1).
- *
- * ── MAKBUZ SONRAYA, BİLETLER REF'E ──────────────────────────────────────────
- * Expo teslimi asenkron söyler: dönen BİLET kimlikleri `ref`e virgülle yazılır ve teslim
- * defterine iner — makbuz süpürme cron'u (14.16'nın ikinci yarısı) `DeviceNotRegistered`ı
- * oradan okuyup çürük jetonu silecek. Bilet saklanmasaydı makbuz hiç sorulamazdı.
+ * Expo push sürücüsü: jetonlar alıcıyla gelir, sürücü DB'ye bakmaz ve yalnız uygulama içi satır yazan olayı (`inApp`) cihaza taşır.
+ * Expo'nun döndürdüğü biletler `ref`e {jeton, bilet} çifti olarak yazılır, çünkü makbuz turu çürük jetonu yalnız bu çiftten silebilir.
  */
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
@@ -62,11 +44,8 @@ export function pushDriver(options: PushDriverOptions = {}): NotifyDriver {
             // yokken uç açık çalışır — boş başlık göndermek ise isteği reddettirirdi.
             ...(process.env.EXPO_ACCESS_TOKEN ? { authorization: `Bearer ${process.env.EXPO_ACCESS_TOKEN}` } : {}),
           },
-          // Cihaz başına bir mesaj, tek POST (Expo 100'e kadar kabul eder; kişi başına cihaz
-          // sayısı bir avuç). `sound` varsayılan: sessiz bildirim, bildirim değildir.
-          // `data` DOKUNUŞUN adresidir (kind + hedef + satır payload'u): uygulama bildirime
-          // dokununca bunu okuyup doğru ekrana gider. Alıcıyla gelir (jetonlarla aynı yol) —
-          // olay başına değişir, sürücü kuruluşunda donamaz; kuran tek kapıdır, sürücü taşır.
+          // Cihaz başına bir mesaj, tek istekte (Expo 100'e kadar kabul eder); `sound` verilmezse bildirim sessiz düşer.
+          // `data` dokunuşun adresidir: uygulama bildirime dokununca onu okuyup ilgili ekrana gider.
           body: JSON.stringify(tokens.map((to) => ({ to, body, sound: 'default', ...(recipient.pushData ? { data: recipient.pushData } : {}) }))),
         });
         if (!res.ok) return { status: 'error', channel: 'push', error: `Expo ${res.status}` };

@@ -12,18 +12,8 @@ import { toOpsNotificationRow, type OpsNotificationRow } from './notification-ro
 import { useBell } from './use-bell.hook';
 
 /*
-  OPERASYON ZİLİ (14.15) — başlık barının kabuk bloğunda durur; `document_undeliverable` gibi
-  personel satırlarının web'de GÖRÜNDÜĞÜ ilk yer. Mobil kabuğun bildirim ekranıyla aynı kararlar:
-
-  · ROZET = OKUNMAMIŞ, sayı SUNUCUDAN (`listNotifications` — tanım tek yerde). İlk okuma bitmeden
-    rozet çizilmez: 0 göstermek "iş yok" derdi, oysa henüz ölçülmedi (ölçülemeyen değer ≠ sıfır).
-  · PANELİN AÇILIŞI "GÖRDÜM" BEYANIDIR: akış okundu sayılır, rozet söner; satırlar listede kalır
-    (akış ≠ gelen kutusu). İyimser — düşerse bir sonraki tazeleme gerçeği geri getirir.
-  · CANLILIK kabuk kanalından: adı sunucu sırrından türer ve layout'tan iner (`ops-shell` künyesi);
-    yük daima boş — duyunca liste SUNUCUDAN yeniden istenir. Gizli sekme tur atmaz (LiveRefresh
-    kuralı), dönüşte bir kez sorar.
-
-  Satır şekli/başlığı `notification-rows`tan (paylaşılan personel sözlüğü) — burada yalnız çizim.
+  Operasyon zili: rozet sunucunun okunmamış sayısıdır ve ilk okuma bitmeden çizilmez, çünkü 0 "iş yok" derdi. Panelin açılışı
+  "gördüm" beyanıdır; canlılık kabuk kanalından gelir ve duyulan her sinyal listeyi sunucudan yeniden ister.
 */
 
 interface NotificationBellProps {
@@ -34,8 +24,7 @@ interface NotificationBellProps {
 export function NotificationBell({ channel }: NotificationBellProps) {
   const anchorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  // `null` = HENÜZ ÖLÇÜLMEDİ — boş liste değil: ilk yük gelmeden "bildirim yok" yazmak,
-  // yüklemeyi yokluk gibi okutmaktı (kullanıcı bildirimi 26.08); o aralıkta iskelet çizilir.
+  // `null` = henüz ölçülmedi: ilk yük gelmeden "bildirim yok" yazmak yüklemeyi yokluk gibi okuturdu, o aralıkta iskelet çizilir.
   const [rows, setRows] = useState<OpsNotificationRow[] | null>(null);
   const [unread, setUnread] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -122,7 +111,7 @@ export function NotificationBell({ channel }: NotificationBellProps) {
                     ].join(' ')}
                   />
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    {/* Tür şapkası (26.08): operatör bir bakışta türü ayırt eder — etiket + yaş üstte. */}
+                    {/* Tür şapkası: operatör bir bakışta türü ayırt eder — etiket + yaş üstte. */}
                     <span className="flex items-center gap-1.5">
                       <span
                         className={[
@@ -141,9 +130,7 @@ export function NotificationBell({ channel }: NotificationBellProps) {
                       </span>
                     </span>
                     <span className="font-ops-body text-ops-sm text-ops-ink">{row.title}</span>
-                    {/* Alt satır (05.09): sözlük başlığı ikiye ayırdı — burada çizilmezse web,
-                        04.09'a kadar başlıkta duran "3 adet eksik · STR kayıp yazdı" gibi olguyu
-                        sessizce kaybederdi. `null` olduğunda hiç çizilmez (boş satır bırakmaz). */}
+                    {/* Alt satır olguyu taşır ("3 adet eksik · STR kayıp yazdı"); `null` ise boş satır bırakılmaz. */}
                     {row.subtitle ? (
                       <span className="font-ops-body text-ops-micro text-ops-muted">{row.subtitle}</span>
                     ) : null}

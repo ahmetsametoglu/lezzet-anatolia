@@ -4,11 +4,8 @@ import { pushDriver } from './push.driver';
 import type { NotifyRecipient } from '../types';
 
 /**
- * Expo push sürücüsü (14.16) — birim, ağsız (sahte taşıyıcı). Çivilenenler:
- *   · gövde ORTAK sözlükten gelir (wa.me ile aynı cümle — iki kopya yok)
- *   · bilet kimlikleri `ref`e iner — makbuz cron'unun (ikinci yarı) tek girdisi
- *   · zile düşmeyen olay (teyit) cihaza da düşmez — iki zil tek karardan
- *   · hiçbir cihaz kabul edilmediyse bu bir ARIZADIR, "gönderdim" değil
+ * Ağsız birim testi (sahte taşıyıcı): biletler `ref`e çift olarak iner ve zile düşmeyen olay cihaza da düşmez.
+ * Hiçbir cihazın kabul etmediği gönderim "gönderildi" değil arızadır.
  */
 
 const data: TicketNotification = {
