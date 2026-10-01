@@ -234,10 +234,11 @@ yöntemi.
 / `cash_in` olarak yazılır, kasa sayımı fiziksel kasayla tutsun diye: bankaya yatırma, kasadan ödenen gider,
 bozukluk ve sermaye girişi, kapıda nakit alınan B2B parası ve iadesi, kurye farkı.
 
-**Kurye farkı** (12. karar): sefer kapanışı bugün para hareketi yazmıyor, farkı açıklamasıyla kaydediyor.
-Nakit farkı sıfır değilse kapanış nakit hesabına hareketi de yazar (eksikte çıkış, fazlada giriş; yeni tür
-"kasa farkı", hesap kodu muhasebecinin), kasa hareketi kuralı onu Hiboutik'e taşır. Kart farkı kasaya
-dokunmaz, bugünkü gibi yalnız mutabakattır.
+**Kurye farkı** (12. karar): nakit farkı sıfır değilse sefer kapanışı (`close_delivery_run`) farkı aynı
+işlemde seferin nakit tahsilatlarının girdiği hesaba hareket olarak yazar (eksikte çıkış, fazlada giriş; tür
+"kasa farkı", hesap kodu muhasebecinin; `meta.deliveryRunId`). Hesap tek değilse yazılmaz, fark kapanış
+kaydında kalır. Kasa hareketi kuralı hareketi Hiboutik'e taşır. Kart farkı kasaya dokunmaz, yalnız
+mutabakattır.
 
 **Hediye sipariş** (11. karar): sipariş açılırken her kalem sıfır fiyatla yazılır, liste fiyatı pazarlık
 izinde kalır; kargo alınmaz (`checkout-draft`). Ödenecek tutar, ciro ve kâr raporundaki gelir böylece
@@ -278,9 +279,9 @@ fiş bağlantısı. Sistem ekranı: kuyruk ve mutabakat durumu.
 **İş sırası** (her adım ayrı commit):
 1. Motor ve testleri.
 2. Hediye siparişin ödemesiz kapanışı.
-3. Şema, servisler ve tahsilat kapısının yöntem alanı.
+3. Şema, servisler, tahsilat kapısının yöntem alanı ve kurye farkının hareketi.
 4. Hiboutik uyarlaması, eşitleme cron'u, ürün aynası.
-5. Kasa hareketleri (B2B nakdi, kurye farkı dahil), mutabakat, gün kapanışı.
+5. Kasa hareketleri (B2B nakdi ve kurye farkı Hiboutik'e), mutabakat, gün kapanışı.
 6. Ekran satırları ve mimari belge güncellemeleri (`DOMAIN.md` §7 ve §9, `INTEGRATIONS.md`,
    `data-model/para.md`).
 7. İki ajanla inceleme (13. karar) ve rapordaki uyumsuzlukların giderilmesi.

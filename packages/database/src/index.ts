@@ -6,7 +6,7 @@ export { createServiceRoleClient, serviceDb, createAnonClient, anonDb, supabaseF
 // Reset/restart sonrası ilk istek 502 alır (PostgREST şema önbelleğini yüklüyor) — seed ve testler
 // ilk sorgudan önce bunu bekler.
 export { waitForRest, type WaitForRestOptions } from './core/ready';
-// Kısıt ihlalinin ADI — cümlesini arayüz yazar (operasyon talebi §7).
+// Kısıt ihlalinin ADI — cümlesini arayüz yazar.
 export { constraintOf } from './core/constraint';
 
 // Servisler
@@ -96,12 +96,21 @@ export {
   type PeriodTotal,
 } from './services/money.service';
 export { OrderSaleService } from './services/accounting.service';
+export {
+  RegisterCashOpService,
+  RegisterPaymentService,
+  RegisterProductService,
+  RegisterQueueService,
+  RegisterStoreService,
+  RegisterTicketLineService,
+  RegisterTicketService,
+} from './services/register.service';
 export { BankImportProfileService, BankImportService } from './services/bank-import.service';
 export { JobRunService } from './services/job-run.service';
 export { WebhookEventService } from './services/webhook-event.service';
 export { ErrorLogService, errorFingerprint, type ListErrorLogsOptions } from './services/error-log.service';
 export { SystemHealthService } from './services/system-health.service';
-// MCP kapısı (22.4) — anahtar doğrulaması ve çağrı izi. Gözlemleme servislerinin yanında:
+// MCP kapısı — anahtar doğrulaması ve çağrı izi. Gözlemleme servislerinin yanında:
 // ikisi de "sistem kendi hakkında ne biliyor" sorusunun parçası.
 export { McpConnectionKeyService } from './services/mcp-connection-key.service';
 export { McpCallLogService } from './services/mcp-call-log.service';

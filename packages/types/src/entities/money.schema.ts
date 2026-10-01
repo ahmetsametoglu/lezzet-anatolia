@@ -1,25 +1,13 @@
 import { z } from 'zod';
-import { CurrencyEnum } from '../primitives/enums.schema';
+import { CurrencyEnum, PaymentMethodEnum } from '../primitives/enums.schema';
 
-// Para ve ön muhasebe (DOMAIN §9, data-model/para.md).
-//
-// TEK MANTIK: **para bir hesapta durur, hareketlerle girer/çıkar.** Kasa hareketi ile banka hareketi
-// aynı şeydir, yalnız hesabı farklıdır — bu yüzden tek tablo, kasa/banka ayrımı yok.
-//
-// BAKİYE SAKLANMAZ, hareketlerden türetilir (DATA_MODEL kalıcı kararlar: sayaç tutulmaz, kayarsa izi
-// bulunamaz). Türetimin tek yeri `account_movement` görünümüdür — bkz. `AccountLedgerRow`.
-//
-// ── SINIFLANDIRMA: TEK TÜR + CARİ + SERBEST ETİKET (13.09 · ikinci karar) ────
-// "Bu para neyin parası" sorusunun cevabı bir TÜRDÜR (`nature`: tek, hesap planı koduyla); "kime /
-// kimden" sorusunun cevabı bir CARİDİR (`counterpartyId`) ya da tedarikçidir; ETİKET serbest bir
-// işarettir ve izah sayılmaz. Belge bağı tutarıyla ayrı tabloda durur (`MoneyAllocation`).
+// Para ve ön muhasebe (DOMAIN §9): para bir hesapta durur ve hareketlerle girer-çıkar; bakiye saklanmaz, `account_movement`
+// görünümünden türer, çünkü saklanan sayaç kayar. "Neyin parası" tek bir türdür (`nature`), "kime/kimden" cari ya da
+// tedarikçidir; etiket izah sayılmaz, belge bağı tutarıyla ayrı tabloda durur.
 
 /**
- * Paranın durduğu yer. "Online havuz" ayrı değil — o da bir hesap (Stripe).
- *
- * `partner` (13.09 · kullanıcı kararı): ORTAK CARİ HESABI — ortağın TEK kaydı. Ortakla şirket
- * arasındaki her para (koyduğu, çektiği, cebinden ödediği, şirketin onun yerine ödediği) bu hesaptan
- * geçer. Bakiye işareti anlatır: eksi = şirket ortağa borçlu, artı = ortak şirkete borçlu.
+ * Paranın durduğu yer; çevrim içi tahsilat da bir hesaptır (sağlayıcı). `partner` ortak cari hesabıdır: ortakla şirket arasındaki
+ * her para buradan geçer, bakiyenin işareti borcun yönünü söyler (eksi şirket ortağa, artı ortak şirkete borçlu).
  */
 export const AccountTypeEnum = z.enum(['cash', 'bank', 'provider', 'partner']);
 export type AccountType = z.infer<typeof AccountTypeEnum>;
@@ -50,9 +38,8 @@ export const MovementDirectionEnum = z.enum(['in', 'out']);
 export type MovementDirection = z.infer<typeof MovementDirectionEnum>;
 
 /**
- * Hareketin SEBEBİ. Yön çoğunlukla sebepten türer (satış parayı içeri, gider dışarı alır) — bu
- * ilişki motorda tanımlıdır (`domain-core/money.expectedDirection`), veri modelinde değil: kural
- * değişirse tek yerde değişir.
+ * Hareketin sebebi. Yön çoğunlukla sebepten türer ve ilişki motorda tanımlıdır (`domain-core/money.expectedDirection`), kural
+ * değişirse tek yerde değişsin diye.
  */
 export const MovementTypeEnum = z.enum([
   'order_payment', // sipariş tahsilatı
@@ -66,30 +53,26 @@ export const MovementTypeEnum = z.enum([
 export type MovementType = z.infer<typeof MovementTypeEnum>;
 
 /**
- * Reklam giderinin TÜRÜ (12.5 · 13.09) — kampanya ROI raporu (13.2) bu türü süzer. Kapı bunu
- * yazar, rapor bunu okur; iki yerde yazılsaydı biri değişince rapor hata vermeden BOŞALIRDI —
- * sessiz sıfır, yanlış cevabın en kötüsü. Sözlükteki karşılığı `movement_nature.slug = 'reklam'`.
+ * Reklam giderinin türü; kampanya kârlılık raporu bunu süzer. Sabit tek yerde, çünkü iki yerde yazılsaydı biri değişince rapor
+ * hata vermeden boşalırdı (`movement_nature.slug = 'reklam'`).
  */
 export const ADVERTISING_NATURE = 'reklam';
 
 /**
- * Stripe ücretinin türü (12.14) — webhook ödeme başına komisyonu ve ödeme dışı Stripe ücretlerini
- * havuzdan bu türle düşer; kârlılık raporu komisyonu siparişin `paymentFee` alanından okur. Aynı
- * gerekçe: sabit tek yerde, sözlükteki karşılığı `movement_nature.slug = 'stripe-ucreti'`.
+ * Ödeme sağlayıcı ücretinin türü: webhook ödeme başına komisyonu havuzdan bu türle düşer, kârlılık komisyonu siparişin
+ * `paymentFee` alanından okur (`movement_nature.slug = 'stripe-ucreti'`).
  */
 export const STRIPE_FEE_NATURE = 'stripe-ucreti';
 
 /**
- * Sermayenin türü (13.09) — girişte bu tür seçilince hareket `capital` tipine geçer (motor:
- * `classificationTypeOf`); öteki türler çıkışta `expense`, girişte `misc` olur. Sözlükteki
- * karşılığı `movement_nature.slug = 'sermaye'`.
+ * Sermayenin türü: girişte seçilince hareket `capital` tipine geçer (`classificationTypeOf`); öteki türler çıkışta `expense`,
+ * girişte `misc` olur (`movement_nature.slug = 'sermaye'`).
  */
 export const CAPITAL_NATURE = 'sermaye';
 
 /**
- * Hareketi kim yazdı (12.4 · 13.09): operatör elle (`manual`), banka dosyası (`bank_import`) ya da
- * sistemin kendisi (`system`: Stripe webhook'u, kapıda tahsilat, hızlı satış, payout). Üçüncüsü
- * olmadan Stripe tahsilatı elle girilmiş bir satırdan ayırt edilemiyordu.
+ * Hareketi kim yazdı: operatör (`manual`), banka dosyası (`bank_import`) ya da sistemin kendisi (`system`: webhook, kapıda
+ * tahsilat, hızlı satış, payout). Üçüncüsü olmadan sistemin yazdığı tahsilat elle girilmiş satırdan ayırt edilemezdi.
  */
 export const MovementSourceEnum = z.enum(['manual', 'bank_import', 'system']);
 export type MovementSource = z.infer<typeof MovementSourceEnum>;
@@ -98,25 +81,28 @@ export const MoneyMovementSchema = z.object({
   id: z.string().uuid(),
   accountId: z.string().uuid(),
   direction: MovementDirectionEnum,
-  /** **Cent** (02.9 · STACK §8); DB kolonu `money_movement.amount` euro `numeric`. İşARETSİZ — yön
-   *  `direction`tadır, işaretli hâli defter satırındadır (`signedAmountCents`). */
+  /**
+   * **Cent** (STACK §8); kolon `money_movement.amount` euro `numeric`. İşaretsizdir, yön `direction`dadır; işaretli hâli defter
+   * satırında (`signedAmountCents`).
+   */
   amountCents: z.number().int(),
   type: MovementTypeEnum,
-  /**
-   * TÜR (13.09 · ikinci karar) — "bu para neyin parası": `movement_nature.slug`, TEK. Sipariş parası,
-   * stok alımı ve transferde boştur (bağın kendisi söyler); giderde, sermayede ve sınıflandırılmamış
-   * parada izahın en kısa yolu budur.
-   */
+  /** Tür, "bu para neyin parası": `movement_nature.slug`, tek. Sipariş parası, stok alımı ve transferde boştur, bağın kendisi söyler. */
   nature: z.string().nullable(),
-  /** CARİ (13.09) — paranın kime gittiği / kimden geldiği (`counterparty`). Tedarikçiyse `supplierId` dolar, bu değil. */
+  /** Cari — paranın kime gittiği ya da kimden geldiği; tedarikçiyse `supplierId` dolar, bu değil. */
   counterpartyId: z.string().uuid().nullable(),
-  /** ETİKETLER — serbest işaret (`movement_tag.slug`), birden çok; izah SAYILMAZ. */
+  /** Etiketler — serbest işaret (`movement_tag.slug`), birden çok; izah sayılmaz. */
   tags: z.array(z.string()),
-  /** Ek künye — reklam giderinde `{campaign}` (gerçek ROI, 12.5/13), Stripe tahsilatında `{providerRef}`. */
+  /** Ek künye — reklam giderinde `{campaign}`, sağlayıcı tahsilatında `{providerRef}`. */
   meta: z.record(z.unknown()).nullable(),
-  /** Transferde KARŞI hesap. Transfer TEK satırdır; karşı hesaba ters işaretle yansır (görünüm). */
+  /** Transferde karşı hesap. Transfer tek satırdır, karşı hesaba ters işaretle yansır (görünüm). */
   counterAccountId: z.string().uuid().nullable(),
   orderId: z.string().uuid().nullable(),
+  /**
+   * Sipariş parasının yöntemi; kapıda nakit ve kart aynı kasa hesabına girdiği için hesaptan okunamaz, sertifikalı kasa ise ikisini
+   * ayrı ister. `null` = bilinmiyor, kasaya tahminle yazılmaz.
+   */
+  paymentMethod: PaymentMethodEnum.nullable(),
   stockIntakeId: z.string().uuid().nullable(),
   /** Tedarikçiye ödemeyse — tedarikçi borcu bundan türetilir (Σ giriş − Σ ödeme). */
   supplierId: z.string().uuid().nullable(),
@@ -124,38 +110,23 @@ export const MoneyMovementSchema = z.object({
   valueDate: z.string(),
   description: z.string().nullable(),
   source: MovementSourceEnum,
-  /**
-   * Banka ekstresiyle eşleşti mi (12.4). YALNIZ banka satırında anlamlıdır (`source = bank_import`);
-   * "izah edildi mi" sorusunun cevabı `explained`tir (13.09).
-   */
+  /** Banka ekstresiyle eşleşti mi; yalnız `bank_import` satırında anlamlıdır, "izah edildi mi" sorusu `explained`tir. */
   reconciled: z.boolean(),
   /**
-   * İZAH (13.09) — türetilir, yazılmaz (tetikleyici kurar; uygulamanın gönderdiği değer ezilir):
-   * sipariş / mal kabul / tedarikçi bağı, transfer, TÜR ya da en az bir belge bağı varsa `true`.
-   * Etiket izah değildir. Yoksa hareket "izah edilmemiş" kuyruğundadır; kayıt yine de geçerlidir.
+   * İzah, türetilir: sipariş, mal kabul ya da tedarikçi bağı, transfer, tür ya da belge bağı varsa `true`; tetikleyici kurar,
+   * gönderilen değer ezilir. Yoksa hareket "izah edilmemiş" kuyruğundadır ama kayıt geçerlidir.
    */
   explained: z.boolean(),
-  /**
-   * Banka satırının üretilmiş kimliği (12.4) — aynı satır iki kez yazılmasın diye. Elle girilen
-   * harekette `null`: elle iki kez 20 € girmek meşrudur, kısıt ona takılmamalı.
-   */
+  /** Banka satırının üretilmiş kimliği, aynı satır iki kez yazılmasın diye. Elle girilen harekette `null`: iki kez 20 € girmek meşrudur. */
   importFingerprint: z.string().nullable(),
   /**
-   * **Yazımın kimliği** (21.263) — "bu isteği zaten yazdım mı?". İstemcide üretilir; cevabı
-   * kaybolan bir tahsilat isteği tekrarlandığında aynı anahtarla gelir ve veritabanı ikinci
-   * yazımı reddeder (`money_movement_idempotency_key`).
-   *
-   * `importFingerprint`in yerine geçmez: o *"bu banka ekstresindeki bu satır"*tır ve tekilliği
-   * HESAP BAŞINADIR; bu ise isteğin kimliğidir ve tekilliği küreseldir. Künyenin tamamı
-   * `0018_money.sql`de. `null` = korumasız yazım (elle giriş, besleme) ve meşrudur.
+   * Yazımın kimliği: istemcide üretilir, cevabı kaybolan istek tekrarlanınca veritabanı ikinci yazımı reddeder
+   * (`money_movement_idempotency_key`). Tekilliği küreseldir, hesap başına tekil `importFingerprint`in yerine geçmez; `null`
+   * korumasız yazımdır.
    */
   idempotencyKey: z.string().nullable(),
   bankImportId: z.string().uuid().nullable(),
-  /**
-   * KARŞI UÇ (12.13) — bu ekstre satırı şu transferin öteki yakasıdır. Transfer tek satırdır ve
-   * karşı hesaba aynalanır; ekstre o yakayı bir kez daha getirince satır buradan uca bağlanır ve
-   * ayna susar (`account_movement`) — para iki kez sayılmaz. Yalnız ekstre satırı, yalnız transferde.
-   */
+  /** Karşı uç: bu ekstre satırı şu transferin öteki yakasıdır. Bağlanınca ayna susar (`account_movement`), para iki kez sayılmaz. */
   counterpartMovementId: z.string().uuid().nullable(),
   createdAt: z.string(),
 });
@@ -174,6 +145,7 @@ export const MoneyMovementInsertSchema = z.object({
   meta: z.record(z.unknown()).nullish(),
   counterAccountId: z.string().uuid().nullish(),
   orderId: z.string().uuid().nullish(),
+  paymentMethod: PaymentMethodEnum.nullish(),
   stockIntakeId: z.string().uuid().nullish(),
   supplierId: z.string().uuid().nullish(),
   valueDate: z.string().optional(),
@@ -181,7 +153,7 @@ export const MoneyMovementInsertSchema = z.object({
   source: MovementSourceEnum.optional(),
   reconciled: z.boolean().optional(),
   importFingerprint: z.string().nullish(),
-  /** Yazımın kimliği (21.263) — künyesi varlık şemasında. Verilmezse yazım korumasızdır. */
+  /** Yazımın kimliği, künyesi varlık şemasında; verilmezse yazım korumasızdır. */
   idempotencyKey: z.string().nullish(),
   bankImportId: z.string().uuid().nullish(),
   counterpartMovementId: z.string().uuid().nullish(),
@@ -193,9 +165,8 @@ export const MoneyMovementUpdateSchema = MoneyMovementSchema.omit({ explained: t
 export type MoneyMovementUpdate = z.infer<typeof MoneyMovementUpdateSchema>;
 
 /**
- * `account_movement` görünümünün satırı — **defter satırı**: bir hareket dokunduğu HER hesapta bir
- * satır üretir (transfer iki hesabı birden etkiler). `signedAmount` işaret kuralının TEK
- * uygulamasıdır; bakiye de ekstre de bunun üstünde durur, kural iki yere yazılmaz.
+ * `account_movement` görünümünün satırı: hareket dokunduğu her hesapta bir satır üretir (transfer iki hesabı birden etkiler).
+ * `signedAmount` işaret kuralının tek uygulamasıdır; bakiye de ekstre de onun üstünde durur.
  */
 export const AccountLedgerRowSchema = MoneyMovementSchema.extend({
   /** Satırın ait olduğu hesap — transferde `accountId`'den farklı olabilir. */
@@ -206,22 +177,18 @@ export const AccountLedgerRowSchema = MoneyMovementSchema.extend({
 export type AccountLedgerRow = z.infer<typeof AccountLedgerRowSchema>;
 
 /**
- * `record_order_movement` / `resync_order_amounts` dönüşü (12.2). Tutarlar **hareketlerden yeniden
- * hesaplanır**, artırılmaz — kaçırılan/tekrarlanan çağrı kalıcı sapma bırakmasın.
+ * `record_order_movement` / `resync_order_amounts` dönüşü; tutarlar hareketlerden yeniden hesaplanır, kaçırılan ya da tekrarlanan
+ * çağrı kalıcı sapma bırakmasın diye artırılmaz.
  */
 export const OrderAmountsSchema = z.object({
   ok: z.boolean(),
   movementId: z.string().uuid().optional(),
   /**
-   * **Bu çağrı yeni bir hareket YAZMADI** (21.263): aynı `idempotencyKey` ile daha önce yazılmış
-   * bir hareket bulundu ve onun sonucu döndü. Tutarlar yine defterin O ANKİ hâlidir (RPC tekrar
-   * dalında da `resync_order_amounts` koşuyor), yani okuyan taraf için `true` bir eksiklik değil
-   * bir BİLGİDİR: ekran "tahsil edildi" yerine "zaten yazılmıştı" diyebilsin.
-   *
-   * `optional` çünkü yalnız sipariş parasını yazan RPC bu alanı üretiyor.
+   * Bu çağrı yeni hareket yazmadı, aynı anahtarla yazılmış hareketin sonucu döndü; tutarlar yine defterin o anki hâlidir. Yalnız
+   * sipariş parasını yazan RPC ürettiği için isteğe bağlıdır.
    */
   deduped: z.boolean().optional(),
-  // RPC euro döndürür; cent'e çevrim servis sınırında (`rpcMoneyToCents`, 02.9 · STACK §8).
+  // RPC euro döndürür; cent'e çevrim servis sınırında (`rpcMoneyToCents`, STACK §8).
   amountCollectedCents: z.number().int(),
   amountRefundedCents: z.number().int(),
 });
@@ -235,25 +202,17 @@ export const AccountBalanceSchema = z.object({
 });
 export type AccountBalance = z.infer<typeof AccountBalanceSchema>;
 
-// ── Belge (13.09) ────────────────────────────────────────────────────────────
-// Resmî muhasebe sorduğunda hareketin dayanağı. Belge PARA DEĞİLDİR: fatura gelince borç doğar,
-// ödeme sonra bir hareket olarak gelir ve bir BAĞLA (`MoneyAllocation`, tutarıyla) belgeye bağlanır.
-// Açık kalan saklanmaz, `money_document_balance` görünümünden türetilir.
+// ── Belge ────────────────────────────────────────────────────────────────────
+// Belge para değildir: fatura gelince borç doğar, ödeme sonra hareket olarak gelir ve tutarıyla belgeye bağlanır
+// (`MoneyAllocation`). Açık kalan saklanmaz, `money_document_balance` görünümünden türer.
 
 /** Belge türü — kapalı küme; `other` bir kaçış kutusu değil, "bu beşten hiçbiri" demektir. */
 export const DocumentKindEnum = z.enum(['invoice', 'receipt', 'payslip', 'contract', 'statement', 'other']);
 export type DocumentKind = z.infer<typeof DocumentKindEnum>;
 
 /**
- * Belgenin KDV REJİMİ (12.26 · kullanıcı sorusu 14.09: "ters KDV etiket üzerinden mi belirlenmeli?").
- *
- * Etiket değil ALAN, çünkü "KDV 0" iki ayrı şeyi anlatıyordu: standart belgede sıfır KDV ile ters
- * yüklemeli (autoliquidation) belge aynı görünüyordu ve muhasebecinin dökümünde ayırt edilemiyordu.
- * `standard` belge KDV'yi kendisi taşır · `reverse_charge` AB içi alım ya da ithalat: belgede KDV yok,
- * Fransız KDV'si bizim beyanımızda hesaplanıp indirilir · `exempt` muaf (sigorta, banka masrafı).
- *
- * **Satışın `VatTreatmentEnum`ı DEĞİL:** o, müşteriye kestiğimiz faturanın sorusu (alıcı AB'li B2B
- * mi); bu, gelen belgenin. Aynı kümeye sıkıştırmak iki ayrı vergi kuralını tek adla anlatırdı.
+ * Gelen belgenin KDV rejimi; alan, çünkü "KDV 0" standart belgede sıfır KDV ile ters yüklemeyi (autoliquidation) ayırt edemezdi.
+ * Satışın `VatTreatmentEnum`ından ayrıdır: o kestiğimiz faturanın sorusu, bu gelen belgenin.
  */
 export const DocumentVatRegimeEnum = z.enum(['standard', 'reverse_charge', 'exempt']);
 export type DocumentVatRegime = z.infer<typeof DocumentVatRegimeEnum>;
@@ -265,34 +224,32 @@ export const MoneyDocumentSchema = z.object({
   number: z.string().nullable(),
   /** Belgenin kendi tarihi (ISO gün). */
   issuedOn: z.string(),
-  /** VADE (12.26) — ödemenin son günü; belgede yazmıyorsa `null`. Belge gününden önce olamaz (veri kısıtı). */
+  /** Vade — ödemenin son günü; belgede yazmıyorsa `null`. Belge gününden önce olamaz (veri kısıtı). */
   dueOn: z.string().nullable(),
-  /** Karşı taraf (13.09): cari (kiraya veren, çalışan, kurum) — tedarikçiyse `supplierId`; ikisinden en çok biri. */
+  /** Karşı taraf: cari (kiraya veren, çalışan, kurum) — tedarikçiyse `supplierId`; ikisinden en çok biri. */
   counterpartyId: z.string().uuid().nullable(),
   supplierId: z.string().uuid().nullable(),
   /**
-   * Stok alımının faturası MAL KABULE ya da TEDARİK SİPARİŞİNE bağlanır (12.26) — ikisinden en çok biri,
-   * ikisi de tedarikçi ister. **Borç bu belgeden türer** (12.26 · kullanıcı kararı 14.09): kabulün
-   * satır toplamı KDV hariçtir ve nakliye, iskonto içermez; faturanın toplamı ödenecek tutardır.
-   * Belgeli kabul `stock_intake_balance.has_document` taşır ve borca ikinci kez girmez.
+   * Stok alımının faturası mal kabule ya da tedarik siparişine bağlanır (en çok biri, ikisi de tedarikçi ister). Borç bu belgeden
+   * türer, çünkü kabulün satır toplamı KDV hariçtir ve nakliyeyi bilmez; belgeli kabul borca ikinci kez girmez.
    */
   stockIntakeId: z.string().uuid().nullable(),
-  /** Faturası mal gelmeden kesilen sipariş (12.26): siparişin kabulleri bu belgeyle borçlanır. */
+  /** Faturası mal gelmeden kesilen sipariş: siparişin kabulleri bu belgeyle borçlanır. */
   purchaseOrderId: z.string().uuid().nullable(),
   /** `out` = bizim ödeyeceğimiz (gelen fatura, bordro), `in` = bize ödenecek (tedarikçi iadesi). */
   direction: MovementDirectionEnum,
-  /** Belgenin TÜRÜ (13.09) — ödemesi bağlanınca harekete de geçer (hareketin türü boşsa). */
+  /** Belgenin türü — ödemesi bağlanınca harekete de geçer (hareketin türü boşsa). */
   nature: z.string().nullable(),
   /** **Cent** (STACK §8); kolon `amount` euro. Belgenin toplamı, KDV dahil. */
   amountCents: z.number().int(),
   /** KDV tutarı (**cent**); belgede yoksa `null` — sıfır "KDV yok" demektir, "bilinmiyor" değil. */
   vatAmountCents: z.number().int().nullable(),
-  /** KDV rejimi (12.26) — `standard` dışındaki rejimde belgede KDV olamaz (veri kısıtı `money_document_vat_regime`). */
+  /** KDV rejimi — `standard` dışındaki rejimde belgede KDV olamaz (veri kısıtı `money_document_vat_regime`). */
   vatRegime: DocumentVatRegimeEnum,
   currency: CurrencyEnum,
   /** Dosyanın ÖZEL kovadaki anahtarı (`r2Keys.financeDocument`); yoksa belge yalnız künyedir. */
   fileKey: z.string().nullable(),
-  /** Serbest etiketler (13.09) — sınıflandırma `nature`dadır. */
+  /** Serbest etiketler — sınıflandırma `nature`dadır. */
   tags: z.array(z.string()),
   note: z.string().nullable(),
   createdAt: z.string(),
@@ -334,13 +291,11 @@ export const MoneyDocumentBalanceSchema = z.object({
 });
 export type MoneyDocumentBalance = z.infer<typeof MoneyDocumentBalanceSchema>;
 
-// ── Belge bağı (13.09 · ikinci karar) ────────────────────────────────────────
+// ── Belge bağı ───────────────────────────────────────────────────────────────
 
 /**
- * Hareket ↔ belge bağı, TUTARIYLA. Bir havale birkaç faturayı kapatır (tedarikçinin üç faturası tek
- * ödemede), bir fatura birkaç ödemeyle kapanır (taksit). Bir hareketin bağları toplamı kendi
- * tutarını aşamaz (veritabanı tetikleyicisi); belgenin açık kalanı eksiye düşebilir — fazla ödeme
- * bir olgudur, gizlenmez.
+ * Hareket ↔ belge bağı, tutarıyla: bir havale birkaç faturayı, bir fatura birkaç ödemeyi kapatabilir. Bağlar hareketin tutarını
+ * aşamaz (tetikleyici); belgenin açık kalanı eksiye düşebilir, çünkü fazla ödeme bir olgudur.
  */
 export const MoneyAllocationSchema = z.object({
   id: z.string().uuid(),
@@ -360,9 +315,8 @@ export const MoneyAllocationInsertSchema = z.object({
 export type MoneyAllocationInsert = z.infer<typeof MoneyAllocationInsertSchema>;
 
 /**
- * `stock_intake_balance` görünümü — mal kabulün açık kalanı: kabul tutarı − kabule bağlı alım
- * ödemeleri (12.3'ün türetimi, 12.13'ün "hangi mal kabulün parası" adayı). Faturası belge olarak
- * girilen kabul `hasDocument` taşır; borcu belgenin açık kalanında görünür, burada ikinci kez değil.
+ * `stock_intake_balance` görünümü: mal kabulün açık kalanı, kabul tutarından kabule bağlı alım ödemeleri düşülür. Faturası belge
+ * olarak girilen kabul `hasDocument` taşır, borcu belgede görünür ve burada ikinci kez sayılmaz.
  */
 export const StockIntakeBalanceSchema = z.object({
   stockIntakeId: z.string().uuid(),
@@ -373,21 +327,20 @@ export const StockIntakeBalanceSchema = z.object({
   paidCents: z.number().int(),
   /** `amount − paid`; eksi çıkabilir (fazla ödeme) ve gizlenmez. */
   openAmountCents: z.number().int(),
-  /** Kabulün kendisine ya da SİPARİŞİNE bağlı bir belge var mı (12.26) — varsa borç belgenin açık kalanındadır. */
+  /** Kabulün kendisine ya da siparişine bağlı bir belge var mı — varsa borç belgenin açık kalanındadır. */
   hasDocument: z.boolean(),
-  /** Kabulün notu — irsaliye/fatura numarası orada durur; banka satırı onu anarsa referans eşleşmesi (12.26). */
+  /** Kabulün notu — irsaliye/fatura numarası orada durur; banka satırı onu anarsa referans eşleşmesi. */
   note: z.string().nullable(),
 });
 export type StockIntakeBalance = z.infer<typeof StockIntakeBalanceSchema>;
 
-// ── Sözlükler (13.09) ────────────────────────────────────────────────────────
-// Tür ve etiket YÖNETİLEN listelerdir: operatör ekler, yazım tek kalır; hareket yalnız buradaki
-// slug'ı taşır. Anahtar `slug`, okunur ad `label`.
+// ── Sözlükler ────────────────────────────────────────────────────────────────
+// Tür ve etiket yönetilen listelerdir: operatör ekler, yazım tek kalır; hareket yalnız buradaki slug'ı taşır.
 
 /** Tür ve etiket slug'ının biçimi — ASCII, küçük harf, tire. Veritabanı kısıtıyla aynı cümle. */
 export const DICTIONARY_SLUG = /^[a-z0-9][a-z0-9-]*$/;
 
-/** TÜR — "bu para neyin parası". Hareketin ve belgenin TEK sınıflandırması (13.09 · ikinci karar). */
+/** Tür — "bu para neyin parası"; hareketin ve belgenin tek sınıflandırması. */
 export const MovementNatureSchema = z.object({
   slug: z.string().regex(DICTIONARY_SLUG),
   label: z.string(),
@@ -413,7 +366,7 @@ export type MovementNatureInsert = z.infer<typeof MovementNatureInsertSchema>;
 export const MovementNatureUpdateSchema = MovementNatureSchema.partial().required({ slug: true });
 export type MovementNatureUpdate = z.infer<typeof MovementNatureUpdateSchema>;
 
-/** ETİKET — serbest işaret, izah sayılmaz (13.09 · ikinci karar). */
+/** Etiket — serbest işaret, izah sayılmaz. */
 export const MovementTagSchema = z.object({
   slug: z.string().regex(DICTIONARY_SLUG),
   label: z.string(),
@@ -433,9 +386,9 @@ export type MovementTagInsert = z.infer<typeof MovementTagInsertSchema>;
 export const MovementTagUpdateSchema = MovementTagSchema.partial().required({ slug: true });
 export type MovementTagUpdate = z.infer<typeof MovementTagUpdateSchema>;
 
-// ── Cari (13.09 · ikinci karar) ──────────────────────────────────────────────
-// Paranın kime gittiği / kimden geldiği: kurum, hizmet veren, çalışan. Tedarikçi burada değil (stok
-// modülünün `supplier`ı), ortak da değil (ortağın kaydı cari HESABIDIR).
+// ── Cari ─────────────────────────────────────────────────────────────────────
+// Paranın kime gittiği / kimden geldiği: kurum, hizmet veren, çalışan. Tedarikçi burada değil (stok modülünün `supplier`ı), ortak
+// da değil (ortağın kaydı cari hesabıdır).
 
 /** Carinin türü — seçicide grup başlığı: kurum (URSSAF, vergi), hizmet (muhasebeci, telefon, kira), çalışan, diğer. */
 export const CounterpartyKindEnum = z.enum(['institution', 'service', 'employee', 'other']);

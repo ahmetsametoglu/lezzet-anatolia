@@ -7,17 +7,8 @@ import { recordOrderPayment } from '../money/order-payment';
 import { deliverOrder } from '../order/fulfillment';
 
 /**
- * Davet zinciri ve getirenin ödülü (17.4 · 17.7 · 17.9).
- *
- * Zemin 29.07'den beri hazırdı ama iki uç bağlanmamıştı: `referred_by` kolonunu hiçbir kod
- * yazmıyordu ve `reason='order'` yalnız testte geçiyordu — yani müşteri sipariş verdiği için hiç
- * puan kazanmıyor, getiren de hiç kazanmıyordu. Bu dosya o iki ucun gerçekten bağlandığını
- * sınıyor; kuralları değil, KABLOYU.
- *
- * **Kapılar artık `@lezzet/application`ta** (17.9): web'in `lib/feedback/referral.ts` kopyası
- * SİLİNDİ — davet bağını kuran çağrı OTP akışının içine girdi ve o akışı iki yüzey çağırıyor.
- * Test web'de KALIYOR ve bu bilinçli: sınadığı şey kural değil, kablonun ta ödeme defterine kadar
- * bağlı olduğu — ve o zincirin web ucu (`lib/money/order-payment`, `lib/order/transition`) burada.
+ * Davet zinciri ve getirenin ödülü: sınanan kural değil, bağı kuran kapının ödeme defterine kadar bağlı olmasıdır. Test web'de durur,
+ * çünkü zincirin web ucu (`lib/money/order-payment`, `lib/order/fulfillment`) buradadır.
  */
 const db = serviceDb();
 const profiles = new UserProfileService(db);
@@ -33,10 +24,10 @@ let warehouseId: string;
 let productId: string;
 let variantId: string;
 let categoryId: string;
-/** Tahsilatın yazıldığı kasa — ödül artık paranın defterde görünmesine bağlı. */
+/** Tahsilatın yazıldığı kasa; ödül paranın defterde görünmesine bağlıdır. */
 let kasaId: string;
 
-/** Teslim edilmeye hazır bir sipariş kurar. Ödülün tetikleyicisi ARTIK ÖDEME (`odemeAl`). */
+/** Teslim edilmeye hazır sipariş kurar; ödülün tetiği ödemedir (`odemeAl`). */
 async function siparisAc(customerId: string): Promise<string> {
   const { order } = await orders.create(
     { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'out_for_delivery', orderedTotalCents: 1500 },
@@ -46,14 +37,15 @@ async function siparisAc(customerId: string): Promise<string> {
   return order.id;
 }
 
-/**
- * Siparişin parasını defterde göster — ödül bu anda doğar.
- *
- * Tutar siparişin tamamı: kısmi tahsilat `paid` yapmaz ve testin konusu ödülün ANI, kısmi ödeme
- * kuralı değil (o `money/order-payment.test.ts`in işi).
- */
+/** Siparişin tamamını tahsil eder, çünkü kısmi tahsilat `paid` yapmaz ve ödül ancak o anda doğar. */
 async function odemeAl(orderId: string): Promise<void> {
-  const sonuc = await recordOrderPayment({ orderId, accountId: kasaId, amountCents: 1500, description: 'Davet testi tahsilatı' });
+  const sonuc = await recordOrderPayment({
+    orderId,
+    accountId: kasaId,
+    amountCents: 1500,
+    method: 'cash',
+    description: 'Davet testi tahsilatı',
+  });
   expect(sonuc.status).toBe('ok');
 }
 
@@ -81,14 +73,8 @@ beforeEach(async () => {
   // bakiyeyi taşırsa "ödeme olmadan puan yok" sınaması yalancı yeşil dönerdi.
   await db.from('money_movement').delete().eq('account_id', kasaId);
 
-  /* SİPARİŞLER DE SIFIRLANIR (17.08) — eskiden yalnız `afterAll`da siliniyorlardı ve bu, senaryolar
-     arasında sessiz bir bağımlılık üretiyordu: davet bağı **zaten müşteri olmayana** kurulur
-     (`linkReferrerById` → `already_customer`, künyesi ★ karar 2f'ye dayanıyor) ve önceki testten
-     kalan sipariş, sonraki testin kurmaya çalıştığı bağı reddettiriyordu. Kural bu dosyada
-     görünmüyordu çünkü `linkReferrer` doğrudan çağrılıyor; gerçek akışta kapı hep
-     `attachReferralOnLogin` ve kontrol orada ilk günden beri var.
-     Para hareketi siparişten ÖNCE silinir (`money_movement.order_id` FK'si siparişi tutuyor) —
-     `afterAll`daki aynı sıra. */
+  // Siparişler de her testte silinir, çünkü davet bağı yalnız henüz müşteri olmayana kurulur ve önceki testin siparişi sonrakinin
+  // bağını reddettirirdi. Para hareketi siparişten önce silinir: `money_movement.order_id` siparişi tutar.
   for (const id of createdOrders) await db.from('order').delete().eq('id', id);
   createdOrders.length = 0;
 
@@ -149,22 +135,13 @@ describe('getiren bağı', () => {
 });
 
 /**
- * ── ÖDÜLÜN ANI DEĞİŞTİ: TESLİMAT → ÖDEME (17.9) ────────────────────────────
- * Bu blok bir tur "kapanan siparişin İKİ ödülü"ydü ve teslimatı tetik sayıyordu. İki kullanıcı
- * kararı ikisini de değiştirdi (11.08): **sipariş puanı kaldırıldı** (artık `reason='order'`
- * yazılmıyor) ve **getirenin ödülü paranın alındığı ana** bağlandı. Testler o yüzden yeniden
- * yazıldı — kural değişince onu koruyan sınamanın da değişmesi gerekir; eskisini bırakmak
- * "geçmiş davranışı" ölçmek olurdu.
- *
- * Tetik artık `recordOrderPayment`: ödeme durumu `paid`e dönünce ödül `order/payment.ts`in
- * `finalize`ında doğuyor. Testin kablosu da bu yüzden para tarafından geçiyor.
+ * Getirenin ödülü paranın alındığı anda, ödeme durumu `paid`e dönünce `order/payment.ts`in `finalize`ında doğar. Sipariş puanı yoktur
+ * ve teslimat tek başına ödül doğurmaz.
  */
 describe('getirenin ödülü — para alındığında', () => {
   it('SİPARİŞ PUANI ARTIK YOK: teslimat da ödeme de `order` satırı doğurmaz', async () => {
     const orderId = await siparisAc(getirilenId);
-    // Teslim DÜZ DURUM YAZIMINDAN yapılmaz (denetim 26.08): fiili stok düşümü geçişle aynı
-    // transaction'da olmalı, o iş `deliver_order`ın içinde. Fikstür de gerçek kapıdan geçer —
-    // yoksa test, üretimde hiç oluşmayan bir durumdan ödül kuralını sınardı.
+    // Teslim gerçek kapıdan (`deliver_order`) geçer, yoksa test üretimde oluşmayan bir durumdan ödül kuralını sınardı.
     expect(await deliverOrder(orderId)).toMatchObject({ ok: true });
     await odemeAl(orderId);
 
@@ -176,8 +153,7 @@ describe('getirenin ödülü — para alındığında', () => {
     const kod = await ensureCustomerReferralCode(db, getirenId);
     await linkReferrer(db, getirilenId, kod!);
 
-    // Sonucu İDDİA EDİLİYOR: teslim gerçekten olmadan "teslimat tek başına ödül doğurmaz" demek,
-    // olmayan bir olayın sonucunu ölçmek olurdu (aynı gerekçe yukarıda).
+    // Teslimin gerçekten olduğu doğrulanır, çünkü olmayan bir olayın sonucu ölçülemez.
     expect(await deliverOrder(await siparisAc(getirilenId))).toMatchObject({ ok: true });
     // Teslim edildi ama tahsilat yazılmadı: bedava sipariş verip puan üretme kapısı kapalı.
     expect((await getPointsBalance(getirenId)).balance).toBe(0);

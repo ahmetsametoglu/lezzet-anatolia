@@ -6,9 +6,8 @@ import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { recordOrderPayment, recordOrderRefund, syncOrderPaymentStatus } from './order-payment';
 
 /**
- * Siparişin para bağları (12.2). Doğrulanan zincir: **hareket → cache → ödeme durumu.**
- * Asıl mesele cache'in kaynağıyla birebir kalması; ikinci mesele durumun TÜRETİLMESİ (elle set
- * edilmemesi) — tahsilat değişmeden de değişebiliyor mu.
+ * Siparişin para bağlarında sınanan zincir hareket → önbellek → ödeme durumudur: önbellek kaynağıyla birebir kalmalı, durum elle değil
+ * türetilerek değişmeli.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -17,7 +16,7 @@ const accounts = new AccountService(db);
 
 const stamp = Date.now();
 let customerId: string;
-// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+// Parti ve sipariş deposuz yazılamaz (DOMAIN §17); testin kendi deposu.
 let warehouseId: string;
 let variantId: string;
 let productId: string;
@@ -67,7 +66,13 @@ describe('tahsilat → cache → ödeme durumu', () => {
   it('tahsilat cache\'i besler ve durumu `paid` yapar', async () => {
     const { order } = await createOrder();
 
-    const result = await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000, description: 'Kapıda nakit' });
+    const result = await recordOrderPayment({
+      orderId: order.id,
+      accountId: cashAccount,
+      amountCents: 5000,
+      method: 'cash',
+      description: 'Kapıda nakit',
+    });
     expect(result).toMatchObject({ status: 'ok', amountCollectedCents: 5000, paymentStatus: 'paid' });
 
     const current = await orders.getById(order.id);
@@ -77,7 +82,7 @@ describe('tahsilat → cache → ödeme durumu', () => {
   it('eksik tahsilat `partial` bırakır; kalan tutar türetilir', async () => {
     const { order } = await createOrder();
 
-    const result = await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 2000 });
+    const result = await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 2000, method: 'cash' });
     expect(result.status).toBe('ok');
     if (result.status !== 'ok') return;
     expect(result.paymentStatus).toBe('partial');
@@ -86,8 +91,8 @@ describe('tahsilat → cache → ödeme durumu', () => {
 
   it('iki tahsilat toplanır — cache ARTIRILMAZ, kaynaktan yeniden hesaplanır', async () => {
     const { order } = await createOrder();
-    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 2000 });
-    const result = await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 3000 });
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 2000, method: 'cash' });
+    const result = await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 3000, method: 'cash' });
 
     expect(result).toMatchObject({ amountCollectedCents: 5000, paymentStatus: 'paid' });
     expect((await movements.listByOrder(order.id))).toHaveLength(2);
@@ -95,16 +100,22 @@ describe('tahsilat → cache → ödeme durumu', () => {
 
   it('iade net tahsilatı düşürür; tamamı geri dönerse durum `refunded` olur', async () => {
     const { order } = await createOrder();
-    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000 });
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000, method: 'cash' });
 
-    const result = await recordOrderRefund({ orderId: order.id, accountId: cashAccount, amountCents: 5000, description: 'Ürün beğenilmedi' });
+    const result = await recordOrderRefund({
+      orderId: order.id,
+      accountId: cashAccount,
+      amountCents: 5000,
+      method: 'cash',
+      description: 'Ürün beğenilmedi',
+    });
     expect(result).toMatchObject({ amountCollectedCents: 5000, amountRefundedCents: 5000, paymentStatus: 'refunded' });
   });
 
   it('fazla tahsilat yeni durum AÇMAZ: `paid` kalır, fark iade borcu olarak türetilir', async () => {
     const { order } = await createOrder();
 
-    const result = await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 6000 });
+    const result = await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 6000, method: 'cash' });
     expect(result.status).toBe('ok');
     if (result.status !== 'ok') return;
     expect(result.paymentStatus).toBe('paid');
@@ -114,17 +125,21 @@ describe('tahsilat → cache → ödeme durumu', () => {
   it('kargo ücreti karşılanan tutara girer', async () => {
     const { order } = await createOrder(1, 2500, 790);
 
-    expect(await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 2500 })).toMatchObject({ paymentStatus: 'partial' });
-    expect(await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 790 })).toMatchObject({ paymentStatus: 'paid' });
+    expect(await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 2500, method: 'cash' })).toMatchObject({
+      paymentStatus: 'partial',
+    });
+    expect(await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 790, method: 'cash' })).toMatchObject({
+      paymentStatus: 'paid',
+    });
   });
 });
 
 describe('durum TÜRETİLİR — tahsilat değişmeden de değişir', () => {
   it('kalem eksik karşılanınca tam ödenmiş sipariş FAZLA ödenmiş olur', async () => {
     const { order, items } = await createOrder(); // 2 × 25 = 50
-    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000 });
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000, method: 'cash' });
 
-    // Kapıda bir adet eksik çıktı: para hiç değişmedi ama karşılanan tutar yarıya indi.
+    // Kapıda bir adet eksik çıktı: para hiç değişmedi ama karşılanan tutar yarıya düştü.
     // Sipariş TESLİM edilmiş olmalı — `fulfilled_qty` ancak hazırlık kesinleştikten sonra bir
     // karardır (`isFulfillmentSettled`); taslak siparişte 0 olması "eksik gitti" demek değildir.
     await db.from('order').update({ status: 'delivered' as const }).eq('id', order.id);
@@ -139,7 +154,7 @@ describe('durum TÜRETİLİR — tahsilat değişmeden de değişir', () => {
 
   it('HAZIRLANMAMIŞ siparişte karşılanan 0 "eksik gitti" DEĞİLDİR — beklenen tutar sipariş edilendir', async () => {
     // `fulfilled_qty` varsayılanı 0'dır ve hazırlıkta yazılır. Bu ayrım gözetilmezse onaylanmış her
-    // sipariş "hiçbir kalemi karşılanmamış" sayılır: kapıda tahsil edilecek tutar 0'a iner, peşin
+    // sipariş "hiçbir kalemi karşılanmamış" sayılır: kapıda tahsil edilecek tutar 0'a düşer, peşin
     // ödenmiş sipariş "iade bekliyor" görünür.
     const { order, items } = await createOrder(); // 2 × 25 = 50
     await db.from('order').update({ status: 'confirmed' }).eq('id', order.id);
@@ -152,7 +167,7 @@ describe('durum TÜRETİLİR — tahsilat değişmeden de değişir', () => {
     expect(openResult.paymentStatus).toBe('pending');
 
     // Peşin ödenmiş hâli: iade borcu DOĞMAZ — mal daha hazırlanmadı, fazla ödeme yok.
-    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000 });
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000, method: 'cash' });
     const paidResult = await syncOrderPaymentStatus(order.id);
     expect(paidResult.status).toBe('ok');
     if (paidResult.status !== 'ok') return;
@@ -162,7 +177,7 @@ describe('durum TÜRETİLİR — tahsilat değişmeden de değişir', () => {
 
   it('iptal edilen siparişte karşılanan 0 sayılır — tahsilatın tamamı iade borcudur', async () => {
     const { order } = await createOrder();
-    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000 });
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000, method: 'cash' });
     await db.from('order').update({ status: 'cancelled' }).eq('id', order.id);
 
     const result = await syncOrderPaymentStatus(order.id);
@@ -174,7 +189,7 @@ describe('durum TÜRETİLİR — tahsilat değişmeden de değişir', () => {
 
   it('hareket elle silinirse cache kendini düzeltir', async () => {
     const { order } = await createOrder();
-    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000 });
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000, method: 'cash' });
     await db.from('money_movement').delete().eq('order_id', order.id);
 
     const result = await syncOrderPaymentStatus(order.id);
@@ -190,15 +205,15 @@ describe('durum TÜRETİLİR — tahsilat değişmeden de değişir', () => {
 describe('hareket tablosuyla birebir', () => {
   it('sipariş tahsilat toplamı hareketlerin toplamına eşittir', async () => {
     const { order } = await createOrder(4, 1250); // 50 €
-    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 1250 });
-    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 1750 });
-    await recordOrderRefund({ orderId: order.id, accountId: cashAccount, amountCents: 500 });
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 1250, method: 'cash' });
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 1750, method: 'cash' });
+    await recordOrderRefund({ orderId: order.id, accountId: cashAccount, amountCents: 500, method: 'cash' });
 
     const hareketler = await movements.listByOrder(order.id);
     const tahsilat = hareketler.filter((h) => h.type === 'order_payment').reduce((s, h) => s + h.amountCents, 0);
     const refund = hareketler.filter((h) => h.type === 'order_refund').reduce((s, h) => s + h.amountCents, 0);
 
-    // İki taraf da cent (02.9 dilim 6) — sınırda çevrim kalmadı, iddia aynı: birebir tutmalı.
+    // İki taraf da cent olduğu için birebir tutmalı.
     const current = await orders.getById(order.id);
     expect(current?.amountCollectedCents).toBe(tahsilat);
     expect(current?.amountRefundedCents).toBe(refund);
@@ -208,8 +223,8 @@ describe('hareket tablosuyla birebir', () => {
     const { order } = await createOrder();
     const before = (await accounts.balance(cashAccount)).balanceCents;
 
-    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000 });
-    await recordOrderRefund({ orderId: order.id, accountId: cashAccount, amountCents: 1000 });
+    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000, method: 'cash' });
+    await recordOrderRefund({ orderId: order.id, accountId: cashAccount, amountCents: 1000, method: 'cash' });
 
     expect((await accounts.balance(cashAccount)).balanceCents).toBe(before + 4000);
   });

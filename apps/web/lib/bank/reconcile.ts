@@ -27,35 +27,15 @@ import type {
 import { syncOrderPaymentStatus } from '../money/order-payment';
 
 /**
- * Banka satırının karşılığı — eşleştirme kuyruğu (12.4 · 12.13). DOMAIN §9: **öneri + elle onay,
- * tam otomatik değil.**
- *
- * Yanlış eşleşen bir satır parayı başka bir siparişin ödemesi yapar: o sipariş "ödendi" görünürken
- * gerçekte ödeyen müşteri hâlâ borçlu kalır ve kimse fark etmez. Bu yüzden bu dosya hiçbir şeyi
- * kendiliğinden uygulamaz; **önerir** ve insanın onayını bekler.
- *
- * ── HEDEF KÜMESİ (12.13 · kullanıcı kararı 13.09: "her banka hareketinin bir karşılığı olmalı") ──
- * · sipariş tahsilatı (giriş) · müşteri iadesi (çıkış) · açık belge — fatura/bordro (belgenin yönü)
- * · mal kabul — tedarikçi borcu (çıkış) · transferin öteki yakası (ucun tersi) · başka hesaba
- * transfer (uç yok) · o hesaba ekstreden ÖNCE elle/sistemce yazılmış hareket ("bunu zaten yazmıştım")
- * · CARİ (13.09 · ikinci karar: eşleşme kelimesiyle önerilir, varsayılan türü satıra konur).
- * Satırın ADI tür kapısından konur (`setMovementNature`, uygulama katmanı) — kuyruğun "Gider"
- * menüsü ve seçim penceresinin "adını koy" bölümü oraya gider. Hiçbir satır "atla"ya mecbur değil.
- *
- * ── BELGE BAĞI TUTARIYLA (13.09 · ikinci karar) ─────────────────────────────
- * Tedarikçinin üç faturası tek havalede ödendiyse satır üç kez bağlanır: her bağ satırın kalanıyla
- * belgenin açık kalanından küçüğüdür; kalan varsa satır kuyrukta KALANIYLA durur ve öneri o kalana
- * göre aranır. Tamamı bağlanınca satır mutabık olur.
- *
- * ── GERİ ALMA (13.09 · kullanıcı bulgusu: "eşleştirmeyle ilgili düzenleme yapamıyorum") ─────
- * Bağlanan, sınıflanan ya da atlanan satır `unmatchRow` ile ekstreden geldiği hâle döner; "zaten
- * yazmıştım" birleşmesinde elle yazılan satır künyesinden yeniden kurulur.
+ * Banka satırının karşılığı, eşleştirme kuyruğu (DOMAIN §9): öneri ve elle onay, çünkü yanlış eşleşen satır parayı başka siparişin
+ * ödemesi yapar ve gerçekte ödeyen borçlu kalır. Hedefler sipariş tahsilatı ve iadesi, açık belge (tutarıyla; kısmen bağlanan satır
+ * kalanıyla kuyrukta kalır), mal kabul, transferin öteki yakası, "bunu zaten yazmıştım" ve caridir; her eşleşme `unmatchRow` ile geri alınır.
  */
 
 /** Adayların arandığı pencere (gün): banka satırı satıştan sonra düşer, bazen günler sonra. */
 const CANDIDATE_WINDOW_DAYS = 30;
 
-/** Açık bakiyeli satış — giriş satırının tahsilat adayı. Formül `openAmountCents` ile aynı, tamsayı (02.9). */
+/** Açık bakiyeli satış — giriş satırının tahsilat adayı. Formül `openAmountCents` ile aynı, tamsayı. */
 export type OrderTarget = Pick<OrderSale, 'id' | 'referenceNo' | 'saleDate'> & { outstandingCents: number };
 /** Net tahsilatı olan satış — çıkış satırının iade hedefi (puanlanmaz, listelenir; aşağıdaki künye). */
 export type RefundTarget = Pick<OrderSale, 'id' | 'referenceNo' | 'saleDate'> & { netCollectedCents: number };
@@ -66,7 +46,7 @@ export type IntakeTarget = StockIntakeBalance & { supplierName: string | null };
 export type TransferLegTarget = MoneyMovement & { accountName: string };
 export type ProvisionalTarget = MoneyMovement;
 export type AccountTarget = Pick<Account, 'id' | 'name' | 'type'>;
-/** Cari (13.09) — eşleşme kelimesi açıklamada geçerse önerilir; seçilince varsayılan türü de konur. */
+/** Cari — eşleşme kelimesi açıklamada geçerse önerilir; seçilince varsayılan türü de konur. */
 export type CounterpartyTarget = Pick<Counterparty, 'id' | 'name' | 'kind' | 'defaultNature'>;
 
 /** Seçim penceresinin listeleri — puanlı öneri bunların içinden çıkar, elle seçim hepsini görür. */
@@ -79,7 +59,7 @@ export interface MatchTargets {
   provisional: ProvisionalTarget[];
   /** "Şu hesaba transfer" — ucu olmayan transfer için hedef hesaplar (bu hesap hariç, aktif). */
   accounts: AccountTarget[];
-  /** Aktif cariler (13.09) — tedarikçi burada değil, o mal kabul ve belge üstünden gelir. */
+  /** Aktif cariler — tedarikçi burada değil, o mal kabul ve belge üstünden gelir. */
   counterparties: CounterpartyTarget[];
 }
 
@@ -116,12 +96,8 @@ export const EMPTY_MATCH_QUEUE: MatchQueue = { rows: [], targets: EMPTY_TARGETS 
 const addDays = (iso: string, n: number) => new Date(new Date(`${iso}T00:00:00.000Z`).getTime() + n * 86_400_000).toISOString().slice(0, 10);
 
 /**
- * Eşleşme bekleyen banka satırları + önerileri + seçim listeleri.
- *
- * Adaylar **tek turda** çekilir: kuyruktaki en eski ve en yeni satırın tarihinden bir pencere
- * kurulur, o dönemin satışları ve elle yazılanları bir kez okunur; açık belgeler, ödenmemiş
- * kabuller, bekleyen transfer uçları ve cariler zaten doğal tavanlı listelerdir. Satır başına sorgu
- * atsaydık 200 satırlık bir ekstre 200 sorgu ederdi.
+ * Eşleşme bekleyen banka satırları, önerileri ve seçim listeleri; adaylar kuyruğun tarih penceresinden tek turda okunur, çünkü satır
+ * başına sorgu 200 satırlık ekstrede 200 tur ederdi.
  */
 export async function matchQueue(accountId: string, opts: { limit?: number } = {}): Promise<MatchQueue> {
   const ledgerPage = await new MoneyMovementService(serviceDb()).ledger({ accountId, unreconciledOnly: true, limit: opts.limit ?? 50 });
@@ -129,12 +105,8 @@ export async function matchQueue(accountId: string, opts: { limit?: number } = {
 }
 
 /**
- * Verilen hareketlerin önerileri (12.19 · tek liste + tek panel): defter listesinin ikinci satırı
- * ("öneri: Fatura FA-2026-0912") sayfadaki ekstre satırları için buradan okunur. Yalnız MUTABIK
- * OLMAYAN ekstre satırı sayılır — öteki satırın izahı bağı ya da türüdür, önerisi olmaz.
- *
- * Adaylar HESAP BAŞINA tek turda (kuyrukla aynı gerekçe: satır başına sorgu 50 satırda 50 tur ederdi);
- * her hesabın penceresi o hesabın satırlarının tarihlerinden kurulur. Sıra girdinin sırasıdır.
+ * Verilen hareketlerin önerileri (defter listesinin ikinci satırı); yalnız mutabık olmayan ekstre satırı sayılır, çünkü öteki satırın
+ * izahı bağı ya da türüdür. Adaylar hesap başına tek turda okunur, pencere o hesabın satırlarından kurulur.
  */
 export async function suggestionsForMovements(movementIds: readonly string[]): Promise<MatchQueue> {
   if (movementIds.length === 0) return EMPTY_MATCH_QUEUE;
@@ -182,9 +154,8 @@ function mergeTargets(all: readonly MatchTargets[]): MatchTargets {
 }
 
 /**
- * Satırın önerileri — KALAN tutara göre (13.09 · bağ tutarıyla): belgeye kısmen bağlanan satır kalanıyla
- * aranır. Zaten bağlı olduğu belge ikinci kez önerilmez (bağ tekildir). Kuyruk ve tek satırın seçicisi
- * (`matchOptions`) aynı hesabı yapar.
+ * Satırın önerileri kalan tutara göre aranır, çünkü belgeye kısmen bağlanan satır kalanıyla kuyrukta durur; zaten bağlı belge ikinci kez
+ * önerilmez. Kuyruk ve tek satırın seçicisi (`matchOptions`) aynı hesabı yapar.
  */
 function suggestionsFor(
   movement: MoneyMovement,
@@ -203,10 +174,8 @@ function suggestionsFor(
 }
 
 /**
- * Bir hesabın HEDEF LİSTELERİ ve motorun aday kümesi — kuyruk (`matchQueue`) ve tek satırın seçicisi
- * (`matchOptions`, 12.17) ORTAK okur; iki kopya bir gün ayrı hedef gösterirdi. `from`/`to` satış ve
- * elle yazılan hareket penceresidir. `documentsOnly`: elle yazılan satırın seçicisi — onun tek bağı
- * belgedir (sipariş, transfer ve "zaten yazmıştım" ekstre satırının işi), öteki listeler hiç okunmaz.
+ * Bir hesabın hedef listeleri ve motorun aday kümesi; kuyruk ve tek satırın seçicisi ortak okur, iki kopya bir gün ayrı hedef
+ * gösterirdi. `documentsOnly` elle yazılan satırın seçicisi içindir, çünkü onun tek bağı belgedir.
  */
 async function loadTargets(
   accountId: string,
@@ -230,22 +199,9 @@ async function loadTargets(
   ]);
 
   /*
-    Sipariş adayı = açık bakiyesi olan satış. Tamamı tahsil edilmiş sipariş öneriye girmez: parası
-    zaten yazılmış bir siparişe ikinci kez ödeme bağlamak, tahsilatı iki kez saymak olurdu.
-
-    ── ÖLÇÜT ÖNCE `payment_status` (01.09, kullanıcı bulgusu) ────────────────────────────────────
-    Süzgeç yalnız `total − net tahsilat > 0` idi ve kısmi karşılamada **kapatılamayan bir hayalet**
-    üretiyordu: sipariş 46,39 €, teslim edilen 27,29 €, müşteri doğru tutarı ödüyor → ödeme durumu
-    `paid` oluyor ama formül 19,10 €'yu hâlâ "açık" sayıyor. Satır kuyrukta sonsuza dek duruyor,
-    çünkü kapatılacak bir borç YOK.
-
-    Motorun cevabı `payment_status`tadır (`derivePaymentStatus`: net ≥ karşılanan → `paid`) ve
-    kapanmış siparişi eleyecek tek doğru ölçüt odur. `iptal` de aynı sebeple dışarıda: iptal edilen
-    siparişin borcu yoktur, tahsil edilmişse iade yoluna girer.
-
-    Fark tutarı yine ham formülden okunuyor ve bu bilinçli: kuyruğun işi banka satırını EŞLEŞTİRMEK,
-    tutarı yeniden hesaplamak değil — hangi siparişin ne kadarının açık olduğunu sipariş ekranı
-    söylüyor. Burada gereken yalnız "hangi aday makul", ve onun için ham fark yeterli.
+    Sipariş adayı açık bakiyeli satıştır ve ölçüt `payment_status`tır, çünkü ham fark kısmi karşılamada ödenmiş siparişi açık gösterir,
+    satır kuyrukta kapanmazdı; iptal edilen siparişin borcu yoktur. Fark tutarı yine ham formülden okunur: kuyruk tutarı hesaplamaz,
+    yalnız makul adayı arar.
   */
   const orders: OrderTarget[] = sales
     .filter((s) => s.paymentStatus !== 'paid' && s.paymentStatus !== 'refunded' && s.status !== 'cancelled')
@@ -258,13 +214,8 @@ async function loadTargets(
     .filter((c) => c.outstandingCents > 0);
 
   /*
-    İADE HEDEFİ PUANLANMAZ, LİSTELENİR (12.13). İade borcu kalemlerden türer
-    (`derivePaymentStatusForOrder`: karşılanan adet × birim fiyat) ve pencerede yüzlerce satışın
-    kalemini okumak kuyruğu ağırlaştırırdı; "tutarı tutan her satış iade adayıdır" deseydik aynı
-    tutarlı bir gider satırı yanlış onaya sürüklenirdi. Net tahsilatı olan satışlar seçim penceresinde
-    durur; iadeyi operatör bilerek bağlar — bankadan iade zaten operatörün kendi yaptığı iştir.
-    Sipariş akışının yazdığı iade satırı (sistem) ise "zaten yazılmış hareket" adayı olarak zaten
-    puanlanır.
+    İade hedefi puanlanmaz, listelenir: iade borcu kalemlerden türer ve pencerede yüzlerce satışın kalemini okumak kuyruğu ağırlaştırırdı,
+    tutara bakan öneri ise aynı tutarlı gideri yanlış onaya sürüklerdi. Sistemin yazdığı iade satırı zaten "yazılmış hareket" adayıdır.
   */
   const refunds: RefundTarget[] = sales
     .map((s) => ({ id: s.id, referenceNo: s.referenceNo, saleDate: s.saleDate, netCollectedCents: s.amountCollectedCents - s.amountRefundedCents }))
@@ -306,8 +257,7 @@ async function loadTargets(
       }),
     ),
     ...intakeTargets.map(
-      // Kabulün notu irsaliye/fatura numarasıdır (12.26): banka satırı onu anarsa referans eşleşmesi
-      // kurulur — bir tur `null` veriliyordu ve fatura numarasıyla gelen ödeme yalnız tutar ve günle puanlanıyordu.
+      // Kabulün notu irsaliye ya da fatura numarasıdır; banka satırı onu anarsa referans eşleşmesi kurulur.
       (i): MatchCandidate => ({ kind: 'intake', id: i.stockIntakeId, referenceNo: i.note, amountCents: i.openAmountCents, date: i.date, direction: 'out', nameHints: [i.supplierName] }),
     ),
     // Ucun yönü GÖNDERENİN gözünden yazılı: uç `out` ise para bu hesaba GİRİYOR.
@@ -334,9 +284,8 @@ async function loadTargets(
         keywords: keywordsOf(p.counterpartyId),
       }),
     ),
-    // CARİ (13.09): tutarı ve günü yok, kanıtı yalnız eşleşme kelimesi — adı ipucu olarak VERİLMEZ:
-    // cari bir yedek öneridir, aynı carinin belgesi ya da elle yazılmış hareketi varsa onun önüne
-    // geçmemeli. Yönü varsayılan türünden (tür yoksa iki yön).
+    // Carinin tutarı ve günü yok, kanıtı yalnız eşleşme kelimesidir; adı ipucu verilmez ki aynı carinin belgesinin önüne geçmesin.
+    // Yönü varsayılan türünden gelir, tür yoksa iki yön.
     ...counterpartyTargets.map(
       (c): MatchCandidate => ({
         kind: 'counterparty',
@@ -378,7 +327,7 @@ export type MatchTarget =
   | { kind: 'transfer_to'; accountId: string }
   /** "Bunu zaten yazmıştım" — ekstre satırı elle yazılanı yutar. */
   | { kind: 'provisional'; movementId: string }
-  /** Cari (13.09) — satır carinin olur; varsayılan türü varsa tür de konur ve satır mutabık olur. */
+  /** Cari — satır carinin olur; varsayılan türü varsa tür de konur ve satır mutabık olur. */
   | { kind: 'counterparty'; counterpartyId: string };
 
 export type ReconcileReason =
@@ -420,25 +369,15 @@ async function loadQueueRow(movementId: string): Promise<MoneyMovement | Reconci
 }
 
 /**
- * Bağla açıklanan satırda tür ve cari anlamsız (13.09): sipariş parası, stok alımı ve transfer
- * onları bağıyla söyler. Kuyrukta seçilmiş bir cari kalmışsa bağ yazılırken temizlenir — yoksa satır
- * hem "URSSAF'ın" hem "şu siparişin tahsilatı" diye iki ayrı cevap taşırdı.
+ * Bağla açıklanan satırda tür ve cari anlamsızdır: sipariş parası, stok alımı ve transfer onları bağıyla söyler. Kuyrukta seçilmiş cari
+ * bağ yazılırken temizlenir, yoksa satır iki ayrı cevap taşırdı.
  */
 const BOUND = { nature: null, counterpartyId: null } as const;
 
 /**
- * **Onaylanan eşleşmeyi uygular** — satır hedefin parası olur.
- *
- * Satır **yerinde güncellenir**, silinip yeniden yazılmaz. Sebebi teknik değil, paranın
- * doğruluğuyla ilgili: satırın parmak izi mükerrer korumasının dayanağıdır (12.4). Silseydik izi
- * de silerdik ve aynı ekstre bir daha yüklendiğinde o satır yeniden girerdi — tahsilat bir yanda,
- * "sınıflandırılmamış" kopya öbür yanda, para İKİ KEZ sayılmış olurdu. `bank_import_id` bağı da
- * böylece korunur: satırın hangi dosyadan geldiği sorusunun cevabı kaybolmaz.
- *
- * Yeni bir hareket YAZILMADIĞI için tutar da iki kez sayılmaz; sipariş parasında `amount_*` cache'i
- * ve ödeme durumu 12.2'nin kapısından (`syncOrderPaymentStatus`) yeniden türetilir. Tek istisna
- * "zaten yazmıştım" hedefi: orada elle yazılan satır SİLİNİR (kullanıcı kararı 13.09) — bağları
- * ekstre satırına geçer, izi künyede kalır; iş tek transaction'dadır (`absorb_provisional_movement`).
+ * Onaylanan eşleşmeyi uygular; satır yerinde güncellenir, çünkü parmak izi mükerrer korumasının dayanağıdır ve silinen satır aynı ekstre
+ * yeniden yüklenince ikinci kez girerdi. Tek istisna "zaten yazmıştım"dır: elle yazılan satır yutulur, bağları ekstre satırına geçer
+ * (`absorb_provisional_movement`).
  */
 export async function applyMatch(movementId: string, target: MatchTarget): Promise<ReconcileOutcome> {
   const found = await loadQueueRow(movementId);
@@ -450,13 +389,27 @@ export async function applyMatch(movementId: string, target: MatchTarget): Promi
   switch (target.kind) {
     case 'order': {
       if (found.direction !== 'in') return invalid('direction_mismatch');
-      await movements.update({ id: movementId, orderId: target.orderId, type: 'order_payment', reconciled: true, ...BOUND });
+      await movements.update({
+        id: movementId,
+        orderId: target.orderId,
+        type: 'order_payment',
+        paymentMethod: 'bank_transfer',
+        reconciled: true,
+        ...BOUND,
+      });
       await syncOrderPaymentStatus(target.orderId);
       return ok;
     }
     case 'refund': {
       if (found.direction !== 'out') return invalid('direction_mismatch');
-      await movements.update({ id: movementId, orderId: target.orderId, type: 'order_refund', reconciled: true, ...BOUND });
+      await movements.update({
+        id: movementId,
+        orderId: target.orderId,
+        type: 'order_refund',
+        paymentMethod: 'bank_transfer',
+        reconciled: true,
+        ...BOUND,
+      });
       await syncOrderPaymentStatus(target.orderId);
       return ok;
     }
@@ -505,12 +458,9 @@ export async function applyMatch(movementId: string, target: MatchTarget): Promi
 }
 
 /**
- * Belgeye bağlama — TUTARIYLA (13.09 · ikinci karar). Bağ satırın kalanı ile belgenin açık kalanından
- * küçüğüdür (uygulama kapısı: `allocateToDocument`). Karşı taraf belgeden gelir: tedarikçi faturası
- * satırı tedarikçinin yapar (cari varsa silinir — veri kısıtı ikisini birden kabul etmez), cari
- * belgesi satırda karşı taraf yoksa carisini verir. Satırın TAMAMI bağlanınca satır mutabık olur ve
- * adı belgeden gelir: tedarikçi faturası → stok alımı, öteki borç → gider, bize ödenecek belge →
- * `misc`; belgenin türü satırın türü boşsa ona geçer. Kalan varsa satır kuyrukta kalır, kalanıyla.
+ * Belgeye bağlama, tutarıyla: bağ satırın kalanı ile belgenin açık kalanının küçüğüdür (`allocateToDocument`) ve karşı taraf belgeden
+ * gelir. Satırın tamamı bağlanınca satır mutabık olur ve adı belgeden gelir (tedarikçi faturası stok alımı, öteki borç gider, bize
+ * ödenecek belge `misc`); kalan varsa satır kalanıyla kuyrukta kalır.
  */
 async function applyDocument(movement: MoneyMovement, documentId: string): Promise<ReconcileOutcome> {
   const db = serviceDb();
@@ -541,11 +491,9 @@ async function applyDocument(movement: MoneyMovement, documentId: string): Promi
 }
 
 /**
- * Eşleşmeyi GERİ ALIR (13.09 · kullanıcı bulgusu: "eşleştirmeyle ilgili düzenleme yapamıyorum") —
- * bağlanan, sınıflanan ya da atlanan ekstre satırı ekstreden geldiği hâle döner: belge bağları,
- * sipariş, mal kabul, transfer ve karşı taraf bağları düşer, tür kalkar, satır kuyruğa geri gelir.
- * "Zaten yazmıştım" birleşmesiyse elle yazılan satır künyesinden yeniden kurulur ve bağları ona döner.
- * Tek transaction (`unmatch_bank_movement`); sipariş parasıysa siparişin ödeme durumu yeniden türer.
+ * Eşleşmeyi geri alır: bağlanan, sınıflanan ya da atlanan ekstre satırı ekstreden geldiği hâle döner ve kuyruğa gelir; "zaten
+ * yazmıştım" birleşmesinde elle yazılan satır künyesinden yeniden kurulur. Tek işlemdir (`unmatch_bank_movement`), sipariş parasıysa
+ * ödeme durumu yeniden türer.
  */
 export async function unmatchRow(movementId: string): Promise<ReconcileOutcome> {
   const movements = new MoneyMovementService(serviceDb());
@@ -559,11 +507,8 @@ export async function unmatchRow(movementId: string): Promise<ReconcileOutcome> 
 }
 
 /**
- * TEK satırın seçici penceresi (12.17 · muhasebeci deseni): sağ panelin "Bağla" menüsü satırın
- * adaylarını açılışta sunucudan ister — kuyruğun hesabı seçili olmasa da ("Tümü" görünümü) aynı
- * öneriler, aynı hedef listesi. Eşleşme bekleyen ekstre satırında bütün hedefler; elle yazılan ya da
- * mutabık satırda yalnız AÇIK BELGELER — onun tek bağı belgedir. `bankRow` seçimin hangi kapıya
- * gideceğini söyler (`applyMatch` ya da `linkDocument`).
+ * Tek satırın seçici penceresi: kuyruğun hesabı seçili olmasa da aynı öneriler ve hedef listesi; eşleşme bekleyen ekstre satırında
+ * bütün hedefler, elle yazılan ya da mutabık satırda yalnız açık belgeler. `bankRow` seçimin hangi kapıya gideceğini söyler.
  */
 export interface MatchOptions extends Omit<QueueRow, 'movement'> {
   movement: MoneyMovement;
@@ -586,10 +531,8 @@ export async function matchOptions(movementId: string): Promise<MatchOptions | n
 }
 
 /**
- * Hareketi belgeye BAĞLAR — sağ panelin iki yanı da buraya gelir (12.17): hareketin "Bağla" menüsü ve
- * belgenin "Ödeme bağla" menüsü. Eşleşme bekleyen ekstre satırı kuyruğun kapısından geçer
- * (`applyDocument`: tamamı bağlanınca mutabık olur, adı ve karşı tarafı belgeden gelir); elle yazılan
- * ya da zaten mutabık satır yalnız tutarlı bağ alır (`allocateToDocument`).
+ * Hareketi belgeye bağlar; hareketin "Bağla" ve belgenin "Ödeme bağla" menüsü buraya gelir. Eşleşme bekleyen ekstre satırı kuyruğun
+ * kapısından (`applyDocument`), elle yazılan ya da mutabık satır yalnız tutarlı bağla (`allocateToDocument`) geçer.
  */
 export async function linkDocument(movementId: string, documentId: string): Promise<ReconcileOutcome> {
   const db = serviceDb();
@@ -626,10 +569,8 @@ export interface DocumentPaymentOptions {
 const PAYMENT_CANDIDATE_LIMIT = 40;
 
 /**
- * Belgenin ÖDEME seçicisi (12.17 · muhasebeci deseninin fatura yanı): belgeye bağlı ödemeler ve
- * bağlanabilecek hareketler. Adaylar belgenin yönündeki, kalanı olan, pencere içindeki hareketlerdir;
- * puan motorun kendisinden gelir (`suggestMatches`: belge numarası banka açıklamasında mı, tutar
- * tutuyor mu, gün yakın mı, carinin eşleşme kelimesi geçiyor mu) — ikinci bir puan kuralı yazılmaz.
+ * Belgenin ödeme seçicisi: bağlı ödemeler ve bağlanabilecek hareketler (belgenin yönünde, kalanı olan, pencere içindeki). Puan motorun
+ * kendisinden gelir (`suggestMatches`), ikinci bir puan kuralı yazılmaz.
  */
 export async function documentPaymentOptions(documentId: string): Promise<DocumentPaymentOptions | null> {
   const db = serviceDb();

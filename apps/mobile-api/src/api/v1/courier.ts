@@ -53,62 +53,14 @@ import { mobileOrderEffects } from '../../lib/order-effects';
 import { requireStaffRole, type StaffEnv } from './auth';
 
 /**
- * Kurye uçları (21.10) — mobil "Yol" bölümünün taşıma katmanı (K1 · K3–K5 · K7).
- *
- * ── SEFER EKSENİ (18.08 · `docs/feature/sefer.md`) ───────────────────────────
- * K1 artık "günü başlat" değil **"seferi başlat"**: kurye atama beklemez, ROTAYI seçer
- * (`GET /courier/routes`) ve o rotanın seferini açar (`POST /courier/day/start`). Kapanış da gün
- * değil SEFER kapatır (`runId` zorunlu) — "fark hangi seferde doğdu" sorusunun cevaplanabilmesi
- * kullanıcı kararıydı (K1, 18.08). Uç adresleri DEĞİŞMEDİ (`/day`, `/day/start`, `/day-close`):
- * istemcinin okuduğu yol aynı kaldı, öznesi netleşti — yol adını da çevirmek, aynı geçişi iki kez
- * yapmak olurdu (sözleşme geçişi eklemeli tutuldu: eski istemci Zod'un bilinmeyen alanı soymasıyla
- * kırılmaz).
- *
- * ── BU DOSYA KURAL HESAPLAMAZ ────────────────────────────────────────────────
- * Katalog ucuyla (`catalog.ts`) aynı çizgi: parse → kapı → zarf. Teslim sırası (kanıt → mal →
- * teslim → para), kanıt zorunluluğu, nakit yasal sınırı, ulaşılamadı/red akıbeti, rota çözümü
- * (tek rotada otomatik seçim), sefer sahipliği, beklenen tahsilat ve mutabakat farkı — hiçbiri
- * burada YOK. Hepsi `@lezzet/application`ın kurye kapılarında (`courier/{day,routes,delivery,
- * day-close,proof}`), yani operasyon web ekranlarının okuduğu kararların TAM AYNISI. İki yüzey
- * arasında ayrışabilecek tek yer taşımadır ve taşıma da bu dosyanın tamamıdır.
- *
- * ── HTTP DURUMU İLE KAPI KARARI AYRI SORULARDIR ──────────────────────────────
- * Durum kodu **"isteğin kapıya ulaştı mı"** sorusunu yanıtlar (401 kimliksiz · 403 rolsüz · 400
- * biçimsiz gövde). Kapının VERDİĞİ karar ne olursa olsun **200**'dür ve gövdedeki sözleşme
- * birleşiminde durur: `stale`, `proof_required`, `forbidden`, `not_found`, `already_closed`,
- * `already_started`, `route_required`, `no_route`, `collectionDeduped`.
- *
- * Gerekçe doc 04'ün omurgasında yazılı: *"bayat geçiş reddi GÖRÜNÜR olmalı — app bu reddi YUTMAZ,
- * ekrana taşır"*. Bir HTTP koduna indirgenen ret, taşıdığı bilgiyi kaybeder: `stale` yalnız
- * "olmadı" demez, siparişin ŞU AN hangi durumda olduğunu da söyler ve kurye "teslim ettim" sanırken
- * sistemin `cancelled` dediğini ancak o alan sayesinde görür. Aynısı `proof_required` (hangi kanal)
- * ve `forbidden` (hangi sebep) için de geçerli. Sözleşme şemaları bu yüzden ayrımlı birleşim
- * (`discriminatedUnion`) — ret dalları da cevabın kendisidir, hata gövdesi değil.
- *
- * ── YAN ETKİ: MÜŞTERİ HABERİ BU UÇTAN DA GİDİYOR (03.09 · denetim bulgusu 1) ──
- * Defter 08.08'den beri bu dosya `effects` geçirmiyordu: port uygulaması terfi etmemişti, uçlar
- * "mail çıkmaz" sınırıyla açılmıştı. Terfi 21.21'de oldu, checkout portu doldurdu, kurye uçları
- * UNUTULDU — ve ekran o sırada "durakları açar · müşterilerine bildirim gider" yazıyordu. Ölçüldü
- * 03.09: mobilden çıkan kurye hiçbir haber göndermiyordu, web'den "yola çıktım" diyen operatör
- * gönderiyordu. Üç kapı artık aynı `mobileOrderEffects`i alıyor (`lib/order-effects.ts`, checkout
- * ile ortak): sefer başlatma (`out_for_delivery`, durak başına), geç kutu yükleme (aynı haber, o
- * durak için) ve kapıda teslim (`delivered`). Tekrar kilidi portun kendisinde (geçiş başına tek).
- *
- * ── LOG: KİMLİK EVET, İÇERİK HAYIR (CLAUDE §1) ──────────────────────────────
- * Bu dosya ayrıca kayıt düşmez; `app.ts`in istek satırı yolu ve durumu zaten yazıyor ve yolda yalnız
- * `orderId` var — o bir kimliktir. Gövde HİÇBİR ZAMAN loglanmaz: kuryenin kapıda yazdığı not
- * ("zil bozuk", "kabul etmedi") serbest metindir ve müşteri hakkında bilgi taşıyabilir; gideceği tek
- * yer `order_status_log.note` sütunudur.
+ * Kurye uçları: parse → kapı → zarf; kural burada hesaplanmaz, karar `@lezzet/application`ın kurye kapılarındadır ki operasyon web
+ * ekranıyla ayrışmasın. Kapının kararı 200 ile gövdedeki ayrımlı birleşimde döner, çünkü HTTP koduna indirgenen ret taşıdığı bilgiyi
+ * kaybederdi (`stale` siparişin şu anki durumunu da söyler).
  */
 
 /**
- * **Kurye kimliği JETONDAN gelir, gövdeden ASLA.**
- *
- * Sözleşmelerin hiçbirinde `courierId` yok ve bu bilinçliydi (`courier-api.schema.ts` künyesi):
- * gövdeye konsaydı kurye başkasının kimliğini yazıp onun durağını kapatabilirdi. Kapılar `courierId`
- * ZORUNLU parametre alıyor ("yalnız kendi teslimatları" imzada durur) ve o değeri buraya koyan tek
- * yer rol kapısıdır (`requireStaffRole` — 21.11'de `auth.ts`e taşındı; hangi kimlik, neden profil ve
- * `admin`in neden ek kapı açmadığı orada yazılı).
+ * Kurye kimliği jetondan gelir, gövdeden asla: gövdeye konsaydı kurye başkasının kimliğini yazıp onun durağını kapatabilirdi. Değeri
+ * koyan tek yer rol kapısıdır (`requireStaffRole`).
  */
 const DateQuerySchema = z.object({ date: IsoDateSchema.optional() });
 
@@ -117,27 +69,8 @@ export const courier = new Hono<StaffEnv>();
 courier.use('*', requireStaffRole('courier', 'admin'));
 
 /**
- * **Günün durakları + seferin künyesi** (K1). Gün verilmezse bugün. ("Rota" artık `delivery_zone`ın
- * adı — bu uç bir günü, o günün duraklarını ve varsa sürülen seferi taşır.)
- *
- * **Varsayılan gün BURADA çözülür ve kapıya AÇIKÇA geçirilir** — kapının kendi varsayılanına
- * bırakılıp cevabın `date` alanı ayrıca hesaplanamaz: iki hesap arasında gece yarısı geçilirse
- * ekran DÜNÜN duraklarını BUGÜNÜN tarihiyle gösterirdi. Tek yerde çözülen varsayılan bu çelişkiyi
- * yapısal olarak imkânsız kılıyor. (Kapının varsayılanı yerinde duruyor; bu yol onu hiç kullanmıyor.)
- *
- * Cevapta gün ZORUNLU: istemci "hangi günü gösteriyorum" sorusunu kendi kendine sormaz.
- *
- * ── `run` = "BAŞLADI" BAYRAĞININ SUNUCU HÂLİ (18.08) ────────────────────────
- * Ekranın "sefer başladı mı" sorusu artık yerel bir tahmin değil, bu alanın kendisi: uygulama
- * yeniden başlasa da açık sefer sunucudan gelir. `null` = kurye o gün henüz rota almadı → ekran
- * seçime (`/courier/routes`) gider. Okuma duraklardan BAĞIMSIZ, o yüzden aynı paralel demete
- * katılıyor; hangi seferin öncelikli olduğu (kapanmamış olan) KAPIDA çözülüyor — üç okuma da
- * birbirini beklemiyor.
- *
- * Mesaj dili sorulmuyor: "yoldayım" bağlantısı MÜŞTERİNİN dilindedir, kuryenin değil, ve gün
- * sorgusunda müşteri başına dil bilgisi yok — kapı bu yüzden `fr`e düşüyor ve operasyon web ekranı
- * da tam olarak aynısını yapıyor (`deliveries/page.tsx`). Uca bir `locale` parametresi koymak,
- * kuryenin cihaz dilini müşterinin diliymiş gibi göstermek olurdu.
+ * Günün durakları ve seferin künyesi; varsayılan gün burada çözülüp kapıya açıkça geçirilir, yoksa gece yarısında ekran dünün duraklarını
+ * bugünün tarihiyle gösterirdi. Mesaj dili sorulmaz, çünkü "yoldayım" bağlantısı müşterinin dilindedir ve kapı `fr`e düşer.
  */
 courier.get('/day', async (c) => {
   const query = DateQuerySchema.safeParse(c.req.query());
@@ -146,27 +79,14 @@ courier.get('/day', async (c) => {
   const db = serviceDb();
   const courierId = c.get('staff').id;
   const date = query.data.date ?? new Date().toISOString().slice(0, 10);
-  // Kapı kasası hesabı gün başına TEKİL ve duraklardan bağımsız; sefer künyesi de öyle — üç okuma
-  // paralel gidiyor, hiçbiri ötekini beklemiyor. Ayarın anahtarı ve kullanılamaz değerin akıbeti
-  // (null → tahsilat kapısı kapalı) KAPIDA yaşıyor; burada yalnız cevaba konuyor.
-  /*
-    ARAÇ BİR ARA DEPO (31.08) — gün cevabı artık GÜNE değil ARACA bakıyor.
-
-    Önce araçtaki seferler okunuyor (kurulmuş + kapanmamış olanların hepsi; yarınınki de araçta
-    olabilir), duraklar da o KÜMEDEN geliyor. Eskiden `listCourierDay` yalnız `date` süzgeciyle
-    çağrılıyordu ve iki sefer sürüldüğünde ikisinin durakları KARIŞIK tek listede dönüyordu —
-    hangi durağın hangi rotaya ait olduğu söylenemiyordu bile (durakta `runId` yoktu).
-
-    `run` = SÜRÜLEN sefer: yola çıkmış (`departedAt` dolu) ve kapanmamış olan. Kurulmuş ama
-    başlamamış sefer araçta bekler ve bu alana düşmez — özet kartı yalnız sürülenin sayımıdır
-    (v3:14: *"Bu sayım yalnız sürülen sefere aittir"*).
-  */
+  // Duraklar araçtaki seferlerden gelir (kurulmuş ve kapanmamış hepsi), çünkü gün süzgeci iki seferin durağını karışık döndürürdü.
+  // `run` sürülen seferdir: yola çıkmış ve kapanmamış olan.
   const runs = await readCourierRuns(db, { courierId });
   const run = runs.find((candidate) => candidate.departedAt !== null) ?? null;
   const [stops, doorAccountId, stranded] = await Promise.all([
     listCourierDay(db, { courierId, date, runIds: runs.map((candidate) => candidate.runId) }),
     readDoorCashAccountId(db),
-    // Askıda kalanlar (03.09): teslim günü geçmiş, sonuçlanmamış — kurye kutuyu neden taşıdığını bilsin.
+    // Askıda kalanlar: teslim günü geçmiş, sonuçlanmamış; kurye kutuyu neden taşıdığını bilsin.
     listStrandedStops(db, { courierId, today: date }),
   ]);
 
@@ -177,19 +97,8 @@ courier.get('/day', async (c) => {
 });
 
 /**
- * **Kuryenin rota seçimi** (K1 · 18.08) — o gün koşan aktif rotalar, yükleri ve varsa açık seferin
- * künyesi. Gün verilmezse bugün, `/day`in AYNI gerekçesiyle burada çözülür (kapı `date`i zorunlu
- * istiyor ve cevaptaki gün ile sorgulanan gün tek hesaptan çıkmalı).
- *
- * ── KURYEYE SÜZÜLMEZ, DEPOYA SÜZÜLÜR (11.7 · kullanıcı kuralı 21.08) ────────
- * İki ayrı eksen: *"arayüzden kurye ataması saçma — kurye giriş yapar, ROTAYI seçer"* kararı
- * sürüyor (kurye eksenine daraltma yok; sahiplik seferi BAŞLATANIN claim'iyle doğar, başka kuryede
- * açılmış rota `run.courierId` ile görünür kalır). DEPO ekseni ise artık süzüyor: *"kurye hangi
- * depoya aitse o depoya ait rotaları görebilmeli ve alabilmeli"* — başka deponun rotası listeye
- * hiç girmez; kapsam profilden çözülür (`warehouseScope`, admin-kurye depo-üstü kalır — auth
- * künyesindeki "admin ek kapı açmaz" kuralının kapsam istisnası).
- *
- * Küme doğal tavanlıdır (operatör elle kurar) → tek turda çekilir, sayfalama yok (CLAUDE §1).
+ * Kuryenin rota seçimi: o gün koşan aktif rotalar, yükleri ve açık seferin künyesi; gün `/day` ile aynı gerekçeyle burada çözülür. Liste
+ * kuryeye değil depoya süzülür (`warehouseScope`): kurye rotayı seçer, sahiplik seferi başlatanındır.
  */
 courier.get('/routes', async (c) => {
   const query = DateQuerySchema.safeParse(c.req.query());
@@ -203,11 +112,7 @@ courier.get('/routes', async (c) => {
   return ok(c, CourierRoutesResponseSchema.parse(body));
 });
 
-/**
- * **Kuryenin seçebileceği araçlar** (31.08 · v3:16) — kendi deposuna künyeli, aktif olanlar.
- * Kapsam rota listesiyle AYNI kapıdan çözülüyor: başka deponun rotasını göremeyen kurye başka
- * deponun aracını da görmemeli. Gün parametresi YOK — filo güne göre değişmiyor.
- */
+/** Kuryenin seçebileceği araçlar: kendi deposuna künyeli ve aktif olanlar; kapsam rota listesiyle aynı kapıdan çözülür. */
 courier.get('/vehicles', async (c) => {
   const staff = c.get('staff');
   const vehicles = await listCourierVehicles(serviceDb(), { scope: warehouseScope(staff.roles, staff.warehouseIds) });
@@ -217,33 +122,8 @@ courier.get('/vehicles', async (c) => {
 });
 
 /**
- * **"Seferi başlat"** (K1 · 18.08 — eski "yola çıktım — günü başlat"ın halefi). Seçilen rotanın
- * seferini açar ve o seferin HAZIR siparişlerini yola çıkarır.
- *
- * ── NEDEN SEFER BAŞINA, WEB'DE SİPARİŞ BAŞINAYKEN ───────────────────────────
- * Web emsali durak başına çalışıyor (`deliveries/[orderId]/actions.ts` → `startDeliveryAction`).
- * Mobil aynı işareti SEFER başına soruyor ve bu ekranın kaprisi değil: K1'in birincil düğmesi
- * *"Seferi başlat"* ve o düğmeye basılmadan hiçbir durak açılmıyor (kapı sırası — teslim,
- * ulaşılamadı ve red YALNIZ yoldaki siparişten yazılabilir). Kurye araca tek durak değil, seferin
- * kolilerini yükler.
- *
- * ── ROTA VE ARAÇ OPSİYONEL: KARARI KAPI VERİR ───────────────────────────────
- * `zoneId` gelmezse kapı o gün koşan rotalara bakar — tek rota varsa onu seçer ("tek adayda soru
- * sorulmaz"), birden çoksa `route_required` döner ve ekran `/courier/routes`tan seçtirir, hiç yoksa
- * `no_route`. Uç bu hesabı YAPMAZ: rota kümesini burada süzmek, ekranın gördüğü liste ile kapının
- * seçtiği rotanın ayrışabileceği ikinci bir yer açmaktı. `vehicleId` de opsiyonel — araç kaydı
- * girilmemiş kurulumda kurye kilitlenmez (zorunluluk `Setting`, kapının işi).
- *
- * ── KISMİ BAŞARI VE RET GÖVDEDE, DURUM KODUNDA DEĞİL ───────────────────────
- * Mutlu dalda dört liste dönüyor (`started` · `alreadyOut` · `stale` · `skipped`): bu ucun "yarısı
- * oldu" hâli normaldir, arıza değil. Tek bir `ok`a indirilseydi kurye hazırlanmayı bekleyen durağı
- * ancak teslim yazmayı deneyip başarısız olunca öğrenirdi. `alreadyOut` da bir hata değil — düğmeye
- * ikinci kez basmak zararsızdır ve cevabı "yeni bir şey yok"tur. Aynısı ret dalları için: rota+gün
- * başına tek sefer kuralı (K3) `already_started` diye görünür ve `mine` ile "senin seferin" mi
- * "başkasında" mı olduğunu söyler — hepsi **200**, çünkü hepsi kapının CEVABIdır, hata değil.
- *
- * Gün alanı sözleşmede serbest dize; burada `.extend` ile biçime bağlanıyor (`IsoDateSchema` ile
- * aynı gerekçe). Gövde hiç gelmezse BUGÜN kastedilmiştir: düğme günü söylemek zorunda değil.
+ * Seferi başlat: seçilen rotanın seferini açar ve hazır siparişlerini yola çıkarır; rota verilmezse kararı kapı verir (tek rotada otomatik
+ * seçim, birden çoksa `route_required`). Kısmi başarı ve ret gövdede döner, çünkü kurye bekleyen durağı teslim yazmayı denemeden öğrenmeli.
  */
 const StartDayBodySchema = StartCourierDayRequestSchema.extend({ date: IsoDateSchema.optional() });
 
@@ -257,7 +137,7 @@ courier.post('/day/start', async (c) => {
     date: parsed.data.date,
     zoneId: parsed.data.zoneId,
     vehicleId: parsed.data.vehicleId,
-    // `depart:false` = seferi KUR, yola çıkarma (31.08). Ekran önce kurar, yükler, sonra başlatır.
+    // `depart:false` seferi kurar ama yola çıkarmaz: ekran önce kurar, yükler, sonra başlatır.
     depart: parsed.data.depart,
     effects: mobileOrderEffects(db),
   });
@@ -267,55 +147,21 @@ courier.post('/day/start', async (c) => {
 });
 
 /**
- * **Kapıda teslim** (K3 + K4) — kanıt, eksik kalem ve tahsilat TEK istekte.
- *
- * İstemci sırayı kurmaz ve kuramaz: sıra (kanıt kapısı → mal → teslim → para) kapının içindedir ve
- * kuralın kendisidir. Üç ayrı uca bölünseydi ağın koptuğu her an yarısı yazılmış bir teslimat
- * bırakırdı — malı düşmüş ama teslim görünmeyen, ya da teslim olmuş ama parası yazılmamış sipariş.
- *
- * `idempotencyKey` gövdededir (`collection` içinde) ve İSTEMCİDE üretilir: çevrimdışı kuyruk aynı
- * isteği tekrar gönderdiğinde aynı anahtarla gelir ve para iki kez yazılmaz. Sunucu tarafındaki
- * sınırı (oku-sonra-yaz; atomik değil) `application/order/payment.ts` künyesinde yazılı.
- */
-/**
- * **Araca yükleme okutması** (23.8 · karar §1.11). Kod gövdede gider (URL'de dolaşmasın —
- * `codes/resolve` gerekçesi). Olumsuz dalların hepsi 200 + gövde: `wrong_route` kutunun HANGİ
- * siparişin malı olduğunu söyler (kurye rampada doğru yığını bulur), `not_sealed` açık kutuyu,
- * `not_loadable` siparişin durumunu. **Durum geçişi burada YAZILMAZ** (31.08): yükleme malı araca
- * geçirir, siparişi yola çıkarmaz — o iş sefer başlatmanındır. `allBoxesLoaded` yalnız "siparişin
- * tamamı araçta" der.
- */
-/**
- * **Araçtaki serbest ürün** (31.08 · v3:19) — araçta ne var + depodan ne alınabilir, TEK okumada.
- *
- * İki liste ayrı uçlara bölünmedi: ekran ikisini yan yana çiziyor ve biri olmadan öteki bir karar
- * kurmuyor ("üç tane var, dört daha alabilirim"). Ayrı uçlar iki ağ turu ve iki yükleme hâli
- * demekti; rampada bekleyen kurye için o iki hâl tek bir gecikmedir.
- *
- * ÇIKIŞ DEPOSU seferin ROTASININ deposu, ARAÇ DEPOSU seferin ARACININ deposu — ikisi de SEFERDEN
- * çözülüyor, istemciden değil (yerinde satış ucunun aynı kararı).
- *
- * Bu satır bir tur *"araç deposu KAPSAMDAKİ `kind='vehicle'` depo"* diyordu ve 21.249'dan beri
- * yanlıştı (düzeltildi 06.09): cevabı kapsam verirken, kapsamda iki araç olan kuryede dizinin
- * SIRASI karar veriyordu. Künye `courierVanContext`te — hemen aşağıdaki satır zaten doğrusunu
- * yazıyordu, yani dosya kendi içinde çelişiyordu.
+ * Araçtaki serbest ürün: araçta ne var ve depodan ne alınabilir tek okumada, çünkü ekran ikisini yan yana çizer ve biri olmadan öteki
+ * karar kurmaz. Çıkış deposu seferin rotasından, araç deposu seferin aracından çözülür, istemciden değil.
  */
 courier.get('/van-stock', async (c) => {
   const staff = c.get('staff');
   const db = serviceDb();
-  /* İKİ UÇ TEK GERÇEKTEN (21.249): araç deposu seferin ARACINDAN, çıkış tesisi seferin ROTASINDAN.
-     Bir tur ikisi de kapsamdan çözülüyordu ve kapsamda iki araç olan kuryede ikisi birden yanlış
-     olurdu — künye `courierVanContext`te. */
+  /* Araç deposu seferin aracından, çıkış tesisi seferin rotasından çözülür; kapsamdan çözülse iki araçlı kuryede ikisi de yanlış olurdu. */
   const { vehicleWarehouseId, facilityId } = await courierVanContext(db, { courierId: staff.id });
-  /* ARAMA AYNI UÇTAN (v3:19 "+ Ürün ara") — ikinci bir uç açılmadı: soru aynı ("depodan ne
-     alabilirim"), yalnız süzgeci var. Ayrı bir uç, aynı listeyi iki farklı sıralama ve iki farklı
-     tavanla döndürmeye açık kapı bırakırdı. Boş sorgu = süzgeçsiz şerit. */
+  /* Arama aynı uçtan, çünkü soru aynıdır ("depodan ne alabilirim"); ayrı uç aynı listeyi iki sıralama ve iki tavanla döndürmeye kapı
+     açardı. Boş sorgu süzgeçsiz seçkidir. */
   const query = c.req.query('q')?.trim() ?? '';
 
   const [onVan, candidates] = await Promise.all([
-    /* İki okuma da ÇIKIŞ DEPOSUNU ve ARAÇ DEPOSUNU birlikte istiyor (v3:19): araçtaki satır
-       "depoda kalan"ı, şerit kartı da "araçta kaç tane var"ı yazıyor. İkisi ayrı okunsaydı ekran
-       eşleştirmeyi kendi yapardı ve şerit tavanlı olduğu için (12 satır) eşleşme yarım kalırdı. */
+    /* İki okuma da çıkış ve araç deposunu birlikte ister: ayrı okunsaydı eşleştirmeyi ekran yapar ve tavanlı seçkide eşleşme yarım
+       kalırdı. */
     vehicleWarehouseId === null
       ? Promise.resolve([])
       : readVanStock(db, { vehicleWarehouseId, sourceWarehouseId: facilityId }),
@@ -325,9 +171,7 @@ courier.get('/van-stock', async (c) => {
           warehouseId: facilityId,
           vehicleWarehouseId,
           query: query.length > 0 ? query : undefined,
-          /* Arama TAVANI daha geniş: şerit bir seçki (12), arama ise kuryenin aradığını bulması
-             gereken bir liste. Yine de sınırsız değil — sınırsız büyüyen bir küme sayfalama
-             isterdi (CLAUDE §1) ve rampada kaydırılacak liste bu değil. */
+          /* Arama tavanı seçkiden geniştir ama sınırsız değildir; rampada kaydırılacak liste sayfalanacak bir küme değil. */
           limit: query.length > 0 ? 40 : undefined,
         }),
   ]);
@@ -337,12 +181,8 @@ courier.get('/van-stock', async (c) => {
 });
 
 /**
- * **Araçtaki adedi YAZ** (21.263) — alma da devretme de burada, çünkü ikisi tek karardır: "araçta
- * şu kadar olsun." Yönü istemci seçmiyor, sunucu ÖLÇEREK buluyor (`setVanQty` künyesi).
- *
- * `/van-stock/take` ve `/van-stock/return` uçlarının yerine geçti. İkisi ayrıyken gövdeleri
- * birbirinin kopyasıydı (bağlam çözümü, kod çevirisi, cevap sarma) ve ikisi de FARK alıyordu —
- * farkı istemcinin bayat tabanından hesaplattığı için ölçülen çift yazımın kaynağıydı.
+ * Araçtaki adedi yaz: alma da devretme de "araçta şu kadar olsun" kararıdır ve yönü sunucu ölçerek bulur (`setVanQty`). Fark istemcinin
+ * bayat tabanından hesaplansaydı çift yazım doğardı.
  */
 courier.post('/van-stock/set', async (c) => {
   const parsed = CourierVanStockSetRequestSchema.safeParse(await readJsonBody(c));
@@ -350,9 +190,7 @@ courier.post('/van-stock/set', async (c) => {
 
   const staff = c.get('staff');
   const db = serviceDb();
-  /* İKİ UÇ TEK GERÇEKTEN (21.249): araç deposu seferin ARACINDAN, çıkış tesisi seferin ROTASINDAN.
-     Bir tur ikisi de kapsamdan çözülüyordu ve kapsamda iki araç olan kuryede ikisi birden yanlış
-     olurdu — künye `courierVanContext`te. */
+  /* Araç deposu seferin aracından, çıkış tesisi seferin rotasından çözülür; kapsamdan çözülse iki araçlı kuryede ikisi de yanlış olurdu. */
   const { vehicleWarehouseId, facilityId } = await courierVanContext(db, { courierId: staff.id });
   if (facilityId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'no_vehicle' }));
 
@@ -370,17 +208,8 @@ courier.post('/van-stock/set', async (c) => {
 });
 
 /**
- * **Okut ve bir tane al** (21.263) — kendi ucu, çünkü kendi bilgi durumu.
- *
- * Okutan istemci kodun hangi varyant olduğunu bilmiyor; hedef de taban da veremez. Bu yüzden burada
- * mutlak hedef YOK: "eldekine bir ekle". Tekrara karşı da korumasız ve bu KAPATILABİLİR BİR AÇIK
- * DEĞİL — *"aynı paketi yeniden okuttum"* ile *"ikinci paketi okuttum"* hiçbir ölçümün ayıramayacağı
- * iki şey. Korumanın yerini görünürlük alıyor: ekran her dalda ölçüp araçtaki güncel adedi yazıyor,
- * kararı sayıyı görerek kurye veriyor.
- *
- * KOD → VARYANT ÇEVİRİSİ UÇTA (v3:19): eşleme `variant_barcode`ta ve istemcinin oraya erişimi yok.
- * Tanınmayan kod SESSİZ GEÇMEZ — kendi dalıyla döner, yoksa kurye okuttuğunu sanır ve mal araca
- * hiç binmez.
+ * Okut ve bir tane al: istemci kodun hangi varyant olduğunu bilmediği için mutlak hedef yoktur ve tekrar korunmaz, çünkü "aynı paketi
+ * yeniden okuttum" ile "ikinci paketi okuttum" ayırt edilemez. Kod → varyant çevirisi uçtadır ve tanınmayan kod kendi dalıyla döner.
  */
 courier.post('/van-stock/scan', async (c) => {
   const parsed = CourierVanStockScanRequestSchema.safeParse(await readJsonBody(c));
@@ -401,8 +230,8 @@ courier.post('/van-stock/scan', async (c) => {
     qty: 1,
     actorId: staff.id,
   });
-  /* Cevap ortak şekilde konuşuyor: `movedQty` → `delta`. Okutma yolu daima artırıyor, yani işaret
-     hep `+`; ayrı bir cevap şekli yazmak aynı dokuz dalı iki yerde bakmak olurdu. */
+  /* Cevap ortak şekilde konuşur (`movedQty` → `delta`); okutma daima artırır ve ayrı bir cevap şekli aynı dalları iki yerde bakmak
+     olurdu. */
   const body: z.input<typeof CourierVanStockMoveResponseSchema> =
     result.status === 'ok'
       ? { status: 'ok', variantId: result.variantId, delta: result.movedQty, vanQty: result.vanQty }
@@ -411,12 +240,8 @@ courier.post('/van-stock/scan', async (c) => {
 });
 
 /**
- * **Seferi yola çıkar** (31.08 · v3:15) — kurulmuş seferin damgası, durakların açılması ve
- * müşteri bildiriminin gittiği an.
- *
- * Hangi sefer olduğu URL'de: araçta birden çok sefer duruyor ve kurye *istediğini* başlatıyor.
- * Kapı `startCourierDay`ın kendisi — rota ve gün seferin kaydından okunuyor, istemciden değil:
- * seferin bölgesini gövdeden almak, başka rotanın seferini bu kimlikle başlatmanın kapısı olurdu.
+ * Seferi yola çıkar: hangi sefer olduğu URL'dedir, çünkü araçta birden çok sefer durur. Rota ve gün seferin kaydından okunur; gövdeden
+ * alınsa başka rotanın seferi bu kimlikle başlatılabilirdi.
  */
 courier.post('/runs/:runId/depart', async (c) => {
   const runId = UuidSchema.safeParse(c.req.param('runId'));
@@ -437,8 +262,8 @@ courier.post('/runs/:runId/depart', async (c) => {
     vehicleId: run.vehicleId,
     effects: mobileOrderEffects(db),
   });
-  /* "Başka sefer sürülüyor" bir HATA DEĞİL cevabın kendisidir ve künyesiyle iner: kurye önce
-     hangisini kapatacağını bilmeli. `not_found`a yıkılsaydı ekran "sefer kayboldu" derdi. */
+  /* "Başka sefer sürülüyor" hata değil cevabın kendisidir ve künyesiyle döner: kurye önce hangisini kapatacağını bilmeli, `not_found`a
+     yıkılsaydı ekran "sefer kayboldu" derdi. */
   if (result.status === 'another_running') {
     const running: z.input<typeof DepartCourierRunResponseSchema> = {
       status: 'another_running',
@@ -453,12 +278,7 @@ courier.post('/runs/:runId/depart', async (c) => {
   return ok(c, DepartCourierRunResponseSchema.parse(body));
 });
 
-/**
- * **Seferi araçtan çıkar** (31.08 · kullanıcı kararı) — `POST /runs/:runId/discard`.
- *
- * `depart`in kardeşi ve aynı kapıyı kullanıyor: hangi sefer olduğu URL'de, kimlik jetondan.
- * "Yok" ile "senin değil" yine AYNI cevap — sefer kimlikleri haritalanamaz.
- */
+/** Seferi araçtan çıkar; `depart` ile aynı kapı: sefer URL'de, kimlik jetondan, "yok" ile "senin değil" aynı cevap. */
 courier.post('/runs/:runId/discard', async (c) => {
   const runId = UuidSchema.safeParse(c.req.param('runId'));
   if (!runId.success) return fail(c, 'invalid_run_id', 400);
@@ -476,17 +296,25 @@ courier.post('/runs/:runId/discard', async (c) => {
   return ok(c, DiscardCourierRunResponseSchema.parse({ status: reason }));
 });
 
+/**
+ * Araca yükleme okutması: kod gövdede gider ki URL'de dolaşmasın ve olumsuz dallar 200 ile gövdede döner (`wrong_route` kutunun hangi
+ * siparişin malı olduğunu söyler). Yükleme durum geçişi yazmaz; siparişi yola çıkarmak sefer başlatmanın işidir.
+ */
 courier.post('/boxes/load', async (c) => {
   const parsed = LoadBoxRequestSchema.safeParse(await readJsonBody(c));
   if (!parsed.success) return fail(c, 'invalid_body', 400);
 
   const db = serviceDb();
-  // Sefer yoldaysa son kutu durağı açar ve haber gider (03.09) — port bu yüzden burada da geçiyor.
+  // Sefer yoldaysa son kutu durağı açar ve haber gider; port bu yüzden burada da geçer.
   const outcome = await loadBox(db, { code: parsed.data.code, courierId: c.get('staff').id, effects: mobileOrderEffects(db) });
   const body: z.input<typeof LoadBoxResponseSchema> = outcome;
   return ok(c, LoadBoxResponseSchema.parse(body));
 });
 
+/**
+ * Kapıda teslim: kanıt, eksik kalem ve tahsilat tek istekte, çünkü üç uca bölünse ağın koptuğu an yarısı yazılmış bir teslimat kalırdı.
+ * `idempotencyKey` istemcide üretilir ki çevrimdışı kuyruğun tekrarı parayı iki kez yazmasın.
+ */
 courier.post('/stops/:orderId/deliver', async (c) => {
   const orderId = UuidSchema.safeParse(c.req.param('orderId'));
   if (!orderId.success) return fail(c, 'invalid_order_id', 400);
@@ -499,7 +327,7 @@ courier.post('/stops/:orderId/deliver', async (c) => {
     orderId: orderId.data,
     courierId: c.get('staff').id,
     ...parsed.data,
-    // "Teslim edildi" haberi (03.09) — dosya künyesi.
+    // Müşterinin "teslim edildi" haberi bu porttan gider.
     effects: mobileOrderEffects(db),
   });
 
@@ -508,18 +336,8 @@ courier.post('/stops/:orderId/deliver', async (c) => {
 });
 
 /**
- * **Ulaşılamadı / reddedildi** (K5). İki ayrı işaret, iki ayrı akıbet: `unreachable` malı araçta
- * bırakır (`ready`), `refused` depoya döndürür (`returned`).
- *
- * ── NOT BU UÇTA ZORUNLU, SÖZLEŞMEDE DEĞİL ───────────────────────────────────
- * Ortak sözleşme notu `nullish` bırakıyor çünkü kapının İKİ çağıranı var ve operasyon web ekranı
- * notsuz da işaretleyebiliyor. Mobil kapının kuralı v2 tasarımının onay ekranından geliyor: kurye
- * sonucu seçtikten sonra notsuz devam EDEMİYOR. Gövde şeması bu yüzden ikinci kez yazılmadı,
- * sözleşmeden `.extend` ile DARALTILDI — alan adı ya da sonuç kümesi yarın değişirse burası da
- * onunla değişir.
- *
- * Notun gideceği yer `order_status_log.note`: kuryenin kapıda girdiği tek serbest bilgi geçişle
- * ATOMİK yazılır. Loglanmaz (dosya künyesi).
+ * Ulaşılamadı ya da reddedildi: `unreachable` malı araçta bırakır (`ready`), `refused` depoya döndürür (`returned`). Not bu uçta zorunludur,
+ * sözleşmede değil, çünkü web ekranı notsuz da işaretleyebilir; not geçişle atomik `order_status_log.note`a yazılır ve loglanmaz.
  */
 const MarkUndeliveredBodySchema = MarkUndeliveredRequestSchema.extend({ note: z.string().trim().min(1) });
 
@@ -549,24 +367,8 @@ courier.post('/stops/:orderId/undelivered', async (c) => {
 });
 
 /**
- * **Kanıt yükleme izni** (K3). Dosya sunucudan GEÇMEZ: cihaz doğrudan kovaya yükler, sunucu yalnız
- * yetkiyi doğrulayıp kısa ömürlü bir izin yazar ve anahtarı KENDİ seçer.
- *
- * ── YOL DURAĞA BAĞLI, GÖVDE SÖZLEŞMENİN AYNISI ──────────────────────────────
- * Talep edilen adres `/courier/proof-upload` idi; uç `/courier/stops/:orderId/proof-upload` olarak
- * açıldı ve sebebi ölçülebilir: kapı `orderId` ZORUNLU istiyor (yetki sorusu "bu sipariş senin mi"
- * onun üstünden soruluyor) ama sözleşmenin istek şemasında `orderId` YOK — yalnız `filename` ve
- * `alreadyRequested` var. Kimliği gövdeye eklemek sözleşmenin ikinci bir sürümünü yazmak, sorgu
- * dizesine koymak ise bir kaynağı POST'ta parametreye gömmek olurdu. Yola alınınca gövde sözleşmeyle
- * BİREBİR kalıyor ve adres kardeş uçlarla aynı kalıba oturuyor (`/stops/:orderId/…`).
- *
- * ── TAVANI ÇAĞIRAN TAŞIR (bilinen sınır, 21.10a raporu) ─────────────────────
- * `alreadyRequested` istemciden gelir; sunucu bu teslimat için daha önce KAÇ izin verdiğini
- * saymıyor (sayacak bir kayıt yok — izinler hiçbir yere yazılmıyor). Yani 0 gönderen bir istemci
- * tavanı (5) hiç görmez. Sınır bilinçli kabul edildi: tavan kötü niyete karşı bir kilit değil,
- * kazara yığılmaya karşı bir frendir ve gerçek kilit imzalı adresin kısa ömrü ile kapının yetki
- * sorusudur — başkasının siparişine izin ÜRETİLEMEZ. Gerçek sayaç, izinlerin kayda geçmesini ister
- * (şema işi; bu görevin alanı dışında, rapora yazıldı).
+ * Kanıt yükleme izni: dosya sunucudan geçmez, cihaz kovaya yükler ve sunucu yalnız yetkiyi doğrulayıp kısa ömürlü izin yazar. Sipariş
+ * kimliği yolda durur ki gövde sözleşmeyle birebir kalsın; `alreadyRequested` tavanı istemciden gelir, gerçek kilit iznin kısa ömrüdür.
  */
 courier.post('/stops/:orderId/proof-upload', async (c) => {
   const orderId = UuidSchema.safeParse(c.req.param('orderId'));
@@ -586,20 +388,8 @@ courier.post('/stops/:orderId/proof-upload', async (c) => {
 });
 
 /**
- * **Sefer kapanışı taslağı** (K7 · 18.08 — eksen kurye×gün'den SEFERE indi) — seferin resmi +
- * beklenen tahsilat, yöntem başına.
- *
- * Gün burada kapının kendi varsayılanına bırakılıyor (`/day`in tersine) ve çelişki YOK: taslak
- * `date`i kendisi döndürüyor, yani cevaptaki gün ile sorgulanan gün TEK hesaptan çıkıyor.
- *
- * ── `runId` OPSİYONEL AMA ANLAMLI ──────────────────────────────────────────
- * Verilmezse kapı kuryenin o günkü seferini bulur (kapanmamış olan öncelikli). Verilirse o seferin
- * taslağı gelir ve GÜN SÜZGECİ UYGULANMAZ — dünkü seferin kapanışı bugünden açılabilmeli, çünkü
- * duraklar güne değil sefere bağlı. Sahiplik kapıda: sefer bu kuryenin değilse `run: null` döner
- * ("yok" ile "senin değil" aynı cevap — sefer kimlikleri denenerek haritalanamaz).
- *
- * `closed` doluysa sefer zaten kapanmıştır ve ekran salt-okunur gösterir — ikinci kapanış istemcinin
- * engellemesine bırakılmıyor, kapı da reddediyor (`already_closed`).
+ * Sefer kapanışı taslağı: seferin resmi ve yöntem başına beklenen tahsilat. `runId` verilirse gün süzgeci uygulanmaz, çünkü dünkü seferin
+ * kapanışı bugünden açılabilmeli; sefer kuryenin değilse "yok" ile "senin değil" aynı cevaptır.
  */
 const DayCloseQuerySchema = DateQuerySchema.extend({ runId: UuidSchema.optional() });
 
@@ -618,23 +408,8 @@ courier.get('/day-close', async (c) => {
 });
 
 /**
- * **Seferi kapat** (K7 · 18.08). Kapanış bir MUTABAKATTIR, para hareketi değil: para kapıda tahsil
- * edilirken yazıldı. Fark (sayılan − beklenen) kapıda türetilir, burada hesaplanmaz.
- *
- * ── ÖZNE ARTIK GÜN DEĞİL SEFER: `runId` ZORUNLU ────────────────────────────
- * Gövdedeki `date` alanı KALDIRILDI ve yerine sefer kimliği geldi (K1 kararı). İki sefer sürmüş
- * kurye ikisini ayrı kapatır; hangisini kapattığını istemci SÖYLER, sunucu tahmin etmez — "o günün
- * kapanışı" ifadesi iki seferli günde iki farklı kaydı işaret ediyordu. Kimlik `/day` ya da
- * `/day-close` taslağından gelir; sefer kuryenin değilse kapı `not_found` der (sahiplik kapıda).
- *
- * Sonuçlanmamış durak varken de kapatılabilir — dönen `pendingCount` uyarı, `releasedCount` ise
- * kapanışın `ready`ye düşürdüğü takılı durak sayısıdır (K4): engel değil, bilgi.
- * `ok:false` + `already_closed` bir hata DEĞİL, bir gerçektir ve 200 ile döner: kapanmış sefer
- * salt-okunurdur, ikinci çağrı ezmez.
- *
- * Gövde şeması sözleşmenin AYNISI — `.extend` ile daraltılacak bir alan kalmadı: `runId` zaten uuid
- * kapısından, sayımlar tamsayı-negatifsiz kapısından geçiyor. Yanıt da `CloseDeliveryRunResultSchema`
- * (entities): RPC dönüşünün aynası, uç onu OLDUĞU GİBİ döndürür.
+ * Seferi kapat: para kapıda tahsil edilirken yazıldığı için kapanış bir mutabakattır, yalnız nakit farkı kasa hesabına hareket olarak
+ * yazılır. Özne seferdir (`runId` zorunlu) ki iki seferli günde hangisinin kapandığını istemci söylesin; `already_closed` hata değil, 200'dür.
  */
 courier.post('/day-close', async (c) => {
   const parsed = CloseDeliveryRunRequestSchema.safeParse(await readJsonBody(c));

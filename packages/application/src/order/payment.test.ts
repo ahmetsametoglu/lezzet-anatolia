@@ -6,15 +6,9 @@ import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { recordOrderPayment } from './payment';
 
 /**
- * **K4 — kapı tahsilatının tekillik anahtarı** (21.10; doc 04 "kapı imzasına baştan
- * `idempotencyKey`").
- *
- * Sınanan şey tek cümle: **aynı anahtarla gelen ikinci istek İKİNCİ hareketi yazmaz** — ama
- * anahtarsız iki tahsilat meşrudur ve yazılır (müşteri 20 € nakit verip 20 € daha verebilir).
- * İkisini birbirinden ayıran şey anahtarın kendisi, tutarın eşitliği değil.
- *
- * Sayımlar KENDİ kurduğu siparişin hareketleri üzerinden yapılıyor (§4b): küresel `money_movement`
- * sayısına bakan bir test, başka bir ajanın verisi yüzünden rastgele kırmızıya döner.
+ * Kapı tahsilatının tekillik anahtarı: aynı anahtarla gelen ikinci istek ikinci hareketi yazmaz, anahtarsız iki tahsilat ise meşrudur
+ * (müşteri 20 € verip 20 € daha verebilir). Sayım kendi siparişin hareketlerinden yapılır, çünkü küresel sayı paylaşılan DB'de rastgele
+ * kırmızıya döner.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -55,8 +49,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Sipariş AYRICA silinmez: `purgeTestData` onu `profileIds`ten buluyor. Elle yazılan bu satır
-  // teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
+  // Sipariş ayrıca silinmez: `purgeTestData` onu `profileIds`ten bulur, elle silme teardown'ı düşürür.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -75,8 +68,8 @@ describe('kapı tahsilatı tekillik anahtarı (K4)', () => {
   it('aynı anahtarla ikinci istek İKİNCİ hareketi yazmaz ve ilk cevabı döndürür', async () => {
     const key = `door-${stamp}-tekrar`;
 
-    const first = await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, idempotencyKey: key });
-    const second = await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, idempotencyKey: key });
+    const first = await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, method: 'cash', idempotencyKey: key });
+    const second = await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, method: 'cash', idempotencyKey: key });
 
     expect(first).toMatchObject({ status: 'ok', amountCollectedCents: 2000 });
     expect(first).not.toHaveProperty('deduped');
@@ -86,8 +79,8 @@ describe('kapı tahsilatı tekillik anahtarı (K4)', () => {
   });
 
   it('FARKLI anahtar farklı tahsilattır — ikisi de yazılır', async () => {
-    await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, idempotencyKey: `door-${stamp}-a` });
-    await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, idempotencyKey: `door-${stamp}-b` });
+    await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, method: 'cash', idempotencyKey: `door-${stamp}-a` });
+    await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, method: 'cash', idempotencyKey: `door-${stamp}-b` });
 
     expect(await paymentsOfOrder()).toBe(2);
     expect((await orders.getById(orderId))?.amountCollectedCents).toBe(4000);
@@ -96,33 +89,30 @@ describe('kapı tahsilatı tekillik anahtarı (K4)', () => {
   it('anahtarsız iki tahsilat meşrudur ve engellenmez — davranış birebir korunur', async () => {
     // Eşit tutarlı iki elle giriş gerçek bir senaryodur (`money_movement_import_key` künyesi aynı
     // gerekçeyi anlatıyor); tekilliği tutar değil ANAHTAR kurar.
-    await recordOrderPayment(db, { orderId, accountId, amountCents: 1000 });
-    await recordOrderPayment(db, { orderId, accountId, amountCents: 1000 });
+    await recordOrderPayment(db, { orderId, accountId, amountCents: 1000, method: 'cash' });
+    await recordOrderPayment(db, { orderId, accountId, amountCents: 1000, method: 'cash' });
 
     expect(await paymentsOfOrder()).toBe(2);
   });
 
   it('anahtar harekete KALICI yazılır — tekrar bir saat sonra gelse de yakalanır', async () => {
-    /* ANAHTARIN EVİ DEĞİŞTİ (21.263): 05.09'a kadar `meta.idempotencyKey`de duruyordu ve kontrol
-       uygulama katmanında oku-sonra-yaz idi. Artık kendi kolonunda (`money_movement.idempotency_key`)
-       ve kararı tekil indeks veriyor. Testin ÇİVİLEDİĞİ ŞEY DEĞİŞMEDİ — anahtar kalıcı olmalı,
-       yoksa saatler sonra gelen tekrar yakalanamaz; değişen yalnız nerede durduğu. */
+    /* Anahtar kendi kolonunda (`money_movement.idempotency_key`) durur ve kararı tekil indeks verir; kalıcı olmalı, yoksa saatler
+       sonra gelen tekrar yakalanamaz. */
     const key = `door-${stamp}-kalici`;
-    await recordOrderPayment(db, { orderId, accountId, amountCents: 1500, idempotencyKey: key });
+    await recordOrderPayment(db, { orderId, accountId, amountCents: 1500, method: 'cash', idempotencyKey: key });
 
     const written = (await movements.listByOrder(orderId)).filter((m) => m.type === 'order_payment');
     expect(written[0]?.idempotencyKey).toBe(key);
-    // `meta` ARTIK TAŞIMIYOR ve bu bilinçli: iki yerde duran bir gerçek bir gün ayrışır.
+    // `meta` anahtarı taşımaz, çünkü iki yerde duran bir gerçek bir gün ayrışır.
     expect(written[0]?.meta?.['idempotencyKey']).toBeUndefined();
   });
 
   it('TEKRAR EDEN İSTEK "yazdım" demez — cevap `deduped`, defter tek satır', async () => {
-    /* Kararı artık veritabanı veriyor; kapının okuyan tarafa söylediği şey de değişti: ikinci çağrı
-       bir hata DEĞİL ama "tahsil edildi" de değil. Ekran bunu ayırabilsin diye `deduped` var —
-       yoksa kurye aynı parayı iki kez aldığını sanır. */
+    /* İkinci çağrı hata değildir ama "tahsil edildi" de değildir; ekran bunu `deduped` ile ayırır, yoksa kurye aynı parayı iki kez
+       aldığını sanır. */
     const key = `door-${stamp}-tekrar`;
-    const ilk = await recordOrderPayment(db, { orderId, accountId, amountCents: 1200, idempotencyKey: key });
-    const ikinci = await recordOrderPayment(db, { orderId, accountId, amountCents: 1200, idempotencyKey: key });
+    const ilk = await recordOrderPayment(db, { orderId, accountId, amountCents: 1200, method: 'cash', idempotencyKey: key });
+    const ikinci = await recordOrderPayment(db, { orderId, accountId, amountCents: 1200, method: 'cash', idempotencyKey: key });
 
     expect(ikinci).toMatchObject({ status: 'ok', deduped: true });
     // İlk çağrıda alan HİÇ YOK — sözleşmenin kendi kuralı: "alan yoksa yazım gerçekten yapıldı".

@@ -6,8 +6,8 @@ import { listCourierDay, readCourierRun, type CourierRunBriefView, type CourierS
 import { vehicleLabelOf } from './vehicle-label';
 
 /**
- * Sefer kapanışı: para kapıda tahsil edilirken yazıldığı için kapanış bir mutabakattır, para hareketi değil; eksen seferdir ki "fark hangi seferde doğdu" cevaplansın.
- * Kurye yalnız kendi seferini görür: `courierId` zorunludur ve sahiplik sefer kaydından doğrulanır.
+ * Sefer kapanışı: para kapıda tahsil edilirken yazıldığı için kapanış bir mutabakattır, yalnız nakit farkı kasa hesabına hareket olarak
+ * yazılır; eksen seferdir ki "fark hangi seferde doğdu" cevaplansın. Kurye yalnız kendi seferini görür, sahiplik sefer kaydından doğrulanır.
  */
 
 /** Kapanış öncesi ekranın gördüğü: seferin resmi + beklenen tahsilat. */
@@ -22,7 +22,7 @@ export interface DayCloseDraft {
   pending: CourierStop[];
   /** Reddedilenler — getirilen mal; depoya fiziksel teslim edilir. */
   returned: CourierStop[];
-  /** Beklenen tahsilat, yöntem başına (**cent** — 02.9). */
+  /** Beklenen tahsilat, yöntem başına (**cent**). */
   expected: { cashCents: number; cardCents: number };
 }
 
@@ -73,7 +73,7 @@ export async function closeCourierDay(
   input: {
     courierId: string;
     runId: string;
-    /** Kuryenin teslim ettiği tutarlar — **cent** (02.9). */
+    /** Kuryenin teslim ettiği tutarlar — **cent**. */
     countedCashCents?: number;
     countedCardCents?: number;
     /** Fark çıktığında kısa açıklama — fark gizlenmez, açıklanır (tasarım §3). */

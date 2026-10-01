@@ -4,15 +4,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 type DeleteBuilder = ReturnType<ReturnType<SupabaseClient['from']>['delete']>;
 
 /**
- * Silme — **hatası fırlatılan** hâli (denetim R4).
- *
- * Supabase `delete()` hatayı FIRLATMAZ, sonuç nesnesinde döndürür. Teardown'larda kimse o nesneye
- * bakmadığı için `restrict` FK'ye takılan bir silme *düşen bir test* değil, **görünmez bir hiç**
- * oluyordu: satırlar kalıyor, koşu yeşil görünüyor, kirlilik haftalarca birikiyordu (ölçüldü:
- * `money_movement` 41 → 187). Fırlatılan hata vitest çıktısında görünür — sessiz birikim biter.
- *
- * Teardown'da fırlamak "testi düşürmek" değil, **teardown'un yalan söylemesini engellemektir**;
- * zaten testin kendisi çoktan geçmiş ya da kalmıştır.
+ * Hatası fırlatılan silme: Supabase `delete()` hatayı sonuç nesnesinde döndürür ve teardown'da kimse ona bakmadığı için `restrict` FK'ye
+ * takılan silme görünmez bir birikime dönerdi. Teardown'da fırlamak testi düşürmek değil, teardown'un yalan söylemesini engellemektir.
  */
 export async function mustDelete(
   db: SupabaseClient,
@@ -24,31 +17,15 @@ export async function mustDelete(
 }
 
 /**
- * **Bir varyantın partilerini SIRASIYLA siler** — önce hareket defteri, sonra parti (06.14).
- *
- * Testlerin `beforeEach` zemin temizliği için: çoğu entegrasyon dosyası her testten önce kendi
- * partilerini süpürüp yeniden kuruyor ve bunu `mustDelete(db, 'stock', …)` ile tek satırda
- * yapıyordu. Defter gelince o satır **çalışamaz** oldu: `stock_movement.stock_id` `restrict` ve
- * artık HER partinin hareketi var (mal kabul bile bir giriş satırı yazıyor) — eskiden yalnız imha
- * edilmiş partilerin `stock_adjustment` kaydı olurdu, o yüzden sorun görünmüyordu.
- *
- * Ölçüldü (27.08): sıra tutturulmadığında hata teardown'da patlıyor, dosyanın TAMAMI kırmızıya
- * dönüyor ve sebep testin kendi iddiasıyla hiç ilgisiz görünüyor.
- *
- * Sıra bilgisi burada duruyor, testte değil (`CLAUDE §4b`): her dosya kendi sırasını uydurursa
- * biri mutlaka yanlış olur.
+ * Bir varyantın partilerini sırasıyla siler: önce partiyi `restrict` ile tutan bağlar, sonra parti. Sıra testte değil burada durur,
+ * çünkü her dosya kendi sırasını uydurursa biri mutlaka yanlış olur.
  */
 export async function purgeVariantStock(db: SupabaseClient, variantIds: readonly string[]): Promise<void> {
   const ids = variantIds.filter(Boolean);
   if (ids.length === 0) return;
   const stockIds = await idsOf(db, 'stock', 'variant_id', [...ids]);
   if (stockIds.length > 0) {
-    // **PARTİYİ TUTAN DÖRT BAĞIN DÖRDÜ DE** — hepsi `restrict` ve hepsi burada, çünkü sıra tek
-    // yerde durmalı. Dördüncüsü (defter) 06.14'te eklendi; ilk üçü zaten vardı ama görünmüyordu:
-    // testler partiyi `db.from('stock').delete()` ile siliyordu ve o çağrı hatayı YUTUYOR — yani
-    // parti aslında silinemiyor, teardown sessizce yarım kalıyor, kirlilik birikiyordu. `mustDelete`
-    // yoluna geçince gizli arıza görünür oldu (ölçüldü 27.08: 4 dosyada `order_item_batch`, 1
-    // dosyada `warehouse_transfer_line` partiyi tutuyormuş).
+    // Partiyi tutan dört bağın dördü de `restrict`; sıra tek yerde dursun diye hepsi burada.
     await mustDelete(db, 'stock_movement', (q) => q.in('stock_id', stockIds));
     // Hazırlık/satış kalem eşlemesi — siparişin kendisi durabilir, kalem–parti bağı gider.
     await mustDelete(db, 'order_item_batch', (q) => q.in('stock_id', stockIds));
@@ -62,30 +39,16 @@ export async function purgeVariantStock(db: SupabaseClient, variantIds: readonly
 }
 
 /**
- * **Siparişleri SIRASIYLA siler** — onları tutan dört bağ önce, sipariş sonra.
- *
- * `purgeTestData`nın içindeydi; dışa açıldı çünkü testlerin `beforeEach`i de aynı sıraya muhtaç:
- * bir sipariş `db.from('order').delete()` ile silinemez olduğunda o çağrı hatayı **yutar** ve
- * teardown sessizce yarım kalır (ölçüldü 27.08: `quick-sale.test.ts` deposunu bırakıyordu —
- * sipariş kalıyor → deposu `order_warehouse_fk` ile tutuluyor → `purgeTestData` depo adımında
- * patlıyor, ama koşu yine "geçti" diyor çünkü kırılan teardown'dur, test değil).
- *
- * Varyant bazlı `purgeVariantStock` bu işi göremez: siparişi tutan hareket BAŞKA bir partiye
- * bağlı olabilir (kapı satışı aracın partisinden mal çıkarır, sipariş dıştaki müşterinindir).
- * Anahtar SİPARİŞTİR, parti değil.
+ * Siparişleri sırasıyla siler: onları tutan bağlar önce, sipariş sonra; testlerin `beforeEach`i de aynı sıraya muhtaçtır. Anahtar
+ * sipariştir, parti değil, çünkü siparişi tutan hareket başka bir partiye bağlı olabilir (kapı satışı aracın partisinden mal çıkarır).
  */
 export async function purgeOrders(db: SupabaseClient, orderIds: readonly string[]): Promise<void> {
   const ids = [...new Set(orderIds.filter(Boolean))];
   if (ids.length === 0) return;
 
   await mustDelete(db, 'reservation', (q) => q.in('order_id', ids));
-  // Siparişe/talebe asılı BİLDİRİMLER hedefleriyle birlikte (ölçüldü 27.08): `notification`
-  // hedefini `target_type` + `target_id` ile tutuyor, FK ile DEĞİL — cascade onu toplamaz.
-  // Müşteri satırı profil cascade'iyle giderdi; ama `dispatchStaffNotification` e-postasız
-  // alıcıda `document_undeliverable`'ı GERÇEK yönetici profillerine yazıyor ve o profiller
-  // purge'ün malı değil. Yani her sipariş testi operasyon ziline KALICI bir satır bırakıyordu:
-  // yerelde 127 satır birikmişti ve zilin ilk sayfası tek türe dönmüştü — "hepsi tek tip"
-  // görüntüsünün yerel kaynağı buydu (176 satırın 127'si).
+  // Siparişe ve talebe asılı bildirimler hedefleriyle birlikte gider: `notification` hedefini FK'siz tutar ve personel fan-out'u
+  // satırı purge'ün malı olmayan gerçek yönetici profillerine yazar.
   const ticketIds = await idsOf(db, 'ticket', 'order_id', ids);
   const bildirimHedefleri: [string, string[]][] = [
     ['order', ids],
@@ -94,33 +57,20 @@ export async function purgeOrders(db: SupabaseClient, orderIds: readonly string[
   for (const [tur, kimlikler] of bildirimHedefleri) {
     await mustDelete(db, 'notification', (q) => q.eq('target_type', tur).in('target_id', kimlikler));
   }
-  // Talepler SİPARİŞTEN ÖNCE (ölçüldü 26.08): kaleme bağlı talepte (`order_item_ids` dolu)
-  // sipariş silinince `ticket.order_id` `set null` düşer ve `ticket_items_need_order` kısıtı
-  // patlar — "kalemi olan talep siparişsiz olamaz". Profil-cascade buraya yetişmiyor: sıra
-  // gereği profil EN SONDA gidiyor. Mesajlar/kuyruk satırı talebe cascade.
+  // Talepler siparişten önce: kaleme bağlı talepte sipariş silinince `ticket.order_id` `set null` düşer ve `ticket_items_need_order`
+  // kısıtı patlar. Mesajlar ve kuyruk satırı talebe cascade.
   await mustDelete(db, 'ticket', (q) => q.in('order_id', ids));
-  // **HAREKET DEFTERİ SİPARİŞTEN ÖNCE** (06.14 · denetim ölçümü 27.08). `stock_movement.order_id`
-  // FK'si `restrict` — satış ve kapı satışı satırları siparişi tutuyor, yani sipariş onlardan
-  // önce silinemiyor. Sıra tersken hata ZİNCİRLENİYORDU: sipariş kalıyor → partisi kalıyor →
-  // deposu silinemiyor (`stock_warehouse_fk`), ve koşu yine "geçti" diyordu çünkü kırılan şey
-  // teardown'du, test değil. Reset öncesi bir koşuda aynı hata 94 kez logdaydı.
-  //
-  // `set null` ile çözülemezdi: `stock_movement_source` kısıtı `kind='sale'` satırında
-  // `order_id`yi ZORUNLU tutuyor — null'a düşen satır kısıtı ihlal ederdi. Kaynak belgesi
-  // silinen bir hareket zaten defterde durmamalı; üretimde sipariş hiç silinmiyor.
+  // Stok defteri siparişten önce, çünkü `stock_movement.order_id` `restrict`; `set null` çözüm değil, `stock_movement_source` kısıtı
+  // satış satırında siparişi zorunlu tutar.
   await mustDelete(db, 'stock_movement', (q) => q.in('order_id', ids));
+  // Kasa fişi siparişi `restrict` ile tutar; satırları ve ödemeleri fişe cascade.
+  await mustDelete(db, 'register_ticket', (q) => q.in('order_id', ids));
   // Kalem–parti eşlemesi siparişe `cascade`, partiye `restrict` bağlı: sipariş silinince kendi
   // gider, ama partisi hâlâ duruyorsa `purgeVariantStock` onu ayrıca toplamak zorunda kalır.
   await mustDelete(db, 'order', (q) => q.in('id', ids)); // kalem/log/discount_use CASCADE
 }
 
-/**
- * Siparişleri BİR SÜTUNDAN bularak siler — `beforeEach` zemin temizliğinin kapısı.
- *
- * Testler siparişi kimlikten değil bağlamdan tanır: "bu müşterinin", "bu deponun", "bu seferin".
- * Üç ayrı yardımcı yerine tek kapı, çünkü değişen şey yalnız süzgeç; SIRA (yukarıdaki dört bağ)
- * hepsinde aynı ve `purgeOrders`ta duruyor.
- */
+/** Siparişleri bir sütundan bularak siler; testler siparişi kimlikten değil bağlamdan tanır ("bu müşterinin", "bu deponun"). */
 export async function purgeOrdersBy(
   db: SupabaseClient,
   column: 'customer_id' | 'warehouse_id' | 'delivery_run_id',
@@ -132,10 +82,8 @@ export async function purgeOrdersBy(
 }
 
 /**
- * Sefer + kapanışı (0046). Üç `restrict` FK'nin ÜÇÜ de buradan geçer: kurye profili, rota→depo
- * zinciri (`warehouse_id` snapshot'ı) ve araç — hangisi silinecekse önce o kaynağın seferleri
- * gitmek zorunda. Sıra sabit: kapanış seferi `restrict` ile tutar → önce `delivery_run_close`.
- * `order.delivery_run_id` `set null` — sipariş sırası etkilenmez.
+ * Sefer ve kapanışı: kurye profili, depo ve araç seferi `restrict` ile tutar, hangisi silinecekse önce o kaynağın seferleri gider.
+ * Kapanış seferi tuttuğu için önce `delivery_run_close`.
  */
 async function purgeDeliveryRuns(
   db: SupabaseClient,
@@ -152,15 +100,8 @@ async function purgeDeliveryRuns(
 }
 
 /**
- * Entegrasyon testlerinin **zemin toplama** yardımcısı. Testler yerel veritabanını kirletmemeli:
- * kalan satırlar operasyon ekranlarında çöp olarak görünür, sonraki koşuşların sayımlarını bozar
- * ve "bu kayıt gerçek mi test mi" sorusunu doğurur.
- *
- * Buradaki asıl bilgi **silme SIRASI**: FK'lerin çoğu `restrict` (parti duran varyant silinemez,
- * siparişi olan tedarikçi silinemez). Sıra yanlışsa teardown sessizce patlar ve kirlilik birikir.
- * Bu sıra tek yerde tutulur; her test dosyası kendi sırasını uydurursa biri mutlaka yanlış olur.
- *
- * Yalnız testlerden çağrılır (`@lezzet/database/testing`); paketin kamu API'sinde yer almaz.
+ * Entegrasyon testlerinin zemin toplama yardımcısı; asıl bilgi silme sırasıdır, çünkü FK'lerin çoğu `restrict` ve yanlış sıra teardown'u
+ * yarım bırakır. Sıra tek yerde tutulur ve yalnız testlerden çağrılır (`@lezzet/database/testing`).
  */
 export interface PurgeTargets {
   /** Ürünler — varyantlar, fiyatlar ve koleksiyon bağları CASCADE ile gider. */
@@ -169,128 +110,58 @@ export interface PurgeTargets {
   collectionIds?: string[];
   /** Tarifler — kalemleri CASCADE ile gider (`recipe_item.recipe_id`). */
   recipeIds?: string[];
-  /**
-   * Ürün aileleri (05.15). Üyelik ayrı tabloda DEĞİL — `product.family_id` kolonudur ve FK'si
-   * `set null`, yani aile üyeleri dururken de silinebilir. Sıra baskısı yok; yine de burada
-   * olması şart (`CLAUDE §4b`): silme bilgisi tek yerde durmalı, test dosyasına sızmamalı.
-   */
+  /** Ürün aileleri; üyelik `product.family_id` kolonudur (`set null`), sıra baskısı yok ama silme bilgisi tek yerde durur. */
   familyIds?: string[];
   /** Tedarikçiler — kod eşlemeleri CASCADE, siparişleri burada elle silinir. */
   supplierIds?: string[];
   /**
-   * Siparişler (e2e checkout dumanları UI'dan GERÇEK sipariş açar — 00.9). Kalemler, durum
-   * logları ve `discount_use` CASCADE ile gider; `money_movement.order_id` `set null` (hareketin
-   * anahtarı HESAP, üstteki künye). Tek tuzak REZERVASYON: `reservation.order_id` FK'sız
-   * (bilinçli — `0006`, tablo siparişten önce doğdu), yani hiçbir cascade toplamaz; burada açıkça
-   * silinir, yoksa sipariş başına öksüz rezervasyon birikir ve `available_stock`u sessizce düşürür.
+   * Siparişler; kalemler, durum logları ve `discount_use` CASCADE ile gider. Rezervasyonun sipariş bağı FK'sızdır, açıkça silinmezse öksüz
+   * rezervasyon birikir ve `available_stock`u sessizce düşürür.
    */
   orderIds?: string[];
   /**
-   * Kimlik profilleri (`user_profiles`) — adresleri ve **kanıtlanmış numaraları** (`customer_phone`,
-   * 04.10) CASCADE ile gider. Ayrı müşteri tablosu yok.
-   *
-   * `customer_phone` bilerek `cascade` ile bağlandı, `restrict` ile değil: kanıt satırı kimliğin
-   * kendisine ait bir künyedir, ondan bağımsız bir hayatı yoktur. `restrict` olsaydı her teardown
-   * onu ayrıca silmek zorunda kalırdı ve biri mutlaka unuturdu — sonuç, aktif tekillik indeksinde
-   * sonsuza dek tutulan bir test numarası olurdu.
-   *
-   * **Profilin SİPARİŞLERİ ve KURYE GÜN KAPANIŞLARI da burada gider** (14.08): ikisi de profili
-   * `restrict` ile tutuyor, yani bildirilmezse profil silinemez. Testler bunu yıllarca kendi
-   * `mustDelete` satırlarıyla çözdü ve tam olarak o satırlar teardown'ı öldürüyordu — `beforeAll`
-   * düşünce `customerId` `undefined` kalıyor, `customer_id=eq.undefined` uuid hatasıyla fırlıyor ve
-   * `purgeTestData` HİÇ çağrılmıyordu (ölçüldü 14.08: 51 artık depo, 46'sı bomboş — yani silme
-   * denenmemişti bile). Bilgi burada durunca `undefined` da `clean()` süzgecine takılır.
+   * Kimlik profilleri; adresleri ve kanıtlanmış numaraları CASCADE ile gider. Profili `restrict` ile tutan siparişler ve kurye gün
+   * kapanışları da burada gider, çünkü bilgi testte dursaydı `beforeAll` düşünce tanımsız kimlik teardown'u tümden atlatırdı.
    */
   profileIds?: string[];
-  /**
-   * Asistan onay kuyruğu satırları (`assistant_proposal`, 0042). Hiçbir şeye FK'yle bağlı DEĞİL —
-   * `decided_by` dışında bağı yok ve o da `set null`. Yani kimse onu tutmaz ama kimse de
-   * toplamaz: silinmezse kuyruk test önerileriyle dolar ve panel açıldığı gün operatör
-   * kendisinin kurmadığı kalemlerle karşılaşır.
-   */
+  /** Asistan onay kuyruğu satırları; kimse onları tutmaz ama kimse de toplamaz, silinmezse kuyruk test önerileriyle dolar. */
   assistantProposalIds?: string[];
   /**
-   * MCP bağlantı anahtarları (`mcp_connection_key`, 0051) ve onların çağrı izleri.
-   *
-   * İz satırları anahtara `set null` ile bağlı — yani anahtar silinse iz KALIR ve sahipsizleşir.
-   * Bu üretimde doğru (iptal edilmiş anahtarın geçmişi cevaplanabilir olmalı), testte yanlış:
-   * teardown yalnız anahtarı silerse `mcp_call_log` sessizce birikir ve panelin "son çağrılar"
-   * listesi bir gün test artığıyla açılır. Bu yüzden İZ ÖNCE, anahtar sonra silinir — sıra tek
-   * yerde durmalı ki her dosya kendi sırasını uydurmasın.
+   * MCP bağlantı anahtarları ve çağrı izleri; iz anahtara `set null` ile bağlı olduğu için önce iz, sonra anahtar silinir, yoksa panelin
+   * "son çağrılar" listesi test artığıyla dolar.
    */
   mcpConnectionKeyIds?: string[];
   /**
-   * Bildirim satırları (`notification`, 0049) — YALNIZ personel fan-out'unun izleri için.
-   * Müşteri satırları profille cascade gider (`profileIds` yeter); ama `dispatchStaffNotification`
-   * GERÇEK personel profillerine yazar (seed yöneticileri dahil) ve o profiller purge'ün malı
-   * değildir. Kapı bu yüzden yazdığı kimlikleri döndürür; test onları buraya taşır. Teslim
-   * defteri (`notification_delivery`) satıra cascade bağlı, ayrıca anılmaz.
-   *
-   * **Sipariş/talep hedefli satırlar ARTIK BURAYA TAŞINMAZ** (27.08): `orderIds` dalı onları
-   * hedefleriyle birlikte siliyor. Geriye kalan iş hedefi bu ikisi OLMAYAN satırlar — `stock_low`
-   * (hedef varyant), `run_close_mismatch` (hedefsiz) gibi; onlar hâlâ kimlikle gelir.
+   * Personel fan-out'unun bildirim satırları; `dispatchStaffNotification` gerçek personel profillerine yazar ve o profiller purge'ün malı
+   * değildir. Sipariş ve talep hedefli satırlar `orderIds` dalında hedefleriyle gider.
    */
   notificationIds?: string[];
   /**
-   * Sahiplenilmiş webhook olayları (`webhook_event`, 0022) — anahtar **sağlayıcı kimliği**
-   * (`event_id`), bizim uuid'imiz değil: satırı testin kendi ürettiği `wamid.…`/`evt_…` damgası
-   * tanır ve çağıran o damgayı zaten biliyor.
-   *
-   * Hiçbir FK'si yok, yani kimse onu tutmaz ama kimse de toplamaz. Silinmezse tekrar-güvenliği
-   * sınayan her koşu bir sonrakini SESSİZCE bozar: aynı olay kimliği ikinci koşuda "zaten
-   * sahiplenilmiş" sayılır, `written` beklenirken `duplicates` gelir ve düşen test kendi
-   * sebebini göstermez. Damgalı kimlik bunu bugün engelliyor; hedefi burada tutmak birikimi de
-   * engelliyor.
+   * Sahiplenilmiş webhook olayları, sağlayıcı kimliğiyle (`event_id`). Silinmezse aynı olay kimliği sonraki koşuda "zaten sahiplenilmiş"
+   * sayılır ve tekrar-güvenliği sınayan test sebebini göstermeden düşer.
    */
   webhookEventIds?: string[];
   /**
-   * WhatsApp konuşmaları (15.1) — mesajları CASCADE ile gider.
-   *
-   * Müşteriye bağlı konuşma zaten profil silinince gider (`conversation.customer_id` CASCADE); bu
-   * hedef **kimliksiz** konuşmalar içindir. Kimliksiz konuşma bir kaza değil, tasarımın bir
-   * hâlidir: adım 2'de webhook mesajı önce yazar, kimliği sonra çözer. Profile bağlı olmadıkları
-   * için hiçbir cascade onları toplamaz — bildirilmezse sessizce birikirler.
+   * WhatsApp konuşmaları, mesajlarıyla; müşteriye bağlı olan profille gider, bu hedef kimliksiz konuşmalar içindir. Webhook mesajı önce
+   * yazar, kimliği sonra çözer, o yüzden kimliksiz konuşmayı hiçbir cascade toplamaz.
    */
   conversationIds?: string[];
-  /**
-   * AI kullanım satırları (15.27) — sohbete/talebe `set null` ile bağlı, yani hiçbir cascade onları
-   * toplamaz: maliyet kaydı sohbet silinse de kalsın diye (tablo künyesi `0056`). Kaydediciyi ve
-   * günlük özeti sınayan test kendi satırlarını bildirir.
-   */
+  /** AI kullanım satırları; sohbete ve talebe `set null` ile bağlıdır ki maliyet kaydı kalsın, o yüzden hiçbir cascade toplamaz. */
   aiUsageIds?: string[];
   /**
-   * Ölçüm noktaları (19.28) — sıcaklık kaydı bunlara `restrict` ile bağlı, yani kayıtlar önce
-   * gider sonra nokta. Eskiden burada `temperatureLocations: string[]` vardı ve kayıtları serbest
-   * metin konumdan siliyordu; nokta tanımlı bir satır olunca anahtar da kimliğe döndü.
-   *
-   * **Alan deponun ÖNÜNDE silinir** (kendisi `restrict` ile depoyu tutar); bildirilmezse teardown
-   * depoda takılır ve artık depo operatörün seçicisinde görünür — 14.08'de ölçülen arızanın aynısı.
+   * Ölçüm noktaları; sıcaklık kaydı onları `restrict` ile tutar, kayıt önce gider. Alan da depoyu `restrict` ile tutar, bildirilmezse
+   * teardown depoda takılır ve depo operatörün seçicisinde kalır.
    */
   storageAreaIds?: string[];
   vehicleIds?: string[];
   /**
-   * "Bölgeye girince haber ver" kayıtları — anahtar POSTA KODU (`zone_notice.postal_code`).
-   *
-   * Bölgeye FK ile bağlı değil: kayıt, bölgenin HENÜZ OLMADIĞI bir kod için açılıyor — bağ
-   * kurulabilseydi zaten kaydın sebebi kalmazdı. `customer_id` de `set null`, yani hiçbir cascade
-   * bu satırı toplamaz; bildirilmezse ziyaretçi beklenti listesi test kodlarıyla dolar.
+   * "Bölgeye girince haber ver" kayıtları, posta koduyla; kayıt henüz olmayan bir bölge için açıldığından FK yoktur ve `customer_id`
+   * `set null`, yani hiçbir cascade toplamaz.
    */
   zoneNoticePostalCodes?: string[];
-  /**
-   * Analitik oturum anahtarları — olay ve oturum satırları burada gider.
-   *
-   * Anahtar `session_key`, `id` DEĞİL: olay defterinde vekil anahtar yok (bilinçli — bkz. `0035`).
-   * Testler damgalı bir anahtar üretir, yani silme kendi satırlarına kilitli kalır ve başka bir
-   * ajanın ölçümüne dokunmaz (`CLAUDE §4b`).
-   */
+  /** Analitik oturum anahtarları; olay defterinde vekil anahtar yoktur ve damgalı anahtar silmeyi testin kendi satırlarına kilitler. */
   analyticsSessionKeys?: string[];
-  /**
-   * Arama özeti satırları — anahtar TERİMİN KENDİSİ (`analytics_daily_search.query`).
-   *
-   * Oturum anahtarıyla silinemezler: özet gruplama sırasında oturumu kaybeder. Damgalı bir terim
-   * kullanan test kendi satırını buradan bildirir; bildirmezse satır günlerce birikir ve
-   * "aranıp bulunamayan" listesini test verisiyle kirletir.
-   */
+  /** Arama özeti satırları, terimin kendisiyle; özet oturumu kaybettiği için oturum anahtarıyla silinemez. */
   analyticsSearchQueries?: string[];
   /** OTP satırları (servis silme kapalı olduğu için doğrudan). */
   verificationEmails?: string[];
@@ -299,57 +170,33 @@ export interface PurgeTargets {
   /** Test depoları (`createTestWarehouse`) — bağlı transfer/eşik/bölge satırları burada gider. */
   warehouseIds?: string[];
   /**
-   * Test hesapları (kasa/banka) — **para hareketleri burada gider** (denetim R1).
-   *
-   * Hareketi silmenin anahtarı HESAPTIR, sipariş değil: `money_movement.order_id`
-   * `on delete set null`'dur, yani sipariş silindiği anda o anahtar buharlaşır ve hareket
-   * bulunamaz hâle gelir. `account_id` ise `restrict` — hesabı silmeye çalışan teardown
-   * hareketler durdukça sessizce yarım kalır. Doğru sıra: önce hareket, sonra hesap.
+   * Test hesapları; para hareketleri burada gider, çünkü `money_movement.order_id` `set null` olduğundan hareketin anahtarı hesaptır.
+   * `account_id` `restrict`: önce hareket, sonra hesap.
    */
   accountIds?: string[];
-  /**
-   * Test belgeleri (12.12) — belge bağı (`money_allocation`) iki uçtan `cascade`: belge silinince bağ
-   * gider, hareket kalır. Sıra yine hareketlerden sonra.
-   */
+  /** Test belgeleri; bağı (`money_allocation`) iki uçtan `cascade`, hareketlerden sonra silinir. */
   documentIds?: string[];
-  /**
-   * Testin sözlüğe eklediği etiketler (12.12) — testin kendi damgalı slug'ı dışında hiçbir satıra
-   * dokunulmaz. Hareketler silindikten SONRA: etiket taşıyan satır kalmasın.
-   */
+  /** Testin sözlüğe eklediği etiketler, damgalı slug'la; hareketlerden sonra, etiket taşıyan satır kalmasın. */
   tagSlugs?: string[];
-  /**
-   * Testin sözlüğe eklediği TÜRLER (13.09) — hareket, belge ve carinin varsayılanı türe FK ile bağlı
-   * (`no action`): onları taşıyan satır durdukça tür silinemez, bu yüzden hepsinden SONRA.
-   */
+  /** Testin eklediği türler; hareket, belge ve carinin varsayılanı türe FK ile bağlıdır, o yüzden hepsinden sonra. */
   natureSlugs?: string[];
-  /** Testin açtığı cariler (13.09) — hareket ve belge bağı `set null`; hareketlerden sonra, türlerden önce. */
+  /** Testin açtığı cariler; hareket ve belge bağı `set null`, hareketlerden sonra ve türlerden önce. */
   counterpartyIds?: string[];
   /**
-   * Ayar satırları — kimlikle, ANAHTARLA DEĞİL: anahtar kapsam satırlarını da taşır ve anahtarla
-   * silen bir test, kendi damgalı bölge satırıyla birlikte işletmenin gerçek ayarını da götürürdü.
-   * Buraya yalnız testin KENDİ AÇTIĞI (damgalı kapsam — ör. e2e fikstürünün bölge satırı) kimlik
-   * bildirilir; küresel tekil satırın geçici değişimi bu hedefin işi değil, `settingsSnapshot`ın.
+   * Ayar satırları, kimlikle: anahtar kapsam satırlarını da taşır ve anahtarla silen test işletmenin gerçek ayarını götürürdü. Küresel
+   * tekil satırın geçici değişimi `settingsSnapshot`ın işidir.
    */
   settingIds?: string[];
   /**
-   * Test iş adları — cron kabuğunun (`runJob`) BIRAKTIĞI İKİ İZ birden gider: `job_run` satırı ve
-   * `error_log` kayıtları (`context->>job`).
-   *
-   * İkisi tek hedefte, çünkü tek bir kabuk ikisini birden yazıyor: düşen bir tur hem "koştu mu"
-   * izini hem "neden koşamadı" kaydını bırakır. Ayrı hedefler olsaydı biri yazılıp öteki unutulur
-   * ve `error_log` sessizce birikirdi — üstelik kimse fark etmezdi, çünkü artık satır bir HATA gibi
-   * görünür ve "eski bir kayıt" sanılır.
-   *
-   * `job_run` iş adı başına TEK satır tutar: testler damgalı ad kullanmalı, gerçek iş adını
-   * kullanan bir test üretim izini ezer.
+   * Test iş adları; cron kabuğunun bıraktığı iki iz (`job_run` ve `error_log`) birlikte gider, çünkü ayrı hedefte biri unutulur ve
+   * `error_log` sessizce birikirdi. `job_run` ad başına tek satırdır, testler damgalı ad kullanır.
    */
   jobNames?: string[];
 }
 
 export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): Promise<void> {
-  // TANIMSIZ kimlikler AYIKLANIR. `beforeAll` yarıda düşerse (ör. yığın cevap vermezse) kimlikler hiç
-  // atanmamış olur ve teardown `invalid input syntax for uuid: "undefined"` ile İKİNCİ bir hata daha
-  // basar; asıl sebep o gürültünün altında kaybolur. Silinecek şey yoksa yapılacak şey de yoktur.
+  // Tanımsız kimlikler ayıklanır: `beforeAll` yarıda düştüyse teardown ikinci bir uuid hatası basar ve asıl sebep gürültünün altında
+  // kaybolurdu.
   const clean = (ids?: (string | undefined | null)[]): string[] => (ids ?? []).filter((id): id is string => Boolean(id));
   const {
     productIds,
@@ -414,18 +261,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   };
 
   /**
-   * **BİR ENGEL, ARKASINDAKİ HER ŞEYİ KURTARMASIN** (ölçüldü 14.08).
-   *
-   * `mustDelete` fırlatarak sessiz birikimi gürültüye çevirdi — ama tek bir `await` zincirinde
-   * fırlayan hata, kendinden SONRAKİ bütün silmeleri de iptal ediyordu. Yaprak bir tabloda
-   * (`category`) takılan teardown, kendisiyle hiç ilgisi olmayan DEPOYU da bırakıyordu; oysa depo
-   * operasyon ekranının listelediği yer, yani çöpün göründüğü tek tablo.
-   *
-   * Buradaki gruplar birbirine FK ile bağlı OLMAYAN dallar: biri düşse öteki yine denenebilir. Grup
-   * İÇİNDE sıra hâlâ kutsal (bağımlılık orada) — o yüzden grup içi zincir aynen duruyor.
-   *
-   * Hatalar yutulmaz, BİRİKTİRİLİR ve sonda topluca fırlar: teardown hem işini bitirir hem de ne
-   * yapamadığını söyler. Yutmak, `mustDelete`'in var oluş sebebini geri almak olurdu.
+   * Bir engel arkasındaki her şeyi bırakmasın: gruplar birbirine FK ile bağlı olmayan dallardır, biri düşse öteki yine denenir. Hatalar
+   * biriktirilir ve sonda topluca fırlar; teardown hem işini bitirir hem ne yapamadığını söyler.
    */
   const failures: string[] = [];
   const step = async (fn: () => Promise<void>): Promise<void> => {
@@ -436,21 +273,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     }
   };
 
-  // 0a) Analitik: defterin hiçbir FK'si yok (bilinçli — `0035`), o yüzden sıradan bağımsız.
-  //     GÜN özeti (`analytics_daily`) SİLİNMEZ: gün bazlıdır ve testin damgalı anahtarıyla
-  //     eşleşmez; testler özeti kendi ürettiği güne bakarak sınar, küresel sayıya değil.
+  // 0a) Analitik: defterin FK'si yok, sıradan bağımsız. Gün özeti silinmez; testler özeti kendi ürettiği güne bakarak sınar.
   await step(async () => {
     if (analyticsSessionKeys.length > 0) {
-      // ── ÖZET, OLAYLAR SİLİNMEDEN ÖNCE OKUNUR (09.08 · müşteri şeridinin gözlemi) ────────────
-      // Aşağıdaki `productIds` süzgeci yalnız testin KURDUĞU ürünleri kapsıyor. Bir test uydurma
-      // bir ürün kimliğiyle olay yazıp `buildAll` çağırdığında özet satırı o kimliğe düşüyor, ürün
-      // satırı hiç var olmadığı için `productIds` onu içermiyor ve satır **öksüz kalıyor** —
-      // ölçüldü: taze veritabanında tek satır, ürünü yok, ham defteri (`analytics_event`) boş,
-      // yani artık yeniden de türetilemez. Zararsız görünüyordu ama özeti ham defterle
-      // karşılaştıran her denetim "rollup kaçırmış mı" sorusuyla başlayıp cevabı bulamazdı.
-      //
-      // Kimlikler olayların KENDİSİNDEN okunuyor: çağırana yeni bir alan eklemek, her testin kendi
-      // silme listesini uydurması demekti — `CLAUDE §4b`'nin tam olarak uyardığı şey.
+      // Ürün özeti olaylar silinmeden okunur: uydurma ürün kimliğiyle yazılan olayın özet satırı `productIds` süzgecine girmez ve
+      // öksüz kalırdı.
       const { data: signalRows } = await db
         .from('analytics_event')
         .select('product_id')
@@ -464,9 +291,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
         await mustDelete(db, 'analytics_daily_product', (q) => q.in('product_id', signalProductIds));
       }
     }
-    //   Ama ÜRÜN ve ARAMA özetleri damgalı bir anahtar taşıyor (test ürünü, damgalı terim) — yani
-    //   bırakılırlarsa gün geçtikçe biriken, kimsenin sahiplenmediği satırlar olurlar. Ürün özeti
-    //   ürünle birlikte gider (anahtar `product_id`), arama özeti kendi hedefiyle.
+    // Ürün ve arama özetleri damgalı anahtar taşır, bırakılırsa sahipsiz birikir: ürün özeti ürünle, arama özeti kendi hedefiyle gider.
     if (productIds.length > 0) {
       await mustDelete(db, 'analytics_daily_product', (q) => q.in('product_id', productIds));
     }
@@ -475,8 +300,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     }
   });
 
-  // 0) İş izleri: hiçbir şeye FK ile bağlı değiller, sıradan bağımsız — en başta gitsinler ki
-  // aşağıdaki grafiklerden biri düşse bile gözlemleme tabloları kirli kalmasın.
+  // 0) İş izleri: FK'leri yok, en başta gitsinler ki aşağıdaki gruplardan biri düşse de gözlem tabloları temiz kalsın.
   await step(async () => {
     if (jobNames.length > 0) {
       await mustDelete(db, 'job_run', (q) => q.in('name', jobNames));
@@ -511,12 +335,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   // Tek grup, çünkü halkalar birbirini `restrict` ile tutuyor: biri kalırsa sonrakinin denenmesi
   // zaten anlamsız. Depo ve para AYRI gruplarda — onlar bu zincirin dalı değil, komşusu.
   await step(async () => {
-    // 0b) Sipariş grafiği ÜRÜNDEN VE PROFİLDEN ÖNCE: `order_item.variant_id` restrict ürünü,
-    //     `order.customer_id` restrict profili tutar — sipariş dururken ikisi de silinemez.
-    //     Rezervasyon AÇIKÇA: `order_id` bağı FK'sız (0006), cascade toplamaz (interface künyesi).
-    //
-    // Profilin siparişleri AYNI listeye katılır, ayrı bir silme olarak değil: rezervasyon bağı
-    // FK'siz ve o boşluğu iki ayrı yerde kapatmak, birini unutmanın kapısıdır.
+    // 0b) Sipariş grafiği üründen ve profilden önce: `order_item.variant_id` ürünü, `order.customer_id` profili `restrict` ile tutar.
+    //     Profilin siparişleri aynı listeye katılır, çünkü FK'siz rezervasyon bağını iki yerde kapatmak birini unutmanın kapısıdır.
     const allOrderIds =
       profileIds.length > 0
         ? [...new Set([...orderIds, ...(await idsOf(db, 'order', 'customer_id', profileIds))])]
@@ -524,16 +344,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
 
     await purgeOrders(db, allOrderIds);
 
-    // 0c) **Depo devirleri PARTİLERDEN ÖNCE** (ölçüldü 14.08): `warehouse_transfer_line` partiyi
-    //     İKİ uçtan da `restrict` ile tutuyor (`source_stock_id`, `target_stock_id`). Devir
-    //     temizliği §8'de duruyordu, yani parti silmesinden (§1) SONRA — sıra tersti ve parti
-    //     silinemiyordu. Görünmüyordu çünkü devir testi kendi `mustDelete` satırıyla önden
-    //     temizliyordu; o satır kalkınca eksik sıra ortaya çıktı. Başlık gider, satırları CASCADE.
+    // 0c) Depo devirleri partilerden önce: `warehouse_transfer_line` partiyi iki uçtan `restrict` ile tutar. Başlık gider, satırları
+    //     CASCADE.
     if (warehouseIds.length > 0) {
-      // **DEFTER TRANSFERDEN DE ÖNCE** (06.14): `stock_movement.transfer_id` `restrict` — sevk,
-      // kabul ve iptal satırları transfer başlığını tutuyor. Parti dalı (§1) bu satırları
-      // yakalıyor ama SIRA GEÇ: transfer temizliği partilerden önce koşuyor, yani o an hareketler
-      // hâlâ duruyor. Depo kimliğinden gitmek şart — hareketin kendi `warehouse_id`si var.
+      // Stok defteri transferden de önce, çünkü `stock_movement.transfer_id` `restrict`; depo kimliğinden gidilir, hareketin kendi
+      // `warehouse_id`si var.
       await mustDelete(db, 'stock_movement', (q) => q.in('warehouse_id', warehouseIds));
       await mustDelete(db, 'warehouse_transfer', (q) => q.in('from_warehouse_id', warehouseIds));
       await mustDelete(db, 'warehouse_transfer', (q) => q.in('to_warehouse_id', warehouseIds));
@@ -544,38 +359,28 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       const variantIds = await idsOf(db, 'product_variant', 'product_id', productIds);
       if (variantIds.length > 0) {
         const stockIds = await idsOf(db, 'stock', 'variant_id', variantIds);
-        // **HAREKET DEFTERİ partiden ÖNCE** (06.14): `stock_movement.stock_id` `restrict` — hareketi
-        // olan parti silinemez. Eskiden burada `stock_adjustment` vardı ve o tablo yalnız imhaları
-        // tutuyordu; defter satış/sevk/kabul hareketlerini de taşıdığı için artık HER partinin
-        // silinmesi bu satırdan geçiyor. Ayrıca `reverses_id` self-FK'sı yüzünden ters kayıtlar
-        // aslından ÖNCE gitmeli — tek `delete` ifadesi bunu kendiliğinden yapar (aynı ifade içindeki
-        // satırlar birbirini kısıtlamaz), satır satır silinseydi sıra tutturmak gerekirdi.
+        // Stok defteri partiden önce (`stock_movement.stock_id` `restrict`); ters kayıtların `reverses_id` self-FK'sını tek `delete`
+        // ifadesi kendiliğinden çözer.
         if (stockIds.length > 0) {
           await mustDelete(db, 'stock_movement', (q) => q.in('stock_id', stockIds));
-          // **Kalem–parti eşlemesi de partiyi tutuyor** (`order_item_batch_stock_id_fkey`,
-          // `restrict`). Çoğu senaryoda sipariş cascade'i onu topluyordu — ama sipariş purge'ün
-          // kapsamı dışındaysa (başka müşterinin ya da anonim alıcının siparişi) parti asılı
-          // kalıyordu. Görünmüyordu çünkü testler partiyi hatayı YUTAN `delete()` ile siliyordu;
-          // `mustDelete` yoluna geçince ortaya çıktı (ölçüldü 27.08).
+          // Kalem–parti eşlemesi de partiyi `restrict` ile tutar; sipariş purge'ün kapsamı dışındaysa onu cascade toplamaz.
           await mustDelete(db, 'order_item_batch', (q) => q.in('stock_id', stockIds));
         }
         await mustDelete(db, 'reservation', (q) => q.in('variant_id', variantIds));
         await mustDelete(db, 'purchase_order_item', (q) => q.in('variant_id', variantIds));
-        // **Tarif kalemi ÜRÜNDEN ÖNCE** (05.16 · denetim eki 07.08): `recipe_item.variant_id` FK'si
-        // `restrict` — tarifte duran varyantın ürünü silinemez. Burada olmasaydı, bir tarif fikstürü
-        // kuran test MEVCUT ürün-fikstürlü testlerin teardown'unu kırardı; kırılma da kendi
-        // dosyasında değil BAŞKA bir dosyada görünürdü.
+        // Tarif kalemi üründen önce: `recipe_item.variant_id` `restrict` ve burada olmasaydı tarif fikstürü başka dosyanın teardown'unu
+        // kırardı.
         await mustDelete(db, 'recipe_item', (q) => q.in('variant_id', variantIds));
+        // Kasa ürün eşlemesi varyantı `restrict` ile tutar.
+        await mustDelete(db, 'register_product', (q) => q.in('variant_id', variantIds));
         await mustDelete(db, 'stock', (q) => q.in('variant_id', variantIds));
       }
     }
 
     // 3) Tedarik grafiği: giriş → sipariş → tedarikçi. Girişler siparişe `set null`, partiler zaten gitti.
     if (supplierIds.length > 0) {
-      // **DEFTER MAL KABULDEN ÖNCE** (06.14): `stock_movement.intake_id` `restrict` — kabulün
-      // giriş satırı belgeyi tutuyor. Parti dalı (§1) bu satırları yakalıyor ama YALNIZ `productIds`
-      // verilmişse; tedarikçi-only bir purge'de kabul asılı kalır ve sonraki koşu onun tutarını
-      // yeniden sayar (ölçüldü 27.08: borç testi `4000` beklerken `8000` gördü — aynı kabul iki kez).
+      // Stok defteri mal kabulden önce (`stock_movement.intake_id` `restrict`); parti dalı bu satırları yalnız `productIds` verilmişse
+      // yakalar.
       const intakeIds = await idsOf(db, 'stock_intake', 'supplier_id', supplierIds);
       if (intakeIds.length > 0) await mustDelete(db, 'stock_movement', (q) => q.in('intake_id', intakeIds));
       await mustDelete(db, 'stock_intake', (q) => q.in('supplier_id', supplierIds));
@@ -584,8 +389,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     }
 
     // 4) Katalog ve müşteri kökleri.
-    // Tarif ÜRÜNDEN ÖNCE: kalemleri `cascade` ile gider ve o kalemler ürünün varyantını `restrict`
-    // ile tutuyor. Ters sırada ürün silinemez ve hata BAŞKA bir testin teardown'unda görünürdü.
+    // Tarif üründen önce: kalemleri `cascade` ile gider ve ürünün varyantını `restrict` ile tutar, ters sırada hata başka testin
+    // teardown'unda görünürdü.
     if (recipeIds.length > 0) await mustDelete(db, 'recipe', (q) => q.in('id', recipeIds));
     if (productIds.length > 0) await mustDelete(db, 'product', (q) => q.in('id', productIds));
     // Aile ÜRÜNDEN SONRA: `product.family_id` FK'si `set null`, yani sıra zorunlu değil — ama ürünler
@@ -602,14 +407,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       // Sefer kaydı kuryeyi `restrict` ile tutar (0046); kapanış da seferi tutar — ikisi tek
       // yardımcıdan, sabit sırayla gider. `closed_by` `set null`, ikinci silme gerektirmez.
       await purgeDeliveryRuns(db, 'courier_id', profileIds);
-      // Talepler PROFİLDEN ÖNCE ve AÇIKÇA (ölçüldü 26.08): profil cascade'i talebi de götürür ama
-      // tek DELETE içinde sıra tanımsız — personel profili müşterininkinden önce düşerse cevabının
-      // `author_id`si `set null` olur ve `ticket_message_author` kısıtı patlar ("admin mesajı
-      // yazarsız olamaz"). Önce müşterilerin talepleri (mesajlar cascade), sonra profiller.
+      // Talepler profilden önce ve açıkça: tek DELETE içinde sıra tanımsızdır ve personel profili önce düşerse cevabın `author_id`si
+      // `set null` olur, `ticket_message_author` kısıtı patlar.
       await mustDelete(db, 'ticket', (q) => q.in('customer_id', profileIds));
-      // "Gelince haber ver" kayıtları PROFİLDEN ÖNCE (21.306): `customer_id` `set null`, yani profil
-      // gidince satır sahipsiz kalır ve hiçbir cascade toplamaz — bekleyen listesi test adresleriyle
-      // dolardı (bölge kaydının `zoneNoticePostalCodes` gerekçesinin aynısı).
+      // "Gelince haber ver" kayıtları profilden önce: `customer_id` `set null`, profil gidince satır sahipsiz kalır ve hiçbir cascade
+      // toplamaz.
       await mustDelete(db, 'variant_stock_notice', (q) => q.in('customer_id', profileIds));
       await mustDelete(db, 'user_profiles', (q) => q.in('id', profileIds)); // adresleri CASCADE
     }
@@ -622,16 +424,21 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     }
   });
 
-  // 2+7) Para grafiği — hareket, sonra hesap. Hesap silmesi `restrict` ile korunuyor, yani
-  //      hareketler durdukça hesap gitmez (denetim R1). Karşı hesap da sayılır: transfer TEK
-  //      satırdır ve karşı uçtan da `restrict` ile tutulur.
-  //
-  //      **Zincirin dalı DEĞİL, komşusu** (ölçüldü 14.08): hareketin siparişe, tedarik girişine ve
-  //      banka yüklemesine bakan FK'lerinin hepsi `set null` — yani yukarıdaki zincir yarıda kalsa
-  //      bile para tarafı temizlenebilir. Eskiden zincirin ortasındaydı ve ordaki bir engel bunu da
-  //      bırakırdı.
+  // 2+7) Para grafiği: hareket, sonra hesap; transfer tek satırdır ve karşı uçtan da `restrict` ile tutulur. Ayrı grupta, çünkü
+  //      hareketin siparişe, kabule ve yüklemeye bakan FK'leri `set null` ve zincir yarıda kalsa da para tarafı temizlenebilir.
   await step(async () => {
     if (accountIds.length > 0) {
+      // Kasa eşlemesi hesabı `restrict` ile tutar ve eşlenmiş hesabın hareketi kasa kuyruğuna FK'siz satır bırakır; eşleme
+      // hareketlerden önce gider ki silinen hareket kuyruğa yeniden düşmesin.
+      const mapped = await mappedCashAccounts(db, accountIds);
+      if (mapped.length > 0) {
+        const movementIds = [
+          ...(await idsOf(db, 'money_movement', 'account_id', mapped)),
+          ...(await idsOf(db, 'money_movement', 'counter_account_id', mapped)),
+        ];
+        await mustDelete(db, 'register_store', (q) => q.in('cash_account_id', mapped));
+        if (movementIds.length > 0) await mustDelete(db, 'register_queue', (q) => q.in('movement_id', movementIds));
+      }
       await mustDelete(db, 'money_movement', (q) => q.in('account_id', accountIds));
       await mustDelete(db, 'money_movement', (q) => q.in('counter_account_id', accountIds));
       // Banka import zinciri de hesaba bağlı ve `bank_import` `restrict` — şablon `cascade` olduğu
@@ -641,9 +448,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       await mustDelete(db, 'bank_import_profile', (q) => q.in('account_id', accountIds));
       await mustDelete(db, 'account', (q) => q.in('id', accountIds));
     }
-    // Belge, cari, etiket ve tür hareketlerden SONRA (12.12 · 13.09): belge bağı iki uçtan `cascade`,
-    // cari bağı `set null`, etiketin FK'si yok; tür ise FK'dir (`no action`) — onu taşıyan hareket,
-    // belge ya da carinin varsayılanı durdukça silinemez, bu yüzden EN SONDA.
+    // Belge, cari, etiket ve tür hareketlerden sonra: tür FK'dir (`no action`) ve onu taşıyan hareket, belge ya da cari varsayılanı
+    // durdukça silinemez, bu yüzden en sonda.
     if (documentIds.length > 0) await mustDelete(db, 'money_document', (q) => q.in('id', documentIds));
     if (counterpartyIds.length > 0) await mustDelete(db, 'counterparty', (q) => q.in('id', counterpartyIds));
     if (tagSlugs.length > 0) await mustDelete(db, 'movement_tag', (q) => q.in('slug', tagSlugs));
@@ -663,14 +469,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     }
     // Sefer aracı `restrict` ile tutar (0046) — sefer görmüş araç ancak seferleriyle gider.
     await purgeDeliveryRuns(db, 'vehicle_id', vehicleIds);
-    /*
-      ARAÇ SATIRININ KENDİSİ BURADA DEĞİL, §9'DA SİLİNİR (21.249 · 04.09) — araç artık "bağımsız
-      kayıt" DEĞİL: `warehouse.vehicle_id … on delete restrict` ile araç deposu onu tutuyor, yani
-      araç ancak deposundan sonra gidebilir. Bu blok depolardan ÖNCE koşuyor; satır burada kalsaydı
-      hem aracını hem deposunu bildiren her teardown `warehouse_vehicle_id_fkey` ile yarıda kalırdı
-      (ölçüldü 04.09: `vehicle-binding.test.ts`). Sıcaklık ve sefer süpürmesi burada kalabilir —
-      ikisi de araca bağlı, araçtan önce gitmeleri gerekiyor ve depoyla işleri yok.
-    */
+    // Araç satırı burada değil §9'da silinir: araç deposu onu `restrict` ile tutar ve bu blok depolardan önce koşar.
     if (zoneNoticePostalCodes.length > 0) {
       await mustDelete(db, 'zone_notice', (q) => q.in('postal_code', zoneNoticePostalCodes));
     }
@@ -681,25 +480,14 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     if (settingIds.length > 0) await mustDelete(db, 'settings', (q) => q.in('id', settingIds));
   });
 
-  // 8) Depolar EN SON, profillerden de sonra: depoya `restrict` ile bağlı ne varsa (parti, sipariş,
-  //    giriş, sıcaklık kaydı, bölge) yukarıda gitti; personel kapsamı ise ayrı bir tetikleyiciyle
-  //    korunuyor — kapsamda geçen depo silinemez, o yüzden profiller önce gitmek zorunda.
-  //
-  //    **KENDİ GRUBUNDA** ve bu kritik: depo, çöpün OPERATÖRE GÖRÜNDÜĞÜ tek tablo (depo seçicisi
-  //    `T-MSAFW5VS1` gibi satırları listeler). Yukarıdaki herhangi bir dalda takılan teardown,
-  //    eskiden depoyu da bırakıyordu — ölçüldü 14.08: 51 artık deponun 46'sı bomboştu, yani onları
-  //    hiçbir FK tutmuyordu, silme sadece hiç denenmemişti.
-  //
-  //    Silinen ARAÇ DEPOLARININ araçları §9'a taşınıyor: depo silinmeden okunmak zorundalar (bağ
-  //    depoda duruyor), silinmeleri ise depodan sonra olmak zorunda.
+  // 8) Depolar en son, profillerden de sonra: personel kapsamında geçen depo tetikleyiciyle korunur. Kendi grubundadır, çünkü depo
+  //    çöpün operatöre göründüğü tablodur ve başka daldaki engel onu bırakmamalı.
   let vanVehicleIds: string[] = [];
   await step(async () => {
     if (warehouseIds.length > 0) {
-      // Tedarikçisi olmayan mal kabulü de vardır (elle giriş) — o satır §3'te yakalanmaz ve depoyu
-      // `restrict` ile tutar (denetim R3).
+      // Tedarikçisi olmayan mal kabulü (elle giriş) §3'te yakalanmaz ve depoyu `restrict` ile tutar.
       await mustDelete(db, 'stock_intake', (q) => q.in('warehouse_id', warehouseIds));
-      // Devirler burada DEĞİL §0c'de gidiyor — satırları partiyi tutuyor, o yüzden partilerden önce
-      // gitmek zorundalar (yukarıdaki künye).
+      // Devirler burada değil §0c'de gider, çünkü satırları partiyi tutar.
       await mustDelete(db, 'warehouse_variant_threshold', (q) => q.in('warehouse_id', warehouseIds));
       // Ölçüm noktaları: alan depoyu `restrict` ile tutar, aracınki `set null` — yani alan gitmek
       // ZORUNDA, araç depoyla birlikte adresini kaybeder ve yaşamaya devam eder. Testin kendi
@@ -719,24 +507,18 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       // Süzgeç `warehouse_id`: **sistem şablonları (`warehouse_id null`) BU SÜZGECE GİRMEZ** ve
       // girmemeli — onlar migration'ın kurduğu kalıcı kayıtlar, testin çöpü değil.
       await mustDelete(db, 'shipping_box', (q) => q.in('warehouse_id', warehouseIds));
-      /*
-        ARAÇ DEPOSUNUN ARACI DA GİDER (21.249 · 04.09) — ama SONRA (§9), çünkü yön depodan araca:
-        `warehouse.vehicle_id … on delete restrict`. Araç önce silinseydi depo onu tutardı.
-        Burada yalnız OKUNUYOR: bağ depo satırında duruyor, depo silindikten sonra sorulamaz.
-
-        Bu adım olmadan `createTestWarehouse(kind:'vehicle')`ın kendiliğinden açtığı araç kaydı
-        geride kalırdı: FK yok, hata yok, yalnız her koşuda tabloya bir ölü plaka — `document_counter`
-        ile aynı sessiz birikim sınıfı (yukarıdaki künye). Testin AYRICA `vehicleIds` bildirmesi
-        gerekmiyor; deposunu bildirmesi yetiyor, çünkü bağ 1:1 ve depodan okunabiliyor.
-      */
+      // Kasa eşlemesi, fiş ve kasa hareketi depoyu `restrict` ile tutar; fişin satırları ve ödemeleri ona cascade.
+      await mustDelete(db, 'register_store', (q) => q.in('warehouse_id', warehouseIds));
+      await mustDelete(db, 'register_cash_op', (q) => q.in('warehouse_id', warehouseIds));
+      await mustDelete(db, 'register_ticket', (q) => q.in('warehouse_id', warehouseIds));
+      // Araç deposunun aracı da gider ama depodan sonra (§9), çünkü bağ depodan araca `restrict`; burada yalnız okunur, depo silindikten
+      // sonra sorulamaz.
       vanVehicleIds = await vehiclesOfWarehouses(db, warehouseIds);
       await mustDelete(db, 'warehouse', (q) => q.in('id', warehouseIds));
     }
   });
 
-  // 9) ARAÇLAR — depolardan SONRA (21.249). İki kaynak birleşiyor: testin açıkça bildirdiği
-  //    araçlar ve §8'in silinen araç depolarından okuduğu araçlar. Aynı araç iki listede de
-  //    olabilir (hem deposunu hem plakasını bildiren test), o yüzden küme.
+  // 9) Araçlar depolardan sonra: testin bildirdiği araçlar ve §8'in silinen araç depolarından okuduğu araçlar, küme olarak.
   await step(async () => {
     const targets = [...new Set([...vehicleIds, ...vanVehicleIds])];
     if (targets.length === 0) return;
@@ -746,26 +528,10 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     await mustDelete(db, 'vehicle', (q) => q.in('id', targets));
   });
 
-  // SAHİPSİZ BİLDİRİMLER — EN SONDA, hedefler silindikten sonra (27.08).
-  //
-  // `notification` hedefini `target_type` + `target_id` ile tutuyor, FK ile DEĞİL: cascade onu
-  // toplamaz. Müşteri satırı profil cascade'iyle giderdi, ama `dispatchStaffNotification`
-  // e-postasız alıcıda `document_undeliverable`'ı GERÇEK yönetici profillerine yazıyor ve o
-  // profiller purge'ün malı değil — her sipariş testi operasyon ziline KALICI bir satır
-  // bırakıyordu (yerelde 127 satır birikmişti; zilin ilk sayfası tek türe dönmüştü).
-  //
-  // Neden hedef listesine değil VARLIĞA bakıyor: teardown'ların çoğu siparişi `purgeTestData`ya
-  // vermek yerine ELLE siliyor (`db.from('order').delete()` — 40 dosya, 58 çağrı; CLAUDE §4b'nin
-  // yasakladığı desen). O yol izlendiğinde sipariş purge çağrılmadan önce yok oluyor, `orderIds`
-  // boş kalıyor ve listeye bağlı bir temizlik hiç koşmuyor — ölçüldü: iki koşu 42'şer satır
-  // bıraktı. Varlığa bakan süpürme o dosyalara dokunmadan aynı işi yapıyor.
-  //
-  // Süpürülen şey tanımı gereği ÇÖPTÜR: hedefi olmayan satır tıklanamaz (`href` null düşer).
-  // Duran hedefin satırına dokunulmaz — seed'in kendi örnekleri bu yüzden yerinde kalır.
+  // Sahipsiz bildirimler en sonda, hedefler silindikten sonra: `notification` hedefini FK'siz tutar ve teardown'ların çoğu siparişi
+  // elle sildiği için süpürme listeye değil hedefin varlığına bakar. Hedefi olmayan satır tanımı gereği çöptür, duranınkine dokunulmaz.
   await step(async () => {
-    // Liste `NotificationTargetTypeEnum`in TAMAMIDIR — eksik bırakılan tür sessizce birikir
-    // (ölçüldü 27.08: `ticket` unutulunca `ticket_opened` artığı 6 satır kaldı, ötekiler 1'e
-    // düşerken). Yeni hedef türü şemaya girdiğinde buraya da girmeli; karşılığı o türün TABLOSU.
+    // Liste `NotificationTargetTypeEnum`in tamamıdır, eksik bırakılan tür sessizce birikir; karşılığı o türün tablosu.
     for (const [tur, tablo] of [
       ['order', 'order'],
       ['ticket', 'ticket'],
@@ -786,17 +552,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       if (sahipsiz.length > 0) await mustDelete(db, 'notification', (q) => q.in('id', sahipsiz));
     }
 
-    // `run_close_mismatch` HEDEFSİZ doğuyor — kapanış bir kayda değil MUTABAKATA bakar — ve
-    // seferine yalnız `payload.referenceNo` ile bağlanıyor. Hedef türü VERİLMEDİ çünkü şemanın
-    // künyesi "yeni hedef türü EKRANIYLA birlikte gelir" diyor ve sefer detay ekranı yok; o yüzden
-    // süpürme burada referanstan yürüyor. İki ayrı kapanış testi var (`apps/web/lib/courier` +
-    // `packages/application/src/courier`) ve ikisi de aynı artığı bırakıyordu — temizliği test
-    // dosyalarına kopyalamak yerine tek yerde tutmak, üçüncü test yazıldığında da çalışır.
-    /* ÜÇ TÜR DAHA aynı sınıfta ve 05.09'a kadar EKSİKTİ — ölçüldü: yerelde 198 sahipsiz satır
-       birikmiş (144 transfer + 54 askıda kapanış). Künyenin kendi uyarısı gerçekleşmiş: "eksik
-       bırakılan tür sessizce birikir". `run_close_pending` 03.09'da, iki transfer türü 04.09'da
-       eklenmişti; süpürücüye eklenmedikleri için testlerin yazdığı satırlar paylaşılan DB'de kaldı.
-       Sefere referansla bağlananlar tek turda, transfer kimliğiyle bağlananlar kendi turunda. */
+    // Hedef türü olmayan bildirimler bağını `payload`da taşır: sefere referansla bağlananlar tek turda, transfer kimliğiyle bağlananlar
+    // kendi turunda süpürülür.
     await sahipsizBildirimleriSil(db, ['run_close_mismatch', 'run_close_pending'], 'delivery_run', 'reference_no', 'referenceNo');
     await sahipsizBildirimleriSil(db, ['transfer_shortfall', 'transfer_excess'], 'warehouse_transfer', 'id', 'transferId');
   });
@@ -809,15 +566,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
 }
 
 /**
- * HEDEF NESNESİ OLMAYAN personel bildirimlerini sahipliğine göre süpürür.
- *
- * Bu türler `target_type`/`target_id` yazmıyor (şemanın kuralı: "yeni hedef türü EKRANIYLA birlikte
- * gelir" ve o ekranlar henüz yok), bağlarını `payload` içinde taşıyorlar. Süpürme o bağdan yürür:
- * payload'daki kimlik/referans artık tabloda YOKSA satır bir testin artığıdır.
- *
- * Tek yerde durmasının sebebi ölçülmüş: aynı artığı bırakan üç ayrı test dosyası var ve temizliği
- * her birine kopyalamak, dördüncüsü yazıldığında yine unutulurdu. Nitekim tür listesi eksik
- * bırakıldığı için 198 satır birikmişti.
+ * Hedef nesnesi olmayan personel bildirimlerini sahipliğine göre süpürür: bu türler bağlarını `payload`da taşır ve oradaki kimlik
+ * tabloda yoksa satır bir testin artığıdır.
  */
 async function sahipsizBildirimleriSil(
   db: SupabaseClient,
@@ -848,18 +598,20 @@ async function codesOf(db: SupabaseClient, warehouseIds: string[]): Promise<stri
   return (data ?? []).map((row) => (row as { code: string }).code);
 }
 
-/**
- * Silinecek depoların ARAÇ kayıtları (21.249) — yalnız `kind='vehicle'` satırlarında dolu.
- *
- * Depo silinmeden ÖNCE okunur (sonra okunacak satır kalmaz), silinmesi ise depodan SONRA olur:
- * yön depodan araca ve `restrict` (`warehouse.vehicle_id`).
- */
+/** Silinecek depoların araç kayıtları; depo silinmeden önce okunur, araç ise depodan sonra silinir (`warehouse.vehicle_id` `restrict`). */
 async function vehiclesOfWarehouses(db: SupabaseClient, warehouseIds: string[]): Promise<string[]> {
   const { data, error } = await db.from('warehouse').select('vehicle_id').in('id', warehouseIds);
   if (error) throw error;
   return (data ?? [])
     .map((row) => (row as { vehicle_id: string | null }).vehicle_id)
     .filter((id): id is string => id !== null);
+}
+
+/** Kasa eşlemesi olan hesaplar; eşlenmiş hesabın hareketi kasa kuyruğuna FK'siz satır bırakır. */
+async function mappedCashAccounts(db: SupabaseClient, accountIds: string[]): Promise<string[]> {
+  const { data, error } = await db.from('register_store').select('cash_account_id').in('cash_account_id', accountIds);
+  if (error) throw error;
+  return (data ?? []).map((row) => (row as { cash_account_id: string }).cash_account_id);
 }
 
 /** Bir üst kaydın alt satır kimlikleri — silme sırası için gerekli ara adım. */

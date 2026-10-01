@@ -9,25 +9,9 @@ import { stripeEffects, type PaymentFee, type PayoutItem, type StripeEffects } f
 import { webPaymentEffects } from './transition';
 
 /**
- * Stripe webhook işleyicisi (07.5) — **uygulama katmanı orkestrasyonu**. STACK §13, DOMAIN §4.
- *
- * Üç emniyet üst üste durur ve karıştırılmaz:
- * 1. **İmza** — gövde doğrulanmadan OKUNMAZ. Doğrulama HTTP kabuğunda yapılır (ham gövde ister),
- *    buraya doğrulanmış olay gelir.
- * 2. **İdempotens** — `(provider, event_id)` benzersizdir; ikinci geliş no-op'tur. Sağlayıcı aynı
- *    olayı tekrar göndermeyi bir arıza saymaz, sözleşmesi budur.
- * 3. **Geç ödeme** — rezervasyon düşmüşken ödeme onayı gelebilir. Ne yapılacağına MOTOR karar verir
- *    (`decideLatePayment`): devam et / yeniden ayır / parayı iade et.
- *
- * **SAPMA — webhook `apps/backend`'de değil, burada.** `STACK §7` webhook'ları backend'e koyuyor.
- * Ama ödeme onayının yaptığı iş (tahsilat hareketi + durum geçişi + bildirim) uygulama kapılarında
- * yazılı; backend'e taşımak ya o mantığı ikinci kez yazmayı ya da kapıları pakete çıkarmayı
- * gerektirirdi. İkincisi doğru hamle ama bu işin kapsamı değil. Buradaki gövde ince: taşınmak
- * istendiğinde tek dosya taşınır.
- *
- * **Onay yolu 07.18'den beri ortak katmanda** (`confirmOnlinePayment`): webhook gelmediğinde ödeme
- * sayfası ve zamanlayıcı sağlayıcıya sorup AYNI yoldan onaylıyor. Burada kalan, olayın kendisine ait
- * olanlar: imza sonrası yönlendirme, ödeme ücreti, iade mutabakatı ve payout.
+ * Stripe webhook işleyicisi: imza HTTP kabuğunda doğrulanır, olay `(provider, event_id)` ile bir kez işlenir ve geç ödemenin kararı
+ * motordadır (`decideLatePayment`). Yeri backend olurdu (STACK §7), ama onay mantığı uygulama kapılarında yazılı olduğu için gövde
+ * ince tutuldu ve onayın kendisi ortak katmanda (`confirmOnlinePayment`).
  */
 
 type WebhookOutcome =
@@ -47,11 +31,11 @@ export interface VerifiedEvent {
   /** Tahsil edilen tutar (cent) — sipariş toplamına değil, GERÇEKTEN ödenene bakarız. */
   amountTotalCents: number | null;
   /**
-   * Sağlayıcı tarafında o ödemeden **bugüne kadar** iade edilmiş TOPLAM (cent) — `charge.refunded`
-   * olayında dolu. Fark değil toplam: olay tekrar gelirse fark iki kez yazılırdı, toplam yazılmaz.
+   * Sağlayıcı tarafında o ödemeden bugüne kadar iade edilmiş toplam (cent), `charge.refunded` olayında dolu. Fark değil toplam,
+   * çünkü olay tekrar gelirse fark iki kez yazılırdı.
    */
   amountRefundedCents?: number | null;
-  /** `payout.paid` olayının yükü (12.14): havuzdan bankaya giden NET tutar (cent) ve varış günü. */
+  /** `payout.paid` olayının yükü: havuzdan bankaya giden NET tutar (cent) ve varış günü. */
   payout?: { id: string; amountCents: number; arrivalDate: string; currency: string } | null;
   raw?: Record<string, unknown> | null;
 }
@@ -75,12 +59,8 @@ export async function handleStripeEvent(event: VerifiedEvent, accountId: string 
     // Damga ATILMAZ: işlenmemiş olay elle tekrar denenebilir kalmalı.
     const message = error instanceof Error ? error.message : String(error);
     await events.markFailed(claim.event.id, message);
-    // **TEKNİK İZ ayrıca düşülür** (OBSERVABILITY §1, §2). `markFailed` bir İŞ KAYDIDIR
-    // (`webhook_event`): "bu olay işlenemedi" der, "neden" demez ve operasyon sağlık ekranına
-    // düşmez. Hata buradan çağırana bir 500 CEVABI olarak dönüyor — fırlatılmadığı için Next'in
-    // `onRequestError` kancası da görmüyor, yani `error_log`'da tek satır kalmıyordu. Alarm
-    // bilinçli olarak yokken (§4.1) ekranın göremediği hata görülmemiş hatadır.
-    // Bağlam KİMLİK taşır (§5): olay/sipariş kimliği yeter, gövde yazılmaz.
+    // Teknik iz ayrıca düşülür (OBSERVABILITY §1): `markFailed` iş kaydıdır ve sağlık ekranına düşmez, hata da fırlatılmadığı için
+    // başka bir kanca görmez. Bağlam kimlik taşır, gövde yazılmaz.
     await captureError(error, {
       source: SOURCES.webhook,
       context: { provider: 'stripe', eventId: event.id, type: event.type, orderId: event.orderId },
@@ -90,15 +70,14 @@ export async function handleStripeEvent(event: VerifiedEvent, accountId: string 
 }
 
 /**
- * Olay adları `PaymentIntent` ailesinden (28.07 · ödeme sayfa içine alındı). Eski oturum olayları
- * (`checkout.session.*`) DA kabul edilir: geçişten önce açılmış ve hâlâ ödenmemiş bir oturum
- * kalmışsa onun onayı da doğru işlensin — sağlayıcıdaki eski olay bizim kod değişikliğimizi bilmez.
+ * Olay adları `PaymentIntent` ailesinden; eski oturum olayları (`checkout.session.*`) da kabul edilir, çünkü sağlayıcıda geçişten önce
+ * açılmış ödenmemiş bir oturum kalmış olabilir.
  */
 const PAID_EVENTS = ['payment_intent.succeeded', 'checkout.session.completed', 'checkout.session.async_payment_succeeded'];
 const RELEASE_EVENTS = ['payment_intent.canceled', 'checkout.session.expired'];
-/** İade mutabakatı (07.11) — bizim başlattığımız ya da panelden elle yapılan iade buradan döner. */
+/** İade mutabakatı — bizim başlattığımız ya da panelden elle yapılan iade buradan döner. */
 const REFUND_EVENTS = ['charge.refunded'];
-/** Payout (12.14): havuzdaki para bankaya geçti — Stripe → banka transferi, künyesinde içerik. */
+/** Payout: havuzdaki para bankaya geçti — Stripe → banka transferi, künyesinde içerik. */
 const PAYOUT_EVENTS = ['payout.paid'];
 
 async function route(event: VerifiedEvent, accountId: string | null, effects: StripeEffects): Promise<WebhookOutcome> {
@@ -111,18 +90,9 @@ async function route(event: VerifiedEvent, accountId: string | null, effects: St
 }
 
 /**
- * **İade mutabakatı** (07.11): sağlayıcıda iade edilmiş toplam ile bizim defterimizdeki toplamı
- * eşitler.
- *
- * İki yol aynı olayı doğurur ve ikisi de doğru işlenmeli:
- * - **Biz başlattık** (`refund.ts` → `refunds.create`): hareket çağrıdan HEMEN SONRA yazıldı, olay
- *   geldiğinde iki toplam zaten eşittir → yazılacak bir şey yok. Fark yazsaydık iade iki kez düşerdi.
- * - **Panelden elle yapıldı**: bizim haberimiz yok. Fark burada deftere düşer — yoksa müşterinin
- *   parası dönmüş ama sipariş "ödendi" görünmeye devam ederdi.
- *
- * Sipariş kimliği olayda GÜVENİLİR DEĞİL: `charge` künyesi niyetinkini her zaman taşımaz. Bu yüzden
- * sipariş, tahsilatta sakladığımız kendi künyemizden (`providerRef`) bulunur — kendi verimiz,
- * sağlayıcının şekil değiştirebilen alanından güvenilirdir.
+ * İade mutabakatı: sağlayıcıda iade edilmiş toplam ile defterdeki toplam eşitlenir; bizim başlattığımız iadede ikisi zaten eşittir,
+ * panelden yapılan iadede fark burada deftere düşer. Sipariş olaydan değil tahsilatta sakladığımız künyeden (`providerRef`) bulunur,
+ * çünkü `charge` künyesi niyetinkini her zaman taşımaz.
  */
 async function reconcileRefund(event: VerifiedEvent, accountId: string | null): Promise<WebhookOutcome> {
   if (event.amountRefundedCents == null || !event.paymentIntentId) return { status: 'ok', action: 'ignored' };
@@ -149,6 +119,7 @@ async function reconcileRefund(event: VerifiedEvent, accountId: string | null): 
     orderId,
     accountId: refundAccountId,
     amountCents: missingCents,
+    method: 'online',
     description: 'Sağlayıcı panelinden iade — mutabakat',
     meta: { providerRef: event.paymentIntentId },
     source: 'system',
@@ -158,13 +129,8 @@ async function reconcileRefund(event: VerifiedEvent, accountId: string | null): 
 }
 
 /**
- * Ödeme penceresi kapandı (niyet iptal edildi ya da oturum süresi doldu): ayrılmış mal geri
- * bırakılır. Sipariş TASLAK kalır — müşteri aynı sepetle tekrar deneyebilmeli; iptal etmek onun
- * kararını bizim yerimize vermek olurdu.
- *
- * **Başarısız ödeme buraya DÜŞMEZ** (`payment_intent.payment_failed`): kart reddedildiğinde müşteri
- * hâlâ sayfada, başka bir kart deneyecek. Malı o anda geri bırakmak, ikinci denemesinde "stok
- * kalmadı" demek olurdu.
+ * Ödeme penceresi kapandı: ayrılmış mal geri bırakılır, sipariş taslak kalır ki müşteri aynı sepetle tekrar deneyebilsin. Başarısız
+ * ödeme buraya düşmez (`payment_intent.payment_failed`), çünkü müşteri hâlâ sayfadadır ve başka kart deneyecektir.
  */
 async function releaseExpired(event: VerifiedEvent): Promise<WebhookOutcome> {
   if (!event.orderId) return { status: 'not_found' };
@@ -173,9 +139,8 @@ async function releaseExpired(event: VerifiedEvent): Promise<WebhookOutcome> {
 }
 
 /**
- * Ödeme onayı — **gövde ortak katmanda** (`confirmOnlinePayment`, 07.18): geç ödeme kararı, tahsilat,
- * `confirmed` geçişi, sepet temizliği ve ekran zili orada. Ödeme sayfası ve zamanlayıcı da aynı yolu
- * çağırıyor; tahsilat ödeme kimliğinden türeyen anahtarla yazıldığı için aynı ödeme iki kez işlenmez.
+ * Ödeme onayının gövdesi ortak katmanda (`confirmOnlinePayment`); ödeme sayfası ve zamanlayıcı da aynı yolu çağırır ve tahsilat ödeme
+ * kimliğinden türeyen anahtarla yazıldığı için aynı ödeme iki kez işlenmez.
  */
 async function confirmPayment(event: VerifiedEvent, accountId: string | null, effects: StripeEffects): Promise<WebhookOutcome> {
   if (!event.orderId) return { status: 'not_found' };
@@ -188,10 +153,8 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null, ef
   );
   if (outcome.status === 'not_found') return { status: 'not_found' };
 
-  // ÜCRET ÖDEME BAŞINA (12.14 · kullanıcı kararı 13.09): brüt tahsilat havuza girdi, komisyon oradan
-  // çıkar ve siparişin kârlılığı onu görür. Öğrenilemezse tahsilat yine onaylanır — ücret payout
-  // geldiğinde içeriğinden tamamlanır (`recordPayout`); iz düşülür ki eksik görünsün. İade dalında
-  // tahsilat yazılmadığı için ücret de yazılmaz.
+  // Ücret ödeme başına havuzdan düşer ve siparişin kârlılığı onu görür; öğrenilemezse tahsilat yine onaylanır, ücret payout içeriğinden
+  // tamamlanır (`recordPayout`). İade dalında tahsilat yazılmadığı için ücret de yazılmaz.
   if (outcome.action !== 'refunded' && accountId && event.paymentIntentId) {
     try {
       const fee = await effects.feeOf(event.paymentIntentId);
@@ -208,12 +171,8 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null, ef
 }
 
 /**
- * **Stripe ücreti** (12.14): havuzdan çıkan `stripe-ucreti` türlü gider + siparişin `paymentFee`
- * alanı. Yazım kimliği ödeme niyetidir — aynı ödemeyi anlatan ikinci olay ya da payout'un tamamlaması
- * ikinci satır doğurmaz (`insertOnce`). Sipariş alanı yalnız BOŞKEN dolar: onay anında yazılanı
- * payout'un tamamlaması ezmez. Sipariş bağı harekete YAZILMAZ (`order_id`): siparişin tahsilat
- * toplamı o bağdan türetiliyor (`resync_order_amounts`), gider satırı o toplamı kaydırırdı — bağ
- * künyede durur.
+ * Sağlayıcı ücreti: havuzdan çıkan gider ve siparişin `paymentFee` alanı; yazım kimliği ödeme niyetidir ki ikinci olay ikinci satır
+ * doğurmasın. Gider satırına sipariş bağı yazılmaz, çünkü siparişin tahsilat toplamı o bağdan türer; bağ künyede durur.
  */
 async function recordPaymentFee(
   db: ReturnType<typeof serviceDb>,
@@ -247,18 +206,9 @@ async function recordPaymentFee(
 const PAYOUT_ITEMS_IN_META = 200;
 
 /**
- * **Payout** (12.14 · kullanıcı kararı 13.09: otomatik): havuzdaki para bankaya geçti — Stripe hesabından
- * bankaya TRANSFER, tutarı payout'un NET tutarı. Künyesi payout'un içeriğini taşır (hangi tahsilatlar,
- * iadeler, ücretler): muhasebeci "bu 1.240 € hangi satışların parası" diye sorduğunda cevap satırın
- * üstündedir. Banka ekstresi aynı tutarı getirince o satır bu ucun karşı satırı olur (12.13) — para
- * iki kez sayılmaz.
- *
- * Banka hesabı AYARDIR (`stripe_payout_account_id`). Yoksa yazım YAPILMAZ ve olay işlenmemiş kalır
- * (hata → sağlayıcı yeniden dener, ayar girilince işlenir): sessizce geçmek payout'u kaybetmek olurdu.
- *
- * İçerik ödeme başına ücretin eksiklerini de tamamlar (onay anında öğrenilememiş ücret burada yazılır)
- * ve ödeme dışı Stripe ücretlerini (`stripe_fee`: aylık/Radar) havuzdan düşer — yoksa defterdeki havuz
- * gerçek bakiyenin üstünde kalırdı.
+ * Payout: havuzdaki para bankaya transfer olur, tutarı net, künyesi içeriği (tahsilatlar, iadeler, ücretler) taşır; ekstre aynı tutarı
+ * getirince bu ucun karşı satırı olur. Banka hesabı ayardır (`stripe_payout_account_id`), yoksa olay işlenmemiş kalır ve sağlayıcı
+ * yeniden dener; içerik eksik ve ödeme dışı ücretleri de havuzdan düşer.
  */
 async function recordPayout(event: VerifiedEvent, accountId: string | null, effects: StripeEffects): Promise<WebhookOutcome> {
   if (!event.payout) return { status: 'ok', action: 'ignored' };

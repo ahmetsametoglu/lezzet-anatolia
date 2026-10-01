@@ -1,0 +1,159 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  RegisterCashOpInsertSchema,
+  RegisterCashOpSchema,
+  RegisterCashOpUpdateSchema,
+  RegisterPaymentInsertSchema,
+  RegisterPaymentRowSchema,
+  RegisterPaymentUpdateSchema,
+  RegisterProductInsertSchema,
+  RegisterProductSchema,
+  RegisterProductUpdateSchema,
+  RegisterQueueSchema,
+  RegisterQueueUpdateSchema,
+  RegisterStoreInsertSchema,
+  RegisterStoreSchema,
+  RegisterTicketInsertSchema,
+  RegisterTicketLineInsertSchema,
+  RegisterTicketLineSchema,
+  RegisterTicketLineUpdateSchema,
+  RegisterTicketSchema,
+  RegisterTicketUpdateSchema,
+  type RegisterCashOp,
+  type RegisterCashOpInsert,
+  type RegisterCashOpUpdate,
+  type RegisterPaymentInsert,
+  type RegisterPaymentRow,
+  type RegisterPaymentUpdate,
+  type RegisterProduct,
+  type RegisterProductInsert,
+  type RegisterProductUpdate,
+  type RegisterQueue,
+  type RegisterQueueUpdate,
+  type RegisterStore,
+  type RegisterStoreInsert,
+  type RegisterTicket,
+  type RegisterTicketInsert,
+  type RegisterTicketLine,
+  type RegisterTicketLineInsert,
+  type RegisterTicketLineUpdate,
+  type RegisterTicketUpdate,
+} from '@lezzet/types';
+import { BaseDbService } from '../core/base.service';
+
+// Sertifikalı kasanın bizdeki aynası ve kuyruğu (docs/feature/kasa-muhasebe.md §7); servisler yalnız satır okur ve yazar, plan motordadır.
+
+/** Mağaza eşlemesi; anahtar depo olduğu için yazım `upsert`, silme süzgeçle yapılır. */
+export class RegisterStoreService extends BaseDbService<RegisterStore, RegisterStoreInsert, never> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'register_store', RegisterStoreSchema, RegisterStoreInsertSchema, RegisterStoreSchema as never);
+  }
+
+  /** Operatörün kurduğu küme, tek turda. */
+  list(): Promise<RegisterStore[]> {
+    return this.getAll(undefined, { orderBy: 'externalStoreId' });
+  }
+
+  findByWarehouse(warehouseId: string): Promise<RegisterStore | null> {
+    return this.getOneBy({ warehouseId });
+  }
+
+  findByCashAccount(cashAccountId: string): Promise<RegisterStore | null> {
+    return this.getOneBy({ cashAccountId });
+  }
+
+  save(row: RegisterStoreInsert): Promise<RegisterStore> {
+    return this.upsert(row, 'warehouse_id');
+  }
+
+  async remove(warehouseId: string): Promise<void> {
+    await this.deleteWhere({ warehouseId });
+  }
+}
+
+export class RegisterProductService extends BaseDbService<RegisterProduct, RegisterProductInsert, RegisterProductUpdate> {
+  protected override readonly moneyFields = ['priceCents'];
+
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'register_product', RegisterProductSchema, RegisterProductInsertSchema, RegisterProductUpdateSchema);
+  }
+
+  findByVariant(variantId: string): Promise<RegisterProduct | null> {
+    return this.getOneBy({ variantId });
+  }
+
+  findShipping(vatRate: number): Promise<RegisterProduct | null> {
+    return this.getOneBy({ kind: 'shipping', vatRate });
+  }
+}
+
+export class RegisterTicketService extends BaseDbService<RegisterTicket, RegisterTicketInsert, RegisterTicketUpdate> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'register_ticket', RegisterTicketSchema, RegisterTicketInsertSchema, RegisterTicketUpdateSchema);
+  }
+
+  /** Siparişin fişleri, sırasıyla; bir siparişin fişi bir elin parmağını geçmez. */
+  listByOrder(orderId: string): Promise<RegisterTicket[]> {
+    return this.getAll({ orderId }, { orderBy: 'seq' });
+  }
+}
+
+export class RegisterTicketLineService extends BaseDbService<RegisterTicketLine, RegisterTicketLineInsert, RegisterTicketLineUpdate> {
+  protected override readonly moneyFields = ['amountCents'];
+
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'register_ticket_line', RegisterTicketLineSchema, RegisterTicketLineInsertSchema, RegisterTicketLineUpdateSchema);
+  }
+
+  listByTickets(ticketIds: readonly string[]): Promise<RegisterTicketLine[]> {
+    if (ticketIds.length === 0) return Promise.resolve([]);
+    return this.getAll({ ticketId: [...ticketIds] }, { orderBy: 'createdAt' });
+  }
+}
+
+export class RegisterPaymentService extends BaseDbService<RegisterPaymentRow, RegisterPaymentInsert, RegisterPaymentUpdate> {
+  protected override readonly moneyFields = ['amountCents'];
+
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'register_payment', RegisterPaymentRowSchema, RegisterPaymentInsertSchema, RegisterPaymentUpdateSchema);
+  }
+
+  listByTickets(ticketIds: readonly string[]): Promise<RegisterPaymentRow[]> {
+    if (ticketIds.length === 0) return Promise.resolve([]);
+    return this.getAll({ ticketId: [...ticketIds] }, { orderBy: 'createdAt' });
+  }
+}
+
+export class RegisterCashOpService extends BaseDbService<RegisterCashOp, RegisterCashOpInsert, RegisterCashOpUpdate> {
+  protected override readonly moneyFields = ['amountCents'];
+
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'register_cash_op', RegisterCashOpSchema, RegisterCashOpInsertSchema, RegisterCashOpUpdateSchema);
+  }
+
+  /** Hareketin kasadaki karşılıkları: yazımı ve varsa ters çevrilmesi. */
+  listForMovement(movementId: string): Promise<RegisterCashOp[]> {
+    return this.getAll(undefined, { orFilters: [`movement_id.eq.${movementId},reversal_of.eq.${movementId}`], orderBy: 'createdAt' });
+  }
+}
+
+/** Kuyruk; satırları `money_movement` tetikleyicisi yazar, işleyen yalnız okur, erteler ve siler. */
+export class RegisterQueueService extends BaseDbService<RegisterQueue, never, RegisterQueueUpdate> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'register_queue', RegisterQueueSchema, RegisterQueueSchema as never, RegisterQueueUpdateSchema);
+  }
+
+  /** Vakti gelen satırlar, en eskiden; tur başına sınırlı ki tek tur kasayı boğmasın. */
+  listDue(now: string, limit: number): Promise<RegisterQueue[]> {
+    return this.getAll(undefined, {
+      rangeFilters: [{ field: 'nextAttemptAt', operator: 'lte', value: now }],
+      orderBy: 'markedAt',
+      limit,
+    });
+  }
+
+  /** İşlenen satırı siler; işlem sürerken yeniden işaretlendiyse (`markedAt` değiştiyse) satır kalır ve sonraki tur yine işler. */
+  async complete(id: string, markedAt: string): Promise<void> {
+    await this.deleteWhere({ id, markedAt });
+  }
+}

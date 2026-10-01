@@ -17,13 +17,8 @@ import type { ProviderRefundInput, ProviderRefundOutcome, ProviderRefunder } fro
 import { transitionOrder } from './transition';
 
 /**
- * **Sağlayıcıya iade** (07.11) — paranın karta fiilen dönmesi.
- *
- * Sınanan tek şey SIRA ve onun sonuçları: *önce sağlayıcı çağrısı, sonra hareket.* Ters sırada
- * başarısız bir iade defterde kapanmış görünür, para dönmemiş olur — ve hiçbir ekranda iz bırakmaz.
- * Bu yüzden testlerin çoğu çağrı DÜŞTÜĞÜNDE geriye ne kaldığına bakıyor.
- *
- * Sağlayıcı bir PORT: gerçek Stripe'a çıkmadan "döndü" ve "düştü" hâlleri kurulabiliyor.
+ * Sağlayıcıya iadede sıra önce sağlayıcı çağrısı, sonra harekettir; ters sırada düşen iade defterde kapanmış görünür ama para dönmemiş
+ * olur. Sağlayıcı port olduğu için "döndü" ve "düştü" hâlleri gerçek Stripe'a çıkmadan kurulur.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -32,7 +27,7 @@ const money = new MoneyMovementService(db);
 
 const stamp = Date.now();
 let customerId: string;
-// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+// Parti ve sipariş deposuz yazılamaz (DOMAIN §17); testin kendi deposu.
 let warehouseId: string;
 let variantId: string;
 let productId: string;
@@ -56,7 +51,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  // Sıra defter → parti → sipariş, çünkü teslimin `sale` satırı partiyi ve siparişi `restrict` ile tutar.
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
@@ -102,6 +97,7 @@ async function paidOrder(opts: { providerRef?: string | null; accountId?: string
     orderId: order.id,
     accountId: opts.accountId ?? providerAccount,
     amountCents: 2000,
+    method: opts.accountId === cashAccount ? 'cash' : 'online',
     description: 'Stripe tahsilatı',
     meta: opts.providerRef === null ? null : { providerRef: opts.providerRef ?? `pi_${stamp}_${order.id.slice(0, 8)}` },
   });

@@ -358,7 +358,8 @@ $$;
 revoke execute on function public.discard_delivery_run(uuid, uuid) from public, anon, authenticated;
 
 -- ── Seferi kapat ─────────────────────────────────────────────────────────────
--- Dönüş damgası, kapanış resmi ve takılı durakların `ready`ye çözümü tek andır; stok değişmez, yeni gün sevkiyatçının kararıdır.
+-- Dönüş damgası, kapanış resmi, takılı durakların `ready`ye çözümü ve nakit farkının hareketi tek andır; stok değişmez, yeni gün
+-- sevkiyatçının kararıdır.
 -- Geçiş koşullu gider: kurye o an teslim yazdıysa onun kaydı kazanır.
 create or replace function public.close_delivery_run(
   p_run_id uuid,
@@ -382,6 +383,8 @@ declare
   v_transition jsonb;
   v_released int := 0;
   v_row public.delivery_run_close;
+  v_cash_account uuid;
+  v_cash_accounts int := 0;
 begin
   select * into v_run from public.delivery_run where id = p_run_id for update;
   if not found then
@@ -414,7 +417,7 @@ begin
     from public.order o
    where o.delivery_run_id = p_run_id;
 
-  -- Takılı durakların çözümü (K4). Koşullu geçiş: stale dönen sayılmaz — o durağı kurye kazandı.
+  -- Takılı durakların çözümü. Koşullu geçiş: stale dönen sayılmaz — o durağı kurye kazandı.
   for v_stuck in
     select id from public.order where delivery_run_id = p_run_id and status = 'out_for_delivery'
   loop
@@ -444,6 +447,31 @@ begin
     v_delivered, v_returned, v_pending, p_note, p_actor_id
   )
   returning * into v_row;
+
+  -- Nakit farkı seferin nakit tahsilatlarının girdiği hesaba kapanışla aynı işlemde yazılır ki hesabın bakiyesi ve sertifikalı kasanın
+  -- sayımı teslim edilen nakitle tutsun. Hesap tek değilse yazılmaz, fark kapanış kaydında kalır; kart farkı yalnız mutabakattır.
+  if v_row.counted_cash <> v_row.expected_cash then
+    select (array_agg(distinct m.account_id))[1], count(distinct m.account_id)
+      into v_cash_account, v_cash_accounts
+      from public.order o
+      join public.money_movement m on m.order_id = o.id and m.type = 'order_payment'
+     where o.delivery_run_id = p_run_id
+       and o.payment_method = 'cash';
+  end if;
+  if v_cash_accounts = 1 then
+    insert into public.money_movement (account_id, direction, amount, type, nature, value_date, description, source, meta)
+    values (
+      v_cash_account,
+      case when v_row.counted_cash > v_row.expected_cash then 'in'::movement_direction else 'out'::movement_direction end,
+      abs(v_row.counted_cash - v_row.expected_cash),
+      'misc',
+      'kasa-farki',
+      current_date,
+      'Sefer kapanış farkı ' || v_run.reference_no,
+      'system',
+      jsonb_build_object('deliveryRunId', p_run_id)
+    );
+  end if;
 
   return jsonb_build_object(
     'ok', true,

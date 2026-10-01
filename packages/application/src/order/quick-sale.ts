@@ -6,19 +6,9 @@ import { readCourierRuns } from '../courier/day';
 import { suggestPicksForVariant } from '../warehouse/preparation';
 
 /**
- * Hızlı satış kapısı (07.10) — **uygulama katmanı orkestrasyonu**. ORDER_LIFECYCLE "Hızlı satış yolu".
- *
- * Kapı önünde tek bir an vardır: mal gider, para alınır, satış kapanır. Tam yolun yedi adımı burada
- * bir adımdır — ama hiçbir **iz** atlanmaz: parti kaydı, referans, geçiş logu ve kâr kalemleri
- * tam yoldakiyle aynı yerlere yazılır.
- *
- * Kararların hepsi motorda: geçiş izinli mi (`status-machine`), bu yol gerçekten hızlı satış mı
- * (`stockEffectOf → consume_direct`), referans üretilir mi. Bu dosya onları gerçek girdilere
- * bağlar; yazımı tek transaction'da RPC yapar.
- *
- * **Mal ile para iki ayrı yazımdır** (12.2): satış RPC'si stoğu düşürüp siparişi kapatır, tahsilat
- * ardından hareket tablosuna yazılır (`recordOrderPayment`) — kapı önü nakdi kasanın bakiyesine de
- * düşsün diye. Sıra bilinçlidir: mal zaten gitti, para kaydı onu geri alamaz.
+ * Hızlı satış kapısı (ORDER_LIFECYCLE "Hızlı satış yolu"): kapı önünde mal gider, para alınır, satış kapanır; kararlar motorda, yazım
+ * tek işlemde RPC'de ve iz (parti, referans, geçiş, kâr kalemleri) tam yoldakiyle aynı yere düşer. Mal ile para iki ayrı yazımdır:
+ * satış stoğu düşürüp siparişi kapatır, tahsilat ardından hareket tablosuna yazılır, çünkü mal zaten gitmiştir.
  */
 
 export type QuickSaleOutcome =
@@ -64,8 +54,8 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
   if (!found) return { status: 'not_found' };
   const { order, items } = found;
 
-  // 1) Kural: `completed`'a geçilebilir mi, ve bu geçiş HIZLI SATIŞ yolu mu? İkincisi önemlidir:
-  //    `delivered → completed` de izinlidir ama o kapanıştır (07.7), stoğu burada düşürmemeli.
+  // 1) Kural: `completed`a geçilebilir mi ve bu geçiş hızlı satış yolu mu; `delivered → completed` de izinlidir ama o kapanıştır,
+  //    stoğu burada düşürmemeli.
   const verdict = canTransition(order.status, 'completed');
   if (!verdict.allowed) return { status: 'forbidden', reason: verdict.reason };
   if (stockEffectOf(order.status, 'completed') !== 'consume_direct') {
@@ -118,45 +108,9 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
     return { status: 'stale', currentStatus: result.currentStatus };
   }
 
-  // ── 4b) ARAÇTAN SATIŞ SEFERE BAĞLANIR (ölçülmüş açık, 26.08) ──────────────
-  //
-  // Sefer kapanışının beklediği nakit `delivery_run_collection` görünümünden geliyor ve o görünüm
-  // `where o.delivery_run_id is not null` ile süzüyor. Kolonu YAZAN tek yer ise `start_delivery_run`
-  // (0046) — yani seferin DURAKLARI. Araçtan yapılan satış bir durak değildir; kolon boş kalırdı ve
-  // sonuç şu olurdu: kurye akşam elindeki parayı teslim eder, sistem onu beklemez, mutabakat
-  // **fazla** verir ve farkın sebebi hiçbir ekranda görünmez. Her araç satışında tekrarlardı.
-  //
-  // Kural EKRANDA değil BURADA, çünkü burası her yerinde satışın geçtiği tek kapı: ekranın
-  // hatırlamasına bırakılsaydı unutan ilk yol sessizce açık nakit üretirdi.
-  //
-  // Ölçüt satışın YERİ (`kind === 'vehicle'`), personelin rolü değil: depo kapısındaki satış bir
-  // sefere ait değildir ve oradaki para kasaya girer. Açık sefer yoksa (kurye henüz çıkmamış ya da
-  // dönmüş) bağ KURULMAZ — uydurulmuş bir sefer, parayı yanlış kapanışa yazardı.
-  //
-  // ── "AÇIK SEFER"İN TANIMI TEK YERDEN OKUNUR (mobil şeridin ölçümü, 26.08) ──
-  //
-  // İlk yazımda burası kendi tanımını kuruyordu (`returnedAt === null`), kurye ekranı ise başka bir
-  // tanımdan konuşuyordu (kapanış kaydı var mı). Gerçek akışta ikisi çakışır — `close_delivery_run`
-  // dönüş damgasını ve kapanış satırını AYNI çağrıda yazar (0046) — ama çakışmaları bir tesadüftür,
-  // kural değil: seed dönüş damgasını kapanış olmadan yazınca ikisi ayrıştı ve motor, ekranın
-  // "açık" dediği sefere bağ kurmayı reddetti. İki tanım varsa biri bir gün yanlış olur.
-  //
-  // Bu yüzden ölçüt artık ekranın okuduğu fonksiyonun ta kendisi: aynı kurye, aynı öncelik kuralı.
-  // Ve tanım TEK sinyale indi — **sefer kapanmamışsa açıktır**. Ölçüt dönüş damgası DEĞİL, çünkü
-  // sorulan soru "araç yolda mı" değil, *"bu para hâlâ bir mutabakata girebilir mi"*: kapanmış
-  // sefere sonradan satış bağlamak, dün mutabık olan fotoğrafı bugün sebepsiz "eksik" göstermek
-  // olurdu.
-  //
-  // ── VE GÜNE DE BAĞLI DEĞİL (03.09 · denetim bulgusu 2) ─────────────────────
-  // Önceki sürüm `readCourierRun`ı (güne bağlı, varsayılan bugün) okuyordu ve gerekçesi "dünün
-  // seferi bugünün parasını yutmasın"dı. Ölçüldü: sefer kendi gününden başka bir günde sürülürse
-  // (uzak rotaya bir akşam önce çıkmak, kapatmadan gece geçmesi) `/day` o seferi SÜRÜLEN sayıyor,
-  // burası ise bulamıyordu — o günün araç satışları mutabakata girmiyor, kapanış fazla veriyordu.
-  // Sürülen seferin tanımı artık `/day` ucununkiyle BİREBİR aynı kaynaktan: `readCourierRuns`
-  // (kapanmamışlar) içinde yola çıkmış olan. "Dünün seferi bugünün parasını yutar mı?" sorusunun
-  // cevabı da bu tanımın içinde: kapanmamış ve yola çıkmış sefer, kuryenin HÂLÂ sürdüğü seferdir —
-  // parası ona aittir. Kapatılmamış eski bir sefer zaten yeni seferi başlatmayı da kilitliyor
-  // (`another_running`), yani iki tanım aynı anda iki sefer gösteremez.
+  // 4b) Araçtan satış sürülen sefere bağlanır, çünkü sefer kapanışının beklediği nakit yalnız sefere bağlı siparişlerden toplanır ve
+  //     bağsız satışın parası mutabakatta açıklanamayan fazla olurdu. Sürülen sefer kurye ekranının tanımıdır (`readCourierRuns`:
+  //     kapanmamış ve yola çıkmış); depo kapısındaki satış sefere ait değildir ve açık sefer yoksa bağ uydurulmaz.
   if (input.actorId) {
     const warehouse = await new WarehouseService(db).getById(order.warehouseId);
     if (warehouse?.kind === 'vehicle') {
@@ -165,9 +119,8 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
     }
   }
 
-  // 5) Tahsilat AYRI bir gerçektir (12.2): para bir hesaba girer, sipariş cache'i ondan türer.
-  //    Satışın kendisi bu adıma bağlı DEĞİLDİR — mal çoktan gitti, stok düştü. Hesap belirsizse
-  //    satış yine kapanır, tahsilat kaydedilmemiş olarak görünür: uydurulmuş bir "ödendi"den iyidir.
+  // 5) Tahsilat ayrı bir gerçektir: para bir hesaba girer, sipariş önbelleği ondan türer. Hesap belirsizse satış yine kapanır ve
+  //    tahsilat kaydedilmemiş görünür; uydurulmuş bir "ödendi"den iyidir.
   const accountId = input.paymentAccountId ?? (await settings.get<string | null>('door_cash_account_id', null));
   let paymentRecorded = false;
   if (accountId) {
@@ -175,22 +128,15 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
       orderId: order.id,
       accountId,
       amountCents: input.collectedAmountCents ?? order.orderedTotalCents,
+      method: input.paymentMethod,
       description: 'Kapı önü satış',
-      // Sistemin yazdığı satır (13.09): kasiyer tutarı onaylar ama deftere yazan akışın kendisidir.
+      // Sistemin yazdığı satır: kasiyer tutarı onaylar ama deftere yazan akışın kendisidir.
       source: 'system',
     });
     paymentRecorded = collected.status === 'ok';
   }
 
-  // 6) ÖDÜL ÇAĞRISI BURADAN KALKTI (17.9). İki sebep birden:
-  //    · **Sipariş puanı kaldırıldı** (kullanıcı kararı 11.08) — yazılacak bir sipariş puanı yok.
-  //    · **Getirenin ödülü artık ödemeye bağlı**, teslimata/kapanışa değil: yukarıdaki
-  //      `recordOrderPayment` zaten ödeme durumunu `paid`e çeviriyor ve ödül orada doğuyor
-  //      (`order/payment.ts` → `finalize`). Buradan ikinci kez çağırmak aynı kuralı iki yerde
-  //      tutmak olurdu.
-  //    **Bilinçli sonuç:** hesap ayarlı değilse tahsilat kaydedilmez ve ödül de yazılmaz. Para
-  //    fiilen alınmış olabilir ama defter onu görmüyor; "para alındığında yaz" kuralının ölçütü
-  //    defterdir, elimizdeki nakit değil.
+  // Getirenin ödülü tahsilatla `finalize`te doğar, burada çağrılmaz; hesap ayarlı değilse ödül de yazılmaz, çünkü ölçüt defterdir.
 
   return {
     status: 'ok',

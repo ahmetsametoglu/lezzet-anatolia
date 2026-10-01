@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { MoneyMovement } from '@lezzet/types';
 import { buildMovementExport, buildMovementRow, type MovementExportDocument, type MovementExportInput } from './movement-export';
 
-// Hareket dökümü (12.15 · 13.09) — saf: satır kurma ve özet. Okuma katmanı web'in entegrasyon testinde.
+// Hareket dökümü saf: satır kurma ve özet. Okuma katmanı web'in entegrasyon testinde.
 
 const movement = (over: Partial<MoneyMovement> = {}): MoneyMovement => ({
   id: 'm1',
@@ -16,6 +16,7 @@ const movement = (over: Partial<MoneyMovement> = {}): MoneyMovement => ({
   meta: null,
   counterAccountId: null,
   orderId: null,
+  paymentMethod: null,
   stockIntakeId: null,
   supplierId: null,
   valueDate: '2026-09-05',

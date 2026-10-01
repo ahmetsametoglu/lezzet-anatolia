@@ -10,11 +10,8 @@ import { analyzeFile, importBankRows, profileFor, saveProfile } from './import';
 import { applyMatch, documentPaymentOptions, linkDocument, matchOptions, matchQueue, suggestionsForMovements, unmatchRow } from './reconcile';
 
 /**
- * Banka import'u ve eşleştirme (12.4) — DB üstünde. Doğrulanan iki zor şey:
- * 1. **Mükerrer koruması**: aynı dosya iki kez yüklenirse para iki kez yazılmaz — ama aynı gün
- *    çekilen iki ayrı 20 € de yutulmaz.
- * 2. **Eşleştirme onaya düşer**: öneri çıkar, uygulamayı insan yapar; uygulandığında para
- *    12.2'nin kapısından geçer ve iki kez sayılmaz.
+ * Banka içe aktarma ve eşleştirme: aynı dosya iki kez yüklenince para iki kez yazılmaz ama aynı gün çekilen iki ayrı 20 € de yutulmaz.
+ * Eşleşme onaya düşer ve uygulanınca para tahsilat kapısından bir kez geçer.
  */
 const db = serviceDb();
 const accounts = new AccountService(db);
@@ -24,12 +21,12 @@ const allocations = new MoneyAllocationService(db);
 
 const stamp = Date.now();
 let bankAccount: string;
-/** Transfer hedefleri için ikinci hesap (12.13): kasadan yatırma, nakit çekimi. */
+/** Transfer hedefleri için ikinci hesap: kasadan yatırma, nakit çekimi. */
 let cashAccount: string;
 let customerId: string;
 const createdDocuments: string[] = [];
 const createdCounterparties: string[] = [];
-// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+// Parti ve sipariş deposuz yazılamaz (DOMAIN §17); testin kendi deposu.
 let warehouseId: string;
 let variantId: string;
 let productId: string;
@@ -204,6 +201,8 @@ describe('eşleştirme kuyruğu', () => {
 
     const row = (await matchQueue(bankAccount)).rows[0]!;
     expect(await applyMatch(row.movement.id, { kind: 'order', orderId: order.id })).toEqual({ status: 'ok', movementId: row.movement.id });
+    // Havale yöntemi satıra yazılır: sertifikalı kasa ödemeyi yöntemiyle ister, yöntemsiz satır siparişin fişini durdururdu.
+    expect(await movements.getById(row.movement.id)).toMatchObject({ paymentMethod: 'bank_transfer' });
 
     // Sipariş tahsilatı yazıldı ve durumu türedi…
     expect(await orders.getById(order.id)).toMatchObject({ amountCollectedCents: 4590, paymentStatus: 'paid' });
@@ -253,9 +252,8 @@ describe('eşleştirme kuyruğu', () => {
 });
 
 /*
-  HEDEF KÜMESİ (12.13 · kullanıcı kararı 13.09: "her banka hareketinin bir karşılığı olmalı").
-  Sınananlar kural katmanı: hangi hedef hangi yöne uyar, para hiçbir hedefte iki kez sayılmaz, elle
-  yazılan satır ekstre gelince tek satıra iner.
+  Hedef kümesi: her banka hareketinin bir karşılığı olur. Sınanan kural katmanıdır: hangi hedef hangi yöne uyar, para hiçbir hedefte iki
+  kez sayılmaz, elle yazılan satır ekstre gelince tek satırda birleşir.
 */
 describe('eşleştirme hedefleri (12.13)', () => {
   it('AÇIK BELGEYE bağlanır — satır gider olur, belgenin türü ve carisi ona geçer, açık kalanı düşer', async () => {
@@ -317,7 +315,7 @@ describe('eşleştirme hedefleri (12.13)', () => {
     expect(await movements.getById(rows[0]!.movement.id)).toMatchObject({
       type: 'transfer', counterAccountId: cashAccount, counterpartMovementId: leg.id, reconciled: true, explained: true,
     });
-    // Uç artık bekleyen değil; ikinci bir ekstre satırı onu sahiplenemez.
+    // Uç bekleyen olmaktan çıktı; ikinci bir ekstre satırı onu sahiplenemez.
     expect(await movements.listTransferLegsAwaiting(bankAccount)).toEqual([]);
   });
 
@@ -386,12 +384,12 @@ describe('eşleştirme hedefleri (12.13)', () => {
 
     expect(await applyMatch(rows[0]!.movement.id, { kind: 'refund', orderId: order.id })).toMatchObject({ status: 'ok' });
     expect(await orders.getById(order.id)).toMatchObject({ amountRefundedCents: 4590, paymentStatus: 'refunded' });
+    expect(await movements.getById(rows[0]!.movement.id)).toMatchObject({ paymentMethod: 'bank_transfer' });
   });
 });
 
 /*
-  İKİNCİ KARAR (13.09 · muhasebeci karşılaştırması): bağ TUTARIYLA, cari eşleşme kelimesiyle, ve
-  verilen her cevap geri alınabilir ("eşleştirmeyle ilgili düzenleme yapamıyorum" bulgusu).
+  Bağ tutarıyla, cari eşleşme kelimesiyle kurulur ve verilen her cevap geri alınabilir.
 */
 describe('bağ tutarıyla · cari · geri alma (13.09)', () => {
   it('TEK HAVALE, İKİ FATURA: ilk bağdan sonra satır kalanıyla kuyrukta, ikinciyle kapanır', async () => {
@@ -465,6 +463,32 @@ describe('bağ tutarıyla · cari · geri alma (13.09)', () => {
     expect(await movements.getById(row.movement.id)).toMatchObject({ type: 'misc', nature: null, reconciled: false, meta: null });
     // İki satır yine bankada — eşleştirme yeniden beklenir, para geçici olarak iki kez sayılır.
     expect((await accounts.balance(bankAccount)).balanceCents).toBe(-42_620);
+  });
+
+  it('"zaten yazmıştım" sipariş tahsilatında yöntem yutan satıra geçer, geri alınca elle yazılana döner', async () => {
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', orderedTotalCents: 3120 }, [
+      { variantId, qty: 1, fulfilledQty: 1, unitPriceCents: 3120, vatRate: 5.5 },
+    ]);
+    await movements.recordForOrder({
+      orderId: order.id,
+      accountId: bankAccount,
+      amountCents: 3120,
+      type: 'order_payment',
+      paymentMethod: 'bank_transfer',
+      valueDate: dayOffset(-2),
+      description: 'Havale geldi',
+    });
+    const [elle] = await movements.listByOrder(order.id);
+    await importStatement([{ Date: frDate(-2), Libellé: `VIR SEPA HAVALE ${stamp}`, Montant: '31,20', Solde: '31,20' }], 'havale.csv');
+    const row = (await matchQueue(bankAccount)).rows[0]!;
+
+    await applyMatch(row.movement.id, { kind: 'provisional', movementId: elle!.id });
+    // Yutan satır siparişin parası olur ve yöntemini taşır; yöntemsiz kalsaydı siparişin fişi dururdu.
+    expect(await movements.getById(row.movement.id)).toMatchObject({ orderId: order.id, paymentMethod: 'bank_transfer' });
+
+    await unmatchRow(row.movement.id);
+    expect((await movements.listByOrder(order.id)).map((movement) => movement.paymentMethod)).toEqual(['bank_transfer']);
+    expect(await movements.getById(row.movement.id)).toMatchObject({ orderId: null, paymentMethod: null });
   });
 });
 
@@ -564,7 +588,7 @@ describe('satırın önerisi listede (12.19 · tek liste + tek panel)', () => {
     expect(result.rows[1]!.suggestions[0]).toMatchObject({ kind: 'document', id: belge.id });
     expect(result.targets.documents.some((document) => document.id === belge.id)).toBe(true);
 
-    // Eşleşen (mutabık) satırın önerisi okunmaz — liste onu artık izahlı gösterir.
+    // Eşleşen (mutabık) satırın önerisi okunmaz, liste onu izahlı gösterir.
     await applyMatch(withRef.id, { kind: 'document', documentId: belge.id });
     expect((await suggestionsForMovements([withRef.id])).rows).toEqual([]);
   });

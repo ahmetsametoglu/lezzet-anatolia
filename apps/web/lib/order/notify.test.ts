@@ -10,11 +10,8 @@ import { cancelOrder } from './refund';
 import { transitionOrder } from './transition';
 
 /**
- * Sipariş bildirimleri (14.5). Doğrulanan üç şey: **veri siparişten doğru türüyor mu** (dil, kalem
- * adı, tutar), **eksik karşılanma müşteriye görünüyor mu**, ve **geçiş başına tek haber** kuralı.
- *
- * Gönderimin kendisi burada test edilmez (o `packages/notify`'ın birim testi); burada test edilen
- * şey maile giren VERİDİR — yanlış sayı gönderilen mailde geri alınamaz.
+ * Sipariş bildiriminde sınanan maile giren veridir (dil, kalem, tutar, eksik karşılanma, geçiş başına tek haber), çünkü gönderilen
+ * maildeki yanlış sayı geri alınamaz. Gönderimin kendisi `packages/notify`'ın birim testindedir.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -23,7 +20,7 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
-// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+// Parti ve sipariş deposuz yazılamaz (DOMAIN §17); testin kendi deposu.
 let warehouseId: string;
 let variantId: string;
 let productId: string;
@@ -56,7 +53,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await db.from('money_movement').delete().eq('account_id', cashAccount);
-  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  // Sıra defter → parti → sipariş, çünkü teslimin `sale` satırı partiyi ve siparişi `restrict` ile tutar.
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
@@ -90,8 +87,8 @@ async function confirmOrder(qty: number, extra: { shippingFeeCents?: number; dis
       discountAmountCents,
       orderedTotalCents: qty * 1000 + shippingFeeCents - discountAmountCents,
     },
-    // İndirim KALEME de dağıtılır: `discount_amount = Σ line_discount_amount` artık veritabanının
-    // zorladığı bir değişmez (0041). Tek kalemli fikstürde payın tamamı o kaleme iner.
+    // İndirim kaleme de dağıtılır, çünkü `discount_amount = Σ line_discount_amount` veritabanının değişmezidir (0041); tek kalemli
+    // fikstürde payın tamamı o kalemdedir.
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5, lineDiscountAmountCents: discountAmountCents }],
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
@@ -136,7 +133,7 @@ describe('bildirim verisi siparişten türer', () => {
     expect(line?.shortfall).toContain('5 commandés, 4 expédiés');
     expect(line?.shortfall).toContain('remboursés');
     expect(line?.qty).toBe(4);
-    // Güncel toplam karşılanandan TÜRER: eksik çıkan kalem tutarı kendiliğinden iner.
+    // Güncel toplam karşılanandan türer: eksik çıkan kalemin tutarı kendiliğinden düşer.
     expect(bundle?.data.grandTotal?.value).toContain('40');
   });
 
@@ -158,7 +155,7 @@ describe('bildirim verisi siparişten türer', () => {
 describe('istisna bildirimleri — zaman çizgisi yok, para çözümü var', () => {
   it('iptalde tahsil edilenin TAMAMI iade tutarı olarak yazılır', async () => {
     const { orderId } = await confirmOrder(3);
-    await recordOrderPayment({ orderId, accountId: cashAccount, amountCents: 3000 });
+    await recordOrderPayment({ orderId, accountId: cashAccount, amountCents: 3000, method: 'cash' });
     await cancelOrder(orderId);
 
     // İade yazıldıktan SONRA kurulur: borç sıfırlanmıştır, tutar kapıdan gelir.
@@ -193,7 +190,7 @@ describe('istisna bildirimleri — zaman çizgisi yok, para çözümü var', () 
 
   it('peşin ödenmiş eksik karşılanmada aynı tutar iade tarafına düşer', async () => {
     const { orderId, itemId } = await confirmOrder(5);
-    await recordOrderPayment({ orderId, accountId: cashAccount, amountCents: 5000 });
+    await recordOrderPayment({ orderId, accountId: cashAccount, amountCents: 5000, method: 'cash' });
     await orders.recordPreparation(orderId, [{ orderItemId: itemId, batches: [{ stockId: batchId, qty: 4 }] }]);
 
     const bundle = await buildOrderNotification(orderId, 'order_shortfall');

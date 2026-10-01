@@ -1,7 +1,7 @@
 import { MoneyMovementService, OrderService } from '@lezzet/database';
 import { derivePaymentStatusForOrder, type PaymentDerivation } from '@lezzet/domain-core';
 import { revokeReferralOnUnpaidOrder, rewardReferralOnPaidOrder } from '../feedback/points';
-import type { MovementSource, Order, OrderItem, PaymentStatus } from '@lezzet/types';
+import type { MovementSource, Order, OrderItem, PaymentMethod, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { settleOrder } from './settle';
 
@@ -28,6 +28,11 @@ export interface OrderMovementInput {
   accountId: string;
   /** Cent. */
   amountCents: number;
+  /**
+   * Paranın yöntemi; sertifikalı kasa nakit, kart, çevrim içi ve havaleyi ayrı yazar ve kapıda nakit ile kart aynı hesaba girer.
+   * `null` yalnız yöntemi gerçekten bilinemeyen yolda; kasa o hareketi tahminle yazmaz, uyarır.
+   */
+  method: PaymentMethod | null;
   valueDate?: string;
   description?: string | null;
   /** Sistemin kendi akışları `system` geçer, operatörün elle girdiği satırdan ayrışsın diye; verilmezse `manual`. */
@@ -72,6 +77,7 @@ async function writeOrderMovement(
     source: input.source,
     meta: input.meta ?? null,
     idempotencyKey: input.idempotencyKey,
+    paymentMethod: input.method,
     type,
   });
   const outcome = await finalize(db, found.order, found.items, amounts.amountCollectedCents, amounts.amountRefundedCents);

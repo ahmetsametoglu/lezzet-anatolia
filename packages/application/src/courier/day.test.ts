@@ -29,7 +29,7 @@ const stamp = Date.now();
 */
 const customerPhone = `07${String(stamp).slice(-8)}`;
 let customerId: string;
-// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+// Parti ve sipariş deposuz yazılamaz (DOMAIN §17); testin kendi deposu.
 let warehouseId: string;
 let addressId: string;
 let courierId: string;
@@ -285,7 +285,7 @@ describe('gün listesi (11.1)', () => {
 
   it('önceden ödenmiş durakta borç NULL — kapıda para konuşulmaz', async () => {
     const { orderId } = await dispatched({ orderedTotalCents: 2000 });
-    await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, description: 'Online ödeme' });
+    await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, method: 'online', description: 'Online ödeme' });
 
     expect(mine(await listCourierDay(db, { courierId }), orderId).payment.dueAmountCents).toBeNull();
   });
@@ -401,9 +401,8 @@ describe('seferin künyesi: araç adı + çıkış deposu (30.08 · uyuşmazlık
     vehicleIds.push(adli.id);
     await startCourierDay(db, { courierId, zoneId, vehicleId: adli.id });
 
-    /* Ad plakanın YERİNE değil YANINA geçer (v3:17 `"FR-482-BX · Frigo kamyonet"`): ad "hangi
-       tür araç", plaka "hangi araç" sorusunun cevabı. Depoda iki soğutmalı panelvan varsa ad tek
-       başına kuryeyi doğru aracın önüne götürmez. */
+    /* Ad plakanın yerine değil yanına geçer (`"FR-482-BX · Frigo kamyonet"`): ad "hangi tür araç", plaka "hangi araç" sorusunun
+       cevabı. Depoda iki soğutmalı panelvan varsa ad tek başına kuryeyi doğru aracın önüne götürmez. */
     expect((await readCourierRun(db, { courierId }))?.vehicleLabel).toBe(`AD-${stamp} · Soğutmalı panelvan`);
   });
 
@@ -638,7 +637,7 @@ describe('seferi başlat (K1 · 18.08)', () => {
     expect(result.run.zoneId).toBe(zoneId);
     expect(result.run.referenceNo).toMatch(/^SF-\d{2}-/);
     expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
-    // Sipariş SEFERE damgalanır: kanıtlı "kim götürdü" artık run üzerinden okunur.
+    // Sipariş sefere damgalanır: kanıtlı "kim götürdü" run üzerinden okunur.
     expect((await orders.getById(orderId))?.deliveryRunId).toBe(result.run.runId);
   });
 
@@ -772,8 +771,8 @@ describe('seferi başlat (K1 · 18.08)', () => {
     expect(first.run.runId).toBe(second.run.runId);
     expect([...first.started, ...second.started].filter((id) => id === orderId)).toHaveLength(1);
 
-    // `already_started` artık YALNIZ başkasının (ya da kapanmış) seferinin cevabı: rota bugün
-    // bu kuryede — öteki kurye başlatamaz, kimde olduğunu görür.
+    // `already_started` yalnız başkasının (ya da kapanmış) seferinin cevabıdır: rota bugün bu kuryede, öteki kurye başlatamaz ve
+    // kimde olduğunu görür.
     const other = await startCourierDay(db, { courierId: otherCourierId, zoneId });
     expect(other.status).toBe('already_started');
     if (other.status === 'already_started') {

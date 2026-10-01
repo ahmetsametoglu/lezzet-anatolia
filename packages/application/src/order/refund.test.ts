@@ -25,7 +25,7 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
-// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+// Parti ve sipariş deposuz yazılamaz (DOMAIN §17); testin kendi deposu.
 let warehouseId: string;
 let variantId: string;
 let productId: string;
@@ -61,7 +61,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Sipariş ve rezervasyon ayrıca silinmez: `purgeTestData` ikisini de biliyor, elle silme teardown'ı bozuyordu.
+  // Sipariş ve rezervasyon ayrıca silinmez: `purgeTestData` ikisini de bilir, elle silme teardown'ı bozar.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -97,7 +97,7 @@ async function sendOut(qty: number, extra: { shippingFeeCents?: number; lineDisc
 describe('kısmi karşılama (07.8)', () => {
   it('peşin ödenmiş siparişte eksik kalemin farkı OTOMATİK iade edilir', async () => {
     const { orderId, itemId } = await sendOut(3);
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 3000 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 3000, method: 'cash' });
 
     const outcome = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2 }]);
 
@@ -112,8 +112,8 @@ describe('kısmi karşılama (07.8)', () => {
     const ikinciKasa = (await new AccountService(db).insert({ name: `İkinci kasa ${stamp}`, type: 'cash' })).id;
     try {
       const { orderId, itemId } = await sendOut(3);
-      await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
-      await recordOrderPayment(db, { orderId, accountId: ikinciKasa, amountCents: 1000 });
+      await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000, method: 'cash' });
+      await recordOrderPayment(db, { orderId, accountId: ikinciKasa, amountCents: 1000, method: 'cash' });
 
       const outcome = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2 }]);
 
@@ -129,8 +129,8 @@ describe('kısmi karşılama (07.8)', () => {
   it('TEK hesapta para varsa iade oraya yazılır — bölünme yoksa davranış birebir aynı', async () => {
     // Karşı-örnek: üstteki testin "iade hiç yazılmaz" diye okunmasını engelliyor.
     const { orderId, itemId } = await sendOut(3);
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 1500 });
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 1500 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 1500, method: 'cash' });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 1500, method: 'cash' });
 
     const outcome = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2 }]);
 
@@ -140,7 +140,7 @@ describe('kısmi karşılama (07.8)', () => {
   it('kuponlu + kargolu siparişte iade tutarı KALEMİN payından hesaplanır', async () => {
     // 3 × 10 € = 30, kupon payı 6 €, kargo 5 € → tahsilat 29 €.
     const { orderId, itemId } = await sendOut(3, { shippingFeeCents: 500, lineDiscountAmountCents: 600 });
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2900 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2900, method: 'cash' });
 
     const outcome = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2 }]);
 
@@ -227,7 +227,7 @@ describe('depo kapsamı (D6 hazırlığı)', () => {
 describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOMAIN §8)', () => {
   it('restock: mal depoya geri girer, maliyeti siparişten çıkar', async () => {
     const { orderId, itemId } = await sendOut(3);
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 3000 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 3000, method: 'cash' });
     await deliverOrder(db, orderId);
     expect((await stocks.getById(batchId))?.physicalQty).toBe(7);
 
@@ -242,7 +242,7 @@ describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOM
 
   it('discard: fiili stok DEĞİŞMEZ (ikinci kez düşemez), maliyet siparişte kalır', async () => {
     const { orderId, itemId } = await sendOut(3);
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 3000 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 3000, method: 'cash' });
     await deliverOrder(db, orderId);
 
     const outcome = await adjustFulfillment(db, orderId, [
@@ -256,7 +256,7 @@ describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOM
 
   it('goodwill: mal müşteride kalır — miktar da stok da değişmez, parası türetilir', async () => {
     const { orderId, itemId } = await sendOut(2);
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000, method: 'cash' });
     await deliverOrder(db, orderId);
 
     const outcome = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill' }]);
@@ -280,7 +280,7 @@ describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOM
 
 /**
  * Kapı denkliği: iptal ve teslim, hangi kapıdan geçilirse geçilsin malı doğru yere koymalı. Bu testler koddan değil
- * kuraldan yazılır, çünkü düz durum yazımı stoğa bakmadan ilerleyip ayrılmış malı kalıcı olarak kilitliyordu.
+ * kuraldan yazılır, çünkü düz durum yazımı stoğa bakmadan ilerler ve ayrılmış malı kalıcı olarak kilitler.
  */
 describe('kapı denkliği: yan etkili geçiş düz durum yazımından ÜRETİLEMEZ', () => {
   it('iptal — üretilebilseydi ayrılmış mal ortada kalırdı', async () => {
@@ -320,7 +320,7 @@ describe('kapı denkliği: yan etkili geçiş düz durum yazımından ÜRETİLEM
 describe('iptal (07.9)', () => {
   it('ödenmiş sipariş iptalinde TAMAMI iade edilir, ayrılmış geri bırakılır', async () => {
     const { orderId } = await prepare(3);
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 3000 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 3000, method: 'cash' });
 
     const outcome = await cancelOrder(db, orderId);
 
@@ -403,7 +403,7 @@ describe('akıbetin değişmezleri', () => {
 
   it('kalan adet farklı akıbetle sonradan iade edilir — iki olay, stok ve maliyet ikisine göre', async () => {
     const { orderId, itemId } = await sendOut(2);
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000, method: 'cash' });
     await deliverOrder(db, orderId);
 
     await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'restock', note: 'ambalaj sağlam' }]);
@@ -422,7 +422,7 @@ describe('akıbetin değişmezleri', () => {
 
   it('kalan adet aynı akıbetle ikinci kez iade edilince yazılır ve parası döner', async () => {
     const { orderId, itemId } = await sendOut(2);
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000, method: 'cash' });
     await deliverOrder(db, orderId);
     await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'discard' }]);
 
@@ -434,7 +434,7 @@ describe('akıbetin değişmezleri', () => {
 
   it('aynı isteğin tekrarı reddedilir, hiçbir şey yazılmaz ve müşteriye haber gitmez', async () => {
     const { orderId, itemId } = await sendOut(2);
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000, method: 'cash' });
     await deliverOrder(db, orderId);
     const istek = [{ orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'discard' as const }];
     await adjustFulfillment(db, orderId, istek);
@@ -495,7 +495,7 @@ describe('akıbetin değişmezleri', () => {
 describe('iade e-postası', () => {
   it('ikinci iadenin maili yalnız bu iadenin kalemini ve net ödenenden düşen toplamı yazar', async () => {
     const { orderId, itemId } = await sendOut(2);
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000, method: 'cash' });
     await deliverOrder(db, orderId);
     await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 1, returnDisposition: 'restock', note: 'ambalaj sağlam' }]);
     let detail: OrderExceptionDetail = {};
@@ -519,7 +519,7 @@ describe('iade e-postası', () => {
 describe('müşteride kaldı ve iade haberi', () => {
   it('aynı onayda müşteride kaldı ve rafa dönüş: ikisinin parası da türetilir, tahsil edilecek kalan doğmaz', async () => {
     const { orderId, itemId } = await sendOut(3);
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 3000 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 3000, method: 'cash' });
     await deliverOrder(db, orderId);
 
     const outcome = await adjustFulfillment(db, orderId, [
@@ -542,7 +542,7 @@ describe('müşteride kaldı ve iade haberi', () => {
 
   it('müşteride kalan adet yeniden iade edilemez ve ikinci kez müşteride bırakılamaz', async () => {
     const { orderId, itemId } = await sendOut(2);
-    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000, method: 'cash' });
     await deliverOrder(db, orderId);
     await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill', goodwillQty: 1 }]);
 
@@ -556,7 +556,13 @@ describe('müşteride kaldı ve iade haberi', () => {
 
   it('para iade edilemediyse "iade işlendi" haberi gitmez; yeniden deneme müşteride kalanın parasını da türetip çıkarır', async () => {
     const { orderId, itemId } = await sendOut(2);
-    await recordOrderPayment(db, { orderId, accountId: providerAccount, amountCents: 2000, meta: { providerRef: `pi_${stamp}` } });
+    await recordOrderPayment(db, {
+      orderId,
+      accountId: providerAccount,
+      amountCents: 2000,
+      method: 'online',
+      meta: { providerRef: `pi_${stamp}` },
+    });
     await deliverOrder(db, orderId);
     const notifyException = vi.fn(async () => undefined);
 

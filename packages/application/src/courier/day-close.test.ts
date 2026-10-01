@@ -1,7 +1,15 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, DeliveryZoneService, OrderService, ProductService, ReservationService,
-  StockService, UserProfileService, serviceDb,
+  AccountService,
+  CategoryService,
+  DeliveryZoneService,
+  MoneyMovementService,
+  OrderService,
+  ProductService,
+  ReservationService,
+  StockService,
+  UserProfileService,
+  serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { closeCourierDay, openDayClose, type DayCloseDraft } from './day-close';
@@ -22,7 +30,7 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 let customerId: string;
-// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+// Parti ve sipariş deposuz yazılamaz (DOMAIN §17); testin kendi deposu.
 let warehouseId: string;
 let courierId: string;
 let variantId: string;
@@ -32,7 +40,7 @@ let stockId: string;
 let accountId: string;
 /** Sefer akışının rotası: claim zone süzgeçli, zonesuz sipariş sefere bağlanmaz. */
 let zoneId: string;
-/** İkinci rota — "araçta iki sefer" hâli ancak iki rotayla kurulur (rota+gün başına tek sefer, K3). */
+/** İkinci rota — "araçta iki sefer" hâli ancak iki rotayla kurulur (rota+gün başına tek sefer). */
 let ikinciZoneId: string;
 const createdProfiles: string[] = [];
 
@@ -59,7 +67,7 @@ beforeAll(async () => {
   customerId = customer.id;
   courierId = courier.id;
   createdProfiles.push(customer.id, courier.id);
-  // Kurye rol + depo kapsamıyla açılır (11.7): boş kapsam fail-closed `no_route` demek.
+  // Kurye rol ve depo kapsamıyla açılır: boş kapsam fail-closed `no_route` demektir.
   await profiles.setRoles(courierId, ['courier'], [warehouseId]);
 
   accountId = (await new AccountService(db).insert({ name: `Kapanış kasası ${stamp}`, type: 'cash' })).id;
@@ -148,6 +156,12 @@ async function collect(orderId: string, qty: number, method: 'cash' | 'card', bo
   });
 }
 
+/** Kapanışın seferin nakit tahsilatlarının girdiği hesaba yazdığı fark hareketi; yoksa `null`. */
+async function cashDifferenceOf(runId: string) {
+  const { rows } = await new MoneyMovementService(db).ledger({ accountId, type: 'misc', limit: 50 });
+  return rows.find((row) => row.meta?.['deliveryRunId'] === runId) ?? null;
+}
+
 describe('kapanış taslağı', () => {
   it('beklenen tahsilat YÖNTEM BAZINDA, SEFERİN duraklarından toplanır', async () => {
     const a = await atTheDoor(3); // 30 €
@@ -175,7 +189,7 @@ describe('kapanış taslağı', () => {
     await markUndelivered(db, { orderId: ulasilamayan, courierId, outcome: 'unreachable' });
     await markUndelivered(db, { orderId: reddedilen, courierId, outcome: 'refused' });
 
-    // runId verilmeden açılır: kuryenin o günkü seferi bulunur (mobil K7'nin varsayılan yolu).
+    // runId verilmeden açılır: kuryenin o günkü seferi bulunur (mobil kapanış ekranının varsayılan yolu).
     const draft = await openDayClose(db, { courierId, date: day });
 
     expect(draft.delivered).toHaveLength(1);
@@ -218,6 +232,7 @@ describe('seferi kapat', () => {
 
     expect(result).toMatchObject({ ok: true, reconciled: true, differenceCashCents: 0, deliveredCount: 1 });
     expect(result.returnedAt).toBeTruthy();
+    expect(await cashDifferenceOf(runId)).toBeNull();
   });
 
   it('fark AYNI GÜN görünür ve işareti anlamlıdır', async () => {
@@ -230,6 +245,8 @@ describe('seferi kapat', () => {
     expect(eksik).toMatchObject({ ok: true, reconciled: false, differenceCashCents: -500 });
     // Eksi eksik teslim, artı fazla para: ikisi de açıklanmayı hak eder, mutlak değere indirilmez.
     expect(eksik.differenceCashCents).toBeLessThan(0);
+    // Eksik nakit kasa hesabından çıkar ki hesabın bakiyesi ve sertifikalı kasanın sayımı teslim edilen nakitle tutsun.
+    expect(await cashDifferenceOf(runId)).toMatchObject({ direction: 'out', amountCents: 500, nature: 'kasa-farki', source: 'system' });
   });
 
   it('fazla para da fark sayılır', async () => {
@@ -240,6 +257,7 @@ describe('seferi kapat', () => {
     const fazla = await closeCourierDay(db, { courierId, runId, countedCashCents: 2500 });
 
     expect(fazla).toMatchObject({ reconciled: false, differenceCashCents: 500 });
+    expect(await cashDifferenceOf(runId)).toMatchObject({ direction: 'in', amountCents: 500, nature: 'kasa-farki' });
   });
 
   it('takılı `out_for_delivery` durak kapanışta ÇÖZÜLÜR — fotoğrafta pending, durumda ready (K4)', async () => {
@@ -247,7 +265,7 @@ describe('seferi kapat', () => {
     const { orderId: takili } = await atTheDoor(1);
     const runId = await depart();
     await collect(teslim.orderId, teslim.qty, 'cash', teslim.boxCode);
-    // `takili` kapıda hiç işaretlenmedi — eskiden kimsenin ulaşamadığı kilitte kalırdı.
+    // `takili` kapıda hiç işaretlenmedi; kapanış çözmeseydi kimsenin ulaşamadığı kilitte kalırdı.
 
     const result = await closeCourierDay(db, { courierId, runId, countedCashCents: 2000 });
 

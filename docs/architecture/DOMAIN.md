@@ -352,7 +352,7 @@ Kapıda ödeme tüm rota-içi müşterilere sunulur, ama peşin taahhüt olmadı
 
 ### Sefer kapanışı (kullanıcı kararı 18.08 — eksen kurye/günden SEFERE indi)
 
-Kurye sefer dönüşünde kapanış yapar: seferin teslim edilen siparişleri, tahsil ettiği tutar (yöntem bazında), iadeler. Kasaya teslim eder. Sistem beklenen ile teslim edileni karşılaştırır; fark aynı gün görünür ve **hangi seferde doğduğu bellidir** — iki sefer sürmüş kurye ikisini ayrı kapatır (akış sıralı: kapat → yeni sefer). Kapanış ayrıca sefer bitiminde hâlâ "yolda" görünen durakları motorun "ulaşılamadı" kenarıyla çözer; yeni teslim GÜNÜ yazmaz — tarih sevkiyatçının kararıdır ("görünür devir", 16.08). Sefer kavramı ve kararları: `docs/feature/sefer.md`, veri modeli `data-model/musteri-siparis.md › DeliveryRun`.
+Kurye sefer dönüşünde kapanış yapar: seferin teslim edilen siparişleri, tahsil ettiği tutar (yöntem bazında), iadeler. Kasaya teslim eder. Sistem beklenen ile teslim edileni karşılaştırır; fark aynı gün görünür ve **hangi seferde doğduğu bellidir** — iki sefer sürmüş kurye ikisini ayrı kapatır (akış sıralı: kapat → yeni sefer). Nakit farkı sıfır değilse kapanış farkı seferin nakit tahsilatlarının girdiği hesaba `kasa-farki` hareketi olarak yazar (eksikte çıkış, fazlada giriş) ki hesabın bakiyesi ve sertifikalı kasanın sayımı teslim edilen nakitle tutsun; kart farkı yalnız mutabakattır. Kapanış ayrıca sefer bitiminde hâlâ "yolda" görünen durakları motorun "ulaşılamadı" kenarıyla çözer; yeni teslim GÜNÜ yazmaz — tarih sevkiyatçının kararıdır ("görünür devir", 16.08). Sefer kavramı ve kararları: `docs/feature/sefer.md`, veri modeli `data-model/musteri-siparis.md › DeliveryRun`.
 
 ### Sipariş ödeme durumu
 

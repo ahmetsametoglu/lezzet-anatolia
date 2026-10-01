@@ -19,8 +19,7 @@ import {
 } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock, settingsSnapshot } from '@lezzet/database/testing';
 import { loadBox, openBox, recordOrderPayment, sealBox } from '@lezzet/application';
-// Beklenen şekiller ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME
-// kırılır (katalog testinin kararı). Kurye sözleşmelerinin ilk tüketicisi de budur.
+// Beklenen şekiller elle yazılmaz, sözleşmeden gelir: uç bir alanı düşürürse iddia değil derleme kırılır.
 import type {
   CloseDeliveryRunResult,
   ConfirmDoorDeliveryResponse,
@@ -90,7 +89,7 @@ async function dataOf<T>(res: Response): Promise<T> {
   return envelope.data;
 }
 
-/** Kurye jetonuyla okuma — başlığı her çağrıda elle kurmak testin okunurluğunu yiyordu. */
+/** Kurye jetonuyla okuma; başlık her çağrıda elle kurulmasın diye. */
 async function asCourier(path: string): Promise<Response> {
   return app.request(path, { headers: { authorization: `Bearer ${courierToken}` } });
 }
@@ -139,9 +138,8 @@ async function advance(orderId: string, path: readonly OrderStatus[]): Promise<v
 }
 
 /**
- * Yola çıkmış sipariş — kuryenin gün listesine düşmesi için gereken en kısa yol (emsal:
- * `courier/day.test.ts`). `upTo` gün başlatma ucunun üç adayını kurar (yolda · hazır ·
- * hazırlanmamış); verilmeyen her çağrı eskisi gibi `out_for_delivery`e kadar gider.
+ * Yola çıkmış sipariş, kuryenin gün listesine düşmesi için en kısa yol. `upTo` gün başlatma ucunun üç adayını kurar (yolda, hazır,
+ * hazırlanmamış); verilmezse `out_for_delivery`e kadar gider.
  */
 async function dispatched(
   opts: {
@@ -285,7 +283,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   /*
     Her test kendi siparişlerini kurar, çünkü gün listesi ve kapanış taslağı günün tamamını okur.
-    Silme hatayı gösterir ve sıra zorunludur: `purgeVariantStock` partinin hareketlerini toplayıp siparişi de serbest bırakır; sessiz silme çift sayıma yol açıyordu.
+    Silme hatayı gösterir, çünkü sessiz kalan silme çift sayım doğurur; sıra zorunludur, çünkü `purgeVariantStock` partinin hareketlerini toplayıp siparişi de serbest bırakır.
   */
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
@@ -313,8 +311,8 @@ afterAll(async () => {
 });
 
 /**
- * Testin rotasında açılmış seferleri toplar (kapanış seferi `restrict` ile tuttuğu için sıra sabit). Süzgeç rota,
- * çünkü başka bir ajanın aynı kuryeyle açtığı sefer bu dosyanın işi değil.
+ * Testin rotasında açılmış seferleri toplar (kapanış seferi `restrict` ile tuttuğu için sıra sabit). Süzgeç rota, çünkü aynı kuryeyle
+ * başka bir koşunun açtığı sefer bu dosyanın işi değil.
  */
 async function resetRuns(): Promise<void> {
   const { data, error } = await db.from('delivery_run').select('id').eq('delivery_zone_id', zoneId);
@@ -407,8 +405,8 @@ describe('GET /api/v1/courier/day', () => {
 
     const gun = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
 
-    /* Kullanıcının senaryosu: araç iki-üç günlük yola çıkıyor, rotalar tek günlük olduğu için
-       yarının seferi de bugünden yükleniyor. Güne süzülseydi o kutular hiçbir ekranda görünmezdi. */
+    /* Araç iki-üç günlük yola çıkar ve rotalar tek günlük olduğu için yarının seferi de bugünden yüklenir; güne süzülseydi o kutular
+       hiçbir ekranda görünmezdi. */
     expect(gun.runs.map((run) => run.runId).sort()).toEqual([bugunSefer.run.runId, ileriSefer.run.runId].sort());
     const ids = gun.stops.map((s) => s.orderId);
     expect(ids).toContain(bugunku);
@@ -485,7 +483,7 @@ describe('GET /api/v1/courier/day', () => {
 
   it('kurye AKIBET yazamaz — gövdeye konsa bile kaleme geçmez (21.272)', async () => {
     /*
-      Kapıdaki iki karar ayrı ellerdedir: adedi kurye söyler, akıbeti mal depoya dönünce depocu seçer; akıbet alanı kurye şemasından `omit` ile çıkarıldı.
+      Kapıdaki iki karar ayrı ellerdedir: adedi kurye söyler, akıbeti mal depoya dönünce depocu seçer.
       İddia "400 döner" değil "yazılmaz": şema bilinmeyen anahtarı düşürür ve kapıda düşen adetin olayı akıbetsiz kalmalı.
     */
     const orderId = await dispatched({ qty: 2, orderedTotalCents: 2000 });
@@ -621,8 +619,7 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
     await post(`/api/v1/courier/stops/${orderId}/deliver`, { scannedBoxCodes: codes });
 
     const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, { scannedBoxCodes: codes });
-    // Doc 04 omurgası: "bayat geçiş reddi GÖRÜNÜR olmalı — app bu reddi YUTMAZ". Bir HTTP koduna
-    // indirgenseydi `currentStatus` kaybolurdu ve ekran "neden olmadı"yı söyleyemezdi.
+    // Bayat geçiş reddi görünür olmalı: bir HTTP koduna indirgenseydi `currentStatus` kaybolur ve ekran "neden olmadı"yı söyleyemezdi.
     expect(res.status).toBe(200);
     expect(await dataOf<ConfirmDoorDeliveryResponse>(res)).toEqual({ status: 'stale', currentStatus: 'delivered' });
   });
@@ -664,7 +661,14 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
     // Aynı isteği iki kez göndermek `stale` üretir, çünkü birinci kilit durum makinesidir.
     const orderId = await dispatched({ orderedTotalCents: 2000 });
     const key = `kuyruk-${stamp}`;
-    await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, description: 'Kapıda tahsilat', idempotencyKey: key });
+    await recordOrderPayment(db, {
+      orderId,
+      accountId,
+      amountCents: 2000,
+      method: 'cash',
+      description: 'Kapıda tahsilat',
+      idempotencyKey: key,
+    });
 
     const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
       collection: { method: 'cash', amountCents: 2000, accountId, idempotencyKey: key },
@@ -717,8 +721,7 @@ describe('POST /api/v1/courier/stops/:orderId/undelivered', () => {
       currentStatus: 'ready',
     });
 
-    // Kuryenin kapıda girdiği TEK serbest bilgi bir yere düşmeli — yoksa ekran "sebep yok" gösterir
-    // ve sebep gerçekten yok olur (düzeltme 95428fb).
+    // Kuryenin kapıda girdiği tek serbest bilgi bir yere düşmeli, yoksa ekran "sebep yok" gösterir ve sebep gerçekten yok olur.
     const { data } = await db.from('order_status_log').select('note,to_status').eq('order_id', orderId);
     expect((data ?? []).some((row) => row.to_status === 'ready' && row.note === 'zil bozuk')).toBe(true);
 
@@ -943,8 +946,7 @@ describe('araç stoğu uçları (21.278)', () => {
     );
     expect(ilk).toMatchObject({ status: 'ok', variantId, delta: 3, vanQty: 3 });
 
-    /* İkinci yazım AZALTIYOR: yön istemciden gelmiyor, sunucu ÖLÇEREK buluyor (`setVanQty` künyesi).
-       Aynı uçtan hem alma hem devretme çıkması bu ucun var oluş sebebiydi. */
+    /* İkinci yazım azaltır: yön istemciden gelmez, sunucu ölçerek bulur (`setVanQty`); alma ve devretme aynı uçtan çıkar. */
     const azalt = await dataOf<CourierVanStockMoveResponse>(
       await post('/api/v1/courier/van-stock/set', { variantId, targetQty: 1, observedQty: 3 }),
     );
@@ -989,9 +991,8 @@ describe('araç stoğu uçları (21.278)', () => {
 
   it('liste araçtakini ve depodaki adayları BİRLİKTE veriyor; `?q=` süzgeci uca ulaşıyor', async () => {
     /*
-      Tek uçtan iki okuma (v3:19) — ayrı uç açılmadı, çünkü soru aynı: "depodan ne alabilirim".
-      `?q=` sorgu dizesinden okunuyor ve yalnız burada; motorun `query` argümanına bağlandığını
-      başka hiçbir test ölçmüyor.
+      Tek uçtan iki okuma, çünkü soru aynıdır: "depodan ne alabilirim".
+      `?q=` yalnız burada sorgu dizesinden okunur; motorun `query` argümanına bağlandığını başka hiçbir test ölçmez.
     */
     await vanRun();
     await araca(2, 0);

@@ -100,7 +100,7 @@ async function sentOrder(customerId: string, qty: number, unitPriceCents = 1000)
 async function paidOrderWithReward(label: string, qty: number) {
   const pair = await referralPair(label);
   const order = await sentOrder(pair.customer, qty);
-  await recordOrderPayment(db, { orderId: order.orderId, accountId, amountCents: qty * 1000 });
+  await recordOrderPayment(db, { orderId: order.orderId, accountId, amountCents: qty * 1000, method: 'cash' });
   return { ...pair, ...order, totalCents: qty * 1000 };
 }
 
@@ -119,7 +119,7 @@ describe('KISMÎ iade ödüle dokunmaz (kullanıcı kararı 25.08)', () => {
   it('30 € siparişte 10 € iade → ödül DURUR, durum `partial` olur', async () => {
     const senaryo = await paidOrderWithReward('kısmî', 3);
 
-    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: 1000 });
+    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: 1000, method: 'cash' });
 
     expect(await paymentStatusOf(senaryo.orderId)).toBe('partial');
     expect(await balanceOf(senaryo.inviter)).toBe(referralPoints);
@@ -128,7 +128,7 @@ describe('KISMÎ iade ödüle dokunmaz (kullanıcı kararı 25.08)', () => {
   it('YALNIZ 1 € iade de ödülü götürmez — eski kural 500 puanı siliyordu', async () => {
     const senaryo = await paidOrderWithReward('kuruş', 3);
 
-    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: 100 });
+    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: 100, method: 'cash' });
 
     expect(await balanceOf(senaryo.inviter)).toBe(referralPoints);
   });
@@ -165,7 +165,7 @@ describe('TAM iade ödülü geri alır', () => {
   it('paranın tamamı dönünce ödül SIFIRLANIR ve defterde ters satır durur', async () => {
     const senaryo = await paidOrderWithReward('tam-iade', 3);
 
-    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: senaryo.totalCents });
+    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: senaryo.totalCents, method: 'cash' });
 
     expect(await paymentStatusOf(senaryo.orderId)).toBe('refunded');
     expect(await balanceOf(senaryo.inviter)).toBe(0);
@@ -179,10 +179,10 @@ describe('TAM iade ödülü geri alır', () => {
   it('KISMÎ iade sonra TAMAMLANIRSA ödül o an gider — kısmî hâl yalnız ERTELEr', async () => {
     const senaryo = await paidOrderWithReward('tamamlanan', 3);
 
-    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: 1000 });
+    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: 1000, method: 'cash' });
     expect(await balanceOf(senaryo.inviter)).toBe(referralPoints);
 
-    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: 2000 });
+    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: 2000, method: 'cash' });
     expect(await paymentStatusOf(senaryo.orderId)).toBe('refunded');
     expect(await balanceOf(senaryo.inviter)).toBe(0);
   });
@@ -194,7 +194,7 @@ describe('TAM iade ödülü geri alır', () => {
     })).id;
     // İptal `out_for_delivery`den izinli DEĞİL — sipariş `ready`de bırakılıyor.
     const order = await prepareOrderToReady(db, { warehouseId, customerId: pair.customer, variantId, stockId, qty: 2, unitPriceCents: 1000 });
-    await recordOrderPayment(db, { orderId: order.orderId, accountId, amountCents: 2000 });
+    await recordOrderPayment(db, { orderId: order.orderId, accountId, amountCents: 2000, method: 'cash' });
     expect(await balanceOf(pair.inviter)).toBe(referralPoints);
 
     await cancelOrder(db, order.orderId, { actorId: null, reason: 'staff' });
@@ -206,10 +206,10 @@ describe('TAM iade ödülü geri alır', () => {
   it('yeniden ödenirse ödül GERİ GELMEZ — bilinçli sınır (tekillik indeksi)', async () => {
     // Tersi, aynı siparişi iade/ödeme arasında gidip gelerek puan üretmeye kapı açardı.
     const senaryo = await paidOrderWithReward('yeniden-ödeme', 3);
-    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: senaryo.totalCents });
+    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: senaryo.totalCents, method: 'cash' });
     expect(await balanceOf(senaryo.inviter)).toBe(0);
 
-    await recordOrderPayment(db, { orderId: senaryo.orderId, accountId, amountCents: senaryo.totalCents });
+    await recordOrderPayment(db, { orderId: senaryo.orderId, accountId, amountCents: senaryo.totalCents, method: 'cash' });
 
     expect(await paymentStatusOf(senaryo.orderId)).toBe('paid');
     expect(await balanceOf(senaryo.inviter)).toBe(0);
@@ -224,7 +224,7 @@ describe('geri alma BAKİYEYLE kırpılır (kullanıcı kararı 25.08)', () => {
     const kalan = referralPoints - harcanan;
     expect(await balanceOf(senaryo.inviter)).toBe(kalan);
 
-    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: senaryo.totalCents });
+    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: senaryo.totalCents, method: 'cash' });
 
     expect(await balanceOf(senaryo.inviter)).toBe(0);
     // Yazılan satır GERÇEKTEN geri alınan tutardır: tam ödül değil, elde kalan. Fark af edilir —
@@ -238,7 +238,7 @@ describe('geri alma BAKİYEYLE kırpılır (kullanıcı kararı 25.08)', () => {
     await entries.insert({ customerId: senaryo.inviter, points: -referralPoints, reason: 'redemption', refId: null });
     expect(await balanceOf(senaryo.inviter)).toBe(0);
 
-    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: senaryo.totalCents });
+    await recordOrderRefund(db, { orderId: senaryo.orderId, accountId, amountCents: senaryo.totalCents, method: 'cash' });
 
     expect(await balanceOf(senaryo.inviter)).toBe(0);
     // İki satır: ödül + çevirme. Negatif bir `referral` satırı OLMAMALI.
@@ -255,12 +255,12 @@ describe('getiren ödülünün ölçütü KİŞİDİR, sipariş değil', () => {
     // ilk siparişte hak edilmiş ödülü götürmemeli.
     const pair = await referralPair('iki-sipariş');
     const ilk = await sentOrder(pair.customer, 2);
-    await recordOrderPayment(db, { orderId: ilk.orderId, accountId, amountCents: 2000 });
+    await recordOrderPayment(db, { orderId: ilk.orderId, accountId, amountCents: 2000, method: 'cash' });
     const ikinci = await sentOrder(pair.customer, 2);
-    await recordOrderPayment(db, { orderId: ikinci.orderId, accountId, amountCents: 2000 });
+    await recordOrderPayment(db, { orderId: ikinci.orderId, accountId, amountCents: 2000, method: 'cash' });
     expect(await balanceOf(pair.inviter)).toBe(referralPoints);
 
-    await recordOrderRefund(db, { orderId: ikinci.orderId, accountId, amountCents: 2000 });
+    await recordOrderRefund(db, { orderId: ikinci.orderId, accountId, amountCents: 2000, method: 'cash' });
 
     expect(await paymentStatusOf(ikinci.orderId)).toBe('refunded');
     expect(await balanceOf(pair.inviter)).toBe(referralPoints);
@@ -286,14 +286,14 @@ describe('KOMŞU ödülü aynı kurala tabidir', () => {
 
     const guestOrder = await sentOrder(guest, 3);
     await orders.update({ id: guestOrder.orderId, neighborInviteId: invite.id });
-    await recordOrderPayment(db, { orderId: guestOrder.orderId, accountId, amountCents: 3000 });
+    await recordOrderPayment(db, { orderId: guestOrder.orderId, accountId, amountCents: 3000, method: 'cash' });
     const neighborPoints = await balanceOf(inviter);
     expect(neighborPoints).toBeGreaterThan(0);
 
-    await recordOrderRefund(db, { orderId: guestOrder.orderId, accountId, amountCents: 500 });
+    await recordOrderRefund(db, { orderId: guestOrder.orderId, accountId, amountCents: 500, method: 'cash' });
     expect(await balanceOf(inviter)).toBe(neighborPoints);
 
-    await recordOrderRefund(db, { orderId: guestOrder.orderId, accountId, amountCents: 2500 });
+    await recordOrderRefund(db, { orderId: guestOrder.orderId, accountId, amountCents: 2500, method: 'cash' });
     expect(await paymentStatusOf(guestOrder.orderId)).toBe('refunded');
     expect(await balanceOf(inviter)).toBe(0);
   });

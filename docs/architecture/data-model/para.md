@@ -46,6 +46,7 @@ Tüm para hareketleri **tek tablo**; kasa/banka ayrımı yok — hareketin **hes
 | `meta` | jsonb | • |  |
 | `counter_account_id` | uuid | • |  |
 | `order_id` | uuid | • |  |
+| `payment_method` | payment_method | • |  |
 | `stock_intake_id` | uuid | • |  |
 | `supplier_id` | uuid | • |  |
 | `value_date` | date |  | `current_date` |

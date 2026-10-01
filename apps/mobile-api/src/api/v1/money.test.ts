@@ -8,15 +8,8 @@ import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, type SignedInUser } from '../../lib/testing';
 
 /**
- * PARA UÇLARI (21.12 · M1/M2) — çivilenen üç karar:
- *
- *  1. **Kapı `accounting` + `admin`** — kurye/depocu para özetini GÖREMEZ (403). Bearer'sız 401
- *     `router.test`in KORUMALI beyanında.
- *  2. **Bekleyen tahsilat GÜNÜN ödenmemiş siparişlerinden türetilir** — kendi kurduğumuz satır
- *     listede kalan tutarıyla görünmeli (paylaşılan DB: yalnız KENDİ satırımızı ararız, küresel
- *     sayı iddia edilmez — CLAUDE §4b).
- *  3. **Gün sonu bir MUTABAKAT özetidir**: kapanan sefer yokken fark `null` gelir, 0 değil —
- *     0 "fark yok" derdi, oysa soru henüz sorulmadı.
+ * Para uçları: kapı yalnız `accounting` ve `admin`e açıktır, bekleyen tahsilat günün ödenmemiş siparişlerinden türer ve gün sonu farkı
+ * kapanan sefer yokken `null` gelir, çünkü 0 "fark yok" derdi. Paylaşılan DB'de yalnız kendi satırımız aranır, küresel sayı iddia edilmez.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -49,7 +42,7 @@ beforeAll(async () => {
   kurye = await createSignedInUser({ prefix: 'money', label: 'kurye', roles: ['courier'], warehouseIds: [warehouseId] });
   musteri = await createSignedInUser({ prefix: 'money', label: 'musteri', roles: ['customer'], warehouseIds: [] });
 
-  // Bugün teslim edilecek, ödemesi kapıda bekleyen sipariş — M1'in "bekleyen tahsilat" satırı.
+  // Bugün teslim edilecek, ödemesi kapıda bekleyen sipariş; "bekleyen tahsilat" satırı bundan doğar.
   const created = await new OrderService(db).create(
     {
       customerId: musteri.profileId,
@@ -65,9 +58,8 @@ beforeAll(async () => {
   );
   orderId = created.order.id;
 
-  // ── KISMİ ödenmiş sipariş + GERÇEK tahsilat hareketi: yöntem kırılımı ve gün sonu bu deftere
-  // bakar. Hesap TESTİN KENDİ hesabıdır (purge `accountIds` ile toplar) — işletmenin Kasa'sına
-  // test hareketi yazmak, paylaşılan defteri kirletmek olurdu (CLAUDE §4b).
+  // Kısmi ödenmiş sipariş gerçek tahsilat hareketiyle kurulur, çünkü yöntem kırılımı ve gün sonu deftere bakar. Hesap testin
+  // kendisinindir; işletmenin kasasına yazmak paylaşılan defteri kirletirdi.
   accountId = (await new AccountService(db).insert({ name: `Test Kasa ${stamp}`, type: 'cash' })).id;
   const partial = await new OrderService(db).create(
     {
@@ -83,7 +75,7 @@ beforeAll(async () => {
     [{ variantId, qty: 1, unitPriceCents: 2000, vatRate: 5.5 }],
   );
   partialOrderId = partial.order.id;
-  const payment = await recordOrderPayment(db, { orderId: partialOrderId, accountId, amountCents: 600 });
+  const payment = await recordOrderPayment(db, { orderId: partialOrderId, accountId, amountCents: 600, method: 'cash' });
   if (payment.status !== 'ok') throw new Error(`fikstür: tahsilat yazılamadı (${payment.status})`);
 });
 

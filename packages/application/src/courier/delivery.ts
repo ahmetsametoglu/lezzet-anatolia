@@ -22,7 +22,7 @@ export interface DeliveryProofInput {
 /** Kapıda tahsilat. Yöntem ikiyle sınırlıdır (nakit, kart): online ve havale kuryenin eline hiç girmez. */
 export interface DoorCollectionInput {
   method: 'cash' | 'card';
-  /** **Cent** (02.9 · STACK §8). */
+  /** **Cent** (STACK §8). */
   amountCents: number;
   /** Paranın gireceği hesap (kurye kasası / kapı tahsilatı). */
   accountId: string;
@@ -53,7 +53,7 @@ export type DoorDeliveryOutcome =
     }
   /** Kanıt zorunlu ama gelmedi — HİÇBİR yazım yapılmadı. */
   | { status: 'proof_required'; channel: Order['channel'] }
-  /** Kutulu siparişte okutulmamış kutu var — teslim YAZILMADI (23.8, etüt 2.5). */
+  /** Kutulu siparişte okutulmamış kutu var — teslim YAZILMADI. */
   | { status: 'boxes_missing'; remainingBoxNos: number[] }
   | { status: 'forbidden'; reason: 'not_assigned' }
   | { status: 'stale'; currentStatus: Order['status'] }
@@ -69,7 +69,7 @@ export async function confirmDoorDelivery(
     courierId: string;
     /**
      * Kapıda eksik çıkan / müşterinin kabul etmediği kalemler. `fulfilledQty` **hedef** değerdir
-     * (kalan adet), fark değil — ekranda görülen sayı gönderilir (07.8).
+     * (kalan adet), fark değil — ekranda görülen sayı gönderilir.
      */
     adjustments?: readonly FulfillmentAdjustment[];
     proof?: DeliveryProofInput | null;
@@ -145,13 +145,14 @@ export async function confirmDoorDelivery(
     };
   }
 
-  // Yöntem siparişe yazılır: gün kapanışı beklenen toplamları yöntem bazında bundan türetir (11.6).
+  // Yöntem siparişe yazılır: gün kapanışı beklenen toplamları yöntem bazında bundan türetir.
   await orders.update({ id: input.orderId, paymentMethod: input.collection.method });
 
   const paid = await recordOrderPayment(db, {
     orderId: input.orderId,
     accountId: input.collection.accountId,
     amountCents: input.collection.amountCents,
+    method: input.collection.method,
     description: 'Kapıda tahsilat',
     idempotencyKey: input.collection.idempotencyKey,
     // Sistemin yazdığı satır: kurye kapıda onaylar, deftere yazan teslim akışıdır.

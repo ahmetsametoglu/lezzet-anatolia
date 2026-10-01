@@ -16,14 +16,8 @@ import { deliverOrder } from '../order/fulfillment';
 import { recordOrderPayment, syncOrderPaymentStatus } from '../order/payment';
 
 /**
- * **Gel-al teslim — D9** (DOMAIN §6): izinli müşterinin checkout'ta seçtiği depodan, hazır (`ready`) siparişini alması.
- *
- * Gel-al siparişinin "yolda"sı yoktur: teslim `ready`den yazılır ve kapı yine `deliver_order` (fiili stok düşer, rezervasyon
- * kapanır, haber gider). Sıra kuryenin kapıdaki sırasıyla aynı ve aynı sebeple: önce kutu kapısı (hiçbir yazım yapılmadan),
- * sonra MAL + TESLİM, en sonda PARA — teslim `stale` dönerse karşılığı olmayan para yazılmış olmaz.
- *
- * Tahsilat tezgâhta kapıdakiyle aynı şekildir (`DoorCollectionInput`): yöntem siparişe yazılır, hareket deponun kapı
- * kasasına girer, nakit yasal sınırı uyarır ama engellemez.
+ * Gel-al teslim (DOMAIN §6): teslim `ready`den yazılır ve sıra kapıdakiyle aynıdır, önce kutu kapısı, sonra mal ve teslim, en sonda
+ * para; teslim `stale` dönerse karşılıksız para yazılmaz. Tahsilat kapıdakiyle aynı şekildir (`DoorCollectionInput`).
  */
 
 export interface PickupQueueOrder {
@@ -210,6 +204,7 @@ export async function deliverPickupOrder(
     orderId: input.orderId,
     accountId: input.collection.accountId,
     amountCents: input.collection.amountCents,
+    method: input.collection.method,
     description: 'Gel-al tahsilatı',
     idempotencyKey: input.collection.idempotencyKey,
     source: 'system',

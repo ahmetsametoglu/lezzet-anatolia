@@ -8,12 +8,8 @@ import { addMovementTag, setMovementTagActive, tagMovement } from './tags';
 import { recordOrderPayment } from '../order/payment';
 
 /*
-  TÜR · CARİ · ETİKET · BELGE KAPILARI (12.12 · 13.09 ikinci karar) — entegrasyon: gerçek
-  tetikleyici, gerçek görünüm.
-
-  Sınananlar kural katmanıdır, ekran değil: tür hareketi izahlı yapar ve tipini belirler, etiket
-  izah değildir; cari varsayılan türünü taşır; belgenin açık kalanı BAĞLARDAN türer ve bir havale
-  birkaç faturayı kapatabilir. `recordOrderPayment` burada yalnız "izahlı doğan satır" örneği için.
+  Tür, cari, etiket ve belge kapılarının kural katmanı gerçek tetikleyici ve görünümle sınanır: tür hareketi izahlı yapar, etiket izah
+  değildir, cari varsayılan türünü taşır ve belgenin açık kalanı bağlardan türer. `recordOrderPayment` yalnız izahlı doğan satır örneğidir.
 */
 
 const db = serviceDb();
@@ -45,8 +41,7 @@ afterAll(async () => {
 const movements = () => new MoneyMovementService(db);
 
 /**
- * STOK ALIMININ BAĞI, REJİM VE VADE (12.26) — kapının okunur retleri. Kabul ve sipariş kurmayı
- * gerektirmeyen dallar burada (ret, arama yapılmadan döner); kabule bağlanan faturanın borcu ve ikinci
+ * Stok alımının bağı, rejim ve vade: kabul ve sipariş kurmayı gerektirmeyen retler burada; kabule bağlanan faturanın borcu ve ikinci
  * faturanın reddi `apps/web/lib/money/supplier-document-debt.test.ts`'te.
  */
 describe('belgenin koşulları — okunur retler (12.26)', () => {
@@ -240,6 +235,7 @@ describe('belge ve bağ — tutarıyla (13.09)', () => {
       orderId: (data as { id: string }).id,
       accountId: bankAccount,
       amountCents: 1,
+      method: 'bank_transfer',
       description: 'izah testi',
       source: 'system',
       idempotencyKey: `izah-${stamp}`,

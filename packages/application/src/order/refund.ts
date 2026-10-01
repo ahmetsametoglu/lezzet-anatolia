@@ -1,5 +1,5 @@
 import { AccountService, MoneyMovementService, OrderService } from '@lezzet/database';
-import { canTransition } from '@lezzet/domain-core';
+import { canTransition, refundMethodOf } from '@lezzet/domain-core';
 import type { FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cancelOrderShipment, type ShipmentCancelOutcome } from '../shipping/cancel';
@@ -315,6 +315,7 @@ async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOpt
     orderId,
     accountId,
     amountCents: dueCents,
+    method: account ? refundMethodOf(account.type, payment?.paymentMethod ?? null) : null,
     valueDate: opts.valueDate,
     description: opts.description ?? 'Sipariş iadesi',
     meta: refundMeta,

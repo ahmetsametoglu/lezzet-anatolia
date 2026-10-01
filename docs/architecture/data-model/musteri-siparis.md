@@ -709,7 +709,7 @@ yapılmaz"). Hesap sefer başlatmayı **bloke etmez**: düşerse sıra `null` ka
 
 ## DeliveryRunClose (sefer kapanışı — kurye×gün kapanışının halefi, 18.08)
 
-Kapanış bir **mutabakattır**, para hareketi değil: para kapıda tahsil edilirken yazıldı (`money_movement`, 12.2). Bu tablo beklenen ile sayılanı yan yana koyar ve farkı **aynı gün, seferiyle birlikte** görünür kılar (DOMAIN §7). Eski `courier_day_close` (kurye×gün) kaldırıldı — "fark hangi seferde doğdu" cevaplanamıyordu ve teslimden sonra yeniden atanan sipariş yanlış kuryeye yazılabiliyordu; `delivery_run_id` teslimle donduğu için o kayma kökten kapandı.
+Kapanış bir **mutabakattır**: para kapıda tahsil edilirken yazıldı (`money_movement`); yalnız nakit farkı, seferin nakit tahsilatlarının girdiği hesaba `kasa-farki` hareketi olarak kapanışla aynı işlemde yazılır (`meta.deliveryRunId`, hesap tek değilse yazılmaz). Bu tablo beklenen ile sayılanı yan yana koyar ve farkı **aynı gün, seferiyle birlikte** görünür kılar (DOMAIN §7). Eski `courier_day_close` (kurye×gün) kaldırıldı — "fark hangi seferde doğdu" cevaplanamıyordu ve teslimden sonra yeniden atanan sipariş yanlış kuryeye yazılabiliyordu; `delivery_run_id` teslimle donduğu için o kayma kökten kapandı.
 
 <!-- alanlar:delivery_run_close -->
 | Kolon | Tip | Null | Varsayılan |

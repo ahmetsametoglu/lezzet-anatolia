@@ -152,6 +152,9 @@ create table public.money_movement (
   -- yarım transfer hiçbir yerde görünmezdi.
   counter_account_id uuid references public.account (id) on delete restrict,
   order_id uuid references public.order (id) on delete set null,
+  -- Sipariş parasının yöntemi; kapıda nakit ve kart aynı kasa hesabına girdiği için hesaptan okunamaz, sertifikalı kasa ise ikisini
+  -- ayrı ister. `null` = yöntemi bilinmiyor, kasaya tahminle yazılmaz.
+  payment_method payment_method,
   stock_intake_id uuid references public.stock_intake (id) on delete set null,
   supplier_id uuid references public.supplier (id) on delete set null,
   -- Paranın gerçekten hareket ettiği gün; kayıt günü farklı olabilir ve raporlar bu tarihi okur.
@@ -450,7 +453,8 @@ create or replace function public.record_order_movement(
   -- harekette, çünkü bir siparişin birden çok tahsilatı olabilir.
   p_meta jsonb default null,
   -- `null` korumasız yazımdır (elle giriş, besleme); NULL'lar tekil indekste çakışmaz.
-  p_idempotency_key text default null
+  p_idempotency_key text default null,
+  p_payment_method payment_method default null
 ) returns jsonb
 language plpgsql
 security invoker
@@ -476,8 +480,13 @@ begin
 
   -- Aynı anahtarla gelen istek yazmaz ama reddedilmez de, var olan hareketi `deduped: true` ile döner: hata dönse kurye
   -- "olmadı" görür ve para iki kez tahsil edilirdi. Hedef yalnız `(idempotency_key)`, banka içe aktarma koruması bozulmaz.
-  insert into public.money_movement (account_id, direction, amount, type, order_id, value_date, description, source, meta, idempotency_key)
-  values (p_account_id, v_direction, p_amount, p_type, p_order_id, p_value_date, p_description, p_source, p_meta, p_idempotency_key)
+  insert into public.money_movement (
+    account_id, direction, amount, type, order_id, value_date, description, source, meta, idempotency_key, payment_method
+  )
+  values (
+    p_account_id, v_direction, p_amount, p_type, p_order_id, p_value_date, p_description, p_source, p_meta, p_idempotency_key,
+    p_payment_method
+  )
   on conflict (idempotency_key) do nothing
   returning id into v_movement_id;
 
@@ -502,8 +511,9 @@ end;
 $$;
 
 revoke execute on function public.resync_order_amounts(uuid) from public, anon, authenticated;
-revoke execute on function public.record_order_movement(uuid, uuid, numeric, movement_type, date, text, movement_source, jsonb, text)
-  from public, anon, authenticated;
+revoke execute on function public.record_order_movement(
+  uuid, uuid, numeric, movement_type, date, text, movement_source, jsonb, text, payment_method
+) from public, anon, authenticated;
 
 -- `charge.refunded` yalnız `pi_...` ile gelir, sipariş kimliğiyle değil; künyeyi yalnız sağlayıcı ödemeleri taşır.
 create index money_movement_provider_ref_idx on public.money_movement ((meta ->> 'providerRef'))
@@ -569,6 +579,7 @@ begin
          tags = p.tags,
          counter_account_id = p.counter_account_id,
          order_id = p.order_id,
+         payment_method = p.payment_method,
          stock_intake_id = p.stock_intake_id,
          supplier_id = p.supplier_id,
          idempotency_key = p.idempotency_key,
@@ -618,22 +629,23 @@ begin
     delete from public.money_allocation where movement_id = s.id;
     update public.money_movement
        set type = 'misc', nature = null, counterparty_id = null, counter_account_id = null,
-           counterpart_movement_id = null, order_id = null, stock_intake_id = null, supplier_id = null,
-           reconciled = false
+           counterpart_movement_id = null, order_id = null, payment_method = null, stock_intake_id = null,
+           supplier_id = null, reconciled = false
      where id = s.id;
   else
     -- Önce ekstre satırı ham hâline iner: yazım kimliği tekildir ve yeniden kurulan satır onu alacak.
     update public.money_movement
        set type = 'misc', nature = null, counterparty_id = null, tags = '{}', counter_account_id = null,
-           counterpart_movement_id = null, order_id = null, stock_intake_id = null, supplier_id = null,
-           idempotency_key = null, meta = null, reconciled = false
+           counterpart_movement_id = null, order_id = null, payment_method = null, stock_intake_id = null,
+           supplier_id = null, idempotency_key = null, meta = null, reconciled = false
      where id = s.id;
     insert into public.money_movement (
       account_id, direction, amount, type, nature, counterparty_id, tags, meta, counter_account_id,
-      order_id, stock_intake_id, supplier_id, value_date, description, source, idempotency_key, created_at
+      order_id, payment_method, stock_intake_id, supplier_id, value_date, description, source, idempotency_key,
+      created_at
     ) values (
       s.account_id, s.direction, (v_absorbed ->> 'amount')::numeric, s.type, s.nature, s.counterparty_id,
-      s.tags, nullif(s.meta - 'absorbed', '{}'::jsonb), s.counter_account_id, s.order_id,
+      s.tags, nullif(s.meta - 'absorbed', '{}'::jsonb), s.counter_account_id, s.order_id, s.payment_method,
       s.stock_intake_id, s.supplier_id, (v_absorbed ->> 'valueDate')::date, v_absorbed ->> 'description',
       (v_absorbed ->> 'source')::movement_source, s.idempotency_key,
       coalesce((v_absorbed ->> 'createdAt')::timestamptz, now())

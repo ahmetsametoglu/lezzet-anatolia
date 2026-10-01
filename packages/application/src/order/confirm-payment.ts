@@ -21,7 +21,7 @@ export interface ConfirmPaymentInput {
   orderId: string;
   /** Sağlayıcıdaki ödeme — iade bunun üzerinden döner ve tahsilatın künyesine yazılır. */
   paymentIntentId: string | null;
-  /** Sağlayıcının GERÇEKTEN aldığı tutar (cent) — sipariş toplamı değil (12.2). */
+  /** Sağlayıcının GERÇEKTEN aldığı tutar (cent) — sipariş toplamı değil. */
   amountCents: number | null;
   /** Paranın düştüğü hesap; verilmezse aktif sağlayıcı hesabı okunur (`providerAccountId`). */
   accountId?: string | null;
@@ -30,7 +30,7 @@ export interface ConfirmPaymentInput {
 export interface ConfirmPaymentDeps {
   /** Sağlayıcı portu — anahtarsız ortamda `null`: iade sağlayıcıya iletilemez, damga yine düşer. */
   gateway: PaymentGateway | null;
-  /** Durum geçişinin ve iptalin müşteri haberi (14.5) — çağıranın portları. */
+  /** Durum geçişinin ve iptalin müşteri haberi — çağıranın portları. */
   effects?: OrderEffects;
 }
 
@@ -82,6 +82,7 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
       orderId: order.id,
       accountId,
       amountCents: input.amountCents,
+      method: 'online',
       description: 'Stripe tahsilatı',
       source: 'system',
       meta: input.paymentIntentId ? { providerRef: input.paymentIntentId } : null,

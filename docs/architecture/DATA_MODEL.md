@@ -34,6 +34,7 @@ Varlık tabloları konu dosyalarına ayrıldı — 700 satırlık tek dosya, par
 - [`data-model/stok-tedarik.md`](data-model/stok-tedarik.md) — **Stok ve Tedarik:** `Stock`, `Reservation`, `StockAdjustment`, `TemperatureLog`, `Supplier`, `SupplierProduct`, `PurchaseOrder`, `PurchaseOrderItem`, `StockIntake`
 - [`data-model/musteri-siparis.md`](data-model/musteri-siparis.md) — **Müşteri ve Sipariş:** `Customer`, `Address`, `DeliveryZone`, `Order`, `OrderItem`, `OrderItemReturn`, `OrderItemBatch`, `OrderStatusLog`, `OrderBox(+Item)`, `Cart`, `DeliveryRun`, `DeliveryRunClose`
 - [`data-model/para.md`](data-model/para.md) — **Para ve Ön Muhasebe:** `Account`, `MoneyMovement`, `BankImportProfile`
+- [`data-model/kasa.md`](data-model/kasa.md) — **Sertifikalı kasa:** `RegisterStore`, `RegisterProduct`, `RegisterTicket`, `RegisterTicketLine`, `RegisterPayment`, `RegisterCashOp`, `RegisterQueue` — kasaya yazılanın aynası ve yazım kuyruğu
 - [`data-model/iletisim-geribildirim.md`](data-model/iletisim-geribildirim.md) — **İletişim, Geri Bildirim ve Analitik:** `Conversation`, `Message`, `WebhookEvent`, `AnalyticsEvent`, `ProductFeedback`, `FeedbackRequest`, `PointsEntry`, `Ticket`, `TicketMessage`, `Setting`
 - [`data-model/operasyon.md`](data-model/operasyon.md) — **Operasyon ve Gözlemleme:** `JobRun`, `ErrorLog`, `SystemHealthSnapshot` — sistemin kendi hakkındaki verisi; iş kaydı DEĞİL, saklama süresi var (bkz. [`OBSERVABILITY.md`](OBSERVABILITY.md))
 - [`data-model/asistan.md`](data-model/asistan.md) — **MCP Asistanı:** `AssistantProposal`, `McpConnectionKey`, `McpCallLog` — onay kuyruğu (asistanın TEK yazma kapısı) + kapının kimliği ve izi (bkz. [`AI_ADMIN_ASSISTANT.md`](AI_ADMIN_ASSISTANT.md))
@@ -124,6 +125,8 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `product_status`: active, passive, candidate
 - `product_storage_type`: ambient, chilled, frozen
 - `purchase_order_status`: draft, sent, partially_received, received, cancelled
+- `register_line_kind`: item, shipping *(kasa fişi kaleminin kaynağı: sipariş kalemi ya da kargonun bir KDV oranına düşen payı)*
+- `register_write_status`: writing, written *(kasaya çağrı başladı ama sonucu aynaya geçmedi / geçti)*
 - `return_disposition`: restock, discard, goodwill
 - `review_status`: pending, approved, rejected
 - `setting_scope`: global, channel, zone, country, warehouse *(ayarın hangi eksende istisna aldığı)*
