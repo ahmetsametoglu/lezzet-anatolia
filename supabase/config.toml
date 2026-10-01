@@ -153,16 +153,9 @@ enabled = true
 site_url = "http://localhost:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 #
-# Dönüş adresi bu listeyi geçemezse GoTrue sessizce `site_url`e düşer — kod `/auth/callback`'e hiç
-# uğramaz, `next` kaybolur. Yaşandı (29.07): checkout'ta Google ile giren müşteri ana sayfada,
-# üstelik BAŞKA bir origin'de (`127.0.0.1`) uyanıyor ve sepetini kaybediyordu — misafir sepeti
-# `localhost` origin'inin `localStorage`ında kalmıştı.
-#
-# Yollar joker ile açılır (`/**`): dönüş noktası tek değil — `/auth/callback` yanında OTP ve şifre
-# akışlarının kendi adresleri de var. İki host da yazılı: geliştiricinin hangi adresi yazdığına
-# göre giriş kırılmasın. **Canlıda karşılığı Supabase panelindeki Redirect URLs listesidir** —
-# orası da aynı biçimde doldurulur, yoksa aynı hata canlıda tekrarlar.
-additional_redirect_urls = ["http://localhost:3000/**", "http://127.0.0.1:3000/**", "lezzetanatolia://**"]
+# Dönüş adresi listeyi geçemezse GoTrue sessizce `site_url`e düşer: kod `/auth/callback`e uğramaz ve `next` kaybolur. Native
+# uygulamalar kendi şemasıyla döner; canlıdaki karşılığı Supabase panelindeki Redirect URLs listesidir ve aynı biçimde doldurulur.
+additional_redirect_urls = ["http://localhost:3000/**", "http://127.0.0.1:3000/**", "lezzetanatolie://**", "lezzetoperasyonu://**"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
