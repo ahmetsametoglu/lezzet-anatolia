@@ -288,12 +288,21 @@ describe('yazılmayan ve bekleyen', () => {
     expect(await queueRowOf('order_id', order.id)).toBeNull();
   });
 
-  it('canlıya geçişten önce açılan sipariş kasaya yazılmaz', async () => {
+  it('canlıya geçişten önce para görmüş sipariş kasaya yazılmaz', async () => {
     const order = await newOrder();
     await pay(order.id, 2990);
 
     expect(await runRow('order_id', order.id, new Date(Date.now() + 86_400_000).toISOString())).toBe('skipped');
     expect(salesOf(order.referenceNo)).toHaveLength(0);
+  });
+
+  it('canlıya geçişten önce açılıp sonra ödenen sipariş kasaya yazılır', async () => {
+    const order = await newOrder();
+    const opened = (await orders.getWithItems(order.id))!.order;
+    await pay(order.id, 2990);
+
+    expect(await runRow('order_id', order.id, new Date(Date.parse(opened.createdAt) + 1).toISOString())).toBe('written');
+    expect(salesOf(order.referenceNo)).toHaveLength(1);
   });
 
   it('yöntemi bilinmeyen tahsilat tahminle yazılmaz: satır sebebiyle ertelenir', async () => {

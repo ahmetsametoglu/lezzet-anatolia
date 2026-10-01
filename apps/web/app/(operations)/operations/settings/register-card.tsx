@@ -237,7 +237,7 @@ function LiveFromDialog({ open, value, onClose }: { open: boolean; value: string
       open={open}
       onClose={onClose}
       title="Canlıya geçiş"
-      subtitle="Bu günden (Paris, gece yarısı) önce açılan sipariş ve yazılan kasa hareketi kasaya gitmez. Boş bırakılırsa kasaya hiçbir şey yazılmaz."
+      subtitle="Bu günden (Paris, gece yarısı) sonra para gören sipariş ve yazılan kasa hareketi kasaya gider. Boş bırakılırsa kasaya hiçbir şey yazılmaz."
       footer={
         <>
           {value ? (

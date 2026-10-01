@@ -75,7 +75,7 @@ export async function setRegisterLiveFrom(db: Db, at: string | null): Promise<vo
   if (at) {
     await settings.set(REGISTER_LIVE_FROM_KEY, at, {
       scopeType: 'global',
-      description: 'Sertifikalı kasaya yazımın başladığı an; öncesinde açılan sipariş kasaya gitmez.',
+      description: 'Sertifikalı kasaya yazımın başladığı an; bu andan sonra para görmeyen sipariş kasaya gitmez.',
     });
     return;
   }
@@ -140,12 +140,18 @@ interface Mirror {
 
 async function syncOrderRegister(db: Db, register: CashRegister, orderId: string, ctx: SyncContext): Promise<SyncOutcome> {
   const found = await new OrderService(db).getWithItems(orderId);
-  if (!found || Date.parse(found.order.createdAt) < Date.parse(ctx.liveFrom)) return { status: 'skipped' };
+  if (!found) return { status: 'skipped' };
+  const money = (await new MoneyMovementService(db).listByOrder(orderId)).filter(isOrderMoney);
+  const before = await mirrorOf(db, orderId);
+  // Kapsamı paranın anı belirler, siparişin açılışı değil: geçişten önce açılıp sonra ödenen sipariş de kasaya gider (1. karar).
+  if (before.tickets.length === 0 && !money.some((movement) => Date.parse(movement.createdAt) >= Date.parse(ctx.liveFrom))) {
+    return { status: 'skipped' };
+  }
   const scope: OrderScope = { db, register, order: found.order, items: found.items, now: ctx.now };
 
-  await recoverOrder(scope, await mirrorOf(db, orderId));
+  await recoverOrder(scope, before);
   const mirror = await mirrorOf(db, orderId);
-  const movements = (await new MoneyMovementService(db).listByOrder(orderId)).filter(isOrderMoney).map(registerMovementOf);
+  const movements = money.map(registerMovementOf);
   const plan = planRegister({ order: scope.order, items: scope.items, movements, tickets: snapshotsOf(mirror) });
   if (plan.status === 'skip') return { status: 'skipped' };
   if (plan.dueMismatch) logger.warn({ orderId }, 'kasa: fiş kalemleri türetilen borcu tutmuyor, fark fişin bakiyesinde');

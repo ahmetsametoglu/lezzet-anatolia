@@ -175,7 +175,7 @@ düzeltilen hareket kendiliğinden doğru sonuca iner.
 
 **Kapsam:** B2C siparişlerin bütün tahsilat ve iadeleri (çevrim içi, kapıda nakit ve kart, gel-al, kapı
 önü ve araç satışı) ve eşlenmiş kasaların öteki nakit hareketleri. B2B siparişi fiş olmaz (10. karar);
-hediye sipariş hiç para görmez (11. karar). Canlıya geçiş anı ayardır; öncesindeki hareketler yazılmaz.
+hediye sipariş hiç para görmez (11. karar). Canlıya geçiş anı ayardır; kapsamı paranın anı belirler.
 
 **Akış:**
 1. `money_movement`ta sipariş parası yazılınca, değişince ya da silinince tetikleyici siparişi kasa
@@ -234,8 +234,9 @@ denenir; beşinci denemede `error_log`. Plan durursa (yöntemi bilinmeyen hareke
 eşlenmemiş depo) satır sebebiyle bekler; çözüm bir para değişikliğiyle gelir ve satırı yeniden işaretler.
 Satış tarihini API almıyor: geciken fiş yazıldığı günün Z'sine düşer.
 
-**Canlıya geçiş:** `register_live_from` ayarı (an). Ayar yoksa ya da okunamıyorsa eşitleme hiç koşmaz;
-öncesinde açılan sipariş ve yazılan kasa hareketi kasaya gitmez.
+**Canlıya geçiş:** `register_live_from` ayarı (an). Ayar yoksa ya da okunamıyorsa eşitleme hiç koşmaz.
+Bu andan sonra para görmüş siparişin bütün tahsilat ve iadeleri yazılır, açılışı önce olsa da; yalnız
+önceden para görmüş sipariş ve önceden yazılmış kasa hareketi kasaya gitmez.
 
 **Bilinen sınır:** yazılmış bir ödeme satırının hareketi aynı kimlikle tutarı değişerek düzeltilirse plan
 bunu görmez (birleşmede hareket yenisiyle değiştiği için orada sorun yok); bugün tutar düzelten akış yok.
