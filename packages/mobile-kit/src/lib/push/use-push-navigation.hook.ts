@@ -39,6 +39,10 @@ export function usePushNavigation(resolveHref: (target: PushTarget) => string | 
     /* Env'siz/native-modülsüz ortamda (test, Expo Go Android) kurulum fırlayabilir — künyeli
        yutma (kayıt hook'unun aynısı): dokunuş yönlendirmesi bir hızlandırıcıdır. */
     try {
+      // Açıkken gelen bildirim de gösterilir; işleyici yokken modül onu ekrana koymaz ve başka ekrandaki kullanıcı haberi kaçırır.
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
+      });
       void Notifications.getLastNotificationResponseAsync().then(yonlendir).catch(() => undefined);
       const abonelik = Notifications.addNotificationResponseReceivedListener(yonlendir);
       return () => abonelik.remove();
