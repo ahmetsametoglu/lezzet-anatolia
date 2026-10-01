@@ -6,34 +6,20 @@ import { deviceStore, DEVICE_STORE_KEYS } from '../storage/device-store';
 import { pushNative } from './native-module';
 
 /*
-  CİHAZ KAYDI (14.14'ün cihaz yarısı — 21.13). Sunucu tarafı hazırdı (uç + sahip devri + izin
-  karası); burası jetonu ALIP oraya taşıyan yarım: kanal → izin → jeton → kayıt.
-
-  ── SIRA ANDROID 13'ÜN ŞARTI (v57 dokümanı) ─────────────────────────────────
-  İzin istemi ancak EN AZ BİR bildirim kanalı yaratıldıktan sonra çıkar — kanal önce, izin sonra.
-
-  ── HER AÇILIŞTA, İZİN DURUMUYLA BİRLİKTE ───────────────────────────────────
-  Kayıt bir kere değil her oturum başında tazelenir ve `enabled`ı raporlar: OS'ta bildirimi
-  kapatan kullanıcının jetonu CANLI kalır ve Expo "gönderdim" der — sunucu `enabled:false` görünce
-  cihazı gönderilebilir listesinden düşürür, sıra maile iner (sunucu künyesi).
-
-  ── SESSİZ, AMA KÜNYELİ ─────────────────────────────────────────────────────
-  Push bir HIZLANDIRICIDIR, tek kapı değil (zemin brief kuralı): jeton alınamadı diye uygulama
-  açılışı aksatılmaz. İki bilinen "alınamaz" hâli var ve ikisi de meşru: Expo Go'da Android uzak
-  bildirimi desteklemiyor (SDK 53+, dev build gerekir) ve EAS `projectId`si henüz yapılandırılmadı
-  — ikisinde de `getExpoPushTokenAsync` fırlatır, kayıt sessizce atlanır ve uygulama içi zil
-  (aynı satırların öteki kanalı) çalışmaya devam eder.
+  Cihaz kaydı: kanal → izin → jeton → sunucu, her oturum başında ve izin durumuyla birlikte (kapalı izinli cihaz gönderilebilir
+  sayılmaz). Kanal önce kurulur, çünkü Android 13 izin istemini ancak en az bir kanal varken gösterir.
 */
 
-/**
- * İzin isteme + jeton alma + sunucuya yazma. Oturum AÇIKKEN çağrılır (hook karar verir). `app`: jetonun
- * geldiği native uygulama (21.311) — sunucu müşteri gönderiminde yalnız `customer` jetonlarını okur.
- */
+/*
+  Jeton alınamazsa kayıt sessizce atlanır: Expo Go'da Android uzak bildirimi yok, proje kimliksiz ortamda `getExpoPushTokenAsync`
+  fırlatır. İkisi de arıza değil ortamın kendisidir ve uygulama içi zil aynı satırları taşımaya devam eder.
+*/
+
+/** Oturum açıkken çağrılır; `app` jetonun geldiği native uygulamadır, sunucu müşteri gönderiminde yalnız `customer` jetonlarını okur. */
 export async function ensurePushRegistration(app: PushApp): Promise<void> {
   if (Platform.OS !== 'ios' && Platform.OS !== 'android') return;
 
-  // Modül binary'de yoksa kayıt hiç denenmez — kapı `pushNative` (künyesi orada): statik import
-  // bu dosyayı açılış zincirinde patlatıyor ve uygulama hiç açılmıyordu (26.08).
+  // Modül derlemede yoksa kayıt hiç denenmez; statik import bu dosyayı açılış zincirinde patlatıp uygulamayı açtırmıyordu.
   const Notifications = pushNative();
   if (!Notifications) return;
 
@@ -64,9 +50,8 @@ export async function ensurePushRegistration(app: PushApp): Promise<void> {
 }
 
 /**
- * Çıkışın push adımı — `signOut` supabase oturumunu KAPATMADAN ÖNCE çağırır: silme ucu yetki
- * ister ve oturum kapandıktan sonra istek atılamaz. Sunucudaki sahip devri son emniyettir; ilk
- * emniyet bu silmedir (14.14 kararı).
+ * Çıkışın push adımı: `signOut` oturumu kapatmadan önce çağırır, çünkü silme ucu yetki ister. Sunucudaki sahip devri son emniyettir,
+ * ilk emniyet bu silmedir.
  */
 export async function releasePushRegistration(): Promise<void> {
   try {
