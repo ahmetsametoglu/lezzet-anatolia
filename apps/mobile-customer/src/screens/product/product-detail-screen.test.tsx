@@ -1,10 +1,13 @@
 import { formatPrice } from '@lezzet/helper';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import type * as ReactModule from 'react';
 import { Text } from 'react-native';
 
 import { resetCart, useCart } from '@/screens/customer-kit/cart-store';
+import { catalogProduct } from '@/screens/catalog/catalog-fixture';
 import { ProductDetailScreen } from './product-detail-screen';
 import { productDetail, productVariant } from './product-fixture';
+import { rememberProductPreview } from './product-preview';
 
 /*
   ÜRÜN DETAY EKRANI — tel cevabı fixture'dan gelir (fetch mock'u): ekran GERÇEK istemci yolunu
@@ -14,6 +17,18 @@ import { productDetail, productVariant } from './product-fixture';
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
+
+/* Görselin kaç kez kurulduğu: veri gelince kapak yeniden kurulursa Android'de yeniden solar. Ad `mock` ile başlar (jest hoisting). */
+const mockFrameMounts: (string | null)[] = [];
+jest.mock('@lezzet/mobile-kit/src/components/ui/frame-image', () => {
+  const React = jest.requireActual<typeof ReactModule>('react');
+  return {
+    FrameImage: ({ image }: { image: { url: string | null } }) => {
+      React.useState(() => mockFrameMounts.push(image.url));
+      return null;
+    },
+  };
+});
 
 const mockRouter = { back: jest.fn(), push: jest.fn(), setParams: jest.fn() };
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
@@ -301,5 +316,34 @@ describe('ürün detayı — gelince haber ver', () => {
 
     expect(screen.getByTestId('product-bar')).toBeOnTheScreen();
     expect(screen.queryByTestId('product-stock-alert')).toBeNull();
+  });
+});
+
+/*
+  Kartla açılış: sayfa veri gelmeden kartın bildiğiyle çizilir. Ad ve fiyat görünmezse sayfa dokunuşla boş açılıyordur; veri gelince
+  kapak yeniden kurulursa görsel yeniden solar ve ekran titrer.
+*/
+describe('kartla açılan ürün sayfası', () => {
+  it('veri gelmeden ad ve fiyat görünür, veri gelince kapak görseli yeniden kurulmaz', async () => {
+    const cover = productDetail().image;
+    rememberProductPreview(catalogProduct(1, { slug: 'kartla-acilan', name: 'El Açması Kol Böreği', image: cover, priceCents: 890 }));
+    let deliver: (response: Response) => void = () => undefined;
+    fetchMock.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          deliver = resolve;
+        }),
+    );
+    mockFrameMounts.length = 0;
+
+    await render(<ProductDetailScreen slug="kartla-acilan" />);
+    expect(screen.getByRole('header', { name: 'El Açması Kol Böreği' })).toBeOnTheScreen();
+    expect(screen.getByTestId('product-price')).toHaveTextContent(formatPrice(890, 'tr'));
+    expect(screen.queryByTestId('product-add')).toBeNull();
+    expect(mockFrameMounts.filter((url) => url === cover.url)).toHaveLength(1);
+
+    deliver(ok(productDetail({ gallery: [cover, { url: 'https://cdn.test/kol-boregi-2.jpg', crop: cover.crop, frames: null }] })));
+    await waitFor(() => expect(screen.getByTestId('product-add')).toBeOnTheScreen());
+    expect(mockFrameMounts.filter((url) => url === cover.url)).toHaveLength(1);
   });
 });

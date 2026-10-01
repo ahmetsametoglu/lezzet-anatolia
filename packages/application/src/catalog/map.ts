@@ -304,7 +304,7 @@ export function toVariant(
   };
 }
 
-export type CatalogProductRow = Pick<Product, 'id' | 'slug' | 'name' | 'shippable'> & ImageMeta;
+export type CatalogProductRow = Pick<Product, 'id' | 'slug' | 'name' | 'categoryId' | 'shippable'> & ImageMeta;
 
 /**
  * Ürünü vitrin kartına indirger: kanal fiyatı yoksa satışa kapalı, `purchaseMode` varyant sayısından, tükendi toplam
@@ -335,6 +335,7 @@ export function toProduct(
   return {
     id: row.id,
     slug: row.slug,
+    categoryId: row.categoryId,
     name: resolveLocalizedText(row.name, locale),
     image: imageOf(row),
     unitLabel: primary ? resolveLocalizedText(primary.label, locale) : '',

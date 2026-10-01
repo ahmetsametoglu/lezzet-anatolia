@@ -27,6 +27,8 @@ interface PhoneProductCardProps {
   dimmed?: boolean;
   /** "3 seçenek" — yalnız çok boylu üründe. */
   optionsLabel?: string;
+  /** Açılmadan önce: kartın bilgisini ürün sayfasının yükleme karesine bırakır. */
+  onOpen?: () => void;
 }
 
 export function PhoneProductCard({
@@ -40,6 +42,7 @@ export function PhoneProductCard({
   placeNote,
   dimmed = false,
   optionsLabel,
+  onOpen,
 }: PhoneProductCardProps) {
   // Hiçbir yerde olmayan üründe "bu adrese gelmez" demek, cevabı olmayan bir soruya cevap vermek olurdu.
   const note = soldOut ? undefined : placeNote;
@@ -51,6 +54,7 @@ export function PhoneProductCard({
   return (
     <Link
       href={href}
+      onClick={onOpen}
       // Ekran okuyucu görenle aynı bilgiyi alır: ad · fiyat · rozet · yer notu.
       aria-label={[name, priceLabel, statusLabel, note].filter(Boolean).join(' · ')}
       className="relative block aspect-square cursor-pointer transition-transform hover:opacity-95 active:scale-[0.97]"

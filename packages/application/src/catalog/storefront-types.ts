@@ -48,6 +48,8 @@ export type { PurchaseMode };
 export interface StorefrontProduct {
   id: string;
   slug: string;
+  /** Ürün sayfası kart bilgisiyle açılırken kategori satırının yerini ayırır ki veri gelince ad kaymasın. */
+  categoryId: string | null;
   name: string;
   image: StorefrontImage;
   /** Satılabilir birimin etiketi ("1 kg", "6 adet · 540 g") — varyanttan gelir. */

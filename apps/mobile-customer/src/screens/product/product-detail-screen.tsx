@@ -1,22 +1,19 @@
 // Kart rozeti ve fiyat etiketi web telefon görünümüyle ortak kuruculardan.
 import { cardBadgeOf, formatPrice, fromPriceLabel, openingVariantOf, productPriceLabel, showsNoShipChip } from '@lezzet/helper';
 import type { TextSegment } from '@lezzet/helper';
-import type { LocalizedCopy } from '@lezzet/i18n';
+import type { Locale } from '@lezzet/i18n';
 import { ALLERGEN_LABELS, NUTRITION_KEYS, resolveLocalizedText } from '@lezzet/types';
-import type { CatalogVariant, Nutrition, ProductAllergen } from '@lezzet/types';
-import { LinearGradient } from 'expo-linear-gradient';
+import type { CatalogSelling, CatalogVariant, Nutrition, ProductAllergen } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
 import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
 import { BlurView } from 'expo-blur';
 import { CirclePhoto } from '@lezzet/mobile-kit/src/components/ui/circle-photo';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
-import { PhotoGallery } from '@/components/ui/photo-gallery';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
@@ -24,6 +21,7 @@ import { submitStockNotice } from '@/lib/api/stock-notices';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import placeMessages from '@lezzet/i18n/customer/place';
+import type { PlaceResolution } from '@/lib/api/places';
 import { stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { toastError, toastInfo, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
@@ -36,7 +34,10 @@ import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { useSheet } from '@/screens/customer-kit/use-sheet.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import messages from '@lezzet/i18n/customer/product';
-import { ProductSkeleton } from './product-skeleton';
+import { fill, type Messages } from './product-copy';
+import { ProductHeadLines, ProductHero } from './product-head';
+import { openProductFromCard, productPreviewOf } from './product-preview';
+import { ProductBarSkeleton, ProductBodySkeleton, ProductSkeleton } from './product-skeleton';
 import { useProduct } from './use-product.hook';
 
 /*
@@ -44,11 +45,13 @@ import { useProduct } from './use-product.hook';
   barı kalkar; cümle katalogla aynı yerden (`stockMarkOf`) gelir.
 */
 
-type Messages = LocalizedCopy<typeof messages>;
-
-/** `{price}` gibi tekil yer tutucuları doldurur — sayfanın tüm şablonları tek anahtarlı. */
-function fill(template: string, key: string, value: string): string {
-  return template.replace(`{${key}}`, value);
+/**
+ * Kahramanın yer filigranı: `info` ("Kargoyla gelir") elenir, kargolanabilirliği künyedeki `noShip` çipi söylüyor. Fiyatsız ürün
+ * sessiz kalır: satışa kapalı ürüne "bu adrese gelmiyor" demek cevabı olmayan bir soruya cevap vermektir.
+ */
+function heroMarkOf(selling: CatalogSelling | undefined, place: PlaceResolution | null, locale: Locale) {
+  const mark = selling === undefined || selling.priceCents === null ? null : stockMarkOf(selling.stockStatus, place, locale);
+  return mark === null || mark.tone === 'info' ? null : mark;
 }
 
 /** Vurgulu/vurgusuz parçaları tek `Text` altında dizer (kalın parça `strong` kademesiyle). */
@@ -144,8 +147,41 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
   }, [awaitingMinimumHint, cart.view, locale, t.minimumHint]);
   const [accordion, setAccordion] = useState({ ingredients: false, nutrition: false, storage: false });
 
-  /* İlk yükte sayfanın yerini iskelet tutar; kapsamı ve ölçüleri `product-skeleton`da. */
-  if (status === 'loading') return <ProductSkeleton testID="product-loading" />;
+  if (status === 'loading') {
+    /* Kart bilgisi yoksa (bağlantıyla açılış) sayfanın yerini iskelet tutar; varsa üst bölüm onunla, veri gelince kullanılacak
+       yerde çizilir ki görsel yeniden kurulmasın ve satırlar kaymasın. */
+    const preview = productPreviewOf(slug);
+    if (preview === null) return <ProductSkeleton testID="product-loading" />;
+    return (
+      <View style={styles.screen} testID="product-detail">
+        <ScrollView contentContainerStyle={styles.content} testID="product-scroll">
+          <ProductHero
+            images={[preview.image]}
+            name={preview.name}
+            selling={preview}
+            /* Filigran veriyle gelir: kartın stok hâli bütün boyların toplamı, sayfanınki açılış boyunun; ikisi farklı cümle
+               söyleyebilir. */
+            placeMark={null}
+            onBack={() => router.back()}
+            onShare={null}
+            locale={locale}
+            t={t}
+          />
+          <View style={styles.head}>
+            <ProductHeadLines
+              categoryName={preview.categoryId === null ? null : undefined}
+              name={preview.name}
+              selling={preview}
+              locale={locale}
+              t={t}
+            />
+          </View>
+          <ProductBodySkeleton testID="product-loading" />
+        </ScrollView>
+        <ProductBarSkeleton />
+      </View>
+    );
+  }
 
   if (status === 'missing' || status === 'error' || detail === null) {
     const missing = status === 'missing';
@@ -177,10 +213,7 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
   const was = variant?.wasCents;
   const soldOut = variant?.soldOut ?? true;
   const discounted = was !== undefined;
-  /* `info` ("Kargoyla gelir") elenir, kargolanabilirliği künyedeki `noShip` çipi söylüyor. Fiyatsız ürün sessiz kalır: satışa
-     kapalı ürüne "bu adrese gelmiyor" demek cevabı olmayan bir soruya cevap vermektir. */
-  const stockMark = variant === undefined || price === null ? null : stockMarkOf(variant.stockStatus, place, locale);
-  const placeMark = stockMark === null || stockMark.tone === 'info' ? null : stockMark;
+  const placeMark = heroMarkOf(variant, place, locale);
   /* "Haber ver" dalını tükendi ile "bölgenizde şu an yok" paylaşır, müşterinin yapabileceği aynı. `blocked` bu dala girmez:
      orada beklenen kalem değil bölgedir. */
   const alertBar = soldOut || placeMark?.tone === 'pending';
@@ -271,77 +304,20 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
   return (
     <View style={styles.screen} testID="product-detail">
       <ScrollView contentContainerStyle={styles.content} testID="product-scroll">
-        {/* ── Kahraman: galeri şeridi, üst degrade, yüzen düğmeler, rozetler ── */}
-        <View style={styles.hero}>
-          {/* Şerit kahramanın YERİNE geçer, yerleşimini değiştirmez: degrade, düğmeler ve rozetler
-              onun üstünde çizilmeye devam eder (kardeş sırası korundu). */}
-          <PhotoGallery
-            images={heroPhotos}
-            photoLabel={t.gallery.photo}
-            fallback={
-              <View style={styles.heroFallback}>
-                <Text style={styles.heroInitial}>{detail.name.slice(0, 1)}</Text>
-              </View>
-            }
-            testID="product-gallery"
-          />
-          <LinearGradient
-            colors={[theme.colors['scrim-soft'], 'transparent']}
-            locations={[0, 0.3]}
-            style={styles.heroScrim}
-            pointerEvents="none"
-          />
-          {/* Yer filigranı galerinin kardeşi, çocuğu değil: şeridin içinde kaydırmayla kayar ve solmaya ortak olurdu.
-              `pointerEvents="none"` galeriyi ve yüzen düğmeleri bozmaz. */}
-          {placeMark === null ? null : (
-            <View style={styles.placeVeil} pointerEvents="none" testID="product-place-veil">
-              <Text style={styles.placeVeilText} numberOfLines={3}>
-                {placeMark.label}
-              </Text>
-            </View>
-          )}
-          <View style={styles.heroButtons}>
-            <BackButton onPress={() => router.back()} accessibilityLabel={t.back} variant="photo" testID="product-back" />
-            <PressableSurface
-              onPress={share}
-              feedback="scale-small"
-              compact
-              style={styles.shareButton}
-              accessibilityLabel={t.share}
-              testID="product-share"
-            >
-              <Icon name="share" size={theme.size.inlineIcon} color={theme.colors.ink} />
-            </PressableSurface>
-          </View>
-          {soldOut ? (
-            <View style={[styles.heroBadge, styles.soldOutBadge]}>
-              <Text style={styles.soldOutBadgeText}>{t.badge.soldOut}</Text>
-            </View>
-          ) : discounted ? (
-            <View style={[styles.heroBadge, styles.discountBadge]}>
-              <Text style={styles.discountBadgeText}>{t.badge.discount}</Text>
-            </View>
-          ) : null}
-          {price !== null ? (
-            <View style={styles.priceBadge} testID="product-price">
-              <Text style={styles.priceBadgeText}>{formatPrice(price, locale)}</Text>
-            </View>
-          ) : null}
-        </View>
+        <ProductHero
+          images={heroPhotos}
+          name={detail.name}
+          selling={variant}
+          placeMark={placeMark}
+          onBack={() => router.back()}
+          onShare={share}
+          locale={locale}
+          t={t}
+        />
 
         {/* ── Künye: kategori · ad · birim satırı · çipler · aile · boylar · açıklama ── */}
         <View style={styles.head}>
-          {detail.category === null ? null : <Text style={styles.eyebrow}>{upperIn(detail.category.name, locale)}</Text>}
-          <Text style={styles.title} accessibilityRole="header">
-            {detail.name}
-          </Text>
-          <Text style={styles.meta}>
-            {variant?.comparisonCents == null ? t.meta.vat : `${fill(t.meta.perKg, 'price', formatPrice(variant.comparisonCents, locale))} · ${t.meta.vat}`}
-            {was === undefined ? '' : ` · ${fill(t.meta.was, 'price', formatPrice(was, locale))}`}
-          </Text>
-          {variant?.limitLabel == null ? null : (
-            <Text style={styles.limitChip}>{fill(t.limit, 'n', variant.limitLabel)}</Text>
-          )}
+          <ProductHeadLines categoryName={detail.category?.name ?? null} name={detail.name} selling={variant} locale={locale} t={t} />
           {showsNoShipChip(detail.shippable, placeMark?.tone ?? null) ? (
             <Text style={styles.noShipChip} testID="product-noship">
               {t.noShip}
@@ -507,7 +483,7 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
                   size="sm"
                   image={product.image}
                   initial={product.name.slice(0, 1)}
-                  onPress={() => router.push(`/product/${product.slug}`)}
+                  onPress={() => openProductFromCard(router, product)}
                   testID={`product-similar-${product.slug}`}
                 />
               ))}
@@ -631,136 +607,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     padding: theme.space['3xl'],
   },
 
-  /* Kahraman kapsayıcısı içeriğin ÜSTÜNE çizilir (zIndex) — fiyat rozeti alt komşuya taşıyor. */
-  hero: {
-    height: customerMetrics.productHero,
-    zIndex: 2,
-  },
-  heroFallback: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors['sand-300'],
-  },
-  heroInitial: {
-    fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
-    fontSize: theme.text['h1-sm'],
-    color: theme.colors['on-image-soft'],
-  },
-  heroScrim: {
-    position: 'absolute',
-    inset: 0,
-  },
-  /** Yer filigranı: cümle sayfanın o müşteriye cevabı olduğu için ortalı ve `body` kademesinde; okunurluğu örtünün kendisi verir. */
-  placeVeil: {
-    position: 'absolute',
-    inset: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.space['3xl'],
-    backgroundColor: theme.colors.scrim,
-  },
-  placeVeilText: {
-    fontFamily: theme.font.body[theme.text['badge--font-weight']],
-    fontSize: theme.text.body,
-    lineHeight: theme.text.body * theme.text['lead--line-height'],
-    color: theme.colors['on-image'],
-    textAlign: 'center',
-  },
-  heroButtons: {
-    position: 'absolute',
-    /* Fotoğraf saatin altına taşar, düğmeler taşmaz: üst güvenli alanın üstüne 8 eklenir, çentiksiz cihazda inset 0. */
-    top: rt.insets.top + theme.space.md,
-    left: theme.space['3xl'],
-    right: theme.space['3xl'],
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  /** Paylaş dairesi geri düğmesinin `photo` varyantıyla aynı yüzey. */
-  shareButton: {
-    width: theme.size.iconButtonOnPhoto,
-    height: theme.size.iconButtonOnPhoto,
-    borderRadius: theme.size.iconButtonOnPhoto / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors['cream-glass'],
-  },
-  heroBadge: {
-    position: 'absolute',
-    left: theme.space.lg,
-    bottom: theme.space.xl,
-    paddingVertical: theme.space.xs,
-    paddingHorizontal: theme.space.md,
-    borderRadius: theme.radius.badge,
-    transform: [{ rotate: '-4deg' }],
-  },
-  soldOutBadge: { backgroundColor: theme.colors.ink },
-  soldOutBadgeText: {
-    fontFamily: theme.font.body[theme.text['chip--font-weight']],
-    fontSize: theme.text.note,
-    color: theme.colors['sand-50'],
-  },
-  discountBadge: { backgroundColor: theme.colors['sand-50'] },
-  discountBadgeText: {
-    fontFamily: theme.font.body[theme.text['chip--font-weight']],
-    fontSize: theme.text.note,
-    color: theme.colors.terracotta,
-  },
-  /** Fiyat alt kenardan sarkar; taşma tasarımın imzası. */
-  priceBadge: {
-    position: 'absolute',
-    right: theme.space.xl,
-    bottom: -customerMetrics.productPriceDrop,
-    backgroundColor: theme.colors.terracotta,
-    paddingVertical: theme.space.md,
-    paddingHorizontal: theme.space.xl,
-    borderRadius: theme.radius.control,
-    transform: [{ rotate: '3deg' }],
-    shadowColor: theme.colors.ink,
-    shadowOpacity: 0.28,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-  },
-  priceBadgeText: {
-    fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
-    fontSize: theme.text['card-title'],
-    color: theme.colors.card,
-  },
 
   head: {
     paddingTop: theme.space['2xl'],
     paddingHorizontal: theme.space['2xl'],
     paddingBottom: theme.space.sm,
     gap: theme.space.md,
-  },
-  eyebrow: {
-    fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
-    fontSize: theme.text.eyebrow,
-    letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
-    color: theme.colors.terracotta,
-  },
-  title: {
-    fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
-    fontSize: theme.text['h1-sm'],
-    lineHeight: theme.text['h1-sm'] * theme.text['h1-sm--line-height'],
-    color: theme.colors.ink,
-  },
-  meta: {
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
-    color: theme.colors.muted,
-  },
-  limitChip: {
-    alignSelf: 'flex-start',
-    fontFamily: theme.font.body[600],
-    fontSize: theme.text.micro,
-    color: theme.colors.terracotta,
-    backgroundColor: theme.colors['terracotta-bg'],
-    borderRadius: theme.radius.badge,
-    paddingVertical: theme.space['2xs'],
-    paddingHorizontal: theme.space.md,
   },
   noShipChip: {
     alignSelf: 'flex-start',

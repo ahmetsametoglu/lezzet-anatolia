@@ -48,6 +48,7 @@ import {
 } from './home-layout-memory';
 import { HomeSkeleton } from './home-skeleton';
 import { useNotificationBadge } from '@/screens/notifications/use-notification-badge.hook';
+import { openProductFromCard } from '@/screens/product/product-preview';
 import { useHome } from './use-home.hook';
 import { useHomeOrders } from './use-home-orders.hook';
 
@@ -171,8 +172,6 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
      merceğidir, teslimat kararı değil, ve girişli müşteri de vitrini başka bir bölge için gezebilmeli. Kayıt ve onay
      çekmecenin içindedir. */
   const openLocation = () => setZipSheetOpen(true);
-
-  const openProduct = (slug: string) => router.push({ pathname: '/product/[slug]', params: { slug } });
 
   /* İlk yükte sayfanın yerini iskelet tutar, yenilemede bölümler yerinde kalır; bütün kancalar bu satırın üstünde çağrıldığı için
      erken dönüş çağrı sırasını bozmaz. */
@@ -314,7 +313,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         {offers.map((offer) => (
           <PressableSurface
             key={offer.slug}
-            onPress={() => openProduct(offer.slug)}
+            onPress={() => openProductFromCard(router, offer)}
             feedback="scale-small"
             style={styles.offerCard}
             accessibilityLabel={offer.name}
@@ -439,7 +438,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   /* Yalnız fırsat rozeti: kapsam kampanyası kesitin kendi kartında, ürün başına yazılsa vaat gibi okunurdu. */
                   discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
                   image={product.image}
-                  onPress={() => openProduct(product.slug)}
+                  onPress={() => openProductFromCard(router, product)}
                   testID={`home-featured-${product.slug}`}
                 />
               ))}

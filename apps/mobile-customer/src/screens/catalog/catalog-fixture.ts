@@ -13,6 +13,7 @@ export function catalogProduct(index: number, overrides: Partial<CatalogProduct>
   return {
     id: uuid(index),
     slug: `urun-${index}`,
+    categoryId: uuid(501),
     name: `Ürün ${index}`,
     image: { url: `https://cdn.test/${index}.jpg`, crop: CROP_CENTER, frames: null },
     unitLabel: '1 kg',

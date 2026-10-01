@@ -15,6 +15,7 @@ import { useRouter } from '@/i18n/navigation';
 import { campaignNote } from '@/lib/storefront/campaign-note';
 import { useLoadMore } from '@/lib/use-load-more.hook';
 import { useSearchDraft } from '@/lib/use-search-draft.hook';
+import { rememberProductPreview } from '@/lib/storefront/product-preview';
 import { CatalogPhoneSkeleton } from './components/catalog-phone-skeleton';
 import { CatalogSortSheet } from './components/catalog-sort-sheet';
 import type { CatalogFilterPatch, CatalogViewProps } from './catalog-types';
@@ -208,7 +209,12 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
             </div>
           ) : (
             products.map((product) => (
-              <PhoneProductCard key={product.id} href={{ pathname: '/product/[slug]', params: { slug: product.slug } }} {...cardOf(product)} />
+              <PhoneProductCard
+                key={product.id}
+                href={{ pathname: '/product/[slug]', params: { slug: product.slug } }}
+                onOpen={() => rememberProductPreview(product)}
+                {...cardOf(product)}
+              />
             ))
           )}
         </div>

@@ -19,6 +19,7 @@ import { SectionHeader } from '@/components/customer/phone-kit/section-header';
 import { Tag } from '@/components/customer/phone-kit/tag';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { Link } from '@/i18n/navigation';
+import { rememberProductPreview } from '@/lib/storefront/product-preview';
 import type { HomeMobileProps } from './home-types';
 
 /**
@@ -85,6 +86,7 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
               <Link
                 key={offer.slug}
                 href={{ pathname: '/product/[slug]', params: { slug: offer.slug } }}
+                onClick={() => rememberProductPreview(offer)}
                 aria-label={offer.name}
                 className="relative flex flex-none -rotate-1 cursor-pointer items-center gap-3 rounded-control border-[1.5px] border-dashed border-terracotta bg-terracotta-bg py-2.5 pr-4 pl-2.5 transition-transform hover:opacity-90 active:scale-[0.97]"
               >
@@ -146,6 +148,7 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
               <ProductCircleCard
                 key={product.slug}
                 href={{ pathname: '/product/[slug]', params: { slug: product.slug } }}
+                onOpen={() => rememberProductPreview(product)}
                 name={product.name}
                 priceLabel={productPriceLabel(product.priceCents, locale)}
                 discountLabel={cardBadgeOf(product, { offer: copy.card.offer })}

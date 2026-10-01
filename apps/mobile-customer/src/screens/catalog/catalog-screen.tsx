@@ -28,6 +28,7 @@ import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
+import { openProductFromCard } from '@/screens/product/product-preview';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { CatalogSkeleton } from './catalog-skeleton';
 import { useCatalog } from './use-catalog.hook';
@@ -105,8 +106,6 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
 
   const cart = useCart();
   const fabCount = cartCount(cart);
-
-  const openProduct = (slug: string) => router.push({ pathname: '/product/[slug]', params: { slug } });
 
   /** Sözleşme satırı → kart props'u. Fiyatı olmayan ürünün fiyat çipi çizilmez: yer tutucu tutar "bedava" ya da "bilinmiyor" derdi. */
   const cardOf = (product: CatalogProduct) => {
@@ -333,7 +332,7 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
         renderItem={({ item }) => (
           // Kartın genişliği SÜTUNDAN gelir (kare oranı kartın kendisinden) — bu yüzden hücre sarmalayıcı.
           <View style={styles.cell}>
-            <ProductPhotoCard {...cardOf(item)} onPress={() => openProduct(item.slug)} testID={`product-${item.slug}`} />
+            <ProductPhotoCard {...cardOf(item)} onPress={() => openProductFromCard(router, item)} testID={`product-${item.slug}`} />
           </View>
         )}
         /* Bilgi bandı listenin başında, yapışkan başlıkta değil: bir kez okunur ve kaydırılıp geçilir, başlıkta her kaydırmada

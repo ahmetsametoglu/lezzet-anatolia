@@ -12,23 +12,21 @@ import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/cust
 /** Üç akordeon başlığı — sayfanın kendi sırası (İçindekiler · Besin değerleri · Saklama). */
 const ACCORDION_SLOTS = [0, 1, 2];
 
+type Theme = ReturnType<typeof useUnistyles>['theme'];
+
+/* Satır yüksekliği sayfanın KENDİ hesabıdır. Sayfada `lineHeight` verilmiş metinlerde o oran
+   kullanılır (başlık `h1-sm--line-height`, boş-yorum kutusu `lead--line-height`); verilmemiş
+   olanlarda vitrin skeleton'ının çarpanı (`h1--line-height`) — ikisi de token, uydurma yok. */
+function lineOf(theme: Theme, fontSize: number, ratio: number = theme.text['h1--line-height']): number {
+  return fontSize * ratio;
+}
+
 interface ProductSkeletonProps {
   testID?: string;
 }
 
 export function ProductSkeleton({ testID }: ProductSkeletonProps) {
   const { theme } = useUnistyles();
-
-  /* Satır yüksekliği sayfanın KENDİ hesabıdır. Sayfada `lineHeight` verilmiş metinlerde o oran
-     kullanılır (başlık `h1-sm--line-height`, boş-yorum kutusu `lead--line-height`); verilmemiş
-     olanlarda vitrin skeleton'ının çarpanı (`h1--line-height`) — ikisi de token, uydurma yok. */
-  const line = (fontSize: number, ratio: number = theme.text['h1--line-height']): number => fontSize * ratio;
-
-  /* Boş-yorum kutusu (`styles.reviewsEmpty`) tek parça YÜZEY: dikey dolgu + tek satır metin. */
-  const reviewsEmptyHeight = theme.space.lg * 2 + line(theme.text.note, theme.text['lead--line-height']);
-
-  /* Sepet adedi kutusu (`styles.stepper`): iki düğme + ortadaki sayı alanı; yüksekliği düğmeden. */
-  const stepperWidth = customerMetrics.productStepButtonWidth * 2 + customerMetrics.productStepValueWidth;
 
   return (
     <View
@@ -50,32 +48,64 @@ export function ProductSkeleton({ testID }: ProductSkeletonProps) {
 
       {/* ── Künye: ürün adı + birim/KDV satırı ─────────────────────────────── */}
       <View style={styles.head}>
-        <Skeleton width="72%" height={line(theme.text['h1-sm'], theme.text['h1-sm--line-height'])} />
-        <Skeleton width="48%" height={line(theme.text.micro)} />
+        <Skeleton width="72%" height={lineOf(theme, theme.text['h1-sm'], theme.text['h1-sm--line-height'])} />
+        <Skeleton width="48%" height={lineOf(theme, theme.text.micro)} />
       </View>
 
+      <BodySlots />
+      <ProductBarSkeleton />
+    </View>
+  );
+}
+
+/** Künyenin altındaki gövde; kart bilgisiyle çizilen üst bölümün altında yüklemenin sürdüğünü ekran okuyucuya da söyler. */
+export function ProductBodySkeleton({ testID }: ProductSkeletonProps) {
+  return (
+    <View testID={testID} accessible accessibilityRole="progressbar" accessibilityState={{ busy: true }}>
+      <BodySlots />
+    </View>
+  );
+}
+
+function BodySlots() {
+  const { theme } = useUnistyles();
+
+  /* Boş-yorum kutusu (`styles.reviewsEmpty`) tek parça YÜZEY: dikey dolgu + tek satır metin. */
+  const reviewsEmptyHeight = theme.space.lg * 2 + lineOf(theme, theme.text.note, theme.text['lead--line-height']);
+
+  return (
+    <>
       {/* ── Akordeonlar: çerçeve gerçek, başlıklar gri ─────────────────────── */}
       <View style={styles.accordion}>
         {ACCORDION_SLOTS.map((slot) => (
           <View key={slot} style={[styles.accordionHead, slot === 0 ? null : styles.accordionDivided]}>
-            <Skeleton width="46%" height={line(theme.text.note)} />
+            <Skeleton width="46%" height={lineOf(theme, theme.text.note)} />
           </View>
         ))}
       </View>
 
       {/* ── Değerlendirmeler: bölüm başlığı + "yorum yok" kutusu ───────────── */}
       <View style={styles.reviews}>
-        <Skeleton width="52%" height={line(theme.text['card-title-sm'])} />
+        <Skeleton width="52%" height={lineOf(theme, theme.text['card-title-sm'])} />
         <Skeleton width="100%" height={reviewsEmptyHeight} radius="card" />
       </View>
+    </>
+  );
+}
 
-      {/* ── Yapışkan bar: adet kutusu + sepete ekle düğmesi ─────────────────── */}
-      <View style={styles.bar}>
-        <View style={styles.barRow}>
-          <Skeleton width={stepperWidth} height={customerMetrics.productStepButtonHeight} radius="control" />
-          <View style={styles.ctaSlot}>
-            <Skeleton width="100%" height={theme.size.controlLg} radius="control" />
-          </View>
+/** Yapışkan bar: adet kutusu + sepete ekle düğmesi. */
+export function ProductBarSkeleton() {
+  const { theme } = useUnistyles();
+
+  /* Sepet adedi kutusu (`styles.stepper`): iki düğme + ortadaki sayı alanı; yüksekliği düğmeden. */
+  const stepperWidth = customerMetrics.productStepButtonWidth * 2 + customerMetrics.productStepValueWidth;
+
+  return (
+    <View style={styles.bar}>
+      <View style={styles.barRow}>
+        <Skeleton width={stepperWidth} height={customerMetrics.productStepButtonHeight} radius="control" />
+        <View style={styles.ctaSlot}>
+          <Skeleton width="100%" height={theme.size.controlLg} radius="control" />
         </View>
       </View>
     </View>

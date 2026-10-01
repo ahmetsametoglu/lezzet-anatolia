@@ -21,6 +21,8 @@ interface ProductCircleCardProps {
   /** "Fırsat" rozeti — verilirse sol üstte hap köşe. */
   discountLabel?: string;
   size?: 'lg' | 'sm';
+  /** Açılmadan önce: ürün kartıysa bilgisini ürün sayfasının yükleme karesine bırakır. */
+  onOpen?: () => void;
 }
 
 /** Çap ve baş harf kademesi boya göre: `lg` vitrin rayı, `sm` benzer ürün rayı. */
@@ -29,12 +31,22 @@ const SIZE = {
   sm: { diameter: 120, box: 'w-[120px]', circle: 'size-[120px]', initial: 'text-h2-sm text-muted' },
 } as const;
 
-export function ProductCircleCard({ href, replace = false, name, priceLabel, image, discountLabel, size = 'lg' }: ProductCircleCardProps) {
+export function ProductCircleCard({
+  href,
+  replace = false,
+  name,
+  priceLabel,
+  image,
+  discountLabel,
+  size = 'lg',
+  onOpen,
+}: ProductCircleCardProps) {
   const box = SIZE[size];
   return (
     <Link
       href={href}
       replace={replace}
+      onClick={onOpen}
       aria-label={[name, priceLabel].filter(Boolean).join(' · ')}
       className={`flex ${box.box} flex-none cursor-pointer flex-col items-center gap-1.5 transition-transform hover:opacity-90 active:scale-[0.97]`}
     >

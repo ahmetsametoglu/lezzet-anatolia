@@ -67,9 +67,9 @@ export function PhotoGallery({ images, photoLabel, fallback, testID }: PhotoGall
     <FrameImage
       image={item}
       style={[styles.slide, { width }]}
-      accessible
+      accessible={photos.length > 1}
       accessibilityRole="image"
-      accessibilityLabel={fillLabel(photoLabel, index + 1, photos.length)}
+      accessibilityLabel={photos.length > 1 ? fillLabel(photoLabel, index + 1, photos.length) : undefined}
     />
   );
 
@@ -81,17 +81,15 @@ export function PhotoGallery({ images, photoLabel, fallback, testID }: PhotoGall
     );
   }
 
-  const single = photos[0];
-  if (photos.length === 1 && single !== undefined) {
-    return <FrameImage image={single} style={styles.fill} testID={testID} />;
-  }
-
+  /* Tek görsel de şeritte çizilir: görseller sonradan çoğalınca (ürün kartın bildiğiyle açılır) kapağın karosu yerinde kalır, yeniden
+     kurulan görsel Android'de yeniden solardı. */
   return (
     <View style={styles.fill} onLayout={measure} testID={testID}>
       <FlatList
         data={photos}
         horizontal
         pagingEnabled
+        scrollEnabled={photos.length > 1}
         showsHorizontalScrollIndicator={false}
         keyExtractor={(image) => image.url}
         getItemLayout={(_data, index) => ({ length: width, offset: width * index, index })}
@@ -100,17 +98,19 @@ export function PhotoGallery({ images, photoLabel, fallback, testID }: PhotoGall
         style={styles.fill}
         testID={testID === undefined ? undefined : `${testID}-strip`}
       />
-      <View
-        style={styles.dots}
-        pointerEvents="none"
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        testID={testID === undefined ? undefined : `${testID}-dots`}
-      >
-        {photos.map((image, index) => (
-          <View key={image.url} style={[styles.dot, index === active ? styles.dotActive : styles.dotIdle]} />
-        ))}
-      </View>
+      {photos.length === 1 ? null : (
+        <View
+          style={styles.dots}
+          pointerEvents="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          testID={testID === undefined ? undefined : `${testID}-dots`}
+        >
+          {photos.map((image, index) => (
+            <View key={image.url} style={[styles.dot, index === active ? styles.dotActive : styles.dotIdle]} />
+          ))}
+        </View>
+      )}
     </View>
   );
 }

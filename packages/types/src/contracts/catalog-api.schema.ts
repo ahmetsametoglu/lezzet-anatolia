@@ -67,7 +67,7 @@ export type PurchaseMode = z.infer<typeof PurchaseModeEnum>;
  * Kart başlangıç boyundan (`primaryVariantOf`), detaydaki boy kendinden okur; ayrı bloklar aynı ürünü listede ve detayda
  * farklı gösterirdi.
  */
-const CatalogSellingSchema = z.object({
+export const CatalogSellingSchema = z.object({
   /**
    * Ham cent — biçimlendirme istemcinin işi, sözleşme dil bağımsız.
    * `null` = bu kanalda fiyatı yok, ürün satışa kapalı (DOMAIN §5): istemci fiyat satırını çizmez ve aksiyonu pasifler.
@@ -100,6 +100,7 @@ const CatalogSellingSchema = z.object({
    */
   soldOut: z.boolean(),
 });
+export type CatalogSelling = z.infer<typeof CatalogSellingSchema>;
 
 /**
  * Satılabilir boy — detaydaki "Boy seçin" kartı (`StorefrontVariant` aynası).
@@ -131,6 +132,11 @@ const CatalogCampaignSchema = z.object({
 export const CatalogProductSchema = ProductSchema.pick({ id: true, slug: true })
   .merge(CatalogSellingSchema)
   .extend({
+    /**
+     * Ürün sayfası kart bilgisiyle açılırken kategori satırının yerini ayırır ki veri gelince ad kaymasın. İsteğe bağlı, çünkü
+     * uygulama ile sunucu ayrı yayına çıkar; gelmezse satırın yeri yine ayrılır.
+     */
+    categoryId: ProductSchema.shape.categoryId.optional(),
     name: z.string(),
     image: CatalogImageSchema,
     /** Satılabilir birimin etiketi ("1 kg") — başlangıç boyundan; aktif boyu olmayan üründe boş. */

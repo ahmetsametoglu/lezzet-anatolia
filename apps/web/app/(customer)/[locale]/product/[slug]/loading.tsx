@@ -7,6 +7,7 @@ import { BackButton } from '@/components/customer/ui/back-button';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { Skeleton, SkeletonBlock, SkeletonCard, SkeletonRegion, SkeletonText } from '@/components/customer/ui/skeleton';
 import { detectDevice } from '@/lib/device';
+import { PhonePreviewTop } from './components/phone-preview-top';
 
 /**
  * Ürün sunucuda okunduğu için bu kare olmadan ekran veri gelene kadar önceki sayfada kalır. Telefonda bölümler native iskeletin
@@ -19,18 +20,20 @@ export default async function ProductLoading() {
     <SiteFrame device={device} locale={locale} activeNav="catalog">
       {device === 'mobile' ? (
         <div className="flex min-h-dvh flex-col bg-cream">
-          <div className="relative h-[400px] flex-none">
-            <PhoneSkeleton radius="none" className="absolute inset-0" />
-            <div className="absolute inset-x-4 top-[calc(env(safe-area-inset-top)+8px)] flex justify-between">
-              <BackButton variant="photo" label={productMessages[locale].back} fallback="/catalog" />
-              <PhoneSkeleton tone="deep" className="size-10.5" />
+          <PhonePreviewTop locale={locale}>
+            <div className="relative h-[400px] flex-none">
+              <PhoneSkeleton radius="none" className="absolute inset-0" />
+              <div className="absolute inset-x-4 top-[calc(env(safe-area-inset-top)+8px)] flex justify-between">
+                <BackButton variant="photo" label={productMessages[locale].back} fallback="/catalog" />
+                <PhoneSkeleton tone="deep" className="size-10.5" />
+              </div>
             </div>
-          </div>
-          <SkeletonRegion>
             <div className="flex flex-col gap-2 px-3.5 pt-3.5 pb-1.5">
               <PhoneSkeleton className="h-8 w-[72%]" />
               <PhoneSkeleton className="h-3.5 w-[48%]" />
             </div>
+          </PhonePreviewTop>
+          <SkeletonRegion>
             <div className="mx-3 my-1 border-y-[1.5px] border-ink">
               {[0, 1, 2].map((slot) => (
                 <div key={slot} className={['p-2.5', slot === 0 ? '' : 'border-t-[1.5px] border-dashed border-sand-400'].join(' ')}>
