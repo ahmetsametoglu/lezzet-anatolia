@@ -36,7 +36,7 @@ görür ve seçer (bugünkü davranış); aracın o güne kaçıncı günde vard
 | `delivery_zone.weekdays int[]` (haftanın hangi günleri) + `warehouse_id` | Turun çıkış günü · tur içi sıra · tur kimliği |
 | `vehicle` tablosu (19.28) — araç künyesi + ölçüm noktası | Araç ↔ tur ↔ kurye bağı (araç bugün bir güne/kuryeye bağlanmıyor, `DOMAIN §7`) |
 | `courier_day_close` — `unique (courier_id, date)`, tarih **parametreli** (`close_courier_day(p_courier_id, p_date, …)`) → geçmiş gün kapatılabilir, kısıt yok | Tur başına tek kapanış (bugün gün başına) |
-| Nakit **teslim anında** kasaya yazılıyor (`recordOrderPayment`, `courier/delivery.ts:161`) — kapanış para hareketi YAZMAZ, yalnız sayım/mutabakat | Kurye üzerindeki paranın görünürlüğü (tek `Kasa` hesabı var, kurye kasası yok) |
+| Nakit **teslim anında** kasaya yazılıyor (`recordOrderPayment`, `courier/delivery.ts:161`) — kapanış yalnız sayım farkını yazar (`kasa-farki`, `close_delivery_run`) | Kurye üzerindeki paranın görünürlüğü (tek `Kasa` hesabı var, kurye kasası yok) |
 | `reservation.expires_at` nullable → onaylı siparişin rezervasyonu kalıcı olabilir | **"Yoldaki mal" kavramı** — aşağıda, §7.6 |
 | Rapor/analitik tarafı bölgeye HİÇ bakmıyor (yedi `analytics_*` RPC'sinin hiçbiri zone eksenli değil) | — |
 

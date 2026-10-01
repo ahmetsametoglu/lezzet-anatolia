@@ -56,7 +56,7 @@
 | 9 | **SumUp kasa olarak yok** | Genel API'si kasaya satış yazmıyor; Fransa'daki POS Pro (eski Tiller) 2026 sonunda kapanıyor, yeni entegrasyon talebi 2027'nin ikinci çeyreğinden itibaren. O tarihte yeniden bakılabilir. |
 | 10 | **B2B Hiboutik'e yazılmaz** (01.10) | Kasa yükümlülüğü B2B'yi kapsamıyor (BOFiP §10). B2B faturası bugünkü gibi Pennylane'de kesilir; müşteri alacağı ve vade orada izlenir, 2027'de e-fatura olarak da oradan gider. Kapıda nakit alınan B2B parası Hiboutik kasasına yalnız kasa girişi olarak yazılır. |
 | 11 | **Hediye sipariş ödemesiz kapanır** (01.10) | Kasaya para girmez, Hiboutik'e bir şey yazılmaz; mal hediye olarak stoktan çıkar, muhasebeci hediye gideri olarak işler. DOMAIN §9'daki "parasını patron öder, muhasebe aktarımına girmez" kuralının yerine geçer. |
-| 12 | **Kurye nakdi farkı açıklamalı kasa hareketiyle yazılır** (01.10) | Sefer kapanışında nakit eksik ya da fazla çıkarsa fark bizde nakit hesabına hareket olarak, Hiboutik'e "Kurye farkı — sefer X" açıklamalı kasa çıkışı ya da girişi olarak yazılır. Muhasebeci kasa farkı ya da kurye alacağı olarak işler. Kart farkı kasaya dokunmaz. |
+| 12 | **Kurye nakdi farkı açıklamalı kasa hareketiyle yazılır** (01.10) | Sefer kapanışında nakit eksik ya da fazla çıkarsa fark bizde nakit hesabına hareket olarak, Hiboutik'e "Sefer kapanış farkı <sefer no>" açıklamalı kasa çıkışı ya da girişi olarak yazılır. Muhasebeci kasa farkı ya da kurye alacağı olarak işler. Kart farkı kasaya dokunmaz. |
 | 13 | **Faz 1 bitince iki ajanla inceleme** (01.10) | İki ajan birebir aynı istemle, birbirinden bağımsız çalışır: ikisi de Hiboutik entegrasyonunu ve projenin muhasebe sistemini (para hareketleri, ödeme durumu, muhasebe aktarımı, kâr, KDV, B2B ve hediye kuralları) tasarım (§7), ölçülen davranış (§6) ve yasal zemin (§1) karşısında inceler, uyumsuzlukları raporlar. Bulgular doğrulanıp kullanıcıya özetlenir. `CLAUDE.md`'deki alt ajan yasağının bu inceleme için istisnasıdır. |
 
 ## 3. Veri akışı
@@ -148,9 +148,9 @@ aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yükl�
 **Hiboutik — açık kalan:**
 - Gün kapanışı, mali arşiv ve kapanış sonrası kasa defteri yalnız üretim hesabında görülebilir.
 - Ters yüklemenin `E` kodu 2027 e-fatura / e-reporting için yeterli mi, Faz 4'te bakılacak.
-- Çağrı sınırı: fiş başına 6 çağrı + kalem başına 1 (bölünen ya da KDV'si değişen kalem 1 daha), toplu
-  uç yok. Ayda 600 siparişte 8 kalemle ~8.400 çağrı; kota (ikincil kaynakta ayda 10.000) canlı planla
-  doğrulanacak.
+- Çağrı sınırı: yeni fiş başına 8 çağrı (arama, açma, iki okuma, iki ayar, ödeme, kapatma) + kalem
+  başına 1 (bölünen ya da KDV'si değişen kalem 1 daha), toplu uç yok. Ayda 600 siparişte 8 kalemle ~9.600
+  çağrı; kota (ikincil kaynakta ayda 10.000) canlı planla doğrulanacak.
 
 **Pennylane** (test ortamı):
 - E-fatura okumada fatura satırları, PDF bağlantısı ve e-fatura alanları geliyor mu (veri modelinde
