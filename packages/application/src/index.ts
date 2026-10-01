@@ -629,3 +629,7 @@ export { scanOrphanShipments, sweepStuckShipments, type OrphanScanResult, type S
    sipariş detayı) buradan okuyor. Barrel'a çıkması dördüncü tüketicide gerekti. */
 export { parcelOrdinal, readOrderTracking, type OrderTracking, type TrackedParcel } from './shipping/tracking';
 
+
+// ── Sertifikalı kasa (Hiboutik) ──
+export { hiboutikFromEnv } from './register/hiboutik/client';
+export { syncRegisterQueue } from './register/sync';

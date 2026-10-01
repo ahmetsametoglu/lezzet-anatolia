@@ -37,6 +37,7 @@ import { SHIPMENT_WATCH, shipmentWatchJob } from './jobs/shipment-watch';
 import { SHIPMENT_ORPHAN, shipmentOrphanJob } from './jobs/shipment-orphan';
 import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user-text';
 import { SCAN_TRUST, scanTrustJob } from './jobs/trust-scan';
+import { REGISTER_SYNC, registerSyncJob } from './jobs/register-sync';
 
 /**
  * Süreç düzeyi emniyet ağı: sarmalın dışında doğan bir promise reddi ne `runJob`a ne `onError`a düşer ve süreci kayıtsız
@@ -227,6 +228,11 @@ cron.schedule('50 5 * * 1', () => {
 cron.schedule('35 * * * *', () => {
   void runJob(EXPIRE_PROPOSALS, expireProposalsJob);
 }, { timezone: 'Europe/Paris' });
+
+// Sertifikalı kasa eşitlemesi dakikada bir: satış kasaya aynı gün düşmeli ve gün kapanışından önce kuyruk boşalmalı.
+cron.schedule('* * * * *', () => {
+  void runJob(REGISTER_SYNC, registerSyncJob);
+});
 
 // `??` değil `||`: boş bırakılmış `BACKEND_PORT=` nullish değildir ve `Number('')` 0, yani her başlatmada rastgele port olurdu.
 const port = Number(process.env.BACKEND_PORT) || 8787;

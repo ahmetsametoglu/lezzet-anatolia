@@ -24,7 +24,7 @@ export * from './b2b-api.schema';
 // Keşif turu — aday ürün destesi + kaydırma + ziyaretçi turunun hesaba bağlanması. Kart katalog
 // kartından TÜRETİLMEZ: aday ürün fiyat/stok/varyant taşımaz (gerekçe dosya başlığında).
 export * from './discover-api.schema';
-// Yer çözümü — onboarding posta kodu adımı; dört hâl ayrık, depo kimliği bilerek dışarıda (19.9).
+// Yer çözümü — onboarding posta kodu adımı; dört hâl ayrık, depo kimliği bilerek dışarıda.
 export * from './place-api.schema';
 // İlan edilen teslimat tutarları — bilgi metinlerinin okuduğu ayarlar; sepetin kapsamıyla
 // karıştırılmaz (gerekçe dosya başlığında).
@@ -79,3 +79,5 @@ export * from './management-api.schema';
 export * from './money-api.schema';
 // Operasyon KABUĞU — bölümlerin değil, kabuğun kendi künyesi (personelin çalıştığı tesis).
 export * from './operations-api.schema';
+// Sertifikalı kasanın (Hiboutik) cevap biçimi; tutarı cent'e kasa istemcisi çevirir.
+export * from './hiboutik.schema';

@@ -132,7 +132,9 @@ aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yükl�
 | Almanya'ya ters yükleme | `duty_free_sale = 1`: KDV 0, ama KDV kodu `E` (muaf) yazılıyor, AB içi işlem kodu değil. |
 | Tam iptal | `POST /sales/void`: eksi tutarlı ters satış, aynı ödeme yöntemi, yeni sıra numarası, gerekçe iz kaydında. |
 | Kısmi iade | Eksi fiyatlı kalemle iade satışı kapanıyor (1 × −10,00, nakit). Eksi adet reddediliyor. Kalem iadesi (`sale_line_item_exchange`) para değil alacak notu (avoir) üretiyor ve kalemin tamamını iade ediyor: bizim iade yolu değil. |
-| Ürün dış referansı (`products_ref_ext`) | 20 karakterde kesiliyor; belgede sınır yazmıyor. Varyant kimliğimiz (`uuid`, 36 karakter) sığmaz → ürün eşlemesi bizde tutulur. |
+| Ürün dış referansı (`products_ref_ext`) | 20 karakterde kesiliyor; belgede sınır yazmıyor. Varyant kimliğimiz (`uuid`, 36 karakter) sığmaz → ürün eşlemesi bizde tutulur. 20 karakterlik referansla arama (`/products/search?products_ref_ext=`) ürünü buluyor. |
+| Açık satış | `completed_at` boş tarih (`0000-00-00 00:00:00`), `unique_sale_id` boş. Kalem (`DELETE /sale_line_item/{id}`) ve ödeme satırı (`DELETE /sales_payment_div/{id}`) silinebiliyor; boşalan satış silinebiliyor, silinen satış okunurken 404. |
+| Vergi listesi | `GET /taxes`: oran kesir (`tax_value` = `0.05500`) ve vergi kimliği; ürün açarken kimlik, kalemde kesir istenir. |
 | Stok | Stok takipsiz üründe satış stok hareketi doğurmuyor. |
 | Nakit kasası | Para koyma/çıkarma, anlık sayım ve aylık hareketler çalışıyor; sayım kapanmış satışların nakit payıyla tutuyor. |
 | Gün sonu okumaları | Ödeme yöntemine, KDV oranına göre ve alınan ödemeler dökümü geliyor. Kasa defteri ve nakit akışı boş (kapanış olmadan). |
@@ -227,12 +229,23 @@ yöntemi.
 - Kapanmamış fiş plana göre tamamlanır, uyuşmazsa silinip yeniden yazılır (kapanmamış satış mali kayıt
   değil). Ödeme satırı eklenmeden önce Hiboutik'te var mı diye okunur.
 
-**Hata:** Hiboutik'e ulaşılamazsa sipariş kuyrukta kalır, artan aralıkla yeniden denenir; eşikten sonra
-`error_log` ve operasyon uyarısı. Satış tarihini API almıyor: geciken fiş yazıldığı günün Z'sine düşer.
+**Hata:** Hiboutik'e ulaşılamazsa sipariş kuyrukta kalır, artan aralıkla (1 dakikadan 1 saate) yeniden
+denenir; beşinci denemede `error_log`. Plan durursa (yöntemi bilinmeyen hareket, iadeyle başlayan sipariş,
+eşlenmemiş depo) satır sebebiyle bekler; çözüm bir para değişikliğiyle gelir ve satırı yeniden işaretler.
+Satış tarihini API almıyor: geciken fiş yazıldığı günün Z'sine düşer.
+
+**Canlıya geçiş:** `register_live_from` ayarı (an). Ayar yoksa ya da okunamıyorsa eşitleme hiç koşmaz;
+öncesinde açılan sipariş ve yazılan kasa hareketi kasaya gitmez.
+
+**Bilinen sınır:** yazılmış bir ödeme satırının hareketi aynı kimlikle tutarı değişerek düzeltilirse plan
+bunu görmez (birleşmede hareket yenisiyle değiştiği için orada sorun yok); bugün tutar düzelten akış yok.
 
 **Kasa hareketleri:** eşlenmiş nakit hesabının fiş olmayan hareketleri Hiboutik'e açıklamasıyla `cash_out`
 / `cash_in` olarak yazılır, kasa sayımı fiziksel kasayla tutsun diye: bankaya yatırma, kasadan ödenen gider,
-bozukluk ve sermaye girişi, kapıda nakit alınan B2B parası ve iadesi, kurye farkı.
+bozukluk ve sermaye girişi, kapıda nakit alınan B2B parası ve iadesi, kurye farkı. B2C sipariş parası fişle
+girer, kart çekmeceye girmez. Hareket başına bir yazım vardır, hareket silinirse kasada bir kez ters çevrilir;
+yazıldıktan sonra tutarı, yönü ya da kasası değişen hareket sessizce geçilmez, kuyrukta sebebiyle bekler
+(bugün böyle bir düzeltme akışı yok). Açıklama hareketin künyesini taşır, yarıda kalan yazım onunla bulunur.
 
 **Kurye farkı** (12. karar): nakit farkı sıfır değilse sefer kapanışı (`close_delivery_run`) farkı aynı
 işlemde seferin nakit tahsilatlarının girdiği hesaba hareket olarak yazar (eksikte çıkış, fazlada giriş; tür
@@ -266,22 +279,25 @@ fiş bağlantısı. Sistem ekranı: kuyruk ve mutabakat durumu.
 - `packages/database`: kasa tabloları (mağaza, ürün, fiş, fiş kalemi, ödeme satırı, kuyruk), tetikleyici,
   servisler; `money_movement.payment_method`.
 - `packages/application/src/register/`: `CashRegister` portu ve Hiboutik uyarlaması (anahtar yoksa port
-  yok), sipariş eşitleme, kasa hareketi, mutabakat.
+  yok), sipariş eşitleme, kasa hareketi, mutabakat. Hiboutik'in cevap biçimi `packages/types` sözleşmesinde;
+  istemci ayrı paket değil, kullanıcısı yalnız uygulama katmanı.
 - `apps/backend/src/jobs/`: `register-sync` (dakikalık), `register-reconcile` ve `register-close-day` (günlük).
 - Ortam: `HIBOUTIK_ACCOUNT`, `HIBOUTIK_USER`, `HIBOUTIK_API_KEY`, `HIBOUTIK_MODE` (`demo` | `live`).
 
 **Testler:**
 - Motorun her dalı birim testte: kuruş bölmesi, kargo payı, iptal, müşteride kalan, eksik ve fazla ödeme,
   ödeme kodu, yeni fiş ya da ödeme satırı.
-- Tetikleyicinin kuyruğa işaretlemesi entegrasyon testinde.
+- Tetikleyicinin kuyruğa işaretlemesi ve eşitleme entegrasyon testinde; eşitleme bellek içi kasayla koşar,
+  yarıda kesilen yazım o kasada kurulur.
+- Hiboutik istemcisi sahte `fetch` ile birim testinde.
 - Hiboutik'e karşı ölçüm demo hesapta, betiklerle; test paketinde değil.
 
 **İş sırası** (her adım ayrı commit):
 1. Motor ve testleri.
 2. Hediye siparişin ödemesiz kapanışı.
 3. Şema, servisler, tahsilat kapısının yöntem alanı ve kurye farkının hareketi.
-4. Hiboutik uyarlaması, eşitleme cron'u, ürün aynası.
-5. Kasa hareketleri (B2B nakdi ve kurye farkı Hiboutik'e), mutabakat, gün kapanışı.
+4. Hiboutik uyarlaması, eşitleme cron'u, ürün aynası ve fiş dışı nakit (B2B nakdi, kurye farkı).
+5. Mutabakat ve gün kapanışı.
 6. Ekran satırları ve mimari belge güncellemeleri (`DOMAIN.md` §7 ve §9, `INTEGRATIONS.md`,
    `data-model/para.md`).
 7. İki ajanla inceleme (13. karar) ve rapordaki uyumsuzlukların giderilmesi.
@@ -302,6 +318,8 @@ fiş bağlantısı. Sistem ekranı: kuyruk ve mutabakat durumu.
    yalnız Pennylane'de kesilen faturadan girer.
 5. **Kasa kaydının yazılamaması.** Hiboutik erişilemezse satış bizde var, kasada yok: yasal açık.
    Çare: kuyruk + yeniden deneme + günlük mutabakatta fark uyarısı; gün kapanmadan kuyruk boşalmalı.
+6. **Kasa sıfırlanması.** Hiboutik'te ürünler silinirse (demo sıfırlama) bizdeki ürün eşlemesi
+   (`register_product`) olmayan ürünleri anar ve her yazım düşer; sıfırlamadan sonra eşleme silinmeli.
 
 ## 9. Kaynaklar
 

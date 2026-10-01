@@ -40,6 +40,33 @@ export const RegisterTicketSnapshotSchema = z.object({
 });
 export type RegisterTicketSnapshot = z.infer<typeof RegisterTicketSnapshotSchema>;
 
+/**
+ * Kasadaki satışın kasa portundaki okunuşu: tutar cent, oran yüzde, ödeme yöntemi bizim adımızla (kasada tanınmayan kod `null`).
+ * Kapanmamış satış mali kayıt değildir; yarım yazım ancak açıkken yeniden kurulur.
+ */
+export const RegisterSaleSchema = z.object({
+  saleId: z.number().int(),
+  extRef: z.string(),
+  closed: z.boolean(),
+  uniqueSaleId: z.string().nullable(),
+  receiptUrl: z.string().nullable(),
+  lines: z.array(
+    z.object({
+      lineId: z.number().int(),
+      productId: z.number().int(),
+      quantity: z.number(),
+      unitPriceCents: z.number().int(),
+      vatRate: z.number(),
+    }),
+  ),
+  payments: z.array(z.object({ paymentId: z.number().int(), method: PaymentMethodEnum.nullable(), amountCents: z.number().int() })),
+});
+export type RegisterSale = z.infer<typeof RegisterSaleSchema>;
+
+/** Kasadaki fiş dışı nakit hareketi; açıklama bizim kaydımızın künyesini taşır, yarıda kalan yazım onunla bulunur. */
+export const RegisterCashMoveSchema = z.object({ tillId: z.number().int(), label: z.string() });
+export type RegisterCashMove = z.infer<typeof RegisterCashMoveSchema>;
+
 /** `writing`: kasaya çağrı başladı ama sonucu aynaya geçmedi; yarıda kalan yazım bu satırdan tamamlanır. */
 export const RegisterWriteStatusEnum = z.enum(['writing', 'written']);
 export type RegisterWriteStatus = z.infer<typeof RegisterWriteStatusEnum>;

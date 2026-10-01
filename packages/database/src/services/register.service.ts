@@ -78,8 +78,10 @@ export class RegisterProductService extends BaseDbService<RegisterProduct, Regis
     super(supabase, 'register_product', RegisterProductSchema, RegisterProductInsertSchema, RegisterProductUpdateSchema);
   }
 
-  findByVariant(variantId: string): Promise<RegisterProduct | null> {
-    return this.getOneBy({ variantId });
+  /** Bir fişin bütün kalem ürünleri tek turda. */
+  listByVariants(variantIds: readonly string[]): Promise<RegisterProduct[]> {
+    if (variantIds.length === 0) return Promise.resolve([]);
+    return this.getAll({ variantId: [...variantIds] });
   }
 
   findShipping(vatRate: number): Promise<RegisterProduct | null> {
@@ -109,6 +111,10 @@ export class RegisterTicketLineService extends BaseDbService<RegisterTicketLine,
     if (ticketIds.length === 0) return Promise.resolve([]);
     return this.getAll({ ticketId: [...ticketIds] }, { orderBy: 'createdAt' });
   }
+
+  insertMany(rows: RegisterTicketLineInsert[]): Promise<RegisterTicketLine[]> {
+    return this.bulkInsert(rows);
+  }
 }
 
 export class RegisterPaymentService extends BaseDbService<RegisterPaymentRow, RegisterPaymentInsert, RegisterPaymentUpdate> {
@@ -121,6 +127,10 @@ export class RegisterPaymentService extends BaseDbService<RegisterPaymentRow, Re
   listByTickets(ticketIds: readonly string[]): Promise<RegisterPaymentRow[]> {
     if (ticketIds.length === 0) return Promise.resolve([]);
     return this.getAll({ ticketId: [...ticketIds] }, { orderBy: 'createdAt' });
+  }
+
+  insertMany(rows: RegisterPaymentInsert[]): Promise<RegisterPaymentRow[]> {
+    return this.bulkInsert(rows);
   }
 }
 
@@ -155,5 +165,14 @@ export class RegisterQueueService extends BaseDbService<RegisterQueue, never, Re
   /** İşlenen satırı siler; işlem sürerken yeniden işaretlendiyse (`markedAt` değiştiyse) satır kalır ve sonraki tur yine işler. */
   async complete(id: string, markedAt: string): Promise<void> {
     await this.deleteWhere({ id, markedAt });
+  }
+
+  /** Satırı erteler; işlem sürerken yeniden işaretlendiyse vakit hemen geri çekilir ki yeni değişiklik ertelemeyi beklemesin. */
+  async defer(
+    row: Pick<RegisterQueue, 'id' | 'markedAt'>,
+    change: { attempts: number; nextAttemptAt: string; lastError: string },
+  ): Promise<void> {
+    const deferred = await this.update({ id: row.id, ...change });
+    if (deferred.markedAt !== row.markedAt) await this.update({ id: row.id, nextAttemptAt: deferred.markedAt });
   }
 }
