@@ -97,7 +97,7 @@
 | Faz | İş | Başlıca yerler | Ön şart |
 |---|---|---|---|
 | 0 | **Erişim ve ölçüm.** Hesaplar: Hiboutik demo modunda (API için Premium, ikincil kaynak), Pennylane test ortamı ve API anahtarı (API Essentiel planda ve üstünde), Revolut deneme hesabı (asıl hesaptan bağımsız, anında). §6'daki soruların ölçümü; çıktı ölçüm tablosu ve tasarım kararları. | kök `.env` (değişken adları kullanıcıdan) | Hesapları kullanıcı açar |
-| 1 | **Hiboutik kasa.** Mağaza = depo eşlemesi (mağaza API'den açılmıyor, elle kurulur); ödeme yöntemi kodları (nakit, kapıda kart, online); ürün aynası (`products_ref_ext` = varyant kimliği, stok Hiboutik'te tutulmaz); satış yazma (tahsilat kapısından; `ext_ref` ile tekrar koruması; Hiboutik'e gidemeyen satış için yeniden deneme kuyruğu); iptal ve iade; kasa hareketleri (bozukluk, bankaya yatırma); depo başına günlük mutabakat (bizim toplamlar ↔ Hiboutik Z). | `payment.ts` ve çağıranları; yeni Hiboutik adaptörü; migration (siparişte Hiboutik satış numarası, kuyruk) | Faz 0 Hiboutik ölçümü |
+| 1 | **Hiboutik kasa.** Mağaza = depo eşlemesi (mağaza API'den açılmıyor, elle kurulur); ödeme yöntemi kodları (nakit, kapıda kart, online); ürün aynası (varyant ↔ Hiboutik ürün numarası eşlemesi bizde, stok Hiboutik'te tutulmaz); satış yazma (tahsilat kapısından; `ext_ref` ile tekrar koruması; Hiboutik'e gidemeyen satış için yeniden deneme kuyruğu); iptal ve iade; kasa hareketleri (bozukluk, bankaya yatırma); depo başına günlük mutabakat (bizim toplamlar ↔ Hiboutik Z). | `payment.ts` ve çağıranları; yeni Hiboutik adaptörü; migration (siparişte Hiboutik satış numarası, kuyruk) | Faz 0 Hiboutik ölçümü |
 | 2 | **Pennylane.** Tedarikçi eşleme (`POST /suppliers`); belgeye KDV oranlı satır; PDF yükleme (yabancı ve e-faturasız tedarikçi; fotoğraf PDF'e çevrilir); yüklemeden önce mükerrer kontrolü; e-fatura okuma ve mal kabule bağlama; banka hareketi okuma; eşleşme yazma; hesap başına "hareket gelmiyor" uyarısı. | `money_document` şeması; para modülü; yeni Pennylane adaptörü | Faz 0 Pennylane ölçümü |
 | 3 | **Revolut.** Çevrim içi ödeme Stripe yerine (Merchant API: sipariş, kart alanı, Apple / Google Pay, webhook, iade); kapıda kart (Terminal'e tutar gönderme ya da elle onay + sonradan doğrulama); defter düzeni (brüt tahsilat · komisyon · Merchant'tan ana hesaba aktarma). | `payment-gateway.ts`; web ve mobil ödeme ekranları; `stripe-webhook.ts`'in karşılığı | Faz 0 Revolut ölçümü; canlı için asıl hesap |
 | 4 | **2027.** B2B e-fatura düzenleme ve e-reporting: kim gönderecek (Pennylane / Hiboutik), bağlantı. | — | Son tarih 01.09.2027 |
@@ -111,18 +111,38 @@
 
 ## 6. Ölçülecekler (Faz 0)
 
-**Hiboutik** (demo hesap; deneme satışı gerçek kasaya yazılmaz):
-- Satış aç → kalem → ödeme → kapat yanıtları; satış ve fiş numarasının döndüğü alan (belgede yanıt
-  gövdeleri boş).
-- Kısmi iade (`sale_line_item_exchange` — davranışı belgede yok) ve tam iptal (`POST /sales/void`).
-- Bölünmüş ödeme (`DIV`), kapanmış güne yazım.
-- `POST /z/closure` kendi anahtarımızla çağrılabiliyor mu (belgede *"Scope for public applications :
-  forbidden"*).
+**Hiboutik — ölçüldü (01.10, demo hesap `lezzetanatolie`).** Betikler `.test-results/hiboutik-olcum.mjs` ve
+`hiboutik-olcum-iade.mjs`, raporlar aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yüklüyor,
+309 işlem); `/docapi/json/` eski sürüm (228 işlem, yorum satırına alınmış).
+
+| Konu | Sonuç |
+|---|---|
+| Satış aç → kalem → ödeme → kapat | Çalışıyor. Kapatma, her kalemin `stock_withdrawal = 1` olmasını istiyor (yoksa 422). Cevaplar: `{sale_id}`, `{id_sale_product_detail}`. |
+| Satış kaydı | `GET /sales/{id}`: günlük sıra numarası (`unique_sale_id`, ör. `2026-10-1-1`), gün sonu tarihi, kalem başına KDV, oran başına HT/KDV/TTC (`taxes`), ödemeler (`payment_total`), dijital fiş ve QR bağlantısı (`url_receipt`, `url_qrcode`). |
+| Sipariş numarası (`ext_ref`) | 25 karakterde kesiliyor. Kısa numarayla arama (`/sales/search/ext_ref/{q}`) satışı buluyor: tekrar koruması mümkün. |
+| Bölünmüş ödeme (`DIV`) | Çalışıyor (nakit 10 + kart 20). |
+| B2B KDV hariç fiyat | `prices_without_taxes = 1`: 10,00 HT → 10,55 TTC, doğru. |
+| Almanya'ya ters yükleme | `duty_free_sale = 1`: KDV 0, ama KDV kodu `E` (muaf) yazılıyor, AB içi işlem kodu değil. |
+| Tam iptal | `POST /sales/void`: eksi tutarlı ters satış, aynı ödeme yöntemi, yeni sıra numarası, gerekçe iz kaydında. |
+| Kısmi iade | Eksi fiyatlı kalemle iade satışı kapanıyor (1 × −10,00, nakit). Eksi adet reddediliyor. Kalem iadesi (`sale_line_item_exchange`) para değil alacak notu (avoir) üretiyor ve kalemin tamamını iade ediyor: bizim iade yolu değil. |
+| Ürün dış referansı (`products_ref_ext`) | 20 karakterde kesiliyor; belgede sınır yazmıyor. Varyant kimliğimiz (`uuid`, 36 karakter) sığmaz → ürün eşlemesi bizde tutulur. |
+| Stok | Stok takipsiz üründe satış stok hareketi doğurmuyor. |
+| Nakit kasası | Para koyma/çıkarma, anlık sayım ve aylık hareketler çalışıyor; sayım kapanmış satışların nakit payıyla tutuyor. |
+| Gün sonu okumaları | Ödeme yöntemine, KDV oranına göre ve alınan ödemeler dökümü geliyor. Kasa defteri ve nakit akışı boş (kapanış olmadan). |
+| Gün kapanışı | Demoda yapılamıyor: *"You can't close because your account is in demo mode"*. Çağrı yetki kapısını geçiyor. |
+| Çalışmayanlar | Fiş içeriği (`/print/ticket`) ve Z raporu (`/reports/z`) 500; `/z/credit_notes_issued` canlıda yok (404). |
+| Yuvarlama | `sale_total_net/tax` (23,12 / 1,88) ile oran toplamları (23,13 / 1,87) bir kuruş ayrışıyor; mutabakat oran toplamlarından yapılır. |
+| Hız | Çağrı başına 40–110 ms; kota başlığı yok. |
+| Demo sıfırlama | `POST /reset` (`reset_action`: `sales_and_products`, `sales_keep_stock`, `sales_and_stock`, `clients`, `everything`), yalnız demo modunda. `sales_and_products` satışları, ürünleri ve kasa sayımını siliyor; ödeme yöntemleri, KDV oranları ve mağaza kalıyor. |
+
+**Hiboutik — açık kalan:**
+- Gün kapanışı, mali arşiv ve kapanış sonrası kasa defteri yalnız üretim hesabında görülebilir.
+- Ters yüklemenin `E` kodu 2027 e-fatura / e-reporting için yeterli mi, Faz 4'te bakılacak.
 - Paket ve kargo ücretinin satır olarak yazılışı.
 - Çağrı sınırı: satış başına kalem + 5 çağrı, toplu uç yok. Ayda 10.000 çağrı (ikincil kaynak) ve
   ayda 600 satışta ortalama 11 kaleme kadar sığar.
 - Kurye nakdi: Hiboutik'te kurye ara kasası yok; kuryenin eksik teslim ettiği nakdin kayda nasıl
-  yansıyacağı (açıklamalı kasa çıkışı ya da başka yol) — muhasebe kararı, şıklarla.
+  yansıyacağı (açıklamalı kasa çıkışı ya da başka yol) — Faz 1 tasarımında karara bağlanır.
 
 **Pennylane** (test ortamı):
 - E-fatura okumada fatura satırları, PDF bağlantısı ve e-fatura alanları geliyor mu (veri modelinde
@@ -164,7 +184,7 @@ Resmî:
 - [impots.gouv.fr: e-faturayı tanıyın](https://www.impots.gouv.fr/professionnel/je-decouvre-la-facturation-electronique)
 
 Hiboutik:
-- API: kullanıcının verdiği OpenAPI 2.0 belgesi (`Hiboutik Rest API.yaml`, depoda değil)
+- API belgesi: `https://lezzetanatolie.hiboutik.com/docapi/yaml/` (kopyası `.test-results/hiboutik-docapi-hesap.yaml`, depoda değil)
 - [Webhooklar](https://faq.hiboutik.com/en/api-development/webhooks)
 - [E-fatura ve e-reporting](https://faq.hiboutik.com/fr/caisse-cloture/facturation-electronique-france-e-reporting)
 
