@@ -629,11 +629,11 @@ async function proofOf(raw: unknown): Promise<OrderDetailView['delivery']['proof
   return { when: proof.at, receivedBy: proof.receivedBy, kind: proof.kind, imageUrl: proof.imageUrl };
 }
 
-/** Kuyrukta bekleyen siparişin sebebi: kasa kapalıysa o, plan durduysa sebep, kasaya ulaşılamıyorsa deneme sayısı, yoksa sırada. */
+/** Kuyrukta bekleyen siparişin sebebi: kasa kapalıysa o, plan durduysa sebep, kasaya yazılamıyorsa deneme sayısı ve hata, yoksa sırada. */
 function registerWaitingOf(row: RegisterQueue | null, liveFrom: string | null): string | null {
   if (!row) return null;
   if (!liveFrom) return 'kasa kapalı, canlıya geçiş günü girilmedi';
   if (row.attempts > 0 && !row.lastError?.startsWith('blocked:'))
-    return `kasaya ulaşılamadı, ${row.attempts}. denemeden sonra yeniden denenecek`;
+    return `kasaya yazılamadı (${row.attempts}. deneme, yeniden denenecek): ${row.lastError ?? '—'}`;
   return blockReasonOf(row.lastError) ?? 'sırada';
 }

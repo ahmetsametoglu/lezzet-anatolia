@@ -124,6 +124,7 @@ aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yükl�
 | Sipariş numarası (`ext_ref`) | 25 karakterde kesiliyor. Arama (`/sales/search/ext_ref/{q}`) "içerir" biçiminde: `…-S1` araması `…-S11`'i de getiriyor, tam eşleşme satış okunarak doğrulanır. |
 | Bölünmüş ödeme (`DIV`) | Çalışıyor (nakit 10 + kart 20). |
 | Eksik ve fazla ödeme | `DIV` satış eksik ödemeyle de kapanıyor; kalan `balance`ta duruyor, fişte "Reste" yazıyor. Kapanmış satışa sonradan ödeme satırı eklenebiliyor, eksi tutarlı da (fazla tahsilatın iadesi: bakiye −2,00 → 0,00; kasa sayımı ve Z bunu gösteriyor). Tek yöntemli satışa sonradan ödeme eklenemiyor. |
+| Ödeme türü | Kasada açılmamış türle yazılan ödeme satırı 404 döner (`Please provide a valid payment`); tür `POST /payment_types` ile açılınca kabul ediliyor. Hesapta hazır gelenler ESP, CB, CHE. |
 | Kalem KDV'si | Kalem bazında değiştirilebiliyor (`PUT /sale_line_item/{id}`, `vat` = oran, 0 < v < 1); vergi kimliğiyle reddediliyor. Sıfır oran kalemde verilemiyor, satış düzeyinde `duty_free_sale`. |
 | Birim fiyat | Kuruşa yuvarlanıyor: 3 × 9,6667 → 29,01. Tam tutar için kalem ikiye bölünür (2 × 9,67 + 1 × 9,66). |
 | İndirim | Kalemdeki `discount` fiyatı değiştirmiyor; Hiboutik onu "katalog fiyatı − satış fiyatı" olarak kendisi yazıyor, gün sonu indirim raporu bundan çıkıyor. İndirim satış fiyatına işlenir. |
@@ -237,6 +238,11 @@ Satış tarihini API almıyor: geciken fiş yazıldığı günün Z'sine düşer
 **Canlıya geçiş:** `register_live_from` ayarı (an). Ayar yoksa ya da okunamıyorsa eşitleme hiç koşmaz.
 Bu andan sonra para görmüş siparişin bütün tahsilat ve iadeleri yazılır, açılışı önce olsa da; yalnız
 önceden para görmüş sipariş ve önceden yazılmış kasa hareketi kasaya gitmez.
+
+**Canlıya geçiş adımları:** Hiboutik'te mağaza açılır ve kurulum kartında tesise eşlenir. Ödeme
+türlerinden ESP ve CB hazır gelir; WEB (online) ve VIR (havale) kasada açılır, yoksa o yöntemle yazılan
+ödeme reddedilir. Backend ortamına anahtarlar ve `HIBOUTIK_MODE=live` girilir; en son kartta canlıya
+geçiş günü girilir.
 
 **Bilinen sınır:** yazılmış bir ödeme satırının hareketi aynı kimlikle tutarı değişerek düzeltilirse plan
 bunu görmez (birleşmede hareket yenisiyle değiştiği için orada sorun yok); bugün tutar düzelten akış yok.

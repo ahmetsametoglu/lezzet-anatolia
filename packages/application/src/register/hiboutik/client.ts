@@ -121,11 +121,21 @@ export function hiboutikRegister(config: HiboutikConfig): CashRegister {
       await request(config, `/sale_line_item/${lineId}`, 'DELETE');
     },
     async addPayment(input) {
-      const body = await request(config, '/sales_payment_div', 'POST', {
-        sale_id: input.saleId,
-        payment_type: CODE_OF[input.method],
-        payment_amount: amount(input.amountCents),
-      });
+      const code = CODE_OF[input.method];
+      let body: unknown;
+      try {
+        body = await request(config, '/sales_payment_div', 'POST', {
+          sale_id: input.saleId,
+          payment_type: code,
+          payment_amount: amount(input.amountCents),
+        });
+      } catch (err) {
+        // Kasada açılmamış ödeme türü 404 döner ve satışı gösterir; sebep söylenmezse "kayıt yok" diye okunurdu.
+        if (err instanceof HiboutikError && err.code === 'not_found' && JSON.stringify(err.detail ?? '').includes('valid payment')) {
+          throw new HiboutikError({ code: 'validation', message: `Hiboutik'te "${code}" ödeme türü tanımlı değil`, detail: err.detail });
+        }
+        throw err;
+      }
       return parse(HiboutikCreatedPaymentSchema, body, 'ödeme satırı').payment_detail_id;
     },
     async deletePayment(paymentId) {

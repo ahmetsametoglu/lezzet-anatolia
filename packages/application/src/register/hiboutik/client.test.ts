@@ -136,4 +136,22 @@ describe('yazan istek', () => {
     expect(isHiboutikError(failure) && failure.code).toBe('network');
     expect(calls).toHaveLength(1);
   });
+
+  it('kasada açılmamış ödeme türü adıyla söylenir; 404 "kayıt yok" diye okunmaz', async () => {
+    const { register } = fakeHiboutik([
+      {
+        status: 404,
+        json: {
+          error: 'not_found',
+          error_description: 'Resource not found',
+          code: 5,
+          details: { sale_id: 'Please provide a valid payment' },
+        },
+      },
+    ]);
+
+    await expect(register.addPayment({ saleId: 2, method: 'bank_transfer', amountCents: 100 })).rejects.toThrow(
+      `Hiboutik'te "VIR" ödeme türü tanımlı değil`,
+    );
+  });
 });
