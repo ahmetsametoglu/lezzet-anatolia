@@ -4,7 +4,8 @@ import { registerWebPushSubscription, unregisterPushDevice } from '@lezzet/appli
 import { serviceDb } from '@lezzet/database';
 import { WebPushSubscriptionSchema } from '@lezzet/types';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
-import { currentCustomerId } from '@/lib/guard';
+import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { currentCustomerId, guarded, requireStaff } from '@/lib/guard';
 import { forgetWebPushEndpoint, rememberWebPushEndpoint } from './web-push-cookie';
 
 /**
@@ -37,5 +38,36 @@ export async function removeWebPushAction(endpoint: string): Promise<CustomerRes
     return { data: true, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
+  }
+}
+
+/**
+ * Operasyon panelinin kaydı `operations` uygulamasına yazılır; personel haberi bu satırı okur. Personel oturumu yoksa `false` döner,
+ * çünkü panel eşitlemesi her açılışta çalışır.
+ */
+export async function registerStaffWebPushAction(subscription: unknown): Promise<ActionResult<boolean>> {
+  try {
+    const staff = await guarded(requireStaff);
+    if (!staff.ok) return { data: false, error: null };
+
+    const parsed = WebPushSubscriptionSchema.safeParse(subscription);
+    if (!parsed.success) return { data: null, error: 'Tarayıcı aboneliği okunamadı.' };
+
+    await registerWebPushSubscription(serviceDb(), { profileId: staff.user.profileId, subscription: parsed.data, app: 'operations' });
+    await rememberWebPushEndpoint(parsed.data.endpoint);
+    return { data: true, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+export async function removeStaffWebPushAction(endpoint: string): Promise<ActionResult<true>> {
+  try {
+    const staff = await requireStaff();
+    await unregisterPushDevice(serviceDb(), { profileId: staff.profileId, token: endpoint });
+    await forgetWebPushEndpoint();
+    return { data: true, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
   }
 }

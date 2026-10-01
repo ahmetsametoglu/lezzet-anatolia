@@ -1,7 +1,8 @@
 'use client';
 
 import { SettingsCard } from '@/components/customer/phone-kit/settings-card';
-import { useWebPush } from '@/components/customer/pwa/use-web-push.hook';
+import { customerWebPush } from '@/components/customer/pwa/customer-web-push';
+import { useWebPush } from '@/lib/push/use-web-push.hook';
 import type { Messages } from '../account-types';
 import { ConsentSwitch } from './account-cards';
 
@@ -12,7 +13,7 @@ interface PhoneNotifyCardProps {
 
 /** iPhone'da kart ancak ana ekrana kurulan uygulamada çıkar; Safari sekmesinde yerini kurulum kartı tutar. */
 export function PhoneNotifyCard({ t, failedText }: PhoneNotifyCardProps) {
-  const { mode, on, toggle } = useWebPush();
+  const { mode, on, toggle } = useWebPush(customerWebPush);
   if (mode === 'hidden') return null;
   return (
     <SettingsCard title={t.notifyTitle}>

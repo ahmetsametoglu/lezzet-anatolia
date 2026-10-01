@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { staffNotificationsFeedAction, staffMarkAllNotificationsReadAction } from '@/lib/notifications/actions';
+import { ToggleField } from '../form/toggle';
 import { AnchoredMenu } from './anchored-menu';
 import { CONTROL_SQUARE } from './control';
 import { BellIcon } from './icons';
@@ -10,6 +11,7 @@ import { agoShort } from './format';
 import { Skeleton } from './skeleton';
 import { toOpsNotificationRow, type OpsNotificationRow } from './notification-rows';
 import { useBell } from './use-bell.hook';
+import { useStaffWebPush } from './use-staff-web-push.hook';
 
 /*
   Operasyon zili: rozet sunucunun okunmamış sayısıdır ve ilk okuma bitmeden çizilmez, çünkü 0 "iş yok" derdi. Panelin açılışı
@@ -28,6 +30,8 @@ export function NotificationBell({ channel }: NotificationBellProps) {
   const [rows, setRows] = useState<OpsNotificationRow[] | null>(null);
   const [unread, setUnread] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const push = useStaffWebPush();
+  const [pushFailed, setPushFailed] = useState(false);
 
   const fetchFeed = useCallback(() => {
     void staffNotificationsFeedAction().then((res) => {
@@ -83,7 +87,25 @@ export function NotificationBell({ channel }: NotificationBellProps) {
       </div>
 
       <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width={340} className="p-1.5">
-        <div className="px-2.5 py-1.5 font-ops-display text-ops-sm font-semibold text-ops-ink">Bildirimler</div>
+        <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
+          <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Bildirimler</span>
+          {/* Masaüstü bildirimi bu tarayıcının ayarıdır; zil her durumda çalışır. */}
+          {push.mode === 'ready' && (
+            <ToggleField
+              bare
+              size="sm"
+              label="Bu tarayıcıda"
+              on={push.on}
+              onChange={(next) => void push.toggle(next).then(({ errorKey }) => setPushFailed(errorKey !== null))}
+            />
+          )}
+        </div>
+        {push.mode === 'denied' && (
+          <div className="px-2.5 pb-1.5 font-ops-body text-ops-micro text-ops-muted">
+            Tarayıcı bu sitenin bildirimini engelliyor; izni tarayıcı ayarından verin.
+          </div>
+        )}
+        {pushFailed && <div className="px-2.5 pb-1.5 font-ops-body text-ops-micro text-ops-red">Ayar kaydedilemedi — tekrar deneyin.</div>}
         {error !== null ? (
           <div className="px-2.5 py-2 font-ops-body text-ops-sm text-ops-muted">{error}</div>
         ) : rows === null ? (

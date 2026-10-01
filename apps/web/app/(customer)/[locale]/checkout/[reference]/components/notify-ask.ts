@@ -1,4 +1,4 @@
-import type { WebPushMode } from '@/components/customer/pwa/use-web-push.hook';
+import type { WebPushMode } from '@/lib/push/use-web-push.hook';
 
 export type NotifyAskState = 'hidden' | 'ask' | 'done' | 'failed';
 

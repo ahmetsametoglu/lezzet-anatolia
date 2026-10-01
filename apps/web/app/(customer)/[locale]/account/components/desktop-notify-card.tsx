@@ -2,7 +2,8 @@
 
 import { Card } from '@/components/customer/ui/card';
 import { Icon } from '@/components/customer/ui/icons';
-import { useWebPush } from '@/components/customer/pwa/use-web-push.hook';
+import { customerWebPush } from '@/components/customer/pwa/customer-web-push';
+import { useWebPush } from '@/lib/push/use-web-push.hook';
 import type { Messages } from '../account-types';
 import { CardHead, ConsentSwitch } from './account-cards';
 
@@ -12,7 +13,7 @@ interface DesktopNotifyCardProps {
 
 /** Engellenmiş izinde anahtar yerine yol yazılır, çünkü site tarayıcının kararını yeniden soramaz. */
 export function DesktopNotifyCard({ t }: DesktopNotifyCardProps) {
-  const { mode, on, toggle } = useWebPush();
+  const { mode, on, toggle } = useWebPush(customerWebPush);
   if (mode === 'hidden') return null;
   return (
     <Card compact={false}>
