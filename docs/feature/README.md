@@ -1,8 +1,8 @@
 # docs/feature — özellik etütleri
 
-Yeni bir özelliğin mevcut sisteme yerleşim etütleri. **Karar değildir** — kapsam kararı
-kullanıcının; karar olgunlaşınca ilgili `docs/build/NN-*.md` dosyalarına görev satırı olarak iner
-ve etüt o karara işaret eder. Şerit ajanları teknik itirazlarını dosyanın sonuna yazabilir.
+Yeni bir özelliğin mevcut sisteme yerleşim etütleri. Kapsam kararı kullanıcının. Karar alınınca
+dosya özelliğin tek kaydı olur: kararlar, yol haritası ve açık işler orada tutulur; özellik işi
+`docs/KALAN.md`'ye satır olarak açılmaz. Şerit ajanları teknik itirazlarını dosyanın sonuna yazabilir.
 
 - `barkod-okuyucu.md` — barkod/QR ile operasyon takibi: **kararlar alındı 17.08** (telefon kamerası ·
   koli barkodu + adet çarpanı · öğrenen kod eşlemesi · sipariş KUTUSU kavramı · 4×6 termal etiket ·
@@ -19,3 +19,6 @@ ve etüt o karara işaret eder. Şerit ajanları teknik itirazlarını dosyanın
   sefer · takılı durakları kapanış çözer, günü sevkiyatçı yazar. Ölçülmüş yedi gereklilik kanıtı,
   şema, beş fazlı yol haritası. Tek günlük hâl — turla ilişkisi §6'da, `cok-gunluk-sefer.md`yle
   birlikte okunur.
+- `kasa-muhasebe.md` — sertifikalı kasa, e-fatura ve KDV yükümlülüklerinin Hiboutik · Pennylane ·
+  Revolut ile karşılanması: **kararlar alındı 30.09–01.10**, entegrasyon başlıyor. Yasal zemin
+  (BOFiP, DGFiP fişleri), dokuz karar, veri akışı, beş fazlı yol haritası, ölçülecekler, riskler.
