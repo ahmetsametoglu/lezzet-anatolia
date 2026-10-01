@@ -6,21 +6,9 @@ import type { NotificationRow } from '../api/notifications';
 import { pushNative } from './native-module';
 
 /*
-  PUSH DOKUNUŞU → EKRAN (14.16 / 21.13'ün "dokununca doğru ekrana gitme" maddesi).
-
-  Sunucu bildirime `data` yükü koyar ({kind, targetType, targetId, payload} — sürücü künyesi);
-  burada okunur ve adresi UYGULAMA çözer (`resolveHref` — müşteride `notificationHref`): uygulama
-  içi listede satıra dokunmakla, cihaz bildirimine dokunmak AYNI adrese gider; iki eşleme olsaydı
-  biri gün gelip başka yere götürürdü (CLAUDE §1). Sözlük parametre, çünkü bu kanca ortak
-  çekirdekte ve iki uygulamanın bildirim sözlüğü ayrı (21.310).
-
-  İki an dinlenir, ikisi tek dinleyicide:
-  · Uygulama AÇIKKEN/arka plandayken dokunuş — `addNotificationResponseReceivedListener`.
-  · Uygulama bildirimle SOĞUK açıldıysa — `getLastNotificationResponseAsync` (dinleyici kurulmadan
-    önce gelen dokunuş kaybolmasın; v57 dokümanının önerdiği ikili).
-
-  Adres çözülemezse (bilinmeyen tür, hedefsiz satır) hiçbir şey yapılmaz: bildirimin kendisi
-  uygulamayı zaten açtı, vitrin en dürüst varsayılan.
+  Push dokunuşu → ekran: sunucunun `data` yükü ({kind, targetType, targetId, payload}) uygulamanın kendi eşlemesiyle (`resolveHref`)
+  adrese çevrilir, böylece listedeki satıra ve cihaz bildirimine dokunmak aynı yere gider. Dokunuş iki anda dinlenir, açıkken gelen
+  (`addNotificationResponseReceivedListener`) ve uygulamayı soğuk açan (`getLastNotificationResponseAsync`); çözülemeyen adres hiçbir şey yapmaz.
 */
 /** Bildirimin dokunuş hedefi — uygulama içi listenin satırıyla aynı alanlar. */
 type PushTarget = Pick<NotificationRow, 'kind' | 'targetType' | 'targetId' | 'payload'>;
