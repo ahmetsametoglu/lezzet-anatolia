@@ -56,14 +56,21 @@ interface SyncContext {
   now: Date;
 }
 
-export async function syncRegisterQueue(db: Db, register: CashRegister, opts: { now?: Date } = {}): Promise<Record<string, unknown>> {
+/** Canlıya geçiş anı; ayar yoksa ya da okunamıyorsa `null` ve kasaya hiçbir şey yazılmaz. */
+export async function registerLiveFrom(db: Db): Promise<string | null> {
   const liveFrom = await new SettingsService(db).get<string | null>(REGISTER_LIVE_FROM_KEY, null);
-  if (!liveFrom) return { skipped: 'not_live' };
-  // Okunamayan tarih bütün geçmişi kasaya açardı; ayar düzeltilene kadar tur koşmaz.
+  if (!liveFrom) return null;
+  // Okunamayan tarih bütün geçmişi kasaya açardı; ayar düzeltilene kadar kasaya yazılmaz.
   if (Number.isNaN(Date.parse(liveFrom))) {
-    logger.warn({ setting: REGISTER_LIVE_FROM_KEY }, 'kasa: canlıya geçiş anı okunamadı, eşitleme koşmadı');
-    return { skipped: 'invalid_live_from' };
+    logger.warn({ setting: REGISTER_LIVE_FROM_KEY }, 'kasa: canlıya geçiş anı okunamadı');
+    return null;
   }
+  return liveFrom;
+}
+
+export async function syncRegisterQueue(db: Db, register: CashRegister, opts: { now?: Date } = {}): Promise<Record<string, unknown>> {
+  const liveFrom = await registerLiveFrom(db);
+  if (!liveFrom) return { skipped: 'not_live' };
   const now = opts.now ?? new Date();
   const rows = await new RegisterQueueService(db).listDue(now.toISOString(), BATCH);
   const counts: Record<RegisterQueueOutcome, number> = { written: 0, skipped: 0, blocked: 0, failed: 0 };
@@ -296,7 +303,18 @@ async function writeLines(scope: OrderScope, saleId: number, lines: RegisterTick
     register,
     lines.filter((line) => line.kind === 'item').map((line) => variantOf.get(line.orderItemId!)!),
   );
-  for (const line of lines) {
+  // Aynı anda açılan kalem satırlarının sırası belirsizdir; fiş siparişin kalem sırasıyla yazılır, kargo en sonda.
+  const rank = new Map(scope.items.map((item, index) => [item.id, index]));
+  const ordered = [...lines].sort((a, b) =>
+    a.kind === b.kind
+      ? a.kind === 'item'
+        ? rank.get(a.orderItemId!)! - rank.get(b.orderItemId!)!
+        : a.vatRate - b.vatRate
+      : a.kind === 'item'
+        ? -1
+        : 1,
+  );
+  for (const line of ordered) {
     const product =
       line.kind === 'item' ? items.get(variantOf.get(line.orderItemId!)!)! : await ensureShippingProduct(db, register, line.vatRate);
     const externalLineIds: number[] = [];

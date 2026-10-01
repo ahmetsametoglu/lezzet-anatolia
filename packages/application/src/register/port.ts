@@ -1,4 +1,4 @@
-import type { MovementDirection, PaymentMethod, RegisterCashMove, RegisterSale } from '@lezzet/types';
+import type { MovementDirection, PaymentMethod, RegisterCashMove, RegisterDay, RegisterSale } from '@lezzet/types';
 
 /**
  * Sertifikalı kasanın portu: eşitleme yalnız bunu bilir, Hiboutik uyarlaması ve testlerin bellek içi kasası uygular. Kapanmamış satışta
@@ -24,4 +24,10 @@ export interface CashRegister {
   /** Fiş dışı nakit, açıklamasıyla kasaya giriş ya da çıkış; kasa sayımı çekmeceyle tutsun diye. */
   moveCash(input: { storeId: number; direction: MovementDirection; amountCents: number; label: string }): Promise<number>;
   listCashMoves(storeId: number, month: { year: number; month: number }): Promise<RegisterCashMove[]>;
+  /** Günler `YYYY-MM-DD`, kasanın takviminde. */
+  readDay(storeId: number, date: string): Promise<RegisterDay>;
+  /** Günün kapanış anı; kapanmamışsa `null`. */
+  dayClosedAt(storeId: number, date: string): Promise<string | null>;
+  /** Günü ve öncesini kapatır; kapanış mali kayıttır, geri alınmaz. */
+  closeDay(storeId: number, date: string): Promise<void>;
 }

@@ -19,7 +19,23 @@ export const HiboutikTaxListSchema = z.array(
 
 export const HiboutikProductListSchema = z.array(z.object({ product_id: z.number().int() }));
 export const HiboutikSaleIdListSchema = z.array(z.object({ sale_id: z.number().int() }));
-export const HiboutikTillMoveListSchema = z.array(z.object({ till_id: z.number().int(), comments: z.string().nullish() }));
+export const HiboutikTillMoveListSchema = z.array(
+  z.object({
+    till_id: z.number().int(),
+    comments: z.string().nullish(),
+    date_till: z.string(),
+    deposit: decimal,
+    withdrawal: decimal,
+  }),
+);
+
+/** Gün sonu: oran başına KDV dahil toplam ve ödeme türü başına, satış kimliğiyle ödemeler. */
+export const HiboutikDayTaxListSchema = z.array(z.object({ tax_value: decimal, total_incl_taxes: decimal }));
+export const HiboutikDayPaymentListSchema = z.array(
+  z.object({ payment_type: z.string(), payments: z.array(z.object({ sale_id: z.number().int(), amount: decimal })) }),
+);
+/** Kapanmamış günde `closure_date` boş tarihtir. */
+export const HiboutikDayClosureSchema = z.object({ closure_date: z.string() });
 
 export const HiboutikSaleSchema = z.object({
   sale_id: z.number().int(),

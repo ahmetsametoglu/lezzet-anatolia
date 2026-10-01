@@ -1,21 +1,6 @@
 /**
- * TAKVİM günü farkı — `to` ile `from` arasında kaç gün var (denetim A6).
- *
- * ── NEDEN GÜN BAŞINA İNDİRİLİR ───────────────────────────────────────────────
- * İki damga arasındaki ham milisaniyeyi 86.400.000'e bölmek "kaç 24 saat geçti"yi verir, "kaç gün
- * sonra" sorusunu DEĞİL. Son kullanma tarihi 3 gün sonraysa cevap saat kaç olduğuna göre 2 ya da 3
- * çıkar; aynı parti sabah "uyarı eşiğinde", akşam "değil" görünür. Bu yüzden iki uç da UTC gün
- * başına indirilir ve fark tam sayıdır.
- *
- * ── NEDEN TEK EV ─────────────────────────────────────────────────────────────
- * `domain-core` içinde iki tanım vardı: `stock/shelf-life` (`Date` alır, gün başına indirir,
- * `round`) ve `stock/transfer` (`string` alır, ham milisaniyeyi `floor`'lar). Tarih-yalnız
- * girdilerde ikisi aynı sonucu veriyordu, ama iki farklı yuvarlama taşıyorlardı — saatli bir damga
- * geçen ilk çağrıda ayrışacaklardı ve ayrıştıkları yer raf ömrü kararıydı: bir parti "sevkte
- * bozulur" sayılıp elenir ya da elenmezdi.
- *
- * Girdi `Date` de `string` de olabilir; iki çağıranın biçimi farklıydı ve birini ötekine
- * uydurmak, taşımanın kendisini gereksiz yere büyütürdü.
+ * Takvim günü farkı: `to` ile `from` arasında kaç gün var. İki uç UTC gün başına indirilir, çünkü ham milisaniyeyi 86.400.000'e bölmek
+ * "kaç 24 saat geçti"yi verir ve aynı parti sabah eşikte, akşam eşik dışında görünürdü.
  */
 export function daysBetween(from: Date | string, to: Date | string): number {
   return dayIndex(to) - dayIndex(from);
@@ -25,4 +10,35 @@ export function daysBetween(from: Date | string, to: Date | string): number {
 function dayIndex(value: Date | string): number {
   const d = typeof value === 'string' ? new Date(value) : value;
   return Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 86_400_000);
+}
+
+/** İşletme günü Paris takvimindedir; kasanın gün sonu ve günlük raporlar bu saatle döner. */
+const PARIS = 'Europe/Paris';
+
+/** Bir anın Paris'teki takvim günü (`YYYY-MM-DD`). */
+export function parisDateOf(at: Date): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: PARIS }).format(at);
+}
+
+/** Paris takviminde bir günün UTC sınırları, yarı açık `[from, to)`; yaz saatine geçilen gün 23 saattir. */
+export function parisDayRange(date: string): { from: string; to: string } {
+  const [year, month, day] = date.split('-').map(Number) as [number, number, number];
+  return { from: parisMidnight(year, month, day).toISOString(), to: parisMidnight(year, month, day + 1).toISOString() };
+}
+
+/** Paris'te yerel gece yarısının anı; Paris UTC+1 ya da +2'dir ve saat değişimi gece yarısına düşmez. */
+function parisMidnight(year: number, month: number, day: number): Date {
+  const guess = Date.UTC(year, month - 1, day);
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: PARIS,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(guess));
+  const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((candidate) => candidate.type === type)!.value);
+  const wall = Date.UTC(part('year'), part('month') - 1, part('day'), part('hour'), part('minute'));
+  return new Date(guess - (wall - guess));
 }

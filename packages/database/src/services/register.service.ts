@@ -43,6 +43,11 @@ import { BaseDbService } from '../core/base.service';
 
 // Sertifikalı kasanın bizdeki aynası ve kuyruğu (docs/feature/kasa-muhasebe.md §7); servisler yalnız satır okur ve yazar, plan motordadır.
 
+const writtenBetween = (field: string, from: string, to: string) => [
+  { field, operator: 'gte' as const, value: from },
+  { field, operator: 'lt' as const, value: to },
+];
+
 /** Mağaza eşlemesi; anahtar depo olduğu için yazım `upsert`, silme süzgeçle yapılır. */
 export class RegisterStoreService extends BaseDbService<RegisterStore, RegisterStoreInsert, never> {
   constructor(supabase: SupabaseClient) {
@@ -98,6 +103,16 @@ export class RegisterTicketService extends BaseDbService<RegisterTicket, Registe
   listByOrder(orderId: string): Promise<RegisterTicket[]> {
     return this.getAll({ orderId }, { orderBy: 'seq' });
   }
+
+  listByIds(ids: readonly string[]): Promise<RegisterTicket[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.getByIds([...ids]);
+  }
+
+  /** Mağazanın `[from, to)` aralığında kapanan fişleri; gün sonu mutabakatının bizim tarafı. */
+  listWrittenBetween(warehouseId: string, from: string, to: string): Promise<RegisterTicket[]> {
+    return this.getAll({ warehouseId, status: 'written' }, { rangeFilters: writtenBetween('writtenAt', from, to) });
+  }
 }
 
 export class RegisterTicketLineService extends BaseDbService<RegisterTicketLine, RegisterTicketLineInsert, RegisterTicketLineUpdate> {
@@ -132,6 +147,11 @@ export class RegisterPaymentService extends BaseDbService<RegisterPaymentRow, Re
   insertMany(rows: RegisterPaymentInsert[]): Promise<RegisterPaymentRow[]> {
     return this.bulkInsert(rows);
   }
+
+  /** `[from, to)` aralığında kasaya yazılan ödeme satırları; satır yazımdan hemen önce açıldığı için açılış anı yazım anıdır. */
+  listWrittenBetween(from: string, to: string): Promise<RegisterPaymentRow[]> {
+    return this.getAll({ status: 'written' }, { rangeFilters: writtenBetween('createdAt', from, to) });
+  }
 }
 
 export class RegisterCashOpService extends BaseDbService<RegisterCashOp, RegisterCashOpInsert, RegisterCashOpUpdate> {
@@ -144,6 +164,10 @@ export class RegisterCashOpService extends BaseDbService<RegisterCashOp, Registe
   /** Hareketin kasadaki karşılıkları: yazımı ve varsa ters çevrilmesi. */
   listForMovement(movementId: string): Promise<RegisterCashOp[]> {
     return this.getAll(undefined, { orFilters: [`movement_id.eq.${movementId},reversal_of.eq.${movementId}`], orderBy: 'createdAt' });
+  }
+
+  listWrittenBetween(warehouseId: string, from: string, to: string): Promise<RegisterCashOp[]> {
+    return this.getAll({ warehouseId, status: 'written' }, { rangeFilters: writtenBetween('createdAt', from, to) });
   }
 }
 
@@ -160,6 +184,11 @@ export class RegisterQueueService extends BaseDbService<RegisterQueue, never, Re
       orderBy: 'markedAt',
       limit,
     });
+  }
+
+  /** Kuyrukta bekleyen sipariş ve kasa hareketi; ertelenmiş ve durmuş satırlar da sayılır. */
+  countWaiting(): Promise<number> {
+    return this.count();
   }
 
   /** İşlenen satırı siler; işlem sürerken yeniden işaretlendiyse (`markedAt` değiştiyse) satır kalır ve sonraki tur yine işler. */

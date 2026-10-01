@@ -129,6 +129,8 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 - Yazım yolu: `money_movement` tetikleyicisi siparişi ya da eşlenmiş kasanın hareketini kuyruğa işaretler, backend cron'u
   (`register_sync`, dakikada bir) sipariş başına durum farkını fiş ve ödeme satırı olarak, fiş dışı nakdi kasa giriş/çıkışı
   olarak yazar. Ayna `register_*` tablolarında (`data-model/kasa.md`). Canlıya geçiş anı ayardır (`register_live_from`).
+- Gün sonu `register_close_day`: günü kasada kapatır (yalnız `HIBOUTIK_MODE=live`) ve aynayı kasanın gün sonu toplamlarıyla
+  karşılaştırır; fark `error_log`a uyarıdır.
 
 ## Muhasebe export
 

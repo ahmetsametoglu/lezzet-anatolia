@@ -259,16 +259,17 @@ kendiliğinden sıfırdır, mal maliyeti gider olarak kalır; sipariş teslim ed
 (`isSettled`). Ödeme kapısı sıfır tutarı hareket olarak yazmaz; hediyeye yine de para yazılırsa kasa planı
 durur ve uyarır.
 
-**Günlük mutabakat** (gün sonu, depo başına):
-1. Bizim para ↔ kasa aynası: hareketi olup yazılmamış sipariş.
-2. Kasa aynası ↔ Hiboutik Z: oran başına KDV (`/z/taxes`), yöntem başına ödeme (`/z/payment_types`),
-   kasa sayımı (`/till_cash_count`) ↔ nakit hesabın bakiyesi. Bizde olmayan satış da fark sayılır
-   (Hiboutik ekranından elle yapılmış satış).
+**Gün sonu** (`register_close_day`, her gün `REGISTER_CLOSE_AT` saatinde, varsayılan 23:50 Paris; mağaza başına):
+1. **Kapanış:** NF525 dönemsel kapanış istiyor; satışlar API'den geldiği için kapanışı cron yapar
+   (`POST /z/closure`), yalnız `HIBOUTIK_MODE=live` iken, çünkü kapanış geri alınmaz. Kapanmış gün yeniden
+   kapatılmaz. Demoda yapılamıyor; ilk canlı günde ölçülür.
+2. **Mutabakat, kasa aynası ↔ Hiboutik gün sonu:** oran başına KDV dahil tutar (`/z/taxes`), yöntem başına
+   ödeme (`/z/payment_types`), satış kimlikleri (kasada olup bizde olmayan satış Hiboutik ekranından elle
+   yapılmıştır; bizde olup kasada görünmeyen de fark) ve çekmecenin günlük net nakdi (nakit ödemeler + kasa
+   giriş/çıkışı). Kasa sayımı hesabın bakiyesiyle karşılaştırılmaz: kapıda kart da aynı hesaba giriyor.
+3. **Bizim para ↔ ayna:** kuyrukta bekleyen sayı; gün kapanırken bekleyen para ertesi günün kasasına düşer.
 
-Sonuç sistem ekranında.
-
-**Gün kapanışı:** NF525 dönemsel kapanış istiyor; satışlar API'den geldiği için kapanışı cron yapar
-(varsayılan 23:50 Paris saati, ayarla değişir). Demoda yapılamıyor; ilk canlı günde ölçülür.
+Fark `error_log`a uyarı olarak, özet `job_run`a yazılır; sistem ekranı satırı adım 6'da.
 
 **Ekranlar:** yeni ekran yok. Ayarlar: Hiboutik mağaza eşlemesi. Sipariş detayı: fiş numaraları ve dijital
 fiş bağlantısı. Sistem ekranı: kuyruk ve mutabakat durumu.
@@ -281,8 +282,8 @@ fiş bağlantısı. Sistem ekranı: kuyruk ve mutabakat durumu.
 - `packages/application/src/register/`: `CashRegister` portu ve Hiboutik uyarlaması (anahtar yoksa port
   yok), sipariş eşitleme, kasa hareketi, mutabakat. Hiboutik'in cevap biçimi `packages/types` sözleşmesinde;
   istemci ayrı paket değil, kullanıcısı yalnız uygulama katmanı.
-- `apps/backend/src/jobs/`: `register-sync` (dakikalık), `register-reconcile` ve `register-close-day` (günlük).
-- Ortam: `HIBOUTIK_ACCOUNT`, `HIBOUTIK_USER`, `HIBOUTIK_API_KEY`, `HIBOUTIK_MODE` (`demo` | `live`).
+- `apps/backend/src/jobs/`: `register-sync` (dakikalık) ve `register-close-day` (günlük kapanış ve mutabakat).
+- Ortam: `HIBOUTIK_ACCOUNT`, `HIBOUTIK_USER`, `HIBOUTIK_API_KEY`, `HIBOUTIK_MODE` (`demo` | `live`), `REGISTER_CLOSE_AT`.
 
 **Testler:**
 - Motorun her dalı birim testte: kuruş bölmesi, kargo payı, iptal, müşteride kalan, eksik ve fazla ödeme,

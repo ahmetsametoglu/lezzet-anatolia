@@ -1,3 +1,4 @@
+import { parisDateOf } from '@lezzet/helper';
 import type { MovementDirection, PaymentMethod, RegisterSale } from '@lezzet/types';
 import type { CashRegister } from './port';
 
@@ -10,9 +11,9 @@ interface MemorySale {
   storeId: number;
   extRef: string;
   divided: boolean;
-  closed: boolean;
+  closedAt: Date | null;
   lines: RegisterSale['lines'];
-  payments: Array<{ paymentId: number; method: PaymentMethod; amountCents: number }>;
+  payments: Array<{ paymentId: number; method: PaymentMethod; amountCents: number; at: Date }>;
 }
 
 interface MemoryTill {
@@ -24,11 +25,16 @@ interface MemoryTill {
   at: Date;
 }
 
+/** Kasanın yerel saati, Hiboutik'in yazdığı biçimde (`YYYY-MM-DD hh:mm:ss`). */
+const localTime = (at: Date): string =>
+  `${parisDateOf(at)} ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', timeStyle: 'medium' }).format(at)}`;
+
 export function memoryRegister() {
   let nextId = 1;
   const products = new Map<number, { name: string; priceCents: number; vatRate: number; refExt: string }>();
   const sales = new Map<number, MemorySale>();
   const tills: MemoryTill[] = [];
+  const closedDays = new Map<string, string>();
   const failures = new Map<keyof CashRegister, 'before' | 'after'>();
 
   /** Çağrının yazımı `act` ile yapılır; düşme kipi yazımdan önce ya da sonra fırlatır ve bir kez geçerlidir. */
@@ -47,7 +53,7 @@ export function memoryRegister() {
   };
   const openSaleOf = (saleId: number): MemorySale => {
     const sale = saleOf(saleId);
-    if (sale.closed) throw new Error(`kapanmış satış değişmez (${saleId})`);
+    if (sale.closedAt) throw new Error(`kapanmış satış değişmez (${saleId})`);
     return sale;
   };
 
@@ -64,7 +70,7 @@ export function memoryRegister() {
     createSale: (storeId) =>
       run('createSale', () => {
         const id = nextId++;
-        sales.set(id, { storeId, extRef: '', divided: false, closed: false, lines: [], payments: [] });
+        sales.set(id, { storeId, extRef: '', divided: false, closedAt: null, lines: [], payments: [] });
         return id;
       }),
     prepareSale: (saleId, extRef) =>
@@ -89,7 +95,7 @@ export function memoryRegister() {
     deleteLine: (lineId) =>
       run('deleteLine', () => {
         const sale = [...sales.values()].find((candidate) => candidate.lines.some((line) => line.lineId === lineId));
-        if (!sale || sale.closed) throw new Error(`kalem silinemez (${lineId})`);
+        if (!sale || sale.closedAt) throw new Error(`kalem silinemez (${lineId})`);
         sale.lines = sale.lines.filter((line) => line.lineId !== lineId);
       }),
     addPayment: (input) =>
@@ -97,16 +103,16 @@ export function memoryRegister() {
         const sale = saleOf(input.saleId);
         if (!sale.divided) throw new Error('ödeme satırı yalnız DIV satışa eklenir');
         const paymentId = nextId++;
-        sale.payments.push({ paymentId, method: input.method, amountCents: input.amountCents });
+        sale.payments.push({ paymentId, method: input.method, amountCents: input.amountCents, at: new Date() });
         return paymentId;
       }),
     deletePayment: (paymentId) =>
       run('deletePayment', () => {
         const sale = [...sales.values()].find((candidate) => candidate.payments.some((payment) => payment.paymentId === paymentId));
-        if (!sale || sale.closed) throw new Error(`ödeme satırı silinemez (${paymentId})`);
+        if (!sale || sale.closedAt) throw new Error(`ödeme satırı silinemez (${paymentId})`);
         sale.payments = sale.payments.filter((payment) => payment.paymentId !== paymentId);
       }),
-    closeSale: (saleId) => run('closeSale', () => void (openSaleOf(saleId).closed = true)),
+    closeSale: (saleId) => run('closeSale', () => void (openSaleOf(saleId).closedAt = new Date())),
     readSale: (saleId) =>
       run('readSale', () => {
         const sale = sales.get(saleId);
@@ -114,11 +120,11 @@ export function memoryRegister() {
         return {
           saleId,
           extRef: sale.extRef,
-          closed: sale.closed,
-          uniqueSaleId: sale.closed ? `Z-${saleId}` : null,
-          receiptUrl: sale.closed ? `https://fis.test/${saleId}` : null,
+          closed: sale.closedAt !== null,
+          uniqueSaleId: sale.closedAt ? `Z-${saleId}` : null,
+          receiptUrl: sale.closedAt ? `https://fis.test/${saleId}` : null,
           lines: sale.lines.map((line) => ({ ...line })),
-          payments: sale.payments.map((payment) => ({ ...payment })),
+          payments: sale.payments.map(({ paymentId, method, amountCents }) => ({ paymentId, method, amountCents })),
         };
       }),
     findSaleIdsByExtRef: (extRef) =>
@@ -130,13 +136,36 @@ export function memoryRegister() {
         return tillId;
       }),
     listCashMoves: (storeId, month) =>
-      run('listCashMoves', () =>
-        tills
-          .filter(
-            (till) => till.storeId === storeId && till.at.getUTCFullYear() === month.year && till.at.getUTCMonth() + 1 === month.month,
-          )
-          .map((till) => ({ tillId: till.tillId, label: till.label })),
-      ),
+      run('listCashMoves', () => {
+        const prefix = `${month.year}-${String(month.month).padStart(2, '0')}`;
+        return tills
+          .filter((till) => till.storeId === storeId && parisDateOf(till.at).startsWith(prefix))
+          .map((till) => ({
+            tillId: till.tillId,
+            label: till.label,
+            at: localTime(till.at),
+            amountCents: till.direction === 'in' ? till.amountCents : -till.amountCents,
+          }));
+      }),
+    readDay: (storeId, date) =>
+      run('readDay', () => {
+        const own = [...sales].filter(([, sale]) => sale.storeId === storeId);
+        const vat = new Map<number, number>();
+        for (const [, sale] of own) {
+          if (!sale.closedAt || parisDateOf(sale.closedAt) !== date) continue;
+          for (const line of sale.lines) vat.set(line.vatRate, (vat.get(line.vatRate) ?? 0) + line.quantity * line.unitPriceCents);
+        }
+        return {
+          vat: [...vat].map(([vatRate, grossCents]) => ({ vatRate, grossCents })),
+          payments: own.flatMap(([saleId, sale]) =>
+            sale.payments
+              .filter((payment) => parisDateOf(payment.at) === date)
+              .map(({ method, amountCents }) => ({ saleId, method, amountCents })),
+          ),
+        };
+      }),
+    dayClosedAt: (storeId, date) => run('dayClosedAt', () => closedDays.get(`${storeId}:${date}`) ?? null),
+    closeDay: (storeId, date) => run('closeDay', () => void closedDays.set(`${storeId}:${date}`, localTime(new Date()))),
   };
 
   return {
@@ -144,6 +173,7 @@ export function memoryRegister() {
     products,
     sales,
     tills,
+    closedDays,
     failOn(name: keyof CashRegister, when: 'before' | 'after' = 'before') {
       failures.set(name, when);
     },

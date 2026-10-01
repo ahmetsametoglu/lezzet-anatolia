@@ -5,6 +5,9 @@ import {
   HiboutikCreatedProductSchema,
   HiboutikCreatedSaleSchema,
   HiboutikCreatedTillMoveSchema,
+  HiboutikDayClosureSchema,
+  HiboutikDayPaymentListSchema,
+  HiboutikDayTaxListSchema,
   HiboutikProductListSchema,
   HiboutikSaleIdListSchema,
   HiboutikSaleReadSchema,
@@ -36,7 +39,8 @@ const METHOD_OF = new Map<string, PaymentMethod>(Object.entries(CODE_OF).map(([m
 
 const TIMEOUT_MS = 15_000;
 const GET_ATTEMPTS = 3;
-const OPEN_SALE_COMPLETED_AT = '0000-00-00 00:00:00';
+/** Hiboutik boş tarihi böyle yazar: kapanmamış satış ve kapanmamış gün. */
+const EMPTY_DATE = '0000-00-00 00:00:00';
 
 const amount = (cents: number): string => fromCents(cents).toFixed(2);
 /** Kalem KDV'si kesir ister (`0.055`); yüzde ya da vergi kimliği reddedilir. */
@@ -155,7 +159,39 @@ export function hiboutikRegister(config: HiboutikConfig): CashRegister {
     },
     async listCashMoves(storeId, month) {
       const body = await request(config, `/till/${storeId}/${month.year}/${String(month.month).padStart(2, '0')}`, 'GET');
-      return parse(HiboutikTillMoveListSchema, body, 'kasa hareketleri').map((row) => ({ tillId: row.till_id, label: row.comments ?? '' }));
+      return parse(HiboutikTillMoveListSchema, body, 'kasa hareketleri').map((row) => ({
+        tillId: row.till_id,
+        label: row.comments ?? '',
+        at: row.date_till,
+        amountCents: toCents(Number(row.deposit)) - toCents(Number(row.withdrawal)),
+      }));
+    },
+    async readDay(storeId, date) {
+      const day = date.split('-').join('/');
+      const [taxes, payments] = await Promise.all([
+        request(config, `/z/taxes/${storeId}/${day}`, 'GET').then((body) => parse(HiboutikDayTaxListSchema, body, 'gün sonu KDV')),
+        request(config, `/z/payment_types/${storeId}/${day}`, 'GET').then((body) =>
+          parse(HiboutikDayPaymentListSchema, body, 'gün sonu ödemeler'),
+        ),
+      ]);
+      return {
+        vat: taxes.map((tax) => ({ vatRate: percentOf(Number(tax.tax_value)), grossCents: toCents(Number(tax.total_incl_taxes)) })),
+        payments: payments.flatMap((type) =>
+          type.payments.map((payment) => ({
+            saleId: payment.sale_id,
+            method: METHOD_OF.get(type.payment_type) ?? null,
+            amountCents: toCents(Number(payment.amount)),
+          })),
+        ),
+      };
+    },
+    async dayClosedAt(storeId, date) {
+      const body = await request(config, `/z/closure/${storeId}/${date.split('-').join('/')}`, 'GET');
+      const closedAt = parse(HiboutikDayClosureSchema, body, 'gün kapanışı').closure_date;
+      return closedAt === EMPTY_DATE ? null : closedAt;
+    },
+    async closeDay(storeId, date) {
+      await request(config, `/z/closure/${storeId}/${date.split('-').join('/')}`, 'POST');
     },
   };
 }
@@ -164,7 +200,7 @@ function saleOf(row: HiboutikSale): RegisterSale {
   return {
     saleId: row.sale_id,
     extRef: row.sale_ext_ref ?? '',
-    closed: row.completed_at !== OPEN_SALE_COMPLETED_AT,
+    closed: row.completed_at !== EMPTY_DATE,
     uniqueSaleId: row.unique_sale_id ? row.unique_sale_id : null,
     receiptUrl: row.url_receipt ? row.url_receipt : null,
     lines: row.line_items.map((line) => ({

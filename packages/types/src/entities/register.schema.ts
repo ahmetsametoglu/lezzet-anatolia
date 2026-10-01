@@ -63,9 +63,24 @@ export const RegisterSaleSchema = z.object({
 });
 export type RegisterSale = z.infer<typeof RegisterSaleSchema>;
 
-/** Kasadaki fiş dışı nakit hareketi; açıklama bizim kaydımızın künyesini taşır, yarıda kalan yazım onunla bulunur. */
-export const RegisterCashMoveSchema = z.object({ tillId: z.number().int(), label: z.string() });
+/**
+ * Kasadaki fiş dışı nakit hareketi; açıklama bizim kaydımızın künyesini taşır, yarıda kalan yazım onunla bulunur. `at` kasanın yerel
+ * saatidir (`YYYY-MM-DD hh:mm:ss`), tutar işaretlidir: giriş artı, çıkış eksi.
+ */
+export const RegisterCashMoveSchema = z.object({
+  tillId: z.number().int(),
+  label: z.string(),
+  at: z.string(),
+  amountCents: z.number().int(),
+});
 export type RegisterCashMove = z.infer<typeof RegisterCashMoveSchema>;
+
+/** Kasanın bir iş günü: oran başına KDV dahil toplam ve satış başına ödemeler (**cent**). */
+export const RegisterDaySchema = z.object({
+  vat: z.array(z.object({ vatRate: z.number(), grossCents: z.number().int() })),
+  payments: z.array(z.object({ saleId: z.number().int(), method: PaymentMethodEnum.nullable(), amountCents: z.number().int() })),
+});
+export type RegisterDay = z.infer<typeof RegisterDaySchema>;
 
 /** `writing`: kasaya çağrı başladı ama sonucu aynaya geçmedi; yarıda kalan yazım bu satırdan tamamlanır. */
 export const RegisterWriteStatusEnum = z.enum(['writing', 'written']);

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   AccountService,
   CategoryService,
@@ -12,7 +12,9 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData } from '@lezzet/database/testing';
+import { parisDateOf } from '@lezzet/helper';
 import type { PaymentMethod, RegisterQueue } from '@lezzet/types';
+import { closeRegisterDay } from './day-end';
 import { memoryRegister } from './memory-register.testkit';
 import { processQueueRow } from './sync';
 
@@ -155,7 +157,8 @@ describe('sipariş fişi', () => {
 
     const [sale, ...others] = salesOf(order.referenceNo);
     expect(others).toHaveLength(0);
-    expect(sale).toMatchObject({ extRef: `${order.referenceNo}-1`, closed: true, divided: true });
+    expect(sale).toMatchObject({ extRef: `${order.referenceNo}-1`, divided: true });
+    expect(sale!.closedAt).not.toBeNull();
     expect(sale!.lines.map(({ quantity, unitPriceCents, vatRate }) => ({ quantity, unitPriceCents, vatRate }))).toEqual([
       { quantity: 2, unitPriceCents: 1250, vatRate: 5.5 },
       { quantity: 1, unitPriceCents: 490, vatRate: 5.5 },
@@ -227,7 +230,7 @@ describe('sipariş fişi', () => {
     expect(await runRow('order_id', order.id)).toBe('written');
     const sales = salesOf(order.referenceNo);
     expect(sales).toHaveLength(1);
-    expect(sales[0]).toMatchObject({ closed: true });
+    expect(sales[0]!.closedAt).not.toBeNull();
     expect(sales[0]!.lines).toHaveLength(2);
     expect(sales[0]!.payments).toHaveLength(1);
   });
@@ -363,5 +366,58 @@ describe('fiş dışı nakit', () => {
     expect(tillsOf(b2bMovement!.id).map(({ direction, amountCents }) => ({ direction, amountCents }))).toEqual([
       { direction: 'in', amountCents: 2990 },
     ]);
+  });
+});
+
+describe('gün sonu', () => {
+  it('kasa aynayla aynıysa fark yoktur; gün kapanır ve ikinci kez kapatılmaz', async () => {
+    const order = await newOrder();
+    await pay(order.id, 2990);
+    await runRow('order_id', order.id);
+    const deposit = await movements.insert({
+      accountId: cashAccountId,
+      direction: 'out',
+      amountCents: 1000,
+      type: 'expense',
+      description: 'Kasadan gider',
+    });
+    await runRow('movement_id', deposit.id);
+    const date = parisDateOf(new Date());
+    const closeDay = vi.spyOn(fake.register, 'closeDay');
+
+    const first = await closeRegisterDay(db, fake.register, { date, close: true });
+    const second = await closeRegisterDay(db, fake.register, { date, close: true });
+
+    expect(first.stores.find((store) => store.warehouseId === warehouseId)).toEqual({ warehouseId, closed: true, differences: [] });
+    expect(second.stores.find((store) => store.warehouseId === warehouseId)).toEqual({ warehouseId, closed: true, differences: [] });
+    expect(closeDay).toHaveBeenCalledTimes(1);
+    closeDay.mockRestore();
+  });
+
+  it('canlı kasa değilse gün kapatılmaz, mutabakat yine koşar', async () => {
+    const closeDay = vi.spyOn(fake.register, 'closeDay');
+    const date = '2026-01-01';
+
+    const result = await closeRegisterDay(db, fake.register, { date, close: false });
+
+    expect(closeDay).not.toHaveBeenCalled();
+    expect(result.stores.find((store) => store.warehouseId === warehouseId)).toMatchObject({ closed: false });
+    closeDay.mockRestore();
+  });
+
+  it('kasa ekranından elle yapılan satış fark sayılır', async () => {
+    const storeId = Number(String(stamp).slice(-9));
+    const productId = [...fake.products.keys()][0]!;
+    const manual = await fake.register.createSale(storeId);
+    await fake.register.prepareSale(manual, 'ELLE');
+    await fake.register.addLine({ saleId: manual, productId, quantity: 1, unitPriceCents: 500, vatRate: 20 });
+    await fake.register.addPayment({ saleId: manual, method: 'cash', amountCents: 500 });
+    await fake.register.closeSale(manual);
+
+    const result = await closeRegisterDay(db, fake.register, { date: parisDateOf(new Date()), close: false });
+
+    const kinds = result.stores.find((store) => store.warehouseId === warehouseId)!.differences;
+    expect(kinds).toContainEqual({ kind: 'unknown_sale', saleId: manual });
+    expect(kinds).toContainEqual({ kind: 'vat', vatRate: 20, oursCents: 0, registerCents: 500 });
   });
 });

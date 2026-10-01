@@ -38,6 +38,7 @@ import { SHIPMENT_ORPHAN, shipmentOrphanJob } from './jobs/shipment-orphan';
 import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user-text';
 import { SCAN_TRUST, scanTrustJob } from './jobs/trust-scan';
 import { REGISTER_SYNC, registerSyncJob } from './jobs/register-sync';
+import { REGISTER_CLOSE_DAY, registerCloseCron, registerCloseDayJob } from './jobs/register-close-day';
 
 /**
  * Süreç düzeyi emniyet ağı: sarmalın dışında doğan bir promise reddi ne `runJob`a ne `onError`a düşer ve süreci kayıtsız
@@ -233,6 +234,15 @@ cron.schedule('35 * * * *', () => {
 cron.schedule('* * * * *', () => {
   void runJob(REGISTER_SYNC, registerSyncJob);
 });
+
+// Kasanın gün sonu, işletme gününün sonunda: kapanış NF525'in dönemsel kapanışıdır, satışlar API'den geldiği için onu cron yapar.
+cron.schedule(
+  registerCloseCron(),
+  () => {
+    void runJob(REGISTER_CLOSE_DAY, registerCloseDayJob);
+  },
+  { timezone: 'Europe/Paris' },
+);
 
 // `??` değil `||`: boş bırakılmış `BACKEND_PORT=` nullish değildir ve `Number('')` 0, yani her başlatmada rastgele port olurdu.
 const port = Number(process.env.BACKEND_PORT) || 8787;
