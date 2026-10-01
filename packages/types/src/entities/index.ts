@@ -44,6 +44,7 @@ export * from './temperature-log.schema';
 export * from './supply.schema';
 export * from './money.schema';
 export * from './bank-import.schema';
+export * from './register.schema';
 export * from './job-run.schema';
 export * from './webhook-event.schema';
 export * from './ticket.schema';
@@ -60,7 +61,7 @@ export * from './error-log.schema';
 export * from './system-health.schema';
 export * from './analytics.schema';
 export * from './assistant-proposal.schema';
-// MCP kapısı (22.4) — bağlantı anahtarı + çağrı izi. Kuyruğun (`assistant-proposal`) yanında
+// MCP kapısı — bağlantı anahtarı + çağrı izi. Kuyruğun (`assistant-proposal`) yanında
 // duruyor çünkü ikisi aynı zincirin uçları: anahtar kapıyı açar, kuyruk yazımı denetler.
 export * from './mcp.schema';
 export * from './mcp-oauth.schema';

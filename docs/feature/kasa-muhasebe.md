@@ -57,6 +57,7 @@
 | 10 | **B2B Hiboutik'e yazılmaz** (01.10) | Kasa yükümlülüğü B2B'yi kapsamıyor (BOFiP §10). B2B faturası bugünkü gibi Pennylane'de kesilir; müşteri alacağı ve vade orada izlenir, 2027'de e-fatura olarak da oradan gider. Kapıda nakit alınan B2B parası Hiboutik kasasına yalnız kasa girişi olarak yazılır. |
 | 11 | **Hediye sipariş ödemesiz kapanır** (01.10) | Kasaya para girmez, Hiboutik'e bir şey yazılmaz; mal hediye olarak stoktan çıkar, muhasebeci hediye gideri olarak işler. DOMAIN §9'daki "parasını patron öder, muhasebe aktarımına girmez" kuralının yerine geçer. |
 | 12 | **Kurye nakdi farkı açıklamalı kasa hareketiyle yazılır** (01.10) | Sefer kapanışında nakit eksik ya da fazla çıkarsa fark bizde nakit hesabına hareket olarak, Hiboutik'e "Kurye farkı — sefer X" açıklamalı kasa çıkışı ya da girişi olarak yazılır. Muhasebeci kasa farkı ya da kurye alacağı olarak işler. Kart farkı kasaya dokunmaz. |
+| 13 | **Faz 1 bitince iki ajanla inceleme** (01.10) | İki ajan birebir aynı istemle, birbirinden bağımsız çalışır: ikisi de Hiboutik entegrasyonunu ve projenin muhasebe sistemini (para hareketleri, ödeme durumu, muhasebe aktarımı, kâr, KDV, B2B ve hediye kuralları) tasarım (§7), ölçülen davranış (§6) ve yasal zemin (§1) karşısında inceler, uyumsuzlukları raporlar. Bulgular doğrulanıp kullanıcıya özetlenir. `CLAUDE.md`'deki alt ajan yasağının bu inceleme için istisnasıdır. |
 
 ## 3. Veri akışı
 
@@ -192,9 +193,11 @@ kesinleşmeden sipariş edilen adet, sonra giden eksi müşteride kalan; iptalde
 kalem varsa. Hiboutik kalemi:
 - Tutar indirim payı düşülmüş tutardır. Birim fiyat kuruşa bölünmüyorsa kalem ikiye ayrılır.
 - Paket kalemleri zaten ayrı `order_item`, ayrı yazılır.
-- Kargo, KDV oranlarına `vatLinesOf` ile aynı ağırlıkla bölünür; oran başına bir "Frais de livraison"
-  kalemi. Kalem değişince kargonun oran payı da değişir, fark iade fişinde düzeltilir.
-- Kalemler türetilen tutarı tutmazsa fark "Remise" kalemiyle kapanır ve uyarı yazılır.
+- Kargo, ücretlenen kalem tutarlarına göre KDV oranlarına bölünür (`apportionShippingVat`); oran başına
+  bir "Frais de livraison" kalemi. Kalem değişince kargonun oran payı da değişir, fark iade fişinde
+  düzeltilir.
+- Kalemler türetilen borcu tutmazsa plan bunu işaretler ve uyarı yazılır; fark fişin bakiyesinde görünür.
+  İndirimin kalemlere tam dağıtıldığını veritabanı zaten zorluyor (`assert_order_discount_balance`).
 
 **Ödeme kodu hareketin yönteminden:** nakit `ESP`, kapıda ve tezgâhta kart `CB`, çevrim içi `WEB`, havale
 `VIR`. Yöntem bugün siparişte duruyor ve sonraki tahsilatta üzerine yazılıyor (kapıda nakit ve kart aynı
@@ -280,6 +283,7 @@ fiş bağlantısı. Sistem ekranı: kuyruk ve mutabakat durumu.
 5. Kasa hareketleri (B2B nakdi, kurye farkı dahil), mutabakat, gün kapanışı.
 6. Ekran satırları ve mimari belge güncellemeleri (`DOMAIN.md` §7 ve §9, `INTEGRATIONS.md`,
    `data-model/para.md`).
+7. İki ajanla inceleme (13. karar) ve rapordaki uyumsuzlukların giderilmesi.
 
 Şemaya dokunan adım `db:refresh` ister; kararı kullanıcının.
 

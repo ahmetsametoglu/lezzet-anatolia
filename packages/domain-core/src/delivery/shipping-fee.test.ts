@@ -60,6 +60,15 @@ describe('kargo ücretinin KDV\'si — taşıdığı malın oranını izler', ()
     expect(parcalar.reduce((sum, p) => sum + p.amountCents, 0)).toBe(777);
   });
 
+  it('ücret kalem toplamından büyükse de Σ parça = ücret', () => {
+    // Eksik teslimden sonra yalnız 3,00'lık kalem kaldı, kargo 4,90: indirim gibi kalem toplamıyla sınırlanırsa 1,90 kaybolur.
+    const parcalar = apportionShippingVat(490, [
+      { totalCents: 200, vatRate: 5.5 },
+      { totalCents: 100, vatRate: 20 },
+    ]);
+    expect(parcalar.reduce((sum, p) => sum + p.amountCents, 0)).toBe(490);
+  });
+
   it('aynı orandaki kalemler birleşir — parça sayısı ORAN sayısıdır', () => {
     const parcalar = apportionShippingVat(600, [
       { totalCents: 1000, vatRate: 5.5 },

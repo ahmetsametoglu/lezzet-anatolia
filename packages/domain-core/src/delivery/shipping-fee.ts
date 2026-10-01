@@ -1,4 +1,4 @@
-import { distributeDiscount, vatPortion } from '@lezzet/helper';
+import { distributeProportional, vatPortion } from '@lezzet/helper';
 import type { AddressDeliveryType } from '@lezzet/types';
 
 /**
@@ -75,8 +75,9 @@ export interface ShippingVatPart {
 }
 
 /**
- * Kargo ücretinin KDV'si taşıdığı malın oranını izler: karışık oranlı sepette ücret kalem tutarlarına oransal bölünür ve her parça kendi
- * oranından vergilenir. Artan kuruş en büyük paya gider (Σ parça = ücret); kalemsiz sepette boş döner.
+ * Kargo ücretinin KDV'si taşıdığı malın oranını izler: ücret oran başına kalem tutarlarına bölünür, artan kuruş en büyük paya gider
+ * (Σ parça = ücret). İndirim dağıtıcısı kullanılmaz, çünkü tutarı kalem toplamıyla sınırlar; eksik teslimden sonra kargo kalemlerden
+ * büyük olabilir.
  */
 export function apportionShippingVat(feeCents: number, lines: readonly VatLine[]): ShippingVatPart[] {
   if (feeCents <= 0 || lines.length === 0) return [];
@@ -89,7 +90,7 @@ export function apportionShippingVat(feeCents: number, lines: readonly VatLine[]
 
   const rates = [...byRate.keys()];
   const totals = rates.map((rate) => byRate.get(rate)!);
-  const shares = distributeDiscount(totals, feeCents);
+  const shares = distributeProportional(totals, feeCents);
 
   return rates
     .map((vatRate, i) => ({ vatRate, amountCents: shares[i]!, vatCents: vatPortion(shares[i]!, vatRate) }))

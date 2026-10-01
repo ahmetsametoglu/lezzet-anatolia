@@ -54,17 +54,11 @@ export interface PaymentDerivation {
  */
 export function derivePaymentStatusForOrder(
   order: Pick<Order, 'shippingFeeCents' | 'status' | 'orderedTotalCents'>,
-  items: readonly Pick<OrderItem, 'fulfilledQty' | 'goodwillQty' | 'qty' | 'unitPriceCents' | 'lineDiscountAmountCents'>[],
+  items: readonly FulfilledItem[],
   amounts: { collectedCents: number; refundedCents: number },
 ): PaymentDerivation {
   return derivePaymentStatus({
-    lines: items.map((item) => ({
-      fulfilledQty: item.fulfilledQty,
-      goodwillQty: item.goodwillQty,
-      orderedQty: item.qty,
-      unitPriceCents: item.unitPriceCents,
-      lineDiscountCents: item.lineDiscountAmountCents,
-    })),
+    lines: items.map(fulfilledLineOf),
     collectedCents: amounts.collectedCents,
     refundedCents: amounts.refundedCents,
     shippingFeeCents: order.shippingFeeCents,
@@ -77,6 +71,19 @@ export function derivePaymentStatusForOrder(
     // orada 0'dır ve doğru cevap değildir: mal henüz hazırlanmadı, "hiçbiri gitmedi" demek değil.
     orderTotalCents: order.orderedTotalCents,
   });
+}
+
+export type FulfilledItem = Pick<OrderItem, 'fulfilledQty' | 'goodwillQty' | 'qty' | 'unitPriceCents' | 'lineDiscountAmountCents'>;
+
+/** Sipariş kaleminin türetim girdisi; eşleme tek yerde durur ki kasa ile ödeme durumu aynı kalemi farklı okumasın. */
+export function fulfilledLineOf(item: FulfilledItem): FulfilledLine {
+  return {
+    fulfilledQty: item.fulfilledQty,
+    goodwillQty: item.goodwillQty,
+    orderedQty: item.qty,
+    unitPriceCents: item.unitPriceCents,
+    lineDiscountCents: item.lineDiscountAmountCents,
+  };
 }
 
 export function derivePaymentStatus(input: PaymentDerivationInput): PaymentDerivation {
@@ -106,7 +113,7 @@ function statusOf(net: number, fulfilled: number, refunded: number): PaymentStat
  * satırı da bunu kullanır, çünkü vergi tabanı motorun "ödenecek" dediğiyle aynı olmalı. `settled = false` iken ölçü sipariş edilen adettir.
  */
 export function fulfilledLineAmountCents(line: FulfilledLine, settled = true): number {
-  const qty = settled ? chargedQty(line) : line.orderedQty;
+  const qty = chargedQtyOf(line, settled);
   if (qty <= 0) return 0;
   const gross = line.unitPriceCents * qty;
   const discountShare = line.lineDiscountCents
@@ -115,9 +122,12 @@ export function fulfilledLineAmountCents(line: FulfilledLine, settled = true): n
   return gross - discountShare;
 }
 
-/** Müşteride kalan malın bedeli düşer; o adet stokta ve maliyette gitmiş sayılır ama ücretlenmez (DOMAIN §8). */
-function chargedQty(line: FulfilledLine): number {
-  return line.fulfilledQty - (line.goodwillQty ?? 0);
+/**
+ * Ücretlenen adet; `settled = false` iken sipariş edilen adettir. Müşteride kalan malın bedeli düşer: o adet stokta ve maliyette
+ * gitmiş sayılır ama ücretlenmez (DOMAIN §8).
+ */
+export function chargedQtyOf(line: FulfilledLine, settled = true): number {
+  return settled ? line.fulfilledQty - (line.goodwillQty ?? 0) : line.orderedQty;
 }
 
 /** Karşılanan tutar: kalemlerin ücretlenen kısmı, ücretlenen kalem varsa kargo da. */
@@ -130,8 +140,7 @@ function fulfilledAmount({ lines, shippingFeeCents = 0, fulfillmentSettled = tru
   let anyFulfilled = false;
 
   for (const line of lines) {
-    const qty = fulfillmentSettled ? chargedQty(line) : line.orderedQty;
-    if (qty <= 0) continue;
+    if (chargedQtyOf(line, fulfillmentSettled) <= 0) continue;
     anyFulfilled = true;
     total += fulfilledLineAmountCents(line, fulfillmentSettled);
   }

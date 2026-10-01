@@ -54,6 +54,8 @@ export * from './delivery/geo-point';
 export * from './payment/checkout-options';
 export * from './payment/credit';
 export * from './payment/payment-status';
+export * from './register/plan';
+export * from './register/split';
 export * from './money/movement';
 export * from './money/dictionary-slug';
 export * from './money/pinpoint';
