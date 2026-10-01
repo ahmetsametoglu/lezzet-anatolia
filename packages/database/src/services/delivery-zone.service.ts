@@ -4,6 +4,7 @@ import {
   DeliveryZoneInsertSchema,
   DeliveryZonePostalCodeSchema,
   DeliveryZoneUpdateSchema,
+  DeliveryZoneWithCodesSchema,
   type DeliveryZone,
   type DeliveryZoneInsert,
   type DeliveryZonePostalCode,
@@ -15,6 +16,9 @@ import { BaseDbService } from '../core/base.service';
 
 /** Karar vermez, bölge satırlarını getirir; rota içi ve teslim günü kararını çağıran motora sorar. */
 export class DeliveryZoneService extends BaseDbService<DeliveryZone, DeliveryZoneInsert, DeliveryZoneUpdate> {
+  /** `postalCodes:delivery_zone_postal_code(...)` (bkz. `BaseDbService.embeds`). */
+  protected override readonly embeds = ['postalCodes'];
+
   constructor(supabase: SupabaseClient) {
     super(supabase, 'delivery_zone', DeliveryZoneSchema, DeliveryZoneInsertSchema, DeliveryZoneUpdateSchema);
   }
@@ -24,22 +28,14 @@ export class DeliveryZoneService extends BaseDbService<DeliveryZone, DeliveryZon
   }
 
   /**
-   * Kodlar kendi tablosunda; iki turda okunup bellekte birleşir. Bölgeler operatörün kurduğu, doğal tavanı olan bir küme olduğu
-   * için sayfalanmaz.
+   * Kodlar gömülü seçimle bölgelerle aynı turda gelir; yer çözümü her ürün ve katalog isteğinde bunu okur. Bölgeler operatörün kurduğu,
+   * doğal tavanı olan bir küme olduğu için sayfalanmaz.
    */
-  async listWithCodes(opts: { activeOnly?: boolean } = {}): Promise<DeliveryZoneWithCodes[]> {
-    const zones = await this.list(opts);
-    if (zones.length === 0) return [];
-
-    const rows = await new DeliveryZonePostalCodeService(this.supabase).listByZones(zones.map((z) => z.id));
-
-    const byZone = new Map<string, Array<{ country: DeliveryZonePostalCode['country']; postalCode: string }>>();
-    for (const row of rows) {
-      const list = byZone.get(row.zoneId) ?? [];
-      list.push({ country: row.country, postalCode: row.postalCode });
-      byZone.set(row.zoneId, list);
-    }
-    return zones.map((zone) => ({ ...zone, postalCodes: byZone.get(zone.id) ?? [] }));
+  listWithCodes(opts: { activeOnly?: boolean } = {}): Promise<DeliveryZoneWithCodes[]> {
+    return this.getAllAs(DeliveryZoneWithCodesSchema, opts.activeOnly ? { isActive: true } : undefined, {
+      select: '*, postalCodes:delivery_zone_postal_code(country, postal_code)',
+      orderBy: 'name',
+    });
   }
 
   async replacePostalCodes(zoneId: string, codes: Array<{ country: DeliveryZonePostalCode['country']; postalCode: string }>): Promise<void> {

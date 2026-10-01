@@ -13,18 +13,27 @@ import type { PlaceWarehouses } from '../catalog/storefront-types';
 
 /**
  * Bölgeler aktiflik süzgecisiz okunur: pasif bölgenin kodu da bizim kaydımızdır, süzülseydi kapalı bölgedeki müşteri "tanımadık"
- * cevabı alırdı. `country` bir seçimdir ve adayları süzer; kod o ülkede yoksa çözüm `unknown`a düşer.
+ * cevabı alırdı. Girdiler tek turda gelir, kargo deposu da aynı tesis listesinden seçilir.
  */
-export async function resolvePlaceForPostalCode(db: SupabaseClient, postalCode: string, country?: Country): Promise<PostalCodeResolution> {
+async function readPlaceInputs(db: SupabaseClient, postalCode: string) {
   const code = normalizePostalCode(postalCode);
   const [matches, zones, warehouses] = await Promise.all([
     new PostalCodePlaceService(db).findByPostalCode(code),
     new DeliveryZoneService(db).listWithCodes(),
-    // Yalnız tesisler; `readDeliveryInputs` ile aynı süzgeç.
+    // Yalnız tesisler; `readDeliveryInputs` ile aynı süzgeç, araç zaten kargo deposu olamaz.
     new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
   ]);
-  const scoped = country ? matches.filter((match) => match.country === country) : matches;
-  return resolvePlaceByPostalCode(code, scoped, zones, warehouses);
+  return { code, matches, zones, warehouses };
+}
+
+/** `country` bir seçimdir ve adayları süzer; kod o ülkede yoksa çözüm `unknown`a düşer. */
+function resolveFrom(inputs: Awaited<ReturnType<typeof readPlaceInputs>>, country?: Country): PostalCodeResolution {
+  const scoped = country ? inputs.matches.filter((match) => match.country === country) : inputs.matches;
+  return resolvePlaceByPostalCode(inputs.code, scoped, inputs.zones, inputs.warehouses);
+}
+
+export async function resolvePlaceForPostalCode(db: SupabaseClient, postalCode: string, country?: Country): Promise<PostalCodeResolution> {
+  return resolveFrom(await readPlaceInputs(db, postalCode), country);
 }
 
 /**
@@ -32,11 +41,8 @@ export async function resolvePlaceForPostalCode(db: SupabaseClient, postalCode: 
  * "ücretsiz kapı teslimi" görürdü. Çözülemeyen kodda iki kimlik de `null`dur: tahmin, yanlış stok ve yanlış teslimat sözü demek.
  */
 export async function resolvePlaceWarehouses(db: SupabaseClient, postalCode: string, country?: Country): Promise<PlaceWarehouses> {
-  const [resolution, warehouses] = await Promise.all([
-    resolvePlaceForPostalCode(db, postalCode, country),
-    // Araç zaten kargo deposu olamaz; tesis süzgeci sonucu değiştirmez, listeyi niyetiyle uyumlu tutar.
-    new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
-  ]);
+  const inputs = await readPlaceInputs(db, postalCode);
+  const resolution = resolveFrom(inputs, country);
 
   if (resolution.kind !== 'route' && resolution.kind !== 'shipping') return UNRESOLVED_PLACE;
 
@@ -44,7 +50,7 @@ export async function resolvePlaceWarehouses(db: SupabaseClient, postalCode: str
     // Kargo hâlinde `null` ki yerel havuz boş kalsın.
     warehouseId: resolution.kind === 'route' ? resolution.warehouseId : null,
     // Kargo deposu ülkeden türer, rotadan değil: rota içindeki müşteri de kargo dolgusu alabilir.
-    shippingWarehouseId: findShippingWarehouse(resolution.country, warehouses)?.id ?? null,
+    shippingWarehouseId: findShippingWarehouse(resolution.country, inputs.warehouses)?.id ?? null,
   };
 }
 
