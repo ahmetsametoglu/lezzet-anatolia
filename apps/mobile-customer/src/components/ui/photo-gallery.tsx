@@ -8,50 +8,9 @@ import { StyleSheet } from 'react-native-unistyles';
 import { FrameImage } from '@lezzet/mobile-kit/src/components/ui/frame-image';
 
 /*
-  FOTOĞRAF GALERİSİ — kahraman görselin yerine geçen yatay şerit (ürün detayı · paket detayı).
-
-  NEDEN VAR (kullanıcı isteği 09.08): sözleşme ürün başına birden çok görsel taşıyor
-  (`CatalogProductDetail.gallery` — "İlk öğe KAPAKTIR; tek görselli üründe şerit çizilmez") ama
-  ekranlar yalnız kapağı çiziyordu; yüklenen ötekiler müşteriye hiç ulaşmıyordu.
-
-  ── TASARIMDAN SAPMA (bilinçli, `design/KARARLAR.md`e yazıldı) ────────────────
-  v3 şablonunda galeri YOK: kahraman tek bir `image-slot`. Bu komponent o yuvanın YERİNE geçer,
-  YERLEŞİMİ DEĞİŞTİRMEZ — ölçü, köşe, üst degrade, yüzen düğmeler ve rozetler çağıranda kalır ve
-  şeridin üstünde çizilmeye devam eder. Şeridin kendisi çağıranın verdiği kutuyu tam doldurur.
-
-  ── KÜTÜPHANE YOK ────────────────────────────────────────────────────────────
-  Yatay kaydırma ve sayfa sınırı RN'in kendi `FlatList`inden gelir (`horizontal` + `pagingEnabled`);
-  bir karusel paketi kurulmadı. `getItemLayout` sabittir (karo genişliği = kabın genişliği), yani
-  liste ölçü hesabı için hiçbir karoyu önceden çizmez.
-
-  ── ÜÇ HÂL ───────────────────────────────────────────────────────────────────
-  · hiç görsel yok → çağıranın yer tutucusu (`fallback`) — bugünkü davranış korunur
-  · tek görsel     → düz `Image`; şerit de gösterge de ÇİZİLMEZ (sözleşmenin kendi kuralı; tek
-                     noktalı bir gösterge zaten hiçbir bilgi taşımaz)
-  · çok görsel     → şerit + sayfa noktaları
-
-  ── GENİŞLİK ÖLÇÜLÜR, VARSAYILMAZ ────────────────────────────────────────────
-  Sayfa sınırının doğru yere düşmesi karo genişliğinin KABIN genişliğine eşit olmasına bağlı. İlk
-  karede ölçüm yoktur; o kare için pencere genişliği kullanılır (iki çağıran da kenardan kenara
-  çizer, yani ilk kare zaten doğrudur) ve `onLayout` gelince ölçülen değere geçilir. Ekran döndüğünde
-  `onLayout` yeniden koşar — kenar payı olan bir kapta da paging bu yüzden bozulmaz.
-
-  ── ERİŞİLEBİLİRLİK ──────────────────────────────────────────────────────────
-  Her karo kendi sırasını söyler ("Ürün görseli 2 / 3"); cümleyi çağıran verir (i18n ekranın
-  sözlüğünde). Nokta sırası DEKORATİFtir: sırayı zaten karo söylüyor, noktaları ikinci kez okutmak
-  ekran okuyucuda aynı bilgiyi tekrar ederdi.
-
-  ── NOKTA GEOMETRİSİ `step-dots.tsx` İLE AYNI ────────────────────────────────
-  Onboarding'in adım noktalarıyla birebir aynı dil (v3 `ob.dots`: etkin 24 · sönük 8 · yükseklik 5 ·
-  yarıçap 3). Komponent oradan İTHAL EDİLMEDİ çünkü `screens/onboarding` altında yaşıyor ve `components/ui`
-  bir ekranın içine bağımlı olamaz; ayrıca oradaki sıra ekran okuyucuya konuşur, buradaki susar.
-  Doğrusu ortak bir `PageDots`a terfidir — o iş onboarding ekranına da dokunduğu için bu görevin
-  yazma alanının dışında; terfi ihtiyacı raporlandı.
-
-  RENKLER FOTOĞRAF ÜSTÜ AİLESİNDEN: onboarding noktaları krem sayfada durur (sönük nokta opak kum),
-  buradakiler fotoğrafın üstünde. Etkin nokta markanın terracotta'sını korur; sönük nokta tasarımın
-  kendi "foto üstü yüzen yüzey" tokenına (`cream-glass-soft`) bağlandı — opak kum, açık bir
-  fotoğrafın üstünde kaybolurdu.
+  Ürün ve paket detayında kahraman görselin yerine geçen yatay galeri; yerleşimi değiştirmez, ölçü, degrade, düğmeler ve rozetler
+  çağıranda kalır. Tek görselde gösterge çizilmez, karo genişliği ilk karede pencereden sonra ölçülen kaptan alınır ki sayfa sınırı
+  doğru yere düşsün.
 */
 
 /** v3 `ob.dots` birebir: etkin 24 · sönük 8 · yükseklik 5 · yarıçap 3 (yapısal ölçü, yuvarlanmaz). */
@@ -70,10 +29,8 @@ type ShownPhoto = CatalogImage & { url: string };
 
 interface PhotoGalleryProps {
   /**
-   * Katalog görselleri, gösterim sırasında; İLK öğe kapaktır. Adressiz (`url: null`) görsel ve
-   * tekrarlanan adres BURADA elenir: boş karo çizilmez, aynı fotoğraf iki karo olsaydı kaydırma
-   * "takılmış" gibi görünürdü (ve karo anahtarı ikizlenirdi). Her karo kendi kutusuna oturan CDN
-   * türevini alır (21.303, `FrameImage`) — tam boy özgün dosyayı değil.
+   * Katalog görselleri, ilk öğe kapak; adressiz görsel ve tekrarlanan adres burada elenir, çünkü boş karo çizilmez ve aynı fotoğrafın
+   * iki karosu kaydırmayı takılmış gösterirdi. Her karo kendi kutusuna oturan CDN türevini alır (`FrameImage`).
    */
   images: readonly CatalogImage[];
   /** Karo etiketi şablonu ("Ürün görseli {n} / {total}") — i18n çağıranda çözülür. */
@@ -167,8 +124,7 @@ const styles = StyleSheet.create((theme) => ({
   slide: {
     height: '100%',
   },
-  /* Gösterge kahramanın alt kenarında ortalanır — sol alttaki durum rozeti ile sağ alttan sarkan
-     fiyat rozetinin arasında kalan tek boş şerit orası (v3 `vProduct` yerleşimi). */
+  /* Gösterge alt kenarda ortalanır: sol alttaki durum rozeti ile sağ alttan sarkan fiyat rozetinin arasında kalan tek boş yer orası. */
   dots: {
     position: 'absolute',
     left: 0,

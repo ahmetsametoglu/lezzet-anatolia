@@ -5,27 +5,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 
 /*
-  ÜRÜN DETAY SKELETON'I — ilk yükte sayfanın YERİNİ TUTAR. Vitrin skeleton'ının (`home-skeleton`)
-  aynı iki kuralı geçerli: ölçüler TAHMİN DEĞİL, sayfanın kendi stillerinden türer (dolgu + satır
-  yüksekliği + kit ölçüsü); metin yazılmaz, tek ses ekran okuyucuya kökten gider.
-
-  ÖNCEKİ HÂLİNİN İKİ KUSURU (ölçüldü 10.08 — ekranın içine gömülü dört çubuktu):
-  · ÖLÇÜLER HAM SAYIYDI (`120`, `12`, `26`, `14`, `90`) — hiçbiri sayfadan alınmamıştı, yani
-    skeleton'ın yüksekliği sayfanın yüksekliği değildi ve veri gelince ekran zıplıyordu;
-  · SAYFANIN YARISI YOKTU — akordeonlar, değerlendirmeler ve en görünürü YAPIŞKAN BAR. Bar her
-    hâlde ekranın altında duran sabit yükseklikli tek öğe; skeleton'da olmayınca veri gelince
-    aşağıdan aniden beliriyordu.
-
-  YALNIZ HER ZAMAN GÖRÜNENLER ÇİZİLİR (kullanıcı kararı 10.08): kahraman · künye (ad + birim
-  satırı) · üç akordeon başlığı · değerlendirmeler · yapışkan bar. Koşullu olanlar — kategori
-  üstbaşlığı, limit/kargo çipleri, aile rayı, boy çipleri, açıklama, benzerler rayı, rozetler,
-  yer filigranı — ÇİZİLMEZ. Vitrindeki "son açılışın izi" çözümü burada işlemez: iz ürüne özel
-  olurdu (bu üründe aile rayı var, ötekinde yok) ve slug başına kayıt tutmak depoyu şişirirdi.
-  Sonuç: kayma yalnız "gelen eklendi" yönünde olur, gözden kaybolan blok kalmaz.
-
-  SABİT YAPI GERÇEK ÇİZİLİR, VERİ GRİ OLUR: akordeonun çerçeveleri (üst/alt düz mürekkep, aralar
-  kesik kum) ve barın zemini veriye bağlı değil — onları da griye çevirmek, sayfanın değişmeyen
-  iskeletini bilinmiyormuş gibi göstermek olurdu. Gri kalan yalnız uçtan gelecek olandır.
+  Ürün detayının ilk yükte yer tutucusu: ölçüler sayfanın kendi stillerinden türer ki veri gelince ekran zıplamasın, metin yazılmaz.
+  Yalnız her zaman görünen bölümler çizilir; koşullu bölümler çizilmez ki kayma yalnız "gelen eklendi" yönünde olsun.
 */
 
 /** Üç akordeon başlığı — sayfanın kendi sırası (İçindekiler · Besin değerleri · Saklama). */
