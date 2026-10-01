@@ -338,6 +338,37 @@ describe('fiş dışı nakit', () => {
     ]);
   });
 
+  it('ekstre satırı yatırmanın öteki yakasına bağlanınca kasaya ikinci çıkış yazılmaz', async () => {
+    const deposit = await movements.insert({
+      accountId: cashAccountId,
+      direction: 'out',
+      amountCents: 6000,
+      type: 'transfer',
+      counterAccountId: bankAccountId,
+      description: 'Kasa fazlası bankaya',
+    });
+    expect(await runRow('movement_id', deposit.id)).toBe('written');
+    const line = await movements.insert({
+      accountId: bankAccountId,
+      direction: 'in',
+      amountCents: 6000,
+      type: 'misc',
+      source: 'bank_import',
+      description: 'VERSEMENT ESPECES',
+    });
+    await movements.update({
+      id: line.id,
+      type: 'transfer',
+      counterAccountId: cashAccountId,
+      counterpartMovementId: deposit.id,
+      reconciled: true,
+    });
+
+    expect(await runRow('movement_id', line.id)).toBe('skipped');
+    expect(tillsOf(line.id)).toEqual([]);
+    expect(tillsOf(deposit.id)).toHaveLength(1);
+  });
+
   it('kasa hareketinin cevabı kaybolursa açıklamasından bulunur, ikinci kez yazılmaz', async () => {
     const change = await movements.insert({
       accountId: cashAccountId,

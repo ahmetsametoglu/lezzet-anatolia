@@ -443,7 +443,9 @@ async function syncCashMovement(db: Db, register: CashRegister, movementId: stri
 async function cashEffectOf(db: Db, movement: MoneyMovement): Promise<CashEffect | null> {
   const stores = new RegisterStoreService(db);
   const own = await stores.findByCashAccount(movement.accountId);
-  const counter = !own && movement.counterAccountId ? await stores.findByCashAccount(movement.counterAccountId) : null;
+  // Var olan transfer ucuna bağlanmış ekstre satırında karşı yakanın kasadaki karşılığı o uçtur; defter de bu yakayı saymaz.
+  const counter =
+    !own && movement.counterAccountId && !movement.counterpartMovementId ? await stores.findByCashAccount(movement.counterAccountId) : null;
   const store = own ?? counter;
   if (!store) return null;
   if (movement.orderId) {
