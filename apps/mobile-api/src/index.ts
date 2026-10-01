@@ -1,8 +1,6 @@
 /**
- * Süreç girişi. **Env ELLE ve İLK import'ta yüklenir** (apps/backend deseni — orada beş cron'un
- * beşini birden düşüren arızanın düzeltmesiydi, 03.08): mobile-api Next.js değil, `tsx
- * src/index.ts` ile koşar ve Node `.env` dosyası okumaz. Yükleme `./env`'de YAN ETKİ — ESM'de
- * importlar hoist edildiği için aradaki bir `loadEnv()` çağrısı alttaki importlardan sonra koşardı.
+ * Süreç girişi; env ilk içe aktarımda `./env`'in yan etkisiyle yüklenir, çünkü mobile-api `tsx` ile koşar ve Node `.env`
+ * okumaz. Yükleme bir çağrı olsaydı ESM içe aktarımları yukarı taşıdığı için alttaki modüllerden sonra koşardı.
  */
 import './env';
 import { serve } from '@hono/node-server';
@@ -10,12 +8,9 @@ import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { app } from './app';
 
 /**
- * SÜREÇ DÜZEYİ EMNİYET AĞI (apps/backend denetim G2'nin aynısı). Hono `onError` her isteği sarar
- * ama sarmalın DIŞINDA doğan başıboş bir promise reddi ona düşmez; modern Node'da bu süreci
- * öldürür ve ölüm hiçbir yere yazılmaz. İki kancanın işi ayrı:
- * - `unhandledRejection`: süreç ayakta kalır, kayıt düşer.
- * - `uncaughtException`: durum artık güvenilmez, TEMİZ ÇIKILIR — süpervizör yeniden başlatır.
- *   Kayıt `await` edilir: `process.exit` kaydı yarıda kesmesin.
+ * Hono `onError` isteğin dışında doğan promise reddini görmez ve Node böyle bir ret yüzünden süreci iz bırakmadan öldürür;
+ * `unhandledRejection` kaydı düşüp süreci ayakta tutar. `uncaughtException` sonrası durum güvenilmez: kayıt bitince temiz
+ * çıkılır, süpervizör yeniden başlatır.
  */
 process.on('unhandledRejection', (reason) => {
   void captureError(reason, { source: SOURCES.mobileApiProcess, context: { fatal: false, hook: 'unhandledRejection' } });

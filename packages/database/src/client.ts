@@ -5,19 +5,9 @@ export type Db = SupabaseClient;
 let cached: SupabaseClient | null = null;
 
 /**
- * YEREL yığının bilinen kusuru için tek seferlik yeniden deneme.
- *
- * Belirti: aralıklı `An invalid response was received from the upstream server` (Kong 502) — hep
- * YAZMA isteğinde. Sebep, Kong günlüğünde açık: `recv() failed (104: Connection reset by peer) while
- * reading response header from upstream`. PostgREST boşta duran keep-alive bağlantısını kapatıyor,
- * Kong o bayat bağlantıyı yeniden kullanıyor. GET'i Kong kendiliğinden taze bağlantıyla yeniden
- * deniyor (bu yüzden okumalar hiç düşmüyor), POST'u denemiyor: idempotent değil.
- *
- * Yeniden denemek burada GÜVENLİ: bağlantı istek OKUNMADAN kapandığı için yazma hiç gerçekleşmedi
- * (cevap başlığı bile başlamamış). Tarayıcıların bayat keep-alive'da yaptığı da budur.
- *
- * ⚠ YALNIZ yerelde devrede. Üretimde 502, isteğin işlenmesinin ORTASINDA da doğabilir; orada sessiz
- * yeniden deneme kaydı ikizleyebilir — o yüzden ana makine adresine bakıp karar veriyoruz.
+ * Yerel yığında PostgREST boştaki keep-alive bağlantısını kapatıyor ve Kong o bayat bağlantıyı kullanınca yazma isteği 502
+ * alıyor; istek okunmadan düştüğü için bir kez yeniden denemek güvenli. Üretimde 502 işlemin ortasında da doğabilir ve yeniden
+ * deneme kaydı ikizler, bu yüzden yalnız yerel adreste devrede.
  */
 const LOCAL_HOST = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?/i;
 
@@ -35,9 +25,8 @@ function retryOnStaleUpstream(fetchImpl: typeof fetch): typeof fetch {
 }
 
 /**
- * Service-role istemci — RLS'i baypas eder. YALNIZ sunucuda (Server Action, RSC, backend,
- * script). Tarayıcıya asla sızmamalı. Servisler bu istemciyi (ya da cookie'li kullanıcı
- * istemcisini) constructor'dan enjekte alır; hangi istemci verilirse RLS ona göre işler.
+ * Service-role istemci RLS'i baypas eder, bu yüzden yalnız sunucuda kullanılır ve tarayıcıya sızmamalıdır. Servisler istemciyi
+ * (ya da cookie'li kullanıcı istemcisini) constructor'dan alır; RLS verilen istemciye göre işler.
  */
 export function createServiceRoleClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -59,17 +48,9 @@ export function serviceDb(): SupabaseClient {
 }
 
 /**
- * ── ANON (publishable-key) İSTEMCİ — EN AZ YETKİ İLKESİ ─────────────────────────────────────────
- * Mobil API'nin Bearer doğrulaması (`auth.getUser(token)`) ve OTP tüketimi (`auth.verifyOtp`)
- * service-role GEREKTİRMEZ: ikisi de public anahtarla yapılabilen işler. RLS baypas eden anahtarı
- * gerektirmeyen yere taşımamak bir tercih değil, güvenlik kuralı.
- *
- * Fabrika 06.08'de mobil şeridinde YEREL yazılmıştı (`apps/mobile-api/src/lib/supabase.ts`) ve
- * dosyanın kendi künyesi terfi bekliyordu; ikinci tüketen (21.4 OTP uçları) doğmadan buraya alındı
- * — duplikasyon hiç doğmasın diye (`CLAUDE §1`).
- *
- * **Veri okumaları buradan GİTMEZ.** Onlar `serviceDb()` üzerinden gider: iş kuralı sunucuda kalır,
- * RLS ikinci savunma hattıdır. Anon istemci yalnız auth uçlarınındır.
+ * Bearer doğrulaması (`auth.getUser(token)`) ve OTP tüketimi (`auth.verifyOtp`) public anahtarla yapılabildiği için RLS'i
+ * baypas eden anahtar oraya taşınmaz (en az yetki). Veri okumaları bu istemciden değil `serviceDb()`den gider: iş kuralı
+ * sunucuda kalır, RLS ikinci savunma hattıdır.
  */
 function anonCreds(): { url: string; key: string } {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -81,14 +62,9 @@ function anonCreds(): { url: string; key: string } {
 }
 
 /**
- * **HER ÇAĞRIDA YENİ** anon istemci — adlandırma `createServiceRoleClient` ile aynı sözleşmeyi
- * taşır: `create*` yeni nesne verir, `*Db()` tekili verir.
- *
- * Oturum YAZAN çağrılar bunu kullanmak ZORUNDA. `auth.verifyOtp` başarıda istemciye (bellek içi)
- * oturum yazar; süreç-geneli paylaşılan bir istemcide bu, sonraki isteklerin o kullanıcının
- * token'ıyla gitmesi demektir — **iki müşterinin oturumunun karışabildiği ve hiçbir yerde hata
- * üretmeyen** bir arıza. Web'de karşılığı yok çünkü SSR istemcisi istek başına kurulur; buradaki
- * karşılığı da budur: tüket, zarfla, at.
+ * Her çağrıda yeni anon istemci; oturum yazan çağrılar (`auth.verifyOtp`) bunu kullanmak zorunda, çünkü paylaşılan istemcide
+ * yazılan oturum sonraki istekleri başka müşterinin jetonuyla gönderir ve hiçbir yerde hata üretmez. Adlandırma
+ * `createServiceRoleClient` ile aynı: `create*` yeni nesne, `*Db()` tekil verir.
  */
 export function createAnonClient(): SupabaseClient {
   const { url, key } = anonCreds();
@@ -103,11 +79,8 @@ export function createAnonClient(): SupabaseClient {
 let anonCached: SupabaseClient | null = null;
 
 /**
- * Süreç içi TEKİL anon istemci — yalnız **durum YAZMAYAN** auth çağrıları için.
- *
- * `auth.getUser(token)` böyledir: token parametreyle gider, istemcide oturum bırakmaz. Tekil
- * olması bu yüzden güvenli. Oturum yazan bir çağrı için `createAnonClient()` kullanılır; ayrımı
- * çağıranın hatırlaması gerekiyor ve künyelerin ikisi de bunu söylüyor.
+ * Süreç içi tekil anon istemci, yalnız oturum yazmayan auth çağrıları için: `auth.getUser(token)` jetonu parametreyle alır,
+ * istemcide oturum bırakmaz. Oturum yazan çağrı `createAnonClient()` kullanır.
  */
 export function anonDb(): SupabaseClient {
   anonCached ??= createAnonClient();

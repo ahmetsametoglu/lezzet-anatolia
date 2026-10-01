@@ -3,11 +3,8 @@ import { aiUsageRecorder } from '@lezzet/application/ai/usage-recorder';
 import { serviceDb } from '@lezzet/database';
 
 /*
-  YALNIZ NODE SÜRECİNDE yüklenir (`instrumentation.ts` → `register`). Ayrı dosya, çünkü içe aktardığı ağaç
-  (veritabanı istemcisi, pino) edge derlemesine girerse derleme `node:` şemasında kırılır — yaşandı (30.07,
-  `instrumentation.ts` künyesi).
-
-  Kanca süreç genelinde tektir (`globalThis` — `@lezzet/ai/usage-recorder` künyesi): Next'in server action
-  ve route derlemeleri bu modülü ayrı grafiklerde yükler, kaydedici yine hepsinde görünür.
+  Yalnız Node sürecinde yüklenir (`instrumentation.ts` → `register`), çünkü içe aktardığı Node'a özgü ağaç edge derlemesine
+  girerse derleme `node:` şemasında kırılır. Kancalar süreç genelinde `globalThis`te durur: Next server action ve route
+  derlemelerinde modülleri ayrı grafiklerde yükler, kurulan kanca yine hepsinde görünür.
 */
 setAiUsageRecorder(aiUsageRecorder(serviceDb()));
