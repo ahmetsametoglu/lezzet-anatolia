@@ -60,7 +60,8 @@ Anahtar sözcük yalnız aday bulur; ilanı kalemle eşleştiren karar daima ell
 
 ## Fiyat politikası
 
-İşletmecinin kararı. Beslemedeki fiyatlar (`scripts/seed-real/data.ts` · `SALE_PRICES`) bu kuralın ölçüm günündeki çıktısıdır.
+İşletmecinin kararı. Aşağıdaki kural TAVSİYE üretir; beslemedeki fiyatlar (`scripts/seed-real/data.ts` ·
+`SALE_PRICES`) işletmecinin tavsiyeye bakarak verdiği karardır, kuralın çıktısı değildir.
 
 - **Profesyonel fiyat (HT)** = alış × 1,40.
 - **Son tüketici fiyatı (TTC)** = alış × piyasa katsayısı.

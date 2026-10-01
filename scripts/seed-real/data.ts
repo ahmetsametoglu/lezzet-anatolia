@@ -312,10 +312,12 @@ export const PURCHASES: Purchase[] = [
       { sku: '312241', supplierCode: '312241', nameAtSupplier: 'LEZITA Tender Fillet 700 gr', qty: 12, unitCost: 3.65 },
       { sku: '312341', supplierCode: '312341', nameAtSupplier: 'LEZITA Spicy Tender Fillet 700 gr', qty: 12, unitCost: 3.6 },
       { sku: '312442', supplierCode: '312442', nameAtSupplier: 'LEZITA Spicy Chicken Wings 700 gr', qty: 14, unitCost: 3.5 },
-      { sku: '901028B', supplierCode: '901015', nameAtSupplier: 'Lamour Artisan Pistachio Cake (90g) 1x9', qty: 36, unitCost: 2.3 },
-      { sku: '901025B', supplierCode: '901023B', nameAtSupplier: 'Lamour Artisan Mango Cake (90g) 1x9', qty: 36, unitCost: 1.99 },
-      { sku: '901026B', supplierCode: '901016B', nameAtSupplier: 'Lamour Artisan Lemon Cake (90g) 1x9', qty: 36, unitCost: 1.99 },
-      { sku: '901027B', supplierCode: '901024B', nameAtSupplier: 'Lamour Artisan Strawberry Cake (90g) 1x9', qty: 36, unitCost: 1.99 },
+      // Kek 9'arlı kutu satılıyor (işletmeci kararı 01.10), tekli değil: satılan birim 9 × 90 g varyantı.
+      // Adet ve birim alış ona göre yazıldı; satır toplamı faturadaki gibi kaldı (36 × 2,30 = 4 × 20,70).
+      { sku: '901015B', supplierCode: '901015', nameAtSupplier: 'Lamour Artisan Pistachio Cake (90g) 1x9', qty: 4, unitCost: 20.7 },
+      { sku: '901023B', supplierCode: '901023B', nameAtSupplier: 'Lamour Artisan Mango Cake (90g) 1x9', qty: 4, unitCost: 17.91 },
+      { sku: '901016B', supplierCode: '901016B', nameAtSupplier: 'Lamour Artisan Lemon Cake (90g) 1x9', qty: 4, unitCost: 17.91 },
+      { sku: '901024B', supplierCode: '901024B', nameAtSupplier: 'Lamour Artisan Strawberry Cake (90g) 1x9', qty: 4, unitCost: 17.91 },
     ],
     drafts: [
       // Faturadaki döner ve mantı katalog kaynağında YOK; künyeleri veritabanı aynasından gelir.
@@ -413,7 +415,19 @@ export const TEST_PURCHASES: Purchase[] = [
   {
     supplier: 'Lezza Foods BV',
     invoice: 'TEST-2026-02',
-    catalog: [{ sku: '200301', supplierCode: '200301', nameAtSupplier: 'LEZZA Vegan Kibbeh 5x70 gr', qty: 24, unitCost: 2.35 }],
+    catalog: [
+      { sku: '200301', supplierCode: '200301', nameAtSupplier: 'LEZZA Vegan Kibbeh 5x70 gr', qty: 24, unitCost: 2.35 },
+      // Fiyat kararı verilmiş ama alış belgesi olmayan katalog kalemleri (işletmeci kararı 01.10): katman 2
+      // onlara maliyet ve stok açsın ki panelden mal kabulü yapılmadan önce vitrinde denenebilsinler.
+      // Alış Lezza'nın 22.12.2025 teklifinden, adet o teklifteki koli adedinden.
+      { sku: '900201', supplierCode: '900201', nameAtSupplier: 'LEZZA Dark Chocolate Whole Cake 1600 gr', qty: 4, unitCost: 14.25 },
+      { sku: '900901', supplierCode: '900901', nameAtSupplier: 'LEZZA Red Velvet Whole Cake 1600 gr', qty: 4, unitCost: 15 },
+      { sku: '900105', supplierCode: '900105', nameAtSupplier: 'LEZZA Pistachio Garden Whole Cake 1600 gr', qty: 4, unitCost: 19 },
+      { sku: '901809', supplierCode: '901809', nameAtSupplier: 'LEZZA Lemon Cheesecake 12x150 gr', qty: 4, unitCost: 15.5 },
+      { sku: '901804', supplierCode: '901804', nameAtSupplier: 'LEZZA Raspberry Cheesecake 12x150 gr', qty: 4, unitCost: 15.5 },
+      { sku: '601402', supplierCode: '601402', nameAtSupplier: 'LEZZA Sobiyet Baklava 1250 gr', qty: 8, unitCost: 22 },
+      { sku: '111121', supplierCode: '111121', nameAtSupplier: 'LEZZA Maras Ice Cream Slice Plain 70 gr', qty: 72, unitCost: 0.62 },
+    ],
     drafts: [
       { name: 'Böreklik Yufka', variants: [{ nameAtSupplier: 'LEZZA Boreklik Yufka 8x125 gr', qty: 20, unitCost: 1.45 }] },
       { name: 'Lahmacun', variants: [{ nameAtSupplier: 'LEZZA Lahmacun 5x170 gr', qty: 20, unitCost: 2.65 }] },
@@ -428,7 +442,14 @@ export const TEST_SALE_PRICES: Record<string, { b2c: number; b2b: number }> = {
   'Kadayif rulo pestil 300gr': { b2c: 8.85, b2b: 5.95 },
   'Findikli sultan sarma 300gr': { b2c: 8.65, b2b: 5.81 },
   'Lychnos olijfolie 5lt': { b2c: 52.9, b2b: 39.9 },
-  'LEZZA Vegan Kibbeh 5x70 gr': { b2c: 4.95, b2b: 3.45 },
+  'LEZZA Vegan Kibbeh 5x70 gr': { b2c: 5, b2b: 4.2 },
+  'LEZZA Dark Chocolate Whole Cake 1600 gr': { b2c: 25.5, b2b: 19.95 },
+  'LEZZA Red Velvet Whole Cake 1600 gr': { b2c: 25.5, b2b: 21 },
+  'LEZZA Pistachio Garden Whole Cake 1600 gr': { b2c: 35, b2b: 26.6 },
+  'LEZZA Lemon Cheesecake 12x150 gr': { b2c: 25, b2b: 21.7 },
+  'LEZZA Raspberry Cheesecake 12x150 gr': { b2c: 25, b2b: 21.7 },
+  'LEZZA Sobiyet Baklava 1250 gr': { b2c: 45, b2b: 30.8 },
+  'LEZZA Maras Ice Cream Slice Plain 70 gr': { b2c: 1.2, b2b: 0.87 },
   'LEZZA Boreklik Yufka 8x125 gr': { b2c: 2.95, b2b: 2.15 },
   'LEZZA Lahmacun 5x170 gr': { b2c: 5.45, b2b: 3.95 },
 };
@@ -463,62 +484,61 @@ export const EK_TASLAKLAR: LooseDraft[] = [
 ];
 
 /**
- * Anahtar tedarikçideki ad, çünkü fiyat varyanta bağlıdır (zeytinyağının iki boyu iki fiyat). Yöntem
- * `docs/architecture/COMPETITORS.md`'de; `taban` işaretli kalemde piyasa fiyatı profesyonel fiyatın KDV'li hâlinin
- * altında kaldığı için son tüketici fiyatı tabana çekildi.
+ * Anahtar tedarikçideki ad, çünkü fiyat varyanta bağlıdır (zeytinyağının iki boyu iki fiyat).
+ * Değerler işletmecinin kararıdır; tavsiyenin nasıl hesaplandığı `docs/architecture/COMPETITORS.md`'de.
  */
 export const SALE_PRICES: Record<string, { b2c: number; b2b: number }> = {
-  'LEZZA Kol Borek with Cheese Uncooked (Peynirli) 200 gr': { b2c: 0.99, b2b: 0.73 },
-  'LEZZA Kol Borek with Spinach & Cheese Uncooked (Ispanakli Peynirli) 200 gr': { b2c: 0.99, b2b: 0.73 },
-  'LEZZA Kol Borek with Minced Meat Uncooked (Kiymali) 200 gr': { b2c: 1.23, b2b: 0.91 },
-  'LEZZA Kol Borek with Potato Uncooked (Patatesli) 200 gr': { b2c: 0.99, b2b: 0.73 },
-  'LEZZA Vegan Cig kofte 16x1000 gr': { b2c: 14.97, b2b: 4.9 },
-  'LEZZA Kunefah (Included plate and syrup) 2*145 gr– 420g': { b2c: 5.87, b2b: 4.27 },
-  'LEZZA Turkish Bagel-Simit (% 80 Cooked) 4x105 gr': { b2c: 3.7, b2b: 2.45 },
-  'LEZZA Cheese Pastry Rond (Peynirli Su Boregi Yuvarlak Tepsi) 800 gr': { b2c: 8.22, b2b: 6.3 },
-  'LEZZA Spiral Pie Cheese (Peynirli Tepsi Boregi) 800 gr': { b2c: 5.27, b2b: 3.78 },
-  'LEZZA Acma Plain Cooked (Sade Acma) 4x80 gr': { b2c: 3.95, b2b: 3.01 },
-  'LEZZA Stuffed Pastry (%80 Cooked) (%80 Pismis Sade Pogaca) 4x80 gr': { b2c: 3.41, b2b: 2.52 },
-  'LEZITA Tender Fillet 700 gr': { b2c: 7.29, b2b: 5.11 },
-  'LEZITA Spicy Tender Fillet 700 gr': { b2c: 7.19, b2b: 5.04 },
-  'LEZITA Spicy Chicken Wings 700 gr': { b2c: 6.17, b2b: 4.9 },
-  'Lamour Artisan Pistachio Cake (90g) 1x9': { b2c: 4.43, b2b: 3.22 },
-  'Lamour Artisan Mango Cake (90g) 1x9': { b2c: 3.83, b2b: 2.79 },
-  'Lamour Artisan Lemon Cake (90g) 1x9': { b2c: 3.83, b2b: 2.79 },
-  'Lamour Artisan Strawberry Cake (90g) 1x9': { b2c: 3.83, b2b: 2.79 },
-  'LEZZA Traditional Meet Doner 10x700gr': { b2c: 11.82, b2b: 11.2 }, // taban
-  'LEZZA Traditional Chicken Doner 10x700gr': { b2c: 9.45, b2b: 8.54 },
-  'LEZZA Manti with Minced Meat (Kiymali )1000 gr': { b2c: 9.49, b2b: 7.21 },
-  'Druivenmelasse 650gr': { b2c: 8.12, b2b: 7.7 }, // taban
-  'Johannesbroodmelasse 650gr': { b2c: 8.12, b2b: 7.7 }, // taban
-  'Tahini 500gr': { b2c: 7.02, b2b: 6.65 }, // taban
-  'Meidoorn azijn 500ml': { b2c: 9.49, b2b: 4.2 },
-  'Ananas azijn 500ml': { b2c: 10.45, b2b: 4.2 },
-  'Enginar azijn 500ml': { b2c: 8.99, b2b: 4.2 },
-  'Appel azijn 500ml': { b2c: 5.95, b2b: 4.2 },
-  'Isgin azijn 500ml': { b2c: 9.45, b2b: 4.2 },
-  'Granaatappelextraat 250ml': { b2c: 7.51, b2b: 4.83 },
-  'Sifamix Kozalak extract 670gr': { b2c: 9.25, b2b: 5.95 },
-  'Sifamix Johannesbrood extract 700ml': { b2c: 10.43, b2b: 5.25 },
-  'Sifamix Andiz extract 350gr': { b2c: 8.68, b2b: 5.59 },
-  'Coconut mix 250ml': { b2c: 15.9, b2b: 6.93 },
-  'Honing azijn 500ml': { b2c: 9.45, b2b: 4.2 },
+  'LEZZA Kol Borek with Cheese Uncooked (Peynirli) 200 gr': { b2c: 1.2, b2b: 0.8 },
+  'LEZZA Kol Borek with Spinach & Cheese Uncooked (Ispanakli Peynirli) 200 gr': { b2c: 1.2, b2b: 0.8 },
+  'LEZZA Kol Borek with Minced Meat Uncooked (Kiymali) 200 gr': { b2c: 1.2, b2b: 0.91 },
+  'LEZZA Kol Borek with Potato Uncooked (Patatesli) 200 gr': { b2c: 1.2, b2b: 0.8 },
+  'LEZZA Vegan Cig kofte 16x1000 gr': { b2c: 12.5, b2b: 7.5 },
+  'LEZZA Kunefah (Included plate and syrup) 2*145 gr– 420g': { b2c: 6, b2b: 4.76 },
+  'LEZZA Turkish Bagel-Simit (% 80 Cooked) 4x105 gr': { b2c: 3.5, b2b: 2.45 },
+  'LEZZA Cheese Pastry Rond (Peynirli Su Boregi Yuvarlak Tepsi) 800 gr': { b2c: 10, b2b: 6.3 },
+  'LEZZA Spiral Pie Cheese (Peynirli Tepsi Boregi) 800 gr': { b2c: 6, b2b: 3.85 },
+  'LEZZA Acma Plain Cooked (Sade Acma) 4x80 gr': { b2c: 4, b2b: 3.01 },
+  'LEZZA Stuffed Pastry (%80 Cooked) (%80 Pismis Sade Pogaca) 4x80 gr': { b2c: 3.5, b2b: 2.52 },
+  'LEZITA Tender Fillet 700 gr': { b2c: 7.5, b2b: 5.11 },
+  'LEZITA Spicy Tender Fillet 700 gr': { b2c: 7.5, b2b: 5.04 },
+  'LEZITA Spicy Chicken Wings 700 gr': { b2c: 6.5, b2b: 4.9 },
+  'Lamour Artisan Pistachio Cake (90g) 1x9': { b2c: 45, b2b: 28.98 },
+  'Lamour Artisan Mango Cake (90g) 1x9': { b2c: 40, b2b: 25.11 },
+  'Lamour Artisan Lemon Cake (90g) 1x9': { b2c: 40, b2b: 25.11 },
+  'Lamour Artisan Strawberry Cake (90g) 1x9': { b2c: 40, b2b: 25.11 },
+  'LEZZA Traditional Meet Doner 10x700gr': { b2c: 15, b2b: 11.2 },
+  'LEZZA Traditional Chicken Doner 10x700gr': { b2c: 12, b2b: 8.54 },
+  'LEZZA Manti with Minced Meat (Kiymali )1000 gr': { b2c: 10, b2b: 7.21 },
+  'Druivenmelasse 650gr': { b2c: 8.5, b2b: 7.15 },
+  'Johannesbroodmelasse 650gr': { b2c: 8.5, b2b: 7.15 },
+  'Tahini 500gr': { b2c: 7.5, b2b: 6.65 },
+  'Meidoorn azijn 500ml': { b2c: 9.5, b2b: 3.9 },
+  'Ananas azijn 500ml': { b2c: 10.5, b2b: 3.9 },
+  'Enginar azijn 500ml': { b2c: 9, b2b: 3.9 },
+  'Appel azijn 500ml': { b2c: 6, b2b: 3.9 },
+  'Isgin azijn 500ml': { b2c: 9.5, b2b: 3.9 },
+  'Granaatappelextraat 250ml': { b2c: 7.5, b2b: 4.83 },
+  'Sifamix Kozalak extract 670gr': { b2c: 9.5, b2b: 5.95 },
+  'Sifamix Johannesbrood extract 700ml': { b2c: 10.5, b2b: 5.25 },
+  'Sifamix Andiz extract 350gr': { b2c: 9, b2b: 5.59 },
+  'Coconut mix 250ml': { b2c: 15, b2b: 6.93 },
+  'Honing azijn 500ml': { b2c: 9.5, b2b: 4.2 },
   'Olijfolie 5lt': { b2c: 55, b2b: 41.86 },
-  'Olijfolie 750ml': { b2c: 12.82, b2b: 7.7 },
-  'Pistache 700gr': { b2c: 24.37, b2b: 23.1 }, // taban
-  'Bromelain siroop 250ml': { b2c: 14.99, b2b: 11.2 },
-  'Zuhre Ana Kekre 250ml': { b2c: 17.62, b2b: 11.83 },
-  'Propolis pasta 240gr': { b2c: 14.6, b2b: 11.9 },
-  'Form pasta 240gr': { b2c: 17.49, b2b: 11.2 },
-  'Dennenappel pasta 240gr': { b2c: 11.82, b2b: 11.2 }, // taban
-  'Igde cekirdegi pasta 240gr': { b2c: 13.74, b2b: 11.2 },
-  'Zwarte moerbei extrat 670gr': { b2c: 11.39, b2b: 10.15 },
-  'Pestil met Hazinoten Muska 300gr': { b2c: 8.23, b2b: 5.53 },
-  'Gedroogde aronya 150gr': { b2c: 13.15, b2b: 5.59 },
-  'Gedroogde appel 180gr': { b2c: 9.06, b2b: 3.85 },
-  'Gedroogde Kaki cips 180gr': { b2c: 6.59, b2b: 2.8 },
-  'Gedroogde perzik': { b2c: 13.18, b2b: 5.6 },
-  'Gedroogde meloen 100gr': { b2c: 7.41, b2b: 3.15 },
+  'Olijfolie 750ml': { b2c: 12.5, b2b: 7.7 },
+  'Pistache 700gr': { b2c: 25, b2b: 23.1 },
+  'Bromelain siroop 250ml': { b2c: 16, b2b: 11.2 },
+  'Zuhre Ana Kekre 250ml': { b2c: 15, b2b: 11.83 },
+  'Propolis pasta 240gr': { b2c: 14.5, b2b: 11.9 },
+  'Form pasta 240gr': { b2c: 17.5, b2b: 11.2 },
+  'Dennenappel pasta 240gr': { b2c: 12.5, b2b: 11.2 },
+  'Igde cekirdegi pasta 240gr': { b2c: 13.5, b2b: 11.2 },
+  'Zwarte moerbei extrat 670gr': { b2c: 11.5, b2b: 10.15 },
+  'Pestil met Hazinoten Muska 300gr': { b2c: 8, b2b: 5.53 },
+  'Gedroogde aronya 150gr': { b2c: 12.5, b2b: 5.59 },
+  'Gedroogde appel 180gr': { b2c: 9, b2b: 3.85 },
+  'Gedroogde Kaki cips 180gr': { b2c: 6.5, b2b: 2.8 },
+  'Gedroogde perzik': { b2c: 12.5, b2b: 5.6 },
+  'Gedroogde meloen 100gr': { b2c: 7.5, b2b: 3.15 },
 };
 
 /**
@@ -673,7 +693,6 @@ export const ADAY_SKULARI: string[] = [
   '200414',
   '200410',
   '200201',
-  '201302',
   '200702',
   '201401',
   '200301',
@@ -935,16 +954,14 @@ export const BUNDLES: SeedBundle[] = [
   {
     name: { tr: 'Çay Saati', fr: 'L’heure du goûter', de: 'Kaffee und Kuchen' },
     description: {
-      tr: 'Dört çeşit artisan kek, poğaça ve Trabzon hurması cipsi: öğleden sonra çayının yanına hazır bir tabak.',
-      fr: 'Quatre cakes artisanaux, des poğaças et des chips de kaki : de quoi garnir le goûter de l’après-midi.',
-      de: 'Vier Artisan-Kuchen, Poğaça und Kaki-Chips: alles für die Kaffeetafel am Nachmittag.',
+      tr: 'Poğaça ve Trabzon hurması cipsi: öğleden sonra çayının yanına hazır bir tabak.',
+      fr: 'Des poğaças et des chips de kaki : de quoi garnir le goûter de l’après-midi.',
+      de: 'Poğaça und Kaki-Chips: alles für die Kaffeetafel am Nachmittag.',
     },
     serves: 4,
+    // Kek 9'arlı kutu satıldığı için paketten çıktı (işletmeci kararı 01.10): tek kek artık satılmıyor,
+    // dokuzluk kutu da bu paketin boyunu aşıyordu.
     items: [
-      { sku: '901027B', qty: 1 },
-      { sku: '901028B', qty: 1 },
-      { sku: '901026B', qty: 1 },
-      { sku: '901025B', qty: 1 },
       { sku: '700201', qty: 1 },
       { draft: 'Gedroogde Kaki cips', qty: 1 },
     ],
