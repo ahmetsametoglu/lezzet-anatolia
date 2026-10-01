@@ -103,7 +103,8 @@ port = 54324
 # sender_name = "Admin"
 
 [storage]
-enabled = true
+# Kapalı: dosyalar R2'de durur, Supabase depolamasını hiçbir kod çağırmıyor.
+enabled = false
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
@@ -382,7 +383,8 @@ authorization_url_path = "/oauth/consent"
 allow_dynamic_registration = false
 
 [edge_runtime]
-enabled = true
+# Kapalı: projede edge fonksiyonu yok.
+enabled = false
 # Supported request policies: `oneshot`, `per_worker`.
 # `per_worker` (default) — enables hot reload during local development.
 # `oneshot` — fallback mode if hot reload causes issues (e.g. in large repos or with symlinks).
@@ -396,7 +398,8 @@ deno_version = 2
 # secret_key = "env(SECRET_VALUE)"
 
 [analytics]
-enabled = true
+# Yerelde kapalı: günlüklerini okuyan yok ve yığında en çok belleği o tutar; vector de onunla kapanır.
+enabled = false
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"
