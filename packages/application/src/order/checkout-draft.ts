@@ -122,7 +122,7 @@ export interface CheckoutDraftInput {
     actorId: string;
     /** Pazarlıklı birim fiyat (`variantId` → cent); verilmeyen kalem liste fiyatından gider. */
     priceOverrides?: ReadonlyMap<string, number>;
-    /** Patron ikramı: operasyon ve iç muhasebe normal, yalnız muhasebe dışa aktarımına girmez. */
+    /** Hediye sipariş ödemesiz kapanır: kalemler sıfır fiyatla yazılır, liste fiyatı pazarlık izinde kalır; kargo alınmaz. */
     isGiftOrder?: boolean;
     /** Varsayılan `manual`; sohbetten açılan sipariş kendi kanalını geçirir, çünkü kanal ile kaynak ayrı eksenlerdir. */
     orderSource?: OrderSource;
@@ -232,11 +232,15 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   const cartService = new CartService(db);
   const storedCart = await cartService.get(customer.id);
   const previousPrices = storedPrices(storedCart.items);
+  // Hediyede her kalem sıfır fiyatlı pazarlıktır; böylece toplam, KDV ve liste fiyatı izi öteki pazarlıklarla aynı yoldan türer.
+  const giftOverrides = input.staff?.isGiftOrder
+    ? new Map<string, number>(entries.flatMap((entry) => (entry.kind === 'variant' ? [[entry.variantId, 0] as [string, number]] : [])))
+    : null;
   const cart = await getCartView(db, input.locale, entries, {
     customerId: customer.id,
     couponCode: input.couponCode,
     // Pazarlıklı fiyat sepet okumasına girer: toplam, indirim matrahı, KDV kırılımı ve kargo eşiği bu okumadan türer.
-    priceOverrides: input.staff?.priceOverrides,
+    priceOverrides: giftOverrides ?? input.staff?.priceOverrides,
     warehouseId: orderWarehouseId,
     // Gel-al'da sepet bölünmez: kargo deposu verilmez, depoda olmayan kalem "burada yok" olarak reddedilir.
     shippingWarehouseId: pickupWarehouse ? null : place.shippingWarehouseId,
@@ -338,7 +342,8 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   const options = await resolveCheckoutPayment(db, {
     customerId: customer.id,
     deliveryType,
-    quotedFeeCents: priced?.priceCents ?? null,
+    // Hediyede kargo ücreti alınmaz; taşıyıcının maliyeti siparişe yine yazılır.
+    quotedFeeCents: giftOverrides ? 0 : (priced?.priceCents ?? null),
     basketCents: scope.basketCents,
     // Asgari sepet eşiği indirim öncesini ister; `basketCents` kargo ve toplam içindir.
     subtotalCents: scope.subtotalCents,

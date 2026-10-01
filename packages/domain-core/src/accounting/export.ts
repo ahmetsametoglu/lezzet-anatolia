@@ -4,15 +4,8 @@ import { lineAmountCents, vatSplitOf, type AccountingLine } from './line';
 import { isZeroRated } from '../tax/vat-treatment';
 
 /**
- * Muhasebe export'u (12.7) — DOMAIN §9. **Sistem resmî muhasebe değildir:** fatura kesmez, numara
- * üretmez; muhasebeciye TEMİZ VERİ verir. Resmî fatura numarası dışarıda doğar ve sonradan
- * `invoiceNo` olarak eşleşir.
- *
- * Saf karar katmanı: hangi satış export'a girer, satırın KDV kırılımı nedir. Okuma/yazma yok.
- *
- * **Tutarlar TTC'dir** (müşterinin ödediği); muhasebeci HT + KDV ister, o yüzden her satır kendi
- * oranlarına ayrıştırılır. Hesap cent üstünde yapılır (kayan nokta KDV'de kuruş kaçırır), dosyaya
- * euro yazılır.
+ * Muhasebe aktarımı (DOMAIN §9): hangi satış dışa gider ve satırın KDV kırılımı nedir; tutarlar TTC'dir, muhasebeci HT ve KDV
+ * istediği için her satır oranlarına ayrıştırılır. Hesap cent üstünde yapılır, çünkü kayan nokta KDV'de kuruş kaçırır.
  */
 
 /** Bir satırın tek KDV oranındaki payı. `net + vat === gross` her zaman tutar. */
@@ -75,9 +68,8 @@ export interface AccountingExport {
 }
 
 /**
- * Kargonun KDV oranı — YALNIZ dağıtılacak kalem bulunmadığında kullanılır (kalemsiz ya da tamamı
- * hediye satış). Normal satışta kargo malın oranını izler, buraya hiç düşmez. Fransa'da hizmet
- * temel oranı %20'dir; kural değişirse tek satır değişir.
+ * Kargonun KDV oranı, yalnız dağıtılacak kalem tutarı yokken (kalemsiz ya da tamamı sıfır fiyatlı satış) kullanılır; normal
+ * satışta kargo malın oranını izler. Fransa'da hizmetin temel oranı %20'dir.
  */
 export const SHIPPING_VAT_RATE = 20;
 
@@ -87,25 +79,16 @@ export type ExportSkipReason = 'gift_order';
 export type ExportEligibility = { included: true } | { included: false; reason: ExportSkipReason };
 
 /**
- * Bu satış dış muhasebeye gider mi. **Patron ikramı gitmez** — parayı patron öder, iç muhasebede
- * (gelir/kâr/kasa/ortaklık) tam normal sayılır; `isGiftOrder` YALNIZCA bu filtreyi etkiler.
- *
- * "Gerçekleşmiş mi" sorusu burada sorulmaz: `order_sale` görünümüne zaten yalnız teslim edilmiş ya
- * da kapanmış siparişler girer. İki yerde süzseydik biri gevşediğinde diğeri sessizce örterdi.
+ * Bu satış dış muhasebeye gider mi: hediye sipariş gitmez, çünkü ödemesiz kapanır ve satış değildir (DOMAIN §9). Gerçekleşme
+ * burada sorulmaz; `order_sale` yalnız teslim edilmiş ya da kapanmış siparişi taşır ve iki yerde süzmek birinin gevşemesini örterdi.
  */
 export function exportEligibility(sale: Pick<OrderSale, 'isGiftOrder'>): ExportEligibility {
   return sale.isGiftOrder ? { included: false, reason: 'gift_order' } : { included: true };
 }
 
 /**
- * Bir satışın export satırı.
- *
- * **Kargo ücreti kalemlere oransal dağıtılır.** Fransız kuralı: teslimat bedeli satışın yan
- * unsurudur, malın oranını izler; karışık oranlı sepette paylaştırılır. Tek orana (ör. %20)
- * yazsaydık %5,5'lik gıda ağırlıklı bir siparişte KDV olduğundan fazla beyan edilirdi.
- *
- * **Reverse charge'da KDV yoktur** (`Autoliquidation`): müşteri kendi ülkesinde beyan eder, satır
- * net = brüt olarak gider.
+ * Bir satışın aktarım satırı: kargo kalemlere oransal dağıtılır, çünkü teslimat bedeli malın oranını izler ve tek orana yazmak
+ * %5,5'lik gıdada KDV'yi fazla beyan ederdi. Ters yüklemede KDV yoktur, satır net = brüt gider.
  */
 export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]): AccountingExportRow {
   const vatLines = vatLinesOf(sale, items);
@@ -125,9 +108,7 @@ export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]
     gross: sumOf(vatLines, 'gross'),
     net: sumOf(vatLines, 'net'),
     vat: sumOf(vatLines, 'vat'),
-    // Export SATIRI muhasebeciye giden bir belgedir ve euro yazar; sipariş tarafı artık cent
-    // döndürüyor (02.9), dönüşüm burada. Satırın kendi alanlarının `…Cents`e geçmesi para/muhasebe
-    // ailesinin işi (02.9 dilim 5) — bu dilim sipariş alanlarını kapatıyor.
+    // Aktarım satırı muhasebeciye giden belgedir ve euro yazar; sipariş tarafı cent taşıdığı için dönüşüm burada.
     shippingFee: fromCents(sale.shippingFeeCents),
     discountAmount: fromCents(sale.discountAmountCents),
     vatLines,
@@ -146,11 +127,8 @@ function sumOf<T>(rows: readonly T[], field: keyof T): number {
 export type SaleVatBasis = Pick<OrderSale, 'channel' | 'vatTreatment' | 'shippingFeeCents'>;
 
 /**
- * Satışın oran bazında KDV kırılımı — **export satırının da kâr raporunun da tek zemini**.
- *
- * Kargo kalemlere oransal dağıtılır (yukarıdaki gerekçe); dağıtım kalemlerle AYNI tabanda yapılır,
- * yani b2b'de HT tutarlar üstünde. Dönüşüm en sonda, oran başına bir kez uygulanır: her kalemi tek
- * tek çevirip toplasaydık kuruş artıkları birikirdi.
+ * Satışın oran bazında KDV kırılımı; aktarım satırının da kâr raporunun da tek zemini. Kargo kalemlerle aynı tabanda (b2b'de HT)
+ * dağıtılır ve dönüşüm oran başına bir kez uygulanır, çünkü kalem kalem çevirmek kuruş artığı biriktirirdi.
  */
 export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[]): ExportVatLine[] {
   const zeroRated = isZeroRated(sale.vatTreatment);
@@ -163,8 +141,8 @@ export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[])
       buckets[i]!.amount += share;
     });
   } else if (shippingCents > 0) {
-    // Dağıtacak ağırlık yok: kalemsiz satış ya da tamamı 0 fiyatlı (hediye) sepet. Kargo kendi
-    // satırını açar — oransal dağıtım burada sessizce 0 döndürürdü ve kargo export'tan DÜŞERDİ.
+    // Dağıtacak ağırlık yok: kalemsiz satış ya da tamamı sıfır fiyatlı sepet. Kargo kendi satırını açar, yoksa oransal dağıtım
+    // sessizce 0 döndürür ve kargo aktarımdan düşerdi.
     buckets.push({ vatRate: zeroRated ? 0 : SHIPPING_VAT_RATE, amount: shippingCents });
   }
 
@@ -186,22 +164,16 @@ export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[])
 }
 
 /**
- * Satışın KDV hariç cirosu (cent) — kalemler + kargo.
- *
- * Kâr raporu (12.6) bunu çağırır ve **export satırının HT'siyle aynı sayıyı alır**, çünkü ikisi de
- * `vatLinesOf`'tan doğar. Ayrı bir formül yazılsaydı aynı siparişin cirosu muhasebe dosyasında
- * başka, kâr raporunda başka çıkardı — ve hangisinin doğru olduğu tartışılırdı.
+ * Satışın KDV hariç cirosu (cent), kalemler ve kargo. Kâr raporu da bunu çağırır, çünkü ayrı bir formül aynı siparişin cirosunu
+ * aktarımda başka, kâr raporunda başka çıkarırdı.
  */
 export function saleNetCents(sale: SaleVatBasis, items: readonly AccountingLine[]): number {
   return vatLinesOf(sale, items).reduce((sum, line) => sum + toCents(line.net), 0);
 }
 
 /**
- * Dönemin export'u — satırlar + özet. Girdi zaten döneme süzülmüş satışlardır; burada yalnız
- * hediye siparişler ayrılır ve toplamlar çıkar.
- *
- * **Özet satırlardan türetilir**, ayrıca sorgulanmaz: dosyanın toplamı ile satırların toplamı
- * ayrı hesaplansaydı ikisi bir gün ayrışır ve hangisinin doğru olduğu bilinemezdi.
+ * Dönemin aktarımı: girdi döneme süzülmüş satışlardır, burada yalnız hediye siparişler ayrılır ve toplamlar çıkar. Özet
+ * satırlardan türetilir, çünkü ayrı hesaplanan iki toplam bir gün ayrışır ve hangisinin doğru olduğu bilinemezdi.
  */
 export function buildAccountingExport(
   period: { from: string; to: string },

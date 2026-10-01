@@ -180,15 +180,8 @@ const tumGecisler: [OrderStatus, OrderStatus][] = (
 
 describe('kendi kapısını isteyen geçişler (denetim 26.08)', () => {
   /*
-    İddia KURALDAN yazılıyor: "stok yazımı geçişin KENDİSİYLE aynı transaction'da olan geçiş, düz
-    durum yazımından üretilemez." Ölçüt etkinin varlığı değil ZAMANI — önce (ayırma) ya da sonra
-    (iade akıbeti) yapılan iş düz kapıyı bozmaz.
-
-    Liste elle sayılmıyor: izinli geçişlerin TAMAMI dolaşılıp her biri sınıflandırılıyor, çünkü elle
-    yazılan bir liste yeni bir durum eklendiğinde sessizce eksik kalır ve bekçi tam da o yeni
-    geçişte kör olur. Beklenen küme burada duruyor; tabloya bir geçiş eklenip bu küme
-    güncellenmezse test düşer ve ekleyen kişi "bunun stok yazımı nerede" sorusunu yanıtlamak
-    ZORUNDA kalır.
+    Stok yazımı geçişin kendisiyle aynı işlemde olan geçiş düz durum yazımından üretilemez; ölçüt etkinin varlığı değil zamanıdır.
+    Liste elle sayılmaz, izinli geçişlerin tamamı dolaşılır, çünkü elle yazılan liste yeni bir durum eklendiğinde sessizce eksik kalırdı.
   */
   const KAPI_ISTEYEN = new Set(['draft→completed', 'draft→cancelled', 'confirmed→cancelled', 'preparing→cancelled', 'ready→cancelled', 'out_for_delivery→delivered']);
 
@@ -340,5 +333,11 @@ describe('kapanış kararı', () => {
   it('teslim edilmemiş ödenmiş sipariş kapanmaz', () => {
     expect(isSettled('confirmed', 'paid')).toBe(false);
     expect(isSettled('out_for_delivery', 'paid')).toBe(false);
+  });
+
+  it('hediye sipariş teslimle ödemesiz kapanır, teslimden önce kapanmaz', () => {
+    // Hediyeye para yazılmaz; kapanış ödemeyi bekleseydi teslim edilmiş hediye sonsuza dek açık kalırdı.
+    expect(isSettled('delivered', 'pending', true)).toBe(true);
+    expect(isSettled('out_for_delivery', 'pending', true)).toBe(false);
   });
 });

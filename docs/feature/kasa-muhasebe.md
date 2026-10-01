@@ -239,11 +239,11 @@ Nakit farkı sıfır değilse kapanış nakit hesabına hareketi de yazar (eksik
 "kasa farkı", hesap kodu muhasebecinin), kasa hareketi kuralı onu Hiboutik'e taşır. Kart farkı kasaya
 dokunmaz, bugünkü gibi yalnız mutabakattır.
 
-**Hediye sipariş** (11. karar): tahsilat kapısı hediye siparişe para yazmaz. Siparişin ücretlenen tutarı,
-cirosu ve kâr raporundaki geliri sıfırdır; mal maliyeti hediye gideri olarak kalır. Sıfırlamanın yolu
-(sıfır fiyat ve liste fiyatı izi ya da motorda istisna) dokunulacak yerler ölçülerek seçilir:
-ödeme türetimi, ciro tetikleyicisi (`resync_order_revenue`), kâr raporu, muhasebe aktarımı süzgeci,
-operasyonun yeni sipariş ekranı.
+**Hediye sipariş** (11. karar): sipariş açılırken her kalem sıfır fiyatla yazılır, liste fiyatı pazarlık
+izinde kalır; kargo alınmaz (`checkout-draft`). Ödenecek tutar, ciro ve kâr raporundaki gelir böylece
+kendiliğinden sıfırdır, mal maliyeti gider olarak kalır; sipariş teslim edilince ödeme beklemeden kapanır
+(`isSettled`). Ödeme kapısı sıfır tutarı hareket olarak yazmaz; hediyeye yine de para yazılırsa kasa planı
+durur ve uyarır.
 
 **Günlük mutabakat** (gün sonu, depo başına):
 1. Bizim para ↔ kasa aynası: hareketi olup yazılmamış sipariş.

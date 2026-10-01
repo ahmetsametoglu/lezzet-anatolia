@@ -434,12 +434,12 @@ Tüm finans tek mantıkla: **para bir hesapta durur, hareketlerle girer/çıkar.
 
 ### Patron ikramı (hediye sipariş)
 
-Patron bazen bir arkadaşına siparişi hediye eder; müşteri ödemez ama **parayı patron kendisi öder** — yani para yine kasaya girer. Sipariş `is_gift_order=true` işaretlenir.
+Patron bazen bir arkadaşına siparişi hediye eder. Hediye sipariş **ödemesiz kapanır**: kasaya para girmez, sertifikalı kasaya bir şey yazılmaz (`docs/feature/kasa-muhasebe.md`); mal hediye olarak stoktan çıkar, muhasebeci hediye gideri olarak işler. Sipariş `is_gift_order=true` işaretlenir ve yalnız personel yolundan açılır.
 
-- **Operasyon tam normal:** stok düşer, hazırlanır, teslim edilir.
-- **İç muhasebe tam normal:** gelir, kâr, kasa ve **ortaklık paylaşımı dahil** her şeyde sayılır — parası (patron tarafından) ödenmiş gerçek bir satıştır.
-- **Tek fark:** **muhasebe export'una girmez** — dış muhasebeye giden veride yer almaz; gerisi tam.
-- Yani `is_gift_order` yalnızca **export filtresini** etkiler, başka hiçbir hesabı değiştirmez.
+- **Fiyat sıfırdır:** her kalem sıfır fiyatla yazılır, liste fiyatı pazarlık izinde kalır (hediyenin değeri görünür); kargo ücreti alınmaz.
+- **Operasyon tam normal:** stok düşer, hazırlanır, teslim edilir; kapıda tahsilat istenmez.
+- **Kapanış ödeme beklemez:** teslim edilince kapanır.
+- **İç muhasebe:** ciro sıfırdır, mal maliyeti siparişin kârında gider olarak görünür; muhasebe aktarımına girmez.
 
 ---
 

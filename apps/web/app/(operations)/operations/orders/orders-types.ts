@@ -1,11 +1,5 @@
-// Sipariş ekranı view-model'leri (09.7) — RSC okur, serileştirilebilir bu tiplere indirger; client
-// yalnız bunları görür.
-//
-// KARARLAR SUNUCUDA verilir ve satırla birlikte taşınır: vadesi geçti mi, ne kadarı açık, izinli
-// geçişler neler. Client yeniden hesaplasaydı "gecikmiş" tanımı iki yerde yaşardı — biri checkout
-// frenine, biri ekrana ait iki ayrı gerçek.
-//
-// Para ekranda hep KURUŞ (STACK §8). Sipariş tutarları KDV DAHİL toplamdır (müşterinin ödediği).
+// Sipariş ekranı view-model'leri: kararlar (vade, açık tutar, izinli geçişler) sunucuda verilip satırla taşınır, çünkü client
+// yeniden hesaplasaydı "gecikmiş" tanımı iki yerde yaşardı. Para kuruştur (STACK §8), sipariş tutarları KDV dahil toplamdır.
 import type {
   Channel,
   DeliveryType,
@@ -61,22 +55,22 @@ export interface OrderRow {
   /** Kurye atanmış mı — rota gününde "kim götürüyor" sorusu listede yanıtlanır. */
   courierId: string | null;
   courierName: string | null;
-  /** Hangi GERÇEKLEŞEN seferle gitti (18.08) — panel kartları sefer başına gruplar. */
+  /** Hangi gerçekleşen seferle gitti — panel kartları sefer başına gruplar. */
   deliveryRunId: string | null;
   payment: OrderPaymentView;
-  /** Hediye sipariş (patron ikramı) — muhasebe export'una girmez, operasyonu normaldir. */
+  /** Hediye sipariş (patron ikramı) — ödemesiz kapanır, kalemleri sıfır fiyatlıdır (DOMAIN §9). */
   isGift: boolean;
   createdAt: string;
   /** Bu durumdan gidilebilecek durumlar — motor söyler, ekran YALNIZ bunları sunar (ORDER_LIFECYCLE). */
   allowedNext: OrderStatus[];
   /**
-   * Siparişin çıktığı depo (19.5) — bir sipariş tek depodan çıkar, istisnasız (DOMAIN §17).
+   * Siparişin çıktığı depo — bir sipariş tek depodan çıkar, istisnasız (DOMAIN §17).
    * `null` yalnız ad çözülemediğinde; satır o zaman depo söylemez, yanlış depo söylemez.
    */
   warehouse: { code: string; name: string } | null;
 }
 
-/** Listenin depo ekseni — sütun çizilir mi, süzgeç var mı, hangi depoya süzülü (19.5). */
+/** Listenin depo ekseni — sütun çizilir mi, süzgeç var mı, hangi depoya süzülü. */
 export interface OrdersWarehouseView {
   /** Satırlarda depo sütunu görünür mü (kural 4: yalnız çok depolu bakışta). */
   showColumn: boolean;

@@ -33,7 +33,7 @@ create table public.order (
   -- *Kim* alıyor — müşteri tipinden TÜRETİLİR ve sipariş anında sabitlenir (sonra değişmez).
   channel channel not null,
   order_source order_source not null default 'web',
-  -- Patron ikramı: yalnız muhasebe export'una girmez; gelir/kâr/kasa tam normal (DOMAIN §9).
+  -- Hediye sipariş: ödemesiz kapanır, kalemleri sıfır fiyatlıdır ve muhasebe aktarımına girmez (DOMAIN §9).
   is_gift_order boolean not null default false,
 
   status order_status not null default 'draft',

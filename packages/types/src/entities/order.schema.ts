@@ -48,7 +48,7 @@ export const OrderSchema = z.object({
   customerId: z.string().uuid(),
   channel: ChannelEnum,
   orderSource: OrderSourceEnum,
-  /** Patron ikramı — yalnız muhasebe export'una girmez; gerisi tam normal (DOMAIN §9). */
+  /** Hediye sipariş — ödemesiz kapanır, kalemleri sıfır fiyatlıdır (DOMAIN §9). */
   isGiftOrder: z.boolean(),
 
   status: OrderStatusEnum,
@@ -113,7 +113,7 @@ export const OrderSchema = z.object({
   servicePoint: ServicePointSnapshotSchema.nullable(),
   parcelPlan: ParcelPlanSnapshotSchema.nullable(),
 
-  // Para **cent** (02.9 · STACK §8); DB kolonları euro `numeric`, dönüşüm `OrderService.moneyFields`.
+  // Para **cent** (STACK §8); DB kolonları euro `numeric`, dönüşüm `OrderService.moneyFields`.
   shippingFeeCents: z.number().int(),
   /**
    * Sipariş anında anlaşılan tutar (Σ kalem − indirim + kargo), donuktur: ödeme niyeti, vade limiti ve onay maili

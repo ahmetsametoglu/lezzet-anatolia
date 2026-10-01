@@ -259,12 +259,11 @@ export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDes
                   {delivery.creditAvailable && (
                     <ToggleField on={onAccount} onChange={setOnAccount} label="Vadeli (hesaba)" />
                   )}
-                  {/* Hediye = patron ikramı: operasyon ve iç muhasebe tam normal, yalnız muhasebe
-                      export'una girmez (DOMAIN §9). İşaretin anlamı girişte net yazılıyor. */}
+                  {/* İşaretin sonucu girişte yazılıyor, çünkü sunucu hediyenin fiyatlarını sıfırlıyor (DOMAIN §9). */}
                   <ToggleField on={isGift} onChange={setIsGift} label="Hediye sipariş (patron ikramı)" />
                   <p className="font-ops-body text-ops-xs text-ops-muted">
-                    Hediye siparişte operasyon ve stok tam normal işler; yalnız muhasebe dışa
-                    aktarımına girmez (DOMAIN §9).
+                    Hediye sipariş ödemesiz kapanır: kalemler ve kargo sıfır fiyatla yazılır, mal stoktan düşer; kasaya ve muhasebeye satış
+                    olarak girmez.
                   </p>
                 </div>
               )}
@@ -311,7 +310,7 @@ export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDes
           <section className="rounded-ops-card border border-ops-line-soft bg-ops-subtle p-4">
             <div className="flex items-baseline justify-between">
               <span className="font-ops-body text-ops-sm text-ops-muted">Kalemler toplamı</span>
-              <span className="font-ops-mono text-ops-section font-bold text-ops-ink">{formatPrice(subtotalCents, 'fr')}</span>
+              <span className="font-ops-mono text-ops-section font-bold text-ops-ink">{formatPrice(isGift ? 0 : subtotalCents, 'fr')}</span>
             </div>
             {/* Kargo ücreti ve indirim BURADA GÖSTERİLMİYOR — ikisini de sunucu çözüyor ve ekranda
                 tahmin etmek, siparişin gerçek toplamıyla çelişecek bir sayı yazmak olurdu. */}

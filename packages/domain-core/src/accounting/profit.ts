@@ -20,7 +20,7 @@ export interface OrderContribution {
   orderId: string;
   saleDate: string;
   channel: Channel;
-  /** Patron ikramı da kârda sayılır — parayı patron öder (DOMAIN §9). Yalnız export'a girmez. */
+  /** Hediye sipariş: kalemleri sıfır fiyatlı olduğu için cirosu sıfırdır, mal maliyeti gider olarak kalır (DOMAIN §9). */
   isGiftOrder: boolean;
   /** KDV hariç ciro — kalemler + kargo. */
   revenue: number;

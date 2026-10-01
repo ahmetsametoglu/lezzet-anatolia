@@ -126,9 +126,9 @@ export function transitionOwner(from: OrderStatus, to: OrderStatus): TransitionO
   return 'field';
 }
 
-/** Sipariş kapanır mı: teslim edildi ve parası tamamen alındı — açık iş kalmadı. */
-export function isSettled(status: OrderStatus, paymentStatus: PaymentStatus): boolean {
-  return status === 'delivered' && paymentStatus === 'paid';
+/** Sipariş kapanır mı: teslim edildi ve parası tamamen alındı. Hediye sipariş ödemesiz kapanır, para beklemez (DOMAIN §9). */
+export function isSettled(status: OrderStatus, paymentStatus: PaymentStatus, isGiftOrder = false): boolean {
+  return status === 'delivered' && (paymentStatus === 'paid' || isGiftOrder);
 }
 
 /**

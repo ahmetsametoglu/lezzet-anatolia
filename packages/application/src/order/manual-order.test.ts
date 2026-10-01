@@ -18,16 +18,9 @@ import { placeOrder } from './place-order';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
 
 /**
- * **Elle sipariş girişi — personel yolu** (09.8).
- *
- * Sınanan şey "sipariş yazıldı mı" değil: personel yolu müşteri yoluyla AYNI orkestrasyonu
- * kullanıyor (ikinci bir sipariş kuralı yazılmadı) ve aralarındaki fark yalnız dört noktada.
- * Bu dosya o dört farkın **gerçekten var olduğunu** ve **fazlasının olmadığını** tutuyor.
- *
- * En kritik iddia ikincisi: pazarlıklı fiyat siparişin TOPLAMINA yansımalı. Fiyat kalem yazımında
- * üstüne yazılsaydı kalemler ucuzlar, başlık toplamı liste fiyatından kalırdı — sipariş kendi
- * toplamıyla çelişir ve ödeme durumu motoru müşteriyi sonsuza kadar borçlu görürdü. Hiçbir yerde
- * hata çıkmaz; yalnız müşteri "kısmi ödendi" olarak kalır.
+ * Elle sipariş girişi: personel yolu müşteri yoluyla aynı orkestrasyonu kullanır, bu dosya aradaki farkların var olduğunu ve
+ * fazlasının olmadığını tutar. Pazarlıklı fiyat kalem yazımında uygulansaydı başlık liste fiyatından kalır, ödeme durumu
+ * müşteriyi sonsuza kadar borçlu görürdü.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -51,9 +44,8 @@ const createdProfiles: string[] = [];
 const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 /**
- * Bölgenin yaklaşan ilk teslimat günü. Tarih ELLE YAZILMAZ: sabit bir gün, geçtiği gün testi
- * kodunda hiçbir şey değişmeden çürütür. Rota siparişinde gün doğrulanır (`date_unavailable`),
- * yani boş bırakmak da olmaz — bölge birden çok güne açıksa kapı seçim bekler.
+ * Bölgenin yaklaşan ilk teslimat günü; sabit bir tarih geçtiği gün testi kod değişmeden çürütürdü. Rota siparişinde gün
+ * doğrulandığı (`date_unavailable`) için boş da bırakılamaz.
  */
 async function ilkUygunGun(): Promise<string> {
   const inputs = await readDeliveryInputs(db);
@@ -128,9 +120,8 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Parti BURADA SİLİNMEZ (`beforeAll`da bir kez kuruluyor, testler paylaşıyor). Silme `mustDelete`
-  // ile: `delete()` hatayı yutar ve siparişi tutan bir defter satırı doğduğu gün teardown sessizce
-  // yarım kalırdı (06.14 · künye `packages/application/src/courier/day.test.ts`te).
+  // Parti burada silinmez, `beforeAll`da bir kez kurulup paylaşılıyor. Silme `mustDelete` ile, çünkü `delete()` hatayı yutar ve
+  // siparişi tutan bir defter satırı doğduğu gün teardown sessizce yarım kalırdı.
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
 });
 
@@ -157,7 +148,7 @@ async function elleSiparis(
     isGiftOrder?: boolean;
     variant?: string;
     staff?: boolean;
-    /** Sohbet köprüsünün geçirdiği kaynak (15.4) — verilmezse personel yolu `manual` kalır. */
+    /** Sohbet köprüsünün geçirdiği kaynak — verilmezse personel yolu `manual` kalır. */
     orderSource?: OrderSource;
   } = {},
 ) {
@@ -230,20 +221,27 @@ describe('elle sipariş — personel yolu (09.8)', () => {
     expect(order2!.isGiftOrder).toBe(false);
   });
 
+  it('hediye sipariş sıfır fiyatla açılır, pazarlık da sıfırlanır; liste fiyatı izde kalır', async () => {
+    // Fiyat sıfırlanmasaydı kurye kapıda para ister, para kasaya ve muhasebeye satış olarak girerdi.
+    const ikram = await elleSiparis({ isGiftOrder: true, overrides: new Map([[variantId, 1500]]) });
+    expect(ikram.status).toBe('ok');
+    const orderId = (ikram as { orderId: string }).orderId;
+    expect((await new OrderService(db).getById(orderId))!.orderedTotalCents).toBe(0);
+    const kalemler = await kalemleriOku(orderId);
+    expect(Number(kalemler[0]!.unit_price)).toBe(0);
+    expect(Number(kalemler[0]!.list_unit_price)).toBe(20);
+    expect(kalemler[0]!.price_set_by).toBe(personelId);
+  });
+
   /**
-   * **Bu dosyanın en pahalı iddiası.** Pazarlık sepet okumasına giriyor, yani başlık toplamı da
-   * kalem fiyatları da AYNI sayıdan türüyor. Kalem yazımında üstüne yazılsaydı buradaki toplam
-   * 6000 kalır, kalemler 4500 olur ve ödeme motoru siparişi sonsuza kadar "kısmi" görürdü.
+   * Pazarlık sepet okumasına girer, yani başlık toplamı da kalem fiyatları da aynı sayıdan türer. Kalem yazımında uygulansaydı
+   * toplam liste fiyatından kalır ve ödeme motoru siparişi sonsuza kadar "kısmi" görürdü.
    */
   it('pazarlıklı fiyat siparişin TOPLAMINA yansır ve başlık kalemleriyle tutarlı kalır', async () => {
     const orders = new OrderService(db);
 
-    /* Toplam SABİT SAYIYA çivilenmiyor: yereldeki otomatik kampanyalar tutarı oynatır (ölçüldü —
-       6000 yerine 5520 döndü, %8'lik seed kampanyası) ve testin ölçtüğü şey o değil. Sınanan
-       değişmez, siparişin KENDİ İÇİNDE tutarlı olması: başlık toplamı = Σ(kalem × adet) − indirim
-       + kargo. Pazarlık kalem yazımında uygulansaydı tam bu eşitlik bozulurdu — kalemler ucuzlar,
-       başlık liste fiyatından kalırdı; hiçbir yerde hata çıkmaz, yalnız ödeme motoru müşteriyi
-       sonsuza kadar borçlu görürdü. */
+    /* Toplam sabit sayıya çivilenmez, çünkü otomatik kampanyalar tutarı oynatır. Sınanan değişmez siparişin kendi içinde
+       tutarlı olmasıdır: başlık toplamı = Σ(kalem × adet) − indirim + kargo. */
     const tutarli = async (orderId: string) => {
       const order = await orders.getById(orderId);
       const kalemler = await kalemleriOku(orderId);
@@ -301,16 +299,8 @@ describe('elle sipariş — personel yolu (09.8)', () => {
   });
 
   /**
-   * Elle fiyat yazmak SATIŞA KAPALI bir ürünü diriltmez: `blocked` ölçütü liste fiyatının
-   * varlığıdır. Aksi hâlde kanal fiyatı kaldırılarak satıştan çekilmiş bir ürün, operatörün
-   * eline bir sayı yazmasıyla sessizce yeniden satılabilirdi.
-   */
-  /**
-   * **ZİNCİRİN TAMAMI** — taslak değil, `placeOrder`. Ekranın çağırdığı kapı budur ve taslaktan
-   * sonrası da sınanmalı: stok AYRILIR ve sipariş `confirmed`e geçer.
-   *
-   * Kartla ödeme sağlayıcısı geçilmiyor (`createPaymentSession: null`) çünkü masada kart
-   * çekilmiyor; nakit/vadeli dalında sipariş bu çağrıda kesinleşir ve beklenen bir ödeme yoktur.
+   * Zincirin tamamı: ekranın çağırdığı kapı `placeOrder`dır ve taslaktan sonrası da sınanır, stok ayrılır ve sipariş `confirmed`e
+   * geçer. Ödeme oturumu geçilmez (`createPaymentSession: null`), çünkü masada kart çekilmez.
    */
   it('placeOrder personel künyesiyle siparişi KESİNLEŞTİRİR ve stoğu ayırır', async () => {
     const oncekiRezerv = await rezerveAdet();
@@ -341,12 +331,8 @@ describe('elle sipariş — personel yolu (09.8)', () => {
   });
 
   /**
-   * **YARIM İZ VERİTABANINDA REDDEDİLİR** (`order_item_negotiation_complete`).
-   *
-   * Üstteki testler izi UYGULAMA yolundan sınıyor; bu onun altındaki kapıyı sınıyor. Ayrımı
-   * önemli: uygulama bir gün yanlış yazsa da (ya da ikinci bir yol açılsa — onarım betiği,
-   * doğrudan SQL) yarım bir iz yazılamamalı. Tek başına bir liste fiyatı "birileri indirdi" der
-   * ama kimin indirdiğini söylemez: kayıt soruyu açar, cevabı vermez.
+   * Yarım iz veritabanında reddedilir (`order_item_negotiation_complete`): uygulama yanlış yazsa ya da ikinci bir yazma yolu açılsa
+   * da kimin indirdiğini söylemeyen bir liste fiyatı yazılamamalı.
    */
   it('yarım pazarlık izi VERİTABANINCA reddedilir — uygulamadan bağımsız', async () => {
     const sonuc = await elleSiparis();
@@ -371,6 +357,10 @@ describe('elle sipariş — personel yolu (09.8)', () => {
     expect((await yarim({ list_unit_price: 12.5, price_set_by: personelId })).error).toBeNull();
   });
 
+  /**
+   * Elle fiyat satışa kapalı ürünü diriltmez, çünkü `blocked` ölçütü liste fiyatının varlığıdır; aksi hâlde satıştan çekilmiş ürün
+   * operatörün yazdığı bir sayıyla sessizce yeniden satılabilirdi.
+   */
   it('kanal fiyatı olmayan ürünü elle fiyatla satamaz', async () => {
     const sonuc = await elleSiparis({
       variant: fiyatsizVariantId,

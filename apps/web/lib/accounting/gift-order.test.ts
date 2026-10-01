@@ -7,13 +7,8 @@ import { quickSale } from '@lezzet/application';
 import { buildExport } from './export';
 
 /**
- * **Patron ikramı — DOMAIN §9.** Patron bir arkadaşına siparişi hediye eder; müşteri ödemez ama
- * **parayı patron kendisi öder**. Yani gerçek bir satıştır: mal depodan çıkar, maliyeti kâra biner,
- * para kasaya girer.
- *
- * `isGiftOrder` YALNIZCA muhasebe export'unu etkiler. Bu dosya o kuralı **kilitler**: birileri bir
- * gün "hediye siparişi stoktan/cirodan/kârdan düşelim" derse test kırmızıya döner. Kural yorumda
- * yazılı olmakla korunmaz, ancak ölçülürse korunur.
+ * Hediye sipariş (DOMAIN §9) ödemesiz kapanır: kalemler sıfır fiyatlıdır, para kasaya girmez; mal stoktan düşer ve maliyeti kârda
+ * gider olarak kalır. Bu dosya kuralı kilitler: hediyeye para yazılır ya da maliyeti düşerse kırmızıya döner.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -22,7 +17,8 @@ const accounts = new AccountService(db);
 
 const stamp = Date.now();
 let customerId: string;
-// Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
+let personelId: string;
+// Parti ve sipariş deposuz yazılamaz (DOMAIN §17); testin kendi deposu.
 let warehouseId: string;
 let variantId: string;
 let productId: string;
@@ -33,11 +29,8 @@ const createdProfiles: string[] = [];
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 const QTY = 3;
-const UNIT_PRICE_CENTS = 1200; // 12,00 €
-const PURCHASE_PRICE_CENTS = 400; // 4,00 €
-const TOTAL_CENTS = QTY * UNIT_PRICE_CENTS; // 36,00 €
-/** Muhasebe export ÖZETİ euro yazar (muhasebeciye giden belge) — kasa bakiyesi artık cent. */
-const TOTAL_EURO = TOTAL_CENTS / 100;
+const LIST_PRICE_CENTS = 1200; // hediyenin değeri, pazarlık izinde durur
+const PURCHASE_PRICE_CENTS = 400;
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;
@@ -46,66 +39,52 @@ beforeAll(async () => {
   categoryId = category.id;
   productId = product.id;
   variantId = variants[0]!.id;
-  customerId = (await new UserProfileService(db).insert({ name: `İkram edilen ${stamp}` })).id;
-  createdProfiles.push(customerId);
+  const profiles = new UserProfileService(db);
+  customerId = (await profiles.insert({ name: `İkram edilen ${stamp}` })).id;
+  personelId = (await profiles.insert({ name: `İkram eden ${stamp}` })).id;
+  createdProfiles.push(customerId, personelId);
   cashAccount = (await accounts.insert({ name: `İkram kasası ${stamp}`, type: 'cash' })).id;
 });
 
 afterAll(async () => {
-  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
-  // İkram da bir satıştır: deftere `counter_sale` yazıyor ve o satır ikisini birden tutuyor.
+  // Satış deftere `counter_sale` yazar ve o satır partiyi ve siparişi birden tutar; sıra bu yüzden defter → parti → sipariş.
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
-    accountIds: [cashAccount], // hareketleri onunla gider
+    accountIds: [cashAccount],
     warehouseIds: [warehouseId],
   });
 });
 
-describe('patron ikramı iç hesapların TAMAMINDA sayılır', () => {
-  it('mal stoktan düşer, maliyet kâra biner, para kasaya girer — yalnız export dışıdır', async () => {
+describe('hediye sipariş ödemesiz kapanır', () => {
+  it('mal stoktan düşer ve maliyeti siparişte kalır; kasaya para girmez, ciro sıfırdır, aktarıma girmez', async () => {
     const batch = await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: PURCHASE_PRICE_CENTS });
     const cashBefore = (await accounts.balance(cashAccount)).balanceCents;
-    // Export'un ikram öncesi hâli: karşılaştırma FARK üzerinden yapılır (rapor şirket genelini okur).
     const exportBefore = await buildExport({ from: dayOffset(0), to: dayOffset(0) });
 
+    // Sipariş açılışının hediyeye verdiği hâl: sıfır fiyat, liste fiyatı ve personel izde.
     const { order } = await orders.create(
-      { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: true, orderedTotalCents: TOTAL_CENTS },
-      [{ variantId, qty: QTY, unitPriceCents: UNIT_PRICE_CENTS, vatRate: 5.5 }],
+      { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: true, orderedTotalCents: 0 },
+      [{ variantId, qty: QTY, unitPriceCents: 0, listUnitPriceCents: LIST_PRICE_CENTS, priceSetBy: personelId, vatRate: 5.5 }],
     );
 
+    // Kasa hesabı verilse de tahsil edilecek tutar sıfırdır, hareket yazılmaz.
     const result = await quickSale(db, { orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
     expect(result.status).toBe('ok');
     if (result.status !== 'ok') return;
 
-    // 1) STOK: mal gerçekten gitti — ikram, malı depoda bırakmaz.
     expect((await stocks.getById(batch.id))?.physicalQty).toBe(10 - QTY);
-    expect(result.consumedQty).toBe(QTY);
-
-    // 2) KÂR: maliyet kapanışta sabitlendi — ikramın maliyeti kârda görünür.
     expect(result.cogsAmountCents).toBe(QTY * PURCHASE_PRICE_CENTS);
-    expect((await orders.getById(order.id))?.cogsAmountCents).toBe(QTY * PURCHASE_PRICE_CENTS);
 
-    // 3) KASA: parayı patron ödedi, hesabın bakiyesine girdi.
-    expect(result.paymentRecorded).toBe(true);
-    expect((await accounts.balance(cashAccount)).balanceCents).toBe(cashBefore + TOTAL_CENTS);
-    expect(await orders.getById(order.id)).toMatchObject({ amountCollectedCents: TOTAL_CENTS, paymentStatus: 'paid' });
+    expect((await accounts.balance(cashAccount)).balanceCents).toBe(cashBefore);
+    expect(await orders.getById(order.id)).toMatchObject({ status: 'completed', amountCollectedCents: 0, revenueTotalCents: 0 });
 
-    // 4) EXPORT: TEK fark burada — satır dosyaya girmez, ama tutarı özet'te açıkça durur.
+    // Küresel sayıya bakılmaz (CLAUDE §4b): yalnız bu siparişin dışarıda kaldığı ve sayaca bir eklendiği ölçülür.
     const exportAfter = await buildExport({ from: dayOffset(0), to: dayOffset(0) });
     expect(exportAfter.rows.map((r) => r.orderId)).not.toContain(order.id);
-    // **Mutlak sayı DEĞİL küme karşılaştırması** (`CLAUDE §4b`: küresel sayıya bakan test yazma).
-    // `toHaveLength(exportBefore.rows.length)` idi ve paylaşılan veritabanında kırılgandı: paralel
-    // koşan başka bir dosya kendi siparişini aynı güne yazdığında sayı artıyor ve test o satırı
-    // bizim ikramımız sanıyordu (ölçüldü 27.08, 11 dosyalık koşuda tam bu satır düştü — tek başına
-    // koşunca geçiyordu). İddia zaten "ikram araya girmedi"dir; onu üstteki satır söylüyor, bu satır
-    // da öncekilerin YERİNDE durduğunu.
-    const oncekiler = new Set(exportBefore.rows.map((r) => r.orderId));
-    expect(exportAfter.rows.filter((r) => oncekiler.has(r.orderId))).toHaveLength(exportBefore.rows.length);
     expect(exportAfter.summary.excludedGiftCount - exportBefore.summary.excludedGiftCount).toBe(1);
-    expect(exportAfter.summary.excludedGiftGross - exportBefore.summary.excludedGiftGross).toBe(TOTAL_EURO);
   });
 });

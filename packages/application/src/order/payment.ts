@@ -56,6 +56,9 @@ async function writeOrderMovement(
   input: OrderMovementInput,
   type: 'order_payment' | 'order_refund',
 ): Promise<PaymentOutcome> {
+  // Sıfır tutar para değildir ve veritabanı onu reddeder; hediye ya da sıfır tutarlı satış yine de durumunu tazeler.
+  if (input.amountCents === 0) return syncOrderPaymentStatus(db, input.orderId);
+
   const found = await new OrderService(db).getWithItems(input.orderId);
   if (!found) return { status: 'not_found' };
 
@@ -117,8 +120,8 @@ async function finalize(
     }
   }
 
-  // Değişim şartı yok: parası önceden alınmış sipariş teslimden sonraki senkronda kapanır.
-  if (derivation.status === 'paid') await settleOrder(db, order.id);
+  // Değişim şartı yok: parası önceden alınmış sipariş teslimden sonraki senkronda kapanır; hediye ödemesiz kapanır.
+  if (derivation.status === 'paid' || order.isGiftOrder) await settleOrder(db, order.id);
 
   return {
     status: 'ok',
