@@ -2,13 +2,8 @@ import { CROP_CENTER } from '@lezzet/types';
 import type { CatalogCategory, CatalogProduct } from '@lezzet/types';
 
 /*
-  KATALOG TEST VERİSİ — hook testi (tel cevabı olarak) ve ekran testi (hook çıktısı olarak) AYNI
-  satırları kullanır. Tek yerde durmasının sebebi sözleşmenin kendisi: `CatalogProduct` bir alan
-  kazandığında iki test birden derlemede kırılsın ve ikisi de güncellensin — ayrı ayrı yazılmış iki
-  yer tutucudan biri mutlaka eskir.
-
-  Kimlikler UUID biçiminde çünkü şema öyle istiyor (`ProductSchema.id`); okunabilir olsunlar diye
-  sonları sayaçlı.
+  Katalog testlerinin ortak satırları: hook testi tel cevabı, ekran testi hook çıktısı olarak aynı satırları kullanır ki
+  `CatalogProduct` bir alan kazanınca ikisi birden derlemede kırılsın. Kimlikler şemanın istediği UUID biçiminde, sonları sayaçlı.
 */
 
 const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
