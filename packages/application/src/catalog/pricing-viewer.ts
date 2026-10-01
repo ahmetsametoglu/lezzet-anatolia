@@ -1,6 +1,6 @@
 import { PriceGroupService, UserProfileService } from '@lezzet/database';
 import { deriveChannel, type CustomerPriceRule } from '@lezzet/domain-core';
-import type { Channel } from '@lezzet/types';
+import type { Channel, UserProfile } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -44,7 +44,11 @@ export function effectiveChannelOf(profile: { type: string | null; b2bApproved: 
  */
 export async function pricingViewerOf(db: SupabaseClient, customerId: string | null): Promise<PricingViewer> {
   if (!customerId) return VISITOR;
-  const profile = await new UserProfileService(db).getById(customerId);
+  return pricingViewerFor(db, await new UserProfileService(db).getById(customerId));
+}
+
+/** Profili oturumdan zaten okumuş çağıranın yolu: satır yeniden okunmaz, yalnız toptan kanalda grup yüzdesi için gruba gidilir. */
+export async function pricingViewerFor(db: SupabaseClient, profile: UserProfile | null): Promise<PricingViewer> {
   if (!profile) return VISITOR;
 
   const b2bApproved = profile.b2bApproved === true;

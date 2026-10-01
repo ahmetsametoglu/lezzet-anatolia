@@ -95,13 +95,15 @@ function declarationOf(
   };
 }
 
+/** Yer ve görüş birlikte; liste okumaları onları beklemez, yalnız fiyat ve stok bağlamı bekler. */
+type PlaceAndViewer = Promise<readonly [PlaceWarehouses, PricingViewer]>;
+
 /** Aynı kategoriden başka ürünler; kategorisiz üründe bölüm boş kalır, çünkü "benzer" iddiası karşılanamıyorsa rastgele ürün önerilmez. */
 async function readSimilar(
   db: SupabaseClient,
   product: Pick<ProductWithRelations, 'id' | 'categoryId' | 'familyId'>,
   locale: PreferredLanguage,
-  place: PlaceWarehouses,
-  viewer: PricingViewer,
+  placeAndViewer: PlaceAndViewer,
 ) {
   if (!product.categoryId) return [];
   const page = await new ProductService(db).listWithRelations({
@@ -115,7 +117,7 @@ async function readSimilar(
   // Alınabilirlik seçimden önce bilinmeli, bu yüzden bağlam havuzun tamamı için okunur; tur sayısı aday sayısından bağımsız.
   // Kartlar farklı kategori ve koleksiyonlardan gelir ve üstünde kampanyayı söyleyecek başlık yoktur, rozet kapsamı bu yüzden okunur.
   const [context, scopeCampaigns] = await Promise.all([
-    loadProductContext(db, candidates, place, viewer),
+    placeAndViewer.then(([place, viewer]) => loadProductContext(db, candidates, place, viewer)),
     readScopeCampaigns(db, {
       categoryIds: candidates.flatMap((p) => (p.categoryId === null ? [] : [p.categoryId])),
       collectionIds: candidates.flatMap((p) => p.collections.map((c) => c.collectionId)),
@@ -157,8 +159,7 @@ async function readFamily(
   db: SupabaseClient,
   product: ProductWithRelations,
   locale: PreferredLanguage,
-  place: PlaceWarehouses,
-  viewer: PricingViewer,
+  placeAndViewer: PlaceAndViewer,
 ): Promise<StorefrontFamilyMember[]> {
   if (!product.familyId) return [];
 
@@ -169,6 +170,7 @@ async function readFamily(
   });
   if (page.rows.length < 2) return [];
 
+  const [place, viewer] = await placeAndViewer;
   const context = await loadProductContext(db, page.rows, place, viewer);
   const cards = page.rows
     // "Tükendi mi" ve başlangıç fiyatı `toProduct`tan okunur: kart, katalog ve detay aynı ürün için farklı sayı göstermemeli.
@@ -198,17 +200,30 @@ export interface ProductDetailInput {
   locale: PreferredLanguage;
   slug: string;
   /**
-   * Müşterinin yerinden çözülen depolar — `CatalogInput.place` ile aynı sözleşme: zorunlu,
-   * varsayılansız; `warehouseId: null` "yer bilinmiyor" demektir ve depo-ÜSTÜ okumaya düşer.
+   * Müşterinin yerinden çözülen depolar — `CatalogInput.place` ile aynı sözleşme: zorunlu, varsayılansız; `warehouseId: null`
+   * "yer bilinmiyor" demektir. Söz olarak verilirse yer çözümü ürün okumasıyla aynı anda koşar.
    */
-  place: PlaceWarehouses;
-  /** **Kim soruyor** — kanal/onay/kimlik; fiyatın çözüldüğü eksen. */
-  viewer: PricingViewer;
+  place: PlaceWarehouses | Promise<PlaceWarehouses>;
+  /** **Kim soruyor** — kanal/onay/kimlik; fiyatın çözüldüğü eksen. Söz olarak verilebilir, yalnız fiyat ve stok bağlamı onu bekler. */
+  viewer: PricingViewer | Promise<PricingViewer>;
+  /**
+   * Satır başka bir okuma için zaten isteniyorsa (sayfanın yorumları) `findActiveProduct`un aynı sözü verilir ki ürün iki kez
+   * okunmasın.
+   */
+  product?: Promise<ProductWithRelations | null>;
 }
 
 /**
- * Slug ile ürün detayı; ürün yoksa ya da satışta değilse `null` (çağıran 404'e çevirir), çünkü katalogda görünmeyen ürünün
- * linkle alınabilmesi `status` kararını boşa çıkarırdı (DOMAIN §13).
+ * Satıştaki ürün satırı; aday ve pasif ürün `null`dur, çünkü katalogda görünmeyen ürünün linkle alınabilmesi `status` kararını
+ * boşa çıkarırdı.
+ */
+export async function findActiveProduct(db: SupabaseClient, slug: string): Promise<ProductWithRelations | null> {
+  const product = await new ProductService(db).findBySlug(slug);
+  return product && product.status === 'active' ? product : null;
+}
+
+/**
+ * Slug ile ürün detayı; ürün yoksa ya da satışta değilse `null` (çağıran 404'e çevirir, DOMAIN §13).
  *
  * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`).
  */
@@ -216,18 +231,21 @@ export async function getProductDetail(
   db: SupabaseClient,
   input: ProductDetailInput,
 ): Promise<StorefrontProductDetail | null> {
-  const { locale, slug, place, viewer } = input;
-  const product = await new ProductService(db).findBySlug(slug);
-  if (!product || product.status !== 'active') return null;
+  const { locale, slug } = input;
+  const placeAndViewer = Promise.all([input.place, input.viewer] as const);
+  // Ürün bulunamazsa yer ve görüş beklenmeden dönülür; hataları sahipsiz kalmasın diye işlenir, onları bekleyen okumada yine yükselir.
+  void placeAndViewer.catch(() => undefined);
+  const product = await (input.product ?? findActiveProduct(db, slug));
+  if (!product) return null;
 
   const [family, context, images, category, similar] = await Promise.all([
-    readFamily(db, product, locale, place, viewer),
-    loadProductContext(db, [product], place, viewer),
+    readFamily(db, product, locale, placeAndViewer),
+    placeAndViewer.then(([place, viewer]) => loadProductContext(db, [product], place, viewer)),
     new ProductImageService(db).listByProduct(product.id),
     product.categoryId ? new CategoryService(db).getById(product.categoryId) : Promise.resolve(null),
     // Aynı künye "benzer ürünler"e de gider: detay B2B fiyat gösterirken altındaki kartların
     // perakende göstermesi, sayfayı kendi kendisiyle çelişkiye düşürürdü.
-    readSimilar(db, product, locale, place, viewer),
+    readSimilar(db, product, locale, placeAndViewer),
   ]);
 
   const ctx: ProductContext = context.get(product.id) ?? EMPTY_PRODUCT_CONTEXT;

@@ -90,10 +90,12 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
     - [ ] En son, kullanıcı inceler (müşteriyle yoğun etkileşen sayfalar): Talepler `support` · Talep Detay `support/[ticket]` · Yeni Talep `support/new` ↔ native `support`
   - Şu sayfaların ayrı telefon gövdesi yok, telefonda masaüstü gövdesinin `compact` dalı çiziliyor: `support/new` · `feedback/[token]` · `invite/[code]` · `neighbor/[token]`. Sırası gelen ekranda ilk iş fork.
 - [~] (08.59) **MASAÜSTÜ WEB v1 — başlık, yer paneli ve adres penceresi `Musteri Web v1.dc.html`'in birebir aynısı; ikon seti müşterinin gördüğü her ekranda** *(kullanıcı isteği 13.09: "Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."; ikon seti kullanıcı kararı 14.09 — ikon deseni her yerde aynı; mobil web aynı anda `08.58`, iki şeridin işi birbirine bağlı olduğu için tek commit — kullanıcı kararı 13.09 + 14.09)*
-- [ ] (K.53) [hedef: web] Sayfa verisi test sunucusunda yavaş: vitrin ~0,74 sn, ürün ~0,72 sn, katalog ~0,54 sn (DB'siz yasal
-  sayfa ~0,16 sn). Veritabanı barındırılan Supabase'te olduğundan sıralı her okuma bir ağ turu (~100 ms) ekliyor. Kalan: vitrinin
-  (`readHome`) sıralı turları ve çift okumaları (`category`, `bundle`, `discount`, `price`, stok toplamı), ürün detayının zinciri.
-  Sunucunun kendi payı (işlemci, bellek, Supabase'e gidiş-dönüş) içeriden ölçülmedi.
+- [ ] (K.53) [hedef: web] Sayfa verisi test sunucusunda yavaş: vitrin ~0,74 sn, katalog ~0,54 sn (DB'siz yasal sayfa ~0,16 sn).
+  Supabase istekleri Cloudflare'in Paris düğümünden geçiyor (açık bağlantıda istek ~45–55 ms) ve sıralı her okuma bir tur ekliyor.
+  Kalan: vitrinin (`readHome`) sıralı turları ve çift okumaları (`category`, `bundle`, `discount`, `price`, stok toplamı); native
+  katalog, vitrin ve paket uçlarında yer okuması kimliği bekliyor (ürün ucunun `readPlaceAlongside` deseni uygulanmadı); girişli
+  web ürün sayfasında okumalar layout'un oturum doğrulamasını bekliyor, `/auth/v1/user` aynı istekte iki kez çağrılıyor ve
+  profil → adres → yer → fiyat sırayla okunuyor (yerelde 7–9 tur, misafirde 3).
 - [ ] (K.55) [hedef: web] Görsel adresleri çizim anında kurulsun: ürün ve kategori görseli sayfa verisinde 7 kadraj × 5 genişlik
   hazır adres taşıyor, kart yalnız birini kullanıyor (katalog RSC yükünün %84'ü; sıkıştırılmış sayfada 10 KB, sunucuda Mac'te
   2,2 ms/sayfa). Veride künye (anahtar, sürüm, boyut, odak) kalır, adresi çizen bileşen kurar (Next `loader`, Cloudflare'in

@@ -4,7 +4,7 @@ import { CategoryImageService, CategoryService, serviceDb } from '@lezzet/databa
 import {
   getCatalogData,
   getProductDetail,
-  pricingViewerOf,
+  pricingViewerFor,
   toCategory,
   toWireCampaign,
   resolvePlaceWarehouses,
@@ -29,7 +29,7 @@ import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { recordNativeEvent } from '../../lib/analytics';
 import { decodeCursor, encodeCursor } from '../../lib/request';
-import { optionalCustomerId } from './auth';
+import { optionalCustomerProfile } from './auth';
 
 /**
  * Katalog uçları oturumsuz gezilir: kimliğin değiştirdiği tek şey fiyattır, erişim değil, bu yüzden geçersiz Bearer ziyaretçi
@@ -108,8 +108,19 @@ const ProductQuerySchema = z.object({
  * `auth.ts`te tek yerde durur; burada yalnız fiyat künyesine çevrilir ve vitrin ucu da aynı kapıyı kullanır.
  */
 export async function readViewer(db: SupabaseClient, authorization: string | undefined): Promise<PricingViewer> {
-  // Kimliksizde `pricingViewerOf` zaten `VISITOR` döner — ayrı bir kısa devre ikinci bir karar olurdu.
-  return pricingViewerOf(db, await optionalCustomerId(db, authorization));
+  // Kimliksizde `pricingViewerFor` zaten `VISITOR` döner — ayrı bir kısa devre ikinci bir karar olurdu.
+  return pricingViewerFor(db, await optionalCustomerProfile(db, authorization));
+}
+
+/** Yer kimliği beklemez; yalnız gel-al seçiliyken müşterinin izni için görüşün çözülmesini bekler. */
+async function readPlaceAlongside(
+  db: SupabaseClient,
+  opts: { postalCode: string | undefined; pickupWarehouseId: string | undefined },
+  viewer: Promise<PricingViewer>,
+): Promise<PlaceWarehouses> {
+  if (!opts.pickupWarehouseId) return readPlace(db, opts.postalCode);
+  const { place } = await readPlaceOrPickup(db, { ...opts, customerId: (await viewer).customerId });
+  return place;
 }
 
 export const catalog = new Hono<AppEnv>();
@@ -216,24 +227,21 @@ catalog.get('/products/:slug', async (c) => {
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   const db = serviceDb();
-  const viewer = await readViewer(db, c.req.header('authorization'));
-  const { place } = await readPlaceOrPickup(db, {
-    postalCode: c.req.query('postalCode'),
-    pickupWarehouseId: c.req.query('pickupWarehouseId'),
-    customerId: viewer.customerId,
-  });
-  const detail = await getProductDetail(db, {
-    locale: locale.data,
-    slug: c.req.param('slug'),
-    place,
+  // Kimlik, yer ve ürün birbirini beklemeden okunur; yalnız fiyat ve stok bağlamı yeri ve kimliği bekler.
+  const viewer = readViewer(db, c.req.header('authorization'));
+  const place = readPlaceAlongside(
+    db,
+    { postalCode: c.req.query('postalCode'), pickupWarehouseId: c.req.query('pickupWarehouseId') },
     viewer,
-  });
+  );
+  const detail = await getProductDetail(db, { locale: locale.data, slug: c.req.param('slug'), place, viewer });
   if (!detail) return fail(c, 'product_not_found', 404);
+  const [seenPlace, seenBy] = await Promise.all([place, viewer]);
 
   /* Ürün görüntülemesi native'de sunucudan atılır, çünkü detay ucu zaten bu istekte çağrılıyor ve istemci atıcısı aynı olayı ikinci
      kez sayardı. Ülke `null` geçer: `readPlace` yalnız depo döndürür, ülkeyi bilen uç onu doldurur. → BEKLEYEN(21.103) */
   void recordNativeEvent(
-    { db, channel: viewer.channel, customerId: viewer.customerId, place, locale: locale.data, country: null },
+    { db, channel: seenBy.channel, customerId: seenBy.customerId, place: seenPlace, locale: locale.data, country: null },
     {
       type: 'product_view',
       subjectType: 'product',

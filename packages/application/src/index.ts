@@ -255,10 +255,10 @@ export { resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } f
 export { getCatalogData, readCollectionHead } from './catalog/catalog';
 export type { CatalogInput, CatalogQuery } from './catalog/catalog';
 export { productIdOfCode } from './catalog/code-search';
-export { getProductDetail } from './catalog/product';
+export { findActiveProduct, getProductDetail } from './catalog/product';
 export type { ProductDetailInput } from './catalog/product';
 export { loadProductContext, listOfferProductIds } from './catalog/product-context';
-export { pricingViewerOf, VISITOR } from './catalog/pricing-viewer';
+export { pricingViewerFor, pricingViewerOf, VISITOR } from './catalog/pricing-viewer';
 export type { PricingViewer } from './catalog/pricing-viewer';
 export { readCostBasis } from './catalog/cost-basis';
 export {

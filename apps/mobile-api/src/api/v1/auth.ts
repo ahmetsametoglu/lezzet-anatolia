@@ -45,15 +45,18 @@ export async function bearerAuth(c: Context<V1Env>, next: Next): Promise<Respons
  * profil satırı yoksa ziyaretçiye düşer, çünkü 401 süresi dolmuş token'lı müşteriye vitrin yerine hata gösterirdi. Auth kimliği
  * müşteri kimliği değildir; zincir fiyat ve keşif uçlarının ortak kaynağı olarak tek yerde durur.
  */
-export async function optionalCustomerId(db: SupabaseClient, authorization: string | undefined): Promise<string | null> {
+export async function optionalCustomerProfile(db: SupabaseClient, authorization: string | undefined): Promise<UserProfile | null> {
   const token = bearerTokenOf(authorization);
   if (!token) return null;
 
   const { data, error } = await anonDb().auth.getUser(token);
   if (error || !data.user) return null;
 
-  const profile = await new UserProfileService(db).findByAuthUserId(data.user.id);
-  return profile?.id ?? null;
+  return new UserProfileService(db).findByAuthUserId(data.user.id);
+}
+
+export async function optionalCustomerId(db: SupabaseClient, authorization: string | undefined): Promise<string | null> {
+  return (await optionalCustomerProfile(db, authorization))?.id ?? null;
 }
 
 /**

@@ -11,7 +11,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { detectDevice } from '@/lib/device';
-import { availabilityOf, getProductDetail } from '@lezzet/application';
+import { availabilityOf, findActiveProduct, getProductDetail } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
 import { getProductScore, getReviewEligibility, listProductReviews } from '@/lib/feedback/product-feedback';
 import { currentCustomerId } from '@/lib/guard';
@@ -30,11 +30,22 @@ import messages from './messages.json';
  */
 const REVIEW_PAGE_SIZE = 6;
 
-/** Başlık bilgisi ile sayfa aynı ürünü okur; `cache` bunu istek başına tek okumaya indirir, yoksa ürün, fiyatları ve stokları iki kez okunurdu. */
-const readProduct = cache(async (locale: Locale, slug: string) => {
-  const [place, viewer] = await Promise.all([readPlaceWarehouses(), readPricingViewer()]);
-  return getProductDetail(serviceDb(), { locale, slug, place, viewer });
-});
+/** Ürün satırı istek başına bir kez: detay okuması ile yorumlar aynı satırı bekler. */
+const readActiveProduct = cache((slug: string) => findActiveProduct(serviceDb(), slug));
+
+/**
+ * Başlık bilgisi ile sayfa aynı ürünü okur; `cache` bunu istek başına tek okumaya indirir, yoksa ürün, fiyatları ve stokları iki kez
+ * okunurdu. Yer ve görüş söz olarak geçer ki ürün okuması oturumun çözülmesini beklemesin.
+ */
+const readProduct = cache(async (locale: Locale, slug: string) =>
+  getProductDetail(serviceDb(), {
+    locale,
+    slug,
+    place: readPlaceWarehouses(),
+    viewer: readPricingViewer(),
+    product: readActiveProduct(slug),
+  }),
+);
 
 interface ProductPageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -79,8 +90,20 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   void recordPageView('/product/[slug]', query);
 
   const t: Messages = messages[locale];
-  const [product, device] = await Promise.all([readProduct(locale, slug), detectDevice()]);
-  if (!product) notFound();
+  // Yorumlar ürün satırı bulununca başlar: 404'e düşecek sayfa için yorum sorgusu atılmaz, fiyat ve stok okuması da beklenmez.
+  const feedback = readActiveProduct(slug).then(
+    (listed) =>
+      listed &&
+      Promise.all([
+        getProductScore(listed.id),
+        // Dil zorunlu: yorumlar okuyucunun dilinde gösterilir, orijinal korunur ve çeviri yanına konur.
+        listProductReviews(listed.id, locale as PreferredLanguage, undefined, REVIEW_PAGE_SIZE),
+        currentCustomerId().then((customerId) => getReviewEligibility(customerId, listed.id)),
+      ]),
+  );
+  const [product, device, reviews] = await Promise.all([readProduct(locale, slug), detectDevice(), feedback]);
+  if (!product || !reviews) notFound();
+  const [score, page, eligibility] = reviews;
 
   // Prefetch/bot/personel elemesi kapıda: atıcı ne olduğunu söyler, neyin sayılacağına kapı karar verir.
   void recordEvent(
@@ -94,17 +117,6 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
     // Kalıbı olay kendisi geçer: render anında kapının `referer` türetimi bir önceki sayfayı gösterir.
     { path: '/product/[slug]' },
   );
-
-  /**
-   * Yorumlar ürün bulunduktan sonra okunur: 404'e düşecek sayfa için yorum sorgusu atılmaz.
-   */
-  const customerId = await currentCustomerId();
-  const [score, page, eligibility] = await Promise.all([
-    getProductScore(product.id),
-    // Dil zorunlu: yorumlar okuyucunun dilinde gösterilir, orijinal korunur ve çeviri yanına konur.
-    listProductReviews(product.id, locale as PreferredLanguage, undefined, REVIEW_PAGE_SIZE),
-    getReviewEligibility(customerId, product.id),
-  ]);
 
   return (
     <SiteFrame device={device} locale={locale} activeNav="catalog">
