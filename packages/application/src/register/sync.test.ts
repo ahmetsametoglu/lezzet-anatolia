@@ -8,6 +8,7 @@ import {
   ProductService,
   RegisterStoreService,
   RegisterTicketService,
+  SettingsService,
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
@@ -16,7 +17,7 @@ import { parisDateOf } from '@lezzet/helper';
 import type { PaymentMethod, RegisterQueue } from '@lezzet/types';
 import { closeRegisterDay } from './day-end';
 import { memoryRegister } from './memory-register.testkit';
-import { processQueueRow } from './sync';
+import { REGISTER_LIVE_FROM_KEY, processQueueRow, registerLiveFrom, setRegisterLiveFrom } from './sync';
 
 /**
  * Kasa eşitlemesi kuyruk satırından kasaya: fiş, ödeme satırı ve fiş dışı nakit doğru yazılır, yarıda kalan yazım kasadaki hâlinden
@@ -419,5 +420,24 @@ describe('gün sonu', () => {
     const kinds = result.stores.find((store) => store.warehouseId === warehouseId)!.differences;
     expect(kinds).toContainEqual({ kind: 'unknown_sale', saleId: manual });
     expect(kinds).toContainEqual({ kind: 'vat', vatRate: 20, oursCents: 0, registerCents: 500 });
+  });
+});
+
+describe('canlıya geçiş', () => {
+  it('kasayı kapatmak ayarı siler: değeri boş yazılamaz, okuma hemen kapalı görür', async () => {
+    const settings = new SettingsService(db);
+    const before = (await settings.listByKey(REGISTER_LIVE_FROM_KEY))[0]?.value as string | undefined;
+    try {
+      await setRegisterLiveFrom(db, '2026-09-30T22:00:00.000Z');
+      expect(await registerLiveFrom(db)).toBe('2026-09-30T22:00:00.000Z');
+
+      await setRegisterLiveFrom(db, null);
+
+      expect(await registerLiveFrom(db)).toBeNull();
+      expect(await settings.listByKey(REGISTER_LIVE_FROM_KEY)).toEqual([]);
+    } finally {
+      // Küresel satır: testten önceki değer geri konur.
+      await setRegisterLiveFrom(db, before ?? null);
+    }
   });
 });

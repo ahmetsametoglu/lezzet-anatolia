@@ -26,7 +26,7 @@ import {
   timelineNote,
   timelineSteps,
 } from './order-detail-labels';
-import type { OrderDetailView } from './order-detail-types';
+import type { OrderDetailView, OrderRegisterView } from './order-detail-types';
 import type { OrderDecision } from '@lezzet/domain-core';
 import type { OrderSource, OrderStatus } from '@lezzet/types';
 import { cardClass } from '@/components/operation/ui/card';
@@ -221,6 +221,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                     <span className="flex-none font-ops-body text-ops-xs font-medium text-ops-ink">{m.kind}</span>
                     <span className="min-w-0 flex-1 truncate font-ops-body text-ops-xs text-ops-body">
                       {m.accountName}
+                      {m.method ? ` · ${m.method}` : ''}
                     </span>
                     <span className={`font-ops-mono text-ops-sm ${m.isRefund ? 'text-ops-red' : 'text-ops-olive-dark'}`}>
                       {m.isRefund ? '−' : ''}
@@ -230,6 +231,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                 ))
               )}
             </div>
+            <RegisterRows register={order.register} />
           </section>
 
           <section className={cardClass()}>
@@ -701,6 +703,36 @@ function CreditRow({ label, value, tone }: { label: string; value: string; tone?
       <span className={`font-ops-mono text-ops-xs ${tone === 'red' ? 'font-semibold text-ops-red' : 'text-ops-ink'}`}>
         {value}
       </span>
+    </div>
+  );
+}
+
+/** Siparişin sertifikalı kasadaki izi: fiş numarası ve dijital fiş; kasaya yazılmayı bekliyorsa sebebi. */
+function RegisterRows({ register }: { register: OrderRegisterView }) {
+  if (register.tickets.length === 0 && register.waiting === null) return null;
+  return (
+    <div className="border-t border-ops-line">
+      {register.tickets.map((ticket) => (
+        <div key={ticket.seq} className="flex items-center gap-2.5 border-b border-ops-line-soft px-3.5 py-2.5 last:border-b-0">
+          <span className="flex-none font-ops-body text-ops-xs font-medium text-ops-ink">Kasa fişi {ticket.seq}</span>
+          <span className="min-w-0 flex-1 truncate font-ops-mono text-ops-micro text-ops-muted">
+            {ticket.written ? (ticket.saleNo ?? '—') : 'yazılıyor'}
+          </span>
+          {ticket.receiptUrl ? (
+            <a
+              href={ticket.receiptUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="cursor-pointer font-ops-body text-ops-xs font-medium text-ops-olive-dark hover:underline"
+            >
+              Dijital fiş ↗
+            </a>
+          ) : null}
+        </div>
+      ))}
+      {register.waiting ? (
+        <p className="px-3.5 py-2.5 font-ops-body text-ops-xs text-ops-amber-dark">Kasaya yazılmayı bekliyor: {register.waiting}</p>
+      ) : null}
     </div>
   );
 }

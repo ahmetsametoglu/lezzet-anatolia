@@ -120,7 +120,7 @@ aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yükl�
 | Konu | Sonuç |
 |---|---|
 | Satış aç → kalem → ödeme → kapat | Çalışıyor. Kapatma, her kalemin `stock_withdrawal = 1` olmasını istiyor (yoksa 422). Cevaplar: `{sale_id}`, `{id_sale_product_detail}`. |
-| Satış kaydı | `GET /sales/{id}`: günlük sıra numarası (`unique_sale_id`, ör. `2026-10-1-1`), gün sonu tarihi, kalem başına KDV, oran başına HT/KDV/TTC (`taxes`), ödemeler (`payment_total`), dijital fiş ve QR bağlantısı (`url_receipt`, `url_qrcode`). |
+| Satış kaydı | `GET /sales/{id}`: günlük sıra numarası (`unique_sale_id`, ör. `2026-10-1-1`), gün sonu tarihi, kalem başına KDV, oran başına HT/KDV/TTC (`taxes`), ödemeler (`payment_total`), dijital fiş ve QR bağlantısı (`url_receipt`, `url_qrcode`). Ödeme satırları (`payment_details`) ve bakiye (`balance`) yalnız `DIV` satışta gelir; taze açılan satış `DIV` değildir. |
 | Sipariş numarası (`ext_ref`) | 25 karakterde kesiliyor. Arama (`/sales/search/ext_ref/{q}`) "içerir" biçiminde: `…-S1` araması `…-S11`'i de getiriyor, tam eşleşme satış okunarak doğrulanır. |
 | Bölünmüş ödeme (`DIV`) | Çalışıyor (nakit 10 + kart 20). |
 | Eksik ve fazla ödeme | `DIV` satış eksik ödemeyle de kapanıyor; kalan `balance`ta duruyor, fişte "Reste" yazıyor. Kapanmış satışa sonradan ödeme satırı eklenebiliyor, eksi tutarlı da (fazla tahsilatın iadesi: bakiye −2,00 → 0,00; kasa sayımı ve Z bunu gösteriyor). Tek yöntemli satışa sonradan ödeme eklenemiyor. |
@@ -269,10 +269,13 @@ durur ve uyarır.
    giriş/çıkışı). Kasa sayımı hesabın bakiyesiyle karşılaştırılmaz: kapıda kart da aynı hesaba giriyor.
 3. **Bizim para ↔ ayna:** kuyrukta bekleyen sayı; gün kapanırken bekleyen para ertesi günün kasasına düşer.
 
-Fark `error_log`a uyarı olarak, özet `job_run`a yazılır; sistem ekranı satırı adım 6'da.
+Fark `error_log`a uyarı olarak, özet `job_run`a yazılır.
 
-**Ekranlar:** yeni ekran yok. Ayarlar: Hiboutik mağaza eşlemesi. Sipariş detayı: fiş numaraları ve dijital
-fiş bağlantısı. Sistem ekranı: kuyruk ve mutabakat durumu.
+**Ekranlar:** yeni ekran yok. Ayarlar › Kurulum: Hiboutik kartı (tesis ↔ mağaza ↔ çekmece eşlemesi, canlıya
+geçiş günü, kuyruk özeti, son eşitleme ve gün sonu turu); kuyruk özeti sistem ekranında değil kasanın yanında,
+çünkü çözümü (eşleme, canlıya geçiş) orada. Sipariş detayı: hareketin yöntemi, kasa fişinin günlük numarası,
+dijital fiş bağlantısı ve kasaya yazılmayı bekliyorsa sebebi. Sistem ekranı: gün sonu farkı ve beşinci
+denemede düşen yazım hata kaydı olarak.
 
 **Kod yerleşimi:**
 - `packages/domain-core/src/register/`: plan (ücretlenen kalem, kuruş bölmesi, kargo payı, fark, ödeme kodu,

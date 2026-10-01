@@ -8,6 +8,7 @@ import { SETTING_TABS, sectionTab } from './settings-layout';
 import { CardGrid, GridCell, SectionGrid, StaffCard } from './settings-sections';
 import { SiteImagesCard } from './site-images-card';
 import { McpCard } from './mcp-card';
+import { RegisterCard } from './register-card';
 import type { SettingsViewProps } from './settings-types';
 
 /**
@@ -83,6 +84,9 @@ export function SettingsDesktop({
               </GridCell>
               <GridCell>
                 <McpCard data={data.setup.mcp} />
+              </GridCell>
+              <GridCell wide>
+                <RegisterCard data={data.setup.register} />
               </GridCell>
             </CardGrid>
           ) : null

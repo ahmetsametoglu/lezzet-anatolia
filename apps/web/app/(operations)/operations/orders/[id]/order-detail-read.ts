@@ -8,6 +8,8 @@ import {
   OrderItemReturnService,
   OrderStatusLogService,
   ProductService,
+  RegisterQueueService,
+  RegisterTicketService,
   ProductVariantService,
   SettingsService,
   StockService,
@@ -26,6 +28,7 @@ import {
   type OrderItem,
   type OrderStatus,
   type OrderStatusLog,
+  type RegisterQueue,
   type Ticket,
 } from '@lezzet/types';
 import {
@@ -48,12 +51,14 @@ import {
   vatSplitOf,
 } from '@lezzet/domain-core';
 import { doorCheckOf } from '@lezzet/address';
-import { listOrderBoxes, readDeliveryProof, readOrderTracking, thumbnailImageUrl } from '@lezzet/application';
+import { listOrderBoxes, readDeliveryProof, readOrderTracking, registerLiveFrom, thumbnailImageUrl } from '@lezzet/application';
 import { toCents } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
 import { readCustomerTrust } from '@/lib/customer/trust';
+import { blockReasonOf } from '@/lib/register/labels';
 import { ticketsLink } from '../../tickets/tickets-url';
+import { methodLabel } from '../orders-labels';
 import type {
   OrderBundleGroup,
   OrderDetailView,
@@ -83,18 +88,22 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
   const { order, items } = found;
 
-  const [logs, returns, movements, accounts, batches, tickets, termDays, warehouseLabels, trust] = await Promise.all([
-    new OrderStatusLogService(db).listByOrder(orderId),
-    new OrderItemReturnService(db).listByOrders([orderId]),
-    new MoneyMovementService(db).listByOrder(orderId),
-    new AccountService(db).list(),
-    new OrderItemBatchService(db).listByOrder(orderId),
-    new TicketService(db).listByOrder(orderId),
-    new SettingsService(db).getNumber(PAYMENT_TERM_DAYS_KEY, PAYMENT_TERM_DAYS_DEFAULT),
-    // Kapalı depolar dahil: eski bir sipariş tesisi kapandı diye deposunu unutmaz.
-    readWarehouseLabels(),
-    readCustomerTrust(db, order.customerId, TRUST_PREVIEW_ROWS),
-  ]);
+  const [logs, returns, movements, accounts, batches, tickets, termDays, warehouseLabels, trust, registerTickets, registerQueue, liveFrom] =
+    await Promise.all([
+      new OrderStatusLogService(db).listByOrder(orderId),
+      new OrderItemReturnService(db).listByOrders([orderId]),
+      new MoneyMovementService(db).listByOrder(orderId),
+      new AccountService(db).list(),
+      new OrderItemBatchService(db).listByOrder(orderId),
+      new TicketService(db).listByOrder(orderId),
+      new SettingsService(db).getNumber(PAYMENT_TERM_DAYS_KEY, PAYMENT_TERM_DAYS_DEFAULT),
+      // Kapalı depolar dahil: eski bir sipariş tesisi kapandı diye deposunu unutmaz.
+      readWarehouseLabels(),
+      readCustomerTrust(db, order.customerId, TRUST_PREVIEW_ROWS),
+      new RegisterTicketService(db).listByOrder(orderId),
+      new RegisterQueueService(db).findByOrder(orderId),
+      registerLiveFrom(db),
+    ]);
 
   const variantIds = [...new Set(items.map((i) => i.variantId))];
   const bundleIds = [...new Set(items.flatMap((i) => (i.bundleId ? [i.bundleId] : [])))];
@@ -255,7 +264,17 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       accountName: accounts.find((a) => a.id === m.accountId)?.name ?? '—',
       amountCents: m.amountCents,
       isRefund: m.type === 'order_refund',
+      method: m.paymentMethod ? methodLabel(m.paymentMethod) : null,
     })),
+    register: {
+      tickets: registerTickets.map((ticket) => ({
+        seq: ticket.seq,
+        saleNo: ticket.uniqueSaleId,
+        receiptUrl: ticket.receiptUrl,
+        written: ticket.status === 'written',
+      })),
+      waiting: registerWaitingOf(registerQueue, liveFrom),
+    },
 
     timeline: timelineOf(logs, actorNames, tickets, order.status),
     /*
@@ -608,4 +627,13 @@ async function proofOf(raw: unknown): Promise<OrderDetailView['delivery']['proof
   const proof = await readDeliveryProof(raw);
   if (!proof) return null;
   return { when: proof.at, receivedBy: proof.receivedBy, kind: proof.kind, imageUrl: proof.imageUrl };
+}
+
+/** Kuyrukta bekleyen siparişin sebebi: kasa kapalıysa o, plan durduysa sebep, kasaya ulaşılamıyorsa deneme sayısı, yoksa sırada. */
+function registerWaitingOf(row: RegisterQueue | null, liveFrom: string | null): string | null {
+  if (!row) return null;
+  if (!liveFrom) return 'kasa kapalı, canlıya geçiş günü girilmedi';
+  if (row.attempts > 0 && !row.lastError?.startsWith('blocked:'))
+    return `kasaya ulaşılamadı, ${row.attempts}. denemeden sonra yeniden denenecek`;
+  return blockReasonOf(row.lastError) ?? 'sırada';
 }

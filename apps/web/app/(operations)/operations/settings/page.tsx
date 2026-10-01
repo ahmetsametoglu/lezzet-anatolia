@@ -16,6 +16,7 @@ import { SETTING_CATALOG } from './settings-catalog';
 import { toScopeOptions, toSettingRows, toStaffRows } from './settings-read';
 import { readSiteImages } from './site-images-read';
 import { readMcpPanel } from './mcp-read';
+import { readRegisterPanel } from './register-read';
 import { parseSettingsUrl } from './settings-url';
 import type { SettingsData, SetupData } from './settings-types';
 
@@ -75,6 +76,6 @@ async function readAllSettings(svc: SettingsService): Promise<Setting[]> {
 }
 
 async function readSetup(): Promise<SetupData> {
-  const [siteImages, mcp] = await Promise.all([readSiteImages(), readMcpPanel()]);
-  return { siteImages, mcp };
+  const [siteImages, mcp, register] = await Promise.all([readSiteImages(), readMcpPanel(), readRegisterPanel()]);
+  return { siteImages, mcp, register };
 }

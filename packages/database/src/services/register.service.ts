@@ -191,6 +191,23 @@ export class RegisterQueueService extends BaseDbService<RegisterQueue, never, Re
     return this.count();
   }
 
+  /** Planı duran satırlar (`blocked:<sebep>`); çözümleri bir para değişikliğidir, sebep ekrana gider. */
+  listBlocked(limit = 500): Promise<RegisterQueue[]> {
+    return this.getAll(undefined, { prefixFilters: [{ field: 'lastError', value: 'blocked:' }], limit });
+  }
+
+  /** Kasaya ulaşamayıp yeniden denenen satırlar; planı duran satır önceki deneme sayısını korur, o yüzden ayrılır. */
+  countFailing(): Promise<number> {
+    return this.count(undefined, {
+      rangeFilters: [{ field: 'attempts', operator: 'gt', value: 0 }],
+      orFilters: ['last_error.is.null,last_error.not.like.blocked:*'],
+    });
+  }
+
+  findByOrder(orderId: string): Promise<RegisterQueue | null> {
+    return this.getOneBy({ orderId });
+  }
+
   /** İşlenen satırı siler; işlem sürerken yeniden işaretlendiyse (`markedAt` değiştiyse) satır kalır ve sonraki tur yine işler. */
   async complete(id: string, markedAt: string): Promise<void> {
     await this.deleteWhere({ id, markedAt });

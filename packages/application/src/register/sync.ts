@@ -68,6 +68,20 @@ export async function registerLiveFrom(db: Db): Promise<string | null> {
   return liveFrom;
 }
 
+/** Canlıya geçiş anını yazar, `null` kasayı kapatır; ayarın değeri boş olamadığı için kapalı kasa satırın yokluğudur. */
+export async function setRegisterLiveFrom(db: Db, at: string | null): Promise<void> {
+  const settings = new SettingsService(db);
+  if (at) {
+    await settings.set(REGISTER_LIVE_FROM_KEY, at, {
+      scopeType: 'global',
+      description: 'Sertifikalı kasaya yazımın başladığı an; öncesinde açılan sipariş kasaya gitmez.',
+    });
+    return;
+  }
+  for (const row of await settings.listByKey(REGISTER_LIVE_FROM_KEY)) await settings.delete(row.id);
+  SettingsService.invalidate(REGISTER_LIVE_FROM_KEY);
+}
+
 export async function syncRegisterQueue(db: Db, register: CashRegister, opts: { now?: Date } = {}): Promise<Record<string, unknown>> {
   const liveFrom = await registerLiveFrom(db);
   if (!liveFrom) return { skipped: 'not_live' };

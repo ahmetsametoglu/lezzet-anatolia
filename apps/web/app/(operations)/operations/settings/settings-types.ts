@@ -4,6 +4,7 @@ import type { ExceptionScope, SettingDef, SettingValue } from './settings-catalo
 import type { SectionDef } from './settings-layout';
 import type { SiteImageView } from './site-images-read';
 import type { McpPanelData } from './mcp-read';
+import type { RegisterPanelData } from './register-read';
 import type { SettingsTab, SettingsUrlState } from './settings-url';
 
 // Ayarlar ekranının tipleri; giriş şemaları `packages/types`teki `Setting`/`UserProfile` şemalarından türer.
@@ -119,6 +120,7 @@ export interface SetupData {
   /** Vitrin görselleri: dört slot da gelir, boş olanlar dahil; boş slot listeden düşerse yükleme yolu da kaybolur. */
   siteImages: SiteImageView[];
   mcp: McpPanelData;
+  register: RegisterPanelData;
 }
 
 /** Bir konu kartı ve içinde çizilecek satırlar. */

@@ -98,6 +98,14 @@ export interface OrderMovementView {
   amountCents: number;
   /** İade mi (ekranda eksi ve kırmızı). */
   isRefund: boolean;
+  /** Ödeme yönteminin etiketi; yöntemi bilinmeyen harekette `null`. */
+  method: string | null;
+}
+
+/** Siparişin sertifikalı kasadaki izi: fişleri ve kasaya yazılmayı bekliyorsa sebebi (`null` = kasa siparişle aynı). */
+export interface OrderRegisterView {
+  tickets: { seq: number; saleNo: string | null; receiptUrl: string | null; written: boolean }[];
+  waiting: string | null;
 }
 
 /**
@@ -254,6 +262,7 @@ export interface OrderDetailView {
     vatTreatment: VatTreatment;
   };
   movements: OrderMovementView[];
+  register: OrderRegisterView;
 
   timeline: OrderTimelineStep[];
   /** Motorun izin verdiği geçişler — ekran YALNIZ bunları sunar. */

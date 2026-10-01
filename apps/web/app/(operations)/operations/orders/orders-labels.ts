@@ -37,6 +37,10 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   bank_transfer: 'havale',
 };
 
+export function methodLabel(method: PaymentMethod): string {
+  return METHOD_LABELS[method];
+}
+
 /**
  * Tahsilat cümlesi, üç hâl: para geldi, kapıda alınacak, vadesi var (belki geçti).
  * Tutar yalnız tahsil edilecekse yazılır: ödenmiş siparişte rakamı tekrar etmek sütunu okunmaz yapardı.
