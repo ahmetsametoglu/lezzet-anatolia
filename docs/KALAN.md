@@ -141,7 +141,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [ ] (14.6) **Teslimat özeti PDF:** kalemler + karşılanan miktarlar + `reference_no` + "resmî fatura değildir" ibaresi; teslimde e-postası olan müşteriye **otomatik** gönderim (parametrik `Setting`, varsayılan açık); kurye için indirilebilir/yazdırılabilir hâli
 - [ ] (14.8) **Kampanya e-postası elle gönderim aracı (admin):** alıcı listesi yalnız `marketing_consent.email` izinlilerden; içerik elle hazırlanır, önizleme + gönder; otomasyon/zamanlama **yok**
 - [ ] (14.9) **Bülten kayıt kutusu (site) + `marketing_consent` yazımı:** kutu baştan işaretsiz (AB açık eylem şartı); kayıtta `{granted, at, source}` yazılır — checkout/kayıt kutuları da aynı yazım fonksiyonunu kullanır
-- [ ] (14.11) **`notification-data` + `rewardCompletedOrder` terfisi (`@lezzet/application`)** *(mobil ucun ön şartı — koordinasyon defteri 08.08; kabul edildi)*: kurye/refund orkestrasyonları pakete terfi etti, yan etkileri port (`order/effects.ts`) — port boş kaldıkça `/api/v1/courier` teslimatı müşteriye mail atmıyor, puan yazmıyor (sessiz değil: süreç başına bir `logger.warn`). Web bugün etkilenmiyor: köprü kendi uygulamalarını çağırıyor. Terfi `@lezzet/notify` + `@lezzet/i18n` bağımlılığını pakete ekler; `17.4`'ün `rewardCompletedOrder`'ı aynı turda gider. **Stripe refunder TAŞINMAZ** — anahtar ve webhook bağlamı yüzeyin işidir, kalıcı port olarak kalır. Zamanlama: en geç kurye köprüsünün benimseme t…
 
 ## 15 · WhatsApp: Zemin ve Canlı Kanal
 
