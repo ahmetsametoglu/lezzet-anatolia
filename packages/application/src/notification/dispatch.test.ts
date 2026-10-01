@@ -4,7 +4,7 @@ import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { notificationSentence, notificationTitle, staffNotificationBrief } from '@lezzet/i18n';
 import { createNotifier, type NotifyDriver, type NotifyRecipient } from '@lezzet/notify';
 import { registerPushDevice, registerWebPushSubscription } from './devices';
-import type { TicketNotification, ZoneAvailableNotification } from '@lezzet/types';
+import { PUSH_CHANNEL, type TicketNotification, type ZoneAvailableNotification } from '@lezzet/types';
 import { dispatchCustomerNotification, dispatchStaffNotification, type StaffPushSenders } from './dispatch';
 
 /**
@@ -315,7 +315,7 @@ describe('personel fan-out', () => {
     expect(giden).toContainEqual({
       kanal: 'native',
       hedef: [telefon],
-      mesaj: { title: brief.title, body: brief.subtitle, data: { kind: 'stock_low', targetType: null, targetId: null, payload } },
+      mesaj: { title: brief.title, body: brief.subtitle, data: { kind: 'stock_low', targetType: null, targetId: null, payload }, channelId: PUSH_CHANNEL.operations },
     });
     expect(giden).toContainEqual({ kanal: 'web', hedef: [masa], mesaj: { title: brief.title, body: brief.subtitle, url: '/operations/procurement' } });
     expect(giden.flatMap((g) => g.hedef)).not.toContain(musteriUygulamasi);

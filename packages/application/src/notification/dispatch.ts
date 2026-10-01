@@ -14,7 +14,7 @@ import {
 } from '@lezzet/notify';
 import { notificationSentence, notificationTitle, opsNotificationHref, staffNotificationBrief } from '@lezzet/i18n';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
-import type { AppNotificationKind, NotificationTargetType, StaffRole, WebPushSubscription } from '@lezzet/types';
+import { PUSH_CHANNEL, type AppNotificationKind, type NotificationTargetType, type StaffRole, type WebPushSubscription } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ringNotificationsBell, ringStaffNotificationsBell } from '../realtime/bell';
 import { listSendablePushTargets, prunePushTargets } from './devices';
@@ -222,7 +222,7 @@ async function pushStaffRows(
       try {
         const devices = await listSendablePushTargets(db, profileId, 'operations');
         const results = await Promise.all([
-          ...(devices.native.length > 0 ? [senders.native(devices.native, { ...text, data: target })] : []),
+          ...(devices.native.length > 0 ? [senders.native(devices.native, { ...text, data: target, channelId: PUSH_CHANNEL.operations })] : []),
           ...(devices.web.length > 0 ? [senders.web(devices.web, { ...text, url })] : []),
         ]);
         await pruneGone(db, results);

@@ -16,6 +16,12 @@ export type PushPlatform = z.infer<typeof PushPlatformEnum>;
 export const PushAppEnum = z.enum(['customer', 'operations']);
 export type PushApp = z.infer<typeof PushAppEnum>;
 
+/**
+ * Android bildirim kanalı: uygulama kaydolurken kurar, sunucu cihaz bildirimini ona gönderir. Operasyonunki ayrıdır ve yüksek önemle
+ * kurulur ki personel haberi başka bir uygulama açıkken de ekranın üstüne düşsün; Android var olan kanalın önemini sonradan yükseltmez.
+ */
+export const PUSH_CHANNEL: Record<PushApp, string> = { customer: 'default', operations: 'personel' };
+
 /** Tarayıcıların bildirim servisleri (Chrome, Safari, Firefox, Edge). */
 const PUSH_SERVICE_HOSTS = ['fcm.googleapis.com', 'push.apple.com', 'push.services.mozilla.com', 'notify.windows.com'];
 

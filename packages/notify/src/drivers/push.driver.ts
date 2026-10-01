@@ -19,6 +19,8 @@ export interface DevicePushMessage {
   body?: string;
   /** Dokunuşun adresi: uygulama bildirime dokununca onu okuyup ilgili ekrana gider. */
   data?: Record<string, unknown>;
+  /** Android kanalı; uygulamanın kurduğu kanalla aynı kimlik (`PUSH_CHANNEL`). */
+  channelId?: string;
 }
 
 export interface PushDriverOptions {

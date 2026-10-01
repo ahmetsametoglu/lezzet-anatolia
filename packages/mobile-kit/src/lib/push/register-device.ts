@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import type { PushApp } from '@lezzet/types';
+import { PUSH_CHANNEL, type PushApp } from '@lezzet/types';
 
 import { registerPushDevice, removePushDevice } from '../api/notifications';
 import { deviceStore, DEVICE_STORE_KEYS } from '../storage/device-store';
@@ -25,9 +25,9 @@ export async function ensurePushRegistration(app: PushApp): Promise<void> {
 
   try {
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.DEFAULT,
+      await Notifications.setNotificationChannelAsync(PUSH_CHANNEL[app], {
+        name: app === 'operations' ? 'Operasyon bildirimleri' : 'default',
+        importance: app === 'operations' ? Notifications.AndroidImportance.HIGH : Notifications.AndroidImportance.DEFAULT,
       });
     }
 
