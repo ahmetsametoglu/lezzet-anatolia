@@ -40,6 +40,7 @@ let productId: string;
 let variantId: string;
 let cashAccountId: string;
 let bankAccountId: string;
+const ownTestRegisters: { warehouseIds: string[]; accountIds: string[] } = { warehouseIds: [], accountIds: [] };
 let shippingBefore: string[] = [];
 let orderCounter = 0;
 
@@ -83,8 +84,8 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: [customerId],
-    accountIds: [cashAccountId, bankAccountId],
-    warehouseIds: [warehouseId, unmappedWarehouseId],
+    accountIds: [cashAccountId, bankAccountId, ...ownTestRegisters.accountIds],
+    warehouseIds: [warehouseId, unmappedWarehouseId, ...ownTestRegisters.warehouseIds],
   });
 });
 
@@ -384,6 +385,34 @@ describe('fiş dışı nakit', () => {
     expect(tillsOf(change.id)).toHaveLength(1);
   });
 
+  it('ay dönümü gecesi cevabı kaybolan kasa hareketi Paris ayında bulunur, ikinci kez yazılmaz', async () => {
+    // Paris'te 1 Kasım 00:30, UTC'de hâlâ 31 Ekim. Kendi çekmecesi var ki yazımı dosyanın gün sonu mutabakatına girmesin.
+    const night = new Date('2026-10-31T23:30:00.000Z');
+    const nightly = memoryRegister({ now: () => night });
+    const nightWarehouseId = (await createTestWarehouse(db, { label: 'KASA-GECE' })).id;
+    const nightCashAccountId = (await new AccountService(db).insert({ name: `Gece çekmecesi ${stamp}`, type: 'cash' })).id;
+    ownTestRegisters.warehouseIds.push(nightWarehouseId);
+    ownTestRegisters.accountIds.push(nightCashAccountId);
+    await new RegisterStoreService(db).save({
+      warehouseId: nightWarehouseId,
+      externalStoreId: Number(String(stamp).slice(-9)) + 1,
+      cashAccountId: nightCashAccountId,
+    });
+    const change = await movements.insert({
+      accountId: nightCashAccountId,
+      direction: 'in',
+      amountCents: 1500,
+      type: 'capital',
+      description: 'Gece bozukluğu',
+    });
+    const row = (await queueRowOf('movement_id', change.id))!;
+    nightly.failOn('moveCash', 'after');
+
+    expect(await processQueueRow(db, nightly.register, row, { liveFrom: LIVE_FROM, now: night })).toBe('failed');
+    expect(await processQueueRow(db, nightly.register, row, { liveFrom: LIVE_FROM, now: night })).toBe('written');
+    expect(nightly.tills.filter((till) => till.label.endsWith(`#${change.id.slice(0, 8)}`))).toHaveLength(1);
+  });
+
   it('B2C nakdi fişle girer, kasa hareketi olmaz; B2B nakdi kasa hareketidir', async () => {
     const b2c = await newOrder();
     const b2b = await newOrder({ channel: 'b2b' });
@@ -415,6 +444,7 @@ describe('gün sonu', () => {
     });
     await runRow('movement_id', deposit.id);
     const date = parisDateOf(new Date());
+    const storeId = Number(String(stamp).slice(-9));
     const closeDay = vi.spyOn(fake.register, 'closeDay');
 
     const first = await closeRegisterDay(db, fake.register, { date, close: true });
@@ -422,7 +452,8 @@ describe('gün sonu', () => {
 
     expect(first.stores.find((store) => store.warehouseId === warehouseId)).toEqual({ warehouseId, closed: true, differences: [] });
     expect(second.stores.find((store) => store.warehouseId === warehouseId)).toEqual({ warehouseId, closed: true, differences: [] });
-    expect(closeDay).toHaveBeenCalledTimes(1);
+    // Paylaşılan veritabanında başka eşlenmiş mağaza da olabilir; sayılan yalnız bu dosyanın mağazası.
+    expect(closeDay.mock.calls.filter(([id]) => id === storeId)).toHaveLength(1);
     closeDay.mockRestore();
   });
 

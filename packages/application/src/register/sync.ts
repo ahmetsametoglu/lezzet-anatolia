@@ -12,6 +12,7 @@ import {
   type Db,
 } from '@lezzet/database';
 import { planRegister, splitRegisterLine, type RegisterBlockReason, type RegisterMovement } from '@lezzet/domain-core';
+import { parisDateOf } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type {
   MoneyMovement,
@@ -467,15 +468,17 @@ async function writeCashOp(db: Db, register: CashRegister, now: Date, insert: Re
   await completeCashOp(db, register, op, now);
 }
 
-/** Yarıda kalan kasa hareketi kasadaki açıklamasından bulunur; ay dönümünde yazılmış olabileceği için iki ay aranır. */
+/**
+ * Yarıda kalan kasa hareketi kasadaki açıklamasından bulunur. Kasa Paris saatini tutar ve hareket ay dönümünde yazılmış olabilir; bu
+ * yüzden Paris takviminde iki ay aranır.
+ */
 async function completeCashOp(db: Db, register: CashRegister, op: RegisterCashOp, now: Date): Promise<void> {
   const store = await new RegisterStoreService(db).findByWarehouse(op.warehouseId);
   if (!store) throw new Error(`kasa: kasa hareketinin mağaza eşlemesi yok (${op.id})`);
-  const months = [...new Map([new Date(op.createdAt), now].map((at) => [`${at.getUTCFullYear()}-${at.getUTCMonth()}`, at])).values()];
-  for (const at of months) {
-    const found = (await register.listCashMoves(store.externalStoreId, { year: at.getUTCFullYear(), month: at.getUTCMonth() + 1 })).find(
-      (move) => move.label === op.label,
-    );
+  const months = [...new Set([new Date(op.createdAt), now].map((at) => parisDateOf(at).slice(0, 7)))];
+  for (const month of months) {
+    const [year, monthNo] = month.split('-').map(Number) as [number, number];
+    const found = (await register.listCashMoves(store.externalStoreId, { year, month: monthNo })).find((move) => move.label === op.label);
     if (found) {
       await new RegisterCashOpService(db).update({ id: op.id, externalTillId: found.tillId, status: 'written' });
       return;

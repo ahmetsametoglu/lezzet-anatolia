@@ -4,7 +4,7 @@ import type { CashRegister } from './port';
 
 /**
  * Testlerin bellek içi kasası: Hiboutik'in ölçülen davranışını taklit eder (kapanmış satışa kalem eklenmez ama ödeme satırı eklenir,
- * arama "içerir" biçimindedir). `failOn` yarıda kesilen yazımı kurar: çağrı yazmadan ya da yazdıktan sonra fırlatır.
+ * arama "içerir" biçimindedir). `failOn` yarıda kesilen yazımı kurar: çağrı yazmadan ya da yazdıktan sonra fırlatır. `now` kasanın saatidir.
  */
 
 interface MemorySale {
@@ -29,7 +29,8 @@ interface MemoryTill {
 const localTime = (at: Date): string =>
   `${parisDateOf(at)} ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', timeStyle: 'medium' }).format(at)}`;
 
-export function memoryRegister() {
+export function memoryRegister(opts: { now?: () => Date } = {}) {
+  const clock = opts.now ?? (() => new Date());
   let nextId = 1;
   const products = new Map<number, { name: string; priceCents: number; vatRate: number; refExt: string }>();
   const sales = new Map<number, MemorySale>();
@@ -103,7 +104,7 @@ export function memoryRegister() {
         const sale = saleOf(input.saleId);
         if (!sale.divided) throw new Error('ödeme satırı yalnız DIV satışa eklenir');
         const paymentId = nextId++;
-        sale.payments.push({ paymentId, method: input.method, amountCents: input.amountCents, at: new Date() });
+        sale.payments.push({ paymentId, method: input.method, amountCents: input.amountCents, at: clock() });
         return paymentId;
       }),
     deletePayment: (paymentId) =>
@@ -112,7 +113,7 @@ export function memoryRegister() {
         if (!sale || sale.closedAt) throw new Error(`ödeme satırı silinemez (${paymentId})`);
         sale.payments = sale.payments.filter((payment) => payment.paymentId !== paymentId);
       }),
-    closeSale: (saleId) => run('closeSale', () => void (openSaleOf(saleId).closedAt = new Date())),
+    closeSale: (saleId) => run('closeSale', () => void (openSaleOf(saleId).closedAt = clock())),
     readSale: (saleId) =>
       run('readSale', () => {
         const sale = sales.get(saleId);
@@ -132,7 +133,7 @@ export function memoryRegister() {
     moveCash: (input) =>
       run('moveCash', () => {
         const tillId = nextId++;
-        tills.push({ ...input, tillId, at: new Date() });
+        tills.push({ ...input, tillId, at: clock() });
         return tillId;
       }),
     listCashMoves: (storeId, month) =>
@@ -165,7 +166,7 @@ export function memoryRegister() {
         };
       }),
     dayClosedAt: (storeId, date) => run('dayClosedAt', () => closedDays.get(`${storeId}:${date}`) ?? null),
-    closeDay: (storeId, date) => run('closeDay', () => void closedDays.set(`${storeId}:${date}`, localTime(new Date()))),
+    closeDay: (storeId, date) => run('closeDay', () => void closedDays.set(`${storeId}:${date}`, localTime(clock()))),
   };
 
   return {
