@@ -45,7 +45,7 @@
 
 | # | Karar | Sonucu |
 |---|---|---|
-| 1 | **Kasa Hiboutik; bütün ödemeler oraya yazılır** — nakit, kapıda kart, online, kanal fark etmez | Yasal kayıt Hiboutik'te. Bizdeki tahsilat kaydı iç kontrol aynası olarak kalır; bunun için muhasebeciye soru gitmez. Hiboutik'in NF525 sertifikasını kullanıcı doğruladı. |
+| 1 | **Kasa Hiboutik; bütün B2C ödemeleri oraya yazılır** — nakit, kapıda kart, online | Yasal kayıt Hiboutik'te. Bizdeki tahsilat kaydı iç kontrol aynası olarak kalır; bunun için muhasebeciye soru gitmez. Hiboutik'in NF525 sertifikasını kullanıcı doğruladı. |
 | 2 | **Muhasebe Pennylane; kurulumunu kullanıcı yürütür** | Pennylane hem muhasebe yazılımı hem kayıtlı platform (PA): e-fatura alımı bugün, düzenleme ve e-reporting 2027'de. Aylık muhasebe ve KDV beyanı (CA3) Pennylane'den çıkar → **canlı öncesi şart.** |
 | 3 | **Hiboutik ↔ Pennylane ve banka ↔ Pennylane doğrudan konuşur** | Bu iki akış için bizden kod yok; sistemimiz muhasebe işine karışmaz. |
 | 4 | **Pennylane'e bizden giden: alış faturası ve eşleşme** | Yabancı ve e-faturaya geçmemiş tedarikçinin PDF faturası bizden yüklenir. Fransız tedarikçinin e-faturası Pennylane'e platformdan gelir; biz okuruz, yüklemeyiz. |
@@ -54,14 +54,15 @@
 | 7 | **Revolut: çevrim içi ödeme + kapıda kart + banka** | Stripe'ın yerini alır; Stripe'taki sipariş başına defter düzeni aynen sürer. Revolut nakit almaz, Fransa'da nakit yatırma da kalktı → **nakit için Crédit Mutuel kalır.** Revolut hesap açılışı kullanıcıda. |
 | 8 | **Revolut ↔ Pennylane bağlantısında yalnız banka akışı açık** | "Harcamalar" modülü ve Revolut'tan Pennylane'e fatura aktarımı kapalı: ikisi de bizim yüklediğimiz faturanın ikizini üretir. |
 | 9 | **SumUp kasa olarak yok** | Genel API'si kasaya satış yazmıyor; Fransa'daki POS Pro (eski Tiller) 2026 sonunda kapanıyor, yeni entegrasyon talebi 2027'nin ikinci çeyreğinden itibaren. O tarihte yeniden bakılabilir. |
-
-**Açık karar:** B2B faturasının 2027'de nereden kesileceği (Pennylane mi Hiboutik mi) — §7.
+| 10 | **B2B Hiboutik'e yazılmaz** (01.10) | Kasa yükümlülüğü B2B'yi kapsamıyor (BOFiP §10). B2B faturası bugünkü gibi Pennylane'de kesilir; müşteri alacağı ve vade orada izlenir, 2027'de e-fatura olarak da oradan gider. Kapıda nakit alınan B2B parası Hiboutik kasasına yalnız kasa girişi olarak yazılır. |
+| 11 | **Hediye sipariş ödemesiz kapanır** (01.10) | Kasaya para girmez, Hiboutik'e bir şey yazılmaz; mal hediye olarak stoktan çıkar, muhasebeci hediye gideri olarak işler. DOMAIN §9'daki "parasını patron öder, muhasebe aktarımına girmez" kuralının yerine geçer. |
+| 12 | **Kurye nakdi farkı açıklamalı kasa hareketiyle yazılır** (01.10) | Sefer kapanışında nakit eksik ya da fazla çıkarsa fark bizde nakit hesabına hareket olarak, Hiboutik'e "Kurye farkı — sefer X" açıklamalı kasa çıkışı ya da girişi olarak yazılır. Muhasebeci kasa farkı ya da kurye alacağı olarak işler. Kart farkı kasaya dokunmaz. |
 
 ## 3. Veri akışı
 
 | # | Akış | Yön | Bizden kod | Dayanak |
 |---|---|---|---|---|
-| 1 | Her ödeme → kasa | biz → Hiboutik | var | Hiboutik API: `/sales`, `/sales/add_product`, `PUT /sale/{id}`, `/sales/close` |
+| 1 | Her B2C ödemesi → kasa | biz → Hiboutik | var | Hiboutik API: `/sales`, `/sales/add_product`, `PUT /sale/{id}`, `/sales/close` |
 | 2 | Satış → muhasebe | Hiboutik → Pennylane | yok | Pennylane, Chift üzerinden günlük Z kayıtlarını (*tickets Z*) çeker |
 | 3 | Banka → muhasebe | Revolut, Crédit Mutuel → Pennylane | yok | Revolut'un resmî Pennylane bağlantısı (Open Banking); Crédit Mutuel toplayıcı (Powens / Bridge) ile |
 | 4 | Kart tahsilatı → bizim defter | Revolut Merchant API → biz | var | ödeme nesnesinde komisyon (`fees`); para 24 saat içinde Business içindeki Merchant hesabına, oradan ana hesaba |
@@ -97,10 +98,10 @@
 | Faz | İş | Başlıca yerler | Ön şart |
 |---|---|---|---|
 | 0 | **Erişim ve ölçüm.** Hesaplar: Hiboutik demo modunda (API için Premium, ikincil kaynak), Pennylane test ortamı ve API anahtarı (API Essentiel planda ve üstünde), Revolut deneme hesabı (asıl hesaptan bağımsız, anında). §6'daki soruların ölçümü; çıktı ölçüm tablosu ve tasarım kararları. | kök `.env` (değişken adları kullanıcıdan) | Hesapları kullanıcı açar |
-| 1 | **Hiboutik kasa.** Mağaza = depo eşlemesi (mağaza API'den açılmıyor, elle kurulur); ödeme yöntemi kodları (nakit, kapıda kart, online); ürün aynası (varyant ↔ Hiboutik ürün numarası eşlemesi bizde, stok Hiboutik'te tutulmaz); satış yazma (tahsilat kapısından; `ext_ref` ile tekrar koruması; Hiboutik'e gidemeyen satış için yeniden deneme kuyruğu); iptal ve iade; kasa hareketleri (bozukluk, bankaya yatırma); depo başına günlük mutabakat (bizim toplamlar ↔ Hiboutik Z). | `payment.ts` ve çağıranları; yeni Hiboutik adaptörü; migration (siparişte Hiboutik satış numarası, kuyruk) | Faz 0 Hiboutik ölçümü |
+| 1 | **Hiboutik kasa.** Tasarım §7: sipariş başına durum farkı, kasa aynası, ürün ve mağaza eşlemesi, kasa hareketleri, günlük mutabakat, gün kapanışı. | domain-core `register/`; migration (kasa tabloları, tetikleyici, hareketin ödeme yöntemi); Hiboutik uyarlaması; backend cron'ları | Faz 0 Hiboutik ölçümü (tamam) |
 | 2 | **Pennylane.** Tedarikçi eşleme (`POST /suppliers`); belgeye KDV oranlı satır; PDF yükleme (yabancı ve e-faturasız tedarikçi; fotoğraf PDF'e çevrilir); yüklemeden önce mükerrer kontrolü; e-fatura okuma ve mal kabule bağlama; banka hareketi okuma; eşleşme yazma; hesap başına "hareket gelmiyor" uyarısı. | `money_document` şeması; para modülü; yeni Pennylane adaptörü | Faz 0 Pennylane ölçümü |
 | 3 | **Revolut.** Çevrim içi ödeme Stripe yerine (Merchant API: sipariş, kart alanı, Apple / Google Pay, webhook, iade); kapıda kart (Terminal'e tutar gönderme ya da elle onay + sonradan doğrulama); defter düzeni (brüt tahsilat · komisyon · Merchant'tan ana hesaba aktarma). | `payment-gateway.ts`; web ve mobil ödeme ekranları; `stripe-webhook.ts`'in karşılığı | Faz 0 Revolut ölçümü; canlı için asıl hesap |
-| 4 | **2027.** B2B e-fatura düzenleme ve e-reporting: kim gönderecek (Pennylane / Hiboutik), bağlantı. | — | Son tarih 01.09.2027 |
+| 4 | **2027.** B2B e-faturası Pennylane'den (10. karar): siparişten Pennylane faturasına bağlantı gerekip gerekmediği. B2C e-reporting: Hiboutik'in Z verisi Pennylane'e gidiyor; Pennylane'in bunu idareye e-reporting olarak iletip iletmediği bakılacak. | — | Son tarih 01.09.2027 |
 
 - **Sıra 1 → 2 → 3.** Hiboutik, sağlayıcıdan bağımsız tahsilat kapısına oturduğu için Revolut'tan önce
   yapılması ek iş doğurmaz. Faz 1–3 canlı öncesi şart; Revolut geçişi canlıdan önce en ucuz.
@@ -111,16 +112,21 @@
 
 ## 6. Ölçülecekler (Faz 0)
 
-**Hiboutik — ölçüldü (01.10, demo hesap `lezzetanatolie`).** Betikler `.test-results/hiboutik-olcum.mjs` ve
-`hiboutik-olcum-iade.mjs`, raporlar aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yüklüyor,
+**Hiboutik — ölçüldü (01.10, demo hesap `lezzetanatolie`).** Betikler `.test-results/hiboutik-olcum*.mjs`, raporlar
+aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yüklüyor,
 309 işlem); `/docapi/json/` eski sürüm (228 işlem, yorum satırına alınmış).
 
 | Konu | Sonuç |
 |---|---|
 | Satış aç → kalem → ödeme → kapat | Çalışıyor. Kapatma, her kalemin `stock_withdrawal = 1` olmasını istiyor (yoksa 422). Cevaplar: `{sale_id}`, `{id_sale_product_detail}`. |
 | Satış kaydı | `GET /sales/{id}`: günlük sıra numarası (`unique_sale_id`, ör. `2026-10-1-1`), gün sonu tarihi, kalem başına KDV, oran başına HT/KDV/TTC (`taxes`), ödemeler (`payment_total`), dijital fiş ve QR bağlantısı (`url_receipt`, `url_qrcode`). |
-| Sipariş numarası (`ext_ref`) | 25 karakterde kesiliyor. Kısa numarayla arama (`/sales/search/ext_ref/{q}`) satışı buluyor: tekrar koruması mümkün. |
+| Sipariş numarası (`ext_ref`) | 25 karakterde kesiliyor. Arama (`/sales/search/ext_ref/{q}`) "içerir" biçiminde: `…-S1` araması `…-S11`'i de getiriyor, tam eşleşme satış okunarak doğrulanır. |
 | Bölünmüş ödeme (`DIV`) | Çalışıyor (nakit 10 + kart 20). |
+| Eksik ve fazla ödeme | `DIV` satış eksik ödemeyle de kapanıyor; kalan `balance`ta duruyor, fişte "Reste" yazıyor. Kapanmış satışa sonradan ödeme satırı eklenebiliyor, eksi tutarlı da (fazla tahsilatın iadesi: bakiye −2,00 → 0,00; kasa sayımı ve Z bunu gösteriyor). Tek yöntemli satışa sonradan ödeme eklenemiyor. |
+| Kalem KDV'si | Kalem bazında değiştirilebiliyor (`PUT /sale_line_item/{id}`, `vat` = oran, 0 < v < 1); vergi kimliğiyle reddediliyor. Sıfır oran kalemde verilemiyor, satış düzeyinde `duty_free_sale`. |
+| Birim fiyat | Kuruşa yuvarlanıyor: 3 × 9,6667 → 29,01. Tam tutar için kalem ikiye bölünür (2 × 9,67 + 1 × 9,66). |
+| İndirim | Kalemdeki `discount` fiyatı değiştirmiyor; Hiboutik onu "katalog fiyatı − satış fiyatı" olarak kendisi yazıyor, gün sonu indirim raporu bundan çıkıyor. İndirim satış fiyatına işlenir. |
+| Fiş | Dijital fiş ürün adını, toplamı, KDV'yi, ödemeleri ve kalanı gösteriyor; kalem açıklaması (`product_comments`) görünmüyor. |
 | B2B KDV hariç fiyat | `prices_without_taxes = 1`: 10,00 HT → 10,55 TTC, doğru. |
 | Almanya'ya ters yükleme | `duty_free_sale = 1`: KDV 0, ama KDV kodu `E` (muaf) yazılıyor, AB içi işlem kodu değil. |
 | Tam iptal | `POST /sales/void`: eksi tutarlı ters satış, aynı ödeme yöntemi, yeni sıra numarası, gerekçe iz kaydında. |
@@ -138,11 +144,9 @@
 **Hiboutik — açık kalan:**
 - Gün kapanışı, mali arşiv ve kapanış sonrası kasa defteri yalnız üretim hesabında görülebilir.
 - Ters yüklemenin `E` kodu 2027 e-fatura / e-reporting için yeterli mi, Faz 4'te bakılacak.
-- Paket ve kargo ücretinin satır olarak yazılışı.
-- Çağrı sınırı: satış başına kalem + 5 çağrı, toplu uç yok. Ayda 10.000 çağrı (ikincil kaynak) ve
-  ayda 600 satışta ortalama 11 kaleme kadar sığar.
-- Kurye nakdi: Hiboutik'te kurye ara kasası yok; kuryenin eksik teslim ettiği nakdin kayda nasıl
-  yansıyacağı (açıklamalı kasa çıkışı ya da başka yol) — Faz 1 tasarımında karara bağlanır.
+- Çağrı sınırı: fiş başına 6 çağrı + kalem başına 1 (bölünen ya da KDV'si değişen kalem 1 daha), toplu
+  uç yok. Ayda 600 siparişte 8 kalemle ~8.400 çağrı; kota (ikincil kaynakta ayda 10.000) canlı planla
+  doğrulanacak.
 
 **Pennylane** (test ortamı):
 - E-fatura okumada fatura satırları, PDF bağlantısı ve e-fatura alanları geliyor mu (veri modelinde
@@ -158,7 +162,128 @@
   gönderme.
 - Android'de Google Pay, itiraz akışı.
 
-## 7. Riskler
+## 7. Faz 1 tasarımı — Hiboutik kasa (01.10)
+
+**İlke: sipariş başına durum farkı.** Hiboutik'e hareket başına olay yazılmaz. Her turda siparişin bugünkü
+hâli (ücretlenen kalemler ve yönteme göre net para) Hiboutik'e yazılmış olanla karşılaştırılır, yalnız
+fark yazılır. Hareketler silinebildiği ve yutulabildiği için (ekstre birleştirmesi, `absorb_provisional_movement`)
+hareket başına kayıt mükerrer üretirdi; durum farkında tekrar eden tur, yarıda kalan yazım ve sonradan
+düzeltilen hareket kendiliğinden doğru sonuca iner.
+
+**Kapsam:** B2C siparişlerin bütün tahsilat ve iadeleri (çevrim içi, kapıda nakit ve kart, gel-al, kapı
+önü ve araç satışı) ve eşlenmiş kasaların öteki nakit hareketleri. B2B siparişi fiş olmaz (10. karar);
+hediye sipariş hiç para görmez (11. karar). Canlıya geçiş anı ayardır; öncesindeki hareketler yazılmaz.
+
+**Akış:**
+1. `money_movement`ta sipariş parası yazılınca, değişince ya da silinince tetikleyici siparişi kasa
+   kuyruğuna işaretler; eşlenmiş nakit hesabının öteki hareketleri de kuyruğa düşer. Aynı işlemde olduğu
+   için kuyruğa düşmeyen para kalmaz.
+2. Backend cron'u (`register-sync`, dakikada bir) kuyruğu sırayla işler: motor planı çıkarır, Hiboutik
+   uyarlaması yazar, sonuç bizdeki kasa aynasına geçer. Hiç para görmemiş sipariş yazılmaz.
+3. **Kalem farkı varsa yeni fiş** (Hiboutik satışı): fark kalemleri (artı ya da eksi) ve yöntem
+   farkı kadar ödeme satırı. İade, eksi kalemli fiştir; `void` kullanılmaz, çünkü iadeyi asıl ödemenin
+   yöntemine yazıyor, oysa operatör kartla ödenmiş siparişi nakit iade edebilir (DOMAIN §8).
+4. **Yalnız ödeme farkı varsa** (kalan borcun ödenmesi, fazla tahsilatın iadesi) siparişin son fişine
+   ödeme satırı eklenir. Her fiş `DIV` açılır: tutarlar açık yazılır, eksik ya da fazla ödeme fişin
+   bakiyesinde görünür ve sonraki ödeme satırıyla kapanır.
+
+**Ücretlenen kalem motorun tanımıdır** (`fulfilledLineAmountCents`, `isFulfillmentSettled`): hazırlık
+kesinleşmeden sipariş edilen adet, sonra giden eksi müşteride kalan; iptalde sıfır; kargo ancak ücretlenen
+kalem varsa. Hiboutik kalemi:
+- Tutar indirim payı düşülmüş tutardır. Birim fiyat kuruşa bölünmüyorsa kalem ikiye ayrılır.
+- Paket kalemleri zaten ayrı `order_item`, ayrı yazılır.
+- Kargo, KDV oranlarına `vatLinesOf` ile aynı ağırlıkla bölünür; oran başına bir "Frais de livraison"
+  kalemi. Kalem değişince kargonun oran payı da değişir, fark iade fişinde düzeltilir.
+- Kalemler türetilen tutarı tutmazsa fark "Remise" kalemiyle kapanır ve uyarı yazılır.
+
+**Ödeme kodu hareketin yönteminden:** nakit `ESP`, kapıda ve tezgâhta kart `CB`, çevrim içi `WEB`, havale
+`VIR`. Yöntem bugün siparişte duruyor ve sonraki tahsilatta üzerine yazılıyor (kapıda nakit ve kart aynı
+hesaba giriyor) → `money_movement`a `payment_method` kolonu; tahsilat kapısı (`recordOrderPayment`,
+`recordOrderRefund`) onu çağıranlardan alır. İadede: kasa hesabından `ESP`, sağlayıcıdan asıl ödemenin
+yöntemi.
+
+**Eşlemeler (bizde):**
+- **Mağaza:** tesis deposu ↔ Hiboutik mağazası ↔ o kasanın nakit hesabı. Araç satışı aracın ana
+  deposunun mağazasına yazılır. Eşlemesiz depodaki sipariş beklemede kalır ve uyarı verir.
+- **Ürün:** varyant ↔ Hiboutik ürün numarası; ilk satışta açılır. Stok takipsiz; ad Fransızca ürün adı ve
+  boy (fişte görünen bu); KDV varyantın oranı; katalog fiyatı B2C liste fiyatı ki Hiboutik'in indirim
+  raporu anlam taşısın. `products_ref_ext` = varyant kimliğinin ilk 20 onaltılık hanesi (kurtarma anahtarı).
+  Sipariş kalemindeki KDV ürününkinden farklıysa (oran sonradan değişmiş) kalemde oran değiştirilir.
+- **Fiş numarası:** `ext_ref` = `<sipariş referansı>-<sıra>` (ör. `LA-26-7K4M2P-2`, 25 karakter sınırında).
+
+**Kasa aynası** — Hiboutik'e ne yazıldığının bizdeki kaydı; plan farkı buna göre çıkarır:
+- fiş: sipariş, sıra, Hiboutik satış numarası, günlük sıra numarası (`unique_sale_id`), dijital fiş
+  bağlantısı, durum;
+- fiş kalemi: kaynak (sipariş kalemi ya da kargo/oran), adet, tutar;
+- ödeme satırı: kod, tutar, Hiboutik ödeme satırı numarası.
+
+**Yarıda kesilme:**
+- Her Hiboutik çağrısından önce aynaya "yazılıyor" satırı düşer, sonra Hiboutik'in verdiği numara.
+- Yarım fiş yeniden ele alındığında Hiboutik'teki hâli okunur. Satış numarası kaybolduysa `ext_ref`
+  aramasıyla bulunur ve tam eşleşme okunarak doğrulanır.
+- Kapanmamış fiş plana göre tamamlanır, uyuşmazsa silinip yeniden yazılır (kapanmamış satış mali kayıt
+  değil). Ödeme satırı eklenmeden önce Hiboutik'te var mı diye okunur.
+
+**Hata:** Hiboutik'e ulaşılamazsa sipariş kuyrukta kalır, artan aralıkla yeniden denenir; eşikten sonra
+`error_log` ve operasyon uyarısı. Satış tarihini API almıyor: geciken fiş yazıldığı günün Z'sine düşer.
+
+**Kasa hareketleri:** eşlenmiş nakit hesabının fiş olmayan hareketleri Hiboutik'e açıklamasıyla `cash_out`
+/ `cash_in` olarak yazılır, kasa sayımı fiziksel kasayla tutsun diye: bankaya yatırma, kasadan ödenen gider,
+bozukluk ve sermaye girişi, kapıda nakit alınan B2B parası ve iadesi, kurye farkı.
+
+**Kurye farkı** (12. karar): sefer kapanışı bugün para hareketi yazmıyor, farkı açıklamasıyla kaydediyor.
+Nakit farkı sıfır değilse kapanış nakit hesabına hareketi de yazar (eksikte çıkış, fazlada giriş; yeni tür
+"kasa farkı", hesap kodu muhasebecinin), kasa hareketi kuralı onu Hiboutik'e taşır. Kart farkı kasaya
+dokunmaz, bugünkü gibi yalnız mutabakattır.
+
+**Hediye sipariş** (11. karar): tahsilat kapısı hediye siparişe para yazmaz. Siparişin ücretlenen tutarı,
+cirosu ve kâr raporundaki geliri sıfırdır; mal maliyeti hediye gideri olarak kalır. Sıfırlamanın yolu
+(sıfır fiyat ve liste fiyatı izi ya da motorda istisna) dokunulacak yerler ölçülerek seçilir:
+ödeme türetimi, ciro tetikleyicisi (`resync_order_revenue`), kâr raporu, muhasebe aktarımı süzgeci,
+operasyonun yeni sipariş ekranı.
+
+**Günlük mutabakat** (gün sonu, depo başına):
+1. Bizim para ↔ kasa aynası: hareketi olup yazılmamış sipariş.
+2. Kasa aynası ↔ Hiboutik Z: oran başına KDV (`/z/taxes`), yöntem başına ödeme (`/z/payment_types`),
+   kasa sayımı (`/till_cash_count`) ↔ nakit hesabın bakiyesi. Bizde olmayan satış da fark sayılır
+   (Hiboutik ekranından elle yapılmış satış).
+
+Sonuç sistem ekranında.
+
+**Gün kapanışı:** NF525 dönemsel kapanış istiyor; satışlar API'den geldiği için kapanışı cron yapar
+(varsayılan 23:50 Paris saati, ayarla değişir). Demoda yapılamıyor; ilk canlı günde ölçülür.
+
+**Ekranlar:** yeni ekran yok. Ayarlar: Hiboutik mağaza eşlemesi. Sipariş detayı: fiş numaraları ve dijital
+fiş bağlantısı. Sistem ekranı: kuyruk ve mutabakat durumu.
+
+**Kod yerleşimi:**
+- `packages/domain-core/src/register/`: plan (ücretlenen kalem, kuruş bölmesi, kargo payı, fark, ödeme kodu,
+  yeni fiş mi ödeme satırı mı) ve mutabakat karşılaştırması.
+- `packages/database`: kasa tabloları (mağaza, ürün, fiş, fiş kalemi, ödeme satırı, kuyruk), tetikleyici,
+  servisler; `money_movement.payment_method`.
+- `packages/application/src/register/`: `CashRegister` portu ve Hiboutik uyarlaması (anahtar yoksa port
+  yok), sipariş eşitleme, kasa hareketi, mutabakat.
+- `apps/backend/src/jobs/`: `register-sync` (dakikalık), `register-reconcile` ve `register-close-day` (günlük).
+- Ortam: `HIBOUTIK_ACCOUNT`, `HIBOUTIK_USER`, `HIBOUTIK_API_KEY`, `HIBOUTIK_MODE` (`demo` | `live`).
+
+**Testler:**
+- Motorun her dalı birim testte: kuruş bölmesi, kargo payı, iptal, müşteride kalan, eksik ve fazla ödeme,
+  ödeme kodu, yeni fiş ya da ödeme satırı.
+- Tetikleyicinin kuyruğa işaretlemesi entegrasyon testinde.
+- Hiboutik'e karşı ölçüm demo hesapta, betiklerle; test paketinde değil.
+
+**İş sırası** (her adım ayrı commit):
+1. Motor ve testleri.
+2. Hediye siparişin ödemesiz kapanışı.
+3. Şema, servisler ve tahsilat kapısının yöntem alanı.
+4. Hiboutik uyarlaması, eşitleme cron'u, ürün aynası.
+5. Kasa hareketleri (B2B nakdi, kurye farkı dahil), mutabakat, gün kapanışı.
+6. Ekran satırları ve mimari belge güncellemeleri (`DOMAIN.md` §7 ve §9, `INTEGRATIONS.md`,
+   `data-model/para.md`).
+
+Şemaya dokunan adım `db:refresh` ister; kararı kullanıcının.
+
+## 8. Riskler
 
 1. **Banka bağlantısının kopması.** Bankalar bağlantıyı en çok 180 gün açık tutuyor, bazıları çok daha
    kısa (Pennylane'in tablosunda BNP 36 gün, CIC 0 gün). Kopunca hem Pennylane hem biz hareket alamayız.
@@ -168,14 +293,12 @@
 3. **Mükerrer belge.** Aynı fatura hem e-fatura hem PDF olarak ya da Revolut harcama aktarımıyla girerse
    iki kayıt olur; Pennylane yalnız aynı dosyayı yakalıyor. Çare: 8. karar + yüklemeden önce kontrol.
 4. **Gelirin iki kez sayılması.** Pennylane'de Hiboutik dışında bir satış bağlantısı (ödeme sağlayıcısı
-   vb.) açılırsa aynı satış iki kez gelir sayılır. Satış Pennylane'e yalnız Hiboutik'ten girer.
+   vb.) açılırsa aynı satış iki kez gelir sayılır. B2C satışı Pennylane'e yalnız Hiboutik'ten, B2B satışı
+   yalnız Pennylane'de kesilen faturadan girer.
 5. **Kasa kaydının yazılamaması.** Hiboutik erişilemezse satış bizde var, kasada yok: yasal açık.
    Çare: kuyruk + yeniden deneme + günlük mutabakatta fark uyarısı; gün kapanmadan kuyruk boşalmalı.
-6. **B2B faturası (2027).** Hiboutik'ten kesilirse Pennylane'e günlük Z toplamının içinde gider; vadeli
-   müşterinin alacağı Pennylane'de müşteri bazında görünmez. Hiboutik B2B e-faturayı ortak platformla
-   2027'nin ilk yarısında açacağını yazıyor.
 
-## 8. Kaynaklar
+## 9. Kaynaklar
 
 Resmî:
 - [BOFiP BOI-TVA-DECLA-30-10-30 (25.03.2026)](https://bofip.impots.gouv.fr/bofip/10691-PGP.html/identifiant=BOI-TVA-DECLA-30-10-30-20260325)
