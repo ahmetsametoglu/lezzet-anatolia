@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
+    "./keep-alive": "./src/keep-alive.ts",
     "./services/*": "./src/services/*.ts",
     "./testing": "./src/testing/index.ts"
   },
@@ -19,6 +20,7 @@
     "@lezzet/helper": "workspace:*",
     "@lezzet/types": "workspace:*",
     "@supabase/supabase-js": "^2.48.1",
+    "undici": "7.29.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

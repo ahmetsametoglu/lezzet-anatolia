@@ -4,8 +4,11 @@
  */
 import './env';
 import { serve } from '@hono/node-server';
+import { installSupabaseKeepAlive } from '@lezzet/database/keep-alive';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { app } from './app';
+
+installSupabaseKeepAlive();
 
 /**
  * Hono `onError` isteğin dışında doğan promise reddini görmez ve Node böyle bir ret yüzünden süreci iz bırakmadan öldürür;

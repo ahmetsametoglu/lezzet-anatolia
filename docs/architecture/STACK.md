@@ -31,7 +31,7 @@ Tek markalı, tek veritabanlı, orta ölçekli bir web ürünü: müşteriye aç
 | Web | **Next.js** App Router (RSC) | Sunucu bileşeni + Server Action; ayrı API gereksiz |
 | Dil | **TypeScript strict** | `any` yasak, `noUncheckedIndexedAccess` açık |
 | Doğrulama | **Zod** | Tip ve çalışma-anı doğrulama tek kaynaktan |
-| Veritabanı | **Supabase** (Postgres + Auth + Storage + Realtime) | ORM yok — `@supabase/supabase-js` doğrudan |
+| Veritabanı | **Supabase** (Postgres + Auth + Storage + Realtime) | ORM yok — `@supabase/supabase-js` doğrudan. Node süreçlerinde uzak REST ve auth istekleri `undici` bağlantı havuzundan gider (`@lezzet/database/keep-alive`, 30 sn açık bağlantı); modülü yalnız Node girişleri yükler, çünkü `undici` edge derlemesine giremez |
 | **Stil** | **Tailwind** | Tasarım Claude Design ile üretiliyor, çıktısı Tailwind. Bkz. Sapma 2. |
 | **i18n (arayüz)** | kod içi i18n + **`next-intl`** (yalnız yönlendirme) | Statik metinler; içerik jsonb (§5). Sınır aşağıda. |
 | Arka plan işleri | **Hono** + `node-cron` | Webhook ve zamanlı işler için hafif süreç |

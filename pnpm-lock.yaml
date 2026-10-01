@@ -805,6 +805,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.48.1
         version: 2.110.8
+      undici:
+        specifier: 7.29.0
+        version: 7.29.0
       zod:
         specifier: ^3.24.1
         version: 3.25.76

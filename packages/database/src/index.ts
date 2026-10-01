@@ -2,7 +2,7 @@
 // yalnız istemci ve servisler verilir.
 
 // İstemci
-export { createServiceRoleClient, serviceDb, createAnonClient, anonDb, type Db } from './client';
+export { createServiceRoleClient, serviceDb, createAnonClient, anonDb, supabaseFetch, type Db } from './client';
 // Reset/restart sonrası ilk istek 502 alır (PostgREST şema önbelleğini yüklüyor) — seed ve testler
 // ilk sorgudan önce bunu bekler.
 export { waitForRest, type WaitForRestOptions } from './core/ready';

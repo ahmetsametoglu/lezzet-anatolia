@@ -25,6 +25,29 @@ function retryOnStaleUpstream(fetchImpl: typeof fetch): typeof fetch {
 }
 
 /**
+ * Uzak Supabase'e giden JSON istekleri (veri ve oturum) Node girişlerinin taktığı havuzlu `fetch`ten gider (`keep-alive.ts`). Yuva
+ * `globalThis`te durur, çünkü Next aynı modülü ayrı grafiklerde yükler; takılmamışsa (edge, testler) yerleşik `fetch` kullanılır.
+ */
+type PooledFetch = (url: string, init?: RequestInit) => Promise<Response>;
+const POOLED_SLOT = Symbol.for('lezzet.database.pooledFetch');
+type PooledSlot = { [POOLED_SLOT]?: PooledFetch };
+// Depolama yerleşik `fetch`te kalır: form ve akış gövdeleri başka sürüm `undici`ye taşınmaz.
+const POOLED_PATH = /\/(rest|auth)\/v1\//;
+
+/** Havuzlu `fetch`i süreç için takar; `null` söker (testte önceki hâli geri koymak için). */
+export function setPooledSupabaseFetch(pooled: PooledFetch | null): void {
+  (globalThis as PooledSlot)[POOLED_SLOT] = pooled ?? undefined;
+}
+
+/** Supabase istemcilerinin `fetch`i; web'in oturum istemcisi de bunu verir ki aynı havuzu paylaşsın. */
+export const supabaseFetch: typeof fetch = (input, init) => {
+  const pooled = (globalThis as PooledSlot)[POOLED_SLOT];
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : null;
+  if (!pooled || url === null || LOCAL_HOST.test(url) || !POOLED_PATH.test(url)) return fetch(input, init);
+  return pooled(url, init);
+};
+
+/**
  * Service-role istemci RLS'i baypas eder, bu yüzden yalnız sunucuda kullanılır ve tarayıcıya sızmamalıdır. Servisler istemciyi
  * (ya da cookie'li kullanıcı istemcisini) constructor'dan alır; RLS verilen istemciye göre işler.
  */
@@ -37,7 +60,7 @@ export function createServiceRoleClient(): SupabaseClient {
   return createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
     // Bayat keep-alive yeniden denemesi yalnız yerel yığında (yukarıdaki gerekçe).
-    ...(LOCAL_HOST.test(url) ? { global: { fetch: retryOnStaleUpstream(fetch) } } : {}),
+    global: { fetch: LOCAL_HOST.test(url) ? retryOnStaleUpstream(fetch) : supabaseFetch },
   });
 }
 
@@ -72,7 +95,7 @@ export function createAnonClient(): SupabaseClient {
     auth: { autoRefreshToken: false, persistSession: false },
     // Bayat keep-alive yeniden denemesi yalnız yerel yığında — auth çağrıları da aynı Kong'dan
     // geçiyor, yani aynı kusura açıklar (gerekçe `retryOnStaleUpstream` künyesinde).
-    ...(LOCAL_HOST.test(url) ? { global: { fetch: retryOnStaleUpstream(fetch) } } : {}),
+    global: { fetch: LOCAL_HOST.test(url) ? retryOnStaleUpstream(fetch) : supabaseFetch },
   });
 }
 
