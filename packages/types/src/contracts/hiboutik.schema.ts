@@ -37,14 +37,13 @@ export const HiboutikDayPaymentListSchema = z.array(
 /** Kapanmamış günde `closure_date` boş tarihtir. */
 export const HiboutikDayClosureSchema = z.object({ closure_date: z.string() });
 
+/** Ödeme satırları ve bakiye yalnız bölünmüş (`DIV`) satışta gelir, taze açılan satış henüz `DIV` değildir; şema yalnız tüketilen alanı ister. */
 export const HiboutikSaleSchema = z.object({
   sale_id: z.number().int(),
   store_id: z.number().int(),
   sale_ext_ref: z.string().nullish(),
   unique_sale_id: z.string().nullish(),
   completed_at: z.string(),
-  total: decimal,
-  balance: decimal,
   url_receipt: z.string().nullish(),
   line_items: z
     .array(

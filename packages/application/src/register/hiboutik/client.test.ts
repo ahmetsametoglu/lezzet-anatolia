@@ -95,6 +95,31 @@ describe('satış okuması', () => {
     expect(await register.readSale(7)).toMatchObject({ closed: false, uniqueSaleId: null });
   });
 
+  it('taze açılan satış okunur: bölünmemiş satışta ödeme satırı ve bakiye alanı hiç gelmez', async () => {
+    const fresh = {
+      sale_id: 2,
+      store_id: 1,
+      sale_ext_ref: '',
+      unique_sale_id: '',
+      completed_at: '0000-00-00 00:00:00',
+      total: '0.00',
+      payment: 'CB',
+      url_receipt: 'https://myrecei.pt/fr/1/2/x',
+      line_items: [],
+    };
+    const { register } = fakeHiboutik([{ json: [fresh] }]);
+
+    expect(await register.readSale(2)).toEqual({
+      saleId: 2,
+      extRef: '',
+      closed: false,
+      uniqueSaleId: null,
+      receiptUrl: 'https://myrecei.pt/fr/1/2/x',
+      lines: [],
+      payments: [],
+    });
+  });
+
   it('olmayan satış `null` döner, hata fırlatmaz', async () => {
     const { register } = fakeHiboutik([{ status: 404, json: { error: 'invalid_data', code: 6 } }]);
 
