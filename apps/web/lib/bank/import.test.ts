@@ -107,7 +107,7 @@ describe('mükerrer koruması', () => {
     expect(result.inserted).toBe(4);
     expect(result.duplicates).toBe(0);
     expect(result.failures).toEqual([]);
-    // 45.90 − 120 − 20 − 20 = −114.10
+    // Bakiye: 45,90 − 120 − 20 − 20 = −114,10 €
     expect((await accounts.balance(bankAccount)).balanceCents).toBe(-11_410);
   });
 

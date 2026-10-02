@@ -10,14 +10,8 @@ import { toCents } from '@lezzet/helper';
 import type { BankColumnSuggestion, BankImport, BankImportProfile, MoneyMovementInsert, RawBankRow } from '@lezzet/types';
 
 /**
- * Banka ekstresi import kapısı (12.4) — DOMAIN §9.
- *
- * Akış üç adımdır ve **ikisi otomatik, biri insanın**: dosya çözümlenir (sütun eşlemesi önerilir) →
- * operatör onaylar/düzeltir ve şablon kaydedilir → satırlar hareket olarak yazılır.
- *
- * **Sütun eşlemesini bugün sezgisel bir motor öneriyor** (`heuristicColumnMapper`); yapay zekâ
- * entegrasyonu geldiğinde (`packages/ai`) değişen tek şey aşağıdaki `mapper` varsayılanıdır —
- * imza aynı kalır, bu dosyanın gerisi hiç değişmez.
+ * Banka ekstresi içe aktarma kapısı (DOMAIN §9): dosya çözümlenir ve sütun eşlemesi önerilir, operatör onaylar ve şablon kaydedilir,
+ * satırlar hareket olarak yazılır. Öneriyi önce yapay zekâ, olmazsa sezgisel motor (`heuristicColumnMapper`) verir.
  */
 
 /** Dosyanın ilk satırlarından sütun örneği çıkarır — yapay zekâya gidecek "bilginin bir kısmı". */
@@ -46,21 +40,9 @@ function missingOf(suggestion: BankColumnSuggestion): MappingSuggestion['missing
 }
 
 /**
- * Dosyayı çözümler: hangi sütun hangi alan. **Sonuç ONAYA düşer** — yanlış eşlenen bir sütun
- * (ör. bakiye ↔ tutar) bütün ekstreyi çöpe çevirir; ne sezgisel kural ne yapay zekâ bunu tek
- * başına üstlenebilir.
- *
- * ── PORT DOLDU (12.4'ün AI ayağı, sınıf 3 · 16.08) ──────────────────────────
- * Önce MODEL denenir (`bankColumnsTask`), her başarısızlıkta sezgisel devralır — `not_configured`
- * beklenen hâldir (anahtarsız kurulum AI'sız çalışır), ötekiler bir sonraki dosyada yeniden dener.
- * Çağıran hangisinin cevapladığını görmez (port sözleşmesi); imza bu yüzden async oldu, başka
- * hiçbir şey değişmedi.
- *
- * ── FİZİKSEL KAPI: UYDURULMUŞ BAŞLIK ELENİR ─────────────────────────────────
- * Model örnekte olmayan bir başlık yazabilir ve bu, parse aşamasında sessizce boş kolon okumak
- * demek olurdu. Dönen her başlık örneğe karşı doğrulanır; biri bile uydurmaysa cevabın TAMAMI
- * atılır ve sezgisel devralır — yarısı doğru bir eşlemeyi ayıklamak, yanlış yarıyı onaya
- * taşımaktı. `mapping` serbest başlık taşıdığı için Zod bunu zorlayamaz; kapı burada.
+ * Dosyayı çözümler: hangi sütun hangi alan; sonuç onaya düşer, çünkü yanlış eşlenen bir sütun (bakiye ↔ tutar) bütün ekstreyi
+ * çöpe çevirir. Önce model denenir, her başarısızlıkta sezgisel devralır; modelin örnekte olmayan bir başlık yazdığı cevap bütünüyle
+ * atılır, çünkü uydurma başlık parse aşamasında sessizce boş kolon okutur.
  */
 export async function analyzeFile(
   rows: readonly RawBankRow[],
@@ -90,14 +72,9 @@ interface ImportOutcome {
 }
 
 /**
- * Dosyayı hesaba yazar.
- *
- * **Mükerrer koruması veritabanındadır** (`money_movement_import_key`): "önce sorgula, yoksa yaz"
- * iki eşzamanlı yüklemede ikisini de yazardı. Çakışan satır sessizce düşer, sayısı farktan çıkar.
- *
- * **Satırlar doğrudan HAREKET olur**, bekleme odasına değil: banka gerçeği para gerçeğidir, hesabın
- * bakiyesi anında doğru olmalıdır. Sınıflandırma (hangi sipariş, hangi gider) sonra gelir —
- * `reconciled=false` kuyruğu tam bunun için var (12.1).
+ * Dosyayı hesaba yazar: satırlar doğrudan hareket olur ki bakiye anında doğru olsun, sınıflandırma sonra eşleştirme kuyruğunda
+ * yapılır. Mükerrer koruması veritabanındadır (`money_movement_import_key`), çünkü "önce sorgula, yoksa yaz" iki eşzamanlı
+ * yüklemede ikisini de yazardı.
  */
 export async function importBankRows(input: {
   accountId: string;
@@ -119,11 +96,10 @@ export async function importBankRows(input: {
   const movements: MoneyMovementInsert[] = fingerprinted.map((row) => ({
     accountId: input.accountId,
     direction: row.direction,
-    // Ekstre satırı euro okur (banka dosyası öyle gelir); hareket cent yazar (02.9 · STACK §8).
+    // Ekstre satırı euro okur, hareket cent yazar (STACK §8).
     amountCents: toCents(row.amount),
-    // Tip HENÜZ BİLİNMİYOR: banka "para girdi" der, sebebini söylemez. `misc` sınıflandırılmamış
-    // demektir; eşleştirme onaylandığında gerçek tipine döner. Baştan `order_payment` deseydik
-    // siparişi olmayan bir tahsilat uydurmuş olurduk.
+    // Tip henüz bilinmiyor: banka "para girdi" der, sebebini söylemez; `misc` eşleştirme onaylanınca gerçek tipine döner, baştan
+    // `order_payment` siparişi olmayan bir tahsilat uydururdu.
     type: 'misc',
     description: row.label,
     valueDate: row.valueDate,
