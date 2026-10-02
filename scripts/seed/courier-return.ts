@@ -24,59 +24,10 @@ import { tabloDolu, type Db, type VaryantRef } from './shared';
 import type { Depolar } from './warehouse';
 
 /*
-  ── KURYE DÖNÜŞÜ SAHNESİ (kullanıcı kararı 04.09) ───────────────────────────────────────────────
-
-  **Neden var:** D6 (kurye dönüşü) ve K (araçtaki seferler) ekranlarının hiçbir hâli beslemede
-  doğmuyordu — `delivery_run` tablosu boştu, dönen sipariş yoktu, araçta serbest ürün yoktu. O
-  ekranları denemek için her `db:refresh`ten sonra elle sipariş verip toplama, yükleme, sürme ve
-  kapama adımlarının tamamını geçmek gerekiyordu. Kullanıcının cümlesi: *"her seferinde şu an akışı
-  koşmak zor biraz… gerekirse besleme dosyalarını düzenleyelim."*
-
-  **Satırlar ELLE YAZILMIYOR, GERÇEK KAPILARDAN geçiyor** (`test-orders.ts`in aynı kuralı): sefer
-  `startCourierDay` ile açılıyor, kutu `openBox`/`sealBox` ile kapanıyor, araca `loadBox` ile
-  biniyor, kapı `confirmDoorDelivery`/`markUndelivered` ile sonuçlanıyor, sefer `closeCourierDay`
-  ile kapanıyor. Elle yazılmış bir satır kuralların hiçbirinden geçmez ve ekranda üretimde asla
-  oluşamayacak bir hâl gösterirdi.
-
-  **`db:reset` GEREKTİRMEZ:** blok kendi guard'ını `delivery_run` tablosuna bakarak koyuyor ve o
-  tablo boş. Yani mevcut veritabanında `pnpm db:seed` tek başına koşar, sahneyi kurar, öteki
-  bölümlere dokunmaz (hepsi kendi "tablo dolu mu" guard'ında atlanır).
-
-  ── SAHNE: BİR KURYE, İKİ SEFER, DÖRT HÂL ───────────────────────────────────
-  Kullanıcının soruları buydu — *"bir araç birden fazla rotayı yükleyip sefere çıkıp da geri
-  döndüğünde bu kapanışlar rota rota mı yapılıyor?"* ve *"bazı ürünler müşteriden dönerken bazıları
-  da arabaya ekstra koyulan ama satılmayan ürünler olabilir."* Sahne ikisini de gösteriyor:
-
-    · SEFER A — sürüldü ve KAPANDI. Üç durak: biri teslim edildi, biri kapıda REDDEDİLDİ (mal
-      döner → D6'nın akıbet bölümü), birine ULAŞILAMADI (kutu araçta kalır, kabul edilmez).
-    · SEFER B — araçta BEKLİYOR, kutuları yüklü ama yola çıkmadı. D6'da "başka seferin yükü".
-    · SERBEST ÜRÜN — araca iki varyant alındı, satılmadı. D6'nın "say ve devret" bölümü.
-
-  **KURYESİZ DÖNÜŞ bu blokta YOK ve bilerek yok:** kuryesi olmayan bir dönüş kargo yolundan gelir
-  ve o yol ~~beslemede kapalı (01.09 kararı)~~ **HİÇ YAZILMAMIŞ** (düzeltildi 05.09, ölçüldü):
-  taşıyıcının iadesi gönderiye yazılıyor ama siparişi kıpırdatmıyor — bu testle çivili bilinçli bir
-  karar — ve depoya dönen koliyi karşılayan bir kapı hiç yok. Yani sahne kurulamıyor çünkü besleme
-  kapalı değil, üretim yolu yok. Uydurma bir yoldan `returned` yazmak, üretimde oluşamayacak bir
-  hâl kurmak olurdu. Ekranın o kümesi kendi birim testinde sınanıyor
-  (`courier-return-screen.test.tsx`). Açığın kendisi `design/BACKLOG.md §4`te.
-
-  İki sefer de AYNI GÜN ve aynı araçta: kural veride (`assert_vehicle_single_courier`) ve sahne o
-  kuralın içinde duruyor — para iki kez (sefer başına), mal bir kez (araç bir kez boşalır).
-
-  ── KAPIDA PARA: 05.09'DA GİRDİ, ÇÜNKÜ ARTIK ÖLÇÜLÜ ──────────────────────────
-  Bu blok 04.09'da bilerek parasızdı ve gerekçesi şuydu: *"uydurma bir kasa farkı, ölçülmemiş bir
-  sayıyı gerçek gibi okuturdu."* İtiraz UYDURMA sayıyaydı, paranın kendisine değil — ve artık
-  uydurma bir sayı yok: durak zaten NAKİT bir sipariş (`paymentMethod: 'cash'`) ve kapıda gerçekten
-  tahsil edilecek bir tutarı var. Kurye o tutarı topluyor, kapanışta EKSİK teslim ediyor; fark
-  hesaplanan bir sonuç, yazılan bir varsayım değil.
-
-  Neden gerekti: PARA bölümünün TEK bildirim türü `run_close_mismatch` ve o da yalnız FARK varken
-  doğuyor. Hiçbir sahnede fark olmadığı için bölüm her kurulumda boş açılıyordu — ekran doğru
-  çalışıyor ama gösterecek olayı hiç olmuyordu (kullanıcı bulgusu 05.09: *"sadece yönetimle
-  alakalı bildirimler var"*).
-
-  Fark KURYENİN ELİNDE eksilen paradır, kasanın değil: teslim edilen tutar tam, kapanışta beyan
-  edilen eksik. Gerçek hayatta bunun adı sayım farkıdır ve tam da bu yüzden bir zil çalar.
+  Kurye dönüşü sahnesi: bir kurye, iki sefer (biri kapandı: teslim, kapıda ret, ulaşılamadı; biri araçta bekliyor) ve araçta
+  satılmayan serbest ürün; satırlar elle yazılmaz, gerçek kapılardan geçer ki ekran üretimde oluşamayacak bir hâl göstermesin.
+  Kapıdaki nakit eksik teslim edilir ki PARA bölümünün tek türü (`run_close_mismatch`) beslemede de doğsun; kuryesiz dönüşün
+  üretim yolu olmadığı için sahnede yok.
 */
 
 /** Sahnenin kurye anahtarı — `people.ts`teki `kurye` satırı (Marc Lemoine, kapsamı {str, van}). */
@@ -104,13 +55,8 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
   if (!kurye) throw new Error(`seed: kurye profili yok (${KURYE_EPOSTA}) — sahne kurulamaz`);
 
   /*
-    İKİ ROTA, AYNI GÜN — ve gün TAKVİMDEN çözülüyor, uydurulmuyor.
-
-    Rota+gün başına TEK sefer kuralı (`delivery_run_key`) var, yani iki sefer iki AYRI rota
-    olmalı; ikisi de aynı gün koşmalı ki araçta yan yana dursunlar. Beslemede bu koşulu Batı ve
-    Doğu hatları taşıyor (ikisi de salı+cuma). Gün BUGÜNDEN GERİYE aranıyor: dönen mal rampada
-    duruyor demek, seferin çoktan sürülmüş olması demek — ileri bir tarih "gelecekte dönmüş" bir
-    sipariş üretirdi.
+    İki rota aynı gün: rota+gün başına tek sefer kuralı (`delivery_run_key`) iki ayrı rota ister ve araçta yan yana durmaları için
+    ikisi aynı gün koşmalı. Gün takvimden, bugünden geriye aranır: dönen mal rampada duruyorsa sefer çoktan sürülmüştür.
   */
   const zones = (await new DeliveryZoneService(db).list()).filter(
     (zone) => zone.warehouseId === depolar.str && zone.isActive,
@@ -206,9 +152,8 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
     return { orderId: order.id, code: acildi.box.code, dueCents: birim * adet };
   };
 
-  /* Kapı tahsilatının gireceği hesap — para sahnesinin açtığı KASA. `maybeSingle` bilerek: hesap
-     yoksa (para sahnesi koşmamışsa) tahsilat atlanır ve kapanış farksız kapanır; sahne yine kurulur,
-     yalnız PARA zili doğmaz. Hesabı burada YARATMIYORUZ — para defterinin sahibi `money.ts`. */
+  /* Kapı tahsilatının gireceği hesap, para sahnesinin açtığı kasa; hesap yoksa tahsilat atlanır, kapanış farksız kapanır ve
+     yalnız PARA zili doğmaz. Hesap burada yaratılmaz, para defterinin sahibi `money.ts`. */
   const { data: kasa } = await db.from('account').select('id').eq('type', 'cash').eq('is_active', true).limit(1).maybeSingle();
   const kasaId = (kasa as { id: string } | null)?.id ?? null;
   let tahsilEdilenKurus = 0;
@@ -268,10 +213,8 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
     }
   }
 
-  /* KAPANIŞ EKSİK BEYANLA: kurye 2,50 € eksik teslim ediyor. Fark hesaplanan bir sonuçtur
-     (beklenen = kapıda yazılan tahsilat, sayılan = beyan) ve `notifyRunCloseMismatch` onu gerçek
-     üreticiden çalıyor — PARA bölümünün tek türü ancak böyle doğar. Eksik tutar sahnenin sabiti;
-     tahsilat sıfırsa (kasa hesabı yok) fark da sıfır kalır ve zil haklı olarak susar. */
+  /* Kapanış eksik beyanla: kurye 2,50 € eksik teslim eder ve fark gerçek üreticiden (`notifyRunCloseMismatch`) doğar, PARA
+     bölümünün tek türü ancak böyle doğar. Tahsilat sıfırsa fark da sıfır kalır ve zil haklı olarak susar. */
   const eksikBeyanKurus = tahsilEdilenKurus > 0 ? 250 : 0;
   const kapandi = await closeCourierDay(db, {
     courierId: kurye.id,
@@ -311,11 +254,8 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
 }
 
 /**
- * İki rotanın ORTAK koşu günü — bugünden GERİYE doğru aranır.
- *
- * Geriye, çünkü dönen mal rampada duruyorsa sefer çoktan sürülmüştür; ileri bir tarih "gelecekte
- * dönmüş" bir sipariş üretirdi. Bulunamazsa sessiz geçilmez: iki rotanın hiç ortak günü yoksa
- * sahne kurulamaz ve bu bir VERİ hatasıdır, atlanacak bir hâl değil.
+ * İki rotanın ortak koşu günü, bugünden geriye aranır: dönen mal rampada duruyorsa sefer çoktan sürülmüştür. Bulunamazsa sessiz
+ * geçilmez, çünkü ortak günü olmayan iki rota bir veri hatasıdır.
  */
 function ortakKosuGunu(
   zones: ReadonlyArray<{ id: string; name: string; weekdays: number[] }>,
@@ -334,11 +274,8 @@ function ortakKosuGunu(
 }
 
 /**
- * Araç deposunun ARACI (`warehouse.vehicle_id`, 21.249) — seferin `vehicleId`si bu olmak ZORUNDA.
- *
- * Kuryenin araç deposu artık kapsamdan değil SEFERİN ARACINDAN çözülüyor: sefere araç yazılmazsa
- * `vehicleWarehouseOf` `null` döner, araca alınan serbest ürün D6'da hiç görünmez ve sahne
- * sessizce yarım kalır — tam olarak sınanmak istenen bölüm çalışmaz.
+ * Araç deposunun aracı (`warehouse.vehicle_id`); seferin `vehicleId`si bu olmak zorunda, çünkü kuryenin araç deposu seferin
+ * aracından çözülür ve araç yazılmazsa araca alınan serbest ürün kurye dönüşü ekranında hiç görünmez.
  */
 async function aracIdOf(db: Db, vanWarehouseId: string): Promise<string> {
   const { data, error } = await db.from('warehouse').select('vehicle_id').eq('id', vanWarehouseId).single();
