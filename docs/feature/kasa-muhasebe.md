@@ -101,7 +101,7 @@
 |---|---|---|---|
 | 0 | **Erişim ve ölçüm.** Hesaplar: Hiboutik demo modunda (API için Premium, ikincil kaynak), Pennylane test ortamı ve API anahtarı (API Essentiel planda ve üstünde), Revolut deneme hesabı (asıl hesaptan bağımsız, anında). §6'daki soruların ölçümü; çıktı ölçüm tablosu ve tasarım kararları. | kök `.env` (değişken adları kullanıcıdan) | Hesapları kullanıcı açar |
 | 1 | **Hiboutik kasa.** Tasarım §7: sipariş başına durum farkı, kasa aynası, ürün ve mağaza eşlemesi, kasa hareketleri, günlük mutabakat, gün kapanışı. | domain-core `register/`; migration (kasa tabloları, tetikleyici, hareketin ödeme yöntemi); Hiboutik uyarlaması; backend cron'ları | Faz 0 Hiboutik ölçümü (tamam) |
-| 2 | **Pennylane.** Tedarikçi eşleme (`POST /suppliers`); belgeye KDV oranlı satır; PDF yükleme (yabancı ve e-faturasız tedarikçi; fotoğraf PDF'e çevrilir); yüklemeden önce mükerrer kontrolü; e-fatura okuma ve mal kabule bağlama; banka hareketi okuma; eşleşme yazma; hesap başına "hareket gelmiyor" uyarısı. | `money_document` şeması; para modülü; yeni Pennylane adaptörü | Faz 0 Pennylane ölçümü |
+| 2 | **Pennylane.** Tedarikçi eşleme (`POST /suppliers`); belgeye KDV oranlı satır; PDF yükleme (yabancı ve e-faturasız tedarikçi; fotoğraf PDF'e çevrilir); yüklemeden önce mükerrer kontrolü; e-fatura okuma ve mal kabule bağlama; banka hareketi okuma; eşleşme yazma; hesap başına "hareket gelmiyor" uyarısı. | `money_document` şeması; para modülü; yeni Pennylane adaptörü | Faz 0 Pennylane ölçümü (tamam; e-fatura okuma canlıda) |
 | 3 | **Revolut.** Çevrim içi ödeme Stripe yerine (Merchant API: sipariş, kart alanı, Apple / Google Pay, webhook, iade); kapıda kart (Terminal'e tutar gönderme ya da elle onay + sonradan doğrulama); defter düzeni (brüt tahsilat · komisyon · Merchant'tan ana hesaba aktarma). | `payment-gateway.ts`; web ve mobil ödeme ekranları; `stripe-webhook.ts`'in karşılığı | Faz 0 Revolut ölçümü; canlı için asıl hesap |
 | 4 | **2027.** B2B e-faturası Pennylane'den (10. karar): siparişten Pennylane faturasına bağlantı gerekip gerekmediği. B2C e-reporting: Hiboutik'in Z verisi Pennylane'e gidiyor; Pennylane'in bunu idareye e-reporting olarak iletip iletmediği bakılacak. | — | Son tarih 01.09.2027 |
 
@@ -196,13 +196,26 @@ aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yükl�
   yok. Bir hareket birden çok faturaya, bir fatura birden çok harekete bağlanabilir; geri alma
   `DELETE …/matched_transactions/{id}`.
 
-**Pennylane — test ortamında ölçülecek:**
-- `/me` cevabı ve test şirketinin tanınması (yazımdan önce `sandbox-` denetimi).
-- Banka hareketi tutarının işareti; test ortamında `POST /transactions` ile hareket yaratma.
-- Tutarı faturadan büyük hareket iki faturaya bağlanınca kalan tutar ve ödeme durumu (bizim tutarlı bağımızın
-  Pennylane'deki karşılığı).
-- İçe aktarmanın ters yükleme satırını ve satır toplamlarının fatura toplamıyla tutmasını nasıl denetlediği.
-- Test ortamına e-fatura gelip gelmediği; gelmiyorsa e-fatura okuma canlı hesapta, yalnız okuyarak ölçülür.
+**Pennylane — ölçüldü (02.10, test şirketi `sandbox-270612`).** Betikler `.test-results/pennylane-olcum*.mjs`,
+raporlar aynı klasörde; ölçüm verisi test şirketinde `LA-TEST-…` etiketiyle duruyor.
+
+| Konu | Sonuç |
+|---|---|
+| Kimlik | `/me` şirketi ve anahtarın yetkilerini döndürüyor; yazımdan önce `sandbox-` denetimi buna dayanır. |
+| Banka hareketi | Test şirketinde API'den yaratılıyor (`POST /transactions`). Tutar işaretli ondalık metin (çıkış `-500.0`, giriş `250.0`; ondalık sayısı sabit değil). `outstanding_balance` belgesiz kalan tutarı ters işaretle taşıyor (çıkışta `500.0`). API'den yaratılan hareket hesabın bakiyesini değiştirmiyor (`0.0`). Kimlikler 14 haneli tam sayı. |
+| Tedarikçi | Her yeni tedarikçiye ayrı muhasebe hesabı açılıyor. Dış referans tekil (ikincisi 422 *"External reference has already been taken"*) ve süzgeçle bulunuyor. |
+| Fatura içe aktarma | Fatura doğrudan muhasebeleşiyor (`accounting_status: complete`); kalan borç eksi işaretli (`-360.0`). İki oranlı satır ve ters yüklemeli satır (`extracom`, `intracom_55`, KDV 0) kabul ediliyor. Satır toplamı fatura toplamını tutmazsa 422 ve açık mesaj. KDV'si oranla tutmayan satır kabul ediliyor (KDV dahil 120 €, %20, KDV 5 €): oran denetimi bizde. |
+| Mükerrer | Aynı içerikli dosya, yeni yükleme olsa da, 409 *"A document with ID … already exists with such attachment"* (belgede 422 yazıyor; mesaj var olan faturanın kimliğini taşıyor). Aynı tedarikçiye aynı numarayla başka içerikli fatura kabul ediliyor: numara denetimi bizde, yüklemeden önce `supplier_id` + `invoice_number` süzgeciyle. |
+| Süzgeç | Parametre adı `filter`; rehberdeki `filters` yok sayılıyor ve bütün listeyi döndürüyor. |
+| Eşleşme | Tutar taşımaz; Pennylane hareketi bağlama sırasıyla dağıtır. 400 € → 360 € + 140 €: önce bağlanan tam, sonraki 40 € ödenmiş görünür. Fazlası harekette açık kalır (500 € → 360 €: 140 € açık). Eşleşen faturada `paid` ve kalan tutar değişir, `payment_status` `to_be_processed` kalır; harekete faturanın tedarikçisi yazılır. |
+| Eşleşmeyi geri alma | Tek bir faturanın bağını çözmek hareketin bütün bağlarını çözer; kalanlar yeniden bağlanmalı (yeniden bağlama çalışıyor). |
+| E-fatura durumu | İçe aktarılmış faturada 422 *"This supplier invoice is not an electronic invoice"*. |
+| Değişiklik akışı | Yaratma, eşleşme ve geri alma 1–2 saniye içinde akışta (`insert`, `update`); muhasebecinin Pennylane'de yaptığı eşleşme de buradan görülür. |
+| Hız | 75 istekte, istekler arasında 250 ms ile, en düşük kalan sınır 13/25. |
+
+**Pennylane — açık kalan:**
+- E-fatura okuma: test şirketine e-fatura gelmiyor; canlı hesapta yalnız okuyarak ölçülür.
+- Ters yüklemenin KDV kodu (AB dışı `extracom`, AB içi `intracom_*`) ve hesap kodları muhasebeciyle netleşir.
 
 **Revolut** (deneme hesabı):
 - Ödeme başına komisyon (`fees`) ve Merchant hesabından ana hesaba aktarmanın görünüşü.
