@@ -314,7 +314,7 @@ export type MoneyDocumentBalance = z.infer<typeof MoneyDocumentBalanceSchema>;
 
 /**
  * Hareket ↔ belge bağı, tutarıyla: bir havale birkaç faturayı, bir fatura birkaç ödemeyi kapatabilir. Bağlar hareketin tutarını
- * aşamaz (tetikleyici); belgenin açık kalanı eksiye düşebilir, çünkü fazla ödeme bir olgudur.
+ * aşamaz (tetikleyici); kapı tutarı hareketin kalanı ile belgenin açık kalanının küçüğünden kurar, fazla ödeme harekette kalır.
  */
 export const MoneyAllocationSchema = z.object({
   id: z.string().uuid(),

@@ -356,7 +356,6 @@ const ALLOCATION_REASON: Record<Extract<AllocationOutcome, { status: 'invalid' }
   already_allocated: 'already_allocated',
   nothing_to_allocate: 'already_reconciled',
   document_settled: 'document_settled',
-  over_movement: 'already_reconciled',
 };
 
 /** Kuyruktaki satırı bulur ve dokunulabilir olduğunu doğrular — iki kez uygulanmasın. */

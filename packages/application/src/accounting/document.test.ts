@@ -178,7 +178,7 @@ describe('cari (13.09)', () => {
 });
 
 describe('belge ve bağ — tutarıyla (13.09)', () => {
-  it('bir havale İKİ faturayı kapatır; kalanı olmayan hareket üçüncüye bağlanmaz', async () => {
+  it('bir havale İKİ faturayı kapatır; kalanı olmayan hareket üçüncüye, yeni hareket ödenmiş faturaya bağlanmaz', async () => {
     const a = await createMoneyDocument(db, {
       kind: 'invoice', number: `A-${stamp}`, issuedOn: '2026-09-01', direction: 'out', amountCents: 70_000, nature: 'kira', vatRegime: 'exempt',
     });
@@ -203,6 +203,17 @@ describe('belge ve bağ — tutarıyla (13.09)', () => {
 
     expect(await allocateToDocument(db, { movementId: havale.id, documentId: c.document.id })).toEqual({ status: 'invalid', reason: 'nothing_to_allocate' });
     expect(await allocateToDocument(db, { movementId: havale.id, documentId: a.document.id })).toEqual({ status: 'invalid', reason: 'already_allocated' });
+
+    // Bağın tutarı elle verilmez: fazla para hareketin bağlanmamış kalanında durur, ödenmiş faturaya geçmez.
+    const ikinci = await movements().insert({ accountId: bankAccount, direction: 'out', amountCents: 90_000, type: 'expense' });
+    expect(await allocateToDocument(db, { movementId: ikinci.id, documentId: a.document.id })).toEqual({
+      status: 'invalid',
+      reason: 'document_settled',
+    });
+    expect(await allocateToDocument(db, { movementId: ikinci.id, documentId: c.document.id })).toMatchObject({
+      status: 'ok',
+      allocation: { amountCents: 10_000 },
+    });
   });
 
   it('kısmi ödeme açık kalanı düşürür; bağ kaldırılınca geri gelir; ters yönlü para bağlanmaz', async () => {

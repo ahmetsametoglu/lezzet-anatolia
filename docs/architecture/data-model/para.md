@@ -223,10 +223,10 @@ Hareket ↔ belge, TUTARIYLA (13.09 · ikinci karar, muhasebeci karşılaştırm
 
 **Kararlar**
 
-- **Bağların toplamı hareketin tutarını AŞAMAZ** (`check_allocation_within_movement`; hareket satırı kilitlenir — aynı anda yazılan iki bağ ikisi de "yer var" görmesin). Belgenin tarafı serbesttir: fazla ödeme bir olgudur, açık kalan eksiye düşer.
+- **Bağların toplamı hareketin tutarını AŞAMAZ** (`check_allocation_within_movement`; hareket satırı kilitlenir — aynı anda yazılan iki bağ ikisi de "yer var" görmesin). Belgenin tarafı veride serbesttir, açık kalan eksiye düşebilir; kapı fazla ödemeyi belgeye yazmaz, o hareketin bağlanmamış kalanında görünür.
 - **Aynı hareket aynı belgeye bir kez bağlanır** (tekil çift): ikinci bağ, birincinin tutarını değiştirmek olurdu.
 - **İki uçtan `cascade`:** hareket ya da belge silinirse bağ gider, öteki kalır. Bağ eklenip silinince hareketin izahı yeniden kurulur (`money_allocation_touch`).
-- **Tutar verilmezse** kapı hareketin bağlanmamış kalanıyla belgenin açık kalanının KÜÇÜĞÜNÜ bağlar (`allocateToDocument`): 500 €'luk havale 360 €'luk faturayı kapatır, 140 € kuyrukta kalır.
+- **Bağın tutarı elle verilmez:** kapı hareketin bağlanmamış kalanıyla belgenin açık kalanının KÜÇÜĞÜNÜ bağlar (`allocateToDocument`), kapanmış belgeye bağ kurmaz. 500 €'luk havale 360 €'luk faturayı kapatır, 140 € kuyrukta kalır. Pennylane de bağda tutar taşımaz, hareketi faturalara bağlanma sırasıyla dağıtır; iki taraf aynı sonucu bulur.
 
 ## BankImportProfile (banka import şablonu)
 

@@ -231,7 +231,6 @@ export const ALLOCATION_REASON = {
   already_allocated: 'Bu hareket bu belgeye zaten bağlı.',
   nothing_to_allocate: 'Hareketin bağlanacak kalanı yok — tutarın tamamı başka belgelere bağlanmış.',
   document_settled: 'Belgenin açık kalanı yok — ödemesi zaten tamamlanmış.',
-  over_movement: 'Bağ tutarı hareketin kalanını aşıyor.',
 } as const;
 
 /** Etiket kapısının reddi → operatörün cümlesi. */

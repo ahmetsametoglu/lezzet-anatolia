@@ -110,15 +110,16 @@ async function supplyLinkProblemOf(db: SupabaseClient, input: MoneyDocumentInser
 
 export type AllocationOutcome =
   | { status: 'ok'; allocation: MoneyAllocation }
-  | { status: 'invalid'; reason: 'not_found' | 'direction_mismatch' | 'already_allocated' | 'nothing_to_allocate' | 'document_settled' | 'over_movement' };
+  | { status: 'invalid'; reason: 'not_found' | 'direction_mismatch' | 'already_allocated' | 'nothing_to_allocate' | 'document_settled' };
 
 /**
- * Hareketi belgeye tutarıyla bağlar; tutar verilmezse hareketin bağlanmamış kalanı ile belgenin açık kalanından küçüğü. Yön aynı
- * olmalı, aynı çift iki kez bağlanmaz; kapanmış belgeye ancak açık tutarla bağlanır, çünkü fazla ödeme bir olgudur.
+ * Hareketi belgeye bağlar; bağın tutarı hareketin bağlanmamış kalanı ile belgenin açık kalanının küçüğüdür ve elle verilmez, çünkü
+ * Pennylane de hareketi faturalara bağlanma sırasıyla dağıtır. Yön aynı olmalı, aynı çift iki kez bağlanmaz; kapanmış belgeye bağ
+ * kurulmaz, fazla ödeme hareketin bağlanmamış kalanında görünür.
  */
 export async function allocateToDocument(
   db: SupabaseClient,
-  input: { movementId: string; documentId: string; amountCents?: number },
+  input: { movementId: string; documentId: string },
 ): Promise<AllocationOutcome> {
   const documents = new MoneyDocumentService(db);
   const [movement, document] = await Promise.all([new MoneyMovementService(db).getById(input.movementId), documents.getById(input.documentId)]);
@@ -131,16 +132,10 @@ export async function allocateToDocument(
   const remaining = movement.amountCents - existing.reduce((sum, allocation) => sum + allocation.amountCents, 0);
   if (remaining <= 0) return { status: 'invalid', reason: 'nothing_to_allocate' };
 
-  let amountCents = input.amountCents;
-  if (amountCents === undefined) {
-    const open = (await documents.balances([document.id])).get(document.id)?.openAmountCents ?? document.amountCents;
-    if (open <= 0) return { status: 'invalid', reason: 'document_settled' };
-    amountCents = Math.min(remaining, open);
-  }
-  if (amountCents <= 0) return { status: 'invalid', reason: 'nothing_to_allocate' };
-  if (amountCents > remaining) return { status: 'invalid', reason: 'over_movement' };
+  const open = (await documents.balances([document.id])).get(document.id)?.openAmountCents ?? document.amountCents;
+  if (open <= 0) return { status: 'invalid', reason: 'document_settled' };
 
-  const allocation = await allocations.insert({ movementId: movement.id, documentId: document.id, amountCents });
+  const allocation = await allocations.insert({ movementId: movement.id, documentId: document.id, amountCents: Math.min(remaining, open) });
   return { status: 'ok', allocation };
 }
 
