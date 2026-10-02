@@ -459,9 +459,10 @@ bildirim. Yazım duran belge (oran tutmuyor, mükerrer numara, karşı taraf yok
 bildirim ilk turda gider. İstemci istek sınırına (5 saniyede 25) göre aralık bırakır; 429 gelirse `retry-after`
 kadar bekler.
 
-**Güvenlik:** `PENNYLANE_MODE=sandbox` iken her yazımdan önce `/me` şirket numarasının `sandbox-` ile başladığı
-doğrulanır; `live` kipinde canlı şirkete yazılır. Anahtar yalnız backend'dedir. Log'a kimlik yazılır, tutar ve
-açıklama yazılmaz.
+**Güvenlik:** istemci ilk istekte `/me` ile anahtarın şirketini okur; kip ile şirket uyuşmazsa (test kipinde
+numarası `sandbox-` ile başlamayan, canlı kipte başlayan şirket) okuma dahil hiçbir istek gitmez, çünkü canlı
+hareket test veritabanına ya da test şirketinin uydurma hareketi deftere karışırdı. Anahtar yalnız backend'dedir.
+Log'a kimlik yazılır, tutar ve açıklama yazılmaz.
 
 **Şema:**
 - `money_document.vat_lines` (jsonb, oran başına KDV hariç tutar ve KDV, cent): belgenin KDV'sinin tek kaynağı.
@@ -498,8 +499,8 @@ var.
 - `packages/domain-core/src/accounting/pennylane/`: iki yönlü KDV kodu eşlemesi, içe aktarma gövdesi, yazım öncesi
   denetimler, bağ planı (istenen küme; ekle ya da baştan yaz), kalan tutar karşılaştırması.
 - `packages/database`: tablolar, kuyruk tetikleyicileri (belge ve kırılımı, bağ), servisler.
-- `packages/application/src/accounting/pennylane/`: port ve Pennylane istemcisi (istek sınırı, test şirketi
-  denetimi), bellek içi ikiz, okuma (hareket, e-fatura), yazma (tedarikçi, belge, bağ, ödeme durumu), sessizlik
+- `packages/application/src/accounting/pennylane/`: port ve Pennylane istemcisi (istek sınırı, kip ile
+  şirketin denetimi), bellek içi ikiz, okuma (hareket, e-fatura), yazma (tedarikçi, belge, bağ, ödeme durumu), sessizlik
   uyarısı. Cevap biçimi ölçülen alanlarla `packages/types` sözleşmesindedir. Fotoğrafı PDF'e çevirmek için yeni
   bir bağımlılık gerekir (`pdf-lib`; HEIC ve WEBP'nin yolu uygulamada ölçülür).
 - `apps/backend/src/jobs/`: `pennylane-sync` (birkaç dakikada bir; akışlar ve kuyruk), `bank-feed-quiet` (günlük).
@@ -511,8 +512,9 @@ ile; istemci sahte `fetch` ile. Pennylane'e karşı ölçüm test şirketinde, b
 **İş sırası** (her adım ayrı commit):
 1. Belgenin KDV kırılımı: şema, belge formu, asistan ve mal kabul önerileri, döküm.
 2. Bağ kuralının kesinleşmesi (elle tutar seçeneğinin kaldırılması).
-3. Pennylane istemcisi, port, bellek içi ikiz, sözleşme şemaları.
-4. Banka hareketi okuma, Pennylane kartı (hesap eşlemesi, canlıya geçiş), hareket gelmiyor uyarısı.
+3. Pennylane istemcisi, port, sözleşme şemaları; sonraki her adım kendi okuma ve yazımını porta ekler.
+4. Banka hareketi okuma (bellek içi ikiz ilk tüketicisiyle burada), Pennylane kartı (hesap eşlemesi, canlıya
+   geçiş), hareket gelmiyor uyarısı.
 5. Tedarikçi eşleme ve alış belgesi yükleme (PDF'e çevirme, denetimler, kuyruk, nakit ödemede ödeme durumu).
 6. Eşleşme yazma ve Pennylane'deki eşleşmeleri okuma.
 7. E-fatura okuma, mal kabule bağlama, itiraz; canlı hesapta yalnız okuyarak ölçüm.

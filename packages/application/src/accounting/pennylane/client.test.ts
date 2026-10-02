@@ -1,0 +1,171 @@
+import { describe, expect, it } from 'vitest';
+import { pennylanePort, type PennylaneConfig } from './client';
+import { PennylaneError } from './errors';
+
+interface Reply {
+  status?: number;
+  json?: unknown;
+  headers?: Record<string, string>;
+  throws?: string;
+}
+
+const SANDBOX_ME = { company: { id: 270612, name: 'Sandbox', reg_no: 'sandbox-270612' } };
+const LIVE_ME = { company: { id: 9001, name: 'QUALITE SAS', reg_no: '912345678' } };
+const EMPTY_PAGE = { items: [], has_more: false, next_cursor: null };
+/** `/me` ile 24 okuma pencereyi doldurur; saat ilerlemediği için 26. istek tam pencere kadar bekler. */
+const WINDOW_WAIT = 5_000;
+
+/**
+ * Yola göre cevap veren sahte `fetch` ve sahte saat: istekler, sorgularıyla kaydedilir, beklemeler süreleriyle; test ağa çıkmaz,
+ * gerçek saatte beklemez. Bir yolun cevap listesi bitince son cevap tekrar eder.
+ */
+function fakePennylane(routes: Record<string, Reply[]>, mode: PennylaneConfig['mode'] = 'sandbox') {
+  const calls: Array<{ path: string; query: Record<string, string> }> = [];
+  const sleeps: number[] = [];
+  const served = new Map<string, number>();
+  let now = 0;
+  const fetchImpl = (async (url: string | URL | Request) => {
+    const parsed = new URL(String(url));
+    const path = parsed.pathname.replace('/api/external/v2', '');
+    calls.push({ path, query: Object.fromEntries(parsed.searchParams) });
+    const replies = routes[path] ?? [{ status: 404, json: { error: 'not_found' } }];
+    const index = served.get(path) ?? 0;
+    served.set(path, index + 1);
+    const reply = replies[Math.min(index, replies.length - 1)]!;
+    if (reply.throws) throw new Error(reply.throws);
+    return new Response(JSON.stringify(reply.json ?? {}), { status: reply.status ?? 200, headers: reply.headers });
+  }) as unknown as typeof fetch;
+  const clock = {
+    now: () => now,
+    sleep: async (ms: number) => {
+      sleeps.push(ms);
+      now += ms;
+    },
+  };
+  return { port: pennylanePort({ token: 't', mode, fetchImpl, clock }), calls, sleeps };
+}
+
+const transaction = (over: Record<string, unknown> = {}) => ({
+  id: 31309718454272,
+  label: 'VIR FOURNISSEUR',
+  date: '2026-10-02',
+  amount: '-500.0',
+  currency: 'EUR',
+  archived_at: null,
+  updated_at: '2026-10-02T14:41:26.328677Z',
+  bank_account: { id: 17111818240 },
+  ...over,
+});
+
+describe('kip ve şirket', () => {
+  it('kip ile anahtarın şirketi uyuşmazsa hiçbir okuma gitmez; uyuşunca şirket bir kez denetlenir', async () => {
+    const yanlis = fakePennylane({ '/me': [{ json: LIVE_ME }], '/bank_accounts': [{ json: EMPTY_PAGE }] }, 'sandbox');
+    await expect(yanlis.port.listBankAccounts()).rejects.toMatchObject({ code: 'company_mismatch' });
+    expect(yanlis.calls.map((call) => call.path)).toEqual(['/me']);
+
+    const ters = fakePennylane({ '/me': [{ json: SANDBOX_ME }] }, 'live');
+    await expect(ters.port.company()).rejects.toMatchObject({ code: 'company_mismatch' });
+
+    const dogru = fakePennylane({ '/me': [{ json: SANDBOX_ME }], '/bank_accounts': [{ json: EMPTY_PAGE }] }, 'sandbox');
+    await dogru.port.listBankAccounts();
+    await dogru.port.listBankAccounts();
+    expect(dogru.calls.map((call) => call.path)).toEqual(['/me', '/bank_accounts', '/bank_accounts']);
+  });
+});
+
+describe('hareket okuması', () => {
+  it('işaretli ondalık tutar cent ve yöne çevrilir; arşivlenen hareket işaretlenir', async () => {
+    const { port } = fakePennylane({
+      '/me': [{ json: SANDBOX_ME }],
+      '/transactions': [
+        {
+          json: {
+            items: [
+              transaction(),
+              transaction({ id: 2, amount: '250.0' }),
+              transaction({ id: 3, amount: '-39.99', archived_at: '2026-10-03T08:00:00Z' }),
+            ],
+            has_more: false,
+            next_cursor: 'son',
+          },
+        },
+      ],
+    });
+    const page = await port.listTransactions({ bankAccountId: 17111818240, fromDate: '2026-10-01', cursor: null });
+
+    expect(page.items.map(({ id, direction, amountCents, archived }) => ({ id, direction, amountCents, archived }))).toEqual([
+      { id: 31309718454272, direction: 'out', amountCents: 50_000, archived: false },
+      { id: 2, direction: 'in', amountCents: 25_000, archived: false },
+      { id: 3, direction: 'out', amountCents: 3999, archived: true },
+    ]);
+    // `has_more` yoksa imleç sonraki sayfayı istetmez.
+    expect(page.nextCursor).toBeNull();
+  });
+
+  it('süzgeç `filter` adıyla ve her sayfada yeniden gider; imleç sonraki sayfayı ister', async () => {
+    const { port, calls } = fakePennylane({
+      '/me': [{ json: SANDBOX_ME }],
+      '/transactions': [{ json: { items: [transaction()], has_more: true, next_cursor: 'c2' } }, { json: EMPTY_PAGE }],
+    });
+    const first = await port.listTransactions({ bankAccountId: 17111818240, fromDate: '2026-10-01', cursor: null });
+    await port.listTransactions({ bankAccountId: 17111818240, fromDate: '2026-10-01', cursor: first.nextCursor });
+
+    const pages = calls.filter((call) => call.path === '/transactions').map((call) => call.query);
+    expect(first.nextCursor).toBe('c2');
+    expect(pages[1]).toMatchObject({ cursor: 'c2' });
+    for (const page of pages) {
+      expect(JSON.parse(page.filter ?? 'null')).toEqual([
+        { field: 'bank_account_id', operator: 'eq', value: '17111818240' },
+        { field: 'date', operator: 'gteq', value: '2026-10-01' },
+      ]);
+    }
+  });
+
+  it('değişiklik akışında ilk sayfa andan, sonraki imleçten istenir; ikisi birlikte gitmez', async () => {
+    const { port, calls } = fakePennylane({
+      '/me': [{ json: SANDBOX_ME }],
+      '/changelogs/transactions': [
+        { json: { items: [{ id: 5, operation: 'update', processed_at: '2026-10-02T14:41:27Z' }], has_more: true, next_cursor: 'k2' } },
+        { json: EMPTY_PAGE },
+      ],
+    });
+    const first = await port.transactionChanges({ since: '2026-10-02T14:00:00Z', cursor: null });
+    await port.transactionChanges({ since: null, cursor: 'k2' });
+
+    expect(first).toEqual({ items: [{ id: 5, operation: 'update', processedAt: '2026-10-02T14:41:27Z' }], nextCursor: 'k2' });
+    const [ilk, sonraki] = calls.filter((call) => call.path === '/changelogs/transactions').map((call) => call.query);
+    expect(ilk).toMatchObject({ start_date: '2026-10-02T14:00:00Z' });
+    expect(ilk).not.toHaveProperty('cursor');
+    expect(sonraki).toMatchObject({ cursor: 'k2' });
+    expect(sonraki).not.toHaveProperty('start_date');
+  });
+
+  it('olmayan hareket `null`; geçersiz anahtar tekrar edilmeden `credentials` olarak düşer', async () => {
+    const { port } = fakePennylane({ '/me': [{ json: SANDBOX_ME }] });
+    expect(await port.getTransaction(42)).toBeNull();
+
+    const yetkisiz = fakePennylane({ '/me': [{ status: 401, json: { error: 'unauthorized', message: 'invalid token' } }] });
+    await expect(yetkisiz.port.company()).rejects.toBeInstanceOf(PennylaneError);
+    await expect(yetkisiz.port.company()).rejects.toMatchObject({ code: 'credentials' });
+    expect(yetkisiz.calls).toHaveLength(2);
+  });
+});
+
+describe('istek sınırı ve tekrar', () => {
+  it("429'da `retry-after` kadar beklenip tekrar istenir; sunucu arızasında okuma artan aralıkla tekrarlanır", async () => {
+    const { port, sleeps } = fakePennylane({
+      '/me': [{ json: SANDBOX_ME }],
+      '/bank_accounts': [{ status: 429, headers: { 'retry-after': '2' } }, { status: 503 }, { json: EMPTY_PAGE }],
+    });
+    expect(await port.listBankAccounts()).toEqual([]);
+    expect(sleeps).toEqual([2000, 1000]);
+  });
+
+  it('beş saniyede 25 istekten fazlası gitmez: 26. istek pencerenin en eskisi düşene kadar bekler', async () => {
+    const { port, sleeps } = fakePennylane({ '/me': [{ json: SANDBOX_ME }], '/transactions/1': [{ json: transaction({ id: 1 }) }] });
+    for (let i = 0; i < 24; i += 1) await port.getTransaction(1);
+    expect(sleeps).toEqual([]);
+    await port.getTransaction(1);
+    expect(sleeps).toEqual([WINDOW_WAIT]);
+  });
+});

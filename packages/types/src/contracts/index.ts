@@ -81,3 +81,5 @@ export * from './money-api.schema';
 export * from './operations-api.schema';
 // Sertifikalı kasanın (Hiboutik) cevap biçimi; tutarı cent'e kasa istemcisi çevirir.
 export * from './hiboutik.schema';
+// Muhasebe yazılımının (Pennylane) cevap biçimi; tutarı cent'e ve yöne muhasebe istemcisi çevirir.
+export * from './pennylane.schema';

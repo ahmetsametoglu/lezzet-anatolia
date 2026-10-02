@@ -45,6 +45,7 @@ export * from './supply.schema';
 export * from './money.schema';
 export * from './bank-import.schema';
 export * from './register.schema';
+export * from './pennylane.schema';
 export * from './job-run.schema';
 export * from './webhook-event.schema';
 export * from './ticket.schema';
