@@ -70,7 +70,7 @@
 | 4 | Kart tahsilatı → bizim defter | Revolut Merchant API → biz | var | ödeme nesnesinde komisyon (`fees`); para 24 saat içinde Business içindeki Merchant hesabına, oradan ana hesaba |
 | 5 | Banka hareketi → biz | Pennylane API → biz | var | `GET /transactions` (hesap ve tarih süzgeci) + `/changelogs/transactions` |
 | 6 | Alış faturası (yabancı / e-faturasız) | biz → Pennylane | var | `POST /file_attachments` (yalnız PDF) → `POST /supplier_invoices/import` |
-| 7 | E-fatura (Fransız tedarikçi) | Pennylane API → biz | var | `/changelogs/supplier_invoices` (son 4 hafta) + `GET /supplier_invoices/{id}` |
+| 7 | E-fatura (Fransız tedarikçi) | Pennylane API → biz | var | `/changelogs/supplier_invoices` (son 4 hafta) ya da webhook `supplier_invoice.e_invoicing_received` + `GET /supplier_invoices/{id}` ve `/invoice_lines` |
 | 8 | Eşleşme | biz → Pennylane | var | `POST /supplier_invoices/{id}/matched_transactions` (çağrı başına tek hareket–tek fatura) |
 | 9 | Nakit → banka | Hiboutik kasasından çıkış, Crédit Mutuel'e yatırma | var | `POST /till/cash_out`; yatırma 3. akışla Pennylane'e gelir |
 
@@ -162,13 +162,47 @@ aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yükl�
   başına 1 (bölünen ya da KDV'si değişen kalem 1 daha), toplu uç yok. Ayda 600 siparişte 8 kalemle ~9.600
   çağrı; kota (ikincil kaynakta ayda 10.000) canlı planla doğrulanacak.
 
-**Pennylane** (test ortamı):
-- E-fatura okumada fatura satırları, PDF bağlantısı ve e-fatura alanları geliyor mu (veri modelinde
-  görünmüyor).
-- İçe aktarmanın zorunlu alanları (KDV oranlı satır, hesap kodu).
-- Eşleşme yazmada kısmi tutar: "havalenin 360 €'su A'ya, 140 €'su B'ye" nasıl görünüyor.
-- Banka hareketinde karşı taraf bilgisi (belgede yalnız açıklama, tutar, tarih, hesap var).
-- Fatura durumunu (onaylandı, reddedildi, itirazda) bizden yazma: `PUT /supplier_invoices/{id}/e_invoice_status`.
+**Pennylane — belgeden okundu (02.10).** Company API v2 belgesinin kopyası `.test-results/pennylane-api/`
+(depoda değil; `oas.py` bir uç sayfasının alanlarını döker).
+- **Erişim:** şirket anahtarı (Bearer), Essential ve üstü planda yönetici rolüyle Ayarlar › Bağlantılar ›
+  Geliştiriciler'den üretilir ve bir kez gösterilir; okuma ya da okuma-yazma, süre 1–12 ay ya da süresiz.
+  Test ortamını şirket kendisi açar (profil › Test environment › Create my sandbox); test şirketinin `/me`
+  cevabında `reg_no` `sandbox-` ile başlar.
+- **Sınır:** anahtar başına 5 saniyede 25 istek, aşımda 429 ve `retry-after`; sınır başlıkları her cevapta.
+- **2026 değişikliği** (1 Temmuz 2026'dan beri zorunlu): `ledger` yetkisi yerine ayrıntılı yetkiler, imleçli
+  sayfalama, sonek almayan kimlikler, dosya için `POST /file_attachments`. Bağlantı doğrudan yeni sürümle yazılır.
+- **Alış faturası içe aktarma:** önce `POST /file_attachments` (içe aktarma yalnız PDF kabul eder, 100 MB), sonra
+  `POST /supplier_invoices/import`. Zorunlu alanlar: dosya, tedarikçi, tarih, vade, KDV hariç, KDV ve toplam tutar
+  (iki ondalıklı metin), KDV oranlı satırlar (`vat_rate`: `FR_55`, `FR_200`; ters yükleme için `intracom_55`,
+  `extracom` gibi kodlar). Hesap kodu isteğe bağlıdır, verilmezse Pennylane tedarikçiden atar. `external_reference`
+  bizim belge kimliğimizi taşır; aynı dosya ikinci kez içe aktarılırsa 422. Fatura listesi `supplier_id`,
+  `invoice_number` ve `external_reference` ile süzülür, yüklemeden önce mükerrer kontrolü bununla yapılır.
+- **Tedarikçi:** `POST /suppliers` ad, SIREN/SIRET, KDV numarası, adres, IBAN, ödeme yöntemi, vade gün sayısı ve
+  `external_reference` alır.
+- **E-fatura okuma:** okunan faturada `e_invoicing` (durum, gerekçe, akış, asıl CII/UBL/Factur-X dosyasının adresi,
+  alıcının e-fatura adresi), 30 dakika geçerli dosya adresi, ödeme durumu ve kalan tutar var; satırlar ayrı uçtan
+  gelir (`/supplier_invoices/{id}/invoice_lines`: oran, tutarlar, etiket). Yeni e-fatura için webhook var
+  (`supplier_invoice.e_invoicing_received`); değişiklik akışı (`/changelogs/supplier_invoices`) son 4 haftayı tutar.
+- **E-fatura durumu yazma:** `PUT /supplier_invoices/{id}/e_invoice_status` ile itiraz (`disputed`; gerekçe
+  sözlükten: yanlış miktar, kusurlu mal, teslimat sorunu vb.), ret (`refused`; geri alınmaz, ödeme bağlıysa
+  yapılamaz) ve itirazı kaldırma (`approved`). Fatura `null` durumla gelir; bu örtük onaydır.
+- **Banka hareketi:** `GET /transactions` hesap, günlük ve tarihle süzülür, kimliğe göre sıralanır, sayfa başına
+  en çok 100. Alanlar: tutar, tarih, açıklama, ücret, hesap, Pennylane'de eşlenmişse tedarikçi ya da müşteri,
+  eşlenen faturalar, `interbank_code`; karşı taraf adı ya da IBAN alanı yok. Değişiklik akışı
+  (`/changelogs/transactions`) ekleme, güncelleme ve silmeyi işlenme sırasıyla verir, son 4 haftayı tutar; banka
+  hareketi için webhook yok. Banka hesabında ad, bakiye ve günlük var, son eşitleme bilgisi yok: "hareket
+  gelmiyor" uyarısı bizde hesaplanır.
+- **Eşleşme:** `POST /supplier_invoices/{id}/matched_transactions` gövdesi yalnız hareket kimliğidir, tutar alanı
+  yok. Bir hareket birden çok faturaya, bir fatura birden çok harekete bağlanabilir; geri alma
+  `DELETE …/matched_transactions/{id}`.
+
+**Pennylane — test ortamında ölçülecek:**
+- `/me` cevabı ve test şirketinin tanınması (yazımdan önce `sandbox-` denetimi).
+- Banka hareketi tutarının işareti; test ortamında `POST /transactions` ile hareket yaratma.
+- Tutarı faturadan büyük hareket iki faturaya bağlanınca kalan tutar ve ödeme durumu (bizim tutarlı bağımızın
+  Pennylane'deki karşılığı).
+- İçe aktarmanın ters yükleme satırını ve satır toplamlarının fatura toplamıyla tutmasını nasıl denetlediği.
+- Test ortamına e-fatura gelip gelmediği; gelmiyorsa e-fatura okuma canlı hesapta, yalnız okuyarak ölçülür.
 
 **Revolut** (deneme hesabı):
 - Ödeme başına komisyon (`fees`) ve Merchant hesabından ana hesaba aktarmanın görünüşü.
@@ -378,6 +412,10 @@ Pennylane:
 - [Banka bağlama](https://help.pennylane.com/fr/articles/18855-connecter-et-synchroniser-un-compte-bancaire)
 - [Bankaların otomatik bağlantı kopması](https://help.pennylane.com/fr/articles/20882-anticiper-la-deconnexion-automatique-des-banques)
 - [Test ortamı oluşturma](https://help.pennylane.com/fr/articles/18773-creer-un-environnement-de-test)
+- [API seçimi (Company · Firm · Firm Group)](https://pennylane.readme.io/docs/what-apis-are-available)
+- [Şirket anahtarı](https://pennylane.readme.io/docs/generating-my-api-token) · [Test ortamı ve ilk istek](https://pennylane.readme.io/docs/getting-started)
+- [İstek sınırı](https://pennylane.readme.io/docs/rate-limiting-1) · [2026 değişiklikleri](https://pennylane.readme.io/docs/2026-api-changes-guide)
+- [Webhook olayları](https://pennylane.readme.io/docs/list-of-events) · [E-fatura durumu](https://pennylane.readme.io/reference/putsupplierinvoiceeinvoicestatus)
 
 Revolut:
 - [Merchant API](https://developer.revolut.com/docs/merchant/merchant-api)
