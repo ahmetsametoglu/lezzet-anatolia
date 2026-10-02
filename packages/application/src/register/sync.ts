@@ -485,6 +485,8 @@ async function cashEffectOf(db: Db, movement: MoneyMovement): Promise<CashEffect
     !own && movement.counterAccountId && !movement.counterpartMovementId ? await stores.findByCashAccount(movement.counterAccountId) : null;
   const store = own ?? counter;
   if (!store) return null;
+  // Kart, online ya da havale aynı hesaba yazılmış olsa da çekmeceden geçmez; gün sonu defteri de yalnız nakdi bekler.
+  if (movement.paymentMethod !== null && movement.paymentMethod !== 'cash') return null;
   if (movement.orderId) {
     const order = await new OrderService(db).getById(movement.orderId);
     if (!order || order.channel !== 'b2b' || movement.paymentMethod !== 'cash') return null;

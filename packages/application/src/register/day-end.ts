@@ -169,7 +169,10 @@ async function oursOf(db: Db, store: RegisterStore, date: string): Promise<Regis
   return {
     vat: lines.map((line) => ({ vatRate: line.vatRate, grossCents: line.amountCents })),
     payments: ownPayments.map((payment) => ({ method: payment.method, amountCents: payment.amountCents })),
-    saleIds: [...ownTickets.values()].map((ticket) => ticket.externalSaleId).filter((id): id is number => id !== null),
+    // Kasa tarafının satış listesi günün ödemelerinden çıkar; ödemesiz fiş (para doğurmayan iade) orada görünmez, KDV'de karşılaştırılır.
+    saleIds: [...new Set(ownPayments.map((payment) => ownTickets.get(payment.ticketId)!.externalSaleId))].filter(
+      (id): id is number => id !== null,
+    ),
     cashNetCents: cashPaid + cashMoved,
   };
 }

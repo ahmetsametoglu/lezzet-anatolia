@@ -438,6 +438,21 @@ describe('fiş dışı nakit', () => {
     ]);
   });
 
+  it('çekmece hesabına kartla yazılmış sipariş dışı para kasaya nakit olarak yazılmaz', async () => {
+    // Kapı önü satışın kart tahsilatı çekmecenin hesabına düşebilir; nakit girişi yazılsaydı kasa sayımı kart parası kadar şişerdi.
+    const card = await movements.insert({
+      accountId: cashAccountId,
+      direction: 'in',
+      amountCents: 500,
+      type: 'order_payment',
+      paymentMethod: 'card',
+      description: 'Kapı önü satış',
+    });
+
+    expect(await runRow('movement_id', card.id)).toBe('skipped');
+    expect(tillsOf(card.id)).toEqual([]);
+  });
+
   it('ekstre satırı yatırmanın öteki yakasına bağlanınca kasaya ikinci çıkış yazılmaz', async () => {
     const deposit = await movements.insert({
       accountId: cashAccountId,
@@ -659,6 +674,27 @@ describe('gün sonu', () => {
       closed: false,
       days: [{ date: today(), differences: [] }],
       waiting: 1,
+    });
+  });
+
+  it('ödemesiz fiş satış listesinde fark sayılmaz, gün kapanır', async () => {
+    // Kasanın satış listesi günün ödemelerinden okunur; ödemesiz fiş orada yoktur, bizde sayılsaydı her iade günü kapanışı bekletirdi.
+    const own = await ownStore('KASA-ODEMESIZ');
+    const order = await newOrder({ warehouseId: own.warehouseId });
+    await orders.update({ id: order.id, status: 'delivered' });
+    const items = new OrderItemService(db);
+    const [line] = await items.listByOrder(order.id);
+    await items.setFulfilled(line!.id, 2);
+    await pay(order.id, 2000);
+    await runRow('order_id', order.id);
+    await items.setFulfilled(line!.id, 1);
+    await runRow('order_id', order.id);
+
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate: today() });
+
+    expect(result.stores.find((store) => store.warehouseId === own.warehouseId)).toMatchObject({
+      closed: true,
+      days: [{ date: today(), differences: [] }],
     });
   });
 
