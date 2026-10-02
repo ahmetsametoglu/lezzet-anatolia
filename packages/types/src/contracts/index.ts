@@ -44,7 +44,7 @@ export * from './package-api.schema';
 // `@lezzet/application`ın kurye kapıları; kanıt ve kapanış varlık şemalarından türer.
 export * from './courier-api.schema';
 export * from './courier-return-api.schema';
-// Depo — hazırlık kuyruğu/onayı, mal kabul, sayım-düzeltme, transfer, kurye dönüşü (D1–D6).
+// Depo — hazırlık kuyruğu/onayı, mal kabul, sayım-düzeltme, transfer ve kurye dönüşü ekranları.
 // Kaynağı `@lezzet/application`ın depo kapıları; parti/kabul/transfer varlık şemalarından türer.
 export * from './warehouse-api.schema';
 // Sepet gövdesi fiyat taşımaz, çünkü istemcinin yazabildiği tutar siparişin parasını belirleyemez. Cevap görünüm değil satırdır:
