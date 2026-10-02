@@ -134,11 +134,12 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
   karşılaştırır; hepsi tutuyor ve mağazanın kuyruğu boşsa günü kasada kapatır (yalnız `HIBOUTIK_MODE=live`). Tutmayan gün
   kapanmaz, `error_log`a uyarı ve yönetime bildirim gider.
 
-## Muhasebe export
+## Muhasebe
 
-- Sistem ön muhasebe verisini dış muhasebe yazılımına **export** eder; resmî fatura orada kesilir.
-- **Hedef yazılım muhasebeciyle netleşince biçimlenir** (iş bağımlılığı, faz değil) — muhasebecinin kullandığı programa göre (Pennylane, Sage, EBP, Tiime vb. Fransa'da yaygın). İlk sürümde tek hedef seçilir, adaptör deseniyle yazılır (başka hedef sonradan eklenebilir).
-- e-fatura (2026 FR zorunluluğu) sistemin işi **değil** — dış yazılımda. Sistem sadece temiz veri üretir.
+- Muhasebe yazılımı Pennylane; akış `docs/feature/kasa-muhasebe.md`de. B2C satış Pennylane'e yalnız Hiboutik'ten, banka
+  hareketi bankadan doğrudan girer; bizden giden yalnız alış faturası ve eşleşmedir.
+- Raporlar ekranındaki satış dosyası ve hareket dökümü genel amaçlı dışa aktarımdır, muhasebe akışının parçası değildir.
+- e-fatura sistemin işi **değil**: B2B satış faturası Pennylane'de kesilir, tedarikçi e-faturası Pennylane'e kayıtlı platformdan gelir.
 
 ## Banka import
 
