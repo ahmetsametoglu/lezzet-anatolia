@@ -3,9 +3,9 @@ import {
   AccountService, AddressService, CategoryService, DeliveryZoneService, OrderService, ProductService,
   ReservationService, StockService, UserProfileService, VehicleService, WarehouseService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, settingsSnapshot, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { canTransition, warehouseScope } from '@lezzet/domain-core';
-import { discardCourierRun, listCourierDay, markUndelivered, readCourierRun, readDoorCashAccountId, startCourierDay, type CourierDayStart, type CourierStop } from './day';
+import { discardCourierRun, listCourierDay, markUndelivered, readCourierRun, startCourierDay, type CourierDayStart, type CourierStop } from './day';
 import { loadBox } from './load';
 import { openBox, sealBox } from '../warehouse/boxes';
 import { listCourierRoutes } from './routes';
@@ -337,48 +337,6 @@ describe('gün listesi (11.1)', () => {
 
     expect((await listCourierDay(db, { courierId })).some((stop) => stop.orderId === orderId)).toBe(false);
     expect((await listCourierDay(db, { courierId, date: dayOffset(3) })).some((stop) => stop.orderId === orderId)).toBe(true);
-  });
-});
-
-/**
- * Kapı kasası hesabı. Ayar küresel tekil bir satır: her test kendi penceresini açıp bulduğu hâli geri koyar (CLAUDE §4b), pencere
- * kısa tutulur ki paralel koşan okumalar etkilenmesin.
- */
-describe('kapı kasası hesabı (21.10d)', () => {
-  it('hesap AYARDAN okunur — ekranın tahsilat kapısını açan tek değer', async () => {
-    const settings = settingsSnapshot(db);
-    await settings.override('door_cash_account_id', accountId);
-
-    try {
-      expect(await readDoorCashAccountId(db)).toBe(accountId);
-    } finally {
-      await settings.restore();
-    }
-  });
-
-  it('ayar yoksa NULL döner — "hesap yok" uydurulmuş bir hesaba düşmez', async () => {
-    // Ayar tohumda dolu olabilir; bu senaryo tam onun BOŞ olduğu hâli sınıyor.
-    const settings = settingsSnapshot(db);
-    await settings.remove('door_cash_account_id');
-
-    try {
-      expect(await readDoorCashAccountId(db)).toBeNull();
-    } finally {
-      await settings.restore();
-    }
-  });
-
-  it('ayar hesap kimliği DEĞİLSE null — kapıdaki para olmayan bir hesaba yazılmaz', async () => {
-    // Ayar elle yazılabilir bir jsonb; operatör oraya hesabın ADINI yazabilir. O değer cevaba
-    // konsaydı istemci onu `accountId` diye gönderir ve uçtan 400 alırdı — sebebi görünmeyen bir ret.
-    const settings = settingsSnapshot(db);
-    await settings.override('door_cash_account_id', 'Kapı kasası');
-
-    try {
-      expect(await readDoorCashAccountId(db)).toBeNull();
-    } finally {
-      await settings.restore();
-    }
   });
 });
 

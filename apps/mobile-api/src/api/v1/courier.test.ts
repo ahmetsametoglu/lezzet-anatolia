@@ -66,6 +66,9 @@ let zoneId = '';
 let otherZoneId = '';
 let addressId = '';
 let accountId = '';
+let cardAccountId = '';
+// Kapı hesapları küresel ayardır: dosya boyunca testin hesaplarına bağlanır ve bulunan hâl geri konur (CLAUDE §4b).
+const doorSettings = settingsSnapshot(db);
 let categoryId = '';
 let productId = '';
 let variantId = '';
@@ -268,6 +271,9 @@ beforeAll(async () => {
     })
   ).id;
   accountId = (await new AccountService(db).insert({ name: `Kapı kasası ${stamp}`, type: 'cash' })).id;
+  cardAccountId = (await new AccountService(db).insert({ name: `Kart cihazı ${stamp}`, type: 'provider' })).id;
+  await doorSettings.override('door_cash_account_id', accountId);
+  await doorSettings.override('door_card_account_id', cardAccountId);
 
   /* Araç bir depodur (`kind='vehicle'`) ve `createTestWarehouse` araç kaydını kendisi açar; tesis olarak kurulsaydı `vanWarehouseIdOf` onu bulamaz ve zemin sessizce yanlış olurdu. */
   const van = await createTestWarehouse(db, { label: 'ARAC', kind: 'vehicle', homeWarehouseId: warehouseId });
@@ -297,6 +303,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  await doorSettings.restore();
   // Kapanış, sipariş, rezervasyon, adres, sefer ve rota ayrıca silinmez: hepsi `purgeTestData`'nın bildiği bağlar,
   // boş kimlikle elle silme kurulum yarıda kalınca fırlatırdı.
   await purgeTestData(db, {
@@ -304,7 +311,7 @@ afterAll(async () => {
     categoryIds: [categoryId],
     profileIds,
     authUserIds,
-    accountIds: [accountId],
+    accountIds: [accountId, cardAccountId],
     // Araç deposu da buradan gider; purge aracın kaydını da toplar.
     warehouseIds: [warehouseId, vanWarehouseId],
   });
@@ -421,27 +428,19 @@ describe('GET /api/v1/courier/day', () => {
     expect(await res.json()).toEqual({ data: null, error: 'invalid_query' });
   });
 
-  it('kapı kasası hesabı AYARDAN gelir — tahsilat kapısını açan tek değer (21.10d)', async () => {
-    // Ayar KÜRESEL tekil satır: pencere kısa tutulur ve bulunan hâl geri konur (CLAUDE §4b).
-    const settings = settingsSnapshot(db);
-    await settings.override('door_cash_account_id', accountId);
-
-    try {
-      const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
-      // Gün başına TEKİL: durak başına tekrarlanmıyor, çünkü ayar da tekil.
-      expect(day.doorAccountId).toBe(accountId);
-    } finally {
-      await settings.restore();
-    }
+  it('gün cevabı hangi yöntemle tahsilat yazılabileceğini AYARDAN taşır', async () => {
+    const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
+    // Gün başına tekil: durak başına tekrarlanmıyor, çünkü ayar da tekil.
+    expect(day.doorCollection).toEqual({ cash: true, card: true });
   });
 
-  it('ayar boşsa `doorAccountId` null — istemci uydurma bir hesaba yazmasın', async () => {
+  it('kart ayarı boşsa gün cevabında kart kapalı, nakit açık kalır', async () => {
     const settings = settingsSnapshot(db);
-    await settings.remove('door_cash_account_id');
+    await settings.remove('door_card_account_id');
 
     try {
       const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
-      expect(day.doorAccountId).toBeNull();
+      expect(day.doorCollection).toEqual({ cash: true, card: false });
     } finally {
       await settings.restore();
     }
@@ -590,7 +589,7 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
     const orderId = await dispatched({ qty: 2, orderedTotalCents: 2000 });
 
     const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
-      collection: { method: 'cash', amountCents: 2000, accountId },
+      collection: { method: 'cash', amountCents: 2000 },
       scannedBoxCodes: [await boxCodeOf(orderId)],
     });
     expect(res.status).toBe(200);
@@ -642,7 +641,7 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
     const orderId = await dispatched({ channel: 'b2b' });
 
     const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
-      collection: { method: 'cash', amountCents: 2000, accountId },
+      collection: { method: 'cash', amountCents: 2000 },
       scannedBoxCodes: [await boxCodeOf(orderId)],
     });
 
@@ -671,7 +670,7 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
     });
 
     const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
-      collection: { method: 'cash', amountCents: 2000, accountId, idempotencyKey: key },
+      collection: { method: 'cash', amountCents: 2000, idempotencyKey: key },
       scannedBoxCodes: [await boxCodeOf(orderId)],
     });
 
@@ -796,7 +795,7 @@ describe('sefer kapanışı (K7)', () => {
     const run = await startRun();
 
     await post(`/api/v1/courier/stops/${teslim}/deliver`, {
-      collection: { method: 'cash', amountCents: 2000, accountId },
+      collection: { method: 'cash', amountCents: 2000 },
       scannedBoxCodes: [await boxCodeOf(teslim)],
     });
     await post(`/api/v1/courier/stops/${bekleyen}/undelivered`, { outcome: 'unreachable', note: 'kimse yok' });
@@ -819,7 +818,7 @@ describe('sefer kapanışı (K7)', () => {
     const teslim = await dispatched({ orderedTotalCents: 2000 });
     const run = await startRun();
     await post(`/api/v1/courier/stops/${teslim}/deliver`, {
-      collection: { method: 'cash', amountCents: 2000, accountId },
+      collection: { method: 'cash', amountCents: 2000 },
       scannedBoxCodes: [await boxCodeOf(teslim)],
     });
 

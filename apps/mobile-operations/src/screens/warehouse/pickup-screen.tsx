@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { ORDER_STATUS_LABELS, type PickupDeliverResponse, type PickupQueueOrderContract } from '@lezzet/types';
+import { DoorMethodEnum, ORDER_STATUS_LABELS, type PickupDeliverResponse, type PickupQueueOrderContract } from '@lezzet/types';
 
 import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
@@ -18,7 +18,7 @@ import { centsToAmountText, money } from '@/lib/operations/money';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { warehouseCopy } from './copy';
-import { usePickup, type PickupMethod } from './use-pickup.hook';
+import { usePickup } from './use-pickup.hook';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
@@ -27,7 +27,7 @@ import { useWarehouseStatus } from './warehouse-status';
 */
 
 const t = warehouseCopy;
-const METHODS: readonly PickupMethod[] = ['cash', 'card'];
+const METHODS = DoorMethodEnum.options;
 
 interface ResultRow {
   tone: 'done' | 'error';
@@ -50,6 +50,8 @@ function resultRowOf(data: PickupDeliverResponse, order: PickupQueueOrderContrac
     }
     case 'boxes_missing':
       return { tone: 'error', title: fillCopy(r.boxesMissing, { nos: data.remainingBoxNos.join(', ') }), sub: ref };
+    case 'collection_unavailable':
+      return { tone: 'error', title: fillCopy(r.collectionUnavailable, { method: t.pickup.deliver.method[data.method] }), sub: ref };
     case 'not_ready':
       return { tone: 'error', title: fillCopy(r.notReady, { status: ORDER_STATUS_LABELS[data.currentStatus] }), sub: ref };
     case 'not_pickup':
@@ -194,7 +196,7 @@ export function PickupScreen() {
                     />
                   ))}
                 </View>
-                {pickup.collectionBlocked && pickup.cashAccountId === null ? (
+                {pickup.collectionBlocked && !pickup.doorCollection[pickup.method] ? (
                   <Text style={styles.errorText} accessibilityRole="alert" testID="warehouse-pickup-collection-blocked">
                     {t.pickup.deliver.blocked}
                   </Text>
@@ -260,7 +262,7 @@ export function PickupScreen() {
         hint={t.pickup.deliver.scanHint}
         onClose={() => setScanOpen(false)}
         onScan={handleScan}
-        /* Simülasyon çipleri SEÇİLİ siparişin kutularıdır: kutu QR'ı havuzda yok, gerçek kodlar listeden gelir (D8'in kararı). */
+        /* Simülasyon çipleri SEÇİLİ siparişin kutularıdır: kutu QR'ı havuzda yok, gerçek kodlar listeden gelir. */
         devCodes={(selected?.boxes ?? []).map((box) => ({ label: fillCopy(t.pickup.deliver.boxRow, { no: String(box.boxNo) }), code: box.code }))}
         testID="warehouse-pickup-scan-sheet"
       />

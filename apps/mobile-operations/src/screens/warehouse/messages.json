@@ -1254,7 +1254,7 @@
       },
       "partial": "Eksik ödeme — durum \"Kısmi\"ye türer",
       "cashWarning": "⚠ Nakit yasal sınırın üstünde — bilgi amaçlıdır, engellemez.",
-      "blocked": "Tahsilat YAZILAMIYOR: bu deponun kapı kasası ayarlanmamış. Para alınırsa defterde görünmez — önce ayarı düzeltin.",
+      "blocked": "Tahsilat YAZILAMIYOR: bu deponun bu yöntem için hesabı ayarlanmamış. Para alınırsa defterde görünmez — önce ayarı düzeltin.",
       "method": {
         "cash": "nakit",
         "card": "kart"
@@ -1270,6 +1270,7 @@
       "okDeduped": "tahsilat zaten yazılmıştı",
       "cashLimit": "nakit yasal sınırın üstünde",
       "boxesMissing": "Okutulmayan kutu: {nos}",
+      "collectionUnavailable": "Bu depoda {method} hesabı ayarlanmamış — hiçbir kayıt yazılmadı",
       "notReady": "Sipariş hazır değil — {status}",
       "notPickup": "Bu sipariş gel-al değil",
       "forbidden": "Başka deponun siparişi",

@@ -107,7 +107,7 @@ describe('hızlı satış (07.10)', () => {
 
   it('adım atlandı diye İZ atlanmaz: parti kaydı ve geçiş logu yazılır', async () => {
     const { order } = await doorDraft(2);
-    // Hesap açıkça verilir: verilmezse `door_cash_account_id` ayarına düşülür ve o ayar yerelde demo kasayı gösterir.
+    // Hesap açıkça verilir: verilmezse yöntemin kapı hesabı ayarına düşülür ve o ayar yerelde demo hesabı gösterir.
     await quickSale(db, { orderId: order.id, paymentMethod: 'card', paymentAccountId: cashAccount });
 
     // Geri çağırma ("bu parti kime gitti") hızlı satışta da çalışır.
@@ -190,23 +190,28 @@ describe('hızlı satış (07.10)', () => {
     expect(line.fulfilledQty).toBe(2);
   });
 
-  it('hesap verilmezse tahsilat AYARDAKİ çekmeceye yazılır', async () => {
+  it('hesap verilmezse tahsilat yöntemin ayarındaki hesaba yazılır: nakit çekmeceye, kart kart hesabına', async () => {
     // Satış ekranı hesabı göndermez, düşülen yol ayardır. Ayar bilinen bir duruma getirilir ve bulunduğu gibi geri konur (§4b).
     const settings = settingsSnapshot(db);
     const ayarKasasi = (await new AccountService(db).insert({ name: `Ayar kasası ${stamp}`, type: 'cash' })).id;
+    const ayarKarti = (await new AccountService(db).insert({ name: `Ayar kart cihazı ${stamp}`, type: 'provider' })).id;
     await settings.override('door_cash_account_id', ayarKasasi);
+    await settings.override('door_card_account_id', ayarKarti);
 
     try {
-      const { order } = await doorDraft(3);
-      const outcome = await quickSale(db, { orderId: order.id, paymentMethod: 'cash' }); // hesap YOK, ayar var
-      expect(outcome).toMatchObject({ status: 'ok', paymentRecorded: true });
+      // Hesap YOK, ayar var.
+      const nakit = await quickSale(db, { orderId: (await doorDraft(3)).order.id, paymentMethod: 'cash' });
+      const kart = await quickSale(db, { orderId: (await doorDraft(2)).order.id, paymentMethod: 'card' });
+      expect(nakit).toMatchObject({ status: 'ok', paymentRecorded: true });
+      expect(kart).toMatchObject({ status: 'ok', paymentRecorded: true });
 
-      // Para uydurulmadı ve DOĞRU çekmeceye girdi: testin kendi kasası boş kaldı.
+      // Para uydurulmadı ve her yöntem kendi hesabına girdi: kart parası çekmeceye düşmedi.
       expect((await new AccountService(db).balance(ayarKasasi)).balanceCents).toBe(3000);
+      expect((await new AccountService(db).balance(ayarKarti)).balanceCents).toBe(2000);
     } finally {
       await settings.restore();
-      await mustDelete(db, 'money_movement', (q) => q.eq('account_id', ayarKasasi));
-      await mustDelete(db, 'account', (q) => q.eq('id', ayarKasasi));
+      await mustDelete(db, 'money_movement', (q) => q.in('account_id', [ayarKasasi, ayarKarti]));
+      await mustDelete(db, 'account', (q) => q.in('id', [ayarKasasi, ayarKarti]));
     }
   });
 

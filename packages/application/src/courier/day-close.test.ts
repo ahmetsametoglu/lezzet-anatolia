@@ -11,7 +11,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete, settingsSnapshot } from '@lezzet/database/testing';
 import { closeCourierDay, openDayClose, type DayCloseDraft } from './day-close';
 import { confirmDoorDelivery } from './delivery';
 import { markUndelivered, startCourierDay } from './day';
@@ -44,6 +44,9 @@ let zoneId: string;
 /** İkinci rota — "araçta iki sefer" hâli ancak iki rotayla kurulur (rota+gün başına tek sefer). */
 let ikinciZoneId: string;
 const createdProfiles: string[] = [];
+let cardAccountId: string;
+// Kapı hesapları küresel ayardır: dosya boyunca testin hesaplarına bağlanır ve bulunan hâl geri konur (CLAUDE §4b).
+const doorSettings = settingsSnapshot(db);
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 /** Her test kendi gününde çalışır: sefer (rota, gün) çiftinde TEKİLDİR (0046). */
@@ -72,6 +75,9 @@ beforeAll(async () => {
   await profiles.setRoles(courierId, ['courier'], [warehouseId]);
 
   accountId = (await new AccountService(db).insert({ name: `Kapanış kasası ${stamp}`, type: 'cash' })).id;
+  cardAccountId = (await new AccountService(db).insert({ name: `Kapanış kart cihazı ${stamp}`, type: 'provider' })).id;
+  await doorSettings.override('door_cash_account_id', accountId);
+  await doorSettings.override('door_card_account_id', cardAccountId);
   // Rota HER GÜN koşar: testin hangi gün koştuğu davranışı değiştirmesin.
   zoneId = (await new DeliveryZoneService(db).insert({
     name: `Kapanış rotası ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5, 6, 7],
@@ -103,11 +109,12 @@ beforeEach(async () => {
 afterAll(async () => {
   // Sefer, kapanış, sipariş ve rezervasyon ayrıca silinmez: hepsi `purgeTestData`nın bildiği bağlardır ve elle silme teardown'ı bozar.
   // `run_close_mismatch` bildirimleri de purge'ün işidir; sıra `cleanup.ts`te.
+  await doorSettings.restore();
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
-    accountIds: [accountId],
+    accountIds: [accountId, cardAccountId],
     warehouseIds: [warehouseId],
   });
 });
@@ -153,7 +160,7 @@ async function collect(orderId: string, qty: number, method: 'cash' | 'card', bo
     orderId,
     courierId,
     scannedBoxCodes: [boxCode],
-    collection: { method, amountCents: qty * 1000, accountId },
+    collection: { method, amountCents: qty * 1000 },
   });
 }
 
@@ -258,7 +265,7 @@ describe('seferi kapat', () => {
       orderId: a.orderId,
       courierId,
       scannedBoxCodes: [a.boxCode],
-      collection: { method: 'cash', amountCents: 2000, accountId },
+      collection: { method: 'cash', amountCents: 2000 },
     });
     await recordOrderPayment(db, {
       orderId: a.orderId,

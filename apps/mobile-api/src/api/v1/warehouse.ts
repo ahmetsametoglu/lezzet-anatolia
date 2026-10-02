@@ -464,7 +464,7 @@ warehouse.post('/handover', async (c) => {
 });
 
 /**
- * Gel-al kuyruğu: bu depoda müşterisini bekleyen hazır siparişler ve tezgâh tahsilatının yazılacağı kasa. Hazırlığın
+ * Gel-al kuyruğu: bu depoda müşterisini bekleyen hazır siparişler ve tezgâhta hangi yöntemle tahsilat yazılabileceği. Hazırlığın
  * "tamamlananlar" yüzünden ayrı, çünkü burada bekleyen taşıyıcı değil müşteridir.
  */
 warehouse.get('/pickup', async (c) => {

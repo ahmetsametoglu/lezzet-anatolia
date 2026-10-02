@@ -41,7 +41,7 @@ export interface OnSiteSaleInput {
   paymentMethod: PaymentMethod;
   /** Tahsil edilen tutar (**cent**). Verilmezse siparişin toplamı tahsil edilmiş sayılır. */
   collectedAmountCents?: number;
-  /** Paranın girdiği kasa. Verilmezse `door_cash_account_id` ayarına düşülür (`quickSale`). */
+  /** Paranın girdiği hesap. Verilmezse yöntemin kapı hesabı ayarına düşülür (`quickSale`). */
   paymentAccountId?: string;
   /** Satır adlarının dili — ret mesajları müşterinin değil PERSONELİN dilinde okunur. */
   locale?: PreferredLanguage;

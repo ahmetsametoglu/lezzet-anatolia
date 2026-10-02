@@ -1,6 +1,7 @@
 import { OrderService, SettingsService, WarehouseService, type Db } from '@lezzet/database';
 import { canTransition, generateReferenceNo, producesReferenceNo, stockEffectOf } from '@lezzet/domain-core';
 import type { OrderStatus, PaymentMethod, PreparationPick } from '@lezzet/types';
+import { readDoorAccountId } from './door-account';
 import { recordOrderPayment } from './payment';
 import { readCourierRuns } from '../courier/day';
 import { suggestPicksForVariant } from '../warehouse/preparation';
@@ -36,8 +37,8 @@ export interface QuickSaleInput {
   /** Tahsil edilen tutar (**cent**). Verilmezse siparişin toplamı tahsil edilmiş sayılır. */
   collectedAmountCents?: number;
   /**
-   * Paranın girdiği hesap (kasadaki çekmece). Verilmezse `door_cash_account_id` ayarına düşülür;
-   * o da yoksa tahsilat KAYDEDİLMEZ — satış yine kapanır, para kayıtsız görünür.
+   * Paranın girdiği hesap. Verilmezse yöntemin kapı hesabı ayarına düşülür (nakit çekmeceye, kart kart hesabına); o da yoksa tahsilat
+   * kaydedilmez, satış yine kapanır ve para kayıtsız görünür.
    */
   paymentAccountId?: string;
   /**
@@ -121,7 +122,7 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
 
   // 5) Tahsilat ayrı bir gerçektir: para bir hesaba girer, sipariş önbelleği ondan türer. Hesap belirsizse satış yine kapanır ve
   //    tahsilat kaydedilmemiş görünür; uydurulmuş bir "ödendi"den iyidir.
-  const accountId = input.paymentAccountId ?? (await settings.get<string | null>('door_cash_account_id', null));
+  const accountId = input.paymentAccountId ?? (await readDoorAccountId(db, input.paymentMethod));
   let paymentRecorded = false;
   if (accountId) {
     const collected = await recordOrderPayment(db, {

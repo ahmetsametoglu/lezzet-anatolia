@@ -10,7 +10,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
+import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock, settingsSnapshot } from '@lezzet/database/testing';
 import { advanceOrder, prepareOrderToReady } from '../order/advance.testkit';
 import { openBox, sealBox } from './boxes';
 import { deliverPickupOrder, listPickupQueue } from './pickup';
@@ -21,7 +21,9 @@ import { deliverPickupOrder, listPickupQueue } from './pickup';
  *  · hazır olmayan gel-al teslim edilirse (mal toplanmadan "verildi" denir) → `not_ready`;
  *  · kutu okutulmadan teslim yazılırsa (yanlış kutu gider) → `boxes_missing`, hiçbir şey değişmez;
  *  · teslimde fiili stok düşmez ya da rezervasyon kalırsa (mal hem gitti hem rafta) → sayılar;
- *  · tahsilat kasaya yazılmaz ya da tekrar anahtarı ikinci yazımı engellemezse → hareket sayısı.
+ *  · tahsilat yöntemin hesabına yazılmazsa (kart nakit çekmeceye düşer) → hareketin hesabı;
+ *  · hesabı olmayan yöntemle teslim yazılırsa (para kayıtsız, mal gitmiş) → `collection_unavailable`, hiçbir şey değişmez;
+ *  · tekrar anahtarı ikinci yazımı engellemezse → hareket sayısı.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -33,6 +35,7 @@ let stockId = '';
 let customerId = '';
 let staffId = '';
 let accountId = '';
+let cardAccountId = '';
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;
@@ -50,14 +53,19 @@ beforeAll(async () => {
   customerId = (await profiles.insert({ name: `Gel-al müşterisi ${stamp}`, phone: `+3364444${String(stamp).slice(-4)}`, pickupAllowed: true })).id;
   staffId = (await profiles.insert({ name: `Gel-al depocusu ${stamp}`, roles: ['warehouse'], warehouseIds: [warehouseId] })).id;
   accountId = (await new AccountService(db).insert({ name: `Kasa gel-al ${stamp}`, type: 'cash' })).id;
+  cardAccountId = (await new AccountService(db).insert({ name: `Kart gel-al ${stamp}`, type: 'provider' })).id;
+  // Kapı hesapları deponun satırından okunur; küresel satırdan ayrı hesaplar, okumanın depo kapsamını kanıtlar.
+  const settings = new SettingsService(db);
+  await settings.set('door_cash_account_id', accountId, { scopeType: 'warehouse', scopeId: warehouseId });
+  await settings.set('door_card_account_id', cardAccountId, { scopeType: 'warehouse', scopeId: warehouseId });
 });
 
 afterAll(async () => {
-  await mustDelete(db, 'settings', (q) => q.eq('key', 'door_cash_account_id').eq('scope_id', warehouseId));
-  await mustDelete(db, 'money_movement', (q) => q.eq('account_id', accountId));
+  await mustDelete(db, 'settings', (q) => q.in('key', ['door_cash_account_id', 'door_card_account_id']).eq('scope_id', warehouseId));
+  await mustDelete(db, 'money_movement', (q) => q.in('account_id', [accountId, cardAccountId]));
   await purgeVariantStock(db, [variantId]);
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [customerId, staffId], warehouseIds: [warehouseId] });
-  await mustDelete(db, 'account', (q) => q.eq('id', accountId));
+  await mustDelete(db, 'account', (q) => q.in('id', [accountId, cardAccountId]));
 });
 
 /** Hazır gel-al siparişi: onay → kutu aç → partiyi kutuya koy → mühürle (son kutu siparişi `ready` yapar). */
@@ -97,11 +105,6 @@ describe('gel-al kuyruğu', () => {
     expect(row!.amountDueCents).toBe(1000);
     expect(queue.orders.some((o) => o.orderId === rota.orderId)).toBe(false);
   });
-
-  it('kasa ayarı depo kapsamıyla okunur — kuyruk cevabı deponun kasasını taşır', async () => {
-    await new SettingsService(db).set('door_cash_account_id', accountId, { scopeType: 'warehouse', scopeId: warehouseId });
-    expect((await listPickupQueue(db, { warehouseId })).cashAccountId).toBe(accountId);
-  });
 });
 
 describe('gel-al teslimi', () => {
@@ -119,7 +122,7 @@ describe('gel-al teslimi', () => {
     expect((await new OrderService(db).getById(orderId))?.status).toBe('ready');
   });
 
-  it('tezgâh tahsilatıyla teslim: fiili stok düşer, rezervasyon kapanır, para kasaya yazılır, sipariş kapanır', async () => {
+  it('tezgâh tahsilatıyla teslim: fiili stok düşer, rezervasyon kapanır, para yöntemin hesabına yazılır, sipariş kapanır', async () => {
     const { orderId, boxCodes } = await readyPickupOrder(2);
     const before = await stockOf(orderId);
     expect(before.reserved).toBe(2);
@@ -128,7 +131,7 @@ describe('gel-al teslimi', () => {
       warehouseId,
       actorId: staffId,
       scannedBoxCodes: boxCodes,
-      collection: { method: 'card', amountCents: 2000, accountId, idempotencyKey: `gla-${stamp}-${orderId}` },
+      collection: { method: 'card', amountCents: 2000, idempotencyKey: `gla-${stamp}-${orderId}` },
     });
     expect(outcome).toMatchObject({ status: 'ok', collectedCents: 2000, amountDueCents: 0, paymentStatus: 'paid', cashLimitExceeded: false });
     const after = await stockOf(orderId);
@@ -138,11 +141,41 @@ describe('gel-al teslimi', () => {
     // Teslim + tam tahsilat = kapanış (`settleOrder`); ödeme yöntemi tezgâhtan yazılır.
     expect(order?.status).toBe('completed');
     expect(order?.paymentMethod).toBe('card');
+    // Kart parası deponun kart hesabına yazılır, nakit çekmeceye değil.
+    const { data: paid } = await db.from('money_movement').select('account_id').eq('order_id', orderId);
+    expect(paid?.map((row) => row.account_id)).toEqual([cardAccountId]);
+  });
+
+  it('yöntemin depoda hesabı yoksa kuyruk onu kapalı gösterir ve teslim yazılmaz', async () => {
+    const { orderId, boxCodes } = await readyPickupOrder(1);
+    const before = await stockOf(orderId);
+    const settings = settingsSnapshot(db);
+    await settings.remove('door_card_account_id');
+    await mustDelete(db, 'settings', (q) => q.eq('key', 'door_card_account_id').eq('scope_id', warehouseId));
+    // Ham silme ayar önbelleğini düşürmez.
+    SettingsService.invalidate('door_card_account_id');
+
+    try {
+      expect((await listPickupQueue(db, { warehouseId })).doorCollection).toEqual({ cash: true, card: false });
+      const outcome = await deliverPickupOrder(db, {
+        orderId,
+        warehouseId,
+        actorId: staffId,
+        scannedBoxCodes: boxCodes,
+        collection: { method: 'card', amountCents: 1000 },
+      });
+      expect(outcome).toEqual({ status: 'collection_unavailable', method: 'card' });
+      expect(await stockOf(orderId)).toEqual(before);
+      expect((await new OrderService(db).getById(orderId))?.status).toBe('ready');
+    } finally {
+      await settings.restore();
+      await new SettingsService(db).set('door_card_account_id', cardAccountId, { scopeType: 'warehouse', scopeId: warehouseId });
+    }
   });
 
   it('aynı tahsilat anahtarıyla ikinci istek parayı iki kez yazmaz — durum makinesi ilk kilit', async () => {
     const { orderId, boxCodes } = await readyPickupOrder(1);
-    const collection = { method: 'cash' as const, amountCents: 1000, accountId, idempotencyKey: `gla-tekrar-${stamp}-${orderId}` };
+    const collection = { method: 'cash' as const, amountCents: 1000, idempotencyKey: `gla-tekrar-${stamp}-${orderId}` };
     expect((await deliverPickupOrder(db, { orderId, warehouseId, actorId: staffId, scannedBoxCodes: boxCodes, collection })).status).toBe('ok');
     expect((await deliverPickupOrder(db, { orderId, warehouseId, actorId: staffId, scannedBoxCodes: boxCodes, collection })).status).toBe('not_ready');
     const { data } = await db.from('money_movement').select('id').eq('order_id', orderId);

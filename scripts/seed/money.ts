@@ -255,13 +255,16 @@ export async function seedMoney(db: Db): Promise<void> {
     valueDate: gun(-2),
   });
 
-  // Payout'un aktarıldığı banka: webhook Stripe → bu hesap transferini kendiliğinden yazar. Kapı önü satışın nakdi ayardaki çekmeceye
-  // girer; satış çağrısı hesabı açıkça verirse ayar ezilir.
+  // Payout'un aktarıldığı banka: webhook Stripe → bu hesap transferini kendiliğinden yazar. Kapıda alınan nakit çekmeceye, kart parası
+  // kart cihazının hesabına (burada Revolut) girer; satış çağrısı hesabı açıkça verirse ayar ezilir.
   await new SettingsService(db).set('stripe_payout_account_id', hesapId.get('revolut')!, {
     description: 'Stripe payout\'unun aktarıldığı banka hesabı (12.14).',
   });
   await new SettingsService(db).set('door_cash_account_id', hesapId.get('kasa')!, {
     description: 'Kapı önü satış tahsilatının düştüğü hesap (12.2).',
+  });
+  await new SettingsService(db).set('door_card_account_id', hesapId.get('revolut')!, {
+    description: 'Kapıda kartla alınan paranın düştüğü hesap.',
   });
 
   // Banka ekstresi ayrı adımdır (`seedBankQueue`), çünkü yalnız `full` katmanında koşar.

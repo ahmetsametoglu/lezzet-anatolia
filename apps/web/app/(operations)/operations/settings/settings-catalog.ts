@@ -300,16 +300,27 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
   },
   {
     key: 'door_cash_account_id',
-    label: 'Kapı önü satış kasası',
-    help: 'Kapıda/dükkânda alınan paranın hangi hesaba yazılacağı. Satış anında hesap seçilmezse bu kullanılır.',
+    label: 'Kapıda nakit kasası',
+    help: 'Kapıda, gel-al tezgâhında ve kapı önü satışta nakit alınan paranın yazılacağı hesap (çekmece). Boşsa nakit tahsilat yazılmaz.',
     section: 'accounts',
     kind: 'account',
     // Fabrika değeri YOK ve olamaz: değer bir hesap kimliği, her kurulumda başka. Migration'a uuid
     // gömmek, hiçbir yerde karşılığı olmayan bir hesabı işaret eden bir satır bırakırdı.
     impact:
-      'Bu hesap kapı önü satışın parasının indiği yerdir (`quick-sale`). Yanlış hesap seçilirse para kaydı yanlış kasada birikir ve gün sonu mutabakatı tutmaz — hareket silinmez, düzeltilmesi elle iş çıkarır.',
+      'Bu hesap kapıda alınan nakdin çekmecesidir; kartla alınan para buraya değil kapıda kart hesabına yazılır. Yanlış hesap seçilirse nakit yanlış kasada birikir ve gün sonu mutabakatı tutmaz — hareket silinmez, düzeltilmesi elle iş çıkarır.',
     // İstisna ekseni YOK: hangi kasaya yazılacağı kanala ya da bölgeye göre değişmez; değişmesi
     // gerekiyorsa o, ikinci bir depo/tesis demektir ve cevabı depo ekseninde aranır.
+    exceptionScopes: [],
+  },
+  {
+    key: 'door_card_account_id',
+    label: 'Kapıda kart hesabı',
+    help: 'Kapıda, gel-al tezgâhında ve kapı önü satışta kartla alınan paranın yazılacağı hesap (kart cihazının hesabı). Boşsa kartla tahsilat yazılmaz.',
+    section: 'accounts',
+    kind: 'account',
+    impact:
+      'Kart parası nakit çekmeceden ayrı tutulur, çünkü çekmece sayımı yalnız nakdi sayar ve kart parası cihazın hesabından bankaya geçer. Yanlış hesap seçilirse kart tahsilatı yanlış hesapta birikir ve banka mutabakatı tutmaz.',
+    // Nakit kasasıyla aynı sebeple fabrika değeri ve istisna ekseni yok.
     exceptionScopes: [],
   },
   {

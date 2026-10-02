@@ -8,16 +8,24 @@ import {
 } from '@lezzet/database';
 import { addressLine } from '@lezzet/address';
 import { canTransition, derivePaymentStatusForOrder } from '@lezzet/domain-core';
-import type { Channel, Order, PaymentStatus, Warehouse } from '@lezzet/types';
-import { boxScanRecord, cashLegalLimitCents, type DoorCollectionInput } from '../courier/delivery';
-import { readDoorCashAccountId } from '../courier/day';
+import type {
+  Channel,
+  DoorCollectionInputContract,
+  DoorCollectionMethods,
+  DoorMethod,
+  Order,
+  PaymentStatus,
+  Warehouse,
+} from '@lezzet/types';
+import { boxScanRecord, cashLegalLimitCents } from '../courier/delivery';
+import { readDoorAccountId, readDoorCollection } from '../order/door-account';
 import type { OrderEffects } from '../order/effects';
 import { deliverOrder } from '../order/fulfillment';
 import { recordOrderPayment, syncOrderPaymentStatus } from '../order/payment';
 
 /**
  * Gel-al teslim (DOMAIN §6): teslim `ready`den yazılır ve sıra kapıdakiyle aynıdır, önce kutu kapısı, sonra mal ve teslim, en sonda
- * para; teslim `stale` dönerse karşılıksız para yazılmaz. Tahsilat kapıdakiyle aynı şekildir (`DoorCollectionInput`).
+ * para; teslim `stale` dönerse karşılıksız para yazılmaz. Tahsilat kapıdakiyle aynı şekildir (`DoorCollectionInputContract`).
  */
 
 export interface PickupQueueOrder {
@@ -41,8 +49,8 @@ export interface PickupQueueOrder {
 
 export interface PickupQueue {
   orders: PickupQueueOrder[];
-  /** Tezgâh tahsilatının gireceği kasa — deponun kapı kasası ayarı; boşsa tahsilat kapısı kapalıdır. */
-  cashAccountId: string | null;
+  /** Tezgâhta hangi yöntemle tahsilat yazılabilir; hesabı ayarlı olmayan yöntemde tahsilat kapısı kapalıdır. */
+  doorCollection: DoorCollectionMethods;
 }
 
 /** Deponun tek satır adresi — müşteriye söylenen yer; jsonb'nin alanları adres paketinin sözleşmesiyle okunur. */
@@ -64,8 +72,9 @@ export async function listPickupQueue(db: Db, input: { warehouseId: string; now?
   const orders = (await new OrderService(db).listByStatus('ready', { warehouseId: input.warehouseId, limit: 200 })).filter(
     (order) => order.deliveryType === 'pickup',
   );
-  const cashAccountId = await readDoorCashAccountId(db, { warehouseId: input.warehouseId });
-  if (orders.length === 0) return { orders: [], cashAccountId };
+  // Her depo bir kasadır (DOMAIN §17): tezgâh deponun ayar satırını okur.
+  const doorCollection = await readDoorCollection(db, { warehouseId: input.warehouseId });
+  if (orders.length === 0) return { orders: [], doorCollection };
 
   const ids = orders.map((order) => order.id);
   const [items, boxes, logs, customers] = await Promise.all([
@@ -104,7 +113,7 @@ export async function listPickupQueue(db: Db, input: { warehouseId: string; now?
     };
   });
   rows.sort((a, b) => (a.readyAt ?? '').localeCompare(b.readyAt ?? ''));
-  return { orders: rows, cashAccountId };
+  return { orders: rows, doorCollection };
 }
 
 /**
@@ -140,6 +149,8 @@ export type PickupDeliveryOutcome =
       collectionDeduped?: true;
     }
   | { status: 'boxes_missing'; remainingBoxNos: number[] }
+  /** Tahsilatın yönteminin bu depoda hesabı yok — HİÇBİR yazım yapılmadı. */
+  | { status: 'collection_unavailable'; method: DoorMethod }
   | { status: 'not_ready'; currentStatus: Order['status'] }
   | { status: 'not_pickup' }
   | { status: 'forbidden'; reason: 'out_of_scope' }
@@ -153,7 +164,7 @@ export async function deliverPickupOrder(
     warehouseId: string;
     actorId: string;
     scannedBoxCodes: readonly string[];
-    collection?: DoorCollectionInput | null;
+    collection?: DoorCollectionInputContract | null;
     effects?: OrderEffects;
   },
 ): Promise<PickupDeliveryOutcome> {
@@ -166,7 +177,7 @@ export async function deliverPickupOrder(
     return { status: 'not_ready', currentStatus: order.status };
   }
 
-  // Kutu kapısı yazımdan önce: mal kutusuyla hazırlanır, kutusuyla müşteriye verilir (kurye kapısının aynı kuralı, 23.8).
+  // Kutu kapısı yazımdan önce: mal kutusuyla hazırlanır, kutusuyla müşteriye verilir (kurye kapısının aynı kuralı).
   // Mühürsüz (boş) kutu okutulacak kutu değildir — kuyrukla aynı süzgeç, yoksa depocu olmayan bir kutuyu arar.
   const boxes = (await new OrderBoxService(db).listByOrder(input.orderId)).filter((box) => box.sealedAt !== null);
   const scanned = new Set(input.scannedBoxCodes.map((code) => code.trim()));
@@ -174,6 +185,10 @@ export async function deliverPickupOrder(
   if (boxes.length === 0 || remaining.length > 0) {
     return { status: 'boxes_missing', remainingBoxNos: remaining.map((box) => box.boxNo) };
   }
+
+  // Hesap da yazımdan önce çözülür, çünkü teslim yazılıp para yazılamasaydı mal gitmiş, tahsilat kayıtsız kalırdı.
+  const accountId = input.collection ? await readDoorAccountId(db, input.collection.method, { warehouseId: input.warehouseId }) : null;
+  if (input.collection && accountId === null) return { status: 'collection_unavailable', method: input.collection.method };
 
   const written = await deliverOrder(db, input.orderId, {
     actorId: input.actorId,
@@ -185,7 +200,7 @@ export async function deliverPickupOrder(
   });
   if (!written.ok) return { status: 'not_ready', currentStatus: written.currentStatus };
 
-  if (!input.collection) {
+  if (!input.collection || accountId === null) {
     const synced = await syncOrderPaymentStatus(db, input.orderId);
     if (synced.status !== 'ok') return { status: 'not_found' };
     return {
@@ -202,7 +217,7 @@ export async function deliverPickupOrder(
   await orders.update({ id: input.orderId, paymentMethod: input.collection.method });
   const paid = await recordOrderPayment(db, {
     orderId: input.orderId,
-    accountId: input.collection.accountId,
+    accountId,
     amountCents: input.collection.amountCents,
     method: input.collection.method,
     description: 'Gel-al tahsilatı',

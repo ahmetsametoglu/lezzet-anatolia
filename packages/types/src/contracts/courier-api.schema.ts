@@ -227,6 +227,17 @@ export const CourierRoutesResponseSchema = z.object({
 });
 export type CourierRoutesResponse = z.infer<typeof CourierRoutesResponseSchema>;
 
+/** Kapıda elden alınan iki yöntem; online ve havale kuryenin eline hiç girmez. */
+export const DoorMethodEnum = PaymentMethodEnum.extract(['cash', 'card']);
+export type DoorMethod = z.infer<typeof DoorMethodEnum>;
+
+/** Kapıda hangi yöntemle tahsilat yazılabilir: hesabı ayarlı olmayan yöntemde ekran tahsilat kapısını kapatır. */
+export const DoorCollectionMethodsSchema: z.ZodType<Record<DoorMethod, boolean>> = z.object({ cash: z.boolean(), card: z.boolean() });
+export type DoorCollectionMethods = z.infer<typeof DoorCollectionMethodsSchema>;
+
+/** Yöntemin hesabı ayarlı değil; hesap yazımdan önce çözüldüğü için hiçbir kayıt yazılmadı. */
+export const DoorCollectionUnavailableSchema = z.object({ status: z.literal('collection_unavailable'), method: DoorMethodEnum });
+
 /** `GET /courier/day` yanıtı. Gün ZORUNLU döner: istemci "hangi günü gösteriyorum" sorusunu sormaz. */
 export const CourierDayResponseSchema = z.object({
   date: z.string(),
@@ -241,11 +252,8 @@ export const CourierDayResponseSchema = z.object({
    */
   runs: z.array(CourierRunDetailSchema),
   stops: z.array(CourierStopSchema),
-  /**
-   * Kapıda tahsil edilen paranın gireceği hesap (`door_cash_account_id` ayarı); ayar tekil olduğu için gün başınadır.
-   * `null` = ayar boş, tahsilat kapısı kapalıdır ve ekran sebebini söyler; uydurma bir kimlik parayı olmayan bir hesaba yazardı.
-   */
-  doorAccountId: z.string().uuid().nullable(),
+  /** Kapıda hangi yöntemle tahsilat yazılabilir; kapı hesapları küresel ayar olduğu için gün başınadır. */
+  doorCollection: DoorCollectionMethodsSchema,
   /**
    * Askıda kalan duraklar: kuryenin geçmiş seferlerinden sonuçlanmamış siparişler; kutusu araçta kalmış olabilir.
    * Kurye buradan bir şey yapmaz (yeni günü sevkiyat masası seçer); alan "araçtaki kutu neden duraksız" sorusunu cevaplar.
@@ -600,14 +608,12 @@ export const DeliveryProofInputSchema = z.object({
 export type DeliveryProofInputContract = z.infer<typeof DeliveryProofInputSchema>;
 
 /**
- * Kapıda tahsilat (K4). Yöntem ikiyle sınırlı (nakit, kart): online ve havale kuryenin eline hiç girmez.
+ * Kapıda tahsilat. Paranın hesabını istemci göndermez, sunucu yöntemin ayarından çözer: nakit çekmeceye, kart kart hesabına yazılır.
  */
 export const DoorCollectionInputSchema = z.object({
-  method: z.enum(['cash', 'card']),
+  method: DoorMethodEnum,
   /** **Cent**. */
   amountCents: z.number().int().positive(),
-  /** Paranın gireceği hesap (kurye kasası / kapı tahsilatı). */
-  accountId: z.string().uuid(),
   /**
    * **Kuyruk yeniden-denemesi parayı iki kez yazmasın.** Anahtar İSTEMCİDE üretilir ve isteğin
    * kimliğidir (durağın değil): çevrimdışı kuyruk aynı isteği tekrar gönderdiğinde aynı anahtarla
@@ -656,6 +662,7 @@ export const ConfirmDoorDeliveryResponseSchema = z.discriminatedUnion('status', 
    * tamamlanmaz). Kalan kutuların numarası döner: ekran "Kutu 2 ve 3 okutulmadı" der.
    */
   z.object({ status: z.literal('boxes_missing'), remainingBoxNos: z.array(z.number().int()) }),
+  DoorCollectionUnavailableSchema,
   z.object({ status: z.literal('forbidden'), reason: z.literal('not_assigned') }),
   z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
   z.object({ status: z.literal('not_found') }),

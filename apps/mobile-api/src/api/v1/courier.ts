@@ -18,7 +18,7 @@ import {
   markUndelivered,
   openDayClose,
   readCourierRuns,
-  readDoorCashAccountId,
+  readDoorCollection,
   requestDeliveryProofUploadUrl,
   discardCourierRun,
   startCourierDay,
@@ -83,16 +83,16 @@ courier.get('/day', async (c) => {
   // `run` sürülen seferdir: yola çıkmış ve kapanmamış olan.
   const runs = await readCourierRuns(db, { courierId });
   const run = runs.find((candidate) => candidate.departedAt !== null) ?? null;
-  const [stops, doorAccountId, stranded] = await Promise.all([
+  const [stops, doorCollection, stranded] = await Promise.all([
     listCourierDay(db, { courierId, date, runIds: runs.map((candidate) => candidate.runId) }),
-    readDoorCashAccountId(db),
+    readDoorCollection(db),
     // Askıda kalanlar: teslim günü geçmiş, sonuçlanmamış; kurye kutuyu neden taşıdığını bilsin.
     listStrandedStops(db, { courierId, today: date }),
   ]);
 
   // Gövde `z.input<…>` ile TİPLENİR: kapının döndürdüğü `CourierStop` sözleşmeye alan alan uymak
   // zorunda ve uymadığı gün burası DERLENMEZ (katalogdaki compile-lock deseni).
-  const body: z.input<typeof CourierDayResponseSchema> = { date, run, runs, stops, doorAccountId, stranded };
+  const body: z.input<typeof CourierDayResponseSchema> = { date, run, runs, stops, doorCollection, stranded };
   return ok(c, CourierDayResponseSchema.parse(body));
 });
 

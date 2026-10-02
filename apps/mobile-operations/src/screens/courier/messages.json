@@ -357,7 +357,7 @@
       "partial": "Eksik ödeme — durum \"Kısmi\"ye türer",
       "cashWarning": "⚠ Nakit yasal sınırın üstünde — bilgi amaçlıdır, engellemez.",
       "note": "Ödeme durumu tahsilattan türetilir; \"tekrar dene\" güvenlidir, para iki kez yazılmaz.",
-      "blocked": "Tahsilat YAZILAMIYOR: kapı kasası hesabı ayarlanmamış (sistem ayarı boş ya da geçersiz). Para yazılmadan teslim kapatılmaz — operasyonu arayın.",
+      "blocked": "Tahsilat YAZILAMIYOR: bu yöntemin hesabı ayarlanmamış (sistem ayarı boş ya da geçersiz). Para yazılmadan teslim kapatılmaz — operasyonu arayın.",
       "settled": "✓ Borç yok",
       "settledNote": "bu kapıda para konuşulmaz"
     },
@@ -432,6 +432,7 @@
     "refusal": {
       "boxesMissing": "Okutulmamış kutu var: {boxes}. Tüm kutular okutulmadan teslim yazılmaz — HİÇBİR kayıt yazılmadı.",
       "proofRequired": "Bu teslimat ({channel}) imza ya da fotoğraf ister; kanıt alınmadan kapanmaz. HİÇBİR kayıt yazılmadı.",
+      "collectionUnavailable": "Seçilen yöntemin ({method}) hesabı ayarlanmamış; para yazılmadan teslim kapatılmaz. HİÇBİR kayıt yazılmadı — operasyonu arayın.",
       "stale": "Sipariş artık \"{status}\" durumunda — bu durak başkası tarafından kapatılmış olabilir. Para ve kayıt İKİLENMEDİ.",
       "notAssigned": "Bu durak size atanmamış.",
       "notFound": "Sipariş bulunamadı.",

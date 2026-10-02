@@ -9,7 +9,6 @@ import {
   OrderStatusLogService,
   ProductService,
   ProductVariantService,
-  SettingsService,
   UserProfileService,
   WarehouseService,
 } from '@lezzet/database';
@@ -29,7 +28,6 @@ import { customerCardsOf } from './names';
 import { listCourierRoutes } from './routes';
 import { ensureStopOrder } from './stop-order';
 import { notifyStatusEffect, type OrderEffects } from '../order/effects';
-import { logger } from '@lezzet/observability';
 import { resolveLocalizedText } from '@lezzet/types';
 import type {
   DiscardDeliveryRunResult,
@@ -40,7 +38,6 @@ import type {
   StopOrderMetric,
   StopOrderPrecision,
   StopOrderSource,
-  SettingScopeContext,
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -288,32 +285,6 @@ function applyStopOrder(
     if (stopOrder.length === 0) return bucket;
     return sortBySequence(bucket, (stop) => stop.orderId, stopOrder).map(({ item, seq }) => ({ ...item, stopSeq: seq }));
   });
-}
-
-/** Sözleşme de uuid istiyor (`doorAccountId`). */
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * Gün başına tekil olduğu için durak dizisinden ayrı okunur. Kullanılamaz ayar `null` döner ve tahsilat kapısı kapalı kalır: para
- * olmayan bir hesaba yazılmaz; log'a anahtar yazılır, değer yazılmaz.
- */
-export async function readDoorCashAccountId(db: SupabaseClient, scope: SettingScopeContext = {}): Promise<string | null> {
-  // Kapsam: her depo bir kasadır (DOMAIN §17); gel-al tezgâhı deponun satırını, kurye küresel satırı okur.
-  const raw = await new SettingsService(db).get<unknown>('door_cash_account_id', null, scope);
-  if (typeof raw !== 'string') {
-    if (raw !== null && raw !== undefined) {
-      logger.warn({ setting: 'door_cash_account_id' }, 'kapı kasası ayarı metin değil — tahsilat kapısı kapalı');
-    }
-    return null;
-  }
-
-  const value = raw.trim();
-  if (value.length === 0) return null;
-  if (!UUID_PATTERN.test(value)) {
-    logger.warn({ setting: 'door_cash_account_id' }, 'kapı kasası ayarı hesap kimliği değil — tahsilat kapısı kapalı');
-    return null;
-  }
-  return value;
 }
 
 /**

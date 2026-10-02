@@ -14,11 +14,8 @@ import type {
 
 const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
-/**
- * Kapı kasası hesabı: tahsilat senaryosu kuran testin gün cevabına koyduğu kimlik; varsayılan `null`, çünkü kapının kapalı hâli de ölçülür.
- * Sayı kalem kimliklerinin uzayının dışında seçildi: çakışan iki kimlik testi yanlış satırda yeşil gösterirdi.
- */
-export const DOOR_ACCOUNT_ID = uuid(7000);
+/** İki yöntemin de hesabı ayarlı gün: tahsilat senaryosu kuran test bunu geçer; varsayılan kapalıdır, çünkü kapının kapalı hâli de ölçülür. */
+export const DOOR_COLLECTION_OPEN = { cash: true, card: true } as const;
 
 /**
  * Durak kaleminin kimliği; testler işaretleyecekleri satırı bu kimlikle bulur, çünkü ekranın satır anahtarı `orderItemId`dir. İki
@@ -53,7 +50,7 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
     payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null },
     itemCount: 2,
     contentSummary: '2 × Fıstıklı Baklava, 1 × Mantı',
-    // Kalem satırları KİMLİKLİ (21.10d): kısmi iade `orderItemId` ile gönderilir; fixture'ın
+    // Kalem satırları kimliklidir: kısmi iade `orderItemId` ile gönderilir; fixture'ın
     // kimliği durak kimliğinden türetilir ki iki durağın kalemleri çakışmasın.
     // `fulfilledQty` bekleyen durakta 0 — mal daha kapıya gitmedi (kolonun kendi varsayılanı).
     items: [
@@ -174,7 +171,7 @@ export function courierDay(
     date: '2026-08-08',
     run,
     runs: run && !run.closed ? [run] : [],
-    doorAccountId: null,
+    doorCollection: { cash: false, card: false },
     stops,
     stranded: [],
     ...overrides,

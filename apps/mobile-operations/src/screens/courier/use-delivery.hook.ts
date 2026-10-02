@@ -4,6 +4,8 @@ import {
   type ConfirmDoorDeliveryResponse,
   type CourierStopContract,
   type DoorCollectionInputContract,
+  type DoorCollectionMethods,
+  type DoorMethod,
   type FulfillmentAdjustment,
   type MarkUndeliveredResponse,
 } from '@lezzet/types';
@@ -22,7 +24,7 @@ import { centsToAmountText, money, parseAmountToCents } from './courier-format';
 
 /*
   Teslimat ekranının motoru: durak kuryenin kendi gün listesinden okunur (sahiplik sorgunun içindedir), kanıt → mal → teslim → para sırası kapıdadır ve ekran tek istek gönderir.
-  Tahsilat hesabı gün cevabından gelir; `null` ise panel çalışır ama teslim kapısı kapanır, çünkü parayı yazmadan kapanan teslim siparişi borçlu gösterir.
+  Hangi yöntemle tahsilat yazılabileceği gün cevabından gelir; hesabı olmayan yöntemde panel çalışır ama teslim kapısı kapanır, çünkü parayı yazmadan kapanan teslim siparişi borçlu gösterir.
 */
 
 const t = courierCopy;
@@ -36,7 +38,7 @@ const CASH_LIMIT_CENTS = 100_000;
 /** Tutar ±/− adımı — v2 bir euro artırıp azaltıyor (`gercek - 1`). */
 const AMOUNT_STEP_CENTS = 100;
 
-/** Kalemin üç hâli (v2:917): işaretsiz → teslim → reddedildi → işaretsiz. */
+/** Kalemin üç hâli: işaretsiz → teslim → reddedildi → işaretsiz. */
 
 /** Kapıdaki kalem satırı — tip SÖZLEŞMEDEN türer, elle yazılmaz (CLAUDE §1). */
 type StopLine = CourierStopContract['items'][number];
@@ -61,7 +63,7 @@ interface UseDeliveryResult {
   reload: () => void;
 
   /**
-   * KUTU OKUTMASI (23.8) — kutulu durakta teslimin ön koşulu. `boxes` boşsa bölüm hiç çizilmez
+   * KUTU OKUTMASI — kutulu durakta teslimin ön koşulu. `boxes` boşsa bölüm hiç çizilmez
    * (kutusuz akış); doluysa tüm kodlar okutulmadan teslim kapısı açılmaz — son doğrulama yine
    * sunucuda (`boxes_missing`).
    */
@@ -88,11 +90,11 @@ interface UseDeliveryResult {
   setAmountText: (value: string) => void;
   changeAmount: (deltaCents: number) => void;
   amountCents: number | null;
-  method: 'cash' | 'card';
-  setMethod: (method: 'cash' | 'card') => void;
+  method: DoorMethod;
+  setMethod: (method: DoorMethod) => void;
   partialPayment: boolean;
   cashLimitWarning: boolean;
-  /** Kapı kasası hesabı yok (ayar boş) — panel çalışır, teslim kapısı kapalıdır. */
+  /** Seçilen yöntemin hesabı yok (ayar boş) — panel çalışır, teslim kapısı kapalıdır. */
   collectionBlocked: boolean;
   amountStepCents: number;
 
@@ -130,6 +132,8 @@ function refusalText(result: CourierRefusal): string {
       return fillCopy(t.delivery.refusal.stale, { status: ORDER_STATUS_LABELS[result.currentStatus] });
     case 'not_found':
       return t.delivery.refusal.notFound;
+    case 'collection_unavailable':
+      return fillCopy(t.delivery.refusal.collectionUnavailable, { method: t.method[result.method] });
     default:
       if (result.reason === 'same_status') return t.delivery.refusal.sameStatus;
       if (result.reason === 'terminal') return t.delivery.refusal.terminal;
@@ -148,22 +152,19 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const [stop, setStop] = useState<CourierStopContract | null>(null);
   const [order, setOrder] = useState(0);
   const [total, setTotal] = useState(0);
-  /**
-   * Kapı kasası hesabı gün cevabından gelir; `null` = ayar boş, tahsilat kapısı kapalıdır ve sebebi ekranda yazılır.
-   * Uydurma bir kimlik kapıda alınan parayı olmayan bir hesaba yazardı.
-   */
-  const [doorAccountId, setDoorAccountId] = useState<string | null>(null);
+  /** Hangi yöntemin hesabı ayarlı, gün cevabından gelir; yüklenene kadar ikisi de kapalıdır ki para hesapsız gönderilmesin. */
+  const [doorCollection, setDoorCollection] = useState<DoorCollectionMethods>({ cash: false, card: false });
 
 
   /* Teslim varsayılandır, red istisna: kalem başına tek sayı reddedilen adettir, çünkü kutulu akışta içerik mühürde sabitlendi ve her kalemi ayrıca işaretlemek gereksiz dokunuştu. */
   const [refusedQty, setRefusedQtyState] = useState<Record<string, number>>({});
 
-  /** Kapıda okutulan kutu KODLARI (23.8) — teslim isteğiyle gider, kanıt kaydına yazılır. */
+  /** Kapıda okutulan kutu KODLARI — teslim isteğiyle gider, kanıt kaydına yazılır. */
   const [scannedBoxCodes, setScannedBoxCodes] = useState<string[]>([]);
   const [boxScanOpen, setBoxScanOpen] = useState(false);
 
   const [amountText, setAmountText] = useState('');
-  const [method, setMethod] = useState<'cash' | 'card'>('cash');
+  const [method, setMethod] = useState<DoorMethod>('cash');
 
   const [outcome, setOutcome] = useState<'unreachable' | 'refused' | null>(null);
   const [outcomeNote, setOutcomeNote] = useState('');
@@ -214,7 +215,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     const inRun = ownRun.findIndex((candidate) => candidate.orderId === orderId);
     setOrder(inRun >= 0 ? inRun + 1 : index + 1);
     setTotal(ownRun.length > 0 ? ownRun.length : result.data.stops.length);
-    setDoorAccountId(result.data.doorAccountId);
+    setDoorCollection(result.data.doorCollection);
     setStatus('ready');
     // Tutar alanı MOTORUN tutarıyla açılır (K4: "alan onunla açılır"); kurye gerçekleşeni düzeltir.
     setAmountText(found.payment.dueAmountCents === null ? '' : centsToAmountText(found.payment.dueAmountCents));
@@ -322,22 +323,21 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const cashLimitWarning = dueCents !== null && method === 'cash' && (amountCents ?? 0) > CASH_LIMIT_CENTS;
 
   /**
-   * Gönderilecek tahsilat gövdesi. Borç yoksa `null` (kapıda para konuşulmaz); kasa hesabı
-   * bilinmiyorsa da `null` — ve o hâlde `collectionBlocked` teslim kapısını kapatır, yani "para
-   * yazılmadan teslim" ASLA gönderilmez.
+   * Gönderilecek tahsilat gövdesi. Borç yoksa `null` (kapıda para konuşulmaz); yöntemin hesabı yoksa da `null` ve o hâlde
+   * `collectionBlocked` teslim kapısını kapatır, yani "para yazılmadan teslim" gönderilmez.
    */
   const buildCollection = useCallback((): DoorCollectionInputContract | null => {
     if (dueCents === null || amountCents === null || amountCents <= 0) return null;
-    if (doorAccountId === null) return null;
+    if (!doorCollection[method]) return null;
     collectionKey.current ??= newRequestKey('col');
-    return { method, amountCents, accountId: doorAccountId, idempotencyKey: collectionKey.current };
-  }, [amountCents, doorAccountId, dueCents, method]);
+    return { method, amountCents, idempotencyKey: collectionKey.current };
+  }, [amountCents, doorCollection, dueCents, method]);
 
   /**
-   * Tahsilat yazılamaz: borç var ama kapı kasası hesabı yok.
+   * Tahsilat yazılamaz: borç var ama seçilen yöntemin hesabı yok.
    * Boş tutar bu kapıyı kapatmaz, çünkü boş tutar "kapıda para almadım" demektir ve sipariş borçlu kalır.
    */
-  const collectionBlocked = dueCents !== null && doorAccountId === null;
+  const collectionBlocked = dueCents !== null && !doorCollection[method];
 
   /* Kapı üç şeyi sorar: kutular okutuldu mu, kanıt alındı mı, para yazılabilir mi; hepsi geri verilmişse bu teslim değil "kabul etmedi"dir. */
   const gateOpen = loadedOnVan && boxesSatisfied && !allRefused && !collectionBlocked && !finished;
@@ -383,7 +383,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       const result = await submitDoorDelivery(orderId, {
         ...(adjustments.length === 0 ? {} : { adjustments }),
         ...(collection === null ? {} : { collection }),
-        // Kutulu durakta okutulan kodlar teslimin ön koşulu (23.8) — kutusuz durakta alan gitmez.
+        // Kutulu durakta okutulan kodlar teslimin ön koşulu — kutusuz durakta alan gitmez.
         ...(scannedBoxCodes.length === 0 ? {} : { scannedBoxCodes }),
       });
       setSending(false);

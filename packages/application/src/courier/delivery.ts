@@ -1,12 +1,20 @@
 import { OrderBoxService, OrderService, SettingsService } from '@lezzet/database';
-import type { DeliveryProofRecord, FulfillmentAdjustment, Order, PaymentStatus } from '@lezzet/types';
+import type {
+  DeliveryProofRecord,
+  DoorCollectionInputContract,
+  DoorMethod,
+  FulfillmentAdjustment,
+  Order,
+  PaymentStatus,
+} from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { readDoorAccountId } from '../order/door-account';
 import type { OrderEffects } from '../order/effects';
 import { recordOrderPayment, syncOrderPaymentStatus } from '../order/payment';
 import { deliverOrderWithAdjustments } from '../order/refund';
 
 /**
- * Kapıda teslim: sıra kuralın kendisidir: önce kanıt kapısı (hiçbir yazım yapılmadan), sonra mal ve teslim tek yazımda, en sonda para; teslim `stale` dönerse karşılıksız para yazılmaz.
+ * Kapıda teslim: sıra kuralın kendisidir: önce kanıt ve hesap kapısı (hiçbir yazım yapılmadan), sonra mal ve teslim tek yazımda, en sonda para; teslim `stale` dönerse karşılıksız para yazılmaz.
  * Kurye hesap yapmaz: eksik işaretlenince tahsil edilecek tutarı ödeme durumu türetimi düşürür, tutar tek yerde hesaplanır.
  */
 
@@ -17,20 +25,6 @@ export interface DeliveryProofInput {
   imageKey: string;
   /** Kapıda teslim alan kişi — B2B'de "kim imzaladı" ihtilafın cevabıdır. */
   receivedBy?: string | null;
-}
-
-/** Kapıda tahsilat. Yöntem ikiyle sınırlıdır (nakit, kart): online ve havale kuryenin eline hiç girmez. */
-export interface DoorCollectionInput {
-  method: 'cash' | 'card';
-  /** **Cent** (STACK §8). */
-  amountCents: number;
-  /** Paranın gireceği hesap (kurye kasası / kapı tahsilatı). */
-  accountId: string;
-  /**
-   * Kuyruk yeniden denemesi parayı iki kez yazmasın: anahtar istemcide üretilen istek kimliğidir ve tahsilat hareketinin `meta`sında kalıcı durur.
-   * Birinci kilit durum makinesidir (teslim yalnız yoldaki siparişten), ikincisi bu anahtar; sınırı `order/payment.ts` künyesinde yazılı.
-   */
-  idempotencyKey?: string | null;
 }
 
 export type DoorDeliveryOutcome =
@@ -55,6 +49,8 @@ export type DoorDeliveryOutcome =
   | { status: 'proof_required'; channel: Order['channel'] }
   /** Kutulu siparişte okutulmamış kutu var — teslim YAZILMADI. */
   | { status: 'boxes_missing'; remainingBoxNos: number[] }
+  /** Tahsilatın yönteminin hesabı ayarlı değil — HİÇBİR yazım yapılmadı. */
+  | { status: 'collection_unavailable'; method: DoorMethod }
   | { status: 'forbidden'; reason: 'not_assigned' }
   | { status: 'stale'; currentStatus: Order['status'] }
   | { status: 'not_found' };
@@ -73,7 +69,7 @@ export async function confirmDoorDelivery(
      */
     adjustments?: readonly FulfillmentAdjustment[];
     proof?: DeliveryProofInput | null;
-    collection?: DoorCollectionInput | null;
+    collection?: DoorCollectionInputContract | null;
     /**
      * Kapıda okutulan kutu kodları: kutulu siparişte teslimin ön koşulu; set kutuları kapsamıyorsa hiçbir yazım yapılmadan `boxes_missing` döner.
      */
@@ -102,6 +98,10 @@ export async function confirmDoorDelivery(
   if (!input.proof && (await proofRequired(db, order.channel))) {
     return { status: 'proof_required', channel: order.channel };
   }
+
+  // Hesap da yazımdan önce çözülür, çünkü teslim yazılıp para yazılamasaydı mal gitmiş, tahsilat kayıtsız kalırdı.
+  const accountId = input.collection ? await readDoorAccountId(db, input.collection.method) : null;
+  if (input.collection && accountId === null) return { status: 'collection_unavailable', method: input.collection.method };
 
   /*
     Düzeltme ve teslim tek yazımdır (`deliverOrderWithAdjustments`), çünkü ardışık iki çağrıda teslim `stale` dönünce düzeltme ve müşteriye giden "eksik" haberi geri alınamıyordu.
@@ -132,7 +132,7 @@ export async function confirmDoorDelivery(
   const cashLimitExceeded =
     input.collection?.method === 'cash' && input.collection.amountCents > (await cashLegalLimitCents(db));
 
-  if (!input.collection) {
+  if (!input.collection || accountId === null) {
     const synced = await syncOrderPaymentStatus(db, input.orderId);
     if (synced.status !== 'ok') return { status: 'not_found' };
     return {
@@ -150,7 +150,7 @@ export async function confirmDoorDelivery(
 
   const paid = await recordOrderPayment(db, {
     orderId: input.orderId,
-    accountId: input.collection.accountId,
+    accountId,
     amountCents: input.collection.amountCents,
     method: input.collection.method,
     description: 'Kapıda tahsilat',

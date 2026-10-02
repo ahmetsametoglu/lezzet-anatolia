@@ -23,7 +23,7 @@ async function clearCollection() {
 
 import type { CourierStopContract } from '@lezzet/types';
 import { CourierDeliveryScreen } from './delivery-screen';
-import { courierDay, courierStop, DOOR_ACCOUNT_ID, stopItemId } from './courier-fixture';
+import { courierDay, courierStop, DOOR_COLLECTION_OPEN, stopItemId } from './courier-fixture';
 import messages from './messages.json';
 
 /*
@@ -319,7 +319,7 @@ describe('teslimat · mal (reddedilen kalem çekmecesi)', () => {
         ],
         payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null },
       },
-      { doorAccountId: DOOR_ACCOUNT_ID },
+      { doorCollection: DOOR_COLLECTION_OPEN },
     );
     expect(screen.getByTestId('courier-collection-amount')).toHaveTextContent(/42,00\s€/);
 
@@ -424,21 +424,37 @@ describe('teslimat · tahsilat', () => {
     expect(screen.getByTestId('courier-settled')).toBeOnTheScreen();
   });
 
-  it('kapı kasası hesabı YOKSA sebep ekranda ve teslim kapısı KAPALI (para yazılmadan teslim yok)', async () => {
-    // Gün cevabının `doorAccountId`si null — ayar boş; fixture'ın varsayılanı bu.
+  it('yöntemin hesabı YOKSA sebep ekranda ve teslim kapısı KAPALI (para yazılmadan teslim yok)', async () => {
+    // Gün cevabında iki yöntem de kapalı; fixture'ın varsayılanı bu.
     mockRoutes({ day: courierDay([oneLineStop({ payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null } })]) });
 
     await renderDelivery();
 
-    expect(screen.getByTestId('courier-collection-blocked')).toHaveTextContent(/kapı kasası hesabı ayarlanmamış/);
+    expect(screen.getByTestId('courier-collection-blocked')).toHaveTextContent(/bu yöntemin hesabı ayarlanmamış/);
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
     expect(deliverCalls()).toBe(0);
   });
 
-  it('hesap GELİNCE tahsilat gövdeye girer: tutar, yöntem, hesap ve istek kimliğiyle', async () => {
+  it('kart hesabı yoksa kart seçilince kapı kapanır, nakitte açık kalır', async () => {
     await renderScannedStop(
       { payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null } },
-      { doorAccountId: DOOR_ACCOUNT_ID },
+      { doorCollection: { cash: true, card: false } },
+    );
+    expect(screen.queryByTestId('courier-collection-blocked')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('courier-method-card'));
+    expect(screen.getByTestId('courier-collection-blocked')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+    expect(deliverCalls()).toBe(0);
+
+    await fireEvent.press(screen.getByTestId('courier-method-cash'));
+    expect(screen.queryByTestId('courier-collection-blocked')).toBeNull();
+  });
+
+  it('hesap ayarlıysa tahsilat gövdeye girer: tutar, yöntem ve istek kimliğiyle; hesabı sunucu seçer', async () => {
+    await renderScannedStop(
+      { payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null } },
+      { doorCollection: DOOR_COLLECTION_OPEN },
       { deliver: { ok: okDelivery({ collectedCents: 4200 }) } },
     );
     expect(screen.queryByTestId('courier-collection-blocked')).toBeNull();
@@ -448,7 +464,6 @@ describe('teslimat · tahsilat', () => {
     expect(deliverBody().collection).toEqual({
       method: 'cash',
       amountCents: 4200,
-      accountId: DOOR_ACCOUNT_ID,
       // Anahtar İSTEĞİN kimliği: içeriği rastgele, varlığı sözleşme (para iki kez yazılmasın).
       idempotencyKey: expect.stringMatching(/^col-/) as unknown as string,
     });
@@ -457,7 +472,7 @@ describe('teslimat · tahsilat', () => {
   it('borç varken tutar BOŞSA teslim yine gider ama düğme "tahsilat yazılmaz" der', async () => {
     await renderScannedStop(
       { payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null } },
-      { doorAccountId: DOOR_ACCOUNT_ID },
+      { doorCollection: DOOR_COLLECTION_OPEN },
       { deliver: { ok: okDelivery({ amountDueCents: 4200, paymentStatus: 'pending' }) } },
     );
     await clearCollection();
@@ -555,6 +570,13 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
     await waitFor(() =>
       expect(lastToast.at(-1) ?? '').toMatch(/\(B2B\).*HİÇBİR kayıt yazılmadı/),
     );
+  });
+
+  it('`collection_unavailable` yöntemin adıyla ve "hiçbir kayıt yazılmadı" diye gösterilir', async () => {
+    await renderScannedStop({}, undefined, { deliver: { ok: { status: 'collection_unavailable', method: 'card' } } });
+    await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
+
+    await waitFor(() => expect(lastToast.at(-1) ?? '').toMatch(/\(kart\) hesabı ayarlanmamış.*HİÇBİR kayıt yazılmadı/));
   });
 
   it('`forbidden: not_assigned` başkasının durağı olduğunu söyler', async () => {

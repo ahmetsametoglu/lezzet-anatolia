@@ -4,7 +4,8 @@ import {
   ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, settingsSnapshot, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
-import { confirmDoorDelivery, type DeliveryProofInput, type DoorCollectionInput } from './delivery';
+import type { DoorCollectionInputContract } from '@lezzet/types';
+import { confirmDoorDelivery, type DeliveryProofInput } from './delivery';
 import { readDeliveryProof, requestDeliveryProofUploadUrl } from './proof';
 import { advanceOrder } from '../order/advance.testkit';
 import { deliverOrder } from '../order/fulfillment';
@@ -32,7 +33,10 @@ let productId: string;
 let categoryId: string;
 let stockId: string;
 let accountId: string;
+let cardAccountId: string;
 const createdProfiles: string[] = [];
+// Kapı hesapları küresel ayardır: dosya boyunca testin hesaplarına bağlanır ve bulunan hâl geri konur (CLAUDE §4b).
+const doorSettings = settingsSnapshot(db);
 
 const today = new Date().toISOString().slice(0, 10);
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
@@ -59,6 +63,9 @@ beforeAll(async () => {
   createdProfiles.push(customer.id, b2b.id, courier.id);
 
   accountId = (await new AccountService(db).insert({ name: `Kurye kasası ${stamp}`, type: 'cash' })).id;
+  cardAccountId = (await new AccountService(db).insert({ name: `Kart cihazı ${stamp}`, type: 'provider' })).id;
+  await doorSettings.override('door_cash_account_id', accountId);
+  await doorSettings.override('door_card_account_id', cardAccountId);
 });
 
 beforeEach(async () => {
@@ -73,12 +80,13 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  await doorSettings.restore();
   // Sipariş ve rezervasyon ayrıca silinmez: ikisi de `purgeTestData`'nın bildiği bağlar, elle silme teardown'ı bozuyordu.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
-    accountIds: [accountId],
+    accountIds: [accountId, cardAccountId],
     warehouseIds: [warehouseId],
   });
 });
@@ -146,9 +154,9 @@ describe('teslim onayı (11.2)', () => {
     await settings.override('delivery_proof_required', { b2b: true, b2c: false });
     try {
       const { orderId, boxCode } = await atTheDoor({ channel: 'b2b' });
-      // Ekranın göndereceği şekiller — kanıt görsel anahtarı taşır, tahsilat üç yöntemle sınırlıdır.
+      // Ekranın göndereceği şekiller — kanıt görsel anahtarı taşır, tahsilat iki yöntemle sınırlıdır.
       const proof: DeliveryProofInput = { kind: 'signature', imageKey: 'proofs/abc.png', receivedBy: 'Şef Murat' };
-      const collection: DoorCollectionInput = { method: 'cash', amountCents: 4000, accountId };
+      const collection: DoorCollectionInputContract = { method: 'cash', amountCents: 4000 };
 
       const outcome = await confirmDoorDelivery(db, {
         orderId,
@@ -190,7 +198,7 @@ describe('eksik/reddedilen kalem (11.2)', () => {
     const outcome = await confirmDoorDelivery(db, {
       orderId, courierId, scannedBoxCodes: [boxCode],
       adjustments: [{ orderItemId: itemId, fulfilledQty: 3 }],
-      collection: { method: 'cash', amountCents: 3000, accountId },
+      collection: { method: 'cash', amountCents: 3000 },
     });
 
     expect(outcome).toMatchObject({ status: 'ok', collectedCents: 3000, amountDueCents: 0, paymentStatus: 'paid' });
@@ -204,7 +212,7 @@ describe('eksik/reddedilen kalem (11.2)', () => {
     await confirmDoorDelivery(db, {
       orderId, courierId, scannedBoxCodes: [boxCode],
       adjustments: [{ orderItemId: itemId, fulfilledQty: 2 }],
-      collection: { method: 'cash', amountCents: 2000, accountId },
+      collection: { method: 'cash', amountCents: 2000 },
     });
 
     // Kalem–parti kaydı 2'ye inmiş olmalı: teslimde bundan düşülür (0026 "tam bir kez say").
@@ -255,7 +263,7 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
 
     const outcome = await confirmDoorDelivery(db, {
       orderId, courierId, scannedBoxCodes: [boxCode],
-      collection: { method: 'cash', amountCents: 200_000, accountId },
+      collection: { method: 'cash', amountCents: 200_000 },
     });
 
     expect(outcome).toMatchObject({ status: 'ok', cashLimitExceeded: true, collectedCents: 200_000, paymentStatus: 'paid' });
@@ -267,12 +275,46 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
 
     const outcome = await confirmDoorDelivery(db, {
       orderId, courierId, scannedBoxCodes: [boxCode],
-      collection: { method: 'card', amountCents: 200_000, accountId },
+      collection: { method: 'card', amountCents: 200_000 },
     });
 
     expect(outcome).toMatchObject({ status: 'ok', cashLimitExceeded: false });
-    // Yöntem siparişe yazılır: gün kapanışı beklenen toplamları bundan türetir (11.6).
+    // Yöntem siparişe yazılır: gün kapanışı beklenen toplamları bundan türetir.
     expect((await orders.getById(orderId))?.paymentMethod).toBe('card');
+  });
+
+  it('kart parası nakit çekmeceye değil kart hesabına yazılır', async () => {
+    const { orderId, boxCode } = await atTheDoor({ qty: 2 });
+
+    await confirmDoorDelivery(db, {
+      orderId,
+      courierId,
+      scannedBoxCodes: [boxCode],
+      collection: { method: 'card', amountCents: 2000 },
+    });
+
+    const paid = (await movements.listByOrder(orderId)).filter((m) => m.type === 'order_payment');
+    expect(paid.map((m) => m.accountId)).toEqual([cardAccountId]);
+  });
+
+  it('yöntemin hesabı yoksa HİÇBİR yazım yapılmaz — mal da para da yerinde kalır', async () => {
+    const { orderId, boxCode } = await atTheDoor({ qty: 2 });
+    const settings = settingsSnapshot(db);
+    await settings.remove('door_card_account_id');
+
+    try {
+      const outcome = await confirmDoorDelivery(db, {
+        orderId,
+        courierId,
+        scannedBoxCodes: [boxCode],
+        collection: { method: 'card', amountCents: 2000 },
+      });
+      expect(outcome).toEqual({ status: 'collection_unavailable', method: 'card' });
+      expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+      expect(await movements.listByOrder(orderId)).toHaveLength(0);
+    } finally {
+      await settings.restore();
+    }
   });
 
   it('sınır ayardan gelir — kodda sabit yok', async () => {
@@ -283,7 +325,7 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
     try {
       const outcome = await confirmDoorDelivery(db, {
         orderId, courierId, scannedBoxCodes: [boxCode],
-        collection: { method: 'cash', amountCents: 4000, accountId },
+        collection: { method: 'cash', amountCents: 4000 },
       });
       expect(outcome).toMatchObject({ cashLimitExceeded: true });
     } finally {
@@ -306,7 +348,7 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
 
     await confirmDoorDelivery(db, {
       orderId, courierId, scannedBoxCodes: [boxCode],
-      collection: { method: 'cash', amountCents: 2000, accountId, idempotencyKey: key },
+      collection: { method: 'cash', amountCents: 2000, idempotencyKey: key },
     });
 
     const written = (await movements.listByOrder(orderId)).filter((m) => m.type === 'order_payment');
@@ -319,7 +361,7 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
     // durumundan teslim eder); anahtar ikinci kilittir. İkisi birden ölçülmezse "anahtar var,
     // koruma var" sanılır — oysa bu yoldan zaten geçilemiyor.
     const { orderId, boxCode } = await atTheDoor({ qty: 2 });
-    const collection: DoorCollectionInput = { method: 'cash', amountCents: 2000, accountId, idempotencyKey: `retry-${stamp}` };
+    const collection: DoorCollectionInputContract = { method: 'cash', amountCents: 2000, idempotencyKey: `retry-${stamp}` };
 
     const first = await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode], collection });
     const second = await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode], collection });

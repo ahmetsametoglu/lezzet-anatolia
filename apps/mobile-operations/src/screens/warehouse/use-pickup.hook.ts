@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { PickupDeliverResponse, PickupQueueOrderContract } from '@lezzet/types';
+import type { DoorCollectionMethods, DoorMethod, PickupDeliverResponse, PickupQueueOrderContract } from '@lezzet/types';
 
 import { deliverPickup, fetchPickupQueue } from '@/lib/api/warehouse';
 import { centsToAmountText, parseAmountToCents } from '@/lib/operations/money';
@@ -11,13 +11,11 @@ import { trackWarehouse } from './warehouse-status';
   Teslim anında yazılır, kuyruğa alınmaz, çünkü müşteriye verilen malın sistemde "sırada" beklemesi malın kimde olduğunu belirsiz bırakır.
 */
 
-export type PickupMethod = 'cash' | 'card';
-
 export interface UsePickupResult {
   status: 'loading' | 'ready' | 'error';
   orders: PickupQueueOrderContract[];
-  /** Tezgâh kasası; `null` = ayar yok → borçlu siparişte tahsilat yazılamaz, teslim kapısı kapanır. */
-  cashAccountId: string | null;
+  /** Tezgâhta hangi yöntemin hesabı ayarlı; hesabı olmayan yöntemde borçlu siparişin teslim kapısı kapanır. */
+  doorCollection: DoorCollectionMethods;
   selected: PickupQueueOrderContract | null;
   select: (orderId: string | null) => void;
   scanned: ReadonlySet<string>;
@@ -26,12 +24,12 @@ export interface UsePickupResult {
   allBoxesScanned: boolean;
   amountText: string;
   setAmountText: (text: string) => void;
-  method: PickupMethod;
-  setMethod: (method: PickupMethod) => void;
+  method: DoorMethod;
+  setMethod: (method: DoorMethod) => void;
   /** Tahsilat gerekiyor mu — borç varsa; vadeli ve online ödenmişte 0. */
   dueCents: number;
   partialPayment: boolean;
-  /** Tahsilat gerekiyor ama kasa yok ya da tutar geçersiz — teslim kapısı kapalı. */
+  /** Tahsilat gerekiyor ama yöntemin hesabı yok ya da tutar geçersiz — teslim kapısı kapalı. */
   collectionBlocked: boolean;
   canDeliver: boolean;
   busy: boolean;
@@ -42,11 +40,11 @@ export interface UsePickupResult {
 export function usePickup(): UsePickupResult {
   const [status, setStatus] = useState<UsePickupResult['status']>('loading');
   const [orders, setOrders] = useState<PickupQueueOrderContract[]>([]);
-  const [cashAccountId, setCashAccountId] = useState<string | null>(null);
+  const [doorCollection, setDoorCollection] = useState<DoorCollectionMethods>({ cash: false, card: false });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scanned, setScanned] = useState<Set<string>>(new Set());
   const [amountText, setAmountText] = useState('');
-  const [method, setMethod] = useState<PickupMethod>('cash');
+  const [method, setMethod] = useState<DoorMethod>('cash');
   const [busy, setBusy] = useState(false);
   /* Tahsilatın tekrar anahtarı SEÇİM başına: ağ yeniden denemesi aynı anahtarla gider, para iki kez yazılmaz. */
   const collectionKey = useRef<string | null>(null);
@@ -61,7 +59,7 @@ export function usePickup(): UsePickupResult {
       return;
     }
     setOrders(result.data.orders);
-    setCashAccountId(result.data.cashAccountId);
+    setDoorCollection(result.data.doorCollection);
     setStatus('ready');
   }, []);
 
@@ -98,7 +96,7 @@ export function usePickup(): UsePickupResult {
   const dueCents = selected?.amountDueCents ?? 0;
   const amountCents = parseAmountToCents(amountText);
   const partialPayment = dueCents > 0 && amountCents !== null && amountCents < dueCents;
-  const collectionBlocked = dueCents > 0 && (cashAccountId === null || amountCents === null || amountCents <= 0);
+  const collectionBlocked = dueCents > 0 && (!doorCollection[method] || amountCents === null || amountCents <= 0);
   const canDeliver = selected !== null && allBoxesScanned && !collectionBlocked && !busy;
 
   const deliver = useCallback(async (): Promise<PickupDeliverResponse | null> => {
@@ -106,8 +104,8 @@ export function usePickup(): UsePickupResult {
     setBusy(true);
     collectionKey.current ??= newRequestKey('pickup');
     const collection =
-      dueCents > 0 && cashAccountId !== null && amountCents !== null && amountCents > 0
-        ? { method, amountCents, accountId: cashAccountId, idempotencyKey: collectionKey.current }
+      dueCents > 0 && doorCollection[method] && amountCents !== null && amountCents > 0
+        ? { method, amountCents, idempotencyKey: collectionKey.current }
         : null;
     const result = await trackWarehouse(deliverPickup(selected.orderId, { scannedBoxCodes: [...scanned], collection }));
     setBusy(false);
@@ -120,7 +118,7 @@ export function usePickup(): UsePickupResult {
       void load();
     }
     return result.data;
-  }, [amountCents, canDeliver, cashAccountId, dueCents, load, method, scanned, selected]);
+  }, [amountCents, canDeliver, doorCollection, dueCents, load, method, scanned, selected]);
 
   const reload = useCallback(() => {
     setStatus('loading');
@@ -130,7 +128,7 @@ export function usePickup(): UsePickupResult {
   return {
     status,
     orders,
-    cashAccountId,
+    doorCollection,
     selected,
     select,
     scanned,

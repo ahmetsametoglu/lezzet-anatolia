@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { CourierReturnBoxSchema, CourierReturnFreeGoodSchema, CourierReturnStayBoxSchema } from './courier-return-api.schema';
-import { DoorCollectionInputSchema } from './courier-api.schema';
+import { DoorCollectionInputSchema, DoorCollectionMethodsSchema, DoorCollectionUnavailableSchema } from './courier-api.schema';
 import {
   FulfillmentAdjustmentSchema,
   OrderItemReturnSchema,
@@ -171,7 +171,7 @@ export const ConfirmPreparationResponseSchema = z.discriminatedUnion('status', [
 ]);
 export type ConfirmPreparationResponse = z.infer<typeof ConfirmPreparationResponseSchema>;
 
-// ── D1 · Kutu döngüsü (23.6 — karar §1.4) ───────────────────────────────────
+// ── D1 · Kutu döngüsü ───────────────────────────────────────────────────────
 
 /**
  * Kargo kutusu seçeneği — deponun benimsediği dış kutu tiplerinden biri; varyantın ambalajıyla karışmaz. Ölçüler depocuya
@@ -310,7 +310,7 @@ export const AnnounceShipmentResponseSchema = z.discriminatedUnion('status', [
     parcels: z.array(z.object({ boxId: z.string().uuid(), trackingNumber: z.string(), labelKey: z.string().nullable() })),
     /**
      * Etiketi SAKLANAMAYAN kutuların numarası. Gönderi ALINDI ve parası ödendi — yükleme hatası
-     * duyuruyu geri çekmez (23.7'nin "basım hatası kutu kapanışını geri çekmez" çizgisi).
+     * duyuruyu geri çekmez, tıpkı basım hatasının kutu kapanışını geri çekmediği gibi.
      */
     labelFailures: z.array(z.number().int().positive()),
   }),
@@ -521,7 +521,7 @@ export const BoxLabelSchema = z.object({
   boxNo: z.number().int().positive(),
   boxCount: z.number().int().positive(),
   referenceNo: z.string().nullable(),
-  /** Koliye yazılacak ad: adresin alıcısı, yoksa hesap sahibi (10.9 kuralı). */
+  /** Koliye yazılacak ad: adresin alıcısı, yoksa hesap sahibi. */
   parcelName: z.string(),
   routeName: z.string().nullable(),
   deliveryType: DeliveryTypeEnum,
@@ -592,7 +592,7 @@ export const BoxLabelResponseSchema = z.discriminatedUnion('status', [
 ]);
 export type BoxLabelResponse = z.infer<typeof BoxLabelResponseSchema>;
 
-/** Basım damgası cevabı (23.7) — damga başarının kaydıdır; telefon SDK "bastı" deyince çağırır. */
+/** Basım damgası cevabı — damga başarının kaydıdır; telefon SDK "bastı" deyince çağırır. */
 export const MarkBoxPrintedResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('ok'), printedAt: z.string() }),
   z.object({ status: z.literal('not_sealed') }),
@@ -1040,7 +1040,7 @@ export const DispatchTransferResponseSchema = z.discriminatedUnion('status', [
 ]);
 export type DispatchTransferResponse = z.infer<typeof DispatchTransferResponseSchema>;
 
-/** Sevk kaydını geri al (19.6) — "mal hiç çıkmadı". Gerekçe serbest metin, zorunlu değil. */
+/** Sevk kaydını geri al — "mal hiç çıkmadı". Gerekçe serbest metin, zorunlu değil. */
 export const CancelTransferRequestSchema = z.object({ reason: z.string().nullish() });
 export type CancelTransferRequest = z.infer<typeof CancelTransferRequestSchema>;
 
@@ -1511,14 +1511,14 @@ export type PickupQueueOrderContract = z.infer<typeof PickupQueueOrderSchema>;
 
 export const PickupQueueResponseSchema = z.object({
   orders: z.array(PickupQueueOrderSchema),
-  /** Tezgâh tahsilatının gireceği kasa (deponun kapı kasası ayarı); boşsa ekran tahsilat bloğunu kapalı çizer. */
-  cashAccountId: z.string().uuid().nullable(),
+  /** Tezgâhta hangi yöntemle tahsilat yazılabilir (deponun kapı hesapları). */
+  doorCollection: DoorCollectionMethodsSchema,
 });
 export type PickupQueueResponse = z.infer<typeof PickupQueueResponseSchema>;
 
 /**
  * `POST /warehouse/pickup/:orderId/deliver` — müşteriye teslim. Kutu okutması rota kapısıyla aynı şart (tüm kutular),
- * tahsilat kuryenin kapı tahsilatıyla aynı şekil (`DoorCollectionInputSchema`): yöntem, tutar, kasa, tekrar anahtarı.
+ * tahsilat kuryenin kapı tahsilatıyla aynı şekil (`DoorCollectionInputSchema`): yöntem, tutar, tekrar anahtarı.
  */
 export const PickupDeliverRequestSchema = z.object({
   scannedBoxCodes: z.array(z.string()).default([]),
@@ -1541,6 +1541,7 @@ export const PickupDeliverResponseSchema = z.discriminatedUnion('status', [
   }),
   /** Okutulmamış kutu var — teslim YAZILMADI; kalan kutuların numarası döner. */
   z.object({ status: z.literal('boxes_missing'), remainingBoxNos: z.array(z.number().int()) }),
+  DoorCollectionUnavailableSchema,
   /** Sipariş hazır değil (henüz toplanıyor ya da çoktan teslim edilmiş). */
   z.object({ status: z.literal('not_ready'), currentStatus: OrderStatusEnum }),
   /** Sipariş gel-al değil — rota ve kargo bu kapıdan teslim edilmez. */
