@@ -141,13 +141,22 @@ aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yükl�
 | Nakit kasası | Para koyma/çıkarma, anlık sayım ve aylık hareketler çalışıyor; sayım kapanmış satışların nakit payıyla tutuyor. |
 | Gün sonu okumaları | Ödeme yöntemine, KDV oranına göre ve alınan ödemeler dökümü geliyor. Kasa defteri ve nakit akışı boş (kapanış olmadan). |
 | Gün kapanışı | Demoda yapılamıyor: *"You can't close because your account is in demo mode"*. Çağrı yetki kapısını geçiyor. |
+| Satışı önceki güne taşıma | `PUT /z/date/` demoda reddediliyor (02.10): *"You must be in production mode to use this function"*. Satış kapanışı bütün kalemlerin stoktan düşülmesini istiyor (`stock_withdrawal = 1`). |
 | Çalışmayanlar | Fiş içeriği (`/print/ticket`) ve Z raporu (`/reports/z`) 500; `/z/credit_notes_issued` canlıda yok (404). |
 | Yuvarlama | `sale_total_net/tax` (23,12 / 1,88) ile oran toplamları (23,13 / 1,87) bir kuruş ayrışıyor; mutabakat oran toplamlarından yapılır. |
 | Hız | Çağrı başına 40–110 ms; kota başlığı yok. |
 | Demo sıfırlama | `POST /reset` (`reset_action`: `sales_and_products`, `sales_keep_stock`, `sales_and_stock`, `clients`, `everything`), yalnız demo modunda. `sales_and_products` satışları, ürünleri ve kasa sayımını siliyor; ödeme yöntemleri, KDV oranları ve mağaza kalıyor. |
 
 **Hiboutik — açık kalan:**
-- Gün kapanışı, mali arşiv ve kapanış sonrası kasa defteri yalnız üretim hesabında görülebilir.
+- Gün kapanışı, satışı önceki güne taşıma, mali arşiv ve kapanış sonrası kasa defteri yalnız üretim hesabında
+  görülebilir; üretime geçiş geri alınmaz, demo satışları silinir, ayarlar kalır.
+- Hiboutik belgesine göre (02.10): kapanış geri alınmaz ve önceki kapanmamış günleri de kapatır; kapanan günün
+  satışı ancak ters satışla düzeltilir. Bütün günleri kapanan ay ve 12 ayı kapanan yıl kendiliğinden kapanır, kapanan
+  ayın mali arşivi indirilir. Gün, hesabın ayarlı saatinde (varsayılan gece yarısı) başlayan 24 saattir; satış
+  kapanmamış önceki güne taşınabilir. Pennylane Hiboutik'ten günlük Z'yi alır (Chift), kapanmamış günde "POS still
+  open" der.
+- Canlıda ilk iş: gün başlangıç saatinin gece yarısı olduğu ekrandan doğrulanır; ilk gerçek satıştan önce kaydı
+  olmayan bir gün API'den kapatılıp cevabı ölçülür.
 - Ters yüklemenin `E` kodu 2027 e-fatura / e-reporting için yeterli mi, Faz 4'te bakılacak.
 - Çağrı sınırı: yeni fiş başına 8 çağrı (arama, açma, iki okuma, iki ayar, ödeme, kapatma) + kalem
   başına 1 (bölünen ya da KDV'si değişen kalem 1 daha), toplu uç yok. Ayda 600 siparişte 8 kalemle ~9.600
@@ -356,6 +365,9 @@ Hiboutik:
 - API belgesi: `https://lezzetanatolie.hiboutik.com/docapi/yaml/` (kopyası `.test-results/hiboutik-docapi-hesap.yaml`, depoda değil)
 - [Webhooklar](https://faq.hiboutik.com/en/api-development/webhooks)
 - [E-fatura ve e-reporting](https://faq.hiboutik.com/fr/caisse-cloture/facturation-electronique-france-e-reporting)
+- [Kapanış](https://faq.hiboutik.com/en/till-closing/perform-a-closing) · [Kapanış (FR)](https://faq.hiboutik.com/?faq=84)
+- [Demo ve üretim modları](https://faq.hiboutik.com/fr/mon-compte/modes-demonstration-production)
+- [Satışı önceki güne taşıma](https://faq.hiboutik.com/fr/caisse-cloture/transferer-une-vente-sur-une-journee-anterieure)
 
 Pennylane:
 - [Kasa yazılımlarından satış senkronu](https://help.pennylane.com/fr/articles/212053-logiciels-de-gestion-de-point-de-vente-synchroniser-les-ventes-en-magasin)
