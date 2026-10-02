@@ -1,6 +1,8 @@
-import { distributeProportional, fromCents, toCents } from '@lezzet/helper';
+import { fromCents, toCents } from '@lezzet/helper';
 import type { Channel, Country, OrderSale, PaymentMethod, VatTreatment } from '@lezzet/types';
-import { lineAmountCents, vatSplitOf, type AccountingLine } from './line';
+import { chargedShippingParts } from '../delivery/shipping-fee';
+import { chargedQtyOf, fulfilledLineOf } from '../payment/payment-status';
+import { chargedAmountCents, vatSplitOf, type AccountingLine } from './line';
 import { isZeroRated } from '../tax/vat-treatment';
 
 /**
@@ -67,12 +69,6 @@ export interface AccountingExport {
   rows: AccountingExportRow[];
 }
 
-/**
- * Kargonun KDV oranı, yalnız dağıtılacak kalem tutarı yokken (kalemsiz ya da tamamı sıfır fiyatlı satış) kullanılır; normal
- * satışta kargo malın oranını izler. Fransa'da hizmetin temel oranı %20'dir.
- */
-export const SHIPPING_VAT_RATE = 20;
-
 /** Export'a girmeyen satışın sebebi. Bugün tek sebep var; liste büyürse ekran neden'i gösterebilsin. */
 export type ExportSkipReason = 'gift_order';
 
@@ -127,27 +123,21 @@ function sumOf<T>(rows: readonly T[], field: keyof T): number {
 export type SaleVatBasis = Pick<OrderSale, 'channel' | 'vatTreatment' | 'shippingFeeCents'>;
 
 /**
- * Satışın oran bazında KDV kırılımı; aktarım satırının da kâr raporunun da tek zemini. Kargo kalemlerle aynı tabanda (b2b'de HT)
- * dağıtılır ve dönüşüm oran başına bir kez uygulanır, çünkü kalem kalem çevirmek kuruş artığı biriktirirdi.
+ * Satışın oran bazında KDV kırılımı; aktarım satırının da kâr raporunun da tek zemini. Ücretlenen kalem ve kargo payı kasa fişindeki
+ * tanımla aynıdır; dönüşüm oran başına bir kez uygulanır, çünkü kalem kalem çevirmek kuruş artığı biriktirirdi.
  */
 export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[]): ExportVatLine[] {
   const zeroRated = isZeroRated(sale.vatTreatment);
-  const buckets = items.map((item) => ({ vatRate: zeroRated ? 0 : item.vatRate, amount: lineAmountCents(item) }));
-
-  const shippingCents = sale.shippingFeeCents;
-  const bucketTotal = buckets.reduce((sum, b) => sum + b.amount, 0);
-  if (shippingCents > 0 && bucketTotal > 0) {
-    distributeProportional(buckets.map((b) => b.amount), shippingCents).forEach((share, i) => {
-      buckets[i]!.amount += share;
-    });
-  } else if (shippingCents > 0) {
-    // Dağıtacak ağırlık yok: kalemsiz satış ya da tamamı sıfır fiyatlı sepet. Kargo kendi satırını açar, yoksa oransal dağıtım
-    // sessizce 0 döndürür ve kargo aktarımdan düşerdi.
-    buckets.push({ vatRate: zeroRated ? 0 : SHIPPING_VAT_RATE, amount: shippingCents });
-  }
+  const charged = items
+    .filter((item) => chargedQtyOf(fulfilledLineOf(item)) > 0)
+    .map((item) => ({ vatRate: item.vatRate, totalCents: chargedAmountCents(item) }));
+  const shipping = chargedShippingParts(sale.shippingFeeCents, charged).map((part) => ({ vatRate: part.vatRate, totalCents: part.amountCents }));
 
   const byRate = new Map<number, number>();
-  for (const b of buckets) byRate.set(b.vatRate, (byRate.get(b.vatRate) ?? 0) + b.amount);
+  for (const part of [...charged, ...shipping]) {
+    const vatRate = zeroRated ? 0 : part.vatRate;
+    byRate.set(vatRate, (byRate.get(vatRate) ?? 0) + part.totalCents);
+  }
 
   return [...byRate.entries()]
     .filter(([, amount]) => amount > 0)

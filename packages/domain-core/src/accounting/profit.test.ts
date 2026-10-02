@@ -64,7 +64,7 @@ const BASE_SALE: OrderSale = {
 
 const sale = (over: Partial<OrderSale> = {}): OrderSale => ({ ...BASE_SALE, ...over });
 const line = (over: Partial<SoldLine['item']> = {}) => ({
-  qty: 1, fulfilledQty: 1, unitPriceCents: 1000, lineDiscountAmountCents: 0, vatRate: 5.5, ...over,
+  qty: 1, fulfilledQty: 1, goodwillQty: 0, unitPriceCents: 1000, lineDiscountAmountCents: 0, vatRate: 5.5, ...over,
 });
 
 /** Maliyeti bilinen sipariş. */
@@ -120,6 +120,14 @@ describe('sipariş katkı payı', () => {
     );
 
     expect(result.revenue).toBe(100);
+  });
+
+  it('müşteride kalan adet ciroya girmez, maliyette kalır', () => {
+    // 3 adet teslim edildi, 1'i müşteride kaldı: stok ve maliyet 3 adet, ciro 2 adet; ödeme türetimi ve kasa fişi de böyle sayar.
+    const item = line({ qty: 3, fulfilledQty: 3, goodwillQty: 1, unitPriceCents: 2110 });
+
+    expect(orderContribution(closed({ cogsAmountCents: 2400 }), [item]).revenue).toBe(40);
+    expect(variantProfit([{ variantId: 'v1', item, channel: 'b2c', costCents: 2400 }])[0]).toMatchObject({ qty: 3, revenue: 40, cogs: 24 });
   });
 
   it('patron ikramı kârda SAYILIR — parayı patron öder', () => {

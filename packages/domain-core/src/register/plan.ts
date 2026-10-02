@@ -1,6 +1,5 @@
 import type { MoneyMovement, Order, OrderItem, PaymentMethod, RegisterLine, RegisterPayment, RegisterTicketSnapshot } from '@lezzet/types';
-import { SHIPPING_VAT_RATE } from '../accounting/export';
-import { apportionShippingVat } from '../delivery/shipping-fee';
+import { chargedShippingParts } from '../delivery/shipping-fee';
 import { isFulfillmentSettled } from '../order/status-machine';
 import {
   chargedQtyOf,
@@ -173,14 +172,10 @@ function registerLinesOf(order: RegisterOrder, items: readonly RegisterItem[], b
     if (qty <= 0) continue;
     lines.push({ kind: 'item', orderItemId: item.id, qty, amountCents: fulfilledLineAmountCents(line, settled), vatRate: item.vatRate });
   }
-  if (lines.length === 0 || order.shippingFeeCents <= 0) return lines;
-
-  const parts = apportionShippingVat(
+  const shipping = chargedShippingParts(
     order.shippingFeeCents,
     lines.map((line) => ({ totalCents: line.amountCents, vatRate: line.vatRate })),
   );
-  // Kalemlerin hepsi sıfır fiyatlıysa paylaştıracak ağırlık yoktur; kargo muhasebe aktarımındaki oranla yazılır.
-  const shipping = parts.length > 0 ? parts : [{ vatRate: SHIPPING_VAT_RATE, amountCents: order.shippingFeeCents }];
   return [
     ...lines,
     ...shipping.map((part) => ({

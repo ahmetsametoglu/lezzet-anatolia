@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { OrderItem, OrderSale } from '@lezzet/types';
-import { buildAccountingExport, buildExportRow, exportEligibility } from './export';
+import { fromCents } from '@lezzet/helper';
+import { apportionShippingVat } from '../delivery/shipping-fee';
+import { buildAccountingExport, buildExportRow, exportEligibility, vatLinesOf } from './export';
 
 /**
  * Muhasebe export sözleşmesi: her satırda ve özette `net + vat === gross`; HT/KDV TTC satıştan ayrıştırılır;
@@ -61,9 +63,9 @@ const BASE_SALE: OrderSale = {
   createdAt: '2026-03-12T09:00:00.000Z',
 };
 
-type Line = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPriceCents' | 'lineDiscountAmountCents' | 'vatRate'>;
+type Line = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'goodwillQty' | 'unitPriceCents' | 'lineDiscountAmountCents' | 'vatRate'>;
 const line = (over: Partial<Line> = {}): Line => ({
-  qty: 1, fulfilledQty: 1, unitPriceCents: 1000, lineDiscountAmountCents: 0, vatRate: 5.5, ...over,
+  qty: 1, fulfilledQty: 1, goodwillQty: 0, unitPriceCents: 1000, lineDiscountAmountCents: 0, vatRate: 5.5, ...over,
 });
 
 const sale = (over: Partial<OrderSale> = {}): OrderSale => ({ ...BASE_SALE, ...over });
@@ -122,6 +124,23 @@ describe('kargo — malın oranını izler', () => {
     expect(row.vatLines.find((l) => l.vatRate === 5.5)!.gross).toBe(37.5);
     expect(row.vatLines.find((l) => l.vatRate === 20)!.gross).toBe(12.5);
     expect(row.gross).toBe(50);
+  });
+
+  it('kargo payı kasa fişindekiyle aynı bölünür: oran başına, artan kuruş en büyük paya', () => {
+    // İki ayrı bölme kuruş farkı üretiyordu: aynı satış kasada %5,5'e 2,53, muhasebede 2,52 yazılıyordu.
+    const lines = vatLinesOf(sale({ shippingFeeCents: 101 }), [
+      line({ unitPriceCents: 101, vatRate: 5.5 }),
+      line({ unitPriceCents: 101, vatRate: 5.5 }),
+      line({ unitPriceCents: 202, vatRate: 20 }),
+    ]);
+    const parts = apportionShippingVat(101, [
+      { totalCents: 202, vatRate: 5.5 },
+      { totalCents: 202, vatRate: 20 },
+    ]);
+
+    expect(lines.map(({ vatRate, gross }) => ({ vatRate, gross }))).toEqual(
+      parts.map((part) => ({ vatRate: part.vatRate, gross: fromCents(202 + part.amountCents) })),
+    );
   });
 
   it('dağıtılacak kalem yoksa kargo KENDİ satırını açar — export’tan düşmez', () => {

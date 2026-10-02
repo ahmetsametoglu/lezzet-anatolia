@@ -1,5 +1,6 @@
 import { addVat, removeVat } from '@lezzet/helper';
 import type { Channel, OrderItem } from '@lezzet/types';
+import { fulfilledLineAmountCents, fulfilledLineOf } from '../payment/payment-status';
 import { vatBaseOf } from '../pricing/vat-base';
 
 /**
@@ -7,7 +8,10 @@ import { vatBaseOf } from '../pricing/vat-base';
  * (`vatBaseOf`) ve kâr her zaman HT üstünden hesaplanır, çünkü KDV ciro değildir.
  */
 
-export type AccountingLine = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPriceCents' | 'lineDiscountAmountCents' | 'vatRate'>;
+export type AccountingLine = Pick<
+  OrderItem,
+  'qty' | 'fulfilledQty' | 'goodwillQty' | 'unitPriceCents' | 'lineDiscountAmountCents' | 'vatRate'
+>;
 
 /**
  * `lineAmountCents`in gerçekten istediği alanlar; KDV oranı yok, çünkü kurye sözleşmesi onu taşımaz.
@@ -15,8 +19,8 @@ export type AccountingLine = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPrice
 export type LineAmountInput = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPriceCents' | 'lineDiscountAmountCents'>;
 
 /**
- * Kalemin faturalanacak tutarı **kanalın kendi tabanında** (cent) — **teslim edilen** miktar
- * üzerinden. Sipariş edilen değil: gitmeyen mal ne faturalanır ne ciro sayılır.
+ * Kalemin teslim edilen adet üzerinden tutarı (kanalın tabanında, cent); kapıda reddedilen kalemin payı bununla bulunur. Ciro ve fiş
+ * müşteride kalan adedi de düşer (`chargedAmountCents`).
  */
 export function lineAmountCents(item: LineAmountInput): number {
   const beforeDiscount = item.unitPriceCents * item.fulfilledQty;
@@ -50,7 +54,15 @@ export function vatSplitOf(amountCents: number, channel: Channel, vatRate: numbe
   return { grossCents: gross, netCents: amountCents, vatCents: gross - amountCents };
 }
 
-/** Kalemin KDV hariç (HT) tutarı (cent). */
+/**
+ * Kalemin ücretlenen tutarı (kanalın tabanında, cent): teslim edilen eksi müşteride kalan, ödeme türetiminin tanımı. Müşteride kalan
+ * mal stoktan ve maliyetten çıkar ama ciroya girmez; kasa fişi de aynı tanımı kullanır.
+ */
+export function chargedAmountCents(item: AccountingLine): number {
+  return fulfilledLineAmountCents(fulfilledLineOf(item));
+}
+
+/** Kalemin KDV hariç (HT) ücretlenen tutarı (cent). */
 export function lineNetCents(item: AccountingLine, channel: Channel, zeroRated = false): number {
-  return vatSplitOf(lineAmountCents(item), channel, item.vatRate, zeroRated).netCents;
+  return vatSplitOf(chargedAmountCents(item), channel, item.vatRate, zeroRated).netCents;
 }

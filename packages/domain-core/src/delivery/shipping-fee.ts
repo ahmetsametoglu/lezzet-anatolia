@@ -58,6 +58,12 @@ export function meetsMinBasket(basketCents: number, minBasketCents: number): { o
   return { ok: missing === 0, missingCents: missing };
 }
 
+/**
+ * Kargonun KDV oranı, yalnız paylaştırılacak kalem tutarı yokken (ücretlenen kalemlerin hepsi sıfır fiyatlı) kullanılır; normal satışta
+ * kargo malın oranını izler. Fransa'da hizmetin temel oranı %20'dir.
+ */
+const SHIPPING_VAT_RATE = 20;
+
 /** KDV paylaştırması için gereken asgari kalem bilgisi. */
 export interface VatLine {
   /** Kalemin indirimli toplamı (cent, kanal tabanında). */
@@ -107,4 +113,16 @@ export function shippingPriceWithVat(netCents: number, lines: readonly VatLine[]
   if (netCents <= 0 || total <= 0) return netCents;
   const netShare = lines.reduce((sum, l) => sum + Math.max(0, l.totalCents) / total / (1 + l.vatRate / 100), 0);
   return Math.round(netCents / netShare);
+}
+
+/**
+ * Ücretlenen kalemler üzerinden kargonun oran payları; kasa fişi, ciro ve kâr aynı bölmeyi kullanır. Ücretlenen kalem yoksa kargo da
+ * ücretlenmez; kalemlerin hepsi sıfır fiyatlıysa paylaştıracak ağırlık yoktur ve kargo kendi oranıyla tek paydır.
+ */
+export function chargedShippingParts(feeCents: number, lines: readonly VatLine[]): Array<{ vatRate: number; amountCents: number }> {
+  if (feeCents <= 0 || lines.length === 0) return [];
+  const parts = apportionShippingVat(feeCents, lines);
+  return parts.length > 0
+    ? parts.map(({ vatRate, amountCents }) => ({ vatRate, amountCents }))
+    : [{ vatRate: SHIPPING_VAT_RATE, amountCents: feeCents }];
 }
