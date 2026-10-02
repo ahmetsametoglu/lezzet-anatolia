@@ -55,7 +55,7 @@ insert into public.settings (key, value, description) values
   ('ai_model_prices_usd',          '{"gemini-3.5-flash-lite": {"inputPerMillion": 0.30, "outputPerMillion": 2.50}, "gemini-3.5-flash": {"inputPerMillion": 1.50, "outputPerMillion": 9.00}}', 'AI model tarifesi — milyon jeton başına USD (girdi/çıktı). Kullanım defterinin maliyeti buradan hesaplanır; listede olmayan modelin maliyeti boş kalır.'),
   ('order_cutoff_time',            '"16:00"','Sipariş kesim saati. Sonrasında gelen sipariş bir SONRAKİ rota gününe yazılır.'),
   -- ── GÜNÜN EŞİK SAATLERİ ───────────────────────────────────────────────────
-  -- Panelin gün akışı şeridi bu satırları okur ve uyarı şeridi en yakın eşiği bunlardan seçer; saatler depo bazlı olmaya en açık
+  -- Panelin gün akışı bu satırları okur ve uyarı satırı en yakın eşiği bunlardan seçer; saatler depo bazlı olmaya en açık
   -- değerler olduğu için koda gömülmez.
   ('prep_cutoff_time',             '"11:00"','Depo hazırlık kapanışı. Bu saate kadar hazırlanmayan sipariş rotaya yetişmez (panel gün akışı).'),
   ('route_departure_time',         '"14:00"','Rota çıkış saati — kuryenin yola çıkması beklenen an (panel gün akışı).'),
