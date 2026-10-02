@@ -88,6 +88,28 @@ export async function notifyRunCloseMismatch(
 }
 
 /**
+ * Sertifikalı kasanın günü kapanmadı — yönetime ve muhasebeye. Dedupe mağaza ve gün başına: aynı gece ikinci kez haber olmaz, ertesi
+ * gece gün hâlâ açıksa yeni günle yeniden hatırlatılır.
+ */
+export async function notifyRegisterDayUnclosed(
+  db: SupabaseClient,
+  input: { warehouseId: string; date: string; differences: number; waiting: number },
+): Promise<void> {
+  try {
+    await dispatchStaffNotification(db, {
+      kind: 'register_day_unclosed',
+      roles: ['admin', 'accounting'],
+      warehouseId: input.warehouseId,
+      target: null,
+      payload: { date: input.date, differences: input.differences, waiting: input.waiting },
+      dedupeKey: `register-day:${input.warehouseId}:${input.date}`,
+    });
+  } catch (err) {
+    yut(err, 'register_day_unclosed');
+  }
+}
+
+/**
  * Sefer kapandı ama durak sonuçlanmadı: sevkiyat masası dürtülür, çünkü askıdaki durak bakan olmazsa kaybolmuş gibi kalır; zil yalnız "bak" der, gün seçmez.
  * Depo süzgeçlidir ve dedupe yoktur: her kapanış ayrıdır.
  */

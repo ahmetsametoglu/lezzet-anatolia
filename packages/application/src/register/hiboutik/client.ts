@@ -5,6 +5,7 @@ import {
   HiboutikCreatedProductSchema,
   HiboutikCreatedSaleSchema,
   HiboutikCreatedTillMoveSchema,
+  HiboutikDayCashFlowListSchema,
   HiboutikDayClosureSchema,
   HiboutikDayPaymentListSchema,
   HiboutikDayTaxListSchema,
@@ -136,7 +137,8 @@ export function hiboutikRegister(config: HiboutikConfig): CashRegister {
         }
         throw err;
       }
-      return parse(HiboutikCreatedPaymentSchema, body, 'ödeme satırı').payment_detail_id;
+      const created = parse(HiboutikCreatedPaymentSchema, body, 'ödeme satırı');
+      return 'payment_detail_id' in created ? { kind: 'payment', id: created.payment_detail_id } : { kind: 'cash_flow', id: created.cash_flow_id };
     },
     async deletePayment(paymentId) {
       await request(config, `/sales_payment_div/${paymentId}`, 'DELETE');
@@ -178,21 +180,31 @@ export function hiboutikRegister(config: HiboutikConfig): CashRegister {
     },
     async readDay(storeId, date) {
       const day = date.split('-').join('/');
-      const [taxes, payments] = await Promise.all([
+      const [taxes, payments, cashFlows] = await Promise.all([
         request(config, `/z/taxes/${storeId}/${day}`, 'GET').then((body) => parse(HiboutikDayTaxListSchema, body, 'gün sonu KDV')),
         request(config, `/z/payment_types/${storeId}/${day}`, 'GET').then((body) =>
           parse(HiboutikDayPaymentListSchema, body, 'gün sonu ödemeler'),
         ),
+        request(config, `/z/cash_flow/${storeId}/${day}`, 'GET').then((body) =>
+          parse(HiboutikDayCashFlowListSchema, body, 'gün sonu nakit akışı'),
+        ),
       ]);
       return {
         vat: taxes.map((tax) => ({ vatRate: percentOf(Number(tax.tax_value)), grossCents: toCents(Number(tax.total_incl_taxes)) })),
-        payments: payments.flatMap((type) =>
-          type.payments.map((payment) => ({
-            saleId: payment.sale_id,
-            method: METHOD_OF.get(type.payment_type) ?? null,
-            amountCents: toCents(Number(payment.amount)),
+        payments: [
+          ...payments.flatMap((type) =>
+            type.payments.map((payment) => ({
+              saleId: payment.sale_id,
+              method: METHOD_OF.get(type.payment_type) ?? null,
+              amountCents: toCents(Number(payment.amount)),
+            })),
+          ),
+          ...cashFlows.map((flow) => ({
+            saleId: flow.sale_id,
+            method: METHOD_OF.get(flow.payment_type) ?? null,
+            amountCents: toCents(Number(flow.payment_amount)),
           })),
-        ),
+        ],
       };
     },
     async dayClosedAt(storeId, date) {
@@ -224,6 +236,11 @@ function saleOf(row: HiboutikSale): RegisterSale {
       paymentId: payment.payment_detail_id,
       method: METHOD_OF.get(payment.payment_type) ?? null,
       amountCents: toCents(Number(payment.payment_amount)),
+    })),
+    cashFlows: row.cash_flow.map((flow) => ({
+      cashFlowId: flow.cash_flow_id,
+      method: METHOD_OF.get(flow.payment_type) ?? null,
+      amountCents: toCents(Number(flow.payment_amount)),
     })),
   };
 }

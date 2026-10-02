@@ -3,9 +3,12 @@ import {
   AccountService,
   CategoryService,
   MoneyMovementService,
+  OrderItemService,
   OrderService,
   PriceService,
   ProductService,
+  RegisterCashOpService,
+  RegisterPaymentService,
   RegisterStoreService,
   RegisterTicketService,
   SettingsService,
@@ -147,8 +150,21 @@ const salesOf = (referenceNo: string) =>
 
 const tillsOf = (movementId: string) =>
   fake.tills
-    .filter((till) => till.label.endsWith(`#${movementId.slice(0, 8)}`))
+    .filter((till) => till.label.includes(`#${movementId.slice(0, 8)}`))
     .map(({ direction, amountCents, label }) => ({ direction, amountCents, label }));
+
+let ownStoreCounter = 0;
+/** Kendi deposu, çekmecesi ve mağaza eşlemesi olan kasa; yazımları ve gün sonu dosyanın öteki mağazasıyla karışmasın. */
+async function ownStore(label: string) {
+  const warehouse = (await createTestWarehouse(db, { label })).id;
+  const cashAccount = (await new AccountService(db).insert({ name: `${label} çekmecesi ${stamp}`, type: 'cash' })).id;
+  ownTestRegisters.warehouseIds.push(warehouse);
+  ownTestRegisters.accountIds.push(cashAccount);
+  ownStoreCounter += 1;
+  const storeId = Number(String(stamp).slice(-9)) + ownStoreCounter;
+  await new RegisterStoreService(db).save({ warehouseId: warehouse, externalStoreId: storeId, cashAccountId: cashAccount });
+  return { warehouseId: warehouse, cashAccountId: cashAccount, storeId };
+}
 
 describe('sipariş fişi', () => {
   it('ilk tahsilat fişi açar ve kapatır: kalemler, kargo payı ve ödeme; ayna yazıldı, kuyruk satırı tamamlandı', async () => {
@@ -276,6 +292,59 @@ describe('sipariş fişi', () => {
     ]);
     expect(refund!.payments.map(({ method, amountCents }) => ({ method, amountCents }))).toEqual([{ method: 'cash', amountCents: -2990 }]);
   });
+
+  it('başka siparişe taşınan tahsilat ilk siparişin fişinde ters çevrilir, yenisine yazılır', async () => {
+    const first = await newOrder();
+    const second = await newOrder();
+    await pay(first.id, 2990);
+    await runRow('order_id', first.id);
+    const [movement] = await movements.listByOrder(first.id);
+    await movements.update({ id: movement!.id, orderId: second.id });
+
+    expect(await runRow('order_id', first.id)).toBe('written');
+    expect(await runRow('order_id', second.id)).toBe('written');
+    expect(salesOf(first.referenceNo)[0]!.payments.map((payment) => payment.amountCents)).toEqual([2990, -2990]);
+    expect(salesOf(second.referenceNo)[0]!.payments.map((payment) => payment.amountCents)).toEqual([2990]);
+  });
+
+  it('günü kapanmış fişe gelen ödeme nakit akışıdır; cevabı kaybolursa satıştan bulunur, ikinci kez yazılmaz', async () => {
+    const own = await ownStore('KASA-KAPALI-GUN');
+    const order = await newOrder({ warehouseId: own.warehouseId });
+    await pay(order.id, 2000);
+    await runRow('order_id', order.id);
+    await fake.register.closeDay(own.storeId, parisDateOf(new Date()));
+    await pay(order.id, 990);
+    fake.failOn('addPayment', 'after');
+
+    expect(await runRow('order_id', order.id)).toBe('failed');
+    expect(await runRow('order_id', order.id)).toBe('written');
+    const [sale] = salesOf(order.referenceNo);
+    expect(sale!.cashFlows.map(({ method, amountCents }) => ({ method, amountCents }))).toEqual([{ method: 'cash', amountCents: 990 }]);
+    const rows = await new RegisterPaymentService(db).listByTickets((await tickets.listByOrder(order.id)).map((ticket) => ticket.id));
+    expect(rows.find((row) => row.amountCents === 990)).toMatchObject({
+      status: 'written',
+      externalPaymentId: null,
+      externalCashFlowId: sale!.cashFlows[0]!.cashFlowId,
+    });
+  });
+
+  it('borç doğurmayan kalem iadesi kuyruğa düşer ve kasaya ödemesiz fişle gider', async () => {
+    // Kapıda eksik ödenmiş siparişte iade borcu doğmaz, para hareketi de; fiş açılmasaydı kasa gitmeyen malı satılmış gösterirdi.
+    const order = await newOrder();
+    await orders.update({ id: order.id, status: 'delivered' });
+    const items = new OrderItemService(db);
+    const [line] = await items.listByOrder(order.id);
+    await items.setFulfilled(line!.id, 2);
+    await pay(order.id, 2000);
+    await runRow('order_id', order.id);
+
+    await items.setFulfilled(line!.id, 1);
+
+    expect(await runRow('order_id', order.id)).toBe('written');
+    const [, refund] = salesOf(order.referenceNo);
+    expect(refund!.payments).toEqual([]);
+    expect(refund!.lines.reduce((sum, saleLine) => sum + saleLine.quantity * saleLine.unitPriceCents, 0)).toBe(-1250);
+  });
 });
 
 describe('yazılmayan ve bekleyen', () => {
@@ -348,6 +417,27 @@ describe('fiş dışı nakit', () => {
     ]);
   });
 
+  it('tutarı değişen kasa hareketinin eski kaydı ters çevrilir, yenisi ayrı açıklamayla yazılır', async () => {
+    // Kasadaki kayıt değişmez; değişiklik beklemede kalsaydı kasa sayımı eski tutarla kalırdı.
+    const change = await movements.insert({
+      accountId: cashAccountId,
+      direction: 'in',
+      amountCents: 2000,
+      type: 'capital',
+      description: 'Sermaye',
+    });
+    expect(await runRow('movement_id', change.id)).toBe('written');
+    await movements.update({ id: change.id, amountCents: 2500 });
+
+    expect(await runRow('movement_id', change.id)).toBe('written');
+    const ref = `#${change.id.slice(0, 8)}`;
+    expect(tillsOf(change.id)).toEqual([
+      { direction: 'in', amountCents: 2000, label: `Sermaye ${ref}` },
+      { direction: 'out', amountCents: 2000, label: `Annulation Sermaye ${ref}` },
+      { direction: 'in', amountCents: 2500, label: `Sermaye ${ref}/2` },
+    ]);
+  });
+
   it('ekstre satırı yatırmanın öteki yakasına bağlanınca kasaya ikinci çıkış yazılmaz', async () => {
     const deposit = await movements.insert({
       accountId: cashAccountId,
@@ -395,20 +485,12 @@ describe('fiş dışı nakit', () => {
   });
 
   it('ay dönümü gecesi cevabı kaybolan kasa hareketi Paris ayında bulunur, ikinci kez yazılmaz', async () => {
-    // Paris'te 1 Kasım 00:30, UTC'de hâlâ 31 Ekim. Kendi çekmecesi var ki yazımı dosyanın gün sonu mutabakatına girmesin.
+    // Paris'te 1 Kasım 00:30, UTC'de hâlâ 31 Ekim.
     const night = new Date('2026-10-31T23:30:00.000Z');
     const nightly = memoryRegister({ now: () => night });
-    const nightWarehouseId = (await createTestWarehouse(db, { label: 'KASA-GECE' })).id;
-    const nightCashAccountId = (await new AccountService(db).insert({ name: `Gece çekmecesi ${stamp}`, type: 'cash' })).id;
-    ownTestRegisters.warehouseIds.push(nightWarehouseId);
-    ownTestRegisters.accountIds.push(nightCashAccountId);
-    await new RegisterStoreService(db).save({
-      warehouseId: nightWarehouseId,
-      externalStoreId: Number(String(stamp).slice(-9)) + 1,
-      cashAccountId: nightCashAccountId,
-    });
+    const own = await ownStore('KASA-GECE');
     const change = await movements.insert({
-      accountId: nightCashAccountId,
+      accountId: own.cashAccountId,
       direction: 'in',
       amountCents: 1500,
       type: 'capital',
@@ -440,55 +522,140 @@ describe('fiş dışı nakit', () => {
 });
 
 describe('gün sonu', () => {
-  it('kasa aynayla aynıysa fark yoktur; gün kapanır ve ikinci kez kapatılmaz', async () => {
-    const order = await newOrder();
+  const today = () => parisDateOf(new Date());
+
+  it('defter, ayna ve kasa tutuyorsa gün kapanır ve ikinci kez kapatılmaz', async () => {
+    const own = await ownStore('KASA-KAPANIS');
+    const order = await newOrder({ warehouseId: own.warehouseId });
     await pay(order.id, 2990);
     await runRow('order_id', order.id);
-    const deposit = await movements.insert({
-      accountId: cashAccountId,
+    const expense = await movements.insert({
+      accountId: own.cashAccountId,
       direction: 'out',
       amountCents: 1000,
       type: 'expense',
       description: 'Kasadan gider',
     });
-    await runRow('movement_id', deposit.id);
-    const date = parisDateOf(new Date());
-    const storeId = Number(String(stamp).slice(-9));
+    await runRow('movement_id', expense.id);
     const closeDay = vi.spyOn(fake.register, 'closeDay');
 
-    const first = await closeRegisterDay(db, fake.register, { date, close: true });
-    const second = await closeRegisterDay(db, fake.register, { date, close: true });
+    const first = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate: today() });
+    const second = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate: today() });
 
-    expect(first.stores.find((store) => store.warehouseId === warehouseId)).toEqual({ warehouseId, closed: true, differences: [] });
-    expect(second.stores.find((store) => store.warehouseId === warehouseId)).toEqual({ warehouseId, closed: true, differences: [] });
-    // Paylaşılan veritabanında başka eşlenmiş mağaza da olabilir; sayılan yalnız bu dosyanın mağazası.
-    expect(closeDay.mock.calls.filter(([id]) => id === storeId)).toHaveLength(1);
+    expect(first.stores.find((store) => store.warehouseId === own.warehouseId)).toEqual({
+      warehouseId: own.warehouseId,
+      closed: true,
+      days: [{ date: today(), differences: [] }],
+      waiting: 0,
+    });
+    expect(second.stores.find((store) => store.warehouseId === own.warehouseId)).toEqual({
+      warehouseId: own.warehouseId,
+      closed: true,
+      days: [],
+      waiting: 0,
+    });
+    // Paylaşılan veritabanında başka eşlenmiş mağaza da olabilir; sayılan yalnız bu mağaza.
+    expect(closeDay.mock.calls.filter(([id]) => id === own.storeId)).toHaveLength(1);
     closeDay.mockRestore();
+  });
+
+  it('defterin saymadığı kasa kaydı fark çıkarır ve gün kapanmaz', async () => {
+    // Bağlı ekstre satırına plan kasa kaydı yazsaydı (çift çıkış) ayna ile kasa yine tutardı; farkı ancak defter gösterir.
+    const own = await ownStore('KASA-DEFTER');
+    const deposit = await movements.insert({
+      accountId: own.cashAccountId,
+      direction: 'out',
+      amountCents: 6000,
+      type: 'transfer',
+      counterAccountId: bankAccountId,
+      description: 'Bankaya yatırma',
+    });
+    await runRow('movement_id', deposit.id);
+    const line = await movements.insert({
+      accountId: bankAccountId,
+      direction: 'in',
+      amountCents: 6000,
+      type: 'misc',
+      source: 'bank_import',
+      description: 'VERSEMENT',
+    });
+    await movements.update({
+      id: line.id,
+      type: 'transfer',
+      counterAccountId: own.cashAccountId,
+      counterpartMovementId: deposit.id,
+      reconciled: true,
+    });
+    await runRow('movement_id', line.id);
+    const ops = new RegisterCashOpService(db);
+    const wrong = await ops.insert({
+      warehouseId: own.warehouseId,
+      movementId: line.id,
+      reversalOf: null,
+      direction: 'out',
+      amountCents: 6000,
+      label: 'çift çıkış',
+    });
+    await ops.update({ id: wrong.id, status: 'written', writtenAt: new Date().toISOString() });
+    await fake.register.moveCash({ storeId: own.storeId, direction: 'out', amountCents: 6000, label: 'çift çıkış' });
+
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate: today() });
+
+    const store = result.stores.find((candidate) => candidate.warehouseId === own.warehouseId)!;
+    expect(store.closed).toBe(false);
+    expect(store.days[0]!.differences).toEqual([
+      { kind: 'ledger', movementId: line.id, entry: 'cash', method: null, expectedCents: 0, writtenCents: -6000 },
+    ]);
+  });
+
+  it('mağazanın kuyruğunda bekleyen kayıt varsa defter, ayna ve kasa tutsa da gün kapanmaz', async () => {
+    // Kalem değişikliği kuyruğa düştü ama henüz yazılmadı: kasa bugünkü satışı eksik gösteriyor, kapanış onu dondururdu.
+    const own = await ownStore('KASA-BEKLEYEN');
+    const order = await newOrder({ warehouseId: own.warehouseId });
+    await orders.update({ id: order.id, status: 'delivered' });
+    const items = new OrderItemService(db);
+    const [line] = await items.listByOrder(order.id);
+    await items.setFulfilled(line!.id, 2);
+    await pay(order.id, 2000);
+    await runRow('order_id', order.id);
+    await items.setFulfilled(line!.id, 1);
+
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate: today() });
+
+    expect(result.stores.find((store) => store.warehouseId === own.warehouseId)).toEqual({
+      warehouseId: own.warehouseId,
+      closed: false,
+      days: [{ date: today(), differences: [] }],
+      waiting: 1,
+    });
   });
 
   it('canlı kasa değilse gün kapatılmaz, mutabakat yine koşar', async () => {
     const closeDay = vi.spyOn(fake.register, 'closeDay');
     const date = '2026-01-01';
 
-    const result = await closeRegisterDay(db, fake.register, { date, close: false });
+    const result = await closeRegisterDay(db, fake.register, { date, close: false, liveFromDate: date });
 
     expect(closeDay).not.toHaveBeenCalled();
-    expect(result.stores.find((store) => store.warehouseId === warehouseId)).toMatchObject({ closed: false });
+    expect(result.stores.find((store) => store.warehouseId === warehouseId)).toMatchObject({
+      closed: false,
+      days: [{ date, differences: [] }],
+    });
     closeDay.mockRestore();
   });
 
   it('kasa ekranından elle yapılan satış fark sayılır', async () => {
-    const storeId = Number(String(stamp).slice(-9));
+    const own = await ownStore('KASA-ELLE');
     const productId = [...fake.products.keys()][0]!;
-    const manual = await fake.register.createSale(storeId);
+    const manual = await fake.register.createSale(own.storeId);
     await fake.register.prepareSale(manual, 'ELLE');
     await fake.register.addLine({ saleId: manual, productId, quantity: 1, unitPriceCents: 500, vatRate: 20 });
     await fake.register.addPayment({ saleId: manual, method: 'cash', amountCents: 500 });
     await fake.register.closeSale(manual);
 
-    const result = await closeRegisterDay(db, fake.register, { date: parisDateOf(new Date()), close: false });
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: false, liveFromDate: today() });
 
-    const kinds = result.stores.find((store) => store.warehouseId === warehouseId)!.differences;
+    const kinds = result.stores.find((store) => store.warehouseId === own.warehouseId)!.days[0]!.differences;
     expect(kinds).toContainEqual({ kind: 'unknown_sale', saleId: manual });
     expect(kinds).toContainEqual({ kind: 'vat', vatRate: 20, oursCents: 0, registerCents: 500 });
   });

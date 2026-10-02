@@ -72,16 +72,16 @@ alter table public.order add constraint order_delivery_run_fk
 create index order_delivery_run_idx on public.order (delivery_run_id) where delivery_run_id is not null;
 
 -- ── Beklenen tahsilat — sefer bazında ────────────────────────────────────────
--- Fark hangi seferde doğduysa orada görünsün diye; `delivery_run_id` teslimle donduğu için yeniden atama kaydırmaz.
--- Yalnız kapıda toplanan iki yöntem sayılır, çünkü online ve havale kuryenin eline girmez.
+-- Fark hangi seferde doğduysa orada görünsün diye `delivery_run_id` teslimle donar, yeniden atama kaydırmaz. Yalnız kapıda toplanan
+-- iki yöntem hareketin kendi yönteminden sayılır: online ve havale kuryenin eline girmez, kalanı havaleyle gelen siparişte karışmaz.
 create or replace view public.delivery_run_collection with (security_invoker = true) as
 select o.delivery_run_id,
-       coalesce(sum(m.amount) filter (where o.payment_method = 'cash'), 0)::numeric(12, 2) as expected_cash,
-       coalesce(sum(m.amount) filter (where o.payment_method = 'card'), 0)::numeric(12, 2) as expected_card
+       coalesce(sum(m.amount) filter (where m.payment_method = 'cash'), 0)::numeric(12, 2) as expected_cash,
+       coalesce(sum(m.amount) filter (where m.payment_method = 'card'), 0)::numeric(12, 2) as expected_card
   from public.order o
   join public.money_movement m on m.order_id = o.id and m.type = 'order_payment'
  where o.delivery_run_id is not null
-   and o.payment_method in ('cash', 'card')
+   and m.payment_method in ('cash', 'card')
  group by o.delivery_run_id;
 
 -- ── Sefer kapanışı — mutabakat kaydı ────────────────────────────────────────
@@ -456,7 +456,7 @@ begin
       from public.order o
       join public.money_movement m on m.order_id = o.id and m.type = 'order_payment'
      where o.delivery_run_id = p_run_id
-       and o.payment_method = 'cash';
+       and m.payment_method = 'cash';
   end if;
   if v_cash_accounts = 1 then
     insert into public.money_movement (account_id, direction, amount, type, nature, value_date, description, source, meta)

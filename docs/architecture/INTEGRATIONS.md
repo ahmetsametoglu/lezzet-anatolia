@@ -126,11 +126,13 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 - Port `CashRegister` (`packages/application/src/register/port.ts`), uyarlama `register/hiboutik/client.ts`; cevap biçimi
   `packages/types` sözleşmesinde (`hiboutik.schema.ts`). Anahtar yoksa port yoktur (`HIBOUTIK_ACCOUNT`, `HIBOUTIK_USER`,
   `HIBOUTIK_API_KEY`, yalnız backend).
-- Yazım yolu: `money_movement` tetikleyicisi siparişi ya da eşlenmiş kasanın hareketini kuyruğa işaretler, backend cron'u
+- Yazım yolu: `money_movement` tetikleyicisi siparişi ya da eşlenmiş kasanın hareketini, kalem ve durum tetikleyicisi fişi olan
+  siparişi kuyruğa işaretler, backend cron'u
   (`register_sync`, dakikada bir) sipariş başına durum farkını fiş ve ödeme satırı olarak, fiş dışı nakdi kasa giriş/çıkışı
   olarak yazar. Ayna `register_*` tablolarında (`data-model/kasa.md`). Canlıya geçiş anı ayardır (`register_live_from`).
-- Gün sonu `register_close_day`: günü kasada kapatır (yalnız `HIBOUTIK_MODE=live`) ve aynayı kasanın gün sonu toplamlarıyla
-  karşılaştırır; fark `error_log`a uyarıdır.
+- Gün sonu `register_close_day` (gece yarısından sonra, önceki gün): kapanmamış günleri defter ↔ ayna ve ayna ↔ kasa olarak
+  karşılaştırır; hepsi tutuyor ve mağazanın kuyruğu boşsa günü kasada kapatır (yalnız `HIBOUTIK_MODE=live`). Tutmayan gün
+  kapanmaz, `error_log`a uyarı ve yönetime bildirim gider.
 
 ## Muhasebe export
 

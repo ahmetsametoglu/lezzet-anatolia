@@ -4,7 +4,7 @@ import type { CashRegister } from './port';
 
 /**
  * Testlerin bellek içi kasası: Hiboutik'in ölçülen davranışını taklit eder (kapanmış satışa kalem eklenmez ama ödeme satırı eklenir,
- * arama "içerir" biçimindedir). `failOn` yarıda kesilen yazımı kurar: çağrı yazmadan ya da yazdıktan sonra fırlatır. `now` kasanın saatidir.
+ * günü de kapanmışsa ödeme nakit akışı olur; arama "içerir" biçimindedir). `failOn` yarıda kesilen yazımı kurar: çağrı yazmadan ya da yazdıktan sonra fırlatır. `now` kasanın saatidir.
  */
 
 interface MemorySale {
@@ -14,6 +14,7 @@ interface MemorySale {
   closedAt: Date | null;
   lines: RegisterSale['lines'];
   payments: Array<{ paymentId: number; method: PaymentMethod; amountCents: number; at: Date }>;
+  cashFlows: Array<{ cashFlowId: number; method: PaymentMethod; amountCents: number; at: Date }>;
 }
 
 interface MemoryTill {
@@ -71,7 +72,7 @@ export function memoryRegister(opts: { now?: () => Date } = {}) {
     createSale: (storeId) =>
       run('createSale', () => {
         const id = nextId++;
-        sales.set(id, { storeId, extRef: '', divided: false, closedAt: null, lines: [], payments: [] });
+        sales.set(id, { storeId, extRef: '', divided: false, closedAt: null, lines: [], payments: [], cashFlows: [] });
         return id;
       }),
     prepareSale: (saleId, extRef) =>
@@ -103,9 +104,13 @@ export function memoryRegister(opts: { now?: () => Date } = {}) {
       run('addPayment', () => {
         const sale = saleOf(input.saleId);
         if (!sale.divided) throw new Error('ödeme satırı yalnız DIV satışa eklenir');
-        const paymentId = nextId++;
-        sale.payments.push({ paymentId, method: input.method, amountCents: input.amountCents, at: clock() });
-        return paymentId;
+        const id = nextId++;
+        if (sale.closedAt && closedDays.has(`${sale.storeId}:${parisDateOf(sale.closedAt)}`)) {
+          sale.cashFlows.push({ cashFlowId: id, method: input.method, amountCents: input.amountCents, at: clock() });
+          return { kind: 'cash_flow' as const, id };
+        }
+        sale.payments.push({ paymentId: id, method: input.method, amountCents: input.amountCents, at: clock() });
+        return { kind: 'payment' as const, id };
       }),
     deletePayment: (paymentId) =>
       run('deletePayment', () => {
@@ -126,6 +131,7 @@ export function memoryRegister(opts: { now?: () => Date } = {}) {
           receiptUrl: sale.closedAt ? `https://fis.test/${saleId}` : null,
           lines: sale.lines.map((line) => ({ ...line })),
           payments: sale.payments.map(({ paymentId, method, amountCents }) => ({ paymentId, method, amountCents })),
+          cashFlows: sale.cashFlows.map(({ cashFlowId, method, amountCents }) => ({ cashFlowId, method, amountCents })),
         };
       }),
     findSaleIdsByExtRef: (extRef) =>
@@ -159,7 +165,7 @@ export function memoryRegister(opts: { now?: () => Date } = {}) {
         return {
           vat: [...vat].map(([vatRate, grossCents]) => ({ vatRate, grossCents })),
           payments: own.flatMap(([saleId, sale]) =>
-            sale.payments
+            [...sale.payments, ...sale.cashFlows]
               .filter((payment) => parisDateOf(payment.at) === date)
               .map(({ method, amountCents }) => ({ saleId, method, amountCents })),
           ),

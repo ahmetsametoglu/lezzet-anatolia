@@ -29,8 +29,8 @@ export type RegisterMovement = Pick<MoneyMovement, 'id' | 'createdAt'> & {
 export type RegisterOp =
   | { op: 'open_ticket'; seq: number; lines: RegisterLine[]; payments: RegisterPayment[] }
   | { op: 'add_payments'; seq: number; payments: RegisterPayment[] }
-  /** Kasadaki ödeme satırı silinen hareketten eşdeğer yeni harekete geçer; kasaya yazım yoktur. */
-  | { op: 'relink_payment'; seq: number; fromMovementId: string; toMovementId: string };
+  /** Kasadaki ödeme satırları silinen hareketten eşdeğer yeni harekete geçer; kasaya yazım yoktur. */
+  | { op: 'relink_payment'; fromMovementId: string; toMovementId: string };
 
 export type RegisterSkip = 'b2b' | 'gift_order';
 export type RegisterBlockReason = 'gift_order_money' | 'unknown_method' | 'refund_before_sale' | 'no_lines';
@@ -67,35 +67,44 @@ export function planRegister({ order, items, movements, tickets }: RegisterPlanI
   });
   if (order.isGiftOrder) return result({ reason: 'gift_order_money', movementId: movements[0]?.id ?? null });
 
-  const known = new Set(movements.map((movement) => movement.id));
-  const written = tickets.flatMap((ticket) => ticket.payments.map((payment) => ({ seq: ticket.seq, payment })));
-  const linked = new Set(written.map(({ payment }) => payment.movementId));
-  const reversed = new Set(written.map(({ payment }) => payment.reversalOf));
-  const pending = movements.filter((movement) => !linked.has(movement.id)).sort(byTime);
+  const written = writtenNetOf(tickets);
+  const present = new Set(movements.map((movement) => movement.id));
+  const pending = movements.filter((movement) => !written.has(movement.id)).sort(byTime);
+  const lines = tickets.flatMap((ticket) => ticket.lines);
+  let lastSeq = Math.max(0, ...tickets.map((ticket) => ticket.seq));
 
-  // Hareketi silinmiş ödeme satırı: eşdeğer yeni hareket (ekstre birleştirmesi) ona bağlanır, yoksa satır ters çevrilir.
-  for (const { seq, payment } of written) {
-    if (payment.movementId === null || known.has(payment.movementId) || reversed.has(payment.movementId)) continue;
-    const twin = pending.findIndex((m) => m.method === payment.method && m.signedAmountCents === payment.amountCents);
+  // Siparişten çıkan hareket (silindi ya da başka siparişe geçti): eşdeğer yeni hareket (ekstre birleştirmesi) satırları devralır,
+  // yoksa yazılmış neti ters satırla geri alınır.
+  for (const [movementId, net] of written) {
+    if (present.has(movementId)) continue;
+    const parts = [...net].filter(([, cents]) => cents !== 0);
+    if (parts.length === 0) continue;
+    const [only] = parts;
+    const twin = parts.length === 1 ? pending.findIndex((m) => m.method === only![0] && m.signedAmountCents === only![1]) : -1;
     if (twin >= 0) {
       const [movement] = pending.splice(twin, 1);
-      ops.push({ op: 'relink_payment', seq, fromMovementId: payment.movementId, toMovementId: movement!.id });
+      ops.push({ op: 'relink_payment', fromMovementId: movementId, toMovementId: movement!.id });
     } else {
-      const reversal = { method: payment.method, amountCents: -payment.amountCents, movementId: null, reversalOf: payment.movementId };
-      ops.push({ op: 'add_payments', seq, payments: [reversal] });
+      ops.push({
+        op: 'add_payments',
+        seq: lastSeq,
+        payments: parts.map(([method, cents]) => ({ method, amountCents: -cents, movementId })),
+      });
     }
   }
 
-  const lines = tickets.flatMap((ticket) => ticket.lines);
-  let lastSeq = Math.max(0, ...tickets.map((ticket) => ticket.seq));
+  // Siparişte duran hareketin yazılmışı tutmuyorsa (tutarı ya da yöntemi değişti, geri alınıp yeniden bağlandı) fark yeni satırdır.
+  for (const movement of movements) {
+    const net = written.get(movement.id);
+    if (!net) continue;
+    if (movement.method === null) return result({ reason: 'unknown_method', movementId: movement.id });
+    const delta = paymentDeltaOf(net, movement.id, movement.method, movement.signedAmountCents);
+    if (delta.length > 0) ops.push({ op: 'add_payments', seq: lastSeq, payments: delta });
+  }
+
   for (const movement of pending) {
     if (movement.method === null) return result({ reason: 'unknown_method', movementId: movement.id });
-    const payment: RegisterPayment = {
-      method: movement.method,
-      amountCents: movement.signedAmountCents,
-      movementId: movement.id,
-      reversalOf: null,
-    };
+    const payment: RegisterPayment = { method: movement.method, amountCents: movement.signedAmountCents, movementId: movement.id };
 
     if (lastSeq === 0) {
       if (movement.signedAmountCents < 0) return result({ reason: 'refund_before_sale', movementId: movement.id });
@@ -116,12 +125,42 @@ export function planRegister({ order, items, movements, tickets }: RegisterPlanI
     ops.push({ op: 'open_ticket', seq: lastSeq, lines: diff, payments: [payment] });
     lines.push(...diff);
   }
+
+  // Para doğurmayan kalem farkı (eksik ödenmiş siparişte iade, borçsuz iptal) ödemesiz fiştir; yoksa kasa gitmeyen malı satılmış gösterirdi.
+  if (lastSeq > 0) {
+    const diff = diffRegisterLines(registerLinesOf(order, items, 'charged'), lines);
+    if (diff.length > 0) ops.push({ op: 'open_ticket', seq: lastSeq + 1, lines: diff, payments: [] });
+  }
   return result(null);
 }
 
+/** Yazılmış ödeme satırlarının neti, hareket ve yöntem başına. */
+function writtenNetOf(tickets: readonly RegisterTicketSnapshot[]): Map<string, Map<PaymentMethod, number>> {
+  const net = new Map<string, Map<PaymentMethod, number>>();
+  for (const payment of tickets.flatMap((ticket) => ticket.payments)) {
+    const byMethod = net.get(payment.movementId) ?? new Map<PaymentMethod, number>();
+    byMethod.set(payment.method, (byMethod.get(payment.method) ?? 0) + payment.amountCents);
+    net.set(payment.movementId, byMethod);
+  }
+  return net;
+}
+
+/** Hareketin yazılmış neti ile bugünkü hâli arasındaki fark, yöntem başına. */
+function paymentDeltaOf(
+  net: Map<PaymentMethod, number>,
+  movementId: string,
+  method: PaymentMethod,
+  signedAmountCents: number,
+): RegisterPayment[] {
+  const target = new Map([[method, signedAmountCents]]);
+  return [...new Set([...net.keys(), method])]
+    .map((candidate) => ({ method: candidate, amountCents: (target.get(candidate) ?? 0) - (net.get(candidate) ?? 0), movementId }))
+    .filter((payment) => payment.amountCents !== 0);
+}
+
 /**
- * Siparişin kasadaki hedef kalemleri. `charged` ödeme türetiminin tanımıdır (iptalde boş); `ordered` sipariş edilen hâldir.
- * Kargo, ücretlenen kalem varsa oran başına bölünür.
+ * Siparişin kasadaki hedef kalemleri: `charged` ödeme türetiminin tanımıdır (iptalde boş), `ordered` sipariş edilen hâldir. Kargo,
+ * ücretlenen kalem varsa oran başına bölünür.
  */
 function registerLinesOf(order: RegisterOrder, items: readonly RegisterItem[], basis: 'charged' | 'ordered'): RegisterLine[] {
   if (basis === 'charged' && order.status === 'cancelled') return [];
@@ -185,7 +224,7 @@ function keyOf(line: RegisterLine): string {
 type Amount = Pick<RegisterLine, 'qty' | 'amountCents'>;
 
 /**
- * Tek kaynağın farkı. Kargoda adet anlam taşımaz, fark tek kalemdir. Kalemde adet ile tutar aynı yöne gitmiyorsa (fiyat yazıldıktan
+ * Tek kaynağın farkı; kargoda adet anlam taşımaz, fark tek kalemdir. Kalemde adet ile tutar aynı yöne gitmiyorsa (fiyat yazıldıktan
  * sonra değişmiş) yazılan geri alınıp hedef yeniden yazılır, çünkü sıfır adetli tutar kalemi kasaya yazılamaz.
  */
 function deltaOf(base: RegisterLine, target: Amount, written: Amount): RegisterLine[] {

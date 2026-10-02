@@ -1,8 +1,9 @@
-import type { PaymentMethod } from '@lezzet/types';
+import type { PaymentMethod, RegisterDayMovement } from '@lezzet/types';
 
 /**
- * Kasanın gün sonu mutabakatı (docs/feature/kasa-muhasebe.md §7): bizim kasa aynamız ile kasanın gün sonu toplamları oran, yöntem, satış
- * ve nakit düzeyinde karşılaştırılır. Kasada olup bizde olmayan satış kasa ekranından elle yapılmıştır ve fark sayılır.
+ * Kasanın gün sonu mutabakatı (docs/feature/kasa-muhasebe.md §7): ayna ↔ kasa yazımın kendisini oran, yöntem, satış ve nakit düzeyinde
+ * sınar, kasada olup bizde olmayan satış kasa ekranından elle yapılmıştır. Defter ↔ ayna neyin yazılacağının kararını sınar, çünkü yanlış
+ * plan iki tarafta da aynı göründüğü için ayna ↔ kasada fark çıkarmazdı.
  */
 
 /** Bir tarafın günü; tutarlar **cent**, oran ve yöntem başına. */
@@ -19,7 +20,29 @@ export type RegisterDayDifference =
   | { kind: 'payment'; method: PaymentMethod | null; oursCents: number; registerCents: number }
   | { kind: 'unknown_sale'; saleId: number }
   | { kind: 'missing_sale'; saleId: number }
-  | { kind: 'cash'; oursCents: number; registerCents: number };
+  | { kind: 'cash'; oursCents: number; registerCents: number }
+  | {
+      kind: 'ledger';
+      movementId: string;
+      entry: RegisterDayMovement['kind'];
+      method: PaymentMethod | null;
+      expectedCents: number;
+      writtenCents: number;
+    };
+
+/** Defter ↔ ayna: gün içinde açılmış hareketin kasada beklenen etkisi aynada yazılanla tutmalı. */
+export function reconcileLedgerDay(rows: readonly RegisterDayMovement[]): RegisterDayDifference[] {
+  return rows
+    .filter((row) => row.expectedCents !== row.writtenCents)
+    .map((row) => ({
+      kind: 'ledger',
+      movementId: row.movementId,
+      entry: row.kind,
+      method: row.method,
+      expectedCents: row.expectedCents,
+      writtenCents: row.writtenCents,
+    }));
+}
 
 export function reconcileRegisterDay(ours: RegisterDaySide, register: RegisterDaySide): RegisterDayDifference[] {
   const differences: RegisterDayDifference[] = [];

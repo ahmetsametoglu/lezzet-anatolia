@@ -76,29 +76,44 @@ create table public.register_payment (
   method payment_method not null,
   -- İşaretli: tahsilat artı, iade eksi.
   amount numeric(10, 2) not null check (amount <> 0),
-  -- FK yok: hareket silinse de satır onu anar, ters satır bir kez yazılsın.
-  movement_id uuid unique,
-  reversal_of uuid unique,
+  -- Satırın taşıdığı hareket; FK yok, silinen hareketin satırı da onu anar. Kasadaki satır değişmediği için tutarı, yöntemi ya da
+  -- siparişi değişen hareketin farkı yeni satırla yazılır; bir hareketin birden çok satırı olabilir.
+  movement_id uuid not null,
   external_payment_id int,
+  -- Gün kapanmışsa kasa ödemeyi satışın nakit akışı olarak kaydeder; numarası burada durur.
+  external_cash_flow_id int,
   status register_write_status not null default 'writing',
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Kasaya yazıldığı an; gün sonu mutabakatı bunu sayar, satır yeniden denemede günler önce açılmış olabilir.
+  written_at timestamptz,
+  constraint register_payment_written check ((status = 'written') = (written_at is not null))
 );
 create index register_payment_ticket_idx on public.register_payment (ticket_id);
+create index register_payment_movement_idx on public.register_payment (movement_id);
+create index register_payment_written_idx on public.register_payment (written_at);
 
 -- ── Kasa hareketi (fiş dışı nakit) ──────────────────────────────────────────
 create table public.register_cash_op (
   id uuid primary key default gen_random_uuid(),
   warehouse_id uuid not null references public.warehouse (id) on delete restrict,
-  movement_id uuid unique,
-  reversal_of uuid unique,
+  -- Kaydın taşıdığı hareket; FK yok, silinen hareketin kaydı da ters çevrilir. Kasadaki kayıt değişmez: etkisi değişen hareketin eski
+  -- kaydı ters çevrilir, yenisi yazılır.
+  movement_id uuid not null,
+  -- Bu kaydın ters çevirdiği kayıt; bir kayıt en çok bir kez ters çevrilir.
+  reversal_of uuid unique references public.register_cash_op (id),
   direction movement_direction not null,
   amount numeric(10, 2) not null check (amount > 0),
-  -- Kasa dökümünde görünen açıklama; yarıda kalan yazım kasadaki satırı bununla bulur.
+  -- Kasa dökümünde görünen açıklama, kayıt başına tekil; yarıda kalan yazım kasadaki satırı bununla bulur.
   label text not null,
   external_till_id int,
   status register_write_status not null default 'writing',
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Kasaya yazıldığı an; gün sonu mutabakatı bunu sayar.
+  written_at timestamptz,
+  constraint register_cash_op_written check ((status = 'written') = (written_at is not null))
 );
+create index register_cash_op_movement_idx on public.register_cash_op (movement_id);
+create index register_cash_op_written_idx on public.register_cash_op (warehouse_id, written_at);
 
 -- ── Kuyruk ──────────────────────────────────────────────────────────────────
 -- Satır "bu siparişi ya da bu nakit hareketini yeniden eşitle" demektir; işleyen satırı yalnız `marked_at` değişmediyse siler.
@@ -165,6 +180,100 @@ create trigger money_movement_register_queue
 
 revoke execute on function public.register_queue_mark_movement(uuid, uuid, movement_type, uuid, uuid) from public, anon, authenticated;
 revoke execute on function public.register_queue_mark() from public, anon, authenticated;
+
+-- Kalem ve durum değişikliği para doğurmayabilir (eksik ödenmiş siparişte iade, borçsuz iptal); fişi olan sipariş kasayla yine
+-- karşılaştırılsın diye kuyruğa düşer. Fişi olmayan siparişin ilk fişini para açar.
+create or replace function public.register_queue_mark_order() returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_order_id uuid;
+begin
+  if tg_table_name = 'order' then
+    v_order_id := new.id;
+  elsif tg_op = 'DELETE' then
+    v_order_id := old.order_id;
+  else
+    v_order_id := new.order_id;
+  end if;
+  if exists (select 1 from public.register_ticket where order_id = v_order_id) then
+    insert into public.register_queue (order_id) values (v_order_id)
+    on conflict (order_id) do update set marked_at = now(), next_attempt_at = now(), attempts = 0, last_error = null;
+  end if;
+  return null;
+end;
+$$;
+
+create trigger order_item_register_queue
+  after insert or delete or update of qty, fulfilled_qty, goodwill_qty, unit_price, line_discount_amount, vat_rate on public.order_item
+  for each row execute function public.register_queue_mark_order();
+
+create trigger order_register_queue
+  after update of status, shipping_fee, is_gift_order on public.order
+  for each row execute function public.register_queue_mark_order();
+
+revoke execute on function public.register_queue_mark_order() from public, anon, authenticated;
+
+-- ── Gün sonu: defter ↔ ayna ─────────────────────────────────────────────────
+-- Aralıkta açılmış her hareketin kasada olması gereken etkisi (defter) ve aynada yazılmış olanı, yazımın saatinden bağımsız. B2C
+-- sipariş parası fişin ödeme satırıdır; çekmecenin kart dışı öteki nakdi defter görünümünden okunur, karşı yakası susan satır gelmez.
+create or replace function public.register_day_movements(
+  p_warehouse_id uuid,
+  p_cash_account_id uuid,
+  p_from timestamptz,
+  p_to timestamptz
+) returns table (movement_id uuid, kind text, method payment_method, expected numeric, written numeric)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with day_movements as (
+    select m.id from public.money_movement m where m.created_at >= p_from and m.created_at < p_to
+  ),
+  expected as (
+    select m.id as movement_id, 'payment'::text as kind, m.payment_method as method,
+           case when m.type = 'order_payment' then m.amount else -m.amount end as amount
+      from public.money_movement m
+      join public.order o on o.id = m.order_id
+     where o.warehouse_id = p_warehouse_id
+       and o.channel = 'b2c'
+       and m.type in ('order_payment', 'order_refund')
+       and m.created_at >= p_from and m.created_at < p_to
+    union all
+    select a.id, 'cash', null, a.signed_amount
+      from public.account_movement a
+      left join public.order o on o.id = a.order_id
+     where a.ledger_account_id = p_cash_account_id
+       and (a.payment_method is null or a.payment_method = 'cash')
+       and (o.id is null or o.channel <> 'b2c' or a.type not in ('order_payment', 'order_refund'))
+       and a.created_at >= p_from and a.created_at < p_to
+  ),
+  written as (
+    select p.movement_id, 'payment'::text as kind, p.method, sum(p.amount) as amount
+      from public.register_payment p
+      join public.register_ticket t on t.id = p.ticket_id
+     where t.warehouse_id = p_warehouse_id
+       and p.status = 'written'
+       and p.movement_id in (select id from day_movements)
+     group by p.movement_id, p.method
+    union all
+    select c.movement_id, 'cash', null, sum(case when c.direction = 'in' then c.amount else -c.amount end)
+      from public.register_cash_op c
+     where c.warehouse_id = p_warehouse_id
+       and c.status = 'written'
+       and c.movement_id in (select id from day_movements)
+     group by c.movement_id
+  )
+  select coalesce(e.movement_id, w.movement_id), coalesce(e.kind, w.kind), coalesce(e.method, w.method),
+         coalesce(e.amount, 0), coalesce(w.amount, 0)
+    from expected e
+    full join written w on w.movement_id = e.movement_id and w.kind = e.kind and w.method is not distinct from e.method;
+$$;
+
+revoke execute on function public.register_day_movements(uuid, uuid, timestamptz, timestamptz) from public, anon, authenticated;
 
 -- Kurye seferi kapanışındaki nakit farkı; hesap kodu muhasebecinin kararıdır (kasa farkı ya da kurye alacağı).
 insert into public.movement_nature (slug, label, direction, account_code) values ('kasa-farki', 'Kasa farkı', null, null);

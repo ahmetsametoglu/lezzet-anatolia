@@ -20,6 +20,12 @@ export function parisDateOf(at: Date): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: PARIS }).format(at);
 }
 
+/** Takvimde bir önceki gün (`YYYY-MM-DD`); saat dilimi gerektirmeyen takvim aritmetiği. */
+export function previousDay(date: string): string {
+  const [year, month, day] = date.split('-').map(Number) as [number, number, number];
+  return new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10);
+}
+
 /** Paris takviminde bir günün UTC sınırları, yarı açık `[from, to)`; yaz saatine geçilen gün 23 saattir. */
 export function parisDayRange(date: string): { from: string; to: string } {
   const [year, month, day] = date.split('-').map(Number) as [number, number, number];

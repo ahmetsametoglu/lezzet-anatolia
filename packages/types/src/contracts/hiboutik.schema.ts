@@ -10,7 +10,11 @@ const decimal = z.union([z.string(), z.number()]);
 export const HiboutikCreatedProductSchema = z.object({ product_id: z.number().int() });
 export const HiboutikCreatedSaleSchema = z.object({ sale_id: z.number().int() });
 export const HiboutikCreatedLineSchema = z.object({ id_sale_product_detail: z.number().int() });
-export const HiboutikCreatedPaymentSchema = z.object({ payment_detail_id: z.number().int() });
+/** Gün kapanmışsa kasa ödemeyi satışın nakit akışı olarak kaydeder ve onun numarasını döner. */
+export const HiboutikCreatedPaymentSchema = z.union([
+  z.object({ payment_detail_id: z.number().int() }),
+  z.object({ cash_flow_id: z.number().int() }),
+]);
 export const HiboutikCreatedTillMoveSchema = z.object({ till_id: z.number().int() });
 
 export const HiboutikTaxListSchema = z.array(
@@ -33,6 +37,10 @@ export const HiboutikTillMoveListSchema = z.array(
 export const HiboutikDayTaxListSchema = z.array(z.object({ tax_value: decimal, total_incl_taxes: decimal }));
 export const HiboutikDayPaymentListSchema = z.array(
   z.object({ payment_type: z.string(), payments: z.array(z.object({ sale_id: z.number().int(), amount: decimal })) }),
+);
+/** Günün nakit akışları: kapanmış güne ait satışa sonradan eklenen ödemeler; günün ödeme türü raporunda yer almazlar. */
+export const HiboutikDayCashFlowListSchema = z.array(
+  z.object({ cash_flow_id: z.number().int(), sale_id: z.number().int(), payment_type: z.string(), payment_amount: decimal }),
 );
 /** Kapanmamış günde `closure_date` boş tarihtir. */
 export const HiboutikDayClosureSchema = z.object({ closure_date: z.string() });
@@ -59,6 +67,7 @@ export const HiboutikSaleSchema = z.object({
   payment_details: z
     .array(z.object({ payment_detail_id: z.number().int(), payment_type: z.string(), payment_amount: decimal }))
     .default([]),
+  cash_flow: z.array(z.object({ cash_flow_id: z.number().int(), payment_type: z.string(), payment_amount: decimal })).default([]),
 });
 export type HiboutikSale = z.output<typeof HiboutikSaleSchema>;
 

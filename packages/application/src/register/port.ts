@@ -1,8 +1,8 @@
-import type { MovementDirection, PaymentMethod, RegisterCashMove, RegisterDay, RegisterSale } from '@lezzet/types';
+import type { MovementDirection, PaymentMethod, RegisterCashMove, RegisterDay, RegisterPaymentRef, RegisterSale } from '@lezzet/types';
 
 /**
  * Sertifikalı kasanın portu: eşitleme yalnız bunu bilir, Hiboutik uyarlaması ve testlerin bellek içi kasası uygular. Kapanmamış satışta
- * kalem ve ödeme satırı silinebilir; kapanmış satış mali kayıttır, ona yalnız ödeme satırı eklenir.
+ * kalem ve ödeme satırı silinebilir; kapanmış satış mali kayıttır, ona yalnız ödeme satırı eklenir (gün de kapandıysa nakit akışı olarak).
  */
 export interface CashRegister {
   findProductByRef(refExt: string): Promise<number | null>;
@@ -14,7 +14,7 @@ export interface CashRegister {
   /** `vatRate` verilirse kalemin oranı ürününkinden ayrılır (oran ürün açıldıktan sonra değişmişse). */
   addLine(input: { saleId: number; productId: number; quantity: number; unitPriceCents: number; vatRate: number | null }): Promise<number>;
   deleteLine(lineId: number): Promise<void>;
-  addPayment(input: { saleId: number; method: PaymentMethod; amountCents: number }): Promise<number>;
+  addPayment(input: { saleId: number; method: PaymentMethod; amountCents: number }): Promise<RegisterPaymentRef>;
   deletePayment(paymentId: number): Promise<void>;
   closeSale(saleId: number): Promise<void>;
   /** Olmayan satış `null` döner. */

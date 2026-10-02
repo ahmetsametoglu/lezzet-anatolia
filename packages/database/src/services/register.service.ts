@@ -1,8 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { toCents } from '@lezzet/helper';
 import {
   RegisterCashOpInsertSchema,
   RegisterCashOpSchema,
   RegisterCashOpUpdateSchema,
+  RegisterDayMovementSchema,
   RegisterPaymentInsertSchema,
   RegisterPaymentRowSchema,
   RegisterPaymentUpdateSchema,
@@ -22,6 +24,7 @@ import {
   type RegisterCashOp,
   type RegisterCashOpInsert,
   type RegisterCashOpUpdate,
+  type RegisterDayMovement,
   type RegisterPaymentInsert,
   type RegisterPaymentRow,
   type RegisterPaymentUpdate,
@@ -73,6 +76,30 @@ export class RegisterStoreService extends BaseDbService<RegisterStore, RegisterS
 
   async remove(warehouseId: string): Promise<void> {
     await this.deleteWhere({ warehouseId });
+  }
+
+  /**
+   * Gün sonu, defter ↔ ayna: `[from, to)` aralığında açılmış hareketlerin kasada beklenen etkisi ve aynada yazılmış olanı. Hesap
+   * `register_day_movements`tadır, çünkü defterin karşı yaka kuralı `account_movement` görünümünde yaşar.
+   */
+  async dayMovements(store: RegisterStore, from: string, to: string): Promise<RegisterDayMovement[]> {
+    const { data, error } = await this.supabase.rpc('register_day_movements', {
+      p_warehouse_id: store.warehouseId,
+      p_cash_account_id: store.cashAccountId,
+      p_from: from,
+      p_to: to,
+    });
+    if (error) throw error;
+    const rows = (data ?? []) as Array<{ movement_id: string; kind: string; method: string | null; expected: number; written: number }>;
+    return rows.map((row) =>
+      RegisterDayMovementSchema.parse({
+        movementId: row.movement_id,
+        kind: row.kind,
+        method: row.method,
+        expectedCents: toCents(Number(row.expected)),
+        writtenCents: toCents(Number(row.written)),
+      }),
+    );
   }
 }
 
@@ -148,9 +175,14 @@ export class RegisterPaymentService extends BaseDbService<RegisterPaymentRow, Re
     return this.bulkInsert(rows);
   }
 
-  /** `[from, to)` aralığında kasaya yazılan ödeme satırları; satır yazımdan hemen önce açıldığı için açılış anı yazım anıdır. */
+  /** `[from, to)` aralığında kasaya yazılan ödeme satırları. */
   listWrittenBetween(from: string, to: string): Promise<RegisterPaymentRow[]> {
-    return this.getAll({ status: 'written' }, { rangeFilters: writtenBetween('createdAt', from, to) });
+    return this.getAll({ status: 'written' }, { rangeFilters: writtenBetween('writtenAt', from, to) });
+  }
+
+  /** Satırları başka harekete taşır: silinen hareketin yerini eşdeğer yeni hareket alınca kasaya yazım olmaz. */
+  async relink(rowIds: readonly string[], movementId: string): Promise<void> {
+    await this.updateWhereIn('id', rowIds, { movementId });
   }
 }
 
@@ -161,13 +193,13 @@ export class RegisterCashOpService extends BaseDbService<RegisterCashOp, Registe
     super(supabase, 'register_cash_op', RegisterCashOpSchema, RegisterCashOpInsertSchema, RegisterCashOpUpdateSchema);
   }
 
-  /** Hareketin kasadaki karşılıkları: yazımı ve varsa ters çevrilmesi. */
+  /** Hareketin kasadaki kayıtları, yazılış sırasıyla: yazımları ve ters çevrilmeleri. */
   listForMovement(movementId: string): Promise<RegisterCashOp[]> {
-    return this.getAll(undefined, { orFilters: [`movement_id.eq.${movementId},reversal_of.eq.${movementId}`], orderBy: 'createdAt' });
+    return this.getAll({ movementId }, { orderBy: 'createdAt' });
   }
 
   listWrittenBetween(warehouseId: string, from: string, to: string): Promise<RegisterCashOp[]> {
-    return this.getAll({ warehouseId, status: 'written' }, { rangeFilters: writtenBetween('createdAt', from, to) });
+    return this.getAll({ warehouseId, status: 'written' }, { rangeFilters: writtenBetween('writtenAt', from, to) });
   }
 }
 
@@ -189,6 +221,11 @@ export class RegisterQueueService extends BaseDbService<RegisterQueue, never, Re
   /** Kuyrukta bekleyen sipariş ve kasa hareketi; ertelenmiş ve durmuş satırlar da sayılır. */
   countWaiting(): Promise<number> {
     return this.count();
+  }
+
+  /** Kuyruğun tamamı; satırlar işlenince silindiği için küme kısa kalır, gün sonu onu mağazalara dağıtır. */
+  listAll(): Promise<RegisterQueue[]> {
+    return this.getAll(undefined, { orderBy: 'markedAt' });
   }
 
   /** Planı duran satırlar (`blocked:<sebep>`); çözümleri bir para değişikliğidir, sebep ekrana gider. */

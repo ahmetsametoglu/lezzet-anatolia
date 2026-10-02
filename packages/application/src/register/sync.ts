@@ -21,7 +21,9 @@ import type {
   OrderItem,
   RegisterCashOp,
   RegisterCashOpInsert,
+  PaymentMethod,
   RegisterPayment,
+  RegisterPaymentRef,
   RegisterPaymentRow,
   RegisterQueue,
   RegisterSale,
@@ -47,7 +49,7 @@ const ALERT_AFTER_ATTEMPTS = 5;
 const BLOCKED_RETRY_MS = 6 * 3_600_000;
 const MAX_BACKOFF_MS = 3_600_000;
 
-type BlockReason = RegisterBlockReason | 'no_store' | 'changed_after_write';
+type BlockReason = RegisterBlockReason | 'no_store';
 /** `written`: kasa bu kaydı yansıtıyor (şimdi ya da önceden yazıldı); `skipped`: kayıt kasanın kapsamı dışında. */
 type SyncOutcome = { status: 'written' } | { status: 'skipped' } | { status: 'blocked'; reason: BlockReason };
 export type RegisterQueueOutcome = 'written' | 'skipped' | 'blocked' | 'failed';
@@ -170,8 +172,11 @@ async function syncOrderRegister(db: Db, register: CashRegister, orderId: string
       const rows = await payments.insertMany(op.payments.map((payment) => ({ ...payment, ticketId: ticket.id })));
       await completePayments(scope, ticket, rows);
     } else {
-      const row = mirror.payments.find((payment) => payment.movementId === op.fromMovementId)!;
-      await payments.update({ id: row.id, movementId: op.toMovementId });
+      const rows = mirror.payments.filter((payment) => payment.movementId === op.fromMovementId);
+      await payments.relink(
+        rows.map((row) => row.id),
+        op.toMovementId,
+      );
     }
   }
   return plan.blocked ? { status: 'blocked', reason: plan.blocked.reason } : { status: 'written' };
@@ -204,7 +209,7 @@ function snapshotsOf(mirror: Mirror): RegisterTicketSnapshot[] {
       .map(({ kind, orderItemId, qty, amountCents, vatRate }) => ({ kind, orderItemId, qty, amountCents, vatRate })),
     payments: mirror.payments
       .filter((payment) => payment.ticketId === ticket.id)
-      .map(({ method, amountCents, movementId, reversalOf }): RegisterPayment => ({ method, amountCents, movementId, reversalOf })),
+      .map(({ method, amountCents, movementId }): RegisterPayment => ({ method, amountCents, movementId })),
   }));
 }
 
@@ -223,7 +228,7 @@ async function recoverOrder(scope: OrderScope, mirror: Mirror): Promise<void> {
 }
 
 /** Araç satışı aracın ana deposunun mağazasına yazılır. */
-async function storeOf(db: Db, warehouseId: string): Promise<RegisterStore | null> {
+export async function storeOf(db: Db, warehouseId: string): Promise<RegisterStore | null> {
   const stores = new RegisterStoreService(db);
   const direct = await stores.findByWarehouse(warehouseId);
   if (direct) return direct;
@@ -288,12 +293,8 @@ async function completeTicket(scope: OrderScope, store: RegisterStore, ticket: R
     for (const line of sale.lines) await register.deleteLine(line.lineId);
     await writeLines(scope, sale.saleId, lines);
     for (const payment of payments) {
-      const externalPaymentId = await register.addPayment({
-        saleId: sale.saleId,
-        method: payment.method,
-        amountCents: payment.amountCents,
-      });
-      await new RegisterPaymentService(db).update({ id: payment.id, externalPaymentId, status: 'written' });
+      const ref = await register.addPayment({ saleId: sale.saleId, method: payment.method, amountCents: payment.amountCents });
+      await new RegisterPaymentService(db).update({ id: payment.id, ...externalOf(ref), status: 'written', writtenAt: scope.now.toISOString() });
     }
     await register.closeSale(sale.saleId);
     sale = (await register.readSale(sale.saleId)) ?? sale;
@@ -355,8 +356,8 @@ async function writeLines(scope: OrderScope, saleId: number, lines: RegisterTick
 }
 
 /**
- * Ödeme satırlarını yazılmış fişin satışına ekler. Kasada aynı yöntem ve tutarda sahipsiz bir ödeme satırı varsa o, yarıda kalan
- * yazımındır ve sahiplenilir; yoksa ödeme ikinci kez yazılırdı.
+ * Ödeme satırlarını yazılmış fişin satışına ekler; gün kapanmışsa kasa onları satışın nakit akışı olarak kaydeder. Kasada aynı yöntem ve
+ * tutarda sahipsiz bir ödeme satırı ya da nakit akışı varsa o, yarıda kalan yazımındır ve sahiplenilir; yoksa ödeme ikinci kez yazılırdı.
  */
 async function completePayments(
   scope: OrderScope,
@@ -370,19 +371,28 @@ async function completePayments(
   const sale = known ?? (ticket.externalSaleId === null ? null : await register.readSale(ticket.externalSaleId));
   if (!sale) throw new Error(`kasa: fişin satışı kasada yok (${ticket.extRef})`);
 
-  const claimed = new Set(
-    (await payments.listByTickets([ticket.id])).map((payment) => payment.externalPaymentId).filter((id): id is number => id !== null),
-  );
+  const mine = await payments.listByTickets([ticket.id]);
+  const claimed = {
+    payment: new Set(mine.map((payment) => payment.externalPaymentId).filter((id): id is number => id !== null)),
+    cash_flow: new Set(mine.map((payment) => payment.externalCashFlowId).filter((id): id is number => id !== null)),
+  };
   for (const row of rows) {
-    const orphan = sale.payments.find(
-      (payment) => !claimed.has(payment.paymentId) && payment.method === row.method && payment.amountCents === row.amountCents,
-    );
-    const externalPaymentId =
-      orphan?.paymentId ?? (await register.addPayment({ saleId: sale.saleId, method: row.method, amountCents: row.amountCents }));
-    claimed.add(externalPaymentId);
-    await payments.update({ id: row.id, externalPaymentId, status: 'written' });
+    const matches = (candidate: { method: PaymentMethod | null; amountCents: number }) =>
+      candidate.method === row.method && candidate.amountCents === row.amountCents;
+    const orphan = sale.payments.find((payment) => !claimed.payment.has(payment.paymentId) && matches(payment));
+    const orphanFlow = sale.cashFlows.find((flow) => !claimed.cash_flow.has(flow.cashFlowId) && matches(flow));
+    const ref: RegisterPaymentRef = orphan
+      ? { kind: 'payment', id: orphan.paymentId }
+      : orphanFlow
+        ? { kind: 'cash_flow', id: orphanFlow.cashFlowId }
+        : await register.addPayment({ saleId: sale.saleId, method: row.method, amountCents: row.amountCents });
+    claimed[ref.kind].add(ref.id);
+    await payments.update({ id: row.id, ...externalOf(ref), status: 'written', writtenAt: scope.now.toISOString() });
   }
 }
+
+const externalOf = (ref: RegisterPaymentRef) =>
+  ref.kind === 'payment' ? { externalPaymentId: ref.id, externalCashFlowId: null } : { externalPaymentId: null, externalCashFlowId: ref.id };
 
 // ── Kasa hareketi (fiş dışı nakit) ──────────────────────────────────────────
 
@@ -394,8 +404,8 @@ interface CashEffect {
 }
 
 /**
- * Eşlenmiş kasa hesabının fiş dışı nakdi kasaya giriş ya da çıkış olarak yazılır, silinen hareketin yazımı bir kez ters çevrilir.
- * Yazıldıktan sonra değişen hareket sessizce geçilmez: kasadaki kayıt hareket başına tektir, satır sebebiyle bekler.
+ * Eşlenmiş kasa hesabının fiş dışı nakdi kasaya giriş ya da çıkış olarak yazılır. Kasadaki kayıt değişmez: etkisi değişen ya da
+ * silinen hareketin yürürlükteki kaydı ters çevrilir, yeni etkisi varsa yeni kayıt yazılır.
  */
 async function syncCashMovement(db: Db, register: CashRegister, movementId: string, ctx: SyncContext): Promise<SyncOutcome> {
   const ops = new RegisterCashOpService(db);
@@ -403,43 +413,43 @@ async function syncCashMovement(db: Db, register: CashRegister, movementId: stri
     await completeCashOp(db, register, op, ctx.now);
   }
   const written = await ops.listForMovement(movementId);
-  const own = written.find((op) => op.movementId === movementId) ?? null;
-  const reversal = written.find((op) => op.reversalOf === movementId) ?? null;
+  const reversed = new Set(written.map((op) => op.reversalOf).filter((id): id is string => id !== null));
+  const active = written.find((op) => op.reversalOf === null && !reversed.has(op.id)) ?? null;
   const [movement] = await new MoneyMovementService(db).listByIds([movementId]);
+  if (written.length === 0 && movement && Date.parse(movement.createdAt) < Date.parse(ctx.liveFrom)) return { status: 'skipped' };
 
-  if (!movement) {
-    if (!own) return { status: 'skipped' };
-    if (reversal) return { status: 'written' };
+  const effect = movement ? await cashEffectOf(db, movement) : null;
+  const unchanged =
+    active !== null &&
+    effect !== null &&
+    active.warehouseId === effect.store.warehouseId &&
+    active.direction === effect.direction &&
+    active.amountCents === effect.amountCents;
+  if (unchanged) return { status: 'written' };
+  // Kaydı önceden ters çevrilmiş hareketi kasa zaten yansıtıyor; hiç kaydı olmayan ise kapsam dışıdır.
+  if (!active && !effect) return { status: written.length > 0 ? 'written' : 'skipped' };
+  if (active) {
     await writeCashOp(db, register, ctx.now, {
-      warehouseId: own.warehouseId,
-      movementId: null,
-      reversalOf: movementId,
-      direction: own.direction === 'in' ? 'out' : 'in',
-      amountCents: own.amountCents,
-      label: `Annulation ${own.label}`,
+      warehouseId: active.warehouseId,
+      movementId,
+      reversalOf: active.id,
+      direction: active.direction === 'in' ? 'out' : 'in',
+      amountCents: active.amountCents,
+      label: `Annulation ${active.label}`,
     });
-    return { status: 'written' };
   }
-  if (Date.parse(movement.createdAt) < Date.parse(ctx.liveFrom)) return { status: 'skipped' };
-
-  const effect = await cashEffectOf(db, movement);
-  if (own) {
-    const same =
-      effect !== null &&
-      own.warehouseId === effect.store.warehouseId &&
-      own.direction === effect.direction &&
-      own.amountCents === effect.amountCents;
-    return same ? { status: 'written' } : { status: 'blocked', reason: 'changed_after_write' };
+  if (effect) {
+    // Açıklama kasadaki kaydı bulmanın anahtarıdır; aynı hareketin sonraki kaydı sırasıyla ayrılır.
+    const generation = written.filter((op) => op.reversalOf === null).length + 1;
+    await writeCashOp(db, register, ctx.now, {
+      warehouseId: effect.store.warehouseId,
+      movementId,
+      reversalOf: null,
+      direction: effect.direction,
+      amountCents: effect.amountCents,
+      label: generation > 1 ? `${effect.label}/${generation}` : effect.label,
+    });
   }
-  if (!effect) return { status: 'skipped' };
-  await writeCashOp(db, register, ctx.now, {
-    warehouseId: effect.store.warehouseId,
-    movementId,
-    reversalOf: null,
-    direction: effect.direction,
-    amountCents: effect.amountCents,
-    label: effect.label,
-  });
   return { status: 'written' };
 }
 
@@ -486,7 +496,7 @@ async function completeCashOp(db: Db, register: CashRegister, op: RegisterCashOp
     const [year, monthNo] = month.split('-').map(Number) as [number, number];
     const found = (await register.listCashMoves(store.externalStoreId, { year, month: monthNo })).find((move) => move.label === op.label);
     if (found) {
-      await new RegisterCashOpService(db).update({ id: op.id, externalTillId: found.tillId, status: 'written' });
+      await new RegisterCashOpService(db).update({ id: op.id, externalTillId: found.tillId, status: 'written', writtenAt: now.toISOString() });
       return;
     }
   }
@@ -496,5 +506,5 @@ async function completeCashOp(db: Db, register: CashRegister, op: RegisterCashOp
     amountCents: op.amountCents,
     label: op.label,
   });
-  await new RegisterCashOpService(db).update({ id: op.id, externalTillId, status: 'written' });
+  await new RegisterCashOpService(db).update({ id: op.id, externalTillId, status: 'written', writtenAt: now.toISOString() });
 }

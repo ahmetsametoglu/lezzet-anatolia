@@ -104,16 +104,19 @@ Siparişin kasadaki bir satışı. Kalem farkı doğduğunda yeni fiş açılır
 | `ticket_id` | uuid |  |  |
 | `method` | payment_method |  |  |
 | `amount` | numeric(10, 2) |  |  |
-| `movement_id` | uuid | • |  |
-| `reversal_of` | uuid | • |  |
+| `movement_id` | uuid |  |  |
 | `external_payment_id` | int | • |  |
+| `external_cash_flow_id` | int | • |  |
 | `status` | register_write_status |  | `'writing'` |
 | `created_at` | timestamptz |  | `now()` |
+| `written_at` | timestamptz | • |  |
 <!-- /alanlar -->
 
 **Kararlar**
 
-- **`movement_id`** — FK yok: hareket silinse de satır onu anar. Eşdeğer yeni hareket gelirse satır ona bağlanır, gelmezse ters satır yazılır ve `reversal_of` ikinci kez ters çevirmeyi engeller.
+- **`movement_id`** — FK yok: hareket silinse de satır onu anar. Kasadaki satır değişmediği için bir hareketin birden çok satırı olabilir: tutarı, yöntemi ya da siparişi değişen hareketin farkı yeni satırdır, silinen hareketin neti ters satırla geri alınır; eşdeğer yeni hareket gelirse satırlar ona bağlanır.
+- **`external_cash_flow_id`** — gün kapanmışsa kasa ödemeyi satışın nakit akışı olarak kaydeder; numara `external_payment_id` yerine burada durur.
+- **`written_at`** — gün sonu mutabakatı satırı yazıldığı güne sayar; açılış anı yeniden denemede günler öncesinde kalabilir.
 
 ## RegisterCashOp (kasa hareketi)
 
@@ -124,7 +127,7 @@ Fiş olmayan nakit hareketinin kasadaki karşılığı (giriş ya da çıkış).
 | --- | --- | --- | --- |
 | `id` | uuid |  | `gen_random_uuid()` |
 | `warehouse_id` | uuid |  |  |
-| `movement_id` | uuid | • |  |
+| `movement_id` | uuid |  |  |
 | `reversal_of` | uuid | • |  |
 | `direction` | movement_direction |  |  |
 | `amount` | numeric(10, 2) |  |  |
@@ -132,15 +135,17 @@ Fiş olmayan nakit hareketinin kasadaki karşılığı (giriş ya da çıkış).
 | `external_till_id` | int | • |  |
 | `status` | register_write_status |  | `'writing'` |
 | `created_at` | timestamptz |  | `now()` |
+| `written_at` | timestamptz | • |  |
 <!-- /alanlar -->
 
 **Kararlar**
 
-- **`label`** — kasa dökümünde görünen açıklama; yarıda kalan yazım kasadaki satırı bununla bulur.
+- **`label`** — kasa dökümünde görünen açıklama, kayıt başına tekil; yarıda kalan yazım kasadaki satırı bununla bulur.
+- **`reversal_of`** — kasadaki kayıt değişmez: etkisi değişen ya da silinen hareketin yürürlükteki kaydı bu sütunla ters çevrilir, yeni etkisi varsa yeni kayıt yazılır. Bir kayıt en çok bir kez ters çevrilir.
 
 ## RegisterQueue (kuyruk)
 
-Satır "bu siparişi ya da bu nakit hareketini yeniden eşitle" demektir. `money_movement` tetikleyicisi yazar; para hangi yoldan yazılırsa yazılsın kuyruğa düşer.
+Satır "bu siparişi ya da bu nakit hareketini yeniden eşitle" demektir. `money_movement` tetikleyicisi yazar, para hangi yoldan yazılırsa yazılsın kuyruğa düşer; fişi olan siparişi kalem ve durum değişikliği de işaretler, çünkü iade para doğurmayabilir.
 
 <!-- alanlar:register_queue -->
 | Kolon | Tip | Null | Varsayılan |

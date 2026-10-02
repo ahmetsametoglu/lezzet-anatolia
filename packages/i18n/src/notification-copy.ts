@@ -265,6 +265,19 @@ const KARGO_EKSIGI: Record<string, string> = {
 };
 
 const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, unknown>) => StaffNotificationBrief>> = {
+  /* Kapanmayan kasa günü yasal bir açıktır; sebebi sayıyla söylenir, ayrıntısı kurulum kartında ve hata kaydında. */
+  register_day_unclosed: (p) => ({
+    tone: 'alert',
+    label: 'Kasa',
+    title: `Kasa günü kapanmadı${typeof p.date === 'string' ? ` — ${p.date}` : ''}`,
+    subtitle:
+      [
+        typeof p.differences === 'number' && p.differences > 0 ? `${p.differences} fark` : null,
+        typeof p.waiting === 'number' && p.waiting > 0 ? `${p.waiting} kayıt yazılmayı bekliyor` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ') || null,
+  }),
   document_undeliverable: (p) => ({
     // `alert`: yasal belge hiçbir kanala ulaşamadı, iş insana düştü.
     tone: 'alert',

@@ -188,8 +188,12 @@ hediye sipariş hiç para görmez (11. karar). Canlıya geçiş anı ayardır; k
    farkı kadar ödeme satırı. İade, eksi kalemli fiştir; `void` kullanılmaz, çünkü iadeyi asıl ödemenin
    yöntemine yazıyor, oysa operatör kartla ödenmiş siparişi nakit iade edebilir (DOMAIN §8).
 4. **Yalnız ödeme farkı varsa** (kalan borcun ödenmesi, fazla tahsilatın iadesi) siparişin son fişine
-   ödeme satırı eklenir. Her fiş `DIV` açılır: tutarlar açık yazılır, eksik ya da fazla ödeme fişin
-   bakiyesinde görünür ve sonraki ödeme satırıyla kapanır.
+   ödeme satırı eklenir; gün kapanmışsa Hiboutik onu satışın nakit akışı olarak kaydeder. Her fiş `DIV`
+   açılır: tutarlar açık yazılır, eksik ya da fazla ödeme fişin bakiyesinde görünür.
+5. **Para doğurmayan kalem farkı** (eksik ödenmiş siparişte iade, borçsuz iptal) ödemesiz fiştir; fişi
+   olan siparişi kalem ve durum değişikliği de kuyruğa düşürür.
+6. **Değişen hareket:** kasadaki satır değişmez; tutarı, yöntemi ya da siparişi değişen hareketin farkı
+   aynı harekete yeni ödeme satırıdır, siparişten çıkan hareketin neti ters satırla geri alınır.
 
 **Ücretlenen kalem motorun tanımıdır** (`fulfilledLineAmountCents`, `isFulfillmentSettled`): hazırlık
 kesinleşmeden sipariş edilen adet, sonra giden eksi müşteride kalan; iptalde sıfır; kargo ancak ücretlenen
@@ -227,8 +231,8 @@ yöntemi.
 - Her Hiboutik çağrısından önce aynaya "yazılıyor" satırı düşer, sonra Hiboutik'in verdiği numara.
 - Yarım fiş yeniden ele alındığında Hiboutik'teki hâli okunur. Satış numarası kaybolduysa `ext_ref`
   aramasıyla bulunur ve tam eşleşme okunarak doğrulanır.
-- Kapanmamış fiş plana göre tamamlanır, uyuşmazsa silinip yeniden yazılır (kapanmamış satış mali kayıt
-  değil). Ödeme satırı eklenmeden önce Hiboutik'te var mı diye okunur.
+- Kapanmamış fişin satışı silinip aynadan yeniden yazılır (kapanmamış satış mali kayıt değil). Kapanmış
+  fişe ödeme eklenmeden önce Hiboutik'te sahipsiz bir ödeme satırı ya da nakit akışı var mı diye okunur.
 
 **Hata:** Hiboutik'e ulaşılamazsa sipariş kuyrukta kalır, artan aralıkla (1 dakikadan 1 saate) yeniden
 denenir; beşinci denemede `error_log`. Plan durursa (yöntemi bilinmeyen hareket, iadeyle başlayan sipariş,
@@ -244,15 +248,13 @@ türlerinden ESP ve CB hazır gelir; WEB (online) ve VIR (havale) kasada açıl�
 ödeme reddedilir. Backend ortamına anahtarlar ve `HIBOUTIK_MODE=live` girilir; en son kartta canlıya
 geçiş günü girilir.
 
-**Bilinen sınır:** yazılmış bir ödeme satırının hareketi aynı kimlikle tutarı değişerek düzeltilirse plan
-bunu görmez (birleşmede hareket yenisiyle değiştiği için orada sorun yok); bugün tutar düzelten akış yok.
-
 **Kasa hareketleri:** eşlenmiş nakit hesabının fiş olmayan hareketleri Hiboutik'e açıklamasıyla `cash_out`
 / `cash_in` olarak yazılır, kasa sayımı fiziksel kasayla tutsun diye: bankaya yatırma, kasadan ödenen gider,
 bozukluk ve sermaye girişi, kapıda nakit alınan B2B parası ve iadesi, kurye farkı. B2C sipariş parası fişle
-girer, kart çekmeceye girmez. Hareket başına bir yazım vardır, hareket silinirse kasada bir kez ters çevrilir;
-yazıldıktan sonra tutarı, yönü ya da kasası değişen hareket sessizce geçilmez, kuyrukta sebebiyle bekler
-(bugün böyle bir düzeltme akışı yok). Açıklama hareketin künyesini taşır, yarıda kalan yazım onunla bulunur.
+girer, kart çekmeceye girmez; var olan transfer ucuna bağlanmış ekstre satırı kasaya yazılmaz, karşılığı o
+uçtur. Kasadaki kayıt değişmez: tutarı, yönü ya da kasası değişen ya da silinen hareketin yürürlükteki kaydı
+ters çevrilir, yeni etkisi varsa yeni kayıt yazılır. Açıklama hareketin künyesini taşır (sonraki kayıtta sıra
+eki alır), yarıda kalan yazım onunla bulunur.
 
 **Kurye farkı** (12. karar): nakit farkı sıfır değilse sefer kapanışı (`close_delivery_run`) farkı aynı
 işlemde seferin nakit tahsilatlarının girdiği hesaba hareket olarak yazar (eksikte çıkış, fazlada giriş; tür
@@ -266,17 +268,21 @@ kendiliğinden sıfırdır, mal maliyeti gider olarak kalır; sipariş teslim ed
 (`isSettled`). Ödeme kapısı sıfır tutarı hareket olarak yazmaz; hediyeye yine de para yazılırsa kasa planı
 durur ve uyarır.
 
-**Gün sonu** (`register_close_day`, her gün `REGISTER_CLOSE_AT` saatinde, varsayılan 23:50 Paris; mağaza başına):
-1. **Kapanış:** NF525 dönemsel kapanış istiyor; satışlar API'den geldiği için kapanışı cron yapar
-   (`POST /z/closure`), yalnız `HIBOUTIK_MODE=live` iken, çünkü kapanış geri alınmaz. Kapanmış gün yeniden
-   kapatılmaz. Demoda yapılamıyor; ilk canlı günde ölçülür.
-2. **Mutabakat, kasa aynası ↔ Hiboutik gün sonu:** oran başına KDV dahil tutar (`/z/taxes`), yöntem başına
-   ödeme (`/z/payment_types`), satış kimlikleri (kasada olup bizde olmayan satış Hiboutik ekranından elle
-   yapılmıştır; bizde olup kasada görünmeyen de fark) ve çekmecenin günlük net nakdi (nakit ödemeler + kasa
-   giriş/çıkışı). Kasa sayımı hesabın bakiyesiyle karşılaştırılmaz: kapıda kart da aynı hesaba giriyor.
-3. **Bizim para ↔ ayna:** kuyrukta bekleyen sayı; gün kapanırken bekleyen para ertesi günün kasasına düşer.
+**Gün sonu** (`register_close_day`, her gece `REGISTER_CLOSE_AT` saatinde, varsayılan 00:15 Paris; mağaza başına):
+önceki gün bittikten sonra bakılır ki gece yarısına sarkan yazım da onun mutabakatına girsin. Kapanmamış
+günler (en çok 7 gün geriye, canlıya geçişten önceye değil) sırayla karşılaştırılır:
+1. **Defter ↔ ayna** (`register_day_movements`): gün içinde açılmış her hareketin kasada beklenen etkisi
+   (B2C sipariş parası yöntemiyle ödeme satırı; çekmece hesabının kart dışı öteki nakdi, defterin karşı yaka
+   kuralıyla kasa kaydı) aynada yazılanla tutmalı. Yanlış plan ayna ↔ kasada fark çıkarmaz, burada çıkarır.
+2. **Ayna ↔ Hiboutik:** oran başına KDV dahil tutar (`/z/taxes`), yöntem başına ödeme (`/z/payment_types` ve
+   kapanmış güne eklenen ödemeler için `/z/cash_flow`), satış kimlikleri (kasada olup bizde olmayan satış
+   Hiboutik ekranından elle yapılmıştır) ve çekmecenin günlük net nakdi; bizim taraf yazıldığı ana göre sayılır.
+3. **Bekleyen:** mağazanın kuyrukta duran siparişi ve kasa hareketi.
 
-Fark `error_log`a uyarı olarak, özet `job_run`a yazılır.
+Hepsi tutuyorsa gün kasada kapatılır (`POST /z/closure`); yalnız `HIBOUTIK_MODE=live` iken, çünkü kapanış geri
+alınmaz ve demoda yapılamıyor. Tutmuyorsa gün kapanmaz, yönetime ve muhasebeye bildirim gider; Hiboutik'in
+kapanışı önceki günleri de kapattığı için tutmayan gün düzelene kadar sonrakiler de bekler. Fark `error_log`a
+uyarı olarak, özet `job_run`a yazılır.
 
 **Ekranlar:** yeni ekran yok. Ayarlar › Kurulum: Hiboutik kartı (tesis ↔ mağaza ↔ çekmece eşlemesi, canlıya
 geçiş günü, kuyruk özeti, son eşitleme ve gün sonu turu); kuyruk özeti sistem ekranında değil kasanın yanında,

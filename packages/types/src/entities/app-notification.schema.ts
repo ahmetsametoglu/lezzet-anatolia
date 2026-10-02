@@ -56,6 +56,8 @@ export const AppNotificationKindEnum = z.enum([
    * düzeltilene kadar o ürün eşik altında kargoyla satılamaz.
    */
   'shipping_data_missing',
+  /** Sertifikalı kasanın günü kapanmadı: kasayla tutmuyor ya da kasaya yazılmayı bekleyen kayıt var; düzelince gün kapanır. */
+  'register_day_unclosed',
 ]);
 export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
 
@@ -73,6 +75,7 @@ export const STAFF_NOTIFICATION_KINDS = [
   'transfer_shortfall',
   'transfer_excess',
   'shipping_data_missing',
+  'register_day_unclosed',
 ] as const satisfies readonly AppNotificationKind[];
 
 /** "Tıkla, git" hedefinin türü — adres, içerik değil. Yeni hedef türü ekranıyla birlikte gelir. */

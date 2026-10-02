@@ -5,9 +5,8 @@ import type { NotificationRow } from '@lezzet/mobile-kit/src/lib/api/notificatio
 import type { OperationsSection } from '@/lib/operations/sections';
 
 /*
-  Uçtan gelen satır → operasyon bildirimi: başlık, alt satır ve ton web ile paylaşılan sözlükten (`staffNotificationBrief`) gelir, burada
-  yüzeye özgü olan satırın gittiği yer ve bilinmeyen türün genel metnidir. Kitleyi yalnız sunucu belirler; bölüm hedef ekranın bölümüdür,
-  rengi verir ve satır gizlemez, hedefi olmayan satır tıklanmaz.
+  Başlık, alt satır ve ton web ile paylaşılan sözlükten (`staffNotificationBrief`) gelir; burada yalnız yüzeye özgü olan durur: satırın
+  gittiği yer ve bilinmeyen türün genel metni. Kitleyi sunucu belirler, bölüm yalnız rengi verir ve hedefi olmayan satır tıklanmaz.
   BEKLEYEN(21.284): belge · askıda kapanış için hedef ekranlar.
 */
 
@@ -69,6 +68,8 @@ const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, Operation
   run_close_pending: 'management',
   // Ölçü ürün kartında, kutu ve adres depo ekranında düzeltilir; ikisi de web operasyonunda.
   shipping_data_missing: 'management',
+  // Kasa günü web'deki kurulum kartında okunur.
+  register_day_unclosed: 'management',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */

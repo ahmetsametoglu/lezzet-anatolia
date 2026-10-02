@@ -18,6 +18,7 @@ import { markUndelivered, startCourierDay } from './day';
 import { advanceOrder } from '../order/advance.testkit';
 import { openBox, sealBox } from '../warehouse/boxes';
 import { loadBox } from './load';
+import { recordOrderPayment } from '../order/payment';
 
 /**
  * Sefer kapanışı ve kasa mutabakatı: beklenen toplam yöntem bazında doğru mu, fark aynı gün görünüyor mu, kapanmış sefer salt okunur mu, takılı duraklar çözülüyor mu.
@@ -247,6 +248,31 @@ describe('seferi kapat', () => {
     expect(eksik.differenceCashCents).toBeLessThan(0);
     // Eksik nakit kasa hesabından çıkar ki hesabın bakiyesi ve sertifikalı kasanın sayımı teslim edilen nakitle tutsun.
     expect(await cashDifferenceOf(runId)).toMatchObject({ direction: 'out', amountCents: 500, nature: 'kasa-farki', source: 'system' });
+  });
+
+  it('kalanı havaleyle gelen siparişte havale beklenen nakde girmez, sahte kasa farkı yazılmaz', async () => {
+    // Beklenen siparişin yönteminden okunsaydı havale nakit sayılır ya da nakit hiç sayılmaz, kasaya olmayan bir fark yazılırdı.
+    const a = await atTheDoor(5); // 50 €
+    const runId = await depart();
+    await confirmDoorDelivery(db, {
+      orderId: a.orderId,
+      courierId,
+      scannedBoxCodes: [a.boxCode],
+      collection: { method: 'cash', amountCents: 2000, accountId },
+    });
+    await recordOrderPayment(db, {
+      orderId: a.orderId,
+      accountId,
+      amountCents: 3000,
+      method: 'bank_transfer',
+      description: 'kalan havaleyle',
+      source: 'system',
+    });
+
+    const result = await closeCourierDay(db, { courierId, runId, countedCashCents: 2000 });
+
+    expect(result).toMatchObject({ ok: true, reconciled: true, differenceCashCents: 0 });
+    expect(await cashDifferenceOf(runId)).toBeNull();
   });
 
   it('fazla para da fark sayılır', async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parisDateOf, parisDayRange } from './date';
+import { parisDateOf, parisDayRange, previousDay } from './date';
 
 describe('Paris takvimi', () => {
   it('kış günü UTC+1, yaz günü UTC+2 sınırlıdır; yaz saatine geçilen gün 23 saat, ay sonu ertesi aya taşar', () => {
@@ -12,5 +12,10 @@ describe('Paris takvimi', () => {
   it('UTC gece yarısından önce Paris gün değiştirir', () => {
     expect(parisDateOf(new Date('2026-07-15T21:59:00.000Z'))).toBe('2026-07-15');
     expect(parisDateOf(new Date('2026-07-15T22:00:00.000Z'))).toBe('2026-07-16');
+  });
+
+  it('ay ve yıl başında önceki gün bir önceki aya ve yıla düşer, artık yılda 29 Şubattır', () => {
+    expect(previousDay('2027-01-01')).toBe('2026-12-31');
+    expect(previousDay('2028-03-01')).toBe('2028-02-29');
   });
 });

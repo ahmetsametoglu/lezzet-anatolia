@@ -11,7 +11,7 @@ import { FieldShell } from '@/components/operation/form/field-shell';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
 import { removeRegisterStoreAction, saveRegisterStoreAction, setRegisterLiveFromAction } from './register-actions';
-import type { RegisterJobView, RegisterPanelData, RegisterStoreRowView } from './register-read';
+import type { RegisterDayEndView, RegisterJobView, RegisterPanelData, RegisterStoreRowView } from './register-read';
 import { SettingsCard } from './settings-sections';
 
 /**
@@ -77,11 +77,7 @@ export function RegisterCard({ data }: RegisterCardProps) {
         <JobText job={data.sync} />
       </Line>
       <Line label="Gün sonu">
-        <JobText job={data.dayEnd}>
-          {data.dayEnd?.date
-            ? ` · ${data.dayEnd.date} · ${data.dayEnd.differences === 0 ? 'fark yok' : `${data.dayEnd.differences} fark`}`
-            : null}
-        </JobText>
+        <JobText job={data.dayEnd}>{data.dayEnd?.date ? <DayEndText dayEnd={data.dayEnd} /> : null}</JobText>
       </Line>
 
       <StoreDialog row={editing} accounts={data.cashAccounts} onClose={() => setEditing(null)} />
@@ -111,6 +107,26 @@ function JobText({ job, children }: { job: RegisterJobView | null; children?: Re
       {job.skipped ? <span className="text-ops-amber-dark"> · atlandı ({job.skipped})</span> : null}
       {children}
     </span>
+  );
+}
+
+/** Gün kapanmadıysa sebebi kırmızıyla: kapanmayan kasa günü yasal bir açıktır. */
+function DayEndText({ dayEnd }: { dayEnd: RegisterDayEndView & { date: string | null } }) {
+  const reasons = [
+    dayEnd.differences > 0 ? `${dayEnd.differences} fark` : null,
+    dayEnd.waiting > 0 ? `${dayEnd.waiting} kayıt bekliyor` : null,
+  ].filter(Boolean);
+  return (
+    <>
+      {` · ${dayEnd.date} · `}
+      {dayEnd.closed ? (
+        'kapandı'
+      ) : reasons.length > 0 ? (
+        <span className="text-ops-red">kapanmadı: {reasons.join(', ')}</span>
+      ) : (
+        `fark yok${dayEnd.live ? '' : ' · canlı kip değil, kapatılmadı'}`
+      )}
+    </>
   );
 }
 

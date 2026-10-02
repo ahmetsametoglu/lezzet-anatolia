@@ -86,6 +86,7 @@ describe('satış okuması', () => {
         { paymentId: 21, method: 'cash', amountCents: -2000 },
         { paymentId: 22, method: null, amountCents: 500 },
       ],
+      cashFlows: [],
     });
   });
 
@@ -117,7 +118,25 @@ describe('satış okuması', () => {
       receiptUrl: 'https://myrecei.pt/fr/1/2/x',
       lines: [],
       payments: [],
+      cashFlows: [],
     });
+  });
+
+  it('kapanmış güne yazılan ödeme nakit akışı numarasıyla döner; satış okuması onu ödeme satırlarından ayrı taşır', async () => {
+    const flow = {
+      cash_flow_id: 1,
+      date_time: '2026-10-01 22:29:21',
+      payment_amount: '1.00',
+      payment_type: 'ESP',
+      currency_code: 'EUR',
+      comments: '',
+      store_id: 1,
+      datez: 20261001,
+    };
+    const { register } = fakeHiboutik([{ json: { cash_flow_id: 1 } }, { json: sale({ cash_flow: [flow] }) }]);
+
+    expect(await register.addPayment({ saleId: 7, method: 'cash', amountCents: 100 })).toEqual({ kind: 'cash_flow', id: 1 });
+    expect((await register.readSale(7))?.cashFlows).toEqual([{ cashFlowId: 1, method: 'cash', amountCents: 100 }]);
   });
 
   it('olmayan satış `null` döner, hata fırlatmaz', async () => {

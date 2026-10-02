@@ -30,7 +30,17 @@ export interface RegisterPanelData {
   blocked: { reason: string; count: number }[];
   failing: number;
   sync: RegisterJobView | null;
-  dayEnd: (RegisterJobView & { date: string | null; differences: number }) | null;
+  dayEnd: (RegisterJobView & RegisterDayEndView) | null;
+}
+
+/** Son gece işinin sonucu, bütün mağazalar için: gün kapandı mı, kaç fark ve kaç bekleyen kayıt vardı. */
+export interface RegisterDayEndView {
+  date: string | null;
+  closed: boolean;
+  differences: number;
+  waiting: number;
+  /** Canlı kipte değilse gün tutsa da kapatılmaz. */
+  live: boolean;
 }
 
 /** Turun kendini atlama sebebi, operatörün diliyle; tanınmayan kod olduğu gibi gösterilir. */
@@ -73,7 +83,9 @@ export async function readRegisterPanel(): Promise<RegisterPanelData> {
     const reason = blockReasonOf(row.lastError) ?? '—';
     reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
   }
-  const dayStores = Array.isArray(dayEnd?.lastResult?.['stores']) ? (dayEnd.lastResult['stores'] as Array<{ differences?: number }>) : [];
+  const dayStores = Array.isArray(dayEnd?.lastResult?.['stores'])
+    ? (dayEnd.lastResult['stores'] as Array<{ closed?: boolean; differences?: number; waiting?: number }>)
+    : [];
 
   return {
     liveFrom: liveFrom ? parisDateOf(new Date(liveFrom)) : null,
@@ -96,7 +108,10 @@ export async function readRegisterPanel(): Promise<RegisterPanelData> {
       ? {
           ...jobView(dayEnd),
           date: typeof dayEnd.lastResult?.['date'] === 'string' ? (dayEnd.lastResult['date'] as string) : null,
+          closed: dayStores.length > 0 && dayStores.every((store) => store.closed === true),
           differences: dayStores.reduce((sum, store) => sum + (store.differences ?? 0), 0),
+          waiting: dayStores.reduce((sum, store) => sum + (store.waiting ?? 0), 0),
+          live: dayEnd.lastResult?.['live'] === true,
         }
       : null,
   };

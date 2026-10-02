@@ -1,4 +1,6 @@
 import {
+  MoneyMovementService,
+  OrderService,
   RegisterCashOpService,
   RegisterPaymentService,
   RegisterQueueService,
@@ -7,36 +9,143 @@ import {
   RegisterTicketService,
   type Db,
 } from '@lezzet/database';
-import { reconcileRegisterDay, type RegisterDayDifference, type RegisterDaySide } from '@lezzet/domain-core';
-import { parisDayRange } from '@lezzet/helper';
+import { reconcileLedgerDay, reconcileRegisterDay, type RegisterDayDifference, type RegisterDaySide } from '@lezzet/domain-core';
+import { parisDateOf, parisDayRange, previousDay } from '@lezzet/helper';
+import { captureError, SOURCES } from '@lezzet/observability';
 import type { RegisterStore } from '@lezzet/types';
+import { notifyRegisterDayUnclosed } from '../notification/staff-events';
 import type { CashRegister } from './port';
+import { registerLiveFrom, storeOf } from './sync';
 
 /**
- * Kasanın gün sonu: mağaza başına gün kapanışı ve mutabakat. Mutabakat kasaya ne yazdığımızı (ayna) kasanın gün sonu toplamlarıyla
- * karşılaştırır; paranın aynaya geçmesini kuyruk taşır, kuyrukta bekleyen sayı sonuçta durur.
+ * Kasanın gün sonu: kapanmamış günler sırayla karşılaştırılır; hepsi tutuyor ve mağazanın kuyruğu boşsa gün kapanır. Kasanın kapanışı
+ * önceki günleri de kapattığı için tutmayan gün kapanışı bekletir, düzelince sonraki kapanışla birlikte kapanır.
  */
 
 export interface RegisterDayEnd {
+  /** Kapatılmak istenen gün. */
   date: string;
-  stores: Array<{ warehouseId: string; closed: boolean; differences: RegisterDayDifference[] }>;
-  /** Kuyrukta bekleyen sipariş ve kasa hareketi; gün kapanırken boş değilse o para ertesi günün kasasına düşer. */
-  waiting: number;
+  stores: Array<{
+    warehouseId: string;
+    closed: boolean;
+    /** Karşılaştırılan kapanmamış günler, eskiden yeniye; önceden kapanmış mağazada boştur. */
+    days: Array<{ date: string; differences: RegisterDayDifference[] }>;
+    /** Mağazanın kuyrukta bekleyen sipariş ve kasa hareketi; bekleyen para henüz kasada olmadığı için gün kapanmaz. */
+    waiting: number;
+  }>;
 }
 
-/** Gün `YYYY-MM-DD`, Paris takviminde. `close` yalnız canlı kasada açılır: kapanış mali kayıttır, geri alınmaz. */
-export async function closeRegisterDay(db: Db, register: CashRegister, opts: { date: string; close: boolean }): Promise<RegisterDayEnd> {
+/** Kapanmamış gün en çok bu kadar geriye aranır. */
+const LOOKBACK_DAYS = 7;
+
+/**
+ * Gece işi: gün bittikten sonra önceki Paris günü kapatılır, yoksa gece yarısına sarkan yazım hiçbir günün mutabakatına girmezdi.
+ * Fark hata kaydına uyarı olarak düşer; kapanmayan gün yönetime ve muhasebeye bildirilir.
+ */
+export async function registerDayEnd(
+  db: Db,
+  register: CashRegister,
+  opts: { now: Date; close: boolean },
+): Promise<Record<string, unknown>> {
+  const liveFrom = await registerLiveFrom(db);
+  const date = previousDay(parisDateOf(opts.now));
+  if (!liveFrom || date < parisDateOf(new Date(liveFrom))) return { skipped: 'not_live' };
+
+  const result = await closeRegisterDay(db, register, { date, close: opts.close, liveFromDate: parisDateOf(new Date(liveFrom)) });
   const stores = [];
-  for (const store of await new RegisterStoreService(db).list()) {
-    let closed = (await register.dayClosedAt(store.externalStoreId, opts.date)) !== null;
-    if (!closed && opts.close) {
+  for (const store of result.stores) {
+    const differences = store.days.flatMap((day) => day.differences.map((difference) => ({ date: day.date, ...difference })));
+    if (differences.length > 0) {
+      await captureError(new Error(`kasa mutabakatı: ${differences.length} fark`), {
+        source: SOURCES.backendCron,
+        level: 'warning',
+        context: { job: 'register_close_day', warehouseId: store.warehouseId, date, differences },
+      });
+    }
+    if (!store.closed && (differences.length > 0 || store.waiting > 0)) {
+      await notifyRegisterDayUnclosed(db, {
+        warehouseId: store.warehouseId,
+        date,
+        differences: differences.length,
+        waiting: store.waiting,
+      });
+    }
+    stores.push({
+      warehouseId: store.warehouseId,
+      closed: store.closed,
+      days: store.days.length,
+      differences: differences.length,
+      waiting: store.waiting,
+    });
+  }
+  return { date, live: opts.close, stores };
+}
+
+/**
+ * Günler `YYYY-MM-DD`, Paris takviminde; canlıya geçiş gününden önceki gün aranmaz. `close` yalnız canlı kasada açılır: kapanış mali
+ * kayıttır, geri alınmaz.
+ */
+export async function closeRegisterDay(
+  db: Db,
+  register: CashRegister,
+  opts: { date: string; close: boolean; liveFromDate: string },
+): Promise<RegisterDayEnd> {
+  const storeService = new RegisterStoreService(db);
+  const all = await storeService.list();
+  const waiting = await waitingByWarehouse(db, all);
+  const stores = [];
+  for (const store of all) {
+    const days = [];
+    for (const date of await unclosedDays(register, store, opts.date, opts.liveFromDate)) {
+      const { from, to } = parisDayRange(date);
+      const differences = [
+        ...reconcileLedgerDay(await storeService.dayMovements(store, from, to)),
+        ...reconcileRegisterDay(await oursOf(db, store, date), await registerSideOf(register, store, date)),
+      ];
+      days.push({ date, differences });
+    }
+    const storeWaiting = waiting.get(store.warehouseId) ?? 0;
+    let closed = days.length === 0;
+    if (!closed && opts.close && storeWaiting === 0 && days.every((day) => day.differences.length === 0)) {
       await register.closeDay(store.externalStoreId, opts.date);
       closed = true;
     }
-    const differences = reconcileRegisterDay(await oursOf(db, store, opts.date), await registerSideOf(register, store, opts.date));
-    stores.push({ warehouseId: store.warehouseId, closed, differences });
+    stores.push({ warehouseId: store.warehouseId, closed, days, waiting: storeWaiting });
   }
-  return { date: opts.date, stores, waiting: await new RegisterQueueService(db).countWaiting() };
+  return { date: opts.date, stores };
+}
+
+/** İstenen günden geriye kapanmamış günler, eskiden yeniye: kapanmış güne, canlıya geçiş gününe ya da sınıra kadar. */
+async function unclosedDays(register: CashRegister, store: RegisterStore, date: string, liveFromDate: string): Promise<string[]> {
+  const days: string[] = [];
+  for (let day = date; days.length < LOOKBACK_DAYS && day >= liveFromDate; day = previousDay(day)) {
+    if ((await register.dayClosedAt(store.externalStoreId, day)) !== null) break;
+    days.unshift(day);
+  }
+  return days;
+}
+
+/** Kuyruk mağazalara dağıtılır ki bir deponun birikmiş kuyruğu başka deponun gününü bekletmesin. */
+async function waitingByWarehouse(db: Db, stores: readonly RegisterStore[]): Promise<Map<string, number>> {
+  const rows = await new RegisterQueueService(db).listAll();
+  const waiting = new Map<string, number>();
+  const add = (warehouseId: string | undefined) => {
+    if (warehouseId) waiting.set(warehouseId, (waiting.get(warehouseId) ?? 0) + 1);
+  };
+  for (const order of await new OrderService(db).listByIds(rows.flatMap((row) => (row.orderId ? [row.orderId] : [])))) {
+    add((await storeOf(db, order.warehouseId))?.warehouseId);
+  }
+  const byCashAccount = new Map(stores.map((store) => [store.cashAccountId, store.warehouseId]));
+  const movementIds = rows.flatMap((row) => (row.movementId ? [row.movementId] : []));
+  const movements = await new MoneyMovementService(db).listByIds(movementIds);
+  for (const movement of movements) {
+    add(byCashAccount.get(movement.accountId) ?? (movement.counterAccountId ? byCashAccount.get(movement.counterAccountId) : undefined));
+  }
+  // Silinen hareketin ters kaydı bekler; deposu kasadaki kaydından okunur.
+  for (const id of movementIds.filter((candidate) => !movements.some((movement) => movement.id === candidate))) {
+    add((await new RegisterCashOpService(db).listForMovement(id))[0]?.warehouseId);
+  }
+  return waiting;
 }
 
 /** Bizim taraf: o gün yazılan fişler ve ödeme satırları ile kasa hareketleri, aynadan. */

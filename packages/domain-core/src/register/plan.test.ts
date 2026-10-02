@@ -53,11 +53,10 @@ const shipping = (qty: number, amountCents: number, vatRate: number): RegisterLi
   amountCents,
   vatRate,
 });
-const paid = (movementId: string | null, amountCents: number, method: RegisterPayment['method'] = 'online'): RegisterPayment => ({
+const paid = (movementId: string, amountCents: number, method: RegisterPayment['method'] = 'online'): RegisterPayment => ({
   method,
   amountCents,
   movementId,
-  reversalOf: null,
 });
 
 /** Test 1'in fişi: sipariş edilen kalemler; kargo 30,00 : 2,00 ağırlıkla 4,60 + 0,30. */
@@ -136,6 +135,18 @@ describe('kasa planı — fiş', () => {
     });
   });
 
+  it('para doğurmayan kalem farkı ödemesiz fiştir', () => {
+    // Kapıda 20,00 alınmış 30,00'lık siparişte 10,00'luk kalem iade edilince borç kalmaz, hareket doğmaz; fiş açılmasaydı kasa
+    // gitmeyen malı satılmış gösterirdi.
+    const r = plan({
+      order: order({ status: 'delivered', shippingFeeCents: 0, orderedTotalCents: 3000 }),
+      items: [lokum({ fulfilledQty: 2 })],
+      movements: [move('h1', 2000, 'cash')],
+      tickets: [{ seq: 1, lines: [item('lokum', 3, 3000, 5.5)], payments: [paid('h1', 2000, 'cash')] }],
+    });
+    expect(r).toMatchObject({ ops: [{ op: 'open_ticket', seq: 2, lines: [item('lokum', -1, -1000, 5.5)], payments: [] }] });
+  });
+
   it('fiyatı fişe yazıldıktan sonra değişen kalem geri alınıp yeniden yazılır', () => {
     // Fark tek kalem olsaydı sıfır adetli bir tutar kalemi çıkardı; kasa onu yazamaz.
     const r = plan({
@@ -183,16 +194,32 @@ describe('kasa planı — ödeme satırı', () => {
   it('hareketi silinip eşdeğeri gelen ödeme satırı yeni harekete bağlanır, kasaya yazılmaz', () => {
     // Ekstre birleştirmesi elle yazılan hareketi silip yerine ekstre satırını koyar; bağ kurulmasaydı para iki kez yazılırdı.
     const r = plan({ movements: [move('yeni', 3690)], tickets: [firstTicket([paid('eski', 3690)])] });
-    expect(r).toMatchObject({ ops: [{ op: 'relink_payment', seq: 1, fromMovementId: 'eski', toMovementId: 'yeni' }] });
+    expect(r).toMatchObject({ ops: [{ op: 'relink_payment', fromMovementId: 'eski', toMovementId: 'yeni' }] });
   });
 
   it('eşdeğeri olmayan silinmiş hareket ters satırla bir kez geri alınır', () => {
-    // Ters satır olmasaydı silinen tahsilat kasada kalırdı; işaret tutulmasaydı her turda yeniden ters çevrilirdi.
-    const reversal: RegisterPayment = { method: 'online', amountCents: -3690, movementId: null, reversalOf: 'silinen' };
+    // Ters satır olmasaydı silinen tahsilat kasada kalırdı; net sıfırlanınca bir daha çevrilmez.
+    const reversal = paid('silinen', -3690);
     expect(plan({ movements: [], tickets: [firstTicket([paid('silinen', 3690)])] })).toMatchObject({
       ops: [{ op: 'add_payments', seq: 1, payments: [reversal] }],
     });
     expect(plan({ movements: [], tickets: [firstTicket([paid('silinen', 3690), reversal])] })).toMatchObject({ ops: [] });
+  });
+
+  it('geri alınıp aynı siparişe yeniden bağlanan tahsilat kasaya yeniden yazılır', () => {
+    // Banka eşleşmesi geri alınıp yeniden yapılınca satır ters çevrilmiş kalsaydı kasa ödenmiş satışı ödenmemiş gösterirdi.
+    const r = plan({ movements: [move('h1', 3690)], tickets: [firstTicket([paid('h1', 3690), paid('h1', -3690)])] });
+    expect(r).toMatchObject({ ops: [{ op: 'add_payments', seq: 1, payments: [paid('h1', 3690)] }] });
+  });
+
+  it('tutarı ya da yöntemi değişen hareketin farkı aynı harekete yeni satırdır', () => {
+    // Kasadaki satır değişmez; fark yazılmasaydı kasa eski tutarı ya da eski yöntemi gösterirdi.
+    expect(plan({ movements: [move('h1', 3790)], tickets: [firstTicket()] })).toMatchObject({
+      ops: [{ op: 'add_payments', seq: 1, payments: [paid('h1', 100)] }],
+    });
+    expect(plan({ movements: [move('h1', 3690, 'cash')], tickets: [firstTicket()] })).toMatchObject({
+      ops: [{ op: 'add_payments', seq: 1, payments: [paid('h1', -3690), paid('h1', 3690, 'cash')] }],
+    });
   });
 });
 
