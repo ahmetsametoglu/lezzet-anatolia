@@ -39,7 +39,7 @@ export const AppNotificationKindEnum = z.enum([
   'run_close_mismatch',
   /**
    * Sefer kapandı ama durak(lar) sonuçlanmadı: askıda kalanlar sevkiyat masasına düşer ve günü sevkiyatçı seçer, zil yalnız "bak" der.
-   * Hedefi web'in askıda şeridi (`/operations/deliveries`).
+   * Hedefi web'in askıdaki duraklar bölümü (`/operations/deliveries`).
    */
   'run_close_pending',
   /** Yeni kurumsal başvuru düştü — onay kuyruğunun kapı zili. */
