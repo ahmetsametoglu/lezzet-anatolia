@@ -139,6 +139,28 @@ export async function notifyRegisterWriteStuck(
 }
 
 /**
+ * İzahlı banka satırının Pennylane'deki parası değişti ya da hareket silindi — muhasebeye ve yönetime; satıra dokunulmadığı için karar
+ * elle verilir. Pennylane'deki hâl başına bir kez haber olur, akış aynı olayı yeniden getirse de.
+ */
+export async function notifyBankFeedChanged(
+  db: SupabaseClient,
+  input: { accountId: string; movementId: string; valueDate: string; change: 'changed' | 'removed'; dedupeKey: string },
+): Promise<void> {
+  try {
+    await dispatchStaffNotification(db, {
+      kind: 'bank_feed_changed',
+      roles: ['admin', 'accounting'],
+      warehouseId: null,
+      target: null,
+      payload: { accountId: input.accountId, movementId: input.movementId, valueDate: input.valueDate, change: input.change },
+      dedupeKey: input.dedupeKey,
+    });
+  } catch (err) {
+    yut(err, 'bank_feed_changed');
+  }
+}
+
+/**
  * Sefer kapandı ama durak sonuçlanmadı: sevkiyat masası dürtülür, çünkü askıdaki durak bakan olmazsa kaybolmuş gibi kalır; zil yalnız "bak" der, gün seçmez.
  * Depo süzgeçlidir ve dedupe yoktur: her kapanış ayrıdır.
  */

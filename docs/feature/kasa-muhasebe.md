@@ -416,11 +416,11 @@ gösterir.
 1. **Banka hareketi okuma.** Ayarlar › Kurulum'daki Pennylane kartında banka hesabımız Pennylane'deki hesabına
    eşlenir ve canlıya geçiş günü girilir. İlk okumada eşlenen hesabın o günden sonraki hareketleri listeden bir kez
    okunur (`GET /transactions`, hesap ve tarih süzgeciyle). Sonra değişiklik akışı (`/changelogs/transactions`)
-   birkaç dakikada bir okunur. Akış son 4 haftayı tuttuğu için daha uzun bir kesintiden sonra liste son okunan
-   günden yeniden okunur. Hareket bizde eşleşmemiş banka satırı olarak yazılır (`source = bank_import`, tip
+   birkaç dakikada bir okunur. Akış son 4 haftayı tuttuğu için daha uzun bir kesintiden sonra liste canlıya geçiş
+   gününden yeniden okunur; listede olmayan ama aynada duran hareket Pennylane'de silinmiştir. Hareket bizde eşleşmemiş banka satırı olarak yazılır (`source = bank_import`, tip
    `misc`); mükerrer kimliği `pennylane:<kimlik>`, Pennylane kimliği aynada durur. Pennylane'de tutarı, günü ya
-   da açıklaması değişen satır bizde henüz izah edilmemişse güncellenir. İzahlı satır değişirse ya da Pennylane'de
-   silinirse muhasebeye bildirim gider. Eşlenmiş hesaba canlıya geçiş gününden sonrası için Excel yüklemesi
+   da açıklaması değişen satır bizde henüz izah edilmemişse güncellenir. İzahlı satıra dokunulmaz: parası (tutar, gün,
+   yön) değişirse ya da hareket Pennylane'de silinirse muhasebeye ve yönetime bildirim gider. Eşlenmiş hesaba canlıya geçiş gününden sonrası için Excel yüklemesi
    reddedilir, çünkü iki kaynak aynı satırı iki kez yazardı; eşlenmemiş hesapta Excel yüklemesi bugünkü gibi kalır.
 2. **Tedarikçi eşleme.** Pennylane'deki tedarikçi bizim tedarikçimize ya da carimize ayna tablosuyla bağlanır.
    Yüklenecek belgenin karşı tarafı Pennylane'de yoksa önce dış referansla (`sup:<kimlik>`, `cp:<kimlik>`) aranır,

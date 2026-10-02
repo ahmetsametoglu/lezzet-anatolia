@@ -72,6 +72,8 @@ const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, Operation
   register_day_unclosed: 'management',
   // Yazılamayan kaydın sebebi web'de sipariş detayında ya da kurulum kartında okunur.
   register_write_stuck: 'management',
+  // Banka satırının kararı web'deki Para ekranında verilir.
+  bank_feed_changed: 'management',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */

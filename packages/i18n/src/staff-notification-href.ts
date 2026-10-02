@@ -11,6 +11,9 @@ export function opsNotificationHref(row: Pick<MeNotification, 'kind' | 'targetTy
   if (row.kind === 'run_close_mismatch') return '/operations/deliveries';
   if (row.kind === 'register_day_unclosed' || row.kind === 'register_write_stuck') return '/operations/settings?tab=setup';
   if (row.kind === 'b2b_application_received') return '/operations/customers';
+  if (row.kind === 'bank_feed_changed' && typeof row.payload.accountId === 'string' && typeof row.payload.valueDate === 'string') {
+    return `/operations/finance?acct=${row.payload.accountId}&from=${row.payload.valueDate}&to=${row.payload.valueDate}`;
+  }
   // Ölçü ürün kartında düzeltilir; ürünsüz eksik (kutu, adres) depo ekranındadır.
   if (row.kind === 'shipping_data_missing') {
     return typeof row.payload.productId === 'string' ? `/operations/products?productId=${row.payload.productId}` : '/operations/warehouses';

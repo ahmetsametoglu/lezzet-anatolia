@@ -305,6 +305,13 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
           ? registerBlockReasonLabel(p.reason)
           : null,
   }),
+  /* İzahlı satıra dokunulmaz, karar muhasebenin: bildirim Para ekranını o hesabın o gününe açar. */
+  bank_feed_changed: (p) => ({
+    tone: 'alert',
+    label: 'Banka',
+    title: p.change === 'removed' ? "İzahlı banka hareketi Pennylane'de silindi" : "İzahlı banka hareketi Pennylane'de değişti",
+    subtitle: `${typeof p.valueDate === 'string' ? `${p.valueDate} · ` : ''}satır olduğu gibi duruyor, elle bakın`,
+  }),
   document_undeliverable: (p) => ({
     // `alert`: yasal belge hiçbir kanala ulaşamadı, iş insana düştü.
     tone: 'alert',

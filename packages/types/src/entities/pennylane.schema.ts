@@ -60,3 +60,43 @@ export const PennylaneChangePageSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 export type PennylaneChangePage = z.infer<typeof PennylaneChangePageSchema>;
+
+/** Banka hesabımızın Pennylane'deki karşılığı; `listedAt` boşsa sonraki tur canlıya geçiş gününden listeyi okur. */
+export const PennylaneAccountSchema = z.object({
+  accountId: z.string().uuid(),
+  pennylaneBankAccountId: z.number().int(),
+  pennylaneName: z.string(),
+  listedAt: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type PennylaneAccount = z.infer<typeof PennylaneAccountSchema>;
+
+export const PennylaneAccountInsertSchema = PennylaneAccountSchema.omit({ createdAt: true }).partial({ listedAt: true });
+export type PennylaneAccountInsert = z.infer<typeof PennylaneAccountInsertSchema>;
+
+/** Pennylane hareketinin son okunan hâli ve bizdeki banka satırı (`pennylane_transaction`). */
+export const PennylaneTransactionMirrorSchema = z.object({
+  pennylaneId: z.number().int(),
+  accountId: z.string().uuid(),
+  /** Sıfır tutarlı hareket yazılmaz, Pennylane'de silinen izahsız satır silinir; ikisinde de `null`. */
+  movementId: z.string().uuid().nullable(),
+  valueDate: z.string(),
+  direction: MovementDirectionEnum,
+  /** **Cent**; kolon `amount` euro. */
+  amountCents: z.number().int().nonnegative(),
+  label: z.string().nullable(),
+  removed: z.boolean(),
+  readAt: z.string(),
+});
+export type PennylaneTransactionMirror = z.infer<typeof PennylaneTransactionMirrorSchema>;
+
+export const PennylaneTransactionMirrorInsertSchema = PennylaneTransactionMirrorSchema.partial({ readAt: true });
+export type PennylaneTransactionMirrorInsert = z.infer<typeof PennylaneTransactionMirrorInsertSchema>;
+
+/** Değişiklik akışının kaldığı an, akış başına bir satır. */
+export const PennylaneCursorSchema = z.object({
+  stream: z.enum(['transactions']),
+  processedAt: z.string(),
+  updatedAt: z.string(),
+});
+export type PennylaneCursor = z.infer<typeof PennylaneCursorSchema>;

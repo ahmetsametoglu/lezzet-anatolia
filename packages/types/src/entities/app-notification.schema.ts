@@ -60,6 +60,8 @@ export const AppNotificationKindEnum = z.enum([
   'register_day_unclosed',
   /** Bir kayıt sertifikalı kasaya yazılamıyor; gece kapanışını beklemeden mesaide düzeltilsin diye anında gider. */
   'register_write_stuck',
+  /** İzahlı banka satırının Pennylane'deki parası değişti ya da hareket silindi; satıra dokunulmaz, karar elle verilir. */
+  'bank_feed_changed',
 ]);
 export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
 
@@ -79,6 +81,7 @@ export const STAFF_NOTIFICATION_KINDS = [
   'shipping_data_missing',
   'register_day_unclosed',
   'register_write_stuck',
+  'bank_feed_changed',
 ] as const satisfies readonly AppNotificationKind[];
 
 /** "Tıkla, git" hedefinin türü — adres, içerik değil. Yeni hedef türü ekranıyla birlikte gelir. */

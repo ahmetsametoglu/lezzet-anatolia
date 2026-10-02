@@ -475,6 +475,11 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     if (rows.length === 0) return [];
     return this.bulkUpsertIgnoring(rows, 'account_id,import_fingerprint');
   }
+
+  /** Banka satırı kimliğiyle; yarıda kalan yazımdan sonra aynı satırı yeniden yazmak isteyen tur var olanı bulur. */
+  findImported(accountId: string, importFingerprint: string): Promise<MoneyMovement | null> {
+    return this.getOneBy({ accountId, importFingerprint });
+  }
 }
 
 /**
