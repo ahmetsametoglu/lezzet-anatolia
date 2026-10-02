@@ -16,7 +16,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData } from '@lezzet/database/testing';
-import { parisDateOf } from '@lezzet/helper';
+import { parisDateOf, previousDay } from '@lezzet/helper';
 import type { PaymentMethod, RegisterQueue } from '@lezzet/types';
 import { closeRegisterDay } from './day-end';
 import { memoryRegister } from './memory-register.testkit';
@@ -570,6 +570,7 @@ describe('eşleme', () => {
 
 describe('gün sonu', () => {
   const today = () => parisDateOf(new Date());
+  const daysBefore = (count: number) => Array.from({ length: count }).reduce<string>((day) => previousDay(day), today());
 
   it('defter, ayna ve kasa tutuyorsa gün kapanır ve ikinci kez kapatılmaz', async () => {
     const own = await ownStore('KASA-KAPANIS');
@@ -594,12 +595,14 @@ describe('gün sonu', () => {
       closed: true,
       days: [{ date: today(), differences: [] }],
       waiting: 0,
+      olderUnclosed: false,
     });
     expect(second.stores.find((store) => store.warehouseId === own.warehouseId)).toEqual({
       warehouseId: own.warehouseId,
       closed: true,
       days: [],
       waiting: 0,
+      olderUnclosed: false,
     });
     // Paylaşılan veritabanında başka eşlenmiş mağaza da olabilir; sayılan yalnız bu mağaza.
     expect(closeDay.mock.calls.filter(([id]) => id === own.storeId)).toHaveLength(1);
@@ -674,6 +677,7 @@ describe('gün sonu', () => {
       closed: false,
       days: [{ date: today(), differences: [] }],
       waiting: 1,
+      olderUnclosed: false,
     });
   });
 
@@ -695,6 +699,33 @@ describe('gün sonu', () => {
     expect(result.stores.find((store) => store.warehouseId === own.warehouseId)).toMatchObject({
       closed: true,
       days: [{ date: today(), differences: [] }],
+    });
+  });
+
+  it('arama sınırının gerisinde kapanmamış gün varsa gün kapatılmaz, çünkü kapanış onu da karşılaştırmadan mühürlerdi', async () => {
+    const own = await ownStore('KASA-ESKI-GUN');
+    const closeDay = vi.spyOn(fake.register, 'closeDay');
+    const liveFromDate = daysBefore(10);
+
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate });
+
+    const store = result.stores.find((candidate) => candidate.warehouseId === own.warehouseId)!;
+    expect(store).toMatchObject({ closed: false, olderUnclosed: true });
+    expect(store.days).toHaveLength(7);
+    expect(store.days.every((day) => day.differences.length === 0)).toBe(true);
+    expect(closeDay.mock.calls.filter(([id]) => id === own.storeId)).toHaveLength(0);
+    closeDay.mockRestore();
+  });
+
+  it('canlıya geçiş günü arama sınırının içindeyse daha eski gün aranmaz, gün kapanır', async () => {
+    const own = await ownStore('KASA-SINIR');
+    const liveFromDate = daysBefore(6);
+
+    const result = await closeRegisterDay(db, fake.register, { date: today(), close: true, liveFromDate });
+
+    expect(result.stores.find((candidate) => candidate.warehouseId === own.warehouseId)).toMatchObject({
+      closed: true,
+      olderUnclosed: false,
     });
   });
 

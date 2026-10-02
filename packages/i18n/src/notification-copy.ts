@@ -274,6 +274,7 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
       [
         typeof p.differences === 'number' && p.differences > 0 ? `${p.differences} fark` : null,
         typeof p.waiting === 'number' && p.waiting > 0 ? `${p.waiting} kayıt yazılmayı bekliyor` : null,
+        p.olderUnclosed === true ? 'daha eski bir gün kapanmamış' : null,
       ]
         .filter(Boolean)
         .join(' · ') || null,

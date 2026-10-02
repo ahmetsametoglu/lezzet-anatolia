@@ -115,6 +115,7 @@ function DayEndText({ dayEnd }: { dayEnd: RegisterDayEndView & { date: string | 
   const reasons = [
     dayEnd.differences > 0 ? `${dayEnd.differences} fark` : null,
     dayEnd.waiting > 0 ? `${dayEnd.waiting} kayıt bekliyor` : null,
+    dayEnd.olderUnclosed ? 'daha eski bir gün kapanmamış' : null,
   ].filter(Boolean);
   return (
     <>

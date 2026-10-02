@@ -32,10 +32,12 @@ export interface RegisterDayEnd {
     days: Array<{ date: string; differences: RegisterDayDifference[] }>;
     /** Mağazanın kuyrukta bekleyen sipariş ve kasa hareketi; bekleyen para henüz kasada olmadığı için gün kapanmaz. */
     waiting: number;
+    /** Arama sınırının gerisinde kapanmamış gün var; kasanın kapanışı onu da mühürleyeceği için gün kapatılmaz. */
+    olderUnclosed: boolean;
   }>;
 }
 
-/** Kapanmamış gün en çok bu kadar geriye aranır. */
+/** Kapanmamış gün en çok bu kadar geriye aranır; sınır kasaya giden çağrı sayısını tutar. */
 const LOOKBACK_DAYS = 7;
 
 /**
@@ -62,12 +64,20 @@ export async function registerDayEnd(
         context: { job: 'register_close_day', warehouseId: store.warehouseId, date, differences },
       });
     }
-    if (!store.closed && (differences.length > 0 || store.waiting > 0)) {
+    if (store.olderUnclosed) {
+      await captureError(new Error('kasa: arama sınırının gerisinde kapanmamış gün var'), {
+        source: SOURCES.backendCron,
+        level: 'warning',
+        context: { job: 'register_close_day', warehouseId: store.warehouseId, date },
+      });
+    }
+    if (!store.closed && (differences.length > 0 || store.waiting > 0 || store.olderUnclosed)) {
       await notifyRegisterDayUnclosed(db, {
         warehouseId: store.warehouseId,
         date,
         differences: differences.length,
         waiting: store.waiting,
+        olderUnclosed: store.olderUnclosed,
       });
     }
     stores.push({
@@ -76,6 +86,7 @@ export async function registerDayEnd(
       days: store.days.length,
       differences: differences.length,
       waiting: store.waiting,
+      olderUnclosed: store.olderUnclosed,
     });
   }
   return { date, live: opts.close, stores };
@@ -96,7 +107,8 @@ export async function closeRegisterDay(
   const stores = [];
   for (const store of all) {
     const days = [];
-    for (const date of await unclosedDays(register, store, opts.date, opts.liveFromDate)) {
+    const unclosed = await unclosedDays(register, store, opts.date, opts.liveFromDate);
+    for (const date of unclosed.days) {
       const { from, to } = parisDayRange(date);
       const differences = [
         ...reconcileLedgerDay(await storeService.dayMovements(store, from, to)),
@@ -106,23 +118,33 @@ export async function closeRegisterDay(
     }
     const storeWaiting = waiting.get(store.warehouseId) ?? 0;
     let closed = days.length === 0;
-    if (!closed && opts.close && storeWaiting === 0 && days.every((day) => day.differences.length === 0)) {
+    if (!closed && opts.close && storeWaiting === 0 && !unclosed.older && days.every((day) => day.differences.length === 0)) {
       await register.closeDay(store.externalStoreId, opts.date);
       closed = true;
     }
-    stores.push({ warehouseId: store.warehouseId, closed, days, waiting: storeWaiting });
+    stores.push({ warehouseId: store.warehouseId, closed, days, waiting: storeWaiting, olderUnclosed: unclosed.older });
   }
   return { date: opts.date, stores };
 }
 
-/** İstenen günden geriye kapanmamış günler, eskiden yeniye: kapanmış güne, canlıya geçiş gününe ya da sınıra kadar. */
-async function unclosedDays(register: CashRegister, store: RegisterStore, date: string, liveFromDate: string): Promise<string[]> {
+/**
+ * İstenen günden geriye kapanmamış günler, eskiden yeniye: kapanmış güne, canlıya geçiş gününe ya da sınıra kadar. Sınırda durulursa
+ * bir gün daha bakılır (`older`), çünkü sınırın gerisinde kapanmamış gün varsa kapanış onu karşılaştırmadan mühürlerdi.
+ */
+async function unclosedDays(
+  register: CashRegister,
+  store: RegisterStore,
+  date: string,
+  liveFromDate: string,
+): Promise<{ days: string[]; older: boolean }> {
   const days: string[] = [];
-  for (let day = date; days.length < LOOKBACK_DAYS && day >= liveFromDate; day = previousDay(day)) {
-    if ((await register.dayClosedAt(store.externalStoreId, day)) !== null) break;
+  let day = date;
+  for (; days.length < LOOKBACK_DAYS && day >= liveFromDate; day = previousDay(day)) {
+    if ((await register.dayClosedAt(store.externalStoreId, day)) !== null) return { days, older: false };
     days.unshift(day);
   }
-  return days;
+  const older = day >= liveFromDate && (await register.dayClosedAt(store.externalStoreId, day)) === null;
+  return { days, older };
 }
 
 /** Kuyruk mağazalara dağıtılır ki bir deponun birikmiş kuyruğu başka deponun gününü bekletmesin. */

@@ -93,7 +93,7 @@ export async function notifyRunCloseMismatch(
  */
 export async function notifyRegisterDayUnclosed(
   db: SupabaseClient,
-  input: { warehouseId: string; date: string; differences: number; waiting: number },
+  input: { warehouseId: string; date: string; differences: number; waiting: number; olderUnclosed: boolean },
 ): Promise<void> {
   try {
     await dispatchStaffNotification(db, {
@@ -101,7 +101,7 @@ export async function notifyRegisterDayUnclosed(
       roles: ['admin', 'accounting'],
       warehouseId: input.warehouseId,
       target: null,
-      payload: { date: input.date, differences: input.differences, waiting: input.waiting },
+      payload: { date: input.date, differences: input.differences, waiting: input.waiting, olderUnclosed: input.olderUnclosed },
       dedupeKey: `register-day:${input.warehouseId}:${input.date}`,
     });
   } catch (err) {

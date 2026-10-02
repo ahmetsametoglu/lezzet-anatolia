@@ -284,7 +284,8 @@ günler (en çok 7 gün geriye, canlıya geçişten önceye değil) sırayla kar
 
 Hepsi tutuyorsa gün kasada kapatılır (`POST /z/closure`); yalnız `HIBOUTIK_MODE=live` iken, çünkü kapanış geri
 alınmaz ve demoda yapılamıyor. Tutmuyorsa gün kapanmaz, yönetime ve muhasebeye bildirim gider; Hiboutik'in
-kapanışı önceki günleri de kapattığı için tutmayan gün düzelene kadar sonrakiler de bekler. Fark `error_log`a
+kapanışı önceki günleri de kapattığı için tutmayan gün düzelene kadar sonrakiler de bekler; aynı sebeple 7 günün
+gerisinde kapanmamış gün kalmışsa da gün kapatılmaz ve bildirim gider, o gün elle incelenir. Fark `error_log`a
 uyarı olarak, özet `job_run`a yazılır.
 
 **Ekranlar:** yeni ekran yok. Ayarlar › Kurulum: Hiboutik kartı (tesis ↔ mağaza ↔ çekmece eşlemesi, canlıya
