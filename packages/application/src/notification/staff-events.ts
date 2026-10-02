@@ -161,6 +161,28 @@ export async function notifyBankFeedChanged(
 }
 
 /**
+ * Eşlenen banka hesabına Pennylane'den hareket gelmiyor — muhasebeye ve yönetime; bankanın Pennylane bağlantısı yenilenene kadar banka
+ * satırı gelmez. Hesap ve gün başına bir kez haber olur, sessizlik sürerse ertesi gün yeniden hatırlatılır.
+ */
+export async function notifyBankFeedQuiet(
+  db: SupabaseClient,
+  input: { accountId: string; lastDate: string | null; quietDays: number; dedupeKey: string },
+): Promise<void> {
+  try {
+    await dispatchStaffNotification(db, {
+      kind: 'bank_feed_quiet',
+      roles: ['admin', 'accounting'],
+      warehouseId: null,
+      target: null,
+      payload: { accountId: input.accountId, lastDate: input.lastDate, quietDays: input.quietDays },
+      dedupeKey: input.dedupeKey,
+    });
+  } catch (err) {
+    yut(err, 'bank_feed_quiet');
+  }
+}
+
+/**
  * Sefer kapandı ama durak sonuçlanmadı: sevkiyat masası dürtülür, çünkü askıdaki durak bakan olmazsa kaybolmuş gibi kalır; zil yalnız "bak" der, gün seçmez.
  * Depo süzgeçlidir ve dedupe yoktur: her kapanış ayrıdır.
  */

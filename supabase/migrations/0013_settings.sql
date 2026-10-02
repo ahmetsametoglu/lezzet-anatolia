@@ -81,4 +81,6 @@ insert into public.settings (key, value, description) values
   ('packaging_unit_cost_cents',    '120',    'Paketleme (soğuk zincir) birim maliyeti (cent) — kâr hesabı.'),
   ('door_packaging_unit_cost_cents','0',     'Kapı önü satışta paketleme birim maliyeti (cent). Varsayılan 0: mal elden gidiyor, soğuk zincir paketi yok.'),
   -- Gel-al siparişinde randevu sistem dışıdır (telefon); ayrılmış mal süresiz bekleyemez, süre dolunca ofis görür ve karar verir.
-  ('pickup_wait_days',             '7',      'Gel-al siparişinin hazır bekleyebileceği süre (gün); dolunca ofis listesine düşer, iptal kararı ofisin.');
+  ('pickup_wait_days',             '7',      'Gel-al siparişinin hazır bekleyebileceği süre (gün); dolunca ofis listesine düşer, iptal kararı ofisin.'),
+  -- Banka hareketi Pennylane'e gecikmeli gelir; hafta sonuyla birlikte dört günlük sessizlik bağlantının düştüğünü gösterir.
+  ('pennylane_quiet_days',         '4',      'Eşlenen banka hesabına Pennylane''den bu kadar gün hareket gelmezse muhasebe ve yönetim uyarılır.');

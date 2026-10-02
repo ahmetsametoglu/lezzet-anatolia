@@ -74,6 +74,8 @@ const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, Operation
   register_write_stuck: 'management',
   // Banka satırının kararı web'deki Para ekranında verilir.
   bank_feed_changed: 'management',
+  // Sessiz hesap web'deki Pennylane kartında okunur.
+  bank_feed_quiet: 'management',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */

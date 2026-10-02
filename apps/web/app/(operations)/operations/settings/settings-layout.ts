@@ -18,6 +18,7 @@ export type SettingSection =
   | 'stock'
   | 'paymentLimits'
   | 'accounts'
+  | 'bankFeed'
   | 'cost'
   | 'pointsEarn'
   | 'pointsRedeem'
@@ -55,6 +56,7 @@ const SECTIONS: Record<SettingSection, Omit<SectionDef, 'key'>> = {
     layout: 'rows',
     hint: 'Paranın yazıldığı hesaplar. Kuruluma özgüdür, fabrika değeri yoktur.',
   },
+  bankFeed: { label: 'Pennylane banka akışı', tab: 'money', layout: 'rows' },
   cost: {
     label: 'Birim maliyet',
     tab: 'money',

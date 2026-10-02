@@ -53,3 +53,16 @@ export function planBankFeed(input: {
   // Sıfıra inen hareket bilgi taşımaz, satır silinir; izahsız satır Pennylane'in hâline çekilir.
   return transaction.amountCents > 0 ? { kind: 'update' } : { kind: 'remove' };
 }
+
+/** "Hareket gelmiyor" eşiğinin ayarı; banka hareketi gecikmeli iletir, hafta sonuyla birlikte dört günlük sessizlik olağan değildir. */
+export const BANK_FEED_QUIET_DAYS_KEY = 'pennylane_quiet_days';
+export const BANK_FEED_QUIET_DAYS_DEFAULT = 4;
+
+/**
+ * Hesap sessiz mi: Pennylane'den gelen son hareketin günü, hiç gelmediyse izlemenin başladığı gün, eşikten eski. Sessizlik çoğu zaman
+ * bankanın Pennylane bağlantısının düşmesidir; yenilenene kadar hiçbir banka satırı gelmez.
+ */
+export function bankFeedQuiet(input: { lastDate: string | null; watchedFrom: string; today: string; quietDays: number }): boolean {
+  const since = input.lastDate !== null && input.lastDate > input.watchedFrom ? input.lastDate : input.watchedFrom;
+  return (Date.parse(`${input.today}T00:00:00Z`) - Date.parse(`${since}T00:00:00Z`)) / 86_400_000 > input.quietDays;
+}

@@ -8,6 +8,8 @@ import { SettingScopeEnum } from '@lezzet/types';
 export const ExceptionScopeEnum = SettingScopeEnum.exclude(['global']);
 export type ExceptionScope = z.infer<typeof ExceptionScopeEnum>;
 import {
+  BANK_FEED_QUIET_DAYS_DEFAULT,
+  BANK_FEED_QUIET_DAYS_KEY,
   CONVERSATION_DEFAULT_HANDLER_FALLBACK,
   CONVERSATION_DEFAULT_HANDLER_HELP,
   CONVERSATION_DEFAULT_HANDLER_KEY,
@@ -334,6 +336,20 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
       'Ayar boşken payout olayı İŞLENMEZ ve sağlayıcı yeniden dener; ayar girilince işlenir. Yanlış hesap seçilirse banka ekstresinin satırı transferin karşısını bulamaz ve para iki hesapta birden görünür.',
     unsetNote: 'Boşken payout olayı işlenmez; sağlayıcı yeniden dener.',
     exceptionScopes: [],
+  },
+
+  // ── Pennylane banka akışı ─────────────────────────────────────────────────
+  {
+    key: BANK_FEED_QUIET_DAYS_KEY,
+    label: 'Hareket gelmiyor uyarısı',
+    help: "Eşlenen banka hesabına Pennylane'den bu kadar gün hareket gelmezse muhasebe ve yönetim uyarılır; çoğu zaman bankanın Pennylane bağlantısı düşmüştür.",
+    section: 'bankFeed',
+    kind: 'integer',
+    unit: 'gün',
+    min: 1,
+    max: 30,
+    exceptionScopes: NONE,
+    fallback: BANK_FEED_QUIET_DAYS_DEFAULT,
   },
 
   // ── Stok & tazelik ────────────────────────────────────────────────────────

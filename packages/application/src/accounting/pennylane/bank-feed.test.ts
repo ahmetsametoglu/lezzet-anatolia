@@ -3,7 +3,8 @@ import { AccountService, MoneyMovementService, PennylaneAccountService, Pennylan
 import { mustDelete, purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
 import type { PennylaneCursor } from '@lezzet/types';
 import { setMovementNature } from '../natures';
-import { PENNYLANE_LIVE_FROM_KEY, syncBankFeed } from './bank-feed';
+import { parisDateOf } from '@lezzet/helper';
+import { PENNYLANE_LIVE_FROM_KEY, checkBankFeedQuiet, syncBankFeed } from './bank-feed';
 import { memoryPennylane } from './memory-pennylane.testkit';
 
 /*
@@ -169,5 +170,22 @@ describe('Pennylane banka hareketi okuması', () => {
     expect(await sync()).toMatchObject({ listed: 1, removed: 1 });
     expect(await movements.getById(rowA!.id)).toBeNull();
     expect(await rowsOf()).toHaveLength(1);
+  });
+
+  it('eşikten uzun süre hareket gelmeyen eşlenmiş hesap için muhasebe uyarılır, eşik içinde uyarı olmaz', async () => {
+    const today = parisDateOf(new Date());
+    const dayAfter = (n: number) => new Date(Date.parse(`${today}T10:00:00Z`) + n * 86_400_000);
+    twin.add(out(50_000, 'VIR A', today));
+    await sync();
+
+    expect(await checkBankFeedQuiet(db, { now: dayAfter(4) })).toMatchObject({ quiet: 0, quietDays: 4 });
+    expect(await checkBankFeedQuiet(db, { now: dayAfter(5) })).toMatchObject({ quiet: 1 });
+    const { data, error } = await db.from('notification').select('payload').eq('kind', 'bank_feed_quiet');
+    if (error) throw error;
+    const mine = ((data ?? []) as Array<{ payload: { accountId?: string; lastDate?: string } }>).filter(
+      (row) => row.payload.accountId === accountId,
+    );
+    expect(mine.length).toBeGreaterThan(0);
+    expect(mine.every((row) => row.payload.lastDate === today)).toBe(true);
   });
 });

@@ -784,6 +784,12 @@ export async function importBankFileAction(
     if (!profile || profile.accountId !== input.accountId) return { data: null, error: 'Şablon bulunamadı — sayfayı tazeleyin.' };
 
     const outcome = await importBankRows({ accountId: input.accountId, profile, fileName: input.fileName, rows: input.rows });
+    if (outcome.status === 'pennylane_feed') {
+      return {
+        data: null,
+        error: `Bu hesabın ${outcome.from} ve sonraki hareketleri Pennylane'den geliyor; dosyadan yalnız o günden önceki satırlar yüklenebilir.`,
+      };
+    }
     revalidatePath(FINANCE_PATH);
     return { data: { inserted: outcome.inserted, duplicates: outcome.duplicates, failures: outcome.failures }, error: null };
   } catch (error) {

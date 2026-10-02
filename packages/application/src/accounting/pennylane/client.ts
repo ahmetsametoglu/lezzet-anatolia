@@ -1,5 +1,6 @@
 import { toCents } from '@lezzet/helper';
 import {
+  PennylaneModeEnum,
   PennylaneApiBankAccountPageSchema,
   PennylaneApiChangePageSchema,
   PennylaneApiMeSchema,
@@ -39,6 +40,14 @@ const PAGE_LIMIT = 100;
 const CHANGE_PAGE_LIMIT = 1000;
 
 const realClock = { now: () => Date.now(), sleep: (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)) };
+
+/** Anahtar ya da kip yoksa port yoktur: Pennylane'e bağlanamayan eşitleme "okudum" diyemesin. */
+export function pennylaneFromEnv(): PennylanePort | null {
+  const token = process.env.PENNYLANE_API_TOKEN;
+  const mode = PennylaneModeEnum.safeParse(process.env.PENNYLANE_MODE);
+  if (!token || !mode.success) return null;
+  return pennylanePort({ token, mode: mode.data });
+}
 
 /** Muhasebe portunun Pennylane uyarlaması; anahtarın şirketi ilk istekte bir kez okunur ve kiple karşılaştırılır. */
 export function pennylanePort(config: PennylaneConfig): PennylanePort {

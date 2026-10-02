@@ -38,6 +38,8 @@ import { SHIPMENT_ORPHAN, shipmentOrphanJob } from './jobs/shipment-orphan';
 import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user-text';
 import { SCAN_TRUST, scanTrustJob } from './jobs/trust-scan';
 import { REGISTER_SYNC, registerSyncJob } from './jobs/register-sync';
+import { PENNYLANE_SYNC, pennylaneSyncJob } from './jobs/pennylane-sync';
+import { BANK_FEED_QUIET, bankFeedQuietJob } from './jobs/bank-feed-quiet';
 import { REGISTER_CLOSE_DAY, registerCloseCron, registerCloseDayJob } from './jobs/register-close-day';
 
 /**
@@ -240,6 +242,21 @@ cron.schedule(
   registerCloseCron(),
   () => {
     void runJob(REGISTER_CLOSE_DAY, registerCloseDayJob);
+  },
+  { timezone: 'Europe/Paris' },
+);
+
+// Banka hareketi Pennylane'den beş dakikada bir: hareket bankadan Pennylane'e zaten gecikmeli gelir, daha sık sormak istek sınırını
+// yerdi. Beşin katından bir dakika sonra, aynı dakikaya düşen işlerle birbirini bekletmesin.
+cron.schedule('1-59/5 * * * *', () => {
+  void runJob(PENNYLANE_SYNC, pennylaneSyncJob);
+});
+
+// "Hareket gelmiyor" denetimi günde bir, mesai başında: sessizlik gün ölçeğindedir ve bankanın bağlantısını mesaide yenilemek gerekir.
+cron.schedule(
+  '10 9 * * *',
+  () => {
+    void runJob(BANK_FEED_QUIET, bankFeedQuietJob);
   },
   { timezone: 'Europe/Paris' },
 );

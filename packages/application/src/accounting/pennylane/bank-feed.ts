@@ -6,10 +6,11 @@ import {
   SettingsService,
   type Db,
 } from '@lezzet/database';
-import { planBankFeed } from '@lezzet/domain-core';
+import { BANK_FEED_QUIET_DAYS_DEFAULT, BANK_FEED_QUIET_DAYS_KEY, bankFeedQuiet, planBankFeed } from '@lezzet/domain-core';
+import { parisDateOf } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import type { MoneyMovement, PennylaneAccount, PennylaneTransaction, PennylaneTransactionMirror } from '@lezzet/types';
-import { notifyBankFeedChanged } from '../../notification/staff-events';
+import { notifyBankFeedChanged, notifyBankFeedQuiet } from '../../notification/staff-events';
 import { PennylaneError } from './errors';
 import type { PennylanePort } from './port';
 
@@ -34,6 +35,12 @@ export async function pennylaneLiveFrom(db: Db): Promise<string | null> {
     return null;
   }
   return value;
+}
+
+/** Hesabın Pennylane'den okunduğu ilk gün: hesap eşlenmiş ve okuma açıksa canlıya geçiş günü, değilse `null`. */
+export async function pennylaneFeedFrom(db: Db, accountId: string): Promise<string | null> {
+  const [liveFrom, mapping] = await Promise.all([pennylaneLiveFrom(db), new PennylaneAccountService(db).findByAccount(accountId)]);
+  return liveFrom && mapping ? liveFrom : null;
 }
 
 /** Canlıya geçiş gününü yazar, `null` okumayı kapatır; gün değişince eşlenen hesapların listesi yeni günden yeniden okunur. */
@@ -122,6 +129,41 @@ export async function syncBankFeed(db: Db, pennylane: PennylanePort, opts: { now
   await cursors.save(STREAM, changes.last ?? since);
 
   return { company: company.name, listed, changes: changes.ids.size, ...counts };
+}
+
+/**
+ * Günlük "hareket gelmiyor" denetimi (akış 6): eşlenen hesabın Pennylane'den gelen son hareketi eşikten eskiyse muhasebe ve yönetim
+ * uyarılır. Ayna okunur, Pennylane'e sorulmaz; eşitleme durduysa da sessizlik görünür.
+ */
+export async function checkBankFeedQuiet(db: Db, opts: { now?: Date } = {}): Promise<Record<string, unknown>> {
+  const liveFrom = await pennylaneLiveFrom(db);
+  if (!liveFrom) return { skipped: 'not_live' };
+  const quietDays = await quietDaysOf(db);
+  const today = parisDateOf(opts.now ?? new Date());
+  const mirrors = new PennylaneTransactionService(db);
+  const accounts = await new PennylaneAccountService(db).list();
+  let quiet = 0;
+  for (const account of accounts) {
+    const lastDate = await mirrors.latestValueDate(account.accountId);
+    const mappedOn = parisDateOf(new Date(account.createdAt));
+    if (!bankFeedQuiet({ lastDate, watchedFrom: mappedOn > liveFrom ? mappedOn : liveFrom, today, quietDays })) continue;
+    quiet += 1;
+    await notifyBankFeedQuiet(db, {
+      accountId: account.accountId,
+      lastDate,
+      quietDays,
+      dedupeKey: `bank-feed-quiet:${account.accountId}:${today}`,
+    });
+  }
+  return { accounts: accounts.length, quiet, quietDays };
+}
+
+/** Eşik ayarı; okunamayan değer varsayılana düşer ve bunu söyler, uyarı sessizce kapanmasın. */
+async function quietDaysOf(db: Db): Promise<number> {
+  const value = await new SettingsService(db).get<unknown>(BANK_FEED_QUIET_DAYS_KEY, BANK_FEED_QUIET_DAYS_DEFAULT);
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) return value;
+  logger.warn({ setting: BANK_FEED_QUIET_DAYS_KEY }, 'pennylane: hareket gelmiyor eşiği okunamadı, varsayılan kullanılıyor');
+  return BANK_FEED_QUIET_DAYS_DEFAULT;
 }
 
 /** Akışın `since` anından sonraki olayları; aynı hareketin olayları tek okumaya iner, son hâli Pennylane'den okunur. */

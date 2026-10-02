@@ -1,11 +1,20 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, CounterpartyService, MoneyAllocationService, MoneyDocumentService, MoneyMovementService, OrderService,
-  ProductService, UserProfileService, serviceDb,
+  AccountService,
+  CategoryService,
+  CounterpartyService,
+  MoneyAllocationService,
+  MoneyDocumentService,
+  MoneyMovementService,
+  OrderService,
+  PennylaneAccountService,
+  ProductService,
+  UserProfileService,
+  serviceDb,
 } from '@lezzet/database';
-import { setMovementNature } from '@lezzet/application';
+import { PENNYLANE_LIVE_FROM_KEY, setMovementNature } from '@lezzet/application';
 import { failingAiModel } from '@lezzet/ai/testing';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { mustDelete, purgeTestData, createTestWarehouse, settingsSnapshot } from '@lezzet/database/testing';
 import { analyzeFile, importBankRows, profileFor, saveProfile } from './import';
 import { applyMatch, documentPaymentOptions, linkDocument, matchOptions, matchQueue, suggestionsForMovements, unmatchRow } from './reconcile';
 
@@ -86,7 +95,9 @@ async function importStatement(rows = STATEMENT, fileName = 'releve.csv') {
   const profile =
     (await profileFor(bankAccount)) ??
     (await saveProfile({ accountId: bankAccount, name: `Crédit Mutuel ${stamp}`, suggestion }));
-  return importBankRows({ accountId: bankAccount, profile, fileName, rows });
+  const outcome = await importBankRows({ accountId: bankAccount, profile, fileName, rows });
+  if (outcome.status !== 'ok') throw new Error(`ekstre yazılmadı: ${outcome.status}`);
+  return outcome;
 }
 
 describe('dosya çözümlenir ve şablon kaydedilir', () => {
@@ -591,5 +602,31 @@ describe('satırın önerisi listede (12.19 · tek liste + tek panel)', () => {
     // Eşleşen (mutabık) satırın önerisi okunmaz, liste onu izahlı gösterir.
     await applyMatch(withRef.id, { kind: 'document', documentId: belge.id });
     expect((await suggestionsForMovements([withRef.id])).rows).toEqual([]);
+  });
+});
+
+describe("Pennylane'e eşlenen hesap", () => {
+  it('canlıya geçiş gününden sonraki satırı taşıyan dosya yazılmaz, çünkü iki kaynak aynı banka satırını iki kez yazardı', async () => {
+    const settings = settingsSnapshot(db);
+    await settings.override(PENNYLANE_LIVE_FROM_KEY, dayOffset(-2));
+    await new PennylaneAccountService(db).save({
+      accountId: bankAccount,
+      pennylaneBankAccountId: 900_000_000 + (stamp % 100_000_000),
+      pennylaneName: 'Banque',
+    });
+    try {
+      const suggestion = await analyzeFile(STATEMENT, { model: failingAiModel('test: AI atlandı') });
+      const profile =
+        (await profileFor(bankAccount)) ?? (await saveProfile({ accountId: bankAccount, name: `Crédit Mutuel ${stamp}`, suggestion }));
+      expect(await importBankRows({ accountId: bankAccount, profile, fileName: 'pennylane.csv', rows: STATEMENT })).toEqual({
+        status: 'pennylane_feed',
+        from: dayOffset(-2),
+      });
+      expect(await movements.listTouchingAccountSince(bankAccount, '2000-01-01')).toHaveLength(0);
+    } finally {
+      // Eşleme ve ayar kalırsa dosyanın öteki testlerindeki yükleme de reddedilirdi.
+      await mustDelete(db, 'pennylane_account', (q) => q.eq('account_id', bankAccount));
+      await settings.restore();
+    }
   });
 });

@@ -1,4 +1,5 @@
 import { bankColumnsTask, runTask, type AiModel } from '@lezzet/ai';
+import { pennylaneFeedFrom } from '@lezzet/application';
 import {
   BankImportProfileService, BankImportService, MoneyMovementService, serviceDb,
 } from '@lezzet/database';
@@ -60,7 +61,9 @@ export async function analyzeFile(
   return { ...result.data, missing: missingOf(result.data) };
 }
 
-interface ImportOutcome {
+type ImportOutcome = ImportWritten | { status: 'pennylane_feed'; from: string };
+
+interface ImportWritten {
   status: 'ok';
   batch: BankImport;
   /** Yazılan hareket sayısı. */
@@ -84,6 +87,9 @@ export async function importBankRows(input: {
 }): Promise<ImportOutcome> {
   const db = serviceDb();
   const { rows, failures } = parseBankRows(input.rows, input.profile);
+  // Eşlenen hesabın canlıya geçiş gününden sonrası Pennylane'den gelir; dosya aynı banka satırını ikinci kez yazardı.
+  const feedFrom = await pennylaneFeedFrom(db, input.accountId);
+  if (feedFrom && rows.some((row) => row.valueDate >= feedFrom)) return { status: 'pennylane_feed', from: feedFrom };
   const fingerprinted = fingerprintRows(input.accountId, rows);
 
   const batch = await new BankImportService(db).insert({

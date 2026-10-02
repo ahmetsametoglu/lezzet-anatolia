@@ -635,3 +635,5 @@ export { parcelOrdinal, readOrderTracking, type OrderTracking, type TrackedParce
 export { registerDayEnd } from './register/day-end';
 export { hiboutikFromEnv } from './register/hiboutik/client';
 export { registerLiveFrom, requeueRegisterStore, setRegisterLiveFrom, syncRegisterQueue } from './register/sync';
+export { pennylaneFromEnv } from './accounting/pennylane/client';
+export { PENNYLANE_LIVE_FROM_KEY, checkBankFeedQuiet, pennylaneFeedFrom, syncBankFeed } from './accounting/pennylane/bank-feed';

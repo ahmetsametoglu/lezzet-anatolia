@@ -312,6 +312,13 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
     title: p.change === 'removed' ? "İzahlı banka hareketi Pennylane'de silindi" : "İzahlı banka hareketi Pennylane'de değişti",
     subtitle: `${typeof p.valueDate === 'string' ? `${p.valueDate} · ` : ''}satır olduğu gibi duruyor, elle bakın`,
   }),
+  /* Sessizlik çoğu zaman bankanın Pennylane bağlantısının düşmesidir; yenilenene kadar banka satırı gelmez. */
+  bank_feed_quiet: (p) => ({
+    tone: 'alert',
+    label: 'Banka',
+    title: "Pennylane'den banka hareketi gelmiyor",
+    subtitle: `${typeof p.lastDate === 'string' ? `son hareket ${p.lastDate}` : 'hiç hareket gelmedi'} · bankanın Pennylane bağlantısını yenileyin`,
+  }),
   document_undeliverable: (p) => ({
     // `alert`: yasal belge hiçbir kanala ulaşamadı, iş insana düştü.
     tone: 'alert',

@@ -324,7 +324,7 @@ gösterilen sıra aslında **siparişin verilme sırasıydı** — ekran olmayan
 
 1. **Online** (kart) — ödeme sağlayıcı üzerinden.
 2. **Kapıda** — nakit / kart. Kurye toplar. Çek hiçbir koşulda kabul edilmez.
-3. **Banka** — hesap hareketleri Excel ile içe alınır.
+3. **Banka** — hesap hareketleri Pennylane'den okunur; Pennylane'e eşlenmemiş hesapta Excel ile içe alınır.
 
 > **Depo ağı (01.08):** her depo aynı zamanda bir kapıda-tahsilat kasasıdır — depo başına ayrı
 > `Account` satırı açılır, model değişmez; merkeze aktarım hesaplar arası harekettir (§17).
@@ -414,7 +414,7 @@ Sipariş kalem-kalem karşılanabilir (all-or-nothing değil). Eksik iki noktada
 - Sistem **resmî muhasebe değildir**, e-fatura kesmez; **hiçbir resmî belge (fatura, avoir vb.) sistemde üretilmez** — müşteri faturasını muhasebe tarafından alır, sitede fatura indirme yoktur.
 - Yaptığı: dış muhasebe yazılımına gidecek veriyi temiz üretmek (export: satış dosyası + dönemin **hareket dökümü** — her hareket hesabı, türü ve hesap kodu, belgeleri, karşı tarafı ve etiketleriyle, 12.15) ve o veriden iş rakamları çıkarmak.
 - Resmî fatura numarası dış yazılımda üretilir; sistem bir **referans numarası** verir, sonradan gerçek fatura numarasıyla eşleştirilir.
-- Banka hareketleri Excel ile alınır, sipariş/alımlarla eşleştirilir (öneri + elle onay; tam otomatik değil).
+- Banka hareketleri Pennylane'den okunur (eşlenmemiş hesapta Excel ile alınır), sipariş/alımlarla eşleştirilir (öneri + elle onay; tam otomatik değil). Eşlenen hesaba canlıya geçiş gününden sonrası için Excel yüklenmez, çünkü iki kaynak aynı satırı iki kez yazardı.
 
 ### Para hareketleri, hesaplar ve satın almalar
 

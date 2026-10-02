@@ -1,6 +1,6 @@
 import type { PennylaneTransaction } from '@lezzet/types';
 import { describe, expect, it } from 'vitest';
-import { planBankFeed, type BankFeedMirror } from './bank-feed';
+import { bankFeedQuiet, planBankFeed, type BankFeedMirror } from './bank-feed';
 
 const LIVE = '2026-10-01';
 const tx = (over: Partial<PennylaneTransaction> = {}): PennylaneTransaction => ({
@@ -64,5 +64,22 @@ describe('Pennylane hareketinin banka satırına etkisi', () => {
   it("Pennylane'de geri gelen hareketin silinmiş satırı yeniden yazılır; uyarıyla kalan izahlı satır yalnız aynada geri döner", () => {
     expect(plan(tx(), mirror(null, { removed: true }))).toEqual({ kind: 'insert' });
     expect(plan(tx(), mirror(true, { removed: true }))).toEqual({ kind: 'mirror' });
+  });
+});
+
+describe('hareket gelmiyor uyarısı', () => {
+  const quiet = (lastDate: string | null, today: string, watchedFrom = '2026-10-01') =>
+    bankFeedQuiet({ lastDate, watchedFrom, today, quietDays: 4 });
+
+  it('son hareketten eşik kadar gün geçmesi olağandır, fazlası sessizliktir', () => {
+    expect(quiet('2026-10-02', '2026-10-06')).toBe(false);
+    expect(quiet('2026-10-02', '2026-10-07')).toBe(true);
+  });
+
+  it('hiç hareket gelmediyse sayaç izlemenin başladığı günden, sonradan eşlenen hesapta eşleme gününden başlar', () => {
+    expect(quiet(null, '2026-10-05')).toBe(false);
+    expect(quiet(null, '2026-10-06')).toBe(true);
+    // Eşlemeden önce kalan eski hareket yeni eşlenen hesabı sessiz göstermez.
+    expect(quiet('2026-09-20', '2026-10-12', '2026-10-10')).toBe(false);
   });
 });

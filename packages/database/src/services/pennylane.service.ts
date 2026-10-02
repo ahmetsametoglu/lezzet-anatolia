@@ -28,6 +28,10 @@ export class PennylaneAccountService extends BaseDbService<PennylaneAccount, Pen
     return this.getOneBy({ pennylaneBankAccountId });
   }
 
+  findByAccount(accountId: string): Promise<PennylaneAccount | null> {
+    return this.getOneBy({ accountId });
+  }
+
   save(row: PennylaneAccountInsert): Promise<PennylaneAccount> {
     return this.upsert(row, 'account_id');
   }
@@ -59,6 +63,12 @@ export class PennylaneTransactionService extends BaseDbService<PennylaneTransact
   /** Hesabın Pennylane'de silinmemiş hareketleri; liste baştan okununca aradaki silinme bunlardan bulunur. */
   listPresent(accountId: string): Promise<PennylaneTransactionMirror[]> {
     return this.getAll({ accountId, removed: false });
+  }
+
+  /** Hesabın Pennylane'den gelen son hareketinin günü; hiç gelmediyse `null`. */
+  async latestValueDate(accountId: string): Promise<string | null> {
+    const [latest] = await this.getAll({ accountId }, { orderBy: 'valueDate', orderDirection: 'desc', limit: 1 });
+    return latest?.valueDate ?? null;
   }
 
   save(row: PennylaneTransactionMirrorInsert): Promise<PennylaneTransactionMirror> {
