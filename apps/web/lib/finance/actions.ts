@@ -77,15 +77,8 @@ import type {
 } from '@/app/(operations)/operations/finance/finance-types';
 import type { ManualType } from '@/components/operation/form/movement-form/schema';
 
-// Para ekranı server action'ları — 'use server' + guard ilk + kapıya devret + `{ data, error }`
-// döner (throw yok) + `revalidatePath`.
-//
-// **Guard `requireFinance`, `requireAdmin` DEĞİL** (09.2'nin kapısı): kasa hareketi ve tedarikçi
-// ödemesi muhasebecinin de işidir; ekranın rayda beyan ettiği rol de bu (`ops-nav`: FINANCE). Tek
-// rollü `requireAdmin` konsaydı muhasebeci kendi ekranını açıp hiçbir şey yazamazdı.
-//
-// **İş kuralı burada YOK:** hangi hareketin geçerli olduğuna motor ve uygulama kapıları karar veriyor;
-// action'ın işi guard, çeviri ve tazeleme. Kuralı buraya da yazsaydık iki kopya bir gün ayrışırdı.
+// Para ekranı server action'ları: guard, kapıya devir, `{ data, error }` dönüşü ve tazeleme; iş kuralı motorda ve uygulama
+// kapılarındadır. Guard `requireFinance`tır, çünkü kasa hareketi ve tedarikçi ödemesi muhasebecinin de işidir.
 
 /** Motorun reddini operatörün diline çevirir; bilinmeyen sebep ham bırakılmaz, genel cümleye düşer. */
 function invalidMessage(reason: string): string {
@@ -105,38 +98,24 @@ interface ManualMovementInput {
   amountCents: number;
   /** Yalnız `misc` için anlamlı: sebebi bilinmeyen paranın yönü kullanıcıdan gelir. */
   direction: MovementDirection;
-  /** TÜR (13.09) — "bu para neyin parası"; `reklam` ise kampanya sorulur. Boşsa hareket izah bekler. */
+  /** Tür, "bu para neyin parası"; `reklam` ise kampanya sorulur. Boşsa hareket izah bekler. */
   nature: string | null;
-  /** Kime ödendi / kimden geldi (13.09). */
+  /** Kime ödendi ya da kimden geldi. */
   counterpartyId: string | null;
   /** Serbest etiketler. */
   tags: string[];
-  /** Reklam giderinde kampanya künyesi (12.5) — analitiğin ROAS köprüsü. Boşsa yazılmaz. */
+  /** Reklam giderinde kampanya künyesi, analitiğin ROAS köprüsü; boşsa yazılmaz. */
   campaign: string;
   valueDate: string;
   description: string;
-  /** Dayanak belge (12.12): açık belgeden "Ödemesini yaz" ile gelindiyse dolu; ödeme belgeye bağlanır. */
+  /** Dayanak belge: açık belgeden "Ödemesini yaz" ile gelindiyse dolu; ödeme belgeye bağlanır. */
   documentId?: string | null;
 }
 
 /**
- * **Elle hareket** — gider, sermaye ya da sınıflandırılmamış.
- *
- * Sipariş tahsilatı ve iade BİLEREK yok (tasarım §6): onlar kendi akışlarından düşer (online ödeme,
- * kapıda tahsilat, kurye gün kapanışı) ve elle girilseydi aynı para iki kez sayılırdı — bir kez
- * akıştan, bir kez elden. Stok alımı da yok: o `purchase` tipi mal kabule ya da tedarikçiye bağlıdır,
- * motor bağsız olanı zaten reddediyor (`supply_link_missing`). **Tek kapı tedarikçinin belgesidir**
- * (12.26): belgeden "Ödemesini yaz" ile gelinen ödenecek tedarikçi belgesinde ödeme ALIM olarak yazılır
- * (`recordSupplierPayment`; tedarikçi ve belgenin kabulü bağlı) — tedarikçi borcu o belgeden türüyor ve
- * gider diye yazılan ödeme borcu hiç kapatmazdı.
- *
- * **Reklam gideri ayrı kapıdan geçer** çünkü tür sabiti tek yerde yaşamalı: `reklam` dizesini burada
- * elle yazsaydık, sabit değişince rapor hata vermeden boşalırdı (12.5'in künyesi: *"sessiz sıfır,
- * yanlış cevabın en kötüsü"*).
- *
- * **Belgeden gelindiyse** ödeme yazıldıktan sonra belgeye bağlanır (13.09: bağ tutarıyla). Bağ
- * düşerse hareket yine yazılmıştır ve cevap bunu SÖYLER — "olmadı" deseydik operatör tekrar girip
- * parayı iki kez yazardı.
+ * Elle hareket: gider, sermaye ya da sınıflandırılmamış; sipariş tahsilatı, iade ve stok alımı kendi akışlarından yazılır, elle
+ * girilseydi aynı para iki kez sayılırdı. Belgeden gelindiyse ödeme yazıldıktan sonra belgeye bağlanır; bağ düşerse cevap hareketin
+ * yazıldığını söyler ki operatör parayı ikinci kez girmesin.
  */
 export async function recordManualMovementAction(
   input: ManualMovementInput & { proposalId?: string | null },
@@ -154,21 +133,15 @@ export async function recordManualMovementAction(
     };
 
     /**
-     * Öneriden gelindiyse kayıt ile kuyruk satırı BİRLİKTE koşar; sıra tek yerde (`withProposal`).
-     *
-     * **Motorun `invalid` cevabı FIRLATILIR, döndürülmez** — ve bu, sarmalın var olmasının doğrudan
-     * sonucu: `invalid` hiçbir şey yazılmadı demek, ama `work()` sessizce dönseydi `withProposal`
-     * satırı "uygulandı" diye damgalardı. Kuyruğun söyleyebileceği en kötü yalan bu olurdu.
-     * Fırlatınca satır `failed`e park ediyor ve sebebi orada yazıyor.
+     * Öneriden gelindiyse kayıt ile kuyruk satırı birlikte koşar (`withProposal`). Motorun `invalid` cevabı fırlatılır, çünkü sessizce
+     * dönseydi satır "uygulandı" damgası yerdi; fırlatılınca satır sebebiyle `failed`e park eder.
      */
     const outcome = await withProposal(
       input.proposalId,
       staff.profileId,
       async () => {
-        // TEDARİKÇİ FATURASININ ÖDEMESİ (12.26): mal bedelidir — tedarikçiye bağlı ALIM (`purchase`),
-        // gider değil. Bir tur "Ödemesini yaz" onu gider olarak yazıyordu: hareket tedarikçi bağı
-        // taşımadığı için tedarikçi borcunu hiç kapatmıyordu ve muhasebeci dökümünde mal alımı gider
-        // görünüyordu. Faturanın kabul bağı da ödemeye geçer (hangi kabulün parası olduğu görünsün).
+        // Tedarikçi faturasının ödemesi mal bedelidir: tedarikçiye bağlı alım (`purchase`) olarak yazılır ki tedarikçi borcunu
+        // kapatsın; faturanın kabul bağı da ödemeye geçer.
         const document = input.documentId ? await new MoneyDocumentService(serviceDb()).getById(input.documentId) : null;
         if (document?.supplierId && document.direction === 'out') {
           const payment = await recordSupplierPayment({
@@ -226,21 +199,16 @@ interface TransferInput {
 }
 
 /**
- * **Transfer** — hesaptan hesaba. TEK satır yazılır; para karşı hesaba ters işaretle yansır
- * (`account_movement` görünümü).
- *
- * Operatöre "gelir mi gider mi" diye sorulmaz ve tasarımın kendi gerekçesi bu: *"tek işlem, iki
- * hesapta simetrik hareket; kullanıcı 'gelir/gider' diye düşünmek zorunda kalmaz"*. Nakit bankaya
- * yatırıldığında işletme ne kazandı ne kaybetti — iki kutu arasında yer değiştirdi.
+ * Transfer: hesaptan hesaba tek satır yazılır, para karşı hesaba ters işaretle yansır (`account_movement`). Operatöre "gelir mi
+ * gider mi" sorulmaz, çünkü nakdin bankaya yatırılması iki kutu arasında yer değiştirmedir.
  */
 export async function recordTransferAction(input: TransferInput, proposalId?: string): Promise<ActionResult<{ movementId: string }>> {
   try {
     const staff = await requireFinance();
 
     /**
-     * Öneriden gelindiyse kayıt ile kuyruk satırı BİRLİKTE koşar (22.22) — elle hareketin aynı
-     * deseni. `invalid` FIRLATILIR, döndürülmez: hiçbir şey yazılmadı demektir ve sessizce dönseydi
-     * satır "uygulandı" damgası yerdi (`recordManualMovementAction` künyesi).
+     * Öneriden gelindiyse kayıt ile kuyruk satırı birlikte koşar; `invalid` fırlatılır, çünkü sessizce dönseydi satır "uygulandı"
+     * damgası yerdi (`recordManualMovementAction` künyesi).
      */
     const outcome = await withProposal(
       proposalId,
@@ -270,13 +238,8 @@ export async function recordTransferAction(input: TransferInput, proposalId?: st
 // ── Banka satırı: bağla · adını koy · geri al ─────────────────────────────────
 
 /**
- * Banka satırını hedefin parası yapar — **operatörün onayıyla** (12.4 · 12.13): sipariş tahsilatı,
- * müşteri iadesi, açık belge (tutarıyla), mal kabul, transfer ucu, başka hesap, zaten yazılmış
- * hareket ya da cari.
- *
- * Kapının kendisi hiçbir şeyi kendiliğinden uygulamıyor (*"öneri + elle onay, tam otomatik
- * değil"*); bu action o onayın taşıyıcısı. Hedefin yönü satıra uymuyorsa kapı reddeder; ekran zaten
- * uymayanı listelemiyor, kapı son emniyet.
+ * Banka satırını hedefin parası yapar, operatörün onayıyla: sipariş tahsilatı, müşteri iadesi, açık belge (tutarıyla), mal kabul,
+ * transfer ucu, başka hesap, zaten yazılmış hareket ya da cari. Hedefin yönü satıra uymuyorsa kapı reddeder; ekran uymayanı listelemez.
  */
 export async function applyMatchAction(movementId: string, target: MatchTarget): Promise<ActionResult<{ ok: true }>> {
   try {
@@ -292,9 +255,8 @@ export async function applyMatchAction(movementId: string, target: MatchTarget):
 }
 
 /**
- * Hareketin TÜRÜNÜ koyar ya da kaldırır (`nature: null`) — satırdaki tür seçici, kuyruğun "Gider"
- * menüsü ve seçim penceresinin "adını koy" bölümü (13.09 · ikinci karar). Banka satırında tür
- * koymak satırı mutabık yapar; kaldırmak, başka açıklaması yoksa satırı kuyruğa döndürür.
+ * Hareketin türünü koyar ya da kaldırır (`nature: null`): satırdaki tür seçici, kuyruğun "Gider" menüsü ve seçim penceresinin "adını
+ * koy" bölümü. Banka satırında tür koymak satırı mutabık yapar; kaldırmak, başka açıklaması yoksa satırı kuyruğa döndürür.
  */
 export async function setMovementNatureAction(movementId: string, nature: string | null): Promise<ActionResult<{ ok: true }>> {
   try {
@@ -309,7 +271,7 @@ export async function setMovementNatureAction(movementId: string, nature: string
   }
 }
 
-/** Hareketin CARİSİNİ koyar ya da kaldırır; carinin varsayılan türü boş türe geçer (13.09). */
+/** Hareketin carisini koyar ya da kaldırır; carinin varsayılan türü boş türe geçer. */
 export async function setMovementCounterpartyAction(movementId: string, counterpartyId: string | null): Promise<ActionResult<{ ok: true }>> {
   try {
     await requireFinance();
@@ -324,8 +286,8 @@ export async function setMovementCounterpartyAction(movementId: string, counterp
 }
 
 /**
- * Ekstre satırının eşleşmesini GERİ ALIR (13.09 · kullanıcı bulgusu) — satır ekstreden geldiği hâle
- * döner ve kuyruğa geri gelir; "zaten yazmıştım" birleşmesiyse elle yazılan satır geri kurulur.
+ * Ekstre satırının eşleşmesini geri alır: satır ekstreden geldiği hâle döner ve kuyruğa gelir; "zaten yazmıştım" birleşmesiyse elle
+ * yazılan satır geri kurulur.
  */
 export async function unmatchRowAction(movementId: string): Promise<ActionResult<{ ok: true }>> {
   try {
@@ -354,12 +316,11 @@ export async function removeAllocationAction(movementId: string, documentId: str
   }
 }
 
-// ── Liste devamı · sağ panel (12.17) ──────────────────────────────────────────
+// ── Liste devamı · sağ panel ──────────────────────────────────────────────────
 
 /**
- * Listenin SONRAKİ sayfası. Süzgeçler adresten okunur (`search`), böylece devam eden sayfa ilk
- * sayfayla aynı ölçüte uyar (müşteri ekranının deseni); sayfayı kuran okuma sayfanınkiyle aynıdır
- * (`finance-data.ts`). İmleç istemcide JSON metni olarak durur.
+ * Listenin sonraki sayfası: süzgeçler adresten okunur ki devam eden sayfa ilk sayfayla aynı ölçüte uysun; sayfayı kuran okuma
+ * sayfanınkiyle aynıdır (`finance-data.ts`). İmleç istemcide JSON metni olarak durur.
  */
 export async function loadMoreLedgerAction(search: string, cursor: string): Promise<ActionResult<Pick<LedgerView, 'rows' | 'nextCursor'>>> {
   try {
@@ -389,8 +350,8 @@ export async function loadMoreDocumentsAction(search: string, cursor: string): P
 }
 
 /**
- * Tek hareketin satırları (12.17) — "devamını yükle" ile gelmiş satır yazımdan sonra kendisi
- * tazelenir; listenin tamamı baştan istenmez (operatörün kaydırdığı yer kaybolmasın).
+ * Tek hareketin satırları: "devamını yükle" ile gelmiş satır yazımdan sonra kendisi tazelenir, liste baştan istenmez ki operatörün
+ * kaydırdığı yer kaybolmasın.
  */
 export async function ledgerRowsAction(movementId: string): Promise<ActionResult<MovementRowView[]>> {
   try {
@@ -414,8 +375,8 @@ export async function documentRowAction(documentId: string): Promise<ActionResul
 }
 
 /**
- * Sağ panelin hareket seçicisi (12.17 · muhasebeci deseni) — satırın önerileri ve hedefleri, menü
- * açılınca istenir. Hesap seçili olmasa da ("Tümü") aynı öneri: kuyruğun hesabına bağlı değil.
+ * Sağ panelin hareket seçicisi: satırın önerileri ve hedefleri menü açılınca istenir. Hesap seçili olmasa da ("Tümü") öneri aynıdır,
+ * çünkü kuyruğun hesabına bağlı değildir.
  */
 export async function matchOptionsAction(movementId: string): Promise<ActionResult<MatchOptionsView>> {
   try {
@@ -429,7 +390,7 @@ export async function matchOptionsAction(movementId: string): Promise<ActionResu
   }
 }
 
-/** Hareketi belgeye bağlar — hareket panelinin "Bağla"sı ve belge panelinin "Ödeme bağla"sı (12.17). */
+/** Hareketi belgeye bağlar: hareket panelinin "Bağla"sı ve belge panelinin "Ödeme bağla"sı. */
 export async function linkDocumentAction(movementId: string, documentId: string): Promise<ActionResult<{ ok: true }>> {
   try {
     await requireFinance();
@@ -443,7 +404,7 @@ export async function linkDocumentAction(movementId: string, documentId: string)
   }
 }
 
-/** Belge panelinin ödemeleri ve ödeme adayları (12.17) — panel açılınca istenir. */
+/** Belge panelinin ödemeleri ve ödeme adayları; panel açılınca istenir. */
 export async function documentPaymentsAction(documentId: string): Promise<ActionResult<DocumentPaymentsView>> {
   try {
     await requireFinance();
@@ -455,18 +416,18 @@ export async function documentPaymentsAction(documentId: string): Promise<Action
   }
 }
 
-// ── Belge (12.12) ─────────────────────────────────────────────────────────────
+// ── Belge ─────────────────────────────────────────────────────────────────────
 
 interface DocumentInput {
   kind: DocumentKind;
   number: string;
   issuedOn: string;
-  /** Vade (12.26) — belgede yazmıyorsa `null`. */
+  /** Vade; belgede yazmıyorsa `null`. */
   dueOn: string | null;
-  /** Karşı taraf (13.09): cari YA DA tedarikçi — ikisinden en çok biri. */
+  /** Karşı taraf: cari ya da tedarikçi, ikisinden en çok biri. */
   counterpartyId: string | null;
   supplierId: string | null;
-  /** Neyin faturası (12.26): mal kabul YA DA tedarik siparişi — yalnız tedarikçinin belgesinde; borç bu belgeden türer. */
+  /** Neyin faturası: mal kabul ya da tedarik siparişi; yalnız tedarikçinin belgesinde, borç bu belgeden türer. */
   stockIntakeId: string | null;
   purchaseOrderId: string | null;
   direction: MovementDirection;
@@ -476,21 +437,16 @@ interface DocumentInput {
   amountCents: number;
   /** **Cent**; `null` = belgede KDV yazmıyor (sıfır "KDV yok" demek olurdu). */
   vatAmountCents: number | null;
-  /** KDV rejimi (12.26) — ters yüklemede ve muafiyette belgede KDV olamaz. */
+  /** KDV rejimi; ters yüklemede ve muafiyette belgede KDV olamaz. */
   vatRegime: DocumentVatRegime;
   tags: string[];
   note: string;
 }
 
 /**
- * **Belge girişi** — fatura gelince borç doğar; ödeme sonra hareket olarak gelip belgeye bağlanır.
- * Dosya AYRI adımda (`requestDocumentUploadAction` → istemci PUT → `attachDocumentFileAction`):
- * anahtar belge kimliğinden kurulduğu için belge önce doğmak zorunda.
- *
- * **Asistanın belge önerisi de bu kapıdan yazar** (22.44 · `proposalId`): kayıt ile kuyruk satırı
- * BİRLİKTE koşar (`withProposal`) ve kuyruk ikinci bir yazma yolu açmaz. Öneriden gelindiyse kapının
- * reddi FIRLATILIR — hiçbir şey yazılmadı demektir; sessizce dönseydi satır "uygulandı" damgası yerdi
- * (`recordManualMovementAction` künyesi). Ekranın kendi yolunda ret okunur bir cümle olarak döner.
+ * Belge girişi: fatura gelince borç doğar, ödeme sonra hareket olarak gelip bağlanır; dosya ayrı adımda bağlanır, çünkü anahtar
+ * belge kimliğinden kurulur. Asistanın önerisi de bu kapıdan yazar (`withProposal`): öneriden gelindiyse ret fırlatılır ki satır
+ * "uygulandı" damgası yemesin, ekranın kendi yolunda ret okunur bir cümle olarak döner.
  */
 export async function createDocumentAction(input: DocumentInput, proposalId?: string | null): Promise<ActionResult<{ documentId: string }>> {
   try {
@@ -541,11 +497,9 @@ export async function createDocumentAction(input: DocumentInput, proposalId?: st
 }
 
 /**
- * "Neyin faturası" seçenekleri (12.26) — seçili tedarikçinin FATURASI GİRİLMEMİŞ kabulleri ve açık
- * siparişleri. Faturası girilmiş olan (belgesi kabulün kendisine ya da siparişine bağlı) listeye
- * girmez: ikinci bir bağ aynı alımın borcunu iki kez yazardı — kapı da reddeder (`link_has_document`).
- * Tutarı sıfır görünen kabul BİLEREK listede: sahadan maliyetsiz yapılan kabuldür ve borcu ancak
- * faturasıyla doğar.
+ * "Neyin faturası" seçenekleri: seçili tedarikçinin faturası girilmemiş kabulleri ve açık siparişleri; faturası girilmiş olan
+ * girmez, çünkü ikinci bağ aynı alımın borcunu iki kez yazardı (`link_has_document`). Tutarı sıfır görünen kabul listede kalır:
+ * sahadan maliyetsiz yapılan kabulün borcu ancak faturasıyla doğar.
  */
 export async function documentStockLinksAction(supplierId: string): Promise<ActionResult<StockLinkOption[]>> {
   try {
@@ -617,7 +571,7 @@ export async function documentFileUrlAction(documentId: string): Promise<ActionR
   }
 }
 
-// ── Sözlük: tür · cari · etiket (13.09) ───────────────────────────────────────
+// ── Sözlük: tür · cari · etiket ───────────────────────────────────────────────
 
 /**
  * Sözlüğe etiket ekler. Aynı ad zaten varsa YENİSİ açılmaz, var olanın anahtarı döner: etiket
@@ -656,8 +610,8 @@ export async function setTagActiveAction(slug: string, isActive: boolean): Promi
 }
 
 /**
- * Hareketin etiketlerini yazar — menü her dokunuşta listenin yeni hâlini gönderir (Kaydet yok,
- * kullanıcı isteği 13.09). Etiket izah değildir: satırın izahı değişmez.
+ * Hareketin etiketlerini yazar: menü her dokunuşta listenin yeni hâlini gönderir, Kaydet düğmesi yoktur. Etiket izah değildir, satırın
+ * izahı değişmez.
  */
 export async function tagMovementAction(movementId: string, tags: string[]): Promise<ActionResult<{ ok: true }>> {
   try {
@@ -747,15 +701,12 @@ export async function updateCounterpartyAction(
 }
 
 /**
- * Hesap ekleme — kurulum işi, nadir (tasarım §3).
- *
- * Ekranda duruyor çünkü hesabı olmayan bir kurulumda Para ekranının söyleyecek hiçbir şeyi yok:
- * "para bir hesapta durur" diyen bir yüzeyin ilk hesabı açacak yeri de kendisi olmalı. Ayarlara
- * konsaydı operatör boş ekrandan çıkıp aramak zorunda kalırdı.
+ * Hesap ekleme, kurulum işi: Para ekranında durur, çünkü hesabı olmayan kurulumda ekranın söyleyecek bir şeyi yok ve ilk hesabı
+ * açacak yer de kendisi olmalı.
  */
 export async function createAccountAction(input: {
   name: string;
-  /** `partner` da buradan açılır (13.09): ortak cari hesabı — ortağın tek kaydı. */
+  /** `partner` da buradan açılır: ortak cari hesabı, ortağın tek kaydı. */
   type: AccountType;
 }): Promise<ActionResult<{ accountId: string }>> {
   try {
@@ -771,13 +722,12 @@ export async function createAccountAction(input: {
   }
 }
 
-// ── Banka dosyası (12.10) ─────────────────────────────────────────────────────
+// ── Banka dosyası ─────────────────────────────────────────────────────────────
 
 /**
- * Yükleme penceresinin ilk sorusu: bu hesabın kayıtlı şablonu bu dosyaya uyuyor mu, uymuyorsa
- * dosya nasıl okunmalı? Satırlar TARAYICIDA çözülmüş gelir (dosya değil); sunucu yalnız sütunları
- * tanır. Şablon "uyar" = eşlediği her başlık dosyada var — banka dışa aktarımını değiştirmişse
- * şablon sessizce boş kolon okutmasın, yeni öneri sunulsun.
+ * Yükleme penceresinin ilk sorusu: bu hesabın kayıtlı şablonu dosyaya uyuyor mu, uymuyorsa dosya nasıl okunmalı; satırlar tarayıcıda
+ * çözülmüş gelir, sunucu yalnız sütunları tanır. Şablon eşlediği her başlık dosyada varsa uyar, yoksa yeni öneri sunulur ki boş kolon
+ * okunmasın.
  */
 export async function analyzeBankFileAction(
   accountId: string,

@@ -15,35 +15,12 @@ import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { ProposalSubject } from '@/lib/assistant/subject';
 
 /**
- * TEDARİK SİPARİŞİ ÖNERİSİ — kuyruğun içinde, DÜZENLENEBİLİR kalemleriyle (22.33).
- *
- * ── NEDEN GEREKTİ ───────────────────────────────────────────────────────────
- * Tip gövdesizdi: kartta adetler görünüyordu ama karar iki uçluydu — onayla ya da reddet. Onay
- * `applyPurchaseOrder`'a gidiyor ve **dilekçede ne yazıyorsa o** taslağa dönüşüyordu. Oysa adetleri
- * MOTOR hesapladı (`ReorderService`) ve motor eşiği bilir, kasayı bilmez: *"bu hafta bu kadarını
- * alalım"* ya da *"şunu şimdilik geçelim"* kararı patronundur. Reddetmek de çözüm değildi — öneriyi
- * reddedip aynı siparişi elle kurmak, kuyruğun var oluş sebebini siliyordu.
- *
- * ── FORM ORTAK, YENİDEN YAZILMADI (`CLAUDE §1`) ─────────────────────────────
- * Tedarik ekranının "elle sipariş" penceresi aynı formu zaten açıyordu. İkinci bir satır editörü
- * yazmak, kullanıcının 22.23'te reddettiği şeyin ta kendisi olurdu (*"komponentler ortak komponent
- * havuzundan kullanılmamış, yeniden tasarlanmış"*). Gövde ortak alana çıktı
- * (`purchase-order-form/`), iki yüzey onu paylaşıyor — `intake-form`un aynı deseni.
- *
- * ── TEDARİKÇİ BURADA SORULUR ────────────────────────────────────────────────
- * `applyPurchaseOrder` tedarikçisiz dilekçeyi reddediyordu ve bu, onay anında öğrenilen bir kuraldı:
- * "Onayla"ya basıp hata okumak. Asistan eşleşme bulamadan da öneri üretebilir — artık form sorar ve
- * engel cümlesi alt barda durur (`purchaseOrderBlock`).
- *
- * ── FATURADAN SİPARİŞ (22.44 · kullanıcı kararı 14.09) ──────────────────────
- * Tedarikçi faturayı mal gelmeden kestiyse (e-postayla gelen fatura) öneri FATURADAN kurulur: adet ve
- * fiyat faturadan, kalemler tedarikçinin adıyla eşlemeden. Onayda sipariş GÖNDERİLMİŞ açılır (tedarikçiye
- * mesaj gitmez), fatura siparişe bağlı bir belge olarak doğar — borç o belgeden türer — ve mal gelince
- * rampa bu siparişi sayar, SKT ve lotu orada girer. Faturanın para künyesi formun altındaki blokta
- * düzeltilir; dosyası burada bırakılır.
+ * Tedarik siparişi önerisi kuyrukta düzenlenebilir kalemleriyle durur: adetleri motor eşikten hesaplar ama kasayı bilmez, son
+ * karar patronundur; tedarikçisiz dilekçeyi kapı reddettiği için tedarikçi burada sorulur. Fatura mal gelmeden kesildiyse öneri
+ * faturadan kurulur, onayda sipariş gönderilmiş açılır ve fatura siparişe bağlı belge olarak doğar.
  */
 
-/** Sipariş önerisinin taslağı — satırlar, faturadan siparişte faturanın para künyesi ve dosyası (22.44). */
+/** Sipariş önerisinin taslağı — satırlar, faturadan siparişte faturanın para künyesi ve dosyası. */
 export interface PurchaseOrderDraft {
   order: PurchaseOrderFormValues;
   /** Faturadan siparişte faturanın para künyesi; eşik altı önerisinde `null`. */
@@ -63,7 +40,7 @@ export function purchaseOrderValuesFrom(payload: PurchaseOrderPayload): Purchase
       note: '',
       lines: payload.lines.map((line) => ({
         variantId: line.variantId,
-        // Tedarikçinin yazdığı ad başlıkta (22.44): onay, kalem eşlemesinin de onayıdır.
+        // Tedarikçinin yazdığı ad başlıkta: onay, kalem eşlemesinin de onayıdır.
         title: line.supplierItemName ? `${line.productName} · tedarikçide: ${line.supplierItemName}` : line.productName,
         qty: line.qty,
         lastPurchasePriceCents: line.lastPurchasePriceCents,

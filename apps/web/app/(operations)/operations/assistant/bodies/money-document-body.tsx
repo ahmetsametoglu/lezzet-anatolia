@@ -16,15 +16,9 @@ import type { AssistantFormOptions } from '@/lib/assistant/form-options';
 import type { ProposalSubject } from '@/lib/assistant/subject';
 
 /**
- * BELGE ÖNERİSİ — kuyruğun içinde, Para ekranının GERÇEK belge formuyla (22.44 · kullanıcı kararı 14.09).
- *
- * Asistan faturayı okur ve alanları doldurur; patron burada düzeltir ve kaydeder. Kaydeden kapı Para
- * ekranının kendi eylemi (`createDocumentAction` + `withProposal`) — kuyruk ikinci bir yazma yolu açmaz.
- *
- * ── DOSYA BURADA BIRAKILIR ─────────────────────────────────────────────────
- * MCP araçlarının girdisi yalnız metin: asistan faturayı OKUR ama dosyanın kendisini sisteme taşıyamaz.
- * Dosya onay anında bu gövdede seçilir ve belge yazıldıktan sonra yüklenir (`uploadDocumentFile`) — Para
- * ekranının belge penceresiyle aynı sıra.
+ * Belge önerisi kuyrukta Para ekranının gerçek belge formuyla düzeltilip kaydedilir; kapı Para'nın kendi eylemidir
+ * (`createDocumentAction` + `withProposal`), kuyruk ikinci yazma yolu açmaz. MCP girdisi yalnız metin olduğundan dosya onay
+ * anında burada seçilir ve belge yazıldıktan sonra yüklenir (`uploadDocumentFile`).
  */
 
 /** Belge önerisinin taslağı — formun değerleri ve onayda yüklenecek dosya (dosya formun alanı değil). */
@@ -34,8 +28,8 @@ export interface DocumentDraft {
 }
 
 /**
- * Dilekçe → formun açılış değerleri. Tür dilekçede sözlük slug'ı; formun yönüne uymuyorsa ya da sözlükte
- * artık yoksa form türsüz açılır ve operatör seçer — uydurma bir türle "izahlı" görünmesindense.
+ * Dilekçe → formun açılış değerleri. Tür dilekçede sözlük slug'ı; formun yönüne uymuyor ya da sözlükte yoksa form türsüz
+ * açılır ve operatör seçer, uydurma bir türle izahlı görünmesin.
  */
 export function documentValuesFrom(payload: MoneyDocumentPayload, natures: AssistantFormOptions['natures']): DocumentDraft {
   const natureFits =

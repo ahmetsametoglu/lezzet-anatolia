@@ -5,10 +5,8 @@ import { createTestWarehouse, purgeTestData, purgeVariantStock } from '@lezzet/d
 import { recordSupplierPayment } from './movement';
 
 /**
- * BORÇ BELGEDEN TÜRER (12.26 · kullanıcı kararı 14.09) — faturası girilen kabulün borcu FATURANIN
- * toplamıdır (KDV ve nakliye dâhil), kabulün satır toplamı değil. Bir tur borç yalnız kabullerin
- * satırlarından toplanıyordu: KDV hariç, nakliyesiz — ödenen fatura ise KDV dâhildi ve banka satırı hiç
- * tam eşleşmiyordu. Kendi kurduğumuz satırları sayıyoruz, küresel sayıya bakmıyoruz (`CLAUDE §4b`).
+ * Faturası girilen kabulün borcu faturanın toplamıdır (KDV ve nakliye dâhil), kabulün satır toplamı değil; yoksa ödenen
+ * KDV dâhil fatura banka satırıyla hiç tam eşleşmez. Kendi kurduğumuz satırları sayıyoruz, küresel sayıya bakmıyoruz (`CLAUDE §4b`).
  */
 const db = serviceDb();
 const suppliers = new SupplierService(db);

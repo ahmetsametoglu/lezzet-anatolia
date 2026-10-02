@@ -73,22 +73,9 @@ import { DiscountDraftBody } from './bodies/discount-draft-body';
 import { ProductDraftBody, productCreateValuesFrom, productDraftValuesFrom } from './bodies/product-draft-body';
 
 /**
- * ÖNERİ GÖVDELERİ — kuyruğun içinde karar verilen tiplerin kaydı (22.8).
- *
- * ── BU DOSYA `kind`'A GÖRE DALLANAN TEK YERDİR ──────────────────────────────
- * Karar çerçevesi (`DecisionCard`) tipi BİLMEZ: gövdeyi, ilk değerini, engelini ve kaydeden kapısını
- * buradan sorar. Çerçeveye tek bir `if (kind === …)` girseydi, on bir tipin on biri oraya sızardı ve
- * "öğrenilecek tek ekran" vaadi biterdi.
- *
- * ── SÖZLEŞME NEDEN BU BEŞ PARÇA ─────────────────────────────────────────────
- * Gövde kendi durumunu tutmuyor, ÇERÇEVE tutuyor (`draft`) — çünkü kararı yürüten, hatayı gösteren
- * ve kuyruğu tazeleyen taraf çerçeve. Gövde kendi state'ini saklasaydı "kaydet" düğmesi gövdenin
- * içine kaçardı ve her tip kendi alt barını yeniden çizerdi; çizimin tek alt barı budur.
- *
- * ── YAZAN KAPI HEDEF EKRANINKİDİR ───────────────────────────────────────────
- * `submit` yeni bir yazma yolu açmaz: varlığın kendi server action'ını çağırır ve o eylem
- * `withProposal` ile kuyruk satırını da kapatır (`lib/assistant/handoff`). Kuyruk hâlâ uygulamıyor —
- * değişen tek şey formun nerede durduğu.
+ * Öneri gövdeleri: kuyrukta karar verilen tiplerin kaydı ve `kind`a göre dallanan tek yer, çünkü karar çerçevesi (`DecisionCard`) tipi
+ * bilmez ve gövdeyi, ilk değeri, engeli ve kapıyı buradan sorar. Taslağı çerçeve tutar ve `submit` varlığın kendi server action'ını
+ * çağırır (`withProposal`), yani kuyruk ikinci bir yazma yolu açmaz.
  */
 
 interface InlineBodyArgs<Payload, Draft> {
@@ -102,21 +89,14 @@ interface InlineBodyArgs<Payload, Draft> {
    * üç kez koşardı.
    */
   options: AssistantFormOptions;
-  /**
-   * Kararın teknik künyesi — dilekçe sütununun "Metadata" görünümü bunu basar (`ProposalAside`).
-   *
-   * Sözleşmeye TİP BAŞINA değil ortak eklendi ve gövdelerin hepsi olduğu gibi geçiriyor: bir tur bu
-   * bilgi diyaloğun dibinde ayrı bir blokta duruyordu ve formun alanını yiyordu (11.08).
-   */
+  /** Kararın teknik künyesi; dilekçe sütununun "Metadata" görünümü bunu basar (`ProposalAside`), formun alanını yemesin diye. */
   meta: ProposalMeta;
   draft: Draft;
   onDraft: (next: Draft) => void;
   disabled: boolean;
   /**
-   * Karar VERİLMİŞ öneri — aynı gövde, düzenlenmeyen hâliyle çizilir.
-   *
-   * Arşiv satırına ayrı bir "özet" bileşeni yazmak duplikasyonun kendisiydi: aynı karar iki dilde
-   * anlatılır ve bir gün biri ötekinden ayrışırdı. Tek gövde, iki hâl.
+   * Karar verilmiş öneri: aynı gövde, düzenlenmeyen hâliyle çizilir. Arşive ayrı bir özet bileşeni aynı kararı iki dilde anlatır ve bir
+   * gün ayrışırdı.
    */
   readOnly: boolean;
 }
@@ -125,46 +105,27 @@ interface InlineBody<Payload, Draft> {
   /** Ham dilekçe → tipin payload'ı; şekil tutmuyorsa `null` (çerçeve o zaman önizlemeye düşer). */
   parse: (raw: unknown) => Payload | null;
   /**
-   * Formun açılış değeri — asistanın önerdiği hâl.
-   *
-   * **Seçenek havuzu da geçilir** (11.08): bazı tiplerin açılış değeri dilekçeden ÇIKMAZ, kaydın
-   * bugünkü hâlinden çıkar. Ürün taslağı böyle — form ürünün mevcut kategorisi, KDV'si, varyantları
-   * ve beyanlarıyla açılıp asistanın önerisi üzerine yazılır.
-   *
-   * Havuz bir tur geçilmiyordu ve bedeli ölçüldü: taslak boş şablonla kuruluyor, gövde gerçek kaydı
-   * okusa bile form o boş şablonu gösteriyordu (kategori boş, beyan sekmesi tamamen boş). Kaydetme
-   * o hâlde ürünün DOLU beyanlarını silerdi — sessizce, çünkü ekran zaten "boş" diyordu.
+   * Formun açılış değeri, asistanın önerdiği hâl. Seçenek havuzu da geçilir, çünkü bazı tiplerin açılışı kaydın bugünkü hâlinden çıkar
+   * (ürün taslağı mevcut kategori, KDV, varyant ve beyanlarla açılır); boş şablonla açılan form kaydedilince dolu beyanları silerdi.
    */
   initial: (payload: Payload, options: AssistantFormOptions) => Draft;
   render: (args: InlineBodyArgs<Payload, Draft>) => ReactNode;
   /**
-   * Kaydetmenin engeli ve SEBEBİ; `null` ise yol açık. Düğme etkin görünüp hiçbir şey yapmasın.
-   *
-   * **`payload` ve `economics` de veriliyor (26.08)** — engel her zaman taslaktan okunmuyor.
-   * Ölçülen vaka: DLC'si geçmiş bir partide gövde doğru uyarıyordu (*"bu parti satılamaz, tek yol
-   * imha"*) ama düğme AÇIKTI, çünkü engel yalnız girilen fiyata bakıyordu. Kapı zaten reddedecekti
-   * (`setOfferPrice` → `must_discard`), yani operatör basıp hata alacaktı. Yasak partinin kendi
-   * hâlinde ve o hâl taslakta değil, dilekçede ve ekonomi okumasında duruyor.
+   * Kaydetmenin engeli ve sebebi; `null` ise yol açık. `payload` ve `economics` de verilir, çünkü engel her zaman taslaktan okunmaz:
+   * yasak partinin hâli dilekçede ve ekonomi okumasında durur.
    */
   blocked: (draft: Draft, payload: Payload, economics: ProposalEconomics | null) => string | null;
   submit: (payload: Payload, draft: Draft, proposalId: string) => Promise<{ error: string | null }>;
   /**
-   * Diyaloğun genişliği — TİPE GÖRE (kullanıcı kararı 11.08: *"farklı öneri diyalogları farklı
-   * genişlik olması gerekecek, içinin yoğunluğuna, yapılan işe ve komponente göre"*).
-   *
-   * Tek bir sayı bütün tiplere dayatılıyordu ve ölçüldü: ürün formu tek başına 1180 px için
-   * tasarlanmış, yanına dilekçe sütunu gelince 1180'e sığmıyor — kutular kelime ortasından
-   * kırılıyordu ("Gelene/ksel/baklav"). Fırsat kartında ise aynı genişlik fazlaydı.
+   * Diyaloğun genişliği, tipe göre: içeriğin yoğunluğu tipten tipe değişir ve ürün formu dilekçe sütunuyla birlikte tek genişliğe
+   * sığmıyordu, fırsat kartına ise fazlaydı.
    */
   width?: number;
   /** Alt bardaki onay düğmesinin metni — "Uygula" değil, işin kendi adı. */
   applyLabel: string | ((payload: Payload) => string);
   /**
-   * Karardan sonra söylenecek cümle; kuyruk tazelendiğinde kart başka öneriye geçmiş olur.
-   *
-   * **Dilekçeye göre değişebilir (22.44):** aynı tip iki ayrı iş yapabiliyor — tedarik siparişi eşik
-   * altından TASLAK açar, faturadan GÖNDERİLMİŞ açar ve belge yazar. Tek sabit cümle ikisinden birinde
-   * yalan söylerdi; düğme de ("Taslağı oluştur") öyle.
+   * Karardan sonra söylenecek cümle; kuyruk tazelenince kart başka öneriye geçer. Dilekçeye göre değişebilir, çünkü aynı tip iki iş
+   * yapabilir (tedarik siparişi eşik altından taslak, faturadan gönderilmiş sipariş açar) ve tek cümle birinde yanlış olurdu.
    */
   appliedNote: string | ((payload: Payload) => string);
 }
@@ -180,11 +141,8 @@ export function appliedNoteOf(body: ErasedBody, payload: unknown): string {
 }
 
 /**
- * Para önerisinin taslağı — tek tip, İKİ HÂL (22.22).
- *
- * `money_movement` hem elle girişi hem transferi taşıyor ve ikisinin alanları hiç örtüşmüyor. Düz
- * bir nesnede birleştirilseydi her hâl ötekinin boş alanlarını da taşırdı; ayrımcı birleşim
- * hangisinin gerçek olduğunu tipin kendisine söyletiyor.
+ * Para önerisinin taslağı: tek tip, iki hâl (elle giriş ve transfer). Alanları örtüşmediği için ayrımcı birleşimdir; düz nesne her
+ * hâlde ötekinin boş alanlarını da taşırdı.
  */
 type MoneyDraft = { kind: 'manual'; values: ManualMovementForm } | { kind: 'transfer'; values: TransferForm };
 
@@ -224,15 +182,8 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
       />
     ),
     /**
-     * Maliyetin ALTINDA fiyat engel DEĞİLDİR — zararına satmak bir karardır; ekran onu cümleyle
-     * söyler, yolu kapatmaz. Engel yalnız yazılamayacak değerlerde.
-     *
-     * **DLC GEÇMİŞ PARTİ BURADA ENGEL DEĞİLDİR** *(kullanıcı kuralı 26.08, bir turluk sapmadan
-     * sonra)*. Bir tur boyunca engeldi ve düğme kapanıyordu; gerekçem "kapı zaten reddediyor,
-     * basan boşuna basıyor"du. Kural tersine çevrildi: *"yanlış bir tespitte bulunup da o butonu
-     * kapatırsan daha büyük bir hataya sebep verirsin."* Tespit yanlışsa iki hatanın bedeli eşit
-     * değil — açık düğme bir hata mesajı üretir, haksız kapalı düğme tıkanmış bir akış. Yasak
-     * ekranda GÖRÜNMEYE devam ediyor (gövdenin kırmızı satırı). Tam gerekçe `offer-block` künyesinde.
+     * Maliyetin altında fiyat engel değildir, zararına satmak bir karardır; engel yalnız yazılamayacak değerlerdedir. SKT'si geçmiş parti
+     * de burada engel değildir, çünkü yanlış tespitle kapanan düğme akışı tıkar; yasak ekranda görünür (`offer-block` künyesi).
      */
     blocked: (cents) => batchOfferBlock({ offerPriceCents: cents }),
     submit: (payload, cents, proposalId) => setOfferPriceAction(payload.batchId, cents, proposalId),
@@ -273,9 +224,8 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // Kaydeden kapı PAKET EKRANININKİ: kuyruk ikinci bir yazma yolu açmıyor, `withProposal` da
     // kuyruk satırını kapatıyor ve doğan paketin kimliğini künyeye yazıyor.
     submit: (_payload, values, proposalId) => createBundleAction(toBundlePayload(values), proposalId),
-    // Paket formu iki sütun + kalem editörü taşıyor; yanına dilekçe sütunu gelince ürün formuyla
-    // aynı sıkışma doğuyordu. Kalem satırı (ad · adet · birim fiyat · pay · marj) dar alanda
-    // okunmuyor — 1560 ölçüldü ve kalem satırı hâlâ kırılıyordu.
+    // Paket formu iki sütun ve kalem editörü taşıyor; dilekçe sütunu yanına gelince kalem satırı (ad, adet, birim fiyat, pay, marj) dar
+    // alanda okunmuyor.
     width: 1640,
     applyLabel: 'Paketi oluştur',
     appliedNote: 'Paket oluşturuldu — Ürünler → Paketler sekmesinde. Satışta bıraktıysanız müşteri yüzeyinde görünüyor.',
@@ -310,27 +260,14 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
   }),
 
   /**
-   * PARA — `handoff`tan geldi (22.11) ve İKİ HÂLİ var: elle giriş (gider · sermaye ·
-   * sınıflandırılmadı) ve transfer.
-   *
-   * ── ÇATAL BURADA, GÖVDEDE DEĞİL (22.22) ───────────────────────────────────
-   * Transfer bir tur "kuyruktan geçmez" sayılıyordu: gövde formu açmıyor, boş bir taban veriliyor
-   * ve `blocked` kaydetmeyi kapatıyordu. Niyet doğruydu (uydurma değerlerle açılan form yanlış bir
-   * defter satırı demektir) ama ekranda olan başkaydı — tutarı boş, türü "Sınıflandırılmadı"
-   * gösteren, künyesinde 500,00 € → 0,00 € yazan bir form (kullanıcı tespiti 12.08). Yarım bir
-   * devir devir değildir: iki hâlin ikisi de artık kendi formuyla açılıyor, taslak da ayrımcı bir
-   * birleşimle taşınıyor.
-   *
-   * İki hâl tek `defineBody`de kalıyor çünkü tek bir öneri TİPİ; ayrı bir kind açmak şemayı ve
+   * Para: iki hâli var, elle giriş (gider, sermaye, sınıflandırılmamış) ve transfer; ikisi de kendi formuyla açılır, çünkü uydurma
+   * değerlerle açılan form yanlış bir defter satırı demektir. İki hâl tek gövdede durur, çünkü tek öneri tipidir; ayrı tip şemayı ve
    * asistanın araç kataloğunu ikiye bölerdi.
    */
-  // Para taslağı AYRIMCI BİRLEŞİM: iki hâlin alanları hiç örtüşmüyor (elle giriş tek hesap + yön,
-  // transfer iki hesap) ve tek bir düz nesnede birleştirilseydi her iki hâl de ötekinin boş
-  // alanlarını taşırdı — hangisinin gerçek olduğu ancak `type` okunarak anlaşılırdı.
   money_movement: defineBody<MoneyMovementPayload, MoneyDraft>({
     parse: parseWith<MoneyMovementPayload>('money_movement'),
     initial: (payload, options) => {
-      // Sözlük seçeneklerden: asistanın kategori kelimesi ancak sözlükte varsa TÜR olur (13.09).
+      // Sözlük seçeneklerden: asistanın kategori kelimesi ancak sözlükte varsa tür olur.
       const manual = movementValuesFrom(payload, options.natures);
       return manual ? { kind: 'manual', values: manual } : { kind: 'transfer', values: transferValuesFrom(payload) };
     },
@@ -454,25 +391,18 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // Kaydeden kapı ÜRÜN EKRANININKİ: kuyruk ikinci bir yazma yolu açmıyor, `withProposal` da
     // kuyruk satırını kapatıyor.
     submit: (payload, values, proposalId) => updateProductAction(payload.productId, toActionPayload(values), proposalId),
-    // Ürün formu tek başına 1180 px için tasarlandı (kendi diyaloğunun ölçüsü); yanına dilekçe
-    // sütunu geldiği için o kadar daha gerekiyor. 1560 denendi ve DAR kaldı (kullanıcı ölçümü
-    // 11.08): formun sağ rayı (kargo · KDV · marj) ile içerik sütunu hâlâ sıkışıyordu.
+    // Ürün formu tek başına kendi diyaloğunun genişliğine göre tasarlandı; yanına dilekçe sütunu geldiği için o kadar daha gerekir,
+    // yoksa formun sağ rayı (kargo, KDV, marj) sıkışır.
     width: 1720,
-    // "Kaydet" değil GÜNCELLE: `product_draft` VAR OLAN bir ürünün kaydına yazıyor
-    // (`payload.productId`) — yeni ürün ayrı bir tip (aşağıda). Kullanıcının sorusu tam buydu
-    // (11.08: *"yeni ürün mü oluşturuyorum yoksa güncelliyor muyum?"*): düğme cevabı vermiyordu ve
-    // "kaydet" iki işi birden anlatabilen tek kelime.
+    // "Kaydet" değil "Güncelle": `product_draft` var olan bir ürünün kaydına yazar (`payload.productId`), yeni ürün ayrı tiptir;
+    // "kaydet" iki işi birden anlatabilen tek kelime olurdu.
     applyLabel: 'Ürünü güncelle',
     appliedNote: 'Ürün güncellendi — katalogda görülebilir. Satış durumu değişmedi: kuyruk içeriği yazar, yayına almaz.',
   }),
 
   /**
-   * YENİ ÜRÜN — `product_draft` ile AYNI GÖVDE (22.16).
-   *
-   * Kullanıcının sorusu: *"yeni ürün ile ürün düzenleme ayna diyaloğu kullanabilir değil mi?"* Evet,
-   * ve ürün ekranında zaten öyle (`ProductFormDialog`, `mode: 'create' | 'edit'`). Değişen ÜÇ şey
-   * burada duruyor — açılış değeri (boş şablon + dilekçe), kaydeden kapı (`createProductAction`) ve
-   * düğmenin adı. Gövde ikiye bölünseydi bugün kopya olurdu, yarın ayrışırdı.
+   * Yeni ürün: `product_draft` ile aynı gövde, ürün ekranının `ProductFormDialog`ı gibi. Değişen üç şey burada durur: açılış değeri (boş
+   * şablon ve dilekçe), kaydeden kapı (`createProductAction`) ve düğmenin adı.
    */
   product_create: defineBody<ProductCreatePayload, ProductFormValues>({
     parse: parseWith<ProductCreatePayload>('product_create'),
@@ -498,28 +428,13 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     submit: (_payload, values, proposalId) => createProductAction(toActionPayload(values), proposalId),
     width: 1720,
     applyLabel: 'Ürünü oluştur',
-    // Kayıt ADAY doğar ve bu cümle bayat DEĞİL: durumu formdaki seçici belirliyor, o seçici kuyrukta
-    // yok (kullanıcı kararı 11.08 — kuyruk satış eksenine dokunmaz), yani ürün kapının kendi
-    // varsayılanıyla geliyor. Satışa çıkarmak ürün ekranının kararı.
+    // Kayıt aday doğar: durumu formdaki seçici belirler ve o seçici kuyrukta yoktur, çünkü kuyruk satış eksenine dokunmaz; satışa
+    // çıkarmak ürün ekranının kararıdır.
     appliedNote: 'Ürün oluşturuldu — katalogda ADAY olarak duruyor. Satışa çıkarmak ürün ekranının kararı.',
   }),
 
   /**
-   * VİTRİN İŞARETİ — gövdesizdi, ızgaranın tamamı düzenlenemiyordu (22.35).
-   *
-   * Karar iki uçluydu (onayla/reddet) ama vitrin bir SEÇKİ ve kontenjanı var: dolu bir ızgaraya
-   * ekleme yapmak sıradaki birini ana sayfadan düşürür. Önizleme bunu söylüyordu ama kimin
-   * düşeceğine karar vermenin yolu yoktu. Form ORTAK (`featured-form/`) ve kararın tamamı diyaloğun
-   * içinde veriliyor — kullanıcı kararı 15.08: *"biz yönlendirme yapmıyoruz."*
-   *
-   * `initial` SEÇENEKLERİ de okuyor: açılış değeri ızgaranın bugünkü hâli + dilekçenin istediği
-   * değişiklik. Dilekçe tek bayrak taşıyor, ızgara ise kayıtta duruyor.
-   */
-  /**
-   * BÖLGE GENİŞLETME — son gövdesiz tip, artık haritayla kuyruğun içinde (22.36).
-   *
-   * `handoff`tan `inline`a geçti: rota ekranını ön doldurup oraya yollamak yerine haritayı buraya
-   * getirdik. Karar zaten burada veriliyordu; eksik olan kararın DAYANAĞIYDI.
+   * Bölge genişletme: harita kuyruğun içinde çizilir, çünkü karar burada verilir ve dayanağı haritadır.
    */
   zone_extend: defineBody<ZoneExtendPayload, ZoneFormValues>({
     parse: parseWith<ZoneExtendPayload>('zone_extend'),
@@ -542,9 +457,8 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     submit: async (payload, values, proposalId) => {
       const chosen = new Set(values.selectedKeys);
       const result = await addZoneCodesFromProposalAction({
-        // Hedef TASLAKTAN: operatör dilekçenin önerdiği rotayı değiştirmiş olabilir
-        // (kullanıcı tespiti 15.08). `payload.zoneId` yazsaydık seçici çizilir ama seçim
-        // hiçbir yere gitmezdi — ekranın söylediği ile sistemin yaptığı ayrışırdı.
+        // Hedef taslaktan okunur: operatör dilekçenin önerdiği rotayı değiştirmiş olabilir; `payload.zoneId` yazılsaydı seçim hiçbir
+        // yere gitmezdi.
         zoneId: values.zoneId,
         // Gönderilen küme dilekçenin kodlarından SÜZÜLÜYOR, taslaktan çözülmüyor: anahtarlar
         // istemcide kuruluyor ve sunucuya kod listesi gitmeli, anahtar dizesi değil.
@@ -556,12 +470,8 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
       return { error: result.error };
     },
     /**
-     * Harita + kanıt listesi + künye rayı yan yana duruyor (kullanıcı isteği 15.08: *"diyaloğun
-     * büyüklüğünü ona göre ayarlayabilirsin"*).
-     *
-     * 1320'de sol sütuna ~800 piksel düşüyordu ve harita ile kod listesi aynı dar kolonu
-     * paylaşıyordu. 1600'de harita nefes alıyor; en geniş iki gövdenin (1720) altında kalması da
-     * bilinçli — buradaki karar üç kodluk bir seçim, bir sipariş tablosu değil.
+     * Harita, kanıt listesi ve künye rayı yan yana durur; harita ile kod listesi dar tek kolonu paylaşmasın diye genişlik onlara göredir,
+     * en geniş iki gövdenin altında kalır.
      */
     width: 1600,
     applyLabel: 'Bölgeye ekle',
@@ -569,6 +479,10 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
       'Kodlar bölgeye eklendi. Haber bekleyen müşterilere "bölgeniz açıldı" bildirimi uzlaştırma işiyle gidiyor (saatte bir) — geri alınamaz.',
   }),
 
+  /**
+   * Vitrin işareti: vitrin kontenjanlı bir seçkidir ve dolu ızgaraya ekleme sıradakini ana sayfadan düşürür, bu yüzden kararın tamamı
+   * ortak formla (`featured-form/`) diyaloğun içinde verilir. Açılış değeri ızgaranın bugünkü hâli ve dilekçenin istediği değişikliktir.
+   */
   featured_flag: defineBody<FeaturedFlagPayload, FeaturedFormValues>({
     parse: parseWith<FeaturedFlagPayload>('featured_flag'),
     initial: (payload, options) => featuredValuesFrom(payload, options),
@@ -598,16 +512,9 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
   }),
 
   /**
-   * TEDARİK SİPARİŞİ — gövdesizdi, kalemleri düzenlenemiyordu (22.33).
-   *
-   * Onay `applyPurchaseOrder`'a gidiyor ve dilekçede ne yazıyorsa o taslağa dönüşüyordu. Adetleri
-   * MOTOR hesapladı (`ReorderService`) ve motor eşiği bilir, kasayı bilmez — "bu hafta bu kadarını
-   * alalım" kararı patronundur. Form ORTAK (`purchase-order-form/`): tedarik ekranının elle sipariş
-   * penceresiyle aynı gövde, ikinci bir satır editörü yazılmadı (`CLAUDE §1`).
-   *
-   * Kaydeden kapı kuyruğun kendi eylemi (`createDraftFromProposalAction`): kalemler FORMDAN gider,
-   * dilekçeden değil — düzeltilen değeri yok sayıp dilekçedekini yazmak, ekranda görünen ile deftere
-   * geçen arasında sessiz bir ayrışma bırakırdı (`receiveIntakeFromProposalAction` künyesi).
+   * Tedarik siparişi: kalemler kuyrukta düzenlenir, çünkü adetleri eşiği bilen ama kasayı bilmeyen motor hesaplar; form tedarik ekranının
+   * ortak formudur (`purchase-order-form/`). Kaydeden kapı kalemleri formdan yazar (`createDraftFromProposalAction`), dilekçeden yazsaydı
+   * ekranda görünen ile deftere geçen sessizce ayrışırdı.
    */
   purchase_order: defineBody<PurchaseOrderPayload, PurchaseOrderDraft>({
     parse: parseWith<PurchaseOrderPayload>('purchase_order'),
@@ -633,7 +540,7 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
         // eksiğini kapatmış sayılmaz (şema künyesi).
         targetWarehouseId: draft.order.targetWarehouseId || null,
         note: draft.order.note.trim() || null,
-        // Faturadan siparişte birim fiyat FATURANIN (22.44); eşik altı önerisinde boş — kapı eşlemedeki son alışı yazar.
+        // Faturadan siparişte birim fiyat faturanındır; eşik altı önerisinde boştur ve kapı eşlemedeki son alışı yazar.
         lines: draft.order.lines.map((line) => ({ variantId: line.variantId, qty: line.qty, unitPriceCents: line.unitPriceCents })),
         invoice:
           invoice && payload.invoice
@@ -646,7 +553,7 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
                 dueOn: invoice.dueOn,
               }
             : null,
-        // Eşleme önerileri (22.44): onay, tedarikçinin kalem eşlemesinin de onayıdır.
+        // Eşleme önerileri: onay, tedarikçinin kalem eşlemesinin de onayıdır.
         mappings: payload.lines
           .filter((line) => line.mappingProposed && line.supplierItemKey)
           .map((line) => ({ variantId: line.variantId, supplierCode: line.supplierItemKey as string, nameAtSupplier: line.supplierItemName })),
@@ -660,8 +567,8 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
     // Satır ızgarası dört kolon; dar sütunda ürün adı ile adet birbirine giriyor.
     width: 1180,
     applyLabel: (payload) => (payload.source === 'invoice' ? 'Siparişi ve faturayı kaydet' : 'Taslağı oluştur'),
-    // Taslak GÖNDERİLMEZ ve bu ayrım kayıtta duruyor (`applyPurchaseOrder` künyesi): onay "bu
-    // siparişi hazırla" demektir, "tedarikçiye yolla" değil. Faturadan siparişte sipariş zaten verilmiş (22.44).
+    // Taslak gönderilmez (`applyPurchaseOrder` künyesi): onay "bu siparişi hazırla" demektir, "tedarikçiye yolla" değil; faturadan
+    // siparişte sipariş zaten verilmiştir.
     appliedNote: (payload) =>
       payload.source === 'invoice'
         ? 'Sipariş GÖNDERİLMİŞ açıldı ve fatura siparişe bağlı belge olarak kaydedildi — mal gelince rampa sayar, borç Para ekranında.'
@@ -669,12 +576,8 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
   }),
 
   /**
-   * MAL KABUL — `handoff`tan geldi (22.23). Devrin gerekçesi *"geri alınamaz: giren parti satılabilir
-   * olur ve SKT o an sabitlenir; faturadan okunan miktar gözle doğrulanmadan yazılmamalı"*tı ve o
-   * şart AYNEN duruyor — doğrulama hâlâ karardan önce, değişen tek şey formun nerede DURDUĞU.
-   *
-   * Kaydeden kapı kuyruğun kendi eylemi (`receiveIntakeFromProposalAction`): fiyat FORMDAN gider,
-   * dilekçeden değil — patron faturayı yanlış okunmuş görürse maliyeti onaydan önce düzeltebilmeli.
+   * Mal kabul: giren parti satılabilir olur ve SKT o an sabitlenir, bu yüzden faturadan okunan miktar karardan önce gözle doğrulanır.
+   * Kaydeden kapı fiyatı formdan yazar (`receiveIntakeFromProposalAction`) ki yanlış okunan maliyet onaydan önce düzeltilebilsin.
    */
   stock_intake: defineBody<StockIntakePayload, IntakeDraft>({
     parse: parseWith<StockIntakePayload>('stock_intake'),
@@ -691,22 +594,21 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
         readOnly={readOnly}
       />
     ),
-    // Faturanın engeli satırlarınkinden SONRA (22.44): toplam boşsa fatura yok, engel de yok.
+    // Faturanın engeli satırlarınkinden sonra gelir: toplam boşsa fatura yok, engel de yok.
     blocked: (draft) => intakeBlock(draft.intake) ?? intakeInvoiceBlock(draft),
     submit: async (payload, draft, proposalId) => {
       const values = draft.intake;
       const result = await receiveIntakeFromProposalAction({
         warehouseId: values.warehouseId,
-        // Eşleme önerileri (22.43): dilekçede işaretli kalemler, giriş onaylanınca tedarikçi
-        // eşlemesine bu anahtar ve adla yazılır — sonraki fatura kendiliğinden eşleşir.
+        // Eşleme önerileri: dilekçede işaretli kalemler, giriş onaylanınca tedarikçi eşlemesine bu anahtar ve adla yazılır; sonraki
+        // fatura kendiliğinden eşleşir.
         mappings: payload.lines
           .filter((line) => line.mappingProposed && line.supplierItemKey)
           .map((line) => ({ variantId: line.variantId, supplierCode: line.supplierItemKey as string, nameAtSupplier: line.supplierItemName })),
         // Tedarikçi seçilmemiş olabilir — plansız/küçük alım meşru bir hâl ve `null` onu söylüyor.
         supplierId: values.supplierId || null,
         note: values.documentNo.trim() || null,
-        // Belgenin tarihi — boşsa kapı bugüne yazar. Alan dilekçede vardı ama HİÇBİR yola bağlı
-        // değildi (ölçüldü 13.08): fatura tarihi kayda geçmiyor, kabul her hâlde bugüne yazılıyordu.
+        // Belgenin tarihi; boşsa kapı bugüne yazar.
         date: values.date.trim() || null,
         lines: countedLines(values).map((line) => ({
           variantId: line.variantId,
@@ -718,8 +620,8 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
           // bilmiyorum ve öyle gider — sıfır yazmak bedava alınmış gibi okunurdu.
           unitCostCents: line.unitCost === null ? null : toCents(line.unitCost),
         })),
-        // Faturanın toplamı girildiyse fatura kabule bağlı BELGE olarak doğar ve tedarikçi borcu ondan
-        // türer (22.44 · 12.26); boşsa kabul faturasız yazılır — faturası sonra gelen kabul meşrudur.
+        // Faturanın toplamı girildiyse fatura kabule bağlı belge olarak doğar ve tedarikçi borcu ondan türer; boşsa kabul faturasız
+        // yazılır, faturası sonra gelen kabul meşrudur.
         invoice: draft.invoice.amount === null ? null : invoiceTermsOf(draft.invoice),
         proposalId,
       });
@@ -736,11 +638,8 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
   }),
 
   /**
-   * BELGE — mal dışı fatura ya da fiş (22.44 · kullanıcı kararı 14.09): kira, muhasebe, sigorta, akaryakıt.
-   *
-   * Form Para ekranının belge penceresinin gövdesi (`document-form/`), kaydeden kapı onun eylemi
-   * (`createDocumentAction` + `withProposal`) — kuyruk ikinci bir yazma yolu açmaz. Dosya MCP'den geçmez:
-   * onay anında burada seçilir ve belge yazıldıktan sonra yüklenir (Para ekranının penceresiyle aynı sıra).
+   * Belge: mal dışı fatura ya da fiş (kira, muhasebe, sigorta, akaryakıt); form Para ekranının belge formu, kapı onun eylemidir
+   * (`createDocumentAction` + `withProposal`). Dosya MCP'den geçmez: onay anında seçilir ve belge yazıldıktan sonra yüklenir.
    */
   money_document: defineBody<MoneyDocumentPayload, DocumentDraft>({
     parse: parseWith<MoneyDocumentPayload>('money_document'),
@@ -777,9 +676,8 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
   }),
 
   /**
-   * TEDARİKÇİ — faturanın başlığından yeni kart (22.44). Form Tedarik ekranının kartı (`supplier-form/`),
-   * kaydeden kapı onun eylemi (`saveSupplierAction` + `withProposal`): yeni kayıtta vergi no, telefon ya da
-   * tam adla mükerrer yoklaması orada bir kez daha yapılır.
+   * Tedarikçi: faturanın başlığından yeni kart; form Tedarik ekranının kartı, kapı onun eylemidir (`saveSupplierAction` +
+   * `withProposal`). Yeni kayıtta vergi no, telefon ya da tam adla mükerrer yoklaması orada bir kez daha yapılır.
    */
   supplier_create: defineBody<SupplierCreatePayload, SupplierFormValues>({
     parse: parseWith<SupplierCreatePayload>('supplier_create'),

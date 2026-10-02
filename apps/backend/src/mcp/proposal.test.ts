@@ -26,11 +26,8 @@ import { proposeProductDraft } from './tools-propose';
 import { HANDLERS, TOOLS } from './server-factory';
 
 /**
- * Onay kuyruğunun GÜVENCELERİ (22.3) — kurgunun kalbi burada kilitleniyor.
- *
- * Sınanan şey davranış değil **söz**: "asistan onaysız hiçbir şey yazamaz", "bir öneri iki kez
- * uygulanamaz", "uygulama normal servis yolundan geçer", "şeması olan her tipin uygulayıcısı var".
- * Bunların biri gevşerse kuyruk bir güvenlik katmanı olmaktan çıkıp bir formaliteye döner.
+ * Onay kuyruğunun güvenceleri: sınanan davranış değil sözdür (asistan onaysız yazamaz, bir öneri iki kez uygulanamaz, uygulama normal
+ * servis yolundan geçer, şeması olan her tipin uygulayıcısı var). Biri gevşerse kuyruk güvenlik katmanı olmaktan çıkar.
  */
 
 const db = serviceDb();
@@ -191,8 +188,7 @@ describe('ürün künyesi dilekçesi', () => {
   });
 
   /**
-   * Vurgu işareti `**`, büyük harf değil (işletmeci bildirimi 23.09). Kural araç künyesinde yazılıydı ama
-   * modeller alerjeni görünür yapmak için büyük harfe çeviriyordu; kapı dilekçe anında durduruyor.
+   * Vurgu işareti `**`tır, büyük harf değil: modeller alerjeni görünür yapmak için büyük harfe çeviriyor; kapı dilekçe anında durdurur.
    */
   it('beyanda vurgu için büyük harf reddedilir, ** ** geçer', async () => {
     const products = new ProductService(db);
@@ -331,8 +327,8 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
     expect(amountCentsOf('stock_intake', { lines: [{ qty: 2, unitCostCents: 500 }] })).toBe(1000);
     expect(amountCentsOf('stock_intake', { lines: [{ qty: 2, unitCostCents: null }] })).toBeNull();
     expect(amountCentsOf('featured_flag', { name: 'x' })).toBeNull();
-    // FATURANIN TUTARI faturanın KENDİ yazdığı (22.44): satırlardan toplamak KDV'yi ve nakliyeyi
-    // dışarıda bırakırdı — belge, faturalı sipariş ve toplamı okunmuş mal kabul.
+    // Faturanın tutarı faturanın kendi yazdığıdır: satırlardan toplamak KDV'yi ve nakliyeyi dışarıda bırakırdı (belge, faturalı
+    // sipariş ve toplamı okunmuş mal kabul).
     expect(amountCentsOf('money_document', { amountCents: 42000 })).toBe(42000);
     expect(amountCentsOf('purchase_order', { lines: [], invoice: { totalAmountCents: 180207 } })).toBe(180207);
     expect(amountCentsOf('purchase_order', { lines: [], invoice: null })).toBeNull();
@@ -368,10 +364,8 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
   });
 
   /**
-   * Payload jsonb'ye yazılırken anahtar biçimi dönüşüyor (`appToDb`). Dönüş yolunda geri
-   * çevrilmezse `remainingGaps` okunamaz ve **tamlık cümlesi sessizce yanlış olur**: eksik
-   * beyanlı bir ürün "onaylarsan tam olur" diye görünür. Sessiz olduğu için de fark edilmez —
-   * o yüzden gidiş-dönüş burada kilitleniyor (22.6).
+   * Payload jsonb'ye yazılırken anahtar biçimi korunmalı; dönüşte okunamayan `remainingGaps` tamlık cümlesini sessizce yanlış yapar ve
+   * eksik beyanlı ürün "onaylarsan tam olur" diye görünürdü. Gidiş-dönüş bu yüzden burada kilitlenir.
    */
   it('payload GİDİŞ-DÖNÜŞÜ alan adlarını korur — tamlık cümlesi gerçek veriden kurulur', async () => {
     const row = await proposals.create({
@@ -408,50 +402,17 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
   });
 
   /**
-   * Kararın CİNSİ künyeden okunur (22.5). Ekran kendi tablosunu kurarsa iki gerçek doğar ve biri
-   * bir gün ötekinden ayrılır — geri alınamaz bir öneri "tek tık uygula" kapısına düşer.
+   * Kararın cinsi künyeden okunur; ekran kendi tablosunu kursa iki gerçek doğar ve geri alınamaz bir öneri "tek tık uygula" kapısına
+   * düşebilirdi.
    */
   it('geri alınamaz tipler DEVREDİLİR, kendi formu kuyruğa gelenler İÇERİDE karar alır', () => {
-    // Geri alınamaz üçlü: bildirim gider, stok/defter yazılır. Kararın konusu formda değil ekranda
-    // (harita, mal kabul akışı, defter satırı) — kuyruk bunları uygulamaz, ön doldurup devreder.
-    // `money_movement` 12.08'de bu kümeden ÇIKTI (22.11): finans ekranının elle hareket formu ortak
-    // alana ayrılıp kuyruğa taşındı. Devrin gerekçesi ("defter silinemez, karar öncesi düzenleme
-    // şart") kalkmadı — düzenleme hâlâ karardan önce, yalnız formun yeri değişti.
-    // `stock_intake` 13.08'de bu kümeden ÇIKTI (22.23): mal kabul satırları kuyruğun içine taşındı.
-    // Devrin gerekçesi ("giren parti satılabilir olur, SKT o an sabitlenir; okunan miktar gözle
-    // doğrulanmalı") kalkmadı — doğrulama hâlâ karardan önce, yalnız formun yeri değişti.
-    // `zone_extend` 15.08'de ÇIKTI (22.36) ve küme BOŞALDI: son devir gerekçesi *"hangi kod girsin
-    // sorusu haritasız cevaplanamaz"*dı ve doğruydu — ama çözüm haritayı diyaloğa getirmekmiş
-    // (`components/operation/form/zone-form/`), rota ekranına yollamak değil.
-    //
-    // Bu yüzden döngü değil İDDİA: kullanıcının kuralı (15.08) *"biz yönlendirme yapmıyoruz;
-    // doğrudan açılan diyaloğun içerisinde düzenlenecek ortak komponent yapıyoruz"* — ve bir
-    // kuralın kanıtı, o kuralın bozulduğu gün kırmızıya dönen bir satır olmalı. Boş bırakılmış bir
-    // döngü hiçbir şey doğrulamaz; yeni bir `handoff` künyesi sessizce geçerdi.
-    //
-    // ── İDDİA 22.24'te BİÇİM DEĞİŞTİRDİ (26.08) ────────────────────────────
-    // Burada `modeOf(kind) === 'handoff'` yazıyordu ve künyesi şöyle diyordu: *"`modeOf` geniş
-    // `ProposalMode` döndürüyor, satır bugün de derleniyor yarın da; künyeye yeniden `handoff`
-    // eklendiği gün kırmızıya döner."* O gün gelmedi — tersi oldu: **`handoff` değeri
-    // `ProposalMode`'dan tümüyle SÖKÜLDÜ** (devir yolları ölü çıktı, 22.24) ve satır derlenemez
-    // hâle geldi.
-    //
-    // Koruma kaybolmadı, TİPE taşındı ve güçlendi: künyeye `mode: 'handoff'` yazmak artık bir test
-    // düşürmüyor, doğrudan **derlemeyi** durduruyor. Geriye kalan iddia kümenin kapalılığı — her
-    // tipin modu bilinen üçten biri olmalı; dördüncü bir mod eklendiği gün burası kırmızıya döner
-    // ve o modun kuyrukta ne anlama geldiği düşünülmeden geçmez.
+    // Kuyruğun kuralı: yönlendirme yapılmaz, düzenleme doğrudan açılan diyaloğun içindeki ortak komponentte yapılır. Bu yüzden döngü
+    // değil iddia: her tipin modu bilinen üçten biri olmalı (`handoff` modu tipten söküldü ve derlenmez); dördüncü mod eklendiği gün
+    // burası kırmızıya döner.
     const BILINEN_MODLAR: readonly ProposalMode[] = ['inline', 'apply', 'draft_then_edit'];
     const taninmayan = AssistantProposalKindEnum.options.filter((kind) => !BILINEN_MODLAR.includes(modeOf(kind)));
     expect(taninmayan).toEqual([]);
-    // `inline` = gövdesi kuyruğun içinde çizilen tipler. Üçü de bir tur devredilmişti; formları
-    // kuyruğa taşındıkça devir kalktı (`kind-meta` künyeleri). Yazan kapı yine varlığın kendi
-    // eylemi, o yüzden `resultKey` burada da şart.
-    //
-    // `product_draft` 11.08'de bu kümeye geçti: ürün ekranının kendi formu 22.14'te kuyruğa taşındı
-    // ama künye `draft_then_edit` kalmıştı ve alt bar olmayan bir kısıtı anlatıyordu ("kayıt pasif
-    // doğar, yayına alma kendi ekranının işi") — kullanıcı bunu ekranda gördü.
-    // `bundle_draft` 12.08'de bu kümeye geçti (22.11): paket formu ortak alana ayrılıp kuyruğa
-    // taşındı. Etki cümlesi de düzeltildi — paket artık PASİF DOĞMUYOR, durum seçicisi formda.
+    // `inline` gövdesi kuyruğun içinde çizilen tiplerdir; yazan kapı varlığın kendi eylemi olduğu için `resultKey` burada da şarttır.
     for (const kind of [
       'batch_offer',
       'discount_draft',
@@ -461,26 +422,20 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
       'recipe_draft',
       'money_movement',
       'stock_intake',
-      // 22.44: faturadan belge ve tedarikçi — ikisi de varlığın kendi formuyla kuyruğun içinde.
+      // Faturadan belge ve tedarikçi: ikisi de varlığın kendi formuyla kuyruğun içinde.
       'money_document',
       'supplier_create',
     ] as const) {
       expect(modeOf(kind)).toBe('inline');
       expect(KIND_META[kind].resultKey).toBeTruthy();
     }
-    // `zone_extend` inline ama üstteki döngüde DEĞİL, çünkü `resultKey` taşımıyor — ve taşımaması
-    // doğru: uygulandığında yeni bir kayıt doğmuyor, var olan bölgenin kod listesi genişliyor.
-    // Köprü ancak doğan kaydın kimliğiyle kurulur; olmayan bir kimliğe anahtar uydurmak kuyruğa
-    // hiçbir yere gitmeyen bir bağlantı koyardı.
-    //
-    // Yokluğu burada AYRICA doğrulanmıyor: künye sabit olduğu için `KIND_META.zone_extend.resultKey`
-    // ifadesi hiç derlenmiyor (TS2339). Alan bir gün eklenirse satır derlenir ama bu döngüye de
-    // girmesi gerekir — orası zaten kırmızıya döner.
+    // `zone_extend` inline ama bu döngüde değil, çünkü `resultKey` taşımaz: uygulandığında yeni kayıt doğmaz, var olan bölgenin kod
+    // listesi genişler. Yokluğu ayrıca doğrulanmaz, çünkü künye sabit olduğu için `KIND_META.zone_extend.resultKey` derlenmez.
     expect(modeOf('zone_extend')).toBe('inline');
     // `product_create` gövdeye taşındı ama ADAY doğurmaya devam ediyor: satış durumu seçicisi
     // kuyrukta yok. Etki cümlesinin o kısmı bu yüzden korunuyor — mod değişti, kısıt değişmedi.
     expect(KIND_META.product_create.impact).toContain('ADAY');
-    // Paketin kısıtı ise KALKTI: cümle artık "pasif doğar" demiyor, çünkü öyle olmuyor.
+    // Paketin etki cümlesi "pasif doğar" demez, çünkü paketin durumu formda seçilir.
     expect(KIND_META.bundle_draft.impact).not.toContain('PASİF');
     // Geriye TEK devir-sonrası-düzenleme tipi kaldı: tedarik. Formu var ama RHF'siz (durumu elle
     // taşıyor), yani kuyruğa taşınması önce o formun standarda gelmesini istiyor.
@@ -566,23 +521,9 @@ describe('kayıt eşliği — yazıp uygulayamama hâli olamaz', () => {
 });
 
 /**
- * ─── ALAN DENKLİĞİ: DİLEKÇEDE OLAN HER ALAN MODELE SORULMUŞ MU (11.08) ───────
- *
- * ── NEDEN BU TEST VAR ───────────────────────────────────────────────────────
- * Aynı arıza üç kez yaşandı ve üçünde de sessizdi: payload bir alan taşıyor, kart onu gösteriyor,
- * uygulama onu yazıyor — ama MCP aracının girdi şemasında o alan HİÇ TANIMLI DEĞİL. Model alanın
- * varlığından habersiz olduğu için hiç doldurmuyor; onay ekranında boş bir kutu görünüyor ve boş
- * kutu **"asistan atladı" diye okunuyor**, oysa gerçek "asistana sorulmadı"ydı.
- *
- * En pahalısı `money_movement` idi: `counterAccountId` işleyicide okunuyordu, araç girdisinde yoktu
- * — yani transfer önerisi kurulabiliyor ama paranın nereye gittiği hep boş kalıyordu.
- *
- * ── NEDEN OTOMATİK DEĞİL, BEYANLI ───────────────────────────────────────────
- * "Her payload alanının araçta karşılığı olsun" diye kör bir kural yazılamaz: alanların bir kısmı
- * MODELDEN GELMEZ, araç onları veritabanından çözer (`warehouseCode` → `warehouseId`) ya da motor
- * hesaplar (`lines`, `allocatedUnitPrice`). Bu yüzden karşılığı olmayan her alan aşağıda GEREKÇESİYLE
- * yazılı. Yeni bir alan eklendiğinde iki yoldan biri şart olur: ya araca da eklenir, ya buraya
- * gerekçesi yazılır. Sessiz üçüncü yol kapalı — testi kırmadan alan eklenemez.
+ * Alan denkliği: dilekçede olan her alan MCP aracının girdi şemasında modele sorulmuş mu; sorulmayan alan onay ekranında boş kutu olur
+ * ve "asistan atladı" diye okunur. Karşılığı olmayan alanlar (veritabanından çözülen ya da motorun hesapladığı) aşağıda gerekçesiyle
+ * yazılıdır; yeni alan ya araca eklenir ya buraya, testi kırmadan eklenemez.
  */
 describe('alan denkliği — dilekçedeki her alan ya modelden gelir ya gerekçelidir', () => {
   /** Payload'da olup araç girdisinde KARŞILIĞI OLMAYAN alanlar; değer = neden sorulmadığı. */
@@ -637,7 +578,7 @@ describe('alan denkliği — dilekçedeki her alan ya modelden gelir ya gerekçe
   };
 
   /**
-   * Şemanın alan listesi — kuralını `.refine` ile taşıyan şemada (ör. "en az bir alan dolu") alanlar bir sarmalın
+   * Şemanın alan listesi — kuralını `.refine` ile taşıyan şemada (örneğin "en az bir alan dolu") alanlar bir sarmalın
    * altında durur. Sarmal açılmazsa liste boş gelir ve test hiçbir şey ölçmeden yeşil kalırdı.
    */
   function shapeOf(schema: unknown): Record<string, unknown> {
@@ -666,22 +607,8 @@ describe('alan denkliği — dilekçedeki her alan ya modelden gelir ya gerekçe
 });
 
 /**
- * ─── OKUMA YÖNÜ: MODELDEN İSTENEN KİMLİK ELDE EDİLEBİLİYOR MU (11.08) ────────
- *
- * ── ÜSTTEKİ TESTİN KÖR NOKTASI ──────────────────────────────────────────────
- * Yukarıdaki denklik yazma eksenini ölçüyor: dilekçedeki alan modele soruluyor mu. `featured_flag`
- * o testten TAM geçiyordu — ve altı tur boyunca **tek bir kez bile kullanılamadı**. Çünkü arıza
- * öteki uçtaydı: araç `id: uuid` istiyordu ve o kimliği veren hiçbir OKUMA aracı yoktu. Soru
- * soruluyordu, cevabı elde etmenin yolu yoktu.
- *
- * Aynı kopukluk ölçünce üç yerde daha çıktı (`supplierId` × 3, `purchaseOrderId`) ve ikisinin
- * bedeli sessizdi: tedarikçisiz mal kabul son alış fiyatını tazelemiyor, siparişsiz kabul siparişi
- * kapatmıyor. Hiçbir hata patlamıyor — sadece bir bağ hiç kurulmuyor.
- *
- * ── KURAL ───────────────────────────────────────────────────────────────────
- * Bir `propose_*` aracı MODELDEN uuid istiyorsa, o uuid'yi veren bir okuma aracı olmalı. Yoksa
- * alan ADLA sorulmalı ve kimliği sunucu çözmeli — projenin deseni bu. İstisna varsa aşağıya
- * gerekçesiyle yazılır.
+ * Okuma yönü: bir `propose_*` aracı modelden uuid istiyorsa o uuid'yi veren bir okuma aracı olmalı, yoksa alan adla sorulup kimliği
+ * sunucu çözmeli; aksi hâlde soru sorulur ama cevabı elde edilemez ve bağ sessizce kurulmaz. İstisnalar aşağıda gerekçesiyle yazılıdır.
  */
 describe('okuma yönü — modelden istenen her kimliğin bir kaynağı var', () => {
   /** Okuma araçlarının modele VERDİĞİ kimlik alanları (araç adı → alan). */

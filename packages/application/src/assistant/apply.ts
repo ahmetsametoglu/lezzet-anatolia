@@ -38,23 +38,9 @@ import { learnCode } from '../warehouse/scan';
 import { createSupplier, duplicateSupplierMessage } from '../warehouse/supplier';
 
 /**
- * Onaylanmış önerinin UYGULANMASI (22.3) — `AI_ADMIN_ASSISTANT §5`.
- *
- * ── TEK KURAL: KUYRUK İKİNCİ BİR YAZMA YOLU AÇMAZ ───────────────────────────
- * Buradaki her uygulayıcı, ekrandaki server action'ların çağırdığı **AYNI servis kapısını**
- * çağırır. Kuyruk kendi `insert`ini yazsaydı, DOMAIN kuralları (paket mutabakatı, PO'nun hedef
- * deposu, vitrin işaretinin niyet/gerçek ayrımı) asistan yolunda atlanabilir olurdu — ve
- * atlanabilen kural, bir gün atlanmış kuraldır.
- *
- * ── ÖNERİ TAZE OLSA DA GERÇEK YENİDEN DOĞRULANIR ────────────────────────────
- * `expires_at` bayat öneriyi patronun ÖNÜNE koymamak içindir; buradaki motor doğrulaması ise
- * onun yerine geçmez, ardından gelir. Onay anında stok bitmiş, ürün pasifleşmiş, tedarikçi
- * silinmiş olabilir — o hâlde servis fırlatır ve öneri `failed` olur, sebebiyle birlikte.
- *
- * ── UYGULAYICI YOKSA ÖNERİ DE YOKTUR ────────────────────────────────────────
- * Kayıt (`APPLIERS`) ile payload şeması sözlüğü (`PROPOSAL_PAYLOAD_SCHEMAS`) aynı üç tipi taşır.
- * Şeması olup uygulayıcısı olmayan bir tip, panelde onaylanıp hiçbir şey yapmayan bir kalem
- * üretirdi; testi bu eşliği kilitliyor.
+ * Onaylanmış önerinin uygulanması (`AI_ADMIN_ASSISTANT §5`): her uygulayıcı ekrandaki server action'ların çağırdığı aynı servis
+ * kapısını çağırır, çünkü kuyruğun kendi yazımı DOMAIN kurallarını atlanabilir kılardı. Öneri taze olsa da gerçek onay anında yeniden
+ * doğrulanır; kayıt (`APPLIERS`) ile şema sözlüğü (`PROPOSAL_PAYLOAD_SCHEMAS`) aynı tipleri taşır ve testi bu eşliği kilitler.
  */
 
 /** Uygulamanın doğurduğu kayıtların kimlikleri — satıra yazılır ("bu paketi kim kurdu"). */
@@ -83,12 +69,9 @@ const applyFeaturedFlag: Applier = async (db, raw) => {
  */
 const applyPurchaseOrder: Applier = async (db, raw) => {
   const payload = parseProposalPayload('purchase_order', raw) as PurchaseOrderPayload;
-  // Tedarikçi ZORUNLU ve kapının kendi kuralı: eşlenmemiş kalemlerden sipariş açılamaz. Öneri
-  // tedarikçisiz geldiyse burada durur — asistanın "bir şekilde" sipariş açması, sonradan kimin
-  // gönderileceği bilinmeyen bir taslak bırakırdı.
-  // FATURADAN SİPARİŞ (22.44) bu kapıdan uygulanmaz: onayı faturanın BELGESİNİ de yazar ve dosyası kuyruğun
-  // formunda bırakılır — kuyruğun gövdesi (`createDraftFromProposalAction`) tek doğru yol. Buradan geçseydi
-  // sipariş belgesiz ve taslak açılır, tedarikçi borcu hiç doğmazdı.
+  // Tedarikçi zorunludur, çünkü eşlenmemiş kalemlerden sipariş açılamaz ve tedarikçisiz taslak kime gideceği bilinmeden kalırdı.
+  // Faturadan sipariş bu kapıdan uygulanmaz: onayı faturanın belgesini de yazar, tek doğru yol kuyruğun gövdesidir
+  // (`createDraftFromProposalAction`).
   if (payload.source === 'invoice') throw new Error('Faturadan sipariş kuyruğun formundan onaylanır — fatura belgesi orada doğar.');
   if (!payload.supplierId) throw new Error('Tedarikçisi belirlenmemiş öneriden sipariş açılamaz.');
   const { order } = await new PurchaseOrderService(db).createDraft(
@@ -106,12 +89,8 @@ const applyPurchaseOrder: Applier = async (db, raw) => {
 };
 
 /**
- * Paket taslağı — **pasif doğar** (`isActive: false`). Onay "paketi kur" demektir, "vitrine çıkar"
- * değil: yayına almak ayrı bir karardır ve o karar katalog ekranında verilir. Aynı ayrım ürün ve
- * tarif taslaklarında da geçerli (taslak-varlık deseni, `AI_ADMIN_ASSISTANT §5`).
- *
- * Payların mutabakatı burada HESAPLANMAZ: `BundleService.create` kalemleri yazarken kuralı motor
- * uygular (`bundleBalance`) — ikinci bir kopya, bir gün ötekinden ayrılacak bir kuraldır.
+ * Paket taslağı pasif doğar (`isActive: false`): onay "paketi kur" demektir, yayına almak katalog ekranının kararıdır. Payların
+ * mutabakatı burada hesaplanmaz, `BundleService.create` motorun kuralını (`bundleBalance`) uygular.
  */
 const applyBundleDraft: Applier = async (db, raw) => {
   const payload = parseProposalPayload('bundle_draft', raw) as BundleDraftPayload;
@@ -142,8 +121,7 @@ const applyStockIntake: Applier = async (db, raw) => {
     supplierId: payload.supplierId,
     purchaseOrderId: payload.purchaseOrderId,
     note: payload.documentNo,
-    // Belgenin tarihi (11.08): verilmezse kapı bugüne yazar. Fatura genelde dünkü olur — patron
-    // akşam fotoğraflar, ertesi gün onaylar — ve yanlış tarihe düşen kabul stok yaşını kaydırır.
+    // Belgenin tarihi; verilmezse kapı bugüne yazar. Fatura çoğu zaman önceki günündür ve yanlış tarihe düşen kabul stok yaşını kaydırır.
     ...(payload.date ? { date: payload.date } : {}),
     lines: payload.lines.map((line) => ({
       variantId: line.variantId,
@@ -164,11 +142,8 @@ const applyStockIntake: Applier = async (db, raw) => {
 const applyMoneyMovement: Applier = async (db, raw) => {
   const payload = parseProposalPayload('money_movement', raw) as MoneyMovementPayload;
   /*
-    TÜR SÖZLÜKTEN (13.09 · ikinci karar; 22.42). Dilekçe sözlük slug'ı taşıyor — MCP aracı kelimeyi
-    öneri anında sözlükle eşledi (`matchNature`). Burada bir kez daha eşlenir, çünkü sözlük öneri ile
-    onay arasında değişmiş olabilir (tür pasifleşir): bulunmazsa hareket TÜRSÜZ yazılır ve izah
-    kuyruğuna düşer — uydurulmuş bir türle "izahlı" görünmesindense operatörün eliyle sınıflanması
-    doğrudur. Transfer tür almaz (onu karşı hesabı açıklar — motor: `acceptsNature`).
+    Tür sözlükten: dilekçe sözlük slug'ını taşır ama burada yeniden eşlenir, çünkü sözlük öneri ile onay arasında değişmiş olabilir;
+    bulunmazsa hareket türsüz yazılır ve izah kuyruğuna düşer. Transfer tür almaz, onu karşı hesabı açıklar (`acceptsNature`).
   */
   const nature =
     acceptsNature(payload.type) && payload.nature
@@ -183,7 +158,7 @@ const applyMoneyMovement: Applier = async (db, raw) => {
     type: nature ? classificationTypeOf(payload.direction, nature) : payload.type,
     nature,
     description: payload.description,
-    // Cari sunucuda tam adla çözülmüş kimlik (22.42, `pinpointCounterparty`); tedarikçi bu tipte yok.
+    // Cari sunucuda tam adla çözülmüş kimliktir (`pinpointCounterparty`); tedarikçi bu tipte yok.
     counterpartyId: payload.counterpartyId,
     counterAccountId: payload.counterAccountId,
     ...(payload.valueDate ? { valueDate: payload.valueDate } : {}),
@@ -193,13 +168,8 @@ const applyMoneyMovement: Applier = async (db, raw) => {
 };
 
 /**
- * Bölgeye posta kodu ekleme — kapı `replacePostalCodes` yani KÜMEYİ yazar. Uygulayıcı bu yüzden
- * önce mevcut kodları okur ve üstüne ekler: doğrudan yazsaydı bölgenin var olan kodları silinirdi
- * ("ekle" denen bir öneri, sessizce "bunlarla değiştir" olurdu).
- *
- * **Bildirim buradan GİTMEZ:** `zone_available` uzlaştırma işi (saatte bir) "kapsanmış hâle gelmiş
- * ve haberi gitmemiş" bekleyişleri kendi bulur. İkinci bir gönderim yolu açmak aynı müşteriye iki
- * mesaj demekti.
+ * Bölgeye posta kodu ekleme: kapı kümeyi yazar (`replacePostalCodes`), bu yüzden uygulayıcı mevcut kodları okuyup üstüne ekler, yoksa
+ * "ekle" sessizce "değiştir" olurdu. Bildirim buradan gitmez; `zone_available` uzlaştırma işi bekleyenleri kendisi bulur.
  */
 const applyZoneExtend: Applier = async (db, raw) => {
   const payload = parseProposalPayload('zone_extend', raw) as ZoneExtendPayload;
@@ -226,10 +196,8 @@ const applyZoneExtend: Applier = async (db, raw) => {
  */
 const applyProductDraft: Applier = async (db, raw) => {
   const payload = parseProposalPayload('product_draft', raw) as ProductDraftPayload;
-  // Yalnız GELEN alanlar yazılır: payload'da olmayan alanı `undefined` geçmek, dolu bir beyanı
-  // sessizce `null`a çevirirdi. `status` hiç geçilmiyor — yayın kararı bu kapıdan verilmez (22.6).
-  // Ürün satırına yalnız DOLU bir yama gider: alansız `update` hiçbir satır döndürmez ve kapı
-  // "tek kayıt bekleniyordu" diye düşer — oysa dilekçe yalnız boy ya da kod taşıyor olabilir.
+  // Yalnız gelen alanlar yazılır, çünkü `undefined` geçmek dolu bir beyanı sessizce boşaltır; `status` yayın kararı olduğu için geçilmez.
+  // Ürün satırına yalnız dolu yama gider: alansız `update` satır döndürmez ve kapı "tek kayıt bekleniyordu" diye düşerdi.
   const productPatch = { ...declarationUpdate(payload.fields), ...identityUpdate(payload.identity) };
   if (Object.keys(productPatch).length > 0) await new ProductService(db).updateDetails(payload.productId, productPatch);
   // Boy satırı KİMLİKLE güncellenir, liste yeniden yazılmaz (`syncVariants` eksik satırı silerdi):
@@ -274,11 +242,8 @@ function identityUpdate(identity: ProductDraftPayload['identity']): Record<strin
 }
 
 /**
- * Payload'ın beyan alanlarını `updateDetails` girdisine çevirir — **verilmeyen alan hiç yazılmaz**.
- *
- * Ayrım ince ama pahalı: `{ description: undefined }` göndermek ile alanı hiç göndermemek aynı
- * şey değil. Birincisi dolu bir açıklamayı boşaltır ve bunu kimse fark etmez (22.5'te ölçtük:
- * ürün metinlerinde sürüm tutulmuyor, kaybolan geri gelmiyor).
+ * Payload'ın beyan alanlarını `updateDetails` girdisine çevirir; verilmeyen alan hiç yazılmaz, çünkü `{ description: undefined }`
+ * dolu bir açıklamayı fark edilmeden boşaltır ve ürün metinlerinde sürüm tutulmaz.
  */
 function declarationUpdate(p: {
   name?: unknown;
@@ -297,14 +262,8 @@ function declarationUpdate(p: {
 }
 
 /**
- * Ambalajdan YENİ ÜRÜN (22.6) — öteki tiplerden farkı: katalogda olmayan bir şeyi doğurur.
- *
- * **Ürün ADAY (`candidate`) doğar ve bu payload'la değiştirilemez:** `status` şemada yok, burada da
- * elle veriliyor. Asistanın beyanı doldurabilmesi ile ürünü satışa çıkarabilmesi ayrı eksenler —
- * yanlış okunmuş bir alerjen en kötü hâlde bile vitrine düşmez (`AI_ADMIN_ASSISTANT §6`).
- *
- * Fiyat ve stok YOK: ikisi de ayrı karar, ayrı ekran. Varyant en az bir tane (şema zorluyor) çünkü
- * varyantsız ürün satılamaz — fiyat ve stok varyanta bağlıdır.
+ * Ambalajdan yeni ürün: ürün aday (`candidate`) doğar ve bu payload'la değiştirilemez, çünkü beyanı doldurmak ile satışa çıkarmak ayrı
+ * eksenlerdir (`AI_ADMIN_ASSISTANT §6`). Fiyat ve stok ayrı karardır; en az bir varyant şarttır, çünkü fiyat ve stok varyanta bağlıdır.
  */
 const applyProductCreate: Applier = async (db, raw) => {
   const payload = parseProposalPayload('product_create', raw) as ProductCreatePayload;
@@ -316,18 +275,15 @@ const applyProductCreate: Applier = async (db, raw) => {
     shelfLifeDays: payload.shelfLifeDays,
     vatRate: payload.vatRate,
     status: 'candidate',
-    // Kargolanabilirlik yalnız BİLİNİYORSA yazılır: `null` "okunamadı" demek ve kapının kendi
-    // varsayılanı geçerli kalmalı — `false` yazmak bilinmeyeni "hayır"a çevirirdi. (Varsayılanın
-    // kendisi `false`'tur, 08.08 kararı: unutulan alanın bedeli "satılamadı" olmalı, "bozuk
-    // gitti" değil. Yani bilinmeyen zaten güvenli tarafa düşüyor.)
+    // Kargolanabilirlik yalnız biliniyorsa yazılır: `null` "okunamadı" demektir ve kapının varsayılanı (`false`, güvenli taraf)
+    // geçerli kalmalı.
     ...(payload.shippable === null ? {} : { shippable: payload.shippable }),
     // Saklama rejimi de yalnız BİLİNİYORSA yazılır; bilinmeyende kapının varsayılanı (donuk) kalır ve
     // operatör formda düzeltir — uydurma bir rejim, ürünün iade/imha kuralını sessizce değiştirirdi.
     ...(payload.storageType === null ? {} : { storageType: payload.storageType }),
     variants: payload.variants.map((v, index) => ({
       label: v.label,
-      // Ambalajdan okunan ölçüler (11.08): etiketi yazıp ağırlığı boş bırakmak aynı bilgiyi yarım
-      // kaydetmek olurdu — kilo başı fiyat ve kargo hesabı bu alandan çıkar.
+      // Ambalajdan okunan ölçüler: kilo başı fiyat ve kargo hesabı bu alandan çıkar, etiket yazılıp ağırlık boş bırakılmaz.
       netQuantity: v.netQuantity,
       netUnit: v.netUnit,
       piecesCount: v.piecesCount,
@@ -350,21 +306,15 @@ const applyProductCreate: Applier = async (db, raw) => {
 };
 
 /**
- * Kampanya/indirim — **pasif doğar** (`isActive: false`). Onay "kampanyayı hazırla" demektir,
- * "yayına al" değil: indirim yayına alındığı an sepetlere işler ve geri alınması müşterinin
- * gördüğü fiyatı değiştirir. Yayın kararı fiyat ekranında.
- *
- * Kupon KODU burada üretilmez: kod tekilliği veritabanının işi (`discount_code`) ve öneri
- * anındaki bir kod, onaya kadar geçen sürede başkasına verilmiş olabilir.
+ * Kampanya pasif doğar (`isActive: false`): yayına alınan indirim sepetlere işler, yayın kararı fiyat ekranındadır. Kupon kodu burada
+ * üretilmez, çünkü tekillik veritabanının işidir ve öneri anındaki kod onaya kadar başkasına verilmiş olabilir.
  */
 const applyDiscountDraft: Applier = async (db, raw) => {
   const payload = parseProposalPayload('discount_draft', raw) as DiscountDraftPayload;
   const row = await new DiscountService(db).insert({
     name: payload.name,
-    // ÜÇÜNCÜ YAZMA YOLU (26.08): bu alan sözleşmede vardı ama burada DÜŞÜRÜLÜYORDU — asistan
-    // yolundan yazılan indirim etiketsiz doğuyor, müşteri sepette "İndirim · Kampanya" görüyordu.
-    // Yol bugün ulaşılamıyor (öneri tipinin kendi gövdesi akışı forma sapıtıyor) ama sebebi
-    // tesadüfe yakındı. Kural artık veride de duruyor; burası onun uygulama tarafı.
+    // Müşterinin sepette gördüğü indirim etiketi bu alandan gelir; verilmezse "İndirim · Kampanya" yazar. Kural veride de durur,
+    // burası uygulama tarafıdır.
     publicLabel: payload.publicLabel,
     trigger: payload.trigger,
     type: payload.type,
@@ -392,8 +342,7 @@ const applyRecipeDraft: Applier = async (db, raw) => {
     description: payload.description ?? null,
     steps: payload.steps,
     serves: payload.serves ?? null,
-    // Süre · öğün · evden gerekenler (11.08): dilekçede doldurulan alan burada da yazılmalı, yoksa
-    // asistanın verdiği bilgi kuyrukta kalır ve tarif eksik doğar.
+    // Süre, öğün ve evden gerekenler dilekçede doldurulduysa burada da yazılır, yoksa tarif eksik doğar.
     duration: payload.duration ?? null,
     meal: payload.meal ?? null,
     pantry: payload.pantry ?? null,
@@ -404,12 +353,8 @@ const applyRecipeDraft: Applier = async (db, raw) => {
 };
 
 /**
- * Parti teklifi — tek kolon (`stock.offer_price`) ama **öteki dokuzdan farklı bir şey yapıyor:
- * müşterinin gördüğü fiyatı değiştiriyor** (kullanıcı kararı 09.08). Onaylandığı an vitrinde
- * "fırsat" olarak görünür; taslak evresi yoktur.
- *
- * Parti hâlâ yerinde mi diye BAKILIR: onay anına kadar geçen sürede satılıp bitmiş ya da imha
- * edilmiş olabilir. Yoksa `failed` — olmayan bir partiye fiyat yazmak sessiz bir yalan olurdu.
+ * Parti teklifi müşterinin gördüğü fiyatı değiştirir: onaylandığı an vitrinde fırsat olarak görünür, taslak evresi yoktur. Partinin
+ * hâlâ yerinde olduğuna bakılır, yoksa `failed` döner, çünkü olmayan partiye fiyat yazmak sessiz bir yalan olurdu.
  */
 const applyBatchOffer: Applier = async (db, raw) => {
   const payload = parseProposalPayload('batch_offer', raw) as BatchOfferPayload;
@@ -421,10 +366,8 @@ const applyBatchOffer: Applier = async (db, raw) => {
 };
 
 /**
- * Belge (22.44) — belge kapısından (`createMoneyDocument`): Para ekranının eylemiyle aynı kurallar (KDV
- * toplamı aşamaz, standart dışı rejimde KDV yok, vade belge gününden önce olamaz, tek karşı taraf). Cari
- * adla çözülemediyse dilekçede kimlik yoktur ve kapı karşı tarafsız belgeyi reddeder — seçim kuyruğun
- * formunda yapılır.
+ * Belge, belge kapısından (`createMoneyDocument`): Para ekranının eylemiyle aynı kurallar uygulanır. Cari adla çözülemediyse dilekçede
+ * kimlik yoktur ve kapı karşı tarafsız belgeyi reddeder; seçim kuyruğun formunda yapılır.
  */
 const applyMoneyDocument: Applier = async (db, raw) => {
   const payload = parseProposalPayload('money_document', raw) as MoneyDocumentPayload;
@@ -446,7 +389,7 @@ const applyMoneyDocument: Applier = async (db, raw) => {
   return { moneyDocumentId: outcome.document.id };
 };
 
-/** Tedarikçi (22.44) — Tedarik ekranının kapısından (`createSupplier`): nokta atışı mükerrer yoklamasıyla. */
+/** Tedarikçi, Tedarik ekranının kapısından (`createSupplier`): nokta atışı mükerrer yoklamasıyla. */
 const applySupplierCreate: Applier = async (db, raw) => {
   const payload = parseProposalPayload('supplier_create', raw) as SupplierCreatePayload;
   const outcome = await createSupplier(db, { ...payload, isActive: true });

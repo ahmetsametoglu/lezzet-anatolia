@@ -7,9 +7,8 @@ import { CardFact } from '../assistant-card';
 import { BandBox, BandLabel, BandNote, CardLead, Facts } from './shared';
 
 /**
- * Belge önerisinin kartı (22.44) — "ne kadar, kime, ne zamana kadar". Tutarın rengi YÖN: bizim
- * ödeyeceğimiz belge kırmızı, bize ödenecek olan olive (para kartının sözlüğü). Rejim yalnız
- * standart değilse bir satır olur: ters yüklemeli faturada "KDV 0" ile beyan edilecek KDV'yi o ayırır.
+ * Belge önerisinin kartı: ne kadar, kime, ne zamana kadar; tutarın rengi yönü söyler (bizim ödeyeceğimiz kırmızı, bize ödenecek
+ * olive). Rejim yalnız standart değilse satır olur: ters yüklemeli faturada beyan edilecek KDV'yi "KDV 0"dan o ayırır.
  */
 export function MoneyDocumentCard({ payload }: { payload: MoneyDocumentPayload }) {
   const out = payload.direction === 'out';

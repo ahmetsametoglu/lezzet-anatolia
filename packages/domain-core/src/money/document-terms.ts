@@ -1,11 +1,8 @@
 import type { DocumentVatRegime } from '@lezzet/types';
 
 /**
- * BELGENİN KOŞULLARI (12.26 · kullanıcı kararı 14.09) — KDV rejimi ve vade; saf, DB'siz.
- *
- * Belge penceresi, asistanın belge önerisi ve kapı aynı üç soruyu soruyor: bu faturanın KDV rejimi
- * ne olmalı, vadesi ne, ve rejimle KDV tutarı birbirini tutuyor mu. Üçü ayrı yerde yazılsaydı biri bir
- * gün ötekinden ayrılırdı — pencere "ters yükleme" önerir, kapı reddederdi.
+ * Belgenin koşulları: KDV rejimi ve vade; saf, DB'siz. Belge penceresi, asistanın önerisi ve kapı aynı kuralı buradan okur ki
+ * pencere "ters yükleme" önerip kapı reddetmesin.
  */
 
 /**
@@ -16,14 +13,8 @@ import type { DocumentVatRegime } from '@lezzet/types';
 export const BUSINESS_VAT_COUNTRY = 'FR';
 
 /**
- * Tedarikçinin ülkesinden ve belgenin KDV'sinden rejim ÖNERİSİ. Karar operatörün — form önerir,
- * değiştirilebilir.
- *
- * Fransa dışındaki tedarikçinin KDV'siz faturası ters yüklemedir: AB içi alımda da ithalatta da
- * Fransız KDV'si bizim beyanımızda hesaplanır (autoliquidation). KDV yazan belge her zaman
- * standarttır; ülkesi bilinmeyen tedarikçide öneri standart kalır — bilinmeyen ülkeden rejim
- * türetmek, olmayan bir bilgiyi yazmak olurdu. `exempt` hiç önerilmez: muafiyet belgenin konusundan
- * (sigorta, banka masrafı) okunur, ülkeden değil.
+ * Tedarikçinin ülkesinden ve belgenin KDV'sinden rejim önerisi; Fransa dışından KDV'siz fatura ters yüklemedir (autoliquidation).
+ * Ülkesi bilinmeyende öneri standart kalır, `exempt` hiç önerilmez: muafiyet belgenin konusundan okunur, ülkeden değil.
  */
 export function suggestVatRegime(input: { supplierCountry: string | null | undefined; vatAmountCents: number | null | undefined }): DocumentVatRegime {
   if ((input.vatAmountCents ?? 0) > 0) return 'standard';
@@ -40,9 +31,8 @@ export function vatRegimeProblem(regime: DocumentVatRegime, vatAmountCents: numb
 }
 
 /**
- * Vadenin önerisi — belge günü + tedarikçinin tanıdığı gün sayısı. Vadesiz (`null`) tedarikçi PEŞİN
- * çalışır (kartın sözleşmesi), yani vade belgenin kendi günüdür. Tarih biçimi bozuksa `null`:
- * uydurulmuş bir gün, ödeme takvimini yanlış kurardı.
+ * Vade önerisi: belge günü + tedarikçinin gün sayısı; vadesiz tedarikçi peşin çalışır, vade belgenin kendi günüdür.
+ * Tarih biçimi bozuksa `null`: uydurulmuş gün ödeme takvimini yanlış kurardı.
  */
 export function documentDueOn(issuedOn: string, paymentTermDays: number | null | undefined): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(issuedOn)) return null;

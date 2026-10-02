@@ -275,9 +275,9 @@ const ProductReviewSignalsSchema = z.object({
 });
 
 /**
- * Ambalajdan okunan ama BEYAN olmayan künye: saklama rejimi, tarih türü, raf ömrü, kargo izni ve kategori. Dili yoktur,
- * bu yüzden beyan alanlarının yanında ayrı durur. Saklama rejimi sorulmazsa kolonun varsayılanı kalır ve o varsayılan
- * DONUK'tur (`0005`): rafta duran sirke dondurucuya yazılırdı, üstelik onay ekranında görünmeden.
+ * Ambalajdan okunan ama beyan olmayan künye (saklama, tarih türü, raf ömrü, kargo izni, kategori); dili yoktur, beyan
+ * alanlarından ayrı durur. Saklama rejimi sorulmazsa kolonun varsayılanı DONUK kalır (`0005`) ve rafta duran ürün onay
+ * ekranında görünmeden dondurucuya yazılır.
  */
 const ProductIdentitySchema = z
   .object({
@@ -358,12 +358,8 @@ export const ProductDraftPayloadSchema = ProductReviewSignalsSchema.extend({
   /** Beyan olmayan künye — yeni üründe yazılabilen alanlar var olan üründe de yazılabilmeli, yoksa eksik künye elde kalırdı. */
   identity: ProductIdentitySchema.default({}),
   /**
-   * Ürünün boyları. `variantId` VARSA o boy güncellenir, YOKSA satır yeni boydur. Ayrımın ölçütü kimliğin varlığı:
-   * boyun kendi beyanı yoktur, künyesi ürünündür — ayrı bir dilekçe tipi aynı kararı iki kuyruğa bölerdi.
-   *
-   * Dilekçe hiçbir boyu SİLMEZ: onay formu varyant listesinin tamamını kaydeder (`syncVariants`) ve eksik gelen satır
-   * silinirdi, yani gelen liste olduğu gibi forma konsaydı bir onay ürünün öteki boylarını götürürdü. Liste eşlenir:
-   * kimlikli satır yerinde güncellenir, kimliksiz satır sona eklenir.
+   * Ürünün boyları: `variantId` varsa o boy güncellenir, yoksa satır yeni boydur; boyun kendi beyanı olmadığından ayrı dilekçe
+   * tipi yok. Dilekçe hiçbir boyu silmez: onay formu listenin tamamını kaydeder (`syncVariants`), bu yüzden liste eşlenir.
    */
   variants: z
     .array(
@@ -582,23 +578,16 @@ export function parseProposalPayload(kind: AssistantProposalKind, raw: unknown) 
 }
 
 /**
- * Uyarının AĞIRLIĞI — ekrandaki rengi ve sırası bundan çıkar (`0042` künyesi).
- *
- * `irreversible` tek başına kırmızıdır ve bilinçli: kehribar "dikkat et", kırmızı "bundan dönüş
- * yok" demek. İkisi aynı tonda çizilseydi gerçekten geri alınamaz olanı (bölge bildirimi, para
- * hareketi) ötekilerin arasında kaybolurdu.
+ * Uyarının ağırlığı; ekrandaki rengi ve sırası bundan çıkar (`0042`). `irreversible` tek başına kırmızıdır ki geri alınamaz
+ * olan (bölge bildirimi, para hareketi) kehribar uyarıların arasında kaybolmasın.
  */
 export const AssistantWarningLevelEnum = z.enum(['unclear', 'overwrite', 'untouched', 'irreversible']);
 export type AssistantWarningLevel = z.infer<typeof AssistantWarningLevelEnum>;
 
 /**
- * Asistanın "onaylamadan önce bunu bil" maddesi.
- *
- * `reason` önerinin neden DOĞDUĞUNU söyler, bu ise onaydan önce bilinmesi gerekeni — ve çoğuldur:
- * tek cümleye sıkıştırılınca üç uyarının üçü birden okunmuyordu (kullanıcı ölçümü).
- *
- * `field` dilekçedeki alanın adıdır ve ekranda okunur karşılığına çevrilir; alana bağlı olmayan
- * uyarıda (bölge bildirimi gibi) boş kalır. `note` yoksa başlık tek başına yeter.
+ * Asistanın "onaylamadan önce bunu bil" maddesi; `reason` önerinin neden doğduğunu söyler, bu ise onaydan önce bilinmesi
+ * gerekeni ve çoğuldur. `field` dilekçedeki alanın adıdır, ekranda okunur karşılığına çevrilir; alana bağlı olmayan uyarıda
+ * boştur.
  */
 export const AssistantWarningSchema = z.object({
   field: z.string().optional(),

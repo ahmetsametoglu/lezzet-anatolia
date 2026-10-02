@@ -9,13 +9,9 @@ import { VAT_REGIME_HINT, VAT_REGIME_LABEL } from './labels';
 import type { InvoiceFields } from './schema';
 
 /*
-  FATURANIN PARA KÜNYESİ (12.26 · 22.44) — toplam, KDV, KDV rejimi, vade. Belge penceresi, asistanın
-  belge, mal kabul ve faturalı sipariş gövdeleri aynı bloğu çizer (`schema.ts` künyesi).
-
-  KONTROLLÜ ve form kütüphanesiz: mal kabul ve sipariş gövdeleri RHF kullanmıyor (satır editörleri
-  kontrollü liste), belge penceresi kullanıyor — blok ikisine de `value`/`onChange` ile bağlanır.
-  `fieldset` salt okunur hâlin tek anahtarı: rejim seçicisinin kendi `disabled`ı yok, alan kümesi
-  içindeki bütün düğmeleri birlikte kapatır.
+  Faturanın para künyesi (toplam, KDV, rejim, vade); belge penceresi ile asistanın belge, mal kabul ve sipariş gövdeleri
+  aynı bloğu çizer. Kontrollü ve form kütüphanesiz çünkü mal kabul ve sipariş gövdeleri RHF kullanmaz; `fieldset` salt
+  okunur hâlin tek anahtarıdır, rejim seçicisinin kendi `disabled`ı yok.
 */
 
 interface InvoiceFieldsBlockProps {

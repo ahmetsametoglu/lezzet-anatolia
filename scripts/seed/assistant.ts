@@ -2,32 +2,9 @@ import type { AssistantProposalKind, AssistantProposalStatus } from '@lezzet/typ
 import { gun, an, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
 
 /*
-  ── ASİSTAN ONAY KUYRUĞU (Modül 22) ─────────────────────────────────────────
-
-  NEDEN VAR: kuyruk `db:refresh` sonrası HER SEFERİNDE boştu ve bu, modülün ekran doğrulamalarını
-  aylardır kilitliyordu. Görev satırları *"kuyrukta iki `product_draft` önerisi var"* diye o günkü
-  hâli anlatıyor, kullanıcı ekranı açtığında boş bir sayfa görüyordu — yani onbir gövdenin hiçbiri
-  gözle sınanamıyordu (`BEKLEYEN(22.10/22.11/22.14/22.33/22.34/22.35)` hepsi aynı kökten).
-
-  Barkod modülünün 23.14'te öğrendiği ders burada da geçerli: **test verisi sabit ve refresh'e
-  dayanıklı olmalı.** Orada kâğıt etiket kodları sabitlendi; burada kuyruğa her tipten bir dilekçe
-  düşüyor.
-
-  ── PAYLOAD GERÇEK KAYITLARDAN TÜRER, UYDURULMAZ ────────────────────────────
-  Her dilekçe seed'in kurduğu GERÇEK kimlikleri taşır (varyant, depo, hesap, bölge, parti). Sahte
-  bir uuid yazmak iki şeyi birden bozardı: gövde açılırken ad çözümü boşa düşer ("—" görünür) ve
-  onaylandığında uygulayıcı `23503` ile kesilir. Kimlik seçimi de sıraya değil ROLE bağlı
-  (`test-labels.ts` dersi): "eldeki en yakın tarihli parti", "ilk açık tedarik siparişi" gibi.
-
-  ── ONBİR TİPİN ONBİRİ DE VAR, VE BU BİR KAPSAM KURALI ──────────────────────
-  Eksik tip = o gövdenin ekranda hiç açılmaması demek. `coverage.ts` bunu zorluyor: kuyruk tip
-  sayısı onbirin altına düşerse seed çıkış kodu 1 verir.
-
-  ── KARAR GEÇMİŞİ DE DOLU (kullanıcı kararı 26.08) ──────────────────────────
-  Yalnız `pending` yazsaydık kuyruğun üç sekmesinden ikisi boş kalırdı ve iki davranış hiç
-  sınanamazdı: karar verilmiş öneride formun KİLİTLİ görünmesi (22.19) ve tip süzgecinin geçmiş
-  üzerinde çalışması (22.37). Bu yüzden dört dilekçe karara bağlanmış doğuyor — biri de `expired`,
-  çünkü TTL'i geçmiş bir dilekçenin nasıl göründüğü de bir hâldir.
+  Asistan onay kuyruğunun tohumu: her tipten bir dilekçe, gerçek kayıtların kimlikleriyle (sahte kimlikte ad çözümü "—" görünür,
+  onay `23503` ile kesilir); eksik tipte `coverage.ts` çıkış kodu 1 verir. Dört dilekçe karara bağlanmış doğar ki kilitli form ve
+  geçmiş sekmeleri de gözle sınanabilsin.
 */
 
 /** Dilekçenin kuyruğa düşme şekli — durum + karar izi tek yerde. */
@@ -66,11 +43,8 @@ export interface Capalar {
   parti: { id: string; variantId: string; expiryDate: string; physicalQty: number } | null;
   acikSiparisId: string | null;
   /**
-   * Varyant → geçerli b2c fiyatı (**cent**). Paket ve fırsat dilekçeleri buradan kurulur.
-   *
-   * Uydurulmuş fiyat ekranda YALAN söyler ve bunu ölçerek gördük (26.08): elle yazılan 24,90 €'luk
-   * paket, kalemleri ayrı almaktan pahalıya düşünce kart *"%−149 indirim"* çizdi. Kartın hesabı
-   * doğruydu — girdi saçmaydı. Öneri gerçekçi olmalı ki onaylandığında işe yarasın.
+   * Varyant → geçerli b2c fiyatı (cent); paket ve fırsat dilekçeleri buradan kurulur. Uydurulmuş fiyat kartta saçma oran
+   * çizer (kalemlerden pahalı paket "%−149 indirim" görünür), öneri gerçekçi olmalı ki onaylandığında işe yarasın.
    */
   fiyatlar: Map<string, number>;
 }
@@ -179,9 +153,7 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
     },
   });
 
-  // Paket fiyatı kalemlerin GERÇEK fiyatından türer, elle yazılmaz — %15 indirimli. Uydurulmuş bir
-  // toplam kalemlerin altına düşerse kart "%−149 indirim" çizer (ölçüldü 26.08); hesap doğru,
-  // girdi saçmaydı.
+  // Paket fiyatı kalemlerin gerçek fiyatından %15 indirimle türer; uydurma toplam kalemlerin altına düşerse kart "%−149 indirim" çizer.
   const paketKalemleri = [birinci!, ikinci!].map((v) => ({ v, cent: c.fiyatlar.get(v.id) ?? 900 }));
   const paketHam = paketKalemleri.reduce((t, k) => t + k.cent, 0);
   const paketToplam = Math.round(paketHam * 0.85);
@@ -249,8 +221,8 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
       direction: 'out',
       amountCents: 48_620,
       type: 'expense',
-      // Tür sözlük slug'ı, cari adla (22.42). Tedarikçi bu tipte yok: mal bedeli mal kabulden geçer.
-      // Kimlik bilerek çözülmemiş — kuyruk formunun "cariyi operatör seçer" yolu seed'de görünsün.
+      // Tür sözlük slug'ı; tedarikçi bu tipte yok, mal bedeli mal kabulden geçer. Cari kimliği bilerek boş: kuyruk formunun
+      // "cariyi operatör seçer" yolu seed'de görünsün.
       nature: 'muhasebe-ucreti',
       description: 'Eylül muhasebe ücreti',
       counterpartyId: null,
@@ -261,7 +233,7 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
     },
   });
 
-  // Transfer, `money_movement`ın İKİNCİ hâli (22.22) — kendi tipi yok, gövdesi ayrı çiziliyor.
+  // Transfer `money_movement`ın ikinci hâli: kendi tipi yok, gövdesi ayrı çiziliyor.
   if (c.karsiHesapId) {
     liste.push({
       kind: 'money_movement',
@@ -495,8 +467,8 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
     },
   });
 
-  // Belge (22.44) — mal DIŞI fatura: sigorta primi, MUAF rejim (sigorta KDV'den muaftır), vadeli; cari
-  // adla geliyor ve sözlükte yok — kuyruk formunun "cariyi operatör seçer" yolu seed'de görünsün.
+  // Mal dışı fatura: sigorta primi, muaf rejim (sigorta KDV'den muaftır), vadeli; cari adla geliyor ve sözlükte yok ki kuyruk
+  // formunun "cariyi operatör seçer" yolu seed'de görünsün.
   liste.push({
     kind: 'money_document',
     summary: 'Belge — Rhin Assurances sigorta primi 420,00 € (muaf)',
@@ -519,7 +491,7 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
     },
   });
 
-  // Tedarikçi (22.44) — faturanın başlığından yeni kart: Belçikalı toptancı (ülke BE → faturaları ters yükleme).
+  // Faturanın başlığından yeni tedarikçi kartı: Belçikalı toptancı (ülke BE → faturaları ters yükleme).
   liste.push({
     kind: 'supplier_create',
     summary: 'Yeni tedarikçi — Anatolia Import BV (BE)',
@@ -540,11 +512,8 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
 }
 
 /**
- * **Karar geçmişi** — kuyruğun öteki iki sekmesi (kullanıcı kararı 26.08).
- *
- * Dört dilekçe karara bağlanmış doğar. `expired` olanın TTL'i GEÇMİŞTİR: sönmüş bir dilekçenin
- * nasıl göründüğü de bir hâldir ve yalnız burada üretilebilir (kuyruk süpürücüsü onu bekleyenden
- * çekemez, çünkü kuyruk her refresh'te yeni doğuyor).
+ * Karar geçmişi: kuyruğun öteki iki sekmesi için dört dilekçe karara bağlanmış doğar. `expired` olanın TTL'i geçmiştir; sönmüş
+ * dilekçe ancak burada üretilir, çünkü kuyruk her refresh'te yeni doğar.
  */
 export function kararlilar(c: Capalar, kalemler: VaryantRef[]): Dilekce[] {
   const [birinci, ikinci] = kalemler;

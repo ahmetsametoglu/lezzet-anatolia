@@ -4,16 +4,9 @@ import { toCents } from '@lezzet/helper';
 import { DocumentKindEnum, DocumentVatRegimeEnum, MovementDirectionEnum, type DocumentVatRegime } from '@lezzet/types';
 
 /**
- * **BELGE FORMUNUN ŞEMASI** — Para ekranının "+ Belge" penceresi ile asistan kuyruğunun belge gövdesi
- * aynı tanımı paylaşır (12.26 · 22.44; `movement-form`un gerekçesi: form iki yerde açılıyor, ikinci
- * yüzey için yeniden yazmak iki gerçek doğururdu).
- *
- * ── FATURANIN PARA KÜNYESİ AYRI BİR PARÇA ────────────────────────────────────
- * Toplam · KDV · KDV rejimi · vade dört alanı yalnız bu formun değil: asistanın mal kabul ve faturalı
- * tedarik siparişi gövdeleri de faturayı aynı dört alanla yazar. `InvoiceFields` o ortak parça —
- * engeli (`invoiceBlock`) ve cent'e çevrimi (`invoiceTermsOf`) tek yerde.
- *
- * Tutarlar formda **EURO** (kutu euro yazar), kapıya giderken `toCents` ile cent olur (`STACK §8`).
+ * Belge formunun şeması; Para ekranının "+ Belge" penceresi ile asistanın belge gövdesi aynı tanımı paylaşır. Faturanın para
+ * künyesi (`InvoiceFields`) ayrı parça çünkü mal kabul ve faturalı sipariş gövdeleri de faturayı aynı alanlarla yazar; tutarlar
+ * formda euro, kapıya giderken `toCents` ile cent olur.
  */
 export const InvoiceFieldsSchema = z.object({
   /** **EURO** — KDV dâhil belge toplamı. */
@@ -54,7 +47,7 @@ export function invoiceTermsOf(invoice: InvoiceFields): {
   return { amountCents: toCents(invoice.amount ?? 0), vatAmountCents: vatCentsOf(invoice), vatRegime: invoice.vatRegime, dueOn: invoice.dueOn || null };
 }
 
-/** Tedarikçi seçeneği — ülkesi ve vadesiyle: faturanın rejimi ve vadesi bunlardan önerilir (12.26). */
+/** Tedarikçi seçeneği — ülkesi ve vadesiyle: faturanın rejimi ve vadesi bunlardan önerilir. */
 export interface SupplierOption {
   value: string;
   label: string;
@@ -79,8 +72,8 @@ export function supplierSuggestion(
 }
 
 /**
- * "Neyin faturası" seçeneği (12.26) — değer `intake:<kimlik>` ya da `order:<kimlik>`. Tek seçicide iki
- * tür, çünkü soru tek: bu fatura hangi alımın? Mal geldiyse kabul, mal gelmeden kesildiyse sipariş.
+ * "Neyin faturası" seçeneği: değer `intake:<kimlik>` ya da `order:<kimlik>`. Soru tek olduğu için tek seçicide iki tür: mal
+ * geldiyse kabul, mal gelmeden kesildiyse sipariş.
  */
 export interface StockLinkOption {
   value: string;
@@ -96,11 +89,11 @@ export const DocumentFormSchema = z.object({
   kind: DocumentKindEnum,
   number: z.string(),
   issuedOn: z.string(),
-  /** Cari (13.09) — boş dize = cari değil. Tedarikçiyle birlikte seçilemez. */
+  /** Cari — boş dize = cari değil. Tedarikçiyle birlikte seçilemez. */
   counterpartyId: z.string(),
   /** Boş dize = tedarikçi değil. */
   supplierId: z.string(),
-  /** Neyin faturası (12.26) — `parseStockLink` biçimi; boş = bağsız. Yalnız tedarikçinin ödenecek belgesinde. */
+  /** Neyin faturası — `parseStockLink` biçimi; boş = bağsız. Yalnız tedarikçinin ödenecek belgesinde. */
   stockLink: z.string(),
   direction: MovementDirectionEnum,
   /** Belgenin türü — boş dize = türsüz; ödemesi bağlanınca harekete de geçer. */

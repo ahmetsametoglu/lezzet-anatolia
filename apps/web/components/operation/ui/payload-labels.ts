@@ -8,29 +8,13 @@ import {
 import { DOCUMENT_KIND_LABEL, VAT_REGIME_LABEL } from '@/components/operation/form/document-form/labels';
 
 /**
- * DİLEKÇE KÜNYESİNİN SÖZLÜKLERİ — `payload-tree`nin saf yarısı (26.08'de ayrıldı).
- *
- * ── NEDEN AYRI DOSYA ────────────────────────────────────────────────────────
- * Ayrım bir düzen tercihi değil, TEST edilebilirlik: bu depoda jsdom yok ve bilinçle yok
- * (`vitest.config.ts` künyesi), yani `.tsx` bir dosya birim testinden import EDİLEMİYOR. Künyenin
- * dili bir görünüm ayrıntısı değil bir sözdür — *"operasyon yüzeyinde makine adı görünmez"* — ve
- * söz ancak sınanabildiği yerde durur. Bileşen bu dosyayı import ediyor; kural tek yerde.
- *
- * Sözlüklerin İÇERİĞİ burada YENİDEN yazılmıyor: alerjen ve eksik-beyan karşılıkları
- * `@lezzet/types`ten geliyor (`CLAUDE §1`) — aynı kelimeler müşteri yüzeyinde de görünmeli.
+ * Dilekçe künyesinin sözlükleri; `payload-tree`nin saf yarısı. Ayrı dosyada durur çünkü depoda jsdom yok ve `.tsx` birim
+ * testinden içe aktarılamaz: "operasyon yüzeyinde makine adı görünmez" sözü ancak burada sınanır.
  */
 
 /**
- * Şema ENUM'larının okunur karşılığı — **alan adı + değer** çiftiyle eşleşir (12.08).
- *
- * Künye "dilekçenin okunur hâli" diyor ama enum alanlarını ham basıyordu: para hareketinde
- * "Yön: out", "Tür: expense" yazıyor, hemen üstündeki künye satırı ise aynı şeye "Hesaptan çıktı"
- * diyordu — aynı ekranda iki dil. Eşleşme yalnız değere bakmıyor, çünkü aynı kelime başka bir
- * alanda başka anlama gelebilir ("type" hem hareket türü hem indirim türü).
- *
- * Sözlükte olmayan enum ham kalır ve bu bilinçli: uydurma bir çeviri, olmayan bir alanı varmış
- * gibi gösterirdi. Karşılıklar formların kendi sözlüklerinden geliyor (`MANUAL_TYPE_VIEW`,
- * `discount-form`) — burada yeniden ADLANDIRMA yapılmıyor, aynı kelimeler kullanılıyor.
+ * Enum alanlarının okunur karşılığı alan adı + değer çiftiyle eşleşir, çünkü aynı değer başka alanda başka anlama gelir
+ * ("type" hem hareket hem indirim türü). Sözlükte olmayan enum ham kalır: uydurma çeviri olmayan bir değeri varmış gibi gösterir.
  */
 export const ENUM_LABEL: Record<string, Record<string, string>> = {
   direction: { in: 'Hesaba girdi', out: 'Hesaptan çıktı' },
@@ -47,38 +31,29 @@ export const ENUM_LABEL: Record<string, Record<string, string>> = {
   trigger: { coupon: 'Kupon kodu', automatic: 'Otomatik' },
   scope: { cart: 'Sepetin tamamı', category: 'Kategori', collection: 'Koleksiyon' },
   target: { category: 'Kategori', collection: 'Koleksiyon', bundle: 'Paket' },
-  // Belge (22.44) — sözlükler belge formunun etiketlerinden: aynı kelime iki yerde yazılmaz.
+  // belge
   kind: DOCUMENT_KIND_LABEL,
   vatRegime: VAT_REGIME_LABEL,
   source: { engine: 'Eşik altı eksiği', invoice: 'Tedarikçinin faturası' },
 };
 
 /**
- * Kimliğin ADINI hangi alan taşıyor — künye satırının gizlenip gizlenmeyeceğini bu belirler (26.08).
- *
- * Varsayılan kalıp `<x>Id → <x>Name` ve çoğu payload'da doğru; burada yalnız SAPMALAR duruyor.
- * Varyantın kendi adı yok (ürünün adı + boy etiketi), deponun adı künyelerde koduyla geçiyor.
- * Kalıp tek başına yetmediği için ekranda `Variant id 9a955167…` satırları görünüyordu — hemen
- * altlarında aynı şeyi söyleyen `Ürün` satırıyla birlikte.
+ * Kimliğin adını taşıyan alanlar: ad künyede varsa kimlik satırı gizlenir. Yoksa kalıp `<x>Id → <x>Name` uygulanır;
+ * varyantın kendi adı olmadığı, deponun adı koduyla geçtiği için kalıp tek başına yetmez.
  */
 export const ID_TWIN: Record<string, readonly string[]> = {
   variantId: ['variantName', 'productName', 'product'],
   warehouseId: ['warehouseName', 'warehouseCode'],
   accountId: ['accountName'],
   counterAccountId: ['counterAccountName'],
-  // Cari kimliği (22.42): dilekçe adı da taşır, kimlik ikizinin arkasında durur.
   counterpartyId: ['counterpartyName'],
   supplierId: ['supplierName'],
   zoneId: ['zoneName'],
 };
 
 /**
- * Alan adlarının okunur karşılığı — sözlükte olmayan anahtar kelimelere ayrılıp yazılır.
- *
- * **Kimlik alanları da burada ve olmaları şart (26.08):** türetme camelCase'i ayırmakla yetiniyor
- * (`batchId` → "Batch id"), yani sözlükte olmayan bir İNGİLİZCE anahtar ekranda İngilizce kalıyor.
- * Operasyon yüzeyi Türkçe (`CLAUDE §2`) ve türetme bunu kendiliğinden sağlayamaz. İkizi olan
- * kimlikler zaten gizleniyor; buradakiler ikizi OLMAYANLAR için — görünürlerse Türkçe görünsünler.
+ * Alan adlarının okunur karşılığı; sözlükte olmayan anahtar camelCase'den ayrılıp yazılır. İkizi olmayan kimlikler de burada
+ * olmalı, yoksa İngilizce anahtar Türkçe operasyon yüzeyinde İngilizce kalır (`batchId` → "Batch id").
  */
 const FIELD_LABEL: Record<string, string> = {
   // kimlikler (ikizi olmayan; ikizi olanlar `ID_TWIN` ile gizleniyor)
@@ -99,7 +74,7 @@ const FIELD_LABEL: Record<string, string> = {
   description: 'Açıklama',
   reason: 'Gerekçe',
   note: 'Not',
-  // `category` para dilekçesinde 22.42'de `nature` oldu; eski dilekçeler kuyrukta durduğu sürece etiket kalır.
+  // Eski para dilekçelerinin `category` alanı (bugün `nature`); kuyrukta durdukları sürece etiket kalır.
   category: 'Kategori',
   nature: 'Tür',
   categoryName: 'Kategori',
@@ -144,7 +119,7 @@ const FIELD_LABEL: Record<string, string> = {
   listPriceCents: 'Liste fiyatı',
   amountCents: 'Tutar',
   totalAmountCents: 'Fatura toplamı',
-  // belge / fatura (22.44)
+  // belge / fatura
   vatAmountCents: 'KDV',
   vatRegime: 'KDV rejimi',
   dueOn: 'Vade',
@@ -157,7 +132,7 @@ const FIELD_LABEL: Record<string, string> = {
   supplierItemKey: 'Tedarikçideki anahtar',
   supplierItemName: 'Tedarikçideki ad',
   mappingProposed: 'Eşleme önerisi',
-  // tedarikçi kartı (22.44)
+  // tedarikçi kartı
   vatNumber: 'Vergi no',
   phone: 'Telefon',
   email: 'E-posta',
@@ -211,14 +186,8 @@ export function textOf(obj: Record<string, unknown>, lang: Locale): string {
 }
 
 /**
- * Kapalı kümelerin ÜYE etiketleri — dizi DEĞERLERİ de çevrilir (26.08).
- *
- * Alerjenler ve eksik beyan kalemleri veride slug olarak durur (`sut` · `sert_kabuklu` ·
- * `nutrition`) ve künye onları HAM basıyordu: Türkçe bir listenin ortasında `gluten · sut ·
- * sert_kabuklu` ve `nutrition · ingredients`. İki sözlük de zaten vardı — eksik olan çağrıydı.
- *
- * Sözlükte olmayan üye HAM kalır: uydurma bir çeviri, olmayan bir değeri varmış gibi gösterirdi
- * (`ENUM_LABEL`in aynı kuralı).
+ * Kapalı kümelerin üye etiketleri: alerjen ve eksik beyan kalemleri veride slug olarak durur, künye onları çevirir.
+ * Sözlükte olmayan üye ham kalır; uydurma çeviri olmayan bir değeri varmış gibi gösterir.
  */
 export function memberLabel(key: string, member: string, lang: Locale): string {
   if (key === 'allergens' || key === 'traces') {

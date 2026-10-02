@@ -31,10 +31,8 @@ import {
  */
 
 /**
- * "Onaylamadan önce bunu bil" maddeleri — HER propose_* aracında aynı alan, tarifi TEK yerde.
- *
- * `reason` önerinin neden doğduğunu söyler; bu alan onaydan önce bilinmesi gerekeni sayar ve
- * çoğuldur. Tarif on üç araca elle kopyalansaydı biri bir gün seviyelerden birini kaybederdi.
+ * "Onaylamadan önce bunu bil" maddeleri; her propose_* aracında aynı alan, tarifi tek yerde. `reason` önerinin neden doğduğunu
+ * söyler, bu alan onaydan önce bilinmesi gerekeni sayar ve çoğuldur.
  */
 const WARNINGS_PROP = {
   warnings: {
@@ -45,12 +43,8 @@ const WARNINGS_PROP = {
 } as const;
 
 /**
- * Beyan metinlerinin BİÇİMLENDİRME kuralı — tarifi TEK yerde, çünkü iki araç (`product_create`,
- * `product_draft`) ve iki alan (içindekiler, saklama) aynı kuralı paylaşıyor.
- *
- * Yaşanan hata (işletmeci bildirimi 23.09): modeller alerjeni GÖRÜNÜR yapmak için büyük harfe
- * çeviriyor ("BUĞDAY unu"). Depodaki işaret `**` (`helper/rich-text`) ve vitrin onu kalın çiziyor;
- * büyük harf ise metnin kendisini bozuyor ve her sıfırlamada elle düzeltiliyor.
+ * Beyan metinlerinin biçimlendirme kuralı; iki araç ve iki alan aynı kuralı paylaştığı için tarif tek yerde. Modeller alerjeni
+ * büyük harfle vurgulamaya yatkın, oysa depodaki işaret `**` (`helper/rich-text`) ve büyük harf metnin kendisini bozar.
  */
 const BEYAN_BICIMI =
   'FORMATTING: to make a word stand out, wrap it in ** ** — the storefront renders that as bold. NEVER UPPERCASE a word for emphasis: capitals are not emphasis here, they change the declaration itself. Capitals stay only where the label really prints them (a brand, or an abbreviation like UHT, E330, DLC). Mark the allergen AS IT IS WRITTEN IN THIS LIST, not by its allergen name: "**buğday** unu" / "farine de **blé**", never "GLUTEN". The closed allergen list is a separate field and is not a substitute for this marking.';

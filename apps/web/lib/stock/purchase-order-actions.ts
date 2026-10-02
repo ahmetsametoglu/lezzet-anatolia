@@ -14,36 +14,19 @@ import { DOCUMENT_REASON } from '@/app/(operations)/operations/finance/finance-l
 const PROCUREMENT_PATH = '/operations/procurement';
 
 /**
- * **ÖNERİDEN TEDARİK SİPARİŞİ** — asistan kuyruğunun kendi kapısı (22.33).
- *
- * ── NEDEN `lib/` ALTINDA ────────────────────────────────────────────────────
- * Kolokasyon kuralı server action'ları sayfa klasöründe tutar, ama bu eylemin İKİ sayfası var:
- * kuyruk çağırır, tedarik ekranı tazelenir. Kardeş sayfadan import yasak (`STACK §7` — `docs:check`
- * zorluyor) ve doğrusu paylaşılan yardımcı: `receiveIntakeFromProposalAction` da aynı sebeple
- * `lib/warehouse/` altında duruyor.
- *
- * ── NEDEN AYRI BİR EYLEM ────────────────────────────────────────────────────
- * `createManualDraftAction` ile aynı işi yapar ama bir öneriyi KAPATIR (`withProposal`): satır ve
- * kayıt birlikte yazılır, ikinci bir yazma yolu açılmaz. Ekranın kendi kapısında böyle bir öneri
- * yok ve o yol hiç değişmemeli.
- *
- * ── KALEMLER DİLEKÇEDEN DEĞİL FORMDAN GELİR ─────────────────────────────────
- * Bugüne kadar bu tip gövdesizdi: onay `applyPurchaseOrder` üzerinden koşuyor ve **dilekçede ne
- * yazıyorsa o gidiyordu**. Oysa öneri bir başlangıçtır, son söz değil — adet değişir, vazgeçilen
- * kalem çıkarılır, asistanın bulamadığı tedarikçi seçilir. Düzenlenemeyen bir taslak, "sipariş
- * taslağı" değil bir dayatmadır.
- *
- * Yetki `requireFinance` — elle siparişle AYNI kapı. Kuyruktan gelmek yetkiyi atlatmaz.
+ * Öneriden tedarik siparişi: `createManualDraftAction` ile aynı işi yapar ama öneriyi de kapatır (`withProposal`), kalemler
+ * dilekçeden değil düzeltilmiş formdan gelir; yetki elle siparişle aynı kapı (`requireFinance`). Kuyruk çağırıp tedarik ekranı
+ * tazelendiği için sayfa klasöründe değil `lib/` altında durur, kardeş sayfa içe aktarımı yasak (`STACK §7`).
  */
 export async function createDraftFromProposalAction(input: {
   supplierId: string;
   targetWarehouseId: string | null;
   note: string | null;
-  /** `unitPriceCents` yalnız faturadan siparişte (22.44): tedarikçinin kestiği fiyat, eşlemedeki son alışın önüne geçer. */
+  /** `unitPriceCents` yalnız faturadan siparişte: tedarikçinin kestiği fiyat, eşlemedeki son alışın önüne geçer. */
   lines: Array<{ variantId: string; qty: number; unitPriceCents?: number | null }>;
   /**
-   * FATURADAN SİPARİŞ (22.44 · kullanıcı kararı 14.09) — verildiyse sipariş GÖNDERİLMİŞ açılır ve fatura
-   * siparişe bağlı bir BELGE olarak doğar: tedarikçi borcu o belgeden türer, mal gelince rampa sayar.
+   * Faturadan sipariş: verildiyse sipariş gönderilmiş açılır ve fatura siparişe bağlı belge olarak doğar; tedarikçi borcu o
+   * belgeden türer, mal gelince rampa sayar.
    */
   invoice?: {
     number: string | null;
@@ -53,7 +36,7 @@ export async function createDraftFromProposalAction(input: {
     vatRegime: DocumentVatRegime;
     dueOn: string | null;
   } | null;
-  /** Eşleme önerileri (22.43 · 22.44) — onay, tedarikçinin kalem eşlemesinin de onayıdır. */
+  /** Eşleme önerileri — onay, tedarikçinin kalem eşlemesinin de onayıdır. */
   mappings?: Array<{ variantId: string; supplierCode: string; nameAtSupplier: string | null }>;
   proposalId: string;
 }): Promise<ActionResult<{ orderId: string; documentId: string | null }>> {
@@ -76,9 +59,8 @@ export async function createDraftFromProposalAction(input: {
           input.lines.map((l) => ({ variantId: l.variantId, qty: l.qty, unitPriceCents: l.unitPriceCents ?? null, targetWarehouseId: input.targetWarehouseId })),
           input.note?.trim() || undefined,
         );
-        // Tedarikçi faturayı kesti — sipariş VERİLMİŞ demektir. "Gönderildi" işareti numarayı üretir ve
-        // siparişi rampanın "kabul bekliyor" listesine sokar; tedarikçiye mesaj GİTMEZ (`sendPurchaseOrder`
-        // yalnız işaretler). Taslak bırakmak, olmayan bir "gönder" adımını bekletmek olurdu.
+        // Faturası kesilen sipariş verilmiş demektir: "gönderildi" işareti numarayı üretir ve siparişi rampanın "kabul bekliyor"
+        // listesine sokar; tedarikçiye mesaj gitmez (`sendPurchaseOrder` yalnız işaretler).
         if (input.invoice) await sendPurchaseOrder(draft.order.id);
         return draft;
       },

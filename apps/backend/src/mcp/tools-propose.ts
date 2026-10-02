@@ -212,10 +212,8 @@ function badIdError(field: string, value: string) {
 }
 
 /**
- * Uyarı listesinin kapısı — şekli tutmayan girdi ATILMAZ, REDDEDİLİR (alerjen kümesiyle aynı kural).
- *
- * Sessizce düşürmek en kötü seçenek olurdu: araç "uyardım" sanır, ekran hiçbir şey göstermez ve
- * operatör uyarılmadığı bir şeyi onaylar. Verilmemiş olması ise meşru — o hâlde `null` döner.
+ * Uyarı listesinin kapısı: şekli tutmayan girdi atılmaz, reddedilir; sessiz düşürmede araç "uyardım" sanır, operatör
+ * uyarılmadığı şeyi onaylar. Verilmemiş olması meşru, o hâlde `null` döner.
  */
 function parseWarnings(value: unknown): AssistantWarning[] | null {
   if (value === undefined || value === null) return null;
@@ -567,9 +565,7 @@ function readDeclarations(args: Record<string, unknown>): { fields: Record<strin
     const value = args[key];
     if (value && typeof value === 'object') fields[key] = value;
   }
-  // Vurgu işareti `**`, büyük harf DEĞİL (işletmeci bildirimi 23.09 — modeller bu hataya sık düşüyor:
-  // alerjeni görünür yapmak için "BUĞDAY unu" yazıyorlar). Kural araç künyesinde yazılı; kapı burada,
-  // çünkü yazılı kural tek başına tutmadı ve düzeltmeyi her sıfırlamada insan yapıyordu.
+  // Vurgu işareti `**`, büyük harf değil; araç künyesindeki yazılı kural modelleri tek başına tutmadığı için kapı burada.
   for (const key of ['ingredients', 'storageInstructions'] as const) {
     const bagiran = bagiranKelimeler(fields[key]);
     if (bagiran.length > 0) {
@@ -709,11 +705,8 @@ async function readIdentity(args: Record<string, unknown>): Promise<{ identity: 
 }
 
 /**
- * Ürünün boy satırları — `variantId` VARSA var olan boyun künyesi, YOKSA yeni boy.
- *
- * Kimliğin kaynağı okuma araçlarıdır (`catalog_lookup` · `product_detail`); başka ürünün boyu ya da uydurma kimlik
- * reddedilir. Kimliksiz satırda etiket ve gramaj ZORUNLU: etiketsiz boy müşteriye seçtirilemez, gramajsız boy
- * satılamaz (kilo başı fiyat ondan çıkar). Var olan boyda ikisi de kayıtta durur, dilekçe yalnız eksiği tamamlar.
+ * Ürünün boy satırları: `variantId` varsa var olan boy (kimlik okuma araçlarından, başka ürünün boyu reddedilir), yoksa yeni boy.
+ * Kimliksiz satırda etiket ve gramaj zorunlu: etiketsiz boy müşteriye seçtirilemez, gramajsız boyun kilo başı fiyatı çıkmaz.
  */
 async function readVariantEdits(
   args: Record<string, unknown>,
@@ -785,9 +778,8 @@ async function readVariantEdits(
 }
 
 /**
- * Ürün taslağının doldurulması — ambalaj fotoğrafından okunan beyan dahil; alerjen ve saklama yazılabilir, çünkü bilgi belgeden
- * okunur. Beyan olmayan künye ve var olan boyun ölçüsü de buradan gider: yeni üründe yazılabilen alan var olan üründe de
- * yazılabilmeli, yoksa eksik künye elde kalırdı. Denetim onay ekranında, yayın kararı asistana kapalı.
+ * Ürün taslağının doldurulması; ambalajdan okunan beyan, beyan olmayan künye ve var olan boyun ölçüsü dahil, çünkü yeni üründe
+ * yazılabilen alan var olan üründe de yazılabilmeli. Denetim onay ekranında, yayın kararı asistana kapalı.
  */
 export async function proposeProductDraft(args: Record<string, unknown>) {
   const productId = String(args.productId ?? '').trim();

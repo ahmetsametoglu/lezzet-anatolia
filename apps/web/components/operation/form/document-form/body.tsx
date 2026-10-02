@@ -15,18 +15,8 @@ import { DOCUMENT_DIRECTION_LABEL, DOCUMENT_KIND_LABEL } from './labels';
 import { supplierSuggestion, type DocumentForm, type StockLinkOption, type SupplierOption } from './schema';
 
 /*
-  BELGE FORMUNUN GÖVDESİ (12.12 · 12.26 · 22.44) — Para ekranının "+ Belge" penceresi ve asistan
-  kuyruğunun belge gövdesi aynı alanları çizer (`schema.ts` künyesi).
-
-  ── KARŞI TARAF: CARİ YA DA TEDARİKÇİ (13.09 · ikinci karar) ─────────────────
-  Karşı taraf sözlükten seçilir: kurum, hizmet veren, çalışan → CARİ; stok alımı → TEDARİKÇİ. İkisi
-  birden olmaz (şema kısıtı `money_document_party`); biri seçilince öteki boşalır. Carinin varsayılan
-  türü boş türe önerilir. Belgenin TÜRÜ ödemesine de geçer.
-
-  ── TEDARİKÇİ SEÇİLİNCE (12.26) ────────────────────────────────────────────────
-  Rejim tedarikçinin ülkesinden, vade kartın vadesinden önerilir (`supplierSuggestion`); "neyin
-  faturası" seçicisi açılır — faturası girilmemiş kabuller ve açık siparişler. Seçilen alımın borcu
-  artık bu belgeden türer.
+  Belge formunun gövdesi; Para penceresi ve asistan kuyruğu aynı alanları çizer. Karşı taraf cari ya da tedarikçidir,
+  ikisi birden olmaz (`money_document_party`): biri seçilince öteki boşalır.
 */
 
 interface DocumentFormBodyProps {

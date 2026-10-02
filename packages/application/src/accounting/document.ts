@@ -15,29 +15,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { natureProblemOf } from './natures';
 
 /*
-  BELGE KAPISI (12.12 · kullanıcı kararları 13.09) — DOMAIN §9.
-
-  Resmî muhasebe sorduğunda hareketin dayanağı: fatura, fiş, bordro, sözleşme, dekont. Belge PARA
-  DEĞİLDİR — fatura geldiğinde borç doğar, ödeme sonra bir hareket olarak gelir ve bir BAĞLA belgeye
-  bağlanır; açık kalan `money_document_balance` görünümünden türetilir, burada hesaplanmaz.
-
-  ── BAĞ TUTARIYLA (13.09 · ikinci karar) ────────────────────────────────────
-  Bir havale birkaç faturayı kapatabilir (tedarikçinin üç faturası tek ödemede), bir fatura birkaç
-  ödemeyle kapanır (taksit). Bağın tutarı verilmezse "hareketin kalanı ile belgenin açık kalanından
-  küçüğü"dür — operatör çoğu zaman tam bunu kastediyor. Bir hareketin bağları toplamı kendi tutarını
-  aşamaz: kararı veritabanı verir (`check_allocation_within_movement`), burada ÖNCE sorulur ki ret
-  okunur olsun.
-
-  ── KARŞI TARAF VE TÜR (13.09 · ikinci karar) ──────────────────────────────
-  Belgenin karşı tarafı bir CARİ ya da TEDARİKÇİDİR (ikisinden en çok biri), serbest metin değil; türü
-  sözlükten ve yönüne uygun. Etiket serbest işarettir.
-
-  ── DOSYA SUNUCUDAN GEÇMEZ ──────────────────────────────────────────────────
-  Talep fotoğrafının deseni (`ticket/attachments.ts`): istemci doğrudan özel kovaya yükler, kapı
-  yalnız yetkiyi doğrulayıp kısa ömürlü bir izin yazar ve ANAHTARI KENDİSİ KURAR. İstemciden gelen
-  bir yolu doğrulamak zorunda kalsaydık, doğrulamanın unutulduğu gün private kovanın herhangi bir
-  yerine yazma izni verilirdi. Dosya yüklendikten sonra `attachDocumentFile` anahtarın gerçekten
-  o belgeye ait olduğunu biçimden okur (`financeDocumentScope`).
+  Belge kapısı (DOMAIN §9): belge para değildir, borç doğurur; ödeme sonra hareket olarak gelir ve tutarlı bir bağla belgeye
+  bağlanır, açık kalan `money_document_balance` görünümünden türer. Dosya sunucudan geçmez: istemci özel kovaya doğrudan yükler,
+  anahtarı kapı kurar ki istemciden gelen yolu doğrulamayı unutmak kovanın her yerine yazma izni vermesin.
 */
 
 export type DocumentOutcome =
@@ -53,7 +33,7 @@ export type DocumentOutcome =
         | 'vat_over_amount'
         | 'not_found'
         | 'wrong_key'
-        // 12.26 — KDV rejimi, vade ve stok alımının bağı
+        // KDV rejimi, vade ve stok alımının bağı
         | 'vat_with_regime'
         | 'due_before_issue'
         | 'link_conflict'
@@ -75,13 +55,12 @@ export async function unknownTagOf(db: SupabaseClient, tags: readonly string[]):
 }
 
 /**
- * Belge girişi. KDV belge toplamını aşamaz (toplam KDV dâhildir); karşı taraf cari YA DA tedarikçi;
- * tür sözlükten ve yöne uygun; etiketler sözlükten. Dosya BURADA değil: önce belge doğar, sonra
- * dosyası anahtarıyla bağlanır — anahtar belge kimliğinden kurulduğu için sıra bu.
+ * Belge girişi; KDV toplamı aşamaz (toplam KDV dâhil), karşı taraf cari ya da tedarikçi, tür ve etiketler sözlükten. Dosya burada
+ * bağlanmaz: anahtarı belge kimliğinden kurulduğu için önce belge doğar.
  */
 export async function createMoneyDocument(db: SupabaseClient, input: MoneyDocumentInsert): Promise<DocumentOutcome> {
   if ((input.vatAmountCents ?? 0) > input.amountCents) return { status: 'invalid', reason: 'vat_over_amount' };
-  // KDV REJİMİ ve VADE (12.26) — veri kısıtlarının okunur hâli: ret bir cümle olsun, PG hatası değil.
+  // Veri kısıtlarının okunur hâli: ret bir cümle olsun, PG hatası değil.
   if (vatRegimeProblem(input.vatRegime ?? 'standard', input.vatAmountCents)) return { status: 'invalid', reason: 'vat_with_regime' };
   if (input.dueOn && input.dueOn < input.issuedOn) return { status: 'invalid', reason: 'due_before_issue' };
   if (input.counterpartyId && input.supplierId) return { status: 'invalid', reason: 'party_conflict' };
@@ -101,11 +80,9 @@ export async function createMoneyDocument(db: SupabaseClient, input: MoneyDocume
 type SupplyLinkProblem = 'link_conflict' | 'link_needs_supplier' | 'link_not_found' | 'link_supplier_mismatch' | 'link_has_document';
 
 /**
- * STOK ALIMININ BAĞI (12.26 · kullanıcı kararı 14.09: borç belgeden türer) — fatura bir MAL KABULE ya
- * da mal gelmeden kesildiyse bir TEDARİK SİPARİŞİNE bağlanır. Kurallar veride de duruyor (tek bağ,
- * tedarikçi şart — `money_document_stock_link` · `money_document_supply_party`); burada ÖNCE sorulur
- * ki ret okunur olsun, ve veride duramayan iki kural burada: bağlanan alım AYNI tedarikçinin olmalı, ve
- * faturası zaten girilmiş olmamalı — ikinci bir belge aynı alımın borcunu iki kez yazardı.
+ * Fatura bir mal kabulüne ya da mal gelmeden kesildiyse bir tedarik siparişine bağlanır; tek bağ ve tedarikçi şartı veride de
+ * durur, burada önce sorulur ki ret okunur olsun. Veride duramayan iki kural burada: alım aynı tedarikçinin olmalı ve faturası
+ * girilmemiş olmalı, yoksa ikinci belge aynı borcu iki kez yazar.
  */
 async function supplyLinkProblemOf(db: SupabaseClient, input: MoneyDocumentInsert): Promise<SupplyLinkProblem | null> {
   if (!input.stockIntakeId && !input.purchaseOrderId) return null;
@@ -138,10 +115,8 @@ export type AllocationOutcome =
   | { status: 'invalid'; reason: 'not_found' | 'direction_mismatch' | 'already_allocated' | 'nothing_to_allocate' | 'document_settled' | 'over_movement' };
 
 /**
- * Hareketi belgeye BAĞLAR — tutarıyla. Tutar verilmezse hareketin bağlanmamış kalanı ile belgenin
- * açık kalanından küçüğü. Yön aynı olmalı (bizim ödeyeceğimiz belgeyi çıkan para kapatır). Aynı
- * hareket aynı belgeye iki kez bağlanmaz (tekil); kalanı olmayan hareket de, kapanmış belge de
- * bağlanmaz — ikincisi açıkça tutar verilerek yapılabilir (fazla ödeme bir olgudur).
+ * Hareketi belgeye tutarıyla bağlar; tutar verilmezse hareketin bağlanmamış kalanı ile belgenin açık kalanından küçüğü. Yön aynı
+ * olmalı, aynı çift iki kez bağlanmaz; kapanmış belgeye ancak açık tutarla bağlanır, çünkü fazla ödeme bir olgudur.
  */
 export async function allocateToDocument(
   db: SupabaseClient,
