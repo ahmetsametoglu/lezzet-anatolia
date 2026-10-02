@@ -209,8 +209,8 @@ kalem varsa. Hiboutik kalemi:
 **Ödeme kodu hareketin yönteminden:** nakit `ESP`, kapıda ve tezgâhta kart `CB`, çevrim içi `WEB`, havale
 `VIR`. Yöntem bugün siparişte duruyor ve sonraki tahsilatta üzerine yazılıyor (kapıda nakit ve kart aynı
 hesaba giriyor) → `money_movement`a `payment_method` kolonu; tahsilat kapısı (`recordOrderPayment`,
-`recordOrderRefund`) onu çağıranlardan alır. İadede: kasa hesabından `ESP`, sağlayıcıdan asıl ödemenin
-yöntemi.
+`recordOrderRefund`) onu çağıranlardan alır. İadede: kasa hesabından `ESP`, bankadan `VIR`, sağlayıcıdan
+asıl ödemenin yöntemi; ortak cari iade yolu olarak sunulmaz, çünkü müşteriye para şirketin hesabından döner.
 
 **Eşlemeler (bizde):**
 - **Mağaza:** tesis deposu ↔ Hiboutik mağazası ↔ o kasanın nakit hesabı. Araç satışı aracın ana

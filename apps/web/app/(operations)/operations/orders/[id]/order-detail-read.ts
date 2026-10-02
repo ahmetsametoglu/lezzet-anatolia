@@ -398,8 +398,9 @@ function refundRoutesOf(accounts: readonly Account[], movements: readonly MoneyM
 
   // Yol hesap türüdür: on kasa satırı soruyu "nasıl geri veriyorum"dan "hangi kasa"ya kaydırırdı. Tür başına paranın girdiği hesap,
   // yoksa türün en eskisi seçilir.
-  const byType = new Map<Account['type'], Account>();
-  for (const account of [...accounts].filter((a) => a.isActive).sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
+  const byType = new Map<RefundRouteType, Account & { type: RefundRouteType }>();
+  const routable = accounts.filter((a): a is Account & { type: RefundRouteType } => a.isActive && a.type !== 'partner');
+  for (const account of routable.sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
     if (account.id === paidInto) byType.set(account.type, account);
     else if (!byType.has(account.type)) byType.set(account.type, account);
   }
@@ -416,12 +417,13 @@ function refundRoutesOf(accounts: readonly Account[], movements: readonly MoneyM
     .sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
 }
 
-const ROUTE_LABELS: Record<Account['type'], string> = {
+/** Ortak cari iade yolu değildir: müşteri parası şirketin kasasından, bankasından ya da kartından döner ve kasaya yöntemiyle yazılır. */
+type RefundRouteType = Exclude<Account['type'], 'partner'>;
+
+const ROUTE_LABELS: Record<RefundRouteType, string> = {
   provider: 'Karta geri',
   cash: 'Nakit',
   bank: 'Havaleyle',
-  // Nadir ama hesap türü kapalı küme ve harita tam olmak zorunda.
-  partner: 'Ortak carisinden',
 };
 
 function linksOf(tickets: readonly Ticket[]): OrderLinkView[] {
