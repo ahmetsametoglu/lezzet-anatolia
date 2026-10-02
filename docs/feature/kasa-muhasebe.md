@@ -101,7 +101,7 @@
 |---|---|---|---|
 | 0 | **Erişim ve ölçüm.** Hesaplar: Hiboutik demo modunda (API için Premium, ikincil kaynak), Pennylane test ortamı ve API anahtarı (API Essentiel planda ve üstünde), Revolut deneme hesabı (asıl hesaptan bağımsız, anında). §6'daki soruların ölçümü; çıktı ölçüm tablosu ve tasarım kararları. | kök `.env` (değişken adları kullanıcıdan) | Hesapları kullanıcı açar |
 | 1 | **Hiboutik kasa.** Tasarım §7: sipariş başına durum farkı, kasa aynası, ürün ve mağaza eşlemesi, kasa hareketleri, günlük mutabakat, gün kapanışı. | domain-core `register/`; migration (kasa tabloları, tetikleyici, hareketin ödeme yöntemi); Hiboutik uyarlaması; backend cron'ları | Faz 0 Hiboutik ölçümü (tamam) |
-| 2 | **Pennylane.** Tedarikçi eşleme (`POST /suppliers`); belgeye KDV oranlı satır; PDF yükleme (yabancı ve e-faturasız tedarikçi; fotoğraf PDF'e çevrilir); yüklemeden önce mükerrer kontrolü; e-fatura okuma ve mal kabule bağlama; banka hareketi okuma; eşleşme yazma; hesap başına "hareket gelmiyor" uyarısı. | `money_document` şeması; para modülü; yeni Pennylane adaptörü | Faz 0 Pennylane ölçümü (tamam; e-fatura okuma canlıda) |
+| 2 | **Pennylane.** Tedarikçi eşleme (`POST /suppliers`); belgeye KDV oranlı satır; PDF yükleme (yabancı ve e-faturasız tedarikçi; fotoğraf PDF'e çevrilir); yüklemeden önce mükerrer kontrolü; e-fatura okuma ve mal kabule bağlama; banka hareketi okuma; eşleşme yazma; hesap başına "hareket gelmiyor" uyarısı. Tasarım §8. | `money_document` şeması; para modülü; yeni Pennylane adaptörü | Faz 0 Pennylane ölçümü (tamam; e-fatura okuma canlıda) |
 | 3 | **Revolut.** Çevrim içi ödeme Stripe yerine (Merchant API: sipariş, kart alanı, Apple / Google Pay, webhook, iade); kapıda kart (Terminal'e tutar gönderme ya da elle onay + sonradan doğrulama); defter düzeni (brüt tahsilat · komisyon · Merchant'tan ana hesaba aktarma). | `payment-gateway.ts`; web ve mobil ödeme ekranları; `stripe-webhook.ts`'in karşılığı | Faz 0 Revolut ölçümü; canlı için asıl hesap |
 | 4 | **2027.** B2B e-faturası Pennylane'den (10. karar): siparişten Pennylane faturasına bağlantı gerekip gerekmediği. B2C e-reporting: Hiboutik'in Z verisi Pennylane'e gidiyor; Pennylane'in bunu idareye e-reporting olarak iletip iletmediği bakılacak. | — | Son tarih 01.09.2027 |
 
@@ -383,7 +383,146 @@ denemede düşen yazım hata kaydı olarak.
 
 Şemaya dokunan adım `db:refresh` ister; kararı kullanıcının.
 
-## 8. Riskler
+## 8. Faz 2 tasarımı — Pennylane (02.10)
+
+**İlke: her verinin tek sahibi.** Banka hareketi Pennylane'den gelir (6. karar), bizde izah edilir. E-fatura
+Pennylane'den gelir, bizde belge olarak açılır. PDF ya da fotoğrafla gelen alış belgesi bizde girilir ve
+Pennylane'e bizden yüklenir (4. karar); Pennylane'e doğrudan (e-posta yönlendirme, elle yükleme) girilmez, yoksa
+aynı fatura iki kez kaydedilir. Eşleştirme bizde yapılır ve Pennylane'e yazılır (5. karar). Pennylane'e yazım
+Hiboutik'teki gibi durum farkıdır: kaydın bugünkü hâli Pennylane'de yazılmış olanla karşılaştırılır, yalnız fark
+yazılır; yarıda kalan ya da tekrar eden tur kendiliğinden doğru sonuca iner.
+
+**Kapsam:** eşlenmiş banka hesaplarının hareketleri; yönü çıkış olan fatura ve fişler (karşı tarafı tedarikçi ya
+da cari); e-faturalar; bu belgelerle bu hareketler arasındaki bağlar. Sözleşme, bordro ve dekont Pennylane'e
+gitmez. B2B satış faturası Faz 4'tedir. Para birimi avro olmayan belge yüklenmez, "Pennylane'e elle" diye
+gösterilir.
+
+**Bağın tutarı (ölçümden sonra, 02.10):** Pennylane bağda tutar taşımaz; hareketi faturalara bağlama sırasıyla
+dağıtır. Bizim bağımız da aynı kuralla çalışıyor: üç bağlama yolunun (banka kuyruğu, belgenin ödeme seçicisi,
+"Ödemesini yaz") hiçbiri tutar sormuyor; bağ her seferinde hareketin kalanı ile belgenin açık kalanının
+küçüğüdür (`allocateToDocument`). Bu yüzden model değişmez: bağın tutarı kalır, çünkü belgenin açık kalanı ve
+tedarikçi borcu ondan türer. Hiçbir yerde kullanılmayan elle tutar verme seçeneği kaldırılır, kural kesinleşir.
+Bağlar Pennylane'e bizdeki bağlanma sırasıyla yazılır ve sonuç aynı çıkar. Pennylane'deki kalan tutar
+bizimkinden ayrılırsa, örneğin fatura Pennylane'de başka tutardaysa ya da ona orada başka hareket bağlıysa, belge
+"Pennylane'de farklı" diye işaretlenir; düzeltme elle yapılır.
+
+**Pennylane'de yapılan eşleşme:** muhasebeci Pennylane'de de eşleştirebilir; değişiklik akışı bunu 1–2 saniyede
+gösterir.
+- Bizde olmayan bir faturaya kurulan bağa dokunulmaz; hareketin bağları baştan yazılırken o da yeniden kurulur.
+- Bizim belgemize Pennylane'de kurulan, bizde olmayan bağ benimsenir: aynı kapıdan bizde de kurulur ve banka
+  kuyruğundaki satır izahlı olur.
+- Bizde duran ama Pennylane'de çözülen bağ bizde silinmez; muhasebeye bildirim gider, karar bizim ekrandan verilir.
+
+**Akışlar:**
+1. **Banka hareketi okuma.** Ayarlar › Kurulum'daki Pennylane kartında banka hesabımız Pennylane'deki hesabına
+   eşlenir ve canlıya geçiş günü girilir. İlk okumada eşlenen hesabın o günden sonraki hareketleri listeden bir kez
+   okunur (`GET /transactions`, hesap ve tarih süzgeciyle). Sonra değişiklik akışı (`/changelogs/transactions`)
+   birkaç dakikada bir okunur. Akış son 4 haftayı tuttuğu için daha uzun bir kesintiden sonra liste son okunan
+   günden yeniden okunur. Hareket bizde eşleşmemiş banka satırı olarak yazılır (`source = bank_import`, tip
+   `misc`); mükerrer kimliği `pennylane:<kimlik>`, Pennylane kimliği aynada durur. Pennylane'de tutarı, günü ya
+   da açıklaması değişen satır bizde henüz izah edilmemişse güncellenir. İzahlı satır değişirse ya da Pennylane'de
+   silinirse muhasebeye bildirim gider. Eşlenmiş hesaba canlıya geçiş gününden sonrası için Excel yüklemesi
+   reddedilir, çünkü iki kaynak aynı satırı iki kez yazardı; eşlenmemiş hesapta Excel yüklemesi bugünkü gibi kalır.
+2. **Tedarikçi eşleme.** Pennylane'deki tedarikçi bizim tedarikçimize ya da carimize ayna tablosuyla bağlanır.
+   Yüklenecek belgenin karşı tarafı Pennylane'de yoksa önce dış referansla (`sup:<kimlik>`, `cp:<kimlik>`) aranır,
+   bulunmazsa açılır (ad, KDV numarası, ülke, vade günü). Dış referans tekil olduğu için tekrarlanan açılış çift
+   kayıt doğurmaz.
+3. **Alış belgesi yükleme.** Yönü çıkış olan, dosyası ve KDV kırılımı bulunan fatura ya da fiş, canlıya geçiş
+   anından sonra girildiyse kuyruğa düşer. Yazımdan önce iki denetim yapılır, çünkü Pennylane ikisini de
+   yakalamıyor:
+   - KDV kırılımı oranla tutuyor mu (oran başına, 1 kuruş payla);
+   - aynı tedarikçide aynı numara Pennylane'de var mı (`supplier_id` + `invoice_number` süzgeci).
+
+   Fotoğraf tek sayfalık PDF'e çevrilir, çünkü içe aktarma yalnız PDF alıyor. Sonra dosya yüklenir ve fatura içe
+   aktarılır: `external_reference` belge kimliğidir, KDV kodu kırılımdan ve rejimden türer. 409 cevabının taşıdığı
+   kimlik var olan faturayı aynaya bağlar. Yüklenmiş belge sonradan değişirse ne yapılacağı uygulamada ölçülür:
+   Pennylane'de güncelleme ya da işaret. Nakitle ödenen belge, yani bağlı hareketi banka satırı olmayan belge,
+   tamamen kapanınca Pennylane'de `paid` işaretlenir; bağ çözülünce `to_be_paid`a döner.
+4. **E-fatura okuma.** İlk bağlantıda Pennylane'deki e-faturalar (`e_invoicing` dolu olanlar) listeden bir kez
+   okunur; sonrasını değişiklik akışı taşır. Webhook (`supplier_invoice.e_invoicing_received`) isteğe bağlıdır,
+   çünkü dışarıdan erişilen bir HTTPS adresi ister. Her e-fatura bizde belge olarak açılır: numara, gün, vade,
+   tutar, satırlardan KDV kırılımı ve özel kovaya alınan PDF. Karşı taraf aynadan bulunur; bilinmiyorsa belge
+   karşı tarafsız açılır, operatör seçer ve seçim aynaya yazılır. Operatör belgeyi mal kabule bugünkü "Neyin
+   faturası" seçicisiyle bağlar. Mal kabulde eksik ya da kusur varsa belgeden itiraz yazılır (`disputed`, gerekçe
+   sözlükten). Ret geri alınmadığı için ayrıca onay ister. Yeni e-fatura gelince muhasebeye ve depoya bildirim
+   gider.
+5. **Eşleşme yazma.** Bağ eklenince ya da silinince hareket kuyruğa düşer. Pennylane'de istenen bağ kümesi şudur:
+   hareketin bizdeki bağları, bağlanma sırasıyla ve yalnız Pennylane'de karşılığı olan belgeler; ardından bizde
+   olmayan faturaların Pennylane'deki bağları. Pennylane'deki küme bunun başıysa eksikler eklenir. Değilse
+   hareketin bütün bağları tek çağrıyla çözülür ve küme baştan yazılır, çünkü tek bir bağı çözmek zaten hepsini
+   çözüyor. Yazımdan sonra ilgili faturaların kalan tutarı okunur ve bizimkiyle karşılaştırılır.
+6. **Hareket gelmiyor uyarısı.** Günde bir kez bakılır. Eşlenmiş hesabın Pennylane'den gelen son hareketi
+   `pennylane_quiet_days` günden (varsayılan 4) eskiyse muhasebeye ve yönetime bildirim gider; bankanın
+   Pennylane bağlantısı yenilenir (§9, 1. risk).
+
+**Hata:** Hiboutik kuyruğunun aynısı: artan aralıkla yeniden deneme, beşinci denemede `error_log` ve anlık
+bildirim. Yazım duran belge (oran tutmuyor, mükerrer numara, karşı taraf yok, avro dışı) sebebiyle bekler,
+bildirim ilk turda gider. İstemci istek sınırına (5 saniyede 25) göre aralık bırakır; 429 gelirse `retry-after`
+kadar bekler.
+
+**Güvenlik:** `PENNYLANE_MODE=sandbox` iken her yazımdan önce `/me` şirket numarasının `sandbox-` ile başladığı
+doğrulanır; `live` kipinde canlı şirkete yazılır. Anahtar yalnız backend'dedir. Log'a kimlik yazılır, tutar ve
+açıklama yazılmaz.
+
+**Şema:**
+- `money_document_vat` (belge, oran, KDV hariç tutar, KDV): belgenin KDV'sinin tek kaynağı. `money_document.vat_amount`
+  kalkar, toplam satırlardan türer; satırsız belge KDV taşımaz. Ters yüklemede satırın KDV'si 0, oranı beyandaki
+  orandır.
+- Ayna ve kuyruk:
+  - `pennylane_account`: banka hesabı ↔ Pennylane banka hesabı;
+  - `pennylane_party`: Pennylane tedarikçisi ↔ tedarikçi ya da cari;
+  - `pennylane_invoice`: Pennylane faturası ↔ belge; kaynağı yükleme ya da e-fatura, e-fatura durumu, son okunan
+    kalan tutar;
+  - `pennylane_transaction`: Pennylane hareketi ↔ banka satırı; son okunan bağlar ve bizim son yazdıklarımız;
+  - `pennylane_queue`: yüklenecek belge, eşleşmesi yazılacak hareket;
+  - `pennylane_cursor`: değişiklik akışının kaldığı yer.
+
+  Pennylane kimlikleri `bigint`tir (ölçüldü: 14 hane).
+- Ayarlar: `pennylane_live_from`, `pennylane_quiet_days`.
+- Personel bildirimleri: e-fatura geldi, Pennylane'e yazılamıyor, hareket gelmiyor, Pennylane'de farklı.
+
+**KDV kodu:** standart rejimde oran `FR_<oran × 10>` olur (`FR_55`, `FR_200`). Ters yüklemede AB içi tedarikçi
+için `intracom_<oran>`, AB dışı tedarikçi için `extracom` kullanılır; muaf belge `exempt`tir. Ters yüklemenin
+kodu muhasebeciyle doğrulanır: AB içi %20 için listede `intracom_*` kodu yok, yalnız %2,1 · 5,5 · 8,5 · 10 için
+var.
+
+**Ekranlar:**
+- Ayarlar › Kurulum: Pennylane kartı (bağlantı ve kip, hesap eşlemesi, canlıya geçiş günü, kuyruk özeti, son
+  eşitleme, hareket gelmeyen hesap); Hiboutik kartının deseni.
+- Belge formu: tek KDV alanı yerine oran başına satırlar.
+- Belge detayı: Pennylane durumu (yüklendi; bekliyor ve sebebi; e-fatura ve durumu); e-faturada itiraz.
+- Banka kuyruğu değişmez; satırın kaynağı "Pennylane" yazar.
+
+**Kod yerleşimi:**
+- `packages/domain-core/src/accounting/pennylane/`: iki yönlü KDV kodu eşlemesi, içe aktarma gövdesi, yazım öncesi
+  denetimler, bağ planı (istenen küme; ekle ya da baştan yaz), kalan tutar karşılaştırması.
+- `packages/database`: tablolar, kuyruk tetikleyicileri (belge, KDV kırılımı, bağ), servisler.
+- `packages/application/src/accounting/pennylane/`: port ve Pennylane istemcisi (istek sınırı, test şirketi
+  denetimi), bellek içi ikiz, okuma (hareket, e-fatura), yazma (tedarikçi, belge, bağ, ödeme durumu), sessizlik
+  uyarısı. Cevap biçimi ölçülen alanlarla `packages/types` sözleşmesindedir. Fotoğrafı PDF'e çevirmek için yeni
+  bir bağımlılık gerekir (`pdf-lib`; HEIC ve WEBP'nin yolu uygulamada ölçülür).
+- `apps/backend/src/jobs/`: `pennylane-sync` (birkaç dakikada bir; akışlar ve kuyruk), `bank-feed-quiet` (günlük).
+- Ortam: `PENNYLANE_API_TOKEN`, `PENNYLANE_MODE` (`sandbox` | `live`).
+
+**Testler:** motorun dalları birim testte; tetikleyiciler ve eşitleme entegrasyon testinde, bellek içi Pennylane
+ile; istemci sahte `fetch` ile. Pennylane'e karşı ölçüm test şirketinde, betiklerle yapılır; test paketinde değil.
+
+**İş sırası** (her adım ayrı commit):
+1. Belgenin KDV kırılımı: şema, belge formu, asistan ve mal kabul önerileri, döküm.
+2. Bağ kuralının kesinleşmesi (elle tutar seçeneğinin kaldırılması).
+3. Pennylane istemcisi, port, bellek içi ikiz, sözleşme şemaları.
+4. Banka hareketi okuma, Pennylane kartı (hesap eşlemesi, canlıya geçiş), hareket gelmiyor uyarısı.
+5. Tedarikçi eşleme ve alış belgesi yükleme (PDF'e çevirme, denetimler, kuyruk, nakit ödemede ödeme durumu).
+6. Eşleşme yazma ve Pennylane'deki eşleşmeleri okuma.
+7. E-fatura okuma, mal kabule bağlama, itiraz; canlı hesapta yalnız okuyarak ölçüm.
+8. Ekran satırları ve mimari belge güncellemeleri (`DOMAIN.md` §9, `INTEGRATIONS.md`, `data-model/para.md`).
+
+Şemaya dokunan adımlar `db:refresh` ister; kararı kullanıcının.
+
+**Muhasebeciye sorulacak:** ters yüklemenin KDV kodu; hesap kodlarını Pennylane'in tedarikçiden atamasının yeterli
+olup olmadığı; fişin Pennylane'e fatura olarak girip girmeyeceği.
+
+## 9. Riskler
 
 1. **Banka bağlantısının kopması.** Bankalar bağlantıyı en çok 180 gün açık tutuyor, bazıları çok daha
    kısa (Pennylane'in tablosunda BNP 36 gün, CIC 0 gün). Kopunca hem Pennylane hem biz hareket alamayız.
@@ -400,7 +539,7 @@ denemede düşen yazım hata kaydı olarak.
 6. **Kasa sıfırlanması.** Hiboutik'te ürünler silinirse (demo sıfırlama) bizdeki ürün eşlemesi
    (`register_product`) olmayan ürünleri anar ve her yazım düşer; sıfırlamadan sonra eşleme silinmeli.
 
-## 9. Kaynaklar
+## 10. Kaynaklar
 
 Resmî:
 - [BOFiP BOI-TVA-DECLA-30-10-30 (25.03.2026)](https://bofip.impots.gouv.fr/bofip/10691-PGP.html/identifiant=BOI-TVA-DECLA-30-10-30-20260325)
