@@ -1,9 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 /*
-  TAHSİLAT TUTARI ARTIK TUŞ TAKIMIYLA yazılıyor (v3 · `00-ortak`, 30.08): alan bir `TextInput`
-  değil, tuş takımını açan düğme. Testler kapıdaki gerçek yolu izliyor — alana dokun, rakamlara
-  bas, "Yaz". Doğrudan metin yazmak artık var olmayan bir yolu ölçmek olurdu.
+  Tahsilat tutarı tuş takımıyla yazılır, alan bir `TextInput` değil tuş takımını açan düğmedir; testler kapıdaki gerçek yolu izler
+  (alana dokun, rakamlara bas, "Yaz").
 */
 async function typeCollection(amount: string) {
   await fireEvent.press(screen.getByTestId('courier-collection-amount'));
@@ -33,27 +32,22 @@ import messages from './messages.json';
 */
 jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => {
   const actual = jest.requireActual('@lezzet/mobile-kit/src/lib/toast/toast-store');
-  /* ÜÇ FİİL DE YAKALANIR (01.09): sonuç bildirimleri sayfa şeridinden toast'a taşındı, yani
-     reddin sebebi de artık bu kanaldan geçiyor. Yalnız `toastSuccess` gözlenseydi olumsuz
-     cevapların ekranda göründüğünü sınayan testler sessizce körelirdi. */
+  /* Üç fiil de yakalanır, çünkü reddin sebebi de toast'tan geçer; yalnız `toastSuccess` gözlenseydi olumsuz cevapları sınayan
+     testler sessizce körelirdi. */
   const yakala = (message: string) => lastToast.push(message);
   return { ...actual, toastSuccess: yakala, toastError: yakala, toastWarning: yakala };
 });
 const lastToast: string[] = [];
 
 /*
-  TESLİMAT EKRANI — kutu okutması, reddedilen kalem çekmecesi, tahsilat paneli, iki adımlı sonuç
-  akışı ve kapının olumsuz cevaplarının EKRANDA görünmesi.
-
-  Hook taklit EDİLMEZ (katalog/K1 emsali): gerçek hook + taklit `fetch`. Yalnız İKİ şey taklit
-  edilir ve ikisi de yerel (native) sınırdır:
-  · `expo-router` — navigasyon bağlamı yok
+  Teslimat ekranı: kutu okutması, reddedilen kalem çekmecesi, tahsilat paneli, iki adımlı sonuç akışı ve kapının olumsuz cevapları.
+  Hook taklit edilmez (gerçek hook + taklit `fetch`); yalnız yerel sınırlar taklit edilir: `expo-router`, oturum ve toast deposu.
 */
 
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: () => mockBack(), navigate: jest.fn(), push: jest.fn() }),
-  /* Kabuk kromunun odak hizalaması (21.290) — taklit modülü bütünüyle değiştiriyor. */
+  /* Kabuk kromunun odak hizalaması; taklit modülü bütünüyle değiştirdiği için burada da tanımlanır. */
   useFocusEffect: () => undefined,
 }));
 
@@ -69,7 +63,7 @@ jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
 
 const t = messages;
 const ORDER_ID = '00000000-0000-4000-8000-000000000001';
-/** Fixture'ın birinci durağının iki kalemi — satır anahtarı artık KİMLİK (21.10e). */
+/** Fixture'ın birinci durağının iki kalemi; satır anahtarı kalem kimliğidir. */
 const BAKLAVA = stopItemId(1, 0);
 const MANTI = stopItemId(1, 1);
 
@@ -125,27 +119,21 @@ const settledStop = (overrides: Partial<CourierStopContract> = {}) =>
   courierStop(1, { payment: { dueAmountCents: null, expectedMethod: null, collectedAtDoorCents: null }, ...overrides });
 
 /**
- * Tek kalemli borçsuz durak — kapı testlerinin çoğunun ilgilendiği en küçük hâl.
- *
- * `fulfilledQty` 0: kapıya HENÜZ gidilmedi. Alan 30.08'de sözleşmeye girdi ve buradaki eksikliği
- * derleme YAKALAMADI (`overrides` tipi çıkarımla `{}` idi, yani her şeyi kabul ediyordu) — cevabı
- * şema reddetti ve ekran "durak bulunamadı"ya düştü. Tip aşağıda verildi; sıradaki alan artık
- * derlemede durur.
+ * Tek kalemli borçsuz durak, kapı testlerinin çoğunun ilgilendiği en küçük hâl; `fulfilledQty` 0, çünkü kapıya henüz gidilmedi.
+ * `overrides` tipi açıkça verilir ki sözleşmeye giren yeni alan fikstürde eksik kalınca derleme dursun.
  */
 const oneLineStop = (overrides: Partial<CourierStopContract> = {}) =>
   settledStop({
     itemCount: 1,
     contentSummary: '1 × Mantı',
     items: [{ orderItemId: MANTI, name: 'Mantı', qty: 1, fulfilledQty: 0, unitPriceCents: 1400, lineDiscountAmountCents: 0 }],
-    /* KUTUSUZ ve bu bilerek: bu ekranın testlerinin çoğu kutuyu KONU ETMİYOR ve kutulu hâli
-       `boxedStop` kuruyor. Ortak fikstür 31.08'de varsayılan bir kutu kazandı (kutusuz sipariş
-       artık veri hatası); buradaki boş dizi o varsayılanı bilinçle geri alıyor — kutunun kapıyı
-       nasıl kapattığını ölçen testlerin zemini tam olarak bu. */
+    /* Kutusuz, çünkü testlerin çoğu kutuyu konu etmez ve kutulu hâli `boxedStop` kurar; boş dizi ortak fikstürün varsayılan kutusunu
+       geri alır ve kutusuz durağın kapıyı nasıl kapattığını ölçen testlerin zeminidir. */
     boxes: [],
     ...overrides,
   });
 
-/** Kutulu durak (23.8) — iki kutu, ikisi de araca yüklenmiş; kapıda okutulmayı bekliyor. */
+/** Kutulu durak: iki kutu, ikisi de araca yüklenmiş; kapıda okutulmayı bekliyor. */
 const boxedStop = (overrides: Partial<CourierStopContract> = {}) =>
   oneLineStop({
     boxes: [
@@ -173,11 +161,8 @@ async function renderDelivery() {
 
 
 /**
- * Kutulu durağı kapıya HAZIR hâle getirir: ekranı çizer, kutuları okutur.
- *
- * 30.08'den beri teslim kapısı kutu okutmasına bağlı ve kutusuz durak bir veri hatası — yani
- * "teslim gönderildi" iddiasını ölçen her test bu yoldan geçmek zorunda. Yardımcı olmasaydı her
- * test aynı üç satırı tekrar yazardı (CLAUDE §1).
+ * Kutulu durağı kapıya hazır hâle getirir: ekranı çizer, kutuları okutur. Teslim kapısı kutu okutmasına bağlı olduğu için "teslim
+ * gönderildi" iddiasını ölçen her test bu yoldan geçer.
  */
 async function renderScannedStop(
   overrides: Partial<CourierStopContract> = {},
@@ -204,7 +189,7 @@ beforeEach(() => {
 });
 
 describe('teslimat · durak künyesi', () => {
-  /* İLK YÜK İSKELET, HALKA DEĞİL (N9 · 30.08) — ayıran iz ROL: halka `progressbar`dır. */
+  /* İlk yük iskelettir, halka değil; ayıran iz rol: halka `progressbar`dır. */
   it('yüklenirken İSKELET gösterir, halka değil', async () => {
     fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
 
@@ -234,11 +219,8 @@ describe('teslimat · durak künyesi', () => {
   });
 
   /*
-    KAPI DOĞRULAMASI (11.11) — dört hâlin İKİSİ konuşur, ikisi susar.
-
-    Sessiz olanları da sınıyoruz çünkü asıl kural onlarda: `unknown` her Alman durağında geçerli ve
-    orada bir satır çizmek, kuryeyi GERÇEK uyarıyı da okumamaya alıştırırdı. Yalnız konuşan hâlleri
-    ölçen bir test, o gün satır her durakta belirdiğinde yeşil kalırdı.
+    Kapı doğrulamasının dört hâlinden ikisi konuşur, ikisi susar; sessizler de sınanır, çünkü `unknown` her Alman durağında geçerlidir
+    ve orada çizilen satır kuryeyi gerçek uyarıyı okumamaya alıştırırdı.
   */
   it.each([
     ['unverified', t.delivery.doorCheck.unverified],
@@ -266,11 +248,8 @@ describe('teslimat · durak künyesi', () => {
   );
 
   it('sıra SEFERİN İÇİNDE sayılır — araçtaki öteki seferin durakları paydaya girmez', async () => {
-    /*
-      Sayaç günün BÜTÜN duraklarından geliyordu ve iki sefer sürülürken "Durak 3/15" yazıyordu;
-      gün ekranının özet kartı ise aynı anda "3/6 durak" diyordu (kullanıcı bulgusu 31.08). İki
-      ekran aynı durağı iki ayrı sırada gösterince kurye hangisinin kendi seferi olduğunu okuyamaz.
-    */
+    // Sayaç gün ekranının özet kartıyla aynı sırayı göstermeli; iki ekran aynı durağı iki ayrı sırada gösterince kurye kendi
+    // seferini okuyamaz.
     const otekiSefer = '00000000-0000-4000-8000-000000000802';
     mockRoutes({
       day: courierDay([
@@ -288,18 +267,14 @@ describe('teslimat · durak künyesi', () => {
 });
 
 /*
-  MAL ADIMI: TESLİM VARSAYILAN, RED İSTİSNA (kullanıcı kararı 30.08).
-
-  Eski testler kalemleri tek tek işaretletiyordu ("üç hâlli kalem", "her kalem işaretlenmeden kapı
-  açılmaz") — o model kalktı. Kutu okutması zorunlu olunca "mal verildi mi" sorusu zaten
-  cevaplanıyor; kuryenin söylemesi gereken tek şey İSTİSNA: müşteri ne geri verdi. İstisna
-  çekmeceden giriliyor, ekranda sürekli duran bir liste yok.
+  Mal adımında teslim varsayılan, red istisnadır: kutu okutması "mal verildi mi" sorusunu zaten cevaplar ve kuryenin söyleyeceği tek
+  şey müşterinin ne geri verdiğidir. İstisna çekmeceden girilir, ekranda sürekli duran bir liste yok.
 */
 describe('teslimat · mal (reddedilen kalem çekmecesi)', () => {
   it('varsayılan HEPSİ TESLİM: özet öyle der ve gövdede düzeltme doğmaz', async () => {
     await renderScannedStop();
     expect(screen.getByTestId('courier-goods-summary')).toHaveTextContent(t.delivery.goods.allDelivered);
-    // Kapı AÇIK: işaretlenecek bir şey yok, kutu da yok (kutusuz durak bu testin konusu değil).
+    // Kapı açık: kutular okutuldu, işaretlenecek bir şey yok.
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
     await waitFor(() => expect(deliverCalls()).toBe(1));
@@ -328,15 +303,12 @@ describe('teslimat · mal (reddedilen kalem çekmecesi)', () => {
 
     await waitFor(() => expect(deliverCalls()).toBe(1));
     // `fulfilledQty` HEDEF adettir: 2 sipariş edildi, 1 geri döndü → kapıda kalan 1.
-    // Kutu kodları da gövdede: kutulu durakta teslimin ön koşulu (23.8).
+    // Kutu kodları da gövdededir, çünkü kutulu durakta teslimin ön koşuludur.
     expect(deliverBody().adjustments).toEqual([{ orderItemId: BAKLAVA, fulfilledQty: 1 }]);
   });
 
-  /*
-    KAPIDA ALINACAK TUTAR, GERİ VERİLEN MAL DÜŞÜLMÜŞ (kullanıcı bulgusu 30.08). Ekran eskiden
-    siparişin TAM tutarını gösteriyordu: kurye "1/2 geri verildi" yazıp altında hâlâ 42,00 €
-    görüyor, kapıda ne tahsil edeceğini bilmiyordu. Hesap motorun kendisi (`lineAmountCents`).
-  */
+  // Kapıda alınacak tutar geri verilen malı düşer, yoksa kurye kapıda ne tahsil edeceğini bilemez; hesap motorun kendisidir
+  // (`lineAmountCents`).
   it('geri verilen kalem TAHSİLAT tutarından düşer', async () => {
     await renderScannedStop(
       {
@@ -392,21 +364,19 @@ describe('teslimat · tahsilat', () => {
 
     await renderDelivery();
 
-    /* Alan artık tutarı ve "tuş takımı" rozetini birlikte taşıyor (tasarımın tek satırı) —
-       iddia tutarın kendisinde, satırın tamamında değil. */
+    /* Alan tutarı ve "tuş takımı" rozetini birlikte taşır (tasarımın tek satırı); iddia satırın tamamında değil tutarın
+       kendisindedir. */
     expect(screen.getByTestId('courier-collection-amount')).toHaveTextContent(/42,00\s€/);
     expect(screen.getByRole('button', { name: 'nakit', selected: true })).toBeOnTheScreen();
   });
 
   /*
-    ARTI/EKSİ SÖKÜLDÜ (kullanıcı kararı 30.08) — tasarımda yok. Kapıda tahsil edilen tutar MOTORUN
-    hesabıdır; adım adım artırma onu "pazarlık edilebilir" gibi gösteriyordu. Eksik ödeme tuş
-    takımından yazılır ve ekranda "Kısmi" diye işaretlenir — o yol testte aşağıda ayrıca ölçülüyor.
+    Artı/eksi düğmesi yoktur, çünkü kapıda tahsil edilen tutar motorun hesabıdır ve adım adım artırma onu pazarlık edilebilir
+    gösterirdi. Eksik ödeme tuş takımından yazılır ve "Kısmi" diye işaretlenir.
   */
   it('tutar TUŞ TAKIMINDAN yazılır; CTA yazılan tutarı taşır', async () => {
-    /* KUTU OKUTULMADAN PARA ADIMI KİLİTLİ (kapı sırası: kutu → mal → para). Fikstürün varsayılanı
-       31.08'de kutulu oldu; bu blok tahsilatı ölçüyor, kutuyu değil — o yüzden okutma adımı
-       zeminden çıkarılıyor. Kilidin KENDİSİ "kutu okutması" başlığı altında ayrıca ölçülüyor. */
+    /* Kutusuz durak, çünkü kutu okutulmadan para adımı kilitlidir ve bu blok tahsilatı ölçer; kilidin kendisi "kutu okutması"
+       başlığı altında ölçülür. */
     mockRoutes({ day: courierDay([courierStop(1, { boxes: [] })]) });
 
     await renderDelivery();
@@ -420,9 +390,8 @@ describe('teslimat · tahsilat', () => {
   });
 
   it('eksik ödemede KISMİ rozeti çıkar; tam ödemede çıkmaz', async () => {
-    /* KUTU OKUTULMADAN PARA ADIMI KİLİTLİ (kapı sırası: kutu → mal → para). Fikstürün varsayılanı
-       31.08'de kutulu oldu; bu blok tahsilatı ölçüyor, kutuyu değil — o yüzden okutma adımı
-       zeminden çıkarılıyor. Kilidin KENDİSİ "kutu okutması" başlığı altında ayrıca ölçülüyor. */
+    /* Kutusuz durak, çünkü kutu okutulmadan para adımı kilitlidir ve bu blok tahsilatı ölçer; kilidin kendisi "kutu okutması"
+       başlığı altında ölçülür. */
     mockRoutes({ day: courierDay([courierStop(1, { boxes: [] })]) });
 
     await renderDelivery();
@@ -499,8 +468,7 @@ describe('teslimat · tahsilat', () => {
     await waitFor(() => expect(deliverCalls()).toBe(1));
     // Tahsilat DOĞMAZ (boş tutar "para almadım"dır) ve kalan borç sonuçta yazılır.
     expect(deliverBody().collection).toBeUndefined();
-    /* Sonuç artık ekranda değil TOAST'ta ve ekran listeye dönüyor (kullanıcı kararı 30.08) —
-       iddia da mesajın kendisinde: kalan borç kuryeye söyleniyor mu. */
+    // Sonuç toast'ta söylenir ve ekran listeye döner; iddia mesajın kendisindedir: kalan borç kuryeye söyleniyor mu.
     await waitFor(() => expect(lastToast.at(-1)).toMatch(/Kalan borç 42,00\s€/));
     // İş bitti: ekran listeye döner, kurye durakta takılı kalmaz.
     expect(mockBack).toHaveBeenCalled();
@@ -514,8 +482,7 @@ describe('teslimat · sonuç akışı (K5)', () => {
     await renderDelivery();
     expect(screen.queryByTestId('courier-outcome-sheet')).toBeNull();
 
-    // Etiketler render AĞACINDA da ölçülür (23.08 arızasının dersi: cihazda metin görünmez
-    // olmuştu ve jest süslemeyi göremez — bu satır en azından metnin ağaçtan düşmesini yakalar).
+    // Etiketler render ağacında da ölçülür: jest süslemeyi göremez ama metnin ağaçtan düşmesini yakalar.
     expect(screen.getByTestId('courier-outcome-unreachable')).toHaveTextContent('Ulaşılamadı');
     expect(screen.getByTestId('courier-outcome-refused')).toHaveTextContent('Kabul etmedi');
 
@@ -523,7 +490,7 @@ describe('teslimat · sonuç akışı (K5)', () => {
 
     expect(screen.getByTestId('courier-outcome-sheet')).toBeOnTheScreen();
     expect(screen.getByText(t.delivery.outcome.unreachableTitle)).toBeOnTheScreen();
-    // Çipler HIZLANDIRICIDIR; serbest metin alanı da birlikte durur (doc 21, 21.8 kararı).
+    // Çipler hızlandırıcıdır; serbest metin alanı da birlikte durur.
     expect(screen.getByTestId('courier-outcome-note')).toBeOnTheScreen();
   });
 
@@ -614,8 +581,7 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
     await renderScannedStop({}, undefined, { deliver: { ok: okDelivery({ collectedCents: 4200, collectionDeduped: true }) } });
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
-    /* "İkilenmedi" bilgisi YUTULMAZ ama artık ekranda tutulmuyor: iş bitti, mesaj toast'a çıkıyor
-       ve kurye listeye dönüyor (kullanıcı kararı 30.08). */
+    // "İkilenmedi" bilgisi yutulmaz: iş bittiği için mesaj toast'a çıkar ve kurye listeye döner.
     await waitFor(() => expect(lastToast.at(-1)).toMatch(/para İKİLENMEDİ/));
     expect(mockBack).toHaveBeenCalled();
   });
@@ -627,16 +593,14 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
     await renderDelivery();
 
     expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/0\/2 OKUTULDU/);
-    /* KUTULAR OKUTULMADAN SONRAKİ ADIMLAR AÇILMAZ (v3:17 · 30.08). Kalem satırına dokunmak bile
-       geçmez: bölüm görünür ama dokunulmaz. Teslim düğmesi de kapalı. */
+    // Kutular okutulmadan sonraki adımlar açılmaz: bölüm görünür ama dokunulmaz, teslim düğmesi de kapalıdır.
     expect(screen.getByTestId('courier-delivery-cta')).toBeDisabled();
 
     // Çipler durağın GERÇEK kodlarından kurulur (devCodes) — ikisi de okutulur.
     await fireEvent.press(screen.getByTestId('courier-box-scan'));
     await fireEvent.press(screen.getByLabelText('Kutu 1'));
     await waitFor(() => expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/1\/2 OKUTULDU/));
-    /* Satır artık kutunun KODUNU yazıyor (v3:17 · 30.08): "Kutu 1" kuryenin elindeki kartonla
-       eşleşmiyordu — kartonun üstünde `KT-26-…` yazıyor. Okutulan satır "verildi"ye dönüyor. */
+    // Satır kutunun kodunu yazar, çünkü kuryenin elindeki kartonun üstünde `KT-26-…` yazıyor; okutulan satır "verildi"ye döner.
     expect(screen.getByTestId('courier-box-1')).toHaveTextContent(/KT-26-AAAAAAAAAA/);
     expect(screen.getByTestId('courier-box-1')).toHaveTextContent(/verildi/);
     expect(screen.getByTestId('courier-delivery-cta')).toBeDisabled();
@@ -644,7 +608,7 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
     await fireEvent.press(screen.getByTestId('courier-box-scan'));
     await fireEvent.press(screen.getByLabelText('Kutu 2'));
     await waitFor(() => expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/2\/2 OKUTULDU/));
-    // Kilit açıldı: kalem ARTIK işaretlenebiliyor ve teslim düğmesi de açık.
+    // Kilit açıldı: kalem işaretlenebilir ve teslim düğmesi de açıktır.
     expect(screen.getByTestId('courier-delivery-cta')).not.toBeDisabled();
   });
 
@@ -663,11 +627,7 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
     expect(deliverBody()).toMatchObject({ scannedBoxCodes: ['KT-26-AAAAAAAAAA', 'KT-26-BBBBBBBBBB'] });
   });
 
-  /*
-    KUTUSUZ DURAK ARTIK BİR ARIZADIR (kullanıcı kararı 30.08). Eski test "kutu bölümü HİÇ çizilmez
-    ve teslim kutusuz yazılır (eski akış aynen)" diyordu — o akış kapandı: mal kutusuyla hazırlanır,
-    kutusuyla araca biner, kutusuyla kapıdan çıkar. Ekran kutusuz durağı normal saymaz, ADINI KOYAR.
-  */
+  // Kutusuz durak bir arızadır, çünkü mal kutusuyla hazırlanır, araca biner ve kapıdan çıkar; ekran onu normal saymaz, adını koyar.
   it('kutusuz durak ARIZA olarak çizilir — sessizce atlanmaz', async () => {
     mockRoutes({ day: courierDay([oneLineStop()]) });
     await renderDelivery();
@@ -678,21 +638,17 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
 });
 
 describe('adım numarası (v3 · 30.08)', () => {
-  /*
-    Numaralar metne GÖMÜLÜ değil artık; kutulu durakta akış dört adım, kutusuzda üç. Ölçülen şey
-    numaranın kendisi: gömülü olduğu sürece kutular numarasız duruyordu ve kurye kapıdaki zorunlu
-    ilk kapıyı adımdan saymıyordu.
-  */
+  // Numaralar metne gömülü değil, kendi rozetindedir; ölçülen numaranın kendisidir, çünkü kurye kapıdaki zorunlu ilk adımı (kutular)
+  // numarasız görünce adımdan saymaz.
   it('kutulu durakta kutular 1., mal 2., tahsilat 3. adımdır', async () => {
     mockRoutes({
       day: courierDay([boxedStop({ payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null } })]),
     });
     await renderDelivery();
 
-    /* Numara artık METİNDE DEĞİL, kendi daire rozetinde (v3:17 · 30.08) — iddia da başlık
-       SATIRININ tamamında: rozet ile ad yan yana okunuyor. */
+    // Numara kendi daire rozetindedir; iddia başlık satırının tamamındadır, çünkü rozet ile ad yan yana okunur.
     expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/^1KUTULAR/);
-    // KANIT ADIMI YOK (30.08): imza söküldü, kanıt kutu okutmasının kendisi.
+    // Kanıt adımı yoktur: kanıt kutu okutmasının kendisidir.
     expect(screen.queryByTestId('courier-proof-heading')).toBeNull();
     expect(screen.getByText(/^MAL — /)).toBeOnTheScreen();
     expect(screen.getByText(/^TAHSİLAT — /)).toBeOnTheScreen();
@@ -728,8 +684,8 @@ describe('adım numarası (v3 · 30.08)', () => {
 });
 
 describe('kapı notunun sırası (30.08)', () => {
-  /* Numaralar görünür olunca not ile başlık ayrışabilir hâle geldi: ekran "1 · KUTULAR" derken
-     not sırayı "kanıt"tan başlatırsa, kurye iki farklı sıra okur. */
+  /* Not sırası başlıkların sırasıyla aynı olmalı: ekran "1 · KUTULAR" derken not sırayı başka adımdan başlatırsa kurye iki ayrı sıra
+     okur. */
   it('kutulu durakta sıra cümlesi kutuları da sayar', async () => {
     mockRoutes({ day: courierDay([boxedStop()]) });
     await renderDelivery();
@@ -737,9 +693,8 @@ describe('kapı notunun sırası (30.08)', () => {
     expect(screen.getByTestId('courier-delivery-gate')).toHaveTextContent(/Sıra: kutular → mal → tahsilat/);
   });
 
-  /* KUTUSUZ DURAK ARTIK KAPIYI AÇMAZ (30.08): mal kutusuyla çıkar; kutusuz bir durak veri
-     hatasıdır ve sunucu da onu reddediyor. Ekranın kapıyı açık göstermesi, kuryeyi reddedilecek
-     bir isteğe göndermek olurdu. */
+  /* Kutusuz durak kapıyı açmaz, çünkü sunucu kutusuz teslimi reddeder; ekranın kapıyı açık göstermesi kuryeyi reddedilecek bir isteğe
+     gönderirdi. */
   it('kutusuz durakta teslim kapısı KAPALI ve sebebi kutuların yokluğudur', async () => {
     mockRoutes({ day: courierDay([oneLineStop()]) });
     await renderDelivery();
@@ -750,10 +705,8 @@ describe('kapı notunun sırası (30.08)', () => {
   });
 
   /*
-    ARAÇA BİNMEMİŞ DURAK KAPIDA AÇILMAZ (kullanıcı bulgusu 30.08 · cihazda yakalandı).
-    Kutuları rampada okutulmamış sipariş `ready` kalır; ekran eskiden teslim düğmesini etkin
-    gösteriyor, uç `stale` diyor ve kuryeye *"bu durak başkası tarafından kapatılmış olabilir"*
-    yazıyordu — durağı kimse kapatmamıştı, mal araçta değildi.
+    Araca binmemiş durak kapıda açılmaz: kutuları rampada okutulmamış sipariş `ready` kalır ve uç `stale` der, ekran kapıyı açık
+    gösterseydi kuryeye durağın başkası tarafından kapatıldığını düşündürürdü.
   */
   it('kutuları araca binmemiş durakta kapı KAPALI ve sebep doğru yazılır', async () => {
     mockRoutes({

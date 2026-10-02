@@ -353,9 +353,8 @@ export function useDelivery(orderId: string): UseDeliveryResult {
         ? t.delivery.collection.blocked
         : !loadedOnVan
           ? t.delivery.cta.notLoaded
-          : /* SIRA CÜMLESİ KUTULU DURAKTA KUTUYU DA SAYAR (30.08): adımlar numaralanınca cümlenin
-             kutuları atladığı görünür oldu — ekran "1 · KUTULAR" derken alt not sırayı "kanıt"tan
-             başlatıyordu. İki farklı sıra anlatan tek ekran, kuryeye hangisine uyacağını sordurur. */
+          : /* Kutulu durakta sıra cümlesi kutuyla başlar, çünkü ekranın numaralı adımları da kutuyla başlıyor; iki ayrı sıra
+             anlatan ekran kuryeye hangisine uyacağını sordurur. */
           `${boxes.length === 0 ? t.delivery.cta.gate : t.delivery.cta.gateBoxed}${boxesSatisfied ? '' : t.delivery.cta.gateBoxes}`;
 
   const ctaLabel = allRefused

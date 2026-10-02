@@ -7,8 +7,8 @@ import { quickSale } from './quick-sale';
 import { transitionOrder } from './transition';
 
 /**
- * Hızlı satış (07.10) — kapı önü tek adım. Doğrulanan şey: **tek çağrıda kapanıyor mu** (stok
- * fiiliden düşüyor, referans doğuyor, para yazılıyor, iz kalıyor) ve **olmayan malı satmıyor mu**.
+ * Hızlı satış, kapı önünde tek adım: tek çağrıda kapanıyor mu (stok fiiliden düşer, referans doğar, para yazılır, iz kalır) ve olmayan
+ * malı satmıyor mu.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -40,19 +40,13 @@ beforeAll(async () => {
   const profile = await new UserProfileService(db).insert({ name: `Kapı müşterisi ${stamp}` });
   customerId = profile.id;
   createdProfiles.push(profile.id);
-  // Kapı önü nakdinin gireceği çekmece — tahsilat artık bir HAREKETTİR (12.2).
+  // Kapı önü nakdinin gireceği çekmece; tahsilat bir harekettir.
   cashAccount = (await new AccountService(db).insert({ name: `Kapı kasası ${stamp}`, type: 'cash' })).id;
 });
 
 beforeEach(async () => {
-  // **DEFTER SİPARİŞTEN ÖNCE** (06.14): kapı satışı deftere `counter_sale` yazıyor ve satır
-  // siparişi `restrict` ile tutuyor — sıra tersken sipariş silinemiyor, parti kalıyor, sonraki
-  // test kirli zeminde koşuyordu. Hareketler partiden siliniyor (`stock_id` `not null`).
-  // **SİPARİŞ ÖNCE, sonra parti** — ve sipariş `purgeCustomerOrders`tan (06.14). Varyant bazlı
-  // temizlik burada YETMEZ: kapı satışı ARACIN partisinden mal çıkarıyor (iç blok, `yerel.variantId`)
-  // ama sipariş bu müşterinin; yani siparişi tutan hareket dıştaki partiye bağlı değil ve
-  // `purgeVariantStock(variantId)` onu göremiyor. Anahtar SİPARİŞTİR, parti değil (ölçüldü 27.08:
-  // `stock_movement_order_fk` ile silinemeyen sipariş deposunu da bırakıyordu).
+  // Silme anahtarı müşterinin siparişidir, varyant değil: kapı satışının stok hareketi siparişi `restrict` ile tutar ve araç bloğunun
+  // satışı başka bir partiden çıktığı için `purgeVariantStock` o hareketi göremez.
   await purgeOrdersBy(db, 'customer_id', [customerId]);
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
@@ -62,8 +56,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Sipariş AYRICA silinmez: `purgeTestData` onu `profileIds`ten buluyor. Elle yazılan bu satır
-  // teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
+  // Sipariş ayrıca silinmez: `purgeTestData` onu `profileIds`ten bulur ve elle silme teardown sırasını bozar.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -114,8 +107,7 @@ describe('hızlı satış (07.10)', () => {
 
   it('adım atlandı diye İZ atlanmaz: parti kaydı ve geçiş logu yazılır', async () => {
     const { order } = await doorDraft(2);
-    // Hesap AÇIKÇA verilir: verilmezse `door_cash_account_id` ayarına düşülür ve o ayar yerelde
-    // demo kasayı gösterir — tahsilat kullanıcının gerçek kasasına yazılırdı (denetim R2).
+    // Hesap açıkça verilir: verilmezse `door_cash_account_id` ayarına düşülür ve o ayar yerelde demo kasayı gösterir.
     await quickSale(db, { orderId: order.id, paymentMethod: 'card', paymentAccountId: cashAccount });
 
     // Geri çağırma ("bu parti kime gitti") hızlı satışta da çalışır.
@@ -199,9 +191,7 @@ describe('hızlı satış (07.10)', () => {
   });
 
   it('hesap verilmezse tahsilat AYARDAKİ çekmeceye yazılır', async () => {
-    // Kapıdaki kasiyer ekranı hesabı çoğu zaman göndermez; düşülen yol ayardır ve bu yol bugüne
-    // kadar HİÇ sınanmamıştı — hesapsız çağrılar sessizce yereldeki demo kasaya yazıyordu
-    // (denetim R2). Ayar bilinen bir duruma getirilir, sonra bulunduğu gibi geri konur (§4b).
+    // Satış ekranı hesabı göndermez, düşülen yol ayardır. Ayar bilinen bir duruma getirilir ve bulunduğu gibi geri konur (§4b).
     const settings = settingsSnapshot(db);
     const ayarKasasi = (await new AccountService(db).insert({ name: `Ayar kasası ${stamp}`, type: 'cash' })).id;
     await settings.override('door_cash_account_id', ayarKasasi);
@@ -238,8 +228,7 @@ describe('hızlı satış (07.10)', () => {
       expect(kapanan?.amountCollectedCents).toBe(0); // para kaydı yok — uydurulmadı
       expect(kapanan?.paymentStatus).toBe('pending');
     } finally {
-      // Ne bulduysak onu bırakırız — ayar YOKTUYSA yok kalır (eskiden `if (previous)` ile atlanıyordu,
-      // yani test değeri geride kalabiliyordu).
+      // Ne bulduysak onu bırakırız: ayar yoktuysa yok kalır.
       await settings.restore();
     }
   });
@@ -256,21 +245,14 @@ describe('hızlı satış (07.10)', () => {
 });
 
 /**
- * **ARAÇTAN SATIŞ SEFERE BAĞLANIR** (ölçülmüş açık, 26.08).
- *
- * Sefer kapanışının beklediği nakit `delivery_run_collection`'dan geliyor ve o görünüm
- * `delivery_run_id is not null` süzüyor; kolonu yazan tek yer ise seferin DURAKLARI
- * (`start_delivery_run`). Araçtan yapılan satış bir durak değil — bağ kurulmasaydı kurye akşam
- * parayı teslim eder, sistem onu beklemez ve mutabakat sebebi görünmeyen bir FAZLA verirdi.
- *
- * Kurulum bilerek AYRI (dosyanın `beforeAll`ına dokunulmuyor): bu senaryonun araç deposu, kuryesi,
- * bölgesi ve açık seferi var; ötekilerin hiçbirinin yok.
+ * Araçtan satış sefere bağlanır: sefer kapanışının beklediği nakit `delivery_run_collection`dan gelir ve görünüm yalnız
+ * `delivery_run_id`si dolu siparişi sayar, bağ kurulmasaydı mutabakat sebebi görünmeyen bir fazla verirdi. Kurulum ayrıdır, çünkü bu
+ * senaryonun araç deposu, kuryesi, bölgesi ve açık seferi var, ötekilerin yok.
  */
 describe('araçtan satış — sefer bağı (26.08)', () => {
   const yerel: { aracId?: string; tesisId?: string; kuryeId?: string; zoneId?: string; runId?: string; variantId?: string; productId?: string } = {};
-  /* SEFER DÜNÜN TARİHİYLE (03.09 · denetim bulgusu 2): bağ artık güne değil "sürülen sefer"e
-     bakıyor — yola çıkmış ve kapanmamış olan, kendi günü ne olursa olsun (`/day` ucunun tanımı).
-     Bugünün tarihiyle yazılsaydı eski (güne bağlı) okuma da geçerdi ve gerileme görünmezdi. */
+  /* Sefer dünün tarihiyle kurulur, çünkü bağ güne değil sürülen sefere (yola çıkmış ve kapanmamış) bakar; bugünün tarihiyle güne
+     bağlı bir okuma da geçerdi ve gerileme görünmezdi. */
   const gun = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 
   beforeAll(async () => {
@@ -284,9 +266,8 @@ describe('araçtan satış — sefer bağı (26.08)', () => {
       warehouseIds: [yerel.aracId, yerel.tesisId],
     });
     yerel.kuryeId = kurye.id;
-    // Dosyanın ortak listesine EKLENMİYOR: iç `afterAll` dıştakinden ÖNCE koşuyor ve depoyu
-    // silmeye çalıştığımda kurye hâlâ o depoları kapsamında taşıyordu (`restrict` — ölçüldü).
-    // Kuryeyi kendi temizliğimde, depolarla AYNI çağrıda topluyorum: sıra `purgeTestData`nın işi.
+    // Kurye dosyanın ortak listesine eklenmez: iç `afterAll` dıştakinden önce koşar ve depoları kapsamında taşıyan kurye depo silmeyi
+    // `restrict` ile engeller; kurye depolarla aynı `purgeTestData` çağrısında toplanır.
 
     // Bölge TESİSE bağlanır — araca bağlanamaz (tetikleyici, `warehouse-vehicle.test.ts`).
     const zoneSvc = new DeliveryZoneService(db);
@@ -299,9 +280,7 @@ describe('araçtan satış — sefer bağı (26.08)', () => {
       referenceNo: `SF-TEST-${String(stamp).slice(-6)}`,
     });
     yerel.runId = run.runId;
-    /* Sefer YOLA ÇIKARILIYOR (31.08): kurma artık damga vurmuyor ve başlamamış sefer kapatılamaz
-       (`not_departed`). Bu blok "araçtan satış açık sefere bağlanır"ı ölçüyor — açık sefer, yola
-       çıkmış seferdir. */
+    // Sefer yola çıkarılır, çünkü açık sefer yola çıkmış seferdir ve başlamamış sefer kapatılamaz (`not_departed`).
     await new DeliveryRunService(db).depart({ runId: run.runId!, courierId: kurye.id });
 
     const arac = await new ProductService(db).create({ name: { tr: `Araç ürünü ${stamp}` }, categoryId });
@@ -311,21 +290,15 @@ describe('araçtan satış — sefer bağı (26.08)', () => {
   });
 
   afterAll(async () => {
-    // Parti (ve onu tutan defter/kalem bağları) SİPARİŞTEN ÖNCE — `stock_movement.order_id`
-    // `restrict` ve kapı satışı deftere yazıyor (06.14).
-    // **HER İKİ DEPO DA** (ölçüldü 27.08): eskiden yalnız aracın siparişleri siliniyordu ve tesise
-    // bağlı olanlar kalıyordu — `order_warehouse_fk` `restrict`, yani tesis silinemiyor, teardown
-    // `purgeTestData`nın depo adımında patlıyordu. Görünmüyordu çünkü silmeler `delete()` ile
-    // yazılmıştı ve o çağrı hatayı YUTUYOR; `purgeOrders` sırayı taşıyor, `mustDelete` gürültüyü.
+    // Siparişler iki depodan da silinir, çünkü `order_warehouse_fk` `restrict`tir ve kalan sipariş depo silmeyi engeller; sıra
+    // `purgeOrdersBy`ın, hata gürültüsü `mustDelete`in işidir.
     await mustDelete(db, 'delivery_run_close', (q) => q.eq('delivery_run_id', yerel.runId!));
     await purgeOrdersBy(db, 'warehouse_id', [yerel.aracId!, yerel.tesisId!]);
     await purgeOrdersBy(db, 'delivery_run_id', [yerel.runId!]);
     await purgeVariantStock(db, [yerel.variantId!]);
     await mustDelete(db, 'delivery_run', (q) => q.eq('id', yerel.runId!));
     await mustDelete(db, 'delivery_zone', (q) => q.eq('id', yerel.zoneId!));
-    // **ÜRÜN de bildirilir** (ölçüldü 27.08): bu blok kendi ürününü kuruyor ve onu hiçbir cascade
-    // toplamıyordu — yeşil koşular bile her turda bir "Araç ürünü …" bırakıyordu (yerelde 22 artık
-    // ürün birikmişti). Kategori dıştan geliyor, o yüzden burada anılmaz.
+    // Bu bloğun kendi ürünü de bildirilir, çünkü onu hiçbir cascade toplamaz; kategori dıştan geldiği için burada anılmaz.
     await purgeTestData(db, {
       productIds: [yerel.productId!],
       profileIds: [yerel.kuryeId!],
@@ -380,15 +353,8 @@ describe('araçtan satış — sefer bağı (26.08)', () => {
   });
 
   /**
-   * **"AÇIK SEFER" TEK TANIMDIR** (mobil şeridin ölçümü, 26.08) — ve tanım *kapanmamış olmak*tır,
-   * *dönmemiş olmak* değil.
-   *
-   * Ayrışma böyle görülmüştü: seed dönüş damgasını kapanış kaydı OLMADAN yazınca kurye ekranı
-   * seferi "açık" (kapat düğmesi çizili) gösterdi, motor ise kendi ölçütüyle "kapalı" saydı ve
-   * araçtan satılan malın parası hiçbir sefere bağlanmadı. İki tanım varsa biri bir gün yanlış olur.
-   *
-   * Burada o hâl elle kuruluyor (damga var, kapanış yok) ve iddia şu: ekran ne diyorsa motor da
-   * onu der. Ölçüt yeniden damgaya çevrilirse bu test kırmızıya döner.
+   * Açık sefer tek tanımdır ve tanım dönmemiş olmak değil kapanmamış olmaktır: dönüş damgası olup kapanış kaydı olmayan seferi ekran
+   * açık gösterir, motor da öyle saymalı. Ölçüt damgaya çevrilirse bu test kırmızıya döner.
    */
   it('DÖNÜŞ DAMGALI ama kapanmamış sefer hâlâ açıktır — motor ekranla aynı tanımı okur', async () => {
     await db
@@ -408,17 +374,8 @@ describe('araçtan satış — sefer bağı (26.08)', () => {
   });
 
   /**
-   * **KAPANMIŞ SEFER PARA ALMAZ** (mobil şeridin ölçümü, 26.08).
-   *
-   * Mutabakat bir FOTOĞRAFTIR: kapanış anında beklenen nakit sayılan nakitle karşılaştırılır ve
-   * fark yazılır. Kapanmış bir sefere sonradan satış bağlamak o fotoğrafı geçmişe dönük değiştirir
-   * — dün mutabık olan sefer bugün kendiliğinden "eksik" görünür ve sebebi hiçbir ekranda yazmaz.
-   *
-   * Bu test aynı zamanda "açık sefer"in TEK tanımını çiviliyor: motor ile kurye ekranı aynı
-   * fonksiyondan (`readCourierRun`) okuyor. Ayrıştıkları gün burası kırmızıya döner — ilk yazımda
-   * motor kendi ölçütünü kurmuştu ve seed dönüş damgasını kapanışsız yazınca bağ hiç kurulmadı.
-   *
-   * SON sırada duruyor ve bilerek: seferi kapatmak yukarıdaki iki senaryonun zeminini kaldırır.
+   * Kapanmış sefer para almaz, çünkü mutabakat kapanış anının fotoğrafıdır ve sonradan bağlanan satış dün mutabık olan seferi sebepsiz
+   * "eksik" gösterirdi. Son sırada durur, çünkü seferi kapatmak yukarıdaki senaryoların zeminini kaldırır.
    */
   it('KAPANMIŞ sefere bağlanmaz — mutabakat fotoğrafı geçmişe dönük değişmez', async () => {
     const kapanis = await new DeliveryRunService(db).close({ runId: yerel.runId!, countedCashCents: 0, actorId: null });

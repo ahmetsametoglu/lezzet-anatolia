@@ -21,8 +21,8 @@ const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStar
 export const DOOR_ACCOUNT_ID = uuid(7000);
 
 /**
- * Durak kaleminin kimliği — testler işaretleyecekleri satırı bu kimlikle bulur (satır anahtarı artık
- * sıra numarası değil, `orderItemId`). İki durağın kalemleri çakışmasın diye durak sırasından türer.
+ * Durak kaleminin kimliği; testler işaretleyecekleri satırı bu kimlikle bulur, çünkü ekranın satır anahtarı `orderItemId`dir. İki
+ * durağın kalemleri çakışmasın diye durak sırasından türer.
  */
 export function stopItemId(stopIndex: number, lineIndex: number): string {
   return uuid((lineIndex + 5) * 100 + stopIndex);

@@ -13,36 +13,28 @@ import { fingerprintRows, heuristicColumnMapper, parseBankRows } from '@lezzet/d
 import { toCents } from '@lezzet/helper';
 import { euro, gun, tabloDolu, type Db } from './shared';
 
-// ── Hesaplar + para hareketleri (12) ─────────────────────────────────────────────────────────────
-// Kasa, bankalar ve Stripe: hepsi birer hesap; "online havuz" ayrı kavram değil. Bakiye SAKLANMAZ,
-// hareketlerden türetilir — o yüzden açılış bakiyesi de bir harekettir (`capital`).
-//
-// Sipariş tahsilatları BURADA YOK: onların hareketi 12.2'de siparişe bağlı olarak doğar. Bugün
-// yazılsalardı `Order.amount_*` cache'iyle iki ayrı gerçek oluşurdu.
-//
-// SINIFLANDIRMA (13.09 · ikinci karar): her giderin TEK TÜRÜ var (migration'ın tür sözlüğünden),
-// kime ödendiği CARİDE, serbest işaret ETİKETTE. Ortak etiketi yok: ortağın kaydı cari hesabıdır.
+// Kasa, bankalar ve Stripe birer hesaptır; bakiye saklanmaz, hareketlerden türer ve açılış bakiyesi de bir harekettir (`capital`).
+// Sipariş tahsilatları burada yazılmaz, çünkü siparişe bağlı doğarlar ve ayrı yazılsalar `Order.amount_*` önbelleğiyle iki gerçek
+// oluşurdu.
 
 const HESAPLAR = [
   { key: 'kasa', name: 'Kasa', type: 'cash' as const, acilis: 850 },
   { key: 'revolut', name: 'Revolut', type: 'bank' as const, acilis: 4200 },
   { key: 'cm', name: 'Crédit Mutuel', type: 'bank' as const, acilis: 12500 },
-  // Stripe'ın açılışı var, çünkü payout'u var: sağlayıcı hesabı tahsilatı toplar, sonra bankaya
-  // aktarır. Sipariş tahsilatları 12.2'de siparişe bağlı doğacak; o zamana kadar açılış onların
-  // yerini tutar — yoksa payout hiç girmemiş parayı çıkarır ve bakiye eksiye düşerdi.
+  // Stripe'ın açılışı var, çünkü payout'u var: tahsilatlar burada yazılmadığı için açılış onların yerini tutar, yoksa payout hiç
+  // girmemiş parayı çıkarır ve bakiye eksiye düşerdi.
   { key: 'stripe', name: 'Stripe', type: 'provider' as const, acilis: 1980 },
   // Kapanmış hesap: SİLİNMEZ, pasifleşir — geçmiş hareketleri ona bağlıdır.
   { key: 'eskiBanka', name: 'N26 (kapandı)', type: 'bank' as const, acilis: 0, isActive: false },
-  // ORTAK CARİ HESAPLARI (13.09): ortağın TEK kaydı. Açılışı YOK — cari bir kasa değil, kişiyle
-  // hesaptır; bakiyesi yalnız ortak adına/ortağın cebinden yapılan hareketlerden doğar. Adlar uydurma.
+  // Ortak cari hesabı ortağın tek kaydıdır ve açılışı yoktur: cari bir kasa değil kişiyle hesaptır, bakiyesi yalnız ortak adına ya da
+  // ortağın cebinden yapılan hareketlerden doğar.
   { key: 'ortakA', name: 'Ortak A cari', type: 'partner' as const, acilis: 0 },
   { key: 'ortakB', name: 'Ortak B cari', type: 'partner' as const, acilis: 0 },
 ];
 
 /**
- * CARİLER (13.09 · ikinci karar) — eşleşme kelimeleri ekstrenin satırlarına göre: kelime geçerse cari
- * ve varsayılan türü önerilir. Kelimeler dar tutuldu (test fikstürlerinin açıklamalarıyla çakışmasın:
- * cariler şirket geneli okunur). Adlar uydurma.
+ * Cariler: ekstre satırında eşleşme kelimesi geçerse cari ve varsayılan türü önerilir. Kelimeler dar tutuldu, çünkü cariler şirket
+ * geneli okunur ve test fikstürlerinin açıklamalarıyla çakışmamalı.
  */
 const CARILER = [
   { key: 'urssaf', name: 'URSSAF', kind: 'institution' as const, keywords: ['URSSAF'], defaultNature: 'sosyal-guvenlik' },
@@ -53,13 +45,12 @@ const CARILER = [
   { key: 'bankaMasrafi', name: 'Crédit Mutuel — banka masrafı', kind: 'service' as const, keywords: ['FRAIS TENUE'], defaultNature: 'banka-masrafi' },
 ];
 
-/** Serbest etiket (13.09) — işletmenin kendi gruplaması; izah değildir, sözlüğe seed'de girer. */
+/** Serbest etiket: işletmenin kendi gruplaması; izah değildir, sözlüğe seed'de girer. */
 const ETIKETLER = [{ slug: 'ortak-a-araci', label: 'Ortak A aracı' }];
 
 /**
- * Gider serisi — her satırın TÜRÜ var (migration'ın tür sözlüğünden); kime ödendiği biliniyorsa CARİSİ.
- * Reklam gideri `reklam` türü + kampanya künyesi. "Ortak A aracı" ETİKETLİ satır, şirket giderinin
- * bir ortağı ilgilendirdiğini gösterir — borç doğurmaz, ayrım yapar.
+ * Gider serisi: her satırın türü migration'ın tür sözlüğündendir, kime ödendiği biliniyorsa carisi de yazılır. "Ortak A aracı" etiketi
+ * şirket giderinin bir ortağı ilgilendirdiğini gösterir; borç doğurmaz, yalnız ayırır.
  */
 const GIDERLER: Array<{
   hesap: string;
@@ -79,13 +70,12 @@ const GIDERLER: Array<{
   { hesap: 'kasa', amount: 88.2, nature: 'akaryakit', tags: ['ortak-a-araci'], description: 'Rota yakıtı — Ortak A aracı', gunOnce: 11 },
   { hesap: 'revolut', amount: 340, nature: 'ambalaj', description: 'Soğuk zincir kutu + jel', gunOnce: 18 },
   { hesap: 'revolut', amount: 129.9, nature: 'yazilim', description: 'SaaS abonelikleri', gunOnce: 9 },
-  // Reklam gideri KAMPANYA KÜNYELİ: analitik kampanyanın giderini ve cirosunu yan yana koyar (13).
+  // Reklam gideri kampanya künyelidir: analitik kampanyanın giderini ve cirosunu yan yana koyar.
   { hesap: 'revolut', amount: 250, nature: 'reklam', description: 'Meta — bayram kampanyası', gunOnce: 14, meta: { campaign: 'bayram-2026' } },
   { hesap: 'revolut', amount: 180, nature: 'reklam', description: 'Google — marka araması', gunOnce: 6, meta: { campaign: 'marka-arama' } },
 ];
 
-// **`base` katmanında HİÇ KOŞMAZ** (kullanıcı kararı 16.08): hesap adları da açılış bakiyeleri de uydurma
-// sayılar. Gerçek kasa/banka/Stripe hesabını operatör kurar. Künye `seed/tier.ts`.
+// `base` katmanında koşmaz, çünkü hesap adları da açılış bakiyeleri de uydurmadır; gerçek hesapları operatör kurar (`seed/tier.ts`).
 export async function seedMoney(db: Db): Promise<void> {
   if (await tabloDolu(db, 'account')) {
     console.log('▸ hesaplar zaten dolu — atlandı');
@@ -124,8 +114,8 @@ export async function seedMoney(db: Db): Promise<void> {
     console.log(`  ✓ ${h.name} · ${h.type}${h.isActive === false ? ' · PASİF' : ''}`);
   }
 
-  // `reconciled` YAZILMIYOR (13.09): bayrak yalnız banka satırında anlamlı; elle girilen giderin izahı
-  // türünden gelir (`explained` tetikleyiciyle kurulur).
+  // `reconciled` yazılmaz: bayrak yalnız banka satırında anlamlıdır; elle girilen giderin izahı türünden gelir (`explained`
+  // tetikleyiciyle kurulur).
   for (const g of GIDERLER) {
     await movements.insert({
       accountId: hesapId.get(g.hesap)!,
@@ -142,12 +132,9 @@ export async function seedMoney(db: Db): Promise<void> {
   }
 
   /*
-    ORTAK CARİSİ İŞ BAŞINDA (13.09) — iki yön, iki hareket:
-    · Ortak A şirket giderini CEBİNDEN ödedi → gider, hesabı ortağın carisi → cari EKSİYE düşer
-      (şirket ortağa borçlu).
-    · Şirket, Ortak B'nin kişisel bir ödemesini bankadan yaptı → banka → cari TRANSFERİ → Ortak B
-      carisi ARTIYA çıkar (ortak şirkete borçlu). Fiziken para üçüncü kişiye gitti; muhasebede
-      ortağın hesabına yazılan bir çekiştir. Ortak etiketi YOK: hesap kimin olduğunu zaten söylüyor.
+    Ortak carisinin iki yönü: Ortak A şirket giderini cebinden ödedi (gider ortağın carisinden çıkar, şirket ortağa borçlanır), şirket
+    Ortak B'nin kişisel ödemesini bankadan yaptı (banka → cari transferi, ortak şirkete borçlanır). Ortak etiketi yoktur, çünkü hesap
+    kimin olduğunu zaten söyler.
   */
   await movements.insert({
     accountId: hesapId.get('ortakA')!,
@@ -169,11 +156,9 @@ export async function seedMoney(db: Db): Promise<void> {
   });
 
   /*
-    BELGELER (13.09) — biri kapanmış, ikisi açık; hepsinin karşı tarafı bir CARİ, türü sözlükten:
-    · Kira faturası: belge + ödemesine BAĞ (tutarıyla) → açık kalanı 0. Kira ödemesi yukarıda yazıldı;
-      bağlamak için ayrı bir ödeme yazılmıyor — ilk kira satırı bulunup bağlanıyor (para iki kez sayılmasın).
-    · Muhasebeci ve Orange faturaları: ödeme yok → "Açık belgeler"de dururlar; ekstrenin satırları
-      onları referansla ve carinin eşleşme kelimesiyle bulur.
+    Belgeler: kira faturası ilk kira ödemesine tutarıyla bağlanır ve açık kalanı sıfırlanır, ayrı ödeme yazılmaz ki para iki kez
+    sayılmasın; muhasebeci ve Orange faturaları ödenmemiştir. Açık belgeleri ekstrenin satırları referansla ve carinin eşleşme kelimesiyle
+    bulur.
   */
   const documents = new MoneyDocumentService(db);
   const kiraFaturasi = await documents.insert({
@@ -231,10 +216,8 @@ export async function seedMoney(db: Db): Promise<void> {
     });
   }
 
-  // FATURASI GİRİLMİŞ KABUL (12.26 · borç belgeden türer): ilk kabulün faturası tedarikçinin belgesi —
-  // ithalat olduğu için belgede KDV yok (ters yükleme), kabulün satırlarında olmayan nakliye faturada
-  // (toplam satırlardan 120 € fazla), vadeli. Tedarikçi kartının borcu artık bu belgenin tutarından
-  // okunur; "Neyin faturası" seçicisi bu kabulü bir daha önermez, ikinci kabul seçicide kalır.
+  // İlk kabulün tedarikçi faturası: ithalat olduğu için KDV yok (ters yükleme), kabul satırlarında olmayan nakliye faturada (+120 €) ve
+  // vadeli. Tedarikçi borcu bu belgenin tutarından okunur; "Neyin faturası" seçicisi bu kabulü bir daha önermez.
   const faturali = ((girisler ?? []) as Array<{ id: string; supplier_id: string | null; total_amount: string }>).find((giris) => giris.supplier_id);
   if (faturali?.supplier_id) {
     await documents.insert({
@@ -272,8 +255,8 @@ export async function seedMoney(db: Db): Promise<void> {
     valueDate: gun(-2),
   });
 
-  // Kapı önü satışın nakdi hangi çekmeceye girer — kasiyer ekranı bunu ezebilir, ayar varsayılandır.
-  // Payout'un aktarıldığı banka (12.14): webhook Stripe → bu hesap transferini kendiliğinden yazar.
+  // Payout'un aktarıldığı banka: webhook Stripe → bu hesap transferini kendiliğinden yazar. Kapı önü satışın nakdi ayardaki çekmeceye
+  // girer; satış çağrısı hesabı açıkça verirse ayar ezilir.
   await new SettingsService(db).set('stripe_payout_account_id', hesapId.get('revolut')!, {
     description: 'Stripe payout\'unun aktarıldığı banka hesabı (12.14).',
   });
@@ -281,11 +264,7 @@ export async function seedMoney(db: Db): Promise<void> {
     description: 'Kapı önü satış tahsilatının düştüğü hesap (12.2).',
   });
 
-  // **Banka ekstresi BURADA DEĞİL, siparişlerden SONRA** (`seedBankQueue`) — sıra bir bağımlılık:
-  // ekstrenin eşleştirme kuyruğunu doğuran satırlar açık siparişlerin tutarlarından türüyor ve
-  // `seedMoney` sipariş seed'inden önce koşuyor (hesaplar önce var olmalı, sipariş tahsilatı onlara
-  // yazılıyor). Burada çağrılsaydı sipariş tablosu boş olur, türetilen satır hiç doğmaz ve kuyruk
-  // sessizce tek hâlinde kalırdı — kod çalışır, hiçbir şey üretmezdi.
+  // Banka ekstresi ayrı adımdır (`seedBankQueue`), çünkü yalnız `full` katmanında koşar.
 
   const bakiyeler = await accounts.balances();
   const ozet = HESAPLAR.map((h) => `${h.name}: ${euro((bakiyeler.get(hesapId.get(h.key)!)?.balanceCents ?? 0) / 100)} €`).join(' · ');
@@ -296,28 +275,12 @@ export async function seedMoney(db: Db): Promise<void> {
 }
 
 /**
- * Banka ekstresi + eşleştirme kuyruğu.
- *
- * Kendi hesabını arayıp buluyor: çağıranın hesap haritasını taşıması, iki seed adımı arasında bir
- * bağ daha kurardı.
- *
- * ── SİPARİŞTEN TÜREYEN SATIRLAR KALKTI (kullanıcı kararı 01.09) ──────────────
- * Ekstrenin üç satırı açık siparişlerin bakiyesinden üretiliyordu ve eşleştirme kuyruğunun "güçlü
- * aday" / "çoklu aday" hâllerini doğuruyordu. Besleme artık hiç sipariş yazmıyor (künye
- * `seed.ts` başlığında), dolayısıyla o satırların dayanağı da yok — uydurma bir tutarla yazılsalar
- * motor onları zaten hiçbir siparişe bağlayamaz ve "aday" hâli YALANCI olurdu.
- *
- * ── SİPARİŞ DIŞI ADAYLAR VAR (12.13 · 13.09) ────────────────────────────────
- * Ekstrenin satırları `seedMoney`nin yazdıklarıyla buluşuyor (satır listesinin künyesi). Bunlar
- * uydurma tutar değil, aynı seed'in öteki ucunda gerçekten duran kayıtlar — "güçlü aday" hâli yalancı
- * değil.
+ * Banka ekstresi ve eşleştirme kuyruğu; hesabını adıyla kendisi bulur, çünkü çağıranın hesap haritasını taşıması iki seed adımı
+ * arasında bir bağ daha kurardı. Satırlar sipariş tutarından türemez, çünkü besleme sipariş yazmaz; öneri hâlleri `seedMoney`nin
+ * yazdığı kayıtlarla buluşur.
  */
 export async function seedBankQueue(db: Db): Promise<void> {
-  // Koruma EKSİKTİ (08.08): buradaki her satır her koşuda yeniden yazılıyordu ve ikinci koşu
-  // `bank_import_profile_name_key` tekilliğine çarpıp seed'i KESİYORDU — kendisinden sonraki
-  // bölümler (talep, geri bildirim, iş izleri) hiç çalışmıyordu. Öteki bölümlerin hepsinde bu
-  // koruma var; burada unutulmuştu ve hata dosyanın kendi içinde değil, SONRAKİ bölümlerin
-  // yokluğunda görünüyordu.
+  // Koruma: ikinci koşu `bank_import_profile_name_key` tekilliğine çarpıp seed'i keserdi ve sonraki bölümler hiç çalışmazdı.
   if (await tabloDolu(db, 'bank_import_profile')) {
     console.log('▸ banka ekstresi zaten dolu — atlandı');
     return;
@@ -330,14 +293,9 @@ export async function seedBankQueue(db: Db): Promise<void> {
 async function seedBankImport(db: Db, accountId: string): Promise<void> {
   const frDate = (daysAgo: number) => gun(-daysAgo).split('-').reverse().join('/');
   /*
-    Satırların beşi `seedMoney`nin yazdıklarıyla BULUŞUR:
-    · URSSAF (−22. gün): aynı gün elle yazılmış, carisi URSSAF olan kesinti → "zaten yazılmış hareket"
-      (carinin kelimesi elle yazılanı da tanıtır; cari kendisi de yedek öneridir);
-    · VERSEMENT (−7. gün): kasa→Crédit Mutuel transferinin banka tarafı → "transferin öteki yakası";
-    · ORANGE (−7. gün): Orange'ın açık faturası, eşleşme kelimesi ORANGE → "açık belge";
-    · MULLER (−2. gün): açık muhasebeci faturası FA-2026-0912, referans açıklamada → "açık belge";
-    · FRAIS TENUE (−1. gün): belgesi yok, carinin kelimesi → "cari" (banka masrafı türüyle).
-    Geri kalanı önerisiz durur (nakit çekimi, tanınmayan havale) — gerçek bir ekstre de öyledir.
+    Satırların beşi `seedMoney`nin kayıtlarıyla buluşur: URSSAF elle yazılmış kesintiyle ("zaten yazılmış hareket"), VERSEMENT kasa →
+    Crédit Mutuel transferinin banka yakasıyla, ORANGE ve MULLER açık faturalarla (eşleşme kelimesi, referans), FRAIS TENUE carinin
+    kelimesiyle. Geri kalanı önerisiz durur (nakit çekimi, tanınmayan havale), gerçek bir ekstre de öyledir.
   */
   const statement = [
     { Date: frDate(22), 'Libellé': 'PRLV SEPA URSSAF COTISATIONS', Montant: '-1180,00', Solde: '11 290,30' },
@@ -379,7 +337,7 @@ async function seedBankImport(db: Db, accountId: string): Promise<void> {
     fingerprintRows(accountId, rows).map((row) => ({
       accountId,
       direction: row.direction,
-      // Ekstre satırı euro okur (banka dosyası öyle gelir); hareket cent yazar (02.9 · STACK §8).
+      // Ekstre satırı euro okur (banka dosyası öyle gelir); hareket cent yazar (STACK §8).
       amountCents: toCents(row.amount),
       // Tip sınıflandırma bekliyor: banka "para girdi" der, sebebini söylemez.
       type: 'misc' as const,

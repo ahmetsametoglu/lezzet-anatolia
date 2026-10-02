@@ -156,7 +156,7 @@ describe('gel-al teslimi', () => {
     );
     await new ReservationService(db).reserve({ orderId: order.id, warehouseId, variantId, qty: 1 });
     await advanceOrder(db, order.id, ['confirmed']);
-    // Hazırlık artığı: açılıp mühürlenmeyen ilk kutu, mal ikinci kutuya konur (D9 turunda ölçüldü, 23.09).
+    // Hazırlık artığı: açılıp mühürlenmeyen ilk kutu, mal ikinci kutuya konur.
     const empty = await openBox(db, { orderId: order.id, warehouseId });
     const filled = await openBox(db, { orderId: order.id, warehouseId });
     if (empty.status !== 'ok' || filled.status !== 'ok') throw new Error('kutu açılamadı');
