@@ -110,6 +110,35 @@ export async function notifyRegisterDayUnclosed(
 }
 
 /**
+ * Bir kayıt sertifikalı kasaya yazılamıyor — yönetime ve muhasebeye, gece kapanışını beklemeden mesaide düzeltilsin diye. Tekrar
+ * çağıranın anahtarıyla önlenir: siparişe özgü sebep kayıt başına, kurulum eksikliği depo ve gün başına bir kez haber verir.
+ */
+export async function notifyRegisterWriteStuck(
+  db: SupabaseClient,
+  input: {
+    warehouseId: string | null;
+    orderId: string | null;
+    movementId: string | null;
+    referenceNo: string | null;
+    reason: string;
+    dedupeKey: string;
+  },
+): Promise<void> {
+  try {
+    await dispatchStaffNotification(db, {
+      kind: 'register_write_stuck',
+      roles: ['admin', 'accounting'],
+      warehouseId: input.warehouseId,
+      target: input.orderId ? { type: 'order', id: input.orderId } : null,
+      payload: { reason: input.reason, referenceNo: input.referenceNo, movementId: input.movementId },
+      dedupeKey: input.dedupeKey,
+    });
+  } catch (err) {
+    yut(err, 'register_write_stuck');
+  }
+}
+
+/**
  * Sefer kapandı ama durak sonuçlanmadı: sevkiyat masası dürtülür, çünkü askıdaki durak bakan olmazsa kaybolmuş gibi kalır; zil yalnız "bak" der, gün seçmez.
  * Depo süzgeçlidir ve dedupe yoktur: her kapanış ayrıdır.
  */

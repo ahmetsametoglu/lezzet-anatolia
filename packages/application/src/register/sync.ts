@@ -32,6 +32,7 @@ import type {
   RegisterTicketLine,
   RegisterTicketSnapshot,
 } from '@lezzet/types';
+import { notifyRegisterWriteStuck } from '../notification/staff-events';
 import type { CashRegister } from './port';
 import { ensureItemProducts, ensureShippingProduct } from './products';
 
@@ -105,7 +106,10 @@ export async function processQueueRow(db: Db, register: CashRegister, row: Regis
       : await syncCashMovement(db, register, row.movementId!, ctx);
     if (outcome.status === 'blocked') {
       const nextAttemptAt = new Date(ctx.now.getTime() + BLOCKED_RETRY_MS).toISOString();
-      await queue.defer(row, { attempts: row.attempts, nextAttemptAt, lastError: `blocked:${outcome.reason}` });
+      const lastError = `blocked:${outcome.reason}`;
+      await queue.defer(row, { attempts: row.attempts, nextAttemptAt, lastError });
+      // Durma ilk görüldüğünde haber verilir; seyrek yeniden deneme aynı sebeple durdukça tekrar etmez.
+      if (row.lastError !== lastError) await alertStuck(db, row, outcome.reason, ctx.now);
       return 'blocked';
     }
     await queue.complete(row.id, row.markedAt);
@@ -118,11 +122,32 @@ export async function processQueueRow(db: Db, register: CashRegister, row: Regis
     const target = { orderId: row.orderId, movementId: row.movementId, attempts };
     if (attempts === ALERT_AFTER_ATTEMPTS) {
       await captureError(err, { source: SOURCES.backendCron, context: { job: 'register_sync', ...target } });
+      await alertStuck(db, row, 'error', ctx.now);
     } else {
       logger.warn({ ...target, err: message }, 'kasa eşitlemesi ertelendi');
     }
     return 'failed';
   }
+}
+
+/**
+ * Kasaya yazılamayan kaydın haberi. Eşleme eksikliği deponun bütün siparişlerini durdurduğu için depo ve gün başına bir kez, öteki
+ * sebepler kayıt başına bir kez bildirilir.
+ */
+async function alertStuck(db: Db, row: RegisterQueue, reason: string, now: Date): Promise<void> {
+  const order = row.orderId ? await new OrderService(db).getById(row.orderId) : null;
+  const warehouseId = order?.warehouseId ?? null;
+  await notifyRegisterWriteStuck(db, {
+    warehouseId,
+    orderId: row.orderId,
+    movementId: row.movementId,
+    referenceNo: order?.referenceNo ?? null,
+    reason,
+    dedupeKey:
+      reason === 'no_store'
+        ? `register-stuck:no_store:${warehouseId ?? '-'}:${parisDateOf(now)}`
+        : `register-stuck:${row.orderId ?? row.movementId}:${row.markedAt}:${reason}`,
+  });
 }
 
 // ── Sipariş ─────────────────────────────────────────────────────────────────

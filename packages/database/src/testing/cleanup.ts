@@ -552,10 +552,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       if (sahipsiz.length > 0) await mustDelete(db, 'notification', (q) => q.in('id', sahipsiz));
     }
 
-    // Hedef türü olmayan bildirimler bağını `payload`da taşır: sefere referansla bağlananlar tek turda, transfer kimliğiyle bağlananlar
+    // Hedef türü olmayan bildirimler bağını `payload`da taşır: sefere referansla, transfere ve kasa hareketine kimlikle bağlananlar
     // kendi turunda süpürülür.
     await sahipsizBildirimleriSil(db, ['run_close_mismatch', 'run_close_pending'], 'delivery_run', 'reference_no', 'referenceNo');
     await sahipsizBildirimleriSil(db, ['transfer_shortfall', 'transfer_excess'], 'warehouse_transfer', 'id', 'transferId');
+    await sahipsizBildirimleriSil(db, ['register_write_stuck'], 'money_movement', 'id', 'movementId');
   });
 
   // Ne yapılamadıysa TEK hatada toplanır: teardown işini bitirdi ve şimdi ne bırakmak zorunda

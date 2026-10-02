@@ -6,7 +6,7 @@ import type { OperationsSection } from '@/lib/operations/sections';
 
 /*
   Başlık, alt satır ve ton web ile paylaşılan sözlükten (`staffNotificationBrief`) gelir; burada yalnız yüzeye özgü olan durur: satırın
-  gittiği yer ve bilinmeyen türün genel metni. Kitleyi sunucu belirler, bölüm yalnız rengi verir ve hedefi olmayan satır tıklanmaz.
+  gittiği yer ve bilinmeyen türün genel metni, kitleyi sunucu belirler, bölüm yalnız rengi verir ve hedefi olmayan satır tıklanmaz.
   BEKLEYEN(21.284): belge · askıda kapanış için hedef ekranlar.
 */
 
@@ -70,6 +70,8 @@ const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, Operation
   shipping_data_missing: 'management',
   // Kasa günü web'deki kurulum kartında okunur.
   register_day_unclosed: 'management',
+  // Yazılamayan kaydın sebebi web'de sipariş detayında ya da kurulum kartında okunur.
+  register_write_stuck: 'management',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */

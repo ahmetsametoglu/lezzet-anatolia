@@ -9,7 +9,7 @@ export function opsNotificationHref(row: Pick<MeNotification, 'kind' | 'targetTy
   if (row.targetType === 'ticket' && row.targetId) return `/operations/tickets?t=${row.targetId}`;
   if (row.kind === 'stock_low') return '/operations/procurement';
   if (row.kind === 'run_close_mismatch') return '/operations/deliveries';
-  if (row.kind === 'register_day_unclosed') return '/operations/settings?tab=setup';
+  if (row.kind === 'register_day_unclosed' || row.kind === 'register_write_stuck') return '/operations/settings?tab=setup';
   if (row.kind === 'b2b_application_received') return '/operations/customers';
   // Ölçü ürün kartında düzeltilir; ürünsüz eksik (kutu, adres) depo ekranındadır.
   if (row.kind === 'shipping_data_missing') {

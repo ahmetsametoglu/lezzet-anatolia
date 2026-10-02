@@ -394,6 +394,63 @@ describe('yazılmayan ve bekleyen', () => {
   });
 });
 
+describe('kasaya yazılamayan kayıt bildirimi', () => {
+  const stuckOf = async (filter: { orderId?: string; dedupeKey?: string }) => {
+    let query = db.from('notification').select('id, profile_id, target_id, payload').eq('kind', 'register_write_stuck');
+    if (filter.orderId) query = query.eq('target_id', filter.orderId);
+    if (filter.dedupeKey) query = query.eq('dedupe_key', filter.dedupeKey);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data ?? [];
+  };
+
+  it('plan durunca ilk turda yönetime ve muhasebeye haber gider, aynı sebeple yeniden denemede tekrar etmez', async () => {
+    const order = await newOrder();
+    await pay(order.id, 2990, null);
+
+    expect(await runRow('order_id', order.id)).toBe('blocked');
+    const first = await stuckOf({ orderId: order.id });
+    expect(first.length).toBeGreaterThan(0);
+    expect(first[0]!.payload).toMatchObject({ reason: 'unknown_method', referenceNo: order.referenceNo });
+
+    expect(await runRow('order_id', order.id)).toBe('blocked');
+    expect(await stuckOf({ orderId: order.id })).toHaveLength(first.length);
+  });
+
+  it('eşlemesiz depoda duran siparişler depo ve gün başına tek haberde toplanır', async () => {
+    const unmapped = (await createTestWarehouse(db, { label: 'KASASIZ-HABER' })).id;
+    ownTestRegisters.warehouseIds.push(unmapped);
+    const first = await newOrder({ warehouseId: unmapped });
+    const second = await newOrder({ warehouseId: unmapped });
+    await pay(first.id, 2990);
+    await pay(second.id, 2990);
+
+    expect(await runRow('order_id', first.id)).toBe('blocked');
+    expect(await runRow('order_id', second.id)).toBe('blocked');
+
+    const sent = await stuckOf({ dedupeKey: `register-stuck:no_store:${unmapped}:${parisDateOf(new Date())}` });
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent.every((row) => row.target_id === first.id)).toBe(true);
+    expect(await stuckOf({ orderId: second.id })).toHaveLength(0);
+  });
+
+  it('hata alan kayıt ilk denemelerde değil beşinci denemede bildirilir', async () => {
+    const order = await newOrder();
+    await pay(order.id, 2990);
+
+    fake.failOn('closeSale');
+    expect(await runRow('order_id', order.id)).toBe('failed');
+    expect(await stuckOf({ orderId: order.id })).toHaveLength(0);
+
+    await db.from('register_queue').update({ attempts: 4 }).eq('order_id', order.id);
+    fake.failOn('closeSale');
+    expect(await runRow('order_id', order.id)).toBe('failed');
+    const sent = await stuckOf({ orderId: order.id });
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent[0]!.payload).toMatchObject({ reason: 'error', referenceNo: order.referenceNo });
+  });
+});
+
 describe('fiş dışı nakit', () => {
   it('kasadan bankaya yatırma kasadan çıkıştır; hareket silinirse kasada bir kez ters çevrilir', async () => {
     const deposit = await movements.insert({

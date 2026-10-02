@@ -264,6 +264,20 @@ const KARGO_EKSIGI: Record<string, string> = {
   no_sender: 'depo adresi eksik',
 };
 
+/** Kasa kuyruğunda duran kaydın sebebi, operatörün diliyle; kurulum kartı, sipariş detayı ve bildirim aynı cümleyi kursun diye tek yerde. */
+const KASA_ENGELI: Record<string, string> = {
+  unknown_method: 'yöntemi bilinmeyen tahsilat ya da iade',
+  refund_before_sale: 'satıştan önce iade',
+  no_lines: 'ücretlenen kalem yok',
+  gift_order_money: 'hediye siparişe para yazılmış',
+  no_store: 'deponun kasa eşlemesi yok',
+};
+
+/** Kasa engelinin etiketi; tanınmayan sebep kodu olduğu gibi döner. */
+export function registerBlockReasonLabel(reason: string): string {
+  return KASA_ENGELI[reason] ?? reason;
+}
+
 const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, unknown>) => StaffNotificationBrief>> = {
   /* Kapanmayan kasa günü yasal bir açıktır; sebebi sayıyla söylenir, ayrıntısı kurulum kartında ve hata kaydında. */
   register_day_unclosed: (p) => ({
@@ -278,6 +292,18 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
       ]
         .filter(Boolean)
         .join(' · ') || null,
+  }),
+  /* Gece kapanışını beklemeden gider: kayıt kasaya ulaşmadıkça satış kasada yoktur ve düzeltme gecikirse kaydın günü kayar. */
+  register_write_stuck: (p) => ({
+    tone: 'alert',
+    label: 'Kasa',
+    title: `Kasaya yazılamıyor${typeof p.referenceNo === 'string' ? ` — ${p.referenceNo}` : ''}`,
+    subtitle:
+      p.reason === 'error'
+        ? 'art arda hata alındı, kendiliğinden yeniden deneniyor'
+        : typeof p.reason === 'string'
+          ? registerBlockReasonLabel(p.reason)
+          : null,
   }),
   document_undeliverable: (p) => ({
     // `alert`: yasal belge hiçbir kanala ulaşamadı, iş insana düştü.

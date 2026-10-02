@@ -38,6 +38,7 @@ export {
   notificationTitle,
   notificationSentence,
   notificationVisual,
+  registerBlockReasonLabel,
   staffNotificationBrief,
   type NotificationVisual,
   type NotificationVisualTone,
