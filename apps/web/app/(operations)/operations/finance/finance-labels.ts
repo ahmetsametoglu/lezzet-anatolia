@@ -1,19 +1,12 @@
 import type { AccountType, CounterpartyKind, MovementDirection, MovementType } from '@lezzet/types';
 import type { OpsTone } from '@/components/operation/ui/tone';
 
-// Para ekranının SÖZLÜĞÜ. Tasarımın §6 kuralı burada zorlanıyor ve tezgâh sözleşmesi onu aynen
-// tekrarlıyor: **iç terim arayüze çıkmaz** — "MoneyMovement", "reconciled", "BankImportProfile"
-// değil; "hareket", "eşleşti/eşleşmedi", "banka şablonu". Sözlüğün tek dosyada durması bunu
-// denetlenebilir kılıyor: yeni bir tip eklerken adı buraya yazmak zorunda kalan kişi, ham terimi
-// de burada görür.
+// Para ekranının sözlüğü: iç terim arayüze çıkmaz ("MoneyMovement" değil "hareket", "reconciled" değil "eşleşti"). Sözlük tek
+// dosyada durur ki yeni tip ekleyen ham terimi burada görsün.
 
 /**
- * Hareketin SEBEBİ — operatörün diliyle.
- *
- * `misc` "sair" DEĞİL, **"sınıflandırılmadı"**: muhasebe dilinde "sair" kapanmış bir kutudur ("bu
- * kadar, gerisi önemsiz"), oysa buradaki `misc` açık bir sorudur — banka satırı içeri girmiştir,
- * sebebi henüz söylenmemiştir (12.4'ün kuralı: *"banka 'para girdi' der, sebebini söylemez"*).
- * Kapanmış bir adla anılsaydı eşleştirme kuyruğu bir iş kuyruğu gibi okunmazdı.
+ * Hareketin sebebi, operatörün diliyle. `misc` "sair" değil "sınıflandırılmadı"dır: sair kapanmış bir kutu olurdu, oysa banka
+ * satırının sebebi henüz söylenmemiştir ve eşleştirme kuyruğu bir iş kuyruğu gibi okunmalı.
  */
 export const MOVEMENT_TYPE_LABEL: Record<MovementType, string> = {
   order_payment: 'sipariş ödemesi',
@@ -37,12 +30,8 @@ export const MOVEMENT_TYPE_CHIP: Record<MovementType, string> = {
 };
 
 /**
- * Süzgeç SIRASI — `MovementTypeEnum.options` DEĞİL.
- *
- * Enum sırası bir veri kararıdır (şemadaki yazım sırası) ve ekranı bağlamaz. Burada sıra anlam
- * taşıyor: önce paranın düzenli akışı (tahsilat · iade), sonra işletme giderleri (alım · gider),
- * sonra içeriden hareketler (transfer · sermaye), en sonda cevabı olmayan (`misc`). Enum'a
- * bırakılsaydı yeni bir tip eklendiğinde ekranın sırası da sessizce değişirdi.
+ * Süzgeç sırası `MovementTypeEnum.options` değil, anlamın sırası: düzenli akış, işletme giderleri, içeriden hareketler, en sonda
+ * `misc`. Enum'a bırakılsaydı yeni bir tip ekranın sırasını sessizce değiştirirdi.
  */
 export const MOVEMENT_TYPE_ORDER = [
   'order_payment',
@@ -62,15 +51,11 @@ export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
   cash: 'Nakit kasa',
   bank: 'Banka',
   provider: 'Ödeme sağlayıcı',
-  /* 13.09: ortağın şirketle hesabı — ortağın TEK kaydı. Bakiye işareti anlatır: eksi "şirket ortağa
-     borçlu", artı "ortak şirkete borçlu" (şema künyesi); ekranda cümleyle değil renkle (14.09). */
+  // Ortağın şirketle hesabı, ortağın tek kaydı; bakiye işareti ekranda cümleyle değil renkle anlatılır.
   partner: 'Ortak cari',
 };
 
-/**
- * Bakiye şeridinin GRUP başlıkları (12.17 · kullanıcı isteği: "benzer şeyler bir arada; banka, kasa
- * birbirinden ayrılsın; kapananlar en sonda") — çoğul, çünkü grubun adıdır, tek hesabın değil.
- */
+/** Hesap bakiyelerinin grup başlıkları; çoğul, çünkü grubun adıdır, tek hesabın değil. */
 export const ACCOUNT_GROUP_LABEL: Record<AccountType, string> = {
   bank: 'Bankalar',
   cash: 'Kasalar',
@@ -79,12 +64,8 @@ export const ACCOUNT_GROUP_LABEL: Record<AccountType, string> = {
 };
 
 /**
- * Hesap rengi — kasa/banka/sağlayıcı bir bakışta ayrışsın diye.
- *
- * **Sağlayıcı `violet` DEĞİL `slate`** ve bu bir renk zevki değil, kural: `violet` bu yüzeyde
- * "makine konuştu" demektir (AI çevirisi, AI önerisi). Stripe bir makine değil bir hesap; mor
- * verseydik operatör aynı rengi iki ayrı anlamda okumak zorunda kalırdı. Tasarımın mavi-moru
- * (`#6a5acd`) bu yüzden `slate`e iniyor — bilinçli sapma, `design/BACKLOG` kaydı var.
+ * Hesap rengi; kasa, banka ve sağlayıcı bir bakışta ayrışsın diye. Sağlayıcı `violet` değil `slate`, çünkü `violet` bu yüzeyde
+ * "makine konuştu" (yapay zekâ önerisi) demektir.
  */
 export const ACCOUNT_TONE: Record<AccountType, OpsTone> = {
   cash: 'olive',
@@ -95,12 +76,8 @@ export const ACCOUNT_TONE: Record<AccountType, OpsTone> = {
 };
 
 /**
- * İZAH hâli (13.09) — satırın ne olduğu biliniyor mu: bir bağ (sipariş, mal kabul, tedarikçi,
- * transfer), bir belge bağı ya da bir TÜR. Etiket izah değildir (ikinci karar): serbest işarettir.
- *
- * Nokta bir tur banka mutabakat bayrağını okuyordu ("eşleşti/eşleşmedi") ve o bayrak yalnız ekstre
- * satırında anlam taşıdığı için sistemin kendi yazdığı her tahsilat "eşleşmedi" görünüyordu.
- * "Mutabık" DEĞİL "izahlı": muhasebecinin sorusu budur — *bu satır ne?*
+ * İzah hâli: satırın ne olduğu biliniyor mu (bir bağ, bir belge bağı ya da bir tür); etiket izah değildir, serbest işarettir.
+ * "Mutabık" değil "izahlı", çünkü muhasebecinin sorusu "bu satır ne?"dir ve banka bayrağı sistemin yazdığı satırda anlamsızdır.
  */
 export const EXPLAINED_LABEL = {
   explained: 'izahlı',
@@ -108,9 +85,8 @@ export const EXPLAINED_LABEL = {
 } as const;
 
 /**
- * Eşleştirme önerisinin GÜCÜ — "Karşılığı" hapının tonu (12.21): yeşil güçlü aday (yanında ✓, tek
- * dokunuşla onay), amber çoklu aday (menüden seç), gri önerisiz (menüden elle bağla). Üç hâlin ayrı
- * eylemi kasıtlı: güçlü adayı da "seçmek" zorunda sanan operatör tek dokunuşluk satırda durup düşünür.
+ * Eşleştirme önerisinin gücü, "Karşılığı" hapının tonu: yeşil güçlü aday (tek dokunuşla onay), amber çoklu aday (menüden seç),
+ * gri önerisiz (elle bağla). Üç hâlin eylemi ayrıdır ki güçlü aday tek dokunuşla geçsin.
  */
 export const SUGGESTION_VIEW = {
   strong: { tone: 'olive' },
@@ -121,10 +97,8 @@ export const SUGGESTION_VIEW = {
 export type SuggestionStrength = keyof typeof SUGGESTION_VIEW;
 
 /**
- * Eşleştirme HEDEFİNİN türü (12.13 · kullanıcı kararı 13.09: "her banka hareketinin bir karşılığı
- * olmalı") — seçim penceresinin bölüm başlıkları. `transfer_to` motorun türü değil, ekranın
- * eklediği yol: ucu olmayan transfer ("bu para kasaya çekildi"). `counterparty` (13.09 · ikinci
- * karar): belgesi olmayan satırın KİMİN olduğu.
+ * Eşleştirme hedefinin türü, seçim penceresinin bölüm başlıkları: her banka hareketinin bir karşılığı olmalı. `transfer_to`
+ * ekranın eklediği yoldur (ucu olmayan transfer), `counterparty` belgesi olmayan satırın kimin olduğunu söyler.
  */
 export const MATCH_KIND_LABEL = {
   order: 'Sipariş tahsilatı',
@@ -154,22 +128,21 @@ export const MATCH_EFFECT: Record<MatchKindView, string> = {
   counterparty: 'carinin satırı olur; varsayılan türü varsa tür de konur',
 };
 
-/** Hareketin kaynağı — sağ panelde "bu satır nereden geldi" (12.17). */
-// Kaynak satırın tip hücresinde, tipin yanında okunur ("gider · ekstre") — kısa (12.21: panelin künyesindeydi).
+/** Hareketin kaynağı — satırın tip hücresinde tipin yanında okunur ("gider · ekstre"). */
 export const MOVEMENT_SOURCE_LABEL = {
   bank_import: 'ekstre',
   manual: 'elle',
   system: 'sistem',
 } as const;
 
-/** Belgenin hâli — açık kalanından türer (12.17): borç sürüyor, kapandı ya da fazla ödendi. */
+/** Belgenin hâli — açık kalanından türer: borç sürüyor, kapandı ya da fazla ödendi. */
 export const DOCUMENT_STATE_LABEL = {
   open: 'açık',
   settled: 'kapandı',
   overpaid: 'fazla ödendi',
 } as const;
 
-/** Carinin türü (13.09) — seçicide ve sözlükte grup başlığı. */
+/** Carinin türü — seçicide ve sözlükte grup başlığı. */
 export const COUNTERPARTY_KIND_LABEL: Record<CounterpartyKind, string> = {
   institution: 'Kurum',
   service: 'Hizmet veren',
@@ -177,7 +150,7 @@ export const COUNTERPARTY_KIND_LABEL: Record<CounterpartyKind, string> = {
   other: 'Diğer',
 };
 
-/** Türün yönü (13.09) — sözlükte "bu tür hangi paranın türü": `null` iki yön. */
+/** Türün yönü — sözlükte "bu tür hangi paranın türü": `null` iki yön. */
 export const NATURE_DIRECTION_LABEL: Record<MovementDirection | 'both', string> = {
   out: 'Gider (çıkan para)',
   in: 'Gelir (giren para)',
@@ -209,19 +182,10 @@ export const NOTES = {
 export const NO_ACCOUNTS =
   'Henüz hesap tanımlı değil. Para bir hesapta durur: kasa, banka ve Stripe aynı kavramın örnekleridir — ilkini ekleyerek başlayın.';
 
-// `MANUAL_TYPE_VIEW` FORMUN yanına taşındı (`movement-form/schema`, 22.11) — tür seçicisini artık
-// iki yüzey çiziyor ve etiketin tek tanımı olmalı.
-
-// Hızlı gider kategorileri KALKTI (13.09): sınıflandırma sözlükten TÜRLE yapılıyor (`movement_nature`),
-// seçenekler veritabanından okunan `natureOptions` ile geliyor — kodda sabit liste yok.
-
 /**
- * Motorun ve tür kapısının reddi (`validateMovement` · `natureProblemOf`) → operatörün cümlesi.
- *
- * Ret sebepleri ham anahtar olarak gösterilemez ("direction_mismatch" kimseye bir şey söylemez),
- * ama cümlelerin **motorun kelimeleriyle** kurulması da yanlış olurdu: operatör "yön" diye
- * düşünmüyor, "para girdi mi çıktı mı" diye düşünüyor. Sözlük bu çeviriyi tek yerde tutuyor —
- * aynı ret iki ayrı diyalogda iki ayrı cümleyle karşılansaydı, aynı kural iki kurala benzerdi.
+ * Motorun ve tür kapısının reddi (`validateMovement` · `natureProblemOf`) → operatörün cümlesi; ham anahtar kimseye bir
+ * şey söylemez ve cümle motorun değil operatörün kelimesiyle kurulur. Sözlük tek yerde durur ki aynı ret iki diyalogda iki
+ * cümleyle karşılanmasın.
  */
 export const INVALID_REASON = {
   amount_not_positive: 'Tutar sıfırdan büyük olmalı.',
@@ -236,9 +200,8 @@ export const INVALID_REASON = {
   nature_not_applicable: 'Sipariş parası, stok alımı ve transfer tür almaz — onları bağları açıklar.',
 } as const;
 
-// Belge türünün, yönünün ve KDV rejiminin adları ortak belge formunda
-// (`components/operation/form/document-form/labels.ts`, 12.26): asistan kuyruğu da aynı formu açıyor
-// ve kardeş sayfadan import edemez (`STACK §7`).
+// Belge türünün, yönünün ve KDV rejiminin adları ortak belge formunda (`document-form/labels.ts`): asistan kuyruğu da aynı formu
+// açıyor ve kardeş sayfadan içe aktaramaz (`STACK §7`).
 
 /** Belge kapısının reddi → operatörün cümlesi. */
 export const DOCUMENT_REASON = {
@@ -252,7 +215,7 @@ export const DOCUMENT_REASON = {
   wrong_key: 'Yüklenen dosya bu belgeye ait değil — yeniden yükleyin.',
   unsupported_type: 'Yalnız PDF ve fotoğraf (JPG, PNG, WEBP, HEIC) yüklenebilir.',
   storage_unavailable: 'Belge deposu bu ortamda tanımlı değil — belge kaydedildi, dosyası sonra yüklenebilir.',
-  // 12.26 — KDV rejimi, vade ve stok alımının bağı
+  // KDV rejimi, vade ve stok alımının bağı
   vat_with_regime: 'Ters yüklemeli ya da muaf belgede KDV tutarı olamaz — KDV kutusunu boşaltın ya da rejimi "Standart" yapın.',
   due_before_issue: 'Vade belgenin tarihinden önce olamaz.',
   link_conflict: 'Belge ya bir mal kabulün ya bir tedarik siparişinin faturasıdır — ikisi birden olmaz.',
@@ -262,7 +225,7 @@ export const DOCUMENT_REASON = {
   link_has_document: 'Bu mal kabulün ya da siparişin faturası zaten girilmiş.',
 } as const;
 
-/** Belge bağı kapısının reddi (13.09 · bağ tutarıyla) → operatörün cümlesi. */
+/** Belge bağı kapısının reddi → operatörün cümlesi. */
 export const ALLOCATION_REASON = {
   not_found: 'Hareket ya da belge bulunamadı — sayfayı tazeleyin.',
   direction_mismatch: 'Belgenin yönü paranın yönüne uymuyor — bizim ödeyeceğimiz belgeyi çıkan para kapatır.',
@@ -280,7 +243,7 @@ export const TAG_REASON = {
   unknown_tag: 'Etiket sözlükte yok ya da pasif — Sözlük penceresinden bakın.',
 } as const;
 
-/** Tür kapısının reddi (13.09) → operatörün cümlesi. */
+/** Tür kapısının reddi → operatörün cümlesi. */
 export const NATURE_REASON = {
   bad_label: 'Tür adı boş olamaz.',
   exists: 'Bu tür zaten sözlükte.',
@@ -291,7 +254,7 @@ export const NATURE_REASON = {
   nature_not_applicable: INVALID_REASON.nature_not_applicable,
 } as const;
 
-/** Cari kapısının reddi (13.09) → operatörün cümlesi. */
+/** Cari kapısının reddi → operatörün cümlesi. */
 export const COUNTERPARTY_REASON = {
   bad_name: 'Cari adı boş olamaz.',
   exists: 'Bu adla bir cari zaten var.',
@@ -302,8 +265,8 @@ export const COUNTERPARTY_REASON = {
 } as const;
 
 /**
- * Eşleştirme kapısının reddi. İlk üçü "geç kaldın" sınıfı (satır artık dokunulabilir değil);
- * kalanlar hedefin satıra uymadığını söyler (12.13 · 13.09).
+ * Eşleştirme kapısının reddi; ilk üçü "geç kaldın" sınıfıdır (satır dokunulabilir hâlde değil), kalanlar hedefin satıra
+ * uymadığını söyler.
  */
 export const RECONCILE_REASON = {
   already_reconciled: 'Bu satır zaten eşleştirilmiş — sayfayı tazeleyin.',
@@ -317,7 +280,7 @@ export const RECONCILE_REASON = {
   already_allocated: ALLOCATION_REASON.already_allocated,
 } as const;
 
-/** Okunamayan ekstre satırının sebebi (12.10) — sayısı ve sebebi söylenir, dosya sessizce eksik alınmaz. */
+/** Okunamayan ekstre satırının sebebi — sayısı ve sebebi söylenir, dosya sessizce eksik alınmaz. */
 export const ROW_FAILURE_LABEL = {
   bad_date: 'tarih okunamadı',
   bad_amount: 'tutar okunamadı',

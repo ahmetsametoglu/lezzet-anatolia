@@ -4,9 +4,8 @@ import { purgeTestData } from '@lezzet/database/testing';
 import { buildMovementExport, toMovementCsv } from './movement-export';
 
 /**
- * Hareket dökümü (12.15 · 13.09) — DB üstünde. Doğrulanan şey satır kurma kuralı değil (o motorda),
- * OKUMA: dönemin hareketleri türü, hesap kodu, carisi, belgesi (bağ tablosundan) ve hesabıyla tek
- * dosyada; transfer tek satır; dönem dışı hareket yok; izahsız satır dosyada var ve işaretli.
+ * Hareket dökümü DB üstünde; satır kurma kuralı motorda sınanır, burada okuma: dönemin hareketleri türü, hesap kodu, carisi,
+ * belgesi ve hesabıyla tek dosyada, transfer tek satır, dönem dışı yok, izahsız satır var ve işaretli.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -63,7 +62,7 @@ describe('hareket dökümü', () => {
     expect(csv.split('\n')[0]).toBe(
       'Tarih;Hesap;Karşı hesap;Tip;Tür;Hesap kodu;Tutar;Karşı taraf;Belge türü;Belge no;Belge tarihi;Belge toplamı;Belge KDV;KDV rejimi;Etiketler;Açıklama;Kaynak;İzah;Hareket kimliği',
     );
-    // KDV rejimi belgeden (12.26): kira faturası varsayılanla yazıldı — standart.
+    // KDV rejimi belgeden: kira faturası varsayılanla yazıldı — standart.
     expect(data.rows[0]).toMatchObject({ documentVatRegime: 'standard' });
     expect(csv).toContain(`;gider;Kira;613;`);
     expect(csv).toContain(`Fatura;LOYER-${stamp};`);
