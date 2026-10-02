@@ -4,6 +4,7 @@ import {
   loadBox,
   markUndelivered,
   openBox,
+  readDoorCollection,
   sealBox,
   startCourierDay,
   takeToVan,
@@ -152,10 +153,9 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
     return { orderId: order.id, code: acildi.box.code, dueCents: birim * adet };
   };
 
-  /* Kapı tahsilatının gireceği hesap, para sahnesinin açtığı kasa; hesap yoksa tahsilat atlanır, kapanış farksız kapanır ve
-     yalnız PARA zili doğmaz. Hesap burada yaratılmaz, para defterinin sahibi `money.ts`. */
-  const { data: kasa } = await db.from('account').select('id').eq('type', 'cash').eq('is_active', true).limit(1).maybeSingle();
-  const kasaId = (kasa as { id: string } | null)?.id ?? null;
+  /* Kapı nakdi kapının kendi ayarındaki hesaba yazılır (`door_cash_account_id`, para sahnesi kurar); ayar yoksa tahsilat atlanır,
+     kapanış farksız kapanır ve yalnız PARA zili doğmaz. */
+  const nakitKapisiAcik = (await readDoorCollection(db)).cash;
   let tahsilEdilenKurus = 0;
 
   // ── SEFER A — sürülür, üç durak sonuçlanır, kapanır ────────────────────────
@@ -191,12 +191,9 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
         orderId: kutu.orderId,
         courierId: kurye.id,
         scannedBoxCodes: [kutu.code],
-        collection: kasaId === null ? null : {
-          method: 'cash',
-          amountCents: kutu.dueCents,
-          accountId: kasaId,
-          idempotencyKey: `seed-kurye-donus:${kutu.orderId}`,
-        },
+        collection: nakitKapisiAcik
+          ? { method: 'cash', amountCents: kutu.dueCents, idempotencyKey: `seed-kurye-donus:${kutu.orderId}` }
+          : null,
       });
       if (teslim.status !== 'ok') throw new Error(`seed: teslim yazılamadı (${teslim.status})`);
       tahsilEdilenKurus += kutu.dueCents;
