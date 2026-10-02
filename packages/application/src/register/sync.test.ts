@@ -20,7 +20,7 @@ import { parisDateOf } from '@lezzet/helper';
 import type { PaymentMethod, RegisterQueue } from '@lezzet/types';
 import { closeRegisterDay } from './day-end';
 import { memoryRegister } from './memory-register.testkit';
-import { REGISTER_LIVE_FROM_KEY, processQueueRow, registerLiveFrom, setRegisterLiveFrom } from './sync';
+import { REGISTER_LIVE_FROM_KEY, processQueueRow, registerLiveFrom, requeueRegisterStore, setRegisterLiveFrom } from './sync';
 
 /**
  * Kasa eşitlemesi kuyruk satırından kasaya: fiş, ödeme satırı ve fiş dışı nakit doğru yazılır, yarıda kalan yazım kasadaki hâlinden
@@ -518,6 +518,38 @@ describe('fiş dışı nakit', () => {
     expect(tillsOf(b2bMovement!.id).map(({ direction, amountCents }) => ({ direction, amountCents }))).toEqual([
       { direction: 'in', amountCents: 2990 },
     ]);
+  });
+});
+
+describe('eşleme', () => {
+  it('eşlemeden önce yazılmış çekmece hareketi kuyruğa alınır, eşlemesi olmadığı için duran sipariş hemen yeniden denenir', async () => {
+    // Tetikleyici yalnız yazım anında eşlenmiş çekmeceyi görür; eşleme sonradan kurulunca aradaki nakit kasaya hiç gitmezdi.
+    const warehouse = (await createTestWarehouse(db, { label: 'KASA-SONRADAN' })).id;
+    const cash = (await new AccountService(db).insert({ name: `Sonradan eşlenen çekmece ${stamp}`, type: 'cash' })).id;
+    ownTestRegisters.warehouseIds.push(warehouse);
+    ownTestRegisters.accountIds.push(cash);
+    const expense = await movements.insert({
+      accountId: cash,
+      direction: 'out',
+      amountCents: 700,
+      type: 'expense',
+      description: 'Eşlemeden önce',
+    });
+    const order = await newOrder({ warehouseId: warehouse });
+    await pay(order.id, 2990);
+    expect(await runRow('order_id', order.id)).toBe('blocked');
+    expect(await queueRowOf('movement_id', expense.id)).toBeNull();
+
+    const store = await new RegisterStoreService(db).save({
+      warehouseId: warehouse,
+      externalStoreId: Number(String(stamp).slice(-9)) + 50,
+      cashAccountId: cash,
+    });
+    await requeueRegisterStore(db, store, LIVE_FROM);
+
+    expect(Date.parse((await queueRowOf('order_id', order.id))!.nextAttemptAt)).toBeLessThanOrEqual(Date.now());
+    expect(await runRow('movement_id', expense.id)).toBe('written');
+    expect(tillsOf(expense.id)).toHaveLength(1);
   });
 });
 

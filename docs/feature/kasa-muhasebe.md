@@ -236,7 +236,9 @@ yöntemi.
 
 **Hata:** Hiboutik'e ulaşılamazsa sipariş kuyrukta kalır, artan aralıkla (1 dakikadan 1 saate) yeniden
 denenir; beşinci denemede `error_log`. Plan durursa (yöntemi bilinmeyen hareket, iadeyle başlayan sipariş,
-eşlenmemiş depo) satır sebebiyle bekler; çözüm bir para değişikliğiyle gelir ve satırı yeniden işaretler.
+eşlenmemiş depo) satır sebebiyle bekler; çözüm bir para değişikliğiyle gelir ve satırı yeniden işaretler. Mağaza
+eşlemesi ve canlıya geçiş günü kaydedilince eşlemesiz duran satırlar hemen yeniden denenir, eşlenen çekmecenin
+canlıya geçişten sonra yazılmış hareketleri de kuyruğa alınır (tetikleyici yalnız yazım anındaki eşlemeyi görür).
 Satış tarihini API almıyor: geciken fiş yazıldığı günün Z'sine düşer.
 
 **Canlıya geçiş:** `register_live_from` ayarı (an). Ayar yoksa ya da okunamıyorsa eşitleme hiç koşmaz.

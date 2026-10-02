@@ -138,7 +138,9 @@ export function hiboutikRegister(config: HiboutikConfig): CashRegister {
         throw err;
       }
       const created = parse(HiboutikCreatedPaymentSchema, body, 'ödeme satırı');
-      return 'payment_detail_id' in created ? { kind: 'payment', id: created.payment_detail_id } : { kind: 'cash_flow', id: created.cash_flow_id };
+      return 'payment_detail_id' in created
+        ? { kind: 'payment', id: created.payment_detail_id }
+        : { kind: 'cash_flow', id: created.cash_flow_id };
     },
     async deletePayment(paymentId) {
       await request(config, `/sales_payment_div/${paymentId}`, 'DELETE');

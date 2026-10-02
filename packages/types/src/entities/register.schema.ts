@@ -266,6 +266,10 @@ export const RegisterQueueSchema = z.object({
 });
 export type RegisterQueue = z.infer<typeof RegisterQueueSchema>;
 
+/** Kuyruğa elle yalnız kasa hareketi düşer: çekmece eşlenmeden önce yazılan hareket tetikleyiciden geçmemiştir. */
+export const RegisterQueueInsertSchema = z.object({ movementId: z.string().uuid() });
+export type RegisterQueueInsert = z.infer<typeof RegisterQueueInsertSchema>;
+
 export const RegisterQueueUpdateSchema = RegisterQueueSchema.pick({ id: true, attempts: true, nextAttemptAt: true, lastError: true })
   .partial()
   .required({ id: true });

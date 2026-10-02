@@ -11,6 +11,7 @@ import {
   RegisterProductInsertSchema,
   RegisterProductSchema,
   RegisterProductUpdateSchema,
+  RegisterQueueInsertSchema,
   RegisterQueueSchema,
   RegisterQueueUpdateSchema,
   RegisterStoreInsertSchema,
@@ -32,6 +33,7 @@ import {
   type RegisterProductInsert,
   type RegisterProductUpdate,
   type RegisterQueue,
+  type RegisterQueueInsert,
   type RegisterQueueUpdate,
   type RegisterStore,
   type RegisterStoreInsert,
@@ -204,9 +206,27 @@ export class RegisterCashOpService extends BaseDbService<RegisterCashOp, Registe
 }
 
 /** Kuyruk; satırları `money_movement` tetikleyicisi yazar, işleyen yalnız okur, erteler ve siler. */
-export class RegisterQueueService extends BaseDbService<RegisterQueue, never, RegisterQueueUpdate> {
+export class RegisterQueueService extends BaseDbService<RegisterQueue, RegisterQueueInsert, RegisterQueueUpdate> {
   constructor(supabase: SupabaseClient) {
-    super(supabase, 'register_queue', RegisterQueueSchema, RegisterQueueSchema as never, RegisterQueueUpdateSchema);
+    super(supabase, 'register_queue', RegisterQueueSchema, RegisterQueueInsertSchema, RegisterQueueUpdateSchema);
+  }
+
+  /** Hareketleri kuyruğa işaretler; zaten kuyrukta olan satır olduğu gibi kalır. */
+  async markMovements(movementIds: readonly string[]): Promise<void> {
+    await this.bulkUpsertIgnoring(
+      movementIds.map((movementId) => ({ movementId })),
+      'movement_id',
+    );
+  }
+
+  /** Bu sebeple duran satırları hemen yeniden denemeye açar; sebebi kaldıran değişiklik (eşleme) bekleme süresini beklemesin. */
+  async retryBlocked(reason: string, now: string): Promise<void> {
+    const rows = await this.getAll({ lastError: `blocked:${reason}` });
+    await this.updateWhereIn(
+      'id',
+      rows.map((row) => row.id),
+      { nextAttemptAt: now },
+    );
   }
 
   /** Vakti gelen satırlar, en eskiden; tur başına sınırlı ki tek tur kasayı boğmasın. */

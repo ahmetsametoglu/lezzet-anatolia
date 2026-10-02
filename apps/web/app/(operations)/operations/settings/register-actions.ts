@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { AccountService, RegisterStoreService, WarehouseService, serviceDb } from '@lezzet/database';
-import { setRegisterLiveFrom } from '@lezzet/application';
+import { registerLiveFrom, requeueRegisterStore, setRegisterLiveFrom } from '@lezzet/application';
 import { parisDayRange } from '@lezzet/helper';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -33,7 +33,8 @@ export async function saveRegisterStoreAction(input: {
     if (!account || account.type !== 'cash' || !account.isActive)
       return { data: null, error: 'Çekmecenin hesabı açık bir nakit hesabı olmalı.' };
 
-    await new RegisterStoreService(db).save(input);
+    const store = await new RegisterStoreService(db).save(input);
+    await requeueRegisterStore(db, store, await registerLiveFrom(db));
     revalidatePath(SETTINGS_PATH);
     return { data: { warehouseId: input.warehouseId }, error: null };
   } catch (error) {

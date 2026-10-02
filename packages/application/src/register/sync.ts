@@ -79,6 +79,7 @@ export async function setRegisterLiveFrom(db: Db, at: string | null): Promise<vo
       scopeType: 'global',
       description: 'Sertifikalı kasaya yazımın başladığı an; bu andan sonra para görmeyen sipariş kasaya gitmez.',
     });
+    for (const store of await new RegisterStoreService(db).list()) await requeueRegisterStore(db, store, at);
     return;
   }
   for (const row of await settings.listByKey(REGISTER_LIVE_FROM_KEY)) await settings.delete(row.id);
@@ -227,6 +228,18 @@ async function recoverOrder(scope: OrderScope, mirror: Mirror): Promise<void> {
   }
 }
 
+/**
+ * Çekmece eşlenince ya da canlıya geçiş günü girilince: tetikleyici yalnız yazım anında eşlenmiş çekmecenin hareketini kuyruğa koyar,
+ * öncesinde yazılan hareket kasaya hiç gitmezdi. Eşlemesi olmadığı için duran sipariş de beklemeden yeniden denenir.
+ */
+export async function requeueRegisterStore(db: Db, store: RegisterStore, liveFrom: string | null): Promise<void> {
+  const queue = new RegisterQueueService(db);
+  await queue.retryBlocked('no_store', new Date().toISOString());
+  if (!liveFrom) return;
+  const movements = await new MoneyMovementService(db).listTouchingAccountSince(store.cashAccountId, liveFrom);
+  await queue.markMovements(movements.map((movement) => movement.id));
+}
+
 /** Araç satışı aracın ana deposunun mağazasına yazılır. */
 export async function storeOf(db: Db, warehouseId: string): Promise<RegisterStore | null> {
   const stores = new RegisterStoreService(db);
@@ -294,7 +307,12 @@ async function completeTicket(scope: OrderScope, store: RegisterStore, ticket: R
     await writeLines(scope, sale.saleId, lines);
     for (const payment of payments) {
       const ref = await register.addPayment({ saleId: sale.saleId, method: payment.method, amountCents: payment.amountCents });
-      await new RegisterPaymentService(db).update({ id: payment.id, ...externalOf(ref), status: 'written', writtenAt: scope.now.toISOString() });
+      await new RegisterPaymentService(db).update({
+        id: payment.id,
+        ...externalOf(ref),
+        status: 'written',
+        writtenAt: scope.now.toISOString(),
+      });
     }
     await register.closeSale(sale.saleId);
     sale = (await register.readSale(sale.saleId)) ?? sale;
@@ -392,7 +410,9 @@ async function completePayments(
 }
 
 const externalOf = (ref: RegisterPaymentRef) =>
-  ref.kind === 'payment' ? { externalPaymentId: ref.id, externalCashFlowId: null } : { externalPaymentId: null, externalCashFlowId: ref.id };
+  ref.kind === 'payment'
+    ? { externalPaymentId: ref.id, externalCashFlowId: null }
+    : { externalPaymentId: null, externalCashFlowId: ref.id };
 
 // ── Kasa hareketi (fiş dışı nakit) ──────────────────────────────────────────
 
@@ -496,7 +516,12 @@ async function completeCashOp(db: Db, register: CashRegister, op: RegisterCashOp
     const [year, monthNo] = month.split('-').map(Number) as [number, number];
     const found = (await register.listCashMoves(store.externalStoreId, { year, month: monthNo })).find((move) => move.label === op.label);
     if (found) {
-      await new RegisterCashOpService(db).update({ id: op.id, externalTillId: found.tillId, status: 'written', writtenAt: now.toISOString() });
+      await new RegisterCashOpService(db).update({
+        id: op.id,
+        externalTillId: found.tillId,
+        status: 'written',
+        writtenAt: now.toISOString(),
+      });
       return;
     }
   }

@@ -633,4 +633,4 @@ export { parcelOrdinal, readOrderTracking, type OrderTracking, type TrackedParce
 // ── Sertifikalı kasa (Hiboutik) ──
 export { registerDayEnd } from './register/day-end';
 export { hiboutikFromEnv } from './register/hiboutik/client';
-export { registerLiveFrom, setRegisterLiveFrom, syncRegisterQueue } from './register/sync';
+export { registerLiveFrom, requeueRegisterStore, setRegisterLiveFrom, syncRegisterQueue } from './register/sync';

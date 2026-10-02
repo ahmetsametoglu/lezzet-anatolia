@@ -231,6 +231,14 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   }
 
   /** Kimlik listesiyle hareketler — belge panelinin ödemeleri bağlarından tek turda okunur. */
+  /** Hesaba dokunan (hesabı ya da karşı hesabı o olan) hareketler, verilen andan sonra açılmış. */
+  listTouchingAccountSince(accountId: string, since: string): Promise<MoneyMovement[]> {
+    return this.getAll(undefined, {
+      orFilters: [`account_id.eq.${accountId},counter_account_id.eq.${accountId}`],
+      rangeFilters: [{ field: 'createdAt', operator: 'gte', value: since }],
+    });
+  }
+
   listByIds(ids: readonly string[]): Promise<MoneyMovement[]> {
     return this.getByIds([...ids]);
   }
