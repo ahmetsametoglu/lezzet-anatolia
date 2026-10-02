@@ -1,4 +1,6 @@
+import type { DocumentVatProblem } from '@lezzet/domain-core';
 import type { DocumentKind, DocumentVatRegime, MovementDirection } from '@lezzet/types';
+import { percent } from '@/components/operation/ui/format';
 
 /*
   Belge sözlüğünün okunur adları; form, Para listesi, döküm ve asistan kuyruğu aynı adları okur. Para sayfasında değil
@@ -33,4 +35,18 @@ export const VAT_REGIME_HINT: Record<DocumentVatRegime, string> = {
   standard: 'Belge KDV’yi kendisi taşır.',
   reverse_charge: 'Belgede KDV yok; Fransız KDV’si bizim beyanımızda hesaplanır (autoliquidation).',
   exempt: 'KDV’den muaf — sigorta primi, banka masrafı.',
+};
+
+/** KDV oranı — "%5,5" · "%20"; ürün formunun yazımı. */
+export function vatRateLabel(rate: number): string {
+  return percent(rate, Number.isInteger(rate) ? 0 : 1);
+}
+
+/** KDV kırılımının engeli: formun alt barı ve kapının reddi aynı cümleyi okur. */
+export const DOCUMENT_VAT_PROBLEM_LABEL: Record<DocumentVatProblem, string> = {
+  vat_lines_required: 'KDV kırılımını girin: oran başına KDV hariç tutar ve KDV.',
+  vat_with_regime: 'Ters yüklemede satırın KDV’si sıfırdır; muaf belgede kırılım olmaz.',
+  vat_rate_duplicate: 'Aynı oran iki satırda olamaz — tutarları tek satırda toplayın.',
+  vat_rate_mismatch: 'Bir satırın KDV’si oranıyla tutmuyor — oranı ve tutarları belgeden yeniden okuyun.',
+  vat_total_mismatch: 'KDV kırılımının toplamı belgenin toplamını tutmuyor.',
 };

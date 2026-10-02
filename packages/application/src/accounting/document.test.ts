@@ -1,6 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { AccountService, MoneyMovementService, MovementNatureService, MovementTagService, serviceDb } from '@lezzet/database';
+import {
+  AccountService,
+  MoneyDocumentService,
+  MoneyMovementService,
+  MovementNatureService,
+  MovementTagService,
+  serviceDb,
+} from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
+import type { DocumentVatLine } from '@lezzet/types';
 import { addCounterparty, setMovementCounterparty } from './counterparties';
 import { allocateToDocument, attachDocumentFile, createMoneyDocument, listOpenDocuments, removeAllocation } from './document';
 import { addMovementNature, setMovementNature, updateMovementNature } from './natures';
@@ -40,12 +48,15 @@ afterAll(async () => {
 
 const movements = () => new MoneyMovementService(db);
 
+/** 20 %'lik tek satırlı kırılım: 10,00 € = 8,33 € + 1,67 € KDV. */
+const KDV_10_EUR: DocumentVatLine[] = [{ vatRate: 20, netCents: 833, vatCents: 167 }];
+
 /**
  * Stok alımının bağı, rejim ve vade: kabul ve sipariş kurmayı gerektirmeyen retler burada; kabule bağlanan faturanın borcu ve ikinci
  * faturanın reddi `apps/web/lib/money/supplier-document-debt.test.ts`'te.
  */
 describe('belgenin koşulları — okunur retler (12.26)', () => {
-  const base = { kind: 'invoice' as const, issuedOn: '2026-09-12', direction: 'out' as const, amountCents: 1000 };
+  const base = { kind: 'invoice' as const, issuedOn: '2026-09-12', direction: 'out' as const, amountCents: 1000, vatLines: KDV_10_EUR };
   const someId = '00000000-0000-4000-8000-000000000001';
 
   it('kabul ve sipariş aynı anda bağlanamaz; bağ tedarikçi ister; olmayan kabul bulunamaz', async () => {
@@ -57,9 +68,25 @@ describe('belgenin koşulları — okunur retler (12.26)', () => {
     expect(await createMoneyDocument(db, { ...base, supplierId: someId, stockIntakeId: someId })).toMatchObject({ status: 'invalid', reason: 'link_not_found' });
   });
 
-  it('standart dışındaki rejimde KDV olamaz; vade belgenin gününden önce olamaz', async () => {
-    expect(await createMoneyDocument(db, { ...base, vatAmountCents: 100, vatRegime: 'exempt' })).toMatchObject({ status: 'invalid', reason: 'vat_with_regime' });
+  it('ödenecek fatura kırılım ister; muaf belgenin satırı olmaz; vade belgenin gününden önce olamaz', async () => {
+    expect(await createMoneyDocument(db, { ...base, vatLines: [] })).toMatchObject({ status: 'invalid', reason: 'vat_lines_required' });
+    expect(await createMoneyDocument(db, { ...base, vatRegime: 'exempt' })).toMatchObject({ status: 'invalid', reason: 'vat_with_regime' });
     expect(await createMoneyDocument(db, { ...base, dueOn: '2026-09-01' })).toMatchObject({ status: 'invalid', reason: 'due_before_issue' });
+  });
+
+  it('kırılım veride de tutar: KDV toplamı satırlardan türer, kapıyı atlayan tutarsız yazım reddedilir', async () => {
+    const documents = new MoneyDocumentService(db);
+    const vatLines: DocumentVatLine[] = [
+      { vatRate: 20, netCents: 30_000, vatCents: 6000 },
+      { vatRate: 5.5, netCents: 1800, vatCents: 99 },
+    ];
+    const belge = await documents.insert({ ...base, number: `KIRILIM-${stamp}`, amountCents: 37_899, vatLines });
+    createdDocuments.push(belge.id);
+    expect(belge).toMatchObject({ amountCents: 37_899, vatAmountCents: 6099, vatLines });
+
+    await expect(documents.insert({ ...base, amountCents: 37_900, vatLines })).rejects.toThrow(/money_document_vat_gross/);
+    await expect(documents.insert({ ...base, vatLines: [...KDV_10_EUR, ...KDV_10_EUR] })).rejects.toThrow(/money_document_vat_lines/);
+    await expect(documents.insert({ ...base, vatRegime: 'reverse_charge' })).rejects.toThrow(/money_document_vat_regime/);
   });
 });
 
@@ -152,9 +179,17 @@ describe('cari (13.09)', () => {
 
 describe('belge ve bağ — tutarıyla (13.09)', () => {
   it('bir havale İKİ faturayı kapatır; kalanı olmayan hareket üçüncüye bağlanmaz', async () => {
-    const a = await createMoneyDocument(db, { kind: 'invoice', number: `A-${stamp}`, issuedOn: '2026-09-01', direction: 'out', amountCents: 70_000, nature: 'kira' });
-    const b = await createMoneyDocument(db, { kind: 'invoice', number: `B-${stamp}`, issuedOn: '2026-09-02', direction: 'out', amountCents: 50_000 });
-    const c = await createMoneyDocument(db, { kind: 'invoice', number: `C-${stamp}`, issuedOn: '2026-09-03', direction: 'out', amountCents: 10_000 });
+    const a = await createMoneyDocument(db, {
+      kind: 'invoice', number: `A-${stamp}`, issuedOn: '2026-09-01', direction: 'out', amountCents: 70_000, nature: 'kira', vatRegime: 'exempt',
+    });
+    const b = await createMoneyDocument(db, {
+      kind: 'invoice', number: `B-${stamp}`, issuedOn: '2026-09-02', direction: 'out', amountCents: 50_000,
+      vatLines: [{ vatRate: 20, netCents: 41_667, vatCents: 8333 }],
+    });
+    const c = await createMoneyDocument(db, {
+      kind: 'invoice', number: `C-${stamp}`, issuedOn: '2026-09-03', direction: 'out', amountCents: 10_000,
+      vatLines: [{ vatRate: 20, netCents: 8333, vatCents: 1667 }],
+    });
     if (a.status !== 'ok' || b.status !== 'ok' || c.status !== 'ok') throw new Error('belge yazılamadı');
     createdDocuments.push(a.document.id, b.document.id, c.document.id);
 
@@ -171,7 +206,10 @@ describe('belge ve bağ — tutarıyla (13.09)', () => {
   });
 
   it('kısmi ödeme açık kalanı düşürür; bağ kaldırılınca geri gelir; ters yönlü para bağlanmaz', async () => {
-    const belge = await createMoneyDocument(db, { kind: 'invoice', number: `FA-${stamp}`, issuedOn: '2026-09-01', direction: 'out', amountCents: 120_000, vatAmountCents: 20_000 });
+    const belge = await createMoneyDocument(db, {
+      kind: 'invoice', number: `FA-${stamp}`, issuedOn: '2026-09-01', direction: 'out', amountCents: 120_000,
+      vatLines: [{ vatRate: 20, netCents: 100_000, vatCents: 20_000 }],
+    });
     if (belge.status !== 'ok') throw new Error('belge yazılamadı');
     createdDocuments.push(belge.document.id);
 
@@ -187,10 +225,10 @@ describe('belge ve bağ — tutarıyla (13.09)', () => {
     expect(await allocateToDocument(db, { movementId: giris.id, documentId: belge.document.id })).toEqual({ status: 'invalid', reason: 'direction_mismatch' });
   });
 
-  it('KDV toplamı aşamaz; tür yönüne uymalı; cari ve tedarikçi birlikte olmaz; etiket sözlükten', async () => {
-    expect(await createMoneyDocument(db, { kind: 'receipt', issuedOn: '2026-09-02', direction: 'out', amountCents: 1000, vatAmountCents: 1500 })).toEqual({
+  it('kırılımın toplamı belgenin tutarıdır; tür yönüne uymalı; cari ve tedarikçi birlikte olmaz; etiket sözlükten', async () => {
+    expect(await createMoneyDocument(db, { kind: 'receipt', issuedOn: '2026-09-02', direction: 'out', amountCents: 1200, vatLines: KDV_10_EUR })).toEqual({
       status: 'invalid',
-      reason: 'vat_over_amount',
+      reason: 'vat_total_mismatch',
     });
     expect(await createMoneyDocument(db, { kind: 'receipt', issuedOn: '2026-09-02', direction: 'in', amountCents: 1000, nature: 'kira' })).toEqual({
       status: 'invalid',
@@ -198,11 +236,13 @@ describe('belge ve bağ — tutarıyla (13.09)', () => {
     });
     expect(
       await createMoneyDocument(db, {
-        kind: 'receipt', issuedOn: '2026-09-02', direction: 'out', amountCents: 1000,
+        kind: 'receipt', issuedOn: '2026-09-02', direction: 'out', amountCents: 1000, vatLines: KDV_10_EUR,
         counterpartyId: '00000000-0000-0000-0000-000000000001', supplierId: '00000000-0000-0000-0000-000000000002',
       }),
     ).toEqual({ status: 'invalid', reason: 'party_conflict' });
-    expect(await createMoneyDocument(db, { kind: 'receipt', issuedOn: '2026-09-02', direction: 'out', amountCents: 1000, tags: ['yok-boyle-etiket'] })).toEqual({
+    expect(
+      await createMoneyDocument(db, { kind: 'receipt', issuedOn: '2026-09-02', direction: 'out', amountCents: 1000, vatLines: KDV_10_EUR, tags: ['yok-boyle-etiket'] }),
+    ).toEqual({
       status: 'invalid',
       reason: 'unknown_tag',
     });

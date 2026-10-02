@@ -3,12 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { fromCents, toCents } from '@lezzet/helper';
 import type { MoneyDocumentPayload } from '@lezzet/types';
 import { DocumentFormBody } from '@/components/operation/form/document-form/body';
 import { DocumentFileField } from '@/components/operation/form/document-form/file-field';
 import { DOCUMENT_KIND_LABEL, VAT_REGIME_LABEL } from '@/components/operation/form/document-form/labels';
-import { DocumentFormSchema, type DocumentForm, type StockLinkOption } from '@/components/operation/form/document-form/schema';
+import {
+  DocumentFormSchema,
+  invoiceFieldsOf,
+  invoiceTotalCents,
+  type DocumentForm,
+  type StockLinkOption,
+} from '@/components/operation/form/document-form/schema';
 import { ProposalAside, type ProposalFact, type ProposalMeta } from '@/components/operation/ui/proposal-aside';
 import { money, shortDate } from '@/components/operation/ui/format';
 import { documentStockLinksAction } from '@/lib/finance/actions';
@@ -47,13 +52,7 @@ export function documentValuesFrom(payload: MoneyDocumentPayload, natures: Assis
       nature: natureFits ? (payload.nature ?? '') : '',
       tags: [],
       note: payload.note ?? '',
-      invoice: {
-        // Dilekçe CENT, form EURO — çevrim sınırda (`schema.ts` künyesi).
-        amount: fromCents(payload.amountCents),
-        vatAmount: payload.vatAmountCents === null ? null : fromCents(payload.vatAmountCents),
-        vatRegime: payload.vatRegime,
-        dueOn: payload.dueOn ?? '',
-      },
+      invoice: invoiceFieldsOf(payload),
     },
     file: null,
   };
@@ -149,7 +148,7 @@ function factsOf(payload: MoneyDocumentPayload, values: DocumentForm, options: A
   const day = (iso: string | null) => (iso ? shortDate(iso) : '—');
   return [
     { label: 'Belge', value: `${DOCUMENT_KIND_LABEL[payload.kind]}${payload.number ? ` ${payload.number}` : ''}` },
-    { label: 'Tutar', value: money(payload.amountCents), now: values.invoice.amount === null ? '—' : money(toCents(values.invoice.amount)) },
+    { label: 'Tutar', value: money(payload.amountCents), now: money(invoiceTotalCents(values.invoice)) },
     { label: 'Karşı taraf', value: payload.supplierName ?? payload.counterpartyName ?? '—', now: party ?? '—' },
     { label: 'Tür', value: natureLabel(payload.nature), now: natureLabel(values.nature || null) },
     { label: 'KDV rejimi', value: VAT_REGIME_LABEL[payload.vatRegime], now: VAT_REGIME_LABEL[values.invoice.vatRegime] },

@@ -217,6 +217,22 @@ export type DocumentKind = z.infer<typeof DocumentKindEnum>;
 export const DocumentVatRegimeEnum = z.enum(['standard', 'reverse_charge', 'exempt']);
 export type DocumentVatRegime = z.infer<typeof DocumentVatRegimeEnum>;
 
+/** Gelen belgede geçen Fransız KDV oranları (yüzde), seçicinin sırasıyla; küme veri kısıtında da var (`money_document_vat_lines`). */
+export const DocumentVatRateSchema = z.union([z.literal(5.5), z.literal(10), z.literal(20), z.literal(2.1)]);
+export type DocumentVatRate = z.infer<typeof DocumentVatRateSchema>;
+export const DOCUMENT_VAT_RATES: readonly DocumentVatRate[] = DocumentVatRateSchema.options.map((option) => option.value);
+
+/**
+ * KDV kırılımının bir satırı: oran başına KDV hariç tutar ve KDV (**cent**). Ters yüklemede KDV sıfırdır, oran beyandaki orandır;
+ * jsonb içinde durduğu için anahtarlar çevrilmez.
+ */
+export const DocumentVatLineSchema = z.object({
+  vatRate: DocumentVatRateSchema,
+  netCents: z.number().int().positive(),
+  vatCents: z.number().int().nonnegative(),
+});
+export type DocumentVatLine = z.infer<typeof DocumentVatLineSchema>;
+
 export const MoneyDocumentSchema = z.object({
   id: z.string().uuid(),
   kind: DocumentKindEnum,
@@ -240,11 +256,13 @@ export const MoneyDocumentSchema = z.object({
   direction: MovementDirectionEnum,
   /** Belgenin türü — ödemesi bağlanınca harekete de geçer (hareketin türü boşsa). */
   nature: z.string().nullable(),
-  /** **Cent** (STACK §8); kolon `amount` euro. Belgenin toplamı, KDV dahil. */
+  /** **Cent** (STACK §8); kolon `amount` euro. Belgenin toplamı, KDV dahil; kırılım varsa satırlarının toplamıdır. */
   amountCents: z.number().int(),
-  /** KDV tutarı (**cent**); belgede yoksa `null` — sıfır "KDV yok" demektir, "bilinmiyor" değil. */
+  /** KDV kırılımı, belgenin KDV'sinin tek kaynağı; boş dizi = belgede KDV yazmıyor. */
+  vatLines: z.array(DocumentVatLineSchema),
+  /** KDV toplamı (**cent**), kırılımdan türer (üretilmiş kolon); satırsız belgede `null`, sıfır "KDV yok" demektir. */
   vatAmountCents: z.number().int().nullable(),
-  /** KDV rejimi — `standard` dışındaki rejimde belgede KDV olamaz (veri kısıtı `money_document_vat_regime`). */
+  /** KDV rejimi — ters yüklemede satırın KDV'si sıfır, muaf belgede satır yok (veri kısıtı `money_document_vat_regime`). */
   vatRegime: DocumentVatRegimeEnum,
   currency: CurrencyEnum,
   /** Dosyanın ÖZEL kovadaki anahtarı (`r2Keys.financeDocument`); yoksa belge yalnız künyedir. */
@@ -268,7 +286,7 @@ export const MoneyDocumentInsertSchema = z.object({
   direction: MovementDirectionEnum,
   nature: z.string().nullish(),
   amountCents: z.number().int().positive(),
-  vatAmountCents: z.number().int().nonnegative().nullish(),
+  vatLines: z.array(DocumentVatLineSchema).optional(),
   vatRegime: DocumentVatRegimeEnum.optional(),
   currency: CurrencyEnum.optional(),
   fileKey: z.string().nullish(),
@@ -277,7 +295,8 @@ export const MoneyDocumentInsertSchema = z.object({
 });
 export type MoneyDocumentInsert = z.infer<typeof MoneyDocumentInsertSchema>;
 
-export const MoneyDocumentUpdateSchema = MoneyDocumentSchema.partial().required({ id: true });
+/** `vatAmountCents` üretilmiş kolondur, yazılamaz. */
+export const MoneyDocumentUpdateSchema = MoneyDocumentSchema.omit({ vatAmountCents: true }).partial().required({ id: true });
 export type MoneyDocumentUpdate = z.infer<typeof MoneyDocumentUpdateSchema>;
 
 /** `money_document_balance` görünümü — belgenin açık kalanı, bağlarından türetilir. */

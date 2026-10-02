@@ -17,6 +17,7 @@ import {
   type BankImportProfile,
   type CounterpartyKind,
   type DocumentKind,
+  type DocumentVatLine,
   type DocumentVatRegime,
   type KeysetCursor,
   type MovementDirection,
@@ -435,9 +436,9 @@ interface DocumentInput {
   nature: string | null;
   /** **Cent** (STACK §8) — KDV dâhil belge toplamı. */
   amountCents: number;
-  /** **Cent**; `null` = belgede KDV yazmıyor (sıfır "KDV yok" demek olurdu). */
-  vatAmountCents: number | null;
-  /** KDV rejimi; ters yüklemede ve muafiyette belgede KDV olamaz. */
+  /** KDV kırılımı (**cent**); boş dizi = belgede KDV yazmıyor. */
+  vatLines: DocumentVatLine[];
+  /** KDV rejimi; ters yüklemede satırın KDV'si sıfır, muaf belgede kırılım yok. */
   vatRegime: DocumentVatRegime;
   tags: string[];
   note: string;
@@ -465,7 +466,7 @@ export async function createDocumentAction(input: DocumentInput, proposalId?: st
         direction: input.direction,
         nature: input.nature || null,
         amountCents: input.amountCents,
-        vatAmountCents: input.vatAmountCents,
+        vatLines: input.vatLines,
         vatRegime: input.vatRegime,
         tags: input.tags.map((tag) => tag.trim()).filter((tag) => tag !== ''),
         note: input.note.trim() || null,

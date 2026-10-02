@@ -381,7 +381,7 @@ const applyMoneyDocument: Applier = async (db, raw) => {
     direction: payload.direction,
     nature: payload.nature,
     amountCents: payload.amountCents,
-    vatAmountCents: payload.vatAmountCents,
+    vatLines: payload.vatLines,
     vatRegime: payload.vatRegime,
     note: payload.note,
   });

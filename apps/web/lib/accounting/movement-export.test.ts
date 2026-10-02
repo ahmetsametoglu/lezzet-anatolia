@@ -33,7 +33,7 @@ describe('hareket dökümü', () => {
   it('dönemin hareketleri tür, kod, cari ve belgeyle; transfer tek satır; izahsız işaretli; dönem dışı yok', async () => {
     const belge = await new MoneyDocumentService(db).insert({
       kind: 'invoice', number: `LOYER-${stamp}`, issuedOn: dayOffset(-255), counterpartyId: landlord, direction: 'out', nature: 'kira',
-      amountCents: 145_000, vatAmountCents: 0,
+      amountCents: 145_000, vatLines: [{ vatRate: 20, netCents: 120_833, vatCents: 24_167 }],
     });
     createdDocuments.push(belge.id);
     const movements = new MoneyMovementService(db);
@@ -51,7 +51,7 @@ describe('hareket dökümü', () => {
     // Tür okunur adıyla ve hesap planı koduyla; karşı taraf bağlı belgenin carisi.
     expect(data.rows[0]).toMatchObject({
       account: `Döküm bankası ${stamp}`, amount: -1450, nature: 'Kira', accountCode: '613', tags: '', documentKind: 'invoice', documentNo: `LOYER-${stamp}`,
-      documentTotal: 1450, documentVat: 0, counterparty: `SCI Test ${stamp}`, explained: true,
+      documentTotal: 1450, documentVat: 241.67, counterparty: `SCI Test ${stamp}`, explained: true,
     });
     // Transfer gönderenin gözünden TEK satır: karşı hesap ayrı sütunda, defterdeki iki satır dökümde bir.
     expect(data.rows[1]).toMatchObject({ account: `Döküm kasası ${stamp}`, counterAccount: `Döküm bankası ${stamp}`, amount: -600, counterparty: `Döküm bankası ${stamp}` });
@@ -62,7 +62,7 @@ describe('hareket dökümü', () => {
     expect(csv.split('\n')[0]).toBe(
       'Tarih;Hesap;Karşı hesap;Tip;Tür;Hesap kodu;Tutar;Karşı taraf;Belge türü;Belge no;Belge tarihi;Belge toplamı;Belge KDV;KDV rejimi;Etiketler;Açıklama;Kaynak;İzah;Hareket kimliği',
     );
-    // KDV rejimi belgeden: kira faturası varsayılanla yazıldı — standart.
+    // KDV belgenin kırılımından türer; rejim belgeden, kira faturası varsayılanla yazıldı — standart.
     expect(data.rows[0]).toMatchObject({ documentVatRegime: 'standard' });
     expect(csv).toContain(`;gider;Kira;613;`);
     expect(csv).toContain(`Fatura;LOYER-${stamp};`);

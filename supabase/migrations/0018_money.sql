@@ -86,6 +86,63 @@ create unique index counterparty_name_key on public.counterparty (lower(name));
 -- ── Belge ────────────────────────────────────────────────────────────────────
 -- Belge para değil borçtur: ödeme sonra hareket olarak gelir ve tutarıyla bağlanır (`money_allocation`), açık kalan türetilir.
 -- Satış faturası siparişte (`order.invoice_no`) durur, burada değil.
+
+-- KDV kırılımının biçimi: her satır izinli bir oran (yüzde), pozitif KDV hariç tutar ve eksi olmayan KDV taşır (cent), oran
+-- tekrar etmez. CASE sırayı sabitler, çünkü dizi olmayan değerde dizi işlevi kısıtı açıklamak yerine hata fırlatırdı.
+create or replace function public.money_document_vat_lines_valid(p jsonb) returns boolean
+language sql
+immutable
+parallel safe
+as $$
+  select case
+           when jsonb_typeof(p) <> 'array' then false
+           else not exists (
+                  select 1
+                    from jsonb_array_elements(p) l
+                   where case
+                           when jsonb_typeof(l) = 'object'
+                            and jsonb_typeof(l -> 'vatRate') = 'number'
+                            and jsonb_typeof(l -> 'netCents') = 'number'
+                            and jsonb_typeof(l -> 'vatCents') = 'number'
+                           then (l ->> 'vatRate')::numeric not in (2.1, 5.5, 10, 20)
+                             or (l ->> 'netCents')::numeric <= 0
+                             or (l ->> 'vatCents')::numeric < 0
+                             or (l ->> 'netCents')::numeric <> trunc((l ->> 'netCents')::numeric)
+                             or (l ->> 'vatCents')::numeric <> trunc((l ->> 'vatCents')::numeric)
+                           else true
+                         end
+                )
+            and (select count(*) from jsonb_array_elements(p))
+              = (select count(distinct l -> 'vatRate') from jsonb_array_elements(p) l)
+         end;
+$$;
+
+-- Satırların KDV dâhil toplamı (euro); biçimi bozuk kırılımda NULL, onu `money_document_vat_lines` yakalar.
+create or replace function public.money_document_vat_gross(p jsonb) returns numeric
+language sql
+immutable
+parallel safe
+as $$
+  select case
+           when not public.money_document_vat_lines_valid(p) then null
+           else (select round(coalesce(sum((l ->> 'netCents')::numeric + (l ->> 'vatCents')::numeric), 0) / 100, 2)
+                   from jsonb_array_elements(p) l)
+         end;
+$$;
+
+-- Belgenin KDV toplamı (euro); satırsız belgede NULL, çünkü belgede KDV yazmıyordur ve sıfır "KDV yok" demek olurdu.
+create or replace function public.money_document_vat_total(p jsonb) returns numeric
+language sql
+immutable
+parallel safe
+as $$
+  select case
+           when not public.money_document_vat_lines_valid(p) then null
+           when jsonb_array_length(p) = 0 then null
+           else (select round(sum((l ->> 'vatCents')::numeric) / 100, 2) from jsonb_array_elements(p) l)
+         end;
+$$;
+
 create table public.money_document (
   id uuid primary key default gen_random_uuid(),
   kind document_kind not null,
@@ -107,9 +164,12 @@ create table public.money_document (
   -- Ödemesi bağlanınca türü boş harekete de geçer.
   nature text references public.movement_nature (slug) on update cascade,
   amount numeric(12, 2) not null check (amount > 0),
-  -- KDV tutarı; belgede yoksa NULL — sıfır "KDV yok" demektir, "bilinmiyor" değil (CLAUDE §1).
-  vat_amount numeric(12, 2) check (vat_amount >= 0),
-  -- Standart dışı rejimde belgede KDV olamaz (`money_document_vat_regime`): ters yüklemede KDV'yi biz beyan ederiz.
+  -- KDV kırılımı, belgenin KDV'sinin tek kaynağı: `[{vatRate, netCents, vatCents}]`, satır varsa toplamı belgenin tutarıdır.
+  -- Ayrı tablo değil, çünkü belge tek satırlık yazımla doğar ve kırılımı onunla birlikte tutarlı kalır.
+  vat_lines jsonb not null default '[]'::jsonb,
+  -- Satırlardan türer; satırsız belgede NULL, sıfır "KDV yok" demektir, "bilinmiyor" değil (CLAUDE §1).
+  vat_amount numeric(12, 2) generated always as (public.money_document_vat_total(vat_lines)) stored,
+  -- Ters yüklemede satırın KDV'si sıfırdır ve oranı beyandaki orandır, çünkü KDV'yi biz beyan ederiz; muaf belgenin satırı olmaz.
   vat_regime document_vat_regime not null default 'standard',
   currency currency not null default 'EUR',
   -- Dosyanın ÖZEL kovadaki anahtarı (`r2Keys.financeDocument`); yoksa belge yalnız künyedir.
@@ -122,7 +182,13 @@ create table public.money_document (
   constraint money_document_party check (counterparty_id is null or supplier_id is null),
   constraint money_document_stock_link check (stock_intake_id is null or purchase_order_id is null),
   constraint money_document_supply_party check ((stock_intake_id is null and purchase_order_id is null) or supplier_id is not null),
-  constraint money_document_vat_regime check (vat_regime = 'standard' or coalesce(vat_amount, 0) = 0),
+  constraint money_document_vat_lines check (public.money_document_vat_lines_valid(vat_lines)),
+  constraint money_document_vat_gross check (vat_lines = '[]'::jsonb or public.money_document_vat_gross(vat_lines) = amount),
+  constraint money_document_vat_regime check (
+    vat_regime = 'standard'
+    or (vat_regime = 'reverse_charge' and coalesce(vat_amount, 0) = 0)
+    or (vat_regime = 'exempt' and vat_lines = '[]'::jsonb)
+  ),
   constraint money_document_due check (due_on is null or due_on >= issued_on)
 );
 create index money_document_issued_idx on public.money_document (issued_on desc);

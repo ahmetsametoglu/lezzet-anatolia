@@ -184,7 +184,8 @@ Resmî muhasebe sorduğunda hareketin dayanağı: fatura, fiş, bordro, sözleş
 | `direction` | movement_direction |  |  |
 | `nature` | text | • |  |
 | `amount` | numeric(12, 2) |  |  |
-| `vat_amount` | numeric(12, 2) | • |  |
+| `vat_lines` | jsonb |  | `'[]'::jsonb` |
+| `vat_amount` | numeric(12, 2) | • | *üretilmiş* |
 | `vat_regime` | document_vat_regime |  | `'standard'` |
 | `currency` | currency |  | `'EUR'` |
 | `file_key` | text | • |  |
@@ -197,10 +198,11 @@ Resmî muhasebe sorduğunda hareketin dayanağı: fatura, fiş, bordro, sözleş
 
 - **Satış faturaları burada değil:** bizim kestiğimiz fatura numarası siparişin üstünde (`order.invoice_no`, 12.7).
 - ~~**Stok alımının faturası mal kabule bağlanır** (`stock_intake_id`) ve ikinci bir borç DOĞURMAZ — tedarikçi borcu mal kabulden türemeye devam eder (12.3).~~ **Borç belgeden türer** (12.26 · kullanıcı kararı 14.09): stok alımının faturası mal kabule (`stock_intake_id`) ya da mal gelmeden kesildiyse tedarik siparişine (`purchase_order_id`) bağlanır — ikisinden en çok biri, ikisi de tedarikçi ister (`money_document_stock_link` · `money_document_supply_party`). Tedarikçi borcu faturanın toplamından okunur; faturası girilmemiş kabulün satır toplamı yedektir (`SupplierService.debt`). Ölçüm: kabulün satırları KDV hariç ve nakliyesizdi, sahadan yapılan kabulde sıfırdı — ödenen şey faturanın toplamıydı. Aynı kabule ya da siparişe ikinci fatura bağlanamaz (kapı, `link_has_document`).
-- **`vat_regime`** (12.26) — `standard` · `reverse_charge` (autoliquidation: AB içi alım ya da ithalat; belgede KDV yok, beyanda hesaplanır) · `exempt` (sigorta, banka masrafı). Etiket değil ALAN: "KDV 0" iki ayrı şeyi anlatıyordu. Standart dışında belgede KDV olamaz (`money_document_vat_regime`); öneri tedarikçinin ülkesinden (`suggestVatRegime`). Muhasebeci dökümünde sütun.
+- **`vat_regime`** — `standard` · `reverse_charge` (autoliquidation: AB içi alım ya da ithalat; belgede KDV yok, beyanda hesaplanır) · `exempt` (sigorta, banka masrafı). Etiket değil alan: "KDV 0" iki ayrı şeyi anlatır. Ters yüklemede kırılımın KDV'si sıfır, muaf belgenin kırılımı yok (`money_document_vat_regime`); öneri tedarikçinin ülkesinden (`suggestVatRegime`). Muhasebeci dökümünde sütun.
+- **`vat_lines`** — KDV kırılımı, belgenin KDV'sinin tek kaynağı: oran başına KDV hariç tutar ve KDV, cent (`[{vatRate, netCents, vatCents}]`; oran 5,5 · 10 · 20 · 2,1, tekrar etmez — `money_document_vat_lines`). Satır varsa toplamı belgenin tutarıdır (`money_document_vat_gross`). Ayrı tablo değil, çünkü belge tek satırlık yazımla doğar ve kırılımı onunla tutarlı kalır. Kapının iki kuralı veride durmaz (`documentVatProblem`): ödeyeceğimiz fatura ve fiş kırılımsız kaydedilmez; satırın KDV'si orana uyar, pay en az 2 cent ya da beklenenin binde beşi.
 - **`due_on`** (12.26) — vade; belgede yazmıyorsa NULL, belge gününden önce olamaz (`money_document_due`). Tedarikçi faturasında form kartın vadesinden önerir (`documentDueOn`).
 - **`direction`** hareketinkiyle aynı dilde: `out` = bizim ödeyeceğimiz, `in` = bize ödenecek.
-- **`vat_amount`** belgede yoksa NULL; sıfır "KDV yok" demektir, "bilinmiyor" değil (CLAUDE §1).
+- **`vat_amount`** kırılımdan türeyen üretilmiş kolon; satırsız belgede NULL, sıfır "KDV yok" demektir, "bilinmiyor" değil (CLAUDE §1).
 - **`file_key`** — özel R2 kovası (`r2Keys.financeDocument`), public adresi yok: belgede karşı tarafın adı ve banka bilgisi yazar.
 - **Karşı taraf** cari (`counterparty_id`) YA DA tedarikçi (`supplier_id`) — ikisi birden olmaz (`money_document_party`). Serbest metin `counterparty` kalktı (13.09 · ikinci karar): aynı ev sahibi iki yazımla iki kişi oluyordu.
 - **`nature`** — belgenin türü. Ekstre satırı belgeye TAMAMEN bağlanınca türü ve karşı tarafı satıra geçer; "Ödemesini yaz" formu belgenin türüyle açılır.

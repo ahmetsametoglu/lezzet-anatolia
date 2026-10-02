@@ -1,5 +1,6 @@
 'use client';
 
+import { vatLinesTotals } from '@lezzet/domain-core';
 import type { MoneyDocumentPayload } from '@lezzet/types';
 import { DOCUMENT_KIND_LABEL, VAT_REGIME_LABEL } from '@/components/operation/form/document-form/labels';
 import { money, shortDate } from '@/components/operation/ui/format';
@@ -28,7 +29,7 @@ export function MoneyDocumentCard({ payload }: { payload: MoneyDocumentPayload }
         <CardFact label="Belge no" value={payload.number ?? '—'} />
         <CardFact label="Tarih" value={shortDate(payload.issuedOn)} />
         <CardFact label="Vade" value={payload.dueOn ? shortDate(payload.dueOn) : '—'} />
-        <CardFact label="KDV" value={payload.vatAmountCents === null ? '—' : money(payload.vatAmountCents)} />
+        <CardFact label="KDV" value={money(vatLinesTotals(payload.vatLines).vatCents)} />
         {payload.vatRegime === 'standard' ? null : <CardFact label="KDV rejimi" value={VAT_REGIME_LABEL[payload.vatRegime]} />}
       </Facts>
     </>

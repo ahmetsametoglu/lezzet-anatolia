@@ -1,38 +1,134 @@
 import { z } from 'zod';
-import { documentDueOn, suggestVatRegime, vatRegimeProblem } from '@lezzet/domain-core';
-import { toCents } from '@lezzet/helper';
-import { DocumentKindEnum, DocumentVatRegimeEnum, MovementDirectionEnum, type DocumentVatRegime } from '@lezzet/types';
+import { documentDueOn, documentVatProblem, expectedVatCents, suggestVatRegime, vatLinesTotals } from '@lezzet/domain-core';
+import { fromCents, toCents } from '@lezzet/helper';
+import {
+  DOCUMENT_VAT_RATES,
+  DocumentKindEnum,
+  DocumentVatLineSchema,
+  DocumentVatRateSchema,
+  DocumentVatRegimeEnum,
+  MovementDirectionEnum,
+  type DocumentKind,
+  type DocumentVatLine,
+  type DocumentVatRegime,
+  type MovementDirection,
+} from '@lezzet/types';
+import { DOCUMENT_VAT_PROBLEM_LABEL } from './labels';
 
 /**
  * Belge formunun şeması; Para ekranının "+ Belge" penceresi ile asistanın belge gövdesi aynı tanımı paylaşır. Faturanın para
  * künyesi (`InvoiceFields`) ayrı parça çünkü mal kabul ve faturalı sipariş gövdeleri de faturayı aynı alanlarla yazar; tutarlar
  * formda euro, kapıya giderken `toCents` ile cent olur.
  */
+
+/** KDV kırılımının form satırı — tutarlar **EURO**, `null` = boş kutu; KDV hariç tutarı boş ya da sıfır satır sayılmaz. */
+export const InvoiceVatLineSchema = DocumentVatLineSchema.pick({ vatRate: true }).extend({
+  net: z.number().nonnegative().nullable(),
+  vat: z.number().nonnegative().nullable(),
+});
+export type InvoiceVatLine = z.infer<typeof InvoiceVatLineSchema>;
+
 export const InvoiceFieldsSchema = z.object({
-  /** **EURO** — KDV dâhil belge toplamı. */
+  /** **EURO** — KDV dâhil belge toplamı; kırılım doluysa satırlardan yazılır (`settled`). */
   amount: z.number().positive().nullable(),
-  /** **EURO**; `null` = belgede KDV yazmıyor (sıfır "KDV yok" demek olurdu). */
-  vatAmount: z.number().nonnegative().nullable(),
+  /** KDV kırılımı, oran başına; belgenin KDV'sinin tek kaynağı. */
+  vatLines: z.array(InvoiceVatLineSchema),
   vatRegime: DocumentVatRegimeEnum,
   /** Vade — `YYYY-MM-DD` ya da boş. */
   dueOn: z.string(),
 });
 export type InvoiceFields = z.infer<typeof InvoiceFieldsSchema>;
 
-export function emptyInvoiceFields(): InvoiceFields {
-  return { amount: null, vatAmount: null, vatRegime: 'standard', dueOn: '' };
+/** Kırılımın yeni satırı, kullanılmamış ilk oranla: oran tekrar etmez; dört oran da kullanıldıysa `null`. */
+export function nextVatLine(lines: readonly InvoiceVatLine[]): InvoiceVatLine | null {
+  const rate = DOCUMENT_VAT_RATES.find((candidate) => !lines.some((line) => line.vatRate === candidate));
+  return rate === undefined ? null : { vatRate: rate, net: null, vat: null };
 }
 
-const vatCentsOf = (invoice: Pick<InvoiceFields, 'vatAmount'>) => (invoice.vatAmount === null ? null : toCents(invoice.vatAmount));
+export function emptyInvoiceFields(): InvoiceFields {
+  return {
+    amount: null,
+    vatLines: [{ vatRate: DocumentVatRateSchema.options[0].value, net: null, vat: null }],
+    vatRegime: 'standard',
+    dueOn: '',
+  };
+}
+
+/** Önerinin faturası (cent) → formun alanları. */
+export function invoiceFieldsOf(terms: {
+  amountCents: number | null;
+  vatLines: readonly DocumentVatLine[];
+  vatRegime: DocumentVatRegime;
+  dueOn: string | null;
+}): InvoiceFields {
+  return {
+    amount: terms.amountCents === null ? null : fromCents(terms.amountCents),
+    vatLines: terms.vatLines.map((line) => ({ vatRate: line.vatRate, net: fromCents(line.netCents), vat: fromCents(line.vatCents) })),
+    vatRegime: terms.vatRegime,
+    dueOn: terms.dueOn ?? '',
+  };
+}
+
+/** Formun kırılımı → kapının satırları (cent): boş satır sayılmaz, ters yüklemede KDV sıfır, muaf belgede kırılım yok. */
+export function vatLinesOf(invoice: Pick<InvoiceFields, 'vatLines' | 'vatRegime'>): DocumentVatLine[] {
+  if (invoice.vatRegime === 'exempt') return [];
+  return invoice.vatLines.flatMap((line) =>
+    line.net === null || line.net <= 0
+      ? []
+      : [
+          {
+            vatRate: line.vatRate,
+            netCents: toCents(line.net),
+            vatCents: invoice.vatRegime === 'reverse_charge' ? 0 : toCents(line.vat ?? 0),
+          },
+        ],
+  );
+}
+
+/** Belgenin KDV dâhil toplamı (cent): kırılım doluysa satırlardan, değilse toplam kutusundan; ikisi de boşsa `null`. */
+export function invoiceTotalCents(invoice: InvoiceFields): number | null {
+  const lines = vatLinesOf(invoice);
+  if (lines.length > 0) return vatLinesTotals(lines).grossCents;
+  return invoice.amount === null ? null : toCents(invoice.amount);
+}
+
+/** Belgenin KDV'si (cent); kırılımsız belgede `null`, çünkü belgede yazmıyordur. */
+export function invoiceVatCents(invoice: Pick<InvoiceFields, 'vatLines' | 'vatRegime'>): number | null {
+  return vatLinesTotals(vatLinesOf(invoice)).vatCents;
+}
+
+/** Satırın KDV hariç tutarı ya da oranı değişince KDV orandan yeniden yazılır; belgedeki KDV kalem kalem yuvarlandıysa operatör düzeltir. */
+export function withVatFromRate(line: InvoiceVatLine): InvoiceVatLine {
+  return { ...line, vat: line.net === null ? null : fromCents(expectedVatCents(toCents(line.net), line.vatRate)) };
+}
+
+/** Kırılım doluysa toplam kutusu satırlardan yazılır: kutu satırlardan ayrışmasın, rejim muafa dönünce son toplam kalsın. */
+export function settled(invoice: InvoiceFields): InvoiceFields {
+  const total = vatLinesOf(invoice).length > 0 ? invoiceTotalCents(invoice) : null;
+  return total === null ? invoice : { ...invoice, amount: fromCents(total) };
+}
 
 /**
- * Faturanın engeli, tek cümlede. Rejim kuralı motordan (`vatRegimeProblem`) — kapı ve veri kısıtı aynı
- * kuralı soruyor, form ikinci bir kopya yazmıyor.
+ * Rejim değişince toplam yeniden yazılır. Satırın KDV kutusu korunur: ters yüklemede kapıya sıfır gider (`vatLinesOf`), standarda
+ * dönünce operatörün düzelttiği KDV geri gelir.
  */
-export function invoiceBlock(invoice: InvoiceFields, issuedOn: string): string | null {
-  if (!invoice.amount || invoice.amount <= 0) return 'Belge toplamı sıfırdan büyük olmalı.';
-  if (invoice.vatAmount !== null && invoice.vatAmount > invoice.amount) return 'KDV, belge toplamını aşamaz — toplam KDV dâhildir.';
-  if (vatRegimeProblem(invoice.vatRegime, vatCentsOf(invoice))) return 'Ters yüklemeli ya da muaf belgede KDV tutarı olamaz.';
+export function withRegime(invoice: InvoiceFields, vatRegime: DocumentVatRegime): InvoiceFields {
+  return vatRegime === invoice.vatRegime ? invoice : settled({ ...invoice, vatRegime });
+}
+
+/** Faturanın türü ve yönü; mal kabul ve sipariş gövdelerinde fatura hep tedarikçinin ödenecek faturasıdır. */
+interface InvoiceSubject {
+  kind: DocumentKind;
+  direction: MovementDirection;
+}
+const SUPPLIER_INVOICE: InvoiceSubject = { kind: 'invoice', direction: 'out' };
+
+/** Faturanın engeli, tek cümlede. KDV kuralı motordan (`documentVatProblem`): kapı ve veri kısıtı aynı kuralı sorar. */
+export function invoiceBlock(invoice: InvoiceFields, issuedOn: string, subject: InvoiceSubject = SUPPLIER_INVOICE): string | null {
+  const amountCents = invoiceTotalCents(invoice) ?? 0;
+  const problem = documentVatProblem({ ...subject, vatRegime: invoice.vatRegime, amountCents, vatLines: vatLinesOf(invoice) });
+  if (problem) return DOCUMENT_VAT_PROBLEM_LABEL[problem];
+  if (amountCents <= 0) return 'Belge toplamı sıfırdan büyük olmalı.';
   if (invoice.dueOn && issuedOn && invoice.dueOn < issuedOn) return 'Vade belgenin tarihinden önce olamaz.';
   return null;
 }
@@ -40,11 +136,16 @@ export function invoiceBlock(invoice: InvoiceFields, issuedOn: string): string |
 /** Fatura alanları → kapının cent'li girdisi. */
 export function invoiceTermsOf(invoice: InvoiceFields): {
   amountCents: number;
-  vatAmountCents: number | null;
+  vatLines: DocumentVatLine[];
   vatRegime: DocumentVatRegime;
   dueOn: string | null;
 } {
-  return { amountCents: toCents(invoice.amount ?? 0), vatAmountCents: vatCentsOf(invoice), vatRegime: invoice.vatRegime, dueOn: invoice.dueOn || null };
+  return {
+    amountCents: invoiceTotalCents(invoice) ?? 0,
+    vatLines: vatLinesOf(invoice),
+    vatRegime: invoice.vatRegime,
+    dueOn: invoice.dueOn || null,
+  };
 }
 
 /** Tedarikçi seçeneği — ülkesi ve vadesiyle: faturanın rejimi ve vadesi bunlardan önerilir. */
@@ -66,7 +167,7 @@ export function supplierSuggestion(
   issuedOn: string,
 ): Pick<InvoiceFields, 'vatRegime' | 'dueOn'> {
   return {
-    vatRegime: suggestVatRegime({ supplierCountry: supplier?.country, vatAmountCents: vatCentsOf(invoice) }),
+    vatRegime: suggestVatRegime({ supplierCountry: supplier?.country, vatAmountCents: invoiceVatCents(invoice) }),
     dueOn: invoice.dueOn || (supplier ? (documentDueOn(issuedOn, supplier.paymentTermDays) ?? '') : ''),
   };
 }
@@ -124,7 +225,7 @@ export function emptyDocumentForm(today: string): DocumentForm {
 export function documentBlock(values: DocumentForm): string | null {
   if (!values.issuedOn) return 'Belgenin tarihi seçilmeli.';
   if (!values.counterpartyId && !values.supplierId) return 'Karşı taraf seçilmeli — cari ya da tedarikçi.';
-  return invoiceBlock(values.invoice, values.issuedOn);
+  return invoiceBlock(values.invoice, values.issuedOn, values);
 }
 
 /** Form → belge kapısının girdisi (`createDocumentAction`). Seçici "seçilmedi"yi boş dizeyle söyler; kapı `null` bekler. */
@@ -142,7 +243,7 @@ export function documentInputOf(values: DocumentForm) {
     direction: values.direction,
     nature: values.nature || null,
     amountCents: terms.amountCents,
-    vatAmountCents: terms.vatAmountCents,
+    vatLines: terms.vatLines,
     vatRegime: terms.vatRegime,
     tags: values.tags,
     note: values.note,

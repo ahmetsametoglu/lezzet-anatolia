@@ -43,6 +43,28 @@ const WARNINGS_PROP = {
 } as const;
 
 /**
+ * Faturanın KDV kırılımı; üç araçta aynı alan, tarifi tek yerde. Oran başına satır, çünkü belgenin KDV'si muhasebeye oranıyla gider
+ * ve uydurulan oran beyanı bozar.
+ */
+const VAT_LINES_PROP = {
+  vatLines: {
+    type: 'array',
+    description:
+      "The VAT breakdown exactly as the document's VAT summary prints it: ONE entry per rate. Omit it when the document shows no VAT table — never invent a rate; the admin enters it on the approval screen. Reverse charge: one entry per rate WE self-assess (food 5.5) with vatCents 0. Exempt: omit. The entries must add up to the document total (Σ netCents + vatCents).",
+    items: {
+      type: 'object',
+      properties: {
+        vatRate: { type: 'number', description: 'The rate in percent: 5.5 | 10 | 20 | 2.1.' },
+        netCents: { type: 'number', description: 'The amount excl. VAT at that rate (base HT), in cents.' },
+        vatCents: { type: 'number', description: 'The VAT at that rate as printed, in cents; 0 under reverse charge.' },
+      },
+      required: ['vatRate', 'netCents', 'vatCents'],
+      additionalProperties: false,
+    },
+  },
+} as const;
+
+/**
  * Beyan metinlerinin biçimlendirme kuralı; iki araç ve iki alan aynı kuralı paylaştığı için tarif tek yerde. Modeller alerjeni
  * büyük harfle vurgulamaya yatkın, oysa depodaki işaret `**` (`helper/rich-text`) ve büyük harf metnin kendisini bozar.
  */
@@ -57,7 +79,7 @@ const INSTRUCTIONS = [
   'HOW THIS BUSINESS IS SHAPED — read every number through this. (1) There is NO default warehouse: stock, orders and delivery zones all belong to a specific warehouse, so "12 boxes in total" is never a fact you can act on — ask which warehouse. (2) A delivery zone IS a delivery route: it belongs to one warehouse, runs on fixed weekdays, and covers a set of postal codes. Extending a zone means adding a stop to a van that is already driving — so proximity to that zone\'s existing codes matters (delivery_map gives you the distance). (3) Prices have channels, and **every money field names its own VAT basis**: `…IncVat` means VAT-included (all b2c list, offer and suggested prices), `…ExVat` means VAT-excluded (purchase costs). Subtracting an ExVat figure from an IncVat one overstates margin by the whole VAT rate — divide by (1 + vatRate/100) first. If a field name carries neither suffix it is not money you should compare. (4) A product carries two independent axes: whether its legal declarations are complete, and whether it is on sale. You can help with the first; the second is never yours.',
   'All data you see is aggregate and identity-free by design: no customer names/contacts, no per-product purchase prices, no message content. Do not speculate about individuals.',
   'SUPPLIERS AND COUNTERPARTIES ARE NEVER LISTED (owner decision 14.09): no tool returns them and you must not search them by name fragments. Identify a supplier by what the invoice prints — VAT number (TVA/SIRET), phone, or the exact full name — and a counterparty by its exact name or keyword. If a tool cannot find the record, ask the admin; never guess or retry with a fragment.',
-  'INVOICES — pick the tool by what the invoice is for. Goods that ARRIVED and whose labels you can read (expiry dates): propose_stock_intake with the invoice total, VAT and due date — the invoice is booked as a document linked to that receipt. Goods NOT arrived yet (invoice e-mailed before the delivery, no expiry dates): propose_purchase_order in INVOICE mode. Anything that is not goods (rent, accountant, insurance, phone, fuel): propose_money_document. Supplier not found by its VAT number, phone or exact name: propose_supplier_create from the invoice header first. The VAT regime is a field, not a tag: reverse_charge when the invoice says so ("Verlegging van heffing", "Autoliquidation", "Reverse charge") and shows no VAT. Files never travel through these tools — tell the admin to drop the PDF on the approval screen.',
+  'INVOICES — pick the tool by what the invoice is for. Goods that ARRIVED and whose labels you can read (expiry dates): propose_stock_intake with the invoice total, VAT breakdown and due date — the invoice is booked as a document linked to that receipt. Goods NOT arrived yet (invoice e-mailed before the delivery, no expiry dates): propose_purchase_order in INVOICE mode. Anything that is not goods (rent, accountant, insurance, phone, fuel): propose_money_document. Supplier not found by its VAT number, phone or exact name: propose_supplier_create from the invoice header first. The VAT regime is a field, not a tag: reverse_charge when the invoice says so ("Verlegging van heffing", "Autoliquidation", "Reverse charge") and shows no VAT. Files never travel through these tools — tell the admin to drop the PDF on the approval screen.',
   "Numbers ending in 'Cents' are euro cents — divide by 100 and format as €.",
   "Start-of-day habit: when the admin greets you or asks what's up, call morning_briefing first, and lead your answer with its `attention` list.",
   'Ground every proposal in a tool result. For a weekly route/zone proposal call delivery_map FIRST (it tells you which zones exist, which warehouse and weekdays they run on, and how far an uncovered code is from each) — demand_signals alone only tells you a code was asked for, not where it belongs. For bundle or new-product ideas use demand_signals (zero-result searches, product interest) plus catalog_health. Never invent demand, prices, or stock.',
@@ -322,7 +344,7 @@ export const TOOLS = [
             issuedOn: { type: 'string', description: 'Invoice date, YYYY-MM-DD.' },
             dueOn: { type: 'string', description: 'Due date, YYYY-MM-DD, only if printed. Never computed by you.' },
             totalAmountCents: { type: 'number', description: 'The total the invoice prints (VAT included), in cents — not your sum of the lines.' },
-            vatAmountCents: { type: 'number', description: 'The VAT the invoice prints, in cents; omit if none is shown.' },
+            ...VAT_LINES_PROP,
             vatRegime: {
               type: 'string',
               description:
@@ -399,10 +421,7 @@ export const TOOLS = [
           description:
             'The total the INVOICE itself prints (VAT included), in cents. Do not add the lines up yourself — the point is to compare our sum against the document and surface the gap (shipping, discount, a line you could not read). Given together with the supplier, the invoice is ALSO booked as a document linked to this receipt and the supplier debt is derived from it. Omit if the document shows no total.',
         },
-        vatAmountCents: {
-          type: 'number',
-          description: 'The VAT amount the invoice prints, in cents. Omit if the invoice shows none — never write 0 for "not shown".',
-        },
+        ...VAT_LINES_PROP,
         vatRegime: {
           type: 'string',
           description:
@@ -460,7 +479,7 @@ export const TOOLS = [
   {
     name: 'propose_money_document',
     description:
-      "PROPOSE (does not apply): book a NON-GOODS invoice or receipt as a document — rent, accountant, insurance, phone, fuel receipt, URSSAF, payslip… The debt is born now; the payment comes later as a movement and is linked to it. You read the document the admin gave you; this tool VERIFIES what you read: the supplier by what the document prints (supplierVatNumber / supplierPhone / exact supplierName) or the counterparty by its exact name or keyword (counterpartyName), the nature against reference_data.natures, the VAT regime against the VAT amount, and that the same number is not already booked for that party. GOODS invoices do NOT go here — propose_stock_intake when the goods arrived with expiry dates known, propose_purchase_order in INVOICE mode when they have not arrived yet. The file cannot travel through this tool: the admin drops it on the approval screen.",
+      "PROPOSE (does not apply): book a NON-GOODS invoice or receipt as a document — rent, accountant, insurance, phone, fuel receipt, URSSAF, payslip… The debt is born now; the payment comes later as a movement and is linked to it. You read the document the admin gave you; this tool VERIFIES what you read: the supplier by what the document prints (supplierVatNumber / supplierPhone / exact supplierName) or the counterparty by its exact name or keyword (counterpartyName), the nature against reference_data.natures, the VAT breakdown against the regime, the rates and the total, and that the same number is not already booked for that party. GOODS invoices do NOT go here — propose_stock_intake when the goods arrived with expiry dates known, propose_purchase_order in INVOICE mode when they have not arrived yet. The file cannot travel through this tool: the admin drops it on the approval screen.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -482,7 +501,7 @@ export const TOOLS = [
           description: 'What the document is for — slug or label from reference_data.natures, verbatim. Leave it out if none fits; the admin picks one. An unknown word is rejected.',
         },
         amountCents: { type: 'number', description: 'The total the document prints (VAT included), in cents.' },
-        vatAmountCents: { type: 'number', description: 'The VAT the document prints, in cents; omit if none is shown — never 0 for "not shown".' },
+        ...VAT_LINES_PROP,
         vatRegime: {
           type: 'string',
           description:

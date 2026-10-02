@@ -27,6 +27,7 @@ import {
   acceptsNature,
   barcodeProblem,
   discountPercentOf,
+  documentVatProblem,
   hasSupplierIdentity,
   matchNature,
   matchSupplierItem,
@@ -37,7 +38,9 @@ import {
   suggestedOfferPriceCents,
   suggestVatRegime,
   supplierItemKeyOf,
-  vatRegimeProblem,
+  vatLinesRequired,
+  vatLinesTotals,
+  type DocumentVatProblem,
 } from '@lezzet/domain-core';
 // Para biçimi tek yerden (`formatPrice`): elle `toFixed(2)` Türkçede yanlış ayraç verir ("150,00 €" yerine "150.00 €").
 import { formatPrice, stripLineOrdinals, toCents } from '@lezzet/helper';
@@ -45,6 +48,7 @@ import {
   AssistantWarningSchema,
   CountryEnum,
   DocumentKindEnum,
+  DocumentVatLineSchema,
   DocumentVatRegimeEnum,
   FEATURED_PLACEMENT,
   FEATURED_SLOTS,
@@ -57,12 +61,15 @@ import {
   type BatchOfferPayload,
   type BundleDraftPayload,
   type DiscountDraftPayload,
+  type DocumentKind,
+  type DocumentVatLine,
   type DocumentVatRegime,
   type FeaturedFlagPayload,
   type FeaturedTarget,
   type InvoiceTermsPayload,
   type MoneyDocumentPayload,
   type MoneyMovementPayload,
+  type MovementDirection,
   type NewVariantBarcode,
   type ProductCreatePayload,
   type ProductDraftPayload,
@@ -1007,34 +1014,57 @@ function isIsoDay(value: unknown): boolean {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+/** Kırılımın modele reddi; kuralı belge kapısınındır (`documentVatProblem`), okunmayan kırılım onay formuna kalır. */
+const VAT_PROBLEM_FOR_MODEL: Record<Exclude<DocumentVatProblem, 'vat_lines_required'>, string> = {
+  vat_with_regime:
+    "Ters yüklemede satırın vatCents'i 0'dır, muaf belgede vatLines gönderilmez — faturada KDV yazıyorsa rejim 'standard'dır.",
+  vat_rate_duplicate: 'Aynı oran iki satırda — oran başına tek satır gönderin, tutarları toplayın.',
+  vat_rate_mismatch:
+    "Bir satırın vatCents'i oranıyla tutmuyor (netCents × vatRate) — oranı ve tutarları faturanın KDV tablosundan yeniden okuyun.",
+  vat_total_mismatch: 'vatLines toplamı (Σ netCents + vatCents) belgenin toplamını tutmuyor — iki tabloyu belgeden yeniden okuyun.',
+};
+
 /**
- * Faturanın KDV'si, rejimi ve vadesi — mal kabul, faturadan sipariş ve belge önerisinin ortak doğrulaması; rejim verilmediyse
- * tedarikçinin ülkesinden önerilir (`suggestVatRegime`), KDV'yle çelişen rejim, toplamı aşan KDV ve belgeden önceki vade reddedilir.
- * Bozuk değer süzülmez, reddedilir: süzülen değer "belgede yok" diye okunurdu (CLAUDE §1).
+ * Faturanın KDV kırılımı, rejimi ve vadesi — mal kabul, faturadan sipariş ve belge önerisinin ortak doğrulaması; rejim verilmediyse
+ * tedarikçinin ülkesinden önerilir (`suggestVatRegime`), kırılım belge kapısının kuralıyla sınanır. Bozuk değer süzülmez,
+ * reddedilir: süzülen değer "belgede yok" diye okunurdu (CLAUDE §1).
  */
 async function invoiceTermsFrom(
   db: ReturnType<typeof serviceDb>,
   args: Record<string, unknown>,
   supplier: { id: string } | null,
-  document: { totalCents: number | null; issuedOn: string | null },
-): Promise<{ vatAmountCents: number | null; vatRegime: DocumentVatRegime; dueOn: string | null } | { error: string }> {
+  document: { kind: DocumentKind; direction: MovementDirection; totalCents: number | null; issuedOn: string | null },
+): Promise<
+  { totalCents: number | null; vatLines: DocumentVatLine[]; vatRegime: DocumentVatRegime; dueOn: string | null } | { error: string }
+> {
   const given = (value: unknown) => value !== undefined && value !== null;
-  const vatAmountCents = Number.isInteger(args.vatAmountCents) && (args.vatAmountCents as number) >= 0 ? (args.vatAmountCents as number) : null;
-  if (given(args.vatAmountCents) && vatAmountCents === null) {
-    return { error: `vatAmountCents cent cinsinden tam sayı olmalı (gelen: '${String(args.vatAmountCents)}') — belgede KDV yazmıyorsa göndermeyin.` };
+  const lines = given(args.vatLines) ? DocumentVatLineSchema.array().safeParse(args.vatLines) : null;
+  if (lines && !lines.success) {
+    return {
+      error:
+        'vatLines her satırda { vatRate: 5.5 | 10 | 20 | 2.1, netCents: KDV hariç (cent, pozitif tam sayı), vatCents: KDV (cent, tam sayı) } olmalı — faturanın KDV tablosundan oran başına bir satır; tablo yoksa göndermeyin.',
+    };
   }
-  if (vatAmountCents !== null && document.totalCents !== null && vatAmountCents > document.totalCents) {
-    return { error: 'KDV toplamdan büyük olamaz — toplam KDV dâhil tutardır; iki sayıyı belgeden yeniden okuyun.' };
-  }
+  const vatLines = lines?.data ?? [];
   const regimeArg = typeof args.vatRegime === 'string' ? args.vatRegime.trim() : '';
   const parsed = DocumentVatRegimeEnum.safeParse(regimeArg);
   if (regimeArg && !parsed.success) return { error: `vatRegime 'standard' | 'reverse_charge' | 'exempt' olmalı (gelen: '${regimeArg}').` };
   const supplierCountry = supplier ? ((await new SupplierService(db).getById(supplier.id))?.country ?? null) : null;
-  const vatRegime: DocumentVatRegime = parsed.success ? parsed.data : suggestVatRegime({ supplierCountry, vatAmountCents });
-  if (vatRegimeProblem(vatRegime, vatAmountCents)) {
-    return {
-      error: `Rejim '${vatRegime}' iken belgede KDV olamaz — faturada KDV yazıyorsa rejim 'standard'dır; yazmıyorsa vatAmountCents göndermeyin.`,
-    };
+  const totals = vatLinesTotals(vatLines);
+  const vatRegime: DocumentVatRegime = parsed.success
+    ? parsed.data
+    : suggestVatRegime({ supplierCountry, vatAmountCents: totals.vatCents });
+  // Toplam okunmadıysa kırılımdan türer; ikisi de okunduysa kapının kuralı ikisini karşılaştırır.
+  const totalCents = document.totalCents ?? (vatLines.length > 0 ? totals.grossCents : null);
+  if (totalCents !== null) {
+    const problem = documentVatProblem({
+      kind: document.kind,
+      direction: document.direction,
+      vatRegime,
+      amountCents: totalCents,
+      vatLines,
+    });
+    if (problem && problem !== 'vat_lines_required') return { error: VAT_PROBLEM_FOR_MODEL[problem] };
   }
   if (given(args.dueOn) && !isIsoDay(args.dueOn)) {
     return { error: `dueOn 'YYYY-AA-GG' olmalı (gelen: '${String(args.dueOn)}') — belgede vade yazmıyorsa göndermeyin.` };
@@ -1043,25 +1073,41 @@ async function invoiceTermsFrom(
   if (dueOn && document.issuedOn && dueOn < document.issuedOn) {
     return { error: `Vade (${dueOn}) belge gününden (${document.issuedOn}) önce olamaz — iki tarihi belgeden yeniden okuyun.` };
   }
-  return { vatAmountCents, vatRegime, dueOn };
+  return { totalCents, vatLines, vatRegime, dueOn };
+}
+
+/** Kırılım okunmadıysa modele söylenir: onay formu kırılımsız ödenecek faturayı kaydetmez, oranı yönetici belgeden girer. */
+function vatLinesNoteOf(
+  document: { kind: DocumentKind; direction: MovementDirection },
+  terms: { vatLines: DocumentVatLine[]; vatRegime: DocumentVatRegime },
+) {
+  return terms.vatLines.length === 0 && vatLinesRequired({ ...document, vatRegime: terms.vatRegime })
+    ? { vatNote: 'KDV kırılımı verilmedi — yönetici onay ekranında oran başına girecek; bunu yöneticiye söyleyin.' }
+    : {};
 }
 
 /**
  * Faturanın toplamı ile satırların toplamı — mal kabul ve faturadan siparişin ortak kontrolü; satırlar KDV hariç olduğu için
  * KDV biliniyorsa toplamdan düşülür. Fark modele söylenir, çünkü düzeltmenin ucuz anı onaydan öncesidir.
  */
-function invoiceTotalCheck(input: { totalAmountCents: number; vatAmountCents: number | null; vatRegime: DocumentVatRegime; linesCents: number }) {
-  const gap = input.totalAmountCents - (input.vatAmountCents ?? 0) - input.linesCents;
+function invoiceTotalCheck(input: {
+  totalAmountCents: number;
+  vatLines: readonly DocumentVatLine[];
+  vatRegime: DocumentVatRegime;
+  linesCents: number;
+}) {
+  const vatCents = vatLinesTotals(input.vatLines).vatCents;
+  const gap = input.totalAmountCents - (vatCents ?? 0) - input.linesCents;
   return {
     documentCents: input.totalAmountCents,
-    vatCents: input.vatAmountCents,
+    vatCents,
     linesCents: input.linesCents,
     gapCents: gap,
     note:
       gap === 0
         ? 'Satırların toplamı faturanın KDV hariç tutarını tutuyor.'
         : `DİKKAT: satırların toplamı faturanın KDV hariç tutarından ${Math.abs(gap)} cent ${gap > 0 ? 'AZ' : 'FAZLA'}. Olası sebepler: okunamamış bir satır, nakliye kalemi, iskonto${
-            input.vatAmountCents === null && input.vatRegime === 'standard' ? ' ya da okunmamış KDV (vatAmountCents gönderilmedi)' : ''
+            vatCents === null && input.vatRegime === 'standard' ? ' ya da okunmamış KDV (vatLines gönderilmedi)' : ''
           }. Yöneticiye söyleyin.`,
   };
 }
@@ -1152,10 +1198,12 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   // Belgenin tarihi ve toplamı: bozuk tarih süzülür, çünkü geçirmek kabulü sessizce bugüne yazdırırdı. Toplam okunduysa fatura
   // onayda kabule bağlı belge olarak doğar ve tedarikçi borcu ondan türer; koşulları `invoiceTermsFrom` sınar.
   const date = isIsoDay(args.date) ? String(args.date) : null;
-  const totalAmountCents =
+  const readTotal =
     Number.isInteger(args.totalAmountCents) && (args.totalAmountCents as number) >= 0 ? (args.totalAmountCents as number) : null;
-  const terms = await invoiceTermsFrom(db, args, supplier, { totalCents: totalAmountCents, issuedOn: date });
+  const invoiceKind = { kind: 'invoice', direction: 'out' } as const;
+  const terms = await invoiceTermsFrom(db, args, supplier, { ...invoiceKind, totalCents: readTotal, issuedOn: date });
   if ('error' in terms) return { error: terms.error };
+  const totalAmountCents = terms.totalCents;
 
   const payload: StockIntakePayload = {
     warehouseId: warehouse.id,
@@ -1166,7 +1214,7 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
     documentNo: typeof args.documentNo === 'string' && args.documentNo.trim() ? args.documentNo.trim() : null,
     date,
     totalAmountCents,
-    vatAmountCents: terms.vatAmountCents,
+    vatLines: terms.vatLines,
     vatRegime: terms.vatRegime,
     dueOn: terms.dueOn,
     lines,
@@ -1186,7 +1234,7 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
     totalAmountCents !== null && anyCost
       ? invoiceTotalCheck({
           totalAmountCents,
-          vatAmountCents: terms.vatAmountCents,
+          vatLines: terms.vatLines,
           vatRegime: terms.vatRegime,
           linesCents: lines.reduce((sum, line) => sum + (line.unitCostCents ?? 0) * line.qty, 0),
         })
@@ -1216,6 +1264,7 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
     ...(payload.totalAmountCents === null
       ? {}
       : {
+          ...vatLinesNoteOf(invoiceKind, terms),
           invoiceDocument: supplier
             ? `Onayda fatura kabule bağlı belge olarak doğar (rejim: ${payload.vatRegime}); tedarikçi borcu o belgeden türer. Dosyasını yönetici onay ekranında bırakır.`
             : 'Tedarikçi bağlanmadığı için fatura belge olarak DOĞMAZ — tedarikçiyi faturadaki kimlikle verin ya da propose_supplier_create ile önerin.',
@@ -1360,7 +1409,8 @@ async function proposeInvoicePurchaseOrder(
   }
   if (!isIsoDay(invoiceArgs.issuedOn)) return { error: "invoice.issuedOn 'YYYY-AA-GG' olmalı — faturanın üzerindeki tarih." };
   const issuedOn = String(invoiceArgs.issuedOn);
-  const terms = await invoiceTermsFrom(db, invoiceArgs, supplier, { totalCents: totalAmountCents as number, issuedOn });
+  const invoiceKind = { kind: 'invoice', direction: 'out' } as const;
+  const terms = await invoiceTermsFrom(db, invoiceArgs, supplier, { ...invoiceKind, totalCents: totalAmountCents as number, issuedOn });
   if ('error' in terms) return { error: terms.error };
   const number = textArg(invoiceArgs.number);
   if (number && (await new MoneyDocumentService(db).listByNumber(number)).some((doc) => doc.supplierId === supplier.id)) {
@@ -1405,7 +1455,7 @@ async function proposeInvoicePurchaseOrder(
     issuedOn,
     dueOn: terms.dueOn,
     totalAmountCents: totalAmountCents as number,
-    vatAmountCents: terms.vatAmountCents,
+    vatLines: terms.vatLines,
     vatRegime: terms.vatRegime,
   };
   const note = textArg(args.note);
@@ -1431,12 +1481,13 @@ async function proposeInvoicePurchaseOrder(
       ? {
           totalCheck: invoiceTotalCheck({
             totalAmountCents: invoice.totalAmountCents,
-            vatAmountCents: invoice.vatAmountCents,
+            vatLines: invoice.vatLines,
             vatRegime: invoice.vatRegime,
             linesCents: lines.reduce((sum, line) => sum + (line.unitPriceCents ?? 0) * line.qty, 0),
           }),
         }
       : {}),
+    ...vatLinesNoteOf(invoiceKind, terms),
     invoiceDocument: `Onayda sipariş GÖNDERİLMİŞ açılır (tedarikçiye mesaj gitmez) ve fatura siparişe bağlı belge olarak doğar (rejim: ${invoice.vatRegime}); tedarikçi borcu o belgeden türer. Mal gelince rampa sayar, SKT ve lotu orada girer. Dosyasını yönetici onay ekranında bırakır.`,
   };
 }
@@ -1480,7 +1531,7 @@ export async function proposeMoneyDocument(args: Record<string, unknown>) {
   const { nature, error: natureError } = await resolveNature(db, textArg(args.nature), direction);
   if (natureError) return { error: natureError };
 
-  const terms = await invoiceTermsFrom(db, args, supplier, { totalCents: amountCents as number, issuedOn });
+  const terms = await invoiceTermsFrom(db, args, supplier, { kind: kind.data, direction, totalCents: amountCents as number, issuedOn });
   if ('error' in terms) return { error: terms.error };
 
   // Aynı numara aynı tarafa ikinci kez yazılmaz. Numara tekil DEĞİL (iki taraf aynı numarayı kesebilir),
@@ -1508,7 +1559,7 @@ export async function proposeMoneyDocument(args: Record<string, unknown>) {
     counterpartyName: counterparty?.name ?? counterpartyText,
     nature: nature?.slug ?? null,
     amountCents: amountCents as number,
-    vatAmountCents: terms.vatAmountCents,
+    vatLines: terms.vatLines,
     vatRegime: terms.vatRegime,
     note: textArg(args.note),
   };
@@ -1521,6 +1572,7 @@ export async function proposeMoneyDocument(args: Record<string, unknown>) {
     ...(nature ? { nature: nature.label } : {}),
     // Rejim verilmediyse sunucu önerdi — model neyin yazılacağını görsün.
     vatRegime: terms.vatRegime,
+    ...vatLinesNoteOf({ kind: kind.data, direction }, terms),
     ...(counterpartyText && !counterparty ? { counterpartyNote: counterpartyNoteOf(counterpartyText) } : {}),
     fileNote: 'Belgenin dosyası bu araçtan geçmez — yönetici onay ekranında bırakır.',
   };

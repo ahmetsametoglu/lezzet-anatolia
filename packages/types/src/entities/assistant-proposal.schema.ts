@@ -4,7 +4,7 @@ import { NewVariantBarcodeSchema } from './variant-barcode.schema';
 import { LocalizedTextSchema } from '../primitives/localized-text.schema';
 import { CountryEnum } from '../primitives/enums.schema';
 import { PostalCodeSchema } from '../primitives/postal-code.schema';
-import { DocumentKindEnum, DocumentVatRegimeEnum, MovementDirectionEnum } from './money.schema';
+import { DocumentKindEnum, DocumentVatLineSchema, DocumentVatRegimeEnum, MovementDirectionEnum } from './money.schema';
 import { ProductDateTypeEnum, ProductSchema, ProductStorageTypeEnum } from './product.schema';
 
 /**
@@ -33,15 +33,15 @@ export type AssistantProposalKind = z.infer<typeof AssistantProposalKindEnum>;
 
 /**
  * Faturadan beklenen teslimatın para künyesi: onayda sipariş gönderilmiş açılır ve fatura siparişe bağlı bir belge olarak doğar,
- * tedarikçi borcu o belgeden türer. Toplam faturanın kendi yazdığıdır (fark nakliye, iskonto ya da okunamamış satırdır); KDV
- * belgede yoksa `null`, çünkü sıfır "KDV yok" demek olurdu.
+ * tedarikçi borcu o belgeden türer. Toplam faturanın kendi yazdığıdır (fark nakliye, iskonto ya da okunamamış satırdır); kırılım
+ * okunmadıysa boş dizi, çünkü uydurulan oran beyanı bozar.
  */
 export const InvoiceTermsPayloadSchema = z.object({
   number: z.string().nullable(),
   issuedOn: z.string().nullable(),
   dueOn: z.string().nullable(),
   totalAmountCents: z.number().int().positive(),
-  vatAmountCents: z.number().int().nonnegative().nullable(),
+  vatLines: z.array(DocumentVatLineSchema),
   vatRegime: DocumentVatRegimeEnum,
 });
 export type InvoiceTermsPayload = z.infer<typeof InvoiceTermsPayloadSchema>;
@@ -155,10 +155,10 @@ export const StockIntakePayloadSchema = z.object({
   date: z.string().nullable().default(null),
   totalAmountCents: z.number().int().nonnegative().nullable().default(null),
   /**
-   * Faturanın KDV'si, rejimi ve vadesi: toplam okunduysa fatura kabule bağlı bir belge olarak doğar ve tedarikçi borcu o belgeden
-   * türer. KDV belgede yoksa `null` (ters yükleme ve muafiyette belgede KDV olmaz); `.default`: eski dilekçeler.
+   * Faturanın KDV kırılımı, rejimi ve vadesi: toplam okunduysa fatura kabule bağlı bir belge olarak doğar ve tedarikçi borcu o
+   * belgeden türer. Kırılım okunmadıysa boş dizi, onu onay formunda yönetici girer.
    */
-  vatAmountCents: z.number().int().nonnegative().nullable().default(null),
+  vatLines: z.array(DocumentVatLineSchema).default([]),
   vatRegime: DocumentVatRegimeEnum.default('standard'),
   dueOn: z.string().nullable().default(null),
   lines: z
@@ -512,7 +512,7 @@ export const MoneyDocumentPayloadSchema = z.object({
   counterpartyName: z.string().nullable(),
   nature: z.string().nullable(),
   amountCents: z.number().int().positive(),
-  vatAmountCents: z.number().int().nonnegative().nullable(),
+  vatLines: z.array(DocumentVatLineSchema),
   vatRegime: DocumentVatRegimeEnum,
   note: z.string().nullable(),
 });

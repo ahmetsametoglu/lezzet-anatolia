@@ -21,7 +21,13 @@ import {
 import { toCents } from '@lezzet/helper';
 import { createDocumentAction, recordManualMovementAction, recordTransferAction } from '@/lib/finance/actions';
 import { saveSupplierAction } from '@/lib/stock/supplier-actions';
-import { DocumentFormSchema, documentBlock, documentInputOf, invoiceTermsOf } from '@/components/operation/form/document-form/schema';
+import {
+  DocumentFormSchema,
+  documentBlock,
+  documentInputOf,
+  invoiceTermsOf,
+  invoiceTotalCents,
+} from '@/components/operation/form/document-form/schema';
 import { uploadDocumentFile } from '@/components/operation/form/document-form/file-field';
 import { SupplierFormValuesSchema, type SupplierFormValues } from '@/components/operation/form/supplier-form/schema';
 import { ManualMovementSchema, movementBlock, type ManualMovementForm } from '@/components/operation/form/movement-form/schema';
@@ -548,7 +554,7 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
                 number: payload.invoice.number,
                 issuedOn: payload.invoice.issuedOn,
                 amountCents: invoice.amountCents,
-                vatAmountCents: invoice.vatAmountCents,
+                vatLines: invoice.vatLines,
                 vatRegime: invoice.vatRegime,
                 dueOn: invoice.dueOn,
               }
@@ -622,7 +628,7 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
         })),
         // Faturanın toplamı girildiyse fatura kabule bağlı belge olarak doğar ve tedarikçi borcu ondan türer; boşsa kabul faturasız
         // yazılır, faturası sonra gelen kabul meşrudur.
-        invoice: draft.invoice.amount === null ? null : invoiceTermsOf(draft.invoice),
+        invoice: invoiceTotalCents(draft.invoice) === null ? null : invoiceTermsOf(draft.invoice),
         proposalId,
       });
       if (result.error) return { error: result.error };

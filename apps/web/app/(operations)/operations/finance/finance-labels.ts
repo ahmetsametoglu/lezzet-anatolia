@@ -1,4 +1,5 @@
 import type { AccountType, CounterpartyKind, MovementDirection, MovementType } from '@lezzet/types';
+import { DOCUMENT_VAT_PROBLEM_LABEL } from '@/components/operation/form/document-form/labels';
 import type { OpsTone } from '@/components/operation/ui/tone';
 
 // Para ekranının sözlüğü: iç terim arayüze çıkmaz ("MoneyMovement" değil "hareket", "reconciled" değil "eşleşti"). Sözlük tek
@@ -210,13 +211,11 @@ export const DOCUMENT_REASON = {
   nature_direction: 'Bu tür belgenin yönüne uymuyor — bize ödenecek belgeye gider türü konmaz.',
   unknown_counterparty: 'Seçilen cari bulunamadı ya da pasif — sayfayı tazeleyin.',
   party_conflict: 'Belgenin karşı tarafı ya bir cari ya bir tedarikçidir — ikisi birden olmaz.',
-  vat_over_amount: 'KDV tutarı belge toplamını aşamaz; toplam KDV dâhildir.',
   not_found: 'Belge bulunamadı — başka bir oturumda silinmiş olabilir.',
   wrong_key: 'Yüklenen dosya bu belgeye ait değil — yeniden yükleyin.',
   unsupported_type: 'Yalnız PDF ve fotoğraf (JPG, PNG, WEBP, HEIC) yüklenebilir.',
   storage_unavailable: 'Belge deposu bu ortamda tanımlı değil — belge kaydedildi, dosyası sonra yüklenebilir.',
-  // KDV rejimi, vade ve stok alımının bağı
-  vat_with_regime: 'Ters yüklemeli ya da muaf belgede KDV tutarı olamaz — KDV kutusunu boşaltın ya da rejimi "Standart" yapın.',
+  ...DOCUMENT_VAT_PROBLEM_LABEL,
   due_before_issue: 'Vade belgenin tarihinden önce olamaz.',
   link_conflict: 'Belge ya bir mal kabulün ya bir tedarik siparişinin faturasıdır — ikisi birden olmaz.',
   link_needs_supplier: 'Mal kabulün ya da siparişin faturası bir tedarikçinin belgesidir — önce tedarikçiyi seçin.',

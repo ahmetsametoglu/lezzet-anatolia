@@ -8,7 +8,7 @@ import {
   StockIntakeBalanceService,
   StockIntakeService,
 } from '@lezzet/database';
-import { checkDocumentFile, vatRegimeProblem } from '@lezzet/domain-core';
+import { checkDocumentFile, documentVatProblem, type DocumentVatProblem } from '@lezzet/domain-core';
 import { financeDocumentScope, privateReadUrl, privateUploadUrl, r2Keys } from '@lezzet/storage';
 import type { MoneyAllocation, MoneyDocument, MoneyDocumentBalance, MoneyDocumentInsert } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -30,11 +30,9 @@ export type DocumentOutcome =
         | 'nature_direction'
         | 'unknown_counterparty'
         | 'party_conflict'
-        | 'vat_over_amount'
         | 'not_found'
         | 'wrong_key'
-        // KDV rejimi, vade ve stok alımının bağı
-        | 'vat_with_regime'
+        | DocumentVatProblem
         | 'due_before_issue'
         | 'link_conflict'
         | 'link_needs_supplier'
@@ -55,13 +53,13 @@ export async function unknownTagOf(db: SupabaseClient, tags: readonly string[]):
 }
 
 /**
- * Belge girişi; KDV toplamı aşamaz (toplam KDV dâhil), karşı taraf cari ya da tedarikçi, tür ve etiketler sözlükten. Dosya burada
+ * Belge girişi; KDV kırılımı rejime ve oranına uyar, karşı taraf cari ya da tedarikçi, tür ve etiketler sözlükten. Dosya burada
  * bağlanmaz: anahtarı belge kimliğinden kurulduğu için önce belge doğar.
  */
 export async function createMoneyDocument(db: SupabaseClient, input: MoneyDocumentInsert): Promise<DocumentOutcome> {
-  if ((input.vatAmountCents ?? 0) > input.amountCents) return { status: 'invalid', reason: 'vat_over_amount' };
-  // Veri kısıtlarının okunur hâli: ret bir cümle olsun, PG hatası değil.
-  if (vatRegimeProblem(input.vatRegime ?? 'standard', input.vatAmountCents)) return { status: 'invalid', reason: 'vat_with_regime' };
+  // Kırılımın kuralı veri kısıtlarından önce sorulur: ret bir cümle olsun, PG hatası değil.
+  const vatProblem = documentVatProblem({ ...input, vatRegime: input.vatRegime ?? 'standard', vatLines: input.vatLines ?? [] });
+  if (vatProblem) return { status: 'invalid', reason: vatProblem };
   if (input.dueOn && input.dueOn < input.issuedOn) return { status: 'invalid', reason: 'due_before_issue' };
   if (input.counterpartyId && input.supplierId) return { status: 'invalid', reason: 'party_conflict' };
   const linkProblem = await supplyLinkProblemOf(db, input);

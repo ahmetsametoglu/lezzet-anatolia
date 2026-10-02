@@ -11,7 +11,7 @@ import {
   type PurchaseIntakeLine,
 } from '@lezzet/application';
 import { ProductService, SupplierProductService, SupplierService, serviceDb } from '@lezzet/database';
-import { resolveLocalizedText, type DocumentVatRegime } from '@lezzet/types';
+import { resolveLocalizedText, type DocumentVatLine, type DocumentVatRegime } from '@lezzet/types';
 import { DOCUMENT_REASON } from '@/app/(operations)/operations/finance/finance-labels';
 import { titleOf } from '@/lib/catalog/title';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
@@ -185,7 +185,7 @@ export async function receiveIntakeFromProposalAction(input: {
    * Faturanın para künyesi: verildiyse fatura kabule bağlı bir belge olur ve tedarikçi borcu ondan türer. Numarası kabulün notu, günü
    * kabulün günüdür.
    */
-  invoice?: { amountCents: number; vatAmountCents: number | null; vatRegime: DocumentVatRegime; dueOn: string | null } | null;
+  invoice?: { amountCents: number; vatLines: DocumentVatLine[]; vatRegime: DocumentVatRegime; dueOn: string | null } | null;
   proposalId: string;
 }): Promise<ActionResult<ReceiveOutcome>> {
   try {
@@ -257,7 +257,7 @@ export async function receiveIntakeFromProposalAction(input: {
           stockIntakeId: result.result.intakeId,
           direction: 'out',
           amountCents: input.invoice.amountCents,
-          vatAmountCents: input.invoice.vatAmountCents,
+          vatLines: input.invoice.vatLines,
           vatRegime: input.invoice.vatRegime,
         });
         if (outcome.status === 'ok') documentId = outcome.document.id;

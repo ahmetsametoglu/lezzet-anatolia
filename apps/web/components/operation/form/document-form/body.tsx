@@ -12,7 +12,7 @@ import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { naturesForDirection, type CounterpartyOption, type NatureOption, type TagOption } from '@/components/operation/form/movement-form/schema';
 import { InvoiceFieldsBlock } from './invoice-fields';
 import { DOCUMENT_DIRECTION_LABEL, DOCUMENT_KIND_LABEL } from './labels';
-import { supplierSuggestion, type DocumentForm, type StockLinkOption, type SupplierOption } from './schema';
+import { supplierSuggestion, withRegime, type DocumentForm, type StockLinkOption, type SupplierOption } from './schema';
 
 /*
   Belge formunun gövdesi; Para penceresi ve asistan kuyruğu aynı alanları çizer. Karşı taraf cari ya da tedarikçidir,
@@ -65,8 +65,12 @@ export function DocumentFormBody({
     set('supplierId', id);
     set('counterpartyId', '');
     set('stockLink', '');
-    const picked = supplierOptions.find((option) => option.value === id);
-    setValue('invoice', { ...values.invoice, ...supplierSuggestion(picked, values.invoice, values.issuedOn) }, { shouldValidate: true });
+    const picked = supplierSuggestion(
+      supplierOptions.find((option) => option.value === id),
+      values.invoice,
+      values.issuedOn,
+    );
+    setValue('invoice', withRegime({ ...values.invoice, dueOn: picked.dueOn }, picked.vatRegime), { shouldValidate: true });
   };
 
   // Bağ yalnız tedarikçinin ÖDENECEK belgesinde anlamlı: bize ödenecek bir dekont bir alımın faturası değildir.

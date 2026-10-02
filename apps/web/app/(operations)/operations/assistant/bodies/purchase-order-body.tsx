@@ -1,13 +1,18 @@
 'use client';
 
 import { suggestVatRegime } from '@lezzet/domain-core';
-import { fromCents, toCents } from '@lezzet/helper';
 import type { PurchaseOrderPayload } from '@lezzet/types';
 import { PurchaseOrderFormBody } from '@/components/operation/form/purchase-order-form/body';
 import { purchaseOrderEstimate, type PurchaseOrderFormValues } from '@/components/operation/form/purchase-order-form/schema';
 import { DocumentFileField } from '@/components/operation/form/document-form/file-field';
 import { InvoiceFieldsBlock } from '@/components/operation/form/document-form/invoice-fields';
-import { invoiceBlock, type InvoiceFields } from '@/components/operation/form/document-form/schema';
+import {
+  invoiceBlock,
+  invoiceFieldsOf,
+  invoiceTotalCents,
+  invoiceVatCents,
+  type InvoiceFields,
+} from '@/components/operation/form/document-form/schema';
 import { ProposalAside, type ProposalFact, type ProposalMeta } from '@/components/operation/ui/proposal-aside';
 import { money, num } from '@/components/operation/ui/format';
 import { searchIntakeVariantsAction } from '@/lib/warehouse/intake-actions';
@@ -47,15 +52,7 @@ export function purchaseOrderValuesFrom(payload: PurchaseOrderPayload): Purchase
         unitPriceCents: line.unitPriceCents,
       })),
     },
-    invoice: payload.invoice
-      ? {
-          // Dilekçe CENT, form EURO — çevrim sınırda.
-          amount: fromCents(payload.invoice.totalAmountCents),
-          vatAmount: payload.invoice.vatAmountCents === null ? null : fromCents(payload.invoice.vatAmountCents),
-          vatRegime: payload.invoice.vatRegime,
-          dueOn: payload.invoice.dueOn ?? '',
-        }
-      : null,
+    invoice: payload.invoice ? invoiceFieldsOf({ ...payload.invoice, amountCents: payload.invoice.totalAmountCents }) : null,
     file: null,
   };
 }
@@ -81,10 +78,7 @@ export function PurchaseOrderBody({ payload, subject, options, meta, values, onC
   const locked = disabled || readOnly;
   const invoice = values.invoice;
   const supplier = options.suppliers.find((option) => option.id === values.order.supplierId);
-  const suggested =
-    invoice && supplier
-      ? suggestVatRegime({ supplierCountry: supplier.country, vatAmountCents: invoice.vatAmount === null ? null : toCents(invoice.vatAmount) })
-      : null;
+  const suggested = invoice && supplier ? suggestVatRegime({ supplierCountry: supplier.country, vatAmountCents: invoiceVatCents(invoice) }) : null;
 
   return (
     <div className="flex flex-wrap items-stretch gap-4">
@@ -146,7 +140,7 @@ function factsOf(payload: PurchaseOrderPayload, values: PurchaseOrderDraft): Pro
           {
             label: 'Fatura toplamı',
             value: money(payload.invoice.totalAmountCents),
-            now: values.invoice.amount === null ? '—' : money(toCents(values.invoice.amount)),
+            now: money(invoiceTotalCents(values.invoice)),
           },
         ]
       : []),

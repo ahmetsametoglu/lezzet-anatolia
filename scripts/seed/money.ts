@@ -169,7 +169,8 @@ export async function seedMoney(db: Db): Promise<void> {
     direction: 'out',
     nature: 'kira',
     amountCents: toCents(1450),
-    vatAmountCents: 0,
+    // Boş işyeri kirası KDV'den muaftır (kiraya veren KDV'yi seçmediyse): kırılımı yok.
+    vatRegime: 'exempt',
     note: 'Depo kirası — eylül',
   });
   // Defterden okunur (`ledger`): servis ham `getAll`ı dışarı vermiyor ve vermemeli — seed de bir çağırandır.
@@ -184,7 +185,7 @@ export async function seedMoney(db: Db): Promise<void> {
     direction: 'out',
     nature: 'muhasebe-ucreti',
     amountCents: toCents(360),
-    vatAmountCents: toCents(60),
+    vatLines: [{ vatRate: 20, netCents: toCents(300), vatCents: toCents(60) }],
     note: 'Aylık muhasebe ücreti — ödenmedi',
   });
   await documents.insert({
@@ -195,7 +196,7 @@ export async function seedMoney(db: Db): Promise<void> {
     direction: 'out',
     nature: 'telefon-internet',
     amountCents: toCents(39.99),
-    vatAmountCents: toCents(6.67),
+    vatLines: [{ vatRate: 20, netCents: toCents(33.32), vatCents: toCents(6.67) }],
     note: 'Telefon ve internet — ağustos',
   });
 
@@ -229,7 +230,8 @@ export async function seedMoney(db: Db): Promise<void> {
       stockIntakeId: faturali.id,
       direction: 'out',
       amountCents: toCents(Number(faturali.total_amount) + 120),
-      vatAmountCents: 0,
+      // Ters yüklemede satırın KDV'si sıfır, oranı beyandaki oran: gıda ve onunla faturalanan nakliye %5,5.
+      vatLines: [{ vatRate: 5.5, netCents: toCents(Number(faturali.total_amount) + 120), vatCents: 0 }],
       vatRegime: 'reverse_charge',
       note: 'Mal bedeli + nakliye — ithalat, KDV beyanda (autoliquidation)',
     });

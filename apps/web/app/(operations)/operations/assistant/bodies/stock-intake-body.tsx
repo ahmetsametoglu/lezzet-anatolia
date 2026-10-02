@@ -1,14 +1,20 @@
 'use client';
 
 import { suggestVatRegime } from '@lezzet/domain-core';
-import { fromCents, toCents } from '@lezzet/helper';
+import { fromCents } from '@lezzet/helper';
 import type { StockIntakePayload } from '@lezzet/types';
 import { IntakeFormBody } from '@/components/operation/form/intake-form/body';
 import { emptyIntakeLine, type IntakeFormValues } from '@/components/operation/form/intake-form/schema';
 import { DocumentFileField } from '@/components/operation/form/document-form/file-field';
 import { InvoiceFieldsBlock } from '@/components/operation/form/document-form/invoice-fields';
 import { VAT_REGIME_LABEL } from '@/components/operation/form/document-form/labels';
-import { invoiceBlock, type InvoiceFields } from '@/components/operation/form/document-form/schema';
+import {
+  invoiceBlock,
+  invoiceFieldsOf,
+  invoiceTotalCents,
+  invoiceVatCents,
+  type InvoiceFields,
+} from '@/components/operation/form/document-form/schema';
 import { ProposalAside, type ProposalFact, type ProposalMeta } from '@/components/operation/ui/proposal-aside';
 import { money, num } from '@/components/operation/ui/format';
 import { searchIntakeVariantsAction } from '@/lib/warehouse/intake-actions';
@@ -48,12 +54,7 @@ export function intakeValuesFrom(payload: StockIntakePayload): IntakeDraft {
         unitCost: line.unitCostCents === null ? null : fromCents(line.unitCostCents),
       })),
     },
-    invoice: {
-      amount: payload.totalAmountCents === null ? null : fromCents(payload.totalAmountCents),
-      vatAmount: payload.vatAmountCents === null ? null : fromCents(payload.vatAmountCents),
-      vatRegime: payload.vatRegime,
-      dueOn: payload.dueOn ?? '',
-    },
+    invoice: invoiceFieldsOf({ ...payload, amountCents: payload.totalAmountCents }),
     file: null,
   };
 }
@@ -64,7 +65,9 @@ export function intakeValuesFrom(payload: StockIntakePayload): IntakeDraft {
  */
 export function intakeInvoiceBlock(draft: IntakeDraft): string | null {
   // Dosya faturanın BELGESİNE bağlanır: toplam yoksa belge doğmaz ve seçilen dosya sessizce düşerdi.
-  if (draft.invoice.amount === null) return draft.file ? 'Dosya faturanın belgesine bağlanır — faturanın toplamını girin ya da dosyayı kaldırın.' : null;
+  if (invoiceTotalCents(draft.invoice) === null) {
+    return draft.file ? 'Dosya faturanın belgesine bağlanır — faturanın toplamını girin ya da dosyayı kaldırın.' : null;
+  }
   if (!draft.intake.supplierId) return 'Faturayı belge olarak kaydetmek için tedarikçiyi seçin — ya da faturanın toplamını boşaltın.';
   return invoiceBlock(draft.invoice, draft.intake.date || new Date().toISOString().slice(0, 10));
 }
@@ -88,7 +91,7 @@ export function StockIntakeBody({ payload, subject, options, meta, values, onCha
    * kopyalamak olurdu.
    */
   const supplier = options.suppliers.find((option) => option.id === values.intake.supplierId);
-  const vatCents = values.invoice.vatAmount === null ? null : toCents(values.invoice.vatAmount);
+  const vatCents = invoiceVatCents(values.invoice);
   const suggested = supplier ? suggestVatRegime({ supplierCountry: supplier.country, vatAmountCents: vatCents }) : null;
   const locked = disabled || readOnly;
 
@@ -105,7 +108,7 @@ export function StockIntakeBody({ payload, subject, options, meta, values, onCha
           // Kuyruk patronun ekranı: fiyat görünür ve düzeltilebilir (yukarıdaki künye).
           showCost
           // Mutabakat faturanın hâliyle: KDV biliniyorsa satırlar KDV hariç tutarla karşılaştırılır, fark KDV'nin kendisi çıkmaz.
-          documentTotalCents={values.invoice.amount === null ? null : toCents(values.invoice.amount)}
+          documentTotalCents={invoiceTotalCents(values.invoice)}
           documentVatCents={vatCents}
           disabled={locked}
         />
@@ -144,7 +147,7 @@ function factsOf(payload: StockIntakePayload, values: IntakeDraft): ProposalFact
   const proposedUnits = payload.lines.reduce((sum, line) => sum + line.qty, 0);
   const nowUnits = counted.reduce((sum, line) => sum + (line.qty ?? 0), 0);
   const mappingProposals = payload.lines.filter((line) => line.mappingProposed).length;
-  const invoiceTotal = values.invoice.amount === null ? '—' : money(toCents(values.invoice.amount));
+  const invoiceTotal = money(invoiceTotalCents(values.invoice));
   return [
     { label: 'Kalem', value: String(payload.lines.length), now: String(counted.length) },
     { label: 'Toplam adet', value: num(proposedUnits), now: num(nowUnits) },

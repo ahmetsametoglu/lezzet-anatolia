@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createMoneyDocument } from '@lezzet/application';
 import { PurchaseOrderService, SupplierProductService, serviceDb } from '@lezzet/database';
-import type { DocumentVatRegime } from '@lezzet/types';
+import type { DocumentVatLine, DocumentVatRegime } from '@lezzet/types';
 import { requireFinance } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { withProposal } from '@/lib/assistant/handoff';
@@ -32,7 +32,7 @@ export async function createDraftFromProposalAction(input: {
     number: string | null;
     issuedOn: string | null;
     amountCents: number;
-    vatAmountCents: number | null;
+    vatLines: DocumentVatLine[];
     vatRegime: DocumentVatRegime;
     dueOn: string | null;
   } | null;
@@ -82,7 +82,7 @@ export async function createDraftFromProposalAction(input: {
         purchaseOrderId: created.order.id,
         direction: 'out',
         amountCents: input.invoice.amountCents,
-        vatAmountCents: input.invoice.vatAmountCents,
+        vatLines: input.invoice.vatLines,
         vatRegime: input.invoice.vatRegime,
       });
       if (outcome.status === 'ok') documentId = outcome.document.id;

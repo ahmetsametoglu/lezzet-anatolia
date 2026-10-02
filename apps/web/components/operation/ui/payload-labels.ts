@@ -120,7 +120,9 @@ const FIELD_LABEL: Record<string, string> = {
   amountCents: 'Tutar',
   totalAmountCents: 'Fatura toplamı',
   // belge / fatura
-  vatAmountCents: 'KDV',
+  vatLines: 'KDV kırılımı',
+  netCents: 'KDV hariç',
+  vatCents: 'KDV',
   vatRegime: 'KDV rejimi',
   dueOn: 'Vade',
   issuedOn: 'Belge tarihi',

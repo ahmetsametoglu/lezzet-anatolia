@@ -22,7 +22,7 @@ import {
   type SupplierCreatePayload,
 } from '@lezzet/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { proposeProductDraft } from './tools-propose';
+import { proposeMoneyDocument, proposeProductDraft } from './tools-propose';
 import { HANDLERS, TOOLS } from './server-factory';
 
 /**
@@ -475,6 +475,27 @@ describe('belge ve tedarikçi uygulayıcıları — ekranın kapısından (22.44
     await expect(APPLIERS.supplier_create(db, { ...payload, name: `Başka ad ${stamp}` })).rejects.toThrow(/zaten kayıtlı/);
   });
 
+  it('belge önerisinin kırılımı kapının kuralıyla sınanır: oranla tutmayan KDV kuyruğa girmez', async () => {
+    const base = {
+      kind: 'invoice',
+      direction: 'out',
+      issuedOn: '2026-09-10',
+      counterpartyName: `Kırılım testi ${stamp}`,
+      amountCents: 1200,
+    };
+    const yanlis = (await proposeMoneyDocument({ ...base, vatLines: [{ vatRate: 5.5, netCents: 1000, vatCents: 200 }] })) as {
+      error?: string;
+    };
+    expect(yanlis.error).toMatch(/oranıyla tutmuyor/);
+
+    const dogru = (await proposeMoneyDocument({ ...base, vatLines: [{ vatRate: 20, netCents: 1000, vatCents: 200 }] })) as {
+      error?: string;
+      proposalId?: string;
+    };
+    expect(dogru.error).toBeUndefined();
+    if (dogru.proposalId) created.push(dogru.proposalId);
+  });
+
   it('belge önerisi belge kapısından yazılır; ters yüklemede KDV REDDEDİLİR', async () => {
     const payload: MoneyDocumentPayload = {
       kind: 'invoice',
@@ -488,7 +509,7 @@ describe('belge ve tedarikçi uygulayıcıları — ekranın kapısından (22.44
       counterpartyName: null,
       nature: null,
       amountCents: 12000,
-      vatAmountCents: null,
+      vatLines: [{ vatRate: 5.5, netCents: 12000, vatCents: 0 }],
       vatRegime: 'reverse_charge',
       note: null,
     };
@@ -498,8 +519,17 @@ describe('belge ve tedarikçi uygulayıcıları — ekranın kapısından (22.44
       supplierId: supplierIds[0],
       vatRegime: 'reverse_charge',
       dueOn: '2026-09-20',
+      vatLines: payload.vatLines,
+      vatAmountCents: 0,
     });
-    await expect(APPLIERS.money_document(db, { ...payload, number: `KUY2-${stamp}`, vatAmountCents: 500 })).rejects.toThrow(/vat_with_regime/);
+    await expect(
+      APPLIERS.money_document(db, {
+        ...payload,
+        number: `KUY2-${stamp}`,
+        amountCents: 12660,
+        vatLines: [{ vatRate: 5.5, netCents: 12000, vatCents: 660 }],
+      }),
+    ).rejects.toThrow(/vat_with_regime/);
   });
 });
 

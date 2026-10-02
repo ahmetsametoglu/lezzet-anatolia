@@ -445,7 +445,9 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
       purchaseOrderId: c.acikSiparisId,
       documentNo: 'IRS-2026-0841',
       date: gun(-1),
-      totalAmountCents: 27_400,
+      // Fatura 1 € iskontolu: KDV hariç 274,00 € satırların 275,00 €'sunun altında, fark kuyrukta görünsün.
+      totalAmountCents: 28_907,
+      vatLines: [{ vatRate: 5.5, netCents: 27_400, vatCents: 1507 }],
       lines: [
         {
           variantId: birinci!.id,
@@ -485,7 +487,7 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
       counterpartyName: 'Rhin Assurances',
       nature: 'sigorta',
       amountCents: 42_000,
-      vatAmountCents: null,
+      vatLines: [],
       vatRegime: 'exempt',
       note: 'Depo sigortası — yıllık prim, 1. taksit',
     },

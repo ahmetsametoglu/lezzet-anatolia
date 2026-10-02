@@ -85,9 +85,8 @@
   Sağlayıcıya özgü kalan: ödeme ekranları (web, mobil), webhook, defter düzeni. Testler hariç 81
   dosyada `stripe` geçiyor.
 - **Para modeli** (`0018_money.sql`):
-  - `money_document` tek KDV tutarı taşıyor; Pennylane içe aktarma KDV oranlı satır istiyor →
-    **şema değişikliği** (gıda %5,5 ile ambalaj %20 aynı faturada olabilir). KDV rejimi ve para birimi
-    alanı var.
+  - `money_document` KDV'yi oran başına kırılımla taşır (`vat_lines`; gıda %5,5 ile ambalaj %20 aynı
+    faturada olabilir), KDV toplamı kırılımdan türer. KDV rejimi ve para birimi alanı var.
   - `money_allocation` (hareket ↔ belge, tutarıyla, çoktan çoğa) değişmez; 5. karar bunun üstüne.
   - Hesap türleri `cash · bank · provider · partner`. Revolut Merchant hesabı Stripe'ın `provider`
     düzenine oturur; komisyon için `stripe-ucreti` doğasının Revolut karşılığı gerekir.
@@ -428,10 +427,10 @@ gösterir.
    bulunmazsa açılır (ad, KDV numarası, ülke, vade günü). Dış referans tekil olduğu için tekrarlanan açılış çift
    kayıt doğurmaz.
 3. **Alış belgesi yükleme.** Yönü çıkış olan, dosyası ve KDV kırılımı bulunan fatura ya da fiş, canlıya geçiş
-   anından sonra girildiyse kuyruğa düşer. Yazımdan önce iki denetim yapılır, çünkü Pennylane ikisini de
-   yakalamıyor:
-   - KDV kırılımı oranla tutuyor mu (oran başına, 1 kuruş payla);
-   - aynı tedarikçide aynı numara Pennylane'de var mı (`supplier_id` + `invoice_number` süzgeci).
+   anından sonra girildiyse kuyruğa düşer. Pennylane iki şeyi yakalamıyor: KDV'nin orana uymadığı kırılımı ve
+   aynı tedarikçide aynı numarayı. Birincisi belge girişinde denetlenir (`documentVatProblem`: oran başına pay en
+   az 2 cent ya da beklenen KDV'nin binde beşi, çünkü fatura KDV'yi kalem kalem yuvarlayabilir). İkincisi yazımdan
+   önce sorulur (`supplier_id` + `invoice_number` süzgeci).
 
    Fotoğraf tek sayfalık PDF'e çevrilir, çünkü içe aktarma yalnız PDF alıyor. Sonra dosya yüklenir ve fatura içe
    aktarılır: `external_reference` belge kimliğidir, KDV kodu kırılımdan ve rejimden türer. 409 cevabının taşıdığı
@@ -465,9 +464,11 @@ doğrulanır; `live` kipinde canlı şirkete yazılır. Anahtar yalnız backend'
 açıklama yazılmaz.
 
 **Şema:**
-- `money_document_vat` (belge, oran, KDV hariç tutar, KDV): belgenin KDV'sinin tek kaynağı. `money_document.vat_amount`
-  kalkar, toplam satırlardan türer; satırsız belge KDV taşımaz. Ters yüklemede satırın KDV'si 0, oranı beyandaki
-  orandır.
+- `money_document.vat_lines` (jsonb, oran başına KDV hariç tutar ve KDV, cent): belgenin KDV'sinin tek kaynağı.
+  `vat_amount` ondan türeyen üretilmiş kolondur; satırsız belge KDV taşımaz. Satır varsa toplamı belgenin tutarıdır.
+  Ters yüklemede satırın KDV'si 0, oranı beyandaki orandır; muaf belgenin kırılımı yoktur. Ayrı tablo değil, çünkü
+  belge tek satırlık yazımla doğar ve kırılımı onunla tutarlı kalır; Pennylane kuyruğunun tetikleyicisi belgede
+  durur.
 - Ayna ve kuyruk:
   - `pennylane_account`: banka hesabı ↔ Pennylane banka hesabı;
   - `pennylane_party`: Pennylane tedarikçisi ↔ tedarikçi ya da cari;
@@ -496,7 +497,7 @@ var.
 **Kod yerleşimi:**
 - `packages/domain-core/src/accounting/pennylane/`: iki yönlü KDV kodu eşlemesi, içe aktarma gövdesi, yazım öncesi
   denetimler, bağ planı (istenen küme; ekle ya da baştan yaz), kalan tutar karşılaştırması.
-- `packages/database`: tablolar, kuyruk tetikleyicileri (belge, KDV kırılımı, bağ), servisler.
+- `packages/database`: tablolar, kuyruk tetikleyicileri (belge ve kırılımı, bağ), servisler.
 - `packages/application/src/accounting/pennylane/`: port ve Pennylane istemcisi (istek sınırı, test şirketi
   denetimi), bellek içi ikiz, okuma (hareket, e-fatura), yazma (tedarikçi, belge, bağ, ödeme durumu), sessizlik
   uyarısı. Cevap biçimi ölçülen alanlarla `packages/types` sözleşmesindedir. Fotoğrafı PDF'e çevirmek için yeni

@@ -65,7 +65,7 @@ async function fatura(stockIntakeId: string, over: Partial<Parameters<typeof cre
     stockIntakeId,
     direction: 'out',
     amountCents: 4800,
-    vatAmountCents: 800,
+    vatLines: [{ vatRate: 20, netCents: 4000, vatCents: 800 }],
     ...over,
   });
   if (outcome.status === 'ok') documentIds.push(outcome.document.id);
@@ -107,6 +107,15 @@ describe('borç belgeden türer (12.26)', () => {
     const intake = await malKabul();
     expect(await fatura(intake.intakeId, { vatRegime: 'reverse_charge' })).toMatchObject({ status: 'invalid', reason: 'vat_with_regime' });
     expect(await fatura(intake.intakeId, { dueOn: dayOffset(-1) })).toMatchObject({ status: 'invalid', reason: 'due_before_issue' });
-    expect((await fatura(intake.intakeId, { vatRegime: 'reverse_charge', vatAmountCents: 0, amountCents: 4000, dueOn: dayOffset(10) })).status).toBe('ok');
+    expect(
+      (
+        await fatura(intake.intakeId, {
+          vatRegime: 'reverse_charge',
+          vatLines: [{ vatRate: 5.5, netCents: 4000, vatCents: 0 }],
+          amountCents: 4000,
+          dueOn: dayOffset(10),
+        })
+      ).status,
+    ).toBe('ok');
   });
 });

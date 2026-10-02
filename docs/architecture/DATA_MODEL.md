@@ -99,7 +99,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `discount_trigger`: coupon, automatic
 - `discount_type`: percent, fixed
 - `document_kind`: invoice, receipt, payslip, contract, statement, other *(muhasebe belgesinin türü; `statement` banka/sağlayıcı dekontu)*
-- `document_vat_regime`: standard, reverse_charge, exempt *(belgenin KDV rejimi — 12.26; `reverse_charge` = autoliquidation: belgede KDV yok, beyanda hesaplanır; `exempt` = muaf; standart dışında belgede KDV olmaz)*
+- `document_vat_regime`: standard, reverse_charge, exempt *(belgenin KDV rejimi; `reverse_charge` = autoliquidation: belgede KDV yok, beyanda hesaplanır, kırılımın KDV'si sıfır; `exempt` = muaf, kırılımı yok)*
 - `error_log_level`: warning, error, fatal
 - `feedback_channel`: email, whatsapp
 - `feedback_context`: purchase, candidate
