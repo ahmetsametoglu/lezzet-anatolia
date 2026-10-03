@@ -44,6 +44,7 @@ export * from './temperature-log.schema';
 export * from './supply.schema';
 export * from './money.schema';
 export * from './bank-import.schema';
+export * from './queue.schema';
 export * from './register.schema';
 export * from './pennylane.schema';
 export * from './job-run.schema';

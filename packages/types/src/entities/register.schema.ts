@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { dbNumeric } from '../primitives/db-numeric';
 import { PaymentMethodEnum } from '../primitives/enums.schema';
 import { MovementDirectionEnum } from './money.schema';
+import { QueueRowSchema } from './queue.schema';
 
 // Kasa aynası: sertifikalı kasaya (Hiboutik) ne yazıldığının bizdeki kaydı. Sonraki yazımın farkı buna göre çıkar.
 
@@ -255,22 +256,12 @@ export const RegisterCashOpUpdateSchema = RegisterCashOpSchema.pick({ id: true, 
 export type RegisterCashOpUpdate = z.infer<typeof RegisterCashOpUpdateSchema>;
 
 /** Kuyruk satırı: bir sipariş ya da bir nakit hareketi yeniden eşitlenecek; satırı `money_movement` tetikleyicisi yazar. */
-export const RegisterQueueSchema = z.object({
-  id: z.string().uuid(),
+export const RegisterQueueSchema = QueueRowSchema.extend({
   orderId: z.string().uuid().nullable(),
   movementId: z.string().uuid().nullable(),
-  markedAt: z.string(),
-  attempts: z.number().int(),
-  nextAttemptAt: z.string(),
-  lastError: z.string().nullable(),
 });
 export type RegisterQueue = z.infer<typeof RegisterQueueSchema>;
 
 /** Kuyruğa elle yalnız kasa hareketi düşer: çekmece eşlenmeden önce yazılan hareket tetikleyiciden geçmemiştir. */
 export const RegisterQueueInsertSchema = z.object({ movementId: z.string().uuid() });
 export type RegisterQueueInsert = z.infer<typeof RegisterQueueInsertSchema>;
-
-export const RegisterQueueUpdateSchema = RegisterQueueSchema.pick({ id: true, attempts: true, nextAttemptAt: true, lastError: true })
-  .partial()
-  .required({ id: true });
-export type RegisterQueueUpdate = z.infer<typeof RegisterQueueUpdateSchema>;

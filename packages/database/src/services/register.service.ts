@@ -13,7 +13,6 @@ import {
   RegisterProductUpdateSchema,
   RegisterQueueInsertSchema,
   RegisterQueueSchema,
-  RegisterQueueUpdateSchema,
   RegisterStoreInsertSchema,
   RegisterStoreSchema,
   RegisterTicketInsertSchema,
@@ -34,7 +33,6 @@ import {
   type RegisterProductUpdate,
   type RegisterQueue,
   type RegisterQueueInsert,
-  type RegisterQueueUpdate,
   type RegisterStore,
   type RegisterStoreInsert,
   type RegisterTicket,
@@ -45,6 +43,7 @@ import {
   type RegisterTicketUpdate,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+import { QueueDbService } from '../core/queue.service';
 
 // Sertifikalı kasanın bizdeki aynası ve kuyruğu (docs/feature/kasa-muhasebe.md §7); servisler yalnız satır okur ve yazar, plan motordadır.
 
@@ -206,9 +205,9 @@ export class RegisterCashOpService extends BaseDbService<RegisterCashOp, Registe
 }
 
 /** Kuyruk; satırları `money_movement` tetikleyicisi yazar, işleyen yalnız okur, erteler ve siler. */
-export class RegisterQueueService extends BaseDbService<RegisterQueue, RegisterQueueInsert, RegisterQueueUpdate> {
+export class RegisterQueueService extends QueueDbService<RegisterQueue, RegisterQueueInsert> {
   constructor(supabase: SupabaseClient) {
-    super(supabase, 'register_queue', RegisterQueueSchema, RegisterQueueInsertSchema, RegisterQueueUpdateSchema);
+    super(supabase, 'register_queue', RegisterQueueSchema, RegisterQueueInsertSchema);
   }
 
   /** Hareketleri kuyruğa işaretler; zaten kuyrukta olan satır olduğu gibi kalır. */
@@ -219,63 +218,12 @@ export class RegisterQueueService extends BaseDbService<RegisterQueue, RegisterQ
     );
   }
 
-  /** Bu sebeple duran satırları hemen yeniden denemeye açar; sebebi kaldıran değişiklik (eşleme) bekleme süresini beklemesin. */
-  async retryBlocked(reason: string, now: string): Promise<void> {
-    const rows = await this.getAll({ lastError: `blocked:${reason}` });
-    await this.updateWhereIn(
-      'id',
-      rows.map((row) => row.id),
-      { nextAttemptAt: now },
-    );
-  }
-
-  /** Vakti gelen satırlar, en eskiden; tur başına sınırlı ki tek tur kasayı boğmasın. */
-  listDue(now: string, limit: number): Promise<RegisterQueue[]> {
-    return this.getAll(undefined, {
-      rangeFilters: [{ field: 'nextAttemptAt', operator: 'lte', value: now }],
-      orderBy: 'markedAt',
-      limit,
-    });
-  }
-
-  /** Kuyrukta bekleyen sipariş ve kasa hareketi; ertelenmiş ve durmuş satırlar da sayılır. */
-  countWaiting(): Promise<number> {
-    return this.count();
-  }
-
   /** Kuyruğun tamamı; satırlar işlenince silindiği için küme kısa kalır, gün sonu onu mağazalara dağıtır. */
   listAll(): Promise<RegisterQueue[]> {
     return this.getAll(undefined, { orderBy: 'markedAt' });
   }
 
-  /** Planı duran satırlar (`blocked:<sebep>`); çözümleri bir para değişikliğidir, sebep ekrana gider. */
-  listBlocked(limit = 500): Promise<RegisterQueue[]> {
-    return this.getAll(undefined, { prefixFilters: [{ field: 'lastError', value: 'blocked:' }], limit });
-  }
-
-  /** Kasaya ulaşamayıp yeniden denenen satırlar; planı duran satır önceki deneme sayısını korur, o yüzden ayrılır. */
-  countFailing(): Promise<number> {
-    return this.count(undefined, {
-      rangeFilters: [{ field: 'attempts', operator: 'gt', value: 0 }],
-      orFilters: ['last_error.is.null,last_error.not.like.blocked:*'],
-    });
-  }
-
   findByOrder(orderId: string): Promise<RegisterQueue | null> {
     return this.getOneBy({ orderId });
-  }
-
-  /** İşlenen satırı siler; işlem sürerken yeniden işaretlendiyse (`markedAt` değiştiyse) satır kalır ve sonraki tur yine işler. */
-  async complete(id: string, markedAt: string): Promise<void> {
-    await this.deleteWhere({ id, markedAt });
-  }
-
-  /** Satırı erteler; işlem sürerken yeniden işaretlendiyse vakit hemen geri çekilir ki yeni değişiklik ertelemeyi beklemesin. */
-  async defer(
-    row: Pick<RegisterQueue, 'id' | 'markedAt'>,
-    change: { attempts: number; nextAttemptAt: string; lastError: string },
-  ): Promise<void> {
-    const deferred = await this.update({ id: row.id, ...change });
-    if (deferred.markedAt !== row.markedAt) await this.update({ id: row.id, nextAttemptAt: deferred.markedAt });
   }
 }

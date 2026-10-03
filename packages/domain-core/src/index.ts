@@ -58,6 +58,7 @@ export * from './payment/refund-method';
 export * from './register/plan';
 export * from './register/split';
 export * from './register/reconcile';
+export * from './queue/retry';
 export * from './money/movement';
 export * from './money/dictionary-slug';
 export * from './money/pinpoint';

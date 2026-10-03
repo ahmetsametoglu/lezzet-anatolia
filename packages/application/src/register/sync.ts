@@ -33,6 +33,7 @@ import type {
   RegisterTicketSnapshot,
 } from '@lezzet/types';
 import { notifyRegisterWriteStuck } from '../notification/staff-events';
+import { deferBlocked, deferFailed } from '../queue/defer';
 import type { CashRegister } from './port';
 import { ensureItemProducts, ensureShippingProduct } from './products';
 
@@ -45,10 +46,6 @@ import { ensureItemProducts, ensureShippingProduct } from './products';
 export const REGISTER_LIVE_FROM_KEY = 'register_live_from';
 
 const BATCH = 20;
-const ALERT_AFTER_ATTEMPTS = 5;
-/** Plan durduysa çözüm bir para değişikliğiyle gelir ve satırı zaten yeniden işaretler; ara deneme seyrek tutulur. */
-const BLOCKED_RETRY_MS = 6 * 3_600_000;
-const MAX_BACKOFF_MS = 3_600_000;
 
 type BlockReason = RegisterBlockReason | 'no_store';
 /** `written`: kasa bu kaydı yansıtıyor (şimdi ya da önceden yazıldı); `skipped`: kayıt kasanın kapsamı dışında. */
@@ -105,22 +102,16 @@ export async function processQueueRow(db: Db, register: CashRegister, row: Regis
       ? await syncOrderRegister(db, register, row.orderId, ctx)
       : await syncCashMovement(db, register, row.movementId!, ctx);
     if (outcome.status === 'blocked') {
-      const nextAttemptAt = new Date(ctx.now.getTime() + BLOCKED_RETRY_MS).toISOString();
-      const lastError = `blocked:${outcome.reason}`;
-      await queue.defer(row, { attempts: row.attempts, nextAttemptAt, lastError });
-      // Durma ilk görüldüğünde haber verilir; seyrek yeniden deneme aynı sebeple durdukça tekrar etmez.
-      if (row.lastError !== lastError) await alertStuck(db, row, outcome.reason, ctx.now);
+      if ((await deferBlocked(queue, row, outcome.reason, ctx.now)).firstTime) await alertStuck(db, row, outcome.reason, ctx.now);
       return 'blocked';
     }
     await queue.complete(row.id, row.markedAt);
     return outcome.status;
   } catch (err) {
-    const attempts = row.attempts + 1;
     const message = err instanceof Error ? err.message : String(err);
-    const nextAttemptAt = new Date(ctx.now.getTime() + Math.min(2 ** (attempts - 1) * 60_000, MAX_BACKOFF_MS)).toISOString();
-    await queue.defer(row, { attempts, nextAttemptAt, lastError: message });
+    const { attempts, alert } = await deferFailed(queue, row, message, ctx.now);
     const target = { orderId: row.orderId, movementId: row.movementId, attempts };
-    if (attempts === ALERT_AFTER_ATTEMPTS) {
+    if (alert) {
       await captureError(err, { source: SOURCES.backendCron, context: { job: 'register_sync', ...target } });
       await alertStuck(db, row, 'error', ctx.now);
     } else {
