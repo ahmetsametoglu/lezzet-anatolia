@@ -13,17 +13,8 @@ import { resetWarehouseStatus } from '@/screens/warehouse/warehouse-status';
 import { chooseWarehouse, resetWarehouseChoice } from '@/lib/operations/warehouse-choice';
 
 /*
-  YERİNDE SATIŞ EKRAN TESTİ (21.119) — bu ekranın EN KRİTİK iddiaları paranın yazımıyla ilgilidir:
-
-  · **Pazarlık yalnız DOKUNULANDA gider**: fiyat alanı liste fiyatıyla açılır; değişmediyse istekte
-    `negotiatedUnitPriceCents` HİÇ olmaz (fiyatı sunucu çözer), değiştiyse tam o kalemde olur.
-    Sessizce her kaleme fiyat göndermek, siparişin parasını istemciye yazdırmak olurdu.
-  · **Kalan adet gösterge, karar sunucuda**: kart "kalan N" yazar; adet kalanı aşarsa çekmece
-    onaylatmaz. Ama `insufficient_here` cevabı yine de gelebilir (stok o an düşmüştür) ve ekran
-    onu adı + kalanıyla gösterirken SEPETİ BOZMAZ — personel adedi düşürüp yeniden dener.
-  · **Çok boylu ürün boyunu çekmecede seçer** ve istek SEÇİLEN boyun kimliğini taşır.
-
-  Ağ fetch seviyesinde sahte (mal kabul emsali): URL'e göre dallanır, cevaplar sözleşme şeklinde.
+  Yerinde satışın para iddiaları: pazarlık fiyatı yalnız dokunulan kalemle gider, değişmeyen kalemin fiyatını sunucu çözer;
+  `insufficient_here` cevabı sepeti bozmaz, personel adedi düşürüp yeniden dener. Ağ fetch düzeyinde sahte, URL'e göre dallanır.
 */
 
 const mockReplace = jest.fn();
@@ -42,8 +33,7 @@ jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
 }));
 
 /*
-  KART ÇİZİM SAYACI (26.08 cihaz bulgusu: "çekmece kasarak açılıyor") — kasmanın ölçülen sebebi,
-  dokunuşun ve boy cevabının KART LİSTESİNİ animasyonla aynı karede yeniden çizdirmesiydi.
+  Kart çizim sayacı: dokunuş ve boy cevabı kart listesini animasyonla aynı karede yeniden çizdirirse çekmece kasarak açılır.
   `PressableSurface` sahtesi ürün kartı çizimlerini sayar; iddia "dokunuştan sonra sayaç 0".
 */
 const mockRowRenders = { count: 0 };
@@ -163,10 +153,10 @@ async function renderSale(place: SalePlace = 'facility') {
     <SaleProvider place={place}>
       <SaleScreen />
       <SaleCartScreen />
-      {/* Fiş de aynı sağlayıcının altında: satış yazılınca sepet ekranı `/sale/receipt`e geçiyor
-          (v3:22) ve sonucun okunacağı yer artık orası — geçişin KENDİSİ de burada ölçülüyor. */}
+      {/* Fiş de aynı sağlayıcının altında, çünkü satış yazılınca ekran `/sale/receipt`e geçer ve sonuç orada okunur; geçişin
+          kendisi de burada ölçülür. */}
       <SaleReceiptScreen />
-      {/* TOAST HOST TESTTE DE ÇİZİLİR (01.09): olumsuz cevaplar artık bu kanaldan geçiyor. */}
+      {/* Toast taşıyıcısı testte de çizilir, çünkü olumsuz cevaplar bu kanaldan geçer. */}
       <ToastHost />
     </SaleProvider>,
   );
@@ -181,7 +171,7 @@ async function addSimit() {
   await waitFor(() => expect(screen.getByTestId(`sale-cart-${TEK_VARYANT}`)).toBeTruthy());
 }
 
-/** Tahsilat türü ARTIK BİLİNÇLİ seçilir (varsayılan yok) — satışa giden her test bunu yapar. */
+/** Tahsilat türünün varsayılanı yok; satışa giden her test onu bilinçli seçer. */
 async function pickCash() {
   await fireEvent.press(screen.getByTestId('sale-payment-cash'));
 }
@@ -224,7 +214,7 @@ it('dokunulmamış fiyat İSTEKTE YOK; satış yazılınca sepet sıfırlanır v
   const body = postBody();
   expect(body.paymentMethod).toBe('cash');
   expect(body.lines).toEqual([{ variantId: TEK_VARYANT, qty: 1 }]); // negotiated alanı HİÇ yok
-  // Sonuç artık FİŞTE (v3:22): tutar, tahsilat türü ve referans bir arada okunuyor.
+  // Sonuç fişte okunur: tutar, tahsilat türü ve referans bir arada.
   expect(mockReplace).toHaveBeenCalledWith('/sale/receipt');
   expect(screen.getByTestId('sale-receipt-total')).toHaveTextContent(/4,50/);
   expect(screen.getByTestId('sale-receipt-meta')).toHaveTextContent(/Nakit · SP-26-0009/);
@@ -255,8 +245,8 @@ it('yetersiz stok cevabı adı ve kalanıyla görünür — sepet BOZULMAZ', asy
   await pickCash();
 
   await fireEvent.press(screen.getByTestId('sale-cta'));
-  /* Cevap artık TOAST'ta (01.09): düğmenin üstündeki cümle bir sonraki eyleme kadar asılı
-     kalıyordu. Ölçülen şey değişmedi — personel müşteriye "üçü var" diyebilmeli. */
+  /* Cevap toast'ta, çünkü düğmenin üstündeki cümle bir sonraki eyleme kadar asılı kalırdı. Ölçülen şey: personel müşteriye
+     "üçü var" diyebilmeli. */
   await waitFor(() => expect(screen.getByTestId('toast-message')).toBeTruthy());
   expect(screen.getByTestId('toast-message')).toHaveTextContent(/Simit \(kalan 3\)/);
   // Sepet duruyor: personel adedi düşürüp yeniden dener, her şeyi baştan seçmez.
@@ -282,9 +272,8 @@ it('çok boylu ürün boyunu çekmecede seçer — istek SEÇİLEN boyun kimliğ
 
 it('tahsilat türü SEÇİLMEDEN satış yazılamaz — para yazan alanda varsayılan yok', async () => {
   /*
-    Kullanıcı bulgusu 26.08: "Nakit" önseçiliydi ve satış hiç dokunmadan kapanabiliyordu. Kartla
-    tahsil edilip "nakit" yazılan satış, sefer kapanışının nakit beklentisini sessizce bozar —
-    seçim artık bilinçli: sepet doluyken bile CTA kapalı, tek POST atılamaz.
+    Kartla tahsil edilip "nakit" yazılan satış sefer kapanışının nakit beklentisini sessizce bozar; önseçim olsaydı satış hiç
+    dokunmadan kapanırdı. Bu yüzden tür seçilmeden sepet doluyken bile CTA kapalı ve tek POST atılmaz.
   */
   withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 450, referenceNo: null, paymentRecorded: true });
   await renderSale();
@@ -354,8 +343,8 @@ it('okutmayla gelen adet kalanı aşınca çekmece onaylatmaz ve sebebini söyle
 });
 
 it('yüzen daire de okutmayı açar; simülasyon çipinin altında okutulacak ÜRÜNÜN ADI yazar', async () => {
-  /* Kullanıcı kararı 02.09: "yerinde satışta da fab barkod butonu olsun" + çiplere ürün adı.
-     Ad aynı `/sale/scan` ucundan çözülür: çipin altındaki ad, basınca açılacak çekmecenin başlığı. */
+  /* Yerinde satışta da barkod düğmesi var ve çiplerde ürün adı yazar. Ad aynı `/sale/scan` ucundan çözülür: çipin altındaki ad,
+     basınca açılacak çekmecenin başlığıdır. */
   withScan({ status: 'ok', product: COK, variant: { ...BOYLAR[1], availableHere: 12 }, qtyPerCode: 6 });
   await renderSale();
 
@@ -389,9 +378,8 @@ const SATISLAR = [
 const STR: StaffWarehouse = { id: 'w-str', code: 'STR', name: 'Strasbourg Merkez', kind: 'facility' };
 
 /**
- * Geçmiş ekranı artık oturum künyesini okuyor (üstbaşlığın tesis kuyruğu), yani kabuk SAĞLAYICISI
- * olmadan çizilemez — kapıyı geçmemiş bir ekranı yetkili gibi göstermemenin bedeli bu
- * (`sections-context` künyesi: sağlayıcısız çağrı sessizce boş değer DÖNMEZ, fırlatır).
+ * Geçmiş ekranı oturum künyesini okur, yani kabuk sağlayıcısı olmadan çizilemez: sağlayıcısız çağrı boş değer dönmez, fırlatır
+ * (`sections-context`). Kapıyı geçmemiş bir ekranı yetkili gibi göstermemenin bedeli bu.
  */
 async function renderHistory(warehouse: StaffWarehouse | null = null) {
   await render(
@@ -404,8 +392,8 @@ async function renderHistory(warehouse: StaffWarehouse | null = null) {
         resolvedWarehouseId: warehouse?.id ?? null,
       }}
     >
-      {/* Sağlayıcı BURADA DA sarıyor (01.09): ekran artık satış YERİNİ okuyor (`useSalePlace`) —
-          uygulamada zaten `sale/_layout`ın altında duruyor, sağlayıcısız hâli yok. */}
+      {/* Sağlayıcı burada da sarar, çünkü ekran satış yerini okur (`useSalePlace`); uygulamada zaten `sale/_layout`ın altında
+          durur. */}
       <SaleProvider place="facility">
         <SaleHistoryScreen />
       </SaleProvider>
@@ -429,9 +417,8 @@ it('SON SATIŞLAR kim sattıysa onu söylüyor — iz yoksa uydurmuyor', async (
 });
 
 /*
-  KÜNYE TESİSİN ADIYLA (v3:21 · 30.08) — ve burada ad bir bağlam süsü DEĞİL, listenin SÜZGECİ:
-  uç `listRecentDoorSales(db, warehouseId)` ile okuyor. Çok depolu personele hangi tesisin
-  kasasına baktığını söylememek, iki tesisin satışlarını tek listeymiş gibi okutmaktı.
+  Künye tesisin adıyla, çünkü ad listenin süzgecidir: uç `listRecentDoorSales(db, warehouseId)` ile okur. Çok depolu personele
+  hangi tesisin kasasına baktığını söylememek iki tesisin satışlarını tek listeymiş gibi okuturdu.
 */
 it('SON SATIŞLAR künyesi hangi tesisin kasası olduğunu söyler', async () => {
   withNetwork({ status: 'failed' });
@@ -450,11 +437,8 @@ it('tesis adı yoksa künye KUYRUKSUZ kalır — uydurma bir tesis yazılmaz', a
 });
 
 /*
-  İLK YÜK İSKELET, HALKA DEĞİL (N9'un satış payı · 06.09) — kurye şeridinin emsali birebir.
-
-  Ayıran iz ROL: halka (`LoadingState`) kendini `progressbar` diye tanıtır, iskelet tanıtmaz.
-  Metne ya da testID'ye bakmak yeterli olmazdı: ikisi de aynı "Yükleniyor…" cümlesini taşıyor ve
-  bir gün biri halkayı geri koysa test yine yeşil kalırdı.
+  İlk yük iskeletle çizilir, halkayla değil; ayıran iz rol: halka (`LoadingState`) kendini `progressbar` diye tanıtır, iskelet
+  tanıtmaz. Metne ya da testID'ye bakmak yetmezdi, çünkü ikisi de aynı "Yükleniyor…" cümlesini taşıyor.
 */
 describe('ilk yük iskeleti (06.09)', () => {
   /*
@@ -528,13 +512,11 @@ describe('çevrimdışı kilidi (v3:20)', () => {
     da kapanıyor ve ikisi de sebebini söylüyor.
   */
   /*
-    BARKOD OKUTMA (kullanıcı kararı 02.09): okutma sepete DOĞRUDAN yazmaz — kartla açılan aynı
-    çekmece açılır, boy seçili, adet koli çarpanı. Kurye adedi görüp onaylar; 12'lik koli
-    barkodunu okutan biri sepetinde sessizce 12 kalem bulmamalı.
+    Barkod okutma sepete doğrudan yazmaz: kartla açılan aynı çekmece boy seçili ve adet koli çarpanıyla açılır. Kurye adedi görüp
+    onaylar; 12'lik koli barkodunu okutan biri sepetinde sessizce 12 kalem bulmamalı.
   */
   it('OKUTMA çekmeceyi açar — okutulan boy seçili, adet koli çarpanı', async () => {
-    /* Kalan 12: koli çarpanı (6) kalanı AŞMAMALI, yoksa sınanan şey okutma değil stok kilidi olur
-       (ilk yazımda fikstürün kalanı 2'ydi ve çekmece haklı olarak onaylatmadı). */
+    /* Kalan 12: koli çarpanı (6) kalanı aşmamalı, yoksa sınanan şey okutma değil stok kilidi olur. */
     withScan({ status: 'ok', product: COK, variant: { ...BOYLAR[1], availableHere: 12 }, qtyPerCode: 6 });
     await renderSale();
 
@@ -542,7 +524,7 @@ describe('çevrimdışı kilidi (v3:20)', () => {
     await fireEvent(screen.getByTestId('sale-scan-sheet'), 'scan', 'KOLI-1KG');
 
     await waitFor(() => expect(screen.getByTestId('sale-drawer-confirm')).toBeTruthy());
-    // Boy SORULMAZ (kullanıcı kararı 02.09): başlıkta durur, çip yok; adet 6 ile açıldı.
+    // Boy sorulmaz: başlıkta durur, çip yok; adet 6 ile açılır.
     expect(screen.getByText('Baklava · 1 kg')).toBeTruthy();
     expect(screen.queryByTestId(`sale-variant-${COK_VARYANT_2}`)).toBeNull();
     expect(screen.queryByTestId(`sale-variant-${COK_VARYANT_1}`)).toBeNull();
@@ -628,15 +610,8 @@ describe('fiş (v3:22)', () => {
 
 describe('araçtan satış (01.09 · kullanıcı kararı)', () => {
   /*
-    ── ÖLÇÜLEN ARIZA ──────────────────────────────────────────────────────────
-    Kurye "Yoldan gelen müşteri"ye dokununca ANA DEPONUN kataloğunu görüyordu: araçta dört kalem
-    varken ekranda tesisin partileri vardı. Sebep telde: satış istekleri cihazdaki depo seçimini
-    (`?warehouseId=`) taşıyordu ve sunucunun "kuryenin satış deposu aracıdır" kuralı yalnız
-    PARAMETRESİZ isteğe karışıyordu — yani hiç karışmıyordu.
-
-    Kuryenin seçtiği depo onun ROTA deposudur (hangi bölgenin duraklarını sürüyor), satış deposu
-    değil. İkisi aynı parametreye yazıldığı sürece kural bir daha ölür; bu yüzden yer artık
-    ADRESTE ve açık.
+    Kuryenin seçtiği depo rota deposudur, satış deposu araçtır: ikisi aynı parametreye (`?warehouseId=`) yazılsa sunucunun
+    kuralı devreye girmez ve kurye aracı yerine ana deponun kataloğunu görür. Bu yüzden satış yeri adreste ve açık.
   */
   it('araç yüzeyi depo seçimini TAŞIMAZ, yerini SÖYLER', async () => {
     withNetwork({ status: 'failed' });

@@ -4,14 +4,8 @@ import type { CatalogProductDetail, CatalogVariant } from '@lezzet/types';
 import { catalogProduct } from '@/screens/catalog/catalog-fixture';
 
 /*
-  ÜRÜN DETAY TEST VERİSİ — ekran testinin TEL CEVABI (fetch mock'u bu gövdeyi döner). Şekil
-  `CatalogProductDetail`den TÜRER: sözleşme bir alan kazandığında bu dosya derlemede kırılır ve
-  test güncellenmeden yeşile dönemez.
-
-  "Benzer ürünler" kartları katalog fixture'ından gelir (`catalogProduct`) — kart sözleşmesi ortak
-  (`CatalogProductSchema`) ve iki yerde iki yer tutucu yazmak birinin eskimesi demekti (CLAUDE §1).
-
-  Kimlikler UUID biçiminde (şema istiyor); okunur olsunlar diye sonları sayaçlı.
+  Ekran testinin tel cevabı (fetch sahtesi bu gövdeyi döner); şekil `CatalogProductDetail`den türer ki sözleşme alan kazanınca bu
+  dosya derlemede kırılsın. Benzer ürün kartları katalog fikstüründen gelir, çünkü kart sözleşmesi ortak.
 */
 
 const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -39,7 +33,7 @@ export function productDetail(overrides: Partial<CatalogProductDetail> = {}): Ca
   return {
     id: uuid(1),
     slug: 'el-acmasi-kol-boregi',
-    // Paylaşım adresi (08.45) — gerçek uçta `localizedUrl` üretir; fixture yalnız aynı ŞEKLİ taşır.
+    // Paylaşım adresini gerçek uçta `localizedUrl` üretir; fikstür yalnız aynı şekli taşır.
     shareUrl: 'https://www.lezzetanatolia.fr/tr/urun/el-acmasi-kol-boregi',
     name: 'El Açması Kol Böreği',
     description: 'El açması yufka, taş fırında günlük pişer; peynirli iç harcı Anadolu tulumuyla yoğrulur.',
@@ -53,8 +47,8 @@ export function productDetail(overrides: Partial<CatalogProductDetail> = {}): Ca
       image: { url: null, crop: CROP_CENTER, frames: null },
     },
     variants: [productVariant(1), productVariant(2)],
-    /* Fiyatı olan EN UCUZ boy — burada 1. boy (890 vs 1780). Sunucu bu ölçütü kendisi uygular
-       (`primaryVariantOf`); fikstür yalnız sonucunu taşır, kuralı tekrar etmez. */
+    /* Fiyatı olan en ucuz boy, burada 1. boy (890'a karşı 1780); ölçütü sunucu uygular (`primaryVariantOf`), fikstür yalnız
+       sonucunu taşır. */
     primaryVariantId: uuid(1101),
     declaration: {
       ingredients: [
