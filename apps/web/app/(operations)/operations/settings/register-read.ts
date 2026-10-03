@@ -4,6 +4,7 @@ import { AccountService, JobRunService, RegisterQueueService, RegisterStoreServi
 import { registerLiveFrom } from '@lezzet/application';
 import { parisDateOf } from '@lezzet/helper';
 import { blockReasonOf } from '@/lib/register/labels';
+import { jobView, type SetupJobView } from './setup-job';
 
 /** Tesis başına kasa eşlemesi; eşlenmemiş tesis de listede durur ki eşleme buradan açılsın. */
 export interface RegisterStoreRowView {
@@ -14,13 +15,6 @@ export interface RegisterStoreRowView {
   cashAccountName: string | null;
 }
 
-/** Bir backend turunun izi: ne zaman koştu, atladıysa neden, düştüyse hatası. */
-export interface RegisterJobView {
-  at: string;
-  skipped: string | null;
-  error: string | null;
-}
-
 export interface RegisterPanelData {
   /** Canlıya geçiş günü (Paris); `null` = kasaya hiçbir şey yazılmıyor. */
   liveFrom: string | null;
@@ -29,8 +23,8 @@ export interface RegisterPanelData {
   waiting: number;
   blocked: { reason: string; count: number }[];
   failing: number;
-  sync: RegisterJobView | null;
-  dayEnd: (RegisterJobView & RegisterDayEndView) | null;
+  sync: SetupJobView | null;
+  dayEnd: (SetupJobView & RegisterDayEndView) | null;
 }
 
 /** Son gece işinin sonucu, bütün mağazalar için: gün kapandı mı, kaç fark ve kaç bekleyen kayıt vardı. */
@@ -45,20 +39,10 @@ export interface RegisterDayEndView {
   live: boolean;
 }
 
-/** Turun kendini atlama sebebi, operatörün diliyle; tanınmayan kod olduğu gibi gösterilir. */
+/** Turun kendini atlama sebebi, operatörün diliyle. */
 const JOB_SKIP_LABEL: Record<string, string> = {
   not_live: 'kasa kapalı',
   not_configured: 'Hiboutik anahtarları tanımlı değil',
-};
-
-/** Atlanan turda `skipped` sebep kodudur; normal turda aynı alan atlanan satır sayısıdır ve gösterilmez. */
-const jobView = (row: { lastRunAt: string; lastResult: Record<string, unknown> | null; lastError: string | null }): RegisterJobView => {
-  const skipped = row.lastResult?.['skipped'];
-  return {
-    at: row.lastRunAt,
-    skipped: typeof skipped === 'string' ? (JOB_SKIP_LABEL[skipped] ?? skipped) : null,
-    error: row.lastError,
-  };
 };
 
 export async function readRegisterPanel(): Promise<RegisterPanelData> {
@@ -105,10 +89,10 @@ export async function readRegisterPanel(): Promise<RegisterPanelData> {
     waiting,
     blocked: [...reasons].map(([reason, count]) => ({ reason, count })),
     failing,
-    sync: sync ? jobView(sync) : null,
+    sync: sync ? jobView(sync, JOB_SKIP_LABEL) : null,
     dayEnd: dayEnd
       ? {
-          ...jobView(dayEnd),
+          ...jobView(dayEnd, JOB_SKIP_LABEL),
           date: typeof dayEnd.lastResult?.['date'] === 'string' ? (dayEnd.lastResult['date'] as string) : null,
           closed: dayStores.length > 0 && dayStores.every((store) => store.closed === true),
           differences: dayStores.reduce((sum, store) => sum + (store.differences ?? 0), 0),

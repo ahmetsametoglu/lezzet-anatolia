@@ -5,9 +5,10 @@ import { cutoffBelongsToPreviousDay, ORDER_CUTOFF_KEY, PREP_CUTOFF_KEY } from '@
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { cardClass } from '@/components/operation/ui/card';
-import { num } from '@/components/operation/ui/format';
+import { num, shortDateTime } from '@/components/operation/ui/format';
 import type { SettingValue } from './settings-catalog';
 import type { SectionRowsView, SettingRowView, StaffRowView } from './settings-types';
+import type { SetupJobView } from './setup-job';
 
 // Ayarlar ekranının kart parçaları; sekme görünümü ve arama sonucu aynı satırı çizer ki "istisnalı" işareti bir yerde eksik kalmasın.
 
@@ -64,6 +65,70 @@ export function SettingsCard({ title, count, hint, action, children }: SettingsC
       {children}
     </section>
   );
+}
+
+interface CardLineProps {
+  label: string;
+  children: ReactNode;
+}
+
+/** Kartın etiketli satırı: solda sabit genişlikte etiket, sağda değer. */
+export function CardLine({ label, children }: CardLineProps) {
+  return (
+    <div className="flex items-center gap-3 border-t border-ops-line-soft px-4 py-2.5">
+      <span className="w-[110px] flex-none font-ops-display text-ops-micro font-semibold uppercase tracking-[0.12em] text-ops-body">
+        {label}
+      </span>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
+interface CardItemProps {
+  title: string;
+  /** Başlığın altındaki durum cümlesi. */
+  detail: ReactNode;
+  action: ReactNode;
+}
+
+/** Eşlenen kaydın satırı: adı, eşlemenin durumu ve düzenleme düğmesi. */
+export function CardItem({ title, detail, action }: CardItemProps) {
+  return (
+    <div className="flex items-center gap-3 border-t border-ops-line-soft px-4 py-2.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="font-ops-body text-ops-base font-semibold text-ops-ink">{title}</span>
+        <span className="font-ops-body text-ops-xs text-ops-body">{detail}</span>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+interface JobTextProps {
+  job: SetupJobView | null;
+  children?: ReactNode;
+}
+
+/** Tur hiç koşmadıysa bunu söyler: "kayıt yok" ile "sorun yok" aynı şey değildir. */
+export function JobText({ job, children }: JobTextProps) {
+  if (!job) return <span className="font-ops-body text-ops-xs text-ops-muted">Hiç koşmadı.</span>;
+  return (
+    <span className="font-ops-body text-ops-xs text-ops-body">
+      {shortDateTime(job.at)}
+      {job.error ? <span className="text-ops-red"> · {job.error}</span> : null}
+      {job.skipped ? <span className="text-ops-amber-dark"> · atlandı ({job.skipped})</span> : null}
+      {children}
+    </span>
+  );
+}
+
+interface DialogErrorProps {
+  error: string | null;
+}
+
+/** Kurulum penceresinin ret cümlesi; pencere açık kalır ki operatör düzeltsin. */
+export function DialogError({ error }: DialogErrorProps) {
+  return error ? <span className="font-ops-body text-ops-xs font-semibold text-ops-red">{error}</span> : null;
 }
 
 interface SectionGridProps {

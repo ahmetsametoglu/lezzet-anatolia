@@ -1,8 +1,6 @@
 import { serviceDb } from '@lezzet/database';
 import { pennylaneFromEnv, syncBankFeed } from '@lezzet/application';
 
-export const PENNYLANE_SYNC = 'pennylane_sync';
-
 /**
  * Banka hareketinin Pennylane'den okunması: eşlenen hesapların listesi ve değişiklik akışı. Anahtarsız ortamda tur kendini atlar ve
  * bunu söyler, sessiz bir no-op "banka okunuyor" diye okunurdu.

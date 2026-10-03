@@ -17,6 +17,7 @@ import { toScopeOptions, toSettingRows, toStaffRows } from './settings-read';
 import { readSiteImages } from './site-images-read';
 import { readMcpPanel } from './mcp-read';
 import { readRegisterPanel } from './register-read';
+import { readPennylanePanel } from './pennylane-read';
 import { parseSettingsUrl } from './settings-url';
 import type { SettingsData, SetupData } from './settings-types';
 
@@ -48,7 +49,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     new WarehouseService(db).list(),
     // Pasif hesaplar dahil: ayar kapatılmış bir hesabı gösteriyorsa ekran ham uuid değil adını yazmalı.
     new AccountService(db).list(),
-    // Vitrin görselleri ve MCP yalnız Kurulum sekmesinde çizilir; öteki sekmeler onları okumaz.
+    // Kurulum kartları yalnız Kurulum sekmesinde çizilir; öteki sekmeler onları okumaz.
     urlState.tab === 'setup' ? readSetup() : Promise.resolve(null),
   ]);
 
@@ -76,6 +77,11 @@ async function readAllSettings(svc: SettingsService): Promise<Setting[]> {
 }
 
 async function readSetup(): Promise<SetupData> {
-  const [siteImages, mcp, register] = await Promise.all([readSiteImages(), readMcpPanel(), readRegisterPanel()]);
-  return { siteImages, mcp, register };
+  const [siteImages, mcp, register, pennylane] = await Promise.all([
+    readSiteImages(),
+    readMcpPanel(),
+    readRegisterPanel(),
+    readPennylanePanel(),
+  ]);
+  return { siteImages, mcp, register, pennylane };
 }

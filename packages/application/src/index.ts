@@ -637,7 +637,9 @@ export { hiboutikFromEnv } from './register/hiboutik/client';
 export { registerLiveFrom, requeueRegisterStore, setRegisterLiveFrom, syncRegisterQueue } from './register/sync';
 export { pennylaneFromEnv } from './accounting/pennylane/client';
 export {
+  BANK_FEED_QUIET_JOB,
   PENNYLANE_LIVE_FROM_KEY,
+  PENNYLANE_SYNC_JOB,
   bankFeedStatus,
   checkBankFeedQuiet,
   mapPennylaneBankAccount,

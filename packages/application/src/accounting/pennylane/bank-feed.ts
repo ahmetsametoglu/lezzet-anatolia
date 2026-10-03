@@ -23,6 +23,10 @@ import type { PennylanePort } from './port';
 /** Canlıya geçiş günü (`YYYY-MM-DD`); ayar yoksa hiçbir hareket okunmaz. */
 export const PENNYLANE_LIVE_FROM_KEY = 'pennylane_live_from';
 
+/** Eşitleme ve sessizlik turlarının `job_run` adı; backend bu adla yazar, kurulum kartı aynı adla okur. */
+export const PENNYLANE_SYNC_JOB = 'pennylane_sync';
+export const BANK_FEED_QUIET_JOB = 'bank_feed_quiet';
+
 const STREAM = 'transactions';
 /** Akış dört haftayı tutar; sınıra yaklaşan anla sorulmaz, liste baştan okunur ve aradaki silinme de bulunur. */
 const STREAM_RETENTION_MS = 27 * 86_400_000;

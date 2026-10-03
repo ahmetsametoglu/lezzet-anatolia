@@ -8,6 +8,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import cron from 'node-cron';
 import { setAiUsageRecorder } from '@lezzet/ai';
+import { BANK_FEED_QUIET_JOB, PENNYLANE_SYNC_JOB } from '@lezzet/application';
 import { aiUsageRecorder } from '@lezzet/application/ai/usage-recorder';
 import { serviceDb } from '@lezzet/database';
 import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
@@ -38,8 +39,8 @@ import { SHIPMENT_ORPHAN, shipmentOrphanJob } from './jobs/shipment-orphan';
 import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user-text';
 import { SCAN_TRUST, scanTrustJob } from './jobs/trust-scan';
 import { REGISTER_SYNC, registerSyncJob } from './jobs/register-sync';
-import { PENNYLANE_SYNC, pennylaneSyncJob } from './jobs/pennylane-sync';
-import { BANK_FEED_QUIET, bankFeedQuietJob } from './jobs/bank-feed-quiet';
+import { pennylaneSyncJob } from './jobs/pennylane-sync';
+import { bankFeedQuietJob } from './jobs/bank-feed-quiet';
 import { REGISTER_CLOSE_DAY, registerCloseCron, registerCloseDayJob } from './jobs/register-close-day';
 
 /**
@@ -249,14 +250,14 @@ cron.schedule(
 // Banka hareketi Pennylane'den beş dakikada bir: hareket bankadan Pennylane'e zaten gecikmeli gelir, daha sık sormak istek sınırını
 // yerdi. Beşin katından bir dakika sonra, aynı dakikaya düşen işlerle birbirini bekletmesin.
 cron.schedule('1-59/5 * * * *', () => {
-  void runJob(PENNYLANE_SYNC, pennylaneSyncJob);
+  void runJob(PENNYLANE_SYNC_JOB, pennylaneSyncJob);
 });
 
 // "Hareket gelmiyor" denetimi günde bir, mesai başında: sessizlik gün ölçeğindedir ve bankanın bağlantısını mesaide yenilemek gerekir.
 cron.schedule(
   '10 9 * * *',
   () => {
-    void runJob(BANK_FEED_QUIET, bankFeedQuietJob);
+    void runJob(BANK_FEED_QUIET_JOB, bankFeedQuietJob);
   },
   { timezone: 'Europe/Paris' },
 );

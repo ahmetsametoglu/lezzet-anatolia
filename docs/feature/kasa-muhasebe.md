@@ -545,9 +545,9 @@ olup olmadığı; fişin Pennylane'e fatura olarak girip girmeyeceği.
    Çare: kuyruk + yeniden deneme + günlük mutabakatta fark uyarısı; gün kapanmadan kuyruk boşalmalı.
 6. **Kasa sıfırlanması.** Hiboutik'te ürünler silinirse (demo sıfırlama) bizdeki ürün eşlemesi
    (`register_product`) olmayan ürünleri anar ve her yazım düşer; sıfırlamadan sonra eşleme silinmeli.
-7. **Canlıya geçiş gününün ileri alınması ya da kaldırılması.** Pennylane'den okunmuş günlere dosya yüklemesi
-   yeniden açılır ve iki kaynak aynı banka satırını yazar. Bugün yalnız dosya satırının üstüne geri alış reddediliyor;
-   ileri alış ve kaldırma için dosya reddinin Pennylane'den okunmuş son güne kadar sürmesi gerekir.
+7. **Canlıya geçiş gününün ileri alınması, kaldırılması ya da eşlemenin kaldırılması.** Pennylane'den okunmuş
+   günlere dosya yüklemesi yeniden açılır ve iki kaynak aynı banka satırını yazar. Bugün yalnız dosya satırının üstüne
+   geri alış reddediliyor; öbür üçü için dosya reddinin Pennylane'den okunmuş son güne kadar sürmesi gerekir.
 
 ## 10. Kaynaklar
 

@@ -9,6 +9,7 @@ import { CardGrid, GridCell, SectionGrid, StaffCard } from './settings-sections'
 import { SiteImagesCard } from './site-images-card';
 import { McpCard } from './mcp-card';
 import { RegisterCard } from './register-card';
+import { PennylaneCard } from './pennylane-card';
 import type { SettingsViewProps } from './settings-types';
 
 /**
@@ -87,6 +88,9 @@ export function SettingsDesktop({
               </GridCell>
               <GridCell wide>
                 <RegisterCard data={data.setup.register} />
+              </GridCell>
+              <GridCell wide>
+                <PennylaneCard data={data.setup.pennylane} />
               </GridCell>
             </CardGrid>
           ) : null
