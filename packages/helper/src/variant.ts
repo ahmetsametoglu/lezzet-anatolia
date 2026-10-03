@@ -17,14 +17,21 @@ export function openingVariantOf<V extends { id: string }>(
   return variants.find((v) => v.id === requestedId) ?? variants.find((v) => v.id === primaryId) ?? variants[0];
 }
 
-/** Porsiyon türünün kelimesi: 12 dilimlik cheesecake "12 dilim" yazar, "12 adet" 12 pasta demek olurdu. */
-function portionWordsOf(kind: CatalogSize['portionKind'], t: SizeCopy): { bare: string; withWeight: string } {
-  if (kind === 'slice') return { bare: t.slices, withWeight: t.slicesOf };
-  if (kind === 'package') return { bare: t.packs, withWeight: t.packsOf };
-  return { bare: t.pieces, withWeight: t.piecesOf };
+interface PortionWords {
+  bare: string;
+  withWeight: string;
+  box: string;
+  boxWithWeight: string;
 }
 
-function netQuantityOf(size: CatalogSize, locale: Locale): string | null {
+/** Porsiyon türünün kelimesi: 12 dilimlik cheesecake "12 dilim" yazar, "12 adet" 12 pasta demek olurdu. */
+function portionWordsOf(kind: CatalogSize['portionKind'], t: SizeCopy): PortionWords {
+  if (kind === 'slice') return { bare: t.slices, withWeight: t.slicesOf, box: t.boxSlices, boxWithWeight: t.boxSlicesOf };
+  if (kind === 'package') return { bare: t.packs, withWeight: t.packsOf, box: t.boxPacks, boxWithWeight: t.boxPacksOf };
+  return { bare: t.pieces, withWeight: t.piecesOf, box: t.boxPieces, boxWithWeight: t.boxPiecesOf };
+}
+
+function netQuantityOf(size: Pick<CatalogSize, 'netQuantity' | 'netUnit'>, locale: Locale): string | null {
   return size.netQuantity === null || size.netUnit === null ? null : formatNetQuantity(size.netQuantity, size.netUnit, locale);
 }
 
@@ -40,6 +47,26 @@ export function variantNameOf(variant: CatalogSize & { label: string }, locale: 
     return weight === null ? words.bare.replace('{n}', n) : words.withWeight.replace('{n}', n).replace('{weight}', weight);
   }
   return weight ?? variant.label;
+}
+
+/** Adet ve türü eski sunucunun cevabında olmayabilir; yokluk "adet bilinmiyor" sayılır. */
+type ContentSize = Pick<CatalogSize, 'netQuantity' | 'netUnit'> & Partial<Pick<CatalogSize, 'piecesCount' | 'portionKind'>>;
+
+/**
+ * Ürün sayfasının içerik satırı: çoklu pakette kutunun içi ("Kutuda 5 adet · toplam 350 g"), tek parçada net miktar ("Net ağırlık
+ * 800 g", sıvıda hacim); ölçüsüz boyda `null`. Kutu açıkça söylenir, çünkü yalın "5 adet" beş kutu diye de okunur.
+ */
+export function contentLineOf(size: ContentSize, locale: Locale): string | null {
+  const t = messages[locale];
+  const weight = netQuantityOf(size, locale);
+  const pieces = size.piecesCount ?? null;
+  if (pieces !== null && pieces > 1) {
+    const words = portionWordsOf(size.portionKind ?? null, t);
+    const n = String(pieces);
+    return weight === null ? words.box.replace('{n}', n) : words.boxWithWeight.replace('{n}', n).replace('{weight}', weight);
+  }
+  if (weight === null) return null;
+  return (size.netUnit === 'ml' ? t.netVolume : t.netWeight).replace('{weight}', weight);
 }
 
 /** Kartta boyun miktarı: adet varsa adet ("4 adet", "12 dilim"), yoksa net miktar ("800 g", "1,25 kg"); ölçüsüz boyda `null`. */

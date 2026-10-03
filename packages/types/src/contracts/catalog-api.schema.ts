@@ -111,6 +111,9 @@ export const CatalogVariantSchema = ProductVariantSchema.pick({ id: true, netQua
   .extend({
     /** Boyun müşteriye görünen adı ("4 adet · 420 g"), seçili dilde; ölçüsüz boyda saklı etiket. */
     label: z.string(),
+    /** Kutu satırının adedi (`contentLineOf`); eski sunucu göndermez ve istemci cevabı şemayla doğruladığı için isteğe bağlı. */
+    piecesCount: ProductVariantSchema.shape.piecesCount.optional(),
+    portionKind: ProductVariantSchema.shape.portionKind.optional(),
   });
 export type CatalogVariant = z.infer<typeof CatalogVariantSchema>;
 

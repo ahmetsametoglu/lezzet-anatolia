@@ -107,12 +107,15 @@ interface ProductHeadLinesProps {
   categoryName: string | null | undefined;
   name: string;
   selling: CatalogSelling | undefined;
+  /** Kutunun içi ya da net miktar (`contentLineOf`). `undefined`: boylar henüz gelmedi, satırın yeri tutulur; `null`: satır yok. */
+  content: string | null | undefined;
   locale: Locale;
   t: Messages;
 }
 
-/** Künyenin ilk satırları (kategori · ad · birim satırı · adet sınırı); çağıranın künye kabının içinde, `gap` düzeninde durur. */
-export function ProductHeadLines({ categoryName, name, selling, locale, t }: ProductHeadLinesProps) {
+/** Künyenin ilk satırları (kategori · ad · içerik · birim satırı · adet sınırı); çağıranın künye kabında, `gap` düzeninde durur. */
+export function ProductHeadLines({ categoryName, name, selling, content, locale, t }: ProductHeadLinesProps) {
+  const { theme } = useUnistyles();
   const was = selling?.wasCents;
   return (
     <>
@@ -126,6 +129,17 @@ export function ProductHeadLines({ categoryName, name, selling, locale, t }: Pro
       <Text style={styles.title} accessibilityRole="header">
         {name}
       </Text>
+      {content === null ? null : (
+        <View
+          style={[styles.contentChip, content === undefined ? styles.reserved : null]}
+          accessibilityElementsHidden={content === undefined}
+          importantForAccessibility={content === undefined ? 'no-hide-descendants' : 'auto'}
+          testID="product-content"
+        >
+          <Icon name="box" size={theme.size.inlineIcon} color={theme.colors.ink} />
+          <Text style={styles.contentText}>{content ?? ' '}</Text>
+        </View>
+      )}
       <Text style={styles.meta}>
         {selling?.comparisonCents == null
           ? t.meta.vat
@@ -247,6 +261,22 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
     fontSize: theme.text['h1-sm'],
     lineHeight: theme.text['h1-sm'] * theme.text['h1-sm--line-height'],
+    color: theme.colors.ink,
+  },
+  contentChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.md,
+    backgroundColor: theme.colors['sand-150'],
+    borderRadius: theme.radius.badge,
+    paddingVertical: theme.space.xs,
+    paddingHorizontal: theme.space.lg,
+  },
+  contentText: {
+    flexShrink: 1,
+    fontFamily: theme.font.body[700],
+    fontSize: theme.text.note,
     color: theme.colors.ink,
   },
   meta: {

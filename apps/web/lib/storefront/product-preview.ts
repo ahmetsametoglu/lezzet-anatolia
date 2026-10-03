@@ -9,7 +9,7 @@ export type ProductPreview = Pick<
   StorefrontProduct,
   'id' | 'slug' | 'name' | 'image' | 'priceCents' | 'wasCents' | 'comparisonCents' | 'limitLabel' | 'stockStatus' | 'soldOut'
 > &
-  Pick<CatalogProduct, 'categoryId'>;
+  Pick<CatalogProduct, 'categoryId' | 'sizes'>;
 
 /** Son açılan kartlar; sınır belleğin oturum boyunca büyümesini keser. Yalnız tarayıcıda, tıklamayla yazılır. */
 const PREVIEW_LIMIT = 30;

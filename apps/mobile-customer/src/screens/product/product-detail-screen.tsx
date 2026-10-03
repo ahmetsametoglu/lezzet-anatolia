@@ -1,6 +1,7 @@
 // Kart rozeti ve fiyat etiketi web telefon görünümüyle ortak kuruculardan.
 import {
   cardBadgeOf,
+  contentLineOf,
   formatNetQuantity,
   formatPrice,
   fromPriceLabel,
@@ -160,6 +161,8 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
        yerde çizilir ki görsel yeniden kurulmasın ve satırlar kaymasın. */
     const preview = productPreviewOf(slug);
     if (preview === null) return <ProductSkeleton testID="product-loading" />;
+    // Kartın boyları fiyata göre sıralı, ilki kartın fiyatını taşıyan ve ekranın açılacağı boy: satır veri gelince değişmez.
+    const opening = preview.sizes?.[0];
     return (
       <View style={styles.screen} testID="product-detail">
         <ScrollView contentContainerStyle={styles.content} testID="product-scroll">
@@ -180,6 +183,7 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
               categoryName={preview.categoryId === null ? null : undefined}
               name={preview.name}
               selling={preview}
+              content={preview.sizes === undefined ? undefined : opening === undefined ? null : contentLineOf(opening, locale)}
               locale={locale}
               t={t}
             />
@@ -323,9 +327,16 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
           t={t}
         />
 
-        {/* ── Künye: kategori · ad · birim satırı · çipler · aile · boylar · açıklama ── */}
+        {/* ── Künye: kategori · ad · içerik · birim satırı · çipler · aile · boylar · açıklama ── */}
         <View style={styles.head}>
-          <ProductHeadLines categoryName={detail.category?.name ?? null} name={detail.name} selling={variant} locale={locale} t={t} />
+          <ProductHeadLines
+            categoryName={detail.category?.name ?? null}
+            name={detail.name}
+            selling={variant}
+            content={variant === undefined ? null : contentLineOf(variant, locale)}
+            locale={locale}
+            t={t}
+          />
           {showsNoShipChip(detail.shippable, placeMark?.tone ?? null) ? (
             <Text style={styles.noShipChip} testID="product-noship">
               {t.noShip}

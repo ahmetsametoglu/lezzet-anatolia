@@ -164,6 +164,15 @@ describe('ürün detayı', () => {
     expect(screen.getByText('Net miktar: 1,25 kg')).toBeOnTheScreen();
   });
 
+  it('adın altındaki satır kutunun içini söyler ve boy değişince onu izler', async () => {
+    const box = productVariant(1, { piecesCount: 5, portionKind: 'item', netQuantity: 350 });
+    await renderProduct(productDetail({ variants: [box, productVariant(2)] }));
+    expect(screen.getByTestId('product-content')).toHaveTextContent('Kutuda 5 adet · toplam 350 g');
+
+    await fireEvent.press(screen.getByTestId(`product-variant-${productVariant(2).id}`));
+    expect(screen.getByTestId('product-content')).toHaveTextContent('Net ağırlık 1 kg');
+  });
+
   it('aile çipi yeni sayfa AÇMAZ — aynı rotanın parametresini günceller (kullanıcı kararı 08.08)', async () => {
     await renderProduct();
 
@@ -353,5 +362,24 @@ describe('kartla açılan ürün sayfası', () => {
     deliver(ok(productDetail({ gallery: [cover, { url: 'https://cdn.test/kol-boregi-2.jpg', crop: cover.crop, frames: null }] })));
     await waitFor(() => expect(screen.getByTestId('product-add')).toBeOnTheScreen());
     expect(mockFrameMounts.filter((url) => url === cover.url)).toHaveLength(1);
+  });
+
+  it('kutu satırı veri gelmeden kartın boyundan çizilir, veri gelince aynı kalır', async () => {
+    const size = { piecesCount: 5, portionKind: 'item', netQuantity: 350, netUnit: 'g' } as const;
+    rememberProductPreview(catalogProduct(1, { slug: 'kutulu-kart', name: 'İçli Köfte', sizes: [size] }));
+    let deliver: (response: Response) => void = () => undefined;
+    fetchMock.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          deliver = resolve;
+        }),
+    );
+
+    await render(<ProductDetailScreen slug="kutulu-kart" />);
+    expect(screen.getByTestId('product-content')).toHaveTextContent('Kutuda 5 adet · toplam 350 g');
+
+    deliver(ok(productDetail({ variants: [productVariant(1, size), productVariant(2)] })));
+    await waitFor(() => expect(screen.getByTestId('product-add')).toBeOnTheScreen());
+    expect(screen.getByTestId('product-content')).toHaveTextContent('Kutuda 5 adet · toplam 350 g');
   });
 });

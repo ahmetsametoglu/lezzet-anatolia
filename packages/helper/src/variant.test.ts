@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogSize } from '@lezzet/types';
-import { cardQuantityOf, openingVariantOf, sizeQuantityOf, sizesLabelOf, variantNameOf } from './variant';
+import { cardQuantityOf, contentLineOf, openingVariantOf, sizeQuantityOf, sizesLabelOf, variantNameOf } from './variant';
 
 const small = { id: 'kucuk' };
 const large = { id: 'buyuk' };
@@ -56,6 +56,28 @@ describe('variantNameOf · porsiyon türü kelimeyi seçer', () => {
 
   it('ölçüsüz boy saklı etiketine düşer', () => {
     expect(variantNameOf({ ...boy(null, null, null), label: '4x105g' }, 'tr')).toBe('4x105g');
+  });
+});
+
+describe('contentLineOf · ürün sayfasında kutunun içi', () => {
+  it('çoklu pakette adet kutunun içinde söylenir, gramaj toplamdır', () => {
+    expect(contentLineOf(boy('item', 5, 350), 'tr')).toBe('Kutuda 5 adet · toplam 350 g');
+    expect(contentLineOf(boy('slice', 12, 1800), 'fr')).toBe('Boîte de 12 parts · 1,8 kg');
+    expect(contentLineOf(boy('package', 2, null), 'de')).toBe('Packung mit 2 Einzelpackungen');
+  });
+
+  it('tek parçada net miktar; sıvıya "net ağırlık" denmez', () => {
+    expect(contentLineOf(boy(null, null, 800), 'tr')).toBe('Net ağırlık 800 g');
+    expect(contentLineOf(boy('package', 1, 800), 'fr')).toBe('Poids net 800 g');
+    expect(contentLineOf({ piecesCount: null, portionKind: null, netQuantity: 750, netUnit: 'ml' }, 'de')).toBe('Nettofüllmenge 750 ml');
+  });
+
+  it('ölçüsüz boyda satır yok', () => {
+    expect(contentLineOf(boy(null, null, null), 'tr')).toBeNull();
+  });
+
+  it('adet hiç gelmediyse (eski sunucu) net miktar yazılır, satır düşmez', () => {
+    expect(contentLineOf({ netQuantity: 350, netUnit: 'g' }, 'tr')).toBe('Net ağırlık 350 g');
   });
 });
 

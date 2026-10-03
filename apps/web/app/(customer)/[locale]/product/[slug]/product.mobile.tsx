@@ -1,4 +1,4 @@
-import { cardBadgeOf, formatPrice, productPriceLabel, showsNoShipChip, variantNameOf } from '@lezzet/helper';
+import { cardBadgeOf, contentLineOf, formatPrice, productPriceLabel, showsNoShipChip, variantNameOf } from '@lezzet/helper';
 import productMessages from '@lezzet/i18n/customer/product';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { ProductCircleCard } from '@/components/customer/phone-kit/product-circle-card';
@@ -32,6 +32,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
         name={product.name}
         images={heroPhotos}
         selling={selected}
+        content={selected === null ? null : contentLineOf(selected, locale)}
         placeMark={placeMark}
         categoryLabel={categoryUpper}
       >

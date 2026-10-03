@@ -7,6 +7,7 @@ import { RATIO_SQUARE } from '@lezzet/types';
 import type { ReactNode } from 'react';
 import { PhotoGallery } from '@/components/customer/phone-kit/photo-gallery';
 import { BackButton } from '@/components/customer/ui/back-button';
+import { Icon } from '@/components/customer/ui/icons';
 import { ShareButton } from '@/components/customer/ui/share-button';
 
 /** Kartın da boyun da taşıdığı satış alanları; üst bölüm ikisinden aynı hesapla çizilir. */
@@ -26,6 +27,8 @@ interface PhoneProductHeadProps {
   name: string;
   images: StorefrontImage[];
   selling: HeadSelling | null;
+  /** Kutunun içi ya da net miktar (`contentLineOf`). `undefined`: boylar henüz gelmedi, satırın yeri tutulur; `null`: satır yok. */
+  content: string | null | undefined;
   placeMark: ReturnType<typeof phoneHeroMarkOf>;
   /** `undefined`: ürünün kategorisi var ama adı henüz gelmedi; satırın yeri aynı stille boş tutulur. `null`: kategorisi yok. */
   categoryLabel: string | null | undefined;
@@ -37,7 +40,17 @@ interface PhoneProductHeadProps {
  * Telefonda ürün sayfasının üst bölümü (kahraman ve künyenin ilk satırları). Yükleme karesi kartın bildiğiyle, sayfa gelen detayla
  * aynı bileşeni çizer ki veri gelince satırlar yerinden oynamasın.
  */
-export function PhoneProductHead({ locale, productId, name, images, selling, placeMark, categoryLabel, children }: PhoneProductHeadProps) {
+export function PhoneProductHead({
+  locale,
+  productId,
+  name,
+  images,
+  selling,
+  content,
+  placeMark,
+  categoryLabel,
+  children,
+}: PhoneProductHeadProps) {
   const copy = productMessages[locale];
   const price = selling?.priceCents ?? null;
   const was = selling?.wasCents;
@@ -95,6 +108,15 @@ export function PhoneProductHead({ locale, productId, name, images, selling, pla
           categoryLabel !== null && <span className="font-sans text-eyebrow-xs text-terracotta">{categoryLabel}</span>
         )}
         <h1 className="font-serif text-h1-sm text-ink">{name}</h1>
+        {content !== null && (
+          <span
+            aria-hidden={content === undefined}
+            className={`flex items-center gap-2 self-start rounded-badge bg-sand-150 px-2.5 py-1.5 font-sans text-note font-bold text-ink ${content === undefined ? 'invisible' : ''}`}
+          >
+            <Icon name="box" size={15} className="flex-none" />
+            {content ?? ' '}
+          </span>
+        )}
         <p className="font-sans text-micro text-muted">{metaLine}</p>
         {selling?.limitLabel && (
           <span className="self-start rounded-badge bg-terracotta-bg px-2 py-0.5 font-sans text-micro font-semibold text-terracotta">

@@ -5,7 +5,15 @@
     "slices": "{n} dilim",
     "slicesOf": "{n} dilim · {weight}",
     "packs": "{n} paket",
-    "packsOf": "{n} paket · {weight}"
+    "packsOf": "{n} paket · {weight}",
+    "boxPieces": "Kutuda {n} adet",
+    "boxPiecesOf": "Kutuda {n} adet · toplam {weight}",
+    "boxSlices": "Kutuda {n} dilim",
+    "boxSlicesOf": "Kutuda {n} dilim · toplam {weight}",
+    "boxPacks": "Kutuda {n} paket",
+    "boxPacksOf": "Kutuda {n} paket · toplam {weight}",
+    "netWeight": "Net ağırlık {weight}",
+    "netVolume": "Net {weight}"
   },
   "fr": {
     "pieces": "{n} pièces",
@@ -13,7 +21,15 @@
     "slices": "{n} parts",
     "slicesOf": "{n} parts · {weight}",
     "packs": "{n} paquets",
-    "packsOf": "{n} paquets · {weight}"
+    "packsOf": "{n} paquets · {weight}",
+    "boxPieces": "Boîte de {n} pièces",
+    "boxPiecesOf": "Boîte de {n} pièces · {weight}",
+    "boxSlices": "Boîte de {n} parts",
+    "boxSlicesOf": "Boîte de {n} parts · {weight}",
+    "boxPacks": "Boîte de {n} paquets",
+    "boxPacksOf": "Boîte de {n} paquets · {weight}",
+    "netWeight": "Poids net {weight}",
+    "netVolume": "Volume net {weight}"
   },
   "de": {
     "pieces": "{n} Stück",
@@ -21,6 +37,14 @@
     "slices": "{n} Stück",
     "slicesOf": "{n} Stück · {weight}",
     "packs": "{n} Packungen",
-    "packsOf": "{n} Packungen · {weight}"
+    "packsOf": "{n} Packungen · {weight}",
+    "boxPieces": "Packung mit {n} Stück",
+    "boxPiecesOf": "Packung mit {n} Stück · {weight}",
+    "boxSlices": "Packung mit {n} Stück",
+    "boxSlicesOf": "Packung mit {n} Stück · {weight}",
+    "boxPacks": "Packung mit {n} Einzelpackungen",
+    "boxPacksOf": "Packung mit {n} Einzelpackungen · {weight}",
+    "netWeight": "Nettogewicht {weight}",
+    "netVolume": "Nettofüllmenge {weight}"
   }
 }

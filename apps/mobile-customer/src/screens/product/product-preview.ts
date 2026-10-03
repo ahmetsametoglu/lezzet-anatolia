@@ -2,7 +2,7 @@ import type { CatalogProduct, CatalogSelling } from '@lezzet/types';
 import type { useRouter } from 'expo-router';
 
 /** Kartın bildiği ürün bilgisi; detay ekranı veri gelene kadar üst bölümü bununla çizer ki dokunuşla sayfa boş açılmasın. */
-export type ProductPreview = Pick<CatalogProduct, 'slug' | 'name' | 'image' | 'categoryId'> & CatalogSelling;
+export type ProductPreview = Pick<CatalogProduct, 'slug' | 'name' | 'image' | 'categoryId' | 'sizes'> & CatalogSelling;
 
 /** Son açılan kartlar; ekran yalnız açılan ürünün kaydını okur, sınır belleğin oturum boyunca büyümesini keser. */
 const PREVIEW_LIMIT = 30;
