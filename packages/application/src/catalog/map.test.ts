@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CROP_FIELDS } from '@lezzet/types';
 import type { AvailableStockTotal, Price, ProductVariant } from '@lezzet/types';
-import { EMPTY_PRODUCT_CONTEXT, primaryVariantOf, stockStatusOf, toProduct, type CatalogProductRow, type ProductContext } from './map';
+import {
+  EMPTY_PRODUCT_CONTEXT,
+  primaryVariantOf,
+  stockStatusOf,
+  toProduct,
+  toVariant,
+  type CatalogProductRow,
+  type ProductContext,
+} from './map';
 
 /**
  * Yere göre stok hâli dört cevaptır ve yanlış dal hiçbir şeyi patlatmadan müşteriye yanlış cümleyi kurar: kargoyla gidebilecek ürüne
@@ -164,5 +172,35 @@ describe('toProduct · kartın boyları', () => {
 
     expect(kart.priceCents).toBe(1250);
     expect(kart.sizes.map((size) => size.netQuantity)).toEqual([750, 5000, 250]);
+  });
+});
+
+describe('boyun müşteriye görünen adı', () => {
+  it('kart ve boy saklı etiketi değil türetilmiş adı taşır — sepet, sipariş ve ürün sayfası "4 × 105 g" yazmasın', () => {
+    const simit: ProductVariant = {
+      ...boy('simit'),
+      label: { tr: '4 × 105 g' },
+      piecesCount: 4,
+      portionKind: 'item',
+      netQuantity: 420,
+      netUnit: 'g',
+    };
+    const ctx = fiyatCtx({ simit: 350 }, [simit]);
+    const satir: CatalogProductRow = {
+      id: 'p2',
+      slug: 'simit',
+      name: { tr: 'Simit' },
+      categoryId: null,
+      shippable: true,
+      imageKey: null,
+      imageAlt: null,
+      imageUpdatedAt: null,
+      imageWidth: null,
+      imageHeight: null,
+      ...DEFAULT_CROP_FIELDS,
+    };
+
+    expect(toVariant(simit, 'tr', ctx, true).label).toBe('4 adet · 420 g');
+    expect(toProduct(satir, 'tr', ctx).unitLabel).toBe('4 adet · 420 g');
   });
 });

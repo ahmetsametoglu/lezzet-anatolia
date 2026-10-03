@@ -61,7 +61,11 @@ const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
  * karşılanıyorsa "kapıya teslim"dir (`decideCartAgainstWarehouse`). `soguk`: kargoya verilemez ve
  * stoksuz — bu adrese hiçbir yoldan gidemeyen kalem (`not_shippable_here`).
  */
-async function urunAc(ad: string, boylar: Array<{ label: string; b2c?: number }>, opts: { soguk?: boolean } = {}): Promise<string> {
+async function urunAc(
+  ad: string,
+  boylar: Array<{ label: string; net: number; b2c?: number }>,
+  opts: { soguk?: boolean } = {},
+): Promise<string> {
   const { product, variants } = await new ProductService(db).create({
     name: ucDil(`${ad} ${stamp}`),
     description: ucDil('Sepet aracı testi ürünü'),
@@ -71,8 +75,8 @@ async function urunAc(ad: string, boylar: Array<{ label: string; b2c?: number }>
     categoryId,
     status: 'active',
     ...(opts.soguk ? { shippable: false } : {}),
-    // Satıştaki boyun net miktarı zorunlu (tetikleyici, `0005`); ölçü testin konusu değil, varlığı şart.
-    variants: boylar.map((b) => ({ label: { tr: b.label }, netQuantity: 500, netUnit: 'g' as const })),
+    // Net miktar etiketle tutarlı verilir: müşteriye görünen boy adı ondan türer (`variantNameIn`) ve araç boyu o adla eşler.
+    variants: boylar.map((b) => ({ label: { tr: b.label }, netQuantity: b.net, netUnit: 'g' as const })),
   });
   productIds.push(product.id);
   for (const [i, boy] of boylar.entries()) {
@@ -115,8 +119,8 @@ beforeAll(async () => {
   await zones.replacePostalCodes(bolge.id, [{ country: 'FR', postalCode: SEPET_KODU }]);
 
   categoryId = (await new CategoryService(db).create({ name: { tr: `Sepet aracı ${stamp}` } })).id;
-  const fistikliVariantId = await urunAc('Fıstıklı Sarma', [{ label: '250 g', b2c: 457 }]);
-  await urunAc('Cevizli Sarma', [{ label: '250 g', b2c: 399 }]);
+  const fistikliVariantId = await urunAc('Fıstıklı Sarma', [{ label: '250 g', net: 250, b2c: 457 }]);
+  await urunAc('Cevizli Sarma', [{ label: '250 g', net: 250, b2c: 399 }]);
   // Paket: iki fıstıklı sarma, tek fiyat (DOMAIN §13) — adı ürün adlarını İÇERMİYOR ki ürün araması onu
   // görmesin; paket ikinci sırada, yalnız ürün eşleşmeyince aranır.
   const { bundle } = await new BundleService(db).create({
@@ -126,11 +130,11 @@ beforeAll(async () => {
   });
   bundleIds.push(bundle.id);
   await urunAc('Peynirli Gözleme', [
-    { label: '500 g', b2c: 600 },
-    { label: '1 kg', b2c: 1100 },
+    { label: '500 g', net: 500, b2c: 600 },
+    { label: '1 kg', net: 1000, b2c: 1100 },
   ]);
-  await urunAc('Kapalı Helva', [{ label: '1 kg' }]);
-  await urunAc('Soğuk Pasta', [{ label: '1 adet', b2c: 2258 }], { soguk: true });
+  await urunAc('Kapalı Helva', [{ label: '1 kg', net: 1000 }]);
+  await urunAc('Soğuk Pasta', [{ label: '1 adet', net: 500, b2c: 2258 }], { soguk: true });
 
   musteriId = (await new UserProfileService(db).insert({ name: `Sepet aracı müşterisi ${stamp}` })).id;
   profileIds.push(musteriId);

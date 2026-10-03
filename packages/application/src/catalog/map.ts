@@ -1,6 +1,6 @@
 import { isCustomerPrice, resolvePrice } from '@lezzet/domain-core';
 import type { ActiveOffer } from '@lezzet/domain-core';
-import { comparisonPrice } from '@lezzet/helper';
+import { comparisonPrice, variantNameOf } from '@lezzet/helper';
 import { cdnImageUrl, publicImageUrl } from '@lezzet/storage';
 import {
   CROP_CENTER,
@@ -268,6 +268,14 @@ export function primaryVariantOf(variants: readonly ProductVariant[], ctx: Produ
 }
 
 /**
+ * Boyun müşteriye görünen adı seçili dilde ("4 adet · 420 g"): kart, ürün sayfası, sepet, sipariş, paket ve tarif aynı adı yazar.
+ * Saklı etiket (`4 × 105 g`) kutunun ve operasyonun dilidir; yalnız ölçüsü girilmemiş boyda görünür.
+ */
+export function variantNameIn(variant: ProductVariant, locale: PreferredLanguage): string {
+  return variantNameOf({ ...variant, label: resolveLocalizedText(variant.label, locale) }, locale);
+}
+
+/**
  * Kartın miktar satırı için boyların ölçüsü, fiyata göre ve fiyatsız boy sonda: satır çipteki fiyatın boyuyla başlar, operatörün
  * sırası "5 L · 750 ml" yazıp 750 ml'nin fiyatını 5 L'ye yakıştırırdı. Eşitlikte gelen sıra korunur (`primaryVariantOf` ile aynı).
  */
@@ -298,7 +306,7 @@ export function toVariant(
   return {
     id: variant.id,
     // Boy etiketi ÇOK DİLLİ ("700 g tepsi" / "plateau 700 g") — burada çözülür, ekran dil bilmez.
-    label: resolveLocalizedText(variant.label, locale),
+    label: variantNameIn(variant, locale),
     piecesCount: variant.piecesCount ?? null,
     portionKind: variant.portionKind ?? null,
     netQuantity: variant.netQuantity,
@@ -350,7 +358,7 @@ export function toProduct(
     categoryId: row.categoryId,
     name: resolveLocalizedText(row.name, locale),
     image: imageOf(row),
-    unitLabel: primary ? resolveLocalizedText(primary.label, locale) : '',
+    unitLabel: primary ? variantNameIn(primary, locale) : '',
     variantId: primary?.id ?? null,
     stockId: selling?.stockId ?? null,
     // Kartın çeşit satırının sayısı — `purchaseMode` ile AYNI kümeden (aktif boylar), ikinci bir

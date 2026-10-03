@@ -156,6 +156,14 @@ describe('ürün detayı', () => {
     expect(screen.getByText('Aynı tesiste Sert kabuklu yemişler işlenmektedir.')).toBeOnTheScreen();
   });
 
+  it('net miktar web ile aynı biçimde yazılır — 1250 g "1,25 kg", ham "1250 g" değil', async () => {
+    await renderProduct(productDetail({ variants: [productVariant(1, { netQuantity: 1250 }), productVariant(2)] }));
+
+    await fireEvent.press(screen.getByTestId('product-acc-nutrition'));
+
+    expect(screen.getByText('Net miktar: 1,25 kg')).toBeOnTheScreen();
+  });
+
   it('aile çipi yeni sayfa AÇMAZ — aynı rotanın parametresini günceller (kullanıcı kararı 08.08)', async () => {
     await renderProduct();
 

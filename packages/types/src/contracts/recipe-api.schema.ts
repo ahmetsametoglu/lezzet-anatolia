@@ -27,7 +27,7 @@ export const RecipeRowSchema = z.object({
   variantId: ProductVariantSchema.shape.id,
   /** Ürün adı, seçili dilde çözülmüş (dil yedek zinciri SUNUCUDA — istemci dil bilmez). */
   name: z.string(),
-  /** Boy etiketi ("700 g tepsi"), seçili dilde; tek boylu üründe boş olabilir. */
+  /** Boyun müşteriye görünen adı ("4 adet · 420 g"), seçili dilde. */
   variantLabel: z.string(),
   /**
    * Tarifin bu boydan İSTEDİĞİ adet (veri modelinin kendi tanımı: toplam = Σ qty × fiyat —

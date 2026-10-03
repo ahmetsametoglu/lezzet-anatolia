@@ -29,7 +29,7 @@ import type {
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { brand } from '@lezzet/brand';
-import { EMPTY_IMAGE, imageOf } from '../catalog/map';
+import { EMPTY_IMAGE, imageOf, variantNameIn } from '../catalog/map';
 import { warehouseAddressLine } from '../warehouse/pickup';
 import { parcelOrdinal, readOrderTracking } from '../shipping/tracking';
 import type { StorefrontImage } from '../catalog/storefront-types';
@@ -428,7 +428,7 @@ interface CustomerOrderLine {
   productId: string;
   /** Ürün adı — bulunamazsa boş; ürün silinmiş olabilir, kalem yine de gösterilir. */
   name: string;
-  /** Varyant/boy etiketi ("500 g"). */
+  /** Boyun müşteriye görünen adı ("4 adet · 420 g", `variantNameIn`). */
   unit: string;
   image: StorefrontImage;
 }
@@ -454,7 +454,7 @@ async function resolveOrderLines(
         {
           productId: variant.productId,
           name: product ? resolveLocalizedText(product.name, locale) : '',
-          unit: resolveLocalizedText(variant.label, locale),
+          unit: variantNameIn(variant, locale),
           image: product ? imageOf(product) : EMPTY_IMAGE,
         },
       ];

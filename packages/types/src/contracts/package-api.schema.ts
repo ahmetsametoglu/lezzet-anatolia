@@ -19,7 +19,7 @@ export const PackageItemSchema = ProductSchema.pick({ slug: true }).extend({
   variantId: BundleItemSchema.shape.variantId,
   /** Ürün adı, seçili dilde çözülmüş (dil yedek zinciri sunucuda — istemci dil bilmez). */
   name: z.string(),
-  /** Boy etiketi ("500 g"); tek boylu üründe boş. Addan ayrı alan, çünkü kalem bir boya bağlı ve cümleyi ekran kurar. */
+  /** Boyun müşteriye görünen adı ("4 adet · 420 g"); addan ayrı alan, çünkü kalem bir boya bağlı ve cümleyi ekran kurar. */
   unitLabel: z.string(),
   qty: BundleItemSchema.shape.qty,
   image: CatalogImageSchema,

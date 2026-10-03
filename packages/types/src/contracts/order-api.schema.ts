@@ -82,7 +82,7 @@ export const MeOrderLineSchema = z.object({
   id: z.string(),
   /** Paket satırında paket adı, varyant satırında ürün adı; ürün silinmişse boş olabilir. */
   name: z.string(),
-  /** Boy etiketi ("500 g"); tek boylu üründe ve paket satırında BOŞ. */
+  /** Boyun müşteriye görünen adı ("4 adet · 420 g"); paket satırında boş. */
   unitLabel: z.string(),
   image: CatalogImageSchema,
   /** Paket künyesi — `null` = düz varyant satırı. */

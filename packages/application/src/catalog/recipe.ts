@@ -1,6 +1,6 @@
 import { ProductService, ProductVariantService, type Db } from '@lezzet/database';
 import { resolveLocalizedText, type PreferredLanguage, type ProductVariant, type ProductWithRelations, type RecipeWithItems } from '@lezzet/types';
-import { EMPTY_PRODUCT_CONTEXT, imageOf, sellingOf, stockStatusOf } from './map';
+import { EMPTY_PRODUCT_CONTEXT, imageOf, sellingOf, stockStatusOf, variantNameIn } from './map';
 import { loadProductContext } from './product-context';
 import type { PlaceWarehouses, StorefrontImage } from './storefront-types';
 import type { PricingViewer } from './pricing-viewer';
@@ -20,7 +20,7 @@ export interface RecipeItemReading {
   productSlug: string;
   /** Ürün adı, seçili dilde çözülmüş — ekran dil bilmez. */
   name: string;
-  /** Boy etiketi ("700 g tepsi"), seçili dilde; tek boylu üründe boş olabilir. */
+  /** Boyun müşteriye görünen adı ("4 adet · 420 g", `variantNameIn`), seçili dilde. */
   variantLabel: string;
   image: StorefrontImage;
   /** Tarifin bu boydan istediği adet (`toplam = Σ qty × fiyat`). */
@@ -90,7 +90,7 @@ export async function readRecipeItems(
         variantId: variant.id,
         productSlug: product.slug,
         name: resolveLocalizedText(product.name, locale),
-        variantLabel: resolveLocalizedText(variant.label, locale),
+        variantLabel: variantNameIn(variant, locale),
         image: imageOf(product),
         qty: item.qty,
         priceCents,

@@ -61,7 +61,7 @@ export interface StorefrontProduct {
   categoryId: string | null;
   name: string;
   image: StorefrontImage;
-  /** Satılabilir birimin etiketi ("1 kg", "6 adet · 540 g") — varyanttan gelir. */
+  /** Başlangıç boyunun müşteriye görünen adı ("1 kg", "6 adet · 540 g", `variantNameIn`). */
   unitLabel: string;
   /** Listeden sepete eklenecek varyant: tek boylu üründe o boy, çok boyluda en ucuz boy; aktif varyantı olmayan üründe `null`. */
   variantId: string | null;
@@ -101,7 +101,7 @@ export interface StorefrontProduct {
 /** Satılabilir varyant — detayın "Boy seçin" kartı; fiyat varyant düzeyinde taşınır ki seçim değişince fiyat, kıyas ve toplam aynı satırdan gelsin. */
 export interface StorefrontVariant {
   id: string;
-  /** Boy etiketi ("700 g tepsi"); tek boylu üründe boş olabilir — gösterilecek bir boy adı yoktur. */
+  /** Boyun müşteriye görünen adı ("4 adet · 420 g", `variantNameIn`); ölçüsüz boyda saklı etiket, o da yoksa boş. */
   label: string;
   /** Net miktar ve BİRİMİ — seçili boyunki yazılır; katıda gram, sıvıda mililitre. */
   netQuantity: number | null;
@@ -260,7 +260,7 @@ export interface StorefrontPackageItem {
   /** Ürün detayına bağ — yasal beyan (alerjen/içindekiler) ORADA, paket sayfası yalnız özetler. */
   slug: string;
   name: string;
-  /** Boy etiketi ("700 g tepsi"); tek boylu üründe boş. */
+  /** Boyun müşteriye görünen adı ("4 adet · 420 g", `variantNameIn`); boyu çözülemeyen kalemde boş. */
   unitLabel: string;
   qty: number;
   image: StorefrontImage;

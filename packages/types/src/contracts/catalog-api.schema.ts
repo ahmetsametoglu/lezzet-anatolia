@@ -109,7 +109,7 @@ export type CatalogSelling = z.infer<typeof CatalogSellingSchema>;
 export const CatalogVariantSchema = ProductVariantSchema.pick({ id: true, netQuantity: true, netUnit: true })
   .merge(CatalogSellingSchema)
   .extend({
-    /** Boy etiketi ("700 g tepsi"), seçili dilde; tek boylu üründe boş olabilir. */
+    /** Boyun müşteriye görünen adı ("4 adet · 420 g"), seçili dilde; ölçüsüz boyda saklı etiket. */
     label: z.string(),
   });
 export type CatalogVariant = z.infer<typeof CatalogVariantSchema>;
@@ -143,7 +143,7 @@ export const CatalogProductSchema = ProductSchema.pick({ id: true, slug: true })
     categoryId: ProductSchema.shape.categoryId.optional(),
     name: z.string(),
     image: CatalogImageSchema,
-    /** Satılabilir birimin etiketi ("1 kg") — başlangıç boyundan; aktif boyu olmayan üründe boş. */
+    /** Başlangıç boyunun müşteriye görünen adı ("4 adet · 420 g"); aktif boyu olmayan üründe boş. */
     unitLabel: z.string(),
     /**
      * Listeden sepete eklenecek boy (tek boyluda o boy, çok boyluda başlangıç boyu); `purchaseMode: 'options'` iken kullanılmaz.

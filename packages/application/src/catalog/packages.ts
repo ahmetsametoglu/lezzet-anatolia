@@ -9,7 +9,7 @@ import {
   type ProductVariant,
 } from '@lezzet/types';
 import { decideBundleAgainstWarehouse } from '@lezzet/domain-core';
-import { EMPTY_IMAGE, imageOf } from './map';
+import { EMPTY_IMAGE, imageOf, variantNameIn } from './map';
 import { pickFeatured } from './featured';
 import type { PlaceWarehouses, StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem } from './storefront-types';
 
@@ -157,7 +157,7 @@ function toCard(bundle: BundleRow, locale: PreferredLanguage, context: PackageCo
       // Ürünü çözülemeyen kalem sessizce düşmez: paket "8 ürün" diyorsa sekizi de görünmeli; `listSellable` bu hâli zaten eler.
       slug: product?.slug ?? '',
       name: product ? resolveLocalizedText(product.name, locale) : '',
-      unitLabel: variant ? resolveLocalizedText(variant.label, locale) : '',
+      unitLabel: variant ? variantNameIn(variant, locale) : '',
       qty: item.qty,
       image: product ? imageOf(product) : EMPTY_IMAGE,
     };

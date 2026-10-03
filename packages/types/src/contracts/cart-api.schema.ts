@@ -139,7 +139,7 @@ const CartLineViewShape = {
   slug: z.string(),
   name: z.string(),
   image: CatalogImageSchema,
-  /** Boy etiketi ("700 g tepsi"); tek boylu üründe boş. Pakette paketin künyesi. */
+  /** Boyun müşteriye görünen adı ("4 adet · 420 g"); pakette paketin künyesi. */
   unitLabel: z.string(),
   /** **`null` = satışa kapalı** (kanal fiyatı kalkmış) — satır çıkarılmadan devam edilemez. */
   unitPriceCents: z.number().int().nullable(),

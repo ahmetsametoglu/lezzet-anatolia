@@ -1,5 +1,13 @@
 // Kart rozeti ve fiyat etiketi web telefon görünümüyle ortak kuruculardan.
-import { cardBadgeOf, formatPrice, fromPriceLabel, openingVariantOf, productPriceLabel, showsNoShipChip } from '@lezzet/helper';
+import {
+  cardBadgeOf,
+  formatNetQuantity,
+  formatPrice,
+  fromPriceLabel,
+  openingVariantOf,
+  productPriceLabel,
+  showsNoShipChip,
+} from '@lezzet/helper';
 import type { TextSegment } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { ALLERGEN_LABELS, NUTRITION_KEYS, resolveLocalizedText } from '@lezzet/types';
@@ -440,7 +448,7 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
               )}
               {variant?.netQuantity == null || variant.netUnit === null ? null : (
                 <Text style={styles.netWeight}>
-                  {fill(t.accordion.netQuantity, 'quantity', `${variant.netQuantity} ${variant.netUnit}`)}
+                  {fill(t.accordion.netQuantity, 'quantity', formatNetQuantity(variant.netQuantity, variant.netUnit, locale))}
                 </Text>
               )}
             </View>

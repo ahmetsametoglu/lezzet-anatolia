@@ -144,7 +144,7 @@ interface CartLineView {
   productId: string | null;
   name: string;
   image: StorefrontImage;
-  /** Boy etiketi ("700 g tepsi"); tek boylu üründe boş. */
+  /** Boyun müşteriye görünen adı ("4 adet · 420 g", `variantNameIn`); boyu çözülemeyen satırda boş. */
   unitLabel: string;
   /** null = satışa kapalı (kanal fiyatı yok); satır çıkarılmadan devam edilemez. */
   unitPriceCents: number | null;
