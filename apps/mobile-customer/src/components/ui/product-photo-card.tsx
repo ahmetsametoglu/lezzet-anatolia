@@ -202,6 +202,9 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.space['2xs'],
   },
   name: {
+    /* Kutu metne sarılır: tam genişlikte Android adı kesirli genişlikle ölçüp yuvarlanmış genişlikle çizer ve sınırdaki ad iki satır
+       yer kaplayıp tek satır çizilir ya da tersi kırpılır. Sarılan kutunun genişliği ölçülen satırın kendisi olduğu için ikisi ayrışmaz. */
+    alignSelf: 'flex-start',
     fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text.body,
     // Sıkı başlık satır aralığı — oran da token (`h1--line-height`), ham çarpan yazılmadı.
