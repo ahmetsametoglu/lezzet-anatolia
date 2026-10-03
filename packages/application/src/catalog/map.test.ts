@@ -3,15 +3,9 @@ import type { AvailableStockTotal, Price, ProductVariant } from '@lezzet/types';
 import { EMPTY_PRODUCT_CONTEXT, primaryVariantOf, stockStatusOf, type ProductContext } from './map';
 
 /**
- * **Yere göre stok hâli** (19.10) — dört cevap, dört ayrı cümle.
- *
- * Sınanmasının sebebi: bu karar sessizce yanlış olabilecek türden. Yanlış dal hiçbir şeyi
- * patlatmaz, yalnız müşteriye YANLIŞ CÜMLEYİ kurar — kargoyla gönderebileceğimiz ürüne "Tükendi"
- * der (sistem müşteriyi tanıdıkça daha az satar, C3'ün yasakladığı gerileme) ya da tersine, hiçbir
- * depoda olmayan malı "bölgenizde şu an yok" diye bekletir.
- *
- * Test DB'siz ama dosya entegrasyon kökünde: sınır İSİMLE değil DİZİNLE çiziliyor (`CLAUDE §4b`) —
- * `packages/application/src/**` bir entegrasyon köküdür.
+ * Yere göre stok hâli dört cevaptır ve yanlış dal hiçbir şeyi patlatmadan müşteriye yanlış cümleyi kurar: kargoyla gidebilecek ürüne
+ * "Tükendi" der ya da hiçbir depoda olmayan malı "bölgenizde yok" diye bekletir. Test DB'siz ama entegrasyon kökünde, çünkü sınır
+ * dizinle çiziliyor (`CLAUDE §4b`).
  */
 const qty = (n: number): AvailableStockTotal => ({
   variantId: 'v1',
@@ -77,14 +71,8 @@ describe('stockStatusOf', () => {
 });
 
 /**
- * **Birincil boy = EN UCUZ boy** (düzeltme 09.08).
- *
- * Sınanmasının sebebi kusurun kendi şekli: yanlış boy seçmek hiçbir yerde hata vermez, yalnız kartta
- * daha pahalı bir sayı yazar. Ölçülene kadar da kimse görmez — ölçüldüğünde 32 çok boylu ürünün
- * 24'ünde kart en ucuz boyu göstermiyordu.
- *
- * Boylar teste `sort_order` sırasında verilir (`product-context.ts` sırayı orada sabitliyor); yani
- * her senaryoda "operatörün sırası" ile "en ucuz" bilerek ayrıştırılmıştır.
+ * Birincil boy en ucuz boydur ve yanlış seçim hiçbir yerde hata vermez, kartta yalnız daha pahalı bir sayı yazar. Boylar teste
+ * `sort_order` sırasında verilir; her senaryoda operatörün sırası ile en ucuz bilerek ayrıştırılmıştır.
  */
 const BOS_VARYANT: ProductVariant = {
   id: '',
@@ -127,7 +115,7 @@ describe('primaryVariantOf', () => {
   it('EN UCUZ boyu seçer — operatörün sırası ilk boyu gösterse de', () => {
     const boylar = [boy('buyuk'), boy('kucuk')];
     const ctx = fiyatCtx({ buyuk: 3382, kucuk: 1701 }, boylar);
-    // Ölçülen gerçek vakanın küçültülmüşü: kart 33,82 € yazıyordu, 17,01 €'luk boyu vardı.
+    // Kart pahalı boyu gösterseydi 17,01 €'luk boy varken 33,82 € yazardı.
     expect(primaryVariantOf(boylar, ctx)?.id).toBe('kucuk');
   });
 

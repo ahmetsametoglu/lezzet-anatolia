@@ -21,7 +21,7 @@ import { customerStops } from '@lezzet/mobile-kit/src/theme/unistyles';
   birinin ham `#faf6ec` yazması hiçbir yerde patlamazdı (CLAUDE §3 — ham hex yasak).
 */
 
-// Yazı kademeleri temanın çevirisinden geçer (px→dp + bir kademe, 18.08); yarıçap ölçeklenmez.
+// Yazı kademeleri temanın çevirisinden geçer (px→dp + bir kademe); yarıçap ölçeklenmez.
 const appText = customerStops({ ...customerText, ...customerAppText });
 const appRadius = mapTokens(customerAppRadius);
 
@@ -69,9 +69,8 @@ describe('ProductPhotoCard', () => {
       />,
     );
 
-    /* Rozet metni BÜYÜK HARFE komponentte döner (`upperIn`) — stilin `textTransform`una
-       bırakılmaz, o dönüşümü Android native CİHAZIN diliyle yapıyor (ölçüldü 28.08). Erişilebilirlik
-       adı ise HAM kalır (aşağıdaki iddia): ekran okuyucu büyük harfi hecelemez. */
+    /* Rozet metni büyük harfe komponentte döner (`upperIn`), çünkü Android `textTransform`u cihazın diliyle uygular. Erişilebilir ad
+       ham kalır (aşağıdaki iddia): ekran okuyucu büyük harfi hecelemez. */
     expect(screen.getByText('TÜKENDI')).toHaveStyle({ color: customerColors['sand-50'] });
     expect(screen.getByTestId('card').children[0]).toHaveStyle({ opacity: appMetrics.soldOutOpacity });
     expect(screen.getByRole('button', { name: 'Nar ekşisi · 6 € · Tükendi' })).toBeOnTheScreen();
@@ -94,8 +93,7 @@ describe('ProductPhotoCard', () => {
   });
 
   it('indirim rozeti terracotta metin taşır ve KÜÇÜK ROZET kademesinde büyük harfe döner', async () => {
-    // Token Kararlari #16: kademe artık `badge`/`badge-sm`; üstbaşlıktan devşirme bitti ve
-    // harf aralığı da şablonun kendi değerine (.06em) döndü.
+    // Durum rozeti rozet ailesinin küçük kademesinde (`badge-sm`) ve şablonun harf aralığında (.06em).
     await render(<ProductPhotoCard name="Bal" priceLabel="14 €" onPress={jest.fn()} discountLabel="İndirim" />);
 
     expect(screen.getByText('İNDIRIM')).toHaveStyle({
@@ -107,7 +105,7 @@ describe('ProductPhotoCard', () => {
   });
 
   it('tükendi rozetinin örtüsü KENDİ durağıdır (`scrim-72`), gradyanın ucuna yuvarlanmaz', async () => {
-    // Token Kararlari #18: .72 fotoğrafı SOLDURUR, .82 metni okunur kılar — iki ayrı iş.
+    // .72 fotoğrafı soldurur, .82 metni okunur kılar: iki ayrı iş, iki ayrı durak.
     await render(<ProductPhotoCard name="Kekik" priceLabel="4 €" onPress={jest.fn()} soldOut soldOutLabel="Tükendi" />);
 
     expect(screen.getByText('TÜKENDI').parent).toHaveStyle({
@@ -116,7 +114,7 @@ describe('ProductPhotoCard', () => {
   });
 
   it('ad fotoğraf-üstü ROL token’ıyla yazılır (`on-image`), sıkı satır aralığıyla durur', async () => {
-    // Token Kararlari #14: tasarım `on-image`e çekildi; rol ile değer artık ayrışmıyor.
+    // Fotoğraf üstü ad `on-image` rolünden okunur.
     await render(<ProductPhotoCard name="Bulgur" priceLabel="3 €" onPress={jest.fn()} />);
 
     expect(screen.getByText('Bulgur')).toHaveStyle({
@@ -127,7 +125,7 @@ describe('ProductPhotoCard', () => {
   });
 
   it('çeşit satırı fotoğraf-üstü altyazı rolündedir ve SICAK tona bağlıdır', async () => {
-    // Token Kararlari #15: `on-image-soft`un resmî değeri #d5d0c2; uygulama tabanı EZER.
+    // Çeşit satırı fotoğraf üstü altyazı rolünden (`on-image-soft`) okunur.
     await render(<ProductPhotoCard name="Salça" priceLabel="7 €" onPress={jest.fn()} optionsLabel="3 seçenek" />);
 
     expect(screen.getByText('3 seçenek')).toHaveStyle({

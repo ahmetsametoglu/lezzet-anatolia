@@ -2,13 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { formatPrice } from './format';
 
 /*
-  Beklenen dizgeler `Intl`in kendi çıktısıyla değil, ELLE yazılıyor: testin işi biçim kararını
-  (iki basamak · simge sonda · bölünmeyen boşluk) çivilemek. `Intl` ile üretilen bir beklenti,
-  aynı hatayı iki kez yaparak hep yeşil kalırdı.
-
-  Boşluklar KAÇIŞ DİZİSİYLE yazılı: normal boşluk, bölünmeyen boşluk (U+00A0) ve Fransızcanın
-  binlik ayracı olan dar bölünmeyen boşluk (U+202F) ekranda birbirinin aynısı görünür — birebir
-  karakterle yazılan bir test, bir gün "düzeltilirken" sessizce anlamsızlaşırdı.
+  Beklenen dizgeler elle yazılır, `Intl`le üretilmez: aynı hatayı iki kez yapan bir beklenti hep yeşil kalırdı. Boşluklar kaçış
+  dizisiyle yazılır, çünkü normal, bölünmeyen (U+00A0) ve dar bölünmeyen (U+202F) boşluk ekranda aynı görünür.
 */
 const NBSP = ' ';
 const NARROW_NBSP = ' ';

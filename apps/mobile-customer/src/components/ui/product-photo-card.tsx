@@ -12,65 +12,22 @@ import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 
 /*
-  KARE ÜRÜN KARTI — KATALOG IZGARASI (v3 `catProds`, iki sütun). Kullanıcı kararı 07.08: katalog
-  kartı DAİRE değil KAREdir; daire yalnız vitrin rayında (146) ve "bunları da sevebilirsiniz"
-  rayında (96) kalır (`ProductCircleCard`). İki kart bilerek AYRI komponenttir: daire "fotoğraf +
-  altında ad", kare "fotoğrafın İÇİNDE ad" — aynı gövdeye iki düzen sığdırmak, her prop'u
-  "hangi biçimde geçerli" diye şartlı okumak demekti.
-
-  YAPI (şablon: `design/project/Mobil - Musteri v3.dc.html` §catProds):
-    kart (kare, `aspect-ratio:1`)
-      └ fotoğraf katmanı (inset 0 · yarıçap `card` · overflow hidden · SOLAN GRUP)
-          ├ fotoğraf (yoksa kum zemin — baş harf YOK, ad zaten fotoğrafın üstünde duruyor)
-          └ alt gradyan (yazının okunması için)
-      └ durum rozeti (sol üst, tükendi/indirim) — SOLMAZ
-      └ yer şeridi (üst, fotoğrafın içinde) — SOLMAZ
-      └ künye (sol alt): ad + çeşit satırı — SOLMAZ
-      └ fiyat çipi — kartın DIŞINA taşar (sağ üst), o yüzden fotoğraf katmanının kardeşidir:
-        kırpılan katmanın içinde olsaydı taşan kısmı kesilirdi.
-
-  `CirclePhoto` BİLEREK KULLANILMADI: onun taşıdığı ortak davranış "fotoğraf yoksa baş harfe düş";
-  bu kartta baş harf yoktur (şablon `placeholder=" "`), fotoğrafsız kart yalnız kum zemindir.
-  Ortak olmayan bir davranış için ortak komponent zorlamak, `CirclePhoto`ya kare/harfsiz iki şart
-  eklerdi.
-
-  SOLMA FOTOĞRAFA UYGULANIR, BİLGİYE DEĞİL (kullanıcı bulgusu 10.08 — arıza düzeltmesi). `opacity`
-  şablonda da fotoğraf KATMANINDADIR ve bizde de öyle kaldı; arıza şablonun kararı değil, bizim
-  yapı kurgumuzun yan etkisiydi: rozet yığınını ve alt künyeyi o katmanın İÇİNE koymuştuk, yani
-  solmanın SEBEBİNİ açıklayan cümle ("Bu adrese gönderemiyoruz") tam da gerektiği anda okunaksız
-  hâle geliyordu. Rozet ve künye artık fotoğraf katmanının KARDEŞİ (fiyat çipiyle aynı hizada) ve
-  tam opaklıkta duruyor; konumları birebir aynı çünkü katman zaten `inset:0` ile kartın kutusunu
-  kaplıyordu. Kırpılmaya da ihtiyaçları yok — ikisi de kart sınırının içinde duruyor.
-
-  GRADYAN SOLAN GRUPTA KALIR: fotoğrafla birlikte solmasaydı, soluk bir fotoğrafın üstünde tam opak
-  bir koyu leke bırakırdı. Aynı tercih künyenin okunurluğunu da ARTIRIYOR: eskiden cümle de %45'e
-  düşüyordu ve fotoğrafsız kartta krem yazı kum zemine karışıyordu (`on-image` #f5f1e6 ile
-  `sand-50` #faf6ec neredeyse aynı) — şimdi yazı tam, altındaki gradyan yarı yoğunlukta.
-
-  TÜKENDİ ve "bu adrese gitmiyor" AYNI düzeltmeyi alır: ikisi de aynı `faded` kapısından geçiyor,
-  ayrı davranmaları için bir sebep yok — biri fotoğrafı soldurup bilgiyi bırakıyorsa öteki de.
-  Emsal kitin içinde: daire kart (`ProductCircleCard`) solmayı zaten yalnız fotoğrafa uyguluyor,
-  ad ve rozetleri tam opak bırakıyor. İki kart artık aynı şeyi söylüyor.
-
-  TOKEN'I OLMAYAN DEĞERLER en yakın token'a bağlandı; her biri kendi satırında gerekçesiyle
-  işaretli ve envantere raporlandı — ham değer sıfır.
+  Katalog ızgarasının kare kartı: ad fotoğrafın içinde, fotoğrafsız kartta baş harf yerine kum zemin, fiyat çipi kartın dışına taşar;
+  vitrin rayının daire kartı (`ProductCircleCard`) ayrı komponenttir, çünkü iki düzeni tek gövdeye sığdırmak her prop'u biçime göre
+  şartlı okuturdu. Solma yalnız fotoğrafa ve gradyanına uygulanır, rozet, künye ve yer şeridi tam opak kalır ki solmanın sebebini
+  söyleyen cümle okunsun.
 */
 
 interface ProductPhotoCardProps {
   /** Ürün adı — i18n gerektirmez, veriden gelir. */
   name: string;
   /**
-   * Biçimlenmiş fiyat ("12,90 €") — biçimleme çağıranın işi (sözleşme ham cent taşır).
-   *
-   * VERİLMEZSE ÇİP HİÇ ÇİZİLMEZ. Tasarımda fiyatsız kart yok ama VERİDE var: `priceCents: null`
-   * "bu kanalda fiyatı yok → ürün satışa kapalı" demektir (`StorefrontProduct` sözleşmesi) ve web
-   * o durumda fiyat öğesini hiç render etmiyor (`components/customer/ui/price.tsx` — `cents ===
-   * null` → `null`). Uydurma bir yer tutucu ("—", "0,00 €") yazmak iki yüzeyi ayırır ve ikisi de
-   * yanlış şey söyler: biri "bilinmiyor", öteki "bedava".
+   * Biçimlenmiş fiyat ("12,90 €"); verilmezse çip hiç çizilmez, çünkü `priceCents: null` ürünün bu kanalda satışa kapalı olduğunu
+   * söyler. Yer tutucu ("—", "0,00 €") yazmak web'den ayrışır ve ürünü bilinmiyor ya da bedava gösterirdi.
    */
   priceLabel?: string;
   onPress: () => void;
-  /** Ürün görseli — kartın kare kutusuna yeten CDN türevi (21.303, `FrameImage` kutuyu ölçer). */
+  /** Ürün görseli; kartın kare kutusuna yeten CDN türevini `FrameImage` kutuyu ölçerek seçer. */
   image?: CatalogImage | null;
   soldOut?: boolean;
   /** "Tükendi" etiketi — tükendiyse ZORUNLU (rozet metinsiz çizilmez). */
@@ -78,22 +35,13 @@ interface ProductPhotoCardProps {
   /** "İndirim" etiketi; verilirse indirim rozeti çıkar. */
   discountLabel?: string;
   /**
-   * YER ŞERİDİNİN cümlesi — "bu ürün bana gelir mi" sorusunun kart üstündeki kısa cevabı ("Bu adrese
-   * gelmiyor" / "Bölgenizde şu an yok"). Cümleyi çağıran kurmaz, ortak kurucu seçer (`cardPlaceNoteOf`).
-   *
-   * "Kargoyla gelir" hâli BURAYA HİÇ GELMEZ: rota dışı müşterinin kartlarının neredeyse tamamı onu
-   * taşıyordu ve bilgi olmaktan çıkıp gürültü oluyordu; o cümle listenin başındaki bantta tek yerde durur.
+   * Yer şeridinin cümlesi ("Bu adrese gelmiyor" / "Bölgenizde şu an yok"), ortak kurucudan (`cardPlaceNoteOf`). "Kargoyla gelir"
+   * buraya gelmez, çünkü rota dışında neredeyse her kartta tekrar ederdi; o cümle listenin başındaki bantta tek kez durur.
    */
   placeNote?: string;
   /**
-   * Kartı SOLDUR — ürün bu adrese hiç gitmiyorken (`elsewhere` + rota dışı). Tükendiyle aynı
-   * solma değeri kullanılır çünkü müşteri açısından sonuç aynı: bu kart bugün bir satın alma
-   * değil, bir bilgi.
-   *
-   * **Kart yine BASILABİLİR kalır** (bilinçli): tasarımın "aksiyonsuz" hükmü satın alma yolunu
-   * kapatır, ürünü de kapatmaz. Detay sayfası bu hâlde "neden" ve "haber ver"i taşıyor; kartı
-   * ölü bir dikdörtgene çevirmek müşterinin tek çıkışını almak olurdu (yer bir SÖZ, bir filtre
-   * değil — `apps/web/lib/delivery/place-types.ts`).
+   * Ürün bu adrese hiç gitmiyorken fotoğrafı tükendiyle aynı değerde soldurur, çünkü müşteri için ikisi de bugün alınamayan bir ürün.
+   * Kart yine açılır: detay sayfası "neden"i ve "haber ver"i taşır, kartı kapatmak müşterinin tek çıkışını alırdı.
    */
   dimmed?: boolean;
   /** "3 seçenek" gibi çeşit satırı. */
@@ -120,41 +68,30 @@ export function ProductPhotoCard({
   const { theme } = useUnistyles();
   const locale = useAppLocale();
 
-  /* Durum rozeti TEK yuvadadır (şablonda ikisi de sol üst köşede): tükendi indirimin önüne geçer, çünkü tükenmiş
-     bir üründe indirim bilgisi alınabilir bir şey söylemez. Şerit varken de indirim çizilmez (tasarım) — bu adrese
-     gelmeyen üründe indirim, alınamayacak bir şeyin vaadidir. */
+  /* Durum rozeti tek yuvadadır ve tükendi indirimin önüne geçer, çünkü tükenmiş üründe indirim alınabilir bir şey söylemez. Yer
+     şeridi varken indirim çizilmez (tasarım): bu adrese gelmeyen üründe indirim, alınamayacak bir şeyin vaadidir. */
   const statusLabel = soldOut ? soldOutLabel : placeNote !== undefined ? undefined : discountLabel;
-  /* Yer notu TÜKENDİDE basılmaz: ürün hiçbir yerde yokken "bu adrese gelmez" demek, cevabı
-     olmayan bir soruya cevap vermek olurdu. Sözleşme bunu zaten garanti ediyor (`soldOut` yalnız
-     `out_of_stock` hâlinde, `stockMarkOf` da o hâlde `null` dönüyor) — ikinci kapı yine de burada,
-     çünkü kartın kendi ön koşulunu bilmesi iki çağıranın (katalog · vitrin) onu unutmasından
-     güvenlidir. */
+  /* Yer notu tükendide basılmaz: hiçbir yerde olmayan ürün için "bu adrese gelmez" cevapsız bir soruya cevaptır. Sözleşme bunu
+     zaten garanti ediyor; kapı yine de burada ki kartın ön koşulu çağıranın hatırlamasına kalmasın. */
   const note = soldOut ? undefined : placeNote;
-  /* Solma İKİ sebepten gelebilir ve ikisi de aynı katmana uygulanır (şablonda `opacity` fotoğraf
-     katmanındadır): tükendi (evrensel) ya da bu adrese gitmiyor (yere bağlı). */
+  /* Solma iki sebepten gelir ve ikisi de aynı katmana uygulanır: tükendi (evrensel) ya da bu adrese gitmiyor (yere bağlı). */
   const faded = soldOut || dimmed;
 
-  /* ERİŞİLEBİLİR AD ad + fiyat; durum rozeti VARSA ona eklenir. Rozetin `accessibilityState`e
-     çevrilmesi denenmedi çünkü RN'in durum sözlüğünde "tükendi" YOK; en yakını (`disabled`) yalan
-     olurdu — tükenmiş kart hâlâ açılır, ürün sayfası çeşit ve haber-ver seçeneğini gösterir.
-     Rozet metni de sessizce düşürülemez: `accessibilityLabel` verildiği an RN çocuk metinleri
-     okumaz, yani rozet ekran okuyucuda tamamen kaybolurdu. Yer notu da aynı sebeple eklenir:
-     "bu adrese gönderemiyoruz" gören müşteri ile duyan müşteri aynı bilgiyi almalı. */
+  /* Erişilebilir ad görenle aynı bilgiyi taşır (ad, fiyat, durum rozeti, yer notu): `accessibilityLabel` verilince RN çocuk metinleri
+     okumaz, eklenmeyen rozet ekran okuyucuda kaybolur. Rozet `accessibilityState`e çevrilmez, çünkü RN'de "tükendi" yok ve en
+     yakını (`disabled`) açılabilen kart için yalan olurdu. */
   const composedLabel = [name, priceLabel, statusLabel, note].filter((part) => part !== undefined).join(' · ');
 
   return (
     <PressableSurface
       onPress={onPress}
-      /* Şablon basılı durumda `scale(.96)` diyor; kitte en yakın kademe `scale` (.97) —
-         .96 için ayrı kademe açmak, tek kart uğruna kitin geri bildirim sözlüğünü büyütürdü.
-         Fark (.01) raporlandı. */
+      /* Şablonun basılı ölçeği .96, kitin en yakın kademesi .97: tek kart için kitin geri bildirim sözlüğü büyütülmedi. */
       feedback="scale"
       style={styles.card}
       accessibilityLabel={accessibilityLabel ?? composedLabel}
       testID={testID}
     >
-      {/* SOLAN GRUP — yalnız fotoğraf ve onun gradyanı. Katman `inset:0` olduğu için kartın
-          kutusuyla aynı; altındaki bilgi öğeleri de bu yüzden aynı koordinatlarda kalıyor. */}
+      {/* Solan grup yalnız fotoğraf ve gradyanıdır; katman `inset:0` olduğu için bilgi öğeleri kartla aynı koordinatlarda kalır. */}
       <View style={[styles.photoLayer, faded ? styles.fadedPhoto : undefined]}>
         {image == null || image.url === null ? null : <FrameImage image={image} style={styles.image} />}
         <LinearGradient
@@ -164,20 +101,17 @@ export function ProductPhotoCard({
           testID={testID === undefined ? undefined : `${testID}-scrim`}
         />
       </View>
-      {/* Sol üst köşe: durum rozeti (tükendi/indirim) — şablonun TEK rozet yuvası. Yer notu artık
-          buraya girmiyor (künye §ROZET DEĞİL), yani yuva yeniden tekildir. */}
+      {/* Sol üst köşe durum rozetinin (tükendi/indirim) tek yuvasıdır; yer notu künyenin üstündeki şeritte durur. */}
       {statusLabel === undefined ? null : (
         <View style={[styles.statusBadge, soldOut ? styles.soldOutBadge : styles.discountBadge]}>
-          {/* Büyük harf dilin kuralıyla (`upperIn`), stilin `textTransform`una bırakılmaz — o
-              dönüşümü Android native CİHAZIN diliyle yapıyor (ölçüldü 28.08, `cart-line-row`). */}
+          {/* Büyük harf dilin kuralıyla (`upperIn`) kurulur, `textTransform`a bırakılmaz: Android o dönüşümü cihazın diliyle yapar. */}
           <Text style={[styles.statusLabel, soldOut ? styles.soldOutText : styles.discountText]}>
             {upperIn(statusLabel, locale)}
           </Text>
         </View>
       )}
       <View style={styles.caption}>
-        {/* YER ŞERİDİ künyenin ÜSTÜNDE (kullanıcı kararı): kartın tepesinde dururken fiyat çipiyle çakışıyordu —
-            çip kartın sağ üst köşesinden dışarı taşar ve şeridin sağ ucuna biner. */}
+        {/* Yer şeridi künyenin üstünde durur: tepede olsaydı kartın sağ üst köşesinden taşan fiyat çipi şeridin sağ ucuna binerdi. */}
         {note === undefined ? null : (
           <View style={styles.noteBand}>
             <Icon name="delivery-off" size={theme.size.badgeIcon} color={theme.colors.terracotta} />
@@ -197,10 +131,8 @@ export function ProductPhotoCard({
           </Text>
         )}
       </View>
-      {/* Fiyat çipi `Tag` ile BİREBİR örtüşür: terracotta zemin · beyaz metin · rozet kademesi
-          (12,5/700 · .06em) · yarıçap `badge` · gölge `shadow.badge` · +4°. Token Kararlari #16
-          ile gölge farkı da kapandı — kitte artık şablonun kendi değeri (`0 3px 8px …/.22`) var.
-          Fiyatı olmayan üründe çip HİÇ ÇİZİLMEZ (bkz. prop künyesi). */}
+      {/* Fiyat çipi fotoğraf katmanının kardeşidir, çünkü kırpılan katmanın içinde kartın dışına taşan kısmı kesilirdi; fiyatı olmayan
+          üründe çip çizilmez. */}
       {priceLabel === undefined ? null : (
         <View style={styles.priceBadge}>
           {/* Şerit varken çip griye döner (tasarım): terracotta "al" diyen bir vurgudur, gelmeyen üründe yanıltır. */}
@@ -224,8 +156,8 @@ const styles = StyleSheet.create((theme) => ({
     overflow: 'hidden',
     backgroundColor: theme.colors['sand-300'],
   },
-  /* Solma DURAĞI tükendiden gelir (`soldOutOpacity`) ama artık iki sebebi var; adı bu yüzden
-     "solan fotoğraf". Değer paylaşılır çünkü müşteri açısından sonuç aynı. */
+  /* Solma değeri tükendiyle paylaşılır (`soldOutOpacity`), çünkü müşteri için iki sebebin sonucu aynı; ad bu yüzden sebebi değil
+     fotoğrafı anlatır. */
   fadedPhoto: {
     opacity: theme.soldOutOpacity,
   },
@@ -237,8 +169,7 @@ const styles = StyleSheet.create((theme) => ({
     position: 'absolute',
     inset: 0,
   },
-  /* Şablonun tek rozet köşesi (10/10). Yığın kalktı: tek rozet kaldığı için ayrı bir konum
-     sarmalayıcısına gerek yok — konum rozetin kendisinde. */
+  /* Şablonun tek rozet köşesi (10/10); konum rozetin kendisinde, çünkü yuvada tek rozet var. */
   statusBadge: {
     position: 'absolute',
     top: theme.space.lg,
@@ -249,14 +180,13 @@ const styles = StyleSheet.create((theme) => ({
     paddingHorizontal: theme.space.lg,
     borderRadius: theme.radius.badge,
   },
-  /* Tükendi örtüsü KENDİ durağında (Token Kararlari #18): `.72`nin işi fotoğrafı SOLDURMAK,
-     `.82`nin işi (gradyanın ucu) metni okunur kılmak — ikisi ayrı iş, ayrı durak. */
+  /* Tükendi örtüsü kendi durağında: `.72` fotoğrafı soldurur, gradyanın ucundaki `.82` metni okunur kılar; ikisi ayrı iş. */
   soldOutBadge: { backgroundColor: theme.colors['scrim-72'] },
-  // Şablon %94 opak krem; rozet zeminleri krem-cam ailesine DAHİL DEĞİL (#17) — opak `sand-50`.
+  // Şablon %94 opak krem; rozet zeminleri krem-cam ailesinden olmadığı için opak `sand-50`.
   discountBadge: { backgroundColor: theme.colors['sand-50'] },
   statusLabel: {
     fontFamily: theme.font.body[theme.text['badge--font-weight']],
-    // Rozet ailesinin KÜÇÜK boyu (#16): fotoğraf üstündeki durum etiketi 10 px.
+    // Rozet ailesinin küçük boyu: fotoğraf üstündeki durum etiketi 10 px.
     fontSize: theme.text['badge-sm'],
     letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text['badge-sm']),
     // Şablonda rozet metni büyük harf; büyütmeyi komponent yapar ki i18n dizgesi bağırmasın.
@@ -276,10 +206,7 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: theme.text.body,
     // Sıkı başlık satır aralığı — oran da token (`h1--line-height`), ham çarpan yazılmadı.
     lineHeight: theme.text.body * theme.text['h1--line-height'],
-    /* ROL TOKEN'I (Token Kararlari #14): fotoğraf üstü ad `on-image`tır. Daha önce şablonun
-       #faf6ec'i `cream` ile birebir tuttuğu için değer eşleşmesi seçilmişti; karar tasarımı
-       `on-image`e (#f5f1e6) ÇEKTİ ve `on-image-bright` açılmadı — yani rol ile değer artık aynı
-       şeyi söylüyor ve altyazıyla (`on-image-soft`) aynı aileden okunuyor. */
+    /* Fotoğraf üstü ad `on-image` rolündedir, altyazıyla (`on-image-soft`) aynı aileden okunur. */
     color: theme.colors['on-image'],
   },
   options: {
@@ -287,15 +214,12 @@ const styles = StyleSheet.create((theme) => ({
     // Şablon 10,5; ölçekte o durak yok. `micro` (11,5) alındı: `eyebrow` (10) sayıca daha yakın
     // ama üstbaşlık kademesidir — cümle biçimli bir alt satır onun ağırlığı/aralığıyla döner.
     fontSize: theme.text.micro,
-    // Fotoğraf üstü ALTYAZI rolü; değeri #d5d0c2 (Token Kararlari #15 — rol ile değer örtüştü).
+    // Fotoğraf üstü altyazı rolü.
     color: theme.colors['on-image-soft'],
   },
   /**
-   * YER ŞERİDİ — fotoğrafın üst kenarında duran, SOLMAYAN katman (fotoğraf katmanının kardeşi).
-   *
-   * Solma tek başına sessizdir: müşteri kartın neden soluk olduğunu ancak bu satırdan okur. Zemin opak krem,
-   * çünkü yazı fotoğrafın hangi karesine denk gelirse gelsin okunmak zorunda; dolgu ve köşe durum rozetiyle
-   * aynı duraklarda, ikisi kartın aynı rozet ailesinden.
+   * Yer şeridi fotoğrafın üst kenarında solmayan katmandır, çünkü müşteri kartın neden soluk olduğunu ancak bu satırdan okur. Zemin
+   * opak krem ki yazı fotoğrafın her karesinde okunsun; dolgu ve köşe durum rozetinin duraklarında, ikisi aynı rozet ailesinden.
    */
   noteBand: {
     alignSelf: 'flex-start',

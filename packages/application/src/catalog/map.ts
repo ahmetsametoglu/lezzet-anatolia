@@ -151,11 +151,8 @@ export interface ProductContext {
 }
 
 /**
- * Stok hâlini üç sayıdan ve ürünün kargolanabilirliğinden türetir.
- *
- * Dışa VERİLİR (web'de dosya-içi özeldi): dört hâlin hangi sayıdan doğduğu tek başına sınanabilen
- * bir karardır ve testi de öyle yazılıyor — üç haritanın hepsi doluyken ekrandan geriye doğru
- * okumak, yanlış dalı yeşil gösterirdi.
+ * Stok hâlini üç sayıdan ve ürünün kargolanabilirliğinden türetir. Dışa verilir, çünkü dört hâlin hangi sayıdan doğduğu tek başına
+ * sınanır; ekrandan geriye okumak yanlış dalı yeşil gösterirdi.
  */
 export function stockStatusOf(
   ctx: ProductContext,
@@ -270,9 +267,7 @@ export function primaryVariantOf(variants: readonly ProductVariant[], ctx: Produ
 }
 
 /**
- * Varyantı detay sayfasının "Boy seçin" kartına indirger (K22).
- *
- * `shippable` ÜRÜNÜN özelliğidir, varyantın değil — ama karar varyant düzeyinde verilir (bir boy
+ * Varyantı detay sayfasının "Boy seçin" kartına indirger. `shippable` ürünün özelliğidir ama karar varyant düzeyinde verilir (bir boy
  * yerelde bitip öteki durabilir), o yüzden çağıran onu geçirir.
  */
 export function toVariant(
