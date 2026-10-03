@@ -7,8 +7,8 @@ import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable
 import { Tag } from './tag';
 
 /*
-  Yuvarlak ürün kartı: vitrin rayı (`lg`, 146) ve benzer ürünler rayı (`sm`, 96). Tükenmiş ürünün dairesi solar ama gizlenmez,
-  çünkü "yok" bilgisi de bir bilgidir. Yer işareti bu kartta YOK (tasarım): adresin gerçeğini katalog bandı ile kart şeridi söyler.
+  Yuvarlak ürün kartı: vitrin rayı (`lg`, 146) ve benzer ürünler rayı (`sm`, 96); tükenmiş ürünün dairesi solar ama gizlenmez,
+  çünkü "yok" da bir bilgidir. Yer işareti bu kartta yok (tasarım): adresin gerçeğini katalog bandı ile kart şeridi söyler.
 */
 
 interface ProductCircleCardProps {

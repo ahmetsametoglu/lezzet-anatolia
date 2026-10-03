@@ -17,8 +17,7 @@ describe('ProductCircleCard', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  // Izgaranın 138'lik kademesi 07.08'de emekli edildi (katalog kare karta geçti); kalan iki
-  // boyutun ikisi de ölçü katmanından okunuyor ve varsayılan vitrin çapıdır.
+  // İki boyut kademesi de ölçü katmanından okunur; varsayılan vitrin çapıdır.
   it('iki boyut kademesi ölçü katmanından gelir, varsayılan vitrin çapıdır', async () => {
     await render(
       <>

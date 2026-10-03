@@ -6,47 +6,14 @@ import type { PlaceWarehouses, StorefrontImage } from './storefront-types';
 import type { PricingViewer } from './pricing-viewer';
 
 /**
- * **TARİF MALZEME OKUMASININ TEK KAPISI** (05.16 · web 08.24 · mobil 21.14).
- *
- * ── NEDEN TERFİ ETTİ: VAAT EDİLEN SÖZLEŞME KURULMAMIŞTI ─────────────────────
- * `05.16`nın bitti-ölçütü *"okuma TEK SÖZLEŞMEYLE hem web hem mobil yüzeyi besliyor"* diyordu ve
- * satır `[x]` idi; ölçünce **iki ayrı kapı** çıktı (`apps/web/lib/storefront/recipe.ts` ve
- * `apps/mobile-api/src/lib/recipe.ts`). Üstelik ayrışma teorik değildi, BAŞLAMIŞTI: `stockId`
- * yalnız webde, `wasCents` yalnız mobilde okunuyordu — aynı tarifin aynı malzemesi iki yüzeyde
- * farklı bilgi taşıyordu. Mobil dosyanın kendi künyesi terfi ölçütünü zaten yazmıştı (*"web'in
- * tarif sayfası açıldığı gün bu kompozisyon paket terfisinin adayıdır"*); o gün gelmiş, terfi
- * yapılmamıştı. Emsal `packages.ts`: paket okuması ikinci tüketeni doğunca aynı yolla terfi etti.
- *
- * ── ASIL TEHLİKE ALAN ADI DEĞİL, AYRIŞAN KARARDI ────────────────────────────
- * İki nüsha aynı soruya **farklı cevap** veriyordu: satıştan kalkmış (aday/pasif) ürünün satırını
- * mobil DÜŞÜRÜYOR, web ise "tükendi" diye ÇİZİYORDU. Mobilinki doğru ve gerekçesi `DOMAIN §13`:
- * *"tükendi"* o satırın hâli olamaz — tükendi **"yeniden gelecek"** der, satıştan kalkan gelmeyecek;
- * ürünün detay sayfası da zaten 404. Kural burada mobilin lehine birleştirildi.
- *
- * **Çözülemeyen kalem de DÜŞER** ve bu, web'in eski davranışının bilinçli düzeltmesidir: web
- * ürünü/boyu okunamayan malzeme için adı ve slug'ı BOŞ bir "tükendi" satırı çiziyordu — ekranda
- * adsız, tıklanamaz, hiçbir şey anlatmayan bir satır. Sayaç tutarlılığı bundan bozulmuyor:
- * `itemCount` gösterilen satırlardan sayılıyor, yani liste ne diyorsa sayı onu diyor.
- *
- * ── KARAR YOK, ÇAĞRI VAR ────────────────────────────────────────────────────
- * Fiyat, kıyas fiyatı, parti çıpası ve tükendi kararı motorun MEVCUT kapılarından okunuyor
- * (`sellingOf` + `stockStatusOf`) — katalog kartının okuduğu kararların tam aynısı, kopyası değil.
- * Aynı ürün katalogda başka, tarifte başka fiyatlanamaz. Depo süzgeci de oradan gelir; süzgeci
- * unutulan sorgu tek depolu veride DOĞRU cevap verir ve sistem sessizce olmayan malı satar
- * (`DOMAIN §17`).
- *
- * ── SABİT MALİYET: KALEM SAYISINDAN BAĞIMSIZ ────────────────────────────────
- * Kaç tarif verilirse verilsin sorgu sayısı sabit: boylar (1) → ürünler (1) → fiyat/stok bağlamı.
- * Tarif ya da kalem başına sorgu YOK. Liste sayfası bu yüzden tek turda okunuyor.
+ * Tarif malzemesi okumasının tek kapısı: web ve mobil aynı satırı alır; fiyat, kıyas, parti çıpası ve tükendi kararı katalog kartının
+ * kapılarından (`sellingOf`, `stockStatusOf`) okunur ki aynı ürün tarifte başka fiyatlanmasın. Satıştan kalkmış ya da okunamayan
+ * kalem düşer, çünkü "tükendi" yeniden geleceği söyler (`DOMAIN §13`); sorgu sayısı kalem sayısından bağımsızdır.
  */
 
 /**
- * Bir tarif malzemesinin OKUNMUŞ hâli — iki yüzeyin ortak ham maddesi.
- *
- * **Görünüm tipi DEĞİL, okuma sonucudur.** Web `StorefrontRecipeItem`e, mobil `RecipeRow`a
- * indirger ve ikisi meşru biçimde farklı alan taşır: web satırı sepete parti çıpasıyla ekler
- * (`stockId`), mobil satırı indirim rozetini çizer (`wasCents`). Ayrışan şey EKRAN, karar değil —
- * `05.16`nın kusuru alan farkı değil, aynı kararın iki kez ve farklı yazılmasıydı.
+ * Bir tarif malzemesinin okunmuş hâli, iki yüzeyin ortak ham maddesi; görünüm tipi değildir. Web `StorefrontRecipeItem`e (parti
+ * çıpasıyla, `stockId`), mobil `RecipeRow`a (indirim rozetiyle, `wasCents`) indirger: ayrışan ekrandır, karar değil.
  */
 export interface RecipeItemReading {
   variantId: string;
@@ -58,7 +25,7 @@ export interface RecipeItemReading {
   image: StorefrontImage;
   /** Tarifin bu boydan istediği adet (`toplam = Σ qty × fiyat`). */
   qty: number;
-  /** Birim fiyat. `null` = bu kanalda fiyatı yok → satır satışa kapalı. Sıfır YAZILMAZ. */
+  /** Birim fiyat; `null` bu kanalda fiyatı olmayan, satışa kapalı satırdır ve sıfır yazılmaz. */
   priceCents: number | null;
   /** Teklifin yerine geçtiği fiyat — **alan yoksa indirim de yoktur** (kart sözleşmesinin kuralı). */
   wasCents: number | undefined;
@@ -71,11 +38,8 @@ export interface RecipeItemReading {
 }
 
 /**
- * Verilen tariflerin malzemelerini okunmuş satırlara indirger — anahtarı tarif kimliği.
- *
- * Tek tarif de bir liste de aynı kapıdan geçer: detay sayfası tek elemanlı dizi verir. İki ayrı
- * imza (biri tekil, biri çoğul) açmak, toplu okumanın N+1 kırma sözünü ikinci imzada sessizce
- * kaybetmenin en kolay yoluydu.
+ * Verilen tariflerin malzemelerini okunmuş satırlara indirger, anahtar tarif kimliği. Tek tarif de tek elemanlı diziyle bu kapıdan
+ * geçer: ayrı bir tekil imza, toplu okumanın N+1 kırma sözünü sessizce kaybetmenin en kolay yolu olurdu.
  */
 export async function readRecipeItems(
   db: Db,
@@ -94,12 +58,8 @@ export async function readRecipeItems(
   const productIds = [...new Set(variants.map((v) => v.productId))];
   if (productIds.length === 0) return sonuc;
 
-  // `limit` AÇIKÇA verilir: yoksa `listWithRelations` varsayılan sayfa boyunda keser ve bir tarifin
-  // malzemesi sessizce çözülemeyen satıra düşerdi (emsal `packages.ts` künyesi).
-  //
-  // **`status` süzgeci sorguya KONMADI ve bu bilinçli:** süzgeç koysaydık "ürün satıştan kalkmış"
-  // ile "ürün hiç okunamadı" tek dala düşerdi ve ikisi ayrı şeydir. Ayrım aşağıda açıkça yapılır ki
-  // ileride biri (ör. anomali logu) ötekinden ayrı ele alınabilsin.
+  // `limit` açıkça verilir, yoksa `listWithRelations` varsayılan sayfa boyunda keser ve malzeme çözülemeyen satıra düşerdi. `status`
+  // süzgeci bilerek sorguda yok: "satıştan kalkmış" ile "hiç okunamadı" aşağıda ayrı dallarda kalır.
   const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds }, limit: productIds.length });
   const context = await loadProductContext(db, page.rows, place, viewer);
 
@@ -148,14 +108,8 @@ export async function readRecipeItems(
 }
 
 /**
- * Tarifin ALINABİLİR kalemlerinin toplamı — `null` = alınabilir kalem yok.
- *
- * **Tükenen kalem toplama GİRMEZ** (tasarımın açık kuralı, `DOMAIN §13`): müşteri o kalemi sepete
- * koyamayacağına göre ödeyeceği tutar da onu içermez. Fiyatı çözülmemiş kalem de aynı sebeple
- * dışarıda — iki ayrı gerekçe, tek sonuç: sepete giremeyen kalem toplama da girmez.
- *
- * **Sıfır DÖNMEZ:** alınabilir kalem yoksa `null`, çünkü "0,00 €" tarifi bedava gösterirdi
- * (`CLAUDE §1` — ölçülemeyen değer sıfır değildir).
+ * Tarifin alınabilir kalemlerinin toplamı: tükenen ve fiyatı çözülmemiş kalem girmez, çünkü sepete giremeyen kalemin tutarını müşteri
+ * ödemez (`DOMAIN §13`). Alınabilir kalem yoksa `null`, "0,00 €" tarifi bedava gösterirdi.
  */
 export function recipeTotalCents(rows: readonly RecipeItemReading[]): number | null {
   const alinabilir = rows.filter((r) => !r.soldOut && r.lineTotalCents != null);
