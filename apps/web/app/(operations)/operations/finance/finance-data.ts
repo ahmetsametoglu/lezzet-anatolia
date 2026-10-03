@@ -29,22 +29,11 @@ import type { DocumentListView, DocumentRowView, LedgerView, MovementRowView } f
 import { ALL_ACCOUNTS, resolveAccount, type FinanceUrlState } from './finance-url';
 
 /*
-  PARA EKRANININ OKUMALARI (12.17) — sayfa (`page.tsx`) ile "devamını yükle" action'ları AYNI
-  fonksiyonları çağırır: ilk sayfa ile ikinci sayfa ayrı yerde kurulsaydı bir gün farklı süzer, farklı
-  adlandırırdı (müşteri ekranının dersi). Saf indirgemeler `finance-read.ts`te; burası okur ve onlara
-  verir.
-
-  ── DEFTER HESAP-ÜSTÜ OKUNUR ────────────────────────────────────────────────
-  `ledger({ accountId? })` — hesap verilmezse defterin tamamı sayfalanır. **Transferin İKİ satırı da
-  gelir** ve bu doğru: hareket iki hesabı birden etkiliyor, birini seçip ötekini gizlemek keyfî
-  olurdu. İkisi birbirini götürdüğü için "Tümü"nün toplamı da doğru çıkıyor.
-
-  ── BELGE BAĞLARI TEK TURDA ─────────────────────────────────────────────────
-  Sayfanın belge bağları ve o bağların belgeleri kimlik listesiyle tek turda okunur — satır başına
-  sorgu atılmaz.
+  Para ekranının okumaları: sayfa (`page.tsx`) ile "devamını yükle" action'ları aynı fonksiyonları çağırır, çünkü ayrı kurulan iki
+  okuma bir gün farklı süzer. Hesap verilmezse defter bütünüyle sayfalanır ve transferin iki satırı da gelir; ikisi birbirini götürür.
 */
 
-/** Ekranın sözlükleri — doğal tavanlı, operatörün kurduğu kümeler; tek turda (CLAUDE §1). */
+/** Ekranın sözlükleri: operatörün kurduğu doğal tavanlı kümeler, tek turda okunur. */
 export interface FinanceDictionaries {
   accounts: Account[];
   balances: Map<string, AccountBalance>;
@@ -109,8 +98,7 @@ export async function readLedgerPage(
     type: urlState.type === 'all' ? undefined : urlState.type,
     from: urlState.from || undefined,
     to: urlState.to || undefined,
-    // Adresteki `scope=unmatched` İZAH kuyruğudur (13.09): parametre adı paylaşılmış bağlantılar
-    // kırılmasın diye kaldı; anlamı sayaçla aynı.
+    // Adresteki `scope=unmatched` izah kuyruğudur; parametre adı paylaşılmış bağlantılar kırılmasın diye kaldı.
     unexplainedOnly: urlState.scope === 'unmatched' || undefined,
     cursor,
     limit: DEFAULT_PAGE_SIZE,
@@ -125,10 +113,7 @@ export async function readLedgerPage(
   };
 }
 
-/**
- * Tek hareketin defter satırları (12.17) — "devamını yükle" ile gelmiş satır yazımdan sonra kendisi
- * yeniden okunur: liste başa dönmez, satır tazelenir. Transferde iki satır (iki hesabın defteri).
- */
+/** Tek hareketin defter satırları; yazımdan sonra satır kendi başına tazelenir, liste başa dönmez. Transferde iki satırdır. */
 export async function readLedgerRows(db: SupabaseClient, movementId: string, names: FinanceNames): Promise<MovementRowView[]> {
   return toRowViews(db, await new MoneyMovementService(db).ledgerRows(movementId), names);
 }
@@ -142,7 +127,7 @@ async function toRowViews(db: SupabaseClient, ledgerRows: readonly AccountLedger
   const orderIds = [...new Set(ledgerRows.flatMap((row) => (row.orderId ? [row.orderId] : [])))];
   const allocations = rowIds.length > 0 ? await new MoneyAllocationService(db).listByMovements(rowIds) : [];
   const documentIds = [...new Set(allocations.map((allocation) => allocation.documentId))];
-  // Mutabık olmayan ekstre satırlarının önerisi (12.19): satırın ikinci satırı "öneri: …" okur.
+  // Mutabık olmayan ekstre satırlarının önerisi; satırın hapı "öneri: …" okur.
   const pending = [...new Set(ledgerRows.filter((row) => row.source === 'bank_import' && !row.reconciled).map((row) => row.id))];
   const [orders, documents, queue] = await Promise.all([
     orderIds.length > 0 ? new OrderService(db).listByIds(orderIds) : Promise.resolve([]),
@@ -166,7 +151,7 @@ async function toRowViews(db: SupabaseClient, ledgerRows: readonly AccountLedger
           {
             strength: entry.strength,
             title: entry.candidates[0]?.title ?? null,
-            // ✓ yalnız güçlü önerinin hedefini taşır (12.21) — çoklu adayda seçimi menü yapar.
+            // ✓ yalnız güçlü önerinin hedefini taşır; çoklu adayda seçimi menü yapar.
             target: entry.strength === 'strong' ? (entry.candidates[0]?.target ?? null) : null,
           },
         ] as const,
@@ -175,7 +160,7 @@ async function toRowViews(db: SupabaseClient, ledgerRows: readonly AccountLedger
   return toMovementRows(ledgerRows, { ...names, orderRefs, documentsOf, suggestions });
 }
 
-/** Tek belgenin satırı (12.17) — "devamını yükle" ile gelmiş belge bağ yazımından sonra tazelenir. */
+/** Tek belgenin satırı; bağ yazımından sonra tazelenir. */
 export async function readDocumentRow(db: SupabaseClient, documentId: string, names: FinanceNames): Promise<DocumentRowView | null> {
   const service = new MoneyDocumentService(db);
   const document = await service.getById(documentId);
@@ -185,9 +170,8 @@ export async function readDocumentRow(db: SupabaseClient, documentId: string, na
 }
 
 /**
- * Belgeler sekmesinin bir sayfası (12.17) — belge gününe göre en yeni önce. Hesap süzgeci belgeye
- * UYGULANMAZ: belge bir hesabın değil bir borcun kaydıdır, hangi hesaptan ödeneceği ödemesinde belli
- * olur. "Yalnız açık" kümesi doğal tavanlıdır (kapanan düşer) — tek turda, imleçsiz.
+ * Belgeler sekmesinin bir sayfası. Hesap süzgeci belgeye uygulanmaz, çünkü belge bir hesabın değil bir borcun kaydıdır; "yalnız açık"
+ * kümesi doğal tavanlı olduğu için tek turda, imleçsiz okunur.
  */
 export async function readDocumentsPage(
   db: SupabaseClient,

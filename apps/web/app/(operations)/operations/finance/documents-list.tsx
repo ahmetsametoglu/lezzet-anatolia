@@ -12,20 +12,8 @@ import { GroupHeading, ROW_EDGE } from './list-parts';
 import { DocumentActionsCell, type DocumentRowActions } from './row-actions';
 
 /*
-  BELGELER SEKMESİ (12.17 · kullanıcı sorusu 13.09: "belgeleri nerede görüyorum, nerede listeliyorum?")
-  — fatura, fiş, bordro, sözleşme, dekont; açık ve kapanmış hepsi, belge gününe göre en yeni önce.
-
-  Bir tur yalnız AÇIK belgeler sağ sütunda kart olarak duruyordu: ödenen belge ekrandan kayboluyor ve
-  "şu faturayı hangi havale kapattı" sorusunun cevabı hiçbir yerde okunmuyordu.
-
-  12.21 (sağ panel kalktı): belgenin işi SATIRINDA — ödeme hapı (bağlı ödemeler, kaldırma, adaylar) ve
-  ⋯ menüsü ("Ödemesini yaz", "Belgeyi aç"); panelin KDV'si satırın ikinci satırında.
-
-  12.23 (kullanıcı isteği: "aynı çalışmayı belgeler tablosu için de yap" · seçimler: "aylara göre",
-  "belge tutarı, altında açık kalan"): liste aylara göre gruplu — fatura, kira, telefon aylık gelir,
-  günlere bölünse neredeyse her belge kendi başlığını alırdı; belgenin günü alt satırın başında. Tutar ile
-  açık kalan tek sütunda: üstte belge tutarı (satırın en büyük yazısı, sağ kenarda), altında renkli hâl.
-  Açık belgenin solunda amber, fazla ödenmişin solunda kırmızı çizgi; sağ uçtaki nokta kalktı.
+  Belgeler sekmesi: açık ve kapanmış bütün belgeler aylara göre gruplu, çünkü fatura, kira, telefon aylık gelir ve günlere bölünse
+  neredeyse her belge kendi başlığını alırdı. Kapanmış belge de listede durur; "şu faturayı hangi havale kapattı" ancak orada okunur.
 */
 
 const DOC_GRID = 'grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,240px)_140px] items-center gap-x-3';
@@ -61,7 +49,7 @@ interface DocumentListProps {
   note: string | null;
   /** Etiketin okunur adı — satır slug taşır. */
   tagLabels: ReadonlyMap<string, string>;
-  /** Satırın eylemleri — ödeme hapı ve ⋯ menüsü (12.21). */
+  /** Satırın eylemleri: ödeme hapı ve ⋯ menüsü. */
   actions: DocumentRowActions;
   hasMore: boolean;
   loadingMore: boolean;
@@ -85,7 +73,7 @@ export function DocumentList({ rows, note, tagLabels, actions, hasMore, loadingM
         {groupConsecutive(rows, (document) => document.issuedOn.slice(0, 7)).map((group) => {
           const month = monthYear(`${group.key}-01`);
           return (
-            // AY (12.23): başlık yapışkan ve toplamsız — bkz. `GroupHeading`.
+            // Ay başlığı yapışkan ve toplamsız (`GroupHeading`).
             <li key={group.key}>
               <GroupHeading title={month} />
               <ul aria-label={month}>
@@ -105,10 +93,8 @@ export function DocumentList({ rows, note, tagLabels, actions, hasMore, loadingM
                             {document.partyName ?? '—'}
                           </span>
                         </span>
-                        {/* Günü alt satırın başında — ay başlıkta. KDV belgede yoksa yazılmaz: sıfır "KDV yok" demek
-                            olurdu, "bilinmiyor" değil (CLAUDE §1). */}
-                        {/* Vade ve rejim (12.26): vade belgede yazıyorsa, rejim yalnız standart DEĞİLSE — ters yüklemeli
-                            faturada "KDV 0" ile beyan edilecek KDV'yi ayırt eden tek işaret bu. */}
+                        {/* KDV belgede yoksa yazılmaz, çünkü sıfır "KDV yok" demek olurdu. Rejim yalnız standart değilse
+                            yazılır: ters yüklemeli faturada "KDV 0" ile beyan edilecek KDV'yi ayırt eden tek işaret bu. */}
                         <span className="truncate font-ops-body text-ops-micro text-ops-faint">
                           {dayMonth(document.issuedOn)} · {DOCUMENT_DIRECTION_LABEL[document.direction]}
                           {document.dueOn ? ` · vade ${dayMonth(document.dueOn)}` : ''}
@@ -119,7 +105,7 @@ export function DocumentList({ rows, note, tagLabels, actions, hasMore, loadingM
                       </div>
                       <span className="truncate font-ops-body text-ops-xs text-ops-muted">{classes || '—'}</span>
                       <DocumentActionsCell document={document} actions={actions} />
-                      {/* TUTAR (12.23): belge tutarı satırın en büyük yazısı, sağ kenarda; altında renkli hâl. */}
+                      {/* Belge tutarı satırın en büyük yazısı, altında renkli hâl. */}
                       <div className="flex flex-col items-end gap-0.5">
                         <span className="whitespace-nowrap font-ops-mono text-ops-lead font-semibold text-ops-ink">{amount(document.amountCents)}</span>
                         <span className={`whitespace-nowrap font-ops-mono text-ops-xs ${STATE_TEXT[state]}`}>{stateLine(document, state)}</span>
