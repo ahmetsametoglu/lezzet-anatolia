@@ -268,7 +268,7 @@ export const MeCartViewSchema = z.object({
   minBasketCents: z.number().int(),
   /** Ücretsiz kargo eşiği; **0 = eşik tanımsız**, ilerleme bloğu hiç çizilmez. */
   freeShippingCents: z.number().int(),
-  /** KARGO grubunun toplamı — ücretsiz kargo eşiği buna bakar, sepetin tamamına değil (K37). */
+  /** KARGO grubunun toplamı — ücretsiz kargo eşiği buna bakar, sepetin tamamına değil. */
   shippingSubtotalCents: z.number().int(),
   /** Sepetin tamamı kargo grubundaysa müşteriye "iki sipariş vereceksiniz" DENMEZ. */
   shippingOnly: z.boolean(),

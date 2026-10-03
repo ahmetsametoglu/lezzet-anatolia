@@ -6,23 +6,9 @@ import { ProductVariantSchema } from '../entities/product-variant.schema';
 import { RecipeItemSchema, RecipeSchema } from '../entities/recipe.schema';
 
 /**
- * TARİF DETAY SÖZLEŞMESİ (21.14) — mobil `GET /api/v1/recipes/:slug` ucunun ve onu tüketen Expo
- * tarif ekranının ORTAK dili. Terfi gerekçesi `catalog-api.schema.ts` ile aynı (02-mimari §3.2
- * "sözleşme tek kaynak"): üreten ve tüketen aynı şemayı çağırır, alan adı değişirse iki taraf
- * birden DERLEME anında kırılır.
- *
- * ── FİYAT/STOK MOTORDAN GELİR, TARİFTEN DEĞİL ────────────────────────────────
- * Tarif İÇERİKTİR (`RecipeService` künyesi: servis karar vermez); satır fiyatı ve tükendi kararı
- * `@lezzet/application`ın vitrin indirgemesinden (`sellingOf` + `stockStatusOf`) okunur — katalog
- * kartının okuduğu kararların TAM AYNISI. Aynı ürün katalogda başka, tarifte başka fiyat
- * gösteremez. Yer bilinmezken (`UNKNOWN_PLACE`) davranış da katalogla birdir: teklif tutarı hiç
- * okunmaz, stok depo-üstü toplamdan cevaplanır.
- *
- * ── SATIR LİSTESİ TARİFİN KENDİ SIRASIDIR, AMA HERKES TAŞINMAZ ───────────────
- * Satıştan kalkmış (aday/pasif) ürünün satırı HİÇ taşınmaz (DOMAIN §13: katalogda görünmeyen ürün
- * linkle de satılamaz; detayı zaten 404). "Tükendi" o satırın hâli OLAMAZDI — tükendi "yeniden
- * gelecek" der, satıştan kalkan gelmeyecek. Tükenen ürün ise listede KALIR (katalogun aynı kuralı)
- * ve `soldOut` ile işaretlenir: satır soluk aksiyonsuz çizilir, ürüne tıklanabilir kalır.
+ * Tarif detay sözleşmesi — mobil `GET /api/v1/recipes/:slug` ucu ile Expo tarif ekranının ortak dili; satır fiyatı ve tükendi kararı
+ * katalog kartının indirgemesinden (`sellingOf`, `stockStatusOf`) gelir ki aynı ürün tarifte başka fiyatlanmasın. Satıştan kalkmış
+ * ürünün satırı taşınmaz (`DOMAIN §13`), tükenen ürün `soldOut` ile listede kalır.
  */
 
 /**
@@ -50,13 +36,13 @@ export const RecipeRowSchema = z.object({
    */
   qty: RecipeItemSchema.shape.qty,
   /**
-   * Birim fiyat (ham cent) — biçim istemcinin işi. **`null` = bu kanalda fiyatı yok → satır
-   * SATIŞA KAPALI**: + çizilmez, fiyat parçası düşer. Sıfır YAZILMAZ (`CLAUDE §1`).
+   * Birim fiyat (ham cent), biçim istemcinin işi; `null` bu kanalda fiyatı olmayan, satışa kapalı satırdır: + çizilmez, fiyat
+   * parçası düşer. Sıfır yazılmaz (`CLAUDE §1`).
    */
   priceCents: z.number().int().nullable(),
   /**
-   * İndirim öncesi referans — kart sözleşmesinin aynı kuralı: **alan hiç yoksa indirim de yoktur**.
-   * Sepet satırının `discounted` rozeti bundan kurulur. Yer bilinmezken hiç dolmaz (teklif sözü).
+   * İndirim öncesi referans, kart sözleşmesinin kuralıyla: alan yoksa indirim de yoktur ve sepet satırının `discounted` rozeti bundan
+   * kurulur. Yer bilinmezken hiç dolmaz (teklif sözü).
    */
   wasCents: z.number().int().optional(),
   image: CatalogImageSchema,
@@ -77,9 +63,8 @@ export const RecipeDetailSchema = RecipeSchema.pick({ slug: true }).extend({
   /** Seçili dilde tek metin; **`null` = hiç girilmemiş** (boş/boşluk da `null`) → paragraf düşer. */
   description: z.string().nullable(),
   /**
-   * "35 dk" / "3–4 kişilik" — SERBEST METİN, sayı değil (05.16: hesap yok, birim çekimi dile
-   * bağlı; `serves` aralık olabilir). **`null` = girilmemiş** → rozet parçası düşer; ikisi de
-   * boşsa rozet hiç çizilmez.
+   * "35 dk" / "3–4 kişilik" — serbest metin, sayı değil, çünkü hesap yapılmaz ve birim çekimi dile bağlıdır (`serves` aralık
+   * olabilir). `null` girilmemiş demektir: rozet parçası düşer, ikisi de boşsa rozet çizilmez.
    */
   duration: z.string().nullable(),
   serves: z.string().nullable(),
@@ -91,31 +76,15 @@ export const RecipeDetailSchema = RecipeSchema.pick({ slug: true }).extend({
    * ürünümüz DEĞİL, sepete eklenmez. **Boş dizi = bölüm çizilmez.**
    */
   pantry: z.array(z.string()),
-  /** Hazırlanış — satır = adım; NUMARAYI EKRAN verir (05.16). **Boş dizi = bölüm çizilmez.** */
+  /** Hazırlanış: satır = adım, numarayı ekran verir; boş dizide bölüm çizilmez. */
   steps: z.array(z.string()),
 });
 export type RecipeDetail = z.infer<typeof RecipeDetailSchema>;
 
 /**
- * TARİF LİSTE SÖZLEŞMESİ (Fikirler sekmesi) — `GET /api/v1/recipes`.
- *
- * ── KART İKİNCİ KEZ TANIMLANMADI ─────────────────────────────────────────────
- * Satır şeması `HomeRecipeSchema`ın KENDİSİDİR, daraltması ya da kopyası değil (CLAUDE §1 — tip
- * duplikasyonu da duplikasyondur): vitrin şeridindeki kart ile liste sayfasındaki kart AYNI kartlar
- * ve aynı okuma kapısından çıkıyorlar (`packages/application/src/catalog/ideas.ts`). Ayrı bir
- * `RecipeCardSchema` açmak, iki şeklin bir gün sessizce ayrışmasına kapı bırakırdı. Adın "Home" ile
- * başlaması bir borçtur (kart artık iki yüzeyde): ad `HomeRecipe` kaldı çünkü onu ekran, fixture ve
- * uç birlikte okuyor — yeniden adlandırma ayrı bir iştir, kapsamı bu değil.
- *
- * ── SAYFALAMA YOK, TAVAN VAR (CLAUDE §1) ─────────────────────────────────────
- * Tarif kümesi operatörün elle kurduğu EDİTORYAL bir seçkidir, veriyle büyümez → keyset değil,
- * tek turda. `nextCursor` alanı bilerek yok: dolduramayacağı bir alan taşıyan sözleşme, ekranı
- * "devamı yok" ile "devamı bilinmiyor"u ayırt edemez hâlde bırakır. Uçtaki emniyet sınırı
- * (`RECIPE_LIST_LIMIT`) sayfalama DEĞİL, elle kurulan kümenin bir gün yüz satıra çıkmasına karşı
- * korumadır (web `RECIPE_PAGE_LIMIT` emsali).
- *
- * Zarf SATIR ŞEMASI DEĞİL, nesnedir (`CatalogCategoryListSchema` emsali): uç yarın anahtarı
- * değiştirse çıplak dizi bunu yakalayamazdı.
+ * Tarif liste sözleşmesi (Fikirler sekmesi, `GET /api/v1/recipes`): satır şeması vitrin kartının kendisidir (`HomeRecipeSchema`),
+ * çünkü iki kart aynı okuma kapısından çıkar ve ayrı şema bir gün sessizce ayrışırdı. Küme operatörün kurduğu editoryal seçki olduğu
+ * için tek turda gelir ve `nextCursor` yoktur; zarf nesnedir, çünkü çıplak dizi ucun anahtar değişikliğini yakalayamazdı.
  */
 export const RecipeListSchema = z.object({ recipes: z.array(HomeRecipeSchema) });
 export type RecipeList = z.infer<typeof RecipeListSchema>;
