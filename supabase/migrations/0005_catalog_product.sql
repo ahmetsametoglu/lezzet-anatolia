@@ -41,10 +41,8 @@ create table public.product (
   ingredients jsonb,                                 -- LocalizedText, çok dilli içindekiler
   nutrition jsonb,                                   -- SABİT kalemli (100 g başına) — NutritionSchema
   storage_instructions jsonb,                        -- LocalizedText; saklama koşulunun beyanı
-  -- Hazırlama adımları — SIRALI kısa cümleler ("Buzdolabında 4 saat çözdürün"), her öğe LocalizedText; sıra dizinin
-  -- kendisidir. `storage_instructions`ın içine yazılamaz: o beyan, bu yol tarifi — tek metne sıkışsa ekran adımları
-  -- ayıramaz ve numarayı uyduramazdı. Yasal beyan DEĞİL, bu yüzden `is_incomplete` ölçütüne girmez; boş dizi
-  -- "adım girilmedi" demektir ve bölüm çizilmez.
+  -- Hazırlama adımları — SIRALI kısa cümleler, her öğe LocalizedText; `storage_instructions`a yazılmaz, çünkü tek metinde
+  -- ekran adımları ayıramaz. Yasal beyan DEĞİL, `is_incomplete` ölçütüne girmez; boş dizi "adım girilmedi" demektir.
   preparation_steps jsonb not null default '[]'::jsonb
     constraint product_preparation_steps_is_array check (jsonb_typeof(preparation_steps) = 'array'),
   -- AB 14 alerjen beyanı: null = girilmedi, '{}' = alerjen içermez. Varsayılan yok, çünkü boş dizi varsayılanı beyanı
@@ -118,24 +116,22 @@ create unique index product_slug_key on public.product (slug);
 create index product_incomplete_idx on public.product (is_incomplete) where is_incomplete;
 create index product_category_idx on public.product (category_id);
 
--- Porsiyonun TÜRÜ — `pieces_count` "kaç" der, bu "neyin kaçı" der. `item` ayrı ayrı ürünler (4'lü simit),
--- `slice` tek gövdenin dilimleri (12 dilimlik cheesecake), `package` kendi içinde paketlenmiş birimler
--- (çift paket 1,4 kg). Vitrin üçüne aynı kelimeyi yazamaz: "2 adet" ile "2 paket" aynı şeyi satmaz.
+-- Porsiyonun TÜRÜ: `item` ayrı ürünler (4'lü simit), `slice` tek gövdenin dilimleri (12 dilimlik cheesecake), `package`
+-- paketlenmiş birimler (çift paket 1,4 kg). Vitrin üçüne aynı kelimeyi yazamaz: "2 adet" ile "2 paket" aynı şeyi satmaz.
 create type portion_kind as enum ('item', 'slice', 'package');
 
--- Net miktarın birimi — KAPALI küme: katı gram, sıvı mililitre. Üçüncü bir birim ("adet") burada yok, çünkü adet ayrı
--- kolonda (`pieces_count`) ve ayrı soruya cevap verir. Birim fiyat da buradan seçilir: g → €/kg, ml → €/L.
+-- Net miktarın birimi — KAPALI küme: katı gram, sıvı mililitre; adet ayrı kolonda (`pieces_count`) ayrı soruya cevap verir.
+-- Birim fiyat da buradan seçilir: g → €/kg, ml → €/L.
 create type net_unit as enum ('g', 'ml');
 
 create table public.product_variant (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.product (id) on delete cascade,
-  -- Müşteriye görünen boy etiketi ("700 g tepsi") — çok dilli; tek boylu üründe boş olabilir, birden çok varyantta en az
-  -- bir dilin dolu olması form kuralıdır.
+  -- Boyun operasyondaki adı ("700 g tepsi"); müşteriye boy adı ölçüden türer, etiket yalnız ölçüsüz boyda yedek ad olur.
+  -- Bu yüzden çok dilli; tek boylu üründe boş olabilir, birden çok varyantta en az bir dilin dolu olması form kuralıdır.
   label jsonb not null default '{}'::jsonb,          -- LocalizedText
-  -- NET MİKTAR = sayı + BİRİM. Gramla sınırlı bir kolon sıvıyı hiç yazamıyordu: sirkenin, zeytinyağının ve özlerin
-  -- ambalajında mililitre yazar ve birim fiyatı da litre başına verilir (98/6/EC). "500 ml" etiketi serbest metindir,
-  -- kodun hesap yapabildiği bir sayı değil — bu yüzden ölçü kendi birimiyle taşınır.
+  -- NET MİKTAR = sayı + BİRİM: sıvının ambalajında mililitre yazar ve birim fiyatı litre başına verilir (98/6/EC).
+  -- Etiketteki "500 ml" hesaplanabilir bir sayı değildir, bu yüzden ölçü kendi birimiyle taşınır.
   net_quantity int check (net_quantity is null or net_quantity > 0),
   net_unit net_unit,
   -- Paket içi adet ("12'li" ile "36'lı" aynı ürünün iki boyu) — gramajın yanında, ayrı soruya cevap verir;
@@ -262,7 +258,7 @@ create table public.bundle (
 create unique index bundle_slug_key on public.bundle (slug);
 create index bundle_featured_idx on public.bundle (sort_order) where is_featured;
 
--- Paket kalemi. `allocated_unit_price` müşteriye görünmez: faturada her kalemin KDV'si kendi ürününün oranından işlensin diye var.
+-- Paket kalemi: `allocated_unit_price` müşteriye görünmez, faturada her kalemin KDV'si kendi ürününün oranından işlensin diye var.
 -- Σ(allocated × qty) = total_price kuralı küme üzerinde olduğu için SQL check'te değil, uygulamada (domain-core) doğrulanır.
 create table public.bundle_item (
   id uuid primary key default gen_random_uuid(),
