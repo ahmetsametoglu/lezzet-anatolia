@@ -5,17 +5,8 @@ import type { AddressWrite, MeAddress } from '@/lib/api/addresses';
 import { AddressForm } from './address-form';
 
 /*
-  ADRES FORMU — Musteri Mobil `shAddr` akışı (21.313).
-
-  KRİTİK İDDİALAR:
-  · öneri TEK kapıdan ve SEÇİLİ ülkeyle sorulur; seçilen adres kaynağıyla (BAN / Google) noktasını
-    gövdeye taşır — ikinci bir ağ turu yok, kaynak 30 gün kuralını belirliyor;
-  · kaydetmek = seçmek: yeni adres teslimat adresi olur ve bildirim bunu söyler;
-  · elle girilen adres kaydetmeden önce doğrulanır ama doğrulama kaydı ENGELLEMEZ (10.08);
-  · numarasız yazıda sıfır sonuç "bulamadık" değil "kapı numarasını da yazın"dır (14.09).
-
-  Uçlar taklit; öneri kancasının önbelleği modül düzeyinde yaşadığı için her test KENDİ sorgusunu yazar
-  (aynı metne iki farklı cevap kursaydık ikinci test birincinin önbelleğini okurdu).
+  Uçlar taklit; seçilen adresin noktası kaynağıyla gövdeye girer, çünkü kaynak 30 gün saklama kuralını belirler. Öneri kancasının
+  önbelleği modül düzeyinde yaşadığı için her test kendi sorgusunu yazar, yoksa ikinci test birincinin cevabını okurdu.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
