@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogSize } from '@lezzet/types';
-import { cardQuantityOf, openingVariantOf, sizeQuantityOf, variantNameOf } from './variant';
+import { cardQuantityOf, openingVariantOf, sizeQuantityOf, sizesLabelOf, variantNameOf } from './variant';
 
 const small = { id: 'kucuk' };
 const large = { id: 'buyuk' };
@@ -73,6 +73,18 @@ describe('sizeQuantityOf · kartta adet varsa adet, yoksa net miktar', () => {
 
   it('ölçüsüz boyda null — kart uydurmaz', () => {
     expect(sizeQuantityOf(boy(null, null, null), 'tr')).toBeNull();
+  });
+});
+
+describe('sizesLabelOf · vitrin kartının satırı yedeksiz', () => {
+  it('boylar gelmediyse ya da biri adsızsa satır yok — vitrin kartı bugünkü hâlinde kalır', () => {
+    expect(sizesLabelOf(undefined, 'tr')).toBeUndefined();
+    expect(sizesLabelOf([], 'tr')).toBeUndefined();
+    expect(sizesLabelOf([boy('item', 4, 420), boy(null, null, null)], 'tr')).toBeUndefined();
+  });
+
+  it('adlandırılan boylar " · " ile', () => {
+    expect(sizesLabelOf([boy('item', 4, 420), boy(null, null, 1250)], 'tr')).toBe('4 adet · 1,25 kg');
   });
 });
 

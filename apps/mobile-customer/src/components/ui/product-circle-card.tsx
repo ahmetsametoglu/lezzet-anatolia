@@ -28,9 +28,9 @@ interface ProductCircleCardProps {
   soldOutLabel?: string;
   /** "İndirim" etiketi; verilirse indirim rozeti çıkar. */
   discountLabel?: string;
-  /** "3 seçenek" gibi çeşit satırı. */
-  optionsLabel?: string;
-  /** Ekran okuyucu adı; verilmezse ad + fiyattan kurulur. */
+  /** Miktar satırı ("4 adet" · "750 ml · 5 L", `sizesLabelOf`), katalog kartıyla aynı kural; verilmezse satır çizilmez. */
+  quantityLabel?: string;
+  /** Ekran okuyucu adı; verilmezse ad, miktar ve fiyattan kurulur. */
   accessibilityLabel?: string;
   testID?: string;
 }
@@ -45,7 +45,7 @@ export function ProductCircleCard({
   soldOut = false,
   soldOutLabel,
   discountLabel,
-  optionsLabel,
+  quantityLabel,
   accessibilityLabel,
   testID,
 }: ProductCircleCardProps) {
@@ -57,7 +57,7 @@ export function ProductCircleCard({
       onPress={onPress}
       feedback="scale"
       style={styles.card}
-      accessibilityLabel={accessibilityLabel ?? [name, priceLabel].filter((part) => part !== undefined).join(' · ')}
+      accessibilityLabel={accessibilityLabel ?? [name, quantityLabel, priceLabel].filter((part) => part !== undefined).join(' · ')}
       testID={testID}
     >
       <View style={[styles.photoFrame, { width: diameter, height: diameter }]}>
@@ -90,7 +90,12 @@ export function ProductCircleCard({
       <Text style={styles.name} numberOfLines={2}>
         {name}
       </Text>
-      {optionsLabel === undefined ? null : <Text style={styles.options}>{optionsLabel}</Text>}
+      {/* Kartın genişliği sabit değil: satır dairenin çapıyla sınırlanır ki uzun boy listesi rayda kartı açmasın. */}
+      {quantityLabel === undefined ? null : (
+        <Text style={[styles.quantity, { maxWidth: diameter }]} numberOfLines={1}>
+          {quantityLabel}
+        </Text>
+      )}
     </PressableSurface>
   );
 }
@@ -125,7 +130,7 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.ink,
     textAlign: 'center',
   },
-  options: {
+  quantity: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text.helper,
     color: theme.colors.muted,

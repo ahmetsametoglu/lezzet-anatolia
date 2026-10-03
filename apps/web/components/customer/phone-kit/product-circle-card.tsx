@@ -21,6 +21,8 @@ interface ProductCircleCardProps {
   /** "Fırsat" rozeti — verilirse sol üstte hap köşe. */
   discountLabel?: string;
   size?: 'lg' | 'sm';
+  /** Miktar satırı ("4 adet" · "750 ml · 5 L", `sizesLabelOf`), katalog kartıyla aynı kural; verilmezse satır çizilmez. */
+  quantityLabel?: string;
   /** Açılmadan önce: ürün kartıysa bilgisini ürün sayfasının yükleme karesine bırakır. */
   onOpen?: () => void;
 }
@@ -39,6 +41,7 @@ export function ProductCircleCard({
   image,
   discountLabel,
   size = 'lg',
+  quantityLabel,
   onOpen,
 }: ProductCircleCardProps) {
   const box = SIZE[size];
@@ -47,7 +50,7 @@ export function ProductCircleCard({
       href={href}
       replace={replace}
       onClick={onOpen}
-      aria-label={[name, priceLabel].filter(Boolean).join(' · ')}
+      aria-label={[name, quantityLabel, priceLabel].filter(Boolean).join(' · ')}
       className={`flex ${box.box} flex-none cursor-pointer flex-col items-center gap-1.5 transition-transform hover:opacity-90 active:scale-[0.97]`}
     >
       <span className={`relative block ${box.circle}`}>
@@ -64,6 +67,9 @@ export function ProductCircleCard({
         )}
       </span>
       <span className="line-clamp-2 text-center font-serif text-body-sm leading-[1.15] font-semibold text-ink">{name}</span>
+      {quantityLabel !== undefined && (
+        <span className="max-w-full truncate text-center font-sans text-helper text-muted">{quantityLabel}</span>
+      )}
     </Link>
   );
 }

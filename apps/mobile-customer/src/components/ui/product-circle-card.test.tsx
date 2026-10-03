@@ -60,12 +60,11 @@ describe('ProductCircleCard', () => {
     expect(screen.queryByText('İNDİRİM')).toBeNull();
   });
 
-  it('çeşit satırı verilince yardımcı kademede çıkar', async () => {
-    await render(
-      <ProductCircleCard name="Pekmez" priceLabel="9 €" onPress={jest.fn()} optionsLabel="3 seçenek" />,
-    );
+  it('miktar satırı verilince yardımcı kademede çıkar ve ekran okuyucu fiyatı miktarla duyar', async () => {
+    await render(<ProductCircleCard name="Simit" priceLabel="3,50 €" onPress={jest.fn()} quantityLabel="4 adet" />);
 
-    expect(screen.getByText('3 seçenek')).toHaveStyle({ color: customerColors.muted });
+    expect(screen.getByText('4 adet')).toHaveStyle({ color: customerColors.muted });
+    expect(screen.getByRole('button', { name: 'Simit · 4 adet · 3,50 €' })).toBeOnTheScreen();
   });
 
   it('fotoğraf yoksa adın baş harfine düşer — ve daire a11y ağacında GÖRÜNMEZ (kartın adı yeter)', async () => {

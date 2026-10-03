@@ -51,17 +51,22 @@ export function sizeQuantityOf(size: CatalogSize, locale: Locale): string | null
 }
 
 /**
- * Kartın ikinci satırı: boyların miktarı " · " ile ("750 ml · 5 L"), kartın fiyatı tek başına kaç tane alındığını söylemediği için.
- * Bir boyun ölçüsü yoksa ya da boylar gelmediyse çok boyluda boy sayısı yazılır ("3 seçenek"), eksik liste seçimi gizlerdi.
+ * Boyların miktarı " · " ile ("750 ml · 5 L"), kartın fiyatı tek başına kaç tane alındığını söylemediği için. Bir boyun ölçüsü
+ * yoksa ya da boylar gelmediyse `undefined`: eksik liste boy seçimini gizlerdi.
  */
+export function sizesLabelOf(sizes: readonly CatalogSize[] | undefined, locale: Locale): string | undefined {
+  const labels = sizes?.map((size) => sizeQuantityOf(size, locale));
+  if (labels === undefined || labels.length === 0 || !labels.every((label): label is string => label !== null)) return undefined;
+  return labels.join(' · ');
+}
+
+/** Katalog kartının ikinci satırı: boyların miktarı, o yoksa çok boyluda boy sayısı ("3 seçenek"). */
 export function cardQuantityOf(
   product: { sizes?: readonly CatalogSize[]; variantCount: number },
   t: { options: string },
   locale: Locale,
 ): string | undefined {
-  const labels = product.sizes?.map((size) => sizeQuantityOf(size, locale));
-  if (labels !== undefined && labels.length > 0 && labels.every((label): label is string => label !== null)) {
-    return labels.join(' · ');
-  }
-  return product.variantCount > 1 ? t.options.replace('{n}', String(product.variantCount)) : undefined;
+  return (
+    sizesLabelOf(product.sizes, locale) ?? (product.variantCount > 1 ? t.options.replace('{n}', String(product.variantCount)) : undefined)
+  );
 }

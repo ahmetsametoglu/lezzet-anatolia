@@ -7,6 +7,7 @@ import {
   offerLimitOf,
   productPriceLabel,
   scopeBadgeOf,
+  sizesLabelOf,
 } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 // Metin iki yüzeyin ortak malı: web'in telefon görünümü de bu sözlükten okur.
@@ -437,6 +438,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   priceLabel={productPriceLabel(product.priceCents, locale)}
                   /* Yalnız fırsat rozeti: kapsam kampanyası kesitin kendi kartında, ürün başına yazılsa vaat gibi okunurdu. */
                   discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
+                  quantityLabel={sizesLabelOf(product.sizes, locale)}
                   image={product.image}
                   onPress={() => openProductFromCard(router, product)}
                   testID={`home-featured-${product.slug}`}

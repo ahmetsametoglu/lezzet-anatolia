@@ -6,6 +6,7 @@ import {
   offerLimitOf,
   productPriceLabel,
   scopeBadgeOf,
+  sizesLabelOf,
   type HomeCopy,
 } from '@lezzet/helper';
 import homeMessages from '@lezzet/i18n/customer/home';
@@ -152,6 +153,7 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
                 name={product.name}
                 priceLabel={productPriceLabel(product.priceCents, locale)}
                 discountLabel={cardBadgeOf(product, { offer: copy.card.offer })}
+                quantityLabel={sizesLabelOf(product.sizes, locale)}
                 image={product.image}
               />
             ))}
