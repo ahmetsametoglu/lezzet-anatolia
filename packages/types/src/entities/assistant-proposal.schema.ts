@@ -381,7 +381,7 @@ export const ProductDraftPayloadSchema = ProductReviewSignalsSchema.extend({
         /** Ambalajın üstünde basılı kod — onaylanınca bu boya bağlanır; kod ZATEN başkasındaysa araç önermez. */
         barcode: NewVariantBarcodeSchema.optional(),
       }).superRefine((row, ctx) => {
-        // Yeni boyun ETİKETİ ve GRAMAJI zorunlu: etiketsiz boy müşteriye seçtirilemez, gramajsız boy satılamaz
+        // Yeni boyun ETİKETİ ve GRAMAJI zorunlu: etiketsiz boy operasyon listelerinde ayırt edilemez, gramajsız boy satılamaz
         // (birim fiyat ondan çıkar). Var olan boyda ikisi de kayıtta duruyor, dilekçe yalnız eksiği tamamlar.
         if (row.variantId !== undefined) return;
         if (!row.label) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['label'], message: 'Yeni boyda etiket zorunlu' });

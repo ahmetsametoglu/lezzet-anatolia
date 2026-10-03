@@ -713,7 +713,7 @@ async function readIdentity(args: Record<string, unknown>): Promise<{ identity: 
 
 /**
  * Ürünün boy satırları: `variantId` varsa var olan boy (kimlik okuma araçlarından, başka ürünün boyu reddedilir), yoksa yeni boy.
- * Kimliksiz satırda etiket ve gramaj zorunlu: etiketsiz boy müşteriye seçtirilemez, gramajsız boyun kilo başı fiyatı çıkmaz.
+ * Kimliksiz satırda etiket ve gramaj zorunlu: etiketsiz boy operasyon listelerinde ayırt edilemez, gramajsız boyun kilo başı fiyatı çıkmaz.
  */
 async function readVariantEdits(
   args: Record<string, unknown>,
@@ -872,7 +872,7 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
   if (rawVariants.length === 0) {
     return { error: 'variants boş — en az bir boy gerekir ("500 g", "1 kg"). Varyantsız ürün satılamaz: fiyat ve stok boya bağlıdır.' };
   }
-  // Etiket ("500 g") ile ölçü (500) ayrı alanlar: biri müşterinin okuduğu metin, öteki kilo başı fiyatın tabanı.
+  // Etiket ("500 g") ile ölçü (500) ayrı alanlar: biri operasyonun okuduğu ad, öteki birim fiyatın ve müşteriye görünen adın tabanı.
   // Ambalaj ölçüsü (`packed*`) etikette yazmaz, tartılır: pozitif tam sayı değilse `null`, çünkü tahmini sayı kargo tarifesine girer.
   if (rawVariants.some((v) => !v.label || typeof v.label !== 'object')) {
     return { error: 'Her varyantın `label` alanı olmalı — { "tr": "500 g" }.' };

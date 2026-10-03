@@ -11,14 +11,8 @@ import { ProductVariantService } from './product-variant.service';
 import { StockService } from './stock.service';
 
 /**
- * Varyant senkronu (05.10) — DB üstünde. İki riskli davranış burada sınanır:
- *
- *   1. **Boy etiketi çok dilli** (`label` jsonb). Tek dil kaldığı sürece üç dilli vitrinde Fransız
- *      müşteri Türkçe boy adı okuyordu.
- *   2. **Silme.** `syncVariants` listeden çıkan satırı SİLER; şema bilerek iki farklı davranıyor —
- *      fiyat satırı varyantla gider (cascade), stok partisi silmeyi engeller (restrict). İkisi de
- *      doğru; sınanan şey engelin OKUNABİLİR bir cümleye çevrilmesi, çünkü ham "violates foreign key
- *      constraint" metni operatöre ne olduğunu da ne yapacağını da söylemiyor.
+ * Varyant senkronu, DB üstünde: listeden çıkan satır silinir, fiyatı onunla gider (cascade), stok partisi silmeyi engeller (restrict).
+ * Sınanan, engelin OKUNABİLİR bir cümleye çevrilmesidir, çünkü ham "violates foreign key constraint" operatöre ne yapacağını söylemez.
  */
 const db = serviceDb();
 const products = new ProductService(db);
@@ -57,11 +51,8 @@ afterAll(async () => {
 });
 
 /**
- * Form satırı üreticisi — testin YALNIZ sınadığı alanı yazmasını sağlar.
- *
- * `ProductVariantEntry` alanları bilerek ZORUNLU (künyesi şemada): alanı göstermeyen bir yazan,
- * üretecin bulduğu değeri her kayıtta ezerdi. Ama o disiplin fikstürlerde on kez beş `null`
- * yazdırmak anlamına geliyordu ve okunan şey sınanan şey olmaktan çıkıyordu.
+ * Form satırı üreticisi: `ProductVariantEntry` alanları zorunlu olduğundan boşları üreteç doldurur, test YALNIZ sınadığı alanı yazar.
+ * Her fikstür bütün alanları yazsaydı okunan şey sınanan şey olmaktan çıkardı.
  */
 function entry(over: Partial<ProductVariantEntry> = {}): ProductVariantEntry {
   return {
@@ -90,7 +81,7 @@ describe('ProductVariantService.syncVariants', () => {
         label: { tr: '700 g tepsi', fr: 'plateau 700 g', de: 'Platte 700 g' },
         netQuantity: 700,
         netUnit: 'g',
-        // Adet gramajın YANINDA yaşıyor (05.14): aynı varyant hem 12 parça hem 700 g olabilir.
+        // Adet gramajın YERİNE değil YANINDA: aynı varyant hem 12 parça hem 700 g olabilir.
         piecesCount: 12,
         minStockQty: 6,
         sku: 'TST-700',
@@ -197,9 +188,8 @@ describe('ProductVariantService.syncVariants', () => {
   });
 
   it('SIFIR ölçü ÇİFT KAT reddedilir — "0 g" ölçüm değil, ölçülmemişliğin yanlış yazılmış hâli', async () => {
-    // İlk kapı şemadır (`positive()`), ikincisi veritabanı kısıtı. Bu koşuda düşen ŞEMA — ama
-    // ikisi de yerinde durmalı: şemayı atlayan bir yazan (onarım betiği, doğrudan SQL) kısıta
-    // çarpar. Tek kat savunma, ikinci yazma yolu açıldığı gün delinir (MB-22a dersi).
+    // İlk kapı şema (`positive()`), ikincisi veritabanı kısıtı; bu koşuda düşen ŞEMA. İkisi de yerinde durmalı, çünkü
+    // şemayı atlayan bir yazan (onarım betiği, doğrudan SQL) ancak kısıta çarpar.
     const [mevcut] = await variants.listByProduct(productId);
     await expect(
       variants.syncVariants(productId, [entry({ id: mevcut?.id, label: { tr: 'Tepsi' }, packedWeightG: 0 })]),
@@ -211,8 +201,7 @@ describe('ProductVariantService.syncVariants', () => {
     const outcome = await variants.syncVariants(productId, [
       entry({ id: mevcut?.id, label: { tr: 'Cheesecake' }, piecesCount: 12, portionKind: 'slice' }),
     ]);
-    // "12 dilim" ile "12 adet" aynı şey değil: vitrin ikisine aynı kelimeyi yazarsa müşteri
-    // 12 cheesecake aldığını sanır (19.08 ölçümü).
+    // "12 dilim" ile "12 adet" aynı şey değil: vitrin ikisine aynı kelimeyi yazarsa müşteri 12 cheesecake aldığını sanır.
     expect(outcome[0]).toMatchObject({ piecesCount: 12, portionKind: 'slice' });
   });
 

@@ -583,7 +583,8 @@ function ProductCreatePreview({ payload }: { payload: ProductCreatePayload }) {
             label: 'Kargo',
             value: payload.shippable === null ? 'okunmadı — varsayılan: gönderilebilir' : payload.shippable ? 'Gönderilebilir' : 'Gönderilemez',
           },
-          // Boy satırı etiketi ve ölçüyü birlikte okur: etiket müşterinin gördüğü, ölçü kilo başı fiyatın ve kargo hesabının tabanı.
+          // Boy satırı etiketi ve ölçüyü birlikte okur: etiket operasyonun boy adı, ölçü ise müşteriye görünen adın,
+          // kilo başı fiyatın ve kargo hesabının tabanı.
           {
             label: 'Boylar',
             value: payload.variants

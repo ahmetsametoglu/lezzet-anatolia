@@ -265,7 +265,7 @@ describe('ürün künyesi dilekçesi', () => {
   });
 
   /**
-   * Gramajsız boy SATILAMAZ (birim fiyat ondan çıkar) ve etiketsiz boy müşteriye seçtirilemez. Kapı şemada:
+   * Gramajsız boy SATILAMAZ (birim fiyat ondan çıkar), etiketsiz boy operasyon listelerinde ayırt edilemez. Kapı şemada:
    * araç atlasa bile kuyruğa böyle bir satır giremez.
    */
   it('yeni boy gramajsız ya da etiketsiz olamaz', () => {

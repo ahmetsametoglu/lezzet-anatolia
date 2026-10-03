@@ -35,16 +35,14 @@ export const ProductFormSchema = ProductInsertSchema.omit({
     // bir seçim vardır — alt bardaki üçlü seçici. DB'de de tek kolon (`product_status`).
     status: ProductStatusEnum,
     /**
-     * Varyant satırı + o satıra BAĞLANACAK yeni kodlar. Kod varyantın kolonu değil ayrı bir eşleme kaydıdır
-     * (`variant_barcode`); kayıtlı kodlar editörün kendi okuması, buradaki liste yalnız kaydetmede bağlanacak
-     * olanlardır. Yeni açılan boyda satırın kimliği henüz yok, eşleme satır sırasından kurulur.
+     * Varyant satırı + kaydetmede o satıra BAĞLANACAK yeni kodlar; kod ayrı bir eşleme kaydıdır (`variant_barcode`), kayıtlı
+     * kodları editör kendisi okur. Yeni açılan boyun kimliği henüz olmadığından eşleme satır sırasından kurulur.
      */
     variants: z.array(ProductVariantEntrySchema.extend({ newBarcodes: z.array(NewVariantBarcodeSchema).optional() })),
   })
   .merge(ImageCropFieldsSchema)
-  // Boy etiketi TEK varyantta boş kalabilir (müşteri seçici görmez), ama İKİ boydan sonra ayırt edici
-  // olmak zorunda: etiketsiz iki satır müşteriye aynı görünen iki seçenek demektir. Kural burada, DB'de
-  // değil — DB tek boylu ürünü de tutuyor ve orada boşluk doğru cevap.
+  // Boy etiketi TEK varyantta boş kalabilir, İKİ boydan sonra zorunlu: operasyon listeleri (stok, satın alma, rapor)
+  // boyu etiketle ayırır. Kural DB'de değil burada, çünkü DB tek boylu ürünü de tutuyor ve orada boşluk doğru cevap.
   .superRefine((v, ctx) => {
     if (v.variants.length < 2) return;
     v.variants.forEach((variant, i) => {

@@ -305,7 +305,7 @@ export function toVariant(
   const stockStatus = stockStatusOf(ctx, [variant.id], shippable);
   return {
     id: variant.id,
-    // Boy etiketi ÇOK DİLLİ ("700 g tepsi" / "plateau 700 g") — burada çözülür, ekran dil bilmez.
+    // Boyun adı seçili dilde burada kurulur, ekran dil bilmez.
     label: variantNameIn(variant, locale),
     piecesCount: variant.piecesCount ?? null,
     portionKind: variant.portionKind ?? null,

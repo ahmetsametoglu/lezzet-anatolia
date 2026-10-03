@@ -102,7 +102,7 @@ async function pricedProductIds(productIds: string[]): Promise<Set<string>> {
 }
 
 /**
- * Boyun ölçülebilir kimliği — etiket müşterinin okuduğu, bunlar öneri araçlarının girdisi: gramajı boş
+ * Boyun ölçülebilir kimliği — etiket operasyonun okuduğu ad, bunlar öneri araçlarının girdisi: gramajı boş
  * varyant tamamlanacak olandır, kodu dönen varyanta ikinci kez barkod önerilmez.
  */
 function variantIdentity(variant: ProductVariant, codes: readonly VariantBarcode[]) {
