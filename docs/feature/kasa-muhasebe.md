@@ -46,9 +46,9 @@
 | # | Karar | Sonucu |
 |---|---|---|
 | 1 | **Kasa Hiboutik; bütün B2C ödemeleri oraya yazılır** — nakit, kapıda kart, online | Yasal kayıt Hiboutik'te. Bizdeki tahsilat kaydı iç kontrol aynası olarak kalır; bunun için muhasebeciye soru gitmez. Hiboutik'in NF525 sertifikasını kullanıcı doğruladı. |
-| 2 | **Muhasebe Pennylane; kurulumunu kullanıcı yürütür** | Pennylane hem muhasebe yazılımı hem kayıtlı platform (PA): e-fatura alımı bugün, düzenleme ve e-reporting 2027'de. Aylık muhasebe ve KDV beyanı (CA3) Pennylane'den çıkar → **canlı öncesi şart.** |
+| 2 | **QUALITE ile Lezzet'in buluştuğu yer Pennylane; muhasebeciye çıkan veri oradan gelir** (03.10) | Pennylane iki işin bütün kayıtlarını taşıyan iç defterdir; muhasebeci değişirse devam altyapısıdır. Muhasebeci kendi yazılımını kullanır, Pennylane'e bakmaz; e-fatura alımı onun platformundadır. Muhasebeciye giden dosya Pennylane'den üretilir, biçimi muhasebecinin cevabına bağlı: FEC olduğu gibi ya da Pennylane verisinden dönüştürülmüş döküm (ör. alışların Excel'i). Kurulumunu kullanıcı yürütür → **canlı öncesi şart.** |
 | 3 | **Hiboutik ↔ Pennylane ve banka ↔ Pennylane doğrudan konuşur** | Bu iki akış için bizden kod yok; sistemimiz muhasebe işine karışmaz. |
-| 4 | **Pennylane'e bizden giden: alış faturası ve eşleşme** | Yabancı ve e-faturaya geçmemiş tedarikçinin PDF faturası bizden yüklenir. Fransız tedarikçinin e-faturası Pennylane'e platformdan gelir; biz okuruz, yüklemeyiz. |
+| 4 | **Pennylane'e bizden giden: alış faturası ve eşleşme** | Lezzet'in bütün alış belgeleri bizden yüklenir, Fransız tedarikçinin e-faturasının kopyası dahil: e-fatura Pennylane'e gelmiyor (2. karar). E-fatura Pennylane'e gelmeye başlarsa okunur (akış 4) ve o faturalar bizden yüklenmez. |
 | 5 | **Eşleştirme bizde** — alış faturası ↔ ödeme ↔ mal kabul | Cari çalışma, kısmi ödeme, tek havaleyle birden çok fatura. `money_allocation` bunu tutarıyla, çoktan çoğa taşıyor. Revolut BillPay önerisi bu yüzden geri çekildi. |
 | 6 | **Banka hareketlerinin kaynağı Pennylane** | Lezzet'in hesabı (Revolut, 15. karar) Pennylane'den okunur. Excel içe aktarma yedek kalır. |
 | 7 | **Revolut: çevrim içi ödeme + kapıda kart + banka** | Stripe'ın yerini alır; Stripe'taki sipariş başına defter düzeni aynen sürer. Revolut nakit almaz, Fransa'da nakit yatırma da kalktı → **nakit Crédit Mutuel'e yatırılır, oradan Revolut'a gönderilir** (15. karar). Revolut hesap açılışı kullanıcıda. |
@@ -71,10 +71,11 @@
 | 3 | Banka → muhasebe | Revolut, Crédit Mutuel → Pennylane | yok | Revolut'un resmî Pennylane bağlantısı (Open Banking); Crédit Mutuel toplayıcı (Powens / Bridge) ile |
 | 4 | Kart tahsilatı → bizim defter | Revolut Merchant API → biz | var | ödeme nesnesinde komisyon (`fees`); para 24 saat içinde Business içindeki Merchant hesabına, oradan ana hesaba |
 | 5 | Banka hareketi → biz | Pennylane API → biz | var | `GET /transactions` (hesap ve tarih süzgeci) + `/changelogs/transactions` |
-| 6 | Alış faturası (yabancı / e-faturasız) | biz → Pennylane | var | `POST /file_attachments` (PDF, JPEG, PNG) → `POST /supplier_invoices/import` |
-| 7 | E-fatura (Fransız tedarikçi) | Pennylane API → biz | var | `/changelogs/supplier_invoices` (son 4 hafta) ya da webhook `supplier_invoice.e_invoicing_received` + `GET /supplier_invoices/{id}` ve `/invoice_lines` |
+| 6 | Alış faturası (Lezzet'in bütün alış belgeleri) | biz → Pennylane | var | `POST /file_attachments` (PDF, JPEG, PNG) → `POST /supplier_invoices/import` |
+| 7 | E-fatura (Fransız tedarikçi) — e-fatura Pennylane'e gelince | Pennylane API → biz | ertelendi | `/changelogs/supplier_invoices` (son 4 hafta) ya da webhook `supplier_invoice.e_invoicing_received` + `GET /supplier_invoices/{id}` ve `/invoice_lines` |
 | 8 | Eşleşme | biz → Pennylane | var | `POST /supplier_invoices/{id}/matched_transactions` (çağrı başına tek hareket–tek fatura) |
-| 9 | Nakit → banka | Hiboutik kasasından çıkış, Crédit Mutuel'e yatırma | var | `POST /till/cash_out`; yatırma 3. akışla Pennylane'e gelir |
+| 9 | Nakit → banka | Hiboutik kasasından çıkış, Crédit Mutuel'e yatırma, oradan Revolut'a | var | `POST /till/cash_out`; yatırma 3. akışla Pennylane'e gelir (15. karar) |
+| 10 | Muhasebeciye aktarım | Pennylane → muhasebeci | biçime göre | `POST /exports/fecs` (FEC), `/exports/analytical_general_ledgers`; biçim muhasebecinin cevabına bağlı (2. karar) |
 
 ## 4. Bizim tarafta bağlantı noktaları (ölçüldü, 30.09)
 
@@ -102,9 +103,9 @@
 |---|---|---|---|
 | 0 | **Erişim ve ölçüm.** Hesaplar: Hiboutik demo modunda (API için Premium, ikincil kaynak), Pennylane test ortamı ve API anahtarı (API Essentiel planda ve üstünde), Revolut deneme hesabı (asıl hesaptan bağımsız, anında). §6'daki soruların ölçümü; çıktı ölçüm tablosu ve tasarım kararları. | kök `.env` (değişken adları kullanıcıdan) | Hesapları kullanıcı açar |
 | 1 | **Hiboutik kasa.** Tasarım §7: sipariş başına durum farkı, kasa aynası, ürün ve mağaza eşlemesi, kasa hareketleri, günlük mutabakat, gün kapanışı. | domain-core `register/`; migration (kasa tabloları, tetikleyici, hareketin ödeme yöntemi); Hiboutik uyarlaması; backend cron'ları | Faz 0 Hiboutik ölçümü (tamam) |
-| 2 | **Pennylane.** Tedarikçi eşleme (`POST /suppliers`); belgeye KDV oranlı satır; belge yükleme (yabancı ve e-faturasız tedarikçi; PDF, JPEG ya da PNG); yüklemeden önce mükerrer kontrolü; e-fatura okuma ve mal kabule bağlama; banka hareketi okuma; eşleşme yazma; hesap başına "hareket gelmiyor" uyarısı. Tasarım §8. | `money_document` şeması; para modülü; yeni Pennylane adaptörü | Faz 0 Pennylane ölçümü (tamam; e-fatura okuma canlıda) |
+| 2 | **Pennylane.** Tedarikçi eşleme (`POST /suppliers`); belgeye KDV oranlı satır; belge yükleme (Lezzet'in bütün alış belgeleri; PDF, JPEG ya da PNG); yüklemeden önce mükerrer kontrolü; e-fatura okuma ve mal kabule bağlama (e-fatura Pennylane'e gelince); banka hareketi okuma; eşleşme yazma; hesap başına "hareket gelmiyor" uyarısı. Tasarım §8. | `money_document` şeması; para modülü; yeni Pennylane adaptörü | Faz 0 Pennylane ölçümü (tamam; e-fatura okuma canlıda) |
 | 3 | **Revolut.** Çevrim içi ödeme Stripe yerine (Merchant API: sipariş, kart alanı, Apple / Google Pay, webhook, iade); kapıda kart (Terminal'e tutar gönderme ya da elle onay + sonradan doğrulama); defter düzeni (brüt tahsilat · komisyon · Merchant'tan ana hesaba aktarma). | `payment-gateway.ts`; web ve mobil ödeme ekranları; `stripe-webhook.ts`'in karşılığı | Faz 0 Revolut ölçümü; canlı için asıl hesap |
-| 4 | **2027.** B2B e-faturası Pennylane'den (10. karar): siparişten Pennylane faturasına bağlantı gerekip gerekmediği. B2C e-reporting: Hiboutik'in Z verisi Pennylane'e gidiyor; Pennylane'in bunu idareye e-reporting olarak iletip iletmediği bakılacak. | — | Son tarih 01.09.2027 |
+| 4 | **2027.** B2B e-faturası (10. karar): şirketin e-fatura platformu muhasebecininki olduğu için faturanın hangi platformdan gideceği ve siparişten faturaya bağlantı gerekip gerekmediği. B2C e-reporting: Hiboutik'in Z verisi Pennylane'e gidiyor; idareye hangi platformdan iletileceği bakılacak. | — | Son tarih 01.09.2027 |
 
 - **Sıra 1 → 2 → 3.** Hiboutik, sağlayıcıdan bağımsız tahsilat kapısına oturduğu için Revolut'tan önce
   yapılması ek iş doğurmaz. Faz 1–3 canlı öncesi şart; Revolut geçişi canlıdan önce en ucuz.
@@ -220,6 +221,7 @@ raporlar aynı klasörde; ölçüm verisi test şirketinde `LA-TEST-…` etiketi
 | Tedarikçi tekilliği (03.10) | Aynı ad ve aynı KDV numarasıyla ikinci tedarikçi 201 ile açılıyor. Elle açılan tedarikçiye Pennylane UUID dış referans veriyor. Tedarikçi süzgeci yalnız kimlik, muhasebe hesabı, ad (`start_with`) ve dış referans; KDV numarasıyla süzülmüyor, liste okunarak bulunuyor. |
 | Eşlemenin izi (03.10) | Başka bir faturaya eşlenen hareket `update` olarak hareket akışına düşüyor; `/transactions/{id}/matched_invoices` faturanın kimliğini ve türünü veriyor, dış referansını vermiyor. Eşlenen harekete faturanın tedarikçisi yazılıyor. |
 | Analitik kategori (03.10) | Kategori grubu ve kategori açılıyor; alış faturası ve banka hareketi ağırlıkla işaretleniyor (aynı grupta toplam 1), faturalar `category_id` ile süzülüyor. |
+| Muhasebe dışa aktarımı (03.10) | FEC ve analitik genel defter API'den üretiliyor (`POST /exports/fecs`, `/exports/analytical_general_ledgers`; hazır olunca `file_url`). FEC 18 standart sütun: alış (`HA`), banka (`BQ`) ve KDV (`RT`) günlükleri, hesap numaraları, eşleşme kodu (`EcritureLet`) dolu. Analitik defter Excel; satır başına analitik eksen ve kategori. |
 
 **Pennylane — açık kalan:**
 - E-fatura okuma: test şirketine e-fatura gelmiyor; canlı hesapta yalnız okuyarak ölçülür.
@@ -459,7 +461,7 @@ gösterir.
    güncellenir; satırlar silinip yeniden yazılır ve toplam onlarla birlikte gider. Dosyası değişirse Pennylane'deki
    ek değişmez, çünkü ek API'den değiştirilemiyor. Nakitle ödenen belge, yani bağlı hareketi banka satırı olmayan
    belge, tamamen kapanınca Pennylane'de `paid` işaretlenir; bağ çözülünce `to_be_paid`a döner.
-4. **E-fatura okuma.** İlk bağlantıda Pennylane'deki e-faturalar (`e_invoicing` dolu olanlar) listeden bir kez
+4. **E-fatura okuma** (ertelendi: e-fatura Pennylane'e gelmeye başlayınca, 2. karar). İlk bağlantıda Pennylane'deki e-faturalar (`e_invoicing` dolu olanlar) listeden bir kez
    okunur; sonrasını değişiklik akışı taşır. Webhook (`supplier_invoice.e_invoicing_received`) isteğe bağlıdır,
    çünkü dışarıdan erişilen bir HTTPS adresi ister. Her e-fatura bizde belge olarak açılır: numara, gün, vade,
    tutar, satırlardan KDV kırılımı ve özel kovaya alınan PDF. Karşı taraf aynadan bulunur; bilinmiyorsa belge
@@ -545,8 +547,12 @@ ile; istemci sahte `fetch` ile. Pennylane'e karşı ölçüm test şirketinde, b
    geçiş), hareket gelmiyor uyarısı.
 5. Tedarikçi eşleme ve alış belgesi yükleme (denetimler, kuyruk, nakit ödemede ödeme durumu).
 6. Eşleşme yazma ve Pennylane'deki eşleşmeleri okuma.
-7. E-fatura okuma, mal kabule bağlama, itiraz; canlı hesapta yalnız okuyarak ölçüm.
-8. Ekran satırları ve mimari belge güncellemeleri (`DOMAIN.md` §9, `INTEGRATIONS.md`, `data-model/para.md`).
+7. Ertelendi, e-fatura Pennylane'e gelmeye başlayınca: e-fatura okuma, mal kabule bağlama, itiraz; o faturaların bizden
+   yüklenmemesi.
+8. "Lezzet" kategorisi (16. karar), ekran satırları ve mimari belge güncellemeleri (`DOMAIN.md` §9, `INTEGRATIONS.md`,
+   `data-model/para.md`).
+9. Muhasebeciye aktarım, muhasebecinin istediği biçim gelince: Pennylane'den FEC olduğu gibi ya da Pennylane verisinden
+   dönüştürülmüş döküm (2. karar).
 
 Şemaya dokunan adımlar `db:refresh` ister; kararı kullanıcının.
 
@@ -554,15 +560,13 @@ ile; istemci sahte `fetch` ile. Pennylane'e karşı ölçüm test şirketinde, b
 fatura girer, tedarikçi açar, banka hareketini kendi faturasına eşler. Lezzet'in alış belgesi yalnız bizden gider. Bunun için:
 tedarikçi açılmadan önce aynı firmanın kaydı aranır (akış 2), elle girilmiş fatura sahiplenilmez (akış 3), eşleşme yazımı
 yalnız bizim yüklediğimiz faturalara dokunur ve Pennylane'de bizde olmayan faturaya eşlenmiş hareket bizde başka işe ait
-sayılır (akış 5). Banka hesapları ayrıdır (15. karar), Lezzet'in faturası "Lezzet" kategorisini taşır (16. karar). E-fatura
-alım platformu muhasebecinin yazılımı olabilir; akış 4, gelen e-faturanın QUALITE'nin Pennylane'ine aktarılıp
-aktarılmadığına bağlıdır.
+sayılır (akış 5). Banka hesapları ayrıdır (15. karar), Lezzet'in faturası "Lezzet" kategorisini taşır (16. karar).
+E-fatura alımı muhasebecinin platformundadır (2. karar); akış 4 e-fatura Pennylane'e gelince devreye girer.
 
 **Muhasebeciye sorulacak:** ters yüklemenin KDV kodu; hesap kodlarını Pennylane'in tedarikçiden atamasının yeterli
-olup olmadığı; fişin Pennylane'e fatura olarak girip girmeyeceği; QUALITE'nin e-fatura alım platformunun hangisi olacağı
-(muhasebecinin yazılımı ya da Pennylane) ve muhasebecinin yazılımıysa gelen e-faturanın Pennylane'e aktarılıp
-aktarılmadığı. Aktarılmıyorsa e-faturalı alış faturası Pennylane'e bizden yüklenirse muhasebeci aynı faturayı iki yerde
-görür; 2. ve 4. karar bu cevapla yeniden ele alınır.
+olup olmadığı; fişin Pennylane'e fatura olarak girip girmeyeceği; Pennylane'den giden dosyanın biçimi (FEC ya da döküm)
+ve sıklığı; alış faturasını Pennylane dosyasından mı kendi e-fatura platformundan mı kaydedeceği, çünkü aynı fatura
+ikisinde de durur; belge dosyalarını isteyip istemediği.
 
 ## 9. Riskler
 

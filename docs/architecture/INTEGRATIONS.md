@@ -136,8 +136,9 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 
 ## Muhasebe
 
-- Muhasebe yazılımı Pennylane; akış `docs/feature/kasa-muhasebe.md`de. B2C satış Pennylane'e yalnız Hiboutik'ten, banka
-  hareketi bankadan doğrudan girer; bizden giden yalnız alış faturası ve eşleşmedir.
+- Pennylane QUALITE'nin iç defteridir, Lezzet ile toptan operasyonunun buluştuğu yer; akış `docs/feature/kasa-muhasebe.md`de.
+  B2C satış Pennylane'e yalnız Hiboutik'ten, banka hareketi bankadan doğrudan girer; bizden giden yalnız alış faturası ve
+  eşleşmedir. Muhasebeci kendi yazılımını kullanır; ona giden dosya Pennylane'den üretilir.
 - Alış belgesi (ödeyeceğimiz fatura ve fiş) canlıya geçiş gününden sonra girildiyse kuyrukla Pennylane'e yüklenir (`pennylane_sync`):
   karşı tarafın tedarikçisi dış referansla bulunur ya da açılır, belge değişince fark güncellenir, nakitle kapanan belge ödendi
   işaretini alır. Belge dosyası PDF, JPEG ya da PNG'dir; Pennylane başka türü almıyor.
@@ -147,7 +148,8 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
   Tedarikçi açılmadan önce aynı firmanın kaydı aranıp bağlanır, Pennylane'e elle girilmiş fatura sahiplenilmez. Başka işin faturasına
   kurulan eşleşmeye dokunulmaz; o hareket bizde başka işe eşli sayılır ve izahlıdır.
 - Raporlar ekranındaki satış dosyası ve hareket dökümü genel amaçlı dışa aktarımdır, muhasebe akışının parçası değildir.
-- e-fatura sistemin işi **değil**: B2B satış faturası Pennylane'de kesilir, tedarikçi e-faturası Pennylane'e kayıtlı platformdan gelir.
+- e-fatura sistemin işi **değil**: B2B satış faturası Pennylane'de kesilir, tedarikçi e-faturası muhasebecinin platformuna gelir;
+  Lezzet'in alış belgesi Pennylane'e kopyasından bizden yüklenir.
 
 ## Banka import
 
