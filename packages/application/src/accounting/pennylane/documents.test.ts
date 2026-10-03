@@ -179,7 +179,7 @@ describe('yazılamayan belge', () => {
     expect(twin.invoices()).toHaveLength(1);
   });
 
-  it("aynı dosya başka belgemizle yüklenmişse belge bekler; Pennylane'de başka kaynaktan duran aynı dosyanın faturası benimsenir", async () => {
+  it("aynı dosya Pennylane'de başka bir faturada duruyorsa belge bekler: elle girilmiş faturayı sahiplenmek sonraki yazımla onu ezerdi", async () => {
     const first = await invoice({}, { content: 'ayni-tarama' });
     await run(first.id);
     const twinCopy = await invoice({}, { content: 'ayni-tarama' });
@@ -187,17 +187,17 @@ describe('yazılamayan belge', () => {
     expect(await queue.findByDocument(twinCopy.id)).toMatchObject({ lastError: 'blocked:duplicate_file' });
 
     const foreignFile = await twin.port.uploadFile({
-      bytes: new TextEncoder().encode('dis-kaynak'),
+      bytes: new TextEncoder().encode('toptan-taramasi'),
       contentType: 'application/pdf',
       filename: 'x.pdf',
     });
-    const foreign = await twin.port.importInvoice({
-      draft: { ...twin.invoices()[0]!, externalReference: 'baska:1', invoiceNumber: 'DIS-1' },
+    await twin.port.importInvoice({
+      draft: { ...twin.invoices()[0]!, externalReference: '842FHEIKJD', invoiceNumber: 'G-1' },
       fileId: foreignFile,
     });
-    const adopted = await invoice({}, { content: 'dis-kaynak' });
-    expect(await run(adopted.id)).toBe('uploaded');
-    expect((await mirrors.findByDocument(adopted.id))?.pennylaneInvoiceId).toBe(foreign.status === 'imported' ? foreign.invoice.id : null);
+    const same = await invoice({}, { content: 'toptan-taramasi' });
+    expect(await run(same.id)).toBe('blocked');
+    expect(await mirrors.findByDocument(same.id)).toBeNull();
   });
 
   it('dosyasız belge haber vermeden bekler, dosyası bağlanınca yüklenir', async () => {
@@ -228,6 +228,56 @@ describe('yazılamayan belge', () => {
     );
     expect(await queue.findByDocument(doc.id)).toBeNull();
     expect(twin.invoices()).toHaveLength(0);
+  });
+});
+
+describe('aynı Pennylane şirketindeki öteki operasyon', () => {
+  const ourSupplier = async (name: string, vatNumber: string | null) => {
+    const id = (await new SupplierService(db).insert({ name: `${name}`, vatNumber, country: 'FR' })).id;
+    created.supplierIds.push(id);
+    return id;
+  };
+
+  it("toptan ekibinin açtığı aynı KDV numaralı tedarikçiye bağlanır, Pennylane'de ikinci kayıt açılmaz", async () => {
+    const manual = await twin.port.createSupplier({
+      name: 'Grossiste Anatolie',
+      externalReference: '01a1019f-1640-7925-9dc3-065e51c9badf',
+      vatNumber: 'FR91028564762',
+      dueDays: null,
+    });
+    const doc = await invoice({ supplierId: await ourSupplier(`Anatolie Gros ${stamp}`, 'FR 9102 8564 762') });
+    expect(await run(doc.id)).toBe('uploaded');
+    expect(twin.suppliers()).toHaveLength(1);
+    expect(twin.invoices()[0]!.supplierId).toBe(manual.id);
+  });
+
+  it('KDV numarası olmayan karşı taraf aynı adlı tedarikçiye bağlanır; KDV numarası çelişen aynı adlı kayıt başka firmadır', async () => {
+    const orange = await twin.port.createSupplier({ name: 'ORANGE TÉLÉCOM', externalReference: 'x-1', vatNumber: null, dueDays: null });
+    const counterpartyId = (await new CounterpartyService(db).insert({ name: 'Orange  Telecom' })).id;
+    created.counterpartyIds.push(counterpartyId);
+    const bill = await invoice({ supplierId: null, counterpartyId });
+    expect(await run(bill.id)).toBe('uploaded');
+    expect(twin.invoices()[0]!.supplierId).toBe(orange.id);
+
+    await twin.port.createSupplier({ name: `Muller ${stamp}`, externalReference: 'x-2', vatNumber: 'FR11111111111', dueDays: null });
+    const other = await invoice({ supplierId: await ourSupplier(`Muller ${stamp}`, 'FR22222222222') });
+    expect(await run(other.id)).toBe('uploaded');
+    expect(twin.suppliers()).toHaveLength(3);
+  });
+
+  it('uyan birden çok tedarikçi ya da bizde başka karşı tarafa bağlı tedarikçi seçilmez, belge bekler', async () => {
+    for (const reference of ['x-1', 'x-2']) {
+      await twin.port.createSupplier({ name: 'Grossiste', externalReference: reference, vatNumber: 'FR33333333333', dueDays: null });
+    }
+    const ambiguous = await invoice({ supplierId: await ourSupplier(`Grossiste ${stamp}`, 'FR33333333333') });
+    expect(await run(ambiguous.id)).toBe('blocked');
+    expect(await queue.findByDocument(ambiguous.id)).toMatchObject({ lastError: 'blocked:supplier_ambiguous' });
+
+    const first = await invoice({ supplierId: await ourSupplier(`Kardeş ${stamp}`, 'FR44444444444') });
+    expect(await run(first.id)).toBe('uploaded');
+    const duplicate = await invoice({ supplierId: await ourSupplier(`Kardes Gida ${stamp}`, 'FR44444444444') });
+    expect(await run(duplicate.id)).toBe('blocked');
+    expect(await queue.findByDocument(duplicate.id)).toMatchObject({ lastError: 'blocked:supplier_taken' });
   });
 });
 

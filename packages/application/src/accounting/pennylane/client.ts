@@ -185,6 +185,17 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
       const page = parse(PennylaneApiSupplierPageSchema, await read(`/suppliers?${query({ filter, limit: 2 })}`), 'tedarikçiler');
       return page.items[0] ? supplierOf(page.items[0]) : null;
     },
+    async listSuppliers() {
+      const suppliers: PennylaneSupplier[] = [];
+      let cursor: string | null = null;
+      do {
+        const body: unknown = await read(`/suppliers?${query({ limit: PAGE_LIMIT, cursor })}`);
+        const page = parse(PennylaneApiSupplierPageSchema, body, 'tedarikçiler');
+        suppliers.push(...page.items.map(supplierOf));
+        cursor = page.has_more ? page.next_cursor : null;
+      } while (cursor);
+      return suppliers;
+    },
     async createSupplier(draft) {
       const body = await write('POST', '/suppliers', {
         json: {
@@ -265,8 +276,8 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
   };
 }
 
-function supplierOf(row: { id: number; name: string; external_reference: string | null }): PennylaneSupplier {
-  return { id: row.id, name: row.name, externalReference: row.external_reference };
+function supplierOf(row: { id: number; name: string; external_reference: string | null; vat_number: string | null }): PennylaneSupplier {
+  return { id: row.id, name: row.name, externalReference: row.external_reference, vatNumber: row.vat_number || null };
 }
 
 function invoiceOf(row: { id: number; external_reference: string | null; invoice_number: string | null }): PennylaneInvoice {

@@ -97,6 +97,9 @@ Belgenin karşı tarafının (tedarikçi ya da cari) Pennylane'deki tedarikçisi
 
 - **Dış referans** — `sup:<kimlik>` ya da `cp:<kimlik>`; Pennylane'de tekil olduğu için ayna kaybolsa da tedarikçi ikinci kez açılmaz,
   aramayla bulunur.
+- **Aynı firmanın elle açılmış kaydı** — Pennylane şirketi toptan operasyonuyla ortaktır ve Pennylane aynı firmanın ikinci kaydını
+  reddetmez; tedarikçi açılmadan önce KDV numarası, yoksa adı tutan kayıt aranır ve bağlanır. Bir Pennylane tedarikçisi bizde tek
+  karşı tarafa bağlıdır.
 
 ## PennylaneQueue (belge kuyruğu)
 

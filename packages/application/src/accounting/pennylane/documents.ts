@@ -11,12 +11,12 @@ import {
 } from '@lezzet/database';
 import {
   checkDocumentFile,
-  isPennylaneDocumentReference,
   pennylaneDocumentScope,
   pennylaneInvoiceDraft,
   pennylaneInvoicePatch,
   pennylanePartyReference,
   pennylanePaymentStatus,
+  pennylaneSupplierCandidates,
   type PennylaneDocumentBlock,
 } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
@@ -130,7 +130,9 @@ async function writeDocument(db: Db, pennylane: PennylanePort, documentId: strin
   if (!party) return { status: 'blocked', reason: 'no_party' };
   if (!document.fileKey) return { status: 'blocked', reason: 'no_file' };
 
-  const draft = pennylaneInvoiceDraft(document, await ensureSupplier(db, pennylane, party), scope.lines);
+  const supplier = await ensureSupplier(db, pennylane, party);
+  if (supplier.status === 'blocked') return supplier;
+  const draft = pennylaneInvoiceDraft(document, supplier.id, scope.lines);
   let invoiceId: number;
   let outcome: 'uploaded' | 'updated' | 'unchanged';
   if (!mirror) {
@@ -157,7 +159,7 @@ async function writeDocument(db: Db, pennylane: PennylanePort, documentId: strin
 
 /**
  * Yarıda kalan yükleme dış referansla bulunur, aynı tedarikçide aynı numara Pennylane'e sorulur. Aynı içerikli dosya başka faturada
- * duruyorsa o fatura bizim başka belgemizinse belge bekler, değilse benimsenir.
+ * duruyorsa belge bekler: Pennylane'e elle girilmiş faturayı sahiplenmek, sonraki yazımla o kaydı ezmek olurdu.
  */
 async function upload(
   pennylane: PennylanePort,
@@ -179,10 +181,9 @@ async function upload(
     filename: `${(draft.invoiceNumber ?? 'belge').replace(/[^\w.-]+/g, '-')}.${file.extension}`,
   });
   const imported = await pennylane.importInvoice({ draft, fileId });
-  if (imported.status === 'imported') return { status: 'uploaded', invoiceId: imported.invoice.id };
-  const holder = await pennylane.getInvoice(imported.existingId);
-  if (isPennylaneDocumentReference(holder?.externalReference ?? null)) return { status: 'blocked', reason: 'duplicate_file' };
-  return { status: 'uploaded', invoiceId: imported.existingId };
+  return imported.status === 'imported'
+    ? { status: 'uploaded', invoiceId: imported.invoice.id }
+    : { status: 'blocked', reason: 'duplicate_file' };
 }
 
 /** Aynı tedarikçide aynı numaralı başka fatura var mı; Pennylane bunu kendisi yakalamıyor. */
@@ -196,27 +197,40 @@ async function numberTaken(
   return found.some((invoice) => invoice.id !== ownInvoiceId);
 }
 
-/** Karşı tarafın Pennylane'deki tedarikçisi; aynada yoksa dış referansla aranır, bulunmazsa açılır. */
-async function ensureSupplier(db: Db, pennylane: PennylanePort, party: Party): Promise<number> {
+/**
+ * Karşı tarafın Pennylane'deki tedarikçisi: aynada yoksa dış referansla, o da yoksa aynı firmanın elle açılmış kaydı aranır, hiçbiri
+ * yoksa açılır. Uyan birden çok kayıt ya da bizde başka karşı tarafa bağlı kayıt seçilemez, belge bekler.
+ */
+async function ensureSupplier(
+  db: Db,
+  pennylane: PennylanePort,
+  party: Party,
+): Promise<{ status: 'ok'; id: number } | { status: 'blocked'; reason: PennylaneDocumentBlock }> {
   const mirrors = new PennylaneSupplierService(db);
   const key = party.kind === 'supplier' ? { supplierId: party.id } : { counterpartyId: party.id };
   const mirror = await mirrors.findByParty(key);
-  if (mirror) return mirror.pennylaneId;
+  if (mirror) return { status: 'ok', id: mirror.pennylaneId };
   const reference = pennylanePartyReference(key);
-  const supplier =
-    (await pennylane.findSupplier(reference)) ??
-    (await pennylane.createSupplier({
-      name: party.name,
-      externalReference: reference,
-      vatNumber: party.kind === 'supplier' ? party.vatNumber : null,
-      dueDays: party.kind === 'supplier' ? party.dueDays : null,
-    }));
+  const vatNumber = party.kind === 'supplier' ? party.vatNumber : null;
+  let supplier = await pennylane.findSupplier(reference);
+  if (!supplier) {
+    const candidates = pennylaneSupplierCandidates(await pennylane.listSuppliers(), { name: party.name, vatNumber });
+    if (candidates.length > 1) return { status: 'blocked', reason: 'supplier_ambiguous' };
+    supplier = candidates[0] ?? null;
+  }
+  if (supplier && (await mirrors.findByPennylaneId(supplier.id))) return { status: 'blocked', reason: 'supplier_taken' };
+  supplier ??= await pennylane.createSupplier({
+    name: party.name,
+    externalReference: reference,
+    vatNumber,
+    dueDays: party.kind === 'supplier' ? party.dueDays : null,
+  });
   await mirrors.save({
     pennylaneId: supplier.id,
     supplierId: party.kind === 'supplier' ? party.id : null,
     counterpartyId: party.kind === 'counterparty' ? party.id : null,
   });
-  return supplier.id;
+  return { status: 'ok', id: supplier.id };
 }
 
 async function partyOf(db: Db, document: MoneyDocument): Promise<Party | null> {

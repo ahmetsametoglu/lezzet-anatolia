@@ -214,7 +214,10 @@ raporlar aynı klasörde; ölçüm verisi test şirketinde `LA-TEST-…` etiketi
 | Ek türü (03.10) | PDF, JPEG ve PNG ekli fatura içe aktarılıyor; WEBP ve HEIC eki 422 (*"invalid content type"*). |
 | Güncelleme (03.10) | `PUT /supplier_invoices/{id}` gün, vade, numara, tedarikçi ve satırları değiştiriyor (satırlar kimlikle silinip yenisi yazılıyor). Toplamı satırlarla karşılaştırmıyor: tutmayan toplam da kabul ediliyor. Ek değiştirilemiyor. |
 | Ödeme durumu (03.10) | `paid` yazılınca fatura `paid_offline` görünüyor (`paid` alanı ve kalan tutar değişmiyor); `to_be_paid` geri alıyor. |
-| Fatura dış referansı (03.10) | Tekil: aynı referansla ikinci içe aktarma 422 *"External reference has already been taken"*. Numarasız fatura ve `exempt` satırı kabul ediliyor. |
+| Fatura dış referansı (03.10) | Tekil: aynı referansla ikinci içe aktarma 422 *"External reference has already been taken"*. Numarasız fatura ve `exempt` satırı kabul ediliyor. Elle girilen faturaya Pennylane 10 karakterlik rastgele kod veriyor (`842FHEIKJD`). |
+| Tedarikçi tekilliği (03.10) | Aynı ad ve aynı KDV numarasıyla ikinci tedarikçi 201 ile açılıyor. Elle açılan tedarikçiye Pennylane UUID dış referans veriyor. Tedarikçi süzgeci yalnız kimlik, muhasebe hesabı, ad (`start_with`) ve dış referans; KDV numarasıyla süzülmüyor, liste okunarak bulunuyor. |
+| Eşlemenin izi (03.10) | Başka bir faturaya eşlenen hareket `update` olarak hareket akışına düşüyor; `/transactions/{id}/matched_invoices` faturanın kimliğini ve türünü veriyor, dış referansını vermiyor. Eşlenen harekete faturanın tedarikçisi yazılıyor. |
+| Analitik kategori (03.10) | Kategori grubu ve kategori açılıyor; alış faturası ve banka hareketi ağırlıkla işaretleniyor (aynı grupta toplam 1), faturalar `category_id` ile süzülüyor. |
 
 **Pennylane — açık kalan:**
 - E-fatura okuma: test şirketine e-fatura gelmiyor; canlı hesapta yalnız okuyarak ölçülür.
@@ -431,9 +434,11 @@ gösterir.
    Aynı kural öbür yönden de işler: dosyadan yüklenen son satırı canlıya geçiş gününe ya da sonrasına düşen hesap
    eşlenmez, gün de eşli hesabın son dosya satırına ya da öncesine alınmaz.
 2. **Tedarikçi eşleme.** Pennylane'deki tedarikçi bizim tedarikçimize ya da carimize ayna tablosuyla bağlanır.
-   Yüklenecek belgenin karşı tarafı Pennylane'de yoksa önce dış referansla (`sup:<kimlik>`, `cp:<kimlik>`) aranır,
-   bulunmazsa açılır (ad, KDV numarası, vade günü; ülke yalnız tam posta adresiyle gidiyor, bizde adres yapılandırılmış
-   değil). Dış referans tekil olduğu için tekrarlanan açılış çift kayıt doğurmaz.
+   Yüklenecek belgenin karşı tarafı Pennylane'de yoksa önce dış referansla (`sup:<kimlik>`, `cp:<kimlik>`), o da yoksa
+   aynı firmanın elle açılmış kaydı aranır: KDV numarası tutan, tutan yoksa adı aynı olup KDV numarası çelişmeyen kayıt.
+   Bulunan kayıt bağlanır, hiçbiri yoksa tedarikçi açılır (ad, KDV numarası, vade günü; ülke yalnız tam posta adresiyle
+   gidiyor, bizde adres yapılandırılmış değil). Uyan birden çok kayıt ya da bizde başka karşı tarafa bağlı kayıt seçilmez,
+   belge bekler. Dış referans tekil olduğu için tekrarlanan açılış çift kayıt doğurmaz.
 3. **Alış belgesi yükleme.** Yönü çıkış olan, dosyası ve KDV kırılımı bulunan fatura ya da fiş, canlıya geçiş
    anından sonra girildiyse kuyruğa düşer. Pennylane iki şeyi yakalamıyor: KDV'nin orana uymadığı kırılımı ve
    aynı tedarikçide aynı numarayı. Birincisi belge girişinde denetlenir (`documentVatProblem`: oran başına pay en
@@ -443,8 +448,8 @@ gösterir.
    Belge dosyası PDF, JPEG ya da PNG'dir: Pennylane eki yalnız bunları alıyor, belge girişi de bunlarla sınırlı,
    fotoğraf çevrilmez. Dosya yüklenir ve fatura içe aktarılır: dış referans `doc:<belge kimliği>`, KDV kodu
    kırılımdan ve rejimden türer, vadesiz belgenin vadesi belge günüdür. Yarıda kalan yükleme dış referansla bulunur.
-   409 cevabı aynı içerikli dosyanın durduğu faturayı söyler: fatura başka bir belgemizinse belge "aynı dosya"
-   sebebiyle bekler, değilse aynaya bağlanır. Yüklenmiş belgenin alanları ya da kırılımı değişirse fark Pennylane'de
+   409 cevabı aynı içerikli dosyanın başka bir faturada durduğunu söyler; belge "aynı dosya" sebebiyle bekler, çünkü
+   Pennylane'e elle girilmiş faturayı sahiplenmek sonraki yazımla o kaydı ezerdi. Yüklenmiş belgenin alanları ya da kırılımı değişirse fark Pennylane'de
    güncellenir; satırlar silinip yeniden yazılır ve toplam onlarla birlikte gider. Dosyası değişirse Pennylane'deki
    ek değişmez, çünkü ek API'den değiştirilemiyor. Nakitle ödenen belge, yani bağlı hareketi banka satırı olmayan
    belge, tamamen kapanınca Pennylane'de `paid` işaretlenir; bağ çözülünce `to_be_paid`a döner.
@@ -532,6 +537,13 @@ ile; istemci sahte `fetch` ile. Pennylane'e karşı ölçüm test şirketinde, b
 8. Ekran satırları ve mimari belge güncellemeleri (`DOMAIN.md` §9, `INTEGRATIONS.md`, `data-model/para.md`).
 
 Şemaya dokunan adımlar `db:refresh` ister; kararı kullanıcının.
+
+**Aynı şirkette toptan operasyonu (03.10).** QUALITE'nin restoran ve marketlere toptan satışı Pennylane'i doğrudan kullanır:
+fatura girer, tedarikçi açar, banka hareketini kendi faturasına eşler. Lezzet'in alış belgesi yalnız bizden gider. Bunun için:
+tedarikçi açılmadan önce aynı firmanın kaydı aranır (akış 2), elle girilmiş fatura sahiplenilmez (akış 3), eşleşme yazımı
+yalnız bizim yüklediğimiz faturalara dokunur ve Pennylane'de bizde olmayan faturaya eşlenmiş hareket bizde başka işe ait
+sayılır (akış 5). Banka hesabı ortaksa toptanın hareketi Pennylane'de eşlenene kadar bizde izahsız görünür. Şirketin
+bütün e-faturaları tek kutuya gelir; hangisinin Lezzet'in olduğu akış 4'ün kararıdır.
 
 **Muhasebeciye sorulacak:** ters yüklemenin KDV kodu; hesap kodlarını Pennylane'in tedarikçiden atamasının yeterli
 olup olmadığı; fişin Pennylane'e fatura olarak girip girmeyeceği.

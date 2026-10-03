@@ -33,6 +33,7 @@ export const PennylaneSupplierSchema = z.object({
   id: z.number().int(),
   name: z.string(),
   externalReference: z.string().nullable(),
+  vatNumber: z.string().nullable(),
 });
 export type PennylaneSupplier = z.infer<typeof PennylaneSupplierSchema>;
 

@@ -144,6 +144,10 @@ export class PennylaneSupplierService extends BaseDbService<PennylaneSupplierMir
     return this.getOneBy(party);
   }
 
+  findByPennylaneId(pennylaneId: number): Promise<PennylaneSupplierMirror | null> {
+    return this.getOneBy({ pennylaneId });
+  }
+
   save(row: PennylaneSupplierMirrorInsert): Promise<PennylaneSupplierMirror> {
     return this.upsert(row, 'pennylane_id');
   }

@@ -31,9 +31,18 @@ export function pennylaneVatCode(rate: DocumentVatRate, regime: DocumentVatRegim
   return EU_COUNTRIES.has(partyCountry) ? (INTRACOM_CODE[rate] ?? null) : 'extracom';
 }
 
-/** Belgenin Pennylane'e yazılamama sebebi; son ikisi Pennylane okunarak bulunur. */
+/** Belgenin Pennylane'e yazılamama sebebi; son dördü Pennylane okunarak bulunur. */
 export type PennylaneDocumentBlock =
-  'no_party' | 'no_file' | 'file_type' | 'vat' | 'vat_code' | 'kind_changed' | 'duplicate_number' | 'duplicate_file';
+  | 'no_party'
+  | 'no_file'
+  | 'file_type'
+  | 'vat'
+  | 'vat_code'
+  | 'kind_changed'
+  | 'duplicate_number'
+  | 'duplicate_file'
+  | 'supplier_ambiguous'
+  | 'supplier_taken';
 
 type DocumentFields = Pick<
   MoneyDocument,
@@ -93,9 +102,6 @@ function pennylaneLinesOf(document: DocumentFields, partyCountry: string | null)
 /** Faturanın Pennylane'deki dış referansı; tekil olduğu için yarıda kalan yükleme aramayla bulunur, ikinci kez yüklenmez. */
 export const pennylaneDocumentReference = (documentId: string): string => `doc:${documentId}`;
 
-/** Pennylane'deki faturayı bizim belgemiz mi yükledi: dış referansı belge kimliğimizi taşır. */
-export const isPennylaneDocumentReference = (reference: string | null): boolean => reference?.startsWith('doc:') ?? false;
-
 /** Karşı tarafın Pennylane'deki tedarikçisinin dış referansı. */
 export const pennylanePartyReference = (party: { supplierId: string } | { counterpartyId: string }): string =>
   'supplierId' in party ? `sup:${party.supplierId}` : `cp:${party.counterpartyId}`;
@@ -146,4 +152,30 @@ export function pennylanePaymentStatus(input: {
     input.openAmountCents <= 0 && input.allocations.length > 0 && input.allocations.every((allocation) => !allocation.bank);
   if (paidOffline) return input.written === 'paid' ? null : 'paid';
   return input.written === 'paid' ? 'to_be_paid' : null;
+}
+
+const normalizedVat = (vat: string | null): string | null => vat?.replace(/[\s.-]/g, '').toUpperCase() || null;
+/** Türkçe adın Fransızca yazılışı da tutsun: noktasız ı ayrışmayla i'ye inmez, ayrıca eşlenir. */
+const normalizedName = (name: string): string =>
+  name
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/ı/g, 'i')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+
+/**
+ * Pennylane'de karşı tarafın firması olan tedarikçiler: KDV numarası tutanlar, tutan yoksa adı aynı olup KDV numarası çelişmeyenler.
+ * Aynı şirketi kullanan başka operasyon tedarikçiyi elle açar ve Pennylane aynı firmanın ikinci kaydını reddetmez.
+ */
+export function pennylaneSupplierCandidates<T extends { name: string; vatNumber: string | null }>(
+  suppliers: readonly T[],
+  party: { name: string; vatNumber: string | null },
+): T[] {
+  const vat = normalizedVat(party.vatNumber);
+  const byVat = vat ? suppliers.filter((supplier) => normalizedVat(supplier.vatNumber) === vat) : [];
+  if (byVat.length > 0) return byVat;
+  const name = normalizedName(party.name);
+  return suppliers.filter((supplier) => normalizedName(supplier.name) === name && (!vat || !normalizedVat(supplier.vatNumber)));
 }

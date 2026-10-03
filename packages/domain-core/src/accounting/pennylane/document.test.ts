@@ -1,6 +1,13 @@
 import type { MoneyDocument, PennylaneInvoiceDraft } from '@lezzet/types';
 import { describe, expect, it } from 'vitest';
-import { pennylaneDocumentScope, pennylaneInvoiceDraft, pennylaneInvoicePatch, pennylanePaymentStatus, pennylaneVatCode } from './document';
+import {
+  pennylaneDocumentScope,
+  pennylaneInvoiceDraft,
+  pennylaneInvoicePatch,
+  pennylanePaymentStatus,
+  pennylaneSupplierCandidates,
+  pennylaneVatCode,
+} from './document';
 
 const document = (over: Partial<MoneyDocument> = {}): MoneyDocument =>
   ({
@@ -134,5 +141,24 @@ describe('ödeme durumu', () => {
     expect(pennylanePaymentStatus({ openAmountCents: 16_550, allocations: [], written: 'paid' })).toBe('to_be_paid');
     expect(pennylanePaymentStatus({ openAmountCents: 0, allocations: [{ bank: true }], written: 'paid' })).toBe('to_be_paid');
     expect(pennylanePaymentStatus({ openAmountCents: 16_550, allocations: [], written: 'to_be_paid' })).toBeNull();
+  });
+});
+
+describe("Pennylane'de aynı firmanın tedarikçisi", () => {
+  const suppliers = [
+    { id: 1, name: 'Société Anatolie Gıda', vatNumber: 'FR91028564762' },
+    { id: 2, name: 'Orange', vatNumber: null },
+    { id: 3, name: 'Muller', vatNumber: 'FR11111111111' },
+  ];
+
+  it('KDV numarası tutan kayıt adı farklı olsa da aynı firmadır; numara boşluk, nokta ve harf büyüklüğü farkıyla da tutar', () => {
+    expect(pennylaneSupplierCandidates(suppliers, { name: 'Anatolie', vatNumber: 'fr 910.285-647 62' }).map((row) => row.id)).toEqual([1]);
+  });
+
+  it('KDV numarası yoksa ad aksan, büyüklük ve noktalama farkı gözetmeden karşılaştırılır; numarası çelişen aynı adlı kayıt başka firmadır', () => {
+    expect(pennylaneSupplierCandidates(suppliers, { name: '  ORANGE ', vatNumber: null }).map((row) => row.id)).toEqual([2]);
+    expect(pennylaneSupplierCandidates(suppliers, { name: 'Societe  Anatolie-Gida', vatNumber: null }).map((row) => row.id)).toEqual([1]);
+    expect(pennylaneSupplierCandidates(suppliers, { name: 'Muller', vatNumber: 'FR22222222222' })).toEqual([]);
+    expect(pennylaneSupplierCandidates(suppliers, { name: 'Orange', vatNumber: 'FR33333333333' }).map((row) => row.id)).toEqual([2]);
   });
 });

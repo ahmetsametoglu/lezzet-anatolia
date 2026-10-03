@@ -71,14 +71,21 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
     findSupplier: async (externalReference) => {
       failing('findSupplier');
       const found = [...suppliers.values()].find((row) => row.externalReference === externalReference);
-      return found ? { id: found.id, name: found.name, externalReference: found.externalReference } : null;
+      return found ? { id: found.id, name: found.name, externalReference: found.externalReference, vatNumber: found.vatNumber } : null;
     },
+    listSuppliers: async () =>
+      [...suppliers.values()].map((row) => ({
+        id: row.id,
+        name: row.name,
+        externalReference: row.externalReference,
+        vatNumber: row.vatNumber,
+      })),
     createSupplier: async (draft) => {
       failing('createSupplier');
       if ([...suppliers.values()].some((row) => row.externalReference === draft.externalReference)) throw taken(draft.externalReference);
       const id = (nextId += 1);
       suppliers.set(id, { ...draft, id });
-      return { id, name: draft.name, externalReference: draft.externalReference };
+      return { id, name: draft.name, externalReference: draft.externalReference, vatNumber: draft.vatNumber };
     },
     findInvoices: async (filter) => {
       failing('findInvoices');

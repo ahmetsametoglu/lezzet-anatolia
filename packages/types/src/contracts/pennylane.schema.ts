@@ -41,7 +41,13 @@ export const PennylaneApiChangePageSchema = z.object({
   next_cursor: z.string().nullable(),
 });
 
-export const PennylaneApiSupplierSchema = z.object({ id: z.number().int(), name: z.string(), external_reference: z.string().nullable() });
+/** Elle açılan tedarikçinin dış referansını Pennylane üretir; KDV numarası yoksa boş dize gelir. */
+export const PennylaneApiSupplierSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  external_reference: z.string().nullable(),
+  vat_number: z.string().nullable(),
+});
 
 export const PennylaneApiSupplierPageSchema = z.object({
   items: z.array(PennylaneApiSupplierSchema),

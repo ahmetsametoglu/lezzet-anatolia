@@ -287,7 +287,9 @@ const PENNYLANE_ENGELI: Record<string, string> = {
   vat_code: 'ters yüklemenin Pennylane oran kodu yok',
   kind_changed: "yüklendikten sonra türü değişti, Pennylane'deki fatura duruyor",
   duplicate_number: "aynı tedarikçide bu numarayla Pennylane'de başka fatura var",
-  duplicate_file: 'aynı dosya başka bir belgeyle yüklenmiş',
+  duplicate_file: "aynı dosya Pennylane'de başka bir faturada",
+  supplier_ambiguous: "Pennylane'de bu firmaya uyan birden çok tedarikçi var",
+  supplier_taken: "Pennylane'deki tedarikçi bizde başka bir karşı tarafa bağlı",
 };
 
 /** Pennylane engelinin etiketi; tanınmayan sebep kodu olduğu gibi döner. */
