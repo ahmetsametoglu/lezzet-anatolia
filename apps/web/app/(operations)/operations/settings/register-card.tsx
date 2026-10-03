@@ -10,7 +10,7 @@ import { Select } from '@/components/operation/form/select';
 import { LiveFromDialog } from './live-from-dialog';
 import { removeRegisterStoreAction, saveRegisterStoreAction, setRegisterLiveFromAction } from './register-actions';
 import type { RegisterDayEndView, RegisterPanelData, RegisterStoreRowView } from './register-read';
-import { CardItem, CardLine, DialogError, JobText, SettingsCard } from './settings-sections';
+import { CardItem, CardLine, DialogError, JobText, QueueText, SettingsCard } from './settings-sections';
 import { useDialogAction } from './use-dialog-action.hook';
 
 /**
@@ -62,16 +62,7 @@ export function RegisterCard({ data }: RegisterCardProps) {
       ))}
 
       <CardLine label="Kuyruk">
-        <span className="font-ops-body text-ops-xs text-ops-body">
-          {data.waiting} bekliyor
-          {data.failing > 0 ? <span className="text-ops-red"> · {data.failing} hata alıyor</span> : null}
-          {data.blocked.map((blocked) => (
-            <span key={blocked.reason} className="text-ops-amber-dark">
-              {' '}
-              · {blocked.count} duruyor ({blocked.reason})
-            </span>
-          ))}
-        </span>
+        <QueueText queue={data.queue} />
       </CardLine>
       <CardLine label="Eşitleme">
         <JobText job={data.sync} />

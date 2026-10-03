@@ -236,7 +236,7 @@ describe('Pennylane banka hareketi okuması', () => {
     await settings.override(PENNYLANE_LIVE_FROM_KEY, '2026-10-01');
     twin.removeBankAccount(bank);
     await bankAccounts.markListed([accountId], null);
-    expect(await sync()).toMatchObject({ skipped: 'no_accounts' });
+    expect(await sync()).toMatchObject({ accounts: 0 });
     expect(await rowsOf()).toHaveLength(1);
     expect(await bankAccounts.findByAccount(accountId)).toMatchObject({ pennylaneId: bank });
   });

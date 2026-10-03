@@ -10,7 +10,7 @@ import { Select } from '@/components/operation/form/select';
 import { LiveFromDialog } from './live-from-dialog';
 import { removePennylaneAccountAction, savePennylaneAccountAction, setPennylaneLiveFromAction } from './pennylane-actions';
 import type { PennylaneAccountRowView, PennylanePanelData } from './pennylane-read';
-import { CardItem, CardLine, DialogError, JobText, SettingsCard } from './settings-sections';
+import { CardItem, CardLine, DialogError, JobText, QueueText, SettingsCard } from './settings-sections';
 import { useDialogAction } from './use-dialog-action.hook';
 
 /**
@@ -29,7 +29,7 @@ export function PennylaneCard({ data }: PennylaneCardProps) {
     <SettingsCard
       title="Muhasebe (Pennylane)"
       count={data.accounts.filter((account) => account.pennylane !== null).length}
-      hint="Eşlenen banka hesabının hareketleri Pennylane'den okunur, eşlenmemiş hesaba Excel ekstresi yüklenir; Pennylane'deki hesap listesini eşitleme her turda yeniler."
+      hint="Eşlenen banka hesabının hareketleri Pennylane'den okunur, alış faturası ve fişi Pennylane'e bizden yüklenir; Pennylane'deki hesap listesini eşitleme her turda yeniler."
       action={
         <Button variant="dark" size="sm" onClick={() => setLiveOpen(true)}>
           Canlıya geçiş
@@ -69,6 +69,9 @@ export function PennylaneCard({ data }: PennylaneCardProps) {
         />
       ))}
 
+      <CardLine label="Belgeler">
+        <QueueText queue={data.queue} />
+      </CardLine>
       <CardLine label="Eşitleme">
         <JobText job={data.sync} />
       </CardLine>
@@ -80,7 +83,7 @@ export function PennylaneCard({ data }: PennylaneCardProps) {
       <LiveFromDialog
         open={liveOpen}
         value={data.liveFrom}
-        subtitle="Bu günden itibaren eşlenen hesapların hareketleri Pennylane'den okunur; öncesi Excel ekstresiyle girilir. Boş bırakılırsa hiçbir hareket okunmaz."
+        subtitle="Bu günden itibaren eşlenen hesapların hareketleri Pennylane'den okunur ve girilen alış belgeleri Pennylane'e yüklenir; öncesi Excel ekstresiyle girilir. Boş bırakılırsa ne hareket okunur ne belge yüklenir."
         offLabel="Okumayı kapat"
         onSave={(date) => setPennylaneLiveFromAction({ date })}
         onClose={() => setLiveOpen(false)}

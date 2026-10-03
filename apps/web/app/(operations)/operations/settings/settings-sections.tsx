@@ -8,7 +8,7 @@ import { cardClass } from '@/components/operation/ui/card';
 import { num, shortDateTime } from '@/components/operation/ui/format';
 import type { SettingValue } from './settings-catalog';
 import type { SectionRowsView, SettingRowView, StaffRowView } from './settings-types';
-import type { SetupJobView } from './setup-job';
+import type { SetupJobView, SetupQueueView } from './setup-trace';
 
 // Ayarlar ekranının kart parçaları; sekme görünümü ve arama sonucu aynı satırı çizer ki "istisnalı" işareti bir yerde eksik kalmasın.
 
@@ -118,6 +118,26 @@ export function JobText({ job, children }: JobTextProps) {
       {job.error ? <span className="text-ops-red"> · {job.error}</span> : null}
       {job.skipped ? <span className="text-ops-amber-dark"> · atlandı ({job.skipped})</span> : null}
       {children}
+    </span>
+  );
+}
+
+interface QueueTextProps {
+  queue: SetupQueueView;
+}
+
+/** Kuyruğun hâli: hata alan kırmızı, sebebiyle duran amber yazılır, çünkü ikisinin çözümü ayrı. */
+export function QueueText({ queue }: QueueTextProps) {
+  return (
+    <span className="font-ops-body text-ops-xs text-ops-body">
+      {queue.waiting} bekliyor
+      {queue.failing > 0 ? <span className="text-ops-red"> · {queue.failing} hata alıyor</span> : null}
+      {queue.blocked.map((blocked) => (
+        <span key={blocked.reason} className="text-ops-amber-dark">
+          {' '}
+          · {blocked.count} duruyor ({blocked.reason})
+        </span>
+      ))}
     </span>
   );
 }

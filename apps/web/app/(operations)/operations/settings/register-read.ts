@@ -3,8 +3,8 @@ import 'server-only';
 import { AccountService, JobRunService, RegisterQueueService, RegisterStoreService, WarehouseService, serviceDb } from '@lezzet/database';
 import { registerLiveFrom } from '@lezzet/application';
 import { parisDateOf } from '@lezzet/helper';
-import { blockReasonOf } from '@/lib/register/labels';
-import { jobView, type SetupJobView } from './setup-job';
+import { registerBlockReasonLabel } from '@lezzet/i18n';
+import { jobView, readQueueView, type SetupJobView, type SetupQueueView } from './setup-trace';
 
 /** Tesis başına kasa eşlemesi; eşlenmemiş tesis de listede durur ki eşleme buradan açılsın. */
 export interface RegisterStoreRowView {
@@ -20,9 +20,7 @@ export interface RegisterPanelData {
   liveFrom: string | null;
   stores: RegisterStoreRowView[];
   cashAccounts: { value: string; label: string }[];
-  waiting: number;
-  blocked: { reason: string; count: number }[];
-  failing: number;
+  queue: SetupQueueView;
   sync: SetupJobView | null;
   dayEnd: (SetupJobView & RegisterDayEndView) | null;
 }
@@ -47,16 +45,13 @@ const JOB_SKIP_LABEL: Record<string, string> = {
 
 export async function readRegisterPanel(): Promise<RegisterPanelData> {
   const db = serviceDb();
-  const queue = new RegisterQueueService(db);
   const jobs = new JobRunService(db);
-  const [liveFrom, facilities, accounts, stores, waiting, blockedRows, failing, sync, dayEnd] = await Promise.all([
+  const [liveFrom, facilities, accounts, stores, queue, sync, dayEnd] = await Promise.all([
     registerLiveFrom(db),
     new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
     new AccountService(db).list({ activeOnly: true }),
     new RegisterStoreService(db).list(),
-    queue.countWaiting(),
-    queue.listBlocked(),
-    queue.countFailing(),
+    readQueueView(new RegisterQueueService(db), registerBlockReasonLabel),
     jobs.findByName('register_sync'),
     jobs.findByName('register_close_day'),
   ]);
@@ -64,11 +59,6 @@ export async function readRegisterPanel(): Promise<RegisterPanelData> {
   const cash = accounts.filter((account) => account.type === 'cash');
   const accountName = new Map(cash.map((account) => [account.id, account.name]));
   const storeOf = new Map(stores.map((store) => [store.warehouseId, store]));
-  const reasons = new Map<string, number>();
-  for (const row of blockedRows) {
-    const reason = blockReasonOf(row.lastError) ?? '—';
-    reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
-  }
   const dayStores = Array.isArray(dayEnd?.lastResult?.['stores'])
     ? (dayEnd.lastResult['stores'] as Array<{ closed?: boolean; differences?: number; waiting?: number; olderUnclosed?: boolean }>)
     : [];
@@ -86,9 +76,7 @@ export async function readRegisterPanel(): Promise<RegisterPanelData> {
       };
     }),
     cashAccounts: cash.map((account) => ({ value: account.id, label: account.name })),
-    waiting,
-    blocked: [...reasons].map(([reason, count]) => ({ reason, count })),
-    failing,
+    queue,
     sync: sync ? jobView(sync, JOB_SKIP_LABEL) : null,
     dayEnd: dayEnd
       ? {

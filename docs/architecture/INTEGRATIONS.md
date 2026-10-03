@@ -138,6 +138,9 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 
 - Muhasebe yazılımı Pennylane; akış `docs/feature/kasa-muhasebe.md`de. B2C satış Pennylane'e yalnız Hiboutik'ten, banka
   hareketi bankadan doğrudan girer; bizden giden yalnız alış faturası ve eşleşmedir.
+- Alış belgesi (ödeyeceğimiz fatura ve fiş) canlıya geçiş gününden sonra girildiyse kuyrukla Pennylane'e yüklenir (`pennylane_sync`):
+  karşı tarafın tedarikçisi dış referansla bulunur ya da açılır, belge değişince fark güncellenir, nakitle kapanan belge ödendi
+  işaretini alır. Belge dosyası PDF, JPEG ya da PNG'dir; Pennylane başka türü almıyor.
 - Raporlar ekranındaki satış dosyası ve hareket dökümü genel amaçlı dışa aktarımdır, muhasebe akışının parçası değildir.
 - e-fatura sistemin işi **değil**: B2B satış faturası Pennylane'de kesilir, tedarikçi e-faturası Pennylane'e kayıtlı platformdan gelir.
 

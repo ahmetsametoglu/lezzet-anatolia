@@ -135,7 +135,7 @@ export async function syncBankFeed(db: Db, pennylane: PennylanePort, opts: { now
   const current = new Set(bankAccounts.map((account) => account.id));
   const mappedNow = async () => (await accountService.listMapped()).filter((account) => current.has(account.pennylaneId));
   let accounts = await mappedNow();
-  if (accounts.length === 0) return { skipped: 'no_accounts', ...connection };
+  if (accounts.length === 0) return { ...connection, accounts: 0 };
 
   const cursors = new PennylaneCursorService(db);
   let since = (await cursors.find(STREAM))?.processedAt ?? null;

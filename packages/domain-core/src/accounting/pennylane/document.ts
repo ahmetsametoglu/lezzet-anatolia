@@ -93,6 +93,13 @@ function pennylaneLinesOf(document: DocumentFields, partyCountry: string | null)
 /** Faturanın Pennylane'deki dış referansı; tekil olduğu için yarıda kalan yükleme aramayla bulunur, ikinci kez yüklenmez. */
 export const pennylaneDocumentReference = (documentId: string): string => `doc:${documentId}`;
 
+/** Pennylane'deki faturayı bizim belgemiz mi yükledi: dış referansı belge kimliğimizi taşır. */
+export const isPennylaneDocumentReference = (reference: string | null): boolean => reference?.startsWith('doc:') ?? false;
+
+/** Karşı tarafın Pennylane'deki tedarikçisinin dış referansı. */
+export const pennylanePartyReference = (party: { supplierId: string } | { counterpartyId: string }): string =>
+  'supplierId' in party ? `sup:${party.supplierId}` : `cp:${party.counterpartyId}`;
+
 /** Belgenin taslağı; vadesi yoksa ödeme belge günündedir, Pennylane vadeyi zorunlu tutar. */
 export function pennylaneInvoiceDraft(
   document: Pick<MoneyDocument, 'id' | 'number' | 'issuedOn' | 'dueOn'>,

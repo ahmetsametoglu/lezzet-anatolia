@@ -161,6 +161,28 @@ export async function notifyBankFeedChanged(
 }
 
 /**
+ * Bir alış belgesi Pennylane'e yazılamıyor — muhasebeye ve yönetime; belge düzeltilince kendiliğinden yazılır. Belge ve sebep başına bir
+ * kez haber olur, aynı sebeple yeniden denendikçe tekrar etmez.
+ */
+export async function notifyPennylaneDocumentStuck(
+  db: SupabaseClient,
+  input: { documentId: string; number: string | null; issuedOn: string; reason: string; dedupeKey: string },
+): Promise<void> {
+  try {
+    await dispatchStaffNotification(db, {
+      kind: 'pennylane_document_stuck',
+      roles: ['admin', 'accounting'],
+      warehouseId: null,
+      target: null,
+      payload: { documentId: input.documentId, number: input.number, issuedOn: input.issuedOn, reason: input.reason },
+      dedupeKey: input.dedupeKey,
+    });
+  } catch (err) {
+    yut(err, 'pennylane_document_stuck');
+  }
+}
+
+/**
  * Eşlenen banka hesabına Pennylane'den hareket gelmiyor — muhasebeye ve yönetime; bankanın Pennylane bağlantısı yenilenene kadar banka
  * satırı gelmez. Hesap ve gün başına bir kez haber olur, sessizlik sürerse ertesi gün yeniden hatırlatılır.
  */

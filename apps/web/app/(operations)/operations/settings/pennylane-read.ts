@@ -1,9 +1,10 @@
 import 'server-only';
 
-import { AccountService, JobRunService, PennylaneBankAccountService, serviceDb } from '@lezzet/database';
+import { AccountService, JobRunService, PennylaneBankAccountService, PennylaneQueueService, serviceDb } from '@lezzet/database';
 import { BANK_FEED_QUIET_JOB, PENNYLANE_SYNC_JOB, bankFeedStatus, pennylaneLiveFrom } from '@lezzet/application';
+import { pennylaneBlockReasonLabel } from '@lezzet/i18n';
 import { PennylaneModeEnum, type PennylaneBankAccountMirror, type PennylaneMode } from '@lezzet/types';
-import { jobView, type SetupJobView } from './setup-job';
+import { jobView, readQueueView, type SetupJobView, type SetupQueueView } from './setup-trace';
 
 /** Banka hesabımızın satırı; eşlenmemiş hesap da listede durur ki eşleme buradan açılsın. */
 export interface PennylaneAccountRowView {
@@ -26,6 +27,8 @@ export interface PennylanePanelData {
   freeOptions: { value: string; label: string }[];
   /** Okuma kapalıyken `null`. */
   quietDays: number | null;
+  /** Alış belgelerinin yazım kuyruğu. */
+  queue: SetupQueueView;
   sync: SetupJobView | null;
   quietCheck: SetupJobView | null;
 }
@@ -34,17 +37,17 @@ export interface PennylanePanelData {
 const JOB_SKIP_LABEL: Record<string, string> = {
   not_configured: 'Pennylane anahtarı tanımlı değil',
   not_live: 'canlıya geçiş günü yok',
-  no_accounts: 'okunacak eşli hesap yok',
 };
 
 export async function readPennylanePanel(): Promise<PennylanePanelData> {
   const db = serviceDb();
   const jobs = new JobRunService(db);
-  const [liveFrom, accounts, bankAccounts, status, sync, quietCheck] = await Promise.all([
+  const [liveFrom, accounts, bankAccounts, status, queue, sync, quietCheck] = await Promise.all([
     pennylaneLiveFrom(db),
     new AccountService(db).list(),
     new PennylaneBankAccountService(db).list(),
     bankFeedStatus(db),
+    readQueueView(new PennylaneQueueService(db), pennylaneBlockReasonLabel),
     jobs.findByName(PENNYLANE_SYNC_JOB),
     jobs.findByName(BANK_FEED_QUIET_JOB),
   ]);
@@ -76,6 +79,7 @@ export async function readPennylanePanel(): Promise<PennylanePanelData> {
       .filter((row) => row.accountId === null && current(row))
       .map((row) => ({ value: String(row.pennylaneId), label: row.name })),
     quietDays: status?.quietDays ?? null,
+    queue,
     sync: sync ? jobView(sync, JOB_SKIP_LABEL) : null,
     quietCheck: quietCheck ? jobView(quietCheck, JOB_SKIP_LABEL) : null,
   };

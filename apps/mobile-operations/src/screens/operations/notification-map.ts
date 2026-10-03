@@ -76,6 +76,8 @@ const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, Operation
   bank_feed_changed: 'management',
   // Sessiz hesap web'deki Pennylane kartında okunur.
   bank_feed_quiet: 'management',
+  // Belge web'deki Para ekranında düzeltilir.
+  pennylane_document_stuck: 'management',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */

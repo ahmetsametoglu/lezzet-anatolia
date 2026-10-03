@@ -23,3 +23,6 @@
   hiçbir hareket gelmez.
 - **Kurulum kartında kırmızı "Pennylane'de görünmüyor" yazan hesabı güncel hesaba eşle.** O hesabın hareketi okunmuyor.
 - **E-faturayı reddetmeden önce itiraz et.** Ret geri alınmaz; anlaşmazlık itirazla (`disputed`) çözülür.
+- **Bizden yüklenen faturayı Pennylane'de düzeltme.** Düzeltme bizdeki belgede yapılır ve Pennylane'e kendiliğinden gider;
+  Pennylane'deki elle düzeltme bize dönmez.
+- **Yüklenmiş belgenin dosyasını değiştirme.** Alanlar ve KDV kırılımı Pennylane'de güncellenir, ek güncellenmez.

@@ -247,8 +247,8 @@ cron.schedule(
   { timezone: 'Europe/Paris' },
 );
 
-// Banka hareketi Pennylane'den beş dakikada bir: hareket bankadan Pennylane'e zaten gecikmeli gelir, daha sık sormak istek sınırını
-// yerdi. Beşin katından bir dakika sonra, aynı dakikaya düşen işlerle birbirini bekletmesin.
+// Pennylane eşitlemesi beş dakikada bir: hareket bankadan Pennylane'e zaten gecikmeli gelir, daha sık sormak istek sınırını yerdi.
+// Beşin katından bir dakika sonra, aynı dakikaya düşen işlerle birbirini bekletmesin.
 cron.schedule('1-59/5 * * * *', () => {
   void runJob(PENNYLANE_SYNC_JOB, pennylaneSyncJob);
 });

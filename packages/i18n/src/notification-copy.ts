@@ -278,6 +278,23 @@ export function registerBlockReasonLabel(reason: string): string {
   return KASA_ENGELI[reason] ?? reason;
 }
 
+/** Pennylane'e yazılamayan belgenin sebebi, operatörün diliyle; kurulum kartı ve bildirim aynı cümleyi kursun diye tek yerde. */
+const PENNYLANE_ENGELI: Record<string, string> = {
+  no_party: 'karşı taraf seçilmemiş',
+  no_file: 'dosyası yok',
+  file_type: 'dosya PDF, JPEG ya da PNG değil',
+  vat: 'KDV kırılımı tutmuyor',
+  vat_code: 'ters yüklemenin Pennylane oran kodu yok',
+  kind_changed: "yüklendikten sonra türü değişti, Pennylane'deki fatura duruyor",
+  duplicate_number: "aynı tedarikçide bu numarayla Pennylane'de başka fatura var",
+  duplicate_file: 'aynı dosya başka bir belgeyle yüklenmiş',
+};
+
+/** Pennylane engelinin etiketi; tanınmayan sebep kodu olduğu gibi döner. */
+export function pennylaneBlockReasonLabel(reason: string): string {
+  return PENNYLANE_ENGELI[reason] ?? reason;
+}
+
 const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, unknown>) => StaffNotificationBrief>> = {
   /* Kapanmayan kasa günü yasal bir açıktır; sebebi sayıyla söylenir, ayrıntısı kurulum kartında ve hata kaydında. */
   register_day_unclosed: (p) => ({
@@ -311,6 +328,18 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
     label: 'Banka',
     title: p.change === 'removed' ? "İzahlı banka hareketi Pennylane'de silindi" : "İzahlı banka hareketi Pennylane'de değişti",
     subtitle: `${typeof p.valueDate === 'string' ? `${p.valueDate} · ` : ''}satır olduğu gibi duruyor, elle bakın`,
+  }),
+  /* Belge düzeltilince kendiliğinden yazılır; haber Para ekranını belgenin gününe açar. */
+  pennylane_document_stuck: (p) => ({
+    tone: 'alert',
+    label: 'Muhasebe',
+    title: `Belge Pennylane'e yazılamıyor${typeof p.number === 'string' ? ` — ${p.number}` : ''}`,
+    subtitle:
+      p.reason === 'error'
+        ? 'art arda hata alındı, kendiliğinden yeniden deneniyor'
+        : typeof p.reason === 'string'
+          ? pennylaneBlockReasonLabel(p.reason)
+          : null,
   }),
   /* Sessizlik çoğu zaman bankanın Pennylane bağlantısının düşmesidir; yenilenene kadar banka satırı gelmez. */
   bank_feed_quiet: (p) => ({

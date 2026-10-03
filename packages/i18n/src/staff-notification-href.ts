@@ -16,6 +16,10 @@ export function opsNotificationHref(row: Pick<MeNotification, 'kind' | 'targetTy
   if (row.kind === 'bank_feed_changed' && typeof row.payload.accountId === 'string' && typeof row.payload.valueDate === 'string') {
     return `/operations/finance?acct=${row.payload.accountId}&from=${row.payload.valueDate}&to=${row.payload.valueDate}`;
   }
+  if (row.kind === 'pennylane_document_stuck') {
+    const day = typeof row.payload.issuedOn === 'string' ? `&from=${row.payload.issuedOn}&to=${row.payload.issuedOn}` : '';
+    return `/operations/finance?tab=documents${day}`;
+  }
   // Ölçü ürün kartında düzeltilir; ürünsüz eksik (kutu, adres) depo ekranındadır.
   if (row.kind === 'shipping_data_missing') {
     return typeof row.payload.productId === 'string' ? `/operations/products?productId=${row.payload.productId}` : '/operations/warehouses';

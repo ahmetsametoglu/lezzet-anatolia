@@ -649,3 +649,4 @@ export {
   syncBankFeed,
   type PennylaneSetupOutcome,
 } from './accounting/pennylane/bank-feed';
+export { syncPennylane } from './accounting/pennylane/sync';
