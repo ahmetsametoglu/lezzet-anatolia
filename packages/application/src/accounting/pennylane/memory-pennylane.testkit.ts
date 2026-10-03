@@ -9,18 +9,18 @@ import type {
 import { PennylaneError } from './errors';
 import type { PennylanePort } from './port';
 
-/** İkizdeki fatura: yüklenen taslak, dosyası ve ödeme işareti. */
+/** İkizdeki fatura: yüklenen taslak, dosyası ve ödeme işareti; müşteri faturası yalnız başkasının girdiği faturadır. */
 export type MemoryInvoice = Omit<PennylaneInvoiceDraft, 'externalReference'> & {
   id: number;
+  kind: 'supplier' | 'customer';
   externalReference: string | null;
   fileId: number | null;
   paymentStatus: PennylanePaymentStatus | null;
 };
 
 /**
- * Testlerin bellek içi Pennylane'i: ölçülen davranışı taklit eder (liste kimlik sırasıyla ve sayfalı, imleç yalnız konumdur;
- * değişiklik akışı olayları işlendiği anla verir, aynı hareketin her değişikliği ayrı olaydır). `silently` akışa olay düşmeden
- * değiştirir, akışın kaçırdığı değişikliği kurar.
+ * Testlerin bellek içi Pennylane'i, ölçülen davranışla: liste kimlik sırasıyla ve sayfalıdır, akış olayları işlendiği anla verir ve
+ * eşlenen hareket faturalara açılma sırasıyla dağılır. `silently` akışa olay düşmeden değiştirir, akışın kaçırdığı değişikliği kurar.
  */
 export function memoryPennylane(opts: { pageSize?: number } = {}) {
   const pageSize = opts.pageSize ?? 2;
@@ -29,6 +29,8 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
   const suppliers = new Map<number, PennylaneSupplierDraft & { id: number }>();
   const files = new Map<number, string>();
   const invoices = new Map<number, MemoryInvoice>();
+  /** Hareket başına eşlenen faturalar. */
+  const matches = new Map<number, number[]>();
   const failures = new Map<keyof PennylanePort, Error>();
   const failing = (method: keyof PennylanePort) => {
     const error = failures.get(method);
@@ -46,6 +48,27 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
   let clock = Date.parse('2026-10-01T08:00:00Z');
   const tick = () => new Date((clock += 1000)).toISOString();
   const record = (id: number, operation: PennylaneChange['operation']) => events.push({ id, operation, processedAt: tick() });
+
+  const notFound = () => new PennylaneError({ code: 'not_found', message: 'Pennylane kaydı bulunamadı (404)' });
+  /** Açık kalan: her hareket tutarını faturalara açılma sırasıyla dağıtır, önce açılan tam ödenir; eşleme sırası fark etmez. */
+  const openOf = (invoiceId: number): number => {
+    const open = new Map([...invoices.values()].map((row) => [row.id, row.lines.reduce((sum, line) => sum + line.grossCents, 0)]));
+    for (const [transactionId, invoiceIds] of matches) {
+      let left = transactions.get(transactionId)?.amountCents ?? 0;
+      for (const id of [...invoiceIds].sort((x, y) => x - y)) {
+        const pay = Math.min(left, open.get(id) ?? 0);
+        open.set(id, (open.get(id) ?? 0) - pay);
+        left -= pay;
+      }
+    }
+    return open.get(invoiceId) ?? 0;
+  };
+  const view = (row: MemoryInvoice) => ({
+    id: row.id,
+    externalReference: row.externalReference,
+    invoiceNumber: row.invoiceNumber,
+    openCents: openOf(row.id),
+  });
 
   /** İmleç sayfanın başlangıç sırasıdır; Pennylane'inki opaktır, buradaki ondan fazlasını söylemez. */
   const pageOf = <T>(rows: T[], cursor: string | null) => {
@@ -95,11 +118,11 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
             ? row.externalReference === filter.externalReference
             : row.supplierId === filter.supplierId && row.invoiceNumber === filter.invoiceNumber,
         )
-        .map((row) => ({ id: row.id, externalReference: row.externalReference, invoiceNumber: row.invoiceNumber }));
+        .map(view);
     },
     getInvoice: async (id) => {
       const row = invoices.get(id);
-      return row ? { id: row.id, externalReference: row.externalReference, invoiceNumber: row.invoiceNumber } : null;
+      return row ? view(row) : null;
     },
     uploadFile: async ({ bytes, contentType }) => {
       failing('uploadFile');
@@ -117,20 +140,40 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       if (sameFile) return { status: 'duplicate_file', existingId: sameFile.id };
       if ([...invoices.values()].some((row) => row.externalReference === draft.externalReference)) throw taken(draft.externalReference);
       const id = (nextId += 1);
-      invoices.set(id, { ...draft, id, fileId, paymentStatus: null });
-      return { status: 'imported', invoice: { id, externalReference: draft.externalReference, invoiceNumber: draft.invoiceNumber } };
+      const row: MemoryInvoice = { ...draft, id, kind: 'supplier', fileId, paymentStatus: null };
+      invoices.set(id, row);
+      return { status: 'imported', invoice: view(row) };
     },
     updateInvoice: async (id, patch) => {
       failing('updateInvoice');
       const row = invoices.get(id);
-      if (!row) throw new PennylaneError({ code: 'not_found', message: 'Pennylane kaydı bulunamadı (404)' });
+      if (!row) throw notFound();
       invoices.set(id, { ...row, ...patch });
     },
     setPaymentStatus: async (id, status) => {
       failing('setPaymentStatus');
       const row = invoices.get(id);
-      if (!row) throw new PennylaneError({ code: 'not_found', message: 'Pennylane kaydı bulunamadı (404)' });
+      if (!row) throw notFound();
       invoices.set(id, { ...row, paymentStatus: status });
+    },
+    transactionMatches: async (transactionId) => {
+      failing('transactionMatches');
+      return [...(matches.get(transactionId) ?? [])]
+        .sort((x, y) => y - x)
+        .map((invoiceId) => ({ invoiceId, kind: invoices.get(invoiceId)?.kind ?? 'supplier' }));
+    },
+    matchTransaction: async ({ invoiceId, transactionId }) => {
+      failing('matchTransaction');
+      if (!invoices.has(invoiceId) || !transactions.has(transactionId)) throw notFound();
+      const current = matches.get(transactionId) ?? [];
+      if (!current.includes(invoiceId)) matches.set(transactionId, [...current, invoiceId]);
+      record(transactionId, 'update');
+    },
+    unmatchTransaction: async ({ invoiceId, transactionId }) => {
+      failing('unmatchTransaction');
+      if (!(matches.get(transactionId) ?? []).includes(invoiceId)) throw notFound();
+      matches.delete(transactionId);
+      record(transactionId, 'update');
     },
   };
 
@@ -167,20 +210,25 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
     invoices: () => [...invoices.values()],
     suppliers: () => [...suppliers.values()],
     /** Pennylane'e başkasının girdiği fatura: dış referansı bizim değildir, dosyası yoktur. */
-    addForeignInvoice(row: Pick<MemoryInvoice, 'supplierId' | 'invoiceNumber'>): number {
+    addForeignInvoice(
+      row: Pick<MemoryInvoice, 'supplierId' | 'invoiceNumber'> & { kind?: MemoryInvoice['kind']; grossCents?: number },
+    ): number {
       const id = (nextId += 1);
       invoices.set(id, {
-        ...row,
+        supplierId: row.supplierId,
+        invoiceNumber: row.invoiceNumber,
         id,
+        kind: row.kind ?? 'supplier',
         date: '2026-10-01',
         deadline: '2026-10-01',
-        externalReference: null,
-        lines: [],
+        externalReference: '842FHEIKJD',
+        lines: row.grossCents ? [{ grossCents: row.grossCents, vatCents: 0, vatCode: 'FR_200' }] : [],
         fileId: null,
         paymentStatus: null,
       });
       return id;
     },
+    matchesOf: (transactionId: number) => [...(matches.get(transactionId) ?? [])].sort((x, y) => x - y),
     /** Yöntemin sonraki çağrısı bu hatayla düşer; düşen yazımın kuyrukta ertelenmesi böyle kurulur. */
     failNext(method: keyof PennylanePort, error: Error): void {
       failures.set(method, error);

@@ -61,6 +61,8 @@ export const PennylaneApiInvoiceSchema = z.object({
   id: z.number().int(),
   external_reference: z.string().nullable(),
   invoice_number: z.string().nullable(),
+  /** Alış faturasında ödenmemiş tutar eksi işaretle gelir, kapanınca sıfırdır. */
+  remaining_amount_with_tax: z.string().nullish(),
 });
 
 export const PennylaneApiInvoicePageSchema = z.object({
@@ -72,6 +74,13 @@ export const PennylaneApiInvoicePageSchema = z.object({
 /** Satırların yalnız kimliği okunur: güncellemede eski satırlar kimlikle silinir. */
 export const PennylaneApiInvoiceLinePageSchema = z.object({
   items: z.array(z.object({ id: z.number().int() })),
+  has_more: z.boolean(),
+  next_cursor: z.string().nullable(),
+});
+
+/** Liste eşleme sırasını vermiyor: faturalar kimliğe göre azalan sırayla gelir. */
+export const PennylaneApiTransactionMatchPageSchema = z.object({
+  items: z.array(z.object({ id: z.number().int(), type: z.enum(['supplier', 'customer']) })),
   has_more: z.boolean(),
   next_cursor: z.string().nullable(),
 });

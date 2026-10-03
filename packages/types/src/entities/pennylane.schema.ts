@@ -51,6 +51,8 @@ export const PennylaneInvoiceSchema = z.object({
   id: z.number().int(),
   externalReference: z.string().nullable(),
   invoiceNumber: z.string().nullable(),
+  /** Pennylane'deki açık kalan (**cent**, işaretsiz); eşleşmeyle düşer, `paid` işareti düşürmez. Okunamazsa `null`. */
+  openCents: z.number().int().nullable(),
 });
 export type PennylaneInvoice = z.infer<typeof PennylaneInvoiceSchema>;
 
@@ -76,6 +78,13 @@ export type PennylaneInvoiceDraft = z.infer<typeof PennylaneInvoiceDraftSchema>;
 /** Yüklenmiş faturanın değişen alanları; satırlar verilirse eskileri silinip yenileri yazılır. */
 export const PennylaneInvoicePatchSchema = PennylaneInvoiceDraftSchema.omit({ externalReference: true }).partial();
 export type PennylaneInvoicePatch = z.infer<typeof PennylaneInvoicePatchSchema>;
+
+/** Hareketin Pennylane'de eşlendiği fatura; müşteri faturası da olabilir, bizim yazdığımız yalnız alış faturasıdır. */
+export const PennylaneTransactionMatchSchema = z.object({
+  invoiceId: z.number().int(),
+  kind: z.enum(['supplier', 'customer']),
+});
+export type PennylaneTransactionMatch = z.infer<typeof PennylaneTransactionMatchSchema>;
 
 /** Nakitle kapanan faturanın Pennylane'deki işareti; bankadan ödenen fatura eşleşmeyle kapanır, işaret almaz. */
 export const PennylanePaymentStatusEnum = z.enum(['paid', 'to_be_paid']);

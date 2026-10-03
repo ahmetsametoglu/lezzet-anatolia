@@ -34,7 +34,9 @@ function fakePennylane(routes: Record<string, Reply[]>, mode: PennylaneConfig['m
     served.set(path, index + 1);
     const reply = replies[Math.min(index, replies.length - 1)]!;
     if (reply.throws) throw new Error(reply.throws);
-    return new Response(JSON.stringify(reply.json ?? {}), { status: reply.status ?? 200, headers: reply.headers });
+    // 204 gövde taşımaz; Response gövdeli 204'ü reddeder.
+    const answer = reply.status === 204 ? null : JSON.stringify(reply.json ?? {});
+    return new Response(answer, { status: reply.status ?? 200, headers: reply.headers });
   }) as unknown as typeof fetch;
   const clock = {
     now: () => now,
@@ -201,7 +203,7 @@ describe('alış faturası yazımı', () => {
     });
     expect(await port.importInvoice({ draft, fileId: 93977575424 })).toEqual({
       status: 'imported',
-      invoice: { id: 31309740199936, externalReference: 'doc:4f1c', invoiceNumber: null },
+      invoice: { id: 31309740199936, externalReference: 'doc:4f1c', invoiceNumber: null, openCents: null },
     });
     expect(calls.at(-1)).toMatchObject({
       method: 'POST',
@@ -276,5 +278,51 @@ describe('alış faturası yazımı', () => {
       code: 'provider',
     });
     expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1);
+  });
+});
+
+describe('eşleşme', () => {
+  it('faturanın açık kalanı işaretsiz okunur: Pennylane alış faturasında kalanı eksi verir, okunamayan kalan sıfır sayılmaz', async () => {
+    const { port } = fakePennylane({
+      '/me': [{ json: SANDBOX_ME }],
+      '/supplier_invoices/1': [
+        { json: { id: 1, external_reference: 'doc:a', invoice_number: 'F-1', remaining_amount_with_tax: '-360.0' } },
+      ],
+      '/supplier_invoices/2': [{ json: { id: 2, external_reference: 'doc:b', invoice_number: 'F-2', remaining_amount_with_tax: '0.0' } }],
+      '/supplier_invoices/3': [{ json: { id: 3, external_reference: 'doc:c', invoice_number: 'F-3' } }],
+    });
+    expect((await port.getInvoice(1))?.openCents).toBe(36_000);
+    expect((await port.getInvoice(2))?.openCents).toBe(0);
+    expect((await port.getInvoice(3))?.openCents).toBeNull();
+  });
+
+  it('eşleşmeyi çözmek faturanın yolunda silme isteğidir; eşleme hareketin kimliğini gönderir', async () => {
+    const { port, calls } = fakePennylane({
+      '/me': [{ json: SANDBOX_ME }],
+      '/supplier_invoices/7/matched_transactions': [{ status: 204, json: {} }],
+      '/supplier_invoices/7/matched_transactions/9': [{ status: 204, json: {} }],
+      '/transactions/9/matched_invoices': [
+        {
+          json: {
+            items: [
+              { id: 7, type: 'supplier' },
+              { id: 8, type: 'customer' },
+            ],
+            has_more: false,
+            next_cursor: null,
+          },
+        },
+      ],
+    });
+    await port.matchTransaction({ invoiceId: 7, transactionId: 9 });
+    await port.unmatchTransaction({ invoiceId: 7, transactionId: 9 });
+    expect(calls.slice(-2).map(({ method, path, body }) => ({ method, path, body }))).toEqual([
+      { method: 'POST', path: '/supplier_invoices/7/matched_transactions', body: { transaction_id: 9 } },
+      { method: 'DELETE', path: '/supplier_invoices/7/matched_transactions/9', body: undefined },
+    ]);
+    expect(await port.transactionMatches(9)).toEqual([
+      { invoiceId: 7, kind: 'supplier' },
+      { invoiceId: 8, kind: 'customer' },
+    ]);
   });
 });

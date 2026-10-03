@@ -10,6 +10,7 @@ import {
   PennylaneApiMeSchema,
   PennylaneApiSupplierPageSchema,
   PennylaneApiSupplierSchema,
+  PennylaneApiTransactionMatchPageSchema,
   PennylaneApiTransactionPageSchema,
   PennylaneApiTransactionSchema,
   type PennylaneApiTransaction,
@@ -130,7 +131,7 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
     await verifiedCompany();
     return get(path);
   };
-  const write = async (method: 'POST' | 'PUT', path: string, payload: Payload): Promise<unknown> => {
+  const write = async (method: 'POST' | 'PUT' | 'DELETE', path: string, payload: Payload): Promise<unknown> => {
     await verifiedCompany();
     return send(method, path, payload);
   };
@@ -273,6 +274,23 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
     async setPaymentStatus(id, status) {
       await write('PUT', `/supplier_invoices/${id}/payment_status`, { json: { payment_status: status } });
     },
+    async transactionMatches(transactionId) {
+      const matches: Array<{ invoiceId: number; kind: 'supplier' | 'customer' }> = [];
+      let cursor: string | null = null;
+      do {
+        const body: unknown = await read(`/transactions/${transactionId}/matched_invoices?${query({ limit: PAGE_LIMIT, cursor })}`);
+        const page = parse(PennylaneApiTransactionMatchPageSchema, body, 'hareketin faturaları');
+        matches.push(...page.items.map((item) => ({ invoiceId: item.id, kind: item.type })));
+        cursor = page.has_more ? page.next_cursor : null;
+      } while (cursor);
+      return matches;
+    },
+    async matchTransaction({ invoiceId, transactionId }) {
+      await write('POST', `/supplier_invoices/${invoiceId}/matched_transactions`, { json: { transaction_id: transactionId } });
+    },
+    async unmatchTransaction({ invoiceId, transactionId }) {
+      await write('DELETE', `/supplier_invoices/${invoiceId}/matched_transactions/${transactionId}`, null);
+    },
   };
 }
 
@@ -280,8 +298,19 @@ function supplierOf(row: { id: number; name: string; external_reference: string 
   return { id: row.id, name: row.name, externalReference: row.external_reference, vatNumber: row.vat_number || null };
 }
 
-function invoiceOf(row: { id: number; external_reference: string | null; invoice_number: string | null }): PennylaneInvoice {
-  return { id: row.id, externalReference: row.external_reference, invoiceNumber: row.invoice_number };
+function invoiceOf(row: {
+  id: number;
+  external_reference: string | null;
+  invoice_number: string | null;
+  remaining_amount_with_tax?: string | null;
+}): PennylaneInvoice {
+  const remaining = row.remaining_amount_with_tax == null ? Number.NaN : Number(row.remaining_amount_with_tax);
+  return {
+    id: row.id,
+    externalReference: row.external_reference,
+    invoiceNumber: row.invoice_number,
+    openCents: Number.isFinite(remaining) ? Math.abs(toCents(remaining)) : null,
+  };
 }
 
 const euros = (cents: number) => (cents / 100).toFixed(2);
@@ -342,7 +371,7 @@ function parse<T>(schema: Parser<T>, body: unknown, what: string): T {
   return result.data;
 }
 
-type Method = 'GET' | 'POST' | 'PUT';
+type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 type Payload = { json: unknown } | { form: FormData } | null;
 
 async function once(config: PennylaneConfig, method: Method, path: string, payload: Payload): Promise<Response> {

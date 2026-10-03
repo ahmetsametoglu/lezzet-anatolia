@@ -9,6 +9,7 @@ import type {
   PennylaneSupplier,
   PennylaneSupplierDraft,
   PennylaneTransaction,
+  PennylaneTransactionMatch,
   PennylaneTransactionPage,
 } from '@lezzet/types';
 
@@ -42,4 +43,10 @@ export interface PennylanePort {
   /** Pennylane güncellemede toplamı satırlarla karşılaştırmaz; çağıran ikisini birlikte gönderir. */
   updateInvoice(id: number, patch: PennylaneInvoicePatch): Promise<void>;
   setPaymentStatus(id: number, status: PennylanePaymentStatus): Promise<void>;
+  /** Hareketin eşlendiği faturalar; Pennylane eşleme sırasını vermiyor. */
+  transactionMatches(transactionId: number): Promise<PennylaneTransactionMatch[]>;
+  /** Hareketi alış faturasına eşler; tutar taşımaz, Pennylane hareketi faturalara açılma sırasıyla dağıtır, eşleme sırasıyla değil. */
+  matchTransaction(input: { invoiceId: number; transactionId: number }): Promise<void>;
+  /** Tek bir faturanın bağını çözmek hareketin bütün eşleşmelerini çözer; çağıran kalanları yeniden kurar. */
+  unmatchTransaction(input: { invoiceId: number; transactionId: number }): Promise<void>;
 }

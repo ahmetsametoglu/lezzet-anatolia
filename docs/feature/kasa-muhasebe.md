@@ -206,7 +206,7 @@ raporlar aynı klasörde; ölçüm verisi test şirketinde `LA-TEST-…` etiketi
 | Fatura içe aktarma | Fatura doğrudan muhasebeleşiyor (`accounting_status: complete`); kalan borç eksi işaretli (`-360.0`). İki oranlı satır ve ters yüklemeli satır (`extracom`, `intracom_55`, KDV 0) kabul ediliyor. Satır toplamı fatura toplamını tutmazsa 422 ve açık mesaj. KDV'si oranla tutmayan satır kabul ediliyor (KDV dahil 120 €, %20, KDV 5 €): oran denetimi bizde. |
 | Mükerrer | Aynı içerikli dosya, yeni yükleme olsa da, 409 *"A document with ID … already exists with such attachment"* (belgede 422 yazıyor; mesaj var olan faturanın kimliğini taşıyor). Aynı tedarikçiye aynı numarayla başka içerikli fatura kabul ediliyor: numara denetimi bizde, yüklemeden önce `supplier_id` + `invoice_number` süzgeciyle. |
 | Süzgeç | Parametre adı `filter`; rehberdeki `filters` yok sayılıyor ve bütün listeyi döndürüyor. |
-| Eşleşme | Tutar taşımaz; Pennylane hareketi bağlama sırasıyla dağıtır. 400 € → 360 € + 140 €: önce bağlanan tam, sonraki 40 € ödenmiş görünür. Fazlası harekette açık kalır (500 € → 360 €: 140 € açık). Eşleşen faturada `paid` ve kalan tutar değişir, `payment_status` `to_be_processed` kalır; harekete faturanın tedarikçisi yazılır. |
+| Eşleşme | Tutar taşımaz; Pennylane hareketi faturalara açılma sırasıyla dağıtır, eşleme sırasıyla değil (03.10: aynı hareket önce sonraki faturaya eşlendiğinde de önce açılan tam ödendi). 400 € → 360 € + 140 €: önce açılan tam, öteki 40 € ödenmiş görünür. Fazlası harekette açık kalır (500 € → 360 €: 140 € açık). Eşleşen faturada `paid` ve kalan tutar değişir, `payment_status` `to_be_processed` kalır; harekete faturanın tedarikçisi yazılır. |
 | Eşleşmeyi geri alma | Tek bir faturanın bağını çözmek hareketin bütün bağlarını çözer; kalanlar yeniden bağlanmalı (yeniden bağlama çalışıyor). |
 | E-fatura durumu | İçe aktarılmış faturada 422 *"This supplier invoice is not an electronic invoice"*. |
 | Değişiklik akışı | Yaratma, eşleşme ve geri alma 1–2 saniye içinde akışta (`insert`, `update`); muhasebecinin Pennylane'de yaptığı eşleşme de buradan görülür. |
@@ -403,14 +403,14 @@ da cari); e-faturalar; bu belgelerle bu hareketler arasındaki bağlar. Sözleş
 gitmez. B2B satış faturası Faz 4'tedir. Para birimi avro olmayan belge yüklenmez, "Pennylane'e elle" diye
 gösterilir.
 
-**Bağın tutarı (ölçümden sonra, 02.10):** Pennylane bağda tutar taşımaz; hareketi faturalara bağlama sırasıyla
-dağıtır. Bizim bağımız da aynı kuralla çalışıyor: üç bağlama yolunun (banka kuyruğu, belgenin ödeme seçicisi,
-"Ödemesini yaz") hiçbiri tutar sormuyor; bağ her seferinde hareketin kalanı ile belgenin açık kalanının
-küçüğüdür (`allocateToDocument`). Bu yüzden model değişmez: bağın tutarı kalır, çünkü belgenin açık kalanı ve
-tedarikçi borcu ondan türer. Hiçbir yerde kullanılmayan elle tutar verme seçeneği kaldırılır, kural kesinleşir.
-Bağlar Pennylane'e bizdeki bağlanma sırasıyla yazılır ve sonuç aynı çıkar. Pennylane'deki kalan tutar
-bizimkinden ayrılırsa, örneğin fatura Pennylane'de başka tutardaysa ya da ona orada başka hareket bağlıysa, belge
-"Pennylane'de farklı" diye işaretlenir; düzeltme elle yapılır.
+**Bağın tutarı:** Pennylane bağda tutar taşımaz; hareketi faturalara açılma sırasıyla dağıtır, eşleme sırası dağılımı
+değiştirmiyor (03.10 ölçümü). Bizim bağımız bağlanma sırasıyla dağılır: üç bağlama yolunun (banka kuyruğu, belgenin
+ödeme seçicisi, "Ödemesini yaz") hiçbiri tutar sormuyor; bağ her seferinde hareketin kalanı ile belgenin açık
+kalanının küçüğüdür (`allocateToDocument`). Model değişmez: bağın tutarı kalır, çünkü belgenin açık kalanı ve
+tedarikçi borcu ondan türer. Tek faturayı kapatan ya da bütün faturaları tam kapatan harekette iki taraf aynı sonucu
+bulur; hareket birden çok faturayı kısmen kapatıyorsa ya da fatura Pennylane'de başka tutardaysa veya ona orada başka
+hareket bağlıysa Pennylane'deki kalan bizimkinden ayrılır ve belge "Pennylane'de farklı" diye işaretlenir; düzeltme elle
+yapılır.
 
 **Pennylane'de yapılan eşleşme:** muhasebeci Pennylane'de de eşleştirebilir; değişiklik akışı bunu 1–2 saniyede
 gösterir.
