@@ -414,7 +414,9 @@ gösterir.
 
 **Akışlar:**
 1. **Banka hareketi okuma.** Ayarlar › Kurulum'daki Pennylane kartında banka hesabımız Pennylane'deki hesabına
-   eşlenir ve canlıya geçiş günü girilir. İlk okumada eşlenen hesabın o günden sonraki hareketleri listeden bir kez
+   eşlenir ve canlıya geçiş günü girilir. Anahtar yalnız backend'dedir: eşitleme turu şirketi ve banka hesaplarını
+   okuma kapalıyken de okuyup yazar, kart seçenekleri oradan alır. Pennylane'deki listeden düşen eşli hesap okunmaz,
+   çünkü boş gelen hareket listesi bütün satırlarını silinmiş saydırırdı; kart onu işaretler. İlk okumada eşlenen hesabın o günden sonraki hareketleri listeden bir kez
    okunur (`GET /transactions`, hesap ve tarih süzgeciyle). Sonra değişiklik akışı (`/changelogs/transactions`)
    birkaç dakikada bir okunur. Akış son 4 haftayı tuttuğu için daha uzun bir kesintiden sonra liste canlıya geçiş
    gününden yeniden okunur; listede olmayan ama aynada duran hareket Pennylane'de silinmiştir. Hareket bizde eşleşmemiş banka satırı olarak yazılır (`source = bank_import`, tip
@@ -422,6 +424,8 @@ gösterir.
    da açıklaması değişen satır bizde henüz izah edilmemişse güncellenir. İzahlı satıra dokunulmaz: parası (tutar, gün,
    yön) değişirse ya da hareket Pennylane'de silinirse muhasebeye ve yönetime bildirim gider. Eşlenmiş hesaba canlıya geçiş gününden sonrası için Excel yüklemesi
    reddedilir, çünkü iki kaynak aynı satırı iki kez yazardı; eşlenmemiş hesapta Excel yüklemesi bugünkü gibi kalır.
+   Aynı kural öbür yönden de işler: dosyadan yüklenen son satırı canlıya geçiş gününe ya da sonrasına düşen hesap
+   eşlenmez, gün de eşli hesabın son dosya satırına ya da öncesine alınmaz.
 2. **Tedarikçi eşleme.** Pennylane'deki tedarikçi bizim tedarikçimize ya da carimize ayna tablosuyla bağlanır.
    Yüklenecek belgenin karşı tarafı Pennylane'de yoksa önce dış referansla (`sup:<kimlik>`, `cp:<kimlik>`) aranır,
    bulunmazsa açılır (ad, KDV numarası, ülke, vade günü). Dış referans tekil olduğu için tekrarlanan açılış çift
@@ -541,6 +545,9 @@ olup olmadığı; fişin Pennylane'e fatura olarak girip girmeyeceği.
    Çare: kuyruk + yeniden deneme + günlük mutabakatta fark uyarısı; gün kapanmadan kuyruk boşalmalı.
 6. **Kasa sıfırlanması.** Hiboutik'te ürünler silinirse (demo sıfırlama) bizdeki ürün eşlemesi
    (`register_product`) olmayan ürünleri anar ve her yazım düşer; sıfırlamadan sonra eşleme silinmeli.
+7. **Canlıya geçiş gününün ileri alınması ya da kaldırılması.** Pennylane'den okunmuş günlere dosya yüklemesi
+   yeniden açılır ve iki kaynak aynı banka satırını yazar. Bugün yalnız dosya satırının üstüne geri alış reddediliyor;
+   ileri alış ve kaldırma için dosya reddinin Pennylane'den okunmuş son güne kadar sürmesi gerekir.
 
 ## 10. Kaynaklar
 

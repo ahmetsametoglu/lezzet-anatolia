@@ -104,7 +104,7 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
               : `Pennylane test kipinde ama anahtar canlı şirketin (${name}) — PENNYLANE_MODE ya da anahtar yanlış`,
           });
         }
-        return { id, name, regNo: reg_no };
+        return { id, name, regNo: reg_no, mode: config.mode };
       })
       .catch((err: unknown) => {
         company = null;

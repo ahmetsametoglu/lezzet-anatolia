@@ -480,6 +480,15 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   findImported(accountId: string, importFingerprint: string): Promise<MoneyMovement | null> {
     return this.getOneBy({ accountId, importFingerprint });
   }
+
+  /** Hesaba dosyadan yüklenen son banka satırının günü; hiç yüklenmediyse `null`. */
+  async lastFileRowDate(accountId: string): Promise<string | null> {
+    const [last] = await this.getAll(
+      { accountId },
+      { isNotNullFields: ['bankImportId'], orderBy: 'valueDate', orderDirection: 'desc', limit: 1 },
+    );
+    return last?.valueDate ?? null;
+  }
 }
 
 /**

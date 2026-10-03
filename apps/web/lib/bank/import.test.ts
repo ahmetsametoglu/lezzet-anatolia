@@ -7,7 +7,7 @@ import {
   MoneyDocumentService,
   MoneyMovementService,
   OrderService,
-  PennylaneAccountService,
+  PennylaneBankAccountService,
   ProductService,
   UserProfileService,
   serviceDb,
@@ -609,11 +609,10 @@ describe("Pennylane'e eşlenen hesap", () => {
   it('canlıya geçiş gününden sonraki satırı taşıyan dosya yazılmaz, çünkü iki kaynak aynı banka satırını iki kez yazardı', async () => {
     const settings = settingsSnapshot(db);
     await settings.override(PENNYLANE_LIVE_FROM_KEY, dayOffset(-2));
-    await new PennylaneAccountService(db).save({
-      accountId: bankAccount,
-      pennylaneBankAccountId: 900_000_000 + (stamp % 100_000_000),
-      pennylaneName: 'Banque',
-    });
+    const pennylaneId = 900_000_000 + (stamp % 100_000_000);
+    const pennylaneAccounts = new PennylaneBankAccountService(db);
+    await pennylaneAccounts.saveSeen([{ id: pennylaneId, name: 'Banque', currency: 'EUR' }], new Date().toISOString());
+    await pennylaneAccounts.map(pennylaneId, bankAccount, new Date().toISOString());
     try {
       const suggestion = await analyzeFile(STATEMENT, { model: failingAiModel('test: AI atlandı') });
       const profile =
@@ -625,7 +624,7 @@ describe("Pennylane'e eşlenen hesap", () => {
       expect(await movements.listTouchingAccountSince(bankAccount, '2000-01-01')).toHaveLength(0);
     } finally {
       // Eşleme ve ayar kalırsa dosyanın öteki testlerindeki yükleme de reddedilirdi.
-      await mustDelete(db, 'pennylane_account', (q) => q.eq('account_id', bankAccount));
+      await mustDelete(db, 'pennylane_bank_account', (q) => q.eq('pennylane_id', pennylaneId));
       await settings.restore();
     }
   });

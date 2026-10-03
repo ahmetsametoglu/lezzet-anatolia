@@ -4,28 +4,36 @@
 > [`docs/feature/kasa-muhasebe.md`](../../feature/kasa-muhasebe.md) §8'de. Alan listeleri
 > (`<!-- alanlar:… -->` bloğu) `pnpm docs:sync` ile migration'lardan üretilir, elle yazılmaz.
 
-Banka hareketi Pennylane'den gelir, bizde izah edilir. Bu tablolar hangi hesabın Pennylane'den okunduğunu, okunan her hareketin son
-hâlini ve değişiklik akışının kaldığı yeri tutar.
+Banka hareketi Pennylane'den gelir, bizde izah edilir. Bu tablolar Pennylane'deki banka hesaplarını ve hangisinin hangi hesabımıza
+eşlendiğini, okunan her hareketin son hâlini ve değişiklik akışının kaldığı yeri tutar.
 
-## PennylaneAccount (banka hesabı eşlemesi)
+## PennylaneBankAccount (Pennylane banka hesabı ve eşleme)
 
-Banka hesabımız Pennylane'deki banka hesabına bağlanır; eşlenen hesabın hareketi Pennylane'den okunur.
+Pennylane'deki banka hesabı; banka hesabımız en fazla birine eşlenir ve eşlenen hesabın hareketi Pennylane'den okunur.
 
-<!-- alanlar:pennylane_account -->
+<!-- alanlar:pennylane_bank_account -->
 | Kolon | Tip | Null | Varsayılan |
 | --- | --- | --- | --- |
-| `account_id` | uuid |  |  |
-| `pennylane_bank_account_id` | bigint |  |  |
-| `pennylane_name` | text |  |  |
+| `pennylane_id` | bigint |  |  |
+| `name` | text |  |  |
+| `seen_at` | timestamptz |  |  |
+| `account_id` | uuid | • |  |
+| `mapped_at` | timestamptz | • |  |
 | `listed_at` | timestamptz | • |  |
-| `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
 
 **Kararlar**
 
+- **Liste backend'den** — Pennylane anahtarı yalnız backend'dedir; eşitleme turu şirketi ve banka hesaplarını okuma kapalıyken de
+  okur, kurulum kartı eşleme seçeneklerini bu tablodan alır.
+- **`seen_at`** — son okunan listede görüldüğü an. Listeden düşen hesap eşleme seçeneklerinden çıkar; eşlenmişse okunmaz, çünkü boş
+  gelen hareket listesi bütün satırlarını Pennylane'de silinmiş sayardı. Kart onu işaretler.
+- **`account_id`, `mapped_at`** — eşleme; ikisi birlikte dolu ya da boştur. Hareket gelmiyor sayacı eşleme gününden başlar. Başka
+  hesabımıza eşli Pennylane hesabı eşlenmez; hesabımızın eşlemesi taşınınca eskisi boşalır.
 - **`listed_at`** — canlıya geçiş gününden itibaren liste okundu mu; boşsa sonraki tur listeyi baştan okur (ilk eşleme, gün değişikliği,
-  akışın kapsamadığı kesinti).
-- **`pennylane_name`** — eşleme anında yazılır ki kart her açılışta Pennylane'e sormasın.
+  akışın kapsamadığı kesinti). Eşlenmemiş satırda boştur.
+- **Dosya satırıyla çakışma** — hesaba dosyadan yüklenen son satır canlıya geçiş gününe ya da sonrasına düşüyorsa hesap eşlenmez ve gün o
+  satıra ya da öncesine alınmaz; Pennylane aynı banka satırını ikinci kez yazardı. Eşlenen hesaba o günden sonrası için dosya da yüklenmez.
 
 ## PennylaneTransaction (hareket aynası)
 

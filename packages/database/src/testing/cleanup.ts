@@ -443,7 +443,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       await mustDelete(db, 'money_movement', (q) => q.in('counter_account_id', accountIds));
       // Pennylane eşlemesi ve hareket aynası hesabı `restrict` ile tutar.
       await mustDelete(db, 'pennylane_transaction', (q) => q.in('account_id', accountIds));
-      await mustDelete(db, 'pennylane_account', (q) => q.in('account_id', accountIds));
+      await mustDelete(db, 'pennylane_bank_account', (q) => q.in('account_id', accountIds));
       // Banka import zinciri de hesaba bağlı ve `bank_import` `restrict` — şablon `cascade` olduğu
       // için tek başına görünmez ama yükleme kaydı hesabı tutar. Sıra: yükleme → şablon (şablon
       // silinince yükleme `set null` alır, tersi FK'yi ihlal eder).

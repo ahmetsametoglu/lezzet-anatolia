@@ -1,16 +1,22 @@
--- Muhasebe yazılımı (Pennylane) entegrasyonu (docs/feature/kasa-muhasebe.md §8): banka hesabı eşlemesi, okunan hareketlerin
--- aynası ve değişiklik akışının kaldığı yer. Banka hareketi Pennylane'den gelir, bizde izah edilir.
+-- Muhasebe yazılımı (Pennylane) entegrasyonu (docs/feature/kasa-muhasebe.md §8): Pennylane'deki banka hesapları ve eşlemesi,
+-- okunan hareketlerin aynası ve değişiklik akışının kaldığı yer. Banka hareketi Pennylane'den gelir, bizde izah edilir.
 
--- ── Banka hesabı eşlemesi ───────────────────────────────────────────────────
--- Eşlenen hesabın hareketi Pennylane'den okunur; eşlenmemiş hesapta Excel yüklemesi sürer.
-create table public.pennylane_account (
-  account_id uuid primary key references public.account (id) on delete restrict,
-  pennylane_bank_account_id bigint not null unique,
-  -- Pennylane'deki adı; kart her açılışta Pennylane'e sormasın diye eşleme anında yazılır.
-  pennylane_name text not null,
+-- ── Banka hesapları ve eşleme ───────────────────────────────────────────────
+-- Pennylane'deki banka hesapları her eşitleme turunda yazılır; anahtar yalnız backend'de olduğu için kart listeyi buradan okur.
+-- Eşlenen hesabın hareketi Pennylane'den okunur, eşlenmemiş hesapta Excel yüklemesi sürer.
+create table public.pennylane_bank_account (
+  pennylane_id bigint primary key,
+  name text not null,
+  -- Son okunan listede görüldüğü an; listeden düşen hesap eşleme seçeneklerinden çıkar, eşlenmişse okunmaz ve kartta işaretlenir.
+  seen_at timestamptz not null,
+  account_id uuid unique references public.account (id) on delete restrict,
+  -- Hareket gelmiyor sayacı eşleme gününden başlar.
+  mapped_at timestamptz,
   -- Canlıya geçiş gününden itibaren liste okundu mu; boşsa sonraki tur listeyi baştan okur.
   listed_at timestamptz,
-  created_at timestamptz not null default now()
+  constraint pennylane_bank_account_mapping check (
+    (account_id is null) = (mapped_at is null) and (account_id is not null or listed_at is null)
+  )
 );
 
 -- ── Hareket aynası ──────────────────────────────────────────────────────────
@@ -40,6 +46,6 @@ create table public.pennylane_cursor (
   constraint pennylane_cursor_stream check (stream in ('transactions'))
 );
 
-alter table public.pennylane_account enable row level security;
+alter table public.pennylane_bank_account enable row level security;
 alter table public.pennylane_transaction enable row level security;
 alter table public.pennylane_cursor enable row level security;

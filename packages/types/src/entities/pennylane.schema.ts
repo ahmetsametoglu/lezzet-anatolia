@@ -14,6 +14,8 @@ export const PennylaneCompanySchema = z.object({
   name: z.string(),
   /** Test şirketinde `sandbox-` ile başlar; kipin denetimi buna bakar. */
   regNo: z.string(),
+  /** Anahtarın kipi; şirketin türüyle uyuştuğu denetlenmiştir. */
+  mode: PennylaneModeEnum,
 });
 export type PennylaneCompany = z.infer<typeof PennylaneCompanySchema>;
 
@@ -61,18 +63,32 @@ export const PennylaneChangePageSchema = z.object({
 });
 export type PennylaneChangePage = z.infer<typeof PennylaneChangePageSchema>;
 
-/** Banka hesabımızın Pennylane'deki karşılığı; `listedAt` boşsa sonraki tur canlıya geçiş gününden listeyi okur. */
-export const PennylaneAccountSchema = z.object({
-  accountId: z.string().uuid(),
-  pennylaneBankAccountId: z.number().int(),
-  pennylaneName: z.string(),
+/** Pennylane'deki banka hesabı ve bizdeki eşlemesi (`pennylane_bank_account`); eşlenmemiş hesapta `accountId` boştur. */
+export const PennylaneBankAccountMirrorSchema = z.object({
+  pennylaneId: z.number().int(),
+  name: z.string(),
+  /** Son okunan listede görüldüğü an. */
+  seenAt: z.string(),
+  accountId: z.string().uuid().nullable(),
+  mappedAt: z.string().nullable(),
+  /** Boşsa sonraki tur canlıya geçiş gününden listeyi okur. */
   listedAt: z.string().nullable(),
-  createdAt: z.string(),
 });
-export type PennylaneAccount = z.infer<typeof PennylaneAccountSchema>;
+export type PennylaneBankAccountMirror = z.infer<typeof PennylaneBankAccountMirrorSchema>;
 
-export const PennylaneAccountInsertSchema = PennylaneAccountSchema.omit({ createdAt: true }).partial({ listedAt: true });
-export type PennylaneAccountInsert = z.infer<typeof PennylaneAccountInsertSchema>;
+export const PennylaneBankAccountMirrorInsertSchema = PennylaneBankAccountMirrorSchema.partial({
+  accountId: true,
+  mappedAt: true,
+  listedAt: true,
+});
+export type PennylaneBankAccountMirrorInsert = z.infer<typeof PennylaneBankAccountMirrorInsertSchema>;
+
+/** Banka hesabımıza eşlenmiş satır; eşitleme yalnız bunları okur. */
+export const PennylaneMappedAccountSchema = PennylaneBankAccountMirrorSchema.extend({
+  accountId: z.string().uuid(),
+  mappedAt: z.string(),
+});
+export type PennylaneMappedAccount = z.infer<typeof PennylaneMappedAccountSchema>;
 
 /** Pennylane hareketinin son okunan hâli ve bizdeki banka satırı (`pennylane_transaction`). */
 export const PennylaneTransactionMirrorSchema = z.object({

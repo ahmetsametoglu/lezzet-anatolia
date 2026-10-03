@@ -24,7 +24,7 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
   };
 
   const port: PennylanePort = {
-    company: async () => ({ id: 270612, name: 'Test şirketi', regNo: 'sandbox-270612' }),
+    company: async () => ({ id: 270612, name: 'Test şirketi', regNo: 'sandbox-270612', mode: 'sandbox' }),
     listBankAccounts: async () => [...bankAccounts.values()],
     listTransactions: async ({ bankAccountId, fromDate, cursor }) =>
       pageOf(
@@ -47,6 +47,11 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       const id = (nextId += 1);
       bankAccounts.set(id, { id, name, currency: 'EUR' });
       return id;
+    },
+    /** Hesap Pennylane'den kalkar; hareketleri de listeden düşer, akışa olay düşmez. */
+    removeBankAccount(id: number): void {
+      bankAccounts.delete(id);
+      for (const row of [...transactions.values()]) if (row.bankAccountId === id) transactions.delete(row.id);
     },
     add(row: Omit<PennylaneTransaction, 'id' | 'archived' | 'updatedAt' | 'currency'>): number {
       const id = (nextId += 1);

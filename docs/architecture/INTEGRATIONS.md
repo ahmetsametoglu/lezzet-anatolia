@@ -144,8 +144,10 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 ## Banka import
 
 - Pennylane'e eşlenen hesabın hareketleri Pennylane'den okunur (`pennylane_sync`, beş dakikada bir); eşlenmemiş hesapta bankanın
-  Excel/CSV dosyası içe alınır. Eşlenen hesaba canlıya geçiş gününden sonrası için dosya yüklenmez. Hareketler sipariş/alımlarla
-  eşleştirilir.
+  Excel/CSV dosyası içe alınır. Eşlenen hesaba canlıya geçiş gününden sonrası için dosya yüklenmez; dosya satırı o güne ya da
+  sonrasına düşen hesap da eşlenmez. Hareketler sipariş/alımlarla eşleştirilir.
+- Pennylane anahtarı yalnız backend'dedir (`PENNYLANE_API_TOKEN`, `PENNYLANE_MODE`); kurulum kartı eşlemeyi eşitleme turunun yazdığı
+  hesap listesinden kurar, bağlantıyı ve kipi turun izinden okur.
 - Eşleştirme: **öneri + elle onay.** Tam otomatik değil (toplu ödeme, kısmi ödeme, iade eşleşmeyi bozar).
 
 ## Bildirim
