@@ -92,6 +92,29 @@ export function notifyExceptionEffect(
   return runEffect('notifyException', orderId, effects?.notifyException && (() => effects.notifyException!(orderId, event, opts)));
 }
 
+/** İşi yanıt gönderildikten sonra koşturan kapı: web'de `after`, uzun yaşayan süreçte doğrudan başlatma. */
+export type BackgroundRunner = (task: () => Promise<void>) => void;
+
+/**
+ * Haberleri yanıttan sonraya bırakır: haberin kurulması ve gönderilmesi müşteriyi onay düğmesinde bekletmesin. İade bırakılmaz,
+ * çünkü sonucu çağıranın kararını değiştirir.
+ */
+export function deferredNotices(effects: OrderEffects, runLater: BackgroundRunner): OrderEffects {
+  return {
+    ...effects,
+    notifyStatus:
+      effects.notifyStatus &&
+      (async (orderId, status) => {
+        runLater(() => notifyStatusEffect(effects, orderId, status));
+      }),
+    notifyException:
+      effects.notifyException &&
+      (async (orderId, event, opts) => {
+        runLater(() => notifyExceptionEffect(effects, orderId, event, opts));
+      }),
+  };
+}
+
 /**
  * Kayıtlı değilse `unavailable` döner, "iade edildi" ile karıştırılmaz ve çağırana `refundBlocked: 'provider_unavailable'` olarak
  * görünür. Uyarı yine basılır, çünkü eksik anahtar ile kayıtsız port ayrı arızalardır.

@@ -1,10 +1,12 @@
 'use server';
 
+import { after } from 'next/server';
 import { serviceDb } from '@lezzet/database';
 import { hasLocale } from 'next-intl';
 import {
   checkoutBlockedAnalyticsReason,
   checkoutServicePoints,
+  deferredNotices,
   placeOrder,
   readCheckoutSnapshot,
   type CheckoutSnapshot,
@@ -181,8 +183,9 @@ export async function confirmCheckoutAction(input: {
       // Sağlayıcı istemcisi pakete GİRMEZ (`stripe` npm bağımlılığı): üreteç buradan geçer.
       createPaymentSession: stripeSessionCreator(),
       paymentGateway: stripePaymentGateway(),
-      // Ödeme etkileri, çünkü aynı basışın taslağına dönüşte kapanan ödemenin müşteri haberi de gider.
-      effects: webPaymentEffects,
+      // Ödeme etkileri, çünkü aynı basışın taslağına dönüşte kapanan ödemenin müşteri haberi de gider. Haber yanıttan sonra gider:
+      // müşteri onayı, kendi e-postasının kurulup gönderilmesini beklemeden görür.
+      effects: deferredNotices(webPaymentEffects, after),
       onRejected: measureRejection,
       // Huninin son adımı. Tutar ve müşteri taşınmaz: olay yalnız "bu oturum siparişle bitti" der (`ANALYTICS §1`).
       onPlaced: () => void recordEvent({ type: 'order_placed' }),

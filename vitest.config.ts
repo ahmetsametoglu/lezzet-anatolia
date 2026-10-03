@@ -55,6 +55,7 @@ const UYGULAMA_DBSIZ = [
   'packages/application/src/order/payment-gateway.test.ts',
   // Durum → müşteri haberi seçimi saf: gel-al'da "hazır" haberdir, rota ve kargoda sessizdir.
   'packages/application/src/order/notify-event.test.ts',
+  'packages/application/src/order/effects.test.ts',
   // Hiboutik istemcisi sahte `fetch` ile koşar: tutarın ondalık dizesi, KDV kesri ve açık satışın okunuşu yalnız telde görünür.
   'packages/application/src/register/hiboutik/client.test.ts',
   // Pennylane istemcisi sahte `fetch` ve sahte saatle koşar: kip denetimi, istek sınırı ve tutarın yönü yalnız telde görünür.

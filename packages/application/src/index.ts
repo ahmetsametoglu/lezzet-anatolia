@@ -341,7 +341,9 @@ export type { AdjustOutcome, CancelOutcome, RefundBlockReason, RefundOptions, Wa
 export { deliverOrder } from './order/fulfillment';
 export { recordOrderPayment, recordOrderRefund, syncOrderPaymentStatus } from './order/payment';
 export type { OrderMovementInput, PaymentOutcome } from './order/payment';
+export { deferredNotices } from './order/effects';
 export type {
+  BackgroundRunner,
   OrderEffects,
   OrderExceptionEvent,
   ProviderRefundInput,
