@@ -183,6 +183,28 @@ export async function notifyPennylaneDocumentStuck(
 }
 
 /**
+ * Belgenin açık kalanı Pennylane'dekinden ayrıldı — muhasebeye ve yönetime; iki kalanın çifti başına bir kez haber olur, kalan
+ * değişip yine ayrılırsa yeniden.
+ */
+export async function notifyPennylaneDocumentDifferent(
+  db: SupabaseClient,
+  input: { documentId: string; number: string | null; issuedOn: string; dedupeKey: string },
+): Promise<void> {
+  try {
+    await dispatchStaffNotification(db, {
+      kind: 'pennylane_document_different',
+      roles: ['admin', 'accounting'],
+      warehouseId: null,
+      target: null,
+      payload: { documentId: input.documentId, number: input.number, issuedOn: input.issuedOn },
+      dedupeKey: input.dedupeKey,
+    });
+  } catch (err) {
+    yut(err, 'pennylane_document_different');
+  }
+}
+
+/**
  * Banka satırının eşleşmesi Pennylane'e yazılamıyor — muhasebeye ve yönetime; satır ve sebep başına bir kez haber olur.
  */
 export async function notifyPennylaneMatchStuck(

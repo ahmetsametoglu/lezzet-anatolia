@@ -17,7 +17,7 @@ export function opsNotificationHref(row: Pick<MeNotification, 'kind' | 'targetTy
   if (movementDay && typeof row.payload.accountId === 'string' && typeof row.payload.valueDate === 'string') {
     return `/operations/finance?acct=${row.payload.accountId}&from=${row.payload.valueDate}&to=${row.payload.valueDate}`;
   }
-  if (row.kind === 'pennylane_document_stuck') {
+  if (row.kind === 'pennylane_document_stuck' || row.kind === 'pennylane_document_different') {
     const day = typeof row.payload.issuedOn === 'string' ? `&from=${row.payload.issuedOn}&to=${row.payload.issuedOn}` : '';
     return `/operations/finance?tab=documents${day}`;
   }

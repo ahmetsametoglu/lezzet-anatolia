@@ -221,6 +221,7 @@ raporlar aynı klasörde; ölçüm verisi test şirketinde `LA-TEST-…` etiketi
 | Tedarikçi tekilliği (03.10) | Aynı ad ve aynı KDV numarasıyla ikinci tedarikçi 201 ile açılıyor. Elle açılan tedarikçiye Pennylane UUID dış referans veriyor. Tedarikçi süzgeci yalnız kimlik, muhasebe hesabı, ad (`start_with`) ve dış referans; KDV numarasıyla süzülmüyor, liste okunarak bulunuyor. |
 | Eşlemenin izi (03.10) | Başka bir faturaya eşlenen hareket `update` olarak hareket akışına düşüyor; `/transactions/{id}/matched_invoices` faturanın kimliğini ve türünü veriyor, dış referansını vermiyor. Eşlenen harekete faturanın tedarikçisi yazılıyor. |
 | Analitik kategori (03.10) | Kategori grubu ve kategori açılıyor; alış faturası ve banka hareketi ağırlıkla işaretleniyor (aynı grupta toplam 1), faturalar `category_id` ile süzülüyor. Faturanın kategorileri `GET /supplier_invoices/{id}/categories` ile sayfalı okunuyor, ağırlık ondalık dize ("0.5"). Yazım faturanın bütün kategorilerini değiştiriyor; aynı grupta toplamı 1 olmayan yazım 422 ile reddediliyor ("…must equal 100%"), fatura değişmiyor. |
+| Fatura değişiklik akışı (03.10) | `GET /changelogs/supplier_invoices` hareket akışıyla aynı düzende. İçe aktarma `insert` ve `update`, eşleme ve çözme ikişer `update`, ödendi işareti bir `update` düşürüyor; kategori olay düşürmüyor. Olay 4 saniye içinde görünüyor. |
 | Muhasebe dışa aktarımı (03.10) | FEC ve analitik genel defter API'den üretiliyor (`POST /exports/fecs`, `/exports/analytical_general_ledgers`; hazır olunca `file_url`). FEC 18 standart sütun: alış (`HA`), banka (`BQ`) ve KDV (`RT`) günlükleri, hesap numaraları, eşleşme kodu (`EcritureLet`) dolu. Analitik defter Excel; satır başına analitik eksen ve kategori. |
 
 **Pennylane — açık kalan:**
@@ -480,6 +481,11 @@ gösterir.
 6. **Hareket gelmiyor uyarısı.** Günde bir kez bakılır. Eşlenmiş hesabın Pennylane'den gelen son hareketi
    `pennylane_quiet_days` günden (varsayılan 4) eskiyse muhasebeye ve yönetime bildirim gider; bankanın
    Pennylane bağlantısı yenilenir (§9, 1. risk).
+7. **Açık kalanın okunması.** Faturalarımızın Pennylane'deki açık kalanı yazımdan sonra ve Pennylane'in fatura değişiklik
+   akışından (`/changelogs/supplier_invoices`) okunur, çünkü toptan operasyonunun ya da muhasebecinin Pennylane'de yaptığı
+   eşleşme bizim yazımımızdan geçmez. Akış şirketin bütün faturalarını getirir, yalnız bizimkiler okunur; akışın kapsamadığı
+   boşlukta bütün faturalarımız yeniden okunur. Kalan bizimkinden ayrılırsa belge satırı "Pennylane'de farklı" yazar ve
+   muhasebe kalan çifti başına bir kez uyarılır; kuyrukta bekleyen ve nakitle ödenen belge karşılaştırılmaz.
 
 **Hata:** Hiboutik kuyruğunun aynısı: artan aralıkla yeniden deneme, beşinci denemede `error_log` ve anlık
 bildirim. Yazım duran belge (oran tutmuyor, mükerrer numara, karşı taraf yok, avro dışı) ya da hareket (başka işin
@@ -532,7 +538,7 @@ var.
   (benimse, çözüleni işaretle, başka işe eşli), kalan tutar karşılaştırması.
 - `packages/database`: tablolar, kuyruk tetikleyicileri (belge ve kırılımı, bağ), servisler.
 - `packages/application/src/accounting/pennylane/`: port ve Pennylane istemcisi (istek sınırı, kip ile
-  şirketin denetimi), bellek içi ikiz, okuma (hareket, e-fatura), yazma (tedarikçi, belge, bağ, ödeme durumu), sessizlik
+  şirketin denetimi), bellek içi ikiz, okuma (hareket, fatura akışı, e-fatura), yazma (tedarikçi, belge, bağ, ödeme durumu), sessizlik
   uyarısı. Cevap biçimi ölçülen alanlarla `packages/types` sözleşmesindedir. Fotoğraf çevrilmez, yeni bağımlılık
   yok: Pennylane JPEG ve PNG eki alıyor.
 - `apps/backend/src/jobs/`: `pennylane-sync` (birkaç dakikada bir; akışlar ve kuyruk), `bank-feed-quiet` (günlük).

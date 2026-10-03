@@ -78,6 +78,7 @@ const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, Operation
   bank_feed_quiet: 'management',
   // Belge web'deki Para ekranında düzeltilir.
   pennylane_document_stuck: 'management',
+  pennylane_document_different: 'management',
   // Eşleşmenin kararı web'deki Para ekranında verilir.
   pennylane_match_stuck: 'management',
   pennylane_match_removed: 'management',

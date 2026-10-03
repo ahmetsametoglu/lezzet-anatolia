@@ -344,6 +344,13 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
           ? pennylaneBlockReasonLabel(p.reason)
           : null,
   }),
+  /* Düzeltme elle yapılır; haber Para ekranını belgenin gününe açar, Pennylane'deki kalan satırda yazar. */
+  pennylane_document_different: (p) => ({
+    tone: 'alert',
+    label: 'Muhasebe',
+    title: `Belge Pennylane'de farklı${typeof p.number === 'string' ? ` — ${p.number}` : ''}`,
+    subtitle: "Pennylane'deki açık kalan bizdekinden ayrıldı, elle bakın",
+  }),
   /* Eşleşme kendiliğinden yeniden denenir; haber Para ekranını hesabın o gününe açar. */
   pennylane_match_stuck: (p) => ({
     tone: 'alert',

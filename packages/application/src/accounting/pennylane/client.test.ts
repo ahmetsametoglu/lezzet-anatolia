@@ -143,6 +143,22 @@ describe('hareket okuması', () => {
     expect(sonraki).not.toHaveProperty('start_date');
   });
 
+  it('fatura değişiklik akışı aynı düzenle kendi yolundan istenir', async () => {
+    const { port, calls } = fakePennylane({
+      '/me': [{ json: SANDBOX_ME }],
+      '/changelogs/supplier_invoices': [
+        { json: { ...EMPTY_PAGE, items: [{ id: 9, operation: 'update', processed_at: '2026-10-03T15:08:26Z' }] } },
+      ],
+    });
+    expect(await port.invoiceChanges({ since: '2026-10-03T15:00:00Z', cursor: null })).toEqual({
+      items: [{ id: 9, operation: 'update', processedAt: '2026-10-03T15:08:26Z' }],
+      nextCursor: null,
+    });
+    expect(calls.find((call) => call.path === '/changelogs/supplier_invoices')?.query).toMatchObject({
+      start_date: '2026-10-03T15:00:00Z',
+    });
+  });
+
   it('olmayan hareket `null`; geçersiz anahtar tekrar edilmeden `credentials` olarak düşer', async () => {
     const { port } = fakePennylane({ '/me': [{ json: SANDBOX_ME }] });
     expect(await port.getTransaction(42)).toBeNull();

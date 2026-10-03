@@ -189,7 +189,7 @@ export type PennylaneTransactionMirrorInsert = z.infer<typeof PennylaneTransacti
 
 /** Değişiklik akışının kaldığı an, akış başına bir satır. */
 export const PennylaneCursorSchema = z.object({
-  stream: z.enum(['transactions']),
+  stream: z.enum(['transactions', 'supplier_invoices']),
   processedAt: z.string(),
   updatedAt: z.string(),
 });

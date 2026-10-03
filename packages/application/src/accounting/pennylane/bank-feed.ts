@@ -12,6 +12,7 @@ import { parisDateOf } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import type { MoneyMovement, PennylaneMappedAccount, PennylaneTransaction, PennylaneTransactionMirror } from '@lezzet/types';
 import { notifyBankFeedChanged, notifyBankFeedQuiet } from '../../notification/staff-events';
+import { readChanges, STREAM_RETENTION_MS } from './changes';
 import { PennylaneError } from './errors';
 import { readMovementMatches } from './matches';
 import type { PennylanePort } from './port';
@@ -29,8 +30,6 @@ export const PENNYLANE_SYNC_JOB = 'pennylane_sync';
 export const BANK_FEED_QUIET_JOB = 'bank_feed_quiet';
 
 const STREAM = 'transactions';
-/** Akış dört haftayı tutar; sınıra yaklaşan anla sorulmaz, liste baştan okunur ve aradaki silinme de bulunur. */
-const STREAM_RETENTION_MS = 27 * 86_400_000;
 
 export async function pennylaneLiveFrom(db: Db): Promise<string | null> {
   const value = await new SettingsService(db).get<string | null>(PENNYLANE_LIVE_FROM_KEY, null);
@@ -162,7 +161,7 @@ export async function syncBankFeed(db: Db, pennylane: PennylanePort, opts: { now
 
   let changes: Awaited<ReturnType<typeof readChanges>>;
   try {
-    changes = await readChanges(pennylane, since);
+    changes = await readChanges((input) => pennylane.transactionChanges(input), since);
   } catch (err) {
     // Akış, kapsamadığı anla sorulunca 422 döner: liste sonraki turda baştan okunur, akış o andan sorulur.
     if (!(err instanceof PennylaneError) || err.code !== 'validation') throw err;
@@ -236,24 +235,6 @@ async function quietDaysOf(db: Db): Promise<number> {
   if (typeof value === 'number' && Number.isInteger(value) && value > 0) return value;
   logger.warn({ setting: BANK_FEED_QUIET_DAYS_KEY }, 'pennylane: hareket gelmiyor eşiği okunamadı, varsayılan kullanılıyor');
   return BANK_FEED_QUIET_DAYS_DEFAULT;
-}
-
-/** Akışın `since` anından sonraki olayları; aynı hareketin olayları tek okumaya iner, son hâli Pennylane'den okunur. */
-async function readChanges(
-  pennylane: PennylanePort,
-  since: string,
-): Promise<{ ids: Map<number, 'delete' | 'upsert'>; last: string | null }> {
-  const ids = new Map<number, 'delete' | 'upsert'>();
-  let last: string | null = null;
-  let page = await pennylane.transactionChanges({ since, cursor: null });
-  for (;;) {
-    for (const change of page.items) {
-      ids.set(change.id, change.operation === 'delete' ? 'delete' : 'upsert');
-      if (last === null || Date.parse(change.processedAt) > Date.parse(last)) last = change.processedAt;
-    }
-    if (!page.nextCursor) return { ids, last };
-    page = await pennylane.transactionChanges({ since: null, cursor: page.nextCursor });
-  }
 }
 
 type Apply = (account: PennylaneMappedAccount, pennylaneId: number, transaction: PennylaneTransaction | null) => Promise<void>;

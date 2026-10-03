@@ -77,8 +77,10 @@ Akışın son işlenen olayının anı; imleç tur bitince düşer, sonraki tur 
 
 **Kararlar**
 
-- **`processed_at`** — aynı an iki kez okunsa da sonuç değişmez, çünkü her olayda hareketin son hâli Pennylane'den okunur. Akış dört
+- **`processed_at`** — aynı an iki kez okunsa da sonuç değişmez, çünkü her olayda kaydın son hâli Pennylane'den okunur. Akış dört
   haftayı tutar; bu an 27 günden eskiyse liste baştan okunur ve listede olmayan ama aynada duran hareket silinmiş sayılır.
+- **`stream`** — `transactions` banka satırını, `supplier_invoices` faturalarımızın Pennylane'deki açık kalanını tazeler; fatura akışının
+  kapsamadığı boşlukta bütün faturalarımızın kalanı yeniden okunur.
 
 ## PennylaneSupplier (tedarikçi aynası)
 
@@ -146,7 +148,8 @@ Pennylane'deki fatura ve ona en son yazılan taslak.
 
 - **`written`** — Pennylane'e en son yazılan taslak (`PennylaneInvoiceDraft`); belge değişince fark buna göre çıkar ve güncellenir.
 - **`payment_status`** — nakitle kapanan belgenin işareti; bankadan ödenen belge Pennylane'de eşleşmeyle kapanır, işaret almaz.
-- **`pennylane_open`** — faturanın Pennylane'deki açık kalanı; yüklemeden, güncellemeden ve eşleşmeden sonra okunur, okunamazsa `null`.
+- **`pennylane_open`** — faturanın Pennylane'deki açık kalanı; yüklemeden, güncellemeden, eşleşmeden sonra ve fatura değişiklik akışından
+  okunur, okunamazsa `null`.
   Pennylane kısmi ödemeyi faturaların açılma sırasıyla dağıttığı için bizimkinden ayrılabilir; ayrılan belge "Pennylane'de farklı"dır.
 - **`category_id`** — faturaya en son yazılan analitik kategori (`pennylane_category` ayarı, varsayılan "Lezzet"); ayardaki kategori
   değişince belge bir sonraki yazımında yeni kategoriyi alır. Aynada aynı kategori duruyorsa Pennylane'e gidilmez, orada elle yapılan

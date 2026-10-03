@@ -51,10 +51,13 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       message: `Pennylane isteği reddetti (422): External reference has already been taken (${externalReference})`,
     });
   const events: PennylaneChange[] = [];
+  /** Fatura akışı; kategori olay düşürmez. */
+  const invoiceEvents: PennylaneChange[] = [];
   let nextId = 31_309_700_000_000;
   let clock = Date.parse('2026-10-01T08:00:00Z');
   const tick = () => new Date((clock += 1000)).toISOString();
   const record = (id: number, operation: PennylaneChange['operation']) => events.push({ id, operation, processedAt: tick() });
+  const recordInvoice = (id: number, operation: PennylaneChange['operation']) => invoiceEvents.push({ id, operation, processedAt: tick() });
 
   const notFound = () => new PennylaneError({ code: 'not_found', message: 'Pennylane kaydı bulunamadı (404)' });
   /** Açık kalan: her hareket tutarını faturalara açılma sırasıyla dağıtır, önce açılan tam ödenir; eşleme sırası fark etmez. */
@@ -96,6 +99,11 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
     transactionChanges: async ({ since, cursor }) =>
       pageOf(
         events.filter((event) => since === null || Date.parse(event.processedAt) >= Date.parse(since)),
+        cursor,
+      ),
+    invoiceChanges: async ({ since, cursor }) =>
+      pageOf(
+        invoiceEvents.filter((event) => since === null || Date.parse(event.processedAt) >= Date.parse(since)),
         cursor,
       ),
     findSupplier: async (externalReference) => {
@@ -149,6 +157,7 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       const id = (nextId += 1);
       const row: MemoryInvoice = { ...draft, id, kind: 'supplier', fileId, paymentStatus: null };
       invoices.set(id, row);
+      recordInvoice(id, 'insert');
       return { status: 'imported', invoice: view(row) };
     },
     updateInvoice: async (id, patch) => {
@@ -156,12 +165,14 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       const row = invoices.get(id);
       if (!row) throw notFound();
       invoices.set(id, { ...row, ...patch });
+      recordInvoice(id, 'update');
     },
     setPaymentStatus: async (id, status) => {
       failing('setPaymentStatus');
       const row = invoices.get(id);
       if (!row) throw notFound();
       invoices.set(id, { ...row, paymentStatus: status });
+      recordInvoice(id, 'update');
     },
     transactionMatches: async (transactionId) => {
       failing('transactionMatches');
@@ -175,10 +186,12 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       const current = matches.get(transactionId) ?? [];
       if (!current.includes(invoiceId)) matches.set(transactionId, [...current, invoiceId]);
       record(transactionId, 'update');
+      recordInvoice(invoiceId, 'update');
     },
     unmatchTransaction: async ({ invoiceId, transactionId }) => {
       failing('unmatchTransaction');
       if (!(matches.get(transactionId) ?? []).includes(invoiceId)) throw notFound();
+      for (const id of matches.get(transactionId)!) recordInvoice(id, 'update');
       matches.delete(transactionId);
       record(transactionId, 'update');
     },
@@ -273,6 +286,7 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
         fileId: null,
         paymentStatus: null,
       });
+      recordInvoice(id, 'insert');
       return id;
     },
     matchesOf: (transactionId: number) => [...(matches.get(transactionId) ?? [])].sort((x, y) => x - y),

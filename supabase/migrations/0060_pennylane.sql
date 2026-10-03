@@ -39,11 +39,12 @@ create index pennylane_transaction_account_idx on public.pennylane_transaction (
 
 -- ── Değişiklik akışı ────────────────────────────────────────────────────────
 -- Akışın son işlenen olayının anı: imleç tur bitince düşer, sonraki tur bu andan sorar; aynı an iki kez okunsa da sonuç değişmez.
+-- Hareket akışı banka satırını, fatura akışı faturalarımızın Pennylane'deki açık kalanını tazeler.
 create table public.pennylane_cursor (
   stream text primary key,
   processed_at timestamptz not null,
   updated_at timestamptz not null default now(),
-  constraint pennylane_cursor_stream check (stream in ('transactions'))
+  constraint pennylane_cursor_stream check (stream in ('transactions', 'supplier_invoices'))
 );
 
 -- ── Tedarikçi aynası ────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import {
   MoneyAllocationService,
+  MoneyDocumentService,
   MoneyMovementService,
   PennylaneDocumentService,
   PennylaneMatchRemovedService,
@@ -7,10 +8,11 @@ import {
   PennylaneTransactionService,
   type Db,
 } from '@lezzet/database';
-import { pennylaneMatchPlan, pennylaneMatchReading } from '@lezzet/domain-core';
+import { pennylaneMatchPlan, pennylaneMatchReading, pennylaneOpenDifference } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
+import type { PennylaneDocumentMirror } from '@lezzet/types';
 import { linkMovementToDocument } from '../document';
-import { notifyPennylaneMatchRemoved } from '../../notification/staff-events';
+import { notifyPennylaneDocumentDifferent, notifyPennylaneMatchRemoved } from '../../notification/staff-events';
 import type { PennylanePort } from './port';
 
 /**
@@ -114,11 +116,33 @@ export async function readMovementMatches(
   }
 }
 
-/** Faturalarımızın Pennylane'deki açık kalanı; bizimkinden ayrılan belge "Pennylane'de farklı"dır. */
+/** Faturalarımızın Pennylane'deki açık kalanı; bizimkinden ayrılan belge "Pennylane'de farklı"dır ve muhasebe uyarılır. */
 export async function refreshPennylaneOpen(db: Db, pennylane: PennylanePort, invoiceIds: readonly number[]): Promise<void> {
-  const mirrors = new PennylaneDocumentService(db);
-  for (const mirror of await mirrors.listByInvoices(invoiceIds)) {
-    const invoice = await pennylane.getInvoice(mirror.pennylaneInvoiceId);
-    await mirrors.setPennylaneOpen(mirror.documentId, invoice?.openCents ?? null);
+  await refreshMirrors(db, pennylane, await new PennylaneDocumentService(db).listByInvoices(invoiceIds));
+}
+
+export async function refreshMirrors(db: Db, pennylane: PennylanePort, mirrors: readonly PennylaneDocumentMirror[]): Promise<void> {
+  const service = new PennylaneDocumentService(db);
+  for (const mirror of mirrors) {
+    const pennylaneOpenCents = (await pennylane.getInvoice(mirror.pennylaneInvoiceId))?.openCents ?? null;
+    await service.setPennylaneOpen(mirror.documentId, pennylaneOpenCents);
+    await alertIfDifferent(db, { ...mirror, pennylaneOpenCents });
   }
+}
+
+/** Kuyrukta bekleyen belge karşılaştırılmaz, çünkü bizdeki değişiklik henüz Pennylane'e yazılmadı; haber iki kalanın çifti başına bir kez. */
+async function alertIfDifferent(db: Db, mirror: PennylaneDocumentMirror): Promise<void> {
+  if (await new PennylaneQueueService(db).findByDocument(mirror.documentId)) return;
+  const documents = new MoneyDocumentService(db);
+  const [document, balances] = await Promise.all([documents.getById(mirror.documentId), documents.balances([mirror.documentId])]);
+  const open = balances.get(mirror.documentId)?.openAmountCents;
+  if (!document || open === undefined) return;
+  const pennylaneOpen = pennylaneOpenDifference(open, mirror);
+  if (pennylaneOpen === null) return;
+  await notifyPennylaneDocumentDifferent(db, {
+    documentId: document.id,
+    number: document.number,
+    issuedOn: document.issuedOn,
+    dedupeKey: `pennylane-different:${document.id}:${open}:${pennylaneOpen}`,
+  });
 }

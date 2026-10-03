@@ -164,14 +164,23 @@ export type PennylaneDocumentStatus =
   | { kind: 'failing' }
   | { kind: 'blocked'; reason: string };
 
+type PennylaneOpenMirror = { paymentStatus: PennylanePaymentStatus | null; pennylaneOpenCents: number | null };
+
 /**
- * Belgenin Pennylane durumu; Pennylane canlıya geçmemişse ya da belge kapsam dışıysa `null`. Nakitle ödenen belgenin açık kalanı
+ * Pennylane'deki açık kalan bizimkinden ayrılıyorsa o kalan, ayrılmıyorsa `null`. Nakitle ödenen ya da kalanı okunmamış belge
  * karşılaştırılmaz, çünkü Pennylane "ödendi" işaretinde kalan tutarı düşürmüyor.
  */
+export function pennylaneOpenDifference(openAmountCents: number, mirror: PennylaneOpenMirror): number | null {
+  const pennylaneOpen = mirror.pennylaneOpenCents;
+  if (mirror.paymentStatus === 'paid' || pennylaneOpen === null || pennylaneOpen === Math.max(0, openAmountCents)) return null;
+  return pennylaneOpen;
+}
+
+/** Belgenin Pennylane durumu; Pennylane canlıya geçmemişse ya da belge kapsam dışıysa `null`, kuyruktaki belge kuyruğun hâlini söyler. */
 export function pennylaneDocumentStatus(input: {
   live: boolean;
   openAmountCents: number;
-  mirror: { paymentStatus: PennylanePaymentStatus | null; pennylaneOpenCents: number | null } | null;
+  mirror: PennylaneOpenMirror | null;
   queue: { attempts: number; blockReason: string | null } | null;
 }): PennylaneDocumentStatus | null {
   if (!input.live) return null;
@@ -180,11 +189,8 @@ export function pennylaneDocumentStatus(input: {
     return input.queue.attempts > 0 ? { kind: 'failing' } : { kind: 'pending' };
   }
   if (!input.mirror) return null;
-  const pennylaneOpen = input.mirror.pennylaneOpenCents;
-  if (input.mirror.paymentStatus === 'paid' || pennylaneOpen === null || pennylaneOpen === Math.max(0, input.openAmountCents)) {
-    return { kind: 'uploaded' };
-  }
-  return { kind: 'different', pennylaneOpenCents: pennylaneOpen };
+  const difference = pennylaneOpenDifference(input.openAmountCents, input.mirror);
+  return difference === null ? { kind: 'uploaded' } : { kind: 'different', pennylaneOpenCents: difference };
 }
 
 const normalizedVat = (vat: string | null): string | null => vat?.replace(/[\s.-]/g, '').toUpperCase() || null;

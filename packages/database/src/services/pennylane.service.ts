@@ -208,6 +208,11 @@ export class PennylaneDocumentService extends BaseDbService<PennylaneDocumentMir
     return documentIds.length === 0 ? Promise.resolve([]) : this.getAll({ documentId: [...documentIds] });
   }
 
+  /** Yüklenmiş bütün belgeler; fatura akışının kapsamadığı boşlukta hepsinin açık kalanı yeniden okunur. */
+  listAll(): Promise<PennylaneDocumentMirror[]> {
+    return this.getAll();
+  }
+
   async setPennylaneOpen(documentId: string, pennylaneOpenCents: number | null): Promise<void> {
     await this.updateWhereIn('documentId', [documentId], { pennylaneOpenCents, updatedAt: new Date().toISOString() });
   }

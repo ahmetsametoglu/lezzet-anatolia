@@ -27,6 +27,8 @@ export interface PennylanePort {
   getTransaction(id: number): Promise<PennylaneTransaction | null>;
   /** Hareket değişiklik akışı: ilk sayfa `since` anından, sonrakiler imleçten; akış son dört haftayı tutar. */
   transactionChanges(input: { since: string; cursor: null } | { since: null; cursor: string }): Promise<PennylaneChangePage>;
+  /** Alış faturası değişiklik akışı, aynı düzenle; eşleme, çözme ve ödendi işareti olay düşürür, kategori düşürmez. */
+  invoiceChanges(input: { since: string; cursor: null } | { since: null; cursor: string }): Promise<PennylaneChangePage>;
   /** Dış referansla tedarikçi; referans tekil olduğu için en çok bir tane. */
   findSupplier(externalReference: string): Promise<PennylaneSupplier | null>;
   /** Şirketin bütün tedarikçileri; Pennylane KDV numarasıyla süzmüyor, aynı firma listeden bulunur. */

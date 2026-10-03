@@ -20,6 +20,7 @@ import {
   PennylaneApiTransactionSchema,
   type PennylaneApiTransaction,
   type PennylaneCategory,
+  type PennylaneChangePage,
   type PennylaneCompany,
   type PennylaneInvoice,
   type PennylaneInvoiceLine,
@@ -152,6 +153,19 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
     } while (cursor);
     return items;
   };
+  /** Değişiklik akışının bir sayfası; `start_date` ile `cursor` birlikte 400 döner, ilk sayfa andan, sonrakiler imleçten. */
+  const changes = async (
+    stream: 'transactions' | 'supplier_invoices',
+    input: { since: string; cursor: null } | { since: null; cursor: string },
+  ): Promise<PennylaneChangePage> => {
+    const params = input.cursor !== null ? { cursor: input.cursor } : { start_date: input.since };
+    const body = await read(`/changelogs/${stream}?${query({ ...params, limit: CHANGE_PAGE_LIMIT })}`);
+    const page = parse(PennylaneApiChangePageSchema, body, `${stream === 'transactions' ? 'hareket' : 'fatura'} değişiklikleri`);
+    return {
+      items: page.items.map((item) => ({ id: item.id, operation: item.operation, processedAt: item.processed_at })),
+      nextCursor: page.has_more ? page.next_cursor : null,
+    };
+  };
   const orNull = async <T>(load: () => Promise<T>): Promise<T | null> => {
     try {
       return await load();
@@ -178,16 +192,8 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
       const body = await orNull(() => read(`/transactions/${id}`));
       return body === null ? null : transactionOf(parse(PennylaneApiTransactionSchema, body, 'hareket'));
     },
-    async transactionChanges(input) {
-      // `start_date` ile `cursor` birlikte 400 döner: ilk sayfa andan, sonrakiler imleçten.
-      const params = input.cursor !== null ? { cursor: input.cursor } : { start_date: input.since };
-      const body = await read(`/changelogs/transactions?${query({ ...params, limit: CHANGE_PAGE_LIMIT })}`);
-      const page = parse(PennylaneApiChangePageSchema, body, 'hareket değişiklikleri');
-      return {
-        items: page.items.map((item) => ({ id: item.id, operation: item.operation, processedAt: item.processed_at })),
-        nextCursor: page.has_more ? page.next_cursor : null,
-      };
-    },
+    transactionChanges: (input) => changes('transactions', input),
+    invoiceChanges: (input) => changes('supplier_invoices', input),
     async findSupplier(externalReference) {
       const filter = JSON.stringify([{ field: 'external_reference', operator: 'eq', value: externalReference }]);
       const page = parse(PennylaneApiSupplierPageSchema, await read(`/suppliers?${query({ filter, limit: 2 })}`), 'tedarikçiler');
