@@ -163,15 +163,25 @@ export interface CheckoutDraftInput {
 }
 
 export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Promise<CheckoutDraftOutcome> {
-  const customer = await new UserProfileService(db).getById(input.customerId);
+  const cartService = new CartService(db);
+  // Bu okumalar yalnız istekteki kimliklere bağlı, aynı turda gider: her tur sunucuda bir gidiş-dönüştür ve müşteri onayda bekler.
+  const [customer, addresses, pickupWarehouse, deliveryInputs, storedCart] = await Promise.all([
+    new UserProfileService(db).getById(input.customerId),
+    new AddressService(db).listByCustomer(input.customerId),
+    input.pickupWarehouseId ? pickupWarehouseOf(db, input.pickupWarehouseId) : null,
+    // Bölge ve depo listeleri bir kez okunup iki teslimat çözümüne verilir: iki tur farklı liste görürse sipariş bir turun
+    // deposundan, öteki turun bölgesinden doğardı.
+    readDeliveryInputs(db),
+    // Saklanan fiyatlar sepet okumasından önce alınır: karşılaştırmanın "önceki"si müşterinin en son gördüğü fiyattır.
+    cartService.get(input.customerId),
+  ]);
   if (!customer) return { status: 'customer_not_found' };
 
   // Adres müşterinin kendi adresleri arasından aranır, çünkü `addressId` istemciden geliyor.
-  const address = (await new AddressService(db).listByCustomer(customer.id)).find((a) => a.id === input.addressId);
+  const address = addresses.find((a) => a.id === input.addressId);
   if (!address) return { status: 'address_not_found' };
 
   // Gel-al: izin ve depo SUNUCUDA sorulur — ekran kartı göstermemiş olsa da istek elle kurulabilir.
-  const pickupWarehouse = input.pickupWarehouseId ? await pickupWarehouseOf(db, input.pickupWarehouseId) : null;
   if (input.pickupWarehouseId) {
     if (!customer.pickupAllowed) return { status: 'pickup_not_allowed' };
     if (!pickupWarehouse) return { status: 'pickup_warehouse_unavailable' };
@@ -189,10 +199,6 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     deliveryCountry,
     vatNumberValid: customer.vatNumberValid ?? undefined,
   });
-
-  // Bölge ve depo listeleri bir kez okunup iki teslimat çözümüne verilir: iki tur farklı liste görürse sipariş bir turun
-  // deposundan, öteki turun bölgesinden doğardı.
-  const deliveryInputs = await readDeliveryInputs(db);
 
   // Depo önce, çünkü sepet o deponun stoğuyla okunur; seçilen adresin kodu seçili yerin kodundan farklıysa adres kazanır. Teslimat
   // iki kez çözülür ama döngü yok: depo yalnız adrese bağlı, sepet yalnız "kargo da kapalı mı" kararını etkiler.
@@ -228,9 +234,6 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     if (narrowed.length > 0) entries = narrowed;
   }
 
-  // Saklanan fiyatlar sepet okumasından önce alınır: karşılaştırmanın "önceki"si müşterinin en son gördüğü fiyattır.
-  const cartService = new CartService(db);
-  const storedCart = await cartService.get(customer.id);
   const previousPrices = storedPrices(storedCart.items);
   // Hediyede her kalem sıfır fiyatlı pazarlıktır; böylece toplam, KDV ve liste fiyatı izi öteki pazarlıklarla aynı yoldan türer.
   const giftOverrides = input.staff?.isGiftOrder

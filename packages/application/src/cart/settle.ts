@@ -10,8 +10,7 @@ import { itemOfEntry, type CartEntry } from './cart-types';
  */
 export async function clearOrderedLines(db: Db, customerId: string, orderId: string): Promise<void> {
   const cart = new CartService(db);
-  const order = await new OrderService(db).getWithItems(orderId);
-  const { items } = await cart.get(customerId);
+  const [order, { items }] = await Promise.all([new OrderService(db).getWithItems(orderId), cart.get(customerId)]);
   if (!order || items.length === 0) return;
 
   /**

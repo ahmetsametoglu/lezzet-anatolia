@@ -403,11 +403,10 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     );
   }
 
-  /** Sipariş + kalemleri TEK sorguda — kalem başına ayrı sorgu (N+1) yerine gömülü select. */
+  /** Sipariş ve kalemleri aynı turda okunur: ikisi de yalnız kimliğe bağlı, sırayla okumak her çağırana bir tur eklerdi. */
   async getWithItems(id: string): Promise<{ order: Order; items: OrderItem[] } | null> {
-    const order = await this.getById(id);
-    if (!order) return null;
-    return { order, items: await this.items.listByOrder(id) };
+    const [order, items] = await Promise.all([this.getById(id), this.items.listByOrder(id)]);
+    return order ? { order, items } : null;
   }
 
   /** Müşterinin sipariş geçmişi — en yeni önce, sonsuz kaydırma. */

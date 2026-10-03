@@ -8,11 +8,10 @@ import {
   meetsMinBasket,
   resolveCheckoutOptions,
   resolveShippingFee,
-  type CreditPosition,
   type ShippingVatPart,
 } from '@lezzet/domain-core';
 import type { DeliveryType, PaymentMethod } from '@lezzet/types';
-import { pricingViewerOf } from '../catalog/pricing-viewer';
+import { pricingViewerFor } from '../catalog/pricing-viewer';
 import { minBasketFor } from '../cart/min-basket';
 import { settingScopeOf } from '../cart/setting-scope';
 // Müşteriye söz veren ayarlar: sepet ve checkout AYNI satırı okumalı (`../cart/settings-keys`).
@@ -87,23 +86,28 @@ export interface CheckoutPaymentInput {
 
 export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput): Promise<CheckoutPaymentResult> {
   const settings = new SettingsService(db);
+  // Müşteri satırı ve vade freninin sipariş geçmişi yalnız kimliğe bağlı, aynı turda okunur; görüntüleyen de bu satırdan türer.
+  const [customer, history] = await Promise.all([
+    new UserProfileService(db).getById(input.customerId),
+    new OrderService(db).listByCustomer(input.customerId, { limit: 200 }),
+  ]);
+  if (!customer) throw new Error(`checkout: müşteri bulunamadı (${input.customerId})`);
+
   // Kapsam önce çözülür, çünkü kanal müşteri satırından türer; kapsamsız okuma b2b'ye perakende eşiği, Almanya'ya Fransa tarifesi uygulardı.
   // Kapsam sepetle aynı yerden kurulur (`settingScopeOf`), yoksa sepette yazan eşik checkout'ta tutmazdı.
-  const scope = settingScopeOf(await pricingViewerOf(db, input.customerId), {
+  const scope = settingScopeOf(await pricingViewerFor(db, customer), {
     country: input.country,
     zoneId: input.zoneId,
     warehouseId: input.warehouseId,
   });
 
-  const [customer, codMaxCents, cashLegalLimitCents, freeThresholdCents, minBasketCents] = await Promise.all([
-    new UserProfileService(db).getById(input.customerId),
+  const [codMaxCents, cashLegalLimitCents, freeThresholdCents, minBasketCents] = await Promise.all([
     // Kapıda ödeme tavanı; varsayılanı ve anahtarı `public-terms`te.
     settings.getNumber(COD_MAX_KEY, COD_MAX_DEFAULT, scope),
     settings.getNumber('cash_legal_limit_cents', 100_000, scope),
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
     minBasketFor(settings, input.deliveryType, scope),
   ]);
-  if (!customer) throw new Error(`checkout: müşteri bulunamadı (${input.customerId})`);
 
   // ── Kargo ücreti önce: sipariş toplamı ona bağlı, kapıda ödeme tavanı da toplama bakar.
   // Gel-al'da motor sorulmaz: "kargo ücreti kaç" sorusu geçersizdir (DATA_MODEL), ücret doğrudan yok.
@@ -118,10 +122,10 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
         });
   const orderTotalCents = shipping.feeCents === null ? null : input.basketCents + shipping.feeCents;
 
-  // ── Vade freni için açık bakiye ve gecikme TÜRETİLİR (saklanmaz).
-  const { openBalanceCents, hasOverdue } = await deriveCreditPosition(
-    db,
-    input.customerId,
+  // ── Vade freni için açık bakiye ve gecikme TÜRETİLİR (saklanmaz). Hesabın kendisi motorda (`creditPosition`): sipariş listesi de
+  //    aynı "açık" ve "gecikmiş" tanımını kullanıyor, iki yerde yazılsaydı checkout freni ile ekranın vade işareti ayrışırdı.
+  const { openBalanceCents, hasOverdue } = creditPosition(
+    history.rows,
     customer.paymentTermDays ?? (await settings.getNumber(PAYMENT_TERM_DAYS_KEY, PAYMENT_TERM_DAYS_DEFAULT)),
   );
 
@@ -158,16 +162,4 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
     missingForMinBasketCents: minBasket.missingCents,
     orderTotalCents,
   };
-}
-
-/**
- * Açık bakiye ve gecikme ödenmemiş vadeli siparişlerden türetilir, saklanmaz; saklanan bakiye kayarsa fark edilmez.
- * Gecikme ölçütü: vade süresini aşmış, hâlâ ödenmemiş sipariş.
- */
-async function deriveCreditPosition(db: Db, customerId: string, paymentTermDays: number): Promise<CreditPosition> {
-  const orders = await new OrderService(db).listByCustomer(customerId, { limit: 200 });
-  // Hesabın kendisi MOTORDA (`creditPosition`): aynı "açık" ve "gecikmiş" tanımını sipariş listesi
-  // de satır satır kullanıyor. İki yerde yazılsaydı checkout freni ile ekranın kırmızı vade işareti
-  // bir gün ayrışır, "gecikmesi yok" diyen ekranın altında kapanmış bir vade kapısı olurdu.
-  return creditPosition(orders.rows, paymentTermDays);
 }
