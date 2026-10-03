@@ -1,8 +1,8 @@
 'use client';
 
+import { variantNameOf } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { formatComparison } from '@/lib/storefront/format';
-import { variantNameOf } from '@/lib/storefront/variant-name';
 import type { StorefrontVariant } from '@lezzet/application';
 import { Badge } from '@/components/customer/ui/badge';
 import { Price } from '@/components/customer/ui/price';
@@ -65,7 +65,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
 
   /** "500 g · 15,00 €/kg" — boy adı ve kıyas fiyatı; ikisi de yoksa satır hiç çizilmez. */
   const unitLine = [
-    variantNameOf(selected, t.size, locale),
+    variantNameOf(selected, locale),
     selected.comparisonCents !== null && selected.comparisonUnit !== null
       ? formatComparison(selected.comparisonCents, selected.comparisonUnit, locale)
       : null,
@@ -112,7 +112,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
               >
                 {/* Masaüstünde satırlar sıkı: token satır yükseklikleri kartı tasarımdan 14px uzatıyordu. */}
                 <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-control leading-tight'].join(' ')}>
-                  {variantNameOf(v, t.size, locale)}
+                  {variantNameOf(v, locale)}
                 </span>
                 {/* Fırsat rozeti FİYATIN YANINDA (tasarım): hangi boyun indirimli olduğu ancak o
                     boyun fiyatının yanında görünür — kartların altındaki ortak satır bunu söyleyemez. */}
@@ -161,7 +161,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
 export function PriceBox({ t, locale, selected, children }: { t: Messages; locale: Locale; selected: StorefrontVariant; children?: React.ReactNode }) {
   /** "500 g tepsi · 15,00 €/kg" — boy adı ve kıyas fiyatı; ikisi de yoksa satır hiç çizilmez. */
   const unitLine = [
-    variantNameOf(selected, t.size, locale),
+    variantNameOf(selected, locale),
     selected.comparisonCents !== null && selected.comparisonUnit !== null
       ? formatComparison(selected.comparisonCents, selected.comparisonUnit, locale)
       : null,

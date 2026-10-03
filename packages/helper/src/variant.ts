@@ -1,3 +1,10 @@
+import type { Locale, LocalizedCopy } from '@lezzet/i18n';
+import messages from '@lezzet/i18n/customer/size';
+import type { CatalogSize } from '@lezzet/types';
+import { formatNetQuantity } from './format';
+
+type SizeCopy = LocalizedCopy<typeof messages>;
+
 /**
  * Ürün sayfasının açılış boyu: bağlantının istediği boy (paketin kalemi) ürünün aktif boyları arasındaysa o, değilse kartın
  * fiyatını taşıyan birincil boy, o da yoksa sıranın ilki. İstenen boy satıştan kalkmışsa sayfa kırılmaz, kartın boyuna düşer.
@@ -8,4 +15,53 @@ export function openingVariantOf<V extends { id: string }>(
   primaryId: string | null,
 ): V | undefined {
   return variants.find((v) => v.id === requestedId) ?? variants.find((v) => v.id === primaryId) ?? variants[0];
+}
+
+/** Porsiyon türünün kelimesi: 12 dilimlik cheesecake "12 dilim" yazar, "12 adet" 12 pasta demek olurdu. */
+function portionWordsOf(kind: CatalogSize['portionKind'], t: SizeCopy): { bare: string; withWeight: string } {
+  if (kind === 'slice') return { bare: t.slices, withWeight: t.slicesOf };
+  if (kind === 'package') return { bare: t.packs, withWeight: t.packsOf };
+  return { bare: t.pieces, withWeight: t.piecesOf };
+}
+
+function netQuantityOf(size: CatalogSize, locale: Locale): string | null {
+  return size.netQuantity === null || size.netUnit === null ? null : formatNetQuantity(size.netQuantity, size.netUnit, locale);
+}
+
+/**
+ * Boyun ürün sayfasındaki adı: çoklu pakette adet önde, miktar yanında ("4 adet · 420 g"), tek parçada yalnız miktar ("135 g").
+ * Saklı etiket (`4x105g`) kutunun dilidir ve yalnız ölçü yokken yazılır, çünkü vitrinde müşterinin sorusu kaç tane aldığıdır.
+ */
+export function variantNameOf(variant: CatalogSize & { label: string }, locale: Locale): string {
+  const weight = netQuantityOf(variant, locale);
+  if (variant.piecesCount !== null && variant.piecesCount > 1) {
+    const words = portionWordsOf(variant.portionKind, messages[locale]);
+    const n = String(variant.piecesCount);
+    return weight === null ? words.bare.replace('{n}', n) : words.withWeight.replace('{n}', n).replace('{weight}', weight);
+  }
+  return weight ?? variant.label;
+}
+
+/** Kartta boyun miktarı: adet varsa adet ("4 adet", "12 dilim"), yoksa net miktar ("800 g", "1,25 kg"); ölçüsüz boyda `null`. */
+export function sizeQuantityOf(size: CatalogSize, locale: Locale): string | null {
+  if (size.piecesCount !== null && size.piecesCount > 1) {
+    return portionWordsOf(size.portionKind, messages[locale]).bare.replace('{n}', String(size.piecesCount));
+  }
+  return netQuantityOf(size, locale);
+}
+
+/**
+ * Kartın ikinci satırı: boyların miktarı " · " ile ("750 ml · 5 L"), kartın fiyatı tek başına kaç tane alındığını söylemediği için.
+ * Bir boyun ölçüsü yoksa ya da boylar gelmediyse çok boyluda boy sayısı yazılır ("3 seçenek"), eksik liste seçimi gizlerdi.
+ */
+export function cardQuantityOf(
+  product: { sizes?: readonly CatalogSize[]; variantCount: number },
+  t: { options: string },
+  locale: Locale,
+): string | undefined {
+  const labels = product.sizes?.map((size) => sizeQuantityOf(size, locale));
+  if (labels !== undefined && labels.length > 0 && labels.every((label): label is string => label !== null)) {
+    return labels.join(' · ');
+  }
+  return product.variantCount > 1 ? t.options.replace('{n}', String(product.variantCount)) : undefined;
 }

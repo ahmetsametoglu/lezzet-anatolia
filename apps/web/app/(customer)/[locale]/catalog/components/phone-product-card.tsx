@@ -25,8 +25,8 @@ interface PhoneProductCardProps {
   placeNote?: string;
   /** Bu adrese hiç gitmeyen ürün — fotoğraf solar; kart yine açılır (detay "neden"i söyler). */
   dimmed?: boolean;
-  /** "3 seçenek" — yalnız çok boylu üründe. */
-  optionsLabel?: string;
+  /** Miktar satırı ("4 adet" · "750 ml · 5 L"), `cardQuantityOf`tan; verilmezse satır çizilmez. */
+  quantityLabel?: string;
   /** Açılmadan önce: kartın bilgisini ürün sayfasının yükleme karesine bırakır. */
   onOpen?: () => void;
 }
@@ -41,7 +41,7 @@ export function PhoneProductCard({
   discountLabel,
   placeNote,
   dimmed = false,
-  optionsLabel,
+  quantityLabel,
   onOpen,
 }: PhoneProductCardProps) {
   // Hiçbir yerde olmayan üründe "bu adrese gelmez" demek, cevabı olmayan bir soruya cevap vermek olurdu.
@@ -55,8 +55,8 @@ export function PhoneProductCard({
     <Link
       href={href}
       onClick={onOpen}
-      // Ekran okuyucu görenle aynı bilgiyi alır: ad · fiyat · rozet · yer notu.
-      aria-label={[name, priceLabel, statusLabel, note].filter(Boolean).join(' · ')}
+      // Ekran okuyucu görenle aynı bilgiyi alır: ad · miktar · fiyat · rozet · yer notu.
+      aria-label={[name, quantityLabel, priceLabel, statusLabel, note].filter(Boolean).join(' · ')}
       className="relative block aspect-square cursor-pointer transition-transform hover:opacity-95 active:scale-[0.97]"
     >
       <span className={['absolute inset-0 block overflow-hidden rounded-card bg-sand-300', faded ? 'opacity-45' : ''].filter(Boolean).join(' ')}>
@@ -90,7 +90,7 @@ export function PhoneProductCard({
           </span>
         )}
         <span className="line-clamp-2 font-serif text-copy leading-[1.15] font-semibold text-on-image">{name}</span>
-        {optionsLabel !== undefined && <span className="truncate font-sans text-micro font-semibold text-on-image-soft">{optionsLabel}</span>}
+        {quantityLabel !== undefined && <span className="truncate font-sans text-micro font-semibold text-on-image-soft">{quantityLabel}</span>}
       </span>
 
       {priceLabel !== undefined && (

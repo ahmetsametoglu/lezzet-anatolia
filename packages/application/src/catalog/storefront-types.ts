@@ -1,6 +1,15 @@
 import type { TextSegment } from '@lezzet/helper';
 import type { CartLineRoute } from '@lezzet/domain-core';
-import type { ImageCrop, ImageFrameSources, KeysetCursor, Nutrition, ProductAllergen, PurchaseMode, StockStatus } from '@lezzet/types';
+import type {
+  CatalogSize,
+  ImageCrop,
+  ImageFrameSources,
+  KeysetCursor,
+  Nutrition,
+  ProductAllergen,
+  PurchaseMode,
+  StockStatus,
+} from '@lezzet/types';
 import type { ScopeCampaign } from './campaign';
 
 /**
@@ -59,10 +68,12 @@ export interface StorefrontProduct {
   /** Teklif kalemi hangi partiye çıpalı — sepete o parti ile girer (DOMAIN §5). */
   stockId: string | null;
   /**
-   * Aktif varyant sayısı — kartın "3 seçenek" satırı; liste değil sayı taşınır, seçim detayda yapılır.
-   * Ölçüt `purchaseMode` ile aynı kümedir (`variantCount > 1` ⇔ `options`); 0 ve 1'de satır çizilmez.
+   * Aktif varyant sayısı; ölçüt `purchaseMode` ile aynı kümedir (`variantCount > 1` ⇔ `options`). Boyların ölçüsü eksikken kart
+   * bunu yazar ("3 seçenek"), 0 ve 1'de satır çizilmez.
    */
   variantCount: number;
+  /** Aktif boyların ölçüsü, çipteki fiyatın boyu başta — kartın miktar satırı ("4 adet" · "750 ml · 5 L"). */
+  sizes: CatalogSize[];
   /** Birim fiyat (ham cent) — raf fiyatının yanında; net miktar yoksa null. */
   comparisonCents: number | null;
   /** Kıyasın birimi — katıda `kg`, sıvıda `L`; sayı birimsiz taşınsa sıvı kilo başına yazılırdı. */

@@ -1,6 +1,6 @@
 import { useCallback, useState, useTransition } from 'react';
 import type { StorefrontProduct } from '@lezzet/application';
-import { cardBadgeOf, cardPlaceNoteOf, placeMarkOf, productPriceLabel } from '@lezzet/helper';
+import { cardBadgeOf, cardPlaceNoteOf, cardQuantityOf, placeMarkOf, productPriceLabel } from '@lezzet/helper';
 import catalogMessages from '@lezzet/i18n/customer/catalog';
 import placeMessages from '@lezzet/i18n/customer/place';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
@@ -81,8 +81,7 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
       discountLabel: cardBadgeOf(product, { offer: copy.card.offer }),
       placeNote,
       dimmed,
-      // "1 seçenek" yazılmaz — olmayan bir seçim varmış izlenimi verirdi.
-      optionsLabel: product.variantCount > 1 ? copy.card.options.replace('{n}', String(product.variantCount)) : undefined,
+      quantityLabel: cardQuantityOf(product, copy.card, locale),
     };
   };
 

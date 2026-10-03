@@ -22,6 +22,16 @@ export function formatPrice(cents: number, locale: Locale): string {
 export const UNKNOWN_AMOUNT = '—';
 
 /**
+ * Net miktar ("850 g" · "1,25 kg" · "500 ml" · "1,5 L"): 1000 ve üstü üst birime çıkar ve kesir kısaltılmaz, çünkü net miktar
+ * ambalajda yazan değerdir; 1250 g'ı "1,3 kg" yazmak 50 g fazla söyler.
+ */
+export function formatNetQuantity(quantity: number, unit: 'g' | 'ml', locale: Locale): string {
+  const [small, large] = unit === 'g' ? ['g', 'kg'] : ['ml', 'L'];
+  const number = (value: number) => new Intl.NumberFormat(INTL_LOCALE[locale], { maximumFractionDigits: 3 }).format(value);
+  return quantity < 1000 ? `${number(quantity)} ${small}` : `${number(quantity / 1000)} ${large}`;
+}
+
+/**
  * Eşik ve eşleştirme tutarı: tam euroda kuruşsuz (`5 €`), kesirlide kuruşlu (`7,90 €`), çünkü "60 € üzeri kargo ücretsiz"de
  * `60,00 €` olmayan bir hassasiyet iddia eder. Ürün ve sipariş tutarları bununla değil, kuruşuyla `formatPrice` ile yazılır.
  */

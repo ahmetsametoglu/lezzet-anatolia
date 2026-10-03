@@ -44,9 +44,9 @@ interface ProductPhotoCardProps {
    * Kart yine açılır: detay sayfası "neden"i ve "haber ver"i taşır, kartı kapatmak müşterinin tek çıkışını alırdı.
    */
   dimmed?: boolean;
-  /** "3 seçenek" gibi çeşit satırı. */
-  optionsLabel?: string;
-  /** Ekran okuyucu adı; verilmezse ad + fiyat (+ varsa durum) ile kurulur. */
+  /** Miktar satırı ("4 adet" · "750 ml · 5 L"), `cardQuantityOf`tan; verilmezse satır çizilmez. */
+  quantityLabel?: string;
+  /** Ekran okuyucu adı; verilmezse ad, miktar, fiyat ve varsa durum ile kurulur. */
   accessibilityLabel?: string;
   testID?: string;
 }
@@ -61,7 +61,7 @@ export function ProductPhotoCard({
   discountLabel,
   placeNote,
   dimmed = false,
-  optionsLabel,
+  quantityLabel,
   accessibilityLabel,
   testID,
 }: ProductPhotoCardProps) {
@@ -77,10 +77,10 @@ export function ProductPhotoCard({
   /* Solma iki sebepten gelir ve ikisi de aynı katmana uygulanır: tükendi (evrensel) ya da bu adrese gitmiyor (yere bağlı). */
   const faded = soldOut || dimmed;
 
-  /* Erişilebilir ad görenle aynı bilgiyi taşır (ad, fiyat, durum rozeti, yer notu): `accessibilityLabel` verilince RN çocuk metinleri
+  /* Erişilebilir ad görenle aynı bilgiyi taşır (ad, miktar, fiyat, durum rozeti, yer notu): `accessibilityLabel` verilince RN çocuk metinleri
      okumaz, eklenmeyen rozet ekran okuyucuda kaybolur. Rozet `accessibilityState`e çevrilmez, çünkü RN'de "tükendi" yok ve en
      yakını (`disabled`) açılabilen kart için yalan olurdu. */
-  const composedLabel = [name, priceLabel, statusLabel, note].filter((part) => part !== undefined).join(' · ');
+  const composedLabel = [name, quantityLabel, priceLabel, statusLabel, note].filter((part) => part !== undefined).join(' · ');
 
   return (
     <PressableSurface
@@ -125,9 +125,9 @@ export function ProductPhotoCard({
         <Text style={styles.name} numberOfLines={2}>
           {name}
         </Text>
-        {optionsLabel === undefined ? null : (
-          <Text style={styles.options} numberOfLines={1}>
-            {optionsLabel}
+        {quantityLabel === undefined ? null : (
+          <Text style={styles.quantity} numberOfLines={1}>
+            {quantityLabel}
           </Text>
         )}
       </View>
@@ -209,7 +209,7 @@ const styles = StyleSheet.create((theme) => ({
     /* Fotoğraf üstü ad `on-image` rolündedir, altyazıyla (`on-image-soft`) aynı aileden okunur. */
     color: theme.colors['on-image'],
   },
-  options: {
+  quantity: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     // Şablon 10,5; ölçekte o durak yok. `micro` (11,5) alındı: `eyebrow` (10) sayıca daha yakın
     // ama üstbaşlık kademesidir — cümle biçimli bir alt satır onun ağırlığı/aralığıyla döner.

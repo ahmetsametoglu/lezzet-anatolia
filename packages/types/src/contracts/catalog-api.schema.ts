@@ -125,9 +125,13 @@ const CatalogCampaignSchema = z.object({
   minBasketCents: z.number().int().nullable(),
 });
 
+/** Boyun kart için ölçüsü — adet ve türü, net miktar ve birimi; miktar cümlesini istemci kurar (`cardQuantityOf`). */
+export const CatalogSizeSchema = ProductVariantSchema.pick({ piecesCount: true, portionKind: true, netQuantity: true, netUnit: true });
+export type CatalogSize = z.infer<typeof CatalogSizeSchema>;
+
 /**
- * Katalog kartı (`StorefrontProduct` aynası) — liste, benzer ürünler ve aile dışındaki her ürün gösteriminin gövdesi.
- * Boy listesi ve `shippable` bilerek yok: boy seçimi detayda yapılır, kargolanabilirlik `stockStatus`'ün `shipping` hâlinden görünür.
+ * Katalog kartı (`StorefrontProduct` aynası) — liste, benzer ürünler ve aile dışındaki her ürün gösteriminin gövdesi. Boyların
+ * fiyatı ve kimliği ile `shippable` bilerek yok: boy seçimi detayda yapılır, kargolanabilirlik `stockStatus`'ün `shipping` hâlinden görünür.
  */
 export const CatalogProductSchema = ProductSchema.pick({ id: true, slug: true })
   .merge(CatalogSellingSchema)
@@ -148,10 +152,15 @@ export const CatalogProductSchema = ProductSchema.pick({ id: true, slug: true })
     variantId: ProductVariantSchema.shape.id.nullable(),
     purchaseMode: PurchaseModeEnum,
     /**
-     * Aktif boy sayısı — kartın çeşit satırı; 0 ve 1'de satır çizilmez, çünkü "1 seçenek" olmayan bir seçim izlenimi verir.
-     * "N seçenek" cümlesi cihazın sözlüğünde kurulur (dile göre çekim alır), sözleşme yalnız sayıyı taşır.
+     * Aktif boy sayısı; boyların ölçüsü gelmediğinde kart bunu yazar ("3 seçenek"), 0 ve 1'de satır çizilmez, çünkü "1 seçenek"
+     * olmayan bir seçim izlenimi verir.
      */
     variantCount: z.number().int().min(0),
+    /**
+     * Aktif boyların ölçüsü, çipteki fiyatın boyu başta, sonra fiyata göre — kartın miktar satırı ("4 adet" · "750 ml · 5 L").
+     * İsteğe bağlı, çünkü uygulama ile sunucu ayrı yayına çıkar; gelmezse kart boy sayısını yazar.
+     */
+    sizes: z.array(CatalogSizeSchema).optional(),
     /**
      * Ürünün kapsam kampanyası — kartın rozeti; alan yoksa rozet yok: ya kampanya yok ya da kesit başlığı onu zaten söylüyor
      * (ayrımı okuma yapar, `catalog.ts`). Fiyat değildir: motor kazananı sepetin tamamından seçtiği için kartta birim fiyat

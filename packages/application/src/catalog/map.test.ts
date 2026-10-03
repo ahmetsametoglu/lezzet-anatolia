@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_CROP_FIELDS } from '@lezzet/types';
 import type { AvailableStockTotal, Price, ProductVariant } from '@lezzet/types';
-import { EMPTY_PRODUCT_CONTEXT, primaryVariantOf, stockStatusOf, type ProductContext } from './map';
+import { EMPTY_PRODUCT_CONTEXT, primaryVariantOf, stockStatusOf, toProduct, type CatalogProductRow, type ProductContext } from './map';
 
 /**
  * Yere göre stok hâli dört cevaptır ve yanlış dal hiçbir şeyi patlatmadan müşteriye yanlış cümleyi kurar: kargoyla gidebilecek ürüne
@@ -138,5 +139,30 @@ describe('primaryVariantOf', () => {
 
   it('boy yoksa null — çağıran kartı adsız/fiyatsız çizer, patlamaz', () => {
     expect(primaryVariantOf([], EMPTY_PRODUCT_CONTEXT)).toBeNull();
+  });
+});
+
+describe('toProduct · kartın boyları', () => {
+  const satir: CatalogProductRow = {
+    id: 'p1',
+    slug: 'zeytinyagi',
+    name: { tr: 'Zeytinyağı' },
+    categoryId: null,
+    shippable: true,
+    imageKey: null,
+    imageAlt: null,
+    imageUpdatedAt: null,
+    imageWidth: null,
+    imageHeight: null,
+    ...DEFAULT_CROP_FIELDS,
+  };
+  const sise = (id: string, netQuantity: number): ProductVariant => ({ ...boy(id), netQuantity, netUnit: 'ml' });
+
+  it("çipteki fiyatın boyu başta, fiyatsız boy sonda — operatörün sırası 750 ml'nin fiyatını 5 L'ye yakıştırırdı", () => {
+    const boylar = [sise('bes-litre', 5000), sise('fiyatsiz', 250), sise('kucuk', 750)];
+    const kart = toProduct(satir, 'tr', fiyatCtx({ 'bes-litre': 5990, fiyatsiz: null, kucuk: 1250 }, boylar));
+
+    expect(kart.priceCents).toBe(1250);
+    expect(kart.sizes.map((size) => size.netQuantity)).toEqual([750, 5000, 250]);
   });
 });

@@ -17,7 +17,7 @@ import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-butt
 import { ProductPhotoCard } from '@/components/ui/product-photo-card';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 // Kampanya, fiyat etiketi ve yer notu kurucuları web telefon görünümüyle ortak.
-import { campaignValueOf, cardBadgeOf, cardPlaceNoteOf, productPriceLabel } from '@lezzet/helper';
+import { campaignValueOf, cardBadgeOf, cardPlaceNoteOf, cardQuantityOf, productPriceLabel } from '@lezzet/helper';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { usePurchasePlace } from '@/screens/customer-kit/purchase-place';
 import { placeModeOf, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
@@ -125,9 +125,7 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
       placeNote,
       /* Solma yalnız kapalı kapıda: kargoyla ya da stok girince gelebilen ürünü soldurmak müşteriyi olmayan bir kapıdan çevirirdi. */
       dimmed,
-      /* Çeşit satırı yalnız çok boylu üründe; sayı sözleşmeden, cümle dile göre cihazda kurulur. "1 seçenek" yazılmaz, olmayan
-         bir seçim varmış izlenimi verirdi. */
-      optionsLabel: product.variantCount > 1 ? t.card.options.replace('{n}', String(product.variantCount)) : undefined,
+      quantityLabel: cardQuantityOf(product, t.card, locale),
     };
   };
 

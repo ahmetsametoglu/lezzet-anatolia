@@ -1,8 +1,7 @@
-import { cardBadgeOf, formatPrice, productPriceLabel, showsNoShipChip } from '@lezzet/helper';
+import { cardBadgeOf, formatPrice, productPriceLabel, showsNoShipChip, variantNameOf } from '@lezzet/helper';
 import productMessages from '@lezzet/i18n/customer/product';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { ProductCircleCard } from '@/components/customer/phone-kit/product-circle-card';
-import { variantNameOf } from '@/lib/storefront/variant-name';
 import { rememberProductPreview } from '@/lib/storefront/product-preview';
 import { PhoneDeclaration } from './components/phone-declaration';
 import { PhoneFamilyRail } from './components/phone-family-rail';
@@ -60,7 +59,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
                     chosen ? 'border-ink bg-sand-150' : 'border-sand-400 hover:border-ink',
                   ].join(' ')}
                 >
-                  <span className="font-sans text-note font-bold text-ink">{variantNameOf(option, t.size, locale)}</span>
+                  <span className="font-sans text-note font-bold text-ink">{variantNameOf(option, locale)}</span>
                   <span className="font-sans text-micro font-semibold text-olive-dark">
                     {option.priceCents === null ? '—' : formatPrice(option.priceCents, locale)}
                   </span>

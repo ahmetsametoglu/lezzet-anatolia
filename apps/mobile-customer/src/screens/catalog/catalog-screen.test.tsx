@@ -100,6 +100,29 @@ describe('CatalogScreen', () => {
     expect(screen.queryByText('1 seçenek')).toBeNull();
   });
 
+  it('boylar gelince ikinci satır miktardır: adetli üründe adet, çok boyluda boylar — fiyat tek parçanın fiyatı gibi okunmasın', async () => {
+    const yag = [
+      { piecesCount: null, portionKind: null, netQuantity: 750, netUnit: 'ml' as const },
+      { piecesCount: null, portionKind: null, netQuantity: 5000, netUnit: 'ml' as const },
+    ];
+    mockCatalog(
+      page(
+        [
+          catalogProduct(1, { sizes: [{ piecesCount: 4, portionKind: 'item', netQuantity: 420, netUnit: 'g' }] }),
+          catalogProduct(2, { variantCount: 2, purchaseMode: 'options', sizes: yag }),
+        ],
+        null,
+      ),
+    );
+
+    await render(<CatalogScreen />);
+
+    await waitFor(() => expect(screen.getByTestId('catalog-list')).toBeOnTheScreen());
+    expect(screen.getByText('4 adet')).toBeOnTheScreen();
+    expect(screen.getByText('750 ml · 5 L')).toBeOnTheScreen();
+    expect(screen.queryByText('2 seçenek')).toBeNull();
+  });
+
   it('tükendi kartı rozetini gösterir; fiyatsız (satışa kapalı) ürün fiyat çipi ÇİZMEZ', async () => {
     mockCatalog(
       page(

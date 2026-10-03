@@ -124,14 +124,20 @@ describe('ProductPhotoCard', () => {
     });
   });
 
-  it('çeşit satırı fotoğraf-üstü altyazı rolündedir ve SICAK tona bağlıdır', async () => {
-    // Çeşit satırı fotoğraf üstü altyazı rolünden (`on-image-soft`) okunur.
-    await render(<ProductPhotoCard name="Salça" priceLabel="7 €" onPress={jest.fn()} optionsLabel="3 seçenek" />);
+  it('miktar satırı fotoğraf-üstü altyazı rolündedir ve SICAK tona bağlıdır', async () => {
+    // Miktar satırı fotoğraf üstü altyazı rolünden (`on-image-soft`) okunur.
+    await render(<ProductPhotoCard name="Simit" priceLabel="3,50 €" onPress={jest.fn()} quantityLabel="4 adet" />);
 
-    expect(screen.getByText('3 seçenek')).toHaveStyle({
+    expect(screen.getByText('4 adet')).toHaveStyle({
       color: customerAppColors['on-image-soft'],
       fontSize: appText.micro,
     });
+  });
+
+  it('ekran okuyucu fiyatı miktarla birlikte duyar — "Simit · 3,50 €" tek simidin fiyatı gibi okunurdu', async () => {
+    await render(<ProductPhotoCard name="Simit" priceLabel="3,50 €" onPress={jest.fn()} quantityLabel="4 adet" />);
+
+    expect(screen.getByRole('button', { name: 'Simit · 4 adet · 3,50 €' })).toBeOnTheScreen();
   });
 
   it('fiyat verilmezse çip hiç çizilmez ve a11y adı fiyatsız kurulur (satışa kapalı ürün)', async () => {

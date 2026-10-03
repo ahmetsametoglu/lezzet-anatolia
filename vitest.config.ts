@@ -91,8 +91,6 @@ const WEB_LIB_DBSIZ = [
   // Paylaşım kartının görseli saf: künye alır, adres verir.
   'apps/web/lib/seo/open-graph.test.ts',
   'apps/web/lib/storefront/featured.test.ts',
-  // Boyun müşteriye görünen adı — saf türetme (alanlar + sözlük → dize), DB'ye gitmiyor.
-  'apps/web/lib/storefront/variant-name.test.ts',
   'apps/web/lib/use-load-more.hook.test.ts',
   'apps/web/lib/use-composer-field.hook.test.ts',
   // Bağlam kapısı DB'sizdir ama §3i'nin statik izi onu göremez: depo servisini `vi.mock` ile taklit ettiği için `@lezzet/database`

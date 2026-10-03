@@ -1,14 +1,14 @@
-import { UNKNOWN_AMOUNT, formatPrice, formatShortDate, formatTime } from '@lezzet/helper';
+import { UNKNOWN_AMOUNT, formatNetQuantity, formatPrice, formatShortDate, formatTime } from '@lezzet/helper';
 import { INTL_LOCALE, type Locale } from '@lezzet/i18n';
 
 /**
  * Vitrin biçimleri — sözleşme HAM cent taşır (`storefront-types`), gösterim burada kurulur; ayrı
  * durması aynı değerin masaüstü ve mobil web dosyasında iki kez biçimlendirilmesini önler.
  *
- * `formatPrice`, `formatShortDate`, `formatTime` ve `UNKNOWN_AMOUNT` gövdeleri `@lezzet/helper`da, çünkü web dışında da
- * tüketilirler (native uygulama, `@lezzet/application`); buradan yeniden dışa verilirler ki web çağıranları tek yolu kullansın.
+ * `formatPrice`, `formatNetQuantity`, `formatShortDate`, `formatTime` ve `UNKNOWN_AMOUNT` gövdeleri `@lezzet/helper`da, çünkü web
+ * dışında da tüketilirler (native uygulama, `@lezzet/application`); buradan yeniden dışa verilirler ki web çağıranları tek yolu kullansın.
  */
-export { UNKNOWN_AMOUNT, formatPrice, formatShortDate, formatTime };
+export { UNKNOWN_AMOUNT, formatNetQuantity, formatPrice, formatShortDate, formatTime };
 
 /**
  * Ondalıklı sayı — ayraç DİLE göre değişir (tr/fr/de: virgül), çünkü elle `String(value)` yazmak
@@ -29,16 +29,6 @@ export function formatDecimal(value: number, locale: Locale, fractionDigits: num
 export function formatWeight(grams: number, locale: Locale): string {
   if (grams < 1000) return `${formatDecimal(grams, locale, 0)} g`;
   return `${formatDecimal(grams / 1000, locale, Number.isInteger(grams / 1000) ? 0 : 1)} kg`;
-}
-
-/**
- * Net miktar ("850 g" · "4,2 kg" · "500 ml" · "1,5 L") — BİRİMİYLE birlikte, çünkü sayı tek başına
- * "500 ne?" demektir. Büyük değer üst birime çıkar: 4200 g okunmaz, 0,5 L ise küçük şişeyi süsler.
- */
-export function formatNetQuantity(quantity: number, unit: 'g' | 'ml', locale: Locale): string {
-  if (unit === 'g') return formatWeight(quantity, locale);
-  if (quantity < 1000) return `${formatDecimal(quantity, locale, 0)} ml`;
-  return `${formatDecimal(quantity / 1000, locale, Number.isInteger(quantity / 1000) ? 0 : 1)} L`;
 }
 
 /**

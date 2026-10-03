@@ -17,6 +17,7 @@ import {
 } from '@lezzet/types';
 import type {
   AvailableStockTotal,
+  CatalogSize,
   Category,
   ImageMeta,
   PreferredLanguage,
@@ -267,6 +268,22 @@ export function primaryVariantOf(variants: readonly ProductVariant[], ctx: Produ
 }
 
 /**
+ * Kartın miktar satırı için boyların ölçüsü, fiyata göre ve fiyatsız boy sonda: satır çipteki fiyatın boyuyla başlar, operatörün
+ * sırası "5 L · 750 ml" yazıp 750 ml'nin fiyatını 5 L'ye yakıştırırdı. Eşitlikte gelen sıra korunur (`primaryVariantOf` ile aynı).
+ */
+function sizesOf(variants: readonly ProductVariant[], ctx: ProductContext): CatalogSize[] {
+  return variants
+    .map((variant, index) => ({ variant, index, cents: sellingOf(variant, ctx).priceCents ?? Number.POSITIVE_INFINITY }))
+    .sort((a, b) => a.cents - b.cents || a.index - b.index)
+    .map(({ variant }) => ({
+      piecesCount: variant.piecesCount,
+      portionKind: variant.portionKind,
+      netQuantity: variant.netQuantity,
+      netUnit: variant.netUnit,
+    }));
+}
+
+/**
  * Varyantı detay sayfasının "Boy seçin" kartına indirger. `shippable` ürünün özelliğidir ama karar varyant düzeyinde verilir (bir boy
  * yerelde bitip öteki durabilir), o yüzden çağıran onu geçirir.
  */
@@ -339,6 +356,7 @@ export function toProduct(
     // Kartın çeşit satırının sayısı — `purchaseMode` ile AYNI kümeden (aktif boylar), ikinci bir
     // sayım yapılmaz ki ikisi bir gün çelişmesin.
     variantCount: variants.length,
+    sizes: sizesOf(variants, ctx),
     // Ürünün DOĞASI, yerin değil: stok hâli "bu adrese gider mi" der, bu "kargoyla hiç gider mi".
     // Satırdan aynen geçiyor — `stockStatusOf` de aynı değeri okuyor, ikinci bir kaynak yok.
     shippable: row.shippable,

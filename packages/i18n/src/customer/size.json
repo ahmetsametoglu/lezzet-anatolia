@@ -1,0 +1,26 @@
+{
+  "tr": {
+    "pieces": "{n} adet",
+    "piecesOf": "{n} adet · {weight}",
+    "slices": "{n} dilim",
+    "slicesOf": "{n} dilim · {weight}",
+    "packs": "{n} paket",
+    "packsOf": "{n} paket · {weight}"
+  },
+  "fr": {
+    "pieces": "{n} pièces",
+    "piecesOf": "{n} pièces · {weight}",
+    "slices": "{n} parts",
+    "slicesOf": "{n} parts · {weight}",
+    "packs": "{n} paquets",
+    "packsOf": "{n} paquets · {weight}"
+  },
+  "de": {
+    "pieces": "{n} Stück",
+    "piecesOf": "{n} Stück · {weight}",
+    "slices": "{n} Stück",
+    "slicesOf": "{n} Stück · {weight}",
+    "packs": "{n} Packungen",
+    "packsOf": "{n} Packungen · {weight}"
+  }
+}

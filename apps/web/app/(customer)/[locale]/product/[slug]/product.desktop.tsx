@@ -1,3 +1,4 @@
+import { variantNameOf } from '@lezzet/helper';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
@@ -8,7 +9,6 @@ import { formatDecimal } from '@/lib/storefront/format';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { Band } from '@/components/customer/ui/section';
 import { Icon } from '@/components/customer/ui/icons';
-import { variantNameOf } from '@/lib/storefront/variant-name';
 import { AiAsk } from './components/ai-ask';
 import { Declaration } from './components/declaration';
 import { FamilyBlock } from './components/family-block';
@@ -34,9 +34,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
    * ekranda değişiyor. Boy çözülemezse bölüm çizilmez — yarım bir soru göndermektense hiç sormamak.
    */
   const aiQuestion =
-    product.aiQuestion && selected
-      ? product.aiQuestion.replace('{n}', product.name).replace('{w}', variantNameOf(selected, t.size, locale))
-      : null;
+    product.aiQuestion && selected ? product.aiQuestion.replace('{n}', product.name).replace('{w}', variantNameOf(selected, locale)) : null;
 
   /**
    * Teslimat satırı boy seçiminin üstünde durur ki kargo kısıtı sepete eklemeden önce görünsün; bu adrese gelemeyen üründe kutu karar
