@@ -16,33 +16,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { linkReferrerById } from './referral';
 
 /*
-  KOMŞU DAVETİ (17.10) — davetin İKİNCİ türü.
-
-  ── GETİREN DAVETİNDEN NEYİ FARKLI ──────────────────────────────────────────
-  `customer/referral.ts` hesapsız birini MÜŞTERİ yapmayı ödüllendirir: anahtarı kişi, ömrü sonsuz,
-  bir kez kurulur. Burası var olan bir SEFERE ikinci bir sipariş eklemeyi ödüllendirir: anahtarı
-  `(bölge, gün)`, ömrü o günün kesim saatine kadar, davet başına birkaç kez kullanılır. Davet edilen
-  kişi zaten müşterimiz olabilir (kullanıcı kararı 11.08) — o hâlde getiren ödülü hiç doğmaz ama
-  komşu ödülü doğar. İkisi AYNI turda da doğabilir ve bu çift ödeme değildir: bir müşteri kazanıldı
-  VE bir sefere sipariş eklendi.
-
-  ── NEDEN ORTAK PAKETTE ─────────────────────────────────────────────────────
-  Akışın üç ucu var ve üçü de iki yüzeyden çağrılıyor: daveti AÇMA (sipariş sonrası ekran),
-  KARŞILAMA (bağlantının indiği sayfa) ve SEFERE BAĞLAMA (checkout). Web'de kalsaydı mobil kendi
-  kopyasını yazardı — 17.9'da tam olarak bunun bedeli ölçüldü.
-
-  ── ÖDÜL BURADA DEĞİL ───────────────────────────────────────────────────────
-  Puan yazımı `feedback/points.ts` → `awardNeighborPoints`ta ve tetiği ödeme (`order/payment.ts`
-  → `finalize`). Bu dosya daveti kurar ve bağlar; ödülün ne zaman doğduğu para tarafının kararı.
+  Komşu daveti, davetin ikinci türü: getiren daveti (`customer/referral.ts`) hesapsız birini müşteri yapmayı, bu ise var olan bir
+  sefere (bölge, gün) o günün kesim saatine kadar ikinci bir sipariş eklemeyi ödüllendirir; davet edilen zaten müşteri olabilir ve iki
+  ödül aynı turda doğabilir, çünkü ayrı şeyleri ölçerler. Açma, karşılama ve sefere bağlama iki yüzeyden çağrıldığı için ortak pakette;
+  puan yazımı burada değil, ödemenin tetiğiyle `feedback/points.ts`te.
 */
 
 /** Bağlantı belirteci — geri bildirim davetiyle aynı uzunluk ve alfabe (CSPRNG, O/0 ve I/1 yok). */
 const TOKEN_LENGTH = 16;
-
-// Kesim anahtarı ve varsayılanı ARTIK BURADA DEĞİL: `domain-core/delivery-days` tutuyor (kuralı
-// uygulayan dosya). Yerel kopya `resolveDelivery` ile "aynı olduğunu" künyesinde söylüyordu — yani
-// kopya olduğunu kendisi kabul ediyordu; kesim kuralı hazırlık saatini de okumaya başlayınca ikinci
-// bir anahtar daha kopyalanacaktı.
 
 /** Davetin paylaşılabilir TAM adresi. Dil PAYLAŞANIN dilidir (`inviteUrl` künyesindeki aynı gerekçe). */
 export function neighborInviteUrl(token: string, locale: Locale): string {
@@ -60,15 +41,9 @@ export type OpenNeighborInviteOutcome =
   | { status: 'run_closed'; window: DeliveryRunWindow };
 
 /**
- * Siparişin komşu davetini açar — **varsa aynısını döner** (idempotent).
- *
- * `getOrCreateReferralCode` deseninin aynısı: müşterilerin çoğu komşusunu çağırmaz, her siparişe
- * peşinen bir davet satırı yazmak kullanılmayacak kayıt üretmek olurdu. İkinci çağrı yeni bir
- * bağlantı doğurmaz — doğursaydı müşterinin daha önce paylaştığı bağlantı sessizce ölürdü.
- *
- * **Kargo siparişinde davet açılmaz** ve bu bir kısıtlama değil, kavramın kendisi: kargoda "aynı
- * sefer" diye bir şey yok, taşıyıcı zaten paket başına ücretlendiriyor. Komşuyu çağırmanın hiçbir
- * tarafa kazandırdığı bir şey olmazdı.
+ * Siparişin komşu davetini açar, varsa aynısını döner: her siparişe peşinen davet yazmak kullanılmayacak kayıt üretirdi, ikinci
+ * çağrının yeni bağlantı doğurması ise paylaşılmış bağlantıyı sessizce öldürürdü. Kargo siparişinde davet açılmaz, çünkü kargoda
+ * "aynı sefer" yoktur ve komşuyu çağırmak kimseye bir şey kazandırmaz.
  */
 export async function openNeighborInvite(
   db: SupabaseClient,
@@ -94,9 +69,8 @@ export async function openNeighborInvite(
     orderId: order.id,
     deliveryZoneId: order.deliveryZoneId,
     deliveryDate: order.deliveryDate,
-    // Sınır AÇIKÇA geçiliyor, veritabanı varsayılanına bırakılmıyor (13.08): müşteri yüzeyi
-    // *"o güne en fazla 3 komşu"* diyecek ve o sayıyı motorun uyguladığı yerden okumalı
-    // (`NEIGHBOR_INVITE_MAX_USES` künyesi). Migration'daki `default 3` artık yedek.
+    // Sınır açıkça geçilir, veritabanı varsayılanına bırakılmaz: müşteri yüzeyi "o güne en fazla 3 komşu" der ve sayıyı motorun
+    // uyguladığı yerden okumalı (`NEIGHBOR_INVITE_MAX_USES`).
     maxUses: NEIGHBOR_INVITE_MAX_USES,
   });
   return { status: 'ok', invite };
@@ -116,21 +90,15 @@ export type NeighborWelcome =
   | { status: 'unknown' }
   /** Ziyaretçi kendi bağlantısını açtı. */
   | { status: 'self' }
-  /** Sefer geçti / bugünün kesim saati doldu — davet artık bir söz veremiyor. */
+  /** Sefer geçti ya da bugünün kesim saati doldu: davet bir söz veremez. */
   | { status: 'run_closed'; window: DeliveryRunWindow; deliveryDate: string }
   /** Davetin kullanım hakkı doldu (`maxUses`). */
   | { status: 'full'; deliveryDate: string };
 
 /**
- * Davet bağlantısının karşılama durumu.
- *
- * **Süzgeç servis değil BURASI** ve gerekçe `NeighborInviteService.findByToken` künyesinde: geçmiş
- * bir seferin daveti OKUNABİLMELİ ki komşuya "bu sefer geçti ama alışverişe devam edebilirsin"
- * denebilsin. Servis satırı verir, cümleyi kuracak kararı bu kapı verir.
- *
- * **Sıralama:** önce "bu benim bağlantım", sonra pencere, sonra doluluk. Kendi bağlantısını açan
- * müşteriye "kullanım hakkı doldu" demek doğru ama işe yaramaz bir cümle olurdu; ona söylenecek şey
- * bağlantısının ÇALIŞTIĞIDIR.
+ * Davet bağlantısının karşılama durumu; süzgeç servis değil burasıdır, çünkü geçmiş seferin daveti de okunmalı ki komşuya "bu sefer
+ * geçti ama alışverişe devam edebilirsin" denebilsin. Sıra önce "bu benim bağlantım", sonra pencere, sonra doluluktur: kendi
+ * bağlantısını açana söylenecek şey bağlantının çalıştığıdır.
  */
 export async function readNeighborWelcome(db: SupabaseClient, token: string, viewerId?: string | null): Promise<NeighborWelcome> {
   const invite = await new NeighborInviteService(db).findByToken(token);
@@ -153,30 +121,10 @@ export async function readNeighborWelcome(db: SupabaseClient, token: string, vie
   };
 }
 
-/* `claimNeighborInvite` KALKTI (12.08 kararı). Belirteci checkout'a kadar taşıyıp orada doğrulayan
-   kapıydı; yerini ikisi aldı: kabul artık kimlik doğduğu an KİŞİYE yazılıyor
-   (`acceptNeighborInvite`) ve sipariş anında seferle eşleşen kabul aranıyor
-   (`matchNeighborInviteForOrder`). Ayrılmasının sebebi kullanıcının sorusu: davet yalnız çerezde
-   yaşarken, web'de hesap açıp uygulamayı sonra yükleyen kişi onu sessizce kaybediyordu. */
-
 /**
- * **Daveti KİŞİYE yazar** (kullanıcı sorusu 12.08) — çerezin bittiği yer.
- *
- * Kullanıcının tarif ettiği yolculuk şuydu: *"ister önce gitsin, hesap açsın, gezinsin, sonra
- * mobil uygulamayı yüklesin — sepete geldiğinde bunu görebilmeli."* Davet yalnız çerezde
- * yaşarken bu üç yerden birden kopuyordu: web'de hesap açıp uygulamayı yükleyen kişide davet yok,
- * başka cihazdan giren kaybediyor, çerezi temizleyen siliyordu.
- *
- * Kabul kişiye yapışınca hepsi kendiliğinden çözülüyor: uygulama sonradan yüklense de daveti
- * sunucudan okur, sepette cümle kurulabilir, komşunun günü önseçili gelir ve iki yüzey AYNI kaydı
- * okur — biri unutamaz.
- *
- * **İDEMPOTENT:** aynı kişi aynı daveti iki kez kabul ederse ikinci satır açılmaz (veride de
- * unique). Pencere kapalıysa ya da davet doluysa kabul YAZILMAZ — ölü bir daveti kişiye yapıştırmak,
- * sepette çalışmayan bir cümle göstermek olurdu.
- *
- * **Kendi davetini kabul edemez:** karşılama sayfası zaten `self` diyor, ama kapı da tutuyor —
- * ekran değişse bile veri bozulmasın.
+ * Daveti kişiye yazar: davet yalnız çerezde yaşasaydı web'de hesap açıp uygulamayı sonra yükleyen, başka cihazdan giren ya da çerezi
+ * temizleyen onu kaybederdi; kişiye yapışınca iki yüzey aynı kaydı okur. Kabul idempotenttir ve pencere kapalıysa, davet doluysa ya
+ * da kişi kendi davetini kabul ediyorsa yazılmaz, çünkü ölü bir daveti kişiye yapıştırmak sepette çalışmayan bir cümle olurdu.
  */
 export async function acceptNeighborInvite(
   db: SupabaseClient,
@@ -191,13 +139,8 @@ export async function acceptNeighborInvite(
   // ikinci kez "hâlâ geçerli mi" diye sormak, aynı tıklamayı iki farklı cevaba götürürdü.
   const existing = await claims.find(invite.id, input.customerId);
   if (existing) {
-    /* TEKRAR TIKLAMA SEÇİMİ DEĞİŞTİRİR (kullanıcı kararı 21.08). Bu dal bir süre olduğu gibi
-       `ok` dönüyordu ve HİÇBİR ŞEY yapmıyordu; ölçüldü ve kullanıcının tarif ettiği geri dönüş
-       (*"isterse bir önceki davet linkine yine tıklayabilir"*) fiilen çalışmıyordu — müşteri
-       tıklıyor, ekranda hiçbir şey değişmiyordu.
-
-       Kabulün KENDİSİ yine tekrarlanmıyor (satır tek, veride `unique`); tazelenen yalnız SEÇİM
-       damgası ve varsa ret. Kabul bir olay, seçim bir tercihtir — biri değişmez, öteki değişir. */
+    /* Tekrar tıklama seçimi değiştirir: müşteri önceki davet bağlantısına yeniden tıklayarak o daveti seçebilmeli. Kabulün kendisi
+       tekrarlanmaz (veride tek satır); tazelenen yalnız seçim damgası ve varsa ret. */
     await claims.reselect(existing.id);
     return { status: 'ok', inviteId: invite.id };
   }
@@ -208,23 +151,9 @@ export async function acceptNeighborInvite(
   await claims.insert({ inviteId: invite.id, customerId: input.customerId });
 
   /**
-   * ── KOMŞUSUNU ÇAĞIRAN, YENİ MÜŞTERİ DE GETİRMİŞ OLABİLİR (kullanıcı kararı 17.08) ──
-   * Ölçülen boşluk: `referred_by`yi yazan tek yol getiren daveti kodundan geçiyordu
-   * (`attachReferralOnLogin` → `referralCode`), oysa komşu daveti bağlantısı kod değil **token**
-   * taşıyor. Sonuç, komşu davetiyle gelip kaydolan kişinin *"kimsenin getirmediği müşteri"* olarak
-   * doğmasıydı: davet gerçek bir yeni müşteri kazandırdığı hâlde 500 puanlık getiren ödülü hiç
-   * doğmuyordu. `feedback/points.ts` künyesi bunun tersini vaat ediyordu — kod eksikti, künye değil.
-   *
-   * **İki ödül AYRI şeyi ölçer ve birlikte doğabilir** (★ karar 2f): komşu ödülü SEFERE bağlıdır
-   * (o güne ikinci sipariş = durak başına maliyet düşer), getiren ödülünün seferle ilgisi YOKTUR —
-   * kullanıcının cümlesi: *"o kişi o sefer veya başka sefer veya benimle çok alakasız posta kodunda
-   * dahi oturabilir… bir tane başarılı sipariş gerçekleştirmesi lazım."*
-   *
-   * Bağ ortak kapıdan kuruluyor, kural kopyalanmıyor: `linkReferrerById` zaten kendini getireni,
-   * zaten bağlı olanı ve **zaten müşteri olanı** eliyor. Yani bu satır ancak gerçekten yeni bir
-   * müşteride bağ kurar; ödül yine kendi anında (parası alındığında) doğar.
-   *
-   * **Kabulü DÜŞÜRMEZ:** bağ kurulamazsa komşu daveti yine kabul edilmiştir.
+   * Komşu davetiyle gelip kaydolan kişi yeni müşteriyse davet edene getiren bağı da kurulur: bağlantı kod değil belirteç taşıdığı için
+   * bu yol olmadan o kişi "kimsenin getirmediği müşteri" olarak doğardı. `linkReferrerById` kendini getireni, zaten bağlı olanı ve
+   * zaten müşteri olanı eler; bağ kurulamazsa kabul yine geçerlidir.
    */
   await linkReferrerById(db, input.customerId, invite.inviterId);
 
@@ -232,26 +161,9 @@ export async function acceptNeighborInvite(
 }
 
 /**
- * **"Puan yolda"** — davet EDENİN henüz yazılmamış komşu ödülleri (★ karar 3 · MB-57).
- *
- * Kullanıcının kuralı: *"komşu siparişi verdiği anda davet edene «komşun sipariş verdi — 100 puan
- * yolda, ödeme alınınca hesabına geçecek» gösterilir; puan yazılmaz ama görünür olur."* Beklemenin
- * kendisi doğaldır (ödül başkasının parasına bağlı), **görünmez olması** kusurdu: müşteri komşusunu
- * çağırıyor, komşu sipariş veriyor ve ekranda hiçbir şey değişmiyordu.
- *
- * ── DEFTERE YAZILMAZ, TÜRETİLİR ─────────────────────────────────────────────
- * Bekleyen ödül `points_entry`ye girmez ve girmemeli: defter *"ne oldu"*yu tutar, *"ne olabilir"*i
- * değil. Bakiye satırların toplamı olduğu için sanal bir satır bakiyeyi de yalan söyletirdi. Aynı
- * sebeple ekranda da listeye karışmaz — geçmişin ÜSTÜNDE ayrı bir blok olarak durur.
- *
- * ── ÖLÇÜT ÖDÜLÜN KENDİ KOŞULUDUR ────────────────────────────────────────────
- * Sipariş verilmiş (iptal değil) ama parası alınmamış (`payment_status <> 'paid'`). Ödül tam da o
- * geçişte doğuyor (`order/payment.ts` → `finalize`), yani "yolda" olan küme, ödülün beklediği
- * kümenin aynısı. Kendi davetini kullanan sipariş elenir — ödül de elenirdi.
- *
- * **Getiren ödülü için karşılığı YOK ve bilinçli:** ★ karar 3 "yolda" durumunu yalnız komşu ödülü
- * için tanımlıyor. Getiren tarafında bekleme çok daha uzun ve belirsiz (davet edilen kişi hiç
- * sipariş vermeyebilir); orada bir söz vermek, tutulmayabilecek bir söz olurdu.
+ * "Puan yolda": davet edenin henüz yazılmamış komşu ödülleri, yani verilmiş (iptal olmayan) ama parası alınmamış komşu siparişleri;
+ * ödül tam o ödemede doğduğu için küme ödülün beklediği kümenin aynısıdır ve deftere yazılmaz, türetilir. Getiren ödülü için karşılığı
+ * yoktur, çünkü orada bekleme belirsizdir ve verilecek söz tutulmayabilir.
  */
 export interface PendingNeighborAward {
   /** Davet edilen komşunun YALNIZ adı (ilk sözcük) — ekranın kuracağı cümlenin öznesi. */
@@ -292,32 +204,17 @@ export interface PendingNeighborInvite {
 }
 
 /**
- * **Bekleyen davet** — kabul edilmiş ama henüz siparişe dönmemiş, seferi hâlâ açık olan.
- *
- * "Bekliyor" SAKLANMIYOR, türetiliyor (migration künyesi): davet künyesini taşıyan iptal-olmayan
- * bir sipariş varsa o kabul tüketilmiştir; sefer penceresi kapandıysa da beklemenin anlamı yoktur.
- * Üçüncü bir damga tutmak, iptal edilen siparişte elle geri alınacak bir durum daha demekti.
- *
- * **En YAKIN sefer döner**, çünkü aynı kişiyi iki komşusu iki ayrı sefere çağırabilir ve ekranın
- * kuracağı cümle tek: en yakın gün, müşterinin ilk karşılaşacağı gündür. Checkout ise cümleye
- * değil SEFERE bakar (`claimNeighborInvite`) — orada seçim günün kendisinden gelir.
- *
- * `null` = bekleyen yok; ekran hiçbir şey çizmez.
+ * Bekleyen davet: kabul edilmiş, henüz siparişe dönmemiş ve seferi hâlâ açık olan; "bekliyor" saklanmaz, türetilir, çünkü üçüncü bir
+ * damga iptal edilen siparişte elle geri alınacak bir durum daha demekti. Liste günden güne sıralı döner; boşsa ekran hiçbir şey çizmez.
  */
 export async function readPendingNeighborInvites(db: SupabaseClient, customerId: string): Promise<PendingNeighborInvite[]> {
   const claims = await new NeighborInviteClaimService(db).listByCustomer(customerId);
-  /* REDDEDİLEN SEÇİME GİRMEZ (kullanıcı kararı 21.08). Satır duruyor — ret de bir olaydır ve geri
-     alınabilir (yeniden kabul damgayı temizler); yalnız bu okumanın dışında kalıyor. */
+  /* Reddedilen seçime girmez; satır durur, çünkü ret de bir olaydır ve yeniden kabul damgayı temizleyip geri alır. */
   const live = claims.filter((claim) => claim.declinedAt === null);
   if (live.length === 0) return [];
 
-  /* SIRA KARARIN KENDİSİ: `listByCustomer` kabulleri `chosenAt` azalan getiriyor, yani dizinin
-     BAŞI "son seçilen"dir. Aşağıdaki `seen` süzgeci aynı `(gün, bölge)` için ilk gördüğünü tutup
-     ötekileri eler — böylece "son kabul edilen kazanır" tek satırda uygulanmış olur.
-
-     ESKİ HÂL BURADA KIRIKTI: okuma davetleri `deliveryDate`e göre sıralayıp İLK açık olanı
-     dönüyordu ve aynı gündeki iki davette kazananı dizinin geldiği sıra belirliyordu — aynı girdi
-     farklı sonuç veriyordu (MB-61'in ölçülmüş arızası). Artık ölçüt zaman damgası. */
+  /* Sıra kararın kendisidir: `listByCustomer` kabulleri `chosenAt` azalan getirir, `seen` süzgeci aynı (gün, bölge) için ilk gördüğünü
+     tutar ve böylece son kabul edilen kazanır. Ölçüt dizinin geliş sırası değil zaman damgasıdır, yoksa aynı girdi farklı sonuç verirdi. */
   const inviteById = new Map(
     (await new NeighborInviteService(db).listByIds(live.map((c) => c.inviteId))).map((invite) => [invite.id, invite]),
   );
@@ -351,9 +248,8 @@ export async function readPendingNeighborInvites(db: SupabaseClient, customerId:
 }
 
 /**
- * **Davetin reddi** (kullanıcı kararı 21.08) — davetli daveti geri çevirir; artık seçime girmez ve
- * ekranda gösterilmez. Satır SİLİNMEZ: ret de olmuş bir olaydır ve geri alınabilir — müşteri aynı
- * bağlantıya yeniden tıklarsa `acceptNeighborInvite` damgayı temizleyip kaydı öne alır.
+ * Davetin reddi: davetli daveti geri çevirir, seçime girmez ve ekranda gösterilmez. Satır silinmez, çünkü ret geri alınabilir: aynı
+ * bağlantıya yeniden tıklayınca `acceptNeighborInvite` damgayı temizleyip kaydı öne alır.
  */
 export async function declineNeighborInvite(
   db: SupabaseClient,
@@ -368,14 +264,9 @@ export async function declineNeighborInvite(
 }
 
 /**
- * Bu siparişin seferine uyan KABUL EDİLMİŞ davet — checkout'un sorusu (12.08 sonrası).
- *
- * `claimNeighborInvite`in yerini aldı ve fark şu: orada kaynak ÇEREZDEKİ belirteçti, burada kişiye
- * yazılmış kabul. Çerez artık yalnız kimliksiz ziyaretçinin köprüsü — kimlik doğduğu an kabul
- * kişiye geçiyor (`acceptNeighborInvite`), yani sipariş anında sorulacak yer kişinin kendi kaydı.
- *
- * **Sefer eşleşmesi hâlâ zorunlu** ve bu işin tamamının sebebi: davet BELLİ bir sefere yapıldı.
- * Komşu iki hafta sonrasına sipariş verirse ortada komşuluk da yok, tasarruf da.
+ * Bu siparişin seferine uyan, kişiye yazılmış kabul edilmiş davet; kaynak çerez değil kişinin kendi kaydıdır (`acceptNeighborInvite`).
+ * Sefer eşleşmesi zorunludur, çünkü davet belli bir sefere yapıldı: komşu iki hafta sonrasına sipariş verirse ortada komşuluk da
+ * tasarruf da yoktur.
  */
 export async function matchNeighborInviteForOrder(
   db: SupabaseClient,
@@ -392,13 +283,9 @@ export async function matchNeighborInviteForOrder(
     (await new NeighborInviteService(db).listByIds(live.map((c) => c.inviteId))).map((invite) => [invite.id, invite]),
   );
 
-  /* KAZANAN "SON KABUL EDİLEN" (kullanıcı kararı 21.08) — ve arama artık KABULLER üzerinde
-     dönüyor, davetler üzerinde değil. Fark kararın kendisi: `listByCustomer` kabulleri `chosenAt`
-     azalan getirdiği için ilk uyan kabul, müşterinin EN SON seçtiğidir.
-
-     Eskiden `invites.find(...)` çağrılıyordu ve `invites` dizisinin sırası `listByIds`ten, yani
-     veritabanından geldiği gibiydi: aynı gün + aynı bölgeye iki komşu davet ettiyse ÖDÜLÜN KİME
-     YAZILDIĞI o sıraya bağlıydı — aynı girdi farklı sonuç. MB-61'in para tarafındaki yüzü buydu. */
+  /* Kazanan son kabul edilendir: `listByCustomer` kabulleri `chosenAt` azalan getirdiği için ilk uyan kabul müşterinin en son seçtiğidir.
+     Arama davetler üzerinde dönseydi, aynı gün ve bölgeye iki komşu davet ettiğinde ödülün kime yazıldığını veritabanının dönüş sırası
+     belirlerdi. */
   const winner = live.find((claim) => {
     const invite = inviteById.get(claim.inviteId);
     return (
@@ -419,12 +306,8 @@ export async function matchNeighborInviteForOrder(
 }
 
 /**
- * Davetin kaç kez kullanıldığı — **sayaçtan değil siparişlerden**.
- *
- * `neighbor_invite` satırında azalan bir sayaç YOK (migration künyesi): sipariş iptal olduğunda
- * sayacın geri alınması gerekirdi ve bir gün biri unuturdu. İptal edilmiş sipariş burada da
- * sayılmaz — "iptal olmuş gibi değil, hiç olmamış gibi" davranılır (indirim kotası sayımının
- * aynı kuralı).
+ * Davetin kaç kez kullanıldığı, sayaçtan değil siparişlerden: azalan bir sayaç iptal edilen siparişte geri alınmayı gerektirirdi ve bir
+ * gün unutulurdu. İptal edilmiş sipariş sayılmaz, indirim kotası sayımının aynı kuralı.
  */
 export async function countNeighborInviteUses(db: SupabaseClient, inviteId: string): Promise<number> {
   const orders = await new OrderService(db).listByNeighborInvite(inviteId);
@@ -432,20 +315,9 @@ export async function countNeighborInviteUses(db: SupabaseClient, inviteId: stri
 }
 
 /**
- * **Davetten kaç komşunun daha yararlanabileceği** (kullanıcı kararı 21.08 — şeffaflık).
- *
- * `maxUses − kullanılan`, sıfırın altına düşmez. Taban `Math.max(0, …)` savunmacı değil GEREKLİ:
- * tavan davet AÇILIRKEN dondurulur (`neighbor_invite.max_uses`) ve ayar sonradan düşürülebilir —
- * o gün eski davetlerin kullanımı tavanı aşmış görünür ve çıplak çıkarma negatif verirdi. Ekran da
- * *"-1 komşu daha yararlanabilir"* yazardı.
- *
- * **Burada, taşıma katmanında DEĞİL** (08.55): formül mobil ucun `invite.ts`inde yaşıyordu ve web
- * onay sayfası aynı cümleyi kuracakken ikinci bir kopyası doğacaktı. İki yüzeyin aynı müşteriye
- * farklı sayı söylemesi, kuralın kendisinden daha pahalı bir arıza — hele ki fark yalnız iptal
- * edilmiş bir sipariş ya da düşürülmüş bir ayar varken görünür.
- *
- * **Sıfır, "davet yok" DEMEK DEĞİLDİR:** daveti olmayan siparişte bu fonksiyon hiç çağrılmaz
- * (çağıran zaten `null` ile erken döner). Sıfır burada tek bir şey söyler: davet doldu.
+ * Davetten kaç komşunun daha yararlanabileceği, sıfırın altına düşmeden: tavan davet açılırken dondurulur ve ayar sonradan
+ * düşürülebilir, çıplak çıkarma o gün negatif verirdi. Formül iki yüzey aynı sayıyı söylesin diye burada; sıfır "davet yok" değil
+ * "davet doldu" demektir, daveti olmayan siparişte bu fonksiyon çağrılmaz.
  */
 export async function remainingNeighborInviteUses(
   db: SupabaseClient,
@@ -455,14 +327,9 @@ export async function remainingNeighborInviteUses(
 }
 
 /**
- * Sefer hâlâ açık mı — eşikler ayardan, kural motordan.
- *
- * **Eşikler ROTA kapsamıyla okunuyor** (`zoneId`, kullanıcı kararı 17.08): davet bir seferin daveti,
- * sefer de bir rotanın. Küresel satırı okumak, rotaya yazılmış kesimi yok sayıp müşteriye *"bu sefere
- * yetişirsin"* demek olurdu — checkout ise aynı günü listesinde göstermezdi. `resolveDelivery` ile
- * aynı iki anahtar ve aynı kapsam: iki yerde ayrılırsa fark yalnız kesim saati civarında görünür.
- *
- * Hazırlık kapanışı da okunuyor çünkü kesimin hangi güne ait olduğunu o belirliyor.
+ * Sefer hâlâ açık mı: eşikler rota kapsamıyla ayardan, kural motordan okunur, çünkü küresel satırı okumak rotaya yazılmış kesimi yok
+ * sayıp checkout'un göstermediği bir güne "yetişirsin" demek olurdu. Hazırlık kapanışı da okunur, kesimin hangi güne ait olduğunu o
+ * belirler.
  */
 async function runWindowOf(
   db: SupabaseClient,
@@ -484,9 +351,8 @@ function firstName(name: string): string {
 }
 
 /**
- * Davet açılırken beklenmedik bir hata olursa akışı düşürmemek için sarılmış hâl — sipariş
- * ekranının çağırdığı yol. Ödül gibi davet de bir KOLAYLIK: açılamadıysa müşteri siparişini yine
- * görebilmeli. Sessiz değil, izli.
+ * Davet açılırken beklenmedik hata akışı düşürmesin diye sarılmış hâl, sipariş ekranının yolu: davet bir kolaylıktır, açılamazsa
+ * müşteri siparişini yine görmeli. Hata sessiz değil, iz bırakır.
  */
 export async function tryOpenNeighborInvite(
   db: SupabaseClient,

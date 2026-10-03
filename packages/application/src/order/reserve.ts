@@ -3,21 +3,9 @@ import type { OrderItem } from '@lezzet/types';
 import { notifyStockLowAfterReserve } from '../notification/staff-events';
 
 /**
- * Siparişin stoğunu ayırır — **iki ödeme yolunun ortak adımı**.
- *
- * Ayırma iki yerde birden gerekiyor ve sırası ödeme yöntemine bağlı (ORDER_LIFECYCLE):
- *   online       → checkout BAŞLARKEN, sipariş hâlâ `draft`; ayırma TTL'li, ödeme gelmezse düşer.
- *   kapıda/vadeli → `confirmed` geçişinde; **TTL YOK**, çünkü beklenen bir ödeme penceresi yok —
- *                   sipariş kesinleşti, mal teslime kadar ayrılmış kalır.
- *
- * Döngü ikinci kez yazılmasın diye burada: yarıda kalan ayırmaların geri bırakılması ("ya hepsi ya
- * hiçbiri") kolay unutulan bir ayrıntı ve iki kopyanın biri onu unuttuğunda stok sessizce kilitli
- * kalırdı.
- *
- * ── TERFİ (aşama 2/3) · WEB'DEN FARKI ────────────────────────────────────────
- * Kaynağı `apps/web/lib/order/reserve.ts`tı; web kopyası KÖPRÜ olarak duruyor. Tek fark `db`nin
- * çağırandan gelmesi (`serviceDb()` içeride çağrılmıyor) — paketin ortak deseni. "Ya hepsi ya
- * hiçbiri" döngüsü, TTL kararı ve deponun siparişten okunması aynen korundu.
+ * Siparişin stoğunu ayırır, iki ödeme yolunun ortak adımı: online ödemede checkout başlarken ve süreli (ödeme gelmezse düşer),
+ * kapıda/vadelide `confirmed` geçişinde ve süresiz (ORDER_LIFECYCLE). Yarıda kalan ayırmaların geri bırakılması burada tek yerde
+ * durur, çünkü iki kopyadan biri onu unutsaydı stok sessizce kilitli kalırdı.
  */
 export type ReserveOutcome = { ok: true; expiresAt: string | null } | { ok: false; variantId: string; available: number };
 
@@ -25,8 +13,8 @@ export interface ReserveOrderInput {
   orderId: string;
   items: readonly Pick<OrderItem, 'variantId' | 'qty' | 'stockId'>[];
   /**
-   * Ayırma süresi dolsun mu. `true` → ayarın TTL'i (online ödeme penceresi), `false` → süresiz
-   * (kapıda/vadeli). Varsayılan yok: çağıran bu kararı bilerek vermeli.
+   * Ayırma süresi dolsun mu: `true` ayarın TTL'i (online ödeme penceresi), `false` süresiz (kapıda/vadeli). Varsayılan yok, çağıran bu
+   * kararı bilerek vermeli.
    */
   expiring: boolean;
 }
@@ -55,8 +43,8 @@ export async function reserveOrderStock(db: Db, input: ReserveOrderInput): Promi
     }
   }
 
-  // EŞİK ZİLİ (26.08): ayırma kullanılabilir stoğu düşürdü — dokunulan varyantlar eşiğin altına
-  // İNDİYSE depo+yönetim haber alır (üretici sessiz-künyeli, dedupe "ilk iniş"; künyesi orada).
+  // Eşik zili: ayırma kullanılabilir stoğu düşürdü; dokunulan varyantlar eşiğin altına indiyse depo ve yönetim haber alır (tekrarı
+  // üretici önler).
   await notifyStockLowAfterReserve(db, {
     warehouseId: order.warehouseId,
     variantIds: [...new Set(input.items.map((item) => item.variantId))],
