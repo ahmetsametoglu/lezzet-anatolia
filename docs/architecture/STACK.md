@@ -76,7 +76,7 @@ ORM bilinçli yok: doğrulama Zod'da, sorgu katmanı §6 taban sınıfta. Üçü
 ```
 proje/
 ├── apps/
-│   ├── web/          # Next.js 15 — müşteri + operasyon yüzeyleri, Server Action'lar, ödeme webhook'u (`app/api/webhooks/stripe`)
+│   ├── web/          # Next.js 16 — müşteri + operasyon yüzeyleri, Server Action'lar, ödeme webhook'u (`app/api/webhooks/stripe`)
 │   ├── backend/      # Hono — zamanlı işler (`jobs/`), Meta + Sendcloud webhook'ları (`webhooks/`), MCP yönetici asistanı (`mcp/`)
 │   ├── mobile-api/   # Hono — native uygulamanın arka ucu (`/api/v1`)
 │   ├── mobile-customer/   # Expo 57 / React Native 0.86 — native müşteri uygulaması

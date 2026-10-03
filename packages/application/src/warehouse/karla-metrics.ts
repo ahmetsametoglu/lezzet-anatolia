@@ -4,15 +4,8 @@ import { createRequire } from 'node:module';
 import { readTtfAdvances, type FontAdvances } from './ttf-advances';
 
 /*
-  ETİKET TİPOGRAFİSİNİN ÖLÇÜSÜ — Karla'nın kendi dosyasından (06.09).
-
-  Şablon `font-family="Karla"` yazıyor, yani etiketin yazı tipi zaten burada verili bir karar. Bu
-  dosya o kararın ÖLÇÜSÜNÜ getiriyor: hangi harf ne kadar yer kaplıyor. Kaynak tek — aynı `.ttf`
-  dosyaları raster tarafında da yükleniyor (`apps/mobile-api/src/lib/label-png.ts`), yani ölçen
-  font ile basan font aynı; ikinci bir font kaynağı açılmıyor (CLAUDE §1).
-
-  TEMBEL YÜKLEME: dosya ilk ölçümde okunur ve modül ömrü boyunca durur. Modül yüklenirken okumak,
-  etiket hiç basılmayan bir süreçte (web sunucusu) bedava iki dosya okuması olurdu.
+  Etiket şablonunun yazdığı Karla'nın harf genişlikleri, raster tarafının da yüklediği aynı `.ttf` dosyalarından okunur.
+  Dosya ilk ölçümde okunur: modül yüklenirken okumak, etiket basmayan süreçte (web) boşuna iki dosya okuması olurdu.
 */
 
 /** Şablonun kullandığı ağırlıklar — gövde ve yarı kalın başlıklar. */
@@ -30,18 +23,13 @@ const yuklu = new Map<KarlaWeight, FontAdvances>();
 function font(weight: KarlaWeight): FontAdvances {
   const hazir = yuklu.get(weight);
   if (hazir) return hazir;
-  const okunan = readTtfAdvances(readFileSync(require.resolve(FONT_FILES[weight])));
+  // İşaretsiz Turbopack `.ttf`yi modül diye pakete katmaya çalışır ve web derlemesi düşer; dosya çalışma anında okunur.
+  const okunan = readTtfAdvances(readFileSync(require.resolve(/* turbopackIgnore: true */ FONT_FILES[weight])));
   yuklu.set(weight, okunan);
   return okunan;
 }
 
-/**
- * Fontta OLMAYAN harfin genişliği — Latin büyük "M"in ilerlemesi (≈0,85 em), yani ölçülen en
- * geniş harflerden biri.
- *
- * Bir ödünleşme ve yönü kasıtlı: bilinmeyen harfi DAR saymak onu kâğıdın dışına taşırır, geniş
- * saymak yalnız erken keser. Katalogda Latin dışı ad yok; bu dal bir gün gelirse diye duruyor.
- */
+/** Fontta olmayan harf en geniş harflerden biri ("M", ≈0,85 em) sayılır: dar saymak metni kâğıttan taşırır, geniş saymak yalnız erken keser. */
 function fallbackEm(weight: KarlaWeight): number {
   return font(weight).advanceEm(0x4d) ?? 0.85;
 }
@@ -81,17 +69,8 @@ export function fitMm(text: string, widthMm: number, fontMm: number, weight: Kar
 }
 
 /**
- * Satır başlatabilecek parçalar — boşlukla bölünür, ama **kendi başına kelime olmayan parça bir
- * öncekine yapışır**.
- *
- * Gerekçe kâğıttan geldi (06.09): "Mangolu Artisan Kek · 9 × 90 g" boşluktan bölününce
- * *"…Kek · 9 ×"* / *"90 g"* çıkıyordu — gramaj ikiye ayrılmış, ikinci satır "90 g" diye öksüz
- * kalmıştı. Ayırıcı (`·`), çarpı, rakam ve tek harflik birim (`g`) satır BAŞLATMAZ; okuyan göz
- * onları kendinden öncekiyle birlikte okur.
- *
- * Ölçüt "iki ardışık harf": gerçek bir kelimede vardır (`Kek`, `Boy`), ölçü parçalarında yoktur
- * (`·`, `9`, `×`, `90`, `g`). Katalogdan bağımsız ve dile bağlı olmayan bir kural — birim listesi
- * tutmak, bir gün listede olmayan bir birimle sessizce bozulurdu.
+ * Satır başlatabilecek parçalar: içinde iki ardışık harf olmayan parça (`·`, `×`, `90`, `g`) öncekine yapışır, gramaj iki satıra
+ * bölünüp öksüz kalmasın. Ölçüt birim listesi tutmaz, listede olmayan bir birimle sessizce bozulmaz.
  */
 function breakPoints(text: string): string[] {
   const parcalar: string[] = [];
@@ -107,13 +86,8 @@ function breakPoints(text: string): string[] {
 }
 
 /**
- * Metni satırlara böler — **kelime sınırından**, en fazla `maxLines` satır.
- *
- * Sürekli ruloda yükseklik bedava (kâğıt içerik bitince kesiliyor), yani alt satıra inmek
- * küçültmekten iyidir: kullanıcının şikâyeti zaten okunmayacak kadar küçük yazıydı.
- *
- * Son satır taşarsa "…" ile kesilir; ara satırlar kesilmez. Tek başına sığmayan bir kelime (uzun
- * bir SKU gibi) kendi satırında kesilir — bölünecek bir yeri olmadığı için.
+ * Metni kelime sınırından en fazla `maxLines` satıra böler; sürekli ruloda yükseklik bedava olduğu için alt satıra inmek
+ * küçültmekten iyidir. Yalnız son satır ve tek başına sığmayan kelime "…" ile kesilir.
  */
 export function wrapMm(
   text: string,

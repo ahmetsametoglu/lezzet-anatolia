@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.55). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.56). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
 `docs/GELECEK.md`'dedir.
@@ -35,6 +35,7 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [~] (00.9) **Playwright — önce GÖZ, sonra duman** (kullanıcı kararı 03.08; denetim etüdü)
 - [ ] (00.10) **İstemciden barrel'a DEĞER yolu `docs:check` ile zorlansın** *(kalıbın kendi önerisi, 10.08; kayda geçirildi 15.08)*
 - [~] (00.11) **Paket yapısı elden geçirme — en basitten, tek paket tek tur** *(kullanıcı kararı 15.09: "packages altındaki yapıyı en basitten başlayarak elden geçireceğiz; her seferinde bir tanesini alacağız")* · tur akışı: nerede ve nasıl kullanıldığının incelemesi → değişiklik → YALNIZ o değişikliğin kırabileceği yeri sınayan test → commit
+- [ ] (K.56) **Next 16: `middleware.ts` → `proxy.ts` ve üretim derlemesinin Turbopack'e geçişi** — `middleware` adı Next 16'da kullanımdan kalktı; `proxy` yalnız Node'da çalışır, `instrumentation.ts`'teki edge ayrımı da onunla değişir. Derleme bugün `--webpack` ile; Turbopack derlemesinin test sunucusunun 3,7 GB belleğine sığdığı ölçülmedi.
 
 ## 04 · Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama
 

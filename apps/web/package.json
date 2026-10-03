@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
-    "build:prod": "NEXT_DIST_DIR=.next-prod next build",
+    "build:prod": "NEXT_DIST_DIR=.next-prod next build --webpack",
     "start:prod": "NEXT_DIST_DIR=.next-prod next start -p 3001",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .turbo .next .next-prod node_modules"
@@ -36,7 +36,7 @@
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.48.1",
     "leaflet": "^1.9.4",
-    "next": "^15.1.6",
+    "next": "^16.3.8",
     "next-intl": "^4.13.3",
     "pino": "^9.6.0",
     "react": "^19.0.0",
