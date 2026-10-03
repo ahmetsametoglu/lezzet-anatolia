@@ -391,10 +391,13 @@ export function CheckoutMobile(props: CheckoutViewProps) {
         />
         {props.payStage && <PayProgress stage={props.payStage} />}
 
-        <span className="flex items-center justify-center gap-1.5 font-sans text-micro font-semibold text-muted">
-          <Icon name="lock" size={13} />
-          {t.secure}
-        </span>
+        {/* Güvence satırı yalnız kartla ödemede: kapıda ve vadeli ödemede Stripe devreye girmez, satır yanlış bilgi olurdu. */}
+        {state.paymentMethod === 'online' && (
+          <span className="flex items-center justify-center gap-1.5 font-sans text-micro font-semibold text-muted">
+            <Icon name="lock" size={13} />
+            {t.secure}
+          </span>
+        )}
       </div>
     </div>
   );
