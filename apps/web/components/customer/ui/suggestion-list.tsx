@@ -19,7 +19,7 @@ interface SuggestionItem {
   title: string;
   /** İkincil satır; yoksa hiç çizilmez (uydurulacak alt metin yok). */
   subtitle?: string;
-  /** Sağa yaslanan işaret — v1'de teslim şekli rozeti (`ChannelBadge`). */
+  /** İkinci satırda alt metnin yanındaki işaret (ör. teslim şekli rozeti); sağda dursa başlığı kırpardı. */
   badge?: ReactNode;
 }
 
@@ -97,9 +97,13 @@ export function SuggestionList({ items, onSelect, label, icon, footnote, anchorR
       )}
       <span className="flex min-w-0 flex-1 flex-col gap-px">
         <span className="truncate font-sans text-control text-ink">{item.title}</span>
-        {item.subtitle && <span className="truncate font-sans text-field-label font-normal text-muted">{item.subtitle}</span>}
+        {(item.subtitle || item.badge) && (
+          <span className="flex min-w-0 items-center gap-2">
+            {item.subtitle && <span className="min-w-0 truncate font-sans text-field-label font-normal text-muted">{item.subtitle}</span>}
+            {item.badge && <span className="flex-none">{item.badge}</span>}
+          </span>
+        )}
       </span>
-      {item.badge && <span className="flex-none">{item.badge}</span>}
     </button>
   ));
 

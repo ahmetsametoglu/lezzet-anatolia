@@ -24,7 +24,7 @@ interface SuggestionItem {
   title: string;
   /** İkincil satır (ör. posta kodu + şehir); yoksa tek satır çizilir. */
   subtitle?: string;
-  /** Satırın sağındaki rozet (ör. teslim şekli) — kararı çağıran verir, liste yalnız yerleştirir. */
+  /** İkinci satırda alt metnin yanındaki rozet (ör. teslim şekli); kararı çağıran verir, liste yalnız yerleştirir. */
   badge?: ReactNode;
 }
 
@@ -71,13 +71,17 @@ export function SuggestionList({ items, onSelect, footnote, icon, accessibilityL
               <Text style={styles.title} numberOfLines={1}>
                 {item.title}
               </Text>
-              {item.subtitle === undefined ? null : (
-                <Text style={styles.subtitle} numberOfLines={1}>
-                  {item.subtitle}
-                </Text>
+              {item.subtitle === undefined && item.badge === undefined ? null : (
+                <View style={styles.meta}>
+                  {item.subtitle === undefined ? null : (
+                    <Text style={styles.subtitle} numberOfLines={1}>
+                      {item.subtitle}
+                    </Text>
+                  )}
+                  {item.badge ?? null}
+                </View>
               )}
             </View>
-            {item.badge ?? null}
           </PressableSurface>
         ))}
       </ScrollView>
@@ -100,14 +104,14 @@ const styles = StyleSheet.create((theme) => ({
     overflow: 'hidden',
   },
   /* Tavan = satır yüksekliği × görünen satır sayısı; satır yüksekliği `row` ile aynı token'lardan kurulur, dolguya ya da metin
-     durağına dokunan buraya da bakmalı. Saç teli bölücüler yarım satırlık payın içinde erir. */
+     durağına dokunan buraya da bakmalı. Saç teli bölücüler ve rozetin metin satırını aşan birkaç dp'si yarım satırlık payda erir. */
   scroll: {
     maxHeight:
       (theme.space.xl * 2 + theme.space['2xs'] + theme.text['body-sm'] * theme.text['h1-sm--line-height'] * 2) *
       VISIBLE_ROWS,
   },
-  /* Satır YATAY: ikon · metin sütunu · rozet (tasarım `gap:10px`). İkonu ve rozeti olmayan çağıranda
-     metin sütunu satırı doldurur, görünüm eskisiyle aynı kalır. */
+  /* Satır yatay: ikon · metin sütunu (tasarım `gap:10px`). Rozet metin sütununun ikinci satırında durur, çünkü sağda dursa sokak
+     adını kırpardı. */
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -130,7 +134,14 @@ const styles = StyleSheet.create((theme) => ({
     lineHeight: theme.text['body-sm'] * theme.text['h1-sm--line-height'],
     color: theme.colors.ink,
   },
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.md,
+  },
   subtitle: {
+    // Uzun alt metin daralır, rozet bütün kalır.
+    flexShrink: 1,
     fontFamily: theme.font.body[400],
     fontSize: theme.text['body-sm'],
     lineHeight: theme.text['body-sm'] * theme.text['h1-sm--line-height'],
