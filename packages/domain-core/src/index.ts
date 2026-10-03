@@ -71,6 +71,7 @@ export * from './accounting/profit';
 export * from './accounting/sale-costs';
 export * from './accounting/pennylane/bank-feed';
 export * from './accounting/pennylane/document';
+export * from './accounting/pennylane/matching';
 export * from './bank/column-mapping';
 export * from './bank/parse';
 export * from './bank/fingerprint';

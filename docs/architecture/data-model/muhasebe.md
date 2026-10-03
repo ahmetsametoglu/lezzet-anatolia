@@ -6,7 +6,7 @@
 
 Banka hareketi Pennylane'den gelir, bizde izah edilir; alış belgesi bizde girilir, Pennylane'e bizden yüklenir. Bu tablolar
 Pennylane'deki banka hesaplarını ve eşlemesini, okunan her hareketin son hâlini, değişiklik akışının kaldığı yeri, belgenin karşı
-tarafının Pennylane'deki tedarikçisini ve yüklenen belgenin kuyruğuyla aynasını tutar.
+tarafının Pennylane'deki tedarikçisini, yazım kuyruğunu, yüklenen belgenin aynasını ve Pennylane'de çözülen bağlarımızı tutar.
 
 ## PennylaneBankAccount (Pennylane banka hesabı ve eşleme)
 
@@ -101,15 +101,17 @@ Belgenin karşı tarafının (tedarikçi ya da cari) Pennylane'deki tedarikçisi
   reddetmez; tedarikçi açılmadan önce KDV numarası, yoksa adı tutan kayıt aranır ve bağlanır. Bir Pennylane tedarikçisi bizde tek
   karşı tarafa bağlıdır.
 
-## PennylaneQueue (belge kuyruğu)
+## PennylaneQueue (yazım kuyruğu)
 
-Pennylane'e yazılacak alış belgesi. Ortak kuyruk satırıdır (kasa kuyruğuyla aynı yeniden deneme kuralı).
+Pennylane'e yazılacak alış belgesi ya da eşleşmesi yazılacak banka satırı; satırın tek hedefi vardır. Ortak kuyruk satırıdır (kasa
+kuyruğuyla aynı yeniden deneme kuralı).
 
 <!-- alanlar:pennylane_queue -->
 | Kolon | Tip | Null | Varsayılan |
 | --- | --- | --- | --- |
 | `id` | uuid |  | `gen_random_uuid()` |
-| `document_id` | uuid |  |  |
+| `document_id` | uuid | • |  |
+| `movement_id` | uuid | • |  |
 | `marked_at` | timestamptz |  | `now()` |
 | `attempts` | int |  | `0` |
 | `next_attempt_at` | timestamptz |  | `now()` |
@@ -120,6 +122,8 @@ Pennylane'e yazılacak alış belgesi. Ortak kuyruk satırıdır (kasa kuyruğuy
 
 - **Tetikleyici** — ödeyeceğimiz fatura ya da fiş yazılınca ya da değişince işaretlenir, değişiklikten önce alış belgesiyse de;
   yüklenmiş belgenin bağı değişince de işaretlenir (ödeme durumu). Yazıp yazmamak işleyenin kararıdır (`pennylaneDocumentScope`).
+- **Hareket** — Pennylane'den gelen banka satırının bağı eklenince, silinince ya da "zaten yazmıştım" birleşmesiyle taşınınca, bağlı
+  belgesi Pennylane'e yüklenince de işaretlenir; taşınan bağın iki yakası da işaretlenir, aynası olmayan hareket kuyruğa girmez. Kuyrukta bekleyen hareketin Pennylane'deki eşleşmesi okunmaz, önce bizimki yazılır.
 
 ## PennylaneDocument (belge aynası)
 
@@ -132,6 +136,7 @@ Pennylane'deki fatura ve ona en son yazılan taslak.
 | `pennylane_invoice_id` | bigint |  |  |
 | `written` | jsonb |  |  |
 | `payment_status` | text | • |  |
+| `pennylane_open` | numeric(12, 2) | • |  |
 | `uploaded_at` | timestamptz |  | `now()` |
 | `updated_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
@@ -140,4 +145,22 @@ Pennylane'deki fatura ve ona en son yazılan taslak.
 
 - **`written`** — Pennylane'e en son yazılan taslak (`PennylaneInvoiceDraft`); belge değişince fark buna göre çıkar ve güncellenir.
 - **`payment_status`** — nakitle kapanan belgenin işareti; bankadan ödenen belge Pennylane'de eşleşmeyle kapanır, işaret almaz.
+- **`pennylane_open`** — faturanın Pennylane'deki açık kalanı; yüklemeden, güncellemeden ve eşleşmeden sonra okunur, okunamazsa `null`.
+  Pennylane kısmi ödemeyi faturaların açılma sırasıyla dağıttığı için bizimkinden ayrılabilir; ayrılan belge "Pennylane'de farklı"dır.
 - **Silme** — yüklenmiş belge silinemez (`restrict`), çünkü Pennylane'deki faturası bağını kaybederdi.
+
+## PennylaneMatchRemoved (Pennylane'de çözülen bağ)
+
+Bizde duran ama Pennylane'de çözülen bağ.
+
+<!-- alanlar:pennylane_match_removed -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `allocation_id` | uuid |  |  |
+| `removed_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **Silinmez, yeniden yazılmaz** — bağ bizde kalır ve Pennylane'e yeniden kurulmaz; muhasebeye bildirim gider (`pennylane_match_removed`),
+  karar bizim ekrandan verilir. Bağ Pennylane'de yeniden kurulursa satır silinir, bağ bizde silinince de gider (`cascade`).

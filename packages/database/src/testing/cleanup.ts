@@ -566,6 +566,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     await sahipsizBildirimleriSil(db, ['register_write_stuck', 'bank_feed_changed'], 'money_movement', 'id', 'movementId');
     await sahipsizBildirimleriSil(db, ['bank_feed_quiet'], 'account', 'id', 'accountId');
     await sahipsizBildirimleriSil(db, ['pennylane_document_stuck'], 'money_document', 'id', 'documentId');
+    await sahipsizBildirimleriSil(db, ['pennylane_match_stuck', 'pennylane_match_removed'], 'money_movement', 'id', 'movementId');
   });
 
   // Ne yapılamadıysa TEK hatada toplanır: teardown işini bitirdi ve şimdi ne bırakmak zorunda

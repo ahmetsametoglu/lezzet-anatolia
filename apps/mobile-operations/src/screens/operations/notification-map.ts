@@ -78,6 +78,9 @@ const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, Operation
   bank_feed_quiet: 'management',
   // Belge web'deki Para ekranında düzeltilir.
   pennylane_document_stuck: 'management',
+  // Eşleşmenin kararı web'deki Para ekranında verilir.
+  pennylane_match_stuck: 'management',
+  pennylane_match_removed: 'management',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */

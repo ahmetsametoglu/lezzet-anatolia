@@ -189,6 +189,7 @@ export function toMovementRows(rows: readonly AccountLedgerRow[], context: Movem
       description: row.description,
       source: row.source,
       reconciled: row.reconciled,
+      matchedElsewhere: row.matchedElsewhere,
       // Açıklamasız satır boş hücre bırakmaz: bankadan gelen satırın açıklaması hep vardır, elle
       // girilende boş kalabilir — o zaman okunacak tek şey tipin adıdır.
       title: row.description?.trim() || MOVEMENT_TYPE_LABEL[row.type],

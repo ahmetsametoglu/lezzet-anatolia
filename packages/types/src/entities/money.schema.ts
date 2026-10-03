@@ -113,8 +113,8 @@ export const MoneyMovementSchema = z.object({
   /** Banka ekstresiyle eşleşti mi; yalnız `bank_import` satırında anlamlıdır, "izah edildi mi" sorusu `explained`tir. */
   reconciled: z.boolean(),
   /**
-   * İzah, türetilir: sipariş, mal kabul ya da tedarikçi bağı, transfer, tür ya da belge bağı varsa `true`; tetikleyici kurar,
-   * gönderilen değer ezilir. Yoksa hareket "izah edilmemiş" kuyruğundadır ama kayıt geçerlidir.
+   * İzah, türetilir: sipariş, mal kabul ya da tedarikçi bağı, transfer, tür, belge bağı ya da başka işe eşli olması varsa `true`;
+   * tetikleyici kurar, gönderilen değer ezilir. Yoksa hareket "izah edilmemiş" kuyruğundadır ama kayıt geçerlidir.
    */
   explained: z.boolean(),
   /** Banka satırının üretilmiş kimliği, aynı satır iki kez yazılmasın diye. Elle girilen harekette `null`: iki kez 20 € girmek meşrudur. */
@@ -128,6 +128,8 @@ export const MoneyMovementSchema = z.object({
   bankImportId: z.string().uuid().nullable(),
   /** Karşı uç: bu ekstre satırı şu transferin öteki yakasıdır. Bağlanınca ayna susar (`account_movement`), para iki kez sayılmaz. */
   counterpartMovementId: z.string().uuid().nullable(),
+  /** Muhasebe yazılımında aynı şirketin başka işindeki bir faturaya eşli; o iş burada izah beklemez. */
+  matchedElsewhere: z.boolean(),
   createdAt: z.string(),
 });
 export type MoneyMovement = z.infer<typeof MoneyMovementSchema>;

@@ -12,7 +12,7 @@ import {
 } from '@lezzet/database';
 import { mustDelete, purgeTestData } from '@lezzet/database/testing';
 import type { MoneyDocumentInsert } from '@lezzet/types';
-import { processPennylaneDocumentRow } from './documents';
+import { processPennylaneQueueRow } from './queue';
 import { PennylaneError } from './errors';
 import { memoryPennylane } from './memory-pennylane.testkit';
 
@@ -49,7 +49,7 @@ afterEach(async () => {
 const reader = { read: async (key: string) => files.get(key) ?? Promise.reject(new Error(`dosya yok: ${key}`)) };
 const run = async (documentId: string, now = new Date()) => {
   const row = await queue.findByDocument(documentId);
-  return row ? processPennylaneDocumentRow(db, twin.port, row, { liveFrom: LIVE_FROM, now, files: reader }) : 'not_queued';
+  return row ? processPennylaneQueueRow(db, twin.port, row, { liveFrom: LIVE_FROM, now, files: reader }) : 'not_queued';
 };
 const fileOf = (documentId: string, content = documentId, extension = 'pdf') => {
   const key = `finance/documents/${documentId}/belge.${extension}`;
@@ -223,9 +223,7 @@ describe('yazılamayan belge', () => {
   it('canlıya geçiş gününden önce girilmiş belge yüklenmez, kuyruk satırı tamamlanır', async () => {
     const doc = await invoice();
     const row = (await queue.findByDocument(doc.id))!;
-    expect(await processPennylaneDocumentRow(db, twin.port, row, { liveFrom: '2999-01-01', now: new Date(), files: reader })).toBe(
-      'skipped',
-    );
+    expect(await processPennylaneQueueRow(db, twin.port, row, { liveFrom: '2999-01-01', now: new Date(), files: reader })).toBe('skipped');
     expect(await queue.findByDocument(doc.id)).toBeNull();
     expect(twin.invoices()).toHaveLength(0);
   });

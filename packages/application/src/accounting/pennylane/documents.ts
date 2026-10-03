@@ -4,7 +4,6 @@ import {
   MoneyDocumentService,
   MoneyMovementService,
   PennylaneDocumentService,
-  PennylaneQueueService,
   PennylaneSupplierService,
   SupplierService,
   type Db,
@@ -19,12 +18,9 @@ import {
   pennylaneSupplierCandidates,
   type PennylaneDocumentBlock,
 } from '@lezzet/domain-core';
-import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { privateReadUrl } from '@lezzet/storage';
-import type { MoneyDocument, PennylaneInvoiceDraft, PennylanePaymentStatus, PennylaneQueue } from '@lezzet/types';
-import { notifyPennylaneDocumentStuck } from '../../notification/staff-events';
-import { deferBlocked, deferFailed } from '../../queue/defer';
-import { PENNYLANE_SYNC_JOB, pennylaneLiveFrom } from './bank-feed';
+import type { MoneyDocument, PennylaneInvoiceDraft, PennylanePaymentStatus } from '@lezzet/types';
+import { refreshPennylaneOpen } from './matches';
 import type { PennylanePort } from './port';
 
 /**
@@ -32,88 +28,25 @@ import type { PennylanePort } from './port';
  * tarafın tedarikçisi bulunur ya da açılır, belge yüklenir ya da farkı güncellenir, nakitle kapandıysa ödendi işaretlenir.
  */
 
-const BATCH = 20;
-
 /** Belgenin dosyası; okuma testte ağa çıkmayan bir kaynakla değiştirilir. */
 export interface DocumentFileReader {
   read(fileKey: string): Promise<Uint8Array>;
 }
 
-export type PennylaneDocumentOutcome = 'uploaded' | 'updated' | 'paid' | 'unchanged' | 'skipped' | 'blocked' | 'failed';
-
-type WriteResult =
-  { status: Exclude<PennylaneDocumentOutcome, 'blocked' | 'failed'> } | { status: 'blocked'; reason: PennylaneDocumentBlock };
-
-interface SyncContext {
-  liveFrom: string;
-  now: Date;
-  files: DocumentFileReader;
-}
+export type DocumentWriteResult =
+  { status: 'uploaded' | 'updated' | 'paid' | 'unchanged' | 'skipped' } | { status: 'blocked'; reason: PennylaneDocumentBlock };
 
 /** Karşı taraf: tedarikçinin ülkesi ters yüklemenin kodunu seçer, carinin ülkesi tutulmaz. */
 type Party =
   | { kind: 'supplier'; id: string; name: string; country: string | null; vatNumber: string | null; dueDays: number | null }
   | { kind: 'counterparty'; id: string; name: string };
 
-/** Belge kuyruğunun turu; okuma kapalıyken hiçbir belge yazılmaz, çünkü canlıya geçiş günü kapsamın sınırıdır. */
-export async function syncPennylaneDocuments(
+export async function writeDocument(
   db: Db,
   pennylane: PennylanePort,
-  opts: { now?: Date; files?: DocumentFileReader } = {},
-): Promise<Record<string, unknown>> {
-  const liveFrom = await pennylaneLiveFrom(db);
-  if (!liveFrom) return { skipped: 'not_live' };
-  const ctx: SyncContext = { liveFrom, now: opts.now ?? new Date(), files: opts.files ?? privateFiles };
-  const rows = await new PennylaneQueueService(db).listDue(ctx.now.toISOString(), BATCH);
-  const counts: Record<PennylaneDocumentOutcome, number> = {
-    uploaded: 0,
-    updated: 0,
-    paid: 0,
-    unchanged: 0,
-    skipped: 0,
-    blocked: 0,
-    failed: 0,
-  };
-  for (const row of rows) counts[await processPennylaneDocumentRow(db, pennylane, row, ctx)] += 1;
-  // Sonuç turun izinde iç içe durduğu için koşucunun "bir şey yaptı" kaydı onu görmez; yazım varsa burada kaydedilir.
-  if (counts.uploaded + counts.updated + counts.paid + counts.blocked + counts.failed > 0) {
-    logger.info({ job: PENNYLANE_SYNC_JOB, ...counts }, 'pennylane: belge kuyruğu');
-  }
-  return counts;
-}
-
-/** Kuyruğun tek satırı: yazılırsa ya da yazılacak bir şey yoksa tamamlanır, durursa ya da hata alırsa ertelenir. */
-export async function processPennylaneDocumentRow(
-  db: Db,
-  pennylane: PennylanePort,
-  row: PennylaneQueue,
-  ctx: SyncContext,
-): Promise<PennylaneDocumentOutcome> {
-  const queue = new PennylaneQueueService(db);
-  try {
-    const result = await writeDocument(db, pennylane, row.documentId, ctx);
-    if (result.status === 'blocked') {
-      // Dosyasız belge çoğu zaman dosyası yüklenmek üzere olan belgedir; dosya gelince kuyruğa yeniden düşer, haber gürültü olurdu.
-      const { firstTime } = await deferBlocked(queue, row, result.reason, ctx.now);
-      if (firstTime && result.reason !== 'no_file') await alertStuck(db, row.documentId, result.reason);
-      return 'blocked';
-    }
-    await queue.complete(row.id, row.markedAt);
-    return result.status;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const { attempts, alert } = await deferFailed(queue, row, message, ctx.now);
-    if (alert) {
-      await captureError(err, { source: SOURCES.backendCron, context: { job: PENNYLANE_SYNC_JOB, documentId: row.documentId, attempts } });
-      await alertStuck(db, row.documentId, 'error');
-    } else {
-      logger.warn({ documentId: row.documentId, attempts, err: message }, 'pennylane: belge yazımı ertelendi');
-    }
-    return 'failed';
-  }
-}
-
-async function writeDocument(db: Db, pennylane: PennylanePort, documentId: string, ctx: SyncContext): Promise<WriteResult> {
+  documentId: string,
+  ctx: { liveFrom: string; files: DocumentFileReader },
+): Promise<DocumentWriteResult> {
   const document = await new MoneyDocumentService(db).getById(documentId);
   if (!document) return { status: 'skipped' };
   const mirrors = new PennylaneDocumentService(db);
@@ -140,6 +73,7 @@ async function writeDocument(db: Db, pennylane: PennylanePort, documentId: strin
     if (uploaded.status === 'blocked') return uploaded;
     invoiceId = uploaded.invoiceId;
     await mirrors.save({ documentId, pennylaneInvoiceId: invoiceId, written: draft });
+    await refreshPennylaneOpen(db, pennylane, [invoiceId]);
     outcome = 'uploaded';
   } else {
     invoiceId = mirror.pennylaneInvoiceId;
@@ -150,6 +84,7 @@ async function writeDocument(db: Db, pennylane: PennylanePort, documentId: strin
     if (patch) {
       await pennylane.updateInvoice(invoiceId, patch);
       await mirrors.save({ documentId, pennylaneInvoiceId: invoiceId, written: draft });
+      await refreshPennylaneOpen(db, pennylane, [invoiceId]);
     }
     outcome = patch ? 'updated' : 'unchanged';
   }
@@ -281,20 +216,8 @@ async function writePaymentStatus(
   return true;
 }
 
-async function alertStuck(db: Db, documentId: string, reason: string): Promise<void> {
-  const document = await new MoneyDocumentService(db).getById(documentId);
-  if (!document) return;
-  await notifyPennylaneDocumentStuck(db, {
-    documentId,
-    number: document.number,
-    issuedOn: document.issuedOn,
-    reason,
-    dedupeKey: `pennylane-document:${documentId}:${reason}`,
-  });
-}
-
 /** Özel kovanın tek okuma yolu imzalı adrestir. */
-const privateFiles: DocumentFileReader = {
+export const privateDocumentFiles: DocumentFileReader = {
   async read(fileKey) {
     const url = await privateReadUrl(fileKey);
     if (!url) throw new Error('belge dosyası okunamadı: özel kova yapılandırılmamış');

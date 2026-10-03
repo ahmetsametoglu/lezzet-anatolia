@@ -39,6 +39,7 @@ export type MovementRowView = Pick<
   | 'description'
   | 'source'
   | 'reconciled'
+  | 'matchedElsewhere'
 > & {
   /** Operatörün okuduğu cümle — açıklama yoksa tipin adı (boş hücre bırakmaktansa). */
   title: string;

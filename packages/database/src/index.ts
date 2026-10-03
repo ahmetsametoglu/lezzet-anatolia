@@ -109,6 +109,7 @@ export {
   PennylaneBankAccountService,
   PennylaneCursorService,
   PennylaneDocumentService,
+  PennylaneMatchRemovedService,
   PennylaneQueueService,
   PennylaneSupplierService,
   PennylaneTransactionService,

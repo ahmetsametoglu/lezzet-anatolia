@@ -26,5 +26,7 @@
 - **Bizden yüklenen faturayı Pennylane'de düzeltme.** Düzeltme bizdeki belgede yapılır ve Pennylane'e kendiliğinden gider;
   Pennylane'deki elle düzeltme bize dönmez.
 - **Yüklenmiş belgenin dosyasını değiştirme.** Alanlar ve KDV kırılımı Pennylane'de güncellenir, ek güncellenmez.
+- **Lezzet faturasının banka eşleşmesini Pennylane'de çözme.** Bağ bizdeki satırdan kaldırılır ve Pennylane'e kendiliğinden
+  gider; Pennylane'de çözülen bağ bizde kalır, muhasebeye bildirim gider ve karar yine bizim ekrandan verilir.
 - **Toptan ekibi: var olan tedarikçiyi Pennylane'de ikinci kez açma.** Aynı firmanın iki kaydı borcu iki hesaba böler ve
   Lezzet'in o firmaya yükleyeceği belgeyi bekletir.

@@ -141,8 +141,11 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 - Alış belgesi (ödeyeceğimiz fatura ve fiş) canlıya geçiş gününden sonra girildiyse kuyrukla Pennylane'e yüklenir (`pennylane_sync`):
   karşı tarafın tedarikçisi dış referansla bulunur ya da açılır, belge değişince fark güncellenir, nakitle kapanan belge ödendi
   işaretini alır. Belge dosyası PDF, JPEG ya da PNG'dir; Pennylane başka türü almıyor.
+- Pennylane'den gelen banka satırının yüklenmiş belgeye bağı Pennylane'e eşleşme olarak yazılır. Pennylane'de bizim belgemize kurulan
+  eşleşme bizde benimsenir; orada çözülen bağımız bizde kalır, yeniden yazılmaz ve muhasebeye bildirilir.
 - Pennylane şirketi QUALITE'nin toptan operasyonuyla ortaktır: toptan ekibi Pennylane'e doğrudan fatura girer ve tedarikçi açar.
-  Tedarikçi açılmadan önce aynı firmanın kaydı aranıp bağlanır, Pennylane'e elle girilmiş fatura sahiplenilmez.
+  Tedarikçi açılmadan önce aynı firmanın kaydı aranıp bağlanır, Pennylane'e elle girilmiş fatura sahiplenilmez. Başka işin faturasına
+  kurulan eşleşmeye dokunulmaz; o hareket bizde başka işe eşli sayılır ve izahlıdır.
 - Raporlar ekranındaki satış dosyası ve hareket dökümü genel amaçlı dışa aktarımdır, muhasebe akışının parçası değildir.
 - e-fatura sistemin işi **değil**: B2B satış faturası Pennylane'de kesilir, tedarikçi e-faturası Pennylane'e kayıtlı platformdan gelir.
 

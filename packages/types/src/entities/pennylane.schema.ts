@@ -192,11 +192,14 @@ export type PennylaneSupplierMirror = z.infer<typeof PennylaneSupplierMirrorSche
 export const PennylaneSupplierMirrorInsertSchema = PennylaneSupplierMirrorSchema.omit({ createdAt: true });
 export type PennylaneSupplierMirrorInsert = z.infer<typeof PennylaneSupplierMirrorInsertSchema>;
 
-/** Alış belgesinin yazım kuyruğu (`pennylane_queue`); satırı belge ve bağ tetikleyicisi yazar. */
-export const PennylaneQueueSchema = QueueRowSchema.extend({ documentId: z.string().uuid() });
+/** Pennylane yazım kuyruğu (`pennylane_queue`): bir alış belgesi ya da eşleşmesi yazılacak bir banka satırı; satırı tetikleyiciler yazar. */
+export const PennylaneQueueSchema = QueueRowSchema.extend({
+  documentId: z.string().uuid().nullable(),
+  movementId: z.string().uuid().nullable(),
+});
 export type PennylaneQueue = z.infer<typeof PennylaneQueueSchema>;
 
-export const PennylaneQueueInsertSchema = PennylaneQueueSchema.pick({ documentId: true });
+export const PennylaneQueueInsertSchema = PennylaneQueueSchema.pick({ documentId: true, movementId: true }).partial();
 export type PennylaneQueueInsert = z.infer<typeof PennylaneQueueInsertSchema>;
 
 /** Pennylane'deki fatura ve ona en son yazılan taslak (`pennylane_document`); sonraki yazımın farkı buna göre çıkar. */
@@ -205,6 +208,8 @@ export const PennylaneDocumentMirrorSchema = z.object({
   pennylaneInvoiceId: z.number().int(),
   written: PennylaneInvoiceDraftSchema,
   paymentStatus: PennylanePaymentStatusEnum.nullable(),
+  /** Pennylane'deki açık kalan (**cent**), son okunduğunda; okunmadıysa `null`. */
+  pennylaneOpenCents: z.number().int().nullable(),
   uploadedAt: z.string(),
   updatedAt: z.string(),
 });
@@ -212,7 +217,18 @@ export type PennylaneDocumentMirror = z.infer<typeof PennylaneDocumentMirrorSche
 
 export const PennylaneDocumentMirrorInsertSchema = PennylaneDocumentMirrorSchema.partial({
   paymentStatus: true,
+  pennylaneOpenCents: true,
   uploadedAt: true,
   updatedAt: true,
 });
 export type PennylaneDocumentMirrorInsert = z.infer<typeof PennylaneDocumentMirrorInsertSchema>;
+
+/** Pennylane'de çözülen bağ (`pennylane_match_removed`); bizde durur, yeniden yazılmaz. */
+export const PennylaneMatchRemovedSchema = z.object({
+  allocationId: z.string().uuid(),
+  removedAt: z.string(),
+});
+export type PennylaneMatchRemoved = z.infer<typeof PennylaneMatchRemovedSchema>;
+
+export const PennylaneMatchRemovedInsertSchema = PennylaneMatchRemovedSchema.pick({ allocationId: true });
+export type PennylaneMatchRemovedInsert = z.infer<typeof PennylaneMatchRemovedInsertSchema>;

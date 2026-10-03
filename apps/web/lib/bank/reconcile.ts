@@ -11,7 +11,7 @@ import {
   SupplierService,
   serviceDb,
 } from '@lezzet/database';
-import { allocateToDocument, setMovementCounterparty, type AllocationOutcome } from '@lezzet/application';
+import { linkMovementToDocument, setMovementCounterparty, type AllocationOutcome } from '@lezzet/application';
 import { acceptsNature, isUnambiguous, suggestMatches, type MatchCandidate, type MatchSuggestion } from '@lezzet/domain-core';
 import type {
   Account,
@@ -20,7 +20,6 @@ import type {
   MoneyDocument,
   MoneyDocumentBalance,
   MoneyMovement,
-  MoneyMovementUpdate,
   OrderSale,
   StockIntakeBalance,
 } from '@lezzet/types';
@@ -457,36 +456,12 @@ export async function applyMatch(movementId: string, target: MatchTarget): Promi
 }
 
 /**
- * Belgeye bağlama, tutarıyla: bağ satırın kalanı ile belgenin açık kalanının küçüğüdür (`allocateToDocument`) ve karşı taraf belgeden
- * gelir. Satırın tamamı bağlanınca satır mutabık olur ve adı belgeden gelir (tedarikçi faturası stok alımı, öteki borç gider, bize
- * ödenecek belge `misc`); kalan varsa satır kalanıyla kuyrukta kalır.
+ * Belgeye bağlama, tutarıyla; kalan varsa satır kalanıyla kuyrukta kalır. Satırın cevabı uygulama katmanında kurulur
+ * (`linkMovementToDocument`), çünkü Pennylane'de kurulan eşleşme de aynı kapıdan benimsenir.
  */
 async function applyDocument(movement: MoneyMovement, documentId: string): Promise<ReconcileOutcome> {
-  const db = serviceDb();
-  const outcome = await allocateToDocument(db, { movementId: movement.id, documentId });
-  if (outcome.status === 'invalid') return invalid(ALLOCATION_REASON[outcome.reason]);
-
-  const [document, allocations] = await Promise.all([
-    new MoneyDocumentService(db).getById(documentId),
-    new MoneyAllocationService(db).listByMovements([movement.id]),
-  ]);
-  if (!document) return invalid('target_not_found');
-
-  const party = document.supplierId
-    ? { supplierId: document.supplierId, counterpartyId: null }
-    : movement.supplierId || movement.counterpartyId
-      ? {}
-      : { counterpartyId: document.counterpartyId };
-  const patch: MoneyMovementUpdate = { id: movement.id, ...party };
-  if (allocations.reduce((sum, allocation) => sum + allocation.amountCents, 0) >= movement.amountCents) {
-    const type = document.direction === 'in' ? 'misc' : document.supplierId ? 'purchase' : 'expense';
-    patch.type = type;
-    patch.reconciled = true;
-    patch.stockIntakeId = document.stockIntakeId;
-    if (movement.nature === null && acceptsNature(type)) patch.nature = document.nature;
-  }
-  await new MoneyMovementService(db).update(patch);
-  return { status: 'ok', movementId: movement.id };
+  const outcome = await linkMovementToDocument(serviceDb(), { movement, documentId });
+  return outcome.status === 'invalid' ? invalid(ALLOCATION_REASON[outcome.reason]) : { status: 'ok', movementId: movement.id };
 }
 
 /**
@@ -530,16 +505,13 @@ export async function matchOptions(movementId: string): Promise<MatchOptions | n
 }
 
 /**
- * Hareketi belgeye bağlar; hareketin "Bağla" ve belgenin "Ödeme bağla" menüsü buraya gelir. Eşleşme bekleyen ekstre satırı kuyruğun
- * kapısından (`applyDocument`), elle yazılan ya da mutabık satır yalnız tutarlı bağla (`allocateToDocument`) geçer.
+ * Hareketi belgeye bağlar; hareketin "Bağla" ve belgenin "Ödeme bağla" menüsü buraya gelir. Eşleşme bekleyen ekstre satırında bağ
+ * satırın cevabı da olur, elle yazılan ya da mutabık satır yalnız tutarlı bağı alır.
  */
 export async function linkDocument(movementId: string, documentId: string): Promise<ReconcileOutcome> {
-  const db = serviceDb();
-  const movement = await new MoneyMovementService(db).getById(movementId);
+  const movement = await new MoneyMovementService(serviceDb()).getById(movementId);
   if (!movement) return invalid('not_found');
-  if (movement.source === 'bank_import' && !movement.reconciled) return applyDocument(movement, documentId);
-  const outcome = await allocateToDocument(db, { movementId, documentId });
-  return outcome.status === 'invalid' ? invalid(ALLOCATION_REASON[outcome.reason]) : { status: 'ok', movementId };
+  return applyDocument(movement, documentId);
 }
 
 /** Ödeme adayının arandığı pencere — belge gününden ÖNCE (peşin ödeme) ve SONRA (vade) kaç gün. */

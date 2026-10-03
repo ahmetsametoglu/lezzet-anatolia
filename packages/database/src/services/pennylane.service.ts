@@ -6,6 +6,8 @@ import {
   PennylaneDocumentMirrorInsertSchema,
   PennylaneDocumentMirrorSchema,
   PennylaneMappedAccountSchema,
+  PennylaneMatchRemovedInsertSchema,
+  PennylaneMatchRemovedSchema,
   PennylaneQueueInsertSchema,
   PennylaneQueueSchema,
   PennylaneSupplierMirrorInsertSchema,
@@ -19,6 +21,8 @@ import {
   type PennylaneDocumentMirror,
   type PennylaneDocumentMirrorInsert,
   type PennylaneMappedAccount,
+  type PennylaneMatchRemoved,
+  type PennylaneMatchRemovedInsert,
   type PennylanePaymentStatus,
   type PennylaneQueue,
   type PennylaneQueueInsert,
@@ -97,6 +101,10 @@ export class PennylaneTransactionService extends BaseDbService<PennylaneTransact
     return this.getOneBy({ pennylaneId });
   }
 
+  findByMovement(movementId: string): Promise<PennylaneTransactionMirror | null> {
+    return this.getOneBy({ movementId });
+  }
+
   /** Hesabın Pennylane'de silinmemiş hareketleri; liste baştan okununca aradaki silinme bunlardan bulunur. */
   listPresent(accountId: string): Promise<PennylaneTransactionMirror[]> {
     return this.getAll({ accountId, removed: false });
@@ -162,10 +170,17 @@ export class PennylaneQueueService extends QueueDbService<PennylaneQueue, Pennyl
   findByDocument(documentId: string): Promise<PennylaneQueue | null> {
     return this.getOneBy({ documentId });
   }
+
+  findByMovement(movementId: string): Promise<PennylaneQueue | null> {
+    return this.getOneBy({ movementId });
+  }
 }
 
 /** Pennylane'deki fatura ve ona en son yazılan taslak; anahtar belge kimliğidir. */
 export class PennylaneDocumentService extends BaseDbService<PennylaneDocumentMirror, PennylaneDocumentMirrorInsert, never> {
+  /** Kolon `pennylane_open` euro `numeric`; app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ['pennylaneOpenCents'];
+
   constructor(supabase: SupabaseClient) {
     super(
       supabase,
@@ -180,11 +195,49 @@ export class PennylaneDocumentService extends BaseDbService<PennylaneDocumentMir
     return this.getOneBy({ documentId });
   }
 
+  /** Pennylane'deki faturanın bizdeki belgesi; bir hareketin eşleşmeleri bizim mi, başka işin mi, bununla ayrılır. */
+  listByInvoices(invoiceIds: readonly number[]): Promise<PennylaneDocumentMirror[]> {
+    return invoiceIds.length === 0 ? Promise.resolve([]) : this.getAll({ pennylaneInvoiceId: [...invoiceIds] });
+  }
+
+  listByDocuments(documentIds: readonly string[]): Promise<PennylaneDocumentMirror[]> {
+    return documentIds.length === 0 ? Promise.resolve([]) : this.getAll({ documentId: [...documentIds] });
+  }
+
+  async setPennylaneOpen(documentId: string, pennylaneOpenCents: number | null): Promise<void> {
+    await this.updateWhereIn('documentId', [documentId], { pennylaneOpenCents, updatedAt: new Date().toISOString() });
+  }
+
   save(row: PennylaneDocumentMirrorInsert): Promise<PennylaneDocumentMirror> {
     return this.upsert({ ...row, updatedAt: new Date().toISOString() }, 'document_id');
   }
 
   async setPaymentStatus(documentId: string, paymentStatus: PennylanePaymentStatus): Promise<void> {
     await this.updateWhereIn('documentId', [documentId], { paymentStatus, updatedAt: new Date().toISOString() });
+  }
+}
+
+/** Pennylane'de çözülen bağ; bağ bizde durur ama yeniden yazılmaz. */
+export class PennylaneMatchRemovedService extends BaseDbService<PennylaneMatchRemoved, PennylaneMatchRemovedInsert, never> {
+  constructor(supabase: SupabaseClient) {
+    super(
+      supabase,
+      'pennylane_match_removed',
+      PennylaneMatchRemovedSchema,
+      PennylaneMatchRemovedInsertSchema,
+      PennylaneMatchRemovedSchema as never,
+    );
+  }
+
+  listByAllocations(allocationIds: readonly string[]): Promise<PennylaneMatchRemoved[]> {
+    return allocationIds.length === 0 ? Promise.resolve([]) : this.getAll({ allocationId: [...allocationIds] });
+  }
+
+  save(allocationId: string): Promise<PennylaneMatchRemoved> {
+    return this.upsert({ allocationId }, 'allocation_id');
+  }
+
+  async remove(allocationId: string): Promise<void> {
+    await this.deleteWhere({ allocationId });
   }
 }

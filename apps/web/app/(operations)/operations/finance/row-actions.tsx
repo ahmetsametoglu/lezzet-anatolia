@@ -54,13 +54,22 @@ export function MovementMatchCell({ row, matcher }: MovementMatchCellProps) {
   if (row.fromBank && !row.reconciled) {
     // Eşleşme bekleyen ekstre satırı: hap önerinin kendisi ("öneri: …"), kısmen bağlıysa bağın hâli.
     const partial = row.documents.length > 0;
-    const target = row.suggestionTarget;
+    // Pennylane'de aynı şirketin başka işine eşli satır bizden karşılık beklemez; öneri sunulmaz, bağımız varsa yine kurulabilir.
+    const target = row.matchedElsewhere ? null : row.suggestionTarget;
     return (
       <div className="flex min-w-0 items-center gap-1">
         <MovementMatchSelector
           {...common}
-          triggerLabel={partial ? undefined : row.suggestionTitle ? `öneri: ${row.suggestionTitle}` : 'Eşleştir'}
-          tone={partial ? undefined : SUGGESTION_VIEW[row.suggestion ?? 'none'].tone}
+          triggerLabel={
+            partial
+              ? undefined
+              : row.matchedElsewhere
+                ? "Pennylane'de başka işe eşli"
+                : row.suggestionTitle
+                  ? `öneri: ${row.suggestionTitle}`
+                  : 'Eşleştir'
+          }
+          tone={partial ? undefined : row.matchedElsewhere ? 'neutral' : SUGGESTION_VIEW[row.suggestion ?? 'none'].tone}
           // Kısmen bağlı ya da carisi konmuş satırın cevabı da geri alınır (`canUnmatch`).
           onUnmatch={row.canUnmatch ? () => matcher.onUnmatch(row.id) : undefined}
         />

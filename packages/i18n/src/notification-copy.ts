@@ -290,6 +290,7 @@ const PENNYLANE_ENGELI: Record<string, string> = {
   duplicate_file: "aynı dosya Pennylane'de başka bir faturada",
   supplier_ambiguous: "Pennylane'de bu firmaya uyan birden çok tedarikçi var",
   supplier_taken: "Pennylane'deki tedarikçi bizde başka bir karşı tarafa bağlı",
+  foreign_matches: "Pennylane'de başka işin faturasına da eşli, eşleşme elle düzeltilmeli",
 };
 
 /** Pennylane engelinin etiketi; tanınmayan sebep kodu olduğu gibi döner. */
@@ -342,6 +343,25 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
         : typeof p.reason === 'string'
           ? pennylaneBlockReasonLabel(p.reason)
           : null,
+  }),
+  /* Eşleşme kendiliğinden yeniden denenir; haber Para ekranını hesabın o gününe açar. */
+  pennylane_match_stuck: (p) => ({
+    tone: 'alert',
+    label: 'Muhasebe',
+    title: "Banka satırının eşleşmesi Pennylane'e yazılamıyor",
+    subtitle:
+      p.reason === 'error'
+        ? 'art arda hata alındı, kendiliğinden yeniden deneniyor'
+        : typeof p.reason === 'string'
+          ? pennylaneBlockReasonLabel(p.reason)
+          : null,
+  }),
+  /* Bağ bizde durur ve yeniden yazılmaz; bağı silmek ya da silip yeniden kurmak bizim ekranın kararıdır. */
+  pennylane_match_removed: (p) => ({
+    tone: 'alert',
+    label: 'Muhasebe',
+    title: "Bir eşleşme Pennylane'de çözüldü",
+    subtitle: `${typeof p.valueDate === 'string' ? `${p.valueDate} · ` : ''}bağ bizde duruyor, elle bakın`,
   }),
   /* Sessizlik çoğu zaman bankanın Pennylane bağlantısının düşmesidir; yenilenene kadar banka satırı gelmez. */
   bank_feed_quiet: (p) => ({

@@ -69,7 +69,7 @@ export function PennylaneCard({ data }: PennylaneCardProps) {
         />
       ))}
 
-      <CardLine label="Belgeler">
+      <CardLine label="Kuyruk">
         <QueueText queue={data.queue} />
       </CardLine>
       <CardLine label="Eşitleme">

@@ -13,6 +13,7 @@ import { logger } from '@lezzet/observability';
 import type { MoneyMovement, PennylaneMappedAccount, PennylaneTransaction, PennylaneTransactionMirror } from '@lezzet/types';
 import { notifyBankFeedChanged, notifyBankFeedQuiet } from '../../notification/staff-events';
 import { PennylaneError } from './errors';
+import { readMovementMatches } from './matches';
 import type { PennylanePort } from './port';
 
 /**
@@ -152,7 +153,7 @@ export async function syncBankFeed(db: Db, pennylane: PennylanePort, opts: { now
   }
 
   const counts: FeedCounts = { inserted: 0, updated: 0, removed: 0, alerted: 0 };
-  const apply = applier(db, liveFrom, counts);
+  const apply = applier(db, pennylane, liveFrom, counts);
   let listed = 0;
   for (const account of accounts.filter((row) => row.listedAt === null)) {
     await listAccount(db, pennylane, account, liveFrom, apply);
@@ -281,8 +282,26 @@ async function listAccount(
   await new PennylaneBankAccountService(db).markListed([account.accountId], new Date().toISOString());
 }
 
-/** Hareketin planını uygular; banka satırı yazıldıktan sonra ayna yazılır, yarıda kalan yazım satırı kimliğinden bulur. */
-function applier(db: Db, liveFrom: string, counts: FeedCounts): Apply {
+/**
+ * Hareketin planını uygular; banka satırı yazıldıktan sonra ayna yazılır, yarıda kalan yazım satırı kimliğinden bulur. Satırı duran
+ * hareketin eşleşmesi de okunur, çünkü eşleşme hareketin tutarını değiştirmeden akışa düşer.
+ */
+function applier(db: Db, pennylane: PennylanePort, liveFrom: string, counts: FeedCounts): Apply {
+  const plan = planApplier(db, liveFrom, counts);
+  return async (account, pennylaneId, transaction) => {
+    const movementId = await plan(account, pennylaneId, transaction);
+    if (movementId && transaction && !transaction.archived) {
+      await readMovementMatches(db, pennylane, { movementId, transactionId: pennylaneId, accountId: account.accountId });
+    }
+  };
+}
+
+/** Planın yazımı; banka satırı kalırsa kimliğini döner. */
+function planApplier(
+  db: Db,
+  liveFrom: string,
+  counts: FeedCounts,
+): (account: PennylaneMappedAccount, pennylaneId: number, transaction: PennylaneTransaction | null) => Promise<string | null> {
   const movements = new MoneyMovementService(db);
   const mirrors = new PennylaneTransactionService(db);
   return async (account, pennylaneId, transaction) => {
@@ -310,12 +329,12 @@ function applier(db: Db, liveFrom: string, counts: FeedCounts): Apply {
 
     switch (action.kind) {
       case 'skip':
-        return;
+        return movement?.id ?? null;
       case 'insert': {
         const written = await writeMovement(movements, account, transaction as PennylaneTransaction);
         await mirrors.save(mirrorOf(written.id));
         counts.inserted += 1;
-        return;
+        return written.id;
       }
       case 'update': {
         const row = transaction as PennylaneTransaction;
@@ -328,13 +347,13 @@ function applier(db: Db, liveFrom: string, counts: FeedCounts): Apply {
         });
         await mirrors.save(mirrorOf((movement as MoneyMovement).id));
         counts.updated += 1;
-        return;
+        return (movement as MoneyMovement).id;
       }
       case 'remove':
         if (movement) await movements.delete(movement.id);
         await mirrors.save(mirrorOf(null));
         counts.removed += 1;
-        return;
+        return null;
       case 'alert':
         await notifyBankFeedChanged(db, {
           accountId: account.accountId,
@@ -345,10 +364,10 @@ function applier(db: Db, liveFrom: string, counts: FeedCounts): Apply {
         });
         await mirrors.save(mirrorOf((movement as MoneyMovement).id));
         counts.alerted += 1;
-        return;
+        return (movement as MoneyMovement).id;
       case 'mirror':
         await mirrors.save(mirrorOf(movement?.id ?? null));
-        return;
+        return movement?.id ?? null;
     }
   };
 }

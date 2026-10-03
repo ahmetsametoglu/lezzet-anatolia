@@ -240,8 +240,10 @@ create table public.money_movement (
   -- Ekstre satırının karşıladığı transfer ucu: bağlanınca ayna susar, yoksa kasadan yatırılan para bankada hem ayna hem
   -- ekstre olarak iki kez sayılırdı. Uç silinirse bağ düşer ve para yine tek kez sayılır.
   counterpart_movement_id uuid references public.money_movement (id) on delete set null,
+  -- Hareket bu sistemin dışında, aynı şirketin başka işindeki bir faturaya eşli (muhasebe yazılımında); o iş burada izah beklemez.
+  matched_elsewhere boolean not null default false,
   created_at timestamptz not null default now(),
-  -- Bağ, transfer, tür ya da belge bağından biri hareketi açıklar; etiket açıklamaz ve eksik izah kaydı engellemez.
+  -- Bağ, transfer, tür, belge bağı ya da başka işe eşli olması hareketi açıklar; etiket açıklamaz ve eksik izah kaydı engellemez.
   -- Tetikleyici kurar (`money_movement_explain`), çünkü belge bağı başka tabloda ve üretilmiş kolon oraya bakamaz.
   explained boolean not null default false,
 
@@ -336,7 +338,7 @@ set search_path = public
 as $$
 begin
   new.explained := new.order_id is not null or new.stock_intake_id is not null or new.supplier_id is not null
-    or new.counter_account_id is not null or new.nature is not null
+    or new.counter_account_id is not null or new.nature is not null or new.matched_elsewhere
     or exists (select 1 from public.money_allocation a where a.movement_id = new.id);
   return new;
 end;

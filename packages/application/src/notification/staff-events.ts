@@ -183,6 +183,49 @@ export async function notifyPennylaneDocumentStuck(
 }
 
 /**
+ * Banka satırının eşleşmesi Pennylane'e yazılamıyor — muhasebeye ve yönetime; satır ve sebep başına bir kez haber olur.
+ */
+export async function notifyPennylaneMatchStuck(
+  db: SupabaseClient,
+  input: { movementId: string; accountId: string; valueDate: string; reason: string; dedupeKey: string },
+): Promise<void> {
+  try {
+    await dispatchStaffNotification(db, {
+      kind: 'pennylane_match_stuck',
+      roles: ['admin', 'accounting'],
+      warehouseId: null,
+      target: null,
+      payload: { movementId: input.movementId, accountId: input.accountId, valueDate: input.valueDate, reason: input.reason },
+      dedupeKey: input.dedupeKey,
+    });
+  } catch (err) {
+    yut(err, 'pennylane_match_stuck');
+  }
+}
+
+/**
+ * Bizde duran bir bağ Pennylane'de çözüldü — muhasebeye ve yönetime; bağ bizde silinmez, yeniden de yazılmaz. Bağ başına bir kez
+ * haber olur.
+ */
+export async function notifyPennylaneMatchRemoved(
+  db: SupabaseClient,
+  input: { movementId: string; documentId: string; accountId: string; valueDate: string; dedupeKey: string },
+): Promise<void> {
+  try {
+    await dispatchStaffNotification(db, {
+      kind: 'pennylane_match_removed',
+      roles: ['admin', 'accounting'],
+      warehouseId: null,
+      target: null,
+      payload: { movementId: input.movementId, documentId: input.documentId, accountId: input.accountId, valueDate: input.valueDate },
+      dedupeKey: input.dedupeKey,
+    });
+  } catch (err) {
+    yut(err, 'pennylane_match_removed');
+  }
+}
+
+/**
  * Eşlenen banka hesabına Pennylane'den hareket gelmiyor — muhasebeye ve yönetime; bankanın Pennylane bağlantısı yenilenene kadar banka
  * satırı gelmez. Hesap ve gün başına bir kez haber olur, sessizlik sürerse ertesi gün yeniden hatırlatılır.
  */

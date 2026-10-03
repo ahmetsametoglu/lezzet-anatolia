@@ -57,15 +57,18 @@ create table public.pennylane_supplier (
   constraint pennylane_supplier_party check ((supplier_id is null) <> (counterparty_id is null))
 );
 
--- ── Belge kuyruğu ───────────────────────────────────────────────────────────
--- Alış belgesi ya da yüklenmiş belgenin bağı değişince işaretlenir; işleyen belgeyi yükler, günceller ya da ödeme durumunu yazar.
+-- ── Yazım kuyruğu ───────────────────────────────────────────────────────────
+-- Alış belgesi değişince belge, Pennylane'den okunan banka satırının bağı değişince hareket işaretlenir; işleyen belgeyi yükler,
+-- günceller, ödeme durumunu ya da hareketin eşleşmesini yazar.
 create table public.pennylane_queue (
   id uuid primary key default gen_random_uuid(),
-  document_id uuid not null unique references public.money_document (id) on delete cascade,
+  document_id uuid unique references public.money_document (id) on delete cascade,
+  movement_id uuid unique references public.money_movement (id) on delete cascade,
   marked_at timestamptz not null default now(),
   attempts int not null default 0,
   next_attempt_at timestamptz not null default now(),
-  last_error text
+  last_error text,
+  constraint pennylane_queue_one_target check ((document_id is null) <> (movement_id is null))
 );
 create index pennylane_queue_due_idx on public.pennylane_queue (next_attempt_at);
 
@@ -78,9 +81,19 @@ create table public.pennylane_document (
   written jsonb not null,
   -- Nakitle kapanan belgenin işareti; bankadan ödenen belge eşleşmeyle kapanır, işaret almaz.
   payment_status text,
+  -- Pennylane'deki açık kalan, son okunduğunda; bizimkinden ayrılırsa belge "Pennylane'de farklı"dır.
+  pennylane_open numeric(12, 2),
   uploaded_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint pennylane_document_payment_status check (payment_status in ('paid', 'to_be_paid'))
+);
+
+-- ── Pennylane'de çözülen bağ ────────────────────────────────────────────────
+-- Bizde duran ama Pennylane'de çözülen bağ bizde silinmez, yeniden de yazılmaz; karar bizim ekranda verilir. Bağ silinip yeniden
+-- kurulursa yeni bağdır ve yazılır.
+create table public.pennylane_match_removed (
+  allocation_id uuid primary key references public.money_allocation (id) on delete cascade,
+  removed_at timestamptz not null default now()
 );
 
 create or replace function public.pennylane_queue_mark_document(p_document_id uuid) returns void
@@ -91,6 +104,20 @@ as $$
 begin
   insert into public.pennylane_queue (document_id) values (p_document_id)
   on conflict (document_id) do update set marked_at = now(), next_attempt_at = now(), attempts = 0, last_error = null;
+end;
+$$;
+
+-- Yalnız Pennylane'den okunan banka satırının eşleşmesi yazılır; öteki hareketin Pennylane'de karşılığı yok.
+create or replace function public.pennylane_queue_mark_movement(p_movement_id uuid) returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  if exists (select 1 from public.pennylane_transaction where movement_id = p_movement_id) then
+    insert into public.pennylane_queue (movement_id) values (p_movement_id)
+    on conflict (movement_id) do update set marked_at = now(), next_attempt_at = now(), attempts = 0, last_error = null;
+  end if;
 end;
 $$;
 
@@ -115,29 +142,52 @@ create trigger money_document_pennylane_queue
   on public.money_document
   for each row execute function public.pennylane_queue_mark();
 
--- Bağ yalnız yüklenmiş belgenin ödeme durumunu değiştirir; henüz yüklenmemiş belgenin durumu yüklenirken yazılır.
+-- Bağ yüklenmiş belgenin ödeme durumunu ve hareketin eşleşmesini değiştirir; henüz yüklenmemiş belgenin ikisi yüklenince yazılır.
+-- Taşınan bağın iki yakası da işaretlenir, çünkü "zaten yazmıştım" birleşmesi ve geri alınması bağı bir hareketten ötekine geçirir.
 create or replace function public.pennylane_queue_mark_allocation() returns trigger
 language plpgsql
 security invoker
 set search_path = public
 as $$
 declare
-  v_document_id uuid := case when tg_op = 'DELETE' then old.document_id else new.document_id end;
+  v_sides public.money_allocation[] := case tg_op when 'INSERT' then array[new] when 'DELETE' then array[old] else array[old, new] end;
+  v_side public.money_allocation;
 begin
-  if exists (select 1 from public.pennylane_document where document_id = v_document_id) then
-    perform public.pennylane_queue_mark_document(v_document_id);
-  end if;
+  foreach v_side in array v_sides loop
+    if exists (select 1 from public.pennylane_document where document_id = v_side.document_id) then
+      perform public.pennylane_queue_mark_document(v_side.document_id);
+      perform public.pennylane_queue_mark_movement(v_side.movement_id);
+    end if;
+  end loop;
   return null;
 end;
 $$;
 
 create trigger money_allocation_pennylane_queue
-  after insert or delete or update of amount on public.money_allocation
+  after insert or delete or update of amount, movement_id, document_id on public.money_allocation
   for each row execute function public.pennylane_queue_mark_allocation();
 
+-- Yüklenen belgenin bağları o ana kadar yazılamazdı: Pennylane'de fatura yoktu.
+create or replace function public.pennylane_queue_mark_uploaded() returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  perform public.pennylane_queue_mark_movement(a.movement_id) from public.money_allocation a where a.document_id = new.document_id;
+  return null;
+end;
+$$;
+
+create trigger pennylane_document_queue
+  after insert on public.pennylane_document
+  for each row execute function public.pennylane_queue_mark_uploaded();
+
 revoke execute on function public.pennylane_queue_mark_document(uuid) from public, anon, authenticated;
+revoke execute on function public.pennylane_queue_mark_movement(uuid) from public, anon, authenticated;
 revoke execute on function public.pennylane_queue_mark() from public, anon, authenticated;
 revoke execute on function public.pennylane_queue_mark_allocation() from public, anon, authenticated;
+revoke execute on function public.pennylane_queue_mark_uploaded() from public, anon, authenticated;
 
 alter table public.pennylane_bank_account enable row level security;
 alter table public.pennylane_transaction enable row level security;
@@ -145,3 +195,4 @@ alter table public.pennylane_cursor enable row level security;
 alter table public.pennylane_supplier enable row level security;
 alter table public.pennylane_queue enable row level security;
 alter table public.pennylane_document enable row level security;
+alter table public.pennylane_match_removed enable row level security;

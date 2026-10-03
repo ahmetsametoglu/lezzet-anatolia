@@ -8,9 +8,16 @@ import {
   StockIntakeBalanceService,
   StockIntakeService,
 } from '@lezzet/database';
-import { checkDocumentFile, documentVatProblem, type DocumentVatProblem } from '@lezzet/domain-core';
+import { acceptsNature, checkDocumentFile, documentVatProblem, type DocumentVatProblem } from '@lezzet/domain-core';
 import { financeDocumentScope, privateReadUrl, privateUploadUrl, r2Keys } from '@lezzet/storage';
-import type { MoneyAllocation, MoneyDocument, MoneyDocumentBalance, MoneyDocumentInsert } from '@lezzet/types';
+import type {
+  MoneyAllocation,
+  MoneyDocument,
+  MoneyDocumentBalance,
+  MoneyDocumentInsert,
+  MoneyMovement,
+  MoneyMovementUpdate,
+} from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { natureProblemOf } from './natures';
 
@@ -137,6 +144,41 @@ export async function allocateToDocument(
 
   const allocation = await allocations.insert({ movementId: movement.id, documentId: document.id, amountCents: Math.min(remaining, open) });
   return { status: 'ok', allocation };
+}
+
+/**
+ * Hareketi belgeye bağlar; eşleşme bekleyen banka satırında bağ satırın cevabıdır: karşı taraf belgeden gelir, satırın tamamı
+ * bağlanınca satır mutabık olur ve tipi belgeden gelir. Öteki hareket yalnız bağı alır, çünkü izahı zaten bağı ya da türüdür.
+ */
+export async function linkMovementToDocument(
+  db: SupabaseClient,
+  input: { movement: MoneyMovement; documentId: string },
+): Promise<AllocationOutcome> {
+  const { movement } = input;
+  const outcome = await allocateToDocument(db, { movementId: movement.id, documentId: input.documentId });
+  if (outcome.status === 'invalid' || movement.source !== 'bank_import' || movement.reconciled) return outcome;
+
+  const [document, allocations] = await Promise.all([
+    new MoneyDocumentService(db).getById(input.documentId),
+    new MoneyAllocationService(db).listByMovements([movement.id]),
+  ]);
+  if (!document) return { status: 'invalid', reason: 'not_found' };
+  const party = document.supplierId
+    ? { supplierId: document.supplierId, counterpartyId: null }
+    : movement.supplierId || movement.counterpartyId
+      ? {}
+      : { counterpartyId: document.counterpartyId };
+  const patch: MoneyMovementUpdate = { id: movement.id, ...party };
+  if (allocations.reduce((sum, allocation) => sum + allocation.amountCents, 0) >= movement.amountCents) {
+    // Tedarikçi faturası stok alımı, öteki borç gider, bize ödenecek belge `misc`.
+    const type = document.direction === 'in' ? 'misc' : document.supplierId ? 'purchase' : 'expense';
+    patch.type = type;
+    patch.reconciled = true;
+    patch.stockIntakeId = document.stockIntakeId;
+    if (movement.nature === null && acceptsNature(type)) patch.nature = document.nature;
+  }
+  await new MoneyMovementService(db).update(patch);
+  return outcome;
 }
 
 /** Bağı kaldırır — hareket de belge de kalır, yalnız aradaki bağ gider; belgenin açık kalanı geri gelir. */

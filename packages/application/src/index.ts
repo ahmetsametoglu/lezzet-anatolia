@@ -569,6 +569,7 @@ export {
   attachDocumentFile,
   createMoneyDocument,
   documentFileUrl,
+  linkMovementToDocument,
   listOpenDocuments,
   removeAllocation,
   requestDocumentUploadUrl,

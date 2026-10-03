@@ -13,7 +13,8 @@ export function opsNotificationHref(row: Pick<MeNotification, 'kind' | 'targetTy
     return '/operations/settings?tab=setup';
   }
   if (row.kind === 'b2b_application_received') return '/operations/customers';
-  if (row.kind === 'bank_feed_changed' && typeof row.payload.accountId === 'string' && typeof row.payload.valueDate === 'string') {
+  const movementDay = row.kind === 'bank_feed_changed' || row.kind === 'pennylane_match_stuck' || row.kind === 'pennylane_match_removed';
+  if (movementDay && typeof row.payload.accountId === 'string' && typeof row.payload.valueDate === 'string') {
     return `/operations/finance?acct=${row.payload.accountId}&from=${row.payload.valueDate}&to=${row.payload.valueDate}`;
   }
   if (row.kind === 'pennylane_document_stuck') {
