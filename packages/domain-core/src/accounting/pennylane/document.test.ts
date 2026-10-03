@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   pennylaneByLabel,
   pennylaneDocumentScope,
+  pennylaneDocumentStatus,
   pennylaneInvoiceCategories,
   pennylaneInvoiceDraft,
   pennylaneInvoicePatch,
@@ -211,5 +212,33 @@ describe("Lezzet'in faturasının analitik kategorisi", () => {
         lezzet,
       ),
     ).toEqual([{ id: 21, weight: 1 }]);
+  });
+});
+
+describe('belge satırındaki Pennylane durumu', () => {
+  const uploaded = { paymentStatus: null, pennylaneOpenCents: 0 };
+  const status = (over: Partial<Parameters<typeof pennylaneDocumentStatus>[0]> = {}) =>
+    pennylaneDocumentStatus({ live: true, openAmountCents: 0, mirror: uploaded, queue: null, ...over });
+
+  it('Pennylane canlıya geçmemişse ya da belge kapsam dışıysa durum yok', () => {
+    expect(status({ live: false })).toBeNull();
+    expect(status({ mirror: null })).toBeNull();
+  });
+
+  it('kuyruktaki belge bekleme sebebini, hata aldığını ya da sırada olduğunu söyler; bu yüklenmiş belgede de geçerli', () => {
+    expect(status({ mirror: null, queue: { attempts: 0, blockReason: 'no_file' } })).toEqual({ kind: 'blocked', reason: 'no_file' });
+    expect(status({ queue: { attempts: 3, blockReason: null } })).toEqual({ kind: 'failing' });
+    expect(status({ queue: { attempts: 0, blockReason: null } })).toEqual({ kind: 'pending' });
+  });
+
+  it("açık kalan Pennylane'dekinden ayrılan belge farklıdır; nakitle ödenen ya da Pennylane kalanı okunmamış belge karşılaştırılmaz", () => {
+    expect(status({ openAmountCents: 0, mirror: { paymentStatus: null, pennylaneOpenCents: 2_000 } })).toEqual({
+      kind: 'different',
+      pennylaneOpenCents: 2_000,
+    });
+    expect(status({ openAmountCents: 2_000, mirror: { paymentStatus: null, pennylaneOpenCents: 2_000 } })).toEqual({ kind: 'uploaded' });
+    expect(status({ openAmountCents: -500, mirror: { paymentStatus: null, pennylaneOpenCents: 0 } })).toEqual({ kind: 'uploaded' });
+    expect(status({ openAmountCents: 0, mirror: { paymentStatus: 'paid', pennylaneOpenCents: 16_550 } })).toEqual({ kind: 'uploaded' });
+    expect(status({ openAmountCents: 0, mirror: { paymentStatus: null, pennylaneOpenCents: null } })).toEqual({ kind: 'uploaded' });
   });
 });

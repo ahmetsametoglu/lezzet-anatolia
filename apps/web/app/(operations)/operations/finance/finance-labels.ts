@@ -143,6 +143,15 @@ export const DOCUMENT_STATE_LABEL = {
   overpaid: 'fazla ödendi',
 } as const;
 
+/** Belge satırındaki Pennylane durumu; bekleme sebebinin metni bildirimle ortak sözlükten gelir. */
+export const PENNYLANE_STATUS_LABEL = {
+  uploaded: 'Pennylane ✓',
+  pending: 'Pennylane sırasında',
+  failing: "Pennylane'e yazılamadı, yeniden denenecek",
+  blocked: "Pennylane'e gitmedi",
+  different: "Pennylane'de farklı",
+} as const;
+
 /** Carinin türü — seçicide ve sözlükte grup başlığı. */
 export const COUNTERPARTY_KIND_LABEL: Record<CounterpartyKind, string> = {
   institution: 'Kurum',

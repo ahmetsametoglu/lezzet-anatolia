@@ -156,6 +156,37 @@ export function pennylanePaymentStatus(input: {
   return input.written === 'paid' ? 'to_be_paid' : null;
 }
 
+/** Belge satırındaki Pennylane durumu. */
+export type PennylaneDocumentStatus =
+  | { kind: 'uploaded' }
+  | { kind: 'different'; pennylaneOpenCents: number }
+  | { kind: 'pending' }
+  | { kind: 'failing' }
+  | { kind: 'blocked'; reason: string };
+
+/**
+ * Belgenin Pennylane durumu; Pennylane canlıya geçmemişse ya da belge kapsam dışıysa `null`. Nakitle ödenen belgenin açık kalanı
+ * karşılaştırılmaz, çünkü Pennylane "ödendi" işaretinde kalan tutarı düşürmüyor.
+ */
+export function pennylaneDocumentStatus(input: {
+  live: boolean;
+  openAmountCents: number;
+  mirror: { paymentStatus: PennylanePaymentStatus | null; pennylaneOpenCents: number | null } | null;
+  queue: { attempts: number; blockReason: string | null } | null;
+}): PennylaneDocumentStatus | null {
+  if (!input.live) return null;
+  if (input.queue) {
+    if (input.queue.blockReason) return { kind: 'blocked', reason: input.queue.blockReason };
+    return input.queue.attempts > 0 ? { kind: 'failing' } : { kind: 'pending' };
+  }
+  if (!input.mirror) return null;
+  const pennylaneOpen = input.mirror.pennylaneOpenCents;
+  if (input.mirror.paymentStatus === 'paid' || pennylaneOpen === null || pennylaneOpen === Math.max(0, input.openAmountCents)) {
+    return { kind: 'uploaded' };
+  }
+  return { kind: 'different', pennylaneOpenCents: pennylaneOpen };
+}
+
 const normalizedVat = (vat: string | null): string | null => vat?.replace(/[\s.-]/g, '').toUpperCase() || null;
 /** Türkçe adın Fransızca yazılışı da tutsun: noktasız ı ayrışmayla i'ye inmez, ayrıca eşlenir. */
 const normalizedName = (name: string): string =>

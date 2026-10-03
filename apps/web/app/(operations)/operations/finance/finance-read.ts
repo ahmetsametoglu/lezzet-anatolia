@@ -1,7 +1,25 @@
-import { acceptsNature, type MatchKind, type MatchSuggestion } from '@lezzet/domain-core';
-import type { Account, AccountBalance, AccountLedgerRow, MoneyDocument, MoneyDocumentBalance, MoneyMovement, MovementType } from '@lezzet/types';
-import { dayMonth, money } from '@/components/operation/ui/format';
+import {
+  acceptsNature,
+  pennylaneDocumentStatus,
+  type MatchKind,
+  type MatchSuggestion,
+  type PennylaneDocumentStatus,
+} from '@lezzet/domain-core';
+import { pennylaneBlockReasonLabel } from '@lezzet/i18n';
+import type {
+  Account,
+  AccountBalance,
+  AccountLedgerRow,
+  MoneyDocument,
+  MoneyDocumentBalance,
+  MoneyMovement,
+  MovementType,
+  PennylaneDocumentMirror,
+  PennylaneQueue,
+} from '@lezzet/types';
+import { amount, dayMonth, money } from '@/components/operation/ui/format';
 import type { DocumentPaymentOptions, MatchOptions, MatchTarget, MatchTargets } from '@/lib/bank/reconcile';
+import { queueBlockReason } from '@/lib/queue/block-reason';
 import { DOCUMENT_KIND_LABEL } from '@/components/operation/form/document-form/labels';
 import {
   ACCOUNT_TONE,
@@ -9,6 +27,7 @@ import {
   COUNTERPARTY_KIND_LABEL,
   MATCH_EFFECT,
   MOVEMENT_TYPE_LABEL,
+  PENNYLANE_STATUS_LABEL,
   type MatchKindView,
 } from './finance-labels';
 import type {
@@ -60,13 +79,38 @@ function partyOf(doc: Pick<MoneyDocument, 'counterpartyId' | 'supplierId'>, part
   return id ? (partyNames.get(id) ?? null) : null;
 }
 
+/** Belgelerin Pennylane durumunun girdisi, tek turda okunmuş haritalar; anahtar belge kimliğidir. */
+export interface DocumentPennylaneContext {
+  live: boolean;
+  mirrors: ReadonlyMap<string, Pick<PennylaneDocumentMirror, 'paymentStatus' | 'pennylaneOpenCents'>>;
+  queue: ReadonlyMap<string, Pick<PennylaneQueue, 'attempts' | 'lastError'>>;
+}
+
+/** Satırdaki Pennylane durumu; sorunlu durum amber, öteki silik yazılır. */
+function pennylaneLine(status: PennylaneDocumentStatus | null): DocumentRowView['pennylane'] {
+  if (!status) return null;
+  switch (status.kind) {
+    case 'uploaded':
+    case 'pending':
+      return { text: PENNYLANE_STATUS_LABEL[status.kind], tone: 'neutral' };
+    case 'failing':
+      return { text: PENNYLANE_STATUS_LABEL.failing, tone: 'amber' };
+    case 'blocked':
+      return { text: `${PENNYLANE_STATUS_LABEL.blocked}: ${pennylaneBlockReasonLabel(status.reason)}`, tone: 'amber' };
+    case 'different':
+      return { text: `${PENNYLANE_STATUS_LABEL.different} · açık ${amount(status.pennylaneOpenCents)}`, tone: 'amber' };
+  }
+}
+
 /** Belge satırları: Belgeler sekmesi ve "Ödemesini yaz" formunun künyesi; açık kalan görünümden gelir, burada hesaplanmaz. */
 export function toDocumentRows(
   documents: ReadonlyArray<MoneyDocument & { balance: MoneyDocumentBalance }>,
   names: Pick<MovementReadContext, 'partyNames' | 'natureLabels'>,
+  pennylane: DocumentPennylaneContext,
 ): DocumentRowView[] {
   return documents.map((doc) => {
     const partyName = partyOf(doc, names.partyNames);
+    const queued = pennylane.queue.get(doc.id);
     return {
       id: doc.id,
       kind: doc.kind,
@@ -88,6 +132,14 @@ export function toDocumentRows(
       openAmountCents: doc.balance.openAmountCents,
       hasFile: doc.fileKey !== null,
       label: `${documentHead(doc)} · ${partyName ?? '—'} · açık ${money(doc.balance.openAmountCents)}`,
+      pennylane: pennylaneLine(
+        pennylaneDocumentStatus({
+          live: pennylane.live,
+          openAmountCents: doc.balance.openAmountCents,
+          mirror: pennylane.mirrors.get(doc.id) ?? null,
+          queue: queued ? { attempts: queued.attempts, blockReason: queueBlockReason(queued.lastError) } : null,
+        }),
+      ),
     };
   });
 }

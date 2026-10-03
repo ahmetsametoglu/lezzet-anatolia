@@ -95,13 +95,23 @@ export function DocumentList({ rows, note, tagLabels, actions, hasMore, loadingM
                         </span>
                         {/* KDV belgede yoksa yazılmaz, çünkü sıfır "KDV yok" demek olurdu. Rejim yalnız standart değilse
                             yazılır: ters yüklemeli faturada "KDV 0" ile beyan edilecek KDV'yi ayırt eden tek işaret bu. */}
-                        <span className="truncate font-ops-body text-ops-micro text-ops-faint">
-                          {dayMonth(document.issuedOn)} · {DOCUMENT_DIRECTION_LABEL[document.direction]}
-                          {document.dueOn ? ` · vade ${dayMonth(document.dueOn)}` : ''}
-                          {document.vatAmountCents === null ? '' : ` · KDV ${money(document.vatAmountCents)}`}
-                          {document.vatRegime === 'standard' ? '' : ` · ${VAT_REGIME_LABEL[document.vatRegime]}`}
-                          {document.note ? ` · ${document.note}` : ''}
-                        </span>
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span className="truncate font-ops-body text-ops-micro text-ops-faint">
+                            {dayMonth(document.issuedOn)} · {DOCUMENT_DIRECTION_LABEL[document.direction]}
+                            {document.dueOn ? ` · vade ${dayMonth(document.dueOn)}` : ''}
+                            {document.vatAmountCents === null ? '' : ` · KDV ${money(document.vatAmountCents)}`}
+                            {document.vatRegime === 'standard' ? '' : ` · ${VAT_REGIME_LABEL[document.vatRegime]}`}
+                            {document.note ? ` · ${document.note}` : ''}
+                          </span>
+                          {/* Durum kesilmez, bilgi kısmı kısalır, çünkü "gitmedi" ve "farklı" bir iş bekletir. */}
+                          {document.pennylane ? (
+                            <span
+                              className={`shrink-0 whitespace-nowrap font-ops-body text-ops-micro ${document.pennylane.tone === 'amber' ? 'text-ops-amber-dark' : 'text-ops-faint'}`}
+                            >
+                              · {document.pennylane.text}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                       <span className="truncate font-ops-body text-ops-xs text-ops-muted">{classes || '—'}</span>
                       <DocumentActionsCell document={document} actions={actions} />

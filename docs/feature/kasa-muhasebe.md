@@ -522,7 +522,8 @@ var.
 - Ayarlar › Kurulum: Pennylane kartı (bağlantı ve kip, hesap eşlemesi, canlıya geçiş günü, kuyruk özeti, son
   eşitleme, hareket gelmeyen hesap); Hiboutik kartının deseni.
 - Belge formu: tek KDV alanı yerine oran başına satırlar.
-- Belge detayı: Pennylane durumu (yüklendi; bekliyor ve sebebi; e-fatura ve durumu); e-faturada itiraz.
+- Belge satırı: Pennylane durumu alt satırın sonunda (yüklendi ✓ · sırada · gitmedi ve sebebi · yazılamadı · Pennylane'de farklı
+  ve oradaki açık kalan); Pennylane canlıya geçmeden yazılmaz. E-fatura durumu ve itiraz 7. adımla.
 - Banka kuyruğu değişmez; satırın kaynağı "Pennylane" yazar, başka işe eşli satırın hapı öneri yerine bunu söyler.
 
 **Kod yerleşimi:**

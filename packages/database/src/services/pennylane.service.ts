@@ -161,7 +161,7 @@ export class PennylaneSupplierService extends BaseDbService<PennylaneSupplierMir
   }
 }
 
-/** Alış belgesinin yazım kuyruğu; satırları belge ve bağ tetikleyicisi yazar, işleyen okur, erteler ve siler. */
+/** Pennylane yazım kuyruğu, alış belgesi ya da banka satırı; satırları belge ve bağ tetikleyicisi yazar, işleyen okur, erteler ve siler. */
 export class PennylaneQueueService extends QueueDbService<PennylaneQueue, PennylaneQueueInsert> {
   constructor(supabase: SupabaseClient) {
     super(supabase, 'pennylane_queue', PennylaneQueueSchema, PennylaneQueueInsertSchema);
@@ -169,6 +169,10 @@ export class PennylaneQueueService extends QueueDbService<PennylaneQueue, Pennyl
 
   findByDocument(documentId: string): Promise<PennylaneQueue | null> {
     return this.getOneBy({ documentId });
+  }
+
+  listByDocuments(documentIds: readonly string[]): Promise<PennylaneQueue[]> {
+    return documentIds.length === 0 ? Promise.resolve([]) : this.getAll({ documentId: [...documentIds] });
   }
 
   findByMovement(movementId: string): Promise<PennylaneQueue | null> {

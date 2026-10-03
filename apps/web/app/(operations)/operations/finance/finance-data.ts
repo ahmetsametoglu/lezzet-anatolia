@@ -8,8 +8,11 @@ import {
   MovementNatureService,
   MovementTagService,
   OrderService,
+  PennylaneDocumentService,
+  PennylaneQueueService,
   SupplierService,
 } from '@lezzet/database';
+import { pennylaneLiveFrom } from '@lezzet/application';
 import {
   DEFAULT_PAGE_SIZE,
   type Account,
@@ -23,7 +26,15 @@ import {
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { EMPTY_MATCH_QUEUE, suggestionsForMovements } from '@/lib/bank/reconcile';
 import { NOTES } from './finance-labels';
-import { documentHead, toDocumentRows, toMatchRows, toMatchTargets, toMovementRows, type MovementReadContext } from './finance-read';
+import {
+  documentHead,
+  toDocumentRows,
+  toMatchRows,
+  toMatchTargets,
+  toMovementRows,
+  type DocumentPennylaneContext,
+  type MovementReadContext,
+} from './finance-read';
 import type { AccountLedgerRow } from '@lezzet/types';
 import type { DocumentListView, DocumentRowView, LedgerView, MovementRowView } from './finance-types';
 import { ALL_ACCOUNTS, resolveAccount, type FinanceUrlState } from './finance-url';
@@ -160,13 +171,28 @@ async function toRowViews(db: SupabaseClient, ledgerRows: readonly AccountLedger
   return toMovementRows(ledgerRows, { ...names, orderRefs, documentsOf, suggestions });
 }
 
+/** Belgelerin Pennylane durumunun girdisi tek turda: canlıya geçiş, aynalar ve kuyruk satırları. */
+async function pennylaneOf(db: SupabaseClient, documentIds: readonly string[]): Promise<DocumentPennylaneContext> {
+  const [liveFrom, mirrors, queue] = await Promise.all([
+    pennylaneLiveFrom(db),
+    new PennylaneDocumentService(db).listByDocuments(documentIds),
+    new PennylaneQueueService(db).listByDocuments(documentIds),
+  ]);
+  return {
+    live: liveFrom !== null,
+    mirrors: new Map(mirrors.map((mirror) => [mirror.documentId, mirror] as const)),
+    queue: new Map(queue.flatMap((row) => (row.documentId ? [[row.documentId, row] as const] : []))),
+  };
+}
+
 /** Tek belgenin satırı; bağ yazımından sonra tazelenir. */
 export async function readDocumentRow(db: SupabaseClient, documentId: string, names: FinanceNames): Promise<DocumentRowView | null> {
   const service = new MoneyDocumentService(db);
   const document = await service.getById(documentId);
   if (!document) return null;
-  const balance = (await service.balances([document.id])).get(document.id);
-  return balance ? (toDocumentRows([{ ...document, balance }], names)[0] ?? null) : null;
+  const [balances, pennylane] = await Promise.all([service.balances([document.id]), pennylaneOf(db, [document.id])]);
+  const balance = balances.get(document.id);
+  return balance ? (toDocumentRows([{ ...document, balance }], names, pennylane)[0] ?? null) : null;
 }
 
 /**
@@ -183,18 +209,27 @@ export async function readDocumentsPage(
   if (urlState.open) {
     const inRange = (day: string) => (!urlState.from || day >= urlState.from) && (!urlState.to || day <= urlState.to);
     const open = (await service.listOpen()).filter((doc) => inRange(doc.issuedOn)).sort((a, b) => b.issuedOn.localeCompare(a.issuedOn));
-    const rows = toDocumentRows(open, names);
+    const rows = toDocumentRows(
+      open,
+      names,
+      await pennylaneOf(
+        db,
+        open.map((doc) => doc.id),
+      ),
+    );
     return { rows, nextCursor: null, note: rows.length > 0 ? null : NOTES.noOpenDocuments };
   }
 
   const page = await service.page({ from: urlState.from || undefined, to: urlState.to || undefined, cursor, limit: DEFAULT_PAGE_SIZE });
-  const balances = await service.balances(page.rows.map((doc) => doc.id));
+  const ids = page.rows.map((doc) => doc.id);
+  const [balances, pennylane] = await Promise.all([service.balances(ids), pennylaneOf(db, ids)]);
   const rows = toDocumentRows(
     page.rows.flatMap((doc) => {
       const balance = balances.get(doc.id);
       return balance ? [{ ...doc, balance }] : [];
     }),
     names,
+    pennylane,
   );
   return {
     rows,
