@@ -18,7 +18,7 @@ import type { PlaceWarehouses, StorefrontImage } from '../catalog/storefront-typ
 import { minBasketFor } from './min-basket';
 import { settingScopeOf } from './setting-scope';
 import { FREE_SHIPPING_THRESHOLD_DEFAULT, FREE_SHIPPING_THRESHOLD_KEY } from './settings-keys';
-import { resolveCartDiscount } from './discount';
+import { loadCartDiscountData, resolveCartDiscount } from './discount';
 import {
   EMPTY_CART,
   cartGroupOf,
@@ -122,9 +122,26 @@ export async function getCartView(
   } = {},
 ): Promise<CartView> {
   const settings = new SettingsService(db);
+  // İki tür satır, iki okuma — ikisi de TOPLU. Paketler kendi kapısından gelir (`lib/storefront`),
+  // türetme (stok, kargo, ağırlık) orada tek yerde durur; sepette ikinci kez yazılsaydı vitrindeki
+  // kartla sepetteki satır aynı paket için farklı "tükendi" diyebilirdi.
+  const bundleIds = [...new Set(entries.map((e) => e.bundleId).filter((id): id is string => id !== undefined))];
+  const variantIds = [...new Set(entries.map((e) => e.variantId).filter((id): id is string => id !== undefined))];
+
+  const place: PlaceWarehouses = {
+    warehouseId: opts.warehouseId ?? null,
+    shippingWarehouseId: opts.shippingWarehouseId ?? null,
+  };
+  // Görüntüleyen, satırların kaynağı ve indirimin girdisi birbirini beklemez: her tur sunucuda bir gidiş-dönüştür ve sepet,
+  // ödeme ve sipariş bu okumadan geçer. Görüntüleyen oturumdan değil sepetin kimliğinden çözülür, misafir OTP yolunda oturum yoktur.
+  const empty = entries.length === 0;
+  const [viewer, rows, discountData] = await Promise.all([
+    pricingViewerOf(db, opts.customerId ?? null),
+    empty ? null : readCartRows(db, locale, { variantIds, bundleIds, place, bundles: opts.bundles }),
+    empty ? null : loadCartDiscountData(db, { customerId: opts.customerId, couponCode: opts.couponCode }),
+  ]);
   // Eşikler parametrik ve checkout ile aynı anahtar ve kapsamla okunur (`settingScopeOf`), yoksa sepetin gösterdiği eşik kasada
-  // tutmazdı. Görüntüleyen oturumdan değil sepetin kimliğinden bir kez çözülür, misafir OTP yolunda oturum yoktur.
-  const viewer = await pricingViewerOf(db, opts.customerId ?? null);
+  // tutmazdı.
   const scope = settingScopeOf(viewer, {
     country: opts.country,
     zoneId: opts.zoneId,
@@ -140,30 +157,13 @@ export async function getCartView(
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
   ]);
   // Boş sepette yol da yok: kapıya teslim tabanı yazılır ki ekran "en az şu kadar" diyebilsin.
-  if (entries.length === 0) return { ...EMPTY_CART, freeShippingCents, ...meets(0, minBasketRouteCents) };
+  if (rows === null || discountData === null) return { ...EMPTY_CART, freeShippingCents, ...meets(0, minBasketRouteCents) };
+  const { variants, packageRows, page } = rows;
   // Motorun kalem sözleşmesi: satır çözülürken doldurulur (kategori/koleksiyon oradan gelir).
   const discountable: DiscountableLine[] = [];
 
-  // İki tür satır, iki okuma — ikisi de TOPLU. Paketler kendi kapısından gelir (`lib/storefront`),
-  // türetme (stok, kargo, ağırlık) orada tek yerde durur; sepette ikinci kez yazılsaydı vitrindeki
-  // kartla sepetteki satır aynı paket için farklı "tükendi" diyebilirdi.
-  const bundleIds = [...new Set(entries.map((e) => e.bundleId).filter((id): id is string => id !== undefined))];
-  const variantIds = [...new Set(entries.map((e) => e.variantId).filter((id): id is string => id !== undefined))];
-
-  const place: PlaceWarehouses = {
-    warehouseId: opts.warehouseId ?? null,
-    shippingWarehouseId: opts.shippingWarehouseId ?? null,
-  };
-  const [variants, packageRows] = await Promise.all([
-    new ProductVariantService(db).listByIds(variantIds),
-    // Yer paket kapısına da geçer ki kart, sepet ve checkout aynı yolu görsün; paket yoksa okuma yapılmaz.
-    opts.bundles && bundleIds.length > 0 ? opts.bundles(bundleIds, locale, place) : Promise.resolve([]),
-  ]);
   const packages = new Map(packageRows.map((p) => [p.id, p]));
   const byVariant = new Map(variants.map((v) => [v.id, v]));
-  const productIds = [...new Set(variants.map((v) => v.productId))];
-
-  const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds }, limit: productIds.length });
   const byProduct = new Map(page.rows.map((p) => [p.id, p]));
   const context = await loadProductContext(db, page.rows, place, viewer);
 
@@ -276,13 +276,17 @@ export async function getCartView(
     rules: discountRules,
     context: discountContext,
     localOrderDiscountCents,
-  } = await resolveCartDiscount(db, {
-    // Satır sırası korunur ki paylar satırlarla hizalı kalsın; gelemeyen satır fiyatı çözülemeyen satır gibi sıfır katar.
-    lines: discountable.map((line, index) => (lines[index] && cartGroupOf(lines[index]) === 'undeliverable' ? { ...line, unitPriceCents: 0 } : line)),
-    localOrderLines: split ? discountable.filter((_, index) => lines[index] && cartGroupOf(lines[index]) === 'local') : undefined,
-    customerId: opts.customerId,
-    couponCode: opts.couponCode,
-  });
+  } = await resolveCartDiscount(
+    db,
+    {
+      // Satır sırası korunur ki paylar satırlarla hizalı kalsın; gelemeyen satır fiyatı çözülemeyen satır gibi sıfır katar.
+      lines: discountable.map((line, index) => (lines[index] && cartGroupOf(lines[index]) === 'undeliverable' ? { ...line, unitPriceCents: 0 } : line)),
+      localOrderLines: split ? discountable.filter((_, index) => lines[index] && cartGroupOf(lines[index]) === 'local') : undefined,
+      customerId: opts.customerId,
+      couponCode: opts.couponCode,
+    },
+    discountData,
+  );
 
   return {
     lines,
@@ -312,6 +316,22 @@ export async function getCartView(
      */
     ...meets(minBasketBaseOf(lines), opts.shippingOrder || (hasShipping && !hasLocal) ? minBasketShippingCents : minBasketRouteCents),
   };
+}
+
+/** Satırların kaynağı: boylar ve paketler bir turda, ürünler boyların ardından. */
+async function readCartRows(
+  db: Db,
+  locale: PreferredLanguage,
+  input: { variantIds: string[]; bundleIds: string[]; place: PlaceWarehouses; bundles?: CartBundlePort },
+) {
+  const [variants, packageRows] = await Promise.all([
+    new ProductVariantService(db).listByIds(input.variantIds),
+    // Yer paket kapısına da geçer ki kart, sepet ve checkout aynı yolu görsün; paket yoksa okuma yapılmaz.
+    input.bundles && input.bundleIds.length > 0 ? input.bundles(input.bundleIds, locale, input.place) : Promise.resolve([]),
+  ]);
+  const productIds = [...new Set(variants.map((v) => v.productId))];
+  const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds }, limit: productIds.length });
+  return { variants, packageRows, page };
 }
 
 /**

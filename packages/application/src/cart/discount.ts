@@ -26,17 +26,24 @@ export interface CartDiscountInput {
   now?: Date;
 }
 
-/**
- * Sepetin indirimi: kupon yoksa otomatik adaylar, varsa önce kuponun kendisi teşhis edilir. Geçerli kupon kazanamazsa
- * `outranked` döner ve kazanan indirim uygulanır.
- */
-export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Promise<CartDiscountResult> {
+/** İndirimin okunan girdisi. Sepetin satırlarını beklemez; bu yüzden sepet okuması onu ürünlerle aynı anda başlatır. */
+export interface CartDiscountData {
+  code: string;
+  hit: Awaited<ReturnType<DiscountService['findByCode']>>;
+  pool: Discount[];
+  codesByDiscount: Map<string, DiscountCode[]>;
+  usage: Map<string, DiscountUsage>;
+  isFirstOrder: boolean;
+}
+
+export async function loadCartDiscountData(db: Db, input: Pick<CartDiscountInput, 'customerId' | 'couponCode'>): Promise<CartDiscountData> {
   const discounts = new DiscountService(db);
   const code = input.couponCode?.trim() ?? '';
-  const now = input.now ?? new Date();
-
-  const candidates = await discounts.listCandidates(input.customerId);
-  const hit = code ? await discounts.findByCode(code) : null;
+  const [candidates, hit, firstOrder] = await Promise.all([
+    discounts.listCandidates(input.customerId),
+    code ? discounts.findByCode(code) : null,
+    isFirstOrder(db, input.customerId),
+  ]);
   const coupon = hit?.discount ?? null;
 
   // Koda karşılık gelen kupon aday havuzunda olmayabilir (pasif ya da kişisel): motorun görmesi için
@@ -44,12 +51,23 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
   const pool = coupon && !candidates.some((row) => row.id === coupon.id) ? [...candidates, coupon] : candidates;
   // Kurallar KODLARINI taşır: bir kuponun birden çok kapısı olur ve motor girilenle hepsini
   // karşılaştırır. Tek turda okunur — kural başına sorgu N+1 olurdu.
-  const codesByDiscount = await new DiscountCodeService(db).listByDiscounts(pool.map((row) => row.id));
-  const usage = await discounts.usageCounts(pool.map((row) => row.id));
+  const ids = pool.map((row) => row.id);
+  const [codesByDiscount, usage] = await Promise.all([new DiscountCodeService(db).listByDiscounts(ids), discounts.usageCounts(ids)]);
+  return { code, hit, pool, codesByDiscount, usage, isFirstOrder: firstOrder };
+}
+
+/**
+ * Sepetin indirimi: kupon yoksa otomatik adaylar, varsa önce kuponun kendisi teşhis edilir; önceden okunan girdi (`data`) yeniden
+ * okunmaz. Geçerli kupon kazanamazsa `outranked` döner ve kazanan indirim uygulanır.
+ */
+export async function resolveCartDiscount(db: Db, input: CartDiscountInput, data?: CartDiscountData): Promise<CartDiscountResult> {
+  const { code, hit, pool, codesByDiscount, usage, isFirstOrder: firstOrder } = data ?? (await loadCartDiscountData(db, input));
+  const coupon = hit?.discount ?? null;
+  const now = input.now ?? new Date();
 
   const ctx = {
     customerId: input.customerId,
-    isFirstOrder: await isFirstOrder(db, input.customerId),
+    isFirstOrder: firstOrder,
     enteredCouponCode: code || null,
     now,
   };
