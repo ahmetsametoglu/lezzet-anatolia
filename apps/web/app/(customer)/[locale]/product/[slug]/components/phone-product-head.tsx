@@ -2,16 +2,14 @@ import { formatPrice, placeMarkOf } from '@lezzet/helper';
 import placeMessages from '@lezzet/i18n/customer/place';
 import productMessages from '@lezzet/i18n/customer/product';
 import type { Locale } from '@lezzet/i18n';
-import type { StorefrontImage, StorefrontVariant } from '@lezzet/application';
+import type { StorefrontImage } from '@lezzet/application';
 import { RATIO_SQUARE } from '@lezzet/types';
 import type { ReactNode } from 'react';
 import { PhotoGallery } from '@/components/customer/phone-kit/photo-gallery';
 import { BackButton } from '@/components/customer/ui/back-button';
 import { Icon } from '@/components/customer/ui/icons';
 import { ShareButton } from '@/components/customer/ui/share-button';
-
-/** Kartın da boyun da taşıdığı satış alanları; üst bölüm ikisinden aynı hesapla çizilir. */
-export type HeadSelling = Pick<StorefrontVariant, 'priceCents' | 'wasCents' | 'comparisonCents' | 'limitLabel' | 'stockStatus' | 'soldOut'>;
+import { phoneMetaLine, type HeadSelling } from './phone-meta-line';
 
 type HeroPlace = Parameters<typeof placeMarkOf>[1];
 
@@ -55,14 +53,7 @@ export function PhoneProductHead({
   const price = selling?.priceCents ?? null;
   const was = selling?.wasCents;
   const soldOut = selling?.soldOut ?? true;
-  const comparison = selling?.comparisonCents ?? null;
-  const metaLine = [
-    comparison === null ? null : copy.meta.perKg.replace('{price}', formatPrice(comparison, locale)),
-    copy.meta.vat,
-    was === undefined ? null : copy.meta.was.replace('{price}', formatPrice(was, locale)),
-  ]
-    .filter((part) => part !== null)
-    .join(' · ');
+  const metaLine = phoneMetaLine(selling, locale);
 
   return (
     <>

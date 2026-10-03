@@ -141,9 +141,9 @@ export function ProductHeadLines({ categoryName, name, selling, content, locale,
         </View>
       )}
       <Text style={styles.meta}>
-        {selling?.comparisonCents == null
+        {selling?.comparisonCents == null || selling.comparisonUnit == null
           ? t.meta.vat
-          : `${fill(t.meta.perKg, 'price', formatPrice(selling.comparisonCents, locale))} · ${t.meta.vat}`}
+          : `${fill(fill(t.meta.perUnit, 'price', formatPrice(selling.comparisonCents, locale)), 'unit', selling.comparisonUnit)} · ${t.meta.vat}`}
         {was === undefined ? '' : ` · ${fill(t.meta.was, 'price', formatPrice(was, locale))}`}
       </Text>
       {selling?.limitLabel == null ? null : <Text style={styles.limitChip}>{fill(t.limit, 'n', selling.limitLabel)}</Text>}

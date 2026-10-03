@@ -7,7 +7,17 @@ import type { CatalogProduct } from '@lezzet/types';
  */
 export type ProductPreview = Pick<
   StorefrontProduct,
-  'id' | 'slug' | 'name' | 'image' | 'priceCents' | 'wasCents' | 'comparisonCents' | 'limitLabel' | 'stockStatus' | 'soldOut'
+  | 'id'
+  | 'slug'
+  | 'name'
+  | 'image'
+  | 'priceCents'
+  | 'wasCents'
+  | 'comparisonCents'
+  | 'comparisonUnit'
+  | 'limitLabel'
+  | 'stockStatus'
+  | 'soldOut'
 > &
   Pick<CatalogProduct, 'categoryId' | 'sizes'>;
 

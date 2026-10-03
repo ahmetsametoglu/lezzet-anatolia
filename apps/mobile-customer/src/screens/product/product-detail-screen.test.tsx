@@ -173,6 +173,14 @@ describe('ürün detayı', () => {
     expect(screen.getByTestId('product-content')).toHaveTextContent('Net ağırlık 1 kg');
   });
 
+  it('birim fiyat verinin birimiyle yazılır — sıvıda litre, kilo değil', async () => {
+    const oil = productVariant(1, { netQuantity: 750, netUnit: 'ml', comparisonCents: 1667, comparisonUnit: 'L' });
+    await renderProduct(productDetail({ variants: [oil, productVariant(2)] }));
+
+    const meta = screen.getByText(`${formatPrice(1667, 'tr')} / L · KDV dahil`, { exact: false });
+    expect(meta).not.toHaveTextContent('/ kg');
+  });
+
   it('aile çipi yeni sayfa AÇMAZ — aynı rotanın parametresini günceller (kullanıcı kararı 08.08)', async () => {
     await renderProduct();
 

@@ -12,7 +12,7 @@
       "photo": "Ürün görseli {n} / {total}"
     },
     "meta": {
-      "perKg": "{price} / kg",
+      "perUnit": "{price} / {unit}",
       "vat": "KDV dahil",
       "was": "normal {price}"
     },
@@ -95,7 +95,7 @@
       "photo": "Photo du produit {n} / {total}"
     },
     "meta": {
-      "perKg": "{price} / kg",
+      "perUnit": "{price} / {unit}",
       "vat": "TTC",
       "was": "au lieu de {price}"
     },
@@ -178,7 +178,7 @@
       "photo": "Produktbild {n} / {total}"
     },
     "meta": {
-      "perKg": "{price} / kg",
+      "perUnit": "{price} / {unit}",
       "vat": "inkl. MwSt.",
       "was": "statt {price}"
     },
