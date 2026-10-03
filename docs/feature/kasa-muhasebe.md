@@ -531,6 +531,8 @@ olup olmadığı; fişin Pennylane'e fatura olarak girip girmeyeceği.
 
 ## 9. Riskler
 
+Operatörün Hiboutik ve Pennylane'de yapmaması gerekenler `docs/runbook/muhasebe-duzeni.md`'de.
+
 1. **Banka bağlantısının kopması.** Bankalar bağlantıyı en çok 180 gün açık tutuyor, bazıları çok daha
    kısa (Pennylane'in tablosunda BNP 36 gün, CIC 0 gün). Kopunca hem Pennylane hem biz hareket alamayız.
    Çare: hesap başına "hareket gelmiyor" uyarısı; sık kopan bankada EBICS (Pennylane önerisi).
@@ -545,9 +547,6 @@ olup olmadığı; fişin Pennylane'e fatura olarak girip girmeyeceği.
    Çare: kuyruk + yeniden deneme + günlük mutabakatta fark uyarısı; gün kapanmadan kuyruk boşalmalı.
 6. **Kasa sıfırlanması.** Hiboutik'te ürünler silinirse (demo sıfırlama) bizdeki ürün eşlemesi
    (`register_product`) olmayan ürünleri anar ve her yazım düşer; sıfırlamadan sonra eşleme silinmeli.
-7. **Canlıya geçiş gününün ileri alınması, kaldırılması ya da eşlemenin kaldırılması.** Pennylane'den okunmuş
-   günlere dosya yüklemesi yeniden açılır ve iki kaynak aynı banka satırını yazar. Bugün yalnız dosya satırının üstüne
-   geri alış reddediliyor; öbür üçü için dosya reddinin Pennylane'den okunmuş son güne kadar sürmesi gerekir.
 
 ## 10. Kaynaklar
 
