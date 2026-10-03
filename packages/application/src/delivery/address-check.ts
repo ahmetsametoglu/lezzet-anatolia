@@ -29,6 +29,9 @@ export async function checkAddress(
   try {
     const [row] = await addresses.listByIds([input.addressId]);
     if (!row) return { status: 'unknown' };
+    // Kapı düzeyindeki nokta bu adresin cevabıdır, çünkü satır, kod ya da şehir değişince düşer; servise yeniden sormak aynı
+    // cevabı müşteriyi bekleterek almak olurdu.
+    if (row.geoPrecision === 'housenumber') return { status: 'confirmed' };
 
     const service = input.geocoder ?? defaultGeocoder();
     const query = { line1: row.line1, postalCode: row.postalCode, city: row.city, country: row.country };

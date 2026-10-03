@@ -116,6 +116,25 @@ describe('checkAddress · doğrulanan kapı', () => {
     expect(fake.elsewhereCalls).toHaveLength(0);
   });
 
+  it('kapı düzeyinde noktası olan adres servise hiç sorulmaz', async () => {
+    // Öneriden seçilen ya da önceki siparişte doğrulanan adres her onayda yeniden sorulsaydı müşteri aynı cevabı beklerdi.
+    const row = await adres();
+    await addresses.update({
+      id: row.id,
+      lat: KAPI.point.lat,
+      lng: KAPI.point.lng,
+      geoPrecision: 'housenumber',
+      geoSource: 'ban',
+      geoAt: new Date().toISOString(),
+    });
+    const fake = fakeGeocoder(SOKAK, { status: 'ok', candidates: [LINGOLSHEIM] });
+
+    const outcome = await checkAddress(db, { addressId: row.id, geocoder: fake });
+
+    expect(outcome).toEqual({ status: 'confirmed' });
+    expect(fake.calls).toHaveLength(0);
+  });
+
   it('doğrulanmış kapıda ÖNERİ TEMİZLENİR — çelişkili satır doğmaz', async () => {
     // Veri kısıtı (`address_geo_alt`) böyle bir satırı zaten reddediyor; kapı da onu üretmemeli.
     const row = await adres();
