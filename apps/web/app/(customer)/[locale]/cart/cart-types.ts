@@ -18,9 +18,8 @@ export interface CartViewProps {
   t: Messages;
   locale: Locale;
   /**
-   * Boş sepetin öneri alanı. Sunucuda okunur ve sepet DOLU olsa da taşınır: sayfa boş olup
-   * olmadığını sunucuda bilemez (ziyaretçinin sepeti tarayıcıda yaşar), tasarım ise boş ekranın
-   * TEK ADIMDA gelmesini istiyor — ikinci tura bırakılsa kahraman çizilir, öneri sonradan patlardı.
+   * Masaüstü boş sepetinin öneri alanı: sunucu sepetin boş olup olmadığını bilemez ve tasarım boş ekranın tek adımda gelmesini
+   * istediği için sepet doluyken de okunur. Telefon çatalı onu kullanmaz, orada önerisiz hâli gelir.
    */
   emptyContext: EmptyCartContext;
 }

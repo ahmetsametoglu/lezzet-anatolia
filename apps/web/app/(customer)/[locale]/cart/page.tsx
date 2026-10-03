@@ -3,13 +3,16 @@ import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { CART_LINK_PARAM } from '@lezzet/application/cart/link';
 import { detectDevice } from '@/lib/device';
-import { getEmptyCartContext } from '@/lib/cart/empty-cart';
+import { getEmptyCartContext, type EmptyCartContext } from '@/lib/cart/empty-cart';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { CartClient } from './cart-client';
 import type { Messages } from './cart-types';
 import messages from './messages.json';
+
+/** Önerisiz boş sepet: telefon çatalı boş sepeti kendi kartıyla çizer ve bağlamı okumaz. */
+const NO_SUGGESTIONS: EmptyCartContext = { lastOrder: null, categories: [], showcase: [], illustration: null };
 
 interface CartPageProps {
   params: Promise<{ locale: string }>;
@@ -34,7 +37,9 @@ export default async function CartPage({ params, searchParams }: CartPageProps) 
   void recordPageView('/cart');
 
   const t: Messages = messages[locale];
-  const [device, emptyContext] = await Promise.all([detectDevice(), getEmptyCartContext(locale)]);
+  const device = await detectDevice();
+  // Bağlam yalnız masaüstü çatalının boş sepetine gider; telefonda beklemek dolu sepeti de geciktirirdi.
+  const emptyContext = device === 'mobile' ? NO_SUGGESTIONS : await getEmptyCartContext(locale);
 
   return (
     // Mobilde çıplak kabuk: tasarımın karesi logosuz tek satır çiziyor, o satırı sayfa kurar.
