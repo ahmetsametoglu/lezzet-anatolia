@@ -20,28 +20,9 @@ import {
 } from './neighbor';
 
 /**
- * KOMŞU DAVETİ — sefere bağlı ödülün karar katmanı (21.93 · MB-56).
- *
- * ── NEDEN BU MODÜL, NEDEN ŞİMDİ ─────────────────────────────────────────────
- * Davet PARAYA dokunuyor: her kabul edilen komşu 100 puanlık bir ödülün önkoşulu ve kullanım hakkı
- * SINIRLI. Buradaki her karar yanlış tarafa düştüğünde ya müşteriye tutulmayacak bir söz verilir
- * ya hak ettiği ödül doğmaz — ikisi de hata vermez.
- *
- * ── ÇİVİLENEN DÖRT KARAR ────────────────────────────────────────────────────
- * 1. **Davet İDEMPOTENT açılır.** İkinci çağrı yeni bağlantı doğurursa müşterinin PAYLAŞTIĞI
- *    bağlantı sessizce ölür — ve bunu ancak komşusu tıklayıp "tanımadık" görünce fark eder.
- * 2. **Karşılamada sıra: `self` → pencere → doluluk.** Kendi bağlantısını açan müşteriye
- *    *"kullanım hakkı doldu"* demek doğru ama işe yaramaz bir cümle; ona söylenecek şey
- *    bağlantısının ÇALIŞTIĞIDIR.
- * 3. **Kullanım siparişten TÜRETİLİR, sayaçtan değil — ve İPTAL sayılmaz.** Sayaç tutulsaydı iptal
- *    edilen sipariş hakkı geri vermezdi: müşteri üç komşu çağırma hakkını, gelmemiş bir siparişe
- *    kaptırırdı.
- * 4. **Kalan hak SIFIRIN ALTINA düşmez.** Tavan davet açılırken donuyor; ayar sonradan düşerse
- *    çıplak çıkarma negatif verir ve ekran *"-1 komşu daha yararlanabilir"* yazardı.
- *
- * ── KÜRESEL SAYIYA BAKILMIYOR (`CLAUDE §4b`) ────────────────────────────────
- * Üç ajan aynı veritabanını paylaşıyor. Her iddia yalnız BU testin kurduğu davet ve siparişleri
- * sayıyor; "toplam kaç davet var" gibi bir ölçüt başka şeridin verisiyle oynar.
+ * Komşu daveti paraya dokunur: her kabul edilen komşu bir ödülün önkoşulu ve kullanım hakkı sınırlı, yanlış karar ya tutulmayacak
+ * bir söz verir ya hak edilen ödülü doğurmaz ve ikisi de hata vermez. İddialar yalnız bu testin kurduğu davet ve siparişleri sayar,
+ * çünkü veritabanı paylaşılıyor ve küresel bir sayı başka testlerin verisiyle oynar.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -308,9 +289,8 @@ describe('kabul', () => {
   });
 
   it('kabul davet EDENİ getiren olarak bağlar — komşu daveti yeni müşteri de kazandırır', async () => {
-    // Ölçülen boşluk (17.08): `referred_by`yi yazan tek yol getiren KODUNDAN geçiyordu, oysa komşu
-    // bağlantısı kod değil TOKEN taşıyor — davetle gelip kaydolan kişi "kimsenin getirmediği
-    // müşteri" olarak doğuyordu ve 500 puanlık getiren ödülü hiç doğmuyordu.
+    // Komşu bağlantısı kod değil belirteç taşır: bağ bu yoldan kurulmasa davetle gelip kaydolan kişi "kimsenin getirmediği müşteri"
+    // olarak doğar, getiren ödülü hiç doğmazdı.
     const invite = await davet();
     await acceptNeighborInvite(db, { token: invite.token, customerId: otherId });
 
