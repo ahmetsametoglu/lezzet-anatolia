@@ -22,19 +22,12 @@ import type {
   MovementRowView,
 } from './finance-types';
 
-// Para ekranının SAF indirgemeleri — servis satırı → görünüm satırı.
-//
-// Sunucu bileşeninden ayrı bir dosyada duruyorlar çünkü **saf oldukları için test edilebilirler**
-// (`finance-read.test.ts`): işaret, bağ ve tür kuralları burada; okuma (`page.tsx`) yalnız
-// satırları getirip bunlara veriyor. Karışsalardı her iddia bir veritabanı ister, birim testi
-// entegrasyon testine dönerdi.
+// Para ekranının saf indirgemeleri: servis satırı → görünüm satırı. Okumadan ayrı dururlar, çünkü saf oldukları için veritabanısız
+// sınanırlar (`finance-read.test.ts`).
 
 /**
- * Hesap kartları — bakiye haritasıyla birleştirilir.
- *
- * **Haritada olmayan hesap 0 bakiyeli DEĞİL, 0 hareketli sayılır** ve bu ayrım kasıtlı: hiç hareketi
- * olmayan yeni bir hesabın bakiyesi gerçekten 0'dır (servis de öyle diyor, `balance()` künyesi).
- * Ölçüm düşmüş olsaydı `null` dönmeliydi — ama burada ölçüm düşmüyor, kayıt hiç yok.
+ * Hesap kartları, bakiye haritasıyla birleştirilir. Haritada olmayan hesabın bakiyesi bilinmiyor değil 0'dır, çünkü hiç hareketi
+ * olmayan hesabın bakiyesi gerçekten sıfırdır.
  */
 export function toAccountViews(accounts: readonly Account[], balances: ReadonlyMap<string, AccountBalance>): AccountView[] {
   return accounts.map((account) => {
@@ -67,11 +60,7 @@ function partyOf(doc: Pick<MoneyDocument, 'counterpartyId' | 'supplierId'>, part
   return id ? (partyNames.get(id) ?? null) : null;
 }
 
-/**
- * Belge satırları (12.12 · 12.17) — Belgeler sekmesi, sağ panelin belgesi ve "Ödemesini yaz" formunun
- * künyesi. Açık kalan GÖRÜNÜMDEN gelir, burada hesaplanmaz; künye belge numarasıyla başlar, numarasız
- * belgede türün adıyla (fiş, bordro).
- */
+/** Belge satırları: Belgeler sekmesi ve "Ödemesini yaz" formunun künyesi; açık kalan görünümden gelir, burada hesaplanmaz. */
 export function toDocumentRows(
   documents: ReadonlyArray<MoneyDocument & { balance: MoneyDocumentBalance }>,
   names: Pick<MovementReadContext, 'partyNames' | 'natureLabels'>,
@@ -113,22 +102,21 @@ export interface MovementReadContext {
   natureLabels: ReadonlyMap<string, string>;
   /** Hareketin bağlı belgeleri (bağ tablosundan) — künyesi ve bağın tutarıyla. */
   documentsOf: ReadonlyMap<string, Array<{ id: string; label: string; amountCents: number }>>;
-  /** Mutabık olmayan ekstre satırlarının önerisi (12.19) — hareket kimliğiyle; yoksa cümle eski hâlinde. */
+  /** Mutabık olmayan ekstre satırlarının önerisi, hareket kimliğiyle. */
   suggestions?: ReadonlyMap<string, RowSuggestion>;
 }
 
-/** Ekstre satırının önerisi (12.19) — gücü ve en iyi adayın adı (adsız aday gösterilmez). */
+/** Ekstre satırının önerisi: gücü ve en iyi adayın adı (adsız aday gösterilmez). */
 export interface RowSuggestion {
   strength: MatchRowView['strength'];
   title: string | null;
-  /** Güçlü önerinin hedefi (12.21) — satırın ✓'si tek dokunuşla uygular; güçlü değilse `null`. */
+  /** Güçlü önerinin hedefi, satırın ✓'si tek dokunuşla uygular; güçlü değilse `null`. */
   target: MatchTarget | null;
 }
 
 /**
- * Tür almayan tiplerin izahı BAĞIDIR (motor: `acceptsNature`) — izahsızsa eksik olan o bağdır ve
- * satırda tür menüsü yoktur. "Türünü seçin" demek, olmayan bir düğmeyi göstermek olurdu (ölçüldü
- * 13.09: kapı önü satışın tahsilat satırları siparişsiz yazılıyor ve bu cümleyi taşıyordu).
+ * Tür almayan tiplerin izahı bağıdır (`acceptsNature`): izahsızsa eksik olan o bağdır ve satırda tür menüsü yoktur. "Türünü seçin"
+ * demek olmayan bir düğmeyi göstermek olurdu.
  */
 const MISSING_LINK: Partial<Record<MovementType, string>> = {
   order_payment: 'siparişe bağlı değil',
@@ -138,12 +126,8 @@ const MISSING_LINK: Partial<Record<MovementType, string>> = {
 };
 
 /**
- * Açıklamanın altındaki İPUCU ve satırın BAĞI (12.21 · sağ panel kalktı).
- *
- * İpucu yalnız iki şeydir: kampanya (reklam giderinin tek ayırt edici bilgisi, `meta.campaign`) ya da
- * izah sorusu. Bağ "Karşılığı" sütununa gider (`linkOf`); tür, cari ve belge bağı satırın kendi
- * araçlarında okunur (13.09) ve burada tekrarlanmaz. Eşleşme bekleyen ekstre satırının sorusu ("bu para
- * neyin nesi") o sütunun hapıdır — altta ayrıca yazılmaz.
+ * Açıklamanın altındaki ipucu ve satırın bağı. İpucu kampanya (reklam giderinin tek ayırt edici bilgisi) ya da izah sorusudur; eşleşme
+ * bekleyen ekstre satırının sorusu "Karşılığı" sütununun hapında durduğu için altta tekrarlanmaz.
  */
 function refOf(row: AccountLedgerRow, context: MovementReadContext): Pick<MovementRowView, 'ref' | 'refTone' | 'link'> {
   const campaign = typeof row.meta?.campaign === 'string' ? row.meta.campaign : null;
@@ -161,8 +145,8 @@ function refOf(row: AccountLedgerRow, context: MovementReadContext): Pick<Moveme
 }
 
 /**
- * Satırın BAĞI — "Karşılığı" sütununda düz yazı (12.21). Sıra öncelik sırasıdır: en somut olan okunur.
- * Ekstre satırının belge bağı ve önerisi burada değil, sütunun hapında.
+ * Satırın bağı, "Karşılığı" sütununda düz yazı; sıra öncelik sırasıdır, en somut olan okunur. Ekstre satırının belge bağı ve önerisi
+ * sütunun hapındadır.
  */
 function linkOf(row: AccountLedgerRow, context: MovementReadContext): MovementRowView['link'] {
   if (row.orderId) {
@@ -228,10 +212,8 @@ export function toMovementRows(rows: readonly AccountLedgerRow[], context: Movem
 }
 
 /**
- * Listeyi ARDIŞIK anahtara göre gruplar (12.22 · 12.23) — hareketler günlere (`valueDate`), belgeler aylara
- * (`issuedOn`) bölünür. İki sayfa da o tarihe göre azalan gelir (`AccountLedgerService.page` ·
- * `MoneyDocumentService.page`): ardışık aynı anahtar tek grup olur, sıra korunur. Eklenen sayfanın ilk
- * satırı öncekinin son grubundansa ona katılır — başlık ikinci kez çizilmez.
+ * Listeyi ardışık anahtara göre gruplar: hareketler günlere, belgeler aylara. Sayfalar o tarihe göre azalan geldiği için eklenen
+ * sayfanın ilk satırı önceki son gruba katılır ve başlık ikinci kez çizilmez.
  */
 export function groupConsecutive<T>(rows: readonly T[], keyOf: (row: T) => string): Array<{ key: string; rows: T[] }> {
   const groups: Array<{ key: string; rows: T[] }> = [];
@@ -245,11 +227,8 @@ export function groupConsecutive<T>(rows: readonly T[], keyOf: (row: T) => strin
 }
 
 /**
- * Kuyruk satırının `matchQueue` dönüşünden görünüme indirgenmiş hâli.
- *
- * **Öneri yalnız tür + kimlik taşır** (`MatchSuggestion`: kind, id, puan, sebepler) — referans,
- * açık tutar ve tarih motorun ADAY nesnesinde kalır, cevabında değil. Ekran onları hedef
- * listesinden alır (`toMatchTargets`): öneri ile hedef aynı `${kind}:${id}` anahtarıyla buluşur.
+ * Kuyruk satırı, `matchQueue` dönüşü. Öneri yalnız tür ve kimlik taşır; referans, açık tutar ve tarih hedef listesinden gelir ve öneri
+ * ile hedef aynı `${kind}:${id}` anahtarıyla buluşur.
  */
 interface QueueInput {
   movement: Omit<AccountLedgerRow, 'ledgerAccountId' | 'signedAmountCents'> & { signedAmountCents?: number };
@@ -260,14 +239,7 @@ interface QueueInput {
 
 type MatchReason = MatchSuggestion['reasons'][number];
 
-/**
- * "Neden bu öneri" — motorun `reasons` dizisi operatörün diline çevrilir.
- *
- * Motorun künyesi bu alanı açıkça bunun için koymuş (*"operatör 'neden bu?' diye sormasın"*) ve
- * gösterilmeseydi alan ölü kalırdı. Sıra önem sırası: referans eşleşmesi en güçlü kanıttır (banka
- * açıklamasında bizim numaramız geçiyor), carinin eşleşme kelimesi ondan sonra (operatörün kendi
- * kuralı), tarih yakınlığı en zayıfı.
- */
+/** "Neden bu öneri": motorun `reasons` dizisi operatörün dilinde. */
 const REASON_LABEL: Record<MatchReason, string> = {
   reference_in_label: 'referans açıklamada geçiyor',
   keyword_in_label: 'eşleşme kelimesi geçiyor',
@@ -278,6 +250,7 @@ const REASON_LABEL: Record<MatchReason, string> = {
   name_in_label: 'ad açıklamada geçiyor',
 };
 
+// Önem sırası: banka açıklamasında bizim numaramız en güçlü kanıttır, carinin eşleşme kelimesi ondan sonra, tarih yakınlığı en zayıfı.
 const REASON_ORDER = [
   'reference_in_label',
   'keyword_in_label',
@@ -300,11 +273,8 @@ const targetKey = (kind: MatchKindView, id: string) => `${kind}:${id}`;
 const orderName = (referenceNo: string | null, id: string) => `Sipariş ${referenceNo ?? `#${id.slice(0, 8)}`}`;
 
 /**
- * Seçim penceresinin hedef listesi (12.13 · 13.09) — kapının listelerinden görünüme.
- *
- * Her hedef iki satır okunur (`title` / `detail`) ve kararı hazır taşır (`target`): pencere
- * seçileni olduğu gibi action'a verir, kendi kimlik kurmaz. Yön hedefin üstünde durur; pencere
- * satırın yönüne uymayanı hiç listelemez (giren paraya fatura ödemesi teklif edilmez).
+ * Seçim penceresinin hedef listesi; her hedef kararı hazır taşır, pencere seçileni olduğu gibi gönderir. Yön hedefin üstünde durur,
+ * çünkü pencere satırın yönüne uymayanı listelemez.
  */
 export function toMatchTargets(targets: MatchTargets, natureLabels: ReadonlyMap<string, string>): MatchTargetView[] {
   const natureOf = (slug: string | null) => (slug ? (natureLabels.get(slug) ?? slug) : null);
@@ -382,7 +352,7 @@ export function toMatchTargets(targets: MatchTargets, natureLabels: ReadonlyMap<
         direction: null,
       }),
     ),
-    // Cari (13.09): iki yöne de listelenir — varsayılan türü satırın yönüne uymuyorsa tür konmaz, cari yine yazılır.
+    // Cari iki yöne de listelenir: varsayılan türü satırın yönüne uymuyorsa tür konmaz, cari yine yazılır.
     ...targets.counterparties.map(
       (counterparty): MatchTargetView => ({
         kind: 'counterparty',
@@ -397,11 +367,8 @@ export function toMatchTargets(targets: MatchTargets, natureLabels: ReadonlyMap<
 }
 
 /**
- * Eşleştirme kuyruğu — üç hâl, üç ayrı eylem (tezgâh sözleşmesi).
- *
- * Güç sınıflandırması motorun cevabından TÜRETİLİR, ekranda yeniden karar verilmez: `unambiguous`
- * zaten "iki aday yakın mı" sorusunun cevabıdır (`isUnambiguous`) ve ekran kendi eşiğini koysaydı
- * aynı satır için motorla ayrı düşerdi — motor "belirsiz" derken ekran "onayla" teklif ederdi.
+ * Eşleştirme önerisinin görünümü. Güç motorun cevabından türer (`isUnambiguous`), çünkü ekran kendi eşiğini koysaydı motor "belirsiz"
+ * derken "onayla" teklif ederdi.
  */
 export function toMatchRows(queue: readonly QueueInput[], targets: readonly MatchTargetView[]): MatchRowView[] {
   const targetOf = new Map(targets.map((target) => [target.key, target] as const));
@@ -439,17 +406,14 @@ function sentenceOf(strength: MatchRowView['strength'], best: MatchCandidateView
   return 'Birden çok hedef bu satıra uyuyor — hangisi olduğunu siz seçin.';
 }
 
-/**
- * Sağ panelin hareket seçicisi (12.17) — kuyruk kartıyla AYNI öneri görünümü (`toMatchRows`) ve
- * aynı hedef listesi (`toMatchTargets`): tek satır için ikinci bir öneri dili yazılmaz.
- */
+/** Hareketin eşleştirme menüsü; tek satır için ikinci bir öneri dili yazılmaz, görünüm ve hedef listesi aynıdır. */
 export function toMatchOptionsView(options: MatchOptions, natureLabels: ReadonlyMap<string, string>): MatchOptionsView {
   const targets = toMatchTargets(options.targets, natureLabels);
   const [row] = toMatchRows([options], targets);
   return { row: row!, targets, bankRow: options.bankRow };
 }
 
-/** Belge panelinin ödemeleri ve adayları (12.17) — hareket künyeleriyle, puan sebepleri operatörün dilinde. */
+/** Belgenin ödeme menüsü: ödemeleri ve adayları, hareket künyeleriyle; puan sebepleri operatörün dilinde. */
 export function toDocumentPaymentsView(options: DocumentPaymentOptions, accountNames: ReadonlyMap<string, string>): DocumentPaymentsView {
   const titleOf = (movement: MoneyMovement) => movement.description?.trim() || MOVEMENT_TYPE_LABEL[movement.type];
   return {

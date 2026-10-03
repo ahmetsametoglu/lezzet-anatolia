@@ -11,13 +11,8 @@ import { DocumentPaymentSelector, MovementMatchSelector } from './match-selector
 import { useLazyRead } from './use-lazy-read.hook';
 
 /*
-  SATIRIN EYLEMLERİ (12.21 · kullanıcı kararı: "sağ taraftaki panel anlamını büyük yitirdi, kaldıralım;
-  o panelden yapılıp tabloda olmayan işi tablodan yapılabilir kılalım") — panelin her işi satırın kendi
-  kontrolüne geldi:
-   · hareket → "Karşılığı" hapı: eşleştirme menüsü (her hedef, belge bağı ve kaldırması, eşleşmiş
-     satırda "Eşleşmeyi geri al"); güçlü öneride yanında ✓ — tek dokunuşla onay
-   · belge → ödeme hapı (bağlı ödemeler ve kaldırma menüde) · ⋯ menüsünde "Ödemesini yaz" ve "Belgeyi aç"
-  Menülerin verisi AÇILINCA okunur (`useLazyRead`).
+  Satırın eylemleri: hareketin "Karşılığı" hapı eşleştirme menüsünü, belgenin ödeme hapı bağlı ödemelerini açar; seyrek eylemler ⋯
+  menüsündedir. Menülerin verisi açılınca okunur (`useLazyRead`).
 */
 
 /** Satırın bağ kararları — defter listesi hepsini aynı kapıya iletir; `busyId` o satırı kilitler. */
@@ -37,8 +32,7 @@ interface MovementMatchCellProps {
 export function MovementMatchCell({ row, matcher }: MovementMatchCellProps) {
   const options = useLazyRead<MatchOptionsView>(() => matchOptionsAction(row.id));
   const busy = matcher.busyId === row.id;
-  // Bağlanabilir mi (panelin kuralı, 12.17): eşleşme bekleyen ekstre satırı her hedefe; tür alan elle
-  // satır ve stok alımı belgeye.
+  // Bağlanabilir mi: eşleşme bekleyen ekstre satırı her hedefe; tür alan elle satır ve stok alımı belgeye.
   const linkable = row.fromBank ? !row.reconciled : row.canClassify || row.type === 'purchase';
   const common = {
     amountCents: row.amountCents,
@@ -67,7 +61,7 @@ export function MovementMatchCell({ row, matcher }: MovementMatchCellProps) {
           {...common}
           triggerLabel={partial ? undefined : row.suggestionTitle ? `öneri: ${row.suggestionTitle}` : 'Eşleştir'}
           tone={partial ? undefined : SUGGESTION_VIEW[row.suggestion ?? 'none'].tone}
-          // Kısmen bağlı ya da carisi konmuş satırın cevabı da geri alınır (panelin kuralı: `canUnmatch`).
+          // Kısmen bağlı ya da carisi konmuş satırın cevabı da geri alınır (`canUnmatch`).
           onUnmatch={row.canUnmatch ? () => matcher.onUnmatch(row.id) : undefined}
         />
         {target ? (
@@ -123,7 +117,7 @@ interface DocumentActionsCellProps {
 export function DocumentActionsCell({ document, actions }: DocumentActionsCellProps) {
   const payments = useLazyRead<DocumentPaymentsView>(() => documentPaymentsAction(document.id));
   const busy = actions.busyId === document.id;
-  // Seyrek eylemler ⋯ menüsünde: ödeme yalnız açık kalan varken, dosya yalnız yüklüyse (panelin kuralı).
+  // Seyrek eylemler ⋯ menüsünde: ödeme yalnız açık kalan varken, dosya yalnız yüklüyse.
   const items = [
     ...(document.openAmountCents > 0
       ? [{ key: 'pay', icon: <NavIcon name="para" />, label: document.direction === 'out' ? 'Ödemesini yaz' : 'Tahsilatını yaz', hint: 'elle hareket penceresi belgeyle dolu açılır', onSelect: () => actions.onPay(document) }]

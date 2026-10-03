@@ -113,9 +113,9 @@ export type AllocationOutcome =
   | { status: 'invalid'; reason: 'not_found' | 'direction_mismatch' | 'already_allocated' | 'nothing_to_allocate' | 'document_settled' };
 
 /**
- * Hareketi belgeye bağlar; bağın tutarı hareketin bağlanmamış kalanı ile belgenin açık kalanının küçüğüdür ve elle verilmez, çünkü
- * Pennylane de hareketi faturalara bağlanma sırasıyla dağıtır. Yön aynı olmalı, aynı çift iki kez bağlanmaz; kapanmış belgeye bağ
- * kurulmaz, fazla ödeme hareketin bağlanmamış kalanında görünür.
+ * Hareketi belgeye bağlar; bağın tutarı hareketin bağlanmamış kalanı ile belgenin açık kalanının küçüğüdür ve elle verilmez, böylece
+ * bağlar ne hareketi ne belgeyi aşar. Yön aynı olmalı, aynı çift iki kez bağlanmaz; kapanmış belgeye bağ kurulmaz, fazla ödeme
+ * hareketin bağlanmamış kalanında görünür.
  */
 export async function allocateToDocument(
   db: SupabaseClient,

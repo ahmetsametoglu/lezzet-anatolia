@@ -6,15 +6,12 @@ import type { MatchTarget } from '@/lib/bank/reconcile';
 import type { MatchKindView, SuggestionStrength } from './finance-labels';
 import type { FinanceUrlState } from './finance-url';
 
-// Para ekranının GÖRÜNÜM MODELİ. Kural (CLAUDE.md §1): view-model şemadan TÜRETİLİR —
-// `View = Entity & { extra }`. Veride duran alan `Pick`'lenir, hesaplanan alan yazılır; DB alanları
-// görünüm için elle yeniden yazılmaz (müşteri ekranının O9 dersi).
+// Para ekranının görünüm modeli: veride duran alan şemadan `Pick`'lenir, hesaplanan alan yanına yazılır. DB alanı görünüm için
+// elle yeniden yazılmaz, çünkü ikinci tanım şemadan ayrışır.
 
 /**
- * Hesap kartı — bakiye şeridinin hücresi ve 12.17'den beri hesap SÜZGECİ.
- *
- * `balanceCents` hesabın kendi alanı DEĞİL, `account_balance` görünümünden gelir: bakiye saklanmaz,
- * hareketlerden türetilir. Bu yüzden `Account`a `Pick` ile değil, yanına eklenerek konuyor.
+ * Hesap kartı: bakiye şeridinin hücresi ve hesap süzgeci. `balanceCents` hesabın alanı değil, `account_balance` görünümünden gelir,
+ * çünkü bakiye saklanmaz, hareketlerden türer.
  */
 export type AccountView = Pick<Account, 'id' | 'name' | 'type' | 'isActive'> & {
   balanceCents: number;
@@ -23,17 +20,8 @@ export type AccountView = Pick<Account, 'id' | 'name' | 'type' | 'isActive'> & {
 };
 
 /**
- * Defter satırı — hareket tablosunun bir satırı.
- *
- * **`signedAmountCents` görünümden gelir, ekranda HESAPLANMAZ.** İşaret kuralının tek uygulaması
- * `account_movement`tir (servisin künyesi: *"kural iki yere yazılmaz"*); ekran `direction`a bakıp
- * kendi eksisini koysaydı transferin karşı ucunda yanılırdı — orada işaret ters ve sebebi hareketin
- * yönü değil, satırın hangi hesabın defterinde durduğu.
- *
- * ── SATIR KENDİ YERİNDE DÜZENLENİR (13.09 · 12.17) ─────────────────────────
- * Tür, cari ve etiket satırın ortasındaki hücrede; belge bağı, eşleştirme ve geri alma "Karşılığı"
- * sütununun hapında (12.21 — bir tur sağ paneldeydi). Bir tur satır salt okunurdu ve verilen cevap geri
- * alınamıyordu.
+ * Defter satırı. `signedAmountCents` görünümden gelir ve ekranda hesaplanmaz, çünkü transferin karşı ucunda işaret hareketin yönüne
+ * değil, satırın hangi hesabın defterinde durduğuna bağlıdır.
  */
 export type MovementRowView = Pick<
   AccountLedgerRow,
@@ -55,25 +43,24 @@ export type MovementRowView = Pick<
   /** Operatörün okuduğu cümle — açıklama yoksa tipin adı (boş hücre bırakmaktansa). */
   title: string;
   /**
-   * Açıklamanın altındaki İPUCU (12.21): kampanya ya da izah sorusu ("izah bekliyor — …"). Bağ `link`te,
-   * ekstre satırının önerisi `suggestion*`da. `null` ise alt satır çizilmez — "—" yazmak, ipucu olmamasını
-   * bir eksiklik gibi gösterirdi.
+   * Açıklamanın altındaki ipucu: kampanya ya da izah sorusu. `null` ise alt satır çizilmez, çünkü "—" ipucu olmamasını eksiklik gibi
+   * gösterirdi.
    */
   ref: string | null;
   /** Cümlenin tonu: bir kayda gidiyorsa `olive`, cevap bekliyorsa `amber`, düz bilgiyse `neutral`. */
   refTone: OpsTone;
-  /** Satırın BAĞI (12.21 · "Karşılığı" sütunu): sipariş, mal kabul, tedarikçi ya da karşı hesap — düz yazı. */
+  /** Satırın bağı, "Karşılığı" sütununda düz yazı: sipariş, mal kabul, tedarikçi ya da karşı hesap. */
   link: { text: string; tone: OpsTone } | null;
   accountName: string;
-  /** Kaba tip — "gider", "transfer". Tür ve etiketler satırın kendi hücresinde okunur (13.09). */
+  /** Kaba tip: "gider", "transfer"; tür ve etiketler satırın kendi hücresinde okunur. */
   typeLabel: string;
   /** Satır tür alır mı — sipariş parası, stok alımı ve transfer almaz (motor: `acceptsNature`). */
   canClassify: boolean;
   /** Türün okunur adı — pasif tür seçicide yoktur ama satırda adıyla okunmalı. */
   natureLabel: string | null;
-  /** Carinin adı (13.09) — aynı gerekçe: pasif cari de adıyla okunur. */
+  /** Carinin adı; pasif cari de adıyla okunur. */
   counterpartyName: string | null;
-  /** Bağlı belgeler (13.09 · bağ ayrı tabloda) — künyesi ve bağın tutarıyla. */
+  /** Bağlı belgeler, künyesi ve bağın tutarıyla. */
   documents: Array<{ id: string; label: string; amountCents: number }>;
   /** Belgelere bağlanmamış kalan (**cent**) — "Karşılığı" hapının "bağlı / tutar"ı. */
   remainingCents: number;
@@ -81,29 +68,17 @@ export type MovementRowView = Pick<
   fromBank: boolean;
   /** Ekstre satırının cevabı geri alınabilir mi: mutabık, belgeye bağlı ya da carisi konmuş. */
   canUnmatch: boolean;
-  /**
-   * Mutabık olmayan ekstre satırının önerisinin GÜCÜ (12.19) — "Karşılığı" hapının tonu bundan (12.21);
-   * öteki satırlarda `null`.
-   */
+  /** Mutabık olmayan ekstre satırının önerisinin gücü, "Karşılığı" hapının tonu; öteki satırlarda `null`. */
   suggestion: MatchRowView['strength'] | null;
-  /** En iyi adayın adı — "Karşılığı" hapının "öneri: …"su (12.21). */
+  /** En iyi adayın adı, "Karşılığı" hapının "öneri: …"su. */
   suggestionTitle: string | null;
-  /** Güçlü önerinin hedefi — satırın ✓'si tek dokunuşla uygular (12.21). */
+  /** Güçlü önerinin hedefi; satırın ✓'si tek dokunuşla uygular. */
   suggestionTarget: MatchTarget | null;
 };
 
 /**
- * Defter satırının KİMLİĞİ — `id` tek başına değil, `(id, ledgerAccountId)` ÇİFTİ.
- *
- * Ölçüldü (06.08, kullanıcı bildirimi — React "iki çocuk aynı anahtarla" uyarısı): `account_movement`
- * bir transferi İKİ satır olarak veriyor (gönderen hesabın defteri + alanın defteri) ve ikisinin
- * `id`'si aynı hareketin kimliği. Hesap süzgeci yokken ("Tüm hesaplar") her iki bacak da aynı listede
- * duruyor, yani `id` orada tekil DEĞİL. Görünümün künyesi bunu zaten söylüyordu: *"bir hareket
- * dokunduğu her hesapta bir satır üretir: normal hareket bir, transfer iki."*
- *
- * Satırdan `id`'yi ATMADIM ve atmamalıyım: o gerçek bir hareket kimliği ve mutabakat eylemi onunla
- * çalışıyor. Eksik olan ikinci yarısıydı; anahtar bu yüzden burada, tek yerde kuruluyor — iki listede
- * elle birleştirilseydi biri bir gün ötekinden ayrışırdı.
+ * Defter satırının kimliği `(id, ledgerAccountId)` çiftidir, çünkü `account_movement` transferi iki hesabın defterinde aynı `id`'li
+ * iki satır olarak verir. Anahtar tek yerde kurulur; iki listede elle birleştirilen anahtar ayrışırdı.
  */
 export function ledgerRowKey(row: Pick<MovementRowView, 'id' | 'ledgerAccountId'>): string {
   return `${row.id}:${row.ledgerAccountId}`;
@@ -115,10 +90,7 @@ export interface MatchRowView {
   /** Bankanın kendi yazdığı satır ("VIREMENT 8829 LEROY") — sadeleştirilmeden gösterilir. */
   bankLine: string;
   signedAmountCents: number;
-  /**
-   * Satırın BAĞLANMAMIŞ kalanı (13.09 · bağ tutarıyla) — belgeye kısmen bağlanan satır kuyrukta
-   * kalanıyla durur; tamamı açıksa tutarın kendisi.
-   */
+  /** Satırın bağlanmamış kalanı; belgeye kısmen bağlanan satır kuyrukta kalanıyla durur. */
   remainingCents: number;
   /** Satırın yönü — seçim penceresi yalnız bu yöne uyan hedefleri listeler. */
   direction: MovementDirection;
@@ -131,12 +103,8 @@ export interface MatchRowView {
 }
 
 /**
- * Eşleştirme HEDEFİ (12.13 · 13.09) — seçim penceresinin bir satırı: sipariş, açık belge, mal kabul,
- * transfer ucu, başka hesap, o hesaba zaten yazılmış hareket ya da cari.
- *
- * `target` kapının aldığı kararın kendisidir (`MatchTarget`), ekran onu olduğu gibi gönderir;
- * `title`/`detail` operatörün okuduğu iki satır. Kimlik yerine ad: UUID gösteren bir seçim
- * penceresi okunamaz.
+ * Eşleştirme hedefi, seçim penceresinin bir satırı; `target` kapının alacağı karardır ve olduğu gibi gönderilir. Satır kimlik yerine
+ * ad okur, çünkü UUID gösteren seçim penceresi okunamaz.
  */
 export interface MatchTargetView {
   kind: MatchKindView;
@@ -160,15 +128,7 @@ export interface MatchCandidateView extends MatchTargetView {
   reasons: string[];
 }
 
-/**
- * Listenin hâli.
- *
- * Bir tur ÜÇÜNCÜ bir hâl vardı (`blocked`: veri var, ekran hazır, okuma kapısı yok) ve işini
- * gördü — "hiç hareket yok" ile "hepsini gösteremiyorum" farklı cümlelerdir, ikincisini birincisi
- * gibi göstermek dolu bir kasayı boş göstermek olurdu. Kapı gelince (`LedgerFilter.accountId`
- * isteğe bağlı oldu) hâl kendiliğinden ölü kaldı ve silindi: geçici bir dürüstlük aracıydı,
- * kalıcı bir kavram değil.
- */
+/** Listenin hâli. */
 export type LedgerState = 'ready' | 'empty';
 
 export interface LedgerView {
@@ -181,8 +141,8 @@ export interface LedgerView {
 }
 
 /**
- * Belge satırı (12.12 · 12.17) — Belgeler sekmesinin satırı ve "Ödemesini yaz" formunun künyesi. `openAmountCents` belgenin alanı DEĞİL, `money_document_balance` görünümünden
- * gelir: açık kalan saklanmaz, bağlarından türetilir.
+ * Belge satırı: Belgeler sekmesinin satırı ve "Ödemesini yaz" formunun künyesi. `openAmountCents` belgenin alanı değil,
+ * `money_document_balance` görünümünden gelir, çünkü açık kalan saklanmaz, bağlarından türer.
  */
 export type DocumentRowView = Pick<
   MoneyDocument,
@@ -202,7 +162,7 @@ export type DocumentRowView = Pick<
   | 'vatRegime'
 > & {
   kindLabel: string;
-  /** Karşı tarafın ADI (13.09) — cari ya da tedarikçi; yoksa `null`. */
+  /** Karşı tarafın adı, cari ya da tedarikçi; yoksa `null`. */
   partyName: string | null;
   natureLabel: string | null;
   openAmountCents: number;
@@ -217,7 +177,7 @@ export interface DocumentListView {
   note: string | null;
 }
 
-/** Hareketin eşleştirme menüsü (12.17 · 12.21'den beri satırda) — `matchOptionsAction`ın cevabı. */
+/** Hareketin eşleştirme menüsü, `matchOptionsAction`ın cevabı. */
 export interface MatchOptionsView {
   /** Satırın öneri görünümü — kuyruk kartıyla AYNI (güç, cümle, adaylar, kalan). */
   row: MatchRowView;
@@ -259,10 +219,7 @@ export interface DocumentPaymentsView {
   candidates: PaymentCandidateView[];
 }
 
-/**
- * Sözlük penceresinin listeleri (13.09) — PASİFLER DÂHİL: pasif tür, cari ya da etiket geri
- * açılabilsin diye listede durur; seçicilere yalnız aktifler gider (`FinanceData.*Options`).
- */
+/** Sözlük penceresinin listeleri, pasifler dâhil: pasif kayıt geri açılabilsin diye listede durur; seçicilere yalnız aktifler gider. */
 export interface DictionaryView {
   natures: Array<Pick<MovementNature, 'slug' | 'label' | 'direction' | 'accountCode' | 'isActive'>>;
   counterparties: Array<Pick<Counterparty, 'id' | 'name' | 'kind' | 'keywords' | 'defaultNature' | 'isActive'>>;
@@ -275,41 +232,31 @@ export interface FinanceData {
   totalCents: number;
   /** Hareketler sekmesinin ilk sayfası; Belgeler sekmesindeyken `null` — görünmeyen liste okunmaz. */
   ledger: LedgerView | null;
-  /** Belgeler sekmesinin ilk sayfası (12.17); Hareketler sekmesindeyken `null`. */
+  /** Belgeler sekmesinin ilk sayfası; Hareketler sekmesindeyken `null`. */
   documents: DocumentListView | null;
   /** Açık belge sayısı — Belgeler sekmesinin rozeti: ödenmemiş fatura bir iştir. */
   openDocumentCount: number;
-  /** Belge formunun tedarikçi seçeneği; yalnız aktif tedarikçiler. */
-  /** Belge formunun tedarikçi seçeneği; yalnız aktifler — ülkesi ve vadesiyle (rejim ve vade önerisi, 12.26). */
+  /** Belge formunun tedarikçi seçeneği: yalnız aktifler, ülkesi ve vadesiyle (rejim ve vade önerisi). */
   supplierOptions: SupplierOption[];
-  /** Tür seçenekleri (13.09) — yalnız AKTİF; seçici satırın yönüyle süzsün diye yönü de taşır. */
+  /** Tür seçenekleri, yalnız aktifler; seçici satırın yönüyle süzsün diye yönü de taşır. */
   natureOptions: NatureOption[];
   /** Serbest etiketler — yalnız AKTİF: pasif etiket yeni harekete verilmez. */
   tagOptions: TagOption[];
-  /** Cariler (13.09) — yalnız AKTİF; varsayılan türüyle (seçilince boş türe önerilir). */
+  /** Cariler, yalnız aktifler; varsayılan türüyle, seçilince boş türe önerilir. */
   counterpartyOptions: CounterpartyOption[];
   /** Sözlük penceresi — pasifler dâhil. */
   dictionary: DictionaryView;
-  /**
-   * İzah edilmemiş hareket sayısı (13.09) — `null` "sayaç kapısı yok" demek, sıfır değil.
-   *
-   * CLAUDE.md §1: **ölçülemeyen değer SIFIR değildir.** Sayacı olmayan bir ekranda "0 izahsız"
-   * yazmak, dolu bir iş kuyruğunu "her şey izahlı" diye okutur.
-   */
+  /** İzah edilmemiş hareket sayısı; `null` sayaç yok demektir, sıfır değil, çünkü "0 izahsız" dolu kuyruğu boş okuturdu. */
   unexplainedCount: number | null;
 }
 
 /**
- * Açık diyalog — `null` hiçbiri. `document` belge girişi, `dictionary` tür · cari · etiket sözlüğü
- * (13.09), `bankImport` dosya yükleme (12.10). `movement` ile `transfer` AYNI pencere — ikincisi onu
- * transfer kipinde açar (12.24).
+ * Açık diyalog, `null` hiçbiri: `document` belge girişi, `dictionary` tür · cari · etiket sözlüğü, `bankImport` dosya yükleme.
+ * `movement` ile `transfer` aynı penceredir, ikincisi onu transfer kipinde açar.
  */
 export type DialogKind = 'movement' | 'transfer' | 'document' | 'dictionary' | 'bankImport' | null;
 
-/**
- * Satırın yazım sözleşmesi (13.09 · 12.17) — ortadaki hücrenin seçenekleri ve kapıları (`useRowWrites`);
- * pasif etiketin adı sözlüğün tamamından.
- */
+/** Satırın yazım sözleşmesi: ortadaki hücrenin seçenekleri ve kapıları (`useRowWrites`); pasif etiketin adı sözlüğün tamamından. */
 export interface RowEditor {
   natureOptions: NatureOption[];
   counterpartyOptions: CounterpartyOption[];
@@ -323,11 +270,8 @@ export interface RowEditor {
 }
 
 /**
- * İki cihaz görünümünün ORTAK sözleşmesi.
- *
- * `finance-client.tsx`'te DEĞİL burada duruyor ve sebebi yaşanmış: client → desktop → client
- * döngüsü `no-circular` ihlali veriyor (geri bildirim ekranında aynısı olmuştu). Tipler ikisinin de
- * altında duran bir modülde yaşamalı.
+ * İki cihaz görünümünün ortak sözleşmesi. `finance-client.tsx`'te durmaz, çünkü client → desktop → client döngüsü `no-circular`
+ * ihlalidir.
  */
 export interface FinanceViewProps {
   data: FinanceData;
@@ -341,7 +285,7 @@ export interface FinanceViewProps {
   onOpenDialog: (kind: DialogKind) => void;
   onCloseDialog: () => void;
   onSaved: () => void;
-  // ── Satırın düzenlemesi (13.09 · 12.17) — söz `false` dönerse kapı reddetti, sebep şeritte ──
+  // ── Satırın düzenlemesi: söz `false` dönerse kapı reddetti, sebep şeritte ──
   onSetNature: (movementId: string, nature: string | null) => Promise<boolean>;
   onSetCounterparty: (movementId: string, counterpartyId: string | null) => Promise<boolean>;
   /** Etiketler — menünün her dokunuşu listenin yeni hâlini yazar (Kaydet yok). */
@@ -352,16 +296,16 @@ export interface FinanceViewProps {
   onUnmatch: (movementId: string) => void;
   /** Elle yazılmış satırın belge bağını kaldırır. */
   onRemoveAllocation: (movementId: string, documentId: string) => void;
-  /** Satırın kararı ("Karşılığı" hapı ya da ✓) — ekstre satırı kapının hedefine gider (12.21). */
+  /** Satırın kararı ("Karşılığı" hapı ya da ✓); ekstre satırı kapının hedefine gider. */
   onApplyTarget: (movementId: string, target: MatchTarget) => Promise<boolean>;
-  /** Hareket ↔ belge bağı — hareket satırının hapı ve belge satırının "Ödeme bağla"sı (12.21). */
+  /** Hareket ↔ belge bağı: hareket satırının hapı ve belge satırının "Ödeme bağla"sı. */
   onLinkDocument: (movementId: string, documentId: string) => Promise<boolean>;
   /** Hangi satır beklemede (geri alma, bağ kaldırma) — iki kez tıklanmasın. */
   rowBusyId: string | null;
   /** Satırın son reddi — listenin üstünde okunur. */
   rowError: string | null;
 
-  // ── Listeler: ilk sayfa sunucudan, devamı action ile eklenir (12.17) ──
+  // ── Listeler: ilk sayfa sunucudan, devamı action ile eklenir ──
   movementRows: MovementRowView[];
   documentRows: DocumentRowView[];
   hasMore: boolean;
@@ -376,17 +320,3 @@ export interface FinanceViewProps {
   /** Belge dosyasını yeni sekmede açar — okuma adresi tıklanınca istenir, süresi kısa. */
   onOpenDocumentFile: (document: DocumentRowView) => void;
 }
-
-/**
- * ── ELLE HAREKET ŞEMASI ARTIK FORMUN YANINDA (22.18) ────────────────────────
- * `MANUAL_TYPES`, `ManualType`, `ManualMovementSchema` ve `ManualMovementForm` buradan
- * `components/operation/form/movement-form/schema.ts`e taşındı: form ortak alana çıktı (asistan
- * kuyruğu da onu açıyor) ve bir komponentin sayfa klasöründen şema okuması ters yönlü bağımlılıktır.
- *
- * **Yeniden ihraç YOK:** çağıranların hepsi (diyalog · kuyruk gövdesi · devir okuması) şemayı
- * doğrudan oradan okuyor. Buradan da vermek, aynı tanıma ikinci bir adres açmak olurdu.
- */
-
-// `TransferFormSchema`/`TransferForm` de aynı yolu izledi (22.22) →
-// `components/operation/form/transfer-form/schema.ts`. Sebep aynı: transfer formu artık kuyruğun
-// içinde de açılıyor ve iki yüzey tek tanımı paylaşmalı.
