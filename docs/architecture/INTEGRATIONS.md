@@ -50,8 +50,10 @@ Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK �
 ### Kapının VARLIĞI ayrı bir sorudur — adres doğrulama (11.11)
 
 Koordinat çözmek ile *"bu kapı gerçekten var mı"* diye sormak aynı iş değil. İkincisi
-**sipariş anında** sorulur (kullanıcı kararı 02.09) — adres girişinde değil: müşteri defterine on
-adres ekleyebilir, soru ancak malın gideceği kapı seçilince anlamlıdır.
+**ödeme ekranında** sorulur — adres girişinde değil: müşteri defterine on adres ekleyebilir, soru
+ancak malın gideceği kapı seçilince anlamlıdır. Soru ödeme yolu seçilince arkada başlar, sipariş
+düğmesi cevabı hazır bulur; web bunu yalnız kart dışı yollarda soruyor (K.58). Kapı düzeyinde
+çözülmüş (`housenumber`) adres servise sorulmadan onaylı sayılır.
 
 **Yöntem BAN'a İKİ sorgudur ve ikinciliği şart:** birinci sorgu posta kodunu sert süzgeç olarak
 verir, ikincisi vermez. Kodu sabitlemek "posta kodu yanlış" hâlini **yapısal olarak görünmez**
