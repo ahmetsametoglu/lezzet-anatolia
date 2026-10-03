@@ -157,11 +157,30 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   const selectedAddress = snapshot.addresses.find((a) => a.id === state.addressId) ?? null;
 
   /**
-   * Sipariş anında sorulan adres doğrulamasının sonucu; `checkedFor` aynı adres ikinci kez sorulmasın diye sorulan adresi tutar.
+   * Adres doğrulamasının sonucu; `checkedFor` aynı adres ikinci kez sorulmasın diye sorulan adresi tutar.
    * Sorulsaydı "benim yazdığım doğru" diyen müşteri döngüye girerdi, çünkü ret bir beyandır ve bir kez alınır.
    */
   const [addressNotice, setAddressNotice] = useState<AddressCheckOutcome | null>(null);
   const checkedFor = useRef<string | null>(null);
+
+  /**
+   * Doğrulama kart dışı yol seçilince arkada başlar: düğmeye basıldığında cevap hazırdır, müşteri onu beklemez. İstek düşerse
+   * sonuç `null` sayılır ve sipariş durmaz; sunucu da servis kesintisinde aynı yolu tutar (`unknown`).
+   */
+  const pendingCheck = useRef<{ addressId: string; outcome: Promise<AddressCheckOutcome | null> } | null>(null);
+  const addressCheckOf = useCallback((addressId: string) => {
+    if (pendingCheck.current?.addressId !== addressId) {
+      const outcome = checkCheckoutAddressAction(addressId).then(
+        (check) => check.data,
+        () => null,
+      );
+      pendingCheck.current = { addressId, outcome };
+    }
+    return pendingCheck.current.outcome;
+  }, []);
+  useEffect(() => {
+    if (state.addressId && state.paymentMethod && state.paymentMethod !== 'online') void addressCheckOf(state.addressId);
+  }, [state.addressId, state.paymentMethod, addressCheckOf]);
 
   /** Kart dışı yollar (kapıda / vadeli): sipariş burada kapanır, sağlayıcıya gidilmez. */
   const confirm = async () => {
@@ -171,10 +190,9 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
        gösterilmez, çünkü "doğrulayamadık" her siparişte görünen ve hiçbir şey söylemeyen bir satır olurdu. */
     if (checkedFor.current !== state.addressId) {
       setBusy(true);
-      const check = await checkCheckoutAddressAction(state.addressId);
+      const outcome = await addressCheckOf(state.addressId);
       checkedFor.current = state.addressId;
       setBusy(false);
-      const outcome = check.data;
       if (outcome && outcome.status !== 'confirmed' && outcome.status !== 'unknown') {
         return setAddressNotice(outcome);
       }

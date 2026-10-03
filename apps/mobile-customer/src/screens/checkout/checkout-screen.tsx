@@ -100,6 +100,12 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /** `checkedFor` hangi adres için sorulduğunu tutar: "benim yazdığım doğru" diyen müşteriye aynı adres için ikinci kez sorulmaz. */
   const [addressNotice, setAddressNotice] = useState<AddressCheckResult | null>(null);
   const checkedFor = useRef<string | null>(null);
+  /** Ödeme yolu seçilince başlayan doğrulama; dokunuşta cevap hazırdır, müşteri onu beklemez. */
+  const pendingCheck = useRef<{ addressId: string; result: ReturnType<typeof checkAddress> } | null>(null);
+  const addressCheckOf = useCallback((addressId: string) => {
+    if (pendingCheck.current?.addressId !== addressId) pendingCheck.current = { addressId, result: checkAddress(addressId) };
+    return pendingCheck.current.result;
+  }, []);
 
   /* Ad ve telefon girişte değil ilk siparişte istenir: kimliğini yeni kuran kişiden künye istemek bir bedeldir, siparişte ise
      karşılığı görünür. Yazım ayrı adım, çünkü `phone_invalid` gibi retler siparişin değil künyenin sorunudur. */
@@ -256,6 +262,10 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   }
   /** Seçim de türetilir: adres değişip yöntem kapanınca seçili kalması "kapalıyı seçtim" olurdu. */
   const selectedPayment = paymentOptions.find((option) => option.key === paymentKey && option.available) ?? null;
+  const paymentChosen = selectedPayment !== null;
+  useEffect(() => {
+    if (selectedAddressId !== null && paymentChosen) void addressCheckOf(selectedAddressId);
+  }, [selectedAddressId, paymentChosen, addressCheckOf]);
 
   const view = cart.view;
   const viewLines = view.lines;
@@ -471,10 +481,10 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     setSubmitting(true);
     setNotice(null);
 
-    /* Adres doğrulaması sipariş anında ve bir kez: söylenecek bir şey varsa akış durur, ikinci dokunuşta sipariş geçer. Soru
+    /* Adres doğrulamasının cevabı bir kez kullanılır: söylenecek bir şey varsa akış durur, ikinci dokunuşta sipariş geçer. Soru
        düşerse akış durmaz, çünkü dış servisin kesintisi satışı durduramaz. */
     if (checkedFor.current !== selectedAddress.id) {
-      const check = await checkAddress(selectedAddress.id);
+      const check = await addressCheckOf(selectedAddress.id);
       checkedFor.current = selectedAddress.id;
       if (check.error === null && check.data.status !== 'confirmed' && check.data.status !== 'unknown') {
         setSubmitting(false);

@@ -463,6 +463,20 @@ describe('CheckoutScreen — adres teklifi ve düzenleme', () => {
     expect(checkCalls()).toHaveLength(1);
   });
 
+  it('doğrulama ödeme yolu seçilince başlar; dokunuşta yeniden sorulmaz', async () => {
+    routeFetch({ status: 'confirmed' });
+    await openCheckout();
+    expect(checkCalls()).toHaveLength(0);
+
+    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    await waitFor(() => expect(checkCalls()).toHaveLength(1));
+
+    await fireEvent.press(screen.getByRole('button', { name: t.terms }));
+    await fireEvent.press(screen.getByTestId('checkout-confirm'));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalled());
+    expect(checkCalls()).toHaveLength(1);
+  });
+
   it('kapı doğrulandıysa soru HİÇ görünmez, sipariş ilk dokunuşta geçer', async () => {
     routeFetch({ status: 'confirmed' });
     await openAndConfirm();
