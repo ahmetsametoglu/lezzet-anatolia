@@ -2,12 +2,8 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 /*
-  TESLİM ŞEKLİ ROZETİ (Musteri Mobil `shAddr` öneri satırı, 21.313) — bir posta kodunun bize göre
-  cevabı: kapıya teslim (zeytin) ya da kargo (nötr). Web'in `ChannelBadge`ının telefondaki karşılığı.
-  KARAR ÇAĞIRANDA verilir (bölge listesinden — `use-door-codes.hook`); rozet yalnız çizer.
-
-  Tasarım satırda yalnız METİN taşıyor; web masaüstü v1'deki kamyon/koli ikonu burada yok (telefonda
-  native çizim geçerli — kullanıcı kararı 14.09).
+  Posta kodunun teslim şekli: kapıya teslim (zeytin) ya da kargo (nötr); kararı çağıran bölge listesinden verir, rozet yalnız
+  çizer. Masaüstündeki kamyon ve koli ikonu yok, çünkü telefon tasarımı satırda yalnız metin taşır.
 */
 
 interface ChannelBadgeProps {

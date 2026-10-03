@@ -3,31 +3,11 @@
 import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 /**
- * ÖNERİ LİSTESİ — bir alanın ALTINDA duran, seçilebilir aday satırları.
- *
- * **İki yerleşim (14.09):** akışta blok (varsayılan — mobil web, başvuru formu) ya da alanın altında
- * formun ÜSTÜNE açılan menü (`anchorRef` — masaüstü adres penceresi, kullanıcı isteği: liste akışta
- * durunca pencere her harfte uzayıp kısalıyordu). İkisinde de **`combobox` rolü YOK ve bu bilinçli**:
- * o rol bir KLAVYE SÖZLEŞMESİ vaat eder (ok tuşları, `aria-activedescendant`) ve o sözleşme burada
- * yok. Rolü yazıp gereğini yapmamak, hiç yazmamaktan kötüdür — ekran okuyucu kullanıcısına var
- * olmayan bir gezinme sözü verir. Satırlar sıradan düğme; sekme ile gezilir (menüde alandan satırlara).
- *
- * **Menü EKRANA sabit (`fixed`), yeri alanın konumundan ölçülür (14.09):** önce kabın içinde
- * `absolute`tu ve pencerenin kaydırma kutusu (`overflow`) son satırı alt kenarda kesiyordu — menü
- * pencerenin bir parçası gibi görünüyordu (kullanıcının görüntüsü). Sabit konumlu öğeyi atasının
- * kaydırması kesmez; ölçü kaydırmada ve ekran boyu değişince tazelenir. Şartı: atalarda `transform`
- * olmaması — pencerenin açılış animasyonu yalnız saydamlığı değiştiriyor. Görünen satır dört buçuk
- * (kullanıcı isteği: "dört falan… aşağı da kaydırılabilir"); yarım satır, listenin kaydığını söyler.
- *
- * **Görünüm v1'in adres penceresinden (13.09):** tek beyaz kart, satırlar ince ayraçla alt alta,
- * üzerine gelince kum zemin; satırın solunda isteğe bağlı ikon (iğne), sağında isteğe bağlı rozet
- * (teslim şekli). Önceki hâl her satırı ayrı bir kart olarak çiziyordu.
- *
- * **Boş listede HİÇBİR ŞEY çizilmez** — "sonuç yok" satırı bile. Öneri bir kolaylıktır; yokluğu
- * bir hata değildir ve müşteriye bir şey olmuş gibi göstermek, çalışan bir formu arızalı okutur.
+ * Bir alanın altında duran aday satırları: akışta blok ya da `anchorRef` verilirse alanın altına açılan menü. `combobox` rolü
+ * bilerek yok, çünkü o rol ok tuşlarıyla gezinme vaat eder; satırlar sekmeyle gezilen sıradan düğmelerdir.
  */
 
-/** Menüde görünen satır — dört tam satır ve beşincinin yarısı. */
+/** Menüde görünen satır — dört tam satır ve beşincinin yarısı; yarım satır listenin kaydığını söyler. */
 const VISIBLE_ROWS = 4.5;
 /** Menünün alanla arası ve ekranın alt kenarına bıraktığı pay (px). */
 const GAP_PX = 6;
@@ -51,14 +31,13 @@ interface SuggestionListProps {
   /** Her satırın solundaki ikon (v1: iğne) — yalnız görsel. */
   icon?: ReactNode;
   /**
-   * Kaynak künyesi — kartın ALTINDA. BAN verisi Etalab 2.0 altında ve kaynak gösterimi ZORUNLU
-   * (STACK "Adres arama (FR)"); Google önerisinde logo zorunlu. Kendi referansımızdan gelen
-   * listelerde geçilmez.
+   * Kaynak künyesi, kartın altında: BAN verisi Etalab 2.0 gereği kaynak, Google önerisi kullanım koşulu gereği logo ister. Kendi
+   * verimizden gelen listede verilmez.
    */
   footnote?: ReactNode;
   /**
-   * Verilirse liste MENÜDÜR: bu öğenin altında, ekrana sabit açılır (künye). Açma ve kapama çağıranın
-   * işi — alanın yazması ve odağı onda (`address-form` künyesi). Künye menünün içinde, altta.
+   * Verilirse liste bu öğenin altında ekrana sabit açılan bir menüdür; açıp kapamak çağıranın işi, çünkü yazma ve odak alanda.
+   * Sabit konum, atanın kaydırma kutusu son satırı kesmesin diye; şartı atalarda `transform` olmaması.
    */
   anchorRef?: RefObject<HTMLElement | null>;
 }
@@ -101,6 +80,7 @@ export function SuggestionList({ items, onSelect, label, icon, footnote, anchorR
     };
   }, [anchorRef, count]);
 
+  // Boş listede "sonuç yok" satırı bile çizilmez: öneri bir kolaylıktır, yokluğu hata gibi gösterilmez.
   if (count === 0) return null;
 
   const rows = items.map((item) => (

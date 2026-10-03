@@ -124,8 +124,8 @@ interface AddressFormProps {
   /** Verilirse mobil web çekmecesi düzenlemede kaydetmenin altında "Adresi sil" sunar, native adres çekmecesi gibi. */
   onDelete?: () => Promise<void>;
   /**
-   * Rol eylemleri — çekmecenin en üstünde tek şerit (native adres çekmecesiyle aynı). Satırdan kalktılar, çünkü üç eylem adres
-   * satırını eziyordu; kutu ya da başlık açılmaz, çekmece yükselmemeli.
+   * Rol eylemleri çekmecenin en üstünde tek şerittir, çünkü adres satırına konsalar üç eylem adresi ezerdi. Kutu ya da başlık açılmaz
+   * ki çekmece yükselmesin.
    */
   roleActions?: ReactNode;
 }
