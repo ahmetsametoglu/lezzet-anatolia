@@ -30,3 +30,13 @@
   gider; Pennylane'de çözülen bağ bizde kalır, muhasebeye bildirim gider ve karar yine bizim ekrandan verilir.
 - **Toptan ekibi: var olan tedarikçiyi Pennylane'de ikinci kez açma.** Aynı firmanın iki kaydı borcu iki hesaba böler ve
   Lezzet'in o firmaya yükleyeceği belgeyi bekletir.
+
+## Banka
+
+- **Kurulum kartında yalnız Revolut'u eşle.** Crédit Mutuel toptanındır; eşlenirse toptanın hareketleri Lezzet'in izah
+  kuyruğuna düşer.
+- **Lezzet faturasını Crédit Mutuel'den, toptan ödemesini Revolut'tan yapma.** Crédit Mutuel'den ödenen Lezzet belgesi
+  bizde açık kalır; Revolut'tan çıkan toptan ödemesi Pennylane'de eşlenene kadar bizde izah bekler.
+- **Nakdi yatırdığın gün bizde "Kasa → Crédit Mutuel" transferini yaz.** Yazılmazsa kasa sayımı Hiboutik'te tutmaz.
+- **Yatırılan Lezzet nakdini Crédit Mutuel'de bırakma, Revolut'a gönder.** Revolut'taki satır "Başka hesaba transfer →
+  Crédit Mutuel" ile eşleşir; bizdeki Crédit Mutuel bakiyesi gönderilmeyi bekleyen nakittir.

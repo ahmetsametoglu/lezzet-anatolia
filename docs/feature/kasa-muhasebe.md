@@ -50,8 +50,8 @@
 | 3 | **Hiboutik ↔ Pennylane ve banka ↔ Pennylane doğrudan konuşur** | Bu iki akış için bizden kod yok; sistemimiz muhasebe işine karışmaz. |
 | 4 | **Pennylane'e bizden giden: alış faturası ve eşleşme** | Yabancı ve e-faturaya geçmemiş tedarikçinin PDF faturası bizden yüklenir. Fransız tedarikçinin e-faturası Pennylane'e platformdan gelir; biz okuruz, yüklemeyiz. |
 | 5 | **Eşleştirme bizde** — alış faturası ↔ ödeme ↔ mal kabul | Cari çalışma, kısmi ödeme, tek havaleyle birden çok fatura. `money_allocation` bunu tutarıyla, çoktan çoğa taşıyor. Revolut BillPay önerisi bu yüzden geri çekildi. |
-| 6 | **Banka hareketlerinin kaynağı Pennylane** | Revolut ve Crédit Mutuel tek kaynaktan gelir. Excel içe aktarma yedek kalır. |
-| 7 | **Revolut: çevrim içi ödeme + kapıda kart + banka** | Stripe'ın yerini alır; Stripe'taki sipariş başına defter düzeni aynen sürer. Revolut nakit almaz, Fransa'da nakit yatırma da kalktı → **nakit için Crédit Mutuel kalır.** Revolut hesap açılışı kullanıcıda. |
+| 6 | **Banka hareketlerinin kaynağı Pennylane** | Lezzet'in hesabı (Revolut, 15. karar) Pennylane'den okunur. Excel içe aktarma yedek kalır. |
+| 7 | **Revolut: çevrim içi ödeme + kapıda kart + banka** | Stripe'ın yerini alır; Stripe'taki sipariş başına defter düzeni aynen sürer. Revolut nakit almaz, Fransa'da nakit yatırma da kalktı → **nakit Crédit Mutuel'e yatırılır, oradan Revolut'a gönderilir** (15. karar). Revolut hesap açılışı kullanıcıda. |
 | 8 | **Revolut ↔ Pennylane bağlantısında yalnız banka akışı açık** | "Harcamalar" modülü ve Revolut'tan Pennylane'e fatura aktarımı kapalı: ikisi de bizim yüklediğimiz faturanın ikizini üretir. |
 | 9 | **SumUp kasa olarak yok** | Genel API'si kasaya satış yazmıyor; Fransa'daki POS Pro (eski Tiller) 2026 sonunda kapanıyor, yeni entegrasyon talebi 2027'nin ikinci çeyreğinden itibaren. O tarihte yeniden bakılabilir. |
 | 10 | **B2B Hiboutik'e yazılmaz** (01.10) | Kasa yükümlülüğü B2B'yi kapsamıyor (BOFiP §10). B2B faturası bugünkü gibi Pennylane'de kesilir; müşteri alacağı ve vade orada izlenir, 2027'de e-fatura olarak da oradan gider. Kapıda nakit alınan B2B parası Hiboutik kasasına yalnız kasa girişi olarak yazılır. |
@@ -59,6 +59,8 @@
 | 12 | **Kurye nakdi farkı açıklamalı kasa hareketiyle yazılır** (01.10) | Sefer kapanışında nakit eksik ya da fazla çıkarsa fark bizde nakit hesabına hareket olarak, Hiboutik'e "Sefer kapanış farkı <sefer no>" açıklamalı kasa çıkışı ya da girişi olarak yazılır. Muhasebeci kasa farkı ya da kurye alacağı olarak işler. Kart farkı kasaya dokunmaz. |
 | 13 | **Faz 1 bitince iki ajanla inceleme** (01.10) | İki ajan birebir aynı istemle, birbirinden bağımsız çalışır: ikisi de Hiboutik entegrasyonunu ve projenin muhasebe sistemini (para hareketleri, ödeme durumu, muhasebe aktarımı, kâr, KDV, B2B ve hediye kuralları) tasarım (§7), ölçülen davranış (§6) ve yasal zemin (§1) karşısında inceler, uyumsuzlukları raporlar. Bulgular doğrulanıp kullanıcıya özetlenir. `CLAUDE.md`'deki alt ajan yasağının bu inceleme için istisnasıdır. |
 | 14 | **Kapıda kart parası nakit kasadan ayrı hesaba yazılır** (02.10) | Kurye, gel-al tezgâhı ve kapı önü satış kartla alınan parayı kapıda kart hesabına (`door_card_account_id`, kart cihazının hesabı), nakdi kapı çekmecesine (`door_cash_account_id`) yazar; hesabı istemci değil sunucu yöntemden seçer. Çekmece sayımı yalnız nakdi sayar. Yöntemin hesabı ayarlı değilse o yöntemle tahsilat kapalıdır ve teslim yazılmaz. |
+| 15 | **Banka hesapları işe göre ayrı** (03.10) | Revolut Lezzet'in, Crédit Mutuel toptan operasyonunun; ikisi de Pennylane'e bağlı, kurulum kartında yalnız Revolut eşlenir. Lezzet'in nakdi Crédit Mutuel'e yatırılır ve oradan Revolut'a gönderilir: bizde eşlenmemiş bir Crédit Mutuel hesabına "Kasa → Crédit Mutuel" transferi yazılır, Revolut'taki satır "Başka hesaba transfer → Crédit Mutuel" ile eşleşir. Bizdeki Crédit Mutuel bakiyesi gönderilmeyi bekleyen Lezzet nakdidir, gönderimden sonra sıfırdır. |
+| 16 | **Lezzet'in faturası Pennylane'de "Lezzet" analitik kategorisini taşır** (03.10) | Pennylane şirketi toptan operasyonuyla ortak; iki işin gideri ve kârı Pennylane'de kategoriyle ayrı raporlanır. |
 
 ## 3. Veri akışı
 
@@ -552,11 +554,15 @@ ile; istemci sahte `fetch` ile. Pennylane'e karşı ölçüm test şirketinde, b
 fatura girer, tedarikçi açar, banka hareketini kendi faturasına eşler. Lezzet'in alış belgesi yalnız bizden gider. Bunun için:
 tedarikçi açılmadan önce aynı firmanın kaydı aranır (akış 2), elle girilmiş fatura sahiplenilmez (akış 3), eşleşme yazımı
 yalnız bizim yüklediğimiz faturalara dokunur ve Pennylane'de bizde olmayan faturaya eşlenmiş hareket bizde başka işe ait
-sayılır (akış 5). Banka hesabı ortaksa toptanın hareketi Pennylane'de eşlenene kadar bizde izahsız görünür. Şirketin
-bütün e-faturaları tek kutuya gelir; hangisinin Lezzet'in olduğu akış 4'ün kararıdır.
+sayılır (akış 5). Banka hesapları ayrıdır (15. karar), Lezzet'in faturası "Lezzet" kategorisini taşır (16. karar). E-fatura
+alım platformu muhasebecinin yazılımı olabilir; akış 4, gelen e-faturanın QUALITE'nin Pennylane'ine aktarılıp
+aktarılmadığına bağlıdır.
 
 **Muhasebeciye sorulacak:** ters yüklemenin KDV kodu; hesap kodlarını Pennylane'in tedarikçiden atamasının yeterli
-olup olmadığı; fişin Pennylane'e fatura olarak girip girmeyeceği.
+olup olmadığı; fişin Pennylane'e fatura olarak girip girmeyeceği; QUALITE'nin e-fatura alım platformunun hangisi olacağı
+(muhasebecinin yazılımı ya da Pennylane) ve muhasebecinin yazılımıysa gelen e-faturanın Pennylane'e aktarılıp
+aktarılmadığı. Aktarılmıyorsa e-faturalı alış faturası Pennylane'e bizden yüklenirse muhasebeci aynı faturayı iki yerde
+görür; 2. ve 4. karar bu cevapla yeniden ele alınır.
 
 ## 9. Riskler
 
