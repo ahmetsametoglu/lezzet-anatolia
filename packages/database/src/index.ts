@@ -105,7 +105,14 @@ export {
   RegisterTicketLineService,
   RegisterTicketService,
 } from './services/register.service';
-export { PennylaneBankAccountService, PennylaneCursorService, PennylaneTransactionService } from './services/pennylane.service';
+export {
+  PennylaneBankAccountService,
+  PennylaneCursorService,
+  PennylaneDocumentService,
+  PennylaneQueueService,
+  PennylaneSupplierService,
+  PennylaneTransactionService,
+} from './services/pennylane.service';
 export { BankImportProfileService, BankImportService } from './services/bank-import.service';
 export { JobRunService } from './services/job-run.service';
 export { WebhookEventService } from './services/webhook-event.service';

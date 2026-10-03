@@ -1,0 +1,142 @@
+import { parisDateOf } from '@lezzet/helper';
+import type {
+  DocumentVatRate,
+  DocumentVatRegime,
+  MoneyDocument,
+  PennylaneInvoiceDraft,
+  PennylaneInvoiceLine,
+  PennylaneInvoicePatch,
+  PennylanePaymentStatus,
+} from '@lezzet/types';
+import { checkDocumentFile } from '../../money/document-file';
+import { BUSINESS_VAT_COUNTRY, documentVatProblem } from '../../money/document-terms';
+
+/**
+ * Alış belgesinin Pennylane'e yazımı; saf karar. Belge bizde girilir ve Pennylane'e bizden yüklenir, yüklenmiş belgenin değişikliği
+ * fark olarak yazılır ve nakitle kapanan belge ödendi işaretini alır.
+ */
+
+/** AB üyeleri (ISO 3166-1 alfa-2); ters yüklemede AB içi karşı tarafın kodu `intracom_<oran>`, dışındakinin `extracom`. */
+const EU_COUNTRIES = new Set('AT BE BG CY CZ DE DK EE ES FI FR GR HR HU IE IT LT LU LV MT NL PL PT RO SE SI SK'.split(' '));
+
+const STANDARD_CODE: Record<DocumentVatRate, string> = { 2.1: 'FR_21', 5.5: 'FR_55', 10: 'FR_100', 20: 'FR_200' };
+/** Pennylane'in listesinde AB içi %20 ters yükleme kodu yok; o belge muhasebeciyle netleşene kadar bekler. */
+const INTRACOM_CODE: Partial<Record<DocumentVatRate, string>> = { 2.1: 'intracom_21', 5.5: 'intracom_55', 10: 'intracom_100' };
+
+/** Satırın Pennylane oran kodu, karşılığı yoksa `null`; ters yüklemede ülkesi bilinmeyen karşı tarafın kodu seçilemez. */
+export function pennylaneVatCode(rate: DocumentVatRate, regime: DocumentVatRegime, partyCountry: string | null): string | null {
+  if (regime === 'exempt') return 'exempt';
+  if (regime === 'standard') return STANDARD_CODE[rate];
+  if (!partyCountry || partyCountry === BUSINESS_VAT_COUNTRY) return null;
+  return EU_COUNTRIES.has(partyCountry) ? (INTRACOM_CODE[rate] ?? null) : 'extracom';
+}
+
+/** Belgenin Pennylane'e yazılamama sebebi; son ikisi Pennylane okunarak bulunur. */
+export type PennylaneDocumentBlock =
+  'no_party' | 'no_file' | 'file_type' | 'vat' | 'vat_code' | 'kind_changed' | 'duplicate_number' | 'duplicate_file';
+
+type DocumentFields = Pick<
+  MoneyDocument,
+  | 'id'
+  | 'kind'
+  | 'direction'
+  | 'number'
+  | 'issuedOn'
+  | 'dueOn'
+  | 'supplierId'
+  | 'counterpartyId'
+  | 'amountCents'
+  | 'vatLines'
+  | 'vatRegime'
+  | 'fileKey'
+  | 'createdAt'
+>;
+
+export type PennylaneDocumentScope =
+  { kind: 'skip' } | { kind: 'blocked'; reason: PennylaneDocumentBlock } | { kind: 'write'; lines: PennylaneInvoiceLine[] };
+
+/**
+ * Belge Pennylane'e gider mi: canlıya geçiş gününden sonra girilmiş, ödeyeceğimiz fatura ya da fiş. Yüklenmiş belge kapsamdan çıksa
+ * da izlenir, çünkü Pennylane'deki faturası kalır.
+ */
+export function pennylaneDocumentScope(input: {
+  document: DocumentFields;
+  partyCountry: string | null;
+  liveFrom: string;
+  uploaded: boolean;
+}): PennylaneDocumentScope {
+  const { document } = input;
+  if (!((document.kind === 'invoice' || document.kind === 'receipt') && document.direction === 'out')) {
+    return input.uploaded ? { kind: 'blocked', reason: 'kind_changed' } : { kind: 'skip' };
+  }
+  if (!input.uploaded && parisDateOf(new Date(document.createdAt)) < input.liveFrom) return { kind: 'skip' };
+  if (!document.supplierId && !document.counterpartyId) return { kind: 'blocked', reason: 'no_party' };
+  if (!document.fileKey) return { kind: 'blocked', reason: 'no_file' };
+  if (!checkDocumentFile(document.fileKey).ok) return { kind: 'blocked', reason: 'file_type' };
+  if (documentVatProblem(document)) return { kind: 'blocked', reason: 'vat' };
+  const lines = pennylaneLinesOf(document, input.partyCountry);
+  return lines ? { kind: 'write', lines } : { kind: 'blocked', reason: 'vat_code' };
+}
+
+/** Muaf belgenin kırılımı olmaz, Pennylane'e tek `exempt` satırıyla gider. */
+function pennylaneLinesOf(document: DocumentFields, partyCountry: string | null): PennylaneInvoiceLine[] | null {
+  if (document.vatRegime === 'exempt') return [{ grossCents: document.amountCents, vatCents: 0, vatCode: 'exempt' }];
+  const lines: PennylaneInvoiceLine[] = [];
+  for (const line of document.vatLines) {
+    const vatCode = pennylaneVatCode(line.vatRate, document.vatRegime, partyCountry);
+    if (!vatCode) return null;
+    lines.push({ grossCents: line.netCents + line.vatCents, vatCents: line.vatCents, vatCode });
+  }
+  return lines;
+}
+
+/** Faturanın Pennylane'deki dış referansı; tekil olduğu için yarıda kalan yükleme aramayla bulunur, ikinci kez yüklenmez. */
+export const pennylaneDocumentReference = (documentId: string): string => `doc:${documentId}`;
+
+/** Belgenin taslağı; vadesi yoksa ödeme belge günündedir, Pennylane vadeyi zorunlu tutar. */
+export function pennylaneInvoiceDraft(
+  document: Pick<MoneyDocument, 'id' | 'number' | 'issuedOn' | 'dueOn'>,
+  supplierId: number,
+  lines: PennylaneInvoiceLine[],
+): PennylaneInvoiceDraft {
+  return {
+    supplierId,
+    date: document.issuedOn,
+    deadline: document.dueOn ?? document.issuedOn,
+    invoiceNumber: document.number?.trim() || null,
+    externalReference: pennylaneDocumentReference(document.id),
+    lines,
+  };
+}
+
+/** Yüklenmiş faturanın farkı, fark yoksa `null`; satırlar alan alan karşılaştırılır, çünkü jsonb anahtar sırasını korumaz. */
+export function pennylaneInvoicePatch(written: PennylaneInvoiceDraft, next: PennylaneInvoiceDraft): PennylaneInvoicePatch | null {
+  const patch: PennylaneInvoicePatch = {};
+  if (written.supplierId !== next.supplierId) patch.supplierId = next.supplierId;
+  if (written.date !== next.date) patch.date = next.date;
+  if (written.deadline !== next.deadline) patch.deadline = next.deadline;
+  if (written.invoiceNumber !== next.invoiceNumber) patch.invoiceNumber = next.invoiceNumber;
+  const sameLines =
+    written.lines.length === next.lines.length &&
+    written.lines.every((line, i) => {
+      const other = next.lines[i]!;
+      return line.grossCents === other.grossCents && line.vatCents === other.vatCents && line.vatCode === other.vatCode;
+    });
+  if (!sameLines) patch.lines = next.lines;
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/**
+ * Pennylane'e yazılacak ödeme durumu, yazılacak bir şey yoksa `null`. Bağlı hareketi banka satırı olmayan ve tamamen kapanan belge
+ * ödendi işaretini alır; bankadan ödenen belge Pennylane'de eşleşmeyle kapanır.
+ */
+export function pennylanePaymentStatus(input: {
+  openAmountCents: number;
+  allocations: ReadonlyArray<{ bank: boolean }>;
+  written: PennylanePaymentStatus | null;
+}): PennylanePaymentStatus | null {
+  const paidOffline =
+    input.openAmountCents <= 0 && input.allocations.length > 0 && input.allocations.every((allocation) => !allocation.bank);
+  if (paidOffline) return input.written === 'paid' ? null : 'paid';
+  return input.written === 'paid' ? 'to_be_paid' : null;
+}

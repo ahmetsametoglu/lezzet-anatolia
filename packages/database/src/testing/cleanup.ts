@@ -453,7 +453,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     }
     // Belge, cari, etiket ve tür hareketlerden sonra: tür FK'dir (`no action`) ve onu taşıyan hareket, belge ya da cari varsayılanı
     // durdukça silinemez, bu yüzden en sonda.
-    if (documentIds.length > 0) await mustDelete(db, 'money_document', (q) => q.in('id', documentIds));
+    if (documentIds.length > 0) {
+      // Pennylane'e yüklenmiş belgenin aynası belgeyi `restrict` ile tutar.
+      await mustDelete(db, 'pennylane_document', (q) => q.in('document_id', documentIds));
+      await mustDelete(db, 'money_document', (q) => q.in('id', documentIds));
+    }
     if (counterpartyIds.length > 0) await mustDelete(db, 'counterparty', (q) => q.in('id', counterpartyIds));
     if (tagSlugs.length > 0) await mustDelete(db, 'movement_tag', (q) => q.in('slug', tagSlugs));
     if (natureSlugs.length > 0) await mustDelete(db, 'movement_nature', (q) => q.in('slug', natureSlugs));

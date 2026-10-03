@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MovementDirectionEnum } from './money.schema';
+import { QueueRowSchema } from './queue.schema';
 
 /**
  * Pennylane portunun okunuşu (`docs/feature/kasa-muhasebe.md` §8): kimlikler Pennylane'in tamsayılarıdır, tutar cent ve yönü bizim
@@ -168,3 +169,40 @@ export const PennylaneCursorSchema = z.object({
   updatedAt: z.string(),
 });
 export type PennylaneCursor = z.infer<typeof PennylaneCursorSchema>;
+
+/** Belgenin karşı tarafının Pennylane'deki tedarikçisi (`pennylane_supplier`); bizde tedarikçi ya da cari, ikisinden biri. */
+export const PennylaneSupplierMirrorSchema = z.object({
+  pennylaneId: z.number().int(),
+  supplierId: z.string().uuid().nullable(),
+  counterpartyId: z.string().uuid().nullable(),
+  createdAt: z.string(),
+});
+export type PennylaneSupplierMirror = z.infer<typeof PennylaneSupplierMirrorSchema>;
+
+export const PennylaneSupplierMirrorInsertSchema = PennylaneSupplierMirrorSchema.omit({ createdAt: true });
+export type PennylaneSupplierMirrorInsert = z.infer<typeof PennylaneSupplierMirrorInsertSchema>;
+
+/** Alış belgesinin yazım kuyruğu (`pennylane_queue`); satırı belge ve bağ tetikleyicisi yazar. */
+export const PennylaneQueueSchema = QueueRowSchema.extend({ documentId: z.string().uuid() });
+export type PennylaneQueue = z.infer<typeof PennylaneQueueSchema>;
+
+export const PennylaneQueueInsertSchema = PennylaneQueueSchema.pick({ documentId: true });
+export type PennylaneQueueInsert = z.infer<typeof PennylaneQueueInsertSchema>;
+
+/** Pennylane'deki fatura ve ona en son yazılan taslak (`pennylane_document`); sonraki yazımın farkı buna göre çıkar. */
+export const PennylaneDocumentMirrorSchema = z.object({
+  documentId: z.string().uuid(),
+  pennylaneInvoiceId: z.number().int(),
+  written: PennylaneInvoiceDraftSchema,
+  paymentStatus: PennylanePaymentStatusEnum.nullable(),
+  uploadedAt: z.string(),
+  updatedAt: z.string(),
+});
+export type PennylaneDocumentMirror = z.infer<typeof PennylaneDocumentMirrorSchema>;
+
+export const PennylaneDocumentMirrorInsertSchema = PennylaneDocumentMirrorSchema.partial({
+  paymentStatus: true,
+  uploadedAt: true,
+  updatedAt: true,
+});
+export type PennylaneDocumentMirrorInsert = z.infer<typeof PennylaneDocumentMirrorInsertSchema>;

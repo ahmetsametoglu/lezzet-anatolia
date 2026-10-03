@@ -3,18 +3,32 @@ import {
   PennylaneBankAccountMirrorInsertSchema,
   PennylaneBankAccountMirrorSchema,
   PennylaneCursorSchema,
+  PennylaneDocumentMirrorInsertSchema,
+  PennylaneDocumentMirrorSchema,
   PennylaneMappedAccountSchema,
+  PennylaneQueueInsertSchema,
+  PennylaneQueueSchema,
+  PennylaneSupplierMirrorInsertSchema,
+  PennylaneSupplierMirrorSchema,
   PennylaneTransactionMirrorInsertSchema,
   PennylaneTransactionMirrorSchema,
   type PennylaneBankAccount,
   type PennylaneBankAccountMirror,
   type PennylaneBankAccountMirrorInsert,
   type PennylaneCursor,
+  type PennylaneDocumentMirror,
+  type PennylaneDocumentMirrorInsert,
   type PennylaneMappedAccount,
+  type PennylanePaymentStatus,
+  type PennylaneQueue,
+  type PennylaneQueueInsert,
+  type PennylaneSupplierMirror,
+  type PennylaneSupplierMirrorInsert,
   type PennylaneTransactionMirror,
   type PennylaneTransactionMirrorInsert,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+import { QueueDbService } from '../core/queue.service';
 
 /** Pennylane'deki banka hesapları ve eşlemesi; anahtar Pennylane'in kimliğidir, banka hesabımız en fazla bir satıra eşlenir. */
 export class PennylaneBankAccountService extends BaseDbService<PennylaneBankAccountMirror, PennylaneBankAccountMirrorInsert, never> {
@@ -111,5 +125,62 @@ export class PennylaneCursorService extends BaseDbService<PennylaneCursor, Penny
 
   save(stream: PennylaneCursor['stream'], processedAt: string): Promise<PennylaneCursor> {
     return this.upsert({ stream, processedAt, updatedAt: new Date().toISOString() }, 'stream');
+  }
+}
+
+/** Belgenin karşı tarafının Pennylane'deki tedarikçisi; anahtar Pennylane'in kimliğidir. */
+export class PennylaneSupplierService extends BaseDbService<PennylaneSupplierMirror, PennylaneSupplierMirrorInsert, never> {
+  constructor(supabase: SupabaseClient) {
+    super(
+      supabase,
+      'pennylane_supplier',
+      PennylaneSupplierMirrorSchema,
+      PennylaneSupplierMirrorInsertSchema,
+      PennylaneSupplierMirrorSchema as never,
+    );
+  }
+
+  findByParty(party: { supplierId: string } | { counterpartyId: string }): Promise<PennylaneSupplierMirror | null> {
+    return this.getOneBy(party);
+  }
+
+  save(row: PennylaneSupplierMirrorInsert): Promise<PennylaneSupplierMirror> {
+    return this.upsert(row, 'pennylane_id');
+  }
+}
+
+/** Alış belgesinin yazım kuyruğu; satırları belge ve bağ tetikleyicisi yazar, işleyen okur, erteler ve siler. */
+export class PennylaneQueueService extends QueueDbService<PennylaneQueue, PennylaneQueueInsert> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'pennylane_queue', PennylaneQueueSchema, PennylaneQueueInsertSchema);
+  }
+
+  findByDocument(documentId: string): Promise<PennylaneQueue | null> {
+    return this.getOneBy({ documentId });
+  }
+}
+
+/** Pennylane'deki fatura ve ona en son yazılan taslak; anahtar belge kimliğidir. */
+export class PennylaneDocumentService extends BaseDbService<PennylaneDocumentMirror, PennylaneDocumentMirrorInsert, never> {
+  constructor(supabase: SupabaseClient) {
+    super(
+      supabase,
+      'pennylane_document',
+      PennylaneDocumentMirrorSchema,
+      PennylaneDocumentMirrorInsertSchema,
+      PennylaneDocumentMirrorSchema as never,
+    );
+  }
+
+  findByDocument(documentId: string): Promise<PennylaneDocumentMirror | null> {
+    return this.getOneBy({ documentId });
+  }
+
+  save(row: PennylaneDocumentMirrorInsert): Promise<PennylaneDocumentMirror> {
+    return this.upsert({ ...row, updatedAt: new Date().toISOString() }, 'document_id');
+  }
+
+  async setPaymentStatus(documentId: string, paymentStatus: PennylanePaymentStatus): Promise<void> {
+    await this.updateWhereIn('documentId', [documentId], { paymentStatus, updatedAt: new Date().toISOString() });
   }
 }

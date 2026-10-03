@@ -3,13 +3,12 @@
  * burada türetilir, çünkü imzalı yükleme adresi onu bağlar ve istemci aynı eşlemeyi ikinci kez yazmamalı.
  */
 
+/** Pennylane eki yalnız PDF, JPEG ve PNG alır (WEBP ve HEIC 422); her alış belgesi muhasebeye gidebilsin diye küme onunla aynı. */
 const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
   pdf: 'application/pdf',
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
   png: 'image/png',
-  webp: 'image/webp',
-  heic: 'image/heic',
 };
 
 export const ALLOWED_DOCUMENT_EXTENSIONS: readonly string[] = Object.keys(CONTENT_TYPE_BY_EXTENSION);

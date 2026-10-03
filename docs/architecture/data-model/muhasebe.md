@@ -4,8 +4,9 @@
 > [`docs/feature/kasa-muhasebe.md`](../../feature/kasa-muhasebe.md) §8'de. Alan listeleri
 > (`<!-- alanlar:… -->` bloğu) `pnpm docs:sync` ile migration'lardan üretilir, elle yazılmaz.
 
-Banka hareketi Pennylane'den gelir, bizde izah edilir. Bu tablolar Pennylane'deki banka hesaplarını ve hangisinin hangi hesabımıza
-eşlendiğini, okunan her hareketin son hâlini ve değişiklik akışının kaldığı yeri tutar.
+Banka hareketi Pennylane'den gelir, bizde izah edilir; alış belgesi bizde girilir, Pennylane'e bizden yüklenir. Bu tablolar
+Pennylane'deki banka hesaplarını ve eşlemesini, okunan her hareketin son hâlini, değişiklik akışının kaldığı yeri, belgenin karşı
+tarafının Pennylane'deki tedarikçisini ve yüklenen belgenin kuyruğuyla aynasını tutar.
 
 ## PennylaneBankAccount (Pennylane banka hesabı ve eşleme)
 
@@ -78,3 +79,62 @@ Akışın son işlenen olayının anı; imleç tur bitince düşer, sonraki tur 
 
 - **`processed_at`** — aynı an iki kez okunsa da sonuç değişmez, çünkü her olayda hareketin son hâli Pennylane'den okunur. Akış dört
   haftayı tutar; bu an 27 günden eskiyse liste baştan okunur ve listede olmayan ama aynada duran hareket silinmiş sayılır.
+
+## PennylaneSupplier (tedarikçi aynası)
+
+Belgenin karşı tarafının (tedarikçi ya da cari) Pennylane'deki tedarikçisi.
+
+<!-- alanlar:pennylane_supplier -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `pennylane_id` | bigint |  |  |
+| `supplier_id` | uuid | • |  |
+| `counterparty_id` | uuid | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **Dış referans** — `sup:<kimlik>` ya da `cp:<kimlik>`; Pennylane'de tekil olduğu için ayna kaybolsa da tedarikçi ikinci kez açılmaz,
+  aramayla bulunur.
+
+## PennylaneQueue (belge kuyruğu)
+
+Pennylane'e yazılacak alış belgesi. Ortak kuyruk satırıdır (kasa kuyruğuyla aynı yeniden deneme kuralı).
+
+<!-- alanlar:pennylane_queue -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `document_id` | uuid |  |  |
+| `marked_at` | timestamptz |  | `now()` |
+| `attempts` | int |  | `0` |
+| `next_attempt_at` | timestamptz |  | `now()` |
+| `last_error` | text | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **Tetikleyici** — ödeyeceğimiz fatura ya da fiş yazılınca ya da değişince işaretlenir, değişiklikten önce alış belgesiyse de;
+  yüklenmiş belgenin bağı değişince de işaretlenir (ödeme durumu). Yazıp yazmamak işleyenin kararıdır (`pennylaneDocumentScope`).
+
+## PennylaneDocument (belge aynası)
+
+Pennylane'deki fatura ve ona en son yazılan taslak.
+
+<!-- alanlar:pennylane_document -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `document_id` | uuid |  |  |
+| `pennylane_invoice_id` | bigint |  |  |
+| `written` | jsonb |  |  |
+| `payment_status` | text | • |  |
+| `uploaded_at` | timestamptz |  | `now()` |
+| `updated_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`written`** — Pennylane'e en son yazılan taslak (`PennylaneInvoiceDraft`); belge değişince fark buna göre çıkar ve güncellenir.
+- **`payment_status`** — nakitle kapanan belgenin işareti; bankadan ödenen belge Pennylane'de eşleşmeyle kapanır, işaret almaz.
+- **Silme** — yüklenmiş belge silinemez (`restrict`), çünkü Pennylane'deki faturası bağını kaybederdi.
