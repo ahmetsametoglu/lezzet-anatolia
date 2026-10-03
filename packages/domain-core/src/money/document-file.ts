@@ -1,12 +1,6 @@
 /**
- * Muhasebe belgesi olarak kabul edilen dosya türleri (12.12) — DOMAIN §9.
- *
- * Fatura çoğu zaman PDF gelir, fiş ve bordro fotoğraflanır; ofis dosyası ya da arşiv kabul
- * edilmez — belge bir KANITTIR, düzenlenebilir bir taslak değil. Kural motorda, çünkü "neyi belge
- * sayarız" bir iş kararıdır, depo ayarı değil (talep eklerinin `checkAttachment` deseni).
- *
- * İçerik türü BURADA türetilir: imzalı yükleme adresi içerik türünü bağlar (uyuşmayan yükleme R2'de
- * reddedilir) ve istemcinin aynı eşlemeyi ikinci kez yazması gerekmez (CLAUDE §1).
+ * Muhasebe belgesi olarak kabul edilen dosya türleri: belge bir kanıttır, ofis dosyası ya da arşiv kabul edilmez. İçerik türü
+ * burada türetilir, çünkü imzalı yükleme adresi onu bağlar ve istemci aynı eşlemeyi ikinci kez yazmamalı.
  */
 
 const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
