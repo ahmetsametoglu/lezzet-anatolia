@@ -1,16 +1,16 @@
-import { CartService, OrderService, ReservationService, type Db } from '@lezzet/database';
+import { OrderService, ReservationService, type Db } from '@lezzet/database';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { DeliveryType, Order, OrderCancelReason, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { clearOrderedLines } from '../cart/settle';
 import type { CartBundlePort } from '../cart/read';
-import { entriesInCart, type CartEntry } from '../cart/cart-types';
+import type { CartEntry } from '../cart/cart-types';
 import { createCheckoutDraft, type CheckoutDraftInput, type CheckoutDraftOutcome } from './checkout-draft';
 import { createCheckoutSession, type CheckoutSessionCreator, type CheckoutSessionOutcome } from './checkout-session';
 import type { PaymentGateway } from './payment-gateway';
 import { resumeOrderPayment, type ResumePaymentOutcome } from './pending-payment';
 import { reserveOrderStock } from './reserve';
 import { transitionOrder } from './transition';
-import type { OrderEffects } from './effects';
+import { deferredNotices, type BackgroundRunner, type OrderEffects } from './effects';
 
 /**
  * "Siparişi onayla": taslağı açar, stoğu ayırır, ödemeyi başlatır; tek turda, ki ödemeye gelmeyen müşteri ardında yetim taslak
@@ -83,6 +83,8 @@ export interface PlaceOrderInput {
   paymentGateway?: PaymentGateway | null;
   /** Durum geçişinin ve ödeme netleşmesinin yan etkileri; taslağa dönüşte ödeme kapanırsa müşteri haberi de buradan gider. */
   effects?: OrderEffects;
+  /** Yanıttan sonra koşan işlerin kapısı (web'de `after`); verilirse müşteri haberleri ve stok eşiği uyarısı yanıtı bekletmez. */
+  runLater?: BackgroundRunner;
   /** Huni ölçümü: sipariş reddedildi; çağıran hangi retlerin sayılacağına kendisi karar verir. */
   onRejected?: (reason: string) => void;
   /** Huni ölçümü: müşteri siparişi verdi (kart yolunda "ödemeye bastı" niyeti de buraya sayılır). */
@@ -90,7 +92,8 @@ export interface PlaceOrderInput {
 }
 
 export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceOrderOutcome> {
-  const deps = { gateway: input.paymentGateway ?? null, effects: input.effects };
+  const effects = input.runLater && input.effects ? deferredNotices(input.effects, input.runLater) : input.effects;
+  const deps = { gateway: input.paymentGateway ?? null, effects };
   /** Aynı istek ikinci kez geldiyse ikinci sipariş açılmaz; huni ölçümü de ilk çağrıda sayıldığı için atılmaz. */
   if (input.idempotencyKey) {
     const already = await new OrderService(db).findByIdempotencyKey(input.idempotencyKey, input.customerId);
@@ -99,13 +102,6 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
       return resumedOutcome(db, await resumeOrderPayment(db, already, deps), already);
     }
     if (already && already.status !== 'draft' && already.status !== 'cancelled') return placedOf(already);
-  }
-
-  // Kart siparişi kalemlerini sepetten alır; eski ekrandan gelen ikinci basış sepette olmayan kalemle yeni sipariş açmamalı.
-  // Personel siparişi müşterinin sepetine bakmaz.
-  if (!input.staff && !entriesInCart(input.entries, (await new CartService(db).get(input.customerId)).items)) {
-    input.onRejected?.('cart_changed');
-    return { status: 'cart_changed' };
   }
 
   const draft = await createCheckoutDraft(db, {
@@ -127,6 +123,8 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
     pickupWarehouseId: input.pickupWarehouseId,
     bundles: input.bundles,
     onCustomerAcquired: input.onCustomerAcquired,
+    // Personel siparişi müşterinin sepetine bakmaz.
+    requireEntriesInCart: !input.staff,
   });
 
   if (draft.status !== 'ok') {
@@ -149,11 +147,14 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
    * bekleyeceğimiz bir ödeme penceresi yok.
    */
   if (input.paymentMethod !== 'online') {
-    // Kalemler siparişten okunur: paket açılımı, parti ve fiyat taslakta satırlara yazıldı, ayırma o hâli ayırmalı.
-    const placed = await new OrderService(db).getWithItems(draft.orderId);
-    if (!placed) return { status: 'order_not_placed' };
-
-    const reserved = await reserveOrderStock(db, { orderId: draft.orderId, items: placed.items, expiring: false });
+    // Kalemler siparişin yazılan satırlarıdır (taslak onları geri okudu): paket açılımı, parti ve fiyat orada, ayırma o hâli ayırmalı.
+    const reserved = await reserveOrderStock(db, {
+      orderId: draft.orderId,
+      order: draft.order,
+      items: draft.items,
+      expiring: false,
+      runLater: input.runLater,
+    });
     if (!reserved.ok) {
       // Ayrılamadıysa taslak kapanır, sebep `out_of_stock`; bu yolda para hiç çekilmedi.
       await cancelDraft(db, draft.orderId, 'out_of_stock');
@@ -161,7 +162,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
       return { status: 'insufficient_stock', variantId: reserved.variantId, available: reserved.available };
     }
 
-    const moved = await transitionOrder(db, { orderId: draft.orderId, to: 'confirmed', effects: input.effects });
+    const moved = await transitionOrder(db, { orderId: draft.orderId, to: 'confirmed', effects });
     if (moved.status !== 'ok') {
       await releaseOrderStock(db, draft.orderId);
       // Sebep yazılmaz: geçişi motor reddetti ve kümedeki sebeplerin hiçbiri bunu anlatmaz, ekran nötr cümleye düşer.
@@ -191,7 +192,12 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
   try {
     session = await createCheckoutSession(
       db,
-      { orderId: draft.orderId, marketingConsent: input.marketingConsent },
+      {
+        orderId: draft.orderId,
+        marketingConsent: input.marketingConsent,
+        placed: { order: draft.order, items: draft.items },
+        runLater: input.runLater,
+      },
       input.createPaymentSession,
     );
     if (session.status === 'ok' && session.clientSecret && !input.staff) await clearOrderedLines(db, input.customerId, draft.orderId);

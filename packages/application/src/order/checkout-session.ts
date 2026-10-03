@@ -1,4 +1,6 @@
 import { OrderService, UserProfileService, type Db } from '@lezzet/database';
+import type { Order, OrderItem } from '@lezzet/types';
+import type { BackgroundRunner } from './effects';
 import { reserveOrderStock } from './reserve';
 
 /**
@@ -37,6 +39,10 @@ export interface CheckoutSessionInput {
   marketingConsent?: boolean;
   /** İlk siparişte yazılacak edinim kaynağı (UTM). Sonraki siparişlerde DOKUNULMAZ. */
   acquisitionSource?: Record<string, unknown> | null;
+  /** Bu istekte az önce yazılıp geri okunmuş sipariş ve kalemleri; verilirse yeniden okunmaz. */
+  placed?: { order: Order; items: OrderItem[] };
+  /** Stok eşiği uyarısını yanıttan sonra koşturan kapı. */
+  runLater?: BackgroundRunner;
 }
 
 export async function createCheckoutSession(
@@ -44,7 +50,7 @@ export async function createCheckoutSession(
   input: CheckoutSessionInput,
   createSession: CheckoutSessionCreator | null,
 ): Promise<CheckoutSessionOutcome> {
-  const found = await new OrderService(db).getWithItems(input.orderId);
+  const found = input.placed ?? (await new OrderService(db).getWithItems(input.orderId));
   if (!found) return { status: 'not_found' };
 
   const { order, items } = found;
@@ -55,7 +61,7 @@ export async function createCheckoutSession(
   if (!createSession) return { status: 'provider_unavailable' };
 
   // Ayırma TTL'li: ödeme gelmezse mal geri açılmalı ("önce ayır, sonra tahsil et" — DOMAIN §4).
-  const reserved = await reserveOrderStock(db, { orderId: order.id, items, expiring: true });
+  const reserved = await reserveOrderStock(db, { orderId: order.id, order, items, expiring: true, runLater: input.runLater });
   if (!reserved.ok) return { status: 'insufficient_stock', variantId: reserved.variantId, available: reserved.available };
 
   // Edinim kaynağı ve izin, ödeme açılırken yazılır: müşteri buraya kadar geldiyse niyet bellidir.

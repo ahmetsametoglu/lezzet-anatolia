@@ -105,8 +105,6 @@ export type { NotificationPreferencesView, PreferencesSubject } from './customer
 // ── Komşu daveti: kimliğe değil sefere bağlı; ödül para tarafında (`feedback/points`) ──
 export {
   acceptNeighborInvite,
-  countNeighborInviteUses,
-  remainingNeighborInviteUses,
   declineNeighborInvite,
   matchNeighborInviteForOrder,
   neighborInviteUrl,
@@ -341,15 +339,7 @@ export type { AdjustOutcome, CancelOutcome, RefundBlockReason, RefundOptions, Wa
 export { deliverOrder } from './order/fulfillment';
 export { recordOrderPayment, recordOrderRefund, syncOrderPaymentStatus } from './order/payment';
 export type { OrderMovementInput, PaymentOutcome } from './order/payment';
-export { deferredNotices } from './order/effects';
-export type {
-  BackgroundRunner,
-  OrderEffects,
-  OrderExceptionEvent,
-  ProviderRefundInput,
-  ProviderRefundOutcome,
-  ProviderRefunder,
-} from './order/effects';
+export type { OrderEffects, OrderExceptionEvent, ProviderRefundInput, ProviderRefundOutcome, ProviderRefunder } from './order/effects';
 
 // ── Depo: her kapı depo kimliği ister ve kapsam dışı yazım `forbidden`/`out_of_scope` ile döner ──
 export { confirmPreparation, listPreparationQueue, recordShipment } from './warehouse/preparation';

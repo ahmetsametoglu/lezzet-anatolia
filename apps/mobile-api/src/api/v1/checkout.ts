@@ -5,7 +5,6 @@ import {
   cancelPendingOrder,
   checkoutBlockedAnalyticsReason,
   checkoutServicePoints,
-  deferredNotices,
   effectiveChannelOf,
   entryOfItem,
   getPackagesByIds,
@@ -221,9 +220,10 @@ checkout.post('/order', async (c) => {
     bundles: (ids, bundleLocale, place) => getPackagesByIds(db, ids, bundleLocale, place),
     createPaymentSession: paymentSessionCreator(),
     paymentGateway: paymentGateway(),
-    // Ödeme etkileri, çünkü aynı basışın taslağına dönüşte kapanan ödemenin müşteri haberi de gider. Haber yanıttan sonra gider;
-    // süreç uzun yaşadığı için yanıt gönderildikten sonra da tamamlanır.
-    effects: deferredNotices(mobilePaymentEffects(db), (task) => void task()),
+    // Ödeme etkileri, çünkü aynı basışın taslağına dönüşte kapanan ödemenin müşteri haberi de gider.
+    effects: mobilePaymentEffects(db),
+    // Haberler ve stok eşiği uyarısı yanıttan sonra gider; süreç uzun yaşadığı için yanıt gönderildikten sonra da tamamlanır.
+    runLater: (task) => void task(),
   });
 
   /* Kapının birliği `z.input<>` ile tiplenir: kapı yeni bir hâl eklerse burası derlenmez; `parse` ekranın işi olmayan alanları süzer.

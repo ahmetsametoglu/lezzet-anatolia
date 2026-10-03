@@ -23,6 +23,8 @@ import {
 import { toCents } from '@lezzet/helper';
 import type {
   DeliveryType,
+  Order,
+  OrderItem,
   OrderItemInsert,
   OrderSource,
   ParcelPlanSnapshot,
@@ -38,6 +40,7 @@ import {
   discountAmountOf,
   discountIdOf,
   discountLabelOf,
+  entriesInCart,
   entryOf,
   itemOfEntry,
   laneEntriesOf,
@@ -63,7 +66,15 @@ import type { ShippingRateProvider } from '../shipping/port';
 
 export type CheckoutDraftOutcome =
   // Adresin cevabı ya da müşterinin seçtiği gel-al: üç tür de bu kapıdan doğar (yerinde satış hâlâ kendi kapısında).
-  | { status: 'ok'; orderId: string; totalCents: number; deliveryType: DeliveryType }
+  | {
+      status: 'ok';
+      orderId: string;
+      totalCents: number;
+      deliveryType: DeliveryType;
+      /** Yazılıp geri okunan sipariş ve kalemleri; çağıran ayırma ve ödeme için onları yeniden okumaz. */
+      order: Order;
+      items: OrderItem[];
+    }
   /**
    * `ambiguous_zone` veri hatası, `no_shipping_warehouse` yapılandırma eksiğidir; ikisi de müşteriye "bölge dışısınız"
    * dedirtmemeli.
@@ -160,6 +171,11 @@ export interface CheckoutDraftInput {
    * hatasını yutar.
    */
   onCustomerAcquired?: (customerId: string) => void;
+  /**
+   * Kalemler müşterinin kayıtlı sepetinde mi, ilk okumada sorulsun mu; sipariş kapısı müşteri yolunda sorar, taslağı doğrudan açan
+   * araçlar sormaz. Sorgu burada, çünkü sepet ilk okuma turunda zaten geliyor.
+   */
+  requireEntriesInCart?: boolean;
 }
 
 export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Promise<CheckoutDraftOutcome> {
@@ -175,6 +191,8 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     // Saklanan fiyatlar sepet okumasından önce alınır: karşılaştırmanın "önceki"si müşterinin en son gördüğü fiyattır.
     cartService.get(input.customerId),
   ]);
+  // Sipariş kalemlerini sepetten alır: eski ekrandan gelen ikinci basış sepette olmayan kalemle yeni sipariş açmamalı.
+  if (input.requireEntriesInCart && !entriesInCart(input.entries, storedCart.items)) return { status: 'cart_changed' };
   if (!customer) return { status: 'customer_not_found' };
 
   // Adres müşterinin kendi adresleri arasından aranır, çünkü `addressId` istemciden geliyor.
@@ -283,13 +301,47 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // Gel-al ve kargo seçimi adresin cevabını ezer, tersi olmaz; aşağıdaki her karar bu türü izler.
   const deliveryType: DeliveryType = pickupWarehouse ? 'pickup' : input.shippingOrder ? 'shipping' : delivery.deliveryType;
 
-  // Adres tutarlılığı yalnız rota siparişinde sorulur: kurye sokağa gider ve kod ile şehir çelişiyorsa hangisinin yanlış olduğunu
-  // biz bilemeyiz. Kargoda adresi taşıyıcı doğrular; kural formda değil kapıda, çünkü form atlanabilir.
-  if (deliveryType === 'route') {
-    const places = await placesForPostalCode(db, address.country, address.postalCode);
-    if (!cityMatchesPlaces(address.city, places)) {
-      return { status: 'address_city_mismatch', postalCode: address.postalCode, city: address.city, places };
-    }
+  // Adres anlık görüntü olarak da yazılır ki müşteri adresini sonradan düzenlese de sipariş nereye gittiğini bilsin.
+  const deliveryDate = deliveryType === 'route' ? (input.deliveryDate ?? delivery.availableDates[0] ?? null) : null;
+  const orderZoneId = input.shippingOrder || pickupWarehouse ? null : delivery.zoneId;
+  // Ücretin KDV'si ekranın satırlarından: sipariş kalemleri (açılmış paket, ters vergilendirmede sıfır oran) başka bir ücret çıkarırdı.
+  const vatLines = shippingVatLines(scope.lines);
+  const paymentOf = (quotedFeeCents: number | null) =>
+    resolveCheckoutPayment(db, {
+      customerId: customer.id,
+      deliveryType,
+      // Hediyede kargo ücreti alınmaz; taşıyıcının maliyeti siparişe yine yazılır.
+      quotedFeeCents: giftOverrides ? 0 : quotedFeeCents,
+      basketCents: scope.basketCents,
+      // Asgari sepet eşiği indirim öncesini ister; `basketCents` kargo ve toplam içindir.
+      subtotalCents: scope.subtotalCents,
+      lines: vatLines,
+      /* Ayar kapsamı ödeme kapısına da sepet okumasındaki ifadelerle geçer; geçmeseydi sepet kapsamlı ayarı, siparişe yazılan kargo
+         ücreti ise genel değeri okurdu. */
+      country: deliveryCountry,
+      // Kargo ve gel-al siparişi bölgeye ait değildir.
+      zoneId: input.shippingOrder || pickupWarehouse ? null : place.zoneId,
+      warehouseId: orderWarehouseId,
+    });
+
+  /* Bu okumalar yalnız buraya kadar çözülen değerlere bağlı ve hiçbiri yazmaz; aynı turda gider, retler aşağıda eskisi gibi aynı sırayla
+     sorulur. Kargo teklifi ve eksik veri haberi retlerden sonra kalır, çünkü dış servise ve personele dokunurlar. */
+  const [places, items, earlyOptions, neighborInviteId, unitCosts, orderSource] = await Promise.all([
+    // Adres tutarlılığı yalnız rota siparişinde sorulur: kurye sokağa gider ve kod ile şehir çelişiyorsa hangisinin yanlış olduğunu
+    // biz bilemeyiz. Kargoda adresi taşıyıcı doğrular; kural formda değil kapıda, çünkü form atlanabilir.
+    deliveryType === 'route' ? placesForPostalCode(db, address.country, address.postalCode) : null,
+    expandToOrderItems(db, orderedLines, orderedShares, vat.zeroRated, input.staff?.actorId ?? null),
+    // Kargo dışında ücret teklife bağlı değildir; ödeme kapısı teklifi beklemeden sorulur.
+    deliveryType === 'shipping' ? null : paymentOf(null),
+    // Komşu daveti kişinin kendi kabul kaydından okunur ve ancak sefer belli olunca sorulabilir; eşleşmeme sessizdir.
+    matchedNeighborInviteId(db, { customerId: customer.id, deliveryZoneId: orderZoneId, deliveryDate }),
+    readUnitCosts(db),
+    // Kaynak yüzeyi söyler, kanaldan ayrı eksendir; müşteri yolunda sohbetin dokunduğu sepet sohbetin siparişidir, ödeme sitede alınsa da.
+    input.staff ? (input.staff.orderSource ?? 'manual') : chatSourceOf(db, storedCart.sourceConversationId),
+  ]);
+
+  if (places !== null && !cityMatchesPlaces(address.city, places)) {
+    return { status: 'address_city_mismatch', postalCode: address.postalCode, city: address.city, places };
   }
 
   // Soğuk zincir engeli "şu an yok"tan önce söylenir, yoksa müşteri o adrese hiç gitmeyecek ürünü beklerdi. Kargo siparişi ayrıca
@@ -322,7 +374,6 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     }
   }
 
-  const items = await expandToOrderItems(db, orderedLines, orderedShares, vat.zeroRated, input.staff?.actorId ?? null);
   // Kargo teklifi ekranınkiyle aynı kapıdan yeniden alınır: fiyat istemciden gelmez, yalnız servis kodu ve nokta gelir.
   const rateProvider = input.rateProvider === undefined ? (shippingProviderConfigured() ? sendcloudProvider() : null) : input.rateProvider;
   const quote =
@@ -337,27 +388,9 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // Elle siparişte ekran okuması yoktur; eksik veri operasyona buradan da haber olur.
   const dataGap = quoteDataGap(quote);
   if (dataGap && orderWarehouseId) await notifyShippingDataMissing(db, { ...dataGap, warehouseId: orderWarehouseId });
-  // Ücretin KDV'si ekranın satırlarından: sipariş kalemleri (açılmış paket, ters vergilendirmede sıfır oran) başka bir ücret çıkarırdı.
-  const vatLines = shippingVatLines(scope.lines);
   const quoted = quote?.status === 'ok' ? pricedOptions(quote.options, vatLines) : [];
   const priced = optionForPricing(quoted, input.shippingOptionCode ?? null);
-
-  const options = await resolveCheckoutPayment(db, {
-    customerId: customer.id,
-    deliveryType,
-    // Hediyede kargo ücreti alınmaz; taşıyıcının maliyeti siparişe yine yazılır.
-    quotedFeeCents: giftOverrides ? 0 : (priced?.priceCents ?? null),
-    basketCents: scope.basketCents,
-    // Asgari sepet eşiği indirim öncesini ister; `basketCents` kargo ve toplam içindir.
-    subtotalCents: scope.subtotalCents,
-    lines: vatLines,
-    /* Ayar kapsamı ödeme kapısına da sepet okumasındaki ifadelerle geçer; geçmeseydi sepet kapsamlı ayarı, siparişe yazılan kargo
-       ücreti ise genel değeri okurdu. */
-    country: deliveryCountry,
-    // Kargo ve gel-al siparişi bölgeye ait değildir.
-    zoneId: input.shippingOrder || pickupWarehouse ? null : place.zoneId,
-    warehouseId: orderWarehouseId,
-  });
+  const options = earlyOptions ?? (await paymentOf(priced?.priceCents ?? null));
   if (!options.methods.includes(input.paymentMethod)) {
     return { status: 'payment_not_allowed', methods: options.methods };
   }
@@ -422,26 +455,13 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     };
   }
 
-  // Adres anlık görüntü olarak da yazılır ki müşteri adresini sonradan düzenlese de sipariş nereye gittiğini bilsin.
-  const deliveryDate = deliveryType === 'route' ? (input.deliveryDate ?? delivery.availableDates[0] ?? null) : null;
-  const orderZoneId = input.shippingOrder || pickupWarehouse ? null : delivery.zoneId;
-
-  // Komşu daveti kişinin kendi kabul kaydından okunur ve ancak sefer belli olunca sorulabilir; eşleşmeme sessizdir.
-  const neighborInviteId = await matchedNeighborInviteId(db, {
-    customerId: customer.id,
-    deliveryZoneId: orderZoneId,
-    deliveryDate,
-  });
-
-  const { order } = await new OrderService(db).create(
+  const { order, items: createdItems } = await new OrderService(db).create(
     {
       customerId: customer.id,
       // Sipariş tek depodan çıkar ve depo adresin posta kodundan gelir; varsayılan depo yoktur.
       warehouseId: orderWarehouseId,
       channel,
-      // Kaynak yüzeyi söyler, kanaldan ayrı eksendir; müşteri yolunda sohbetin dokunduğu sepet sohbetin siparişidir, ödeme sitede
-      // alınsa da.
-      orderSource: input.staff ? (input.staff.orderSource ?? 'manual') : await chatSourceOf(db, storedCart.sourceConversationId),
+      orderSource,
       // Patron ikramı yalnız personel yolundan işaretlenir.
       isGiftOrder: input.staff?.isGiftOrder ?? false,
       status: 'draft',
@@ -463,7 +483,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       orderedTotalCents: options.orderTotalCents,
       // Doğrudan maliyetler sipariş anının değeriyle yazılır; kargoda seçilen servisin teklifi, bildirimde gerçek kutularla düzelir.
       // Maliyet taşıyıcının KDV hariç fiyatıdır; müşterinin KDV dahil ücreti `shippingFeeCents`te.
-      ...costsAtSale(deliveryType, await readUnitCosts(db), shippingChoice?.costCents ?? null),
+      ...costsAtSale(deliveryType, unitCosts, shippingChoice?.costCents ?? null),
       shippingOptionCode: shippingChoice?.code ?? null,
       servicePoint: shippingChoice?.servicePoint ?? null,
       parcelPlan: shippingChoice?.plan ?? null,
@@ -483,7 +503,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // kalırdı.
   input.onCustomerAcquired?.(customer.id);
 
-  return { status: 'ok', orderId: order.id, totalCents: options.orderTotalCents, deliveryType };
+  return { status: 'ok', orderId: order.id, totalCents: options.orderTotalCents, deliveryType, order, items: createdItems };
 }
 
 /**

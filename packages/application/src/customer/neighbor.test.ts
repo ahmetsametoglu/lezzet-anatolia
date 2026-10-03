@@ -17,6 +17,7 @@ import {
   openNeighborInvite,
   readNeighborWelcome,
   remainingNeighborInviteUses,
+  tryOpenNeighborInvite,
 } from './neighbor';
 
 /**
@@ -239,6 +240,21 @@ describe('kullanım hakkı', () => {
 
     expect(await countNeighborInviteUses(db, invite.id)).toBe(0);
     expect(await remainingNeighborInviteUses(db, invite)).toBe(invite.maxUses);
+  });
+
+  it('sipariş sonrası kapı kalan hakkı da verir: yeni davette tavanın kendisi, kullanılmış davette sayılmış hâli', async () => {
+    // Yeni açılan davet sayılmadan döner; kullanılmış davet de "yeni" sanılsaydı ekran dolmuş davete komşu çağırtırdı.
+    const order = await rotaSiparisi();
+    const ilk = await tryOpenNeighborInvite(db, { orderId: order.id, customerId: inviterId });
+    if (!ilk) throw new Error('davet açılamadı');
+    expect(ilk.remainingUses).toBe(ilk.invite.maxUses);
+
+    const komsuSiparisi = await rotaSiparisi({ customerId: neighborId });
+    await db.from('order').update({ neighbor_invite_id: ilk.invite.id }).eq('id', komsuSiparisi.id);
+
+    const ikinci = await tryOpenNeighborInvite(db, { orderId: order.id, customerId: inviterId });
+    expect(ikinci?.invite.id).toBe(ilk.invite.id);
+    expect(ikinci?.remainingUses).toBe(ilk.invite.maxUses - 1);
   });
 
   it('KALAN HAK sıfırın altına düşmez — tavan sonradan düşürülebilir', async () => {

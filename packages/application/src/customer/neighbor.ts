@@ -11,7 +11,7 @@ import {
 } from '@lezzet/domain-core';
 import { localizedUrl, type Locale } from '@lezzet/i18n';
 import { logger } from '@lezzet/observability';
-import type { NeighborInvite } from '@lezzet/types';
+import type { NeighborInvite, Order } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { linkReferrerById } from './referral';
 
@@ -31,7 +31,8 @@ export function neighborInviteUrl(token: string, locale: Locale): string {
 }
 
 export type OpenNeighborInviteOutcome =
-  | { status: 'ok'; invite: NeighborInvite }
+  /** `created`: davet bu çağrıda açıldı, henüz kimse yararlanmadı. */
+  | { status: 'ok'; invite: NeighborInvite; created: boolean }
   | { status: 'not_found' }
   /** Sipariş başkasının — davet ancak kendi siparişinden açılır. */
   | { status: 'not_owner' }
@@ -47,20 +48,19 @@ export type OpenNeighborInviteOutcome =
  */
 export async function openNeighborInvite(
   db: SupabaseClient,
-  input: { orderId: string; customerId: string },
+  input: { orderId: string; customerId: string; order?: Order },
 ): Promise<OpenNeighborInviteOutcome> {
-  const order = await new OrderService(db).getById(input.orderId);
+  const order = input.order ?? (await new OrderService(db).getById(input.orderId));
   if (!order) return { status: 'not_found' };
   if (order.customerId !== input.customerId) return { status: 'not_owner' };
   if (order.deliveryType !== 'route' || !order.deliveryZoneId || !order.deliveryDate) return { status: 'not_route' };
 
   const invites = new NeighborInviteService(db);
-  const existing = await invites.findByOrder(order.id);
+  // Pencere yalnız yeni davet açılacaksa gerekir ama var olan davetle aynı turda okunur: sipariş sonrası ekran bu zinciri bekliyor.
+  const [existing, window] = await Promise.all([invites.findByOrder(order.id), runWindowOf(db, order.deliveryDate, order.deliveryZoneId)]);
   // Var olan davet, penceresi kapansa bile AYNEN döner: ekranın söyleyeceği cümleyi pencere
   // belirler (`readNeighborWelcome`), ama paylaşılmış bir bağlantı burada ikinci kez üretilmez.
-  if (existing) return { status: 'ok', invite: existing };
-
-  const window = await runWindowOf(db, order.deliveryDate, order.deliveryZoneId);
+  if (existing) return { status: 'ok', invite: existing, created: false };
   if (window !== 'open') return { status: 'run_closed', window };
 
   const invite = await invites.insert({
@@ -73,7 +73,7 @@ export async function openNeighborInvite(
     // uyguladığı yerden okumalı (`NEIGHBOR_INVITE_MAX_USES`).
     maxUses: NEIGHBOR_INVITE_MAX_USES,
   });
-  return { status: 'ok', invite };
+  return { status: 'ok', invite, created: true };
 }
 
 export type NeighborWelcome =
@@ -351,16 +351,19 @@ function firstName(name: string): string {
 }
 
 /**
- * Davet açılırken beklenmedik hata akışı düşürmesin diye sarılmış hâl, sipariş ekranının yolu: davet bir kolaylıktır, açılamazsa
- * müşteri siparişini yine görmeli. Hata sessiz değil, iz bırakır.
+ * Siparişin daveti ve kalan hakkı tek kapıda, iki yüzeyin sipariş sonrası ekranı için; beklenmedik hata akışı düşürmez, çünkü davet bir
+ * kolaylıktır ve açılamazsa müşteri siparişini yine görmeli. Hata sessiz değil, iz bırakır.
  */
 export async function tryOpenNeighborInvite(
   db: SupabaseClient,
-  input: { orderId: string; customerId: string },
-): Promise<NeighborInvite | null> {
+  input: { orderId: string; customerId: string; order?: Order },
+): Promise<{ invite: NeighborInvite; remainingUses: number } | null> {
   try {
     const outcome = await openNeighborInvite(db, input);
-    return outcome.status === 'ok' ? outcome.invite : null;
+    if (outcome.status !== 'ok') return null;
+    // Yeni açılan davetten henüz kimse yararlanmadı; sayım yalnız var olan davette gerekir.
+    const remainingUses = outcome.created ? outcome.invite.maxUses : await remainingNeighborInviteUses(db, outcome.invite);
+    return { invite: outcome.invite, remainingUses };
   } catch (err) {
     logger.warn(
       { context: 'customer/neighbor', orderId: input.orderId, err: err instanceof Error ? err.message : String(err) },

@@ -1,21 +1,22 @@
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import { OrderService, ProductService, ProductVariantService, UserProfileService, WarehouseService, serviceDb } from '@lezzet/database';
+import {
+  OrderService,
+  ProductService,
+  ProductVariantService,
+  UserProfileService,
+  WarehouseService,
+  serviceDb,
+  type Db,
+} from '@lezzet/database';
 import { brand } from '@lezzet/brand';
-import { resolveLocalizedText } from '@lezzet/types';
+import { resolveLocalizedText, type OrderItem } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { detectDevice } from '@/lib/device';
 import { getSessionUser } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
-import {
-  imageOf,
-  neighborInviteUrl,
-  paymentDeadlineOf,
-  remainingNeighborInviteUses,
-  tryOpenNeighborInvite,
-  warehouseAddressLine,
-} from '@lezzet/application';
+import { imageOf, neighborInviteUrl, paymentDeadlineOf, tryOpenNeighborInvite, warehouseAddressLine } from '@lezzet/application';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { orderIdOrNull } from '@/lib/order/order-id';
 import { routing } from '@/i18n/routing';
@@ -47,51 +48,41 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   const [device, user] = await Promise.all([detectDevice(), getSessionUser()]);
 
   const db = serviceDb();
-  const profile = user ? await new UserProfileService(db).findByAuthUserId(user.id) : null;
   // Biçimi geçersiz kimlik servise gitmez: UUID olmayan segment veritabanı hatası olup 500 gösterirdi.
   const orderId = orderIdOrNull(reference);
-  const found = orderId ? await new OrderService(db).getWithItems(orderId) : null;
+  // Profil ve sipariş birbirini beklemez; sahiplik ikisi gelince sorulur.
+  const [profile, found] = await Promise.all([
+    user ? new UserProfileService(db).findByAuthUserId(user.id) : null,
+    orderId ? new OrderService(db).getWithItems(orderId) : null,
+  ]);
   // Başkasının siparişi GÖRÜNMEZ: kimlik yoldan geliyor, sahiplik sunucuda doğrulanır.
   if (!found || !profile || found.order.customerId !== profile.id) notFound();
 
   const { order, items } = found;
-  // Gel-al'da onay kartı DEPONUN adresini ve randevu numarasını yazar — müşteri oraya gidecek.
-  const pickupWarehouse = order.deliveryType === 'pickup' ? await new WarehouseService(db).getById(order.warehouseId) : null;
   /**
    * Sipariş kesinleşti mi (taslak değil, iptal değil); "ödendi" ile aynı şey değil, kapıda ödenecek
    * sipariş de kesinleşmiştir.
    */
   const { placed, cancelled, awaitingCard } = orderOutcomeOf(order);
 
-  // Kalem künyesi: sipariş varyant satırlarından oluşuyor, müşteri ürün adını ve görselini görmeli.
-  const variants = await new ProductVariantService(db).listByIds([...new Set(items.map((i) => i.variantId))]);
-  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
-  const lineByVariant = new Map(
-    variants.map((variant) => {
-      const product = products.find((p) => p.id === variant.productId);
-      return [
-        variant.id,
-        {
-          name: product ? resolveLocalizedText(product.name, locale as Locale) : '',
-          unit: resolveLocalizedText(variant.label, locale as Locale),
-          image: product ? imageOf(product) : null,
-        },
-      ];
-    }),
-  );
-
-  /**
-   * Komşu daveti okuması yazabilir: ekran "komşunu çağır" diyecekse paylaşılacak bağlantı var olmalı,
-   * yazım idempotent. Yalnız kesinleşmiş rota siparişinde denenir; kargoda sefer, taslakta gün yok.
-   */
-  const invite =
-    placed && order.deliveryType === 'route' ? await tryOpenNeighborInvite(db, { orderId: order.id, customerId: profile.id }) : null;
-
-  /**
-   * Sağlayıcının söylediği, yalnız ödemesi beklenen kart taslağında sorulur; okuma yan etkisizdir. Hata
-   * burada `null`a düşer, çünkü canlı bağın eylemi aynı soruyu saniyeler sonra sorar ve orada iz bırakır.
-   */
-  const payment = awaitingCard && order.paymentRef ? await stripePaymentGateway()?.read(order.paymentRef).catch(() => null) : null;
+  // Aşağıdaki okumalar birbirini beklemez; her biri sunucuda ayrı bir gidiş-dönüş zinciri, sırayla gitselerdi müşteri sipariş verdikten
+  // sonra toplamlarını beklerdi.
+  const [lineByVariant, pickupWarehouse, invite, payment, payBy] = await Promise.all([
+    lineCatalogOf(db, items, locale as Locale),
+    // Gel-al'da onay kartı DEPONUN adresini ve randevu numarasını yazar — müşteri oraya gidecek.
+    order.deliveryType === 'pickup' ? new WarehouseService(db).getById(order.warehouseId) : null,
+    /* Komşu daveti okuması yazabilir: ekran "komşunu çağır" diyecekse paylaşılacak bağlantı var olmalı, yazım idempotent. Yalnız
+       kesinleşmiş rota siparişinde denenir; kargoda sefer, taslakta gün yok. */
+    placed && order.deliveryType === 'route' ? tryOpenNeighborInvite(db, { orderId: order.id, customerId: profile.id, order }) : null,
+    /* Sağlayıcının söylediği, yalnız ödemesi beklenen kart taslağında sorulur; okuma yan etkisizdir. Hata burada `null`a düşer, çünkü
+       canlı bağın eylemi aynı soruyu saniyeler sonra sorar ve orada iz bırakır. */
+    awaitingCard && order.paymentRef
+      ? (stripePaymentGateway()
+          ?.read(order.paymentRef)
+          .catch(() => null) ?? null)
+      : null,
+    awaitingCard ? paymentDeadlineOf(db, order.id) : null,
+  ]);
 
   const view: ConfirmationView = {
     orderId: order.id,
@@ -99,9 +90,9 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
        paylaşımı hiç sunmasın. */
     neighborInvite: invite
       ? {
-          url: neighborInviteUrl(invite.token, locale as Locale),
-          remainingUses: await remainingNeighborInviteUses(db, invite),
-          maxUses: invite.maxUses,
+          url: neighborInviteUrl(invite.invite.token, locale as Locale),
+          remainingUses: invite.remainingUses,
+          maxUses: invite.invite.maxUses,
         }
       : null,
     referenceNo: order.referenceNo,
@@ -112,7 +103,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     refundedAt: order.providerRefundedAt,
     awaitingCard,
     paymentState: payment ? paymentStateOf(payment.status) : null,
-    payBy: awaitingCard ? await paymentDeadlineOf(db, order.id) : null,
+    payBy,
     billing: awaitingCard ? billingOf(profile, order.addressSnapshot) : null,
     onRoute: order.deliveryType === 'route',
     pickup: pickupWarehouse
@@ -153,6 +144,25 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
       {view.awaitingCard && <OrderWatch orderId={order.id} />}
       <ConfirmationClient t={t} shared={checkoutMessages[locale]} locale={locale as Locale} view={view} device={device} />
     </SiteFrame>
+  );
+}
+
+/** Kalem künyesi: sipariş varyant satırlarından oluşuyor, müşteri ürün adını ve görselini görmeli; ürünler boyların ardından okunur. */
+async function lineCatalogOf(db: Db, items: readonly OrderItem[], locale: Locale) {
+  const variants = await new ProductVariantService(db).listByIds([...new Set(items.map((i) => i.variantId))]);
+  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
+  return new Map(
+    variants.map((variant) => {
+      const product = products.find((p) => p.id === variant.productId);
+      return [
+        variant.id,
+        {
+          name: product ? resolveLocalizedText(product.name, locale) : '',
+          unit: resolveLocalizedText(variant.label, locale),
+          image: product ? imageOf(product) : null,
+        },
+      ];
+    }),
   );
 }
 

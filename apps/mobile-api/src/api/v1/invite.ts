@@ -3,7 +3,6 @@ import type { Context, Next } from 'hono';
 import { z } from 'zod';
 import {
   acceptNeighborInvite,
-  countNeighborInviteUses,
   declineNeighborInvite,
   neighborInviteUrl,
   readInviteWelcome,
@@ -126,16 +125,15 @@ inviteClaim.post('/neighbor', async (c) => {
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   const db = serviceDb();
-  const invite = await tryOpenNeighborInvite(db, { orderId: body.data.orderId, customerId: c.get('customerId') });
-  /* Kalan hak sunucuda sayılır: tüketim ve tavan kuralını istemciye taşımak ikinci kopya olurdu. Davet yoksa sayı 0, çünkü
-     sözleşme "bilinmiyor" hâli taşımıyor. */
-  const remainingUses = invite === null ? 0 : Math.max(0, invite.maxUses - (await countNeighborInviteUses(db, invite.id)));
+  const opened = await tryOpenNeighborInvite(db, { orderId: body.data.orderId, customerId: c.get('customerId') });
   return ok(
     c,
     OrderNeighborInviteSchema.parse({
-      inviteUrl: invite === null ? null : neighborInviteUrl(invite.token, locale.data),
-      remainingUses,
-      maxUses: invite?.maxUses ?? NEIGHBOR_INVITE_MAX_USES,
+      inviteUrl: opened === null ? null : neighborInviteUrl(opened.invite.token, locale.data),
+      /* Kalan hak sunucuda sayılır: tüketim ve tavan kuralını istemciye taşımak ikinci kopya olurdu. Davet yoksa sayı 0, çünkü
+         sözleşme "bilinmiyor" hâli taşımıyor. */
+      remainingUses: opened?.remainingUses ?? 0,
+      maxUses: opened?.invite.maxUses ?? NEIGHBOR_INVITE_MAX_USES,
     }),
   );
 });
