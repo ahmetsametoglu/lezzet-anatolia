@@ -20,14 +20,15 @@ const WINDOW_WAIT = 5_000;
  * gerçek saatte beklemez. Bir yolun cevap listesi bitince son cevap tekrar eder.
  */
 function fakePennylane(routes: Record<string, Reply[]>, mode: PennylaneConfig['mode'] = 'sandbox') {
-  const calls: Array<{ path: string; query: Record<string, string> }> = [];
+  const calls: Array<{ path: string; query: Record<string, string>; method: string; body: unknown }> = [];
   const sleeps: number[] = [];
   const served = new Map<string, number>();
   let now = 0;
-  const fetchImpl = (async (url: string | URL | Request) => {
+  const fetchImpl = (async (url: string | URL | Request, init?: RequestInit) => {
     const parsed = new URL(String(url));
     const path = parsed.pathname.replace('/api/external/v2', '');
-    calls.push({ path, query: Object.fromEntries(parsed.searchParams) });
+    const body = typeof init?.body === 'string' ? JSON.parse(init.body) : init?.body instanceof FormData ? 'form' : undefined;
+    calls.push({ path, query: Object.fromEntries(parsed.searchParams), method: init?.method ?? 'GET', body });
     const replies = routes[path] ?? [{ status: 404, json: { error: 'not_found' } }];
     const index = served.get(path) ?? 0;
     served.set(path, index + 1);
@@ -167,5 +168,113 @@ describe('istek sınırı ve tekrar', () => {
     expect(sleeps).toEqual([]);
     await port.getTransaction(1);
     expect(sleeps).toEqual([WINDOW_WAIT]);
+  });
+});
+
+describe('alış faturası yazımı', () => {
+  const draft = {
+    supplierId: 1549933174784,
+    date: '2026-10-02',
+    deadline: '2026-11-01',
+    invoiceNumber: null,
+    externalReference: 'doc:4f1c',
+    lines: [
+      { grossCents: 10_550, vatCents: 550, vatCode: 'FR_55' },
+      { grossCents: 6_000, vatCents: 1_000, vatCode: 'FR_200' },
+    ],
+  };
+
+  it('test kipinde canlı şirkete hiçbir yazım gitmez', async () => {
+    const { port, calls } = fakePennylane({ '/me': [{ json: LIVE_ME }], '/suppliers': [{ status: 201, json: {} }] }, 'sandbox');
+    await expect(
+      port.createSupplier({ name: 'Fournisseur', externalReference: 'sup:1', vatNumber: null, dueDays: null }),
+    ).rejects.toMatchObject({
+      code: 'company_mismatch',
+    });
+    expect(calls.map((call) => call.path)).toEqual(['/me']);
+  });
+
+  it('içe aktarma toplamları satırlardan türetir, tutarı euro dizesiyle ve oran koduyla gönderir; numarasız fiş numara alanı taşımaz', async () => {
+    const { port, calls } = fakePennylane({
+      '/me': [{ json: SANDBOX_ME }],
+      '/supplier_invoices/import': [{ status: 201, json: { id: 31309740199936, external_reference: 'doc:4f1c', invoice_number: null } }],
+    });
+    expect(await port.importInvoice({ draft, fileId: 93977575424 })).toEqual({
+      status: 'imported',
+      invoice: { id: 31309740199936, externalReference: 'doc:4f1c', invoiceNumber: null },
+    });
+    expect(calls.at(-1)).toMatchObject({
+      method: 'POST',
+      body: {
+        file_attachment_id: 93977575424,
+        supplier_id: 1549933174784,
+        date: '2026-10-02',
+        deadline: '2026-11-01',
+        currency: 'EUR',
+        currency_amount_before_tax: '150.00',
+        currency_tax: '15.50',
+        currency_amount: '165.50',
+        invoice_lines: [
+          { label: '', currency_amount: '105.50', currency_tax: '5.50', vat_rate: 'FR_55' },
+          { label: '', currency_amount: '60.00', currency_tax: '10.00', vat_rate: 'FR_200' },
+        ],
+        external_reference: 'doc:4f1c',
+      },
+    });
+    expect(calls.at(-1)?.body).not.toHaveProperty('invoice_number');
+  });
+
+  it("aynı içerikli dosyanın 409'u var olan faturanın kimliğini döner; öteki ret hata kalır ve Pennylane'in sebebini taşır", async () => {
+    const { port } = fakePennylane({
+      '/me': [{ json: SANDBOX_ME }],
+      '/supplier_invoices/import': [
+        { status: 409, json: { status: 409, error: 'A document with ID 31309740199936 already exists with such attachment.' } },
+        { status: 422, json: { status: 422, error: 'The sum of invoice lines "currency_amount" (100.0) does not match with the total' } },
+      ],
+    });
+    expect(await port.importInvoice({ draft, fileId: 1 })).toEqual({ status: 'duplicate_file', existingId: 31309740199936 });
+    await expect(port.importInvoice({ draft, fileId: 2 })).rejects.toMatchObject({
+      code: 'validation',
+      message: expect.stringContaining('The sum of invoice lines'),
+    });
+  });
+
+  it('satırları değişen faturada eski satırlar kimlikle silinir; yeni satırlar ve toplamlar aynı istekte gider', async () => {
+    const { port, calls } = fakePennylane({
+      '/me': [{ json: SANDBOX_ME }],
+      '/supplier_invoices/7/invoice_lines': [{ json: { items: [{ id: 41 }, { id: 42 }], has_more: false, next_cursor: null } }],
+      '/supplier_invoices/7': [{ json: {} }],
+    });
+    await port.updateInvoice(7, { lines: [{ grossCents: 36_000, vatCents: 6_000, vatCode: 'FR_200' }] });
+    expect(calls.at(-1)).toEqual({
+      path: '/supplier_invoices/7',
+      query: {},
+      method: 'PUT',
+      body: {
+        currency_amount_before_tax: '300.00',
+        currency_tax: '60.00',
+        currency_amount: '360.00',
+        invoice_lines: {
+          delete: [{ id: 41 }, { id: 42 }],
+          create: [{ label: '', currency_amount: '360.00', currency_tax: '60.00', vat_rate: 'FR_200' }],
+        },
+      },
+    });
+  });
+
+  it('yazım sunucu hatasında tekrarlanmaz: karşıya ulaşmış yazımın tekrarı ikinci kayıt doğururdu', async () => {
+    const { port, calls } = fakePennylane({
+      '/me': [{ json: SANDBOX_ME }],
+      '/suppliers': [
+        { status: 502, json: {} },
+        { status: 201, json: { id: 1, name: 'Fournisseur', external_reference: 'sup:1' } },
+      ],
+    });
+    await expect(
+      port.createSupplier({ name: 'Fournisseur', externalReference: 'sup:1', vatNumber: null, dueDays: 30 }),
+    ).rejects.toMatchObject({
+      code: 'provider',
+    });
+    expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1);
   });
 });

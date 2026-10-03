@@ -40,10 +40,14 @@ export class PennylaneError extends Error {
   }
 }
 
-/** HTTP durumundan hata sınıfı; Pennylane reddin sebebini `message` ve `details` alanında verir, mesaja o taşınır. */
+/** HTTP durumundan hata sınıfı; Pennylane reddin sebebini `error`, `message` ve `details` alanında verir, mesaja o taşınır. */
 export function classify(status: number, body: unknown): PennylaneErrorDetail {
-  const reason = typeof body === 'object' && body !== null ? (body as { message?: unknown; details?: unknown }) : {};
-  const said = [typeof reason.message === 'string' ? reason.message : null, reason.details ? JSON.stringify(reason.details) : null]
+  const reason = typeof body === 'object' && body !== null ? (body as { error?: unknown; message?: unknown; details?: unknown }) : {};
+  const said = [
+    typeof reason.error === 'string' ? reason.error : null,
+    typeof reason.message === 'string' ? reason.message : null,
+    reason.details ? JSON.stringify(reason.details) : null,
+  ]
     .filter(Boolean)
     .join(' · ');
   if (status === 401 || status === 403) {

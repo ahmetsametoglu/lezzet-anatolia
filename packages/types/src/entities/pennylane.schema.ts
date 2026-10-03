@@ -27,6 +27,58 @@ export const PennylaneBankAccountSchema = z.object({
 });
 export type PennylaneBankAccount = z.infer<typeof PennylaneBankAccountSchema>;
 
+/** Pennylane'deki tedarikçi; bizim tedarikçimize ya da carimize dış referansla bağlanır (`sup:<kimlik>`, `cp:<kimlik>`). */
+export const PennylaneSupplierSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  externalReference: z.string().nullable(),
+});
+export type PennylaneSupplier = z.infer<typeof PennylaneSupplierSchema>;
+
+/** Açılacak tedarikçi; vade gün sayısı Pennylane'in ödeme takvimine geçer. */
+export const PennylaneSupplierDraftSchema = z.object({
+  name: z.string(),
+  externalReference: z.string(),
+  vatNumber: z.string().nullable(),
+  dueDays: z.number().int().nullable(),
+});
+export type PennylaneSupplierDraft = z.infer<typeof PennylaneSupplierDraftSchema>;
+
+/** Pennylane'deki alış faturası; bizim yüklediğimizde dış referans belge kimliğimizi taşır. */
+export const PennylaneInvoiceSchema = z.object({
+  id: z.number().int(),
+  externalReference: z.string().nullable(),
+  invoiceNumber: z.string().nullable(),
+});
+export type PennylaneInvoice = z.infer<typeof PennylaneInvoiceSchema>;
+
+/** Faturanın satırı: KDV dahil tutar ve KDV (**cent**), Pennylane'in oran kodu (`FR_55`, `intracom_100`, `exempt`). */
+export const PennylaneInvoiceLineSchema = z.object({
+  grossCents: z.number().int().positive(),
+  vatCents: z.number().int().nonnegative(),
+  vatCode: z.string(),
+});
+export type PennylaneInvoiceLine = z.infer<typeof PennylaneInvoiceLineSchema>;
+
+/** Yüklenecek faturanın bizim dilimizdeki hâli; toplamlar satırlardan türer, ayrıca taşınmaz. */
+export const PennylaneInvoiceDraftSchema = z.object({
+  supplierId: z.number().int(),
+  date: z.string(),
+  deadline: z.string(),
+  invoiceNumber: z.string().nullable(),
+  externalReference: z.string(),
+  lines: z.array(PennylaneInvoiceLineSchema).min(1),
+});
+export type PennylaneInvoiceDraft = z.infer<typeof PennylaneInvoiceDraftSchema>;
+
+/** Yüklenmiş faturanın değişen alanları; satırlar verilirse eskileri silinip yenileri yazılır. */
+export const PennylaneInvoicePatchSchema = PennylaneInvoiceDraftSchema.omit({ externalReference: true }).partial();
+export type PennylaneInvoicePatch = z.infer<typeof PennylaneInvoicePatchSchema>;
+
+/** Nakitle kapanan faturanın Pennylane'deki işareti; bankadan ödenen fatura eşleşmeyle kapanır, işaret almaz. */
+export const PennylanePaymentStatusEnum = z.enum(['paid', 'to_be_paid']);
+export type PennylanePaymentStatus = z.infer<typeof PennylanePaymentStatusEnum>;
+
 /** Bankadan Pennylane'e gelen hareket; arşivlenen hareket muhasebede yok sayılır. */
 export const PennylaneTransactionSchema = z.object({
   id: z.number().int(),

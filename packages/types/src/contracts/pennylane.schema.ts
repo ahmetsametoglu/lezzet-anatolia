@@ -40,3 +40,32 @@ export const PennylaneApiChangePageSchema = z.object({
   has_more: z.boolean(),
   next_cursor: z.string().nullable(),
 });
+
+export const PennylaneApiSupplierSchema = z.object({ id: z.number().int(), name: z.string(), external_reference: z.string().nullable() });
+
+export const PennylaneApiSupplierPageSchema = z.object({
+  items: z.array(PennylaneApiSupplierSchema),
+  has_more: z.boolean(),
+  next_cursor: z.string().nullable(),
+});
+
+export const PennylaneApiFileAttachmentSchema = z.object({ id: z.number().int() });
+
+export const PennylaneApiInvoiceSchema = z.object({
+  id: z.number().int(),
+  external_reference: z.string().nullable(),
+  invoice_number: z.string().nullable(),
+});
+
+export const PennylaneApiInvoicePageSchema = z.object({
+  items: z.array(PennylaneApiInvoiceSchema),
+  has_more: z.boolean(),
+  next_cursor: z.string().nullable(),
+});
+
+/** Satırların yalnız kimliği okunur: güncellemede eski satırlar kimlikle silinir. */
+export const PennylaneApiInvoiceLinePageSchema = z.object({
+  items: z.array(z.object({ id: z.number().int() })),
+  has_more: z.boolean(),
+  next_cursor: z.string().nullable(),
+});

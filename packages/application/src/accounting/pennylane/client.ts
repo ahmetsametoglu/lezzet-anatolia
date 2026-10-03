@@ -3,13 +3,22 @@ import {
   PennylaneModeEnum,
   PennylaneApiBankAccountPageSchema,
   PennylaneApiChangePageSchema,
+  PennylaneApiFileAttachmentSchema,
+  PennylaneApiInvoiceLinePageSchema,
+  PennylaneApiInvoicePageSchema,
+  PennylaneApiInvoiceSchema,
   PennylaneApiMeSchema,
+  PennylaneApiSupplierPageSchema,
+  PennylaneApiSupplierSchema,
   PennylaneApiTransactionPageSchema,
   PennylaneApiTransactionSchema,
   type PennylaneApiTransaction,
   type PennylaneBankAccount,
   type PennylaneCompany,
+  type PennylaneInvoice,
+  type PennylaneInvoiceLine,
   type PennylaneMode,
+  type PennylaneSupplier,
   type PennylaneTransaction,
 } from '@lezzet/types';
 import type { PennylanePort } from './port';
@@ -38,6 +47,8 @@ const GET_ATTEMPTS = 3;
 const RATE_LIMIT_ATTEMPTS = 4;
 const PAGE_LIMIT = 100;
 const CHANGE_PAGE_LIMIT = 1000;
+/** Fatura araması dış referans ya da tedarikçi ve numarayla yapılır; sonuç bir iki kayıttır. */
+const INVOICE_PAGE_LIMIT = 20;
 
 const realClock = { now: () => Date.now(), sleep: (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)) };
 
@@ -67,14 +78,16 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
     }
   };
 
-  // Okuma tekrarlanabilir: 429'da Pennylane'in söylediği kadar, sunucu ve ağ arızasında artan aralıkla beklenir.
-  const get = async (path: string): Promise<unknown> => {
+  // 429'da Pennylane'in söylediği kadar beklenir. Sunucu ve ağ arızasında yalnız okuma tekrarlanır; yazım tekrarı kuyruğundur, çünkü
+  // karşıya ulaşmış bir yazım tekrarlanınca ikinci kayıt doğardı.
+  const send = async (method: Method, path: string, payload: Payload): Promise<unknown> => {
+    const retries = method === 'GET';
     let failures = 0;
     let limited = 0;
     for (;;) {
       await pace();
       try {
-        const res = await once(config, path);
+        const res = await once(config, method, path, payload);
         const body = await readBody(res);
         if (res.ok) return body;
         const error = new PennylaneError(classify(res.status, body));
@@ -82,13 +95,14 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
           await clock.sleep(retryAfterMs(res));
           continue;
         }
-        if (error.code !== 'provider' || ++failures >= GET_ATTEMPTS) throw error;
+        if (!retries || error.code !== 'provider' || ++failures >= GET_ATTEMPTS) throw error;
       } catch (err) {
-        if (!(err instanceof PennylaneError) || err.code !== 'network' || ++failures >= GET_ATTEMPTS) throw err;
+        if (!retries || !(err instanceof PennylaneError) || err.code !== 'network' || ++failures >= GET_ATTEMPTS) throw err;
       }
       await clock.sleep(failures * 1000);
     }
   };
+  const get = (path: string) => send('GET', path, null);
 
   let company: Promise<PennylaneCompany> | null = null;
   const verifiedCompany = (): Promise<PennylaneCompany> => {
@@ -116,6 +130,18 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
     await verifiedCompany();
     return get(path);
   };
+  const write = async (method: 'POST' | 'PUT', path: string, payload: Payload): Promise<unknown> => {
+    await verifiedCompany();
+    return send(method, path, payload);
+  };
+  const orNull = async <T>(load: () => Promise<T>): Promise<T | null> => {
+    try {
+      return await load();
+    } catch (err) {
+      if (err instanceof PennylaneError && err.code === 'not_found') return null;
+      throw err;
+    }
+  };
 
   return {
     company: verifiedCompany,
@@ -141,14 +167,8 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
       return { items: page.items.map(transactionOf), nextCursor: page.has_more ? page.next_cursor : null };
     },
     async getTransaction(id) {
-      let body: unknown;
-      try {
-        body = await read(`/transactions/${id}`);
-      } catch (err) {
-        if (err instanceof PennylaneError && err.code === 'not_found') return null;
-        throw err;
-      }
-      return transactionOf(parse(PennylaneApiTransactionSchema, body, 'hareket'));
+      const body = await orNull(() => read(`/transactions/${id}`));
+      return body === null ? null : transactionOf(parse(PennylaneApiTransactionSchema, body, 'hareket'));
     },
     async transactionChanges(input) {
       // `start_date` ile `cursor` birlikte 400 döner: ilk sayfa andan, sonrakiler imleçten.
@@ -160,7 +180,117 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
         nextCursor: page.has_more ? page.next_cursor : null,
       };
     },
+    async findSupplier(externalReference) {
+      const filter = JSON.stringify([{ field: 'external_reference', operator: 'eq', value: externalReference }]);
+      const page = parse(PennylaneApiSupplierPageSchema, await read(`/suppliers?${query({ filter, limit: 2 })}`), 'tedarikçiler');
+      return page.items[0] ? supplierOf(page.items[0]) : null;
+    },
+    async createSupplier(draft) {
+      const body = await write('POST', '/suppliers', {
+        json: {
+          name: draft.name,
+          external_reference: draft.externalReference,
+          ...(draft.vatNumber ? { vat_number: draft.vatNumber } : {}),
+          ...(draft.dueDays !== null ? { supplier_due_date_delay: draft.dueDays } : {}),
+        },
+      });
+      return supplierOf(parse(PennylaneApiSupplierSchema, body, 'tedarikçi'));
+    },
+    async findInvoices(filter) {
+      const conditions =
+        'externalReference' in filter
+          ? [{ field: 'external_reference', operator: 'eq', value: filter.externalReference }]
+          : [
+              { field: 'supplier_id', operator: 'eq', value: String(filter.supplierId) },
+              { field: 'invoice_number', operator: 'eq', value: filter.invoiceNumber },
+            ];
+      const body = await read(`/supplier_invoices?${query({ filter: JSON.stringify(conditions), limit: INVOICE_PAGE_LIMIT })}`);
+      return parse(PennylaneApiInvoicePageSchema, body, 'faturalar').items.map(invoiceOf);
+    },
+    async getInvoice(id) {
+      const body = await orNull(() => read(`/supplier_invoices/${id}`));
+      return body === null ? null : invoiceOf(parse(PennylaneApiInvoiceSchema, body, 'fatura'));
+    },
+    async uploadFile({ bytes, contentType, filename }) {
+      const form = new FormData();
+      form.append('file', new Blob([Uint8Array.from(bytes)], { type: contentType }), filename);
+      return parse(PennylaneApiFileAttachmentSchema, await write('POST', '/file_attachments', { form }), 'dosya').id;
+    },
+    async importInvoice({ draft, fileId }) {
+      try {
+        const body = await write('POST', '/supplier_invoices/import', {
+          json: {
+            file_attachment_id: fileId,
+            supplier_id: draft.supplierId,
+            date: draft.date,
+            deadline: draft.deadline,
+            ...(draft.invoiceNumber ? { invoice_number: draft.invoiceNumber } : {}),
+            currency: 'EUR',
+            ...totalsOf(draft.lines),
+            invoice_lines: draft.lines.map(lineOf),
+            external_reference: draft.externalReference,
+          },
+        });
+        return { status: 'imported', invoice: invoiceOf(parse(PennylaneApiInvoiceSchema, body, 'fatura')) };
+      } catch (err) {
+        const existingId = err instanceof PennylaneError && err.code === 'conflict' ? existingDocumentId(err.detail) : null;
+        if (existingId === null) throw err;
+        return { status: 'duplicate_file', existingId };
+      }
+    },
+    async updateInvoice(id, patch) {
+      const body: Record<string, unknown> = {};
+      if (patch.supplierId !== undefined) body['supplier_id'] = patch.supplierId;
+      if (patch.date !== undefined) body['date'] = patch.date;
+      if (patch.deadline !== undefined) body['deadline'] = patch.deadline;
+      if (patch.invoiceNumber !== undefined) body['invoice_number'] = patch.invoiceNumber;
+      if (patch.lines) {
+        const current: number[] = [];
+        let cursor: string | null = null;
+        do {
+          const raw: unknown = await read(`/supplier_invoices/${id}/invoice_lines?${query({ limit: PAGE_LIMIT, cursor })}`);
+          const page = parse(PennylaneApiInvoiceLinePageSchema, raw, 'fatura satırları');
+          current.push(...page.items.map((line) => line.id));
+          cursor = page.has_more ? page.next_cursor : null;
+        } while (cursor);
+        Object.assign(body, totalsOf(patch.lines), {
+          invoice_lines: { delete: current.map((lineId) => ({ id: lineId })), create: patch.lines.map(lineOf) },
+        });
+      }
+      await write('PUT', `/supplier_invoices/${id}`, { json: body });
+    },
+    async setPaymentStatus(id, status) {
+      await write('PUT', `/supplier_invoices/${id}/payment_status`, { json: { payment_status: status } });
+    },
   };
+}
+
+function supplierOf(row: { id: number; name: string; external_reference: string | null }): PennylaneSupplier {
+  return { id: row.id, name: row.name, externalReference: row.external_reference };
+}
+
+function invoiceOf(row: { id: number; external_reference: string | null; invoice_number: string | null }): PennylaneInvoice {
+  return { id: row.id, externalReference: row.external_reference, invoiceNumber: row.invoice_number };
+}
+
+const euros = (cents: number) => (cents / 100).toFixed(2);
+
+/** Toplamlar satırlardan: içe aktarma satır toplamı tutmayan faturayı reddeder, güncelleme hiç bakmaz. */
+function totalsOf(lines: readonly PennylaneInvoiceLine[]) {
+  const gross = lines.reduce((sum, line) => sum + line.grossCents, 0);
+  const vat = lines.reduce((sum, line) => sum + line.vatCents, 0);
+  return { currency_amount_before_tax: euros(gross - vat), currency_tax: euros(vat), currency_amount: euros(gross) };
+}
+
+/** Güncellemede yeni satır etiket ister; boş etiketi Pennylane kabul ediyor. */
+function lineOf(line: PennylaneInvoiceLine) {
+  return { label: '', currency_amount: euros(line.grossCents), currency_tax: euros(line.vatCents), vat_rate: line.vatCode };
+}
+
+/** 409 aynı içerikli dosyanın durduğu faturanın kimliğini metinde taşır ("A document with ID … already exists"). */
+function existingDocumentId(detail: unknown): number | null {
+  const match = /document with ID (\d+)/i.exec(JSON.stringify(detail ?? ''));
+  return match ? Number(match[1]) : null;
 }
 
 function transactionOf(row: PennylaneApiTransaction): PennylaneTransaction {
@@ -201,14 +331,20 @@ function parse<T>(schema: Parser<T>, body: unknown, what: string): T {
   return result.data;
 }
 
-async function once(config: PennylaneConfig, path: string): Promise<Response> {
+type Method = 'GET' | 'POST' | 'PUT';
+type Payload = { json: unknown } | { form: FormData } | null;
+
+async function once(config: PennylaneConfig, method: Method, path: string, payload: Payload): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const headers: Record<string, string> = { Authorization: `Bearer ${config.token}`, Accept: 'application/json' };
+  if (payload && 'json' in payload) headers['Content-Type'] = 'application/json';
   try {
     return await (config.fetchImpl ?? fetch)(`${BASE}${path}`, {
-      method: 'GET',
+      method,
       signal: controller.signal,
-      headers: { Authorization: `Bearer ${config.token}`, Accept: 'application/json' },
+      headers,
+      ...(payload ? { body: 'json' in payload ? JSON.stringify(payload.json) : payload.form } : {}),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
