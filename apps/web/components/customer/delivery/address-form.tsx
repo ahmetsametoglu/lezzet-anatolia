@@ -9,6 +9,7 @@ import {
   MIN_QUERY_LENGTH,
   type AddressLabelKind,
 } from '@lezzet/address';
+import { useSettled } from '@lezzet/address/react';
 import { CountryEnum, type Address, type Country } from '@lezzet/types';
 import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
@@ -192,8 +193,16 @@ export function AddressForm({
   const google = useGermanAddressSearch(query, { enabled: searchOn && country === 'DE', sessionToken });
   const found = country === 'FR' ? ban : google;
   const throttled = country === 'FR' && ban.throttled;
-  // "Bulamadık" yalnız cevap bu sorgu için geldiyse; yoksa yazarken kutu yanıp sönerdi.
-  const notFound = searchOn && manual === null && term.length >= MIN_QUERY_LENGTH && found.term === term && found.suggestions.length === 0 && !throttled;
+  const settled = useSettled(term);
+  // "Bulamadık" yalnız cevap bu sorgunun ve müşteri yazmayı bıraktıysa: yazarken boş dönen ara sorgu yarım adresi "yok" ilan ederdi.
+  const notFound =
+    settled &&
+    searchOn &&
+    manual === null &&
+    term.length >= MIN_QUERY_LENGTH &&
+    found.term === term &&
+    found.suggestions.length === 0 &&
+    !throttled;
   /** Öneriler yalnız kapı düzeyinde olduğundan numarasız sokak sonuç vermez; "bulamadık" yerine "kapı numarasını da yazın" denir. */
   const lacksDoor = !hasHouseNumber(term);
 

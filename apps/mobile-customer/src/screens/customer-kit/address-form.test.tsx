@@ -1,5 +1,5 @@
 import addressCopy from '@lezzet/i18n/customer/address';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import type { AddressWrite, MeAddress } from '@/lib/api/addresses';
 import { AddressForm } from './address-form';
@@ -180,14 +180,39 @@ describe('adres formu — öneri ve doğrulama', () => {
   });
 });
 
+/** "Bulamadık" kutusu yazma 1,5 sn durunca açılır; varsayılan 1 sn'lik bekleme ona yetmez. */
+const SETTLED = { timeout: 3000 };
+
 describe('adres formu — öneri çıkmayınca', () => {
+  it('müşteri yazarken "bulamadık" denmez; kutu yazma durunca açılır', async () => {
+    jest.useFakeTimers();
+    try {
+      await renderNew();
+      const field = screen.getByTestId('address-search');
+      // Kelimeler arası duraklamada ara sorgu boş döner; yarım adres "yok" ilan edilmemeli.
+      await fireEvent.changeText(field, '9 rue');
+      await act(() => jest.advanceTimersByTimeAsync(1000));
+      expect(mockSuggest).toHaveBeenCalled();
+      expect(screen.queryByText(t.notFoundTitle)).toBeNull();
+
+      await fireEvent.changeText(field, '9 rue des lilas');
+      await act(() => jest.advanceTimersByTimeAsync(1000));
+      expect(screen.queryByText(t.notFoundTitle)).toBeNull();
+
+      await act(() => jest.advanceTimersByTimeAsync(600));
+      expect(screen.getByText(t.notFoundTitle)).toBeOnTheScreen();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('numarasız yazıda "kapı numarasını da yazın", numaralıda "bulamadık" der', async () => {
     await renderNew();
     await fireEvent.changeText(screen.getByTestId('address-search'), 'rue des lilas');
-    await waitFor(() => expect(screen.getByText(t.needDoorTitle)).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByText(t.needDoorTitle)).toBeOnTheScreen(), SETTLED);
 
     await fireEvent.changeText(screen.getByTestId('address-search'), '3 rue des lilas');
-    await waitFor(() => expect(screen.getByText(t.notFoundTitle)).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByText(t.notFoundTitle)).toBeOnTheScreen(), SETTLED);
   });
 
   it('elle girilen adres kaydetmeden önce doğrulanır; bulunan nokta gövdeye girer', async () => {
@@ -195,7 +220,7 @@ describe('adres formu — öneri çıkmayınca', () => {
     mockLocate.mockResolvedValue({ data: checked, error: null });
     await renderNew();
     await fireEvent.changeText(screen.getByTestId('address-search'), '5 rue des tilleuls');
-    await waitFor(() => expect(screen.getByTestId('address-manual-open')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('address-manual-open')).toBeOnTheScreen(), SETTLED);
     await fireEvent.press(screen.getByTestId('address-manual-open'));
 
     // Kart yazılanla açılır; kod ve şehir müşteriden.
@@ -212,7 +237,7 @@ describe('adres formu — öneri çıkmayınca', () => {
   it('doğrulama bulamazsa adres YİNE kaydedilir — nokta hiç gönderilmez (defter reddetmez)', async () => {
     await renderNew();
     await fireEvent.changeText(screen.getByTestId('address-search'), '7 rue des tilleuls');
-    await waitFor(() => expect(screen.getByTestId('address-manual-open')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('address-manual-open')).toBeOnTheScreen(), SETTLED);
     await fireEvent.press(screen.getByTestId('address-manual-open'));
     await fireEvent.changeText(screen.getByTestId('address-zip'), '67100');
     await fireEvent.changeText(screen.getByTestId('address-city'), 'Strasbourg');

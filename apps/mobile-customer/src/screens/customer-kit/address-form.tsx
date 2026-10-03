@@ -6,6 +6,7 @@ import {
   POSTAL_CODE_PATTERN,
   type AddressLabelKind,
 } from '@lezzet/address';
+import { useSettled } from '@lezzet/address/react';
 import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import addressCopy from '@lezzet/i18n/customer/address';
@@ -116,9 +117,16 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
   const searchOn = active && picked === null;
   const found = useAddressLookup(query, { country, enabled: searchOn, sessionToken, locale });
   const doorOf = useDoorCodes(active);
-  // "Bulamadık" yalnız cevap BU sorgu için geldiyse — yoksa yazarken kutu yanıp sönerdi.
+  const settled = useSettled(term);
+  // "Bulamadık" yalnız cevap bu sorgunun ve müşteri yazmayı bıraktıysa: yazarken boş dönen ara sorgu yarım adresi "yok" ilan ederdi.
   const notFound =
-    searchOn && manual === null && term.length >= MIN_QUERY_LENGTH && found.term === term && found.options.length === 0 && !found.busy;
+    settled &&
+    searchOn &&
+    manual === null &&
+    term.length >= MIN_QUERY_LENGTH &&
+    found.term === term &&
+    found.options.length === 0 &&
+    !found.busy;
   /* Öneriler yalnız kapı düzeyinde olduğundan numarasız sokak sonuç vermez; "bulamadık" demek var olan sokağı yok saymak olurdu. */
   const lacksDoor = !hasHouseNumber(term);
 
