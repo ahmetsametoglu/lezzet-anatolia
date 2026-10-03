@@ -149,6 +149,8 @@ export default defineConfig({
             'scripts/seed/image-manifest.test.ts',
             'apps/web/app/**/*.test.ts?(x)',
             'apps/web/components/**/*.test.ts?(x)',
+            // Sunucu hata kancası: hangi hata listeye yazılır, hangisi ağ olayı diye düşer.
+            'apps/web/instrumentation.test.ts',
             // `apps/web/lib` entegrasyon köküdür ama bu dosyalar DB'ye vurmaz.
             ...WEB_LIB_DBSIZ,
             ...PAKET_DBSIZ,

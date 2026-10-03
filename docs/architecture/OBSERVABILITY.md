@@ -88,7 +88,9 @@ diskte iz kalmalı — DB'nin düştüğü an, iz tutmanın en gerekli olduğu a
 
 **Otomatik yakalama.** Next'in `instrumentation.ts` → `onRequestError` kancası sunucu tarafı
 hatalarını (RSC render, route handler, server action) kendiliğinden toplar; `NEXT_*` digest taşıyan
-kontrol-akışı "hataları" (`redirect`, `notFound`) atlanır — onlar hata değil, akıştır. Backend
+kontrol-akışı "hataları" (`redirect`, `notFound`) atlanır — onlar hata değil, akıştır. Müşterinin
+sayfadan ayrılınca yarıda kestiği akış ("The destination stream closed early.") da atlanır: ağ
+olayıdır; Next'in kendi `⨯` satırı süreç günlüğünde kalır, hata listesine yazılmaz. Backend
 tarafında aynı işi Hono'nun `onError`'ı ve cron kabuğu yapar. Elle `try/catch` serpmeye gerek yok:
 **yakalama altyapının işi, bağlam eklemek çağıranın işi.**
 

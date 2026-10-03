@@ -1,36 +1,19 @@
 import type { Instrumentation } from 'next';
 
+/** React'in akış sunucusu, yanıtın gittiği bağlantı yayın bitmeden kapanınca bu iletiyle durur. */
+const CLIENT_CLOSED_STREAM = 'The destination stream closed early.';
+
 /**
- * Sunucu tarafı hataların OTOMATİK yakalanması (18.5) — `OBSERVABILITY §2`.
- *
- * `onRequestError` Next'in kancası: RSC render'ında, route handler'da, server action'da ve
- * middleware'de fırlatılan her hata buraya düşer. Elle `try/catch` serpmeye gerek yok —
- * **yakalama altyapının işi, bağlam eklemek çağıranın işi.** Kapı kendi bağlamını
- * `captureError`'a doğrudan verir (`orderId` gibi); buraya düşen hatalar ise "kimse yakalamadı"
- * sınıfıdır ve elimizdeki tek bağlam istektir.
- *
- * **`NEXT_*` digest'li hatalar ATLANIR.** `redirect()` ve `notFound()` Next'te fırlatılarak çalışır;
- * onlar akıştır, hata değil. Süzülmezse hata listesi her yönlendirmede bir satır alır ve gerçek
- * hatalar o gürültünün içinde kaybolur.
- *
- * **Dinamik import** iki gerekçeyle: (1) instrumentation modülü en hafif hâlde yüklenir; (2) paket
- * ağacı (pino + Supabase istemcisi) yalnız gerçekten bir hata olduğunda çözülür.
- *
- * **EDGE'DE KAYIT YOK, `console` var.** Bu dosya Next tarafından **edge çalışma zamanı için de**
- * derleniyor (projede `middleware.ts` var). Edge'de `node:` şemalı modül yoktur; gözlemleme paketi
- * ise `pino` ve Supabase istemcisi taşıyor. Ayrım yapılmazsa derleme
- * *"UnhandledSchemeError: node:crypto"* ile kırılıyor — yaşandı (30.07). Kaynak `@lezzet/database`
- * barrel'ıydı: kökü her servisi yeniden dışa açıyor ve içlerinden biri (`email-verification.service`)
- * `node:crypto` kullanıyor. Köprü artık alt yol import'u kullanıyor ama **bu kapı da kendi tarafını
- * korumalı**: bugün pino'nun, yarın başka bir paketin node bağımlılığı aynı duvara çarpar.
- *
- * Edge'de kaybedilen şey `error_log` satırıdır, iz değil: `console.error` stdout'a yazar ve süreç
- * yöneticisi onu da dosyaya alır. Bugün edge'de yalnız middleware çalışıyor; oradaki bir hata zaten
- * en sık görülecek hata sınıfı değil.
+ * Kimsenin yakalamadığı sunucu hatası (RSC, route handler, server action, middleware) buraya düşer ve hata listesine yazılır;
+ * elde bağlam olarak yalnız istek vardır. Edge derlemesinde gözlemleme paketi `node:` modülleri yüzünden yüklenemez, orada iz
+ * yalnız `console`dadır.
  */
 export const onRequestError: Instrumentation.onRequestError = async (err, request, context) => {
+  // `redirect()` ve `notFound()` fırlatılarak çalışır; akıştır, hata değil.
   const digest = (err as { digest?: unknown })?.digest;
   if (typeof digest === 'string' && digest.startsWith('NEXT_')) return;
+  // Sayfadan ayrılan müşteri yarıdaki ön yüklemeyi keser; bu bir ağ olayıdır, hata listesine yazılsa her gezinme bir satır olurdu.
+  if ((err as { message?: unknown })?.message === CLIENT_CLOSED_STREAM) return;
 
   if (process.env.NEXT_RUNTIME === 'edge') {
     console.error('[edge]', request.path, err);
@@ -38,12 +21,12 @@ export const onRequestError: Instrumentation.onRequestError = async (err, reques
   }
 
   try {
+    // Paket ağacı (pino + Supabase istemcisi) yalnız gerçekten hata olunca yüklenir.
     const { captureError, SOURCES } = await import('@lezzet/observability');
     await captureError(err, {
       source: SOURCES.webServer,
       path: request.path,
-      // Bağlam KİMLİK taşır, içerik taşımaz (`OBSERVABILITY §5`): istek gövdesi, çerez ve başlıklar
-      // buraya girmez — müşterinin oturum çerezi bir teşhis verisi değildir.
+      // Bağlam kimlik taşır, içerik taşımaz (`OBSERVABILITY §5`): istek gövdesi, çerez ve başlıklar yazılmaz.
       context: {
         method: request.method,
         routerKind: context.routerKind,
@@ -52,19 +35,11 @@ export const onRequestError: Instrumentation.onRequestError = async (err, reques
       },
     });
   } catch {
-    // Kancanın kendisi render/cevap akışını BOZMAZ. `captureError` zaten yutuyor; bu kat, import'un
-    // kendisi patlarsa (paket çözülemedi) diye.
+    // Kanca render ve yanıt akışını bozmamalı; `captureError` zaten yutar, bu kat paketin kendisi yüklenemezse diye.
   }
 };
 
-/**
- * Süreç başı kurulum (15.27) — AI kullanım kaydedicisi `@lezzet/ai`nin kancasına takılır; web'deki her
- * model koşusu (talep taslağı, çeviri önerisi, banka sütunları) `ai_usage`a düşer.
- *
- * **Yalnız NODE çalışma zamanında ve ayrı dosyadan:** kaydedici veritabanına yazar ve edge'de `node:`
- * modülü yok (yukarıdaki künye). `NEXT_RUNTIME` derleme anında sabitlenir; edge derlemesinde dal düşer ve
- * `instrumentation-node` o pakete hiç girmez — Next'in önerdiği biçim bu.
- */
+/** AI kullanım kaydedicisi yalnız Node'da kurulur: veritabanına yazar ve `NEXT_RUNTIME` derlemede sabitlendiği için edge paketine girmez. */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === 'nodejs') await import('./instrumentation-node');
 }
