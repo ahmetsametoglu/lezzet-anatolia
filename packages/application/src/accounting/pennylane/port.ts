@@ -1,8 +1,11 @@
 import type {
   PennylaneBankAccount,
+  PennylaneCategory,
+  PennylaneCategoryGroup,
   PennylaneChangePage,
   PennylaneCompany,
   PennylaneInvoice,
+  PennylaneInvoiceCategory,
   PennylaneInvoiceDraft,
   PennylaneInvoicePatch,
   PennylanePaymentStatus,
@@ -49,4 +52,11 @@ export interface PennylanePort {
   matchTransaction(input: { invoiceId: number; transactionId: number }): Promise<void>;
   /** Tek bir faturanın bağını çözmek hareketin bütün eşleşmelerini çözer; çağıran kalanları yeniden kurar. */
   unmatchTransaction(input: { invoiceId: number; transactionId: number }): Promise<void>;
+  listCategoryGroups(): Promise<PennylaneCategoryGroup[]>;
+  createCategoryGroup(label: string): Promise<PennylaneCategoryGroup>;
+  listCategories(): Promise<PennylaneCategory[]>;
+  createCategory(input: { label: string; groupId: number }): Promise<PennylaneCategory>;
+  invoiceCategories(invoiceId: number): Promise<PennylaneInvoiceCategory[]>;
+  /** Faturanın bütün kategorilerini verilenlerle değiştirir; aynı gruptaki ağırlıkların toplamı 1 olmalı. */
+  setInvoiceCategories(invoiceId: number, categories: ReadonlyArray<{ id: number; weight: number }>): Promise<void>;
 }

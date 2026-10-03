@@ -86,6 +86,21 @@ export const PennylaneTransactionMatchSchema = z.object({
 });
 export type PennylaneTransactionMatch = z.infer<typeof PennylaneTransactionMatchSchema>;
 
+/** Pennylane'deki analitik kategori; grup bir eksendir (ör. "Activité"), Lezzet ile toptan operasyonu o eksende ayrılır. */
+export const PennylaneCategorySchema = z.object({
+  id: z.number().int(),
+  label: z.string(),
+  groupId: z.number().int(),
+});
+export type PennylaneCategory = z.infer<typeof PennylaneCategorySchema>;
+
+export const PennylaneCategoryGroupSchema = z.object({ id: z.number().int(), label: z.string() });
+export type PennylaneCategoryGroup = z.infer<typeof PennylaneCategoryGroupSchema>;
+
+/** Faturanın kategorisi ve ağırlığı (0–1); aynı gruptaki ağırlıkların toplamı 1'dir. */
+export const PennylaneInvoiceCategorySchema = PennylaneCategorySchema.pick({ id: true, groupId: true }).extend({ weight: z.number() });
+export type PennylaneInvoiceCategory = z.infer<typeof PennylaneInvoiceCategorySchema>;
+
 /** Nakitle kapanan faturanın Pennylane'deki işareti; bankadan ödenen fatura eşleşmeyle kapanır, işaret almaz. */
 export const PennylanePaymentStatusEnum = z.enum(['paid', 'to_be_paid']);
 export type PennylanePaymentStatus = z.infer<typeof PennylanePaymentStatusEnum>;
@@ -210,6 +225,8 @@ export const PennylaneDocumentMirrorSchema = z.object({
   paymentStatus: PennylanePaymentStatusEnum.nullable(),
   /** Pennylane'deki açık kalan (**cent**), son okunduğunda; okunmadıysa `null`. */
   pennylaneOpenCents: z.number().int().nullable(),
+  /** Faturaya en son yazılan kategori; ayardaki kategori değişince yeniden yazılır, henüz yazılmadıysa `null`. */
+  categoryId: z.number().int().nullable(),
   uploadedAt: z.string(),
   updatedAt: z.string(),
 });
@@ -218,6 +235,7 @@ export type PennylaneDocumentMirror = z.infer<typeof PennylaneDocumentMirrorSche
 export const PennylaneDocumentMirrorInsertSchema = PennylaneDocumentMirrorSchema.partial({
   paymentStatus: true,
   pennylaneOpenCents: true,
+  categoryId: true,
   uploadedAt: true,
   updatedAt: true,
 });

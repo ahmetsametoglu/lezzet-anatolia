@@ -83,4 +83,6 @@ insert into public.settings (key, value, description) values
   -- Gel-al siparişinde randevu sistem dışıdır (telefon); ayrılmış mal süresiz bekleyemez, süre dolunca ofis görür ve karar verir.
   ('pickup_wait_days',             '7',      'Gel-al siparişinin hazır bekleyebileceği süre (gün); dolunca ofis listesine düşer, iptal kararı ofisin.'),
   -- Banka hareketi Pennylane'e gecikmeli gelir; hafta sonuyla birlikte dört günlük sessizlik bağlantının düştüğünü gösterir.
-  ('pennylane_quiet_days',         '4',      'Eşlenen banka hesabına Pennylane''den bu kadar gün hareket gelmezse muhasebe ve yönetim uyarılır.');
+  ('pennylane_quiet_days',         '4',      'Eşlenen banka hesabına Pennylane''den bu kadar gün hareket gelmezse muhasebe ve yönetim uyarılır.'),
+  -- Pennylane şirketi toptan operasyonuyla ortak; Lezzet'in gideri Pennylane'de bu kategoriyle ayrılır.
+  ('pennylane_category',           '"Lezzet"', 'Lezzet''in Pennylane''e yüklenen her faturasına konan analitik kategori; boşsa kategori konmaz.');

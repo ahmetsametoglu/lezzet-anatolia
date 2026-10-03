@@ -1,6 +1,9 @@
 import type {
   PennylaneBankAccount,
+  PennylaneCategory,
+  PennylaneCategoryGroup,
   PennylaneChange,
+  PennylaneInvoiceCategory,
   PennylaneInvoiceDraft,
   PennylanePaymentStatus,
   PennylaneSupplierDraft,
@@ -31,6 +34,10 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
   const invoices = new Map<number, MemoryInvoice>();
   /** Hareket başına eşlenen faturalar. */
   const matches = new Map<number, number[]>();
+  const categoryGroups = new Map<number, PennylaneCategoryGroup>();
+  const categories = new Map<number, PennylaneCategory>();
+  /** Fatura başına kategoriler ve ağırlıkları. */
+  const invoiceCategories = new Map<number, PennylaneInvoiceCategory[]>();
   const failures = new Map<keyof PennylanePort, Error>();
   const failing = (method: keyof PennylanePort) => {
     const error = failures.get(method);
@@ -175,6 +182,46 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       matches.delete(transactionId);
       record(transactionId, 'update');
     },
+    listCategoryGroups: async () => [...categoryGroups.values()],
+    createCategoryGroup: async (label) => {
+      failing('createCategoryGroup');
+      const id = (nextId += 1);
+      categoryGroups.set(id, { id, label });
+      return { id, label };
+    },
+    listCategories: async () => {
+      failing('listCategories');
+      return [...categories.values()];
+    },
+    createCategory: async ({ label, groupId }) => {
+      failing('createCategory');
+      if (!categoryGroups.has(groupId)) throw notFound();
+      const id = (nextId += 1);
+      categories.set(id, { id, label, groupId });
+      return { id, label, groupId };
+    },
+    invoiceCategories: async (invoiceId) => {
+      if (!invoices.has(invoiceId)) throw notFound();
+      return [...(invoiceCategories.get(invoiceId) ?? [])];
+    },
+    setInvoiceCategories: async (invoiceId, rows) => {
+      failing('setInvoiceCategories');
+      if (!invoices.has(invoiceId)) throw notFound();
+      const next = rows.map((row) => {
+        const category = categories.get(row.id);
+        if (!category) throw notFound();
+        return { id: row.id, groupId: category.groupId, weight: row.weight };
+      });
+      const sums = new Map<number, number>();
+      for (const row of next) sums.set(row.groupId, (sums.get(row.groupId) ?? 0) + row.weight);
+      if ([...sums.values()].some((sum) => Math.abs(sum - 1) > 1e-9)) {
+        throw new PennylaneError({
+          code: 'validation',
+          message: 'Pennylane isteği reddetti (422): The sum of analytical accounting category weights within a family must equal 100%.',
+        });
+      }
+      invoiceCategories.set(invoiceId, next);
+    },
   };
 
   return {
@@ -229,6 +276,9 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       return id;
     },
     matchesOf: (transactionId: number) => [...(matches.get(transactionId) ?? [])].sort((x, y) => x - y),
+    categories: () => [...categories.values()],
+    categoryGroups: () => [...categoryGroups.values()],
+    categoriesOf: (invoiceId: number) => [...(invoiceCategories.get(invoiceId) ?? [])],
     /** Yöntemin sonraki çağrısı bu hatayla düşer; düşen yazımın kuyrukta ertelenmesi böyle kurulur. */
     failNext(method: keyof PennylanePort, error: Error): void {
       failures.set(method, error);

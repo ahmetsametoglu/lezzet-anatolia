@@ -3,6 +3,8 @@ import type {
   DocumentVatRate,
   DocumentVatRegime,
   MoneyDocument,
+  PennylaneCategory,
+  PennylaneInvoiceCategory,
   PennylaneInvoiceDraft,
   PennylaneInvoiceLine,
   PennylaneInvoicePatch,
@@ -178,4 +180,32 @@ export function pennylaneSupplierCandidates<T extends { name: string; vatNumber:
   if (byVat.length > 0) return byVat;
   const name = normalizedName(party.name);
   return suppliers.filter((supplier) => normalizedName(supplier.name) === name && (!vat || !normalizedVat(supplier.vatNumber)));
+}
+
+/** Lezzet'in faturasına yazılan analitik kategorinin adı ayardır; boşsa kategori yazılmaz. */
+export const PENNYLANE_CATEGORY_KEY = 'pennylane_category';
+export const PENNYLANE_CATEGORY_DEFAULT = 'Lezzet';
+/** Kategori Pennylane'de yoksa bu adlı grupta açılır. */
+export const PENNYLANE_CATEGORY_GROUP = 'Activité';
+
+/** Ada göre kayıt; büyük-küçük harf ve aksan farkı sayılmaz, aynı adlı birden çok kayıtta önce açılan seçilir. */
+export function pennylaneByLabel<T extends { id: number; label: string }>(rows: readonly T[], label: string): T | null {
+  const wanted = normalizedName(label);
+  return [...rows].filter((row) => normalizedName(row.label) === wanted).sort((a, b) => a.id - b.id)[0] ?? null;
+}
+
+/**
+ * Faturaya yazılacak kategoriler: bizim gruptaki kategori ağırlık 1 ile bizimki olur, öteki grupların kategorileri olduğu gibi kalır,
+ * çünkü Pennylane yazımda faturanın bütün kategorilerini değiştirir. Fatura zaten öyleyse `null`.
+ */
+export function pennylaneInvoiceCategories(
+  current: readonly PennylaneInvoiceCategory[],
+  target: Pick<PennylaneCategory, 'id' | 'groupId'>,
+): Array<{ id: number; weight: number }> | null {
+  const sameGroup = current.filter((row) => row.groupId === target.groupId);
+  if (sameGroup.length === 1 && sameGroup[0]!.id === target.id && sameGroup[0]!.weight === 1) return null;
+  return [
+    ...current.filter((row) => row.groupId !== target.groupId).map((row) => ({ id: row.id, weight: row.weight })),
+    { id: target.id, weight: 1 },
+  ];
 }

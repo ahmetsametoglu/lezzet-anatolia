@@ -10,7 +10,8 @@ import {
   SupplierService,
   serviceDb,
 } from '@lezzet/database';
-import { mustDelete, purgeTestData } from '@lezzet/database/testing';
+import { mustDelete, purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
+import { PENNYLANE_CATEGORY_KEY } from '@lezzet/domain-core';
 import type { MoneyDocumentInsert } from '@lezzet/types';
 import { processPennylaneQueueRow } from './queue';
 import { PennylaneError } from './errors';
@@ -26,6 +27,7 @@ const stamp = Date.now();
 const documents = new MoneyDocumentService(db);
 const queue = new PennylaneQueueService(db);
 const mirrors = new PennylaneDocumentService(db);
+const settings = settingsSnapshot(db);
 const LIVE_FROM = '2026-10-01';
 
 let twin: ReturnType<typeof memoryPennylane>;
@@ -43,6 +45,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await settings.restore();
   await purgeTestData(db, created);
 });
 
@@ -329,5 +332,64 @@ describe('ödeme durumu', () => {
     await paidFrom('cash', partly.id, 6_550);
     expect(await run(partly.id)).toBe('unchanged');
     expect(twin.invoices().map((row) => row.paymentStatus)).toEqual([null, null]);
+  });
+});
+
+describe("Lezzet'in Pennylane kategorisi", () => {
+  const invoiceIdOf = async (documentId: string) => (await mirrors.findByDocument(documentId))!.pennylaneInvoiceId;
+
+  it("yüklenen faturaya Lezzet kategorisi yazılır; Pennylane'de yoksa Activité grubunda açılır, varsa o kullanılır", async () => {
+    await settings.override(PENNYLANE_CATEGORY_KEY, 'Lezzet');
+    const first = await invoice();
+    expect(await run(first.id)).toBe('uploaded');
+    const [group] = twin.categoryGroups();
+    const [lezzet] = twin.categories();
+    expect(group).toMatchObject({ label: 'Activité' });
+    expect(lezzet).toMatchObject({ label: 'Lezzet', groupId: group!.id });
+    expect(twin.categoriesOf(await invoiceIdOf(first.id))).toEqual([{ id: lezzet!.id, groupId: group!.id, weight: 1 }]);
+
+    const second = await invoice({}, { content: 'ikinci fatura' });
+    expect(await run(second.id)).toBe('uploaded');
+    expect(twin.categories()).toHaveLength(1);
+    expect(twin.categoriesOf(await invoiceIdOf(second.id))).toEqual([{ id: lezzet!.id, groupId: group!.id, weight: 1 }]);
+  });
+
+  it("Pennylane'de elle değiştirilen kategori sonraki yazımda ezilmez", async () => {
+    await settings.override(PENNYLANE_CATEGORY_KEY, 'Lezzet');
+    const doc = await invoice();
+    await run(doc.id);
+    const invoiceId = await invoiceIdOf(doc.id);
+    const wholesale = await twin.port.createCategory({ label: 'Grossiste', groupId: twin.categoryGroups()[0]!.id });
+    await twin.port.setInvoiceCategories(invoiceId, [{ id: wholesale.id, weight: 1 }]);
+
+    await documents.update({ id: doc.id, dueOn: '2026-11-01' });
+    expect(await run(doc.id)).toBe('unchanged');
+    expect(twin.categoriesOf(invoiceId)).toEqual([{ id: wholesale.id, groupId: wholesale.groupId, weight: 1 }]);
+  });
+
+  it('kategori değişince faturanın başka eksendeki kategorisi korunur; ayar boşsa kategori yazılmaz', async () => {
+    await settings.override(PENNYLANE_CATEGORY_KEY, 'Lezzet');
+    const doc = await invoice();
+    await run(doc.id);
+    const invoiceId = await invoiceIdOf(doc.id);
+    // Pennylane'de başka bir eksene elle konmuş kategori.
+    const project = await twin.port.createCategory({ label: 'Salon', groupId: (await twin.port.createCategoryGroup('Projet')).id });
+    await twin.port.setInvoiceCategories(invoiceId, [...twin.categoriesOf(invoiceId), { id: project.id, weight: 1 }]);
+
+    // Ayar belgeyi kuyruğa düşürmez; belge bir sonraki yazımında yeni kategoriyi alır.
+    await settings.override(PENNYLANE_CATEGORY_KEY, 'Lezzet Anatolie');
+    await documents.update({ id: doc.id, dueOn: '2026-11-01' });
+    expect(await run(doc.id)).toBe('updated');
+    const anatolie = twin.categories().find((row) => row.label === 'Lezzet Anatolie')!;
+    expect(twin.categoriesOf(invoiceId)).toEqual([
+      { id: project.id, groupId: project.groupId, weight: 1 },
+      { id: anatolie.id, groupId: anatolie.groupId, weight: 1 },
+    ]);
+
+    await settings.override(PENNYLANE_CATEGORY_KEY, '');
+    const plain = await invoice({}, { content: 'kategorisiz' });
+    expect(await run(plain.id)).toBe('uploaded');
+    expect(twin.categoriesOf(await invoiceIdOf(plain.id))).toEqual([]);
+    expect(await mirrors.findByDocument(plain.id)).toMatchObject({ categoryId: null });
   });
 });

@@ -137,6 +137,7 @@ Pennylane'deki fatura ve ona en son yazılan taslak.
 | `written` | jsonb |  |  |
 | `payment_status` | text | • |  |
 | `pennylane_open` | numeric(12, 2) | • |  |
+| `category_id` | bigint | • |  |
 | `uploaded_at` | timestamptz |  | `now()` |
 | `updated_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
@@ -147,6 +148,9 @@ Pennylane'deki fatura ve ona en son yazılan taslak.
 - **`payment_status`** — nakitle kapanan belgenin işareti; bankadan ödenen belge Pennylane'de eşleşmeyle kapanır, işaret almaz.
 - **`pennylane_open`** — faturanın Pennylane'deki açık kalanı; yüklemeden, güncellemeden ve eşleşmeden sonra okunur, okunamazsa `null`.
   Pennylane kısmi ödemeyi faturaların açılma sırasıyla dağıttığı için bizimkinden ayrılabilir; ayrılan belge "Pennylane'de farklı"dır.
+- **`category_id`** — faturaya en son yazılan analitik kategori (`pennylane_category` ayarı, varsayılan "Lezzet"); ayardaki kategori
+  değişince belge bir sonraki yazımında yeni kategoriyi alır. Aynada aynı kategori duruyorsa Pennylane'e gidilmez, orada elle yapılan
+  değişiklik ezilmez; faturanın öteki eksenlerdeki kategorisi korunur.
 - **Silme** — yüklenmiş belge silinemez (`restrict`), çünkü Pennylane'deki faturası bağını kaybederdi.
 
 ## PennylaneMatchRemoved (Pennylane'de çözülen bağ)

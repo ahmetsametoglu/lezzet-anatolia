@@ -13,6 +13,8 @@ import {
   CONVERSATION_DEFAULT_HANDLER_FALLBACK,
   CONVERSATION_DEFAULT_HANDLER_HELP,
   CONVERSATION_DEFAULT_HANDLER_KEY,
+  PENNYLANE_CATEGORY_DEFAULT,
+  PENNYLANE_CATEGORY_KEY,
   TICKET_DEFAULT_HANDLER_FALLBACK,
   TICKET_DEFAULT_HANDLER_HELP,
   TICKET_DEFAULT_HANDLER_KEY,
@@ -338,7 +340,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     exceptionScopes: [],
   },
 
-  // ── Pennylane banka akışı ─────────────────────────────────────────────────
+  // ── Pennylane ─────────────────────────────────────────────────────────────
   {
     key: BANK_FEED_QUIET_DAYS_KEY,
     label: 'Hareket gelmiyor uyarısı',
@@ -350,6 +352,15 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     max: 30,
     exceptionScopes: NONE,
     fallback: BANK_FEED_QUIET_DAYS_DEFAULT,
+  },
+  {
+    key: PENNYLANE_CATEGORY_KEY,
+    label: 'Pennylane kategorisi',
+    help: "Lezzet'in Pennylane'e yüklenen her faturasına konan analitik kategori; şirket toptan operasyonuyla ortak olduğu için iki işin gideri bununla ayrılır. Pennylane'de yoksa \"Activité\" grubunda açılır. Boşsa kategori konmaz.",
+    section: 'bankFeed',
+    kind: 'text',
+    exceptionScopes: NONE,
+    fallback: PENNYLANE_CATEGORY_DEFAULT,
   },
 
   // ── Stok & tazelik ────────────────────────────────────────────────────────

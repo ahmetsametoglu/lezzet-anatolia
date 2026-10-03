@@ -19,7 +19,8 @@ import {
   type PennylaneDocumentBlock,
 } from '@lezzet/domain-core';
 import { privateReadUrl } from '@lezzet/storage';
-import type { MoneyDocument, PennylaneInvoiceDraft, PennylanePaymentStatus } from '@lezzet/types';
+import type { MoneyDocument, PennylaneCategory, PennylaneInvoiceDraft, PennylanePaymentStatus } from '@lezzet/types';
+import { resolvePennylaneCategory, writeInvoiceCategory } from './category';
 import { refreshPennylaneOpen } from './matches';
 import type { PennylanePort } from './port';
 
@@ -45,7 +46,7 @@ export async function writeDocument(
   db: Db,
   pennylane: PennylanePort,
   documentId: string,
-  ctx: { liveFrom: string; files: DocumentFileReader },
+  ctx: { liveFrom: string; files: DocumentFileReader; category?: () => Promise<PennylaneCategory | null> },
 ): Promise<DocumentWriteResult> {
   const document = await new MoneyDocumentService(db).getById(documentId);
   if (!document) return { status: 'skipped' };
@@ -88,8 +89,15 @@ export async function writeDocument(
     }
     outcome = patch ? 'updated' : 'unchanged';
   }
+  const categorized = await writeInvoiceCategory(db, pennylane, {
+    documentId,
+    invoiceId,
+    written: mirror?.categoryId ?? null,
+    category: await (ctx.category ?? (() => resolvePennylaneCategory(db, pennylane)))(),
+  });
   const paid = await writePaymentStatus(db, pennylane, document, invoiceId, mirror?.paymentStatus ?? null);
-  return { status: outcome === 'unchanged' && paid ? 'paid' : outcome };
+  if (outcome !== 'unchanged') return { status: outcome };
+  return { status: paid ? 'paid' : categorized ? 'updated' : 'unchanged' };
 }
 
 /**

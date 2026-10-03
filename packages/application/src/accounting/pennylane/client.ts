@@ -2,8 +2,13 @@ import { toCents } from '@lezzet/helper';
 import {
   PennylaneModeEnum,
   PennylaneApiBankAccountPageSchema,
+  PennylaneApiCategoryGroupPageSchema,
+  PennylaneApiCategoryGroupSchema,
+  PennylaneApiCategoryPageSchema,
+  PennylaneApiCategorySchema,
   PennylaneApiChangePageSchema,
   PennylaneApiFileAttachmentSchema,
+  PennylaneApiInvoiceCategoryPageSchema,
   PennylaneApiInvoiceLinePageSchema,
   PennylaneApiInvoicePageSchema,
   PennylaneApiInvoiceSchema,
@@ -14,7 +19,7 @@ import {
   PennylaneApiTransactionPageSchema,
   PennylaneApiTransactionSchema,
   type PennylaneApiTransaction,
-  type PennylaneBankAccount,
+  type PennylaneCategory,
   type PennylaneCompany,
   type PennylaneInvoice,
   type PennylaneInvoiceLine,
@@ -135,6 +140,18 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
     await verifiedCompany();
     return send(method, path, payload);
   };
+  /** Sayfalı listenin bütün kayıtları; süzgeç imleçle taşınmadığı için yoldaki sorgu her sayfada yeniden gönderilir. */
+  const readAll = async <T>(path: string, schema: Parser<{ items: T[]; has_more: boolean; next_cursor: string | null }>, what: string) => {
+    const items: T[] = [];
+    let cursor: string | null = null;
+    do {
+      const body: unknown = await read(`${path}${path.includes('?') ? '&' : '?'}${query({ limit: PAGE_LIMIT, cursor })}`);
+      const page = parse(schema, body, what);
+      items.push(...page.items);
+      cursor = page.has_more ? page.next_cursor : null;
+    } while (cursor);
+    return items;
+  };
   const orNull = async <T>(load: () => Promise<T>): Promise<T | null> => {
     try {
       return await load();
@@ -146,17 +163,7 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
 
   return {
     company: verifiedCompany,
-    async listBankAccounts() {
-      const accounts: PennylaneBankAccount[] = [];
-      let cursor: string | null = null;
-      do {
-        const body: unknown = await read(`/bank_accounts?${query({ limit: PAGE_LIMIT, cursor })}`);
-        const page = parse(PennylaneApiBankAccountPageSchema, body, 'banka hesapları');
-        accounts.push(...page.items);
-        cursor = page.has_more ? page.next_cursor : null;
-      } while (cursor);
-      return accounts;
-    },
+    listBankAccounts: () => readAll('/bank_accounts', PennylaneApiBankAccountPageSchema, 'banka hesapları'),
     async listTransactions({ bankAccountId, fromDate, cursor }) {
       // Süzgecin adı `filter`dır (`filters` sessizce yok sayılır) ve imleç süzgeci taşımaz: her sayfada yeniden gönderilir.
       const filter = JSON.stringify([
@@ -187,15 +194,7 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
       return page.items[0] ? supplierOf(page.items[0]) : null;
     },
     async listSuppliers() {
-      const suppliers: PennylaneSupplier[] = [];
-      let cursor: string | null = null;
-      do {
-        const body: unknown = await read(`/suppliers?${query({ limit: PAGE_LIMIT, cursor })}`);
-        const page = parse(PennylaneApiSupplierPageSchema, body, 'tedarikçiler');
-        suppliers.push(...page.items.map(supplierOf));
-        cursor = page.has_more ? page.next_cursor : null;
-      } while (cursor);
-      return suppliers;
+      return (await readAll('/suppliers', PennylaneApiSupplierPageSchema, 'tedarikçiler')).map(supplierOf);
     },
     async createSupplier(draft) {
       const body = await write('POST', '/suppliers', {
@@ -257,14 +256,9 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
       if (patch.deadline !== undefined) body['deadline'] = patch.deadline;
       if (patch.invoiceNumber !== undefined) body['invoice_number'] = patch.invoiceNumber;
       if (patch.lines) {
-        const current: number[] = [];
-        let cursor: string | null = null;
-        do {
-          const raw: unknown = await read(`/supplier_invoices/${id}/invoice_lines?${query({ limit: PAGE_LIMIT, cursor })}`);
-          const page = parse(PennylaneApiInvoiceLinePageSchema, raw, 'fatura satırları');
-          current.push(...page.items.map((line) => line.id));
-          cursor = page.has_more ? page.next_cursor : null;
-        } while (cursor);
+        const current = (
+          await readAll(`/supplier_invoices/${id}/invoice_lines`, PennylaneApiInvoiceLinePageSchema, 'fatura satırları')
+        ).map((line) => line.id);
         Object.assign(body, totalsOf(patch.lines), {
           invoice_lines: { delete: current.map((lineId) => ({ id: lineId })), create: patch.lines.map(lineOf) },
         });
@@ -275,15 +269,12 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
       await write('PUT', `/supplier_invoices/${id}/payment_status`, { json: { payment_status: status } });
     },
     async transactionMatches(transactionId) {
-      const matches: Array<{ invoiceId: number; kind: 'supplier' | 'customer' }> = [];
-      let cursor: string | null = null;
-      do {
-        const body: unknown = await read(`/transactions/${transactionId}/matched_invoices?${query({ limit: PAGE_LIMIT, cursor })}`);
-        const page = parse(PennylaneApiTransactionMatchPageSchema, body, 'hareketin faturaları');
-        matches.push(...page.items.map((item) => ({ invoiceId: item.id, kind: item.type })));
-        cursor = page.has_more ? page.next_cursor : null;
-      } while (cursor);
-      return matches;
+      const items = await readAll(
+        `/transactions/${transactionId}/matched_invoices`,
+        PennylaneApiTransactionMatchPageSchema,
+        'hareketin faturaları',
+      );
+      return items.map((item) => ({ invoiceId: item.id, kind: item.type }));
     },
     async matchTransaction({ invoiceId, transactionId }) {
       await write('POST', `/supplier_invoices/${invoiceId}/matched_transactions`, { json: { transaction_id: transactionId } });
@@ -291,7 +282,41 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
     async unmatchTransaction({ invoiceId, transactionId }) {
       await write('DELETE', `/supplier_invoices/${invoiceId}/matched_transactions/${transactionId}`, null);
     },
+    async listCategoryGroups() {
+      return (await readAll('/category_groups', PennylaneApiCategoryGroupPageSchema, 'kategori grupları')).map(({ id, label }) => ({
+        id,
+        label,
+      }));
+    },
+    async createCategoryGroup(label) {
+      const { id } = parse(PennylaneApiCategoryGroupSchema, await write('POST', '/category_groups', { json: { label } }), 'kategori grubu');
+      return { id, label };
+    },
+    async listCategories() {
+      return (await readAll('/categories', PennylaneApiCategoryPageSchema, 'kategoriler')).map(categoryOf);
+    },
+    async createCategory({ label, groupId }) {
+      const body = await write('POST', '/categories', { json: { label, category_group_id: groupId } });
+      return categoryOf(parse(PennylaneApiCategorySchema, body, 'kategori'));
+    },
+    async invoiceCategories(invoiceId) {
+      const items = await readAll(
+        `/supplier_invoices/${invoiceId}/categories`,
+        PennylaneApiInvoiceCategoryPageSchema,
+        'faturanın kategorileri',
+      );
+      return items.map((item) => ({ id: item.id, groupId: item.category_group.id, weight: Number(item.weight) }));
+    },
+    async setInvoiceCategories(invoiceId, categories) {
+      // Ağırlık ondalık dize gider ("1"), cevapta da öyle gelir.
+      const json = categories.map((category) => ({ id: category.id, weight: String(category.weight) }));
+      await write('PUT', `/supplier_invoices/${invoiceId}/categories`, { json });
+    },
   };
+}
+
+function categoryOf(row: { id: number; label: string; category_group: { id: number } }): PennylaneCategory {
+  return { id: row.id, label: row.label, groupId: row.category_group.id };
 }
 
 function supplierOf(row: { id: number; name: string; external_reference: string | null; vat_number: string | null }): PennylaneSupplier {

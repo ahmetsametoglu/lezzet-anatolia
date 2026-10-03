@@ -1,9 +1,10 @@
 import { MoneyDocumentService, MoneyMovementService, PennylaneQueueService, type Db } from '@lezzet/database';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
-import type { PennylaneQueue } from '@lezzet/types';
+import type { PennylaneCategory, PennylaneQueue } from '@lezzet/types';
 import { notifyPennylaneDocumentStuck, notifyPennylaneMatchStuck } from '../../notification/staff-events';
 import { deferBlocked, deferFailed } from '../../queue/defer';
 import { PENNYLANE_SYNC_JOB, pennylaneLiveFrom } from './bank-feed';
+import { resolvePennylaneCategory } from './category';
 import { privateDocumentFiles, writeDocument, type DocumentFileReader } from './documents';
 import { writeMovementMatches } from './matches';
 import type { PennylanePort } from './port';
@@ -21,6 +22,8 @@ interface QueueContext {
   liveFrom: string;
   now: Date;
   files: DocumentFileReader;
+  /** Lezzet kategorisi; tur başına bir kez çözülür, çünkü her belgede Pennylane'e sormak istek sınırını yerdi. */
+  category?: () => Promise<PennylaneCategory | null>;
 }
 
 /** Okuma kapalıyken hiçbir şey yazılmaz, çünkü canlıya geçiş günü kapsamın sınırıdır. */
@@ -31,7 +34,13 @@ export async function syncPennylaneQueue(
 ): Promise<Record<string, unknown>> {
   const liveFrom = await pennylaneLiveFrom(db);
   if (!liveFrom) return { skipped: 'not_live' };
-  const ctx: QueueContext = { liveFrom, now: opts.now ?? new Date(), files: opts.files ?? privateDocumentFiles };
+  let category: Promise<PennylaneCategory | null> | null = null;
+  const ctx: QueueContext = {
+    liveFrom,
+    now: opts.now ?? new Date(),
+    files: opts.files ?? privateDocumentFiles,
+    category: () => (category ??= resolvePennylaneCategory(db, pennylane)),
+  };
   const rows = await new PennylaneQueueService(db).listDue(ctx.now.toISOString(), BATCH);
   const counts: Record<PennylaneQueueOutcome, number> = {
     uploaded: 0,

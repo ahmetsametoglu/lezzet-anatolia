@@ -83,6 +83,8 @@ create table public.pennylane_document (
   payment_status text,
   -- Pennylane'deki açık kalan, son okunduğunda; bizimkinden ayrılırsa belge "Pennylane'de farklı"dır.
   pennylane_open numeric(12, 2),
+  -- Faturaya en son yazılan analitik kategori (Lezzet); ayardaki kategori değişince yeniden yazılır.
+  category_id bigint,
   uploaded_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint pennylane_document_payment_status check (payment_status in ('paid', 'to_be_paid'))

@@ -215,6 +215,10 @@ export class PennylaneDocumentService extends BaseDbService<PennylaneDocumentMir
   async setPaymentStatus(documentId: string, paymentStatus: PennylanePaymentStatus): Promise<void> {
     await this.updateWhereIn('documentId', [documentId], { paymentStatus, updatedAt: new Date().toISOString() });
   }
+
+  async setCategory(documentId: string, categoryId: number): Promise<void> {
+    await this.updateWhereIn('documentId', [documentId], { categoryId, updatedAt: new Date().toISOString() });
+  }
 }
 
 /** Pennylane'de çözülen bağ; bağ bizde durur ama yeniden yazılmaz. */

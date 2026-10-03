@@ -56,7 +56,7 @@ const SECTIONS: Record<SettingSection, Omit<SectionDef, 'key'>> = {
     layout: 'rows',
     hint: 'Paranın yazıldığı hesaplar. Kuruluma özgüdür, fabrika değeri yoktur.',
   },
-  bankFeed: { label: 'Pennylane banka akışı', tab: 'money', layout: 'rows' },
+  bankFeed: { label: 'Pennylane', tab: 'money', layout: 'rows' },
   cost: {
     label: 'Birim maliyet',
     tab: 'money',

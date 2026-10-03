@@ -60,7 +60,7 @@
 | 13 | **Faz 1 bitince iki ajanla inceleme** (01.10) | İki ajan birebir aynı istemle, birbirinden bağımsız çalışır: ikisi de Hiboutik entegrasyonunu ve projenin muhasebe sistemini (para hareketleri, ödeme durumu, muhasebe aktarımı, kâr, KDV, B2B ve hediye kuralları) tasarım (§7), ölçülen davranış (§6) ve yasal zemin (§1) karşısında inceler, uyumsuzlukları raporlar. Bulgular doğrulanıp kullanıcıya özetlenir. `CLAUDE.md`'deki alt ajan yasağının bu inceleme için istisnasıdır. |
 | 14 | **Kapıda kart parası nakit kasadan ayrı hesaba yazılır** (02.10) | Kurye, gel-al tezgâhı ve kapı önü satış kartla alınan parayı kapıda kart hesabına (`door_card_account_id`, kart cihazının hesabı), nakdi kapı çekmecesine (`door_cash_account_id`) yazar; hesabı istemci değil sunucu yöntemden seçer. Çekmece sayımı yalnız nakdi sayar. Yöntemin hesabı ayarlı değilse o yöntemle tahsilat kapalıdır ve teslim yazılmaz. |
 | 15 | **Banka hesapları işe göre ayrı** (03.10) | Revolut Lezzet'in, Crédit Mutuel toptan operasyonunun; ikisi de Pennylane'e bağlı, kurulum kartında yalnız Revolut eşlenir. Lezzet'in nakdi Crédit Mutuel'e yatırılır ve oradan Revolut'a gönderilir: bizde eşlenmemiş bir Crédit Mutuel hesabına "Kasa → Crédit Mutuel" transferi yazılır, Revolut'taki satır "Başka hesaba transfer → Crédit Mutuel" ile eşleşir. Bizdeki Crédit Mutuel bakiyesi gönderilmeyi bekleyen Lezzet nakdidir, gönderimden sonra sıfırdır. |
-| 16 | **Lezzet'in faturası Pennylane'de "Lezzet" analitik kategorisini taşır** (03.10) | Pennylane şirketi toptan operasyonuyla ortak; iki işin gideri ve kârı Pennylane'de kategoriyle ayrı raporlanır. |
+| 16 | **Lezzet'in faturası Pennylane'de "Lezzet" analitik kategorisini taşır** (03.10) | Pennylane şirketi toptan operasyonuyla ortak; iki işin gideri ve kârı Pennylane'de kategoriyle ayrı raporlanır. Kategorinin adı ayardır (`pennylane_category`, varsayılan "Lezzet", boşsa kategori yazılmaz); Pennylane'de adla bulunur, yoksa "Activité" grubunda açılır. Faturanın öteki eksenlerdeki kategorisi korunur, Pennylane'de elle değiştirilen kategori ezilmez. |
 
 ## 3. Veri akışı
 
@@ -220,7 +220,7 @@ raporlar aynı klasörde; ölçüm verisi test şirketinde `LA-TEST-…` etiketi
 | Fatura dış referansı (03.10) | Tekil: aynı referansla ikinci içe aktarma 422 *"External reference has already been taken"*. Numarasız fatura ve `exempt` satırı kabul ediliyor. Elle girilen faturaya Pennylane 10 karakterlik rastgele kod veriyor (`842FHEIKJD`). |
 | Tedarikçi tekilliği (03.10) | Aynı ad ve aynı KDV numarasıyla ikinci tedarikçi 201 ile açılıyor. Elle açılan tedarikçiye Pennylane UUID dış referans veriyor. Tedarikçi süzgeci yalnız kimlik, muhasebe hesabı, ad (`start_with`) ve dış referans; KDV numarasıyla süzülmüyor, liste okunarak bulunuyor. |
 | Eşlemenin izi (03.10) | Başka bir faturaya eşlenen hareket `update` olarak hareket akışına düşüyor; `/transactions/{id}/matched_invoices` faturanın kimliğini ve türünü veriyor, dış referansını vermiyor. Eşlenen harekete faturanın tedarikçisi yazılıyor. |
-| Analitik kategori (03.10) | Kategori grubu ve kategori açılıyor; alış faturası ve banka hareketi ağırlıkla işaretleniyor (aynı grupta toplam 1), faturalar `category_id` ile süzülüyor. |
+| Analitik kategori (03.10) | Kategori grubu ve kategori açılıyor; alış faturası ve banka hareketi ağırlıkla işaretleniyor (aynı grupta toplam 1), faturalar `category_id` ile süzülüyor. Faturanın kategorileri `GET /supplier_invoices/{id}/categories` ile sayfalı okunuyor, ağırlık ondalık dize ("0.5"). Yazım faturanın bütün kategorilerini değiştiriyor; aynı grupta toplamı 1 olmayan yazım 422 ile reddediliyor ("…must equal 100%"), fatura değişmiyor. |
 | Muhasebe dışa aktarımı (03.10) | FEC ve analitik genel defter API'den üretiliyor (`POST /exports/fecs`, `/exports/analytical_general_ledgers`; hazır olunca `file_url`). FEC 18 standart sütun: alış (`HA`), banka (`BQ`) ve KDV (`RT`) günlükleri, hesap numaraları, eşleşme kodu (`EcritureLet`) dolu. Analitik defter Excel; satır başına analitik eksen ve kategori. |
 
 **Pennylane — açık kalan:**
@@ -500,7 +500,8 @@ Log'a kimlik yazılır, tutar ve açıklama yazılmaz.
 - Ayna ve kuyruk:
   - `pennylane_bank_account`: Pennylane banka hesabı ↔ banka hesabımız; listede görülmesi, eşlenmesi, ilk okuması;
   - `pennylane_supplier`: Pennylane tedarikçisi ↔ tedarikçi ya da cari;
-  - `pennylane_document`: Pennylane faturası ↔ belge; en son yazılan taslak, ödeme durumu, son okunan açık kalan;
+  - `pennylane_document`: Pennylane faturası ↔ belge; en son yazılan taslak, ödeme durumu, son okunan açık kalan, yazılan
+    kategori;
   - `pennylane_transaction`: Pennylane hareketi ↔ banka satırı;
   - `pennylane_match_removed`: Pennylane'de çözülen bağımız;
   - `pennylane_queue`: yüklenecek belge ya da eşleşmesi yazılacak hareket;
@@ -508,7 +509,7 @@ Log'a kimlik yazılır, tutar ve açıklama yazılmaz.
 - `money_movement.matched_elsewhere`: hareket Pennylane'de aynı şirketin başka işinin faturasına eşli; izahlı sayılır.
 
   Pennylane kimlikleri `bigint`tir (ölçüldü: 14 hane).
-- Ayarlar: `pennylane_live_from`, `pennylane_quiet_days`.
+- Ayarlar: `pennylane_live_from`, `pennylane_quiet_days`, `pennylane_category` (16. karar).
 - Personel bildirimleri: e-fatura geldi, belge ya da eşleşme Pennylane'e yazılamıyor, eşleşme Pennylane'de çözüldü,
   izahlı hareket Pennylane'de değişti, hareket gelmiyor, Pennylane'de farklı.
 

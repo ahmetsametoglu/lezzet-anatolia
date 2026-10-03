@@ -1,7 +1,9 @@
 import type { MoneyDocument, PennylaneInvoiceDraft } from '@lezzet/types';
 import { describe, expect, it } from 'vitest';
 import {
+  pennylaneByLabel,
   pennylaneDocumentScope,
+  pennylaneInvoiceCategories,
   pennylaneInvoiceDraft,
   pennylaneInvoicePatch,
   pennylanePaymentStatus,
@@ -160,5 +162,54 @@ describe("Pennylane'de aynı firmanın tedarikçisi", () => {
     expect(pennylaneSupplierCandidates(suppliers, { name: 'Societe  Anatolie-Gida', vatNumber: null }).map((row) => row.id)).toEqual([1]);
     expect(pennylaneSupplierCandidates(suppliers, { name: 'Muller', vatNumber: 'FR22222222222' })).toEqual([]);
     expect(pennylaneSupplierCandidates(suppliers, { name: 'Orange', vatNumber: 'FR33333333333' }).map((row) => row.id)).toEqual([2]);
+  });
+});
+
+describe("Lezzet'in faturasının analitik kategorisi", () => {
+  it('kategori adla bulunur, büyüklük ve aksan farkı tutmaz; aynı adlı birden çok kayıtta önce açılan seçilir', () => {
+    const categories = [
+      { id: 30, label: 'Grossiste', groupId: 7 },
+      { id: 21, label: 'lezzet ', groupId: 7 },
+      { id: 12, label: 'Lézzet', groupId: 8 },
+    ];
+    expect(pennylaneByLabel(categories, 'Lezzet')?.id).toBe(12);
+    expect(pennylaneByLabel(categories, 'Toptan')).toBeNull();
+  });
+
+  it('bizim gruptaki kategori bizimkiyle değişir, öteki grupların kategorisi korunur; fatura zaten öyleyse yazım yok', () => {
+    const lezzet = { id: 21, groupId: 7 };
+    expect(pennylaneInvoiceCategories([], lezzet)).toEqual([{ id: 21, weight: 1 }]);
+    expect(
+      pennylaneInvoiceCategories(
+        [
+          { id: 30, groupId: 7, weight: 1 },
+          { id: 55, groupId: 9, weight: 0.5 },
+          { id: 56, groupId: 9, weight: 0.5 },
+        ],
+        lezzet,
+      ),
+    ).toEqual([
+      { id: 55, weight: 0.5 },
+      { id: 56, weight: 0.5 },
+      { id: 21, weight: 1 },
+    ]);
+    expect(
+      pennylaneInvoiceCategories(
+        [
+          { id: 21, groupId: 7, weight: 1 },
+          { id: 55, groupId: 9, weight: 1 },
+        ],
+        lezzet,
+      ),
+    ).toBeNull();
+    expect(
+      pennylaneInvoiceCategories(
+        [
+          { id: 21, groupId: 7, weight: 0.5 },
+          { id: 30, groupId: 7, weight: 0.5 },
+        ],
+        lezzet,
+      ),
+    ).toEqual([{ id: 21, weight: 1 }]);
   });
 });
