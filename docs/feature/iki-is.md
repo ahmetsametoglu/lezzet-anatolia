@@ -20,6 +20,7 @@ satış yapan iştir. İkisi aynı tüzel kişilik (QUALITE SAS) altındadır: m
 | 7 | **QUALITE yalnız profesyonel müşteriye satar;** müşteriyi QUALITE müşterisi operasyondan admin yapar, müşteri kendisi seçemez | Bireysel ve etiketsiz müşteri Lezzet'tir. Siparişin işi deposundan gelir; müşterinin işi yalnız hangi depoların seçilebileceğini belirler. |
 | 8 | **İki iş arasında mal geçişi yoktur;** olursa depo transferiyle yapılır ve sonraki siparişte mahsuplaşılır | Muhasebede tek şirket olduğu için iç fatura ya da iç devir kaydı açılmaz. |
 | 9 | **Her işin kendi teslimat bölgesi ve seferi vardır;** geçici olarak tek kurye tek araçla iki hesap ve iki telefonla iki işin seferini birlikte sürer, ileride araçlar ayrılır | Sistemde iki ayrı kurye olduğu için iki sefer aynı anda yoldadır. Tek hesap iki seferi birlikte süremez: kurye aynı anda tek sefer sürer ve başlamamış seferin durağı gün ekranında görünmez. Sahada sürtünme görülürse birleşik sürüş kurulur (§5). |
+| 10 | **QUALITE etiketi yalnız B2B onaylı müşteriye verilir; QUALITE deposundan anonim kapı satışı yapılmaz; QUALITE kargo göndermez** | Toptan fiyat onaysız açılmaz (`effectiveChannelOf`). QUALITE bölgelerinin dışındaki QUALITE müşterisi "teslimat noktası belirlenemedi" mesajını alır, Lezzet deposuna düşmez. |
 
 **Dayanak (ölçüm ve araştırma, 03.10):** Pennylane'in yerleşik stok modülü yok (yardım merkezi: *"Pennylane ne dispose pas
 de module natif dédié à la gestion des stocks"*); stok için önerdiği Stockpit ayrı abonelikli ikinci bir sistemdir.
@@ -43,11 +44,11 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
   seferinde olamaz (`vehicle_taken`): araç QUALITE için farklı plaka koduyla ikinci kez kaydedilir (plaka tekildir) ya da QUALITE
   hesabı "araçsız devam" der. Soğuk zincir izi araç kaydına bağlı olduğu için aynı aracın izi iki kayda bölünür. Ortak bölge
   seçilmedi, çünkü araçlar ayrılınca bozulurdu: bölge ve gün başına tek sefer var, seferde tek kurye ve tek araç.
-- **QUALITE'nin kargo deposu yoktur** (varsayılan): QUALITE bölgelerinin dışındaki QUALITE müşterisi "teslimat noktası
-  belirlenemedi" mesajını alır, Lezzet deposuna düşmez.
-- **QUALITE etiketi B2B onaylı profesyonel müşteriye verilir,** çünkü toptan fiyat onaysız açılmaz (`effectiveChannelOf`).
-- **Kapı ve araç satışının işi deposundan gelir;** anonim alıcı işe göre bölünmez. QUALITE deposundan anonim kapı satışı
-  yapılmaz, çünkü QUALITE yalnız profesyonele satar.
+- **Kapı ve araç satışının işi deposundan gelir;** anonim alıcı işe göre bölünmez.
+- **WhatsApp'tan yazan yeni kişi Lezzet'te taslak müşteri olarak açılır** (7. ve 10. karar): taslak B2B onaylı olamaz;
+  profesyonelse admin onaydan sonra QUALITE yapar. Bu yüzden iki işin aynı numarayı kullanması sorun değildir. QUALITE ayrı bir
+  numara açarsa konuşmanın tekilliği bizim hesabı da içerecek şekilde genişler (`0039_conversation.sql`,
+  `conversation_external_ref_key`).
 - **İşler arası transfer bugünkü hâliyle çalışır** (8. karar): alış fiyatı yeni partiye taşınır, müşteriye söz verilmiş mal
   sevk edilemez, tedarikçinin lot numarası kopyalandığı için geri çağırma iki depoyu da bulur, para kaydı doğmaz. Kaynak deponun
   eşiği delinirse tedarik önerisi açığı sonraki siparişe yazar; mahsup buradan yürür. O malın alış faturası Pennylane'de kaynak
@@ -65,7 +66,7 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
 
 ## 4. Açık sorular
 
-1. **Ortak WhatsApp numarası:** iki iş aynı numarayı kullanıyorsa sohbetten doğan taslak müşterinin varsayılan işi seçilemez.
+Açık soru yok.
 
 ## 5. Ölçülmüş etki (03–04.10, salt okuma analizi; kod değişmedi)
 
