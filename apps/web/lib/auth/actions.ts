@@ -18,5 +18,6 @@ export async function signOutAction(): Promise<void> {
   await forgetWebPushEndpoint();
 
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  // Yalnız bu tarayıcıdan çıkılır, native'in çıkışı gibi: varsayılan `global` müşterinin uygulamadaki oturumunu da kapatır.
+  await supabase.auth.signOut({ scope: 'local' });
 }
