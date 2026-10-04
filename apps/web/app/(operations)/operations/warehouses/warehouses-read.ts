@@ -22,20 +22,12 @@ import {
   type ZoneCardView,
 } from './warehouses-types';
 
-// DB satırı → görünüm indirgemesi. Sayfa (RSC) okur, burası şekillendirir; **karar burada verilmez,
-// sorulur** (`STACK §4`): parti kararı `domain-core`'un (`needsExpiryAttention`), risk tutarı
-// partinin ortak sözlüğünün (`totalRiskCents`).
-//
-// Sayıların hepsi TEK okumadan türer: depoların hepsi için partiler bir kez çekilir ve burada
-// gruplanır. Depo başına sorgu atmak (N+1) beş tesiste beş tur demekti — ve tesis sayısı fiziksel
-// bir gerçek olduğu için kümenin tamamı zaten belleğe sığar.
+// DB satırı → görünüm indirgemesi; karar burada verilmez, `domain-core`'dan sorulur (`STACK §4`). Sayılar tek okumadan türer: partiler
+// bütün depolar için bir kez çekilip burada gruplanır, çünkü depo başına sorgu N+1 olurdu.
 
 /**
- * `warehouse.address` serbest `jsonb` — şekli **uygulama** belirler ve okurken DOĞRULANIR.
- *
- * Eski/bozuk bir kayıt geldiğinde `null` döner ve ekran adres yazmaz. Ham nesneyi olduğu gibi
- * basmak, bir gün ekranda `[object Object]` görmek demekti; alanları tek tek okumak ise
- * doğrulamayı her çağırana bırakırdı.
+ * `warehouse.address` serbest `jsonb`'dir, şekli uygulama belirler ve okurken doğrulanır. Bozuk kayıtta `null` döner ve ekran adres
+ * yazmaz, ham nesne basılmaz.
  */
 function parseAddress(raw: Warehouse['address']): WarehouseAddressView {
   if (!raw) return null;
@@ -70,12 +62,11 @@ export function toWarehouseRows({ warehouses, zones, staff, batches, transfers }
       code: w.code,
       name: w.name,
       kind: w.kind,
-      // Aracın evi (02.09) — kartta "STR'nin aracı" diye okunur; tesiste daima `null`.
+      // Aracın evi; kartta "STR'nin aracı" diye okunur, tesiste daima `null`.
       homeWarehouseId: w.homeWarehouseId,
       countryCode: w.countryCode,
       address: parseAddress(w.address),
-      // Deponun noktası (11.9) — rotanın çıpası. `null` = girilmemiş; karne bunu bir eksiklik olarak
-      // gösterebilir ama satır yine de tam okunur.
+      // Deponun noktası, rotanın çıpası; `null` girilmemiş demektir ve satır yine tam okunur.
       lat: w.lat,
       lng: w.lng,
       shipsOnline: w.shipsOnline,
@@ -97,22 +88,10 @@ export function toWarehouseRows({ warehouses, zones, staff, batches, transfers }
   });
 }
 
-// `setupGapOf` BURADAN GİTTİ (19.32) → `@/lib/warehouse/setup-gap`. İkinci tüketici Hazırlık'ın
-// karşılama ekranı oldu: orada da seçmeden ÖNCE bilinmesi gereken tek şey bu cümledir. Gerekçesinin
-// tamamı taşındığı dosyada.
+// Bu dosya saf kalır, DB okuması sayfadadır: `closureConsequences` istemci penceresinden de çağrıldığı için modül istemci paketine
+// girer ve `@lezzet/database` importu derlemeyi kırar.
 
 /** Deponun bölge kartları — ad sırasına göre; pasif olanlar da listede kalır (tanım silinmez). */
-// `readLastMeasured` BURADA DEĞİL, `page.tsx`te (19.28 · ölçüldü 17.08).
-//
-// Bu dosya bir SUNUCU dosyası gibi duruyor ama değil: `closureConsequences` istemci penceresinden
-// de çağrılıyor (`close-warehouse-dialog.tsx`), yani modül istemci paketine giriyor. İçine
-// `@lezzet/database` importu konunca supabase-js de onunla gitti ve derleme `node:crypto` ile
-// kırıldı — iki sayfa birden 500 döndü. Bu dosya SAF kalır: DB okuması yapan her şey sayfada.
-
-// `toMeasurePoints` de BURADAN GİTTİ (19.30) → `measure-read.ts`. Nokta görünümü artık takvimi de
-// taşıyor ve takvim DB okuması istiyor; bu dosyanın istemciye giriyor olması onu burada tutmayı
-// imkânsız kıldı. Kalan tek nokta kuralı yukarıdaki `server-only` künyesidir.
-
 export function toZoneCards(
   zones: readonly DeliveryZoneWithCodes[],
   warehouseId: string,
@@ -128,10 +107,8 @@ export function toZoneCards(
     .filter((z) => z.warehouseId === warehouseId)
     .map((z) => {
       /**
-       * Bölgenin ağırlığı = kodlarının TOPLAMI. Anahtar yalnız posta kodu (ülke yok), çünkü RPC de
-       * öyle eşliyor — `67000` hem FR hem DE'de geçerli olduğu için iki ülkenin siparişi birleşir.
-       * Bugün tek ülkeli rotalarda görünmez; sınır deposu büyürse ayrışması gerekir (Rotalar
-       * ekranının aynı künyesi, `routes-read`).
+       * Bölgenin ağırlığı kodlarının toplamıdır; anahtar yalnız posta kodudur, çünkü RPC de öyle eşler ve `67000` iki ülkede
+       * geçerlidir. Sınır deposu büyürse ayrışması gerekir (`routes-read`).
        */
       const totals = z.postalCodes.reduce(
         (sum, code) => {
@@ -154,12 +131,8 @@ export function toZoneCards(
         postalCodes: [...z.postalCodes].sort((a, b) => a.postalCode.localeCompare(b.postalCode)),
         ...totals,
         /**
-         * Sıradaki gün MOTORDAN türer (`upcomingDeliveryDates`), burada yeniden hesaplanmaz —
-         * müşteriye söylenen günle operatörün gördüğü gün aynı kuraldan çıkmalı.
-         *
-         * **Kesim saati verilmiyor ve bu bilinçli:** kesim müşterinin SİPARİŞ penceresidir ("bugüne
-         * yetişir mi"), buradaki soru ise "araç ne zaman çıkıyor". Kesim geçince aracın günü
-         * değişmez. Pasif bölge `null` — tanımı durur ama dağıtıma çıkmaz.
+         * Sıradaki gün motordan türer (`upcomingDeliveryDates`), müşteriye söylenen günle operatörün gördüğü gün aynı kuraldan
+         * çıksın diye. Kesim saati verilmez, çünkü soru siparişin değil aracın günüdür; pasif bölge `null`.
          */
         nextDeliveryDate: z.isActive
           ? (upcomingDeliveryDates({ weekdays: z.weekdays, now: stats.now, count: 1 })[0] ?? null)
@@ -171,11 +144,8 @@ export function toZoneCards(
 }
 
 /**
- * Bu depoyu kapsamında taşıyan personel — **okunur**.
- *
- * `onlyHere` kapatma kararının girdisi: kapsamı yalnız bu depo olan depocu/kurye, tesis kapanınca
- * kapsamsız kalır ve kapsamsız depocu kapalı kapıdır (kural veritabanında). Yöneticide bu hiç
- * sorulmaz — admin depo-ÜSTÜdür ve kapsamı zaten boştur.
+ * Bu depoyu kapsamında taşıyan personel. `onlyHere` kapatma kararının girdisidir: kapsamı yalnız bu depo olan depocu ya da kurye
+ * tesis kapanınca kapsamsız kalır.
  */
 export function toStaffChips(staff: readonly UserProfile[], warehouseId: string): StaffChipView[] {
   return staff
@@ -193,10 +163,8 @@ interface ScorecardInput {
   batches: readonly BatchView[];
   belowMinCount: number;
   /**
-   * Bu depoya yolda olan sevkiyat. **Artık karnede ÇİZİLMİYOR** (17.08) — kutu tek depolu bir
-   * kurulumda tanımı gereği daima sıfırdı. Sayı yine de okunuyor, çünkü asıl tüketicisi ekran
-   * değil KAPATMA uyarısı: yoldaki mal hiçbir deponun stoğunda değil, hedefi kapanırsa kabul
-   * edilecek yer bulamaz (`closeBlockers`).
+   * Bu depoya yolda olan sevkiyat; karnede çizilmez ama kapatma uyarısı okur, çünkü hedefi kapanan yoldaki mal kabul edilecek yer
+   * bulamaz (`closeBlockers`).
    */
   inTransitIn: number;
   openOrderCount: number;
@@ -225,11 +193,8 @@ export function toScorecard({ batches, belowMinCount, inTransitIn, openOrderCoun
 }
 
 /**
- * Sipariş sayaçlarından **açık iş** — bu depodan çıkacak, henüz teslim edilmemiş sipariş.
- *
- * Kapanmış dallar (teslim · tamamlandı · iptal · iade) ve taslak düşer: onlar bir iş değil, biri
- * geçmiş öteki yarım kalmış bir checkout. Küme `OrderStatus`'e karşı doğrulanıyor (`satisfies`) —
- * yeni bir durum eklenip buraya yazılmazsa derleyici susar ama yanlış adlı bir durum yazılamaz.
+ * Sipariş sayaçlarından açık iş: bu depodan çıkacak, henüz teslim edilmemiş sipariş; kapanmış dallar ve taslak düşer. Küme
+ * `OrderStatus`'e karşı doğrulanır (`satisfies`), yanlış adlı durum yazılamaz.
  */
 const CLOSED_ORDER_STATUSES = ['draft', 'delivered', 'completed', 'cancelled', 'returned'] as const satisfies ReadonlyArray<OrderStatus>;
 

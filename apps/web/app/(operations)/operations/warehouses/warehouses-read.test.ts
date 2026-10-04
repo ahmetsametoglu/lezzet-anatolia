@@ -3,11 +3,8 @@ import type { OrderStatus } from '@lezzet/types';
 import { closureConsequences, openOrderCountOf, toStaffChips, toWarehouseRows } from './warehouses-read';
 import type { WarehouseCardView, ZoneCardView } from './warehouses-types';
 
-// Depolar ekranının SAF indirgemeleri. DB'siz: girdiler zaten okunmuş satırlar.
-//
-// Test edilenler ekranın YALAN SÖYLEYEBİLECEĞİ yerler: "kurulumu eksik" hangi hâlde doğar, açık iş
-// hangi durumları sayar, kapatma hangi sonuçları üretir. Üçü de sessizce yanlış olabilecek kararlar —
-// bir tanesi yanlışsa operatör kapatılmaması gereken bir depoyu kapatır.
+// Depolar ekranının saf indirgemeleri. Test edilenler ekranın yanlış söyleyebileceği yerlerdir: kurulum eksiği, açık iş ve kapatmanın
+// sonuçları; biri yanlışsa operatör kapatılmaması gereken depoyu kapatır.
 
 const WAREHOUSE = {
   id: 'w1',
@@ -16,7 +13,7 @@ const WAREHOUSE = {
   kind: 'facility' as const,
   /** Tesisin evi olmaz — kural veride de zorlanıyor (`warehouse_home_only_vehicle`). */
   homeWarehouseId: null,
-  /** Tesis ARAÇ da göstermez (21.249 · `warehouse_vehicle_identity`): bağ yalnız araç deposunda dolu. */
+  /** Tesis araç göstermez (`warehouse_vehicle_identity`): bağ yalnız araç deposunda dolu. */
   vehicleId: null,
   countryCode: 'FR' as const,
   address: null,
@@ -99,11 +96,7 @@ describe('açık iş', () => {
 });
 
 describe('kapatmanın sonuçları', () => {
-  /**
-   * Bölge fikstürü — ağırlık alanları (19.28) varsayılan sıfır. Kapatma kararı onlara BAKMIYOR:
-   * bir bölgenin cirosu, kapanınca adreslerinin sahipsiz kalmasını değiştirmez. Fikstürde durmaları
-   * yalnız tipin gereği, testin konusu değil.
-   */
+  /** Bölge fikstürü; ağırlık alanları varsayılan sıfır, çünkü kapatma kararı onlara bakmaz ve fikstürde yalnız tipin gereği dururlar. */
   const zone = (over: Partial<ZoneCardView> = {}): ZoneCardView => ({
     id: 'z1',
     name: 'Merkez',
