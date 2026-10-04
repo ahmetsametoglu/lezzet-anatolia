@@ -82,6 +82,9 @@ alter table public.analytics_daily_source enable row level security;
 
 create index analytics_daily_source_day_idx on public.analytics_daily_source (day desc, session_count desc);
 
+-- Bu dosyada gün sınırı ya da tarih kullanan her fonksiyon `set timezone = 'Europe/Paris'` ile koşar, ki günlük özetle aynı işletme
+-- gününü saysın.
+
 -- Ürün kırılımını üretir (idempotent), yazılan satır sayısını döner. Sepet olayı yalnız varyantı taşıdığı için ürün burada
 -- varyanttan çözülür; sıcak yazma yolundaki bir okumaya göre günlük işte bedelsizdir, paket satırı ise atfedilmez.
 create or replace function public.build_analytics_daily_product(p_day date)
@@ -89,6 +92,7 @@ returns integer
 language plpgsql
 security definer
 set search_path = public
+set timezone = 'Europe/Paris'
 as $$
 declare
   yazilan integer;
@@ -137,6 +141,7 @@ returns integer
 language plpgsql
 security definer
 set search_path = public
+set timezone = 'Europe/Paris'
 as $$
 declare
   yazilan integer;
@@ -174,6 +179,7 @@ returns integer
 language plpgsql
 security definer
 set search_path = public
+set timezone = 'Europe/Paris'
 as $$
 declare
   yazilan integer;
@@ -222,6 +228,7 @@ returns table (sessions integer, searches integer)
 language plpgsql
 security definer
 set search_path = public
+set timezone = 'Europe/Paris'
 as $$
 begin
   with silinen as (delete from public.analytics_session where first_seen_at < p_day returning 1)
@@ -338,6 +345,7 @@ language sql
 stable
 security definer
 set search_path = public
+set timezone = 'Europe/Paris'
 as $$
   select o.created_at::date as day,
          o.channel,
@@ -369,6 +377,7 @@ language sql
 stable
 security definer
 set search_path = public
+set timezone = 'Europe/Paris'
 as $$
   -- Ciro tanımı `analytics_order_base`'ten gelir — üç okuma da aynı yerden, yoksa aynı ekranda
   -- iki farklı ciro belirir ve hiçbiri hata vermez.
@@ -436,6 +445,7 @@ language sql
 stable
 security definer
 set search_path = public
+set timezone = 'Europe/Paris'
 as $$
   -- Segment de aynı ciro tanımından okur (`analytics_order_base`): "iyi müşteri" yargısı ile
   -- "dönem cirosu" farklı sipariş kümelerinden çıksaydı ekran kendiyle çelişirdi.
@@ -485,6 +495,7 @@ language sql
 stable
 security definer
 set search_path = public
+set timezone = 'Europe/Paris'
 as $$
   -- Segment de aynı ciro tanımından okur (`analytics_order_base`): "iyi müşteri" yargısı ile
   -- "dönem cirosu" farklı sipariş kümelerinden çıksaydı ekran kendiyle çelişirdi.

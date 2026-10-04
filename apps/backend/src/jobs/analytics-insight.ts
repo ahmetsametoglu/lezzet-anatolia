@@ -9,38 +9,20 @@ import {
   SettingsService,
   serviceDb,
 } from '@lezzet/database';
+import { addDays, parisDateOf } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import { ANALYTICS_FUNNEL_STEPS, ANALYTICS_INSIGHT_SETTING, resolveLocalizedText, type AnalyticsDaily } from '@lezzet/types';
 
 export const ANALYTICS_INSIGHT = 'analytics_insight';
 
 /**
- * **HAFTALIK AI İÇGÖRÜ** (13.7) — özetten anlatı üretir, sonucu saklar.
- *
- * ── NEDEN BİR İŞ, İSTEK ANINDA DEĞİL ────────────────────────────────────────
- * Ekran her açıldığında modeli çağırmak hem parayı ziyaret sayısıyla çarpardı hem aynı haftanın
- * anlatısını her açılışta biraz farklı yazardı — yönetici sayfayı yenileyince fikir değiştiren bir
- * rapor okurdu. İş haftada bir koşar, sonuç `settings`'te durur, ekran onu OKUR.
- *
- * ── MODELE HAM SATIR GİTMEZ (`ANALYTICS §5`, sözleşme maddesi) ──────────────
- * Bu dosya defterden hiç okumuyor; girdisinin tamamı ÖZET tablolarından geliyor. Görevin girdi tipi
- * de bunu yapısal olarak zorluyor (`AnalyticsInsightInput` bir satır taşıyamaz).
- *
- * ── SAKLANAN ŞEY BİR CEVAP DEĞİL, BİR ÖLÇÜM ─────────────────────────────────
- * Kayıtta dönem ve üretim zamanı da var: ekran "bu anlatı hangi haftanın" sorusunu cevaplayabilsin.
- * Zamansız saklansaydı iş bir hafta koşmadığında ekran eski anlatıyı BU haftanınmış gibi gösterirdi
- * ve kimse fark etmezdi.
+ * Haftalık AI içgörüsü bir iştir, istek anında üretilmez, çünkü her açılışta model çağırmak parayı ziyaretle çarpar ve anlatı her seferinde
+ * değişirdi. Modele ham satır gitmez, girdinin tamamı özet tablolarındandır; kayıt dönemi de taşır ki eski anlatı bu haftanınmış gibi görünmesin.
  */
 
 /** Pencere PARAMETRİK: bir hafta varsayılan, ama dönem uzatılabilir. */
 const WINDOW_DAYS = 7;
 const TOP_N = 5;
-
-function isoDay(offsetDays: number): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
-}
 
 /** Özet satırlarından bir olay tipinin toplamı. Toplanabilir tek sayı `eventCount` (şema künyesi). */
 function sumOf(rows: readonly AnalyticsDaily[], type: string): number {
@@ -55,10 +37,11 @@ export async function analyticsInsightJob(opts: { model?: AiModel } = {}): Promi
   const db = serviceDb();
   // Dün dahil, bugün HARİÇ: bugünün özeti henüz üretilmedi (rollup dünü işliyor). Bugünü katsaydık
   // her hafta son gün boş görünür ve model onu "sert düşüş" diye yorumlardı.
-  const to = isoDay(-1);
-  const from = isoDay(-WINDOW_DAYS);
-  const prevTo = isoDay(-WINDOW_DAYS - 1);
-  const prevFrom = isoDay(-WINDOW_DAYS * 2);
+  const today = parisDateOf(new Date());
+  const to = addDays(today, -1);
+  const from = addDays(today, -WINDOW_DAYS);
+  const prevTo = addDays(today, -WINDOW_DAYS - 1);
+  const prevFrom = addDays(today, -WINDOW_DAYS * 2);
 
   const daily = new AnalyticsDailyService(db);
   const [rows, prevRows, sources, zeroSearches, productSignals, segments] = await Promise.all([
@@ -80,8 +63,7 @@ export async function analyticsInsightJob(opts: { model?: AiModel } = {}): Promi
   const products = await new ProductService(db).listByIds(productSignals.map((s) => s.productId));
   const adlar = new Map(products.map((p) => [p.id, resolveLocalizedText(p.name, 'tr')]));
 
-  // Terk sebepleri: özetin `blockedReason` boyutundan. Bu kırılım 04.08'de eklendi; öncesinde
-  // huninin en değerli kolonu yalnız ham defterde duruyordu ve hiçbir okuyucuya ulaşmıyordu.
+  // Terk sebepleri özetin `blockedReason` boyutundan okunur; huninin en değerli kolonu okuyucuya buradan ulaşır.
   const sebepler = new Map<string, number>();
   for (const r of rows) {
     if (!r.blockedReason) continue;

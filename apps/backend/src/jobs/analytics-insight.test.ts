@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
+import { addDays, parisDateOf, parisDayRange } from '@lezzet/helper';
 import { fakeAiModel } from '@lezzet/ai/testing';
 import { SettingsService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
@@ -6,17 +7,8 @@ import { ANALYTICS_INSIGHT_SETTING, StoredAnalyticsInsightSchema } from '@lezzet
 import { analyticsInsightJob } from './analytics-insight';
 
 /**
- * Haftalık AI içgörü (13.7).
- *
- * **Anlatının KALİTESİ burada sınanmaz** — o modelin işi ve sürümüyle değişir. Sınanan, kaliteden
- * bağımsız olarak her zaman doğru olması gerekenler: ham satır modele gitmiyor mu, veri yokken
- * çağrı hiç yapılıyor mu, saklanan kayıt hangi döneme ait olduğunu söylüyor mu.
- *
- * **Model SAHTE:** gerçek uca gitmek hem para hem tekrarlanmayan bir çıktı demek olurdu.
- *
- * ⚠ İş `settings`'te KÜRESEL bir satır yazıyor (`CLAUDE §4b`: küresel tekil satırı kirletme). Bu
- * yüzden anahtarın önceki hâli okunup `afterAll`'da geri konuyor — "boşa çek" de bir varsayımdır
- * ve bir gün yanlış olur.
+ * Anlatının kalitesi değil, kaliteden bağımsız doğrular sınanır: ham satır modele gitmiyor, veri yokken çağrı yapılmıyor, kayıt dönemini
+ * söylüyor. Model sahtedir; iş küresel bir ayar satırı yazdığı için önceki hâli `afterAll`da geri konur (`CLAUDE §4b`).
  */
 const db = serviceDb();
 const settings = new SettingsService(db);
@@ -31,8 +23,8 @@ const ANLATI = JSON.stringify({
 });
 
 /** İşin okuduğu pencere: dün dahil son yedi gün. */
-const day = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-const at = (hour: number) => `${day}T${String(hour).padStart(2, '0')}:20:00.000Z`;
+const day = addDays(parisDateOf(new Date()), -1);
+const at = (hour: number) => new Date(Date.parse(parisDayRange(day).from) + (hour * 60 + 20) * 60_000).toISOString();
 
 let onceki: unknown = null;
 
@@ -46,9 +38,7 @@ describe('analytics_insight', () => {
   it('özetten anlatı üretir ve DÖNEMİYLE birlikte saklar', async () => {
     onceki = await settings.get<unknown>(ANALYTICS_INSIGHT_SETTING, null);
 
-    // Dönemde en az bir özet satırı olsun — iş boş dönemde modeli hiç çağırmıyor (aşağıdaki test).
-    // `surface` zorunlu (24.08, MB-63): eksik yazılırsa satır hiç doğmaz, dönem boş kalır ve iş
-    // modeli hiç çağırmaz — test "anlatı üretilmedi" diye düşerdi, sebebi görünmeden.
+    // Dönemde en az bir özet satırı olmalı, çünkü iş boş dönemde modeli çağırmaz; `surface` zorunludur, eksikse satır doğmaz.
     await db.from('analytics_event').insert([{ created_at: at(9), type: 'page_view', session_key: sessionKey, path: '/', surface: 'web' }]);
     await db.rpc('build_analytics_daily', { p_day: day });
 

@@ -1,27 +1,14 @@
--- Analitik olay defteri (13.1) — kuralların TAMAMI `docs/architecture/ANALYTICS.md`'dedir.
--- Bu dosya o kuralların şema karşılığıdır; buradaki her karar orada gerekçeliyle yazılı.
---
--- ── ÜÇ TABLO, ÜÇ AYRI İŞ ─────────────────────────────────────────────────────
---   `analytics_event`   ham iz, aylık bölümlenmiş, 25 ay yaşar        → yalnız DETAY
---   `analytics_session` oturumun kampanya künyesi (UTM), bir kez      → atfetme
---   `analytics_daily`   günlük özet, SÜRESİZ, saat kırılımı dizili    → EKRANLAR BUNU OKUR
---
--- **Ekran ham deftere BAĞLANMAZ.** Bağlandığı gün hızlıdır ve her hafta biraz daha yavaşlar; kimse
--- tek bir günü işaret edemez. Ham defter yalnız detaya inmek içindir (ANALYTICS §5).
+-- Analitik olay defterinin şeması; kuralların gerekçesi `docs/architecture/ANALYTICS.md`'dedir. Ham iz (`analytics_event`),
+-- oturumun kampanya künyesi (`analytics_session`) ve ekranların okuduğu günlük özet (`analytics_daily`) ayrıdır; ekran ham deftere bağlanmaz.
 
--- ── KİMLİK YOK, VE BU BİR KOLON EKSİKLİĞİ DEĞİL BİR KARAR ────────────────────
--- `customer_id` YOKTUR, nullable bile değil (kullanıcı kararı 04.08 · ANALYTICS §2). Nullable bir
--- kimlik kolonu "opsiyonel" değil KARARSIZdır: silme anlamı tanımsız kalır (cascade geçmiş sayıları
--- geriye dönük değiştirir, set null "anonim" iddiasını çürütür), tek tablo iki hukuki dayanak ve iki
--- saklama süresi taşıyamaz. Kimlikli davranış defteri ayrı bir tablonun işidir ve ancak izin yüzeyi
--- + "verilerimi indir/sil" aracıyla aynı gün doğar (09.10).
+-- `customer_id` yoktur, nullable bile değil: nullable kimlik kolonunun silme anlamı tanımsız kalır ve tek tablo iki hukuki dayanak
+-- taşıyamaz (ANALYTICS §2). Kimlikli davranış defteri ayrı bir tablonun işidir ve izin yüzeyiyle birlikte doğar.
 
 create type analytics_event_type as enum (
   'page_view',
   'product_view',
   'search',
-  -- Yer kapısı huninin İLK adımı: yer çözülmeden düşen ziyaretçi en erken ve muhtemelen en büyük
-  -- kayıptır. `postal_code_demand` yalnız ONAYLAYANI sayar, düşeni kimse saymıyordu.
+  -- Yer kapısı huninin ilk adımıdır: yer çözülmeden düşen ziyaretçi en erken kayıptır ve `postal_code_demand` yalnız onaylayanı sayar.
   'place_resolved',
   'add_to_cart',
   'cart_blocked',
@@ -35,27 +22,16 @@ create type analytics_event_type as enum (
   'share'
 );
 
--- Ölçülen NESNE. Polimorfik ve FK'siz — ikisi de bilinçli: silinen bir ürünün geçmiş görüntülemeleri
--- silinmemeli, yoksa mart ayının sayıları haziranda değişir. Çeviri torbası tartışmasındaki
--- "polimorfik olmasın" itirazı BURAYA UYMAZ: orada itiraz "FK'siz kalır, öksüz satır doğar" idi,
--- burada FK'yi zaten istemiyoruz.
--- `recipe` 24.08'de katıldı (08.57, mobil şeridin gözlemi): tarif sayfası ölçülüyordu ama yol
--- KALIBI yazıldığı ve slug bilerek maskeli olduğu için (`route-pattern`, denetim P2) "kaç tarif
--- görüntülendi" cevaplanıyor, "HANGİ tarif" cevaplanmıyordu. Kimlik `path`e yazılamazdı — o alan
--- rota kalıbıdır ve maskeleme bir gizlilik kararı; kimliğin evi zaten `subject_id`.
+-- Ölçülen nesne polimorfik ve FK'sizdir, çünkü silinen bir ürünün geçmiş görüntülemeleri silinmemeli. "Hangi tarif" sorusunun kimliği de
+-- burada (`recipe`), çünkü `path` slug'ı maskeleyen rota kalıbıdır.
 create type analytics_subject_type as enum ('product', 'variant', 'bundle', 'category', 'collection', 'recipe');
 
--- Görüntüleme ANINDAKİ satılabilirlik — anlık görüntü (snapshot), sonradan kurulamaz çünkü stok
--- hareket eder. Kaydedilmezse "çok bakılıp az alınan" listesinin başına STOKSUZ ürünler oturur ve
--- yönetici fiyata bakar; oysa doğru aksiyon tedariktir.
--- Dört ayrı bayrak yerine TEK enum: bunlar bağımsız alanlar değil, tek bir durumun hâlleri —
--- ayrı kolonlar bir gün birbiriyle çelişir (emsal: `rating_breakdown` dizisi).
+-- Görüntüleme anındaki satılabilirlik sonradan kurulamaz, çünkü stok hareket eder; kaydedilmezse "çok bakılıp az alınan" listesinin başına
+-- stoksuz ürünler otururdu. Dört bayrak yerine tek enum, çünkü bunlar tek bir durumun hâlleridir.
 create type analytics_availability as enum ('sellable', 'sold_out', 'closed', 'not_here');
 
--- Terk SEBEBİ tiplidir; serbest metin YASAK. Değerler motordaki kararların karşılığıdır
--- (`meetsMinBasket` · `splitByRoute` · `diffCartByPlace` · kupon doğrulaması). Serbest metin
--- olsaydı huninin en kıymetli kolonu bir ay içinde sorgulanamaz hâle gelirdi: üç ekran üç farklı
--- cümle yazardı.
+-- Terk sebebi tiplidir, serbest metin yasaktır: değerler motordaki sonuçların karşılığıdır ve serbest metin huninin en kıymetli kolonunu
+-- sorgulanamaz kılardı.
 create type analytics_blocked_reason as enum (
   'min_basket',        -- asgari sepet tutmadı
   'split',             -- sepet ikiye bölündü (yerel + kargo)
@@ -64,51 +40,21 @@ create type analytics_blocked_reason as enum (
   'out_of_stock',      -- checkout anında stok yetmedi
   'payment_failed',    -- ödeme düştü
   'not_shippable',     -- seçilen yere gönderilemiyor
-  -- Seçilen güne teslimat yok (müşteri şeridinin ölçümü, 04.08). Gerçek bir sürtünme ve müşterinin
-  -- kendi seçiminden doğuyor — bizim arızamız değil, o yüzden huniye girer.
-  -- **`warehouse_unresolved` ve `order_not_placed` BİLEREK YOK:** ikisi de BİZİM arızamız
-  -- (bölge çözülemedi / sipariş açılamadı). Huniye yazılsalardı müşteri vazgeçmiş görünürdü;
-  -- yerleri `error_log`. Aynı gerekçe `cart_unreachable` ve `address_missing` için de geçerli —
-  -- ikincisi zaten checkout'un normal ilk hâli, engel sayılsaydı her oturum bir
-  -- `checkout_blocked` üretir ve olay değerini kaybederdi.
+  -- Seçilen güne teslimat yok: müşterinin seçiminden doğan gerçek bir sürtünmedir, huniye girer. Bizim arızalarımız (bölge çözülemedi,
+  -- sipariş açılamadı) burada yoktur, çünkü müşteri vazgeçmiş görünürdü; yerleri `error_log`dur.
   'date_unavailable'
 );
 
--- Cihaz: uygulamanın `Device` tipiyle AYNI küme (`lib/device.ts`: mobile | desktop). Veri modelinde
--- `web|mobile` yazıyordu; kod `desktop` diyor ve iki sözlük tutmanın gerekçesi yok — kod haklıdır.
--- **Olayın cihazı İLK BOYAMANIN cihazıdır:** sunucu UA'dan çözer, istemci `matchMedia` ile düzeltir;
--- tanım sunucununkidir, yoksa aynı ziyaret iki cihaz sayılabilirdi.
+-- Cihaz uygulamanın `Device` tipiyle aynı kümedir (`mobile | desktop`). Olayın cihazı ilk boyamanın, yani sunucunun çözdüğü cihazdır,
+-- yoksa aynı ziyaret iki cihaz sayılabilirdi.
 create type analytics_device as enum ('mobile', 'desktop');
 
--- ═══ YÜZEY — hangi uygulamadan geldi (kullanıcı kararı 24.08 · MB-63) ════════
--- **`device` ile KARIŞTIRILMAZ:** o tarayıcı cihazıdır (`mobile|desktop`), bu ise ürünün hangi
--- yüzeyi. Native uygulamada `device` her zaman `mobile`dır ve o bilgi hiçbir soruyu ayırt etmez.
---
--- NEDEN AYRI TABLO DEĞİL, BOYUT (kullanıcı kararı 24.08): iki defter tutmak aynı huniyi iki kez
--- tanımlamak olurdu ve "toplam" sorusu her seferinde elle birleştirme isterdi. Tek defter +
--- boyut, hem toplamı hem kırılımı verir.
---
--- **VARSAYILANI YOK ve bu bilinçli.** `default 'web'` yazmak, yüzeyi söylemeyi unutan bir yazımın
--- sessizce web sayılması demekti — tam olarak MB-63'ün şikâyet ettiği arızanın (native sayılmıyor
--- ama ekranda "toplam" yazıyor) yeniden üretilmesi. Zorunlu alan, unutmayı derleme hatasına çevirir
--- — ama YALNIZ Zod şemasından geçen yazımda (`AnalyticsEventInsert`). Ham `insert` yazan testler
--- kısıttan öğrenir ve orası sessizdir: Supabase `insert()` hatayı FIRLATMAZ, DÖNDÜRÜR; satır hiç
--- doğmaz, test boş kümeyi ölçer. Ölçüldü 24.08: iki backend testi tam böyle düştü, sebebi
--- görünmeden. Bu tablonun ham fikstürünü yazan her testin `surface` taşıması gerekir.
---
--- GÜNLÜK ÖZETE (`analytics_daily_*`) KOYULMADI: özet `product_id`'ye göre gruplandığı için native
--- olayları kendiliğinden akar ve "toplam" yazan sayı GERÇEKTEN toplam olur — MB-63'ün kapattığı şey
--- budur. Yüzey kırılımı gerekirse ham defterden sorulur (25 ay duruyor); özeti şimdiden ikiye
--- katlamak, sorulmamış bir soruya satır üretmek olurdu.
+-- Yüzey (web ya da native) cihazdan ayrı bir boyuttur, çünkü native uygulamada cihaz hep `mobile`dır; tek defter hem toplamı hem
+-- kırılımı verir. Varsayılanı yoktur, çünkü `default 'web'` yüzeyi söylemeyi unutan yazımı sessizce web sayardı.
 create type analytics_surface as enum ('web', 'native');
 
--- ═══ OTURUMUN KAMPANYA KÜNYESİ ═══════════════════════════════════════════════
--- UTM oturum başına BİR KEZ düşer; sonraki olaylar taşımaz, rapor `session_key` üzerinden çözer.
---
--- **`session_key` günlük dönen tuzla türer** (ANALYTICS §2): `hash(günlük_tuz ‖ kırpılmış_ip ‖ ua ‖ site)`.
--- Tuz her gün değişir ve ESKİSİ SAKLANMAZ — atıldığı an o günün anahtarları geri hesaplanamaz, yani
--- defter psödonimden ANONİME döner. Sabit tuzla kurulsaydı bu bir PARMAK İZİ olurdu ve rıza isterdi.
--- Bedeli dürüstçe: "tekrar gelen ziyaretçi" ölçülemez (o soru siparişten cevaplanıyor — 13.5).
+-- UTM oturum başına bir kez düşer. `session_key` günlük dönen tuzla türer ve eski tuz saklanmaz, böylece defter psödonimden anonime döner;
+-- bedeli "tekrar gelen ziyaretçi"nin ölçülememesidir (ANALYTICS §2).
 create table public.analytics_session (
   session_key text primary key,
   -- Kampanya künyesi: `{source, medium, campaign, content, term}`. Serbest jsonb çünkü UTM'in kendisi
@@ -124,16 +70,8 @@ comment on table public.analytics_session is
 
 alter table public.analytics_session enable row level security;
 
--- ═══ HAM OLAY DEFTERİ ════════════════════════════════════════════════════════
--- **Aylık BÖLÜMLENMİŞ** (ANALYTICS §5): süresi dolan veri satır silinerek değil BÖLÜM DÜŞÜRÜLEREK
--- gider. 25 aylık bir tabloda toplu `delete` hem uzun sürer hem tabloyu şişirir (ölü satırlar);
--- `drop partition` tek metadata işlemidir.
---
--- **Vekil anahtar (id) YOK ve bu bilinçli bir sapma.** Bu depoda her tablo `id uuid primary key`
--- taşır; burada taşımıyor çünkü satır asla kimliğiyle okunmuyor — defter yalnız YAZILIYOR ve
--- toplanıyor. En çok yazılan tabloya, hiçbir okumanın kullanmadığı bir indeks eklemek bedava değil.
--- (Bölümlenmiş tabloda birincil anahtar zaten bölüm anahtarını içermek zorundadır, yani `id` tek
--- başına anahtar da olamazdı.)
+-- Ham defter aylık bölümlenmiştir: süresi dolan veri bölüm düşürülerek gider, çünkü toplu `delete` uzun sürer ve tabloyu şişirir.
+-- Vekil anahtar yoktur, çünkü satır kimliğiyle hiç okunmaz ve en çok yazılan tabloya kullanılmayan bir indeks eklemek bedava değildir.
 create table public.analytics_event (
   created_at timestamptz not null default now(),
   type analytics_event_type not null,
@@ -142,9 +80,7 @@ create table public.analytics_event (
   -- FK koysaydık UTM'siz gelen ziyaretçinin hiçbir olayı yazılamazdı.
   session_key text not null,
 
-  -- **ROTA KALIBI, somut değer ASLA** (ANALYTICS §2): `/product/[slug]`. Ham yol yazılsaydı deftere
-  -- `/feedback/<token>` (oturum yerine geçen bir SIR) ve `/orders/<reference>` (doğrudan
-  -- kimliklendirici) düşerdi. Sorgu dizesi tümüyle düşer; ölçülecek parametre `meta`'ya adıyla girer.
+  -- Somut değer değil rota kalıbı yazılır (`/product/[slug]`), çünkü ham yol deftere sır ve kimliklendirici taşırdı; sorgu dizesi düşer.
   path text,
 
   subject_type analytics_subject_type,
@@ -155,13 +91,8 @@ create table public.analytics_event (
 
   -- Kanal: karışık ölçüm yalan söyler (tasarımın kendi sözleşmesi).
   channel channel,
-  -- **YER: DEPO granülünde, posta kodu DEĞİL.** `b2b + posta kodu + zaman ≈ tek işletme` — defter
-  -- kolon kolon anonim olur, satır olarak değil (k-anonimlik). Posta kodu sorusunun sahibi
-  -- `postal_code_demand`: kanalsız, yolsuz, oturumsuz bir sayaç.
-  -- **`null` BİR KOVADIR, eksik veri değil:** yer seçmeden gezinme gerçek ve muhtemelen kalabalık;
-  -- huninin en büyük kayıp adımı orada. Düşürülseydi rapor onu hiç görmezdi (CLAUDE §1).
-  -- FK YOK — `subject_id` ile aynı gerekçe: silinen bir depo geçmiş satırları `null`'a çevirirdi ve
-  -- o satırlar "yer seçilmemiş" kovasına karışırdı. Geçmiş sayılar geriye dönük değişmemeli.
+  -- Yer depo granülündedir, posta kodu değil, çünkü kanal, posta kodu ve zaman birlikte tek işletmeyi ele verir; `null` yer seçmeden
+  -- gezinmenin kovasıdır. FK yoktur, çünkü silinen bir depo geçmiş satırları `null` kovasına karıştırırdı.
   warehouse_id uuid,
 
   availability analytics_availability,
@@ -174,11 +105,8 @@ create table public.analytics_event (
   country country_code,
   language preferred_language,
 
-  -- Tipe ÖZEL alanlar. Sözlüğü KAPALI ve kapıda Zod ayrık birliğiyle doğrulanır (olay tipine göre) —
-  -- yoksa altı ay sonra kimsenin şemasını bilmediği bir çöp alan olur.
-  -- **Defterdeki TEK serbest metin `search.query`'dir** ve o da `scrubMessage`'dan geçer,
-  -- normalleştirilir, ~100 karakterde kesilir. Adres, e-posta, telefon, not gövdesi hiçbir olaya
-  -- girmez; IP hiçbir yerde durmaz (yalnız `country` türetilir).
+  -- Tipe özel alanların sözlüğü kapalıdır ve kapıda Zod ayrık birliğiyle doğrulanır. Tek serbest metin temizlenip kesilen `search.query`dir;
+  -- IP hiçbir yerde durmaz.
   meta jsonb
 ) partition by range (created_at);
 
@@ -193,12 +121,8 @@ create index analytics_event_session_idx on public.analytics_event (session_key,
 create index analytics_event_product_idx on public.analytics_event (product_id, created_at) where product_id is not null;
 
 /**
- * Bölüm açıcı — verilen ayın bölümü yoksa yaratır. İdempotent.
- *
- * **Neden fonksiyon:** bölüm YOKSA insert HATA VERİR ve o hata ayın ilk gününde, gece yarısı,
- * ölçümün en sessiz yerinde patlar. Kapı ölçümü akışı kesmeyecek biçimde yazıldığı için hata da
- * yutulur — yani ay başında ölçüm sessizce durur ve kimse fark etmez. Bölüm bakımı bu yüzden bir
- * işin (`analytics_rollup`) parçasıdır, elle yapılan bir bakım değil.
+ * Bölüm açıcı, idempotent. Bölüm yoksa yazım hata verir ve kapı hatayı yuttuğu için ölçüm ay başında sessizce dururdu; bakım bu yüzden
+ * `analytics_rollup` işinin parçasıdır.
  */
 create or replace function public.ensure_analytics_partition(p_month date)
 returns void
@@ -228,14 +152,8 @@ select public.ensure_analytics_partition(now()::date);
 select public.ensure_analytics_partition((now() + interval '1 month')::date);
 
 /**
- * Saklama süresi dolmuş BÖLÜMLERİ düşürür (25 ay — `ANALYTICS §5`). Düşen bölüm adlarını döner.
- *
- * **Satır silinmiyor, bölüm düşüyor.** 25 aylık bir tabloda `delete from … where created_at < …`
- * hem uzun sürer hem tabloyu ölü satırlarla şişirir (vakum işi); `drop table` tek metadata
- * işlemidir ve diski anında bırakır.
- *
- * Ad ÇÖZÜMLEMESİ yerine `pg_inherits` taranıyor: bölüm adından tarih ayrıştırmak, adlandırma bir
- * gün değişirse sessizce hiçbir şey silmezdi — miras zinciri ise şemanın kendi gerçeğidir.
+ * Saklama süresi dolmuş bölümleri düşürür (25 ay, `ANALYTICS §5`) ve adlarını döner. Bölümler adlarından değil `pg_inherits`ten bulunur,
+ * çünkü adlandırma değişirse ad ayrıştırma sessizce hiçbir şey silmezdi.
  */
 create or replace function public.drop_analytics_partitions_before(p_month date)
 returns table (dropped text)
@@ -267,12 +185,8 @@ $$;
 comment on function public.drop_analytics_partitions_before(date) is
   'Süresi dolmuş olay bölümlerini düşürür (13.1) — satır silmez, bölüm düşürür.';
 
--- ═══ GÜNLÜK ÖZET — EKRANLARIN OKUDUĞU TABLO ══════════════════════════════════
--- SÜRESİZ yaşar: özet kişisel veri değildir ve yıllar arası karşılaştırma ancak böyle mümkündür.
---
--- **Hafta/ay/yıl AYRI TABLO DEĞİL** — günlükten okuma anında türetilir (türetilebilen ikinci kez
--- yazılmaz). **Saatlik tablo da YOK:** satır 24 öğeli bir saat kırılımı dizisi taşıyor; ısı haritası
--- (haftanın günü × saat) her pencerede bundan okunur.
+-- Günlük özet süresiz yaşar, çünkü kişisel veri değildir ve yıllar arası karşılaştırma ancak böyle mümkündür. Hafta, ay ve saat ayrı
+-- tablo değildir; günlükten ve satırın 24 öğeli saat dizisinden türetilir.
 create table public.analytics_daily (
   day date not null,
   type analytics_event_type not null,
@@ -297,11 +211,8 @@ create table public.analytics_daily (
 
   updated_at timestamptz not null default now(),
 
-  -- **`nulls not distinct` ŞART ve sebebi ölçüldü.** Boyutların çoğu nullable (`path`,
-  -- `warehouse_id`, `channel`, `availability`) ve SQL'de `null <> null` — standart `unique` aynı
-  -- gün/tip için `warehouse_id = null` satırının defalarca yazılmasına izin verirdi. Özet sessizce
-  -- çoğalır, hata vermez, yalnız toplamlar tutmadığında fark edilirdi. Postgres 15+ gerekiyor
-  -- (yerelde 17.6).
+  -- `nulls not distinct` şarttır, çünkü boyutların çoğu nullable ve standart `unique` aynı gün ve tip için `null` boyutlu satırın defalarca
+  -- yazılmasına izin verirdi.
   constraint analytics_daily_key unique nulls not distinct (day, type, path, warehouse_id, channel, availability, blocked_reason)
 );
 
@@ -313,20 +224,15 @@ alter table public.analytics_daily enable row level security;
 create index analytics_daily_day_idx on public.analytics_daily (day desc, type);
 
 /**
- * Bir günün özetini ham defterden ÜRETİR (idempotent: aynı gün ikinci kez koşarsa üzerine yazar).
- *
- * **Neden RPC:** toplama + `on conflict` upsert PostgREST'ten söylenemez (toplama fonksiyonları bu
- * kurulumda kapalı) ve gün başına on binlerce satırı uygulamaya çekmek zaten yanlış olurdu —
- * `STACK §13`'ün RPC eşiği burada fazlasıyla karşılanıyor.
- *
- * **Sıra kritiktir (ANALYTICS §5): özet ÖNCE, silme SONRA.** Ters sırada bir gün özet koşmazsa o
- * günün verisi hem özette hem ham defterde yok olur ve bunu kimse fark etmez.
+ * Bir günün özetini ham defterden üretir, idempotent; toplama ve upsert PostgREST'ten söylenemediği için RPC'dir. Gün ve saat Paris
+ * takvimindedir (`set timezone`), çünkü sunucunun UTC günü gece yarısından sonraki olayları önceki güne ve kayık saate yazardı.
  */
 create or replace function public.build_analytics_daily(p_day date)
 returns integer
 language plpgsql
 security definer
 set search_path = public
+set timezone = 'Europe/Paris'
 as $$
 declare
   yazilan integer;

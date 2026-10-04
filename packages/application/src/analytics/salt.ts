@@ -1,28 +1,11 @@
 import { createHash } from 'node:crypto';
 import { SettingsService } from '@lezzet/database';
+import { parisDateOf } from '@lezzet/helper';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /*
-  GÜNLÜK OTURUM TUZU — İKİ YÜZEYİN ORTAK TEK PARÇASI (24.08 · MB-63).
-
-  ── NEDEN BURAYA TAŞINDI ────────────────────────────────────────────────────
-  Tuz `apps/web/lib/analytics/session-key.ts`te doğdu ve orada tek tüketicisi vardı. Native ölçüm
-  açılınca ikinci tüketici doğdu (`apps/mobile-api`) ve uygulamalar birbirinden import edemez.
-  Kopyalamak seçenek DEĞİLDİ: iki üretici, aynı gün iki farklı tuz üretebilir ve o gün iki yüzeyin
-  anahtarları birbiriyle karşılaştırılamaz hâle gelirdi — hata vermeden. Taşındı, KOPYALANMADI;
-  web aynı fonksiyonu buradan çağırıyor.
-
-  Web'in `session-key.ts` künyesindeki kararlar AYNEN geçerlidir ve burada tekrarlanmaz; yalnız
-  ikisi taşınacak kadar önemli:
-
-  · **Tuz her gün değişir ve eskisi SAKLANMAZ** — üzerine yazılır. Atıldığı an o günün anahtarları
-    geri hesaplanamaz, yani defter psödonimden ANONİME döner (GDPR Recital 26).
-  · **Sabit bir sırdan TÜRETİLMEZ:** `hash(SIR ‖ gün)` biçiminde bir tuz, sırrı bilen için her günü
-    geriye dönük yeniden hesaplanabilir kılardı — "eskisi saklanmıyor" iddiası yalan olurdu.
-
-  Yarış davranışı da aynen korunur: aynı gün iki süreç birden üretirse son yazan kazanır. Kabul
-  edilebilir — en kötüsü o günün bir kısım anahtarının bölünmesi; ölçüm gürültülenir, kimlik sızmaz.
-  Ters ödünleşme (kilit) en sıcak yola kilit koymak olurdu.
+  Günlük oturum tuzu web ile mobil ucun tek kaynağıdır, ki iki yüzeyin aynı günkü anahtarları karşılaştırılabilsin. Tuz her gün değişir,
+  eskisi saklanmaz ve sabit bir sırdan türetilmez; böylece defter psödonimden anonime döner (ayrıntı web `session-key.ts`).
 */
 
 const SALT_KEY = 'analytics_session_salt';
@@ -35,7 +18,8 @@ let saltCache: { day: string; salt: string } | null = null;
  * servis istemcisiyle çağırır — paket hangi bağlamda koştuğunu bilmez ve bilmemelidir.
  */
 export async function dailySalt(db: SupabaseClient): Promise<string> {
-  const day = new Date().toISOString().slice(0, 10);
+  // Gün, günlük özetle aynı Paris günüdür; tuz o günün sınırında döner.
+  const day = parisDateOf(new Date());
   if (saltCache?.day === day) return saltCache.salt;
 
   const settings = new SettingsService(db);

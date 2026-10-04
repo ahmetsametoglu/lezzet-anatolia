@@ -120,6 +120,9 @@
   süresi" bir cümledir, kural değil. Sıra: günlük özet ÖNCE üretilir, silme SONRA.
 - **Günlük özet (`analytics_daily`) SÜRESİZ** ve boyutları ZENGİN: gün × olay tipi × rota × depo ×
   kanal × satılabilirlik. Ekranlar HAM DEFTERE BAĞLANMAZ, özetten okur; ham yalnız detay içindir.
+- **Gün ve saat Paris takvimindedir:** günlük özetin günü, saat kırılımı, oturum tuzunun dönüşü ve
+  dönem raporları `Europe/Paris`e göre kurulur (SQL fonksiyonlarında `set timezone`); sunucunun UTC
+  günü gece yarısından sonraki olayları önceki güne ve kayık saate yazardı.
 - **Hafta/ay/yıl AYRI TABLO DEĞİL** — günlükten okuma anında türetilir (türetilebilen ikinci kez
   yazılmaz). **Saatlik tablo da YOK:** günlük özet satırı 24 öğeli **saat kırılımı dizisi** taşır;
   ısı haritası (haftanın günü × saat; hafta/ay/yıl pencereleri) her zaman özetten okunur.

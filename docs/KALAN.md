@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.64). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.65). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
 `docs/GELECEK.md`'dedir.
@@ -57,8 +57,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 
 - [ ] (K.44) **Paketin kargo ölçüsü kurgulanmamış:** paket (`bundle`) kendi kutusuyla mı gider, bir kargo kutusunun içine mi konur, karar yok; ikisinde de paketin ambalaj ölçüsü ve ağırlığı gerekir ama `bundle` tablosunda böyle bir alan yok. Ödeme adımındaki kargo teklifi paket satırını koli planına hiç koymuyor (`checkout-snapshot.ts`, `checkout-draft.ts`: yalnız varyant satırları), sevk ise paketi içindeki varyantlar olarak tartıyor (`shipping/dispatch.ts`); iki hesap ayrışıyor. Bugünkü etki: ücretsiz kargo eşiğinin altındaki yalnız-paket kargo sepeti sipariş edilemiyor ("kargo servisi bulunamadı"), paket + ürün sepetinde kargo fiyatı eksik ağırlıktan çıkıyor.
 - [~] (07.12) **Taşıyıcı + kargo takip numarası:** `order.carrier` (tanımlı küme: `colissimo · chronopost · dhl · ups · other`) + `order.tracking_number`; ikisi de yalnız `delivery_type = 'shipping'` siparişlerde anlamlı — kısıt veride (rota siparişine takip numarası yazılamaz). Numarayı hazırlık ekranı girer (paketi kapatan kişi etiketi elinde tutar), ayrı sevk adımı açılmaz. Takip bağlantısı taşıyıcının URL kalıbından üretilir; `other` seçilirse bağlantı gösterilmez, numara düz metin durur
-- [ ] (K.59) **Native ödeme ekranında ayrı ad/telefon kutusu:** native, adresinde alıcı adı ve telefonu kayıtlı müşteriden de "Contact" kutusunda telefon istiyor; web istemiyor. Karar bekliyor: native'den kaldırmak ya da web'e eklemek.
-- [ ] (K.60) **Onay ekranındaki komşu daveti metni iki yüzeyde farklı:** web kendi `messages.json`'ında ("Même jour, même camion…"), native ortak `packages/i18n/src/customer/checkout.json`'da ("Notre camion sera déjà…"); iki yüzeyin ortak metni ortak dosyada olmalı. Karar bekliyor: hangi metin kalacak.
 
 ## 08 · Müşteri Web Uygulaması (Vitrin)
 
@@ -103,7 +101,7 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
   hazır adres taşıyor, kart yalnız birini kullanıyor (katalog RSC yükünün %84'ü; sıkıştırılmış sayfada 10 KB, sunucuda Mac'te
   2,2 ms/sayfa). Veride künye (anahtar, sürüm, boyut, odak) kalır, adresi çizen bileşen kurar (Next `loader`, Cloudflare'in
   önerdiği desen); web `FramedImage`, native `FrameImage` ve mobil API sözleşmesi birlikte değişir. Sıra: K.53'ün vitrin zincirinden sonra.
-- [ ] (K.57) [hedef: web] **Var olmayan ürünün adresi 404 değil 200 döner:** ürün sayfasının `loading.tsx`'i akışı `notFound()`'dan önce başlattığı için durum kodu yazılmış oluyor; sayfa 404 metnini ve `noindex`i taşısa da arama motoru için bu yumuşak 404'tür. Yol, tarif ve paket adresleri 404 dönüyor; `not-found.tsx` yorumu 404 diyor.
+- [ ] (K.65) [hedef: web] **Bulunamadı sayfasında tasarımın seçkisi yok:** "çok sevilenler" ızgarası ve kategori çipleri çizilmiyor; seçki ölçütü (`readShowcase`) ve parçalar (`ProductCard` · `SectionHeading`) hazır, kalan iş sayfanın yerleşimi.
 
 ## 09 · Admin Yüzeyi: Komponentler ve Sayfalar
 
@@ -141,7 +139,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
   - Görev kapandı; koddaki `BEKLEYEN(13.2)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [~] (13.5) **Segmentler:** edinim kaynağı kohortu (tekrar sipariş), RFM + uyuyan müşteri (siparişten türetilir), export'lu
 - [~] (13.8) **Analitik ekranı** *(tasarım: `Operasyon - Analitik.dc.html`, `design/pages/admin-analitik.md`)*
-- [ ] (K.64) **Analitik günü ve saati UTC'de:** günlük özet (`build_analytics_daily`) günü ve saat kırılımını veritabanının UTC saatiyle kuruyor, toplama işi ve günlük tuz da UTC günüyle dönüyor; operasyonun ısı haritası saatleri çevirmeden çizdiği için Paris saatinden 1–2 saat kayık görünüyor. İşletme günü Paris'te; düzeltme migration, toplama işi ve tuzu birlikte değiştirir.
 
 ## 14 · Bildirim ve E-posta: `packages/email` + `packages/notify`
 

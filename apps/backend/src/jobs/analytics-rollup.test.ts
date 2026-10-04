@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
+import { addDays, parisDateOf, parisDayRange } from '@lezzet/helper';
 import {
   AnalyticsDailyService,
   AnalyticsProductDailyService,
@@ -10,15 +11,8 @@ import { purgeTestData } from '@lezzet/database/testing';
 import { analyticsRollupJob } from './analytics-rollup';
 
 /**
- * Analitik özet + bakım turu (13.1).
- *
- * **Bu testin asıl koruduğu şey bir sayı değil, bir SESSİZ ARIZA sınıfıdır:** yeni bir özet
- * eklenip işe bağlanmayı unutmak. Unutulduğunda hiçbir yer hata vermez — yalnız o blok ekranda
- * hiç dolmaz ve kimse tek bir günü işaret edemez. `buildAll` dördünü birlikte üretiyor; burada
- * sınanan, işin gerçekten dördünü de yazdığı.
- *
- * **Küresel sayıya bakılmıyor** (`CLAUDE §4b`): iş tüm günü özetliyor ve başka ajanların satırları
- * da aynı güne düşüyor. Ölçüt yalnız bu testin damgalı kovaları.
+ * İşin dört özeti de yazdığı sınanır, çünkü işe bağlanmayı unutulan özet hiçbir yerde hata vermez, yalnız ekranda hiç dolmazdı.
+ * Ölçüt yalnız bu testin damgalı kovalarıdır, çünkü iş tüm günü özetler (`CLAUDE §4b`).
  */
 const db = serviceDb();
 const daily = new AnalyticsDailyService(db);
@@ -32,9 +26,9 @@ const productId = `00000000-0000-4000-9000-${String(stamp).slice(-12).padStart(1
 const searchQuery = `rollup-terim-${stamp}`;
 const campaign = `rollup-kampanya-${stamp}`;
 
-/** İş DÜNÜ özetliyor (gün kapanmadan üretilen özet eksiktir) — test de dünü kuruyor. */
-const day = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-const at = (hour: number) => `${day}T${String(hour).padStart(2, '0')}:15:00.000Z`;
+/** İş Paris'te dünü özetliyor; test de o günü, Paris duvar saatiyle kuruyor. */
+const day = addDays(parisDateOf(new Date()), -1);
+const at = (hour: number) => new Date(Date.parse(parisDayRange(day).from) + (hour * 60 + 15) * 60_000).toISOString();
 
 afterAll(async () => {
   await purgeTestData(db, {
@@ -51,9 +45,8 @@ describe('analytics_rollup', () => {
       utm: { source: 'instagram', campaign, medium: 'cpc' },
       source: 'instagram.com',
     });
-    // `surface` ZORUNLU (24.08, MB-63) ve varsayılanı yok — ham `insert` yazmayı unutursa Supabase
-    // hatayı FIRLATMAZ, DÖNDÜRÜR: satırlar hiç doğmaz, iş boş günü özetler ve test "0 satır" diye
-    // düşer. Fikstür web olayı kurduğu için (`path` taşıyor) yüzey de `web`.
+    // `surface` zorunludur ve varsayılanı yoktur; ham `insert`te unutulursa Supabase hatayı döndürür, satır doğmaz ve test sebebi görünmeden
+    // düşerdi.
     await db.from('analytics_event').insert([
       { created_at: at(8), type: 'page_view', session_key: sessionKey, path: '/', surface: 'web' },
       { created_at: at(9), type: 'product_view', session_key: sessionKey, product_id: productId, availability: 'sellable', surface: 'web' },

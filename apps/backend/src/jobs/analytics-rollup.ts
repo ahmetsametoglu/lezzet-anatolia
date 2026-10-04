@@ -1,40 +1,19 @@
 import { AnalyticsDailyService, serviceDb } from '@lezzet/database';
+import { addDays, parisDateOf } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 
 export const ANALYTICS_ROLLUP = 'analytics_rollup';
 
 /**
- * **Analitik özet + bakım işi** (13.1 · `ANALYTICS §5`).
- *
- * Üç iş, ve SIRALARI kritik:
- *   1. **Bölüm bakımı** — gelecek ayın bölümü açılır.
- *   2. **Günlük özet** — dün (ve emniyet payı olarak evvelsi gün) üretilir.
- *   3. **Saklama süpürmesi** — 25 ayı dolduran BÖLÜMLER düşürülür.
- *
- * **Özet ÖNCE, silme SONRA** (`ANALYTICS §5`). Ters sırada bir gün özet koşmazsa o günün verisi hem
- * özette hem ham defterde yok olur ve bunu kimse fark etmez — kayıp sessizdir.
- *
- * **Bölüm bakımı neden bir İŞİN parçası, elle yapılan bakım değil:** bölüm yoksa `insert` hata verir
- * ve o hata ayın ilk gününde, gece yarısı, ölçümün en sessiz yerinde patlar. Kapı ölçümün akışı
- * kesmemesi için hatayı yutuyor — yani ay başında ölçüm sessizce durur. Bu işin var olma sebebi
- * budur.
+ * Analitik özet ve bakım işi: bölüm bakımı, günlük özet, saklama süpürmesi, bu sırayla (`ANALYTICS §5`). Özet önce, silme sonra gelir,
+ * çünkü ters sırada bir gün özet koşmazsa o günün verisi sessizce kaybolurdu.
  */
 
 /** Ham olay saklama süresi (ay) — `ANALYTICS §5`: iki tam yılın aynı-ay karşılaştırma penceresi. */
 const RETENTION_MONTHS = 25;
 
-/**
- * Kaç günü yeniden üretiyoruz. Bir gün YETMEZ: iş bir gün koşmazsa o gün özetsiz kalırdı ve
- * özet idempotent olduğu için ikinci kez üretmenin maliyeti yalnız bir upsert'tir. Ucuz bir
- * emniyet payı, sessiz bir boşluktan iyidir.
- */
+/** Yeniden üretilen gün sayısı; iş bir gün koşmazsa o gün özetsiz kalmasın, özet idempotent olduğu için bedeli bir upsert'tir. */
 const REBUILD_DAYS = 3;
-
-function isoDay(offsetDays: number): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
-}
 
 function isoMonth(offsetMonths: number): string {
   const d = new Date();
@@ -51,16 +30,12 @@ export async function analyticsRollupJob(): Promise<Record<string, unknown>> {
   await service.ensurePartition(isoMonth(0));
   await service.ensurePartition(isoMonth(1));
 
-  // 2) Özet — dünden geriye doğru. BUGÜN üretilmiyor: gün kapanmadan üretilen özet eksiktir ve
-  //    ertesi koşuda zaten üzerine yazılacaktı; eksik bir sayıyı ekrana bir gün boyunca göstermek,
-  //    hiç göstermemekten kötüdür.
-  //
-  //    **DÖRT özet birlikte üretilir** (`buildAll`): gün özeti + ürün + arama + kaynak. Ayrı
-  //    çağrılar bırakılsaydı yeni bir özet eklendiği gün işe eklenmeyi unutmak mümkün olurdu ve
-  //    unutulduğunda hata vermezdi — yalnız o blok hiç dolmazdı.
+  // 2) Özet dünden geriye, Paris günüyle üretilir; bugün üretilmez, çünkü kapanmamış günün özeti eksiktir. Dört özet `buildAll` ile
+  //    birlikte üretilir, ki yeni bir özet işe eklenmeyi unutmasın.
+  const today = parisDateOf(new Date());
   let yazilan = 0;
   for (let i = 1; i <= REBUILD_DAYS; i += 1) {
-    yazilan += await service.buildAll(isoDay(-i));
+    yazilan += await service.buildAll(addDays(today, -i));
   }
 
   // 3) Saklama — süresi dolan BÖLÜMLER düşer (satır silinmez).

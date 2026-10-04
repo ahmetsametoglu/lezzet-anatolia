@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
+import { addDays, parisDateOf, parisDayRange } from '@lezzet/helper';
 import { serviceDb } from '../client';
 import { purgeTestData } from '../testing/cleanup';
 import {
@@ -12,14 +13,8 @@ import {
 } from './analytics.service';
 
 /**
- * Analitik I/O (13.1) — kurallar `docs/architecture/ANALYTICS.md`'de.
- *
- * **Sınanan şey sayı değil DAVRANIŞ:** özet idempotent mi, `null` boyutlu satır çoğalıyor mu, saat
- * kırılımı doğru kovaya düşüyor mu, oturum künyesi ikinci kez yazılınca eziliyor mu.
- *
- * **Küresel sayıya bakılmıyor** (`CLAUDE §4b`): üç ajan aynı veritabanını paylaşıyor ve özet tablosu
- * gün bazlı — başka bir koşunun yazdığı satır toplamı oynatır. Her sınama kendi damgalı oturum
- * anahtarına ve kendi ürettiği güne kilitli.
+ * Analitik I/O'nun davranışı sınanır: özet idempotent mi, `null` boyutlu satır çoğalıyor mu, saat kırılımı doğru kovaya düşüyor mu.
+ * Küresel sayıya bakılmaz, çünkü veritabanı paylaşılıyor; her sınama kendi damgalı anahtarına ve gününe kilitlidir (`CLAUDE §4b`).
  */
 const db = serviceDb();
 const events = new AnalyticsEventService(db);
@@ -37,32 +32,25 @@ const otherKey = `test-${stamp}-b`;
 /** Damgalı bir ürün kimliği: defterde FK yok, yani var olmayan bir ürün de ölçülebilir (bilinçli). */
 const productId = `00000000-0000-4000-8000-${String(stamp).slice(-12).padStart(12, '0')}`;
 /**
- * İkinci damgalı ürün — "hiç satılabilir görünmemiş" hâli için. Temizliği `afterAll`'da, sınamanın
- * içinde DEĞİL: FK'siz olduğu için hiçbir cascade onu toplamıyor, o yüzden düşen ya da kesilen bir
- * koşuda satır kalıcı oluyordu (ölçüldü 09.08: 3 öksüz satır, `demand_signals` çıktısını
- * "(silinmiş ürün)" ile dolduruyordu). Teardown, testin geçmesine bağlı olmamalı.
+ * "Hiç satılabilir görünmemiş" hâlinin ürünü; temizliği `afterAll`dadır, çünkü FK'siz satırı hiçbir cascade toplamaz ve teardown testin
+ * geçmesine bağlı olmamalı.
  */
 const soldOutOnlyProductId = `00000000-0000-4000-8001-${String(stamp).slice(-12).padStart(12, '0')}`;
 /**
- * **GERÇEK** bir ürün — sentetik olamaz (08.56): özet, ürün kimliği yazılmamış satırlarda kırılımı
- * `product_variant` tablosundan çözüyor ve o tablonun `product`a FK'si var. Kimlik testin içinde
- * doğuyor, temizliği `afterAll`'da: teardown testin geçmesine bağlı olmamalı (üstteki künye).
+ * Gerçek bir ürün gerekir, çünkü özet ürün kimliği yazılmamış satırı `product_variant`tan çözer ve o tablonun `product`a FK'si vardır.
  */
 let gercekUrunId: string | null = null;
 const searchQuery = `lahmacun-${stamp}`;
 const campaign = `kampanya-${stamp}`;
 /**
- * Yol da DAMGALI — oturum anahtarı damgalıyken süzgeç sabit `/catalog`taydı ve günlük özet
- * o boyutta BÜTÜN oturumları topluyor: yerelde dolaşan gerçek bir gezinme (ya da başka şeridin
- * fikstürü) aynı gün+yol+kanal satırına karışıp sayıyı 3'ten 14'e taşıdı (mobil şeridin ölçümü,
- * 17.08). CLAUDE §4b: kendi kurduğun satırları say — teardown da kurtaramaz, kirleten satırlar
- * testin değil.
+ * Yol da damgalıdır, çünkü günlük özet o boyutta bütün oturumları toplar ve paylaşılan veritabanında başka bir gezinme aynı satıra
+ * karışırdı (`CLAUDE §4b`).
  */
 const searchPath = `/catalog-${stamp}`;
 
-/** Dünün tarihi: özet BUGÜNÜ üretmiyor (gün kapanmadan üretilen özet eksiktir) — iş de öyle davranıyor. */
-const day = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-const at = (hour: number) => `${day}T${String(hour).padStart(2, '0')}:30:00.000Z`;
+/** Paris'te dün: özet bugünü üretmez ve gün ile saat Paris takvimindedir; `at` o günün Paris duvar saatindeki anıdır. */
+const day = addDays(parisDateOf(new Date()), -1);
+const at = (hour: number) => new Date(Date.parse(parisDayRange(day).from) + (hour * 60 + 30) * 60_000).toISOString();
 
 afterAll(async () => {
   await purgeTestData(db, {
@@ -71,9 +59,7 @@ afterAll(async () => {
     productIds: [productId, soldOutOnlyProductId, ...(gercekUrunId ? [gercekUrunId] : [])],
     analyticsSearchQueries: [searchQuery],
   });
-  // GÜN özeti satırları testin ürettiği güne ait; başka koşular da aynı güne yazabildiği için
-  // silinmiyorlar (küresel satır). Sınamalar zaten kendi boyutlarına bakıyor. Ürün ve arama
-  // özetleri damgalı anahtar taşıdığı için purge'ün hedefinde.
+  // Gün özeti satırları silinmez, çünkü başka koşular da aynı güne yazar (küresel satır); damgalı ürün ve arama özetleri purge'ün hedefindedir.
 });
 
 describe('olay defteri — YAZMA-YALNIZ', () => {
@@ -91,13 +77,11 @@ describe('olay defteri — YAZMA-YALNIZ', () => {
   });
 
   it('AYNI oturumda aynı tip İKİ KEZ yazılabilir — tekilleştirme YOK ve bu bir karar', async () => {
-    // Sepeti bölünen müşteri iki sipariş verir, kartı reddedilen tekrar dener: ikisi de gerçek
-    // birer NİYETTİR (kullanıcı kararı 04.08). Bir tur "oturum başına bir kez" kuralı yazılmıştı;
-    // olay dönüş SAYFASINDAN atılacak sanılıyordu. Artık sunucu eyleminden atılıyor, yani
-    // yenileme sorunu yok — kural kalsaydı ikinci niyeti sessizce yutardı.
+    // Sepeti bölünen müşteri iki sipariş verir, kartı reddedilen tekrar dener: ikisi de gerçek birer niyettir ve tekilleştirme ikinciyi
+    // sessizce yutardı.
     const taze = `test-${stamp}-niyet`;
     await events.record({ type: 'order_placed', sessionKey: taze, surface: 'web' });
-    // İkinci niyet NATIVE'den gelmiş olabilir — yüzey ayrı, sayım aynı deftere düşer (24.08).
+    // İkinci niyet native'den gelmiş olabilir; yüzey ayrı, sayım aynı deftere düşer.
     await events.record({ type: 'order_placed', sessionKey: taze, surface: 'native' });
 
     const { count } = await db
@@ -199,29 +183,17 @@ describe('sinyal özetleri', () => {
     expect(signal?.viewCount).toBe(3);
     expect(signal?.sellableViewCount).toBe(2);
     expect(signal?.cartCount).toBe(1);
-    // 1 / 2 — payda TOPLAM görüntüleme (3) olsaydı 0.33 çıkardı ve ürün olduğundan ilgisiz görünürdü.
+    // 1 / 2: payda toplam görüntüleme (3) olsaydı 0,33 çıkardı ve ürün olduğundan ilgisiz görünürdü.
     expect(signal?.cartRate).toBeCloseTo(0.5);
   });
 
   /**
-   * **ATICI'nın yazdığı şekle bakan tek test** (08.56 · 24.08).
-   *
-   * Üstteki sınama `product_id`yi ELDEN veriyor ve geçiyordu; oysa sepete ekleme kapısı öyle
-   * yazmıyor. `AddToCartIntent` ürünü değil VARYANTI taşıyor (bilinçli — `cart-types.ts` künyesi:
-   * istemcinin elindeki `CartEntry` ürünü tanımıyor, sunucuda doldurmak en sıcak yazma yoluna
-   * fazladan bir okuma eklerdi), atıcı da `product_id: null` yazıyor. Özet o satırları eliyordu ve
-   * `cart_count` **yapısal olarak sıfırdı**.
-   *
-   * Kırık olan rollup DEĞİLDİ, onu kapsayan test yoktu: mevcut test doğru olanı doğruluyordu.
-   * Bu yüzden fikstür ham `insert` ile ve KAPININ yazdığı şekilde kuruluyor — ürün kimliği YOK,
-   * özne varyant. Gerçek bir `product_variant` satırı şart: çözüm o tablodan okunuyor.
+   * Sepete ekleme kapısının yazdığı şekle bakar: olay ürünü değil varyantı taşır (`product_id: null`) ve özet ürünü varyanttan çözmelidir.
+   * Fikstür bu yüzden ham `insert` ile, kapının yazdığı şekilde kurulur.
    */
   it('ürün kimliği YAZILMAMIŞ sepete ekleme de sayılır — özet onu varyanttan çözer', async () => {
-    // **Durum ADAY bırakıldı** (05.36): satır bir tur `status: 'active'` yazıyordu ve yayın kısıtı
-    // (`product_publish_requires_all_locales`) onu reddediyordu — metinleri yok. Testin konusu
-    // analitik özeti; ürünün satışta olup olmaması ilgisiz, o yüzden kolonun varsayılanı yeterli.
-    // **Hata da artık kontrol ediliyor:** reddedilen insert `data: null` döndürüyordu ve test bir
-    // sonraki satırda `null.id` ile patlıyordu — sebebi kendi iddiasıyla ilgisiz görünen bir hata.
+    // Ürün aday durumda kalır, çünkü yayın kısıtı metinsiz ürünü reddeder ve testin konusu satış değil özettir. Hata kontrol edilir, yoksa
+    // reddedilen yazım ilgisiz görünen bir `null.id` hatasıyla patlardı.
     const { data: urun, error: urunHata } = await db
       .from('product')
       .insert({ name: { tr: `Atıcı Kanıtı ${stamp}` }, slug: `atici-kaniti-${stamp}` })
@@ -304,7 +276,7 @@ describe('sinyal özetleri', () => {
  * bir şey; sınanan şey sözleşmenin tutması (satır şekli, segment kümesi, sayı-liste tutarlılığı).
  */
 describe('rapor okumaları', () => {
-  const bugun = new Date().toISOString().slice(0, 10);
+  const bugun = parisDateOf(new Date());
 
   it('kampanya cirosu: etiketsiz kova DÜŞÜRÜLMEZ — toplam dönemin gerçek cirosunu tutmalı', async () => {
     const rows = await reports.campaignRevenue('2020-01-01', bugun);
@@ -317,15 +289,8 @@ describe('rapor okumaları', () => {
   });
 
   it('İKİ CİRO AYNI TANIMDAN ÇIKAR — dönem cirosu ile kampanya cirosunun toplamı eşit', async () => {
-    // Bu testin koruduğu şey bir sayı değil, `analytics_order_base` görünümünün VAR OLMA sebebi:
-    // "hangi sipariş ciro sayılır" üç yerde ayrı yazılsaydı biri iadeyi düşer öteki düşmezdi ve
-    // aynı ekranda iki farklı ciro belirirdi — hiçbiri hata vermeden.
-    // **İKİSİ AYNI ANI GÖRMELİ** — `Promise.all`, ardışık `await` değil (ölçüldü 27.08, mobil
-    // şeridin notu): iki okuma arasında koşan başka bir dosya sipariş yazar ya da teardown'ı bir
-    // sipariş siler ve toplamlar tutmaz. Testin iddiası "iki ciro aynı TANIMDAN çıkar"; sıralı
-    // okuma ona "aynı ANDAN çıkar" varsayımını da gizlice ekliyordu ve paylaşılan veritabanında o
-    // varsayım yanlış (`CLAUDE §4b`). Eşzamanlı gitmek pencereyi kapatmıyor ama milisaniyeye
-    // indiriyor; küme testin kendi verisi olmadığı için daha dar bir süzgeç de yazılamıyor.
+    // `analytics_order_base` görünümünün var olma sebebi sınanır: "hangi sipariş ciro sayılır" iki yerde ayrı yazılsaydı iki ciro ayrışırdı.
+    // İki okuma eşzamanlıdır, çünkü paylaşılan veritabanında araya giren başka bir koşu toplamları oynatırdı (`CLAUDE §4b`).
     const [donem, kampanya] = await Promise.all([
       reports.orderRevenue('2020-01-01', bugun),
       reports.campaignRevenue('2020-01-01', bugun),
