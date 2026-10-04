@@ -41,12 +41,18 @@ export function useLoginFlow({ initialNotice, googleReturn, onVerified, onClose 
   const [emailError, setEmailError] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
-  /** Seçim adımının bilgi ya da hata satırı. */
-  const [notice, setNotice] = useState<string | null>(() => {
-    if (initialNotice === undefined) return null;
-    // Reddedilen oturumun cümlesi bu ekranın sözlüğünde; auth retleri ortak auth sözlüğünde.
-    return initialNotice === SESSION_ENDED_NOTICE ? t.sessionEnded : authErrorText(locale, initialNotice);
-  });
+  /** Seçim adımının bilgi ya da hata satırı; `undefined` açılış sebebinin hâlâ gösterildiği demek. */
+  const [notice, setNotice] = useState<string | null | undefined>(undefined);
+  /* Açılış sebebi metin olarak saklanmaz, her çizimde güncel dilden kurulur: reddedilen oturum kapanırken hesabın dili düşer ve
+     saklanan metin ekranın geri kalanından farklı dilde kalırdı. Oturumun cümlesi bu ekranın sözlüğünde, auth retleri ortak sözlükte. */
+  const shownNotice =
+    notice !== undefined
+      ? notice
+      : initialNotice === undefined
+        ? null
+        : initialNotice === SESSION_ENDED_NOTICE
+          ? t.sessionEnded
+          : authErrorText(locale, initialNotice);
   /** İstek uçuştayken düğme kilidi — çift dokunuş iki kod isteği atmasın. */
   const [sending, setSending] = useState(false);
   /** 429'un bekleme süresi (sn) — sayaç sıfıra inene dek yeniden gönderme kilitli. */
@@ -195,7 +201,7 @@ export function useLoginFlow({ initialNotice, googleReturn, onVerified, onClose 
     emailError,
     code,
     codeError,
-    notice,
+    notice: shownNotice,
     sending,
     cooldownSec,
     stepBack,

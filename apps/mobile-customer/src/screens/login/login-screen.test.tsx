@@ -3,6 +3,9 @@ import { BackHandler } from 'react-native';
 
 import type { Me } from '@lezzet/mobile-kit/src/lib/api/me';
 import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
+import { applyProfileLocale, forgetAccountLocale, initAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { SESSION_ENDED_NOTICE } from '@lezzet/mobile-kit/src/screens/login/login-notice';
+import loginMessages from '@lezzet/i18n/customer/login';
 import { LoginScreen } from './login-screen';
 
 /* Akış telden koşar (fetch sahtesi): kod isteği ve doğrulama istemci yolunu katederek, başarıda oturum cihaza yazılır.
@@ -320,5 +323,20 @@ describe('geri oku', () => {
 
     await fireEvent.press(screen.getByTestId('login-back'));
     expect(mockNavigation.setOptions).toHaveBeenLastCalledWith({ gestureEnabled: true });
+  });
+});
+
+describe('açılış uyarısı', () => {
+  it('oturum kapanırken hesabın dili düşse de uyarı ekranın geri kalanıyla aynı dilde kalır', async () => {
+    await initAppLocale();
+    applyProfileLocale('fr');
+    await render(<LoginScreen initialNotice={SESSION_ENDED_NOTICE} />);
+    expect(screen.getByTestId('login-notice')).toHaveTextContent(loginMessages.fr.sessionEnded);
+
+    await act(async () => {
+      await forgetAccountLocale();
+    });
+
+    expect(screen.getByTestId('login-notice')).toHaveTextContent(loginMessages.tr.sessionEnded);
   });
 });
