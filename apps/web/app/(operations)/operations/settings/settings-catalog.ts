@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { SettingScopeEnum } from '@lezzet/types';
+import { BUSINESS_LABELS, BusinessEnum, SettingScopeEnum } from '@lezzet/types';
 
 /**
  * İstisna açılabilen eksenler; `global` istisna değil, değerin kendisidir. Tip burada durur, çünkü `settings-types` sözlükten tip
@@ -13,8 +13,7 @@ import {
   CONVERSATION_DEFAULT_HANDLER_FALLBACK,
   CONVERSATION_DEFAULT_HANDLER_HELP,
   CONVERSATION_DEFAULT_HANDLER_KEY,
-  PENNYLANE_CATEGORY_DEFAULT,
-  PENNYLANE_CATEGORY_KEY,
+  PENNYLANE_CATEGORY_KEYS,
   TICKET_DEFAULT_HANDLER_FALLBACK,
   TICKET_DEFAULT_HANDLER_HELP,
   TICKET_DEFAULT_HANDLER_KEY,
@@ -353,15 +352,15 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     exceptionScopes: NONE,
     fallback: BANK_FEED_QUIET_DAYS_DEFAULT,
   },
-  {
-    key: PENNYLANE_CATEGORY_KEY,
-    label: 'Pennylane kategorisi',
-    help: "Lezzet'in Pennylane'e yüklenen her faturasına konan analitik kategori; şirket toptan operasyonuyla ortak olduğu için iki işin gideri bununla ayrılır. Pennylane'de yoksa \"Activité\" grubunda açılır. Boşsa kategori konmaz.",
-    section: 'bankFeed',
-    kind: 'text',
+  ...BusinessEnum.options.map((business) => ({
+    key: PENNYLANE_CATEGORY_KEYS[business],
+    label: `Pennylane kategorisi — ${BUSINESS_LABELS[business]}`,
+    help: `${BUSINESS_LABELS[business]} belgelerinin Pennylane'de taşıdığı analitik kategori; iki işin gideri bununla ayrılır. Pennylane'de yoksa "Activité" grubunda açılır. Boşsa kategori konmaz.`,
+    section: 'bankFeed' as const,
+    kind: 'text' as const,
     exceptionScopes: NONE,
-    fallback: PENNYLANE_CATEGORY_DEFAULT,
-  },
+    fallback: BUSINESS_LABELS[business],
+  })),
 
   // ── Stok & tazelik ────────────────────────────────────────────────────────
   {

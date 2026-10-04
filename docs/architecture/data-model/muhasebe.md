@@ -151,8 +151,9 @@ Pennylane'deki fatura ve ona en son yazılan taslak.
 - **`pennylane_open`** — faturanın Pennylane'deki açık kalanı; yüklemeden, güncellemeden, eşleşmeden sonra ve fatura değişiklik akışından
   okunur, okunamazsa `null`.
   Pennylane kısmi ödemeyi faturaların açılma sırasıyla dağıttığı için bizimkinden ayrılabilir; ayrılan belge "Pennylane'de farklı"dır.
-- **`category_id`** — faturaya en son yazılan analitik kategori (`pennylane_category` ayarı, varsayılan "Lezzet"); ayardaki kategori
-  değişince belge bir sonraki yazımında yeni kategoriyi alır. Aynada aynı kategori duruyorsa Pennylane'e gidilmez, orada elle yapılan
+- **`category_id`** — faturaya en son yazılan analitik kategori; belgenin işinin ayarından gelir (`pennylane_category_lezzet` ·
+  `pennylane_category_qualite`, varsayılanı işin adı). Belgenin işi değişince belge kuyruğa düşer; ayar değişince belge bir sonraki
+  yazımında yeni kategoriyi alır. Aynada aynı kategori duruyorsa Pennylane'e gidilmez, orada elle yapılan
   değişiklik ezilmez; faturanın öteki eksenlerdeki kategorisi korunur.
 - **Silme** — yüklenmiş belge silinemez (`restrict`), çünkü Pennylane'deki faturası bağını kaybederdi.
 

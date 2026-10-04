@@ -11,7 +11,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { mustDelete, purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
-import { PENNYLANE_CATEGORY_KEY } from '@lezzet/domain-core';
+import { PENNYLANE_CATEGORY_KEYS } from '@lezzet/domain-core';
 import type { MoneyDocumentInsert } from '@lezzet/types';
 import { processPennylaneQueueRow } from './queue';
 import { PennylaneError } from './errors';
@@ -336,11 +336,11 @@ describe('ödeme durumu', () => {
   });
 });
 
-describe("Lezzet'in Pennylane kategorisi", () => {
+describe('işin Pennylane kategorisi', () => {
   const invoiceIdOf = async (documentId: string) => (await mirrors.findByDocument(documentId))!.pennylaneInvoiceId;
 
   it("yüklenen faturaya Lezzet kategorisi yazılır; Pennylane'de yoksa Activité grubunda açılır, varsa o kullanılır", async () => {
-    await settings.override(PENNYLANE_CATEGORY_KEY, 'Lezzet');
+    await settings.override(PENNYLANE_CATEGORY_KEYS.lezzet, 'Lezzet');
     const first = await invoice();
     expect(await run(first.id)).toBe('uploaded');
     const [group] = twin.categoryGroups();
@@ -355,8 +355,23 @@ describe("Lezzet'in Pennylane kategorisi", () => {
     expect(twin.categoriesOf(await invoiceIdOf(second.id))).toEqual([{ id: lezzet!.id, groupId: group!.id, weight: 1 }]);
   });
 
+  it('QUALITE belgesi QUALITE kategorisini alır; belgenin işi değişince fatura kuyruğa düşer ve kategorisi yeniden yazılır', async () => {
+    await settings.override(PENNYLANE_CATEGORY_KEYS.lezzet, 'Lezzet');
+    await settings.override(PENNYLANE_CATEGORY_KEYS.qualite, 'QUALITE');
+    const doc = await invoice({ business: 'qualite' });
+    expect(await run(doc.id)).toBe('uploaded');
+    const invoiceId = await invoiceIdOf(doc.id);
+    const qualite = twin.categories().find((row) => row.label === 'QUALITE')!;
+    expect(twin.categoriesOf(invoiceId)).toEqual([{ id: qualite.id, groupId: qualite.groupId, weight: 1 }]);
+
+    await documents.update({ id: doc.id, business: 'lezzet' });
+    expect(await run(doc.id)).toBe('updated');
+    const lezzet = twin.categories().find((row) => row.label === 'Lezzet')!;
+    expect(twin.categoriesOf(invoiceId)).toEqual([{ id: lezzet.id, groupId: lezzet.groupId, weight: 1 }]);
+  });
+
   it("Pennylane'de elle değiştirilen kategori sonraki yazımda ezilmez", async () => {
-    await settings.override(PENNYLANE_CATEGORY_KEY, 'Lezzet');
+    await settings.override(PENNYLANE_CATEGORY_KEYS.lezzet, 'Lezzet');
     const doc = await invoice();
     await run(doc.id);
     const invoiceId = await invoiceIdOf(doc.id);
@@ -369,7 +384,7 @@ describe("Lezzet'in Pennylane kategorisi", () => {
   });
 
   it('kategori değişince faturanın başka eksendeki kategorisi korunur; ayar boşsa kategori yazılmaz', async () => {
-    await settings.override(PENNYLANE_CATEGORY_KEY, 'Lezzet');
+    await settings.override(PENNYLANE_CATEGORY_KEYS.lezzet, 'Lezzet');
     const doc = await invoice();
     await run(doc.id);
     const invoiceId = await invoiceIdOf(doc.id);
@@ -378,7 +393,7 @@ describe("Lezzet'in Pennylane kategorisi", () => {
     await twin.port.setInvoiceCategories(invoiceId, [...twin.categoriesOf(invoiceId), { id: project.id, weight: 1 }]);
 
     // Ayar belgeyi kuyruğa düşürmez; belge bir sonraki yazımında yeni kategoriyi alır.
-    await settings.override(PENNYLANE_CATEGORY_KEY, 'Lezzet Anatolie');
+    await settings.override(PENNYLANE_CATEGORY_KEYS.lezzet, 'Lezzet Anatolie');
     await documents.update({ id: doc.id, dueOn: '2026-11-01' });
     expect(await run(doc.id)).toBe('updated');
     const anatolie = twin.categories().find((row) => row.label === 'Lezzet Anatolie')!;
@@ -387,7 +402,7 @@ describe("Lezzet'in Pennylane kategorisi", () => {
       { id: anatolie.id, groupId: anatolie.groupId, weight: 1 },
     ]);
 
-    await settings.override(PENNYLANE_CATEGORY_KEY, '');
+    await settings.override(PENNYLANE_CATEGORY_KEYS.lezzet, '');
     const plain = await invoice({}, { content: 'kategorisiz' });
     expect(await run(plain.id)).toBe('uploaded');
     expect(twin.categoriesOf(await invoiceIdOf(plain.id))).toEqual([]);

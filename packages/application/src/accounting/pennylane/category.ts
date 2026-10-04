@@ -1,23 +1,17 @@
 import { PennylaneDocumentService, SettingsService, type Db } from '@lezzet/database';
-import {
-  PENNYLANE_CATEGORY_DEFAULT,
-  PENNYLANE_CATEGORY_GROUP,
-  PENNYLANE_CATEGORY_KEY,
-  pennylaneByLabel,
-  pennylaneInvoiceCategories,
-} from '@lezzet/domain-core';
+import { PENNYLANE_CATEGORY_GROUP, PENNYLANE_CATEGORY_KEYS, pennylaneByLabel, pennylaneInvoiceCategories } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
-import type { PennylaneCategory } from '@lezzet/types';
+import { BUSINESS_LABELS, type Business, type PennylaneCategory } from '@lezzet/types';
 import type { PennylanePort } from './port';
 
 /**
- * Lezzet'in faturasının Pennylane'deki analitik kategorisi (docs/feature/kasa-muhasebe.md §2, karar 16). Pennylane şirketi toptan
- * operasyonuyla ortak olduğu için iki işin gideri bu kategoriyle ayrılır.
+ * Faturanın Pennylane'deki analitik kategorisi belgenin işinden gelir (docs/feature/iki-is.md §2): Pennylane iki işin buluştuğu iç
+ * defterdir ve iki işin gideri bu kategoriyle ayrılır.
  */
 
-/** Ayardaki kategori; Pennylane'de yoksa grubuyla açılır. Ayar boşsa `null`, faturaya kategori yazılmaz. */
-export async function resolvePennylaneCategory(db: Db, pennylane: PennylanePort): Promise<PennylaneCategory | null> {
-  const label = await categoryLabel(db);
+/** İşin ayardaki kategorisi; Pennylane'de yoksa grubuyla açılır. Ayar boşsa `null`, faturaya kategori yazılmaz. */
+export async function resolvePennylaneCategory(db: Db, pennylane: PennylanePort, business: Business): Promise<PennylaneCategory | null> {
+  const label = await categoryLabel(db, business);
   if (!label) return null;
   const existing = pennylaneByLabel(await pennylane.listCategories(), label);
   if (existing) return existing;
@@ -28,12 +22,13 @@ export async function resolvePennylaneCategory(db: Db, pennylane: PennylanePort)
   return pennylane.createCategory({ label, groupId: group.id });
 }
 
-/** Okunamayan ayar varsayılana düşer ve bunu söyler, faturalar sessizce kategorisiz kalmasın. */
-async function categoryLabel(db: Db): Promise<string | null> {
-  const value = await new SettingsService(db).get<unknown>(PENNYLANE_CATEGORY_KEY, PENNYLANE_CATEGORY_DEFAULT);
+/** Okunamayan ayar işin adına düşer ve bunu söyler, faturalar sessizce kategorisiz kalmasın. */
+async function categoryLabel(db: Db, business: Business): Promise<string | null> {
+  const key = PENNYLANE_CATEGORY_KEYS[business];
+  const value = await new SettingsService(db).get<unknown>(key, BUSINESS_LABELS[business]);
   if (typeof value === 'string') return value.trim() || null;
-  logger.warn({ setting: PENNYLANE_CATEGORY_KEY }, 'pennylane: kategori ayarı okunamadı, varsayılan kullanılıyor');
-  return PENNYLANE_CATEGORY_DEFAULT;
+  logger.warn({ setting: key }, 'pennylane: kategori ayarı okunamadı, varsayılan kullanılıyor');
+  return BUSINESS_LABELS[business];
 }
 
 /**

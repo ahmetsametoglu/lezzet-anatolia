@@ -1,5 +1,6 @@
 import { parisDateOf } from '@lezzet/helper';
 import type {
+  Business,
   DocumentVatRate,
   DocumentVatRegime,
   MoneyDocument,
@@ -219,9 +220,11 @@ export function pennylaneSupplierCandidates<T extends { name: string; vatNumber:
   return suppliers.filter((supplier) => normalizedName(supplier.name) === name && (!vat || !normalizedVat(supplier.vatNumber)));
 }
 
-/** Lezzet'in faturasına yazılan analitik kategorinin adı ayardır; boşsa kategori yazılmaz. */
-export const PENNYLANE_CATEGORY_KEY = 'pennylane_category';
-export const PENNYLANE_CATEGORY_DEFAULT = 'Lezzet';
+/** İşin faturasına yazılan analitik kategorinin adı ayardır, varsayılanı işin adıdır; ayar boşsa o işin faturasına kategori yazılmaz. */
+export const PENNYLANE_CATEGORY_KEYS: Record<Business, string> = {
+  qualite: 'pennylane_category_qualite',
+  lezzet: 'pennylane_category_lezzet',
+};
 /** Kategori Pennylane'de yoksa bu adlı grupta açılır. */
 export const PENNYLANE_CATEGORY_GROUP = 'Activité';
 

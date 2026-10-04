@@ -85,4 +85,5 @@ insert into public.settings (key, value, description) values
   -- Banka hareketi Pennylane'e gecikmeli gelir; hafta sonuyla birlikte dört günlük sessizlik bağlantının düştüğünü gösterir.
   ('pennylane_quiet_days',         '4',      'Eşlenen banka hesabına Pennylane''den bu kadar gün hareket gelmezse muhasebe ve yönetim uyarılır.'),
   -- Pennylane şirketi toptan operasyonuyla ortak; Lezzet'in gideri Pennylane'de bu kategoriyle ayrılır.
-  ('pennylane_category',           '"Lezzet"', 'Lezzet''in Pennylane''e yüklenen her faturasına konan analitik kategori; boşsa kategori konmaz.');
+  ('pennylane_category_lezzet',    '"Lezzet"', 'Lezzet''in Pennylane''e yüklenen her faturasına konan analitik kategori; boşsa kategori konmaz.'),
+  ('pennylane_category_qualite',   '"QUALITE"', 'QUALITE''nin Pennylane''e yüklenen her faturasına konan analitik kategori; boşsa kategori konmaz.');

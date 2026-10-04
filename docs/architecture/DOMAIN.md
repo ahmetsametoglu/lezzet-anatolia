@@ -415,7 +415,7 @@ Sipariş kalem-kalem karşılanabilir (all-or-nothing değil). Eksik iki noktada
 - Yaptığı: Pennylane'e alış belgesini ve eşleşmeyi temiz yazmak ve iş rakamları çıkarmak. Pennylane QUALITE ile Lezzet'in buluştuğu iç defterdir; muhasebeciye giden dosya oradan üretilir. Raporlar ekranındaki satış dosyası ve dönemin **hareket dökümü** (her hareket hesabı, türü ve hesap kodu, belgeleri, karşı tarafı ve etiketleriyle) genel amaçlı dışa aktarımdır.
 - Resmî fatura numarası dış yazılımda üretilir; sistem bir **referans numarası** verir, sonradan gerçek fatura numarasıyla eşleştirilir.
 - Banka hareketleri Pennylane'den okunur (eşlenmemiş hesapta Excel ile alınır), sipariş/alımlarla eşleştirilir (öneri + elle onay; tam otomatik değil). Eşlenen hesaba canlıya geçiş gününden sonrası için Excel yüklenmez, çünkü iki kaynak aynı satırı iki kez yazardı; aynı sebeple Excel satırı o güne ya da sonrasına düşen hesap eşlenmez.
-- Alış belgesi (ödeyeceğimiz fatura ve fiş) bizde girilir ve Pennylane'e bizden yüklenir; belge değişince Pennylane güncellenir. Belge dosyası PDF, JPEG ya da PNG'dir, çünkü Pennylane başka türü almıyor. Belge Pennylane'de "Lezzet" analitik kategorisini taşır, çünkü Pennylane şirketi toptan operasyonuyla ortaktır.
+- Alış belgesi (ödeyeceğimiz fatura ve fiş) bizde girilir ve Pennylane'e bizden yüklenir; belge değişince Pennylane güncellenir. Belge dosyası PDF, JPEG ya da PNG'dir, çünkü Pennylane başka türü almıyor. Belge Pennylane'de işinin analitik kategorisini taşır ("Lezzet" ya da "QUALITE"), çünkü Pennylane iki işin ortak defteridir.
 
 ### Para hareketleri, hesaplar ve satın almalar
 

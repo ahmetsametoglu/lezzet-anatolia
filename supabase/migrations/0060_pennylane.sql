@@ -141,7 +141,8 @@ end;
 $$;
 
 create trigger money_document_pennylane_queue
-  after insert or update of kind, direction, number, issued_on, due_on, counterparty_id, supplier_id, amount, vat_lines, vat_regime, file_key
+  after insert or update of kind, direction, number, issued_on, due_on, counterparty_id, supplier_id, amount, vat_lines, vat_regime, file_key,
+    business
   on public.money_document
   for each row execute function public.pennylane_queue_mark();
 

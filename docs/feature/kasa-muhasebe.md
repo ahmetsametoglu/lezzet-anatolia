@@ -60,7 +60,7 @@
 | 13 | **Faz 1 bitince iki ajanla inceleme** (01.10) | İki ajan birebir aynı istemle, birbirinden bağımsız çalışır: ikisi de Hiboutik entegrasyonunu ve projenin muhasebe sistemini (para hareketleri, ödeme durumu, muhasebe aktarımı, kâr, KDV, B2B ve hediye kuralları) tasarım (§7), ölçülen davranış (§6) ve yasal zemin (§1) karşısında inceler, uyumsuzlukları raporlar. Bulgular doğrulanıp kullanıcıya özetlenir. `CLAUDE.md`'deki alt ajan yasağının bu inceleme için istisnasıdır. |
 | 14 | **Kapıda kart parası nakit kasadan ayrı hesaba yazılır** (02.10) | Kurye, gel-al tezgâhı ve kapı önü satış kartla alınan parayı kapıda kart hesabına (`door_card_account_id`, kart cihazının hesabı), nakdi kapı çekmecesine (`door_cash_account_id`) yazar; hesabı istemci değil sunucu yöntemden seçer. Çekmece sayımı yalnız nakdi sayar. Yöntemin hesabı ayarlı değilse o yöntemle tahsilat kapalıdır ve teslim yazılmaz. |
 | 15 | **Banka hesapları işe göre ayrı** (03.10) | Revolut Lezzet'in, Crédit Mutuel toptan operasyonunun; ikisi de Pennylane'e bağlı, kurulum kartında yalnız Revolut eşlenir. Lezzet'in nakdi Crédit Mutuel'e yatırılır ve oradan Revolut'a gönderilir: bizde eşlenmemiş bir Crédit Mutuel hesabına "Kasa → Crédit Mutuel" transferi yazılır, Revolut'taki satır "Başka hesaba transfer → Crédit Mutuel" ile eşleşir. Bizdeki Crédit Mutuel bakiyesi gönderilmeyi bekleyen Lezzet nakdidir, gönderimden sonra sıfırdır. İki iş tek sistem kararıyla Crédit Mutuel de eşlenecek ([`iki-is.md`](iki-is.md), A fazı). |
-| 16 | **Lezzet'in faturası Pennylane'de "Lezzet" analitik kategorisini taşır** (03.10) | Pennylane şirketi toptan operasyonuyla ortak; iki işin gideri ve kârı Pennylane'de kategoriyle ayrı raporlanır. Kategorinin adı ayardır (`pennylane_category`, varsayılan "Lezzet", boşsa kategori yazılmaz); Pennylane'de adla bulunur, yoksa "Activité" grubunda açılır. Faturanın öteki eksenlerdeki kategorisi korunur, Pennylane'de elle değiştirilen kategori ezilmez. |
+| 16 | **Lezzet'in faturası Pennylane'de "Lezzet" analitik kategorisini taşır** (03.10) | Pennylane şirketi toptan operasyonuyla ortak; iki işin gideri ve kârı Pennylane'de kategoriyle ayrı raporlanır. Kategorinin adı ayardır (iş başına: `pennylane_category_lezzet` · `pennylane_category_qualite`, varsayılanı işin adı, boşsa kategori yazılmaz; QUALITE'nin belgesi `iki-is.md` ile eklendi); Pennylane'de adla bulunur, yoksa "Activité" grubunda açılır. Faturanın öteki eksenlerdeki kategorisi korunur, Pennylane'de elle değiştirilen kategori ezilmez. |
 
 ## 3. Veri akışı
 
@@ -515,7 +515,7 @@ Log'a kimlik yazılır, tutar ve açıklama yazılmaz.
 - `money_movement.matched_elsewhere`: hareket Pennylane'de aynı şirketin başka işinin faturasına eşli; izahlı sayılır.
 
   Pennylane kimlikleri `bigint`tir (ölçüldü: 14 hane).
-- Ayarlar: `pennylane_live_from`, `pennylane_quiet_days`, `pennylane_category` (16. karar).
+- Ayarlar: `pennylane_live_from`, `pennylane_quiet_days`, `pennylane_category_lezzet` · `pennylane_category_qualite` (16. karar).
 - Personel bildirimleri: e-fatura geldi, belge ya da eşleşme Pennylane'e yazılamıyor, eşleşme Pennylane'de çözüldü,
   izahlı hareket Pennylane'de değişti, hareket gelmiyor, Pennylane'de farklı.
 
@@ -568,7 +568,7 @@ ile; istemci sahte `fetch` ile. Pennylane'e karşı ölçüm test şirketinde, b
 fatura girer, tedarikçi açar, banka hareketini kendi faturasına eşler. Lezzet'in alış belgesi yalnız bizden gider. Bunun için:
 tedarikçi açılmadan önce aynı firmanın kaydı aranır (akış 2), elle girilmiş fatura sahiplenilmez (akış 3), eşleşme yazımı
 yalnız bizim yüklediğimiz faturalara dokunur ve Pennylane'de bizde olmayan faturaya eşlenmiş hareket bizde başka işe ait
-sayılır (akış 5). Banka hesapları ayrıdır (15. karar), Lezzet'in faturası "Lezzet" kategorisini taşır (16. karar).
+sayılır (akış 5). Banka hesapları ayrıdır (15. karar), her belge işinin kategorisini taşır (16. karar, `iki-is.md`).
 E-fatura alımı muhasebecinin platformundadır (2. karar); akış 4 e-fatura Pennylane'e gelince devreye girer.
 
 **Muhasebeciye sorulacak:** ters yüklemenin KDV kodu; hesap kodlarını Pennylane'in tedarikçiden atamasının yeterli

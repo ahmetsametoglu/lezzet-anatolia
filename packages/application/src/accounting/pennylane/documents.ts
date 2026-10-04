@@ -19,7 +19,7 @@ import {
   type PennylaneDocumentBlock,
 } from '@lezzet/domain-core';
 import { privateReadUrl } from '@lezzet/storage';
-import type { MoneyDocument, PennylaneCategory, PennylaneInvoiceDraft, PennylanePaymentStatus } from '@lezzet/types';
+import type { Business, MoneyDocument, PennylaneCategory, PennylaneInvoiceDraft, PennylanePaymentStatus } from '@lezzet/types';
 import { resolvePennylaneCategory, writeInvoiceCategory } from './category';
 import { refreshPennylaneOpen } from './matches';
 import type { PennylanePort } from './port';
@@ -46,7 +46,7 @@ export async function writeDocument(
   db: Db,
   pennylane: PennylanePort,
   documentId: string,
-  ctx: { liveFrom: string; files: DocumentFileReader; category?: () => Promise<PennylaneCategory | null> },
+  ctx: { liveFrom: string; files: DocumentFileReader; category?: (business: Business) => Promise<PennylaneCategory | null> },
 ): Promise<DocumentWriteResult> {
   const document = await new MoneyDocumentService(db).getById(documentId);
   if (!document) return { status: 'skipped' };
@@ -93,7 +93,7 @@ export async function writeDocument(
     documentId,
     invoiceId,
     written: mirror?.categoryId ?? null,
-    category: await (ctx.category ?? (() => resolvePennylaneCategory(db, pennylane)))(),
+    category: await (ctx.category ?? ((business: Business) => resolvePennylaneCategory(db, pennylane, business)))(document.business),
   });
   const paid = await writePaymentStatus(db, pennylane, document, invoiceId, mirror?.paymentStatus ?? null);
   if (outcome !== 'unchanged') return { status: outcome };
