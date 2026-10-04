@@ -22,6 +22,7 @@ import {
   whatsAppLink,
   type MessageLocale,
 } from '@lezzet/domain-core';
+import { parisDateOf } from '@lezzet/helper';
 import { amountDueCents } from './door-payment';
 import { vehicleLabelOf } from './vehicle-label';
 import { customerCardsOf } from './names';
@@ -129,7 +130,7 @@ export async function listCourierDay(
     locale?: MessageLocale;
   },
 ): Promise<CourierStop[]> {
-  const date = input.date ?? new Date().toISOString().slice(0, 10);
+  const date = input.date ?? parisDateOf(new Date());
   const orders = await new OrderService(db).listByCourier(
     input.courierId,
     input.runIds
@@ -374,7 +375,7 @@ export async function startCourierDay(
     effects?: OrderEffects;
   },
 ): Promise<CourierDayStart> {
-  const date = input.date ?? new Date().toISOString().slice(0, 10);
+  const date = input.date ?? parisDateOf(new Date());
   /*
     Kurma ile başlatma aynı rota çözümünü, claim'i ve kapsam kararını paylaştığı için tek kapıdadır; `depart` bayrağı ikisini ayırır.
   */
@@ -580,7 +581,7 @@ export async function readCourierRun(
   db: SupabaseClient,
   input: { courierId: string; date?: string },
 ): Promise<CourierDayRunView | null> {
-  const date = input.date ?? new Date().toISOString().slice(0, 10);
+  const date = input.date ?? parisDateOf(new Date());
   const runs = await new DeliveryRunService(db).listByCourier(input.courierId, { date });
   if (runs.length === 0) return null;
 

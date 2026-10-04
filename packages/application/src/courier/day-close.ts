@@ -1,4 +1,5 @@
 import { DeliveryRunCloseService, DeliveryRunCollectionService, DeliveryRunService, DeliveryZoneService } from '@lezzet/database';
+import { parisDateOf } from '@lezzet/helper';
 import { notifyRunCloseMismatch, notifyRunClosePending } from '../notification/staff-events';
 import type { CloseDeliveryRunResult, DeliveryRunClose } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -34,7 +35,7 @@ export async function openDayClose(
   db: SupabaseClient,
   input: { courierId: string; runId?: string; date?: string },
 ): Promise<DayCloseDraft> {
-  const date = input.date ?? new Date().toISOString().slice(0, 10);
+  const date = input.date ?? parisDateOf(new Date());
 
   const run = input.runId
     ? await briefOf(db, input.runId, input.courierId)

@@ -12,6 +12,7 @@ import {
   type Db,
 } from '@lezzet/database';
 import { resolveUserText } from '@lezzet/domain-core';
+import { parisDateOf } from '@lezzet/helper';
 import type {
   ManagementHub,
   ManagementQueue,
@@ -25,25 +26,11 @@ import { readB2bQueue } from '../b2b/queue';
 import { countOrderExceptions } from './exceptions';
 
 /*
-  YÖNETİM HUB'I — karar kutusu + gün özeti TEK okumada (21.12 · doc 04 "Y5 birleştirme ucu:
-  parçalar hazır, birleştiren kapı yok" — bu o kapı).
-
-  ── HİÇBİR KURAL BURADA HESAPLANMAZ ─────────────────────────────────────────
-  Eksik toplama önerisi hazırlık motorundan (`listPreparationQueue`), teklif adayı raf ömrü
-  motorundan (`offerDecisionOf`), tedarik önerisi eşik servisinden (`ReorderService`) gelir; bu
-  dosya yalnız SAYAR ve BİRLEŞTİRİR. Karar kutusundaki sayı ile hedef ekranın listesi aynı motoru
-  okuduğu için ayrışamaz — iki ayrı hesap olsaydı "kutu 3 diyor, ekran 2 gösteriyor" kaçınılmazdı.
-
-  ── DEPO-ÜSTÜ OKUMA BURADA MEŞRU ────────────────────────────────────────────
-  Yönetim işletmenin TAMAMINA bakar (OrderListFilters künyesi: depo-üstü yalnız admin/muhasebe
-  için meşru). Depo bazlı motorlar (hazırlık, tedarik, stok) tesis tesis sorulup toplanır — süzgeç
-  atlanmaz, kapsamı "bütün tesisler" olarak açıkça kurulur.
-
-  ── "GÜN" TESLİM GÜNÜDÜR ────────────────────────────────────────────────────
-  Sipariş sayacı ve listelerle aynı eksen (`order_counts` `deliveryFrom/To`): operasyonun günü
-  teslim edilecek işle tanımlanır. Sipariş anına göre saymak, dünkü verilmiş yarın teslim edilecek
-  siparişi iki güne birden yazardı.
+  Yönetim hub'ı karar kutusunu ve gün özetini tek okumada verir; burada kural hesaplanmaz, her sayı hedef ekranın okuduğu motordan
+  gelir ki kutu ile ekran ayrışmasın. Depo-üstü okuma burada meşrudur ve depo bazlı motorlar tesis tesis sorulup toplanır.
 */
+
+/* Gün teslim günüdür, sipariş anı değil: sipariş anına göre saymak dün verilip yarın teslim edilecek siparişi iki güne yazardı. */
 
 /** Gün özetinde kırılımı verilen kanallar — v2:673'ün üç satırı. `manual` bilerek dışarıda:
  *  elle girilen sipariş bir kanal değil bir giriş yoludur, tasarım da onu çizmiyor. */
@@ -70,44 +57,25 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
     b2bQueue,
   ] = await Promise.all([
       tickets.countAwaiting(),
-      /* Karar kutusunun TALEP kartı için (v3:28) — açık kuyruğun tamamı ve tür kırılımı.
-         Talep LİSTESİNİN şeridiyle aynı sayım (`countForFilters`), yani kart "6 açık" derken
-         listenin "tümü · 6" demesi garanti; iki ekran ayrışamaz. */
+      // Talep listesiyle aynı sayım (`countForFilters`): kart "6 açık" derken liste de "tümü · 6" der.
       tickets.countForFilters(),
       tickets.list({ openOnly: true, awaitingReply: true }, undefined, 1),
-      // İstisna sayısı Y2 ekranının OKUDUĞU motordan (`listOrderExceptions`) — kutu ile ekran
-      // aynı kümeyi sayar, ayrışamaz ("kutu 3 diyor, ekran 2" çelişkisi motor düzeyinde imkânsız).
+      // İstisna sayısı istisna ekranının okuduğu motordan, ki kutu ile ekran aynı kümeyi saysın.
       countOrderExceptions(db, { warehouseIds: facilityIds }),
       stocks.listInStockDetailed(undefined, facilityIds),
       readExpiryThresholds(new SettingsService(db)),
       Promise.all(facilityIds.map((warehouseId) => new ReorderService(db).suggestions(warehouseId))),
-      /* Kanal SÜZGECİ YOK ve bu bir düzeltme (06.09): sayaç `'whatsapp'` ile daraltılmıştı, oysa
-         açtığı ekran ÜÇ kanalı birden listeliyor (`/social`, 15.15). Kutucuk "1 bekliyor" derken
-         gelen kutusunda iki sohbetin beklemesi mümkündü — hemen üstteki iki yorumun ("kutu ile
-         ekran aynı kümeyi sayar, ayrışamaz") çiğnendiği tek yer burasıydı. Ayrışma bugüne kadar
-         GİZLİYDİ çünkü defterde yalnız WhatsApp sohbeti var; ilk Messenger/IG sohbetinde
-         görünür olurdu — yani sessizce yanlış sayı gösteren bir kapı. */
+      // Kanal süzgeci yok, çünkü açtığı gelen kutusu (`/social`) üç kanalı birden listeliyor.
       new ConversationInboxService(db).countAwaitingReply(),
-      /* Kutucuğun ikinci olgusu (21.301): cevabı yazılmış ama gönderilmemiş sohbet sayısı. */
+      // Kutucuğun ikinci olgusu: cevabı yazılmış ama gönderilmemiş sohbet sayısı.
       new ConversationService(db).countPendingDrafts(),
-      /* Kurumsal başvuru kartı (v3:2625) — LİSTENİN okuyucusundan, ayrı bir sayaçtan değil. Kutu
-         ile listenin sekmesi böylece ayrışamaz ve "tek başvuruda listeyi atla" kestirmesi tek
-         yerde kalır (`B2bQueueView.single`); burada yeniden yazılsaydı iki kural bir gün ayrılırdı.
-
-         `limit: 1` yeter: kart en çok BİR künye yazıyor. Çoklu bekleyende o tek satırın montajı
-         (satır başına dört yerel okuma, `queue.ts` künyesi) boşa gider — ölçülmüş bir yavaşlık
-         yok, o yüzden ikinci bir ucuz yol AÇILMADI (CLAUDE §0: sebebi kanıtlanmadan müdahale yok). */
+      /* Kurumsal başvuru kartı listenin okuyucusundan gelir, ki "tek başvuruda listeyi atla" kestirmesi tek yerde kalsın
+         (`B2bQueueView.single`). `limit: 1` yeter, çünkü kart en çok bir künye yazıyor. */
       readB2bQueue(db, { limit: 1 }),
     ]);
 
-  /*
-    Teklif adayı: raf ömrü motoru "teklife açılabilir" diyor ve parti HENÜZ teklifte değil.
-
-    Karar `toBatchViews`ten okunuyor — teklif EKRANININ da (`listOfferCandidates`) okuduğu görünüm.
-    Kutu kararı kendi başına hesaplasaydı iki yerde iki kural olurdu ve bir gün ayrışırlardı; kutu
-    "3 aday" derken ekran 2 gösterirdi. Fiyat haritası verilmiyor: kartın künyesi adet ve gün
-    ister, öneri fiyatı değil — o teklif ekranının işi.
-  */
+  /* Teklif adayı kararı teklif ekranının da okuduğu `toBatchViews`ten gelir, ki kutu ile ekran ayrışmasın. Fiyat haritası
+     verilmez, çünkü kartın künyesi adet ve gün ister, öneri fiyatı teklif ekranının işidir. */
   const now = new Date();
   const candidates = toBatchViews(batches, { now, thresholds }).filter((view) => view.decision === 'can_offer');
   /* Künye EN ACİL aday: kalan ömrü en az olan. "İlk satır" demek, sıralaması stok okumasından
@@ -121,13 +89,8 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
   const unmappedVariantCount = groups
     .filter((group) => group.supplierId === null)
     .reduce((sum, group) => sum + group.lines.length, 0);
-  /* Tedarik künyesi EN KALABALIK eşlenmiş grup — kartın vaadi "onay bekliyor"dur ve yalnız
-     eşlenmiş grup onaylanabilir. Adı olmayan grup künye olmaz: kart adsız bir tedarikçiyi
-     gösteremez, gösterirse yönetici hangi siparişten söz edildiğini bilmez.
-
-     Tedarikçi ADI burada okunuyor çünkü öneri servisi yalnız kimlik taşıyor; küme operatör
-     kurulumudur (doğal tavan) ve tek turda çekilir — tedarik EKRANI da aynı yolu izliyor
-     (`listSupplyGroups`). Künye yoksa sorgu da atılmaz. */
+  /* Tedarik künyesi en kalabalık eşlenmiş gruptur, çünkü kartın vaadi "onay bekliyor"dur ve yalnız eşlenmiş grup onaylanabilir.
+     Tedarikçi adı burada okunur, çünkü öneri servisi yalnız kimlik taşır; künye yoksa sorgu atılmaz. */
   const headGroup = groups
     .filter((group) => group.supplierId !== null)
     .reduce<(typeof groups)[number] | null>(
@@ -251,13 +214,10 @@ async function readSummary(db: Db, date: string): Promise<ManagementSummary> {
 }
 
 /**
- * Hub'ın tek zarfı. `date` verilmezse bugün (sunucu saati) — ekran cevaptaki `summary.date`i
- * gösterir, kendi saatinden "bugün" uydurmaz.
+ * Hub'ın tek zarfı; `date` verilmezse Paris takviminde bugün. Ekran cevaptaki `summary.date`i gösterir, kendi saatinden "bugün" uydurmaz.
  */
 export async function readManagementHub(db: Db, input: { date?: string } = {}): Promise<ManagementHub> {
-  const date = input.date ?? isoDate(new Date());
-  // Süzgeç servise geçti (02.09): aynı cümle beş ekranda ayrı ayrı yazılıyordu ve çoğu yerde hiç
-  // yazılmamıştı. `list({ kind })` tek kapı.
+  const date = input.date ?? parisDateOf(new Date());
   const facilities = await new WarehouseService(db).list({ activeOnly: true, kind: 'facility' });
   const [queue, summary] = await Promise.all([
     readQueue(db, facilities.map((warehouse) => warehouse.id)),

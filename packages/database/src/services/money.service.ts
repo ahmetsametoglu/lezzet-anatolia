@@ -58,7 +58,7 @@ import {
   type PaymentMethod,
   type StockIntakeBalance,
 } from '@lezzet/types';
-import { fromCents, toCents } from '@lezzet/helper';
+import { fromCents, parisDateOf, toCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
 import { rpcMoneyToCents } from '../utils/rpc-money';
@@ -295,7 +295,7 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
       // RPC euro konuşuyor (kolonlarla aynı taban); uygulama cent — çevrim bu sınırda.
       p_amount: fromCents(input.amountCents),
       p_type: input.type,
-      p_value_date: input.valueDate ?? new Date().toISOString().slice(0, 10),
+      p_value_date: input.valueDate ?? parisDateOf(new Date()),
       p_description: input.description ?? null,
       p_source: input.source ?? 'manual',
       p_meta: input.meta ?? null,

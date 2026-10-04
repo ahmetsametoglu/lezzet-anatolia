@@ -8,16 +8,13 @@ import {
   UserProfileService,
   type Db,
 } from '@lezzet/database';
+import { parisDateOf } from '@lezzet/helper';
 import type { MethodTotal, MoneyDayEnd, MoneyOverview, PaymentMethod, PendingCollection } from '@lezzet/types';
 
 /*
   Para bölümü okumaları salt okumadır: para hesaplanmaz, defterden toplanır; tahsilat kapıda, mutabakat kapanışta yazılır.
   Kuryenin üstündeki para bir hesap değildir: kapanmamış seferlerin beklenen tahsilatından türer, ayrı bir "kurye kasası" satırı uydurulmaz.
 */
-
-function isoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
 
 /** Yöntem kırılımı — yalnız hareketi olan yöntemler döner; sıra "en çok tutar önce". */
 function totalsByMethod(entries: Array<{ method: PaymentMethod; cents: number }>): MethodTotal[] {
@@ -29,7 +26,7 @@ function totalsByMethod(entries: Array<{ method: PaymentMethod; cents: number }>
 }
 
 export async function readMoneyOverview(db: Db, input: { date?: string } = {}): Promise<MoneyOverview> {
-  const date = input.date ?? isoDate(new Date());
+  const date = input.date ?? parisDateOf(new Date());
   const orders = new OrderService(db);
   const runs = new DeliveryRunService(db);
 
@@ -118,7 +115,7 @@ export async function readMoneyOverview(db: Db, input: { date?: string } = {}): 
 }
 
 export async function readMoneyDayEnd(db: Db, input: { date?: string } = {}): Promise<MoneyDayEnd> {
-  const date = input.date ?? isoDate(new Date());
+  const date = input.date ?? parisDateOf(new Date());
 
   const [movements, todayRuns, unexplainedMovementCount] = await Promise.all([
     new MoneyMovementService(db).listOrderMoneyOfDay(date),

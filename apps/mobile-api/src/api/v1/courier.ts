@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { DeliveryRunService, VariantBarcodeService, serviceDb } from '@lezzet/database';
 import { warehouseScope } from '@lezzet/domain-core';
+import { parisDateOf } from '@lezzet/helper';
 import {
   closeCourierDay,
   confirmDoorDelivery,
@@ -78,7 +79,7 @@ courier.get('/day', async (c) => {
 
   const db = serviceDb();
   const courierId = c.get('staff').id;
-  const date = query.data.date ?? new Date().toISOString().slice(0, 10);
+  const date = query.data.date ?? parisDateOf(new Date());
   // Duraklar araçtaki seferlerden gelir (kurulmuş ve kapanmamış hepsi), çünkü gün süzgeci iki seferin durağını karışık döndürürdü.
   // `run` sürülen seferdir: yola çıkmış ve kapanmamış olan.
   const runs = await readCourierRuns(db, { courierId });
@@ -105,7 +106,7 @@ courier.get('/routes', async (c) => {
   if (!query.success) return fail(c, 'invalid_query', 400);
 
   const staff = c.get('staff');
-  const date = query.data.date ?? new Date().toISOString().slice(0, 10);
+  const date = query.data.date ?? parisDateOf(new Date());
   const routes = await listCourierRoutes(serviceDb(), { date, scope: warehouseScope(staff.roles, staff.warehouseIds) });
 
   const body: z.input<typeof CourierRoutesResponseSchema> = { date, routes };

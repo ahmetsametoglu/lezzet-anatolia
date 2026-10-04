@@ -13,7 +13,7 @@ import {
   type StockIntakeInsert,
   type StockIntakeUpdate,
 } from '@lezzet/types';
-import { fromCents } from '@lezzet/helper';
+import { fromCents, parisDateOf } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 import { appToDb, dbToApp } from '../utils/case-transformers';
 import { rpcMoneyToCents } from '../utils/rpc-money';
@@ -21,9 +21,8 @@ import { rpcMoneyToCents } from '../utils/rpc-money';
 export interface ReceiveIntakeInput {
   supplierId?: string | null;
   /**
-   * **Mal hangi depoya girdi** (K6) — zorunlu. Satın alma siparişi depo-üstüdür ama mal fiziksel
-   * olarak bir kapıdan girer; depo bağı PO'ya değil bu kabule takılır. Aynı PO'nun ikinci kabulü
-   * başka depoda olabilir ve sipariş ancak hepsi geldiğinde kapanır.
+   * Malın girdiği depo; bağ siparişe değil kabule takılır, çünkü satın alma siparişi depo-üstüdür ve mal fiziksel olarak bir
+   * kapıdan girer. Aynı siparişin ikinci kabulü başka depoda olabilir.
    */
   warehouseId: string;
   /** Bağlı tedarik siparişi; PO'suz doğrudan giriş de mümkündür (küçük/plansız alım). */
@@ -32,24 +31,15 @@ export interface ReceiveIntakeInput {
   date?: string;
   note?: string | null;
   /**
-   * **Kabulü yapan personel** (`user_profiles.id`) — belgeye ve doğan her harekete yazılır.
-   *
-   * İSTEĞE BAĞLI, çünkü her çağıranın bir kişisi yok: seed ve bakım yolları aktörsüz yazar ve
-   * defter orada "bilinmiyor" der. Uydurma bir kimlik yazmak, bilinmeyeni biliniyormuş gibi
-   * göstermek olurdu (CLAUDE §1).
+   * Kabulü yapan personel (`user_profiles.id`), belgeye ve doğan her harekete yazılır. İsteğe bağlıdır, çünkü seed ve bakım
+   * yolları aktörsüz yazar ve defter orada "bilinmiyor" der.
    */
   actorId?: string | null;
 }
 
 /**
- * Mal kabul (06.10) — DOMAIN §16. Alımın envanter tarafı: gelen mal partilere dönüşür.
- *
- * Yazım `receive_intake` RPC'sinden geçer: giriş kaydı + partiler + PO kapanışı + son alış fiyatı
- * BÖLÜNEMEZ (STACK §13). Yarısı yazılırsa "partiler girdi ama sipariş açık kaldı" gibi elle
- * düzeltilecek tutarsızlık doğar.
- *
- * MLOR uyarısı burada hesaplanmaz — o motorun işi (`domain-core/stock/shelf-life.meetsMlor`) ve
- * kabulü **engellemez**, uyarır: karar mal kabul edende (DOMAIN §4).
+ * Mal kabul (DOMAIN §16): yazım `receive_intake` RPC'sinden geçer, çünkü giriş kaydı, partiler, sipariş kapanışı ve son alış fiyatı
+ * bölünemez. MLOR uyarısı burada hesaplanmaz ve kabulü engellemez, karar mal kabul edendedir (DOMAIN §4).
  */
 export class StockIntakeService extends BaseDbService<StockIntake, StockIntakeInsert, StockIntakeUpdate> {
   /** Kolon `stock_intake.total_amount` (euro numeric); app tarafı cent (STACK §8). */
@@ -75,7 +65,7 @@ export class StockIntakeService extends BaseDbService<StockIntake, StockIntakeIn
         unit_cost: unitCostCents == null ? null : fromCents(unitCostCents),
       })),
       p_purchase_order_id: input.purchaseOrderId ?? null,
-      p_date: input.date ?? new Date().toISOString().slice(0, 10),
+      p_date: input.date ?? parisDateOf(new Date()),
       p_note: input.note ?? null,
       p_actor_id: input.actorId ?? null,
     });
@@ -89,34 +79,16 @@ export class StockIntakeService extends BaseDbService<StockIntake, StockIntakeIn
   }
 
   /**
-   * Bir siparişin kabulleri (12.26) — belge kapısı "siparişin faturası girilirken kabullerinden birinin
-   * faturası zaten var mı" diye sorar: varsa sipariş faturası borcu İKİ kez yazardı. Sipariş başına
-   * doğal tavanlı (kısmi teslimler), tek turda.
+   * Bir siparişin kabulleri: belge kapısı siparişin faturası girilirken kabullerden birinin faturası var mı diye sorar, varsa borç iki
+   * kez yazılırdı. Sipariş başına doğal tavanlıdır (kısmi teslimler), tek turda okunur.
    */
   listByPurchaseOrder(purchaseOrderId: string): Promise<StockIntake[]> {
     return this.getAll({ purchaseOrderId }, { orderBy: 'date', orderDirection: 'desc' });
   }
 
   /**
-   * **Kabul edilen girişler — "ne geldi" sorusunun cevabı** (22.28).
-   *
-   * ── SAYFALI, ÇÜNKÜ SINIRSIZ BÜYÜR ───────────────────────────────────────────
-   * Giriş kaydı veriyle büyüyen bir kümedir ve hiç erimez (`CLAUDE §1`): açık siparişler kabul
-   * edildikçe kapanır ama bu defter yalnız uzar. Keyset — `offset` iki eşzamanlı kabulde satır
-   * atlatır.
-   *
-   * ── DEPO SÜZGECİ SÖZLEŞMEDE, ÇAĞIRANIN İNSAFINDA DEĞİL ──────────────────────
-   * Depo bir boyut değil DEĞİŞMEZDİR (`CLAUDE §1`): süzgeci unutulan bir okuma tek depolu veride
-   * DOĞRU cevap verir ve çok depoluda sessizce başka şehrin defterini gösterir. `stock_adjustment`
-   * tarafı bunu 08.08'de acı yoldan öğrendi (ekran belleğinde süzüyordu, keyset yüzünden sonraki
-   * sayfalar eksik geliyordu) — aynı hatayı ikinci kez yapmıyoruz.
-   *
-   * **Boş dizi "hepsi" DEĞİL "hiçbiri"** (`stock.service.ts:127` ile aynı kural).
-   *
-   * ── SIRA `created_at`, `date` DEĞİL ─────────────────────────────────────────
-   * `date` operatörün girdiği İRSALİYE günüdür ve geriye dönük yazılabilir (dün gelen mal bugün
-   * kaydedilir). Defterin sırası kaydın kendi anıdır: "az önce ne yazdım" sorusuna cevap veren
-   * tek alan odur, yoksa yeni kayıt listenin ortasına düşer ve operatör onu bulamaz.
+   * Kabul edilen girişler keyset sayfalıdır, çünkü defter yalnız uzar; depo süzgeci sözleşmededir ve boş dizi "hiçbiri" demektir. Sıra
+   * `created_at`tir, çünkü `date` geriye dönük yazılabilen irsaliye günüdür ve yeni kayıt listenin ortasına düşerdi.
    */
   async listRecent(
     opts: { warehouseIds?: readonly string[]; limit?: number; cursor?: KeysetCursor } = {},
@@ -134,13 +106,8 @@ export class StockIntakeService extends BaseDbService<StockIntake, StockIntakeIn
   }
 
   /**
-   * **Sipariş ↔ gelen mal farkı:** PO kalemleriyle o siparişten giren partiler karşılaştırılır.
-   * Eksik gelen mal sessizce kaybolmaz — zincirin görünür halkası budur (DOMAIN §16).
-   *
-   * **Ham `this.supabase` sebebi** (`STACK §6`): okuma BU SERVİSİN TABLOSUNDA değil — biri
-   * `purchase_order_item`, öteki `stock` (üstelik `stock_intake`'e gömülü `!inner` süzgeçle).
-   * Taban tek tablo etrafında kuruludur (`this.tableName`) ve iki farklı tabloyu dar kolonlarla
-   * okuyup karşılaştırmak onun yüzeyinde yok. Dönen şey de entity değil, bir FARK satırı.
+   * Sipariş kalemleri o siparişten giren partilerle karşılaştırılır, ki eksik gelen mal sessizce kaybolmasın (DOMAIN §16). Ham
+   * `this.supabase` kullanılır, çünkü okuma bu servisin tablosunda değil iki ayrı tabloda ve dönen şey entity değil fark satırıdır.
    */
   async orderVsReceived(purchaseOrderId: string): Promise<Array<{ variantId: string; orderedQty: number; receivedQty: number; diff: number }>> {
     const [ordered, received] = await Promise.all([
