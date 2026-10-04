@@ -1,25 +1,21 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, envelopeError } from '../../lib/testing';
 
 /**
- * TALEP / ŞİKÂYET — `/api/v1/me/tickets`, dört uç.
- *
- * ── ÇİVİLENEN ASIL KARAR: TALEP KİMLİĞE DARALTILIR ──────────────────────────
- * Talep, müşterinin yazdığı SERBEST METNİ taşıyor — şikâyetin içeriği, sipariş künyesi, bazen
- * kişisel bir durum. Liste ve detay kimliği jetondan çözüp sorguyu ona daraltıyor; daraltma
- * düşerse kimliği bilen biri başkasının yazışmasını okuyabilir. Mail sızıntısından farkı yok,
- * yalnız daha sessiz.
- *
- * ── İKİNCİ KARAR: SAYFA BOYU İSTEMCİNİN KEYFİNE BIRAKILMAZ ──────────────────
- * Talep listesi veriyle SINIRSIZ büyüyen bir küme (CLAUDE §1) ve imleçli. Tavanı aşan `limit`
- * reddediliyor; edilmeseydi tek istek bütün defteri çekebilirdi.
- *
- * Retlerin İÇERİĞİ (hangi tip açılabilir, hangi sipariş bağlanabilir) uygulama katmanının işi;
- * burada TAŞIMA sınanıyor: kapı, sahiplik, gövde ve sorgu denetimi.
+ * Talep müşterinin serbest metnini taşır; liste ve detay kimliği jetondan çözüp sorguyu ona daraltmazsa kimliği bilen biri başkasının
+ * yazışmasını okur. Retlerin içeriği uygulama katmanının işi, burada taşıma sınanır: kapı, sahiplik, gövde, sorgu ve açılış teyidi.
  */
+
+// Teyit gerçek sürücüye gitmez; sınanan, ucun açılışta teyidi çağırıp çağırmadığı.
+const { notifyTicketReceived } = vi.hoisted(() => ({ notifyTicketReceived: vi.fn(async () => []) }));
+vi.mock('@lezzet/application', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  notifyTicketReceived,
+}));
+
 const db = serviceDb();
 const stamp = Date.now();
 
@@ -51,9 +47,7 @@ beforeAll(async () => {
     method: 'POST',
     body: JSON.stringify({ type: 'other', body: `Öteki müşterinin talebi ${stamp}` }),
   });
-  /* FİKSTÜR SESSİZCE BAŞARISIZ OLAMAZ. İlk taslak `if (status === 200)` ile sarmalıyordu ve her
-     iddianın başında `if (!otekiTalepId) return;` vardı — talep açılamasaydı testlerin YARISI
-     sessizce atlanır, paket yine yeşil görünürdü. Sahiplik iddiası tam da atlanan yarıdaydı. */
+  // Fikstür sessizce düşemez: talep açılamazsa sahiplik iddiaları atlanır ve paket yine yeşil görünürdü.
   otekiTalepId = (await envelopeData<{ id: string }>(res)).id;
   expect(otekiTalepId).toBeTruthy();
 });
@@ -138,6 +132,16 @@ describe('POST — açma ve mesaj', () => {
     expect(await envelopeError(res)).toBe('invalid_body');
   });
 
+  it('mobilden açılan talep de webdeki gibi açılış teyidi doğurur', async () => {
+    notifyTicketReceived.mockClear();
+    const created = await envelopeData<{ id: string }>(
+      await req('', benimToken, { method: 'POST', body: JSON.stringify({ type: 'question', body: `Teyit sınaması ${stamp}` }) }),
+    );
+
+    expect(notifyTicketReceived).toHaveBeenCalledOnce();
+    expect(notifyTicketReceived).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id: created.id }), 'customer');
+  });
+
   it('BAŞKASININ talebine mesaj yazılamaz', async () => {
     const res = await req(`/${otekiTalepId}/messages`, benimToken, {
       method: 'POST',
@@ -149,10 +153,8 @@ describe('POST — açma ve mesaj', () => {
 });
 
 /*
-  TALEP FOTOĞRAFI (21.309) — imzalı adres + açılışta iliştirme. Adres GERÇEK private kovaya imzalanır
-  (web kapı testinin kuralı: "kova yoksa geç" kaçışı yok, izin verilmezse sebebiyle düşer); imzalamak
-  ağa çıkmaz. Dosyanın kendisi yüklenmez: yüklemeyi istemci doğrudan R2'ye yapıyor, uç onu hiç görmez.
-  `profileIds[0]` BENİM müşterimdir (kurulumun sırası).
+  Adres gerçek private kovaya imzalanır ve imzalamak ağa çıkmaz; dosyanın kendisi yüklenmez, çünkü yüklemeyi istemci doğrudan R2'ye
+  yapar. `profileIds[0]` kurulum sırası gereği benim müşterimdir.
 */
 describe('POST /uploads — talep fotoğrafı (21.309)', () => {
   const upload = (token: string, body: unknown) => req('/uploads', token, { method: 'POST', body: JSON.stringify(body) });

@@ -14,10 +14,10 @@ import type {
  */
 
 // Cihaz bildirimleri (`push` native, `web_push` tarayıcı) sırada başta durur: HABER tek kanaldan gider ve en ucuz, en hızlı kanal
-// kazanmalı. BELGE'de e-postanın yerine geçmez, yanına eklenir.
+// kazanmalı. YAZIŞMA ve BELGE'de e-postanın yerine geçmez, yanına eklenir.
 export type NotifyChannel = 'email' | 'wa_link' | 'whatsapp_api' | 'push' | 'web_push';
 
-/** Cihaz bildirimi kanalları: BELGE'de e-postanın yanına bunlardan biri eklenir. */
+/** Cihaz bildirimi kanalları: YAZIŞMA ve BELGE'de e-postanın yanına bunlardan biri eklenir. */
 export const DEVICE_CHANNELS: readonly NotifyChannel[] = ['push', 'web_push'];
 
 /** Olay adı → o olayın taşıdığı veri. Yeni olay buraya eklenir; sürücüler eksik olayı reddeder. */
@@ -95,10 +95,11 @@ export interface NotifyDriver {
 }
 
 /**
- * `ping` HABERdir: tek kanal yeter, ulaşmazsa uygulama içi satır zaten yazılmıştır. `document` mesafeli satışta dayanıklı ortamda
- * verilmesi gereken BELGEdir: e-posta her zaman denenir, cihaz bildirimi yanına eklenir.
+ * `ping` HABERdir: tek kanal yeter, ulaşmazsa uygulama içi satır zaten yazılmıştır. `conversation` YAZIŞMAdır, cihaz bildirimi ve
+ * e-posta birlikte gider ki uygulamayı açmayan müşteri cevabı mailde okusun; `document` mesafeli satışta dayanıklı ortamda verilmesi
+ * gereken BELGEdir, e-posta yoksa yerine başka kanal aranır.
  */
-export type NotifyClass = 'ping' | 'document';
+export type NotifyClass = 'ping' | 'conversation' | 'document';
 
 export interface NotifyEventMeta {
   class: NotifyClass;
@@ -117,8 +118,8 @@ export const NOTIFY_EVENT_META: Record<NotifyEventName, NotifyEventMeta> = {
   order_refunded: { class: 'document', inApp: true },
   order_payment_incomplete: { class: 'ping', inApp: false }, // sipariş oluşmadı: belge değil haber, açılacak kayıt yok
   ticket_received: { class: 'ping', inApp: false }, // teyit — satır yazmaz (gerekçe NotifyEventMeta)
-  ticket_replied: { class: 'ping', inApp: true },
-  ticket_status_changed: { class: 'ping', inApp: true },
+  ticket_replied: { class: 'conversation', inApp: true },
+  ticket_status_changed: { class: 'conversation', inApp: true },
   feedback_invite: { class: 'ping', inApp: true },
   zone_available: { class: 'ping', inApp: true }, // satır YALNIZ profili olan alıcıya (kapının işi)
   b2b_application_result: { class: 'document', inApp: true }, // gerekçeli ticari karar

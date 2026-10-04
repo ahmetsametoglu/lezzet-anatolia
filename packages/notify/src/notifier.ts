@@ -32,14 +32,19 @@ export function createNotifier(drivers: readonly NotifyDriver[]): Notifier {
       }
 
       /*
-        Plan olayın sınıfından kurulur: HABER tek kanala, BELGE e-postaya (yoksa e-posta dışı ilk yedeğe) ve cihaz bildirimi yanına
-        eklenerek gider, çünkü bildirim çubuğundan silinen onay onay değildir. `all` BELGE'de kullanılmaz, yoksa telefonu olan her
-        müşteriye wa_link de giderdi.
+        Plan olayın sınıfından kurulur: HABER tek kanala, YAZIŞMA cihaza ve e-postaya birlikte, BELGE e-postaya (yoksa e-posta dışı ilk
+        yedeğe) ve cihaz bildirimi yanına eklenerek gider, çünkü bildirim çubuğundan silinen onay onay değildir. `all` BELGE'de
+        kullanılmaz, yoksa telefonu olan her müşteriye wa_link de giderdi.
       */
+      const eventClass = NOTIFY_EVENT_META[event].class;
       let chosen: NotifyDriver[];
       if (opts.all) {
         chosen = usable;
-      } else if (NOTIFY_EVENT_META[event].class === 'document') {
+      } else if (eventClass === 'conversation') {
+        // Cihazı da e-postası da olmayan müşteri HABER gibi ilk yedeğe düşer; yazışma uygulamada da okunduğu için cihazın yanına yedek eklenmez.
+        const written = usable.filter((driver) => DEVICE_CHANNELS.includes(driver.channel) || driver.channel === 'email');
+        chosen = written.length > 0 ? written : [usable[0]!];
+      } else if (eventClass === 'document') {
         const device = usable.filter((driver) => DEVICE_CHANNELS.includes(driver.channel));
         const primary = usable.find((driver) => driver.channel === 'email') ?? usable.find((driver) => !DEVICE_CHANNELS.includes(driver.channel));
         chosen = [...device, ...(primary ? [primary] : [])];
@@ -60,7 +65,7 @@ const POSTAL_ADDRESS = `${brand.name} · ${companyAddressLine}, France`;
  */
 export function defaultNotifier(): Notifier {
   return createNotifier([
-    // Cihazsız alıcıda iki cihaz sürücüsü de yeteneksizdir, HABER kendiliğinden maile düşer. BELGE'de sıranın önemi yok, planı sınıf kurar.
+    // Cihazsız alıcıda iki cihaz sürücüsü de yeteneksizdir, HABER kendiliğinden maile düşer. YAZIŞMA ve BELGE'de sıranın önemi yok, planı sınıf kurar.
     pushDriver(),
     webPushDriver(),
     emailDriver({ brandName: brand.name, postalAddress: POSTAL_ADDRESS }),

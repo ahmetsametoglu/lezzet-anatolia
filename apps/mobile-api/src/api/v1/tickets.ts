@@ -4,6 +4,7 @@ import { z } from 'zod';
 import {
   getCustomerTicket,
   listCustomerTickets,
+  notifyTicketReceived,
   openCustomerTicket,
   replyToCustomerTicket,
   requestTicketUploadUrl,
@@ -32,43 +33,21 @@ import { decodeCursor, encodeCursor, readJsonBody } from '../../lib/request';
 import type { V1Env } from './auth';
 
 /*
-  `/me/tickets` (21.14 · modül 16) — "Taleplerim" (v3 `vTalepler`), talep detayı (`vTalepD`) ve
-  yeni talep (`vTalepNew`).
-
-  KURAL BURADA DEĞİL: sahiplik, sipariş/kalem doğrulaması, ek dosya sahipliği, "kapanmış talebe
-  yazmak onu yeniden açar" ve çeviri yönü `@lezzet/application`ın talep kapılarında
-  (`ticket/{read,write}.ts` künyeleri) — yani web `/support` sayfasının okuduğu kararların TAM
-  AYNISI. Bu dosya TAŞIMA katmanıdır: sorgu dizesini süzer, kimliği çözer, sözleşme şekline
-  indirger, zarflar. Burada hesaplanan hiçbir iş kuralı yok.
-
-  BEARER'IN ARKASINDA ve orada kalacak (adres/sipariş uçlarının aynı kararı): talep müşterinin
-  kendisidir, katalog gibi oturumsuz gezilmez.
-
-  ── TEYİT MAİLİ BU UÇTAN GİTMEZ (bilinen açık, sessiz değil) ────────────────
-  Kapı bir ETKİ PORTU sunuyor (`TicketEffects.notifyReceived`) ama bu uç onu geçiremiyor: teyit
-  `@lezzet/notify` + e-posta şablonları ister ve ikisi de `apps/mobile-api`nin bağımlılığı DEĞİL
-  (`order/effects.ts`in ölçtüğü aynı sınır — bağımlılık eklemek kök `pnpm-lock.yaml`a dokunmaktır).
-  Port kayıtsız olduğu için kapı süreç başına bir kez `logger.warn` basıyor; sessizce atlanmıyor.
-  Mobilden açılan talep BUGÜN teyit maili doğurmaz — web'den açılan doğurur.
+  `/me/tickets`: talep listesi, detay ve yeni talep; kural `@lezzet/application`ın talep kapılarında, web `/support` ile aynı, burası
+  yalnız taşır. Bearer arkasında durur, çünkü talep müşterinin kendisidir ve oturumsuz gezilmez.
 */
 
-/** Sayfa boyutu tavanı — siparişlerin aynı kararı: tek istekle arşivi boşaltmak sayfalamayı anlamsız kılar. */
+/** Sayfa boyutu tavanı: tek istekle arşivi boşaltmak sayfalamayı anlamsız kılar. */
 const MAX_PAGE_SIZE = 50;
 
-/** `authUser` (auth uuid) ≠ müşteri kimliği (`user_profiles.id`) — kapıların istediği hep ikincisi. */
+/** `authUser` (auth uuid) ≠ müşteri kimliği (`user_profiles.id`); kapıların istediği hep ikincisi. */
 interface CustomerEnv {
   Variables: V1Env['Variables'] & { customerId: string };
 }
 
 /**
- * Profil çözümü TEK middleware'de — adres ve sipariş uçlarının deseni BİREBİR. Profili olmayan auth
- * kullanıcısı `GET /me` ile aynı cevabı alır (`profile_not_found`, 404): trigger boşluğu ya da
- * silinmiş kayıt; boş liste uydurmak arızayı görünmez kılardı.
- *
- * ÜÇÜNCÜ KOPYA VE BUNUN FARKINDAYIM (CLAUDE §1): aynı on satır `addresses.ts` ve `orders.ts`ta da
- * duruyor. Doğrusu `lib/customer.ts`e çıkarmaktır — bu görevin yazma alanı yalnız bu dosya olduğu
- * için çıkarma yapılmadı ve ihtiyaç rapora yazıldı. Üç kopyanın ayrışması hâlinde arıza şöyle
- * görünür: bir bölüm 404 derken öteki boş liste döner.
+ * Profili olmayan auth kullanıcısı `GET /me` ile aynı cevabı alır (`profile_not_found`, 404), çünkü boş liste uydurmak arızayı görünmez
+ * kılardı. Aynı çözüm `addresses.ts` ve `orders.ts`te de var; ayrışırlarsa bir bölüm 404 derken öteki boş liste döner.
  */
 async function resolveCustomer(c: Context<CustomerEnv>, next: Next): Promise<Response | void> {
   const profile = await new UserProfileService(serviceDb()).findByAuthUserId(c.get('authUser').id);
@@ -77,32 +56,21 @@ async function resolveCustomer(c: Context<CustomerEnv>, next: Next): Promise<Res
   await next();
 }
 
-/**
- * Liste sorgusu — **`locale` YOK ve bu bir eksiklik değil, ölçüm sonucu.**
- *
- * Sipariş listesi dili zorunlu istiyor çünkü satırlarında ÜRÜN ADI var ve `resolveLocalizedText`
- * dilsiz çağrıda sessizce Türkçeye düşer. Talep satırında çözülen tek bir metin yok: tür ve durum
- * kapalı enum'lar (ekranın sözlüğünde çevriliyor), başlık ile sipariş numarası ham dize, tarihler
- * ISO. Kullanılmayan bir parametreyi zorunlu kılmak, sözleşmeyi taklitle büyütmek olurdu.
- */
+/** Liste dilsizdir, çünkü talep satırında çözülen metin yok: tür ve durum ekranın sözlüğünde çevrilir, başlık ve numara ham dizedir. */
 const ListQuerySchema = z.object({
   cursor: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
 });
 
 /**
- * Detay ve cevap uçlarının dili — ZORUNLU ve varsayılansız (katalog/sipariş uçlarının kuralı).
- *
- * İki yerde kullanılıyor: işaretli kalemlerin ürün adı (`resolveLocalizedText`) ve yazışmanın
- * ÇEVİRİ YÖNÜ (20.2 — personelin Türkçe cevabı müşteriye kendi dilinde açılır). Varsayılan
- * koysaydık, dilini göndermeyi unutan bir ekran herkese aynı dili gösterir ve bu hiçbir yerde hata
- * vermezdi.
+ * Detay ve cevap uçlarının dili zorunlu ve varsayılansız: işaretli kalemlerin ürün adı ve yazışmanın çeviri yönü buna bağlı. Varsayılan
+ * olsaydı dilini göndermeyi unutan ekran herkese aynı dili gösterir ve bu hiçbir yerde hata vermezdi.
  */
 function localeOf(c: Context<CustomerEnv>): ReturnType<typeof PreferredLanguageEnum.safeParse> {
   return PreferredLanguageEnum.safeParse(c.req.query('locale'));
 }
 
-/** Kapının görünümü → sözleşme şekli. `z.input` KİLİTTİR: kapı saparsa burası DERLENMEZ. */
+/** Kapının görünümü → sözleşme şekli; `z.input` kilittir, kapı saparsa burası derlenmez. */
 function toDetailBody(view: CustomerTicketView): z.input<typeof MeTicketDetailSchema> {
   return {
     id: view.id,
@@ -115,8 +83,7 @@ function toDetailBody(view: CustomerTicketView): z.input<typeof MeTicketDetailSc
     messages: view.messages.map((message) => ({
       id: message.id,
       createdAt: message.createdAt,
-      // `ai` göndericisi de İŞLETMEDİR — eşleme TEK yerde (sözleşme künyesi); ekran ham `sender`
-      // görmez, yoksa 16.5 geldiği gün iki yüzey iki farklı şey gösterirdi.
+      // `ai` göndericisi de işletmedir; eşleme tek yerde, yoksa iki yüzey aynı mesajın göndericisini farklı gösterebilirdi.
       fromCustomer: message.sender === 'customer',
       body: message.body,
       translated: message.bodyTranslated,
@@ -129,12 +96,8 @@ function toDetailBody(view: CustomerTicketView): z.input<typeof MeTicketDetailSc
 }
 
 /**
- * Kapının adlı retleri → sözleşmenin adlı retleri.
- *
- * Tabloda OLMAYAN ret `invalid_body`ye düşer ve bu bilinçli: `attachment_not_yours` gibi sebepler
- * kapının kümesinde var (web ek dosya gönderiyor) ama BU uç ek göndermiyor — yani buraya düşmesi
- * bir istemci/kapı uyumsuzluğudur, müşteriye söylenecek bir cümle değil. Enum'a eklemek, ekranın
- * asla kuramayacağı bir metni sözleşmeye yazmak olurdu.
+ * Kapının adlı retleri → sözleşmenin adlı retleri. Tabloda olmayan ret `invalid_body`ye düşer, çünkü bu uçta doğması istemci ile kapının
+ * uyumsuzluğudur, müşteriye söylenecek bir cümle değil.
  */
 const OPEN_ERRORS: Partial<Record<Exclude<OpenCustomerTicketOutcome['status'], 'ok'>, TicketOpenError>> = {
   empty_body: 'empty_body',
@@ -148,7 +111,7 @@ const REPLY_ERRORS: Partial<Record<Exclude<ReplyToTicketOutcome['status'], 'ok'>
   ticket_not_found: 'ticket_not_found',
 };
 
-/** Yükleme adresinin retleri; `not_found` bu uçta doğamaz (talep kimliği alınmıyor, künye). */
+/** Yükleme adresinin retleri; `not_found` bu uçta doğamaz, çünkü talep kimliği alınmıyor. */
 const UPLOAD_ERRORS: Partial<Record<Extract<TicketUploadOutcome, { ok: false }>['reason'], TicketUploadError>> = {
   unsupported_type: 'unsupported_type',
   too_many: 'too_many',
@@ -159,9 +122,8 @@ export const tickets = new Hono<CustomerEnv>();
 tickets.use('*', resolveCustomer);
 
 /**
- * "Taleplerim" — keyset sayfalı, SON MESAJA göre sıralı (kapının kararı: cevaplanan talep başa
- * çıkar). İmleç telde OPAK bir dizedir; bozuk imleç 400 değil, listeyi BAŞTAN verir
- * (`decodeCursor` künyesi) — eskimiş bir bağlantı bir arıza değildir.
+ * Talep listesi keyset sayfalı ve son mesaja göre sıralı, cevaplanan talep başa çıkar. Bozuk imleç 400 değil listeyi baştan verir:
+ * eskimiş bir bağlantı arıza değildir.
  */
 tickets.get('/', async (c) => {
   const parsed = ListQuerySchema.safeParse(c.req.query());
@@ -189,12 +151,8 @@ tickets.get('/', async (c) => {
 });
 
 /**
- * Talep detayı — yazışmanın TAMAMI tek turda (mesaj sayfalaması yok: yazışma sınırsız büyüyen bir
- * küme değil, tek bir konuşmadır — DOMAIN §15).
- *
- * **Bulunamayan ile BAŞKASINA AİT aynı cevabı alır** (404 `ticket_not_found`): ayrım söylenirse
- * deneme yanılmayla başkasının talebinin varlığı doğrulatılabilirdi. Karar kapının içinde (`null`
- * döner), burada yalnız HTTP karşılığı veriliyor.
+ * Yazışmanın tamamı tek turda gelir: yazışma sınırsız büyüyen bir küme değil, tek bir konuşmadır. Bulunamayan ile başkasına ait aynı
+ * 404'ü alır, yoksa deneme yanılmayla başkasının talebinin varlığı doğrulatılabilirdi.
  */
 tickets.get('/:id', async (c) => {
   const locale = localeOf(c);
@@ -211,42 +169,35 @@ tickets.get('/:id', async (c) => {
 });
 
 /**
- * Yeni talep (v3 `vTalepNew`) — `source: 'form'` ve bu GÖVDEDEN GELMEZ.
- *
- * Geliş yolu istemcinin beyanı değil, ucun bilgisidir: gövdeden kabul etmek, WhatsApp'tan geldiğini
- * söyleyen bir telefona inanmak olurdu. Uygulamadaki her talep formdan yazılıyor — sipariş
- * detayından gelinse bile kaynak formdur (web `openTicketAction`ın aynı kararı; `order` kaynağı
- * WhatsApp/operatör akışlarının işi).
- *
- * Sipariş REFERANSLA bağlanıyor: mobil sözleşmesi sipariş UUID'sini bilerek taşımıyor.
+ * Geliş yolu (`source: 'form'`) gövdeden alınmaz, ucun bilgisidir: gövdeden kabul etmek WhatsApp'tan geldiğini söyleyen bir telefona
+ * inanmak olurdu. Sipariş referansla bağlanır, çünkü mobil sözleşme sipariş kimliğini taşımaz.
  */
 tickets.post('/', async (c) => {
   const body = TicketOpenSchema.safeParse(await readJsonBody(c));
   if (!body.success) return fail(c, 'invalid_body', 400);
 
-  const outcome = await openCustomerTicket(serviceDb(), {
-    customerId: c.get('customerId'),
-    source: 'form',
-    type: body.data.type,
-    body: body.data.body,
-    order: body.data.orderReference ? { reference: body.data.orderReference } : null,
-    orderItemIds: body.data.orderItemIds,
-    attachments: body.data.attachments,
-  });
+  const db = serviceDb();
+  const outcome = await openCustomerTicket(
+    db,
+    {
+      customerId: c.get('customerId'),
+      source: 'form',
+      type: body.data.type,
+      body: body.data.body,
+      order: body.data.orderReference ? { reference: body.data.orderReference } : null,
+      orderItemIds: body.data.orderItemIds,
+      attachments: body.data.attachments,
+    },
+    { notifyReceived: (ticket) => notifyTicketReceived(db, ticket, 'customer') },
+  );
   if (outcome.status !== 'ok') return fail(c, OPEN_ERRORS[outcome.status] ?? 'invalid_body', 400);
 
   return ok(c, TicketCreatedSchema.parse({ id: outcome.ticket.id }));
 });
 
 /**
- * Talep fotoğrafı için imzalı yükleme adresi (21.309) — YALNIZ AÇILIŞ TASLAĞI.
- *
- * Talep kimliği alınmaz: dosya müşterinin taslak klasörüne yazılır ve açılış onu `attachments`la
- * iliştirir. Yazışmada ek YOK (kullanıcı kararı 10.09: *"mesajlaşma sırasında (chatten) gönderme
- * olmasın"*) — bu yüzden `/:id/uploads` yazılmadı. Kural kapıda (`requestTicketUploadUrl`, web'in
- * aynı kapısı); burası yalnız taşır. Dosya bu uçtan GEÇMEZ: istemci doğrudan R2'ye yükler.
- *
- * Depo yapılandırılmamışsa 503: istemci "yüklendi" sanıp talebi eksik açmasın diye adlı ret.
+ * Talep fotoğrafının imzalı yükleme adresi, yalnız açılış taslağı için: yazışmada ek yok, bu yüzden `/:id/uploads` yazılmadı. Depo
+ * yapılandırılmamışsa 503 döner ki istemci "yüklendi" sanıp talebi eksik açmasın.
  */
 tickets.post('/uploads', async (c) => {
   const body = TicketUploadRequestSchema.safeParse(await readJsonBody(c));
@@ -265,12 +216,8 @@ tickets.post('/uploads', async (c) => {
 });
 
 /**
- * Yazışmaya cevap. **Kapanmış talep kendiliğinden yeniden açılır** (motorun kararı) — ayrı bir
- * "yeniden aç" ucu YOK: olsaydı müşteri yazar, çağırmayı unutur ve mesajı kapalı bir talepte
- * kalırdı.
- *
- * Cevap GÜNCEL DETAYI döndürür (adres uçlarının "cevap hep güncel liste" kararı): yazım durumu ve
- * son mesaj anını da oynatıyor, tek kaydı dönmek ekranı kendi durumunu tahmin etmeye zorlardı.
+ * Kapanmış talep cevapla kendiliğinden yeniden açılır; ayrı bir "yeniden aç" ucu olsaydı müşteri çağırmayı unutur ve mesajı kapalı
+ * talepte kalırdı. Cevap güncel detayı döndürür, çünkü yazım durumu ve son mesaj anını da değiştirir.
  */
 tickets.post('/:id/messages', async (c) => {
   const locale = localeOf(c);

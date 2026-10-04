@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MESSAGE } from './event-copy';
 import { NOTIFY_EVENT_META } from './types';
 
-/**
- * Olay-meta haritası (14.12). Haritanın TAMLIĞI derlemede kilitli (`Record<NotifyEventName, …>`);
- * burada çivilenen şey tamlık değil, üç KARAR — yorumda kalsalar sessizce ters çevrilebilirlerdi:
- */
+/** Haritanın tamlığı derlemede kilitli (`Record<NotifyEventName, …>`); burada çivilenen her olayın sınıf kararı, yorumda kalırsa sessizce ters çevrilebilir. */
 describe('NOTIFY_EVENT_META', () => {
   it('`ticket_received` uygulama içi satır YAZMAZ — teyit, kendi eylemin yankısıdır', () => {
     expect(NOTIFY_EVENT_META.ticket_received.inApp).toBe(false);
@@ -22,13 +19,16 @@ describe('NOTIFY_EVENT_META', () => {
   it('B2B kararı belgedir — gerekçeli ticari karar, kaybolmaya gelmez', () => {
     expect(NOTIFY_EVENT_META.b2b_application_result.class).toBe('document');
   });
+
+  it('talep cevabı ve durum değişimi YAZIŞMADIR — cihaz bildiriminin yanında e-posta da gider', () => {
+    expect(NOTIFY_EVENT_META.ticket_replied.class).toBe('conversation');
+    expect(NOTIFY_EVENT_META.ticket_status_changed.class).toBe('conversation');
+  });
 });
 
 /**
- * Sözlük TAMLIĞI (14.16 — kullanıcı isteği: birim testler eksiksiz): her olayın ÜÇ dilde bir
- * cümlesi var ve cümle boş değil. Tip `Record` eksik OLAYI derlemede yakalar ama eksik DİLİ
- * yakalayamaz — `say()`in sözlüğü olay gövdesinin içinde ve ancak çalıştırınca görünür.
- * Push ve wa.me aynı cümleyi kullandığı için boş bir dil, iki kanalı birden susturur.
+ * Tip `Record` eksik olayı derlemede yakalar ama eksik dili yakalayamaz, çünkü sözlük olay gövdesinin içinde ve ancak çalıştırınca
+ * görünür. Push ve wa.me aynı cümleyi kullandığı için boş bir dil iki kanalı birden susturur.
  */
 describe('event-copy sözlüğü', () => {
   it('her olay, üç dilde, boş olmayan bir cümle üretir', () => {

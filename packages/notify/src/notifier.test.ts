@@ -87,23 +87,23 @@ describe('sürücü seçimi — çağıran kanal bilmez', () => {
   });
 });
 
+const ticket: TicketNotification = {
+  ticketId: '11111111-1111-1111-1111-111111111111',
+  subject: 'Bozuk et geldi',
+  type: 'damaged',
+  status: 'in_progress',
+  customerName: 'Ayşe',
+  locale: 'fr',
+  orderReferenceNo: 'LZA-1234',
+  openedOn: '22 juillet 2026',
+  history: [{ sender: 'admin', body: 'Nous avons vérifié le lot.', at: '24 juillet, 10:40', truncated: false, unread: true }],
+  previousStatus: null,
+  ticketUrl: 'https://example.test/fr/demandes/11111111',
+  notificationPreferencesUrl: 'https://example.test/fr/preferences',
+};
+
 /** Talep olayları başka veri taşır ama aynı sözleşmeden geçer: kanal seçimi bozulmamalı ve wa.me metni talebin konusunu sızdırmamalı. */
 describe('talep bildirimleri', () => {
-  const ticket: TicketNotification = {
-    ticketId: '11111111-1111-1111-1111-111111111111',
-    subject: 'Bozuk et geldi',
-    type: 'damaged',
-    status: 'in_progress',
-    customerName: 'Ayşe',
-    locale: 'fr',
-    orderReferenceNo: 'LZA-1234',
-    openedOn: '22 juillet 2026',
-    history: [{ sender: 'admin', body: 'Nous avons vérifié le lot.', at: '24 juillet, 10:40', truncated: false, unread: true }],
-    previousStatus: null,
-    ticketUrl: 'https://example.test/fr/demandes/11111111',
-    notificationPreferencesUrl: 'https://example.test/fr/preferences',
-  };
-
   it('e-postası olan müşteriye mail sürücüsü bakar', async () => {
     const results = await createNotifier(drivers).send('ticket_replied', { ...withEmail, locale: 'fr' }, ticket);
 
@@ -119,7 +119,7 @@ describe('talep bildirimleri', () => {
   });
 });
 
-/** BELGE'de push mailin yerine geçmez, e-postasızda wa_link yedeği korunur; HABER tek kanaldan gider ve push kazanır. */
+/** BELGE'de push mailin yerine geçmez, e-postasızda wa_link yedeği korunur; YAZIŞMA push ve maile birlikte gider; HABER tek kanaldan gider ve push kazanır. */
 describe('sınıf planı — push geldikten sonra', () => {
   const pushFake = (calls: string[]) =>
     ({
@@ -156,6 +156,18 @@ describe('sınıf planı — push geldikten sonra', () => {
   it('BELGE + e-postasız: wa_link yedeği KORUNUR, push ilave', async () => {
     const results = await createNotifier([pushFake([]), ...drivers]).send('order_confirmed', jetonluTelefon, data);
     expect(results.map((r) => r.channel).sort()).toEqual(['push', 'wa_link']);
+  });
+
+  it('YAZIŞMA: push + e-posta BİRLİKTE — uygulamayı açmayan müşteri cevabı mailde okur', async () => {
+    const results = await createNotifier([pushFake([]), ...drivers]).send('ticket_replied', { ...jetonluMail, locale: 'fr' }, ticket);
+
+    expect(results.map((r) => r.channel).sort()).toEqual(['email', 'push']);
+  });
+
+  it('YAZIŞMA + e-postasız: yalnız push, wa_link yedeği EKLENMEZ', async () => {
+    const results = await createNotifier([pushFake([]), ...drivers]).send('ticket_replied', { ...jetonluTelefon, locale: 'fr' }, ticket);
+
+    expect(results.map((r) => r.channel)).toEqual(['push']);
   });
 
   it('HABER: TEK kanal ve push kazanır; jetonsuzda sıra maile düşer', async () => {
