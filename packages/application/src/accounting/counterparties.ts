@@ -1,6 +1,6 @@
 import { CounterpartyService, MoneyMovementService, MovementNatureService } from '@lezzet/database';
 import { acceptsNature } from '@lezzet/domain-core';
-import type { Counterparty, CounterpartyKind, MoneyMovement } from '@lezzet/types';
+import type { Business, Counterparty, CounterpartyKind, MoneyMovement } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { setMovementNature } from './natures';
 
@@ -33,7 +33,14 @@ async function natureKnown(db: SupabaseClient, nature: string | null | undefined
 /** Cari ekler — ad benzersizdir (büyük/küçük harf farkı aynı ad sayılır). */
 export async function addCounterparty(
   db: SupabaseClient,
-  input: { name: string; kind: CounterpartyKind; keywords?: readonly string[]; defaultNature?: string | null; note?: string | null },
+  input: {
+    name: string;
+    kind: CounterpartyKind;
+    keywords?: readonly string[];
+    defaultNature?: string | null;
+    defaultBusiness?: Business | null;
+    note?: string | null;
+  },
 ): Promise<CounterpartyOutcome> {
   const name = input.name.trim();
   if (name === '') return { status: 'invalid', reason: 'bad_name' };
@@ -47,6 +54,7 @@ export async function addCounterparty(
     kind: input.kind,
     keywords: cleanKeywords(input.keywords ?? []),
     defaultNature: input.defaultNature || null,
+    defaultBusiness: input.defaultBusiness ?? null,
     note: input.note?.trim() || null,
   });
   return { status: 'ok', counterparty };
@@ -56,7 +64,15 @@ export async function addCounterparty(
 export async function updateCounterparty(
   db: SupabaseClient,
   id: string,
-  patch: { name?: string; kind?: CounterpartyKind; keywords?: readonly string[]; defaultNature?: string | null; note?: string | null; isActive?: boolean },
+  patch: {
+    name?: string;
+    kind?: CounterpartyKind;
+    keywords?: readonly string[];
+    defaultNature?: string | null;
+    defaultBusiness?: Business | null;
+    note?: string | null;
+    isActive?: boolean;
+  },
 ): Promise<CounterpartyOutcome> {
   const service = new CounterpartyService(db);
   const all = await service.list();
@@ -74,6 +90,7 @@ export async function updateCounterparty(
     ...(patch.kind !== undefined ? { kind: patch.kind } : {}),
     ...(patch.keywords !== undefined ? { keywords: cleanKeywords(patch.keywords) } : {}),
     ...(patch.defaultNature !== undefined ? { defaultNature: patch.defaultNature || null } : {}),
+    ...(patch.defaultBusiness !== undefined ? { defaultBusiness: patch.defaultBusiness } : {}),
     ...(patch.note !== undefined ? { note: patch.note?.trim() || null } : {}),
     ...(patch.isActive !== undefined ? { isActive: patch.isActive } : {}),
   });

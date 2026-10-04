@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { CounterpartyKindEnum, type CounterpartyKind } from '@lezzet/types';
+import { BUSINESS_LABELS, CounterpartyKindEnum, type Business, type CounterpartyKind } from '@lezzet/types';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { UnderlineTabs } from '@/components/operation/ui/underline-tabs';
+import { DEFAULT_BUSINESS_OPTIONS } from '@/components/operation/form/business-field';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
 import {
@@ -41,11 +42,11 @@ const NATURE_DIRECTIONS = ['out', 'in', 'both'] as const satisfies readonly Natu
 /** Yeni kaydın düzenleme anahtarı — kayıtların anahtarlarıyla (slug · kimlik) çakışmaz. */
 const NEW = 'new';
 /**
- * Satır şablonları: tür tek satırdır (ad · yön · hesap kodu · eylemler), cari iki satırlık aynadır (ad · türü / eşleşme kelimeleri ·
- * varsayılan tür). Eylem sütunu satır parçalarıyla aynı genişliktedir (130px).
+ * Satır şablonları: tür tek satırdır (ad · yön · hesap kodu · eylemler), cari iki satırlık aynadır (ad · türü · varsayılan iş /
+ * eşleşme kelimeleri · varsayılan tür). Eylem sütunu satır parçalarıyla aynı genişliktedir (130px).
  */
 const NATURE_COLUMNS = 'grid-cols-[minmax(0,1fr)_170px_96px_130px]';
-const COUNTERPARTY_COLUMNS = 'grid-cols-[minmax(0,1fr)_190px_130px]';
+const COUNTERPARTY_COLUMNS = 'grid-cols-[minmax(0,1fr)_190px_150px_130px]';
 
 /** "URSSAF, DGFIP" → iki kelime; virgül ayırır, boşluklu ifade tek kelimedir ("CABINET MULLER"). */
 function keywordsOf(text: string): string[] {
@@ -245,6 +246,7 @@ function CounterpartiesTab({ counterparties, natures, busy, error, run }: Counte
   const [kind, setKind] = useState<CounterpartyKind>('institution');
   const [keywords, setKeywords] = useState('');
   const [defaultNature, setDefaultNature] = useState('');
+  const [defaultBusiness, setDefaultBusiness] = useState<Business | ''>('');
   const natureLabel = new Map(natures.map((nature) => [nature.slug, nature.label] as const));
   const locked = busy !== null || editing !== null;
 
@@ -254,10 +256,17 @@ function CounterpartiesTab({ counterparties, natures, busy, error, run }: Counte
     setKind(counterparty?.kind ?? 'institution');
     setKeywords(counterparty?.keywords.join(', ') ?? '');
     setDefaultNature(counterparty?.defaultNature ?? '');
+    setDefaultBusiness(counterparty?.defaultBusiness ?? '');
   };
   const save = async () => {
     if (editing === null) return;
-    const fields = { name, kind, keywords: keywordsOf(keywords), defaultNature: defaultNature || null };
+    const fields = {
+      name,
+      kind,
+      keywords: keywordsOf(keywords),
+      defaultNature: defaultNature || null,
+      defaultBusiness: defaultBusiness || null,
+    };
     const key = editing;
     const ok =
       key === NEW
@@ -295,6 +304,15 @@ function CounterpartiesTab({ counterparties, natures, busy, error, run }: Counte
           options={CounterpartyKindEnum.options.map((option) => ({ value: option, label: COUNTERPARTY_KIND_LABEL[option] }))}
         />
       }
+      extra={
+        <Select
+          size="sm"
+          ariaLabel="Varsayılan iş"
+          value={defaultBusiness}
+          onChange={(next) => setDefaultBusiness(next as Business | '')}
+          options={DEFAULT_BUSINESS_OPTIONS}
+        />
+      }
       second={
         <Input
           inputSize="sm"
@@ -325,7 +343,7 @@ function CounterpartiesTab({ counterparties, natures, busy, error, run }: Counte
 
   return (
     <TabBody
-      hint="Banka satırında eşleşme kelimelerinden biri geçerse satır bu cariye önerilir; cari konunca varsayılan türü de harekete geçer."
+      hint="Banka satırında eşleşme kelimelerinden biri geçerse satır bu cariye önerilir; cari konunca varsayılan türü harekete geçer, varsayılan işi belge girişinde önerilir."
       error={error !== null && error.key !== editing ? error.message : null}
     >
       <DictionaryList>
@@ -342,6 +360,11 @@ function CounterpartiesTab({ counterparties, natures, busy, error, run }: Counte
               aside={
                 <ReadText active={counterparty.isActive} secondary>
                   {COUNTERPARTY_KIND_LABEL[counterparty.kind]}
+                </ReadText>
+              }
+              extra={
+                <ReadText active={counterparty.isActive} secondary>
+                  {counterparty.defaultBusiness ? BUSINESS_LABELS[counterparty.defaultBusiness] : 'iki iş'}
                 </ReadText>
               }
               second={<ReadDetail>{counterparty.keywords.length > 0 ? counterparty.keywords.join(', ') : 'eşleşme kelimesi yok'}</ReadDetail>}

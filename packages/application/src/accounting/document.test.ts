@@ -13,11 +13,12 @@ import {
 } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import type { DocumentVatLine } from '@lezzet/types';
-import { addCounterparty, setMovementCounterparty } from './counterparties';
+import { addCounterparty, setMovementCounterparty, updateCounterparty } from './counterparties';
 import { allocateToDocument, attachDocumentFile, createMoneyDocument, listOpenDocuments, removeAllocation } from './document';
 import { addMovementNature, setMovementNature, updateMovementNature } from './natures';
 import { addMovementTag, setMovementTagActive, tagMovement } from './tags';
 import { recordOrderPayment } from '../order/payment';
+import { supplierRowOf } from '../warehouse/supplier';
 
 /*
   Tür, cari, etiket ve belge kapılarının kural katmanı gerçek tetikleyici ve görünümle sınanır: tür hareketi izahlı yapar, etiket izah
@@ -366,6 +367,30 @@ describe('belgenin işi', () => {
     expect(await createMoneyDocument(db, { ...entry, counterpartyId: counterparty.id })).toEqual({
       status: 'invalid',
       reason: 'business_required',
+    });
+  });
+
+  it('cari ve tedarikçi kapısının yazdığı varsayılan iş belge girişinde kullanılır; kaldırılınca belge iş ister', async () => {
+    const counterparty = await addCounterparty(db, { name: `İşli cari ${stamp}`, kind: 'service', defaultBusiness: 'qualite' });
+    if (counterparty.status !== 'ok') throw new Error('cari açılamadı');
+    createdCounterparties.push(counterparty.counterparty.id);
+    expect(created(await createMoneyDocument(db, { ...entry, counterpartyId: counterparty.counterparty.id }))).toMatchObject({
+      status: 'ok',
+      document: { business: 'qualite' },
+    });
+    await updateCounterparty(db, counterparty.counterparty.id, { defaultBusiness: null });
+    expect(await createMoneyDocument(db, { ...entry, counterpartyId: counterparty.counterparty.id })).toEqual({
+      status: 'invalid',
+      reason: 'business_required',
+    });
+
+    const supplier = await new SupplierService(db).insert(
+      supplierRowOf({ name: `Kapı tedarikçisi ${stamp}`, defaultBusiness: 'qualite', isActive: true }),
+    );
+    parties.supplierIds.push(supplier.id);
+    expect(created(await createMoneyDocument(db, { ...entry, supplierId: supplier.id }))).toMatchObject({
+      status: 'ok',
+      document: { business: 'qualite' },
     });
   });
 

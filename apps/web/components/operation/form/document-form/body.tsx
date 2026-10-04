@@ -1,7 +1,8 @@
 'use client';
 
 import { Controller, type Control, type UseFormSetValue } from 'react-hook-form';
-import { BUSINESS_LABELS, BusinessEnum, DocumentKindEnum, MovementDirectionEnum, type Business } from '@lezzet/types';
+import { DocumentKindEnum, MovementDirectionEnum, type Business } from '@lezzet/types';
+import { BUSINESS_OPTIONS } from '@/components/operation/form/business-field';
 import { Combobox } from '@/components/operation/form/combobox';
 import { DateField } from '@/components/operation/form/date-field';
 import { FieldShell } from '@/components/operation/form/field-shell';
@@ -155,21 +156,9 @@ export function DocumentFormBody({
         </FieldShell>
       </div>
 
-      <Controller
-        control={control}
-        name="business"
-        render={({ field }) => (
-          <div className="flex flex-col gap-1.5">
-            <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] text-ops-muted">İş</span>
-            <MultiToggle
-              value={field.value}
-              onChange={field.onChange}
-              label="Belgenin işi"
-              options={BusinessEnum.options.map((business) => ({ key: business, label: BUSINESS_LABELS[business] }))}
-            />
-          </div>
-        )}
-      />
+      <div className="grid grid-cols-2 gap-3">
+        <FormSelect control={control} name="business" label="İş" required placeholder="İş seçin" options={BUSINESS_OPTIONS} />
+      </div>
 
       {showStockLink ? (
         <FieldShell label="Neyin faturası" labelAside="mal kabul ya da sipariş · borç bu belgeden türer">

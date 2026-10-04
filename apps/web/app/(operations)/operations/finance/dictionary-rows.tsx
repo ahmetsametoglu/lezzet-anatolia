@@ -56,7 +56,7 @@ interface RowCells {
   first: ReactNode;
   /** İlk satırın ikinci alanı (tür: yön · cari: türü). */
   aside?: ReactNode;
-  /** İlk satırın üçüncü alanı (tür: hesap kodu). */
+  /** İlk satırın üçüncü alanı (tür: hesap kodu · cari: varsayılan iş). */
   extra?: ReactNode;
   /** İkinci satırın ilk hücresi (cari: eşleşme kelimeleri). */
   second?: ReactNode;

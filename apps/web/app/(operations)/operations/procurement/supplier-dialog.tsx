@@ -38,6 +38,7 @@ export function SupplierDialog({ editing, onClose }: SupplierDialogProps) {
       country: editing?.country ?? '',
       // null = peşin çalışıyoruz (şemanın kendi sözleşmesi); 0 gün "vade var ama sıfır" olurdu.
       paymentTermDays: editing?.paymentTermDays ?? null,
+      defaultBusiness: editing?.defaultBusiness ?? null,
       note: editing?.note ?? '',
       isActive: editing?.isActive ?? true,
     },

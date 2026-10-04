@@ -671,10 +671,12 @@ interface CounterpartyInput {
   kind: CounterpartyKind;
   keywords: string[];
   defaultNature: string | null;
+  /** Boş = iki işle de çalışıyor; belge girişi o zaman işi sorar. */
+  defaultBusiness: Business | null;
   note: string;
 }
 
-/** Cari ekler — eşleşme kelimeleri ve varsayılan türüyle. */
+/** Cari ekler — eşleşme kelimeleri, varsayılan türü ve işiyle. */
 export async function addCounterpartyAction(input: CounterpartyInput): Promise<ActionResult<{ counterpartyId: string }>> {
   try {
     await requireFinance();
@@ -713,13 +715,15 @@ export async function createAccountAction(input: {
   name: string;
   /** `partner` da buradan açılır: ortak cari hesabı, ortağın tek kaydı. */
   type: AccountType;
+  /** Hiçbir bağın iş söylemediği hareket işini buradan alır. */
+  business: Business;
 }): Promise<ActionResult<{ accountId: string }>> {
   try {
     await requireFinance();
     const name = input.name.trim();
     if (!name) return { data: null, error: 'Hesap adı boş bırakılamaz.' };
 
-    const account = await new AccountService(serviceDb()).insert({ name, type: input.type });
+    const account = await new AccountService(serviceDb()).insert({ name, type: input.type, business: input.business });
     revalidatePath(FINANCE_PATH);
     return { data: { accountId: account.id }, error: null };
   } catch (error) {

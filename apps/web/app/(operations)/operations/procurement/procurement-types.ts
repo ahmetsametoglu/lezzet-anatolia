@@ -1,4 +1,4 @@
-import type { KeysetCursor, PurchaseOrderStatus } from '@lezzet/types';
+import type { Business, KeysetCursor, PurchaseOrderStatus } from '@lezzet/types';
 
 // Tedarik ekranının görünüm modelleri — sunucu okur ve bu biçime indirger, ekran yalnız çizer.
 
@@ -53,6 +53,8 @@ export interface SupplierCardView {
   note: string | null;
   /** null = peşin çalışılır. */
   paymentTermDays: number | null;
+  /** Belgelerinin varsayılan işi; `null` iki işe birden satıyor demektir. */
+  defaultBusiness: Business | null;
   /** Türetilen borç (cent): Σ alım − Σ ödeme; alım faturalardan okunur (`SupplierService.debt`). */
   debtCents: number;
   /** Bu yılki alım (cent) — faturalar + faturası henüz girilmemiş kabuller (`purchasedCents`, dönemli çağrı). */

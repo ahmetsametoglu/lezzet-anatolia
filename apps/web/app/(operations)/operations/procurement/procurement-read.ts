@@ -293,6 +293,7 @@ export async function readSupplierCards(db: Db): Promise<SupplierCardView[]> {
         country: s.country,
         note: s.note,
         paymentTermDays: s.paymentTermDays,
+        defaultBusiness: s.defaultBusiness,
         debtCents: balanceCents, // servis cent döndürüyor (02.9) — çeviri kalmadı
         purchasedCents,
         pendingOrderCount,

@@ -1,5 +1,6 @@
 import { SupplierService } from '@lezzet/database';
 import { pinpointSupplier } from '@lezzet/domain-core';
+import type { Business } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -15,6 +16,7 @@ export interface SupplierFields {
   address?: string | null;
   country?: string | null;
   paymentTermDays?: number | null;
+  defaultBusiness?: Business | null;
   note?: string | null;
   isActive: boolean;
 }
@@ -36,6 +38,8 @@ export function supplierRowOf(input: SupplierFields) {
     country: input.country?.trim().toUpperCase() || null,
     // null = peşin çalışıyoruz (şemanın kendi sözleşmesi); 0 gün yazmak "vade var ama sıfır" olurdu.
     paymentTermDays: input.paymentTermDays ?? null,
+    // Boş = iki işe birden satıyor; belge girişi o zaman işi sorar.
+    defaultBusiness: input.defaultBusiness ?? null,
     note: input.note?.trim() || null,
     isActive: input.isActive,
   };

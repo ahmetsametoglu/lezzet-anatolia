@@ -1,6 +1,8 @@
 'use client';
 
-import type { Control } from 'react-hook-form';
+import { Controller, type Control } from 'react-hook-form';
+import { DefaultBusinessToggle } from '@/components/operation/form/business-field';
+import { FieldShell } from '@/components/operation/form/field-shell';
 import { FormInput, FormNumber } from '@/components/operation/form/form-input';
 import type { SupplierFormValues } from './schema';
 
@@ -38,6 +40,16 @@ export function SupplierFormBody({ control }: SupplierFormBodyProps) {
         <FormInput control={control} name="country" label="Ülke" placeholder="FR" mono />
         <FormNumber control={control} name="paymentTermDays" label="Bize tanıdığı vade" labelAside="boş = peşin" integer placeholder="30" />
       </div>
+
+      <Controller
+        control={control}
+        name="defaultBusiness"
+        render={({ field }) => (
+          <FieldShell label="Varsayılan iş" labelAside="belge girişinde önerilir">
+            <DefaultBusinessToggle value={field.value} onChange={field.onChange} label="Tedarikçinin varsayılan işi" />
+          </FieldShell>
+        )}
+      />
 
       <FormInput control={control} name="note" label="Not" placeholder="Teslimat günü, iletişim kişisi…" />
     </>

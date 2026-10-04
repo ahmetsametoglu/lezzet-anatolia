@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DOCUMENT_VAT_PROBLEM_LABEL } from './labels';
-import { invoiceBlock, invoiceTermsOf, settled, withRegime, type InvoiceFields } from './schema';
+import { documentBlock, emptyDocumentForm, invoiceBlock, invoiceTermsOf, settled, withRegime, type InvoiceFields } from './schema';
 
 /**
  * Faturanın para künyesi: belge penceresi ile asistanın üç gövdesi aynı bloğu açar ve kapıya giden kırılım ile toplam burada türer;
@@ -45,5 +45,13 @@ describe('faturanın kırılımı', () => {
   it('mal kabul ve sipariş gövdesinde fatura ödenecek faturadır: kırılımsız kaydedilmez; bordro kırılımsız geçer', () => {
     expect(invoiceBlock(fields({ amount: 120, vatLines: [] }), '2026-10-02')).toBe(DOCUMENT_VAT_PROBLEM_LABEL.vat_lines_required);
     expect(invoiceBlock(fields({ amount: 120, vatLines: [] }), '2026-10-02', { kind: 'payslip', direction: 'out' })).toBeNull();
+  });
+});
+
+describe('belgenin engeli', () => {
+  it('karşı taraf seçilse de iş seçilmeden belge kaydedilmez', () => {
+    const values = { ...emptyDocumentForm('2026-10-02'), counterpartyId: 'cari', invoice: fields() };
+    expect(documentBlock(values)).toBe('Belgenin işi seçilmeli — QUALITE ya da Lezzet.');
+    expect(documentBlock({ ...values, business: 'lezzet' })).toBeNull();
   });
 });

@@ -72,7 +72,15 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
       })),
     dictionary: {
       natures: natures.map(({ slug, label, direction, accountCode, isActive }) => ({ slug, label, direction, accountCode, isActive })),
-      counterparties: counterparties.map(({ id, name, kind, keywords, defaultNature, isActive }) => ({ id, name, kind, keywords, defaultNature, isActive })),
+      counterparties: counterparties.map(({ id, name, kind, keywords, defaultNature, defaultBusiness, isActive }) => ({
+        id,
+        name,
+        kind,
+        keywords,
+        defaultNature,
+        defaultBusiness,
+        isActive,
+      })),
       tags: tags.map(({ slug, label, isActive }) => ({ slug, label, isActive })),
     },
   };

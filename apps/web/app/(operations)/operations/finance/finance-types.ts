@@ -225,7 +225,7 @@ export interface DocumentPaymentsView {
 /** Sözlük penceresinin listeleri, pasifler dâhil: pasif kayıt geri açılabilsin diye listede durur; seçicilere yalnız aktifler gider. */
 export interface DictionaryView {
   natures: Array<Pick<MovementNature, 'slug' | 'label' | 'direction' | 'accountCode' | 'isActive'>>;
-  counterparties: Array<Pick<Counterparty, 'id' | 'name' | 'kind' | 'keywords' | 'defaultNature' | 'isActive'>>;
+  counterparties: Array<Pick<Counterparty, 'id' | 'name' | 'kind' | 'keywords' | 'defaultNature' | 'defaultBusiness' | 'isActive'>>;
   tags: Array<Pick<MovementTag, 'slug' | 'label' | 'isActive'>>;
 }
 

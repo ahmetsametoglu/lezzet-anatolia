@@ -25,6 +25,7 @@ export function supplierValuesFrom(payload: SupplierCreatePayload): SupplierForm
     vatNumber: payload.vatNumber ?? '',
     country: payload.country ?? '',
     paymentTermDays: payload.paymentTermDays,
+    defaultBusiness: null,
     note: payload.note ?? '',
     isActive: true,
   };
