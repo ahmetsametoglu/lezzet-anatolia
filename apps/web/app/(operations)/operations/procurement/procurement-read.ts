@@ -27,18 +27,13 @@ import type {
   VariantPickOption,
 } from './procurement-types';
 
-// Tedarik ekranının sunucu okumaları. Okuma SEKMEYE bağlıdır (09.4'te ölçülen desen) — page.tsx
-// yalnız açık sekmenin fonksiyonunu çağırır.
+// Tedarik ekranının sunucu okumaları; okuma sekmeye bağlıdır, page.tsx yalnız açık sekmenin fonksiyonunu çağırır.
 
 type Db = ReturnType<typeof serviceDb>;
 
 /**
- * "Sipariş zamanı" — bağlam evrenindeki HER depo için öneri, tedarikçiye gruplu.
- *
- * Öneri depo başınadır (C6: eşik depo bazlı bir gerçek) ve motor tek depo alır; evren üzerinden
- * dönülür. Depo sayısı fiziksel bir sınırdır (birkaç tesis), döngü satır sayısıyla ÇARPMAZ.
- * Sekme sayaçları bağlamı izler (depo ekseni kural 5) — bağlam STR'ye alınmışsa yalnız STR'nin
- * eşikleri görünür; bu bir süzgeç değil, evrenin kendisidir.
+ * "Sipariş zamanı": bağlam evrenindeki her depo için öneri, tedarikçiye gruplu; öneri depo başınadır, çünkü eşik depo bazlıdır. Döngü
+ * depo sayısıyla sınırlıdır ve satır sayısıyla çarpmaz.
  */
 export async function readSuggestionGroups(db: Db): Promise<SuggestionGroupView[]> {
   const ctx = await readWarehouseContext();
@@ -46,10 +41,7 @@ export async function readSuggestionGroups(db: Db): Promise<SuggestionGroupView[
   const codeOf = new Map(ctx.warehousesWithVehicles.map((w) => [w.id, w.code]));
 
   const reorder = new ReorderService(db);
-  // **Öneri turu YALNIZ TESİSLERDEN** (02.09): satın alma önerisi "bu deponun rafı boşalıyor"
-  // demektir ve araçta raf yoktur — araç transferle dolar, tedarikçiden değil. Bugün araç için
-  // eşik tanımlı olmadığından tur boş dönüyordu; yani arıza görünmüyordu ama ilk eşik tanımlandığı
-  // gün tedarikçiye araç adına satır yazılırdı.
+  // Öneri turu yalnız tesislerden: satın alma önerisi rafın boşalmasıdır, araçta raf yoktur ve araç transferle dolar.
   const suggestionWarehouseIds = ctx.facilities
     .map((w) => w.id)
     .filter((id) => ctx.visibleWarehouseIds.includes(id));
@@ -127,15 +119,8 @@ export async function readSuggestionGroups(db: Db): Promise<SuggestionGroupView[
 }
 
 /**
- * Aynı varyantın ÖTEKİ depolardaki kullanılabiliri — "sipariş yerine transfer" seçeneğinin ham verisi.
- *
- * Kapsam `visibleWarehouseIds`: operatörün göremediği bir deponun stoğunu ipucu diye yazmak, kapsam
- * kapısını ekran üzerinden delmek olurdu.
- *
- * **Yargı yok, sayı var.** "Şuradan transfer et" demiyoruz: öteki deponun kendi eşiğini bilmiyoruz
- * (motor yalnız eşik ALTINDAKİLERİ döndürüyor) ve oradan mal çekmek onu eksiğe düşürebilir. Karar
- * operatörün, ekran yalnız görüş açısını genişletiyor. Sıfır ve altı hiç taşınmaz — "0 adet var"
- * bir bilgi değil, gürültüdür.
+ * Aynı varyantın öteki depolardaki kullanılabiliri, "sipariş yerine transfer" seçeneğinin ham verisi; kapsam `visibleWarehouseIds`'tir,
+ * görülmeyen deponun stoğu ipucu diye yazılmaz. Yargı yoktur ve sıfır ile altı taşınmaz, çünkü "0 adet var" gürültüdür.
  */
 async function readElsewhere(
   db: Db,
@@ -157,14 +142,8 @@ async function readElsewhere(
 }
 
 /**
- * Siparişler sekmesi — tek turda sayfa (`listRows`, keyset) + özet motoru.
- *
- * "8/12 kalem", tutar ve depo kırılımı EKRANDA hesaplanmaz: `summarizePurchaseOrder` üç sayıyı da
- * türetir (`STACK §4`) — aynı özet sipariş detayında ve tedarikçi kartında da görünecek, türetmeyi
- * ekrana bırakmak üç kopya demekti.
- *
- * Süzgeç ve imleç BİRLİKTE gezer: ikinci sayfa birincinin ölçütünü taşımazsa liste sessizce karışır
- * (aynı sözleşme `loadMorePurchaseOrdersAction`'da da geçerli).
+ * Siparişler sekmesi: tek turda sayfa (`listRows`, keyset) ve özet motoru; "8/12 kalem", tutar ve depo kırılımını
+ * `summarizePurchaseOrder` türetir (`STACK §4`). Süzgeç ve imleç birlikte gezer, yoksa ikinci sayfa sessizce karışırdı.
  */
 export async function readOrderPage(
   db: Db,
@@ -174,21 +153,15 @@ export async function readOrderPage(
   return { rows: page.rows.map(toOrderRowView), nextCursor: page.nextCursor };
 }
 
-/** Süzgeç şeridinin ve elle sipariş penceresinin tedarikçi listesi — yalnız ad (borç türetilmez). */
+/** Süzgecin ve elle sipariş penceresinin tedarikçi listesi; yalnız ad, borç türetilmez. */
 export async function readSupplierOptions(db: Db): Promise<SupplierOption[]> {
   const suppliers = await new SupplierService(db).list();
   return suppliers.map((s) => ({ id: s.id, name: s.name }));
 }
 
 /**
- * Sipariş penceresinin tam okuması — kalem kalem, tek açılışta.
- *
- * Dört okuma paralel: sipariş · kalemler · ilerleme (`purchase_order_progress`) · tedarikçiye
- * gidecek liste. Pencere açılınca okunur, listeyle birlikte DEĞİL: elli satırlık sayfada her
- * siparişin kalemlerini peşinen çekmek, biri açılsın diye ellisinin bedelini ödemek olurdu.
- *
- * `receivedQty`/`missingQty` motorun görünümünden gelir, burada hesaplanmaz (`STACK §4`): "ne kadar
- * geldi" ölçüsü `initial_qty`'dir ve `physical_qty` satışla eridiği için ekranda toplanamaz.
+ * Sipariş penceresinin tam okuması; dört okuma (sipariş, kalemler, ilerleme, tedarikçiye gidecek liste) pencere açılınca paralel
+ * yapılır, listeyle birlikte değil. `receivedQty` ve `missingQty` görünümden gelir, çünkü ölçü satışla erimeyen `initial_qty`'dir.
  */
 export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDetailView> {
   const orders = new PurchaseOrderService(db);
@@ -289,12 +262,8 @@ function toOrderRowView(row: PurchaseOrderRow): PurchaseOrderRowView {
 const startOfYear = (): Date => new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1));
 
 /**
- * Tedarikçi kartları. Borç tedarikçi başına türetilir (`debt()`) — tedarikçi sayısı fiziksel olarak
- * sınırlı (sayfa sözleşmesi: "az sayıda tedarikçi beklenir, dev CRM değil"), döngü veriyle büyümez.
- * Küme büyürse toplu okuma servise eklenir (debt() künyesi bu kapıyı zaten bırakıyor).
- *
- * Tedarikçi başına İKİ `debt()` çağrısı var ve ikisi ayrı soruyu soruyor (dönemsiz borç · bu yılki
- * alım). Tek çağrıya indirmenin yolu yok: dönem süzgeci ikisini birden kaydırır.
+ * Tedarikçi kartları; borç tedarikçi başına türetilir, tedarikçi sayısı sınırlı olduğu için döngü veriyle büyümez. Tedarikçi başına
+ * iki `debt()` çağrısı iki ayrı soruyu sorar: dönemsiz borç ve bu yılki alım.
  */
 export async function readSupplierCards(db: Db): Promise<SupplierCardView[]> {
   const svc = new SupplierService(db);
@@ -355,19 +324,14 @@ export async function readSupplierProducts(db: Db, supplierId: string): Promise<
 }
 
 /**
- * Eşleme formunun varyant seçicisi. Arama ÜRÜN ADINDA yapılır ve eşleşen ürünün tüm boyları döner:
- * "baklava" yazan, baklavanın boylarını arıyordur (fiyat ekranının seçicisiyle aynı kural).
- *
- * Okuma DAR: fiyat/maliyet taşımıyor. Fiyat ekranının seçicisi o bağlamı getiriyor çünkü orada
- * karar parasal; burada soru "hangi ürün" — aynı okumayı paylaşmak, tedarik ekranına hiç
- * kullanmayacağı üç okumanın bedelini ödetirdi.
+ * Eşleme formunun varyant seçicisi: arama ürün adında yapılır ve eşleşen ürünün bütün boyları döner. Okuma dardır, fiyat taşımaz,
+ * çünkü buradaki soru "hangi ürün"dür.
  */
 export async function searchVariantOptions(db: Db, term: string): Promise<VariantPickOption[]> {
   const query = term.trim();
   if (!query) return [];
 
-  // Kod zinciri (23.3): terim bir barkod/SKU/tedarikçi koduysa ürün ORADAN bulunur — elinde koli
-  // olan operatör eşlemeyi adla aramak zorunda kalmaz (`code-search` künyesi).
+  // Terim barkod, SKU ya da tedarikçi koduysa ürün oradan bulunur; elinde koli olan operatör adla aramaz (`code-search`).
   const codeProductId = await productIdOfCode(db, query);
   const page = await new ProductService(db).listPriceRows({
     filters: codeProductId ? { ids: [codeProductId] } : { query },

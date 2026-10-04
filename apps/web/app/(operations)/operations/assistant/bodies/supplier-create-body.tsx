@@ -10,12 +10,9 @@ import { ProposalAside, type ProposalFact, type ProposalMeta } from '@/component
 import type { ProposalSubject } from '@/lib/assistant/subject';
 
 /**
- * TEDARİKÇİ ÖNERİSİ — kuyruğun içinde, Tedarik ekranının GERÇEK kart formuyla (22.44).
- *
- * Faturanın başlığı yeni bir tedarikçi için gereken her şeyi taşır: ad, vergi no, telefon, e-posta,
- * adres, ülke, vade. Asistan okur; patron burada düzeltir ve kaydeder. Kaydeden kapı Tedarik ekranının
- * kendi eylemi (`saveSupplierAction` + `withProposal`) ve yeni kayıtta NOKTA ATIŞI mükerrer yoklaması
- * yapar — aynı vergi no, telefon ya da tam adla ikinci kart açılmaz.
+ * Tedarikçi önerisi, kuyruğun içinde Tedarik ekranının gerçek kart formuyla; asistan faturanın başlığını okur, operatör düzeltip
+ * kaydeder. Kaydeden kapı Tedarik ekranının eylemidir (`saveSupplierAction` + `withProposal`) ve yeni kayıtta nokta atışı mükerrer
+ * yoklaması yapar.
  */
 
 /** Dilekçe → formun açılış değerleri. Yeni kart ÇALIŞILAN tedarikçi olarak doğar. */

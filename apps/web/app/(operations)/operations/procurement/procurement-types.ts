@@ -22,12 +22,8 @@ export interface SuggestionLineView {
   /** Hedefi yazılmamış açık siparişlerdeki adet — hiçbir depoya sayılmaz ama gizlenmez de. */
   unassignedQty: number;
   /**
-   * Aynı varyantın BAŞKA depolardaki kullanılabilir miktarı — "sipariş yerine transfer" seçeneği.
-   *
-   * Ham sayı taşınır, yargı taşınmaz: "transfer et" demiyoruz, çünkü öteki deponun kendi eşiğini
-   * bilmiyoruz (`listBelowMinStock` yalnız eşik ALTINDAKİLERİ veriyor) ve oradan mal çekmek onu
-   * eksiğe düşürebilir. Karar operatörün; ekran yalnız "başka yerde var" diyor. Boş dizi = başka
-   * depoda kullanılabilir yok.
+   * Aynı varyantın başka depolardaki kullanılabilir miktarı, "sipariş yerine transfer" seçeneği için. Yargı taşınmaz, çünkü öteki
+   * deponun eşiği bilinmez ve oradan mal çekmek onu eksiğe düşürebilir; boş dizi başka depoda yok demektir.
    */
   elsewhere: Array<{ code: string; qty: number }>;
 }
@@ -52,12 +48,12 @@ export interface SupplierCardView {
   email: string | null;
   address: string | null;
   vatNumber: string | null;
-  /** Ülke (12.26) — ISO iki harf; bilinmiyorsa `null`. Faturanın KDV rejimi bundan önerilir. */
+  /** ISO iki harf; bilinmiyorsa `null`. Faturanın KDV rejimi bundan önerilir. */
   country: string | null;
   note: string | null;
   /** null = peşin çalışılır. */
   paymentTermDays: number | null;
-  /** Türetilen borç (cent): Σ alım − Σ ödeme; alım 12.26'dan beri faturalardan (`SupplierService.debt`). */
+  /** Türetilen borç (cent): Σ alım − Σ ödeme; alım faturalardan okunur (`SupplierService.debt`). */
   debtCents: number;
   /** Bu yılki alım (cent) — faturalar + faturası henüz girilmemiş kabuller (`purchasedCents`, dönemli çağrı). */
   purchasedCents: number;
@@ -66,8 +62,8 @@ export interface SupplierCardView {
   isActive: boolean;
 }
 
-// Tedarikçi formunun şeması ortak bileşende (`components/operation/form/supplier-form/schema.ts`, 22.44):
-// asistan kuyruğunun tedarikçi önerisi aynı formu açıyor.
+// Tedarikçi formunun şeması ortak bileşendedir (`components/operation/form/supplier-form/schema.ts`), çünkü asistanın tedarikçi
+// önerisi aynı formu açar.
 
 /**
  * Tedarik siparişi liste satırı — ham okuma (`PurchaseOrderRow`) + motorun özeti
@@ -136,7 +132,7 @@ export interface OrderLineView {
   qty: number;
   /** Beklenen alış (cent); null = fiyat girilmemiş — tutar EKSİKTİR (ekran "≈" der). */
   unitPriceCents: number | null;
-  /** Hedef depo kodu — NİYET beyanıdır, kısıt değil (K6). null = hedefsiz (elle açılan sipariş). */
+  /** Hedef depo kodu; niyet beyanıdır, kısıt değil. `null` hedefsiz sipariş. */
   targetWarehouseCode: string | null;
   /** Fiilen giren adet (`purchase_order_progress`, ölçü `initial_qty`). */
   receivedQty: number;
@@ -145,11 +141,8 @@ export interface OrderLineView {
 }
 
 /**
- * Sipariş penceresinin tam okuması — kalem kalem.
- *
- * Liste satırı (`PurchaseOrderRowView`) özetle yetinir; pencere açıldığında kalemler ve tedarikçiye
- * gidecek metin BİR turda gelir: iki ayrı eylem iki gidiş-geliş demekti ve pencere iki kez boş
- * kalırdı.
+ * Sipariş penceresinin tam okuması, kalem kalem; kalemler ve tedarikçiye gidecek metin tek turda gelir, çünkü iki eylem iki
+ * gidiş-geliş ve iki kez boş kalan pencere demekti.
  */
 export interface OrderDetailView {
   id: string;
@@ -182,12 +175,6 @@ export interface WarehouseOption {
   name: string;
 }
 
-// Elle sipariş formunun girdisi ARTIK BURADA DEĞİL (22.33): şema ortak alana taşındı
-// (`components/operation/form/purchase-order-form/schema.ts`), çünkü aynı formu asistan kuyruğunun
-// `purchase_order` önerisi de açıyor. Buradaki tanım o taşımadan sonra hiçbir yerden okunmuyordu —
-// `knip` yakaladı. Boş = seçilmedi kuralı ve `null`'a çevrimin gönderim anında olması aynen duruyor,
-// yeni şemanın `targetWarehouseId` künyesinde.
-
 export interface ProcurementData {
   /** Yalnız `suggestions` sekmesinde dolu (okuma sekmeye bağlı). */
   suggestions: SuggestionGroupView[] | null;
@@ -200,10 +187,8 @@ export interface ProcurementData {
   /** Gönderilmiş ve henüz kapanmamış sipariş sayısı — başlık altı ("yolda ne var"). */
   pendingOrderCount: number | null;
   /**
-   * Tedarikçi seçenekleri — sipariş sekmesinin süzgeci ve "elle sipariş" penceresi için.
-   *
-   * Kart okumasından AYRI: kart borç türetiyor (tedarikçi başına tur), süzgeç yalnız ad istiyor.
-   * Aynı okumayı paylaşmak, süzgeç şeridini çizmek için borç hesaplatmak olurdu.
+   * Tedarikçi seçenekleri, sipariş sekmesinin süzgeci ve elle sipariş penceresi için; kart okumasından ayrıdır, çünkü kart borç türetir
+   * ve süzgeç yalnız ad ister.
    */
   supplierOptions: SupplierOption[] | null;
   /** Elle siparişin hedef depo seçenekleri — yalnız sipariş sekmesinde okunur. */
