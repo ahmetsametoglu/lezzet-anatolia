@@ -249,7 +249,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [ ] (21.284) **Hedefi olmayan iki bildirim türü — belge ve askıda kapanış** (21.217'den ayrıldı 07.09)
 - [~] (21.312) **OPERASYON GİRİŞİ TASARIMINDA — sistemde kayıtlı olmayan giremez; kod ve Google aynı kurala bağlı** (tasarım 14.09: 02-operasyon / Operasyon Mobil - Giris; kullanıcı kararları 14.09)
 - [~] (21.313) **ADRES ÇEKMECESİ TASARIMDA — ülke, tek arama, rozetli öneri, doğrulama; adres araması TEK KAPIDAN** (tasarım: 01-musteri / Musteri Mobil `shAddr`; kullanıcı kararları 13.09 · 14.09)
-- [ ] (K.63) **Oturum düşmüşken bildirime dokunan müşteri girişten sonra hedefe ulaşmıyor:** native'de talep cevabı bildirimine dokununca giriş ekranı açılıyor, girişten sonra talep açılmıyor; oturum açıkken aynı dokunuş talebi açıyor. Sebep ölçülmedi; dokunuş `use-push-navigation.hook.ts`, giriş `use-session-ended-login.hook.ts` (ikisi `packages/mobile-kit`).
 
 ## 22 · MCP Yönetici Asistanı
 

@@ -16,7 +16,13 @@ jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
 }));
 
 const mockReplace = jest.fn();
-jest.mock('expo-router', () => ({ useRouter: () => ({ replace: (to: unknown) => mockReplace(to) }) }));
+const mockDismiss = jest.fn();
+/** Kök yığının durumu; varsayılan yalnız dönüş ekranıdır (uygulama Google'dan soğuk açılmış gibi). */
+let mockStack: { routes: { name: string }[]; index: number } = { routes: [{ name: 'auth/callback' }], index: 0 };
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ replace: (to: unknown) => mockReplace(to), dismiss: (count: number) => mockDismiss(count) }),
+  useNavigation: () => ({ getState: () => mockStack }),
+}));
 
 const mockExchange = jest.fn(async (_code: string): Promise<{ error: string | null }> => ({ error: null }));
 jest.mock('@lezzet/mobile-kit/src/lib/auth/oauth', () => ({ exchangeOAuthCode: (code: string) => mockExchange(code) }));
@@ -50,6 +56,8 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  mockStack = { routes: [{ name: 'auth/callback' }], index: 0 };
+  mockDismiss.mockReset();
   mockReplace.mockReset();
   mockExchange.mockClear();
   mockToast.mockReset();
@@ -65,6 +73,15 @@ describe('AuthCallbackScreen', () => {
     await waitFor(() => expect(mockExchange).toHaveBeenCalledWith('pkce-kodu-1'));
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/account'));
     expect(mockToast).toHaveBeenCalledWith('Hoş geldiniz ✓');
+  });
+
+  // Girişin altındaki ekrana dönülmez de eve gidilirse kırmızıya döner: bildirimden açılan talep girişten sonra kaybolurdu.
+  it('giriş bir ekranın üstüne açıldıysa dönüş o ekranadır, eve değil', async () => {
+    mockStack = { routes: [{ name: '(tabs)' }, { name: 'support/[ticket]' }, { name: 'login' }, { name: 'auth/callback' }], index: 3 };
+    await render(<AuthCallbackScreen {...ROUTES} code="pkce-kodu-1" />);
+
+    await waitFor(() => expect(mockDismiss).toHaveBeenCalledWith(2));
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 
   /* Künye eksikliği girişin yolunu değiştirmez: ad ve telefon ilk siparişte istenir. Kardeş OTP testiyle aynı karar. */

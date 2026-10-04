@@ -1,22 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 
+import { registerReadRecovery } from '@lezzet/mobile-kit/src/lib/auth/recover-reads';
 import { fetchOrderDetail, type OrderDetail } from '@/lib/api/orders';
 import { useLiveRefresh } from '@/lib/app-state/use-live-refresh';
 
 /*
-  SİPARİŞ DETAY VERİSİ — paket/tarif detay hook'larının deseni birebir (`use-package.hook.ts`):
-  sayfanın TAMAMI tek turda gelir (sözleşmenin sözü — kalemler, çizgi, adres, para; bölüm başına
-  çağrı yok) ve eskimiş cevap koruması "Tekrar dene"ye art arda basan parmağın iki uçuşu için.
-
-  DÖRT HÂL, çünkü dördü ayrı şey:
-  · `guest`   — oturum yok (401 yerel kısa devre): bildirimden/derin bağlantıdan gelinmiş olabilir,
-                doğru cevap giriş kapısıdır, hata değil.
-  · `missing` — uç 404 dedi: bulunamayan, başkasına ait ve taslak siparişin ORTAK cevabı (ayrımı
-                sunucu bilerek söylemiyor — numara denenerek başkasının siparişi doğrulatılmasın).
-  · `error`   — telin arızası.
-  · `ready`   — veri elde.
-  İkisini tek "hata"ya indirmek, silinmiş bir bağlantıyı bağlantı arızası gibi gösterirdi.
+  Sipariş detayı tek turda gelir. Dört hâl ayrıdır: `guest` oturumsuzdur ve cevabı giriştir, `missing` bulunamayan ile başkasına ait
+  siparişin ortak 404'üdür, `error` telin arızasıdır, `ready` veridir.
 */
 
 type OrderStatus = 'loading' | 'guest' | 'ready' | 'missing' | 'error';
@@ -51,17 +42,11 @@ export function useOrder(reference: string, locale: Locale): UseOrderResult {
     load();
   }, [load]);
 
-  /*
-    ÖNE GELİNCE TAZELENİR (kullanıcı bulgusu 01.09 — `21.209`ın ölçümü).
+  // Oturumsuz okunan sipariş, oturumla yapılan ilk başarılı istekte yeniden okunur: bildirimden girişe yönlenen müşteri girişten sonra siparişi görür.
+  useEffect(() => (status === 'guest' ? registerReadRecovery(load) : undefined), [status, load]);
 
-    Sipariş 17:52'de hazırlandı; ekran 18:23'te hâlâ "Alındı" diyordu. Sebep bu dosyaydı: okuma
-    yalnız monte olurken koşuyor ve telefonlar kapatılmıyor, cebe konuyor. Sipariş durumu
-    müşterinin BEKLEDİĞİ şeydir — bayat kaldığında ekran yalnız eskiyi göstermiyor, müşteriyi
-    boşuna bekletiyor.
-
-    `load` eskimiş cevabı zaten eliyor (`generation`), yani öne gelme ile "Tekrar dene" aynı yoldan
-    geçer ve yarışan iki uçuşta son cevap kazanır.
-  */
+  /* Uygulama öne gelince tazelenir, çünkü telefon cebe konur ve sipariş durumu müşterinin beklediği şeydir. `load` eskimiş cevabı
+     elediği için yarışan iki uçuşta son cevap kazanır. */
   useLiveRefresh(load);
 
   return { status, detail, retry: load };

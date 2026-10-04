@@ -3,23 +3,12 @@ import type { Locale } from '@lezzet/i18n';
 import { BELL_EVENT, ticketChannelName } from '@lezzet/types';
 
 import { fetchTicket, replyToTicket, type TicketDetail } from '@/lib/api/tickets';
+import { registerReadRecovery } from '@lezzet/mobile-kit/src/lib/auth/recover-reads';
 import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
 
 /*
-  TALEP DETAY VERİSİ — sipariş detay hook'unun (`use-order.hook.ts`) deseni, üstüne YAZMA yarısı.
-
-  DÖRT OKUMA HÂLİ, dördü ayrı şey: `guest` (oturum yok — bildirimden/derin bağlantıdan gelinmiş
-  olabilir, doğru cevap giriş kapısıdır), `missing` (404: bulunamayan ve BAŞKASINA AİT talebin ortak
-  cevabı — ayrımı sunucu bilerek söylemiyor), `error` (telin arızası), `ready`.
-
-  ── GÖNDERİM SONUCU SUNUCUDAN GELİR, EKRANDA UYDURULMAZ ─────────────────────
-  Cevap ucu GÜNCEL DETAYI döndürüyor (sözleşmenin kararı): yeni mesajın damgası, yeniden açılmış
-  durum ve son mesaj anı oradan gelir. Ekranın yerel bir "iyimser mesaj" listesi YOK — kapanmış
-  talebe yazınca durumun `open`a döndüğünü tahmin etmek zorunda kalırdı ve o tahmin bir gün
-  sunucudan ayrışırdı.
-
-  DÜŞEN GÖNDERİM TASLAĞI SİLMEZ: metin kutuda kalır ki müşteri yazdığını kaybetmesin — tekrar
-  basmak tek dokunuş. Kaybolan bir şikâyet metni, gönderilmemiş bir talepten kötüdür.
+  Talep detayı sipariş detayının dört hâlini taşır; gönderimin sonucu sunucunun döndürdüğü güncel detaydır, ekran iyimser mesaj
+  uydurmaz. Düşen gönderim taslağı silmez, çünkü kaybolan bir şikâyet metni gönderilmemiş bir talepten kötüdür.
 */
 
 type TicketStatus = 'loading' | 'guest' | 'ready' | 'missing' | 'error';
@@ -65,16 +54,12 @@ export function useTicket(id: string, locale: Locale): UseTicketResult {
     load();
   }, [load]);
 
+  // Oturumsuz okunan talep, oturumla yapılan ilk başarılı istekte yeniden okunur: bildirimden girişe yönlenen müşteri girişten sonra talebi görür.
+  useEffect(() => (status === 'guest' ? registerReadRecovery(load) : undefined), [status, load]);
+
   /**
-   * Zil duyulunca yazışmayı SESSİZCE tazeler — `load`dan farkı burada.
-   *
-   * `load` durumu `loading`e çeker ve ekran iskelete döner; canlı tazelemede bu YANLIŞ olurdu:
-   * müşteri okuduğu mesajın ortasındayken ekran bir anlığına boşalır, geldiği yeri kaybederdi.
-   * Karşı taraf yazdı diye kimsenin ekranı sıfırlanmaz.
-   *
-   * Düşen tur da SESSİZ: elde duran yazışma korunur ve kırmızı bir uyarı yazılmaz. Zil bir kolaylık;
-   * çalışmadığı an müşterinin kaybı "biraz geç görmek"tir — ekrandan çıkıp girmek tam bir okuma
-   * yapıyor ve elle yenileme kapısı bilerek YOK (ekran künyesinde gerekçesi).
+   * Zil duyulunca yazışma sessizce tazelenir, çünkü `load` ekranı iskelete çevirir ve okunan mesajın yeri kaybolurdu. Düşen tur da
+   * sessizdir: zil bir kolaylıktır ve elde duran yazışma korunur.
    */
   const refresh = useCallback(async (): Promise<void> => {
     const run = (generation.current += 1);
@@ -84,21 +69,8 @@ export function useTicket(id: string, locale: Locale): UseTicketResult {
     setStatus('ready');
   }, [id, locale]);
 
-  /*
-    CANLI YAZIŞMA — **kapı zili, veri borusu değil** (kullanıcı isteği 16.08).
-
-    Kanal boş bir "changed" yayınlar, ekran duyunca yazışmayı SUNUCUDAN yeniden ister. Mesajın
-    kendisi asla kanaldan geçmez: projede RLS yok, her okuma sunucuda service-role ile yapılıyor ve
-    istemciyi `ticket_message` tablosuna abone etmek o duvarda ilk delik olurdu (`bell.ts` künyesi,
-    16.8 kararı). Aynı sebeple sipariş ekranı da yıllardır böyle çalışıyor (`order-watch`).
-
-    Kanal adı ve olay adı `@lezzet/types`tan geliyor (`realtime.contract`): zili ÇALAN taraf sunucu
-    paketinde ve mobil ona bağlı değil — adı burada yeniden yazmak, bir gün sessizce çalmayan bir
-    zil demekti.
-
-    Abonelik ekran ömrü boyunca AÇIK kalır ve sökülürken kapatılır; kanal talebe özel olduğu için
-    tek yazışma için tek soket açılıyor.
-  */
+  /* Kanal bir kapı zilidir, veri borusu değil: boş bir "changed" yayınlar ve ekran yazışmayı sunucudan yeniden ister. Mesaj kanaldan
+     geçmez, çünkü RLS yok ve istemciyi `ticket_message` tablosuna abone etmek o duvarda ilk delik olurdu. */
   useEffect(() => {
     const supabase = getSupabase();
     const channel = supabase

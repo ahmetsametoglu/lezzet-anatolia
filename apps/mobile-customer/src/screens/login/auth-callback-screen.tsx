@@ -1,4 +1,4 @@
-import { useRouter, type Href } from 'expo-router';
+import { useNavigation, useRouter, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -12,17 +12,8 @@ import { publishMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import messages from '@lezzet/i18n/customer/login';
 
 /*
-  OAUTH DÖNÜŞ EKRANI (`/auth/callback`) — Google'dan dönen derin bağlantının İNDİĞİ yer.
-  Değişimin TEK sahibi burasıdır (gerekçe ve cihaz kanıtı `lib/auth/oauth.ts` künyesinde:
-  dinleyici kurgusunda expo-router URL'i navigasyona çevirip 404 basıyordu, kod hiç
-  kullanılmıyordu).
-
-  Başarıda uygulamanın evine (`homeRoute`, müşteride hesap sekmesi) `replace` — geri tuşu bu ara
-  ekrana dönmesin (tek kullanımlık kod
-  taşıyan bir URL'in geçmişte işi yok). Retler login'e adlı `notice` parametresiyle döner;
-  cümleyi login ekranı kendi sözlüğünden kurar.
-  Müşteri uygulamasının dönüşüdür: operasyon uygulamasında değişimi giriş ekranı yapar (21.312 — kayıt kapısı
-  ve "hazır" hâli orada; `apps/mobile-operations/src/screens/login/oauth-handoff.ts`).
+  Google dönüşünün derin bağlantısı (`/auth/callback`) burada karşılanır ve kod yalnız burada oturuma çevrilir (`lib/auth/oauth.ts`).
+  Başarıda giriş bir ekranın üstüne açıldıysa o ekrana, değilse eve dönülür; tek kullanımlık kod taşıyan bu ara ekran geçmişte kalmaz.
 */
 
 interface AuthCallbackScreenProps {
@@ -36,6 +27,7 @@ export function AuthCallbackScreen({ code, homeRoute }: AuthCallbackScreenProps)
   const locale = useAppLocale();
   const t = messages[locale];
   const router = useRouter();
+  const navigation = useNavigation();
 
   useEffect(() => {
     if (code === null) {
@@ -47,24 +39,22 @@ export function AuthCallbackScreen({ code, homeRoute }: AuthCallbackScreenProps)
         router.replace({ pathname: '/login', params: { notice: result.error } });
         return;
       }
-      /* Hesaba geçmeden profil OKUNUP YAYINLANIR (cihaz bulgusu 09.08): `useMe` oturum olayını
-         gecikmeli işliyor ve hesap sekmesi o aralıkta "misafir" sanıp otomatik login'e geri
-         itiyordu — giriş başarılı, yönlendirme yarışı kaybediyordu. Profil çekmecesinin
-         `publishMe` deseni aynı yarışı burada da kapatır. */
-      /* Okuma PATLARSA ekran bekleme çarkında ASILI kalırdı (giriş bitti, ekran kapanmadı):
-         beklenmedik hata `null`a çevrilir ve akış hesaba devam eder — profil okuması yardımcı,
-         giriş ise asıl iştir. Sessiz değil, ADLI bir "okunamadı" hâli (CLAUDE §1). */
+      /* Profil yönlendirmeden önce okunup yayınlanır, çünkü `useMe` oturum olayını geç işler ve dönülen ekran kendini misafir
+         sanabilir. Okuma patlarsa akış sürer; profil okuması yardımcı, giriş asıl iştir. */
       const me = await fetchMe().catch(() => null);
       if (me !== null && me.error === null) publishMe(me.data);
       toastSuccess(t.verifiedToast);
 
-      /* GİRİŞTE KÜNYE SORULMAZ (kullanıcı kararı 15.08) — burada `/profile-setup`e bir yönlendirme
-         vardı, OTP kapısındakiyle birlikte kaldırıldı. Ad ve telefon artık ilk siparişte, gerekçesi
-         yazılı olarak isteniyor. İki kapı yine AYNI davranışta: kural kopyalanmadığı gibi kaldırma
-         da tek elden yapıldı. */
-      router.replace(homeRoute);
+      // Girişin altındaki ekrana dönülür, ki bildirimden açılan talep girişten sonra kaybolmasın; altta ekran yoksa ev.
+      const { routes, index } = navigation.getState() ?? { routes: [], index: 0 };
+      const login = routes
+        .slice(0, index)
+        .map((route) => route.name)
+        .lastIndexOf('login');
+      if (login > 0) router.dismiss(index - login + 1);
+      else router.replace(homeRoute);
     });
-  }, [code, router, t.verifiedToast, homeRoute]);
+  }, [code, router, navigation, t.verifiedToast, homeRoute]);
 
   return (
     <View style={styles.screen}>
