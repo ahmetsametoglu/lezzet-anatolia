@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { toCents } from '@lezzet/helper';
+import { parisDateOf, toCents } from '@lezzet/helper';
 import {
   ALLERGEN_LABELS,
   NUTRITION_KEYS,
@@ -330,7 +330,7 @@ function BundlePreview({
  * yüzdesiyle verilir (`domain-core/stock/shelf-life.ts`) ve payload toplam raf ömrünü taşımaz (kayıt `BEKLEYEN(22.13)`te).
  */
 function StockIntakePreview({ payload }: { payload: StockIntakePayload }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = parisDateOf(new Date());
   const lines = payload.lines.map((line) => ({ ...line, ...splitVariantName(line.productName), past: line.expiryDate <= today }));
   const pastCount = lines.filter((l) => l.past).length;
 
@@ -863,7 +863,7 @@ function sizeValueText(key: string, value: unknown): string {
  * Boy satırları — okunur ad dilekçede taşınır (`variantLabel`), kimlik ekrana çıkmaz.
  *
  * Kimliksiz satır YENİ boydur ve adının yanında öyle yazar: var olanın boş kutusunu doldurmak ile ürüne boy
- * eklemek ayrı kararlardır ve ikincisi ürünün satış listesine bir satır daha koyar.
+ * eklemek ayrı karardır ve ikincisi ürünün satış listesine bir satır daha koyar.
  */
 function sizeRows(payload: ProductDraftPayload): { key: string; boy: string; next: string }[] {
   return payload.variants.map((variant, index) => ({

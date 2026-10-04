@@ -1,7 +1,7 @@
 'use client';
 
 import { suggestVatRegime } from '@lezzet/domain-core';
-import { fromCents } from '@lezzet/helper';
+import { fromCents, parisDateOf } from '@lezzet/helper';
 import type { StockIntakePayload } from '@lezzet/types';
 import { IntakeFormBody } from '@/components/operation/form/intake-form/body';
 import { emptyIntakeLine, type IntakeFormValues } from '@/components/operation/form/intake-form/schema';
@@ -69,7 +69,7 @@ export function intakeInvoiceBlock(draft: IntakeDraft): string | null {
     return draft.file ? 'Dosya faturanın belgesine bağlanır — faturanın toplamını girin ya da dosyayı kaldırın.' : null;
   }
   if (!draft.intake.supplierId) return 'Faturayı belge olarak kaydetmek için tedarikçiyi seçin — ya da faturanın toplamını boşaltın.';
-  return invoiceBlock(draft.invoice, draft.intake.date || new Date().toISOString().slice(0, 10));
+  return invoiceBlock(draft.invoice, draft.intake.date || parisDateOf(new Date()));
 }
 
 interface StockIntakeBodyProps {

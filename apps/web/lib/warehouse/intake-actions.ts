@@ -11,6 +11,7 @@ import {
   type PurchaseIntakeLine,
 } from '@lezzet/application';
 import { ProductService, SupplierProductService, SupplierService, serviceDb } from '@lezzet/database';
+import { parisDateOf } from '@lezzet/helper';
 import { resolveLocalizedText, type DocumentVatLine, type DocumentVatRegime } from '@lezzet/types';
 import { DOCUMENT_REASON } from '@/app/(operations)/operations/finance/finance-labels';
 import { titleOf } from '@/lib/catalog/title';
@@ -251,7 +252,7 @@ export async function receiveIntakeFromProposalAction(input: {
         const outcome = await createMoneyDocument(serviceDb(), {
           kind: 'invoice',
           number: input.note,
-          issuedOn: input.date ?? new Date().toISOString().slice(0, 10),
+          issuedOn: input.date ?? parisDateOf(new Date()),
           dueOn: input.invoice.dueOn,
           supplierId: input.supplierId,
           stockIntakeId: result.result.intakeId,

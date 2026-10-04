@@ -10,6 +10,7 @@ import {
   type ReceiveTransferOutcome,
 } from '@lezzet/application';
 import { serviceDb, SettingsService, WarehouseTransferService } from '@lezzet/database';
+import { parisDateOf } from '@lezzet/helper';
 import type { DispatchLine, KeysetCursor, ReceiveLine } from '@lezzet/types';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireWarehouseScope } from '@/lib/guard';
@@ -19,16 +20,9 @@ import { readHistoryPage, readTransferDetailView } from './transfer-read';
 import type { HistoryPageView, TransferDetailView } from './transfer-types';
 
 /**
- * Transfer ekranının yazma yolları (19.6). Kural YAZILMAZ, kapıya devredilir: kapsam/eksik-satır/
- * stok denetimi `@lezzet/application`ın üç fiilinde — burada yalnız kimlik sorulur, KAYNAK depo
- * çözülür ve cevap Türkçeye çevrilir.
- *
- * ── KAYNAK DEPO İSTEMCİDEN GELMEZ — bir istisnayla (10.7'nin bu ekrandaki hâli) ─────────────
- * Depocunun kaynağı ÇALIŞILAN depodur ve sunucuda bağlamdan çözülür; istemcinin gönderdiği kaynak
- * yok sayılır (başka deponun malını sevk etmenin kapısı olurdu). Tek istisna depo-üstü bakış:
- * yönetici "Tüm depolar"dayken kaynağı pencereden SEÇER (tasarım kuralı) — o seçim de yalnız
- * scope 'all' iken okunur, yine de son sözü partilerin gerçek deposu söyler (`dispatchTransfer`
- * kapısı kalemleri kaynağa karşı doğrular).
+ * Transfer ekranının yazma yolları kural yazmaz, denetim `@lezzet/application`ın fiillerindedir; burada kimlik sorulur, kaynak depo
+ * çözülür ve cevap Türkçeye çevrilir. Kaynak istemciden gelmez, çünkü başka deponun malını sevk etmenin kapısı olurdu; tek istisna
+ * "Tüm depolar"daki yöneticinin pencereden seçtiği kaynaktır ve son sözü yine partilerin gerçek deposu söyler.
  */
 
 async function resolveSourceWarehouse(clientChoice?: string): Promise<
@@ -71,7 +65,7 @@ export async function suggestDispatchAction(input: {
       variantId: input.variantId,
       wantedQty: input.wantedQty,
       transitDays,
-      today: new Date().toISOString().slice(0, 10),
+      today: parisDateOf(new Date()),
     });
     return { data, error: null };
   } catch (error) {
@@ -143,8 +137,8 @@ export async function receiveTransferAction(input: {
 // düğme doğduğu gün buraya `dispatchTransferAction` deseniyle bağlanır.
 
 /**
- * İçerik penceresinin verisi — durum süzgeci YOK (19.08): yoldaki satırdan da geçmiş satırından da
- * aynı kapı açılır; kabul formu mu salt-okunur mu, dönen `canReceive` söyler. `null` = kayıt yok.
+ * İçerik penceresinin verisi durum süzgeçsizdir, çünkü yoldaki satırdan da geçmiş satırından da aynı kapı açılır; kabul formu mu
+ * salt okunur mu, dönen `canReceive` söyler. `null` kayıt yok demektir.
  */
 export async function openTransferDetailAction(
   transferId: string,

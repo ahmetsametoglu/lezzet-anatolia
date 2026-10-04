@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { parisDateOf } from '@lezzet/helper';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
 import { DocumentFormBody } from '@/components/operation/form/document-form/body';
 import { DocumentFileField, uploadDocumentFile } from '@/components/operation/form/document-form/file-field';
@@ -19,29 +20,19 @@ import type { CounterpartyOption, NatureOption, TagOption } from '@/components/o
 import { createDocumentAction, documentStockLinksAction } from '@/lib/finance/actions';
 
 /*
-  BELGE GİRİŞİ (12.12 · kullanıcı kararı 13.09: "para hareketi ya etiketlenebilmeli ya resmî bir
-  belgeyle ilişkilendirilmeli; dosya eki de baştan").
-
-  Fatura geldiğinde para henüz çıkmamıştır ama borç doğmuştur — bu pencere borcu kaydeder; ödeme
-  sonra "Ödemesini yaz" ile hareket olarak gelir ve belgeye bağlanır.
-
-  ── FORM ORTAK BİLEŞENDE (12.26 · 22.44) ─────────────────────────────────────
-  Alanlar `components/operation/form/document-form/`da: asistan kuyruğunun belge önerisi aynı formu
-  açıyor. Pencerede kalan iş, pencereye özgü olan: "neyin faturası" seçeneklerini seçili tedarikçi
-  için okumak, dosyayı yüklemek ve kapatmak.
-
-  ── DOSYA DÜŞERSE BELGE İKİNCİ KEZ YAZILMAZ (12.26) ────────────────────────────
-  Belge kaydedilir, sonra dosyası yüklenir (`uploadDocumentFile` künyesi). Yükleme düşünce pencere
-  açık kalıyordu ama ikinci "Kaydet" belgeyi YENİDEN yazıyordu — aynı fatura iki kez, borç iki kez.
-  Kaydedilen belgenin kimliği artık tutuluyor: ikinci basış yalnız dosyayı yeniden dener.
+  Belge girişi borcu kaydeder: fatura geldiğinde para henüz çıkmamıştır, ödeme sonra "Ödemesini yaz" ile hareket olarak gelir ve
+  belgeye bağlanır. Alanlar asistan kuyruğuyla ortak formdadır; pencerede yalnız ona özgü iş kalır (seçenekleri okumak, dosya, kapanış).
 */
+
+/* Belge kaydedilir, sonra dosyası yüklenir; yükleme düşerse ikinci basış belgeyi yeniden yazmaz, yalnız dosyayı yeniden dener, yoksa aynı
+   borç iki kez doğardı. */
 
 const FORM_ID = 'money-document-form';
 
 interface DocumentDialogProps {
-  /** Aktif tedarikçiler — ülkesi ve vadesiyle (rejim ve vade önerisi, 12.26). */
+  /** Aktif tedarikçiler, ülkesi ve vadesiyle (rejim ve vade önerisi için). */
   supplierOptions: SupplierOption[];
-  /** Tür, cari ve etiket sözlükleri (13.09) — yalnız aktifler. */
+  /** Tür, cari ve etiket sözlükleri, yalnız aktifler. */
   counterpartyOptions: CounterpartyOption[];
   natureOptions: NatureOption[];
   tagOptions: TagOption[];
@@ -60,13 +51,12 @@ export function DocumentDialog({ supplierOptions, counterpartyOptions, natureOpt
 
   const form = useForm<DocumentForm>({
     resolver: zodResolver(DocumentFormSchema),
-    defaultValues: emptyDocumentForm(new Date().toISOString().slice(0, 10)),
+    defaultValues: emptyDocumentForm(parisDateOf(new Date())),
     mode: 'onChange',
   });
   const watched = useWatch({ control: form.control }) as DocumentForm;
 
-  // "Neyin faturası" seçenekleri seçili TEDARİKÇİNİN (12.26) — tedarikçi değişince yeniden okunur; eski
-  // tedarikçinin cevabı geç gelirse yenisinin listesini ezmesin diye bayat cevap atılır.
+  // "Neyin faturası" seçenekleri seçili tedarikçinindir; eski tedarikçinin cevabı geç gelirse yenisinin listesini ezmesin diye atılır.
   useEffect(() => {
     if (!watched.supplierId) {
       setStockLinks([]);

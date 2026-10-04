@@ -1,6 +1,7 @@
 'use client';
 
 import { suggestVatRegime } from '@lezzet/domain-core';
+import { parisDateOf } from '@lezzet/helper';
 import type { PurchaseOrderPayload } from '@lezzet/types';
 import { PurchaseOrderFormBody } from '@/components/operation/form/purchase-order-form/body';
 import { purchaseOrderEstimate, type PurchaseOrderFormValues } from '@/components/operation/form/purchase-order-form/schema';
@@ -60,7 +61,7 @@ export function purchaseOrderValuesFrom(payload: PurchaseOrderPayload): Purchase
 /** Faturanın engeli — yalnız faturadan siparişte; toplam, KDV, rejim ve vade kuralları (`invoiceBlock`). */
 export function purchaseOrderInvoiceBlock(draft: PurchaseOrderDraft, payload: PurchaseOrderPayload): string | null {
   if (!draft.invoice) return null;
-  return invoiceBlock(draft.invoice, payload.invoice?.issuedOn ?? new Date().toISOString().slice(0, 10));
+  return invoiceBlock(draft.invoice, payload.invoice?.issuedOn ?? parisDateOf(new Date()));
 }
 
 interface PurchaseOrderBodyProps {

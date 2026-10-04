@@ -1,4 +1,5 @@
 import { serviceDb } from '@lezzet/database';
+import { parisDateOf } from '@lezzet/helper';
 import { guarded, requireAdmin, requireFinance } from '@/lib/guard';
 import { ProcurementClient } from './procurement-client';
 import {
@@ -12,13 +13,8 @@ import { parseProcurementUrl, toOrderFilters } from './procurement-url';
 import { readWarehouseContext } from '@/lib/warehouse/context';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 
-// Tedarik ekranı (09.14) — YÖNETİCİ + MUHASEBE. Tedarikçi borcu ve vadesi muhasebenin de sorusudur;
-// depocu ve kurye görmez (onun mal kabulü fiyatsızdır, 10.4). Sidebar da aynı kümeyi gösterir ama
-// kapı BURADA: nav bir görgü kuralı, guard bir yetki kapısıdır (09.1 çift kat).
-//
-// OKUMA SEKMEYE BAĞLI (09.4'te ölçülen desen): öneri sekmesi stok eşiklerini, sipariş sekmesi PO
-// sayfasını, tedarikçi sekmesi borç türetimini okur — üçünü birden okumak, açılan her sekmeye
-// ötekilerin bedelini ödetirdi.
+// Tedarik ekranı yönetici ve muhasebenindir: tedarikçi borcu ve vadesi muhasebenin de sorusudur, depocu ve kurye görmez. Okuma sekmeye
+// bağlıdır, çünkü üç sekmeyi birden okumak açılan her sekmeye ötekilerin bedelini ödetirdi.
 
 interface ProcurementPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -39,7 +35,7 @@ export default async function ProcurementPage({ searchParams }: ProcurementPageP
     // (fiyat ekranının rozet kuralı). Sayaç SÜZGEÇTEN bağımsızdır ve öyle kalmalı: "yolda ne var"
     // ekranın daralttığı bakışın değil, işin gerçeğinin sorusudur.
     urlState.tab === 'orders' ? readPendingOrderCount(db) : Promise.resolve(null),
-    // Süzgeç şeridi ve elle sipariş penceresi aynı listeyi kullanır — ikisi de sipariş sekmesinde.
+    // Süzgeç satırı ve elle sipariş penceresi aynı listeyi kullanır, ikisi de sipariş sekmesinde.
     urlState.tab === 'orders' ? readSupplierOptions(db) : Promise.resolve(null),
   ]);
 
@@ -62,9 +58,8 @@ export default async function ProcurementPage({ searchParams }: ProcurementPageP
         supplierOptions,
         // Yalnız TESİSLER: satın alma siparişi bir araca teslim edilmez (bağlamın `facilities` künyesi).
         warehouseOptions: ctx?.facilities.map((w) => ({ id: w.id, code: w.code, name: w.name })) ?? null,
-        // Gün SUNUCUDAN: "kaç gündür yolda" istemcide `new Date()` ile hesaplansaydı sunucu ve
-        // istemci gece yarısını geçen bir istekte farklı gün üretirdi (sipariş ekranının deseni).
-        today: new Date().toISOString().slice(0, 10),
+        // Gün sunucudan ve Paris takviminden: istemcide hesaplansaydı gece yarısını geçen bir istekte iki taraf farklı gün üretirdi.
+        today: parisDateOf(new Date()),
       }}
       urlState={urlState}
       canCancelOrders={canCancelOrders}

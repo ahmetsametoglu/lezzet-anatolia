@@ -1,5 +1,6 @@
 'use client';
 
+import { movementToday } from '@/components/operation/form/movement-form/schema';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { AccountSetup } from './account-setup';
 import { BankImportDialog } from './bank-import-dialog';
@@ -12,15 +13,8 @@ import { ALL_ACCOUNTS } from './finance-url';
 import { MovementDialog } from './movement-dialog';
 import type { DocumentRowActions, RowMatcher } from './row-actions';
 
-// Para — MASAÜSTÜ (12.17 düzeni, kullanıcı istekleri 13.09 · 12.21):
-//   başlık · bakiye şeridi (= hesap süzgeci; Toplam en solda, gruplu, kapananlar sonda, yatay kayar)
-//   · tek bant: "Hareketler | Belgeler" + süzgeçler + izah sayacı + Eylemler menüsü
-//   · gövde: tam genişlik liste — satırın bütün işi satırın kendisinde (12.21: sağ panel kalktı; tür ·
-//     cari · etiket orta hücrede, bağ ve öneri "Karşılığı" hapında, belgenin ödemesi kendi hapında).
-//
-// Başlıktaki beş düğme kalktı: seyrek eylemler (hareket, transfer, belge, banka dosyası, sözlük)
-// bandın sağındaki tek menüde. Açık belgeler sağ sütundan Belgeler sekmesine taşındı — ödenen belge
-// artık ekrandan kaybolmuyor. Çizimde bu düzen yok; kitin gramerinde yazıldı (`design/BACKLOG.md §4`).
+// Para masaüstü: başlık, hesap süzgeci olan bakiye satırı, "Hareketler | Belgeler" bandı ve satırın bütün işini kendinde taşıyan tam
+// genişlik liste. Seyrek eylemler bandın sağındaki tek menüdedir; çizimde bu düzen yok, kitin gramerinde yazıldı.
 
 export function FinanceDesktop({
   data,
@@ -116,7 +110,7 @@ export function FinanceDesktop({
         <AccountSetup onCreated={onSaved} />
       )}
 
-      {/* Elle hareket ve transfer TEK pencerede (12.24); "Eylemler → Transfer" onu transfer kipinde açar. */}
+      {/* Elle hareket ve transfer tek penceredir; "Eylemler → Transfer" onu transfer kipinde açar. */}
       {dialog === 'movement' || dialog === 'transfer' ? (
         <MovementDialog
           accounts={writableAccounts}
@@ -152,7 +146,7 @@ export function FinanceDesktop({
             counterpartyId: payingDocument.counterpartyId ?? '',
             tags: [...payingDocument.tags],
             campaign: '',
-            valueDate: new Date().toISOString().slice(0, 10),
+            valueDate: movementToday(),
             description: `${payingDocument.kindLabel}${payingDocument.number ? ` ${payingDocument.number}` : ''}${
               payingDocument.partyName ? ` — ${payingDocument.partyName}` : ''
             }`,

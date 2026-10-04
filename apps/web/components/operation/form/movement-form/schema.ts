@@ -1,33 +1,23 @@
 import { z } from 'zod';
 import { classificationTypeOf } from '@lezzet/domain-core';
+import { parisDateOf } from '@lezzet/helper';
 import { CAPITAL_NATURE, MovementDirectionEnum, type MovementDirection, type MovementNature, type MovementType } from '@lezzet/types';
 
 /*
-  ELLE PARA HAREKETİ FORMUNUN ŞEMASI VE SÖZLÜĞÜ (22.18) — finans sayfasından TAŞINDI, kopyalanmadı.
-
-  Form ortak alana çıktı: asistanın para önerisi artık kuyruğun içinde, gerçek formuyla karar
-  veriliyor (`money_movement` → `inline`). Bir komponentin sayfa klasöründen şema okuması ters
-  yönlü bağımlılıktır (`docs:check §3e`); sayfa bunları yeniden ihraç ederek okuyor.
+  Elle para hareketi formunun şeması ve sözlüğü ortak alandadır, çünkü form hem finans sayfasında hem asistan kuyruğunda çizilir.
+  Komponentin sayfa klasöründen şema okuması ters yönlü bağımlılık olurdu; sayfa bunları yeniden ihraç ederek okur.
 */
 
 /**
- * Elle girilebilen hareket türleri — `money_movement.type`ın ALT kümesi.
- *
- * `order_payment`/`order_refund` yok: sipariş bakiyesi iki yerden değişemez. `purchase` de yok —
- * stok alımı mal kabule bağlıdır ve bağsız satırı motor `supply_link_missing` ile reddeder.
+ * Elle girilebilen hareket türleri, `money_movement.type`ın alt kümesi. Sipariş tahsilatı ve iadesi yoktur, çünkü sipariş bakiyesi iki
+ * yerden değişemez; alım da yoktur, çünkü stok alımı mal kabule bağlıdır.
  */
 export const MANUAL_TYPES = ['expense', 'capital', 'misc'] as const satisfies readonly MovementType[];
 export type ManualType = (typeof MANUAL_TYPES)[number];
 
 /**
- * Formun şeması.
- *
- * **`amount` EURO taşır, cent değil** ve adı bunu söyler: alan bir tur `amountCents` adıyla euro
- * taşıyordu ve doğru görünüyordu — operatörün yazdığı "340,00" kapıya 340 CENT gidiyor, deftere
- * 3,40 € yazılıyordu. Çevrim gönderme anında (`toCents`).
- *
- * Seçici alanlar (tür, cari) "seçilmedi"yi BOŞ DİZEYLE söyler, `null` ile değil: seçici kutular dize
- * taşır; kapıya giderken boş dize `null` olur (`recordManualMovementAction`).
+ * `amount` euro taşır ve kapıya giderken `toCents` ile çevrilir. Seçici alanlar "seçilmedi"yi boş dizeyle söyler, çünkü seçici kutular
+ * dize taşır; kapıya giderken boş dize `null` olur.
  */
 export const ManualMovementSchema = z.object({
   accountId: z.string().min(1),
@@ -35,7 +25,7 @@ export const ManualMovementSchema = z.object({
   /** **EURO** — kapıya `toCents` ile gider. */
   amount: z.number().positive().nullable(),
   direction: MovementDirectionEnum,
-  /** TÜR (13.09 · ikinci karar) — "bu para neyin parası", sözlükten TEK tür. `reklam` seçilince kampanya sorulur. */
+  /** Paranın neyin parası olduğu, sözlükten tek tür; `reklam` seçilince kampanya sorulur. */
   nature: z.string(),
   /** Kime ödendi / kimden geldi — cari. */
   counterpartyId: z.string(),
@@ -44,20 +34,14 @@ export const ManualMovementSchema = z.object({
   campaign: z.string(),
   valueDate: z.string(),
   description: z.string(),
-  /**
-   * Dayanak belge (12.12) — "Ödemesini yaz" ile açılan formda dolu gelir, elle girişte `null`.
-   * Form bunu DÜZENLETMEZ (belge seçici yok); belgeden gelen ödeme belgeye bağlı doğar.
-   */
+  /** Dayanak belge: "Ödemesini yaz" ile açılan formda dolu gelir, elle girişte `null`. Form bunu düzenletmez, ödeme belgeye bağlı doğar. */
   documentId: z.string().nullable(),
 });
 export type ManualMovementForm = z.infer<typeof ManualMovementSchema>;
 
 /**
- * Kaydetmenin ENGELİ, tek cümlede.
- *
- * Alan alan kırmızı yazı yerine bu: eksik alan zaten kutuya bakınca görülüyor, ama "neden düğme
- * kapalı" sorusunun cevabı hiçbir yerde yazmıyordu. İki yüzey (finans diyaloğu · kuyruk) aynı
- * fonksiyonu okuyor — ayrışsalardı hareket bir ekranda kaydedilir ötekinde reddedilirdi.
+ * Kaydetmenin engeli tek cümlede, çünkü "düğme neden kapalı" sorusunun cevabı başka yerde yazmıyor. Finans diyaloğu ile kuyruk aynı
+ * fonksiyonu okur, ki hareket bir ekranda kaydedilip ötekinde reddedilmesin.
  */
 export function movementBlock(values: ManualMovementForm): string | null {
   if (!values.accountId) return 'Önce hesabı seçin.';
@@ -67,9 +51,9 @@ export function movementBlock(values: ManualMovementForm): string | null {
   return null;
 }
 
-/** Bugünün günü — `valueDate` varsayılanı. Para çoğu zaman girildiği gün hareket etmiştir. */
+/** Paris takviminde bugün, `valueDate` varsayılanı: para çoğu zaman girildiği gün hareket etmiştir. */
 export function movementToday(): string {
-  return new Date().toISOString().slice(0, 10);
+  return parisDateOf(new Date());
 }
 
 /** Tür seçicisinin etiketleri ve ipuçları. */
@@ -80,13 +64,8 @@ export const MANUAL_TYPE_VIEW: Record<ManualType, { label: string; hint: string 
 };
 
 /**
- * Etiket seçeneği — serbest etiket sözlüğünün (`movement_tag`) formdaki hâli: `value` slug,
- * `label` okunur ad.
- *
- * ── SINIFLANDIRMA ARTIK TÜR (13.09 · ikinci karar) ─────────────────────────
- * Bir tur sınıflandırmanın tek mekanizması etiketti ve iki şey kayboluyordu: çok etiketli satırda
- * hangisinin tür olduğu, ve muhasebeciye giden dökümde hesap kodu. Tür artık tektir
- * (`NatureOption`); etiket isteğe bağlı serbest işarettir. İkisi de sözlükten, çağırandan gelir.
+ * Serbest etiket sözlüğünün (`movement_tag`) formdaki hâli: `value` slug, `label` okunur ad. Sınıflandırma etiketle değil tek türle
+ * yapılır (`NatureOption`), çünkü çok etiketli satırda hangisinin tür olduğu ve dökümdeki hesap kodu belirsiz kalırdı.
  */
 export interface TagOption {
   value: string;
@@ -113,10 +92,8 @@ export function naturesForDirection(options: readonly NatureOption[], direction:
 }
 
 /**
- * Elle girişin türleri — yönüne uyan VE seçilen hareket türünü veren türler. Kural motorun
- * (`classificationTypeOf`): sermaye girişinin türü sermayedir, öteki çıkış gider, öteki giriş
- * sınıflandırılmamış giriştir. Sonuç: "Sermaye" yalnız sermaye türünü, "Gider" çıkış türlerini
- * görür; sınıflandırılmamış ÇIKIŞIN türü yoktur — türü biliniyorsa o bir giderdir.
+ * Elle girişin türleri: yönüne uyan ve seçilen hareket türünü veren türler, kural motorun (`classificationTypeOf`). Sınıflandırılmamış
+ * çıkışın türü yoktur, çünkü türü biliniyorsa o bir giderdir.
  */
 export function naturesFor(options: readonly NatureOption[], type: ManualType, direction: MovementDirection): NatureOption[] {
   return naturesForDirection(options, direction).filter((option) => classificationTypeOf(direction, option.value) === type);
@@ -135,11 +112,8 @@ export function natureAfterChange(options: readonly NatureOption[], type: Manual
 }
 
 /**
- * Hareket türü değişince formun yeni hâli (12.24) — yön tipin SONUCUDUR, ayrı bir soru değil: gider
- * çıkış, sermaye giriştir (motorun kuralı); yalnız `misc` serbest kalır, çünkü banka "para girdi/çıktı"
- * der, sebebini söylemez. Tür yeni türe ve yöne göre yeniden süzülür (`natureAfterChange`). Tür seçici
- * iki yerde duruyor — gövdenin kendi seçicisi (asistan kuyruğu) ve Para penceresinin dört kipli seçicisi —
- * ve ikisi aynı kuralı buradan okur; ayrı yazılsalardı bir gün biri yönü öteki türü unuturdu.
+ * Hareket türü değişince yön türün sonucudur: gider çıkış, sermaye giriştir ve yalnız `misc` serbest kalır, çünkü banka sebebini
+ * söylemez. Tür seçici asistan kuyruğunda ve Para penceresinde durur ve ikisi kuralı buradan okur.
  */
 export function typePatch(
   options: readonly NatureOption[],
@@ -151,9 +125,7 @@ export function typePatch(
 }
 
 /**
- * Elle girişin KAPSAMI — "burada olmayan"ı susarak değil cümleyle söylemek: sipariş tahsilatını neden
- * giremediğini bilmeyen operatör onu "sınıflandırılmadı" diye girer ve sipariş ile para kaydı sessizce
- * ayrışır. 12.24'ten beri Para penceresinin alt başlığında tek satır; gövdedeki gri kutu kalktı (üç
- * satır yer tutuyordu ve "transfer" diyordu, transfer ise ayrı bir penceredeydi).
+ * Elle girişin kapsamı cümleyle söylenir, çünkü sipariş tahsilatını neden giremediğini bilmeyen operatör onu "sınıflandırılmadı" diye
+ * girer ve sipariş ile para kaydı sessizce ayrışır.
  */
 export const MANUAL_ENTRY_SCOPE = 'Sipariş tahsilatları burada girilmez — online ödeme, kapıda tahsilat ve kurye gün kapanışı kendi akışlarından düşer.';

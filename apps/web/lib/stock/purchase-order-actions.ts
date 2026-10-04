@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createMoneyDocument } from '@lezzet/application';
 import { PurchaseOrderService, SupplierProductService, serviceDb } from '@lezzet/database';
+import { parisDateOf } from '@lezzet/helper';
 import type { DocumentVatLine, DocumentVatRegime } from '@lezzet/types';
 import { requireFinance } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -76,7 +77,7 @@ export async function createDraftFromProposalAction(input: {
       const outcome = await createMoneyDocument(serviceDb(), {
         kind: 'invoice',
         number: input.invoice.number?.trim() || null,
-        issuedOn: input.invoice.issuedOn ?? new Date().toISOString().slice(0, 10),
+        issuedOn: input.invoice.issuedOn ?? parisDateOf(new Date()),
         dueOn: input.invoice.dueOn,
         supplierId: input.supplierId,
         purchaseOrderId: created.order.id,

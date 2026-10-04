@@ -1,14 +1,9 @@
 import { z } from 'zod';
+import { parisDateOf } from '@lezzet/helper';
 
 /**
- * **TRANSFER FORMUNUN ŞEMASI** — iki yüzeyin paylaştığı tek tanım (22.22).
- *
- * Finans ekranının `finance-types.ts` dosyasındaydı; asistan kuyruğu da aynı formu açtığı için
- * ortak alana çıktı. Bir komponentin sayfa klasöründen şema okuması ters yönlü bağımlılıktır ve
- * `docs:check §3e` bunu zaten yasaklıyor.
- *
- * **Yeniden ihraç YOK:** iki çağıran da (finans diyaloğu · kuyruk gövdesi) şemayı buradan okuyor.
- * Eski adresten de vermek, aynı tanıma ikinci bir kapı açmak olurdu.
+ * Transfer formunun şeması finans diyaloğu ile asistan kuyruğunun paylaştığı tek tanımdır; ortak alandadır, çünkü komponentin sayfa
+ * klasöründen şema okuması ters yönlü bağımlılık olurdu.
  */
 export const TransferFormSchema = z.object({
   fromAccountId: z.string().min(1),
@@ -20,9 +15,9 @@ export const TransferFormSchema = z.object({
 });
 export type TransferForm = z.infer<typeof TransferFormSchema>;
 
-/** Bugün (YYYY-AA-GG) — değer tarihinin varsayılanı; uydurma bir tarih defterde yanlış güne yazar. */
+/** Paris takviminde bugün, değer tarihinin varsayılanı; UTC günü gece yarısından sonra hareketi önceki güne yazardı. */
 export function transferToday(): string {
-  return new Date().toISOString().slice(0, 10);
+  return parisDateOf(new Date());
 }
 
 /**
