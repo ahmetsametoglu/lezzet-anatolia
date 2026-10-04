@@ -6,17 +6,14 @@ import {
   officeTransitions,
   openAmountCents,
 } from '@lezzet/domain-core';
+import { parisDateOf } from '@lezzet/helper';
 import type { Order, OrderItem, UserProfile } from '@lezzet/types';
 import type { OrderCountsView, OrderRow } from './orders-types';
 import type { OrderCounts } from '@lezzet/database';
 
 /**
- * Sipariş satırının kurulumu (09.7) — **saf dönüşüm**: DB satırları girer, ekranın göreceği
- * view-model çıkar. Okuma `page.tsx`'te, karar motorda; burası ikisini birleştirir.
- *
- * Kararların hiçbiri burada VERİLMEZ: sunulacak geçişler `officeTransitions`'tan, vade gecikmesi
- * `isOverdue`'dan, tahsil edilecek tutar `derivePaymentStatusForOrder`'dan gelir — üçü de checkout
- * freninin ve durum makinesinin kullandığı tanımların ta kendisi.
+ * Sipariş satırının kurulumu saf dönüşümdür: DB satırları girer, ekranın view-model'i çıkar. Geçişler, vade gecikmesi ve tahsil
+ * edilecek tutar motordan gelir, ki checkout freni ve durum makinesiyle aynı tanım kullanılsın.
  */
 
 interface OrderRowInput {
@@ -76,19 +73,9 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
       onAccount: order.onAccount,
       // Vade günü YALNIZ vadeli siparişte anlamlı: peşin siparişte "vade 12 Tem" yazmak, olmayan
       // bir borcu varmış gibi gösterirdi.
-      dueDate: order.onAccount ? dueDateOf(order.createdAt, termDays).toISOString().slice(0, 10) : null,
-      /*
-        KALAN MOTORDAN (01.09) — liste ile detay AYNI sayıyı söylemek zorunda.
-
-        Burada `openAmountCents(order)` duruyordu ve o hesap `total − net tahsilat`tır: **kısmi
-        karşılamayı görmez.** Ölçüldü (`LA-26-93UXKY`): liste "Kapıda 46,39 €" derken detay
-        "Kalan 27,29 €" diyordu — aradaki 19,10 € hiç gitmemiş maldı. İki ekranın aynı siparişe iki
-        borç yazması, hangisine bakıldığına göre farklı para tahsil edilmesi demek.
-
-        `openAmountCents` yanlış değil, BAŞKA bir sorunun cevabı: vade defterinde siparişin ham
-        borcu odur (`creditPosition` onu kullanır ve orada doğrudur). Kapıda tahsil edilecek tutarı
-        soran ekran motora sorar.
-      */
+      dueDate: order.onAccount ? parisDateOf(dueDateOf(order.createdAt, termDays)) : null,
+      /* Kalan tutar motordan gelir, ki liste ile detay aynı sayıyı söylesin; `openAmountCents` kısmi karşılamayı görmez, o vade
+         defterinin ham borcudur. */
       openCents: derivePaymentStatusForOrder(order, items, {
         collectedCents: order.amountCollectedCents,
         refundedCents: order.amountRefundedCents,
@@ -97,10 +84,8 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
     },
     isGift: order.isGiftOrder,
     createdAt: order.createdAt,
-    // Detay şeridiyle AYNI süzgeç, aynı fonksiyondan (`officeTransitions` — kapı 26.08, sahiplik
-    // 09.29): düz kapıdan geçemeyen ya da anı sahanın olan geçiş burada da "ilerlenebilir" diye
-    // sunulmaz. Bugün bu alanı çizen bir liste ekranı yok; süzgeç yine de burada, çünkü ayrı
-    // bırakılan iki liste bir gün ayrışır ve ikincisini kullanan ekran aynı arızayı sıfırdan doğurur.
+    // Detayın eylem satırıyla aynı süzgeç (`officeTransitions`); bugün bu alanı çizen liste yok, ama ayrı bırakılan iki süzgeç bir gün
+    // ayrışırdı.
     allowedNext: officeTransitions(order.status),
     // Bir sipariş TEK depodan çıkar (DOMAIN §17) — bu yüzden satırda tek bir kod durur, liste değil.
     // Ad bilinmiyorsa (silinmiş değil, yalnız haritaya girmemiş bir kimlik) uydurma yapılmaz.

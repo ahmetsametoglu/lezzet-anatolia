@@ -52,7 +52,7 @@ import {
 } from '@lezzet/domain-core';
 import { doorCheckOf } from '@lezzet/address';
 import { listOrderBoxes, readDeliveryProof, readOrderTracking, registerLiveFrom, thumbnailImageUrl } from '@lezzet/application';
-import { toCents } from '@lezzet/helper';
+import { parisDateOf, toCents } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
 import { readCustomerTrust } from '@/lib/customer/trust';
@@ -253,7 +253,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       refundedCents: order.amountRefundedCents,
       openCents: derivation.amountToCollectCents,
       refundDueCents: derivation.refundDueCents,
-      dueDate: order.onAccount ? dueDateOf(order.createdAt, termDays).toISOString().slice(0, 10) : null,
+      dueDate: order.onAccount ? parisDateOf(dueDateOf(order.createdAt, termDays)) : null,
       overdue: isOverdue(order, termDays, now),
       vatTreatment: order.vatTreatment,
     },
@@ -278,7 +278,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
     timeline: timelineOf(logs, actorNames, tickets, order.status),
     /*
-      Şerit yalnız ofisin geçişlerini sunar: iptal ve teslim düz durum yazımıyla stok ve rezervasyonu atlardı, hazırlık ve kapıdaki
+      Eylem satırı yalnız ofisin geçişlerini sunar: iptal ve teslim düz durum yazımıyla stok ve rezervasyonu atlardı, hazırlık ve kapıdaki
       sonuç ise sahanın işidir. Bayat sekmeden gelen istek eylem tarafında da reddedilir.
     */
     allowedNext: officeTransitions(order.status),
@@ -321,7 +321,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
             overdueDays: isOverdue(order, termDays, now)
               ? Math.floor((now.getTime() - dueDateOf(order.createdAt, termDays).getTime()) / 86_400_000)
               : null,
-            dueDate: order.onAccount ? dueDateOf(order.createdAt, termDays).toISOString().slice(0, 10) : null,
+            dueDate: order.onAccount ? parisDateOf(dueDateOf(order.createdAt, termDays)) : null,
           }
         : null,
     },

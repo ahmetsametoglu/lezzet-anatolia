@@ -100,6 +100,12 @@ describe('sipariş satırı', () => {
     expect(fallback?.payment.dueDate).toBe('2026-07-16');
   });
 
+  it('vade günü Paris takvimindedir: gece yarısından sonra açılan siparişin vadesi bir gün erken yazılmaz', () => {
+    // Paris'te 1 Temmuz 00:30, UTC'de hâlâ 30 Haziran.
+    const [row] = build([order({ createdAt: '2026-06-30T22:30:00Z' })], { termDays: 15 });
+    expect(row?.payment.dueDate).toBe('2026-07-16');
+  });
+
   it('peşin siparişte vade günü YOKTUR — olmayan borç gösterilmez', () => {
     const [row] = build([order({ onAccount: false })]);
     expect(row?.payment.dueDate).toBeNull();
