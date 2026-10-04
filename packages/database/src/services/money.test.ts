@@ -312,30 +312,21 @@ describe('hareketin işi', () => {
   };
   const businessOf = async (movementId: string) => (await movements.getById(movementId))?.business;
 
-  it('iş sırayla belge bağından, mal kabulün deposundan, tedarikçiden, cariden, en son hesaptan gelir; bağ kalkınca geri döner', async () => {
-    const qualiteAccount = await accounts.insert({ name: `QUALITE bankası ${stamp}-${(counter += 1)}`, type: 'bank', business: 'qualite' });
-    createdAccounts.push(qualiteAccount.id);
-    const fromAccount = await movements.insert({
-      accountId: qualiteAccount.id,
-      direction: 'out',
-      amountCents: 1000,
-      type: 'expense',
-      description: 'hesap',
-    });
-    expect(fromAccount.business).toBe('qualite');
-
-    const counterparty = await counterpartyOf('lezzet');
+  it("iş sırayla belge bağından, mal kabulün deposundan, tedarikçiden, cariden gelir, hiçbiri söylemiyorsa Lezzet'tir; bağ kalkınca geri döner", async () => {
+    const counterparty = await counterpartyOf('qualite');
     const movement = await movements.insert({
-      accountId: qualiteAccount.id,
+      accountId: bankAccount.id,
       direction: 'out',
       amountCents: 1000,
       type: 'expense',
       counterpartyId: counterparty.id,
     });
-    expect(movement.business).toBe('lezzet');
+    expect(movement.business).toBe('qualite');
+    await movements.update({ id: movement.id, counterpartyId: null });
+    expect(await businessOf(movement.id)).toBe('lezzet');
 
     const supplier = await supplierOf('qualite');
-    await movements.update({ id: movement.id, counterpartyId: null, supplierId: supplier.id });
+    await movements.update({ id: movement.id, supplierId: supplier.id });
     expect(await businessOf(movement.id)).toBe('qualite');
 
     const warehouse = await warehouseOf('lezzet');
@@ -350,7 +341,7 @@ describe('hareketin işi', () => {
     expect(await businessOf(movement.id)).toBe('lezzet');
   });
 
-  it('sipariş parası işini siparişin deposundan alır, hesabın işinden değil', async () => {
+  it('sipariş parası işini siparişin deposundan alır', async () => {
     const warehouse = await warehouseOf('qualite');
     const categoryId = (await new CategoryService(db).create({ name: { tr: `İş testi ${stamp}` } })).id;
     parties.categoryIds.push(categoryId);

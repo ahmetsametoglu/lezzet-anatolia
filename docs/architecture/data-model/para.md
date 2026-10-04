@@ -24,7 +24,6 @@ Paranın durduğu yer. Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Stripe 
 | `name` | text |  |  |
 | `type` | account_type |  |  |
 | `currency` | currency |  | `'EUR'` |
-| `business` | business |  | `'lezzet'` |
 | `is_active` | boolean |  | `true` |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->

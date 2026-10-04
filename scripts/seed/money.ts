@@ -20,8 +20,7 @@ import { euro, gun, tabloDolu, type Db } from './shared';
 const HESAPLAR = [
   { key: 'kasa', name: 'Kasa', type: 'cash' as const, acilis: 850 },
   { key: 'revolut', name: 'Revolut', type: 'bank' as const, acilis: 4200 },
-  // Crédit Mutuel QUALITE'nin hesabıdır; Lezzet'in nakdi buradan Revolut'a gider (`docs/feature/iki-is.md`).
-  { key: 'cm', name: 'Crédit Mutuel', type: 'bank' as const, acilis: 12500, business: 'qualite' as const },
+  { key: 'cm', name: 'Crédit Mutuel', type: 'bank' as const, acilis: 12500 },
   // Stripe'ın açılışı var, çünkü payout'u var: tahsilatlar burada yazılmadığı için açılış onların yerini tutar, yoksa payout hiç
   // girmemiş parayı çıkarır ve bakiye eksiye düşerdi.
   { key: 'stripe', name: 'Stripe', type: 'provider' as const, acilis: 1980 },
@@ -98,7 +97,7 @@ export async function seedMoney(db: Db): Promise<void> {
   for (const etiket of ETIKETLER) await tagService.insert(etiket);
 
   for (const h of HESAPLAR) {
-    const created = await accounts.insert({ name: h.name, type: h.type, isActive: h.isActive ?? true, business: h.business });
+    const created = await accounts.insert({ name: h.name, type: h.type, isActive: h.isActive ?? true });
     hesapId.set(h.key, created.id);
     // Açılış bakiyesi bir HAREKETTİR: bakiye kolonu yok, sayı hareketlerden çıkar. Türü `sermaye`.
     if (h.acilis > 0) {

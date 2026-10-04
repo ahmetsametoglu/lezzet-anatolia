@@ -35,10 +35,7 @@
 
 ## Banka
 
-- **Kurulum kartında yalnız Revolut'u eşle.** Crédit Mutuel toptanındır; eşlenirse toptanın hareketleri Lezzet'in izah
-  kuyruğuna düşer.
-- **Lezzet faturasını Crédit Mutuel'den, toptan ödemesini Revolut'tan yapma.** Crédit Mutuel'den ödenen Lezzet belgesi
-  bizde açık kalır; Revolut'tan çıkan toptan ödemesi Pennylane'de eşlenene kadar bizde izah bekler.
-- **Nakdi yatırdığın gün bizde "Kasa → Crédit Mutuel" transferini yaz.** Yazılmazsa kasa sayımı Hiboutik'te tutmaz.
-- **Yatırılan Lezzet nakdini Crédit Mutuel'de bırakma, Revolut'a gönder.** Revolut'taki satır "Başka hesaba transfer →
-  Crédit Mutuel" ile eşleşir; bizdeki Crédit Mutuel bakiyesi gönderilmeyi bekleyen nakittir.
+- **Kurulum kartında Revolut'u da Crédit Mutuel'i de eşle.** Eşlenmeyen hesabın hareketi gelmez. Ödemenin işi bankadan değil,
+  bağlandığı belgeden ya da siparişten gelir; iki işin ödemesi iki bankadan da yapılabilir.
+- **Nakdi yatırdığın gün bizde "Kasa → Crédit Mutuel" transferini yaz.** Yazılmazsa kasa sayımı Hiboutik'te tutmaz; Crédit
+  Mutuel'e gelen satır bu transferin öteki yakası olarak eşleşir.

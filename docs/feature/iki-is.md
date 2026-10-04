@@ -13,7 +13,7 @@ satış yapan iştir. İkisi aynı tüzel kişilik (QUALITE SAS) altındadır: m
 |---|---|---|
 | 1 | **İki işin bütün kayıtları bizim sistemde** — müşteri, sipariş, alış, gider, banka, stok | Kayıt doğduğu yerde işini taşır; Pennylane iki işi kategoriyle ayırır ve muhasebeciye giden dosya oradan çıkar (`kasa-muhasebe.md` 2. karar). Toptan ekibi alışı ve gideri Pennylane'e doğrudan girmez, çünkü her kaydın tek giriş yeri olur. |
 | 2 | **Gider fişi bizim mobil uygulamadan girilir**, fotoğrafla | Fişten otomatik okuma ayrı bir iştir (§3, E fazı). |
-| 3 | **Ayrımın tek alanı "iş"** (`qualite` · `lezzet`), serbest etiket değil | Etiket unutulunca kayıt sessizce yanlış işe yazılırdı; alan zorunludur ve varsayılanı karşı taraftan ya da hesaptan gelir. |
+| 3 | **Ayrımın tek alanı "iş"** (`qualite` · `lezzet`), serbest etiket değil | Etiket unutulunca kayıt sessizce yanlış işe yazılırdı; alan zorunludur ve varsayılanı karşı taraftan gelir. |
 | 4 | **İki işe birden alınan mal ayrı fatura ve ayrı ödemeyle alınır** | Belge bölünmez. |
 | 5 | **Bölünemeyen ortak gider (kira, personel, enerji, ortak araç) tek işe yazılır** | İş alanı tek değerdir, oran tutmaz. |
 | 6 | **Stok depo üzerinden ayrılır:** her depo bir işe aittir, etiketsiz depo Lezzet'tir | Mal kabul, parti, rezervasyon, sipariş, sayım ve fire işini deposundan alır; depo bu kayıtların hepsinde zorunlu olduğu için yeni alan gerekmez. Dayanak: iki işin malı fiziksel olarak ayrı duruyor, aynı rafta değil. |
@@ -21,6 +21,7 @@ satış yapan iştir. İkisi aynı tüzel kişilik (QUALITE SAS) altındadır: m
 | 8 | **İki iş arasında mal geçişi yoktur;** olursa depo transferiyle yapılır ve sonraki siparişte mahsuplaşılır | Muhasebede tek şirket olduğu için iç fatura ya da iç devir kaydı açılmaz. |
 | 9 | **Her işin kendi teslimat bölgesi ve seferi vardır;** geçici olarak tek kurye tek araçla iki hesap ve iki telefonla iki işin seferini birlikte sürer, ileride araçlar ayrılır | Sistemde iki ayrı kurye olduğu için iki sefer aynı anda yoldadır. Tek hesap iki seferi birlikte süremez: kurye aynı anda tek sefer sürer ve başlamamış seferin durağı gün ekranında görünmez. Sahada sürtünme görülürse birleşik sürüş kurulur (§5). |
 | 10 | **QUALITE etiketi yalnız B2B onaylı müşteriye verilir; QUALITE deposundan anonim kapı satışı yapılmaz; QUALITE kargo göndermez** | Toptan fiyat onaysız açılmaz (`effectiveChannelOf`). QUALITE bölgelerinin dışındaki QUALITE müşterisi "teslimat noktası belirlenemedi" mesajını alır, Lezzet deposuna düşmez. |
+| 11 | **Banka hesapları işe göre ayrılmaz** (04.10): Crédit Mutuel ile Revolut şirketin hesaplarıdır | Ödemenin işi bağından gelir (belge, siparişin ya da mal kabulün deposu, tedarikçi, cari); hiçbiri iş söylemiyorsa Lezzet'tir. İki banka da Pennylane'den okunur (`kasa-muhasebe.md` 15. karar). |
 
 **Dayanak (ölçüm ve araştırma, 03.10):** Pennylane'in yerleşik stok modülü yok (yardım merkezi: *"Pennylane ne dispose pas
 de module natif dédié à la gestion des stocks"*); stok için önerdiği Stockpit ayrı abonelikli ikinci bir sistemdir.
@@ -29,9 +30,8 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
 
 ## 2. Sonuçları
 
-- **Crédit Mutuel de eşlenir.** QUALITE'nin ödemeleri bizde QUALITE belgeleriyle izah edilir; `kasa-muhasebe.md` 15.
-  kararın "yalnız Revolut eşlenir" kısmı bununla değişir. Lezzet'in nakdi yine Crédit Mutuel'e yatırılıp Revolut'a
-  gönderilir; artık iki uç da eşli hesaptır.
+- **İki banka da eşlenir** (11. karar): iki işin ödemesi hangi bankadan çıkarsa çıksın bağlandığı belgeyle izah edilir ve işini
+  ondan alır. Nakit Crédit Mutuel'e yatırılır.
 - **Pennylane kategorisi işten yazılır** ("Lezzet", "QUALITE"; "Activité" grubunda); `kasa-muhasebe.md` 16. karar
   genişler. Banka hareketine de bağının işinden kategori yazılır.
 - **E-fatura okuyucusu** (`kasa-muhasebe.md` 7. adım) iki işi de kapsar; işi tedarikçinin varsayılan işinden okur.
@@ -58,7 +58,7 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
 
 | Faz | İş | Ön şart |
 |---|---|---|
-| A | **Para tarafında iş.** Belgede ve belgesiz harekette zorunlu iş alanı; tedarikçi, cari ve hesapta varsayılan iş; depoda iş (mal kabule bağlı belge ve sipariş parası işini deposundan alır); formlarda seçim; Pennylane kategorisi belgenin işinden; banka satırının işi bağından; para ekranında iş süzgeci ve iki işin özeti; Crédit Mutuel eşlemesi. | — |
+| A | **Para tarafında iş.** Belgede ve belgesiz harekette zorunlu iş alanı; tedarikçide ve caride varsayılan iş; depoda iş (mal kabule bağlı belge ve sipariş parası işini deposundan alır); formlarda seçim; Pennylane kategorisi belgenin işinden; banka satırının işi bağından; para ekranında iş süzgeci ve iki işin özeti; Crédit Mutuel eşlemesi. | — |
 | B | **Satış ve stokta iş (depo modeli).** Müşteride iş; deponun işi formda seçilir ve kullanılmaya başlayınca kilitlenir; bölge işe göre; depo çözümü, gel-al teklifi ve vitrinin "hiç var mı" toplamı müşterinin işine göre; tedarik siparişinde iş; satış raporları iki iş için (§5). | A |
 | C | **Gider fişi mobilde.** Fotoğraf, iş, tür, tutar ve KDV ile belge açılır; Pennylane'e bugünkü kuyrukla yüklenir. | A |
 | D | **E-fatura okuyucu** iki iş için; çift kayıt koruması (`kasa-muhasebe.md` 7. adım). | A |
@@ -72,11 +72,12 @@ Açık soru yok.
 
 **Para (A fazı):**
 - İş enum'u `0010_supply.sql`'de tanımlanır, çünkü tedarikçi tablosu para tablolarından önce açılır. Tedarikçinin ve carinin
-  varsayılan işi boş bırakılabilir (ortak tedarikçide boşluk seçimi zorlar); hesabın ve deponun işi zorunlu, etiketsiz Lezzet.
+  varsayılan işi boş bırakılabilir (ortak tedarikçide boşluk seçimi zorlar); deponun işi zorunlu, etiketsiz Lezzet; banka hesabının
+  işi yoktur (11. karar).
 - `money_document.business` zorunlu; mal kabule bağlıysa deponun işi (çelişen seçim reddedilir), değilse sırayla açık seçim,
   tedarikçi, cari; kararı belge kapısı (`createMoneyDocument`) verir.
 - `money_movement.business` zorunlu ve tetikleyici kurar: bağ (belge, siparişin ya da mal kabulün deposu, tedarikçi), sonra
-  cari, sonra hesap. Böylece RPC'ler ve SQL yazımları da kapsanır; bağ değişince iş yeniden türer. İki işin belgesine giden
+  cari; hiçbiri iş söylemiyorsa Lezzet. Böylece RPC'ler ve SQL yazımları da kapsanır; bağ değişince iş yeniden türer. İki işin belgesine giden
   bağ reddedilir (4. karar).
 - Pennylane: faturanın kategorisi belgenin işinden yazılır, belgenin işi değişince belge kuyruğa düşer. Banka işleminin kategorisi
   hareketin işinden ayrı bir turda yazılır (aynada `category_business`), eşleşme kuyruğundan bağımsız; ölçüme göre işlem kategorisi

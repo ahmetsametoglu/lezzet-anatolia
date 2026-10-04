@@ -17,8 +17,6 @@ export const AccountSchema = z.object({
   name: z.string(),
   type: AccountTypeEnum,
   currency: CurrencyEnum,
-  /** Hesabın sahibi olan iş; hiçbir bağın iş söylemediği hareket işini buradan alır. */
-  business: BusinessEnum,
   isActive: z.boolean(),
   createdAt: z.string(),
 });
@@ -28,8 +26,6 @@ export const AccountInsertSchema = z.object({
   name: z.string().min(1),
   type: AccountTypeEnum,
   currency: CurrencyEnum.optional(),
-  /** Verilmezse Lezzet (veri varsayılanı). */
-  business: BusinessEnum.optional(),
   isActive: z.boolean().optional(),
 });
 export type AccountInsert = z.infer<typeof AccountInsertSchema>;

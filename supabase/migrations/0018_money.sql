@@ -21,8 +21,6 @@ create table public.account (
   name text not null,
   type account_type not null,
   currency currency not null default 'EUR',
-  -- Hesabın sahibi olan iş; hiçbir bağın iş söylemediği harekette son dayanaktır, etiketsiz hesap Lezzet'tir.
-  business business not null default 'lezzet',
   -- Hesap SİLİNMEZ, pasifleşir: geçmiş hareketleri ona bağlıdır (kapanan banka hesabı da tarihtir).
   is_active boolean not null default true,
   created_at timestamptz not null default now()
@@ -381,8 +379,8 @@ create trigger money_allocation_explains
   for each row execute function public.money_allocation_touch();
 
 -- ── İş ───────────────────────────────────────────────────────────────────────
--- Hareketin işi bağlarından türer: belge bağı, siparişin ya da mal kabulün deposu, tedarikçi, cari, sonra hesap. Gövde geç bağlanır,
--- çünkü `warehouse` 0031'de açılır; hesabın işi zorunlu olduğu için sonuç hep doludur.
+-- Hareketin işi bağlarından türer: belge bağı, siparişin ya da mal kabulün deposu, tedarikçi, cari; hiçbiri iş söylemiyorsa etiketsiz
+-- depo gibi Lezzet'tir. Gövde geç bağlanır, çünkü `warehouse` 0031'de açılır.
 create or replace function public.money_movement_business(p public.money_movement)
 returns public.business
 language plpgsql
@@ -400,7 +398,7 @@ begin
     (select w.business from public.stock_intake i join public.warehouse w on w.id = i.warehouse_id where i.id = p.stock_intake_id),
     (select s.default_business from public.supplier s where s.id = p.supplier_id),
     (select c.default_business from public.counterparty c where c.id = p.counterparty_id),
-    (select a.business from public.account a where a.id = p.account_id)
+    'lezzet'
   );
 end;
 $$;
@@ -417,8 +415,7 @@ begin
      or new.order_id is distinct from old.order_id
      or new.stock_intake_id is distinct from old.stock_intake_id
      or new.supplier_id is distinct from old.supplier_id
-     or new.counterparty_id is distinct from old.counterparty_id
-     or new.account_id is distinct from old.account_id then
+     or new.counterparty_id is distinct from old.counterparty_id then
     new.business := public.money_movement_business(new);
   end if;
   return new;
