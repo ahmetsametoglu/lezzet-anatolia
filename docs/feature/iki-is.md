@@ -78,8 +78,9 @@ Açık soru yok.
 - `money_movement.business` zorunlu ve tetikleyici kurar: bağ (belge, siparişin ya da mal kabulün deposu, tedarikçi), sonra
   cari, sonra hesap. Böylece RPC'ler ve SQL yazımları da kapsanır; bağ değişince iş yeniden türer. İki işin belgesine giden
   bağ reddedilir (4. karar).
-- Pennylane: kategori işten; harekete kategori yazan port yöntemi ve aynası eklenir; kuyruk tetikleyicisinin sütun listesine
-  iş girer.
+- Pennylane: faturanın kategorisi belgenin işinden yazılır, belgenin işi değişince belge kuyruğa düşer. Banka işleminin kategorisi
+  hareketin işinden ayrı bir turda yazılır (aynada `category_business`), eşleşme kuyruğundan bağımsız; ölçüme göre işlem kategorisi
+  uç noktası faturanınkiyle aynı biçimdedir.
 - Eşleşmeyi geri alma ve "zaten yazmıştım" birleşmesi bağı taşır; bağ tetikleyicisi iki hareketin işini de yeniden kurar.
 - Kalan risk: `matched_elsewhere` iki iş bizdeyken anlamını yitirir (Crédit Mutuel eşlemesi adımı).
 

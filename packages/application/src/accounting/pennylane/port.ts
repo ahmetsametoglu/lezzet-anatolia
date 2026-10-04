@@ -1,11 +1,11 @@
 import type {
+  PennylaneAssignedCategory,
   PennylaneBankAccount,
   PennylaneCategory,
   PennylaneCategoryGroup,
   PennylaneChangePage,
   PennylaneCompany,
   PennylaneInvoice,
-  PennylaneInvoiceCategory,
   PennylaneInvoiceDraft,
   PennylaneInvoicePatch,
   PennylanePaymentStatus,
@@ -15,6 +15,12 @@ import type {
   PennylaneTransactionMatch,
   PennylaneTransactionPage,
 } from '@lezzet/types';
+
+/** Kategorisi okunup yazılan kayıt; fatura ile banka işleminin kategori uç noktası aynı biçimdedir. */
+export interface PennylaneCategoryTarget {
+  kind: 'invoice' | 'transaction';
+  id: number;
+}
 
 /** Muhasebe yazılımının portu: eşitleme yalnız bunu bilir, böylece Pennylane uyarlaması ağa çıkmayan bir ikizle değiştirilebilir. */
 export interface PennylanePort {
@@ -58,7 +64,7 @@ export interface PennylanePort {
   createCategoryGroup(label: string): Promise<PennylaneCategoryGroup>;
   listCategories(): Promise<PennylaneCategory[]>;
   createCategory(input: { label: string; groupId: number }): Promise<PennylaneCategory>;
-  invoiceCategories(invoiceId: number): Promise<PennylaneInvoiceCategory[]>;
-  /** Faturanın bütün kategorilerini verilenlerle değiştirir; aynı gruptaki ağırlıkların toplamı 1 olmalı. */
-  setInvoiceCategories(invoiceId: number, categories: ReadonlyArray<{ id: number; weight: number }>): Promise<void>;
+  readCategories(target: PennylaneCategoryTarget): Promise<PennylaneAssignedCategory[]>;
+  /** Kaydın bütün kategorilerini verilenlerle değiştirir; aynı gruptaki ağırlıkların toplamı 1 olmalı. */
+  writeCategories(target: PennylaneCategoryTarget, categories: ReadonlyArray<{ id: number; weight: number }>): Promise<void>;
 }

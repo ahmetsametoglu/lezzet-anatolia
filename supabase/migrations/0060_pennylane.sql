@@ -33,9 +33,45 @@ create table public.pennylane_transaction (
   label text,
   -- Pennylane'de silindi ya da arşivlendi.
   removed boolean not null default false,
+  -- İşleme kategorisi en son yazılan iş; boşsa kategori yazılacaktır. Pennylane'de elle konan kategori, hareketin işi değişmedikçe
+  -- ezilmez.
+  category_business business,
   read_at timestamptz not null default now()
 );
 create index pennylane_transaction_account_idx on public.pennylane_transaction (account_id, value_date desc);
+-- Kategorisi yazılacak işlemler azınlıktır; küme yalnız yeni okunan ve işi değişen satırlarla büyür.
+create index pennylane_transaction_category_due_idx on public.pennylane_transaction (pennylane_id)
+  where category_business is null and not removed and movement_id is not null;
+
+-- Başka harekete bağlanan işlemin kategorisi yeni hareketin işinden yeniden yazılır.
+create or replace function public.pennylane_transaction_category_relink() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.category_business := null;
+  return new;
+end;
+$$;
+create trigger pennylane_transaction_category_relink
+  before update of movement_id on public.pennylane_transaction
+  for each row when (old.movement_id is distinct from new.movement_id)
+  execute function public.pennylane_transaction_category_relink();
+
+-- İşi değişen hareketin işlemi, kategorisi yeniden yazılmak üzere bekleyen kümeye döner.
+create or replace function public.pennylane_transaction_category_reset() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  update public.pennylane_transaction set category_business = null where movement_id = new.id and category_business is not null;
+  return null;
+end;
+$$;
+create trigger money_movement_pennylane_category
+  after update of business on public.money_movement
+  for each row when (old.business is distinct from new.business)
+  execute function public.pennylane_transaction_category_reset();
 
 -- ── Değişiklik akışı ────────────────────────────────────────────────────────
 -- Akışın son işlenen olayının anı: imleç tur bitince düşer, sonraki tur bu andan sorar; aynı an iki kez okunsa da sonuç değişmez.
@@ -84,7 +120,7 @@ create table public.pennylane_document (
   payment_status text,
   -- Pennylane'deki açık kalan, son okunduğunda; bizimkinden ayrılırsa belge "Pennylane'de farklı"dır.
   pennylane_open numeric(12, 2),
-  -- Faturaya en son yazılan analitik kategori (Lezzet); ayardaki kategori değişince yeniden yazılır.
+  -- Faturaya en son yazılan analitik kategori; belgenin işi değişince belge kuyruğa düşer ve kategori yeniden yazılır.
   category_id bigint,
   uploaded_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

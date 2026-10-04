@@ -14,7 +14,7 @@ create table public.supplier (
   country text,
   payment_term_days int,                             -- BİZE tanıdığı vade; null = peşin
   -- Belgelerinin varsayılan işi; iki işe birden satan tedarikçide boş kalır ve belge girişi seçim ister.
-  default_business public.business,
+  default_business business,
   note text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),

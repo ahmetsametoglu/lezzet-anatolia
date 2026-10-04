@@ -4,8 +4,8 @@ import type {
   DocumentVatRate,
   DocumentVatRegime,
   MoneyDocument,
+  PennylaneAssignedCategory,
   PennylaneCategory,
-  PennylaneInvoiceCategory,
   PennylaneInvoiceDraft,
   PennylaneInvoiceLine,
   PennylaneInvoicePatch,
@@ -235,11 +235,11 @@ export function pennylaneByLabel<T extends { id: number; label: string }>(rows: 
 }
 
 /**
- * Faturaya yazılacak kategoriler: bizim gruptaki kategori ağırlık 1 ile bizimki olur, öteki grupların kategorileri olduğu gibi kalır,
- * çünkü Pennylane yazımda faturanın bütün kategorilerini değiştirir. Fatura zaten öyleyse `null`.
+ * Kayda (fatura ya da banka işlemi) yazılacak kategoriler: bizim gruptaki kategori ağırlık 1 ile bizimki olur, öteki grupların
+ * kategorileri olduğu gibi kalır, çünkü Pennylane yazımda kaydın bütün kategorilerini değiştirir. Kayıt zaten öyleyse `null`.
  */
-export function pennylaneInvoiceCategories(
-  current: readonly PennylaneInvoiceCategory[],
+export function pennylaneCategoriesWith(
+  current: readonly PennylaneAssignedCategory[],
   target: Pick<PennylaneCategory, 'id' | 'groupId'>,
 ): Array<{ id: number; weight: number }> | null {
   const sameGroup = current.filter((row) => row.groupId === target.groupId);

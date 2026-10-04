@@ -1,16 +1,16 @@
 import type {
+  PennylaneAssignedCategory,
   PennylaneBankAccount,
   PennylaneCategory,
   PennylaneCategoryGroup,
   PennylaneChange,
-  PennylaneInvoiceCategory,
   PennylaneInvoiceDraft,
   PennylanePaymentStatus,
   PennylaneSupplierDraft,
   PennylaneTransaction,
 } from '@lezzet/types';
 import { PennylaneError } from './errors';
-import type { PennylanePort } from './port';
+import type { PennylaneCategoryTarget, PennylanePort } from './port';
 
 /** İkizdeki fatura: yüklenen taslak, dosyası ve ödeme işareti; müşteri faturası yalnız başkasının girdiği faturadır. */
 export type MemoryInvoice = Omit<PennylaneInvoiceDraft, 'externalReference'> & {
@@ -36,8 +36,10 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
   const matches = new Map<number, number[]>();
   const categoryGroups = new Map<number, PennylaneCategoryGroup>();
   const categories = new Map<number, PennylaneCategory>();
-  /** Fatura başına kategoriler ve ağırlıkları. */
-  const invoiceCategories = new Map<number, PennylaneInvoiceCategory[]>();
+  /** Kayıt başına kategoriler ve ağırlıkları; anahtar `invoice:<kimlik>` ya da `transaction:<kimlik>`. */
+  const assignedCategories = new Map<string, PennylaneAssignedCategory[]>();
+  const keyOf = (target: PennylaneCategoryTarget) => `${target.kind}:${target.id}`;
+  const exists = (target: PennylaneCategoryTarget) => (target.kind === 'invoice' ? invoices : transactions).has(target.id);
   const failures = new Map<keyof PennylanePort, Error>();
   const failing = (method: keyof PennylanePort) => {
     const error = failures.get(method);
@@ -213,13 +215,13 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
       categories.set(id, { id, label, groupId });
       return { id, label, groupId };
     },
-    invoiceCategories: async (invoiceId) => {
-      if (!invoices.has(invoiceId)) throw notFound();
-      return [...(invoiceCategories.get(invoiceId) ?? [])];
+    readCategories: async (target) => {
+      if (!exists(target)) throw notFound();
+      return [...(assignedCategories.get(keyOf(target)) ?? [])];
     },
-    setInvoiceCategories: async (invoiceId, rows) => {
-      failing('setInvoiceCategories');
-      if (!invoices.has(invoiceId)) throw notFound();
+    writeCategories: async (target, rows) => {
+      failing('writeCategories');
+      if (!exists(target)) throw notFound();
       const next = rows.map((row) => {
         const category = categories.get(row.id);
         if (!category) throw notFound();
@@ -233,7 +235,7 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
           message: 'Pennylane isteği reddetti (422): The sum of analytical accounting category weights within a family must equal 100%.',
         });
       }
-      invoiceCategories.set(invoiceId, next);
+      assignedCategories.set(keyOf(target), next);
     },
   };
 
@@ -292,7 +294,8 @@ export function memoryPennylane(opts: { pageSize?: number } = {}) {
     matchesOf: (transactionId: number) => [...(matches.get(transactionId) ?? [])].sort((x, y) => x - y),
     categories: () => [...categories.values()],
     categoryGroups: () => [...categoryGroups.values()],
-    categoriesOf: (invoiceId: number) => [...(invoiceCategories.get(invoiceId) ?? [])],
+    categoriesOf: (invoiceId: number) => [...(assignedCategories.get(`invoice:${invoiceId}`) ?? [])],
+    transactionCategoriesOf: (transactionId: number) => [...(assignedCategories.get(`transaction:${transactionId}`) ?? [])],
     /** Yöntemin sonraki çağrısı bu hatayla düşer; düşen yazımın kuyrukta ertelenmesi böyle kurulur. */
     failNext(method: keyof PennylanePort, error: Error): void {
       failures.set(method, error);

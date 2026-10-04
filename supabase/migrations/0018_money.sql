@@ -22,7 +22,7 @@ create table public.account (
   type account_type not null,
   currency currency not null default 'EUR',
   -- Hesabın sahibi olan iş; hiçbir bağın iş söylemediği harekette son dayanaktır, etiketsiz hesap Lezzet'tir.
-  business public.business not null default 'lezzet',
+  business business not null default 'lezzet',
   -- Hesap SİLİNMEZ, pasifleşir: geçmiş hareketleri ona bağlıdır (kapanan banka hesabı da tarihtir).
   is_active boolean not null default true,
   created_at timestamptz not null default now()
@@ -79,7 +79,7 @@ create table public.counterparty (
   keywords text[] not null default '{}',
   default_nature text references public.movement_nature (slug) on update cascade,
   -- Belgelerinin ve hareketlerinin varsayılan işi; iki işle çalışan caride boş kalır.
-  default_business public.business,
+  default_business business,
   note text,
   -- Cari SİLİNMEZ, pasifleşir: geçmiş hareketleri ve belgeleri ona bağlıdır.
   is_active boolean not null default true,
@@ -163,7 +163,7 @@ create table public.money_document (
   stock_intake_id uuid references public.stock_intake (id) on delete set null,
   purchase_order_id uuid references public.purchase_order (id) on delete set null,
   -- Belgenin işi; belge bölünmez, iki işe giden mal ayrı faturayla alınır. Kapı sırayla açık seçimden, tedarikçiden ya da cariden kurar.
-  business public.business not null,
+  business business not null,
   -- Belgenin YÖNÜ hareketinkiyle aynı dilde: `out` = bizim ödeyeceğimiz (gelen fatura, bordro),
   -- `in` = bize ödenecek (tedarikçi iadesi, ortağa kesilen dekont).
   direction movement_direction not null,
@@ -230,7 +230,7 @@ create table public.money_movement (
   stock_intake_id uuid references public.stock_intake (id) on delete set null,
   supplier_id uuid references public.supplier (id) on delete set null,
   -- Hareketin işi bağlarından türer (`money_movement_business`); yazanın gönderdiği değer ezilir.
-  business public.business not null,
+  business business not null,
   -- Paranın gerçekten hareket ettiği gün; kayıt günü farklı olabilir ve raporlar bu tarihi okur.
   value_date date not null default current_date,
   description text,

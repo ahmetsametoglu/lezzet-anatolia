@@ -18,7 +18,7 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 | `name` | text |  |  |
 | `kind` | warehouse_kind |  | `'facility'` |
 | `country_code` | country_code |  | `'FR'` |
-| `business` | public |  | `'lezzet'` |
+| `business` | business |  | `'lezzet'` |
 | `address` | jsonb | • |  |
 | `lat` | numeric(9, 6) | • |  |
 | `lng` | numeric(9, 6) | • |  |

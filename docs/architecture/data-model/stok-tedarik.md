@@ -185,7 +185,7 @@ Müşteri kartının simetriği (bkz. `DOMAIN.md §16`). **Tedarikçiye borç t�
 | `vat_number` | text | • |  |
 | `country` | text | • |  |
 | `payment_term_days` | int | • |  |
-| `default_business` | public | • |  |
+| `default_business` | business | • |  |
 | `note` | text | • |  |
 | `is_active` | boolean |  | `true` |
 | `created_at` | timestamptz |  | `now()` |

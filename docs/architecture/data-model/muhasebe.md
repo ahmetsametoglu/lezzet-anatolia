@@ -52,6 +52,7 @@ değiştirmiş olabilir.
 | `amount` | numeric(12, 2) |  |  |
 | `label` | text | • |  |
 | `removed` | boolean |  | `false` |
+| `category_business` | business | • |  |
 | `read_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
 
@@ -60,6 +61,9 @@ değiştirmiş olabilir.
 - **`movement_id`** — banka satırı `source = bank_import`, tip `misc` olarak yazılır, kimliği `import_fingerprint = pennylane:<kimlik>`.
   Sıfır tutarlı hareket yazılmaz; Pennylane'de silinen izahsız satır silinir ve bu alan boşalır.
 - **`removed`** — Pennylane'de silindi ya da arşivlendi. Hareket geri gelirse silinmiş satır yeniden yazılır.
+- **`category_business`** — işleme kategorisi en son yazılan iş; boşsa tur işlemin kategorisini hareketin işinden yazar. Hareketin işi
+  değişince ya da ayna başka harekete bağlanınca boşalır; Pennylane'de elle konan kategori, hareketin işi değişmedikçe ezilmez. Yazım
+  eşleşme kuyruğundan ayrıdır, çünkü yeni satırı kuyruğa düşürmek Pennylane'deki eşleşmenin benimsenmesini atlatırdı.
 - Planı motor verir (`planBankFeed`): izahsız satır Pennylane'in hâline çekilir; izahlı satıra dokunulmaz, parası (tutar, gün, yön)
   değişirse ya da hareket silinirse muhasebe uyarılır (`bank_feed_changed`), yalnız açıklaması değişirse ayna tazelenir.
 

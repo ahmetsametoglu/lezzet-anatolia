@@ -73,5 +73,5 @@ export const PennylaneApiCategorySchema = z.object({
 });
 export const PennylaneApiCategoryPageSchema = pageOf(PennylaneApiCategorySchema);
 
-/** Faturanın kategorisi; ağırlık ondalık dize gelir ("1.0") ve aynı gruptaki ağırlıkların toplamı 1'dir. */
-export const PennylaneApiInvoiceCategoryPageSchema = pageOf(PennylaneApiCategorySchema.extend({ weight: z.string() }));
+/** Kayda (fatura ya da banka işlemi) konmuş kategori; ağırlık ondalık dize gelir ("1.0") ve aynı gruptaki ağırlıkların toplamı 1'dir. */
+export const PennylaneApiAssignedCategoryPageSchema = pageOf(PennylaneApiCategorySchema.extend({ weight: z.string() }));

@@ -12,8 +12,10 @@ import {
   PennylaneQueueSchema,
   PennylaneSupplierMirrorInsertSchema,
   PennylaneSupplierMirrorSchema,
+  PennylaneTransactionCategoryDueSchema,
   PennylaneTransactionMirrorInsertSchema,
   PennylaneTransactionMirrorSchema,
+  type Business,
   type PennylaneBankAccount,
   type PennylaneBankAccountMirror,
   type PennylaneBankAccountMirrorInsert,
@@ -28,6 +30,7 @@ import {
   type PennylaneQueueInsert,
   type PennylaneSupplierMirror,
   type PennylaneSupplierMirrorInsert,
+  type PennylaneTransactionCategoryDue,
   type PennylaneTransactionMirror,
   type PennylaneTransactionMirrorInsert,
 } from '@lezzet/types';
@@ -118,6 +121,31 @@ export class PennylaneTransactionService extends BaseDbService<PennylaneTransact
 
   save(row: PennylaneTransactionMirrorInsert): Promise<PennylaneTransactionMirror> {
     return this.upsert({ ...row, readAt: new Date().toISOString() }, 'pennylane_id');
+  }
+
+  /** Kategorisi yazılacak işlemler: kategorisi hiç yazılmamış ya da hareketinin işi sonradan değişmiş satırlar, hareketin işiyle. */
+  async listCategoryDue(limit: number): Promise<PennylaneTransactionCategoryDue[]> {
+    const { data, error } = await this.supabase
+      .from('pennylane_transaction')
+      .select('pennylane_id, movement:money_movement!inner(business)')
+      .is('category_business', null)
+      .eq('removed', false)
+      .order('pennylane_id')
+      .limit(limit);
+    if (error) throw error;
+    // Gömülü hareket tek kayıttır; şemasız istemci onu dizi sanır, `flat` iki biçimi de okur.
+    return (data ?? []).map((row) =>
+      PennylaneTransactionCategoryDueSchema.parse({ pennylaneId: row.pennylane_id, business: [row.movement].flat()[0]?.business }),
+    );
+  }
+
+  /** İşleme kategorisi yazılan iş; satır bekleyen kümeden çıkar. */
+  async setCategoryBusiness(pennylaneId: number, business: Business): Promise<void> {
+    const { error } = await this.supabase
+      .from('pennylane_transaction')
+      .update({ category_business: business })
+      .eq('pennylane_id', pennylaneId);
+    if (error) throw error;
   }
 }
 

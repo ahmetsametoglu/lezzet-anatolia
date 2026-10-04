@@ -8,7 +8,7 @@ import {
   PennylaneApiCategorySchema,
   PennylaneApiChangePageSchema,
   PennylaneApiFileAttachmentSchema,
-  PennylaneApiInvoiceCategoryPageSchema,
+  PennylaneApiAssignedCategoryPageSchema,
   PennylaneApiInvoiceLinePageSchema,
   PennylaneApiInvoicePageSchema,
   PennylaneApiInvoiceSchema,
@@ -28,7 +28,7 @@ import {
   type PennylaneSupplier,
   type PennylaneTransaction,
 } from '@lezzet/types';
-import type { PennylanePort } from './port';
+import type { PennylaneCategoryTarget, PennylanePort } from './port';
 import { PennylaneError, classify } from './errors';
 
 /**
@@ -305,21 +305,20 @@ export function pennylanePort(config: PennylaneConfig): PennylanePort {
       const body = await write('POST', '/categories', { json: { label, category_group_id: groupId } });
       return categoryOf(parse(PennylaneApiCategorySchema, body, 'kategori'));
     },
-    async invoiceCategories(invoiceId) {
-      const items = await readAll(
-        `/supplier_invoices/${invoiceId}/categories`,
-        PennylaneApiInvoiceCategoryPageSchema,
-        'faturanın kategorileri',
-      );
+    async readCategories(target) {
+      const items = await readAll(categoriesPath(target), PennylaneApiAssignedCategoryPageSchema, 'kaydın kategorileri');
       return items.map((item) => ({ id: item.id, groupId: item.category_group.id, weight: Number(item.weight) }));
     },
-    async setInvoiceCategories(invoiceId, categories) {
+    async writeCategories(target, categories) {
       // Ağırlık ondalık dize gider ("1"), cevapta da öyle gelir.
       const json = categories.map((category) => ({ id: category.id, weight: String(category.weight) }));
-      await write('PUT', `/supplier_invoices/${invoiceId}/categories`, { json });
+      await write('PUT', categoriesPath(target), { json });
     },
   };
 }
+
+const categoriesPath = (target: PennylaneCategoryTarget): string =>
+  `/${target.kind === 'invoice' ? 'supplier_invoices' : 'transactions'}/${target.id}/categories`;
 
 function categoryOf(row: { id: number; label: string; category_group: { id: number } }): PennylaneCategory {
   return { id: row.id, label: row.label, groupId: row.category_group.id };

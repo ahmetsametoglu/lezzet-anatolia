@@ -4,7 +4,7 @@ import {
   pennylaneByLabel,
   pennylaneDocumentScope,
   pennylaneDocumentStatus,
-  pennylaneInvoiceCategories,
+  pennylaneCategoriesWith,
   pennylaneInvoiceDraft,
   pennylaneInvoicePatch,
   pennylanePaymentStatus,
@@ -166,7 +166,7 @@ describe("Pennylane'de aynı firmanın tedarikçisi", () => {
   });
 });
 
-describe("Lezzet'in faturasının analitik kategorisi", () => {
+describe('kaydın analitik kategorisi', () => {
   it('kategori adla bulunur, büyüklük ve aksan farkı tutmaz; aynı adlı birden çok kayıtta önce açılan seçilir', () => {
     const categories = [
       { id: 30, label: 'Grossiste', groupId: 7 },
@@ -179,9 +179,9 @@ describe("Lezzet'in faturasının analitik kategorisi", () => {
 
   it('bizim gruptaki kategori bizimkiyle değişir, öteki grupların kategorisi korunur; fatura zaten öyleyse yazım yok', () => {
     const lezzet = { id: 21, groupId: 7 };
-    expect(pennylaneInvoiceCategories([], lezzet)).toEqual([{ id: 21, weight: 1 }]);
+    expect(pennylaneCategoriesWith([], lezzet)).toEqual([{ id: 21, weight: 1 }]);
     expect(
-      pennylaneInvoiceCategories(
+      pennylaneCategoriesWith(
         [
           { id: 30, groupId: 7, weight: 1 },
           { id: 55, groupId: 9, weight: 0.5 },
@@ -195,7 +195,7 @@ describe("Lezzet'in faturasının analitik kategorisi", () => {
       { id: 21, weight: 1 },
     ]);
     expect(
-      pennylaneInvoiceCategories(
+      pennylaneCategoriesWith(
         [
           { id: 21, groupId: 7, weight: 1 },
           { id: 55, groupId: 9, weight: 1 },
@@ -204,7 +204,7 @@ describe("Lezzet'in faturasının analitik kategorisi", () => {
       ),
     ).toBeNull();
     expect(
-      pennylaneInvoiceCategories(
+      pennylaneCategoriesWith(
         [
           { id: 21, groupId: 7, weight: 0.5 },
           { id: 30, groupId: 7, weight: 0.5 },

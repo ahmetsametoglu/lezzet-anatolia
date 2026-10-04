@@ -10,7 +10,13 @@ import {
 import { BANK_FEED_QUIET_DAYS_DEFAULT, BANK_FEED_QUIET_DAYS_KEY, bankFeedQuiet, planBankFeed } from '@lezzet/domain-core';
 import { parisDateOf } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
-import type { MoneyMovement, PennylaneMappedAccount, PennylaneTransaction, PennylaneTransactionMirror } from '@lezzet/types';
+import type {
+  MoneyMovement,
+  PennylaneMappedAccount,
+  PennylaneTransaction,
+  PennylaneTransactionMirror,
+  PennylaneTransactionMirrorInsert,
+} from '@lezzet/types';
 import { notifyBankFeedChanged, notifyBankFeedQuiet } from '../../notification/staff-events';
 import { readChanges, STREAM_RETENTION_MS } from './changes';
 import { PennylaneError } from './errors';
@@ -294,7 +300,7 @@ function planApplier(
       liveFrom,
     });
     const gone = transaction === null || transaction.archived;
-    const mirrorOf = (movementId: string | null): Omit<PennylaneTransactionMirror, 'readAt'> =>
+    const mirrorOf = (movementId: string | null): PennylaneTransactionMirrorInsert =>
       transaction && !gone
         ? {
             pennylaneId,

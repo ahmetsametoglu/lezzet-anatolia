@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BusinessEnum } from '../primitives/enums.schema';
 import { MovementDirectionEnum } from './money.schema';
 import { QueueRowSchema } from './queue.schema';
 
@@ -97,9 +98,9 @@ export type PennylaneCategory = z.infer<typeof PennylaneCategorySchema>;
 export const PennylaneCategoryGroupSchema = z.object({ id: z.number().int(), label: z.string() });
 export type PennylaneCategoryGroup = z.infer<typeof PennylaneCategoryGroupSchema>;
 
-/** Faturanın kategorisi ve ağırlığı (0–1); aynı gruptaki ağırlıkların toplamı 1'dir. */
-export const PennylaneInvoiceCategorySchema = PennylaneCategorySchema.pick({ id: true, groupId: true }).extend({ weight: z.number() });
-export type PennylaneInvoiceCategory = z.infer<typeof PennylaneInvoiceCategorySchema>;
+/** Kayda (fatura ya da banka işlemi) konmuş kategori ve ağırlığı (0–1); aynı gruptaki ağırlıkların toplamı 1'dir. */
+export const PennylaneAssignedCategorySchema = PennylaneCategorySchema.pick({ id: true, groupId: true }).extend({ weight: z.number() });
+export type PennylaneAssignedCategory = z.infer<typeof PennylaneAssignedCategorySchema>;
 
 /** Nakitle kapanan faturanın Pennylane'deki işareti; bankadan ödenen fatura eşleşmeyle kapanır, işaret almaz. */
 export const PennylanePaymentStatusEnum = z.enum(['paid', 'to_be_paid']);
@@ -180,12 +181,20 @@ export const PennylaneTransactionMirrorSchema = z.object({
   amountCents: z.number().int().nonnegative(),
   label: z.string().nullable(),
   removed: z.boolean(),
+  /** İşlemine kategorisi en son yazılan iş; hareketin işi değişince boşalır ve kategori yeniden yazılır. */
+  categoryBusiness: BusinessEnum.nullable(),
   readAt: z.string(),
 });
 export type PennylaneTransactionMirror = z.infer<typeof PennylaneTransactionMirrorSchema>;
 
-export const PennylaneTransactionMirrorInsertSchema = PennylaneTransactionMirrorSchema.partial({ readAt: true });
+export const PennylaneTransactionMirrorInsertSchema = PennylaneTransactionMirrorSchema.partial({ readAt: true, categoryBusiness: true });
 export type PennylaneTransactionMirrorInsert = z.infer<typeof PennylaneTransactionMirrorInsertSchema>;
+
+/** Kategorisi yazılacak banka işlemi ve hareketinin işi. */
+export const PennylaneTransactionCategoryDueSchema = PennylaneTransactionMirrorSchema.pick({ pennylaneId: true }).extend({
+  business: BusinessEnum,
+});
+export type PennylaneTransactionCategoryDue = z.infer<typeof PennylaneTransactionCategoryDueSchema>;
 
 /** Değişiklik akışının kaldığı an, akış başına bir satır. */
 export const PennylaneCursorSchema = z.object({

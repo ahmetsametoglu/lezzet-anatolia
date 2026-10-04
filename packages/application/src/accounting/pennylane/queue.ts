@@ -1,10 +1,10 @@
 import { MoneyDocumentService, MoneyMovementService, PennylaneQueueService, type Db } from '@lezzet/database';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
-import type { Business, PennylaneCategory, PennylaneQueue } from '@lezzet/types';
+import type { PennylaneQueue } from '@lezzet/types';
 import { notifyPennylaneDocumentStuck, notifyPennylaneMatchStuck } from '../../notification/staff-events';
 import { deferBlocked, deferFailed } from '../../queue/defer';
 import { PENNYLANE_SYNC_JOB, pennylaneLiveFrom } from './bank-feed';
-import { resolvePennylaneCategory } from './category';
+import { categoryResolver, type CategoryResolver } from './category';
 import { privateDocumentFiles, writeDocument, type DocumentFileReader } from './documents';
 import { writeMovementMatches } from './matches';
 import type { PennylanePort } from './port';
@@ -22,8 +22,8 @@ interface QueueContext {
   liveFrom: string;
   now: Date;
   files: DocumentFileReader;
-  /** İşin kategorisi; tur başına iş başına bir kez çözülür, çünkü her belgede Pennylane'e sormak istek sınırını yerdi. */
-  category?: (business: Business) => Promise<PennylaneCategory | null>;
+  /** İşin kategorisi; tur başına iş başına bir kez çözülür. */
+  category?: CategoryResolver;
 }
 
 /** Okuma kapalıyken hiçbir şey yazılmaz, çünkü canlıya geçiş günü kapsamın sınırıdır. */
@@ -34,16 +34,11 @@ export async function syncPennylaneQueue(
 ): Promise<Record<string, unknown>> {
   const liveFrom = await pennylaneLiveFrom(db);
   if (!liveFrom) return { skipped: 'not_live' };
-  const categories = new Map<Business, Promise<PennylaneCategory | null>>();
   const ctx: QueueContext = {
     liveFrom,
     now: opts.now ?? new Date(),
     files: opts.files ?? privateDocumentFiles,
-    category: (business) => {
-      const resolved = categories.get(business) ?? resolvePennylaneCategory(db, pennylane, business);
-      categories.set(business, resolved);
-      return resolved;
-    },
+    category: categoryResolver(db, pennylane),
   };
   const rows = await new PennylaneQueueService(db).listDue(ctx.now.toISOString(), BATCH);
   const counts: Record<PennylaneQueueOutcome, number> = {

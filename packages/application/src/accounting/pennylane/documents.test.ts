@@ -376,7 +376,7 @@ describe('işin Pennylane kategorisi', () => {
     await run(doc.id);
     const invoiceId = await invoiceIdOf(doc.id);
     const wholesale = await twin.port.createCategory({ label: 'Grossiste', groupId: twin.categoryGroups()[0]!.id });
-    await twin.port.setInvoiceCategories(invoiceId, [{ id: wholesale.id, weight: 1 }]);
+    await twin.port.writeCategories({ kind: 'invoice', id: invoiceId }, [{ id: wholesale.id, weight: 1 }]);
 
     await documents.update({ id: doc.id, dueOn: '2026-11-01' });
     expect(await run(doc.id)).toBe('unchanged');
@@ -390,7 +390,7 @@ describe('işin Pennylane kategorisi', () => {
     const invoiceId = await invoiceIdOf(doc.id);
     // Pennylane'de başka bir eksene elle konmuş kategori.
     const project = await twin.port.createCategory({ label: 'Salon', groupId: (await twin.port.createCategoryGroup('Projet')).id });
-    await twin.port.setInvoiceCategories(invoiceId, [...twin.categoriesOf(invoiceId), { id: project.id, weight: 1 }]);
+    await twin.port.writeCategories({ kind: 'invoice', id: invoiceId }, [...twin.categoriesOf(invoiceId), { id: project.id, weight: 1 }]);
 
     // Ayar belgeyi kuyruğa düşürmez; belge bir sonraki yazımında yeni kategoriyi alır.
     await settings.override(PENNYLANE_CATEGORY_KEYS.lezzet, 'Lezzet Anatolie');

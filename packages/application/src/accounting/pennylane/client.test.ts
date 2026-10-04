@@ -344,7 +344,7 @@ describe('eşleşme', () => {
 });
 
 describe('analitik kategori', () => {
-  it('faturanın kategorileri sayfa sayfa okunur ve ağırlık sayıya çevrilir; yazımda ağırlık dize gider, kategori grubuyla açılır', async () => {
+  it('kaydın kategorileri sayfa sayfa okunur ve ağırlık sayıya çevrilir; yazımda ağırlık dize gider, kategori grubuyla açılır', async () => {
     const category = (id: number, groupId: number, weight: string) => ({ id, label: `K${id}`, category_group: { id: groupId }, weight });
     const { port, calls } = fakePennylane({
       '/me': [{ json: SANDBOX_ME }],
@@ -352,9 +352,10 @@ describe('analitik kategori', () => {
         { json: { items: [category(21, 5, '1.0')], has_more: true, next_cursor: 'c2' } },
         { json: { items: [category(55, 9, '0.5')], has_more: false, next_cursor: null } },
       ],
+      '/transactions/9/categories': [{ json: { items: [category(21, 5, '1.0')], has_more: false, next_cursor: null } }],
       '/categories': [{ status: 201, json: { id: 31, label: 'Lezzet', category_group: { id: 5 } } }],
     });
-    expect(await port.invoiceCategories(7)).toEqual([
+    expect(await port.readCategories({ kind: 'invoice', id: 7 })).toEqual([
       { id: 21, groupId: 5, weight: 1 },
       { id: 55, groupId: 9, weight: 0.5 },
     ]);
@@ -363,7 +364,7 @@ describe('analitik kategori', () => {
       'c2',
     ]);
 
-    await port.setInvoiceCategories(7, [
+    await port.writeCategories({ kind: 'invoice', id: 7 }, [
       { id: 55, weight: 0.5 },
       { id: 21, weight: 1 },
     ]);
@@ -375,6 +376,10 @@ describe('analitik kategori', () => {
         { id: 21, weight: '1' },
       ],
     });
+    // Banka işleminin uç noktası aynı biçimdedir (test şirketinde ölçüldü).
+    expect(await port.readCategories({ kind: 'transaction', id: 9 })).toEqual([{ id: 21, groupId: 5, weight: 1 }]);
+    await port.writeCategories({ kind: 'transaction', id: 9 }, [{ id: 21, weight: 1 }]);
+    expect(calls.at(-1)).toMatchObject({ method: 'PUT', path: '/transactions/9/categories', body: [{ id: 21, weight: '1' }] });
     expect(await port.createCategory({ label: 'Lezzet', groupId: 5 })).toEqual({ id: 31, label: 'Lezzet', groupId: 5 });
     expect(calls.at(-1)).toMatchObject({ method: 'POST', path: '/categories', body: { label: 'Lezzet', category_group_id: 5 } });
   });
