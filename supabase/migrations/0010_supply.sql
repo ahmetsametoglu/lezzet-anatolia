@@ -1,17 +1,13 @@
--- Modül 06 — Tedarik zinciri: tedarikçi, ürün-kod eşlemesi, tedarik siparişi, mal kabul.
--- DOMAIN §16. İlke: **sistem önerir, siparişi insan verir**; sistem tedarikçiye hiçbir şey GÖNDERMEZ.
---
--- Zincir: PurchaseOrder (ne sipariş ettim) → StockIntake (ne geldi) → Stock partileri (nerede duruyor)
--- → MoneyMovement (ne ödedim, modül 12). Eksik gelen mal bu zincirde fark olarak görünür.
+-- Tedarik zinciri: tedarikçi, ürün-kod eşlemesi, tedarik siparişi ve mal kabul (DOMAIN §16).
+-- Sistem önerir, siparişi insan verir; tedarikçiye sistemden hiçbir şey gitmez.
 
 create table public.supplier (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   contact jsonb,                                     -- telefon/e-posta/adres
   vat_number text,                                   -- muhasebe eşleşmesi
-  -- ÜLKE (12.26 · kullanıcı kararı 14.09): ISO 3166-1 alfa-2. Faturanın KDV rejimi buradan önerilir —
-  -- Fransa dışındaki tedarikçinin KDV'siz faturası ters yüklemedir (autoliquidation): KDV'yi biz
-  -- beyan ederiz. Bilinmiyorsa NULL; "FR" varsayılmaz — varsayılan ülke, olmayan bir bilgiyi yazmaktır.
+  -- ISO 3166-1 alfa-2; faturanın KDV rejimi buradan önerilir, çünkü Fransa dışındaki tedarikçinin KDV'siz faturası ters
+  -- yüklemedir. Bilinmiyorsa NULL kalır, çünkü varsayılan ülke olmayan bir bilgiyi yazmak olurdu.
   country text,
   payment_term_days int,                             -- BİZE tanıdığı vade; null = peşin
   note text,
@@ -37,55 +33,34 @@ create table public.supplier_product (
 
 -- Aynı varyant aynı tedarikçide iki kez tanımlanmasın (kod değişirse satır güncellenir).
 create unique index supplier_product_key on public.supplier_product (supplier_id, variant_id);
--- Kalem anahtarı tedarikçi başına TEKİLDİR (06.16 · kullanıcı kararı 14.09): aynı kod iki varyanta
--- gidemez, yoksa faturadan çözüm belirsiz kalır. Kod yoksa anahtar tedarikçideki adın slug'ıdır
--- (motor: `supplierItemKeyOf`) — yazım kuralı motorda, tekillik veride. `lower`: büyük-küçük harf
--- farkı ikinci bir kayıt doğurmasın.
+-- Kod tedarikçi başına tekildir, çünkü aynı kod iki varyanta giderse faturadan çözüm belirsiz kalır. Kod yoksa anahtar
+-- tedarikçideki adın slug'ıdır (`supplierItemKeyOf`); `lower` büyük-küçük harf farkının ikinci kayıt doğurmasını önler.
 create unique index supplier_product_code_key on public.supplier_product (supplier_id, lower(supplier_code));
 -- "Bu varyantı kimden alıyorum" — alternatif kaynak listesi.
 create index supplier_product_variant_idx on public.supplier_product (variant_id);
 
--- ── "VARYANT BAŞINA TEK TERCİHLİ TEDARİKÇİ" KURALI VERİDE (02.15) ───────────────────────────────
--- `address_one_default_per_customer`ın kardeşi ve gerekçesi aynı: kural uygulamada (`setExclusiveFlag`)
--- duruyordu, o koddan geçmeyen her yazım onu kırabilirdi. Burada bedeli para: otomatik alış önerisi
--- "tercihli" tedarikçiden fiyat okur; iki tercihli satır varsa okuduğu fiyat sıralamaya kalır ve
--- sipariş yanlış maliyetle açılır.
+-- Varyant başına tek tercihli tedarikçi veride zorlanır, çünkü alış önerisi fiyatı tercihli satırdan okur ve iki tercihli
+-- satırda sipariş yanlış maliyetle açılırdı.
 create unique index supplier_product_one_preferred_per_variant
   on public.supplier_product (variant_id)
   where is_preferred;
 
--- `partially_received` (DOMAIN §17): tek PO birden çok depoda parça parça kabul edilebilir —
--- ilk kabul siparişi KAPATMAZ. Durum saklanan bir sayaçtan değil, kabullerden TÜRETİLİR
--- (`purchase_order_progress`, 0042): kalem miktarı ↔ o kaleme giren partilerin `initial_qty`
--- toplamı. `physical_qty` satışla eridiği için "ne kadar geldi" sorusuna yalnız `initial_qty`
--- doğru cevap verir.
+-- Durum saklanan bir sayaçtan değil kabullerden türer (`purchase_order_progress`), çünkü tek sipariş birden çok depoda parça
+-- parça kabul edilebilir. Ölçü `initial_qty`'dir, çünkü `physical_qty` satışla erir.
 create type purchase_order_status as enum ('draft', 'sent', 'partially_received', 'received', 'cancelled');
 
 create table public.purchase_order (
   id uuid primary key default gen_random_uuid(),
   supplier_id uuid not null references public.supplier (id) on delete restrict,
   status purchase_order_status not null default 'draft',
-  -- İNSAN-OKUR NUMARA (`TS-26-4K2M9P`) — bu belge DIŞARI çıkıyor: liste tedarikçiye WhatsApp'tan ya
-  -- da PDF olarak gidiyor (`printableList`). Numarasız belge, karşı tarafın referans veremediği
-  -- belgedir; fatura eşleştirmede de siparişi faturayla bağlayan tek şey bu numara olacak.
-  --
-  -- **Rastgele, sıralı DEĞİL** (`Order.reference_no` ile aynı gerekçe): sıralı numara dışarıya iş
-  -- hacmimizi söyler — tedarikçi iki siparişin numarasına bakıp aradaki farkı okur.
-  --
-  -- **GÖNDERİMDE üretilir, açılışta değil.** Taslak bizim içimizde bir hazırlıktır; numara karşı
-  -- tarafa verilen sözdür. Siparişteki "ilk kalıcı durum" kuralının buradaki karşılığı `sent`:
-  -- açılıp vazgeçilen taslaklar numara tüketmez.
+  -- Tedarikçinin referans verebileceği numara (`TS-26-4K2M9P`); rastgeledir, çünkü sıralı numara dışarıya iş hacmimizi
+  -- söyler. Gönderimde üretilir, çünkü numara karşı tarafa verilen sözdür ve vazgeçilen taslak numara tüketmez.
   reference_no text unique,
   sent_at timestamptz,                               -- İNSAN gönderdikten sonra işaretlenir
   note text,
   created_at timestamptz not null default now(),
-  -- Gönderilmiş siparişin numarası OLMAK ZORUNDA: numarasız gönderilmiş bir kayıt, tedarikçinin
-  -- elindeki kâğıtla eşleşmeyen bir kayıttır. Kural veride durur, uygulama unutsa da geçmez.
-  --
-  -- **Ölçüt `sent_at`, `status` DEĞİL** — ilk yazımda durum eksenine bağlanmıştı ve yanlıştı:
-  -- `receive_intake` bir siparişi `draft`tan doğrudan `received`a taşıyabiliyor (mal geldi, kimse
-  -- "gönderdim" demedi) ve o kayıtta numara YOKTUR — olmamalı da, çünkü numara tedarikçiye
-  -- söylediğimiz şeydir ve söylemedik. Aynı şekilde iptal edilen taslak da numara tüketmez.
+  -- Gönderilmiş siparişin numarası olmak zorunda. Ölçüt `status` değil `sent_at`, çünkü `receive_intake` siparişi `draft`tan
+  -- doğrudan `received`a taşıyabilir ve o kayıtta numara yoktur.
   constraint purchase_order_sent_has_reference check (sent_at is null or reference_no is not null)
 );
 create index purchase_order_supplier_idx on public.purchase_order (supplier_id, created_at desc);
@@ -98,10 +73,8 @@ create table public.purchase_order_item (
   supplier_product_id uuid references public.supplier_product (id) on delete set null,
   qty int not null check (qty > 0),
   unit_price numeric(10, 2),                         -- beklenen alış (varsa)
-  -- İSTEĞE BAĞLI hedef depo (DOMAIN §17): "20 koli STR'ye, 10 koli KEHL'e" — tedarikçi listesine
-  -- yazılabilir, kabul eden depocu kendi payını listeden okur. Boşsa hedefi kabul eden depo söyler:
-  -- niyet beyanıdır, kısıt değil — mal fiilen nereye indiyse oraya girer.
-  -- FK YOK: `warehouse` 0031'de açılır.
+  -- İsteğe bağlı hedef depo: tedarikçi listesine yazılır ve depocu kendi payını oradan okur; niyet beyanıdır, mal fiilen
+  -- hangi depoya girerse oraya yazılır. FK yok, çünkü `warehouse` 0031'de açılır.
   target_warehouse_id uuid
 );
 create index purchase_order_item_order_idx on public.purchase_order_item (purchase_order_id);
@@ -111,31 +84,20 @@ create table public.stock_intake (
   supplier_id uuid references public.supplier (id) on delete restrict,
   -- Bağlı tedarik siparişi; PO'suz doğrudan giriş de mümkündür (küçük/plansız alım).
   purchase_order_id uuid references public.purchase_order (id) on delete set null,
-  -- **MAL KABUL DEPOYA YAPILIR** (DOMAIN §17) — parçalı kabulün kalbi: satın alma siparişi
-  -- depo-üstüdür, ama mal fiziksel olarak bir kapıdan girer. Depo bağı PO'ya değil BURAYA takılır;
-  -- aynı PO'nun ikinci kabulü başka depoda olabilir. FK YOK: `warehouse` 0031'de açılır.
+  -- Mal kabul depoya yapılır, çünkü sipariş depo-üstüdür ama mal bir kapıdan girer ve aynı siparişin ikinci kabulü başka
+  -- depoda olabilir. FK yok, çünkü `warehouse` 0031'de açılır.
   warehouse_id uuid not null,
   date date not null default current_date,
   total_amount numeric(10, 2) not null default 0,
   note text,
-  -- **KABULÜ KİM YAPTI** (kullanıcı kararı 31.08, `BEKLEYEN(06.14)` kapandı).
-  --
-  -- Ölçümle geldi: `stock_movement.actor_id` mal kabulde HİÇ yazılmıyordu (29/29 boş), oysa
-  -- satış (32/32), imha (5/5), sayım (2/2) ve iade (2/2) hepsinde doluydu. Yani alan çalışıyordu,
-  -- yalnız kabul onu beslemiyordu — "bu malı depoya kim aldı" sorusunun cevabı defterde yoktu.
-  --
-  -- KİMLİK BELGEDE DE DURUR, yalnız harekette değil: bir kabul birden çok parti doğurur ve
-  -- hareketlerin hepsi aynı kişiye aittir. Yalnız harekete yazmak, aynı gerçeği satır sayısı
-  -- kadar tekrarlamak ve belgeye "kim" diye sorulduğunda hareketlerden türetmek olurdu.
-  --
-  -- `on delete set null`: personel kaydı silinse de kabul belgesi durur — geçmiş bir olayın
-  -- kaydı, kişinin bugünkü varlığına bağlı değildir.
+  -- Kabulü yapan personel; doğan partilerin hareketleri de aynı kimliği taşır, ama "kim aldı" sorusu belgeden okunur.
+  -- `set null`, çünkü geçmiş bir olayın kaydı kişinin bugünkü varlığına bağlı değildir.
   received_by uuid references public.user_profiles (id) on delete set null,
   created_at timestamptz not null default now()
 );
 create index stock_intake_supplier_idx on public.stock_intake (supplier_id, date desc);
 
--- Partiler girişe bağlanır (0006'da FK'siz açılmıştı — tablo geldi, bağ kuruldu).
+-- Partinin girişe bağı burada kurulur, çünkü `stock` tablosu bu tablodan önce açılır.
 alter table public.stock add constraint stock_intake_fk
   foreign key (intake_id) references public.stock_intake (id) on delete set null;
 
@@ -145,16 +107,8 @@ alter table public.purchase_order enable row level security;
 alter table public.purchase_order_item enable row level security;
 alter table public.stock_intake enable row level security;
 
--- ── Mal kabul (06.10) ────────────────────────────────────────────────────────
--- NEDEN RPC: dört tabloya bölünemez yazım — giriş kaydı + partiler + PO kapanışı + son alış fiyatı.
--- Yarısı yazılırsa "partiler girdi ama PO açık kaldı" gibi elle düzeltilecek tutarsızlık doğar
--- (STACK §13 (b) koşulu). MLOR uyarısı BURADA hesaplanmaz — o motorun işi, kabulü de engellemez.
---
--- ── MAL KABUL DEPOYA YAPILIR (DOMAIN §17) ───────────────────────────────────
--- `p_warehouse_id` zorunlu: mal fiziksel olarak bir kapıdan girer. Tek PO birden çok depoda parça
--- parça kabul edilebilir — bu yüzden PO kapanışı artık KOŞULSUZ DEĞİL: eskiden ilk kabul siparişi
--- `received` yapıyordu ve "20 koli STR'ye, 10 koli KEHL'e" senaryosunda ikinci depo malı beklerken
--- sipariş kapanmış görünüyordu. Durum artık `purchase_order_progress`'ten TÜRETİLİR (0031).
+-- Mal kabul RPC'dir, çünkü giriş kaydı, partiler, sipariş durumu ve son alış fiyatı bölünemez bir yazımdır (STACK §13).
+-- Sipariş durumu bu kabulden değil kabullerden türer, çünkü tek sipariş birden çok depoda kabul edilebilir.
 --
 -- p_lines: [{"variant_id":…,"qty":…,"expiry_date":…,"lot_number":…,"unit_cost":…,"storage_area_id":…,
 --            "purchase_order_item_id":…}]
@@ -165,8 +119,7 @@ create or replace function public.receive_intake(
   p_purchase_order_id uuid default null,
   p_date date default current_date,
   p_note text default null,
-  -- Kabulü yapan personel (`user_profiles.id`). Varsayılan NULL: seed ve bakım çağrıları aktörsüz
-  -- yazar ve o hâlde defter "bilinmiyor" der — uydurma bir kimlik yazmaktansa boş kalır.
+  -- Kabulü yapan personel; seed ve bakım çağrıları aktörsüz yazar ve defter o hâlde "bilinmiyor" der.
   p_actor_id uuid default null
 ) returns jsonb
 language plpgsql
@@ -208,23 +161,15 @@ begin
       raise exception 'receive_intake: kalem miktarı pozitif olmalı (varyant %)', v_variant;
     end if;
 
-    -- Hangi PO kalemini karşıladığı partinin KENDİSİNDE durur (T5): parçalı kabulde "sipariş
-    -- ettiğim kadar geldi mi" sorusu artık girişten değil bu bağdan hesaplanır.
+    -- Hangi sipariş kalemini karşıladığı partinin kendisinde durur, çünkü parçalı kabulde ilerleme bu bağdan hesaplanır.
     v_po_item := nullif(v_line ->> 'purchase_order_item_id', '')::uuid;
 
     if p_purchase_order_id is not null then
-      -- PO'lu kabulde bağ ZORUNLU. Bağsız bırakılsaydı mal depoya girer ama ilerleme "0 geldi"
-      -- derdi: sipariş sonsuza dek `partially_received` kalır, fark raporu var olmayan bir eksik
-      -- gösterirdi. Bu, ölçülmemiş bir değeri sıfır saymaktır (CLAUDE.md §1) — ölçüm yoksa cevap
-      -- "bilinmiyor"dur, sıfır değil; burada da doğru davranış yazmayı reddetmektir.
-      --
-      -- Ama depocudan kalem seçmesini İSTEMEYİZ: PO'da o varyanttan tek kalem varsa sistem çözer.
-      -- Belirsizse (aynı varyant iki kalemde) varsayılan seçmez, sorar — C2'nin aynı ilkesi.
+      -- Siparişli kabulde bağ zorunludur, çünkü bağsız mal ilerlemede "0 geldi" görünür ve sipariş hep açık kalırdı. Kalem
+      -- depocuya sorulmaz: siparişte o varyanttan tek kalem varsa sistem çözer, birden çoksa varsayılan seçmeden reddeder.
       if v_po_item is null then
-        -- `select ... into` tek başına YETMEZ: birden çok satırda sessizce ilkini alır ve
-        -- belirsizlik varsayılanla çözülmüş olurdu. Sayıyı ayrıca soruyoruz.
-        -- `array_agg(...)[1]`: uuid'nin `min()` agregatı yoktur, ama tek satırlık halde ilk öğe
-        -- zaten aradığımız kalemdir; birden çoksa aşağıdaki sayı kontrolü devreye girer.
+        -- `select … into` birden çok satırda sessizce ilkini alırdı, bu yüzden sayı ayrıca okunur. uuid'nin `min()` agregatı
+        -- yok; tek satırda `array_agg(...)[1]` aranan kalemdir.
         select count(*), (array_agg(poi.id))[1] into v_po_count, v_po_item
           from public.purchase_order_item poi
          where poi.purchase_order_id = p_purchase_order_id and poi.variant_id = v_variant;
@@ -260,25 +205,14 @@ begin
       v_cost,
       v_intake_id,
       v_po_item,
-      -- Alan artık KİMLİK (19.29): serbest metin `location` yerine `storage_area` satırı. Yanlış
-      -- tesisin alanı gönderilirse FK reddetmez (alan↔depo kısıtı yok) — o doğrulama uygulama
-      -- katmanında, kabul kapısında yapılıyor.
+      -- Alan kimliktir; alan ile depo arasında kısıt olmadığı için yanlış tesisin alanını kabul kapısı reddeder.
       nullif(v_line ->> 'storage_area_id', '')::uuid
     )
     returning id into v_stock_id;
     v_stock_ids := v_stock_ids || v_stock_id;
 
-    -- **PARTİNİN DOĞUŞU DA BİR HAREKETTİR** (06.14). Defterin değişmezi `Σ(in) − Σ(out) =
-    -- physical_qty` ve `initial_qty`'den kurulmuyor — parti doğuşu deftere yazılmasaydı denklem her
-    -- partide giriş miktarı kadar sapardı ve mutabakat testi hiç yeşile dönmezdi.
-    --
-    -- **AKTÖR ARTIK YAZILIYOR** (kullanıcı kararı 31.08 — `BEKLEYEN(06.14)` kapandı). Eskiden
-    -- burada `actor_id` boş kalıyordu ve künyesi *"bu RPC aktör parametresi almıyor"* diyordu;
-    -- ölçüm bunun bir kural değil bir eksik olduğunu gösterdi (öteki hareket türlerinin hepsinde
-    -- alan doluydu). Artık parametre var ve belge de aynı kimliği taşıyor (`received_by`).
-    --
-    -- Aktör VERİLMEZSE hâlâ NULL: seed ve bakım çağrılarında gerçek bir kişi yok ve uydurmak,
-    -- defterin bilmediği bir şeyi biliyormuş gibi yazması olurdu (CLAUDE §1).
+    -- Partinin doğuşu da harekettir, çünkü defterin değişmezi `Σ(in) − Σ(out) = physical_qty`'dir. Aktör verilmezse NULL
+    -- kalır: seed ve bakım çağrısında kişi yoktur ve uydurmak defterin bilmediğini yazmak olurdu.
     insert into public.stock_movement
       (stock_id, direction, qty, kind, unit_cost, intake_id, actor_id)
     values
@@ -296,10 +230,8 @@ begin
 
   update public.stock_intake set total_amount = v_total where id = v_intake_id;
 
-  -- Sipariş durumu KABULLERDEN TÜRER, bu kabulden değil (K6). Eskiden burada koşulsuz `received`
-  -- yazılıyordu; çok depoda bu, ikinci depo malı beklerken siparişi kapatmak demekti.
-  -- Ölçü `purchase_order_progress` (0031) — `initial_qty` üzerinden kümülatif karşılaştırma.
-  -- Fonksiyon gövdesi geç bağlanır: görünüm 0031'de doğar, ilk çağrıya kadar yerindedir.
+  -- Sipariş durumu kabullerden türer (`purchase_order_progress`, 0031), çünkü çok depoda tek kabul siparişi kapatmamalı.
+  -- Fonksiyon gövdesi geç bağlanır: görünüm 0031'de doğar ve ilk çağrıya kadar yerindedir.
   if p_purchase_order_id is not null then
     select count(*) into v_open
       from public.purchase_order_progress
@@ -316,7 +248,5 @@ begin
 end;
 $$;
 
--- İMZA `p_actor_id` ile büyüdü (31.08): `revoke` fonksiyonu TAM imzasıyla arar ve eski liste
--- "böyle bir fonksiyon yok" diye migration'ı durdurur (ölçüldü — kullanıcının `db:refresh`i
--- 19. ifadede kesildi). Parametre eklendiğinde burası da güncellenmek zorunda.
+-- `revoke` fonksiyonu tam imzasıyla arar; parametre eklenince imza burada da güncellenir, yoksa migration durur.
 revoke execute on function public.receive_intake(uuid, uuid, jsonb, uuid, date, text, uuid) from public, anon, authenticated;

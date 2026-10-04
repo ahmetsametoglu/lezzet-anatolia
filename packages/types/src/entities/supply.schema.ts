@@ -1,19 +1,12 @@
 import { z } from 'zod';
 
-// Tedarik zinciri şemaları (DOMAIN §16, data-model/stok-tedarik.md): tedarikçi kartı,
-// ürün–kod eşlemesi, tedarik siparişi ve mal kabul. Müşteri tarafının simetriği.
-//
-// Para alanları **cent** (02.9 · STACK §8); DB kolonları euro `numeric` ve çevrimi servis yapıyor
-// (`moneyFields`). `dbNumeric` bu dosyada artık YOK: tedarik ailesinde numeric taşıyan tek şey
-// paraydı — oran ya da ölçü alanı bulunmuyor.
+// Tedarik zinciri şemaları (DOMAIN §16, data-model/stok-tedarik.md): tedarikçi, ürün–kod eşlemesi, tedarik siparişi, mal kabul.
+// Para alanları cent'tir (STACK §8); DB kolonları euro `numeric` ve çevrimi servis yapar (`moneyFields`).
 
 // ── Supplier ────────────────────────────────────────────────────────────────
 // Tedarikçiye borç SAKLANMAZ, türetilir: Σ girişler − Σ ödemeler.
 
-/**
- * Ülke kodu — ISO 3166-1 alfa-2, büyük harf (12.26). Tedarikçinin ülkesi faturanın KDV rejimini
- * önerir (`suggestVatRegime`); kısıt veride de duruyor (`supplier_country_iso`).
- */
+/** Ülke kodu, ISO 3166-1 alfa-2; tedarikçinin ülkesi faturanın KDV rejimini önerir (`suggestVatRegime`). */
 const CountryCodeSchema = z.string().regex(/^[A-Z]{2}$/, 'Ülke iki harfli ISO kodu olmalı (FR, BE, TR…).');
 
 export const SupplierSchema = z.object({
@@ -21,7 +14,7 @@ export const SupplierSchema = z.object({
   name: z.string(),
   contact: z.record(z.unknown()).nullable(), // telefon/e-posta/adres
   vatNumber: z.string().nullable(),
-  /** Ülke (12.26) — bilinmiyorsa `null`; "FR" varsayılmaz. */
+  /** Bilinmiyorsa `null`; "FR" varsayılmaz, çünkü varsayılan ülke olmayan bilgiyi yazmak olurdu. */
   country: CountryCodeSchema.nullable(),
   /** BİZE tanıdığı vade (gün); null = peşin. */
   paymentTermDays: z.number().int().nullable(),
@@ -81,9 +74,8 @@ export type SupplierProductUpdate = z.infer<typeof SupplierProductUpdateSchema>;
 // Taslak → gönderildi → mal kabulde kapanır. Sistem GÖNDERMEZ: temiz liste üretir, gönderim insana ait.
 
 /**
- * `partially_received` (K6): tek tedarik siparişi birden çok depoda parça parça kabul edilebilir —
- * ilk kabul siparişi KAPATMAZ. Durum saklanan bir sayaçtan değil kabullerden TÜRETİLİR
- * (`purchase_order_progress`); bu enum yalnız türetilmiş sonucu taşır.
+ * Durum kabullerden türer (`purchase_order_progress`), çünkü tek sipariş birden çok depoda parça parça kabul edilebilir; enum
+ * yalnız türetilmiş sonucu taşır.
  */
 export const PurchaseOrderStatusEnum = z.enum(['draft', 'sent', 'partially_received', 'received', 'cancelled']);
 export type PurchaseOrderStatus = z.infer<typeof PurchaseOrderStatusEnum>;
@@ -93,11 +85,8 @@ export const PurchaseOrderSchema = z.object({
   supplierId: z.string().uuid(),
   status: PurchaseOrderStatusEnum,
   /**
-   * İnsan-okur numara (`TS-26-4K2M9P`) — **taslakta null, gönderimde dolu.**
-   *
-   * Belge dışarı çıkıyor (tedarikçiye WhatsApp/PDF), yani karşı tarafın referans verebileceği bir
-   * numara gerekiyor; fatura eşleştirmede siparişi faturayla bağlayan da bu olacak. Rastgele,
-   * sıralı değil: sıralı numara dışarıya iş hacmimizi söyler.
+   * Tedarikçinin referans verebileceği numara (`TS-26-4K2M9P`): taslakta null, gönderimde dolu. Rastgeledir, çünkü sıralı numara
+   * dışarıya iş hacmimizi söyler.
    */
   referenceNo: z.string().nullable(),
   sentAt: z.string().nullable(),
@@ -107,17 +96,8 @@ export const PurchaseOrderSchema = z.object({
 export type PurchaseOrder = z.infer<typeof PurchaseOrderSchema>;
 
 /**
- * Tedarik siparişi LİSTE satırı (09.14) — ekranın bir satırda sorduğu her şey, tek turda.
- *
- * ── NEDEN RPC DEĞİL ──────────────────────────────────────────────────────────
- * `STACK §13`: okuma RPC'si istisnadır ve N+1'i kırmanın **ilk** aracı PostgREST'in gömülü
- * `select`'idir. Buradaki tüm bağlar gerçek yabancı anahtar (`stock → purchase_order_item`,
- * `stock → warehouse`, `purchase_order → supplier`), yani sorgu kurucusu zinciri ifade edebiliyor —
- * eşik geçilmiyor. Toplamlar okunan sayfanın satırlarında yapılır: sayfa 20 satırsa toplama da
- * 20 satırlıktır, veriyle büyümez.
- *
- * **Ham sayılar taşınır, karar taşınmaz.** "Tamamlandı mı", "geç kaldı mı" gibi yargılar burada
- * YOK; şema yalnız kalemleri ve gelen partileri getirir, özeti `domain-core` türetir (`STACK §4`).
+ * Tedarik siparişi liste satırı: bağlar gerçek yabancı anahtar olduğu için tek turda gömülü `select` ile okunur (STACK §13).
+ * Ham sayılar taşınır; "tamamlandı mı", "geç kaldı mı" yargısını `domain-core` türetir.
  */
 export const PurchaseOrderRowSchema = PurchaseOrderSchema.extend({
   /** Tedarikçi — satırın başlığı; ad olmadan sipariş listesi okunmaz. */
@@ -127,22 +107,13 @@ export const PurchaseOrderRowSchema = PurchaseOrderSchema.extend({
       id: z.string().uuid(),
       qty: z.number().int(),
       /**
-       * Beklenen alış (**cent**); **null olabilir** ve o zaman sipariş tutarı EKSİKTİR (ekran "≈" der).
-       *
-       * Kalem GÖMÜLÜ bir ilişkiden geliyor (`items:purchase_order_item(...)`), yani `moneyFields`
-       * buraya inmez — üst düzey servisin kendi tablosudur (`STACK §8`). Çevrim okumanın sınırında,
-       * `PurchaseOrderService.listRows` içinde yapılıyor.
+       * Beklenen alış (cent); boşsa sipariş tutarı eksiktir ve ekran "≈" der. Gömülü ilişkiye `moneyFields` inmediği için
+       * çevrim `PurchaseOrderService.listRows` içinde yapılır.
        */
       unitPriceCents: z.number().int().nullable(),
       /**
-       * Bu kaleme karşılık FİİLEN giren partiler.
-       *
-       * Depo kırılımı buradan çıkar, `purchase_order_item.target_warehouse_id`'den DEĞİL: o alan bir
-       * niyet beyanıdır, kısıt değil (K6) — mal fiilen nereye indiyse oraya girer. Hedefi okumak
-       * "planlanan"ı "gerçekleşen" diye göstermek olurdu.
-       *
-       * Ölçü `initialQty`: `physicalQty` satışla erir ve "ne kadar geldi" sorusuna yanlış cevap
-       * verir (`purchase_order_progress` da bu yüzden `initial_qty` sayıyor).
+       * Bu kaleme fiilen giren partiler; depo kırılımı buradan çıkar, çünkü `target_warehouse_id` yalnız niyettir. Ölçü
+       * `initialQty`'dir, çünkü `physicalQty` satışla erir.
        */
       batches: z.array(
         z.object({
@@ -175,9 +146,8 @@ export const PurchaseOrderItemSchema = z.object({
   /** Beklenen alış (**cent**) — kolon `unit_price` (euro numeric). */
   unitPriceCents: z.number().int().nullable(),
   /**
-   * İSTEĞE BAĞLI hedef depo (C7): "20 koli STR'ye, 10 koli KEHL'e" — tedarikçi listesine yazılır,
-   * kabul eden depocu kendi payını listeden okur. Boşsa hedefi kabul eden depo söyler; niyet
-   * beyanıdır, kısıt değil — mal fiilen nereye indiyse oraya girer.
+   * İsteğe bağlı hedef depo: tedarikçi listesine yazılır ve depocu kendi payını oradan okur. Niyet beyanıdır, mal fiilen hangi
+   * depoya girerse oraya yazılır.
    */
   targetWarehouseId: z.string().uuid().nullable(),
 });
@@ -203,8 +173,8 @@ export const StockIntakeSchema = z.object({
   supplierId: z.string().uuid().nullable(),
   purchaseOrderId: z.string().uuid().nullable(),
   /**
-   * **Mal kabul depoya yapılır** (K6): satın alma siparişi depo-üstüdür ama mal bir kapıdan girer.
-   * Depo bağı PO'ya değil BURAYA takılır — aynı PO'nun ikinci kabulü başka depoda olabilir.
+   * Mal kabul depoya yapılır, çünkü sipariş depo-üstüdür ama mal bir kapıdan girer; aynı siparişin ikinci kabulü başka depoda
+   * olabilir.
    */
   warehouseId: z.string().uuid(),
   date: z.string(),
@@ -212,14 +182,8 @@ export const StockIntakeSchema = z.object({
   totalAmountCents: z.number().int(),
   note: z.string().nullable(),
   /**
-   * **Kabulü yapan personel** (`user_profiles.id`) — kullanıcı kararı 31.08.
-   *
-   * NULLABLE ve öyle kalmalı: seed ve bakım yolları aktörsüz yazar, orada gerçek bir kişi yok.
-   * Boş olması "bilinmiyor" demektir — sıfır ya da bir varsayılan kimlik yazmak, defterin
-   * bilmediğini biliyormuş gibi göstermesi olurdu (CLAUDE §1).
-   *
-   * Aynı kimlik doğan HER harekete de yazılıyor (`stock_movement.actor_id`); belgede durması
-   * "kim aldı" sorusunu hareketlerden türetmeyi gereksiz kılıyor.
+   * Kabulü yapan personel; seed ve bakım yolları aktörsüz yazar ve boş değer "bilinmiyor" demektir. Aynı kimlik doğan her
+   * harekete de yazılır (`stock_movement.actor_id`).
    */
   receivedBy: z.string().uuid().nullable(),
   createdAt: z.string(),
@@ -247,25 +211,21 @@ export const IntakeLineSchema = z.object({
   expiryDate: z.string(),
   lotNumber: z.string().nullish(),
   /**
-   * Birim (paket) başına alış maliyeti (**cent**) — gerçek COGS bundan çıkar.
-   *
-   * RPC girdisidir (`receive_intake.p_lines`) ve fonksiyon euro `numeric` bekler; cent→euro çevrimi
-   * servis sınırında yapılır (`StockIntakeService.receive`). Alan yine `…Cents` adını taşır: adı
-   * euro bırakmak, uygulamanın tek birimini (cent) kapıya kadar taşıyıp orada bozmak olurdu.
+   * Paket başına alış maliyeti (cent). RPC euro bekler ve çevrim servis sınırında yapılır (`StockIntakeService.receive`); ad
+   * `…Cents` kalır, çünkü uygulamanın tek birimi cent'tir.
    */
   unitCostCents: z.number().int().nonnegative().nullish(),
-  /** Partinin konacağı depo İÇİ alan — serbest metin değil kimlik (19.29, `storage_area`). */
+  /** Partinin konacağı depo içi alan; serbest metin değil kimlik (`storage_area`). */
   storageAreaId: z.string().uuid().nullish(),
   /**
-   * Hangi PO kalemini karşılıyor (T5). PO'lu kabulde ZORUNLU ama yazılması şart değil: boş
-   * bırakılırsa RPC varyanttan çözer, belirsizse (aynı varyant iki kalemde) hata verir. Bağsız
-   * kabul PO'yu sonsuza dek açık bırakırdı — ölçüm yokken "0 geldi" demek olurdu.
+   * Karşıladığı sipariş kalemi; siparişli kabulde zorunludur ama boş bırakılırsa RPC varyanttan çözer, belirsizse reddeder.
+   * Bağsız kabul siparişi hep açık bırakırdı.
    */
   purchaseOrderItemId: z.string().uuid().nullish(),
 });
 export type IntakeLine = z.infer<typeof IntakeLineSchema>;
 
-/** `receive_intake` dönüşü — giriş + partiler + PO kapanışı tek transaction'da (06.10). */
+/** `receive_intake` dönüşü; giriş, partiler ve sipariş durumu tek işlemde yazılır. */
 export const ReceiveIntakeResultSchema = z.object({
   ok: z.boolean(),
   intakeId: z.string().uuid(),
