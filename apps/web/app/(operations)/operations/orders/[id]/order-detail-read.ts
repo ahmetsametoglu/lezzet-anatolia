@@ -38,7 +38,7 @@ import {
   allowedReturnDispositions,
   creditPosition,
   derivePaymentStatusForOrder,
-  dueDateOf,
+  dueDayOf,
   defaultsToDiscardOnReturn,
   fulfilledLineAmountCents,
   isFulfillmentSettled,
@@ -52,7 +52,7 @@ import {
 } from '@lezzet/domain-core';
 import { doorCheckOf } from '@lezzet/address';
 import { listOrderBoxes, readDeliveryProof, readOrderTracking, registerLiveFrom, thumbnailImageUrl } from '@lezzet/application';
-import { parisDateOf, toCents } from '@lezzet/helper';
+import { daysBetween, parisDateOf, toCents } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
 import { readCustomerTrust } from '@/lib/customer/trust';
@@ -253,7 +253,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       refundedCents: order.amountRefundedCents,
       openCents: derivation.amountToCollectCents,
       refundDueCents: derivation.refundDueCents,
-      dueDate: order.onAccount ? parisDateOf(dueDateOf(order.createdAt, termDays)) : null,
+      dueDate: order.onAccount ? dueDayOf(order.createdAt, termDays) : null,
       overdue: isOverdue(order, termDays, now),
       vatTreatment: order.vatTreatment,
     },
@@ -318,10 +318,8 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
             // Müşterinin borcu, bu siparişinki değil.
             openBalanceCents: credit.openBalanceCents,
             limitCents: customer.creditLimitCents,
-            overdueDays: isOverdue(order, termDays, now)
-              ? Math.floor((now.getTime() - dueDateOf(order.createdAt, termDays).getTime()) / 86_400_000)
-              : null,
-            dueDate: order.onAccount ? parisDateOf(dueDateOf(order.createdAt, termDays)) : null,
+            overdueDays: isOverdue(order, termDays, now) ? daysBetween(dueDayOf(order.createdAt, termDays), parisDateOf(now)) : null,
+            dueDate: order.onAccount ? dueDayOf(order.createdAt, termDays) : null,
           }
         : null,
     },

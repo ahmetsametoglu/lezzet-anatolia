@@ -1,6 +1,6 @@
 /**
- * Takvim günü farkı: `to` ile `from` arasında kaç gün var. İki uç UTC gün başına indirilir, çünkü ham milisaniyeyi 86.400.000'e bölmek
- * "kaç 24 saat geçti"yi verir ve aynı parti sabah eşikte, akşam eşik dışında görünürdü.
+ * Takvim günü farkı: `to` ile `from` arasında kaç gün var. İki uç UTC gün başına indirilir, çünkü ham milisaniyeyi bir günün
+ * milisaniyesine bölmek "kaç 24 saat geçti"yi verir ve aynı parti sabah eşikte, akşam eşik dışında görünürdü.
  */
 export function daysBetween(from: Date | string, to: Date | string): number {
   return dayIndex(to) - dayIndex(from);
@@ -32,10 +32,10 @@ export function parisMinutesOf(at: Date): number {
   return part('hour') * 60 + part('minute');
 }
 
-/** Takvimde bir önceki gün (`YYYY-MM-DD`); saat dilimi gerektirmeyen takvim aritmetiği. */
-export function previousDay(date: string): string {
+/** Takvimde `days` gün sonrası (`YYYY-MM-DD`, eksi değer geri gider); saat dilimi gerektirmeyen takvim aritmetiği. */
+export function addDays(date: string, days: number): string {
   const [year, month, day] = date.split('-').map(Number) as [number, number, number];
-  return new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
 /** Paris takviminde bir günün UTC sınırları, yarı açık `[from, to)`; yaz saatine geçilen gün 23 saattir. */

@@ -13,7 +13,7 @@ import {
 } from '@lezzet/database';
 import { countOverduePickups, readFacilityVanSummary } from '@lezzet/application';
 import { PICKUP_WAIT_DAYS_DEFAULT, PICKUP_WAIT_DAYS_KEY } from '@lezzet/domain-core';
-import { BUSINESS_TIME_ZONE, parisDateOf, parisMinutesOf } from '@lezzet/helper';
+import { addDays, BUSINESS_TIME_ZONE, parisDateOf, parisMinutesOf } from '@lezzet/helper';
 import type { Order, OrderStatus, TicketStatus } from '@lezzet/types';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import { stockLink } from './stock/stock-url';
@@ -57,10 +57,7 @@ const PREPARED: ReadonlySet<OrderStatus> = new Set<OrderStatus>(['ready', 'out_f
 const OUT_OF_DAY: ReadonlySet<OrderStatus> = new Set<OrderStatus>(['draft', 'cancelled']);
 
 /** Paris takviminde `days` gün ötesi (`YYYY-MM-DD`): sunucu UTC'de koşar, işletmenin günü ise Paris'tedir. */
-function dayOffset(base: Date, days: number): string {
-  const [year, month, day] = parisDateOf(base).split('-').map(Number) as [number, number, number];
-  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
-}
+const dayOffset = (base: Date, days: number): string => addDays(parisDateOf(base), days);
 
 export async function readDashboard(db: Db, now = new Date()): Promise<DashboardData> {
   const orderSvc = new OrderService(db);

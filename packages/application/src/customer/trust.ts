@@ -6,11 +6,12 @@ import {
   TRUST_UNCOLLECTED_GRACE_DAYS_DEFAULT,
   TRUST_UNCOLLECTED_GRACE_DAYS_KEY,
   TRUST_WEIGHTS,
-  dueDateOf,
+  dueDayOf,
   isOverdue,
   trustEntryOf,
   type TrustEntryDraft,
 } from '@lezzet/domain-core';
+import { addDays, parisDayRange } from '@lezzet/helper';
 import { TrustReasonEnum, type TrustReason } from '@lezzet/types';
 
 /** Bir partide okunan en çok olay ve bir turdaki en çok parti: ilk kurulumda geçmiş tek turda erisin ama tur sonsuza uzamasın. */
@@ -78,7 +79,9 @@ async function recordOverdue(
     if (!order.customerId) continue;
     const termDays = termOf.get(order.customerId) ?? defaultTermDays;
     if (!isOverdue(order, termDays, now)) continue;
-    const fact = { reason: 'payment_overdue' as const, customerId: order.customerId, refId: order.id, occurredAt: dueDateOf(order.createdAt, termDays).toISOString() };
+    // Gecikme, vade gününü izleyen Paris gece yarısında başlar.
+    const overdueSince = parisDayRange(addDays(dueDayOf(order.createdAt, termDays), 1)).from;
+    const fact = { reason: 'payment_overdue' as const, customerId: order.customerId, refId: order.id, occurredAt: overdueSince };
     const draft = trustEntryOf(fact, weights, { graceDays: 0, now });
     if (draft) drafts.push(draft);
   }

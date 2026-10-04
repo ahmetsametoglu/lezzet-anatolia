@@ -1,12 +1,11 @@
 import { waitingDaysSince } from '@lezzet/application';
 import {
   derivePaymentStatusForOrder,
-  dueDateOf,
+  dueDayOf,
   isOverdue,
   officeTransitions,
   openAmountCents,
 } from '@lezzet/domain-core';
-import { parisDateOf } from '@lezzet/helper';
 import type { Order, OrderItem, UserProfile } from '@lezzet/types';
 import type { OrderCountsView, OrderRow } from './orders-types';
 import type { OrderCounts } from '@lezzet/database';
@@ -73,7 +72,7 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
       onAccount: order.onAccount,
       // Vade günü YALNIZ vadeli siparişte anlamlı: peşin siparişte "vade 12 Tem" yazmak, olmayan
       // bir borcu varmış gibi gösterirdi.
-      dueDate: order.onAccount ? parisDateOf(dueDateOf(order.createdAt, termDays)) : null,
+      dueDate: order.onAccount ? dueDayOf(order.createdAt, termDays) : null,
       /* Kalan tutar motordan gelir, ki liste ile detay aynı sayıyı söylesin; `openAmountCents` kısmi karşılamayı görmez, o vade
          defterinin ham borcudur. */
       openCents: derivePaymentStatusForOrder(order, items, {

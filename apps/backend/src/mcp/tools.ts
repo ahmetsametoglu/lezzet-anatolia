@@ -11,36 +11,13 @@ import {
   WarehouseService,
   serviceDb,
 } from '@lezzet/database';
-import { formatPrice } from '@lezzet/helper';
+import { addDays, formatPrice, parisDateOf } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
 
 /**
- * MCP deneme diliminin ÜÇ salt-okuma aracı (22.1) — Faz A'nın yerel provası.
- *
- * Katman kuralı: burası uygulama katmanıdır — servislerden OKUR, özet KURAR; iş kuralı yok
- * (karar gerektiren hiçbir soru yok, hepsi sayım/özet). `apps/web/lib` okumaları `server-only`
- * olduğu için buradan import edilemez ve edilmemeli: asistanın okuma yüzeyi kendi seçtiği
- * alanlarla sınırlı kalmalı ki maskeleme tek yerde denetlensin.
- *
- * MASKELEME (AI_ADMIN_ASSISTANT §6) burada uygulanır ve testle korunur:
- * - Müşteri kimliği taşıyan HİÇBİR alan seçilmez — sayılar ve durum kırılımları döner.
- * - `ReorderLine.lastPurchasePriceCents` (tedarikçi alışı) BİLİNÇLİ süzülür — finans sınırı
- *   "toplanmış marj"dır, tekil alış fiyatı asistan yüzeyine çıkmaz.
- * - `error_log.message` zaten `scrubMessage`den geçmiş yazılır (OBSERVABILITY §5); `context`
- *   gövdesi yine de dökülmez — kimlik meşru olsa da ham gövde araç yüzeyine taşınmaz.
+ * MCP'nin salt okuma araçları servislerden okuyup özet kurar, iş kuralı yazmaz; okuma yüzeyi kendi seçtiği alanlarla sınırlıdır ki
+ * maskeleme tek yerde denetlensin. Müşteri kimliği, tedarikçi alış fiyatı ve hata kaydının ham gövdesi seçilmez (AI_ADMIN_ASSISTANT §6).
  */
-
-/** Paris günü (YYYY-AA-GG) — teslim günü süzgeci bu takvimle kurulur; operasyonun günü teslim günüdür. */
-function parisToday(): string {
-  return new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris' }).format(new Date());
-}
-
-/** Paris gününden n gün geri — aralık ucu (dahil). Öğlen çıpası gün-kayması riskini keser. */
-function parisDaysAgo(days: number): string {
-  const anchor = new Date(`${parisToday()}T12:00:00Z`);
-  anchor.setUTCDate(anchor.getUTCDate() - days);
-  return anchor.toISOString().slice(0, 10);
-}
 
 /** `OrderCounts`in JSON'a çevrilebilir özeti — `byStatus` Map'tir, olduğu gibi serileşmez. */
 function orderCountsView(counts: Awaited<ReturnType<OrderService['counts']>>) {
@@ -60,7 +37,7 @@ function orderCountsView(counts: Awaited<ReturnType<OrderService['counts']>>) {
  */
 export async function morningBriefing() {
   const db = serviceDb();
-  const today = parisToday();
+  const today = parisDateOf(new Date());
   const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
 
   const [todayCounts, openErrors, errorsLast24h, health, tickets, reorder] = await Promise.all([
@@ -98,8 +75,8 @@ export async function morningBriefing() {
 export async function salesSummary(days: number) {
   const clamped = Math.max(1, Math.min(90, Math.floor(days)));
   const db = serviceDb();
-  const to = parisToday();
-  const from = parisDaysAgo(clamped - 1);
+  const to = parisDateOf(new Date());
+  const from = addDays(to, -(clamped - 1));
   const counts = await new OrderService(db).counts({ deliveryFrom: from, deliveryTo: to });
   return { from, to, days: clamped, ...orderCountsView(counts) };
 }
@@ -123,13 +100,13 @@ export async function systemErrors(limit: number) {
 }
 
 /**
- * AI harcaması (15.27) — son N günün `ai_usage_daily` özeti, DOLAR: görev×model kırılımı ("hangi özellik
- * harcıyor") ve gün serisi ("artıyor mu"). Tarifesiz koşu AYRI sayılır ve tutara GİRMEZ — sıfır sayılsaydı
- * harcama olduğundan az görünürdü; hiç tarifeli koşu yoksa tutar `null`dur (`CLAUDE §1`).
+ * AI harcaması: son N günün `ai_usage_daily` özeti, dolar cinsinden görev×model kırılımı ve gün serisi. Tarifesiz koşu ayrı sayılır
+ * ve tutara girmez, çünkü sıfır sayılsaydı harcama olduğundan az görünürdü; hiç tarifeli koşu yoksa tutar `null`dur.
  */
 export async function aiCosts(days: number) {
   const clamped = Math.max(1, Math.min(90, Math.floor(days)));
-  const from = parisDaysAgo(clamped - 1);
+  const to = parisDateOf(new Date());
+  const from = addDays(to, -(clamped - 1));
   const rows = await new AiUsageDailyService(serviceDb()).listSince(from);
 
   const topla = (a: number | null, b: number | null) => (a === null && b === null ? null : (a ?? 0) + (b ?? 0));
@@ -161,7 +138,7 @@ export async function aiCosts(days: number) {
   const tasks = [...byTask.values()].sort((a, b) => (b.costUsd ?? 0) - (a.costUsd ?? 0));
   return {
     from,
-    to: parisToday(),
+    to,
     days: clamped,
     currency: 'USD',
     totals: {
@@ -184,18 +161,15 @@ const BRIEFING_LINE_LIMIT = 8;
 
 async function reorderOverview() {
   const db = serviceDb();
-  // Yalnız TESİSLER (02.09): tur her depo için eşik önerisi soruyor ve araçta eşik kavramı yok.
+  // Yalnız tesisler: tur her depo için eşik önerisi soruyor ve araçta eşik kavramı yok.
   const warehouses = await new WarehouseService(db).list({ activeOnly: true, kind: 'facility' });
   const reorder = new ReorderService(db);
 
   const perWarehouse = await Promise.all(
     warehouses.map(async (warehouse) => {
       const groups = await reorder.suggestions(warehouse.id);
-      // **TEDARİKÇİ SATIRA TAŞINIR** (MCP tur 8 raporu §3.10 · 15.08): motor eksikleri zaten
-      // tedarikçiye göre grupluyordu, ama düzleştirme onu yutuyordu. Sonuç dene-yanıl bir akıştı —
-      // "hangi tedarikçiden sipariş açabilirim" sorusu ancak `propose_purchase_order`ı deneyip
-      // hatasından öğreniliyordu ("… için STR deposunda eşik altı kalem yok"). Hata mesajı iyi ama
-      // bir okuma aracının cevaplaması gereken soruyu hataya sordurmak, akışı tersine çeviriyordu.
+      // Tedarikçi satıra taşınır, ki "hangi tedarikçiden sipariş açabilirim" sorusu `propose_purchase_order`ın hatasından değil bu
+      // okumadan öğrenilsin.
       const lines = groups.flatMap((group) => group.lines.map((line) => ({ ...line, supplierId: group.supplierId })));
       return { code: warehouse.code, lineCount: lines.length, lines };
     }),
@@ -215,9 +189,7 @@ async function reorderOverview() {
     }),
   );
 
-  // Tedarikçi adları (§3.10 künyesi). Küme kimlikle daraltılmıyor: tedarikçi listesi operatörün
-  // elle kurduğu, doğal tavanı olan bir küme (`CLAUDE §1` sayfalama ölçütü) — tek turda okumak,
-  // kimlik listesi çıkarıp süzmekten hem ucuz hem de daha az koddur.
+  // Tedarikçi listesi operatörün kurduğu, doğal tavanlı bir kümedir; tek turda okumak kimlikle süzmekten ucuzdur.
   const supplierById = new Map((await new SupplierService(db).list({})).map((s) => [s.id, s.name]));
 
   return {
@@ -225,30 +197,9 @@ async function reorderOverview() {
     warehouses: perWarehouse.map((w) => ({
       code: w.code,
       lineCount: w.lineCount,
-      /**
-       * **KIRPMA SÖYLENİR** (MCP tur 8 raporu §3.5 · ölçüldü 15.08).
-       *
-       * `lineCount` 20 derken listede 8 satır olması sessiz bir kesmeydi ve bedeli raporun kendi
-       * içinde görüldü: okuyan taraf o 8 satırı "deponun eksikleri" sanıp `propose_purchase_order`
-       * çıktısıyla karşılaştırdı, kesişim az çıkınca **"depo süzgeci çalışmıyor" diye kritik bir
-       * arıza bildirdi** — oysa süzgeç doğru, listeler farklı çünkü biri kırpılmış. Yanlış teşhis
-       * ölçümle çürütüldü ama maliyeti bir tur oldu.
-       *
-       * `stock_watch` bu deseni zaten doğru uyguluyordu (`truncated` alanı); aynısı buraya geldi.
-       */
+      /** Kırpma söylenir, çünkü kırpılmış liste "deponun eksikleri" sanılırsa okuyan taraf yanlış teşhis koyar. */
       truncated: w.lineCount > BRIEFING_LINE_LIMIT,
-      /**
-       * **HANGİ TEDARİKÇİDEN SİPARİŞ AÇILABİLİR** — kırpmadan BAĞIMSIZ özet (§3.10 · ölçüldü 15.08).
-       *
-       * Satır başına tedarikçi adı tek başına yetmedi: ölçümde STR'nin ilk 8 satırında hiç eşleme
-       * yokken 9-11 arasında vardı, yani listeye bakan model "bu depodan sipariş açılamaz" sanırdı
-       * — oysa `propose_purchase_order(STR)` üç kalemlik bir taslak açıyor. Kırpma doğru
-       * bildirilse bile yanlış çıkarım mümkündü.
-       *
-       * Bu özet TÜM satırları sayar ve doğrudan aracın girdisini verir: hangi adı yazarsan sipariş
-       * açılır. Rapor bunu "dene-yanıl akışı" diye bildirmişti — hata mesajından öğrenilen bilgi,
-       * okuma aracının cevaplaması gereken bir soruydu.
-       */
+      /** Kırpmadan bağımsız özet: tüm satırları sayar ve hangi tedarikçi adıyla sipariş açılabileceğini doğrudan verir. */
       suppliersWithShortfall: [...new Map(w.lines.flatMap((l) => (l.supplierId ? [[l.supplierId, l] as const] : []))).keys()]
         .map((id) => ({
           name: supplierById.get(id) ?? '?',

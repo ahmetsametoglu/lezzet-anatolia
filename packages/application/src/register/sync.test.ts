@@ -16,7 +16,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData } from '@lezzet/database/testing';
-import { parisDateOf, previousDay } from '@lezzet/helper';
+import { addDays, parisDateOf } from '@lezzet/helper';
 import type { PaymentMethod, RegisterQueue } from '@lezzet/types';
 import { closeRegisterDay } from './day-end';
 import { memoryRegister } from './memory-register.testkit';
@@ -627,7 +627,7 @@ describe('eşleme', () => {
 
 describe('gün sonu', () => {
   const today = () => parisDateOf(new Date());
-  const daysBefore = (count: number) => Array.from({ length: count }).reduce<string>((day) => previousDay(day), today());
+  const daysBefore = (count: number) => Array.from({ length: count }).reduce<string>((day) => addDays(day, -1), today());
 
   it('defter, ayna ve kasa tutuyorsa gün kapanır ve ikinci kez kapatılmaz', async () => {
     const own = await ownStore('KASA-KAPANIS');

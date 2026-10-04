@@ -13,42 +13,16 @@ import {
   type PointsReason,
   type RedemptionResult,
 } from '@lezzet/types';
+import { parisDateOf, parisDayRange } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
 
-/** İşletmenin saat dilimi — tek şube, Strasbourg. Gün sınırı buna göre çizilir. */
-const BUSINESS_TIME_ZONE = 'Europe/Paris';
+/** İşletme gününün başlangıcı (Paris'te gece yarısı), ISO an olarak; sunucu UTC'de koştuğu için gün açıkça Paris'ten kurulur. */
+const businessDayStart = (now: Date): string => parisDayRange(parisDateOf(now)).from;
 
 /**
- * Verilen anın **işletme gününün** başlangıcı (yerel gece yarısı), UTC anı olarak.
- *
- * `setHours(0,0,0,0)` süreç saat dilimini kullanır ve sunucu UTC'deyse gün yanlış yerde döner.
- * Bölgeyi açıkça söylemek, dağıtım ortamının sessiz bir parametreye dönüşmesini engeller.
- */
-function startOfBusinessDay(now: Date): Date {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: BUSINESS_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(now);
-  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
-  // Yereldeki "şu an" ile gerçek an arasındaki fark = bölgenin o günkü ofseti (yaz saati dahil).
-  const asUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
-  const offsetMs = asUtc - Math.floor(now.getTime() / 1000) * 1000;
-  return new Date(Date.UTC(get('year'), get('month') - 1, get('day')) - offsetMs);
-}
-
-/**
- * Puan defteri (17.4) — **karar vermez, satır getirir/yazar** (STACK §4).
- *
- * "Kim kazanır, ne kadar kazanır, tavana takıldı mı" soruları motorda (`domain-core/feedback`);
- * servis yalnız defteri tutar. `update`/`delete` YOK ve olmayacak: defter satırı düzeltilmez,
- * karşı kayıt yazılır — muhasebenin en eski kuralı.
+ * Puan defteri karar vermez, satır getirir ve yazar; kazanma ve tavan kuralı motordadır (`domain-core/feedback`). `update`/`delete`
+ * yoktur, çünkü defter satırı düzeltilmez, karşı kayıt yazılır.
  */
 export class PointsEntryService extends BaseDbService<PointsEntry, PointsEntryInsert, never> {
   constructor(supabase: SupabaseClient) {
@@ -61,28 +35,13 @@ export class PointsEntryService extends BaseDbService<PointsEntry, PointsEntryIn
   }
 
   /**
-   * Müşterinin **bugün** kazandığı puan — günlük tavanın ölçütü.
-   *
-   * Yalnız pozitifler sayılır: harcama tavanı serbest bırakmamalı, yoksa kupona çevirip yeniden
-   * kazanmak sınırsız bir döngü olurdu.
-   *
-   * **"Bugün" işletmenin günüdür, sunucununki değil.** `setHours(0,0,0,0)` süreç saat dilimine göre
-   * çalışır; sunucu UTC'de koşarsa gün Fransa'da 01:00/02:00'de döner ve müşteri gece yarısından
-   * sonraki aksiyonunda dünün tavanına takılır. Bölge sabittir çünkü işletme tektir (Strasbourg);
-   * müşterinin kendi saat dilimi burada ölçüt değil — tavan BİZİM günümüzün sınırıdır.
-   *
-   * **`reasons` verilirse yalnız o sebepler sayılır** (kullanıcı onayı 11.08): tavan artık tüm
-   * defteri değil, YALNIZ tavana tabi eylemleri ölçüyor (`CAPPED_POINTS_REASONS`). Tümünü saysaydık
-   * 500 puanlık bir getiren ödülü pencereyi tek başına doldurur ve müşteri aynı gün keşif oyundan
-   * puan alamazdı — tavanın DIŞINDA tuttuğumuz bir ödül, tavanın içindekileri yemiş olurdu.
-   * Süzgeç sorguda: çağıranın sonradan yapacağı bir filtreye bırakılsaydı unutan ilk çağıran eski
-   * davranışa döner ve fark hiçbir yerde hata vermezdi.
+   * İşletmenin bugününde kazanılan puan, günlük tavanın ölçütü; yalnız pozitifler sayılır, yoksa kupona çevirip yeniden kazanmak
+   * sınırsız bir döngü olurdu. `reasons` verilirse yalnız tavana tabi sebepler sayılır, ki tavan dışı bir ödül tavanın içini yemesin.
    */
   async earnedToday(customerId: string, reasons?: readonly PointsReason[], now: Date = new Date()): Promise<number> {
-    const dayStart = startOfBusinessDay(now);
     const rows = await this.getAll(
       reasons ? { customerId, reason: [...reasons] } : { customerId },
-      { rangeFilters: [{ field: 'createdAt', operator: 'gte', value: dayStart.toISOString() }] },
+      { rangeFilters: [{ field: 'createdAt', operator: 'gte', value: businessDayStart(now) }] },
     );
     return rows.filter((r) => r.points > 0).reduce((sum, r) => sum + r.points, 0);
   }
@@ -93,12 +52,8 @@ export class PointsEntryService extends BaseDbService<PointsEntry, PointsEntryIn
   }
 
   /**
-   * Bu kaynaktan yazılmış **ÖDÜL** satırı (pozitif) — geri almanın tutarı buradan okunur.
-   *
-   * İşaret süzgeci şart: aynı üçlüde artık iki satır bulunabiliyor (ödül + geri alma, ★ karar 7d)
-   * ve `getOneBy` sırasızdır, yani hangisini döndüreceği belirsizdir. Geri alınacak tutar **o gün
-   * yazılan** tutardır, bugünkü ayardaki değer değil: `points_referral` sonradan değişmiş olabilir
-   * ve ayardan okumak defteri kendi geçmişiyle çelişkiye düşürürdü.
+   * Bu kaynaktan yazılmış ödül satırı; işaret süzgeci şart, çünkü aynı üçlüde ödül ve geri alma birlikte bulunabilir. Geri alınacak
+   * tutar o gün yazılandır, bugünkü ayar değil, yoksa defter kendi geçmişiyle çelişirdi.
    */
   async findAwardFor(customerId: string, reason: PointsReason, refId: string): Promise<PointsEntry | null> {
     const rows = await this.getAll(
@@ -118,27 +73,20 @@ export class PointsEntryService extends BaseDbService<PointsEntry, PointsEntryIn
   }
 
   /**
-   * KAYNAKSIZ sebepler için günlük tekillik nezaketi (bugün ziyaret puanı yazıldı mı).
-   *
-   * **Gün İŞLETMENİN günüdür** (`startOfBusinessDay`) — `earnedToday` ve `points_entry_visit_day`
-   * kısmi unique indeksiyle BİREBİR aynı tanım. Üç yerin aynı günü kullanması şart: buradaki
-   * kontrol başka bir gün tanımı kullansaydı uygulama "kazanabilirsin" der, veritabanı reddederdi.
-   *
-   * Asıl güvence indekste; bu yalnız gereksiz bir yazma turunu önleyen nezaket.
+   * Kaynaksız sebeplerin günlük tekillik nezaketi; gün `earnedToday` ve `points_entry_visit_day` indeksiyle aynı işletme günüdür, yoksa
+   * uygulama "kazanabilirsin" der, veritabanı reddederdi. Asıl güvence indekstedir.
    */
   async hasEntryOnBusinessDay(customerId: string, reason: PointsReason, now: Date = new Date()): Promise<boolean> {
     const rows = await this.getAll(
       { customerId, reason },
-      { rangeFilters: [{ field: 'createdAt', operator: 'gte', value: startOfBusinessDay(now).toISOString() }], limit: 1 },
+      { rangeFilters: [{ field: 'createdAt', operator: 'gte', value: businessDayStart(now) }], limit: 1 },
     );
     return rows.length > 0;
   }
 
   /**
-   * **Puan → kişisel kupon** (`redeem_points`, 17.5). Puan düşümü ve kuponun doğuşu tek
-   * transaction'da: ayrı olsalardı ikincisi düştüğünde müşterinin puanı gider, kuponu doğmazdı.
-   *
-   * `ok:false` bir hata değil bir gerçektir — yetersiz bakiye müşteriye söylenecek bir cümledir.
+   * Puan kişisel kupona çevrilir; düşüm ve kuponun doğuşu tek transaction'dadır, yoksa ikincisi düşünce puan gider kupon doğmazdı.
+   * `ok:false` hata değil, müşteriye söylenecek bir gerçektir (yetersiz bakiye).
    */
   async redeem(input: {
     customerId: string;
@@ -159,10 +107,8 @@ export class PointsEntryService extends BaseDbService<PointsEntry, PointsEntryIn
 }
 
 /**
- * `customer_points_balance` görünümü — defterden türetilen bakiye.
- *
- * Ayrı servis, çünkü görünüm yazılmaz. Bakiyeyi defter servisine metot olarak eklemek, bir gün
- * "bakiyeyi güncelle" diye bir yol açmanın davetiyesi olurdu.
+ * Defterden türetilen bakiye görünümü (`customer_points_balance`); ayrı servistir, çünkü defter servisine eklenen bir bakiye metodu bir
+ * gün "bakiyeyi güncelle" yolunu açardı.
  */
 export class PointsBalanceService extends BaseDbService<PointsBalance, never, never> {
   constructor(supabase: SupabaseClient) {
@@ -183,19 +129,8 @@ export class PointsBalanceService extends BaseDbService<PointsBalance, never, ne
   }
 
   /**
-   * Operasyon puan tablosu — en çok biriktirenler önce.
-   *
-   * "Kim ne kadar biriktirmiş" sorusu bir istisna avı değil genel resim çizer (tasarım §4); bu
-   * yüzden sıralama bakiyeye göredir, son hareket tarihine göre değil.
-   *
-   * **RPC üzerinden okunuyor, görünümden DEĞİL** (operasyon talebi 03.08): ekranın başlığındaki
-   * "Son 30 gün" seçicisi bir dönem ister ve toplamı dönemle daraltmanın yolu parametredir —
-   * görünüm parametre alamaz. `since` verilmezse fonksiyon tüm zamanları toplar, yani dönemli ve
-   * dönemsiz hâl AYNI kod yolundan geçer; iki ayrı uç olsaydı biri gün gelip ötekinden farklı bir
-   * kural uygular ve fark hiçbir yerde hata vermezdi.
-   *
-   * **`since` verildiğinde `balance` bir DELTA'dır**, cüzdan bakiyesi değil — 30 günlük pencerede
-   * "bakiye" diye okunacak bir sayı yoktur. Ekranın başlığı zaten dönemi yazıyor.
+   * Operasyon puan tablosu bakiyeye göre sıralıdır ve RPC'den okunur, çünkü dönem seçicisi parametre ister ve görünüm parametre alamaz.
+   * `since` verildiğinde `balance` dönemin farkıdır, cüzdan bakiyesi değil.
    */
   async listTop(limit = 50, since?: string): Promise<PointsBalance[]> {
     const rows = await this.executeRpc<unknown[]>('points_leaderboard', { p_since: since ?? null, p_limit: limit });

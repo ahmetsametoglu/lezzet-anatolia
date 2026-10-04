@@ -1,3 +1,4 @@
+import { addDays, parisDateOf } from '@lezzet/helper';
 import type { Order } from '@lezzet/types';
 
 /**
@@ -26,9 +27,9 @@ export function openAmountCents(
   return order.orderedTotalCents - order.amountCollectedCents + order.amountRefundedCents;
 }
 
-/** Vade günü — sipariş tarihinden itibaren. */
-export function dueDateOf(createdAt: string | Date, termDays: number): Date {
-  return new Date(new Date(createdAt).getTime() + termDays * 86_400_000);
+/** Vade günü (`YYYY-MM-DD`): siparişin Paris'teki günü + vade süresi, takvim günü olarak; saatle toplamak yaz saati geçişinde günü kaydırırdı. */
+export function dueDayOf(createdAt: string | Date, termDays: number): string {
+  return addDays(parisDateOf(new Date(createdAt)), termDays);
 }
 
 /**
@@ -39,9 +40,9 @@ export function isOpenCredit(order: CreditOrder): boolean {
   return order.onAccount && order.paymentStatus !== 'paid' && order.status !== 'cancelled';
 }
 
-/** Vadesi geçmiş mi — açık vadeli sipariş + vade günü geride kaldıysa. */
+/** Vadesi geçmiş mi: açık vadeli sipariş ve vade günü Paris takviminde geride kaldı; vade gününün kendisi henüz gecikme değildir. */
 export function isOverdue(order: CreditOrder, termDays: number, now: Date = new Date()): boolean {
-  return isOpenCredit(order) && dueDateOf(order.createdAt, termDays).getTime() < now.getTime();
+  return isOpenCredit(order) && parisDateOf(now) > dueDayOf(order.createdAt, termDays);
 }
 
 export interface CreditPosition {

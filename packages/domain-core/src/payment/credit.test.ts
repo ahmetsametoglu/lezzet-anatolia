@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { creditPosition, dueDateOf, isOpenCredit, isOverdue, openAmountCents, type CreditOrder } from './credit';
+import { creditPosition, dueDayOf, isOpenCredit, isOverdue, openAmountCents, type CreditOrder } from './credit';
 
 const NOW = new Date('2026-07-29T10:00:00Z');
 
@@ -40,10 +40,11 @@ describe('isOpenCredit', () => {
 });
 
 describe('isOverdue', () => {
-  it('vade günü geride kaldıysa gecikmiştir', () => {
-    // 29 Haziran + 30 gün = 29 Temmuz 10:00; "şimdi" tam o an → henüz geçmemiş.
+  it('vade günü geride kaldıysa gecikmiştir; vade günü boyunca gecikme yoktur', () => {
+    // 29 Haziran + 30 gün = 29 Temmuz; Paris'te 29 Temmuz bitene dek (UTC 21:59:59) gecikme yok.
     expect(isOverdue(order(), 30, NOW)).toBe(false);
-    expect(isOverdue(order(), 30, new Date('2026-07-29T10:00:01Z'))).toBe(true);
+    expect(isOverdue(order(), 30, new Date('2026-07-29T21:59:59Z'))).toBe(false);
+    expect(isOverdue(order(), 30, new Date('2026-07-29T22:00:00Z'))).toBe(true);
   });
 
   it('vade süresi uzunsa gecikme yoktur', () => {
@@ -54,8 +55,10 @@ describe('isOverdue', () => {
     expect(isOverdue(order({ paymentStatus: 'paid' }), 1, NOW)).toBe(false);
   });
 
-  it('vade günü sipariş tarihinden sayılır', () => {
-    expect(dueDateOf('2026-06-29T10:00:00Z', 30).toISOString()).toBe('2026-07-29T10:00:00.000Z');
+  it('vade günü siparişin Paris gününden sayılır; yaz saati geçişi günü kaydırmaz', () => {
+    expect(dueDayOf('2026-06-29T10:00:00Z', 30)).toBe('2026-07-29');
+    // Paris'te 5 Ekim 00:30 (UTC'de 4 Ekim); 30 gün sonrası kış saatinde de 4 Kasım'dır.
+    expect(dueDayOf('2026-10-04T22:30:00Z', 30)).toBe('2026-11-04');
   });
 });
 

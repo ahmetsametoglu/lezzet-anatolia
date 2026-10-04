@@ -12,6 +12,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { offerDecisionOf, productPublishGaps, suggestedOfferPriceCents } from '@lezzet/domain-core';
+import { addDays, parisDateOf } from '@lezzet/helper';
 import {
   missingDeclarations,
   resolveLocalizedText,
@@ -170,10 +171,8 @@ export async function stockWatch(days: number) {
   ]);
   const codeById = new Map(warehouses.map((w) => [w.id, w.code]));
 
-  const today = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris' }).format(new Date());
-  const horizon = new Date(`${today}T12:00:00Z`);
-  horizon.setUTCDate(horizon.getUTCDate() + clamped);
-  const horizonDay = horizon.toISOString().slice(0, 10);
+  const today = parisDateOf(new Date());
+  const horizonDay = addDays(today, clamped);
 
   const inHorizon = batches.filter((b) => b.expiryDate <= horizonDay).sort((a, b) => a.expiryDate.localeCompare(b.expiryDate));
   // Liste fiyatı AYRI tabloda (kanal/tarih boyutlu) — teklif önerisinin tabanı b2c liste fiyatıdır.

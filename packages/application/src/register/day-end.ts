@@ -10,7 +10,7 @@ import {
   type Db,
 } from '@lezzet/database';
 import { reconcileLedgerDay, reconcileRegisterDay, type RegisterDayDifference, type RegisterDaySide } from '@lezzet/domain-core';
-import { parisDateOf, parisDayRange, previousDay } from '@lezzet/helper';
+import { addDays, parisDateOf, parisDayRange } from '@lezzet/helper';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { RegisterStore } from '@lezzet/types';
 import { notifyRegisterDayUnclosed } from '../notification/staff-events';
@@ -50,7 +50,7 @@ export async function registerDayEnd(
   opts: { now: Date; close: boolean },
 ): Promise<Record<string, unknown>> {
   const liveFrom = await registerLiveFrom(db);
-  const date = previousDay(parisDateOf(opts.now));
+  const date = addDays(parisDateOf(opts.now), -1);
   if (!liveFrom || date < parisDateOf(new Date(liveFrom))) return { skipped: 'not_live' };
 
   const result = await closeRegisterDay(db, register, { date, close: opts.close, liveFromDate: parisDateOf(new Date(liveFrom)) });
@@ -139,7 +139,7 @@ async function unclosedDays(
 ): Promise<{ days: string[]; older: boolean }> {
   const days: string[] = [];
   let day = date;
-  for (; days.length < LOOKBACK_DAYS && day >= liveFromDate; day = previousDay(day)) {
+  for (; days.length < LOOKBACK_DAYS && day >= liveFromDate; day = addDays(day, -1)) {
     if ((await register.dayClosedAt(store.externalStoreId, day)) !== null) return { days, older: false };
     days.unshift(day);
   }
