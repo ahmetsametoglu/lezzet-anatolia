@@ -58,7 +58,7 @@ export function ConfirmationMobile(props: ConfirmationViewProps) {
 
       {view.placed && <p className="font-sans text-body-sm leading-[1.6] text-muted">{c.note}</p>}
       <NotifyInvite t={t} placed={view.placed} />
-      {view.placed && view.neighborInvite && <NeighborInvite t={t} invite={view.neighborInvite} />}
+      {view.placed && view.neighborInvite && <NeighborInvite t={t} copy={c} invite={view.neighborInvite} />}
 
       {phase === 'unpaid' ? (
         <PendingPayment {...props} />
@@ -123,26 +123,28 @@ function NotifyInvite({ t, placed }: NotifyInviteProps) {
 
 interface NeighborInviteProps {
   t: Messages;
+  /** Native ile ortak metin (`@lezzet/i18n/customer/checkout`). */
+  copy: CheckoutCopy['confirmed'];
   invite: NonNullable<ConfirmationView['neighborInvite']>;
 }
 
 /**
- * Komşunu bu güne çağır: native bandın yerleşimi, web'in metni. Dolmuş davet paylaşılmaz.
+ * Komşunu bu güne çağır: native bandın yerleşimi ve metni. Dolmuş davet paylaşılmaz.
  */
-function NeighborInvite({ t, invite }: NeighborInviteProps) {
+function NeighborInvite({ t, copy, invite }: NeighborInviteProps) {
   const { share, copied } = useShareLink();
   const full = invite.remainingUses === 0;
   return (
     <div className="flex w-full flex-col items-center gap-2 rounded-card bg-olive-bg px-4.5 py-3.5">
       <span className="flex items-center gap-1.5 font-sans text-body-sm font-semibold text-ink">
         <Icon name="truck" size={16} className="flex-none text-olive" />
-        {t.neighbor.title}
+        {copy.neighborTitle}
       </span>
-      <span className="font-sans text-note leading-[1.6] text-muted">{t.neighbor.body}</span>
+      <span className="font-sans text-note leading-[1.6] text-muted">{copy.neighborBody}</span>
       <span className="font-sans text-note font-semibold leading-[1.6] text-muted">
-        {(full ? t.neighbor.full : t.neighbor.remaining).replace('{n}', String(invite.remainingUses)).replace('{max}', String(invite.maxUses))}
+        {(full ? copy.neighborFull : copy.neighborRemaining).replace('{n}', String(invite.remainingUses)).replace('{max}', String(invite.maxUses))}
       </span>
-      {!full && <SecondaryButton shape="pill" tone="olive" label={copied ? t.neighbor.copied : t.neighbor.cta} onClick={() => void share(invite.url)} />}
+      {!full && <SecondaryButton shape="pill" tone="olive" label={copied ? t.neighbor.copied : copy.neighborShare} onClick={() => void share(invite.url)} />}
     </div>
   );
 }

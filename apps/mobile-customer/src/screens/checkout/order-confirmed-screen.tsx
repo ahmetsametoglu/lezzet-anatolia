@@ -108,7 +108,10 @@ export function OrderConfirmedScreen({
         {/* Komşu daveti onay anında, çünkü sefer ve gün o an somut; paylaşım sistem sayfasından. Bağlantı yoksa bant çizilmez. */}
         {neighborInvite === null || neighborInvite.inviteUrl === null ? null : (
           <View style={styles.neighbor} testID="confirmed-neighbor">
-            <Text style={styles.neighborTitle}>{t.confirmed.neighborTitle}</Text>
+            <View style={styles.neighborHeading}>
+              <Icon name="truck" size={theme.size.inlineIcon} color={theme.colors.olive} />
+              <Text style={styles.neighborTitle}>{t.confirmed.neighborTitle}</Text>
+            </View>
             <Text style={styles.neighborBody}>{t.confirmed.neighborBody}</Text>
             {/* Kontenjan yazılır, dolmuş davet paylaşılmasın; sayı sözleşmeden gelir, sabit yazılsaydı ayar değişince yalan söylerdi. */}
             <Text style={styles.neighborLimit} testID="confirmed-neighbor-limit">
@@ -317,6 +320,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     borderRadius: theme.radius.card,
     paddingVertical: theme.space['2xl'],
     paddingHorizontal: theme.space['4xl'],
+  },
+  neighborHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.xs,
   },
   neighborTitle: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],

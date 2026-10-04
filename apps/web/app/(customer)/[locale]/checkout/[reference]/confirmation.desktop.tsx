@@ -17,7 +17,7 @@ import type { ConfirmationViewProps } from './confirmation-types';
 
 /**
  * Sipariş alındı, masaüstü: kutlama bandı tam genişlikte, altında 1.5/1 iki sütun; solda teslimat ve ödeme kartları, zaman çizgisi
- * ve şeritler, sağda yapışık sipariş özeti, ki uzun sayfada ne ödendiği gözden kaybolmasın.
+ * ve bantlar, sağda yapışık sipariş özeti, ki uzun sayfada ne ödendiği gözden kaybolmasın.
  */
 export function ConfirmationDesktop(props: ConfirmationViewProps) {
   // Ödemesi gerçekleşmeyen sipariş sol sütunun başında ödenir ya da iptal edilir; zaman çizgisi ancak ödenince anlam taşır.
@@ -38,8 +38,8 @@ export function ConfirmationDesktop(props: ConfirmationViewProps) {
 
           {!unpaid && <TimelineCard {...props} />}
           <NotifyBand t={props.t} compact={false} view={props.view} />
-          {/* Komşu daveti yardımın üstünde: eylem şeridi "ne zaman gelecek" okunduğu anda anlamlıdır. */}
-          <NeighborBand t={props.t} compact={false} view={props.view} />
+          {/* Komşu daveti yardımın üstünde: eylem bandı "ne zaman gelecek" okunduğu anda anlamlıdır. */}
+          <NeighborBand t={props.t} locale={props.locale} compact={false} view={props.view} />
           <HelpBand t={props.t} compact={false} referenceNo={props.view.referenceNo} />
         </div>
 

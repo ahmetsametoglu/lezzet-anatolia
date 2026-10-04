@@ -248,14 +248,14 @@ export function HelpBand({
       <div className="flex flex-1 flex-col gap-0.5">
         <span className="font-sans text-body-sm font-bold text-ink">{t.help.title}</span>
         <span className="font-sans text-note leading-relaxed text-body">{t.help.body}</span>
-        {/* Dar ekranda düğme yerine bu satır: dokunma hedefi şeridin tamamı, eylemin adı yine yazılı durur. */}
+        {/* Dar ekranda düğme yerine bu satır: dokunma hedefi bandın tamamı, eylemin adı yine yazılı durur. */}
         {compact && <span className="font-sans text-note font-bold text-olive underline">{t.help.cta}</span>}
       </div>
     </>
   );
 
   /*
-    Dar ekranda şeridin tamamı tıklanabilir, çünkü WhatsApp'ın doğal cihazı telefondur; düğmeyi ikinci satıra almak çizimde olmayan
+    Dar ekranda bandın tamamı tıklanabilir, çünkü WhatsApp'ın doğal cihazı telefondur; düğmeyi ikinci satıra almak çizimde olmayan
     bir yerleşim kurmak olurdu.
   */
   return compact ? (
@@ -276,16 +276,18 @@ export function HelpBand({
  * Komşunu bu sefere çağır: yardım bandının gramerinde; davet yoksa hiç çizilmez. Kontenjan sözleşmeden gelir ve yazılır,
  * dolduysa bant kalır, yalnız paylaşım düğmesi gider.
  */
-export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, 't' | 'compact' | 'view'>) {
+export function NeighborBand({ t, locale, compact, view }: Pick<ConfirmationViewProps, 't' | 'locale' | 'compact' | 'view'>) {
   // Paylaşım kapısı telefonun bandıyla ortak; kanca erken dönüşten önce çağrılır.
   const { share, copied } = useShareLink();
   const invite = view.neighborInvite;
   if (!invite) return null;
+  // Metin native ile ortaktır; yalnız "kopyalandı" geri bildirimi web'e özgü.
+  const copy = checkoutMessages[locale].confirmed;
   const { url } = invite;
   const full = invite.remainingUses === 0;
   // Yer tutucular metnin İÇİNDE: cümle dile göre farklı sırada kuruluyor (FR'de sayı başta, DE'de
   // ortada) ve parçalara bölünmüş bir çeviri o sırayı dayatırdı.
-  const limitText = (full ? t.neighbor.full : t.neighbor.remaining)
+  const limitText = (full ? copy.neighborFull : copy.neighborRemaining)
     .replace('{n}', String(invite.remainingUses))
     .replace('{max}', String(invite.maxUses));
 
@@ -293,8 +295,8 @@ export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, '
     <div className={bandClass(compact)}>
       <Icon name="truck" size={24} className="flex-none text-olive" />
       <div className="flex flex-1 flex-col gap-0.5">
-        <span className="font-sans text-body-sm font-bold text-ink">{t.neighbor.title}</span>
-        <span className="font-sans text-note leading-relaxed text-body">{t.neighbor.body}</span>
+        <span className="font-sans text-body-sm font-bold text-ink">{copy.neighborTitle}</span>
+        <span className="font-sans text-note leading-relaxed text-body">{copy.neighborBody}</span>
         {/* Kontenjan cümlesi gövdenin ALTINDA ve daha soluk: davetin kendisi değil, koşulu.
             Dolduğunda vurgusu artar (`text-ink`) — o hâlde tek bilgi taşıyan satır bu. */}
         <span className={['font-sans text-micro leading-relaxed', full ? 'font-medium text-ink' : 'text-muted'].join(' ')}>
@@ -304,7 +306,7 @@ export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, '
       {/* Mobilde de çizilir, çünkü bloğun tek işlevi paylaşmak; dolduysa çizilmez. */}
       {full ? null : (
         <Button variant="secondary" size="sm" className="flex-none" onClick={() => void share(url)}>
-          {copied ? t.neighbor.copied : t.neighbor.cta}
+          {copied ? t.neighbor.copied : copy.neighborShare}
         </Button>
       )}
     </div>

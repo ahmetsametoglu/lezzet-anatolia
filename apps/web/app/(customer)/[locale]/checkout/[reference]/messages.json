@@ -47,12 +47,7 @@
       "prefillPlain": "Merhaba Lezzet Anatolie, siparişim hakkında bir sorum var."
     },
     "neighbor": {
-      "title": "Komşunuzu bu teslimata çağırın",
-      "body": "Aynı gün, aynı araç: komşunuz aynı güne sipariş verirse ikiniz de birlikte teslim alırsınız — ve siz puan kazanırsınız.",
-      "cta": "Bağlantıyı kopyala",
-      "copied": "Kopyalandı",
-      "remaining": "Bu davetten {n} komşunuz daha yararlanabilir (en fazla {max}).",
-      "full": "Bu davet doldu — {max} komşunuz katıldı. Bir sonraki siparişinizde yeni bir davet açılır."
+      "copied": "Kopyalandı"
     },
     "notify": {
       "title": "Gelişmeleri bildirimle alın",
@@ -111,12 +106,7 @@
       "prefillPlain": "Bonjour Lezzet Anatolie, j'ai une question au sujet de ma commande."
     },
     "neighbor": {
-      "title": "Invitez votre voisin à cette livraison",
-      "body": "Même jour, même camion : si votre voisin commande pour le même jour, vous serez livrés ensemble — et vous gagnerez des points.",
-      "cta": "Copier le lien",
-      "copied": "Lien copié",
-      "remaining": "Places encore disponibles sur cette invitation : {n} (maximum {max}).",
-      "full": "Cette invitation est complète — {max} voisins y ont participé. Une nouvelle invitation s'ouvrira à votre prochaine commande."
+      "copied": "Lien copié"
     },
     "notify": {
       "title": "Suivez votre commande par notification",
@@ -175,12 +165,7 @@
       "prefillPlain": "Hallo Lezzet Anatolie, ich habe eine Frage zu meiner Bestellung."
     },
     "neighbor": {
-      "title": "Laden Sie Ihre Nachbarn zu dieser Lieferung ein",
-      "body": "Gleicher Tag, gleiches Fahrzeug: Bestellt jemand aus Ihrer Nachbarschaft für denselben Tag, werden Sie zusammen beliefert – und Sie sammeln Punkte.",
-      "cta": "Link kopieren",
-      "copied": "Kopiert",
-      "remaining": "Freie Plätze in dieser Einladung: {n} (höchstens {max}).",
-      "full": "Diese Einladung ist ausgeschöpft – {max} Nachbarn haben mitbestellt. Mit Ihrer nächsten Bestellung erhalten Sie eine neue Einladung."
+      "copied": "Kopiert"
     },
     "notify": {
       "title": "Bestellung per Benachrichtigung verfolgen",
