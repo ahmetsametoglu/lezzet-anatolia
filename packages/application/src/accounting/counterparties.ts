@@ -5,19 +5,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { setMovementNature } from './natures';
 
 /*
-  CARİ KAPILARI (13.09 · ikinci karar, muhasebeci karşılaştırması) — DOMAIN §9.
-
-  Paranın KİME gittiği / KİMDEN geldiği: kurum (URSSAF, vergi dairesi), hizmet veren (muhasebeci,
-  telefon, kiraya veren), çalışan. Bir tur bu soru belgede serbest metindi ve aynı kurum iki yazımla
-  iki kişi oluyordu; "URSSAF'a bu yıl ne ödedik" bir kayıttan değil metin aramasından cevaplanıyordu.
-
-  Tedarikçi ve ortak BURADA DEĞİL: tedarikçi stok modülünün kaydıdır (seçici ikisini aynı listede
-  gösterir), ortağın kaydı cari hesabıdır.
-
-  ── EŞLEŞME KELİMELERİ ─────────────────────────────────────────────────────
-  Banka satırında carinin kelimesi geçerse cari ve varsayılan türü önerilir (motor: `suggestMatches`,
-  `keyword_in_label`). Kelimeler yazıldığı gibi saklanır, karşılaştırma büyük/küçük harf ve aksandan
-  bağımsızdır; üç harften kısa kelime aranmaz (motorun kuralı).
+  Cari kapıları (DOMAIN §9): paranın kime gittiği ya da kimden geldiği kayıtlı bir caridir, çünkü serbest metinde aynı kurum iki
+  yazımla iki kişi olurdu. Banka satırında carinin eşleşme kelimesi geçerse cari ve varsayılan türü önerilir (`suggestMatches`).
 */
 
 export type CounterpartyOutcome =
@@ -96,12 +85,8 @@ export type MovementCounterpartyOutcome =
   | { status: 'invalid'; reason: 'not_found' | 'unknown_counterparty' | 'party_taken' };
 
 /**
- * Hareketin CARİSİNİ koyar ya da kaldırır (`counterpartyId: null`).
- *
- * Tedarikçili harekete cari konmaz — karşı taraf zaten belli, iki kayıt aynı soruyu iki ayrı cevapla
- * yanıtlardı. Carinin varsayılan türü varsa ve hareketin türü boşsa tür de konur: "URSSAF" seçmek
- * "Sosyal güvenlik" demektir (banka satırında bu, tür kapısının kuralıyla satırı mutabık yapar).
- * Tür yöne uymuyorsa (URSSAF'tan gelen bir iade) cari yine yazılır, tür operatöre kalır.
+ * Hareketin carisini koyar ya da kaldırır; tedarikçili harekete cari konmaz, çünkü karşı taraf zaten bellidir. Carinin varsayılan türü
+ * boş türe konur, yöne uymuyorsa cari yine yazılır ve tür operatöre kalır.
  */
 export async function setMovementCounterparty(
   db: SupabaseClient,

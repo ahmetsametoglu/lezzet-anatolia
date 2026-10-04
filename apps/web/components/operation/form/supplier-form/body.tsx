@@ -5,13 +5,8 @@ import { FormInput, FormNumber } from '@/components/operation/form/form-input';
 import type { SupplierFormValues } from './schema';
 
 /*
-  TEDARİKÇİ KARTININ ALANLARI (09.14 · 22.44) — Tedarik ekranının kart penceresi ve asistan kuyruğunun
-  tedarikçi önerisi aynı gövdeyi çizer. Alanlar `DOMAIN §16`'nın kart tanımı: ad · iletişim · vergi no ·
-  ülke · BİZE tanıdığı vade · not. Borç burada YOK ve olmayacak: türetilir, elle yazılan bir bakiye ilk
-  günden yanlış olurdu.
-
-  Ülke (12.26) vergi numarasının yanında: faturanın KDV rejimi ondan önerilir — Fransa dışındaki
-  tedarikçinin KDV'siz faturası ters yüklemedir.
+  Tedarikçi kartının alanları (DOMAIN §16): ad · iletişim · vergi no · ülke · bize tanıdığı vade · not; borç burada yoktur, çünkü
+  türetilir. Ülke vergi numarasının yanındadır, faturanın KDV rejimi ondan önerilir.
 */
 
 interface SupplierFormBodyProps {

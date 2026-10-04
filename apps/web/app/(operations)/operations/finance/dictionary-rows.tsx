@@ -2,8 +2,7 @@ import type { KeyboardEvent, ReactNode } from 'react';
 import { Button } from '@/components/operation/ui/button';
 import { CheckIcon, XIcon } from '@/components/operation/ui/icons';
 
-// Sözlük penceresinin SATIR parçaları (12.18) — görünüm ve yerinde düzenleme aynı ızgarayı paylaşır;
-// gerekçe `dictionary-dialog.tsx` künyesinde ("SATIR FORMUN KENDİSİDİR").
+// Sözlük penceresinin satır parçaları; görünüm ve yerinde düzenleme aynı ızgarayı paylaşır (gerekçe `dictionary-dialog.tsx`).
 
 /**
  * Görünümdeki metnin İÇERLEĞİ — `Input`/`Select` `sm`nin yazısıyla aynı x (1px çerçeve + `px-2`).
@@ -12,9 +11,8 @@ import { CheckIcon, XIcon } from '@/components/operation/ui/icons';
  */
 const READ_INSET = 'px-[9px]';
 /**
- * Tek alanlı satırın ızgarası (etiket): ad · eylemler. Eylem sütunu SABİT (130px): görünümde
- * bağlantılar, düzenlemede ikon düğmeler aynı yeri kaplar — genişliği içerikten gelseydi öteki
- * sütunlar geçişte kayardı. Tür ve cari kendi şablonunu verir (`columns`).
+ * Tek alanlı satırın ızgarası (etiket): ad · eylemler. Eylem sütunu sabittir (130px), çünkü genişliği içerikten gelseydi öteki
+ * sütunlar görünümle düzenleme arasında kayardı.
  */
 const ONE_FIELD_COLUMNS = 'grid-cols-[minmax(0,1fr)_130px]';
 
@@ -109,9 +107,8 @@ export function EditRow({ columns = ONE_FIELD_COLUMNS, isNew, busy, disabled, er
     if (event.key !== 'Escape') return;
     // Açık bir seçici menüsü Esc'i kendisi için ister (kutunun `aria-expanded`ı) — önce o kapanır.
     if ((event.target as HTMLElement).getAttribute('aria-expanded') === 'true') return;
-    // Esc önce DÜZENLEMEYİ bırakır ve bunu `preventDefault` ile SAHİPLENİR: pencere sahiplenilmiş Esc'i
-    // yok sayar (`Dialog` künyesi) — ikinci Esc pencereyi kapatır. Kabarmayı kesmek yetmiyordu, pencere
-    // de kapanıyordu (ölçüldü 14.09).
+    // Esc önce düzenlemeyi bırakır ve `preventDefault` ile sahiplenir; pencere sahiplenilmiş Esc'i yok sayar, ikinci Esc pencereyi
+    // kapatır.
     event.preventDefault();
     onCancel();
   };
@@ -131,8 +128,7 @@ export function EditRow({ columns = ONE_FIELD_COLUMNS, isNew, busy, disabled, er
           {...cells}
           actions={
             <>
-              {/* İKON DÜĞMELER (kullanıcı isteği 14.09): satır içi düzenlemenin iki kararı yazısız — adları
-                  `aria-label` + `title`da, kısayollarıyla (Enter · Esc). */}
+              {/* Satır içi düzenlemenin iki kararı ikon düğmedir; adları `aria-label` ve `title`da, kısayollarıyla (Enter · Esc). */}
               <Button type="button" variant="secondary" size="sm" icon aria-label="Vazgeç (Esc)" title="Vazgeç (Esc)" onClick={onCancel}>
                 <XIcon size={16} />
               </Button>

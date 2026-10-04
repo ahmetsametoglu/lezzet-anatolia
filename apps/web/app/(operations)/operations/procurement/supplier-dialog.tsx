@@ -12,12 +12,8 @@ import { saveSupplierAction } from '@/lib/stock/supplier-actions';
 import { SupplierCatalogPane } from './supplier-catalog-pane';
 import type { SupplierCardView } from './procurement-types';
 
-// Tedarikçi kartı formu (09.14). Kart olmadan sipariş de olmaz — bu form ekranın süsü değil,
-// sıfırdan kurulumun ilk adımı.
-//
-// Alanlar ve şema ORTAK bileşende (`components/operation/form/supplier-form/`, 22.44): asistan
-// kuyruğunun faturadan tedarikçi önerisi aynı formu açıyor. Şema VARLIK ŞEMASINDAN türetilmiş: action
-// ile form aynı sözleşmeyi paylaşır — ayrı yazılsalardı biri değişip öteki eskirdi.
+// Tedarikçi kartı formu; kart olmadan sipariş olmaz, bu yüzden sıfırdan kurulumun ilk adımıdır. Alanlar ve şema ortak bileşendedir
+// (`components/operation/form/supplier-form/`), çünkü asistanın faturadan tedarikçi önerisi aynı formu açar.
 
 const FORM_ID = 'supplier-form';
 

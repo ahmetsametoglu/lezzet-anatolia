@@ -2,16 +2,8 @@ import { z } from 'zod';
 import { SupplierInsertSchema } from '@lezzet/types';
 
 /**
- * **TEDARİKÇİ FORMUNUN ŞEMASI** — Tedarik ekranının kartı ve asistan kuyruğunun tedarikçi önerisi
- * (22.44) aynı tanımı paylaşır; 22.44'e dek tedarik sayfasının `procurement-types`ındaydı ve kuyruk
- * kardeş sayfadan import edemezdi (`STACK §7`).
- *
- * **Varlık şemasından türetilir** (CLAUDE §1): `contact` serbest JSON'u formda üç adlı alana açılır —
- * telefon, e-posta, adres; birleştirme kapıda (`saveSupplierAction`). Serbest JSON'a bırakılsaydı her
- * kayıt farklı anahtar kullanır ve "WhatsApp'tan sipariş gönder" bağlantısı güvenle çalışmazdı.
- *
- * **Ülke formda gevşek** (12.26): kutu küçük harf de kabul eder ("be"), büyük harfe kapı çevirir;
- * boş = bilinmiyor. Varlığın katı ISO kalıbı (`[A-Z]{2}`) kapıdan sonra, kayıtta uygulanır.
+ * Tedarikçi formunun şeması; Tedarik ekranının kartı ve asistanın tedarikçi önerisi aynı tanımı paylaşır. `contact` formda üç adlı
+ * alana açılır ve kapıda birleşir; ülke formda küçük harf de kabul eder, büyük harfe kapı çevirir ve boş bilinmiyor demektir.
  */
 export const SupplierFormSchema = SupplierInsertSchema.omit({ contact: true, country: true }).extend({
   /** Boşsa yeni kayıt. */

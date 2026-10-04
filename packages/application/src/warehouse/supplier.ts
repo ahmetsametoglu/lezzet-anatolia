@@ -3,16 +3,9 @@ import { pinpointSupplier } from '@lezzet/domain-core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * TEDARİKÇİ KARTININ KAPISI — Tedarik ekranının eylemi (`saveSupplierAction`) ve asistanın tedarikçi
- * önerisinin uygulayıcısı (`APPLIERS.supplier_create`, 22.44) aynı kurallardan geçer.
- *
- * Kapı web eyleminin içindeydi. Uygulayıcı eklenince ikinci bir kopya doğacaktı: iletişim alanlarının
- * kuruluşu ve mükerrer yoklaması iki yerde yazılır, bir gün biri ötekinden ayrışırdı (`APPLIERS` künyesi:
- * kuyruk ikinci bir yazma yolu açmaz).
- *
- * İletişim JSON olarak durur (`contact`) ve üç adlı alandan kurulur: telefon, e-posta, adres. Serbest
- * JSON'a bırakılsaydı her kayıt farklı anahtar kullanır ve "WhatsApp'tan sipariş gönder" bağlantısı hiçbir
- * kayıtta güvenle çalışmazdı — telefon o bağlantının anahtarıdır.
+ * Tedarikçi kartının kapısı: Tedarik ekranının eylemi (`saveSupplierAction`) ve asistanın tedarikçi önerisi (`APPLIERS.supplier_create`)
+ * aynı kurallardan geçer. İletişim üç adlı alandan kurulur (telefon, e-posta, adres), çünkü telefon "WhatsApp'tan sipariş gönder"
+ * bağlantısının anahtarıdır.
  */
 export interface SupplierFields {
   name: string;
@@ -39,7 +32,7 @@ export function supplierRowOf(input: SupplierFields) {
     // `contact?.phone` diye bakıyor — boş nesne de aynı cevabı verir ama satırı kirletir.
     contact: Object.keys(contact).length > 0 ? contact : null,
     vatNumber: input.vatNumber?.trim() || null,
-    // Ülke büyük harfle (12.26): "be" yazan da "BE" kaydeder.
+    // Ülke büyük harfle: "be" yazan da "BE" kaydeder.
     country: input.country?.trim().toUpperCase() || null,
     // null = peşin çalışıyoruz (şemanın kendi sözleşmesi); 0 gün yazmak "vade var ama sıfır" olurdu.
     paymentTermDays: input.paymentTermDays ?? null,
@@ -49,10 +42,8 @@ export function supplierRowOf(input: SupplierFields) {
 }
 
 /**
- * Kayıtlı bir tedarikçiye NOKTA ATIŞI gidiyor mu (22.44 · kullanıcı kararı 14.09) — aynı vergi numarası,
- * telefon ya da tam ad; pasif kayıtlar da sayılır. Gidiyorsa kaydın adı (birden çok kayda gidiyorsa `null`),
- * gitmiyorsa `null` değil boş sonuç: faturadaki kimlik tek karta gitmeli, yoksa asistanın araması "birden
- * çok" der ve tedarikçinin borcu iki karta bölünür.
+ * Kayıtlı bir tedarikçiye nokta atışı gidiyor mu: aynı vergi numarası, telefon ya da tam ad, pasif kayıtlar dahil; birden çok kayda
+ * gidiyorsa ad `null` döner. Faturadaki kimlik tek karta gitmeli, yoksa tedarikçinin borcu iki karta bölünürdü.
  */
 export async function duplicateSupplierOf(
   db: SupabaseClient,

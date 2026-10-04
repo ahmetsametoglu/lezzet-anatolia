@@ -8,14 +8,8 @@ import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { createAccountAction } from '@/lib/finance/actions';
 import { ACCOUNT_TYPE_LABEL, NO_ACCOUNTS } from './finance-labels';
 
-// **İlk hesap** — hesabı olmayan kurulumun tek eylemi.
-//
-// Ekranın boş hâli *"ilkini ekleyerek başlayın"* diyor; o cümlenin karşılığı burada olmasaydı
-// operatör ekrandan çıkıp aramak zorunda kalırdı — ve arayacağı yer de yok (Ayarlar 09.16 henüz
-// yazılmadı). Bir yüzey kendi verdiği sözü kendi tutmalı.
-//
-// **Diyalog DEĞİL, boş ekranın içinde:** açılışta gösterilecek başka hiçbir şey yok; bir pencerenin
-// arkasına koymak, boş bir ekranı bir tıklama daha uzağa itmek olurdu.
+// İlk hesap, hesabı olmayan kurulumun tek eylemidir: boş ekran "ilkini ekleyerek başlayın" der ve sözünü kendi tutmalı. Diyalog
+// değil boş ekranın içindedir, çünkü açılışta gösterilecek başka bir şey yokken pencere bir tıklama fazlası olurdu.
 
 export function AccountSetup({ onCreated }: { onCreated: () => void }) {
   const [name, setName] = useState('');

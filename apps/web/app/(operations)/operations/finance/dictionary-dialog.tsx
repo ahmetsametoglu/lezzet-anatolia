@@ -19,33 +19,9 @@ import { COUNTERPARTY_KIND_LABEL, NATURE_DIRECTION_LABEL } from './finance-label
 import type { DictionaryView } from './finance-types';
 
 /*
-  SÖZLÜK (13.09 · ikinci karar, muhasebeci karşılaştırması) — üç liste, üç ayrı soru:
-
-  - TÜR — "bu para neyin parası": kira, maaş, banka masrafı. Harekete TEK tür konur; yönü (gider /
-    gelir / iki yön) ve isteğe bağlı hesap planı kodu (PCG) taşır — kod muhasebecinin dökümüne gider.
-  - CARİ — "kime ödendi / kimden geldi": URSSAF, muhasebeci, ev sahibi, çalışan. Eşleşme kelimeleri
-    banka satırında aranır ("URSSAF" geçen satır bu cariye önerilir); varsayılan türü harekete geçer.
-  - ETİKET — serbest işaret ("Ortak A aracı"): izah DEĞİLDİR, süzmek ve gruplamak içindir.
-
-  Ortaklar burada DEĞİL: ortağın tek kaydı ortak cari HESABIDIR (hesap türü `partner`) — ortağın
-  koyduğu ve çektiği para o hesabın hareketidir. Bir tur ortak hem etiket hem hesaptı ve ikisi
-  birbirinden ayrışabiliyordu (kullanıcı sorusu 13.09).
-
-  Hiçbiri SİLİNMEZ, pasifleşir: eski hareketler onu taşımaya devam eder, yeni kayda verilmez.
-  Pencere yazımdan sonra açık kalır — sözlük action'ları sayfayı aynı cevapta tazeliyor.
-
-  SATIR FORMUN KENDİSİDİR (12.18 · kullanıcı isteği 14.09: "Düzenle'ye basınca inline edit havası
-  olmalı; satır görünümü ile düzenleme formu birbiriyle uyumlu olmalı"). Eskiden her sekmenin tepesinde
-  büyük bir ekleme/düzenleme kutusu duruyordu: "Düzenle" o kutuyu dolduruyor, tıklanan satır aşağıda
-  değişmeden kalıyordu — neyin düzenlendiği kopuktu ve kutu sekmeye göre pencereyi zıplatıyordu.
-  Şimdi yalnız o satır YERİNDE kutulara döner: görünümle aynı ızgara ve sütunlar, metin kutunun
-  yazısıyla aynı içerlekte (`READ_INSET`, `dictionary-rows.tsx`) — geçişte yazı kaymaz, yalnız çerçeve belirir. Yeni kayıt
-  listenin başındaki "+ Yeni …" satırından, AYNI düzenleyiciyle açılır. Enter kaydeder, Esc vazgeçer
-  (pencere açık kalır; ikinci Esc kapatır). Aynı anda tek satır düzenlenir, o sürerken öteki
-  satırların eylemleri kilitli: yarım kalan bir düzenleme sessizce başka bir satıra geçmesin.
-
-  Tür satırı TEK satırdır — yön bir seçici (kullanıcı isteği 14.09: "bu formu tek satırda kurgulamak
-  mümkün"); kararın iki düğmesi ikondur (✓ kaydet · ✕ vazgeç), adları `title`da.
+  Sözlük üç listedir: tür ("bu para neyin parası"), cari ("kime ödendi, kimden geldi") ve serbest etiket; hiçbiri silinmez, pasifleşir,
+  ortak da burada değildir, ortağın kaydı cari hesabıdır. Satır formun kendisidir: düzenlenen satır yerinde kutulara döner ve aynı anda
+  tek satır düzenlenir ki yarım düzenleme başka satıra sessizce geçmesin.
 */
 
 type DictionaryTab = 'natures' | 'counterparties' | 'tags';
@@ -65,9 +41,8 @@ const NATURE_DIRECTIONS = ['out', 'in', 'both'] as const satisfies readonly Natu
 /** Yeni kaydın düzenleme anahtarı — kayıtların anahtarlarıyla (slug · kimlik) çakışmaz. */
 const NEW = 'new';
 /**
- * Satır şablonları (12.18 · 14.09). TÜR TEK SATIR (kullanıcı isteği: "bu formu tek satırda kurgulamak
- * mümkün; aşağıdaki buton yerine bir selectbox"): ad · yön · hesap kodu · eylemler. Cari iki satırlık
- * ayna: ad · türü / eşleşme kelimeleri · varsayılan tür. Eylem sütunu satır parçalarıyla aynı (130px).
+ * Satır şablonları: tür tek satırdır (ad · yön · hesap kodu · eylemler), cari iki satırlık aynadır (ad · türü / eşleşme kelimeleri ·
+ * varsayılan tür). Eylem sütunu satır parçalarıyla aynı genişliktedir (130px).
  */
 const NATURE_COLUMNS = 'grid-cols-[minmax(0,1fr)_170px_96px_130px]';
 const COUNTERPARTY_COLUMNS = 'grid-cols-[minmax(0,1fr)_190px_130px]';
@@ -109,7 +84,7 @@ export function DictionaryDialog({ dictionary, onClose }: DictionaryDialogProps)
       title="Sözlük"
       subtitle="Tür · cari · etiket — silinmez, pasifleşir"
       maxWidth={680}
-      // SABİT yükseklik: sekmeler 700 · 774 · 402px arasında gidip geliyordu (ölçüldü 14.09).
+      // Sabit yükseklik: sekmeler arasında pencere boyu oynamasın.
       height={620}
       // Sekmeler BAŞLIKTA (ürün penceresinin deseni — `ProductFormTabs`): gövde kaydırılırken kaybolmaz.
       headerAside={
