@@ -508,6 +508,11 @@ aynı kovanın içinde "şu klasör gizli" denemez. Zorunluluk, tercih değil.
 onu dosyanın sahibini bilen uygulama kapısı söyler (ör. `lib/ticket/read.ts`). Yetkiyi depoya
 gömmek, her yeni dosya türünde aynı kararı yeniden yazmak olurdu.
 
+**Tarayıcıdan yükleme CORS ister:** private kovanın CORS kuralı (Cloudflare panelinde, koddan
+okunmaz) `PUT` ve `content-type` başlığını yalnız sitenin kökenlerine açar: `https://lezzetanatolie.com`,
+`https://test.lezzetanatolie.com`, yerel `http://localhost:3000` ve `3001`. Yeni alan adı kurala da
+eklenir; eklenmezse web'de fotoğraf yüklemesi ön kontrolde 403 ile düşer, native etkilenmez.
+
 ---
 
 ## 11. Yeni projede kurulum sırası
