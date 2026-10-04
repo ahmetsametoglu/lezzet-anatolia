@@ -8,25 +8,8 @@ import { toAccountViews, totalBalance } from './finance-read';
 import type { FinanceData } from './finance-types';
 import { parseFinanceUrl } from './finance-url';
 
-// Para (12) — **yönetici VEYA muhasebeci** (`requireFinance`). Tasarım §1: paranın tek mantıkla
-// izlendiği yer — para bir hesapta durur, hareketlerle girer/çıkar.
-//
-// ── İKİ LİSTE, YALNIZ GÖRÜNEN OKUNUR (12.17) ─────────────────────────────────
-// "Hareketler | Belgeler" sekmesi adreste; görünmeyen sekmenin listesi okunmaz. İlk sayfa burada,
-// devamı "devamını yükle" action'larıyla — ikisi de aynı okumayı çağırır (`finance-data.ts`).
-//
-// ── KUYRUK YOK, ÖNERİ SATIRDA (12.19) ──────────────────────────────────────
-// Banka eşleştirme kuyruğunun kartları kalktı (kullanıcı kararı "tek liste + tek panel"): mutabık
-// olmayan ekstre satırının önerisi satırın kendisiyle okunur (`finance-data.ts`), onay satırın panelinde.
-//
-// ── SAYAÇ SÜZGEÇTEN BAĞIMSIZ ────────────────────────────────────────────────
-// `unexplainedCount()` ham `money_movement`tan sayar, defter görünümünden değil: görünüm transferi
-// iki satır üretiyor ve bir hareket iki kez sayılırdı. Sayılan şey İZAH (13.09): bağı, belge bağı,
-// türü ya da karşı hesabı olmayan hareket. Belgeler sekmesinin rozeti AÇIK belge sayısıdır.
-//
-// ── SÖZLÜKLER TEK TURDA (13.09 · ikinci karar) ──────────────────────────────
-// Tür, cari, etiket ve tedarikçi listeleri doğal tavanlı (operatörün kurduğu kümeler); satırların
-// adları ve seçicilerin seçenekleri aynı okumadan kurulur.
+// Para ekranı yönetime ve muhasebeye açıktır (`requireFinance`); görünmeyen sekmenin listesi okunmaz, devamı aynı okumayı çağıran
+// action'larla gelir (`finance-data.ts`). İzah sayacı ham `money_movement`tan sayar, çünkü defter görünümü transferi iki satır yapar.
 
 interface FinancePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -72,7 +55,7 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
     counterpartyOptions: counterparties
       .filter((counterparty) => counterparty.isActive)
       .map((counterparty) => ({ value: counterparty.id, label: counterparty.name, defaultNature: counterparty.defaultNature })),
-    // Ülke ve vade de taşınır (12.26): belge formu faturanın KDV rejimini ülkeden, vadesini kartın vadesinden önerir.
+    // Ülke ve vade de taşınır: belge formu faturanın KDV rejimini ülkeden, vadesini kartın vadesinden önerir.
     supplierOptions: suppliers
       .filter((supplier) => supplier.isActive)
       .map((supplier) => ({ value: supplier.id, label: supplier.name, country: supplier.country, paymentTermDays: supplier.paymentTermDays })),
@@ -87,8 +70,7 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
     <FinanceClient
       data={data}
       urlState={urlState}
-      // Pasif hesap listede kalır (geçmişi ona bağlı) ama YENİ harekete kapanır — diyalogların
-      // seçicisi bu yüzden ayrı bir küme okur, hesap şeridiyle aynı diziyi değil.
+      // Pasif hesap listede kalır ama yeni harekete kapanır, bu yüzden diyalogların seçicisi ayrı bir küme okur.
       writableAccounts={accountViews.filter((account) => account.isActive)}
     />
   );
