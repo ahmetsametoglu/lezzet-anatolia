@@ -1,7 +1,7 @@
 'use client';
 
 import { brand } from '@lezzet/brand';
-import { awaitsOurReply, ticketScope } from '@lezzet/helper';
+import { awaitsOurReply, messageStamp, ticketScope } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type supportMessages from '@lezzet/i18n/customer/support';
 import { Note } from '@/components/customer/phone-kit/note';
@@ -9,7 +9,8 @@ import { ChatText } from '@/components/text/chat-text';
 import { formatOrderDate, formatPrice } from '@/lib/storefront/format';
 import type { CustomerTicketView, TicketMessageView } from '@/lib/ticket/ticket-types';
 import type { Messages } from '../support-types';
-import { messageStamp } from './ticket-labels';
+import { MessageStamp } from './message-stamp';
+import { useStampReveal } from './use-stamp-reveal.hook';
 
 type SupportCopy = LocalizedCopy<typeof supportMessages>;
 
@@ -30,6 +31,7 @@ export function PhoneTicketThread({ copy, t, locale, ticket }: PhoneTicketThread
   const refunded =
     ticket.returnOutcome && ticket.returnOutcome.refundedCents > 0 ? formatPrice(ticket.returnOutcome.refundedCents, locale) : null;
   const last = ticket.messages.at(-1);
+  const stamp = useStampReveal();
 
   return (
     <div className="flex flex-col gap-2.5 px-4 py-4.5">
@@ -39,7 +41,14 @@ export function PhoneTicketThread({ copy, t, locale, ticket }: PhoneTicketThread
       )}
 
       {ticket.messages.map((message) => (
-        <PhoneBubble key={message.id} copy={copy} t={t} locale={locale} message={message} />
+        <PhoneBubble
+          key={message.id}
+          copy={copy}
+          locale={locale}
+          message={message}
+          stampShown={stamp.shownId === message.id}
+          onReveal={() => stamp.show(message.id)}
+        />
       ))}
 
       {/* Çözülmüş talep yazınca kendiliğinden açılır; ayrı bir "yeniden aç" düğmesi yazıp basmayı unutanın mesajını kapalı talepte bırakırdı. */}
@@ -56,25 +65,30 @@ export function PhoneTicketThread({ copy, t, locale, ticket }: PhoneTicketThread
 
 interface PhoneBubbleProps {
   copy: SupportCopy;
-  t: Messages;
   locale: Locale;
   message: TicketMessageView;
+  stampShown: boolean;
+  onReveal: () => void;
 }
 
-function PhoneBubble({ copy, t, locale, message }: PhoneBubbleProps) {
+function PhoneBubble({ copy, locale, message, stampShown, onReveal }: PhoneBubbleProps) {
   // `ai` gönderici de işletmedir: müşteri kimin değil işletmenin yazdığını görür.
   const mine = message.sender === 'customer';
   const tone = mine ? 'bg-olive text-card' : 'bg-transparent text-ink';
+  const stamp = messageStamp(message.createdAt, locale, copy.today);
 
   return (
     <div className={['flex', mine ? 'justify-end' : 'justify-start'].join(' ')}>
       {/* Tavan %88: kimin yazdığını karşılıklı hizadaki boşluk söyler. */}
       <div className={['flex max-w-[88%] flex-col gap-1.5', mine ? 'items-end' : 'items-start'].join(' ')}>
-        <div className={`rounded-control border border-sand-200 px-4 py-3 ${tone}`}>
-          {/* Hizalama ve renk yazanı yalnız görene söyler; ekran okuyucu öneki duyar. */}
+        {/* Saat yalnız dokununca görünür, çünkü kalıcı damga tek satırlık mesajda yazının kendisinden çok yer tutar. */}
+        <div onClick={onReveal} className={`group relative rounded-control border border-sand-200 px-4 py-3 ${tone}`}>
+          {/* Hizalama ve renk yazanı yalnız görene söyler; ekran okuyucu öneki ve saati duyar. */}
           <span className="sr-only">{`${mine ? copy.detail.fromCustomer : brand.name}: `}</span>
           {!mine && <span className="block font-sans text-micro font-bold text-olive">{brand.name}</span>}
           <ChatText lang={locale} className="font-sans text-note leading-[1.6]" text={message.body} />
+          <span className="sr-only">{` · ${stamp}`}</span>
+          <MessageStamp text={stamp} shown={stampShown} mine={mine} />
         </div>
 
         {message.attachmentUrls.length > 0 && (
@@ -91,8 +105,6 @@ function PhoneBubble({ copy, t, locale, message }: PhoneBubbleProps) {
             ))}
           </div>
         )}
-
-        <span className="font-sans text-micro text-sand-600">{messageStamp(message.createdAt, locale, t)}</span>
       </div>
     </div>
   );

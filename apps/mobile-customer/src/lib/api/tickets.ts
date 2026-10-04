@@ -17,19 +17,8 @@ import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetc
 import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
-  `/api/v1/me/tickets` — "Taleplerim" + talep detayı + yeni talep (21.14 · modül 16).
-
-  ŞEMA BURADA YAZILMAZ (`orders.ts` · `addresses.ts` ile aynı gerekçe): sözleşme `@lezzet/types`ta
-  ve UÇ DA aynı şemayla üretiyor (02-mimari §3.2) — alan adı değişirse üreten ve tüketen aynı anda
-  derlemede kırılır. Bu dosyanın işi yalnız sorgu dizesini kurmak ve şemayı istemciye vermek.
-
-  KORUNAN ÇAĞRI (`authorizedFetch`): talep uçları Bearer'ın arkasında ve oturum yoksa çağrı ağa HİÇ
-  çıkmaz — yerel kısa devreyle `401 unauthorized` döner. Ekran bunu MİSAFİR olarak okur (giriş kapısı
-  çizer); veri katmanı yönlendirme yapmaz (02-mimari §4).
-
-  `locale` LİSTEDE YOK, DETAYDA VAR ve bu ucun kararı: liste satırında çözülen bir metin yok (tür ve
-  durum ekranın sözlüğünde çevriliyor), detay ise hem işaretli ürün adlarını hem yazışmanın ÇEVİRİ
-  YÖNÜNÜ dile göre kuruyor (20.2). Gerekçenin tamamı `apps/mobile-api/src/api/v1/tickets.ts`te.
+  `/api/v1/me/tickets` istemcisi: şema sözleşmede, burada yalnız yol ve sorgu dizesi kurulur. Çağrılar korunur, oturum yoksa ağa
+  çıkmadan 401 döner ve ekran bunu misafir olarak okur; dil yalnız detayda gider, çünkü yazışmanın çeviri yönü ona bağlı.
 */
 
 /** Liste satırı — alan kümesi sözleşmenin kendisi. */
@@ -49,50 +38,33 @@ function queryOf(params: Record<string, string | undefined>): string {
   return pairs.length === 0 ? '' : `?${pairs.join('&')}`;
 }
 
-/**
- * Talep sayfası — keyset imleçli (`nextCursor === null` → liste bitti).
- *
- * İmleç OPAK bir dizedir: yorumlanmaz, aynen geri verilir. İçinin ne olduğu sunucunun bileceği iş;
- * istemci onu okumaya kalksaydı keyset'in şekli sözleşme olurdu.
- */
+/** Talep sayfası; imleç opak bir dizedir ve aynen geri verilir, yoksa keyset'in şekli sözleşmeye dönüşürdü. */
 export function fetchTickets(cursor?: string): Promise<ApiResult<z.infer<typeof MeTicketPageSchema>>> {
   return authorizedFetch(`/api/v1/me/tickets${queryOf({ cursor })}`, MeTicketPageSchema);
 }
 
-/**
- * Tek talebin detayı. Bulunamayan · başkasına ait — ikisi de 404 alır ve ekran "bu talebi bulamadık"
- * bloğunu çizer (ayrım söylenirse kimlik denenerek başkasının talebi doğrulatılabilirdi).
- */
+/** Tek talebin detayı; bulunamayan ile başkasına ait aynı 404'ü alır, yoksa kimlik denenerek başkasının talebi doğrulatılırdı. */
 export function fetchTicket(id: string, locale: Locale): Promise<ApiResult<TicketDetail>> {
   return authorizedFetch(`/api/v1/me/tickets/${encodeURIComponent(id)}${queryOf({ locale })}`, MeTicketDetailSchema);
 }
 
-/** Yeni talep — cevabı yalnız kimliktir; ekran listeye döner ve liste odakta tazelenir. */
+/** Yeni talep; cevabı yalnız kimliktir ve ekran yazışmayı onunla açar. */
 export function createTicket(input: TicketOpenInput): Promise<ApiResult<z.infer<typeof TicketCreatedSchema>>> {
   return authorizedFetch('/api/v1/me/tickets', TicketCreatedSchema, { method: 'POST', body: input });
 }
 
 /**
- * Talep fotoğrafı için imzalı yükleme adresi (21.309) — yalnız AÇILIŞ taslağı; yazışmada ek yok
- * (kullanıcı kararı 10.09). `alreadyRequested` bu taslakta kaç fotoğrafın adresinin istendiği:
- * tavanı kapı sayıyor, ekran yalnız sayıyı söylüyor.
+ * Talep fotoğrafı için imzalı yükleme adresi: talep kimliği verilmezse açılış taslağına, verilirse o yazışmaya. `alreadyRequested`
+ * bu mesaj için kaç adres istendiği; tavanı kapı sayar.
  */
-export function requestTicketUpload(filename: string, alreadyRequested: number): Promise<ApiResult<TicketUpload>> {
-  return authorizedFetch('/api/v1/me/tickets/uploads', TicketUploadSchema, {
-    method: 'POST',
-    body: { filename, alreadyRequested },
-  });
+export function requestTicketUpload(filename: string, alreadyRequested: number, ticketId?: string): Promise<ApiResult<TicketUpload>> {
+  const path = ticketId === undefined ? '/api/v1/me/tickets/uploads' : `/api/v1/me/tickets/${encodeURIComponent(ticketId)}/uploads`;
+  return authorizedFetch(path, TicketUploadSchema, { method: 'POST', body: { filename, alreadyRequested } });
 }
 
 /**
- * Fotoğrafı imzalı adrese YÜKLER — dosya sunucumuzdan geçmez, doğrudan R2'ye gider.
- *
- * `Authorization` GÖNDERİLMEZ: imza yetkinin kendisidir ve jetonu kovaya taşımak onu gereksiz bir
- * yere yaymak olurdu (`lib/print/label-file.ts`in kargo etiketi deseni). İçerik türü KAPININ
- * söylediğidir — imza onu bağlıyor, cihazın tahmini değil.
- *
- * Sonuç yalnız "gitti mi": düşen yüklemenin müşteriye söylenecek tek cümlesi var ("fotoğraf
- * yüklenemedi") ve sebebi — kovanın cevabı, kopan ağ — müşterinin düzeltebileceği bir şey değil.
+ * Fotoğrafı imzalı adrese doğrudan yükler; `Authorization` gitmez, çünkü imza yetkinin kendisidir ve içerik türü imzanın bağladığı
+ * türdür. Sonuç yalnız "gitti mi", çünkü düşen yüklemenin sebebi müşterinin düzeltebileceği bir şey değil.
  */
 export async function uploadTicketPhoto(upload: TicketUpload, uri: string): Promise<boolean> {
   try {
@@ -103,22 +75,17 @@ export async function uploadTicketPhoto(upload: TicketUpload, uri: string): Prom
     });
     return response.ok;
   } catch {
-    // Ağ koptu ya da dosya okunamadı: ekran "yüklenemedi" der ve fotoğraf eklenmez, talep
-    // fotoğrafsız da gönderilebilir. Sessizlik bilinçli — sonuç müşteriye yine söyleniyor.
+    // Ağ koptu ya da dosya okunamadı: ekran "yüklenemedi" der ve mesaj fotoğrafsız da gönderilebilir.
     return false;
   }
 }
 
-/**
- * Yazışmaya cevap — dönen şey GÜNCEL DETAYDIR, tek mesaj değil.
- *
- * Kapanmış talebe yazmak onu yeniden açar (motorun kararı), yani durum da değişmiş olabilir; ekran
- * kendi durumunu tahmin etmesin diye sunucu tam görünümü döndürüyor.
- */
-export function replyToTicket(id: string, body: string, locale: Locale): Promise<ApiResult<TicketDetail>> {
+/** Yazışmaya cevap; dönen şey güncel detaydır, çünkü kapanmış talebe yazmak onu yeniden açar ve ekran durumu tahmin etmemeli. */
+export function replyToTicket(id: string, body: string, locale: Locale, attachments: readonly string[]): Promise<ApiResult<TicketDetail>> {
   return authorizedFetch(
     `/api/v1/me/tickets/${encodeURIComponent(id)}/messages${queryOf({ locale })}`,
     MeTicketDetailSchema,
-    { method: 'POST', body: { body } },
+    // Fotoğraf yoksa alan hiç gitmez: boş dizi var olmayan bir eki anlatmaya kalkardı.
+    { method: 'POST', body: attachments.length === 0 ? { body } : { body, attachments } },
   );
 }

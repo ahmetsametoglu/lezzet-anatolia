@@ -38,12 +38,9 @@ export function OrderLinePicker({ reference, locale, t, selected, onToggle }: Or
   const { status, detail, retry } = useOrder(reference, locale);
 
   const heading = (
-    <>
-      <Text style={styles.eyebrow}>{t.new.items.eyebrow.replace('{reference}', reference)}</Text>
-      <Text style={styles.question} accessibilityRole="header">
-        {t.new.items.question}
-      </Text>
-    </>
+    <Text style={styles.question} accessibilityRole="header">
+      {t.new.items.question}
+    </Text>
   );
 
   if (status === 'loading') {
@@ -55,7 +52,7 @@ export function OrderLinePicker({ reference, locale, t, selected, onToggle }: Or
         accessibilityRole="progressbar"
         accessibilityState={{ busy: true }}
       >
-        {/* Başlık GERÇEK: metni veriden gelmiyor (sipariş numarası zaten elimizde). */}
+        {/* Başlık gerçek, çünkü metni veriden gelmiyor. */}
         {heading}
         {SKELETON_SLOTS.map((slot) => (
           <View key={slot} style={[styles.lineRow, styles.lineIdle]}>
@@ -122,11 +119,6 @@ export function OrderLinePicker({ reference, locale, t, selected, onToggle }: Or
 
 const styles = StyleSheet.create((theme) => ({
   block: { gap: theme.space['2xl'] },
-  eyebrow: {
-    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
-    fontSize: theme.text.note,
-    color: theme.colors.muted,
-  },
   question: {
     fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text['card-title-sm'],

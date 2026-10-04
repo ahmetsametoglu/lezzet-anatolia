@@ -1,17 +1,13 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { CROP_CENTER, type MeOrderDetail } from '@lezzet/types';
 
 import messages from '@lezzet/i18n/customer/support';
 import { NewTicketSheet } from './new-ticket-sheet';
 
 /*
-  YENİ TALEP ÇEKMECESİ — FOTOĞRAF (21.309). Ağ GERÇEK yoldan geçiyor (`authorizedFetch` → fetch
-  taklidi): imzalı adres isteği ve açılış gövdesi telden okunuyor. Taklit edilen yalnız cihazın
-  sınırı: görsel seçici (`testing/expo-image-picker.mock`), R2'ye giden PUT (`expo/fetch`) ve yerel
-  dosya (`expo-file-system`) — üçü de yerel yetenek, testte köprü yok.
-
-  KRİTİK İDDİALAR: dosya imzalı adrese `Authorization`SIZ gider (jeton kovaya taşınmaz), içerik türü
-  KAPININ söylediğidir, yüklenmemiş fotoğraf talebe girmez ve tavan motorun sayısıdır.
+  Ağ gerçek yoldan geçer ve gövdeler telden okunur; taklit edilen yalnız cihazın sınırı (görsel seçici, R2'ye giden PUT, yerel dosya),
+  çünkü üçü de yerel yetenek ve testte köprü yok.
 */
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
@@ -31,8 +27,8 @@ jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
 /** R2'ye giden PUT — gövdesi `File`, cevabı yalnız `ok`. */
 const mockExpoFetch = jest.fn();
 jest.mock('expo/fetch', () => ({ fetch: (...args: unknown[]) => mockExpoFetch(...args) }));
-/* Sınıf alanı AÇIKÇA atanıyor: `constructor(readonly uri)` kısayolu derlenince fabrikanın dışına bir
-   `uri` başvurusu doğuruyor ve jest'in kaldırma bekçisi dosyayı hiç koşturmuyor (ölçüldü). */
+/* Sınıf alanı açıkça atanır, çünkü `constructor(readonly uri)` kısayolu fabrikanın dışına bir başvuru doğurur ve jest'in kaldırma
+   bekçisi dosyayı koşturmaz. */
 jest.mock('expo-file-system', () => ({
   File: class {
     uri: string;
@@ -51,10 +47,50 @@ function reply(status: number, body: unknown): Response {
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 let issued = 0;
 
-/** Uçlar: boş sipariş listesi (kapsam sorusu atlanır) · imzalı adres · açılış. */
+const ORDER: MeOrderDetail = {
+  reference: 'LA-26-TEST01',
+  placedAt: '2026-10-01T10:00:00Z',
+  status: 'delivered',
+  active: false,
+  deliveryType: 'shipping',
+  deliveryDate: '2026-10-03',
+  address: { line1: '8 rue de la Mésange', line2: null, postalCode: '67000', city: 'Strasbourg' },
+  lines: [
+    {
+      id: 'line-1',
+      name: 'Su Böreği',
+      unitLabel: '2500 g',
+      image: { url: null, crop: CROP_CENTER, frames: null },
+      bundle: null,
+      qty: 1,
+      billedQty: 1,
+      shortfall: false,
+      shortfallCents: 0,
+      unitPriceCents: 2247,
+      lineTotalCents: 2247,
+    },
+  ],
+  timeline: null,
+  pickup: null,
+  subtotalCents: 2247,
+  discountCents: 0,
+  discountLabel: '',
+  shippingFeeCents: 0,
+  totalCents: 2247,
+  paymentMethod: 'online',
+  paymentStatus: 'paid',
+  onAccount: false,
+  shipment: null,
+  feedback: null,
+};
+
+/** Uçlar: boş sipariş listesi (kapsam sorusu atlanır) · tek siparişin detayı · imzalı adres · açılış. */
 function route({ uploadError }: { uploadError?: string } = {}) {
   fetchMock.mockImplementation((url) => {
     const address = String(url);
+    if (address.includes(`/api/v1/me/orders/${ORDER.reference}`)) {
+      return Promise.resolve(reply(200, { data: ORDER, error: null }));
+    }
     if (address.includes('/api/v1/me/orders')) {
       return Promise.resolve(reply(200, { data: { orders: [], nextCursor: null }, error: null }));
     }
@@ -114,8 +150,7 @@ async function submitWith(text: string) {
   await fireEvent.press(screen.getByTestId('new-ticket-submit'));
 }
 
-/* Adres ZORUNLU: `env.apiUrl` tanımsızken bilerek fırlatır ve `apiFetch` onu `network_error`a
-   çevirir — istek fetch'e hiç ulaşmaz (ölçüldü; depodaki öteki ağ testlerinin aynı satırı). */
+/* Adres zorunlu: `env.apiUrl` tanımsızken bilerek fırlatır ve istek fetch'e hiç ulaşmaz. */
 beforeAll(() => {
   process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
 });
@@ -132,7 +167,7 @@ beforeEach(() => {
   route();
 });
 
-describe('yeni talep — fotoğraf (21.309)', () => {
+describe('yeni talep — fotoğraf', () => {
   it('galeriden seçilen fotoğraf imzalı adrese YÜKLENİR ve anahtarı açılış gövdesine girer', async () => {
     jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValueOnce(picked(asset(1)));
     await openForm();
@@ -240,5 +275,24 @@ describe('yeni talep — fotoğraf (21.309)', () => {
     expect(screen.queryByTestId('new-ticket-photo-library')).toBeNull();
     expect(screen.queryByTestId('new-ticket-photo-camera')).toBeNull();
     expect(screen.getByTestId('new-ticket-photo-count')).toHaveTextContent('5/5 fotoğraf');
+  });
+});
+
+describe('yeni talep — önce konu, sonra ürün', () => {
+  // Konu değişince gizlenen işaret gövdede kalırsa ya da ürün listesi konudan önce çizilirse kırmızıya döner.
+  it('ürün listesi yalnız ürüne dair konuda çıkar; "Soru"ya dönülünce işaretli kalem gövdeden düşer', async () => {
+    await render(<NewTicketSheet locale="tr" orderReference={ORDER.reference} onClose={jest.fn()} onCreated={onCreated} />);
+    await screen.findByTestId('new-ticket-type-damaged');
+    expect(screen.queryByTestId('new-ticket-lines')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('new-ticket-type-damaged'));
+    await fireEvent.press(await screen.findByTestId('new-ticket-line-line-1'));
+    await fireEvent.press(screen.getByTestId('new-ticket-type-question'));
+    expect(screen.queryByTestId('new-ticket-lines')).toBeNull();
+
+    await submitWith('Teslim saatini sormak istiyorum');
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith('00000000-0000-4000-9000-000000000001'));
+    expect(openBodies()[0]).toMatchObject({ type: 'question', orderReference: ORDER.reference });
+    expect(openBodies()[0]).not.toHaveProperty('orderItemIds');
   });
 });

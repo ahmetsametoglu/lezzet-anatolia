@@ -72,18 +72,19 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
     />
   );
 
-  /* Çekmece KAPALIYKEN ÇİZİLMEZ (komponentin kendi künyesi): her açılış temiz taslakla başlar ve
-     kapalı çekmece sipariş listesi için ağa çıkmaz. Ekranın hangi hâlde olduğundan bağımsız —
-     boş listeden de, dolu listeden de aynı çekmece açılır. */
+  /* Çekmece kapalıyken çizilmez: her açılış temiz taslakla başlar ve kapalı çekmece sipariş listesi için ağa çıkmaz. Boş listeden de
+     dolu listeden de aynı çekmece açılır. */
   const sheet = sheetOpen ? (
     <NewTicketSheet
       locale={locale}
       orderReference={orderReference}
       onClose={() => setSheetOpen(false)}
-      onCreated={() => {
+      onCreated={(ticketId) => {
         setSheetOpen(false);
         tickets.refresh();
         toastSuccess(t.new.sentToast);
+        // Yazışma hemen açılır: müşteri yazdığını orada görür ve ilk cevap da oraya düşer.
+        router.push({ pathname: '/support/[ticket]', params: { ticket: ticketId } });
       }}
     />
   ) : null;

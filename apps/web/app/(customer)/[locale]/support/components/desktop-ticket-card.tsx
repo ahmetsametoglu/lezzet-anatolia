@@ -24,7 +24,7 @@ export function DesktopTicketCard({ t, locale, ticket, active }: DesktopTicketCa
   if (ticket.status === 'resolved') {
     parts.push(formatOrderDate(ticket.createdAt, locale, true));
   } else {
-    parts.push(t.lastMessage.replace('{when}', lastMessageLabel(ticket.lastMessageAt, locale, t)));
+    parts.push(t.lastMessage.replace('{when}', lastMessageLabel(ticket.lastMessageAt, locale)));
   }
 
   return (

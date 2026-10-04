@@ -11,6 +11,7 @@ import type { CustomerTicketView } from '@/lib/ticket/ticket-types';
 import { replyToTicketAction } from '../actions';
 import { useTicketPhoto } from '../use-ticket-photo.hook';
 import type { Messages } from '../support-types';
+import { PhotoThumb } from './photo-thumb';
 
 type SupportCopy = LocalizedCopy<typeof supportMessages>;
 
@@ -34,7 +35,8 @@ export function PhoneReplyBox({ copy, t, locale, ticketId, onReplied }: PhoneRep
   const fileInput = useRef<HTMLInputElement>(null);
   const toast = useToast();
   const photo = useTicketPhoto({ ticketId, busy, onFailed: (key) => setPhotoError(errorText(t.errors, key)) });
-  const canSend = body.trim().length > 0 && !busy;
+  // Yükleme sürerken Gönder bekler, ki yarım fotoğraf mesaja girmesin.
+  const canSend = body.trim().length > 0 && !busy && photo.pending === 0;
 
   const send = () => {
     if (!canSend) return;
@@ -68,19 +70,27 @@ export function PhoneReplyBox({ copy, t, locale, ticketId, onReplied }: PhoneRep
       )}
       {photoError && <p className="font-sans text-note text-error">{photoError}</p>}
 
-      {photo.attachments.length > 0 && (
+      {/* Ek, yeni talep çekmecesindeki gibi küçük resimdir ve köşesindeki düğmeyle kalkar; yolda olan yükleme yerinde bekler. */}
+      {photo.photos.length + photo.pending > 0 && (
         <div className="flex flex-wrap gap-2">
-          {photo.attachments.map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => photo.remove(key)}
-              aria-label={t.reply.removePhoto}
-              className="flex cursor-pointer items-center gap-1.5 rounded-badge border border-sand-300 bg-card px-2.5 py-1 font-sans text-micro text-muted transition-colors hover:border-terracotta-line"
-            >
-              <MobileIcon name="camera" size={14} />
-              <MobileIcon name="close" size={12} />
-            </button>
+          {photo.photos.map((item) => (
+            <PhotoThumb
+              key={item.key}
+              size="sm"
+              preview={item.preview}
+              label={copy.detail.photo}
+              removeLabel={copy.new.photo.remove}
+              onRemove={() => photo.remove(item.key)}
+            />
+          ))}
+          {Array.from({ length: photo.pending }, (_, index) => (
+            <PhotoThumb
+              key={`pending-${index}`}
+              size="sm"
+              preview={null}
+              label={copy.new.photo.uploading}
+              removeLabel={copy.new.photo.remove}
+            />
           ))}
         </div>
       )}
@@ -101,7 +111,7 @@ export function PhoneReplyBox({ copy, t, locale, ticketId, onReplied }: PhoneRep
         <button
           type="button"
           onClick={() => fileInput.current?.click()}
-          aria-label={t.reply.photo}
+          aria-label={copy.detail.reply.photo}
           className="mb-[3px] grid size-11 flex-none cursor-pointer place-items-center text-muted transition-colors hover:text-olive"
         >
           <MobileIcon name="camera" size={20} />

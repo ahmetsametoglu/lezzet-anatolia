@@ -5,28 +5,8 @@ import { useRef, useState } from 'react';
 import { requestTicketUpload, uploadTicketPhoto } from '@/lib/api/tickets';
 
 /*
-  TALEP FOTOĞRAFI — açılış çekmecesinin yükleme akışı (21.309). Web'in `use-ticket-photo`sunun
-  native karşılığı: **imzalı adres al → PUT ile R2'ye yükle → anahtarı listeye ekle.** Dosya
-  sunucumuzdan geçmez; kapı yalnız izin verir (`@lezzet/application` → `requestTicketUploadUrl`).
-  Yalnız AÇILIŞTA: yazışmada ek yok (kullanıcı kararı 10.09).
-
-  ── İKİ KAYNAK: KAMERA VE GALERİ ────────────────────────────────────────────
-  Tasarım sayfası: *"Fotoğraf ekleme mobilde kameradan doğrudan yapılabilmeli (bozuk ürün
-  fotoğrafı o an çekilir)"* (`design/pages/musteri-talep.md`). Galeri de gerekli: fotoğraf çoğu zaman
-  önceden çekilmiştir. Galeri izin istemez (sistem seçicisi); kamera ister ve reddi SÖYLENİR.
-
-  ── TAVAN MOTORDAN ──────────────────────────────────────────────────────────
-  `MAX_ATTACHMENTS_PER_MESSAGE` (domain-core) kapının saydığı sayının kendisi; ekran ikinci bir sayı
-  yazmaz. Seçici kalan kadarını açar ve yolda olan yüklemeler de sayılır.
-
-  ── UYUMLU BİÇİM İSTENİR ────────────────────────────────────────────────────
-  iOS kitaplığı HEIC verebilir ve kapı onu kabul ediyor, ama operasyonun web ekranı HEIC'i çoğu
-  tarayıcıda çizemez. `Compatible` temsil iOS'tan uyumlu biçimi ister, `quality` boyu mobil veride
-  makul tutar. Kapıya giden uzantı içerik TÜRÜNDEN türer, dosya adından değil: dönüşümden sonra ad
-  hâlâ `.HEIC` diyebilir, tür ise gerçeği söyler.
-
-  ── HATA HOOK'UN DEĞİL ──────────────────────────────────────────────────────
-  Web'in aynı kararı: hook sebebi haber verir, cümleyi ekran seçer (sözlük ekranın).
+  Talep fotoğrafının yükleme akışı: imzalı adres alınır, dosya doğrudan R2'ye gider ve anahtar listeye eklenir; kapı yalnız izin verir.
+  Tavan motorun sayısıdır ve yolda olan yüklemeler de sayılır; hata cümlesini ekran seçer, kanca yalnız sebebi bildirir.
 */
 
 /** Ekranın cümleye çevirdiği sebepler. */
@@ -45,6 +25,8 @@ interface PendingPhoto {
 }
 
 interface UseTicketPhotosOptions {
+  /** Yazışmaya eklenen fotoğrafın talebi; verilmezse açılış taslağıdır. */
+  ticketId?: string;
   /** Seçim ya da yükleme düştü — cümleyi ekran kurar. */
   onFailed: (reason: TicketPhotoFailure) => void;
 }
@@ -56,6 +38,8 @@ interface UseTicketPhotosResult {
   remaining: number;
   pick: (source: 'camera' | 'library') => Promise<void>;
   remove: (key: string) => void;
+  /** Mesaj gittikten sonra bir sonraki mesaj boş başlar. */
+  reset: () => void;
 }
 
 /** Kapının adlı retleri → sebep; tabloda olmayan her şey (depo, ağ, oturum) `unavailable`. */
@@ -65,8 +49,8 @@ const UPLOAD_FAILURES: Record<string, TicketPhotoFailure> = {
 };
 
 /**
- * Kapıya giden uzantı — önce içerik türünden (künye), yoksa dosya adından. Seçici ikisini de boş
- * bırakırsa `jpg` varsayılır: kapı dosyanın içeriğini okumaz, yalnız saklanan türün ipucu değişir.
+ * Kapıya giden uzantı önce içerik türünden, çünkü dönüşümden sonra dosya adı hâlâ `.HEIC` diyebilir. İkisi de boşsa `jpg`, çünkü
+ * kapı dosyanın içeriğini okumaz, yalnız saklanan türün ipucu değişir.
  */
 function extensionOf(asset: ImagePicker.ImagePickerAsset): string {
   const subtype = asset.mimeType?.split('/')[1]?.toLowerCase();
@@ -76,7 +60,7 @@ function extensionOf(asset: ImagePicker.ImagePickerAsset): string {
   return 'jpg';
 }
 
-export function useTicketPhotos({ onFailed }: UseTicketPhotosOptions): UseTicketPhotosResult {
+export function useTicketPhotos({ ticketId, onFailed }: UseTicketPhotosOptions): UseTicketPhotosResult {
   const [photos, setPhotos] = useState<TicketPhoto[]>([]);
   const [pending, setPending] = useState<PendingPhoto[]>([]);
   // Aynı fotoğraf iki kez seçilebilir: yolda olanı adresinden değil kendi kimliğinden tanırız.
@@ -87,7 +71,7 @@ export function useTicketPhotos({ onFailed }: UseTicketPhotosOptions): UseTicket
   const uploadOne = async (asset: ImagePicker.ImagePickerAsset, alreadyRequested: number): Promise<void> => {
     const id = nextId.current++;
     setPending((current) => [...current, { id, uri: asset.uri }]);
-    const upload = await requestTicketUpload(`photo.${extensionOf(asset)}`, alreadyRequested);
+    const upload = await requestTicketUpload(`photo.${extensionOf(asset)}`, alreadyRequested, ticketId);
     const sent = upload.error === null && (await uploadTicketPhoto(upload.data, asset.uri));
     setPending((current) => current.filter((item) => item.id !== id));
 
@@ -115,6 +99,7 @@ export function useTicketPhotos({ onFailed }: UseTicketPhotosOptions): UseTicket
       }
     }
 
+    // iOS kitaplığı HEIC verebilir ve operasyonun web ekranı onu çizemez; kalite mobil veride boyu makul tutar.
     const options: ImagePicker.ImagePickerOptions = {
       mediaTypes: ['images'],
       quality: 0.7,
@@ -140,5 +125,6 @@ export function useTicketPhotos({ onFailed }: UseTicketPhotosOptions): UseTicket
     remaining,
     pick,
     remove: (key) => setPhotos((current) => current.filter((photo) => photo.key !== key)),
+    reset: () => setPhotos([]),
   };
 }

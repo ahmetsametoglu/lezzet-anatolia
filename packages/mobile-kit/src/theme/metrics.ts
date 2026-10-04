@@ -83,6 +83,10 @@ export const appMetrics = {
     stepBadge: 22,
     /** Fotoğraf üstündeki geri düğmesi (tasarım: 42). */
     iconButtonOnPhoto: 42,
+    /** Küçük resmin köşesindeki kaldırma düğmesi (tasarımda yok): resmi örtmeyecek kadar küçük, dokunma payı `touchSlop`la tamamlanır. */
+    thumbRemove: 26,
+    /** Yazma kutusundaki ek önizlemesi (tasarımda yok): konuşmayı itmeyecek kadar küçük, fotoğrafı tanıtacak kadar büyük. */
+    attachThumb: 64,
     /**
      * Ürün dairesinin iki boyu: vitrin 146, benzer ürünler 120. Küçük çap tasarımın 96'sından büyük, çünkü 96'da yemek fotoğrafı
      * ne olduğu anlaşılacak kadar büyük değil; 146'ya çıkmaz ki iki kademe ayrı kalsın.

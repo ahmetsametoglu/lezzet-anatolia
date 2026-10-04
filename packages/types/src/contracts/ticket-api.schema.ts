@@ -4,31 +4,13 @@ import { TicketTypeEnum } from '../primitives/enums.schema';
 import { SourceLanguageSchema } from '../primitives/user-text.schema';
 
 /**
- * `/api/v1/me/tickets` SÖZLEŞME şemaları (21.14 · modül 16) — mobil talep uçlarının ve
- * "Taleplerim / talep detayı / bize yazın" ekranlarının ORTAK dili.
- *
- * Terfi gerekçesi `me-api.schema.ts` · `order-api.schema.ts` ile aynı (02-mimari §3.2 "sözleşme tek
- * kaynak"): üreten uç ile tüketen ekran AYNI şemayı çağırır, alan adı değişirse iki taraf birden
- * DERLEME anında kırılır. Entity/taşıma ayrımı da oradaki künyede: `ticket.schema.ts` DB satırının
- * aynasıdır, bu dosya "bu yüzey tele ne verir"i söyler.
- *
- * ── KAPSAM: YALNIZ MÜŞTERİNİN GÖRDÜĞÜ ────────────────────────────────────────
- * `handledBy` · `source` · `conversationId` · `customerId` · `answeredByAi` BİLEREK yok. İlk üçü
- * operasyonun iç bilgisi (kim yürütüyor, nereden geldi, hangi WhatsApp konuşması), dördüncüsü
- * jetondan çözülüyor ve telefonun onunla yapacağı bir şey yok. Uç `parse` ile döndürür: pick'te
- * olmayan alan zarfa SIZAMAZ — süzme tipte değil, çalışma zamanında da geçerli.
+ * `/api/v1/me/tickets` sözleşmesi: üreten uç ile tüketen ekran aynı şemayı çağırır ki alan adı değişince iki taraf derlemede kırılsın.
+ * Yalnız müşterinin gördüğü alanlar var; operasyonun iç bilgisi ve jetondan çözülen kimlik yok, uç `parse` ettiği için zarfa da sızmaz.
  */
 
 /**
- * "Taleplerim" listesinin tek satırı (v3 `vTalepler` kartı).
- *
- * `lastMessageAt` iki işi birden yapıyor ve ikincisi bir zorunluluk: liste SON MESAJA göre sıralı
- * (kapının ölçülmüş kuralı — cevaplanan talep başa çıkar) ve sıralama ölçütünü göstermeyen bir
- * liste kullanıcıya rastgele sıralı görünürdü. Web'in mobil kartı da üç parçayı birden yazıyor
- * (`kapsam · açılış · son mesaj`) — aynı müşteri iki yüzeyde aynı satırı okur.
- *
- * `subject` kümede ama müşteri onu YAZMAZ (entity künyesi: müşteri başlık değil anlatım yazar);
- * personelin elle açtığı talepte dolu olur ve o zaman kartın adı "Eksik ürün · Gözleme" olur.
+ * Listenin tek satırı. `lastMessageAt` taşınır, çünkü liste son mesaja göre sıralıdır ve ölçütü göstermeyen liste rastgele görünür;
+ * `subject`i müşteri yazmaz, personelin açtığı talepte dolar.
  */
 export const MeTicketSummarySchema = TicketSchema.pick({
   id: true,
@@ -44,12 +26,8 @@ export const MeTicketSummarySchema = TicketSchema.pick({
 export type MeTicketSummary = z.infer<typeof MeTicketSummarySchema>;
 
 /**
- * Sayfa zarfı — `MeOrderPageSchema` ile aynı şekil ve aynı gerekçe: talep sayısı veriyle sınırsız
- * büyür → keyset + sonsuz kaydırma; `nextCursor` OPAK bir dizedir (istemci yorumlamaz, bir sonraki
- * isteğe aynen geri verir), `null` = liste bitti. İmleç URL'e/ekran durumuna yazılmaz (CLAUDE §1).
- *
- * `total` yok: v3'te "N talep" diye bir başlık yok ve olmayan bir sayacı taşımak, bir gün süzgeç
- * eklendiğinde sessizce yalan söyleyen bir alan bırakırdı (sipariş zarfının aynı kararı).
+ * Sayfa zarfı: talep sayısı veriyle sınırsız büyüdüğü için keyset; `nextCursor` opak bir dizedir ve `null` listenin bittiğini söyler.
+ * `total` yok, çünkü ekranda sayaç yok ve süzgeç eklendiği gün sessizce yanlış bir sayı kalırdı.
  */
 export const MeTicketPageSchema = z.object({
   tickets: z.array(MeTicketSummarySchema),
@@ -58,16 +36,8 @@ export const MeTicketPageSchema = z.object({
 export type MeTicketPage = z.infer<typeof MeTicketPageSchema>;
 
 /**
- * Yazışmadaki tek mesaj.
- *
- * **`sender` YERİNE `fromCustomer`** ve bu bir sadeleştirme değil, bir KARARIN tek yerde
- * tutulmasıdır: `ai` göndericisi de İŞLETMEDİR (web `ticket-thread.tsx` künyesi — müşteri "bir
- * robotla mı konuşuyorum" sorusuyla baş başa bırakılmaz). Ham `sender` gönderilseydi bu eşleme
- * ekranda yeniden yazılırdı ve 16.5 geldiği gün iki yüzey iki farklı şey gösterirdi.
- *
- * **Metin OKUYUCUNUN dilinde gelir** (20.2): personelin Türkçe cevabı müşteriye kendi dilinde
- * açılır. `translated` bunu ekranda işaretlemek için, `originalBody` ise "orijinali göster" için —
- * çeviri orijinalin YERİNE GEÇMEZ: makine çevirisi bir şikâyeti yumuşatabilir.
+ * Yazışmadaki tek mesaj. `sender` yerine `fromCustomer` taşınır, çünkü `ai` göndericisi de işletmedir ve bu eşleme iki ekranda ayrı
+ * yazılmamalı; metin okuyucunun dilinde gelir ve `originalBody` korunur, çünkü makine çevirisi bir şikâyeti yumuşatabilir.
  */
 export const MeTicketMessageSchema = TicketMessageSchema.pick({
   id: true,
@@ -82,23 +52,14 @@ export const MeTicketMessageSchema = TicketMessageSchema.pick({
   /** ORİJİNALİN dili; `null` = tespit henüz koşmadı. */
   language: SourceLanguageSchema.nullable(),
   originalBody: z.string(),
-  /**
-   * Eklerin SÜRELİ imzalı okuma adresleri — anahtar DEĞİL (ekranın anahtarla yapabileceği bir şey
-   * yok, ama sızan bir anahtar ileride açılacak her kapının önünde durur).
-   *
-   * Ad "ek" değil "fotoğraf": motor yalnız görsel uzantı geçiriyor (`checkAttachment`) ve ekran
-   * onları `Image` olarak çiziyor — telin adı, karşı tarafın ne çizeceğini söylemeli.
-   */
+  /** Eklerin süreli imzalı okuma adresleri, anahtar değil; ad "fotoğraf", çünkü motor yalnız görsel geçirir ve ekran resim çizer. */
   photos: z.array(z.string()),
 });
 export type MeTicketMessage = z.infer<typeof MeTicketMessageSchema>;
 
 /**
- * İadenin sonucu — **siparişin para hareketlerinden türetilir**, talepte saklanmaz (DOMAIN §8).
- *
- * İki alan ayrı durur çünkü "tetiklendi ama henüz ödenmedi" gerçek bir ara hâldir: tek bir tutar
- * alanı olsaydı o hâl kaybolur, ekran 0 € iadeyi "iade yok" sanırdı. v3'ün "✓ Sonuç: 11,40 € iade
- * edildi" bandı yalnız `refundedCents > 0` iken çizilir (web bandının aynı ölçütü).
+ * İadenin sonucu siparişin para hareketlerinden türer. İki alan ayrı, çünkü "tetiklendi ama ödenmedi" gerçek bir ara hâldir ve ekran
+ * bandı yalnız `refundedCents > 0` iken çizer.
  */
 export const MeTicketReturnSchema = z.object({
   triggeredAt: z.string(),
@@ -106,21 +67,13 @@ export const MeTicketReturnSchema = z.object({
 });
 
 /**
- * Talep detayı — yazışma ve iade sonucuyla; sayfanın TAMAMI tek turda.
- *
- * **İşaretli kalemler ("2× Gözleme") BİLEREK yok** ve bu ölçülmüş bir karar: v3 detayı onları
- * çizmiyor, web müşteri yüzeyi de çizmiyor — `markedItems`i okuyan tek yer operasyon talep detayı
- * ve o BAŞKA bir kapıdan geliyor (`getStaffTicketDetail`). Taşımak, hiçbir ekranın basmayacağı bir
- * dizi için detay başına üç ek sorgu (kalem → varyant → ürün adı) demekti. İhtiyaç doğduğu gün
- * küme buradan büyür; bugün müşteri neyi işaretlediğini kendi anlatımında okuyor.
+ * Talep detayı, sayfanın tamamı tek turda. İşaretli kalemler yok, çünkü hiçbir müşteri ekranı onları çizmiyor ve taşımak detay başına
+ * üç ek sorgu demekti.
  */
 export const MeTicketDetailSchema = MeTicketSummarySchema.extend({
   /**
-   * Yazışmanın TAMAMI, eskiden yeniye. Sayfalanmaz ve bu bilinçli: yazışma sınırsız büyüyen bir
-   * küme değil, üç durumlu sade bir konuşmadır (DOMAIN §15) — ortasından değil baştan okunur.
-   *
-   * `min(1)`: talep ve ilk mesaj TEK turda yazılıyor (`create_ticket`), yani mesajsız bir talep
-   * bir anomalidir — sözleşme onu parse anında keser.
+   * Yazışmanın tamamı eskiden yeniye ve sayfasız, çünkü bir konuşma baştan okunur. Talep ilk mesajıyla tek turda yazıldığı için boş
+   * olamaz.
    */
   messages: z.array(MeTicketMessageSchema).min(1),
   returnOutcome: MeTicketReturnSchema.nullable(),
@@ -128,18 +81,8 @@ export const MeTicketDetailSchema = MeTicketSummarySchema.extend({
 export type MeTicketDetail = z.infer<typeof MeTicketDetailSchema>;
 
 /**
- * `POST /api/v1/me/tickets` gövdesi — yeni talep (v3 `vTalepNew`).
- *
- * **Sipariş REFERANSLA adreslenir, kimlikle değil:** mobil sipariş sözleşmesi UUID'yi bilerek
- * dışarıda bırakıyor (`MeOrderSummarySchema` künyesi — müşteriye gösterilen ve destekle konuşurken
- * kullanılan şey numaradır). Uç referansı sahiplikle birlikte çözer; çözemezse `order_unavailable`.
- *
- * `orderItemIds` sipariş DETAYINDAN gelen satır kimlikleridir (`MeOrderDetailSchema.lines[].id`).
- * `subject` YOK: müşteri başlık yazmaz, anlatımını yazar (entity künyesi) — başlığı olan talep
- * personelin elle açtığıdır ve o akış bu uçtan geçmez.
- *
- * `source` da YOK ve gönderilmemeli: geliş yolu istemcinin beyanı değil, ucun bilgisidir — gövdeden
- * kabul etmek WhatsApp'tan geldiğini söyleyen bir telefona inanmak olurdu.
+ * Yeni talep gövdesi. Sipariş numarayla adreslenir, çünkü mobil sözleşme sipariş kimliğini taşımaz; `subject` ve `source` yok, çünkü
+ * müşteri başlık değil anlatım yazar ve geliş yolu istemcinin beyanı değil ucun bilgisidir.
  */
 export const TicketOpenSchema = z.object({
   type: TicketTypeEnum,
@@ -147,65 +90,30 @@ export const TicketOpenSchema = z.object({
   body: z.string().min(1),
   orderReference: z.string().min(1).nullish(),
   orderItemIds: z.array(z.string().uuid()).optional(),
-  /**
-   * Fotoğraf ekleri — `POST /me/tickets/uploads`un verdiği anahtarlar (21.309). Anahtar istemciden
-   * gelir ama biçimini yükleme kapısı kurar; açılış yalnız müşterinin KENDİ taslak klasöründen
-   * geleni kabul eder (`attachment_not_yours`). Tavan adres isteğinde sayılıyor (web'in aynı kuralı).
-   */
+  /** Fotoğraf ekleri, yükleme kapısının verdiği anahtarlar; açılış yalnız müşterinin kendi taslak klasöründen geleni kabul eder. */
   attachments: z.array(z.string().min(1)).optional(),
 });
 
-/**
- * Açılışın cevabı — YALNIZ yeni talebin kimliği.
- *
- * Özeti ya da detayı döndürmedik ve gerekçe ölçülebilir: v3 gönderimden sonra LİSTEYE dönüyor
- * (`tnSubmit` → `stack:[{n:'talepler'}]`) ve liste odağa gelince zaten tazeleniyor. Kuyruk satırını
- * burada kurmak, hiç okunmayacak bir gövde için fazladan bir görünüm turu olurdu.
- *
- * Kimlik yine de dönüyor çünkü bir gün gerekecek olan tek şey o: "talebi aç" diyen bir onay bağı,
- * ya da bildirime yazılacak adres. Boş bir 200, o günü yeni bir sözleşme turuna bırakırdı.
- */
+/** Açılışın cevabı yalnız yeni talebin kimliğidir; ekran yazışmayı onunla açar. */
 export const TicketCreatedSchema = z.object({ id: z.string().uuid() });
 
 /**
- * Talep açılışının adlı retleri — cümleyi ekran kurar, anahtar sözleşmede yaşar.
- *
- * **`order_unavailable` ÜÇ iç sebebi birden taşır** ("sipariş yok" · "senin değil" · "kalem o
- * siparişte değil") ve ayrım BİLEREK söylenmiyor: web müşteri kapısının ölçülmüş kararı bu
- * (`customerErrorKey` → `ticket_unavailable`). Farkı söylemek, deneme yanılmayla başkasının sipariş
- * numarasını doğrulatmak olurdu — müşteri için üçü de aynı şey: "bu siparişi size bağlayamıyoruz".
- *
- * `items_without_order` ayrı kalıyor çünkü ayrı cinsten: bir yetki sorusu değil, gövdenin kendi
- * içinde tutarsız olması (kalem işaretlenmiş ama sipariş yok) — yani istemci hatası ve görünmesi
- * gerekir (CLAUDE §0: belirtiyi susturan çözüm, arızayı gözden saklar).
- *
- * `attachment_not_yours` (21.309): iliştirilen anahtar müşterinin KENDİ taslak klasöründen gelmiyor.
- * Anahtarı yükleme kapısı kurduğu için bu ancak kurcalanmış bir istekte doğar; ekran genel cümleyi
- * söyler (web: `photo_unavailable`).
+ * Açılışın adlı retleri; cümleyi ekran kurar. `order_unavailable` "yok", "senin değil" ve "kalem o siparişte değil"i birlikte taşır,
+ * çünkü ayrımı söylemek başkasının sipariş numarasını deneme yanılmayla doğrulatırdı.
  */
 export const TicketOpenErrorEnum = z.enum(['empty_body', 'order_unavailable', 'items_without_order', 'attachment_not_yours']);
 export type TicketOpenError = z.infer<typeof TicketOpenErrorEnum>;
 
 /**
- * `POST /api/v1/me/tickets/uploads` gövdesi — talep fotoğrafı için imzalı yükleme adresi (21.309).
- *
- * **Talep kimliği YOK:** native yalnız AÇILIŞTA fotoğraf alıyor (kullanıcı kararı 10.09 — sohbette ek
- * yok). Dosya müşterinin taslak klasörüne yazılır, açılış anahtarı `attachments`la iliştirir.
- *
- * `alreadyRequested` bu taslak için kaç adres istendiği — tavan kontrolü. İstemciden gelmesi bilinçli
- * (web'in aynı kararı): sayı henüz gönderilmemiş bir taslağa ait ve yalnız istemcide biliniyor;
- * güvenlik sınırı sayı değil, açılıştaki ek sahipliği kontrolü.
+ * Talep fotoğrafının imzalı yükleme adresi: `POST /me/tickets/uploads` açılış taslağına, `POST /me/tickets/:id/uploads` yazışmaya.
+ * `alreadyRequested` istemciden gelir, çünkü sayı henüz gönderilmemiş bir mesaja ait; güvenlik sınırı ekin sahipliği kontrolüdür.
  */
 export const TicketUploadRequestSchema = z.object({
   filename: z.string().trim().min(1).max(200),
   alreadyRequested: z.number().int().min(0).default(0),
 });
 
-/**
- * Yükleme adresi — dosya `uploadUrl`e `PUT` ile, `contentType` başlığıyla yüklenir (imza türü
- * bağlıyor); `key` açılışta `attachments`a girer. Adres kısa ömürlüdür ve `Authorization` İSTEMEZ:
- * imza yetkinin kendisidir.
- */
+/** Yükleme adresi: dosya `uploadUrl`e `contentType` başlığıyla `PUT` edilir; `Authorization` istemez, çünkü imza yetkinin kendisidir. */
 export const TicketUploadSchema = z.object({
   key: z.string().min(1),
   uploadUrl: z.string().url(),
@@ -213,24 +121,19 @@ export const TicketUploadSchema = z.object({
 });
 export type TicketUpload = z.infer<typeof TicketUploadSchema>;
 
-/** Yükleme adresinin adlı retleri — dosya türü · tavan · depo yapılandırılmamış (503). */
-export const TicketUploadErrorEnum = z.enum(['unsupported_type', 'too_many', 'storage_unavailable']);
+/** Yükleme adresinin adlı retleri — dosya türü · tavan · depo yapılandırılmamış (503) · talep yok ya da başkasının (404). */
+export const TicketUploadErrorEnum = z.enum(['unsupported_type', 'too_many', 'storage_unavailable', 'ticket_not_found']);
 export type TicketUploadError = z.infer<typeof TicketUploadErrorEnum>;
 
 /**
- * `POST /api/v1/me/tickets/:id/messages` gövdesi — yazışmaya cevap.
- *
- * **"Yeniden aç" diye bir alan YOK ve olmayacak:** kapanmış talebe yazmak onu kendiliğinden açar
- * (motorun kararı — `statusAfterCustomerReply`). Ayrı bir bayrak olsaydı müşteri yazar, işaretlemeyi
- * unutur ve mesajı kimsenin bakmadığı kapalı bir talepte kalırdı.
- *
- * Ek dosya alanı da yok: mobilde fotoğraf seçici henüz yok (yerel modül kararı) ve kabul edeceği bir
- * anahtar üretecek uç da yok — alanı bugün açmak, doldurulamayan bir söz vermek olurdu.
+ * `POST /api/v1/me/tickets/:id/messages` gövdesi — yazışmaya cevap. "Yeniden aç" alanı yok, çünkü kapanmış talebe yazmak onu
+ * kendiliğinden açar; ekler yalnız o talebin klasöründen gelir (`POST /me/tickets/:id/uploads`).
  */
 export const TicketReplySchema = z.object({
   body: z.string().min(1),
+  attachments: z.array(z.string().min(1)).optional(),
 });
 
 /** Cevabın adlı retleri. `ticket_not_found` = "yok" ile "senin değil" — ikisi aynı cevabı verir. */
-export const TicketReplyErrorEnum = z.enum(['empty_body', 'ticket_not_found']);
+export const TicketReplyErrorEnum = z.enum(['empty_body', 'ticket_not_found', 'attachment_not_yours']);
 export type TicketReplyError = z.infer<typeof TicketReplyErrorEnum>;

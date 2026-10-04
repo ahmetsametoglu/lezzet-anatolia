@@ -21,11 +21,8 @@ const STAFF_TRANSITIONS: Record<TicketStatus, readonly TicketStatus[]> = {
 };
 
 /**
- * Müşterinin yapabileceği tek geçiş: **kapanmış talebi yeniden açmak.**
- *
- * Müşteri kendi talebini "işlemde" ya da "çözüldü" yapamaz ve bu bilinçli: durum bizim iş
- * kuyruğumuzun hâlidir, müşterinin memnuniyetinin değil. Müşteri memnun olmadığını söyler
- * (`open`), çözüldüğünü biz söyleriz.
+ * Müşterinin yapabileceği tek geçiş kapanmış talebi yeniden açmaktır, çünkü durum bizim iş kuyruğumuzun hâlidir, müşterinin
+ * memnuniyetinin değil: müşteri memnun olmadığını söyler (`open`), çözüldüğünü biz söyleriz.
  */
 const CUSTOMER_TRANSITIONS: Record<TicketStatus, readonly TicketStatus[]> = {
   open: [],
@@ -84,11 +81,8 @@ export function canTriggerReturn(ticket: { orderId: string | null; returnTrigger
 }
 
 /**
- * Talep açılışının tutarlılığı — formun ve API'nin aynı kuralı.
- *
- * DB de bunu zorlar (`ticket_items_need_order`, `ticket_source_link`); burada olması tekrar değil,
- * **kullanıcıya sebebini söyleyebilmek** içindir: veritabanı kısıtı ihlal edildiğinde eline geçen
- * şey bir constraint adıdır, müşteriye gösterilecek bir cümle değil.
+ * Talep açılışının tutarlılığı, formun ve API'nin aynı kuralı. DB de bunu zorlar; burada olması sebebi kullanıcıya söyleyebilmek
+ * içindir, çünkü kısıt ihlalinden elde kalan şey bir kısıt adıdır, müşteriye gösterilecek cümle değil.
  */
 export type TicketDraftCheck = { ok: true } | { ok: false; reason: 'items_without_order' | 'whatsapp_without_conversation' | 'order_source_without_order' };
 
@@ -105,15 +99,21 @@ export function checkTicketDraft(draft: {
 }
 
 /**
- * İade kararına giden tipler — kuyruğun "bu iş para işi" ayrımı.
- *
- * Bir YASAK değil bir İŞARET'tir (`canTriggerReturn` tipe bakmaz): operasyon ekranı bunları öne
- * alır, çünkü bozuk ve eksik bekledikçe müşteri parasını bekliyor demektir.
+ * İade kararına giden tipler, kuyruğun "bu iş para işi" işareti; yasak değildir (`canTriggerReturn` tipe bakmaz). Operasyon bunları
+ * öne alır, çünkü bozuk ve eksik bekledikçe müşteri parasını bekliyor demektir.
  */
 export const RETURN_BOUND_TYPES: readonly TicketType[] = ['damaged', 'missing'];
 
 export function isReturnBound(type: TicketType): boolean {
   return RETURN_BOUND_TYPES.includes(type);
+}
+
+/**
+ * Yeni talepte ürün seçimi yalnız belli bir kaleme dair konuda sorulur; küme iade bağlı tiplerle aynı, çünkü ikisi de "hangi kalem"
+ * sorusuna dayanır. Konu seçilmeden sorulmaz.
+ */
+export function asksForItems(type: TicketType | null): boolean {
+  return type !== null && isReturnBound(type);
 }
 
 /**

@@ -25,7 +25,7 @@ interface UseTicketResult {
   /** SESSİZ tazeleme — okunan yazışma yerinde kalır; TEK çağıranı canlı zildir. */
   refresh: () => Promise<void>;
   /** `true` = mesaj yazışmaya eklendi (ekran kutuyu temizler ve toast basar). */
-  send: (body: string) => Promise<boolean>;
+  send: (body: string, attachments: readonly string[]) => Promise<boolean>;
 }
 
 export function useTicket(id: string, locale: Locale): UseTicketResult {
@@ -83,14 +83,14 @@ export function useTicket(id: string, locale: Locale): UseTicketResult {
   }, [id, refresh]);
 
   const send = useCallback(
-    async (body: string): Promise<boolean> => {
+    async (body: string, attachments: readonly string[]): Promise<boolean> => {
       // Boş mesaj uca hiç gitmez; düğme zaten kapalı ama kapı iki yerde durur (kapının kendisi de
       // `empty_body` döner) — istemci kapısı yalnız boşuna bir turu önlüyor.
       if (sending || body.trim().length === 0) return false;
       setSending(true);
       setSendFailed(false);
 
-      const result = await replyToTicket(id, body, locale);
+      const result = await replyToTicket(id, body, locale, attachments);
       setSending(false);
       if (result.error !== null) {
         setSendFailed(true);

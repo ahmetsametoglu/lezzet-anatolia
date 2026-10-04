@@ -218,3 +218,39 @@ describe('POST /uploads — talep fotoğrafı (21.309)', () => {
     expect(await envelopeError(res)).toBe('attachment_not_yours');
   });
 });
+
+describe('POST /:id/uploads — yazışma fotoğrafı', () => {
+  // Uç cevaptaki ekleri kapıya iletmezse fotoğraf sessizce düşer; bu test o hâlde kırmızıya döner.
+  it('ek talebin KENDİ klasörüne kurulur ve cevapla yazışmaya girer', async () => {
+    const created = await envelopeData<{ id: string }>(
+      await req('', benimToken, { method: 'POST', body: JSON.stringify({ type: 'other', body: `Yazışma eki ${stamp}` }) }),
+    );
+    const { key } = await envelopeData<{ key: string }>(
+      await req(`/${created.id}/uploads`, benimToken, {
+        method: 'POST',
+        body: JSON.stringify({ filename: 'etiket.jpg', alreadyRequested: 0 }),
+      }),
+    );
+    expect(key).toMatch(new RegExp(`^support/tickets/${created.id}/[^/]+\\.jpg$`));
+
+    const detail = await envelopeData<{ messages: { photos: string[] }[] }>(
+      await req(`/${created.id}/messages`, benimToken, {
+        method: 'POST',
+        body: JSON.stringify({ body: 'İşte etiket', attachments: [key] }),
+      }),
+    );
+
+    expect(detail.messages.at(-1)!.photos).toHaveLength(1);
+  });
+
+  // Sahiplik kapıya iletilmezse müşteri başkasının talep klasörüne yazma izni alır; bu test o hâlde kırmızıya döner.
+  it('BAŞKASININ talebine yükleme adresi alınamaz — 404 `ticket_not_found`', async () => {
+    const res = await req(`/${otekiTalepId}/uploads`, benimToken, {
+      method: 'POST',
+      body: JSON.stringify({ filename: 'araya.jpg', alreadyRequested: 0 }),
+    });
+
+    expect(res.status).toBe(404);
+    expect(await envelopeError(res)).toBe('ticket_not_found');
+  });
+});

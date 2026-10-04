@@ -109,14 +109,45 @@ const OPEN_ERRORS: Partial<Record<Exclude<OpenCustomerTicketOutcome['status'], '
 const REPLY_ERRORS: Partial<Record<Exclude<ReplyToTicketOutcome['status'], 'ok'>, TicketReplyError>> = {
   empty_body: 'empty_body',
   ticket_not_found: 'ticket_not_found',
+  attachment_not_yours: 'attachment_not_yours',
 };
 
-/** Yükleme adresinin retleri; `not_found` bu uçta doğamaz, çünkü talep kimliği alınmıyor. */
-const UPLOAD_ERRORS: Partial<Record<Extract<TicketUploadOutcome, { ok: false }>['reason'], TicketUploadError>> = {
+/** Yükleme adresinin retleri; `not_found` yalnız yazışma ekinde doğar ve "yok" ile "senin değil"i aynı cevapla söyler. */
+const UPLOAD_ERRORS: Record<Extract<TicketUploadOutcome, { ok: false }>['reason'], TicketUploadError> = {
   unsupported_type: 'unsupported_type',
   too_many: 'too_many',
   storage_unavailable: 'storage_unavailable',
+  not_found: 'ticket_not_found',
 };
+
+const UPLOAD_STATUS: Record<TicketUploadError, 400 | 404 | 503> = {
+  unsupported_type: 400,
+  too_many: 400,
+  storage_unavailable: 503,
+  ticket_not_found: 404,
+};
+
+/**
+ * İmzalı yükleme adresi: talep kimliği yoksa açılış taslağına, varsa o talebin klasörüne. Depo yapılandırılmamışsa 503 döner ki
+ * istemci "yüklendi" sanıp mesajı eksik göndermesin.
+ */
+async function uploadUrlFor(c: Context<CustomerEnv>, ticketId: string | null): Promise<Response> {
+  const body = TicketUploadRequestSchema.safeParse(await readJsonBody(c));
+  if (!body.success) return fail(c, 'invalid_body', 400);
+
+  const outcome = await requestTicketUploadUrl(serviceDb(), {
+    customerId: c.get('customerId'),
+    ticketId,
+    filename: body.data.filename,
+    alreadyRequested: body.data.alreadyRequested,
+  });
+  if (!outcome.ok) {
+    const key = UPLOAD_ERRORS[outcome.reason];
+    return fail(c, key, UPLOAD_STATUS[key]);
+  }
+
+  return ok(c, TicketUploadSchema.parse({ key: outcome.key, uploadUrl: outcome.uploadUrl, contentType: outcome.contentType }));
+}
 
 export const tickets = new Hono<CustomerEnv>();
 tickets.use('*', resolveCustomer);
@@ -195,25 +226,8 @@ tickets.post('/', async (c) => {
   return ok(c, TicketCreatedSchema.parse({ id: outcome.ticket.id }));
 });
 
-/**
- * Talep fotoğrafının imzalı yükleme adresi, yalnız açılış taslağı için: yazışmada ek yok, bu yüzden `/:id/uploads` yazılmadı. Depo
- * yapılandırılmamışsa 503 döner ki istemci "yüklendi" sanıp talebi eksik açmasın.
- */
-tickets.post('/uploads', async (c) => {
-  const body = TicketUploadRequestSchema.safeParse(await readJsonBody(c));
-  if (!body.success) return fail(c, 'invalid_body', 400);
-
-  const outcome = await requestTicketUploadUrl(serviceDb(), {
-    customerId: c.get('customerId'),
-    filename: body.data.filename,
-    alreadyRequested: body.data.alreadyRequested,
-  });
-  if (!outcome.ok) {
-    return fail(c, UPLOAD_ERRORS[outcome.reason] ?? 'invalid_body', outcome.reason === 'storage_unavailable' ? 503 : 400);
-  }
-
-  return ok(c, TicketUploadSchema.parse({ key: outcome.key, uploadUrl: outcome.uploadUrl, contentType: outcome.contentType }));
-});
+tickets.post('/uploads', (c) => uploadUrlFor(c, null));
+tickets.post('/:id/uploads', (c) => uploadUrlFor(c, c.req.param('id')));
 
 /**
  * Kapanmış talep cevapla kendiliğinden yeniden açılır; ayrı bir "yeniden aç" ucu olsaydı müşteri çağırmayı unutur ve mesajı kapalı
@@ -231,6 +245,7 @@ tickets.post('/:id/messages', async (c) => {
     ticketId: c.req.param('id'),
     body: body.data.body,
     locale: locale.data,
+    attachments: body.data.attachments,
   });
   if (outcome.status !== 'ok') {
     const key = REPLY_ERRORS[outcome.status] ?? 'invalid_body';

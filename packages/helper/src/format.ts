@@ -56,3 +56,14 @@ export function formatShortDate(iso: string, locale: Locale): string {
 export function formatTime(iso: string, locale: Locale): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], { hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
 }
+
+/** Mesaj damgası ("bugün, 10:15" · "24 juillet, 18:02"); yıl yazılmaz, çünkü damga yazışmanın içinde okunur. */
+export function messageStamp(iso: string, locale: Locale, todayLabel: string): string {
+  return `${isLocalToday(iso) ? todayLabel : formatShortDate(iso, locale)}, ${formatTime(iso, locale)}`;
+}
+
+/** Cihazın takviminde bugün mü; damga müşterinin ekranında çizildiği için onun günü esas alınır. */
+export function isLocalToday(iso: string, now: Date = new Date()): boolean {
+  const then = new Date(iso);
+  return then.getFullYear() === now.getFullYear() && then.getMonth() === now.getMonth() && then.getDate() === now.getDate();
+}

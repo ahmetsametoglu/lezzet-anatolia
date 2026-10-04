@@ -1,10 +1,11 @@
 import { brand } from '@lezzet/brand';
-import { awaitsOurReply, formatPrice, ticketScope, ticketTitle } from '@lezzet/helper';
+import { MESSAGE_STAMP_VISIBLE_MS, awaitsOurReply, formatPrice, messageStamp, ticketScope, ticketTitle } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 // `ScrollView` yalnız tip: kaydırıcıyı `ChatLayout` çiziyor, ekran ona yalnız ref veriyor.
-import { Image, Text, View, type ScrollView } from 'react-native';
+import { Image, Pressable, Text, View, type ScrollView } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppBar } from '@/components/ui/app-bar';
@@ -26,6 +27,8 @@ import { TicketDetailSkeleton } from './ticket-detail-skeleton';
 import { TicketStatusTag } from './ticket-status-tag';
 import messages from '@lezzet/i18n/customer/support';
 import { useTicket } from './use-ticket.hook';
+import { TicketPhotoThumb } from './ticket-photo-thumb';
+import { useTicketPhotos, type TicketPhotoFailure } from './use-ticket-photos.hook';
 
 /*
   Talep detayı: gönderimin sonucu sunucudan gelir, ekran iyimser mesaj uydurmaz ve düşen gönderim taslağı silmez. Her baloncuk
@@ -51,6 +54,8 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
   // Yazışma öndeyken bu talebin bildirimi gösterilmez, cevap ekrana zille zaten düşer.
   useFocusEffect(useCallback(() => markViewing('ticket', id), [id]));
   const [draft, setDraft] = useState('');
+  const [photoError, setPhotoError] = useState<TicketPhotoFailure | null>(null);
+  const photos = useTicketPhotos({ ticketId: id, onFailed: setPhotoError });
   const threadRef = useRef<ScrollView>(null);
 
   /* Başlık her hâlde durur (şablonda da yüklenen sayfanın üstünde): geri yolu ekran boşken de açık. */
@@ -114,53 +119,25 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
     : null;
 
   const send = () => {
-    void ticket.send(draft).then((sent) => {
+    setPhotoError(null);
+    const keys = photos.photos.map((photo) => photo.key);
+    void ticket.send(draft, keys).then((sent) => {
       if (!sent) return;
       setDraft('');
+      photos.reset();
       toastSuccess(t.detail.reply.sent);
     });
   };
 
-  const canSend = draft.trim().length > 0 && !ticket.sending;
-  const last = detail.messages.at(-1);
-
-  const renderMessage = (message: TicketMessage) => {
-    // Ekip etiketi marka adıdır ve çevrilmez; tek kaynağı `@lezzet/brand`.
-    const who = message.fromCustomer ? t.detail.fromCustomer : brand.name;
-
-    return (
-      <View
-        key={message.id}
-        style={[styles.bubbleRow, message.fromCustomer ? styles.mineRow : styles.theirsRow]}
-        accessible
-        accessibilityLabel={`${who}: ${message.body}`}
-        testID={`ticket-message-${message.id}`}
-      >
-        <View style={[styles.bubbleColumn, message.fromCustomer ? styles.mineColumn : styles.theirsColumn]}>
-          <View style={[styles.bubble, message.fromCustomer ? styles.mine : styles.theirs]}>
-            {message.fromCustomer ? null : <Text style={styles.sender}>{brand.name}</Text>}
-            {/* Gövde sohbet metni: işletmenin cevabı biçimlendirme işaretleriyle yazılır ve müşteri onu operasyonun gördüğü gibi görmeli. */}
-            <ChatText style={[styles.bubbleText, message.fromCustomer ? styles.mineText : styles.theirsText]}>{message.body}</ChatText>
-          </View>
-
-          {message.photos.length === 0 ? null : (
-            <View style={styles.photoRow}>
-              {message.photos.map((uri) => (
-                <Image
-                  key={uri}
-                  source={{ uri }}
-                  style={styles.photo}
-                  accessibilityLabel={t.detail.photo}
-                  accessibilityIgnoresInvertColors
-                />
-              ))}
-            </View>
-          )}
-
-        </View>
-      </View>
-    );
+  const pickPhoto = () => {
+    // Yeni bir deneme eski reddi düşürür: kapanmış bir kapının uyarısı ekranda durmaz.
+    setPhotoError(null);
+    void photos.pick('camera');
   };
+
+  // Yükleme sürerken Gönder kilitli, ki yarım fotoğraf mesaja girmesin.
+  const canSend = draft.trim().length > 0 && !ticket.sending && photos.pending.length === 0;
+  const last = detail.messages.at(-1);
 
   /** Altta sabit yazma çubuğu: kaydırma alanının dışında ama akışta; gerekçesi `composer` stilinde. */
   const composer = (
@@ -171,6 +148,38 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
           {t.detail.reply.failed}
         </Text>
       ) : null}
+      {photoError === null ? null : (
+        <Text style={styles.sendError} testID="ticket-photo-error">
+          {photoError === 'cameraDenied' ? t.detail.reply.cameraDenied : t.new.photo.errors[photoError]}
+        </Text>
+      )}
+      {/* Ek, yeni talep çekmecesindeki gibi küçük resimdir ve köşesindeki düğmeyle kalkar; yolda olan yükleme yerinde bekler. */}
+      {photos.photos.length + photos.pending.length === 0 ? null : (
+        <View style={styles.attachRow} testID="ticket-photos">
+          {photos.photos.map((photo, index) => (
+            <TicketPhotoThumb
+              key={photo.key}
+              uri={photo.uri}
+              size="sm"
+              onRemove={() => photos.remove(photo.key)}
+              label={t.detail.photo}
+              removeLabel={t.new.photo.remove}
+              testID={`ticket-photo-${index}`}
+              removeTestID={`ticket-photo-remove-${index}`}
+            />
+          ))}
+          {photos.pending.map((item) => (
+            <TicketPhotoThumb
+              key={item.id}
+              uri={item.uri}
+              size="sm"
+              label={t.new.photo.uploading}
+              removeLabel={t.new.photo.remove}
+              testID="ticket-photo-pending"
+            />
+          ))}
+        </View>
+      )}
       <View style={styles.composerRow}>
         {/* Alanın kendi kökü esnemez (kit `TextField` bir `View` döndürüyor ve `flex` taşımıyor);
             genişliği saran kutu verir — örtük esnemeye güvenilmez, kural açık yazılır. */}
@@ -186,6 +195,16 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
             testID="ticket-reply"
           />
         </View>
+        <PressableSurface
+          onPress={pickPhoto}
+          feedback="scale-small"
+          disabled={ticket.sending}
+          style={styles.photoButton}
+          accessibilityLabel={t.detail.reply.photo}
+          testID="ticket-photo"
+        >
+          <Icon name="camera" size={theme.size.headerIcon} color={theme.colors.muted} />
+        </PressableSurface>
         <PressableSurface
           onPress={send}
           feedback="scale-small"
@@ -229,7 +248,9 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
           />
         )}
 
-        {detail.messages.map(renderMessage)}
+        {detail.messages.map((message) => (
+          <MessageBubble key={message.id} message={message} locale={locale} t={t} />
+        ))}
 
         {/* Çeviri işareti baloncukta değil ekranda, bir kez: yazışmanın iki yönü de çevrildiği için baloncuk başına işaret gürültü
             olur. Hiç çeviri yoksa satır da yok. */}
@@ -239,6 +260,63 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
 
         {awaitsOurReply(detail.status, last ? last.fromCustomer : null) ? <Text style={styles.notice}>{t.detail.notice}</Text> : null}
       </ChatLayout>
+    </View>
+  );
+}
+
+interface MessageBubbleProps {
+  message: TicketMessage;
+  locale: Locale;
+  t: Messages;
+}
+
+function MessageBubble({ message, locale, t }: MessageBubbleProps) {
+  // Ekip etiketi marka adıdır ve çevrilmez; tek kaynağı `@lezzet/brand`.
+  const who = message.fromCustomer ? t.detail.fromCustomer : brand.name;
+  const stamp = messageStamp(message.createdAt, locale, t.today);
+  const stampOpacity = useSharedValue(0);
+  const stampStyle = useAnimatedStyle(() => ({ opacity: stampOpacity.value }));
+
+  // Saat yalnız dokununca görünür, çünkü kalıcı damga tek satırlık mesajda yazının kendisinden çok yer tutar.
+  const revealStamp = () => {
+    stampOpacity.value = withSequence(withTiming(1), withDelay(MESSAGE_STAMP_VISIBLE_MS, withTiming(0)));
+  };
+
+  return (
+    <View
+      style={[styles.bubbleRow, message.fromCustomer ? styles.mineRow : styles.theirsRow]}
+      accessible
+      accessibilityLabel={`${who}: ${message.body}, ${stamp}`}
+      testID={`ticket-message-${message.id}`}
+    >
+      <View style={[styles.bubbleColumn, message.fromCustomer ? styles.mineColumn : styles.theirsColumn]}>
+        {/* Dokunuş bir eylem değil, saati gösterir; ekran okuyucu saati satırın etiketinden duyduğu için yüzey ona kapalı. */}
+        <Pressable
+          onPress={revealStamp}
+          accessible={false}
+          style={[styles.bubble, message.fromCustomer ? styles.mine : styles.theirs]}
+          testID={`ticket-bubble-${message.id}`}
+        >
+          {message.fromCustomer ? null : <Text style={styles.sender}>{brand.name}</Text>}
+          {/* Gövde sohbet metni: işletmenin cevabı biçimlendirme işaretleriyle yazılır ve müşteri onu operasyonun gördüğü gibi görmeli. */}
+          <ChatText style={[styles.bubbleText, message.fromCustomer ? styles.mineText : styles.theirsText]}>{message.body}</ChatText>
+        </Pressable>
+
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.stamp, message.fromCustomer ? styles.stampMine : styles.stampTheirs, stampStyle]}
+        >
+          <Text style={styles.stampText}>{stamp}</Text>
+        </Animated.View>
+
+        {message.photos.length === 0 ? null : (
+          <View style={styles.photoRow}>
+            {message.photos.map((uri) => (
+              <Image key={uri} source={{ uri }} style={styles.photo} accessibilityLabel={t.detail.photo} accessibilityIgnoresInvertColors />
+            ))}
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -296,6 +374,26 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   mineText: { color: theme.colors.card },
   theirsText: { color: theme.colors.ink },
+  /* Saat etiketi balonun üst kenarına ortadan oturur ve konumu mutlak olduğu için satırları oynatmaz. Yüksekliği satır, dolgu ve
+     çerçeveden hesaplanır, çünkü sıfır yükseklikli kapla ortalamak yazıyı da sıfır yüksekliğe ölçtürür. */
+  stamp: {
+    position: 'absolute',
+    top: -(theme.text.micro * theme.text['h1--line-height'] + 2 * theme.space['2xs'] + 2 * theme.border.hairline) / 2,
+    borderWidth: theme.border.hairline,
+    borderColor: theme.colors['sand-200'],
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.card,
+    paddingHorizontal: theme.space.md,
+    paddingVertical: theme.space['2xs'],
+  },
+  stampMine: { right: theme.space.xl },
+  stampTheirs: { left: theme.space.xl },
+  stampText: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    lineHeight: theme.text.micro * theme.text['h1--line-height'],
+    color: theme.colors['sand-600'],
+  },
   photoRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -335,6 +433,19 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space.md,
   },
   composerField: { flex: 1 },
+  attachRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.space.md,
+  },
+  // Gönder düğmesiyle aynı dip hizası; dokunma hedefi tam ölçüde, çünkü ikon küçük.
+  photoButton: {
+    width: theme.size.touchTarget,
+    height: theme.size.touchTarget,
+    marginBottom: (theme.size.controlMd - theme.size.touchTarget) / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   /* Gönderim hatası ipucu satırlarından büyük (`note`), çünkü müşteriden bir şey istiyor; yazma alanından büyük değil ki bağırmasın. */
   sendError: {
     fontFamily: theme.font.body[400],
@@ -351,8 +462,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     justifyContent: 'center',
   },
   sendEnabled: { backgroundColor: theme.colors.olive },
-  /* Boş mesaj gönderilemez ve düğme bunu BASILMADAN ÖNCE söyler (şablon sessizce hiçbir şey
-     yapmıyordu — engelli düğme kuralı basmadan anlatır). Gönderim sürerken de kapalıdır: aynı
-     mesaj iki kez gitmez. */
+  /* Boş mesaj gönderilemez ve düğme bunu basılmadan önce söyler. Gönderim sürerken de kapalıdır, ki aynı mesaj iki kez gitmesin. */
   sendDisabled: { backgroundColor: theme.colors['disabled-fill'] },
 }));

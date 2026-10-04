@@ -29,6 +29,9 @@ export function ticketMeta(
   return parts.join(' · ');
 }
 
+/** Dokunulan mesajın saati bu süre görünür kalır, sonra kendiliğinden kaybolur; yazışmada kalıcı damga yer kaplıyordu. */
+export const MESSAGE_STAMP_VISIBLE_MS = 3000;
+
 /** "Cevap gelince haber veririz" notu yalnız sıra işletmedeyken doğrudur: son mesaj müşterinin ve talep çözülmemiş. */
 export function awaitsOurReply(status: TicketStatus, lastFromCustomer: boolean | null): boolean {
   return status !== 'resolved' && lastFromCustomer === true;

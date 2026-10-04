@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import supportMessages from '@lezzet/i18n/customer/support';
 import type { CustomerTicketView } from '@/lib/ticket/ticket-types';
 import { errorText } from '@/lib/customer-error-text';
 import { useComposerField } from '@/lib/use-composer-field.hook';
@@ -31,7 +32,8 @@ export function DesktopReplyBox({ t, locale, ticketId, onReplied }: DesktopReply
   const photo = useTicketPhoto({ ticketId, busy, onFailed: (key) => setError(errorText(t.errors, key)) });
 
   const send = () => {
-    if (busy || body.trim().length === 0) return;
+    // Yükleme sürerken gönderim bekler, ki yarım fotoğraf mesaja girmesin.
+    if (busy || photo.pending > 0 || body.trim().length === 0) return;
     setBusy(true);
     setError(null);
     void replyToTicketAction(locale, ticketId, body, photo.attachments)
@@ -60,7 +62,7 @@ export function DesktopReplyBox({ t, locale, ticketId, onReplied }: DesktopReply
               key={key}
               type="button"
               onClick={() => photo.remove(key)}
-              aria-label={t.reply.removePhoto}
+              aria-label={supportMessages[locale].new.photo.remove}
               className="flex cursor-pointer items-center gap-2 rounded-soft border border-sand-200 bg-cream-deep px-3 py-1.5 font-sans text-micro text-muted hover:border-terracotta-line"
             >
               <Icon name="camera" size={14} />
@@ -89,7 +91,7 @@ export function DesktopReplyBox({ t, locale, ticketId, onReplied }: DesktopReply
         <button
           type="button"
           onClick={() => fileInput.current?.click()}
-          aria-label={t.reply.photo}
+          aria-label={supportMessages[locale].detail.reply.photo}
           className="flex cursor-pointer items-center text-muted transition-colors hover:text-olive"
         >
           <Icon name="camera" size={20} />
@@ -98,7 +100,7 @@ export function DesktopReplyBox({ t, locale, ticketId, onReplied }: DesktopReply
         <button
           type="button"
           onClick={send}
-          disabled={busy || body.trim().length === 0}
+          disabled={busy || photo.pending > 0 || body.trim().length === 0}
           aria-label={t.reply.send}
           className="grid size-9 flex-none cursor-pointer place-items-center rounded-full bg-olive font-sans text-copy font-bold text-cream transition-colors hover:bg-olive-dark disabled:cursor-not-allowed disabled:bg-disabled-fill"
         >

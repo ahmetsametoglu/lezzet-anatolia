@@ -1,14 +1,13 @@
-import { MAX_ATTACHMENTS_PER_MESSAGE } from '@lezzet/domain-core';
+import { MAX_ATTACHMENTS_PER_MESSAGE, asksForItems } from '@lezzet/domain-core';
 import type { LocalizedCopy, Locale } from '@lezzet/i18n';
 import { TicketTypeEnum, type TicketType } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Image, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { Chip } from '@lezzet/mobile-kit/src/components/ui/chip';
-import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
@@ -20,59 +19,13 @@ import { createTicket, type TicketOpenInput } from '@/lib/api/tickets';
 import { useOrders } from '@/screens/orders/use-orders.hook';
 import { OrderLinePicker } from './order-line-picker';
 import { OrderPicker } from './order-picker';
+import { TicketPhotoThumb } from './ticket-photo-thumb';
 import { useTicketPhotos, type TicketPhotoFailure } from './use-ticket-photos.hook';
 import messages from '@lezzet/i18n/customer/support';
 
 /*
-  YENİ TALEP · "BİZE YAZIN" — v3 `vTalepNew`in akışı, **ÇEKMECE olarak** (kullanıcı kararı 09.08).
-
-  ── NEDEN SAYFA DEĞİL ÇEKMECE ───────────────────────────────────────────────
-  Şablon bunu ayrı bir sayfa yapıyordu ve hesap menüsünde "Taleplerim" ile "Bize yazın" iki ayrı
-  satırdı. Karar ikisini teke indirdi: talep yazmak, taleplerin listesinin İÇİNDEN yapılan bir
-  eylemdir — yazılan talep zaten o listeye düşecek. Akışın tamamı (kapsam → sipariş → konu/anlatım)
-  çekmecenin içinde ilerler; adımlar arası sayfa geçişi YOKTUR, içerik değişir.
-
-  ── KAPALIYKEN DOĞMAZ ───────────────────────────────────────────────────────
-  Çağıran bu komponenti KOŞULLU çizer (liste ekranı). İki kazancı var: her açılış temiz bir
-  taslakla başlar (kapatılan yarım form ikinci açılışta karşımıza çıkmaz) ve kapalı bir çekmece
-  sipariş listesini çekmek için ağa çıkmaz.
-
-  ── GÖNDERİMDEN SONRA ───────────────────────────────────────────────────────
-  Başarıda çekmece kapanır, liste tazelenir ve onay toast'la söylenir — üçünü de ÇAĞIRAN yapar
-  (`onCreated`): liste kendi verisinin sahibidir, çekmece onu uzaktan tazeleyemez. RET hâlinde
-  çekmece AÇIK kalır ve sebep içeride, gönder düğmesinin üstünde söylenir; kapanan bir çekmece
-  müşteriye "gitti" der ve yazdığı metni de götürürdü.
-
-  ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
-  1. **Anlatım ZORUNLU** (v3 kalem işaretini yeterli sayıp gövdeye "(ürünler işaretlendi)" yazıyor).
-     Sözleşme boş gövdeyi reddediyor (`body: z.string().min(1)` — "anlatımsız talep, çözülemeyen
-     taleptir") ve müşteri adına cümle uydurmak, operatöre hiçbir şey anlatmayan bir talep açmaktır.
-     Web müşteri formunun da aynı kapısı var.
-  2. **Boş gönderim reddi ALANIN ALTINDA**, toast değil: kuralı alanın kendi hata satırına yazmak
-     onu basınca değil, bakınca gösterir (sepet ekranının kupon reddiyle aynı karar).
-  3. **Konu çipleri ŞEMADAN türer** (`TicketTypeEnum.options`), elle yazılmaz; sıra şablonun sırası.
-     Siparişsiz talepte konu SORULMAZ ve `other` gider (web'in ölçülmüş kararı): "Soru" bizim
-     yapmadığımız bir iddiadır — gelen mesaj şikâyet de olabilir, operatör okuyup sınıflandırır.
-  4. **Fotoğraf GERÇEK (21.309)** — şablonda bir bayrak çeviriyordu (`photoT`) ve 10.09'a kadar burada
-     da öyleydi: "✓ 1 fotoğraf eklendi" yazıyor, hiçbir şey yüklemiyordu. Şimdi kamera + galeri, en
-     çok motorun tavanı kadar (`MAX_ATTACHMENTS_PER_MESSAGE`), dosya doğrudan R2'ye; mekanik
-     `use-ticket-photos.hook.ts`te. Şablonun tek kutusu İKİ kutuya bölündü — tasarım sayfası
-     *"kameradan doğrudan"* diyor, fotoğraf çoğu zaman da önceden çekilmiş; seçilenler küçük resim
-     olarak dizilir ve her biri kaldırılabilir (`design/KARARLAR.md`). Yalnız AÇILIŞTA: yazışmada ek
-     yok (kullanıcı kararı 10.09). **Yükleme sürerken Gönder kilitli** — yarım kalan fotoğraf talebe
-     girmez, müşteri de "gitti" sanmaz.
-  5. **Ucun adlı retleri müşteri cümlesine çevrilir** (şablonda hata hâli yok): sipariş bağlanamadı ·
-     oturum kapandı · kalanı. Sessizce başarısız olan bir gönderim, gönderilmemiş bir talepten
-     kötüdür.
-  6. **Adımlar arasında "Geri"** (şablonda cihazın geri hareketi vardı, burada sayfa yok): çekmecede
-     tek çıkış kapatmak olsaydı, yanlış siparişi seçen müşteri baştan başlardı.
-  7. **Kapsam sorusu SORULACAK bir şey varken sorulur** (kullanıcı kararı 09.08). Şablon soruyu her
-     hâlde soruyordu; siparişi olmayan müşteri "evet, bir siparişimle ilgili" diyebiliyor ve
-     karşısında boş liste buluyordu. Tek cevabı olan soru, soru değildir: sipariş yoksa adım
-     ATLANIR ve akış doğrudan genel talebe açılır. Bunu bilmek için sipariş listesi ARTIK BURADA
-     okunuyor (seçicide değil) — seçici de aynı okumayı kullanır, sayfa iki kez istenmez.
-     Liste OKUNAMAZSA soru yine sorulur: "bilmiyoruz" ile "yok" ayrı şeylerdir (CLAUDE §1) ve
-     müşterinin siparişini bir ağ arızası yüzünden sessizce elinden almayız.
+  Yeni talep, taleplerin listesinin çekmecesidir: talep yazmak listenin içinden yapılan bir eylemdir ve adımlar (kapsam → sipariş →
+  konu ve anlatım) sayfa değiştirmeden çekmecenin içinde ilerler. Ret çekmeceyi kapatmaz, çünkü kapanan çekmece "gitti" der ve yazılanı götürür.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -93,8 +46,8 @@ interface NewTicketSheetProps {
   /** Sipariş detayından gelindiyse referans — akış doğrudan forma açılır (şablonun kendi kuralı). */
   orderReference?: string;
   onClose: () => void;
-  /** Talep açıldı — liste tazelenir, onay basılır, çekmece kapanır (hepsi çağıranın işi). */
-  onCreated: () => void;
+  /** Talep açıldı; çekmeceyi kapatıp yazışmayı açmak çağıranın işi, çünkü liste kendi verisinin sahibi. */
+  onCreated: (ticketId: string) => void;
 }
 
 export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: NewTicketSheetProps) {
@@ -124,15 +77,20 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
   const toggleLine = (id: string) =>
     setOrderItemIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
 
+  const pickType = (option: TicketType) => {
+    setType(option);
+    // Ürünle ilgisi olmayan konuya geçilince işaretler düşer: görünmeyen bir seçim talebe girip operatörü yanıltmasın.
+    if (!asksForItems(option)) setOrderItemIds([]);
+  };
+
   const goGeneral = () => {
     setReference(null);
     setOrderItemIds([]);
     setStep('form');
   };
 
-  /* Kapsam sorusunun ÖN KOŞULU: seçilebilecek en az bir sipariş. Okuma burada duruyor çünkü karar
-     burada veriliyor; sipariş detayından gelindiğinde kapsam zaten belli olduğu için ağa hiç
-     çıkılmaz (künye §7). */
+  /* Kapsam sorusu ancak seçilecek bir sipariş varken sorulur; liste okunamazsa yine sorulur, çünkü "bilmiyoruz" ile "yok" ayrı
+     şeydir. Siparişten gelindiğinde kapsam belli olduğu için liste hiç okunmaz. */
   const orderList = useOrders(locale, { enabled: orderReference === undefined });
   const askScope = orderList.status === 'error' || (orderList.status === 'ready' && orderList.orders.length > 0);
 
@@ -153,11 +111,12 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
             : null
           : 'order';
 
-  /* Seçilmeyen konu şablonun kendi varsayılanına düşer; siparişsiz talepte konu hiç sorulmaz. */
+  /* Siparişsiz talepte konu sorulmaz ve `other` gider, çünkü "Soru" bizim yapmadığımız bir iddiadır; seçilmeyen konu da oraya düşer. */
   const resolvedType: TicketType = reference === null ? 'other' : (type ?? 'other');
 
   const submit = () => {
     if (submitting || uploading) return;
+    // Anlatım zorunlu: sözleşme boş gövdeyi reddeder ve müşteri adına cümle uydurmak operatöre bir şey anlatmazdı.
     if (body.trim().length === 0) {
       setShowError(true);
       return;
@@ -186,17 +145,13 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
         setSubmitError(SUBMIT_ERRORS[result.error] ?? 'generic');
         return;
       }
-      onCreated();
+      onCreated(result.data.id);
     });
   };
 
   return (
     <BottomSheet visible title={t.new.title} onClose={onClose} testID="new-ticket-sheet">
-      {/* Kaydırma ARTIK KİTTE (11.08): bu form (sipariş listesi + kalemler + anlatım) panelin
-          tavanını aşabiliyor ve sığmayan adım kırpılıyordu — çözüm burada bulunmuştu, ama tek
-          ekranda kalması aynı taşmanın öteki çekmecelerde sürmesi demekti. `BottomSheet` kendi
-          kaydırmasını ve `keyboardShouldPersistTaps`ini taşıyor; burada yalnız içeriğin dikey
-          düzeni kaldı. */}
+      {/* Kaydırma kitin `BottomSheet`inde, çünkü bu form panelin tavanını aşabiliyor; burada yalnız içeriğin dikey düzeni var. */}
       <View style={styles.content} testID="new-ticket-form">
         {backStep === null ? null : (
           <TextAction label={t.back} onPress={() => setStep(backStep)} testID="new-ticket-back" />
@@ -205,9 +160,7 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
         {/* Kapsam sorusunun cevabı henüz bilinmiyor: soru da, form da çizilmez — yanlış adımı
             gösterip bir an sonra değiştirmek, müşterinin gözünde ekranın zıplaması olurdu. */}
         {resolvedStep === 'scope' && orderList.status === 'loading' ? (
-          /* Halka yerine ADIMIN KENDİSİ bekler (kullanıcı kararı 10.08): burada bekleyen şey bir
-             işlem değil, gelecek olan SORU ve iki cevap düğmesi. Halka onların yerini tutmuyordu
-             ve çekmece cevap gelince bir anda uzuyordu. Ölçüler adımın kendi stillerinden. */
+          /* Halka yerine adımın kendisi bekler, çünkü gelecek olan soru ve iki düğmedir; çekmece cevap gelince uzamaz. */
           <View
             style={styles.content}
             testID="new-ticket-scope-loading"
@@ -254,16 +207,10 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
 
         {resolvedStep === 'form' ? (
           <>
+            {/* Önce konu, sonra ürün: ürün sorusu yalnız belli bir kaleme dair konuda anlamlı, öteki konularda hiç sorulmaz. */}
             {reference === null ? null : (
               <>
-                <OrderLinePicker
-                  reference={reference}
-                  locale={locale}
-                  t={t}
-                  selected={orderItemIds}
-                  onToggle={toggleLine}
-                />
-
+                <Text style={styles.eyebrow}>{t.new.items.eyebrow.replace('{reference}', reference)}</Text>
                 <Text style={styles.question} accessibilityRole="header">
                   {t.new.typeTitle}
                 </Text>
@@ -273,11 +220,15 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
                       key={option}
                       label={t.type[option]}
                       selected={type === option}
-                      onPress={() => setType(option)}
+                      onPress={() => pickType(option)}
                       testID={`new-ticket-type-${option}`}
                     />
                   ))}
                 </View>
+
+                {asksForItems(type) ? (
+                  <OrderLinePicker reference={reference} locale={locale} t={t} selected={orderItemIds} onToggle={toggleLine} />
+                ) : null}
               </>
             )}
 
@@ -299,41 +250,31 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
               testID="new-ticket-message"
             />
 
-            {/* FOTOĞRAF (21.309 · künye §4) — önce eklenenler, sonra iki kaynak. */}
+            {/* Önce eklenenler, sonra iki kaynak: tasarım kamerayı ister, fotoğraf çoğu zaman da önceden çekilmiştir. Yükleme sürerken
+                Gönder kilitli, ki yarım fotoğraf talebe girmesin. */}
             {photos.photos.length + photos.pending.length === 0 ? null : (
               <View style={styles.photoRow} testID="new-ticket-photos">
                 {photos.photos.map((photo, index) => (
-                  <View key={photo.key} style={styles.thumbFrame}>
-                    <Image
-                      source={{ uri: photo.uri }}
-                      style={styles.thumb}
-                      accessibilityLabel={t.detail.photo}
-                      accessibilityIgnoresInvertColors
-                      testID={`new-ticket-photo-${index}`}
-                    />
-                    <PressableSurface
-                      onPress={() => photos.remove(photo.key)}
-                      feedback="opacity"
-                      style={styles.thumbRemove}
-                      accessibilityLabel={t.new.photo.remove}
-                      testID={`new-ticket-photo-remove-${index}`}
-                    >
-                      <Icon name="close" size={theme.size.inlineIcon} color={theme.colors.ink} />
-                    </PressableSurface>
-                  </View>
+                  <TicketPhotoThumb
+                    key={photo.key}
+                    uri={photo.uri}
+                    size="lg"
+                    onRemove={() => photos.remove(photo.key)}
+                    label={t.detail.photo}
+                    removeLabel={t.new.photo.remove}
+                    testID={`new-ticket-photo-${index}`}
+                    removeTestID={`new-ticket-photo-remove-${index}`}
+                  />
                 ))}
                 {photos.pending.map((item) => (
-                  <View
+                  <TicketPhotoThumb
                     key={item.id}
-                    style={styles.thumbFrame}
-                    accessible
-                    accessibilityLabel={t.new.photo.uploading}
-                    accessibilityState={{ busy: true }}
+                    uri={item.uri}
+                    size="lg"
+                    label={t.new.photo.uploading}
+                    removeLabel={t.new.photo.remove}
                     testID="new-ticket-photo-pending"
-                  >
-                    <Image source={{ uri: item.uri }} style={styles.thumb} accessibilityIgnoresInvertColors />
-                    <ActivityIndicator style={styles.thumbSpinner} color={theme.colors.olive} />
-                  </View>
+                  />
                 ))}
               </View>
             )}
@@ -404,6 +345,11 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
 
 const styles = StyleSheet.create((theme) => ({
   content: { gap: theme.space['2xl'] },
+  eyebrow: {
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text.note,
+    color: theme.colors.muted,
+  },
   question: {
     fontFamily: theme.font.display[theme.text['card-title-sm--font-weight']],
     fontSize: theme.text['card-title-sm'],
@@ -424,37 +370,6 @@ const styles = StyleSheet.create((theme) => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.space.md,
-  },
-  thumbFrame: {
-    width: theme.size.circleSm,
-    height: theme.size.circleSm,
-  },
-  thumb: {
-    // Ölçü talep detayının ek fotoğrafıyla AYNI (`ticket-detail-screen` · `circleSm`): müşteri
-    // gönderdiğini, talepte göreceği boyda görür; yeni sayı açılmadı.
-    width: theme.size.circleSm,
-    height: theme.size.circleSm,
-    borderRadius: theme.radius.control,
-    backgroundColor: theme.colors['sand-250'],
-  },
-  thumbSpinner: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  },
-  thumbRemove: {
-    // Rol kitteki "fotoğraf üstündeki düğme" (`iconButtonOnPhoto`) — ölçü de oradan.
-    position: 'absolute',
-    top: theme.space.xs,
-    right: theme.space.xs,
-    width: theme.size.iconButtonOnPhoto,
-    height: theme.size.iconButtonOnPhoto,
-    borderRadius: theme.radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.card,
   },
   photoActions: {
     flexDirection: 'row',

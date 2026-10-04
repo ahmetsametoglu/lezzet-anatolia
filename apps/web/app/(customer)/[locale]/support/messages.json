@@ -22,14 +22,11 @@
     },
     "noOrder": "siparişsiz",
     "lastMessage": "son mesaj: {when}",
-    "today": "bugün",
     "orderBound": "{ref} siparişine bağlı",
     "reply": {
       "placeholder": "Cevap yazın…",
       "send": "Gönder",
-      "sending": "Gönderiliyor…",
-      "photo": "Fotoğraf ekle",
-      "removePhoto": "Fotoğrafı kaldır"
+      "sending": "Gönderiliyor…"
     },
     "refunded": "{amount} iade edildi — sipariş detayında da görünür",
     "reopenNote": "Sorun devam ediyorsa yazışmaya mesaj yazmanız yeterli — talep kendiliğinden yeniden açılır.",
@@ -58,9 +55,7 @@
       "submit": "Talebi gönder",
       "submitting": "Gönderiliyor…",
       "note": "Talebinizi aldığımızda ve yanıtladığımızda e-posta ile haber veririz.",
-      "sentTitle": "Aldık",
-      "sentBody": "Cevabımızı e-posta ile bildireceğiz.",
-      "sentCta": "Talebi aç"
+      "close": "Kapat"
     },
     "errors": {
       "unexpected": "Bir şeyler ters gitti. Tekrar deneyin; sürerse bize yazın.",
@@ -95,14 +90,11 @@
     },
     "noOrder": "sans commande",
     "lastMessage": "dernier message : {when}",
-    "today": "aujourd'hui",
     "orderBound": "liée à la commande {ref}",
     "reply": {
       "placeholder": "Écrivez votre réponse…",
       "send": "Envoyer",
-      "sending": "Envoi…",
-      "photo": "Ajouter une photo",
-      "removePhoto": "Retirer la photo"
+      "sending": "Envoi…"
     },
     "refunded": "{amount} remboursés — visible aussi dans le détail de la commande",
     "reopenNote": "Si le problème persiste, il suffit d'écrire un message — la demande se rouvre d'elle-même.",
@@ -131,9 +123,7 @@
       "submit": "Envoyer la demande",
       "submitting": "Envoi…",
       "note": "Nous vous préviendrons par e-mail à la réception et à la réponse.",
-      "sentTitle": "Bien reçue",
-      "sentBody": "Nous vous répondrons par e-mail.",
-      "sentCta": "Ouvrir la demande"
+      "close": "Fermer"
     },
     "errors": {
       "unexpected": "Une erreur est survenue. Réessayez ; si cela persiste, écrivez-nous.",
@@ -168,14 +158,11 @@
     },
     "noOrder": "ohne Bestellung",
     "lastMessage": "letzte Nachricht: {when}",
-    "today": "heute",
     "orderBound": "gehört zur Bestellung {ref}",
     "reply": {
       "placeholder": "Antwort schreiben…",
       "send": "Senden",
-      "sending": "Wird gesendet…",
-      "photo": "Foto hinzufügen",
-      "removePhoto": "Foto entfernen"
+      "sending": "Wird gesendet…"
     },
     "refunded": "{amount} erstattet – auch in den Bestelldetails sichtbar",
     "reopenNote": "Falls das Problem weiterbesteht, schreiben Sie einfach eine Nachricht – die Anfrage wird von selbst wieder geöffnet.",
@@ -204,9 +191,7 @@
       "submit": "Anfrage senden",
       "submitting": "Wird gesendet…",
       "note": "Sie erhalten eine E-Mail, sobald Ihre Anfrage eingegangen ist, und eine weitere, sobald wir geantwortet haben.",
-      "sentTitle": "Erhalten",
-      "sentBody": "Wir antworten Ihnen per E-Mail.",
-      "sentCta": "Anfrage öffnen"
+      "close": "Schließen"
     },
     "errors": {
       "unexpected": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut. Besteht das Problem weiter, schreiben Sie uns.",

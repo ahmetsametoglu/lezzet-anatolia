@@ -1,6 +1,7 @@
 {
   "tr": {
     "back": "Geri",
+    "today": "bugün",
     "guest": {
       "title": "Taleplerinizi görmek için giriş yapın",
       "body": "Şifre yok — e-posta ya da Google ile birkaç saniyede girersiniz.",
@@ -54,7 +55,9 @@
         "send": "Gönder",
         "sending": "Gönderiliyor…",
         "sent": "Mesajınız iletildi",
-        "failed": "Mesaj gönderilemedi — yazdığınız duruyor, tekrar deneyin."
+        "failed": "Mesaj gönderilemedi — yazdığınız duruyor, tekrar deneyin.",
+        "photo": "Fotoğraf ekle",
+        "cameraDenied": "Kamera izni verilmedi. Ayarlardan izin verebilirsiniz."
       },
       "notFound": "Bu talebi bulamadık",
       "notFoundBody": "Bağlantı eski olabilir; talebi listeden açmayı deneyin.",
@@ -115,6 +118,7 @@
   },
   "fr": {
     "back": "Retour",
+    "today": "aujourd'hui",
     "guest": {
       "title": "Connectez-vous pour voir vos demandes",
       "body": "Pas de mot de passe — e-mail ou Google en quelques secondes.",
@@ -168,7 +172,9 @@
         "send": "Envoyer",
         "sending": "Envoi…",
         "sent": "Votre message est parti",
-        "failed": "Message non envoyé — votre texte est conservé, réessayez."
+        "failed": "Message non envoyé — votre texte est conservé, réessayez.",
+        "photo": "Ajouter une photo",
+        "cameraDenied": "L'accès à l'appareil photo n'est pas autorisé. Vous pouvez l'activer dans les réglages."
       },
       "notFound": "Demande introuvable",
       "notFoundBody": "Le lien est peut-être ancien ; ouvrez la demande depuis la liste.",
@@ -229,6 +235,7 @@
   },
   "de": {
     "back": "Zurück",
+    "today": "heute",
     "guest": {
       "title": "Melden Sie sich an, um Ihre Anfragen zu sehen",
       "body": "Kein Passwort – mit E-Mail oder Google in Sekunden.",
@@ -282,7 +289,9 @@
         "send": "Senden",
         "sending": "Wird gesendet…",
         "sent": "Ihre Nachricht wurde gesendet",
-        "failed": "Nachricht nicht gesendet – Ihr Text bleibt stehen, bitte erneut versuchen."
+        "failed": "Nachricht nicht gesendet – Ihr Text bleibt stehen, bitte erneut versuchen.",
+        "photo": "Foto hinzufügen",
+        "cameraDenied": "Kamerazugriff nicht erlaubt. Sie können ihn in den Einstellungen erlauben."
       },
       "notFound": "Anfrage nicht gefunden",
       "notFoundBody": "Der Link ist womöglich veraltet; öffnen Sie die Anfrage über die Liste.",
