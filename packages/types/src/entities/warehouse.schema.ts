@@ -2,11 +2,7 @@ import { z } from 'zod';
 import { dbNumeric, dbNumericNullable } from '../primitives/db-numeric';
 import { CountryEnum, TransferStatusEnum, WarehouseKindEnum } from '../primitives/enums.schema';
 
-// Depo ağı şemaları (DOMAIN §17, data-model/depo.md). Sistem tek depo varsayımıyla kuruldu;
-// bu dosya o varsayımın kalktığı yerdir.
-//
-// Depo müşteriye GÖSTERİLMEZ — altın kural: sistemin karmaşıklığı arayüze yansımaz. Müşteri posta
-// kodunu girer, gerisi içeride çözülür (posta kodu → bölge → depo).
+// Depo ağı şemaları (DOMAIN §17, data-model/depo.md). Depo müşteriye gösterilmez: müşteri posta kodunu girer, depo içeride çözülür.
 
 // ── Warehouse ───────────────────────────────────────────────────────────────
 
@@ -16,49 +12,26 @@ export const WarehouseSchema = z.object({
   code: z.string(),
   name: z.string(),
   /**
-   * Tesis mi, kurye aracı mı (26.08). Araç bir YERDİR — yüklenir, sayılır, transfer alır ve
-   * içinden satış yapılır; ölçüm noktası kimliği (`vehicle`, 0045) ayrı yaşar.
-   *
-   * Okuyan tarafın bilmesi gereken dört sonuç: araca bölge bağlanamaz, araç kargo deposu olamaz,
-   * araç `available_stock_total`a girmez (üçü de veride zorlanıyor) — ve araç bir SEÇENEK değildir:
-   * seçici, süzgeç ve yazma hedefi yalnız tesis sunar (02.09, `data-model/depo.md`).
+   * Tesis mi, kurye aracı mı; araç da bir yerdir: yüklenir, sayılır, transfer alır ve içinden satış yapılır. Araç bölgeye
+   * bağlanamaz, kargo deposu olamaz, depo-üstü toplama girmez ve seçicilerde seçenek olmaz (`data-model/depo.md`).
    */
   kind: WarehouseKindEnum,
   /**
-   * **Aracın evi olan tesis** (02.09) — yalnız `kind='vehicle'` satırında dolu, tesiste daima `null`.
-   *
-   * Araç gezen bir yerdir: sabah bir tesisten çıkar, akşam ona döner. Tesisin paneli *"aracımda ek
-   * olarak ne var"* diyebilsin diye bu bağ veride duruyor — türetilmiş hâli ("son transferi kim
-   * yaptı", "hangi kuryenin kapsamında") yalnız genelde doğrudur ve depo kararlarında genelde doğru
-   * yetmez. Evin tesis olması tetikleyiciyle zorlanır (`warehouse_home_is_facility`).
+   * Aracın evi olan tesis; yalnız araçta dolu, tesiste daima `null`. Bağ veride durur, çünkü transferden ya da kapsamdan türetmek
+   * yalnız genelde doğrudur ve depo işlerinde yetmez.
    */
   homeWarehouseId: z.string().uuid().nullable(),
   /**
-   * **Bu deponun ARACI** (21.249) — yalnız `kind='vehicle'` satırında dolu ve orada ZORUNLU.
-   *
-   * Sistemde iki "araç" var: ruhsat tarafı (`vehicle` — plaka, soğuk zincir ölçümü) ve MALIN
-   * durduğu yer (bu satır). 04.09'a kadar aralarında bağ yoktu; malın hangi araçtan çıkacağını
-   * seferin aracı değil, kuryenin kapsam dizisinin SIRASI belirliyordu. Tek araçlı kurulumda
-   * doğru cevap veriyordu, ikinci araçta sessizce yanlış olurdu.
-   *
-   * Çift yönlü kısıt veride (`warehouse_vehicle_identity`): araç deposu aracını söylemek zorunda,
-   * tesis söyleyemez. 1:1 (`warehouse_vehicle_unique`) — iki depo aynı aracı gösteremez.
+   * Bu deponun aracı (ruhsat ve soğuk zincir tarafı); yalnız araçta dolu ve orada zorunlu, iki depo aynı aracı gösteremez. Malın
+   * hangi araçtan çıkacağı bu bağdan okunur (`warehouse_vehicle_identity`, `warehouse_vehicle_unique`).
    */
   vehicleId: z.string().uuid().nullable(),
-  /**
-   * Deponun ülkesi — FİZİKSEL tesis nerede. Bölgenin ülkesiyle karıştırılmamalı: bir bölge sınır
-   * ötesi olabilir (ADR-002), depo olamaz. KDV'nin bağlı olduğu alan da budur (DOMAIN §5/§17).
-   * Araçta da doludur: araç bir ülkenin içinde dolaşır, sınır geçmez.
-   */
+  /** Fiziksel tesisin ülkesi; KDV buna bağlıdır (DOMAIN §5/§17). Bölge sınır ötesi olabilir (ADR-002), depo olamaz. */
   countryCode: CountryEnum,
   address: z.record(z.unknown()).nullable(),
   /**
-   * Deponun coğrafi noktası (11.9) — kapalı turun başlangıcı ve bitişi. `address` jsonb'sinin içine
-   * gömülmedi: gömülü sayı kısıt taşıyamaz ve rotanın çıpası için bu kabul edilemez.
-   *
-   * `null` = nokta girilmemiş. Sıralama motoru o depo için çalışmayı **reddeder** (`no_start`) —
-   * varsayılan bir merkez uydurmaz. Nokta operatörün haritada onayladığı noktadır, o yüzden
-   * `address`teki gibi kademe/kaynak alanı yok: kademesi her zaman "insan onayladı".
+   * Deponun coğrafi noktası, kapalı turun başlangıcı ve bitişi; `address` içine gömülmedi, çünkü gömülü sayı kısıt taşıyamaz.
+   * `null` noktada sıralama motoru varsayılan merkez uydurmaz, `no_start` ile reddeder.
    */
   lat: dbNumericNullable,
   lng: dbNumericNullable,
@@ -95,17 +68,9 @@ export type WarehouseInsert = z.infer<typeof WarehouseInsertSchema>;
 export const WarehouseUpdateSchema = WarehouseSchema.partial().required({ id: true });
 export type WarehouseUpdate = z.infer<typeof WarehouseUpdateSchema>;
 
-// ── Vehicle — KALDIRILDI (02.11, 03.08) ─────────────────────────────────────
-// Şema `vehicle` tablosuyla birlikte düştü: tablonun servisi yoktu, `from('vehicle')` hiçbir yerde
-// geçmiyordu ve hiçbir tasarım sayfası aracı bir VARLIK olarak kullanmıyordu.
-//
-// Tip tek başına bırakılsaydı daha kötü olurdu: karşılığı olmayan bir `Vehicle` tipi, okuyanı
-// "araçlar sistemde tutuluyor" diye inandırır ve ilk kullananı çalışma zamanında (tablo yok)
-// karşılar. Gerekçe: `data-model/depo.md` › Vehicle.
 
-// ── Depo bazlı asgari stok eşiği (C6) ───────────────────────────────────────
-// Varyanttaki `minStockQty` VARSAYILAN kalır; bu satır yalnız İSTİSNA yazar (fiyatın
-// müşteriye-özel satır deseni). Satır yoksa genel eşik işler.
+// ── Depo bazlı asgari stok eşiği ────────────────────────────────────────────
+// Varyanttaki `minStockQty` varsayılandır; bu satır yalnız istisnayı yazar, satır yoksa genel eşik işler.
 
 export const WarehouseVariantThresholdSchema = z.object({
   warehouseId: z.string().uuid(),
@@ -116,9 +81,8 @@ export type WarehouseVariantThreshold = z.infer<typeof WarehouseVariantThreshold
 
 // Ayrı bir `Insert` şeması YOK: üç alanın üçü de zorunlu — yazım ile okuma aynı şekil.
 
-// ── Transfer (K11, T4) ──────────────────────────────────────────────────────
-// İki fiziksel-gerçek an: sevk → kabul. Yoldaki mal hiçbir depoda satılamaz çünkü hiçbir deponun
-// stoğunda değildir — sanal "transit depo" yoktur, "yolda ne var" bu kaydın kendisidir.
+// ── Transfer ────────────────────────────────────────────────────────────────
+// Sevk ve kabul iki ayrı andır; yoldaki mal hiçbir deponun stoğunda değildir, bu yüzden sanal "transit depo" yoktur.
 
 export const WarehouseTransferSchema = z.object({
   id: z.string().uuid(),
@@ -131,19 +95,15 @@ export const WarehouseTransferSchema = z.object({
   dispatchedAt: z.string(),
   receivedBy: z.string().uuid().nullable(),
   receivedAt: z.string().nullable(),
-  /** Sevk kaydının geri alınması (19.6) — `received*`'tan AYRI: "kabul edildi" ile "hiç çıkmamış" aynı şey değil. */
+  /** Sevk kaydının geri alınması; "kabul edildi" ile "hiç çıkmamış" aynı şey olmadığı için `received*`'tan ayrıdır. */
   cancelledBy: z.string().uuid().nullable(),
   cancelledAt: z.string().nullable(),
   /** Geri almanın gerekçesi — `note` sevk anının notudur, bu onu iptal eden kararın. */
   cancelReason: z.string().nullable(),
   note: z.string().nullable(),
   /**
-   * **Yazımın kimliği** (21.263) — "bu sevki zaten yazdım mı?". İstemcide üretilir ve İSTEĞİN
-   * kimliğidir; cevabı kaybolan bir "araca al" isteği tekrarlandığında aynı anahtarla gelir ve
-   * veritabanı ikinci yazımı reddeder (`warehouse_transfer_idempotency_key`). Künyesi
-   * `0031_warehouse.sql`de; aynı kalıbın eşi `money_movement.idempotency_key`.
-   *
-   * `null` = korumasız sevk (depo ekranından elle transfer, besleme) ve meşrudur.
+   * Yazımın kimliği: istemcide üretilir, cevabı kaybolan istek aynı anahtarla tekrarlanınca veritabanı ikinci yazımı reddeder
+   * (`warehouse_transfer_idempotency_key`). `null` korumasız sevktir (elle transfer, besleme) ve meşrudur.
    */
   idempotencyKey: z.string().nullable(),
   createdAt: z.string(),
@@ -184,12 +144,8 @@ export const DispatchTransferResultSchema = z.object({
   transferId: z.string().uuid(),
   referenceNo: z.string(),
   /**
-   * **Bu çağrı yeni bir sevk YAZMADI** (21.263): aynı `idempotencyKey` ile daha önce yazılmış bir
-   * transfer bulundu ve onun künyesi döndü — stok ikinci kez DÜŞMEDİ. Okuyan taraf için `true` bir
-   * hata değil bir bilgidir: rampada ekran "aldım" yerine "zaten alınmıştı" diyebilsin.
-   *
-   * `optional`: anahtarsız çağrıda RPC `false` yazıyor, ama eski bir kayıt okunursa alan hiç
-   * bulunmayabilir; okuyan taraf VARLIĞINA değil DEĞERİNE baksın.
+   * Bu çağrı yeni sevk yazmadı: aynı anahtarla yazılmış transfer bulundu ve stok ikinci kez düşmedi. İsteğe bağlıdır, çünkü
+   * eski kayıtta alan bulunmayabilir; okuyan değerine bakar.
    */
   deduped: z.boolean().optional(),
 });
@@ -199,11 +155,11 @@ export const ReceiveTransferResultSchema = z.object({
   ok: z.boolean(),
   transferId: z.string().uuid(),
   createdBatches: z.number().int(),
-  /** Eksik beyan edilen toplam adet (04.09) — `0` = tam kabul, hiçbir düşüm yazılmadı. */
+  /** Eksik beyan edilen toplam adet; `0` tam kabul, hiçbir düşüm yazılmadı. */
   shortfallQty: z.number().int().nonnegative(),
   /** Eksiğin IMH belgesi (`IMH-STR-26-0013`); eksik yoksa `null`. */
   shortfallReferenceNo: z.string().nullable(),
-  /** Fazla beyan edilen toplam adet (04.09, 21.253) — `0` = sevk edilenden fazlası yok. */
+  /** Fazla beyan edilen toplam adet; `0` sevk edilenden fazlası yok. */
   excessQty: z.number().int().nonnegative(),
   /** Fazlanın SAY belgesi (`count_diff · in`, alan deponun serisi); fazla yoksa `null`. */
   excessReferenceNo: z.string().nullable(),
@@ -218,9 +174,8 @@ export const CancelTransferResultSchema = z.object({
 });
 export type CancelTransferResult = z.infer<typeof CancelTransferResultSchema>;
 
-// ── Tedarik ilerlemesi (K6) ─────────────────────────────────────────────────
-// `purchase_order_progress` görünümü: PO durumu saklanan sayaçtan değil BURADAN türer. Ölçü
-// `initialQty` — `physicalQty` satışla erir ve "ne kadar geldi" sorusuna yanlış cevap verir.
+// ── Tedarik ilerlemesi ──────────────────────────────────────────────────────
+// `purchase_order_progress` görünümü: sipariş durumu buradan türer. Ölçü `initialQty`, çünkü `physicalQty` satışla erir.
 
 export const PurchaseOrderProgressSchema = z.object({
   purchaseOrderId: z.string().uuid(),

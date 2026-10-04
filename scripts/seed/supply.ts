@@ -8,14 +8,13 @@ import { tabloDolu, type Db, type VaryantRef } from './shared';
 // yazılır: bizim varyantımız ↔ onun kodu eşlemesi olmadan liste ona bir şey ifade etmez.
 
 const TEDARIKCILER = [
-  // Ülke (12.26): faturanın KDV rejimi ondan önerilir — TR ithalatı ters yüklemedir, FR standarttır.
+  // Ülke: faturanın KDV rejimi ondan önerilir — TR ithalatı ters yüklemedir, FR standarttır.
   { key: 'gaziantep', name: 'Gaziantep Baklava Fabrikası', vatNumber: 'TR1234567890', country: 'TR', paymentTermDays: 45, contact: { phone: '+903423456789', email: 'ihracat@gaziantepbaklava.com.tr', city: 'Gaziantep' }, note: 'Ana tedarikçi — 45 gün vade, aylık konteyner.' },
   { key: 'alsace', name: 'Alsace Frais Distribution', country: 'FR', paymentTermDays: 15, contact: { phone: '+33388991122', email: 'commandes@alsace-frais.fr', city: 'Strasbourg' }, note: 'Yerel taze ürün; haftalık.' },
   { key: 'eskiTedarik', name: 'Marmara Gıda (eski)', country: 'TR', paymentTermDays: null, contact: { phone: '+902165550000' }, isActive: false, note: 'Çalışılmıyor — kalite sorunu.' },
 ];
 
-// **`base` katmanında HİÇ KOŞMAZ** (kullanıcı kararı 16.08): üç tedarikçi de uydurma firma, kod eşlemeleri
-// de öyle. Gerçek tedarikçiyi operatör kurar. Künye `seed/tier.ts`.
+// `base` katmanında koşmaz: tedarikçiler ve kod eşlemeleri uydurmadır, gerçek tedarikçiyi operatör kurar (`seed/tier.ts`).
 export async function seedSupply(db: Db, varyantlar: VaryantRef[]): Promise<Map<string, string>> {
   const suppliers = new SupplierService(db);
   const harita = new Map<string, string>();
@@ -65,9 +64,8 @@ export async function seedSupply(db: Db, varyantlar: VaryantRef[]): Promise<Map<
     }
   }
 
-  // Tedarik siparişleri — dört durumun dördü de örneklenir. Gönderilmiş olanın NUMARASI olur
-  // (06.12): kural veritabanında, seed de ondan muaf değil — muaf olsaydı seed verisi üretimde
-  // imkânsız bir hâli örnekler ve ekranlar o hâle göre yazılırdı.
+  // Tedarik siparişlerinin dört durumu da örneklenir; gönderilmiş siparişin numarası olur, çünkü seed de veritabanı kuralından
+  // muaf değildir.
   const YIL = new Date().getFullYear();
   const taslak = await purchases.createDraft(ana, satilabilir.slice(0, 5).map((v, i) => ({ variantId: v.id, qty: 24 + i * 6, unitPriceCents: toCents(2.4 + i * 0.3) })), 'Bayram öncesi ek sipariş — taslak.');
   const gonderilen = await purchases.createDraft(ana, satilabilir.slice(5, 11).map((v, i) => ({ variantId: v.id, qty: 36 + i * 12, unitPriceCents: toCents(2.6 + i * 0.25) })), 'Aylık ana sipariş.');
