@@ -164,7 +164,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   const checkedFor = useRef<string | null>(null);
 
   /**
-   * Doğrulama kart dışı yol seçilince arkada başlar: düğmeye basıldığında cevap hazırdır, müşteri onu beklemez. İstek düşerse
+   * Doğrulama ödeme yolu seçilince arkada başlar: düğmeye basıldığında cevap hazırdır, müşteri onu beklemez. İstek düşerse
    * sonuç `null` sayılır ve sipariş durmaz; sunucu da servis kesintisinde aynı yolu tutar (`unknown`).
    */
   const pendingCheck = useRef<{ addressId: string; outcome: Promise<AddressCheckOutcome | null> } | null>(null);
@@ -179,24 +179,28 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     return pendingCheck.current.outcome;
   }, []);
   useEffect(() => {
-    if (state.addressId && state.paymentMethod && state.paymentMethod !== 'online') void addressCheckOf(state.addressId);
+    if (state.addressId && state.paymentMethod) void addressCheckOf(state.addressId);
   }, [state.addressId, state.paymentMethod, addressCheckOf]);
+
+  /**
+   * Söylenecek bir şey varsa akış durur; müşteri görür, karar verir, ikinci tıklamada sipariş geçer. `confirmed` ve `unknown`
+   * gösterilmez, çünkü "doğrulayamadık" her siparişte görünen ve hiçbir şey söylemeyen bir satır olurdu.
+   */
+  const addressStops = async (addressId: string): Promise<boolean> => {
+    if (checkedFor.current === addressId) return false;
+    setBusy(true);
+    const outcome = await addressCheckOf(addressId);
+    checkedFor.current = addressId;
+    setBusy(false);
+    if (!outcome || outcome.status === 'confirmed' || outcome.status === 'unknown') return false;
+    setAddressNotice(outcome);
+    return true;
+  };
 
   /** Kart dışı yollar (kapıda / vadeli): sipariş burada kapanır, sağlayıcıya gidilmez. */
   const confirm = async () => {
     if (!state.addressId || !state.paymentMethod) return;
-
-    /* Söylenecek bir şey varsa akış durur; müşteri görür, karar verir, ikinci tıklamada sipariş geçer. `confirmed` ve `unknown`
-       gösterilmez, çünkü "doğrulayamadık" her siparişte görünen ve hiçbir şey söylemeyen bir satır olurdu. */
-    if (checkedFor.current !== state.addressId) {
-      setBusy(true);
-      const outcome = await addressCheckOf(state.addressId);
-      checkedFor.current = state.addressId;
-      setBusy(false);
-      if (outcome && outcome.status !== 'confirmed' && outcome.status !== 'unknown') {
-        return setAddressNotice(outcome);
-      }
-    }
+    if (await addressStops(state.addressId)) return;
 
     setBusy(true);
     setError(null);
@@ -275,6 +279,12 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     if (data.status !== 'payment_required') return refuse(t.payment.unavailable);
     preparedOrder.current = data.orderId;
     return { ok: true, clientSecret: data.clientSecret, orderId: data.orderId };
+  };
+
+  /** Adres kart doğrulamasından önce sorulur, çünkü cüzdan penceresi açıldıktan sonra durmak ödemeyi yarıda keserdi. */
+  const payByCard = async () => {
+    if (!state.addressId || (await addressStops(state.addressId))) return;
+    await cardRef.current?.submit();
   };
 
   /** Siparişin sayfasına gidilir, sonra sepet tazelenir: ters sırada boşalan sepet gezinme bitene kadar kalemsiz bir özet çizerdi. */
@@ -371,9 +381,11 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       });
       setBusy(false);
       if (!result.ok) return setError(errorText(t.errors, result.errorKey));
-      /* Adres değişti → kapı noktayı ve öneriyi düşürdü → yeniden sorulacak. Ve `refresh` şart:
-         kod değişimi BÖLGEYİ, kargo ücretini ve teslim gününü de oynatabilir. */
+      /* Adres değişti, eski cevap artık bu kaydın değil: soru yeniden sorulur ve cevabı yine arkada hazırlanır. `refresh` şart, çünkü
+         kod değişimi bölgeyi, kargo ücretini ve teslim gününü de oynatabilir. */
       checkedFor.current = null;
+      pendingCheck.current = null;
+      void addressCheckOf(selectedAddress.id);
       setAddressNotice(null);
       void refresh(selectedAddress.id);
     },
@@ -407,7 +419,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     onConfirm: () => {
       // Düğme koşullar kabul edilmeden kapalı; sipariş yine de kabulsüz açılmasın diye kapı burada da durur.
       if (!state.termsAccepted) return;
-      if (state.paymentMethod === 'online') void cardRef.current?.submit();
+      if (state.paymentMethod === 'online') void payByCard();
       else void confirm();
     },
   };

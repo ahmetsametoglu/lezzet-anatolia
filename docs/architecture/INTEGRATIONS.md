@@ -52,7 +52,7 @@ Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK �
 Koordinat çözmek ile *"bu kapı gerçekten var mı"* diye sormak aynı iş değil. İkincisi
 **ödeme ekranında** sorulur — adres girişinde değil: müşteri defterine on adres ekleyebilir, soru
 ancak malın gideceği kapı seçilince anlamlıdır. Soru ödeme yolu seçilince arkada başlar, sipariş
-düğmesi cevabı hazır bulur; web bunu yalnız kart dışı yollarda soruyor (K.58). Kapı düzeyinde
+düğmesi cevabı hazır bulur; kart yolunda da kart doğrulamasından önce sorulur. Kapı düzeyinde
 çözülmüş (`housenumber`) adres servise sorulmadan onaylı sayılır.
 
 **Yöntem BAN'a İKİ sorgudur ve ikinciliği şart:** birinci sorgu posta kodunu sert süzgeç olarak

@@ -579,9 +579,11 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       showNotice(t.reject.transport);
       return;
     }
-    /* Adres değişti → yeniden sorulacak; ve tazeleme ŞART: kod değişimi bölgeyi, kargo ücretini ve
-       teslim gününü de oynatabilir (`applyAddressWrite` künyesi). */
+    /* Adres değişti, eski cevap artık bu kaydın değil: soru yeniden sorulur ve cevabı yine arkada hazırlanır. Tazeleme şart, çünkü
+       kod değişimi bölgeyi, kargo ücretini ve teslim gününü de oynatabilir. */
     checkedFor.current = null;
+    pendingCheck.current = null;
+    void addressCheckOf(selectedAddress.id);
     setAddressNotice(null);
     applyAddressWrite(result.data, selectedAddress.id);
   };

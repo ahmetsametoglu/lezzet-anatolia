@@ -451,6 +451,21 @@ describe('CheckoutScreen — adres teklifi ve düzenleme', () => {
     expect(callsTo('/checkout/order')).toHaveLength(0);
   });
 
+  it('teklif kabul edilince düzelen kayıt YENİDEN sorulur, eski cevap siparişi durdurmaz', async () => {
+    routeFetch(WRONG_CODE);
+    await openAndConfirm();
+    const fix = await screen.findByTestId('checkout-address-fix');
+
+    // Kayıt düzelince servis kapıyı bulur; yazımdan sonraki her soru bunu alır.
+    routeFetch({ status: 'confirmed' });
+    await fireEvent.press(fix);
+    await waitFor(() => expect(screen.queryByTestId('checkout-address-check')).toBeNull());
+    await fireEvent.press(screen.getByTestId('checkout-confirm'));
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalled());
+    expect(checkCalls()).toHaveLength(2);
+  });
+
   it('"Benim yazdığım doğru" bir BEYANDIR: teklif kapanır, ikinci dokunuşta sipariş geçer, soru tekrarlanmaz', async () => {
     routeFetch(WRONG_CODE);
     await openAndConfirm();
