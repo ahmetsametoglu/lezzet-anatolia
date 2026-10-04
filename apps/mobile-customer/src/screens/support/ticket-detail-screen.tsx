@@ -134,10 +134,11 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
         testID={`ticket-message-${message.id}`}
       >
         <View style={[styles.bubbleColumn, message.fromCustomer ? styles.mineColumn : styles.theirsColumn]}>
-          {/* Gövde sohbet metni: işletmenin cevabı biçimlendirme işaretleriyle yazılır ve müşteri onu operasyonun gördüğü gibi görmeli. */}
-          <ChatText style={[styles.bubble, message.fromCustomer ? styles.mine : styles.theirs]}>
-            {message.body}
-          </ChatText>
+          <View style={[styles.bubble, message.fromCustomer ? styles.mine : styles.theirs]}>
+            {message.fromCustomer ? null : <Text style={styles.sender}>{brand.name}</Text>}
+            {/* Gövde sohbet metni: işletmenin cevabı biçimlendirme işaretleriyle yazılır ve müşteri onu operasyonun gördüğü gibi görmeli. */}
+            <ChatText style={[styles.bubbleText, message.fromCustomer ? styles.mineText : styles.theirsText]}>{message.body}</ChatText>
+          </View>
 
           {message.photos.length === 0 ? null : (
             <View style={styles.photoRow}>
@@ -270,25 +271,28 @@ const styles = StyleSheet.create((theme, rt) => ({
   mineColumn: { alignItems: 'flex-end' },
   theirsColumn: { alignItems: 'flex-start' },
   bubble: {
+    gap: theme.space.xs,
     borderWidth: theme.border.hairline,
     borderColor: theme.colors['sand-200'],
     borderRadius: theme.radius.control,
     paddingVertical: theme.space.xl,
     paddingHorizontal: theme.space['3xl'],
+    overflow: 'hidden',
+  },
+  mine: { backgroundColor: theme.colors.olive },
+  theirs: { backgroundColor: 'transparent' },
+  sender: {
+    fontFamily: theme.font.body[700],
+    fontSize: theme.text.micro,
+    color: theme.colors.olive,
+  },
+  bubbleText: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text.note,
     lineHeight: theme.text.note * theme.text['lead--line-height'],
-    // Köşe yarıçapının metnin kendi kutusunda kırpılması için (RN metin arka planı).
-    overflow: 'hidden',
   },
-  mine: {
-    backgroundColor: theme.colors.olive,
-    color: theme.colors.card,
-  },
-  theirs: {
-    backgroundColor: 'transparent',
-    color: theme.colors.ink,
-  },
+  mineText: { color: theme.colors.card },
+  theirsText: { color: theme.colors.ink },
   photoRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
