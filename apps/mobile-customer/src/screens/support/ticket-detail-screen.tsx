@@ -1,5 +1,5 @@
 import { brand } from '@lezzet/brand';
-import { formatPrice, ticketScope, ticketTitle } from '@lezzet/helper';
+import { awaitsOurReply, formatPrice, ticketScope, ticketTitle } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -119,6 +119,7 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
   };
 
   const canSend = draft.trim().length > 0 && !ticket.sending;
+  const last = detail.messages.at(-1);
 
   const renderMessage = (message: TicketMessage) => {
     // Ekip etiketi marka adıdır ve çevrilmez; tek kaynağı `@lezzet/brand`.
@@ -232,7 +233,7 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
           <Text style={styles.notice}>{t.detail.translatedNotice}</Text>
         ) : null}
 
-        <Text style={styles.notice}>{t.detail.notice}</Text>
+        {awaitsOurReply(detail.status, last ? last.fromCustomer : null) ? <Text style={styles.notice}>{t.detail.notice}</Text> : null}
       </ChatLayout>
     </View>
   );

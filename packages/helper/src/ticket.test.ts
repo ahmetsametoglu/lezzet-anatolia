@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ticketMeta, ticketTitle } from './ticket';
+import { awaitsOurReply, ticketMeta, ticketTitle } from './ticket';
 
 const day = (iso: string) => iso.slice(0, 10);
 
@@ -29,5 +29,20 @@ describe('ticketTitle', () => {
   it('konu boşsa yalnız tür kalır, asılı ayraç yok', () => {
     expect(ticketTitle('Soru', '  ', '{type} · {subject}')).toBe('Soru');
     expect(ticketTitle('Eksik ürün', 'Gözleme', '{type} · {subject}')).toBe('Eksik ürün · Gözleme');
+  });
+});
+
+describe('awaitsOurReply', () => {
+  it('son söz müşterinin ve talep açıksa not görünür', () => {
+    expect(awaitsOurReply('open', true)).toBe(true);
+  });
+
+  it('işletme cevap verdiyse not kalkar — söz verilen haber zaten gitti', () => {
+    expect(awaitsOurReply('in_progress', false)).toBe(false);
+  });
+
+  it('çözülmüş talepte not görünmez, mesajsız talepte de', () => {
+    expect(awaitsOurReply('resolved', true)).toBe(false);
+    expect(awaitsOurReply('open', null)).toBe(false);
   });
 });

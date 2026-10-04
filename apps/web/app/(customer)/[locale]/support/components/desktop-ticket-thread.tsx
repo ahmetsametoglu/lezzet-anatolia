@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { brand } from '@lezzet/brand';
 import type { Locale } from '@lezzet/i18n';
 import { TranslationNote } from '@/components/customer/ui/translation-note';
@@ -52,11 +51,6 @@ function MessageBubble({ t, locale, message }: MessageBubbleProps) {
   // `ai` gönderici de işletmedir: müşteri kimin değil işletmenin yazdığını görür.
   const mine = message.sender === 'customer';
 
-  /* Çeviri varsayılan, çünkü yazışmanın işi anlaşılmaktır; ama makine çevirisi bir şikâyeti yumuşatabilir ve müşteri orijinale
-     ulaşabilmeli. Rozet yalnız gerçekten çevrilmiş metinde çizilir. */
-  const [showingOriginal, setShowingOriginal] = useState(false);
-  const shown = message.bodyTranslated && showingOriginal ? message.originalBody : message.body;
-
   return (
     <div
       className={[
@@ -67,27 +61,12 @@ function MessageBubble({ t, locale, message }: MessageBubbleProps) {
       ].join(' ')}
     >
       {!mine && <span className="font-sans text-micro font-bold text-olive">{brand.name}</span>}
-      {/* `lang` gerçek dili söyler, ekran okuyucu ve tarayıcı çevirisi buna bakar. Metin biçimli çizilir ve çizici operasyonla ortak,
-          çünkü müşteriye giden vurgu iki yüzeyde aynı görünmeli. */}
-      <ChatText
-        lang={showingOriginal ? (message.language ?? undefined) : locale}
-        className={`font-sans text-note leading-relaxed ${mine ? '' : 'text-ink'}`}
-        text={shown}
-      />
+      {/* Müşteri yazışmayı yalnız kendi dilinde görür. Metin biçimli çizilir ve çizici operasyonla ortak, çünkü müşteriye giden vurgu
+          iki yüzeyde aynı görünmeli. */}
+      <ChatText lang={locale} className={`font-sans text-note leading-relaxed ${mine ? '' : 'text-ink'}`} text={message.body} />
 
-      {message.bodyTranslated && (
-        <TranslationNote
-          badge={t.translation.badge}
-          toggle={{
-            showingOriginal,
-            onToggle: () => setShowingOriginal((v) => !v),
-            showOriginal: t.translation.showOriginal,
-            showTranslation: t.translation.showTranslation,
-          }}
-          // Müşterinin kendi balonu koyu zeytin: kum rozeti orada okunmuyor.
-          onDark={mine}
-        />
-      )}
+      {/* Müşterinin kendi balonu koyu zeytin: kum rozeti orada okunmuyor. */}
+      {message.bodyTranslated && <TranslationNote badge={t.translation.badge} onDark={mine} />}
 
       {message.attachmentUrls.map((url) => (
         // Ek daima fotoğraftır (`checkAttachment` yalnız görsel uzantı geçiriyor); ham `<img>`

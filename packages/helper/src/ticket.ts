@@ -1,3 +1,5 @@
+import type { TicketStatus } from '@lezzet/types';
+
 /**
  * Talebin ekrandaki adı: tür · konu. Konu boş olabilir (müşteri başlık değil anlatım yazar); o zaman "Soru ·" gibi asılı bir ayraç
  * bırakılmaz.
@@ -25,4 +27,9 @@ export function ticketMeta(
   const parts = [scope, dateOf(ticket.createdAt)];
   if (ticket.status !== 'resolved') parts.push(lastMessageTemplate.replace('{date}', dateOf(ticket.lastMessageAt)));
   return parts.join(' · ');
+}
+
+/** "Cevap gelince haber veririz" notu yalnız sıra işletmedeyken doğrudur: son mesaj müşterinin ve talep çözülmemiş. */
+export function awaitsOurReply(status: TicketStatus, lastFromCustomer: boolean | null): boolean {
+  return status !== 'resolved' && lastFromCustomer === true;
 }

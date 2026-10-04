@@ -639,7 +639,7 @@ Basit yaşam döngüsü; siparişe ve ürünlere isteğe bağlı bağlanır (bkz
 - **`translated_at`** — çeviri işi baktı mı; **başarısızlıkta da dolar** (sonsuz retry yok)
 - **`attachments`** — storage yolu (fotoğraf vb.)
 
-**Yazışma İKİ YÖNLÜ çevrilir (20.2):** müşteri kendi dilinde yazar personel Türkçe okur, personel Türkçe yazar müşteri kendi dilinde okur. Tek yön çevirmek yazışmanın yarısını anlaşılmaz bırakırdı. Orijinal `body`'de kalır, çeviri yanına yazılır — makine çevirisi hiçbir zaman yazanın cümlesi sanılamaz. Gösterim `resolveUserText` (domain-core): site dili → yoksa orijinal.
+**Yazışma İKİ YÖNLÜ çevrilir (20.2):** müşteri kendi dilinde yazar personel Türkçe okur, personel Türkçe yazar müşteri kendi dilinde okur. Tek yön çevirmek yazışmanın yarısını anlaşılmaz bırakırdı. Orijinal `body`'de kalır, çeviri yanına yazılır — makine çevirisi hiçbir zaman yazanın cümlesi sanılamaz. Gösterim `resolveUserText` (domain-core): site dili → yoksa orijinal. Müşteri ekranı yazışmayı yalnız kendi dilinde gösterir, orijinale geçiş yoktur; orijinali operasyon görür.
 
 **Mesajda "metin değişti, çeviriyi düşür" tetikleyicisi YOK ve gerekmiyor:** gönderilmiş mesaj değişmez — güncelleyen bir yol yok, yazışma bir defterdir. `TicketMessageService`'in güncelleme şeması bu yüzden DAR (`TicketMessageTranslationUpdate`: yalnız çeviri alanları); `body` orada olmadığı için "mesajı düzelt" demek isteyen bir kod derlemede durur.
 

@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { brand } from '@lezzet/brand';
-import { ticketScope } from '@lezzet/helper';
+import { awaitsOurReply, ticketScope } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type supportMessages from '@lezzet/i18n/customer/support';
 import { Note } from '@/components/customer/phone-kit/note';
@@ -30,6 +29,7 @@ export function PhoneTicketThread({ copy, t, locale, ticket }: PhoneTicketThread
   // İade ancak ödenmişse söylenir: tetiklenmiş ama ödenmemiş iade gerçek bir ara hâldir.
   const refunded =
     ticket.returnOutcome && ticket.returnOutcome.refundedCents > 0 ? formatPrice(ticket.returnOutcome.refundedCents, locale) : null;
+  const last = ticket.messages.at(-1);
 
   return (
     <div className="flex flex-col gap-2.5 px-4 py-4.5">
@@ -47,7 +47,9 @@ export function PhoneTicketThread({ copy, t, locale, ticket }: PhoneTicketThread
       {ticket.messages.some((message) => message.bodyTranslated) && (
         <p className="pt-2 text-center font-sans text-micro text-sand-600">{copy.detail.translatedNotice}</p>
       )}
-      <p className="pt-2 text-center font-sans text-micro text-sand-600">{copy.detail.notice}</p>
+      {awaitsOurReply(ticket.status, last ? last.sender === 'customer' : null) && (
+        <p className="pt-2 text-center font-sans text-micro text-sand-600">{copy.detail.notice}</p>
+      )}
     </div>
   );
 }
@@ -62,8 +64,6 @@ interface PhoneBubbleProps {
 function PhoneBubble({ copy, t, locale, message }: PhoneBubbleProps) {
   // `ai` gönderici de işletmedir: müşteri kimin değil işletmenin yazdığını görür.
   const mine = message.sender === 'customer';
-  const [showingOriginal, setShowingOriginal] = useState(false);
-  const shown = message.bodyTranslated && showingOriginal ? message.originalBody : message.body;
   const tone = mine ? 'bg-olive text-card' : 'bg-transparent text-ink';
 
   return (
@@ -74,11 +74,7 @@ function PhoneBubble({ copy, t, locale, message }: PhoneBubbleProps) {
           {/* Hizalama ve renk yazanı yalnız görene söyler; ekran okuyucu öneki duyar. */}
           <span className="sr-only">{`${mine ? copy.detail.fromCustomer : brand.name}: `}</span>
           {!mine && <span className="block font-sans text-micro font-bold text-olive">{brand.name}</span>}
-          <ChatText
-            lang={showingOriginal ? (message.language ?? undefined) : locale}
-            className="font-sans text-note leading-[1.6]"
-            text={shown}
-          />
+          <ChatText lang={locale} className="font-sans text-note leading-[1.6]" text={message.body} />
         </div>
 
         {message.attachmentUrls.length > 0 && (
@@ -96,18 +92,7 @@ function PhoneBubble({ copy, t, locale, message }: PhoneBubbleProps) {
           </div>
         )}
 
-        <span className="flex items-center gap-2 font-sans text-micro text-sand-600">
-          {messageStamp(message.createdAt, locale, t)}
-          {message.bodyTranslated && (
-            <button
-              type="button"
-              onClick={() => setShowingOriginal((value) => !value)}
-              className="cursor-pointer font-bold text-olive transition-colors hover:text-olive-dark"
-            >
-              {showingOriginal ? t.translation.showTranslation : t.translation.showOriginal}
-            </button>
-          )}
-        </span>
+        <span className="font-sans text-micro text-sand-600">{messageStamp(message.createdAt, locale, t)}</span>
       </div>
     </div>
   );
