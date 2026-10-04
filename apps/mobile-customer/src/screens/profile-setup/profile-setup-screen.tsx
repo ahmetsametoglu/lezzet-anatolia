@@ -19,7 +19,7 @@ import { publishMe, useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { OnboardingLogo } from '@/screens/onboarding/onboarding-logo';
 import { StepDots } from '@/screens/onboarding/step-dots';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
-import { isNameMissing, isPhoneMissing } from '@/screens/customer-kit/profile-gaps';
+import { isNameMissing, isPhoneMissing } from '@lezzet/domain-core';
 import messages from './messages.json';
 
 /*

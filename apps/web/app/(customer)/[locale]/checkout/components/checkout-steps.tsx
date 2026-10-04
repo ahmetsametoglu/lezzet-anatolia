@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { addressTitle } from '@lezzet/address';
+import { addressContact, addressTitle } from '@lezzet/address';
 import { brand } from '@lezzet/brand';
 import { pointAddress, pointText, shippingChoiceView, shippingNotice } from '@lezzet/helper';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
@@ -9,6 +9,7 @@ import type { PaymentMethod } from '@lezzet/types';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Button } from '@/components/customer/ui/button';
 import { Card } from '@/components/customer/ui/card';
+import { FormInputField } from '@/components/customer/form/form-input-field';
 import { Icon } from '@/components/customer/ui/icons';
 import { SummaryRow, summaryCopy } from '@/components/customer/ui/summary-row';
 import { PlaceRestriction, restrictedLines } from '@/components/customer/delivery/place-restriction';
@@ -24,6 +25,30 @@ import { ServicePointPicker } from './service-point-picker';
  * Checkout'un üç adımı, masaüstü ve mobil web için aynı bloklar. Cihaz forku yerleşimi ayırır, mantığı değil; bu yüzden bloklar
  * burada tek kez yazılır ve iki ekran dosyası yalnız onları farklı düzenlerde sıralar.
  */
+
+/** Adı eksik müşterinin ad kutusu, adımların üstünde; telefon sorulmaz, çünkü kurye adresteki telefonu arar. */
+export function ContactBox({ locale, compact, contact }: Pick<CheckoutViewProps, 'locale' | 'compact' | 'contact'>) {
+  if (!contact.missing) return null;
+  const copy = checkoutMessages[locale].contact;
+  return (
+    <section
+      className={['flex flex-col gap-3 rounded-card border border-sand-200 bg-card', compact ? 'px-4 py-4' : 'px-6.5 py-5.5'].join(' ')}
+    >
+      <span className="font-sans text-eyebrow-xs text-terracotta uppercase">{copy.eyebrow}</span>
+      <p className="font-sans text-note leading-relaxed text-body">{copy.reason}</p>
+      <FormInputField
+        label={copy.name}
+        value={contact.name}
+        onChange={(event) => contact.onChangeName(event.target.value)}
+        autoComplete="name"
+      />
+      {contact.error !== null && <p className="font-sans text-note leading-relaxed font-semibold text-terracotta">{contact.error}</p>}
+      <Button size="md" compact={compact} disabled={contact.saving || contact.name.trim() === ''} onClick={contact.onSave}>
+        {contact.saving ? copy.saving : copy.save}
+      </Button>
+    </section>
+  );
+}
 
 export function StepShell({ step, title, compact, children }: { step: string; title: string; compact?: boolean; children: React.ReactNode }) {
   return (
@@ -149,6 +174,9 @@ export function AddressStep({ t, locale, compact, selectedAddress, snapshot }: C
           <span className="font-sans text-note leading-relaxed text-body">
             {selectedAddress.postalCode} {selectedAddress.city}
           </span>
+          {addressContact(selectedAddress) && (
+            <span className="font-sans text-note leading-relaxed text-body">{addressContact(selectedAddress)}</span>
+          )}
         </div>
       ) : (
         // Buraya adressiz gelinmez (sepet kapısı) — derin bağlantıyla gelen için cümle + çıkış.
@@ -582,7 +610,14 @@ export function OrderSummary(props: CheckoutViewProps) {
   // Engel tek yerde kararlaşır (`checkoutBlocker`), telefon görünümü de aynı cevabı okur. Sepet okunamadıysa da sipariş verilemez,
   // çünkü ekrandaki 0,00 € bir toplam değil cevapsızlıktır.
   const blocked =
-    checkoutBlocker({ cartFailed, cartHasBlocked: cart.hasBlocked, snapshot, addressId: state.addressId, pointMissing: servicePointMissing(state, snapshot.shipping) }) !== null;
+    checkoutBlocker({
+      cartFailed,
+      cartHasBlocked: cart.hasBlocked,
+      snapshot,
+      addressId: state.addressId,
+      pointMissing: servicePointMissing(state, snapshot.shipping),
+      nameMissing: props.contact.missing,
+    }) !== null;
   const totalLabel = settled && totalCents !== null ? formatPrice(totalCents, locale) : UNKNOWN_AMOUNT;
   const confirmLabel = payStage ? t.pay[payStage] : busy ? copy.submitting : copy.confirm.replace('{total}', totalLabel);
 

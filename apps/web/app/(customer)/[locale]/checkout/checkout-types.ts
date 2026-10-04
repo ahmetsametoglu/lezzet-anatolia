@@ -102,6 +102,15 @@ export interface CheckoutViewProps extends StepProps {
   onAcceptAddressFix: () => void;
   /** Teklif reddedildi — bir vazgeçiş değil BEYAN; kayıttaki öneri etiketi silinmez. */
   onDismissAddressNotice: () => void;
+  /** Adı eksik müşterinin ad kutusu; ad ilk siparişte sorulur, telefon sorulmaz (kurye adresteki telefonu arar). */
+  contact: {
+    missing: boolean;
+    name: string;
+    saving: boolean;
+    error: string | null;
+    onChangeName: (value: string) => void;
+    onSave: () => void;
+  };
 }
 
 /**
@@ -109,7 +118,13 @@ export interface CheckoutViewProps extends StepProps {
  * sorulur. Kart formu ve onay düğmesi aynı karardan okur; sıra önce bilinmezlik (sepet, adres), sonra teslimat, en son tutar.
  */
 type CheckoutBlockReason =
-  'cart_unreachable' | 'address_missing' | 'undeliverable_line' | 'min_basket' | 'service_point_missing' | 'shipping_unpriced';
+  | 'cart_unreachable'
+  | 'name_missing'
+  | 'address_missing'
+  | 'undeliverable_line'
+  | 'min_basket'
+  | 'service_point_missing'
+  | 'shipping_unpriced';
 
 export function checkoutBlocker(input: {
   cartFailed: boolean;
@@ -119,8 +134,11 @@ export function checkoutBlocker(input: {
   addressId: string | null;
   /** Ekran nokta istiyor ama nokta seçilmemiş (`servicePointMissing`). */
   pointMissing: boolean;
+  /** Müşterinin adı eksik; kutu ekranın en üstünde olduğu için engel de adresten önce söylenir. */
+  nameMissing: boolean;
 }): CheckoutBlockReason | null {
   if (input.cartFailed) return 'cart_unreachable';
+  if (input.nameMissing) return 'name_missing';
   // Ödeme bloğu adresin cevabıdır: adres yokken `null` gelir ve o hâl bir engel DEĞİL, henüz
   // sorulmamış bir sorudur — adı da onu söylemeli.
   if (!input.addressId || !input.snapshot.payment) return 'address_missing';

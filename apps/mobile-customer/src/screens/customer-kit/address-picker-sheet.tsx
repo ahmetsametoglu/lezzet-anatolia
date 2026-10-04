@@ -7,26 +7,13 @@ import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { MeAddress } from '@/lib/api/addresses';
 import type { PickupPoint } from '@/lib/api/pickup-points';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
-import { addressLine } from '@lezzet/address';
+import { addressContact, addressLine } from '@lezzet/address';
 import messages from './address-picker-messages.json';
 import { OptionRow } from './option-row';
 
 /*
-  TESLİMAT ADRESİ SEÇİCİ — EKRANI TERK ETMEDEN.
-
-  Sepetteki "Değiştir" eskiden `/account`a yönlendiriyordu ve ölçülen sonuç kötüydü (10.08, cihazda):
-  müşteri Hesabım sayfasının TEPESİNE düşüyor, adres bölümünü kendisi arıyor, sekme "Hesap"a geçtiği
-  için geri dönüşte sepete değil VİTRİNE çıkıyordu. Sepetten çıkmak zaten yanlıştı — checkout aynı
-  işi kendi ekranında yapıyor (`address-sheet`, 10.08) ve sepetin ondan farkı yok.
-
-  Seçim ORTAK depoya yazılır (`delivery-address-store`): sepette seçilen adres checkout'ta da
-  geçerlidir. Ayrı tutulsaydı iki ekran yine iki adrese bakardı.
-
-  ── LİSTE YALNIZ SEÇER, DÜZENLEMEZ ──────────────────────────────────────────
-  Adres YAZMA/DÜZENLEME işi kitin kendi formunda (`address-sheet`) ve o form iki ekranda zaten
-  kullanılıyor; buraya üçüncü bir kopyasını koymak, aynı doğrulamayı üç yerde bakıma bırakırdı.
-  "Yeni adres ekle" o formu açar — çağıran ekranın işi, bu yüzden bir yuva (`onAddNew`) olarak
-  dışarı verilir.
+  Teslimat adresi ekran terk edilmeden seçilir; seçim ortak depoya yazılır (`delivery-address-store`), ki sepette seçilen adres ödemede de
+  geçerli olsun. Liste yalnız seçer: yazma ve düzenleme kitin formundadır, "yeni adres" onu çağıranın yuvasından (`onAddNew`) açar.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -69,6 +56,7 @@ export function AddressPickerSheet({
             key={address.id}
             label={address.label ?? t.untitled}
             description={addressLine(address)}
+            detail={addressContact(address) ?? undefined}
             // Depo seçiliyken varsayılan adres fatura adresidir, seçili çizilmez — tek seçim, tek çerçeve.
             selected={address.id === selectedId && selectedPickupId === null}
             onPress={() => {

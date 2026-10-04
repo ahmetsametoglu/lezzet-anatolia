@@ -2,7 +2,7 @@
 
 import { Link } from '@/i18n/navigation';
 import { Icon } from '@/components/customer/ui/icons';
-import { AddressStep, DeliveryStep, OrderSummary, PaymentStep } from './components/checkout-steps';
+import { AddressStep, ContactBox, DeliveryStep, OrderSummary, PaymentStep } from './components/checkout-steps';
 import { CheckoutProgress } from './components/checkout-progress';
 import { CheckoutStepsSkeleton } from './components/checkout-skeleton';
 import { ShippingOrderNote } from './components/shipping-order-note';
@@ -49,6 +49,7 @@ export function CheckoutDesktop(props: CheckoutViewProps) {
               diyordu — henüz bilinmeyen, üstelik yanlış olabilen bir hüküm. */}
           {props.snapshotReady ? (
             <>
+              <ContactBox {...props} />
               <AddressStep {...props} />
               <DeliveryStep {...props} />
               <PaymentStep {...props} />

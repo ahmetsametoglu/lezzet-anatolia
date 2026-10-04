@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 // Router next-intl'den: `next/navigation` dilsiz yol üretir, middleware onu 307 ile dilli yola çevirir ve çerez dili URL diliyle
 // ayrışınca müşteri yanlış dile düşer.
 import { useRouter } from '@/i18n/navigation';
+import { isNameMissing } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
+import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import { useCart } from '@/components/customer/cart/cart-context';
@@ -18,7 +20,7 @@ import { CheckoutDesktop } from './checkout.desktop';
 import { CheckoutMobile } from './checkout.mobile';
 import type { AddressCheckOutcome } from '@lezzet/application';
 import type { CheckoutSnapshot } from '@lezzet/application';
-import { checkCheckoutAddressAction, confirmCheckoutAction, loadCheckoutAction } from './actions';
+import { checkCheckoutAddressAction, confirmCheckoutAction, loadCheckoutAction, saveCheckoutNameAction } from './actions';
 import { checkoutEntriesOf, isSeparateOrder, type CheckoutState, type CheckoutViewProps, type Messages } from './checkout-types';
 
 /**
@@ -71,6 +73,28 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   const [busy, setBusy] = useState(false);
   const [snapshotReady, setSnapshotReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /* Ad eksikse ilk siparişte sorulur, native ile aynı kutu; kaydedilen ad yerelde tutulur, ki kutu sayfa yenilenmeden kapansın ve kart
+     ödemesinin fatura adı onu taşısın. */
+  const [contactName, setContactName] = useState('');
+  const [savedName, setSavedName] = useState<string | null>(null);
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
+  const customerName = savedName ?? customer.name;
+  const nameMissing = savedName === null && isNameMissing(customer);
+  const saveContact = async () => {
+    const name = contactName.trim();
+    if (savingContact || name === '') return;
+    setSavingContact(true);
+    setContactError(null);
+    const { errorKey } = await saveCheckoutNameAction(name);
+    setSavingContact(false);
+    if (errorKey) {
+      const errors = checkoutMessages[locale].contact.errors;
+      return setContactError(errors[errorKey as keyof typeof errors] ?? errors.generic);
+    }
+    setSavedName(name);
+  };
   const cardRef = useRef<CardFieldsHandle>(null);
   const [cardReady, setCardReady] = useState(false);
   const [payStage, setPayStage] = useState<PayStage | null>(null);
@@ -316,7 +340,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
         <CardFields
           ref={cardRef}
           billing={{
-            name: customer.name,
+            name: customerName,
             email: customer.email,
             phone: customer.phone,
             line1: selectedAddress.line1,
@@ -391,6 +415,14 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     },
     /** Teklif reddedildi — bir vazgeçiş değil bir BEYAN; `geo_alt_label` satırda kalır. */
     onDismissAddressNotice: () => setAddressNotice(null),
+    contact: {
+      missing: nameMissing,
+      name: contactName,
+      saving: savingContact,
+      error: contactError,
+      onChangeName: setContactName,
+      onSave: () => void saveContact(),
+    },
     onSelectDate: (date) => setState((prev) => ({ ...prev, deliveryDate: date })),
     /* Seçim SUNUCUYA gidiyor: ücret, KDV kırılımı ve toplam ona bağlı ve hiçbiri istemcide
        hesaplanmıyor. Yerel `setState` ile yetinseydik ekran seçili seçeneği gösterir ama toplam

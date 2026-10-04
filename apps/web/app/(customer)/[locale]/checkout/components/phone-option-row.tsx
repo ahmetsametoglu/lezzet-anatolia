@@ -12,6 +12,8 @@ interface PhoneOptionRowProps {
   badge?: string;
   /** Alt satır — açıklama, ücret notu ya da kapalı yolun sebebi. */
   description?: string;
+  /** Alt satırın altındaki ikinci satır, ör. adresin alıcısı ve telefonu. */
+  detail?: string;
   selected: boolean;
   /** Seçim eylemi; verilmezse satır bilgi kutusudur (bkz. künye). */
   onClick?: () => void;
@@ -26,6 +28,7 @@ export function PhoneOptionRow({
   label,
   badge,
   description,
+  detail,
   selected,
   onClick,
   disabled = false,
@@ -65,6 +68,7 @@ export function PhoneOptionRow({
           {description}
         </span>
       )}
+      {detail !== undefined && <span className="font-sans text-body-sm leading-[1.6] text-muted">{detail}</span>}
     </>
   );
 

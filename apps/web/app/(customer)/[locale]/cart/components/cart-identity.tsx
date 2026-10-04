@@ -21,7 +21,7 @@ import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { useMyAddresses } from '@/components/customer/delivery/use-my-addresses.hook';
 import addressMessages from '@lezzet/i18n/customer/address';
 import placeMessages from '@/components/customer/delivery/place-messages.json';
-import { addressLine, addressTitle } from '@lezzet/address';
+import { addressContact, addressLine, addressTitle } from '@lezzet/address';
 import { errorText } from '@/lib/customer-error-text';
 import type { DeliveryPlace, PlaceAddress } from '@/lib/delivery/place-types';
 import type { CustomerIdentity } from '@/lib/guard';
@@ -148,6 +148,7 @@ function CartAddress({ locale }: Pick<CartIdentityProps, 'locale'>) {
         address && (
           <>
             <span className="font-sans text-copy font-semibold text-ink">{addressLine(address)}</span>
+            {addressContact(address) && <span className="font-sans text-body-sm leading-[1.6] text-muted">{addressContact(address)}</span>}
             <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.note}</span>
             <TextAction label={copy.change} onClick={() => setOpen('list')} />
           </>
@@ -282,8 +283,8 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
                 {addressTitle(row)}
                 {selected && ` · ${placeMessages[locale].panelDefault}`}
               </span>
-              {/* Alıcı: kapıda kimin karşılayacağı kartta görünmeli. */}
-              <span className="truncate font-sans text-note text-ink">{row.recipient}</span>
+              {/* Alıcı ve telefonu: kapıda kimin karşılayacağı ve kuryenin kimi arayacağı kartta görünmeli. */}
+              {addressContact(row) && <span className="truncate font-sans text-note text-ink">{addressContact(row)}</span>}
               <span className="font-sans text-note leading-normal text-body">
                 {row.line1} · {row.postalCode} {row.city}
               </span>
@@ -292,7 +293,7 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
         );
       })}
 
-      {/* Gel-al (izinli müşteri): depo kartı adreslerin altında, aynı seçim dili. Seçilince şerit yerine depo notu. */}
+      {/* Gel-al (izinli müşteri): depo kartı adreslerin altında, aynı seçim dili. Seçilince bant yerine depo notu. */}
       {pickup?.warehouses.map((warehouse) => {
         const selected = warehouse.id === pickedWarehouseId;
         return (

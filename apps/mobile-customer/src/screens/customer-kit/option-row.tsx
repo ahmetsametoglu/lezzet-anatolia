@@ -15,6 +15,8 @@ interface OptionRowProps {
   badge?: string;
   /** Alt satır — açıklama, adres, ücret notu. */
   description?: string;
+  /** Alt satırın altındaki ikinci satır, ör. adresin alıcısı ve telefonu. */
+  detail?: string;
   selected: boolean;
   onPress: () => void;
   /** Satırın ikincil eylemi (kayıtlı adresi düzenlemek): kısa dokunuş seçer, uzun basma düzenler ve titreşimi ayrıdır. */
@@ -33,6 +35,7 @@ export function OptionRow({
   label,
   badge,
   description,
+  detail,
   selected,
   onPress,
   onLongPress,
@@ -50,7 +53,7 @@ export function OptionRow({
       disabled={disabled}
       selected={selected}
       style={[styles.row, selected ? styles.selected : styles.idle, disabled ? styles.disabled : undefined]}
-      accessibilityLabel={[label, badge, description].filter((part) => part !== undefined).join(' · ')}
+      accessibilityLabel={[label, badge, description, detail].filter((part) => part !== undefined).join(' · ')}
       accessibilityHint={hint}
       testID={testID}
     >
@@ -68,6 +71,7 @@ export function OptionRow({
       {description === undefined ? null : (
         <Text style={[styles.description, descriptionTone === 'danger' ? styles.dangerDescription : null]}>{description}</Text>
       )}
+      {detail === undefined ? null : <Text style={styles.description}>{detail}</Text>}
       {hint === undefined ? null : <Text style={styles.hint}>{hint}</Text>}
     </PressableSurface>
   );

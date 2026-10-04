@@ -36,11 +36,23 @@ function snapshotOf(over: Partial<CheckoutSnapshot> = {}): CheckoutSnapshot {
   return { addresses: [], delivery, shipping: null, payment, summary: null, pickup: null, ...over };
 }
 
-const OK = { cartFailed: false, cartHasBlocked: false, snapshot: snapshotOf(), addressId: 'adr-1', pointMissing: false };
+const OK = {
+  cartFailed: false,
+  cartHasBlocked: false,
+  snapshot: snapshotOf(),
+  addressId: 'adr-1',
+  pointMissing: false,
+  nameMissing: false,
+};
 
 describe('checkoutBlocker', () => {
   it('her şey yerindeyse null döner', () => {
     expect(checkoutBlocker(OK)).toBeNull();
+  });
+
+  // Adı eksik müşterinin siparişi açılabilirse kırmızıya döner: kurye kartına ve operasyona adsız sipariş düşerdi.
+  it('ad eksikse sipariş verilemez ve engel adres sorusundan önce söylenir', () => {
+    expect(checkoutBlocker({ ...OK, nameMissing: true, addressId: null })).toBe('name_missing');
   });
 
   it('okunamayan sepet her şeyin önüne geçer', () => {

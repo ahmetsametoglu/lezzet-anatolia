@@ -7,6 +7,7 @@ import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { Chip } from '@/components/customer/phone-kit/chip';
 import { ThumbStack } from '@/components/customer/phone-kit/thumb-stack';
 import { Note } from '@/components/customer/phone-kit/note';
+import { FormInputField } from '@/components/customer/form/form-input-field';
 import { PhoneOptionRow } from './components/phone-option-row';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { SummaryPanel, type SummaryRow } from '@/components/customer/phone-kit/summary-panel';
@@ -15,7 +16,7 @@ import { AppBar } from '@/components/customer/ui/app-bar';
 import { BackButton } from '@/components/customer/ui/back-button';
 import { Icon } from '@/components/customer/ui/icons';
 import { summaryCopy } from '@/components/customer/ui/summary-row';
-import { addressLine, addressTitle } from '@lezzet/address';
+import { addressContact, addressLine, addressTitle } from '@lezzet/address';
 import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
@@ -165,32 +166,37 @@ export function CheckoutMobile(props: CheckoutViewProps) {
     snapshot,
     addressId: state.addressId,
     pointMissing: servicePointMissing(state, snapshot.shipping),
+    nameMissing: props.contact.missing,
   });
   const blockText = !snapshotReady
     ? copy.block.loading
     : blocker === 'cart_unreachable'
       ? t.summary.cartUnreachable
-      : blocker === 'address_missing'
-        ? state.addressId === null
-          ? copy.block.address
-          : error !== null
-            ? copy.state.failed
-            : copy.block.loading
-        : blocker === 'undeliverable_line'
-          ? copy.block.shipping
-          : blocker === 'min_basket' && payment !== null
-            ? copy.block.minBasket.replace('{place}', payment.placeLabel).replace('{missing}', formatPrice(payment.missingForMinBasketCents, locale))
-            : blocker === 'service_point_missing'
-              ? copy.point.none
-              : blocker === 'shipping_unpriced'
-                ? shippingNotice(snapshot.shipping, copy.carrier)
-                : isRoute && delivery?.requiresDateChoice && state.deliveryDate === null
-                  ? copy.block.day
-                  : state.paymentMethod === null
-                    ? copy.block.payment
-                    : !state.termsAccepted
-                      ? copy.block.terms
-                      : null;
+      : blocker === 'name_missing'
+        ? copy.block.contact
+        : blocker === 'address_missing'
+          ? state.addressId === null
+            ? copy.block.address
+            : error !== null
+              ? copy.state.failed
+              : copy.block.loading
+          : blocker === 'undeliverable_line'
+            ? copy.block.shipping
+            : blocker === 'min_basket' && payment !== null
+              ? copy.block.minBasket
+                  .replace('{place}', payment.placeLabel)
+                  .replace('{missing}', formatPrice(payment.missingForMinBasketCents, locale))
+              : blocker === 'service_point_missing'
+                ? copy.point.none
+                : blocker === 'shipping_unpriced'
+                  ? shippingNotice(snapshot.shipping, copy.carrier)
+                  : isRoute && delivery?.requiresDateChoice && state.deliveryDate === null
+                    ? copy.block.day
+                    : state.paymentMethod === null
+                      ? copy.block.payment
+                      : !state.termsAccepted
+                        ? copy.block.terms
+                        : null;
 
   // Küçük resimler siparişin kendisini gösterir — kapsam dışı kalemin fotoğrafı "bunlar geliyor" diye okunurdu.
   // Paketler önce (native'in sırası).
@@ -211,6 +217,26 @@ export function CheckoutMobile(props: CheckoutViewProps) {
         {/* Üç bölüm seçili adresin cevabı ve istemcide çözülüyor: bitmeden iskelet (native `CheckoutSkeleton`). */}
         {snapshotReady ? (
           <>
+            {/* Ad kutusu yalnız ad eksikken ve en üstte, native'in sırası; neden sorulduğu alanın önünde yazılı. */}
+            {props.contact.missing && (
+              <section className="flex flex-col gap-2">
+                <Eyebrow text={copy.contact.eyebrow} />
+                <p className="font-sans text-body-sm leading-[1.6] text-muted">{copy.contact.reason}</p>
+                <FormInputField
+                  label={copy.contact.name}
+                  value={props.contact.name}
+                  onChange={(event) => props.contact.onChangeName(event.target.value)}
+                  autoComplete="name"
+                />
+                {props.contact.error !== null && <Note tone="error" description={props.contact.error} />}
+                <PrimaryButton
+                  label={props.contact.saving ? copy.contact.saving : copy.contact.save}
+                  onClick={props.contact.onSave}
+                  disabled={props.contact.saving || props.contact.name.trim() === ''}
+                />
+              </section>
+            )}
+
             <section className="flex flex-col gap-2">
               <Eyebrow text={copy.address.eyebrow} />
               {pickedWarehouse ? (
@@ -234,6 +260,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                 <PhoneOptionRow
                   label={addressTitle(selectedAddress)}
                   description={addressLine(selectedAddress)}
+                  detail={addressContact(selectedAddress) ?? undefined}
                   selected
                   trailing={<TextAction label={copy.address.change} href="/cart" />}
                 />

@@ -25,7 +25,8 @@ import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { hapticError, hapticSuccess } from '@lezzet/mobile-kit/src/lib/haptics/haptics';
 import { presentPayment } from '@/lib/payment/payment-sheet';
-import { addressLine, addressTitle } from '@lezzet/address';
+import { addressContact, addressLine, addressTitle } from '@lezzet/address';
+import { isNameMissing } from '@lezzet/domain-core';
 import { cartLineId, refreshCart, useCart } from '@/screens/customer-kit/cart-store';
 import { selectDeliveryAddress, useSelectedDeliveryAddress, useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { discountSummaryOf, orderDiscountSummaryOf } from '@/screens/customer-kit/discount-label';
@@ -33,7 +34,6 @@ import { OptionRow } from '@/screens/customer-kit/option-row';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { publishMe, useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { formatDeliveryDate } from '@/screens/orders/order-format';
-import { isNameMissing, isPhoneMissing } from '@/screens/customer-kit/profile-gaps';
 import { newOrderKey } from './order-key';
 import { deliveryLabelOf, rejectionMessage } from './order-result-copy';
 import { CheckoutSkeleton } from './checkout-skeleton';
@@ -107,10 +107,9 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     return pendingCheck.current.result;
   }, []);
 
-  /* Ad ve telefon girişte değil ilk siparişte istenir: kimliğini yeni kuran kişiden künye istemek bir bedeldir, siparişte ise
-     karşılığı görünür. Yazım ayrı adım, çünkü `phone_invalid` gibi retler siparişin değil künyenin sorunudur. */
+  /* Ad girişte değil ilk siparişte istenir: kimliğini yeni kuran kişiden künye istemek bir bedeldir, siparişte ise karşılığı görünür.
+     Telefon sorulmaz, çünkü kurye adresteki zorunlu telefonu arar. */
   const [contactName, setContactName] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
   const [savingContact, setSavingContact] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
 
@@ -380,22 +379,14 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     ...orderedLines.map((line) => ({ key: cartLineId(line), name: line.name, image: line.image })),
   ].slice(0, 4);
 
-  /* YALNIZ EKSİK OLAN ALAN ÇİZİLİR — dolu olanı yeniden sormak, müşteriye zaten verdiği bilgiyi
-     tekrar yazdırmaktır. Bu aynı zamanda "mevcut değeri forma doldurma" işini gereksiz kılıyor:
-     çizilen alan her zaman boştur. */
-  const nameMissing = customer !== null && isNameMissing(customer);
-  const phoneMissing = customer !== null && isPhoneMissing(customer);
-  const contactMissing = nameMissing || phoneMissing;
+  // Kutu yalnız ad eksikken çizilir; dolu adı yeniden sormak müşteriye verdiği bilgiyi tekrar yazdırmak olurdu.
+  const contactMissing = customer !== null && isNameMissing(customer);
 
   const saveContact = (): void => {
     if (savingContact) return;
     setContactError(null);
     setSavingContact(true);
-    void updateMe({
-      // Gönderilmeyen alana DOKUNULMAZ (`MeUpdateSchema` künyesi) — dolu olan alanı boşuna yazmayız.
-      ...(nameMissing ? { name: contactName.trim() } : {}),
-      ...(phoneMissing ? { phone: contactPhone.trim() } : {}),
-    }).then((result) => {
+    void updateMe({ name: contactName.trim() }).then((result) => {
       setSavingContact(false);
       if (result.error !== null) {
         // Adlı retler sözleşmede anahtar, cümle burada (`MeUpdateErrorEnum`); tanınmayan anahtar
@@ -411,8 +402,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /** Onayı engelleyen İLK sebep; yoksa `null`. Sıra şablonun sırası, gerçekler sunucunun. */
   const blockReason = (): string | null => {
     if (customer === null) return t.block.login;
-    /* İletişim künyesi zorunlu: numara olmadan kurye kapıda ulaşamaz. Engel adres kontrolünden önce, çünkü bölüm de ekranın en
-       üstünde ve söylenen sıra uygulanan sıra olmalı. */
+    // Ad zorunlu; engel adres kontrolünden önce, çünkü bölüm de ekranın en üstünde ve söylenen sıra uygulanan sıra olmalı.
     if (contactMissing) return t.block.contact;
     // Okuma düştüyse onay KAPALI ve sebep açıkça söylenir: "seçenekleriniz güncelleniyor" demek,
     // bitmeyecek bir bekleyiş vaat etmek olurdu (yukarıda ayrıca "yeniden dene" duruyor).
@@ -645,28 +635,15 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
               <View style={styles.section} testID="checkout-contact">
                 <Text style={styles.eyebrow}>{upperIn(t.contact.eyebrow, locale)}</Text>
                 <Text style={styles.contactReason}>{t.contact.reason}</Text>
-                {nameMissing ? (
-                  <TextField
-                    label={t.contact.name}
-                    accessibilityLabel={t.contact.name}
-                    value={contactName}
-                    onChangeText={setContactName}
-                    // `content` tek kavram, üç RN prop'una açılıyor (kitin künyesi): otomatik
-                    // doldurma, klavye ve büyük harf davranışı buradan geliyor.
-                    content="name"
-                    testID="checkout-contact-name"
-                  />
-                ) : null}
-                {phoneMissing ? (
-                  <TextField
-                    label={t.contact.phone}
-                    accessibilityLabel={t.contact.phone}
-                    value={contactPhone}
-                    onChangeText={setContactPhone}
-                    content="tel"
-                    testID="checkout-contact-phone"
-                  />
-                ) : null}
+                <TextField
+                  label={t.contact.name}
+                  accessibilityLabel={t.contact.name}
+                  value={contactName}
+                  onChangeText={setContactName}
+                  // `content` otomatik doldurma, klavye ve büyük harf davranışını birlikte kurar (kitin künyesi).
+                  content="name"
+                  testID="checkout-contact-name"
+                />
                 {contactError === null ? null : (
                   <Note tone="terracotta" description={contactError} testID="checkout-contact-error" />
                 )}
@@ -674,13 +651,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   label={savingContact ? t.contact.saving : t.contact.save}
                   shape="pill"
                   onPress={saveContact}
-                  /* Boş alanla yazım denemesi yapılmaz: sunucu zaten `name_required` derdi ama bir
-                     tur ağ gidip gelmesi, dokunduğu anda anlaşılabilecek bir şey için. */
-                  disabled={
-                    savingContact ||
-                    (nameMissing && contactName.trim() === '') ||
-                    (phoneMissing && contactPhone.trim() === '')
-                  }
+                  // Boş alanla yazım denenmez: sunucu `name_required` derdi, ama bu dokunduğu anda anlaşılabilecek bir şey.
+                  disabled={savingContact || contactName.trim() === ''}
                   testID="checkout-contact-save"
                 />
               </View>
@@ -710,6 +682,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   <OptionRow
                     label={addressTitle(selectedAddress)}
                     description={addressLine(selectedAddress)}
+                    detail={addressContact(selectedAddress) ?? undefined}
                     selected
                     onPress={router.back}
                     trailing={<TextAction label={t.address.change} onPress={router.back} testID="checkout-address-change" />}

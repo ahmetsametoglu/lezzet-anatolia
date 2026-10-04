@@ -33,7 +33,7 @@ import {
 } from '@/screens/customer-kit/cart-store';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
-import { addressLine } from '@lezzet/address';
+import { addressContact, addressLine } from '@lezzet/address';
 import { useSelectedPickupWarehouse } from '@/screens/customer-kit/delivery-address-store';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { NewAddressSheet, PlaceSheet } from '@/screens/customer-kit/place-sheet';
@@ -436,6 +436,7 @@ export function CartScreen() {
           <View style={styles.place}>
             <Text style={styles.placeEyebrow}>{t.address.eyebrow}</Text>
             <Text style={styles.placeLine}>{addressLine(deliveryAddress)}</Text>
+            {addressContact(deliveryAddress) === null ? null : <Text style={styles.placeNote}>{addressContact(deliveryAddress)}</Text>}
             <Text style={styles.placeNote}>{t.address.note}</Text>
             <TextAction
               label={t.address.change}

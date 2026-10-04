@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { addressTitle } from '@lezzet/address';
+import { addressContact, addressTitle } from '@lezzet/address';
 import type { Address } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
@@ -143,6 +143,7 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
                   <span className="font-sans text-note text-body">
                     {row.postalCode} {row.city}
                   </span>
+                  {addressContact(row) && <span className="truncate font-sans text-note text-body">{addressContact(row)}</span>}
                 </button>
                 <button
                   type="button"

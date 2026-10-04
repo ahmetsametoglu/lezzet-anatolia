@@ -15,7 +15,7 @@ import type { PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
 import { readSelectedPickupWarehouseId } from '@/lib/delivery/read-place';
-import { checkAddressForCustomer, type AddressCheckOutcome } from '@lezzet/application';
+import { checkAddressForCustomer, updateCustomerProfile, type AddressCheckOutcome } from '@lezzet/application';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import type { ServicePointsResult } from './checkout-types';
 import { formatPrice } from '@/lib/storefront/format';
@@ -93,6 +93,23 @@ export async function loadServicePointsAction(addressId: string, carrierCodes: s
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
     return { data: await checkoutServicePoints(serviceDb(), { customerId, addressId, carrierCodes }), errorKey: null };
+  } catch (err) {
+    return { data: null, errorKey: customerErrorKey(err) };
+  }
+}
+
+/**
+ * Adı eksik müşterinin adını yazar; ad ilk siparişte sorulur, çünkü e-posta koduyla açılan hesapta ad hiç dolmaz. Kural native uçla ortak
+ * kapıdadır (`updateCustomerProfile`).
+ */
+export async function saveCheckoutNameAction(name: string): Promise<CustomerResult<true>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+
+    const result = await updateCustomerProfile(serviceDb(), { profileId: customerId, name });
+    if (result.status !== 'ok') throw new CustomerError(result.status);
+    return { data: true, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
