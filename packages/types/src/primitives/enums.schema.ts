@@ -317,8 +317,8 @@ export const PointsReasonEnum = z.enum([
 export type PointsReason = z.infer<typeof PointsReasonEnum>;
 
 /**
- * Davetin gittiği kanal (17.2). Müşterinin tercih ettiği kanal değil, DAVETİN kanalı: hangisinin
- * daha çok tamamlandığını bilmek, kanalları karşılaştırmanın tek yolu.
+ * Davetin gittiği kanal; müşterinin tercih ettiği kanal değil, çünkü hangi kanalın daha çok tamamlandığı ancak davetin kanalından
+ * okunur.
  */
 export const FeedbackChannelEnum = z.enum(['email', 'whatsapp']);
 export type FeedbackChannel = z.infer<typeof FeedbackChannelEnum>;
@@ -331,8 +331,8 @@ export const ErrorLogLevelEnum = z.enum(['warning', 'error', 'fatal']);
 export type ErrorLogLevel = z.infer<typeof ErrorLogLevelEnum>;
 
 /**
- * Sistem sağlığı hükmü (18.5 · `0008_observability.sql`) — eşiklerden TÜRETİLİR, elle yazılmaz.
- * `crit` = servis/kaynak arızası · `warn` = baskı altında · `ok` = rahat.
+ * Sistem sağlığı hükmü (`0008_observability.sql`); eşiklerden türetilir, elle yazılmaz. `crit` servis ya da kaynak arızası, `warn`
+ * baskı altında, `ok` rahat.
  */
 export const HealthStatusEnum = z.enum(['ok', 'warn', 'crit']);
 export type HealthStatus = z.infer<typeof HealthStatusEnum>;
