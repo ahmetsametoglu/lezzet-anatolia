@@ -72,6 +72,8 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
   const trackable = (order.shipment?.parcels ?? []).filter(
     (parcel): parcel is typeof parcel & { trackingUrl: string } => parcel.trackingUrl !== null,
   );
+  // Kargodaki siparişi taşıyıcı taşır; "kurye bölgenizde" notu yalnız kurye seferinde doğrudur.
+  const timelineNotes = order.deliveryType === 'shipping' ? { ...d.note, on_the_way: d.onTheWayShipping } : d.note;
 
   return (
     <div className="flex flex-col gap-4 px-4.5 pt-4.5 pb-7.5">
@@ -82,7 +84,12 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
       {order.timeline === null ? (
         <Note tone={order.status === 'cancelled' ? 'error' : 'terracotta'} description={order.status === 'cancelled' ? d.cancelled : d.returning} />
       ) : (
-        <PhoneOrderTimeline steps={order.timeline} labels={d.milestone} notes={d.note} formatAt={(iso) => formatStamp(iso, locale)} />
+        <PhoneOrderTimeline
+          steps={order.timeline}
+          labels={d.milestone}
+          notes={timelineNotes}
+          formatAt={(iso) => formatStamp(iso, locale)}
+        />
       )}
 
       <section className="flex flex-col gap-2">

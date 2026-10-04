@@ -142,8 +142,7 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
   }
 
   const address = detail.address;
-  /* Gel-al'da adres satırı DEPONUN adresidir (müşteri oraya gider) ve yanına randevu numarası yazılır; fatura adresi çizilmez.
-     Web telefon görünümünün aynı kararı. */
+  /* Gel-al'da adres satırı DEPONUN adresidir (müşteri oraya gider) ve yanına randevu numarası yazılır; fatura adresi çizilmez. */
   const addressLine = detail.pickup
     ? `${detail.pickup.warehouseName}, ${detail.pickup.addressLine} · ${t.detail.pickupPhone.replace('{phone}', detail.pickup.phoneDisplay)}`
     : address === null
@@ -174,8 +173,7 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
     {
       key: 'delivery',
       label: t.detail.delivery,
-      // Teslim türü + (varsa) gün. Gün yoksa TÜR YALNIZ BAŞINA yazılır: kargoda teslim günü
-      // taşıyıcının işidir ve biz söz veremeyiz (web'in aynı kararı).
+      // Gün yoksa tür yalnız başına yazılır, çünkü kargoda teslim günü taşıyıcının işidir ve söz verilmez.
       value: [
         detail.deliveryType === 'route' ? t.detail.deliveryRoute : detail.deliveryType === 'shipping' ? t.detail.deliveryShipping : t.detail.deliveryPickup,
         detail.deliveryDate === null ? null : formatDeliveryDate(detail.deliveryDate, locale),
@@ -230,6 +228,8 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
   const trackable = (detail.shipment?.parcels ?? []).filter(
     (parcel): parcel is typeof parcel & { trackingUrl: string } => parcel.trackingUrl !== null,
   );
+  // Kargodaki siparişi taşıyıcı taşır; "kurye bölgenizde" notu yalnız kurye seferinde doğrudur.
+  const timelineNotes = detail.deliveryType === 'shipping' ? { ...t.detail.note, on_the_way: t.detail.onTheWayShipping } : t.detail.note;
 
   return (
     <View style={styles.screen} testID="order-detail">
@@ -251,7 +251,7 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
           <OrderTimeline
             steps={detail.timeline}
             labels={t.detail.milestone}
-            notes={t.detail.note}
+            notes={timelineNotes}
             formatAt={(iso) => formatStamp(iso, locale)}
             testID="order-timeline"
           />

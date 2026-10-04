@@ -98,6 +98,7 @@
         "on_the_way": "Kurye bölgenizde — kapınıza yaklaşıyor",
         "ready_for_pickup": "Siparişiniz depoda hazır — saati telefonla kararlaştırıp alabilirsiniz"
       },
+      "onTheWayShipping": "Siparişiniz kargoya verildi — taşıyıcı adresinize getiriyor",
       "feedback": {
         "title": "Aldığınız ürünlere yorum yazın",
         "body": "Birkaç dokunuşla değerlendirin — {points} puan kazanın ve bir sonraki alışverişinizde kullanın.",
@@ -214,6 +215,7 @@
         "on_the_way": "Le livreur est dans votre quartier",
         "ready_for_pickup": "Votre commande vous attend à l'entrepôt — convenez de l'heure par téléphone"
       },
+      "onTheWayShipping": "Votre commande a été remise au transporteur",
       "feedback": {
         "title": "Donnez votre avis sur vos produits",
         "body": "Quelques gestes suffisent — gagnez {points} points à utiliser lors de votre prochaine commande.",
@@ -330,6 +332,7 @@
         "on_the_way": "Der Fahrer ist in Ihrer Nähe",
         "ready_for_pickup": "Ihre Bestellung liegt im Lager bereit – vereinbaren Sie die Uhrzeit telefonisch"
       },
+      "onTheWayShipping": "Ihre Bestellung wurde an den Versanddienstleister übergeben",
       "feedback": {
         "title": "Bewerten Sie Ihre Produkte",
         "body": "Ein paar Fingertipps genügen – sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",

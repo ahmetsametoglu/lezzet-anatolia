@@ -249,3 +249,28 @@ describe('sipariş detayı · tekrar sipariş', () => {
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/cart'));
   });
 });
+
+describe('sipariş detayı · yoldaki sipariş', () => {
+  const yoldaCizgi: MeOrderDetail['timeline'] = [
+    { milestone: 'received', state: 'done', at: '2026-08-20T10:00:00Z' },
+    { milestone: 'prepared', state: 'done', at: null },
+    { milestone: 'on_the_way', state: 'current', at: '2026-08-21T09:00:00Z' },
+    { milestone: 'delivered', state: 'pending', at: null },
+  ];
+
+  // Kargo da "yolda" sayıldığı için ayrım düşerse taşıyıcıdaki koliye kurye haritası ve "kurye bölgenizde" notu çıkar.
+  it('kargoda kurye haritası ve kurye notu yok, kargo notu var', async () => {
+    await renderScreen(null, { status: 'on_the_way', active: true, deliveryType: 'shipping', timeline: yoldaCizgi });
+
+    expect(screen.queryByTestId('order-map')).toBeNull();
+    expect(screen.getByText(t.onTheWayShipping)).toBeOnTheScreen();
+    expect(screen.queryByText(t.note.on_the_way)).toBeNull();
+  });
+
+  it('kurye seferinde harita ve kurye notu görünür', async () => {
+    await renderScreen(null, { status: 'on_the_way', active: true, deliveryType: 'route', timeline: yoldaCizgi });
+
+    expect(screen.getByTestId('order-map')).toBeOnTheScreen();
+    expect(screen.getByText(t.note.on_the_way)).toBeOnTheScreen();
+  });
+});
