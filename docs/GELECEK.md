@@ -37,6 +37,9 @@ bağlanmaz. Satır = kimlik + ne + neden; ele alınmaya karar verilince satır `
 
 - (15.24) **Sohbet hunisi — platform verimliliği:** hangi sosyal platformun daha verimli olduğunu görmek için gün × platform
   özeti — açılan sohbet · sepet kurulan sohbet · gönderilen bağlantı · açılan bağlantı · sipariş · ciro; analitik ekranına bölüm.
+- (K.67) **Çok depolu düzende sohbeti kim cevaplar:** bütün depoların müşterileri tek WhatsApp numarasına yazıyor (Strasbourg'da
+  iki işin iki deposu, ileride başka şehirler). Mesajı posta koduna göre ilgili deponun çalışanı mı, yoksa merkezde biri mi
+  cevaplayacak; karar verilince sohbetin ve bildiriminin kime gideceği buna göre kurulur.
 - (MB-44) **B2B'de fatura e-postasının ayrı verilebilmesi:** bugün hesap e-postası her şeye gidiyor (karar maili, fatura,
   bildirim); muhasebede yetkili adresi ile fatura adresi genelde ayrıdır. Dokunacağı yer: profil künyesi (ikinci bir adres
   alanı) ve maili gönderen taraf; başvuru formu değil.
