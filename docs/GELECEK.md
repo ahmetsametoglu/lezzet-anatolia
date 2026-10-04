@@ -18,6 +18,9 @@ bağlanmaz. Satır = kimlik + ne + neden; ele alınmaya karar verilince satır `
 - (K.38) **Rota dışına soğuk zincir ekspres kargo** — araştırılacak.
 - (K.39) **Kuryenin telefonunda harita ve akıllı rota.**
 - (K.40) **Otomatik taşıyıcı seçiminde onaylı liste ve azami teslim süresi.**
+- (K.66) **Müşterinin kurye haritasında teslim sırası ve tahmini süre:** harita bugün yalnız "Kurye yolda" der. Sıra sefer
+  planından okunabilir, ama kuryenin plana ne kadar uyduğu ölçülmedi; ilk gerçek seferlerden sonra planlanan sıra gerçek teslim
+  sırasıyla karşılaştırılıp karar verilir.
 
 ## Fiyat ve indirim
 

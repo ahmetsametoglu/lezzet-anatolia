@@ -1,5 +1,6 @@
 'use client';
 
+import { isCourierOnTheWay } from '@lezzet/domain-core';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import ordersMessages from '@lezzet/i18n/customer/orders';
 import { CirclePhoto } from '@/components/customer/phone-kit/circle-photo';
@@ -19,15 +20,12 @@ import { paymentKeyOf, type DetailViewProps } from './detail-types';
 
 type OrdersCopy = LocalizedCopy<typeof ordersMessages>;
 
-/**
- * Sipariş detayının telefon görünümü, native sipariş detayının ikizi; tekrar sipariş ve eksik karşılamanın iade notu web'e
- * özgü. Gel-al siparişinde teslim türü yazılmaz, çünkü iki sözlükte de karşılığı yok ve "kargoyla" demek yanlış olur.
- */
+/** Sipariş detayının telefon görünümü, native sipariş detayının ikizi; eksik karşılamanın iade notu web'e özgü. */
 export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewProps) {
   const copy = ordersMessages[locale];
   const d = copy.detail;
 
-  // Teslim türü + (varsa) gün. Gün yoksa tür yalnız başına: kargoda teslim günü taşıyıcının işidir (native'in kararı).
+  // Gün yoksa tür yalnız başına yazılır, çünkü kargoda teslim günü taşıyıcının işidir.
   const kind =
     order.deliveryType === 'route' ? d.deliveryRoute : order.deliveryType === 'shipping' ? d.deliveryShipping : order.pickup ? d.deliveryPickup : null;
   const delivery = [kind, order.deliveryDate === null ? null : formatDeliveryDate(order.deliveryDate, locale)].filter(Boolean).join(' — ');
@@ -77,9 +75,8 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
 
   return (
     <div className="flex flex-col gap-4 px-4.5 pt-4.5 pb-7.5">
-      {/* Harita YALNIZ kurye yoldayken: durmuş bir siparişin üstünde hareketli bir takip görüntüsü, olmayan bir şeyi
-          oluyormuş gibi gösterirdi. */}
-      {order.status === 'on_the_way' && <PhoneDeliveryMap trackingLabel={d.tracking} liveLabel={d.trackingLive} />}
+      {/* Harita yalnız kurye seferi yoldayken: durmuş siparişin üstündeki takip görüntüsü olmayan bir hareketi gösterirdi. */}
+      {isCourierOnTheWay(order.status, order.deliveryType) && <PhoneDeliveryMap trackingLabel={d.tracking} />}
 
       {/* Çizgi mi tek blok mu — kararı MOTOR veriyor (`timeline === null` ⇒ iptal/iade). */}
       {order.timeline === null ? (
@@ -140,9 +137,8 @@ interface ItemRowProps {
 }
 
 /**
- * Kalem satırı (native `itemRow`) — 46'lık küçük resim · "2× ad" · ikinci ses (paket içeriği ya da boy + eksik) · tutar.
- * Eksik varsa tutar sütunu iki sayı: üstte sipariş edilenin tutarı ÜSTÜ ÇİZİLİ, altında ödenecek — para çözümü cümleye
- * gerek kalmadan okunur; sipariş edilenin tutarı sözleşmeden türer (`lineTotalCents + shortfallCents`).
+ * Eksik varsa tutar sütunu iki sayıdır, sipariş edilenin tutarı üstü çizili ve altında ödenecek olan; para çözümü böylece cümlesiz
+ * okunur. Sipariş edilenin tutarı sözleşmeden türer (`lineTotalCents + shortfallCents`), ayrı bir alan aynı gerçeğin ikinci kaynağı olurdu.
  */
 function ItemRow({ copy, locale, line }: ItemRowProps) {
   const d = copy.detail;

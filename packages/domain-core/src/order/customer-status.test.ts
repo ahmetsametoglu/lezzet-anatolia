@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { OrderStatusEnum } from '@lezzet/types';
-import { customerOrderStatus, isActiveForCustomer, isFulfilmentKnown, orderTimeline } from './customer-status';
+import { customerOrderStatus, isActiveForCustomer, isCourierOnTheWay, isFulfilmentKnown, orderTimeline } from './customer-status';
 
 describe('customerOrderStatus', () => {
   it('iç durumların HEPSİ bir karara bağlanır — yeni durum eklenince burası patlar', () => {
@@ -64,6 +64,15 @@ describe('isActiveForCustomer', () => {
     expect(isActiveForCustomer('cancelled')).toBe(false);
     // İadede topu biz taşıyoruz; yeşil çerçeve "yolda" beklentisi yaratırdı.
     expect(isActiveForCustomer('returning')).toBe(false);
+  });
+});
+
+describe('isCourierOnTheWay', () => {
+  // Ayrım düşerse taşıyıcıdaki koliye kurye haritası çizilir; bu test o hâlde kırmızıya döner.
+  it('yalnız kurye seferinde ve yoldayken kurye yolda sayılır', () => {
+    expect(isCourierOnTheWay('on_the_way', 'route')).toBe(true);
+    expect(isCourierOnTheWay('on_the_way', 'shipping')).toBe(false);
+    expect(isCourierOnTheWay('preparing', 'route')).toBe(false);
   });
 });
 

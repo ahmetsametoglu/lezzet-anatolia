@@ -1,3 +1,4 @@
+import { isCourierOnTheWay } from '@lezzet/domain-core';
 import { formatPrice } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
@@ -234,10 +235,9 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
     <View style={styles.screen} testID="order-detail">
       {appBar(<OrderStatusTag status={detail.status} label={t.status[detail.status]} testID="order-status" />)}
       <ScrollView contentContainerStyle={styles.content} testID="order-scroll">
-        {/* Harita YALNIZ kurye yoldayken: durmuş bir siparişin üstünde hareketli bir takip
-            görüntüsü, olmayan bir şeyi oluyormuş gibi gösterirdi. */}
-        {detail.status === 'on_the_way' ? (
-          <DeliveryMap trackingLabel={t.detail.tracking} liveLabel={t.detail.trackingLive} testID="order-map" />
+        {/* Harita yalnız kurye seferi yoldayken: durmuş siparişin üstündeki takip görüntüsü olmayan bir hareketi gösterirdi. */}
+        {isCourierOnTheWay(detail.status, detail.deliveryType) ? (
+          <DeliveryMap trackingLabel={t.detail.tracking} testID="order-map" />
         ) : null}
 
         {/* Çizgi mi tek blok mu — kararı MOTOR veriyor (`timeline === null` ⇒ iptal/iade). */}

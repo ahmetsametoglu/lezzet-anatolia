@@ -40,6 +40,11 @@ export function isActiveForCustomer(status: CustomerOrderStatus): boolean {
   return status === 'received' || status === 'preparing' || status === 'ready_for_pickup' || status === 'on_the_way';
 }
 
+/** Kurye seferi yolda mı: kargo da taşıyıcıya verilince `on_the_way` olur, ama onu taşıyıcı taşır ve takibi koli bağlantısındadır. */
+export function isCourierOnTheWay(status: CustomerOrderStatus, deliveryType: DeliveryType): boolean {
+  return status === 'on_the_way' && deliveryType === 'route';
+}
+
 /**
  * `fulfilled_qty` bir ölçüm mü: hazırlık onayına kadar kolon yazılmamış bir `0`dır ve "hiçbiri gönderilmedi" demez. Eşik
  * `ready`, çünkü onay orada yazılır; ölçüm yoksa okuyan taraf `qty`ye düşer.
@@ -70,12 +75,8 @@ export interface OrderTimelineStep {
   milestone: OrderMilestone;
   state: 'done' | 'current' | 'pending';
   /**
-   * Adımın gerçekleştiği an — **kaydı yoksa `null`.**
-   *
-   * Ayrım şu: **durum çıkarsanabilir, damga çıkarsanamaz.** Sipariş yoldaysa hazırlandığı
-   * kesindir (hazırlanmamış sipariş yola çıkmaz), o yüzden adım `done` işaretlenir. Ama "ne zaman
-   * hazırlandı" sorusunun cevabı yoksa uydurulmaz — ekran o adımın altına saat yazmaz.
-   * (CLAUDE.md §1: ölçülemeyen değer sıfır değildir; burada da tarih değildir.)
+   * Adımın gerçekleştiği an; kaydı yoksa `null`, çünkü durum çıkarsanabilir ama damga çıkarsanamaz. Yoldaki siparişin hazırlandığı
+   * kesindir ve adım `done` olur, ama ne zaman hazırlandığı uydurulmaz.
    */
   at: string | null;
 }
