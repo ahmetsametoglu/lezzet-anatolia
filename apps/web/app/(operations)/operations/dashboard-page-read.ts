@@ -13,6 +13,7 @@ import {
 } from '@lezzet/database';
 import { countOverduePickups, readFacilityVanSummary } from '@lezzet/application';
 import { PICKUP_WAIT_DAYS_DEFAULT, PICKUP_WAIT_DAYS_KEY } from '@lezzet/domain-core';
+import { BUSINESS_TIME_ZONE, parisDateOf, parisMinutesOf } from '@lezzet/helper';
 import type { Order, OrderStatus, TicketStatus } from '@lezzet/types';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import { stockLink } from './stock/stock-url';
@@ -36,26 +37,8 @@ import type { DashboardData, DeliveryRouteView, VanLoadBandView } from './dashbo
 
 type Db = ReturnType<typeof serviceDb>;
 
-// Panel (09.3) — SUNUCU okuması. Dönüştürücüler `dashboard-read`te (saf, istemciye girer); DB'ye
-// dokunan her şey burada kalır (`warehouses/page.tsx` künyesindeki ölçülmüş kural).
-//
-// ── SORGU SAYISI SATIRLA ÇARPMAZ ─────────────────────────────────────────────
-// Bugünün siparişleri TEK sayfada okunur (`DAY_ORDER_LIMIT`) ve o küme dört bölümü birden besler:
-// duraklar · depo nabzı · akışın hazırlık notu · teslim edilemeyen sayacı. Aynı satırları dört kez
-// sormak yerine bir kez okuyup dört soru soruyoruz — panel gün içinde sık sık açılıyor (`§7`).
-//
-// ── EŞİK SAATLERİ AYARDAN ────────────────────────────────────────────────────
-// Dört eşik `settings`ten okunur. Ayar yoksa **makul varsayılan** devreye girer (`CLAUDE §4`):
-// panelin `db:refresh` beklemeden çalışması için.
-//
-// **Varsayılanlar ARTIK BURADA DEĞİL** (`lib/settings/day-hours`): aynı dört saati Ayarlar sözlüğü
-// (fabrika değeri) ve rota kurulumu (rota başına düzenleme) da okuyor. Değerler burada da yazılıydı
-// ve ayrışsalardı panel bir saati, sistem başkasını uygulardı — hiçbir hata vermeden (`CLAUDE §1`).
-//
-// Okuma yolu (`readThresholds`) burada KALIYOR ve bu bilinçli: `readDayHours` bir saatin NEREDEN
-// geldiğini de söylüyor (rotaya mı yazılı, genel mi) — o ayrım rota ekranının sorusu, panelin değil.
-// Panel yalnız yürürlükteki değeri istiyor ve `get()` üzerinden okuduğu için 30 sn'lik ayar
-// önbelleğinden yararlanıyor; panel gün içinde sık açılıyor (`§7`).
+// Panelin sunucu okuması: dönüştürücüler `dashboard-read`te (saf, istemciye girer), DB'ye dokunan her şey burada. Günün siparişleri tek
+// sayfada okunup dört bölümü birden besler, eşik saatleri ayardan gelir (varsayılanları `lib/settings/day-hours`te).
 
 /** Günün siparişi bir tesiste yüzlerle ölçülmez; tavan kaçak bir güvence, ekranın sözü değil. */
 const DAY_ORDER_LIMIT = 300;
@@ -73,10 +56,10 @@ const PREPARED: ReadonlySet<OrderStatus> = new Set<OrderStatus>(['ready', 'out_f
 /** Gün listesinden düşenler: iptal ve taslak bir iş değildir, sayılırsa gün olduğundan yoğun görünür. */
 const OUT_OF_DAY: ReadonlySet<OrderStatus> = new Set<OrderStatus>(['draft', 'cancelled']);
 
+/** Paris takviminde `days` gün ötesi (`YYYY-MM-DD`): sunucu UTC'de koşar, işletmenin günü ise Paris'tedir. */
 function dayOffset(base: Date, days: number): string {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  const [year, month, day] = parisDateOf(base).split('-').map(Number) as [number, number, number];
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
 export async function readDashboard(db: Db, now = new Date()): Promise<DashboardData> {
@@ -84,7 +67,7 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
   const profileSvc = new UserProfileService(db);
   const settings = new SettingsService(db);
 
-  // Bağlam ÖNCE: sayaçların, listenin ve nabzın evrenini o belirliyor (19.14).
+  // Bağlam önce okunur: sayaçların, listenin ve nabzın evrenini o belirler.
   const ctx = await readWarehouseContext();
   const warehouseIds = ctx.warehouseIds;
 
@@ -96,22 +79,13 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
   // saatleri buradan türüyor. Pasif bölge de geliyor — bugüne siparişi varsa nabızda görünmeli.
   const allZones = await new DeliveryZoneService(db).listWithCodes();
 
-  /**
-   * **Depo bağlamı gün akışına da uygulanır** (kullanıcı isteği 18.08: *"o depoyu seçince o depo ile
-   * alakalı bilgileri panele yerleştirebilirsin"*).
-   *
-   * Ölçülmüş arızaydı: seçici siparişleri süzüyordu (`warehouseIds` her sorguya gidiyor) ama eşik
-   * saatleri HER deponun HER rotasından hesaplanıyordu — Strasbourg seçiliyken akışta Colmar'ın
-   * kesimi görünebiliyordu. Eksikliği "en erken saat" toplaması gizliyordu: tek sayı gösterildiği
-   * için hangi rotadan geldiği okunamıyordu.
-   *
-   * Kapsam `null` ise (tüm depolar) süzgeç uygulanmaz — bugünkü davranış aynen korunur.
-   */
+  /** Depo bağlamı gün akışına da uygulanır, yoksa bir tesis seçiliyken akışta başka tesisin rota kesimi görünürdü; kapsam `null` ise süzgeç yok. */
   const zones = warehouseIds ? allZones.filter((z) => warehouseIds.includes(z.warehouseId)) : allZones;
   const zoneRefs: ZoneRef[] = zones.map((z) => ({ id: z.id, name: z.name }));
 
-  // `getDay()` pazarı 0 verir, veri modeli ISO 1-7 kullanıyor (`delivery_zone.weekdays`).
-  const isoWeekday = now.getDay() === 0 ? 7 : now.getDay();
+  // Haftanın günü Paris tarihinden; `getUTCDay()` pazarı 0 verir, veri modeli ISO 1-7 kullanır (`delivery_zone.weekdays`).
+  const weekday = new Date(`${today}T00:00:00.000Z`).getUTCDay();
+  const isoWeekday = weekday === 0 ? 7 : weekday;
 
   const [times, todayCounts, yesterdayCounts, openCounts, dayPage, revenueRows, termDays, labels, ticketCounts, proposalCount] =
     await Promise.all([
@@ -153,7 +127,7 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
     dayOrders.map((o) => o.id),
   );
 
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowMinutes = parisMinutesOf(now);
   const flow = buildRouteFlow(routeFlowFacts(dayOrders, { zones, labels, times, isoWeekday }), { nowMinutes });
 
   const queue = buildQueue(queueFacts({ overdue, openTickets: ticketCounts }));
@@ -167,17 +141,14 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
   return {
     now: {
       iso: now.toISOString(),
-      label: now.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' }),
-      time: now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+      label: now.toLocaleDateString('tr-TR', { timeZone: BUSINESS_TIME_ZONE, weekday: 'long', day: 'numeric', month: 'long' }),
+      time: now.toLocaleTimeString('tr-TR', { timeZone: BUSINESS_TIME_ZONE, hour: '2-digit', minute: '2-digit' }),
     },
     scopeLabel: scopeLabelOf(ctx),
     band: buildBand({ flow, queue, overduePickups }),
     kpis: buildKpis({
       orders: {
-        /* İPTAL HARİÇ (21.265): kartın başlığı `total`dan geliyordu (iptal DÂHİL) ama hemen
-           altındaki depo kırılımı (`splitOf(rows)` — `OUT_OF_DAY` iptali eliyor) ve 7 günlük çizgi
-           (`analytics_order_base` de eliyor) iptalsizdi. Tek kart üç ayrı gerçek söylüyordu.
-           Üçü de artık aynı kümeden: iptal hariç, aynı depo kapsamı, aynı tarih ekseni. */
+        /* İptal hariç: kart başlığı, depo kırılımı ve 7 günlük çizgi aynı kümeden okunur, yoksa tek kart üç ayrı gerçek söylerdi. */
         today: todayCounts.active.count,
         yesterday: yesterdayCounts.active.count,
         split: splitOf(rows),
@@ -205,39 +176,28 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
         series: [],
         detail: dayLog.bounced.size > 0 ? 'kapıdan dönen sipariş yeniden planlanmalı' : 'kapıdan dönen yok',
       },
-      // **Marj-altı bu turda ÖLÇÜLMEDİ** (09.3 ikinci dilim) — `null` geçiyor ve kart hiç çizilmiyor.
-      // Sıfır yazmak, hiç sayılmamış bir kümeyi "temiz" göstermek olurdu (`CLAUDE §1`).
+      // Marj-altı henüz hesaplanmıyor; `null` kartı çizdirmez, sıfır yazmak hiç sayılmamış kümeyi temiz gösterirdi.
       belowMargin: null,
     }),
     flow,
     queue,
     proposals: buildProposals(proposalCount, []),
     routes: routesOf(rows, dayLog.deliveredAt, await runLabelsOf(db, today)),
-    /*
-      Araç yükü YALNIZ TEK TESİS SEÇİLİYKEN (kullanıcı isteği 02.09: *"seçili deponun panel
-      ekranında"*). "Tüm depolar" bakışında bu blok yazılmaz ve bu bir eksiklik değil bir karar:
-      ağın bütün araçlarını tek satırda toplamak, "ek olarak" cümlesini anlamsız kılardı — neyin
-      ekine? Panelin geri kalanı da bağlamı izliyor (18.08 kararı).
-    */
+    // Araç yükü yalnız tek tesis seçiliyken yazılır: ağın bütün araçlarını tek satırda toplamak "ek olarak" cümlesini anlamsız kılar.
     vanLoad: ctx.activeWarehouseId ? await readVanLoadBand(db, ctx.activeWarehouseId) : null,
   };
 }
 
 /**
- * Panelin araç şeridi — motoru `@lezzet/application` (`readFacilityVanSummary`), burası yalnız
- * cümleyi kuruyor.
- *
- * **Sıfır cümlesi KURULMAZ.** Kutu yoksa kutu yarısı, mal yoksa mal yarısı `null` döner; ikisi de
- * boşsa şeridin kendisi `null` olur ve panelde hiç çizilmez. "Araçta 0 kutu · 0 adet" bir bilgi
- * değil, her sabah tekrarlanan bir gürültüdür — ve gürültü, dolduğu gün fark edilmesini zorlaştırır.
+ * Panelin araç bandı; motoru `readFacilityVanSummary`, burası yalnız cümleyi kurar. Kutu da mal da yoksa bant `null` döner: "Araçta 0
+ * kutu" her sabah tekrarlanan bir gürültüdür ve dolduğu günü fark ettirmez.
  */
 async function readVanLoadBand(db: Db, facilityId: string): Promise<VanLoadBandView | null> {
   const summary = await readFacilityVanSummary(db, { facilityId, lineLimit: VAN_SAMPLE_LINES });
   const units = summary.vans.reduce((sum, van) => sum + van.unitCount, 0);
   if (summary.boxCount === 0 && units === 0) return null;
 
-  // Tek araçta adıyla, çoklukta sayısıyla: "VAN-1" bir yerdir, "2 araç" bir kümedir. Araç hiç
-  // yokken de buraya gelinebilir (kutu var, araç kaydı bağlanmamış) — özne o hâlde "Araçta".
+  // Tek araçta adıyla, çoklukta sayısıyla yazılır; araç kaydı bağlanmamış kutu varsa özne "Araçta"dır.
   const tekArac = summary.vans.length === 1 ? summary.vans[0] : null;
   const subject = tekArac ? tekArac.code : summary.vans.length > 1 ? `${summary.vans.length} araç` : 'Araçta';
   const variants = summary.vans.reduce((sum, van) => sum + van.variantCount, 0);
@@ -261,14 +221,10 @@ async function readVanLoadBand(db: Db, facilityId: string): Promise<VanLoadBandV
   };
 }
 
-/** Şeritte adı geçen kalem sayısı — cümle bir satırda kalmalı, liste Stok'ta yaşıyor. */
+/** Araç bandında adı geçen kalem sayısı: cümle bir satırda kalmalı, liste Stok'ta. */
 const VAN_SAMPLE_LINES = 3;
 
-/**
- * Günün sefer künyeleri — panel kartlarının kimliği (18.08). Kart artık kurye grubunun değil
- * SEFERİN kartı: rota adı + SF kodu okunur, kurye adı seferin kuryesidir (satırlardan geliyor —
- * `courier_id` start'ta senkronlandığı için ikisi ayrışamaz).
- */
+/** Günün sefer künyeleri, kartların kimliği: rota adı + sefer kodu; kurye adı seferin kuryesidir. */
 async function runLabelsOf(db: ReturnType<typeof serviceDb>, date: string): Promise<Map<string, string>> {
   const runs = await new DeliveryRunService(db).listByDate(date);
   if (runs.length === 0) return new Map();
@@ -287,14 +243,8 @@ interface ZoneRef {
 }
 
 /**
- * Eşikler **rota başına** okunur (kullanıcı kararı 17.08: depo ekseni kaldırıldı, her rota kendi
- * saatini taşır).
- *
- * **Sorgu sayısı rota sayısıyla ÇARPMAZ:** `SettingsService` bir anahtarın TÜM kapsam satırlarını tek
- * turda çekip statik önbelleğe koyuyor (`rowsFor`), yani N rota × 4 anahtar için 4 sorgu atılır.
- * Ölçülmeden yazılsaydı buradaki döngü bir N+1 tuzağı olurdu.
- *
- * Rotasız okuma da gerekiyor (`global`): kargo siparişi ya da hiç rota tanımlı olmadığı hâl.
+ * Eşikler rota başına okunur, rotasız sipariş için genel satır da gerekir. Sorgu sayısı rota sayısıyla çarpmaz: `SettingsService` bir
+ * anahtarın bütün kapsam satırlarını tek turda çekip önbelleğe koyar.
  */
 async function readThresholds(
   settings: SettingsService,
@@ -354,13 +304,8 @@ async function toRows(
 }
 
 /**
- * Günün durum kaydı — iki türetme, tek okuma.
- *
- * **`bounced`:** kapıya gidilip dönen sipariş = `out_for_delivery → ready` geçişi (11.4). Aynı sipariş
- * iki kez dönmüşse BİR kez sayılır: soru "kaç sipariş yeniden planlanmalı", "kaç kez denendi" değil.
- *
- * **`deliveredAt`:** teslim anı. Panelde saat YALNIZ olmuş durakta görünür ve bu onun tek kaynağıdır
- * (`order` tablosunda `delivered_at` kolonu yok, tarih durum kaydından türetilir — `0012:218`).
+ * Günün durum kaydından iki türetme: kapıdan dönen sipariş (`out_for_delivery → ready`, aynı sipariş bir kez sayılır) ve teslim anı
+ * (`order` tablosunda teslim kolonu yok, an durum kaydından gelir).
  */
 async function readDayLog(db: Db, orderIds: readonly string[]): Promise<{ bounced: Set<string>; deliveredAt: Map<string, string> }> {
   if (orderIds.length === 0) return { bounced: new Set(), deliveredAt: new Map() };
@@ -409,9 +354,8 @@ function deltaPercentOf(today: number, yesterday: number): number | null {
 }
 
 /**
- * 7 günlük seri — gün başına toplam (kanallar toplanır: `analytics_order_revenue` kanal kırılımlı
- * döner). Veri olmayan gün **0**dır ve bu doğru: o gün sipariş girmemiş. Okuma HİÇ dönmezse seri boş
- * kalır ve çubuklar çizilmez — sıfırlarla doldurmak, ölçülmemişi "hiç satış yok" gibi okutur.
+ * 7 günlük seri, gün başına kanalların toplamı; verisiz gün 0'dır, çünkü o gün sipariş girmemiştir. Okuma hiç dönmezse seri boş kalır:
+ * sıfırlarla doldurmak ölçülmemişi "hiç satış yok" gibi okuturdu.
  */
 function seriesOf(
   rows: Awaited<ReturnType<AnalyticsReportService['orderRevenue']>>,
@@ -436,17 +380,8 @@ function seriesOf(
 const WEEKDAY_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cts', 'Paz'] as const;
 
 /**
- * Gün akışı olguları — **satır = ROTA** (kullanıcı kararı 18.08).
- *
- * Satırlar ROTADAN gelir, siparişten değil: eski nabız siparişleri bölgeye göre grupluyordu ve
- * siparişi olmayan rota hiç görünmüyordu — oysa boş bir rotanın da çıkış saati vardır ve operatör
- * onu bilmek zorundadır. Sipariş sayaçları rotanın üstüne yazılır, rotayı DOĞURMAZ.
- *
- * **Bugün koşmayan rota da gelir** ve `runsToday: false` taşır: ekran onu sönük çizer. Gizlemek
- * yerine sönük göstermek kullanıcı kararı — hangi rotaların var olduğu da bir bilgi.
- *
- * **Rotasız sipariş sayaca girmez** — kargo siparişinin hazırlık kesimi yoktur ve onu bir rotanın
- * satırına yazmak, o rotayı olduğundan yüklü göstermek olurdu. Göstergeler onları yine sayıyor.
+ * Gün akışında satır rotadır, sipariş değil: boş rotanın da çıkış saati vardır ve operatör onu bilmeli; bugün koşmayan rota sönük çizilir.
+ * Rotasız sipariş sayaca girmez, çünkü kargo siparişinin hazırlık kesimi yoktur ve bir rotayı olduğundan yüklü gösterirdi.
  */
 function routeFlowFacts(
   orders: readonly Order[],
@@ -496,12 +431,8 @@ function routeFlowFacts(
 }
 
 /**
- * Rota kartları — SEFER başına gruplanır (18.08; kurye grubunun halefi). Panelin "rota" dediği şey
- * eskiden kurye grubuydu ve `zoneLabel: null` geçiyordu — kartın kimliği yoktu. Sefer varlığı tam o
- * boşluğu dolduruyor: kart başlığı rota adı + SF kodu, kurye adı seferin kuryesi.
- *
- * **Sefere bağlanmamış duraklar da gösterilir** ("Sefer açılmadı" kartı): gizlenirse "8 durak"
- * eksik okunur ve rotanın hâlâ beklediği fark edilmez.
+ * Rota kartları sefer başına gruplanır: başlık rota adı + sefer kodu, kurye adı seferin kuryesi. Sefere bağlanmamış duraklar da "Sefer
+ * açılmadı" kartında görünür, gizlenirse rotanın hâlâ beklediği fark edilmez.
  */
 function routesOf(
   rows: readonly OrderRow[],
@@ -543,7 +474,7 @@ function toStopFact(row: OrderRow, deliveredAt: string | null): StopFact {
   };
 }
 
-/** Kuyruk olguları — bu turda ikisi: gecikmiş vade · açık talep (öneriler ayrı blokta). */
+/** Kuyruk olguları: gecikmiş vade ve açık talep; öneriler ayrı blokta. */
 function queueFacts(input: { overdue: readonly OrderRow[]; openTickets: Record<TicketStatus, number> }): QueueFact[] {
   const facts: QueueFact[] = [];
 

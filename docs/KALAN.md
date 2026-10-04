@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.61). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.62). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
 `docs/GELECEK.md`'dedir.
@@ -124,6 +124,7 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [~] (09.17) **Sonsuz kaydırma tek geçişte düzeltilir**
 - [~] (09.18) **İmha/fire aramasının sunucu tarafı**
 - [~] (09.21) **Tarif yönetim ekranı** *(veri modeli 05.16; müşteri yüzeyi 08.24)*
+- [ ] (K.62) **"Bugün" yer yer sunucunun UTC gününden kuruluyor:** `toISOString().slice(0, 10)` kalıbı operasyon ve uygulama kodunda 25 yerde daha geçiyor (kurye günü, teslimat atama, tedarik ve transfer varsayılan tarihleri, analitik tuzu…); sunucu UTC'de, işletme günü Paris'te olduğu için gece yarısından sonraki ilk saatlerde önceki gün okunur. Panel `parisDateOf`/`parisMinutesOf` ile düzeltildi; kalanlar tek tek elden geçmeli, verilen bir tarihi biçimleyenlere dokunulmaz.
 
 ## 11 · Kurye ve Rota Teslimat
 

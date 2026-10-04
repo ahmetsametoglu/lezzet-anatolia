@@ -13,11 +13,23 @@ function dayIndex(value: Date | string): number {
 }
 
 /** İşletme günü Paris takvimindedir; kasanın gün sonu ve günlük raporlar bu saatle döner. */
-const PARIS = 'Europe/Paris';
+export const BUSINESS_TIME_ZONE = 'Europe/Paris';
 
 /** Bir anın Paris'teki takvim günü (`YYYY-MM-DD`). */
 export function parisDateOf(at: Date): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: PARIS }).format(at);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: BUSINESS_TIME_ZONE }).format(at);
+}
+
+/** Bir anın Paris'teki duvar saati, gece yarısından beri dakika olarak. */
+export function parisMinutesOf(at: Date): number {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BUSINESS_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(at);
+  const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((candidate) => candidate.type === type)!.value);
+  return part('hour') * 60 + part('minute');
 }
 
 /** Takvimde bir önceki gün (`YYYY-MM-DD`); saat dilimi gerektirmeyen takvim aritmetiği. */
@@ -36,7 +48,7 @@ export function parisDayRange(date: string): { from: string; to: string } {
 function parisMidnight(year: number, month: number, day: number): Date {
   const guess = Date.UTC(year, month - 1, day);
   const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: PARIS,
+    timeZone: BUSINESS_TIME_ZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
