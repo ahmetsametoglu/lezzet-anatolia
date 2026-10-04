@@ -30,6 +30,7 @@
     },
     "row": {
       "meta": "{date} · {count} ürün",
+      "metaOne": "{date} · 1 ürün",
       "more": "+{n}",
       "detail": "Detay ›",
       "open": "{reference} siparişinin detayı",
@@ -145,7 +146,8 @@
       "retry": "Réessayer"
     },
     "row": {
-      "meta": "{date} · Articles : {count}",
+      "meta": "{date} · {count} articles",
+      "metaOne": "{date} · 1 article",
       "more": "+{n}",
       "detail": "Détail ›",
       "open": "Détail de la commande {reference}",
@@ -262,6 +264,7 @@
     },
     "row": {
       "meta": "{date} · {count} Artikel",
+      "metaOne": "{date} · 1 Artikel",
       "more": "+{n}",
       "detail": "Details ›",
       "open": "Details zur Bestellung {reference}",

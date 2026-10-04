@@ -158,7 +158,7 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
           <View style={styles.cardTopText}>
             <Text style={styles.reference}>{order.reference ?? t.row.pendingTitle}</Text>
             <Text style={styles.meta}>
-              {t.row.meta
+              {(order.itemCount === 1 ? t.row.metaOne : t.row.meta)
                 .replace('{date}', formatOrderDate(order.placedAt, locale))
                 .replace('{count}', String(order.itemCount))}
             </Text>

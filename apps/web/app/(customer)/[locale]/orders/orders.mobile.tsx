@@ -38,7 +38,7 @@ export function OrdersMobile({ t, locale, orders, nextCursor, loadingMore, onLoa
   }
 
   return (
-    <div className="flex flex-col gap-3 px-4.5 pb-5">
+    <div className="flex flex-col gap-3 px-4.5 pt-3 pb-5">
       {orders.map((order) => {
         // Ödeme bekleyen siparişin numarası yok; kart ödeme sayfasına gider, çünkü tek eylemi ödemesi.
         const pending = order.status === 'awaiting_payment';
@@ -59,7 +59,9 @@ export function OrdersMobile({ t, locale, orders, nextCursor, loadingMore, onLoa
                   {reference}
                 </Link>
                 <span className="font-sans text-helper text-muted">
-                  {copy.row.meta.replace('{date}', formatOrderDate(order.createdAt, locale, true)).replace('{count}', String(order.itemCount))}
+                  {(order.itemCount === 1 ? copy.row.metaOne : copy.row.meta)
+                    .replace('{date}', formatOrderDate(order.createdAt, locale, true))
+                    .replace('{count}', String(order.itemCount))}
                 </span>
               </div>
               <OrderStatusTag status={order.status} label={copy.status[order.status]} />

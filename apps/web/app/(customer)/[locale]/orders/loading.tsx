@@ -20,7 +20,11 @@ export default async function OrdersLoading() {
       accountChrome={{ nav: 'orders', back: { label: t.backToAccount, href: '/account' }, title: t.title }}
     >
       <SkeletonRegion>
-        <div className={device === 'mobile' ? 'flex flex-col gap-3 px-4.5 pb-5' : 'mx-auto flex w-full max-w-3xl flex-col gap-3 px-6 py-6'}>
+        <div
+          className={
+            device === 'mobile' ? 'flex flex-col gap-3 px-4.5 pt-3 pb-5' : 'mx-auto flex w-full max-w-3xl flex-col gap-3 px-6 py-6'
+          }
+        >
           {[0, 1, 2].map((card) => (
             <div key={card} className="flex flex-col gap-2.5 rounded-card bg-sand-250 px-4 py-3.5">
               <div className="flex items-center justify-between gap-2.5">
