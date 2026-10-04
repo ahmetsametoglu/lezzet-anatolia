@@ -1,6 +1,7 @@
 import { formatPrice } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Linking, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -15,6 +16,8 @@ import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { OrderDetail } from '@/lib/api/orders';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
+import { toastError, toastSuccess, toastWarning } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
+import { reorderInto } from '@/screens/customer-kit/cart-store';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { OrderStatusTag } from '@/screens/customer-kit/order-status-tag';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
@@ -26,52 +29,14 @@ import messages from '@lezzet/i18n/customer/orders';
 import { useOrder } from './use-order.hook';
 
 /*
-  SİPARİŞ DETAY (v3 `vOrder`) — GERÇEK UÇTAN okur (`GET /api/v1/me/orders/:reference`): canlı takip
-  şeridi (yalnız kurye yoldayken), zaman çizgisi, kalemler, tutar özeti ve destek bağı.
-
-  ── ADRES REFERANSTIR ───────────────────────────────────────────────────────
-  Rota parametresi sipariş NUMARASIDIR (`LA-26-…`), kimlik değil: müşteriye gösterilen ve destekle
-  konuşurken kullanılan numara odur (sözleşme künyesi). Bulunamayan · başkasına ait · taslak —
-  üçü de aynı cevabı alır ve ekran "bu sipariş bulunamadı" bloğunu çizer; ayrım sunucuda bilerek
-  söylenmiyor.
-
-  ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
-  1. **"↻ Tekrar sipariş ver" (v3:64) ÇİZİLMEDİ; "★ Ürünleri değerlendir" (v3:65) 27.08'de GELDİ.**
-     · Tekrar sipariş: kural henüz terfi etmedi ve uç yok — gerekçe liste ekranının künyesinde
-       (donmuş fiyatla sepet doldurmak sessizce eski fiyatı satmaktır). Kendi ucu geldiği gün
-       şablondaki yerine döner.
-     · ~~Değerlendirme: … sipariş numarasından token'a giden bir yol YOK~~ → **yol açıldı**
-       (`readOrderFeedbackInvite`, kullanıcı kararı 27.08): yorum daveti bildirimi artık bu sayfaya
-       götürüyor, dolayısıyla burada yazacak bir kapı olmalıydı — yoksa bildirim boş vaat olurdu.
-       Şablonun düğmesi tek başına değil, TEŞVİK BLOĞU olarak geldi (kullanıcı isteği: puan
-       kazanımını söyleyen ifadelerle) ve kitin davet kartı desenini kullanıyor — yeni görsel dil
-       icat edilmedi. Blok yalnız AÇIK davet varken çizilir (aşağıdaki künye).
-  2. **"Bize yazın" doğru yere gidiyor** (v3 `od.talep` → `openTalepNew(o.ref)`): önceki UI-only
-     sürüm `/legal/faq`ye gidiyordu. Artık `/support?order=<referans>` — yeni talep bir sayfa değil,
-     Taleplerim ekranının ÇEKMECESİDİR (kullanıcı kararı 09.08) ve parametre çekmeceyi doğrudan bu
-     siparişle açar. Eski `/support/new` adresi de çalışır (yönlendiren ince kabuk), ama içeriden
-     bir ara durağa uğramaya gerek yok.
-  3. **Harita şeridinde TAHMİNİ SÜRE YOK** (v3:29 "· tahmini {eta}"). Şablonun `eta`sı sabit bir el
-     yazısıydı ("30–40 dk"); gerçek veride kuryenin varış tahmini diye bir ölçüm yok. Uydurmak
-     müşteriye tutamayacağımız bir zaman sözü vermek olurdu (CLAUDE §1: ölçülemeyen değer sıfır
-     değildir — burada da bir süre değildir). Şerit "Kurye yolda" der, ne zaman demez.
-  4. **Tutar özetine PARA SATIRLARI eklendi** (ara toplam · indirim · teslimat ücreti). Şablonun
-     paneli yalnız Teslimat/Adres/Ödeme + Toplam çiziyor çünkü el yazısı verisinde indirim ve
-     kargo ücreti YOKTU; gerçek siparişte ikisi de var ve onlarsız toplam AÇIKLANAMAZ hâle gelir
-     (kalemler 50 € toplarken toplam 55 € görünür). Panel şablonun kendi bileşeni, eklenen şey
-     satır — yeni bir görsel dil değil.
-  5. **Kargo künyesi eklendi** (taşıyıcı · takip no · takip bağı). Şablonun üç örnek siparişi de
-     rota teslimatıydı, kargo hâli hiç çizilmemiş; gerçek siparişlerin çoğu kargo. Web sipariş
-     detayının kararı birebir alındı: adres bilinmiyorsa (taşıyıcı `other`, boş numara) düğme
-     çizilmez ama NUMARA yazılır — müşteri taşıyıcıyı kendisi arayabilir.
-  6. **İptal/iadede çizgi yerine tek durum bloğu** (tasarımın kendi kuralı; kararı motor veriyor:
-     `timeline === null`). Blok kitin `Note`u ile çizildi.
-  7. **İskelet şablonda tanımlı değil**; paket detayının bekleme diliyle asgari bloklar çizildi.
+  Sipariş detayı numarayla adreslenir, çünkü müşterinin gördüğü ve destekle konuşurken kullandığı odur; bulunamayan, başkasına ait ve
+  taslak aynı "bulunamadı" bloğunu alır. Tasarımdan iki bilinçli sapma: haritada tahmini süre yok (ölçülmeyen süre söz olur), tutar
+  özetinde ara toplam ve kargo satırları var (onlarsız toplam açıklanamaz).
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** Kalem satırının küçük resmi — v3:52'de 44 dp; kitin `md` durağı (46) en yakın karşılık. */
+/** Kalem satırının küçük resmi; tasarımın 44 dp'sine en yakın kit durağı `md` (46). */
 const LINE_THUMB_SIZE = 'md';
 
 /** `{key}` yer tutucularını doldurur. */
@@ -95,14 +60,8 @@ function paymentKey(order: OrderDetail): keyof Messages['detail']['pay'] {
 }
 
 /**
- * **TAŞIYICI ADI** (07.12) — iki kaynak, tek arama.
- *
- * Sağlayıcıdan gelen ad özel isimdir ("Chronopost") ve çeviri istemez; elle girilen taşıyıcı ise
- * bir anahtardır ve ister (`other` → "Kargo firması"). Tanıdığımız anahtar çevrilir, tanımadığımız
- * OLDUĞU GİBİ basılır — webin `carrierLabel` kararının aynısı.
- *
- * Eski `carrier` enum'una geri düşmenin sebebi geçiş: sözleşme onu geriye uyum için hâlâ taşıyor
- * ve `carrierName` boş gelen bir gönderi (henüz duyurulmamış, elle girilmiş) hâlâ mümkün.
+ * Taşıyıcı adı: sağlayıcıdan gelen ad özel isimdir ve çevrilmez, elle girilen anahtar çevrilir; ad boş gelen gönderide sözleşmenin
+ * eski alanına düşülür.
  */
 function carrierLabel(t: Messages, shipment: NonNullable<OrderDetail['shipment']>): string {
   const known = t.detail.carrier as Record<string, string | undefined>;
@@ -123,6 +82,7 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
   const { theme } = useUnistyles();
   const router = useRouter();
   const { status, detail, retry } = useOrder(reference, locale);
+  const [reordering, setReordering] = useState(false);
 
   /* Başlık her hâlde durur (şablonda da yüklenen sayfanın üstünde): geri yolu ekran boşken de açık. */
   const appBar = (right?: React.ReactNode) => (
@@ -134,9 +94,7 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
     />
   );
 
-  /* İLK YÜK: başlık GERÇEK kalır (yukarıdaki kural), sayfanın geri kalanının yerini skeleton tutar
-     (`order-detail-skeleton`). Ekranın içine gömülü dört çubuk sökülüp oraya taşındı: dört
-     ölçünün dördü de hamdı ve sayfanın hiçbir bölümü tanınmıyordu. */
+  /* İlk yükte başlık gerçek kalır, sayfanın geri kalanının yerini iskelet tutar. */
   if (status === 'loading') {
     return (
       <View style={styles.screen}>
@@ -229,10 +187,8 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
     ...(detail.shipment
       ? [
           { key: 'carrier', label: t.detail.carrierLabel, value: carrierLabel(t, detail.shipment) },
-          /* KOLİ BAŞINA TAKİP (07.12): çok kolili gönderide her kutunun AYRI numarası var.
-             Eskiden tek numara basılıyordu ve üç kutulu bir siparişin ikisi ekranda HİÇ
-             görünmüyordu. Sıra (`2/3`) yalnız birden çok kutuda yazılır — `1/1` olmayan bir
-             bölünmeyi varmış gibi gösterirdi (webin aynı kararı). */
+          /* Çok kolili gönderide her kutunun ayrı numarası var; sıra (`2/3`) yalnız birden çok kutuda yazılır, `1/1` olmayan bir
+             bölünmeyi gösterirdi. */
           ...detail.shipment.parcels.map((parcel) => ({
             key: `tracking-${parcel.trackingNumber}`,
             label:
@@ -245,19 +201,31 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
       : []),
   ];
 
-  /*
-    TAKİP BAĞLANTILARI — adresi olan her koli için bir eylem satırı.
+  /* Adresi olan her koli için bir eylem satırı; adresi olmayan koli satır açmaz, çünkü hiçbir yere gitmeyen düğme verilmiş bir söz
+     olmaz. */
+  // Kalemler bugünkü fiyatla sepete eklenir ve sepet açılır; hiçbiri eklenemezse sayfada kalınır, boş sepete götürmek başarı gösterirdi.
+  const reorder = () => {
+    if (reordering) return;
+    setReordering(true);
+    void reorderInto(detail.reference).then((result) => {
+      setReordering(false);
+      if (result.error !== null) {
+        toastError(t.reorder.failed);
+        return;
+      }
+      if (result.data.added === 0) {
+        toastWarning(t.reorder.none);
+        return;
+      }
+      if (result.data.skipped.length > 0) {
+        toastWarning(fill(t.reorder.skipped, { count: String(result.data.skipped.length), names: result.data.skipped.join(', ') }));
+      } else {
+        toastSuccess(t.reorder.addedToast);
+      }
+      router.push('/cart');
+    });
+  };
 
-    Tek kutuda görüntü BİREBİR eskisi gibi kalıyor (tek "Kargoyu takip et ↗" düğmesi); çok kutuda
-    her kutu kendi satırını alıyor ve etiketinde sırası yazıyor. Web aynı kararı verdi ve orada
-    numaralar satır içi bağlantı oldu — burada `TextAction` satırı, çünkü mobil özet paneli
-    dokunulabilir satır taşımıyor ve onu dokunulabilir yapmak paylaşılan komponenti bu ekranın
-    ihtiyacına göre değiştirmek olurdu (CLAUDE §1).
-
-    Adresi olmayan koli satır AÇMAZ (`other` taşıyıcıda `trackingUrl` null gelir): tıklanınca
-    hiçbir yere gitmeyen bir düğme, verilmiş bir söz olmazdı. Numarası yukarıdaki özette yine
-    görünüyor.
-  */
   const trackable = (detail.shipment?.parcels ?? []).filter(
     (parcel): parcel is typeof parcel & { trackingUrl: string } => parcel.trackingUrl !== null,
   );
@@ -311,24 +279,8 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
                     line.unitLabel.length === 0 && !line.shortfall ? null : (
                       <Text style={styles.itemDetail}>
                         {line.unitLabel}
-                        {/*
-                          EKSİK, GRAMAJIN YANINDA (kullanıcı kararı 01.09) — ayrı bir kutu değil.
-
-                          Önce buraya kitin `Note`u konmuştu: tam genişlik, terracotta, iki satır
-                          metinli bir SAYFA DÜZEYİ kutusu, üstelik ayırıcı çizginin altında kaldığı
-                          için anlattığı satıra değil BİR SONRAKİNE bağlanmış görünüyordu. Sonra
-                          tasarımın kendi şeridine çevrildi ve o da kullanıcıda düştü: satır düzeyi
-                          bir bilginin kendi başına kutusu olmasına gerek yok — bilgi zaten satırın
-                          ikinci sesidir, gramajın yanına yazılır.
-
-                          "Kaç sipariş edildi" BURAYA YAZILMAZ: ad satırı zaten "2×" diyor. Cümle
-                          yalnız EKSİĞİ söyler, çünkü bilinmeyen tek şey odur.
-
-                          Para çözümü de metne yazılmaz — tutar sütununda ÜSTÜ ÇİZİLİ eski değerle
-                          gösteriliyor (künye orada). Bir tur burada "tahsilat {tutar}" yazıyordu:
-                          o sipariş DÜZEYİNDE bir sayıdır, satırın altında yeri yok ve birden çok
-                          eksik satırda aynı sayı defalarca tekrarlanırdı.
-                        */}
+                        {/* Eksik, gramajın yanında satırın ikinci sesi olarak yazılır; kaç sipariş edildiği ad satırında, para
+                            çözümü tutar sütununda durur. */}
                         {line.shortfall ? (
                           <Text style={styles.itemShortfall}>
                             {`${line.unitLabel.length === 0 ? '' : ' · '}${fill(t.detail.shortfallLine, {
@@ -347,19 +299,8 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
                     </Text>
                   )}
                 </View>
-                {/*
-                  TUTAR SÜTUNU — eksik varsa İKİ sayı: üstte sipariş edilenin tutarı ÜSTÜ ÇİZİLİ,
-                  altında ödenecek olan (kullanıcı kararı 01.09).
-
-                  Eskiden yalnız yeni tutar yazılıyordu ve satır kendi içinde çelişiyordu: ad "2×"
-                  diyor, tutar 1 adedinkini gösteriyordu. Üstü çizili değer o çelişkiyi kapatıyor
-                  ve para çözümünü CÜMLEYE gerek kalmadan anlatıyor.
-
-                  Sipariş edilenin tutarı SÖZLEŞMEDEN TÜRETİLİR, yeni alan eklenmedi: `shortfallCents`
-                  zaten "eksik gelen miktarın para karşılığı" (şema künyesi), yani ödenecek tutara
-                  eklenince sipariş edilenin tutarı çıkar. İkinci bir alan, aynı gerçeğin ikinci
-                  kaynağı olurdu (CLAUDE §1).
-                */}
+                {/* Eksik varsa tutar sütunu iki sayıdır: üstte sipariş edilenin tutarı çizili, altında ödenecek olan. Çizili değer
+                    `shortfallCents` eklenerek türetilir, ikinci bir alan aynı gerçeğin ikinci kaynağı olurdu. */}
                 {line.shortfall ? (
                   <View style={styles.itemPriceBox}>
                     <Text style={styles.itemPriceWas} testID={`order-line-was-${line.id}`}>
@@ -384,14 +325,14 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
           testID="order-summary"
         />
 
-        {/* YORUM TEŞVİKİ (27.08 · kullanıcı kararı) — davet bildiriminin indiği yer burasıdır.
-            Blok YALNIZ açık davet varken çizilir; sözleşme `feedback: null` gönderdiğinde (davet
-            yok · tamamlandı · süresi doldu) hiç doğmaz — üçünü de ekran ayırt etmez, gerekçe
-            `readOrderFeedbackInvite` künyesinde. Kutunun tamamı basılabilir (davet kartı deseni)
-            ve açtığı yer akışın kendisidir: `/feedback/[token]`, yani düğme bir kapıdır.
+        <PrimaryButton
+          label={reordering ? t.reorder.working : t.reorder.placeAgain}
+          onPress={reorder}
+          disabled={reordering}
+          testID="order-reorder"
+        />
 
-            PUAN SUNUCUDAN: cümledeki sayı ayardan gelen `points`tir, ekran rakam uydurmaz —
-            yazılmayacak bir ödülü vaat etmek, 29.07 denetiminin kapattığı arıza sınıfının aynısı. */}
+        {/* Yorum daveti bildiriminin indiği yer: blok yalnız açık davet varken çizilir ve puan sunucudan gelir, ekran rakam uydurmaz. */}
         {((invite) =>
           invite === null ? null : (
           <DashedInvite

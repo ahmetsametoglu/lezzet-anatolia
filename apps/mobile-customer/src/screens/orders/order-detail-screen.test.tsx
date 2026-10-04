@@ -5,20 +5,16 @@ import { OrderDetailScreen } from './order-detail-screen';
 import messages from '@lezzet/i18n/customer/orders';
 
 /*
-  SİPARİŞ DETAYI — YORUM TEŞVİKİ (27.08 · kullanıcı kararı).
-
-  Çivilenen kararlar:
-  · Blok YALNIZ açık davet varken çizilir; `feedback: null`de HİÇ doğmaz (üç hâl birden: davet
-    yok · tamamlandı · süresi doldu — ekran ayrımı bilmez, sözleşme künyesi).
-  · Düğme bir KAPIDIR: davetin token'ıyla akışa gider. Bildirim artık bu sayfaya götürdüğü için
-    kapının açılmaması, bildirimi boş bir vaade çevirirdi.
-  · Puandaki sayı SUNUCUDAN gelir; ekran rakam uydurmaz (yazılmayacak ödül vaat edilmez).
-
-  Ağ FETCH seviyesinde sahte ve cevap SÖZLEŞME şeklinde: uç bir alanı düşürürse iddia değil
-  DERLEME kırılır (yönetim ekranlarının deseni).
+  Ağ fetch düzeyinde sahte ve cevap sözleşme şeklinde, ki uç bir alanı düşürünce iddia değil derleme kırılsın. Tekrar siparişin
+  sepet yazımı depoda (`reorderInto`) taklit edilir; burada ekranın kararı sınanır.
 */
 
 const mockPush = jest.fn();
+const mockReorderInto = jest.fn();
+jest.mock('@/screens/customer-kit/cart-store', () => ({
+  ...jest.requireActual<object>('@/screens/customer-kit/cart-store'),
+  reorderInto: (...args: unknown[]) => mockReorderInto(...args),
+}));
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, back: jest.fn(), navigate: jest.fn() }),
 }));
@@ -131,16 +127,7 @@ describe('sipariş detayı · yorum teşviki', () => {
   });
 });
 
-/*
-  ÇOK KUTULU TAKİP (07.12) — dört iddia.
-
-  Sözleşme 28.08'de genişledi: gönderi artık `carrierName` (taşıyıcının GERÇEK adı) ve `parcels`
-  (koli başına takip) taşıyor. Eski üç alan (`carrier` · `trackingNumber` · `trackingUrl`) yalnız
-  geriye uyum için duruyor ve İLK koliyi anlatıyor — ekran onları okumayı bıraktı.
-
-  Bırakmasaydı ne olurdu, ölçüldü: üç kutulu bir siparişte taşıyıcı "Kargo firması" (enum `other`)
-  yazıyor ve üç numaradan yalnız biri görünüyordu.
-*/
+/* Çok kutulu takip: ekran koli başına numarayı ve taşıyıcının gerçek adını okur, eski tek koli alanlarını değil. */
 describe('sipariş detayı · çok kutulu takip', () => {
   it('TEK kutuda görüntü DEĞİŞMEDİ: sıra yazılmaz, tek takip düğmesi çıkar', async () => {
     await renderScreen(null, {
@@ -193,14 +180,7 @@ describe('sipariş detayı · çok kutulu takip', () => {
   });
 });
 
-/*
-  EKSİK KARŞILAMA (kullanıcı kararı 01.09) — satırın KENDİSİ konuşur, kutusu yoktur.
-
-  Çivilenen iki şey: (1) cümle yalnız EKSİĞİ söyler — "kaç sipariş edildi" ad satırında zaten var,
-  ikinci kez yazmak gürültü; (2) para çözümü CÜMLEDE değil TUTAR SÜTUNUNDA — sipariş edilenin
-  tutarı üstü çizili, ödenecek olan altında. Bir tur burada "tahsilat {sipariş toplamı}" yazıyordu:
-  o sipariş DÜZEYİNDE bir sayı ve birden çok eksik satırda defalarca tekrarlanırdı.
-*/
+/* Eksik karşılama: cümle yalnız eksiği söyler, para çözümü tutar sütununda (çizili eski, altında ödenecek). */
 describe('sipariş detayı · eksik karşılama', () => {
   const eksikSatir = (): MeOrderDetail['lines'] => [
     {
@@ -246,5 +226,26 @@ describe('sipariş detayı · eksik karşılama', () => {
 
     expect(screen.queryByTestId('order-line-was-line-1')).toBeNull();
     expect(screen.queryByText(/eksik gönderildi/)).toBeNull();
+  });
+});
+
+describe('sipariş detayı · tekrar sipariş', () => {
+  beforeEach(() => {
+    mockPush.mockClear();
+    mockReorderInto.mockReset();
+  });
+
+  // Hiçbir kalem eklenemediğinde boş sepete götürülürse ya da eklendiğinde sepete gidilmezse kırmızıya döner.
+  it('kalem eklendiyse sepete gider; hiçbiri eklenemediyse sayfada kalır', async () => {
+    mockReorderInto.mockResolvedValueOnce({ data: { added: 0, skipped: ['Su Böreği'] }, error: null });
+    await renderScreen(null);
+
+    await fireEvent.press(screen.getByTestId('order-reorder'));
+    await waitFor(() => expect(mockReorderInto).toHaveBeenCalledWith('LA-26-TEST01'));
+    expect(mockPush).not.toHaveBeenCalledWith('/cart');
+
+    mockReorderInto.mockResolvedValueOnce({ data: { added: 1, skipped: [] }, error: null });
+    await fireEvent.press(screen.getByTestId('order-reorder'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/cart'));
   });
 });

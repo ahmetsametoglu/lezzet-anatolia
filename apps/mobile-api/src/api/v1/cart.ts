@@ -1,17 +1,13 @@
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
 import { z } from 'zod';
-import {
-  cartBlockedAnalyticsReason,
-  effectiveChannelOf,
-  entryOfItem,
-  itemOfEntry,
-  storedPrices,
-} from '@lezzet/application';
+import { cartBlockedAnalyticsReason, effectiveChannelOf, entryOfItem, itemOfEntry, planReorder, storedPrices } from '@lezzet/application';
 import { CartService, ProductVariantService, serviceDb, UserProfileService, type CartRef, type Db } from '@lezzet/database';
 import {
   MeCartAddBodySchema,
   MeCartQtyBodySchema,
+  MeCartReorderBodySchema,
+  MeCartReorderSchema,
   MeCartTakeOverBodySchema,
   BundleSchema,
   ProductVariantSchema,
@@ -218,4 +214,37 @@ cart.post('/takeover', async (c) => {
   const db = serviceDb();
   const updated = await new CartService(db).takeOver(c.get('customerId'), incomingOf(body.data.items));
   return ok(c, (await viewOf(c, db, updated)).body);
+});
+
+/**
+ * Tekrar sipariş: geçmiş siparişin eklenebilen kalemleri sunucu sepetine yazılır ve plan sepetin yeriyle okunur, ki eklenen satır
+ * sepette hemen doğru görünsün. Bulunamayan ile başkasına ait aynı 404'ü alır.
+ */
+cart.post('/reorder', async (c) => {
+  const body = MeCartReorderBodySchema.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return fail(c, 'invalid_body', 400);
+
+  const db = serviceDb();
+  const customerId = c.get('customerId');
+  const plan = await planReorder(db, {
+    customerId,
+    locale: c.get('locale'),
+    lookup: { reference: body.data.orderReference },
+    viewOf: async (entries) =>
+      (
+        await readCartView(db, c.get('locale'), entries, {
+          customerId,
+          couponCode: null,
+          postalCode: c.req.query('postalCode'),
+          pickupWarehouseId: c.req.query('pickupWarehouseId'),
+        })
+      ).source,
+  });
+  if (!plan) return fail(c, 'order_not_found', 404);
+
+  const service = new CartService(db);
+  const items = plan.entries.map((entry) => itemOfEntry(entry));
+  const updated = items.length === 0 ? await service.get(customerId) : await service.addItems(customerId, items);
+  const read = await viewOf(c, db, updated);
+  return ok(c, MeCartReorderSchema.parse({ cart: read.body, added: plan.entries.length, skipped: plan.skipped }));
 });

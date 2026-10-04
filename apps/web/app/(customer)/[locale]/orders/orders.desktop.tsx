@@ -11,7 +11,7 @@ import { orderProductNames } from '@/lib/order/order-names';
 import { OrderStatusBadge } from './components/order-status-badge';
 import { DesktopReorderNotice } from './components/desktop-reorder-notice';
 // Liste `ReorderButton`ı kullanmıyor, çünkü meşgul durumunu bütün satırlar için tek yerde tutuyor; kelimeler yine ortak.
-import reorderCopy from './components/reorder-messages.json';
+import ordersShared from '@lezzet/i18n/customer/orders';
 import type { OrdersViewProps } from './orders-types';
 
 /**
@@ -74,7 +74,7 @@ export function OrdersDesktop({
                   className="flex-none"
                 >
                   {busyOrderId !== order.id && <Icon name="refresh" size={14} />}
-                  {busyOrderId === order.id ? reorderCopy[locale].reordering : reorderCopy[locale].reorder}
+                  {busyOrderId === order.id ? ordersShared[locale].reorder.working : t.reorder}
                 </Button>
               )}
 
@@ -87,7 +87,7 @@ export function OrdersDesktop({
               </Link>
             </div>
 
-            {notice?.orderId === order.id && <DesktopReorderNotice t={t} notice={notice} onDismiss={onDismissNotice} />}
+            {notice?.orderId === order.id && <DesktopReorderNotice t={t} locale={locale} notice={notice} onDismiss={onDismissNotice} />}
           </div>
         );
       })}

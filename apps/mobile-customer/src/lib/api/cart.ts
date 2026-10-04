@@ -1,55 +1,26 @@
 import type { z } from 'zod';
-import { MeCartViewSchema, type CartViewBodySchema, type MeCartItemWriteSchema, type MeCartView } from '@lezzet/types';
+import {
+  MeCartReorderSchema,
+  MeCartViewSchema,
+  type CartViewBodySchema,
+  type MeCartItemWriteSchema,
+  type MeCartReorder,
+  type MeCartView,
+} from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
 import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
 import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
-  SEPET UÇLARI — `/api/v1/me/cart` (girişli) + `/api/v1/cart/view` (misafir).
-
-  CEVAP ARTIK SATIR DEĞİL, GÖRÜNÜM (`MeCartView`): sepetin adı · fiyatı · indirimi · asgari sepet
-  kararı · kargo eşiği hep SUNUCUDA çözülür. Gerekçe sözleşmede yazılı (`cart-api.schema.ts`):
-  sepetteki fiyat bağlayıcı değildir (DOMAIN §5), her okumada yeniden çözülür ve iki yüzeyde İKİ
-  ayrı hesap bir gün iki farklı tutar gösterirdi. İstemcinin tek işi çizmek.
-
-  MİSAFİR DE SUNUCUDAN OKUR (yeni): niyet listesi cihazda kalır ama görünümü `POST /cart/view`
-  çözer — aynı sepet misafirken bir, giriş yapınca başka bir tutar göstermesin. Uç oturumsuzdur,
-  Bearer istemez; girişli kullanıcının niyeti gövdeden ASLA alınmaz (onunki sunucudaki sepettir).
-
-  ÜÇ SORGU PARAMETRESİ HER OKUMADA:
-  · `locale` ZORUNLU — ürün adı ve kampanya adı seçili dilde çözülür (katalog uçlarının aynı kuralı).
-  · `postalCode` VARSA — yol/stok/fiyat kararı DEPOYA bağlı; kod gitmezse sunucu "yer bilinmiyor"
-    hükmüyle çalışır ve satırların `route`u null döner.
-  · `coupon` VARSA — kupon bir NİYETTİR; geçerliliği ve indirimi sunucunun kararıdır
-    (`discount.status`), istemci kod sözlüğü tutmaz.
-
-  GÖVDE FİYAT TAŞIMAZ: satırın yalnız ADRESİ ve adedi gider — varyant satırında
-  `{kind:'variant', variantId, qty, stockId}`, paket satırında `{kind:'bundle', bundleId, qty}`.
-  İstemcinin yazabildiği bir tutar siparişin parasını belirleyemez.
-
-  TÜR KENDİ BAYRAĞINI TAŞIR (`kind`), kimlik alanının varlığından çıkarılmaz: `string` birim tip
-  değildir ve TypeScript onunla daraltma yapamaz — o yoldan gidilseydi her okuma yerinde elle
-  kontrol gerekirdi (`MeCartItemWriteSchema` künyesi).
-
-  ── PAKET SATIRININ YAZMA YOLU TAM (20.08) ─────────────────────────────────
-  Üç kapının üçü de paket satırında çalışıyor: `POST /items` ekliyor ve aynı paket ikinci kez
-  gelince adet birleşiyor, `PATCH`/`DELETE` ise `?kind=bundle` ile adresliyor (`linePath`).
-
-  Bir süre yarımdı ve ölçülmüştü (21.21): `PATCH`/`DELETE` yalnız `/items/:variantId?stock=` ile
-  adresliyordu, paketin varyantı olmadığı için satır bulunamıyor ve sepet aynen dönüyordu — yani
-  paket sunucudan azaltılamıyor, silinemiyordu. Çözüm `packages/database` tarafındaydı ve yazıldı:
-  `CartService.setQty`/`removeItem` artık satır ANAHTARI alıyor (`CartRef` — varyant+parti ya da
-  paket), tek kimlikle değil.
+  Sepet uçları: girişli sepet `/api/v1/me/cart`, misafirin görünümü `/api/v1/cart/view`. Görünüm (ad, fiyat, indirim, kargo eşiği)
+  hep sunucuda çözülür ve gövde fiyat taşımaz, çünkü iki yüzeyde iki ayrı hesap bir gün iki farklı tutar gösterirdi.
 */
 
-/** Yazma gövdesinin tek kalemi — sözleşmeden TÜRER, elle DTO yazılmaz (02-mimari §3.2). */
+/** Yazma gövdesinin tek kalemi; sözleşmeden türer. */
 export type CartItemWrite = z.output<typeof MeCartItemWriteSchema>;
 
-/**
- * Görünümü çözen bağlam — dil + yer + kupon niyeti. Üçü de İSTEĞİN parçasıdır, cevabın değil:
- * aynı sepet başka dilde başka adlarla, başka posta kodunda başka bir yolla döner.
- */
+/** Görünümü çözen bağlam (dil, yer, kupon niyeti); üçü de isteğin parçasıdır, aynı sepet başka yerde başka yolla döner. */
 export interface CartViewQuery {
   locale: Locale;
   /** Cihazda kayıtlı posta kodu; `null` = hiç girilmemiş → parametre YAZILMAZ (katalog kuralı). */
@@ -85,12 +56,8 @@ function viewQuery(query: CartViewQuery, extra: Record<string, string | undefine
 }
 
 /**
- * SATIRIN ADRESİ — varyant satırında `/items/:variantId?stock=…` (çift kimlik, tek adres), paket
- * satırında `/items/:bundleId?kind=bundle`. Paketin varyantı yoktur; satılan paketin kendisidir
- * (DOMAIN §13).
- *
- * Paket dalı 20.08'de açıldı ve sebebi ölçülmüş bir zarardı: paket sunucuya hiç yazılmadığı için
- * sepetin toplamına girmiyordu (cihazda 96,92 €'luk sepette bar 14,85 € yazıyordu).
+ * Satırın adresi: varyant satırında `/items/:variantId?stock=…`, paket satırında `/items/:bundleId?kind=bundle`, çünkü paketin varyantı
+ * yoktur, satılan paketin kendisidir.
  */
 export interface CartLineRef {
   variantId?: string;
@@ -110,13 +77,8 @@ export function fetchCart(query: CartViewQuery): Promise<ApiResult<MeCartView>> 
 }
 
 /**
- * Satır(lar) ekler; aynı adres zaten sepetteyse ADET BİRLEŞİR (kural sunucuda — `CartService.addItems`).
- *
- * **GÖVDE HER ZAMAN LİSTE, tek ürün bile** (09.08): sepet sunucuda tek satırda yaşıyor ve her
- * ekleme onu okuyup geri yazıyor — eşzamanlı iki istek aynı başlangıcı okur, son yazan ötekini
- * siler. Tarif ekranının "Malzemeleri sepete ekle"si üç isteği birden atıyordu ve sunucuda bir
- * tanesi kalıyordu (ölçüldü: sırayla 3 satır, eşzamanlı 1–2 satır). Bir kullanıcı eylemi = bir
- * istek; gerekçenin tamamı sözleşmede (`MeCartAddBodySchema`).
+ * Satır(lar) ekler; aynı adres sepetteyse adet birleşir. Gövde tek ürün için bile listedir, çünkü sepet sunucuda tek satırda yaşar ve
+ * eşzamanlı iki ekleme birbirini ezerdi.
  */
 export function addCartItems(items: readonly CartItemWrite[], query: CartViewQuery): Promise<ApiResult<MeCartView>> {
   return authorizedFetch(`/api/v1/me/cart/items${viewQuery(query)}`, MeCartViewSchema, {
@@ -135,10 +97,8 @@ export function removeCartItem(ref: CartLineRef, query: CartViewQuery): Promise<
 }
 
 /**
- * Misafir sepetinin DEVRİ — cihazdaki satırlar müşterinin sepetiyle BİRLEŞİR (sunucudaki korunur,
- * gelenler eklenir, çakışanda adetler toplanır). Devir bir kez yapılır ve cihazdaki kopya
- * temizlenir: aynı satırlar ikinci kez gönderilseydi adetler katlanırdı (web'de ölçülmüş arıza,
- * 29.07 — `serverCart` bayrağının doğuş sebebi).
+ * Misafir sepetinin devri: cihazdaki satırlar sunucudakiyle birleşir ve devir bir kez yapılır, çünkü aynı satırlar ikinci kez
+ * gönderilse adetler katlanırdı.
  */
 export function takeOverCart(items: CartItemWrite[], query: CartViewQuery): Promise<ApiResult<MeCartView>> {
   return authorizedFetch(`/api/v1/me/cart/takeover${viewQuery(query)}`, MeCartViewSchema, {
@@ -148,12 +108,8 @@ export function takeOverCart(items: CartItemWrite[], query: CartViewQuery): Prom
 }
 
 /**
- * MİSAFİRİN GÖRÜNÜMÜ — oturumsuz uç, niyet gövdeden gider.
- *
- * `apiFetch` (Bearer'sız) bilinçli: bu yol yalnız misafirde koşar; girişli kullanıcının sepeti
- * sunucudadır ve gövdeden gelen bir niyet onun sepetini gölgelerdi. Kupon kodu SORGUDA değil
- * GÖVDEDE, çünkü sözleşme onu gövdeye koydu (`CartViewBodySchema`) — kod bir niyettir ve niyetin
- * tamamı tek yerde durur.
+ * Misafirin görünümü oturumsuz uçtan, niyet gövdeden gider; girişli kullanıcının sepeti sunucudadır ve gövdeden gelen bir niyet onu
+ * gölgelerdi.
  */
 export function fetchGuestCartView(
   items: readonly CartItemWrite[],
@@ -165,5 +121,13 @@ export function fetchGuestCartView(
   return apiFetch(`/api/v1/cart/view${queryOf({ locale, postalCode: present(postalCode) })}`, MeCartViewSchema, {
     method: 'POST',
     body,
+  });
+}
+
+/** Geçmiş siparişin eklenebilen kalemlerini sunucu sepetine yazar; sipariş numarayla gider, sepet görünümün yeriyle okunur. */
+export function reorderCart(orderReference: string, query: CartViewQuery): Promise<ApiResult<MeCartReorder>> {
+  return authorizedFetch(`/api/v1/me/cart/reorder${viewQuery(query)}`, MeCartReorderSchema, {
+    method: 'POST',
+    body: { orderReference },
   });
 }

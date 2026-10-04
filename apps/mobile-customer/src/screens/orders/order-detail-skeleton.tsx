@@ -4,37 +4,13 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Skeleton } from '@/components/ui/skeleton';
 
 /*
-  SİPARİŞ DETAY SKELETON'I — ilk yükte sayfanın yerini tutar. Ürün/tarif/paket detaylarının aynı
-  kalıbı: ölçüler sayfanın kendi stillerinden, metin yok, tek ses kökten.
-
-  ÖNCEKİ HÂLİ ekranın içine gömülü dört çubuktu ve DÖRT ÖLÇÜNÜN DÖRDÜ DE HAMDI (`140` · `18` ·
-  `62` · `62`) — hiçbiri sayfadan alınmamıştı. Sayfanın hiçbir bölümü de tanınmıyordu: 140'lık
-  blok neyi temsil ettiği belli olmayan bir dikdörtgendi, zaman çizgisi ve tutar özeti yoktu.
-
-  KAP STİLLERİ KOPYALANMADI, YAPI KURULDU: zaman çizgisi ve tutar özeti kendi komponentlerinde
-  yaşayan panellerdir (`order-timeline` · `customer-kit/summary-panel`). Skeleton onların
-  yüksekliğini HESAPLAMAYA çalışmaz — aynı yapıyı aynı stillerle kurar (zemin · köşe · dolgu ·
-  satır dolgusu) ve içine gri blok koyar; yükseklik böylece kendiliğinden aynı çıkar. Bir formüle
-  çevrilseydi panel her değiştiğinde formül sessizce yanlışa düşerdi.
-
-  BAŞLIK ÇUBUĞU BURADA DEĞİL, EKRANDA: sayfa `AppBar`ı yüklenirken de GERÇEK basıyor (geri yolu
-  ekran boşken de açık — ekranın kendi kuralı). Skeleton onun altından başlar.
-
-  NEYİ ÇİZERİZ — ölçüt "bu bölüm olmadan sayfa VAR OLABİLİR Mİ":
-  · ÇİZİLİR — zaman çizgisi (dört durak, motorun sabit sayısı) · kalemler (üstbaşlık + satırlar) ·
-    tutar özeti · destek eylemi. Kalemi olmayan sipariş yoktur; özet ve destek bağı koşulsuz.
-  · ÇİZİLMEZ — canlı takip haritası (yalnız kurye yoldayken), eksik karşılama notu, kargo takip
-    bağı, durum etiketi (dördü de opsiyonel).
-
-  İKİ YERDE "EN AZ MAKUL" SEÇİLDİ:
-  · Zaman çizgisi durağında yalnız AD çubuğu var, saat çubuğu yok — saat yalnız kaydı olan adımda
-    yazılıyor (`at: null` olanda boş kalır). Saat de çizseydik veri gelince satır KISALIR ve
-    aşağıdaki her şey yukarı kayardı; adla yetinince yalnız aşağı doğru açılır.
-  · Kalem sayısı 3 — kaç kalem geleceği bilinmiyor, fazlası kaybolur azı eklenir.
+  Sipariş detayının ilk yük iskeleti: paneller kendi kap stilleriyle kurulur ki yükseklik veri gelince değişmesin. Yalnız her siparişte
+  olan bölümler çizilir (zaman çizgisi, kalemler, tutar özeti, tekrar sipariş, destek); harita ve kargo takibi gibi opsiyoneller çizilmez.
 */
 
 /** Motorun dört durağı: alındı → hazırlandı → yolda → teslim edildi (sayı sabit, tahmin değil). */
 const STEP_SLOTS = [0, 1, 2, 3];
+/** Kaç kalem geleceği bilinmiyor; fazlası kaybolur, azı eklenir. */
 const LINE_SLOTS = [0, 1, 2];
 /** Özetin koşulsuz satırları: ara toplam · teslimat ücreti · teslimat · ödeme. */
 const SUMMARY_SLOTS = [0, 1, 2, 3];
@@ -65,6 +41,7 @@ export function OrderDetailSkeleton({ testID }: OrderDetailSkeletonProps) {
               {/* Son durağın altında çizgi yok: çizgi İKİ durağı bağlar (panelin kendi kuralı). */}
               {slot < STEP_SLOTS.length - 1 ? <View style={styles.stepLine} /> : null}
             </View>
+            {/* Yalnız ad çubuğu: saat yalnız kaydı olan adımda yazılır, saat de çizilse veri gelince satır kısalır ve aşağısı kayardı. */}
             <View style={styles.stepText}>
               <Skeleton width="46%" height={line(theme.text.control)} tone="deep" />
             </View>
@@ -105,6 +82,11 @@ export function OrderDetailSkeleton({ testID }: OrderDetailSkeletonProps) {
             tone="deep"
           />
         </View>
+      </View>
+
+      {/* ── Tekrar sipariş: tam genişlik blok düğme ─────────────────────────── */}
+      <View style={styles.reorderSlot}>
+        <Skeleton width="100%" height={theme.size.controlLg} radius="control" tone="deep" />
       </View>
 
       {/* ── Destek eylemi: ortalanmış tek metin bağlantısı ──────────────────── */}
@@ -154,6 +136,8 @@ const styles = StyleSheet.create((theme) => ({
   },
 
   items: { gap: theme.space.md },
+  /** Gerçek düğmenin sert gölgesi için ayırdığı pay (`PressableSurface`); iskelet aynı yeri tutar. */
+  reorderSlot: { paddingRight: theme.shadowRoom, paddingBottom: theme.shadowRoom },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',

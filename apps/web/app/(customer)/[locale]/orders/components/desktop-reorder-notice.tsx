@@ -1,5 +1,7 @@
 'use client';
 
+import type { Locale } from '@lezzet/i18n';
+import ordersShared from '@lezzet/i18n/customer/orders';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
 import type { Messages, ReorderNotice as Notice } from '../orders-types';
@@ -10,17 +12,19 @@ import type { Messages, ReorderNotice as Notice } from '../orders-types';
  */
 interface DesktopReorderNoticeProps {
   t: Messages;
+  locale: Locale;
   notice: Notice;
   onDismiss: () => void;
 }
 
-export function DesktopReorderNotice({ t, notice, onDismiss }: DesktopReorderNoticeProps) {
+export function DesktopReorderNotice({ t, locale, notice, onDismiss }: DesktopReorderNoticeProps) {
   const nothing = notice.added === 0;
+  const shared = ordersShared[locale].reorder;
 
   return (
     <div className="flex flex-col gap-2 rounded-[12px] border border-sand-200 bg-cream p-4">
       {nothing ? (
-        <span className="font-sans text-note font-semibold leading-relaxed text-honey">{t.reorderResult.none}</span>
+        <span className="font-sans text-note font-semibold leading-relaxed text-honey">{shared.none}</span>
       ) : (
         <span className="rounded-[12px] bg-olive-bg px-3.5 py-3 font-sans text-note font-semibold leading-relaxed text-olive">
           {t.reorderResult.added.replace('{count}', String(notice.added))}
@@ -29,7 +33,7 @@ export function DesktopReorderNotice({ t, notice, onDismiss }: DesktopReorderNot
 
       {notice.skipped.length > 0 && (
         <span className="rounded-[12px] border border-honey-line bg-honey-bg px-3.5 py-3 font-sans text-note font-semibold leading-relaxed text-honey">
-          {t.reorderResult.skipped.replace('{count}', String(notice.skipped.length)).replace('{names}', notice.skipped.join(', '))}
+          {shared.skipped.replace('{count}', String(notice.skipped.length)).replace('{names}', notice.skipped.join(', '))}
         </span>
       )}
 

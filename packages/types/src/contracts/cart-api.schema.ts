@@ -298,3 +298,14 @@ export const CartViewBodySchema = z.object({
   /** Uygulanmak İSTENEN kupon kodu; geçerliliği sunucunun kararı (`discount.status`). */
   couponCode: z.string().trim().min(1).max(64).nullable().default(null),
 });
+
+/** `POST /api/v1/me/cart/reorder` gövdesi: geçmiş siparişin kalemleri bugünkü fiyatla sepete eklenir, sipariş numarayla adreslenir. */
+export const MeCartReorderBodySchema = z.object({ orderReference: z.string().trim().min(1) });
+
+/** Tekrar siparişin cevabı: güncel sepet, eklenen satır sayısı ve eklenemeyen kalemlerin adları ("tükendi" cümlesi için). */
+export const MeCartReorderSchema = z.object({
+  cart: MeCartViewSchema,
+  added: z.number().int().min(0),
+  skipped: z.array(z.string()),
+});
+export type MeCartReorder = z.infer<typeof MeCartReorderSchema>;

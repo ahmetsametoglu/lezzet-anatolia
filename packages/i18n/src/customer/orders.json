@@ -105,6 +105,14 @@
       },
       "deliveryPickup": "Depodan teslim",
       "pickupPhone": "Randevu için: {phone}"
+    },
+    "reorder": {
+      "placeAgain": "↻ Tekrar sipariş ver",
+      "working": "Ekleniyor…",
+      "addedToast": "Ürünler güncel fiyatlarla sepete eklendi ✓",
+      "skipped": "{count} ürün eklenemedi: {names}.",
+      "none": "Bu siparişteki ürünlerin hiçbiri şu an satışta değil.",
+      "failed": "Sepete eklenemedi — bağlantınızı kontrol edip tekrar deneyin."
     }
   },
   "fr": {
@@ -213,6 +221,14 @@
       },
       "deliveryPickup": "Retrait à l'entrepôt",
       "pickupPhone": "Pour convenir de l'heure : {phone}"
+    },
+    "reorder": {
+      "placeAgain": "↻ Commander à nouveau",
+      "working": "Ajout en cours…",
+      "addedToast": "Articles ajoutés au panier aux prix actuels ✓",
+      "skipped": "Non ajoutés ({count}) : {names}.",
+      "none": "Aucun produit de cette commande n'est disponible actuellement.",
+      "failed": "Ajout au panier impossible — vérifiez votre connexion et réessayez."
     }
   },
   "de": {
@@ -321,6 +337,14 @@
       },
       "deliveryPickup": "Abholung im Lager",
       "pickupPhone": "Für die Terminabsprache: {phone}"
+    },
+    "reorder": {
+      "placeAgain": "↻ Erneut bestellen",
+      "working": "Wird hinzugefügt…",
+      "addedToast": "Artikel zu aktuellen Preisen in den Warenkorb gelegt ✓",
+      "skipped": "{count} Artikel nicht hinzugefügt: {names}.",
+      "none": "Derzeit ist keines der Produkte dieser Bestellung verfügbar.",
+      "failed": "Konnte nicht in den Warenkorb gelegt werden – prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
     }
   }
 }

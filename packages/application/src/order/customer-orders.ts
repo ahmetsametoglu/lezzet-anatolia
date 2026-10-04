@@ -434,7 +434,7 @@ interface CustomerOrderLine {
 }
 
 /** Varyant kimliğine göre künye haritası; haritada olmayan varyant kalemi adsız bırakır, sipariş yine gösterilir. */
-async function resolveOrderLines(
+export async function resolveOrderLines(
   db: SupabaseClient,
   items: readonly { variantId: string }[],
   locale: PreferredLanguage,

@@ -28,11 +28,9 @@
       "body": "İlk siparişinizi vermek için kataloğa göz atın.",
       "cta": "Kataloğa göz at"
     },
+    "reorder": "Tekrar sipariş",
     "reorderResult": {
       "added": "{count} ürün sepete eklendi",
-      "addedToast": "Ürünler güncel fiyatlarla sepete eklendi ✓",
-      "skipped": "{count} ürün eklenemedi: {names}.",
-      "none": "Bu siparişteki ürünlerin hiçbiri şu an satışta değil.",
       "goToCart": "Sepete git",
       "dismiss": "Kapat",
       "note": "Ürünler güncel fiyatlarla sepete eklenir."
@@ -67,11 +65,9 @@
       "body": "Parcourez le catalogue pour passer votre première commande.",
       "cta": "Voir le catalogue"
     },
+    "reorder": "Commander à nouveau",
     "reorderResult": {
       "added": "Ajoutés au panier : {count}",
-      "addedToast": "Articles ajoutés au panier aux prix actuels ✓",
-      "skipped": "Non ajoutés ({count}) : {names}.",
-      "none": "Aucun produit de cette commande n'est disponible actuellement.",
       "goToCart": "Aller au panier",
       "dismiss": "Fermer",
       "note": "Les articles sont ajoutés au panier aux prix actuels."
@@ -106,11 +102,9 @@
       "body": "Sehen Sie sich den Katalog an, um Ihre erste Bestellung aufzugeben.",
       "cta": "Katalog ansehen"
     },
+    "reorder": "Erneut bestellen",
     "reorderResult": {
       "added": "{count} Artikel in den Warenkorb gelegt",
-      "addedToast": "Artikel zu aktuellen Preisen in den Warenkorb gelegt ✓",
-      "skipped": "{count} Artikel nicht hinzugefügt: {names}.",
-      "none": "Derzeit ist keines der Produkte dieser Bestellung verfügbar.",
       "goToCart": "Zum Warenkorb",
       "dismiss": "Schließen",
       "note": "Die Artikel werden zu den aktuellen Preisen übernommen."

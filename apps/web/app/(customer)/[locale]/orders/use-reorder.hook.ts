@@ -6,7 +6,7 @@ import { useCart } from '@/components/customer/cart/cart-context';
 import { useToast } from '@/components/customer/ui/toast';
 import { useRouter } from '@/i18n/navigation';
 import { reorderAction } from './actions';
-import ordersCopy from './messages.json';
+import ordersShared from '@lezzet/i18n/customer/orders';
 
 /**
  * Siparişin kalemlerini sepete ekleyip sepete götürür; sepete istemci yazar, çünkü misafir sepeti tarayıcıda yaşar ve sunucu yazsa
@@ -17,7 +17,7 @@ export function useReorder(locale: Locale, orderId: string) {
   const router = useRouter();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const t = ordersCopy[locale].reorderResult;
+  const t = ordersShared[locale].reorder;
 
   const reorder = () => {
     if (busy) return;
@@ -26,7 +26,10 @@ export function useReorder(locale: Locale, orderId: string) {
     let leaving = false;
     void reorderAction(locale, orderId)
       .then(({ data, errorKey }) => {
-        if (errorKey || !data) return;
+        if (errorKey || !data) {
+          toast(t.failed);
+          return;
+        }
         if (data.entries.length === 0) {
           toast(t.none);
           return;

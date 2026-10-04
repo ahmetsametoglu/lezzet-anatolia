@@ -4,7 +4,8 @@ import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
 import { useReorder } from '../use-reorder.hook';
-import reorderCopy from './reorder-messages.json';
+import ordersShared from '@lezzet/i18n/customer/orders';
+import ordersCopy from '../messages.json';
 
 /**
  * Düğme durumunu kendi taşır, çünkü detay sayfasında sunucuda çizilen başlığın içinde duruyor. Kelimeler de burada, çünkü aynı iki
@@ -16,13 +17,12 @@ interface ReorderButtonProps {
 }
 
 export function ReorderButton({ locale, orderId }: ReorderButtonProps) {
-  const t = reorderCopy[locale];
   const { busy, reorder } = useReorder(locale, orderId);
 
   return (
     <Button variant="outlineOlive" size="sm" disabled={busy} onClick={reorder} className="flex-none">
       {!busy && <Icon name="refresh" size={14} />}
-      {busy ? t.reordering : t.reorder}
+      {busy ? ordersShared[locale].reorder.working : ordersCopy[locale].reorder}
     </Button>
   );
 }

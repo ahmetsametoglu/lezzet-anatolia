@@ -5,6 +5,7 @@ import type { CartLineChange, CatalogImage, MeCartView, MeCartViewLine } from '@
 
 import {
   addCartItems,
+  reorderCart,
   fetchCart,
   fetchGuestCartView,
   removeCartItem,
@@ -825,6 +826,21 @@ export function applyCoupon(code: string): void {
 export function removeCoupon(): void {
   publish({ ...state, couponCode: null });
   refreshView();
+}
+
+/**
+ * Geçmiş siparişin kalemlerini sunucu sepetine ekler ve dönen sepeti benimser; sipariş girişli müşterinindir, misafir yolu yoktur.
+ * Kabuk monte değilken dil ve yer bilinmediği için istek atılmaz.
+ */
+export async function reorderInto(reference: string): Promise<ApiResult<{ added: number; skipped: readonly string[] }>> {
+  const query = queryNow();
+  if (query === null) return { data: null, error: 'cart_not_ready', status: null, retryAfterSec: null };
+
+  const mine = ++revision;
+  const result = await reorderCart(reference, query);
+  if (result.error !== null) return result;
+  if (mine === revision) publish(adopted(state, result.data.cart));
+  return { ...result, data: { added: result.data.added, skipped: result.data.skipped } };
 }
 
 // ── TÜRETİLMİŞ OKUMALAR ─────────────────────────────────────────────────────
