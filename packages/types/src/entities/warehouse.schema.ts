@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { dbNumeric, dbNumericNullable } from '../primitives/db-numeric';
-import { CountryEnum, TransferStatusEnum, WarehouseKindEnum } from '../primitives/enums.schema';
+import { BusinessEnum, CountryEnum, TransferStatusEnum, WarehouseKindEnum } from '../primitives/enums.schema';
 
 // Depo ağı şemaları (DOMAIN §17, data-model/depo.md). Depo müşteriye gösterilmez: müşteri posta kodunu girer, depo içeride çözülür.
 
@@ -28,6 +28,8 @@ export const WarehouseSchema = z.object({
   vehicleId: z.string().uuid().nullable(),
   /** Fiziksel tesisin ülkesi; KDV buna bağlıdır (DOMAIN §5/§17). Bölge sınır ötesi olabilir (ADR-002), depo olamaz. */
   countryCode: CountryEnum,
+  /** Deponun işi; stok, mal kabul ve sipariş işini buradan alır. */
+  business: BusinessEnum,
   address: z.record(z.unknown()).nullable(),
   /**
    * Deponun coğrafi noktası, kapalı turun başlangıcı ve bitişi; `address` içine gömülmedi, çünkü gömülü sayı kısıt taşıyamaz.
@@ -55,6 +57,8 @@ export const WarehouseInsertSchema = z.object({
   /** Araç deposunda ZORUNLU, tesiste yasak (`warehouse_vehicle_identity`) — künyesi varlık şemasında. */
   vehicleId: z.string().uuid().nullish(),
   countryCode: CountryEnum.optional(),
+  /** Verilmezse Lezzet (veri varsayılanı). */
+  business: BusinessEnum.optional(),
   address: z.record(z.unknown()).nullish(),
   lat: z.number().nullish(),
   lng: z.number().nullish(),

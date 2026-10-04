@@ -54,11 +54,22 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
     tagOptions: tags.filter((tag) => tag.isActive).map((tag) => ({ value: tag.slug, label: tag.label })),
     counterpartyOptions: counterparties
       .filter((counterparty) => counterparty.isActive)
-      .map((counterparty) => ({ value: counterparty.id, label: counterparty.name, defaultNature: counterparty.defaultNature })),
-    // Ülke ve vade de taşınır: belge formu faturanın KDV rejimini ülkeden, vadesini kartın vadesinden önerir.
+      .map((counterparty) => ({
+        value: counterparty.id,
+        label: counterparty.name,
+        defaultNature: counterparty.defaultNature,
+        defaultBusiness: counterparty.defaultBusiness,
+      })),
+    // Ülke, vade ve varsayılan iş de taşınır: belge formu faturanın KDV rejimini, vadesini ve işini bunlardan önerir.
     supplierOptions: suppliers
       .filter((supplier) => supplier.isActive)
-      .map((supplier) => ({ value: supplier.id, label: supplier.name, country: supplier.country, paymentTermDays: supplier.paymentTermDays })),
+      .map((supplier) => ({
+        value: supplier.id,
+        label: supplier.name,
+        country: supplier.country,
+        paymentTermDays: supplier.paymentTermDays,
+        defaultBusiness: supplier.defaultBusiness,
+      })),
     dictionary: {
       natures: natures.map(({ slug, label, direction, accountCode, isActive }) => ({ slug, label, direction, accountCode, isActive })),
       counterparties: counterparties.map(({ id, name, kind, keywords, defaultNature, isActive }) => ({ id, name, kind, keywords, defaultNature, isActive })),

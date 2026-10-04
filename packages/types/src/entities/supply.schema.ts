@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BusinessEnum } from '../primitives/enums.schema';
 
 // Tedarik zinciri şemaları (DOMAIN §16, data-model/stok-tedarik.md): tedarikçi, ürün–kod eşlemesi, tedarik siparişi, mal kabul.
 // Para alanları cent'tir (STACK §8); DB kolonları euro `numeric` ve çevrimi servis yapar (`moneyFields`).
@@ -18,6 +19,8 @@ export const SupplierSchema = z.object({
   country: CountryCodeSchema.nullable(),
   /** BİZE tanıdığı vade (gün); null = peşin. */
   paymentTermDays: z.number().int().nullable(),
+  /** Belgelerinin varsayılan işi; iki işe birden satan tedarikçide `null` ve belge girişi seçim ister. */
+  defaultBusiness: BusinessEnum.nullable(),
   note: z.string().nullable(),
   isActive: z.boolean(),
   createdAt: z.string(),
@@ -30,6 +33,7 @@ export const SupplierInsertSchema = z.object({
   vatNumber: z.string().nullish(),
   country: CountryCodeSchema.nullish(),
   paymentTermDays: z.number().int().nullish(),
+  defaultBusiness: BusinessEnum.nullish(),
   note: z.string().nullish(),
   isActive: z.boolean().optional(),
 });

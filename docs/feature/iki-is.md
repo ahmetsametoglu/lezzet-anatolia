@@ -1,6 +1,6 @@
 # İki iş tek sistem — QUALITE ve Lezzet
 
-> **Statü: KARAR ALINDI (03–04.10.2026), uygulama başlamadı.** Özelliğin tek kaydı bu dosya: kararlar, sonuçları, yol haritası ve
+> **Statü: KARAR ALINDI (03–04.10.2026); uygulama A fazında.** Özelliğin tek kaydı bu dosya: kararlar, sonuçları, yol haritası ve
 > açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Muhasebe tarafının kararları
 > [`kasa-muhasebe.md`](kasa-muhasebe.md)'dedir; bu dosya onların iki işe genişlemesidir.
 
@@ -58,8 +58,8 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
 
 | Faz | İş | Ön şart |
 |---|---|---|
-| A | **Para tarafında iş.** Belgede ve belgesiz harekette zorunlu iş alanı; tedarikçi, cari ve hesapta varsayılan iş; formlarda seçim; Pennylane kategorisi belgenin işinden; banka satırının işi bağından; para ekranında iş süzgeci ve iki işin özeti; Crédit Mutuel eşlemesi. | — |
-| B | **Satış ve stokta iş (depo modeli).** Depoda ve müşteride iş; bölge işe göre; depo çözümü, gel-al teklifi ve vitrinin "hiç var mı" toplamı müşterinin işine göre; tedarik siparişinde iş; satış raporları iki iş için (§5). | A |
+| A | **Para tarafında iş.** Belgede ve belgesiz harekette zorunlu iş alanı; tedarikçi, cari ve hesapta varsayılan iş; depoda iş (mal kabule bağlı belge ve sipariş parası işini deposundan alır); formlarda seçim; Pennylane kategorisi belgenin işinden; banka satırının işi bağından; para ekranında iş süzgeci ve iki işin özeti; Crédit Mutuel eşlemesi. | — |
+| B | **Satış ve stokta iş (depo modeli).** Müşteride iş; deponun işi formda seçilir ve kullanılmaya başlayınca kilitlenir; bölge işe göre; depo çözümü, gel-al teklifi ve vitrinin "hiç var mı" toplamı müşterinin işine göre; tedarik siparişinde iş; satış raporları iki iş için (§5). | A |
 | C | **Gider fişi mobilde.** Fotoğraf, iş, tür, tutar ve KDV ile belge açılır; Pennylane'e bugünkü kuyrukla yüklenir. | A |
 | D | **E-fatura okuyucu** iki iş için; çift kayıt koruması (`kasa-muhasebe.md` 7. adım). | A |
 | E | **Fişten otomatik okuma** (tutar, KDV, tedarikçi). | C |
@@ -71,18 +71,17 @@ Açık soru yok.
 ## 5. Ölçülmüş etki (03–04.10, salt okuma analizi; kod değişmedi)
 
 **Para (A fazı):**
-- İş enum'u `0010_supply.sql`'de tanımlanır, çünkü tedarikçi tablosu para tablolarından önce açılır. Varsayılanlar boş
-  bırakılabilir (`supplier`, `counterparty`, `account`): ortak hesapta ya da ortak tedarikçide boşluk seçimi zorlar.
-- `money_document.business` zorunlu; sırayla açık seçim, tedarikçi, cari; kararı belge kapısı (`createMoneyDocument`) verir.
-- `money_movement.business` zorunlu ve tetikleyici kurar: bağ (belge, mal kabul ya da tedarikçi, B fazında sipariş), sonra
+- İş enum'u `0010_supply.sql`'de tanımlanır, çünkü tedarikçi tablosu para tablolarından önce açılır. Tedarikçinin ve carinin
+  varsayılan işi boş bırakılabilir (ortak tedarikçide boşluk seçimi zorlar); hesabın ve deponun işi zorunlu, etiketsiz Lezzet.
+- `money_document.business` zorunlu; mal kabule bağlıysa deponun işi (çelişen seçim reddedilir), değilse sırayla açık seçim,
+  tedarikçi, cari; kararı belge kapısı (`createMoneyDocument`) verir.
+- `money_movement.business` zorunlu ve tetikleyici kurar: bağ (belge, siparişin ya da mal kabulün deposu, tedarikçi), sonra
   cari, sonra hesap. Böylece RPC'ler ve SQL yazımları da kapsanır; bağ değişince iş yeniden türer. İki işin belgesine giden
   bağ reddedilir (4. karar).
 - Pennylane: kategori işten; harekete kategori yazan port yöntemi ve aynası eklenir; kuyruk tetikleyicisinin sütun listesine
   iş girer.
-- Riskler: kapı tahsilatının hesabı tek ayardan geliyor ve A fazında siparişin işi yok, toptanın nakdi Lezzet'e yazılır (B
-  fazında siparişin işi deposundan gelince düzelir); eşleşmeyi geri alma ve "zaten yazmıştım" birleşmesi işi taşımalı;
-  `matched_elsewhere` iki iş bizdeyken anlamını yitirir; zorunlu alan yaklaşık 70 testi, üç tohum dosyasını ve dört SQL yazım
-  noktasını etkiler.
+- Eşleşmeyi geri alma ve "zaten yazmıştım" birleşmesi bağı taşır; bağ tetikleyicisi iki hareketin işini de yeniden kurar.
+- Kalan risk: `matched_elsewhere` iki iş bizdeyken anlamını yitirir (Crédit Mutuel eşlemesi adımı).
 
 **Satış ve stok (B fazı):**
 - **Depo:** `warehouse.business`, etiketsiz Lezzet. Depo kullanılmaya başlayınca işi değişmez; sipariş ve parti işini depodan

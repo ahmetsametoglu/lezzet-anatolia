@@ -1,13 +1,20 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { AccountService, MoneyDocumentService, MoneyMovementService } from './money.service';
+import type { Business } from '@lezzet/types';
+import { AccountService, CounterpartyService, MoneyAllocationService, MoneyDocumentService, MoneyMovementService } from './money.service';
+import { CategoryService } from './category.service';
+import { OrderService } from './order.service';
+import { ProductService } from './product.service';
+import { StockIntakeService } from './stock-intake.service';
+import { SupplierService } from './supplier.service';
+import { UserProfileService } from './user-profile.service';
+import { WarehouseService } from './warehouse.service';
 import { serviceDb } from '../client';
 import { purgeTestData } from '../testing/cleanup';
+import { createTestWarehouse } from '../testing/warehouse';
 
 /**
- * Hesaplar + para hareketleri (12.1) — DOMAIN §9.
- *
- * Doğrulanan şey **türetimin doğruluğu**: bakiye hiçbir yerde saklanmıyor, hareketlerden çıkıyor.
- * Asıl incelik transferde: TEK satır yazılıyor ama İKİ hesabı simetrik etkilemesi gerekiyor.
+ * Hesaplar ve para hareketleri (DOMAIN §9): bakiye saklanmaz, hareketlerden türer. Asıl incelik transferdedir: tek satır yazılır
+ * ama iki hesabı simetrik etkiler.
  */
 const db = serviceDb();
 const accounts = new AccountService(db);
@@ -27,7 +34,6 @@ async function openAccount(ad: string, type: 'cash' | 'bank' | 'provider' = 'ban
 }
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
-// `euro()` kırpıcısı KALKTI (02.9): toplamlar tamsayı cent, kırpılacak kayan-nokta artığı yok.
 
 let cashAccount: Awaited<ReturnType<typeof openAccount>>;
 let bankAccount: Awaited<ReturnType<typeof openAccount>>;
@@ -100,15 +106,8 @@ describe('transfer — tek satır, iki hesap', () => {
     // Aynı hareket, iki defter satırı: id ortak.
     expect(cashLedger.rows[0]!.id).toBe(bankLedger.rows[0]!.id);
 
-    // **HESAP-ÜSTÜ okumada transferin İKİ AYAĞI DA kalır** (karar 04.08, operasyon şeridinin
-    // talebi). Birini seçip ötekini gizlemek keyfî olurdu ve "hangi ayak" sorusunun cevabı yok.
-    // İkisi birbirini götürdüğü için "Tümü"nün toplamı da doğru çıkar: para işletmeden çıkmadı.
-    // Süzgeç HESAP DEĞİL TİP: iddia "hesap-üstü okumada iki ayak da kalır"dır, o yüzden `accountId`
-    // verilemez — ama `type` verilebilir ve evreni daraltır. Çıplak `ledger()` idi ve paylaşılan
-    // veritabanında kırılgandı: okuma keyset sayfalı (`valueDate desc`), yani `money_movement`
-    // kirliliği biriktiğinde testin kendi satırı ilk sayfanın DIŞINA düşüyor ve `expected [] to
-    // have length 2` ile yalancı kırmızı veriyordu (bildirim şeridi 26.08'de bir kez ölçtü, not
-    // bıraktı; sebep bugün doğrulandı). `CLAUDE §4b`: kendi kurduğun satırları oku.
+    // Hesap-üstü okumada transferin iki ayağı da kalır, çünkü birini gizlemek keyfî olurdu ve ikisi birbirini götürdüğü için toplam
+    // doğru çıkar. Süzgeç tiptir, hesap değil; testin kendi satırları ilk sayfada kalsın diye evren daraltılır (`CLAUDE §4b`).
     const hepsi = await movements.ledger({ type: 'transfer', limit: 200 });
     const ayaklar = hepsi.rows.filter((r) => r.id === cashLedger.rows[0]!.id);
     expect(ayaklar).toHaveLength(2);
@@ -166,7 +165,7 @@ describe('ekstre ve dönem', () => {
     // Sayfa ilk N satırı taşır; ekran onu sayarsa "7" yerine "20+" yazar (sayaç olmayan bir sayaç).
     // Küresel sayıya bakılmıyor (`CLAUDE §4b`) — ölçüt kendi eklediğimizin FARKI.
     const once = await movements.unexplainedCount();
-    // Bağsız, belgesiz, türsüz satır izah bekler; türlü satır saymaz (13.09 · etiket izah değildir).
+    // Bağsız, belgesiz, türsüz satır izah bekler; türlü satır saymaz, çünkü etiket izah değildir.
     const izahsiz = await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 111, type: 'misc' });
     await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 222, type: 'expense', nature: 'banka-masrafi' });
     const sonra = await movements.unexplainedCount();
@@ -199,7 +198,6 @@ describe('ekstre ve dönem', () => {
     await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 500_000, type: 'expense', valueDate: dayOffset(-90) });
 
     const expenseAfter = await oku('expense');
-    // `euro()` sarmalayıcısı KALKTI: toplam tamsayı cent, düzeltilecek kayan-nokta artığı yok (02.9).
     expect(expenseAfter.totalCents - expenseBefore.totalCents).toBe(102_040); // 5000'lik satır dönem dışı
     expect(expenseAfter.count - expenseBefore.count).toBe(2);
 
@@ -215,16 +213,8 @@ describe('ekstre ve dönem', () => {
 });
 
 /**
- * SINIR TESTİ (02.9 · STACK §8) — para hareketi ailesi euro↔cent.
- *
- * Bu ailede DÖRT ayrı yol var ve dördü ayrı kodda:
- *   1. **Tablo** (`moneyFields`) — `money_movement.amount` euro, dönen alan cent.
- *   2. **Görünüm** (`account_movement`) — `signed_amount` görünümün TÜRETTİĞİ kolon; işaret kuralı
- *      SQL'de yaşıyor, birim çevrimi burada.
- *   3. **Bakiye görünümü** (`account_balance`) — Σ defter satırı.
- *   4. **RPC** (`record_order_movement`) — girdi euro'ya iner, dönüş cent'e çıkar.
- *
- * Kolonlar HAM okunur: iki tarafı da servisten okuyan bir test, aynı yanlış sabitle çarpılsa geçerdi.
+ * Para hareketi ailesinin euro↔cent sınırı (STACK §8): tablo, defter görünümü, bakiye görünümü ve RPC ayrı kodda çevrilir. Kolonlar
+ * ham okunur, çünkü iki tarafı da servisten okuyan test aynı yanlış sabitle çarpılsa geçerdi.
  */
 describe('para hareketi — euro↔cent sınırı', () => {
   it('cent yazılır, kolon euro tutar, cent okunur (tablo + görünüm + bakiye)', async () => {
@@ -262,7 +252,14 @@ describe('belge arşivi — tarih aralığı ve imleç (12.17)', () => {
     // Yerelde kimsenin yazmadığı bir ay: sayfa bütün belgeleri okur, aralığa yalnız bu testinkiler düşer.
     const days = ['2003-03-02', '2003-03-05', '2003-03-09', '2003-03-12'];
     for (const [i, issuedOn] of days.entries()) {
-      const document = await documents.insert({ kind: 'invoice', number: `ARSIV-${stamp}-${i}`, issuedOn, direction: 'out', amountCents: 1000 + i });
+      const document = await documents.insert({
+        kind: 'invoice',
+        business: 'lezzet',
+        number: `ARSIV-${stamp}-${i}`,
+        issuedOn,
+        direction: 'out',
+        amountCents: 1000 + i,
+      });
       createdDocuments.push(document.id);
     }
 
@@ -273,5 +270,155 @@ describe('belge arşivi — tarih aralığı ve imleç (12.17)', () => {
     const second = await documents.page({ from: '2003-03-01', to: '2003-03-10', limit: 2, cursor: first.nextCursor! });
     expect(second.rows.map((document) => document.issuedOn)).toEqual(['2003-03-02']);
     expect(second.nextCursor).toBeNull();
+  });
+});
+
+describe('hareketin işi', () => {
+  const documents = new MoneyDocumentService(db);
+  const allocations = new MoneyAllocationService(db);
+  const parties = {
+    supplierIds: [] as string[],
+    counterpartyIds: [] as string[],
+    warehouseIds: [] as string[],
+    orderIds: [] as string[],
+    productIds: [] as string[],
+    categoryIds: [] as string[],
+    profileIds: [] as string[],
+  };
+
+  afterAll(async () => {
+    await purgeTestData(db, parties);
+  });
+
+  const counterpartyOf = async (defaultBusiness: Business | null) => {
+    const row = await new CounterpartyService(db).insert({ name: `İş carisi ${stamp}-${parties.counterpartyIds.length}`, defaultBusiness });
+    parties.counterpartyIds.push(row.id);
+    return row;
+  };
+  const supplierOf = async (defaultBusiness: Business | null) => {
+    const row = await new SupplierService(db).insert({ name: `İş tedarikçisi ${stamp}-${parties.supplierIds.length}`, defaultBusiness });
+    parties.supplierIds.push(row.id);
+    return row;
+  };
+  const warehouseOf = async (business: Business) => {
+    const row = await createTestWarehouse(db);
+    parties.warehouseIds.push(row.id);
+    return new WarehouseService(db).update({ id: row.id, business });
+  };
+  const documentOf = async (business: Business, amountCents = 1000) => {
+    const row = await documents.insert({ kind: 'invoice', business, issuedOn: dayOffset(-1), direction: 'out', amountCents });
+    createdDocuments.push(row.id);
+    return row;
+  };
+  const businessOf = async (movementId: string) => (await movements.getById(movementId))?.business;
+
+  it('iş sırayla belge bağından, mal kabulün deposundan, tedarikçiden, cariden, en son hesaptan gelir; bağ kalkınca geri döner', async () => {
+    const qualiteAccount = await accounts.insert({ name: `QUALITE bankası ${stamp}-${(counter += 1)}`, type: 'bank', business: 'qualite' });
+    createdAccounts.push(qualiteAccount.id);
+    const fromAccount = await movements.insert({
+      accountId: qualiteAccount.id,
+      direction: 'out',
+      amountCents: 1000,
+      type: 'expense',
+      description: 'hesap',
+    });
+    expect(fromAccount.business).toBe('qualite');
+
+    const counterparty = await counterpartyOf('lezzet');
+    const movement = await movements.insert({
+      accountId: qualiteAccount.id,
+      direction: 'out',
+      amountCents: 1000,
+      type: 'expense',
+      counterpartyId: counterparty.id,
+    });
+    expect(movement.business).toBe('lezzet');
+
+    const supplier = await supplierOf('qualite');
+    await movements.update({ id: movement.id, counterpartyId: null, supplierId: supplier.id });
+    expect(await businessOf(movement.id)).toBe('qualite');
+
+    const warehouse = await warehouseOf('lezzet');
+    const intake = await new StockIntakeService(db).insert({ supplierId: supplier.id, warehouseId: warehouse.id });
+    await movements.update({ id: movement.id, stockIntakeId: intake.id });
+    expect(await businessOf(movement.id)).toBe('lezzet');
+
+    const document = await documentOf('qualite');
+    await allocations.insert({ movementId: movement.id, documentId: document.id, amountCents: 1000 });
+    expect(await businessOf(movement.id)).toBe('qualite');
+    await allocations.remove(movement.id, document.id);
+    expect(await businessOf(movement.id)).toBe('lezzet');
+  });
+
+  it('sipariş parası işini siparişin deposundan alır, hesabın işinden değil', async () => {
+    const warehouse = await warehouseOf('qualite');
+    const categoryId = (await new CategoryService(db).create({ name: { tr: `İş testi ${stamp}` } })).id;
+    parties.categoryIds.push(categoryId);
+    const { product, variants } = await new ProductService(db).create({
+      name: { tr: `İş testi ürünü ${stamp}` },
+      categoryId,
+      variants: [{ label: { tr: '1 kg' } }],
+    });
+    parties.productIds.push(product.id);
+    const customerId = (await new UserProfileService(db).insert({ name: `İş testi müşterisi ${stamp}` })).id;
+    parties.profileIds.push(customerId);
+    const { order } = await new OrderService(db).create(
+      { customerId, warehouseId: warehouse.id, channel: 'b2b', deliveryType: 'shipping', status: 'confirmed' },
+      [{ variantId: variants[0]!.id, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }],
+    );
+    parties.orderIds.push(order.id);
+
+    const payment = await movements.insert({
+      accountId: bankAccount.id,
+      direction: 'in',
+      amountCents: 1055,
+      type: 'order_payment',
+      orderId: order.id,
+    });
+    expect(payment.business).toBe('qualite');
+  });
+
+  it('bir hareket iki işin belgesine bağlanamaz; belgenin işi değişince ödemesi izler, ödeme öteki işin belgesine de bağlıysa değişemez', async () => {
+    const movement = await movements.insert({
+      accountId: bankAccount.id,
+      direction: 'out',
+      amountCents: 3000,
+      type: 'expense',
+      description: 'iki belge',
+    });
+    const first = await documentOf('lezzet');
+    const second = await documentOf('qualite');
+    await allocations.insert({ movementId: movement.id, documentId: first.id, amountCents: 1000 });
+    await expect(allocations.insert({ movementId: movement.id, documentId: second.id, amountCents: 1000 })).rejects.toThrow(
+      /iki işin belgesine/,
+    );
+
+    await documents.update({ id: first.id, business: 'qualite' });
+    expect(await businessOf(movement.id)).toBe('qualite');
+    await allocations.insert({ movementId: movement.id, documentId: second.id, amountCents: 1000 });
+    await expect(documents.update({ id: first.id, business: 'lezzet' })).rejects.toThrow(/işi değişemez/);
+  });
+
+  it('yazanın gönderdiği iş ezilir; bağı değişmeyen güncelleme, varsayılan sonradan değişse de işi kaydırmaz', async () => {
+    const counterparty = await counterpartyOf('qualite');
+    const movement = await movements.insert({
+      accountId: bankAccount.id,
+      direction: 'out',
+      amountCents: 1000,
+      type: 'expense',
+      counterpartyId: counterparty.id,
+    });
+    expect(movement.business).toBe('qualite');
+
+    const { error } = await db.from('money_movement').update({ business: 'lezzet' }).eq('id', movement.id);
+    expect(error).toBeNull();
+    expect(await businessOf(movement.id)).toBe('qualite');
+
+    await new CounterpartyService(db).update({ id: counterparty.id, defaultBusiness: 'lezzet' });
+    await movements.update({ id: movement.id, description: 'açıklama değişti' });
+    expect(await businessOf(movement.id)).toBe('qualite');
+
+    await movements.update({ id: movement.id, counterpartyId: null });
+    expect(await businessOf(movement.id)).toBe('lezzet');
   });
 });

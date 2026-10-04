@@ -87,6 +87,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `assistant_proposal_kind`: bundle_draft, featured_flag, discount_draft, purchase_order, stock_intake, money_movement, zone_extend, product_draft, recipe_draft, batch_offer, product_create, money_document, supplier_create *(asistan kuyruğundaki öneri tipi; son ikisi faturadan belge ve tedarikçi — 22.44)*
 - `assistant_proposal_status`: pending, applied, rejected, expired, failed
 - `barcode_kind`: unit, case *(tekil ürün mü koli mi)*
+- `business`: qualite, lezzet *(iş — QUALITE toptan, Lezzet çevrim içi satış; aynı tüzel kişiliğin iç ayrımı, `docs/feature/iki-is.md`)*
 - `carrier`: colissimo, chronopost, dhl, ups, other
 - `channel`: b2b, b2c
 - `conversation_source`: whatsapp, messenger, instagram

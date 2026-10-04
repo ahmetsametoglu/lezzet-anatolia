@@ -231,6 +231,8 @@ export const DOCUMENT_REASON = {
   link_not_found: 'Seçilen mal kabul ya da sipariş bulunamadı — sayfayı tazeleyin.',
   link_supplier_mismatch: 'Seçilen mal kabul ya da sipariş başka bir tedarikçinin — belgenin tedarikçisiyle aynı olmalı.',
   link_has_document: 'Bu mal kabulün ya da siparişin faturası zaten girilmiş.',
+  business_required: 'Belgenin işi seçilmeli — karşı tarafın varsayılan işi yok.',
+  business_stock_mismatch: 'Belge bir mal kabule bağlı — işi, malın girdiği deponun işidir.',
 } as const;
 
 /** Belge bağı kapısının reddi → operatörün cümlesi. */
@@ -240,6 +242,7 @@ export const ALLOCATION_REASON = {
   already_allocated: 'Bu hareket bu belgeye zaten bağlı.',
   nothing_to_allocate: 'Hareketin bağlanacak kalanı yok — tutarın tamamı başka belgelere bağlanmış.',
   document_settled: 'Belgenin açık kalanı yok — ödemesi zaten tamamlanmış.',
+  business_mismatch: 'Hareket başka işin belgesine bağlı — bir ödeme iki işin belgesini kapatamaz.',
 } as const;
 
 /** Etiket kapısının reddi → operatörün cümlesi. */
@@ -285,6 +288,7 @@ export const RECONCILE_REASON = {
   same_account: 'Aynı hesabın içinde transfer olmaz — başka bir hesap seçin.',
   document_settled: ALLOCATION_REASON.document_settled,
   already_allocated: ALLOCATION_REASON.already_allocated,
+  business_mismatch: ALLOCATION_REASON.business_mismatch,
 } as const;
 
 /** Okunamayan ekstre satırının sebebi — sayısı ve sebebi söylenir, dosya sessizce eksik alınmaz. */

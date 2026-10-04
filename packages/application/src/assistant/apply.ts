@@ -366,8 +366,8 @@ const applyBatchOffer: Applier = async (db, raw) => {
 };
 
 /**
- * Belge, belge kapısından (`createMoneyDocument`): Para ekranının eylemiyle aynı kurallar uygulanır. Cari adla çözülemediyse dilekçede
- * kimlik yoktur ve kapı karşı tarafsız belgeyi reddeder; seçim kuyruğun formunda yapılır.
+ * Belge, belge kapısından (`createMoneyDocument`): Para ekranının eylemiyle aynı kurallar uygulanır. Dilekçe iş taşımaz, kapı onu karşı
+ * tarafın varsayılanından kurar; cari çözülemediyse ya da varsayılan yoksa kapı reddeder ve seçim kuyruğun formunda yapılır.
  */
 const applyMoneyDocument: Applier = async (db, raw) => {
   const payload = parseProposalPayload('money_document', raw) as MoneyDocumentPayload;

@@ -1,13 +1,17 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   AccountService,
+  CounterpartyService,
   MoneyDocumentService,
   MoneyMovementService,
   MovementNatureService,
   MovementTagService,
+  StockIntakeService,
+  SupplierService,
+  WarehouseService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import type { DocumentVatLine } from '@lezzet/types';
 import { addCounterparty, setMovementCounterparty } from './counterparties';
 import { allocateToDocument, attachDocumentFile, createMoneyDocument, listOpenDocuments, removeAllocation } from './document';
@@ -56,7 +60,14 @@ const KDV_10_EUR: DocumentVatLine[] = [{ vatRate: 20, netCents: 833, vatCents: 1
  * faturanın reddi `apps/web/lib/money/supplier-document-debt.test.ts`'te.
  */
 describe('belgenin koşulları — okunur retler (12.26)', () => {
-  const base = { kind: 'invoice' as const, issuedOn: '2026-09-12', direction: 'out' as const, amountCents: 1000, vatLines: KDV_10_EUR };
+  const base = {
+    kind: 'invoice' as const,
+    business: 'lezzet' as const,
+    issuedOn: '2026-09-12',
+    direction: 'out' as const,
+    amountCents: 1000,
+    vatLines: KDV_10_EUR,
+  };
   const someId = '00000000-0000-4000-8000-000000000001';
 
   it('kabul ve sipariş aynı anda bağlanamaz; bağ tedarikçi ister; olmayan kabul bulunamaz', async () => {
@@ -180,14 +191,31 @@ describe('cari (13.09)', () => {
 describe('belge ve bağ — tutarıyla (13.09)', () => {
   it('bir havale İKİ faturayı kapatır; kalanı olmayan hareket üçüncüye, yeni hareket ödenmiş faturaya bağlanmaz', async () => {
     const a = await createMoneyDocument(db, {
-      kind: 'invoice', number: `A-${stamp}`, issuedOn: '2026-09-01', direction: 'out', amountCents: 70_000, nature: 'kira', vatRegime: 'exempt',
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `A-${stamp}`,
+      issuedOn: '2026-09-01',
+      direction: 'out',
+      amountCents: 70_000,
+      nature: 'kira',
+      vatRegime: 'exempt',
     });
     const b = await createMoneyDocument(db, {
-      kind: 'invoice', number: `B-${stamp}`, issuedOn: '2026-09-02', direction: 'out', amountCents: 50_000,
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `B-${stamp}`,
+      issuedOn: '2026-09-02',
+      direction: 'out',
+      amountCents: 50_000,
       vatLines: [{ vatRate: 20, netCents: 41_667, vatCents: 8333 }],
     });
     const c = await createMoneyDocument(db, {
-      kind: 'invoice', number: `C-${stamp}`, issuedOn: '2026-09-03', direction: 'out', amountCents: 10_000,
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `C-${stamp}`,
+      issuedOn: '2026-09-03',
+      direction: 'out',
+      amountCents: 10_000,
       vatLines: [{ vatRate: 20, netCents: 8333, vatCents: 1667 }],
     });
     if (a.status !== 'ok' || b.status !== 'ok' || c.status !== 'ok') throw new Error('belge yazılamadı');
@@ -218,7 +246,12 @@ describe('belge ve bağ — tutarıyla (13.09)', () => {
 
   it('kısmi ödeme açık kalanı düşürür; bağ kaldırılınca geri gelir; ters yönlü para bağlanmaz', async () => {
     const belge = await createMoneyDocument(db, {
-      kind: 'invoice', number: `FA-${stamp}`, issuedOn: '2026-09-01', direction: 'out', amountCents: 120_000,
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `FA-${stamp}`,
+      issuedOn: '2026-09-01',
+      direction: 'out',
+      amountCents: 120_000,
       vatLines: [{ vatRate: 20, netCents: 100_000, vatCents: 20_000 }],
     });
     if (belge.status !== 'ok') throw new Error('belge yazılamadı');
@@ -260,7 +293,13 @@ describe('belge ve bağ — tutarıyla (13.09)', () => {
   });
 
   it('dosya anahtarı yalnız o belgenin klasöründen bağlanır', async () => {
-    const belge = await createMoneyDocument(db, { kind: 'payslip', issuedOn: '2026-09-03', direction: 'out', amountCents: 200_000 });
+    const belge = await createMoneyDocument(db, {
+      kind: 'payslip',
+      business: 'lezzet',
+      issuedOn: '2026-09-03',
+      direction: 'out',
+      amountCents: 200_000,
+    });
     expect(belge.status).toBe('ok');
     if (belge.status !== 'ok') return;
     createdDocuments.push(belge.document.id);
@@ -294,5 +333,79 @@ describe('belge ve bağ — tutarıyla (13.09)', () => {
     expect(sonuc.status).toBe('ok');
     const satir = (await movements().listByOrder((data as { id: string }).id)).find((m) => m.idempotencyKey === `izah-${stamp}`);
     expect(satir).toMatchObject({ explained: true, source: 'system', nature: null, tags: [] });
+  });
+});
+
+describe('belgenin işi', () => {
+  const entry = { kind: 'invoice' as const, issuedOn: '2026-09-12', direction: 'out' as const, amountCents: 1000, vatLines: KDV_10_EUR };
+  const parties = { supplierIds: [] as string[], warehouseIds: [] as string[] };
+
+  afterAll(async () => {
+    await purgeTestData(db, parties);
+  });
+
+  const created = (outcome: Awaited<ReturnType<typeof createMoneyDocument>>) => {
+    if (outcome.status === 'ok') createdDocuments.push(outcome.document.id);
+    return outcome;
+  };
+
+  it('seçim yoksa tedarikçinin ya da carinin varsayılanı; açık seçim varsayılanı ezer; hiçbiri iş söylemiyorsa belge yazılmaz', async () => {
+    const supplier = await new SupplierService(db).insert({ name: `İş tedarikçisi ${stamp}`, defaultBusiness: 'qualite' });
+    parties.supplierIds.push(supplier.id);
+    expect(created(await createMoneyDocument(db, { ...entry, supplierId: supplier.id }))).toMatchObject({
+      status: 'ok',
+      document: { business: 'qualite' },
+    });
+    expect(created(await createMoneyDocument(db, { ...entry, supplierId: supplier.id, business: 'lezzet' }))).toMatchObject({
+      status: 'ok',
+      document: { business: 'lezzet' },
+    });
+
+    const counterparty = await new CounterpartyService(db).insert({ name: `İşsiz cari ${stamp}` });
+    createdCounterparties.push(counterparty.id);
+    expect(await createMoneyDocument(db, { ...entry, counterpartyId: counterparty.id })).toEqual({
+      status: 'invalid',
+      reason: 'business_required',
+    });
+  });
+
+  it('mal kabule bağlı belge deponun işini alır; depoyla çelişen seçim reddedilir', async () => {
+    const warehouse = await createTestWarehouse(db);
+    parties.warehouseIds.push(warehouse.id);
+    await new WarehouseService(db).update({ id: warehouse.id, business: 'qualite' });
+    const supplier = await new SupplierService(db).insert({ name: `Kabul tedarikçisi ${stamp}`, defaultBusiness: 'lezzet' });
+    parties.supplierIds.push(supplier.id);
+    const intakes = new StockIntakeService(db);
+    const intake = await intakes.insert({ supplierId: supplier.id, warehouseId: warehouse.id });
+    expect(created(await createMoneyDocument(db, { ...entry, supplierId: supplier.id, stockIntakeId: intake.id }))).toMatchObject({
+      status: 'ok',
+      document: { business: 'qualite' },
+    });
+
+    const other = await intakes.insert({ supplierId: supplier.id, warehouseId: warehouse.id });
+    expect(await createMoneyDocument(db, { ...entry, supplierId: supplier.id, stockIntakeId: other.id, business: 'lezzet' })).toEqual({
+      status: 'invalid',
+      reason: 'business_stock_mismatch',
+    });
+  });
+
+  it('bir ödeme iki işin belgesini kapatamaz; kapı veritabanı hatası yerine okunur ret döner', async () => {
+    const payment = await movements().insert({
+      accountId: bankAccount,
+      direction: 'out',
+      amountCents: 2000,
+      type: 'expense',
+      description: 'iki iş',
+    });
+    const documents = new MoneyDocumentService(db);
+    const lezzet = await documents.insert({ ...entry, business: 'lezzet' });
+    const qualite = await documents.insert({ ...entry, business: 'qualite' });
+    createdDocuments.push(lezzet.id, qualite.id);
+
+    expect(await allocateToDocument(db, { movementId: payment.id, documentId: lezzet.id })).toMatchObject({ status: 'ok' });
+    expect(await allocateToDocument(db, { movementId: payment.id, documentId: qualite.id })).toEqual({
+      status: 'invalid',
+      reason: 'business_mismatch',
+    });
   });
 });

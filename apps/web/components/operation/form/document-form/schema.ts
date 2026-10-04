@@ -2,12 +2,14 @@ import { z } from 'zod';
 import { documentDueOn, documentVatProblem, expectedVatCents, suggestVatRegime, vatLinesTotals } from '@lezzet/domain-core';
 import { fromCents, toCents } from '@lezzet/helper';
 import {
+  BusinessEnum,
   DOCUMENT_VAT_RATES,
   DocumentKindEnum,
   DocumentVatLineSchema,
   DocumentVatRateSchema,
   DocumentVatRegimeEnum,
   MovementDirectionEnum,
+  type Business,
   type DocumentKind,
   type DocumentVatLine,
   type DocumentVatRegime,
@@ -148,12 +150,13 @@ export function invoiceTermsOf(invoice: InvoiceFields): {
   };
 }
 
-/** Tedarikçi seçeneği — ülkesi ve vadesiyle: faturanın rejimi ve vadesi bunlardan önerilir. */
+/** Tedarikçi seçeneği — ülkesi, vadesi ve varsayılan işiyle: faturanın rejimi, vadesi ve işi bunlardan önerilir. */
 export interface SupplierOption {
   value: string;
   label: string;
   country: string | null;
   paymentTermDays: number | null;
+  defaultBusiness: Business | null;
 }
 
 /**
@@ -194,6 +197,8 @@ export const DocumentFormSchema = z.object({
   counterpartyId: z.string(),
   /** Boş dize = tedarikçi değil. */
   supplierId: z.string(),
+  /** İş — boş dize = seçilmedi; karşı taraf seçilince varsayılanı önerilir. */
+  business: z.union([BusinessEnum, z.literal('')]),
   /** Neyin faturası — `parseStockLink` biçimi; boş = bağsız. Yalnız tedarikçinin ödenecek belgesinde. */
   stockLink: z.string(),
   direction: MovementDirectionEnum,
@@ -212,6 +217,7 @@ export function emptyDocumentForm(today: string): DocumentForm {
     issuedOn: today,
     counterpartyId: '',
     supplierId: '',
+    business: '',
     stockLink: '',
     direction: 'out',
     nature: '',
@@ -225,6 +231,7 @@ export function emptyDocumentForm(today: string): DocumentForm {
 export function documentBlock(values: DocumentForm): string | null {
   if (!values.issuedOn) return 'Belgenin tarihi seçilmeli.';
   if (!values.counterpartyId && !values.supplierId) return 'Karşı taraf seçilmeli — cari ya da tedarikçi.';
+  if (!values.business) return 'Belgenin işi seçilmeli — QUALITE ya da Lezzet.';
   return invoiceBlock(values.invoice, values.issuedOn, values);
 }
 
@@ -238,6 +245,7 @@ export function documentInputOf(values: DocumentForm) {
     dueOn: terms.dueOn,
     counterpartyId: values.counterpartyId || null,
     supplierId: values.supplierId || null,
+    business: values.business || null,
     // Bağ yalnız tedarikçinin ödenecek belgesinde anlamlı — öteki hâlde seçici çizilmiyor, kalıntı da gitmez.
     ...(values.supplierId && values.direction === 'out' ? parseStockLink(values.stockLink) : { stockIntakeId: null, purchaseOrderId: null }),
     direction: values.direction,

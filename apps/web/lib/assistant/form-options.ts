@@ -15,7 +15,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { publicImageUrl } from '@lezzet/storage';
-import { resolveLocalizedText, type StorageAreaKind } from '@lezzet/types';
+import { resolveLocalizedText, type StorageAreaKind, type Supplier } from '@lezzet/types';
 import type { CounterpartyOption, NatureOption, TagOption } from '@/components/operation/form/movement-form/schema';
 import type { ProductFormSource } from '@/components/operation/form/product-form/schema';
 import type { VariantOption } from '@/components/operation/form/bundle-form/types';
@@ -57,7 +57,7 @@ export interface AssistantFormOptions {
   accounts: Array<{ id: string; name: string; balanceCents: number }>;
   /** Aktif tür sözlüğü; yöne göre süzülsün diye yönünü de taşır. */
   natures: NatureOption[];
-  /** Aktif cariler, varsayılan türüyle — formun "karşı taraf" seçicisi. */
+  /** Aktif cariler, varsayılan türü ve işiyle — formun "karşı taraf" seçicisi. */
   counterparties: CounterpartyOption[];
   /** Aktif serbest etiketler; pasif etiket yeni harekete verilmez. */
   tags: TagOption[];
@@ -66,9 +66,9 @@ export interface AssistantFormOptions {
    */
   warehouses: Array<{ id: string; name: string }>;
   /**
-   * Ülke ve vade de taşınır: belge gövdesi faturanın KDV rejimini ülkeden, vadesini kartın vadesinden önerir (`supplierSuggestion`).
+   * Ülke, vade ve varsayılan iş de taşınır: belge gövdesi faturanın KDV rejimini, vadesini ve işini bunlardan önerir.
    */
-  suppliers: Array<{ id: string; name: string; country: string | null; paymentTermDays: number | null }>;
+  suppliers: Array<Pick<Supplier, 'id' | 'name' | 'country' | 'paymentTermDays' | 'defaultBusiness'>>;
   /**
    * Stoklama alanları, depo-üstü: dilekçe deposunu taşır ama operatör değiştirebilir; liste tek depoya daralsaydı depoyu
    * değiştirene boş raf listesi kalırdı.
@@ -169,10 +169,21 @@ export async function readAssistantFormOptions(
     // hesabın bakiyesi gerçekten sıfırdır (`AccountService.balance` aynı cevabı veriyor).
     accounts: accounts.map((a) => ({ id: a.id, name: a.name, balanceCents: balances.get(a.id)?.balanceCents ?? 0 })),
     natures: natures.map((nature) => ({ value: nature.slug, label: nature.label, direction: nature.direction })),
-    counterparties: counterparties.map((counterparty) => ({ value: counterparty.id, label: counterparty.name, defaultNature: counterparty.defaultNature })),
+    counterparties: counterparties.map((counterparty) => ({
+      value: counterparty.id,
+      label: counterparty.name,
+      defaultNature: counterparty.defaultNature,
+      defaultBusiness: counterparty.defaultBusiness,
+    })),
     tags: tags.map((tag) => ({ value: tag.slug, label: tag.label })),
     warehouses: warehouses.map((w) => ({ id: w.id, name: w.name })),
-    suppliers: suppliers.map((s) => ({ id: s.id, name: s.name, country: s.country, paymentTermDays: s.paymentTermDays })),
+    suppliers: suppliers.map((s) => ({
+      id: s.id,
+      name: s.name,
+      country: s.country,
+      paymentTermDays: s.paymentTermDays,
+      defaultBusiness: s.defaultBusiness,
+    })),
     storageAreas: storageAreas.map((a) => ({ id: a.id, name: a.name, kind: a.kind })),
   };
 }

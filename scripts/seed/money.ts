@@ -20,7 +20,8 @@ import { euro, gun, tabloDolu, type Db } from './shared';
 const HESAPLAR = [
   { key: 'kasa', name: 'Kasa', type: 'cash' as const, acilis: 850 },
   { key: 'revolut', name: 'Revolut', type: 'bank' as const, acilis: 4200 },
-  { key: 'cm', name: 'Crédit Mutuel', type: 'bank' as const, acilis: 12500 },
+  // Crédit Mutuel QUALITE'nin hesabıdır; Lezzet'in nakdi buradan Revolut'a gider (`docs/feature/iki-is.md`).
+  { key: 'cm', name: 'Crédit Mutuel', type: 'bank' as const, acilis: 12500, business: 'qualite' as const },
   // Stripe'ın açılışı var, çünkü payout'u var: tahsilatlar burada yazılmadığı için açılış onların yerini tutar, yoksa payout hiç
   // girmemiş parayı çıkarır ve bakiye eksiye düşerdi.
   { key: 'stripe', name: 'Stripe', type: 'provider' as const, acilis: 1980 },
@@ -97,7 +98,7 @@ export async function seedMoney(db: Db): Promise<void> {
   for (const etiket of ETIKETLER) await tagService.insert(etiket);
 
   for (const h of HESAPLAR) {
-    const created = await accounts.insert({ name: h.name, type: h.type, isActive: h.isActive ?? true });
+    const created = await accounts.insert({ name: h.name, type: h.type, isActive: h.isActive ?? true, business: h.business });
     hesapId.set(h.key, created.id);
     // Açılış bakiyesi bir HAREKETTİR: bakiye kolonu yok, sayı hareketlerden çıkar. Türü `sermaye`.
     if (h.acilis > 0) {
@@ -163,6 +164,7 @@ export async function seedMoney(db: Db): Promise<void> {
   const documents = new MoneyDocumentService(db);
   const kiraFaturasi = await documents.insert({
     kind: 'invoice',
+    business: 'lezzet',
     number: 'LOYER-2026-09',
     issuedOn: gun(-28),
     counterpartyId: cariId.get('sci')!,
@@ -179,6 +181,7 @@ export async function seedMoney(db: Db): Promise<void> {
   if (kiraOdemesi) await new MoneyAllocationService(db).insert({ movementId: kiraOdemesi.id, documentId: kiraFaturasi.id, amountCents: kiraOdemesi.amountCents });
   await documents.insert({
     kind: 'invoice',
+    business: 'qualite',
     number: 'FA-2026-0912',
     issuedOn: gun(-4),
     counterpartyId: cariId.get('muller')!,
@@ -190,6 +193,7 @@ export async function seedMoney(db: Db): Promise<void> {
   });
   await documents.insert({
     kind: 'invoice',
+    business: 'lezzet',
     number: 'ORANGE-0826',
     issuedOn: gun(-9),
     counterpartyId: cariId.get('orange')!,
@@ -223,6 +227,7 @@ export async function seedMoney(db: Db): Promise<void> {
   if (faturali?.supplier_id) {
     await documents.insert({
       kind: 'invoice',
+      business: 'lezzet',
       number: 'GBF-2026-0911',
       issuedOn: gun(-12),
       dueOn: gun(33),

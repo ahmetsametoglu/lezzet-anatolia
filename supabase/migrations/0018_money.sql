@@ -21,6 +21,8 @@ create table public.account (
   name text not null,
   type account_type not null,
   currency currency not null default 'EUR',
+  -- Hesabın sahibi olan iş; hiçbir bağın iş söylemediği harekette son dayanaktır, etiketsiz hesap Lezzet'tir.
+  business public.business not null default 'lezzet',
   -- Hesap SİLİNMEZ, pasifleşir: geçmiş hareketleri ona bağlıdır (kapanan banka hesabı da tarihtir).
   is_active boolean not null default true,
   created_at timestamptz not null default now()
@@ -76,6 +78,8 @@ create table public.counterparty (
   kind counterparty_kind not null default 'other',
   keywords text[] not null default '{}',
   default_nature text references public.movement_nature (slug) on update cascade,
+  -- Belgelerinin ve hareketlerinin varsayılan işi; iki işle çalışan caride boş kalır.
+  default_business public.business,
   note text,
   -- Cari SİLİNMEZ, pasifleşir: geçmiş hareketleri ve belgeleri ona bağlıdır.
   is_active boolean not null default true,
@@ -158,6 +162,8 @@ create table public.money_document (
   -- Borç bu belgeden türer, çünkü kabulün satır toplamı KDV hariçtir ve nakliyeyle iskontoyu bilmez.
   stock_intake_id uuid references public.stock_intake (id) on delete set null,
   purchase_order_id uuid references public.purchase_order (id) on delete set null,
+  -- Belgenin işi; belge bölünmez, iki işe giden mal ayrı faturayla alınır. Kapı sırayla açık seçimden, tedarikçiden ya da cariden kurar.
+  business public.business not null,
   -- Belgenin YÖNÜ hareketinkiyle aynı dilde: `out` = bizim ödeyeceğimiz (gelen fatura, bordro),
   -- `in` = bize ödenecek (tedarikçi iadesi, ortağa kesilen dekont).
   direction movement_direction not null,
@@ -223,6 +229,8 @@ create table public.money_movement (
   payment_method payment_method,
   stock_intake_id uuid references public.stock_intake (id) on delete set null,
   supplier_id uuid references public.supplier (id) on delete set null,
+  -- Hareketin işi bağlarından türer (`money_movement_business`); yazanın gönderdiği değer ezilir.
+  business public.business not null,
   -- Paranın gerçekten hareket ettiği gün; kayıt günü farklı olabilir ve raporlar bu tarihi okur.
   value_date date not null default current_date,
   description text,
@@ -347,8 +355,8 @@ create trigger money_movement_explained
   before insert or update on public.money_movement
   for each row execute function public.money_movement_explain();
 
--- Bağ eklenip silinince hareketin izahı yeniden kurulur: satıra "kendini yeniden yaz" denir ve
--- yukarıdaki kural koşar — kural burada ikinci kez yazılmaz.
+-- Bağ eklenip silinince hareketin izahı ve işi yeniden kurulur: satıra "kendini yeniden yaz" denir ve iki kural da kendi
+-- yerinde koşar, burada ikinci kez yazılmaz.
 create or replace function public.money_allocation_touch()
 returns trigger
 language plpgsql
@@ -356,10 +364,14 @@ set search_path = public
 as $$
 begin
   if tg_op in ('UPDATE', 'DELETE') then
-    update public.money_movement set explained = explained where id = old.movement_id;
+    update public.money_movement m
+       set explained = m.explained, business = public.money_movement_business(m)
+     where m.id = old.movement_id;
   end if;
   if tg_op in ('INSERT', 'UPDATE') then
-    update public.money_movement set explained = explained where id = new.movement_id;
+    update public.money_movement m
+       set explained = m.explained, business = public.money_movement_business(m)
+     where m.id = new.movement_id;
   end if;
   return null;
 end;
@@ -367,6 +379,108 @@ $$;
 create trigger money_allocation_explains
   after insert or update or delete on public.money_allocation
   for each row execute function public.money_allocation_touch();
+
+-- ── İş ───────────────────────────────────────────────────────────────────────
+-- Hareketin işi bağlarından türer: belge bağı, siparişin ya da mal kabulün deposu, tedarikçi, cari, sonra hesap. Gövde geç bağlanır,
+-- çünkü `warehouse` 0031'de açılır; hesabın işi zorunlu olduğu için sonuç hep doludur.
+create or replace function public.money_movement_business(p public.money_movement)
+returns public.business
+language plpgsql
+stable
+set search_path = public
+as $$
+begin
+  return coalesce(
+    (select d.business
+       from public.money_allocation a
+       join public.money_document d on d.id = a.document_id
+      where a.movement_id = p.id
+      limit 1),
+    (select w.business from public.order o join public.warehouse w on w.id = o.warehouse_id where o.id = p.order_id),
+    (select w.business from public.stock_intake i join public.warehouse w on w.id = i.warehouse_id where i.id = p.stock_intake_id),
+    (select s.default_business from public.supplier s where s.id = p.supplier_id),
+    (select c.default_business from public.counterparty c where c.id = p.counterparty_id),
+    (select a.business from public.account a where a.id = p.account_id)
+  );
+end;
+$$;
+
+-- Bağı değişmeyen güncelleme işi yeniden kurmaz, çünkü bir varsayılanın sonradan değişmesi geçmiş hareketin işini kaydırmamalı.
+create or replace function public.money_movement_assign_business()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT'
+     or new.business is distinct from old.business
+     or new.order_id is distinct from old.order_id
+     or new.stock_intake_id is distinct from old.stock_intake_id
+     or new.supplier_id is distinct from old.supplier_id
+     or new.counterparty_id is distinct from old.counterparty_id
+     or new.account_id is distinct from old.account_id then
+    new.business := public.money_movement_business(new);
+  end if;
+  return new;
+end;
+$$;
+create trigger money_movement_business
+  before insert or update on public.money_movement
+  for each row execute function public.money_movement_assign_business();
+
+-- Hareket tek işe aittir, çünkü iki işe giden mal ayrı faturayla ve ayrı ödemeyle alınır. Hareket satırı kilitlenir ki eşzamanlı
+-- iki bağ birbirini görmeden geçmesin.
+create or replace function public.check_allocation_single_business()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  perform 1 from public.money_movement where id = new.movement_id for update;
+  if exists (
+    select 1
+      from public.money_allocation a
+      join public.money_document d on d.id = a.document_id
+     where a.movement_id = new.movement_id
+       and a.id <> new.id
+       and d.business <> (select n.business from public.money_document n where n.id = new.document_id)
+  ) then
+    raise exception 'money_allocation: hareket iki işin belgesine bağlanamaz' using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+create trigger money_allocation_single_business
+  before insert or update of movement_id, document_id on public.money_allocation
+  for each row execute function public.check_allocation_single_business();
+
+-- Belgenin işi değişince ödemelerinin işi yeniden kurulur; ödemesi başka işin belgesine de bağlıysa değişiklik reddedilir.
+create or replace function public.money_document_business_touch()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if exists (
+    select 1
+      from public.money_allocation a
+      join public.money_allocation o on o.movement_id = a.movement_id and o.document_id <> a.document_id
+      join public.money_document d on d.id = o.document_id
+     where a.document_id = new.id
+       and d.business <> new.business
+  ) then
+    raise exception 'money_document: ödemesi başka işin belgesine de bağlı belgenin işi değişemez' using errcode = 'check_violation';
+  end if;
+  update public.money_movement m
+     set business = public.money_movement_business(m)
+   where m.id in (select a.movement_id from public.money_allocation a where a.document_id = new.id);
+  return null;
+end;
+$$;
+create trigger money_document_business_follows
+  after update of business on public.money_document
+  for each row when (old.business is distinct from new.business)
+  execute function public.money_document_business_touch();
 
 -- ── Defter satırı ────────────────────────────────────────────────────────────
 -- Hareket dokunduğu her hesapta bir satır üretir, transfer iki. Aynı kural form önizlemesi için `signedAmountCentsFor`ta

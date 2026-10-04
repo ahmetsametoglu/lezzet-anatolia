@@ -63,6 +63,7 @@ const fileOf = (documentId: string, content = documentId, extension = 'pdf') => 
 const invoice = async (over: Partial<MoneyDocumentInsert> = {}, file: { content?: string; extension?: string } | null = {}) => {
   const row = await documents.insert({
     kind: 'invoice',
+    business: 'lezzet',
     direction: 'out',
     number: `F-${stamp}-${created.documentIds.length + 1}`,
     issuedOn: '2026-10-02',

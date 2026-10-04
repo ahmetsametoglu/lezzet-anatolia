@@ -7,14 +7,17 @@ import {
   PurchaseOrderService,
   StockIntakeBalanceService,
   StockIntakeService,
+  SupplierService,
+  WarehouseService,
 } from '@lezzet/database';
-import { acceptsNature, checkDocumentFile, documentVatProblem, type DocumentVatProblem } from '@lezzet/domain-core';
+import { acceptsNature, checkDocumentFile, documentBusinessOf, documentVatProblem, type DocumentVatProblem } from '@lezzet/domain-core';
 import { financeDocumentScope, privateReadUrl, privateUploadUrl, r2Keys } from '@lezzet/storage';
 import type {
+  Business,
   MoneyAllocation,
   MoneyDocument,
   MoneyDocumentBalance,
-  MoneyDocumentInsert,
+  MoneyDocumentEntry,
   MoneyMovement,
   MoneyMovementUpdate,
 } from '@lezzet/types';
@@ -45,7 +48,9 @@ export type DocumentOutcome =
         | 'link_needs_supplier'
         | 'link_not_found'
         | 'link_supplier_mismatch'
-        | 'link_has_document';
+        | 'link_has_document'
+        | 'business_required'
+        | 'business_stock_mismatch';
     };
 
 export type DocumentUploadOutcome =
@@ -60,10 +65,10 @@ export async function unknownTagOf(db: SupabaseClient, tags: readonly string[]):
 }
 
 /**
- * Belge girişi; KDV kırılımı rejime ve oranına uyar, karşı taraf cari ya da tedarikçi, tür ve etiketler sözlükten. Dosya burada
- * bağlanmaz: anahtarı belge kimliğinden kurulduğu için önce belge doğar.
+ * Belge girişi; KDV kırılımı rejime ve oranına uyar, karşı taraf cari ya da tedarikçi, tür ve etiketler sözlükten, iş deponun, seçimin
+ * ya da karşı tarafın işinden. Dosya burada bağlanmaz: anahtarı belge kimliğinden kurulduğu için önce belge doğar.
  */
-export async function createMoneyDocument(db: SupabaseClient, input: MoneyDocumentInsert): Promise<DocumentOutcome> {
+export async function createMoneyDocument(db: SupabaseClient, input: MoneyDocumentEntry): Promise<DocumentOutcome> {
   // Kırılımın kuralı veri kısıtlarından önce sorulur: ret bir cümle olsun, PG hatası değil.
   const vatProblem = documentVatProblem({ ...input, vatRegime: input.vatRegime ?? 'standard', vatLines: input.vatLines ?? [] });
   if (vatProblem) return { status: 'invalid', reason: vatProblem };
@@ -71,15 +76,31 @@ export async function createMoneyDocument(db: SupabaseClient, input: MoneyDocume
   if (input.counterpartyId && input.supplierId) return { status: 'invalid', reason: 'party_conflict' };
   const linkProblem = await supplyLinkProblemOf(db, input);
   if (linkProblem) return { status: 'invalid', reason: linkProblem };
-  if (input.counterpartyId && !(await new CounterpartyService(db).getById(input.counterpartyId))?.isActive) {
-    return { status: 'invalid', reason: 'unknown_counterparty' };
-  }
+  const [counterparty, supplier, stockBusiness] = await Promise.all([
+    input.counterpartyId ? new CounterpartyService(db).getById(input.counterpartyId) : null,
+    input.supplierId ? new SupplierService(db).getById(input.supplierId) : null,
+    input.stockIntakeId ? intakeBusinessOf(db, input.stockIntakeId) : null,
+  ]);
+  if (input.counterpartyId && !counterparty?.isActive) return { status: 'invalid', reason: 'unknown_counterparty' };
   const natureProblem = await natureProblemOf(db, input.nature, input.direction);
   if (natureProblem) return { status: 'invalid', reason: natureProblem };
   if ((await unknownTagOf(db, input.tags ?? [])) !== null) return { status: 'invalid', reason: 'unknown_tag' };
+  const decided = documentBusinessOf({
+    stockBusiness,
+    chosen: input.business,
+    supplierDefault: supplier?.defaultBusiness,
+    counterpartyDefault: counterparty?.defaultBusiness,
+  });
+  if ('problem' in decided) return { status: 'invalid', reason: decided.problem };
 
-  const document = await new MoneyDocumentService(db).insert(input);
+  const document = await new MoneyDocumentService(db).insert({ ...input, business: decided.business });
   return { status: 'ok', document };
+}
+
+/** Mal kabulün deposunun işi; kabul ya da deposu yoksa `null`, bağın varlığını `supplyLinkProblemOf` zaten sordu. */
+async function intakeBusinessOf(db: SupabaseClient, stockIntakeId: string): Promise<Business | null> {
+  const intake = await new StockIntakeService(db).getById(stockIntakeId);
+  return intake ? ((await new WarehouseService(db).getById(intake.warehouseId))?.business ?? null) : null;
 }
 
 type SupplyLinkProblem = 'link_conflict' | 'link_needs_supplier' | 'link_not_found' | 'link_supplier_mismatch' | 'link_has_document';
@@ -89,7 +110,7 @@ type SupplyLinkProblem = 'link_conflict' | 'link_needs_supplier' | 'link_not_fou
  * durur, burada önce sorulur ki ret okunur olsun. Veride duramayan iki kural burada: alım aynı tedarikçinin olmalı ve faturası
  * girilmemiş olmalı, yoksa ikinci belge aynı borcu iki kez yazar.
  */
-async function supplyLinkProblemOf(db: SupabaseClient, input: MoneyDocumentInsert): Promise<SupplyLinkProblem | null> {
+async function supplyLinkProblemOf(db: SupabaseClient, input: MoneyDocumentEntry): Promise<SupplyLinkProblem | null> {
   if (!input.stockIntakeId && !input.purchaseOrderId) return null;
   if (input.stockIntakeId && input.purchaseOrderId) return 'link_conflict';
   if (!input.supplierId) return 'link_needs_supplier';
@@ -117,11 +138,14 @@ async function supplyLinkProblemOf(db: SupabaseClient, input: MoneyDocumentInser
 
 export type AllocationOutcome =
   | { status: 'ok'; allocation: MoneyAllocation }
-  | { status: 'invalid'; reason: 'not_found' | 'direction_mismatch' | 'already_allocated' | 'nothing_to_allocate' | 'document_settled' };
+  | {
+      status: 'invalid';
+      reason: 'not_found' | 'direction_mismatch' | 'already_allocated' | 'nothing_to_allocate' | 'document_settled' | 'business_mismatch';
+    };
 
 /**
  * Hareketi belgeye bağlar; bağın tutarı hareketin bağlanmamış kalanı ile belgenin açık kalanının küçüğüdür ve elle verilmez, böylece
- * bağlar ne hareketi ne belgeyi aşar. Yön aynı olmalı, aynı çift iki kez bağlanmaz; kapanmış belgeye bağ kurulmaz, fazla ödeme
+ * bağlar ne hareketi ne belgeyi aşar. Yön ve iş aynı olmalı, aynı çift iki kez bağlanmaz; kapanmış belgeye bağ kurulmaz, fazla ödeme
  * hareketin bağlanmamış kalanında görünür.
  */
 export async function allocateToDocument(
@@ -136,6 +160,9 @@ export async function allocateToDocument(
   const allocations = new MoneyAllocationService(db);
   const existing = await allocations.listByMovements([movement.id]);
   if (existing.some((allocation) => allocation.documentId === document.id)) return { status: 'invalid', reason: 'already_allocated' };
+  // Veri de reddeder (`money_allocation_single_business`); burada önce sorulur ki ret okunur olsun.
+  const others = existing.length > 0 ? await documents.listByIds(existing.map((allocation) => allocation.documentId)) : [];
+  if (others.some((other) => other.business !== document.business)) return { status: 'invalid', reason: 'business_mismatch' };
   const remaining = movement.amountCents - existing.reduce((sum, allocation) => sum + allocation.amountCents, 0);
   if (remaining <= 0) return { status: 'invalid', reason: 'nothing_to_allocate' };
 

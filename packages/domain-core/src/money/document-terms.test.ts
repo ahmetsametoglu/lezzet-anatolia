@@ -1,6 +1,6 @@
 import type { DocumentVatRate } from '@lezzet/types';
 import { describe, expect, it } from 'vitest';
-import { documentDueOn, documentVatProblem, suggestVatRegime, vatLinesTotals } from './document-terms';
+import { documentBusinessOf, documentDueOn, documentVatProblem, suggestVatRegime, vatLinesTotals } from './document-terms';
 
 describe('belgenin KDV rejimi önerisi', () => {
   it("Fransa dışındaki tedarikçinin KDV'siz faturası ters yüklemedir — AB içi de ithalat da", () => {
@@ -81,5 +81,30 @@ describe('vade önerisi', () => {
     expect(documentDueOn('2026-09-12', null)).toBe('2026-09-12');
     expect(documentDueOn('12/09/2026', 10)).toBeNull();
     expect(documentDueOn('', 10)).toBeNull();
+  });
+});
+
+describe('belgenin işi', () => {
+  const none = { stockBusiness: null, chosen: null, supplierDefault: null, counterpartyDefault: null };
+
+  it('mal kabule bağlı belge deponun işini alır; depoyla çelişen seçim reddedilir', () => {
+    expect(documentBusinessOf({ ...none, stockBusiness: 'qualite', supplierDefault: 'lezzet' })).toEqual({ business: 'qualite' });
+    expect(documentBusinessOf({ ...none, stockBusiness: 'qualite', chosen: 'qualite' })).toEqual({ business: 'qualite' });
+    expect(documentBusinessOf({ ...none, stockBusiness: 'qualite', chosen: 'lezzet' })).toEqual({ problem: 'business_stock_mismatch' });
+  });
+
+  it('açık seçim tedarikçinin ve carinin varsayılanını ezer', () => {
+    expect(documentBusinessOf({ ...none, chosen: 'lezzet', supplierDefault: 'qualite', counterpartyDefault: 'qualite' })).toEqual({
+      business: 'lezzet',
+    });
+  });
+
+  it('seçim yoksa tedarikçinin, o da yoksa carinin varsayılanı', () => {
+    expect(documentBusinessOf({ ...none, supplierDefault: 'qualite', counterpartyDefault: 'lezzet' })).toEqual({ business: 'qualite' });
+    expect(documentBusinessOf({ ...none, counterpartyDefault: 'qualite' })).toEqual({ business: 'qualite' });
+  });
+
+  it('hiçbir kaynak iş söylemiyorsa seçim istenir; varsayılan uydurulmaz', () => {
+    expect(documentBusinessOf(none)).toEqual({ problem: 'business_required' });
   });
 });

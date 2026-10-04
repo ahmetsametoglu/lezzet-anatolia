@@ -1,7 +1,7 @@
 'use client';
 
 import { Controller, type Control, type UseFormSetValue } from 'react-hook-form';
-import { DocumentKindEnum, MovementDirectionEnum } from '@lezzet/types';
+import { BUSINESS_LABELS, BusinessEnum, DocumentKindEnum, MovementDirectionEnum, type Business } from '@lezzet/types';
 import { Combobox } from '@/components/operation/form/combobox';
 import { DateField } from '@/components/operation/form/date-field';
 import { FieldShell } from '@/components/operation/form/field-shell';
@@ -53,18 +53,26 @@ export function DocumentFormBody({
   const supplier = supplierOptions.find((option) => option.value === values.supplierId);
   const suggestion = supplier ? supplierSuggestion(supplier, values.invoice, values.issuedOn) : null;
 
+  // Karşı tarafın varsayılan işi önerilir; varsayılanı olmayan karşı tarafta seçilmiş iş kalır.
+  const suggestBusiness = (business: Business | null | undefined) => {
+    if (business) setValue('business', business, { shouldValidate: true });
+  };
+
   /** Cari seçilince tedarikçi ve alımın bağı boşalır (karşı taraf tektir); carinin varsayılan türü BOŞ türe konur. */
   const pickCounterparty = (id: string) => {
     set('counterpartyId', id);
     set('supplierId', '');
     set('stockLink', '');
-    const preset = counterpartyOptions.find((option) => option.value === id)?.defaultNature;
+    const counterparty = counterpartyOptions.find((option) => option.value === id);
+    const preset = counterparty?.defaultNature;
     if (!values.nature && preset && natures.some((nature) => nature.value === preset)) set('nature', preset);
+    suggestBusiness(counterparty?.defaultBusiness);
   };
   const pickSupplier = (id: string) => {
     set('supplierId', id);
     set('counterpartyId', '');
     set('stockLink', '');
+    suggestBusiness(supplierOptions.find((option) => option.value === id)?.defaultBusiness);
     const picked = supplierSuggestion(
       supplierOptions.find((option) => option.value === id),
       values.invoice,
@@ -146,6 +154,22 @@ export function DocumentFormBody({
           />
         </FieldShell>
       </div>
+
+      <Controller
+        control={control}
+        name="business"
+        render={({ field }) => (
+          <div className="flex flex-col gap-1.5">
+            <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] text-ops-muted">İş</span>
+            <MultiToggle
+              value={field.value}
+              onChange={field.onChange}
+              label="Belgenin işi"
+              options={BusinessEnum.options.map((business) => ({ key: business, label: BUSINESS_LABELS[business] }))}
+            />
+          </div>
+        )}
+      />
 
       {showStockLink ? (
         <FieldShell label="Neyin faturası" labelAside="mal kabul ya da sipariş · borç bu belgeden türer">

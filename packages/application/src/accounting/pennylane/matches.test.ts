@@ -88,6 +88,7 @@ const document = async (amountCents: number, opts: { upload?: boolean } = {}, ov
   const documents = new MoneyDocumentService(db);
   const row = await documents.insert({
     kind: 'invoice',
+    business: 'lezzet',
     direction: 'out',
     number: `F-${stamp}-${created.documentIds.length + 1}`,
     issuedOn: '2026-10-02',

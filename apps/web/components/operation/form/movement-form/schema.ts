@@ -1,7 +1,14 @@
 import { z } from 'zod';
 import { classificationTypeOf } from '@lezzet/domain-core';
 import { parisDateOf } from '@lezzet/helper';
-import { CAPITAL_NATURE, MovementDirectionEnum, type MovementDirection, type MovementNature, type MovementType } from '@lezzet/types';
+import {
+  CAPITAL_NATURE,
+  MovementDirectionEnum,
+  type Business,
+  type MovementDirection,
+  type MovementNature,
+  type MovementType,
+} from '@lezzet/types';
 
 /*
   Elle para hareketi formunun şeması ve sözlüğü ortak alandadır, çünkü form hem finans sayfasında hem asistan kuyruğunda çizilir.
@@ -79,11 +86,12 @@ export interface NatureOption {
   direction: MovementNature['direction'];
 }
 
-/** Cari seçeneği — varsayılan türü, seçildiğinde boş türe önerilir. */
+/** Cari seçeneği — varsayılan türü boş türe, varsayılan işi belgenin işine önerilir. */
 export interface CounterpartyOption {
   value: string;
   label: string;
   defaultNature: string | null;
+  defaultBusiness: Business | null;
 }
 
 /** Paranın yönüne uyan türler — satırdaki seçici, kuyruk kartı, seçim penceresi ve belge formu. */

@@ -24,6 +24,7 @@ Paranın durduğu yer. Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Stripe 
 | `name` | text |  |  |
 | `type` | account_type |  |  |
 | `currency` | currency |  | `'EUR'` |
+| `business` | public |  | `'lezzet'` |
 | `is_active` | boolean |  | `true` |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
@@ -49,6 +50,7 @@ Tüm para hareketleri **tek tablo**; kasa/banka ayrımı yok — hareketin **hes
 | `payment_method` | payment_method | • |  |
 | `stock_intake_id` | uuid | • |  |
 | `supplier_id` | uuid | • |  |
+| `business` | public |  |  |
 | `value_date` | date |  | `current_date` |
 | `description` | text | • |  |
 | `source` | movement_source |  | `'manual'` |
@@ -155,6 +157,7 @@ Paranın KİME gittiği ya da KİMDEN geldiği (13.09 · ikinci karar): kurum (U
 | `kind` | counterparty_kind |  | `'other'` |
 | `keywords` | text[] |  | `'{}'` |
 | `default_nature` | text | • |  |
+| `default_business` | public | • |  |
 | `note` | text | • |  |
 | `is_active` | boolean |  | `true` |
 | `created_at` | timestamptz |  | `now()` |
@@ -183,6 +186,7 @@ Resmî muhasebe sorduğunda hareketin dayanağı: fatura, fiş, bordro, sözleş
 | `supplier_id` | uuid | • |  |
 | `stock_intake_id` | uuid | • |  |
 | `purchase_order_id` | uuid | • |  |
+| `business` | public |  |  |
 | `direction` | movement_direction |  |  |
 | `nature` | text | • |  |
 | `amount` | numeric(12, 2) |  |  |

@@ -650,7 +650,7 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
   money_document: defineBody<MoneyDocumentPayload, DocumentDraft>({
     parse: parseWith<MoneyDocumentPayload>('money_document'),
     // Tür sözlükten: dilekçenin slug'ı sözlükte ve yönüne uyuyorsa (`documentValuesFrom`).
-    initial: (payload, options) => documentValuesFrom(payload, options.natures),
+    initial: (payload, options) => documentValuesFrom(payload, options),
     render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
       <MoneyDocumentBody
         payload={payload}

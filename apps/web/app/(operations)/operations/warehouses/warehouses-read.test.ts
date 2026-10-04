@@ -16,6 +16,7 @@ const WAREHOUSE = {
   /** Tesis araç göstermez (`warehouse_vehicle_identity`): bağ yalnız araç deposunda dolu. */
   vehicleId: null,
   countryCode: 'FR' as const,
+  business: 'lezzet' as const,
   address: null,
   lat: null,
   lng: null,

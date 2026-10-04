@@ -10,6 +10,19 @@ export type Channel = z.infer<typeof ChannelEnum>;
 export const CurrencyEnum = z.enum(['EUR']);
 export type Currency = z.infer<typeof CurrencyEnum>;
 
+/**
+ * İş: QUALITE toptan satış, Lezzet çevrim içi satış; ikisi aynı tüzel kişiliğin iç ayrımıdır (docs/feature/iki-is.md). Belge ve
+ * hareketin işi zorunludur, etiketsiz hesap Lezzet'tir.
+ */
+export const BusinessEnum = z.enum(['qualite', 'lezzet']);
+export type Business = z.infer<typeof BusinessEnum>;
+
+/** İşin adı; marka adı olduğu için dile göre değişmez. */
+export const BUSINESS_LABELS: Record<Business, string> = {
+  qualite: 'QUALITE',
+  lezzet: 'Lezzet',
+};
+
 /** Sipariş durumu — geçiş kuralları `ORDER_LIFECYCLE.md`, motor: domain-core/order. */
 export const OrderStatusEnum = z.enum([
   'draft',

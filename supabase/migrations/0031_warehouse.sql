@@ -17,6 +17,8 @@ create table public.warehouse (
   -- Fiziksel tesisin ülkesi; bölge sınır ötesi olabilir (ADR-002), depo olamaz. KDV buna bağlıdır: DE'de depo uzaktan
   -- satışı yerel satışa çevirir (DOMAIN §5/§17).
   country_code country_code not null default 'FR',
+  -- Deponun işi; stok, mal kabul ve sipariş işini buradan alır, etiketsiz depo Lezzet'tir (docs/feature/iki-is.md).
+  business public.business not null default 'lezzet',
   address jsonb,
   -- Rotanın başlangıç ve bitiş noktası; jsonb içinde olsa kısıt taşıyamazdı. Hassasiyet kolonu yok, çünkü nokta
   -- operatörün haritada onayladığı konumdur; boşsa sıralama motoru varsayılan uydurmaz, `no_start` ile reddeder.

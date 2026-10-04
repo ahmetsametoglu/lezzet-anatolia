@@ -65,6 +65,7 @@ export function toWarehouseRows({ warehouses, zones, staff, batches, transfers }
       // Aracın evi; kartta "STR'nin aracı" diye okunur, tesiste daima `null`.
       homeWarehouseId: w.homeWarehouseId,
       countryCode: w.countryCode,
+      business: w.business,
       address: parseAddress(w.address),
       // Deponun noktası, rotanın çıpası; `null` girilmemiş demektir ve satır yine tam okunur.
       lat: w.lat,

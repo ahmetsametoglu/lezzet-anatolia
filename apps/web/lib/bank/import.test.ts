@@ -273,7 +273,14 @@ describe('eşleştirme hedefleri (12.13)', () => {
     createdCounterparties.push(cari.id);
     const documents = new MoneyDocumentService(db);
     const belge = await documents.insert({
-      kind: 'invoice', number: `KIRA-${stamp}`, issuedOn: dayOffset(-2), counterpartyId: cari.id, direction: 'out', nature: 'kira', amountCents: 12_000,
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `KIRA-${stamp}`,
+      issuedOn: dayOffset(-2),
+      counterpartyId: cari.id,
+      direction: 'out',
+      nature: 'kira',
+      amountCents: 12_000,
     });
     createdDocuments.push(belge.id);
     await importStatement([{ Date: frDate(-2), 'Libellé': `PRLV KIRA${stamp} FACTURE`, Montant: '-120,00', Solde: '0,00' }], 'belge.csv');
@@ -296,7 +303,13 @@ describe('eşleştirme hedefleri (12.13)', () => {
   });
 
   it('giren para belgeye bağlanamaz — belgenin yönü satıra uymuyor', async () => {
-    const belge = await new MoneyDocumentService(db).insert({ kind: 'invoice', issuedOn: dayOffset(-1), direction: 'out', amountCents: 5000 });
+    const belge = await new MoneyDocumentService(db).insert({
+      kind: 'invoice',
+      business: 'lezzet',
+      issuedOn: dayOffset(-1),
+      direction: 'out',
+      amountCents: 5000,
+    });
     createdDocuments.push(belge.id);
     await importStatement([{ Date: frDate(-1), 'Libellé': 'VIR RECU', Montant: '50,00', Solde: '0,00' }], 'yon.csv');
     const row = (await matchQueue(bankAccount)).rows[0]!;
@@ -405,8 +418,22 @@ describe('eşleştirme hedefleri (12.13)', () => {
 describe('bağ tutarıyla · cari · geri alma (13.09)', () => {
   it('TEK HAVALE, İKİ FATURA: ilk bağdan sonra satır kalanıyla kuyrukta, ikinciyle kapanır', async () => {
     const documents = new MoneyDocumentService(db);
-    const a = await documents.insert({ kind: 'invoice', number: `TOPLU-A-${stamp}`, issuedOn: dayOffset(-3), direction: 'out', amountCents: 7000 });
-    const b = await documents.insert({ kind: 'invoice', number: `TOPLU-B-${stamp}`, issuedOn: dayOffset(-3), direction: 'out', amountCents: 5300 });
+    const a = await documents.insert({
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `TOPLU-A-${stamp}`,
+      issuedOn: dayOffset(-3),
+      direction: 'out',
+      amountCents: 7000,
+    });
+    const b = await documents.insert({
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `TOPLU-B-${stamp}`,
+      issuedOn: dayOffset(-3),
+      direction: 'out',
+      amountCents: 5300,
+    });
     createdDocuments.push(a.id, b.id);
     await importStatement([{ Date: frDate(-1), 'Libellé': `VIR TOPLU ${stamp}`, Montant: '-123,00', Solde: '0,00' }], 'toplu.csv');
     const row = (await matchQueue(bankAccount)).rows[0]!;
@@ -441,7 +468,15 @@ describe('bağ tutarıyla · cari · geri alma (13.09)', () => {
 
   it('GERİ AL: belgeye bağlanan satır ekstreden geldiği hâle döner, belge yeniden açılır', async () => {
     const documents = new MoneyDocumentService(db);
-    const belge = await documents.insert({ kind: 'invoice', number: `GERI-${stamp}`, issuedOn: dayOffset(-2), direction: 'out', nature: 'kira', amountCents: 8800 });
+    const belge = await documents.insert({
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `GERI-${stamp}`,
+      issuedOn: dayOffset(-2),
+      direction: 'out',
+      nature: 'kira',
+      amountCents: 8800,
+    });
     createdDocuments.push(belge.id);
     await importStatement([{ Date: frDate(-2), 'Libellé': `PRLV GERI-${stamp}`, Montant: '-88,00', Solde: '0,00' }], 'geri.csv');
     const row = (await matchQueue(bankAccount)).rows[0]!;
@@ -506,7 +541,14 @@ describe('bağ tutarıyla · cari · geri alma (13.09)', () => {
 describe('ayrıntı paneli: seçenekler · bağla · ödeme adayları (12.17)', () => {
   it('SEÇENEKLER: ekstre satırı bütün hedefleri görür, elle yazılan satır yalnız belgeleri', async () => {
     const documents = new MoneyDocumentService(db);
-    const belge = await documents.insert({ kind: 'invoice', number: `PANEL-${stamp}`, issuedOn: dayOffset(-2), direction: 'out', amountCents: 6600 });
+    const belge = await documents.insert({
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `PANEL-${stamp}`,
+      issuedOn: dayOffset(-2),
+      direction: 'out',
+      amountCents: 6600,
+    });
     createdDocuments.push(belge.id);
     await importStatement([{ Date: frDate(-1), 'Libellé': `PRLV PANEL-${stamp}`, Montant: '-66,00', Solde: '0,00' }], 'panel.csv');
     const row = (await matchQueue(bankAccount)).rows[0]!;
@@ -529,7 +571,14 @@ describe('ayrıntı paneli: seçenekler · bağla · ödeme adayları (12.17)', 
 
   it('BAĞLA: elle yazılan satır belgeye TUTARIYLA bağlanır; ters yönlü satır reddedilir', async () => {
     const documents = new MoneyDocumentService(db);
-    const belge = await documents.insert({ kind: 'invoice', number: `ELLE-${stamp}`, issuedOn: dayOffset(-2), direction: 'out', amountCents: 9000 });
+    const belge = await documents.insert({
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `ELLE-${stamp}`,
+      issuedOn: dayOffset(-2),
+      direction: 'out',
+      amountCents: 9000,
+    });
     createdDocuments.push(belge.id);
     const elle = await movements.insert({
       accountId: cashAccount, direction: 'out', amountCents: 4000, type: 'expense', nature: 'kira', valueDate: dayOffset(-1), description: `Elle ELLE-${stamp}`,
@@ -545,7 +594,14 @@ describe('ayrıntı paneli: seçenekler · bağla · ödeme adayları (12.17)', 
 
   it('ÖDEME ADAYLARI: belgenin yönündeki, kalanı olan hareketler puanlı; bağlanan ödemelere geçer', async () => {
     const documents = new MoneyDocumentService(db);
-    const belge = await documents.insert({ kind: 'invoice', number: `ODEME-${stamp}`, issuedOn: dayOffset(-3), direction: 'out', amountCents: 4500 });
+    const belge = await documents.insert({
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `ODEME-${stamp}`,
+      issuedOn: dayOffset(-3),
+      direction: 'out',
+      amountCents: 4500,
+    });
     createdDocuments.push(belge.id);
     await importStatement([
       { Date: frDate(-1), 'Libellé': `PRLV ODEME-${stamp}`, Montant: '-45,00', Solde: '0,00' },
@@ -571,7 +627,14 @@ describe('ayrıntı paneli: seçenekler · bağla · ödeme adayları (12.17)', 
     expect(after.candidates.some((c) => c.movement.id === cikis.id)).toBe(false);
 
     // Tutarı tükenen hareket başka bir belgenin adayı da olmaz (kalanı 0).
-    const baska = await documents.insert({ kind: 'invoice', number: `ODEME-B-${stamp}`, issuedOn: dayOffset(-3), direction: 'out', amountCents: 1000 });
+    const baska = await documents.insert({
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `ODEME-B-${stamp}`,
+      issuedOn: dayOffset(-3),
+      direction: 'out',
+      amountCents: 1000,
+    });
     createdDocuments.push(baska.id);
     expect((await documentPaymentOptions(baska.id))!.candidates.some((c) => c.movement.id === cikis.id)).toBe(false);
   });
@@ -580,7 +643,14 @@ describe('ayrıntı paneli: seçenekler · bağla · ödeme adayları (12.17)', 
 describe('satırın önerisi listede (12.19 · tek liste + tek panel)', () => {
   it('ÖNERİ: yalnız mutabık olmayan ekstre satırı sayılır, sıra girdinin sırası; eşleşen satır düşer', async () => {
     const documents = new MoneyDocumentService(db);
-    const belge = await documents.insert({ kind: 'invoice', number: `LISTE-${stamp}`, issuedOn: dayOffset(-2), direction: 'out', amountCents: 7700 });
+    const belge = await documents.insert({
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `LISTE-${stamp}`,
+      issuedOn: dayOffset(-2),
+      direction: 'out',
+      amountCents: 7700,
+    });
     createdDocuments.push(belge.id);
     await importStatement([
       { Date: frDate(-1), 'Libellé': `PRLV LISTE-${stamp}`, Montant: '-77,00', Solde: '0,00' },

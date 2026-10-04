@@ -20,7 +20,14 @@ afterAll(async () => {
 });
 
 const document = async (over: Partial<MoneyDocumentInsert> = {}) => {
-  const row = await documents.insert({ kind: 'invoice', direction: 'out', issuedOn: '2026-10-02', amountCents: 1_000, ...over });
+  const row = await documents.insert({
+    kind: 'invoice',
+    business: 'lezzet',
+    direction: 'out',
+    issuedOn: '2026-10-02',
+    amountCents: 1_000,
+    ...over,
+  });
   created.documentIds.push(row.id);
   return row;
 };

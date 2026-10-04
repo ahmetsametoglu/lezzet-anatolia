@@ -497,6 +497,8 @@ describe('belge ve tedarikçi uygulayıcıları — ekranın kapısından (22.44
   });
 
   it('belge önerisi belge kapısından yazılır; ters yüklemede KDV REDDEDİLİR', async () => {
+    // Dilekçe iş taşımaz; kapı onu tedarikçinin varsayılanından kurar.
+    await new SupplierService(db).update({ id: supplierIds[0]!, defaultBusiness: 'lezzet' });
     const payload: MoneyDocumentPayload = {
       kind: 'invoice',
       number: `KUY-${stamp}`,
@@ -517,6 +519,7 @@ describe('belge ve tedarikçi uygulayıcıları — ekranın kapısından (22.44
     documentIds.push(result.moneyDocumentId!);
     expect(await new MoneyDocumentService(db).getById(result.moneyDocumentId!)).toMatchObject({
       supplierId: supplierIds[0],
+      business: 'lezzet',
       vatRegime: 'reverse_charge',
       dueOn: '2026-09-20',
       vatLines: payload.vatLines,

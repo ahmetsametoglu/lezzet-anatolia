@@ -1,5 +1,5 @@
 import { addVat } from '@lezzet/helper';
-import type { DocumentKind, DocumentVatLine, DocumentVatRegime, MovementDirection } from '@lezzet/types';
+import type { Business, DocumentKind, DocumentVatLine, DocumentVatRegime, MovementDirection } from '@lezzet/types';
 
 /**
  * Belgenin koşulları: KDV rejimi, KDV kırılımı ve vade; saf, DB'siz. Belge penceresi, asistanın önerisi ve kapı aynı kuralı buradan
@@ -87,4 +87,25 @@ export function documentDueOn(issuedOn: string, paymentTermDays: number | null |
   if (Number.isNaN(day.getTime())) return null;
   day.setUTCDate(day.getUTCDate() + Math.max(0, paymentTermDays ?? 0));
   return day.toISOString().slice(0, 10);
+}
+
+export type DocumentBusiness = { business: Business } | { problem: 'business_required' | 'business_stock_mismatch' };
+
+/**
+ * Belgenin işi: mal kabule bağlı belgede deponun işi, değilse açık seçim, tedarikçinin ya da carinin varsayılanı. Depoyla çelişen
+ * seçim ve hiçbir kaynağın iş söylemediği belge reddedilir, çünkü sessiz bir varsayılan belgeyi yanlış işe yazardı.
+ */
+export function documentBusinessOf(input: {
+  stockBusiness: Business | null | undefined;
+  chosen: Business | null | undefined;
+  supplierDefault: Business | null | undefined;
+  counterpartyDefault: Business | null | undefined;
+}): DocumentBusiness {
+  if (input.stockBusiness) {
+    return input.chosen && input.chosen !== input.stockBusiness
+      ? { problem: 'business_stock_mismatch' }
+      : { business: input.stockBusiness };
+  }
+  const business = input.chosen ?? input.supplierDefault ?? input.counterpartyDefault;
+  return business ? { business } : { problem: 'business_required' };
 }

@@ -342,7 +342,9 @@ export type ReconcileReason =
   /** Belgenin açık kalanı yok — bağlanacak borç kalmamış. */
   | 'document_settled'
   /** Satır bu belgeye zaten bağlı — ikinci bağ, birincinin tutarını değiştirmek olurdu. */
-  | 'already_allocated';
+  | 'already_allocated'
+  /** Satır başka işin belgesine bağlı; bir ödeme iki işin belgesini kapatamaz. */
+  | 'business_mismatch';
 
 export type ReconcileOutcome = { status: 'ok'; movementId: string } | { status: 'invalid'; reason: ReconcileReason };
 
@@ -355,6 +357,7 @@ const ALLOCATION_REASON: Record<Extract<AllocationOutcome, { status: 'invalid' }
   already_allocated: 'already_allocated',
   nothing_to_allocate: 'already_reconciled',
   document_settled: 'document_settled',
+  business_mismatch: 'business_mismatch',
 };
 
 /** Kuyruktaki satırı bulur ve dokunulabilir olduğunu doğrular — iki kez uygulanmasın. */

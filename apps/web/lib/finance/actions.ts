@@ -15,6 +15,7 @@ import {
   ADVERTISING_NATURE,
   type AccountType,
   type BankImportProfile,
+  type Business,
   type CounterpartyKind,
   type DocumentKind,
   type DocumentVatLine,
@@ -428,6 +429,8 @@ interface DocumentInput {
   /** Karşı taraf: cari ya da tedarikçi, ikisinden en çok biri. */
   counterpartyId: string | null;
   supplierId: string | null;
+  /** Belgenin işi; boşsa kapı karşı tarafın varsayılanından kurar. */
+  business: Business | null;
   /** Neyin faturası: mal kabul ya da tedarik siparişi; yalnız tedarikçinin belgesinde, borç bu belgeden türer. */
   stockIntakeId: string | null;
   purchaseOrderId: string | null;
@@ -461,6 +464,7 @@ export async function createDocumentAction(input: DocumentInput, proposalId?: st
         dueOn: input.dueOn || null,
         counterpartyId: input.counterpartyId || null,
         supplierId: input.supplierId || null,
+        business: input.business,
         stockIntakeId: input.stockIntakeId || null,
         purchaseOrderId: input.purchaseOrderId || null,
         direction: input.direction,

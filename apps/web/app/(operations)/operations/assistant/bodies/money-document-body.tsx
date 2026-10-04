@@ -33,12 +33,22 @@ export interface DocumentDraft {
 }
 
 /**
- * Dilekçe → formun açılış değerleri. Tür dilekçede sözlük slug'ı; formun yönüne uymuyor ya da sözlükte yoksa form türsüz
- * açılır ve operatör seçer, uydurma bir türle izahlı görünmesin.
+ * Dilekçe → formun açılış değerleri. Tür sözlükte yoksa ya da yöne uymuyorsa form türsüz açılır ve operatör seçer; iş karşı tarafın
+ * varsayılanından gelir, varsayılanı yoksa operatör seçer.
  */
-export function documentValuesFrom(payload: MoneyDocumentPayload, natures: AssistantFormOptions['natures']): DocumentDraft {
+export function documentValuesFrom(
+  payload: MoneyDocumentPayload,
+  options: Pick<AssistantFormOptions, 'natures' | 'suppliers' | 'counterparties'>,
+): DocumentDraft {
   const natureFits =
-    payload.nature !== null && natures.some((nature) => nature.value === payload.nature && (nature.direction === null || nature.direction === payload.direction));
+    payload.nature !== null &&
+    options.natures.some(
+      (nature) => nature.value === payload.nature && (nature.direction === null || nature.direction === payload.direction),
+    );
+  const business =
+    options.suppliers.find((supplier) => supplier.id === payload.supplierId)?.defaultBusiness ??
+    options.counterparties.find((counterparty) => counterparty.value === payload.counterpartyId)?.defaultBusiness ??
+    '';
   return {
     values: {
       kind: payload.kind,
@@ -47,6 +57,7 @@ export function documentValuesFrom(payload: MoneyDocumentPayload, natures: Assis
       // Cari adla çözülemediyse kimlik boş gelir, ad künyede ("Karşı taraf") durur — seçimi operatör yapar.
       counterpartyId: payload.counterpartyId ?? '',
       supplierId: payload.supplierId ?? '',
+      business,
       stockLink: '',
       direction: payload.direction,
       nature: natureFits ? (payload.nature ?? '') : '',
@@ -107,6 +118,7 @@ export function MoneyDocumentBody({ payload, subject, options, meta, draft, onCh
     label: supplier.name,
     country: supplier.country,
     paymentTermDays: supplier.paymentTermDays,
+    defaultBusiness: supplier.defaultBusiness,
   }));
 
   return (

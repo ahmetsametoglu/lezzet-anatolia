@@ -1,6 +1,9 @@
 -- Tedarik zinciri: tedarikçi, ürün-kod eşlemesi, tedarik siparişi ve mal kabul (DOMAIN §16).
 -- Sistem önerir, siparişi insan verir; tedarikçiye sistemden hiçbir şey gitmez.
 
+-- İki iş aynı tüzel kişiliğin iç ayrımıdır (docs/feature/iki-is.md); tür burada açılır, çünkü onu ilk kullanan tablo tedarikçidir.
+create type public.business as enum ('qualite', 'lezzet');
+
 create table public.supplier (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -10,6 +13,8 @@ create table public.supplier (
   -- yüklemedir. Bilinmiyorsa NULL kalır, çünkü varsayılan ülke olmayan bir bilgiyi yazmak olurdu.
   country text,
   payment_term_days int,                             -- BİZE tanıdığı vade; null = peşin
+  -- Belgelerinin varsayılan işi; iki işe birden satan tedarikçide boş kalır ve belge girişi seçim ister.
+  default_business public.business,
   note text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),

@@ -9,9 +9,35 @@ import { tabloDolu, type Db, type VaryantRef } from './shared';
 
 const TEDARIKCILER = [
   // Ülke: faturanın KDV rejimi ondan önerilir — TR ithalatı ters yüklemedir, FR standarttır.
-  { key: 'gaziantep', name: 'Gaziantep Baklava Fabrikası', vatNumber: 'TR1234567890', country: 'TR', paymentTermDays: 45, contact: { phone: '+903423456789', email: 'ihracat@gaziantepbaklava.com.tr', city: 'Gaziantep' }, note: 'Ana tedarikçi — 45 gün vade, aylık konteyner.' },
-  { key: 'alsace', name: 'Alsace Frais Distribution', country: 'FR', paymentTermDays: 15, contact: { phone: '+33388991122', email: 'commandes@alsace-frais.fr', city: 'Strasbourg' }, note: 'Yerel taze ürün; haftalık.' },
-  { key: 'eskiTedarik', name: 'Marmara Gıda (eski)', country: 'TR', paymentTermDays: null, contact: { phone: '+902165550000' }, isActive: false, note: 'Çalışılmıyor — kalite sorunu.' },
+  {
+    key: 'gaziantep',
+    name: 'Gaziantep Baklava Fabrikası',
+    defaultBusiness: 'lezzet' as const,
+    vatNumber: 'TR1234567890',
+    country: 'TR',
+    paymentTermDays: 45,
+    contact: { phone: '+903423456789', email: 'ihracat@gaziantepbaklava.com.tr', city: 'Gaziantep' },
+    note: 'Ana tedarikçi — 45 gün vade, aylık konteyner.',
+  },
+  {
+    key: 'alsace',
+    name: 'Alsace Frais Distribution',
+    defaultBusiness: 'lezzet' as const,
+    country: 'FR',
+    paymentTermDays: 15,
+    contact: { phone: '+33388991122', email: 'commandes@alsace-frais.fr', city: 'Strasbourg' },
+    note: 'Yerel taze ürün; haftalık.',
+  },
+  {
+    key: 'eskiTedarik',
+    name: 'Marmara Gıda (eski)',
+    defaultBusiness: 'lezzet' as const,
+    country: 'TR',
+    paymentTermDays: null,
+    contact: { phone: '+902165550000' },
+    isActive: false,
+    note: 'Çalışılmıyor — kalite sorunu.',
+  },
 ];
 
 // `base` katmanında koşmaz: tedarikçiler ve kod eşlemeleri uydurmadır, gerçek tedarikçiyi operatör kurar (`seed/tier.ts`).

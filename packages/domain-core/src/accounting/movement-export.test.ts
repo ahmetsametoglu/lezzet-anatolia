@@ -19,6 +19,7 @@ const movement = (over: Partial<MoneyMovement> = {}): MoneyMovement => ({
   paymentMethod: null,
   stockIntakeId: null,
   supplierId: null,
+  business: 'lezzet',
   valueDate: '2026-09-05',
   description: 'URSSAF',
   source: 'manual',

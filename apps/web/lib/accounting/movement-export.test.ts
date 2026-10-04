@@ -32,8 +32,15 @@ afterAll(async () => {
 describe('hareket dökümü', () => {
   it('dönemin hareketleri tür, kod, cari ve belgeyle; transfer tek satır; izahsız işaretli; dönem dışı yok', async () => {
     const belge = await new MoneyDocumentService(db).insert({
-      kind: 'invoice', number: `LOYER-${stamp}`, issuedOn: dayOffset(-255), counterpartyId: landlord, direction: 'out', nature: 'kira',
-      amountCents: 145_000, vatLines: [{ vatRate: 20, netCents: 120_833, vatCents: 24_167 }],
+      kind: 'invoice',
+      business: 'lezzet',
+      number: `LOYER-${stamp}`,
+      issuedOn: dayOffset(-255),
+      counterpartyId: landlord,
+      direction: 'out',
+      nature: 'kira',
+      amountCents: 145_000,
+      vatLines: [{ vatRate: 20, netCents: 120_833, vatCents: 24_167 }],
     });
     createdDocuments.push(belge.id);
     const movements = new MoneyMovementService(db);

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CurrencyEnum, PaymentMethodEnum } from '../primitives/enums.schema';
+import { BusinessEnum, CurrencyEnum, PaymentMethodEnum } from '../primitives/enums.schema';
 
 // Para ve ön muhasebe (DOMAIN §9): para bir hesapta durur ve hareketlerle girer-çıkar; bakiye saklanmaz, `account_movement`
 // görünümünden türer, çünkü saklanan sayaç kayar. "Neyin parası" tek bir türdür (`nature`), "kime/kimden" cari ya da
@@ -17,6 +17,8 @@ export const AccountSchema = z.object({
   name: z.string(),
   type: AccountTypeEnum,
   currency: CurrencyEnum,
+  /** Hesabın sahibi olan iş; hiçbir bağın iş söylemediği hareket işini buradan alır. */
+  business: BusinessEnum,
   isActive: z.boolean(),
   createdAt: z.string(),
 });
@@ -26,6 +28,8 @@ export const AccountInsertSchema = z.object({
   name: z.string().min(1),
   type: AccountTypeEnum,
   currency: CurrencyEnum.optional(),
+  /** Verilmezse Lezzet (veri varsayılanı). */
+  business: BusinessEnum.optional(),
   isActive: z.boolean().optional(),
 });
 export type AccountInsert = z.infer<typeof AccountInsertSchema>;
@@ -106,6 +110,8 @@ export const MoneyMovementSchema = z.object({
   stockIntakeId: z.string().uuid().nullable(),
   /** Tedarikçiye ödemeyse — tedarikçi borcu bundan türetilir (Σ giriş − Σ ödeme). */
   supplierId: z.string().uuid().nullable(),
+  /** İş, türetilir: belge bağı, tedarikçi, cari, sonra hesap; tetikleyici kurar, gönderilen değer ezilir. */
+  business: BusinessEnum,
   /** Paranın gerçekten hareket ettiği gün; kayıt günü (`createdAt`) ondan farklı olabilir. */
   valueDate: z.string(),
   description: z.string().nullable(),
@@ -162,8 +168,8 @@ export const MoneyMovementInsertSchema = z.object({
 });
 export type MoneyMovementInsert = z.infer<typeof MoneyMovementInsertSchema>;
 
-/** `explained` türetilmiş kolondur, güncelleme gövdesine giremez — tetikleyici her yazımda yeniden kurar. */
-export const MoneyMovementUpdateSchema = MoneyMovementSchema.omit({ explained: true }).partial().required({ id: true });
+/** `explained` ve `business` türetilmiş kolonlardır, güncelleme gövdesine giremez; tetikleyici yeniden kurar. */
+export const MoneyMovementUpdateSchema = MoneyMovementSchema.omit({ explained: true, business: true }).partial().required({ id: true });
 export type MoneyMovementUpdate = z.infer<typeof MoneyMovementUpdateSchema>;
 
 /**
@@ -254,6 +260,8 @@ export const MoneyDocumentSchema = z.object({
   stockIntakeId: z.string().uuid().nullable(),
   /** Faturası mal gelmeden kesilen sipariş: siparişin kabulleri bu belgeyle borçlanır. */
   purchaseOrderId: z.string().uuid().nullable(),
+  /** Belgenin işi; belge bölünmez, ödemesinin işi de buradan gelir. */
+  business: BusinessEnum,
   /** `out` = bizim ödeyeceğimiz (gelen fatura, bordro), `in` = bize ödenecek (tedarikçi iadesi). */
   direction: MovementDirectionEnum,
   /** Belgenin türü — ödemesi bağlanınca harekete de geçer (hareketin türü boşsa). */
@@ -285,6 +293,7 @@ export const MoneyDocumentInsertSchema = z.object({
   supplierId: z.string().uuid().nullish(),
   stockIntakeId: z.string().uuid().nullish(),
   purchaseOrderId: z.string().uuid().nullish(),
+  business: BusinessEnum,
   direction: MovementDirectionEnum,
   nature: z.string().nullish(),
   amountCents: z.number().int().positive(),
@@ -296,6 +305,10 @@ export const MoneyDocumentInsertSchema = z.object({
   note: z.string().nullish(),
 });
 export type MoneyDocumentInsert = z.infer<typeof MoneyDocumentInsertSchema>;
+
+/** Belge kapısının girdisi: iş seçilmediyse kapı tedarikçinin ya da carinin varsayılanından kurar. */
+export const MoneyDocumentEntrySchema = MoneyDocumentInsertSchema.extend({ business: BusinessEnum.nullish() });
+export type MoneyDocumentEntry = z.infer<typeof MoneyDocumentEntrySchema>;
 
 /** `vatAmountCents` üretilmiş kolondur, yazılamaz. */
 export const MoneyDocumentUpdateSchema = MoneyDocumentSchema.omit({ vatAmountCents: true }).partial().required({ id: true });
@@ -423,6 +436,8 @@ export const CounterpartySchema = z.object({
   keywords: z.array(z.string()),
   /** Tanınan satıra önerilecek tür (`movement_nature.slug`). */
   defaultNature: z.string().nullable(),
+  /** Belgelerinin ve hareketlerinin varsayılan işi; iki işle çalışan caride `null`. */
+  defaultBusiness: BusinessEnum.nullable(),
   note: z.string().nullable(),
   isActive: z.boolean(),
   createdAt: z.string(),
@@ -434,6 +449,7 @@ export const CounterpartyInsertSchema = z.object({
   kind: CounterpartyKindEnum.optional(),
   keywords: z.array(z.string()).optional(),
   defaultNature: z.string().nullish(),
+  defaultBusiness: BusinessEnum.nullish(),
   note: z.string().nullish(),
   isActive: z.boolean().optional(),
 });
