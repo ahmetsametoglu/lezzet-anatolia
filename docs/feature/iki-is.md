@@ -101,9 +101,14 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
   kabul aynı işin deposuna yapılır, taslak işe göre bölünür; yoksa tek fatura iki işe yayılır (4. karar).
 - **Kasa:** kapıda nakit alınan B2B parası Hiboutik çekmecesine kasa girişi olarak yazılıyor (`register/sync.ts`); QUALITE'nin
   nakdi de aynı çekmeceye girer. Muhasebede tek şirket olduğu için ayrı kasa gerekmez; hareketin işi siparişin bağından türer.
-- **Kurye:** değişmez (§2).
+- **Kurye:** sefer ve teslim değişmez (§2). Kurye mobilinde iki boşluk var: yükleme listesi kutunun hangi depoda beklediğini
+  göstermiyor (`CourierStopSchema`'da depo yok); iade ekranı kuryenin bütün kutularını depo ayırmadan listeliyor ve kuryeyi
+  yalnız o deponun kapsamındaysa açıyor (`courier/return.ts`). Sefer iki depodan sipariş taşıyorsa durakta ve iade kutusunda
+  depo yazılır; QUALITE siparişi taşıyan kuryenin kapsamına iki tesis de girer.
+- **Depocu:** iki tarafta çalışan depocu cihazdaki "çalışılan depo" seçimini menüden değiştirir (`warehouse-choice.ts`);
+  hazırlık, mal kabul, sayım ve iade ekranları seçili depoyu gösterir. Tek tesisli personele soru sorulmaz.
 - Satış dışa aktarımı, kâr raporu (bugün kanala göre kırılıyor) ve analitik görünüm iş alanını okumalı.
-- **Tahmini boyut:** ~6 migration dosyasında ~8 yer, ~20 TS dosyası; risk orta.
+- **Tahmini boyut:** ~6 migration dosyasında ~8 yer, ~25 TS dosyası; risk orta.
 - **Seçilmeyen modeller:** "parti işe aittir" (~13 SQL, ~40–50 TS; unutulan tek süzgeç fazla ya da eksik satış yaptırır) ve
   "ortak mal, iş satışta belirlenir" (alış ve fire için dağıtım kuralı ister). Mal fiziksel olarak ayrı durduğu için depo modeli
   seçildi.
