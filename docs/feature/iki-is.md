@@ -19,7 +19,7 @@ satış yapan iştir. İkisi aynı tüzel kişilik (QUALITE SAS) altındadır: m
 | 6 | **Stok depo üzerinden ayrılır:** her depo bir işe aittir, etiketsiz depo Lezzet'tir | Mal kabul, parti, rezervasyon, sipariş, sayım ve fire işini deposundan alır; depo bu kayıtların hepsinde zorunlu olduğu için yeni alan gerekmez. Dayanak: iki işin malı fiziksel olarak ayrı duruyor, aynı rafta değil. |
 | 7 | **QUALITE yalnız profesyonel müşteriye satar;** müşteriyi QUALITE müşterisi operasyondan admin yapar, müşteri kendisi seçemez | Bireysel ve etiketsiz müşteri Lezzet'tir. Siparişin işi deposundan gelir; müşterinin işi yalnız hangi depoların seçilebileceğini belirler. |
 | 8 | **İki iş arasında mal geçişi yoktur;** olursa depo transferiyle yapılır ve sonraki siparişte mahsuplaşılır | Muhasebede tek şirket olduğu için iç fatura ya da iç devir kaydı açılmaz. |
-| 9 | **QUALITE ayrı kurye düzeni kurmaz:** teslimat bölgesi ve sefer iki işe ortaktır | QUALITE siparişi aynı rotanın Lezzet seferinde taşınır ve teslim edilir. |
+| 9 | **Her işin kendi teslimat bölgesi ve seferi vardır;** geçici olarak tek kurye tek araçla iki hesap ve iki telefonla iki işin seferini birlikte sürer, ileride araçlar ayrılır | Sistemde iki ayrı kurye olduğu için iki sefer aynı anda yoldadır. Tek hesap iki seferi birlikte süremez: kurye aynı anda tek sefer sürer ve başlamamış seferin durağı gün ekranında görünmez. Sahada sürtünme görülürse birleşik sürüş kurulur (§5). |
 
 **Dayanak (ölçüm ve araştırma, 03.10):** Pennylane'in yerleşik stok modülü yok (yardım merkezi: *"Pennylane ne dispose pas
 de module natif dédié à la gestion des stocks"*); stok için önerdiği Stockpit ayrı abonelikli ikinci bir sistemdir.
@@ -37,14 +37,14 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
 - **Muhasebe düzeni** değişir: toptan ekibinin "Pennylane'e doğrudan girme" kuralı alış ve gideri de kapsar.
 - **İş ekseni sipariş eksenlerinden bağımsızdır:** kanal (`b2b`/`b2c`) müşterinin şirket olup olmadığını söyler, hangi
   işin müşterisi olduğunu söylemez; QUALITE'nin restoranı da Lezzet'in B2B müşterisi de `b2b`dir.
-- **Bölgeye QUALITE deposu eklenir** (9. karar). Posta kodu yine tek bölgeye düşer; QUALITE müşterisinin siparişi bölgenin
-  QUALITE deposuna, Lezzet'inki bölgenin bugünkü deposuna yazılır. Sefer bölge ve gün üzerinden kurulur ve o günün rota
-  siparişlerini deposuna bakmadan alır (`open_delivery_run`); teslim yalnız kuryenin siparişe atanmış olmasına bakar ve stok
-  siparişin kendi deposundan düşer (`deliver_order`). Bölgeyi işe göre ikiye bölmek bunu bozardı, çünkü kurye aynı anda tek
-  sefer sürebiliyor (`depart_delivery_run` → `another_running`). Seferin çıkış noktası bölgenin Lezzet deposudur; QUALITE deposu
-  başka adresteyse durak sıralaması oraya uğramayı bilmez.
-- **QUALITE'nin kargo deposu yoktur** (varsayılan): QUALITE deposu tanımlı bölgenin dışındaki QUALITE müşterisi "teslimat
-  noktası belirlenemedi" mesajını alır, Lezzet deposuna düşmez.
+- **Bölge işe göre ayrılır** (9. karar). Bir posta kodu her işte en çok bir bölgede olur; bölgenin işi deposundan gelir ve
+  müşterinin siparişi kendi işinin bölgesine düşer. Her işin kuryesi ayrı bir hesaptır ve yalnız kendi deposuna bağlıdır; iki
+  sefer ayrı kuryelerin olduğu için aynı anda yoldadır (`another_running` kurye başınadır). Aynı araç kaydı iki kuryenin açık
+  seferinde olamaz (`vehicle_taken`): araç QUALITE için farklı plaka koduyla ikinci kez kaydedilir (plaka tekildir) ya da QUALITE
+  hesabı "araçsız devam" der. Soğuk zincir izi araç kaydına bağlı olduğu için aynı aracın izi iki kayda bölünür. Ortak bölge
+  seçilmedi, çünkü araçlar ayrılınca bozulurdu: bölge ve gün başına tek sefer var, seferde tek kurye ve tek araç.
+- **QUALITE'nin kargo deposu yoktur** (varsayılan): QUALITE bölgelerinin dışındaki QUALITE müşterisi "teslimat noktası
+  belirlenemedi" mesajını alır, Lezzet deposuna düşmez.
 - **QUALITE etiketi B2B onaylı profesyonel müşteriye verilir,** çünkü toptan fiyat onaysız açılmaz (`effectiveChannelOf`).
 - **Kapı ve araç satışının işi deposundan gelir;** anonim alıcı işe göre bölünmez. QUALITE deposundan anonim kapı satışı
   yapılmaz, çünkü QUALITE yalnız profesyonele satar.
@@ -58,7 +58,7 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
 | Faz | İş | Ön şart |
 |---|---|---|
 | A | **Para tarafında iş.** Belgede ve belgesiz harekette zorunlu iş alanı; tedarikçi, cari ve hesapta varsayılan iş; formlarda seçim; Pennylane kategorisi belgenin işinden; banka satırının işi bağından; para ekranında iş süzgeci ve iki işin özeti; Crédit Mutuel eşlemesi. | — |
-| B | **Satış ve stokta iş (depo modeli).** Depoda ve müşteride iş; bölgeye QUALITE deposu; depo çözümü, gel-al teklifi ve vitrinin "hiç var mı" toplamı müşterinin işine göre; tedarik siparişinde iş; satış raporları iki iş için (§5). | A |
+| B | **Satış ve stokta iş (depo modeli).** Depoda ve müşteride iş; bölge işe göre; depo çözümü, gel-al teklifi ve vitrinin "hiç var mı" toplamı müşterinin işine göre; tedarik siparişinde iş; satış raporları iki iş için (§5). | A |
 | C | **Gider fişi mobilde.** Fotoğraf, iş, tür, tutar ve KDV ile belge açılır; Pennylane'e bugünkü kuyrukla yüklenir. | A |
 | D | **E-fatura okuyucu** iki iş için; çift kayıt koruması (`kasa-muhasebe.md` 7. adım). | A |
 | E | **Fişten otomatik okuma** (tutar, KDV, tedarikçi). | C |
@@ -88,9 +88,10 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
   okur, kopya alan tutulmaz (`0031_warehouse.sql`).
 - **Müşteri:** `user_profiles.business` (B2B alanları aynı satırda); QUALITE yalnız onaylı şirkette, değiştiren yalnız admin.
   Siparişi yazan iki yer var (`checkout-draft.ts`, `on-site-sale.ts`); müşterinin işi deponun işiyle tutar, anonim alıcı muaftır.
-- **Bölge ve depo çözümü:** bölgede QUALITE deposu alanı; `warehouse-resolve.ts` müşterinin işine göre bölgenin deposunu seçer.
-  Posta kodu anahtarı ve "ülke başına tek kargo deposu" kuralı değişmez. Web (`read-place.ts`) ve native (`delivery/place.ts`)
-  aynı kurala dayanır.
+- **Bölge ve depo çözümü:** bugün bir posta kodu yalnız tek bölgede olabiliyor (`0014_delivery_zone.sql` anahtarı ve operasyon
+  formunun kontrolü, `routes-actions.ts`); kural "iş başına tek bölge" olur. `warehouse-resolve.ts` yalnız müşterinin işindeki
+  bölgelere bakar; "ülke başına tek kargo deposu" kuralı değişmez. Web (`read-place.ts`) ve native (`delivery/place.ts`) aynı
+  kurala dayanır.
 - **Gel-al:** teklif bugün bütün gel-al depolarını listeliyor (`pickup-offer.ts`); müşterinin işine göre süzülür.
 - **Vitrin:** adres bilinmezken "var/yok" bütün tesislerin toplamından okunuyor (`available_stock_total`); toplam işe göre olur,
   yoksa Lezzet ziyaretçisi yalnız QUALITE'de olan ürünü "var" görür. Okuyanlar: `product-context.ts`, `packages.ts`, MCP katalog
@@ -101,14 +102,18 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
   kabul aynı işin deposuna yapılır, taslak işe göre bölünür; yoksa tek fatura iki işe yayılır (4. karar).
 - **Kasa:** kapıda nakit alınan B2B parası Hiboutik çekmecesine kasa girişi olarak yazılıyor (`register/sync.ts`); QUALITE'nin
   nakdi de aynı çekmeceye girer. Muhasebede tek şirket olduğu için ayrı kasa gerekmez; hareketin işi siparişin bağından türer.
-- **Kurye:** sefer ve teslim değişmez (§2). Kurye mobilinde iki boşluk var: yükleme listesi kutunun hangi depoda beklediğini
-  göstermiyor (`CourierStopSchema`'da depo yok); iade ekranı kuryenin bütün kutularını depo ayırmadan listeliyor ve kuryeyi
-  yalnız o deponun kapsamındaysa açıyor (`courier/return.ts`). Sefer iki depodan sipariş taşıyorsa durakta ve iade kutusunda
-  depo yazılır; QUALITE siparişi taşıyan kuryenin kapsamına iki tesis de girer.
+- **Kurye:** akış değişmez. Her hesap tek depoya bağlı ve her sefer tek depolu olduğu için yükleme listesinde ve iade ekranında
+  depo ayrımı gerekmez. Geçici düzenin sahadaki bedeli: her sefer kendi durak sırasını tek başına hesaplar (`stop-order.ts`);
+  kutu doğru telefonla taranır, öteki telefon "başka rotanın kutusu" der (`load.ts`); her durak kendi telefonunda kapanır; gün
+  sonunda iki kapanış ve iki kasa sayımı yapılır, tek kart cihazının raporu iki seferin toplamıdır; iade iki teslimle yapılır ve
+  teslim kayıtları iki hesaba bölünür. Müşteriye kurye konumu ya da varış süresi gösterilmediği için müşteri tarafı etkilenmez.
+- **Birleşik sürüş** (sürtünme görülürse): aynı araçtaki seferler tek hesapta birlikte yola çıkar, durakları tek sırada dizilir,
+  kapanış sayımı seferlere böler. Dokunulacak yerler: başlatma kapısı (`depart_delivery_run` → `another_running`), araçtaki
+  seferler ekranı, gün ekranının sayaçları, durak sıralaması ve kapanış ekranı. Bölge düzeni değişmez.
 - **Depocu:** iki tarafta çalışan depocu cihazdaki "çalışılan depo" seçimini menüden değiştirir (`warehouse-choice.ts`);
   hazırlık, mal kabul, sayım ve iade ekranları seçili depoyu gösterir. Tek tesisli personele soru sorulmaz.
 - Satış dışa aktarımı, kâr raporu (bugün kanala göre kırılıyor) ve analitik görünüm iş alanını okumalı.
-- **Tahmini boyut:** ~6 migration dosyasında ~8 yer, ~25 TS dosyası; risk orta.
+- **Tahmini boyut:** ~6 migration dosyasında ~8 yer, ~20 TS dosyası; risk orta.
 - **Seçilmeyen modeller:** "parti işe aittir" (~13 SQL, ~40–50 TS; unutulan tek süzgeç fazla ya da eksik satış yaptırır) ve
   "ortak mal, iş satışta belirlenir" (alış ve fire için dağıtım kuralı ister). Mal fiziksel olarak ayrı durduğu için depo modeli
   seçildi.
