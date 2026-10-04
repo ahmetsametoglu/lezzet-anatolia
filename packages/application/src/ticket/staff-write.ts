@@ -105,10 +105,7 @@ export async function openTicket(
 }
 
 /**
- * Personelin cevabı — müşteriye **aynen** görünür (iç not yoktur, DOMAIN §15).
- *
- * Cevap yazmak durumu kendiliğinden değiştirmez: durum değiştirme ayrı bir aksiyondur, sessiz
- * geçiş operatörün vermediği bir kararı ona mal etmek olurdu.
+ * Personelin cevabı müşteriye aynen görünür, iç not yoktur (DOMAIN §15). İlk cevap açık talebi işleme alır (`statusAfterStaffReply`).
  */
 export async function replyAsStaff(
   db: SupabaseClient,

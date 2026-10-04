@@ -2,13 +2,8 @@ import type { TicketStatus, TicketType } from '@lezzet/types';
 import { readableCode } from '../order/reference-no';
 
 /**
- * Talep durum makinesi ve kapıları (16.1) — DOMAIN §15.
- *
- * **Karmaşık ticket mekaniği yok.** Üç durum, iki aktör. Sipariş makinesinden ayrı bir dosyada
- * durur çünkü ayrı bir gerçeği anlatır: sipariş bir malın yolculuğu, talep bir konuşmanın hâli.
- *
- * Burada yalnız "olur mu" sorusu cevaplanır. Geçişin neyi tetiklediği (e-posta, iade akışı,
- * damga) uygulama katmanının işidir — motor karar verir, uygulama uygular (STACK §4).
+ * Talep durum makinesi (DOMAIN §15): üç durum, iki aktör; sipariş makinesinden ayrıdır, çünkü sipariş bir malın yolculuğu, talep bir
+ * konuşmanın hâlidir. Burada yalnız "olur mu" cevaplanır, geçişin tetiklediği iş uygulama katmanınındır.
  */
 
 /** Talebi kim ilerletiyor. Müşteri ile personelin yetkisi aynı değildir. */
@@ -43,11 +38,8 @@ export type TicketTransitionCheck =
   | { allowed: false; reason: 'same_status' | 'not_allowed' | 'forbidden_for_actor' };
 
 /**
- * Geçiş izinli mi. İzinsiz geçiş bir HATA DEĞERİDİR, fırlatma değil — çağıran `{data, error}`
- * sözleşmesine çevirir (STACK §8).
- *
- * `forbidden_for_actor` ile `not_allowed` ayrı sebeplerdir: birincisi "bu geçiş var ama sen
- * yapamazsın", ikincisi "böyle bir geçiş yok". Ekran ikisine aynı cümleyi kurmaz.
+ * Geçiş izinli mi; izinsiz geçiş fırlatma değil hata değeridir (STACK §8). `forbidden_for_actor` "geçiş var ama sen yapamazsın",
+ * `not_allowed` "böyle bir geçiş yok" demektir ve ekran ikisine aynı cümleyi kurmaz.
  */
 export function canTransitionTicket(from: TicketStatus, to: TicketStatus, by: TicketActor): TicketTransitionCheck {
   if (from === to) return { allowed: false, reason: 'same_status' };
@@ -64,40 +56,26 @@ export function allowedTicketTransitions(from: TicketStatus, by: TicketActor): r
 }
 
 /**
- * Müşteri kapanmış bir talebe yazarsa talep **kendiliğinden yeniden açılır**.
- *
- * "Yeniden aç" ile "yaz" ayrı iki düğme olsaydı müşteri yazar, düğmeye basmayı unutur ve mesajı
- * kapalı bir talebin içinde kimsenin görmediği yerde kalırdı. Açık talepte durum DEĞİŞMEZ:
- * personel "işlemde" işaretlediyse müşterinin yeni cümlesi onu başa sarmamalı.
- *
- * `null` = durum değişmez.
+ * Müşteri kapanmış talebe yazarsa talep kendiliğinden yeniden açılır, yoksa mesaj kimsenin görmediği kapalı talepte kalırdı. Açık talepte
+ * durum değişmez (`null`), ki müşterinin yeni cümlesi "işlemde"yi başa sarmasın.
  */
 export function statusAfterCustomerReply(current: TicketStatus): TicketStatus | null {
   return current === 'resolved' ? 'open' : null;
 }
 
 /**
- * Personelin cevabı durumu **kendiliğinden değiştirmez** (`null`).
- *
- * Tasarım durum değiştirmeyi ayrı bir aksiyon olarak sunuyor; cevap yazmayı sessizce "işlemde"ye
- * çevirmek, operatörün vermediği bir kararı onun adına kaydetmek olurdu. Fonksiyon yine de var:
- * kuralın "yok" olduğu, çağıranın her ihtimale karşı kendi varsayımını kurmasından iyidir.
+ * İşletmenin ilk cevabı açık talebi `in_progress`e geçirir, ki müşteri cevabın yanında "alındı, sırada" görmesin. Öteki durumlarda cevap
+ * durumu değiştirmez; operatör durumu yine ayrı eylemle değiştirir.
  */
-export function statusAfterStaffReply(_current: TicketStatus): TicketStatus | null {
-  return null;
+export function statusAfterStaffReply(current: TicketStatus): TicketStatus | null {
+  return current === 'open' ? 'in_progress' : null;
 }
 
 export type ReturnTriggerCheck = { allowed: true } | { allowed: false; reason: 'no_order' | 'already_triggered' };
 
 /**
- * Bu talepten iade akışı başlatılabilir mi.
- *
- * **Tip kısıtlanmaz** — `question` bir talebin içinden de haklı bir iade çıkabilir; müşteri
- * sorununu her zaman doğru kutuya koymaz. Kısıt yalnız fiziksel gerçekten gelir: iade edilecek bir
- * sipariş yoksa tetiklenecek bir akış da yoktur.
- *
- * İkinci tetik engellenir: iade siparişte yaşar ve oradan yürür; talepten ikinci kez başlatmak,
- * aynı iade için iki ayrı akış açmak olurdu (DOMAIN §8).
+ * Bu talepten iade akışı başlatılabilir mi: tür kısıtlanmaz, çünkü müşteri sorununu her zaman doğru kutuya koymaz; kısıt siparişin
+ * varlığıdır. İkinci tetik engellenir, çünkü aynı iade için iki akış açılırdı (DOMAIN §8).
  */
 export function canTriggerReturn(ticket: { orderId: string | null; returnTriggeredAt: string | null }): ReturnTriggerCheck {
   if (!ticket.orderId) return { allowed: false, reason: 'no_order' };
@@ -139,13 +117,8 @@ export function isReturnBound(type: TicketType): boolean {
 }
 
 /**
- * Şikâyet fotoğrafı olarak kabul edilen dosya türleri (16.2).
- *
- * **Yalnız görsel.** Talep eki bir kanıttır: "bozuk geldi"nin fotoğrafı. PDF, arşiv ya da ofis
- * dosyası bu işi görmez — ama private kovaya her şeyin yüklenebilmesi, kovayı bir dosya paylaşım
- * alanına çevirir. Kural motorda, çünkü "neyi kanıt sayarız" bir iş kararıdır, depo ayarı değil.
- *
- * HEIC var: iPhone varsayılanı, ve müşteri dönüştürmekle uğraşmaz.
+ * Şikâyet fotoğrafı olarak yalnız görsel kabul edilir, çünkü ek bir kanıttır ve her şeyin yüklenebilmesi kovayı dosya paylaşım alanına
+ * çevirirdi. HEIC iPhone'un varsayılanıdır, müşteri dönüştürmekle uğraşmaz.
  */
 export const ALLOWED_ATTACHMENT_EXTENSIONS: readonly string[] = ['jpg', 'jpeg', 'png', 'webp', 'heic'];
 
@@ -163,11 +136,8 @@ export function checkAttachment(filename: string, alreadyRequested = 0): Attachm
 }
 
 /**
- * Ek dosyanın anahtarındaki tek kullanımlık kimlik.
- *
- * Aynı talebe birden çok fotoğraf eklenebilir ve hiçbiri diğerinin üzerine yazmamalı — bozuk ürünün
- * ikinci açısı, birincisinin yerine geçmez. Üreteç kriptografiktir (`readableCode` varsayılanı):
- * tahmin edilebilir bir anahtar, imzalı adresi isteyebilen birine komşu fotoğrafı verirdi.
+ * Ek dosyanın anahtarındaki tek kullanımlık kimlik, ki aynı talebin fotoğrafları birbirinin üzerine yazmasın. Üreteç kriptografiktir,
+ * çünkü tahmin edilebilir anahtar imzalı adres isteyebilen birine komşu fotoğrafı verirdi.
  */
 export function attachmentToken(random?: () => number): string {
   return readableCode(12, random);

@@ -55,8 +55,9 @@ describe('cevap yazmanın duruma etkisi', () => {
     expect(statusAfterCustomerReply('open')).toBeNull();
   });
 
-  it('personelin cevabı durumu kendiliğinden değiştirmez', () => {
-    expect(statusAfterStaffReply('open')).toBeNull();
+  it('işletmenin ilk cevabı açık talebi işleme alır; öteki durumları değiştirmez', () => {
+    expect(statusAfterStaffReply('open')).toBe('in_progress');
+    expect(statusAfterStaffReply('in_progress')).toBeNull();
     expect(statusAfterStaffReply('resolved')).toBeNull();
   });
 });

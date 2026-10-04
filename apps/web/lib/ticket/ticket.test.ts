@@ -240,11 +240,11 @@ describe('yazışma ve durum', () => {
     expect((await tickets.getById(ticket.id))?.status).toBe('in_progress');
   });
 
-  it('personelin cevabı durumu kendiliğinden değiştirmez', async () => {
+  it('personelin ilk cevabı açık talebi işleme alır', async () => {
     const ticket = await openPlainTicket();
     const reply = await replyAsStaff({ ticketId: ticket.id, authorId: staffId, body: 'İnceliyoruz.' });
     expect(reply.ok).toBe(true);
-    expect((await tickets.getById(ticket.id))?.status).toBe('open');
+    expect((await tickets.getById(ticket.id))?.status).toBe('in_progress');
 
     const view = await getCustomerTicket('tr', customerId, ticket.id);
     // Personelin yazdığı müşteriye AYNEN görünür — iç not yoktur.

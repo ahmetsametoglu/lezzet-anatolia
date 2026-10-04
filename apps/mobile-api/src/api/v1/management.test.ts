@@ -6,14 +6,8 @@ import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, type SignedInUser } from '../../lib/testing';
 
 /**
- * YÖNETİM HUB UCU (21.12 · karar kutusu + Y5 gün özeti) — çivilenen üç karar:
- *
- *  1. **Kapı YALNIZ `admin`** — depocu ve kurye 403: karar kutusu yönetim bölümünündür (doc 04).
- *  2. **Karar kutusu MOTORLARIN sözünü sayar** — cevap bekleyen talep açınca `complaints.count`
- *     bizim satırımız kadar ARTMIŞ olmalı (paylaşılan DB: alt sınır iddiası, eşitlik değil —
- *     CLAUDE §4b "kendi kurduğun satırları say").
- *  3. **Gün TESLİM günüdür** — kendi kurduğumuz bugün-teslim siparişi günün sayacına ve kanal
- *     kırılımına girer.
+ * Yönetim hub ucu yalnız `admin`e açıktır ve karar kutusu motorların sözünü sayar; paylaşılan veritabanında sayaç için eşitlik değil alt
+ * sınır iddia edilir (`CLAUDE §4b`). Gün teslim günüdür: bugün teslim edilecek sipariş günün sayacına girer.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -258,9 +252,8 @@ describe('Y3 · yakın-SKT teklif onayı', () => {
 describe('Y4 · tedarik önerisi', () => {
   it('grup tedarikçi adıyla ve motorun önerisiyle; onay TASLAK TS yazıyor', async () => {
     const supply = await envelopeData<SupplyResponse>(await get(admin, 'supply'));
-    // Grup DEPO+tedarikçi ikilisiyle seçilir: eşleme varyant düzeyinde olduğundan öteki tesisler de
-    // (stok 0'la) aynı tedarikçiye grup üretir ve düz `find` sırası koşudan koşuya değişir (ölçüldü:
-    // STR'nin grubu yakalanınca öneri 10 çıkıyordu — bizim depoda 8).
+    // Grup depo ve tedarikçi ikilisiyle seçilir, çünkü öteki tesisler de aynı tedarikçiye grup üretir ve düz `find` sırası koşudan koşuya
+    // değişir.
     const group = supply.groups.find((row) => row.supplierId === supplierId && row.warehouseId === warehouseId);
     expect(group).toBeDefined();
     expect(group!.supplierName).toContain('Yönetim Ucu Tedarik');
@@ -269,7 +262,7 @@ describe('Y4 · tedarik önerisi', () => {
     expect(line!.minStockQty).toBe(10);
     // Öneri motorun sözü: eşiğe çıkaracak kadar (10−2=8); koli eşlemesi yok, yuvarlama değişmez.
     expect(line!.suggestedQty).toBe(8);
-    // Görsel alanı uçtan geçiyor (21.302); fikstür ürünü görselsiz → `null`, uydurma bir adres değil.
+    // Görsel alanı uçtan geçer; fikstür ürünü görselsiz olduğu için `null` döner, uydurma bir adres değil.
     expect(line!.imageUrl).toBeNull();
 
     const draft = await envelopeData<SupplyDraftResponse>(
@@ -291,10 +284,8 @@ describe('Y4 · tedarik önerisi', () => {
     expect(items?.length).toBeGreaterThanOrEqual(1);
     expect(items![0]).toMatchObject({ target_warehouse_id: warehouseId });
 
-    /* MÜKERRER TASLAK YOK (21.302): taslaktaki adet artık eşiğe sayılıyor — az önce açılan taslak
-       eksiği karşıladı, aynı grubu İKİNCİ kez onaylamak yeni bir taslak açmaz, "öneri kalmadı"
-       cevabı döner. Eskiden bu ikinci basış ikinci bir taslak TS açıyordu ve hiçbir yerde uyarı
-       yoktu (kullanıcı kararı 10.09: mükerrer taslak riski unutulmuş taslak riskinden büyük). */
+    /* Mükerrer taslak açılmaz: taslaktaki adet eşiğe sayılır, yani aynı grubu ikinci kez onaylamak "öneri kalmadı" döner. Mükerrer taslak
+       riski unutulmuş taslak riskinden büyüktür. */
     const again = await envelopeData<SupplyDraftResponse>(
       await post(admin, 'supply/draft', { warehouseId, supplierId }),
     );
@@ -302,8 +293,7 @@ describe('Y4 · tedarik önerisi', () => {
   });
 
   it('öneri kalmadıysa onay hata değil CEVAP: no_suggestion', async () => {
-    // Taslak açıldı (üstteki test) ve taslaktaki adet eşiğe sayıldığı için o grup zaten kapandı
-    // (21.302). Burada iddia daha dar: OLMAYAN tedarikçiyle onay `no_suggestion` döner.
+    // Taslaktaki adet eşiğe sayıldığı için o grup zaten kapandı; buradaki iddia daha dar: olmayan tedarikçiyle onay `no_suggestion` döner.
     const draft = await envelopeData<SupplyDraftResponse>(
       await post(admin, 'supply/draft', { warehouseId, supplierId: '00000000-0000-4000-8000-00000000dead' }),
     );
@@ -334,10 +324,11 @@ describe('Y1 · şikâyet / talep detayı', () => {
     expect(after.complaint!.awaitingReply).toBe(false);
   });
 
-  /* "Üstlen" ARTIK KENDİ UCU DEĞİL, DURUM KAPISININ BİR ÇAĞRISI (21.276): çekmece dört geçişi de
-     aynı kapıdan yazıyor ve hangisinin açık olduğunu MOTOR söylüyor. Ayrı bir `/claim` ucu, aynı
-     motor çağrısına ikinci bir ad vermek olurdu. */
+  /* "Üstlen" durum kapısının bir çağrısıdır, ayrı uç değil; çekmece dört geçişi de aynı kapıdan yazar ve hangisinin açık olduğunu motor
+     söyler. */
   it('ÜSTLEN durum kapısından geçer; ikinci üstlenme reddi bir CÜMLEDİR, HTTP hatası değil', async () => {
+    // Personelin ilk cevabı talebi işleme aldı (önceki test); üstlenme kapısını sınamak için talep açığa döner.
+    await post(admin, `complaints/${ticketId}/status`, { to: 'open' });
     const claim = await envelopeData<TicketActionResponse>(
       await post(admin, `complaints/${ticketId}/status`, { to: 'in_progress' }),
     );
@@ -350,10 +341,8 @@ describe('Y1 · şikâyet / talep detayı', () => {
     expect(typeof again.reason).toBe('string');
   });
 
-  /* ÇEKMECENİN ÖTEKİ ÜÇ KAPISI (21.276). Hepsi tek zarfı konuşuyor: ret bir CÜMLEDİR, HTTP hatası
-     değil — ekran sebebi kendi diline çevirir. İade burada YALNIZ damgadır; tutar ve akıbet
-     siparişte seçilir (DOMAIN §8), o yüzden motorun mutlu yolu `apps/web/lib/ticket/ticket.test.ts`te
-     ve kapısı `ticket-flow.test.ts`te ölçülüyor. Ucun kendi işi kablolamayı kanıtlamaktır. */
+  /* Çekmecenin öteki üç kapısı tek zarfı konuşur: ret HTTP hatası değil bir cümledir. Ucun işi kablolamayı kanıtlamaktır; iade kuralı
+     `ticket.test.ts` ve `ticket-flow.test.ts`te sınanır. */
   it('TÜR sınıflandırma, MOD geçişi ve İADE damgası aynı zarftan konuşur', async () => {
     const type = await envelopeData<TicketActionResponse>(
       await post(admin, `complaints/${ticketId}/type`, { type: 'damaged' }),
@@ -378,10 +367,8 @@ describe('Y1 · şikâyet / talep detayı', () => {
     expect(ret).toEqual({ ok: false, reason: 'no_order' });
   });
 
-  /* TALEP LİSTESİ (21.281) — kuyruk sayfası + şerit sayaçları TEK turda.
-
-     PAYLAŞILAN DB: kendi kurduğumuz satırı ARIYORUZ, toplam saymıyoruz (CLAUDE §4b). Sayaçlar
-     için de aynısı: eşitlik değil ALT SINIR iddiası — başka bir şeridin talebi sayıyı oynatır. */
+  /* Talep listesi kuyruk sayfasını ve sayaçları tek turda verir. Paylaşılan veritabanında kendi satırımız aranır, sayaçlar için alt sınır
+     iddia edilir (`CLAUDE §4b`). */
   it('liste kendi talebimizi taşıyor; sayaçlar sayfadan DEĞİL sayımdan gelir', async () => {
     const list = await envelopeData<ComplaintsResponse>(await get(admin, 'complaints'));
     const mine = list.rows.find((row) => row.ticketId === ticketId);
