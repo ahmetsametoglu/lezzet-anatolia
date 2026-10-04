@@ -227,7 +227,7 @@ export class PennylaneDocumentService extends BaseDbService<PennylaneDocumentMir
     return this.getOneBy({ documentId });
   }
 
-  /** Pennylane'deki faturanın bizdeki belgesi; bir hareketin eşleşmeleri bizim mi, başka işin mi, bununla ayrılır. */
+  /** Pennylane'deki faturanın bizdeki belgesi; bir hareketin eşleşmeleri bizim mi, bizde olmayan faturanın mı, bununla ayrılır. */
   listByInvoices(invoiceIds: readonly number[]): Promise<PennylaneDocumentMirror[]> {
     return invoiceIds.length === 0 ? Promise.resolve([]) : this.getAll({ pennylaneInvoiceId: [...invoiceIds] });
   }

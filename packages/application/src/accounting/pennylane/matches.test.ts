@@ -180,16 +180,17 @@ describe("bizdeki bağın Pennylane'e yazımı", () => {
   });
 });
 
-describe('aynı şirketin başka işi', () => {
-  it('başka işin faturasına eşli hareket bizde izahlı olur; bağımız yanına eklenir, çıkan bağımız varsa hareket bekler ve muhasebe uyarılır', async () => {
+describe('bizde olmayan fatura', () => {
+  it('bizde olmayan faturaya eşli hareket izah bekler; bağımız yanına eklenir, çıkan bağımız varsa hareket bekler ve muhasebe uyarılır', async () => {
     const { transactionId, movementId } = await bankRow(20_000);
     const foreign = twin.addForeignInvoice({ supplierId: 1, invoiceNumber: 'G-1', grossCents: 5_000 });
     await twin.port.matchTransaction({ invoiceId: foreign, transactionId });
     await sync();
-    expect(await new MoneyMovementService(db).getById(movementId)).toMatchObject({ matchedElsewhere: true, explained: true });
+    expect(await new MoneyMovementService(db).getById(movementId)).toMatchObject({ matchedElsewhere: true, explained: false });
 
     const invoice = await document(15_000);
     await allocateToDocument(db, { movementId, documentId: invoice.id });
+    expect(await new MoneyMovementService(db).getById(movementId)).toMatchObject({ matchedElsewhere: true, explained: true });
     expect(await processMovement(movementId)).toBe('matched');
     expect(twin.matchesOf(transactionId)).toEqual([foreign, invoice.invoiceId].sort((a, b) => a! - b!));
 

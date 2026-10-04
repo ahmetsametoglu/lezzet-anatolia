@@ -54,8 +54,8 @@ export function MovementMatchCell({ row, matcher }: MovementMatchCellProps) {
   if (row.fromBank && !row.reconciled) {
     // Eşleşme bekleyen ekstre satırı: hap önerinin kendisi ("öneri: …"), kısmen bağlıysa bağın hâli.
     const partial = row.documents.length > 0;
-    // Pennylane'de aynı şirketin başka işine eşli satır bizden karşılık beklemez; öneri sunulmaz, bağımız varsa yine kurulabilir.
-    const target = row.matchedElsewhere ? null : row.suggestionTarget;
+    const target = row.suggestionTarget;
+    // Pennylane'de bizde olmayan faturaya eşli satırın belgesi bizde girilmemiştir; önerisi yoksa hap bunu ister.
     return (
       <div className="flex min-w-0 items-center gap-1">
         <MovementMatchSelector
@@ -63,13 +63,13 @@ export function MovementMatchCell({ row, matcher }: MovementMatchCellProps) {
           triggerLabel={
             partial
               ? undefined
-              : row.matchedElsewhere
-                ? "Pennylane'de başka işe eşli"
-                : row.suggestionTitle
-                  ? `öneri: ${row.suggestionTitle}`
+              : row.suggestionTitle
+                ? `öneri: ${row.suggestionTitle}`
+                : row.matchedElsewhere
+                  ? 'Belgeyi bizde girin'
                   : 'Eşleştir'
           }
-          tone={partial ? undefined : row.matchedElsewhere ? 'neutral' : SUGGESTION_VIEW[row.suggestion ?? 'none'].tone}
+          tone={partial ? undefined : SUGGESTION_VIEW[row.suggestion ?? 'none'].tone}
           // Kısmen bağlı ya da carisi konmuş satırın cevabı da geri alınır (`canUnmatch`).
           onUnmatch={row.canUnmatch ? () => matcher.onUnmatch(row.id) : undefined}
         />

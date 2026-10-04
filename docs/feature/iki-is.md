@@ -22,6 +22,7 @@ satış yapan iştir. İkisi aynı tüzel kişilik (QUALITE SAS) altındadır: m
 | 9 | **Her işin kendi teslimat bölgesi ve seferi vardır;** geçici olarak tek kurye tek araçla iki hesap ve iki telefonla iki işin seferini birlikte sürer, ileride araçlar ayrılır | Sistemde iki ayrı kurye olduğu için iki sefer aynı anda yoldadır. Tek hesap iki seferi birlikte süremez: kurye aynı anda tek sefer sürer ve başlamamış seferin durağı gün ekranında görünmez. Sahada sürtünme görülürse birleşik sürüş kurulur (§5). |
 | 10 | **QUALITE etiketi yalnız B2B onaylı müşteriye verilir; QUALITE deposundan anonim kapı satışı yapılmaz; QUALITE kargo göndermez** | Toptan fiyat onaysız açılmaz (`effectiveChannelOf`). QUALITE bölgelerinin dışındaki QUALITE müşterisi "teslimat noktası belirlenemedi" mesajını alır, Lezzet deposuna düşmez. |
 | 11 | **Banka hesapları işe göre ayrılmaz** (04.10): Crédit Mutuel ile Revolut şirketin hesaplarıdır | Ödemenin işi bağından gelir (belge, siparişin ya da mal kabulün deposu, tedarikçi, cari); hiçbiri iş söylemiyorsa Lezzet'tir. İki banka da Pennylane'den okunur (`kasa-muhasebe.md` 15. karar). |
+| 12 | **Pennylane'de bizde olmayan bir faturaya eşli banka satırı izah bekler** (04.10) | O fatura Pennylane'e doğrudan girilmiştir (1. karar). Satır izah kuyruğunda kalır, önerisi yoksa "Belgeyi bizde girin" der; belge bizde girilir, Pennylane'deki kopyası silinir. |
 
 **Dayanak (ölçüm ve araştırma, 03.10):** Pennylane'in yerleşik stok modülü yok (yardım merkezi: *"Pennylane ne dispose pas
 de module natif dédié à la gestion des stocks"*); stok için önerdiği Stockpit ayrı abonelikli ikinci bir sistemdir.
@@ -83,7 +84,7 @@ Açık soru yok.
   hareketin işinden ayrı bir turda yazılır (aynada `category_business`), eşleşme kuyruğundan bağımsız; ölçüme göre işlem kategorisi
   uç noktası faturanınkiyle aynı biçimdedir.
 - Eşleşmeyi geri alma ve "zaten yazmıştım" birleşmesi bağı taşır; bağ tetikleyicisi iki hareketin işini de yeniden kurar.
-- Kalan risk: `matched_elsewhere` iki iş bizdeyken anlamını yitirir (Crédit Mutuel eşlemesi adımı).
+- `matched_elsewhere` bizde olmayan faturaya eşli satırı işaretler, izah saymaz (12. karar); Pennylane'deki o eşleşmeye dokunulmaz.
 
 **Satış ve stok (B fazı):**
 - **Depo:** `warehouse.business`, etiketsiz Lezzet. Depo kullanılmaya başlayınca işi değişmez; sipariş ve parti işini depodan

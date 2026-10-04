@@ -1,6 +1,6 @@
 /**
  * Banka satırının Pennylane eşleşmesi, saf karar: eşleşme bizde kurulur ve Pennylane'e yazılır. Bizde olmayan faturaya kurulan
- * eşleşmeye dokunulmaz, çünkü aynı şirketin başka işinindir; o hareket bizde başka işe eşli sayılır.
+ * eşleşmeye dokunulmaz, çünkü Pennylane'e elle girilmiş kaydı ezerdi; o hareket işaretlenir ve belgesi bizde girilir.
  */
 
 export type PennylaneMatchPlan =
@@ -11,8 +11,8 @@ export type PennylaneMatchPlan =
 
 /**
  * Pennylane'e yazımın planı küme olarak kurulur, çünkü Pennylane dağıtımı eşleme sırasına bağlamıyor; eksik faturalarımız eklenir.
- * Çıkan faturamız varsa bütün eşleşmeler çözülüp küme yeniden kurulur, çünkü tek bağı çözmek hepsini çözüyor; harekette başka işin
- * eşleşmesi de varsa onu yeniden kurmak o kaydı ezerdi, hareket bekler.
+ * Çıkan faturamız varsa bütün eşleşmeler çözülüp küme yeniden kurulur, çünkü tek bağı çözmek hepsini çözüyor; harekette bizde
+ * olmayan faturanın eşleşmesi de varsa onu yeniden kurmak o kaydı ezerdi, hareket bekler.
  */
 export function pennylaneMatchPlan(input: {
   current: readonly number[];
@@ -31,7 +31,7 @@ export function pennylaneMatchPlan(input: {
 /**
  * Pennylane'deki eşleşmelerin bizdeki karşılığı: bizim faturamıza Pennylane'de kurulan ama bizde olmayan bağ benimsenir; bizde duran
  * bağ Pennylane'de çözüldüyse silinmez, işaretlenir ve yeniden yazılmaz; Pennylane'de yeniden kurulursa işaret kalkar. Bizde olmayan
- * faturaya eşli hareket başka işe eşlidir.
+ * faturaya eşli hareket işaretlenir (`elsewhere`).
  */
 export function pennylaneMatchReading(input: {
   current: readonly number[];

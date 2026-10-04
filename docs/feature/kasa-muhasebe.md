@@ -419,8 +419,10 @@ yapılır.
 
 **Pennylane'de yapılan eşleşme:** muhasebeci Pennylane'de de eşleştirebilir; değişiklik akışı bunu 1–2 saniyede
 gösterir.
-- Bizde olmayan bir faturaya kurulan bağa dokunulmaz, çünkü aynı şirketin başka işinindir. O faturaya eşli hareket
-  bizde başka işe eşli sayılır (`matched_elsewhere`) ve izahlıdır; banka kuyruğunda öneri yerine bunu yazar.
+- Bizde olmayan bir faturaya kurulan bağa dokunulmaz, çünkü Pennylane'e elle girilmiş kaydı ezerdi. İki işin bütün belgeleri
+  bizde olduğu için o fatura Pennylane'e doğrudan girilmiştir ([`iki-is.md`](iki-is.md) 12. karar): hareket işaretlenir
+  (`matched_elsewhere`) ama izahlı sayılmaz, banka kuyruğunda önerisi yoksa "Belgeyi bizde girin" der. Belge bizde girilince
+  Pennylane'deki kopyası silinir; aynı tedarikçide aynı numaralı kopya durdukça belge yüklenmez.
 - Bizim belgemize Pennylane'de kurulan, bizde olmayan bağ benimsenir: operatörün bağladığı kapıdan bizde de kurulur,
   satır tedarikçi ödemesi olur, tamamı bağlandıysa mutabıktır.
 - Bizde duran ama Pennylane'de çözülen bağ bizde silinmez ve Pennylane'e yeniden yazılmaz; muhasebeye bildirim gider,
@@ -474,9 +476,8 @@ gösterir.
    birleşmesiyle taşınınca, bağlı belgesi sonradan yüklenince de hareket kuyruğa düşer. İstenen küme hareketin bizdeki bağlarıdır: Pennylane'de karşılığı olan ve
    orada çözüldüğü işaretli olmayan belgeler. Sıra önemsizdir, çünkü Pennylane dağıtımı eşleme sırasına bağlamıyor.
    Eksik faturalarımız eklenir. Çıkan faturamız varsa hareketin bütün bağları tek çağrıyla çözülür ve küme baştan
-   yazılır, çünkü tek bir bağı çözmek zaten hepsini çözüyor. Harekette başka işin eşleşmesi de varsa baştan yazmak o
-   kaydı ezerdi: hareket "başka işin eşleşmesi" sebebiyle bekler, muhasebeye bildirim gider, düzeltme Pennylane'de
-   elle yapılır. Yazımdan sonra ilgili faturaların Pennylane'deki açık kalanı okunup aynaya yazılır; bizimkinden
+   yazılır, çünkü tek bir bağı çözmek zaten hepsini çözüyor. Harekette bizde olmayan bir faturanın eşleşmesi de varsa baştan
+   yazmak o kaydı ezerdi: hareket bu sebeple bekler, muhasebeye bildirim gider, düzeltme Pennylane'de elle yapılır. Yazımdan sonra ilgili faturaların Pennylane'deki açık kalanı okunup aynaya yazılır; bizimkinden
    ayrılan belge "Pennylane'de farklı"dır.
 6. **Hareket gelmiyor uyarısı.** Günde bir kez bakılır. Eşlenmiş hesabın Pennylane'den gelen son hareketi
    `pennylane_quiet_days` günden (varsayılan 4) eskiyse muhasebeye ve yönetime bildirim gider; bankanın
@@ -488,8 +489,8 @@ gösterir.
    muhasebe kalan çifti başına bir kez uyarılır; kuyrukta bekleyen ve nakitle ödenen belge karşılaştırılmaz.
 
 **Hata:** Hiboutik kuyruğunun aynısı: artan aralıkla yeniden deneme, beşinci denemede `error_log` ve anlık
-bildirim. Yazım duran belge (oran tutmuyor, mükerrer numara, karşı taraf yok, avro dışı) ya da hareket (başka işin
-eşleşmesi) sebebiyle bekler, bildirim ilk turda gider. İstemci istek sınırına (5 saniyede 25) göre aralık bırakır; 429 gelirse `retry-after`
+bildirim. Yazım duran belge (oran tutmuyor, mükerrer numara, karşı taraf yok, avro dışı) ya da hareket (bizde olmayan
+faturanın eşleşmesi) sebebiyle bekler, bildirim ilk turda gider. İstemci istek sınırına (5 saniyede 25) göre aralık bırakır; 429 gelirse `retry-after`
 kadar bekler.
 
 **Güvenlik:** istemci ilk istekte `/me` ile anahtarın şirketini okur; kip ile şirket uyuşmazsa (test kipinde
@@ -512,7 +513,7 @@ Log'a kimlik yazılır, tutar ve açıklama yazılmaz.
   - `pennylane_match_removed`: Pennylane'de çözülen bağımız;
   - `pennylane_queue`: yüklenecek belge ya da eşleşmesi yazılacak hareket;
   - `pennylane_cursor`: değişiklik akışının kaldığı yer.
-- `money_movement.matched_elsewhere`: hareket Pennylane'de aynı şirketin başka işinin faturasına eşli; izahlı sayılır.
+- `money_movement.matched_elsewhere`: hareket Pennylane'de bizde olmayan bir faturaya eşli; izah sayılmaz.
 
   Pennylane kimlikleri `bigint`tir (ölçüldü: 14 hane).
 - Ayarlar: `pennylane_live_from`, `pennylane_quiet_days`, `pennylane_category_lezzet` · `pennylane_category_qualite` (16. karar).
@@ -530,12 +531,13 @@ var.
 - Belge formu: tek KDV alanı yerine oran başına satırlar.
 - Belge satırı: Pennylane durumu alt satırın sonunda (yüklendi ✓ · sırada · gitmedi ve sebebi · yazılamadı · Pennylane'de farklı
   ve oradaki açık kalan); Pennylane canlıya geçmeden yazılmaz. E-fatura durumu ve itiraz 7. adımla.
-- Banka kuyruğu değişmez; satırın kaynağı "Pennylane" yazar, başka işe eşli satırın hapı öneri yerine bunu söyler.
+- Banka kuyruğu değişmez; satırın kaynağı "Pennylane" yazar, bizde olmayan faturaya eşli satırın hapı önerisi yoksa "Belgeyi
+  bizde girin" der.
 
 **Kod yerleşimi:**
 - `packages/domain-core/src/accounting/pennylane/`: iki yönlü KDV kodu eşlemesi, içe aktarma gövdesi, yazım öncesi
-  denetimler, bağ planı (eksikleri ekle; çıkan varsa baştan yaz, başka işin eşleşmesi varsa bekle) ve okuması
-  (benimse, çözüleni işaretle, başka işe eşli), kalan tutar karşılaştırması.
+  denetimler, bağ planı (eksikleri ekle; çıkan varsa baştan yaz, bizde olmayan faturanın eşleşmesi varsa bekle) ve
+  okuması (benimse, çözüleni işaretle, bizde olmayan faturaya eşli), kalan tutar karşılaştırması.
 - `packages/database`: tablolar, kuyruk tetikleyicileri (belge ve kırılımı, bağ), servisler.
 - `packages/application/src/accounting/pennylane/`: port ve Pennylane istemcisi (istek sınırı, kip ile
   şirketin denetimi), bellek içi ikiz, okuma (hareket, fatura akışı, e-fatura), yazma (tedarikçi, belge, bağ, ödeme durumu), sessizlik

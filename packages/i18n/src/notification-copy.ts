@@ -308,7 +308,7 @@ const PENNYLANE_ENGELI: Record<string, string> = {
   duplicate_file: "aynı dosya Pennylane'de başka bir faturada",
   supplier_ambiguous: "Pennylane'de bu firmaya uyan birden çok tedarikçi var",
   supplier_taken: "Pennylane'deki tedarikçi bizde başka bir karşı tarafa bağlı",
-  foreign_matches: "Pennylane'de başka işin faturasına da eşli, eşleşme elle düzeltilmeli",
+  foreign_matches: "Pennylane'de bizde olmayan bir faturaya da eşli, eşleşme elle düzeltilmeli",
 };
 
 /** Pennylane engelinin etiketi; tanınmayan sebep kodu olduğu gibi döner. */

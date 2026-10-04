@@ -28,10 +28,13 @@
 - **Yüklenmiş belgenin dosyasını değiştirme.** Alanlar ve KDV kırılımı Pennylane'de güncellenir, ek güncellenmez.
 - **"Lezzet" ve "QUALITE" kategorilerinin adını Pennylane'de değiştirme.** Kategori adla bulunur; adı değişirse eski adla yeni
   kategori açılır. Ad değişecekse önce Ayarlar › Para › Pennylane'deki o işin "Pennylane kategorisi" değiştirilir.
-- **Lezzet faturasının banka eşleşmesini Pennylane'de çözme.** Bağ bizdeki satırdan kaldırılır ve Pennylane'e kendiliğinden
+- **Bizden yüklenen faturanın banka eşleşmesini Pennylane'de çözme.** Bağ bizdeki satırdan kaldırılır ve Pennylane'e kendiliğinden
   gider; Pennylane'de çözülen bağ bizde kalır, muhasebeye bildirim gider ve karar yine bizim ekrandan verilir.
-- **Toptan ekibi: var olan tedarikçiyi Pennylane'de ikinci kez açma.** Aynı firmanın iki kaydı borcu iki hesaba böler ve
-  Lezzet'in o firmaya yükleyeceği belgeyi bekletir.
+- **Pennylane'e fatura girme** (elle yükleme, e-posta yönlendirme). İki işin belgesi bizde girilir ve Pennylane'e bizden gider;
+  Pennylane'e girilen faturaya eşli banka satırı bizde "Belgeyi bizde girin" der. Belge bizde girilince Pennylane'deki kopyası
+  silinir; aynı tedarikçide aynı numaralı kopya durdukça belge yüklenmez.
+- **Var olan tedarikçiyi Pennylane'de ikinci kez açma.** Aynı firmanın iki kaydı borcu iki hesaba böler ve o firmaya yüklenecek
+  belgeyi bekletir.
 
 ## Banka
 

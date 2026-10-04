@@ -66,7 +66,7 @@ export const AppNotificationKindEnum = z.enum([
   'bank_feed_quiet',
   /** Bir alış belgesi Pennylane'e yazılamıyor; belge düzeltilince kendiliğinden yazılır. */
   'pennylane_document_stuck',
-  /** Banka satırının eşleşmesi Pennylane'e yazılamıyor; satır aynı şirketin başka işinin faturasına da eşliyse elle düzeltilir. */
+  /** Banka satırının eşleşmesi Pennylane'e yazılamıyor; satır bizde olmayan bir faturaya da eşliyse elle düzeltilir. */
   'pennylane_match_stuck',
   /** Bizde duran bir bağ Pennylane'de çözüldü; bizde silinmez, karar bizim ekranda verilir. */
   'pennylane_match_removed',

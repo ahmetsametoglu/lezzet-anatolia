@@ -10,12 +10,12 @@ describe('Pennylane eşleşme yazımının planı', () => {
     expect(pennylaneMatchPlan({ current: [12, 11], ours, desired: [11, 12] })).toEqual({ kind: 'none' });
   });
 
-  it('başka işin eşleşmesi korunur: yanına eklenir, çözülmez', () => {
+  it('bizde olmayan faturanın eşleşmesi korunur: yanına eklenir, çözülmez', () => {
     expect(pennylaneMatchPlan({ current: [90], ours, desired: [11] })).toEqual({ kind: 'add', invoiceIds: [11] });
     expect(pennylaneMatchPlan({ current: [90, 11], ours, desired: [11] })).toEqual({ kind: 'none' });
   });
 
-  it('çıkan faturamız varsa eşleşmeler baştan kurulur; harekette başka işin eşleşmesi de varsa hareket bekler', () => {
+  it('çıkan faturamız varsa eşleşmeler baştan kurulur; harekette bizde olmayan faturanın eşleşmesi de varsa hareket bekler', () => {
     expect(pennylaneMatchPlan({ current: [11, 12], ours, desired: [12] })).toEqual({ kind: 'rewrite', invoiceIds: [12] });
     expect(pennylaneMatchPlan({ current: [11], ours, desired: [] })).toEqual({ kind: 'rewrite', invoiceIds: [] });
     expect(pennylaneMatchPlan({ current: [11, 90], ours, desired: [] })).toEqual({ kind: 'blocked', reason: 'foreign_matches' });
@@ -47,7 +47,7 @@ describe("Pennylane'deki eşleşmelerin bizdeki karşılığı", () => {
     ).toEqual(['bag-a']);
   });
 
-  it('bizde olmayan faturaya eşli hareket başka işe eşlidir, müşteri faturası da olsa', () => {
+  it('bizde olmayan faturaya eşli hareket işaretlenir, müşteri faturası da olsa', () => {
     expect(pennylaneMatchReading({ current: [90], ourDocuments, allocations: [] }).elsewhere).toBe(true);
     expect(pennylaneMatchReading({ current: [90, 11], ourDocuments, allocations: [] })).toMatchObject({
       elsewhere: true,

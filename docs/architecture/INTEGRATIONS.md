@@ -147,9 +147,9 @@ Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 - Pennylane'den gelen banka satırının yüklenmiş belgeye bağı Pennylane'e eşleşme olarak yazılır. Pennylane'de bizim belgemize kurulan
   eşleşme bizde benimsenir; orada çözülen bağımız bizde kalır, yeniden yazılmaz ve muhasebeye bildirilir. Faturalarımızın Pennylane'deki
   açık kalanı fatura değişiklik akışından okunur; bizimkinden ayrılan belge "Pennylane'de farklı" diye işaretlenir ve muhasebe uyarılır.
-- Pennylane şirketi QUALITE'nin toptan operasyonuyla ortaktır: toptan ekibi Pennylane'e doğrudan fatura girer ve tedarikçi açar.
-  Tedarikçi açılmadan önce aynı firmanın kaydı aranıp bağlanır, Pennylane'e elle girilmiş fatura sahiplenilmez. Başka işin faturasına
-  kurulan eşleşmeye dokunulmaz; o hareket bizde başka işe eşli sayılır ve izahlıdır.
+- Pennylane şirketi iki işle ortaktır ve iki işin belgesi Pennylane'e bizden gider (`docs/feature/iki-is.md`). Tedarikçi açılmadan
+  önce aynı firmanın elle açılmış kaydı aranıp bağlanır, Pennylane'e elle girilmiş fatura sahiplenilmez. Bizde olmayan faturaya
+  kurulan eşleşmeye dokunulmaz; o hareket işaretlenir ve belgesi bizde girilene kadar izah bekler.
 - Raporlar ekranındaki satış dosyası ve hareket dökümü genel amaçlı dışa aktarımdır, muhasebe akışının parçası değildir.
 - e-fatura sistemin işi **değil**: B2B satış faturası Pennylane'de kesilir, tedarikçi e-faturası muhasebecinin platformuna gelir;
   Lezzet'in alış belgesi Pennylane'e kopyasından bizden yüklenir.

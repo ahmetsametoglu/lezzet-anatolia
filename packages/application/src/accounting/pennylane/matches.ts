@@ -17,7 +17,7 @@ import type { PennylanePort } from './port';
 
 /**
  * Banka satırının Pennylane eşleşmesi (docs/feature/kasa-muhasebe.md §8, akış 5): bizdeki bağlar Pennylane'e yazılır, Pennylane'de
- * kurulan ya da çözülen eşleşme okunur. Aynı şirketin başka işinin faturasına kurulan eşleşmeye dokunulmaz.
+ * kurulan ya da çözülen eşleşme okunur. Bizde olmayan faturaya kurulan eşleşmeye dokunulmaz.
  */
 
 export type MatchWriteResult = { status: 'matched' | 'unchanged' | 'skipped' } | { status: 'blocked'; reason: 'foreign_matches' };
