@@ -10,7 +10,7 @@ export type {
   NotifyResult,
 } from './types';
 // Olay → sınıf (HABER/BELGE) + uygulama içi satır kararı; sınıf bilgisinin tek yeri.
-export { NOTIFY_EVENT_META } from './types';
+export { DEVICE_CHANNELS, NOTIFY_EVENT_META, WRITTEN_CHANNELS } from './types';
 export { createNotifier, defaultNotifier, type Notifier } from './notifier';
 export { formatMessageDate } from './format';
 export { emailDriver } from './drivers/email.driver';

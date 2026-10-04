@@ -24,6 +24,7 @@ import { sendOutboundMessage, type MessageSender } from '../messaging/send';
 import { ringConversationBell, ringConversationsBell, ringTicketBell, ringTicketsBell } from '../realtime/bell';
 import { translateTicketMessageNow } from './translate';
 import { customerSupportTools, type PendingProductCard } from './support-tools';
+import { notifyTicketReplied } from './notify';
 import { queueTicketReplyMail } from './reply-mail';
 
 /**
@@ -404,7 +405,8 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   });
   /* Çeviri haberden ve zilden önce: müşteri cevabı ilk görüşte kendi dilinde okusun. */
   await translateTicketMessageNow(db, written, opts.model ? { model: opts.model } : {});
-  /* Mail anında gitmez, kuyruğa girer: özerk ajan arka arkaya cevap verebildiği için erteleme burada daha da gerekli. */
+  /* Cihaz bildirimi hemen gider; e-posta kuyruğa girer, çünkü özerk ajan arka arkaya cevap verebilir. */
+  await notifyTicketReplied(db, ticket);
   await queueTicketReplyMail(db, ticket);
   await ringTicketsBell();
   // Müşteri de yazışmayı açık tutuyor olabilir; onun kanalı ayrı.

@@ -1,18 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { mailTicketReply } from '@lezzet/application';
 import { TicketService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './notify';
 import { changeTicketStatus, openTicket, replyAsCustomer, replyAsStaff } from './write';
 
 /**
- * Talep bildirimlerinin tetiklenmesi (16.4).
- *
- * Sınanan beş kural: **talebin açılışı teyit doğurur**, **personelin cevabı haber doğurur**,
- * **müşterinin kendi mesajı doğurmaz**, **`in_progress` doğurmaz**, **bildirim asıl işlemi
- * durdurmaz**.
- *
- * Sağlayıcı anahtarı yerelde yok; sürücü `skipped` döner. Sınanan şey gönderimin kendisi değil —
- * **hangi olayın haber sayıldığı**. Gönderim `packages/notify` testinin işi.
+ * Hangi olayın haber sayıldığı sınanır (açılış teyidi, karşı taraf cevabı; müşterinin kendi mesajı ve `in_progress` değil), gönderimin
+ * kendisi değil. Bildirim asıl işlemi durdurmaz; sağlayıcı anahtarı yerelde yok, sürücü `skipped` döner.
  */
 const db = serviceDb();
 const tickets = new TicketService(db);
@@ -62,9 +57,9 @@ describe('hangi olay haber sayılır', () => {
     const ticket = await newTicket();
     await replyAsStaff({ ticketId: ticket.id, authorId: staffId, body: 'Strasbourg ve 20 km çevresi.' });
 
-    const results = await notifyTicketReplied((await tickets.getById(ticket.id))!);
-    // E-postası olan müşteriye mail sürücüsü bakar; yerelde anahtar yok → `skipped`, hata DEĞİL.
-    expect(results[0]?.channel).toBe('email');
+    // Cihaz bildirimi cevap anında gider; cihazı olmayan bu müşteride haber, okunmadıysa sonradan giden e-postadır (yerelde `skipped`).
+    expect((await notifyTicketReplied((await tickets.getById(ticket.id))!))[0]).toMatchObject({ reason: 'no_reachable_channel' });
+    expect((await mailTicketReply(db, (await tickets.getById(ticket.id))!))[0]?.channel).toBe('email');
   });
 
   it('çözüldü ve yeniden açıldı haber doğurur', async () => {

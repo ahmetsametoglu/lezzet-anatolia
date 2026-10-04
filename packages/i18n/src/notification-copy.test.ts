@@ -47,6 +47,14 @@ describe('notificationSentence', () => {
     expect(notificationSentence({ kind: 'order_confirmed', payload: {} }, 'tr')).toContain('alındı');
   });
 
+  // Talep cevabı hangi talep olduğunu söylemezse ya da müşterinin konusunu taşırsa kırmızıya döner.
+  it('talep cevabı sipariş numarasıyla, siparişsiz talepte türüyle, ikisi de yoksa genel cümleyle kurulur', () => {
+    const reply = (payload: Record<string, unknown>) => notificationSentence({ kind: 'ticket_replied', payload }, 'fr');
+    expect(reply({ referenceNo: 'LA-26-7WT4XJ', ticketType: 'damaged' })).toBe('Commande LA-26-7WT4XJ — nous vous avons répondu.');
+    expect(reply({ referenceNo: null, ticketType: 'damaged' })).toBe('Produit abîmé — nous vous avons répondu.');
+    expect(reply({})).toBe('Vous avez reçu une réponse à votre demande.');
+  });
+
   it('BİLİNMEYEN tür genel cümleye düşer — kind kümesi sunucuda büyür', () => {
     const cumle = notificationSentence({ kind: 'yarin_gelecek_tur', payload: {} }, 'tr');
     expect(cumle).toBe('Hesabınızla ilgili bir gelişme var.');

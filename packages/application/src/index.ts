@@ -159,7 +159,7 @@ export type { NotificationFeed } from './notification/read';
 export { listSendablePushTargets, registerPushDevice, registerWebPushSubscription, unregisterPushDevice } from './notification/devices';
 
 // ── Talep bildirimleri + AI destek çekirdeği: özerk AI cevabı personel cevabıyla aynı maili doğurur ──
-export { notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './ticket/notify';
+export { mailTicketReply, notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './ticket/notify';
 // Gönderim anında çeviri — kuyruğu beklemeden, zilden ÖNCE (gerekçe dosya başlığında).
 export { translateTicketMessageNow } from './ticket/translate';
 // Cevap maili: anında değil, okunmamışsa (gerekçe dosya başlığında). `clearTicketReplyMail`

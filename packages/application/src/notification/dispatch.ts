@@ -6,6 +6,7 @@ import {
   sendWebPush,
   type DevicePushMessage,
   type Notifier,
+  type NotifyChannel,
   type NotifyEventName,
   type NotifyPayloads,
   type NotifyRecipient,
@@ -45,6 +46,10 @@ export interface CustomerNotificationInput<E extends NotifyEventName> {
 export interface DispatchOpts {
   /** Test/enjeksiyon — gerçek sürücü listesi yerine sahte notifier (SupportAiOpts deseni). */
   notifier?: Notifier;
+  /** Yalnız bu kanallar denenir; verilmezse olayın sınıf planı geçerlidir. */
+  channels?: readonly NotifyChannel[];
+  /** `false`: satır yazılmaz ve zil çalmaz, ki aynı olayın sonradan giden ikinci kanalı ilk gönderimin satırını tekrarlamasın. */
+  inApp?: boolean;
 }
 
 /**
@@ -57,9 +62,10 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
   opts: DispatchOpts = {},
 ): Promise<NotifyResult[]> {
   const meta = NOTIFY_EVENT_META[input.event];
+  const inApp = meta.inApp && opts.inApp !== false;
 
   let rowId: string | null = null;
-  if (meta.inApp && input.customerId) {
+  if (inApp && input.customerId) {
     const row = await new AppNotificationService(db).record({
       profileId: input.customerId,
       // Müşteri olay adları `AppNotificationKind` ile AYNI sözlük (şema künyesi) — eşleme yok.
@@ -81,7 +87,7 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
     Zile düşmeyen olayda sorgu hiç atılmaz: push da bir zildir.
   */
   // Müşteri bildirimi yalnız müşteri uygulamasının cihazlarına gider.
-  const targets = meta.inApp && input.customerId ? await listSendablePushTargets(db, input.customerId, 'customer') : null;
+  const targets = inApp && input.customerId ? await listSendablePushTargets(db, input.customerId, 'customer') : null;
   const recipient: NotifyRecipient =
     targets
       ? {
@@ -102,7 +108,7 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
         }
       : input.recipient;
 
-  const results = await (opts.notifier ?? defaultNotifier()).send(input.event, recipient, input.data);
+  const results = await (opts.notifier ?? defaultNotifier()).send(input.event, recipient, input.data, { channels: opts.channels });
 
   await pruneGone(db, results);
   if (rowId) {

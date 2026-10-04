@@ -5,7 +5,7 @@ import { webPushDriver } from './drivers/web-push.driver';
 import { waLinkDriver } from './drivers/wa-link.driver';
 import { whatsappApiDriver } from './drivers/whatsapp-api.driver';
 import { DEVICE_CHANNELS, NOTIFY_EVENT_META } from './types';
-import type { NotifyDriver, NotifyEventName, NotifyPayloads, NotifyRecipient, NotifyResult } from './types';
+import type { NotifyChannel, NotifyDriver, NotifyEventName, NotifyPayloads, NotifyRecipient, NotifyResult } from './types';
 
 /**
  * Sürücüler sırayla denenir ve tercih sırası listenin kendisidir, ayrı bir kural tablosu yoktur. `all: true` destekleyen her sürücüye
@@ -17,14 +17,17 @@ export interface Notifier {
     event: E,
     recipient: NotifyRecipient,
     payload: NotifyPayloads[E],
-    opts?: { all?: boolean },
+    /** `channels`: yalnız bu kanalların sürücüleri denenir, ki aynı olayın cihaz bildirimi ile e-postası ayrı anlarda gidebilsin. */
+    opts?: { all?: boolean; channels?: readonly NotifyChannel[] },
   ): Promise<NotifyResult[]>;
 }
 
 export function createNotifier(drivers: readonly NotifyDriver[]): Notifier {
   return {
     async send(event, recipient, payload, opts = {}) {
-      const usable = drivers.filter((driver) => driver.supports(event, recipient));
+      const usable = drivers.filter(
+        (driver) => (!opts.channels || opts.channels.includes(driver.channel)) && driver.supports(event, recipient),
+      );
 
       // Hiçbir kanalın ulaşamaması hata değil olgudur (telefonla girilmiş müşterinin e-postası yoktur); çağıran görüp karar verir.
       if (usable.length === 0) {

@@ -1,53 +1,19 @@
 import { TicketService, type Db } from '@lezzet/database';
 import { logger } from '@lezzet/observability';
 import type { Ticket } from '@lezzet/types';
-import { notifyTicketReplied } from './notify';
+import { mailTicketReply } from './notify';
 
 /*
-  CEVAP MAİLİ ARTIK ANINDA GİTMİYOR — OKUNMAMIŞSA GİDİYOR (kullanıcı isteği 16.08, karar 17.08).
-
-  ── ÇÖZÜLEN ARIZA ───────────────────────────────────────────────────────────
-  Kullanıcı: *"Mail gidiyor, her cevapta. Eğer kullanıcı talep kısmından anlık yazışıyorsa bu
-  maillerin gidip gelmesi de çok hoş değil."* Ölçüldü ve haklıydı: `notify.ts` başka her olayı
-  eliyordu (müşterinin kendi mesajı · personelin açtığı talep · `in_progress` · müşterinin yeniden
-  açması) ama **karşı taraf cevabı istisnasız mail doğuruyordu**. Operatör üç dakikada beş satır
-  yazınca beş mail gidiyordu.
-
-  Canlı zil (16.8) bunu daha da gereksiz kıldı: ekranı açık müşteri cevabı zaten ANINDA görüyor,
-  o an giden mail hiçbir şey söylemiyor.
-
-  ── KURAL: GECİKTİR, SUSTURMA ───────────────────────────────────────────────
-  Maili tamamen kesmek yanlış olurdu — müşteri yazıp uygulamayı kapatmış olabilir ve cevabı hiç
-  öğrenmez. Bu yüzden cevap maili SUSTURULMUYOR, ERTELENİYOR: talep "okunmamış cevap var" diye
-  damgalanır, dakikalık süpürge gecikme dolduğunda HÂLÂ okunmamışsa gönderir. Müşteri o arada
-  okursa damga boşalır ve mail hiç gitmez.
-
-  ── ÖZET BEDAVA GELİYOR ─────────────────────────────────────────────────────
-  Mail şablonu zaten son dört mesajı taşıyor (`HISTORY_LIMIT`). Yani beş satırlık bir cevap
-  patlamasının ardından giden TEK mail, ayrı ayrı gidecek beş mailden daha eksik değil — daha
-  bütün. Ayrıca bir "digest" makinesi yazmaya gerek kalmadı.
-
-  ── NE ERTELENMEZ ───────────────────────────────────────────────────────────
-  Açılış teyidi ve durum değişimi (çözüldü / personel yeniden açtı) AYNEN ANINDA gider: ikisi de
-  talep ömrü boyunca bir-iki kez olur, yani gürültü kaynağı değiller — ve "talebiniz bize ulaştı"
-  gecikirse anlamını yitirir.
+  Cevabın cihaz bildirimi hemen gider; e-postası ertelenir: talep "okunmamış cevap var" diye damgalanır ve süpürge gecikme dolduğunda hâlâ
+  okunmamışsa tek bir e-posta gönderir, ki anlık yazışmada her satır ayrı mail doğurmasın. Açılış teyidi ve durum değişimi ertelenmez.
 */
 
-/**
- * Gecikme (dakika) — cevabın okunması için tanınan süre.
- *
- * Parametrik ve tek yerde. Küçültülürse anlık yazışmada mail yine kaçar; büyütülürse ekranı
- * kapatmış müşteri cevabı geç duyar. 5 dakika, "bir sohbet turu" ile "gitti" arasındaki eşik.
- */
+/** Cevabın okunması için tanınan süre (dakika); küçülürse anlık yazışmada mail kaçar, büyürse ekranı kapatmış müşteri geç duyar. */
 const REPLY_MAIL_DELAY_MIN = Number(process.env.TICKET_REPLY_MAIL_DELAY_MIN ?? 5);
 
 /**
- * Karşı taraf (personel ya da AI) cevap yazdı — mail kuyruğuna al.
- *
- * **Damga YALNIZ boşsa yazılır ve bu kritik:** her satırda tazelenseydi hızlı yazan operatör maili
- * sonsuza dek erteler, müşteri hiç haber almazdı. Gecikme İLK okunmamış cevaptan sayılır.
- *
- * Fırlatmaz: cevap zaten yazılmış durumda, mail kuyruğuna alınamaması onu geri aldırmaz.
+ * Karşı taraf cevap yazdı, e-posta kuyruğa alınır; damga yalnız boşsa yazılır, yoksa hızlı yazan operatör maili sonsuza dek ertelerdi.
+ * Fırlatmaz, çünkü cevap zaten yazılmıştır.
  */
 export async function queueTicketReplyMail(db: Db, ticket: Ticket): Promise<void> {
   if (ticket.replyPendingSince !== null) return;
@@ -62,24 +28,8 @@ export async function queueTicketReplyMail(db: Db, ticket: Ticket): Promise<void
 }
 
 /**
- * Müşteri yazışmayı OKUDU — bekleyen mail iptal.
- *
- * Çağıran yeri müşteri talep detayının okuma kapısıdır; zilin tetiklediği sessiz tazeleme de oradan
- * geçiyor, yani **ekranı açık duran müşteri her zilde okumuş sayılıyor**.
- *
- * ── "EKRAN AÇIK" = "İNSAN OKUYOR" SAYILIR (kullanıcı kararı 17.08) ──────────
- * Bu bir kaçak değil, kabul edilmiş bir eşitlik. Ölçüldü (cihazda): uygulama ARKA PLANDAYKEN bile
- * ekran ayakta kaldığı için zil sessiz tazelemeyi koşturuyor ve damga boşalıyor — yani cebinde
- * uygulaması açık duran müşteriye cevap maili gitmiyor, ekranına bakmasa bile. Kullanıcıya
- * gerekçesiyle soruldu ve **kabul edildi**; ayırmak isteyen bir gün gelirse yol açık: uç, "gerçekten
- * açtı" ile "zil tazeledi"yi ayıran bir parametre alır ve ekran ikisini ayrı çağırır. Bugün
- * ayrılmıyor çünkü kazanılan kesinlik, eklenen sözleşme karmaşasını hak etmiyor.
- *
- * **Kimlikle çalışır, nesneyle değil:** okuma kapısı talebi kuyruk GÖRÜNÜMÜNDEN okuyor ve o görünüm
- * bu damgayı taşımıyor. Damgayı görünüme eklemek, operasyon kuyruğunun sözleşmesini müşteri
- * tarafının ihtiyacı için genişletmek olurdu; tek anahtarlı bir okuma daha ucuz.
- *
- * Damga zaten boşsa YAZMA YAPILMAZ — okuma yolu her çağrıda bir yazma tetiklemesin.
+ * Müşteri yazışmayı okudu, bekleyen mail iptal; zilin tetiklediği sessiz tazeleme de okuma sayılır, yani ekranı açık müşteriye mail gitmez.
+ * Damga zaten boşsa yazma yapılmaz, ki okuma yolu her çağrıda yazma tetiklemesin.
  */
 export async function clearTicketReplyMail(db: Db, ticketId: string): Promise<void> {
   try {
@@ -96,12 +46,8 @@ export async function clearTicketReplyMail(db: Db, ticketId: string): Promise<vo
 }
 
 /**
- * **Süpürge** — gecikmesi dolmuş, hâlâ okunmamış cevapların mailini gönderir.
- *
- * Taramalı ve idempotent (`runner.ts` disiplini): damga gönderimden ÖNCE temizlenir, böylece
- * sağlayıcı yavaşlarken üst üste gelen iki tur aynı maili iki kez göndermez. Sıra bilinçli — mail
- * zaten sessizce başarısız olabilen bir yol (`notify.ts`); iki kez giden mail, hiç gitmeyenden
- * daha kötü bir gürültüdür ve bu işin varlık sebebi gürültüyü kesmek.
+ * Süpürge gecikmesi dolmuş, hâlâ okunmamış cevapların mailini gönderir. Damga gönderimden önce temizlenir, ki üst üste gelen iki tur aynı
+ * maili iki kez göndermesin.
  */
 export async function sweepTicketReplyMails(db: Db, opts: { delayMinutes?: number } = {}): Promise<Record<string, number>> {
   const delay = opts.delayMinutes ?? REPLY_MAIL_DELAY_MIN;
@@ -112,7 +58,7 @@ export async function sweepTicketReplyMails(db: Db, opts: { delayMinutes?: numbe
   let sent = 0;
   for (const ticket of due) {
     await tickets.update({ id: ticket.id, replyPendingSince: null });
-    await notifyTicketReplied(db, ticket);
+    await mailTicketReply(db, ticket);
     sent += 1;
   }
   return { sent };

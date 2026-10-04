@@ -13,22 +13,11 @@ import {
 } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { notifyOrderException, notifyOrderStatus } from '../order/notify';
-import { notifyTicketReceived, notifyTicketReplied } from '../ticket/notify';
+import { mailTicketReply, notifyTicketReceived, notifyTicketReplied } from '../ticket/notify';
 
 /**
- * **UÇTAN UCA ZİNCİR** (14.12-14.16, kullanıcı isteği 26.08: "hem uçtan uca hem birim, hepsi") —
- * `dispatch.test.ts` kapıyı SAHTE sürücüyle ve DOĞRUDAN çağrıyla sınıyor; burada sınanan şey
- * kalan dikiş: **gerçek olay kaynağından** (sipariş satırı + durum kaydı · talep + mesajı) satıra
- * ve teslim defterine kadar, araya sahte hiçbir şey girmeden. Bu dikişin kendi tuzakları var ve
- * hiçbiri kapı testinde görünmez:
- *
- *   · sipariş yolunun İKİ dedupe katmanı üst üste doğru mu (status-log sayımı + satır anahtarı)
- *   · İSTİSNA olayının tekrarı hâlâ MEŞRU mu (naif anahtar onu yutar — kurgu incelemesi 4)
- *   · payload gerçekten dil-bağımsız referansı taşıyor mu (bundle → kapı aktarımı)
- *   · teyit (`ticket_received`) gerçek yoldan da satırsız mı
- *
- * Kanal tarafı canlıya çıkmaz: ortamda Resend anahtarı yok (e-posta `skipped` düşer) ve alıcının
- * push jetonu yok — zincir yine sonuna kadar koşar, teslim defteri o gerçeği aynen yazar.
+ * Gerçek olay kaynağından (sipariş satırı, talep) bildirim satırına ve teslim defterine kadar uçtan uca zincir, araya sahte girmeden: iki
+ * dedupe katmanı, istisnanın meşru tekrarı, payload referansı ve teyidin satırsızlığı kapı testinde görünmez. Kanal canlıya çıkmaz.
  */
 const db = serviceDb();
 const profiles = new UserProfileService(db);
@@ -137,5 +126,17 @@ describe('talep zinciri — gerçek talepten satıra', () => {
     // Her cevap ayrı haber: ikinci cevap ikinci satır (anahtar yok — bilinçli).
     await notifyTicketReplied(db, ticket);
     expect((await notifications.listByProfile(musteriId)).rows.filter((r) => r.targetId === ticket.id)).toHaveLength(2);
+  });
+
+  // Okunmamış cevabın e-postası satır yazarsa kırmızıya döner: aynı cevap zilde iki kez görünürdü.
+  it('okunmamış cevabın sonradan giden e-postası yeni satır yazmaz', async () => {
+    const ticket = await tickets.insert({ customerId: musteriId, source: 'form', type: 'question', subject: 'E-posta turu' });
+    await ticketMessages.insert({ ticketId: ticket.id, sender: 'customer', body: 'Bir sorum daha var.' });
+    await notifyTicketReplied(db, ticket);
+
+    const results = await mailTicketReply(db, ticket);
+
+    expect(results.map((r) => r.channel)).toEqual(['email']);
+    expect((await notifications.listByProfile(musteriId)).rows.filter((r) => r.targetId === ticket.id)).toHaveLength(1);
   });
 });

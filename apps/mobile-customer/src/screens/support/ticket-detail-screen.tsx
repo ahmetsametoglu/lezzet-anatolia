@@ -1,8 +1,8 @@
 import { brand } from '@lezzet/brand';
 import { awaitsOurReply, formatPrice, ticketScope, ticketTitle } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
-import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 // `ScrollView` yalnız tip: kaydırıcıyı `ChatLayout` çiziyor, ekran ona yalnız ref veriyor.
 import { Image, Text, View, type ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -19,6 +19,7 @@ import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-butt
 import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
 import type { TicketMessage } from '@/lib/api/tickets';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { markViewing } from '@lezzet/mobile-kit/src/lib/push/viewing-target';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { formatOrderDate } from '@/screens/orders/order-format';
 import { TicketDetailSkeleton } from './ticket-detail-skeleton';
@@ -47,6 +48,8 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
   const { theme } = useUnistyles();
   const router = useRouter();
   const ticket = useTicket(id, locale);
+  // Yazışma öndeyken bu talebin bildirimi gösterilmez, cevap ekrana zille zaten düşer.
+  useFocusEffect(useCallback(() => markViewing('ticket', id), [id]));
   const [draft, setDraft] = useState('');
   const threadRef = useRef<ScrollView>(null);
 

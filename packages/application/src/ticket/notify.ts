@@ -1,72 +1,32 @@
 import { OrderService, TicketMessageService, UserProfileService, type Db } from '@lezzet/database';
 import { formatShortDate, formatTime } from '@lezzet/helper';
 import { localizedUrl } from '@lezzet/i18n';
-import { type NotifyResult } from '@lezzet/notify';
+import { DEVICE_CHANNELS, WRITTEN_CHANNELS, type NotifyResult } from '@lezzet/notify';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { PreferredLanguage, Ticket, TicketHistoryEntry, TicketMessage, TicketStatus } from '@lezzet/types';
 import { notificationPreferencesUrl } from '../customer/notification-preferences';
-import { dispatchCustomerNotification } from '../notification/dispatch';
+import { dispatchCustomerNotification, type DispatchOpts } from '../notification/dispatch';
 
 /**
- * Talep bildirimlerinin tetiklendiği yer (16.4) — şablonlar 14.7'de.
- *
- * ── TERFİ (16.08) · WEB'DEN GELDİ ────────────────────────────────────────────
- * Kaynağı `apps/web/lib/ticket/notify.ts`ti; web kopyası KÖPRÜ olarak duruyor (`order/notify.ts`
- * ile aynı yol, 21.21). Gerekçe: özerk AI ajanı (16.5) cevabı BACKEND cron'unda yazıyor ve o cevap
- * da müşteriye mail doğurmalı — personel cevabıyla AYNI mail. Kurucu iki uygulamada iki kopya
- * olamazdı (`CLAUDE §1`). Değişen tek şey `db`nin çağırandan gelmesi (paketin ortak deseni).
- *
- * **Bildirim asıl işlemi DURDURMAZ.** Cevap yazıldıysa yazılmıştır; mail sağlayıcısı düştü diye
- * cevabı geri almak yanlış olurdu. Kapılar sonucu beklemez ve hata yukarı çıkmaz.
- *
- * **Müşterinin kendi yazdığı mesaj bildirim doğurmaz:** kimse kendi cümlesini mailde okumak
- * istemez. Haber, KARŞI TARAF konuştuğunda gider — AI da karşı taraftır (`sender='ai'` cevabı
- * müşteriye personel cevabıyla aynı yoldan bildirilir). Tek istisna talebin AÇILIŞIDIR: teyit
- * müşteriye bir şey anlatmaz, mesajın ulaştığını kanıtlar.
+ * Talep bildirimleri burada tetiklenir; bildirim asıl işlemi durdurmaz, çünkü yazılmış cevap sağlayıcı düştü diye geri alınmaz. Haber
+ * karşı taraf (personel ya da yapay zekâ) konuşunca gider; müşterinin kendi mesajı haber doğurmaz, tek istisna açılış teyididir.
  */
 
 
-/**
- * Mailde gösterilecek mesaj sayısı ve alıntı uzunluğu.
- *
- * **Sınır kapıda, çünkü küme sınırsız büyür** (`CLAUDE.md §1`): kırk mesajlık bir talebin tamamını
- * payload'a koymak hem sözleşmeyi hem maili şişirir. Dört = bugünkü haber + öncesindeki üç adım;
- * gerisi talep sayfasında ve mailde onun bağlantısı var.
- */
+/** Mailde gösterilen mesaj sayısı ve alıntı uzunluğu; yazışma sınırsız büyür, gerisi talep sayfasındadır. */
 const HISTORY_LIMIT = 4;
 const QUOTE_CHARS = 600;
 
-/**
- * Mailde TAM KART olarak gösterilecek okunmamış cevap tavanı (17.08).
- *
- * Cevap maili ertelendiği için (21.70) tek mailde birden çok yeni cevap olabiliyor. Tavan yine de
- * gerekli: operatör on satır yazarsa mail bir yazışma dökümüne döner. Aşan kısım alıntıya düşmez,
- * KIRPILMAZ — en yenileri gösterilir, gerisi zaten "önceki mesajlar" bloğundadır.
- */
+/** Mailde tam kart olarak gösterilen okunmamış cevap tavanı; ertelenen mail birden çok cevap taşıyabilir ama yazışma dökümüne dönmemeli. */
 const UNREAD_LIMIT = 6;
 
 /**
- * Yazışmanın son mesajları, **en yeniden eskiye** — mailin okunma yönü bu.
- *
- * **İlk sıra KIRPILMAZ:** o, mailin konusu olan mesajdır ve cevap müşteriye aynen görünmelidir
- * (DOMAIN §15 — iç not yoktur). Alıntılananlar bağlamdır, kırpılabilir; kırpıldığı da SÖYLENİR
- * (`truncated`) — sessizce kesilen bir cümle, müşterinin okuduğunu sandığı şeyi değiştirir.
+ * Yazışmanın son mesajları en yeniden eskiye; haber olan mesaj kırpılmaz, çünkü cevap müşteriye aynen görünmeli (DOMAIN §15). Bağlam
+ * alıntısı kırpılırsa bu söylenir (`truncated`).
  */
 function buildHistory(messages: readonly TicketMessage[], locale: PreferredLanguage): TicketHistoryEntry[] {
-  /*
-    OKUNMAMIŞ KÜME = MÜŞTERİNİN SON MESAJINDAN SONRAKİ KESİNTİSİZ KARŞI-TARAF DİZİSİ (17.08).
-
-    Cevap maili ertelendiği için (21.70) tek mail birden çok yeni cevap taşıyabiliyor; şablon ise
-    "biri cevap, gerisi geçmiş" varsayıyordu ve yeni cevapların çoğu soluk alıntıya düşüyordu.
-
-    Ayıraç için ayrı bir "okundu" damgası TAŞINMIYOR ve bu bilinçli: müşteri yazdığı anda orada
-    olduğu kesindir, yani onun kendi son mesajı doğal sınırdır. Zaman damgasıyla karşılaştırmak
-    (`reply_pending_since`) aynı sonucu verirdi ama kurucuya ikinci bir parametre ve bir saniye
-    toleransı sokardı — yön, damgadan daha sağlam bir ölçüt.
-
-    `ticket_received`ta müşterinin kendi anlatımı sondadır, yani okunmamış küme BOŞ çıkar; o
-    şablon zaten `history[0]`ı kullanıyor ve bu alandan etkilenmiyor.
-  */
+  /* Okunmamış küme müşterinin son mesajından sonraki kesintisiz karşı taraf dizisidir; müşteri yazdığı anda orada olduğu kesin olduğu
+     için onun son mesajı doğal sınırdır ve ayrı bir "okundu" damgası gerekmez. */
   const newest = [...messages].reverse();
   let unreadCount = 0;
   while (unreadCount < newest.length && newest[unreadCount]!.sender !== 'customer') unreadCount += 1;
@@ -111,7 +71,7 @@ async function buildTicketNotification(db: Db, ticket: Ticket, opts: { previousS
       history: buildHistory(messages, locale),
       previousStatus: opts.previousStatus ?? null,
       ticketUrl: localizedUrl('/support/[ticket]', locale, { ticket: ticket.id }),
-      // Jetonlu (22.08) — tek kapıdan; gerekçesi `customer/notification-preferences` künyesinde.
+      // Jetonlu bağlantı tek kapıdan kurulur; gerekçesi `customer/notification-preferences` künyesinde.
       notificationPreferencesUrl: await notificationPreferencesUrl(db, locale, { customerId: customer.id }),
     },
     recipient: { name: customer.name, email: customer.email, phone: customer.phone, locale },
@@ -119,63 +79,65 @@ async function buildTicketNotification(db: Db, ticket: Ticket, opts: { previousS
 }
 
 /**
- * Ortak gönderim — bildirim kurulamıyorsa ya da sağlayıcı düşerse sessiz geçilir.
- *
- * **Veri kurulumu da `try` içindedir**, gönderimin kendisi kadar: müşteri okuması ya da sipariş
- * okuması düşerse istisna yukarı çıkar ve yazılmış cevap "başarısız" görünürdü. Oysa cevap çoktan
- * yazılmıştır; geri alınacak bir şey yok, söylenecek bir şey de.
+ * Ortak gönderim; bildirim kurulamıyorsa ya da sağlayıcı düşerse sessiz geçilir. Veri kurulumu da `try` içindedir, yoksa düşen bir okuma
+ * çoktan yazılmış cevabı "başarısız" gösterirdi.
  */
 async function send(
   db: Db,
   ticket: Ticket,
   event: 'ticket_received' | 'ticket_replied' | 'ticket_status_changed',
-  previousStatus?: TicketStatus | null,
+  previousStatus: TicketStatus | null = null,
+  opts: DispatchOpts = {},
 ): Promise<NotifyResult[]> {
   try {
     const bundle = await buildTicketNotification(db, ticket, { previousStatus });
     if (!bundle) return [{ status: 'skipped', channel: 'email', reason: 'customer_not_found' } as NotifyResult];
-    // TEK KAPI (14.12). `ticket_received` satır YAZMAZ (meta: teyit — kendi mesajının yankısı
-    // zile düşmez), kapı bunu olay-metasından kendisi bilir. Dedupe anahtarı YOK: her cevap ve
-    // her durum değişimi ayrı bir haberdir. Payload BOŞ ve bu bilinçli: talebin konusu müşterinin
-    // kendi cümlesidir, bildirim satırı kişisel içerik taşımaz — ekran "Talebinize cevap geldi"
-    // genel cümlesini kurar, ayrıntı tıklanınca guard'lı sayfada okunur.
-    return await dispatchCustomerNotification(db, {
-      event,
-      customerId: ticket.customerId,
-      recipient: bundle.recipient,
-      data: bundle.data,
-      target: { type: 'ticket', id: ticket.id },
-    });
+    /* Her cevap ve durum değişimi ayrı haberdir, dedupe anahtarı yoktur. Payload yalnız sipariş numarası ve talep türüdür: müşterinin
+       kendi cümlesi kilit ekranında görünmesin diye taşınmaz. */
+    return await dispatchCustomerNotification(
+      db,
+      {
+        event,
+        customerId: ticket.customerId,
+        recipient: bundle.recipient,
+        data: bundle.data,
+        target: { type: 'ticket', id: ticket.id },
+        payload: { referenceNo: bundle.data.orderReferenceNo, ticketType: ticket.type },
+      },
+      opts,
+    );
   } catch (error) {
-    // Dönen sonucu okuyan yok; gitmeyen mail izsiz kalmasın → `warning`. Kimlik yazılır, içerik
-    // yazılmaz (OBSERVABILITY §5). Kaynak AKIŞA bağlı (`applicationTicket`): web de backend'in
-    // cron'u da aynı kapıdan geçiyor.
+    // Dönen sonucu okuyan yok; gitmeyen haber izsiz kalmasın. Kimlik yazılır, içerik yazılmaz (OBSERVABILITY §5).
     void captureError(error, { source: SOURCES.applicationTicket, level: 'warning', context: { ticketId: ticket.id, event } });
     return [{ status: 'error', channel: 'email', error: error instanceof Error ? error.message : String(error) } as NotifyResult];
   }
 }
 
 /**
- * Talep açıldı — **teyit maili**. Yalnız müşterinin KENDİ açtığı talepte gider: personelin müşteri
- * adına açtığında ilk sözü operatör söyler ve "bize yazdıklarınız" başlığı altında müşteriye kendi
- * yazmadığı bir metni göstermek olurdu.
+ * Açılış teyidi yalnız müşterinin kendi açtığı talepte gider, çünkü personelin açtığında "bize yazdıklarınız" başlığı altında müşterinin
+ * yazmadığı bir metin görünürdü.
  */
 export function notifyTicketReceived(db: Db, ticket: Ticket, openedBy: 'customer' | 'staff'): Promise<NotifyResult[]> {
   if (openedBy !== 'customer') return Promise.resolve([]);
   return send(db, ticket, 'ticket_received');
 }
 
-/** Karşı taraf cevap yazdı (personel YA DA özerk AI) — cevabın tam metni mailde gider (DOMAIN §15). */
+/**
+ * Karşı taraf cevap yazdı: uygulama içi satır ve cihaz bildirimi hemen gider; yazışmayı o an açık tutan müşteride uygulama bildirimi
+ * göstermez. E-posta okunmamış cevaplar için sonradan gider (`mailTicketReply`).
+ */
 export function notifyTicketReplied(db: Db, ticket: Ticket): Promise<NotifyResult[]> {
-  return send(db, ticket, 'ticket_replied');
+  return send(db, ticket, 'ticket_replied', null, { channels: DEVICE_CHANNELS });
+}
+
+/** Okunmamış cevabın yazılı haberi: e-posta, yoksa yazılı yedek; satır yazmaz, çünkü cihaz bildirimi cevap anında satırını yazdı. */
+export function mailTicketReply(db: Db, ticket: Ticket): Promise<NotifyResult[]> {
+  return send(db, ticket, 'ticket_replied', null, { channels: WRITTEN_CHANNELS, inApp: false });
 }
 
 /**
- * Durum değişti. **İki hâl haber doğurur: çözüldü ve yeniden açıldı.**
- *
- * `in_progress` doğurmaz — "incelemeye aldık" müşteriye bir şey söylemez; söyleyecek bir şey
- * çıktığında cevap maili zaten gider. Müşterinin kendi yeniden açması da haber doğurmaz: kendi
- * eyleminin mailini almak gürültüdür.
+ * Durum değişiminde yalnız çözüldü ve personelin yeniden açması haber doğurur; `in_progress` müşteriye bir şey söylemez ve müşterinin
+ * kendi eyleminin haberi gürültüdür.
  */
 export function notifyTicketStatusChanged(db: Db, ticket: Ticket, from: TicketStatus, by: 'customer' | 'staff'): Promise<NotifyResult[]> {
   const meaningful = ticket.status === 'resolved' || (ticket.status === 'open' && from === 'resolved');

@@ -689,7 +689,7 @@ Basit yaşam döngüsü; karmaşık ticket sistemi kurulmaz. Amaç: müşteri so
 ### Akış ve yaşam döngüsü
 
 - Şikâyet **talep (Ticket) açar**; müşteri doğrudan iade başlatamaz. Admin inceler, gerekirse **iade/para iadesi akışını tetikler** (bkz. §8) — karar ve kontrol bizde.
-- Durumlar: `open → in_progress → resolved` (yeniden açılabilir → `open`); işletmenin ilk cevabı açık talebi `in_progress`e geçirir. Müşteri hesabından talebinin durumunu ve yazışmayı **görür** (şeffaflık). Talep açılınca teyit e-postası gider; cevap okunmadıysa birkaç dakika sonra cihaz bildirimi ve yazışmanın son mesajlarını taşıyan e-posta birlikte gider, web ve uygulama aynı.
+- Durumlar: `open → in_progress → resolved` (yeniden açılabilir → `open`); işletmenin ilk cevabı açık talebi `in_progress`e geçirir. Müşteri hesabından talebinin durumunu ve yazışmayı **görür** (şeffaflık). Talep açılınca teyit e-postası gider. Cevabın cihaz bildirimi hemen gider ve sipariş numarasını (siparişsiz talepte türünü) taşır; müşteri yazışmayı o an açık tutuyorsa gösterilmez. Cevap okunmadıysa birkaç dakika sonra yazışmanın son mesajlarını taşıyan e-posta gider; web ve uygulama aynı.
 - Yazışma basit bir mesaj dizisidir (müşteri ↔ admin), talebe bağlı.
 
 ### Analiz bağı

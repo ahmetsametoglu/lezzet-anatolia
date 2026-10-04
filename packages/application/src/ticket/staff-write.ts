@@ -4,7 +4,7 @@ import { canTransitionTicket, canTriggerReturn, checkTicketDraft, statusAfterSta
 import { ticketAttachmentScope } from '@lezzet/storage';
 import type { Ticket, TicketHandler, TicketMessage, TicketStatus, TicketType } from '@lezzet/types';
 import { defaultTicketHandler } from '../messaging/default-handler';
-import { notifyTicketReceived, notifyTicketStatusChanged } from './notify';
+import { notifyTicketReceived, notifyTicketReplied, notifyTicketStatusChanged } from './notify';
 import { queueTicketReplyMail } from './reply-mail';
 import { ringTicketBell } from '../realtime/bell';
 import { translateTicketMessageNow } from './translate';
@@ -128,7 +128,8 @@ export async function replyAsStaff(
   // Çeviri haberden ve zilden önce: müşteri operatörün Türkçe yazdığını ilk görüşte kendi dilinde görmeli.
   await translateTicketMessageNow(db, message);
 
-  // Mail anında gitmez, kuyruğa girer: ekranı açık müşteri cevabı zil sayesinde zaten görüyor.
+  // Cihaz bildirimi hemen gider, e-posta okunmamışsa sonra; yazışmayı o an açık tutan müşteride uygulama bildirimi göstermez.
+  await notifyTicketReplied(db, ticket);
   await queueTicketReplyMail(db, ticket);
   /* MÜŞTERİNİN KANALI — operasyon zilinden ayrı (künyesi `ringTicketBell`de). Zil sessizdir:
      çalmazsa cevap yine yazılmıştır, ekran biraz geç görür. */

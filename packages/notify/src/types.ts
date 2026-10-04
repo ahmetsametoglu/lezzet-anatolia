@@ -19,6 +19,8 @@ export type NotifyChannel = 'email' | 'wa_link' | 'whatsapp_api' | 'push' | 'web
 
 /** Cihaz bildirimi kanalları: YAZIŞMA ve BELGE'de e-postanın yanına bunlardan biri eklenir. */
 export const DEVICE_CHANNELS: readonly NotifyChannel[] = ['push', 'web_push'];
+/** Cihaz dışı kanallar: aynı olayın cihaz bildirimi ile yazılı haberi ayrı anlarda gidebilsin diye ayrı adlandırılır. */
+export const WRITTEN_CHANNELS: readonly NotifyChannel[] = ['email', 'wa_link', 'whatsapp_api'];
 
 /** Olay adı → o olayın taşıdığı veri. Yeni olay buraya eklenir; sürücüler eksik olayı reddeder. */
 export interface NotifyPayloads {

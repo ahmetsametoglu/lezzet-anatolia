@@ -4,6 +4,7 @@ import type * as NotificationsModule from 'expo-notifications';
 
 import type { NotificationRow } from '../api/notifications';
 import { pushNative } from './native-module';
+import { isViewing } from './viewing-target';
 
 /*
   Push dokunuşu → ekran: sunucunun `data` yükü ({kind, targetType, targetId, payload}) uygulamanın kendi eşlemesiyle (`resolveHref`)
@@ -39,9 +40,13 @@ export function usePushNavigation(resolveHref: (target: PushTarget) => string | 
     /* Env'siz/native-modülsüz ortamda (test, Expo Go Android) kurulum fırlayabilir — künyeli
        yutma (kayıt hook'unun aynısı): dokunuş yönlendirmesi bir hızlandırıcıdır. */
     try {
-      // Açıkken gelen bildirim de gösterilir; işleyici yokken modül onu ekrana koymaz ve başka ekrandaki kullanıcı haberi kaçırır.
+      /* Açıkken gelen bildirim de gösterilir, yoksa başka ekrandaki kullanıcı haberi kaçırırdı; yalnız öndeki ekranın kendi hedefine ait
+         bildirim gösterilmez, çünkü o ekran canlı zille zaten güncellenir. */
       Notifications.setNotificationHandler({
-        handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
+        handleNotification: async (notification) => {
+          const show = !isViewing(notification.request.content.data as { targetType?: unknown; targetId?: unknown } | undefined);
+          return { shouldShowBanner: show, shouldShowList: show, shouldPlaySound: show, shouldSetBadge: false };
+        },
       });
       void Notifications.getLastNotificationResponseAsync().then(yonlendir).catch(() => undefined);
       const abonelik = Notifications.addNotificationResponseReceivedListener(yonlendir);

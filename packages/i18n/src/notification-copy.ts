@@ -1,4 +1,5 @@
 import type { AppNotificationKind } from '@lezzet/types';
+import support from './customer/support.json';
 import type { Locale } from './locale';
 
 /*
@@ -18,6 +19,12 @@ const say = (locale: Locale, phrases: Record<Locale, string>): string => phrases
 /** Referans payload'da olmayabilir (eski satır, farklı üretici) — cümle referanssız da kurulur. */
 const refOf = (payload: Record<string, unknown>): string =>
   typeof payload.referenceNo === 'string' && payload.referenceNo !== '—' ? ` ${payload.referenceNo}` : '';
+
+/** Talebin türü payload'da varsa ortak sözlükteki adı; müşterinin yazdığı konu değil, kilit ekranında görünebilecek bir kategoridir. */
+const ticketTypeOf = (payload: Record<string, unknown>, locale: Locale): string | null => {
+  const types: Record<string, string> = support[locale].type;
+  return typeof payload.ticketType === 'string' ? (types[payload.ticketType] ?? null) : null;
+};
 
 /* Küme açık (`kind` DB'de düz metin, her modülle büyür): `Record` değil `Partial` — bilinmeyen tür genel metne düşer. */
 const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
@@ -86,12 +93,23 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
   },
   ticket_replied: {
     title: (_p, l) => say(l, { tr: 'Talebinize cevap var', fr: 'Réponse à votre demande', de: 'Antwort auf Ihre Anfrage' }),
-    sentence: (_p, l) =>
-      say(l, {
-        tr: 'Talebinize cevap geldi.',
-        fr: 'Vous avez reçu une réponse à votre demande.',
-        de: 'Sie haben eine Antwort auf Ihre Anfrage erhalten.',
-      }),
+    // Hangi talep olduğu sipariş numarasıyla, siparişsiz talepte türüyle söylenir; ikisi de yoksa genel cümle.
+    sentence: (p, l) => {
+      const ref = refOf(p).trim();
+      const subject = ref !== '' ? say(l, { tr: `Sipariş ${ref}`, fr: `Commande ${ref}`, de: `Bestellung ${ref}` }) : ticketTypeOf(p, l);
+      if (subject === null) {
+        return say(l, {
+          tr: 'Talebinize cevap geldi.',
+          fr: 'Vous avez reçu une réponse à votre demande.',
+          de: 'Sie haben eine Antwort auf Ihre Anfrage erhalten.',
+        });
+      }
+      return say(l, {
+        tr: `${subject} — talebinize cevap verdik.`,
+        fr: `${subject} — nous vous avons répondu.`,
+        de: `${subject} — wir haben Ihnen geantwortet.`,
+      });
+    },
   },
   ticket_status_changed: {
     title: (_p, l) => say(l, { tr: 'Talebiniz güncellendi', fr: 'Demande mise à jour', de: 'Anfrage aktualisiert' }),

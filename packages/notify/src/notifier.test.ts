@@ -170,6 +170,18 @@ describe('sınıf planı — push geldikten sonra', () => {
     expect(results.map((r) => r.channel)).toEqual(['push']);
   });
 
+  // Süzgeç planı aşarsa kırmızıya döner: cevap anında e-posta da giderdi ya da sonraki e-posta turunda push tekrarlanırdı.
+  it('kanal süzgeci: YAZIŞMA cevap anında yalnız cihaza, sonraki turda yalnız yazılı kanala gider', async () => {
+    const notifier = createNotifier([pushFake([]), ...drivers]);
+    const alici = { ...jetonluMail, locale: 'fr' as const };
+
+    const cihaz = await notifier.send('ticket_replied', alici, ticket, { channels: ['push', 'web_push'] });
+    expect(cihaz.map((r) => r.channel)).toEqual(['push']);
+
+    const yazili = await notifier.send('ticket_replied', alici, ticket, { channels: ['email', 'wa_link', 'whatsapp_api'] });
+    expect(yazili.map((r) => r.channel)).toEqual(['email']);
+  });
+
   it('HABER: TEK kanal ve push kazanır; jetonsuzda sıra maile düşer', async () => {
     const notifier = createNotifier([pushFake([]), ...drivers]);
 
