@@ -25,6 +25,7 @@ import {
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { EMPTY_MATCH_QUEUE, suggestionsForMovements } from '@/lib/bank/reconcile';
+import { businessOfFilter } from '@/lib/business-filter';
 import { NOTES } from './finance-labels';
 import {
   documentHead,
@@ -100,9 +101,6 @@ const filtered = (urlState: FinanceUrlState) =>
   urlState.scope !== ALL_ACCOUNTS ||
   urlState.business !== 'all';
 
-/** Servisin iş süzgeci — `all` hiç geçilmez. */
-const businessOf = (urlState: FinanceUrlState) => (urlState.business === 'all' ? undefined : urlState.business);
-
 /** Hareketler sekmesinin bir sayfası — süzgeç adresten, satırlar adlarıyla ve belge bağlarıyla. */
 export async function readLedgerPage(
   db: SupabaseClient,
@@ -114,7 +112,7 @@ export async function readLedgerPage(
     // Hesap bir DARALTMA: `all` iken alan hiç geçilmez, süzgeç de kurulmaz.
     accountId: urlState.acct !== ALL_ACCOUNTS ? urlState.acct : undefined,
     type: urlState.type === 'all' ? undefined : urlState.type,
-    business: businessOf(urlState),
+    business: businessOfFilter(urlState.business),
     from: urlState.from || undefined,
     to: urlState.to || undefined,
     // Adresteki `scope=unmatched` izah kuyruğudur; parametre adı paylaşılmış bağlantılar kırılmasın diye kaldı.
@@ -216,7 +214,7 @@ export async function readDocumentsPage(
   const service = new MoneyDocumentService(db);
   if (urlState.open) {
     const inRange = (day: string) => (!urlState.from || day >= urlState.from) && (!urlState.to || day <= urlState.to);
-    const business = businessOf(urlState);
+    const business = businessOfFilter(urlState.business);
     const open = (await service.listOpen())
       .filter((doc) => inRange(doc.issuedOn) && (!business || doc.business === business))
       .sort((a, b) => b.issuedOn.localeCompare(a.issuedOn));
@@ -234,7 +232,7 @@ export async function readDocumentsPage(
   const page = await service.page({
     from: urlState.from || undefined,
     to: urlState.to || undefined,
-    business: businessOf(urlState),
+    business: businessOfFilter(urlState.business),
     cursor,
     limit: DEFAULT_PAGE_SIZE,
   });
@@ -251,6 +249,11 @@ export async function readDocumentsPage(
   return {
     rows,
     nextCursor: page.nextCursor ? JSON.stringify(page.nextCursor) : null,
-    note: rows.length > 0 ? null : urlState.from || urlState.to || businessOf(urlState) ? NOTES.noDocumentMatch : NOTES.noDocuments,
+    note:
+      rows.length > 0
+        ? null
+        : urlState.from || urlState.to || businessOfFilter(urlState.business)
+          ? NOTES.noDocumentMatch
+          : NOTES.noDocuments,
   };
 }

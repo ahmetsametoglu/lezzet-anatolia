@@ -29,8 +29,7 @@ export function ReportsDesktop({ data, urlState, months, canSeeProfit, onFilter 
         title="Raporlar"
         subtitle={`${monthLabel(urlState.ym)} · kesinleşen siparişler`}
       >
-        {/* Muhasebe dosyası şirketin tamamıdır ve satırları işini taşır; anahtar yalnız kâr sekmelerinde durur ki yarım dosya indirilmesin. */}
-        {active !== 'export' && <BusinessToggle value={urlState.business} onChange={(business) => onFilter({ business })} />}
+        <BusinessToggle value={urlState.business} onChange={(business) => onFilter({ business })} />
         {/* Kitin `Select`i — ham `<select>` değil (CLAUDE.md §2). Burada `field` kipi, çünkü ay
             bir SÜZGEÇ değil raporun konusu: her zaman bir değeri var ve "+ …" daveti anlamsız. */}
         <Select
@@ -78,7 +77,13 @@ export function ReportsDesktop({ data, urlState, months, canSeeProfit, onFilter 
       ) : active === 'kanal' ? (
         <ChannelCards cards={data.channels} />
       ) : (
-        <ExportPanel view={data.export} queue={data.invoiceQueue} ym={urlState.ym} onChanged={() => router.refresh()} />
+        <ExportPanel
+          view={data.export}
+          queue={data.invoiceQueue}
+          ym={urlState.ym}
+          business={urlState.business}
+          onChanged={() => router.refresh()}
+        />
       )}
     </div>
   );

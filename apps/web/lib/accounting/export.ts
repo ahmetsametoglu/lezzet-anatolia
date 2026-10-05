@@ -1,7 +1,7 @@
 import { OrderItemService, OrderSaleService, OrderService, serviceDb } from '@lezzet/database';
 import { buildAccountingExport, type AccountingExport, type AccountingExportRow } from '@lezzet/domain-core';
 import { toCsv } from '@lezzet/helper';
-import { BUSINESS_LABELS, type KeysetCursor, type OrderSale, type Page } from '@lezzet/types';
+import { BUSINESS_LABELS, type Business, type KeysetCursor, type OrderSale, type Page } from '@lezzet/types';
 
 /**
  * Muhasebe export kapısı (DOMAIN §9): sistem resmî muhasebe değildir, fatura kesmez ve numara üretmez, muhasebeciye temiz veri verir.
@@ -39,12 +39,12 @@ interface ExportPeriod {
 }
 
 /**
- * Dönemin export'u, satırlar ve özet: dosya üretilmez, veri döner ve çağıran gösterir ya da indirtir. Kalemler tek turda çekilip
- * siparişe göre gruplanır, sipariş başına sorgu N+1 olurdu.
+ * Dönemin export'u, satırlar ve özet: dosya üretilmez, veri döner ve çağıran gösterir ya da indirtir. `business` verilmezse dosya
+ * şirketin tamamıdır; kalemler tek turda çekilip siparişe göre gruplanır, sipariş başına sorgu N+1 olurdu.
  */
-export async function buildExport(period: ExportPeriod): Promise<AccountingExport> {
+export async function buildExport(period: ExportPeriod, business?: Business): Promise<AccountingExport> {
   const db = serviceDb();
-  const sales = await new OrderSaleService(db).listPeriod(period.from, period.to);
+  const sales = await new OrderSaleService(db).listPeriod(period.from, period.to, business);
   const items = await new OrderItemService(db).listByOrders(sales.map((summary) => summary.id));
 
   const byOrder = new Map<string, typeof items>();
@@ -85,7 +85,7 @@ export function toExportCsv(data: AccountingExport): string {
  * **Fatura eşleştirme kuyruğu** — dış muhasebe fatura numarasını üretir, buradan siparişe yazılır.
  * Sonsuz kaydırma: kuyruk siparişlerle birlikte büyür.
  */
-export function pendingInvoices(opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<OrderSale>> {
+export function pendingInvoices(opts: { cursor?: KeysetCursor; limit?: number; business?: Business } = {}): Promise<Page<OrderSale>> {
   return new OrderSaleService(serviceDb()).pendingInvoices(opts);
 }
 

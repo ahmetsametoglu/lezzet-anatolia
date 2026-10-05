@@ -19,7 +19,7 @@ export interface ReportsUrlState {
   ym: string;
   /** "↳ geçen aya göre" — karşılaştırma açık mı. */
   cmp: boolean;
-  /** Kâr sekmelerinin iş süzgeci; muhasebe dosyası şirketin tamamıdır, süzülmez. */
+  /** Sekmelerin iş süzgeci; muhasebe dosyaları da seçili işi taşır, `all` şirketin tamamıdır. */
   business: BusinessFilter;
 }
 

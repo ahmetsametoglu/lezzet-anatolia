@@ -335,13 +335,13 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
    * Dönemin bütün hareketleri, ham tablodan (transfer tek satır), sayfa sayfa çekilip birleştirilir: tek sorgu PostgREST'in satır
    * tavanında (1000) sessizce kesilir ve döküm eksik çıkardı. Okuma tam okuma içindir, imleç dışarı sızmaz.
    */
-  async listPeriod(from: string, to: string): Promise<MoneyMovement[]> {
+  async listPeriod(from: string, to: string, business?: Business): Promise<MoneyMovement[]> {
     const BATCH_SIZE = 500;
     const all: MoneyMovement[] = [];
     let cursor: KeysetCursor | undefined;
     do {
       const page = await this.getPage(
-        {},
+        { business },
         {
           orderBy: 'valueDate',
           keysetAfter: cursor,

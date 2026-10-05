@@ -4,6 +4,7 @@ import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { buildExport, pendingInvoices } from '@/lib/accounting/export';
 import { buildMovementExport } from '@/lib/accounting/movement-export';
 import { companyPnl, productProfits } from '@/lib/accounting/profit';
+import { businessOfFilter } from '@/lib/business-filter';
 import { guarded, requireAdmin, requireFinance } from '@/lib/guard';
 import { ReportsClient } from './reports-client';
 import { toChannelCards, toPnlRows, toProductMetrics, toVariantRows } from './reports-read';
@@ -35,7 +36,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   // okuyan her yer, yetki kuralının ikinci bir kopyası olurdu.
   const canSeeProfit = (await guarded(requireAdmin)).ok;
   const period = monthRange(urlState.ym);
-  const business = urlState.business === 'all' ? undefined : urlState.business;
+  const business = businessOfFilter(urlState.business);
 
   const [profits, pnl, prevPnl, exportData, movementData, invoicePage] = await Promise.all([
     // Kâr okumaları YALNIZ yetkisi olana yapılır — yetkisiz kullanıcıya gösterilmeyecek bir sayıyı
@@ -43,10 +44,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     canSeeProfit ? productProfits(period, business) : [],
     canSeeProfit ? companyPnl(period, business) : null,
     canSeeProfit && urlState.cmp ? companyPnl(monthRange(previousMonth(urlState.ym)), business) : null,
-    buildExport(period),
+    buildExport(period, business),
     // Hareket dökümünün özeti: dosyaya girmeden "kaç hareket, kaçı izahsız" görünsün.
-    buildMovementExport(period),
-    pendingInvoices({ limit: 30 }),
+    buildMovementExport(period, business),
+    pendingInvoices({ limit: 30, business }),
   ]);
 
   // Satır başlığı ürün adı ve boydur, çünkü boy etiketi gramajdır ("90g") ve üç ayrı ürünün satırı aynı yazılırdı. İki okuma da tek

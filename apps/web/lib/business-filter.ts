@@ -11,3 +11,8 @@ export const BUSINESS_FILTERS = ['all', 'lezzet', 'qualite'] as const satisfies 
 export function parseBusinessFilter(raw: string | string[] | undefined): BusinessFilter {
   return oneOf(raw, BUSINESS_FILTERS, 'all');
 }
+
+/** Servisin iş süzgeci; `all` hiç geçilmez, süzgeçsiz okuma iki işi birlikte okur. */
+export function businessOfFilter(filter: BusinessFilter): Business | undefined {
+  return filter === 'all' ? undefined : filter;
+}

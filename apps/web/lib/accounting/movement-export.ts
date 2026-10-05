@@ -17,7 +17,7 @@ import {
   type MovementExportRow,
 } from '@lezzet/domain-core';
 import { toCsv } from '@lezzet/helper';
-import { BUSINESS_LABELS } from '@lezzet/types';
+import { BUSINESS_LABELS, type Business } from '@lezzet/types';
 import { MOVEMENT_TYPE_LABEL } from '@/app/(operations)/operations/finance/finance-labels';
 import { DOCUMENT_KIND_LABEL, VAT_REGIME_LABEL } from '@/components/operation/form/document-form/labels';
 
@@ -36,9 +36,10 @@ interface ExportPeriod {
 
 const unique = (values: ReadonlyArray<string | null | undefined>): string[] => [...new Set(values.filter((v): v is string => !!v))];
 
-export async function buildMovementExport(period: ExportPeriod): Promise<MovementExport> {
+/** Dönemin dökümü; `business` verilmezse şirketin tamamıdır. */
+export async function buildMovementExport(period: ExportPeriod, business?: Business): Promise<MovementExport> {
   const db = serviceDb();
-  const movements = await new MoneyMovementService(db).listPeriod(period.from, period.to);
+  const movements = await new MoneyMovementService(db).listPeriod(period.from, period.to, business);
   const allocations = movements.length > 0 ? await new MoneyAllocationService(db).listByMovements(movements.map((movement) => movement.id)) : [];
   const [accounts, natures, tags, counterparties, suppliers, documents, orders] = await Promise.all([
     new AccountService(db).list(),

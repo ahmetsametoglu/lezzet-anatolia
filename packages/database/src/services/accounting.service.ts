@@ -50,9 +50,9 @@ export class OrderSaleService extends BaseDbService<OrderSale, never, never> {
    * Fatura numarası bekleyen satışlar (`reference_no` ↔ `invoice_no` eşleştirme kuyruğu), en uzun bekleyen başta. Hediye sipariş
    * kuyruğa girmez, çünkü dış muhasebeye gitmediği için hiç fatura numarası almaz ve kuyruk asla boşalmazdı.
    */
-  pendingInvoices(opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<OrderSale>> {
+  pendingInvoices(opts: { cursor?: KeysetCursor; limit?: number; business?: Business } = {}): Promise<Page<OrderSale>> {
     return this.getPage(
-      { isGiftOrder: false },
+      { isGiftOrder: false, business: opts.business },
       {
         orderBy: 'saleDate',
         keysetAfter: opts.cursor,

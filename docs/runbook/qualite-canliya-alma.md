@@ -34,3 +34,5 @@ Kayıtlar girdikten sonra, aynı posta kodlu bir QUALITE ve bir Lezzet müşteri
 5. Adres vermeyen bir ziyaretçi, yalnız QUALITE deposunda duran ürünü "tükendi" görür.
 6. Açık bir kampanya varken QUALITE müşterisinin sepetinde indirim satırı ve kupon alanı yoktur; Lezzet müşterisinin aynı sepeti
    indirimi alır.
+7. Raporlar › Muhasebe export'ta QUALITE seçiliyken indirilen satış dosyası (`muhasebe-<ay>-qualite.csv`) yalnız QUALITE
+   satışlarını, hareket dökümü yalnız QUALITE hareketlerini taşır.

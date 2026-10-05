@@ -25,6 +25,7 @@ satış yapan iştir. İkisi aynı tüzel kişilik (QUALITE SAS) altındadır: m
 | 11 | **Banka hesapları işe göre ayrılmaz** (04.10): Crédit Mutuel ile Revolut şirketin hesaplarıdır | Ödemenin işi bağından gelir (belge, siparişin ya da mal kabulün deposu, tedarikçi, cari); hiçbiri iş söylemiyorsa Lezzet'tir. İki banka da Pennylane'den okunur (`kasa-muhasebe.md` 15. karar). |
 | 12 | **Pennylane'de bizde olmayan bir faturaya eşli banka satırı izah bekler** (04.10) | O fatura Pennylane'e doğrudan girilmiştir (1. karar). Satır izah kuyruğunda kalır, önerisi yoksa "Belgeyi bizde girin" der; belge bizde girilir, Pennylane'deki kopyası silinir. |
 | 13 | **Kampanya ve kupon yalnız Lezzet'indir** (05.10) | QUALITE müşterisinin sepetine otomatik kampanya inmez ve kupon alanı çizilmez; vitrin ona kampanya rozeti göstermez. İndirim taşıyan sipariş yalnız Lezzet deposundan yazılır (`order_discount_business`). |
+| 14 | **Muhasebe dosyası ve hareket dökümü işe göre ayrı da alınır** (05.10) | Raporların iş anahtarı export sekmesinde de durur: dosya, özeti ve fatura kuyruğu seçili işi taşır, dosya adı işi söyler (`muhasebe-2026-10-qualite.csv`). Süzgeçsiz dosya şirketin tamamıdır. |
 
 **Dayanak (ölçüm ve araştırma, 03.10):** Pennylane'in yerleşik stok modülü yok (yardım merkezi: *"Pennylane ne dispose pas
 de module natif dédié à la gestion des stocks"*); stok için önerdiği Stockpit ayrı abonelikli ikinci bir sistemdir.
@@ -50,8 +51,8 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
   gösterilen bölge listesi ve teslim şekli de görüntüleyenin işinindir: QUALITE müşterisine kargo, Lezzet ziyaretçisine QUALITE'nin
   bölgesi gösterilmez.
 - **Kapı ve araç satışının işi deposundan gelir;** anonim alıcı işe göre bölünmez.
-- **Raporlar iki işi ayrı okur:** kâr sekmelerinin başlığında Tümü · Lezzet · QUALITE anahtarı var; muhasebe dosyası ve hareket
-  dökümü şirketin tamamıdır, her satır işini taşır (`DOMAIN.md` §9, §12).
+- **Raporlar iki işi ayrı okur:** başlıkta Tümü · Lezzet · QUALITE anahtarı var; kâr sekmeleri, muhasebe dosyası, hareket dökümü
+  ve fatura kuyruğu seçili işi okur, her satır işini taşır (`DOMAIN.md` §9, §12).
 - **Para ekranında iş anahtarı listeleri daraltır:** hareketler ve belgeler seçili işe göre süzülür; hesap bakiyeleri bölünmez
   (11. karar), izah ve açık belge sayaçları şirketin tamamını sayar.
 - **Analitik iki işi ayrı sayar:** olayın işi müşterinin işidir (ziyaretçi Lezzet), siparişin işi deposundandır; ekran iki işi
