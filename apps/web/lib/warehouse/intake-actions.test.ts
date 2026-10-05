@@ -1,6 +1,15 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WarehouseScope } from '@lezzet/domain-core';
-import { CategoryService, ProductService, PurchaseOrderService, StockService, SupplierService, serviceDb } from '@lezzet/database';
+import {
+  CategoryService,
+  ProductService,
+  PurchaseOrderService,
+  StockIntakeService,
+  StockService,
+  SupplierService,
+  UserProfileService,
+  serviceDb,
+} from '@lezzet/database';
 import { createTestWarehouse, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 
 /*
@@ -9,8 +18,10 @@ import { createTestWarehouse, purgeTestData, purgeVariantStock } from '@lezzet/d
 */
 
 const kapsam: { simdiki: WarehouseScope } = { simdiki: { kind: 'all' } };
+// Oturum kimliği personelin profil kimliğinden farklıdır, çünkü profil oturumdan önce açılır; kabul profile yazılmazsa FK düşer.
+const personel = { id: '00000000-0000-4000-8000-00000000a0a0', profileId: '' };
 vi.mock('@/lib/guard', () => ({
-  requireWarehouseScope: async () => ({ user: { id: null }, scope: kapsam.simdiki }),
+  requireWarehouseScope: async () => ({ user: personel, scope: kapsam.simdiki }),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: () => undefined }));
 
@@ -37,6 +48,7 @@ beforeAll(async () => {
   productId = product.id;
   variantId = variants[0]!.id;
   supplierId = (await new SupplierService(db).insert({ name: `Salt okunur tedarikçi ${stamp}` })).id;
+  personel.profileId = (await new UserProfileService(db).insert({ name: `Kabulcü ${stamp}` })).id;
 });
 
 beforeEach(async () => {
@@ -50,6 +62,7 @@ afterAll(async () => {
     categoryIds: [categoryId],
     supplierIds: [supplierId],
     warehouseIds: [warehouseId],
+    profileIds: [personel.profileId],
   });
 });
 
@@ -87,5 +100,15 @@ describe('stok ekranında alış fiyatı salt okunur', () => {
     expect(sonuc.error).toBeNull();
     const partiler = await new StockService(db).listByVariant(warehouseId, variantId);
     expect(partiler.map((parti) => parti.purchasePriceCents)).toEqual([600]);
+  });
+
+  it('kabulü yapan personelin profiliyle yazılır', async () => {
+    const satir = { variantId, qty: 3, expiryDate: dayOffset(90), lotNumber: null, storageAreaId: null };
+
+    const sonuc = await receiveIntakeAction({ warehouseId, purchaseOrderId: null, supplierId, date: null, note: null, lines: [satir] });
+
+    expect(sonuc.error).toBeNull();
+    const kabuller = await new StockIntakeService(db).listRecent({ warehouseIds: [warehouseId] });
+    expect(kabuller.rows.map((kabul) => kabul.receivedBy)).toContain(personel.profileId);
   });
 });

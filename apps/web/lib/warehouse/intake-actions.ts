@@ -87,9 +87,9 @@ export async function receiveIntakeAction(input: {
       purchaseOrderId: input.purchaseOrderId,
       supplierId: input.supplierId,
       note: input.note,
-      // Kabulü yapan, kapının doğruladığı kullanıcıdır; belgeye ve doğan her harekete yazılır ki iki yüzeyden giren mal defterde aynı
-      // yerde okunsun.
-      actorId: user.id,
+      // Kabulü yapan, kapının doğruladığı personelin profilidir (oturum kimliği değil, kayıt profile bağlı); belgeye ve doğan her
+      // harekete yazılır ki iki yüzeyden giren mal defterde aynı yerde okunsun.
+      actorId: user.profileId,
       ...(input.date ? { date: input.date } : {}),
     };
 
