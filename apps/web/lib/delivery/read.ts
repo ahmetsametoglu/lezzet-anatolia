@@ -4,20 +4,8 @@ import { DeliveryZoneService, serviceDb } from '@lezzet/database';
 import type { DeliveryZoneSummary } from './place-types';
 
 /**
- * Kapıya teslim ettiğimiz yerler — vitrinin **açılışta bir kez** okuduğu liste.
- *
- * Önceden panel açıldığında istemciden bir action ile çekiliyordu: müşteri "posta kodumu
- * değiştireyim" deyip paneli açıyor, liste birkaç yüz milisaniye sonra alttan beliriyordu. Oysa
- * bu liste **operatörün elle kurduğu, doğal tavanı olan bir küme** (CLAUDE.md §1) — sayfa
- * açılırken sunucuda okunup bağlama konursa panelin hiç beklemesi gerekmez.
- *
- * **Önbellekli ve etiketli.** Bölgeler ayda bir değişir; her sayfa render'ında sorgulamak
- * anlamsız. Etiket bilerek var: bölge düzenleme ekranı geldiğinde (modül 09) kaydeden action
- * `revalidateTag(DELIVERY_ZONES_TAG)` çağıracak ve liste süre dolmasını beklemeden tazelenecek —
- * beklemek operatöre "kaydettim ama görünmüyor" dedirtirdi. Etiket o gün DIŞARI AÇILIR; bugün
- * tüketeni olmadığı için dosyanın içinde durur (ölü export yok — `knip`).
- *
- * Yalnız AKTİF bölgeler: hazırlanan bölge müşteriye söz vermez.
+ * Kapıya teslim ettiğimiz yerler, vitrinin açılışta bir kez okuduğu liste: operatörün kurduğu doğal tavanlı bir kümedir, bağlama
+ * konunca yer paneli beklemez. Önbellekli ve etiketlidir, yalnız aktif bölgeleri taşır; hazırlanan bölge müşteriye söz vermez.
  */
 const DELIVERY_ZONES_TAG = 'delivery-zones';
 

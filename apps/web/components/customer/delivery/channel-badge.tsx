@@ -7,9 +7,8 @@ import { useDeliveryPlace } from './place-context';
 import messages from './place-messages.json';
 
 /**
- * Teslim şekli rozeti — bir posta kodunun bize göre cevabı: kapıya teslim (kamyon, zeytin) ya da
- * kargo (koli, nötr). v1'de iki yerde: yer panelinin adres kartı ve adres penceresinin öneri satırı
- * (13.09). Karar bağlamın bölge listesinden (`zones` — sayfa açılırken okundu), sunucuya sorulmaz.
+ * Teslim şekli rozeti, bir posta kodunun bize göre cevabı: kapıya teslim (kamyon, zeytin) ya da kargo (koli, nötr). Yer panelinin adres
+ * kartında ve adres penceresinin öneri satırında durur; karar sayfa açılırken okunan bölge listesinden çıkar, sunucuya sorulmaz.
  */
 interface ChannelBadgeProps {
   postalCode: string;
