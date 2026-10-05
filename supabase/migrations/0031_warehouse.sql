@@ -40,6 +40,8 @@ create table public.warehouse (
   constraint warehouse_vehicle_never_ships check (kind = 'facility' or not ships_online),
   -- Müşteri hareket hâlindeki bir yere gelemez: gel-al noktası da bir adrestir.
   constraint warehouse_vehicle_never_pickup check (kind = 'facility' or not pickup_enabled),
+  -- QUALITE kargo göndermez (docs/feature/iki-is.md, karar 10); kargo çıkış deposu yalnız Lezzet'in olabilir.
+  constraint warehouse_qualite_never_ships check (business = 'lezzet' or not ships_online),
   -- Ev YALNIZ aracın alanıdır. Tesise ev yazılabilseydi ağaç iki anlama gelirdi.
   constraint warehouse_home_only_vehicle check (kind = 'vehicle' or home_warehouse_id is null),
   -- `postal_code_place_point` / `address_geo_point` ile aynı kural, aynı gerekçe.
@@ -279,6 +281,10 @@ as $$
 begin
   update public.warehouse v set business = new.business
    where v.home_warehouse_id = new.id and v.business is distinct from new.business;
+  -- Bölgelerinin kodları da yeni işi alır; öteki işin aynı kodu tuttuğu bölge varsa anahtar değişikliği reddeder.
+  update public.delivery_zone_postal_code p set zone_id = p.zone_id
+    from public.delivery_zone z
+   where z.id = p.zone_id and z.warehouse_id = new.id;
   return null;
 end;
 $$;
@@ -287,6 +293,39 @@ create trigger warehouse_business_follows
   after update of business on public.warehouse
   for each row when (old.business is distinct from new.business)
   execute function public.warehouse_business_follows();
+
+-- Posta kodunun işi bölgesinin deposundan gelir; yazanın gönderdiği değer ezilir.
+create or replace function public.delivery_zone_postal_code_business() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.business := (
+    select w.business from public.delivery_zone z join public.warehouse w on w.id = z.warehouse_id where z.id = new.zone_id
+  );
+  return new;
+end;
+$$;
+
+create trigger delivery_zone_postal_code_business
+  before insert or update of zone_id, business on public.delivery_zone_postal_code
+  for each row execute function public.delivery_zone_postal_code_business();
+
+-- Bölge başka depoya taşınınca kodları o deponun işini alır; satıra "kendini yeniden yaz" denir, kural tetikleyicisinde koşar.
+create or replace function public.delivery_zone_codes_follow() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  update public.delivery_zone_postal_code p set zone_id = p.zone_id where p.zone_id = new.id;
+  return null;
+end;
+$$;
+
+create trigger delivery_zone_codes_follow
+  after update of warehouse_id on public.delivery_zone
+  for each row when (old.warehouse_id is distinct from new.warehouse_id)
+  execute function public.delivery_zone_codes_follow();
 
 -- Evine göre araç okuması: panelin ve depo kartının sorgusu ("bu tesisin araçları").
 create index warehouse_home_idx on public.warehouse (home_warehouse_id) where home_warehouse_id is not null;

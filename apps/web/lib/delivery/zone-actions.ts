@@ -14,7 +14,7 @@ const DELIVERIES_PATH = '/operations/deliveries';
 /** İnsan diline çevrilmiş kısıt ihlali — rota ekranının sözlüğüyle aynı kayıt. */
 const CONSTRAINT_MESSAGE: Record<string, string> = {
   delivery_zone_postal_code_pkey:
-    'Eklemek istediğiniz posta kodlarından biri başka bir rotada tanımlı. Bir kod yalnız tek rotada olabilir.',
+    'Eklemek istediğiniz posta kodlarından biri bu işin başka bir rotasında tanımlı. Bir kod her işte yalnız tek rotada olabilir.',
 };
 
 const InputSchema = z.object({

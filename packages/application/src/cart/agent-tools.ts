@@ -3,12 +3,13 @@ import { tool, z, type ToolSet } from '@lezzet/ai';
 import { CartService, type CartOwner, type Db } from '@lezzet/database';
 import { formatPrice } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
-import type { Conversation, Country } from '@lezzet/types';
+import type { Business, Conversation, Country } from '@lezzet/types';
 import { getCatalogData } from '../catalog/catalog';
 import { getPackagesByIds, listStorefrontPackages } from '../catalog/packages';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { getProductDetail } from '../catalog/product';
 import type { PlaceWarehouses } from '../catalog/storefront-types';
+import { customerBusiness } from '../delivery/place';
 import { cartGroupOf, entryOfItem, shippingGroupFree, type CartEntry, type CartLine, type CartView } from './cart-types';
 import { resolveChatPlace, ULKE_GIRDISI, yerNotu, type ChatPlace, type ChatPlaceMemory } from './chat-place';
 import { startCartLink, supportLinkUrl } from './link';
@@ -100,8 +101,16 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
 
   /* Yer dört kaynaktan, TEK sırayla (`chat-place.ts`): söylenen · sohbette saklanan · kayıtlı adres
      (yalnız izinliyse) · hiçbiri. Söylenen kod gerçekse sohbete yazılır — müşteri bir daha söylemez. */
-  const yer = (postaKodu?: string, ulke?: Country): Promise<ChatPlace> =>
-    resolveChatPlace(db, { said: postaKodu, saidCountry: ulke, memory: input.place ?? null, addressCustomerId: input.addressCustomerId });
+  // Yerin işi fiyatın kimliğinden gelir: kimlik kapısı kapalıyken ziyaretçi gibi Lezzet'e çözülür. Profil sohbet başına bir kez okunur.
+  let isletme: Promise<Business> | null = null;
+  const yer = async (postaKodu?: string, ulke?: Country): Promise<ChatPlace> =>
+    resolveChatPlace(db, {
+      said: postaKodu,
+      saidCountry: ulke,
+      memory: input.place ?? null,
+      addressCustomerId: input.addressCustomerId,
+      business: await (isletme ??= customerBusiness(db, input.pricingCustomerId)),
+    });
 
   /** Sepet görünümü bu yerin depolarıyla — özet, hazırlık ve "bu adrese gider mi" aynı hesaptan okunur. */
   const gorunum = (entries: CartEntry[], yerim: ChatPlace) =>

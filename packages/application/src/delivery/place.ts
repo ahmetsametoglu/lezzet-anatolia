@@ -1,7 +1,7 @@
-import { DeliveryZoneService, PostalCodePlaceService, WarehouseService } from '@lezzet/database';
-import { findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
+import { DeliveryZoneService, PostalCodePlaceService, UserProfileService, WarehouseService } from '@lezzet/database';
+import { customerBusinessOf, findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
 import { normalizePostalCode } from '@lezzet/address';
-import type { Country } from '@lezzet/types';
+import type { Business, Country } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { PlaceWarehouses } from '../catalog/storefront-types';
@@ -26,23 +26,36 @@ async function readPlaceInputs(db: SupabaseClient, postalCode: string) {
   return { code, matches, zones, warehouses };
 }
 
-/** `country` bir seçimdir ve adayları süzer; kod o ülkede yoksa çözüm `unknown`a düşer. */
-function resolveFrom(inputs: Awaited<ReturnType<typeof readPlaceInputs>>, country?: Country): PostalCodeResolution {
+/**
+ * `country` bir seçimdir ve adayları süzer; kod o ülkede yoksa çözüm `unknown`a düşer. `business` müşterinin işidir, anonim ziyaretçi
+ * Lezzet'tir (`customerBusinessOf`).
+ */
+function resolveFrom(inputs: Awaited<ReturnType<typeof readPlaceInputs>>, business: Business, country?: Country): PostalCodeResolution {
   const scoped = country ? inputs.matches.filter((match) => match.country === country) : inputs.matches;
-  return resolvePlaceByPostalCode(inputs.code, scoped, inputs.zones, inputs.warehouses);
+  return resolvePlaceByPostalCode(inputs.code, scoped, inputs.zones, inputs.warehouses, business);
 }
 
-export async function resolvePlaceForPostalCode(db: SupabaseClient, postalCode: string, country?: Country): Promise<PostalCodeResolution> {
-  return resolveFrom(await readPlaceInputs(db, postalCode), country);
+export async function resolvePlaceForPostalCode(
+  db: SupabaseClient,
+  postalCode: string,
+  business: Business,
+  country?: Country,
+): Promise<PostalCodeResolution> {
+  return resolveFrom(await readPlaceInputs(db, postalCode), business, country);
 }
 
 /**
  * Çözümün `warehouseId`i kargo hâlinde kargo deposunu taşır; burada yalnız rota deposu olarak yayılır, yoksa rota dışındaki müşteri
  * "ücretsiz kapı teslimi" görürdü. Çözülemeyen kodda iki kimlik de `null`dur: tahmin, yanlış stok ve yanlış teslimat sözü demek.
  */
-export async function resolvePlaceWarehouses(db: SupabaseClient, postalCode: string, country?: Country): Promise<PlaceWarehouses> {
+export async function resolvePlaceWarehouses(
+  db: SupabaseClient,
+  postalCode: string,
+  business: Business,
+  country?: Country,
+): Promise<PlaceWarehouses> {
   const inputs = await readPlaceInputs(db, postalCode);
-  const resolution = resolveFrom(inputs, country);
+  const resolution = resolveFrom(inputs, business, country);
 
   if (resolution.kind !== 'route' && resolution.kind !== 'shipping') return UNRESOLVED_PLACE;
 
@@ -50,12 +63,18 @@ export async function resolvePlaceWarehouses(db: SupabaseClient, postalCode: str
     // Kargo hâlinde `null` ki yerel havuz boş kalsın.
     warehouseId: resolution.kind === 'route' ? resolution.warehouseId : null,
     // Kargo deposu ülkeden türer, rotadan değil: rota içindeki müşteri de kargo dolgusu alabilir.
-    shippingWarehouseId: findShippingWarehouse(resolution.country, inputs.warehouses)?.id ?? null,
+    shippingWarehouseId: findShippingWarehouse(resolution.country, inputs.warehouses, business)?.id ?? null,
   };
 }
 
 /** İki `null` bir hâldir: yer bilinmiyor. */
 export const UNRESOLVED_PLACE: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null };
+
+/** Kimlikten müşterinin işi; profili okunamayan kimlik ve ziyaretçi Lezzet'tir (`customerBusinessOf`). */
+export async function customerBusiness(db: SupabaseClient, customerId: string | null): Promise<Business> {
+  if (!customerId) return customerBusinessOf(null);
+  return customerBusinessOf(await new UserProfileService(db).getById(customerId));
+}
 
 /**
  * Adres defteri hizmet alanını bilmez: ülke depo tablosundan değil referansın kendisinden türer ve kayıt hiçbir hâlde reddedilmez.

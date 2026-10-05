@@ -1,6 +1,6 @@
 import { PostalCodePlaceService, type Db } from '@lezzet/database';
 import { normalizePostalCode, placeLabel } from '@lezzet/address';
-import type { Country, PlaceOption } from '@lezzet/types';
+import type { Business, Country, PlaceOption } from '@lezzet/types';
 
 /** Yer çözümünden ayrı, çünkü ödeme çerezdeki kodu değil adresin kodunu sorar ve ikisi farklı olabilir. */
 export async function placesForPostalCode(db: Db, country: Country, postalCode: string): Promise<string[]> {
@@ -11,8 +11,9 @@ export async function placesForPostalCode(db: Db, country: Country, postalCode: 
  * Servisin cevabı sözleşme şekline burada iner ki iki yüzey ayrı yazmasın; harfli terim servisin ad dalına gider. Depo tablosuna
  * bakılmaz: adres defterinin hizmet alanıyla ilgisi yok.
  */
-export async function suggestPlaces(db: Db, prefix: string): Promise<PlaceOption[]> {
-  const rows = await new PostalCodePlaceService(db).search(normalizePostalCode(prefix));
+export async function suggestPlaces(db: Db, prefix: string, business: Business): Promise<PlaceOption[]> {
+  // "Rota içi" soranın işinin bölgesine göredir; ziyaretçi Lezzet'tir.
+  const rows = await new PostalCodePlaceService(db).search(normalizePostalCode(prefix), 8, business);
   return rows.map((row) => ({
     country: row.country,
     postalCode: row.postalCode,

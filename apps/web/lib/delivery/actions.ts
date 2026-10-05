@@ -3,10 +3,11 @@
 import { isValidPostalCode, minPostalQueryLength, normalizePostalCode, placeLabel } from '@lezzet/address';
 import { suggestPlaces } from '@lezzet/application';
 import { DeliveryZoneService, PostalCodePlaceService, WarehouseService, serviceDb } from '@lezzet/database';
-import { resolvePlaceByPostalCode } from '@lezzet/domain-core';
+import { customerBusinessOf, resolvePlaceByPostalCode, type WarehouseCandidate } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
-import type { Country, PlaceOption } from '@lezzet/types';
+import type { Business, Country, PlaceOption } from '@lezzet/types';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
+import { readSessionProfile } from '@/lib/guard';
 import { recordEvent } from '@/lib/analytics/record';
 import { describePlace } from './describe-place';
 import type { PlaceLookup } from './place-types';
@@ -21,16 +22,19 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
     if (!isValidPostalCode(postalCode)) throw new CustomerError('postal_code_invalid');
 
     const db = serviceDb();
-    const [matches, zones, warehouses] = await Promise.all([
+    const [matches, zones, warehouses, profile] = await Promise.all([
       new PostalCodePlaceService(db).findByPostalCode(postalCode),
       // Bölgeler aktiflik süzgecisiz: pasif bölgenin kodu da bizim kaydımızdır, rotanın açıklığına motor karar verir.
       new DeliveryZoneService(db).listWithCodes(),
       // Yalnız tesisler; `readDeliveryInputs` ile aynı süzgeç.
       new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
+      readSessionProfile(),
     ]);
+    // Ziyaretçi Lezzet'tir; girişli müşterinin yeri kendi işinin bölgelerinden çözülür.
+    const business = customerBusinessOf(profile);
 
     // Ülke verilmezse koddan türer, verilirse kod o ülkeye bağlanır; ülke KDV oranını belirlediği için varsayılamaz.
-    const lookup = resolvePlaceByPostalCode(postalCode, matches, zones, warehouses, chosenCountry);
+    const lookup = resolvePlaceByPostalCode(postalCode, matches, zones, warehouses, business, chosenCountry);
 
     // Dört hâl ekrana veri olarak gider; cümleyi ekran kurar.
     if (lookup.kind === 'unknown') {
@@ -65,7 +69,12 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
       return { data: { kind: 'unresolved', reason: lookup.reason }, errorKey: null };
     }
 
-    return await finishResolved(postalCode, { country: lookup.country, placeName: lookup.placeName, places: lookup.places }, zones, matches);
+    return await finishResolved(
+      postalCode,
+      { country: lookup.country, placeName: lookup.placeName, places: lookup.places },
+      { zones, warehouses, matches },
+      business,
+    );
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
@@ -78,9 +87,13 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
 async function finishResolved(
   postalCode: string,
   identity: { country: Country; placeName: string | null; places: readonly string[] },
-  zones: Awaited<ReturnType<DeliveryZoneService['listWithCodes']>>,
   /** Çağıranda zaten okunmuş; ikinci sorgu yok. */
-  matches: readonly { country: Country; lat: number | null; lng: number | null }[],
+  inputs: {
+    zones: Awaited<ReturnType<DeliveryZoneService['listWithCodes']>>;
+    warehouses: readonly Pick<WarehouseCandidate, 'id' | 'business'>[];
+    matches: readonly { country: Country; lat: number | null; lng: number | null }[];
+  },
+  business: Business,
 ): Promise<CustomerResult<PlaceLookup>> {
   // Sayaç cevabı bekletmez ve hata verirse akışı kesmez: asıl iş müşterinin sorusu.
   void recordDemand(postalCode);
@@ -88,7 +101,10 @@ async function finishResolved(
   // Huni kaç kişinin yeri çözdüğünü sayar, talep sayacı hangi kodun sorulduğunu; posta kodu olay defterine girmez.
   void recordEvent({ type: 'place_resolved', resolved: true });
 
-  return { data: { kind: 'resolved', place: await describePlace(postalCode, identity, zones, matches) }, errorKey: null };
+  return {
+    data: { kind: 'resolved', place: await describePlace(postalCode, identity, inputs.zones, inputs.warehouses, inputs.matches, business) },
+    errorKey: null,
+  };
 }
 
 /**
@@ -101,7 +117,7 @@ export async function suggestPostalCodesAction(prefix: string): Promise<PlaceOpt
   if (normalized.length < minPostalQueryLength(normalized)) return [];
   try {
     // Öneri `suggestPlaces`ten geçer ki ad türetme kuralı tek yerde kalsın ve iki yüzey aynı cevabı görsün.
-    return await suggestPlaces(serviceDb(), normalized);
+    return await suggestPlaces(serviceDb(), normalized, customerBusinessOf(await readSessionProfile()));
   } catch (err) {
     await captureError(err, { source: SOURCES.webAction, context: { prefix: normalized } });
     return [];

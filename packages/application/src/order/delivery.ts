@@ -10,7 +10,7 @@ import {
 } from '@lezzet/domain-core';
 import type { WarehouseCandidate, ZoneWithWarehouse } from '@lezzet/domain-core';
 import type { AddressDeliveryType } from '@lezzet/types';
-import type { Country } from '@lezzet/types';
+import type { Business, Country } from '@lezzet/types';
 
 /**
  * Checkout teslimat çözümü (DOMAIN §6): bölgeleri ve ayarları servis getirir, rota içi mi, hangi gün ve kargoya çıkabilir mi
@@ -71,6 +71,8 @@ export interface ResolveDeliveryInput {
    * çağıranlar ülkeyi doldurur.
    */
   country?: Country;
+  /** Müşterinin işi; zincir yalnız o işin bölgelerine ve kargo deposuna çözülür (`customerBusinessOf`). */
+  business: Business;
   /** Sepette kargolanamayan (soğuk zincir) ürün var mı — çağıran ürün okumasından bilir. */
   hasNonShippableItem?: boolean;
   now?: Date;
@@ -86,9 +88,9 @@ export async function resolveDelivery(db: Db, input: ResolveDeliveryInput): Prom
   const { zones, warehouses } = input.inputs ?? (await readDeliveryInputs(db));
 
   const place = { country: input.country ?? 'FR', postalCode: input.postalCode };
-  const resolution = resolveWarehouseForPostalCode(place, zones, warehouses);
+  const resolution = resolveWarehouseForPostalCode(place, zones, warehouses, input.business);
   // Kargo deposu ÜLKEDEN türer, rotadan değil — rota içindeki müşteri de kargo dolgusu alabilir.
-  const shippingWarehouseId = findShippingWarehouse(place.country, warehouses)?.id ?? null;
+  const shippingWarehouseId = findShippingWarehouse(place.country, warehouses, input.business)?.id ?? null;
 
   // Çözümsüz: ya aynı kod iki bölgede (veri çakışması) ya da kargo deposu tanımlı değil. İkisi de
   // sipariş verilemez demektir ama SEBEPLERİ ayrıdır — biri veri hatası, öteki yapılandırma eksiği.

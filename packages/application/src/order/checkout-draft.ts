@@ -14,6 +14,7 @@ import { cityMatchesPlaces } from '@lezzet/address';
 import {
   chooseShippingOption,
   costsAtSale,
+  customerBusinessOf,
   deriveChannel,
   meetsMinBasket,
   needsServicePoint,
@@ -223,6 +224,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   const place = await resolveDelivery(db, {
     postalCode: address.postalCode,
     country: address.country,
+    business: customerBusinessOf(customer),
     inputs: deliveryInputs,
   });
 
@@ -295,6 +297,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     postalCode: address.postalCode,
     country: address.country,
     hasNonShippableItem,
+    business: customerBusinessOf(customer),
     inputs: deliveryInputs,
   });
 

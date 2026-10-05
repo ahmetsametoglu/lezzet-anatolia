@@ -99,7 +99,7 @@ beforeAll(async () => {
     })
   ).id;
   const inputs = await readDeliveryInputs(db);
-  gun = (await resolveDelivery(db, { postalCode: kod, country: 'FR', inputs })).availableDates[0]!;
+  gun = (await resolveDelivery(db, { postalCode: kod, country: 'FR', business: 'lezzet', inputs })).availableDates[0]!;
 });
 
 beforeEach(async () => {

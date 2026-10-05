@@ -53,9 +53,9 @@ export async function recordZoneNotice(db: Db, input: ZoneNoticeInput): Promise<
   if (email.length === 0) return 'email_required';
   if (!EMAIL_PATTERN.test(email)) return 'email_invalid';
 
-  // Yer motora sorulur, çünkü referansın boş cevabı "yok" değil "bilinmiyor" demektir. Kargo ve çözülemeyen hâller de kayıt alır;
-  // yalnız hiçbir yeri işaret etmeyen kod reddedilir.
-  const resolution = await resolvePlaceForPostalCode(db, postalCode);
+  // Yer motora sorulur, çünkü referansın boş cevabı "yok" değil "bilinmiyor" demektir; soru kodun bir ülkeye çözülmesidir ve işten
+  // bağımsızdır. Kargo ve çözülemeyen hâller de kayıt alır, yalnız hiçbir yeri işaret etmeyen kod reddedilir.
+  const resolution = await resolvePlaceForPostalCode(db, postalCode, 'lezzet');
   if (!resolvesToCountry(resolution, input.country)) return 'place_unknown';
 
   // Yer adı kayıt anında dondurulur ki operatör kod değil yer okusun; çok yerleşimli kodda ilki yeter, çünkü karar adres değil
@@ -101,7 +101,7 @@ export async function recordStockNotice(db: Db, input: StockNoticeInput): Promis
   if (email.length === 0) return 'email_required';
   if (!EMAIL_PATTERN.test(email)) return 'email_invalid';
 
-  const resolution = await resolvePlaceForPostalCode(db, postalCode);
+  const resolution = await resolvePlaceForPostalCode(db, postalCode, 'lezzet');
   if (!resolvesToCountry(resolution, input.country)) return 'place_unknown';
 
   const notices = new VariantStockNoticeService(db);

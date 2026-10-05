@@ -1,6 +1,6 @@
 import { dispatchCustomerNotification, notificationPreferencesUrl } from '@lezzet/application';
-import { DeliveryZoneService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
-import { isInRoute } from '@lezzet/domain-core';
+import { DeliveryZoneService, UserProfileService, WarehouseService, ZoneNoticeService, serviceDb } from '@lezzet/database';
+import { customerBusinessOf, isInRoute, zonesOfBusiness } from '@lezzet/domain-core';
 import { localizedUrl } from '@lezzet/i18n';
 import { logger } from '@lezzet/observability';
 import { maskEmail } from '@lezzet/observability/mask';
@@ -29,19 +29,22 @@ export async function zoneAvailableJob(): Promise<Record<string, unknown>> {
   const pending = await notices.listPending(BATCH);
   if (pending.length === 0) return { checked: 0, sent: 0, failed: 0 };
 
-  // Bölgeler operatörün elle kurduğu, doğal tavanı olan bir küme → tek turda (`CLAUDE §1`).
-  const zones = await new DeliveryZoneService(db).listWithCodes({ activeOnly: true });
-
-  // **Kapsama kararını MOTOR veriyor** (`isInRoute`). Kendi karşılaştırmamızı yazsaydık üçüncü bir
-  // kopya olurdu (okuma kapısı + ekran + burası) ve kopyalar bir gün ayrışır: biri haber gönderir,
-  // öteki tabloda "kapsanmıyor" yazar.
-  const covered = pending.filter((n) => isInRoute({ country: n.country, postalCode: n.postalCode }, zones));
-  if (covered.length === 0) return { checked: pending.length, sent: 0, failed: 0 };
-
-  // Kimlikli kayıtların profilleri TEK turda — satır başına sorgu N+1 olurdu.
-  const customerIds = [...new Set(covered.map((n) => n.customerId).filter((id): id is string => Boolean(id)))];
-  const profiles = customerIds.length > 0 ? await new UserProfileService(db).listByIds(customerIds) : [];
+  // Kimlikli kayıtların profilleri tek turda okunur, çünkü kapsama bekleyenin işine göre sorulur: Lezzet müşterisine yalnız
+  // Lezzet bölgesinin açılması haber olur, ziyaretçi Lezzet'tir.
+  const customerIds = [...new Set(pending.map((n) => n.customerId).filter((id): id is string => Boolean(id)))];
+  const [zones, warehouses, profiles] = await Promise.all([
+    new DeliveryZoneService(db).listWithCodes({ activeOnly: true }),
+    new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
+    customerIds.length > 0 ? new UserProfileService(db).listByIds(customerIds) : Promise.resolve([]),
+  ]);
   const profileOf = new Map(profiles.map((p) => [p.id, p]));
+
+  // Kapsama kararını motor verir (`isInRoute`); kendi karşılaştırmamız bir gün ayrışır, biri haber gönderir öteki "kapsanmıyor" yazar.
+  const covered = pending.filter((n) => {
+    const business = customerBusinessOf(n.customerId ? profileOf.get(n.customerId) : null);
+    return isInRoute({ country: n.country, postalCode: n.postalCode }, zonesOfBusiness(zones, warehouses, business));
+  });
+  if (covered.length === 0) return { checked: pending.length, sent: 0, failed: 0 };
 
   const sent: string[] = [];
   let failed = 0;

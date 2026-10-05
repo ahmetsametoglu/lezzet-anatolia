@@ -25,7 +25,7 @@ import { ZoneFormSchema, type PostalCodePick } from './routes-types';
 /** İnsan diline çevrilmiş kısıt ihlali. Adı bilinmeyen hata olduğu gibi geçer. */
 const CONSTRAINT_MESSAGE: Record<string, string> = {
   delivery_zone_postal_code_pkey:
-    'Eklemek istediğiniz posta kodlarından biri başka bir rotada tanımlı. Bir kod yalnız tek rotada olabilir.',
+    'Eklemek istediğiniz posta kodlarından biri bu işin başka bir rotasında tanımlı. Bir kod her işte yalnız tek rotada olabilir.',
 };
 
 const readable = (error: unknown): string => constraintMessage(error, CONSTRAINT_MESSAGE);
@@ -48,7 +48,7 @@ export async function saveZoneAction(input: unknown): Promise<ActionResult<{ id:
     const db = serviceDb();
     const zoneSvc = new DeliveryZoneService(db);
 
-    const conflict = await findConflict(db, postalCodes, id ?? null);
+    const conflict = await findConflict(db, postalCodes, id ?? null, warehouseId);
     if (conflict) return { data: null, error: conflict };
 
     /**
@@ -91,20 +91,26 @@ export async function saveZoneAction(input: unknown): Promise<ActionResult<{ id:
 }
 
 /**
- * Kodlardan biri BAŞKA bir bölgede mi — cevabı hangi bölgenin ve hangi deponun tuttuğuyla birlikte.
- *
- * Sessiz "ilki kazanır" YOKTUR: çok depoda bunun bedeli siparişin yanlış şehre düşmesidir.
+ * Kodlardan biri aynı işin başka bir bölgesinde mi, cevabı tutan bölge ve depoyla birlikte; öteki işin aynı kodu tutan bölgesi
+ * çakışma değildir, çünkü iki iş aynı mahalleye ayrı seferle gider.
  */
 async function findConflict(
   db: ReturnType<typeof serviceDb>,
   codes: readonly PostalCodePick[],
   currentZoneId: string | null,
+  /** Bölgenin kaydedileceği depo; işi buradan okunur. */
+  warehouseId: string,
 ): Promise<string | null> {
   if (codes.length === 0) return null;
 
-  const rows = await new DeliveryZonePostalCodeService(db).listByCodes(codes.map((c) => c.postalCode));
+  const [rows, target] = await Promise.all([
+    new DeliveryZonePostalCodeService(db).listByCodes(codes.map((c) => c.postalCode)),
+    new WarehouseService(db).getById(warehouseId),
+  ]);
   const mine = new Set(codes.map((c) => `${c.country}:${c.postalCode}`));
-  const taken = rows.filter((r) => r.zoneId !== currentZoneId && mine.has(`${r.country}:${r.postalCode}`));
+  const taken = rows.filter(
+    (r) => r.business === target?.business && r.zoneId !== currentZoneId && mine.has(`${r.country}:${r.postalCode}`),
+  );
   if (taken.length === 0) return null;
 
   const zoneSvc = new DeliveryZoneService(db);
@@ -112,7 +118,7 @@ async function findConflict(
   const warehouse = zone ? await new WarehouseService(db).getById(zone.warehouseId) : null;
   const list = taken.map((r) => r.postalCode).join(', ');
   const holder = zone ? `“${zone.name}”${warehouse ? ` bölgesi (${warehouse.code})` : ' bölgesi'}` : 'başka bir bölge';
-  return `${list} kodu ${holder} tarafından tutuluyor. Bir kod yalnız tek bölgede olabilir — taşımak için önce o bölgeden çıkarın.`;
+  return `${list} kodu ${holder} tarafından tutuluyor. Bir kod her işte yalnız tek bölgede olabilir — taşımak için önce o bölgeden çıkarın.`;
 }
 
 /**
@@ -166,10 +172,9 @@ async function writeZoneHours(
 export async function searchPostalCodesAction(term: string): Promise<ActionResult<PostalCodeSuggestion[]>> {
   try {
     await requireAdmin();
-    // Terim HAM geçiyor (`OB-03`): kapı kodu mu adı mı aradığına terimin kendisinden karar veriyor.
-    // Burada normalleştirmek (eski hâl `normalizePostalCode` uyguluyordu) harfleri büyütüp yolu
-    // kod dalına kilitlerdi — operatör "Strasbourg" yazdığında yine sıfır sonuç alırdı.
-    const rows = await new PostalCodePlaceService(serviceDb()).search(term, 12);
+    // Terim ham geçer, çünkü kapı kodu mu adı mı aradığına terimin kendisinden karar verir ve normalleştirmek yolu kod dalına
+    // kilitlerdi. Operatör bölgeyi kurarken kodun hangi işte olursa olsun bir rotada olup olmadığını görür.
+    const rows = await new PostalCodePlaceService(serviceDb()).search(term, 12, null);
     return { data: rows, error: null };
   } catch (error) {
     // Çıplak funnel, `readable` değil: bu uç salt okuma yapar ve çarpabileceği bir kısıt yok.

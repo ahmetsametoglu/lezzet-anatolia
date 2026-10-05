@@ -49,7 +49,7 @@ const gun = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().s
  */
 async function ilkUygunGun(): Promise<string> {
   const inputs = await readDeliveryInputs(db);
-  const { availableDates } = await resolveDelivery(db, { postalCode: rotaKodu, country: 'FR', inputs });
+  const { availableDates } = await resolveDelivery(db, { postalCode: rotaKodu, country: 'FR', business: 'lezzet', inputs });
   return availableDates[0]!;
 }
 

@@ -735,11 +735,13 @@ Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet
 
 ### Omurga: posta kodu → bölge → depo
 
-- Her teslimat bölgesi (`DeliveryZone`) **tek bir depoya** bağlıdır; bir posta kodu **tek bir
-  bölgede** olabilir — pasif bölge dahil ("pasifken çakışsın" esnekliği, bölge yeniden açıldığında
-  iki sahipli kod bırakırdı). Tekillik veritabanında `(ülke, kod)` anahtarıyla zorlanır, çakışma
-  kayıt anında reddedilir ("ilki kazanır" sessiz çözümü kalkar). Ülke bölgeye değil kod satırına
-  yazılır — bölge sınır ötesi olabilir (ADR-002). Sonuç: posta kodu her zaman tek depoya çözülür.
+- Her teslimat bölgesi (`DeliveryZone`) **tek bir depoya** bağlıdır ve işini o depodan alır; bir posta kodu
+  **her işte tek bir bölgede** olabilir — pasif bölge dahil ("pasifken çakışsın" esnekliği, bölge yeniden açıldığında
+  iki sahipli kod bırakırdı). QUALITE ile Lezzet aynı mahalleye ayrı seferle gittiği için aynı kod iki işin ayrı
+  bölgesinde durabilir (`docs/feature/iki-is.md`). Tekillik veritabanında `(ülke, kod, iş)` anahtarıyla zorlanır,
+  çakışma kayıt anında reddedilir ("ilki kazanır" sessiz çözümü kalkar). Ülke bölgeye değil kod satırına yazılır —
+  bölge sınır ötesi olabilir (ADR-002). Sonuç: posta kodu müşterinin işi içinde her zaman tek depoya çözülür; ziyaretçi
+  Lezzet'tir, QUALITE kendi bölgesi dışında Lezzet deposuna düşmez ve kargo göndermez.
 - Müşteriye depo **gösterilmez** — altın kural: sistemin karmaşıklığı arayüze yansımaz. Müşteri
   posta kodunu girer; gerisi içeride çözülür.
 - **Varsayılan depo kavramı YOKTUR.** Belirsizlik varsayılanla çözülmez: sipariş deposunun kaynağı

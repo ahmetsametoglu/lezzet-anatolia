@@ -22,6 +22,7 @@ import { notifyShippingDataMissing } from '../notification/staff-events';
 import { sendcloudProvider, shippingProviderConfigured } from '../shipping/provider';
 import type { ShippingRateProvider } from '../shipping/port';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
+import { customerBusiness } from '../delivery/place';
 import { readPickupOffer } from './pickup-offer';
 
 /**
@@ -165,10 +166,11 @@ export async function readCheckoutSnapshot(
 
   // Yer seçilen adresten çözülür, çerezden değil: eşik, tarife ve bölge müşterinin gönderdiği adresin değeridir. Teslimat iki kez
   // çözülür (önce depo, sepet bilinince kargo kararı) ve taslak aynı deseni koşar ki ekranla kasa aynı hesaptan çıksın.
-  const deliveryInputs = await readDeliveryInputs(db);
+  const [deliveryInputs, business] = await Promise.all([readDeliveryInputs(db), customerBusiness(db, input.customerId)]);
   const place = await resolveDelivery(db, {
     postalCode: selected.postalCode,
     country: selected.country,
+    business,
     inputs: deliveryInputs,
   });
   const readOptions = {
@@ -204,6 +206,7 @@ export async function readCheckoutSnapshot(
     // Kapsam DIŞINDA kalan kalem kargo kararını da etkilememeli: siparişe girmeyen bir soğuk
     // zincir kalemi yüzünden kargo yolunu kapatmak, olmayan bir kısıtı uygulamaktır.
     hasNonShippableItem: scope.lines.some((l) => !l.shippable),
+    business,
     inputs: deliveryInputs,
   });
 

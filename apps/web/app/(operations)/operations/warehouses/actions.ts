@@ -22,6 +22,9 @@ import { StorageAreaFormSchema, VehicleFormSchema, WarehouseFormSchema, Warehous
 const CONSTRAINT_MESSAGE: Record<string, string> = {
   warehouse_single_online: 'Bu ülkede kargo çıkış deposu rolünü zaten başka bir depo taşıyor — ülke başına en fazla bir tane olabilir. Önce o depodan kaldırın.',
   warehouse_code_key: 'Bu kod başka bir depoda kullanılıyor. Kod belge önekidir; iki tesis aynı öneki taşıyamaz.',
+  warehouse_qualite_never_ships: 'QUALITE kargo göndermez; kargo çıkış deposu yalnız Lezzet deposu olabilir.',
+  delivery_zone_postal_code_pkey:
+    'Bu deponun bölgelerindeki posta kodlarından biri seçilen işin başka bir bölgesinde tanımlı. Önce o kodları bölgeden çıkarın.',
   storage_area_name_uq: 'Bu tesiste aynı adda bir alan zaten var — iki "Dolap 1", hangi dolabın ölçüldüğü sorusunu cevapsız bırakır.',
   vehicle_plate_key: 'Bu plaka başka bir araçta kayıtlı. İki kayıt aynı aracı gösterirse soğuk zincir geçmişi ikiye bölünür.',
   temperature_log_area_fk: 'Bu alanın sıcaklık kayıtları var — silinemez. Kullanımdan kaldırmak için pasife alın.',

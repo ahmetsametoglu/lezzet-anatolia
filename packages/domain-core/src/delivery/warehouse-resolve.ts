@@ -1,10 +1,10 @@
 /*
-  Posta kodu → bölge → depo: kod bir aktif bölgeye düşerse o bölgenin deposu, düşmezse ülkenin tek kargo deposu. Aynı kod iki
-  bölgedeyse cevap hatadır, çünkü sessizce birini seçmek siparişi yanlış depoya düşürür.
+  Posta kodu → bölge → depo, müşterinin işi içinde: kod o işin bir aktif bölgesine düşerse bölgenin deposu, düşmezse işin kargo deposu.
+  Aynı kod bir işin iki bölgesindeyse cevap hatadır, çünkü sessizce birini seçmek siparişi yanlış depoya düşürür.
 */
 
 import { normalizePostalCode, placeLabel } from '@lezzet/address';
-import type { Country } from '@lezzet/types';
+import type { Business, Country } from '@lezzet/types';
 import { matchZones, type DeliveryZoneCandidate } from './delivery-days';
 
 export interface WarehouseCandidate {
@@ -14,6 +14,8 @@ export interface WarehouseCandidate {
   /** Bölge dışı adresler kargo deposuna düşer. */
   shipsOnline: boolean;
   isActive: boolean;
+  /** Deponun işi; bölgenin ve kargonun işi buradan gelir. */
+  business: Business;
 }
 
 export interface ZoneWithWarehouse extends DeliveryZoneCandidate {
@@ -31,13 +33,32 @@ export type PlaceResolution =
    */
   | { kind: 'unresolved'; reason: 'no_shipping_warehouse' | 'ambiguous_zone' };
 
+/**
+ * Bir işin bölgeleri: bölgenin işi deposundan gelir ve aynı posta kodu iki işte ayrı bölgede olabildiği için her çözüm önce işe göre
+ * süzülür (docs/feature/iki-is.md, karar 9). Listede olmayan deponun bölgesi düşer, kapalı deponun bölgesi de zaten rota sayılmaz.
+ */
+export function zonesOfBusiness<T extends { warehouseId: string }>(
+  zones: readonly T[],
+  warehouses: readonly Pick<WarehouseCandidate, 'id' | 'business'>[],
+  business: Business,
+): T[] {
+  const own = new Set(warehouses.filter((w) => w.business === business).map((w) => w.id));
+  return zones.filter((zone) => own.has(zone.warehouseId));
+}
+
+/** Müşterinin işi; anonim ziyaretçi Lezzet'tir, çünkü QUALITE yalnız onaylı şirkete admin tarafından verilir. */
+export function customerBusinessOf(customer: { business: Business } | null | undefined): Business {
+  return customer?.business ?? 'lezzet';
+}
+
 /** Pasif bölge yok sayılır; bu "hizmet yok" değil, kargo demektir. */
 export function resolveWarehouseForPostalCode(
   place: { country: Country; postalCode: string },
   zones: readonly ZoneWithWarehouse[],
   warehouses: readonly WarehouseCandidate[],
+  business: Business,
 ): PlaceResolution {
-  const matched = matchZones(place, zones);
+  const matched = matchZones(place, zonesOfBusiness(zones, warehouses, business));
 
   if (matched.length > 1) return { kind: 'unresolved', reason: 'ambiguous_zone' };
 
@@ -48,20 +69,21 @@ export function resolveWarehouseForPostalCode(
     if (warehouse) return { kind: 'route', warehouseId: warehouse.id, zoneId: zone.id, weekdays: zone.weekdays };
   }
 
-  const shipping = findShippingWarehouse(place.country, warehouses);
+  const shipping = findShippingWarehouse(place.country, warehouses, business);
   if (!shipping) return { kind: 'unresolved', reason: 'no_shipping_warehouse' };
   return { kind: 'shipping', warehouseId: shipping.id };
 }
 
 /**
- * Ülke başına tek kargo deposu var (veritabanında kısmi tekil indeks). Ayrı fonksiyon, çünkü vitrin rota içindeki müşteri için
- * de "bu ürün kargoyla gelir mi" diye soruyor.
+ * Ülke başına tek kargo deposu var (veritabanında kısmi tekil indeks) ve yalnız Lezzet'indir, çünkü QUALITE kargo göndermez. Ayrı
+ * fonksiyon, çünkü vitrin rota içindeki müşteri için de "bu ürün kargoyla gelir mi" diye soruyor.
  */
 export function findShippingWarehouse(
   country: Country,
   warehouses: readonly WarehouseCandidate[],
+  business: Business,
 ): WarehouseCandidate | null {
-  return warehouses.find((w) => w.isActive && w.shipsOnline && w.countryCode === country) ?? null;
+  return warehouses.find((w) => w.isActive && w.shipsOnline && w.countryCode === country && w.business === business) ?? null;
 }
 
 /** Hizmet ülkeleri ayardan değil veriden türer: yeni ülkede depo açıldığında küme kendiliğinden büyür. */
@@ -113,6 +135,7 @@ export function resolvePlaceByPostalCode(
   matches: readonly PostalCodeMatch[],
   zones: readonly ZoneWithWarehouse[],
   warehouses: readonly WarehouseCandidate[],
+  business: Business,
   /** Verilirse kod bu ülkeye bağlanır; kod orada yoksa cevap `unknown`. */
   chosenCountry?: Country,
 ): PostalCodeResolution {
@@ -146,7 +169,7 @@ export function resolvePlaceByPostalCode(
   if (effective.length > 1) {
     const scored = effective.map((m) => ({
       ...m,
-      inRoute: resolveWarehouseForPostalCode({ country: m.country, postalCode }, zones, warehouses).kind === 'route',
+      inRoute: resolveWarehouseForPostalCode({ country: m.country, postalCode }, zones, warehouses, business).kind === 'route',
     }));
     // Aynı kod her seferinde aynı listeyi üretsin diye eşitlikte ülke koduna göre sıralanır.
     scored.sort((a, b) => Number(b.inRoute) - Number(a.inRoute) || a.country.localeCompare(b.country));
@@ -154,7 +177,7 @@ export function resolvePlaceByPostalCode(
   }
 
   const only = effective[0]!;
-  const resolved = resolveWarehouseForPostalCode({ country: only.country, postalCode }, zones, warehouses);
+  const resolved = resolveWarehouseForPostalCode({ country: only.country, postalCode }, zones, warehouses, business);
   return resolved.kind === 'unresolved'
     ? { ...resolved, country: only.country }
     : { ...resolved, country: only.country, places: only.places, placeName: placeLabel(only.places) };

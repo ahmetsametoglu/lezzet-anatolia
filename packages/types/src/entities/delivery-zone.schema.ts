@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CountryEnum } from '../primitives/enums.schema';
+import { BusinessEnum, CountryEnum } from '../primitives/enums.schema';
 import { PostalCodeSchema } from '../primitives/postal-code.schema';
 
 // Rota bölgesi: haftalık günler ve bağlı depo, ikisi de yönetimden düzenlenir. Rota içi/dışı saklanmaz, türetilir: saklansaydı
@@ -33,26 +33,27 @@ export const DeliveryZoneUpdateSchema = DeliveryZoneSchema.partial().required({ 
 export type DeliveryZoneUpdate = z.infer<typeof DeliveryZoneUpdateSchema>;
 
 // ── Posta kodu ↔ bölge ─────────────────────────────────────────────────────────
-// Küme kendi tablosunda ve anahtarı `(country, postalCode)`, çünkü iki bölgeye aynı kod yazılabilseydi çok depoda sipariş yanlış
-// depoya düşerdi ve posta kodu ülkeler arası benzersiz değildir (`67000` hem Fransa'da hem Almanya'da var). Ülke bölgede değil
-// burada durur: bölge sınır ötesi olabilir (Strasbourg rotası Kehl'i kapsayabilir).
+// Anahtar `(country, postalCode, business)`: bir kod her işte en çok bir bölgededir ve posta kodu ülkeler arası benzersiz değildir
+// (`67000` hem Fransa'da hem Almanya'da var). Ülke bölgede değil burada durur, çünkü bölge sınır ötesi olabilir.
 
 export const DeliveryZonePostalCodeSchema = z.object({
   country: CountryEnum,
   /** Beş rakam; okuma ve yazma aynı şekil, servis yazmadan önce boşlukları siler. */
   postalCode: PostalCodeSchema,
   zoneId: z.string().uuid(),
+  /** Bölgenin işi, deposundan kopyalanır; tetikleyici yazar. */
+  business: BusinessEnum,
 });
 export type DeliveryZonePostalCode = z.infer<typeof DeliveryZonePostalCodeSchema>;
 
-// Ayrı bir `Insert` şeması YOK: her alan zorunlu, yazım ile okuma aynı şekil. İkinci bir tip
-// vermek onların ayrışabileceğini ima ederdi.
+export const DeliveryZonePostalCodeInsertSchema = DeliveryZonePostalCodeSchema.omit({ business: true });
+export type DeliveryZonePostalCodeInsert = z.infer<typeof DeliveryZonePostalCodeInsertSchema>;
 
 /**
  * Bölge + kodları — ekranın ve motorun birlikte okuduğu hâl. Kodlar ayrı tabloda durduğu için
  * varlık şeması onları taşımaz; bu tip "bölgeyi kodlarıyla göster" sorusunun cevabıdır.
  */
 export const DeliveryZoneWithCodesSchema = DeliveryZoneSchema.extend({
-  postalCodes: z.array(DeliveryZonePostalCodeSchema.omit({ zoneId: true })),
+  postalCodes: z.array(DeliveryZonePostalCodeSchema.omit({ zoneId: true, business: true })),
 });
 export type DeliveryZoneWithCodes = z.infer<typeof DeliveryZoneWithCodesSchema>;

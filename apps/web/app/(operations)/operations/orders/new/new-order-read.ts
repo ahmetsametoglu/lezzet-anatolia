@@ -12,6 +12,7 @@ import {
   loadProductContext,
   pricingViewerOf,
   readCostBasis,
+  customerBusiness,
   readDeliveryInputs,
   resolveCheckoutPayment,
   resolveDelivery,
@@ -83,11 +84,12 @@ export async function readDeliveryContext(db: Db, customerId: string, addressId:
   const address = (await new AddressService(db).listByCustomer(customerId)).find((a) => a.id === addressId);
   if (!address) return null;
 
-  const inputs = await readDeliveryInputs(db);
+  const [inputs, business] = await Promise.all([readDeliveryInputs(db), customerBusiness(db, customerId)]);
   const delivery = await resolveDelivery(db, {
     postalCode: address.postalCode,
     country: address.country,
     hasNonShippableItem: false,
+    business,
     inputs,
   });
 

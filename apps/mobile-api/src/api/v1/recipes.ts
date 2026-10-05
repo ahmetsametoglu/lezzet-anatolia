@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
-import { RECIPE_LIST_LIMIT, readRecipeCards } from '@lezzet/application';
+import { customerBusiness, RECIPE_LIST_LIMIT, readRecipeCards } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
 import { PreferredLanguageEnum, RecipeDetailSchema, RecipeListSchema } from '@lezzet/types';
 import type { AppEnv } from '../../context';
@@ -9,29 +9,14 @@ import { readRecipeDetail } from '../../lib/recipe';
 import { readPlace, readViewer } from './catalog';
 
 /**
- * Tarif uçları (21.14, tasarım 21) — katalogla aynı üç karar, gerekçeleri `catalog.ts` başlığında:
- *   · **Oturumsuz gezilir** — `router.ts`te `bearerAuth`tan ÖNCE bağlıdır; Bearer varsa yalnız
- *     satır FİYATINI kişiselleştirir (B2B/özel fiyat), erişimi değiştirmez. 401 yok.
- *   · **`locale` zorunlu ve varsayılansız** — eksikse 400 (sessizce Türkçeye düşmek gizli arıza).
- *   · **Yer İSTEKTEN çözülür** (09.08, `readPlace`) — stok/teklif kısıtları katalogla aynı davranır;
- *     posta kodu gelmezse yer bilinmiyor sayılır.
- *
- * BU DOSYA KURAL HESAPLAMAZ: kompozisyon okuma kapısında (`lib/recipe.ts`), fiyat/stok kararları
- * `@lezzet/application`da. Burada yalnız sorgu çözümü, kimlik çözümü ve zarf.
+ * Tarif uçları katalogla aynı üç kararı uygular (gerekçeleri `catalog.ts` başlığında): oturumsuz gezilir, `locale` zorunludur ve yer
+ * istekten çözülür. Bu dosya kural hesaplamaz; kompozisyon `lib/recipe.ts`te, fiyat ve stok kararları `@lezzet/application`dadır.
  */
 export const recipes = new Hono<AppEnv>();
 
 /**
- * TARİF LİSTESİ — "Fikirler" sekmesinin tarif bölümü (09.08 bilgi mimarisi kararı).
- *
- * **SAYFALAMA YOK ve bu bilinçli** (CLAUDE §1): tarif kümesi operatörün elle kurduğu editoryal bir
- * seçkidir, veriyle büyümez → doğal tavanlı küme, tek turda çekilir. `limit`/`cursor` sorgusu da
- * yok: istemcinin büyütebileceği bir sınır, sınır değildir. Uçtaki `RECIPE_LIST_LIMIT` sayfalama
- * değil emniyet tavanıdır (gerekçesi `@lezzet/application` `catalog/ideas.ts` künyesinde).
- *
- * KİMLİK OKUNMAZ: kart içerik kartıdır, fiyat taşımaz — Bearer'ın kişiselleştireceği bir şey yok
- * (paket detayı ucunun aynı kısa devresi). Detay ucunun aksine `readViewer` çağrılmıyor: boşa bir
- * tur olurdu.
+ * Tarif listesi, "Fikirler" sekmesinin tarif bölümü: tarif kümesi operatörün kurduğu editoryal seçki olduğu için sayfalanmaz,
+ * `RECIPE_LIST_LIMIT` yalnız emniyet tavanıdır. Kimlik okunmaz, çünkü kart fiyat taşımaz.
  */
 recipes.get('/recipes', async (c) => {
   const locale = PreferredLanguageEnum.safeParse(c.req.query('locale'));
@@ -54,7 +39,7 @@ recipes.get('/recipes/:slug', async (c) => {
 
   const db = serviceDb();
   const viewer = await readViewer(db, c.req.header('authorization'));
-  const place = await readPlace(db, c.req.query('postalCode'));
+  const place = await readPlace(db, c.req.query('postalCode'), await customerBusiness(db, viewer.customerId));
   const detail = await readRecipeDetail(db, c.req.param('slug'), locale.data, place, viewer);
   if (!detail) return fail(c, 'recipe_not_found', 404);
 

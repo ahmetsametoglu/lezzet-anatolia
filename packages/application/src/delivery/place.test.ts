@@ -41,7 +41,7 @@ afterAll(async () => {
 
 describe('posta kodundan yer çözümü (paket kapısı)', () => {
   it('aktif bölgenin kodu rotaya düşer; ülke sorulmadan kendi kaydımızdan türer', async () => {
-    const resolution = await resolvePlaceForPostalCode(db, rotaKodu);
+    const resolution = await resolvePlaceForPostalCode(db, rotaKodu, 'lezzet');
     expect(resolution.kind).toBe('route');
     if (resolution.kind !== 'route') return;
     expect(resolution.warehouseId).toBe(warehouseId);
@@ -52,16 +52,16 @@ describe('posta kodundan yer çözümü (paket kapısı)', () => {
   });
 
   it('kod NORMALİZE edilerek sorulur — boşluklu giriş aynı yere düşer', async () => {
-    const resolution = await resolvePlaceForPostalCode(db, ` 009 ${son2} `);
+    const resolution = await resolvePlaceForPostalCode(db, ` 009 ${son2} `, 'lezzet');
     expect(resolution.kind).toBe('route');
   });
 
   it('hiçbir kayıtta olmayan kod unknown — büyük olasılıkla yazım hatası', async () => {
-    expect((await resolvePlaceForPostalCode(db, bilinmezKod)).kind).toBe('unknown');
+    expect((await resolvePlaceForPostalCode(db, bilinmezKod, 'lezzet')).kind).toBe('unknown');
   });
 
   it('pasif bölgenin kodu "tanımadık" DEĞİLDİR — bölgeler süzgeçsiz okunur (19.16a)', async () => {
-    const resolution = await resolvePlaceForPostalCode(db, pasifKod);
+    const resolution = await resolvePlaceForPostalCode(db, pasifKod, 'lezzet');
     // Rota kapalı: motor pasif bölgeyi rota saymaz ama ülkeyi kayıttan türetir. Kargo mu yapılandırma eksiği mi, paylaşılan DB'deki FR
     // kargo deposuna bağlıdır; yanlış olan yalnız `unknown` ya da `route` olurdu.
     expect(resolution.kind).not.toBe('unknown');

@@ -37,7 +37,7 @@ import {
 } from '../catalog/product-card';
 import { resolveOutboundLanguage } from '../messaging/translate';
 import type { StorefrontDeclaration } from '../catalog/storefront-types';
-import { resolvePlaceForPostalCode } from '../delivery/place';
+import { customerBusiness, resolvePlaceForPostalCode } from '../delivery/place';
 import { birincilAdres, resolveChatPlace, ULKE_GIRDISI, yerNotu, type ChatPlace, type ChatPlaceMemory } from '../cart/chat-place';
 import { readDeliveryInputs, resolveDelivery } from '../order/delivery';
 import { readPublicDeliveryTerms } from '../settings/public-terms';
@@ -107,7 +107,9 @@ async function yerVeGoruntuleyici(
   memory: ChatPlaceMemory | null,
 ) {
   const [yerim, viewer] = await Promise.all([
-    resolveChatPlace(db, { said: soylenen.postaKodu, saidCountry: soylenen.ulke, memory, addressCustomerId: customerId }),
+    customerBusiness(db, customerId).then((business) =>
+      resolveChatPlace(db, { said: soylenen.postaKodu, saidCountry: soylenen.ulke, memory, addressCustomerId: customerId, business }),
+    ),
     pricingViewerOf(db, customerId),
   ]);
   return { yerim, viewer };
@@ -318,10 +320,11 @@ function identityTools(db: Db, customerId: string): ToolSet {
 
           // Rota çözümü motorun işi (`resolveDelivery`); ikinci kopya checkout ile ajanın farklı gün söylemesi demekti.
           // Bölge listesi bir kez okunup geçilir: haftalık günler de aynı listeden gelir, iki okuma iki ayrı ana ait olabilirdi.
-          const inputs = await readDeliveryInputs(db);
+          const [inputs, business] = await Promise.all([readDeliveryInputs(db), customerBusiness(db, customerId)]);
           const cozum = await resolveDelivery(db, {
             postalCode: adres.postalCode,
             country: adres.country,
+            business,
             inputs,
           });
 
@@ -563,12 +566,13 @@ function publicTools(db: Db, customerId: string | null, memory: ChatPlaceMemory 
       }),
       execute: async ({ postaKodu, ulke }) => {
         try {
+          const business = await customerBusiness(db, customerId);
           // Yer adı da kabul edilir, çünkü müşteri çoğunlukla posta kodunu değil semtinin adını söyler;
           // ad `postal_code_place` aramasıyla koda çevrilir.
           const kodMu = /^\d{4,}$/.test(postaKodu.trim());
           let cozulmusKod = postaKodu.trim();
           if (!kodMu) {
-            const adaylar = await new PostalCodePlaceService(db).search(postaKodu, 3);
+            const adaylar = await new PostalCodePlaceService(db).search(postaKodu, 3, business);
             if (adaylar.length === 0) {
               return { bilinmiyor: `"${postaKodu}" diye bir yerleşim bulunamadı. Müşteriden POSTA KODUNU iste.` };
             }
@@ -586,7 +590,7 @@ function publicTools(db: Db, customerId: string | null, memory: ChatPlaceMemory 
           // Bu araç girdi alır ama kimlik almaz: posta kodu herkese açık bir sorudur; "benim adresim" sorusu girdisiz
           // `teslimat_gunleri`nindir, yoksa model adresi uydurmak zorunda kalırdı.
           // Ülke söylendiyse süzgeçtir: iki ülkeli kodun cevabını tek ülkeye indirir.
-          const cozum = await resolvePlaceForPostalCode(db, postaKoduCozum, ulke);
+          const cozum = await resolvePlaceForPostalCode(db, postaKoduCozum, business, ulke);
           // Söylenen gerçek kod sohbete yazılır ki bir daha sorulmasın ve sepet o yerle kurulsun; iki ülkeli kod da (ülkesiz)
           // yazılır, sonraki tur yalnız ülkeyi sorar.
           if (cozum.kind !== 'unknown') await memory?.remember(postaKoduCozum, ulke);

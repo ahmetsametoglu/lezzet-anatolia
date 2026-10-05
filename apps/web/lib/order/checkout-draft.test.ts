@@ -173,7 +173,7 @@ afterAll(async () => {
  */
 async function ilkUygunGun(postalCode: string = rotaKodu): Promise<string> {
   const { resolveDelivery } = await import('./delivery');
-  return (await resolveDelivery({ postalCode })).availableDates[0]!;
+  return (await resolveDelivery({ business: 'lezzet', postalCode })).availableDates[0]!;
 }
 
 const base = async () => ({

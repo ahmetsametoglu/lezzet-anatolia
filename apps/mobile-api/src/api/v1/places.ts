@@ -4,12 +4,13 @@ import { serviceDb, UserProfileService } from '@lezzet/database';
 import {
   listPublicDeliveryAreas,
   recordZoneNotice,
+  customerBusiness,
   resolvePlaceForPostalCode,
   suggestPlaces,
   UNRESOLVED_PLACE,
 } from '@lezzet/application';
 import { isValidPostalCode, normalizePostalCode, placeLabel } from '@lezzet/address';
-import type { PostalCodeResolution } from '@lezzet/domain-core';
+import { customerBusinessOf, type PostalCodeResolution } from '@lezzet/domain-core';
 import {
   DeliveryAreaListSchema,
   PlaceNoticeBodySchema,
@@ -20,7 +21,7 @@ import {
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { readJsonBody } from '../../lib/request';
-import { optionalCustomerId } from './auth';
+import { optionalCustomerId, optionalCustomerProfile } from './auth';
 import { recordNativeEvent } from '../../lib/analytics';
 import { localeOf } from './cart-view';
 
@@ -73,7 +74,9 @@ places.get('/places/by-postal-code', async (c) => {
   if (!isValidPostalCode(code)) return fail(c, 'invalid_code', 400);
 
   const db = serviceDb();
-  const resolution = await resolvePlaceForPostalCode(db, code);
+  const customerId = await optionalCustomerId(db, c.req.header('authorization'));
+  // Girişli müşterinin yeri kendi işinin bölgelerinden çözülür; ziyaretçi Lezzet'tir.
+  const resolution = await resolvePlaceForPostalCode(db, code, await customerBusiness(db, customerId));
 
   /* Huninin ilk adımı bu uçta sayılır, öneri ucunda sayılmaz: öneri her tuşta çağrılır ve paydayı şişirirdi. Katalog uçlarının
      `null` geçtiği ülke burada biliniyor (`BEKLEYEN(21.103)`); depo çözülmez, ölçüm için ikinci tur atılmaz. */
@@ -82,7 +85,7 @@ places.get('/places/by-postal-code', async (c) => {
       db,
       // Çözüm fiyat taşımadığı için kanal sorulmaz; B2B müşterisi de aynı cevabı alır.
       channel: 'b2c',
-      customerId: await optionalCustomerId(db, c.req.header('authorization')),
+      customerId,
       place: UNRESOLVED_PLACE,
       // Uç dil almıyor; uydurulmuş dil yerine boş.
       locale: null,
@@ -100,7 +103,8 @@ places.get('/places/by-postal-code', async (c) => {
  * sorudur: 400 değil boş liste.
  */
 places.get('/places/suggest', async (c) => {
-  const rows = await suggestPlaces(serviceDb(), c.req.query('prefix') ?? '');
+  const db = serviceDb();
+  const rows = await suggestPlaces(db, c.req.query('prefix') ?? '', customerBusinessOf(await optionalCustomerProfile(db, c.req.header('authorization'))));
   // Boş dizi geçerli bir cevaptır.
   return ok(c, PlaceOptionListSchema.parse(rows));
 });

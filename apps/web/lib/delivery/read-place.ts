@@ -4,8 +4,8 @@ import { cookies } from 'next/headers';
 import { POSTAL_CODE_PATTERN } from '@lezzet/address';
 import { pickupOfferFor } from '@lezzet/application';
 import { AddressService, PostalCodePlaceService, serviceDb } from '@lezzet/database';
-import { findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
-import type { Address, CheckoutPickup, UserProfile, Warehouse } from '@lezzet/types';
+import { customerBusinessOf, findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
+import type { Address, Business, CheckoutPickup, UserProfile, Warehouse } from '@lezzet/types';
 import { readSessionProfile } from '@/lib/guard';
 import { describePlace } from './describe-place';
 import { readDeliveryInputs } from './inputs';
@@ -32,9 +32,11 @@ interface PlaceContext {
    * yer çözümü rota bulunca kargo deposunu hiç aramaz.
    */
   shippingWarehouseId: string | null;
+  /** Oturumdaki müşterinin işi; ziyaretçi Lezzet'tir. Yer ve tarif yalnız bu işin bölgelerinden çözülür. */
+  business: Business;
 }
 
-const EMPTY: PlaceContext = { answer: null, resolution: null, warehouseId: null, shippingWarehouseId: null, address: null, pickup: null, pickupWarehouse: null };
+const EMPTY: Omit<PlaceContext, 'business'> = { answer: null, resolution: null, warehouseId: null, shippingWarehouseId: null, address: null, pickup: null, pickupWarehouse: null };
 
 /** Aynı kod birden çok bileşenden sorulabilir; tablo yılda bir yenilendiği için bayatlamaz. */
 const getPostalMatches = cache(async (postalCode: string) =>
@@ -60,16 +62,17 @@ const readPickupSelection = cache(
 const readPlaceContext = cache(async (): Promise<PlaceContext> => {
   // Profil bir kez okunup iki okuyucuya geçer: sunucu eyleminde `cache` işlemez ve her okuyucu oturumu yeniden sorardı.
   const profile = await readSessionProfile();
+  const business = customerBusinessOf(profile);
   const [address, pickup] = await Promise.all([readDefaultAddress(profile?.id ?? null), readPickupSelection(profile)]);
   const answer = address ? { country: address.country, postalCode: address.postalCode } : await readPlaceAnswerFromCookie();
   // Adres yokken de gel-al seçilebilir: sepet o zaman deponun stoğuyla okunur, adres yalnız faturadır.
-  if (!answer) return { ...EMPTY, pickup: pickup.offer, pickupWarehouse: pickup.warehouse };
+  if (!answer) return { ...EMPTY, business, pickup: pickup.offer, pickupWarehouse: pickup.warehouse };
 
   const [{ zones, warehouses }, matches] = await Promise.all([readDeliveryInputs(), getPostalMatches(answer.postalCode)]);
 
   // Cevaptaki ülke süzgeçtir: belirsizlik bir kez çözülüp saklandı; kod o ülkede yoksa çözüm `unknown`a düşer.
   const scoped = matches.filter((m) => m.country === answer.country);
-  const resolution = resolvePlaceByPostalCode(answer.postalCode, scoped, zones, warehouses);
+  const resolution = resolvePlaceByPostalCode(answer.postalCode, scoped, zones, warehouses, business);
 
   const resolved = resolution.kind === 'route' || resolution.kind === 'shipping';
   return {
@@ -84,7 +87,8 @@ const readPlaceContext = cache(async (): Promise<PlaceContext> => {
      */
     warehouseId: resolution.kind === 'route' ? resolution.warehouseId : null,
     // Kargo deposu ülkeden türer, rotadan değil: rota içindeki müşteri de kargo dolgusu alabilir.
-    shippingWarehouseId: resolved ? (findShippingWarehouse(resolution.country, warehouses)?.id ?? null) : null,
+    shippingWarehouseId: resolved ? (findShippingWarehouse(resolution.country, warehouses, business)?.id ?? null) : null,
+    business,
   };
 });
 
@@ -101,18 +105,20 @@ export const readPlaceAnswer = cache(async (): Promise<PlaceAnswer | null> => (a
 
 /** Layout'un ilk karesi, istemci yeri ikinci bir turla çözmesin diye. Tarif sayımsızdır, çünkü sayfa açılışı bir niyet değildir. */
 export const readPlaceSnapshot = cache(async (): Promise<PlaceSnapshot> => {
-  const { answer, resolution, address, pickup } = await readPlaceContext();
+  const { answer, resolution, address, pickup, business } = await readPlaceContext();
   const placeAddress = address ? toPlaceAddress(address) : null;
   if (!answer || !resolution || (resolution.kind !== 'route' && resolution.kind !== 'shipping')) {
     // Karşılanamayan yerin sebebi taşınır ki sepet "buraya gönderemiyoruz" diyebilsin.
     return { place: null, address: placeAddress, unresolved: resolution?.kind === 'unresolved' ? resolution.reason : null, pickup };
   }
-  const [{ zones }, matches] = await Promise.all([readDeliveryInputs(), getPostalMatches(answer.postalCode)]);
+  const [{ zones, warehouses }, matches] = await Promise.all([readDeliveryInputs(), getPostalMatches(answer.postalCode)]);
   const place = await describePlace(
     answer.postalCode,
     { country: resolution.country, placeName: resolution.placeName, places: resolution.places },
     zones,
+    warehouses,
     matches,
+    business,
   );
   return { place, address: placeAddress, unresolved: null, pickup };
 });

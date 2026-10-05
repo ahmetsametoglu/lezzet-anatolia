@@ -71,6 +71,7 @@ export function WarehouseDialog({
 
   const country = useWatch({ control: form.control, name: 'countryCode' });
   const shipsOnline = useWatch({ control: form.control, name: 'shipsOnline' });
+  const business = useWatch({ control: form.control, name: 'business' });
 
   // Rolü BUGÜN taşıyan depo (kendisi hariç). Kural veritabanında; buradaki okuma yalnız cümle kurmak
   // için — kayıt yine de kısıta çarpar ve action onu okunur bir hataya çevirir.
@@ -180,7 +181,11 @@ export function WarehouseDialog({
           <FormSwitch control={form.control} name="shipsOnline" label="Kargo çıkış deposu" />
           {/* Rol DOLU ise reddi ÖNCEDEN söylüyoruz: kaydedip hata almak yerine, devretmenin yolunu
               gösteren bir cümle. Kural yine de veritabanında — bu blok onun yerine geçmez. */}
-          {shipsOnline && holder ? (
+          {shipsOnline && business === 'qualite' ? (
+            <Notice tone="red">
+              <strong>QUALITE kargo göndermez.</strong> Kargo çıkış deposu yalnız Lezzet deposu olabilir — kural veritabanındadır.
+            </Notice>
+          ) : shipsOnline && holder ? (
             <Notice tone="red">
               <strong>
                 {COUNTRY_LABELS[country]}'da bu rolü {holder.name} ({holder.code}) taşıyor.
