@@ -19,19 +19,8 @@ import { constraintMessage } from '@/lib/constraint-message';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { ZoneFormSchema, type PostalCodePick } from './routes-types';
 
-// Rota kurulumunun yazma yolları (19.20 · 09.15).
-//
-// **Depolar'dan BURAYA taşındı (07.08, kullanıcı kararı):** rota tanımlamak ile günü planlamak aynı
-// işin iki anıdır ve tasarım ikisini tek sayfada, iki sekmede topluyor. Eylemler ekranıyla birlikte
-// geldi — iki klasörden birbirine server action ithal etmek, kolokasyon kuralını (CLAUDE §2) bozup
-// "bu iş nerede yaşıyor" sorusunu belirsizleştirirdi.
-//
-// Şema hâlâ `warehouses-types`ten geliyor ve öyle kalmalı: rota KAYDI deponun nesnesidir
-// (depo → rota → kodlar), taşınan şey kurulum YÜZEYİ.
-//
-// **Kural VERİDE, cümle burada:** posta kodunun tekilliği bir veritabanı kısıtıdır; bu dosya onu
-// yeniden uygulamaz, ihlali okunur bir cümleye çevirir. Kuralı iki yerde yazmak, bir gün ayrışan
-// iki kural demektir.
+// Rota kurulumunun yazma yolları; rota kaydı deponun nesnesidir (depo → rota → kodlar), şema bu yüzden `warehouses-types`ten
+// gelir. Posta kodunun tekilliği veritabanı kısıtıdır, bu dosya ihlali okunur bir cümleye çevirir.
 
 /** İnsan diline çevrilmiş kısıt ihlali. Adı bilinmeyen hata olduğu gibi geçer. */
 const CONSTRAINT_MESSAGE: Record<string, string> = {
@@ -42,15 +31,8 @@ const CONSTRAINT_MESSAGE: Record<string, string> = {
 const readable = (error: unknown): string => constraintMessage(error, CONSTRAINT_MESSAGE);
 
 /**
- * Bölge ekle / düzenle — ad, teslim günleri ve kod kümesi TEK yazımda.
- *
- * Kod kümesi sil-yaz ile değişir (servis sözleşmesi): ekran kümenin son hâlini gönderir, "hangileri
- * eklendi hangileri silindi" hesabını iki tarafın da tutması gerekmez.
- *
- * **Çakışma önce OKUNUR, sonra yazılır** — ama kural yine de veritabanındadır. Buradaki ön okuma
- * kuralı uygulamak için değil, ihlali ANLATABİLMEK için: kısıt "kod zaten var" der, operatörün
- * ihtiyacı olan cümle ise "67100'ü Kuzey hattı tutuyor (COL)". Ön okuma ile yazma arasında başka
- * biri aynı kodu alırsa kısıt yine tutar; kaybedilen tek şey cümlenin ayrıntısı olur.
+ * Bölge ekle ya da düzenle: ad, teslim günleri ve kod kümesi tek yazımda, kod kümesi sil-yaz ile değişir. Çakışma önce okunur,
+ * çünkü kısıt yalnız "kod zaten var" der, operatöre gereken cümle kodu hangi bölgenin tuttuğudur.
  */
 export async function saveZoneAction(input: unknown): Promise<ActionResult<{ id: string }>> {
   try {
@@ -58,10 +40,7 @@ export async function saveZoneAction(input: unknown): Promise<ActionResult<{ id:
     const parsed = ZoneFormSchema.extend({
       id: z.string().uuid().optional(),
       warehouseId: z.string().uuid(),
-      /**
-       * Asistan önerisinden gelindiyse o önerinin kimliği (22.5). **Yoksa akış hiç değişmez** —
-       * elle rota kurma yolu bu değişiklikten habersiz kalmalı.
-       */
+      /** Asistan önerisinden gelindiyse önerinin kimliği; yoksa akış değişmez. */
       proposalId: z.string().uuid().optional(),
     }).parse(input);
     const { id, warehouseId, postalCodes, proposalId, hours, ...fields } = parsed;
@@ -81,14 +60,8 @@ export async function saveZoneAction(input: unknown): Promise<ActionResult<{ id:
     if (hoursError) return { data: null, error: hoursError };
 
     /**
-     * **Kayıt ile kuyruk satırı BİRLİKTE koşar** (`withProposal`): önce satır `pending`ten çıkar
-     * (`claimForApply`), sonra iş yapılır, sonra sonuç damgalanır. Sıra şemanın dayattığı sıra ve
-     * tek yerde durur — üç hedef ekrana kopyalansaydı biri bir gün kilidi atlar ve aynı öneri iki
-     * kez uygulanırdı.
-     *
-     * Kaydedilen küme OPERATÖRÜN kümesidir, önerininki değil: kodları haritada görüp çıkarabilsin
-     * diye buraya geliyor. Bildirim de yalnız kaydedilene gider (`zone_available` uzlaştırması
-     * kapsanan kodlara bakar), yani "hepsine birden gitmesi" derdi burada kapanıyor.
+     * Kayıt ile kuyruk satırı birlikte koşar (`withProposal`), aynı öneri iki kez uygulanmasın diye. Kaydedilen küme operatörün
+     * kümesidir, bildirim de yalnız kaydedilen kodlara gider.
      */
     const zone = await withProposal(
       proposalId,
@@ -143,14 +116,8 @@ async function findConflict(
 }
 
 /**
- * Eşik saatlerinin **anahtarı ve biçimi** — DB'ye dokunmayan eleme. Sorun varsa okunur cümle, yoksa `null`.
- *
- * Anahtar kümesi tek yerden (`DAY_HOURS`) doğrulanıyor: ekran o listeden üretiyor, kapı yine o
- * listeye bakıyor. Serbest anahtar kabul etmek, `settings` tablosunu hiçbir yerde okunmayan
- * satırlarla dolduran bir çöp kapısı olurdu (`settings/actions.ts`'in kendi kuralı).
- *
- * Biçim `toMinutes` ile ölçülüyor, ikinci bir regex yazılmadı — aynı saatin ekrandaki gösterimi de
- * o fonksiyondan geçiyor, yani kapı ile ekran aynı şeyi geçerli sayıyor.
+ * Eşik saatlerinin anahtarı ve biçimi DB'ye dokunmadan elenir: anahtar kümesi `DAY_HOURS`tan, biçim ekranla aynı `toMinutes`ten
+ * doğrulanır, serbest anahtar `settings`i okunmayan satırlarla doldururdu. Sorun varsa okunur cümle, yoksa `null`.
  */
 function checkZoneHours(hours: Record<string, string | null>): string | null {
   for (const [key, time] of Object.entries(hours)) {
@@ -164,15 +131,8 @@ function checkZoneHours(hours: Record<string, string | null>): string | null {
 }
 
 /**
- * Rotaya özel eşik saatlerini yazar; `null` gelen eşiğin istisnasını KALDIRIR.
- *
- * **Silmede önbellek ELLE düşürülür.** `set()` kendi kopyasını düşürüyor ama `delete()` düşürmüyor
- * (`settings/actions.ts`'te ölçülmüş ve künyelenmiş tuzak): atlanırsa kaldırılan istisna, süre
- * dolana dek okunmaya devam eder — yani silinmiş bir kural yürürlükte kalır.
- *
- * Açıklama olarak eşiğin ETİKETİ yazılıyor: satırı doğrudan veritabanında gören biri de neyi
- * okuduğunu anlamalı. Sözlükteki uzun yardım metni buraya ithal edilmedi — o Ayarlar ekranının
- * yüzeyi ve iki sayfayı birbirine bağlamak kolokasyonu bozardı.
+ * Rotaya özel eşik saatlerini yazar; `null` gelen eşiğin istisnasını kaldırır. Silmede önbellek elle düşürülür, çünkü `delete()`
+ * kendi kopyasını düşürmez ve kaldırılan istisna süre dolana dek okunurdu.
  */
 async function writeZoneHours(
   db: ReturnType<typeof serviceDb>,
@@ -200,11 +160,8 @@ async function writeZoneHours(
 }
 
 /**
- * Posta kodu önerisi — bölge kurulumunun giriş aracı.
- *
- * **Serbest metin girişi YOK:** seçenekler referans tablosundan gelir, yani haritada (ve veride)
- * olmayan bir kod sisteme hiç giremez. Yazım hatası sınıfı böyle kapanır. Öneri bir OKUMA'dır ve
- * `recordDemand` sayacını KİRLETMEZ — o sayaç niyete bağlıdır (19.7'nin kayıtlı kararı).
+ * Posta kodu önerisi, bölge kurulumunun giriş aracı: seçenekler referans tablosundan gelir, haritada olmayan kod sisteme giremez.
+ * Öneri bir okumadır ve `recordDemand` sayacını kirletmez.
  */
 export async function searchPostalCodesAction(term: string): Promise<ActionResult<PostalCodeSuggestion[]>> {
   try {
@@ -215,25 +172,14 @@ export async function searchPostalCodesAction(term: string): Promise<ActionResul
     const rows = await new PostalCodePlaceService(serviceDb()).search(term, 12);
     return { data: rows, error: null };
   } catch (error) {
-    // `readable` DEĞİL, çıplak funnel — ve bu bilinçli (denetim S2): bu uç salt OKUMA yapıyor
-    // (önek araması), yani çarpabileceği bir kısıt yok. `readable` kısıt adını insan cümlesine
-    // çeviriyor; hiç kısıt üretmeyen bir yola onu bağlamak, olmayan bir hâli varmış gibi göstermek
-    // olurdu. Buraya bir gün yazma eklenirse `readable`'a bağlanmalı.
+    // Çıplak funnel, `readable` değil: bu uç salt okuma yapar ve çarpabileceği bir kısıt yok.
     return { data: null, error: getErrorMessage(error) };
   }
 }
 
 /**
- * **Görüş alanındaki posta kodları** — haritanın "boşta" kodları çizebilmesinin tek yolu (19.20).
- *
- * Sayfanın kendi okuması (`routes-read`) yalnız TANIMLI kodları ve önerileri getiriyor; boştakiler
- * hiçbir rotada olmadığı için hiçbir listede yoklar. Bu uç onları getiriyor ve **kaydırmaya bağlı**
- * olduğu için sayfa okumasında değil ayrı bir eylemde: operatör haritayı gezdirdikçe küme değişiyor,
- * sayfayı yeniden çizdirmek gerekmiyor.
- *
- * Kutu ZORUNLU ve tavan var (`readPostalCodesForMap` varsayılanı 1200): ülkenin tamamı 6.065 kod ve
- * hiçbir ekran onu kullanmaz. Ekran ayrıca `truncated`'i YAZAR — sessiz kesme, operatöre olmayan
- * kodu "yok" diye okuturdu.
+ * Görüş alanındaki posta kodları; haritanın hiçbir rotada olmayan kodları çizebilmesinin yolu, kaydırmaya bağlı olduğu için ayrı
+ * eylem. Kutu zorunlu ve tavanlıdır, ekran `truncated`i yazar ki kesilen kod "yok" diye okunmasın.
  */
 const BboxSchema = z.object({
   minLat: z.number(),
@@ -242,13 +188,7 @@ const BboxSchema = z.object({
   maxLng: z.number(),
 });
 
-/**
- * Dönüş tipi KAPIDAN TÜRETİLİYOR, elle yazılmıyor.
- *
- * `MapPostalCodes` arka uç şeridinde bilerek dışa açılmamış (künyesi: *"tüketicisi doğduğu gün
- * export eklenir"*) ve o dosya onların. Türetmek hem sınırı koruyor hem de kopya bir şekil
- * bırakmıyor — kapı değişirse burası derlemede kırılır, sessizce ayrışmaz (`CLAUDE §1`).
- */
+/** Dönüş tipi kapıdan türetilir; `MapPostalCodes` dışa açık değil ve kopya şekil kapı değişince sessizce ayrışırdı. */
 type MapCodesResult = Awaited<ReturnType<typeof readPostalCodesForMap>>;
 
 export async function readMapCodesAction(input: unknown): Promise<ActionResult<MapCodesResult>> {

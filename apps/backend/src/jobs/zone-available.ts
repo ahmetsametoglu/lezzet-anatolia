@@ -9,59 +9,15 @@ import type { PreferredLanguage, ZoneNotice } from '@lezzet/types';
 export const ZONE_AVAILABLE = 'zone_available';
 
 /**
- * **Beklenen bölge açıldı → bekleyenlere haber** (14.10 · 19.21).
- *
- * ── OLAY DEĞİL, UZLAŞTIRMA İŞİ — VE BU İSTENENDEN GÜÇLÜ ─────────────────────
- * Operasyon şeridi *"bir OLAY olmalı, bir düğme değil"* dedi ve gerekçesi doğruydu: bölgeyi açan
- * kişi unutabilir, sistemin bildiği bir şeyi insana hatırlatmaya bırakmak olurdu. Bir adım daha
- * gidiyoruz, çünkü **olay da kaçırılabilir:** bölgenin kaydedilmesine bağlı bir tetik TEK bir yazma
- * yolunu varsayar; oysa bir kod bölgeye migration'la, elle SQL'le, toplu içe aktarmayla ya da bugün
- * olmayan ikinci bir ekrandan da girebilir. Kaçan gönderim **hata vermez**, yalnız müşteri hiç haber
- * almaz.
- *
- * Bunun yerine her koşuda "kapsanmış hâle gelmiş ve haberi gitmemiş" bekleyişler aranır. Üstünlüğü:
- * **hangi yolla kapsandığı önemsiz.** Sistem kendini onarır — kaçan bir tur telafi olur, ikinci tur
- * no-op'tur.
- *
- * ── İKİ KORUMA, İKİSİ DE ZATEN ŞEMADA ───────────────────────────────────────
- * **İdempotentlik:** sorgunun kendisi `notified_at is null`; ikinci tur aynı kişiyi hiç görmez.
- * Bölge iki kez kaydedilse ya da bir kod çıkıp geri girse de değişmez.
- * **İşaret:** aynı damga "kime gitti"nin cevabı. Toplu yazılıyor — bir bölge açılınca onlarca
- * kişiye birden gider, satır satır damgalamak turu kişi sayısıyla çarpardı.
- *
- * ── DAMGA GÖNDERİMDEN SONRA ─────────────────────────────────────────────────
- * Tersi (önce damgala, sonra gönder) sağlayıcı düşerse müşteriyi **kalıcı sessizliğe** mahkûm
- * ederdi: satır "haber verildi" görünür, bir daha hiçbir tur onu bulmaz. Emsal aynı kararla
- * yazılmış: `ProductFeedback.notified_at` künyesi.
- *
- * ── KANAL ───────────────────────────────────────────────────────────────────
- * Bugün yalnız e-posta gidiyor; `zone_notice` telefon tutmuyor ve WhatsApp `15.x` inmeden
- * gönderilemez. Bildirim altyapısı kanal yeteneğine kendi bakıyor (`supports`), yani WhatsApp
- * açıldığında bu iş değişmeden ikinci kanal devreye girer.
+ * Beklenen bölge açıldı, bekleyenlere haber: olay değil uzlaştırma işidir, çünkü kod bölgeye hangi yoldan girerse girsin her koşu
+ * "kapsanmış ve haberi gitmemiş" bekleyişleri arar ve kaçan tur sonrakinde telafi olur. Damga gönderimden sonra yazılır, çünkü
+ * önce damgalamak sağlayıcı düşünce müşteriyi kalıcı sessizliğe bırakırdı.
  */
 
 /** Tur başına tavan — bir bölge açılınca yüzlerce satır birikmiş olabilir; kuyruk turlara yayılır. */
 const BATCH = 200;
 
-/**
- * ── ÜLKE ARTIK KAYITTA (21.16) ──────────────────────────────────────────────
- * Burada bir zamanlar `const COUNTRIES = ['FR','DE']` duruyordu ve kapsama kontrolü **iki ülkeyi
- * de deneyip biri tutarsa kapsanmış sayıyordu** — kayıt yalnız kodu taşıdığı için başka çare
- * yoktu. Bedeli sessiz ve yanlış bir gönderimdi: ölçüldü (09.08), kod tablosundaki 610 kod iki
- * ülkeye birden çözülüyor, yani Fransa'da açılan bir bölge aynı kodu yazmış Alman müşteriye
- * *"bölgeniz açıldı"* diye gidebilirdi — hem yalan hem de bir daha düzeltilemez (damga yazılır,
- * satır bir daha hiçbir turda görünmez).
- *
- * `zone_notice.country` eklendi; kontrol artık kaydın KENDİ ülkesiyle yapılıyor. Tahmin yok.
- */
-
-/**
- * Haberin dili. Sıra: kaydın kendi dili → müşterinin profili → **Fransızca**.
- *
- * Son basamak bir TAHMİNDİR ve yalnız ikisi de boşken devreye girer (dil kolonu 14.10'da eklendi,
- * ondan önceki ziyaretçi kayıtlarında `null`). Fransızca seçilmesinin sebebi pazarın kendisi:
- * teslimat bölgesi Fransa.
- */
+/** Haberin dili: kaydın dili, sonra müşterinin profili, ikisi de boşsa Fransızca, çünkü teslimat bölgesi Fransa'dadır. */
 function localeOf(notice: ZoneNotice, profileLocale: PreferredLanguage | null): PreferredLanguage {
   return notice.locale ?? profileLocale ?? 'fr';
 }
@@ -96,10 +52,8 @@ export async function zoneAvailableJob(): Promise<Record<string, unknown>> {
 
     let delivered = false;
     try {
-      // TEK KAPI (14.12). `customerId` çoğu kayıtta NULL ve kapı bunu bilir: profilsiz alıcıya
-      // satır YAZILMAZ (uygulama içi zili yok ki), yalnız mail gider — bugüne kadarki davranışın
-      // aynısı. Profili olan alıcıda ise haber artık uygulamada da görünür. Dedupe anahtarı kaydın
-      // kendisi: aynı bölge kaydına ikinci satır açılmaz (mail tarafını zaten `sent` damgası korur).
+      // Profilsiz alıcıya uygulama içi satır yazılmaz, yalnız mail gider; dedupe anahtarı kaydın kendisidir, aynı bölge kaydına
+      // ikinci satır açılmaz.
       const results = await dispatchCustomerNotification(
         db,
         {
@@ -116,10 +70,8 @@ export async function zoneAvailableJob(): Promise<Record<string, unknown>> {
           locale,
           postalCode: notice.postalCode,
           catalogUrl: localizedUrl('/catalog', locale),
-          /* JETONLU, VE İKİ KAYNAKTAN (22.08). Bu yolun alıcısı çoğu zaman HESAPSIZ — tercih
-             sayfası oturum isteseydi, "haber ver" diyen ziyaretçi hesabı olmayan bir giriş
-             ekranında kalırdı. Profili varsa profilin jetonu, yoksa KAYDIN kendi jetonu
-             kullanılır; ikisi de yoksa çıplak adrese düşülür (eski kayıtlarda `token` null). */
+          /* Bu yolun alıcısı çoğu zaman hesapsızdır: profili varsa profilin jetonu, yoksa kaydın kendi jetonu kullanılır, ikisi de
+             yoksa çıplak adrese düşülür. */
           notificationPreferencesUrl: await notificationPreferencesUrl(db, locale, {
             customerId: notice.customerId,
             zoneNoticeToken: notice.token,

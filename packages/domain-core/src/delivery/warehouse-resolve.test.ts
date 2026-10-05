@@ -9,11 +9,8 @@ import {
 } from './warehouse-resolve';
 
 /**
- * Yer çözümü (19.3) — DOMAIN §17.
- *
- * En kritik davranış burada sınanıyor: **belirsizlik bir cevap değil, bir hatadır.** Eski motor
- * aynı posta kodunu içeren iki bölgede "ilki kazanır" diyordu; tek depoda bunun bedeli yanlış bir
- * rota günüydü, çok depoda siparişin yanlış şehre düşmesi demek.
+ * Yer çözümü (DOMAIN §17): belirsizlik bir cevap değil hatadır, çünkü aynı posta kodunu içeren iki bölgede "ilki kazanır" demek
+ * çok depoda siparişi yanlış şehre düşürürdü.
  */
 
 const STR: WarehouseCandidate = { id: 'w-str', code: 'STR', countryCode: 'FR', shipsOnline: true, isActive: true };
@@ -107,11 +104,8 @@ describe('hizmet ülkeleri VERİDEN türer, ayardan değil', () => {
 });
 
 /**
- * Ülkesiz çözüm (19.8) — müşteriye ülke SORULMUYOR.
- *
- * Gerekçe iki katlı: sürtünme (cevabı zaten elimizde olan bir soru) ve vergi (serbest seçilen ülke
- * KDV'yi etkiler — beyan olamaz, `DOMAIN §5`). Ölçüm: FR 6.065 + DE 10.813 kodun 610'u ikisinde de
- * geçerli, yani her on Fransız kodundan biri.
+ * Ülkesiz çözüm: müşteriye ülke sorulmaz, çünkü cevap elimizdedir ve serbest seçilen ülke KDV'yi etkilerdi (`DOMAIN §5`). FR ve DE
+ * kodlarının 610'u iki ülkede de geçerlidir.
  */
 describe('posta kodundan ülke TÜRETİLİR, sorulmaz', () => {
   const FR_67000: PostalCodeMatch = { country: 'FR', places: ['Strasbourg'] };
@@ -153,7 +147,7 @@ describe('posta kodundan ülke TÜRETİLİR, sorulmaz', () => {
   });
 
   it('hiçbir ülkede geçerli olmayan kod TANINMAZ — sessizce kargoya düşmez', () => {
-    // Bu hâl 19.8 öncesi hiç yoktu: yazım hatası geçerli bir yer gibi işleniyordu.
+    // Yazım hatası geçerli bir yer gibi işlenmez.
     expect(resolvePlaceByPostalCode('67x99', [], [zone()], [STR])).toEqual({ kind: 'unknown' });
   });
 
@@ -169,9 +163,7 @@ describe('posta kodundan ülke TÜRETİLİR, sorulmaz', () => {
 });
 
 /**
- * Seçilen ülke kodu BAĞLAR (v1 yer paneli, 13.09): önce ülke, sonra kod sorulur. Seçim serbest bir
- * beyan değil — kod o ülkede yoksa cevap "tanımadık"; başka bir ülkeye sessizce çözülmez, çünkü
- * ülke KDV oranını belirler.
+ * Seçilen ülke kodu bağlar: kod o ülkede yoksa cevap "tanımadık", başka ülkeye sessizce çözülmez, çünkü ülke KDV oranını belirler.
  */
 describe('seçilen ülke kodu BAĞLAR', () => {
   const FR_67000: PostalCodeMatch = { country: 'FR', places: ['Strasbourg'] };
@@ -198,17 +190,12 @@ describe('seçilen ülke kodu BAĞLAR', () => {
 });
 
 /**
- * Kendi bölge tablomuz hizmet alanımız için OTORİTEDİR (19.16a).
- *
- * İlk sürüm `matches.length === 0 → unknown` diyor ve `zones`'a hiç bakmıyordu. Sonuç bir
- * ÇELİŞKİYDİ: operatörün elle girdiği, fiilen aracımızla gittiğimiz bir kod dış referansta yoksa
- * vitrin "tanımadık" derken checkout aynı kodu kabul edip siparişi açıyordu (`resolveDelivery`
- * referansa hiç bakmaz). Tek sistem, aynı koda iki cevap.
+ * Kendi bölge tablomuz hizmet alanımız için otoritedir: dış referansta olmayan ama aracımızla gittiğimiz kodu vitrin "tanımadık"
+ * derken checkout kabul ederdi, tek sistem aynı koda iki cevap verirdi.
  */
 describe('kendi bölgemiz dış referanstan ÜSTÜNDÜR', () => {
   it('referansta olmayan ama BİZİM bölgemizdeki kod çözülür — "tanımadık" denmez', () => {
-    // GeoNames eksik olabilir: FR'de ~6.065 kod var ama liste tam değil, ve operatör yeni bir kodu
-    // her an ekleyebilir. Referansın bilmemesi bizim gitmediğimiz anlamına gelmez.
+    // GeoNames listesi tam değil ve operatör her an yeni kod ekleyebilir; referansın bilmemesi gitmediğimiz anlamına gelmez.
     const sonuc = resolvePlaceByPostalCode('67000', [], [zone()], [STR]);
     expect(sonuc).toMatchObject({ kind: 'route', country: 'FR', warehouseId: 'w-str' });
   });
@@ -230,8 +217,7 @@ describe('kendi bölgemiz dış referanstan ÜSTÜNDÜR', () => {
   });
 
   it('çok yerleşimli kodda ad DEĞİL liste taşınır — seçimi ekran yapar (19.17)', () => {
-    // 67800'ün gerçek hâli. Çözüm adı kendi hesaplamaz, `placeLabel`'a sorar: kural iki yerde
-    // yaşasaydı biri gün gelir ötekinden ayrılırdı — 19.8'in yanlış adı tam olarak öyle doğdu.
+    // Çözüm adı kendi hesaplamaz, `placeLabel`'a sorar: kural iki yerde yaşasaydı biri ötekinden ayrılırdı.
     const sonuc = resolvePlaceByPostalCode('67000', [{ country: 'FR', places: ['Bischheim', 'Hœnheim'] }], [zone()], [STR]);
     expect(sonuc).toMatchObject({ placeName: null, places: ['Bischheim', 'Hœnheim'] });
   });
