@@ -2,39 +2,15 @@ import { DiscountService, type Db } from '@lezzet/database';
 import type { Discount, LocalizedText } from '@lezzet/types';
 
 /*
-  KAPSAM KAMPANYASININ TEK KAPISI (08.44) — "bu kategoride / bu koleksiyonda açık bir kampanya var mı".
-
-  ── NEDEN VAR ───────────────────────────────────────────────────────────────
-  Otomatik kampanya bugün YALNIZ sepette görünüyor: motor onu `resolveCartDiscount` içinde
-  hesaplıyor, müşteri de ancak sepete gelince öğreniyor. Oysa kategori ve koleksiyon kapsamlı
-  kampanya ürüne atfedilebilir bir gerçektir — *Baklava haftası %15* açıkken vitrindeki baklava
-  bandının bunu söylememesi, operatörün açtığı kampanyanın yarısını görünmez bırakıyor.
-
-  ── NEDEN FİYAT DEĞİL, ROZET ────────────────────────────────────────────────
-  Kampanya ürün FİYATINA yazılamaz ve gerekçesi ölçüldü (`08.44` görev satırı): `applyBestDiscount`
-  kazananı TÜM SEPET üzerinden tek-en-büyük seçer ve kalemlere oransal dağıtır. 20 € baklava
-  (kategori %15 → 3,00 €) + 40 € başka ürün sepetinde sepet kampanyası (%8 → 4,80 €) kazanır ve
-  baklava kalemine düşen pay %8 olur — kartta vaat edilen %15 değil. Sepetten BAĞIMSIZ olmayan bir
-  indirim, birim fiyat olarak vaat edilemez. Bu kapı bu yüzden **tutar değil, kampanyanın kendisini**
-  döndürür; yüzey onu bir rozet ya da cümle olarak söyler, fiyatı değiştirmez.
-
-  ── KİMLER DIŞARIDA VE NEDEN ────────────────────────────────────────────────
-  · **Kupon** — kodu olmayan müşteriye kampanya diye duyurulamaz.
-  · **Sepet kapsamı** — ürüne atfedilemez; onun yeri sepet (`08.43`'ün "elinin altındaki" cümlesi).
-  · **Kişiye özel kampanya** (`customerId` dolu) — vitrin herkesin gördüğü yüzey; bir kişinin
-    kampanyasını oraya yazmak hem yanlış vaat hem de o kişinin kaydını ifşadır.
-  · **İlk siparişe bağlı** (`firstOrderOnly`) — vitrinde kimin ilk siparişte olduğu bilinmiyor.
-  · **Tarih penceresi dışı / pasif** — zaten yürürlükte değil.
-
-  **Eşikli kampanya DIŞARIDA DEĞİL:** `minBasketCents` taşınır ve yüzey isterse cümleye koyar
-  (*"60 € üzeri sepette %15"*). Eşiği olan kampanyayı hiç göstermemek, düzelttiğimiz sessizliğin
-  aynısını başka yerde açardı.
+  Kapsam kampanyasının tek kapısı: bu kategoride ya da koleksiyonda duyurulabilir bir kampanya var mı. Tutar değil kampanyanın
+  kendisi döner, çünkü motor kazananı tüm sepet üzerinden seçip kalemlere oransal dağıtır ve kartta vaat edilen oran sepette
+  tutmayabilir.
 */
 
 export interface ScopeCampaign {
   /** Kampanyanın kimliği — yüzey aynı kampanyayı iki yerde anarken karşılaştırabilsin. */
   id: string;
-  /** Müşteriye görünen ad; `null` = operatör yazmamış, yüzey adsız konuşur (MB-22a). */
+  /** Müşteriye görünen ad; `null` = operatör yazmamış, yüzey adsız konuşur. */
   label: LocalizedText | null;
   type: 'percent' | 'fixed';
   /** `type === 'percent'` ise dolu (15 = %15), değilse `null`. */
@@ -53,16 +29,9 @@ export interface ScopeCampaigns {
 export const EMPTY_SCOPE_CAMPAIGNS: ScopeCampaigns = { byCategory: new Map(), byCollection: new Map() };
 
 /**
- * Verilen kategori/koleksiyon kimlikleri için yürürlükteki kampanyalar.
- *
- * **Tek okuma, kimlik başına sorgu YOK:** `listCandidates` aktif kuralların tamamını getiriyor
- * (tablo operatörün elle kurduğu, doğal tavanı olan bir küme — `CLAUDE §1`'in "sayfalama ölçütü"
- * ayrımında sınırsız büyüyen tarafta değil), süzme bellekte yapılıyor. Kimlik listesi boşsa hiç
- * sorgu atılmaz.
- *
- * **Aynı hedefe birden çok kampanya uyarsa:** önce KOŞULSUZ olan kazanır (müşteriye şartsız
- * söylenebilen tek şey odur), eşitlikte daha yeni kural. Tutarları karşılaştırmak mümkün değil —
- * yüzde ile sabit tutar ancak bir sepet varken kıyaslanır, burada sepet yok.
+ * Verilen kategori/koleksiyon kimlikleri için yürürlükteki kampanyalar; kural tablosu operatörün kurduğu sınırlı küme olduğundan
+ * tek okumayla gelir, süzme bellekte. Aynı hedefe birden çok kampanya uyarsa önce koşulsuz olan, eşitlikte daha yeni kural kazanır,
+ * çünkü sepet yokken yüzde ile sabit tutar kıyaslanamaz.
  */
 export async function readScopeCampaigns(
   db: Db,
@@ -88,7 +57,7 @@ export async function readScopeCampaigns(
   return { byCategory, byCollection };
 }
 
-/** Vitrinde duyurulabilir mi — künyedeki "kimler dışarıda" listesinin kod hâli. */
+/** Vitrinde duyurulabilir mi: kupon, kişiye özel ve ilk siparişe bağlı kural vitrini gören herkese vaat edilemez. */
 function announceable(row: Discount, now: Date): boolean {
   if (row.trigger !== 'automatic') return false;
   if (!row.isActive) return false;
@@ -101,22 +70,8 @@ function announceable(row: Discount, now: Date): boolean {
 }
 
 /**
- * ÜRÜN BAŞINA kampanya — karışık listenin rozeti için (kullanıcı kararı 23.08).
- *
- * ── NEDEN AYRI BİR OKUMA DEĞİL, AYNI KAPININ İKİNCİ YÜZÜ ────────────────────
- * `readScopeCampaigns` "şu kesitte kampanya var mı" sorusunun cevabıdır ve kesit seçilmeden
- * sorulamaz. Ama rozet KARIŞIK listede de gerekiyor — vitrin rayı, arama sonucu, benzer ürünler:
- * orada başlık diye bir şey yok, kampanyayı söyleyecek tek yer kartın kendisi. O yüzden kapı
- * genişledi, ikizi doğmadı: duyurulabilirlik süzgeci (`announceable`) ve üstünlük kuralı (`put`)
- * TEK yerde kalsın diye ürün eşlemesi de buraya yazıldı.
- *
- * **Kimlik başına sorgu YOK:** çağıran sayfanın kategori ve koleksiyon kimliklerini toplu geçirir,
- * kampanya tablosu zaten toptan okunuyor (`listCandidates` — operatörün elle kurduğu, doğal tavanı
- * olan küme), eşleme bellekte yapılır.
- *
- * **Koleksiyon kategoriyi yener** — `getCatalogData`'nın etkin kesit sırası neyse o (`catalog.ts`).
- * Aynı ürün iki koleksiyonda birden kampanyalıysa `put`un kuralı geçerlidir: önce KOŞULSUZ olan.
- * Ürünün kendi kategorisi yoksa (`categoryId === null`) yalnız koleksiyonlarına bakılır.
+ * Ürün başına kampanya: karışık listede (vitrin rayı, arama, benzer ürünler) başlık olmadığından rozeti kart taşır. Koleksiyon
+ * kategoriyi yener (katalogdaki etkin kesit sırası); süzgeç ve üstünlük kuralı tek yerde kalsın diye aynı kapıdan geçer.
  */
 export function campaignsByProduct(
   campaigns: ScopeCampaigns,

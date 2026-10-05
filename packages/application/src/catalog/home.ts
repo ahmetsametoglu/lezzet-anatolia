@@ -24,73 +24,32 @@ import { readShowcase } from './showcase';
 import type { PlaceWarehouses, StorefrontProduct } from './storefront-types';
 
 /**
- * TELEFON VİTRİNİNİN okuma kapısı — native `GET /api/v1/home`un ve web telefon görünümünün ORTAK
- * veri tarafı (21.14 bağlanma etabında mobil uçta doğdu; 14.09'da pakete terfi etti — 08.58).
- *
- * PAKETE TERFİ: `apps/mobile-api/src/lib/home.ts`ti ve künyesi ölçütü açıkça koymuştu — pakete giren
- * akış **en az iki yüzeyin** çağırdığı akıştır; o gün tek tüketen mobil vitrindi. Kullanıcı kararıyla
- * (14.09) müşterinin telefon tasarımı native uygulamada ve web'in telefon görünümünde AYNI oldu; web
- * telefon vitrini ikinci tüketen. Web MASAÜSTÜNÜN anasayfa bileşimi (`apps/web/lib/storefront/home.ts`)
- * masaüstü v1 tasarımının bileşimidir ve kendi yüzeyinde kalıyor. Buradaki her bölüm ya paketin
- * mevcut kapısından geçer (fırsatlar → `getCatalogData`, seçki → `readShowcase`) ya kullanıcı
- * kararıyla telefona verilmiş bir kuraldır (bant karışımı — 08.08) ya da karar içermeyen içerik
- * indirgemesidir (tarif kartı — `ideas.ts`).
- *
- * ── SABİT SINIRLAR, `limit` SORGUSU YOK ──────────────────────────────────────
- * Vitrin rayları editoryal seçkidir: sayfalanmaz ama sabit sınır taşır (CLAUDE §1). Sınırlar v3
- * tasarımının ızgarasından geliyor ve parametrik sabit — istemci büyütemez.
+ * Telefon vitrininin okuma kapısı: native `GET /api/v1/home` ile web telefon görünümü aynı tasarımı çizdiği için veri tarafı
+ * pakette tektir. Raylar editoryal seçkidir; sayfalanmaz, sınırları tasarımın ızgarasından gelen sabitlerdir ve istemci büyütemez.
  */
 
 /**
- * Fırsat şeridi (kullanıcı kararı 09.08 — 2'den 10'a).
- *
- * v3 tasarımı iki kart çiziyordu ve sınır oradan gelmişti; ama şerit YATAY KAYDIRILABİLİR, yani
- * ikiden fazlası bir yerleşim sorunu değil. Kullanıcı bunu ölçerek gördü: katalogda 4 fırsat varken
- * vitrin ikisini gösteriyordu.
- *
- * SINIRSIZ YAPILMADI ve gerekçesi veriye bağlı: fırsat, SKT'si yaklaşan bir partiden doğuyor —
- * yani sayısı katalogla değil, stoğun yaşıyla büyüyor ve bir gün onlarca olabilir. Vitrin açılış
- * ekranı; oraya sınırsız bir dizi koymak, açılışta katalogdaki her indirimli ürünü indirip çizmek
- * demek. 10 bugünkü veriyi (4) rahat kapsıyor ve tavan olduğu görünür kalıyor. Tek sayı; artırmak
- * isteyen burayı değiştirir.
+ * Fırsat şeridi yatay kaydırılır; sınırı yerleşim değil açılış maliyeti koyar, çünkü fırsat SKT'si yaklaşan partiden doğar ve
+ * sayısı katalogla değil stoğun yaşıyla büyür.
  */
 const HOME_OFFER_LIMIT = 10;
-/**
- * Vitrin seçkisi rayı — v3'te dört daire, **27.08'de altıya çıktı (kullanıcı isteği)**: ray yatay
- * kaydırılıyor ve dört kart parmağa "kaydırılacak bir şey var" demeye yetmiyordu.
- */
+/** Seçki rayı yatay kaydırılır; altıdan az kart kaydırılacak bir şey olduğunu belli etmez. */
 const HOME_FEATURED_LIMIT = 6;
-/** Bant karışımı: 4 kategori + 2 koleksiyon = 6 slot (kullanıcı kararı 08.08). */
+/** Bant karışımı: 4 kategori + 2 koleksiyon = 6 slot. */
 export const HOME_BAND_CATEGORY_COUNT = 4;
 export const HOME_BAND_COLLECTION_COUNT = 2;
 /** Toplam slot — ayrı bir sabit DEĞİL: iki sayının toplamından türer, üçüncü bir gerçek açılmaz. */
 const HOME_BAND_TOTAL = HOME_BAND_CATEGORY_COUNT + HOME_BAND_COLLECTION_COUNT;
 
 /**
- * Rastgelelik DIŞARIDAN gelir (emsal: `rotateDaily`in `now` parametresi — "test günü
- * sabitleyebilsin"). Testte tohumlu sayaç. Kuralın kendisi rastgele, KANITI deterministik olmalı.
- *
- * ── ÜRETİMDE `Math.random` DEĞİL, `dailyRng()` (kullanıcı kararı 18.08) ─────
- * Kompozisyon: 4 kategori + 2 koleksiyon, koleksiyonlar işaretliler arasından, altısı birbirine
- * rastgele konumlarda karışıyor, fotoğraflar kendi havuzundan geliyor. Rastgeleliğin kaynağı gün
- * numarasından türeyen deterministik bir üreteç (`featured.ts`, `rotateDaily`nin kardeşi).
- *
- * **Gerekçe cihazda ölçüldü (18.08):** her yenilemede koleksiyon sırası ve fotoğraflar
- * değişiyordu. `rotateDaily`nin künyesi bu hâli zaten üç maddede reddetmişti — *"sayfa
- * önbelleğini kırar · aynı müşteriye her yenilemede başka vitrin gösterir, vitrin değil kumar
- * olur · 'dün gördüğüm koleksiyon neydi' sorusunun cevabı kalmaz"*.
- *
- * Kural NEDEN `rotateDaily`ye çevrilmedi: o "havuzu sırayla döndür" der ve buradaki kompozisyonu
- * (dörde-iki + karıştırma + fotoğraf havuzu) ifade edemez. Değişmesi gereken kural değil, tohumdu.
+ * Rastgelelik dışarıdan gelir ki test tohumlu sayaçla kanıtlayabilsin; üretimde `Math.random` değil gün numarasından türeyen
+ * `dailyRng()` geçer. Her yenilemede değişen vitrin sayfa önbelleğini kırar ve aynı müşteriye her açılışta başka bant gösterir.
  */
 export type Rng = () => number;
 
 /**
- * Havuzdan `count` FARKLI öğe seçer; seçilenler HAVUZDAKİ sıralarını korur.
- *
- * Sıranın korunması kuralın yarısıdır (08.08): "rastgele 2 koleksiyon" seçilir ama "ikisinin kendi
- * arası sırası `sortOrder`a uyar" — havuz zaten o sırada geldiği için indeksleri artan sıralamak
- * yeter. Kısmi Fisher–Yates: her aday eşit olasılıkla seçilir, tam karıştırma maliyeti ödenmez.
+ * Havuzdan `count` farklı öğe seçer; seçilenler havuzdaki sıralarını korur ki koleksiyonların kendi arası `sortOrder`a uysun.
+ * Kısmi Fisher–Yates: her aday eşit olasılıkla seçilir, tam karıştırma maliyeti ödenmez.
  */
 export function pickRandomDistinct<T>(pool: readonly T[], count: number, rng: Rng): T[] {
   if (count >= pool.length) return [...pool];
@@ -107,11 +66,7 @@ export function pickRandomDistinct<T>(pool: readonly T[], count: number, rng: Rn
     .map((i) => pool[i]!);
 }
 
-/**
- * `secondary` öğelerini birleşik dizinin RASTGELE konumlarına yerleştirir; iki dizinin de KENDİ İÇ
- * sırası korunur (08.08: koleksiyonlar 6'lı dizide rastgele iki konuma girer, kategoriler kendi
- * aralarındaki sırayı korur).
- */
+/** `secondary` öğelerini birleşik dizinin rastgele konumlarına yerleştirir; iki dizinin de kendi iç sırası korunur. */
 export function interleaveAtRandom<T>(primary: readonly T[], secondary: readonly T[], rng: Rng): T[] {
   const total = primary.length + secondary.length;
   const slots = new Set(
@@ -129,17 +84,9 @@ export function interleaveAtRandom<T>(primary: readonly T[], secondary: readonly
 }
 
 /**
- * Bant KAYNAKLARININ seçimi — saf karar, DB'siz (test edilebilir diye ayrı duruyor).
- *
- * Kural (kullanıcı kararı 08.08, web masaüstünden bilinçli sapma):
- *   koleksiyon → işaretlilerden (`isFeatured`) RASTGELE en çok 2; kendi aralarında `sortOrder`.
- *   kategori   → işaretlilerden `sortOrder` sırasıyla, toplam 6'ya TAMAMLAYACAK kadar (koleksiyon
- *                2'den azsa kategori 4'ten çok olabilir). Toplam 6'yı bulamazsa olduğu kadar —
- *                dolgu/uydurma yok.
- *
- * İşaret SEÇİMDİR, yedeği yoktur: hiç işaret yoksa bant da yoktur. (Web masaüstünün `pickFeatured`ı
- * işaretsiz havuzda "ilk N gerçek satır"a düşer — o kural masaüstünde yaşıyor ve KOPYALANMADI;
- * buradaki kural kullanıcının telefona verdiği kuraldır ve işaretsiz veride boş döner.)
+ * Bant kaynaklarının seçimi: koleksiyon işaretlilerden rastgele en çok 2, kategori işaretlilerden `sortOrder` sırasıyla toplamı
+ * 6'ya tamamlayacak kadar, bulamazsa olduğu kadar. İşaret seçimdir, yedeği yoktur: web masaüstünün `pickFeatured`ı gibi işaretsiz
+ * havuza düşmez, işaret yoksa bant da yoktur.
  */
 export function selectHomeBandSources<C extends { id: string; isFeatured: boolean }, K extends { id: string; isFeatured: boolean }>(
   categories: readonly C[],
@@ -148,14 +95,8 @@ export function selectHomeBandSources<C extends { id: string; isFeatured: boolea
   campaigns: ScopeCampaigns = EMPTY_SCOPE_CAMPAIGNS,
 ): { categories: C[]; collections: K[] } {
   /*
-    KAMPANYALI BANT ÖNE ALINIR (08.44) — ve bu bir süsleme değil, TUTARLILIK düzeltmesi.
-    Ölçüldü: koleksiyonlar işaretli havuzdan RASTGELE seçiliyor ve toplam slot sınırlı, yani
-    kampanyalı bir koleksiyon o gün hiç görünmeyebiliyordu. Kampanya açan operatör kampanyanın
-    görüneceğini varsayar; görünmeyen kampanya, açılmamış kampanyadır.
-
-    Öncelik seçimin İÇİNDE, sonrasında değil: rastgeleliği bozmadan havuzu ikiye ayırıyoruz —
-    kampanyalılar önce, kalanlar sonra ve kendi aralarında yine rastgele. Böylece kampanyasız
-    günlerde bugünkü davranış BİREBİR korunuyor (aynı `rng`, aynı sonuç).
+    Kampanyalı koleksiyon seçimin içinde öne alınır: koleksiyonlar rastgele seçildiği ve slot sınırlı olduğu için kampanyalı olan
+    o gün hiç görünmeyebilirdi. Kampanyasız günde aynı `rng` aynı sonucu verir.
   */
   const featuredCollections = collections.filter((c) => c.isFeatured);
   const withCampaign = featuredCollections.filter((c) => campaigns.byCollection.has(c.id));
@@ -206,16 +147,9 @@ function toBand(
 }
 
 /**
- * Bant karışımını kurar: seç → SEÇİLENLER için say → boş kapıyı düşür → karıştır.
- *
- * Sıra maliyeti belirliyor (web koleksiyon bandının aynı gerekçesi): sayım sorgusu yalnız seçilen
- * ≤6 kayıt için atılır; ters sırada bandın maliyeti katalogdaki kategori/koleksiyon sayısıyla
- * büyürdü. Sayaç kataloğun ölçütüyle AYNI (`status: 'active'`; koleksiyonda aktif ÜYE) —
- * üyelik/kayıt sayısını basmak kartı yalancı yapardı.
- *
- * **Ürünü kalmamış bant karta GİRMEZ** (web emsali: tıklanınca boş katalog açan kapı, kapı
- * değildir) — sayımdan sonra düşer ve dizi kısalır; yerine yenisi SAYILMAZ (sayım maliyeti sabit
- * kalsın, "olduğu kadar" esnemesi 08.08 kararında zaten var). Sözleşmenin `positive` kilidi de bu.
+ * Bant karışımını kurar: seç → seçilenler için say → ürünü kalmamış bandı düşür → karıştır; sayım yalnız seçilen ≤6 kayıt için
+ * atılır ki maliyet katalogla büyümesin. Sayaç kataloğun ölçütüyle aynıdır (aktif ürün, koleksiyonda aktif üye) ve düşen bandın
+ * yerine yenisi sayılmaz.
  */
 export async function composeHomeBands(
   db: SupabaseClient,
@@ -267,18 +201,8 @@ function hasWonOffer(p: StorefrontProduct): p is StorefrontProduct & { wasCents:
 }
 
 /**
- * Fırsat kartları — paketin MEVCUT kapısından (`getCatalogData` + `onlyOffers`): teklifli ürünlerin
- * bulunması, fiyatın motora çözdürülmesi ve kart indirgemesi katalogun okuduğu kararların TAM AYNISI.
- * Buradaki tek iş sözleşme daraltması — teklif normal fiyatı YENMEDİYSE `wasCents` doğmaz ve kart
- * fırsat bandına giremez (karar motorun, süzgeç sonucu okur).
- *
- * Bedeli bilinçli: kapı burada kullanılmayan iki okuma da yapar (kategori listesi + süzgeç sayacı).
- * Kopyasız tek yol buydu; tek-okumaya indirme kararı gecikme ölçümüyle birlikte verilecek (STACK
- * "Okumada RPC eşiği").
- *
- * ⚠ Yer bilinmezken (`warehouseId: null`) teklif TUTARI hiç okunmaz ve dizi BOŞ döner. Bu bir HÂL:
- * kodu göndermeyen istemci yeri bilinmeyen ziyaretçidir. `(null, null)` "yer bilinmiyor"dur, ROTA
- * DIŞI değil — o `(null, kargoDeposu)`dur ve teklif tutarı orada da okunmaz.
+ * Fırsat kartları paketin katalog kapısından (`getCatalogData` + `onlyOffers`) gelir; teklif normal fiyatı yenmediyse `wasCents`
+ * doğmaz ve kart şeride giremez. Yer bilinmezken (`warehouseId: null`) teklif tutarı okunmaz ve dizi boş döner.
  */
 async function readHomeOffers(
   db: SupabaseClient,
@@ -291,15 +215,8 @@ async function readHomeOffers(
 }
 
 /**
- * Vitrin seçkisi — paketin sinyalli okumasından (`readShowcase`, terfi 27.08). Web masaüstü ile
- * telefonun ayrıştığı tek şey yüzeyin kendi kararları: SINIR (masaüstü 4 · telefon 6) ve FIRSAT
- * ELEMESİ.
- *
- * ── FIRSAT ÜRÜNÜ SEÇKİYE GİRMEZ (27.08 · kullanıcı bulgusu) ─────────────────
- * Seçkinin ilk iki kartı, sayfanın en üstündeki fırsat şeridinin AYNI iki ürünüydü. Telefon
- * vitrininde iki ray alt alta duruyor ve iki ayrı soru soruyor (*"bugün ne ucuz"* · *"ne
- * öneriyorsunuz"*); aynı cevabı verirlerse ikinci ray bir seçki değil bir yankıdır. Eleme kuralı
- * pakette (`excludeOffers`), çünkü ölçütü motorun kararıdır (`wasCents`).
+ * Vitrin seçkisi paketin sinyalli okumasından (`readShowcase`) gelir; telefonun kendi kararları sınır ve fırsat elemesidir.
+ * Fırsat şeridiyle alt alta duran seçki aynı ürünleri gösterirse ikinci ray seçki değil yankı olur.
  */
 async function readHomeFeatured(
   db: SupabaseClient,
@@ -311,18 +228,9 @@ async function readHomeFeatured(
 }
 
 /**
- * Telefon vitrininin TEK okuması — ana ekranın MÜŞTERİDEN BAĞIMSIZ bölümleri tek turda: bantlar ·
- * fırsatlar · seçki · tarifler · paketler · keşif kart sayısı. Native vitrin ucu ile web telefon
- * görünümü bunu çağırır; kimlikli bölümler (selamlama, puan, rozet, süren sipariş) kimlikli
- * okumalardan gelir (kullanıcı kararı 08.08).
- *
- * Bölümler birbirinden bağımsız okunur; biri ötekini bekletmez (ucun süresi en yavaş bölümün süresi).
- *
- * ── SÖZLEŞMENİN KİLİDİ ──────────────────────────────────────────────────────
- * Gövde `HomeSchema` ile süzülür: fazla alan tele ya da sayfaya sızamaz, şekil uymadığı gün burada
- * patlar. Kartın kampanya ROZETİ (23.08) kesit başlığıyla ve vitrin bandıyla AYNI çeviri kapısından.
- * `offers` rayında kampanya doğmaz: her kartı bir fırsat kartıdır ve "Fırsat kampanyayı yener"
- * kararı kaynakta uygulanıyor (`toProduct`) — ikinci bir dal yazılmadı.
+ * Telefon vitrininin müşteriden bağımsız bölümleri tek turda ve birbirini beklemeden okunur; kimlikli bölümler (selamlama, puan,
+ * süren sipariş) kendi okumalarından gelir. Gövde `HomeSchema` ile süzülür ki fazla alan tele sızmasın, şekil uymadığı gün burada
+ * patlasın.
  */
 export async function readHome(
   db: SupabaseClient,
@@ -335,14 +243,10 @@ export async function readHome(
     readHomeOffers(db, locale, place, viewer),
     readHomeFeatured(db, locale, place, viewer),
     readRecipeCards(db, locale, HOME_RECIPE_LIMIT),
-    // Vitrin YALNIZ işaretli paketleri taşır — işaret bir seçimdir, yedeği yoktur (sözleşme künyesi).
-    // Yer BURAYA DA geçer (10.08): vitrindeki paket kartı ile Fikirler listesindeki kart AYNI karttır;
-    // birinin yeri bilip ötekinin bilmemesi aynı paketi iki ekranda farklı gösterirdi.
+    // Vitrin yalnız işaretli paketleri taşır. Yer buraya da geçer: vitrindeki paket kartı Fikirler listesindekiyle aynı karttır.
     readPackageCards(db, locale, { featuredOnly: true, limit: HOME_PACKAGE_LIMIT, place }),
-    /* KEŞİF DAVETİNİN ŞARTI (MB-58b): kalan kart sayısı. Destenin KENDİSİ değil sayısı okunur ve
-       kural desteyi kuran fonksiyonun aynısından gelir (`countDiscoverDeck` künyesi) — iki ayrı
-       sayım bir gün ayrı düşer ve vitrin, açtığında boş çıkan bir tura davet ederdi. Bedeli
-       gecikmeye eklenmiyor: okuma demetin İÇİNDE koşuyor. */
+    /* Keşif davetinin şartı kalan kart sayısıdır ve desteyi kuran kuraldan sayılır (`countDiscoverDeck`); iki ayrı sayım bir gün
+       ayrışır ve vitrin boş çıkan bir tura davet eder. */
     countDiscoverDeck(db, viewer.customerId),
   ]);
 

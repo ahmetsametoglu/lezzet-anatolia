@@ -127,8 +127,7 @@ export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer
     // Yer paket bandına da geçer: kart yol işaretini ancak yeri bilirse basabilir.
     listStorefrontPackages(locale, HOME_PACKAGE_LIMIT, place),
     readCollections(db, locale),
-    // Tarif şeridi liste sayfasının kapısından okunur: aynı kart aynı kuralları taşır ve `place`/`viewer` geçmeseydi ana sayfa
-    // tarif sayfasından farklı fiyat basardı.
+    // Tarif şeridi liste sayfasının kapısından okunur ve `place`/`viewer` taşır ki ana sayfa tarif sayfasıyla aynı fiyatı bassın.
     listStorefrontRecipes(locale, place, viewer, HOME_RECIPE_LIMIT),
   ]);
 

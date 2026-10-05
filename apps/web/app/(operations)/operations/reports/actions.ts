@@ -7,22 +7,12 @@ import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireFinance } from '@/lib/guard';
 import { monthRange, REPORTS_PATH } from './reports-url';
 
-// Raporlar server action'ları — guard ilk + kapıya devret + `{ data, error }` (throw yok).
-//
-// **Guard `requireFinance`** (yönetici VEYA muhasebeci): export ve fatura eşleştirmesi tam olarak
-// muhasebenin işidir. Kâr blokları ayrı bir kapıdan geçiyor (sayfada `canSeeProfit`) — tasarım §6
-// kârı yalnız yöneticiye açıyor, ama export'u muhasebeciden esirgemek ekranı işlevsiz kılardı.
+// Raporlar server action'ları: guard ilk, sonuç `{ data, error }`. Guard `requireFinance` (yönetici veya muhasebeci), çünkü
+// export ve fatura eşleştirmesi muhasebenin işidir; kâr blokları sayfada ayrı kapıdan (`canSeeProfit`) geçer.
 
 /**
- * Muhasebe dosyasını üretir — **indirme İSTEMCİDE yapılır**, dosya buradan metin olarak döner.
- *
- * Sunucudan doğrudan dosya yollamak bir rota (route handler) isterdi; oysa üretilen şey birkaç yüz
- * satırlık metin ve zaten ekranın gösterdiği özetin aynısından çıkıyor. Metin dönüp indirmeyi
- * tarayıcıya bırakmak, ikinci bir yetki kapısı açmaktan da güvenli: rota olsaydı guard'ı ayrıca
- * orada tutmak gerekirdi.
- *
- * **Aynı dönem ikinci kez üretilebilir** (tasarım §4: muhasebeci dosyayı kaybetmiş olabilir) —
- * üretim bir KAYIT değil, okuma; hiçbir yere "export edildi" damgası basmıyor.
+ * Muhasebe dosyasını metin olarak döner, indirme tarayıcıda yapılır: ayrı bir rota ikinci bir yetki kapısı isterdi. Üretim kayıt
+ * değil okumadır; aynı dönem tekrar üretilebilir, "export edildi" damgası basılmaz.
  */
 export async function generateExportAction(ym: string): Promise<ActionResult<{ csv: string; filename: string }>> {
   try {
@@ -44,11 +34,7 @@ export async function generateExportAction(ym: string): Promise<ActionResult<{ c
   }
 }
 
-/**
- * Hareket dökümü (12.15) — satış dosyasının yanındaki ikinci dosya: dönemin her para hareketi
- * belgesi, etiketi ve karşı tarafıyla. Aynı desen: metin döner, indirme tarayıcıda; tekrar
- * üretilebilir, damga basmaz.
- */
+/** Hareket dökümü: dönemin her para hareketi belgesi, etiketi ve karşı tarafıyla; satış dosyasıyla aynı desen. */
 export async function generateMovementExportAction(ym: string): Promise<ActionResult<{ csv: string; filename: string }>> {
   try {
     await requireFinance();
@@ -65,11 +51,8 @@ export async function generateMovementExportAction(ym: string): Promise<ActionRe
 }
 
 /**
- * Sipariş referansına resmî fatura numarasını bağlar.
- *
- * Numara burada ÜRETİLMEZ — dış muhasebede doğar, sistem kendi referansıyla eşleştirir (12.7'nin
- * kuralı). Boş numara kapıda reddediliyor: yazılsaydı satır kuyruktan düşer ama hiçbir faturaya
- * bağlanmazdı, yani kuyruk temizlenmiş görünürken eşleşme hiç olmazdı.
+ * Sipariş referansına resmî fatura numarasını bağlar; numara dış muhasebede doğar, burada üretilmez. Boş numara reddedilir: yazılsaydı
+ * satır kuyruktan düşer ama hiçbir faturaya bağlanmazdı.
  */
 export async function matchInvoiceAction(orderId: string, invoiceNo: string): Promise<ActionResult<{ ok: true }>> {
   try {
