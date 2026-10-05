@@ -17,16 +17,12 @@ import {
 import { ShippingBoxInsertSchema, type ShippingBox } from '@lezzet/types';
 import type { MeasureDayState, TemperatureDeviation } from './measure-rules';
 
-// Depolar ekranının (19.5) tipleri. Varlık şemaları `packages/types`'ta; burada YALNIZ görünümün
-// eklediği türetmeler ve formun sözleşmesi var — hiçbir alan elle yeniden yazılmaz (CLAUDE.md §1).
+// Depolar ekranının tipleri: varlık şemaları `packages/types`'ta, burada yalnız görünümün eklediği türetmeler ve formun
+// sözleşmesi var.
 
 // ── Deponun adresi ──────────────────────────────────────────────────────────
-// `warehouse.address` veritabanında serbest `jsonb`: şekli kolon değil UYGULAMA belirler. Şekli
-// burada MÜŞTERİ ADRESİNDEN türetiyoruz — üç alanın anlamı birebir aynı ve ikinci bir adres sözlüğü
-// kurmak, bir gün "postalCode" ile "zip"in yan yana yaşadığı bir veri tabanı demekti.
-//
-// Ülke burada YOK: deponun ülkesi künyenin kendi alanıdır (`countryCode`) ve KDV modeli ona bağlı.
-// Adresin içine ikinci bir ülke yazmak, ikisinin ayrışabileceği bir hâl yaratırdı.
+// `warehouse.address` serbest `jsonb`; şekli müşteri adresinden türer, çünkü üç alanın anlamı aynıdır ve ikinci bir adres
+// sözlüğü "postalCode" ile "zip"i yan yana yaşatırdı. Ülke burada yok: deponun ülkesi künyenin kendi alanıdır ve KDV ona bağlı.
 export const WarehouseAddressSchema = AddressSchema.pick({ line1: true, postalCode: true, city: true });
 export type WarehouseAddress = z.infer<typeof WarehouseAddressSchema>;
 
@@ -48,12 +44,8 @@ export const WarehouseFormSchema = WarehouseInsertSchema.pick({ code: true, name
   pickupEnabled: z.boolean(),
   address: WarehouseAddressSchema,
   /**
-   * Deponun coğrafi noktası (11.9) — **rotanın çıpası**: kapalı tur hesabı buradan başlar ve buraya
-   * döner. Nokta yoksa o deponun rotaları hiç sıralanamaz (motor `no_start` der).
-   *
-   * METİN olarak alınıyor, sayı olarak değil — boş bırakılabilmesi gerek ve boş bir sayı alanı
-   * `NaN` üretir (`storage_area` hedef aralığının aynı gerekçesi). Boşsa kapı adresten ÇÖZER;
-   * doluysa **operatörün değeri kazanır** — otomatik çözüm bir başlangıçtır, son söz değil.
+   * Deponun noktası, rotanın çıpası; nokta yoksa o deponun rotaları sıralanamaz (`no_start`). Metin olarak alınır, çünkü boş
+   * bırakılabilmeli ve boş sayı alanı `NaN` üretir; boşsa kapı adresten çözer, doluysa operatörün değeri kazanır.
    */
   lat: z.string().trim(),
   lng: z.string().trim(),
@@ -66,21 +58,14 @@ export type WarehouseFormInput = z.infer<typeof WarehouseFormSchema>;
  * Posta kodu SEÇİMİ — `(ülke, kod)` ikilisi, çünkü kod tek başına benzersiz değil (`67000` hem
  * Fransa'da hem Almanya'da geçerli). Bölge sınır ötesi olabildiği için ikisi de taşınır.
  */
-/**
- * Rotaya bağlı kod — kartların okuduğu şekil. Rota FORMU burada değil (kurulum Teslimat & Rota'ya
- * taşındı, 07.08); bu ekran yalnız okur, o yüzden yalnız tip kaldı.
- */
+/** Rotaya bağlı kod, kartların okuduğu şekil; rota formu Teslimat & Rota ekranındadır, bu ekran yalnız okur. */
 export type PostalCodePick = Pick<DeliveryZonePostalCode, 'country' | 'postalCode'>;
 
-// ── Ölçüm noktası formları (19.28) ──────────────────────────────────────────
+// ── Ölçüm noktası formları ──────────────────────────────────────────────────
 
 /**
- * Depo içi alan. `warehouseId` formda YOK — hangi tesise eklendiği seçili karttan belli ve onu
- * forma koymak, operatöre zaten verdiği cevabı ikinci kez sordurmaktı.
- *
- * Hedef aralık **metin** olarak alınıyor, sayı olarak değil: boş bırakılabilmesi gerek ("bu alanın
- * beklentisi yok") ve boş bir sayı alanı `0`a düşer — sıfır derece geçerli bir beklentidir, yani
- * boşluk sıfırdan ayırt edilemez hâle gelirdi (`CLAUDE §1`).
+ * Depo içi alan; `warehouseId` formda yok, çünkü tesis seçili karttan bellidir. Hedef aralık metin olarak alınır: boş bir sayı alanı
+ * `0`a düşer ve sıfır derece geçerli bir beklenti olduğu için boşluk sıfırdan ayırt edilemezdi.
  */
 /**
  * Günlük beklenen ölçüm — formda METİN, çünkü `<select>` metin döndürür ve sayıya zorlanan boş bir
@@ -113,10 +98,7 @@ export type VehicleFormInput = z.infer<typeof VehicleFormSchema>;
  * çözüldüğü için (`jsonb` → `WarehouseAddress`) yeniden tanımlanıyor, `createdAt` ise ekranın
  * sorusu değil.
  */
-/* `vehicleId` DE ATILIYOR (21.249): araç deposunun ruhsat kaydına bağı 04.09'da veriye girdi ama bu
-   ekran onu HENÜZ okumuyor — kart araçları deponun ev bağından buluyor (`VanLoadRow`). Taşınmayan
-   bir alanı satıra koymak, "bir gün lazım olur" diye hesaplanıp atılan değer olurdu; gerekince
-   omit'ten çıkarılır ve orada ne gösterdiği de yazılır. */
+/* `vehicleId` atılır, çünkü ekran onu okumuyor: kart araçları deponun ev bağından bulur (`VanLoadRow`). */
 export type WarehouseRowView = Omit<Warehouse, 'address' | 'createdAt' | 'vehicleId'> & {
   address: WarehouseAddressView;
   /** Bağlı bölge sayısı + o bölgelerin kod toplamı; pasif bölgeler ayrı sayılır. */
@@ -128,12 +110,11 @@ export type WarehouseRowView = Omit<Warehouse, 'address' | 'createdAt' | 'vehicl
   batchCount: number;
   /** Karar bekleyen (yaklaşan tarihli / süresi geçmiş) parti sayısı. */
   attentionCount: number;
-  /** Bu depoya yolda olan sevkiyat — karnede çizilmiyor (17.08), KAPATMA uyarısının girdisi. */
+  /** Bu depoya yolda olan sevkiyat; karnede çizilmez, kapatma uyarısının girdisidir. */
   inTransitIn: number;
   /**
-   * Kurulum eksikliği — **hiçbir siparişi alamayan** tesis. Ne bağlı aktif bölgesi ne kargo çıkışı
-   * varsa posta kodu ona çözülmez, kargo yolu ondan geçmez: açık ama ulaşılamaz bir tesistir.
-   * `null` = kurulum tam.
+   * Kurulum eksikliği: ne aktif bölgesi ne kargo çıkışı olan tesis hiçbir siparişi alamaz, açık ama ulaşılamazdır. `null` kurulum tam
+   * demektir.
    */
   setupGap: string | null;
 };
@@ -142,14 +123,8 @@ export type WarehouseRowView = Omit<Warehouse, 'address' | 'createdAt' | 'vehicl
 export type ZoneCardView = Pick<DeliveryZone, 'id' | 'name' | 'isActive' | 'weekdays'> & {
   postalCodes: PostalCodePick[];
   /**
-   * Bölgenin AĞIRLIĞI (19.28, kullanıcı isteği 17.08) — kodlarının toplamı.
-   *
-   * Kart bugüne kadar yalnız TANIMI gösteriyordu (ad · gün · kod). Tanım "ne kurduk"u söyler,
-   * ağırlık "ne getirdi"yi — ve ikisi yan yana durmadan bir bölge hakkında karar verilemez: teslim
-   * günü eklemek mi, kod çıkarmak mı, hiç dokunmamak mı.
-   *
-   * Kaynak Rotalar'ın okuduğu RPC'nin aynısı (`analytics_postal_code_orders`): iki ekran aynı
-   * soruyu iki farklı sayıyla cevaplamasın.
+   * Bölgenin ağırlığı, kodlarının toplamı: tanım "ne kurduk"u, ağırlık "ne getirdi"yi söyler ve bölge kararı ikisi yan yana durunca
+   * verilir. Kaynak Rotalar'ın okuduğu RPC'dir (`analytics_postal_code_orders`), iki ekran aynı soruya iki sayı vermesin.
    */
   orderCount: number;
   revenueCents: number;
@@ -172,11 +147,8 @@ export interface StaffChipView {
 }
 
 /**
- * Karne — deponun bugünkü hâli. **SAYAR, LİSTELEMEZ**: her sayı Stok'a o depo bağlamıyla giden bir
- * kapıdır, satırların kendisi orada yaşar.
- *
- * Ölçülemeyen alanlar `null` döner, sıfıra düşmez (CLAUDE.md §1): fiyatı girilmemiş partilerden
- * risk TUTARI çıkarılamaz ve `0 €` yazmak bozuk ölçümü sağlıklı gibi okuturdu.
+ * Karne, deponun bugünkü hâli: sayar, listelemez; her sayı Stok'a o depo bağlamıyla giden bir kapıdır. Ölçülemeyen alan `null` döner,
+ * çünkü fiyatı girilmemiş partiden risk tutarı çıkarılamaz ve `0 €` bozuk ölçümü sağlıklı okuturdu.
  */
 export interface ScorecardView {
   variantCount: number;
@@ -185,7 +157,7 @@ export interface ScorecardView {
   expiredCount: number;
   riskCents: number | null;
   belowMinCount: number;
-  /** Bu depoya yolda olan sevkiyat — karnede çizilmiyor (17.08), KAPATMA uyarısının girdisi. */
+  /** Bu depoya yolda olan sevkiyat; karnede çizilmez, kapatma uyarısının girdisidir. */
   inTransitIn: number;
   /** Bu depodan çıkacak, henüz teslim edilmemiş sipariş. */
   openOrderCount: number;
@@ -194,21 +166,12 @@ export interface ScorecardView {
 }
 
 /**
- * Etiket yazıcısı formu (23.7) — üçü BİRLİKTE dolu ya da BİRLİKTE boş: yarım ayar, basım anında
- * depocunun telefonunda patlayan bir hata demekti; ekran onu daha kaydederken reddeder. Üçü boş
- * kaydetmek yazıcıyı KALDIRIR (geçerli bir karar — depo etiketsiz çalışabilir, kutu akışı basımsız
- * da tamamlanır).
+ * Etiket yazıcısı formu: üç alan birlikte dolu ya da birlikte boş, çünkü yarım ayar basım anında depocunun telefonunda patlardı. Üçü boş
+ * kaydetmek yazıcıyı kaldırır; depo etiketsiz de çalışır.
  */
 /**
- * **YAZICI ENVANTERİ FORMU** (07.12 · 29.08) — `LabelPrinterFormSchema`ın halefi.
- *
- * Eski şema "üçü birlikte ya da üçü boş" diyordu, çünkü ayar TEK yazıcıyı tarif ediyordu ve
- * "boş = yazıcıyı kaldır" onun tek silme yoluydu. Tabloya geçince o kural anlamını yitirdi:
- * satır eklemek eklemektir, kaldırmak ayrı bir eylem (ve **silme değil kapatma** — cihazların
- * seçimi kimliğe bağlı).
- *
- * `name` zorunlu ve bu kozmetik değil: iki yazıcı arasında seçim yapan depocu `192.168.1.90` ile
- * `.91`i ayırt edemez.
+ * Yazıcı envanteri formu: satır eklemek eklemektir, kaldırmak ayrı bir eylemdir ve silme değil kapatmadır, çünkü cihazların seçimi
+ * kimliğe bağlı. `name` zorunlu, çünkü iki yazıcı arasında seçim yapan depocu onları yalnız IP adresinden ayırt edemez.
  */
 export const WarehousePrinterFormSchema = z.object({
   warehouseId: z.string().uuid(),
@@ -226,24 +189,15 @@ export interface WarehouseCardView {
   zones: ZoneCardView[];
   staff: StaffChipView[];
   scorecard: ScorecardView;
-  /**
-   * Deponun YAZICILARI (07.12 · 29.08) — envanter, seçim değil. Boş dizi = tanımsız; telefon
-   * basmayı hiç denemez ve kart önizleme olarak kalır.
-   */
+  /** Deponun yazıcıları, envanter; boş dizi tanımsız demektir, telefon basmayı denemez ve kart önizleme olarak kalır. */
   printers: BoxPrinterContract[];
-  /** Deponun kargo kutuları + benimsenmemiş sistem şablonları (07.12). */
+  /** Deponun kargo kutuları ve benimsenmemiş sistem şablonları. */
   shippingBoxes: ShippingBoxesView;
-  /** Ölçüm noktaları (19.28) — depo içi alanlar + bu tesise künyelenmiş araçlar. */
+  /** Ölçüm noktaları: depo içi alanlar ve bu tesise künyelenmiş araçlar. */
   points: MeasurePointView[];
   /**
-   * **Bu tesisin araçlarında ne var** (kullanıcı isteği 02.09) — `null` = araçta bir şey yok.
-   *
-   * Karnenin dört kutusu deponun İÇİNİ sayıyor; araç deponun dışında ama malı hâlâ bu tesisin.
-   * Ayrı bir kutu olmadı, karnenin altında tek satır oldu — dört kutu kararı (17.08) bilinçliydi ve
-   * beşincisi o kararı sessizce geri alırdı.
-   *
-   * **ARAÇ kartında `null`:** aracın kendi kartında "araçta ne var" demek, karnenin zaten saydığı
-   * şeyi ikinci kez yazmak olurdu (araç bir depodur, "Elde ne var" kutusu onu sayıyor).
+   * Bu tesisin araçlarında ne var; `null` araçta bir şey yok demektir. Karnenin altında tek satırdır, araç kartında `null` döner,
+   * çünkü aracın karnesi onu zaten sayar.
    */
   vanLoad: VanLoadCardView | null;
   /**
@@ -254,9 +208,8 @@ export interface WarehouseCardView {
 }
 
 /**
- * Karnenin altındaki araç satırı. Panelin şeridiyle AYNI cümleyi kurar (`VanLoadBandView`) ama
- * ayrı tip: ikisi aynı motordan (`readFacilityVanSummary`) besleniyor, sunumları farklı — kart
- * araç araç yazabilir, panelin tek satırı toplar.
+ * Karnenin altındaki araç satırı; paneldeki araç satırıyla aynı motordan (`readFacilityVanSummary`) beslenir ama sunumu farklıdır:
+ * kart araç araç yazar, panel tek satırda toplar.
  */
 export interface VanLoadCardView {
   /** Araç başına satır: "VAN-1 · 40 adet · 6 üründen". Araç yoksa boş dizi. */
@@ -266,11 +219,8 @@ export interface VanLoadCardView {
 }
 
 /**
- * **Ölçüm noktası** — depo içi alan ya da araç, tek görünümde (19.28).
- *
- * Veride İKİ tablo (`storage_area` · `vehicle`, zorunlulukları farklı) ama ekranda tek liste:
- * operatörün sorusu "hangi noktalarım var ve ölçülüyor mu", tablo ayrımı değil. Ayrımı `kind`
- * taşıyor, çünkü düzenleme formu ona göre değişiyor (alanda hedef aralık, araçta plaka).
+ * Ölçüm noktası, depo içi alan ya da araç tek görünümde: veride iki tablo var ama operatörün sorusu "hangi noktalarım var ve ölçülüyor
+ * mu". Ayrımı `kind` taşır, çünkü düzenleme formu ona göre değişir.
  */
 export interface MeasurePointView {
   id: string;
@@ -283,10 +233,7 @@ export interface MeasurePointView {
   areaKind: StorageAreaKind | null;
   targetMinC: number | null;
   targetMaxC: number | null;
-  /**
-   * Günde kaç ölçüm beklendiği — takvimin "eksik gün" ölçütü (19.30). **0 = beklenmiyor** ve o
-   * noktanın boş günleri eksik sayılmaz (oda sıcaklığı rafı, soğutucusuz araç).
-   */
+  /** Günde kaç ölçüm beklendiği, takvimin "eksik gün" ölçütü; 0 beklenmiyor demektir ve o noktanın boş günü eksik sayılmaz. */
   expectedDailyChecks: number;
   /** Noktanın doğum anı — öncesindeki günler "ölçülmedi" değil, nokta henüz yoktu. */
   createdAt: string;
@@ -298,15 +245,12 @@ export interface MeasurePointView {
    * yanlış olurdu — ölçemediğimiz bir şeyi yokluk diye göstermek (`CLAUDE §1`).
    */
   lastRecordedAt: string | null;
-  /** Hijyen takvimi — eskiden yeniye, pencerenin her günü için tam bir kayıt (19.30). */
+  /** Hijyen takvimi; pencerenin her günü için en eski günden en yeniye bir kayıt. */
   days: MeasureDayView[];
 }
 
 /**
- * **Takvimin bir günü** (19.30) — hijyen defterinin bir satırı.
- *
- * Ölçümlerin kendisi de taşınıyor, yalnız hâli değil: takvimde bir güne gelen kişinin sorusu "ne
- * yazmıştık" — saat ve derece olmadan kırmızı bir kutu, cevabı olmayan bir uyarıdır.
+ * Takvimin bir günü, hijyen defterinin bir satırı; ölçümlerin kendisi de taşınır, çünkü güne gelen kişinin sorusu "ne yazmıştık"tır.
  */
 export interface MeasureDayView {
   /** `2026-08-17` — UTC gün anahtarı (`measure-rules.dayKeyOf` künyesi). */
@@ -337,25 +281,13 @@ export interface WarehousesData {
   card: WarehouseCardView | null;
   /** Aktif deposu olan ülkeler — "yeni ülkede ilk depo" mali uyarısı bundan türer. */
   countriesWithWarehouse: Country[];
-  /**
-   * ── `countriesWithoutShipping` ve `zoneDemand` KALKTI (17.08) ─────────────────────────────
-   * İkisi de ekranın "Ağ geneli" bölümünü besliyordu ve o bölüm bu sayfanın sorusuna cevap
-   * vermiyordu. Talep tablosunun gerekçesi burada yazılıydı — *"kararın verildiği yer burası"* —
-   * ve 07.08'de geçerliliğini yitirdi: bölge kurulumu haritayla birlikte Teslimat & Rota'ya taşındı,
-   * karar da onunla gitti. Gerekçesi biten bir alan, alan olarak kalmaz. Ayrıntı `19.27`.
-   */
 }
 
-// ── Kargo kutusu (07.12) ────────────────────────────────────────────────────
+// ── Kargo kutusu ────────────────────────────────────────────────────────────
 
 /**
- * Kutu formu — `ShippingBoxInsertSchema`'dan TÜRER (elle alan yazılmaz, `CLAUDE §1`).
- *
- * `warehouseId` formda YOK: kutu her zaman AÇIK OLAN deponun listesine girer ve kimliği action'a
- * ayrı geçer. Form alanı olsaydı ekranda seçili olan depo ile forma yazılan depo ayrışabilirdi —
- * ve o ayrışma, kutuyu görünmeyen bir listeye yazardı.
- *
- * `isActive`/`sortOrder` de yok: ilki bir DÜĞMEDİR (satırda), ikincisi listenin sırasıdır.
+ * Kutu formu, `ShippingBoxInsertSchema`'dan türer. `warehouseId` formda yok, çünkü kutu açık olan deponun listesine girer ve form alanı
+ * ekranda seçili depoyla ayrışabilirdi; `isActive` satırdaki düğmedir, `sortOrder` listenin sırasıdır.
  */
 export const ShippingBoxFormSchema = ShippingBoxInsertSchema.omit({ warehouseId: true, isActive: true, sortOrder: true });
 export type ShippingBoxFormInput = z.infer<typeof ShippingBoxFormSchema>;

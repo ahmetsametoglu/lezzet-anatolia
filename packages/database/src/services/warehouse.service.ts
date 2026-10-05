@@ -10,13 +10,8 @@ import {
 import { BaseDbService } from '../core/base.service';
 
 /**
- * Depo servisi (19.1) — DOMAIN §17.
- *
- * **Karar vermez, satır getirir.** "Bu posta kodu hangi depoya düşer", "bu personel hangi depoyu
- * görür" kararları saf motordadır (`domain-core/warehouse`); servis depoları getirir.
- *
- * VARSAYILAN DEPO KAVRAMI YOKTUR (C2) — bu yüzden burada `getDefault()` gibi bir uç de yoktur.
- * Depo daima açık bir kaynaktan gelir: adresin posta kodu ya da personelin sabit deposu.
+ * Depo servisi (DOMAIN §17): karar vermez, satır getirir; posta kodundan ve personelden depo kararı saf motordadır
+ * (`domain-core/warehouse`). Varsayılan depo yoktur, depo daima adresin posta kodundan ya da personelin deposundan gelir.
  */
 export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, WarehouseUpdate> {
   constructor(supabase: SupabaseClient) {
@@ -24,30 +19,17 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
   }
 
   /**
-   * Tüm depolar (admin) ya da yalnız aktifler (operasyon seçicisi). Operatörün sırası, eşitlikte kod.
-   *
-   * `warehouseIds` = personelin kapsamı: verilmezse süzgeç yok (admin), verilirse yalnız o depolar,
-   * boş dizi ise **hiçbiri** — kapsam dışı depo hiçbir seçicide ve süzgeçte seçenek olarak var
-   * olmamalı (görüp de seçememek değil, hiç görmemek).
-   *
-   * Kapsam buraya **dizi** olarak girer, `WarehouseScope` motor tipi olarak DEĞİL: `domain-core`
-   * (saf karar) ile `database` (saf I/O) birbirini bilmez (`STACK §4`) ve `boundaries` lint'i o
-   * bağımlılığı geçirmez. Kapsamı diziye çeviren tek yer uygulama katmanındaki bağlam kapısıdır.
-   *
-   * `kind` = tür süzgeci — pratikte hep `'facility'`, yani **araçsız**. Araç bir depodur (`0031`)
-   * ama YAZMA hedefi olamaz: mal kabul, satın alma, hazırlık ve rota çıkışı bir tesise bağlanır.
-   * Süzgeç burada duruyor çünkü çağıranın hepsi aynı cümleyi kurmak zorundaydı; iki yerde elle
-   * yazılmıştı (`management/hub`, `warehouse/supply`) ve geri kalan her seçici araçları da
-   * gösteriyordu (ölçüldü 02.09).
+   * Tüm depolar ya da yalnız aktifler, operatörün sırasıyla; `warehouseIds` personelin kapsamıdır (boş dizi hiçbiri) ve dizi olarak
+   * girer, çünkü `database` motorun `WarehouseScope` tipini bilmez. `kind` süzgeci pratikte `'facility'`dir: araç bir yazma hedefi olamaz.
    */
   list(
     opts: {
       activeOnly?: boolean;
       warehouseIds?: readonly string[];
       kind?: Warehouse['kind'];
-      /** Evi bu tesis olan araçlar (02.09) — panelin ve depo kartının sorgusu. */
+      /** Evi bu tesis olan araçlar; panelin ve depo kartının sorgusu. */
       homeWarehouseId?: string;
-      /** Bu ARACIN deposu (21.249) — bağ 1:1, yani sonuç ya tek satır ya boş. */
+      /** Bu aracın deposu; bağ 1:1 olduğu için sonuç tek satır ya da boştur. */
       vehicleId?: string;
       /** Gel-al noktaları — checkout'un müşteriye sunduğu küme. */
       pickupEnabled?: boolean;
@@ -70,25 +52,16 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
   }
 
   /**
-   * Kargo çıkış deposu — bölge dışı müşteriler ve rota müşterilerinin kargo dolgusu buradan gider.
-   *
-   * Ülke başına EN FAZLA BİR aktif tane vardır (kural veritabanında, kısmi unique indeks) — bu
-   * yüzden "seçim algoritması" yok, tek satır okunuyor. `null` dönmesi gerçek bir arızadır:
-   * kargo deposu tanımlı değilse bölge dışına satış yapılamaz ve bunu çağıran AÇIKÇA söylemeli,
-   * sessizce boş listeye düşmemeli.
+   * Kargo çıkış deposu; ülke başına en fazla bir aktif tane olduğu için (kısmi unique indeks) tek satır okunur. `null` gerçek bir
+   * arızadır: kargo deposu yoksa bölge dışına satış yapılamaz ve çağıran bunu açıkça söylemeli.
    */
   getShippingWarehouse(country: Warehouse['countryCode']): Promise<Warehouse | null> {
     return this.getOneBy({ countryCode: country, shipsOnline: true, isActive: true });
   }
 
   /**
-   * **Kargo çıkışı olan ülkeler** — bilgi metinlerinin *"nereye gönderiyoruz"* cümlesi (18.08).
-   *
-   * `listActiveCountries` ile karıştırılmaz: o "hizmet verdiğimiz ülkeler"dir ve araç bölgesini de
-   * sayar. Bu küme yalnız KARGONUN gidebildiği yerlerdir — cümlenin konusu o. Sayı elle yazılıydı
-   * ve iki yüzey iki farklı şey söylüyordu (web ana sayfa "Fransa geneline", yasal sayfa "Fransa ve
-   * Almanya geneline"); ikisi de bir varsayımdı. Cevap artık veriden: bir ülkeye kargo deposu
-   * açıldığı gün cümle kendiliğinden büyür, kapatıldığı gün küçülür.
+   * Kargo çıkışı olan ülkeler; bilgi metinlerinin "nereye gönderiyoruz" cümlesi veriden kurulsun diye. `listActiveCountries`ten farkı
+   * araç bölgesini saymamasıdır: küme yalnız kargonun gidebildiği yerlerdir.
    */
   async listShippingCountries(): Promise<Warehouse['countryCode'][]> {
     const rows = await this.getAll({ isActive: true, shipsOnline: true });
@@ -106,11 +79,8 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
   }
 
   /**
-   * Sürükle-bırak sıralamasının TEK turu (`reorderBy`, `category`/`collection`/`bundle` ile aynı).
-   *
-   * Depo sırası önemsiz bir tercih değil: sistemdeki **bütün** depo seçicileri bu sırayı okur
-   * (bağlam seçicisi, tablo süzgeci, transfer hedefi). Satır satır `update` atmak listeyi geçici
-   * olarak yarı sıralı bırakır — aradaki bir okuma iki depoyu aynı sırada görür.
+   * Sürükle-bırak sıralamasının tek turu (`reorderBy`); bütün depo seçicileri bu sırayı okur ve satır satır yazım aradaki bir okumaya
+   * yarı sıralı liste gösterirdi.
    */
   async reorder(orderedIds: string[]): Promise<void> {
     return this.reorderBy(orderedIds, 'sortOrder');

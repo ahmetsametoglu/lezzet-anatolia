@@ -13,15 +13,8 @@ import { createTestWarehouse, createTestWarehousePair } from '../testing/warehou
 import { purgeTestData, purgeVariantStock } from '../testing/cleanup';
 
 /**
- * Depo ağı (19.1) — DB üstünde. Burada **depo geçişinin çıkış ölçütü** doğrulanır: aynı varyant iki
- * depoda, biri boş → boş depodan istenen mal ayrılamaz.
- *
- * Bu testin varlık sebebi şudur: depo süzgeci unutulan bir sorgu TEK DEPOLU bir veri setinde doğru
- * cevap verir ve hiçbir test kırılmaz. Sistem sessizce olmayan malı satmaya başlar ve bunu ancak
- * müşteri fark eder. İki depolu kurulum o sessizliği bozar.
- *
- * Kurallar motorun değil VERİNİN sorumluluğundadır (DOMAIN §17) — burada denenen de tam olarak o:
- * uygulama unutsa bile veritabanı reddediyor mu?
+ * Depo ağı, DB üstünde: aynı varyant iki depoda, biri boşken boş depodan istenen mal ayrılamaz. Depo süzgeci unutulan sorgu tek
+ * depolu veride doğru cevap verirdi; iki depolu kurulum o sessizliği bozar ve kuralı uygulama unutsa da veritabanının reddettiğini sınar.
  */
 const db = serviceDb();
 const stocks = new StockService(db);
@@ -73,17 +66,15 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await db.from('reservation').delete().eq('variant_id', variantId);
-  // Transfer satırları partiye `restrict` ile bağlı: silme SIRASI zorunlu. Sıra yanlış olduğunda
-  // parti silinmez, önceki testin stoğu bu teste sızar ve "kullanılabilir" hesabı yalancı geçer —
-  // bir kez yaşandı, sevk testi bu yüzden yanlışlıkla yeşildi.
+  // Transfer satırları partiye `restrict` ile bağlı, silme sırası zorunlu: sıra yanlışsa parti silinmez, önceki testin stoğu bu
+  // teste sızar ve "kullanılabilir" hesabı yalancı geçer.
   const { data: partiler } = await db.from('stock').select('id').eq('variant_id', variantId);
   const ids = (partiler ?? []).map((p) => (p as { id: string }).id);
   if (ids.length > 0) {
     const { data: satirlar } = await db.from('warehouse_transfer_line').select('transfer_id').in('source_stock_id', ids);
     const transferIds = [...new Set((satirlar ?? []).map((l) => (l as { transfer_id: string }).transfer_id))];
-    // **DEFTER TRANSFERDEN ÖNCE** (06.14): sevk/kabul/iptal satırları transferi `restrict` ile
-    // tutuyor. Hareketler partiden siliniyor ve transferinkileri de topluyor — her hareket bir
-    // partiye bağlı (`stock_id` `not null`).
+    // Defter transferden önce silinir: sevk, kabul ve iptal satırları transferi `restrict` ile tutuyor ve her hareket bir partiye
+    // bağlı (`stock_id` `not null`).
     if (transferIds.length > 0) {
       await db.from('stock_movement').delete().in('stock_id', ids);
       await db.from('warehouse_transfer').delete().in('id', transferIds); // satırları CASCADE
@@ -215,8 +206,8 @@ describe('transfer — iki fiziksel gerçek an', () => {
       transferId: sevk.transferId,
       lines: satirlar.map((s) => ({ lineId: s.id, receivedQty: s.qty === 3 ? 0 : s.qty })),
     });
-    // İKİ parti (04.09, 21.248): sıfır gelen satır da parti açar — sıfır adetle, kayıp ona bağlı.
-    // Eksik 3 birim aynı transaction'da IMH belgesiyle düşer; eskiden hiçbir kayda geçmiyordu.
+    // İki parti: sıfır gelen satır da sıfır adetle parti açar ve kayıp ona bağlanır; eksik 3 birim aynı transaction'da IMH
+    // belgesiyle düşer.
     expect(sonuc.createdBatches).toBe(2);
     expect(sonuc.shortfallQty).toBe(3);
     expect(sonuc.shortfallReferenceNo).toMatch(/^IMH-/);
@@ -231,8 +222,8 @@ describe('transfer — iki fiziksel gerçek an', () => {
     });
     const satirlar = await transfers.listLines(sevk.transferId);
 
-    // Sevk 2 iken 3 sayıldı (fazla 1), sevk 3 iken 2 sayıldı (eksik 1). Fazla artık REDDEDİLMEZ:
-    // gönderen iki sanıp üç koymuş olabilir, rampada sayılan gerçektir.
+    // Sevk 2 iken 3 sayıldı (fazla 1), sevk 3 iken 2 sayıldı (eksik 1). Fazla reddedilmez, çünkü gönderen iki sanıp üç koymuş olabilir
+    // ve rampada sayılan gerçektir.
     const sonuc = await transfers.receive({
       transferId: sevk.transferId,
       lines: satirlar.map((s) => ({ lineId: s.id, receivedQty: s.qty === 2 ? 3 : 2 })),
@@ -341,13 +332,8 @@ describe('tedarik — tek sipariş, iki depoda parçalı kabul (K6)', () => {
 
 describe('depo kaydı — kurallar veritabanında', () => {
   /**
-   * Test KENDİ kargo deposunu kurar ve kendi topluyor (CLAUDE.md §4b).
-   *
-   * Seed'in bıraktığı `STR` satırına yaslanmak cazipti ama tehlikeli: o satır yoksa insert
-   * BAŞARILI olur, test düşer **ve** geride aktif bir kargo deposu bırakır. O satır kısmi unique
-   * indeksi işgal ettiği için sonraki seed'in kendi kargo deposunu yazması da imkânsızlaşır —
-   * düşen bir test yerel ortamı kalıcı bozardı. Ülke `DE` seçildi: FR'deki gerçek kargo deposuyla
-   * hiç yarışmaz.
+   * Test kendi kargo deposunu kurar ve toplar: seed'in `STR` satırına yaslanmak, satır yokken düşen testin geride aktif bir kargo
+   * deposu bırakıp sonraki seed'i bozması demekti. Ülke `DE`, çünkü FR'deki gerçek kargo deposuyla yarışmaz.
    */
   it('ülke başına ikinci aktif kargo deposu açılamaz, başka ülkede serbesttir', async () => {
     const ilk = await createTestWarehouse(db, { label: 'SHIP', countryCode: 'DE', shipsOnline: true });

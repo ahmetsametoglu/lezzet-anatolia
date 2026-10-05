@@ -15,17 +15,9 @@ import { saveWarehouseAction } from './actions';
 import { WarehouseFormSchema, type WarehouseFormInput, type WarehouseRowView } from './warehouses-types';
 
 /**
- * Depo künyesi — ekleme ve düzenleme (19.5).
- *
- * **Nadir ve sonuçları ağır bir kurulum işi** (`design/pages/admin-depolar.md §7`): hız değil,
- * doğruluk ve geri dönülmezliğin anlaşılması önemli. O yüzden form üç yerde konuşuyor:
- *  · kodun belge parçası olduğu ve geçmişi değiştirmediği,
- *  · yeni bir ÜLKEDE ilk deponun vergi modelini değiştirdiği,
- *  · kargo çıkışı rolünün ülke başına tek olduğu ve bugün kimde durduğu.
- *
- * **Aktiflik burada YOK.** Kapatma dört ayrı sonucu olan bir karardır ve kendi penceresinde onaylanır;
- * bir form anahtarı olsaydı "kaydet"e basmanın yan etkisi hâline gelirdi. Alt barda yalnız o pencereyi
- * AÇAN düğme var.
+ * Depo künyesi, ekleme ve düzenleme: nadir ve sonuçları ağır bir kurulum işi olduğu için form kodun belge parçası olduğunu, yeni ülkede
+ * ilk deponun vergi modelini değiştirdiğini ve kargo çıkışının ülke başına tek olduğunu söyler. Aktiflik burada yok, çünkü kapatma dört
+ * sonucu olan ayrı bir karardır ve kendi penceresinde onaylanır.
  */
 const FORM_ID = 'warehouse-form';
 
@@ -67,7 +59,7 @@ export function WarehouseDialog({
         postalCode: editing?.address?.postalCode ?? '',
         city: editing?.address?.city ?? '',
       },
-      // Kayıtlı nokta varsa gösterilir; boşsa kapı adresten çözer (11.9).
+      // Kayıtlı nokta varsa gösterilir; boşsa kapı adresten çözer.
       lat: editing?.lat == null ? '' : String(editing.lat),
       lng: editing?.lng == null ? '' : String(editing.lng),
     },
@@ -154,11 +146,8 @@ export function WarehouseDialog({
           <FormInput control={form.control} name="address.postalCode" label="Posta kodu" required mono placeholder="67000" />
           <FormInput control={form.control} name="address.city" label="Şehir" required placeholder="Strasbourg" />
         </div>
-        {/* ── DEPONUN NOKTASI (11.9) — rotanın çıpası ────────────────────────────
-            Kurye rotasının sırası bu noktadan başlayıp buraya döner; nokta yoksa o deponun
-            rotaları HİÇ sıralanamaz. Boş bırakılırsa kaydederken adresten çözülür — dolduysa
-            operatörün değeri kazanır, çünkü yanlış bir çıpa HER rotayı bozar ve "genelde doğru"
-            burada yetmez. */}
+        {/* Deponun noktası rotanın çıpasıdır: kurye rotası buradan başlayıp buraya döner, nokta yoksa rotalar sıralanamaz. Boşsa
+            kaydederken adresten çözülür, doluysa operatörün değeri kazanır, çünkü yanlış bir çıpa her rotayı bozar. */}
         <div className="grid grid-cols-2 gap-3">
           <FormInput control={form.control} name="lat" label="Enlem" mono placeholder="boş bırak — adresten çözülür" />
           <FormInput control={form.control} name="lng" label="Boylam" mono placeholder="boş bırak — adresten çözülür" />
