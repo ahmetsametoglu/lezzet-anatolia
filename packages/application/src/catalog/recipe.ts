@@ -38,6 +38,26 @@ export interface RecipeItemReading {
 }
 
 /**
+ * Malzeme satırı yalnız satıştaki üründe çizilir; okunamayan ya da satışta olmayan (aday, satıştan kalkmış) ürün düşer, çünkü
+ * "tükendi" yeniden geleceği söyler (`DOMAIN §13`). Kartın malzeme sayısı da bu kuraldan sayılır ki kart sayfadaki satırla aynı olsun.
+ */
+function isShownRecipeProduct(product: { status: string }): boolean {
+  return product.status === 'active';
+}
+
+/**
+ * Tariflerin çizilecek malzeme kalemleri, yalnız varyant kimliği: kart okuması fiyat ve stok okumadan sayıyı satırla aynı kuraldan
+ * alsın diye. İki toplu sorgu; tarif ve kalem sayısından bağımsız.
+ */
+export async function readShownRecipeVariantIds(db: Db, recipes: readonly RecipeWithItems[]): Promise<Set<string>> {
+  const variantIds = [...new Set(recipes.flatMap((r) => r.items.map((i) => i.variantId)))];
+  const variants = await new ProductVariantService(db).listByIds(variantIds);
+  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
+  const shownProducts = new Set(products.filter(isShownRecipeProduct).map((p) => p.id));
+  return new Set(variants.filter((v) => shownProducts.has(v.productId)).map((v) => v.id));
+}
+
+/**
  * Verilen tariflerin malzemelerini okunmuş satırlara indirger, anahtar tarif kimliği. Tek tarif de tek elemanlı diziyle bu kapıdan
  * geçer: ayrı bir tekil imza, toplu okumanın N+1 kırma sözünü sessizce kaybetmenin en kolay yolu olurdu.
  */
@@ -76,10 +96,7 @@ export async function readRecipeItems(
     for (const item of items) {
       const variant = byVariant.get(item.variantId);
       const product = variant ? byProduct.get(variant.productId) : undefined;
-      // Okunamayan kalem: adı ve slug'ı olmayan bir satır ekranda hiçbir şey anlatmaz.
-      if (!variant || !product) continue;
-      // Satıştan kalkmış ürünün satırı TAŞINMAZ (`DOMAIN §13`) — "tükendi" burada yalan olurdu.
-      if (product.status !== 'active') continue;
+      if (!variant || !product || !isShownRecipeProduct(product)) continue;
 
       const ctx = context.get(product.id) ?? EMPTY_PRODUCT_CONTEXT;
       const selling = sellingOf(variant, ctx);
