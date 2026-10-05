@@ -5,25 +5,9 @@ import { cartKey } from './cart-types';
 import { getCartView } from './read';
 
 /**
- * **Sepetin fiyat ekseni** — DOMAIN §5'in müşteriye bakan iki kuralı (denetim T2 · T3).
- *
- * Denetim ikisini de "yazılmış ama testsiz" diye işaretledi ve gerekçesi doğruydu: bunlar
- * **Fransız tüketici hukuku** gerekçesiyle dokümana girmiş kurallar, yani sessizce bozulması en
- * pahalı sınıf. Bozulduklarında hiçbir şey patlamaz — müşteri sadece beklemediği bir tutar öder.
- *
- * Sınanan iki kural:
- *
- *  · **Fiyat ARTTIYSA bildirilir, DÜŞTÜYSE sessiz uygulanır.** Asimetri bilinçli: zam müşterinin
- *    onayını gerektirir, indirim sürpriz değil hediyedir — indirimi de "değişti" diye bildirmek
- *    müşteriyi gereksizce durdururdu.
- *  · **Çıpalı teklif partisi tükenirse normal fiyata SESSİZCE dönülmez.** Bu ikisi aynı
- *    mekanizmadan geçiyor ve testin gösterdiği asıl şey bu: teklifin düşmesi ayrı bir "teklif
- *    bitti" yolu değil, fiyat artışının özel bir hâli. Tek mekanizma olması iyi bir tasarım ama
- *    yazılı değildi — iki ayrı yol sanılıp ikincisi eklenebilirdi.
- *
- * `previousPrices` **girişli müşterinin** saklanmış fiyatlarını temsil eder (`writeCartAction`
- * onu `storedPrices` ile veriyor). Ziyaretçide bu harita hiç geçmiyor; o boşluk denetimin
- * kaçırdığı ayrı bir bulgu ve `design/BACKLOG`'a yazıldı — burada sınanan yol girişli yoldur.
+ * Sepetin fiyat ekseni (DOMAIN §5): fiyat arttıysa bildirilir, düştüyse sessiz uygulanır; çıpalı teklif partisi tükenince normal
+ * fiyata dönüş de aynı mekanizmayla artış olarak bildirilir. `previousPrices` girişli müşterinin saklanmış fiyatlarıdır, sınanan yol
+ * girişli yoldur.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -68,11 +52,8 @@ afterAll(async () => {
 const entry = (qty: number, stockId: string | null = null) => [{ kind: 'variant' as const, variantId, qty, stockId }];
 
 /**
- * Saklanan fiyat haritasının anahtarı — `cartKey` ile AYNI biçimde kurulur (`variantId:stockId`).
- *
- * Elle yazılmıyor: `writeCartAction` haritayı `storedPrices` ile üretiyor ve o da `cartKey`
- * kullanıyor. Test kendi biçimini uydursaydı harita hiç eşleşmez, bütün beklentiler "değişmedi"
- * dönerdi — yani testler yeşil kalır ama hiçbir şey sınamazdı.
+ * Saklanan fiyat haritasının anahtarı `cartKey` ile aynı biçimde kurulur (`variantId:stockId`); test kendi biçimini uydursaydı harita
+ * hiç eşleşmez ve beklentiler sınamadan yeşil kalırdı.
  */
 const priced = (cents: number, stockId: string | null = null) => new Map([[cartKey({ kind: 'variant', variantId, stockId }), cents]]);
 
@@ -112,12 +93,8 @@ describe('fiyat değişimi — artış bildirilir, düşüş sessiz (T3)', () =>
 describe('teklif partisi tükenince (T2)', () => {
   it('ÇIPA TUTMUYORSA normal fiyata dönülür ve bu ARTIŞ olarak bildirilir — sessiz zam yok', async () => {
     /**
-     * Sepette teklif fiyatına çıpalı bir satır var (`stockId`), ama o parti artık bugünkü teklifin
-     * partisi değil (burada: ürünün hiç teklifi yok, yani çıpa kesin tutmuyor). Satır normal
-     * fiyata dönüyor — **ama sessizce değil**: müşterinin gördüğü teklif fiyatı `previousPrices`te
-     * durduğu için fark fiyat artışı olarak bildiriliyor.
-     *
-     * Kural burada: teklifin düşmesi ayrı bir yol değil, fiyat artışının bir hâli.
+     * Satır bugünkü teklifin partisi olmayan bir partiye çıpalı; normal fiyata döner ama sessizce değil, gördüğü teklif fiyatı
+     * `previousPrices`te durduğu için fark artış olarak bildirilir.
      */
     const view = await getCartView('tr', entry(1, offerStockId), {
       warehouseId,

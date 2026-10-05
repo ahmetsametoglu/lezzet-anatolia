@@ -127,7 +127,7 @@ describe('sepetin yol ayrımı', () => {
   it('ROTA DIŞI adreste kargolanabilir kalem KARGO yolunu alır — rota deposu yok diye yol düşmez', async () => {
     const view = await getCartView(db, 'tr', entry(1), { shippingWarehouseId });
     expect(view.lines[0]?.route).toBe('shipping');
-    // Grup da tazelenmeli: bir tur `local` kalıyordu ve müşteriye kapıya teslim sözü veriyordu.
+    // Grup da tazelenmeli, yoksa satır `local` kalır ve müşteriye kapıya teslim sözü verilirdi.
     expect(view.lines[0]?.group).toBe('shipping');
     // Sepetin tamamı kargo grubunda: rota grubu hiç yok.
     expect(view.shippingOnly).toBe(true);
@@ -157,7 +157,7 @@ describe('sepetin yol ayrımı', () => {
     });
     expect(view.lines[0]?.route).toBe('not_shippable_here');
     expect(view.lines[0]?.group).toBe('undeliverable');
-    // Gelemeyecek malın tutarı asgari sepet matrahına SAYILMAZ; bir tur daima 0 kalıyordu.
+    // Gelemeyecek malın tutarı asgari sepet matrahına sayılmaz.
     expect(view.undeliverableSubtotalCents).toBe(1_800);
   });
 });

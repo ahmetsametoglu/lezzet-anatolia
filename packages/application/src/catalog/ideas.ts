@@ -9,32 +9,11 @@ import { resolvedOrNull } from './resolved-text';
 import type { PlaceWarehouses, StorefrontPackage } from './storefront-types';
 
 /**
- * TARİF ve PAKET KARTININ okuma kapısı — telefon yüzeylerinin "Fikirler" listelerinin (`/recipes`,
- * `/packages`) ve vitrin şeritlerinin ORTAK kaynağı.
- *
- * NEDEN AYRI DOSYA: kart indirgemesi 09.08'e kadar vitrin okumasında yaşıyordu ve tek tüketeni
- * vitrindi. Fikirler sekmesi ikinci tüketeni doğurdu; kartı orada bırakıp listeye ikinci bir
- * indirgeme yazmak, aynı kartın iki tanımı olurdu (CLAUDE §1). Kart buraya taşındı, vitrin de
- * buradan okuyor — iki ekran, tek kart.
- *
- * PAKETE TERFİ (14.09): `apps/mobile-api/src/lib/ideas.ts`ti; pakete girmenin ölçütü EN AZ İKİ
- * YÜZEYİN çağırmasıydı ve web telefon görünümü native vitrini alınca (kullanıcı kararı) karşılandı.
- * Web masaüstünün kendi tarif/paket okumaları masaüstü v1 tasarımının kartlarıdır, kendi yüzeyinde kalır.
- *
- * ── BU DOSYA KURAL HESAPLAMAZ ────────────────────────────────────────────────
- * TARİF kartı burada indirgenir (ad/süre/porsiyon çözümü, satır sayımı, görsel) — içerik kartıdır,
- * fiyatı ve stoğu yoktur. PAKET kartı ise 10.08'den beri hiç kurulmuyor: kapının
- * (`listStorefrontPackages`/`getPackagesByIds`) verdiği vitrin kartı sözleşme şekline indirgeniyor,
- * o kadar. Fiyat · tükendi · yol kararlarının hiçbiri burada değil (sözleşme künyeleri:
- * `HomeRecipeSchema` · `HomePackageSchema`).
- *
- * ── SAYFALAMA YOK, SINIR VAR (CLAUDE §1) ─────────────────────────────────────
- * İki küme de operatörün elle kurduğu editoryal seçkilerdir, veriyle büyümezler → keyset değil,
- * TEK TURDA. Aşağıdaki sayılar sayfalama değil: vitrindekiler tasarımın ızgarasından gelen seçki
- * sınırları, listedeki ise emniyet tavanı.
+ * Tarif ve paket kartının okuma kapısı: telefon yüzeylerinin "Fikirler" listeleri ve vitrin bantları aynı kartı buradan okur. Kural
+ * hesaplanmaz; paket kartı kapının vitrin kartından süzülür, kümeler editoryal seçki olduğu için tek turda okunur ve sayılar sınırdır.
  */
 
-/** "Sofradan Fikirler" şeridi — v3'te üç kart. */
+/** "Sofradan Fikirler" bandının kart sayısı, tasarımın üçlü ızgarası. */
 export const HOME_RECIPE_LIMIT = 3;
 /** Vitrin "Hazır paketler" bölümü — v3'te iki büyük kart. */
 export const HOME_PACKAGE_LIMIT = 2;
@@ -66,14 +45,8 @@ function toRecipeCard(recipe: RecipeWithItems, locale: PreferredLanguage): HomeR
 }
 
 /**
- * Paket kartı — kapının ürettiği vitrin kartını SÖZLEŞME şekline indirger.
- *
- * ── 10.08: KART ARTIK KAPIDAN GELİYOR, BURADA KURULMUYOR ────────────────────
- * Eskiden ham `BundleWithItems` satırından kuruluyordu (ad/fiyat/adet/görsel) ve stok/yol hiç
- * okunmuyordu — kart yere KÖRDÜ. Kapı (`listStorefrontPackages` → `toCard`) o kararları zaten
- * veriyor; ikinci bir kart kurgusu, `soldOut`/`route`u burada yeniden hesaplamak demekti
- * (CLAUDE §1). Bu fonksiyonun işi artık yalnız SÜZGEÇ: kapının kartı ekranın taşımadığı alanları
- * da içeriyor (KDV oranı, ağırlık, kişi sayısı, tavan, rota kilidi) ve onlar tele çıkmaz.
+ * Paket kartı: kapının (`listStorefrontPackages` → `toCard`) ürettiği vitrin kartını sözleşme şekline indirger, stok ve yol kararı
+ * burada yeniden hesaplanmaz. Kapının kartındaki iç alanlar (KDV oranı, ağırlık, tavan, rota kilidi) tele çıkmaz.
  */
 function toPackageCard(pack: StorefrontPackage): HomePackage {
   return {
@@ -91,10 +64,7 @@ function toPackageCard(pack: StorefrontPackage): HomePackage {
 }
 
 /**
- * Yayındaki tarifler, editoryal sırada (`sortOrder`), kart şekline indirgenmiş.
- *
- * `listActiveWithItems` kalemleri TEK sorguda getirir — kalem başına sorgu liste boyunca N+1
- * olurdu ve kalem sayısı kartın kendi alanıdır (`itemCount`). Taslak tarif taşınmaz: yayın kapısı
+ * Yayındaki tarifler editoryal sırada; kalemler tek sorguda gelir, kalem başına sorgu N+1 olurdu. Taslak tarif taşınmaz, yayın kapısı
  * (üç dil dolmadan yayın yok) burada da geçerlidir.
  */
 export async function readRecipeCards(
@@ -107,27 +77,8 @@ export async function readRecipeCards(
 }
 
 /**
- * Paket kartları — süzme BELLEKTE yapılır: paket kataloğu doğal tavanlı küçük bir kümedir
- * (mobil `api/v1/packages.ts` detay ucunun aynı deseni), okuma `sortOrder` sırasında gelir.
- *
- * ── SATILABİLİRLİK ÖLÇÜTÜ DETAYLA AYNI OLMAK ZORUNDA (09.08) ────────────────
- * Süzgeç 09.08'e kadar elle yazılıyordu (`isActive` + kalem sayısı) çünkü ölçütün tam hâli
- * (`listSellable`: kalemi satıştan kalkmış paket de düşer) web'in `server-only` kapısındaydı.
- * Detay ucu terfi etmiş kapıya (`getPackageDetail` → `listSellable`) geçince ikisi AYRIŞACAKTI:
- * boyu pasife alınmış bir ürünün paketi listede görünür, dokununca 404 verirdi. Liste de aynı
- * servis kapısına alındı — tek ölçüt, iki uç.
- *
- * ── YER ARTIK KAPIYA GEÇİYOR (10.08) ────────────────────────────────────────
- * `place` verilmezse iki `null` = yer bilinmiyor → `route: null`; ekran o hâlde de doğru davranır:
- * "bilinmiyor" bir hâldir, sıfır değil.
- *
- * `isFeatured` süzgeci burada KALIYOR: YALNIZ vitrinde uygulanır (`featuredOnly`). İşaret bir
- * SEÇİMDİR ve yedeği yoktur (bant karışımının ilkesi; web'in `pickFeatured` yedeğine bilerek
- * düşülmüyor — `home.ts` künyesi). Liste sayfası "hepsi" sorusunun cevabıdır, seçki değil.
- * **İki dal, TEK ölçüt:** ikisi de `listSellable` süzgecinden geçen kapıları çağırıyor
- * (`listStorefrontPackages` ve `getPackagesByIds`), yani satılabilirlik iki uçta ayrışamaz.
- *
- * `limit` VERİLMEZSE kesme yapılmaz — liste sayfası kümenin tamamını ister (doğal tavan).
+ * Paket kartları: liste ve vitrin bandı `listSellable` süzgecinden geçen kapılardan okur, böylece satılabilirlik listeyle detayda
+ * ayrışmaz. `isFeatured` yalnız vitrinde uygulanır ve yedeği yoktur; `limit` verilmezse liste kesilmez.
  */
 export async function readPackageCards(
   db: SupabaseClient,
@@ -137,27 +88,19 @@ export async function readPackageCards(
   const place = options.place;
 
   if (!options.featuredOnly) {
-    /* Liste sayfası: kapının kendi tam listesi. `limit` VERİLMEDEN çağrılır ki kapı `pickFeatured`e
-       hiç girmesin — o yedek (işaret yoksa ilk N) WEB masaüstünün kararıdır ve telefon ona bilerek
-       düşmüyor (aşağıdaki dalın künyesi). Kesme, kapı kararını verdikten SONRA burada yapılır.
-       Kapının kendi sırası korunur: tükenmiş paket listeden düşmez, SONA gider
-       (`listStorefrontPackages` künyesi — sosyal medyadaki link boşa düşmesin). */
+    /* Liste sayfası kapının tam listesidir: `limit` verilmez ki kapı web masaüstünün `pickFeatured` yedeğine girmesin, kesme burada
+       yapılır. Kapının sırası korunur, tükenmiş paket sona gider. */
     const cards = await listStorefrontPackages(db, locale, undefined, place);
     const page = options.limit === undefined ? cards : cards.slice(0, options.limit);
     return page.map(toPackageCard);
   }
 
-  /* VİTRİN ŞERİDİ İKİ ADIMDIR ve sebebi bir ödünleşmedir: işaret süzgeci `isFeatured` alanını
-     ister, kapının döndürdüğü KART ise onu taşımaz (ve taşımamalı — kart müşteriye giden şeydir,
-     editoryal işaret değil). Seçimi ham satırdan yapıp seçilenleri kimlikle kapıya soruyoruz.
-     Bedeli bir fazladan `listSellable` turudur; kazancı, telefonun "işaret yoksa şerit yok"
-     kuralının KAPININ yedeğine (`pickFeatured`) sessizce dönüşmemesidir — o gün vitrin, operatör
-     hiçbir şey işaretlememişken kendi kendine iki paket seçerdi. */
+  /* Vitrin bandı iki adımdır, çünkü işaret süzgeci `isFeatured` ister ve kapının kartı onu taşımaz: seçim ham satırdan yapılır,
+     seçilenler kimlikle kapıya sorulur. Bedeli bir fazladan `listSellable` turudur, karşılığında işaretsiz vitrin kendi kendine paket seçmez. */
   const marked = (await new BundleService(db).listSellable()).filter((b) => b.isFeatured);
   const page = options.limit === undefined ? marked : marked.slice(0, options.limit);
   if (page.length === 0) return [];
-  /* Sıra `sortOrder`dan gelir ve kapı onu korur (`getPackagesByIds` de aynı listeden süzer).
-     Tükenmişi sona atma kuralı burada UYGULANMAZ: şerit iki karttır ve seçimi operatör yapmıştır —
-     onun sırasını stok durumuna göre değiştirmek, işaretin anlamını zayıflatırdı. */
+  /* Sıra `sortOrder`dan gelir ve kapı onu korur; tükenmişi sona atma burada uygulanmaz, çünkü seçimi operatör yapmıştır ve sırayı
+     stoğa göre değiştirmek işaretin anlamını zayıflatırdı. */
   return (await getPackagesByIds(db, page.map((b) => b.id), locale, place)).map(toPackageCard);
 }

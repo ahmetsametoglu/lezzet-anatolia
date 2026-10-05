@@ -11,29 +11,9 @@ import { getCartView } from './read';
 import { cartBlockedAnalyticsReason, entryOf, entryOfItem, isSplitCart, itemOfEntry, storedPrices, type CartEntry, type CartSignal, type CartView } from './cart-types';
 
 /**
- * Sepet server action'ları (08.4).
- *
- * **İki depo, tek arayüz.** Girişli müşterinin sepeti sunucuda kalıcıdır (`CartService`, 07.1);
- * ziyaretçininki tarayıcıda yaşar ve girişte devralınır (`takeOver`). Ekran bu ayrımı bilmez:
- * her iki yolda da niyet listesi gönderilir, çözülmüş görünüm döner.
- *
- * **İKİ LİSTE birlikte taşınır:** sepet ve sonraya kaydedilenler (K33). Ayrı uçlardan gitselerdi
- * "kalemi sepetten listeye taşı" iki ayrı tura bölünür ve arada biri başarısız olursa kalem ya iki
- * yerde birden ya da hiçbir yerde kalırdı. Tek tur, tek karar.
- *
- * Guard YOK ve olmamalı: sepet ziyaretçiye de açıktır. Ama oturum VARSA yazma sunucuya gider —
- * yani "kimin sepeti" sorusunu istemci değil oturum cevaplar; istemciden gelen bir müşteri kimliği
- * asla kabul edilmez.
- *
- * Fiyat action'a girdi olarak ALINMAZ: istemciden gelen fiyat, istemcinin belirlediği fiyattır.
- * `CartService` fiyatı gösterim için saklar, bağlayıcı fiyat checkout'ta çözülür (DOMAIN §5) —
- * burada sunucunun kendi çözdüğü değer yazılır.
- *
- * **Hata kapısı müşteriye ait** (`customerErrorKey`, denetim H1/H2 · 03.08): dönen şey metin değil
- * ANAHTAR. Burada müşteriye SÖYLENECEK bilinen bir hâl yok — sepet okuması ya çalışır ya arızadır,
- * ikincisini bağlam kendi bayrağıyla anlatıyor (`failed` → `CartUnreachable`). Yani her hata
- * `unexpected`e iner ve ham mesaj yalnız `error_log`'a gider; eskiden bu dize ekrana hiç
- * ulaşmadığı için iç mesaj görünmüyordu ama funnel da yanlıştı: bir gün gösterilseydi sızacaktı.
+ * Sepet server action'ları: sepet ve sonraya kaydedilenler tek turda taşınır, ayrı uçlarda "listeye taşı" yarıda kalıp kalemi iki
+ * yerde ya da hiçbir yerde bırakırdı. Guard yoktur, sepet ziyaretçiye açıktır; kimin sepeti olduğunu oturum söyler, istemciden fiyat
+ * ve müşteri kimliği alınmaz.
  */
 
 /** İki listenin çözülmüş hâli — ekran ikisini de aynı anda gösterir (sepet + altındaki liste). */
@@ -42,23 +22,15 @@ interface CartPayload {
   /** Sonraya kaydedilenlerin çözülmüş görünümü; `lines` dışındaki toplamları anlamsızdır. */
   saved: CartView;
   /**
-   * Sepet SUNUCUDA mı yaşıyor (girişli müşteri) — istemci tarayıcı deposunu ona göre yönetir.
-   *
-   * Şart, çünkü istemci "kimin sepeti" sorusunu kendi cevaplayamaz. Bu bayrak yokken sağlayıcı
-   * her yazmada tarayıcı deposunu da dolduruyordu; girişli müşteride depo yeniden doluyor, bir
-   * sonraki açılışta `readCartAction` onu misafir sepeti sanıp sunucudakinin ÜSTÜNE ekliyordu.
-   * Sonuç: her yenilemede adetler katlanıyordu — 4 kalem 8 oluyordu (29.07).
+   * Sepet sunucuda mı yaşıyor (girişli müşteri): istemci tarayıcı deposunu buna göre yönetir, yoksa girişlide dolan depo bir sonraki
+   * açılışta misafir sepeti sanılıp sunucudakinin üstüne eklenirdi.
    */
   serverCart: boolean;
 }
 
 /**
- * Sepetin ilk okunması — ve **misafir sepetinin devralınması**.
- *
- * Ziyaretçi tarayıcıda sepet doldurup sonra giriş yaparsa o kalemler sunucudakinin ÜSTÜNE eklenir
- * (`takeOver`, 07.1): giriş, daha önce eklenmiş bir ürünü sessizce kaybettirmemeli. Devralma
- * yapıldıysa `merged` döner ve istemci tarayıcı deposunu boşaltır — yoksa aynı kalemler her
- * açılışta yeniden eklenir ve adet katlanır.
+ * Sepetin ilk okunması ve misafir sepetinin devralınması: tarayıcıdaki kalemler sunucudakinin üstüne eklenir, giriş eklenmiş ürünü
+ * kaybettirmemeli. Devralma olduysa `merged` döner ve istemci tarayıcı deposunu boşaltır, yoksa kalemler her açılışta yeniden eklenirdi.
  */
 export async function readCartAction(
   locale: string,
@@ -75,10 +47,8 @@ export async function readCartAction(
 ): Promise<CustomerResult<CartPayload & { merged: boolean }>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
-    // Sepetin sahibi MÜŞTERİ kimliğidir, auth kimliği değil (`currentCustomerId`): `cart.customer_id`
-    // `user_profiles`'a FK'lidir. Burada auth kimliği yazılıyordu ve giriş yapan müşterinin sepeti
-    // sessizce kayboluyordu — devralma FK ihlaliyle düşüyor, action `{data:null}` dönüyor, ekran
-    // boş sepet çiziyordu (28.07).
+    // Sepetin sahibi müşteri kimliğidir, auth kimliği değil: `cart.customer_id` `user_profiles`a bağlıdır ve auth kimliği devralmayı
+    // yabancı anahtar ihlaliyle düşürürdü.
     const customerId = await currentCustomerId();
     if (!customerId) {
       const payload = await resolveBoth(locale, entries, saved, { couponCode });
@@ -112,10 +82,8 @@ export async function readCartAction(
 }
 
 /**
- * İki listeyi verilen niyete EŞİTLER (ekleme, adet değişimi, çıkarma ve "sonraya kaydet" aynı uç).
- *
- * Tek uç olmasının sebebi: istemci zaten tam listeleri tutuyor. Ayrı uçlar, iki tarafın listelerinin
- * ayrışabildiği birden çok yol açardı; eşitleme tek yön bırakır.
+ * İki listeyi verilen niyete eşitler; ekleme, adet değişimi, çıkarma ve "sonraya kaydet" aynı uçtur, çünkü istemci tam listeleri
+ * tutar ve ayrı uçlar iki tarafın listelerini ayrıştırabilirdi.
  */
 export async function writeCartAction(
   locale: string,
@@ -123,14 +91,8 @@ export async function writeCartAction(
   saved: CartEntry[] = [],
   couponCode: string | null = null,
   /**
-   * **ÖLÇÜM İÇİN, yazma için değil** (08.9 · `ANALYTICS §3`). Uç bir "ekleme" ucu değil eşitleme
-   * ucudur: sunucuya tam liste gelir, niyet gelmez. Farkı sunucuda hesaplamak yalnız girişli
-   * müşteride mümkün (ziyaretçide saklanmış liste yok) ve o zaman huninin "sepete ekleme" adımı
-   * sistematik olarak yalnız girişlileri sayardı — oysa huninin asıl sorusu ziyaretçinin nerede
-   * düştüğü.
-   *
-   * Bu yüzden niyeti İSTEMCİ BEYAN EDER. Beyan edilmiş olay gözlenen olay değildir: sayısı sepet
-   * satırlarıyla tutmaz ve **bu bir arıza değildir.** Parametre yazma nesnesine hiç girmez.
+   * Yalnız ölçüm için, yazmaya girmez: uç eşitleme ucudur ve farkı sunucuda hesaplamak yalnız girişlide mümkün olurdu, huni ziyaretçiyi
+   * saymazdı. Niyeti istemci beyan eder; beyan gözlenen olay olmadığından sayısı sepet satırlarıyla tutmaz ve bu arıza değildir.
    */
   signal: CartSignal | null = null,
 ): Promise<CustomerResult<CartPayload>> {
@@ -166,23 +128,13 @@ export async function writeCartAction(
 }
 
 /**
- * Sepet turunun ölçümü (08.9) — iki olay, tek yer.
- *
- * **`cart_blocked` bir DURUM değil bir AN olarak yazılıyor:** engel her okumada var olabilir, ama
- * burası müşterinin sepetini DEĞİŞTİRDİĞİ an. Her okumada atsaydık defter aynı engeli onlarca kez
- * sayar ve huninin en kıymetli olayı gürültüye dönerdi; hiç atmasaydık terkin sebebi ölçülemezdi.
- *
- * Ölçüm akışı kesmez: `void`, ve kapı zaten fırlatmıyor.
+ * Sepet turunun ölçümü: `cart_blocked` bir durum değil, müşterinin sepeti değiştirdiği an olarak yazılır, her okumada yazılsaydı aynı
+ * engel onlarca kez sayılırdı. Ölçüm akışı kesmez.
  */
 function measureWrite(view: CartView, signal: CartSignal | null): void {
   for (const item of signal?.added ?? []) {
-    /* ÜRÜN KİMLİĞİ GÖRÜNÜMDEN okunuyor (24.08 · mobil şeridin gözlemi). Eskiden `null` yazılıyordu
-       ve ürün kırılımı özeti o satırları GRUPLAMADAN ÖNCE eliyordu (`product_id is not null`) —
-       yani `cart_count` yapısal olarak hep sıfırdı ve hiçbir yerde hata vermiyordu: yönetim
-       ekranı her ürün için "1.240 → 0" yazıyor, yönetici bunu "kimse sepete atmıyor" diye okuyordu.
-       İstemci hâlâ yalnız VARYANT beyan ediyor (`AddToCartIntent` künyesi); ürünü sunucu, az önce
-       hesapladığı görünümden dolduruyor — fazladan sorgu yok. Paket satırında `null` DOĞRU: paket
-       bir ürün değildir. */
+    /* Ürün kimliği görünümden doldurulur, çünkü ürün kırılımı özeti kimliksiz satırları eler ve `cart_count` sıfır kalırdı; istemci
+       yalnız varyant beyan eder. Paket satırında `null` doğrudur, paket bir ürün değildir. */
     const line = view.lines.find((l) => (l.kind === 'variant' ? l.variantId : l.bundleId) === item.subjectId);
     void recordEvent({
       type: 'add_to_cart',
@@ -238,10 +190,8 @@ async function resolveBoth(
   opts: { previousPrices?: ReadonlyMap<string, number>; customerId?: string | null; couponCode?: string | null } = {},
 ): Promise<Omit<CartPayload, 'serverCart'>> {
   const [view, savedView] = await Promise.all([
-    // Yer eksenleri `readPlaceScope` ile TEK parça geçiyor (07.15): iki depo kimliği + ülke +
-    // bölge. Sepet ekranında adres henüz seçilmemiş olabilir, o yüzden kaynak ÇEREZ — ama bölge
-    // kimliği çerezten okunmuyor, çözümden geliyor (kapının künyesi): istemci çerez yazabilir ve
-    // uydurulmuş bir çerez hangi asgari sepetin uygulanacağını belirlememeli.
+    // Yer eksenleri `readPlaceScope`tan tek parça gelir; bölge kimliği çerezden değil çözümden okunur, çünkü uydurulmuş çerez hangi
+    // asgari sepetin uygulanacağını belirlememeli.
     getCartView(locale, entries, { previousPrices: opts.previousPrices, customerId: opts.customerId, couponCode: opts.couponCode, ...(await readPlaceScope()) }),
     // Sonraya kaydedilenlerde zam işareti gösterilmez: o liste bir satın alma niyeti değil, bir
     // hatırlatmadır — orada onay istenecek bir karar yok.
