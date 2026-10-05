@@ -5,7 +5,7 @@ import { ALL_ACCOUNTS, financeUrl, parseFinanceUrl, resolveAccount, type Finance
 // koruduğu şey bir davranış değil bir SÖZ: aynı görünüm hep aynı adresi üretir, bozuk adres ekranı
 // kırmaz.
 
-const DEFAULTS: FinanceUrlState = { acct: ALL_ACCOUNTS, tab: 'movements', type: 'all', from: '', to: '', scope: 'all', open: false };
+const DEFAULTS: FinanceUrlState = { acct: ALL_ACCOUNTS, tab: 'movements', type: 'all', from: '', to: '', scope: 'all', open: false, business: 'all' };
 
 describe('parseFinanceUrl', () => {
   it('boş parametrede varsayılanları verir', () => {
@@ -15,13 +15,31 @@ describe('parseFinanceUrl', () => {
   it('tanınmayan değeri sessizce varsayılana düşürür', () => {
     // Bozuk bağlantı ekranı KIRMAMALI: elle düzenlenmiş ya da eskimiş bir adres, boş bir hata
     // sayfası yerine varsayılan görünümü açar. Eski `period` parametresi de artık yok sayılır.
-    expect(parseFinanceUrl({ type: 'uydurma', tab: 'hepsi', period: 'd30', scope: 'hepsi', open: 'evet' })).toEqual(DEFAULTS);
+    expect(parseFinanceUrl({ type: 'uydurma', tab: 'hepsi', period: 'd30', scope: 'hepsi', open: 'evet', business: 'migros' })).toEqual(DEFAULTS);
   });
 
   it('geçerli süzgeçleri okur', () => {
     expect(
-      parseFinanceUrl({ acct: 'abc', tab: 'documents', type: 'expense', from: '2026-09-01', to: '2026-09-13', scope: 'unmatched', open: '1' }),
-    ).toEqual({ acct: 'abc', tab: 'documents', type: 'expense', from: '2026-09-01', to: '2026-09-13', scope: 'unmatched', open: true });
+      parseFinanceUrl({
+        acct: 'abc',
+        tab: 'documents',
+        type: 'expense',
+        from: '2026-09-01',
+        to: '2026-09-13',
+        scope: 'unmatched',
+        open: '1',
+        business: 'qualite',
+      }),
+    ).toEqual({
+      acct: 'abc',
+      tab: 'documents',
+      type: 'expense',
+      from: '2026-09-01',
+      to: '2026-09-13',
+      scope: 'unmatched',
+      open: true,
+      business: 'qualite',
+    });
   });
 
   it('bozuk günü düşürür — biçim de, takvim de denetlenir', () => {
@@ -45,12 +63,32 @@ describe('financeUrl', () => {
   });
 
   it('aynı görünüm aynı adresi üretir (sıra sabit)', () => {
-    const state: FinanceUrlState = { acct: 'abc', tab: 'documents', type: 'expense', from: '2026-09-01', to: '2026-09-13', scope: 'unmatched', open: true };
-    expect(financeUrl(state)).toBe('/operations/finance?acct=abc&tab=documents&type=expense&from=2026-09-01&to=2026-09-13&scope=unmatched&open=1');
+    const state: FinanceUrlState = {
+      acct: 'abc',
+      tab: 'documents',
+      type: 'expense',
+      from: '2026-09-01',
+      to: '2026-09-13',
+      scope: 'unmatched',
+      open: true,
+      business: 'qualite',
+    };
+    expect(financeUrl(state)).toBe(
+      '/operations/finance?acct=abc&tab=documents&type=expense&from=2026-09-01&to=2026-09-13&scope=unmatched&open=1&business=qualite',
+    );
   });
 
   it('gidiş-dönüş kayıpsız', () => {
-    const state: FinanceUrlState = { acct: 'x1', tab: 'movements', type: 'transfer', from: '2026-08-01', to: '2026-08-31', scope: 'unmatched', open: false };
+    const state: FinanceUrlState = {
+      acct: 'x1',
+      tab: 'movements',
+      type: 'transfer',
+      from: '2026-08-01',
+      to: '2026-08-31',
+      scope: 'unmatched',
+      open: false,
+      business: 'lezzet',
+    };
     const query = financeUrl(state).split('?')[1] ?? '';
     expect(parseFinanceUrl(Object.fromEntries(new URLSearchParams(query)))).toEqual(state);
   });

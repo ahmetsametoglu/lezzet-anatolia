@@ -12,8 +12,7 @@ import { StorageAreaService } from './storage-point.service';
 import { SupplierProductService, SupplierService } from './supplier.service';
 
 /**
- * Tedarik zinciri (06.8–06.11) — DB üstünde. Zincirin bütünü doğrulanır:
- * eşik altı öneri → PO taslağı → mal kabul → partiler + PO kapanışı + son alış fiyatı.
+ * Tedarik zinciri, DB üstünde: eşik altı öneri → sipariş taslağı → mal kabul → partiler, sipariş kapanışı ve son alış fiyatı.
  */
 const db = serviceDb();
 const suppliers = new SupplierService(db);
@@ -29,7 +28,7 @@ let productId: string;
 let categoryId: string;
 // Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
 let warehouseId: string;
-/** Partinin rafı artık tanımlı bir alan (19.29) — testin kendi dolabı. */
+/** Partinin rafı tanımlı bir alandır; testin kendi dolabı. */
 let storageAreaId: string;
 const createdSuppliers: string[] = [];
 
@@ -55,8 +54,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14). Ayrıca `mustDelete` yoluna
-  // geçti — `db.from(...).delete()` hatayı YUTUYOR ve teardown sessizce yarım kalıyordu.
+  // Parti sırasıyla gider, önce hareket defteri sonra parti; `mustDelete` hatayı fırlatır, düz `delete()` yutardı.
   await purgeVariantStock(db, [variantId]);
 });
 
@@ -114,17 +112,16 @@ describe('tedarikçi ve kod eşlemesi (06.8)', () => {
       lines: [{ variantId, qty: 10, expiryDate: dayOffset(250), unitCostCents: 400 }],
     });
 
-    // Ödeme tarafı 12.3'te bağlandı, alımın belgeden türemesi 12.26'da; buradaki sözleşme yalnız
-    // denklemin kendisidir (ödemenin ve faturanın borcu nasıl kurduğu `apps/web/lib/money/supplier-debt.test.ts`'te).
+    // Buradaki sözleşme yalnız denklemin kendisidir; ödemenin ve faturanın borcu nasıl kurduğu
+    // `apps/web/lib/money/supplier-debt.test.ts`tedir.
     const debt = await suppliers.debt(supplierId);
     expect(debt.purchasedCents).toBeGreaterThanOrEqual(4000);
     expect(debt.balanceCents).toBe(debt.purchasedCents - debt.paidCents);
   });
 
   /**
-   * Dönemli toplam (tedarik talebi §6) — kart "bu yıl ne kadar iş yaptık" soruyor, ömür boyu toplam
-   * o soruya cevap vermiyor. Dönem kabulün GÜNÜNE göre (12.26). Kendi kurduğumuz girişleri sayıyoruz,
-   * küresel sayıya bakmıyoruz (`CLAUDE.md §4b`).
+   * Dönemli toplam: kart "bu yıl ne kadar iş yaptık" sorar ve dönem kabulün gününe göredir. Kendi kurduğumuz girişler sayılır, küresel
+   * sayıya bakılmaz.
    */
   it('dönem verilince yalnız o aralığın girişleri sayılır', async () => {
     const gecmis = await suppliers.debt(supplierId, { to: new Date(Date.now() - 86_400_000) });
@@ -142,7 +139,7 @@ describe('tedarikçi ve kod eşlemesi (06.8)', () => {
 
 describe('tedarik siparişi (06.9)', () => {
   it('taslak kalemleri tedarikçi koduyla eşleşir; liste onun diliyle çıkar', async () => {
-    const { order, items } = await orders.createDraft(supplierId, [{ variantId, qty: 24 }], 'Haftalık sipariş');
+    const { order, items } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 24 }], 'Haftalık sipariş');
     expect(order.status).toBe('draft');
     expect(items[0]!.supplierProductId).not.toBeNull();
 
@@ -151,16 +148,16 @@ describe('tedarik siparişi (06.9)', () => {
   });
 
   it('gönderim işareti insana aittir; kalemsiz taslak açılmaz', async () => {
-    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 12 }]);
+    const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 12 }]);
     const gonderilen = await orders.markSent(order.id, testRef());
     expect(gonderilen.status).toBe('sent');
     expect(gonderilen.sentAt).not.toBeNull();
 
-    await expect(orders.createDraft(supplierId, [])).rejects.toThrow();
+    await expect(orders.createDraft(supplierId, 'lezzet', [])).rejects.toThrow();
   });
 
   it('mal gelmiş sipariş iptal edilemez — zincir kopmaz', async () => {
-    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 12 }]);
+    const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 12 }]);
     await intakes.receive({ warehouseId, supplierId, purchaseOrderId: order.id, lines: [{ variantId, qty: 12, expiryDate: dayOffset(250) }] });
 
     await expect(orders.cancel(order.id)).rejects.toThrow();
@@ -169,7 +166,7 @@ describe('tedarik siparişi (06.9)', () => {
 
 describe('mal kabul (06.10)', () => {
   it('partiler girişe bağlanır, PO kapanır, son alış fiyatı tazelenir — tek işlemde', async () => {
-    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 24 }]);
+    const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 24 }]);
 
     const outcome = await intakes.receive({
       warehouseId,
@@ -187,8 +184,7 @@ describe('mal kabul (06.10)', () => {
 
     const batches = await stocks.listByVariant(warehouseId, variantId);
     expect(batches.every((p) => p.intakeId === outcome.intakeId)).toBe(true);
-    // Alan KİMLİKLE yazılıyor (19.29): serbest metin olsaydı RPC her yazımda yeni bir "konum"
-    // uydurabilirdi; FK ile yazılan değer okunduğunda birebir aynı satırı gösterir.
+    // Alan kimlikle yazılır: serbest metin olsaydı RPC her yazımda yeni bir "konum" uydurabilirdi.
     expect(batches.find((p) => p.lotNumber === 'LOT-A')?.storageAreaId).toBe(storageAreaId);
 
     expect((await orders.getById(order.id))?.status).toBe('received');
@@ -196,7 +192,7 @@ describe('mal kabul (06.10)', () => {
   });
 
   it('eksik gelen mal fark olarak görünür — parti satılsa bile rakam erimez', async () => {
-    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 24 }]);
+    const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 24 }]);
     const outcome = await intakes.receive({
       warehouseId,
       supplierId,
@@ -232,38 +228,30 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
     await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(250) });
 
     const group = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
-    const { order, items } = await reorder.createDraftFrom(group, 'Eşik altı otomatik taslak');
+    const { order, items } = await reorder.createDraftFrom(group, 'lezzet', 'Eşik altı otomatik taslak');
 
     try {
       expect(order.supplierId).toBe(supplierId);
       expect(items.find((i) => i.variantId === variantId)?.qty).toBe(24);
     } finally {
-      /* TASLAK TEMİZLENİR (21.302). `createDraftFrom` taslağa HEDEF DEPO yazıyor ve taslaktaki adet
-         artık eşiğe sayılıyor: bu 24'lük taslak geride kalsaydı dosyanın sonraki her testinde eksik
-         baştan kapalı görünür, "öneri açık siparişleri görür" bloğunun beş testi birden satırı hiç
-         bulamazdı (ölçüldü: kural değişince tam bu beşi düştü). Eskiden sızıntı zararsızdı, çünkü
-         taslak eşiğe girmiyordu. `finally` içinde: bir iddia düşse bile sızıntı zincirleme kırmasın. */
+      /* Taslak temizlenir, çünkü taslaktaki adet eşiğe sayılır ve geride kalsaydı sonraki testlerde eksik baştan kapalı görünürdü.
+         `finally` içinde, bir iddia düşse de sızıntı zincirleme kırmasın. */
       await mustDelete(db, 'purchase_order', (q) => q.eq('id', order.id));
     }
   });
 
   it('tedarikçisi eşlenmemiş kalemlerden sipariş açılmaz (açıkça reddedilir)', async () => {
-    await expect(reorder.createDraftFrom({ supplierId: null, warehouseId, lines: [] })).rejects.toThrow();
+    await expect(reorder.createDraftFrom({ supplierId: null, warehouseId, lines: [] }, 'lezzet')).rejects.toThrow();
   });
 
   /**
-   * "Yolda" hesabı (09.14 üçüncü talep · kullanıcı bulgusu): sipariş verdikten sonra öneri satırı
-   * OLDUĞU GİBİ duruyordu. Sipariş stoğu değiştirmez (mal gelmedi), o yüzden eşik hâlâ delikti —
-   * davranış tanıma göre doğru ama sonucu arıza: aynı tedarikçiye üst üste basmak ikinci siparişi
-   * açıyordu ve hiçbir yerde uyarı yoktu.
+   * "Yolda" hesabı: sipariş stoğu değiştirmez, eşik hâlâ deliktir; yoldaki adet düşülmeseydi aynı tedarikçiye üst üste basmak ikinci
+   * siparişi açardı.
    */
   describe('öneri açık siparişleri görür', () => {
     /**
-     * Bu blokta açılan siparişler her testten sonra TOPLANIR.
-     *
-     * Şart, çünkü dosyanın önceki testleri de açık sipariş bırakıyor ve "yolda" hesabı tam olarak
-     * onları okuyor: temizlik olmadan ikinci test birincinin siparişini görür ve satır beklenmedik
-     * yerde düşerdi. Mutlak sayı yerine FARK ölçen iddialar da aynı sebeple (`CLAUDE.md §4b`).
+     * Bu blokta açılan siparişler her testten sonra toplanır, çünkü "yolda" hesabı önceki testlerin açık siparişlerini de okur; mutlak sayı
+     * yerine fark ölçen iddialar da aynı sebepledir.
      */
     const acilanlar: string[] = [];
     afterEach(async () => {
@@ -282,18 +270,15 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
     });
 
     /*
-      TASLAK EŞİĞE SAYILIR (21.302, kullanıcı kararı 10.09). Bu test eskiden tam TERSİNİ çiviliyordu
-      ("taslak açılınca satır DÜŞMEZ") ve gerekçesi unutulmuş taslaktı. Kullanıcı iki riski tarttı:
-      *"mükerrer taslak riski unutmaktan daha tehlikeli — taslağı biz oluşturduğumuz için unutmayız."*
-      Satır düşmeseydi aynı gruba ikinci basış ikinci bir taslak açardı ve hiçbir yerde uyarı yoktu.
+      Taslak eşiğe sayılır: satır düşmeseydi aynı gruba ikinci basış ikinci bir taslak açardı ve hiçbir yerde uyarı olmazdı.
     */
     it('taslak açılınca satır DÜŞER — taslak eşiğe sayılır, aynı gruba ikinci taslak açılamaz', async () => {
       expect(await öneriSatiri()).toBeDefined();
       const grup = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
-      const { order } = await reorder.createDraftFrom(grup, 'Test');
+      const { order } = await reorder.createDraftFrom(grup, 'lezzet', 'Test');
       acilanlar.push(order.id);
 
-      // Eksik 15 (20 − 5), taslakta 24 → satır artık öneri değil; "tek dokunuş" tekrarlanamaz.
+      // Eksik 15 (20 − 5), taslakta 24: satır öneri değildir ve "tek dokunuş" tekrarlanamaz.
       expect(await öneriSatiri()).toBeUndefined();
     });
 
@@ -303,6 +288,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
       // Eksiğin yalnız bir kısmını karşılayan elle taslak — öneriden gelmeyen, masada kurulmuş hâl.
       const { order } = await orders.createDraft(
         supplierId,
+        'lezzet',
         [{ variantId, qty: 6, unitPriceCents: null, targetWarehouseId: warehouseId }],
         'Test',
       );
@@ -319,11 +305,11 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
 
     it('GÖNDERİLİNCE satır düşer — mal yolda, ikinci sipariş açılmamalı', async () => {
       const grup = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
-      const { order } = await reorder.createDraftFrom(grup, 'Test');
+      const { order } = await reorder.createDraftFrom(grup, 'lezzet', 'Test');
       acilanlar.push(order.id);
       await orders.markSent(order.id, testRef());
 
-      // Asıl bulgunun kapanışı: eksik 15 (20 − 5), yolda 24 → satır artık öneri değil.
+      // Eksik 15 (20 − 5), yolda 24: satır öneri değildir.
       expect(await öneriSatiri()).toBeUndefined();
     });
 
@@ -331,7 +317,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
       const grup = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
       expect(grup.warehouseId).toBe(warehouseId);
 
-      const { order, items } = await reorder.createDraftFrom(grup, 'Test');
+      const { order, items } = await reorder.createDraftFrom(grup, 'lezzet', 'Test');
       acilanlar.push(order.id);
       expect(items[0]?.targetWarehouseId).toBe(warehouseId);
     });
@@ -339,14 +325,14 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
     it('HEDEFSİZ sipariş hiçbir deponun eksiğini kapatmaz — ama görünür kalır', async () => {
       const önceki = (await öneriSatiri())?.unassignedQty ?? 0;
 
-      // Elle açılmış, hedefi yazılmamış sipariş: mal fiilen nereye inecek bilinmiyor (C7/K6).
-      const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 100 }]);
+      // Elle açılmış, hedefi yazılmamış sipariş: malın nereye ineceği bilinmez.
+      const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 100 }]);
       acilanlar.push(order.id);
       await orders.markSent(order.id, testRef());
 
       const satir = await öneriSatiri();
-      // 100 adet yolda ama hangi depoya? Bilinmiyor → eksik KAPANMADI sayılır, sayı ayrı gösterilir.
-      // Bakılan depoya saymak malın oraya geleceğini varsaymaktı ve K6 tam bunu yasaklıyor.
+      // 100 adet yolda ama hangi depoya bilinmiyor, eksik kapanmadı sayılır ve sayı ayrı gösterilir; bakılan depoya saymak malın oraya
+      // geleceğini varsaymak olurdu.
       expect(satir).toBeDefined();
       expect(satir?.incomingQty).toBe(0);
       expect((satir?.unassignedQty ?? 0) - önceki).toBe(100);
@@ -362,16 +348,12 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
 });
 
 /**
- * Siparişler ekranının sayfası (09.14) — `listRows`.
- *
- * Buradaki iddia okumanın DOĞRULUĞU değil yalnız; **tek turda ifade edilebildiği**. Zincir üç
- * yabancı anahtar üzerinden gidiyor (`purchase_order → supplier`, `stock → purchase_order_item`,
- * `stock → warehouse`) ve gömülü select onu taşıyabiliyorsa RPC eşiği geçilmiyor (`STACK §13`).
- * Gömme bozulursa (FK kalkar, alan adı değişir) bu testler kırılır — sessizce N+1'e düşülmez.
+ * Siparişler ekranının sayfası (`listRows`): okuma doğru olmalı ve tek turda ifade edilebilmeli; gömme bozulursa (FK kalkar, alan adı
+ * değişir) bu testler kırılır, sessizce N+1'e düşülmez.
  */
 describe('tedarik siparişi listesi (09.14)', () => {
   it('satır tedarikçiyi, kalemleri ve GİREN partileri tek turda taşır', async () => {
-    const { order, items } = await orders.createDraft(supplierId, [{ variantId, qty: 10, unitPriceCents: 450 }]);
+    const { order, items } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 10, unitPriceCents: 450 }]);
     await orders.markSent(order.id, testRef());
     await intakes.receive({
       warehouseId,
@@ -384,14 +366,14 @@ describe('tedarik siparişi listesi (09.14)', () => {
 
     expect(satir?.supplier?.name).toContain('Anadolu Gıda');
     expect(satir?.items).toHaveLength(1);
-    // Depo kırılımı FİİLEN giren partiden çıkar — kalemin hedef deposundan değil (K6).
+    // Depo kırılımı fiilen giren partiden çıkar, kalemin hedef deposundan değil.
     expect(satir?.items[0]?.batches[0]).toMatchObject({ initialQty: 6 });
     expect(satir?.items[0]?.batches[0]?.warehouse?.id).toBe(warehouseId);
   });
 
   it('keyset imleci kurulur — liste sonsuz kaydırmaya açık', async () => {
-    await orders.createDraft(supplierId, [{ variantId, qty: 1, unitPriceCents: 100 }]);
-    await orders.createDraft(supplierId, [{ variantId, qty: 2, unitPriceCents: 100 }]);
+    await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 1, unitPriceCents: 100 }]);
+    await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 2, unitPriceCents: 100 }]);
 
     const ilk = await orders.listRows({ supplierId, limit: 1 });
     expect(ilk.rows).toHaveLength(1);
@@ -406,7 +388,7 @@ describe('tedarik siparişi listesi (09.14)', () => {
     // siparişle oynar ve tekrarlanmayan bir düşüş üretir (`CLAUDE.md §4b`).
     const önce = await orders.countPending(supplierId);
 
-    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 3, unitPriceCents: 100 }]);
+    const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 3, unitPriceCents: 100 }]);
     // Taslak henüz gönderilmedi: "yolda" değil.
     expect(await orders.countPending(supplierId)).toBe(önce);
 
@@ -419,14 +401,8 @@ describe('tedarik siparişi listesi (09.14)', () => {
 });
 
 /**
- * Tedarik ailesinin euro↔cent sınırı (02.9 dilim 4 · `STACK §8`).
- *
- * Kolon HAM okunur (`db.from(...).select(...)`), servisten değil: iki tarafı da servisten okuyan bir
- * test, dönüşüm yanlış sabitle yapılsa bile geçerdi — gidiş ve dönüş aynı hatayı taşırdı. Sınırın
- * doğrulanması ancak kolonun kendi birimine bakarak mümkün.
- *
- * Üç kapı da ayrı ayrı sınanıyor, çünkü üçü ayrı yollardan geçiyor: eşleme ve PO kalemi taban
- * sınıfın `moneyFields` eşlemesinden, mal kabul ise RPC'den (jsonb — eşlemenin dışında).
+ * Tedarik ailesinin euro↔cent sınırı (`STACK §8`): kolon ham okunur, çünkü iki tarafı servisten okuyan test yanlış sabitle de geçerdi.
+ * Üç kapı ayrı sınanır, çünkü eşleme ve sipariş kalemi taban sınıfın eşlemesinden, mal kabul RPC'den geçer.
  */
 describe('euro↔cent sınırı (02.9)', () => {
   it('eşlemenin son alışı: cent yazılır, kolon euro tutar, cent okunur', async () => {
@@ -440,7 +416,7 @@ describe('euro↔cent sınırı (02.9)', () => {
   });
 
   it('PO kaleminin beklenen alışı: cent yazılır, kolon euro tutar, cent okunur', async () => {
-    const { order, items } = await orders.createDraft(supplierId, [{ variantId, qty: 2, unitPriceCents: 675 }]);
+    const { order, items } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 2, unitPriceCents: 675 }]);
     expect(items[0]!.unitPriceCents).toBe(675);
 
     const { data } = await db.from('purchase_order_item').select('unit_price').eq('id', items[0]!.id).single();

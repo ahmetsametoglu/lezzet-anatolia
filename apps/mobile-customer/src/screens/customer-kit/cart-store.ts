@@ -47,7 +47,7 @@ export interface CartProductLine {
   image: CatalogImage;
   /** İndirimli fiyattan geliyor — sepette rozetle söylenir. */
   discounted: boolean;
-  /** Sepete girdikten SONRA tükendi: teslim edilemez, kaldırılması istenir (v3:437). */
+  /** Sepete girdikten sonra tükendi: teslim edilemez, kaldırılması istenir. */
   soldOut: boolean;
   /**
    * Sunucu sepetindeki adres, varyantın kimliği; satırı kuran ekranlar geçer.
@@ -57,7 +57,7 @@ export interface CartProductLine {
   stockId?: string | null;
 }
 
-/** Sepetteki hazır paket satırı — koyu kartla ayrı çizilir (v3:411). */
+/** Sepetteki hazır paket satırı; koyu kartla ayrı çizilir. */
 export interface CartBundleLine {
   /**
    * PAKETİN UUID'Sİ (`bundle.id`), slug DEĞİL — sunucu sepetindeki adresi budur
@@ -117,6 +117,8 @@ const EMPTY_VIEW: MeCartView = {
   lines: [],
   subtotalCents: 0,
   discount: { status: 'none' },
+  // Okunmamış sepet ziyaretçinindir ve ziyaretçi Lezzet'tir; ilk okumada sepetin işinden dolar.
+  acceptsCoupons: true,
   // Boş sepette eşiğe "az kalmış" bir kampanya da yoktur: kapsamda kalem olmadan cümle kurulamaz.
   reachableDiscount: null,
   totalCents: 0,

@@ -37,7 +37,8 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 - **`name`** — ekranda okunan ad
 - **`kind`** — `facility` \| `vehicle` (26.08) — **araç da bir depodur**; yükleme/dönüş birer transfer, içindeki mal gerçek parti. Tür bir etiket değil DÖRT KURALIN süzgeci — üçü veride, dördüncüsü seçicilerde (aşağıda)
 - **`country_code`** — **fiziksel tesis nerede.** Bölgenin ülkesiyle karıştırılmamalı: bir bölge sınır ötesi olabilir (ADR-002), depo olamaz. ⚠ KDV'nin bağlı olduğu alan (`DOMAIN §5/§17`)
-- **`ships_online`** — kargo çıkış deposu — bölge dışı müşteriler + rota müşterilerinin kargo dolgusu
+- **`business`** — deponun işi (`docs/feature/iki-is.md`); parti, mal kabul ve sipariş işini buradan okur, etiketsiz depo Lezzet'tir. Depo kullanılmaya başlayınca (parti, hareket, sipariş, rezervasyon, mal kabul, transfer ya da sefer) değişmez (`warehouse_business_guard`, kural `warehouse_in_use`), çünkü kopya alan tutulmaz ve geçmiş öteki işe kayardı. Aracın işi evinin işidir: tesisin işi değişince araç izler, araca ayrı iş yazılamaz
+- **`ships_online`** — kargo çıkış deposu; yalnız Lezzet deposunda olur, QUALITE kargo göndermez (`warehouse_qualite_never_ships`) — bölge dışı müşteriler + rota müşterilerinin kargo dolgusu
 - **`is_active`** — depo **kapatılır, silinmez**: geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorunda (FK'ler `restrict`)
 - **`sort_order`** — operatörün seçici sırası
 - **`home_warehouse_id`** (02.09) — **aracın evi olan tesis**; yalnız `kind='vehicle'` satırında dolu
@@ -257,16 +258,18 @@ Bu yüzden **`cancelled`'ın anlamı dardır** (19.6): iptal edilen şey her zam
 | `country` | country_code |  |  |
 | `postal_code` | text |  |  |
 | `zone_id` | uuid |  |  |
+| `business` | business |  |  |
 <!-- /alanlar -->
 
 **Kararlar**
 
 - **`postal_code`** — PK'nın parçası; normalize saklanır (boşluksuz, büyük harf — CHECK ile zorlanır)
 - **`zone_id`** — cascade
+- **`business`** — bölgenin işi, deposundan kopyalanır (`delivery_zone_postal_code_business` tetikleyicisi); bölge başka depoya taşınınca ya da deponun işi değişince kodlar izler, öteki işte aynı kodu tutan bölge varsa değişiklik anahtara takılır
 
 Kod kümesi eskiden `delivery_zone.postal_codes` dizisiydi ve iki bölgeye aynı kodu yazmak serbestti; çözücü "ilki kazanır" diyerek sessizce birini seçiyordu. Tek depoda bunun bedeli yanlış bir rota günüydü — **çok depoda siparişin yanlış depoya düşmesi** demek. Küme kendi tablosuna taşındı, çakışma kayıt anında reddediliyor.
 
-**PK `(country, postal_code)`:** posta kodu ülkeler arası benzersiz değildir — `67000` hem Fransa'da hem Almanya'da geçerli. Yer çözümü daima bu ikilidir.
+**PK `(country, postal_code, business)`:** posta kodu ülkeler arası benzersiz değildir — `67000` hem Fransa'da hem Almanya'da geçerli; iki iş aynı mahalleye ayrı seferle gittiği için aynı kod iki işin ayrı bölgesinde durabilir. Yer çözümü daima müşterinin işi içinde bu ikilidir.
 
 **Ülke bölgede değil burada durur:** bir bölge sınır ötesi olabilir (ADR-002 — Strasbourg rotası Kehl'i kapsayabilir); bölgeye tek ülke yazmak onu bir devlete hapsederdi.
 
@@ -375,7 +378,7 @@ Kodu teslim bölgesine düşmeyen müşterinin bıraktığı haber kaydı. `Post
 
 **`available_stock`** — grain `(warehouse_id, variant_id)`. Denklem değişmedi (`fiili − aktif rezervasyon`), değişen hesabın **depo içinde** yapılması. Aktif depolara `cross join`: "0 da bir cevaptır" sözleşmesi korunuyor — yeni açılan depoda hiç parti olmasa da her varyant için satır döner.
 
-**`available_stock_total`** — depo-üstü toplam. **Satış kararı bunu okumaz:** birleştirilmiş stok kimsenin stoğu değildir (3 STR'de + 2 KEHL'de duran maldan 5 kişilik sipariş çıkmaz). Meşru tüketicileri: tedarik önerisi ve "hiçbir depoda yok mu" (C3 — ziyaretçiye "tükendi" demenin tek dayanağı). **Geri çağırma bunu okumaz**, `stock` tablosunu okur: bu görünüm yalnız aktif depoları sayar, kapatılmış depodaki parti burada görünmez.
+**`available_stock_total`** — işe göre depo-üstü toplam, grain `(variant_id, business)`: öteki işin deposundaki mal bu işin müşterisine satılamaz. **Satış kararı bunu okumaz:** birleştirilmiş stok kimsenin stoğu değildir (3 STR'de + 2 KEHL'de duran maldan 5 kişilik sipariş çıkmaz). Meşru tüketicisi "müşterinin işinin hiçbir deposunda yok mu" sorusudur (C3 — ziyaretçiye "tükendi" demenin tek dayanağı); iş verilmeyen okuma iki işi toplar ve yalnız personelin tükenen ürün aracında kullanılır. **Geri çağırma bunu okumaz**, `stock` tablosunu okur: bu görünüm yalnız aktif depoları sayar, kapatılmış depodaki parti burada görünmez.
 
 **`purchase_order_progress`** — PO kalemi ↔ Σ `initial_qty`. Sipariş durumu saklanan sayaçtan değil buradan türer; ölçü `initial_qty`, çünkü `physical_qty` satışla erir ve "ne kadar geldi" sorusuna yanlış cevap verir.
 

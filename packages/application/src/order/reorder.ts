@@ -4,6 +4,7 @@ import type { OrderItem, PreferredLanguage } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cartGroupOf, entryOf, type CartEntry, type CartView } from '../cart/cart-types';
 import { getPackagesByIds } from '../catalog/packages';
+import { customerBusiness, unresolvedPlace } from '../delivery/place';
 import { resolveOrderLines, type CustomerOrderLookup } from './customer-orders';
 
 /**
@@ -29,10 +30,10 @@ export async function planReorder(
 ): Promise<ReorderPlan | null> {
   const service = new OrderService(db);
   // Numarayla gelen istekte sahiplik sorguya gömülü, kimlikle gelende eşitlikle sorulur; "yok" ile "senin değil" aynı cevabı alır.
-  const order =
-    'orderId' in input.lookup
-      ? await service.getById(input.lookup.orderId)
-      : await service.findByReference(input.lookup.reference, input.customerId);
+  const [order, business] = await Promise.all([
+    'orderId' in input.lookup ? service.getById(input.lookup.orderId) : service.findByReference(input.lookup.reference, input.customerId),
+    customerBusiness(db, input.customerId),
+  ]);
   if (!order || order.customerId !== input.customerId) return null;
 
   const items = await new OrderItemService(db).listByOrder(order.id);
@@ -40,7 +41,8 @@ export async function planReorder(
   const variantItems = items.filter((i) => !i.bundleId);
 
   const bundleIds = [...new Set(bundleItems.map((i) => i.bundleId!))];
-  const bundles = await getPackagesByIds(db, bundleIds, input.locale);
+  // Paket yalnız satılıyor mu ve kalemleri için okunur, yer gerekmez; stok yeni sepette müşterinin yeriyle okunur.
+  const bundles = await getPackagesByIds(db, bundleIds, input.locale, unresolvedPlace(business));
 
   const entries: CartEntry[] = [];
   const skipped: string[] = [];

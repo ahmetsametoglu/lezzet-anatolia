@@ -65,8 +65,8 @@ export async function unknownTagOf(db: SupabaseClient, tags: readonly string[]):
 }
 
 /**
- * Belge girişi; KDV kırılımı rejime ve oranına uyar, karşı taraf cari ya da tedarikçi, tür ve etiketler sözlükten, iş deponun, seçimin
- * ya da karşı tarafın işinden. Dosya burada bağlanmaz: anahtarı belge kimliğinden kurulduğu için önce belge doğar.
+ * Belge girişi; KDV kırılımı rejime ve oranına uyar, karşı taraf cari ya da tedarikçi, tür ve etiketler sözlükten, iş stok bağının
+ * (kabulün deposu ya da tedarik siparişi), seçimin ya da karşı tarafın işinden. Dosya burada bağlanmaz: anahtarı belge kimliğinden kurulduğu için önce belge doğar.
  */
 export async function createMoneyDocument(db: SupabaseClient, input: MoneyDocumentEntry): Promise<DocumentOutcome> {
   // Kırılımın kuralı veri kısıtlarından önce sorulur: ret bir cümle olsun, PG hatası değil.
@@ -79,7 +79,11 @@ export async function createMoneyDocument(db: SupabaseClient, input: MoneyDocume
   const [counterparty, supplier, stockBusiness] = await Promise.all([
     input.counterpartyId ? new CounterpartyService(db).getById(input.counterpartyId) : null,
     input.supplierId ? new SupplierService(db).getById(input.supplierId) : null,
-    input.stockIntakeId ? intakeBusinessOf(db, input.stockIntakeId) : null,
+    input.stockIntakeId
+      ? intakeBusinessOf(db, input.stockIntakeId)
+      : input.purchaseOrderId
+        ? orderBusinessOf(db, input.purchaseOrderId)
+        : null,
   ]);
   if (input.counterpartyId && !counterparty?.isActive) return { status: 'invalid', reason: 'unknown_counterparty' };
   const natureProblem = await natureProblemOf(db, input.nature, input.direction);
@@ -101,6 +105,11 @@ export async function createMoneyDocument(db: SupabaseClient, input: MoneyDocume
 async function intakeBusinessOf(db: SupabaseClient, stockIntakeId: string): Promise<Business | null> {
   const intake = await new StockIntakeService(db).getById(stockIntakeId);
   return intake ? ((await new WarehouseService(db).getById(intake.warehouseId))?.business ?? null) : null;
+}
+
+/** Tedarik siparişinin işi; sipariş yoksa `null`, bağın varlığını `supplyLinkProblemOf` zaten sordu. */
+async function orderBusinessOf(db: SupabaseClient, purchaseOrderId: string): Promise<Business | null> {
+  return (await new PurchaseOrderService(db).getById(purchaseOrderId))?.business ?? null;
 }
 
 type SupplyLinkProblem = 'link_conflict' | 'link_needs_supplier' | 'link_not_found' | 'link_supplier_mismatch' | 'link_has_document';

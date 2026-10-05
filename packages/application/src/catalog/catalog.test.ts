@@ -1,19 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
+import { CategoryService, PriceService, ProductService, StockService, WarehouseService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
-import { DEFAULT_CROP_FIELDS } from '@lezzet/types';
+import { DEFAULT_CROP_FIELDS, type Business } from '@lezzet/types';
 import { getCatalogData } from './catalog';
-/* Künye açıkça geçilir çünkü kapı istek bağlamı okumaz — okusaydı bu dosya (ve mobil çağıran) hiç
-   koşamazdı.
-
-   **BU YORUM ESKİDEN ŞUNU DİYORDU:** *"Sıralama testi ZİYARETÇİ gözünden bakar: ölçtüğü şey fiyatın
-   kim tarafından görüldüğü değil, sıranın kümenin tamamında doğru kurulduğu."* Cümle makul
-   görünüyordu ve YANLIŞTI — sıra, fiyatın kim tarafından görüldüğüne bağlıdır, çünkü fiyatın kendisi
-   öyle. O varsayım yüzünden on testin onu da `VISITOR` ile koştu ve toptan müşterinin dört ay
-   boyunca yanlış sıralanması hiçbir testten geçmedi (08.54). Kayda geçiyor: burada düşen şey kod
-   değil, testin kendi kapsam iddiasıydı. */
+/* Künye açıkça geçilir, çünkü kapı istek bağlamı okumaz. Sıralama testleri kanala göre koşar, çünkü sıra fiyata ve fiyat onu
+   görene bağlıdır. */
 import { VISITOR, type PricingViewer } from './pricing-viewer';
 import type { PlaceWarehouses } from './storefront-types';
+import { unresolvedPlace } from '../delivery/place';
 
 /**
  * Katalogda fiyat sıralaması — `product_listing` görünümü motorun (`resolvePrice`) fiyat dalını SQL'de yeniden ifade eder, çünkü
@@ -28,13 +22,14 @@ let categoryId: string;
 // Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
 let warehouseId: string;
 const productIds: string[] = [];
+const extraWarehouseIds: string[] = [];
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 /** Yer BİLİNMİYOR — ziyaretçinin posta kodu vermediği hâl (depo-üstü okuma). */
-const YERSIZ: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null };
+const YERSIZ: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null, business: 'lezzet' };
 /** Yer BELLİ — teklif tutarının gösterilebildiği tek hâl. */
-const yerli = (): PlaceWarehouses => ({ warehouseId, shippingWarehouseId: null });
+const yerli = (): PlaceWarehouses => ({ warehouseId, shippingWarehouseId: null, business: 'lezzet' });
 
 /** Yayın kısıtlarının şartı: `active` ürün üç dilde dolu, alerjen beyanı girilmiş olmalı; bunlar fikstürün konusu değil. */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
@@ -93,7 +88,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   // Parti satırları ürünün varyantlarından çözülüp `purgeTestData` içinde gider (sıra orada tutulur).
-  await purgeTestData(db, { productIds, categoryIds: [categoryId], warehouseIds: [warehouseId] });
+  await purgeTestData(db, { productIds, categoryIds: [categoryId], warehouseIds: [warehouseId, ...extraWarehouseIds] });
 });
 
 /**
@@ -152,7 +147,7 @@ describe('sıralama SORANIN kanalından okunur', () => {
       place: YERSIZ,
       viewer: TOPTANCI,
     });
-    // Bu dosyanın asıl işi bu çifti çivilemek; artık iki kanalda birden çiviliyor.
+    // Bu dosyanın asıl işi bu çifti iki kanalda birden çivilemek.
     expect(data.products.map((p) => p.priceCents)).toEqual([600, 900, 1500]);
   });
 });
@@ -340,7 +335,7 @@ describe('süzgeçler sıralamayla birlikte çalışır', () => {
       // Toptan müşteri görür ve KENDİ sırasında görür: Orta(600) → Yalnız(700) → Ucuz(900) → Pahalı(1500)
       expect(toptanci.products.map((p) => p.name.split(' ')[0])).toEqual(['Orta', 'Yalnız', 'Ucuz', 'Pahalı']);
       expect(toptanci.total).toBe(4);
-      // Listelenen her satırın fiyatı VARDIR — `sort_price` artık null olamaz.
+      // Listelenen her satırın fiyatı vardır; `sort_price` null olamaz.
       expect(toptanci.products.every((p) => p.priceCents != null)).toBe(true);
     } finally {
       // Ürün sonraki testlerin sayımına girmesin — hatası fırlatılan silme (CLAUDE §4b); önce hareket defteri, sonra parti.
@@ -381,16 +376,9 @@ describe('yedek kategoriler ÇAĞIRANIN kararıdır', () => {
 });
 
 /*
-  YALNIZ BURADA DURAN MAL (01.09 · kullanıcı kararı) — vitrin kuralının TERSİ ve tek bir yüzey için.
-
-  Vitrinin kuralı *"katalog süzülmez, işaretlenir"*: rafta olmayan ürün de listede durur, üstünde
-  "tükendi" yazar. Müşteri için doğru — ARAÇ için değil. Kurye elinde ne varsa onu satar ve
-  01.09'da ölçülen arıza tam buydu: kurye kendi satış ekranında aracının dört kalemini değil, ana
-  deponun yüz elli dört partisini görüyordu.
-
-  Daraltma bu yüzden bir BAYRAK, ayrı bir okuma değil: aynı süzgeç, aynı bağlam, aynı kart
-  indirgemesi — ayrışan tek şey kümenin kaynağı. İkinci bir okuma yazmak, vitrinle satış ekranının
-  aynı ürün için farklı "tükendi" demesine kapı bırakırdı.
+  Yalnız burada duran mal: vitrinin "süzülmez, işaretlenir" kuralının tersi ve yalnız araç satış ekranı için, çünkü kurye
+  elindekini satar. Daraltma ayrı okuma değil bayraktır; ikinci okuma vitrinle satış ekranının aynı ürüne farklı "tükendi" demesine
+  kapı açardı.
 */
 describe('yalnız burada duran mal', () => {
   // Ayrı damga BİLİNÇLİ: dosyanın öteki testleri `search: String(stamp)` ile süzüyor ve bu iki ürün
@@ -447,5 +435,44 @@ describe('yalnız burada duran mal', () => {
        vermemek: `CLAUDE §1` — ölçülemeyen değer sıfır değildir, ama olmayan bir yerin envanteri de
        tüm envanter değildir. */
     expect(await kimlikler(true, YERSIZ)).toEqual([]);
+  });
+});
+
+describe('yer bilinmezken "var" müşterinin işinin depolarından okunur', () => {
+  // Ayrı damga: ürün fiyat sıralaması testlerinin `search: String(stamp)` kümesine girmesin.
+  const isStamp = stamp + 11;
+  let urunId: string;
+
+  beforeAll(async () => {
+    const qualiteDepo = (await createTestWarehouse(db, { label: 'QUA' })).id;
+    extraWarehouseIds.push(qualiteDepo);
+    await new WarehouseService(db).update({ id: qualiteDepo, business: 'qualite' });
+    const { product, variants } = await new ProductService(db).create({
+      name: ucDil(`Isler${isStamp} Toptan`),
+      categoryId,
+      ...yayinaHazir,
+      variants: [{ label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' }],
+    });
+    productIds.push(product.id);
+    urunId = product.id;
+    await prices.insert({ variantId: variants[0]!.id, channel: 'b2c', amountCents: 500 });
+    await stocks.insert({
+      warehouseId: qualiteDepo, variantId: variants[0]!.id, physicalQty: 5, expiryDate: dayOffset(60), purchasePriceCents: 100,
+    });
+  });
+
+  const durum = async (business: Business) => {
+    const data = await getCatalogData(db, {
+      locale: 'tr',
+      query: { search: `Isler${isStamp}` },
+      place: unresolvedPlace(business),
+      viewer: VISITOR,
+    });
+    return data.products.find((p) => p.id === urunId)?.stockStatus;
+  };
+
+  it('yalnız QUALITE deposunda duran ürün Lezzet ziyaretçisine tükenmiş, QUALITE müşterisine var görünür', async () => {
+    expect(await durum('lezzet')).toBe('out_of_stock');
+    expect(await durum('qualite')).toBe('available');
   });
 });

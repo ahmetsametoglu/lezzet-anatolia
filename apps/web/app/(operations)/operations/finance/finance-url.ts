@@ -1,16 +1,9 @@
 import { MovementTypeEnum, type MovementType } from '@lezzet/types';
+import { parseBusinessFilter, type BusinessFilter } from '@/lib/business-filter';
 import { one, oneOf, type RawParams } from '@/lib/url-params';
 
-// Para ekranının URL SÖZLEŞMESİ — müşteri/stok/fiyat ekranlarının deseni. Süzgeç adreste taşınır
-// (yenilemede aynı görünüm açılır, sunucu okuyabildiği için süzme sunucuda yapılabilir); İMLEÇ
-// adrese yazılmaz (CLAUDE.md §1) — paylaşılan bağlantı listenin ortasından başlamamalı.
-//
-// **Hesap bir EKSEN değil, bir DARALTMADIR** ve bu ekranın tamamını belirleyen karar bu. Tasarımın
-// kendi sözleşmesi: *"Tek model → kasa/banka/Stripe aynı kavram; hesap yalnız bir filtre çipi"*
-// (`Operasyon - Para.dc.html`), sayfa dokümanı da aynı cümleyi kuruyor (`admin-para.md §6`:
-// "tek liste, hesap yalnız bir filtredir"). Bu yüzden varsayılan `all`; kasa ile bankanın ayrı
-// ekranı yok, ayrı sözlüğü de yok. Süzgeç 12.17'den beri bakiye şeridinin KARTIDIR (kullanıcı
-// isteği 13.09): kart hem bakiyeyi söyler hem daraltır — aynı hesabın adı iki yerde yazmaz.
+// Para ekranının URL sözleşmesi: süzgeç adreste taşınır, çünkü yenilemede aynı görünüm açılır ve sunucu süzebilir; imleç adrese
+// yazılmaz. Hesap eksen değil daraltmadır: kasa, banka ve Stripe aynı kavramdır, varsayılan `all`, hesap bakiye şeridinin kartıyla seçilir.
 
 export const FINANCE_PATH = '/operations/finance';
 
@@ -18,21 +11,15 @@ export const FINANCE_PATH = '/operations/finance';
 export const ALL_ACCOUNTS = 'all';
 
 /**
- * Kuyruk daraltması.
- *  · `all`       → bütün hareketler
- *  · `unmatched` → izah bekleyen hareketler (13.09: ad paylaşılmış bağlantılar kırılmasın diye kaldı)
- *
- * `unmatched` bir süzgeçten fazlası: tasarım onu **iş kuyruğu** ilan ediyor (*"sağ üstteki
- * 'eşleşmemiş satır' sayacı iş kuyruğudur"*). Rozet tıklanınca buraya iner, yani sayı ile liste
- * aynı ölçütten çıkar — sayacın gösterdiği kümeyi açamamak, sayacı bir süse çevirirdi.
+ * Kuyruk daraltması: `all` bütün hareketler, `unmatched` izah bekleyen hareketler (paylaşılmış bağlantılar kırılmasın diye adı kaldı).
+ * `unmatched` iş kuyruğudur; sayaç tıklanınca buraya iner ki sayı ile liste aynı ölçütten çıksın.
  */
 const FINANCE_SCOPES = [ALL_ACCOUNTS, 'unmatched'] as const;
 export type FinanceScope = (typeof FINANCE_SCOPES)[number];
 
 /**
- * Ekranın iki listesi (12.17 · kullanıcı sorusu 13.09: "belgeleri nerede görüyorum?") — hareketler ve
- * belgeler. Sekme adreste taşınır: "bu ayın belgeleri" bağlantısı paylaşılabilsin. Tarih süzgeci iki
- * sekmede aynı anlamı taşır (hareketin değer günü · belgenin belge günü).
+ * Ekranın iki listesi, hareketler ve belgeler; sekme adreste taşınır ki "bu ayın belgeleri" bağlantısı paylaşılabilsin. Tarih süzgeci
+ * iki sekmede aynı anlamı taşır: hareketin değer günü, belgenin belge günü.
  */
 const FINANCE_TABS = ['movements', 'documents'] as const;
 export type FinanceTab = (typeof FINANCE_TABS)[number];
@@ -42,19 +29,26 @@ export interface FinanceUrlState {
   acct: string;
   tab: FinanceTab;
   type: MovementType | 'all';
-  /**
-   * Tarih ARALIĞI (`YYYY-MM-DD`; boş = sınırsız) — 12.17'de hazır dört aralığın ("son 7/30/90 gün")
-   * yerini aldı: kullanıcı "tarih aralığında süzebilmeliyim" dedi ve "geçen ayın 5'i ile 20'si"
-   * sorulamıyordu. Önayarlar aralık seçicinin içinde durur (`DateRangeMenu`).
-   */
+  /** Tarih aralığı (`YYYY-MM-DD`; boş sınırsız); hazır aralıklar seçicinin içindedir (`DateRangeMenu`). */
   from: string;
   to: string;
   scope: FinanceScope;
   /** Belgeler sekmesinde yalnız AÇIK belgeler — ödenmemiş fatura, bize ödenecek dekont. */
   open: boolean;
+  /** Listelerin iş süzgeci; bakiyeler bölünmez, çünkü iki iş aynı hesapları kullanır. */
+  business: BusinessFilter;
 }
 
-const DEFAULTS: FinanceUrlState = { acct: ALL_ACCOUNTS, tab: 'movements', type: 'all', from: '', to: '', scope: ALL_ACCOUNTS, open: false };
+const DEFAULTS: FinanceUrlState = {
+  acct: ALL_ACCOUNTS,
+  tab: 'movements',
+  type: 'all',
+  from: '',
+  to: '',
+  scope: ALL_ACCOUNTS,
+  open: false,
+  business: 'all',
+};
 
 /** Adresteki gün — biçimi ve kendisi geçerliyse (`2026-13-40` düşer); değilse boş (sınırsız). */
 function dayOf(raw: RawParams[string]): string {
@@ -76,6 +70,7 @@ export function parseFinanceUrl(params: RawParams): FinanceUrlState {
     to: end,
     scope: oneOf(params.scope, FINANCE_SCOPES, DEFAULTS.scope),
     open: one(params.open) === '1',
+    business: parseBusinessFilter(params.business),
   };
 }
 
@@ -89,16 +84,14 @@ export function financeUrl(state: FinanceUrlState): string {
   if (state.to) p.set('to', state.to);
   if (state.scope !== DEFAULTS.scope) p.set('scope', state.scope);
   if (state.open) p.set('open', '1');
+  if (state.business !== DEFAULTS.business) p.set('business', state.business);
   const qs = p.toString();
   return qs ? `${FINANCE_PATH}?${qs}` : FINANCE_PATH;
 }
 
 /**
- * Adresteki hesap kimliği GERÇEK bir hesap mı — değilse `all`.
- *
- * Kimlik URL'de taşındığı için elle düzenlenebiliyor, ve pasifleştirilmiş bir hesabın bağlantısı
- * kayıtlı kalabiliyor. Doğrulamasaydık ekran hiçbir kartın seçili görünmediği bir hâlde boş liste
- * gösterirdi: operatör "hiç hareket yok" diye okur, oysa yalnız süzgeç geçersizdir.
+ * Adresteki hesap kimliği gerçek bir hesap mı, değilse `all`: kimlik elle düzenlenebilir ve pasifleştirilmiş hesabın bağlantısı kayıtlı
+ * kalabilir; doğrulanmasaydı hiçbir kart seçili görünmeden boş liste "hiç hareket yok" diye okunurdu.
  */
 export function resolveAccount(acct: string, accountIds: readonly string[]): string {
   return acct === ALL_ACCOUNTS || accountIds.includes(acct) ? acct : ALL_ACCOUNTS;

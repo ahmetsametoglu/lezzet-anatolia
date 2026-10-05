@@ -1,5 +1,5 @@
 import { fromCents, toCents } from '@lezzet/helper';
-import type { Channel, Country, OrderSale, PaymentMethod, VatTreatment } from '@lezzet/types';
+import type { Business, Channel, Country, OrderSale, PaymentMethod, VatTreatment } from '@lezzet/types';
 import { chargedShippingParts } from '../delivery/shipping-fee';
 import { chargedQtyOf, fulfilledLineOf } from '../payment/payment-status';
 import { chargedAmountCents, vatSplitOf, type AccountingLine } from './line';
@@ -28,6 +28,8 @@ export interface AccountingExportRow {
   /** Dış muhasebeden sonradan eşleşir; boşsa satır eşleştirme kuyruğundadır. */
   invoiceNo: string | null;
   customerId: string;
+  /** Satışın işi; dosya şirketin tamamıdır, satır işini taşır. */
+  business: Business;
   channel: Channel;
   paymentMethod: PaymentMethod | null;
   deliveryCountry: Country;
@@ -95,6 +97,7 @@ export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]
     referenceNo: sale.referenceNo,
     invoiceNo: sale.invoiceNo,
     customerId: sale.customerId,
+    business: sale.business,
     channel: sale.channel,
     paymentMethod: sale.paymentMethod,
     deliveryCountry: sale.deliveryCountry,

@@ -28,29 +28,16 @@ import { useSalePlace, useSaleContext } from './sale-context';
 import { selectionOf } from './use-sale.hook';
 
 /*
-  YERİNDE SATIŞ · KATALOG — `/sale` (21.119 · `DOMAIN §17`: satan kişi malın yanında duran
-  personeldir; depoyu SUNUCU künyeden çözer, ekran depo sormaz).
-
-  ── AKIŞ İKİ YÜZEY (kullanıcı kararı 26.08) ─────────────────────────────────
-  Liste ile sepet aynı sayfadaydı ve kötüydü: iki ayrı soru tek ekranda itişiyordu. Artık burası
-  yalnız "ne satıyorum" — ara, karta dokun, çekmecede adet+fiyat, sepete at. Sepet dolunca altta
-  ÇUBUK belirir ve `/sale/cart`a götürür: son kontrol, tahsilat seçimi ve yazma orada. Kaydedilen
-  satışlar `/sale/history`de (başlığın altındaki bağ). Durum `SaleProvider`da ortak.
-
-  Kartta ÜRÜN GÖRSELİ var (aynı karar): personel müşteriyle ürünün yüzü üstünden konuşur; görselsiz
-  liste, adı benzeyen iki böreği ayırt ettirmiyordu. Görsel yoksa baş harf çizilir (`CirclePhoto` —
-  kitin kendi yedeği), boş bir kare değil.
+  Yerinde satış kataloğu: satan kişi malın yanındaki personeldir ve depoyu sunucu künyeden çözer, ekran depo sormaz. Burası yalnız "ne
+  satıyorum" sorusudur; sepet dolunca alttaki çubuk `/sale/cart`a götürür, kartta ürün görseli personelin müşteriyle ürünün yüzü üstünden
+  konuşması içindir.
 */
 
 const t = saleCopy;
 
 /**
- * Yükleme iskeletindeki kutunun boyu — ürün kartının KENDİ bloklarından türer, elle ölçülmüş bir
- * sayı değil: kartın dolgusu iki kez, içinde de `md` boyunda kare (48). Metin sütunu kareden
- * kısa kaldığı için satırın yüksekliğini kare belirliyor (`row` dikeyde ortalıyor).
- *
- * Kartın dolgusu değişirse iskelet de değişir; sabit yazılsaydı bir gün sessizce ayrışır ve veri
- * gelince sayfa yine zıplardı — iskeletin var olma sebebinin tam tersi.
+ * Yükleme iskeletindeki kutunun boyu ürün kartının kendi bloklarından türer (iki dolgu + `md` kare): sabit yazılsaydı kart değişince
+ * ayrışır ve veri gelince sayfa zıplardı.
  */
 const SALE_CARD_HEIGHT =
   operationsTheme.space['2xl'] * 2 + operationsTheme.size.thumb + operationsTheme.border.base * 2;
@@ -61,14 +48,11 @@ const CART_BAR_LIFT = operationsTheme.space.xl + operationsTheme.size.controlLg 
 export function SaleScreen() {
   const router = useRouter();
   const sale = useSaleContext();
-  /* SATIŞ YERİ EKRANIN CÜMLESİNİ DE DEĞİŞTİRİR (01.09): araçtan satarken liste kataloğun tamamı
-     değil ARACIN İÇERİĞİDİR (uç `onlyStockedHere` ile daraltıyor) ve boş liste "aramaya uyan yok"
-     değil "araçta mal yok" demektir. İki hâle aynı cümleyi kurmak, kuryeyi olmayan bir ürünü
-     aramaya gönderirdi. */
+  /* Satış yeri ekranın cümlesini de değiştirir: araçta liste aracın içeriğidir ve boş liste "araçta mal yok" demektir, aynı cümle
+     kuryeyi olmayan ürünü aramaya gönderirdi. */
   const place = useSalePlace();
-  /* ÇEVRİMDIŞI KİLİDİ (v3:20) — depo yazma ekranlarının kuralı burada da geçerli ve AYNI sinyalden
-     okunuyor: sepete atılan kalem, o anki fiyatı ve kalan stoğu taşır; hat kapalıyken ikisi de
-     bayattır ve bayat fiyatla yazılan satış, müşterinin gözünün önünde yanlış para demektir. */
+  /* Çevrimdışı kilidi depo ekranlarının sinyalinden okunur: hat kapalıyken fiyat ve kalan stok bayattır ve bayat fiyatla yazılan satış
+     yanlış paradır. */
   const { offline } = useWarehouseStatus();
 
   const draftSelection = sale.draft === null ? null : selectionOf(sale.draft);
@@ -96,49 +80,43 @@ export function SaleScreen() {
       />
 
       {/*
-        ── GİRİŞ TASARIMIN İKİ DÜĞMESİ (v3:23 · kullanıcı kararı 02.09) ────────
-        Tasarım ekranı iki düğmeyle açıyor: **Barkod okut** (zeytin, ışımalı, 54) ve **Ürün ara**
-        (çerçeveli, "+"). Bizde bunun yerine sürekli açık bir arama kutusu vardı ve okutma hiç
-        yoktu — kullanıcı: *"barkod okuma bence burada önemli… kötü bir desen bu."*
-
-        Arama artık ÇEKMECEDE (tasarımın `urunAraSheet`i): kutu düğmenin arkasında duruyor, listeyi
-        çekmecenin içinde daraltıyor. Alanın durum dalının DIŞINDA kalma gerekçesi (her tuş bir
-        yükleme tetikliyor, alan sökülürse IME kompozisyonu ölür — 26.08) çekmecede de geçerli:
-        çekmece kendi kabında ve gövde tazelenirken sökülmüyor.
-
-        "son satışlar ›" tasarımdaki yerine indi: listenin ALTINDA, sola yaslı, zeytin.
+        Giriş tasarımın iki düğmesidir (Barkod okut, Ürün ara); arama çekmecede durur ve gövde tazelenirken sökülmez, sökülseydi her
+        tuşta IME kompozisyonu ölürdü.
       */}
-      <View style={styles.entryBlock}>
-        <PrimaryButton
-          label={t.scanCta}
-          icon="scan"
-          tone="olive"
-          elevation="glow"
-          onPress={() => sale.setScanOpen(true)}
-          disabled={offline}
-          testID="sale-scan-cta"
-        />
-        <SecondaryButton
-          label={t.searchCta}
-          icon="plus"
-          elevation="flat"
-          onPress={() => setSearchOpen(true)}
-          testID="sale-search-cta"
-        />
-      </View>
+      {sale.status === 'closed' ? null : (
+        <View style={styles.entryBlock}>
+          <PrimaryButton
+            label={t.scanCta}
+            icon="scan"
+            tone="olive"
+            elevation="glow"
+            onPress={() => sale.setScanOpen(true)}
+            disabled={offline}
+            testID="sale-scan-cta"
+          />
+          <SecondaryButton
+            label={t.searchCta}
+            icon="plus"
+            elevation="flat"
+            onPress={() => setSearchOpen(true)}
+            testID="sale-search-cta"
+          />
+        </View>
+      )}
 
       {sale.status === 'loading' ? (
-        /* İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08 · N9'un satış payı, 06.09).
-           Halka ekranın ORTASINDA dönüyordu ve yerleşim tutmuyordu: veri gelince liste bir anda
-           yerine oturup sayfayı zıplatıyordu. Kutular gelecek KARTLARIN boyunda duruyor — personel
-           listeyi görmeden listenin biçimini görüyor. Üç kutu, çünkü ekranda her zaman en az o
-           kadar ürün var. */
+        /* İlk yük iskelettir, halka değil: kutular gelecek kartların boyunda durur ki veri gelince sayfa zıplamasın; ekranda her zaman
+           en az üç ürün vardır. */
         <View style={styles.list}>
           <OperationsSkeletonList
             heights={[SALE_CARD_HEIGHT, SALE_CARD_HEIGHT, SALE_CARD_HEIGHT]}
             label={t.loading}
             testID="sale-loading"
           />
+        </View>
+      ) : sale.status === 'closed' ? (
+        <View style={styles.block}>
+          <OperationsNoticeBlock variant="empty" title={t.closed.title} description={t.closed.body} testID="sale-closed" />
         </View>
       ) : sale.status === 'error' ? (
         <View style={styles.block}>
@@ -149,8 +127,8 @@ export function SaleScreen() {
         <FormScroll contentContainerStyle={styles.list} testID="sale-body">
           {sale.products.length === 0 ? (
             place === 'van' && sale.search.trim().length === 0 ? (
-              /* Aranmadan boş kalan ARAÇ bir arama sonucu değil, bir DURUMDUR — ve çıkışı da var:
-                 rampada serbest ürün yükleme (v3:19). Cümle o kapıyı gösteriyor. */
+              /* Aranmadan boş kalan araç bir arama sonucu değil durumdur; cümle çıkış kapısını, rampada serbest ürün yüklemeyi
+                 gösterir. */
               <OperationsNoticeBlock
                 variant="empty"
                 title={t.van.empty}
@@ -169,14 +147,13 @@ export function SaleScreen() {
           )}
           {sale.hasMore ? <TextAction label={t.loadMore} onPress={sale.loadMore} testID="sale-load-more" /> : null}
 
-          {/* SON SATIŞLAR — tasarımın yeri (v3:23): listenin altında, sola yaslı, zeytin. */}
+          {/* Son satışlar tasarımdaki yerinde: listenin altında, sola yaslı. */}
           <View style={styles.recentRow}>
             <TextAction label={t.recentLinkLower} onPress={() => router.navigate('/sale/history')} testID="sale-recent-link" />
           </View>
 
-          {/* DİPNOT (v3:20) — bu ekranın üç kuralı: müşteri kaydı istenmez, para alınınca stok
-              anında iner, pazarlık meşrudur ama iz bırakır. Üçü de ekranda görünmeyen ama satışı
-              yazan kişinin bilmesi gereken şeyler. */}
+          {/* Dipnot ekranın üç kuralını söyler: müşteri kaydı istenmez, para alınınca stok anında iner, pazarlık meşrudur ama
+              iz bırakır. */}
           <Text style={styles.footnote} testID="sale-footnote">
             {t.footnote}
           </Text>
@@ -204,9 +181,8 @@ export function SaleScreen() {
         </LinearGradient>
       )}
 
-      {/* ARAMA ÇEKMECESİ (v3:23 `urunAraSheet`) — kutu + daralan liste; ürün seçilince çekmece
-          kapanır ve kartın kendi çekmecesi açılır. Liste aynı `sale.products`: iki liste, iki
-          gerçek demek olurdu. */}
+      {/* Arama çekmecesi: ürün seçilince kapanır ve kartın çekmecesi açılır; liste aynı `sale.products`tır, iki liste iki gerçek
+          olurdu. */}
       <BottomSheet visible={searchOpen} title={t.searchSheetTitle} fill onClose={() => setSearchOpen(false)} testID="sale-search-sheet">
         <TextInput
           value={sale.search}
@@ -242,20 +218,20 @@ export function SaleScreen() {
           açar, bulunamayan kod toast'la söylenir. Simülasyon çipleri kitin havuzundan (ürün
           barkodları statik formülle taklit edilebiliyor — `dev-scan-pool`). */}
       {/*
-        OKUTMA YÜZEN DÜĞMEDE DE (kullanıcı kararı 02.09: *"yerinde satışta da fab barkod butonu
-        olsun"*) — yükleme ekranının kararıyla aynı: üstteki "Barkod okut" tasarımın giriş düğmesi
-        ve listeyle birlikte kayıp gidiyor; daire ise her zaman elin altında. Sepet çubuğu varken
-        daire onun kadar yukarı kalkar (`lift`), yoksa çubuğun tutarını örterdi.
+        Okutma yüzen düğmede de durur, çünkü üstteki giriş düğmesi listeyle kayıp gider; sepet çubuğu varken daire onun kadar yukarı
+        kalkar, yoksa tutarı örterdi.
       */}
-      <OperationsScanFab
-        icon="scan"
-        tone="scan"
-        accessibilityLabel={t.scanCta}
-        onPress={() => sale.setScanOpen(true)}
-        disabled={offline}
-        lift={sale.lines.length === 0 ? 0 : CART_BAR_LIFT}
-        testID="sale-scan-fab"
-      />
+      {sale.status === 'closed' ? null : (
+        <OperationsScanFab
+          icon="scan"
+          tone="scan"
+          accessibilityLabel={t.scanCta}
+          onPress={() => sale.setScanOpen(true)}
+          disabled={offline}
+          lift={sale.lines.length === 0 ? 0 : CART_BAR_LIFT}
+          testID="sale-scan-fab"
+        />
+      )}
 
       <ScanSheet
         open={sale.scanOpen}
@@ -268,21 +244,8 @@ export function SaleScreen() {
       />
 
       {/*
-        ── SEPETE EKLEME ÇEKMECESİ — kitin `sheetTopAdet` şekli + satışın iki sorusu ──────
-        Kullanıcı kararı 02.09: *"Barkodunu okuttuktan sonra boyu seçmek mantıklı değil; sadece
-        adet girişine müsaade eden bir çekmece yeterli. Fiyat orada düzeltilebiliyor, kapıda satışın
-        mantığı gereği o da olsa olur. O kaydırmalı komponenti komple kaldırabiliriz."*
-
-        - BOY yalnız birden çok boy varken sorulur (listeden dokunulan çok boylu kart). Okutmada ve
-          tek boyluda boy BAŞLIKTA durur ("Fıstıklı Baklava · 2500 g"), seçtirilmez — tek çipli bir
-          "BOY SEÇ" bölümü, cevabı belli bir soruydu.
-        - ADET kitin sayacı, büyük boyda (`OperationsStepperGroup size="lg"`) — depo çekmeceleriyle
-          aynı şekil. Elastik kaydırıcı (`qty-slider`) buradan söküldü: kabulün "kaç koli geldi"
-          sorusu için yazılmıştı; satışta adet küçük ve tavanı belli (kalan), ray gereksizdi.
-        - FİYAT satışa özgü. Kitin `OperationsScanQtySheet`i bilerek fiyat taşımaz (kendi künyesi:
-          "fiyat, tutar, müşteri YOK — depo yüzeyinin tip sınırı"); o yüzden çekmece burada aynı
-          parçalardan kuruluyor — ikinci bir kit çekmecesi değil, kit çekmecesinin satış cümlesi.
-        - Fotoğraf yok: soru "kaç tane, kaça"; ürünün yüzü listede zaten görüldü.
+        Sepete ekleme çekmecesi kitin parçalarından kurulur, çünkü kitin okutma çekmecesi bilerek fiyat taşımaz: boy yalnız çok boylu
+        kartta sorulur, adet kitin büyük sayacıdır, fiyat satışa özgüdür. Fotoğraf yoktur, ürünün yüzü listede zaten görüldü.
       */}
       <BottomSheet
         visible={sale.draft !== null}
@@ -396,14 +359,8 @@ interface ProductRowProps {
 }
 
 /**
- * Katalog kartı — görsel + ad + birim + fiyat solda, kalan/tükendi rozeti sağda.
- *
- * **`memo` BİR SÜS DEĞİL, ÇEKMECE AKICILIĞININ KENDİSİ** (kullanıcı bulgusu 26.08: "çekmece
- * kasarak açılıyor", başka çekmecelerde yok). Karta dokunmak `draft` durumunu değiştiriyor ve
- * ekranın kökü yeniden çiziliyordu — 30 kart, çekmece animasyonuyla AYNI karede; çok boylu
- * üründe boylar gelince animasyonun ortasında bir tur daha. Kartların hiçbiri o anda değişmiyor.
- * `memo` + kararlı `onOpen` (hook'un `useCallback`'i) ile dokunuş yalnız çekmeceyi çizdirir;
- * kartlar ancak LİSTE değişince (arama, sayfa, satış sonrası tazeleme) yeniden çizilir.
+ * Katalog kartı. `memo` çekmece akıcılığı içindir: karta dokunmak `draft`ı değiştirir ve kartlar çekmece animasyonuyla aynı karede
+ * yeniden çizilirdi; kararlı `onOpen` ile dokunuş yalnız çekmeceyi çizdirir.
  */
 const ProductRow = memo(function ProductRow({ product, onOpen }: ProductRowProps) {
   const multi = product.variantCount > 1;
@@ -419,14 +376,8 @@ const ProductRow = memo(function ProductRow({ product, onOpen }: ProductRowProps
           : fillCopy(t.card.remaining, { n: String(product.availableHere ?? 0) });
 
   /*
-    SATIR KİTTEN (`OperationsProductRow` · 31.08) — burada elden çiziliyordu ve kitin satırıyla
-    BİREBİR aynı anatomiydi: solda kare, ortada ad + alt bilgi, sağda rozet. Üçüncü kopyaydı
-    (hazırlık ekranı ve serbest ürün onu zaten kullanıyor) ve kopyaların ayrışması ölçüldü:
-    burada resim DAİREYDİ, ötekilerde yuvarlatılmış kare — aynı ürün iki ekranda iki farklı
-    kimlikle görünüyordu. Kit kareyi seçiyor (komponentin kendi künyesi: "ürün kutudur, kişi
-    değil") ve karar tek yerde duruyor (CLAUDE §1).
-
-    `memo` YERİNDE KALIYOR — gerekçesi aşağıdaki künyede ve kitle ilgisi yok.
+    Satır kitten gelir (`OperationsProductRow`), çünkü elle çizilen kopyalar ayrışır ve aynı ürün iki ekranda iki farklı resimle
+    görünürdü. `memo` yerinde kalır, gerekçesi kartın künyesindedir.
   */
   return (
     <OperationsProductRow
@@ -470,7 +421,7 @@ const styles = StyleSheet.create({
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
     gap: operationsTheme.space.lg,
   },
-  /** İki giriş düğmesi alt alta (v3:23 `gap:12px`), listeyle aynı yan nefes. */
+  /** İki giriş düğmesi alt alta, listeyle aynı yan nefes. */
   entryBlock: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.space.xl,

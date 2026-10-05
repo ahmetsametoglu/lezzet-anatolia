@@ -9,7 +9,7 @@ import type { PlaceWarehouses } from './storefront-types';
 
 /**
  * Bir ürün listesinin fiyat ve stok yan verilerini sabit sayıda sorguyla toplu okur; `viewer` zorunludur, yoksa unutan çağrı
- * sessizce perakende fiyat okurdu. Yer belliyse o deponun kullanılabiliri (söz), belirsizse depo-üstü toplam ("hiç yok mu") okunur.
+ * sessizce perakende fiyat okurdu. Yer belliyse o deponun kullanılabiliri (söz), belirsizse yerin işinin depo-üstü toplamı okunur.
  */
 export async function loadProductContext(
   db: SupabaseClient,
@@ -45,7 +45,7 @@ export async function loadProductContext(
       ? stocks.getAvailableMap(warehouseId, variantIds)
       : yerBiliniyor
         ? Promise.resolve(new Map())
-        : stocks.getNetworkAvailabilityMap(variantIds),
+        : stocks.getNetworkAvailabilityMap(variantIds, place.business),
     // Kargo deposu ayrı okunur, çünkü yerel depoda yok tek başına tükendi demek değildir; yerel depo zaten kargo deposuysa
     // ikinci okuma atlanır.
     shippingWarehouseId && shippingWarehouseId !== warehouseId
@@ -53,7 +53,7 @@ export async function loadProductContext(
       : Promise.resolve(null),
     // Ağ toplamı, yer bilindiğinde "başka depoda var" (`elsewhere`) ile "hiçbir yerde yok" ayrımının tek dayanağıdır;
     // yer bilinmiyorsa yerel havuz zaten ağ toplamıdır.
-    yerBiliniyor ? stocks.getNetworkAvailabilityMap(variantIds) : Promise.resolve(null),
+    yerBiliniyor ? stocks.getNetworkAvailabilityMap(variantIds, place.business) : Promise.resolve(null),
     // Teklif yalnız yer belliyken, malın geldiği depodan okunur: yer bilinmezken indirimli fiyatı gösterip checkout'ta
     // yükseltmek sözü bozardı ve kart yersiz sıralamayla (liste fiyatı) çelişirdi.
     // BEKLEYEN(19.7): teklifin varlığı (`has_near_expiry_offer`) posta kodu davetine dönüşecek.

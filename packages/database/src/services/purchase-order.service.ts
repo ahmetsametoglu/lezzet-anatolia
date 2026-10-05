@@ -6,6 +6,7 @@ import {
   PurchaseOrderItemSchema,
   PurchaseOrderItemInsertSchema,
   PurchaseOrderItemUpdateSchema,
+  type Business,
   type PurchaseOrder,
   type PurchaseOrderInsert,
   type PurchaseOrderUpdate,
@@ -33,9 +34,8 @@ export interface DraftLine {
   /** Beklenen alış (**cent**); verilmezse eşlemedeki "geçen sefer kaçtı" kullanılır. */
   unitPriceCents?: number | null;
   /**
-   * İsteğe bağlı hedef depo (C7) — "20 koli STR'ye, 10 koli KEHL'e". Tedarikçi listesine yazılır ve
-   * kabul eden depocu kendi payını listeden okur. Boşsa hedefi kabul eden depo söyler: bu bir NİYET
-   * beyanıdır, kısıt değil — mal fiilen nereye indiyse oraya girer (`DOMAIN §17`).
+   * İsteğe bağlı hedef depo: tedarikçi listesine yazılır ve kabul eden depocu kendi payını oradan okur. Niyet beyanıdır, kısıt değil;
+   * mal fiilen nereye girdiyse oraya yazılır.
    */
   targetWarehouseId?: string | null;
 }
@@ -50,14 +50,8 @@ export interface PurchaseListLine {
 }
 
 /**
- * Liste satırının GÖMÜLÜ kalemlerini cent'e indirir (02.9 · `STACK §8`).
- *
- * `moneyFields` yalnız ÜST DÜZEY alanlara iner ve projeksiyonun üst düzeyi `purchase_order`'dır;
- * kalem `items:purchase_order_item(...)` ile gelen BAŞKA bir tablonun satırıdır ve euro taşır. Şema
- * tamsayı beklediği için çevrim doğrulamadan ÖNCE olmalı — bu yüzden `preprocess`, sonradan bir
- * `map` değil: `getPageAs` satırı kendi içinde doğruluyor ve araya girilecek başka nokta yok.
- *
- * Çevrim `toCents` ile; elle `* 100` `STACK §8`'de yasak.
+ * Liste satırının gömülü kalemlerini cent'e indirir: `moneyFields` yalnız üst düzey alanlara iner, kalem başka tablonun satırıdır ve
+ * euro taşır. Çevrim doğrulamadan önce olmalı, bu yüzden `preprocess`; elle `* 100` değil `toCents`.
  */
 const PurchaseOrderRowInCentsSchema = z.preprocess((raw) => {
   const row = raw as { items?: unknown };
@@ -89,14 +83,8 @@ export class PurchaseOrderItemService extends BaseDbService<PurchaseOrderItem, P
 }
 
 /**
- * Tedarik siparişi (06.9) — DOMAIN §16. Taslak → gönderildi → mal kabulde kapanır.
- *
- * **Sistem GÖNDERMEZ.** Tedarikçi ilişkisi insan ilişkisidir: servis kopyalanabilir temiz bir liste
- * üretir (`printableList`), gönderimi insan yapar ve dönüp `markSent()` der. Otomatik gönderim
- * bilinçli olarak yoktur.
- *
- * PDF üretimi burada değil: biçim (PDF/metin) sunum katmanının işidir ve araç seçimi henüz açıktır
- * (06 "Netleşecekler"). Servis veriyi tedarikçinin diliyle hazırlar, biçimlendirmeye karışmaz.
+ * Tedarik siparişi (DOMAIN §16): taslak → gönderildi → mal kabulde kapanır. Sistem göndermez, servis kopyalanabilir liste üretir
+ * (`printableList`), gönderimi insan yapıp `markSent()` der; biçim (PDF/metin) sunum katmanının işidir.
  */
 export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseOrderInsert, PurchaseOrderUpdate> {
   /**
@@ -119,15 +107,8 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
   }
 
   /**
-   * Bir tedarikçinin HENÜZ KAPANMAMIŞ siparişleri — mal kabulün hangi siparişi karşıladığını
-   * bulmak için (11.08).
-   *
-   * `listBySupplier` tek bir duruma bakabiliyor; açıklık ise üç durumun birleşimidir ve o küme
-   * `openProgress` künyesinde bir kez tarif edilmiş: `received` zaten stoğa girdi, `cancelled` hiç
-   * gelmeyecek. Aynı kümeyi çağıranın elde kurması, ikinci bir "açık" tanımı doğururdu — bir gün
-   * ötekinden ayrılacak bir tanım.
-   *
-   * Sayfalama YOK ve gerekmiyor: küme veriyle büyümez, kabul edildikçe kapanır (`CLAUDE §1`).
+   * Tedarikçinin henüz kapanmamış siparişleri, mal kabulün hangi siparişi karşıladığını bulmak için; "açık" tanımı `openProgress`le
+   * aynıdır ve küme veriyle büyümediği için sayfalanmaz.
    */
   async listOpenBySupplier(supplierId: string): Promise<PurchaseOrder[]> {
     return this.getAll(
@@ -137,51 +118,34 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
   }
 
   /**
-   * **TÜM açık siparişler** — mal kabulün "kabul bekliyor" listesinin künyeleri (22.26).
-   *
-   * `openProgress` kalem satırlarını döndürüyor; kartın gösterdiği ise siparişin kendisi (numara,
-   * tedarikçi, gönderim tarihi). Ekran bunu sipariş başına `getById` ile topluyordu — açık sipariş
-   * sayısı kadar tur, yani N+1. Küme burada tek sorguda gelir ve "açık" tanımı yine tek yerde durur.
+   * Bütün açık siparişler, mal kabulün "kabul bekliyor" listesinin künyeleri; sipariş başına `getById` N+1 olurdu, küme tek sorguda
+   * gelir.
    */
   async listOpen(): Promise<PurchaseOrder[]> {
     return this.getAll({ status: ['draft', 'sent', 'partially_received'] }, { orderBy: 'createdAt', orderDirection: 'desc' });
   }
 
   /**
-   * Kimliğe göre siparişler — geçmişe bakan okumaların künye kaynağı (22.28).
-   *
-   * `listOpen` yalnız AÇIK siparişleri veriyor ve kabul defteri tam tersini soruyor: kabul edilmiş
-   * bir giriş, çoktan `received`e dönmüş bir siparişe bağlıdır. Numarası orada okunmasaydı defter
-   * satırı "siparişsiz kabul" gibi görünürdü — yani doğru bilgi yokluğa dönüşürdü.
+   * Kimliğe göre siparişler, geçmişe bakan okumaların künye kaynağı: kabul edilmiş giriş kapanmış bir siparişe bağlıdır ve numarası
+   * okunmasaydı defter satırı siparişsiz kabul gibi görünürdü.
    */
   listByIds(ids: readonly string[]): Promise<PurchaseOrder[]> {
     return this.getByIds([...ids]);
   }
 
   /**
-   * Siparişler ekranının sayfası (09.14) — **tek turda**, keyset imleçli.
-   *
-   * ── NEDEN AYRI BİR OKUMA ────────────────────────────────────────────────────
-   * `listBySupplier` tedarikçi başına tur attırıyor: sayfalama bozulur (her tedarikçi kendi
-   * sayfasını verir, birleştirme elde yapılır) ve sıralama listenin değil elin işi olur. Alternatifi
-   * satır başına `progressOf` + kalem okumasıydı — N+1, `bundle_list_rows`'un kapattığı sınıf.
-   *
-   * ── VE NEDEN RPC DEĞİL ──────────────────────────────────────────────────────
-   * `STACK §13`: okuma RPC'si istisnadır, N+1'i kırmanın **ilk** aracı gömülü `select`'tir. Zincirin
-   * tamamı gerçek yabancı anahtar üzerinden gidiyor (`stock → purchase_order_item`,
-   * `stock → warehouse`, `purchase_order → supplier`), yani sorgu kurucusu bunu ifade edebiliyor ve
-   * eşiğin üçüncü koşulu ("fark bariz") sağlanmıyor. Toplama okunan SAYFA üzerinde yapılır: 20
-   * satırlık sayfa 20 satırlık toplama demektir, veriyle büyümez.
-   *
-   * Depo kırılımı FİİLEN GİREN partilerden çıkar (`stock.warehouse_id`), kalemin
-   * `target_warehouse_id`'sinden değil: o bir niyet beyanıdır, kısıt değil (K6).
+   * Siparişler ekranının sayfası, tek turda ve keyset imleçli: tedarikçi başına tur ya da satır başına ilerleme okuması N+1 olurdu ve
+   * zincir gerçek yabancı anahtarlardan gittiği için gömülü `select` yeter. Depo kırılımı fiilen giren partilerden çıkar, hedef depodan
+   * değil.
    */
-  async listRows(opts: { limit?: number; cursor?: KeysetCursor; status?: PurchaseOrderStatus; supplierId?: string } = {}): Promise<Page<PurchaseOrderRow>> {
-    return this.getPageAs(PurchaseOrderRowInCentsSchema, { status: opts.status, supplierId: opts.supplierId }, {
+  async listRows(
+    opts: { limit?: number; cursor?: KeysetCursor; status?: PurchaseOrderStatus; supplierId?: string; business?: Business } = {},
+  ): Promise<Page<PurchaseOrderRow>> {
+    return this.getPageAs(PurchaseOrderRowInCentsSchema, { status: opts.status, supplierId: opts.supplierId, business: opts.business }, {
       // `created_at` hem GÖRÜNÜM hem İMLEÇ alanı — dar şema onu taşısa da select'te bulunması şart
       // (bkz. `pageOf`): eksikse ikinci sayfa istenemez.
       select:
-        'id,supplier_id,status,reference_no,sent_at,note,created_at,' +
+        'id,supplier_id,business,status,reference_no,sent_at,note,created_at,' +
         'supplier:supplier_id(id,name),' +
         'items:purchase_order_item(id,qty,unit_price,batches:stock(initial_qty,warehouse:warehouse_id(id,code)))',
       orderBy: 'createdAt',
@@ -192,14 +156,8 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
   }
 
   /**
-   * Gönderilmiş ve HENÜZ KAPANMAMIŞ sipariş sayısı — ekranın başlık altı (09.14).
-   *
-   * "Yolda ne var" sorusudur: `draft` daha gönderilmedi, `received`/`cancelled` kapandı. Satır
-   * TAŞINMADAN sayılır (`head: true`).
-   *
-   * `supplierId` isteğe bağlı: tedarikçi kartı aynı soruyu tek tedarikçi için sorar ("bu firmadan
-   * yolda ne var"). Aynı sayacı iki kez yazmamak için tek metot — sayaç ile listenin süzgeci
-   * ayrışırsa "12 sonuç" yazıp 5 satır gösteren ekranlar doğar.
+   * Gönderilmiş ve henüz kapanmamış sipariş sayısı ("yolda ne var"), satır taşınmadan sayılır. `supplierId` tedarikçi kartının aynı
+   * sorusudur; sayaç ile listenin süzgeci ayrışmasın diye tek metot.
    */
   async countPending(supplierId?: string): Promise<number> {
     // Dizi değer PostgREST'te `IN (…)` demektir (bkz. `FilterOptions` künyesi).
@@ -210,10 +168,15 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
    * Taslak PO açar. Kalemlerin tedarikçi kod eşlemesi TEK sorguda bulunur (satır başına sorgu yok);
    * eşlemesi olmayan kalem de listeye girer — sadece bizim adımızla yazılır, iş durmaz.
    */
-  async createDraft(supplierId: string, lines: DraftLine[], note?: string): Promise<{ order: PurchaseOrder; items: PurchaseOrderItem[] }> {
+  async createDraft(
+    supplierId: string,
+    business: Business,
+    lines: DraftLine[],
+    note?: string,
+  ): Promise<{ order: PurchaseOrder; items: PurchaseOrderItem[] }> {
     if (lines.length === 0) throw new Error('purchase_order: kalemsiz taslak açılmaz');
 
-    const order = await this.insert({ supplierId, note });
+    const order = await this.insert({ supplierId, business, note });
     const mappings = await this.mappings.listByVariants(lines.map((l) => l.variantId));
     const byVariant = new Map(mappings.filter((m) => m.supplierId === supplierId).map((m) => [m.variantId, m]));
 
@@ -253,14 +216,8 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
   }
 
   /**
-   * İnsan gönderdikten sonra işaretlenir — sistemin gönderdiği anlamına GELMEZ.
-   *
-   * **Numara burada ÜRETİLMEZ, dışarıdan gelir** (`Order.reference_no` ile aynı sözleşme):
-   * rastgelelik motorun (`generateReferenceNo`), benzersizlik veritabanının işi. Servis karar
-   * vermez, satır yazar (`STACK §4`) — ve zaten `domain-core`'u da bilmiyor (`STACK §6` sınırı).
-   *
-   * Çarpışmada `23505` fırlar; çağıran yeni numarayla yeniden dener. "Önce sorgula, boşsa yaz"
-   * yolu iki eşzamanlı gönderimde ikisine de aynı numarayı verirdi.
+   * İnsan gönderdikten sonra işaretlenir; numara dışarıdan gelir, rastgelelik motorun, benzersizlik veritabanının işidir. Çarpışmada
+   * `23505` fırlar ve çağıran yeni numarayla dener, "önce sorgula" iki eşzamanlı gönderime aynı numarayı verirdi.
    */
   async markSent(id: string, referenceNo: string): Promise<PurchaseOrder> {
     return this.update({ id, status: 'sent', referenceNo, sentAt: new Date().toISOString() });
@@ -275,21 +232,12 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
   }
 
   /**
-   * Siparişin kalem kalem ilerlemesi (`purchase_order_progress`, 0042).
-   *
-   * PO durumu SAKLANAN bir sayaç değil, bu görünümden türer: tek sipariş birden çok depoda parça
-   * parça kabul edilebilir (K6) ve ilk kabul siparişi kapatmaz. Ölçü `initial_qty` — `physical_qty`
-   * satışla erir ve "ne kadar geldi" sorusuna yanlış cevap verir.
+   * Siparişin kalem kalem ilerlemesi (`purchase_order_progress`): durum saklanan sayaç değil bu görünümden türer, çünkü sipariş birden
+   * çok depoda parça parça kabul edilebilir. Ölçü `initial_qty`dir, `physical_qty` satışla erir.
    */
   /**
-   * AÇIK siparişlerin bekleyen kalemleri — "yolda ne var" (09.14 · üçüncü talep).
-   *
-   * `received` ve `cancelled` DIŞARIDA: ilki zaten stoğa girdi (iki kez sayılırdı), ikincisi hiç
-   * gelmeyecek. `draft` İÇERİDE ama ayrı sayılmalı — çağıran onu `sent` ile toplamamalı: gönderilmiş
-   * sipariş bir bekleyiştir, taslak yalnız bizim kararımızdır ve tedarikçi ondan habersizdir.
-   *
-   * Sayfalama YOK ve gerekmiyor: açık sipariş kümesi veriyle büyümez, kabul edildikçe kapanır
-   * (`CLAUDE.md §1` — ölçüt liste olmak değil, sınırsız büyümek).
+   * Açık siparişlerin bekleyen kalemleri: `received` ve `cancelled` dışarıda, `draft` içeride ama ayrı sayılmalı, çünkü tedarikçi
+   * taslaktan habersizdir. Açık küme veriyle büyümediği için sayfalanmaz.
    */
   async openProgress(): Promise<Array<PurchaseOrderProgress & { status: PurchaseOrderStatus }>> {
     const open = await this.getAll({ status: ['draft', 'sent', 'partially_received'] });

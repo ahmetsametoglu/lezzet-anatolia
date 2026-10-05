@@ -14,6 +14,7 @@ import {
   cutoffBelongsToPreviousDay,
   deliveryRunWindow,
   findZoneForPostalCode,
+  zonesOfBusiness,
   ORDER_CUTOFF_KEY,
   PREP_CUTOFF_KEY,
   upcomingDeliveryDates,
@@ -124,7 +125,9 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
 
   const stops = orders.map((order): DispatchStopView => {
     const snapshot = (order.addressSnapshot ?? {}) as Record<string, unknown>;
-    const zoneId = zoneIdOf(snapshot, zones);
+    // Aynı posta kodu iki işte ayrı bölgede olabilir; siparişin bölgesi kendi deposunun işinin bölgelerinden aranır.
+    const own = warehouses.find((warehouse) => warehouse.id === order.warehouseId);
+    const zoneId = own ? zoneIdOf(snapshot, zonesOfBusiness(zones, warehouses, own.business)) : null;
     const zone = zoneId ? zoneById.get(zoneId) : undefined;
     return {
       orderId: order.id,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   activeCountries,
+  deliveryChannelOf,
   resolvePlaceByPostalCode,
   resolveWarehouseForPostalCode,
   type PostalCodeMatch,
@@ -9,15 +10,12 @@ import {
 } from './warehouse-resolve';
 
 /**
- * Yer çözümü (19.3) — DOMAIN §17.
- *
- * En kritik davranış burada sınanıyor: **belirsizlik bir cevap değil, bir hatadır.** Eski motor
- * aynı posta kodunu içeren iki bölgede "ilki kazanır" diyordu; tek depoda bunun bedeli yanlış bir
- * rota günüydü, çok depoda siparişin yanlış şehre düşmesi demek.
+ * Yer çözümü (DOMAIN §17): belirsizlik bir cevap değil hatadır, çünkü aynı posta kodunu içeren iki bölgede "ilki kazanır" demek
+ * çok depoda siparişi yanlış şehre düşürürdü.
  */
 
-const STR: WarehouseCandidate = { id: 'w-str', code: 'STR', countryCode: 'FR', shipsOnline: true, isActive: true };
-const KEHL: WarehouseCandidate = { id: 'w-kehl', code: 'KEHL', countryCode: 'DE', shipsOnline: false, isActive: true };
+const STR: WarehouseCandidate = { id: 'w-str', code: 'STR', countryCode: 'FR', shipsOnline: true, isActive: true, business: 'lezzet' };
+const KEHL: WarehouseCandidate = { id: 'w-kehl', code: 'KEHL', countryCode: 'DE', shipsOnline: false, isActive: true, business: 'lezzet' };
 
 const zone = (over: Partial<ZoneWithWarehouse> = {}): ZoneWithWarehouse => ({
   id: 'z-1',
@@ -28,41 +26,61 @@ const zone = (over: Partial<ZoneWithWarehouse> = {}): ZoneWithWarehouse => ({
   ...over,
 });
 
+describe('teslim şekli görüntüleyenin işine göre', () => {
+  const zones = [
+    { business: 'lezzet' as const, postalCodes: ['67000'] },
+    { business: 'qualite' as const, postalCodes: ['67000', '68100'] },
+  ];
+
+  it('kendi işinin bölgesindeki kod kapıya teslimdir', () => {
+    expect(deliveryChannelOf('67000', zones, 'lezzet')).toBe('door');
+    expect(deliveryChannelOf('68100', zones, 'qualite')).toBe('door');
+  });
+
+  it("başka işin bölgesi kapı vaat etmez: Lezzet'e kargo, kargo göndermeyen QUALITE'ye şekil yok", () => {
+    expect(deliveryChannelOf('68100', zones, 'lezzet')).toBe('ship');
+    expect(deliveryChannelOf('75001', zones, 'qualite')).toBeNull();
+  });
+});
+
 describe('posta kodu → bölge → depo', () => {
   it('bölgeye düşen adres rota siparişidir ve bölgenin deposunu verir', () => {
-    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '67000' }, [zone()], [STR, KEHL]);
+    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '67000' }, [zone()], [STR, KEHL], 'lezzet');
     expect(sonuc).toEqual({ kind: 'route', warehouseId: 'w-str', zoneId: 'z-1', weekdays: [2, 5] });
   });
 
   it('biçim farkı yer değiştirmez — "67 000" ile "67000" aynı adrestir', () => {
-    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '67 000' }, [zone()], [STR, KEHL]);
+    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '67 000' }, [zone()], [STR, KEHL], 'lezzet');
     expect(sonuc).toMatchObject({ kind: 'route' });
   });
 
   it('bölge dışı adres kargo deposuna düşer', () => {
-    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '75001' }, [zone()], [STR, KEHL]);
+    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '75001' }, [zone()], [STR, KEHL], 'lezzet');
     expect(sonuc).toEqual({ kind: 'shipping', warehouseId: 'w-str' });
   });
 
   it('ÜLKE zincirin parçasıdır — aynı kod başka ülkede aynı yer değildir', () => {
     // 67000 hem FR hem DE'de geçerli. FR bölgesine kayıtlı kod, DE adresini rotaya sokmamalı.
-    const sonuc = resolveWarehouseForPostalCode({ country: 'DE', postalCode: '67000' }, [zone()], [STR, KEHL]);
+    const sonuc = resolveWarehouseForPostalCode({ country: 'DE', postalCode: '67000' }, [zone()], [STR, KEHL], 'lezzet');
     expect(sonuc.kind).not.toBe('route');
   });
 
   it('pasif bölge rotayı kapatır ama müşteriyi hizmetsiz bırakmaz — kargoya düşer', () => {
-    const sonuc = resolveWarehouseForPostalCode(
-      { country: 'FR', postalCode: '67000' },
-      [zone({ isActive: false })],
-      [STR, KEHL],
-    );
+    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '67000' }, [zone({ isActive: false })], [STR, KEHL], 'lezzet');
     expect(sonuc).toEqual({ kind: 'shipping', warehouseId: 'w-str' });
   });
 
   it('bölgenin deposu kapatılmışsa rota fiilen yoktur — kargo devreye girer', () => {
     const kapali = { ...STR, isActive: false };
-    const kargo: WarehouseCandidate = { id: 'w-alt', code: 'ALT', countryCode: 'FR', shipsOnline: true, isActive: true };
-    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '67000' }, [zone()], [kapali, kargo]);
+    const kargo: WarehouseCandidate = {
+      id: 'w-alt',
+      code: 'ALT',
+      countryCode: 'FR',
+      shipsOnline: true,
+      isActive: true,
+      business: 'lezzet',
+    };
+    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '67000' }, [zone()], [kapali, kargo], 'lezzet');
     expect(sonuc).toEqual({ kind: 'shipping', warehouseId: 'w-alt' });
   });
 });
@@ -70,19 +88,19 @@ describe('posta kodu → bölge → depo', () => {
 describe('belirsizlik sessizce çözülmez', () => {
   it('aynı kod iki AKTİF bölgede ise hata döner — "ilki kazanır" yok', () => {
     const ikinci = zone({ id: 'z-2', warehouseId: KEHL.id });
-    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '67000' }, [zone(), ikinci], [STR, KEHL]);
+    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '67000' }, [zone(), ikinci], [STR, KEHL], 'lezzet');
     expect(sonuc).toEqual({ kind: 'unresolved', reason: 'ambiguous_zone' });
   });
 
   it('pasif bölgedeki çakışma belirsizlik SAYILMAZ — rota kapalıdır, çelişki yok', () => {
     const pasifIkiz = zone({ id: 'z-2', warehouseId: KEHL.id, isActive: false });
-    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '67000' }, [zone(), pasifIkiz], [STR, KEHL]);
+    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '67000' }, [zone(), pasifIkiz], [STR, KEHL], 'lezzet');
     expect(sonuc).toMatchObject({ kind: 'route', warehouseId: 'w-str' });
   });
 
   it('kargo deposu tanımlı değilse bu BİZİM eksiğimizdir, "bölge dışısınız" değil', () => {
     const kargosuz = { ...STR, shipsOnline: false };
-    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '75001' }, [zone()], [kargosuz]);
+    const sonuc = resolveWarehouseForPostalCode({ country: 'FR', postalCode: '75001' }, [zone()], [kargosuz], 'lezzet');
     expect(sonuc).toEqual({ kind: 'unresolved', reason: 'no_shipping_warehouse' });
   });
 });
@@ -107,18 +125,15 @@ describe('hizmet ülkeleri VERİDEN türer, ayardan değil', () => {
 });
 
 /**
- * Ülkesiz çözüm (19.8) — müşteriye ülke SORULMUYOR.
- *
- * Gerekçe iki katlı: sürtünme (cevabı zaten elimizde olan bir soru) ve vergi (serbest seçilen ülke
- * KDV'yi etkiler — beyan olamaz, `DOMAIN §5`). Ölçüm: FR 6.065 + DE 10.813 kodun 610'u ikisinde de
- * geçerli, yani her on Fransız kodundan biri.
+ * Ülkesiz çözüm: müşteriye ülke sorulmaz, çünkü cevap elimizdedir ve serbest seçilen ülke KDV'yi etkilerdi (`DOMAIN §5`). FR ve DE
+ * kodlarının 610'u iki ülkede de geçerlidir.
  */
 describe('posta kodundan ülke TÜRETİLİR, sorulmaz', () => {
   const FR_67000: PostalCodeMatch = { country: 'FR', places: ['Strasbourg'] };
   const DE_67000: PostalCodeMatch = { country: 'DE', places: ['Ludwigshafen'] };
 
   it('tek ülkede geçerli kod tek turda rotaya çözülür — soru yok', () => {
-    const sonuc = resolvePlaceByPostalCode('67000', [FR_67000], [zone()], [STR]);
+    const sonuc = resolvePlaceByPostalCode('67000', [FR_67000], [zone()], [STR], 'lezzet');
     expect(sonuc).toEqual({
       kind: 'route',
       country: 'FR',
@@ -132,12 +147,12 @@ describe('posta kodundan ülke TÜRETİLİR, sorulmaz', () => {
 
   it('ÇAKIŞAN kod bile hizmet vermediğimiz ülkede soru doğurmaz', () => {
     // 610 çakışmanın bugünkü karşılığı: yalnız FR aktifken DE adayı elenir, müşteri hiçbir şey seçmez.
-    const sonuc = resolvePlaceByPostalCode('67000', [FR_67000, DE_67000], [zone()], [STR]);
+    const sonuc = resolvePlaceByPostalCode('67000', [FR_67000, DE_67000], [zone()], [STR], 'lezzet');
     expect(sonuc).toMatchObject({ kind: 'route', country: 'FR' });
   });
 
   it('iki hizmet ülkesinde de geçerliyse SORULUR — yanlış ülke yanlış KDV demektir', () => {
-    const sonuc = resolvePlaceByPostalCode('67000', [FR_67000, DE_67000], [zone()], [STR, KEHL]);
+    const sonuc = resolvePlaceByPostalCode('67000', [FR_67000, DE_67000], [zone()], [STR, KEHL], 'lezzet');
     expect(sonuc.kind).toBe('ambiguous');
     if (sonuc.kind !== 'ambiguous') throw new Error('beklenen ambiguous');
     // Rota adayı ÖNCE: daha olası cevap üstte görünür, ama seçim yine müşterinin.
@@ -147,102 +162,133 @@ describe('posta kodundan ülke TÜRETİLİR, sorulmaz', () => {
   });
 
   it('aday sırası KARARLIDIR — aynı kod her seferinde aynı ekranı üretir', () => {
-    const ilk = resolvePlaceByPostalCode('99999', [DE_67000, FR_67000], [zone()], [STR, KEHL]);
-    const ikinci = resolvePlaceByPostalCode('99999', [FR_67000, DE_67000], [zone()], [STR, KEHL]);
+    const ilk = resolvePlaceByPostalCode('99999', [DE_67000, FR_67000], [zone()], [STR, KEHL], 'lezzet');
+    const ikinci = resolvePlaceByPostalCode('99999', [FR_67000, DE_67000], [zone()], [STR, KEHL], 'lezzet');
     expect(ilk).toEqual(ikinci);
   });
 
   it('hiçbir ülkede geçerli olmayan kod TANINMAZ — sessizce kargoya düşmez', () => {
-    // Bu hâl 19.8 öncesi hiç yoktu: yazım hatası geçerli bir yer gibi işleniyordu.
-    expect(resolvePlaceByPostalCode('67x99', [], [zone()], [STR])).toEqual({ kind: 'unknown' });
+    // Yazım hatası geçerli bir yer gibi işlenmez.
+    expect(resolvePlaceByPostalCode('67x99', [], [zone()], [STR], 'lezzet')).toEqual({ kind: 'unknown' });
   });
 
   it('geçerli ama hizmet dışı ülke "tanımadık" DEĞİLDİR — kodu tanıyoruz, oraya gidemiyoruz', () => {
-    const sonuc = resolvePlaceByPostalCode('10115', [{ country: 'DE', places: ['Berlin'] }], [zone()], [STR]);
+    const sonuc = resolvePlaceByPostalCode('10115', [{ country: 'DE', places: ['Berlin'] }], [zone()], [STR], 'lezzet');
     expect(sonuc).toEqual({ kind: 'unresolved', reason: 'no_shipping_warehouse', country: 'DE' });
   });
 
   it('bölge dışı ama hizmet içi kod kargoya düşer ve YER ADINI taşır', () => {
-    const sonuc = resolvePlaceByPostalCode('75011', [{ country: 'FR', places: ['Paris'] }], [zone()], [STR]);
+    const sonuc = resolvePlaceByPostalCode('75011', [{ country: 'FR', places: ['Paris'] }], [zone()], [STR], 'lezzet');
     expect(sonuc).toEqual({ kind: 'shipping', country: 'FR', places: ['Paris'], placeName: 'Paris', warehouseId: 'w-str' });
   });
 });
 
 /**
- * Seçilen ülke kodu BAĞLAR (v1 yer paneli, 13.09): önce ülke, sonra kod sorulur. Seçim serbest bir
- * beyan değil — kod o ülkede yoksa cevap "tanımadık"; başka bir ülkeye sessizce çözülmez, çünkü
- * ülke KDV oranını belirler.
+ * Seçilen ülke kodu bağlar: kod o ülkede yoksa cevap "tanımadık", başka ülkeye sessizce çözülmez, çünkü ülke KDV oranını belirler.
  */
 describe('seçilen ülke kodu BAĞLAR', () => {
   const FR_67000: PostalCodeMatch = { country: 'FR', places: ['Strasbourg'] };
   const DE_67000: PostalCodeMatch = { country: 'DE', places: ['Ludwigshafen'] };
 
   it('iki hizmet ülkesinde geçerli kod seçilen ülkede çözülür — soru çıkmaz', () => {
-    const sonuc = resolvePlaceByPostalCode('67000', [FR_67000, DE_67000], [zone()], [STR, KEHL], 'FR');
+    const sonuc = resolvePlaceByPostalCode('67000', [FR_67000, DE_67000], [zone()], [STR, KEHL], 'lezzet', 'FR');
     expect(sonuc).toMatchObject({ kind: 'route', country: 'FR', placeName: 'Strasbourg' });
   });
 
   it('kod seçilen ülkede yoksa TANINMAZ — öteki ülkeye düşmez', () => {
-    expect(resolvePlaceByPostalCode('67000', [FR_67000], [zone()], [STR, KEHL], 'DE')).toEqual({ kind: 'unknown' });
+    expect(resolvePlaceByPostalCode('67000', [FR_67000], [zone()], [STR, KEHL], 'lezzet', 'DE')).toEqual({ kind: 'unknown' });
   });
 
   it('kendi bölge kaydımız da seçilen ülkeye göre süzülür', () => {
     // Referansta yok, yalnız FR bölgemizde var: DE seçilince aday kalmaz.
-    expect(resolvePlaceByPostalCode('67000', [], [zone()], [STR, KEHL], 'DE')).toEqual({ kind: 'unknown' });
+    expect(resolvePlaceByPostalCode('67000', [], [zone()], [STR, KEHL], 'lezzet', 'DE')).toEqual({ kind: 'unknown' });
   });
 
   it('seçilen ülkede kod geçerli ama gönderim yoksa "tanımadık" DEĞİL — çözülemedi', () => {
-    const sonuc = resolvePlaceByPostalCode('67000', [FR_67000, DE_67000], [zone()], [STR], 'DE');
+    const sonuc = resolvePlaceByPostalCode('67000', [FR_67000, DE_67000], [zone()], [STR], 'lezzet', 'DE');
     expect(sonuc).toEqual({ kind: 'unresolved', reason: 'no_shipping_warehouse', country: 'DE' });
   });
 });
 
 /**
- * Kendi bölge tablomuz hizmet alanımız için OTORİTEDİR (19.16a).
- *
- * İlk sürüm `matches.length === 0 → unknown` diyor ve `zones`'a hiç bakmıyordu. Sonuç bir
- * ÇELİŞKİYDİ: operatörün elle girdiği, fiilen aracımızla gittiğimiz bir kod dış referansta yoksa
- * vitrin "tanımadık" derken checkout aynı kodu kabul edip siparişi açıyordu (`resolveDelivery`
- * referansa hiç bakmaz). Tek sistem, aynı koda iki cevap.
+ * Kendi bölge tablomuz hizmet alanımız için otoritedir: dış referansta olmayan ama aracımızla gittiğimiz kodu vitrin "tanımadık"
+ * derken checkout kabul ederdi, tek sistem aynı koda iki cevap verirdi.
  */
 describe('kendi bölgemiz dış referanstan ÜSTÜNDÜR', () => {
   it('referansta olmayan ama BİZİM bölgemizdeki kod çözülür — "tanımadık" denmez', () => {
-    // GeoNames eksik olabilir: FR'de ~6.065 kod var ama liste tam değil, ve operatör yeni bir kodu
-    // her an ekleyebilir. Referansın bilmemesi bizim gitmediğimiz anlamına gelmez.
-    const sonuc = resolvePlaceByPostalCode('67000', [], [zone()], [STR]);
+    // GeoNames listesi tam değil ve operatör her an yeni kod ekleyebilir; referansın bilmemesi gitmediğimiz anlamına gelmez.
+    const sonuc = resolvePlaceByPostalCode('67000', [], [zone()], [STR], 'lezzet');
     expect(sonuc).toMatchObject({ kind: 'route', country: 'FR', warehouseId: 'w-str' });
   });
 
   it('ülke referanssız da türer — bağ satırı (ülke, kod) taşıyor', () => {
     const deBolge = zone({ warehouseId: KEHL.id, postalCodes: [{ country: 'DE', postalCode: '77694' }] });
-    const sonuc = resolvePlaceByPostalCode('77694', [], [deBolge], [STR, KEHL]);
+    const sonuc = resolvePlaceByPostalCode('77694', [], [deBolge], [STR, KEHL], 'lezzet');
     expect(sonuc).toMatchObject({ kind: 'route', country: 'DE' });
   });
 
   it('yer adı UYDURULMAZ — referansta yoksa null kalır, bölge adı zaten ekranda', () => {
-    const sonuc = resolvePlaceByPostalCode('67000', [], [zone()], [STR]);
+    const sonuc = resolvePlaceByPostalCode('67000', [], [zone()], [STR], 'lezzet');
     expect(sonuc).toMatchObject({ placeName: null });
   });
 
   it('referanstaki ad kazanır — iki kaynak aynı ülkeyi verirse daha bilgilendirici olan', () => {
-    const sonuc = resolvePlaceByPostalCode('67000', [{ country: 'FR', places: ['Strasbourg'] }], [zone()], [STR]);
+    const sonuc = resolvePlaceByPostalCode('67000', [{ country: 'FR', places: ['Strasbourg'] }], [zone()], [STR], 'lezzet');
     expect(sonuc).toMatchObject({ placeName: 'Strasbourg' });
   });
 
   it('çok yerleşimli kodda ad DEĞİL liste taşınır — seçimi ekran yapar (19.17)', () => {
-    // 67800'ün gerçek hâli. Çözüm adı kendi hesaplamaz, `placeLabel`'a sorar: kural iki yerde
-    // yaşasaydı biri gün gelir ötekinden ayrılırdı — 19.8'in yanlış adı tam olarak öyle doğdu.
-    const sonuc = resolvePlaceByPostalCode('67000', [{ country: 'FR', places: ['Bischheim', 'Hœnheim'] }], [zone()], [STR]);
+    // Çözüm adı kendi hesaplamaz, `placeLabel`'a sorar: kural iki yerde yaşasaydı biri ötekinden ayrılırdı.
+    const sonuc = resolvePlaceByPostalCode('67000', [{ country: 'FR', places: ['Bischheim', 'Hœnheim'] }], [zone()], [STR], 'lezzet');
     expect(sonuc).toMatchObject({ placeName: null, places: ['Bischheim', 'Hœnheim'] });
   });
 
   it('PASİF bölgedeki kod da bizim kaydımızdır — rota kapalı ama kod tanınır', () => {
     // Rota kapalıysa müşteri kargoya düşer; "tanımadık" demek onu hizmetsiz bırakmak olurdu.
-    const sonuc = resolvePlaceByPostalCode('67000', [], [zone({ isActive: false })], [STR]);
+    const sonuc = resolvePlaceByPostalCode('67000', [], [zone({ isActive: false })], [STR], 'lezzet');
     expect(sonuc).toMatchObject({ kind: 'shipping', country: 'FR' });
   });
 
   it('ne bizde ne referansta olan kod hâlâ TANINMAZ — düzeltme unknown hâlini yutmadı', () => {
-    expect(resolvePlaceByPostalCode('99999', [], [zone()], [STR])).toEqual({ kind: 'unknown' });
+    expect(resolvePlaceByPostalCode('99999', [], [zone()], [STR], 'lezzet')).toEqual({ kind: 'unknown' });
+  });
+});
+
+describe('çözüm müşterinin işi içindedir', () => {
+  const QLT: WarehouseCandidate = { id: 'w-qlt', code: 'QLT', countryCode: 'FR', shipsOnline: false, isActive: true, business: 'qualite' };
+  const lezzetBolge = zone();
+  const qualiteBolge = zone({ id: 'z-q', warehouseId: QLT.id, weekdays: [3] });
+  const yer = { country: 'FR' as const, postalCode: '67000' };
+
+  it('aynı kod iki işte ayrı bölgededir; her müşteri kendi işinin bölgesine çözülür, belirsizlik doğmaz', () => {
+    expect(resolveWarehouseForPostalCode(yer, [lezzetBolge, qualiteBolge], [STR, QLT], 'lezzet')).toEqual({
+      kind: 'route',
+      warehouseId: 'w-str',
+      zoneId: 'z-1',
+      weekdays: [2, 5],
+    });
+    expect(resolveWarehouseForPostalCode(yer, [lezzetBolge, qualiteBolge], [STR, QLT], 'qualite')).toEqual({
+      kind: 'route',
+      warehouseId: 'w-qlt',
+      zoneId: 'z-q',
+      weekdays: [3],
+    });
+  });
+
+  it('QUALITE müşterisi kendi bölgesi dışında Lezzet kargosuna düşmez; cevap yapılandırma eksiği değil, teslimat noktası yok', () => {
+    const disarida = { country: 'FR' as const, postalCode: '75001' };
+    expect(resolveWarehouseForPostalCode(disarida, [lezzetBolge, qualiteBolge], [STR, QLT], 'qualite')).toEqual({
+      kind: 'unresolved',
+      reason: 'outside_zones',
+    });
+  });
+
+  it('yalnız QUALITE bölgesindeki kod Lezzet müşterisine rota olmaz, Lezzet kargosuna düşer', () => {
+    const yalnizQualite = zone({ id: 'z-q', warehouseId: QLT.id, postalCodes: [{ country: 'FR', postalCode: '67100' }] });
+    const qYeri = { country: 'FR' as const, postalCode: '67100' };
+    expect(resolveWarehouseForPostalCode(qYeri, [lezzetBolge, yalnizQualite], [STR, QLT], 'lezzet')).toEqual({
+      kind: 'shipping',
+      warehouseId: 'w-str',
+    });
   });
 });

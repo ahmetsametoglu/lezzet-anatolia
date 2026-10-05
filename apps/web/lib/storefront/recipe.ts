@@ -4,50 +4,23 @@ import { splitLines } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { LocalizedText, Recipe } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import { imageOf, readRecipeItems, recipeSoldOut, recipeTotalCents } from '@lezzet/application';
-import type { RecipeItemReading } from '@lezzet/application';
+import type { PlaceWarehouses, RecipeItemReading } from '@lezzet/application';
 import type { PricingViewer } from './read-viewer';
 import type { StorefrontRecipe, StorefrontRecipeDetail, StorefrontRecipeItem } from './storefront-types';
 
 /**
- * **Tarif okuması — "Sofradan Fikirler"** (08.24 · veri modeli 05.16 · tasarım
- * `design/project/Musteri - Tarifler.dc.html`).
- *
- * ── MALZEME KARARI ARTIK BURADA DEĞİL, PAKETTE ──────────────────────────────
- * Bu dosya bir zamanlar malzeme satırını kendi indirgiyordu ve mobil-api'de onun İKİZİ vardı;
- * `05.16`nın *"okuma tek sözleşmeyle hem web hem mobil"* sözü böyle karşılanmamış kalmıştı. Nüsha
- * `@lezzet/application/catalog/recipe`e terfi etti (`readRecipeItems`) — gerekçesi ve birleştirilen
- * kararlar orada. Geriye kalan iş SAYFANIN kendi işi: kart künyesi, metin maddeleri ve web görünüm
- * tipine indirgeme.
- *
- * ── TARİF BİR SATIŞ BİRİMİ DEĞİL ────────────────────────────────────────────
- * Kendi fiyatı, stoğu ve sipariş kalemi YOKTUR; yalnız var olan varyantları sepete taşır. Paket
- * (`packages.ts`) buna benzemez ve karıştırılmamalı: paket bütün olarak satılır, tek fiyatı vardır
- * ve bir kalemi yetmiyorsa tamamı tükenir. Tarifte ise **her kalem kendi başına alınabilir** —
- * biri tükendiğinde tarif okunmaya devam eder, yalnız o satır düşer. Bu ayrım korunmazsa tarif bir
- * gün faturaya kalem olarak düşmeye çalışır.
- *
- * ── TOPLAM TÜKENEN KALEMİ SAYMAZ ────────────────────────────────────────────
- * Tasarımın açık kuralı: *"Tükenen malzeme listeden düşer; toplam, kalan ürünlerle hesaplanır."*
- * Hesap `recipeTotalCents`te, yani mobil de aynı cevabı veriyor.
+ * Tarif okuması, "Sofradan Fikirler": malzeme kararı pakettedir (`readRecipeItems`), burada kart künyesi, metin maddeleri ve web
+ * görünümüne indirgeme kalır. Tarif satış birimi değildir, her kalem kendi başına alınır ve toplam tükenen kalemi saymaz.
  */
 
 /**
- * Liste sayfasının TAVANI — sayfalama değil **emniyet sınırı** (emsal: `FAMILY_LIMIT`).
- *
- * Tarif kümesi operatörün elle kurduğu editoryal bir seçkidir, veriyle büyümez (`CLAUDE §1`:
- * doğal tavanı olan küme tek turda çekilir). Sınır bir tasarım kararı değil: elle kurulan bir küme
- * de bir gün yanlışlıkla yüz satıra çıkabilir ve o sayfa ilk boyada açılmazdı.
+ * Liste sayfasının tavanı, emniyet sınırıdır: tarif kümesi editoryal seçkidir ve tek turda çekilir, sınır yanlışlıkla büyüyen
+ * kümeye karşıdır.
  */
 const RECIPE_PAGE_LIMIT = 60;
 
-/**
- * **Ana sayfa şeridinin sınırı** — tasarımın üçlü ızgarası (`Musteri - Anasayfa.dc.html`).
- *
- * Liste sayfasının 60'ı bir EMNİYET sınırıyken bu bir SUNUM kararı: şerit bir liste değil, tıklatma
- * davetidir (`CLAUDE §1`). Dördüncü kart ızgarayı ikinci satıra taşırdı.
- */
+/** Ana sayfa şeridinin sınırı, tasarımın üçlü ızgarası: şerit tıklatma davetidir ve dördüncü kart ızgarayı ikinci satıra taşırdı. */
 export const HOME_RECIPE_LIMIT = 3;
 
 /** Çok dilli metni çözer; boş/boşluk metin YOK sayılır (rozet ve bölüm boşuna açılmasın). */
@@ -64,11 +37,8 @@ function linesOf(value: LocalizedText | null, locale: Locale): string[] {
 }
 
 /**
- * Yayındaki tarifler — vitrin listesi.
- *
- * `listActiveWithItems` kalemleri TEK sorguda getiriyor; tarif başına kalem okumak liste boyunca
- * N+1 olurdu. Kalemler kartta da gerekli: "1 ürün + 3 ev malzemesi · 6,40 €" satırının üç parçası
- * da onlardan türüyor.
+ * Yayındaki tarifler, vitrin listesi: kalemler tek sorguda gelir, çünkü kartın "1 ürün + 3 ev malzemesi · 6,40 €" satırı
+ * onlardan türer.
  */
 export async function listStorefrontRecipes(
   locale: Locale,
@@ -85,11 +55,8 @@ export async function listStorefrontRecipes(
 }
 
 /**
- * Slug ile tarif detayı; tarif yoksa ya da yayında değilse `null` → sayfa 404'e çevirir.
- *
- * **Taslak tarif doğrudan linkle AÇILMAZ:** `isActive` kontrolü listedeki süzgeçle aynı kararı
- * verir. Ayrı bir kapı bıraksaydık, yayın kısıtının (üç dil dolmadan yayın yok — 05.16) taşıdığı
- * karar boşa çıkardı: yarım çevrilmiş bir tarif paylaşılan bir linkle okunabilirdi.
+ * Slug ile tarif detayı; tarif yoksa ya da yayında değilse `null` döner ve sayfa 404'e çevirir. Taslak tarif doğrudan linkle de
+ * açılmaz, yoksa yarım çevrilmiş tarif paylaşılan bağlantıyla okunurdu.
  */
 export async function getRecipeDetail(
   slug: string,
@@ -113,11 +80,8 @@ export async function getRecipeDetail(
 }
 
 /**
- * Okunmuş satırı WEB görünüm tipine indirger — yalnız ad değişimi ve alan seçimi, karar yok.
- *
- * `wasCents` bilerek TAŞINMIYOR: web tarif satırı üstü çizili referans çizmiyor (tasarımda yok).
- * Kapı onu üretiyor ve mobil kullanıyor; taşımayan taraf alanı boşuna sürüklemez — `05.16`nın
- * kusuru alan farkı değil, aynı KARARIN iki kez yazılmasıydı ve o kusur kapıyla kapandı.
+ * Okunmuş satırı web görünüm tipine indirger, karar yoktur; `wasCents` taşınmaz, çünkü web tarif satırı üstü çizili fiyat
+ * çizmez.
  */
 function toItem(row: RecipeItemReading): StorefrontRecipeItem {
   return {

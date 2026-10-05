@@ -15,20 +15,16 @@ import { WAREHOUSES_PATH } from './warehouses-url';
 import { ShippingBoxFormSchema } from './warehouses-types';
 import { StorageAreaFormSchema, VehicleFormSchema, WarehouseFormSchema, WarehousePrinterFormSchema } from './warehouses-types';
 
-// Depolar ekranının yazma kapıları (19.5).
-//
-// **Hepsi `requireAdmin`.** Depo bir kurulum nesnesidir: kodu belgelere basılır, kapatılması stoğu
-// görünmez kılar, bölgesi siparişin hangi şehre gideceğini belirler. Depocu kendi deposunu bile
-// düzenleyemez — göreceği ekran Stok'tur.
-//
-// **Kurallar VERİDE, cümleler burada.** Ülke başına tek kargo deposu ve posta kodunun tekilliği
-// veritabanı kısıtlarıdır; bu dosya onları yeniden uygulamaz, ihlali OKUNUR bir cümleye çevirir
-// (`constraintOf`). Kuralı iki yerde yazmak, bir gün ayrışan iki kural demektir.
+// Depolar ekranının yazma kapıları; hepsi `requireAdmin`, çünkü depo bir kurulum nesnesidir ve kodu, kapatılması, bölgesi siparişi
+// etkiler. Ülke başına tek kargo deposu gibi kurallar veritabanı kısıtıdır, bu dosya ihlali okunur bir cümleye çevirir.
 
 /** İnsan diline çevrilmiş kısıt ihlalleri. Ad → cümle; adı bilinmeyen hata olduğu gibi geçer. */
 const CONSTRAINT_MESSAGE: Record<string, string> = {
   warehouse_single_online: 'Bu ülkede kargo çıkış deposu rolünü zaten başka bir depo taşıyor — ülke başına en fazla bir tane olabilir. Önce o depodan kaldırın.',
   warehouse_code_key: 'Bu kod başka bir depoda kullanılıyor. Kod belge önekidir; iki tesis aynı öneki taşıyamaz.',
+  warehouse_qualite_never_ships: 'QUALITE kargo göndermez; kargo çıkış deposu yalnız Lezzet deposu olabilir.',
+  delivery_zone_postal_code_pkey:
+    'Bu deponun bölgelerindeki posta kodlarından biri seçilen işin başka bir bölgesinde tanımlı. Önce o kodları bölgeden çıkarın.',
   storage_area_name_uq: 'Bu tesiste aynı adda bir alan zaten var — iki "Dolap 1", hangi dolabın ölçüldüğü sorusunu cevapsız bırakır.',
   vehicle_plate_key: 'Bu plaka başka bir araçta kayıtlı. İki kayıt aynı aracı gösterirse soğuk zincir geçmişi ikiye bölünür.',
   temperature_log_area_fk: 'Bu alanın sıcaklık kayıtları var — silinemez. Kullanımdan kaldırmak için pasife alın.',
@@ -77,17 +73,8 @@ export async function saveWarehouseAction(input: unknown): Promise<ActionResult<
 }
 
 /**
- * Deponun noktası (11.9) — **rotanın çıpası**: kapalı tur hesabı buradan başlar ve buraya döner.
- * Nokta yoksa o deponun rotaları hiç sıralanamaz (motor `no_start` der ve sebebini söyler).
- *
- * **Operatörün yazdığı değer KAZANIR.** Otomatik çözüm bir başlangıçtır, son söz değil: depo tek
- * haneli sayıda satırdır, ömür boyu bir kez girilir ve yanlışlığı HER rotayı bozar — burada
- * "genelde doğru" yetmez. Alan boşsa adresten çözülür (BAN), yani operatör hiçbir şey yapmadan da
- * doğru noktaya kavuşur.
- *
- * **Kaydı ENGELLEMEZ:** çözülemezse nokta `null` kalır ve depo yine kaydedilir. Bir koordinat
- * yüzünden tesis açılamaması, koordinatsız bir tesisten pahalıdır; eksiklik zaten görünür (o deponun
- * rotaları "sırasız" der).
+ * Deponun noktası, rotanın çıpası: operatörün yazdığı değer kazanır, boşsa adresten çözülür, çünkü yanlış çıpa her rotayı bozar.
+ * Çözülemezse nokta `null` kalır ve depo yine kaydedilir; koordinat yüzünden tesis açılamaması koordinatsız tesisten pahalıdır.
  */
 async function resolveWarehousePoint(input: {
   latText: string;
@@ -118,12 +105,8 @@ async function resolveWarehousePoint(input: {
 }
 
 /**
- * Kapatma / yeniden açma — **silme YOKTUR** ve bu kapı da silmez.
- *
- * `confirmCode` kasıt kapısıdır: kapatmanın sonucu stoğa, bölgelere ve personele aynı anda dokunur.
- * Ekran onu zaten soruyor, ama kapı da soruyor — istemciye güvenerek yazılan bir yıkıcı eylem,
- * yanlış çağrıldığında hiçbir yerde durdurulmaz. Yeniden açmada sorulmaz: kapıyı AÇMAK bir sonuç
- * doğurmaz, tesisi yeniden görünür kılar.
+ * Kapatma ya da yeniden açma; silme yoktur. `confirmCode` kasıt kapısıdır, çünkü kapatma stoğa, bölgelere ve personele aynı anda
+ * dokunur ve istemciye güvenerek yazılan yıkıcı eylem yanlış çağrıldığında durdurulmazdı.
  */
 export async function setWarehouseActiveAction(input: { id: string; isActive: boolean; confirmCode?: string }): Promise<ActionResult> {
   try {
@@ -146,15 +129,8 @@ export async function setWarehouseActiveAction(input: { id: string; isActive: bo
 }
 
 /**
- * **YAZICI ENVANTERİ** (07.12 · 29.08) — `saveLabelPrinterAction`ın halefi.
- *
- * 23.7'nin üç ayar anahtarı emekli oldu: TEK yazıcı varsayıyordu ve kargo kanalı hem yazıcıyı
- * (iki rulo) hem etiket TÜRÜNÜ (bizim 4×6 kutu etiketimiz ↔ taşıyıcının A6'sı) çoğalttı.
- * Ayarla ifade edilemeyen şey bir LİSTEdir.
- *
- * **Bu ekran envanteri yönetir, SEÇİMİ değil:** hangi yazıcının kullanılacağı cihazın bilgisi
- * (kullanıcı kararı 29.08) ve telefonun yerel deposunda yaşıyor. Buradan bir "varsayılan yazıcı"
- * işaretlemek, cihazın seçimini sunucudan ezmek olurdu.
+ * Yazıcı envanteri: bir depoda birden çok yazıcı ve iki etiket türü olabildiği için ayar değil liste. Ekran envanteri yönetir,
+ * hangi yazıcının kullanılacağı cihazın yerel seçimidir.
  */
 export async function addWarehousePrinterAction(input: unknown): Promise<ActionResult> {
   try {
@@ -192,15 +168,7 @@ export async function setWarehousePrinterActiveAction(input: unknown): Promise<A
   }
 }
 
-/**
- * Operatör sırası — listedeki sürükleme. Sıra TÜM depo seçicilerinde aynıdır (bağlam seçicisi,
- * tablo süzgeci, transfer hedefi), o yüzden tek yerden yazılır.
- *
- * Satır satır yazılıyor: `WarehouseService`'te `reorder()` yok — kategori/koleksiyon/paket
- * servislerinde duran tek satırlık desen (`reorderBy`) bu servise henüz gelmedi ve `reorderBy`
- * korumalı. Tesis sayısı fiziksel bir gerçek (bir avuç satır), yani bugün ölçülebilir bir bedeli
- * yok; yine de arka uç şeridinden istendi (`operasyon-ekranlari-arka-uc-talebi.md §5`).
- */
+/** Operatör sırası, listedeki sürükleme; sıra bütün depo seçicilerinde aynıdır, bu yüzden tek yerden yazılır. */
 export async function reorderWarehousesAction(ids: string[]): Promise<ActionResult> {
   try {
     await requireAdmin();
@@ -215,21 +183,9 @@ export async function reorderWarehousesAction(ids: string[]): Promise<ActionResu
   }
 }
 
-// ── Hizmet alanı (bölge + posta kodları) ────────────────────────────────────
-
-// Rota (bölge) kurulumunun eylemleri BURADAN TAŞINDI (07.08) →
-// `deliveries/routes-actions.ts`. Gerekçe: kurulum yüzeyi Teslimat & Rota'ya geçti; eylem
-// ekranıyla aynı klasörde yaşar (CLAUDE §2 kolokasyon). Bölge KAYDI hâlâ deponun nesnesidir.
-
-// ── Ölçüm noktaları (19.28) ─────────────────────────────────────────────────
-//
-// **Depo istemciden GELMEZ, seçili tesisten gelir.** Nokta bir tesisin künyesidir; kimliği forma
-// bırakmak, bir deponun dolabını ötekinin künyesine yazmanın en sessiz yolu olurdu (sıcaklık
-// yazma kapısının aynı kuralı).
-//
-// **Silme YOK, susturma var.** Kayıtlı bir nokta veritabanında zaten silinemiyor (`restrict`) ve
-// silinebilseydi denetim geçmişi sahipsiz kalırdı. Kullanımdan kalkan nokta `isActive = false`
-// olur: kayıtları yerinde durur, seçim listesinde çıkmaz.
+// ── Ölçüm noktaları ─────────────────────────────────────────────────────────
+// Depo istemciden gelmez, seçili tesisten gelir: kimliği forma bırakmak bir deponun dolabını ötekine yazmanın en sessiz yolu
+// olurdu. Silme yok, nokta `isActive = false` olur ve kayıtları yerinde durur.
 
 /** Hedef aralık metinden sayıya — boş dize `null`, çünkü "beklenti yok" ile "sıfır derece" ayrı. */
 function parseTargetC(raw: string): number | null {
@@ -327,24 +283,8 @@ export async function setPointActiveAction(input: {
 // ── Sıcaklık ölçümü ─────────────────────────────────────────────────────────
 
 /**
- * **Ölçüm kaydı** — `/operations/temperature`ten buraya taşındı (`22.29` kapanışı, kullanıcı kararı
- * 17.08): *"web'de yazma olsun, burada admin girsin; depocu zaten mobil uygulama üzerinden girecek."*
- *
- * ── KAPI DEĞİŞTİ VE BU BİLİNÇLİ ─────────────────────────────────────────────
- * Eski kapı `requireWarehouseScope` + `readWorkWarehouse` idi: yazan kişi DEPOCUydu ve hangi depoda
- * çalıştığı bağlamdan geliyordu. Buradaki yazan YÖNETİCİ ve depoyu bağlamdan değil SEÇTİĞİ KARTTAN
- * belirtiyor — Depolar sayfasının tamamı `requireAdmin`. Sahadaki kayıt native uygulamanın işi ve
- * **zamanı gelince yapılacak** (kullanıcı kararı 17.08, `BEKLEYEN(19.30)`); o uç gelene kadar
- * depocunun ölçüm yazacak yolu yok, web'deki bu kapı da yalnız yöneticinin.
- *
- * ── GEÇMİŞE YAZILMIYOR (kullanıcı kararı 17.08) ─────────────────────────────
- * `recordedAt` girdide YOK ve olmayacak: `now()` yazılıyor. Hijyen defterine sonradan kayıt
- * düşmek defteri denetimde değersiz kılar — **boş bir gün dürüsttür, sonradan doldurulmuş bir gün
- * değildir.** Takvimde geçmiş günler bu yüzden salt okunur.
- *
- * ── UYARIR, ENGELLEMEZ ──────────────────────────────────────────────────────
- * Aralık dışı değer YAZILIR, sonra uyarılır (`DOMAIN §4` — karar sahadaki insanın). Reddetseydik
- * dondurucu bozulduğunda kayıt hiç yazılmazdı.
+ * Ölçüm kaydı: yazan yöneticidir ve depoyu seçtiği karttan belirtir; sahadaki kayıt native uygulamanın işidir (`BEKLEYEN(19.30)`).
+ * `recordedAt` girdide yok, çünkü sonradan doldurulan gün hijyen defterini değersiz kılar; aralık dışı değer yazılır, sonra uyarılır.
  */
 export async function recordTemperatureAction(input: {
   warehouseId: string;
@@ -410,11 +350,9 @@ export async function recordTemperatureAction(input: {
 const SANE_MIN_C = -60;
 const SANE_MAX_C = 60;
 
-// ── KARGO KUTUSU (07.12) ─────────────────────────────────────────────────────
-//
-// Kutu tipi DEPOYA aittir ve bu bir boyut değil DEĞİŞMEZDİR (CLAUDE §1): her action deponun
-// kimliğini ayrıca alır ve servis onu yazar. Kural ayrıca veride duruyor — `order_box`taki
-// bileşik FK başka deponun kutusunun seçilmesini reddediyor (0052).
+// ── Kargo kutusu ─────────────────────────────────────────────────────────────
+// Kutu tipi depoya aittir: her action deponun kimliğini ayrıca alır ve `order_box`taki bileşik FK başka deponun kutusunun
+// seçilmesini reddeder.
 
 /** Yeni kutu ya da düzenleme. `id` varsa güncelle, yoksa deponun listesine ekle. */
 export async function saveShippingBoxAction(input: unknown): Promise<ActionResult<{ id: string }>> {
@@ -431,10 +369,7 @@ export async function saveShippingBoxAction(input: unknown): Promise<ActionResul
   }
 }
 
-/**
- * **Şablonu benimse** — bağlama değil KOPYALAMA (kullanıcı kararı 28.08). Kopya deponun malıdır:
- * ölçüsünü kendi gerçeğine göre düzeltebilir ve şablon sonradan değişse kopya değişmez.
- */
+/** Şablonu benimse: bağlama değil kopyalama, çünkü kopya deponun malıdır ve şablon sonradan değişse kopya değişmez. */
 export async function adoptShippingBoxAction(input: { warehouseId: string; templateId: string }): Promise<ActionResult<{ id: string }>> {
   try {
     await requireAdmin();

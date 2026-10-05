@@ -4,16 +4,8 @@ import { createTestWarehouse, purgeTestData, purgeVariantStock } from '@lezzet/d
 import { getCartView } from '@/lib/cart/read';
 
 /**
- * **Fiyatın "kim soruyor" ekseni** (DOMAIN §5, §10) — `read-viewer.ts`'in bağladığı iki açık.
- *
- * Vitrin fiyatı uzun süre `channel: 'b2c'` ve `b2bApproved: false` SABİTLERİYLE çözülüyordu.
- * Hiçbir şey patlamıyordu, çünkü sabitler geçerli değerlerdi — yalnız iki özellik sessizce ölüydü:
- * onaylanmış B2B müşteri toptan fiyat görmüyordu ve müşteriye özel fiyat hiç okunmuyordu. Bu
- * sınıf hatanın testi de bu yüzden yazılıyor: kod okunarak değil, **fiyatın kendisi sorularak**
- * doğrulanır.
- *
- * Sınama `getCartView` üzerinden çünkü zincirin tamamını geçiyor: kimlik → görüntüleyen künyesi →
- * fiyat satırlarının okunması → motor. Ara katmandan biri sabitlense test yine kırmızıya döner.
+ * Fiyatın "kim soruyor" ekseni (DOMAIN §5, §10): onaylı B2B müşteri toptan fiyatı, özel fiyatı olan müşteri kendi fiyatını görmeli.
+ * Sınama `getCartView` üzerinden yapılır, çünkü kimlikten motora bütün zinciri geçer ve ara katmandan biri sabitlense test kırmızıya döner.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -55,7 +47,7 @@ const entry = () => [{ kind: 'variant' as const, variantId, qty: 1, stockId: nul
 
 /** Sepetteki tek satırın birim fiyatı — testin sorduğu tek sayı. */
 async function birimFiyat(customerId?: string): Promise<number | null> {
-  const view = await getCartView('tr', entry(), { warehouseId, ...(customerId ? { customerId } : {}) });
+  const view = await getCartView('tr', entry(), { business: 'lezzet', warehouseId, ...(customerId ? { customerId } : {}) });
   return view.lines[0]?.unitPriceCents ?? null;
 }
 
@@ -84,8 +76,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // `purgeVariantStock`: silme sırası tek yerde durur ve hata FIRLAR — `delete()` onu yutuyordu
-  // (06.14 · künye `packages/application/src/courier/day.test.ts`te).
+  // `purgeVariantStock` silme sırasını tek yerde tutar ve hatayı fırlatır, düz `delete()` onu yutardı.
   await purgeVariantStock(db, [variantId]);
   await purgeTestData(db, {
     productIds: [productId],

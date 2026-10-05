@@ -32,6 +32,7 @@ import {
   type AccountInsert,
   type AccountLedgerRow,
   type AccountUpdate,
+  type Business,
   type Counterparty,
   type CounterpartyInsert,
   type CounterpartyUpdate,
@@ -122,6 +123,7 @@ class AccountLedgerService extends BaseDbService<AccountLedgerRow, never, never>
         // Hesap zorunlu değil, bir süzgeçtir: liste tektir, zorunlu imza ekranı açılışta boş bırakır ya da bir hesabı keyfî öne alırdı.
         ledgerAccountId: opts.accountId,
         type: opts.type,
+        business: opts.business,
         ...(opts.unreconciledOnly ? { reconciled: false } : {}),
         ...(opts.unexplainedOnly ? { explained: false } : {}),
       },
@@ -159,6 +161,8 @@ export interface LedgerFilter {
   accountId?: string;
   /** Hareket tipi — tasarımın süzgeç barındaki "+ tip" çipi. Kapalı enum, ek indeks istemiyor. */
   type?: MovementType;
+  /** Hareketin işi, bağından türer. */
+  business?: Business;
   cursor?: KeysetCursor;
   limit?: number;
   from?: string;
@@ -331,13 +335,13 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
    * Dönemin bütün hareketleri, ham tablodan (transfer tek satır), sayfa sayfa çekilip birleştirilir: tek sorgu PostgREST'in satır
    * tavanında (1000) sessizce kesilir ve döküm eksik çıkardı. Okuma tam okuma içindir, imleç dışarı sızmaz.
    */
-  async listPeriod(from: string, to: string): Promise<MoneyMovement[]> {
+  async listPeriod(from: string, to: string, business?: Business): Promise<MoneyMovement[]> {
     const BATCH_SIZE = 500;
     const all: MoneyMovement[] = [];
     let cursor: KeysetCursor | undefined;
     do {
       const page = await this.getPage(
-        {},
+        { business },
         {
           orderBy: 'valueDate',
           keysetAfter: cursor,
@@ -360,12 +364,10 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   }
 
   /** Dönem toplamları tipe göre — kâr ve nakit akışı raporlarının girdisi; satırlar dönemle sınırlı, toplama uygulamada. */
-  async periodTotals(from: string, to: string): Promise<PeriodTotal[]> {
-    const { data, error } = await this.supabase
-      .from('money_movement')
-      .select('type,direction,amount')
-      .gte('value_date', from)
-      .lte('value_date', to);
+  async periodTotals(from: string, to: string, business?: Business): Promise<PeriodTotal[]> {
+    let query = this.supabase.from('money_movement').select('type,direction,amount').gte('value_date', from).lte('value_date', to);
+    if (business) query = query.eq('business', business);
+    const { data, error } = await query;
     if (error) throw error;
 
     const buckets = new Map<string, PeriodTotal>();
@@ -384,13 +386,15 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
    * Kampanya başına reklam gideri; süzgeç tip değil türdür (`reklam`), çünkü reklam kredisi `misc` olarak girer ve tipe göre süzmek
    * gideri eksik gösterirdi. Künyesiz satır `campaign: null` kovasında toplanır, atılsaydı kampanyalar kârlı görünürdü.
    */
-  async campaignSpend(from: string, to: string): Promise<CampaignSpend[]> {
-    const { data, error } = await this.supabase
+  async campaignSpend(from: string, to: string, business?: Business): Promise<CampaignSpend[]> {
+    let query = this.supabase
       .from('money_movement')
       .select('direction,amount,meta')
       .eq('nature', ADVERTISING_NATURE)
       .gte('value_date', from)
       .lte('value_date', to);
+    if (business) query = query.eq('business', business);
+    const { data, error } = await query;
     if (error) throw error;
 
     const buckets = new Map<string | null, CampaignSpend>();
@@ -608,17 +612,22 @@ export class MoneyDocumentService extends BaseDbService<MoneyDocument, MoneyDocu
   }
 
   /** Belgeler — belge tarihine göre en yeni önce, keyset sayfalı (arşiv sınırsız büyür); `from`/`to` belge gününü süzer. */
-  page(opts: { from?: string; to?: string; cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<MoneyDocument>> {
+  page(
+    opts: { from?: string; to?: string; business?: Business; cursor?: KeysetCursor; limit?: number } = {},
+  ): Promise<Page<MoneyDocument>> {
     const rangeFilters: Array<{ field: string; operator: 'gte' | 'lte'; value: string }> = [];
     if (opts.from) rangeFilters.push({ field: 'issuedOn', operator: 'gte', value: opts.from });
     if (opts.to) rangeFilters.push({ field: 'issuedOn', operator: 'lte', value: opts.to });
-    return this.getPage(undefined, {
-      orderBy: 'issuedOn',
-      orderDirection: 'desc',
-      keysetAfter: opts.cursor,
-      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
-      rangeFilters,
-    });
+    return this.getPage(
+      { business: opts.business },
+      {
+        orderBy: 'issuedOn',
+        orderDirection: 'desc',
+        keysetAfter: opts.cursor,
+        limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+        rangeFilters,
+      },
+    );
   }
 
   /** Kimlik listesiyle belgeler — hareket dökümü satırların belgelerini tek turda okur. */

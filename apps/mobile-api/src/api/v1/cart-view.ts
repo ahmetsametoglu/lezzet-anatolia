@@ -71,6 +71,7 @@ export async function readCartView(
     couponCode: opts.couponCode,
     warehouseId: place.warehouseId,
     shippingWarehouseId: place.shippingWarehouseId,
+    business: place.business,
     ...(pickup ? { country: pickup.countryCode, zoneId: null, pickup: true } : {}),
     // `db` bağlanır, başka hiçbir şey yapılmaz: port imzası (`CartBundlePort`) ile kapının imzası
     // `db` dışında birebir tutuyor ve dönüş şekli `CartBundleSource`un yapısal ikizi. Araya bir
@@ -100,6 +101,7 @@ function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof M
     lines: view.lines.map(toLineBody),
     subtotalCents: view.subtotalCents,
     discount: toDiscountBody(view.discount, locale),
+    acceptsCoupons: view.acceptsCoupons,
     /* Elinin altındaki indirim — ad burada çözülür (sözleşme tek dize taşır, istemci üç dilli
        nesneyi hiç görmez; `labelOf` künyesi). Alan `null` ise ekran susar. */
     reachableDiscount:

@@ -26,27 +26,9 @@ import { openOrderCountOf, toScorecard, toStaffChips, toWarehouseRows, toZoneCar
 import { parseWarehousesUrl } from './warehouses-url';
 import type { VanLoadCardView, WarehouseCardView, WarehousesData } from './warehouses-types';
 
-// Depolar (19.5) — tesisin **kim olduğu, nereye hizmet ettiği ve nasıl durduğu**; üçü aynı nesneye
-// ait olduğu için ayrılmaz (`design/pages/admin-depolar.md`).
-//
-// ── KAPI: YALNIZ YÖNETİCİ ────────────────────────────────────────────────────
-// Depocu ve kurye bu ekranı hiç görmez. Kapı `requireAdmin`; nav'ın onu göstermemesi bir güvence
-// değil, bir görgü kuralıdır (`ops-nav`).
-//
-// ── DEPO BAĞLAMI BU SAYFAYI DARALTMAZ ────────────────────────────────────────
-// Sistemin geri kalanında `readWarehouseContext` evreni belirler; burada değil. Depolar bir YÖNETİM
-// nesnesidir: kapalı olan da, kapsam dışı olan da listelenir. Kapsamla süzülseydi, "ikinci depoyu
-// nereden ekleyeceğim" sorusunun cevabı kendi içinde kaybolurdu.
-//
-// ── OKUMA PLANI — iki dalga, hiçbiri satır sayısıyla ÇARPMAZ ─────────────────
-//   1. dalga (her zaman) · depolar · bölgeler+kodları · personel (rol başına) · eldeki TÜM partiler ·
-//      yoldaki sevkiyatlar · raf ömrü eşikleri
-//   2. dalga (YALNIZ bir tesis seçiliyken) · o deponun eşik altı varyantları · sipariş sayaçları
-//
-// Sayfalama YOK ve olmamalı: depo, bölge ve posta kodu kümeleri operatörün elle kurduğu, doğal
-// tavanı olan kümelerdir (`CLAUDE.md §1`) — tesis sayısı fiziksel bir gerçektir, veriyle büyümez.
-// Partiler de eldeki malla sınırlıdır ve karne TAM olmak zorunda: eksik sayılan bir risk, bakılmayan
-// bir risktir.
+// Depolar: tesisin kim olduğu, nereye hizmet ettiği ve nasıl durduğu; depo bağlamı bu sayfayı daraltmaz, çünkü depolar bir yönetim
+// nesnesidir ve kapalı ya da kapsam dışı depo da listelenir. Sayfalama yok, çünkü depo, bölge ve posta kodu kümeleri operatörün
+// kurduğu kümelerdir; seçili tesisin eşik altı varyantları ve sipariş sayaçları ikinci dalgada okunur.
 
 interface WarehousesPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -67,17 +49,14 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
   const db = serviceDb();
   const stockSvc = new StockService(db);
 
-  // **Bölge dışı talep okuması KALKTI (17.08).** Buradan bir liderlik tablosu okunuyordu ("hangi
-  // kod ne sıklıkla soruluyor") ve ekranın "Ağ geneli" bölümünü besliyordu; o bölüm bu sayfanın
-  // sorusuna cevap vermediği için kaldırıldı — gerekçe `warehouses.desktop`ta. Sayfa bir sorgu
-  // eksildi: veriyi okuyup çizmeyen bir sayfa, o okumanın bedelini boşuna ödüyordu.
-  const [warehouses, zones, staff, thresholds, transfers, warehouseLabels] = await Promise.all([
+  const [warehouses, zones, staff, thresholds, transfers, warehouseLabels, inUse] = await Promise.all([
     new WarehouseService(db).list(),
     new DeliveryZoneService(db).listWithCodes(),
     readStaff(new UserProfileService(db)),
     readExpiryThresholds(new SettingsService(db)),
     new WarehouseTransferService(db).listInTransit(),
     readWarehouseLabels(),
+    new WarehouseService(db).inUseIds(),
   ]);
 
   // Partiler YALNIZ aktif depolardan: kapalı tesisin stoğu kayıtta durur ama satış okumalarında
@@ -90,19 +69,10 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
   // Liste fiyatı okunmuyor — karne teklif ÖNERMEZ, yalnız riski sayar; öneri Stok'un işi.
   const batches = toBatchViews(batchRows, { now: new Date(), thresholds, warehouseLabels });
 
-  const rows = toWarehouseRows({ warehouses, zones, staff, batches, transfers });
+  const rows = toWarehouseRows({ warehouses, zones, staff, batches, transfers, inUse });
   /**
-   * **Seçim boşsa İLK TESİS açılır** (16.08) — ekran artık tek görünüm, yani "hiçbiri seçili değil"
-   * diye bir hâli yok. Boş bırakılsaydı sayfa kendi şeridini gösterip altını boş bırakırdı: bir
-   * seçim davetiyle karşılamak, ilk tesisi göstermekten hiçbir şey kazandırmaz — operatör zaten
-   * şeritten istediğine geçiyor.
-   *
-   * **Aktif olan tercih edilir:** kapalı bir tesisin karnesi okunmuyor (`readCard` künyesi) ve
-   * sayfayı kapalı bir depoyla açmak, ekranı boş bir kartla karşılamak olurdu. Hepsi kapalıysa
-   * yine de ilki açılır — orada kapalılık gerçeğin kendisidir.
-   *
-   * URL'e YAZILMIYOR: adres boş kalır, bağlantı paylaşan kişi "ilk tesis" der. Yönlendirme
-   * yazsaydık her açılış bir gezinme turu daha eklerdi.
+   * Seçim boşsa ilk tesis açılır, aktif olan tercih edilir: ekran tek görünümdür ve kapalı tesisin karnesi okunmaz. Seçim URL'e
+   * yazılmaz, çünkü yönlendirme her açılışa bir gezinme turu eklerdi.
    */
   const fallback = rows.find((r) => r.isActive) ?? rows[0] ?? null;
   const selected = urlState.code ? (rows.find((r) => r.code === urlState.code) ?? fallback) : fallback;
@@ -119,12 +89,6 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
 
   return <WarehousesClient data={data} urlState={urlState} />;
 }
-
-
-// `readLastMeasured` SİLİNDİ (19.30) → `measure-read.readMeasurePoints`. "Son ölçüm" artık takvimin
-// yan ürünü: aynı üç aylık pencere hem günleri hem son anı veriyor, yani ayrı bir tarama gereksizdi.
-// Sınırı da düzeldi — eskiden 200 satırlık tavanın dışında kalan nokta "hiç ölçülmemiş" görünüyordu;
-// bugün "son 3 ayda ölçüm yok" deniyor ve bu cümle ölçtüğümüz şeyin birebir karşılığı.
 
 /** Seçili tesisin tam kartı — ikinci dalga: yalnız bu deponun eşik altı ve açık işi okunur. */
 async function readCard(
@@ -146,24 +110,18 @@ async function readCard(
     : [[], null];
 
   /**
-   * Ölçüm noktaları + hijyen takvimi (19.28 · 19.30) — **kapalı tesiste de okunur**, karnenin aksine.
-   *
-   * Karne "bugün ne durumda" sorusudur ve kapalı tesiste sorulmaz; nokta ise KÜNYEDİR — tesis
-   * kapalıyken de dolabı vardır ve yeniden açılınca aynı noktalarla açılır. Denetim defteri de
-   * kapalı tesiste okunur; asıl o zaman sorulur.
+   * Ölçüm noktaları ve hijyen takvimi kapalı tesiste de okunur, karnenin aksine: nokta bir künyedir, tesis kapalıyken de dolabı
+   * vardır ve denetim defteri asıl o zaman sorulur.
    */
   const measure = await readMeasurePoints(db, row.id, new Date());
 
-  // Yazıcı ENVANTERİ (07.12 · 29.08) — kapalı tesiste de okunur: yazıcı da nokta gibi KÜNYEDİR.
-  // Liste, tek satır değil: bir depoda N yazıcı ve iki etiket türü var.
+  // Yazıcı envanteri kapalı tesiste de okunur, çünkü yazıcı da nokta gibi künyedir; bir depoda birden çok yazıcı ve iki etiket
+  // türü var.
   const printers = await printersFor(db, row.id);
 
   /**
-   * Kargo kutuları (07.12) — deponun kutuları + HENÜZ BENİMSENMEMİŞ şablonlar.
-   *
-   * Şablonlar burada süzülüyor, ekranda değil: benimsenmişi "ekle" diye sunmak tıklanınca
-   * reddedilen bir davet olurdu (ad depo içinde benzersiz). Ölçüt AD — kopya şablonun adını
-   * taşıyor ve kimliği taşımıyor (kopyalama, bağlama değil).
+   * Kargo kutuları: deponun kutuları ve henüz benimsenmemiş şablonlar; benimsenmiş şablonu "ekle" diye sunmak reddedilen bir davet
+   * olurdu. Ölçüt ad, çünkü kopya şablonun adını taşır, kimliğini taşımaz.
    */
   const boxSvc = new ShippingBoxService(db);
   const [ownBoxes, templates] = await Promise.all([boxSvc.listForWarehouse(row.id), boxSvc.listTemplates()]);
@@ -171,11 +129,7 @@ async function readCard(
   const shippingBoxes = { boxes: ownBoxes, adoptable: templates.filter((t) => !ownNames.has(t.name)) };
 
   /**
-   * **Bölgelerin ağırlığı** (19.28) — kart artık yalnız tanımı değil sonucu da gösteriyor.
-   *
-   * Kodlar TEK turda soruluyor: bölge başına sorgu atmak (N+1) beş bölgede beş tur demekti ve
-   * ikisi de aynı RPC'yi çağırırdı. Kod yoksa sorgu HİÇ atılmıyor — boş bir `in ()` sorgusu, sonucu
-   * baştan belli bir tur.
+   * Bölgelerin ağırlığı: kodlar tek turda sorulur, çünkü bölge başına sorgu aynı RPC'yi N kez çağırırdı; kod yoksa sorgu atılmaz.
    */
   const zoneCodes = [...new Set(zones.filter((z) => z.warehouseId === row.id).flatMap((z) => z.postalCodes.map((c) => c.postalCode)))];
   const [zoneOrders, zoneWaiting] = await Promise.all([
@@ -194,9 +148,7 @@ async function readCard(
     points: measure.points,
     measureTruncated: measure.truncated,
     /*
-      Araç yükü YALNIZ TESİS kartında ve YALNIZ AÇIK tesiste (02.09). Araç kartında sorulmaz:
-      aracın kendi karnesi zaten onu sayıyor. Kapalı tesiste de sorulmaz — karnenin kuralının
-      aynısı; kapalı tesisin aracı olsaydı bile o mal bugünün işi değil.
+      Araç yükü yalnız açık tesisin kartında sorulur: aracın kendi karnesi onu zaten sayar, kapalı tesisin malı da bugünün işi değil.
     */
     vanLoad: row.kind === 'facility' && row.isActive ? await readVanLoadCard(db, row.id) : null,
     scorecard: toScorecard({
@@ -209,11 +161,8 @@ async function readCard(
 }
 
 /**
- * Karnenin altındaki araç satırı — motoru `@lezzet/application`, burası yalnız cümleyi kurar
- * (panelin şeridiyle aynı kaynak, iki ekran ayrışamasın).
- *
- * **Boş satır çizilmez:** ne kutu ne mal varsa `null` döner. Her tesisin altında sabit duran bir
- * "araçta 0" satırı, dolduğu gün fark edilmeyen bir satırdır.
+ * Karnenin altındaki araç satırı; motoru `@lezzet/application`, burası yalnız cümleyi kurar. Boş satır çizilmez, çünkü sabit duran
+ * bir "araçta 0" satırı dolduğu gün fark edilmez.
  */
 async function readVanLoadCard(db: ReturnType<typeof serviceDb>, facilityId: string): Promise<VanLoadCardView | null> {
   const summary = await readFacilityVanSummary(db, { facilityId });

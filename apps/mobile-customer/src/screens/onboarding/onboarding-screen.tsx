@@ -142,7 +142,9 @@ export function OnboardingScreen() {
           ? zipCopy.ambiguousNote
           : place.kind === 'unknown'
             ? zipCopy.unknownNote
-            : zipCopy.unresolvedNote;
+            : place.reason === 'outside_zones'
+              ? zipCopy.outsideNote
+              : zipCopy.unresolvedNote;
 
   /**
    * Her çıkış o ana dek yapılan seçimleri saklar ve onboarding'i bitmiş sayar. Son adımın iki çıkışı var: "Hesap aç" girişe,

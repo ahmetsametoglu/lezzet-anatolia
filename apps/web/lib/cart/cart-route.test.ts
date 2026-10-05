@@ -55,7 +55,7 @@ const entry = (qty: number) => [{ kind: 'variant' as const, variantId, qty, stoc
 
 describe('sepetin yol ayrımı', () => {
   it('yerelde olmayan kargolanabilir kalem KARGO grubuna düşer — "tükendi" denmez', async () => {
-    const view = await getCartView('tr', entry(1), { warehouseId: localWarehouseId, shippingWarehouseId });
+    const view = await getCartView('tr', entry(1), { business: 'lezzet', warehouseId: localWarehouseId, shippingWarehouseId });
     expect(view.lines[0]?.route).toBe('shipping');
     // Kritik: satır ENGELLİ değil. Bu ayrım olmadan müşteri kargoyla gönderebileceğimiz ürünü
     // "çıkarın" uyarısıyla görüyordu.
@@ -63,24 +63,24 @@ describe('sepetin yol ayrımı', () => {
   });
 
   it('ücretsiz kargo eşiği KARGO grubunun tutarından ölçülür', async () => {
-    const view = await getCartView('tr', entry(1), { warehouseId: localWarehouseId, shippingWarehouseId });
+    const view = await getCartView('tr', entry(1), { business: 'lezzet', warehouseId: localWarehouseId, shippingWarehouseId });
     expect(view.shippingSubtotalCents).toBe(3_000);
     // Eşik ayardan gelir; kalan = eşik − kargo grubu (sepetin tamamı değil).
     expect(shippingGroupFree(view).remainingForFreeCents).toBe(Math.max(0, view.freeShippingCents - 3_000));
   });
 
   it('kargo grubu yokken eşiğe kalan söylenmez — boş grup eşiğin altı sayılmaz', async () => {
-    const view = await getCartView('tr', entry(1), {});
+    const view = await getCartView('tr', entry(1), { business: 'lezzet' });
     expect(shippingGroupFree(view).remainingForFreeCents).toBe(0);
   });
 
   it('sepetin tamamı kargodaysa `shippingOnly` — müşteriye "iki sipariş" denmez', async () => {
-    const view = await getCartView('tr', entry(2), { warehouseId: localWarehouseId, shippingWarehouseId });
+    const view = await getCartView('tr', entry(2), { business: 'lezzet', warehouseId: localWarehouseId, shippingWarehouseId });
     expect(view.shippingOnly).toBe(true);
   });
 
   it('YER BİLİNMİYORSA yol atanmaz — bilmediğimiz şey söylenmez', async () => {
-    const view = await getCartView('tr', entry(1), {});
+    const view = await getCartView('tr', entry(1), { business: 'lezzet' });
     expect(view.lines[0]?.route).toBeNull();
     expect(view.shippingOnly).toBe(false);
     expect(view.shippingSubtotalCents).toBe(0);
@@ -91,18 +91,18 @@ describe('sepetin yol ayrımı', () => {
   it('SATIRIN kendi havuzundaki miktar taşınır — istenen adet kadar değil', async () => {
     // Motorun `fulfillableQty` alanı `min(istenen, mevcut)` döndürüyor; ekran ondan "tavana
     // dayandım mı" sorusunu cevaplayamaz. 1 adet isteyip 10 bulunan satırda da havuz 10'dur.
-    const one = await getCartView('tr', entry(1), { warehouseId: localWarehouseId, shippingWarehouseId });
+    const one = await getCartView('tr', entry(1), { business: 'lezzet', warehouseId: localWarehouseId, shippingWarehouseId });
     expect(one.lines[0]?.availableHere).toBe(10);
 
     // İstenen adet havuzu aşsa da taşınan sayı havuzun kendisidir — sepetin düzeltme düğmesi
     // ve checkout'un reddi aynı sayıyı söylemek zorunda.
-    const many = await getCartView('tr', entry(25), { warehouseId: localWarehouseId, shippingWarehouseId });
+    const many = await getCartView('tr', entry(25), { business: 'lezzet', warehouseId: localWarehouseId, shippingWarehouseId });
     expect(many.lines[0]?.availableHere).toBe(10);
     expect(many.lines[0]?.route).toBe('shipping');
   });
 
   it('kargo deposu bilinmiyorsa kalem kargoya düşmez — uydurma yol yok', async () => {
-    const view = await getCartView('tr', entry(1), { warehouseId: localWarehouseId });
+    const view = await getCartView('tr', entry(1), { business: 'lezzet', warehouseId: localWarehouseId });
     expect(view.lines[0]?.route).toBe('unavailable');
   });
 });

@@ -17,17 +17,13 @@ import {
   type MovementExportRow,
 } from '@lezzet/domain-core';
 import { toCsv } from '@lezzet/helper';
+import { BUSINESS_LABELS, type Business } from '@lezzet/types';
 import { MOVEMENT_TYPE_LABEL } from '@/app/(operations)/operations/finance/finance-labels';
 import { DOCUMENT_KIND_LABEL, VAT_REGIME_LABEL } from '@/components/operation/form/document-form/labels';
 
 /**
- * Hareket dökümü kapısı (12.15) — DOMAIN §9. Satış dosyasının (12.7) yanına dönemin her para
- * hareketi; muhasebeci "bu 1.180 € ne" diye sorduğunda cevap satırın üstünde: hesap, TÜR ve hesap
- * kodu, cari, belgeler (tür / no / tarih / KDV), etiketler. Karar motorun
- * (`domain-core/accounting/movement-export`), okuma servislerin; birleştiren yer burası (STACK §4).
- *
- * Her bağ TEK turda okunur (belge bağları ve belgeler, siparişler kimlik listesiyle; hesaplar, türler,
- * etiketler, cariler, tedarikçiler doğal tavanlı listeler): satır başına sorgu atsaydık aylık bir döküm
+ * Hareket dökümü kapısı (DOMAIN §9), satış dosyasının yanında dönemin her para hareketi; karar motorda
+ * (`domain-core/accounting/movement-export`), okuma servislerdedir. Her bağ tek turda okunur, satır başına sorgu atılsa aylık bir döküm
  * yüzlerce sorgu ederdi.
  */
 
@@ -40,9 +36,10 @@ interface ExportPeriod {
 
 const unique = (values: ReadonlyArray<string | null | undefined>): string[] => [...new Set(values.filter((v): v is string => !!v))];
 
-export async function buildMovementExport(period: ExportPeriod): Promise<MovementExport> {
+/** Dönemin dökümü; `business` verilmezse şirketin tamamıdır. */
+export async function buildMovementExport(period: ExportPeriod, business?: Business): Promise<MovementExport> {
   const db = serviceDb();
-  const movements = await new MoneyMovementService(db).listPeriod(period.from, period.to);
+  const movements = await new MoneyMovementService(db).listPeriod(period.from, period.to, business);
   const allocations = movements.length > 0 ? await new MoneyAllocationService(db).listByMovements(movements.map((movement) => movement.id)) : [];
   const [accounts, natures, tags, counterparties, suppliers, documents, orders] = await Promise.all([
     new AccountService(db).list(),
@@ -68,7 +65,7 @@ export async function buildMovementExport(period: ExportPeriod): Promise<Movemen
   const documentOf = new Map(documents.map((document) => [document.id, document] as const));
   const orderRef = new Map(orders.map((order) => [order.id, order.referenceNo] as const));
 
-  // Hareketin belgeleri BAĞ tablosundan (13.09): bir havale birkaç faturayı kapatabilir.
+  // Hareketin belgeleri bağ tablosundan gelir, çünkü bir havale birkaç faturayı kapatabilir.
   const documentsOf = new Map<string, MovementExportDocument[]>();
   for (const allocation of allocations) {
     const document = documentOf.get(allocation.documentId);
@@ -116,8 +113,9 @@ export async function buildMovementExport(period: ExportPeriod): Promise<Movemen
 /** Dosyanın satırı — dökümün satırı artı operatörün diliyle yazılan sütunlar (tip, belge türü, kaynak). */
 type MovementCsvRow = MovementExportRow & {
   typeLabel: string;
+  businessLabel: string;
   documentKindLabel: string | null;
-  /** KDV rejiminin okunur adı (12.26) — "Ters yükleme": belgede KDV yok ama beyanda hesaplanır. */
+  /** KDV rejiminin okunur adı; "Ters yükleme"de belgede KDV yoktur ama beyanda hesaplanır. */
   documentVatRegimeLabel: string | null;
   sourceLabel: string;
   explainedLabel: string;
@@ -126,9 +124,8 @@ type MovementCsvRow = MovementExportRow & {
 const SOURCE_LABEL = { manual: 'elle', bank_import: 'banka ekstresi', system: 'sistem' } as const;
 
 /**
- * Dosyanın sütunları — sıra ve başlıklar AÇIK yazılır (12.7 ile aynı kural); alan eklenince biçim
- * habersiz kaymasın. "Tip" hareketin kaba tipi (gider, transfer…), "Tür" onun sınıflandırması (Kira,
- * Sosyal güvenlik) ve "Hesap kodu" türün hesap planı karşılığı (13.09).
+ * Dosyanın sütunları; sıra ve başlıklar açık yazılır ki alan eklenince biçim habersiz kaymasın. "Tip" hareketin kaba tipi, "Tür" onun
+ * sınıflandırması (Kira, Sosyal güvenlik), "Hesap kodu" türün hesap planı karşılığıdır.
  */
 const COLUMNS: ReadonlyArray<{ key: keyof MovementCsvRow & string; label: string }> = [
   { key: 'valueDate', label: 'Tarih' },
@@ -137,6 +134,7 @@ const COLUMNS: ReadonlyArray<{ key: keyof MovementCsvRow & string; label: string
   { key: 'typeLabel', label: 'Tip' },
   { key: 'nature', label: 'Tür' },
   { key: 'accountCode', label: 'Hesap kodu' },
+  { key: 'businessLabel', label: 'İş' },
   { key: 'amount', label: 'Tutar' },
   { key: 'counterparty', label: 'Karşı taraf' },
   { key: 'documentKindLabel', label: 'Belge türü' },
@@ -153,14 +151,14 @@ const COLUMNS: ReadonlyArray<{ key: keyof MovementCsvRow & string; label: string
 ];
 
 /**
- * Dökümün CSV'si. Özet dosyanın İÇİNDE (12.7'nin kuralı): muhasebeci satırların toplamını aynı dosyada
- * görmezse kendi toplamını çıkarır ve iki sayı ayrışırsa hangisinin doğru olduğu tartışılır. İzahsız
- * satır sayısı da orada — eksik olan gizlenmez.
+ * Dökümün CSV'si; özet ve izahsız satır sayısı dosyanın içindedir, çünkü muhasebeci toplamı aynı dosyada görmezse kendisi çıkarır ve
+ * iki sayı ayrışırsa hangisinin doğru olduğu tartışılır.
  */
 export function toMovementCsv(data: MovementExport): string {
   const rows: MovementCsvRow[] = data.rows.map((row) => ({
     ...row,
     typeLabel: MOVEMENT_TYPE_LABEL[row.type],
+    businessLabel: BUSINESS_LABELS[row.business],
     documentKindLabel: row.documentKind ? DOCUMENT_KIND_LABEL[row.documentKind] : null,
     documentVatRegimeLabel: row.documentVatRegime ? VAT_REGIME_LABEL[row.documentVatRegime] : null,
     sourceLabel: SOURCE_LABEL[row.source],

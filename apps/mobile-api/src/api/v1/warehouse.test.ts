@@ -140,7 +140,7 @@ async function advance(orderId: string, path: readonly OrderStatus[]): Promise<v
   }
 }
 
-/** Hazırlanmayı bekleyen sipariş — D1 kuyruğunun en kısa zemini. */
+/** Hazırlanmayı bekleyen sipariş, hazırlık kuyruğunun en kısa zemini. */
 async function pendingOrder(opts: { warehouse?: string; qty?: number; date?: string } = {}) {
   const qty = opts.qty ?? 2;
   const warehouse = opts.warehouse ?? warehouseId;
@@ -163,7 +163,7 @@ async function pendingOrder(opts: { warehouse?: string; qty?: number; date?: str
   return { orderId: order.id, itemId: items[0]!.id, qty };
 }
 
-/** Hazırlanmış sipariş — parti kaydı var, yani D6'nın düzeltebileceği bir mal geçmişi var. */
+/** Hazırlanmış sipariş: parti kaydı var, yani düzeltilebilecek bir mal geçmişi var. */
 async function preparedOrder(qty = 2) {
   const order = await pendingOrder({ qty });
   await advance(order.orderId, ['preparing']);
@@ -189,7 +189,7 @@ async function deliveredOrder(qty = 2) {
 
 /** Tedarik siparişi — beklenen adet ve birim maliyetle (**cent**; admin girer, depocu görmez). */
 async function draftPurchaseOrder(qty: number, unitPriceCents: number): Promise<string> {
-  const { order } = await new PurchaseOrderService(db).createDraft(supplierId, [{ variantId, qty, unitPriceCents }]);
+  const { order } = await new PurchaseOrderService(db).createDraft(supplierId, 'lezzet', [{ variantId, qty, unitPriceCents }]);
   return order.id;
 }
 
@@ -528,7 +528,7 @@ describe('D2 · mal kabul', () => {
 
     const body = await dataOf<PendingIntakesResponse>(await asStaff('/api/v1/warehouse/intake'));
 
-    // Küresel sayıya BAKILMAZ: liste depo-üstüdür (satın alma K6), kendi kimliğimiz aranır.
+    // Küresel sayıya bakılmaz: liste deponun işinin bütün siparişleridir, kendi kimliğimiz aranır.
     const mine = body.intakes.find((row) => row.purchaseOrderId === purchaseOrderId);
     expect(mine).toEqual({
       purchaseOrderId,
@@ -1133,8 +1133,8 @@ describe('D6 · POST /api/v1/warehouse/returns/:orderId', () => {
 });
 
 /*
-  D1 · Sevk uçları — yalnız ucun kendi işi: sağlayıcı yapılandırılmamışsa ağa hiç çıkmamak ve depo kapsamı. Kapının iş
-  kuralları `packages/application/src/shipping/announce.test.ts`te sınanır.
+  Sevk uçları: yalnız ucun kendi işi sınanır, sağlayıcı yapılandırılmamışsa ağa hiç çıkmamak ve depo kapsamı. Kapının iş kuralları
+  `packages/application/src/shipping/announce.test.ts`tedir.
 */
 describe('D1 · sevk uçları (teklif + duyuru)', () => {
   it('sağlayıcı yapılandırılmamışken 503 — boş anahtarla ağa çıkılmaz', async () => {

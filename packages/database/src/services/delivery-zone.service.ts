@@ -2,12 +2,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   DeliveryZoneSchema,
   DeliveryZoneInsertSchema,
+  DeliveryZonePostalCodeInsertSchema,
   DeliveryZonePostalCodeSchema,
   DeliveryZoneUpdateSchema,
   DeliveryZoneWithCodesSchema,
   type DeliveryZone,
   type DeliveryZoneInsert,
   type DeliveryZonePostalCode,
+  type DeliveryZonePostalCodeInsert,
   type DeliveryZoneUpdate,
   type DeliveryZoneWithCodes,
 } from '@lezzet/types';
@@ -51,15 +53,19 @@ export class DeliveryZoneService extends BaseDbService<DeliveryZone, DeliveryZon
   }
 }
 
-/** Satırın kendi kimliği yok, anahtar `(country, postal_code)`; küme sil-yaz ile değiştiği için silme açık. */
-export class DeliveryZonePostalCodeService extends BaseDbService<DeliveryZonePostalCode, DeliveryZonePostalCode, DeliveryZonePostalCode> {
+/** Satırın kendi kimliği yok, anahtar `(country, postal_code, business)`; küme sil-yaz ile değiştiği için silme açık. */
+export class DeliveryZonePostalCodeService extends BaseDbService<
+  DeliveryZonePostalCode,
+  DeliveryZonePostalCodeInsert,
+  DeliveryZonePostalCodeInsert
+> {
   constructor(supabase: SupabaseClient) {
     super(
       supabase,
       'delivery_zone_postal_code',
       DeliveryZonePostalCodeSchema,
-      DeliveryZonePostalCodeSchema,
-      DeliveryZonePostalCodeSchema,
+      DeliveryZonePostalCodeInsertSchema,
+      DeliveryZonePostalCodeInsertSchema,
     );
   }
 

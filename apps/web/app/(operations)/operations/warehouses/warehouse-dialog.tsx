@@ -8,6 +8,7 @@ import { Button } from '@/components/operation/ui/button';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
 import { AlertIcon } from '@/components/operation/ui/icons';
 import { COUNTRY_LABELS, COUNTRY_OPTIONS } from '@/components/operation/ui/labels';
+import { BUSINESS_OPTIONS } from '@/components/operation/form/business-field';
 import { FormInput } from '@/components/operation/form/form-input';
 import { FormSelect } from '@/components/operation/form/form-select';
 import { FormSwitch } from '@/components/operation/form/form-switch';
@@ -15,17 +16,9 @@ import { saveWarehouseAction } from './actions';
 import { WarehouseFormSchema, type WarehouseFormInput, type WarehouseRowView } from './warehouses-types';
 
 /**
- * Depo künyesi — ekleme ve düzenleme (19.5).
- *
- * **Nadir ve sonuçları ağır bir kurulum işi** (`design/pages/admin-depolar.md §7`): hız değil,
- * doğruluk ve geri dönülmezliğin anlaşılması önemli. O yüzden form üç yerde konuşuyor:
- *  · kodun belge parçası olduğu ve geçmişi değiştirmediği,
- *  · yeni bir ÜLKEDE ilk deponun vergi modelini değiştirdiği,
- *  · kargo çıkışı rolünün ülke başına tek olduğu ve bugün kimde durduğu.
- *
- * **Aktiflik burada YOK.** Kapatma dört ayrı sonucu olan bir karardır ve kendi penceresinde onaylanır;
- * bir form anahtarı olsaydı "kaydet"e basmanın yan etkisi hâline gelirdi. Alt barda yalnız o pencereyi
- * AÇAN düğme var.
+ * Depo künyesi, ekleme ve düzenleme: nadir ve sonuçları ağır bir kurulum işi olduğu için form kodun belge parçası olduğunu, yeni ülkede
+ * ilk deponun vergi modelini değiştirdiğini ve kargo çıkışının ülke başına tek olduğunu söyler. Aktiflik burada yok, çünkü kapatma dört
+ * sonucu olan ayrı bir karardır ve kendi penceresinde onaylanır.
  */
 const FORM_ID = 'warehouse-form';
 
@@ -57,6 +50,8 @@ export function WarehouseDialog({
     defaultValues: {
       code: editing?.code ?? '',
       name: editing?.name ?? '',
+      // Etiketsiz depo Lezzet'tir (docs/feature/iki-is.md 6. karar).
+      business: editing?.business ?? 'lezzet',
       // Varsayılan ülke YOK sayılmaz: bugün hizmet verdiğimiz ilk ülke Fransa ve yeni tesisin
       // oradan doğması olağan hâl. Ülke değişince mali uyarı zaten belirir.
       countryCode: editing?.countryCode ?? 'FR',
@@ -67,7 +62,7 @@ export function WarehouseDialog({
         postalCode: editing?.address?.postalCode ?? '',
         city: editing?.address?.city ?? '',
       },
-      // Kayıtlı nokta varsa gösterilir; boşsa kapı adresten çözer (11.9).
+      // Kayıtlı nokta varsa gösterilir; boşsa kapı adresten çözer.
       lat: editing?.lat == null ? '' : String(editing.lat),
       lng: editing?.lng == null ? '' : String(editing.lng),
     },
@@ -76,6 +71,7 @@ export function WarehouseDialog({
 
   const country = useWatch({ control: form.control, name: 'countryCode' });
   const shipsOnline = useWatch({ control: form.control, name: 'shipsOnline' });
+  const business = useWatch({ control: form.control, name: 'business' });
 
   // Rolü BUGÜN taşıyan depo (kendisi hariç). Kural veritabanında; buradaki okuma yalnız cümle kurmak
   // için — kayıt yine de kısıta çarpar ve action onu okunur bir hataya çevirir.
@@ -138,6 +134,23 @@ export function WarehouseDialog({
           )}
         </span>
 
+        {/* Stok, mal kabul ve sipariş işini depodan alır; kural ve kilit veritabanında, burada yalnız kilidin sebebi okunur. */}
+        <FormSelect
+          control={form.control}
+          name="business"
+          label="İş"
+          options={BUSINESS_OPTIONS}
+          required
+          disabled={editing?.kind === 'vehicle' || editing?.businessLocked}
+          labelAside={
+            editing?.kind === 'vehicle'
+              ? 'aracın işi evinin işidir'
+              : editing?.businessLocked
+                ? 'depo kullanıldığı için değişmez'
+                : 'stok ve sipariş işini depodan alır'
+          }
+        />
+
         <FormSelect control={form.control} name="countryCode" label="Ülke" options={COUNTRY_OPTIONS} required />
 
         {/* Yeni ÜLKEDE ilk depo — mali uyarı. Alan bir beyandır, kural Ayarlar'da tanımlıdır. */}
@@ -154,11 +167,8 @@ export function WarehouseDialog({
           <FormInput control={form.control} name="address.postalCode" label="Posta kodu" required mono placeholder="67000" />
           <FormInput control={form.control} name="address.city" label="Şehir" required placeholder="Strasbourg" />
         </div>
-        {/* ── DEPONUN NOKTASI (11.9) — rotanın çıpası ────────────────────────────
-            Kurye rotasının sırası bu noktadan başlayıp buraya döner; nokta yoksa o deponun
-            rotaları HİÇ sıralanamaz. Boş bırakılırsa kaydederken adresten çözülür — dolduysa
-            operatörün değeri kazanır, çünkü yanlış bir çıpa HER rotayı bozar ve "genelde doğru"
-            burada yetmez. */}
+        {/* Deponun noktası rotanın çıpasıdır: kurye rotası buradan başlayıp buraya döner, nokta yoksa rotalar sıralanamaz. Boşsa
+            kaydederken adresten çözülür, doluysa operatörün değeri kazanır, çünkü yanlış bir çıpa her rotayı bozar. */}
         <div className="grid grid-cols-2 gap-3">
           <FormInput control={form.control} name="lat" label="Enlem" mono placeholder="boş bırak — adresten çözülür" />
           <FormInput control={form.control} name="lng" label="Boylam" mono placeholder="boş bırak — adresten çözülür" />
@@ -171,7 +181,11 @@ export function WarehouseDialog({
           <FormSwitch control={form.control} name="shipsOnline" label="Kargo çıkış deposu" />
           {/* Rol DOLU ise reddi ÖNCEDEN söylüyoruz: kaydedip hata almak yerine, devretmenin yolunu
               gösteren bir cümle. Kural yine de veritabanında — bu blok onun yerine geçmez. */}
-          {shipsOnline && holder ? (
+          {shipsOnline && business === 'qualite' ? (
+            <Notice tone="red">
+              <strong>QUALITE kargo göndermez.</strong> Kargo çıkış deposu yalnız Lezzet deposu olabilir — kural veritabanındadır.
+            </Notice>
+          ) : shipsOnline && holder ? (
             <Notice tone="red">
               <strong>
                 {COUNTRY_LABELS[country]}'da bu rolü {holder.name} ({holder.code}) taşıyor.

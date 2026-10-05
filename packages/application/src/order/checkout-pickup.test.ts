@@ -9,6 +9,7 @@ import {
   SettingsService,
   StockService,
   UserProfileService,
+  WarehouseService,
   serviceDb,
 } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock, testPostalCode } from '@lezzet/database/testing';
@@ -20,6 +21,7 @@ import { placeOrder } from './place-order';
  * Gel-al checkout'u. Her test adını verebildiği bir arızayı yakalar:
  *  · izinsiz müşteriye teklif çıkar ya da izinsiz istek sipariş açarsa → teklif `null`, ret `pickup_not_allowed`;
  *  · gel-al noktası olmayan depo seçilebilirse → `pickup_warehouse_unavailable`;
+ *  · öteki işin gel-al deposu teklifte görünür ya da sipariş alırsa → teklif listesi, ret `pickup_warehouse_unavailable`;
  *  · gel-al siparişi bölge/gün/kargo ücreti taşır ya da depo seçilen değilse → satırın alanları;
  *  · depoda ödeme (kapıda ödeme kuralı) kapalı çıkarsa → yöntem listesi;
  *  · gel-al siparişine sepetin grubu ya da kapının asgari sepeti uygulanırsa → adrese gidemeyen kalem düşer ya da sipariş reddedilir.
@@ -29,6 +31,8 @@ const stamp = Date.now();
 const kod = testPostalCode();
 let pickupWarehouseId = '';
 let plainWarehouseId = '';
+let qualitePickupId = '';
+let qualiteCustomerId = '';
 let categoryId = '';
 let productId = '';
 let variantId = '';
@@ -48,6 +52,8 @@ const sepeteKoy = (customerId: string, lines: ReturnType<typeof entries>) =>
 beforeAll(async () => {
   pickupWarehouseId = (await createTestWarehouse(db, { label: 'GLA', pickupEnabled: true })).id;
   plainWarehouseId = (await createTestWarehouse(db, { label: 'DUZ' })).id;
+  qualitePickupId = (await createTestWarehouse(db, { label: 'GLQ', pickupEnabled: true })).id;
+  await new WarehouseService(db).update({ id: qualitePickupId, business: 'qualite' });
   categoryId = (await new CategoryService(db).create({ name: { tr: `Gel-al checkout ${stamp}` } })).id;
   const urun = await new ProductService(db).create({
     name: { tr: `Gel-al künefesi ${stamp}` },
@@ -62,6 +68,18 @@ beforeAll(async () => {
   const profiles = new UserProfileService(db);
   allowedId = (await profiles.insert({ name: `Gel-al izinli ${stamp}`, phone: `+3365555${String(stamp).slice(-4)}`, pickupAllowed: true })).id;
   deniedId = (await profiles.insert({ name: `Gel-al izinsiz ${stamp}`, phone: `+3366666${String(stamp).slice(-4)}` })).id;
+  // QUALITE yalnız onaylı şirkete verilir; onay işten önce gelir.
+  qualiteCustomerId = (
+    await profiles.insert({
+      name: `Gel-al QUALITE ${stamp}`,
+      type: 'company',
+      companyInfo: { legalName: `SARL Gel-al ${stamp}` },
+      b2bApproved: false,
+      pickupAllowed: true,
+    })
+  ).id;
+  await profiles.approveB2b(qualiteCustomerId);
+  await profiles.update({ id: qualiteCustomerId, business: 'qualite' });
   const addresses = new AddressService(db);
   // Adres hiçbir bölgede değil: gel-al adresten çözülmez, adres yalnız fatura adresi olarak siparişe yazılır.
   allowedAddressId = (await addresses.addForCustomer({ customerId: allowedId, recipient: 'Gel-al Alıcı', phone: '+33612345678', line1: '2 rue du Test', postalCode: kod, city: 'Strasbourg' })).id;
@@ -69,10 +87,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await mustDelete(db, 'order', (q) => q.in('customer_id', [allowedId, deniedId]));
+  await mustDelete(db, 'order', (q) => q.in('customer_id', [allowedId, deniedId, qualiteCustomerId]));
   await purgeVariantStock(db, [variantId]);
   await db.from('address').delete().in('customer_id', [allowedId, deniedId]);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [allowedId, deniedId], warehouseIds: [pickupWarehouseId, plainWarehouseId] });
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [allowedId, deniedId, qualiteCustomerId], warehouseIds: [pickupWarehouseId, plainWarehouseId, qualitePickupId] });
 });
 
 describe('gel-al teklifi (anlık görüntü)', () => {
@@ -83,6 +101,15 @@ describe('gel-al teklifi (anlık görüntü)', () => {
     expect(allowed.pickup?.warehouses.map((w) => w.id)).not.toContain(plainWarehouseId);
     const denied = await readCheckoutSnapshot(db, 'fr', { customerId: deniedId, entries: entries(), addressId: deniedAddressId });
     expect(denied.pickup).toBeNull();
+  });
+
+  it('teklif müşterinin işindeki gel-al noktalarıdır: iki iş birbirinin deposunu görmez', async () => {
+    const lezzet = await readCheckoutSnapshot(db, 'fr', { customerId: allowedId, entries: entries(), addressId: allowedAddressId });
+    expect(lezzet.pickup?.warehouses.map((w) => w.id)).toContain(pickupWarehouseId);
+    expect(lezzet.pickup?.warehouses.map((w) => w.id)).not.toContain(qualitePickupId);
+    const qualite = await readCheckoutSnapshot(db, 'fr', { customerId: qualiteCustomerId, entries: entries(), addressId: null });
+    expect(qualite.pickup?.warehouses.map((w) => w.id)).toContain(qualitePickupId);
+    expect(qualite.pickup?.warehouses.map((w) => w.id)).not.toContain(pickupWarehouseId);
   });
 
   it('gel-al seçilince tür `pickup`, gün ve kargo yok, depoda ödeme açık, ücret sıfır', async () => {
@@ -134,6 +161,10 @@ describe('gel-al siparişi (placeOrder)', () => {
 
   it('gel-al noktası olmayan depo reddedilir', async () => {
     expect((await place(allowedId, allowedAddressId, plainWarehouseId)).status).toBe('pickup_warehouse_unavailable');
+  });
+
+  it('öteki işin gel-al deposu reddedilir — teklifte olmasa da istek elle kurulabilir', async () => {
+    expect((await place(allowedId, allowedAddressId, qualitePickupId)).status).toBe('pickup_warehouse_unavailable');
   });
 
   it('depoda ödemeyle gel-al siparişi: seçilen depodan, bölgesiz, günsüz, kargo ücretsiz, fatura adresiyle', async () => {
@@ -252,6 +283,7 @@ describe('gel-al sepetin grubuna ve kapının asgari sepetine bağlı değildir'
 
   it('gel-al sepeti depo kapsamlı tabanı okumaz — okusaydı sepetin düğmesi kapanırdı', async () => {
     const view = await getCartView(db, 'fr', ikiKalem(), {
+      business: 'lezzet',
       customerId: allowedId,
       warehouseId: pickupId,
       shippingWarehouseId: null,

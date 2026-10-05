@@ -285,6 +285,7 @@ oturumun künyesi olayların arasında ayrışabilirdi.
 | `product_id` | uuid | • |  |
 | `channel` | channel | • |  |
 | `warehouse_id` | uuid | • |  |
+| `business` | business |  |  |
 | `availability` | analytics_availability | • |  |
 | `blocked_reason` | analytics_blocked_reason | • |  |
 | `device` | analytics_device | • |  |

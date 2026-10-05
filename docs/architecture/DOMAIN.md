@@ -230,6 +230,7 @@ Toptanda "bugün 10 koli alırsan şu fiyat" gündeliktir; kalıcı `Price` sat�
 - **Müşterinin genel fiyat kuralı bu havuzda değildir** — bir fiyattır (yukarıda "Fiyat çözüm sırası"); kazandığı kalem indirim matrahına girmez.
 - **Paketler hariç:** `Bundle` fiyatı sabittir — hiçbir genel indirim/kupon uygulanmaz. Near-expiry teklif satırı ve müşteriye özel fiyatlı kalem de kendi fiyatındadır; genel indirim binmez.
 - **Koşullar (parametrik):** asgari sepet, ilk sipariş, geçerlilik tarihi, kullanım sınırı.
+- **Yalnız Lezzet:** kampanya ve kupon Lezzet'indir; QUALITE sepeti indirim almaz, vitrin QUALITE müşterisine kampanya duyurmaz ve indirim taşıyan sipariş QUALITE deposundan yazılamaz (`docs/feature/iki-is.md`, karar 13).
 - Uygulanan indirim siparişe yazılır (`Order.discount_id` + `discount_amount`); net tutar para hareketine yansır, kâr buna göre türetilir.
 - **Kalemlere dağıtım:** sepet düzeyi indirim sipariş anında kalemlere **oransal dağıtılır** (`OrderItem.line_discount_amount`) — kısmi karşılamada iade tutarı ve kalem KDV'si **indirimli birim fiyattan** hesaplanır; sonradan hesap belirsizliği kalmaz.
 
@@ -261,8 +262,8 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
   - Kural **kodda zorlanır, veriyle değil** (`packages/application/src/cart/min-basket.ts`): kargo yolunda ayar yalnız kanal kapsamından okunur (`only: ['channel']`), küresel satır bile sayılmaz. Kapsam düşürmek yetmiyordu — küresel satır her zaman eşleşir, yani operatör küresel bir eşik yazdığı gün kargo siparişleri sessizce ona takılırdı. **Kimsenin vermediği bir kararın oluşabildiği yol kapatıldı.**
   - Bu güvence sayesinde taban **küresel satıra** yazılabiliyor (bölge bölge tekrarlanmadan); bölge satırı yalnız gerçekten farklı bir tur için gerekir.
 - **Depodan teslim (gel-al) — yalnız izinli müşteriye (22.09):** üçüncü teslim türü `pickup`, checkout'ta yalnız
-  `Customer.pickup_allowed` müşteriye ve yalnız gel-al noktası olan tesisler (`Warehouse.pickup_enabled`) için
-  sunulur; herkese açık bir Drive değildir. Seçim adres seçicide yapılır: depo bir adres gibi listelenir (web sepet,
+  `Customer.pickup_allowed` müşteriye ve yalnız müşterinin işindeki gel-al noktası olan tesisler (`Warehouse.pickup_enabled`)
+  için sunulur; herkese açık bir Drive değildir. Seçim adres seçicide yapılır: depo bir adres gibi listelenir (web sepet,
   telefon adres çekmecesi, checkout adres bölümü), seçilen adres fatura adresi olarak kalır (seçim yoksa varsayılan),
   posta koduyla ilişkisi yoktur. Depo seçiliyken sepet, katalog, ürün, vitrin ve paket okumaları seçilen depoya göre
   yapılır (liste ile detay aynı yeri sorar). Sipariş seçilen depodan çıkar, bölge ve gün yok, kargo ücreti yok, asgari
@@ -412,7 +413,7 @@ Sipariş kalem-kalem karşılanabilir (all-or-nothing değil). Eksik iki noktada
 ## 9. Ön muhasebe sınırı
 
 - Sistem **resmî muhasebe değildir**, e-fatura kesmez; **hiçbir resmî belge (fatura, avoir vb.) sistemde üretilmez** — müşteri faturasını muhasebe tarafından alır, sitede fatura indirme yoktur.
-- Yaptığı: Pennylane'e alış belgesini ve eşleşmeyi temiz yazmak ve iş rakamları çıkarmak. Pennylane QUALITE ile Lezzet'in buluştuğu iç defterdir; muhasebeciye giden dosya oradan üretilir. Raporlar ekranındaki satış dosyası ve dönemin **hareket dökümü** (her hareket hesabı, türü ve hesap kodu, belgeleri, karşı tarafı ve etiketleriyle) genel amaçlı dışa aktarımdır.
+- Yaptığı: Pennylane'e alış belgesini ve eşleşmeyi temiz yazmak ve iş rakamları çıkarmak. Pennylane QUALITE ile Lezzet'in buluştuğu iç defterdir; muhasebeciye giden dosya oradan üretilir. Raporlar ekranındaki satış dosyası ve dönemin **hareket dökümü** (her hareket hesabı, türü ve hesap kodu, belgeleri, karşı tarafı ve etiketleriyle) genel amaçlı dışa aktarımdır; ikisi de şirketin tamamı için ya da tek iş için alınır ve her satır işini taşır.
 - Resmî fatura numarası dış yazılımda üretilir; sistem bir **referans numarası** verir, sonradan gerçek fatura numarasıyla eşleştirilir.
 - Banka hareketleri Pennylane'den okunur (eşlenmemiş hesapta Excel ile alınır), sipariş/alımlarla eşleştirilir (öneri + elle onay; tam otomatik değil). Eşlenen hesaba canlıya geçiş gününden sonrası için Excel yüklenmez, çünkü iki kaynak aynı satırı iki kez yazardı; aynı sebeple Excel satırı o güne ya da sonrasına düşen hesap eşlenmez.
 - Alış belgesi (ödeyeceğimiz fatura ve fiş) bizde girilir ve Pennylane'e bizden yüklenir; belge değişince Pennylane güncellenir. Belge dosyası PDF, JPEG ya da PNG'dir, çünkü Pennylane başka türü almıyor. Belge Pennylane'de işinin analitik kategorisini taşır ("Lezzet" ya da "QUALITE"), çünkü Pennylane iki işin ortak defteridir.
@@ -425,7 +426,7 @@ Tüm finans tek mantıkla: **para bir hesapta durur, hareketlerle girer/çıkar.
 - **Para hareketi (tek tablo):** her giriş/çıkışın bir **hesabı** ve **tipi** var — sipariş ödemesi, gider, satın alma, transfer (hesaplar arası: nakit→banka, Stripe→banka payout), sermaye girişi, sair. Kasa hareketi ile banka hareketi **aynı şeydir**, yalnız hesabı farklı.
 - **Her hareket izah edilebilir** (kullanıcı kararı 13.09 · ikinci karar, muhasebeci karşılaştırması): ya bir işe bağlıdır (sipariş, mal kabul, tedarikçi, transfer), ya bir **belgeye** bağlıdır (fatura, fiş, bordro, sözleşme, dekont — tutarıyla: bir ödeme birden çok belgeyi, bir belge birden çok ödemeyi kapatabilir), ya bir **türü** vardır (sözlükten TEK tür: kira, maaş, banka masrafı; isteğe bağlı hesap planı kodu). Muhasebe yazılımında bizde olmayan bir faturaya eşli hareket izahlı sayılmaz: o fatura oraya doğrudan girilmiştir, belgesi bizde girilir. Hiçbiri yoksa "izah edilmemiş" kuyruğundadır; kayıt engellenmez, kuyruk bir iş listesidir. **Cari** "kime ödendi / kimden geldi"dir (URSSAF, muhasebeci, ev sahibi — eşleşme kelimeleri ve varsayılan türüyle), **etiket** serbest işarettir; ikisi de tek başına izah değildir. Ortağın kaydı ortak cari HESABIDIR; ortak etiketle ayrılmaz.
 - **Belge para değildir:** fatura geldiğinde borç doğar, ödeme sonra bir hareket olarak gelir ve belgeye bağlanır; açık kalan hareketlerden türetilir. ~~Stok alımının faturası mal kabule bağlanır ve ikinci bir borç doğurmaz.~~ Stok alımının faturası mal kabule ya da (mal gelmeden kesildiyse) tedarik siparişine bağlanır ve **tedarikçi borcu o belgeden türer** (12.26 · kullanıcı kararı 14.09): kabulün satır toplamı KDV hariçtir ve nakliyeyi bilmez. Belgenin KDV rejimi (standart · ters yükleme · muaf) bir ALANDIR, etiket değil. Belgenin KDV'si oran başına kırılımla tutulur: ödeyeceğimiz fatura ve fiş kırılımsız kaydedilmez, satırın KDV'si orana uyar.
-- **İş (QUALITE · Lezzet):** her belge ve hareket tek işe aittir (`docs/feature/iki-is.md`). Belgenin işi mal kabule bağlıysa deponun, değilse seçimin, tedarikçinin ya da carinin işidir; hiçbiri iş söylemiyorsa belge yazılmaz. Hareketin işi bağından türer: belge, siparişin ya da mal kabulün deposu, tedarikçi, cari; hiçbiri iş söylemiyorsa Lezzet'tir. Bir ödeme iki işin belgesini kapatamaz. Banka hesabının işi yoktur, etiketsiz depo Lezzet'tir.
+- **İş (QUALITE · Lezzet):** her belge ve hareket tek işe aittir (`docs/feature/iki-is.md`). Belgenin işi mal kabule bağlıysa deponun, tedarik siparişine bağlıysa siparişin, değilse seçimin, tedarikçinin ya da carinin işidir; hiçbiri iş söylemiyorsa belge yazılmaz. Hareketin işi bağından türer: belge, siparişin ya da mal kabulün deposu, tedarikçi, cari; hiçbiri iş söylemiyorsa Lezzet'tir. Bir ödeme iki işin belgesini kapatamaz. Banka hesabının işi yoktur, etiketsiz depo Lezzet'tir.
 - **Satın alma / gider:** giderler bu hareketlerin bir tipidir. **Stok alımı** olan gider ayrıca bir **stok girişi** (`StockIntake` → partiler + maliyet) oluşturur; diğer giderler (kira, akaryakıt, maaş) hareket + tür (+ belge)dir.
 - **Reklam gideri kampanya künyesiyle girer:** `reklam` türü + `meta.campaign` — analitik, kampanyanın **cirosunu ve giderini yan yana** koyar; gerçek ROI Excel'e taşınmaz.
 - **Banka import (AI):** AI ajanı banka dosyasından sütun şablonunu çıkarır (`BankImportProfile`), satırlar hesabın para hareketleri olarak girer, sonra karşılığına bağlanır (öneri + elle onay). **Her banka satırının bir karşılığı vardır** (kullanıcı kararı 13.09 · 12.13): sipariş tahsilatı, müşteri iadesi, açık belge (fatura), mal kabul (tedarikçi borcu), transferin öteki yakası (kasadan yatırma, Stripe payout'u), başka hesaba transfer, o hesaba ekstreden önce elle yazılmış hareket, cari (eşleşme kelimesiyle önerilir) ya da tür koyma. Hiçbir satır "atla"ya mecbur değildir; verilen cevap **geri alınabilir** — eşleşme çözülür, satır kuyruğa döner.
@@ -592,6 +593,8 @@ Yalnızca siparişin **doğrudan** (o sipariş yüzünden var olan) giderleri d�
 
 Ürün kârlarının toplamından **genel giderler** (kira, maaş, araç, sabit masraf — ön muhasebe gelir/gider, §9) düşülür. Genel giderler tek tek ürüne dağıtılmaz; şirket seviyesinde bir kez düşülür. Böylece hem ürün kararı temiz kalır hem şirketin gerçek kârı görünür.
 
+**İki iş ayrı okunabilir:** kâr raporları işe göre süzülür; satışın işi deposundan, firenin işi düştüğü depodan, genel giderin işi hareketin bağından gelir. Süzgeçsiz rapor şirketin tamamıdır.
+
 > Ürün kârlılığı = katkı payı (doğrudan gider düşülür). Şirket kârlılığı = tam P&L (genel gider de düşülür). Ortaklık paylaşımı platform satışları üzerinden yürür (bkz. `PRODUCT.md`); sistem her satışı doğru ve değişmez kaydeder.
 
 ---
@@ -735,11 +738,14 @@ Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet
 
 ### Omurga: posta kodu → bölge → depo
 
-- Her teslimat bölgesi (`DeliveryZone`) **tek bir depoya** bağlıdır; bir posta kodu **tek bir
-  bölgede** olabilir — pasif bölge dahil ("pasifken çakışsın" esnekliği, bölge yeniden açıldığında
-  iki sahipli kod bırakırdı). Tekillik veritabanında `(ülke, kod)` anahtarıyla zorlanır, çakışma
-  kayıt anında reddedilir ("ilki kazanır" sessiz çözümü kalkar). Ülke bölgeye değil kod satırına
-  yazılır — bölge sınır ötesi olabilir (ADR-002). Sonuç: posta kodu her zaman tek depoya çözülür.
+- Her teslimat bölgesi (`DeliveryZone`) **tek bir depoya** bağlıdır ve işini o depodan alır; bir posta kodu
+  **her işte tek bir bölgede** olabilir — pasif bölge dahil ("pasifken çakışsın" esnekliği, bölge yeniden açıldığında
+  iki sahipli kod bırakırdı). QUALITE ile Lezzet aynı mahalleye ayrı seferle gittiği için aynı kod iki işin ayrı
+  bölgesinde durabilir (`docs/feature/iki-is.md`). Tekillik veritabanında `(ülke, kod, iş)` anahtarıyla zorlanır,
+  çakışma kayıt anında reddedilir ("ilki kazanır" sessiz çözümü kalkar). Ülke bölgeye değil kod satırına yazılır —
+  bölge sınır ötesi olabilir (ADR-002). Sonuç: posta kodu müşterinin işi içinde her zaman tek depoya çözülür; ziyaretçi
+  Lezzet'tir, QUALITE kendi bölgesi dışında Lezzet deposuna düşmez ve kargo göndermez; o müşteriye "teslimat noktası
+  belirlenemedi" denir ve bu bir yapılandırma eksiği sayılmaz.
 - Müşteriye depo **gösterilmez** — altın kural: sistemin karmaşıklığı arayüze yansımaz. Müşteri
   posta kodunu girer; gerisi içeride çözülür.
 - **Varsayılan depo kavramı YOKTUR.** Belirsizlik varsayılanla çözülmez: sipariş deposunun kaynağı
@@ -789,6 +795,9 @@ izi ve soğuk zincir kendiliğinden çalışır.
 - **Bir sipariş tek depodan çıkar** (`Order.warehouse_id`); bölünmüş sipariş yoktur ve soğuk zincir
   ürünü asla depo değiştirmez. Değişmez **veride** durur: siparişe yazılan partiler siparişin
   deposundan olmak zorundadır (ertelenmiş kısıt — `order_discount_balance` emsali).
+- **Sipariş müşterinin işinin deposundan çıkar** (`docs/feature/iki-is.md`, karar 7 ve 10): QUALITE müşterisi yalnız
+  QUALITE deposundan, Lezzet müşterisi ve anonim alıcı yalnız Lezzet deposundan alır; QUALITE deposunda kapı satışı
+  yapılmaz. Kural veridedir ve yazılmış siparişin işi depo değişse de değişmez.
 - **Karma sepet (rota müşterisi):** kendi deposunda OLAN her şey — kargolanabilir dahil — rota
   siparişiyle araçtan gider. Kendi deposunda OLMAYAN kargolanabilir ürün **engellenmez**:
   "kargoyla gönderilir" işaretiyle satılır ve **ayrı ödemeli ayrı bir kargo checkout'una** gider
@@ -809,7 +818,8 @@ izi ve soğuk zincir kendiliğinden çalışır.
   stoğu karta işaret olarak düşer; süzme müşterinin elindeki çiptir (varsayılan kapalı).
 - Posta kodu **zorunlu değildir**; ısrarlı ve nazik davetle istenir (anasayfa, katalog girişi,
   soğuk zincir ürün detayı — tasarım deseni). Yer bilinmiyorken yere bağlı hiçbir vaat verilmez:
-  "tükendi" yalnız **hiçbir depoda** yoksa söylenir, gerisi "muhtemel" tonunda kalır.
+  "tükendi" yalnız müşterinin işinin **hiçbir deposunda** yoksa söylenir, gerisi "muhtemel" tonunda kalır; öteki işin
+  deposundaki mal bu müşteriye satılamaz, ziyaretçi Lezzet'tir (`docs/feature/iki-is.md`).
 - Posta kodu değişince sepet yeniden değerlendirilir: yeni depoda karşılanamayan kalem
   **silinmez**, `saved_items`'a taşınır (mevcut mekanizma; tetik genişler). "Burada satılmıyor" ile
   "şu an tükendi" ayrı mesajlardır — ilki kalıcı, ikincisi geçici.
@@ -826,7 +836,9 @@ izi ve soğuk zincir kendiliğinden çalışır.
   depoda parçalı kabul edilebilir, PO durumu kabullerden **türetilir**. PO kalemine isteğe bağlı
   hedef depo yazılabilir ("20 koli STR'ye, 10 koli KEHL'e") — kabul eden depocu kendi payını
   listeden okur. Asgari stok eşiği depo bazlıdır: varyanttaki genel eşik varsayılan, depo satırı
-  istisnadır (müşteriye-özel fiyat deseni); sipariş önerisi depo başına hesaplanır.
+  istisnadır (müşteriye-özel fiyat deseni); sipariş önerisi depo başına hesaplanır. Sipariş tek işe yazılır
+  (`docs/feature/iki-is.md`, karar 4): kalemlerin hedef deposu ve siparişe bağlı kabulün deposu siparişin işindendir, öneriden açılan
+  taslak işe göre bölünür.
 - **Depolar arası transfer** iki fiziksel-gerçek anıyla çalışır (sevk → kabul; §4'ün "yalnız
   fiziksel an stoğu değiştirir" ilkesi): yoldaki mal hiçbir depoda satılamaz, "yolda ne var"
   transfer kaydının kendisidir. Parti kimliği korunur (tarih/lot/alış hedefte yeni partiye

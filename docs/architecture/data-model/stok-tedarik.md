@@ -233,6 +233,7 @@ Taslak → gönderildi → mal kabulde kapanır (bkz. `DOMAIN.md §16`). Sistem 
 | --- | --- | --- | --- |
 | `id` | uuid |  | `gen_random_uuid()` |
 | `supplier_id` | uuid |  |  |
+| `business` | business |  |  |
 | `status` | purchase_order_status |  | `'draft'` |
 | `reference_no` | text | • |  |
 | `sent_at` | timestamptz | • |  |
@@ -242,6 +243,7 @@ Taslak → gönderildi → mal kabulde kapanır (bkz. `DOMAIN.md §16`). Sistem 
 
 **Kararlar**
 
+- **`business`** — siparişin işi (`docs/feature/iki-is.md`, karar 4): kalemlerin hedef deposu ve siparişe bağlı mal kabulün deposu bu işten olmak zorundadır, iş doğduktan sonra değişmez (veride). Öneriden açılan taslak işe göre bölünür; elle açılanın işi hedef depodan, hedef yoksa tedarikçinin varsayılanından, o da yoksa Lezzet'ten gelir.
 - **`reference_no`** — İnsan-okur numara (`TS-26-4K2M9P`) — **gönderimde** üretilir, taslakta null. Belge dışarı çıkıyor (tedarikçiye liste/PDF) ve fatura eşleştirmesinin bağı bu. Rastgele, sıralı DEĞİL: sıralı numara dışarıya iş hacmini söyler (`Order.reference_no` ile aynı karar). Kısıt: taslak değilse zorunlu.
 
 ## PurchaseOrderItem (tedarik siparişi kalemi)

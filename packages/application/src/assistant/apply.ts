@@ -8,7 +8,6 @@ import {
   MovementNatureService,
   ProductService,
   ProductVariantService,
-  PurchaseOrderService,
   RecipeService,
   StockIntakeService,
   StockService,
@@ -35,6 +34,7 @@ import {
 } from '@lezzet/types';
 import { createMoneyDocument } from '../accounting/document';
 import { learnCode } from '../warehouse/scan';
+import { openPurchaseDraft } from '../warehouse/supply';
 import { createSupplier, duplicateSupplierMessage } from '../warehouse/supplier';
 
 /**
@@ -74,18 +74,18 @@ const applyPurchaseOrder: Applier = async (db, raw) => {
   // (`createDraftFromProposalAction`).
   if (payload.source === 'invoice') throw new Error('Faturadan sipariş kuyruğun formundan onaylanır — fatura belgesi orada doğar.');
   if (!payload.supplierId) throw new Error('Tedarikçisi belirlenmemiş öneriden sipariş açılamaz.');
-  const { order } = await new PurchaseOrderService(db).createDraft(
-    payload.supplierId,
-    payload.lines.map((line) => ({
+  const draft = await openPurchaseDraft(db, {
+    supplierId: payload.supplierId,
+    lines: payload.lines.map((line) => ({
       variantId: line.variantId,
       qty: line.qty,
-      // Hedef depo kalem başına yazılır (C7): hedefsiz sipariş hiçbir deponun eksiğini kapatmaz
-      // ve "yolda" hesabı tam da bu akışta sessizce 0 kalırdı.
+      // Hedef depo kalem başına yazılır: hedefsiz sipariş hiçbir deponun eksiğini kapatmaz ve "yolda" hesabı 0 kalırdı.
       targetWarehouseId: payload.warehouseId,
     })),
-    payload.note,
-  );
-  return { purchaseOrderId: order.id };
+    note: payload.note,
+  });
+  if (draft.status !== 'ok') throw new Error('Bir sipariş tek işe yazılır; QUALITE ve Lezzet depolarının kalemleri ayrı siparişle açılır.');
+  return { purchaseOrderId: draft.order.id };
 };
 
 /**

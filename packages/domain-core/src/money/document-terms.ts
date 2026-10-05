@@ -92,8 +92,9 @@ export function documentDueOn(issuedOn: string, paymentTermDays: number | null |
 export type DocumentBusiness = { business: Business } | { problem: 'business_required' | 'business_stock_mismatch' };
 
 /**
- * Belgenin işi: mal kabule bağlı belgede deponun işi, değilse açık seçim, tedarikçinin ya da carinin varsayılanı. Depoyla çelişen
- * seçim ve hiçbir kaynağın iş söylemediği belge reddedilir, çünkü sessiz bir varsayılan belgeyi yanlış işe yazardı.
+ * Belgenin işi: mal kabule bağlı belgede deponun, tedarik siparişine bağlı belgede siparişin işi, değilse açık seçim, tedarikçinin ya da
+ * carinin varsayılanı. Bağla çelişen seçim ve hiçbir kaynağın iş söylemediği belge reddedilir, çünkü sessiz bir varsayılan belgeyi yanlış işe
+ * yazardı.
  */
 export function documentBusinessOf(input: {
   stockBusiness: Business | null | undefined;

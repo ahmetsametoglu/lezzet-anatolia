@@ -4,17 +4,9 @@ import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { resolveAddressCountry, resolvePlaceForPostalCode } from './place';
 
 /**
- * Posta kodu → yer çözümü, PAKET kapısı — girdilerin GERÇEKTEN okunduğunun kanıtı.
- *
- * Karar dallarının tamamı motorun birim testinde (`domain-core/delivery/warehouse-resolve.test`);
- * burada sınanan şey kompozisyon: kod normalize edilerek sorulur, bölgeler AKTİFLİK SÜZGECİSİZ
- * okunur (19.16a — pasif bölgenin kodu "tanımadık" değildir) ve kendi bölge tablomuz referansın
- * üstündedir.
- *
- * Paylaşılan DB (CLAUDE.md §4b): kodlar `009xx`/`008xx`/`007xx` bandından damgalı — bu bant ne
- * FR ne DE posta kodu referansında var (FR 01000'den, DE 01067'den başlar), yani çözüm yalnız BU
- * dosyanın kurduğu bölge satırlarından etkilenir. Kargo dalı BİLEREK iddia edilmiyor: ülkenin
- * kargo deposu küresel durumdur, ona bakan bir iddia başka ajanın verisiyle oynar.
+ * Posta kodu → yer çözümü, paket kapısı: kod normalize edilerek sorulur, bölgeler aktiflik süzgecisiz okunur ve kendi bölge tablomuz
+ * referansın üstündedir; karar dalları motorun birim testindedir. Kodlar ne FR ne DE referansında olan `009xx`/`008xx`/`007xx`
+ * bandından damgalıdır ve kargo dalı iddia edilmez, çünkü ülkenin kargo deposu paylaşılan DB'nin küresel durumudur.
  */
 const db = serviceDb();
 const zones = new DeliveryZoneService(db);
@@ -49,49 +41,37 @@ afterAll(async () => {
 
 describe('posta kodundan yer çözümü (paket kapısı)', () => {
   it('aktif bölgenin kodu rotaya düşer; ülke sorulmadan kendi kaydımızdan türer', async () => {
-    const resolution = await resolvePlaceForPostalCode(db, rotaKodu);
+    const resolution = await resolvePlaceForPostalCode(db, rotaKodu, 'lezzet');
     expect(resolution.kind).toBe('route');
     if (resolution.kind !== 'route') return;
     expect(resolution.warehouseId).toBe(warehouseId);
     expect(resolution.zoneId).toBe(zoneId);
     expect(resolution.country).toBe('FR');
-    // Kendi kaydımız bölgeyi bilir, coğrafi adı bilmez — ad UYDURULMAZ (19.16a).
+    // Kendi kaydımız bölgeyi bilir, coğrafi adı bilmez; ad uydurulmaz.
     expect(resolution.placeName).toBeNull();
   });
 
   it('kod NORMALİZE edilerek sorulur — boşluklu giriş aynı yere düşer', async () => {
-    const resolution = await resolvePlaceForPostalCode(db, ` 009 ${son2} `);
+    const resolution = await resolvePlaceForPostalCode(db, ` 009 ${son2} `, 'lezzet');
     expect(resolution.kind).toBe('route');
   });
 
   it('hiçbir kayıtta olmayan kod unknown — büyük olasılıkla yazım hatası', async () => {
-    expect((await resolvePlaceForPostalCode(db, bilinmezKod)).kind).toBe('unknown');
+    expect((await resolvePlaceForPostalCode(db, bilinmezKod, 'lezzet')).kind).toBe('unknown');
   });
 
   it('pasif bölgenin kodu "tanımadık" DEĞİLDİR — bölgeler süzgeçsiz okunur (19.16a)', async () => {
-    const resolution = await resolvePlaceForPostalCode(db, pasifKod);
-    // Rota kapalı: motor pasif bölgeyi rota saymaz ama ülkeyi kayıttan türetir. Sonuç kargo mu
-    // (`shipping`) yapılandırma eksiği mi (`unresolved/no_shipping_warehouse`) — o, paylaşılan
-    // DB'de FR kargo deposunun var olup olmadığına bağlı KÜRESEL durumdur; iki hâl de doğrudur,
-    // yanlış olan tek şey `unknown`/`route` olurdu. Dalların kilidi motorun birim testinde.
+    const resolution = await resolvePlaceForPostalCode(db, pasifKod, 'lezzet');
+    // Rota kapalı: motor pasif bölgeyi rota saymaz ama ülkeyi kayıttan türetir. Kargo mu yapılandırma eksiği mi, paylaşılan DB'deki FR
+    // kargo deposuna bağlıdır; yanlış olan yalnız `unknown` ya da `route` olurdu.
     expect(resolution.kind).not.toBe('unknown');
     expect(resolution.kind).not.toBe('route');
   });
 });
 
 /**
- * ADRESİN ÜLKESİ — koddan türer, beyandan değil (21.28).
- *
- * ── ADRES DEFTERİ HİZMET ALANINI BİLMEZ (kullanıcı kararı 10.08) ─────────────
- * Kritik iddia: bu çözüm `postal_code_place`e bakar, DEPO tablosuna DEĞİL. Kardeşi
- * `resolvePlaceForPostalCode` adayları hizmet ülkelerimizle kesiştiriyor (`activeCountries`) ve o
- * doğru — "bu adrese nasıl gideriz" sorusunun cevabı; ama adresin ÜLKESİ coğrafi bir gerçektir ve
- * deponun aktifliğinden etkilenemez. Hiçbir kod da kaydı reddettirmez.
- *
- * Kodlar üstteki bandın damgalıları ve İKİSİ DE referansta YOK (`009xx`/`008xx` bandı ne FR ne DE
- * dökümünde var) — yani bu dosyada sınanan dal "referans tanımıyor" dalıdır. Çok ülkeli kodun
- * (610 tane) dalı motorun birim testinde: paylaşılan DB'de ikinci bir ülke kaydı açmak başka
- * ajanın yer çözümünü oynatırdı.
+ * Adresin ülkesi koddan türer, beyandan değil: çözüm `postal_code_place`e bakar, depo tablosuna değil, çünkü adresin ülkesi coğrafi
+ * bir gerçektir ve hiçbir kod kaydı reddettirmez. Buradaki kodlar referansta yok, çok ülkeli kodun dalı motorun birim testindedir.
  */
 describe('adresin ülkesi (21.28)', () => {
   it('referansın tanımadığı kodda müşterinin SEÇİMİ geçerlidir — doğrulayacak veri yok', async () => {
@@ -99,8 +79,7 @@ describe('adresin ülkesi (21.28)', () => {
   });
 
   it('ne kod tanınıyor ne seçim var: `null` — kayıt yine geçer, kolon varsayılanına düşer', async () => {
-    // Reddetmek YANLIŞ olurdu: müşteri adresini dilediği yere girer, oraya gidip gidemediğimiz
-    // sipariş anının sorusudur (kullanıcı kararı 10.08).
+    // Reddetmek yanlış olurdu: müşteri adresini dilediği yere girer, oraya gidip gidemediğimiz sipariş anının sorusudur.
     expect(await resolveAddressCountry(db, { postalCode: bilinmezKod })).toBeNull();
   });
 

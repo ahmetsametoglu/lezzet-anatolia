@@ -3,73 +3,56 @@
 import { revalidatePath } from 'next/cache';
 import { buildExport, matchInvoiceNo, toExportCsv } from '@/lib/accounting/export';
 import { buildMovementExport, toMovementCsv } from '@/lib/accounting/movement-export';
+import { businessOfFilter, parseBusinessFilter, type BusinessFilter } from '@/lib/business-filter';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireFinance } from '@/lib/guard';
 import { monthRange, REPORTS_PATH } from './reports-url';
 
-// Raporlar server action'ları — guard ilk + kapıya devret + `{ data, error }` (throw yok).
-//
-// **Guard `requireFinance`** (yönetici VEYA muhasebeci): export ve fatura eşleştirmesi tam olarak
-// muhasebenin işidir. Kâr blokları ayrı bir kapıdan geçiyor (sayfada `canSeeProfit`) — tasarım §6
-// kârı yalnız yöneticiye açıyor, ama export'u muhasebeciden esirgemek ekranı işlevsiz kılardı.
+// Raporlar server action'ları: guard ilk, sonuç `{ data, error }`. Guard `requireFinance` (yönetici veya muhasebeci), çünkü
+// export ve fatura eşleştirmesi muhasebenin işidir; kâr blokları sayfada ayrı kapıdan (`canSeeProfit`) geçer.
+
+/** Dosya adı ayı ve süzgeçli dosyada işi taşır, yoksa aynı klasördeki aylar ve işler birbirinden ayrılmaz. */
+function filenameOf(kind: 'muhasebe' | 'hareketler', ym: string, filter: BusinessFilter): string {
+  return filter === 'all' ? `${kind}-${ym}.csv` : `${kind}-${ym}-${filter}.csv`;
+}
 
 /**
- * Muhasebe dosyasını üretir — **indirme İSTEMCİDE yapılır**, dosya buradan metin olarak döner.
- *
- * Sunucudan doğrudan dosya yollamak bir rota (route handler) isterdi; oysa üretilen şey birkaç yüz
- * satırlık metin ve zaten ekranın gösterdiği özetin aynısından çıkıyor. Metin dönüp indirmeyi
- * tarayıcıya bırakmak, ikinci bir yetki kapısı açmaktan da güvenli: rota olsaydı guard'ı ayrıca
- * orada tutmak gerekirdi.
- *
- * **Aynı dönem ikinci kez üretilebilir** (tasarım §4: muhasebeci dosyayı kaybetmiş olabilir) —
- * üretim bir KAYIT değil, okuma; hiçbir yere "export edildi" damgası basmıyor.
+ * Muhasebe dosyasını metin olarak döner, indirme tarayıcıda yapılır: ayrı bir rota ikinci bir yetki kapısı isterdi. Üretim kayıt
+ * değil okumadır; aynı dönem tekrar üretilebilir, "export edildi" damgası basılmaz.
  */
-export async function generateExportAction(ym: string): Promise<ActionResult<{ csv: string; filename: string }>> {
+export async function generateExportAction(ym: string, business: BusinessFilter): Promise<ActionResult<{ csv: string; filename: string }>> {
   try {
     await requireFinance();
     const { from, to } = monthRange(ym);
-    const data = await buildExport({ from, to });
+    const filter = parseBusinessFilter(business);
+    const data = await buildExport({ from, to }, businessOfFilter(filter));
 
-    return {
-      data: {
-        csv: toExportCsv(data),
-        // Dosya adı insanın tanıyacağı hâlde: muhasebeciye giden ekte "export.csv" değil ayın adı
-        // görünmeli, yoksa üç ayın dosyası aynı klasörde birbirinden ayrılmaz.
-        filename: `lezzet-muhasebe-${ym}.csv`,
-      },
-      error: null,
-    };
+    return { data: { csv: toExportCsv(data), filename: filenameOf('muhasebe', ym, filter) }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Hareket dökümü: dönemin her para hareketi belgesi, etiketi ve karşı tarafıyla; satış dosyasıyla aynı desen. */
+export async function generateMovementExportAction(
+  ym: string,
+  business: BusinessFilter,
+): Promise<ActionResult<{ csv: string; filename: string }>> {
+  try {
+    await requireFinance();
+    const { from, to } = monthRange(ym);
+    const filter = parseBusinessFilter(business);
+    const data = await buildMovementExport({ from, to }, businessOfFilter(filter));
+
+    return { data: { csv: toMovementCsv(data), filename: filenameOf('hareketler', ym, filter) }, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }
 }
 
 /**
- * Hareket dökümü (12.15) — satış dosyasının yanındaki ikinci dosya: dönemin her para hareketi
- * belgesi, etiketi ve karşı tarafıyla. Aynı desen: metin döner, indirme tarayıcıda; tekrar
- * üretilebilir, damga basmaz.
- */
-export async function generateMovementExportAction(ym: string): Promise<ActionResult<{ csv: string; filename: string }>> {
-  try {
-    await requireFinance();
-    const { from, to } = monthRange(ym);
-    const data = await buildMovementExport({ from, to });
-
-    return {
-      data: { csv: toMovementCsv(data), filename: `lezzet-hareketler-${ym}.csv` },
-      error: null,
-    };
-  } catch (error) {
-    return { data: null, error: getErrorMessage(error) };
-  }
-}
-
-/**
- * Sipariş referansına resmî fatura numarasını bağlar.
- *
- * Numara burada ÜRETİLMEZ — dış muhasebede doğar, sistem kendi referansıyla eşleştirir (12.7'nin
- * kuralı). Boş numara kapıda reddediliyor: yazılsaydı satır kuyruktan düşer ama hiçbir faturaya
- * bağlanmazdı, yani kuyruk temizlenmiş görünürken eşleşme hiç olmazdı.
+ * Sipariş referansına resmî fatura numarasını bağlar; numara dış muhasebede doğar, burada üretilmez. Boş numara reddedilir: yazılsaydı
+ * satır kuyruktan düşer ama hiçbir faturaya bağlanmazdı.
  */
 export async function matchInvoiceAction(orderId: string, invoiceNo: string): Promise<ActionResult<{ ok: true }>> {
   try {

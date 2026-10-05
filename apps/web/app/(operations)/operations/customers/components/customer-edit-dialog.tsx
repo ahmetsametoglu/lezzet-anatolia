@@ -6,9 +6,11 @@ import { FieldShell } from '@/components/operation/form/field-shell';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
 import { ToggleField } from '@/components/operation/form/toggle';
+import { BUSINESS_OPTIONS } from '@/components/operation/form/business-field';
 import {
   CustomerTypeEnum,
   PreferredLanguageEnum,
+  type Business,
   type Country,
   type CustomerPriceBasis,
   type CustomerType,
@@ -36,6 +38,10 @@ interface CustomerEditDialogProps {
   codAllowed: boolean;
   /** Gel-al izni — depodan teslim yalnız işaretli müşteriye sunulur; detaydan gelir. */
   pickupAllowed: boolean;
+  /** Müşterinin işi — detaydan gelir. */
+  business: Business;
+  /** B2B onayı var mı; QUALITE yalnız onaylı şirkete verilir. */
+  b2bApproved: boolean;
   /** Genel fiyat kuralı; ikisi birlikte dolu ya da boş. */
   priceRuleBasis: CustomerPriceBasis | null;
   priceRulePercent: number | null;
@@ -55,6 +61,8 @@ export function CustomerEditDialog({
   preferredLanguage,
   codAllowed,
   pickupAllowed,
+  business,
+  b2bApproved,
   priceRuleBasis,
   priceRulePercent,
   priceGroupId,
@@ -73,6 +81,7 @@ export function CustomerEditDialog({
   const [vat, setVat] = useState(vatNumber ?? '');
   const [cod, setCod] = useState(codAllowed);
   const [pickup, setPickup] = useState(pickupAllowed);
+  const [customerBusiness, setCustomerBusiness] = useState<Business>(business);
   // Kuralın yokluğu '' ile temsil edilir (Select string ister); yüzde metin tutulur, çünkü boş kutu sayı state'inde temsil edilemez.
   const [ruleBasis, setRuleBasis] = useState<CustomerPriceBasis | ''>(priceRuleBasis ?? '');
   const [rulePercent, setRulePercent] = useState(priceRulePercent === null ? '' : String(priceRulePercent));
@@ -123,6 +132,7 @@ export function CustomerEditDialog({
             vatNumber: vat.trim() || null,
             codAllowed: cod,
             pickupAllowed: pickup,
+            business: customerBusiness,
             priceRuleBasis: ruleBasis || null,
             priceRulePercent: ruleBasis ? kuralYuzde : null,
             priceGroupId: group || null,
@@ -186,6 +196,29 @@ export function CustomerEditDialog({
         {/* ── Ticari ayarlar ── Kimlikten AYRI bölüm: ikisi de müşterinin ne ödeyeceğini ve nasıl
             ödeyeceğini belirler, kim olduğunu değil. Ayraç bu yüzden var. */}
         <div className="flex flex-col gap-3 border-t border-ops-line pt-3.5">
+          {/* QUALITE yalnız onaylı şirketin işi olabilir (`user_profiles_business_b2b`); QUALITE müşterisinde kutu, Lezzet'e
+              dönülebilsin diye tip değişse de görünür kalır. */}
+          {type === 'company' || customerBusiness === 'qualite' ? (
+            <FieldShell
+              label="İş"
+              className="max-w-[260px]"
+              labelAside={
+                <span className="font-ops-body text-ops-xs text-ops-muted">
+                  {type === 'company' && b2bApproved
+                    ? 'hangi işin deposundan alacağını belirler'
+                    : 'yalnız onaylı B2B müşteri QUALITE olur'}
+                </span>
+              }
+            >
+              <Select
+                value={customerBusiness}
+                onChange={(v) => setCustomerBusiness(v as Business)}
+                options={BUSINESS_OPTIONS}
+                disabled={customerBusiness === 'lezzet' && !(type === 'company' && b2bApproved)}
+              />
+            </FieldShell>
+          ) : null}
+
           <ToggleField label="Kapıda ödeme izni" on={cod} onChange={setCod} />
           <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
             {cod

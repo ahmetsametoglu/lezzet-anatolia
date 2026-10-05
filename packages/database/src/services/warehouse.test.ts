@@ -11,17 +11,11 @@ import { WarehouseService } from './warehouse.service';
 import { WarehouseTransferService } from './warehouse-transfer.service';
 import { createTestWarehouse, createTestWarehousePair } from '../testing/warehouse';
 import { purgeTestData, purgeVariantStock } from '../testing/cleanup';
+import type { Business } from '@lezzet/types';
 
 /**
- * Depo ağı (19.1) — DB üstünde. Burada **depo geçişinin çıkış ölçütü** doğrulanır: aynı varyant iki
- * depoda, biri boş → boş depodan istenen mal ayrılamaz.
- *
- * Bu testin varlık sebebi şudur: depo süzgeci unutulan bir sorgu TEK DEPOLU bir veri setinde doğru
- * cevap verir ve hiçbir test kırılmaz. Sistem sessizce olmayan malı satmaya başlar ve bunu ancak
- * müşteri fark eder. İki depolu kurulum o sessizliği bozar.
- *
- * Kurallar motorun değil VERİNİN sorumluluğundadır (DOMAIN §17) — burada denenen de tam olarak o:
- * uygulama unutsa bile veritabanı reddediyor mu?
+ * Depo ağı, DB üstünde: aynı varyant iki depoda, biri boşken boş depodan istenen mal ayrılamaz. Depo süzgeci unutulan sorgu tek
+ * depolu veride doğru cevap verirdi; iki depolu kurulum o sessizliği bozar ve kuralı uygulama unutsa da veritabanının reddettiğini sınar.
  */
 const db = serviceDb();
 const stocks = new StockService(db);
@@ -36,6 +30,7 @@ const intakes = new StockIntakeService(db);
 
 let doluDepo: string;
 let bosDepo: string;
+let qualiteDepo: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -48,6 +43,8 @@ beforeAll(async () => {
   const { primary, secondary } = await createTestWarehousePair(db);
   doluDepo = primary.id;
   bosDepo = secondary.id;
+  qualiteDepo = (await createTestWarehouse(db, { label: 'QUA' })).id;
+  await warehouses.update({ id: qualiteDepo, business: 'qualite' });
 
   const category = await categories.create({ name: { tr: `Depo testi ${Date.now()}` } });
   const { product, variants } = await products.create({
@@ -67,23 +64,21 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     supplierIds: [supplierId],
-    warehouseIds: [doluDepo, bosDepo],
+    warehouseIds: [doluDepo, bosDepo, qualiteDepo],
   });
 });
 
 beforeEach(async () => {
   await db.from('reservation').delete().eq('variant_id', variantId);
-  // Transfer satırları partiye `restrict` ile bağlı: silme SIRASI zorunlu. Sıra yanlış olduğunda
-  // parti silinmez, önceki testin stoğu bu teste sızar ve "kullanılabilir" hesabı yalancı geçer —
-  // bir kez yaşandı, sevk testi bu yüzden yanlışlıkla yeşildi.
+  // Transfer satırları partiye `restrict` ile bağlı, silme sırası zorunlu: sıra yanlışsa parti silinmez, önceki testin stoğu bu
+  // teste sızar ve "kullanılabilir" hesabı yalancı geçer.
   const { data: partiler } = await db.from('stock').select('id').eq('variant_id', variantId);
   const ids = (partiler ?? []).map((p) => (p as { id: string }).id);
   if (ids.length > 0) {
     const { data: satirlar } = await db.from('warehouse_transfer_line').select('transfer_id').in('source_stock_id', ids);
     const transferIds = [...new Set((satirlar ?? []).map((l) => (l as { transfer_id: string }).transfer_id))];
-    // **DEFTER TRANSFERDEN ÖNCE** (06.14): sevk/kabul/iptal satırları transferi `restrict` ile
-    // tutuyor. Hareketler partiden siliniyor ve transferinkileri de topluyor — her hareket bir
-    // partiye bağlı (`stock_id` `not null`).
+    // Defter transferden önce silinir: sevk, kabul ve iptal satırları transferi `restrict` ile tutuyor ve her hareket bir partiye
+    // bağlı (`stock_id` `not null`).
     if (transferIds.length > 0) {
       await db.from('stock_movement').delete().in('stock_id', ids);
       await db.from('warehouse_transfer').delete().in('id', transferIds); // satırları CASCADE
@@ -106,8 +101,7 @@ describe('kullanılabilir stok depo içinde hesaplanır', () => {
     await stocks.insert({ variantId, warehouseId: doluDepo, physicalQty: 7, expiryDate: dayOffset(200) });
     await stocks.insert({ variantId, warehouseId: bosDepo, physicalQty: 3, expiryDate: dayOffset(200) });
 
-    // Süzgeç olmasaydı iki satır aynı anahtara düşer ve son okunan depo kazanırdı (T8'in kapattığı
-    // sessiz kırılma). Her iki okuma da KENDİ deposunun sayısını vermeli.
+    // Süzgeç olmasaydı iki satır aynı anahtara düşer ve son okunan depo kazanırdı; her iki okuma da kendi deposunun sayısını vermeli.
     expect((await stocks.getAvailableMap(doluDepo, [variantId])).get(variantId)?.availableQty).toBe(7);
     expect((await stocks.getAvailableMap(bosDepo, [variantId])).get(variantId)?.availableQty).toBe(3);
   });
@@ -117,7 +111,19 @@ describe('kullanılabilir stok depo içinde hesaplanır', () => {
     await stocks.insert({ variantId, warehouseId: bosDepo, physicalQty: 3, expiryDate: dayOffset(200) });
 
     // 7 + 3 = 10 ama bu SATIŞ KARARI DEĞİL: 10 kişilik sipariş bu maldan çıkmaz.
-    expect((await stocks.getNetworkAvailabilityMap([variantId])).get(variantId)?.availableQty).toBe(10);
+    expect((await stocks.getNetworkAvailabilityMap([variantId], null)).get(variantId)?.availableQty).toBe(10);
+  });
+
+  it('depo-üstü toplam işe göredir: QUALITE stoğu Lezzet müşterisinin "hiç var mı" cevabına girmez', async () => {
+    await stocks.insert({ variantId, warehouseId: doluDepo, physicalQty: 7, expiryDate: dayOffset(200) });
+    await stocks.insert({ variantId, warehouseId: qualiteDepo, physicalQty: 4, expiryDate: dayOffset(200) });
+
+    const toplam = async (business: Business | null) =>
+      (await stocks.getNetworkAvailabilityMap([variantId], business)).get(variantId)?.availableQty;
+    expect(await toplam('lezzet')).toBe(7);
+    expect(await toplam('qualite')).toBe(4);
+    // İş verilmeyen okuma iki işi toplar; personelin "hiçbir depoda yok mu" sorusu budur.
+    expect(await toplam(null)).toBe(11);
   });
 });
 
@@ -215,8 +221,8 @@ describe('transfer — iki fiziksel gerçek an', () => {
       transferId: sevk.transferId,
       lines: satirlar.map((s) => ({ lineId: s.id, receivedQty: s.qty === 3 ? 0 : s.qty })),
     });
-    // İKİ parti (04.09, 21.248): sıfır gelen satır da parti açar — sıfır adetle, kayıp ona bağlı.
-    // Eksik 3 birim aynı transaction'da IMH belgesiyle düşer; eskiden hiçbir kayda geçmiyordu.
+    // İki parti: sıfır gelen satır da sıfır adetle parti açar ve kayıp ona bağlanır; eksik 3 birim aynı transaction'da IMH
+    // belgesiyle düşer.
     expect(sonuc.createdBatches).toBe(2);
     expect(sonuc.shortfallQty).toBe(3);
     expect(sonuc.shortfallReferenceNo).toMatch(/^IMH-/);
@@ -231,8 +237,8 @@ describe('transfer — iki fiziksel gerçek an', () => {
     });
     const satirlar = await transfers.listLines(sevk.transferId);
 
-    // Sevk 2 iken 3 sayıldı (fazla 1), sevk 3 iken 2 sayıldı (eksik 1). Fazla artık REDDEDİLMEZ:
-    // gönderen iki sanıp üç koymuş olabilir, rampada sayılan gerçektir.
+    // Sevk 2 iken 3 sayıldı (fazla 1), sevk 3 iken 2 sayıldı (eksik 1). Fazla reddedilmez, çünkü gönderen iki sanıp üç koymuş olabilir
+    // ve rampada sayılan gerçektir.
     const sonuc = await transfers.receive({
       transferId: sevk.transferId,
       lines: satirlar.map((s) => ({ lineId: s.id, receivedQty: s.qty === 2 ? 3 : 2 })),
@@ -294,7 +300,7 @@ describe('transfer — iki fiziksel gerçek an', () => {
 
 describe('tedarik — tek sipariş, iki depoda parçalı kabul (K6)', () => {
   it('fark raporu KÜMÜLATİFTİR — ikinci kabul ilkini yok saymaz', async () => {
-    const po = await purchaseOrders.insert({ supplierId, status: 'sent' });
+    const po = await purchaseOrders.insert({ supplierId, business: 'lezzet', status: 'sent' });
     await db.from('purchase_order_item').insert({ purchase_order_id: po.id, variant_id: variantId, qty: 30 });
 
     await intakes.receive({
@@ -315,7 +321,7 @@ describe('tedarik — tek sipariş, iki depoda parçalı kabul (K6)', () => {
   });
 
   it('ilk kabul siparişi KAPATMAZ, tamamlanınca kapanır', async () => {
-    const po = await purchaseOrders.insert({ supplierId, status: 'sent' });
+    const po = await purchaseOrders.insert({ supplierId, business: 'lezzet', status: 'sent' });
     await db.from('purchase_order_item').insert({ purchase_order_id: po.id, variant_id: variantId, qty: 30 });
 
     await intakes.receive({
@@ -341,13 +347,8 @@ describe('tedarik — tek sipariş, iki depoda parçalı kabul (K6)', () => {
 
 describe('depo kaydı — kurallar veritabanında', () => {
   /**
-   * Test KENDİ kargo deposunu kurar ve kendi topluyor (CLAUDE.md §4b).
-   *
-   * Seed'in bıraktığı `STR` satırına yaslanmak cazipti ama tehlikeli: o satır yoksa insert
-   * BAŞARILI olur, test düşer **ve** geride aktif bir kargo deposu bırakır. O satır kısmi unique
-   * indeksi işgal ettiği için sonraki seed'in kendi kargo deposunu yazması da imkânsızlaşır —
-   * düşen bir test yerel ortamı kalıcı bozardı. Ülke `DE` seçildi: FR'deki gerçek kargo deposuyla
-   * hiç yarışmaz.
+   * Test kendi kargo deposunu kurar ve toplar: seed'in `STR` satırına yaslanmak, satır yokken düşen testin geride aktif bir kargo
+   * deposu bırakıp sonraki seed'i bozması demekti. Ülke `DE`, çünkü FR'deki gerçek kargo deposuyla yarışmaz.
    */
   it('ülke başına ikinci aktif kargo deposu açılamaz, başka ülkede serbesttir', async () => {
     const ilk = await createTestWarehouse(db, { label: 'SHIP', countryCode: 'DE', shipsOnline: true });
@@ -380,6 +381,39 @@ describe('depo kaydı — kurallar veritabanında', () => {
       expect((await warehouses.list({ warehouseIds: [a.id, b.id] })).map((w) => w.id)).toEqual([a.id, b.id]);
     } finally {
       await purgeTestData(db, { warehouseIds: [a.id, b.id] });
+    }
+  });
+});
+
+describe('deponun işi', () => {
+  it('kullanılmamış deponun işi değişir; mal kabul açılınca depo kullanılmış sayılır ve işi değişmez', async () => {
+    const depo = await createTestWarehouse(db, { label: 'IS' });
+    try {
+      expect((await warehouses.update({ id: depo.id, business: 'qualite' })).business).toBe('qualite');
+      expect((await warehouses.inUseIds()).has(depo.id)).toBe(false);
+
+      await intakes.insert({ supplierId, warehouseId: depo.id });
+      expect((await warehouses.inUseIds()).has(depo.id)).toBe(true);
+      await expect(warehouses.update({ id: depo.id, business: 'lezzet' })).rejects.toThrow(/işi değişmez/);
+      expect((await warehouses.getById(depo.id))?.business).toBe('qualite');
+    } finally {
+      await purgeTestData(db, { warehouseIds: [depo.id] });
+    }
+  });
+
+  it('aracın işi evinin işidir: tesisin işi değişince araç izler, araca ayrı iş yazılamaz', async () => {
+    const tesis = await createTestWarehouse(db, { label: 'ISEV' });
+    const arac = await createTestWarehouse(db, { label: 'ISARAC', kind: 'vehicle', homeWarehouseId: tesis.id });
+    try {
+      expect(arac.business).toBe('lezzet');
+      await warehouses.update({ id: tesis.id, business: 'qualite' });
+      expect((await warehouses.getById(arac.id))?.business).toBe('qualite');
+
+      await warehouses.update({ id: arac.id, business: 'lezzet' });
+      expect((await warehouses.getById(arac.id))?.business).toBe('qualite');
+    } finally {
+      await purgeTestData(db, { warehouseIds: [arac.id] });
+      await purgeTestData(db, { warehouseIds: [tesis.id] });
     }
   });
 });

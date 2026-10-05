@@ -14,6 +14,7 @@ import { cityMatchesPlaces } from '@lezzet/address';
 import {
   chooseShippingOption,
   costsAtSale,
+  customerBusinessOf,
   deriveChannel,
   meetsMinBasket,
   needsServicePoint,
@@ -51,7 +52,7 @@ import {
   type CartLine,
 } from '../cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
-import { readDeliveryInputs, resolveDelivery } from './delivery';
+import { readDeliveryInputs, resolveDelivery, type DeliveryResolution } from './delivery';
 import { readUnitCosts } from './unit-costs';
 import { optionForPricing, parcelPlanSnapshot, pricedOptions, servicePointSnapshot, shippingVatLines } from './shipping-selection';
 import { quoteDataGap, quoteFailureOf, quoteShipping } from '../shipping/quote';
@@ -76,10 +77,10 @@ export type CheckoutDraftOutcome =
       items: OrderItem[];
     }
   /**
-   * `ambiguous_zone` veri hatası, `no_shipping_warehouse` yapılandırma eksiğidir; ikisi de müşteriye "bölge dışısınız"
-   * dedirtmemeli.
+   * `ambiguous_zone` veri hatası, `no_shipping_warehouse` yapılandırma eksiğidir, ikisi de müşteriye "bölge dışısınız" dedirtmemeli;
+   * `outside_zones` kargo göndermeyen işin bölgesi dışıdır.
    */
-  | { status: 'warehouse_unresolved'; reason: 'ambiguous_zone' | 'no_shipping_warehouse' }
+  | { status: 'warehouse_unresolved'; reason: NonNullable<DeliveryResolution['unresolvedReason']> }
   | { status: 'empty_cart' }
   /** Tükenmiş ya da satışa kapanmış satır; çıkarılmadan sipariş açılmaz. */
   | { status: 'blocked_lines'; lines: string[] }
@@ -194,15 +195,16 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // Sipariş kalemlerini sepetten alır: eski ekrandan gelen ikinci basış sepette olmayan kalemle yeni sipariş açmamalı.
   if (input.requireEntriesInCart && !entriesInCart(input.entries, storedCart.items)) return { status: 'cart_changed' };
   if (!customer) return { status: 'customer_not_found' };
+  const business = customerBusinessOf(customer);
 
   // Adres müşterinin kendi adresleri arasından aranır, çünkü `addressId` istemciden geliyor.
   const address = addresses.find((a) => a.id === input.addressId);
   if (!address) return { status: 'address_not_found' };
 
-  // Gel-al: izin ve depo SUNUCUDA sorulur — ekran kartı göstermemiş olsa da istek elle kurulabilir.
+  // Gel-al: izin, depo ve deponun işi sunucuda sorulur, çünkü ekran kartı göstermemiş olsa da istek elle kurulabilir.
   if (input.pickupWarehouseId) {
     if (!customer.pickupAllowed) return { status: 'pickup_not_allowed' };
-    if (!pickupWarehouse) return { status: 'pickup_warehouse_unavailable' };
+    if (!pickupWarehouse || pickupWarehouse.business !== business) return { status: 'pickup_warehouse_unavailable' };
   }
   // Malın teslim edildiği ülke: adresinki, gel-al'da deponunki — KDV oraya bağlıdır (DOMAIN §5); Almanya adresli müşteri
   // Strasbourg'dan alıyorsa mal Fransa'da teslim edilmiştir.
@@ -223,6 +225,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   const place = await resolveDelivery(db, {
     postalCode: address.postalCode,
     country: address.country,
+    business,
     inputs: deliveryInputs,
   });
 
@@ -242,6 +245,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       customerId: customer.id,
       warehouseId: place.warehouseId,
       shippingWarehouseId: place.shippingWarehouseId,
+      business,
       country: address.country,
       zoneId: place.zoneId,
       bundles: input.bundles,
@@ -265,6 +269,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     warehouseId: orderWarehouseId,
     // Gel-al'da sepet bölünmez: kargo deposu verilmez, depoda olmayan kalem "burada yok" olarak reddedilir.
     shippingWarehouseId: pickupWarehouse ? null : place.shippingWarehouseId,
+    business,
     // Kapsamlı ayarların (kargo tarifesi, asgari sepet) ülke ekseni çerezden değil malın teslim edildiği yerden okunur.
     country: deliveryCountry,
     // Kargo ve gel-al siparişi bir bölgeye ait değildir; bölgenin asgari sepeti onlara uygulanmaz.
@@ -295,6 +300,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     postalCode: address.postalCode,
     country: address.country,
     hasNonShippableItem,
+    business: customerBusinessOf(customer),
     inputs: deliveryInputs,
   });
 

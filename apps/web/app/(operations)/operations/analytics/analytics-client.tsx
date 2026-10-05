@@ -6,13 +6,8 @@ import { AnalyticsDesktop } from './analytics.desktop';
 import { analyticsUrl, type AnalyticsUrlState } from './analytics-url';
 import type { AnalyticsData } from './analytics-types';
 
-// Analitik client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
-// mobil deneyim native uygulamada — `docs/uygulama`.
-//
-// Mod/dönem/kanal GERÇEK GEZİNMEDİR (`?mode=…&period=…&ch=…`) çünkü veriyi sunucu okuyor ve
-// "şu döneme bak" bağlantısı paylaşılabilir olmalı — analitikte bir bulguyu göstermenin tek yolu
-// budur. İstemci durumunda tutulsaydı her seçim bir istemci turu olur, bağlantı hep varsayılanı
-// açardı.
+// Analitik client kökü, operasyon web'i masaüstü yalnızdır. Mod, dönem ve kanal gerçek gezinmedir, çünkü veriyi sunucu okur ve "şu döneme
+// bak" bağlantısı paylaşılabilir olmalı.
 
 interface AnalyticsClientProps {
   data: AnalyticsData;
@@ -36,6 +31,7 @@ export function AnalyticsClient({ data, urlState }: AnalyticsClientProps) {
     onMode: (mode: AnalyticsUrlState['mode']) => go({ mode }),
     onPeriod: (period: AnalyticsUrlState['period']) => go({ period }),
     onChannel: (channel: AnalyticsUrlState['channel']) => go({ channel }),
+    onBusiness: (business: AnalyticsUrlState['business']) => go({ business }),
   };
 
   return <AnalyticsDesktop {...view} />;

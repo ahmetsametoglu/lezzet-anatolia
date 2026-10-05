@@ -85,7 +85,7 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
           view.lines.map((line) => <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} />)
         )}
 
-        {/* K33 · Sonraya kaydedilenler — sepetin ALTINDA, boşken hiç çizilmez. */}
+        {/* Sonraya kaydedilenler sepetin altında durur, boşken çizilmez. */}
         <SavedList locale={locale} />
       </div>
 
@@ -93,7 +93,7 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
         {/* Kim ve nereye özetin en üstünde: ödemeye geçmenin iki ön şartı tutardan önce okunur. */}
         <CartIdentity t={t} locale={locale} />
         <CartSummary view={view} t={t} locale={locale} grouped={grouped} />
-        <CartCoupon t={t} locale={locale} />
+        {view.acceptsCoupons && <CartCoupon t={t} locale={locale} />}
       </div>
     </section>
   );

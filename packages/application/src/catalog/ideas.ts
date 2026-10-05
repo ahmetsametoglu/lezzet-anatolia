@@ -78,7 +78,7 @@ export async function readRecipeCards(
 export async function readPackageCards(
   db: SupabaseClient,
   locale: PreferredLanguage,
-  options: { featuredOnly: boolean; limit?: number; place?: PlaceWarehouses },
+  options: { featuredOnly: boolean; limit?: number; place: PlaceWarehouses },
 ): Promise<HomePackage[]> {
   const place = options.place;
 

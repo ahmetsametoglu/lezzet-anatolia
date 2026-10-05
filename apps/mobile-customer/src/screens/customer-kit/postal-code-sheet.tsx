@@ -19,45 +19,10 @@ import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { usePostalSuggest } from './use-postal-suggest.hook';
 
 /*
-  TESLİMAT BÖLGESİ ÇEKMECESİ (v3 `shZip`, açan `pillTap`) — vitrin başlığındaki "67000 STRASBOURG ▾"
-  hapına dokununca aşağıdan açılır: posta kodu alanı → çözüm notu → Kaydet.
-
-  ÇEKMECENİN KENDİSİ KİTİN (`BottomSheet`): örtü, tutamak, sürükleyip kapatma ve açılış/kapanış
-  eğrileri orada tek kopya durur (09.08'de gerçek animasyona kavuştu). Burada yalnız İÇERİK var.
-
-  VİTRİNDEN KİTE TAŞINDI (10.08): çağıranı üçe çıktı — vitrin başlığı, bölge dışı bilgi bandı
-  (katalog · paketler) ve teslimat bölgeleri sayfası. Aynı soruyu soran ikinci bir çekmece
-  YAZILMADI (CLAUDE §1); taşınırken üç şey içeri alındı ki çağıranlar aynı davranışı üç kez
-  kurmasın:
-    · METİN — sözlük yer ailesinin ortak dosyasında (`@lezzet/i18n/customer/place`, 14.09), `copy` prop'u kalktı.
-      Prop kalsaydı her çağıran kendi kopyasını taşırdı ve cümleler bir gün ayrışırdı.
-    · KAYIT — kaydeden de burasıdır (`saveOnboarding` + onay toast'ı). Kaydı çağırana bırakmak,
-      "kaydettikten sonra ne olur" sorusunu üç ekranda üç kez cevaplatırdı.
-    · KİMLİK — girişli mi sorusunun cevabı kitin ORTAK durumundan (`useMe`), prop'tan değil.
-  Geriye çağıranın gerçekten bildiği tek şey kaldı: çekmece açık mı, kapanınca ne olsun.
-
-  YER ÇÖZÜMÜ ORTAK KAPIDAN (`lib/places`): onboarding'in posta kodu adımıyla AYNI soru, aynı
-  davranış — kod beş haneye ulaşınca sorulur, kod değişince eski cevap anında düşer.
-
-  TASLAK YERELDİR: yazılan kod ancak KAYDET ile saklanır. Çekmece her açılışta saklı koddan
-  başlar — yarım bırakılmış bir düzenleme, bir sonraki açılışta "kayıtlı değer" gibi görünmemeli.
-
-  KAYDET BEŞ HANEDEN ÖNCE KAPALI: eksik kod bir yer anahtarı değildir (`place-api.schema` künyesi:
-  saklanan şey `country` + normalize `postalCode` ikilisidir) ve kaydedilirse vitrin başlığı
-  çözülemeyecek bir kodu gösterirdi. Tasarım düğmeyi hep açık çiziyor; fark bir görsel karar değil,
-  veri bütünlüğü.
-
-  ── "NERELERE GİDİYORSUNUZ?" BURAYA TAŞINDI (kullanıcı kararı 10.08) ────────
-  Bağlantı önce bilgi bandındaydı; kullanıcının gerekçesiyle çekmeceye alındı: kendi kodunu
-  denemekle "siz nereye gidiyorsunuz" sorusu aynı sorunun iki yüzüdür, ikisi aynı yerde durmalı.
-  ~~Panel bu yüzden `tall`.~~ Bir tur denendi ve kullanıcı cihazda görüp geri aldı (10.08): tek
-  bağlantı için paneli tavana dayamak, altında kocaman boş bir alan bırakıyordu. Panel yeniden
-  İÇERİK yüksekliğinde — çekmece taşıdığı kadar yer kaplar, kitin varsayılanı da budur.
-
-  BAĞLANTI PROP'LA AÇILIR (`showZonesLink`), varsayılanı YOK — üç çağıranın üçü de niyetini
-  yazmak zorunda. Sebebi teslimat bölgeleri sayfasıdır: çekmece ORADAN açıldığında bağlantı
-  müşteriyi zaten durduğu sayfaya yollardı, yani ölü bir kapı olurdu. Sessizce her yerde
-  göstermek bu ölü kapıyı kimsenin fark etmeyeceği bir yere saklamak olurdu.
+  Teslimat bölgesi çekmecesi: vitrin başlığındaki posta kodu hapına dokununca açılır (posta kodu → çözüm notu → Kaydet); üç çağıran aynı
+  soruyu sorduğu için metin, kayıt ve kimlik buradadır ve yer çözümü onboarding'in posta kodu adımıyla aynı kapıdan gelir. Taslak yereldir,
+  Kaydet beş haneden önce kapalıdır ve "Nerelere gidiyorsunuz?" bağlantısı prop'la açılır, çünkü bölgeler sayfasından açılınca ölü kapı
+  olurdu.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -79,20 +44,14 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
   const router = useRouter();
   const t: Messages = messages[locale];
   const copy = t.zip;
-  /* GİRİŞLİ Mİ — YALNIZ bir cümleyi açar (`browsingOnly`), davranışı DEĞİŞTİRMEZ: çekmece her
-     hâlde açılır ve her hâlde kaydeder (kullanıcı kararı 09.08 — `home-screen` künyesi).
-     Girişlide kayıtlı bir adres de var, o yüzden hangi bilginin ne zaman kullanıldığı söylenir;
-     söylenmezse müşteri buradan girdiği kodu teslimat adresi sanır. */
+  /* Girişli mi yalnız bir cümleyi açar, davranışı değiştirmez: girişlide kayıtlı adres de vardır ve söylenmezse müşteri buraya girdiği kodu
+     teslimat adresi sanırdı. */
   const meState = useMe();
   const signedIn = meState.status === 'ready' && meState.me !== null;
 
   const [draft, setDraft] = useState(code ?? '');
-  /* ÖNERİ LİSTESİ YALNIZ YAZARKEN VE YALNIZ EKSİK KODDA (kullanıcı kararı 26.08 — web
-     `place-dialog` ile aynı davranış; ayrışma denetimin 25.08 kaydıydı). Beş haneye ulaşınca
-     liste kapanır: o andan sonra soruyu yer ÇÖZÜMÜ cevaplıyor, aynı kodu bir de listede
-     göstermek cevabın yanına kopyasını koymak olurdu. Seçim yalnız KODU doldurur — ülke burada
-     saklanmıyor (kayıt `postalCode`tan ibaret) ve iki ülkede geçerli kodun ülkesi, adres
-     girilirken netleşir (`ambiguousNote` zaten bunu söylüyor). */
+  /* Öneri listesi yalnız yazarken ve eksik kodda görünür: beş haneden sonra soruyu yer çözümü cevaplar. Seçim yalnız kodu doldurur, iki
+     ülkede geçerli kodun ülkesi adres girilirken netleşir. */
   const [suggestOpen, setSuggestOpen] = useState(false);
   // Açılışta saklı değere dönülür (künye: yarım kalmış düzenleme taşınmaz); liste kapalı başlar.
   useEffect(() => {
@@ -122,8 +81,7 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
   /* Bekleyiş bayrağı hook'tan gelir, TÜRETİLMEZ: `place === null` "istek düştü" hâlini de kapsıyor
      ve türetilmiş bir bayrak orada sönmezdi — iskelet ebediyen dönerdi (künyesi hook'ta). */
   const { place, pending } = usePlaceLookup(draft);
-  /* İskelet çubuklarının boyu METİN KADEMESİNDEN okunur, sabit yazılmaz: yazı boyutu "Büyük"
-     seçildiğinde bekleyiş de cevapla birlikte büyür (görev 21.38'in ölçtüğü merdivenin gereği). */
+  /* İskelet çubuklarının boyu metin kademesinden okunur, sabit yazılmaz: yazı boyutu büyütülünce bekleyiş de cevapla birlikte büyür. */
   const { theme } = useUnistyles();
   const inRoute = place?.kind === 'resolved' && place.place.inRoute;
   const placeName = place?.kind === 'resolved' ? place.place.placeName : null;
@@ -138,7 +96,9 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
           ? copy.ambiguousNote
           : place.kind === 'unknown'
             ? copy.unknownNote
-            : copy.unresolvedNote;
+            : place.reason === 'outside_zones'
+              ? copy.outsideNote
+              : copy.unresolvedNote;
 
   const idOf = (part: string) => (testID === undefined ? undefined : `${testID}-${part}`);
 
@@ -187,11 +147,8 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
           testID={idOf('suggestions')}
         />
       )}
-      {/* CEVAP BEKLENİRKEN İSKELET (kullanıcı isteği 13.08) — onboarding'in posta kodu adımıyla
-          AYNI davranış. İki yüzey aynı soruyu soruyor ve aynı kapıdan cevap alıyor; birinde bekleyiş
-          görünür öteki sessiz kalsaydı, aynı sistemin iki farklı hâli olurdu. İskelet cevabın
-          ŞEKLİNİ taklit eder (kısa satır = yer adı, uzun satır = teslimat cümlesi), böylece cevap
-          geldiğinde çekmece yeniden düzenlenmez. */}
+      {/* Cevap beklenirken iskelet çizilir, onboarding'in posta kodu adımıyla aynı; iskelet cevabın şeklini taklit eder ki cevap gelince
+          çekmece yeniden düzenlenmesin. */}
       {pending ? (
         <View style={styles.skeleton} testID={idOf('skeleton')}>
           <Skeleton width={140} height={theme.text.control} radius="badge" />
@@ -251,7 +208,7 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: theme.text['field-label'],
     lineHeight: theme.text['field-label'] * theme.text['lead--line-height'],
   },
-  /** Rota içi: olumlu cevap zeytin tonunda (v3:1527 `sz.col`). */
+  /** Rota içi: olumlu cevap zeytin tonunda. */
   noteInside: { color: theme.colors['olive-dark'] },
   /** Öteki üç hâl nötr gövde tonunda — bir kapı değil, bir bilgi. */
   noteShipping: { color: theme.colors.muted },

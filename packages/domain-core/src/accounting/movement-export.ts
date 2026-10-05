@@ -1,22 +1,10 @@
 import { fromCents } from '@lezzet/helper';
-import type { DocumentKind, MoneyDocument, MoneyMovement, MovementDirection, MovementSource, MovementType } from '@lezzet/types';
+import type { Business, DocumentKind, MoneyDocument, MoneyMovement, MovementDirection, MovementSource, MovementType } from '@lezzet/types';
 
 /**
- * Hareket dökümü (12.15) — DOMAIN §9. Satış dosyasının (12.7) yanına dönemin HER para hareketi:
- * alım, gider, maaş, transfer, sermaye — muhasebeci "bu 1.180 € ne" diye sorduğunda cevap satırın
- * üstünde durur: hesabı, TÜRÜ ve hesap kodu, carisi, belgeleri (tür / no / tarih / KDV), etiketleri.
- *
- * Saf: okuma yok, yazma yok. Girdi zaten döneme süzülmüş hareketler ve onların adlandırılmış
- * bağlarıdır (hesap adı, tür, cari, belge, sipariş referansı, tedarikçi adı); burada yalnız satır
- * kurulur ve özet çıkar. Tutarlar CENT'te toplanır, dosyaya EURO yazılır (12.7 ile aynı kural).
- *
- * **Transfer TEK satırdır** (gönderenin gözünden, karşı hesap ayrı sütunda): defter görünümünün iki
- * satırı dökümde iki kez sayılırdı. Muhasebeci "kasadan bankaya 600 €" satırını bir kez görür.
- *
- * ── TÜR VE HESAP KODU (13.09 · ikinci karar) ────────────────────────────────
- * Sınıflandırma bir tur çoklu etiketti ve dosyada "Kira, Ortak A" diye tek hücreye yazılıyordu:
- * muhasebeci hangisinin gider türü olduğunu bilemiyordu. Tür artık tektir ve Fransız hesap planındaki
- * kodunu (varsa) taşır; etiketler serbest işarettir, ayrı sütunda.
+ * Hareket dökümü (DOMAIN §9), satış dosyasının yanında dönemin her para hareketi: muhasebeci "bu ödeme ne" diye sorduğunda cevap
+ * satırdadır (hesap, tür ve hesap kodu, cari, belgeler, etiketler). Saf hesaptır, tutar cent'te toplanıp euro yazılır; transfer tek
+ * satırdır, çünkü defterin iki satırı dökümde iki kez sayılırdı.
  */
 
 /** Dökümün gördüğü belge — hareketin BAĞLI olduğu belgelerden biri (bir havale birkaç faturayı kapatabilir). */
@@ -41,7 +29,7 @@ export interface MovementExportInput {
   /** Sipariş bağıysa referans numarası (tahsilat / iade). */
   orderReference: string | null;
   supplierName: string | null;
-  /** Carinin adı (13.09) — karşı tarafın en doğrudan kaydı. */
+  /** Carinin adı, karşı tarafın en doğrudan kaydı. */
   counterpartyName: string | null;
 }
 
@@ -59,6 +47,8 @@ export interface MovementExportRow {
   nature: string | null;
   /** Türün hesap planı kodu — "645"; muhasebecinin kendi yazılımına aktarımı buna bakar. */
   accountCode: string | null;
+  /** Hareketin işi, bağından türer; döküm şirketin tamamıdır, satır işini taşır. */
+  business: Business;
   /** "Ortak A aracı, Bayram" — serbest etiketlerin okunur adları, virgülle. */
   tags: string;
   /** İlk belgenin türü (belge tarihine göre). */
@@ -72,8 +62,8 @@ export interface MovementExportRow {
   /** Belgelerde yazan KDV toplamı (euro); `null` = hiçbir belgede KDV yok ya da belge yok. */
   documentVat: number | null;
   /**
-   * İlk belgenin KDV rejimi (12.26) — ters yüklemeli alımda belgede KDV yoktur ama muhasebeci onu
-   * beyanda hesaplar; "KDV 0" ile ayırt edebilmesi bu sütunun bütün sebebi. Belge yoksa `null`.
+   * İlk belgenin KDV rejimi; ters yüklemeli alımda belgede KDV yoktur ama muhasebeci onu beyanda hesaplar ve "KDV 0"dan ancak bu
+   * sütunla ayırır. Belge yoksa `null`.
    */
   documentVatRegime: MoneyDocument['vatRegime'] | null;
   /**
@@ -132,6 +122,7 @@ export function buildMovementRow(input: MovementExportInput): MovementExportRow 
     type: movement.type,
     nature: input.natureLabel,
     accountCode: input.accountCode,
+    business: movement.business,
     tags: input.tagLabels.join(', '),
     documentKind: first?.kind ?? null,
     documentNo: numbers.length > 0 ? numbers.join('; ') : null,
@@ -152,8 +143,8 @@ export function buildMovementRow(input: MovementExportInput): MovementExportRow 
 }
 
 /**
- * Dönemin dökümü — satırlar tarih sırasında (eşit günde kayıt sırası), özet satırlardan TÜRETİLİR
- * (ayrı sorgulansaydı iki toplam bir gün ayrışırdı — 12.7'nin kuralı).
+ * Dönemin dökümü: satırlar tarih sırasındadır (eşit günde kayıt sırası) ve özet satırlardan türer, çünkü ayrı sorgulanan iki toplam
+ * bir gün ayrışırdı.
  */
 export function buildMovementExport(period: { from: string; to: string }, inputs: readonly MovementExportInput[]): MovementExport {
   const ordered = [...inputs].sort(

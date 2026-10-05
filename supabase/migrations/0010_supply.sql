@@ -57,6 +57,8 @@ create type purchase_order_status as enum ('draft', 'sent', 'partially_received'
 create table public.purchase_order (
   id uuid primary key default gen_random_uuid(),
   supplier_id uuid not null references public.supplier (id) on delete restrict,
+  -- Siparişin işi; kalemlerin hedef deposu, mal kabulün deposu ve bağlı belge bu işe göre yazılır (docs/feature/iki-is.md, karar 4).
+  business business not null,
   status purchase_order_status not null default 'draft',
   -- Tedarikçinin referans verebileceği numara (`TS-26-4K2M9P`); rastgeledir, çünkü sıralı numara dışarıya iş hacmimizi
   -- söyler. Gönderimde üretilir, çünkü numara karşı tarafa verilen sözdür ve vazgeçilen taslak numara tüketmez.
@@ -69,6 +71,21 @@ create table public.purchase_order (
   constraint purchase_order_sent_has_reference check (sent_at is null or reference_no is not null)
 );
 create index purchase_order_supplier_idx on public.purchase_order (supplier_id, created_at desc);
+
+-- Siparişin işi doğduğu anda belli olur ve değişmez, çünkü kalemleri, kabulü ve belgesi o işe yazıldı.
+create or replace function public.purchase_order_business_frozen() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  raise exception 'Tedarik siparişinin işi değişmez' using errcode = 'check_violation';
+end;
+$$;
+
+create trigger purchase_order_business_frozen
+  before update of business on public.purchase_order
+  for each row when (old.business is distinct from new.business)
+  execute function public.purchase_order_business_frozen();
 
 create table public.purchase_order_item (
   id uuid primary key default gen_random_uuid(),

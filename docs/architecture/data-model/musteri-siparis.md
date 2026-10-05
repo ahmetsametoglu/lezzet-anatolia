@@ -51,6 +51,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | `price_group_id` | uuid | • |  |
 | `cod_allowed` | boolean |  | `true` |
 | `pickup_allowed` | boolean |  | `false` |
+| `business` | business |  | `'lezzet'` |
 | `marketing_consent` | jsonb |  | `'{}'::jsonb` |
 | `notification_consent` | jsonb |  | `'{}'::jsonb` |
 | `notification_token` | text | • |  |
@@ -88,6 +89,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 - **`price_rule_basis` / `price_rule_percent`** — müşterinin genel fiyat kuralı: `list` liste fiyatından yüzde indirim (%0 < p < %100), `cost` alış fiyatı üzerine yüzde pay (p ≥ 0); ikisi birlikte dolu ya da boş (bkz. `DOMAIN.md §5`)
 - **`price_group_id`** — fiyat grubu üyeliği (B2B alt kademesi — `katalog.md › PriceGroup`, 20.08); `restrict` FK, `null` = düz liste
 - **`cod_allowed`** — kapıda ödeme izni (varsayılan true); kötüye kullanımda kapatılır (bkz. `DOMAIN.md §7`)
+- **`business`** — müşterinin işi (`docs/feature/iki-is.md`); varsayılan Lezzet, müşteri seçemez, admin verir. QUALITE yalnız şirket ve onaylı B2B müşteride olur (`user_profiles_business_b2b`): QUALITE müşterisinin onayı kalkmadan ya da tipi değişmeden önce işi Lezzet yapılır
 - **`roles`** — **dizi**: personel içinde çoklu rol olağandır (depo + muhasebe). `customer` yalnız BAŞINA durabilir — müşteri ↔ personel keskin ayrım, DB kısıtıyla zorlanır (`DOMAIN.md §2`)
 - **`auth_user_id`** — Supabase Auth kullanıcısı; doğrulanınca bağlanır (bkz. `DOMAIN.md §10`). **Üçüncü kimlik anahtarıdır** — `0002` trigger'ı girişte profili e-postayla bulup bağlar
 - **`marketing_consent`** — kanal bazlı pazarlama izni: `{email: {granted, at, source}, whatsapp: {...}}` — GDPR kanıtı (ne zaman, nereden). **OPT-IN:** anahtar yoksa izin yoktur. Kampanya gönderimi henüz yok; alan bugün tercih sayfasının ve operasyon süzgecinin kaynağı (bkz. `DOMAIN.md §11`)
@@ -291,7 +293,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 
 **Kararlar**
 
-- **`warehouse_id`** — **bir sipariş tek depodan çıkar** (`DOMAIN §17`, istisnasız): bölünmüş sipariş yoktur; kendi deposunda olmayan kargolanabilir ürün AYRI bir kargo siparişi olur. Kaynağı ya adresin posta kodu ya işlemi yapan personelin sabit deposudur — **varsayılan depo kavramı yoktur**. Siparişe yazılan partilerin de bu depodan olduğunu ertelenmiş kısıt tutar
+- **`warehouse_id`** — **bir sipariş tek depodan çıkar** (`DOMAIN §17`, istisnasız): bölünmüş sipariş yoktur; kendi deposunda olmayan kargolanabilir ürün AYRI bir kargo siparişi olur. Kaynağı ya adresin posta kodu ya işlemi yapan personelin sabit deposudur — **varsayılan depo kavramı yoktur**. Siparişe yazılan partilerin de bu depodan olduğunu ertelenmiş kısıt tutar; deponun işi müşterinin işiyle aynı olmak zorundadır ve yazılmış siparişin işi değişmez (`order_business_matches`)
 - **`channel`** — *kim* — müşteri tipinden otomatik (`deriveChannel`) ve **DONAR**: müşteri sonradan şirkete dönse bile geçmiş siparişin kanalı sabit kalır. 27.08'e kadar bu satırdaki *"değişmez"* yalnız bir İDDİAYDI — ne şema ne veri koruyordu (`03.12`); artık iki katman zorluyor: `OrderUpdateSchema` alanı `omit` eder, `order_channel_frozen` tetikleyicisi şemayı atlayan yolu keser. Gerekçe: kanal `vat_treatment`ı ve fiyat kademesini belirler, yani sonradan değişmesi parası alınmış bir belgenin vergisini geriye dönük oynatırdı
 - **`order_source`** — *nereden kapandı* — kanaldan bağımsız eksen (bkz. `CHANNELS.md §2`). **Sohbetin dokunduğu sepetin siparişi sohbetin kanalıdır** (15.23 · 07.09): checkout, sepetin `source_conversation_id` izinden sohbetin kanalını okur (`whatsapp`/`messenger`/`instagram`); iz yoksa `web`. Personel yolu kendi kaynağını geçirir (`manual`, 15.4 köprüsünde `whatsapp`)
 - **`is_gift_order`** — patron ikramı (arkadaşa hediye); **ödemesiz kapanır**: kalemler sıfır fiyatla yazılır (liste fiyatı pazarlık izinde), kargo alınmaz, kasaya ve muhasebe aktarımına girmez (bkz. `DOMAIN.md §9`)
@@ -573,7 +575,7 @@ durumumuzun geçiş defteri) **yerine geçmez** — bu koli düzeyi ve taşıyı
 Sipariş kayıt anında değil, **gerçekleştiği anda** gelirdir. `order_sale`, teslim edilmiş ya da kapanmış siparişleri `sale_date` ile birlikte verir: `sale_date` = `OrderStatusLog`'un İLK `delivered`/`completed` kaydının günü. Muhasebe export'u (12.7) da dönemsel kârlılık (12.6) da bu tarihi okur — iki rapor iki ayrı "satış günü" hesaplamaz.
 
 - **`min(...)` şart:** tam yolda sipariş önce `delivered` sonra `completed` olur, ikisi farklı aya düşebilir. Kapanışı esas alsaydık ocakta teslim edilmiş satış şubat cirosuna yazılırdı.
-- **`o.*` seçilir:** görünüm siparişin alanlarını yeniden yazmaz, yalnız `sale_date` ekler. Şema da öyle türetilir (`OrderSaleSchema = OrderSchema.extend({saleDate})`); alan listesi kopyalansaydı `order`a eklenen kolon burada sessizce eksik kalırdı.
+- **`o.*` seçilir:** görünüm siparişin alanlarını yeniden yazmaz, yalnız `sale_date` ile satışın işini (`business`, deposundan) ekler. Şema da öyle türetilir (`OrderSaleSchema = OrderSchema.extend({business, saleDate})`); alan listesi kopyalansaydı `order`a eklenen kolon burada sessizce eksik kalırdı.
 - **Hediye sipariş DIŞLANMAZ:** cirosu sıfırdır ama mal maliyeti kârda gider olarak görünmelidir. Dış muhasebe süzgeci aktarım kapısındadır (`domain-core/accounting`); burada dışlansaydı kâr raporu hediyenin maliyetini kaybederdi.
 - **`returned` dışarıda:** mal geri gelmiş, para iadesi süreci açık (07.9). Sipariş `completed`'a dönünce satış yine görünür ve `sale_date` orijinal teslim günüdür — geçmiş dönemin raporu yeniden üretildiğinde satır doğru aya oturur.
 

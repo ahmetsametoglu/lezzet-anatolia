@@ -3,12 +3,13 @@ import { tool, z, type ToolSet } from '@lezzet/ai';
 import { CartService, type CartOwner, type Db } from '@lezzet/database';
 import { formatPrice } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
-import type { Conversation, Country } from '@lezzet/types';
+import type { Business, Conversation, Country } from '@lezzet/types';
 import { getCatalogData } from '../catalog/catalog';
 import { getPackagesByIds, listStorefrontPackages } from '../catalog/packages';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { getProductDetail } from '../catalog/product';
 import type { PlaceWarehouses } from '../catalog/storefront-types';
+import { customerBusiness, unresolvedPlace } from '../delivery/place';
 import { cartGroupOf, entryOfItem, shippingGroupFree, type CartEntry, type CartLine, type CartView } from './cart-types';
 import { resolveChatPlace, ULKE_GIRDISI, yerNotu, type ChatPlace, type ChatPlaceMemory } from './chat-place';
 import { startCartLink, supportLinkUrl } from './link';
@@ -100,8 +101,17 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
 
   /* Yer dört kaynaktan, TEK sırayla (`chat-place.ts`): söylenen · sohbette saklanan · kayıtlı adres
      (yalnız izinliyse) · hiçbiri. Söylenen kod gerçekse sohbete yazılır — müşteri bir daha söylemez. */
-  const yer = (postaKodu?: string, ulke?: Country): Promise<ChatPlace> =>
-    resolveChatPlace(db, { said: postaKodu, saidCountry: ulke, memory: input.place ?? null, addressCustomerId: input.addressCustomerId });
+  // Yerin işi fiyatın kimliğinden gelir: kimlik kapısı kapalıyken ziyaretçi gibi Lezzet'e çözülür. Profil sohbet başına bir kez okunur.
+  let isletme: Promise<Business> | null = null;
+  const isletmesi = (): Promise<Business> => (isletme ??= customerBusiness(db, input.pricingCustomerId));
+  const yer = async (postaKodu?: string, ulke?: Country): Promise<ChatPlace> =>
+    resolveChatPlace(db, {
+      said: postaKodu,
+      saidCountry: ulke,
+      memory: input.place ?? null,
+      addressCustomerId: input.addressCustomerId,
+      business: await isletmesi(),
+    });
 
   /** Sepet görünümü bu yerin depolarıyla — özet, hazırlık ve "bu adrese gider mi" aynı hesaptan okunur. */
   const gorunum = (entries: CartEntry[], yerim: ChatPlace) =>
@@ -109,6 +119,7 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
       customerId: input.pricingCustomerId,
       warehouseId: yerim.place.warehouseId,
       shippingWarehouseId: yerim.place.shippingWarehouseId,
+      business: yerim.place.business,
       bundles: (ids, locale, bundlePlace) => getPackagesByIds(db, ids, locale, bundlePlace),
     });
 
@@ -121,6 +132,7 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
     if (cart.items.length === 0) return { sonuc: { sepetBos: 'Sepet zaten boş.' } };
     const view = await getCartView(db, 'tr', cart.items.map(entryOfItem), {
       customerId: input.pricingCustomerId,
+      business: await isletmesi(),
       bundles: (ids, locale, bundlePlace) => getPackagesByIds(db, ids, locale, bundlePlace),
     });
     const adaylar = view.lines.filter((line) => esitAd(line.name, urun) || icerir(line.name, urun));
@@ -398,7 +410,7 @@ async function urunuCoz(
   const katalog = await getCatalogData(db, { ...ortak, query: { search: girdi.urun } });
   const tam = katalog.products.filter((p) => esitAd(p.name, girdi.urun));
   const adaylar = tam.length > 0 ? tam : katalog.products;
-  if (adaylar.length === 0) return paketiCoz(db, girdi.urun);
+  if (adaylar.length === 0) return paketiCoz(db, girdi.urun, place.business);
   if (adaylar.length > 1) {
     return { sonuc: { secenekler: adaylar.slice(0, MAX_CHOICES).map((p) => p.name), soru: 'Birden çok ürün eşleşti — müşteriye hangisini istediğini sor, sonra o adla yeniden çağır.' } };
   }
@@ -429,8 +441,8 @@ async function urunuCoz(
  * kalemi satıştan kalkmış paket zaten düşmüş). Paket sepette TEK satırdır, tek fiyatla (DOMAIN §13);
  * boyu yoktur.
  */
-async function paketiCoz(db: Db, ad: string): Promise<CozulmusSatir | { sonuc: Record<string, unknown> }> {
-  const paketler = await listStorefrontPackages(db, 'tr');
+async function paketiCoz(db: Db, ad: string, business: Business): Promise<CozulmusSatir | { sonuc: Record<string, unknown> }> {
+  const paketler = await listStorefrontPackages(db, 'tr', undefined, unresolvedPlace(business));
   const tam = paketler.filter((p) => esitAd(p.name, ad));
   const adaylar = tam.length > 0 ? tam : paketler.filter((p) => icerir(p.name, ad));
   if (adaylar.length === 0) return { sonuc: { bilinmiyor: `"${ad}" için katalogda eşleşen ürün ya da paket yok.` } };

@@ -1,4 +1,4 @@
-import type { Address, CheckoutPickup, Country } from '@lezzet/types';
+import type { Address, Business, CheckoutPickup, Country } from '@lezzet/types';
 
 /*
   Teslimat yeri müşterinin "nereye getirelim" cevabıdır ve yalnız posta kodu tutulur: teslimat şeklini o belirler, sokak ve numara
@@ -34,9 +34,9 @@ export type PlaceLookup =
   | { kind: 'unknown' }
   /**
    * `no_shipping_warehouse` bizim yapılandırma eksiğimizdir ve müşteriye "bölge dışısınız" dedirtmemeli; `ambiguous_zone` veri
-   * çakışmasıdır.
+   * çakışmasıdır, `outside_zones` kargo göndermeyen işin bölgesi dışıdır.
    */
-  | { kind: 'unresolved'; reason: 'no_shipping_warehouse' | 'ambiguous_zone' };
+  | { kind: 'unresolved'; reason: 'no_shipping_warehouse' | 'ambiguous_zone' | 'outside_zones' };
 
 export interface DeliveryPlace {
   /** Normalleştirilmiş, boşluksuz. */
@@ -94,30 +94,22 @@ export interface PlaceSnapshot {
   unresolved: PlaceUnresolved | null;
   /** Gel-al teklifi ve seçimi (yalnız izinli müşteride); `null` = teklif yok, kart çizilmez. */
   pickup: CheckoutPickup | null;
+  /** Görüntüleyenin işi, ziyaretçi Lezzet'tir; kapıya teslim yalnız bu işin bölgesinde, kargo yalnız kargo gönderen işte vardır. */
+  business: Business;
 }
 
 /** Kod tanınıyor ama ne rota ne kargo karşılıyor; iki sebep de müşteriye "bölge dışısınız" dedirtmez. */
 export type PlaceUnresolved = Extract<PlaceLookup, { kind: 'unresolved' }>['reason'];
 
 /**
- * Burada durur, çünkü istemci de okuyor ve sunucu okuması `server-only`. `id` ve `weekdays` taşınmaz: panelin tek sorusu
- * "benimki listede var mı".
+ * Burada durur, çünkü istemci de okuyor ve sunucu okuması `server-only`. `id` ve `weekdays` taşınmaz, iş taşınır: panelin tek sorusu
+ * "benimki görüntüleyenin işinin listesinde var mı".
  */
 export interface DeliveryZoneSummary {
   name: string;
+  business: Business;
   postalCodes: string[];
 }
 
 // Web'deki çağıranlar yerin sözlüğünü tek dosyadan okur.
 export { elsewhereReasonOf } from '@lezzet/helper';
-
-/**
- * Vitrin okumasının yer bağlamı; iki depo birlikte geçilir, çünkü tek başına `warehouseId` "yerelde yok = tükendi" hatasını geri
- * getirirdi. `(null, null)` yer bilinmiyor, `(rota, kargo)` rota içi, `(null, kargo)` rota dışı demektir.
- */
-export interface PlaceWarehouses {
-  /** Yalnız rota deposu: kargo hâlinde de dolu olsaydı rota dışındaki müşteri "ücretsiz kapı teslimi" görürdü. */
-  warehouseId: string | null;
-  /** `null`: yer bilinmiyor ya da o ülkeye kargo yok. */
-  shippingWarehouseId: string | null;
-}

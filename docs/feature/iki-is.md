@@ -1,13 +1,14 @@
 # İki iş tek sistem — QUALITE ve Lezzet
 
-> **Statü: KARAR ALINDI (03–04.10.2026); uygulama A fazında.** Özelliğin tek kaydı bu dosya: kararlar, sonuçları, yol haritası ve
-> açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Muhasebe tarafının kararları
+> **Statü: KARAR ALINDI (03–04.10.2026); uygulama B fazında (dal `iki-is-b`).** Özelliğin tek kaydı bu dosya: kararlar, sonuçları, yol haritası ve
+> açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Canlıya alma adımları
+> [`docs/runbook/qualite-canliya-alma.md`](../runbook/qualite-canliya-alma.md)'dedir. Muhasebe tarafının kararları
 > [`kasa-muhasebe.md`](kasa-muhasebe.md)'dedir; bu dosya onların iki işe genişlemesidir.
 
 **QUALITE** şirketin adıdır ve restoran ile marketlere toptan satış yapan iştir; **Lezzet** markamızdır ve çevrim içi
 satış yapan iştir. İkisi aynı tüzel kişilik (QUALITE SAS) altındadır: muhasebede tek şirkettir, iki işin ayrımı iç takip içindir.
 
-## 1. Kararlar (kullanıcı, 03–04.10)
+## 1. Kararlar (kullanıcı, 03–05.10)
 
 | # | Karar | Sonucu |
 |---|---|---|
@@ -23,6 +24,8 @@ satış yapan iştir. İkisi aynı tüzel kişilik (QUALITE SAS) altındadır: m
 | 10 | **QUALITE etiketi yalnız B2B onaylı müşteriye verilir; QUALITE deposundan anonim kapı satışı yapılmaz; QUALITE kargo göndermez** | Toptan fiyat onaysız açılmaz (`effectiveChannelOf`). QUALITE bölgelerinin dışındaki QUALITE müşterisi "teslimat noktası belirlenemedi" mesajını alır, Lezzet deposuna düşmez. |
 | 11 | **Banka hesapları işe göre ayrılmaz** (04.10): Crédit Mutuel ile Revolut şirketin hesaplarıdır | Ödemenin işi bağından gelir (belge, siparişin ya da mal kabulün deposu, tedarikçi, cari); hiçbiri iş söylemiyorsa Lezzet'tir. İki banka da Pennylane'den okunur (`kasa-muhasebe.md` 15. karar). |
 | 12 | **Pennylane'de bizde olmayan bir faturaya eşli banka satırı izah bekler** (04.10) | O fatura Pennylane'e doğrudan girilmiştir (1. karar). Satır izah kuyruğunda kalır, önerisi yoksa "Belgeyi bizde girin" der; belge bizde girilir, Pennylane'deki kopyası silinir. |
+| 13 | **Kampanya ve kupon yalnız Lezzet'indir** (05.10) | QUALITE müşterisinin sepetine otomatik kampanya inmez ve kupon alanı çizilmez; vitrin ona kampanya rozeti göstermez. İndirim taşıyan sipariş yalnız Lezzet deposundan yazılır (`order_discount_business`). |
+| 14 | **Muhasebe dosyası ve hareket dökümü işe göre ayrı da alınır** (05.10) | Raporların iş anahtarı export sekmesinde de durur: dosya, özeti ve fatura kuyruğu seçili işi taşır, dosya adı işi söyler (`muhasebe-2026-10-qualite.csv`). Süzgeçsiz dosya şirketin tamamıdır. |
 
 **Dayanak (ölçüm ve araştırma, 03.10):** Pennylane'in yerleşik stok modülü yok (yardım merkezi: *"Pennylane ne dispose pas
 de module natif dédié à la gestion des stocks"*); stok için önerdiği Stockpit ayrı abonelikli ikinci bir sistemdir.
@@ -44,8 +47,16 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
   sefer ayrı kuryelerin olduğu için aynı anda yoldadır (`another_running` kurye başınadır). Aynı araç kaydı iki kuryenin açık
   seferinde olamaz (`vehicle_taken`): araç QUALITE için farklı plaka koduyla ikinci kez kaydedilir (plaka tekildir) ya da QUALITE
   hesabı "araçsız devam" der. Soğuk zincir izi araç kaydına bağlı olduğu için aynı aracın izi iki kayda bölünür. Ortak bölge
-  seçilmedi, çünkü araçlar ayrılınca bozulurdu: bölge ve gün başına tek sefer var, seferde tek kurye ve tek araç.
+  seçilmedi, çünkü araçlar ayrılınca bozulurdu: bölge ve gün başına tek sefer var, seferde tek kurye ve tek araç. Müşteriye
+  gösterilen bölge listesi ve teslim şekli de görüntüleyenin işinindir: QUALITE müşterisine kargo, Lezzet ziyaretçisine QUALITE'nin
+  bölgesi gösterilmez.
 - **Kapı ve araç satışının işi deposundan gelir;** anonim alıcı işe göre bölünmez.
+- **Raporlar iki işi ayrı okur:** başlıkta Tümü · Lezzet · QUALITE anahtarı var; kâr sekmeleri, muhasebe dosyası, hareket dökümü
+  ve fatura kuyruğu seçili işi okur, her satır işini taşır (`DOMAIN.md` §9, §12).
+- **Para ekranında iş anahtarı listeleri daraltır:** hareketler ve belgeler seçili işe göre süzülür; hesap bakiyeleri bölünmez
+  (11. karar), izah ve açık belge sayaçları şirketin tamamını sayar.
+- **Analitik iki işi ayrı sayar:** olayın işi müşterinin işidir (ziyaretçi Lezzet), siparişin işi deposundandır; ekran iki işi
+  birlikte ya da ayrı okur (`ANALYTICS.md`).
 - **WhatsApp'tan yazan yeni kişi Lezzet'te taslak müşteri olarak açılır** (7. ve 10. karar): taslak B2B onaylı olamaz;
   profesyonelse admin onaydan sonra QUALITE yapar. Bu yüzden iki işin aynı numarayı kullanması sorun değildir. QUALITE ayrı bir
   numara açarsa konuşmanın tekilliği bizim hesabı da içerecek şekilde genişler (`0039_conversation.sql`,
@@ -88,8 +99,9 @@ Açık soru yok.
 
 **Satış ve stok (B fazı):**
 - **Depo:** `warehouse.business`, etiketsiz Lezzet. Depo kullanılmaya başlayınca işi değişmez; sipariş ve parti işini depodan
-  okur, kopya alan tutulmaz (`0031_warehouse.sql`).
+  okur, kopya alan tutulmaz (`0031_warehouse.sql`). Aracın işi evindeki tesisin işidir, çünkü araçtaki mal oradan yüklenir.
 - **Müşteri:** `user_profiles.business` (B2B alanları aynı satırda); QUALITE yalnız onaylı şirkette, değiştiren yalnız admin.
+  QUALITE müşterisinin onayı kalkmadan önce işi Lezzet yapılır; kural veride (`user_profiles_business_b2b`).
   Siparişi yazan iki yer var (`checkout-draft.ts`, `on-site-sale.ts`); müşterinin işi deponun işiyle tutar, anonim alıcı muaftır.
 - **Bölge ve depo çözümü:** bugün bir posta kodu yalnız tek bölgede olabiliyor (`0014_delivery_zone.sql` anahtarı ve operasyon
   formunun kontrolü, `routes-actions.ts`); kural "iş başına tek bölge" olur. `warehouse-resolve.ts` yalnız müşterinin işindeki

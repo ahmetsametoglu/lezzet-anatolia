@@ -40,6 +40,8 @@ create table public.warehouse (
   constraint warehouse_vehicle_never_ships check (kind = 'facility' or not ships_online),
   -- Müşteri hareket hâlindeki bir yere gelemez: gel-al noktası da bir adrestir.
   constraint warehouse_vehicle_never_pickup check (kind = 'facility' or not pickup_enabled),
+  -- QUALITE kargo göndermez (docs/feature/iki-is.md, karar 10); kargo çıkış deposu yalnız Lezzet'in olabilir.
+  constraint warehouse_qualite_never_ships check (business = 'lezzet' or not ships_online),
   -- Ev YALNIZ aracın alanıdır. Tesise ev yazılabilseydi ağaç iki anlama gelirdi.
   constraint warehouse_home_only_vehicle check (kind = 'vehicle' or home_warehouse_id is null),
   -- `postal_code_place_point` / `address_geo_point` ile aynı kural, aynı gerekçe.
@@ -220,6 +222,219 @@ create trigger warehouse_home_is_facility
   before insert or update of home_warehouse_id on public.warehouse
   for each row execute function public.assert_home_warehouse_is_facility();
 
+-- ── Deponun işi ──────────────────────────────────────────────────────────────
+-- Parti, hareket, sipariş, rezervasyon, mal kabul, transfer ve sefer işini depodan okur ve kopyalamaz; kullanılmış deponun işi
+-- değişseydi geçmişleri öteki işe kayardı. Gövde geç bağlanır, çünkü `delivery_run` 0046'da açılır.
+create or replace function public.warehouse_in_use(p_warehouse_id uuid)
+returns boolean
+language plpgsql
+stable
+set search_path = public
+as $$
+begin
+  return exists (select 1 from public.stock s where s.warehouse_id = p_warehouse_id)
+    or exists (select 1 from public.stock_movement m where m.warehouse_id = p_warehouse_id)
+    or exists (select 1 from public.order o where o.warehouse_id = p_warehouse_id)
+    or exists (select 1 from public.reservation r where r.warehouse_id = p_warehouse_id)
+    or exists (select 1 from public.stock_intake i where i.warehouse_id = p_warehouse_id)
+    or exists (select 1 from public.warehouse_transfer t where p_warehouse_id in (t.from_warehouse_id, t.to_warehouse_id))
+    or exists (select 1 from public.delivery_run d where d.warehouse_id = p_warehouse_id);
+end;
+$$;
+
+-- Depo ekranı kilidi buradan okur, kuralı kendisi yeniden kurmaz.
+create or replace function public.warehouses_in_use()
+returns setof uuid
+language sql
+stable
+set search_path = public
+as $$
+  select w.id from public.warehouse w where public.warehouse_in_use(w.id);
+$$;
+
+-- Aracın işi evinin işidir, çünkü araçtaki mal o tesisten yüklenir.
+create or replace function public.warehouse_business_guard() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.kind = 'vehicle' and new.home_warehouse_id is not null then
+    new.business := (select h.business from public.warehouse h where h.id = new.home_warehouse_id);
+  end if;
+  if tg_op = 'UPDATE' and new.business is distinct from old.business and public.warehouse_in_use(new.id) then
+    raise exception 'Depo kullanılmaya başladı (stok, sipariş ya da sefer var); işi değişmez: %', new.code
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger warehouse_business_guard
+  before insert or update of business, kind, home_warehouse_id on public.warehouse
+  for each row execute function public.warehouse_business_guard();
+
+-- Tesisin işi değişince araçları izler; kullanılmış aracın kendi tetikleyicisi değişikliği bütünüyle reddeder.
+create or replace function public.warehouse_business_follows() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  update public.warehouse v set business = new.business
+   where v.home_warehouse_id = new.id and v.business is distinct from new.business;
+  -- Bölgelerinin kodları da yeni işi alır; öteki işin aynı kodu tuttuğu bölge varsa anahtar değişikliği reddeder.
+  update public.delivery_zone_postal_code p set zone_id = p.zone_id
+    from public.delivery_zone z
+   where z.id = p.zone_id and z.warehouse_id = new.id;
+  return null;
+end;
+$$;
+
+create trigger warehouse_business_follows
+  after update of business on public.warehouse
+  for each row when (old.business is distinct from new.business)
+  execute function public.warehouse_business_follows();
+
+-- Posta kodunun işi bölgesinin deposundan gelir; yazanın gönderdiği değer ezilir.
+create or replace function public.delivery_zone_postal_code_business() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.business := (
+    select w.business from public.delivery_zone z join public.warehouse w on w.id = z.warehouse_id where z.id = new.zone_id
+  );
+  return new;
+end;
+$$;
+
+create trigger delivery_zone_postal_code_business
+  before insert or update of zone_id, business on public.delivery_zone_postal_code
+  for each row execute function public.delivery_zone_postal_code_business();
+
+-- Bölge başka depoya taşınınca kodları o deponun işini alır; satıra "kendini yeniden yaz" denir, kural tetikleyicisinde koşar.
+create or replace function public.delivery_zone_codes_follow() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  update public.delivery_zone_postal_code p set zone_id = p.zone_id where p.zone_id = new.id;
+  return null;
+end;
+$$;
+
+create trigger delivery_zone_codes_follow
+  after update of warehouse_id on public.delivery_zone
+  for each row when (old.warehouse_id is distinct from new.warehouse_id)
+  execute function public.delivery_zone_codes_follow();
+
+-- Sipariş müşterinin işinin deposundan yazılır: QUALITE müşterisi yalnız QUALITE deposundan, Lezzet müşterisi ve anonim alıcı yalnız
+-- Lezzet deposundan alır (docs/feature/iki-is.md, karar 7 ve 10). Depo sonradan değişse de siparişin işi değişmez; müşteri birleştirmesi
+-- geçmişi yeniden yazmadığı için müşteri değişikliği sorulmaz.
+create or replace function public.order_business_matches() returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_expected public.business;
+  v_warehouse public.business;
+begin
+  select w.business into v_warehouse from public.warehouse w where w.id = new.warehouse_id;
+  if tg_op = 'INSERT' then
+    select p.business into v_expected from public.user_profiles p where p.id = new.customer_id;
+  else
+    select w.business into v_expected from public.warehouse w where w.id = old.warehouse_id;
+  end if;
+  if v_warehouse is distinct from v_expected then
+    raise exception 'order_business_matches: siparişin işi % olmalı, depo % işinde', v_expected, v_warehouse
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger order_business_matches
+  before insert or update of warehouse_id on public.order
+  for each row execute function public.order_business_matches();
+
+-- Kampanya ve kupon yalnız Lezzet'indir (docs/feature/iki-is.md, karar 13): indirim taşıyan sipariş yalnız Lezzet deposundan yazılır.
+create or replace function public.order_discount_business() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if (select w.business from public.warehouse w where w.id = new.warehouse_id) is distinct from 'lezzet' then
+    raise exception 'order_discount_business: indirim yalnız Lezzet siparişine yazılır (indirim %)', new.discount_id
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger order_discount_business
+  before insert or update of discount_id, warehouse_id on public.order
+  for each row when (new.discount_id is not null)
+  execute function public.order_discount_business();
+
+-- Muhasebe sipariş değil satış ister: satış gerçekleştiği anda gelirdir ve o an `order_status_log`tan türer. Bu görünüm o türetimin
+-- tek yeridir ki export ile kârlılık aynı satış gününü okusun; satışın işi deposunun işidir, görünüm bu yüzden depodan sonra kurulur.
+
+-- `sale_date` ilk gerçekleşme anıdır (`min`), çünkü `delivered` ile `completed` farklı aya düşebilir. Hediye sipariş burada
+-- dışlanmaz (yalnız export süzer), `returned` dışarıdadır.
+
+-- `o.*` görünüm kurulduğu an donar: `order`a eklenen kolon için görünüm drop edilip yeniden kurulmalıdır.
+create or replace view public.order_sale with (security_invoker = true) as
+select o.*,
+       w.business,
+       s.sale_date
+  from public."order" o
+  join public.warehouse w on w.id = o.warehouse_id
+  join (
+    select order_id, min(created_at)::date as sale_date
+      from public.order_status_log
+     where to_status in ('delivered', 'completed')
+     group by order_id
+  ) s on s.order_id = o.id
+ where o.status in ('delivered', 'completed');
+
+-- Tedarik siparişi tek işe yazılır: kalemin hedef deposu siparişin işinden olmak zorunda, yoksa tek fatura iki işin malını kapsardı
+-- (docs/feature/iki-is.md, karar 4).
+create or replace function public.purchase_order_item_business() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.target_warehouse_id is not null
+     and (select w.business from public.warehouse w where w.id = new.target_warehouse_id)
+         is distinct from (select o.business from public.purchase_order o where o.id = new.purchase_order_id) then
+    raise exception 'Kalemin hedef deposu tedarik siparişinin işinden değil' using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger purchase_order_item_business
+  before insert or update of target_warehouse_id, purchase_order_id on public.purchase_order_item
+  for each row execute function public.purchase_order_item_business();
+
+-- Siparişe bağlı mal kabul siparişin işinin deposuna yapılır; siparişsiz alım depodan başka iş sormaz.
+create or replace function public.stock_intake_purchase_business() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.purchase_order_id is not null
+     and (select w.business from public.warehouse w where w.id = new.warehouse_id)
+         is distinct from (select o.business from public.purchase_order o where o.id = new.purchase_order_id) then
+    raise exception 'Mal kabulün deposu tedarik siparişinin işinden değil' using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger stock_intake_purchase_business
+  before insert or update of warehouse_id, purchase_order_id on public.stock_intake
+  for each row execute function public.stock_intake_purchase_business();
+
 -- Evine göre araç okuması: panelin ve depo kartının sorgusu ("bu tesisin araçları").
 create index warehouse_home_idx on public.warehouse (home_warehouse_id) where home_warehouse_id is not null;
 -- Parti ↔ tedarik kalemi (T5): parçalı kabulde fark raporunun bağı.
@@ -318,18 +533,19 @@ left join (
 ) r on r.variant_id = v.id and r.warehouse_id = w.id
 where w.is_active;
 
--- Depo-üstü toplam yalnız "hiç var mı" sorusunun ve tedarik önerisinin; satış kararı ve geri çağırma bunu okumaz.
--- Araçlar girmez: araçtaki mal siteden alınamaz ve akşam tesise döner, sayılsa söz ya da bolluk yanlış olurdu.
+-- Depo-üstü toplam yalnız "hiç var mı" sorusunundur, satış kararı ve geri çağırma bunu okumaz; işe göredir, çünkü öteki işin
+-- deposundaki mal bu işin müşterisine satılamaz. Araçlar girmez: araçtaki mal siteden alınamaz ve akşam tesise döner.
 create or replace view public.available_stock_total with (security_invoker = true) as
 select
   a.variant_id,
+  w.business,
   sum(a.physical_qty)    as physical_qty,
   sum(a.reserved_qty)    as reserved_qty,
   sum(a.available_qty)   as available_qty,
   sum(a.expired_dlc_qty) as expired_dlc_qty
 from public.available_stock a
 join public.warehouse w on w.id = a.warehouse_id and w.kind = 'facility'
-group by a.variant_id;
+group by a.variant_id, w.business;
 
 -- ── Tedarik siparişi ilerlemesi ──────────────────────────────────────────────
 -- PO durumu buradan türer; ölçü `initial_qty`, çünkü `physical_qty` satışla erir.

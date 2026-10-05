@@ -93,13 +93,33 @@ export async function seedSupply(db: Db, varyantlar: VaryantRef[]): Promise<Map<
   // Tedarik siparişlerinin dört durumu da örneklenir; gönderilmiş siparişin numarası olur, çünkü seed de veritabanı kuralından
   // muaf değildir.
   const YIL = new Date().getFullYear();
-  const taslak = await purchases.createDraft(ana, satilabilir.slice(0, 5).map((v, i) => ({ variantId: v.id, qty: 24 + i * 6, unitPriceCents: toCents(2.4 + i * 0.3) })), 'Bayram öncesi ek sipariş — taslak.');
-  const gonderilen = await purchases.createDraft(ana, satilabilir.slice(5, 11).map((v, i) => ({ variantId: v.id, qty: 36 + i * 12, unitPriceCents: toCents(2.6 + i * 0.25) })), 'Aylık ana sipariş.');
+  const taslak = await purchases.createDraft(
+    ana,
+    'lezzet',
+    satilabilir.slice(0, 5).map((v, i) => ({ variantId: v.id, qty: 24 + i * 6, unitPriceCents: toCents(2.4 + i * 0.3) })),
+    'Bayram öncesi ek sipariş — taslak.',
+  );
+  const gonderilen = await purchases.createDraft(
+    ana,
+    'lezzet',
+    satilabilir.slice(5, 11).map((v, i) => ({ variantId: v.id, qty: 36 + i * 12, unitPriceCents: toCents(2.6 + i * 0.25) })),
+    'Aylık ana sipariş.',
+  );
   await purchases.markSent(gonderilen.order.id, purchaseOrderReferenceNo(YIL));
-  const iptal = await purchases.createDraft(yerel, satilabilir.slice(0, 2).map((v) => ({ variantId: v.id, qty: 10 })), 'Yanlış tedarikçiye açıldı.');
+  const iptal = await purchases.createDraft(
+    yerel,
+    'lezzet',
+    satilabilir.slice(0, 2).map((v) => ({ variantId: v.id, qty: 10 })),
+    'Yanlış tedarikçiye açıldı.',
+  );
   await purchases.cancel(iptal.order.id);
   // Dördüncüsü (received) mal kabulde kapanır — stok bölümü onu kullanır.
-  const kabulBekleyen = await purchases.createDraft(ana, satilabilir.slice(11, 16).map((v, i) => ({ variantId: v.id, qty: 48 + i * 6, unitPriceCents: toCents(2.2 + i * 0.4) })), 'Gelen konteyner — mal kabulde kapanacak.');
+  const kabulBekleyen = await purchases.createDraft(
+    ana,
+    'lezzet',
+    satilabilir.slice(11, 16).map((v, i) => ({ variantId: v.id, qty: 48 + i * 6, unitPriceCents: toCents(2.2 + i * 0.4) })),
+    'Gelen konteyner — mal kabulde kapanacak.',
+  );
   await purchases.markSent(kabulBekleyen.order.id, purchaseOrderReferenceNo(YIL));
   harita.set('kabulBekleyenPo', kabulBekleyen.order.id);
 
@@ -109,6 +129,7 @@ export async function seedSupply(db: Db, varyantlar: VaryantRef[]): Promise<Map<
   // tedarikçi performansı raporu da tek renkli çıkardı.
   const tamGelen = await purchases.createDraft(
     yerel,
+    'lezzet',
     satilabilir.slice(16, 19).map((v, i) => ({ variantId: v.id, qty: 24 + i * 12, unitPriceCents: toCents(3.1 + i * 0.35) })),
     'Alsace haftalık — eksiksiz teslim alındı.',
   );

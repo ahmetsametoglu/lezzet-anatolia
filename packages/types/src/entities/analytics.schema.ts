@@ -1,13 +1,9 @@
 import { z } from 'zod';
-import { ChannelEnum, CountryEnum, PreferredLanguageEnum } from '../primitives/enums.schema';
+import { BusinessEnum, ChannelEnum, CountryEnum, PreferredLanguageEnum } from '../primitives/enums.schema';
 
 /**
- * Analitik olay sözleşmesi (13.1) — kuralların TAMAMI `docs/architecture/ANALYTICS.md`'dedir.
- *
- * **Bu dosyanın taşıdığı ayrım:** atıcının SÖYLEDİĞİ (`AnalyticsInput`) ile deftere YAZILAN
- * (`AnalyticsEventInsert`) ayrı şeylerdir. Atıcı ne olduğunu söyler; bağlamı (oturum, kanal, yer,
- * cihaz, ülke, dil) ve **sayılıp sayılmayacağını** KAPI çözer. Kural atıcılara dağıtılsaydı biri
- * unuturdu ve unutulduğunda hata vermezdi — yalnız payda sessizce şişerdi.
+ * Analitik olay sözleşmesi; kuralların tamamı `docs/architecture/ANALYTICS.md`'dedir. Atıcının söylediği (`AnalyticsInput`) ile deftere
+ * yazılan (`AnalyticsEventInsert`) ayrıdır: bağlamı ve sayılıp sayılmayacağını kapı çözer, kural atıcılara dağılsaydı payda sessizce şişerdi.
  */
 
 export const AnalyticsEventTypeEnum = z.enum([
@@ -25,11 +21,8 @@ export const AnalyticsEventTypeEnum = z.enum([
 export type AnalyticsEventType = z.infer<typeof AnalyticsEventTypeEnum>;
 
 /**
- * **HUNİNİN ADIM SIRASI** — tek kaynak (13.3).
- *
- * Etiketler ekranın dilinde ve ekranda kalır; ama SIRA bir iş kuralıdır: "ziyaret → ürün → sepet →
- * checkout → sipariş". İki yerde ayrı yazılsaydı biri gün gelip bir adım eklerdi ve iki rapor aynı
- * huninin iki farklı kayıp oranını gösterirdi — ikisi de hata vermeden.
+ * Huninin adım sırası, tek kaynak: etiketler ekranda kalır ama sıra iş kuralıdır (ziyaret → ürün → sepet → checkout → sipariş); iki yerde
+ * yazılsaydı iki rapor aynı huninin iki farklı kayıp oranını gösterirdi.
  */
 export const ANALYTICS_FUNNEL_STEPS = [
   'page_view',
@@ -40,13 +33,8 @@ export const ANALYTICS_FUNNEL_STEPS = [
 ] as const satisfies readonly AnalyticsEventType[];
 
 /**
- * Ölçülen nesne. Paket de bir katalog yüzeyidir — `product_id` ile ölçülemezdi.
- *
- * **`recipe` 24.08'de katıldı** (08.57, mobil şeridin gözlemi): tarif sayfası ölçülüyordu ama
- * yazılan `path` rota KALIBIDIR ve slug bilerek maskeli (gizlilik kararı, denetim P2). Sonuç:
- * *"kaç tarif sayfası görüntülendi"* cevaplanıyor, *"HANGİ tarif ilgi çekti"* cevaplanmıyordu.
- * Kimliği `path`e yazmak çare değildi — tek alana iki anlam yüklemek olurdu; kimliğin evi zaten
- * `subject_id`.
+ * Ölçülen nesne; paket ve tarif de katalog yüzeyidir. `path` rota kalıbıdır ve slug maskelidir, "hangi kayıt" sorusunun cevabı
+ * `subject_id`dedir.
  */
 export const AnalyticsSubjectTypeEnum = z.enum(['product', 'variant', 'bundle', 'category', 'collection', 'recipe']);
 export type AnalyticsSubjectType = z.infer<typeof AnalyticsSubjectTypeEnum>;
@@ -60,14 +48,8 @@ export const AnalyticsAvailabilityEnum = z.enum(['sellable', 'sold_out', 'closed
 export type AnalyticsAvailability = z.infer<typeof AnalyticsAvailabilityEnum>;
 
 /**
- * **TERK SEBEBİ — huninin en değerli kolonu, ve tipli olmak zorunda.**
- *
- * Değerler motordaki kararların karşılığıdır: `meetsMinBasket` · `splitByRoute` · `diffCartByPlace`
- * · kupon doğrulaması · stok kontrolü · ödeme sonucu. Serbest metin olsaydı üç ekran üç farklı
- * cümle yazardı ve kolon bir ay içinde sorgulanamaz hâle gelirdi.
- *
- * **Yeni bir sebep eklemek buraya bir satır + migration'a bir enum değeri demektir** — ikisi birden;
- * yalnız birini eklemek sessizce düşen bir olay üretir.
+ * Terk sebebi, huninin en değerli kolonu ve tipli olmak zorunda: değerler motorun kararlarının karşılığıdır, serbest metin üç ekranda üç
+ * cümleye dağılırdı. Yeni sebep burada bir satır ve migration'da bir enum değeri ister, biri unutulursa olay sessizce düşer.
  */
 export const AnalyticsBlockedReasonEnum = z.enum([
   'min_basket',
@@ -78,24 +60,16 @@ export const AnalyticsBlockedReasonEnum = z.enum([
   'payment_failed',
   'not_shippable',
   /**
-   * Seçilen güne teslimat yok. **Bizim arızamız olan hâller BU LİSTEDE YOK ve bu bir karar**
-   * (müşteri şeridinin ayrımı, 04.08): `cart_unreachable` sepet okumasının düşmesidir,
-   * `warehouse_unresolved` bölgenin çözülememesidir — huniye yazılsalardı müşteri VAZGEÇMİŞ
-   * görünürdü, oysa biz cevap verememişiz; yerleri `error_log`. `address_missing` de yok, çünkü
-   * o checkout'un normal ilk hâli: engel sayılsaydı her oturum bir `checkout_blocked` üretir ve
-   * olay değerini kaybederdi.
+   * Seçilen güne teslimat yok. Bizim arızamız olan hâller (`cart_unreachable`, `warehouse_unresolved`) ve checkout'un normal ilk hâli
+   * (`address_missing`) bu listede yoktur, huniye yazılsalardı müşteri vazgeçmiş görünürdü.
    */
   'date_unavailable',
 ]);
 export type AnalyticsBlockedReason = z.infer<typeof AnalyticsBlockedReasonEnum>;
 
 /**
- * **UTM KÜNYESİ — kapalı sözlük.** Ham sorgu dizesinin anahtarları deftere GİRMEZ; kapı gelen
- * parametreleri bu beş alana indirger (`normalizeUtm`). Açık bırakılsaydı reklam aracının eklediği
- * her parametre — tıklama kimlikleri (`gclid`, `fbclid`) dâhil — anonim deftere sızardı; o kimlikler
- * reklam ağının tarafında tek kullanıcıya çözülür, yani "kimliksiz defter" iddiası düşerdi.
- *
- * SQL tarafı bu adları okuyor (`utm->>'campaign'`, `0036`); sözlük değişirse iki yer birden değişir.
+ * UTM künyesi, kapalı sözlük: kapı gelen parametreleri bu beş alana indirger, açık bırakılsaydı tıklama kimlikleri (`gclid`, `fbclid`) anonim
+ * deftere sızardı. SQL tarafı bu adları okur (`utm->>'campaign'`), sözlük değişirse iki yer birden değişir.
  */
 export const UtmTagsSchema = z.object({
   source: z.string().nullish(),
@@ -111,15 +85,8 @@ export const AnalyticsDeviceEnum = z.enum(['mobile', 'desktop']);
 export type AnalyticsDevice = z.infer<typeof AnalyticsDeviceEnum>;
 
 /**
- * **YÜZEY** — olayın hangi uygulamadan geldiği (kullanıcı kararı 24.08 · MB-63).
- *
- * `AnalyticsDeviceEnum` ile KARIŞTIRILMAZ: o tarayıcı cihazıdır (`mobile|desktop`), bu ise ürünün
- * hangi yüzeyi. Native uygulamada `device` her zaman `mobile`dır ve o bilgi hiçbir soruyu ayırt
- * etmez — nitekim MB-63'ün arızası tam buydu: `analytics_daily` yalnız web'in sayılarını taşırken
- * ekran "toplam" yazıyordu.
- *
- * **AYRI DEFTER DEĞİL, BOYUT** (kullanıcı kararı): iki defter aynı huniyi iki kez tanımlamak olurdu
- * ve "toplam" sorusu her seferinde elle birleştirme isterdi.
+ * Yüzey, olayın hangi uygulamadan geldiği: `AnalyticsDeviceEnum` tarayıcı cihazıdır, native'de hep `mobile` olduğu için yüzeyi ayırt
+ * etmez. Ayrı defter değil boyuttur, iki defter aynı huniyi iki kez tanımlardı.
  */
 export const AnalyticsSurfaceEnum = z.enum(['web', 'native']);
 export type AnalyticsSurface = z.infer<typeof AnalyticsSurfaceEnum>;
@@ -133,24 +100,13 @@ const SubjectSchema = z.object({
 });
 
 /**
- * **ATICININ SÖYLEDİĞİ** — olay tipine göre ayrık birlik (discriminated union).
- *
- * Ayrık birlik olması `meta`'nın kapalı sözlük kalmasını SAĞLAYAN şeydir: her tipin taşıyabileceği
- * alan burada yazılı, kapı bunu doğruluyor. Serbest bir `meta` bırakılsaydı altı ay sonra kimsenin
- * şemasını bilmediği bir çöp alan olurdu.
- *
- * Bağlam alanları (oturum · kanal · yer · cihaz · ülke · dil · yol) BURADA YOK ve bilerek: onları
- * kapı çözer. Atıcıya bırakılsalardı her atıcı kendi çözümünü yazardı ve biri gün gelip ötekinden
- * ayrışırdı.
+ * Atıcının söylediği, olay tipine göre ayrık birlik: her tipin taşıyabileceği alan burada yazılıdır ve `meta` kapalı sözlük kalır. Bağlam
+ * alanları (oturum, kanal, yer, cihaz, ülke, dil, yol) burada yoktur, onları kapı çözer.
  */
 export const AnalyticsInputSchema = z.discriminatedUnion('type', [
   /**
-   * Sayfa açılışı — yol KAPIDA rota kalıbına çevrilir, atıcı somut yol göndermez.
-   *
-   * **UTM burada taşınır ve ayrı bir kapı YOKTUR** (13.2 zemini): kampanya künyesi yalnız ilk
-   * istekte vardır ve o istek zaten bir sayfa render'ıdır. Ayrı bir `rememberCampaign` kapısı
-   * açılsaydı atıcının iki şeyi birden hatırlaması gerekirdi — biri unutulduğunda kampanya raporu
-   * sessizce eksik kalırdı. Kapı bunu oturumun ilk olayında **bir kez** kalıcılaştırır.
+   * Sayfa açılışı: yol kapıda rota kalıbına çevrilir. UTM burada taşınır ve ayrı kapısı yoktur, çünkü kampanya künyesi yalnız ilk istekte
+   * vardır; kapı onu oturumun ilk olayında bir kez kalıcılaştırır.
    */
   z.object({
     type: z.literal('page_view'),
@@ -158,13 +114,8 @@ export const AnalyticsInputSchema = z.discriminatedUnion('type', [
     /** Yönlendiren ALAN ADI — ham URL değil (sorgu dizesi kişisel veri taşır). */
     source: z.string().nullish(),
     /**
-     * **Sayfanın öznesi — İSTEĞE BAĞLI** (08.57). `path` rota KALIBIDIR (slug maskeli, denetim P2),
-     * yani "hangi sayfa türü" cevaplanır ama "hangi kayıt" cevaplanmazdı. Tarif sayfası bunu
-     * dolduruyor: kendi `*_view` olayı yok ve olması da gerekmiyor — ölçülen şey aynı, bir içerik
-     * sayfasına bakıldı.
-     *
-     * Öznesi olmayan sayfalar (katalog, hesap, sepet) geçmez ve geçmemeleri doğrudur; zorunlu
-     * yapmak her sayfaya uydurma bir kimlik yazdırmak olurdu.
+     * Sayfanın öznesi, isteğe bağlı: `path` rota kalıbıdır ve "hangi kayıt" sorusunu cevaplamaz. Öznesi olmayan sayfa (katalog, hesap,
+     * sepet) geçmez, zorunlu olsa uydurma kimlik yazılırdı.
      */
     subjectType: AnalyticsSubjectTypeEnum.optional(),
     subjectId: z.string().uuid().optional(),
@@ -221,10 +172,8 @@ export const AnalyticsInputSchema = z.discriminatedUnion('type', [
 export type AnalyticsInput = z.infer<typeof AnalyticsInputSchema>;
 
 /**
- * **DEFTERE YAZILAN** — kapının ürettiği satır. Atıcı bunu asla kurmaz.
- *
- * `customerId` YOKTUR ve nullable bile değildir (`ANALYTICS §2`): tipte de bulunmaması, bir gün
- * birinin "opsiyonel olarak koyalım" demesini derleme hatasına çevirir.
+ * Deftere yazılan satır, kapının ürettiği; `customerId` tipte yoktur, "opsiyonel olarak koyalım" demek derleme hatası olsun diye
+ * (`ANALYTICS §2`).
  */
 export const AnalyticsEventInsertSchema = z.object({
   type: AnalyticsEventTypeEnum,
@@ -240,12 +189,10 @@ export const AnalyticsEventInsertSchema = z.object({
   availability: AnalyticsAvailabilityEnum.nullish(),
   blockedReason: AnalyticsBlockedReasonEnum.nullish(),
   device: AnalyticsDeviceEnum.nullish(),
-  /**
-   * Hangi yüzeyden geldi — **ZORUNLU, `nullish` değil.** `default 'web'` ya da opsiyonel bir alan,
-   * yüzeyi söylemeyi unutan bir yazımın sessizce web sayılması demekti; yani MB-63'ün arızasının
-   * yeniden üretilmesi. Zorunlu alan, unutmayı DERLEME hatasına çevirir.
-   */
+  /** Hangi yüzeyden geldiği zorunludur: yüzeyi söylemeyi unutan yazım sessizce web sayılmasın, unutmak derleme hatası olsun. */
   surface: AnalyticsSurfaceEnum,
+  /** Olayın işi, yerin işidir ve ziyaretçi Lezzet'tir; yüzey gibi zorunludur. */
+  business: BusinessEnum,
   country: CountryEnum.nullish(),
   language: PreferredLanguageEnum.nullish(),
   meta: z.record(z.unknown()).nullish(),
@@ -273,14 +220,12 @@ export const AnalyticsSessionInsertSchema = AnalyticsSessionSchema.pick({ sessio
 export type AnalyticsSessionInsert = z.infer<typeof AnalyticsSessionInsertSchema>;
 
 /**
- * Günlük özet satırı — **ekranların okuduğu şey.** Ham defter yalnız detay içindir.
- *
- * `sessionCount` YAKLAŞIKTIR: aynı oturum birden çok boyut satırına düşebilir, yani satırların
- * toplamı gerçek oturum sayısından büyüktür. Toplanabilir tek sayı `eventCount`'tur — bunu okuyan
- * ekran bilmezse "toplam ziyaretçi" diye yanlış bir sayı üretir.
+ * Günlük özet satırı, ekranların okuduğu şey. `sessionCount` yaklaşıktır, aynı oturum birden çok boyut satırına düşebilir; toplanabilir tek
+ * sayı `eventCount`'tur.
  */
 export const AnalyticsDailySchema = z.object({
   day: z.string(),
+  business: BusinessEnum,
   type: AnalyticsEventTypeEnum,
   path: z.string().nullable(),
   warehouseId: z.string().uuid().nullable(),
@@ -297,16 +242,14 @@ export const AnalyticsDailySchema = z.object({
 export type AnalyticsDaily = z.infer<typeof AnalyticsDailySchema>;
 
 /**
- * **SİNYAL ÖZETLERİ (13.2 · 13.4)** — `analytics_daily`'nin taşıyamadığı üç kırılım.
- *
- * Ürünü ya da arama terimini günlük özete BOYUT olarak eklemek satır sayısını katalog büyüklüğüyle
- * çarpardı; huni/ısı/seri okumaları da o şişmiş tabloyu taramak zorunda kalırdı. Üç ayrı soru, üç
- * ayrı doğal tavan.
+ * Sinyal özetleri, `analytics_daily`'nin taşıyamadığı üç kırılım: ürünü ya da arama terimini günlük özete boyut yapmak satır sayısını
+ * katalog büyüklüğüyle çarpardı. Üç ayrı soru, üç ayrı doğal tavan.
  */
 
-/** Gün × ürün. Vitrin seçkisi (08.9) de bunu okur — ham deftere bağlanmaz. */
+/** Gün × ürün; vitrin seçkisi de bunu okur, ham deftere bağlanmaz. */
 export const AnalyticsProductDailySchema = z.object({
   day: z.string(),
+  business: BusinessEnum,
   productId: z.string().uuid(),
   viewCount: z.number().int(),
   cartCount: z.number().int(),
@@ -328,6 +271,7 @@ export type AnalyticsZeroResultKind = z.infer<typeof AnalyticsZeroResultKindEnum
 /** Gün × terim × kova. Sistemdeki tek KALICI serbest metin — ham defterle aynı 25 ayı yaşar. */
 export const AnalyticsSearchDailySchema = z.object({
   day: z.string(),
+  business: BusinessEnum,
   query: z.string(),
   zeroResultKind: AnalyticsZeroResultKindEnum.nullable(),
   searchCount: z.number().int(),
@@ -339,6 +283,7 @@ export type AnalyticsSearchDaily = z.infer<typeof AnalyticsSearchDailySchema>;
 /** Gün × kaynak × kampanya. `source: null` DOĞRUDAN trafiktir — eksik veri değil. */
 export const AnalyticsSourceDailySchema = z.object({
   day: z.string(),
+  business: BusinessEnum,
   source: z.string().nullable(),
   campaign: z.string().nullable(),
   medium: z.string().nullable(),
@@ -351,10 +296,8 @@ export const AnalyticsSourceDailySchema = z.object({
 export type AnalyticsSourceDaily = z.infer<typeof AnalyticsSourceDailySchema>;
 
 /**
- * Dönemin ürün sinyali (13.4 · vitrin 08.9).
- *
- * `cartRate` paydası SATILABİLİR görüntülemedir. Payda 0 ise oran `null` — sıfır değil: hiç
- * satılabilir hâlde görünmemiş ürün "kimse almıyor" diye okunmamalı (`CLAUDE §1`).
+ * Dönemin ürün sinyali: `cartRate` paydası satılabilir görüntülemedir ve payda 0 ise oran `null`dur, hiç satılabilir görünmemiş ürün "kimse
+ * almıyor" diye okunmamalı.
  */
 export const AnalyticsProductSignalSchema = z.object({
   productId: z.string().uuid(),
@@ -367,7 +310,7 @@ export const AnalyticsProductSignalSchema = z.object({
 });
 export type AnalyticsProductSignal = z.infer<typeof AnalyticsProductSignalSchema>;
 
-/** Dönemin arama sinyali (13.4) — `zeroResultKind` doluysa sonuç dönmemiş demektir. */
+/** Dönemin arama sinyali; `zeroResultKind` doluysa sonuç dönmemiş demektir. */
 export const AnalyticsSearchSignalSchema = z.object({
   query: z.string(),
   zeroResultKind: AnalyticsZeroResultKindEnum.nullable(),
@@ -377,13 +320,8 @@ export const AnalyticsSearchSignalSchema = z.object({
 export type AnalyticsSearchSignal = z.infer<typeof AnalyticsSearchSignalSchema>;
 
 /**
- * **DÖNEM CİROSU — gün × kanal** (13.2).
- *
- * Süzgeç **SİPARİŞ tarihindedir**, teslim gününde değil: bugün verilen sipariş üç gün sonra teslim
- * edilir, yani teslim gününe göre okunan bir dönem cirosu kampanya giderinin dönemiyle hizalanmaz.
- *
- * Kanal ayrı satır çünkü **karışık ölçüm yalan söyler** (`ANALYTICS §3`): B2B'nin tek siparişi
- * B2C'nin ortalamasını savurur. Toplamak okuyanın kararı.
+ * Dönem cirosu gün × kanal: süzgeç sipariş tarihindedir, teslim gününe göre okunan ciro kampanya giderinin dönemiyle hizalanmazdı. Kanal
+ * ayrı satırdır, çünkü B2B'nin tek siparişi B2C'nin ortalamasını savurur.
  */
 export const OrderRevenueDailySchema = z.object({
   day: z.string(),
@@ -394,11 +332,8 @@ export const OrderRevenueDailySchema = z.object({
 export type OrderRevenueDaily = z.infer<typeof OrderRevenueDailySchema>;
 
 /**
- * Kampanya cirosu — **İLK TEMAS atfı** (13.2). Satır "o kampanyanın reklamına tıklayıp sipariş
- * verenler" DEĞİL, "o kampanyanın kazandırdığı müşterilerin o dönemdeki siparişleri"dir.
- *
- * `newCustomerCount` bu farkı okutmak için var: yeni kampanyada ciro geç görünür, eski kampanyada
- * gider bittiği hâlde ciro sürer.
+ * Kampanya cirosu, ilk temas atfı: satır "o kampanyanın kazandırdığı müşterilerin o dönemdeki siparişleri"dir. `newCustomerCount` bu
+ * farkı okutur, yeni kampanyada ciro geç görünür, eskisinde gider bitse de sürer.
  */
 export const AnalyticsCampaignRevenueSchema = z.object({
   campaign: z.string().nullable(),
@@ -412,8 +347,7 @@ export const AnalyticsCampaignRevenueSchema = z.object({
 export type AnalyticsCampaignRevenue = z.infer<typeof AnalyticsCampaignRevenueSchema>;
 
 /**
- * Müşteri segmenti (13.5) — **saklanmaz, TÜRETİLİR.** Saklanan bir segment kolonu, tazeleyen iş bir
- * gün koşmayınca sessizce yanlışa dönerdi ve "uyuyan" listesinde dün sipariş vermiş biri dururdu.
+ * Müşteri segmenti saklanmaz, türetilir: saklanan kolon, tazeleyen iş koşmayınca "uyuyan" listesinde dün sipariş vermiş birini tutardı.
  */
 export const CustomerSegmentEnum = z.enum(['champion', 'new', 'active', 'dormant', 'lost']);
 export type CustomerSegment = z.infer<typeof CustomerSegmentEnum>;
@@ -428,11 +362,8 @@ export const CustomerSegmentCountSchema = z.object({
 export type CustomerSegmentCount = z.infer<typeof CustomerSegmentCountSchema>;
 
 /**
- * **HAFTALIK AI İÇGÖRÜ** (13.7) — üreten iş ile okuyan ekranın ortak sözleşmesi.
- *
- * Şema `packages/ai`'da değil BURADA çünkü iki tarafı var: AI görevi çıktı sözleşmesi olarak
- * kullanır, ekran saklanmış hâlini okur. `packages/ai` zaten `types`'a bakıyor, tersi yasak
- * (`STACK §4`) — emsal `SuggestLocalizedOutputSchema`.
+ * Haftalık yapay zekâ içgörüsü, üreten iş ile okuyan ekranın ortak sözleşmesi; şema burada durur, çünkü `packages/ai` `types`'a bakar,
+ * tersi yasaktır.
  */
 export const AnalyticsInsightSchema = z.object({
   headline: z.string(),

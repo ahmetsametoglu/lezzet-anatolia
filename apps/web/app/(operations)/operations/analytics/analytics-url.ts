@@ -1,23 +1,15 @@
 import { ChannelEnum, type Channel } from '@lezzet/types';
+import { parseBusinessFilter, type BusinessFilter } from '@/lib/business-filter';
 import { oneOf, type RawParams } from '@/lib/url-params';
 
-// Analitik ekranının URL SÖZLEŞMESİ — tek kaynak (öteki operasyon ekranlarının deseni). Üç eksen
-// adreste taşınır çünkü üçü de bir GÖRÜNÜMÜ tanımlıyor: hangi soruyu soruyorum (mod), hangi
-// pencerede (dönem), kimin için (kanal). Paylaşılan bir bağlantı aynı ekranı açmalı — analitikte
-// bu, "şuna bak" demenin tek yolu.
-//
-// İmleç yok: bu ekranda sayfalanan bir liste yok. Bloklar SABİT SINIRLI kümeler gösteriyor
-// (ilk N kaynak, ilk N kampanya) — sayfalama değil, "tıklatma daveti" (CLAUDE.md §1).
+// Analitik ekranının URL sözleşmesi: mod, dönem ve kanal adreste taşınır, çünkü paylaşılan bağlantı aynı görünümü açmalı. İmleç yoktur,
+// bloklar sabit sınırlı kümeler gösterir.
 
 const ANALYTICS_PATH = '/operations/analytics';
 
 /**
- * Tezgâhın iki modu — çizimin kendi sözleşmesi: *"Ticaret ↔ Trafik. Aynı çorbada değil, mimari
- * ayrım."*
- *
- * Ayrımın sebebi kaynak: **Ticaret** siparişten okunur (kesin sayı, kapalı dönem), **Trafik** olay
- * defterinden (olasılıklı iz). İkisini tek bir gösterge bandında toplamak, kesin bir ciroyu
- * örneklemli bir ziyaret sayısıyla aynı güvenle okutmak olurdu.
+ * Ekranın iki modu ayrı kaynaktan okur: Ticaret siparişten (kesin sayı, kapalı dönem), Trafik olay defterinden (olasılıklı iz). İkisi tek
+ * gösterge bandında toplansaydı kesin ciro örneklemli ziyaret sayısıyla aynı güvenle okunurdu.
  */
 export const ANALYTICS_MODES = ['ticaret', 'trafik'] as const;
 export type AnalyticsMode = (typeof ANALYTICS_MODES)[number];
@@ -46,9 +38,10 @@ export interface AnalyticsUrlState {
   mode: AnalyticsMode;
   period: AnalyticsPeriod;
   channel: AnalyticsChannel;
+  business: BusinessFilter;
 }
 
-const DEFAULTS: AnalyticsUrlState = { mode: 'ticaret', period: 'd30', channel: 'all' };
+const DEFAULTS: AnalyticsUrlState = { mode: 'ticaret', period: 'd30', channel: 'all', business: 'all' };
 
 /** URL → ekran durumu. Tanınmayan değer sessizce varsayılana düşer (bozuk link ekranı kırmaz). */
 export function parseAnalyticsUrl(params: RawParams): AnalyticsUrlState {
@@ -56,6 +49,7 @@ export function parseAnalyticsUrl(params: RawParams): AnalyticsUrlState {
     mode: oneOf(params.mode, ANALYTICS_MODES, DEFAULTS.mode),
     period: oneOf(params.period, ANALYTICS_PERIODS, DEFAULTS.period),
     channel: oneOf(params.ch, [...ChannelEnum.options, 'all'] as const, DEFAULTS.channel),
+    business: parseBusinessFilter(params.business),
   };
 }
 
@@ -65,18 +59,14 @@ export function analyticsUrl(state: AnalyticsUrlState): string {
   if (state.mode !== DEFAULTS.mode) p.set('mode', state.mode);
   if (state.period !== DEFAULTS.period) p.set('period', state.period);
   if (state.channel !== DEFAULTS.channel) p.set('ch', state.channel);
+  if (state.business !== DEFAULTS.business) p.set('business', state.business);
   const qs = p.toString();
   return qs ? `${ANALYTICS_PATH}?${qs}` : ANALYTICS_PATH;
 }
 
 /**
- * Dönemin iki penceresi — **bu** ve **önceki**, ikisi de aynı uzunlukta.
- *
- * Kıyas omurgası çizimin birinci maddesi (*"kıyassız çıplak rakam eksik sayılır"*), yani pencereyi
- * hesaplayan tek bir yer olmalı: iki blok kendi başına hesaplarsa bir gün biri günü dahil eder
- * öteki etmez ve fark hiçbir yerde hata vermez, yalnız iki blok birbirini yalanlar.
- *
- * `now` DIŞARIDAN geçilir — sunucuda tek bir an okunur ve tüm bloklar aynı ana göre hizalanır.
+ * Dönemin iki penceresi, bu ve önceki, aynı uzunlukta; pencereyi tek yer hesaplar ki iki blok birbirini yalanlamasın. `now` dışarıdan
+ * geçilir, bütün bloklar aynı ana hizalanır.
  */
 export function periodRange(period: AnalyticsPeriod, now: Date): { from: string; to: string; prevFrom: string; prevTo: string } {
   const days = PERIOD_DAYS[period];

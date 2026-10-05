@@ -10,14 +10,15 @@ import {
   EMPTY_PRODUCT_CONTEXT,
   effectiveChannelOf,
   loadProductContext,
-  pricingViewerOf,
+  pricingViewerFor,
   readCostBasis,
+  customerBusiness,
   readDeliveryInputs,
   resolveCheckoutPayment,
   resolveDelivery,
   toVariant,
 } from '@lezzet/application';
-import { costOf, targetMarginFor } from '@lezzet/domain-core';
+import { costOf, customerBusinessOf, targetMarginFor } from '@lezzet/domain-core';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Channel, ProductVariant, ProductWithRelations, UserProfile } from '@lezzet/types';
 import type { AddressPickOption, CustomerPickOption, DeliveryContext, VariantPickRow } from './new-order-types';
@@ -83,11 +84,12 @@ export async function readDeliveryContext(db: Db, customerId: string, addressId:
   const address = (await new AddressService(db).listByCustomer(customerId)).find((a) => a.id === addressId);
   if (!address) return null;
 
-  const inputs = await readDeliveryInputs(db);
+  const [inputs, business] = await Promise.all([readDeliveryInputs(db), customerBusiness(db, customerId)]);
   const delivery = await resolveDelivery(db, {
     postalCode: address.postalCode,
     country: address.country,
     hasNonShippableItem: false,
+    business,
     inputs,
   });
 
@@ -126,12 +128,16 @@ export async function searchVariantRows(
   const query = opts.term.trim();
   if (query.length < 2) return [];
 
-  const viewer = await pricingViewerOf(db, opts.customerId);
+  const profile = await new UserProfileService(db).getById(opts.customerId);
+  const viewer = await pricingViewerFor(db, profile);
+  const business = customerBusinessOf(profile);
   const page = await new ProductService(db).listWithRelations({ filters: { query }, limit: SEARCH_LIMIT });
   if (page.rows.length === 0) return [];
 
-  const shippingWarehouseId = (await new WarehouseService(db).list({ activeOnly: true })).find((w) => w.shipsOnline)?.id ?? null;
-  const context = await loadProductContext(db, page.rows, { warehouseId: opts.warehouseId, shippingWarehouseId }, viewer);
+  // Kargo deposu müşterinin işinden seçilir: QUALITE kargo göndermez, müşterisine kargo stoğu gösterilmez.
+  const shippingWarehouseId =
+    (await new WarehouseService(db).list({ activeOnly: true })).find((w) => w.shipsOnline && w.business === business)?.id ?? null;
+  const context = await loadProductContext(db, page.rows, { warehouseId: opts.warehouseId, shippingWarehouseId, business }, viewer);
 
   const variantIds = page.rows.flatMap((p) => p.variants?.map((v) => v.id) ?? []);
   const costs = await readCostBasis(db, variantIds);

@@ -15,7 +15,7 @@ import {
 // hata vermez.
 
 const NOW = new Date('2026-08-04T10:00:00.000Z');
-const DEFAULTS: ReportsUrlState = { tab: 'urun', ym: '2026-08', cmp: false };
+const DEFAULTS: ReportsUrlState = { tab: 'urun', ym: '2026-08', cmp: false, business: 'all' };
 
 describe('parseReportsUrl', () => {
   it('boş parametrede bu ayı ve ilk sekmeyi verir', () => {
@@ -30,15 +30,17 @@ describe('parseReportsUrl', () => {
   });
 
   it('geçerli değerleri okur', () => {
-    expect(parseReportsUrl({ tab: 'sirket', ym: '2026-07', cmp: '1' }, NOW)).toEqual({
+    expect(parseReportsUrl({ tab: 'sirket', ym: '2026-07', cmp: '1', business: 'qualite' }, NOW)).toEqual({
       tab: 'sirket',
       ym: '2026-07',
       cmp: true,
+      business: 'qualite',
     });
   });
 
   it('tanınmayan sekmeyi varsayılana düşürür', () => {
     expect(parseReportsUrl({ tab: 'uydurma' }, NOW).tab).toBe('urun');
+    expect(parseReportsUrl({ business: 'migros' }, NOW).business).toBe('all');
   });
 });
 
@@ -48,7 +50,7 @@ describe('reportsUrl', () => {
   });
 
   it('gidiş-dönüş kayıpsız', () => {
-    const state: ReportsUrlState = { tab: 'export', ym: '2026-05', cmp: true };
+    const state: ReportsUrlState = { tab: 'sirket', ym: '2026-05', cmp: true, business: 'lezzet' };
     const query = reportsUrl(state, NOW).split('?')[1] ?? '';
     expect(parseReportsUrl(Object.fromEntries(new URLSearchParams(query)), NOW)).toEqual(state);
   });

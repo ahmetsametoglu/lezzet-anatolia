@@ -31,6 +31,7 @@ export * from './stock/offer';
 export * from './stock/reservation';
 export * from './stock/shelf-life';
 export * from './stock/shortfall';
+export * from './stock/purchase-business';
 export * from './stock/document-no';
 export * from './stock/transfer';
 export * from './stock/purchase-summary';

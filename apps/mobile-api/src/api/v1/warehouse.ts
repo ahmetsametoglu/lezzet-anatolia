@@ -179,7 +179,7 @@ export const warehouse = new Hono<WarehouseEnv>();
 warehouse.use('*', requireStaffRole('warehouse', 'admin'));
 warehouse.use('*', warehouseGuard);
 
-// ── D1 · Hazırlık (toplama) ─────────────────────────────────────────────────
+// ── Hazırlık (toplama) ──────────────────────────────────────────────────────
 
 /**
  * Hazırlama kuyruğu: `confirmed` + `preparing` birlikte gelir ki yarım kalan iş kaybolmasın. Gün verilmezse süzgeç yoktur, çünkü
@@ -231,7 +231,7 @@ warehouse.post('/preparation/:orderId/confirm', async (c) => {
   return ok(c, ConfirmPreparationResponseSchema.parse(body));
 });
 
-// ── D1 · Kutu döngüsü ───────────────────────────────────────────────────────
+// ── Kutu döngüsü ────────────────────────────────────────────────────────────
 
 /**
  * Deponun yazıcı envanteri; hangisinin kullanılacağı cihazın seçimidir ve buraya gelmez. Yalnız açık satırlar döner ki sökülmüş
@@ -399,7 +399,7 @@ warehouse.get('/boxes/:boxId/label.png', async (c) => {
   return c.body(new Uint8Array(png), 200, { 'content-type': 'image/png' });
 });
 
-// ── D1 · Sevk: teklif + duyuru ──────────────────────────────────────────────
+// ── Sevk: teklif + duyuru ───────────────────────────────────────────────────
 
 /**
  * Sevk seçenekleri: sağlayıcıya teklif sorar, para harcamaz; ön koşullar duyurunun kapısından geçer ki listedeki seçenek duyuruda
@@ -540,7 +540,7 @@ warehouse.post('/boxes/:boxId/printed', async (c) => {
   return ok(c, MarkBoxPrintedResponseSchema.parse(body));
 });
 
-// ── D3 · Yakın-SKT turu ─────────────────────────────────────────────────────
+// ── Yakın-SKT turu ──────────────────────────────────────────────────────────
 
 /**
  * Karar bekleyen partiler, en acil önce; parti tek depoda olduğu için depo süzgeci zorunludur. Dönen tip fiyat taşımaz.
@@ -552,14 +552,17 @@ warehouse.get('/near-expiry', async (c) => {
   return ok(c, NearExpiryResponseSchema.parse(body));
 });
 
-// ── D2 · Mal kabul ──────────────────────────────────────────────────────────
+// ── Mal kabul ───────────────────────────────────────────────────────────────
 
 /**
  * Bekleyen sevkiyatlar: referans, tedarikçi ve kalem sayısı; depocunun gördüğü "bekleyen kabul" olduğu için adres `/intake`.
  * Dönen tip fiyat taşımaz.
  */
 warehouse.get('/intake', async (c) => {
-  const intakes = await listPendingIntakes(serviceDb());
+  const db = serviceDb();
+  const workplace = await new WarehouseService(db).getById(c.get('warehouseId'));
+  if (!workplace) return fail(c, 'warehouse_not_found', 404);
+  const intakes = await listPendingIntakes(db, { business: workplace.business });
 
   const body: z.input<typeof PendingIntakesResponseSchema> = { intakes };
   return ok(c, PendingIntakesResponseSchema.parse(body));
@@ -645,7 +648,7 @@ warehouse.post('/intake/:purchaseOrderId/receive', async (c) => {
  */
 warehouse.post('/intake/receive', async (c) => receiveIntake(c, null));
 
-// ── D4 · Sayım / düzeltme ───────────────────────────────────────────────────
+// ── Sayım / düzeltme ────────────────────────────────────────────────────────
 
 /**
  * İmha / sayım kaydı: satırlar tek transaction'da yazılır ve tek olay belgesini paylaşır. Depocuya `return_restock` sunulmaz
@@ -665,7 +668,7 @@ warehouse.post('/adjustments', async (c) => {
   return ok(c, RecordAdjustmentResponseSchema.parse(body));
 });
 
-// ── D5 · Transfer (gelen) ───────────────────────────────────────────────────
+// ── Transfer (gelen) ────────────────────────────────────────────────────────
 
 /**
  * Bu depoya yolda olan transferler; küme fiziksel gerçekle sınırlı olduğu ve bir sevkiyatı kaçırmak iki depoda da görünmeyen mal
@@ -732,7 +735,7 @@ warehouse.post('/transfers/:transferId/receive', async (c) => {
   return ok(c, ReceiveTransferResponseSchema.parse(body));
 });
 
-// ── D6 · Kurye dönüşü kabulü ────────────────────────────────────────────────
+// ── Kurye dönüşü kabulü ─────────────────────────────────────────────────────
 
 /**
  * Rampaya dönen, akıbeti bekleyen kalemi olan siparişler; anahtar kurye günü değil depodur, çünkü aynı rampaya iki kurye döner ve
@@ -765,7 +768,7 @@ warehouse.post('/returns/:orderId', async (c) => {
   return ok(c, WarehouseReturnResponseSchema.parse(body));
 });
 
-// ── D6 · Rampa listesi + tek kuryenin dönüşü ────────────────────────────────
+// ── Rampa listesi + tek kuryenin dönüşü ─────────────────────────────────────
 
 /**
  * Rampada bekleyen kuryeler: depocunun sorusu "hangi sipariş döndü" değil "kimden teslim alıyorum", çünkü mal kurye başına

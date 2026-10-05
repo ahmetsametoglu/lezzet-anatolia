@@ -315,6 +315,8 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
           preferredLanguage={selected.preferredLanguage}
           codAllowed={detail.codAllowed}
           pickupAllowed={detail.pickupAllowed}
+          business={detail.business}
+          b2bApproved={selected.b2bStatus === 'approved'}
           priceRuleBasis={detail.priceRuleBasis}
           priceRulePercent={detail.priceRulePercent}
           priceGroupId={detail.priceGroupId}

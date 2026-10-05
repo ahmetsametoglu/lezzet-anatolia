@@ -13,15 +13,18 @@ create table public.delivery_zone (
   created_at timestamptz not null default now()
 );
 
--- Posta kodu ↔ bölge: tekillik veride, çünkü iki bölgedeki aynı kod siparişi yanlış depoya düşürürdü. Anahtar
--- `(country, postal_code)`, çünkü `67000` iki ülkede de geçerli; pasif bölge de kodunu tutar.
+-- Posta kodu ↔ bölge: bir kod her işte en çok bir bölgede olur, çünkü aynı işin iki bölgesindeki kod siparişi yanlış depoya
+-- düşürürdü; iki iş aynı mahalleye ayrı seferle gider (docs/feature/iki-is.md, karar 9). Anahtar ülkeyi de taşır, çünkü `67000` iki
+-- ülkede de geçerli; pasif bölge de kodunu tutar.
 create table public.delivery_zone_postal_code (
   country country_code not null,
   -- Normalize saklanır (boşluksuz, büyük harf) — arama tarafı da normalize eder; iki taraf aynı
   -- kuralı uygulamazsa "67 000" ile "67000" iki ayrı kod olur ve tekillik kâğıt üstünde kalır.
   postal_code text not null check (postal_code = upper(replace(postal_code, ' ', ''))),
   zone_id uuid not null references public.delivery_zone (id) on delete cascade,
-  primary key (country, postal_code)
+  -- Bölgenin işi, deposundan kopyalanır (0031 tetikleyicisi); iş başına tekilliği anahtar ancak burada taşıyabilir.
+  business business not null,
+  primary key (country, postal_code, business)
 );
 
 -- "Bu bölgenin kodları" — bölge ekranı ve rota listesi.

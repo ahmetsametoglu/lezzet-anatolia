@@ -2,10 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CatalogImage, SaleCatalogProduct, SalePlace, SaleVariant } from '@lezzet/types';
 
 import { fetchSaleCatalog, fetchSaleVariants, scanSaleCode, sellOnSite } from '@/lib/api/sale';
-/* ÇEVRİMDIŞI SİNYALİ DEPONUNKİYLE AYNI (v3:20 istiyor: "Sepete ekleme kapalı" / "Satış yazma
-   kapalı"). İkinci bir ölçüm yazılmadı — yerinde satış zaten depo kapsamlı bir yazmadır
-   (`warehouseGuard`), yani hattın açık olup olmadığı sorusu birebir aynı soru. İki ayrı sinyal,
-   bir gün birbirinden ayrılır ve iki ekran aynı hat için iki farklı şey söylerdi (CLAUDE §1). */
+/* Çevrimdışı sinyali deponunkiyle aynıdır: yerinde satış da depo kapsamlı bir yazmadır, iki ayrı sinyal bir gün ayrışır ve iki ekran
+   aynı hat için farklı şey söylerdi. */
 import { trackWarehouse } from '@/screens/warehouse/warehouse-status';
 import { toastError, toastWarning } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { centsToAmountText, parseAmountToCents } from '@/lib/operations/money';
@@ -13,29 +11,8 @@ import { fillCopy } from '@/screens/operations/copy';
 import { saleCopy } from './copy';
 
 /*
-  YERİNDE SATIŞ (21.119) — depo kapısına ya da kuryenin aracına gelen müşteriye elden satış.
-
-  ── EKRAN KURAL HESAPLAMAZ ──────────────────────────────────────────────────
-  Fiyat, KDV, indirim, FEFO, stok reddi, sefer bağı — hepsi sunucuda (`sellOnSite` → `quickSale`).
-  Buradaki "ara toplam" yalnız GÖSTERGEDİR (personel müşteriye kabaca ne diyeceğini bilsin);
-  kesin toplam satış yazılınca cevaptan okunur. İki toplamın ayrışabildiği yerde (indirim) ekran
-  bunu saklamaz, sözlük "kesin toplam sunucudan gelir" der.
-
-  ── KALAN ADET EKRANDA, KARAR SUNUCUDA ──────────────────────────────────────
-  `availableHere` personelin "kaç tane var" sorusuna cevabıdır ve çekmece adedi onunla SINIRLAR —
-  ama bu bir ön kibarlıktır, güvence değil: stok o saniye başka satışla düşebilir. Gerçek kapı
-  `insufficient_here` cevabıdır; ekran o cevabı ADIYLA ve KALANIYLA gösterir, sepeti BOZMAZ ki
-  personel adedi düşürüp yeniden denesin.
-
-  ── PAZARLIK YALNIZ DOKUNULANDA GİDER ───────────────────────────────────────
-  Fiyat alanı liste fiyatıyla dolu açılır; personel değiştirmediyse istekte alan HİÇ yoktur ve
-  fiyatı sunucu çözer. Her kaleme sayı göndermek, siparişin parasını istemciye yazdırmak olurdu
-  (sözleşme künyesindeki karar — 09.8 ile aynı).
-
-  ── ARAMA HER TUŞTA, SON İSTEK KAZANIR ──────────────────────────────────────
-  Mal kabulün arama deseni: "henüz yazmadın" hata değil, akışın normal hâli. Sıra numarası
-  (`seqRef`) geciken cevabın taze listeyi ezmesini önler — debounce değil, çünkü sorun sıklık
-  değil SIRADIR.
+  Yerinde satış: fiyat, KDV, indirim, FEFO ve stok reddi sunucudadır; ekrandaki ara toplam ve kalan adet yalnız göstergedir, kesin kapı
+  `insufficient_here` cevabıdır. Pazarlıklı fiyat yalnız dokunulan kalemde gider; aramada son istek kazanır (`seqRef`).
 */
 
 const t = saleCopy;
@@ -51,10 +28,7 @@ export interface SaleCartLine {
   negotiatedCents: number | null;
   /** Çekmece açıldığı andaki kalan — gösterge (üst künye). */
   availableHere: number;
-  /**
-   * Ürün görseli (sepet satırı da yüzü gösterir) — boy görseli yok, ürününki kullanılır. Katalogdaki
-   * hâliyle taşınır: daire kendi çapına yeten kare CDN türevini seçer (21.303).
-   */
+  /** Ürün görseli; boy görseli olmadığı için ürününki taşınır, daire kendi çapına yeten kare CDN türevini seçer. */
   image: CatalogImage;
 }
 
@@ -74,7 +48,8 @@ interface SaleNotice {
   text: string;
 }
 
-type CatalogStatus = 'loading' | 'error' | 'ready';
+/** `closed`: bu depoda kapı satışı yapılmaz (QUALITE); tekrar denemek anlamsız olduğu için hatadan ayrıdır. */
+type CatalogStatus = 'loading' | 'error' | 'closed' | 'ready';
 
 /** Çekmecede seçili boyun satış künyesi (fiyat/kalan) — tek ve çok boylunun ortak görünümü. */
 export interface DraftSelection {
@@ -110,12 +85,8 @@ export function selectionOf(draft: SaleDraft): DraftSelection | null {
 }
 
 /**
- * **FİŞ** (v3:22) — yazılmış satışın ekrana kalan izi.
- *
- * `at` SUNUCUDAN GELMİYOR: `OnSiteSaleResponse` bir zaman damgası taşımıyor ve uydurma bir alan
- * eklemek yerine cevabın GELDİĞİ an yazılıyor — personelin yaşadığı satış anı budur, saniyeler
- * farkıyla. Fiş bir belge olsaydı sunucu damgası şart olurdu; bu ekran ise "az önce ne oldu"yu
- * anlatan bir onay sayfası ve yazdırma zaten bu sürümde bağlı değil.
+ * Fiş: yazılmış satışın ekrana kalan izi. `at` cevabın geldiği andır, çünkü cevap zaman damgası taşımaz ve bu ekran belge değil onay
+ * sayfasıdır.
  */
 export interface SaleReceipt {
   totalCents: number;
@@ -141,18 +112,13 @@ export function useSale(place: SalePlace) {
   const [draft, setDraft] = useState<SaleDraft | null>(null);
   const [lines, setLines] = useState<SaleCartLine[]>([]);
   /*
-    TAHSİLAT TÜRÜNÜN VARSAYILANI YOK (kullanıcı bulgusu 26.08: "neyle ödendiğini dahi seçmedim").
-    "Nakit" önseçiliydi ve satış hiç dokunulmadan kapanabiliyordu — para yazan alanda bilinçsiz
-    varsayılan, yanlış kayıttır: kartla tahsil edilip "nakit" yazılan satış, sefer kapanışının
-    nakit beklentisini sessizce bozar. "Varsayılan depo yoktur" kuralının parasal karşılığı:
-    seçim yapılmadan CTA açılmaz, her satışta yeniden sorulur (başarıda sıfırlanır).
+    Tahsilat türünün varsayılanı yoktur: kartla tahsil edilip "nakit" yazılan satış sefer kapanışının nakit beklentisini bozar. Seçim
+    yapılmadan düğme açılmaz ve başarıda sıfırlanır.
   */
   const [payment, setPayment] = useState<'cash' | 'card' | null>(null);
   const [sending, setSending] = useState(false);
-  /* SONUÇ TOAST'TA (kullanıcı kararı 01.09) — cümle sepet ekranında, satış düğmesinin üstünde
-     duruyordu ve bir sonraki eyleme kadar orada kalıyordu. Başarılı satışın kendi ekranı zaten
-     var (fiş, v3:22), yani bu kanaldan yalnız OLUMSUZ cevaplar geçiyor: yetersiz stok, kapanmayan
-     satış, hat. Titreşim `useNotice`tan toast fiillerine geçti. */
+  /* Sonuç toast'ta: başarılı satışın kendi ekranı (fiş) olduğu için bu kanaldan yalnız olumsuz cevaplar geçer (yetersiz stok, kapanmayan
+     satış, hat). */
   const setNotice = useCallback((notice: SaleNotice | null) => {
     if (notice === null) return;
     if (notice.tone === 'warn') toastWarning(notice.text);
@@ -161,11 +127,8 @@ export function useSale(place: SalePlace) {
   const seqRef = useRef(0);
 
   /*
-    YENİDEN YÜKLEME EKRANI KARARTMAZ (cihazda ölçüldü 26.08): burada her tuşta `setStatus('loading')`
-    vardı ve o durum LİSTEYLE BİRLİKTE ARAMA ALANINI da söküp yükleme halkasına çeviriyordu — odak
-    ve IME kompozisyonu her tuşta ölüyor, alanda tek harf kalıyordu (adb'de de, parmakla da).
-    Açılış durumu zaten 'loading' başlıyor; sonraki yüklemeler mevcut listeyi ekranda tutar ve
-    cevap gelince değiştirir. Yarışın bekçisi durum değil sıra numarasıdır (`seqRef`).
+    Yeniden yükleme ekranı karartmaz: her tuşta `loading` arama alanını da söküp odağı ve IME kompozisyonunu öldürürdü. Sonraki
+    yüklemeler mevcut listeyi tutar; yarışın bekçisi durum değil sıra numarasıdır (`seqRef`).
   */
   const load = useCallback(
     async (term: string, cursor?: string) => {
@@ -175,7 +138,7 @@ export function useSale(place: SalePlace) {
     );
     if (seq !== seqRef.current) return; // geciken cevap — taze listeyi ezmesin
     if (result.error !== null) {
-      setStatus('error');
+      setStatus(result.error === 'door_sale_closed' ? 'closed' : 'error');
       return;
     }
     setProducts((prev) => (cursor === undefined ? result.data.products : [...prev, ...result.data.products]));
@@ -229,16 +192,8 @@ export function useSale(place: SalePlace) {
   const closeDraft = useCallback(() => setDraft(null), []);
 
   /*
-    ── BARKOD OKUTMA (kullanıcı kararı 02.09) ────────────────────────────────
-    *"Ürünü okutmak, hangi ürünün sepette olduğunu sonra görmek önemli; okuttuktan sonra adet
-    çekmecesinin açılması da."* Okutma SEPETE DOĞRUDAN YAZMAZ: kod çözülür, kartla açılan aynı
-    çekmece açılır (boy başlıkta ve SORULMAZ — kod zaten boyu söyledi; adet koli çarpanı) ve
-    kurye adedi/fiyatı görüp onaylar. Doğrudan yazmak, 12'lik koli barkodunu okutan kuryenin
-    sepetinde sessizce 12 kalem bulması demekti.
-
-    Çekmece aynı `draft` durumu: `variants` tek elemanlı (okutulan boy), `pickedVariantId` o boy;
-    ekran tek elemanlı listeye boy çipi çizmez. İkinci bir "okutulmuş ürün" çekmecesi yazılmadı —
-    aynı ürün iki yerde iki farklı görünümle çıkardı (CLAUDE §1).
+    Barkod okutma sepete doğrudan yazmaz: kod çözülür ve kartla açılan aynı çekmece açılır (boy sorulmaz, adet koli çarpanıdır), kurye
+    adedi ve fiyatı görüp onaylar. Doğrudan yazmak 12'lik koli barkodunu okutan kuryenin sepetine sessizce 12 kalem koyardı.
   */
   const [scanOpen, setScanOpen] = useState(false);
   const handleScan = useCallback(
@@ -279,10 +234,8 @@ export function useSale(place: SalePlace) {
   );
 
   /**
-   * Simülasyon çipinin yanına ÜRÜN ADI (yalnız geliştirme; `ScanSheet.devResolve` künyesi).
-   * Aynı uçtan, aynı yer beyanıyla okunur: çipin altında yazan ad, çipe basınca açılacak
-   * çekmecenin başlığıyla birebir aynıdır. Olumsuz dallar da adıyla söylenir ki kurye hangi
-   * çipin "araçta yok"u tetiklediğini basmadan görsün.
+   * Simülasyon çipinin yanındaki ürün adı (yalnız geliştirme): aynı uçtan aynı yer beyanıyla okunur ki çipin altındaki ad açılacak
+   * çekmecenin başlığıyla aynı olsun; olumsuz dallar da adıyla söylenir.
    */
   const describeDevCode = useCallback(
     async (code: string): Promise<string | null> => {
@@ -388,9 +341,8 @@ export function useSale(place: SalePlace) {
       if (outcome.status === 'ok') {
         setLines([]); // satış kapandı; sepet sıfırdan başlar
         setPayment(null); // tahsilat türü de: her satış kendi kararını ister, öncekinden miras almaz
-        /* SONUÇ ARTIK KENDİ EKRANINDA (v3:22). Sepet ekranındaki tek satırlık bildirim, sepet
-           boşaldığı an "boş sepet" ekranının üstünde asılı kalıyordu: satışı yazan göz, cevabı
-           BOŞ bir sayfada okuyordu. Fiş referansı ve tutarı da o satıra sığmıyordu. */
+        /* Sonuç kendi ekranında (fiş): sepet boşalınca tek satırlık bildirim boş sayfanın üstünde kalırdı, referans ve tutar da
+           sığmazdı. */
         setReceipt({
           totalCents: outcome.totalCents,
           referenceNo: outcome.referenceNo,
@@ -443,10 +395,7 @@ export function useSale(place: SalePlace) {
 
 type SaleOutcome = Extract<Awaited<ReturnType<typeof sellOnSite>>, { error: null }>['data'];
 
-/* `noticeOfOk` 30.08'de SÖKÜLDÜ: başarı artık tek satırlık bir bildirim değil, kendi ekranı
-   (v3:22 · `sale-receipt-screen.tsx`). Kasa ayarsız hâlin cümlesi de oraya taşındı — orada
-   kaybolmaz, çünkü ekranın kendisi o satışın sayfasıdır. */
-
+/** Yalnız ret cevaplarının cümlesi: başarılı satışın kendi ekranı (fiş) vardır. */
 function noticeOfRefusal(outcome: Exclude<SaleOutcome, { status: 'ok' }>): SaleNotice {
   if (outcome.status === 'insufficient_here') {
     const linesText = outcome.lines

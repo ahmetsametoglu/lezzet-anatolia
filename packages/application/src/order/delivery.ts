@@ -8,60 +8,31 @@ import {
   resolveWarehouseForPostalCode,
   upcomingDeliveryDates,
 } from '@lezzet/domain-core';
-import type { WarehouseCandidate, ZoneWithWarehouse } from '@lezzet/domain-core';
+import type { PlaceResolution, WarehouseCandidate, ZoneWithWarehouse } from '@lezzet/domain-core';
 import type { AddressDeliveryType } from '@lezzet/types';
-import type { Country } from '@lezzet/types';
+import type { Business, Country } from '@lezzet/types';
 
 /**
- * Checkout teslimat çözümü (07.2) — **uygulama katmanı orkestrasyonu**. DOMAIN §6.
- *
- * Bölgeleri ve ayarları servis getirir, kararı motor verir (`domain-core/delivery`), ikisini burası
- * birleştirir (STACK §4).
- *
- * Üç şey birlikte çözülür çünkü birbirine bağlıdır:
- * - **Rota içi mi?** Posta kodu aktif bir bölgeye düşüyorsa evet → ücretsiz kapı teslimi, kapıda
- *   ödeme mümkün. Düşmüyorsa kargo.
- * - **Hangi gün?** Bölgenin günlerinden yaklaşan tarihler; kesim saati (parametrik) geçtiyse bugün
- *   atlanır. **Tek tarih varsa seçim sunulmaz, gösterilir.**
- * - **Kargoya çıkabilir mi?** Soğuk zincir nedeniyle kargolanamayan ürün (`shippable=false`)
- *   sepetteyse kargo seçeneği KAPANIR — müşteri yalnız rota-içi teslim alabilir.
- *
- * ── TERFİ (aşama 2/3) · WEB'DEN FARKLARI ─────────────────────────────────────
- * Kaynağı `apps/web/lib/order/delivery.ts`tı; web kopyası KÖPRÜ olarak duruyor. Kural tarafında
- * hiçbir şey değişmedi — değişen yalnız kapının taşımayla bağını kesen iki şey:
- *   · `db` çağırandan gelir (`serviceDb()` içeride çağrılmıyor) — paketin ortak deseni.
- *   · Bölge + depo listeleri **çözülmüş hâliyle geçilebilir** (`inputs`). Web'de bu liste ikilisi
- *     `react.cache()`li ortak bir okumadan (`lib/delivery/inputs`) geliyordu ve amacı hız değil
- *     TUTARLILIKTI: aynı istekte sepet bir depoyu, katalog başka bir depoyu görmesin. İstek
- *     kapsamı pakette yok, ama tutarlılık ihtiyacı var — o yüzden önbellek yerine AÇIK bir girdi:
- *     iki kez çözen çağıran (checkout taslağı) listeyi bir kez okur, ikisine de aynısını verir.
- *     Verilmezse burası kendisi okur; kimse bir şeyi unutmak zorunda kalmasın.
+ * Checkout teslimat çözümü (DOMAIN §6): bölgeleri ve ayarları servis getirir, rota içi mi, hangi gün ve kargoya çıkabilir mi
+ * kararını motor verir. Bölge ve depo listeleri çözülmüş hâliyle geçilebilir (`inputs`), çünkü iki kez çözen çağıranın iki
+ * turda farklı liste görmemesi gerekir.
  */
 
 export interface DeliveryResolution {
-  /**
-   * `AddressDeliveryType` — bu çözüm bir ADRESTEN çıkar, `pickup` üretemez (26.08). Yerinde satışın
-   * adresi yoktur; müşteri tezgâhın önündedir ve posta kodu → bölge → depo zinciri hiç çalışmaz.
-   */
+  /** Bu çözüm bir adresten çıkar ve `pickup` üretemez: yerinde satışın adresi yoktur. */
   deliveryType: AddressDeliveryType;
   zoneId: string | null;
   /**
-   * Siparişin çıkacağı depo (DOMAIN §17) — teslimat kararıyla AYNI turda çözülür çünkü ikisi tek
-   * zincirdir: posta kodu → bölge → depo. Ayrı bir okumaya alınsaydı iki cevap ayrışabilirdi
-   * (bölge şurada, depo burada) ve sipariş kendi bölgesinin deposundan çıkmayabilirdi.
-   *
-   * `null` yalnız çözümsüz hâlde: aynı kod iki bölgede (veri çakışması) ya da kargo deposu hiç
-   * tanımlı değil. İkisi de sipariş verilemez demektir ve `unresolvedReason` sebebini söyler —
-   * müşteriye "bölge dışısınız" dedirtmemek için ikisi ayrı tutuluyor.
+   * Siparişin çıkacağı depo, teslimat kararıyla aynı turda çözülür, çünkü posta kodu → bölge → depo tek zincirdir. `null` yalnız
+   * çözümsüz hâlde olur ve `unresolvedReason` sebebini söyler.
    */
   warehouseId: string | null;
   /**
-   * Ülkenin KARGO deposu (19.11) — `warehouseId`'den ayrı. Rota içindeki adres için de doludur:
-   * sepetin kargo grubu (kendi deposunda olmayan kargolanabilir kalemler) oradan çıkacak ve
-   * ikinci taslak onu isteyecek. `null` = o ülkeye kargo yapılmıyor.
+   * Ülkenin kargo deposu; rota içindeki adreste de doludur, çünkü sepetin kargo grubu oradan çıkar. `null` o ülkeye kargo
+   * yapılmıyor demektir.
    */
   shippingWarehouseId: string | null;
-  unresolvedReason: 'ambiguous_zone' | 'no_shipping_warehouse' | null;
+  unresolvedReason: Extract<PlaceResolution, { kind: 'unresolved' }>['reason'] | null;
   /** Rota-içi teslimat için yaklaşan somut tarihler; kargoda boş. */
   availableDates: string[];
   /** Tek tarih varsa arayüz seçim sunmaz, onu gösterir (DOMAIN §6). */
@@ -73,34 +44,21 @@ export interface DeliveryResolution {
   shippingBlockedReason: 'cold_chain' | null;
 }
 
-/**
- * Yer çözümünün girdileri — aktif depolar + (aktiflik süzgecisiz) bölgeler.
- *
- * Motorun sözleşmesinden TÜRER, elle yeniden tanımlanmaz: `resolveWarehouseForPostalCode` ne
- * bekliyorsa o. İkinci bir şekil yazsaydık motor bir alan eklediğinde burası sessizce eksik kalırdı.
- */
+/** Yer çözümünün girdileri; şekil motorun sözleşmesinden türer ki motor alan ekleyince burası sessizce eksik kalmasın. */
 export interface DeliveryInputs {
   zones: readonly ZoneWithWarehouse[];
   warehouses: readonly WarehouseCandidate[];
 }
 
 /**
- * Girdileri okur — çağıran bir kez okuyup iki çözüme birden verebilsin diye AYRI bir kapı.
- *
- * Bölgeler AKTİFLİK SÜZGECİSİZ (19.16a): pasif bölgedeki kod da bizim kaydımızdır ve ülkesi ondan
- * türer — süzersek kapalı bölgedeki müşteri "bu kodu tanımadık" cevabı alır, oysa doğru cevap
- * "rota kapalı, kargoyla gönderiyoruz". Rotanın açık olup olmadığına MOTOR karar verir
- * (`matchZones` pasifleri zaten eliyor); okuma o kararı önden vermemeli.
+ * Girdileri okur; çağıran bir kez okuyup iki çözüme birden verebilsin diye ayrıdır. Bölgeler aktiflik süzgecisiz okunur, çünkü
+ * pasif bölgedeki kodun da ülkesi bizden türer ve rotanın açık olup olmadığına motor karar verir.
  */
 export async function readDeliveryInputs(db: Db): Promise<DeliveryInputs> {
   const [zones, warehouses] = await Promise.all([
     new DeliveryZoneService(db).listWithCodes(),
-    // **TESİSLER** (02.09): motorun iki seçim yolu da zaten tesise çıkıyor (bölgenin deposu —
-    // `delivery_zone_warehouse_is_facility`; kargo deposu — `warehouse_vehicle_never_ships`), yani
-    // araç buraya girse de hiç seçilemezdi. Ama motorun ÜÇÜNCÜ kullanımı `activeCountries` ve o
-    // sessizce yanlıştı: "hizmet verdiğimiz ülkeler" kümesine aracın ülkesi de giriyordu. Bugün
-    // etkisiz (hepsi FR) — DE plakalı bir araç eklendiği gün vitrin, o ülkede deposu olmadan
-    // "Almanya'ya gönderiyoruz" derdi. Hareket hâlindeki bir yer bir ülkeye hizmet sözü veremez.
+    // Yalnız tesisler: araç bölgeye bağlanamaz ve kargo deposu olamaz, ama `activeCountries` aracın ülkesini de hizmet
+    // ülkesi sayardı.
     new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
   ]);
   return { zones, warehouses };
@@ -109,49 +67,33 @@ export async function readDeliveryInputs(db: Db): Promise<DeliveryInputs> {
 export interface ResolveDeliveryInput {
   postalCode: string;
   /**
-   * Adresin ülkesi (DOMAIN §17) — `67000` hem Fransa'da hem Almanya'da geçerlidir, ülkesiz bir
-   * posta kodu eksik bir sorudur. Varsayılan `FR` yalnız TESTLER için kaldı: gerçek çağıranların
-   * ikisi de ülkeyi doldurur — checkout adresten okur, yer çözümü `postal_code_place`'ten türetir
-   * (19.8). İkinci ülke açıldığında varsayılan kalkar.
+   * Adresin ülkesi, çünkü `67000` hem Fransa'da hem Almanya'da geçerlidir. Varsayılan `FR` yalnız testler içindir; gerçek
+   * çağıranlar ülkeyi doldurur.
    */
   country?: Country;
+  /** Müşterinin işi; zincir yalnız o işin bölgelerine ve kargo deposuna çözülür (`customerBusinessOf`). */
+  business: Business;
   /** Sepette kargolanamayan (soğuk zincir) ürün var mı — çağıran ürün okumasından bilir. */
   hasNonShippableItem?: boolean;
   now?: Date;
   /** Kaç tarih önerilsin (varsayılan 3). */
   dateCount?: number;
-  /**
-   * Bölge + depo listeleri ÇOKTAN okunmuşsa (bkz. `readDeliveryInputs` künyesi). Verilmezse burası
-   * okur. Aynı çözümü iki kez yapan çağıranın iki turda FARKLI liste görmemesi için var.
-   */
+  /** Çoktan okunmuş bölge ve depo listeleri; aynı çözümü iki kez yapan çağıran iki turda farklı liste görmesin diye. */
   inputs?: DeliveryInputs;
 }
 
 export async function resolveDelivery(db: Db, input: ResolveDeliveryInput): Promise<DeliveryResolution> {
-  // Bölge + depo listeleri ORTAK: aynı iki listeyi vitrinin yer bağlamı da okuyor. İki ayrı okuma
-  // iki farklı ana ait olabilirdi ve o hâlde aynı istekte sepet bir depoyu, katalog başka bir
-  // depoyu görürdü. Ucuz olması da checkout'ta işe yarıyor: teslimat bir kez depoyu vermek, bir kez
-  // de sepet bilindikten sonra kargo kararını vermek için iki kez çözülebiliyor — çağıran listeyi
-  // bir kez okuyup `inputs` ile geçtiğinde ikinci tur gerçekten bedava.
-  //
-  // **EŞİK SAATLERİ BURADA OKUNMUYOR, ROTA ÇÖZÜLDÜKTEN SONRA OKUNUYOR** (17.08 — ölçülmüş açık).
-  // Eskiden kesim bu `Promise.all` içinde, bölge çözümünden ÖNCE ve kapsam bağlamı OLMADAN okunuyordu
-  // (`get('order_cutoff_time', '16:00')`). Sonucu şuydu: eşikler rota eksenine alınmış olmasına ve
-  // operatör rota rayından kesimi 10:00 yazmasına rağmen müşteri hâlâ küresel 16:00'ya göre gün
-  // seçiyordu — panel bir şey, checkout başka bir şey söylüyordu. Kapsamı geçirmek için hangi rotaya
-  // düşüldüğünü bilmek gerekiyor, o yüzden okuma aşağıya taşındı.
-  //
-  // Maliyet nötr: ayar okuması `SettingsService`in süreç içi önbelleğinden geçiyor (anahtar başına
-  // tek sorgu, 30 sn) ve KARGO yolunda artık hiç okunmuyor — orada kesim kavramı yok.
+  // Eşik saatleri burada değil rota çözüldükten sonra okunur, çünkü kesim ve hazırlık kapanışı rotanın kapsamına bağlıdır; kargo
+  // yolunda hiç okunmaz.
   const { zones, warehouses } = input.inputs ?? (await readDeliveryInputs(db));
 
   const place = { country: input.country ?? 'FR', postalCode: input.postalCode };
-  const resolution = resolveWarehouseForPostalCode(place, zones, warehouses);
+  const resolution = resolveWarehouseForPostalCode(place, zones, warehouses, input.business);
   // Kargo deposu ÜLKEDEN türer, rotadan değil — rota içindeki müşteri de kargo dolgusu alabilir.
-  const shippingWarehouseId = findShippingWarehouse(place.country, warehouses)?.id ?? null;
+  const shippingWarehouseId = findShippingWarehouse(place.country, warehouses, input.business)?.id ?? null;
 
-  // Çözümsüz: ya aynı kod iki bölgede (veri çakışması) ya da kargo deposu tanımlı değil. İkisi de
-  // sipariş verilemez demektir ama SEBEPLERİ ayrıdır — biri veri hatası, öteki yapılandırma eksiği.
+  // Çözümsüz: aynı kod iki bölgede, kargo deposu tanımlı değil ya da adres kargo göndermeyen işin bölgesi dışında; üçü de sipariş
+  // verilemez demektir ama sebepleri ayrıdır.
   if (resolution.kind === 'unresolved') {
     return {
       deliveryType: 'shipping',
@@ -180,9 +122,8 @@ export async function resolveDelivery(db: Db, input: ResolveDeliveryInput): Prom
   }
 
   /**
-   * Eşikler **bu rotanın** kapsamıyla okunuyor (`{ zoneId }`): her rota kendi kesimini ve hazırlık
-   * kapanışını taşıyor (kullanıcı kararı 17.08). Hazırlık da okunuyor çünkü kesimin hangi güne ait
-   * olduğunu o belirliyor — `cutoffBelongsToPreviousDay`.
+   * Eşikler bu rotanın kapsamıyla okunur (`{ zoneId }`); hazırlık kapanışı da okunur, çünkü kesimin hangi güne ait olduğunu o
+   * belirler (`cutoffBelongsToPreviousDay`).
    */
   const settings = new SettingsService(db);
   const scope = { zoneId: resolution.zoneId };

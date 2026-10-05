@@ -3,9 +3,9 @@ import { z } from '@lezzet/ai';
 import { AddressService, ConversationService, type Db } from '@lezzet/database';
 import { isValidPostalCode, normalizePostalCode } from '@lezzet/address';
 import { logger } from '@lezzet/observability';
-import { COUNTRY_LABELS, CountryEnum, type Address, type Conversation, type Country } from '@lezzet/types';
+import { COUNTRY_LABELS, CountryEnum, type Address, type Business, type Conversation, type Country } from '@lezzet/types';
 import type { PlaceWarehouses } from '../catalog/storefront-types';
-import { resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
+import { resolvePlaceForPostalCode, resolvePlaceWarehouses, unresolvedPlace } from '../delivery/place';
 
 /*
   Sohbetin yeri bu sırayla okunur: bu turda söylenen kod, sohbette saklanan kod, kimlik kapısı izin veriyorsa kayıtlı adres;
@@ -43,7 +43,8 @@ export function chatPlaceMemory(db: Db, conversation: Pick<Conversation, 'id' | 
       const temiz = normalizePostalCode(postalCode);
       if (!isValidPostalCode(temiz)) return;
       if (temiz === kod && (country === undefined || country === ulke)) return;
-      const cozum = await resolvePlaceForPostalCode(db, temiz, country);
+      // Geçerlilik ve ülke sorusu işten bağımsızdır.
+      const cozum = await resolvePlaceForPostalCode(db, temiz, 'lezzet', country);
       // Yazım hatası ya da kodun geçerli olmadığı ülke saklanmaz.
       if (cozum.kind === 'unknown') return;
       // İki ülkeli kodda da kod saklanır ki sonraki tur yalnız ülkeyi sorsun.
@@ -97,6 +98,8 @@ export async function resolveChatPlace(
     saidCountry?: Country;
     memory: ChatPlaceMemory | null;
     addressCustomerId: string | null;
+    /** Sohbetteki müşterinin işi; kimlik kapısı kapalıyken ziyaretçi gibi Lezzet. */
+    business: Business;
   },
 ): Promise<ChatPlace> {
   const soylenen = input.said?.trim() ? normalizePostalCode(input.said) : null;
@@ -108,15 +111,15 @@ export async function resolveChatPlace(
       ? birincilAdres(await new AddressService(db).listByCustomer(input.addressCustomerId))
       : null;
   const kod = soylenen || saklanan || adres?.postalCode || null;
-  if (!kod) return { kod: null, ulke: null, place: UNRESOLVED_PLACE, durum: 'bilinmiyor', adaylar: [] };
+  if (!kod) return { kod: null, ulke: null, place: unresolvedPlace(input.business), durum: 'bilinmiyor', adaylar: [] };
 
   /* Ülke kodla aynı kaynaktan okunur. Söylenen kod saklanamadıysa eski kodun ülkesi ona uygulanmaz. */
   const ulke =
     input.saidCountry ??
     (kod === saklanan ? (input.memory?.knownCountry() ?? null) : kod === adres?.postalCode ? adres.country : null);
-  const place = await resolvePlaceWarehouses(db, kod, ulke ?? undefined);
+  const place = await resolvePlaceWarehouses(db, kod, input.business, ulke ?? undefined);
   if (place.warehouseId || place.shippingWarehouseId) return { kod, ulke, place, durum: 'biliniyor', adaylar: [] };
-  const cozum = await resolvePlaceForPostalCode(db, kod, ulke ?? undefined);
+  const cozum = await resolvePlaceForPostalCode(db, kod, input.business, ulke ?? undefined);
   if (cozum.kind === 'ambiguous') {
     return { kod, ulke: null, place, durum: 'belirsiz', adaylar: cozum.candidates.map((aday) => aday.country) };
   }

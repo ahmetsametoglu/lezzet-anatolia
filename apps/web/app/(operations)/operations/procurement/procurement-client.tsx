@@ -10,10 +10,8 @@ import { SupplierDialog } from './supplier-dialog';
 import { procurementUrl, toOrderFilters, type ProcurementUrlState } from './procurement-url';
 import type { ProcurementData, PurchaseOrderRowView, SupplierCardView } from './procurement-types';
 
-// Tedarik ekranı client kökü: durum burada. Operasyon web'i masaüstü-yalnız; mobil deneyim native
-// uygulamada (`docs/uygulama`).
-// SEKME GERÇEK gezinmedir: okuma sunucuda sekmeye bağlı — sığ yazsaydık öteki sekme boş açılırdı.
-// Süzgeçler de öyle: sunucuda uygulanıyorlar (`listRows`), yani adres değişmeli.
+// Tedarik ekranı client kökü, operasyon web'i masaüstü yalnızdır. Sekme ve süzgeç gerçek gezinmedir, çünkü okuma sunucuda sekmeye
+// ve süzgece bağlıdır.
 
 interface ProcurementClientProps {
   data: ProcurementData;
@@ -24,7 +22,7 @@ interface ProcurementClientProps {
 
 export function ProcurementClient({ data, urlState, canCancelOrders }: ProcurementClientProps) {
   const router = useRouter();
-  // Sekme/süzgeç turu sürerken ekran karşılık vermeli (09.2 navPending dersi): içerik soluklaşır.
+  // Sekme ya da süzgeç turu sürerken ekran karşılık vermeli: içerik soluklaşır.
   const [pending, startNav] = useTransition();
 
   const onFilter = (patch: Partial<ProcurementUrlState>) => {
@@ -88,12 +86,11 @@ export function ProcurementClient({ data, urlState, canCancelOrders }: Procureme
         // Taslak açıldı: operatör onu GÖNDERMELİ, yoksa sipariş yalnız bizde kalır. Bu yüzden
         // ekran Siparişler sekmesine geçer — taslağın yaşadığı ve gönderim penceresinin açıldığı yer.
         else if (result.data) {
-          // Öneri listesi de yeniden okunur: action `revalidatePath` yapıyor ama istemci yönlendirme
-          // önbelleği eski RSC yükünü bir süre tutuyor ve sekmeye dönüldüğünde bayat liste görünürdü.
-          // Satır artık DÜŞMEZ de değil: taslak gönderilene kadar eşik hâlâ delik ve motor bunu
-          // "taslakta" olarak ayrı gösteriyor — gönderildiği anda satır listeden çıkar.
+          // Öneri listesi de yeniden okunur, çünkü istemci yönlendirme önbelleği eski RSC yükünü bir süre tutar. Satır taslak gönderilene
+          // kadar "taslakta" olarak durur, gönderilince listeden çıkar.
           router.refresh();
-          setOpenOrderId(result.data.orderId);
+          // İki işin kalemi iki taslak açar ve liste ikisini gösterir; tek taslak doğrudan açılır.
+          setOpenOrderId(result.data.orderIds.length === 1 ? (result.data.orderIds[0] ?? null) : null);
           onFilter({ tab: 'orders' });
         }
       })

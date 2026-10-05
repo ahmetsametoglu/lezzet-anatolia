@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { PurchaseOrder, PurchaseOrderItem } from '@lezzet/types';
+import type { Business, PurchaseOrder, PurchaseOrderItem } from '@lezzet/types';
 import { PurchaseOrderService, type DraftLine } from './purchase-order.service';
 import { StockService } from './stock.service';
 import { SupplierProductService } from './supplier.service';
@@ -20,26 +20,13 @@ export interface ReorderLine {
    */
   incomingQty: number;
   /**
-   * **Taslakta**: bu depoya açılmış, henüz gönderilmemiş siparişlerdeki adet — **eşikten DÜŞÜLÜR**
-   * (21.302, kullanıcı kararı 10.09).
-   *
-   * Eskiden düşülmüyordu ve gerekçesi yazılıydı: gönderilmiş sipariş bir bekleyiştir, taslak yalnız
-   * bizim kararımızdır; ikisini toplamak, göndermeyi unuttuğumuz bir taslağın eksiği "kapatmış"
-   * görünmesi olurdu. Bedeli ise MÜKERRER TASLAKTI: onaydan sonra grup aynı önerilerle listede
-   * kalıyor, `createDraft` her basışta yeni sipariş açıyordu ve hiçbir yüzeyde engel yoktu. Kullanıcı
-   * iki riski tarttı — *"mükerrer taslak riski unutmaktan daha tehlikeli; taslağı biz oluşturduğumuz
-   * için unutmayız"* — ve karar tersine döndü. Unutma riskinin karşılığı görünürlük: taslak web'in
-   * siparişler sekmesinde durur, satır da bu adedi "taslakta N" diye taşır. `incomingQty`den AYRI
-   * alan, çünkü ikisi ayrı şey söyler: biri tedarikçinin bildiği bekleyiş, öteki bizim kararımız.
+   * Taslakta: bu depoya açılmış, gönderilmemiş siparişlerdeki adet, eşikten düşülür, çünkü düşülmeseydi her basış aynı öneriden yeni
+   * taslak açardı. `incomingQty`den ayrı alandır: biri tedarikçinin bildiği bekleyiş, öteki bizim kararımız.
    */
   draftQty: number;
   /**
-   * Hedef deposu YAZILMAMIŞ açık siparişlerdeki adet — hiçbir depoya sayılmaz, ama görünür kalır.
-   *
-   * `target_warehouse_id` bir niyet beyanıdır, kısıt değil (C7): mal fiilen nereye indiyse oraya
-   * girer. Hedefsiz kalemi bakılan depoya saymak, malın oraya geleceğini VARSAYMAK olurdu ve K6
-   * tam bunu yasaklıyor — yanlış varsayım "eksik kapandı" der, raf boş kalır ve kimse sebebini
-   * aramaz. Ölçemediğimizi sıfır saymıyoruz; ayrı sayıp operatöre gösteriyoruz (`CLAUDE.md §1`).
+   * Hedef deposu yazılmamış açık siparişlerdeki adet: hiçbir depoya sayılmaz ama görünür kalır, çünkü malın bakılan depoya geleceğini
+   * varsaymak "eksik kapandı" deyip rafı boş bırakırdı.
    */
   unassignedQty: number;
 }
@@ -59,13 +46,8 @@ export interface ReorderGroup {
 }
 
 /**
- * "Sipariş zamanı" önerisi (06.11) — DOMAIN §16 Faz 1 (eşik). Kullanılabilir stoğu `min_stock_qty`
- * altına düşen varyantlar tedarikçiye göre gruplanır; **otomatik sipariş yoktur**, karar admin'in.
- *
- * Tedarikçisi eşlenmemiş varyantlar da listelenir (`supplierId: null`) — görünmez olmaları
- * "eksik ürün fark edilmedi" demektir; eksik olan eşlemedir, ürünün kendisi değil.
- *
- * Faz 2 (satış hızı + tedarik süresi + sezon ile "şu tarihte biter" tahmini) AI içgörü ailesine ait.
+ * Sipariş zamanı önerisi (DOMAIN §16, eşik): kullanılabilir stoğu `min_stock_qty` altına düşen varyantlar tedarikçiye göre gruplanır,
+ * otomatik sipariş yoktur. Tedarikçisi eşlenmemiş varyant da listelenir (`supplierId: null`), eksik olan eşlemedir.
  */
 export class ReorderService {
   private readonly stocks: StockService;
@@ -79,21 +61,15 @@ export class ReorderService {
   }
 
   /**
-   * BİR DEPODA eşik altına inen varyantlar, tercihli tedarikçilerine göre gruplu.
-   *
-   * Öneri depo başınadır (C6) ve bu isteğe bağlı bir ayrıntı değil: eşiğin kendisi depo bazlı
-   * (varyanttaki değer varsayılan, depo satırı istisna). Depo-üstü tek bir öneri listesi "toplamda
-   * 40 var" deyip Kehl'in boş rafını gizlerdi — sipariş de o rafı doldurmak için verilecek.
+   * Bir depoda eşik altına inen varyantlar, tercihli tedarikçilerine göre gruplu: eşik depo bazlıdır ve depo-üstü tek liste "toplamda 40
+   * var" deyip boş rafı gizlerdi.
    */
   async suggestions(warehouseId: string): Promise<ReorderGroup[]> {
     const below = await this.stocks.listBelowMinStock(warehouseId);
     if (below.length === 0) return [];
 
-    // ── YOLDAKİ MAL DA ELDEDİR (09.14 üçüncü talep · kullanıcı bulgusu) ────────
-    // Eski hâl yalnız `availableQty < minStockQty`'ye bakıyordu. Sipariş vermek stoğu değiştirmez
-    // (mal gelmedi, raf boş), dolayısıyla satır yerinde kalıyordu — davranış tanıma göre doğru ama
-    // operasyonel sonucu arıza: aynı tedarikçiye üst üste basmak ikinci, üçüncü siparişi açıyor ve
-    // hiçbir yerde uyarı yok. Bedeli para ve raf; soğuk zincirde fazla malın raf ömrü de risk.
+    // Yoldaki mal da eldedir: sipariş stoğu değiştirmez ve yalnız `availableQty < minStockQty`ye bakılsaydı aynı tedarikçiye üst üste
+    // basmak ikinci, üçüncü siparişi açardı.
     const pending = await this.orders.openProgress();
     const incoming = sumByVariant(pending, (row) => row.status !== 'draft' && row.targetWarehouseId === warehouseId);
     const drafts = sumByVariant(pending, (row) => row.status === 'draft' && row.targetWarehouseId === warehouseId);
@@ -111,10 +87,7 @@ export class ReorderService {
     for (const row of below) {
       const incomingQty = incoming.get(row.variantId) ?? 0;
       const draftQty = drafts.get(row.variantId) ?? 0;
-      // Yoldaki mal VE taslaktaki adet eksiği KAPATIYORSA satır düşer (taslak 21.302'den beri —
-      // gerekçe `draftQty` künyesinde). Süzgeç burada, SQL'de değil: `listBelowMinStock` aday
-      // kümesini veriyor (`available < min`) ve yolda/taslakta olanı eklemek o kümeyi yalnız
-      // KÜÇÜLTÜR — eşiğin üstündeki bir varyant zaten aday değildi.
+      // Yoldaki ve taslaktaki adet eksiği kapatıyorsa satır düşer; süzgeç SQL'de değil burada, çünkü aday kümeyi yalnız küçültür.
       if (row.availableQty + incomingQty + draftQty >= row.minStockQty) continue;
 
       const mapping = chosen.get(row.variantId) ?? null;
@@ -124,9 +97,7 @@ export class ReorderService {
         variantId: row.variantId,
         availableQty: row.availableQty,
         minStockQty: row.minStockQty,
-        // Eşiğe çıkaracak kadar — YOLDAKİ ve TASLAKTAKİ düşülerek; koli içi adet biliniyorsa yukarı
-        // yuvarlanır (koli bölünmez). Yoldakini düşmemek gelen malın üstüne, taslaktakini düşmemek
-        // açılmış taslağın üstüne bir kez daha sipariş vermekti (mükerrer taslak, 21.302).
+        // Eşiğe çıkaracak kadar, yoldaki ve taslaktaki düşülerek; koli içi adet biliniyorsa yukarı yuvarlanır, koli bölünmez.
         suggestedQty: roundToPack(
           row.minStockQty - row.availableQty - incomingQty - draftQty,
           mapping?.packQty ?? null,
@@ -146,20 +117,21 @@ export class ReorderService {
    * Bir öneri grubundan taslak PO üretir — "tek dokunuş". Tedarikçisi olmayan grup sipariş edilemez:
    * kime yazılacağı belli değildir, sessizce boş tedarikçiyle kayıt açmak yerine açıkça reddedilir.
    */
-  async createDraftFrom(group: ReorderGroup, note?: string): Promise<{ order: PurchaseOrder; items: PurchaseOrderItem[] }> {
+  async createDraftFrom(
+    group: ReorderGroup,
+    business: Business,
+    note?: string,
+  ): Promise<{ order: PurchaseOrder; items: PurchaseOrderItem[] }> {
     if (!group.supplierId) throw new Error('reorder: tedarikçisi eşlenmemiş kalemlerden sipariş açılamaz');
 
     const lines: DraftLine[] = group.lines.map((line) => ({
       variantId: line.variantId,
       qty: line.suggestedQty,
       unitPriceCents: line.lastPurchasePriceCents,
-      // HEDEF DEPO YAZILIR (09.14 üçüncü talep): öneri depo başınadır, yani niyet zaten belli.
-      // Yazmamak, bir sonraki turda "bu mal hangi deponun eksiğini kapatıyor" sorusunu
-      // cevapsız bırakırdı ve `incomingQty` tam da bu akışta hep 0 kalırdı — düzeltme kâğıt
-      // üstünde kalır, operatör yine ikinci siparişi açardı.
+      // Hedef depo yazılır, çünkü öneri depo başınadır; yazılmasa sonraki turda `incomingQty` 0 kalır ve operatör ikinci siparişi açardı.
       targetWarehouseId: group.warehouseId,
     }));
-    return this.orders.createDraft(group.supplierId, lines, note);
+    return this.orders.createDraft(group.supplierId, business, lines, note);
   }
 }
 

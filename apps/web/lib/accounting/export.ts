@@ -1,25 +1,23 @@
 import { OrderItemService, OrderSaleService, OrderService, serviceDb } from '@lezzet/database';
 import { buildAccountingExport, type AccountingExport, type AccountingExportRow } from '@lezzet/domain-core';
 import { toCsv } from '@lezzet/helper';
-import type { KeysetCursor, OrderSale, Page } from '@lezzet/types';
+import { BUSINESS_LABELS, type Business, type KeysetCursor, type OrderSale, type Page } from '@lezzet/types';
 
 /**
- * Muhasebe export kapısı (12.7) — DOMAIN §9. **Sistem resmî muhasebe değildir:** fatura kesmez,
- * numara üretmez; muhasebeciye temiz veri verir.
- *
- * Karar motorun (hangi satış girer, KDV kırılımı), okuma servisin; birleştiren yer burası
- * (STACK §4).
- *
- * **Hedef biçim henüz açık** — muhasebecinin yazılımı (Pennylane/Sage/EBP/Tiime…) netleşince
- * biçimlenir. Bu yüzden dosya iki katmanda üretiliyor: satırlar biçimden bağımsız (`rows`), CSV
- * yalnız onların bir sunumu. Yeni hedef geldiğinde değişen tek şey sütun eşlemesidir.
+ * Muhasebe export kapısı (DOMAIN §9): sistem resmî muhasebe değildir, fatura kesmez ve numara üretmez, muhasebeciye temiz veri verir.
+ * Hedef biçim henüz açık olduğu için satırlar biçimden bağımsızdır (`rows`) ve CSV yalnız onların sunumudur; yeni hedefte değişen tek şey
+ * sütun eşlemesidir.
  */
 
+/** Dosyanın satırı — aktarım satırı artı işin okunur adı. */
+type ExportCsvRow = AccountingExportRow & { businessLabel: string };
+
 /** Dosyanın sütunları — sıra ve başlıklar AÇIK yazılır; alan eklenince biçim habersiz kaymasın. */
-const COLUMNS: ReadonlyArray<{ key: keyof AccountingExportRow & string; label: string }> = [
+const COLUMNS: ReadonlyArray<{ key: keyof ExportCsvRow & string; label: string }> = [
   { key: 'saleDate', label: 'Satış tarihi' },
   { key: 'referenceNo', label: 'Referans' },
   { key: 'invoiceNo', label: 'Fatura no' },
+  { key: 'businessLabel', label: 'İş' },
   { key: 'channel', label: 'Kanal' },
   { key: 'deliveryCountry', label: 'Ülke' },
   { key: 'vatTreatment', label: 'KDV işlemi' },
@@ -41,14 +39,12 @@ interface ExportPeriod {
 }
 
 /**
- * Dönemin export'u: satırlar + özet. Dosya üretilmez, veri döner — çağıran ekranda gösterir ya da
- * indirtir.
- *
- * Kalemler TEK turda çekilir (sipariş başına sorgu N+1 olurdu) ve siparişe göre gruplanır.
+ * Dönemin export'u, satırlar ve özet: dosya üretilmez, veri döner ve çağıran gösterir ya da indirtir. `business` verilmezse dosya
+ * şirketin tamamıdır; kalemler tek turda çekilip siparişe göre gruplanır, sipariş başına sorgu N+1 olurdu.
  */
-export async function buildExport(period: ExportPeriod): Promise<AccountingExport> {
+export async function buildExport(period: ExportPeriod, business?: Business): Promise<AccountingExport> {
   const db = serviceDb();
-  const sales = await new OrderSaleService(db).listPeriod(period.from, period.to);
+  const sales = await new OrderSaleService(db).listPeriod(period.from, period.to, business);
   const items = await new OrderItemService(db).listByOrders(sales.map((summary) => summary.id));
 
   const byOrder = new Map<string, typeof items>();
@@ -70,7 +66,8 @@ export async function buildExport(period: ExportPeriod): Promise<AccountingExpor
  * olduğu tartışılır.
  */
 export function toExportCsv(data: AccountingExport): string {
-  const body = toCsv(data.rows as unknown as Array<Record<string, unknown>>, COLUMNS);
+  const rows: ExportCsvRow[] = data.rows.map((row) => ({ ...row, businessLabel: BUSINESS_LABELS[row.business] }));
+  const body = toCsv(rows as unknown as Array<Record<string, unknown>>, COLUMNS);
   const summary = data.summary;
   const summaryLines = [
     '',
@@ -88,7 +85,7 @@ export function toExportCsv(data: AccountingExport): string {
  * **Fatura eşleştirme kuyruğu** — dış muhasebe fatura numarasını üretir, buradan siparişe yazılır.
  * Sonsuz kaydırma: kuyruk siparişlerle birlikte büyür.
  */
-export function pendingInvoices(opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<OrderSale>> {
+export function pendingInvoices(opts: { cursor?: KeysetCursor; limit?: number; business?: Business } = {}): Promise<Page<OrderSale>> {
   return new OrderSaleService(serviceDb()).pendingInvoices(opts);
 }
 
@@ -97,11 +94,8 @@ type InvoiceMatchOutcome =
   | { status: 'invalid'; reason: 'empty_invoice_no' };
 
 /**
- * Resmî fatura numarasını siparişe bağlar. Numara BURADA ÜRETİLMEZ — dış muhasebede doğar; sistem
- * yalnız kendi referansıyla eşleştirir (`reference_no ≠ invoice_no`, DATA_MODEL).
- *
- * Boş numara reddedilir: boş dize yazılsaydı satır kuyruktan düşer ama hiçbir faturaya bağlanmaz,
- * eşleşmemiş satış görünmez olurdu.
+ * Resmî fatura numarasını siparişe bağlar; numara burada üretilmez, dış muhasebede doğar (`reference_no ≠ invoice_no`). Boş numara
+ * reddedilir, yazılsaydı satır kuyruktan düşer ama hiçbir faturaya bağlanmazdı.
  */
 export async function matchInvoiceNo(orderId: string, invoiceNo: string): Promise<InvoiceMatchOutcome> {
   const trimmed = invoiceNo.trim();

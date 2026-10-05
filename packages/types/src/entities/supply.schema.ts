@@ -87,6 +87,8 @@ export type PurchaseOrderStatus = z.infer<typeof PurchaseOrderStatusEnum>;
 export const PurchaseOrderSchema = z.object({
   id: z.string().uuid(),
   supplierId: z.string().uuid(),
+  /** Siparişin işi; kalemlerin hedef deposu ve mal kabulün deposu bu işten olmak zorunda, sipariş doğduktan sonra değişmez. */
+  business: BusinessEnum,
   status: PurchaseOrderStatusEnum,
   /**
    * Tedarikçinin referans verebileceği numara (`TS-26-4K2M9P`): taslakta null, gönderimde dolu. Rastgeledir, çünkü sıralı numara
@@ -132,13 +134,15 @@ export type PurchaseOrderRow = z.infer<typeof PurchaseOrderRowSchema>;
 
 export const PurchaseOrderInsertSchema = z.object({
   supplierId: z.string().uuid(),
+  business: BusinessEnum,
   status: PurchaseOrderStatusEnum.optional(),
   sentAt: z.string().nullish(),
   note: z.string().nullish(),
 });
 export type PurchaseOrderInsert = z.infer<typeof PurchaseOrderInsertSchema>;
 
-export const PurchaseOrderUpdateSchema = PurchaseOrderSchema.partial().required({ id: true });
+// İş güncellemede yoktur, veride de değişmez (`purchase_order_business_frozen`).
+export const PurchaseOrderUpdateSchema = PurchaseOrderSchema.omit({ business: true }).partial().required({ id: true });
 export type PurchaseOrderUpdate = z.infer<typeof PurchaseOrderUpdateSchema>;
 
 export const PurchaseOrderItemSchema = z.object({

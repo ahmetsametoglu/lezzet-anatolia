@@ -1,19 +1,13 @@
-import type { Channel } from '@lezzet/types';
+import { BUSINESS_LABELS, type Channel } from '@lezzet/types';
+import type { BusinessFilter } from '@/lib/business-filter';
 import type { AnalyticsChannel, AnalyticsMode } from './analytics-url';
 
-// Ekran sözlüğü. Tasarımın §6 kuralı burada zorlanıyor: **iç terim arayüze çıkmaz** — "funnel",
-// "RFM", "kohort", "UTM", "AnalyticsEvent" yerine insan dili. Sözlüğün tek yerde durması bunu
-// denetlenebilir kılıyor: yeni bir blok eklerken terimi buraya yazmak zorunda kalan kişi, ham
-// terimi de burada görür.
+// Ekran sözlüğü: iç terim arayüze çıkmaz ("funnel", "RFM", "kohort", "UTM" yerine insan dili). Sözlük tek yerde durduğu için yeni
+// bloğun terimini yazan kişi ham terimi de burada görür.
 
 /**
- * Sıfır-sonuç kovalarının adları.
- *
- * **Kapının kendi `zeroResultKindLabel`'ı KULLANILAMIYOR** ve sebebi bir sınır: `lib/analytics/read`
- * `server-only` ve bu dosyayı okuyan komponentler `'use client'`. Tipler silinerek geçiyor ama bir
- * DEĞER import etmek istemci paketine sunucu modülünü çekerdi. Sözlüğün ekranda durması zaten daha
- * doğru — etiket bir sunum kararıdır, okuma kapısının işi değil. (Kapıdaki kopya bugün hiçbir
- * yerden çağrılmıyor; arka uca bildirildi.)
+ * Sıfır-sonuç kovalarının adları; okuma kapısının etiketi kullanılamaz, çünkü o `server-only` ve bu dosyayı istemci komponentleri okur.
+ * Etiket bir sunum kararıdır, ekranda durması doğrudur.
  */
 export const ZERO_RESULT_LABEL = {
   search: 'Aradı, bizde yok',
@@ -32,17 +26,16 @@ export const CHANNEL_LABEL: Record<AnalyticsChannel, string> = {
 };
 
 /**
- * Çip SIRASI — `ChannelEnum.options` DEĞİL (`['b2b','b2c']`), çizimin sırası: B2C önce.
- *
- * Enum sırası bir veri kararıdır ve ekranı bağlamaz; burada sıra bir anlam taşıyor — B2C ana
- * kanaldır ve okuma soldan sağa "genelden özele" gider. Enum'a bırakılsaydı bir gün enum'a üçüncü
- * bir kanal eklendiğinde ekranın sırası da sessizce değişirdi.
+ * Çip sırası `ChannelEnum.options` değil çizimin sırasıdır, B2C önce: B2C ana kanaldır ve okuma genelden özele gider; enum'a bırakılsaydı
+ * yeni kanal eklenince ekranın sırası sessizce değişirdi.
  */
 export const CHANNEL_ORDER = ['b2c', 'b2b'] as const satisfies readonly Channel[];
 
-/** Servis süzgecine geçen kanal — `all` hiç geçilmez (süzgeç yok). */
-export function toChannelFilter(channel: AnalyticsChannel): Channel | undefined {
-  return channel === 'all' ? undefined : channel;
+export const BUSINESS_LABEL: Record<BusinessFilter, string> = { all: 'Tüm işler', ...BUSINESS_LABELS };
+
+/** Servis süzgecine geçen değer — `all` hiç geçilmez (süzgeç yok). */
+export function toFilter<T extends string>(value: T | 'all'): T | undefined {
+  return value === 'all' ? undefined : value;
 }
 
 /**
@@ -53,7 +46,7 @@ export function toChannelFilter(channel: AnalyticsChannel): Channel | undefined 
  * · `ABSENT_*`  → bu sayı bugün hiç hesaplanmıyor ("bekleme")
  */
 export const NOTES = {
-  /** Olay defteri kurulu ama henüz hiçbir atıcı yazmıyor (08.9). */
+  /** Olay defteri kurulu ama henüz hiçbir atıcı yazmıyor. */
   warmingLedger:
     'Gezinme ölçümünün defteri hazır, ama müşteri yüzeyindeki atıcılar henüz bağlanmadı — ilk ziyaretler kaydedilmeye başlayınca bu blok kendiliğinden dolar.',
   /** Veri var ama dönemde hiç satır yok. */
@@ -77,11 +70,8 @@ export const NOTES = {
 } as const;
 
 /**
- * Hero bandının KISA gerekçeleri. Uzun cümleler blok kutularında yaşar; hero dört ölçüyü yan yana
- * taşıyor ve orada üç satırlık bir açıklama sayının kendisini ezerdi (telefonda ekranın yarısı).
- *
- * Kısaltma bir bilgi kaybı DEĞİL: hero "neden yok"u tek nefeste söyler, blok gövdesi tam gerekçeyi
- * verir. İkisi aynı sözlükte durduğu için de ayrışamazlar.
+ * Hero bandının kısa gerekçeleri: hero dört ölçüyü yan yana taşır ve uzun açıklama sayıyı ezerdi; tam gerekçe blok kutusundadır, ikisi
+ * aynı sözlükte durduğu için ayrışmaz.
  */
 export const HERO_NOTES = {
   warmingLedger: 'Atıcılar bağlanınca dolar.',
@@ -91,14 +81,7 @@ export const HERO_NOTES = {
 } as const;
 
 /**
- * Dönüşüm oranının GÜVENİLİRLİK eşiği — altında oran gösterilir ama "örneklem küçük" denir.
- *
- * **Gerekliliği ölçülerek görüldü (04.08):** defterde tek ziyaret ve tek sipariş varken hero
- * "%100,0 dönüşüm" yazıyordu. Sayı doğruydu, cümlesi yanlış — bir bakışta okunan bir gösterge
- * olarak "ziyaretçilerin tamamı sipariş verdi" diyordu. Analitikte en tehlikeli hata boş bir kutu
- * değil, **inandırıcı bir yanlıştır.**
- *
- * Değer PARAMETRİK ve kutsal değil: 30, "bir oranın yönü hakkında konuşmaya başlanabilecek" makul
- * bir alt sınır. Emsal ürün skorlarındaki `confident` eşiği (`feedback-labels`).
+ * Dönüşüm oranının güvenilirlik eşiği: altında oran gösterilir ama "örneklem küçük" denir, çünkü tek ziyaret ve tek sipariş "%100,0
+ * dönüşüm" gibi inandırıcı bir yanlış yazar. Değer parametriktir; 30, oranın yönü hakkında konuşmaya başlanabilecek makul alt sınırdır.
  */
 export const CONVERSION_MIN_SAMPLE = 30;

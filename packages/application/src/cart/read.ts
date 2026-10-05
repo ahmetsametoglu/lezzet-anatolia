@@ -1,5 +1,6 @@
 import { ProductService, ProductVariantService, SettingsService, type Db } from '@lezzet/database';
 import {
+  businessHasDiscounts,
   decideCartAgainstWarehouse,
   meetsMinBasket,
   minBasketBaseOf,
@@ -9,7 +10,7 @@ import {
   type DiscountableLine,
 } from '@lezzet/domain-core';
 import { resolveLocalizedText } from '@lezzet/types';
-import type { PreferredLanguage, ProductVariant, ProductWithRelations } from '@lezzet/types';
+import type { Business, PreferredLanguage, ProductVariant, ProductWithRelations } from '@lezzet/types';
 import { EMPTY_IMAGE, EMPTY_PRODUCT_CONTEXT, imageOf, sellingOf, toVariant } from '../catalog/map';
 import type { ProductContext } from '../catalog/map';
 import { loadProductContext } from '../catalog/product-context';
@@ -99,6 +100,8 @@ export async function getCartView(
      * ya da o ülkeye kargo yok.
      */
     shippingWarehouseId?: string | null;
+    /** Müşterinin işi; zorunludur, çünkü unutulursa "hiç var mı" iki işin stoğunu toplardı. */
+    business: Business;
     /**
      * Ayar kapsamının yer eksenleri; parametre olarak gelir, çünkü çerez okuması okumayı istek dışında çağrılamaz yapardı.
      */
@@ -119,7 +122,7 @@ export async function getCartView(
      * paket taşımayan yüzey (bugün mobil) bu kapıyı hiç geçmez.
      */
     bundles?: CartBundlePort;
-  } = {},
+  },
 ): Promise<CartView> {
   const settings = new SettingsService(db);
   // İki tür satır, iki okuma — ikisi de TOPLU. Paketler kendi kapısından gelir (`lib/storefront`),
@@ -131,6 +134,7 @@ export async function getCartView(
   const place: PlaceWarehouses = {
     warehouseId: opts.warehouseId ?? null,
     shippingWarehouseId: opts.shippingWarehouseId ?? null,
+    business: opts.business,
   };
   // Görüntüleyen, satırların kaynağı ve indirimin girdisi birbirini beklemez: her tur sunucuda bir gidiş-dönüştür ve sepet,
   // ödeme ve sipariş bu okumadan geçer. Görüntüleyen oturumdan değil sepetin kimliğinden çözülür, misafir OTP yolunda oturum yoktur.
@@ -138,7 +142,7 @@ export async function getCartView(
   const [viewer, rows, discountData] = await Promise.all([
     pricingViewerOf(db, opts.customerId ?? null),
     empty ? null : readCartRows(db, locale, { variantIds, bundleIds, place, bundles: opts.bundles }),
-    empty ? null : loadCartDiscountData(db, { customerId: opts.customerId, couponCode: opts.couponCode }),
+    empty ? null : loadCartDiscountData(db, { customerId: opts.customerId, couponCode: opts.couponCode, business: opts.business }),
   ]);
   // Eşikler parametrik ve checkout ile aynı anahtar ve kapsamla okunur (`settingScopeOf`), yoksa sepetin gösterdiği eşik kasada
   // tutmazdı.
@@ -156,8 +160,9 @@ export async function getCartView(
     minBasketFor(settings, 'shipping', scope),
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
   ]);
+  const acceptsCoupons = businessHasDiscounts(opts.business);
   // Boş sepette yol da yok: kapıya teslim tabanı yazılır ki ekran "en az şu kadar" diyebilsin.
-  if (rows === null || discountData === null) return { ...EMPTY_CART, freeShippingCents, ...meets(0, minBasketRouteCents) };
+  if (rows === null || discountData === null) return { ...EMPTY_CART, freeShippingCents, acceptsCoupons, ...meets(0, minBasketRouteCents) };
   const { variants, packageRows, page } = rows;
   // Motorun kalem sözleşmesi: satır çözülürken doldurulur (kategori/koleksiyon oradan gelir).
   const discountable: DiscountableLine[] = [];
@@ -265,7 +270,7 @@ export async function getCartView(
    */
   const undeliverableSubtotalCents = undeliverableTotalOf(lines);
   const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0) - undeliverableSubtotalCents;
-  // Kargo grubunun kendi toplamı — ücretsiz kargo eşiği BUNA bakar (K37).
+  // Kargo grubunun kendi toplamı; ücretsiz kargo eşiği buna bakar.
   const shippingSubtotalCents = lines.reduce((sum, l) => (l.route === 'shipping' ? sum + (l.lineTotalCents ?? 0) : sum), 0);
   const hasLocal = lines.some((l) => l.route === 'local');
   const hasShipping = lines.some((l) => l.route === 'shipping');
@@ -284,6 +289,7 @@ export async function getCartView(
       localOrderLines: split ? discountable.filter((_, index) => lines[index] && cartGroupOf(lines[index]) === 'local') : undefined,
       customerId: opts.customerId,
       couponCode: opts.couponCode,
+      business: opts.business,
     },
     discountData,
   );
@@ -301,6 +307,7 @@ export async function getCartView(
     /* Motorun girdisi görünümle taşınır ki istemci adet değişince indirimi aynı motorla tazelesin. */
     discountRules,
     discountContext,
+    acceptsCoupons,
     hasBlocked: lines.some((l) => l.blocked),
     freeShippingCents,
     shippingSubtotalCents,

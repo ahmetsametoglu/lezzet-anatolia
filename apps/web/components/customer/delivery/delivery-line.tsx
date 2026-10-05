@@ -1,5 +1,6 @@
 'use client';
 
+import { businessShips } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
 import { formatDeliveryDate } from '@/lib/storefront/format';
 import { elsewhereReasonOf } from '@/lib/delivery/place-types';
@@ -36,7 +37,9 @@ interface DeliveryLineProps {
 
 export function DeliveryLine({ locale, shippable, status, fallback, blockedActions, compact = false, box = false }: DeliveryLineProps) {
   const t = messages[locale];
-  const { place, ready, setPanelOpen } = useDeliveryPlace();
+  const { place, ready, setPanelOpen, business } = useDeliveryPlace();
+  // Kargo göndermeyen işin müşterisine ürünün kargoya verilebilmesi bir vaat değildir.
+  const ships = shippable && businessShips(business);
 
   /**
    * "Teslimat yerini değiştir" başlıktaki yer sorusunu açar, çünkü yer tek yerden sorulur: girişli müşteriye adresleri, ziyaretçiye ülke
@@ -61,7 +64,7 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
     return (
       <>
         <div className={[...rowBox, 'bg-sand-100'].join(' ')}>
-          {shippable ? (
+          {ships ? (
             <>
               <span className="inline-flex items-center gap-1.5">
                 <Icon name="truck" size={compact ? 13 : 15} />

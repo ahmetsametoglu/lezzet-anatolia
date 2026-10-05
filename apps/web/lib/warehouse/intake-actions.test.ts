@@ -4,8 +4,8 @@ import { CategoryService, ProductService, PurchaseOrderService, StockService, Su
 import { createTestWarehouse, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 
 /*
-  Stok ekranındaki mal kabulde alış fiyatı salt okunurdur: fiyat siparişin kaydıdır. Ekrandan gönderilen bir fiyat partiye yazılırsa
-  ya da depoya bağlı personele sipariş fiyatı giderse bu dosya kırmızıya döner. Oturum koruması ve sayfa yenileme sahte, gerisi gerçek.
+  Stok ekranındaki mal kabulde alış fiyatı salt okunurdur, çünkü fiyat siparişin kaydıdır: ekrandan gönderilen fiyat partiye yazılırsa ya
+  da depoya bağlı personele sipariş fiyatı giderse bu dosya kırmızıya döner. Oturum koruması ve sayfa yenileme sahtedir, gerisi gerçek.
 */
 
 const kapsam: { simdiki: WarehouseScope } = { simdiki: { kind: 'all' } };
@@ -54,7 +54,7 @@ afterAll(async () => {
 });
 
 async function siparis(unitPriceCents: number): Promise<string> {
-  const { order } = await new PurchaseOrderService(db).createDraft(supplierId, [{ variantId, qty: 10, unitPriceCents }]);
+  const { order } = await new PurchaseOrderService(db).createDraft(supplierId, 'lezzet', [{ variantId, qty: 10, unitPriceCents }]);
   return order.id;
 }
 

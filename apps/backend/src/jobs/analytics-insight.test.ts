@@ -38,8 +38,10 @@ describe('analytics_insight', () => {
   it('özetten anlatı üretir ve DÖNEMİYLE birlikte saklar', async () => {
     onceki = await settings.get<unknown>(ANALYTICS_INSIGHT_SETTING, null);
 
-    // Dönemde en az bir özet satırı olmalı, çünkü iş boş dönemde modeli çağırmaz; `surface` zorunludur, eksikse satır doğmaz.
-    await db.from('analytics_event').insert([{ created_at: at(9), type: 'page_view', session_key: sessionKey, path: '/', surface: 'web' }]);
+    // Dönemde en az bir özet satırı olmalı, çünkü iş boş dönemde modeli çağırmaz; `surface` ve `business` zorunludur, eksikse satır doğmaz.
+    await db
+      .from('analytics_event')
+      .insert([{ created_at: at(9), type: 'page_view', session_key: sessionKey, path: '/', business: 'lezzet', surface: 'web' }]);
     await db.rpc('build_analytics_daily', { p_day: day });
 
     const sonuc = await analyticsInsightJob({ model: fakeAiModel(ANLATI) });

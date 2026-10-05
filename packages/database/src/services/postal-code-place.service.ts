@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { PostalCodePlaceSchema, type Country, type PostalCodePlace } from '@lezzet/types';
+import { PostalCodePlaceSchema, type Business, type Country, type PostalCodePlace } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import {
   isPlaceNameQuery,
@@ -44,14 +44,19 @@ export class PostalCodePlaceService extends BaseDbService<PostalCodePlace, never
    * Tuş yolundaki öneri ayrı bir kapıdır: onay kapısı her sorulan kodu talep sayacına yazar, öneri ise yalnız okur. Rota içi kod
    * sıralamada öne alınır ama seçilmez, çünkü adaylar arasındaki fark KDV oranı da olabilir.
    */
-  async search(term: string, limit = 8): Promise<PostalCodeSuggestion[]> {
+  async search(
+    term: string,
+    limit: number,
+    /** "Rota içi" bu işin bölgesine göre okunur; `null` hangi işte olursa olsun (operatörün bölge kurulumu). */
+    business: Business | null,
+  ): Promise<PostalCodeSuggestion[]> {
     // Dal terimin kendisinden seçilir, çağırandan bayrak alınmaz.
     const byName = isPlaceNameQuery(term);
-    return byName ? this.searchByPlace(term, limit) : this.searchByCode(term, limit);
+    return byName ? this.searchByPlace(term, limit, business) : this.searchByCode(term, limit, business);
   }
 
   /** Önek indeksi (`postal_code_place_code`) üstünde çalışır. */
-  private async searchByCode(prefix: string, limit: number): Promise<PostalCodeSuggestion[]> {
+  private async searchByCode(prefix: string, limit: number, business: Business | null): Promise<PostalCodeSuggestion[]> {
     const normalized = normalizePostalCode(prefix);
     if (normalized.length < MIN_POSTAL_PREFIX_LENGTH) return [];
 
@@ -61,6 +66,7 @@ export class PostalCodePlaceService extends BaseDbService<PostalCodePlace, never
         orderBy: 'postalCode',
         limit,
       }),
+      business,
     );
   }
 
@@ -69,7 +75,7 @@ export class PostalCodePlaceService extends BaseDbService<PostalCodePlace, never
    * bulamaz. Terim, kolonu üreten `place_search_text()` ile aynı kuralla normalleşir; ikisi ayrışırsa "Hœnheim" yazan kendi kaydını
    * bulamaz.
    */
-  private async searchByPlace(term: string, limit: number): Promise<PostalCodeSuggestion[]> {
+  private async searchByPlace(term: string, limit: number, business: Business | null): Promise<PostalCodeSuggestion[]> {
     const normalized = normalizePlaceName(term);
     if (normalized.length < MIN_PLACE_NAME_LENGTH) return [];
 
@@ -79,15 +85,18 @@ export class PostalCodePlaceService extends BaseDbService<PostalCodePlace, never
         orderBy: 'postalCode',
         limit,
       }),
+      business,
     );
   }
 
-  private async enrich(rows: PostalCodePlace[]): Promise<PostalCodeSuggestion[]> {
+  private async enrich(rows: PostalCodePlace[], business: Business | null): Promise<PostalCodeSuggestion[]> {
     if (rows.length === 0) return [];
 
     // İkinci tur yalnız bulunan kodlar için, en çok `limit` tane.
     const served = await new DeliveryZonePostalCodeService(this.supabase).listByCodes(rows.map((row) => row.postalCode));
-    const inRoute = new Set(served.map((row) => `${row.country}:${row.postalCode}`));
+    const inRoute = new Set(
+      served.filter((row) => business === null || row.business === business).map((row) => `${row.country}:${row.postalCode}`),
+    );
 
     return rows
       .map((row) => ({

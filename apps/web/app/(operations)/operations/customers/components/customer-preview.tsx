@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@lezzet/types';
+import { BUSINESS_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@lezzet/types';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { InlineMetric } from '@/components/operation/ui/inline-metric';
@@ -278,6 +278,18 @@ export function CustomerPreview({
                     </span>
                   }
                 />
+                {/* İş yalnız şirkette sorulur; bireysel müşteri daima Lezzet'tir ve kutu orada gürültü olurdu. */}
+                {row.type === 'company' || detail.business === 'qualite' ? (
+                  <Readout
+                    label="İş"
+                    hint={
+                      detail.business === 'qualite'
+                        ? 'QUALITE müşterisi — siparişleri QUALITE deposundan karşılanır; Düzenle formundan değiştirilir.'
+                        : 'Lezzet müşterisi. Onaylı B2B müşteri Düzenle formundan QUALITE yapılır.'
+                    }
+                    value={<Badge tone={detail.business === 'qualite' ? 'olive' : 'neutral'}>{BUSINESS_LABELS[detail.business]}</Badge>}
+                  />
+                ) : null}
               </div>
             )}
 

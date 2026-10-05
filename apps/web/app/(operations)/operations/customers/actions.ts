@@ -17,6 +17,7 @@ import {
 import { isPointsEligible } from '@lezzet/domain-core';
 import { DEFAULT_PAGE_SIZE, type Discount, type DiscountCode, type KeysetCursor } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
+import { constraintMessage } from '@/lib/constraint-message';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readOrderSummary, type OrderSummaryView } from '@/lib/order/summary';
 import { priceRuleError } from '@/lib/pricing/price-rule-label';
@@ -38,6 +39,12 @@ import type { CreditFormInput, CustomerDetail, CustomerEditInput, CustomerRow } 
 
 /** Önizlemede gösterilen sipariş sayısı — geçmişin TAMAMI değil, "son ne aldı" sorusunun cevabı. */
 const LAST_ORDERS_LIMIT = 5;
+
+/** Veri kuralının okunur cümlesi: QUALITE müşterisinin işi Lezzet yapılmadan onayı kalkmaz, tipi değişmez. */
+const CONSTRAINT_MESSAGE: Record<string, string> = {
+  user_profiles_business_b2b:
+    'QUALITE yalnız onaylı B2B şirketin işi olabilir. Onayı kaldırmadan ya da tipi değiştirmeden önce Düzenle formundan müşterinin işini Lezzet yapın.',
+};
 
 /**
  * Listenin SONRAKİ sayfası. Süzgeçler adresten okunur (`search`), böylece devam eden sayfa ilk
@@ -126,6 +133,7 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
         creditLimitCents: profile.creditLimitCents,
         codAllowed: profile.codAllowed,
         pickupAllowed: profile.pickupAllowed,
+        business: profile.business,
         priceRuleBasis: profile.priceRuleBasis,
         priceRulePercent: profile.priceRulePercent,
         priceGroupId: profile.priceGroupId,
@@ -226,7 +234,7 @@ export async function setB2bApprovalAction(customerId: string, approved: boolean
     revalidatePath(CUSTOMERS_PATH);
     return { data: null, error: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, error: constraintMessage(err, CONSTRAINT_MESSAGE) };
   }
 }
 
@@ -280,6 +288,7 @@ export async function updateCustomerAction(customerId: string, input: CustomerEd
       vatNumber: input.vatNumber?.trim() || null,
       codAllowed: input.codAllowed,
       pickupAllowed: input.pickupAllowed,
+      business: input.business,
       priceRuleBasis: input.priceRuleBasis,
       priceRulePercent: input.priceRuleBasis ? input.priceRulePercent : null,
       priceGroupId: input.priceGroupId,
@@ -287,7 +296,7 @@ export async function updateCustomerAction(customerId: string, input: CustomerEd
     revalidatePath(CUSTOMERS_PATH);
     return { data: null, error: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, error: constraintMessage(err, CONSTRAINT_MESSAGE) };
   }
 }
 

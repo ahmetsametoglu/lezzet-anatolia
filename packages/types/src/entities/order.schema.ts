@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { dbNumeric } from '../primitives/db-numeric';
 import {
+  BusinessEnum,
   CarrierEnum,
   ChannelEnum,
   CountryEnum,
@@ -201,6 +202,8 @@ export type OrderUpdate = z.infer<typeof OrderUpdateSchema>;
  * `delivered`/`completed` kaydından türer; muhasebe ve kârlılık aynı günü okur.
  */
 export const OrderSaleSchema = OrderSchema.extend({
+  /** Satışın işi, deposunun işi. */
+  business: BusinessEnum,
   /** Siparişin İLK gerçekleşme günü — tam yolda teslim, hızlı satışta kapanış. */
   saleDate: z.string(),
 });

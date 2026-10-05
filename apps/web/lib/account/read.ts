@@ -13,6 +13,7 @@ import {
   type CustomerPointsRules,
   type PendingNeighborAward,
 } from '@lezzet/application';
+import { customerBusinessOf } from '@lezzet/domain-core';
 import { listPointsHistory } from '@/lib/feedback/points';
 
 /** Hesap sayfasının tek okuma kapısı; puan yalnız B2C’de okunur, çünkü B2B’de hiç çizilmeyecek veriyi getirmek boşa sorgudur. */
@@ -87,7 +88,7 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
 
   // Kaydedilenler sepetin kendi okumasıyla çözülür: ad, görsel, fiyat ve "bölge içi mi" bilgisi
   // orada zaten hesaplanıyor. İkinci bir çözüm yazmak, aynı satırın iki görünümü demekti.
-  const savedView = await getCartView(locale, cart.savedItems.map(entryOfItem), { customerId });
+  const savedView = await getCartView(locale, cart.savedItems.map(entryOfItem), { customerId, business: customerBusinessOf(profile) });
 
   // Puan ve kupon aynı koşula bağlı ve tek kapıdan gelir, böylece native ile web'in kartı aynı kaynaktan doğar.
   const [points, coupons] = company ? [null, [] as CustomerCoupon[]] : await readPointsAndCoupons(db, customerId);

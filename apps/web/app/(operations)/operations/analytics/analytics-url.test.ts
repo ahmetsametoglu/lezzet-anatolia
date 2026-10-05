@@ -2,22 +2,21 @@ import { describe, expect, it } from 'vitest';
 import { analyticsUrl, parseAnalyticsUrl, periodRange } from './analytics-url';
 
 /**
- * URL sözleşmesi saf mantıktır (DB yok) → birim test. Bu ekranda önemi ayrıca büyük: mod/dönem/kanal
- * SUNUCUDA okunuyor ve analitikte bir bulguyu göstermenin tek yolu bağlantı paylaşmak. Adres yanlış
- * ayrıştırılırsa hata vermez — karşı taraf başka bir döneme bakar ve iki kişi aynı ekranda farklı
+ * URL sözleşmesi saf mantıktır: adres yanlış ayrıştırılırsa hata vermez, karşı taraf başka döneme bakar ve iki kişi aynı ekranda farklı
  * sayı görür.
  */
 
 describe('parseAnalyticsUrl', () => {
   it('boş parametrelerde varsayılana düşer', () => {
-    expect(parseAnalyticsUrl({})).toEqual({ mode: 'ticaret', period: 'd30', channel: 'all' });
+    expect(parseAnalyticsUrl({})).toEqual({ mode: 'ticaret', period: 'd30', channel: 'all', business: 'all' });
   });
 
   it('tanınmayan değerleri sessizce varsayılana çevirir (bozuk link ekranı kırmaz)', () => {
-    expect(parseAnalyticsUrl({ mode: 'kar', period: 'd365', ch: 'b2g' })).toEqual({
+    expect(parseAnalyticsUrl({ mode: 'kar', period: 'd365', ch: 'b2g', business: 'migros' })).toEqual({
       mode: 'ticaret',
       period: 'd30',
       channel: 'all',
+      business: 'all',
     });
   });
 
@@ -32,9 +31,9 @@ describe('analyticsUrl', () => {
   });
 
   it('gidiş-dönüş kayıpsız', () => {
-    const url = analyticsUrl({ mode: 'trafik', period: 'd90', channel: 'b2c' });
-    const params = Object.fromEntries(new URLSearchParams(url.split('?')[1]));
-    expect(parseAnalyticsUrl(params)).toEqual({ mode: 'trafik', period: 'd90', channel: 'b2c' });
+    const state = { mode: 'trafik', period: 'd90', channel: 'b2c', business: 'qualite' } as const;
+    const params = Object.fromEntries(new URLSearchParams(analyticsUrl(state).split('?')[1]));
+    expect(parseAnalyticsUrl(params)).toEqual(state);
   });
 });
 

@@ -51,6 +51,10 @@ alter table public.user_profiles
   -- Gel-al izni: depodan teslim herkese açık bir Drive değil, depoyla telefonla randevulaşan anlaşmalı müşterinin yoludur;
   -- bayrak kapalıyken checkout seçeneği hiç sunmaz ve sunucu kapısı da reddeder.
   add column pickup_allowed boolean not null default false,
+  -- Müşterinin işi; müşteri seçemez, admin verir. QUALITE toptan satış demek olduğu için yalnız onaylı şirkete verilir
+  -- (docs/feature/iki-is.md, karar 7 ve 10).
+  add column business business not null default 'lezzet',
+  add constraint user_profiles_business_b2b check (business = 'lezzet' or (type = 'company' and b2b_approved is true)),
 
   -- Kanal bazlı pazarlama izni ve GDPR kanıtı (ne zaman, nereden); opt-in, yani anahtar yoksa izin yoktur. Kampanya açık rıza ister
   -- ve sessizliği rıza saymak hukuken yanlıştır.

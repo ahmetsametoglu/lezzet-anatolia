@@ -4,21 +4,15 @@ import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { buildExport, pendingInvoices } from '@/lib/accounting/export';
 import { buildMovementExport } from '@/lib/accounting/movement-export';
 import { companyPnl, productProfits } from '@/lib/accounting/profit';
+import { businessOfFilter } from '@/lib/business-filter';
 import { guarded, requireAdmin, requireFinance } from '@/lib/guard';
 import { ReportsClient } from './reports-client';
 import { toChannelCards, toPnlRows, toProductMetrics, toVariantRows } from './reports-read';
 import type { ReportsData } from './reports-types';
 import { monthRange, parseReportsUrl, previousMonth, selectableMonths } from './reports-url';
 
-// Raporlar (12.9) — **yönetici VEYA muhasebeci** sayfayı açar, ama **kâr blokları yalnız
-// yöneticinin**.
-//
-// Tasarım §6 net: *"Depo/kurye rollerinin bu sayfaya erişimi yoktur — kâr yalnız admin görür"*.
-// O metin `accounting` rolü doğmadan önce yazıldı (rol 09.2 ile geldi) ve muhasebecinin işi tam
-// olarak bu sayfanın alt yarısı: export ve fatura eşleştirme. İkisini birden yöneticiye kilitlemek
-// muhasebeciyi kendi işinden dışlardı; kârı ona açmak da tasarımın kararını çiğnerdi. Bu yüzden
-// sayfa `requireFinance`, kâr blokları `canSeeProfit` — sipariş detayındaki rol kapılı finansal
-// kartın aynı deseni.
+// Raporlar yönetici ve muhasebeciye açıktır, kâr blokları yalnız yöneticinin: muhasebecinin işi export ve fatura eşleştirmesidir, kâr
+// tasarım gereği yalnız yöneticiye görünür. Bu yüzden sayfa `requireFinance`, kâr blokları `canSeeProfit` kapısındadır.
 
 interface ReportsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -42,25 +36,22 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   // okuyan her yer, yetki kuralının ikinci bir kopyası olurdu.
   const canSeeProfit = (await guarded(requireAdmin)).ok;
   const period = monthRange(urlState.ym);
+  const business = businessOfFilter(urlState.business);
 
   const [profits, pnl, prevPnl, exportData, movementData, invoicePage] = await Promise.all([
     // Kâr okumaları YALNIZ yetkisi olana yapılır — yetkisiz kullanıcıya gösterilmeyecek bir sayıyı
     // hesaplamak hem boşuna iş, hem de bir gün bir sızıntının kaynağı.
-    canSeeProfit ? productProfits(period) : [],
-    canSeeProfit ? companyPnl(period) : null,
-    canSeeProfit && urlState.cmp ? companyPnl(monthRange(previousMonth(urlState.ym))) : null,
-    buildExport(period),
-    // Hareket dökümünün özeti (12.15): dosyaya girmeden "kaç hareket, kaçı izahsız" görünsün.
-    buildMovementExport(period),
-    pendingInvoices({ limit: 30 }),
+    canSeeProfit ? productProfits(period, business) : [],
+    canSeeProfit ? companyPnl(period, business) : null,
+    canSeeProfit && urlState.cmp ? companyPnl(monthRange(previousMonth(urlState.ym)), business) : null,
+    buildExport(period, business),
+    // Hareket dökümünün özeti: dosyaya girmeden "kaç hareket, kaçı izahsız" görünsün.
+    buildMovementExport(period, business),
+    pendingInvoices({ limit: 30, business }),
   ]);
 
-  // Satır başlığı ÜRÜN ADI + BOY, yalnız boy DEĞİL — `ui:shot` ile ölçüldü (04.08): boy etiketi
-  // gramajdır ("90g") ve raporda üç ayrı ürünün üç satırı birden "90g" yazıyordu, yani sayılar
-  // doğruyken satırın kimliği kayboluyordu. Bir kârlılık tablosunun tek işi hangi ürünün ne
-  // kazandırdığını söylemek; ürün adı olmadan tablo okunamaz.
-  //
-  // İki okuma da TEK turda: satır başına sorgu atsaydık yüz boyluk bir rapor iki yüz sorgu ederdi.
+  // Satır başlığı ürün adı ve boydur, çünkü boy etiketi gramajdır ("90g") ve üç ayrı ürünün satırı aynı yazılırdı. İki okuma da tek
+  // turdadır, satır başına sorgu yüz boyluk raporda iki yüz sorgu ederdi.
   const variantIds = profits.map((profit) => profit.variantId);
   const variants = variantIds.length > 0 ? await new ProductVariantService(serviceDb()).listByIds(variantIds) : [];
   const productIds = [...new Set(variants.map((variant) => variant.productId))];
@@ -114,8 +105,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     })),
     unpricedCount: pnl?.unpricedCount ?? 0,
     unpricedRevenueCents: pnl ? toCents(pnl.unpricedRevenue) : 0,
-    // Dönemde satış var mı — export özeti herkese okunduğu için boş hâlin ölçütü de o.
-    hasSales: exportData.summary.orderCount > 0 || (pnl?.orderCount ?? 0) > 0,
+    // Dönemde satış var mı: kâr okunuyorsa iş süzgecine uyan satışlardan (maliyeti bilinen ve bilinmeyen), okunmuyorsa export özetinden.
+    hasSales: pnl ? pnl.orderCount + pnl.unpricedCount > 0 : exportData.summary.orderCount > 0,
   };
 
   return (

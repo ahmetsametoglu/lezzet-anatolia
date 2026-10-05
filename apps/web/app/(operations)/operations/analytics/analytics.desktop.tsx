@@ -20,21 +20,15 @@ import {
   ZeroSearchChips,
   ZoneDemandBridge,
 } from './analytics-sections';
-import { CHANNEL_LABEL, CHANNEL_ORDER, MODE_LABEL } from './analytics-labels';
+import { BUSINESS_FILTERS } from '@/lib/business-filter';
+import { BUSINESS_LABEL, CHANNEL_LABEL, CHANNEL_ORDER, MODE_LABEL } from './analytics-labels';
 import { ANALYTICS_MODES, ANALYTICS_PERIODS, PERIOD_LABEL } from './analytics-url';
 import type { AnalyticsViewProps } from './analytics-types';
 
-// Analitik — web. Çizim (`Operasyon - Analitik.dc.html`) tek bir dikey akış: kontrol barı → kırılım
-// şeridi → içgörü → hero bandı → seri → (huni | kaynak) → (ısı | ROAS) → (kohort | gruplar) →
-// (arama | ilgi). Izgara oranları çizimden birebir (1.2/1 · 1/1 · 1/1.1 · 1/1).
-//
-// ── ÇİZİMDEKİ "DOLU / İLK GÜN" ANAHTARI KODLANMADI ───────────────────────────
-// O bir DEMO kontrolüdür, ekranın kontrolü değil: çizimin kendi üst yazısı "veri halini üstten
-// değiştirebilirsiniz" diyor ve tezgâh sözleşmesi ilk-gün hâlini bir DURUM olarak tanımlıyor
-// ("uydurma rakam göstermez"). Gerçek ekranda yönetici veri hâlini seçemez — veriden okur.
-// Ticaret/Trafik ise gerçek bir mod anahtarıdır ve kodlandı.
+// Analitik, web: çizimdeki tek dikey akış (kontrol barı → kırılım şeridi → içgörü → hero → seri → bloklar), ızgara oranları çizimden.
+// Çizimdeki "Dolu / İlk gün" anahtarı demo kontrolüdür, kodlanmadı; yönetici veri hâlini seçmez, veriden okur.
 
-export function AnalyticsDesktop({ data, urlState, onMode, onPeriod, onChannel, navPending }: AnalyticsViewProps) {
+export function AnalyticsDesktop({ data, urlState, onMode, onPeriod, onChannel, onBusiness, navPending }: AnalyticsViewProps) {
   const trafik = urlState.mode === 'trafik';
 
   return (
@@ -55,9 +49,8 @@ export function AnalyticsDesktop({ data, urlState, onMode, onPeriod, onChannel, 
         <span className="font-ops-mono text-ops-xs text-ops-muted">↳ önceki döneme göre</span>
       </PageHeader>
 
-      {/* KIRILIM ŞERİDİ — çizimde ayrı bir zeminli sıra. "+ kaynak" ve "+ dil/ülke" çizimde KESİKLİ
-          çerçeveli, yani "henüz yok" işareti; kesikli çizilip tıklanamaz bırakıyoruz — çalışmayan
-          bir çipi normal göstermek, basınca bir şey olacağı sözü vermek olurdu. */}
+      {/* Kırılım şeridi: "+ kaynak" ve "+ dil/ülke" çizimde kesikli çerçevelidir, yani henüz yok; tıklanamaz bırakılır, çalışmayan
+          çipi normal göstermek söz vermek olurdu. */}
       <div className="flex flex-wrap items-center gap-2 border-b border-ops-line-soft bg-ops-subtle px-6 py-2.5">
         <span className="mr-1 font-ops-display text-ops-micro font-medium uppercase tracking-[0.08em] text-ops-muted">Kırılım</span>
         <Chip active={urlState.channel === 'all'} onClick={() => onChannel('all')}>
@@ -66,6 +59,12 @@ export function AnalyticsDesktop({ data, urlState, onMode, onPeriod, onChannel, 
         {CHANNEL_ORDER.map((c) => (
           <Chip key={c} tone={c === 'b2b' ? 'amber' : 'olive'} active={urlState.channel === c} onClick={() => onChannel(urlState.channel === c ? 'all' : c)}>
             {CHANNEL_LABEL[c]}
+          </Chip>
+        ))}
+        <span className="mx-1 h-4 w-px bg-ops-line" />
+        {BUSINESS_FILTERS.map((b) => (
+          <Chip key={b} active={urlState.business === b} onClick={() => onBusiness(b !== 'all' && urlState.business === b ? 'all' : b)}>
+            {BUSINESS_LABEL[b]}
           </Chip>
         ))}
         <span className="mx-1 h-4 w-px bg-ops-line" />

@@ -14,7 +14,7 @@ const DELIVERIES_PATH = '/operations/deliveries';
 /** İnsan diline çevrilmiş kısıt ihlali — rota ekranının sözlüğüyle aynı kayıt. */
 const CONSTRAINT_MESSAGE: Record<string, string> = {
   delivery_zone_postal_code_pkey:
-    'Eklemek istediğiniz posta kodlarından biri başka bir rotada tanımlı. Bir kod yalnız tek rotada olabilir.',
+    'Eklemek istediğiniz posta kodlarından biri bu işin başka bir rotasında tanımlı. Bir kod her işte yalnız tek rotada olabilir.',
 };
 
 const InputSchema = z.object({
@@ -24,27 +24,8 @@ const InputSchema = z.object({
 });
 
 /**
- * **ÖNERİDEN BÖLGEYE KOD EKLEME** — kuyruğun kendi kapısı (22.36).
- *
- * ── NEDEN AYRI BİR KAPI, `saveZoneAction` DEĞİL ─────────────────────────────
- * Rota ekranının kapısı bölgenin TAMAMINI yazıyor (ad, günler, aktiflik ve kod kümesinin son hâli;
- * kodlar sil-yaz ile değişiyor). Kuyruğun işi ise dar: **var olan bir bölgeye kod EKLEMEK.** O
- * kapıyı buradan çağırmak, taşımadığımız üç alanı da göndermeyi gerektirirdi ve gönderilmeyen her
- * alan bölgenin bugünkü değerini ezme riski taşırdı — patron kod eklerken teslim günlerini
- * kaybedebilirdi. Üstelik kapı kardeş sayfa klasöründe yaşıyor ve oradan ithal edilemez
- * (`STACK §7`).
- *
- * ── EKLER, DEĞİŞTİRMEZ ──────────────────────────────────────────────────────
- * Mevcut kodlar önce OKUNUYOR, seçilenler üstüne biniyor. `zone_extend` bir EKLEME önerisidir;
- * gelen kümeyi bölgenin kümesi yerine yazmak, onaylayan operatörün haberi olmadan rotadan kod
- * düşürürdü. Aynı kural rota ekranının ön dolgusunda da yazılı (*"önce okur, üstüne ekler — 'ekle'
- * sessizce 'değiştir' olmasın"*), ikinci kez uygulanıyor çünkü ikisi ayrı yazma yolu.
- *
- * ── BİLDİRİMİ BU KAPI GÖNDERMEZ ─────────────────────────────────────────────
- * Kod bölgeye girince `zone_available` uzlaştırma işi (saatte bir) "kapsanmış ve haberi gitmemiş"
- * bekleyişleri bulup gönderiyor (14.10 · 19.21). Buradan ikinci bir gönderim yolu açmak aynı mesajı
- * iki kez yollardı. Ekranın uyarısı yine de doğru ve şart: onaydan sonra mesaj GİDECEK ve geri
- * alınamayacak — yalnız birkaç dakika gecikmeli.
+ * Öneriden bölgeye kod ekleme, kuyruğun kendi kapısı: rota ekranının kapısı bölgenin tamamını yazar ve taşınmayan alanlar bölgenin
+ * değerini ezerdi. Mevcut kodlar önce okunur, seçilenler üstüne biner; haberi `zone_available` uzlaştırma işi gönderir.
  */
 export async function addZoneCodesFromProposalAction(input: unknown): Promise<ActionResult<{ added: number }>> {
   try {

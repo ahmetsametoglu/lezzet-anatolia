@@ -26,13 +26,8 @@ import {
 import { learnCode, resolveScannedCode } from './scan';
 
 /**
- * **Mal kabul — D2** (10.4), terfi 21.11 (kaynağı `apps/web/lib/stock/intake.test.ts`).
- *
- * İki şey sınanıyor: **depocu fiyat girmeden maliyet doğru yazılıyor mu** (PO'dan eşleşiyor) ve
- * **fark/uyarı iş akışını durdurmuyor mu**.
- *
- * Terfiyle gelen yeni iddia: **otomatik fiyat PORTU**. Kayıtsız portta `repricedCount` `null`
- * döner — sıfır DEĞİL (CLAUDE.md §1: ölçülemeyen değer sıfır değildir).
+ * Mal kabul: depocu fiyat girmeden maliyet siparişten doğru yazılıyor mu ve fark ya da uyarı akışı durdurmuyor mu. Otomatik fiyat portu
+ * kayıtsızken `repricedCount` sıfır değil `null` döner, ölçülemeyen değer sıfır değildir.
  */
 const db = serviceDb();
 const stocks = new StockService(db);
@@ -41,7 +36,7 @@ const stamp = Date.now();
 let variantId: string;
 /** Depo geçişi (DOMAIN §17): kabul deposuz yazılamaz — testin kendi deposu. */
 let warehouseId: string;
-/** Partinin rafı artık tanımlı bir alan (19.29) — testin kendi dolabı. */
+/** Partinin rafı tanımlı bir alandır; testin kendi dolabı. */
 let storageAreaId: string;
 let productId: string;
 let categoryId: string;
@@ -67,15 +62,13 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14 — `stock_movement.stock_id`
-  // `restrict` ve artık her partinin hareketi var, mal kabulün girişi bile).
+  // Parti sırasıyla gider: önce hareket defteri, sonra parti, çünkü `stock_movement.stock_id` `restrict`tir ve her partinin hareketi vardır.
   await purgeVariantStock(db, [variantId]);
 });
 
 afterAll(async () => {
-  // Partiler AYRICA silinmez: `purgeTestData` onları `productIds`ten buluyor (§1). Elle yazılan bu
-  // satır teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi). `beforeEach`teki silme
-  // başka iş görür: testler arası izolasyon.
+  // Partiler ayrıca silinmez, `purgeTestData` onları `productIds`ten bulur ve elle silme teardown'ı bozar; `beforeEach`teki silme testler
+  // arası izolasyon içindir.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -87,7 +80,7 @@ afterAll(async () => {
 
 /** Tedarik siparişi — beklenen adet ve birim maliyetle (**cent**; admin girer, depocu görmez). */
 async function draftPurchaseOrder(qty: number, unitPriceCents: number) {
-  const { order } = await new PurchaseOrderService(db).createDraft(supplierId, [{ variantId, qty, unitPriceCents }]);
+  const { order } = await new PurchaseOrderService(db).createDraft(supplierId, 'lezzet', [{ variantId, qty, unitPriceCents }]);
   return order.id;
 }
 
@@ -101,20 +94,14 @@ describe('PO’lu mal kabul', () => {
     expect(rows[0]).toMatchObject({ variantId, expectedQty: 20 });
     expect(rows[0]!.productName).toContain('Mantı');
     expect(rows[0]!.variantLabel).toBe('1 kg');
-    /* "Fiyat yok" iddiası ALAN ADIYLA kurulur: rakam aramak UUID'ye takılır.
-
-       Liste 21.160'ta dörtten sekize çıktı ve dördü de tanıma/karar alanı: `sku` +
-       `supplierCode` (depocunun elindeki kâğıtla eşleştirme), `dateType` + `shelfLifeDays`
-       (satırın SKT alanı ve ömür uyarısı bunlarsız kurulamıyor). Test o turda güncellenmedi ve
-       paket kırmızıya döndü — düzeltildi 30.08. */
+    /* "Fiyat yok" iddiası alan adıyla kurulur, çünkü rakam aramak UUID'ye takılır. Listedeki alanlar tanıma ve karar içindir (`sku`,
+       `supplierCode`, `dateType`, `shelfLifeDays`), para değil. */
     expect(Object.keys(rows[0]!).sort()).toEqual([
-      // Dokuzuncu alan `caseSizes` (30.08): adet çekmecesinin çarpan tablosu — depocu "3 koli
-      // geldi" der, paketi ekran çarpar. Para değil: koli boyu bir ÖLÇÜDÜR.
+      // `caseSizes` adet çekmecesinin çarpan tablosudur: depocu "3 koli geldi" der, paketi ekran çarpar; koli boyu para değil ölçüdür.
       'caseSizes',
       'dateType',
       'expectedQty',
-      // Onuncu alan `lotCandidates` (21.175): depodaki partilerin kodları — lot önerisinin ikinci
-      // kaynağı. Kod, para değil; iddia bozulmuyor.
+      // `lotCandidates` depodaki partilerin kodlarıdır, lot önerisinin ikinci kaynağı; kod para değildir.
       'lotCandidates',
       'productName',
       'shelfLifeDays',
@@ -126,11 +113,8 @@ describe('PO’lu mal kabul', () => {
   });
 
   /**
-   * **Form KALANI gösterir, ısmarlanan toplamı değil** (kusur, ölçüldü ve düzeltildi 25.08 · 10.4 turu).
-   *
-   * Düzeltmeden önce ekranla kayıt aynı olay hakkında iki farklı şey söylüyordu: `expectedQtysOf`
-   * ilk günden `missingQty`ye bakıyor, form ise `line.qty` gösteriyordu. Kısmen gelmiş bir siparişte
-   * depocu kalanı sayıp yazınca ekran "olmayan bir eksik" çiziyor, kayıt farkı sıfır yazıyordu.
+   * Form kalanı gösterir, ısmarlanan toplamı değil: `expectedQtysOf` `missingQty`ye bakar ve form `line.qty` gösterseydi kısmen gelmiş
+   * siparişte ekran olmayan bir eksik çizer, kayıt farkı sıfır yazardı.
    */
   it('KISMEN gelmiş siparişte form KALANI gösterir — ekran ile kayıt aynı tabana bakar', async () => {
     const purchaseOrderId = await draftPurchaseOrder(20, 600);
@@ -208,7 +192,7 @@ describe('PO’lu mal kabul', () => {
 });
 
 /**
- * Satın alma kaydı — admin yolu (09.14). Depocu yolundan ayrılan TEK şey maliyet.
+ * Satın alma kaydı, admin yolu: depocu yolundan ayrılan tek şey maliyettir.
  */
 describe('satın alma kaydı — maliyet admin yolundan gelir', () => {
   it('PO’SUZ alımda parti elle girilen fiyatla doğar', async () => {
@@ -303,12 +287,8 @@ describe('boş form', () => {
 });
 
 /**
- * **Künye ve bekleyen sevkiyat listesi** (21.11d) — ekranın *"TS-26-0114 · Gaziantep Gıda"* başlığı
- * ve konusuz açılışı.
- *
- * Paylaşılan DB (CLAUDE.md §4b): liste küresel okuyor (satın alma depo-üstüdür), o yüzden **hiçbir
- * iddia sayıya bakmaz** — kendi damgalı sipariş kimliklerimiz listede aranır. Başka ajanın açtığı
- * bir PO bu dosyayı kızartamaz.
+ * Künye ve bekleyen sevkiyat listesi: ekranın başlığı ve konusuz açılışı. Liste küresel okunduğu için hiçbir iddia sayıya bakmaz, kendi
+ * damgalı sipariş kimliklerimiz aranır.
  */
 describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
   const purchaseOrders = new PurchaseOrderService(db);
@@ -342,7 +322,7 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
     const purchaseOrderId = await draftPurchaseOrder(9, 400);
     await purchaseOrders.markSent(purchaseOrderId, `TS-BEKLEYEN-${stamp}`);
 
-    const mine = (await listPendingIntakes(db, { limit: 100 })).find((row) => row.purchaseOrderId === purchaseOrderId);
+    const mine = (await listPendingIntakes(db, { limit: 100, business: 'lezzet' })).find((row) => row.purchaseOrderId === purchaseOrderId);
 
     expect(mine).toEqual({
       purchaseOrderId,
@@ -350,17 +330,25 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
       supplierName: `Kabul tedarikçisi ${stamp}`,
       // Kalem SAYISI, adet değil: sipariş tek kalemli (9 adet).
       lineCount: 1,
-      /* Sipariş DURUMU 21.160'ta eklendi: liste "gönderildi" ile "kısmen geldi"yi ayırt
-         edebilsin diye (ekran ikincisine ayrı bir rozet çiziyor). Alan o turda eklenip test
-         güncellenmedi — düzeltildi 30.08. */
+      /* Sipariş durumu listede taşınır, çünkü ekran "gönderildi" ile "kısmen geldi"yi ayrı rozetle çizer. */
       status: 'sent',
     });
+  });
+
+  it('bekleyen liste kabul deposunun işine göredir — öteki işin siparişi görünmez', async () => {
+    const { order } = await purchaseOrders.createDraft(supplierId, 'qualite', [{ variantId, qty: 2 }]);
+    await purchaseOrders.markSent(order.id, `TS-QUALITE-${stamp}`);
+
+    const ids = async (business: 'lezzet' | 'qualite') =>
+      (await listPendingIntakes(db, { limit: 100, business })).map((row) => row.purchaseOrderId);
+    expect(await ids('qualite')).toContain(order.id);
+    expect(await ids('lezzet')).not.toContain(order.id);
   });
 
   it('TASLAK listede YOK — tedarikçi ondan habersiz, mal yolda değil', async () => {
     const purchaseOrderId = await draftPurchaseOrder(4, 400);
 
-    const list = await listPendingIntakes(db, { limit: 100 });
+    const list = await listPendingIntakes(db, { limit: 100, business: 'lezzet' });
 
     expect(list.some((row) => row.purchaseOrderId === purchaseOrderId)).toBe(false);
   });
@@ -372,7 +360,7 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
     await receiveGoods(db, { warehouseId, purchaseOrderId, lines: [{ variantId, qty: 8, expiryDate: dayOffset(90) }] });
     expect((await purchaseOrders.getById(purchaseOrderId))?.status).toBe('partially_received');
 
-    const list = await listPendingIntakes(db, { limit: 100 });
+    const list = await listPendingIntakes(db, { limit: 100, business: 'lezzet' });
 
     expect(list.some((row) => row.purchaseOrderId === purchaseOrderId)).toBe(true);
   });
@@ -383,7 +371,7 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
     await receiveGoods(db, { warehouseId, purchaseOrderId, lines: [{ variantId, qty: 5, expiryDate: dayOffset(90) }] });
     expect((await purchaseOrders.getById(purchaseOrderId))?.status).toBe('received');
 
-    const list = await listPendingIntakes(db, { limit: 100 });
+    const list = await listPendingIntakes(db, { limit: 100, business: 'lezzet' });
 
     expect(list.some((row) => row.purchaseOrderId === purchaseOrderId)).toBe(false);
   });
@@ -392,7 +380,7 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
     const purchaseOrderId = await draftPurchaseOrder(7, 1234);
     await purchaseOrders.markSent(purchaseOrderId, `TS-PARASIZ-${stamp}`);
 
-    const mine = (await listPendingIntakes(db, { limit: 100 })).find((row) => row.purchaseOrderId === purchaseOrderId);
+    const mine = (await listPendingIntakes(db, { limit: 100, business: 'lezzet' })).find((row) => row.purchaseOrderId === purchaseOrderId);
 
     expect(Object.keys(mine!).sort()).toEqual([
       'lineCount',
@@ -406,10 +394,7 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
 });
 
 /**
- * **Otomatik fiyat portu** — terfinin getirdiği tek yapısal fark (`RepricePort`).
- *
- * Web kopyası `repriceVariants`'ı doğrudan çağırıyor; o modül fiyat şeridinin işi ve bu turda
- * taşınmadı. Port, bağın KAYIP değil KAYITSIZ olduğunu söyler.
+ * Otomatik fiyat portu (`RepricePort`): web kopyası `repriceVariants`ı doğrudan çağırır, port bağın kayıp değil kayıtsız olduğunu söyler.
  */
 describe('otomatik fiyat portu', () => {
   it('kayıtlı port kabul edilen VARYANTLARLA çağrılır ve sayısı döner', async () => {
@@ -458,15 +443,8 @@ describe('otomatik fiyat portu', () => {
 });
 
 /**
- * **OKUTMA → KABUL zincirinin son halkası** (23.10'un kalan maddesi).
- *
- * Tarama kapısı ile kabul kapısı ayrı ayrı testli; sınanmayan şey ARALARINDAKİ bağdı: okutulan
- * kodun çözdüğü varyant, kabulün yazdığı partinin varyantı mı? Ekran bu iki kapıyı birleştiriyor
- * ve arada bir eşleme hatası olsaydı (yanlış varyanta yazma) hiçbir test görmezdi — sonucu depoda,
- * olmayan malı satmaya çalışırken görülürdü.
- *
- * Koli kodunun ÇARPANI da burada anlam kazanıyor: kod "1 okutma = N adet" diyorsa, kabulün yazdığı
- * parti de o kadar olmalı.
+ * Okutma → kabul zincirinin son halkası: okutulan kodun çözdüğü varyant, kabulün yazdığı partinin varyantı mı; arada eşleme hatası olsaydı
+ * sonuç depoda olmayan malı satmaya çalışırken görülürdü. Koli kodunun çarpanı da burada sınanır, kabul o kadar adet yazmalı.
  */
 describe('okutulan kod → yazılan parti (23.10)', () => {
   it('okutulan kodun varyantı, kabulün yazdığı partinin varyantıdır', async () => {

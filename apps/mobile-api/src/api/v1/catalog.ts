@@ -7,13 +7,15 @@ import {
   pricingViewerFor,
   toCategory,
   toWireCampaign,
+  customerBusiness,
   resolvePlaceWarehouses,
-  UNRESOLVED_PLACE,
+  unresolvedPlace,
   type PlaceWarehouses,
   type PricingViewer,
   availabilityOf,
   readPickupOffer,
 } from '@lezzet/application';
+import { customerBusinessOf } from '@lezzet/domain-core';
 import { localizedUrl } from '@lezzet/i18n';
 import {
   CatalogCategoryListSchema,
@@ -22,6 +24,8 @@ import {
   CatalogSortEnum,
   DEFAULT_PAGE_SIZE,
   PreferredLanguageEnum,
+  type Business,
+  type UserProfile,
   type Warehouse,
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -41,11 +45,12 @@ const MAX_PAGE_SIZE = 50;
 
 /**
  * İstemci depo kimliği değil posta kodu gönderir ve yer her istekte sunucuda çözülür, çünkü istemcinin yazabildiği bir değer
- * hangi deponun stoğunun gösterileceğini belirleyemez. Kod yoksa ya da çözülemezse `UNRESOLVED_PLACE` bir hâldir, okuma depo-üstüne düşer.
+ * hangi deponun stoğunun gösterileceğini belirleyemez. Kod yoksa ya da çözülemezse yer bilinmiyor bir hâldir, okuma işin depo-üstü
+ * toplamına düşer.
  */
-export async function readPlace(db: SupabaseClient, postalCode: string | undefined): Promise<PlaceWarehouses> {
-  if (postalCode === undefined || postalCode.trim() === '') return UNRESOLVED_PLACE;
-  return resolvePlaceWarehouses(db, postalCode);
+export async function readPlace(db: SupabaseClient, postalCode: string | undefined, business: Business): Promise<PlaceWarehouses> {
+  if (postalCode === undefined || postalCode.trim() === '') return unresolvedPlace(business);
+  return resolvePlaceWarehouses(db, postalCode, business);
 }
 
 /**
@@ -59,7 +64,10 @@ export async function readPlaceOrPickup(
 ): Promise<{ place: PlaceWarehouses; pickup: Warehouse | null }> {
   const pickup =
     opts.customerId && opts.pickupWarehouseId ? (await readPickupOffer(db, opts.customerId, opts.pickupWarehouseId)).warehouse : null;
-  const place: PlaceWarehouses = pickup ? { warehouseId: pickup.id, shippingWarehouseId: null } : await readPlace(db, opts.postalCode);
+  // Yer müşterinin işinin bölgelerinden çözülür, ziyaretçi Lezzet'tir; gel-al deposu teklif kapısından müşterinin işinde gelir.
+  const place: PlaceWarehouses = pickup
+    ? { warehouseId: pickup.id, shippingWarehouseId: null, business: pickup.business }
+    : await readPlace(db, opts.postalCode, await customerBusiness(db, opts.customerId));
   return { place, pickup };
 }
 
@@ -112,14 +120,14 @@ export async function readViewer(db: SupabaseClient, authorization: string | und
   return pricingViewerFor(db, await optionalCustomerProfile(db, authorization));
 }
 
-/** Yer kimliği beklemez; yalnız gel-al seçiliyken müşterinin izni için görüşün çözülmesini bekler. */
+/** Yer ve fiyat görüşü aynı profil okumasını bekler; yerin işi profilden, gel-al izni kimlikten okunur. */
 async function readPlaceAlongside(
   db: SupabaseClient,
   opts: { postalCode: string | undefined; pickupWarehouseId: string | undefined },
-  viewer: Promise<PricingViewer>,
+  profile: Promise<UserProfile | null>,
 ): Promise<PlaceWarehouses> {
-  if (!opts.pickupWarehouseId) return readPlace(db, opts.postalCode);
-  const { place } = await readPlaceOrPickup(db, { ...opts, customerId: (await viewer).customerId });
+  if (!opts.pickupWarehouseId) return readPlace(db, opts.postalCode, customerBusinessOf(await profile));
+  const { place } = await readPlaceOrPickup(db, { ...opts, customerId: (await profile)?.id ?? null });
   return place;
 }
 
@@ -227,12 +235,13 @@ catalog.get('/products/:slug', async (c) => {
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   const db = serviceDb();
-  // Kimlik, yer ve ürün birbirini beklemeden okunur; yalnız fiyat ve stok bağlamı yeri ve kimliği bekler.
-  const viewer = readViewer(db, c.req.header('authorization'));
+  // Kimlik ve ürün birbirini beklemeden okunur; fiyat görüşü ile yer aynı profil okumasından beslenir.
+  const profile = optionalCustomerProfile(db, c.req.header('authorization'));
+  const viewer = profile.then((row) => pricingViewerFor(db, row));
   const place = readPlaceAlongside(
     db,
     { postalCode: c.req.query('postalCode'), pickupWarehouseId: c.req.query('pickupWarehouseId') },
-    viewer,
+    profile,
   );
   const detail = await getProductDetail(db, { locale: locale.data, slug: c.req.param('slug'), place, viewer });
   if (!detail) return fail(c, 'product_not_found', 404);

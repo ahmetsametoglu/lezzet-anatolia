@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { BUSINESS_LABELS } from '@lezzet/types';
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { amount, money, num, percent, shortDate } from '@/components/operation/ui/format';
 import { Input } from '@/components/operation/form/input';
+import type { BusinessFilter } from '@/lib/business-filter';
 import { generateExportAction, generateMovementExportAction, matchInvoiceAction } from './actions';
 import { COST_LABEL, NOTES } from './reports-labels';
 import type { ChannelCard, ExportView, InvoiceQueueRow, MetricView, PnlRow, VariantProfitRow } from './reports-types';
@@ -207,26 +209,29 @@ export function ExportPanel({
   view,
   queue,
   ym,
+  business,
   onChanged,
   stacked = false,
 }: {
   view: ExportView;
   queue: InvoiceQueueRow[];
   ym: string;
+  /** Dosyaların işi; başlık onu söyler ki indirilen dosyanın kapsamı ekranda görünsün. */
+  business: BusinessFilter;
   onChanged: () => void;
   stacked?: boolean;
 }) {
   const [busy, setBusy] = useState<'sales' | 'movements' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const scopeSuffix = business === 'all' ? '' : ` · ${BUSINESS_LABELS[business]}`;
 
-  /**
-   * Dosya İSTEMCİDE iniyor: sunucudan metin gelir, indirmeyi tarayıcı yapar (ayrı rota gerekmez).
-   * İki dosya aynı yoldan: satış dosyası (12.7) ve hareket dökümü (12.15).
-   */
+  /** Dosya istemcide indirilir: sunucudan metin gelir, ayrı rota gerekmez. Satış dosyası ve hareket dökümü aynı yoldan. */
   const download = async (kind: 'sales' | 'movements') => {
     setError(null);
     setBusy(kind);
-    const { data, error: actionError } = await (kind === 'sales' ? generateExportAction(ym) : generateMovementExportAction(ym));
+    const { data, error: actionError } = await (kind === 'sales'
+      ? generateExportAction(ym, business)
+      : generateMovementExportAction(ym, business));
     setBusy(null);
     if (actionError || !data) {
       setError(actionError ?? 'Export üretilemedi.');
@@ -244,7 +249,10 @@ export function ExportPanel({
     <div className={`flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto ${stacked ? 'p-4' : 'p-6'}`}>
       <div className={`flex gap-4 rounded-ops-card border border-ops-line bg-ops-surface p-4 ${stacked ? 'flex-col' : 'items-center'}`}>
         <div className="flex flex-1 flex-col gap-0.5">
-          <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Muhasebe export — {monthLabel(ym)}</span>
+          <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">
+            Muhasebe export — {monthLabel(ym)}
+            {scopeSuffix}
+          </span>
           <span className="font-ops-body text-ops-xs text-ops-faint">
             {num(view.orderCount)} satış · {money(view.grossCents)} brüt · {money(view.vatCents)} KDV
           </span>
@@ -254,12 +262,14 @@ export function ExportPanel({
         </Button>
       </div>
 
-      {/* Hareket dökümü (12.15): satış dosyasının yanındaki ikinci dosya — alım, gider, maaş,
-          transfer, sermaye; her satır belgesi ve etiketiyle. İzahsız sayısı dosyaya girmeden görünür:
-          muhasebeciye eksik bilgiyle dosya göndermeden önce Para ekranında kapatılsın. */}
+      {/* Hareket dökümü: alım, gider, maaş, transfer, sermaye; her satır belgesi ve etiketiyle. İzahsız sayısı dosyaya girmeden
+          görünür ki muhasebeciye eksik dosya gitmeden Para ekranında kapatılsın. */}
       <div className={`flex gap-4 rounded-ops-card border border-ops-line bg-ops-surface p-4 ${stacked ? 'flex-col' : 'items-center'}`}>
         <div className="flex flex-1 flex-col gap-0.5">
-          <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Hareket dökümü — {monthLabel(ym)}</span>
+          <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">
+            Hareket dökümü — {monthLabel(ym)}
+            {scopeSuffix}
+          </span>
           <span className="font-ops-body text-ops-xs text-ops-faint">
             {num(view.movementCount)} hareket
             {view.unexplainedMovementCount > 0 ? (
@@ -279,8 +289,7 @@ export function ExportPanel({
 
       {error ? <p className="font-ops-body text-ops-xs text-ops-red">{error}</p> : null}
 
-      {/* Hediye siparişin dışlanması SESSİZ DEĞİL (12.7'nin kuralı): sayı ve tutarla yazılıyor,
-          yoksa dönem cirosu ile export toplamı arasındaki fark açıklanamaz kalırdı. */}
+      {/* Hediye siparişin dışlanması sayı ve tutarla yazılır; yoksa dönem cirosu ile export toplamı arasındaki fark açıklanamaz kalır. */}
       {view.excludedGiftCount > 0 ? (
         <p className="rounded-ops-card bg-ops-surface-sunken px-4 py-3 font-ops-body text-ops-xs text-ops-muted">
           {NOTES.giftExcluded}{' '}
