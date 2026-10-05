@@ -1,5 +1,7 @@
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { DEFAULT_LOCALE } from '@lezzet/i18n';
+import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { createClient } from '@/lib/supabase/server';
 import { resolvePostLoginRedirect } from '@/lib/auth/redirect';
 import { handOffInvitesToCustomer } from '@/lib/identity/invite-handoff';
@@ -25,30 +27,27 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const supabase = await createClient();
+  // Doğrulama çerezini giriş başlarken tarayıcı yazar, kodu ilk çeviren istek siler.
+  const hadVerifier = (await cookies()).getAll().some((cookie) => cookie.name.endsWith('-auth-token-code-verifier'));
   const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
-  if (exchangeErr) {
-    return NextResponse.redirect(loginErrorUrl);
-  }
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
+
+  // Kurulu PWA varken Android, tarayıcı sekmesi kodu çevirdikten sonra aynı dönüş adresini uygulamada bir kez daha açar; o istek
+  // doğrulama çerezini değil ilk çevirmenin oturumunu taşır, yani giriş tamamdır.
+  const alreadyExchanged = exchangeErr !== null && !hadVerifier && user !== null;
+  if (!user || (exchangeErr && !alreadyExchanged)) {
+    await captureError(new Error(`Google dönüşü oturum açamadı: ${exchangeErr?.message ?? 'kullanıcı okunamadı'}`), {
+      source: SOURCES.webServer,
+      context: { flow: 'auth/callback', hadVerifier, sessionPresent: user !== null },
+    });
     return NextResponse.redirect(loginErrorUrl);
   }
+  if (alreadyExchanged) logger.info({ authUserId: user.id }, 'Google dönüşü: kod ilk istekte çevrilmiş, açık oturumla devam');
 
-  /**
-   * **Davet bağı Google yolunda da kurulur** (17.11 — mobil şeridin 11.08 notu).
-   *
-   * 17.9 bağı OTP akışının içine koymuştu ve o cümle yalnız OTP için doğruydu: bu rota Supabase'e
-   * doğrudan gidiyor, profili `0002` trigger'ı açıyor ve kodu soran hiçbir çağrı yoktu. Davet
-   * bağlantısına tıklayıp *"Google ile devam et"* diyen davetli sessizce bağsız kalıyordu — en
-   * olası yol da buydu (telefonda oturumu açık Google hesabı).
-   *
-   * Kural OTP ile AYNI kapıdan geçiyor (`tryAttachReferral` → `attachReferralOnLogin`), yani iki
-   * yüzey iki ayrı "yeni müşteri" tanımı taşımıyor. Kod tüketilir: bağ kurulsun ya da kurulmasın
-   * çerez düşer — tüketilmiş bir davet tarayıcıda otuz gün daha durup sonraki hiçbir işe yaramaz.
-   */
+  // Davet bağı Google yolunda da OTP ile aynı kapıdan kurulur, çünkü davetlinin en olası yolu telefonda açık Google hesabıdır; davet
+  // çerezi bağ kurulsun ya da kurulmasın tüketilir.
   await handOffInvitesToCustomer(user.id);
 
   const target = await resolvePostLoginRedirect(user.id, next);
