@@ -90,6 +90,7 @@ Açık soru yok.
 - **Depo:** `warehouse.business`, etiketsiz Lezzet. Depo kullanılmaya başlayınca işi değişmez; sipariş ve parti işini depodan
   okur, kopya alan tutulmaz (`0031_warehouse.sql`). Aracın işi evindeki tesisin işidir, çünkü araçtaki mal oradan yüklenir.
 - **Müşteri:** `user_profiles.business` (B2B alanları aynı satırda); QUALITE yalnız onaylı şirkette, değiştiren yalnız admin.
+  QUALITE müşterisinin onayı kalkmadan önce işi Lezzet yapılır; kural veride (`user_profiles_business_b2b`).
   Siparişi yazan iki yer var (`checkout-draft.ts`, `on-site-sale.ts`); müşterinin işi deponun işiyle tutar, anonim alıcı muaftır.
 - **Bölge ve depo çözümü:** bugün bir posta kodu yalnız tek bölgede olabiliyor (`0014_delivery_zone.sql` anahtarı ve operasyon
   formunun kontrolü, `routes-actions.ts`); kural "iş başına tek bölge" olur. `warehouse-resolve.ts` yalnız müşterinin işindeki

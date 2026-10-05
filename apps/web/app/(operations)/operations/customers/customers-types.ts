@@ -123,6 +123,8 @@ export interface CustomerDetail {
   codAllowed: boolean;
   /** Gel-al izni: depodan teslim yalnız işaretli müşteriye sunulur. */
   pickupAllowed: boolean;
+  /** Müşterinin işi; QUALITE yalnız onaylı B2B şirkette olur. */
+  business: UserProfile['business'];
   /** Genel fiyat kuralı; ikisi birlikte dolu ya da boş. */
   priceRuleBasis: CustomerPriceBasis | null;
   priceRulePercent: number | null;
@@ -159,6 +161,7 @@ export type CustomerEditInput = Pick<
   | 'vatNumber'
   | 'codAllowed'
   | 'pickupAllowed'
+  | 'business'
   /** Genel fiyat kuralı; `null` kuralı kaldırır. */
   | 'priceRuleBasis'
   | 'priceRulePercent'

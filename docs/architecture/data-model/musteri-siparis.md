@@ -51,6 +51,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | `price_group_id` | uuid | • |  |
 | `cod_allowed` | boolean |  | `true` |
 | `pickup_allowed` | boolean |  | `false` |
+| `business` | business |  | `'lezzet'` |
 | `marketing_consent` | jsonb |  | `'{}'::jsonb` |
 | `notification_consent` | jsonb |  | `'{}'::jsonb` |
 | `notification_token` | text | • |  |
@@ -88,6 +89,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 - **`price_rule_basis` / `price_rule_percent`** — müşterinin genel fiyat kuralı: `list` liste fiyatından yüzde indirim (%0 < p < %100), `cost` alış fiyatı üzerine yüzde pay (p ≥ 0); ikisi birlikte dolu ya da boş (bkz. `DOMAIN.md §5`)
 - **`price_group_id`** — fiyat grubu üyeliği (B2B alt kademesi — `katalog.md › PriceGroup`, 20.08); `restrict` FK, `null` = düz liste
 - **`cod_allowed`** — kapıda ödeme izni (varsayılan true); kötüye kullanımda kapatılır (bkz. `DOMAIN.md §7`)
+- **`business`** — müşterinin işi (`docs/feature/iki-is.md`); varsayılan Lezzet, müşteri seçemez, admin verir. QUALITE yalnız şirket ve onaylı B2B müşteride olur (`user_profiles_business_b2b`): QUALITE müşterisinin onayı kalkmadan ya da tipi değişmeden önce işi Lezzet yapılır
 - **`roles`** — **dizi**: personel içinde çoklu rol olağandır (depo + muhasebe). `customer` yalnız BAŞINA durabilir — müşteri ↔ personel keskin ayrım, DB kısıtıyla zorlanır (`DOMAIN.md §2`)
 - **`auth_user_id`** — Supabase Auth kullanıcısı; doğrulanınca bağlanır (bkz. `DOMAIN.md §10`). **Üçüncü kimlik anahtarıdır** — `0002` trigger'ı girişte profili e-postayla bulup bağlar
 - **`marketing_consent`** — kanal bazlı pazarlama izni: `{email: {granted, at, source}, whatsapp: {...}}` — GDPR kanıtı (ne zaman, nereden). **OPT-IN:** anahtar yoksa izin yoktur. Kampanya gönderimi henüz yok; alan bugün tercih sayfasının ve operasyon süzgecinin kaynağı (bkz. `DOMAIN.md §11`)

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { dbNumeric } from '../primitives/db-numeric';
-import { CountryEnum, CustomerTypeEnum, PreferredLanguageEnum } from '../primitives/enums.schema';
+import { BusinessEnum, CountryEnum, CustomerTypeEnum, PreferredLanguageEnum } from '../primitives/enums.schema';
 import { TranslationBagSchema } from '../primitives/user-text.schema';
 
 // Kullanıcı profili: müşteri ve personel tek tabloda, rolle ayrılır. Ticari alanlar aynı satırdadır, çünkü 1:1 uzantı
@@ -153,6 +153,8 @@ export const UserProfileSchema = z.object({
   codAllowed: z.boolean(),
   /** Gel-al izni: depodan teslim yalnız işaretli müşteriye sunulur; admin açar, checkout kapısı da bakar. */
   pickupAllowed: z.boolean(),
+  /** Müşterinin işi; QUALITE yalnız onaylı B2B şirkette olabilir ve onu admin verir (`user_profiles_business_b2b`). */
+  business: BusinessEnum,
   marketingConsent: MarketingConsentSchema,
   notificationConsent: NotificationConsentSchema,
   /**
