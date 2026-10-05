@@ -8,6 +8,7 @@ import { Button } from '@/components/operation/ui/button';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
 import { AlertIcon } from '@/components/operation/ui/icons';
 import { COUNTRY_LABELS, COUNTRY_OPTIONS } from '@/components/operation/ui/labels';
+import { BUSINESS_OPTIONS } from '@/components/operation/form/business-field';
 import { FormInput } from '@/components/operation/form/form-input';
 import { FormSelect } from '@/components/operation/form/form-select';
 import { FormSwitch } from '@/components/operation/form/form-switch';
@@ -49,6 +50,8 @@ export function WarehouseDialog({
     defaultValues: {
       code: editing?.code ?? '',
       name: editing?.name ?? '',
+      // Etiketsiz depo Lezzet'tir (docs/feature/iki-is.md 6. karar).
+      business: editing?.business ?? 'lezzet',
       // Varsayılan ülke YOK sayılmaz: bugün hizmet verdiğimiz ilk ülke Fransa ve yeni tesisin
       // oradan doğması olağan hâl. Ülke değişince mali uyarı zaten belirir.
       countryCode: editing?.countryCode ?? 'FR',
@@ -129,6 +132,23 @@ export function WarehouseDialog({
             'Kod belge parçasıdır: imha tutanağı ve transfer numarası bunu taşır, denetmen elle yazar. Kısa, okunur, karışmaz olmalı.'
           )}
         </span>
+
+        {/* Stok, mal kabul ve sipariş işini depodan alır; kural ve kilit veritabanında, burada yalnız kilidin sebebi okunur. */}
+        <FormSelect
+          control={form.control}
+          name="business"
+          label="İş"
+          options={BUSINESS_OPTIONS}
+          required
+          disabled={editing?.kind === 'vehicle' || editing?.businessLocked}
+          labelAside={
+            editing?.kind === 'vehicle'
+              ? 'aracın işi evinin işidir'
+              : editing?.businessLocked
+                ? 'depo kullanıldığı için değişmez'
+                : 'stok ve sipariş işini depodan alır'
+          }
+        />
 
         <FormSelect control={form.control} name="countryCode" label="Ülke" options={COUNTRY_OPTIONS} required />
 

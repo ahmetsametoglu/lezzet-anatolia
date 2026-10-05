@@ -45,9 +45,11 @@ interface WarehouseRowsInput {
   batches: readonly BatchView[];
   /** Yoldaki sevkiyatlar — hem gelen hem giden; gruplama burada. */
   transfers: readonly WarehouseTransfer[];
+  /** Kullanılmaya başlamış depolar (`WarehouseService.inUseIds`). */
+  inUse: ReadonlySet<string>;
 }
 
-export function toWarehouseRows({ warehouses, zones, staff, batches, transfers }: WarehouseRowsInput): WarehouseRowView[] {
+export function toWarehouseRows({ warehouses, zones, staff, batches, transfers, inUse }: WarehouseRowsInput): WarehouseRowView[] {
   const zonesByWarehouse = groupBy(zones, (z) => z.warehouseId);
   const batchesByWarehouse = groupBy(batches, (b) => b.warehouseId);
 
@@ -85,6 +87,7 @@ export function toWarehouseRows({ warehouses, zones, staff, batches, transfers }
       attentionCount: ownBatches.filter((b) => needsExpiryAttention(b.decision)).length,
       inTransitIn: transfers.filter((t) => t.toWarehouseId === w.id).length,
       setupGap: setupGapOf({ isActive: w.isActive, shipsOnline: w.shipsOnline, activeZoneCount: activeZones.length, staffCount: staffHere.length }),
+      businessLocked: inUse.has(w.id),
     };
   });
 }

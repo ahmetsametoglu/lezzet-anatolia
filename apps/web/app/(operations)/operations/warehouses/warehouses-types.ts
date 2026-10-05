@@ -7,6 +7,7 @@ import {
   StorageAreaInsertSchema,
   VehicleInsertSchema,
   WarehouseInsertSchema,
+  WarehouseSchema,
   PrinterPurposeEnum,
   type BoxPrinterContract,
   type Country,
@@ -38,6 +39,7 @@ export type WarehouseAddressView = WarehouseAddress | null;
  * - aktiflik bir düğme değil bir KARAR — kapatmanın dört sonucu var ve kendi penceresinde onaylanır.
  */
 export const WarehouseFormSchema = WarehouseInsertSchema.pick({ code: true, name: true }).extend({
+  business: WarehouseSchema.shape.business,
   countryCode: CountryEnum,
   shipsOnline: z.boolean(),
   /** Gel-al noktası: izinli müşteri hazır siparişini buradan alır; adresi müşteriye görünür. */
@@ -117,6 +119,8 @@ export type WarehouseRowView = Omit<Warehouse, 'address' | 'createdAt' | 'vehicl
    * demektir.
    */
   setupGap: string | null;
+  /** Depo kullanılmaya başladı; işi değişmez ve form seçiciyi kilitler (`warehouse_in_use`). */
+  businessLocked: boolean;
 };
 
 /** Bölge kartı — deponun hizmet alanı bölümünde. Kodlar bölgenin kendi tablosundan gelir. */

@@ -85,4 +85,9 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
   async reorder(orderedIds: string[]): Promise<void> {
     return this.reorderBy(orderedIds, 'sortOrder');
   }
+
+  /** Kullanılmaya başlamış depolar; işleri değişmez ve kural veritabanındadır (`warehouse_in_use`). */
+  async inUseIds(): Promise<Set<string>> {
+    return new Set(await this.executeRpc<string[]>('warehouses_in_use', {}));
+  }
 }

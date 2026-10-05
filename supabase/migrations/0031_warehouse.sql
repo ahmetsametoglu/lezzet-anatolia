@@ -220,6 +220,74 @@ create trigger warehouse_home_is_facility
   before insert or update of home_warehouse_id on public.warehouse
   for each row execute function public.assert_home_warehouse_is_facility();
 
+-- ── Deponun işi ──────────────────────────────────────────────────────────────
+-- Parti, hareket, sipariş, rezervasyon, mal kabul, transfer ve sefer işini depodan okur ve kopyalamaz; kullanılmış deponun işi
+-- değişseydi geçmişleri öteki işe kayardı. Gövde geç bağlanır, çünkü `delivery_run` 0046'da açılır.
+create or replace function public.warehouse_in_use(p_warehouse_id uuid)
+returns boolean
+language plpgsql
+stable
+set search_path = public
+as $$
+begin
+  return exists (select 1 from public.stock s where s.warehouse_id = p_warehouse_id)
+    or exists (select 1 from public.stock_movement m where m.warehouse_id = p_warehouse_id)
+    or exists (select 1 from public.order o where o.warehouse_id = p_warehouse_id)
+    or exists (select 1 from public.reservation r where r.warehouse_id = p_warehouse_id)
+    or exists (select 1 from public.stock_intake i where i.warehouse_id = p_warehouse_id)
+    or exists (select 1 from public.warehouse_transfer t where p_warehouse_id in (t.from_warehouse_id, t.to_warehouse_id))
+    or exists (select 1 from public.delivery_run d where d.warehouse_id = p_warehouse_id);
+end;
+$$;
+
+-- Depo ekranı kilidi buradan okur, kuralı kendisi yeniden kurmaz.
+create or replace function public.warehouses_in_use()
+returns setof uuid
+language sql
+stable
+set search_path = public
+as $$
+  select w.id from public.warehouse w where public.warehouse_in_use(w.id);
+$$;
+
+-- Aracın işi evinin işidir, çünkü araçtaki mal o tesisten yüklenir.
+create or replace function public.warehouse_business_guard() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.kind = 'vehicle' and new.home_warehouse_id is not null then
+    new.business := (select h.business from public.warehouse h where h.id = new.home_warehouse_id);
+  end if;
+  if tg_op = 'UPDATE' and new.business is distinct from old.business and public.warehouse_in_use(new.id) then
+    raise exception 'Depo kullanılmaya başladı (stok, sipariş ya da sefer var); işi değişmez: %', new.code
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger warehouse_business_guard
+  before insert or update of business, kind, home_warehouse_id on public.warehouse
+  for each row execute function public.warehouse_business_guard();
+
+-- Tesisin işi değişince araçları izler; kullanılmış aracın kendi tetikleyicisi değişikliği bütünüyle reddeder.
+create or replace function public.warehouse_business_follows() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  update public.warehouse v set business = new.business
+   where v.home_warehouse_id = new.id and v.business is distinct from new.business;
+  return null;
+end;
+$$;
+
+create trigger warehouse_business_follows
+  after update of business on public.warehouse
+  for each row when (old.business is distinct from new.business)
+  execute function public.warehouse_business_follows();
+
 -- Evine göre araç okuması: panelin ve depo kartının sorgusu ("bu tesisin araçları").
 create index warehouse_home_idx on public.warehouse (home_warehouse_id) where home_warehouse_id is not null;
 -- Parti ↔ tedarik kalemi (T5): parçalı kabulde fark raporunun bağı.

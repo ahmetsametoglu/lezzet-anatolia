@@ -369,3 +369,36 @@ describe('depo kaydı — kurallar veritabanında', () => {
     }
   });
 });
+
+describe('deponun işi', () => {
+  it('kullanılmamış deponun işi değişir; mal kabul açılınca depo kullanılmış sayılır ve işi değişmez', async () => {
+    const depo = await createTestWarehouse(db, { label: 'IS' });
+    try {
+      expect((await warehouses.update({ id: depo.id, business: 'qualite' })).business).toBe('qualite');
+      expect((await warehouses.inUseIds()).has(depo.id)).toBe(false);
+
+      await intakes.insert({ supplierId, warehouseId: depo.id });
+      expect((await warehouses.inUseIds()).has(depo.id)).toBe(true);
+      await expect(warehouses.update({ id: depo.id, business: 'lezzet' })).rejects.toThrow(/işi değişmez/);
+      expect((await warehouses.getById(depo.id))?.business).toBe('qualite');
+    } finally {
+      await purgeTestData(db, { warehouseIds: [depo.id] });
+    }
+  });
+
+  it('aracın işi evinin işidir: tesisin işi değişince araç izler, araca ayrı iş yazılamaz', async () => {
+    const tesis = await createTestWarehouse(db, { label: 'ISEV' });
+    const arac = await createTestWarehouse(db, { label: 'ISARAC', kind: 'vehicle', homeWarehouseId: tesis.id });
+    try {
+      expect(arac.business).toBe('lezzet');
+      await warehouses.update({ id: tesis.id, business: 'qualite' });
+      expect((await warehouses.getById(arac.id))?.business).toBe('qualite');
+
+      await warehouses.update({ id: arac.id, business: 'lezzet' });
+      expect((await warehouses.getById(arac.id))?.business).toBe('qualite');
+    } finally {
+      await purgeTestData(db, { warehouseIds: [arac.id] });
+      await purgeTestData(db, { warehouseIds: [tesis.id] });
+    }
+  });
+});

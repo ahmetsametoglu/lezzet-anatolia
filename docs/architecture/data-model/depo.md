@@ -37,6 +37,7 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 - **`name`** — ekranda okunan ad
 - **`kind`** — `facility` \| `vehicle` (26.08) — **araç da bir depodur**; yükleme/dönüş birer transfer, içindeki mal gerçek parti. Tür bir etiket değil DÖRT KURALIN süzgeci — üçü veride, dördüncüsü seçicilerde (aşağıda)
 - **`country_code`** — **fiziksel tesis nerede.** Bölgenin ülkesiyle karıştırılmamalı: bir bölge sınır ötesi olabilir (ADR-002), depo olamaz. ⚠ KDV'nin bağlı olduğu alan (`DOMAIN §5/§17`)
+- **`business`** — deponun işi (`docs/feature/iki-is.md`); parti, mal kabul ve sipariş işini buradan okur, etiketsiz depo Lezzet'tir. Depo kullanılmaya başlayınca (parti, hareket, sipariş, rezervasyon, mal kabul, transfer ya da sefer) değişmez (`warehouse_business_guard`, kural `warehouse_in_use`), çünkü kopya alan tutulmaz ve geçmiş öteki işe kayardı. Aracın işi evinin işidir: tesisin işi değişince araç izler, araca ayrı iş yazılamaz
 - **`ships_online`** — kargo çıkış deposu — bölge dışı müşteriler + rota müşterilerinin kargo dolgusu
 - **`is_active`** — depo **kapatılır, silinmez**: geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorunda (FK'ler `restrict`)
 - **`sort_order`** — operatörün seçici sırası

@@ -49,13 +49,14 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
   const db = serviceDb();
   const stockSvc = new StockService(db);
 
-  const [warehouses, zones, staff, thresholds, transfers, warehouseLabels] = await Promise.all([
+  const [warehouses, zones, staff, thresholds, transfers, warehouseLabels, inUse] = await Promise.all([
     new WarehouseService(db).list(),
     new DeliveryZoneService(db).listWithCodes(),
     readStaff(new UserProfileService(db)),
     readExpiryThresholds(new SettingsService(db)),
     new WarehouseTransferService(db).listInTransit(),
     readWarehouseLabels(),
+    new WarehouseService(db).inUseIds(),
   ]);
 
   // Partiler YALNIZ aktif depolardan: kapalı tesisin stoğu kayıtta durur ama satış okumalarında
@@ -68,7 +69,7 @@ export default async function WarehousesPage({ searchParams }: WarehousesPagePro
   // Liste fiyatı okunmuyor — karne teklif ÖNERMEZ, yalnız riski sayar; öneri Stok'un işi.
   const batches = toBatchViews(batchRows, { now: new Date(), thresholds, warehouseLabels });
 
-  const rows = toWarehouseRows({ warehouses, zones, staff, batches, transfers });
+  const rows = toWarehouseRows({ warehouses, zones, staff, batches, transfers, inUse });
   /**
    * Seçim boşsa ilk tesis açılır, aktif olan tercih edilir: ekran tek görünümdür ve kapalı tesisin karnesi okunmaz. Seçim URL'e
    * yazılmaz, çünkü yönlendirme her açılışa bir gezinme turu eklerdi.

@@ -34,6 +34,7 @@ function rowsOf(over: Partial<typeof WAREHOUSE> = {}, extra: Partial<Parameters<
     staff: [],
     batches: [],
     transfers: [],
+    inUse: new Set(),
     ...extra,
   });
 }

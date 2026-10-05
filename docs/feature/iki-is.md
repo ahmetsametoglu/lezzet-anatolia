@@ -1,6 +1,6 @@
 # İki iş tek sistem — QUALITE ve Lezzet
 
-> **Statü: KARAR ALINDI (03–04.10.2026); uygulama A fazında.** Özelliğin tek kaydı bu dosya: kararlar, sonuçları, yol haritası ve
+> **Statü: KARAR ALINDI (03–04.10.2026); uygulama B fazında (dal `iki-is-b`).** Özelliğin tek kaydı bu dosya: kararlar, sonuçları, yol haritası ve
 > açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Muhasebe tarafının kararları
 > [`kasa-muhasebe.md`](kasa-muhasebe.md)'dedir; bu dosya onların iki işe genişlemesidir.
 
@@ -88,7 +88,7 @@ Açık soru yok.
 
 **Satış ve stok (B fazı):**
 - **Depo:** `warehouse.business`, etiketsiz Lezzet. Depo kullanılmaya başlayınca işi değişmez; sipariş ve parti işini depodan
-  okur, kopya alan tutulmaz (`0031_warehouse.sql`).
+  okur, kopya alan tutulmaz (`0031_warehouse.sql`). Aracın işi evindeki tesisin işidir, çünkü araçtaki mal oradan yüklenir.
 - **Müşteri:** `user_profiles.business` (B2B alanları aynı satırda); QUALITE yalnız onaylı şirkette, değiştiren yalnız admin.
   Siparişi yazan iki yer var (`checkout-draft.ts`, `on-site-sale.ts`); müşterinin işi deponun işiyle tutar, anonim alıcı muaftır.
 - **Bölge ve depo çözümü:** bugün bir posta kodu yalnız tek bölgede olabiliyor (`0014_delivery_zone.sql` anahtarı ve operasyon
