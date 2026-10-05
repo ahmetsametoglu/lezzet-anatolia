@@ -5,6 +5,8 @@ import { localeAlternates } from '@/lib/seo/alternates';
 import { openGraphOf } from '@/lib/seo/open-graph';
 import { setRequestLocale } from 'next-intl/server';
 import { detectDevice } from '@/lib/device';
+import { unresolvedPlace } from '@lezzet/application';
+import { customerBusinessOf } from '@lezzet/domain-core';
 import { getPackageDetail } from '@/lib/storefront/packages';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
@@ -27,7 +29,8 @@ interface PackagePageProps {
 export async function generateMetadata({ params }: PackagePageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) return {};
-  const pack = await getPackageDetail(slug, locale);
+  // Meta ziyaretçi gözüyle üretilir, ziyaretçi Lezzet'tir.
+  const pack = await getPackageDetail(slug, locale, unresolvedPlace(customerBusinessOf(null)));
   if (!pack) return {};
   return {
     title: pack.name,

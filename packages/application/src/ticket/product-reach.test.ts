@@ -6,9 +6,9 @@ import { gitmeyenAlani, kargoYalniz, stokCumlesi, yereGider, yereGoreAyir } from
  * Ürün bu yere gider mi: ajanın ürün araçlarının yere göre ayıklaması, saf kararlar. Kargo bölgesi entegrasyonda kurulamaz, çünkü
  * ülkenin kargo deposu paylaşılan DB'de küresel durumdur; rota bölgesindeki uçtan uca hâl `support-tools.test.ts`tedir.
  */
-const ROTA = { warehouseId: 'rota-deposu', shippingWarehouseId: 'kargo-deposu' };
-const KARGO = { warehouseId: null, shippingWarehouseId: 'kargo-deposu' };
-const YERSIZ = { warehouseId: null, shippingWarehouseId: null };
+const ROTA = { warehouseId: 'rota-deposu', shippingWarehouseId: 'kargo-deposu', business: 'lezzet' as const };
+const KARGO = { warehouseId: null, shippingWarehouseId: 'kargo-deposu', business: 'lezzet' as const };
+const YERSIZ = { warehouseId: null, shippingWarehouseId: null, business: 'lezzet' as const };
 const HALLER: StockStatus[] = ['available', 'shipping', 'elsewhere', 'out_of_stock'];
 
 const urun = (name: string, stockStatus: StockStatus, shippable = true) => ({ name, stockStatus, shippable });

@@ -104,6 +104,8 @@ async function readLastOrder(locale: Locale): Promise<LastOrderSuggestion | null
     // Parti ÇIPASI taşınmaz: o günkü teklif partisi bugün tükenmiş olabilir; tekrar sipariş
     // "aynı ürünü yeniden al" demektir, "aynı indirimi yeniden al" değil.
     items.map((i) => ({ kind: 'variant' as const, variantId: i.variantId, qty: i.qty, stockId: null })),
+    // Yer verilmez, yalnız iş: tekrar sipariş yere göre daraltılmaz, sorusu "bu ürün hâlâ satılıyor mu"dur.
+    { business: (await readPlaceWarehouses()).business },
   );
 
   const available = view.lines.filter((l) => !l.blocked);

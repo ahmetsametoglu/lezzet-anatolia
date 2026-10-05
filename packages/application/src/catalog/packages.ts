@@ -28,8 +28,8 @@ type BundleRow = Bundle & { items: BundleItem[] };
 export async function listStorefrontPackages(
   db: Db,
   locale: PreferredLanguage,
-  limit?: number,
-  place: PackagePlace = {},
+  limit: number | undefined,
+  place: PlaceWarehouses,
 ): Promise<StorefrontPackage[]> {
   // `listSellable` pasif paketi ve kalemi satıştan kalkmış paketi düşürür; stoğa burada bakılmaz, tükenmiş paket gizlenmez.
   const sellable = await new BundleService(db).listSellable();
@@ -48,7 +48,7 @@ export async function getPackageDetail(
   db: Db,
   slug: string,
   locale: PreferredLanguage,
-  place: PackagePlace = {},
+  place: PlaceWarehouses,
 ): Promise<StorefrontPackageDetail | null> {
   const bundle = (await new BundleService(db).listSellable()).find((b) => b.slug === slug);
   if (!bundle) return null;
@@ -63,7 +63,7 @@ export async function getPackagesByIds(
   db: Db,
   ids: readonly string[],
   locale: PreferredLanguage,
-  place: PackagePlace = {},
+  place: PlaceWarehouses,
 ): Promise<StorefrontPackageDetail[]> {
   if (ids.length === 0) return [];
   const wanted = new Set(ids);
@@ -75,7 +75,7 @@ async function resolveDetails(
   db: Db,
   bundles: BundleRow[],
   locale: PreferredLanguage,
-  place: PackagePlace,
+  place: PlaceWarehouses,
 ): Promise<StorefrontPackageDetail[]> {
   if (bundles.length === 0) return [];
   const context = await loadContext(db, bundles, place);
@@ -101,14 +101,11 @@ function toDetail(bundle: BundleRow, locale: PreferredLanguage, context: Package
   return { ...toCard(bundle, locale, context), allergens, shelfLifeDays };
 }
 
-/** Paketin yeri parametredir, burada çerez okunmaz: istek bağlamına bağlı okuma bu kapıyı cron, webhook ve mobil uçta çağrılamaz kılardı. */
-type PackagePlace = Partial<PlaceWarehouses>;
-
 /** Kalemlerin çözümü için gereken yan veriler — paket başına sorgu YOK, küme tek turda okunur. */
 interface PackageContext {
   byVariant: Map<string, ProductVariant>;
   byProduct: Map<string, Product>;
-  /** AĞ GENELİ — yalnız "hiç var mı" sorusunun (`soldOut`) dayanağı. */
+  /** Yerin işinin bütün depoları; yalnız "hiç var mı" sorusunun (`soldOut`) dayanağı. */
   available: Map<string, number>;
   /** Müşterinin deposunda; yer bilinmiyorsa null (harita yok, sıfır DEĞİL). */
   local: Map<string, number> | null;
@@ -121,17 +118,18 @@ function qtyMap(rows: readonly { variantId: string; availableQty: number }[]): M
   return new Map(rows.map((r) => [r.variantId, r.availableQty]));
 }
 
-async function loadContext(db: Db, bundles: BundleRow[], place: PackagePlace): Promise<PackageContext> {
+/** Yer parametredir, burada çerez okunmaz: istek bağlamına bağlı okuma bu kapıyı cron, webhook ve mobil uçta çağrılamaz kılardı. */
+async function loadContext(db: Db, bundles: BundleRow[], place: PlaceWarehouses): Promise<PackageContext> {
   const variantIds = [...new Set(bundles.flatMap((b) => b.items.map((i) => i.variantId)))];
   const variants = await new ProductVariantService(db).listByIds(variantIds);
   const productIds = [...new Set(variants.map((v) => v.productId))];
   const stocks = new StockService(db);
 
-  // `limit` açıkça verilir, yoksa varsayılan sayfa boyu bazı ürünleri sessizce düşürürdü. Ağ geneli "hiç var mı"yı, depo
-  // okumaları "buraya gelir mi"yi yanıtlar; yer belliyken bile ağ geneli okunur, "tükendi" demenin tek dayanağı odur.
+  // `limit` açıkça verilir, yoksa varsayılan sayfa boyu bazı ürünleri sessizce düşürürdü. İşin ağ toplamı "hiç var mı"yı, depo
+  // okumaları "buraya gelir mi"yi yanıtlar; yer belliyken bile okunur, "tükendi" demenin tek dayanağı odur.
   const [products, network, local, shipping] = await Promise.all([
     new ProductService(db).list({ filters: { ids: productIds }, limit: productIds.length }),
-    stocks.getNetworkAvailabilityMap(variantIds),
+    stocks.getNetworkAvailabilityMap(variantIds, place.business),
     place.warehouseId ? stocks.listAvailableAcross([place.warehouseId], variantIds) : Promise.resolve(null),
     place.shippingWarehouseId ? stocks.listAvailableAcross([place.shippingWarehouseId], variantIds) : Promise.resolve(null),
   ]);

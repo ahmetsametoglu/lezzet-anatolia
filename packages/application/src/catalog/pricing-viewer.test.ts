@@ -52,7 +52,7 @@ async function birimFiyat(customerId: string | null): Promise<number | null> {
   const detail = await getProductDetail(db, {
     locale: 'tr',
     slug: productSlug,
-    place: { warehouseId, shippingWarehouseId: null },
+    place: { warehouseId, shippingWarehouseId: null, business: 'lezzet' },
     viewer,
   });
   return detail?.variants[0]?.priceCents ?? null;

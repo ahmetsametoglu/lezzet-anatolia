@@ -811,7 +811,8 @@ izi ve soğuk zincir kendiliğinden çalışır.
   stoğu karta işaret olarak düşer; süzme müşterinin elindeki çiptir (varsayılan kapalı).
 - Posta kodu **zorunlu değildir**; ısrarlı ve nazik davetle istenir (anasayfa, katalog girişi,
   soğuk zincir ürün detayı — tasarım deseni). Yer bilinmiyorken yere bağlı hiçbir vaat verilmez:
-  "tükendi" yalnız **hiçbir depoda** yoksa söylenir, gerisi "muhtemel" tonunda kalır.
+  "tükendi" yalnız müşterinin işinin **hiçbir deposunda** yoksa söylenir, gerisi "muhtemel" tonunda kalır; öteki işin
+  deposundaki mal bu müşteriye satılamaz, ziyaretçi Lezzet'tir (`docs/feature/iki-is.md`).
 - Posta kodu değişince sepet yeniden değerlendirilir: yeni depoda karşılanamayan kalem
   **silinmez**, `saved_items`'a taşınır (mevcut mekanizma; tetik genişler). "Burada satılmıyor" ile
   "şu an tükendi" ayrı mesajlardır — ilki kalıcı, ikincisi geçici.

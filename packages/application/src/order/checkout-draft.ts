@@ -221,10 +221,11 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
 
   // Depo önce, çünkü sepet o deponun stoğuyla okunur; seçilen adresin kodu seçili yerin kodundan farklıysa adres kazanır. Teslimat
   // iki kez çözülür ama döngü yok: depo yalnız adrese bağlı, sepet yalnız "kargo da kapalı mı" kararını etkiler.
+  const business = customerBusinessOf(customer);
   const place = await resolveDelivery(db, {
     postalCode: address.postalCode,
     country: address.country,
-    business: customerBusinessOf(customer),
+    business,
     inputs: deliveryInputs,
   });
 
@@ -244,6 +245,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       customerId: customer.id,
       warehouseId: place.warehouseId,
       shippingWarehouseId: place.shippingWarehouseId,
+      business,
       country: address.country,
       zoneId: place.zoneId,
       bundles: input.bundles,
@@ -267,6 +269,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     warehouseId: orderWarehouseId,
     // Gel-al'da sepet bölünmez: kargo deposu verilmez, depoda olmayan kalem "burada yok" olarak reddedilir.
     shippingWarehouseId: pickupWarehouse ? null : place.shippingWarehouseId,
+    business,
     // Kapsamlı ayarların (kargo tarifesi, asgari sepet) ülke ekseni çerezden değil malın teslim edildiği yerden okunur.
     country: deliveryCountry,
     // Kargo ve gel-al siparişi bir bölgeye ait değildir; bölgenin asgari sepeti onlara uygulanmaz.

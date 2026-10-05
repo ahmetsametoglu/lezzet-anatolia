@@ -312,7 +312,11 @@ export async function soldOutWatch(limit: number) {
   const page = await new ProductService(db).list({ filters: { status: 'active' }, limit: 500 });
   const variants = await new ProductVariantService(db).listByProducts(page.rows.map((p) => p.id));
   const active = variants.filter((v) => v.isActive);
-  const stock = await new StockService(db).getNetworkAvailabilityMap(active.map((v) => v.id));
+  // İş süzülmez: soru iki işin hiçbir deposunda kalmamış olandır.
+  const stock = await new StockService(db).getNetworkAvailabilityMap(
+    active.map((v) => v.id),
+    null,
+  );
 
   const nameById = new Map(page.rows.map((p) => [p.id, resolveLocalizedText(p.name, 'tr')]));
   const empty = active

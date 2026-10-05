@@ -2,7 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { POSTAL_CODE_PATTERN } from '@lezzet/address';
-import { pickupOfferFor } from '@lezzet/application';
+import { pickupOfferFor, type PlaceWarehouses } from '@lezzet/application';
 import { AddressService, PostalCodePlaceService, serviceDb } from '@lezzet/database';
 import { customerBusinessOf, findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
 import type { Address, Business, CheckoutPickup, UserProfile, Warehouse } from '@lezzet/types';
@@ -93,11 +93,11 @@ const readPlaceContext = cache(async (): Promise<PlaceContext> => {
 });
 
 /** İki depo birlikte döner: "yerelde yok" tek başına "tükendi" değildir, kargo deposunda varsa ürün satılabilir. */
-export async function readPlaceWarehouses(): Promise<{ warehouseId: string | null; shippingWarehouseId: string | null }> {
-  const { warehouseId, shippingWarehouseId, pickupWarehouse } = await readPlaceContext();
+export async function readPlaceWarehouses(): Promise<PlaceWarehouses> {
+  const { warehouseId, shippingWarehouseId, pickupWarehouse, business } = await readPlaceContext();
   // Gel-al'da okumalar SEÇİLEN DEPONUN stoğuyla yapılır; kargo dolgusu yoktur (depoda olmayan kalem "burada yok").
-  if (pickupWarehouse) return { warehouseId: pickupWarehouse.id, shippingWarehouseId: null };
-  return { warehouseId, shippingWarehouseId };
+  if (pickupWarehouse) return { warehouseId: pickupWarehouse.id, shippingWarehouseId: null, business: pickupWarehouse.business };
+  return { warehouseId, shippingWarehouseId, business };
 }
 
 /** Depoyu değil yalnız yeri isteyen çağıran için: "gelince haber ver" kaydı müşterinin yeri hakkındadır, iç coğrafyamız hakkında değil. */
@@ -132,13 +132,21 @@ export async function readPlaceScope(): Promise<{
   zoneId: string | null;
   warehouseId: string | null;
   shippingWarehouseId: string | null;
+  business: Business;
   /** Gel-al seçili: sepet eşiği gel-al kuralından okunur (`getCartView`). */
   pickup: boolean;
 }> {
-  const { answer, resolution, warehouseId, shippingWarehouseId, pickupWarehouse } = await readPlaceContext();
+  const { answer, resolution, warehouseId, shippingWarehouseId, pickupWarehouse, business } = await readPlaceContext();
   // Gel-al: kapsam deponun ülkesi ve kendisidir; bölge yok, kargo deposu yok.
   if (pickupWarehouse) {
-    return { country: pickupWarehouse.countryCode, zoneId: null, warehouseId: pickupWarehouse.id, shippingWarehouseId: null, pickup: true };
+    return {
+      country: pickupWarehouse.countryCode,
+      zoneId: null,
+      warehouseId: pickupWarehouse.id,
+      shippingWarehouseId: null,
+      business: pickupWarehouse.business,
+      pickup: true,
+    };
   }
   return {
     pickup: false,
@@ -147,6 +155,7 @@ export async function readPlaceScope(): Promise<{
     // Kargo deposu da buradan çıkar: `warehouseId` yalnız rota deposu olduğundan, onsuz rota dışı müşteri kargo havuzunu kaybederdi.
     warehouseId,
     shippingWarehouseId,
+    business,
   };
 }
 

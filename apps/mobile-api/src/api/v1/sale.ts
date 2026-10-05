@@ -9,7 +9,9 @@ import {
   sellOnSite,
   toWireCampaign,
   vehicleWarehouseOf,
+  type PlaceWarehouses,
 } from '@lezzet/application';
+import { customerBusinessOf } from '@lezzet/domain-core';
 import {
   DEFAULT_PAGE_SIZE,
   OnSiteSaleRequestSchema,
@@ -42,6 +44,11 @@ interface SaleEnv {
 }
 
 export const sale = new Hono<SaleEnv>();
+
+/** Satışın yeri satıcının deposudur; alıcı anonimdir ve anonim alıcı Lezzet'tir. */
+function salePlaceOf(warehouseId: string): PlaceWarehouses {
+  return { warehouseId, shippingWarehouseId: null, business: customerBusinessOf(null) };
+}
 
 /**
  * Satış yeri yüzeyin açık beyanıdır (`?place=van`), izni sefer verir: araç kuryenin sürdüğü seferin yazdığı araçtır
@@ -139,7 +146,7 @@ sale.get('/catalog', async (c) => {
       /* Araç bir vitrin değildir, kurye elindekini satar; tesis kapısında kural tersinedir (`listStockedProductIds`). */
       onlyStockedHere: c.get('salePlace') === 'van',
     },
-    place: { warehouseId: c.get('warehouseId'), shippingWarehouseId: null },
+    place: salePlaceOf(c.get('warehouseId')),
     viewer: { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null },
     limit: DEFAULT_PAGE_SIZE,
   });
@@ -179,7 +186,7 @@ sale.get('/catalog/:slug/variants', async (c) => {
   const detail = await getProductDetail(db, {
     locale: locale.data,
     slug: c.req.param('slug'),
-    place: { warehouseId: c.get('warehouseId'), shippingWarehouseId: null },
+    place: salePlaceOf(c.get('warehouseId')),
     viewer: { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null },
   });
   if (!detail) return fail(c, 'product_not_found', 404);
@@ -226,7 +233,7 @@ sale.get('/scan', async (c) => {
   const variant = await new ProductVariantService(db).getById(match.variantId);
   if (variant === null) return ok(c, SaleScanResponseSchema.parse({ status: 'unknown_code' }));
 
-  const place = { warehouseId: c.get('warehouseId'), shippingWarehouseId: null };
+  const place = salePlaceOf(c.get('warehouseId'));
   const viewer = { channel: 'b2c' as const, b2bApproved: false, customerId: null, groupPercentOff: null };
 
   const page = await getCatalogData(db, {

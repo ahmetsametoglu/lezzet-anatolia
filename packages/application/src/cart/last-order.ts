@@ -1,6 +1,7 @@
 import { OrderService, type Db } from '@lezzet/database';
 import type { PreferredLanguage } from '@lezzet/types';
 import type { StorefrontImage } from '../catalog/storefront-types';
+import { customerBusiness } from '../delivery/place';
 import { getCartView } from './read';
 import type { CartEntry } from './cart-types';
 
@@ -46,7 +47,7 @@ export async function readLastOrderSuggestion(
   if (!customerId) return null;
 
   const orders = new OrderService(db);
-  const page = await orders.listByCustomer(customerId, { limit: 1 });
+  const [page, business] = await Promise.all([orders.listByCustomer(customerId, { limit: 1 }), customerBusiness(db, customerId)]);
   const order = page.rows[0];
   // Referansı olmayan sipariş henüz kalıcı değildir (taslak/iptal öncesi) — tekrarlanacak bir şey yok.
   if (!order?.referenceNo) return null;
@@ -65,8 +66,8 @@ export async function readLastOrderSuggestion(
     // Parti ÇIPASI taşınmaz: o günkü teklif partisi bugün tükenmiş olabilir; tekrar sipariş
     // "aynı ürünü yeniden al" demektir, "aynı indirimi yeniden al" değil.
     items.map((i) => ({ kind: 'variant' as const, variantId: i.variantId, qty: i.qty, stockId: null })),
-    // Yer BİLEREK boş: tekrar sipariş yere göre DARALTILMAZ — sorusu "senin deponda var mı" değil,
-    // "bu ürün hâlâ satılıyor mu" (C3, `read.ts` künyesi).
+    // Yer verilmez, yalnız iş: tekrar sipariş yere göre daraltılmaz, sorusu "bu ürün hâlâ satılıyor mu"dur.
+    { business },
   );
 
   const available = view.lines.filter((l) => !l.blocked);

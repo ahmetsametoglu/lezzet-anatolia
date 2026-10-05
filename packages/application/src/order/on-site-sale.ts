@@ -87,7 +87,7 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
     db,
     locale,
     input.lines.map((line) => ({ kind: 'variant' as const, variantId: line.variantId, qty: line.qty, stockId: null })),
-    { customerId: input.customerId, priceOverrides: overrides, warehouseId: input.warehouseId },
+    { customerId: input.customerId, priceOverrides: overrides, warehouseId: input.warehouseId, business: warehouse.business },
   );
 
   const blocked = view.lines.filter((line) => line.unitPriceCents === null).map((line) => line.name);

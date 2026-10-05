@@ -22,20 +22,12 @@ import type { Locale } from '@lezzet/i18n';
 export const HOME_PACKAGE_LIMIT = 2;
 
 /** Paket sayfası + ana sayfa şeridi. Künye: `@lezzet/application` → `listStorefrontPackages`. */
-export function listStorefrontPackages(
-  locale: Locale,
-  limit?: number,
-  place: Partial<PlaceWarehouses> = {},
-): Promise<StorefrontPackage[]> {
+export function listStorefrontPackages(locale: Locale, limit: number | undefined, place: PlaceWarehouses): Promise<StorefrontPackage[]> {
   return listStorefrontPackagesFromPackage(serviceDb(), locale, limit, place);
 }
 
 /** Paket detay sayfası. Künye: `@lezzet/application` → `getPackageDetail`. */
-export function getPackageDetail(
-  slug: string,
-  locale: Locale,
-  place: Partial<PlaceWarehouses> = {},
-): Promise<StorefrontPackageDetail | null> {
+export function getPackageDetail(slug: string, locale: Locale, place: PlaceWarehouses): Promise<StorefrontPackageDetail | null> {
   return getPackageDetailFromPackage(serviceDb(), slug, locale, place);
 }
 
@@ -43,10 +35,6 @@ export function getPackageDetail(
  * Sepetin/checkout'un paket kapısı — `CartBundlePort` olarak DOĞRUDAN geçilir (sarmalayıcı yok,
  * imza birebir). Künye: `@lezzet/application` → `getPackagesByIds`.
  */
-export function getPackagesByIds(
-  ids: readonly string[],
-  locale: Locale,
-  place: Partial<PlaceWarehouses> = {},
-): Promise<StorefrontPackageDetail[]> {
+export function getPackagesByIds(ids: readonly string[], locale: Locale, place: PlaceWarehouses): Promise<StorefrontPackageDetail[]> {
   return getPackagesByIdsFromPackage(serviceDb(), ids, locale, place);
 }

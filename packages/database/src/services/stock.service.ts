@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   AvailableStockSchema,
   WarehouseVariantThresholdSchema,
-  AvailableStockTotalSchema,
+  AvailableStockTotalRowSchema,
   StockBatchDetailSchema,
   StockSchema,
   StockInsertSchema,
@@ -11,6 +11,7 @@ import {
   StockWithProductDatesSchema,
   type AvailableStock,
   type AvailableStockTotal,
+  type Business,
   type KeysetCursor,
   type Page,
   type Stock,
@@ -301,22 +302,28 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * Depo ağı genelinde toplam kullanılabilir (`available_stock_total`); satış kararı bunu okumaz, çünkü birleştirilmiş stok kimsenin
-   * stoğu değildir. Tüketicileri tedarik önerisi ve "hiçbir depoda yok mu" sorusudur, dönüş miktar taşır çünkü paket okuması karşılaştırır.
+   * İşin depo ağı genelinde toplam kullanılabilir (`available_stock_total`); satış kararı bunu okumaz, çünkü birleştirilmiş stok
+   * kimsenin stoğu değildir. `business` müşterinin işidir, `null` bütün işlerin toplamıdır (operasyonun bakışı); dönüş miktar taşır,
+   * çünkü paket okuması karşılaştırır.
    */
-  async getNetworkAvailabilityMap(variantIds: string[]): Promise<Map<string, AvailableStockTotal>> {
+  async getNetworkAvailabilityMap(variantIds: string[], business: Business | null): Promise<Map<string, AvailableStockTotal>> {
     if (variantIds.length === 0) return new Map();
-    const { data, error } = await this.supabase
-      .from('available_stock_total')
-      .select('*')
-      .in('variant_id', variantIds);
+    const query = this.supabase.from('available_stock_total').select('*').in('variant_id', variantIds);
+    const { data, error } = await (business ? query.eq('business', business) : query);
     if (error) throw error;
-    const rows = (data ?? []).map((row) => AvailableStockTotalSchema.parse(dbToApp(row)));
-    const map = new Map(rows.map((r) => [r.variantId, r]));
-    for (const id of variantIds) {
-      if (!map.has(id)) {
-        map.set(id, { variantId: id, physicalQty: 0, reservedQty: 0, availableQty: 0, expiredDlcQty: 0 });
-      }
+    const map = new Map<string, AvailableStockTotal>(
+      variantIds.map((id) => [id, { variantId: id, physicalQty: 0, reservedQty: 0, availableQty: 0, expiredDlcQty: 0 }]),
+    );
+    for (const row of (data ?? []).map((raw) => AvailableStockTotalRowSchema.parse(dbToApp(raw)))) {
+      const sum = map.get(row.variantId);
+      if (!sum) continue;
+      map.set(row.variantId, {
+        variantId: row.variantId,
+        physicalQty: sum.physicalQty + row.physicalQty,
+        reservedQty: sum.reservedQty + row.reservedQty,
+        availableQty: sum.availableQty + row.availableQty,
+        expiredDlcQty: sum.expiredDlcQty + row.expiredDlcQty,
+      });
     }
     return map;
   }

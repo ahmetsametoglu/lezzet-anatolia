@@ -2,7 +2,6 @@ import 'server-only';
 import { CategoryImageService, CategoryService, CollectionService, ProductService, serviceDb } from '@lezzet/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Locale } from '@lezzet/i18n';
-import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import { resolveLocalizedText } from '@lezzet/types';
 import { FIXTURE_CATEGORIES } from './fixtures';
 import {
@@ -19,7 +18,7 @@ import type { PricingViewer } from './read-viewer';
 import { HOME_PACKAGE_LIMIT, listStorefrontPackages } from './packages';
 import { HOME_RECIPE_LIMIT, listStorefrontRecipes } from './recipe';
 import { pickFeatured, pickRandom, rotateDaily } from './featured';
-import type { StorefrontProduct } from '@lezzet/application';
+import type { PlaceWarehouses, StorefrontProduct } from '@lezzet/application';
 import type { StorefrontCollection, StorefrontHome, StorefrontOffer } from './storefront-types';
 
 /**

@@ -43,7 +43,8 @@ export interface NativeEventContext {
   channel: Channel;
   /** Personel süzgeci için — `null` = misafir. Kimliği bilmeyen uç `null` geçer. */
   customerId: string | null;
-  place: PlaceWarehouses;
+  /** Ölçüm yerden yalnız depoyu yazar; `null` uç yeri çözmüyor demektir. */
+  place: Pick<PlaceWarehouses, 'warehouseId' | 'shippingWarehouseId'> | null;
   /**
    * Ekranın dili; `null` uç dil almıyor demektir. Uydurulmuş dil boş dilden kötüdür, "tr" yazan satır Fransız müşterinin isteğini
    * Türkçe sayardı.
@@ -81,7 +82,7 @@ export async function recordNativeEvent(ctx: NativeEventContext, input: Analytic
       subjectId: 'subjectId' in girdi ? girdi.subjectId : null,
       productId: 'productId' in girdi ? (girdi.productId ?? null) : null,
       channel: ctx.channel,
-      warehouseId: ctx.place.warehouseId ?? ctx.place.shippingWarehouseId ?? null,
+      warehouseId: ctx.place?.warehouseId ?? ctx.place?.shippingWarehouseId ?? null,
       availability: 'availability' in girdi ? girdi.availability : null,
       blockedReason: 'reason' in girdi ? girdi.reason : null,
       /* Native'de cihaz HER ZAMAN mobil — türetilecek bir şey yok. Ayrımı `surface` taşıyor. */

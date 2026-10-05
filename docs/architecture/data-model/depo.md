@@ -378,7 +378,7 @@ Kodu teslim bölgesine düşmeyen müşterinin bıraktığı haber kaydı. `Post
 
 **`available_stock`** — grain `(warehouse_id, variant_id)`. Denklem değişmedi (`fiili − aktif rezervasyon`), değişen hesabın **depo içinde** yapılması. Aktif depolara `cross join`: "0 da bir cevaptır" sözleşmesi korunuyor — yeni açılan depoda hiç parti olmasa da her varyant için satır döner.
 
-**`available_stock_total`** — depo-üstü toplam. **Satış kararı bunu okumaz:** birleştirilmiş stok kimsenin stoğu değildir (3 STR'de + 2 KEHL'de duran maldan 5 kişilik sipariş çıkmaz). Meşru tüketicileri: tedarik önerisi ve "hiçbir depoda yok mu" (C3 — ziyaretçiye "tükendi" demenin tek dayanağı). **Geri çağırma bunu okumaz**, `stock` tablosunu okur: bu görünüm yalnız aktif depoları sayar, kapatılmış depodaki parti burada görünmez.
+**`available_stock_total`** — işe göre depo-üstü toplam, grain `(variant_id, business)`: öteki işin deposundaki mal bu işin müşterisine satılamaz. **Satış kararı bunu okumaz:** birleştirilmiş stok kimsenin stoğu değildir (3 STR'de + 2 KEHL'de duran maldan 5 kişilik sipariş çıkmaz). Meşru tüketicisi "müşterinin işinin hiçbir deposunda yok mu" sorusudur (C3 — ziyaretçiye "tükendi" demenin tek dayanağı); iş verilmeyen okuma iki işi toplar ve yalnız personelin tükenen ürün aracında kullanılır. **Geri çağırma bunu okumaz**, `stock` tablosunu okur: bu görünüm yalnız aktif depoları sayar, kapatılmış depodaki parti burada görünmez.
 
 **`purchase_order_progress`** — PO kalemi ↔ Σ `initial_qty`. Sipariş durumu saklanan sayaçtan değil buradan türer; ölçü `initial_qty`, çünkü `physical_qty` satışla erir ve "ne kadar geldi" sorusuna yanlış cevap verir.
 

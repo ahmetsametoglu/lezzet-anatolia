@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { OrderStatusEnum } from '../primitives/enums.schema';
+import { BusinessEnum, OrderStatusEnum } from '../primitives/enums.schema';
 import { ProductSchema } from './product.schema';
 import { ProductVariantSchema } from './product-variant.schema';
 import { StorageAreaSchema } from './storage-point.schema';
@@ -76,6 +76,9 @@ export type AvailableStock = z.infer<typeof AvailableStockSchema>;
  */
 export const AvailableStockTotalSchema = AvailableStockSchema.omit({ warehouseId: true });
 export type AvailableStockTotal = z.infer<typeof AvailableStockTotalSchema>;
+
+/** Görünümün satırı işe göredir; iş verilmeyen okumada servis işlerin satırlarını toplar. */
+export const AvailableStockTotalRowSchema = AvailableStockTotalSchema.extend({ business: BusinessEnum });
 
 /**
  * Parti ve raf ömrü kararının ürün alanları (`date_type`, `shelf_life_days`) tek sorguda, gömülü `select` ile; karar motorundur

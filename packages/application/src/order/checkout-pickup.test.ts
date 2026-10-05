@@ -252,6 +252,7 @@ describe('gel-al sepetin grubuna ve kapının asgari sepetine bağlı değildir'
 
   it('gel-al sepeti depo kapsamlı tabanı okumaz — okusaydı sepetin düğmesi kapanırdı', async () => {
     const view = await getCartView(db, 'fr', ikiKalem(), {
+      business: 'lezzet',
       customerId: allowedId,
       warehouseId: pickupId,
       shippingWarehouseId: null,

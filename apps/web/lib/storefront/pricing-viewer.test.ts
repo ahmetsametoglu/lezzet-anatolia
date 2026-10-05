@@ -47,7 +47,7 @@ const entry = () => [{ kind: 'variant' as const, variantId, qty: 1, stockId: nul
 
 /** Sepetteki tek satırın birim fiyatı — testin sorduğu tek sayı. */
 async function birimFiyat(customerId?: string): Promise<number | null> {
-  const view = await getCartView('tr', entry(), { warehouseId, ...(customerId ? { customerId } : {}) });
+  const view = await getCartView('tr', entry(), { business: 'lezzet', warehouseId, ...(customerId ? { customerId } : {}) });
   return view.lines[0]?.unitPriceCents ?? null;
 }
 

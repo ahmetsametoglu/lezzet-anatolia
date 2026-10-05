@@ -11,7 +11,7 @@ import { getPackagesByIds } from '@/lib/storefront/packages';
 export function getCartView(
   locale: Locale,
   entries: readonly CartEntry[],
-  opts: Omit<NonNullable<Parameters<typeof getCartViewFor>[3]>, 'bundles'> = {},
+  opts: Omit<Parameters<typeof getCartViewFor>[3], 'bundles'>,
 ): Promise<CartView> {
   return getCartViewFor(serviceDb(), locale, entries, { ...opts, bundles: getPackagesByIds });
 }

@@ -9,7 +9,7 @@ import {
   type DiscountableLine,
 } from '@lezzet/domain-core';
 import { resolveLocalizedText } from '@lezzet/types';
-import type { PreferredLanguage, ProductVariant, ProductWithRelations } from '@lezzet/types';
+import type { Business, PreferredLanguage, ProductVariant, ProductWithRelations } from '@lezzet/types';
 import { EMPTY_IMAGE, EMPTY_PRODUCT_CONTEXT, imageOf, sellingOf, toVariant } from '../catalog/map';
 import type { ProductContext } from '../catalog/map';
 import { loadProductContext } from '../catalog/product-context';
@@ -99,6 +99,8 @@ export async function getCartView(
      * ya da o ülkeye kargo yok.
      */
     shippingWarehouseId?: string | null;
+    /** Müşterinin işi; zorunludur, çünkü unutulursa "hiç var mı" iki işin stoğunu toplardı. */
+    business: Business;
     /**
      * Ayar kapsamının yer eksenleri; parametre olarak gelir, çünkü çerez okuması okumayı istek dışında çağrılamaz yapardı.
      */
@@ -119,7 +121,7 @@ export async function getCartView(
      * paket taşımayan yüzey (bugün mobil) bu kapıyı hiç geçmez.
      */
     bundles?: CartBundlePort;
-  } = {},
+  },
 ): Promise<CartView> {
   const settings = new SettingsService(db);
   // İki tür satır, iki okuma — ikisi de TOPLU. Paketler kendi kapısından gelir (`lib/storefront`),
@@ -131,6 +133,7 @@ export async function getCartView(
   const place: PlaceWarehouses = {
     warehouseId: opts.warehouseId ?? null,
     shippingWarehouseId: opts.shippingWarehouseId ?? null,
+    business: opts.business,
   };
   // Görüntüleyen, satırların kaynağı ve indirimin girdisi birbirini beklemez: her tur sunucuda bir gidiş-dönüştür ve sepet,
   // ödeme ve sipariş bu okumadan geçer. Görüntüleyen oturumdan değil sepetin kimliğinden çözülür, misafir OTP yolunda oturum yoktur.

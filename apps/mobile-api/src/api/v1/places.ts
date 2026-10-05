@@ -1,14 +1,7 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import {
-  listPublicDeliveryAreas,
-  recordZoneNotice,
-  customerBusiness,
-  resolvePlaceForPostalCode,
-  suggestPlaces,
-  UNRESOLVED_PLACE,
-} from '@lezzet/application';
+import { listPublicDeliveryAreas, recordZoneNotice, customerBusiness, resolvePlaceForPostalCode, suggestPlaces } from '@lezzet/application';
 import { isValidPostalCode, normalizePostalCode, placeLabel } from '@lezzet/address';
 import { customerBusinessOf, type PostalCodeResolution } from '@lezzet/domain-core';
 import {
@@ -86,7 +79,7 @@ places.get('/places/by-postal-code', async (c) => {
       // Çözüm fiyat taşımadığı için kanal sorulmaz; B2B müşterisi de aynı cevabı alır.
       channel: 'b2c',
       customerId,
-      place: UNRESOLVED_PLACE,
+      place: null,
       // Uç dil almıyor; uydurulmuş dil yerine boş.
       locale: null,
       country: 'country' in resolution ? resolution.country : null,

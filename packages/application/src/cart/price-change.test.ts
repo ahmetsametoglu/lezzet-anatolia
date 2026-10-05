@@ -60,6 +60,7 @@ const priced = (cents: number, stockId: string | null = null) => new Map([[cartK
 describe('fiyat değişimi — artış bildirilir, düşüş sessiz (T3)', () => {
   it('fiyat ARTTIYSA satır eski fiyatı taşır — müşteri sessizce fazla ödemez', async () => {
     const view = await getCartView(db, 'tr',entry(1), {
+      business: 'lezzet',
       warehouseId,
       // Müşteri bu kalemi 25 €'ya görmüştü; bugünkü fiyat 30 €.
       previousPrices: priced(2_500),
@@ -71,6 +72,7 @@ describe('fiyat değişimi — artış bildirilir, düşüş sessiz (T3)', () =>
 
   it('fiyat DÜŞTÜYSE bildirim YOK — indirim sürpriz değil, müşteriyi durdurmaz', async () => {
     const view = await getCartView(db, 'tr',entry(1), {
+      business: 'lezzet',
       warehouseId,
       // Müşteri 35 €'ya görmüştü; bugün 30 €.
       previousPrices: priced(3_500),
@@ -82,6 +84,7 @@ describe('fiyat değişimi — artış bildirilir, düşüş sessiz (T3)', () =>
 
   it('fiyat AYNIYSA bildirim yok — "değişmedi" bir haber değildir', async () => {
     const view = await getCartView(db, 'tr',entry(1), {
+      business: 'lezzet',
       warehouseId,
       previousPrices: priced(TAM_FIYAT),
     });
@@ -97,6 +100,7 @@ describe('teklif partisi tükenince (T2)', () => {
      * `previousPrices`te durduğu için fark artış olarak bildirilir.
      */
     const view = await getCartView(db, 'tr',entry(1, offerStockId), {
+      business: 'lezzet',
       warehouseId,
       previousPrices: priced(TEKLIF_FIYATI, offerStockId),
     });
@@ -108,7 +112,7 @@ describe('teklif partisi tükenince (T2)', () => {
   });
 
   it('çıpa tutmayan satırda teklif TAVANI da düşer — olmayan teklifin sınırı uygulanmaz', async () => {
-    const view = await getCartView(db, 'tr',entry(2, offerStockId), { warehouseId });
+    const view = await getCartView(db, 'tr',entry(2, offerStockId), { business: 'lezzet', warehouseId });
 
     // `limitCap` yalnız teklif GEÇERLİYKEN dolar; burada teklif yok, tavan da yok.
     expect(view.lines[0]?.limitCap).toBeNull();

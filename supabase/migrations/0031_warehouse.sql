@@ -425,18 +425,19 @@ left join (
 ) r on r.variant_id = v.id and r.warehouse_id = w.id
 where w.is_active;
 
--- Depo-üstü toplam yalnız "hiç var mı" sorusunun ve tedarik önerisinin; satış kararı ve geri çağırma bunu okumaz.
--- Araçlar girmez: araçtaki mal siteden alınamaz ve akşam tesise döner, sayılsa söz ya da bolluk yanlış olurdu.
+-- Depo-üstü toplam yalnız "hiç var mı" sorusunundur, satış kararı ve geri çağırma bunu okumaz; işe göredir, çünkü öteki işin
+-- deposundaki mal bu işin müşterisine satılamaz. Araçlar girmez: araçtaki mal siteden alınamaz ve akşam tesise döner.
 create or replace view public.available_stock_total with (security_invoker = true) as
 select
   a.variant_id,
+  w.business,
   sum(a.physical_qty)    as physical_qty,
   sum(a.reserved_qty)    as reserved_qty,
   sum(a.available_qty)   as available_qty,
   sum(a.expired_dlc_qty) as expired_dlc_qty
 from public.available_stock a
 join public.warehouse w on w.id = a.warehouse_id and w.kind = 'facility'
-group by a.variant_id;
+group by a.variant_id, w.business;
 
 -- ── Tedarik siparişi ilerlemesi ──────────────────────────────────────────────
 -- PO durumu buradan türer; ölçü `initial_qty`, çünkü `physical_qty` satışla erir.

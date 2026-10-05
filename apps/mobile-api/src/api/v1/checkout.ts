@@ -12,7 +12,6 @@ import {
   readCheckoutOrderStatus,
   readCheckoutSnapshot,
   resumePendingPayment,
-  UNRESOLVED_PLACE,
 } from '@lezzet/application';
 import { CartService, serviceDb, UserProfileService } from '@lezzet/database';
 // Yan etki portu ortak dosyada: kurye uçları da aynı nesneyi geçirir.
@@ -93,7 +92,7 @@ checkout.get('/', async (c) => {
       db,
       channel: c.get('channel'),
       customerId,
-      place: UNRESOLVED_PLACE,
+      place: null,
       locale: c.get('locale'),
       country: null,
     },
@@ -232,7 +231,7 @@ checkout.post('/order', async (c) => {
     db,
     channel: c.get('channel'),
     customerId,
-    place: UNRESOLVED_PLACE,
+    place: null,
     locale: c.get('locale'),
     country: null,
   };

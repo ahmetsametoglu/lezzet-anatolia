@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
+import { CategoryService, PriceService, ProductService, StockService, WarehouseService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
-import { DEFAULT_CROP_FIELDS } from '@lezzet/types';
+import { DEFAULT_CROP_FIELDS, type Business } from '@lezzet/types';
 import { getCatalogData } from './catalog';
 /* Künye açıkça geçilir, çünkü kapı istek bağlamı okumaz. Sıralama testleri kanala göre koşar, çünkü sıra fiyata ve fiyat onu
    görene bağlıdır. */
 import { VISITOR, type PricingViewer } from './pricing-viewer';
 import type { PlaceWarehouses } from './storefront-types';
+import { unresolvedPlace } from '../delivery/place';
 
 /**
  * Katalogda fiyat sıralaması — `product_listing` görünümü motorun (`resolvePrice`) fiyat dalını SQL'de yeniden ifade eder, çünkü
@@ -21,13 +22,14 @@ let categoryId: string;
 // Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
 let warehouseId: string;
 const productIds: string[] = [];
+const extraWarehouseIds: string[] = [];
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 /** Yer BİLİNMİYOR — ziyaretçinin posta kodu vermediği hâl (depo-üstü okuma). */
-const YERSIZ: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null };
+const YERSIZ: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null, business: 'lezzet' };
 /** Yer BELLİ — teklif tutarının gösterilebildiği tek hâl. */
-const yerli = (): PlaceWarehouses => ({ warehouseId, shippingWarehouseId: null });
+const yerli = (): PlaceWarehouses => ({ warehouseId, shippingWarehouseId: null, business: 'lezzet' });
 
 /** Yayın kısıtlarının şartı: `active` ürün üç dilde dolu, alerjen beyanı girilmiş olmalı; bunlar fikstürün konusu değil. */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
@@ -86,7 +88,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   // Parti satırları ürünün varyantlarından çözülüp `purgeTestData` içinde gider (sıra orada tutulur).
-  await purgeTestData(db, { productIds, categoryIds: [categoryId], warehouseIds: [warehouseId] });
+  await purgeTestData(db, { productIds, categoryIds: [categoryId], warehouseIds: [warehouseId, ...extraWarehouseIds] });
 });
 
 /**
@@ -433,5 +435,44 @@ describe('yalnız burada duran mal', () => {
        vermemek: `CLAUDE §1` — ölçülemeyen değer sıfır değildir, ama olmayan bir yerin envanteri de
        tüm envanter değildir. */
     expect(await kimlikler(true, YERSIZ)).toEqual([]);
+  });
+});
+
+describe('yer bilinmezken "var" müşterinin işinin depolarından okunur', () => {
+  // Ayrı damga: ürün fiyat sıralaması testlerinin `search: String(stamp)` kümesine girmesin.
+  const isStamp = stamp + 11;
+  let urunId: string;
+
+  beforeAll(async () => {
+    const qualiteDepo = (await createTestWarehouse(db, { label: 'QUA' })).id;
+    extraWarehouseIds.push(qualiteDepo);
+    await new WarehouseService(db).update({ id: qualiteDepo, business: 'qualite' });
+    const { product, variants } = await new ProductService(db).create({
+      name: ucDil(`Isler${isStamp} Toptan`),
+      categoryId,
+      ...yayinaHazir,
+      variants: [{ label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' }],
+    });
+    productIds.push(product.id);
+    urunId = product.id;
+    await prices.insert({ variantId: variants[0]!.id, channel: 'b2c', amountCents: 500 });
+    await stocks.insert({
+      warehouseId: qualiteDepo, variantId: variants[0]!.id, physicalQty: 5, expiryDate: dayOffset(60), purchasePriceCents: 100,
+    });
+  });
+
+  const durum = async (business: Business) => {
+    const data = await getCatalogData(db, {
+      locale: 'tr',
+      query: { search: `Isler${isStamp}` },
+      place: unresolvedPlace(business),
+      viewer: VISITOR,
+    });
+    return data.products.find((p) => p.id === urunId)?.stockStatus;
+  };
+
+  it('yalnız QUALITE deposunda duran ürün Lezzet ziyaretçisine tükenmiş, QUALITE müşterisine var görünür', async () => {
+    expect(await durum('lezzet')).toBe('out_of_stock');
+    expect(await durum('qualite')).toBe('available');
   });
 });

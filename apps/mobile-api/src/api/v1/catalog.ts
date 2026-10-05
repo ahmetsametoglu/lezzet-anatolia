@@ -9,7 +9,7 @@ import {
   toWireCampaign,
   customerBusiness,
   resolvePlaceWarehouses,
-  UNRESOLVED_PLACE,
+  unresolvedPlace,
   type PlaceWarehouses,
   type PricingViewer,
   availabilityOf,
@@ -45,10 +45,11 @@ const MAX_PAGE_SIZE = 50;
 
 /**
  * İstemci depo kimliği değil posta kodu gönderir ve yer her istekte sunucuda çözülür, çünkü istemcinin yazabildiği bir değer
- * hangi deponun stoğunun gösterileceğini belirleyemez. Kod yoksa ya da çözülemezse `UNRESOLVED_PLACE` bir hâldir, okuma depo-üstüne düşer.
+ * hangi deponun stoğunun gösterileceğini belirleyemez. Kod yoksa ya da çözülemezse yer bilinmiyor bir hâldir, okuma işin depo-üstü
+ * toplamına düşer.
  */
 export async function readPlace(db: SupabaseClient, postalCode: string | undefined, business: Business): Promise<PlaceWarehouses> {
-  if (postalCode === undefined || postalCode.trim() === '') return UNRESOLVED_PLACE;
+  if (postalCode === undefined || postalCode.trim() === '') return unresolvedPlace(business);
   return resolvePlaceWarehouses(db, postalCode, business);
 }
 
@@ -63,9 +64,9 @@ export async function readPlaceOrPickup(
 ): Promise<{ place: PlaceWarehouses; pickup: Warehouse | null }> {
   const pickup =
     opts.customerId && opts.pickupWarehouseId ? (await readPickupOffer(db, opts.customerId, opts.pickupWarehouseId)).warehouse : null;
-  // Yer müşterinin işinin bölgelerinden çözülür; ziyaretçi Lezzet'tir.
+  // Yer müşterinin işinin bölgelerinden çözülür, ziyaretçi Lezzet'tir; gel-al deposu teklif kapısından müşterinin işinde gelir.
   const place: PlaceWarehouses = pickup
-    ? { warehouseId: pickup.id, shippingWarehouseId: null }
+    ? { warehouseId: pickup.id, shippingWarehouseId: null, business: pickup.business }
     : await readPlace(db, opts.postalCode, await customerBusiness(db, opts.customerId));
   return { place, pickup };
 }

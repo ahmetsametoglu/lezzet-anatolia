@@ -249,7 +249,7 @@ export type {
 } from './feedback/discover';
 
 // ── Yer çözümü: posta kodu → rota/kargo ──
-export { customerBusiness, resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } from './delivery/place';
+export { customerBusiness, resolvePlaceForPostalCode, resolvePlaceWarehouses, unresolvedPlace } from './delivery/place';
 
 // ── Vitrin (katalog) ──
 export { getCatalogData, readCollectionHead } from './catalog/catalog';

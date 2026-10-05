@@ -101,7 +101,7 @@ afterAll(async () => {
 });
 
 /** Yer BELLİ okuma — tarif fiyatı gerçek bir depodan gelir (`DOMAIN §17`). */
-const place = () => ({ warehouseId, shippingWarehouseId: null });
+const place = () => ({ warehouseId, shippingWarehouseId: null, business: 'lezzet' as const });
 const bizimki = async () => (await listStorefrontRecipes('tr', place(), VISITOR)).find((r) => r.id === yayinda);
 
 describe('tarif listesi', () => {

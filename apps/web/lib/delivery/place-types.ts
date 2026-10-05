@@ -110,14 +110,3 @@ export interface DeliveryZoneSummary {
 
 // Web'deki çağıranlar yerin sözlüğünü tek dosyadan okur.
 export { elsewhereReasonOf } from '@lezzet/helper';
-
-/**
- * Vitrin okumasının yer bağlamı; iki depo birlikte geçilir, çünkü tek başına `warehouseId` "yerelde yok = tükendi" hatasını geri
- * getirirdi. `(null, null)` yer bilinmiyor, `(rota, kargo)` rota içi, `(null, kargo)` rota dışı demektir.
- */
-export interface PlaceWarehouses {
-  /** Yalnız rota deposu: kargo hâlinde de dolu olsaydı rota dışındaki müşteri "ücretsiz kapı teslimi" görürdü. */
-  warehouseId: string | null;
-  /** `null`: yer bilinmiyor ya da o ülkeye kargo yok. */
-  shippingWarehouseId: string | null;
-}

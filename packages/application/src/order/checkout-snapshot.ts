@@ -180,6 +180,7 @@ export async function readCheckoutSnapshot(
        de bu depodan okunur, rota dışı adreste kargo deposu gelmesi bu yüzden doğrudur. */
     warehouseId: place.warehouseId,
     shippingWarehouseId: place.shippingWarehouseId,
+    business,
     country: selected.country,
     // Kargo siparişi bir BÖLGEYE ait değildir (taslakla aynı kural): rota bölgesi yalnız araçla
     // gidilen teslimatın kaydıdır, kargoda bölge eşiği uygulanmaz.
@@ -340,6 +341,8 @@ async function pickupSnapshot(
     couponCode: input.couponCode,
     warehouseId: ctx.warehouse.id,
     shippingWarehouseId: null,
+    // Teklif kapısı yalnız müşterinin işindeki depoyu verir; iş depodan okunur, profil ikinci kez sorulmaz.
+    business: ctx.warehouse.business,
     country: ctx.warehouse.countryCode,
     zoneId: null,
     pickup: true,

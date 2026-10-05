@@ -5,7 +5,7 @@ import { isValidPostalCode, normalizePostalCode } from '@lezzet/address';
 import { logger } from '@lezzet/observability';
 import { COUNTRY_LABELS, CountryEnum, type Address, type Business, type Conversation, type Country } from '@lezzet/types';
 import type { PlaceWarehouses } from '../catalog/storefront-types';
-import { resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
+import { resolvePlaceForPostalCode, resolvePlaceWarehouses, unresolvedPlace } from '../delivery/place';
 
 /*
   Sohbetin yeri bu sırayla okunur: bu turda söylenen kod, sohbette saklanan kod, kimlik kapısı izin veriyorsa kayıtlı adres;
@@ -111,7 +111,7 @@ export async function resolveChatPlace(
       ? birincilAdres(await new AddressService(db).listByCustomer(input.addressCustomerId))
       : null;
   const kod = soylenen || saklanan || adres?.postalCode || null;
-  if (!kod) return { kod: null, ulke: null, place: UNRESOLVED_PLACE, durum: 'bilinmiyor', adaylar: [] };
+  if (!kod) return { kod: null, ulke: null, place: unresolvedPlace(input.business), durum: 'bilinmiyor', adaylar: [] };
 
   /* Ülke kodla aynı kaynaktan okunur. Söylenen kod saklanamadıysa eski kodun ülkesi ona uygulanmaz. */
   const ulke =

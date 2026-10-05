@@ -111,6 +111,7 @@ describe('sepet düğmesi', () => {
       { kind: 'variant', variantId: shippingVariantId, qty: 1, stockId: null },
     ];
     const view = await getCartView(db, 'tr', entries, {
+      business: 'lezzet',
       customerId,
       warehouseId: routeId,
       shippingWarehouseId: shippingId,

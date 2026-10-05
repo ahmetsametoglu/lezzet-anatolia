@@ -57,18 +57,21 @@ export async function resolvePlaceWarehouses(
   const inputs = await readPlaceInputs(db, postalCode);
   const resolution = resolveFrom(inputs, business, country);
 
-  if (resolution.kind !== 'route' && resolution.kind !== 'shipping') return UNRESOLVED_PLACE;
+  if (resolution.kind !== 'route' && resolution.kind !== 'shipping') return unresolvedPlace(business);
 
   return {
     // Kargo hâlinde `null` ki yerel havuz boş kalsın.
     warehouseId: resolution.kind === 'route' ? resolution.warehouseId : null,
     // Kargo deposu ülkeden türer, rotadan değil: rota içindeki müşteri de kargo dolgusu alabilir.
     shippingWarehouseId: findShippingWarehouse(resolution.country, inputs.warehouses, business)?.id ?? null,
+    business,
   };
 }
 
-/** İki `null` bir hâldir: yer bilinmiyor. */
-export const UNRESOLVED_PLACE: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null };
+/** İki `null` bir hâldir: yer bilinmiyor; iş yine bellidir, "hiç var mı" o işin depolarından okunur. */
+export function unresolvedPlace(business: Business): PlaceWarehouses {
+  return { warehouseId: null, shippingWarehouseId: null, business };
+}
 
 /** Kimlikten müşterinin işi; profili okunamayan kimlik ve ziyaretçi Lezzet'tir (`customerBusinessOf`). */
 export async function customerBusiness(db: SupabaseClient, customerId: string | null): Promise<Business> {

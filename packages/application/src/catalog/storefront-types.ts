@@ -1,6 +1,7 @@
 import type { TextSegment } from '@lezzet/helper';
 import type { CartLineRoute } from '@lezzet/domain-core';
 import type {
+  Business,
   CatalogSize,
   ImageCrop,
   ImageFrameSources,
@@ -26,6 +27,11 @@ export interface PlaceWarehouses {
   warehouseId: string | null;
   /** Ülkenin kargo çıkış deposu. `null` = yer bilinmiyor ya da o ülkeye kargo yok. */
   shippingWarehouseId: string | null;
+  /**
+   * Müşterinin işi, ziyaretçi Lezzet'tir; seçilen gel-al ya da satış deposu da bu iştendir. Yer bilinmezken "hiç var mı",
+   * bilinirken "başka depoda var" bu işin depolarından okunur.
+   */
+  business: Business;
 }
 
 /** Kart görselinin ortak künyesi — anahtar değil, çözülmüş URL + kırpma. */

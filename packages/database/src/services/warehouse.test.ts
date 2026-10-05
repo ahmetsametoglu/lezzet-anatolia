@@ -11,6 +11,7 @@ import { WarehouseService } from './warehouse.service';
 import { WarehouseTransferService } from './warehouse-transfer.service';
 import { createTestWarehouse, createTestWarehousePair } from '../testing/warehouse';
 import { purgeTestData, purgeVariantStock } from '../testing/cleanup';
+import type { Business } from '@lezzet/types';
 
 /**
  * Depo ağı, DB üstünde: aynı varyant iki depoda, biri boşken boş depodan istenen mal ayrılamaz. Depo süzgeci unutulan sorgu tek
@@ -29,6 +30,7 @@ const intakes = new StockIntakeService(db);
 
 let doluDepo: string;
 let bosDepo: string;
+let qualiteDepo: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
@@ -41,6 +43,8 @@ beforeAll(async () => {
   const { primary, secondary } = await createTestWarehousePair(db);
   doluDepo = primary.id;
   bosDepo = secondary.id;
+  qualiteDepo = (await createTestWarehouse(db, { label: 'QUA' })).id;
+  await warehouses.update({ id: qualiteDepo, business: 'qualite' });
 
   const category = await categories.create({ name: { tr: `Depo testi ${Date.now()}` } });
   const { product, variants } = await products.create({
@@ -60,7 +64,7 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     supplierIds: [supplierId],
-    warehouseIds: [doluDepo, bosDepo],
+    warehouseIds: [doluDepo, bosDepo, qualiteDepo],
   });
 });
 
@@ -97,8 +101,7 @@ describe('kullanılabilir stok depo içinde hesaplanır', () => {
     await stocks.insert({ variantId, warehouseId: doluDepo, physicalQty: 7, expiryDate: dayOffset(200) });
     await stocks.insert({ variantId, warehouseId: bosDepo, physicalQty: 3, expiryDate: dayOffset(200) });
 
-    // Süzgeç olmasaydı iki satır aynı anahtara düşer ve son okunan depo kazanırdı (T8'in kapattığı
-    // sessiz kırılma). Her iki okuma da KENDİ deposunun sayısını vermeli.
+    // Süzgeç olmasaydı iki satır aynı anahtara düşer ve son okunan depo kazanırdı; her iki okuma da kendi deposunun sayısını vermeli.
     expect((await stocks.getAvailableMap(doluDepo, [variantId])).get(variantId)?.availableQty).toBe(7);
     expect((await stocks.getAvailableMap(bosDepo, [variantId])).get(variantId)?.availableQty).toBe(3);
   });
@@ -108,7 +111,19 @@ describe('kullanılabilir stok depo içinde hesaplanır', () => {
     await stocks.insert({ variantId, warehouseId: bosDepo, physicalQty: 3, expiryDate: dayOffset(200) });
 
     // 7 + 3 = 10 ama bu SATIŞ KARARI DEĞİL: 10 kişilik sipariş bu maldan çıkmaz.
-    expect((await stocks.getNetworkAvailabilityMap([variantId])).get(variantId)?.availableQty).toBe(10);
+    expect((await stocks.getNetworkAvailabilityMap([variantId], null)).get(variantId)?.availableQty).toBe(10);
+  });
+
+  it('depo-üstü toplam işe göredir: QUALITE stoğu Lezzet müşterisinin "hiç var mı" cevabına girmez', async () => {
+    await stocks.insert({ variantId, warehouseId: doluDepo, physicalQty: 7, expiryDate: dayOffset(200) });
+    await stocks.insert({ variantId, warehouseId: qualiteDepo, physicalQty: 4, expiryDate: dayOffset(200) });
+
+    const toplam = async (business: Business | null) =>
+      (await stocks.getNetworkAvailabilityMap([variantId], business)).get(variantId)?.availableQty;
+    expect(await toplam('lezzet')).toBe(7);
+    expect(await toplam('qualite')).toBe(4);
+    // İş verilmeyen okuma iki işi toplar; personelin "hiçbir depoda yok mu" sorusu budur.
+    expect(await toplam(null)).toBe(11);
   });
 });
 

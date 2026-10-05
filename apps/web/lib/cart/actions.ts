@@ -189,13 +189,14 @@ async function resolveBoth(
   // sepet checkout'tan farklı bir indirim gösterirdi.
   opts: { previousPrices?: ReadonlyMap<string, number>; customerId?: string | null; couponCode?: string | null } = {},
 ): Promise<Omit<CartPayload, 'serverCart'>> {
+  // Yer eksenleri `readPlaceScope`tan tek parça gelir; bölge kimliği çerezden değil çözümden okunur, çünkü uydurulmuş çerez hangi
+  // asgari sepetin uygulanacağını belirlememeli.
+  const scope = await readPlaceScope();
   const [view, savedView] = await Promise.all([
-    // Yer eksenleri `readPlaceScope`tan tek parça gelir; bölge kimliği çerezden değil çözümden okunur, çünkü uydurulmuş çerez hangi
-    // asgari sepetin uygulanacağını belirlememeli.
-    getCartView(locale, entries, { previousPrices: opts.previousPrices, customerId: opts.customerId, couponCode: opts.couponCode, ...(await readPlaceScope()) }),
+    getCartView(locale, entries, { previousPrices: opts.previousPrices, customerId: opts.customerId, couponCode: opts.couponCode, ...scope }),
     // Sonraya kaydedilenlerde zam işareti gösterilmez: o liste bir satın alma niyeti değil, bir
     // hatırlatmadır — orada onay istenecek bir karar yok.
-    getCartView(locale, saved),
+    getCartView(locale, saved, { business: scope.business }),
   ]);
   return { view, saved: savedView };
 }

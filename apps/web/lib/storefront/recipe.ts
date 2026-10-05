@@ -4,9 +4,8 @@ import { splitLines } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { LocalizedText, Recipe } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import { imageOf, readRecipeItems, recipeSoldOut, recipeTotalCents } from '@lezzet/application';
-import type { RecipeItemReading } from '@lezzet/application';
+import type { PlaceWarehouses, RecipeItemReading } from '@lezzet/application';
 import type { PricingViewer } from './read-viewer';
 import type { StorefrontRecipe, StorefrontRecipeDetail, StorefrontRecipeItem } from './storefront-types';
 
