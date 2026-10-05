@@ -7,10 +7,8 @@ import { fromCents } from '@lezzet/helper';
 import type { OrderItem, OrderSale } from '@lezzet/types';
 
 /**
- * Kârlılık kapısı (12.6) — DOMAIN §12. Karar motorun, okuma servisin; birleştiren yer burası.
- *
- * **Hediye siparişler dahildir.** Patron ikramı gelirdir, kârdır, kasaya girer — parayı patron
- * öder; yalnız muhasebe export'una girmez (DOMAIN §9).
+ * Kârlılık kapısı (DOMAIN §12): karar motorun, okuma servisin, birleştiren yer burasıdır. Hediye siparişler dahildir, çünkü patron
+ * ikramı gelirdir ve kasaya girer; yalnız muhasebe export'una girmez (DOMAIN §9).
  */
 
 interface ProfitPeriod {
@@ -68,20 +66,15 @@ export async function productProfits(period: ProfitPeriod): Promise<VariantProfi
     })(),
   }));
 
-  // **FİRE ARTIK NET OLARAK TANIMLI** (06.14): `lossSummary` yalnız imha ve sayım farkını sayıyor;
-  // satış/sevk (maliyeti zaten COGS'ta) ve iade restoku (karşılığı `order_item_batch`ten düşülmüş)
-  // dışarıda. Eskiden kaynak tablo "satış dışı her azalış"tı ve iade de içindeydi — yani aynı iade
-  // hem COGS'u azaltıyor hem kârı artırıyordu.
+  // Fire yalnız imha ve sayım farkıdır: satış ve sevkin maliyeti COGS'ta, iade restokunun karşılığı `order_item_batch`te zaten düşülür;
+  // iade fireye girseydi aynı iade hem COGS'u azaltır hem kârı artırırdı.
   const losses = await new StockMovementService(db).lossSummary(new Date(period.from), new Date(`${period.to}T23:59:59.999Z`));
   return variantProfit(lines, losses);
 }
 
 /**
- * Şirket P&L — katkı paylarının toplamından fire ve genel gider bir kez düşülür.
- *
- * **Genel gider yalnız `expense` hareketleridir.** Stok alımı (`purchase`) buraya GİRMEZ: malın
- * maliyeti satıldığı anda COGS olarak düşülüyor. İkisini de saysaydık aynı parayı iki kez gider
- * yazardık — ve depoda bekleyen mal, daha satılmadan şirketi zarara sokmuş görünürdü.
+ * Şirket P&L: katkı paylarının toplamından fire ve genel gider bir kez düşülür. Genel gider yalnız `expense` hareketleridir, stok alımı
+ * (`purchase`) girmez, çünkü malın maliyeti satıldığı anda COGS olarak düşülür ve aynı para iki kez gider yazılırdı.
  */
 export async function companyPnl(period: ProfitPeriod): Promise<CompanyProfit> {
   const db = serviceDb();
@@ -91,8 +84,7 @@ export async function companyPnl(period: ProfitPeriod): Promise<CompanyProfit> {
     new MoneyMovementService(db).periodTotals(period.from, period.to),
   ]);
 
-  // Toplama CENT'te ve tamsayıda; euro'ya yalnız motorun girdisi için inilir (02.9). Eskiden
-  // `Math.round(overhead * 100) / 100` ile kayan-nokta artığı süpürülüyordu — artık artık yok.
+  // Toplama cent'te ve tamsayıdadır, euro'ya yalnız motorun girdisi için inilir.
   const overheadCents = totals
     .filter((t) => t.type === 'expense')
     .reduce((sum, t) => sum + (t.direction === 'out' ? t.totalCents : -t.totalCents), 0);

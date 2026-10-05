@@ -1,18 +1,13 @@
 import { one, oneOf, type RawParams } from '@/lib/url-params';
 
-// Raporlar ekranının URL SÖZLEŞMESİ. Sekme ve dönem adreste taşınır: "temmuzun şirket kârı"
-// bağlantısı paylaşılabilir olmalı — bir rapor bulgusunu göstermenin tek yolu budur. İmleç adrese
-// YAZILMAZ (CLAUDE.md §1); zaten bu ekranda sayfalanan tek küme fatura kuyruğu.
+// Raporlar ekranının URL sözleşmesi: sekme ve dönem adreste taşınır, çünkü "temmuzun şirket kârı" bağlantısı paylaşılabilir olmalı.
+// İmleç adrese yazılmaz; bu ekranda sayfalanan tek küme fatura kuyruğudur.
 
 export const REPORTS_PATH = '/operations/reports';
 
 /**
- * Dört sekme — tasarımın kendi ayrımı.
- *
- * **`urun` ile `sirket` ayrı sekmeler ve bu bir yerleşim tercihi değil, §6'nın yasağı:** *"iki kâr
- * kavramı tek rakama indirgenerek karıştırılmaz — 'ürün kârı' genel gider içermez, 'şirket kârı'
- * içerir; ikisi aynı tabloda tek sütun olmaz"*. Aynı ekranda yan yana iki sütun olsalardı okuyan
- * kişi ikisini karşılaştırır ve farkı bir hata sanardı.
+ * Dört sekme, tasarımın ayrımı: `urun` ile `sirket` ayrı sekmelerdir, çünkü ürün kârı genel gider içermez, şirket kârı içerir ve yan
+ * yana iki sütun okuyana farkı bir hata gibi gösterirdi.
  */
 export const REPORT_TABS = ['urun', 'sirket', 'kanal', 'export'] as const;
 export type ReportTab = (typeof REPORT_TABS)[number];
@@ -55,11 +50,8 @@ export function reportsUrl(state: ReportsUrlState, now: Date): string {
 }
 
 /**
- * Ayın ilk ve son günü (`YYYY-MM-DD`).
- *
- * Son gün **bir sonraki ayın sıfırıncı günü** olarak bulunuyor: `new Date(y, m, 0)` ayın uzunluğunu
- * takvimden okur. Elle 28/30/31 yazmak şubatta ve artık yılda yanılır — ve o yanılma sessizdir,
- * yalnız o ayın son gününde kesilmiş bir ciro olarak görünür.
+ * Ayın ilk ve son günü (`YYYY-MM-DD`); son gün bir sonraki ayın sıfırıncı günüdür, çünkü elle yazılan 28/30/31 şubatta ve artık yılda
+ * sessizce yanılırdı.
  */
 export function monthRange(ym: string): { from: string; to: string } {
   const [year, month] = ym.split('-').map(Number) as [number, number];
@@ -95,11 +87,8 @@ export function monthLabel(ym: string): string {
 }
 
 /**
- * Seçilebilir aylar — bu aydan geriye doğru bir yıl.
- *
- * İleri gitmek YOK: gelecek ayın raporu boş çıkar ve boş bir rapor, veri olmadığını değil işin
- * kötü gittiğini düşündürür. Geriye bir yıl, "geçen yılın aynı ayı" karşılaştırmasını da
- * kapsayacak en dar penceredir.
+ * Seçilebilir aylar, bu aydan geriye bir yıl: gelecek ayın boş raporu işin kötü gittiğini düşündürür. Geriye bir yıl, "geçen yılın
+ * aynı ayı" karşılaştırmasını kapsayan en dar penceredir.
  */
 export function selectableMonths(now: Date, count = 13): string[] {
   const months: string[] = [];

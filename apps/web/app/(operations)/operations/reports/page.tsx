@@ -10,15 +10,8 @@ import { toChannelCards, toPnlRows, toProductMetrics, toVariantRows } from './re
 import type { ReportsData } from './reports-types';
 import { monthRange, parseReportsUrl, previousMonth, selectableMonths } from './reports-url';
 
-// Raporlar (12.9) — **yönetici VEYA muhasebeci** sayfayı açar, ama **kâr blokları yalnız
-// yöneticinin**.
-//
-// Tasarım §6 net: *"Depo/kurye rollerinin bu sayfaya erişimi yoktur — kâr yalnız admin görür"*.
-// O metin `accounting` rolü doğmadan önce yazıldı (rol 09.2 ile geldi) ve muhasebecinin işi tam
-// olarak bu sayfanın alt yarısı: export ve fatura eşleştirme. İkisini birden yöneticiye kilitlemek
-// muhasebeciyi kendi işinden dışlardı; kârı ona açmak da tasarımın kararını çiğnerdi. Bu yüzden
-// sayfa `requireFinance`, kâr blokları `canSeeProfit` — sipariş detayındaki rol kapılı finansal
-// kartın aynı deseni.
+// Raporlar yönetici ve muhasebeciye açıktır, kâr blokları yalnız yöneticinin: muhasebecinin işi export ve fatura eşleştirmesidir, kâr
+// tasarım gereği yalnız yöneticiye görünür. Bu yüzden sayfa `requireFinance`, kâr blokları `canSeeProfit` kapısındadır.
 
 interface ReportsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -50,17 +43,13 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     canSeeProfit ? companyPnl(period) : null,
     canSeeProfit && urlState.cmp ? companyPnl(monthRange(previousMonth(urlState.ym))) : null,
     buildExport(period),
-    // Hareket dökümünün özeti (12.15): dosyaya girmeden "kaç hareket, kaçı izahsız" görünsün.
+    // Hareket dökümünün özeti: dosyaya girmeden "kaç hareket, kaçı izahsız" görünsün.
     buildMovementExport(period),
     pendingInvoices({ limit: 30 }),
   ]);
 
-  // Satır başlığı ÜRÜN ADI + BOY, yalnız boy DEĞİL — `ui:shot` ile ölçüldü (04.08): boy etiketi
-  // gramajdır ("90g") ve raporda üç ayrı ürünün üç satırı birden "90g" yazıyordu, yani sayılar
-  // doğruyken satırın kimliği kayboluyordu. Bir kârlılık tablosunun tek işi hangi ürünün ne
-  // kazandırdığını söylemek; ürün adı olmadan tablo okunamaz.
-  //
-  // İki okuma da TEK turda: satır başına sorgu atsaydık yüz boyluk bir rapor iki yüz sorgu ederdi.
+  // Satır başlığı ürün adı ve boydur, çünkü boy etiketi gramajdır ("90g") ve üç ayrı ürünün satırı aynı yazılırdı. İki okuma da tek
+  // turdadır, satır başına sorgu yüz boyluk raporda iki yüz sorgu ederdi.
   const variantIds = profits.map((profit) => profit.variantId);
   const variants = variantIds.length > 0 ? await new ProductVariantService(serviceDb()).listByIds(variantIds) : [];
   const productIds = [...new Set(variants.map((variant) => variant.productId))];

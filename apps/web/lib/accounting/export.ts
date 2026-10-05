@@ -4,15 +4,9 @@ import { toCsv } from '@lezzet/helper';
 import type { KeysetCursor, OrderSale, Page } from '@lezzet/types';
 
 /**
- * Muhasebe export kapısı (12.7) — DOMAIN §9. **Sistem resmî muhasebe değildir:** fatura kesmez,
- * numara üretmez; muhasebeciye temiz veri verir.
- *
- * Karar motorun (hangi satış girer, KDV kırılımı), okuma servisin; birleştiren yer burası
- * (STACK §4).
- *
- * **Hedef biçim henüz açık** — muhasebecinin yazılımı (Pennylane/Sage/EBP/Tiime…) netleşince
- * biçimlenir. Bu yüzden dosya iki katmanda üretiliyor: satırlar biçimden bağımsız (`rows`), CSV
- * yalnız onların bir sunumu. Yeni hedef geldiğinde değişen tek şey sütun eşlemesidir.
+ * Muhasebe export kapısı (DOMAIN §9): sistem resmî muhasebe değildir, fatura kesmez ve numara üretmez, muhasebeciye temiz veri verir.
+ * Hedef biçim henüz açık olduğu için satırlar biçimden bağımsızdır (`rows`) ve CSV yalnız onların sunumudur; yeni hedefte değişen tek şey
+ * sütun eşlemesidir.
  */
 
 /** Dosyanın sütunları — sıra ve başlıklar AÇIK yazılır; alan eklenince biçim habersiz kaymasın. */
@@ -41,10 +35,8 @@ interface ExportPeriod {
 }
 
 /**
- * Dönemin export'u: satırlar + özet. Dosya üretilmez, veri döner — çağıran ekranda gösterir ya da
- * indirtir.
- *
- * Kalemler TEK turda çekilir (sipariş başına sorgu N+1 olurdu) ve siparişe göre gruplanır.
+ * Dönemin export'u, satırlar ve özet: dosya üretilmez, veri döner ve çağıran gösterir ya da indirtir. Kalemler tek turda çekilip
+ * siparişe göre gruplanır, sipariş başına sorgu N+1 olurdu.
  */
 export async function buildExport(period: ExportPeriod): Promise<AccountingExport> {
   const db = serviceDb();
@@ -97,11 +89,8 @@ type InvoiceMatchOutcome =
   | { status: 'invalid'; reason: 'empty_invoice_no' };
 
 /**
- * Resmî fatura numarasını siparişe bağlar. Numara BURADA ÜRETİLMEZ — dış muhasebede doğar; sistem
- * yalnız kendi referansıyla eşleştirir (`reference_no ≠ invoice_no`, DATA_MODEL).
- *
- * Boş numara reddedilir: boş dize yazılsaydı satır kuyruktan düşer ama hiçbir faturaya bağlanmaz,
- * eşleşmemiş satış görünmez olurdu.
+ * Resmî fatura numarasını siparişe bağlar; numara burada üretilmez, dış muhasebede doğar (`reference_no ≠ invoice_no`). Boş numara
+ * reddedilir, yazılsaydı satır kuyruktan düşer ama hiçbir faturaya bağlanmazdı.
  */
 export async function matchInvoiceNo(orderId: string, invoiceNo: string): Promise<InvoiceMatchOutcome> {
   const trimmed = invoiceNo.trim();

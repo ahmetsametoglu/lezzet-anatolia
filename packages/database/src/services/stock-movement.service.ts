@@ -26,12 +26,8 @@ import { rpcMoneyToCents } from '../utils/rpc-money';
 import { dbToApp } from '../utils/case-transformers';
 
 /**
- * Dönem süzgeci **`occurred_at`e bakar, `created_at`e değil** (06.14).
- *
- * İkisi de doğru bir zamandır ama soruları farklı: "bu çeyrekte ne çıktı" fiziksel bir sorudur ve
- * cevabı olayın anıdır; `created_at` kaydın yazıldığı andır ve defterin SIRASINI verir. Geriye
- * dönük yazılan bir kayıt `created_at` ile süzülseydi ait olduğu döneme değil, yazıldığı döneme
- * düşerdi (`stock_intake`in `date`/`created_at` ayrımıyla aynı gerekçe, 22.28).
+ * Dönem süzgeci `occurred_at`e bakar, `created_at`e değil: "bu çeyrekte ne çıktı" fiziksel bir sorudur ve cevabı olayın anıdır,
+ * `created_at` ise kaydın yazıldığı anı ve defterin sırasını verir; geriye dönük yazılan kayıt öbürüyle yazıldığı döneme düşerdi.
  */
 function periodFilters(from?: Date, to?: Date) {
   const filters: Array<{ field: string; operator: 'gte' | 'lte'; value: string }> = [];
@@ -63,24 +59,15 @@ export interface MovementTotal {
 }
 
 /**
- * **Stok hareket defteri** (06.14) — miktar değiştiren her olayın tek kaydı.
- *
- * `StockAdjustmentService`in yerini aldı: o servis yalnız "satış dışı" azalışları okuyordu ve
- * ekran onu çıkışların tamamı sanıyordu. Defter tek olunca o ayrım kalktı — satış, kapı satışı,
- * sevk, imha, sayım, iade hepsi burada.
- *
- * **Yazma yolu YOK ve bu bilinçli** (`order_item_batch`in aynı kararı): satırlar yalnız RPC'lerden
- * doğar, çünkü hareket kaydı ile stoğun değişmesi bölünemez bir yazımdır (`STACK §13`). Bu sınıftan
- * geçen tek yazma kapısı `adjust()`/`adjustBatch()`, ikisi de RPC çağırır.
+ * Stok hareket defteri, miktar değiştiren her olayın tek kaydı: satış, kapı satışı, sevk, imha, sayım ve iade hepsi burada. Yazma yolu
+ * yoktur, satırlar yalnız RPC'lerden doğar, çünkü hareket kaydı ile stoğun değişmesi bölünemez bir yazımdır (`adjust`/`adjustBatch`).
  */
 export class StockMovementService extends BaseDbService<StockMovement, StockMovementInsert, StockMovementUpdate> {
   /** Kolon `stock_movement.unit_cost` (euro numeric); app tarafı cent (STACK §8). */
   protected override readonly moneyFields = ['unitCostCents'];
 
   constructor(supabase: SupabaseClient) {
-    // Silme de KAPALI: defter append-only (`reverses_id` — iptal ters kayıtla yapılır, satır silinmez).
-    // Taban silmeyi varsayılan AÇIK bırakır; kapatmayan defter tek bir `delete` ile geçmişini sessizce
-    // kaybeder (10.09). Test artığını purge'ün ham silmesi toplar, bu kapıdan geçmez.
+    // Silme de kapalı: defter yalnız eklenir, iptal ters kayıtla yapılır (`reverses_id`). Test artığını purge'ün ham silmesi toplar.
     super(supabase, 'stock_movement', StockMovementSchema, StockMovementInsertSchema, StockMovementUpdateSchema, false);
   }
 
@@ -100,14 +87,8 @@ export class StockMovementService extends BaseDbService<StockMovement, StockMove
   }
 
   /**
-   * **Çok partili tek olay** (10.5): N satır + PAYLAŞILAN bir belge numarası, hepsi bölünemez.
-   *
-   * `adjust()`'ı N kez çağırmak aynı şey değildir: üçüncü satır düştüğünde elde yarım bir tutanak
-   * kalır ve kâğıtla eşleşmez. Öneki motor seçer (`documentPrefixFor`), numarayı DB üretir.
-   *
-   * **Yön SATIR başınadır** (06.14): tek sayım tutanağında hem fazla hem eksik satır olabilir ve
-   * tasarım bunu açıkça istiyor — *"o belge iki sekmede de görünür ve ekran bunu belgenin iki yüzü
-   * olarak anlatmalıdır."* Tip ise olaya aittir: bir sayım tutanağı bir sayımdır.
+   * Çok partili tek olay: N satır ve paylaşılan belge numarası bölünmeden yazılır, `adjust()`'ı N kez çağırmak bir satır düşünce yarım
+   * tutanak bırakırdı. Yön satır başınadır, çünkü tek sayım tutanağında hem fazla hem eksik satır olabilir; tip olaya aittir.
    */
   async adjustBatch(input: {
     lines: ReadonlyArray<{ stockId: string; qty: number; direction: StockDirection }>;
@@ -141,12 +122,8 @@ export class StockMovementService extends BaseDbService<StockMovement, StockMove
   }
 
   /**
-   * Birden çok partinin hareketleri TEK turda (22.30) — ürün geçmişi paneli parti başına soruyor,
-   * satır başına sorgu N+1 olurdu (`stock_movement_stock_idx`).
-   *
-   * **Bu okuma defter kurulunca ÇOK daha fazlasını veriyor:** eskiden yalnız düzeltmeler dönerdi ve
-   * satışlar `order_item_batch`ten ayrıca kurulurdu (altı servis, ~530 satır telafi kodu). Artık
-   * partinin bütün geçmişi tek sorguda.
+   * Birden çok partinin hareketleri tek turda: ürün geçmişi paneli parti başına sorar ve satır başına sorgu N+1 olurdu
+   * (`stock_movement_stock_idx`).
    */
   async listByStocks(stockIds: readonly string[]): Promise<StockMovement[]> {
     if (stockIds.length === 0) return [];
@@ -154,10 +131,8 @@ export class StockMovementService extends BaseDbService<StockMovement, StockMove
   }
 
   /**
-   * **Transferlerin hareketleri** (04.09, 21.248) — `transfer_id` taşıyan satırlar, isteğe bağlı tipe
-   * daraltılmış. Kapanmış sevkiyat listesi eksik beyanının IMH belgesini buradan okur: `write_off`
-   * hareketi transfere bağlı ve `reference_no` belgenin kendisi. Transfer kaydına ikinci bir kolon
-   * açılmadı — belge zaten defterde, iki yerde tutulan numara bir gün ayrışırdı.
+   * Transferlerin hareketleri, `transfer_id` taşıyan satırlar; kapanmış sevkiyat listesi eksik beyanının imha belgesini buradan okur.
+   * Transfer kaydına ikinci bir kolon açılmadı, çünkü belge zaten defterde ve iki yerde tutulan numara bir gün ayrışırdı.
    */
   async listByTransferIds(
     transferIds: readonly string[],
@@ -170,21 +145,8 @@ export class StockMovementService extends BaseDbService<StockMovement, StockMove
   }
 
   /**
-   * **Varyantın ÇIKIŞLARI** — hangi partiden, ne zaman, ne kadar mal gitti (22.30 · 06.14).
-   *
-   * ── BU OKUMA ESKİDEN BİR TAHMİNDİ ───────────────────────────────────────────
-   * Kaynağı `order_item_batch`ti (`exitsByVariant`) ve iki yapısal kusuru vardı:
-   *   · **Anı yanlıştı:** o tablonun zaman damgası yok, çıkış anı olarak `order.created_at`
-   *     kullanılıyordu — yani SİPARİŞİN verildiği gün. Sipariş bir gün önce verilip ertesi hafta
-   *     teslim edilirse satış hızı, parti ömrü ve "ilk/son satış" bir hafta kayıyordu.
-   *   · **Sevk hiç görünmüyordu:** başka depoya giden mal da partiden çıkar ama o kayıt başka
-   *     tablodaydı; hız hesabı onu hiç saymıyordu.
-   *
-   * Defterde ikisi de kendiliğinden düzeliyor: satır mal fiilen çıkınca doğuyor ve kendi anını
-   * taşıyor. `kind` da geliyor — çağıran "satış hızı" ile "depodan çıkış"ı ayırmak isterse ayırır.
-   *
-   * **TARİH SÜZGECİ YOK ve bu bilinçli** (22.31): *"bu ürün hiç satıldı mı"* sorusu 90 günle
-   * sınırlanamaz — pencere okumanın değil hesabın işi.
+   * Varyantın çıkışları, hangi partiden ne zaman ne kadar mal gittiği: satır mal fiilen çıkınca doğar ve kendi anını taşır, `kind` satışı
+   * sevkten ayırır. Tarih süzgeci yoktur, çünkü "bu ürün hiç satıldı mı" sorusu bir pencereyle sınırlanamaz; pencere hesabın işidir.
    */
   async exitsByVariant(
     variantId: string,
@@ -206,13 +168,8 @@ export class StockMovementService extends BaseDbService<StockMovement, StockMove
   }
 
   /**
-   * Defter SAYFASI — hareket + hangi partinin, hangi ürünün (09.13).
-   *
-   * Defter zamanla **sınırsız** büyür (CLAUDE.md: veriyle büyüyen küme) → keyset sayfalama.
-   * Ürün/parti adları görünümün içinde geldiği için satır başına ürün sorgusu (N+1) yok.
-   *
-   * `direction` süzgeci sekmeyi belirler: Çıkışlar `'out'`, Mal kabul `'in'`. Verilmezse ikisi de —
-   * bir partinin tam geçmişi bu hâliyle okunur.
+   * Defter sayfası, hareket ile partisi ve ürünü: defter sınırsız büyüdüğü için keyset sayfalıdır ve adlar görünümden gelir. `direction`
+   * sekmeyi seçer (çıkışlar `out`, mal kabul `in`); verilmezse ikisi birden, bir partinin tam geçmişi böyle okunur.
    */
   listRecent(
     opts: {
@@ -229,25 +186,8 @@ export class StockMovementService extends BaseDbService<StockMovement, StockMove
   }
 
   /**
-   * Dönemin TİP ve SEBEP dağılımı + toplamı — "bu çeyrek ne çıktı, hangi türden".
-   *
-   * Sayfalı liste bu soruyu yanıtlayamaz: ilk 30 satır dönemin toplamı değildir. Toplam ancak
-   * dönemin TAMAMI üzerinden çıkar, o yüzden ayrı ve DAR bir okuma — dört kolon, satırın kalanı
-   * taşınmaz.
-   *
-   * ── TOPLAM ARTIK YÖNLÜ VE POZİTİF (06.14) ───────────────────────────────────
-   * Eski `reasonSummary` işaretli `qty`leri topluyordu ve sonuç şuydu: "Çıkışlar" sekmesi dönem
-   * toplamını **−13,49 €** diye yazıyordu, çünkü iade restoku ve sayım fazlası birer GİRİŞ olduğu
-   * hâlde aynı toplamda eriyordu. Artık çağıran yönü seçer, toplam o yönün içindedir ve hep
-   * pozitiftir. Net isteyen iki çağrı yapar — ama bunu BİLEREK yapar.
-   *
-   * `byReason` yalnız `write_off` satırlarını kırar (imha · hasar · kayıp): ekranın "Neden
-   * dağılımı" şeridi budur. Tip kırılımı `byKind`'da.
-   *
-   * RPC YAZILMADI: tek tablo üzerinde toplama, STACK §13'ün "çok tablolu + farkı bariz" eşiğini
-   * karşılamıyor. Dönem seçicisi de yükü sınırlıyor. "Tümü" seçildiğinde okuma geçmişle büyür —
-   * ölçülüp gerekirse RPC'ye ya da günlük özete alınır; bugün ölçüsüz bir migration yazmak erken
-   * karar olurdu.
+   * Dönemin tip ve sebep dağılımı ile toplamı: sayfalı liste dönemin toplamını veremez, o yüzden ayrı ve dar bir okumadır. Toplam
+   * çağıranın seçtiği yönün içindedir ve hep pozitiftir; `byReason` yalnız `write_off` satırlarını kırar.
    */
   async summary(
     opts: { from?: Date; to?: Date; warehouseIds?: readonly string[]; direction?: StockDirection } = {},
@@ -300,21 +240,8 @@ export class StockMovementService extends BaseDbService<StockMovement, StockMove
   }
 
   /**
-   * Dönemsel FİRE toplamı — VARYANT bazında adet ve maliyet. Kayıp raporunun (DOMAIN §12) girdisi.
-   *
-   * ── HANGİ HAREKETLER SAYILIR (06.14'te netleşti) ────────────────────────────
-   * Eskiden bu okuma `stock_adjustment`ın TAMAMINI işaretli topluyordu ve içinde iade restoku da
-   * vardı; künyesi bunu *"rapor net kaybı gösterir"* diye savunuyordu. Defterle birlikte soru
-   * berraklaştı ve iki hareket dışarıda kaldı:
-   *
-   *   · **`return_restock` SAYILMAZ** — karşılığı `order_item_batch`ten zaten düşülmüş (`0020`
-   *     künyesi: *"bizden çıkıp GERİ GELMEYEN mal"*). İkinci kez saymak aynı iadeyi iki kez
-   *     saymaktı ve `domain-core/stock/history` bunu bir üretim arızası olarak kaydetmiş.
-   *   · **`sale`/`counter_sale`/`transfer_*` SAYILMAZ** — satılan mal kayıp değildir; kârda zaten
-   *     COGS olarak duruyor, buraya da girseydi aynı maliyet iki kez düşülürdü.
-   *
-   * Kalan: `write_off` (gerçek fire) + `count_diff` (fiziksel sapma, iki yönlü). Sayım fazlası
-   * (`in`) toplamı DÜŞÜRÜR: rafta beklenenden çok çıkan mal bir kayıp değil, kaybın telafisidir.
+   * Dönemsel fire, varyant bazında adet ve maliyet (DOMAIN §12): yalnız `write_off` ve `count_diff` sayılır, iade restokunun karşılığı
+   * `order_item_batch`ten, satış ve sevkin maliyeti COGS'tan zaten düşülür. Sayım fazlası (`in`) toplamı düşürür, kaybın telafisidir.
    */
   async lossSummary(from: Date, to: Date): Promise<Array<{ variantId: string; qty: number; costCents: number }>> {
     const { data, error } = await this.supabase
@@ -348,17 +275,9 @@ export class StockMovementService extends BaseDbService<StockMovement, StockMove
 }
 
 /**
- * `stock_movement_detail` görünümü (06.14 · 09.18 devamı) — defterin ARANABİLİR okuması.
- *
- * Ayrı servis, çünkü görünüm yazılmaz (`never, never`).
- *
- * **Neden görünüm** (operasyon talebi §2): arama terimi lot numarasına VEYA ürün adına bakıyor;
- * ikisi iki ayrı gömülü kaynakta. PostgREST'in `or=` grubu yalnız üst tablonun kolonlarına bakar,
- * yani bu koşul sorgu kurucusuyla ifade edilemiyor (`STACK §13` istisnası). Görünümün içinde
- * kurulan tek bir `search_text` kolonu sorunu düz bir süzgece indiriyor ve keyset sayfalama bozulmuyor.
- *
- * **Ekranın gördüğü şekil DEĞİŞMİYOR:** görünüm düz kolon döndürür, burada iç içe
- * `StockMovementDetail`'e eşlenir.
+ * `stock_movement_detail` görünümü, defterin aranabilir okuması: arama lot numarasına ya da ürün adına bakar ve PostgREST'in `or=` grubu
+ * gömülü kaynağa bakamadığı için görünüm tek bir `search_text` kolonu kurar. Görünüm düz kolon döndürür, burada `StockMovementDetail`e
+ * eşlenir.
  */
 export class StockMovementDetailService extends BaseDbService<StockMovementDetailRow, never, never> {
   /**
@@ -380,16 +299,8 @@ export class StockMovementDetailService extends BaseDbService<StockMovementDetai
   }
 
   /**
-   * **`warehouseIds` SUNUCUDA süzülür** (10.5 · operasyon talebi 08.08). Ekran geçici olarak bellekte
-   * süzüyordu: sayfa okunuyor, satırların partileri ayrıca çekiliyor, yalnız o deponunkiler
-   * kalıyordu. Çalışıyordu ama bedeli vardı — sayfa keyset'li, yani "30 satırın içindeki bu depo"
-   * demek oluyordu ve sonraki sayfalar sessizce eksik geliyordu (`onlyShippable` ile aynı sınıf).
-   *
-   * **DİZİ, tekil değil** — sözleşme deponun her yerdeki sözleşmesiyle aynı (`StockService`,
-   * `WarehouseService`): verilmezse süzgeç yok (depo-üstü okuma), verilirse yalnız o depolar.
-   *
-   * **Boş dizi "hepsi" DEĞİL "hiçbiri"** (`stock.service.ts:127` ile aynı): kapsamı boş bir
-   * personele bütün depoların hareketlerini göstermek, süzgecin var oluş sebebini tersine çevirirdi.
+   * `warehouseIds` sunucuda süzülür, çünkü keyset'li sayfada bellekte süzmek sonraki sayfaları sessizce eksik getirirdi. Verilmezse süzgeç
+   * yoktur, boş dizi "hiçbiri" demektir: kapsamı boş personele bütün depoları göstermek süzgecin var oluş sebebini tersine çevirirdi.
    */
   async listPage(
     opts: {
