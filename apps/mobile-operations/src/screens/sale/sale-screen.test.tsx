@@ -374,7 +374,7 @@ const SATISLAR = [
   },
 ];
 
-/** Kapsamı tek tesis olan personel — künyenin tesis adını yazdığı hâl (v3:21). */
+/** Kapsamı tek tesis olan personel; künyenin tesis adını yazdığı hâl. */
 const STR: StaffWarehouse = { id: 'w-str', code: 'STR', name: 'Strasbourg Merkez', kind: 'facility' };
 
 /**
@@ -407,7 +407,7 @@ it('SON SATIŞLAR kim sattıysa onu söylüyor — iz yoksa uydurmuyor', async (
   await waitFor(() => expect(screen.getByTestId(`sale-history-${SATISLAR[0]!.orderId}`)).toBeTruthy());
 
   expect(screen.getByText('LA-26-TEST01')).toBeTruthy();
-  // Ad künyenin YANINDA, önekiz (v3:21): aranan şey adın kendisidir.
+  // Ad künyenin yanında, öneksiz: aranan şey adın kendisidir.
   expect(screen.getByText('Marc Lemoine')).toBeTruthy();
   // Aktörsüz kayıt "bilinmiyor" der — boş bırakmaz, ad da uydurmaz.
   expect(screen.getByText('satan bilinmiyor')).toBeTruthy();
@@ -633,8 +633,7 @@ describe('araçtan satış (01.09 · kullanıcı kararı)', () => {
   });
 
   it('BOŞ ARAÇ bir arama sonucu değil, bir durumdur — çıkışını da gösterir', async () => {
-    /* "Eşleşen ürün yok — adın bir kısmını yazmayı deneyin" cümlesi burada kuryeyi olmayan bir
-       ürünü aramaya gönderirdi. Doğru cümle malın nereden geleceğini söyler (v3:19). */
+    /* "Eşleşen ürün yok" cümlesi kuryeyi olmayan bir ürünü aramaya gönderirdi; doğru cümle malın nereden geleceğini söyler. */
     fetchMock.mockImplementation(() => Promise.resolve(ok({ products: [], total: 0, nextCursor: null })));
     await render(
       <SaleProvider place="van">
