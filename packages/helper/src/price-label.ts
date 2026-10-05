@@ -21,3 +21,8 @@ export function fromPriceLabel(priceCents: number | null, locale: Locale): strin
   const t: Messages = messages[locale];
   return t.from.replace('{price}', formatPrice(priceCents, locale));
 }
+
+/** Tutar özetinin indirim satırı ("İndirim — Bayram Sofrası"): bütün özetler aynı ayraçla yazar ki aynı indirim iki ekranda iki biçimde görünmesin. */
+export function discountRowLabel(prefix: string, name: string | null): string {
+  return name ? `${prefix} — ${name}` : prefix;
+}

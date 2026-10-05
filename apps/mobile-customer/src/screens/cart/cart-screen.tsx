@@ -1,5 +1,5 @@
 import { checkoutButtonCents } from '@lezzet/domain-core';
-import { formatPrice, placeChangeText } from '@lezzet/helper';
+import { discountRowLabel, formatPrice, placeChangeText } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { MeCartViewLine } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -165,7 +165,7 @@ export function CartScreen() {
     if (summary === null) return null;
     return {
       key: 'discount',
-      label: summary.name === null ? t.summary.discount : `${t.summary.discount} · ${summary.name}`,
+      label: discountRowLabel(t.summary.discount, summary.name),
       // İndirim EKSİ yazılır: özetteki tek çıkarma satırı odur ve işaretsiz yazılırsa
       // toplamla aritmetiği tutmuyormuş gibi okunur.
       value: `−${formatPrice(summary.amountCents, locale)}`,

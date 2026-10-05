@@ -1,5 +1,5 @@
 import { isCourierOnTheWay } from '@lezzet/domain-core';
-import { formatPrice } from '@lezzet/helper';
+import { discountRowLabel, formatPrice } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -151,15 +151,15 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
           .filter((part) => Boolean(part) && part !== '')
           .join(', ');
 
-  /* Özet satırları: önce PARA (toplamı açıklayan üçlü), sonra LOJİSTİK (v3'ün kendi üç satırı),
-     en sonda kargo künyesi. İndirim yoksa satırı hiç çizilmez — "0,00 €" bir indirim değildir. */
+  /* Para satırları toplamı açıkladığı için önce gelir, lojistik ve kargo künyesi ardından; sıfır indirim indirim olmadığı için
+     çizilmez. */
   const summaryRows: SummaryRow[] = [
     { key: 'subtotal', label: t.detail.subtotal, value: formatPrice(detail.subtotalCents, locale) },
     ...(detail.discountCents > 0
       ? [
           {
             key: 'discount',
-            label: detail.discountLabel ? `${t.detail.discount} — ${detail.discountLabel}` : t.detail.discount,
+            label: discountRowLabel(t.detail.discount, detail.discountLabel || null),
             value: `−${formatPrice(detail.discountCents, locale)}`,
             tone: 'olive' as const,
           },

@@ -247,9 +247,6 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                     selected
                     trailing={<TextAction label={copy.address.change} href="/cart" />}
                   />
-                  <p className="font-sans text-micro leading-[1.45] text-muted">
-                    {copy.address.pickupNote.replace('{phone}', brand.contact.phoneDisplay)}
-                  </p>
                   {selectedAddress && (
                     <p className="font-sans text-micro leading-[1.45] text-muted">
                       {copy.address.billing.replace('{address}', `${addressTitle(selectedAddress)} · ${addressLine(selectedAddress)}`)}
