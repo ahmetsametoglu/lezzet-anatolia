@@ -58,7 +58,7 @@ describe('analytics_rollup', () => {
     const sonuc = await analyticsRollupJob();
     expect(sonuc.summaryRows).toBeTypeOf('number');
 
-    // 1) Gün özeti — terk sebebi BOYUT olarak geldi (13.3).
+    // 1) Gün özeti: terk sebebi bir boyuttur.
     const bloklar = await daily.list({ from: day, to: day, types: ['checkout_blocked'] });
     expect(bloklar.some((r) => r.blockedReason === 'min_basket')).toBe(true);
 

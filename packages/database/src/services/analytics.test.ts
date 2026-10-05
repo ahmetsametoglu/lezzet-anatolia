@@ -163,10 +163,8 @@ describe('günlük özet', () => {
 });
 
 /**
- * Sinyal özetleri (13.2 · 13.4) — `analytics_daily`'nin taşıyamadığı üç kırılım.
- *
- * Hepsi aynı günü paylaşıyor ve o güne başka ajanlar da yazıyor; bu yüzden her sınama KENDİ damgalı
- * kovasına bakıyor (`CLAUDE §4b`: küresel sayıya bakan test yazma).
+ * Sinyal özetleri, `analytics_daily`'nin taşıyamadığı üç kırılım. Gün paylaşıldığı ve o güne başka koşular da yazdığı için her sınama kendi
+ * damgalı kovasına bakar (`CLAUDE §4b`).
  */
 describe('sinyal özetleri', () => {
   it('ürün kırılımı: satılabilir görüntüleme AYRI sayılır ve oran ondan çıkar', async () => {
@@ -216,7 +214,7 @@ describe('sinyal özetleri', () => {
     await daily.buildAll(day);
 
     const [signal] = await products.signals(day, day, 200).then((rows) => rows.filter((r) => r.productId === gercekUrunId));
-    // Düzeltmeden önce bu sayı 0'dı ve hiçbir test bunu görmüyordu.
+    // Özet varyantı ürüne çözmeseydi bu sayı 0 olurdu.
     expect(signal?.cartCount).toBe(1);
   });
 
@@ -270,10 +268,8 @@ describe('sinyal özetleri', () => {
 });
 
 /**
- * Defter DIŞI okumalar (13.2 · 13.5) — kaynağı sipariş ve müşteri tablosu.
- *
- * **Sayılara değil DAVRANIŞA bakılıyor:** paylaşılan veritabanında sipariş sayısı her koşuda başka
- * bir şey; sınanan şey sözleşmenin tutması (satır şekli, segment kümesi, sayı-liste tutarlılığı).
+ * Defter dışı okumalar, kaynağı sipariş ve müşteri tablosu. Sayılara değil davranışa bakılır, çünkü paylaşılan veritabanında sipariş sayısı
+ * her koşuda başkadır: satır şekli, segment kümesi, sayı ile listenin tutarlılığı.
  */
 describe('rapor okumaları', () => {
   const bugun = parisDateOf(new Date());
