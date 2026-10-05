@@ -107,7 +107,8 @@ places.get('/places/suggest', async (c) => {
  * addır ve çevrilmez.
  */
 places.get('/places/zones', async (c) => {
-  const areas = await listPublicDeliveryAreas(serviceDb());
+  const db = serviceDb();
+  const areas = await listPublicDeliveryAreas(db, customerBusinessOf(await optionalCustomerProfile(db, c.req.header('authorization'))));
   // Boş dizi geçerli bir cevaptır; okuma düşerse servis fırlatır ve zarf hata döner.
   return ok(c, DeliveryAreaListSchema.parse(areas));
 });

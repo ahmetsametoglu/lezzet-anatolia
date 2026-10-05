@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useTransition } from 'react';
 import type { ReactNode } from 'react';
-import type { Address, CheckoutPickup, Country } from '@lezzet/types';
+import type { Address, Business, CheckoutPickup, Country } from '@lezzet/types';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
 import { saveMyAddressAction, selectMyAddressAction, selectMyPickupAction, type SaveAddressInput } from '@/lib/address/actions';
@@ -54,6 +54,8 @@ interface PlaceContextValue {
    * belirirdi. Küme operatörün kurduğu ve veriyle büyümeyen bir listedir, bir kez okunur.
    */
   zones: DeliveryZoneSummary[];
+  /** Görüntüleyenin işi; rozet ve teslim satırı yalnız bu işin bölgesini ve kargosunu söyler. */
+  business: Business;
   /**
    * Masaüstü başlığının yer paneli açık mı: hap başlığın içinde, panel başlık satırının altında çizilir ve ikisi aynı durumu okur.
    */
@@ -79,9 +81,19 @@ interface PlaceProviderProps {
   /** Adres karşılanamıyorsa sebebi (`readPlaceSnapshot`) — sepet onu söyler. */
   initialUnresolved: PlaceUnresolved | null;
   initialPickup: CheckoutPickup | null;
+  /** Görüntüleyenin işi (`readPlaceSnapshot`); oturum boyunca değişmez. */
+  business: Business;
 }
 
-export function PlaceProvider({ children, zones, initialPlace, initialAddress, initialUnresolved, initialPickup }: PlaceProviderProps) {
+export function PlaceProvider({
+  children,
+  zones,
+  initialPlace,
+  initialAddress,
+  initialUnresolved,
+  initialPickup,
+  business,
+}: PlaceProviderProps) {
   const router = useRouter();
   const [place, setPlace] = useState<DeliveryPlace | null>(initialPlace);
   const [address, setAddress] = useState<PlaceAddress | null>(initialAddress);
@@ -219,8 +231,24 @@ export function PlaceProvider({ children, zones, initialPlace, initialAddress, i
       selectPickup,
       saveAddress,
       zones,
+      business,
     }),
-    [place, address, unresolved, ready, updating, panelOpen, refresh, setPostalCode, selectAddress, pickup, selectPickup, saveAddress, zones],
+    [
+      place,
+      address,
+      unresolved,
+      ready,
+      updating,
+      panelOpen,
+      refresh,
+      setPostalCode,
+      selectAddress,
+      pickup,
+      selectPickup,
+      saveAddress,
+      zones,
+      business,
+    ],
   );
 
   return <PlaceContext.Provider value={value}>{children}</PlaceContext.Provider>;

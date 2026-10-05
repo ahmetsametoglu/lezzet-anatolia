@@ -45,7 +45,9 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
   sefer ayrı kuryelerin olduğu için aynı anda yoldadır (`another_running` kurye başınadır). Aynı araç kaydı iki kuryenin açık
   seferinde olamaz (`vehicle_taken`): araç QUALITE için farklı plaka koduyla ikinci kez kaydedilir (plaka tekildir) ya da QUALITE
   hesabı "araçsız devam" der. Soğuk zincir izi araç kaydına bağlı olduğu için aynı aracın izi iki kayda bölünür. Ortak bölge
-  seçilmedi, çünkü araçlar ayrılınca bozulurdu: bölge ve gün başına tek sefer var, seferde tek kurye ve tek araç.
+  seçilmedi, çünkü araçlar ayrılınca bozulurdu: bölge ve gün başına tek sefer var, seferde tek kurye ve tek araç. Müşteriye
+  gösterilen bölge listesi ve teslim şekli de görüntüleyenin işinindir: QUALITE müşterisine kargo, Lezzet ziyaretçisine QUALITE'nin
+  bölgesi gösterilmez.
 - **Kapı ve araç satışının işi deposundan gelir;** anonim alıcı işe göre bölünmez.
 - **Raporlar iki işi ayrı okur:** kâr sekmelerinin başlığında Tümü · Lezzet · QUALITE anahtarı var; muhasebe dosyası ve hareket
   dökümü şirketin tamamıdır, her satır işini taşır (`DOMAIN.md` §9, §12).

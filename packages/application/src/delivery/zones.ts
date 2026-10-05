@@ -1,13 +1,18 @@
-import { DeliveryZoneService, PostalCodePlaceService, type Db } from '@lezzet/database';
-import { CountryEnum, type Country, type DeliveryAreaList } from '@lezzet/types';
+import { DeliveryZoneService, PostalCodePlaceService, WarehouseService, type Db } from '@lezzet/database';
+import { zonesOfBusiness } from '@lezzet/domain-core';
+import { CountryEnum, type Business, type Country, type DeliveryAreaList } from '@lezzet/types';
 
 /**
  * Aracın uğradığı posta kodları, bölge dışı müşterinin "siz nereye gidiyorsunuz?" sorusunun cevabı: bölge adı değil kod gösterilir,
- * çünkü müşterinin elindeki tek ölçü kendi kodudur. Liste ülke ve yer adı öbeğinde, belirlenimci sırada ve tek turda kurulur; yalnız aktif
- * bölgeler girer, adı bilinmeyen kod `name: null` öbeğinde kalır.
+ * çünkü müşterinin elindeki tek ölçü kendi kodudur. Liste görüntüleyenin işinin aktif bölgelerinden, ülke ve yer adı öbeğinde, belirlenimci
+ * sırada ve tek turda kurulur; adı bilinmeyen kod `name: null` öbeğinde kalır.
  */
-export async function listPublicDeliveryAreas(db: Db): Promise<DeliveryAreaList> {
-  const zones = await new DeliveryZoneService(db).listWithCodes({ activeOnly: true });
+export async function listPublicDeliveryAreas(db: Db, business: Business): Promise<DeliveryAreaList> {
+  const [allZones, warehouses] = await Promise.all([
+    new DeliveryZoneService(db).listWithCodes({ activeOnly: true }),
+    new WarehouseService(db).list(),
+  ]);
+  const zones = zonesOfBusiness(allZones, warehouses, business);
 
   const codeKey = (country: Country, postalCode: string) => `${country}:${postalCode}`;
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { deliveryChannelOf } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
 import { Badge } from '@/components/customer/ui/badge';
 import { Icon } from '@/components/customer/ui/icons';
@@ -7,8 +8,8 @@ import { useDeliveryPlace } from './place-context';
 import messages from './place-messages.json';
 
 /**
- * Teslim şekli rozeti, bir posta kodunun bize göre cevabı: kapıya teslim (kamyon, zeytin) ya da kargo (koli, nötr). Yer panelinin adres
- * kartında ve adres penceresinin öneri satırında durur; karar sayfa açılırken okunan bölge listesinden çıkar, sunucuya sorulmaz.
+ * Teslim şekli rozeti, bir posta kodunun görüntüleyenin işine göre cevabı: kendi işinin bölgesindeyse kapıya teslim (kamyon, zeytin),
+ * değilse kargo (koli, nötr). Karar sayfa açılırken okunan bölge listesinden çıkar (`deliveryChannelOf`), sunucuya sorulmaz.
  */
 interface ChannelBadgeProps {
   postalCode: string;
@@ -17,8 +18,11 @@ interface ChannelBadgeProps {
 
 export function ChannelBadge({ postalCode, locale }: ChannelBadgeProps) {
   const t = messages[locale];
-  const { zones } = useDeliveryPlace();
-  const door = zones.some((zone) => zone.postalCodes.includes(postalCode));
+  const { zones, business } = useDeliveryPlace();
+  const channel = deliveryChannelOf(postalCode, zones, business);
+  // Teslim edilemeyeceğini sepet ve ödeme söyler; rozet olmayan bir teslim şeklini vaat etmez.
+  if (!channel) return null;
+  const door = channel === 'door';
   return (
     <Badge tone={door ? 'positive' : 'closed'} variant="outline">
       <span className="inline-flex items-center gap-1.5">

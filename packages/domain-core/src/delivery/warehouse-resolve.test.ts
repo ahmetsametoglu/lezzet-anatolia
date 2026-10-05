@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   activeCountries,
+  deliveryChannelOf,
   resolvePlaceByPostalCode,
   resolveWarehouseForPostalCode,
   type PostalCodeMatch,
@@ -23,6 +24,23 @@ const zone = (over: Partial<ZoneWithWarehouse> = {}): ZoneWithWarehouse => ({
   isActive: true,
   postalCodes: [{ country: 'FR', postalCode: '67000' }],
   ...over,
+});
+
+describe('teslim şekli görüntüleyenin işine göre', () => {
+  const zones = [
+    { business: 'lezzet' as const, postalCodes: ['67000'] },
+    { business: 'qualite' as const, postalCodes: ['67000', '68100'] },
+  ];
+
+  it('kendi işinin bölgesindeki kod kapıya teslimdir', () => {
+    expect(deliveryChannelOf('67000', zones, 'lezzet')).toBe('door');
+    expect(deliveryChannelOf('68100', zones, 'qualite')).toBe('door');
+  });
+
+  it("başka işin bölgesi kapı vaat etmez: Lezzet'e kargo, kargo göndermeyen QUALITE'ye şekil yok", () => {
+    expect(deliveryChannelOf('68100', zones, 'lezzet')).toBe('ship');
+    expect(deliveryChannelOf('75001', zones, 'qualite')).toBeNull();
+  });
 });
 
 describe('posta kodu → bölge → depo', () => {

@@ -105,6 +105,7 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
               initialAddress={placeSnapshot.address}
               initialUnresolved={placeSnapshot.unresolved}
               initialPickup={placeSnapshot.pickup}
+              business={placeSnapshot.business}
             >
               <CartProvider locale={locale}>{children}</CartProvider>
             </PlaceProvider>

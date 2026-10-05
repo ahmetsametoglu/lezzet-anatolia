@@ -27,7 +27,8 @@ Lezzet'in deposuna, bölgesine ya da kargosuna düşürür.
 Kayıtlar girdikten sonra, aynı posta kodlu bir QUALITE ve bir Lezzet müşterisiyle:
 
 1. İki müşteri de sipariş verir; QUALITE siparişi QUALITE deposuna, Lezzet siparişi Lezzet deposuna düşer.
-2. QUALITE müşterisi QUALITE bölgesi dışındaki bir posta koduyla "teslimat noktası belirlenemedi" görür, Lezzet kargosuna düşmez.
+2. QUALITE müşterisi QUALITE bölgesi dışındaki bir adresle sepette "buraya şu an gönderemiyoruz", ödemede "teslimat noktası
+   belirlenemedi" görür; adres kartında kargo rozeti yoktur ve sipariş Lezzet kargosuna düşmez.
 3. QUALITE deposunda mobil yerinde satış açılmaz ("Bu depoda yerinde satış yapılmaz").
 4. QUALITE tedarik siparişi yalnız QUALITE deposuna kabul edilir ve Lezzet deposunun bekleyen kabul listesinde görünmez.
 5. Adres vermeyen bir ziyaretçi, yalnız QUALITE deposunda duran ürünü "tükendi" görür.

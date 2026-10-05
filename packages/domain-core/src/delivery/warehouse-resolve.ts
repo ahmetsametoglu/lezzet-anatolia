@@ -49,6 +49,24 @@ export function zonesOfBusiness<T extends { warehouseId: string }>(
 /** Kargo gönderen işler: QUALITE kargo göndermez (karar 10), veritabanı da QUALITE deposunu kargo deposu yapmaz. */
 const BUSINESS_SHIPS: Readonly<Record<Business, boolean>> = { lezzet: true, qualite: false };
 
+/** İş kargo gönderir mi; göndermeyen işin bölgesi dışındaki koda "kargoyla gelir" denmez. */
+export function businessShips(business: Business): boolean {
+  return BUSINESS_SHIPS[business];
+}
+
+/**
+ * Posta kodunun görüntüleyenin işine göre teslim şekli: işin bölgesindeyse kapıya, değilse kargo gönderen işte kargo. Kargo göndermeyen
+ * işin bölgesi dışında şekil yoktur (`null`); başka işin bölgesi kapıya teslim vaat etmez.
+ */
+export function deliveryChannelOf(
+  postalCode: string,
+  zones: readonly { business: Business; postalCodes: readonly string[] }[],
+  business: Business,
+): 'door' | 'ship' | null {
+  if (zones.some((zone) => zone.business === business && zone.postalCodes.includes(postalCode))) return 'door';
+  return businessShips(business) ? 'ship' : null;
+}
+
 /** Müşterinin işi; anonim ziyaretçi Lezzet'tir, çünkü QUALITE yalnız onaylı şirkete admin tarafından verilir. */
 export function customerBusinessOf(customer: { business: Business } | null | undefined): Business {
   return customer?.business ?? 'lezzet';
@@ -73,7 +91,7 @@ export function resolveWarehouseForPostalCode(
   }
 
   const shipping = findShippingWarehouse(place.country, warehouses, business);
-  if (!shipping) return { kind: 'unresolved', reason: BUSINESS_SHIPS[business] ? 'no_shipping_warehouse' : 'outside_zones' };
+  if (!shipping) return { kind: 'unresolved', reason: businessShips(business) ? 'no_shipping_warehouse' : 'outside_zones' };
   return { kind: 'shipping', warehouseId: shipping.id };
 }
 

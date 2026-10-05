@@ -140,7 +140,10 @@ export async function readIntakeTab(rows: ProgressRow[]): Promise<IntakeTabData>
   const supplierOf = new Map(suppliers.map((supplier) => [supplier.id, supplier.name]));
   const now = Date.now();
 
+  // Çalışılan depo seçiliyse liste o deponun işinin siparişleridir: öteki işin siparişi bu depoya kabul edilemez.
+  const workBusiness = workplace.status === 'ok' ? ctx.facilities.find((w) => w.id === workplace.warehouseId)?.business : undefined;
   const pending: PendingPurchase[] = orders.flatMap((order) => {
+    if (workBusiness && order.business !== workBusiness) return [];
     const lines = byOrder.get(order.id);
     // Bekleyen kalemi kalmamış sipariş listede DURMAZ: durumu henüz `received`e dönmemiş olabilir
     // ama kabul edilecek bir şeyi yoktur ve kartı boş bir iş gibi görünürdü.
