@@ -10,25 +10,9 @@ import { writePlaceAnswer } from '@/lib/delivery/place-store';
 import type { DeliveryPlace, DeliveryZoneSummary, PlaceAddress, PlaceLookup, PlaceSnapshot, PlaceUnresolved } from '@/lib/delivery/place-types';
 
 /**
- * Teslimat yeri bağlamı — "nereye getirelim" cevabının TEK sahibi.
- *
- * Neden bağlam: aynı cevap dört yerde birden görünür — başlıktaki hap, ürün ve paket detayındaki
- * teslimat satırı, sepetteki kısıt bloğu, katalogdaki çip. Her biri kendi state'ini tutsaydı
- * müşteri kodu değiştirdiğinde bir kısmı eski yeri göstermeye devam ederdi.
- *
- * **Yer bir SÖZDÜR, bir FİLTRE DEĞİLDİR:** buradan hiçbir şey engellenmez. Bileşenler `place`'e
- * bakıp ne söyleyeceklerine karar verir; ne yapılabileceğine değil (tasarım §7).
- *
- * ── İKİ KAYNAK, TEK CEVAP (kullanıcı kararı 13.09) ───────────────────────────
- * Girişli ve kayıtlı adresi olan müşteride yer = **seçili (varsayılan) adres**; ziyaretçide ve
- * adressiz müşteride yer = çerezdeki posta kodu. Sırayı SUNUCU kurar (`readPlaceContext`) ve ilk
- * kareyi de o verir (`initialPlace`/`initialAddress` — 19.7'nin (b) açığı kapandı): istemci
- * artık çerezi okuyup yeniden çözmüyor. Her `router.refresh()` layout'u yeniden çizer, yeni
- * kare buraya prop olarak iner ve state ona uyar.
- *
- * `address` doluyken `setPostalCode` YERİ DEĞİŞTİRMEZ: cevap çağırana döner, sitenin cevabı adrestir.
- * Adres formu bu kapıyı hiç kullanmaz, motora yalnız sorar (`resolvePlaceAction`): adressiz müşteride
- * öneri seçmek yeri kayıttan önce değiştiriyordu (14.09).
+ * Teslimat yeri bağlamı, "nereye getirelim" cevabının tek sahibi: aynı cevap başlık hapında, detaydaki teslimat satırında, sepette ve
+ * katalog çipinde görünür ve yer bir sözdür, filtre değildir. Girişli ve adresli müşteride yer seçili adrestir, öteki hâlde çerezdeki
+ * posta kodu; sırayı ve ilk kareyi sunucu kurar, `address` doluyken `setPostalCode` yeri değiştirmez.
  */
 interface PlaceContextValue {
   /** null = henüz sorulmadı ya da temizlendi; hap "Teslimat yerinizi seçin" der. */
@@ -36,32 +20,23 @@ interface PlaceContextValue {
   /** Seçili teslimat adresi — yalnız girişli ve adresli müşteride; yerin kaynağı o zaman budur. */
   address: PlaceAddress | null;
   /**
-   * Seçili adres NEDEN yer vermiyor (14.09) — `place` null ve `address` doluyken dolar: kod tanınıyor
-   * ama ne rota ne kargo karşılıyor. `no_shipping_warehouse` bizim ayar eksiğimiz (ülkenin kargo
-   * çıkış deposu yok), `ambiguous_zone` veri çakışması. Sepet bunu söyler — teslim şeridi, satır notu,
-   * pasif "Ödemeye geç"; önce sessizdi ve müşteri ret cümlesini ancak siparişi onaylarken görüyordu.
+   * Seçili adres neden yer vermiyor: kod tanınıyor ama ne rota ne kargo karşılıyor (`no_shipping_warehouse` ayar eksiğimiz,
+   * `ambiguous_zone` veri çakışması). Sepet bunu teslim şeridinde, satır notunda ve pasif "Ödemeye geç"te söyler.
    */
   unresolved: PlaceUnresolved | null;
   /**
-   * İstemcide ilk kare tamamlandı mı — sunucuyla aynı çizilip sonra açılan parçalar (satın alma
-   * kapısı, sepet okuması) bunu bekler. Eskiden "şimdi değil" işaretlerini (`localStorage`) de
-   * bekliyordu; işaretler, sordukları şeritlerle birlikte 14.09'da kalktı. Yerin KENDİSİ bunu
-   * beklemez: o sunucudan ilk kareyle geliyor.
+   * İstemcide ilk kare tamamlandı mı: sunucuyla aynı çizilip sonra açılan parçalar (satın alma kapısı, sepet okuması) bunu bekler. Yerin
+   * kendisi beklemez, ilk kareyle sunucudan gelir.
    */
   ready: boolean;
   /**
-   * Yer DEĞİŞİYOR mu — yeri değiştiren bir istek (kod, adres seçimi, adres kaydı) ya da ardından gelen
-   * sayfa tazelemesi sürüyor. Başlıktaki hap bu arada iskelet çizer (kullanıcı isteği 13.09): eski
-   * yeri göstermeye devam etmek, müşterinin verdiği cevabın alınmadığı izlenimini veriyordu.
+   * Yer değişiyor mu: yeri değiştiren istek ya da ardından gelen tazeleme sürerken başlık hapı iskelet çizer, eski yeri göstermek cevabın
+   * alınmadığı izlenimini verirdi.
    */
   updating: boolean;
   /**
-   * Kodu çözer. **Sonucu ayrık döndürür (19.16b)**, hata metni değil: `resolved` dışındaki hâller
-   * (`ambiguous` · `unknown` · `unresolved`) ekranın kendi cümlesini kurabilmesi için tip olarak
-   * gelir — metni ayrıştırmak bir dizgi eşleştirmesi olurdu ve üç dilde çalışmazdı.
-   *
-   * `null` yalnız GERÇEK arızada döner (ağ/DB); o hâlde çağıran genel hata gösterir.
-   * Yer yalnız `resolved` hâlinde — ve yalnız adres yokken — değişir.
+   * Kodu çözer ve sonucu ayrık döndürür, hata metni değil: `resolved` dışındaki hâller ekranın kendi cümlesini kurabilmesi için tip olarak
+   * gelir. `null` yalnız gerçek arızada döner; yer yalnız `resolved` hâlinde ve adres yokken değişir.
    */
   setPostalCode: (postalCode: string, country?: Country) => Promise<PlaceLookup | null>;
   clear: () => void;
@@ -74,18 +49,12 @@ interface PlaceContextValue {
   /** Adres ekler ya da düzenler; kaydedilen adres seçiliyse yer ona göre yeniden kurulur. */
   saveAddress: (input: SaveAddressInput) => Promise<{ ok: true; address: Address } | { ok: false; errorKey: string | null }>;
   /**
-   * Kapıya teslim ettiğimiz yerler — **sayfa açılırken sunucuda okunmuş** hâlde gelir
-   * (`layout` → `getDeliveryZones`), burada bekletilir.
-   *
-   * Panel bunu kendi açılışında istemciden çekiyordu ve liste birkaç yüz milisaniye sonra alttan
-   * beliriyordu: müşteri sorusunu sorarken cevabın yarısı henüz yoktu. Liste operatörün elle
-   * kurduğu, veriyle büyümeyen bir küme (CLAUDE.md §1) — bir kez okunup burada durması hem
-   * beklemeyi hem de her panel açılışında tekrarlanan turu ortadan kaldırıyor.
+   * Kapıya teslim ettiğimiz yerler, sayfa açılırken sunucuda okunmuş hâlde gelir: panel kendi açılışında çekseydi liste gecikmeyle
+   * belirirdi. Küme operatörün kurduğu ve veriyle büyümeyen bir listedir, bir kez okunur.
    */
   zones: DeliveryZoneSummary[];
   /**
-   * Masaüstü başlığının yer paneli açık mı (v1, 13.09). Hap BAŞLIĞIN içinde, panel başlık satırının
-   * ALTINDA çizilir — iki ayrı yerde duran iki bileşen aynı durumu okuyor, o yüzden durum burada.
+   * Masaüstü başlığının yer paneli açık mı: hap başlığın içinde, panel başlık satırının altında çizilir ve ikisi aynı durumu okur.
    */
   panelOpen: boolean;
   setPanelOpen: (open: boolean) => void;
@@ -156,16 +125,14 @@ export function PlaceProvider({ children, zones, initialPlace, initialAddress, i
       setAddress(snapshot.address);
       setUnresolved(snapshot.unresolved);
       setPickup(snapshot.pickup);
-      // Sunucuyu da tazele: katalog kartlarının işaretleri ve sepetin grupları RSC'de yeni yere
-      // göre yeniden çizilsin (19.7'deki `setPostalCode` gerekçesinin aynısı).
+      // Sunucu da tazelenir ki katalog kartlarının işaretleri ve sepetin grupları RSC'de yeni yere göre çizilsin.
       refresh();
     },
     [refresh],
   );
 
-  // `country` YALNIZ belirsizlik hâlinde geçilir (19.7): kod iki hizmet ülkemizde birden geçerliyse
-  // türetecek bir şey kalmaz ve cevap müşterinindir. Öteki her çağrıda kod ülkeyi zaten belirler.
-  // Masaüstü yer paneli ülkeyi ÖNCE sorar (v1, 13.09) ve her çağrıda geçirir.
+  // `country` yalnız belirsizlik hâlinde geçilir: kod iki hizmet ülkesinde geçerliyse cevap müşterinindir, öteki çağrılarda kod ülkeyi
+  // belirler. Masaüstü yer paneli ülkeyi önce sorar ve her çağrıda geçirir.
   const setPostalCode = useCallback(
     async (postalCode: string, country?: Country): Promise<PlaceLookup | null> => {
       // Yalnız yeri DEĞİŞTİREBİLECEK soru sayılır: adres varken cevap yalnız çağırana döner ve sitenin
@@ -181,11 +148,8 @@ export function PlaceProvider({ children, zones, initialPlace, initialAddress, i
         // Saklanan tek şey CEVAP: çözümü (bölge, gün, depo) her istekte sunucu yeniden üretir.
         writePlaceAnswer({ country: data.place.country, postalCode: data.place.postalCode });
         setUnresolved(null);
-        // ── SUNUCUYU DA TAZELE (19.7) ───────────────────────────────────────────
-        // Çerezi İSTEMCİ yazıyor (`document.cookie`); o an ekranda duran RSC çıktısı hâlâ eski yerle
-        // (çoğu zaman depo-üstü) çizilmiş. Tazeleme olmadan hap doluyor ama katalog kartlarındaki
-        // stok işaretleri bir sonraki gezinmeye kadar ESKİ kalıyordu — "kargoyla gönderilir" yazması
-        // gereken ürün işaretsiz duruyordu. Yer bir soru: cevaplandığı an her yüzey ona göre konuşmalı.
+        // Sunucu da tazelenir: çerezi istemci yazar ve ekrandaki RSC çıktısı eski yerle çizilmiştir, tazeleme olmadan katalog kartlarının
+        // stok işaretleri bir sonraki gezinmeye kadar eski kalırdı.
         refresh();
       }
       return data;
