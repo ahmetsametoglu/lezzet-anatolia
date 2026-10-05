@@ -327,6 +327,35 @@ create trigger delivery_zone_codes_follow
   for each row when (old.warehouse_id is distinct from new.warehouse_id)
   execute function public.delivery_zone_codes_follow();
 
+-- Sipariş müşterinin işinin deposundan yazılır: QUALITE müşterisi yalnız QUALITE deposundan, Lezzet müşterisi ve anonim alıcı yalnız
+-- Lezzet deposundan alır (docs/feature/iki-is.md, karar 7 ve 10). Depo sonradan değişse de siparişin işi değişmez; müşteri birleştirmesi
+-- geçmişi yeniden yazmadığı için müşteri değişikliği sorulmaz.
+create or replace function public.order_business_matches() returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_expected public.business;
+  v_warehouse public.business;
+begin
+  select w.business into v_warehouse from public.warehouse w where w.id = new.warehouse_id;
+  if tg_op = 'INSERT' then
+    select p.business into v_expected from public.user_profiles p where p.id = new.customer_id;
+  else
+    select w.business into v_expected from public.warehouse w where w.id = old.warehouse_id;
+  end if;
+  if v_warehouse is distinct from v_expected then
+    raise exception 'order_business_matches: siparişin işi % olmalı, depo % işinde', v_expected, v_warehouse
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger order_business_matches
+  before insert or update of warehouse_id on public.order
+  for each row execute function public.order_business_matches();
+
 -- Evine göre araç okuması: panelin ve depo kartının sorgusu ("bu tesisin araçları").
 create index warehouse_home_idx on public.warehouse (home_warehouse_id) where home_warehouse_id is not null;
 -- Parti ↔ tedarik kalemi (T5): parçalı kabulde fark raporunun bağı.

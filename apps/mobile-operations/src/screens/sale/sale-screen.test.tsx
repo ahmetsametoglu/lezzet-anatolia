@@ -646,3 +646,26 @@ describe('araçtan satış (01.09 · kullanıcı kararı)', () => {
     expect(screen.queryByTestId('sale-search-empty')).toBeNull();
   });
 });
+
+describe('kapı satışı kapalı depo', () => {
+  it('QUALITE deposunda sebep söylenir; tekrar dene ve okutma çizilmez', async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve({
+        status: 403,
+        headers: { get: () => null },
+        json: async () => ({ data: null, error: 'door_sale_closed' }),
+      } as unknown as Response),
+    );
+    await render(
+      <SaleProvider place="facility">
+        <SaleScreen />
+      </SaleProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('sale-closed')).toBeTruthy());
+    expect(screen.getByTestId('sale-closed')).toHaveTextContent(/QUALITE/);
+    expect(screen.queryByTestId('sale-retry')).toBeNull();
+    expect(screen.queryByTestId('sale-scan-cta')).toBeNull();
+    expect(screen.queryByTestId('sale-scan-fab')).toBeNull();
+  });
+});

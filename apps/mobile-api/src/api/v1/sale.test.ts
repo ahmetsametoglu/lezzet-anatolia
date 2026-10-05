@@ -1,5 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, DeliveryZoneService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
+import {
+  CategoryService,
+  DeliveryZoneService,
+  PriceService,
+  ProductService,
+  StockService,
+  WarehouseService,
+  serviceDb,
+} from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 import { ANONYMOUS_BUYER_ID, startCourierDay } from '@lezzet/application';
 // Beklenen şekil ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME kırılır.
@@ -31,6 +39,9 @@ let kurye: SignedInUser;
 let depocu: SignedInUser;
 /** Kapsamında ARAÇ olmayan kurye — "beyan yetki değil" kuralının karşı-örneği. */
 let aracsizKurye: SignedInUser;
+/** Deposu QUALITE olan depocu; kapı satışı orada kapalıdır. */
+let qualiteDepocu: SignedInUser;
+let qualiteDepoId: string;
 let facilityId: string;
 let vehicleId: string;
 /** Araç deposunun ruhsat kimliği — sefer aracı bununla seçilir, depo kimliğiyle değil. */
@@ -51,6 +62,8 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 beforeAll(async () => {
   facilityId = (await createTestWarehouse(db)).id;
   baskaDepoId = (await createTestWarehouse(db)).id;
+  qualiteDepoId = (await createTestWarehouse(db, { label: 'SQUA' })).id;
+  await new WarehouseService(db).update({ id: qualiteDepoId, business: 'qualite' });
   // Araç deposu aracını söylemek zorunda (`warehouse_vehicle_identity`); yardımcı damgalı aracı açar ve teardown'da depoyla toplar.
   const van = await createTestWarehouse(db, { label: 'VEHU', kind: 'vehicle' });
   vehicleId = van.id;
@@ -86,6 +99,7 @@ beforeAll(async () => {
   kurye = await createSignedInUser({ prefix: 'sale', label: 'kurye', roles: ['courier'], warehouseIds: [facilityId, vehicleId] });
   depocu = await createSignedInUser({ prefix: 'sale', label: 'depocu', roles: ['warehouse'], warehouseIds: [facilityId] });
   aracsizKurye = await createSignedInUser({ prefix: 'sale', label: 'aracsiz', roles: ['courier'], warehouseIds: [facilityId] });
+  qualiteDepocu = await createSignedInUser({ prefix: 'sale', label: 'qualite', roles: ['warehouse'], warehouseIds: [qualiteDepoId] });
 
   /* Kapıda satış malı kuryenin seferinin aracından düşer, bu yüzden fikstürün seferi var; `aracsizKurye` bilerek sefersiz,
      `no_vehicle` dalını o sınar. */
@@ -104,7 +118,7 @@ beforeEach(async () => {
   */
   await purgeVariantStock(db, [variantId, sadeceTesisVariantId]);
   await mustDelete(db, 'order', (q) =>
-    q.eq('customer_id', ANONYMOUS_BUYER_ID).in('warehouse_id', [facilityId, vehicleId, baskaDepoId]),
+    q.eq('customer_id', ANONYMOUS_BUYER_ID).in('warehouse_id', [facilityId, vehicleId, baskaDepoId, qualiteDepoId]),
   );
   await new StockService(db).insert({ warehouseId: vehicleId, variantId, physicalQty: 4, expiryDate: dayOffset(20), purchasePriceCents: 200 });
   await new StockService(db).insert({ warehouseId: facilityId, variantId, physicalQty: 9, expiryDate: dayOffset(20), purchasePriceCents: 200 });
@@ -116,12 +130,12 @@ afterAll(async () => {
   // Aynı gerekçe (`beforeEach` künyesi): parti önce, sipariş sonra; silme bu dosyanın depolarıyla sınırlı.
   await purgeVariantStock(db, [variantId, sadeceTesisVariantId]);
   await mustDelete(db, 'order', (q) =>
-    q.eq('customer_id', ANONYMOUS_BUYER_ID).in('warehouse_id', [facilityId, vehicleId, baskaDepoId]),
+    q.eq('customer_id', ANONYMOUS_BUYER_ID).in('warehouse_id', [facilityId, vehicleId, baskaDepoId, qualiteDepoId]),
   );
   await purgeTestData(db, {
     productIds: [productId, sadeceTesisProductId], categoryIds: [categoryId],
-    profileIds: [kurye.profileId, depocu.profileId, aracsizKurye.profileId],
-    warehouseIds: [facilityId, vehicleId, baskaDepoId],
+    profileIds: [kurye.profileId, depocu.profileId, aracsizKurye.profileId, qualiteDepocu.profileId],
+    warehouseIds: [facilityId, vehicleId, baskaDepoId, qualiteDepoId],
   });
 });
 
@@ -134,7 +148,7 @@ const anonimSiparisSayisi = async (): Promise<number> => {
     .from('order')
     .select('id')
     .eq('customer_id', ANONYMOUS_BUYER_ID)
-    .in('warehouse_id', [facilityId, vehicleId, baskaDepoId]);
+    .in('warehouse_id', [facilityId, vehicleId, baskaDepoId, qualiteDepoId]);
   return data?.length ?? 0;
 };
 
@@ -166,6 +180,16 @@ describe('POST /sale/on-site', () => {
   it('DEPOCU da satabiliyor — aynı kapı, farklı depo', async () => {
     const data = await envelopeData<OnSiteSaleResponse>(await post(depocu, { lines: [{ variantId, qty: 1 }], paymentMethod: 'card' }));
     expect(data.status).toBe('ok');
+  });
+
+  it('QUALITE deposunda kapı satışı kapalıdır — katalog da satış da reddedilir, sipariş yazılmaz', async () => {
+    const katalog = await app.request('/api/v1/sale/catalog?locale=tr', { headers: bearer(qualiteDepocu.token) });
+    expect(katalog.status).toBe(403);
+    expect(((await katalog.json()) as { error: string }).error).toBe('door_sale_closed');
+
+    const satis = await post(qualiteDepocu, { lines: [{ variantId, qty: 1 }], paymentMethod: 'cash' });
+    expect(satis.status).toBe(403);
+    expect(await anonimSiparisSayisi()).toBe(0);
   });
 
   it('KAPSAM DIŞI depo istenirse 403 — kurye başka deponun malını satmayı DENEYEMEZ', async () => {

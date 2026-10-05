@@ -351,10 +351,16 @@ describe('hareketin işi', () => {
       variants: [{ label: { tr: '1 kg' } }],
     });
     parties.productIds.push(product.id);
-    const customerId = (await new UserProfileService(db).insert({ name: `İş testi müşterisi ${stamp}` })).id;
+    // Siparişin müşterisi deponun işinden olmak zorunda; QUALITE yalnız onaylı şirkete verilir ve kargo göndermez.
+    const profiles = new UserProfileService(db);
+    const customerId = (
+      await profiles.insert({ name: `İş testi müşterisi ${stamp}`, type: 'company', companyInfo: { legalName: `SARL İş testi ${stamp}` } })
+    ).id;
     parties.profileIds.push(customerId);
+    await profiles.approveB2b(customerId);
+    await profiles.update({ id: customerId, business: 'qualite' });
     const { order } = await new OrderService(db).create(
-      { customerId, warehouseId: warehouse.id, channel: 'b2b', deliveryType: 'shipping', status: 'confirmed' },
+      { customerId, warehouseId: warehouse.id, channel: 'b2b', deliveryType: 'route', status: 'confirmed' },
       [{ variantId: variants[0]!.id, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }],
     );
     parties.orderIds.push(order.id);

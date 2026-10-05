@@ -1,6 +1,6 @@
 import { Hono, type Context, type Next } from 'hono';
 import { z } from 'zod';
-import { ProductVariantService, StockService, VariantBarcodeService, serviceDb } from '@lezzet/database';
+import { ProductVariantService, StockService, VariantBarcodeService, WarehouseService, serviceDb } from '@lezzet/database';
 import {
   ANONYMOUS_BUYER_ID,
   getCatalogData,
@@ -84,9 +84,20 @@ async function salePlaceGuard(c: Context<SaleEnv>, next: Next): Promise<Response
   await next();
 }
 
-// Sıra güvenlik kararının kendisi (depo ucunun aynı gerekçesi): önce rol (kim), sonra depo (nerede).
+/**
+ * QUALITE deposundan anonim kapı satışı yapılmaz (karar 10): satışın alıcısı anonimdir ve anonim alıcı Lezzet'tir. Ekran bu cevapla
+ * sebebi söyler, liste ve okutma açılmaz.
+ */
+async function doorSaleOpen(c: Context<SaleEnv>, next: Next): Promise<Response | void> {
+  const warehouse = await new WarehouseService(serviceDb()).getById(c.get('warehouseId'));
+  if (warehouse !== null && warehouse.business !== customerBusinessOf(null)) return fail(c, 'door_sale_closed', 403);
+  await next();
+}
+
+// Sıra güvenlik kararının kendisidir: önce rol (kim), sonra depo (nerede), en son o depoda kapı satışı açık mı.
 sale.use('*', requireStaffRole('warehouse', 'courier', 'admin'));
 sale.use('*', salePlaceGuard);
+sale.use('*', doorSaleOpen);
 
 /**
  * Satış tek çağrıda kapanır ve kapının kararı ne olursa olsun 200 döner; `sale_failed` ayrıntısızdır, çünkü sebepleri personelin

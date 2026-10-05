@@ -83,24 +83,26 @@ export function SaleScreen() {
         Giriş tasarımın iki düğmesidir (Barkod okut, Ürün ara); arama çekmecede durur ve gövde tazelenirken sökülmez, sökülseydi her
         tuşta IME kompozisyonu ölürdü.
       */}
-      <View style={styles.entryBlock}>
-        <PrimaryButton
-          label={t.scanCta}
-          icon="scan"
-          tone="olive"
-          elevation="glow"
-          onPress={() => sale.setScanOpen(true)}
-          disabled={offline}
-          testID="sale-scan-cta"
-        />
-        <SecondaryButton
-          label={t.searchCta}
-          icon="plus"
-          elevation="flat"
-          onPress={() => setSearchOpen(true)}
-          testID="sale-search-cta"
-        />
-      </View>
+      {sale.status === 'closed' ? null : (
+        <View style={styles.entryBlock}>
+          <PrimaryButton
+            label={t.scanCta}
+            icon="scan"
+            tone="olive"
+            elevation="glow"
+            onPress={() => sale.setScanOpen(true)}
+            disabled={offline}
+            testID="sale-scan-cta"
+          />
+          <SecondaryButton
+            label={t.searchCta}
+            icon="plus"
+            elevation="flat"
+            onPress={() => setSearchOpen(true)}
+            testID="sale-search-cta"
+          />
+        </View>
+      )}
 
       {sale.status === 'loading' ? (
         /* İlk yük iskelettir, halka değil: kutular gelecek kartların boyunda durur ki veri gelince sayfa zıplamasın; ekranda her zaman
@@ -111,6 +113,10 @@ export function SaleScreen() {
             label={t.loading}
             testID="sale-loading"
           />
+        </View>
+      ) : sale.status === 'closed' ? (
+        <View style={styles.block}>
+          <OperationsNoticeBlock variant="empty" title={t.closed.title} description={t.closed.body} testID="sale-closed" />
         </View>
       ) : sale.status === 'error' ? (
         <View style={styles.block}>
@@ -215,15 +221,17 @@ export function SaleScreen() {
         Okutma yüzen düğmede de durur, çünkü üstteki giriş düğmesi listeyle kayıp gider; sepet çubuğu varken daire onun kadar yukarı
         kalkar, yoksa tutarı örterdi.
       */}
-      <OperationsScanFab
-        icon="scan"
-        tone="scan"
-        accessibilityLabel={t.scanCta}
-        onPress={() => sale.setScanOpen(true)}
-        disabled={offline}
-        lift={sale.lines.length === 0 ? 0 : CART_BAR_LIFT}
-        testID="sale-scan-fab"
-      />
+      {sale.status === 'closed' ? null : (
+        <OperationsScanFab
+          icon="scan"
+          tone="scan"
+          accessibilityLabel={t.scanCta}
+          onPress={() => sale.setScanOpen(true)}
+          disabled={offline}
+          lift={sale.lines.length === 0 ? 0 : CART_BAR_LIFT}
+          testID="sale-scan-fab"
+        />
+      )}
 
       <ScanSheet
         open={sale.scanOpen}

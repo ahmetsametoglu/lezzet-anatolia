@@ -791,6 +791,9 @@ izi ve soğuk zincir kendiliğinden çalışır.
 - **Bir sipariş tek depodan çıkar** (`Order.warehouse_id`); bölünmüş sipariş yoktur ve soğuk zincir
   ürünü asla depo değiştirmez. Değişmez **veride** durur: siparişe yazılan partiler siparişin
   deposundan olmak zorundadır (ertelenmiş kısıt — `order_discount_balance` emsali).
+- **Sipariş müşterinin işinin deposundan çıkar** (`docs/feature/iki-is.md`, karar 7 ve 10): QUALITE müşterisi yalnız
+  QUALITE deposundan, Lezzet müşterisi ve anonim alıcı yalnız Lezzet deposundan alır; QUALITE deposunda kapı satışı
+  yapılmaz. Kural veridedir ve yazılmış siparişin işi depo değişse de değişmez.
 - **Karma sepet (rota müşterisi):** kendi deposunda OLAN her şey — kargolanabilir dahil — rota
   siparişiyle araçtan gider. Kendi deposunda OLMAYAN kargolanabilir ürün **engellenmez**:
   "kargoyla gönderilir" işaretiyle satılır ve **ayrı ödemeli ayrı bir kargo checkout'una** gider

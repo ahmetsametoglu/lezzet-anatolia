@@ -48,7 +48,8 @@ interface SaleNotice {
   text: string;
 }
 
-type CatalogStatus = 'loading' | 'error' | 'ready';
+/** `closed`: bu depoda kapı satışı yapılmaz (QUALITE); tekrar denemek anlamsız olduğu için hatadan ayrıdır. */
+type CatalogStatus = 'loading' | 'error' | 'closed' | 'ready';
 
 /** Çekmecede seçili boyun satış künyesi (fiyat/kalan) — tek ve çok boylunun ortak görünümü. */
 export interface DraftSelection {
@@ -137,7 +138,7 @@ export function useSale(place: SalePlace) {
     );
     if (seq !== seqRef.current) return; // geciken cevap — taze listeyi ezmesin
     if (result.error !== null) {
-      setStatus('error');
+      setStatus(result.error === 'door_sale_closed' ? 'closed' : 'error');
       return;
     }
     setProducts((prev) => (cursor === undefined ? result.data.products : [...prev, ...result.data.products]));

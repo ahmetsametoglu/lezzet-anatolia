@@ -8,6 +8,10 @@
     "body": "Bağlantı ya da sunucu sorunu — hiçbir satış yazılmadı."
   },
   "retry": "Tekrar dene",
+  "closed": {
+    "title": "Bu depoda yerinde satış yapılmaz",
+    "body": "QUALITE deposundan kimliği sorulmayan alıcıya satış yazılmaz."
+  },
   "searchPlaceholder": "Ürün adıyla ara",
   "searchEmpty": "Eşleşen ürün yok — adın bir kısmını yazmayı deneyin.",
   "van": {
