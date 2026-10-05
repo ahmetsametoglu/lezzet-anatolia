@@ -356,6 +356,25 @@ create trigger order_business_matches
   before insert or update of warehouse_id on public.order
   for each row execute function public.order_business_matches();
 
+-- Kampanya ve kupon yalnız Lezzet'indir (docs/feature/iki-is.md, karar 13): indirim taşıyan sipariş yalnız Lezzet deposundan yazılır.
+create or replace function public.order_discount_business() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if (select w.business from public.warehouse w where w.id = new.warehouse_id) is distinct from 'lezzet' then
+    raise exception 'order_discount_business: indirim yalnız Lezzet siparişine yazılır (indirim %)', new.discount_id
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger order_discount_business
+  before insert or update of discount_id, warehouse_id on public.order
+  for each row when (new.discount_id is not null)
+  execute function public.order_discount_business();
+
 -- Muhasebe sipariş değil satış ister: satış gerçekleştiği anda gelirdir ve o an `order_status_log`tan türer. Bu görünüm o türetimin
 -- tek yeridir ki export ile kârlılık aynı satış gününü okusun; satışın işi deposunun işidir, görünüm bu yüzden depodan sonra kurulur.
 

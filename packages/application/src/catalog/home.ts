@@ -1,6 +1,7 @@
 import { CategoryService, CollectionService, ProductService } from '@lezzet/database';
 import { HomeSchema, resolveLocalizedText } from '@lezzet/types';
 import type {
+  Business,
   Category,
   Collection,
   Home,
@@ -155,6 +156,7 @@ export async function composeHomeBands(
   db: SupabaseClient,
   locale: PreferredLanguage,
   pools: HomeBandPools,
+  business: Business,
   rng: Rng = dailyRng(),
 ): Promise<HomeBand[]> {
   /* Kampanya okuması SEÇİMDEN ÖNCE: seçimin kendisi kampanyalıyı öne alıyor (`selectHomeBandSources`
@@ -162,6 +164,7 @@ export async function composeHomeBands(
   const campaigns = await readScopeCampaigns(db, {
     categoryIds: pools.categories.map((c) => c.id),
     collectionIds: pools.collections.map((c) => c.id),
+    business,
   });
   const chosen = selectHomeBandSources(pools.categories, pools.collections, rng, campaigns);
 
@@ -187,12 +190,12 @@ export async function composeHomeBands(
 }
 
 /** Havuzları küresel listeden kurar (2 okuma), kuralı kompozisyona bırakır. */
-async function readHomeBands(db: SupabaseClient, locale: PreferredLanguage, rng: Rng = dailyRng()): Promise<HomeBand[]> {
+async function readHomeBands(db: SupabaseClient, locale: PreferredLanguage, business: Business, rng: Rng = dailyRng()): Promise<HomeBand[]> {
   const [categories, collections] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
     new CollectionService(db).listWithProductIds({ activeOnly: true }),
   ]);
-  return composeHomeBands(db, locale, { categories, collections }, rng);
+  return composeHomeBands(db, locale, { categories, collections }, business, rng);
 }
 
 /** Kartın fırsat hâline geçtiğinin tek ölçütü: motor teklifi kazandırdı → üstü çizili referans var. */
@@ -239,7 +242,7 @@ export async function readHome(
   viewer: PricingViewer,
 ): Promise<Home> {
   const [bands, offers, featured, recipes, packages, discoverCards] = await Promise.all([
-    readHomeBands(db, locale),
+    readHomeBands(db, locale, place.business),
     readHomeOffers(db, locale, place, viewer),
     readHomeFeatured(db, locale, place, viewer),
     readRecipeCards(db, locale, HOME_RECIPE_LIMIT),

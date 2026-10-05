@@ -55,6 +55,9 @@ afterAll(async () => {
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId, otherCategoryId], profileIds: createdProfiles });
 });
 
+/** Bu dosyanın sepetleri Lezzet'indir; işin kapısı en alttaki blokta ölçülür. */
+const resolve = (input: Omit<CartDiscountInput, 'business'>) => resolveCartDiscount(db, { business: 'lezzet', ...input });
+
 async function makeDiscount(
   input: Omit<Parameters<DiscountService['insert']>[0], 'publicLabel'> & { publicLabel?: LocalizedText },
 ) {
@@ -86,9 +89,9 @@ describe('kupon uygulanır', () => {
   it('geçerli kupon sepete iner ve payı kalemlere dağıtılır', async () => {
     await coupon(`YAZ${stamp}`);
     // Ekranın göndereceği şekil: sepet satırları + kim + hangi kod.
-    const input: CartDiscountInput = { lines: basket, customerId, couponCode: `YAZ${stamp}` };
+    const input: CartDiscountInput = { business: 'lezzet', lines: basket, customerId, couponCode: `YAZ${stamp}` };
 
-    const { discount: result } = await resolveCartDiscount(db,input);
+    const { discount: result } = await resolveCartDiscount(db, input);
 
     expect(result).toMatchObject({ status: 'applied', amountCents: 9_000 }); // 100 €'nun %90'ı
     expect(result.status === 'applied' ? result.lineShares : []).toEqual([9_000]);
@@ -97,7 +100,7 @@ describe('kupon uygulanır', () => {
   it('kod HARF AYRIMSIZ eşleşir — müşteri küçük harfle yazabilir', async () => {
     await coupon(`BAHAR${stamp}`);
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId, couponCode: `bahar${stamp}  ` });
+    const { discount: result } = await resolve({ lines: basket, customerId, couponCode: `bahar${stamp}  ` });
 
     expect(result.status).toBe('applied');
   });
@@ -107,7 +110,7 @@ describe('kupon uygulanır', () => {
     // `percent: null` şart — kural tipine uymayan alanı DOLU bırakan satırı DB reddeder (0031).
     await coupon(`SABIT${stamp}`, { type: 'fixed', percent: null, amountCents: 7_550 });
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId, couponCode: `SABIT${stamp}` });
+    const { discount: result } = await resolve({ lines: basket, customerId, couponCode: `SABIT${stamp}` });
 
     expect(result).toMatchObject({ status: 'applied', amountCents: 7_550 });
   });
@@ -115,7 +118,7 @@ describe('kupon uygulanır', () => {
 
 describe('ekranın dört ret hâli', () => {
   it('geçersiz: böyle bir kod yok', async () => {
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId, couponCode: 'YOKBOYLE' });
+    const { discount: result } = await resolve({ lines: basket, customerId, couponCode: 'YOKBOYLE' });
 
     expect(result).toMatchObject({ status: 'rejected', reason: 'unknown_code' });
   });
@@ -123,7 +126,7 @@ describe('ekranın dört ret hâli', () => {
   it('süresi dolmuş', async () => {
     await coupon(`ESKI${stamp}`, { validTo: dayOffset(-1) });
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId, couponCode: `ESKI${stamp}` });
+    const { discount: result } = await resolve({ lines: basket, customerId, couponCode: `ESKI${stamp}` });
 
     expect(result).toMatchObject({ status: 'rejected', reason: 'expired' });
   });
@@ -131,7 +134,7 @@ describe('ekranın dört ret hâli', () => {
   it('asgari sepet tutmuyor — müşteri ürün ekleyerek kullanabilir, bu yüzden sebep AYRI', async () => {
     await coupon(`BUYUK${stamp}`, { minBasketCents: 15_000 });
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId, couponCode: `BUYUK${stamp}` });
+    const { discount: result } = await resolve({ lines: basket, customerId, couponCode: `BUYUK${stamp}` });
 
     expect(result).toMatchObject({ status: 'rejected', reason: 'min_basket' });
   });
@@ -140,7 +143,7 @@ describe('ekranın dört ret hâli', () => {
     await coupon(`KUCUK${stamp}`, { percent: 5 });
     await makeDiscount({ name: `Kampanya ${stamp}`, trigger: 'automatic', type: 'percent', percent: 95, scope: 'cart' });
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId, couponCode: `KUCUK${stamp}` });
+    const { discount: result } = await resolve({ lines: basket, customerId, couponCode: `KUCUK${stamp}` });
 
     // Müşteri hem sebebi görür hem 95 €'yu kaybetmez.
     expect(result).toMatchObject({ status: 'rejected', reason: 'outranked', appliedInsteadCents: 9_500 });
@@ -153,7 +156,7 @@ describe('kişisellik ve sınırlar', () => {
     createdProfiles.push(other.id);
     await coupon(`OZEL${stamp}`, { customerId: other.id });
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId, couponCode: `OZEL${stamp}` });
+    const { discount: result } = await resolve({ lines: basket, customerId, couponCode: `OZEL${stamp}` });
 
     // `not_yours` DIŞARI çıkmaz: "bu kupon var ama senin değil" demek kodu doğrulamak olurdu.
     expect(result).toMatchObject({ status: 'rejected', reason: 'unknown_code' });
@@ -162,7 +165,7 @@ describe('kişisellik ve sınırlar', () => {
   it('pasife alınmış kupon uygulanmaz', async () => {
     await coupon(`KAPALI${stamp}`, { isActive: false });
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId, couponCode: `KAPALI${stamp}` });
+    const { discount: result } = await resolve({ lines: basket, customerId, couponCode: `KAPALI${stamp}` });
 
     expect(result).toMatchObject({ status: 'rejected', reason: 'inactive' });
   });
@@ -171,7 +174,7 @@ describe('kişisellik ve sınırlar', () => {
     const rule = await coupon(`TEK${stamp}`, { maxUses: 1 });
     await db.from('discount_use').insert({ discount_id: rule.id, customer_id: customerId, amount: 10 });
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId, couponCode: `TEK${stamp}` });
+    const { discount: result } = await resolve({ lines: basket, customerId, couponCode: `TEK${stamp}` });
 
     expect(result).toMatchObject({ status: 'rejected', reason: 'used_up' });
   });
@@ -181,7 +184,7 @@ describe('kupon girilmeden', () => {
   it('otomatik kampanya kendiliğinden iner', async () => {
     await makeDiscount({ name: `Oto ${stamp}`, trigger: 'automatic', type: 'percent', percent: 85, scope: 'cart' });
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId });
+    const { discount: result } = await resolve({ lines: basket, customerId });
 
     expect(result).toMatchObject({ status: 'automatic', amountCents: 8_500 });
   });
@@ -189,7 +192,7 @@ describe('kupon girilmeden', () => {
   it('kod girilmediğinde KUPON kaynaklı indirim doğmaz', async () => {
     await coupon(`GIRILMEDI${stamp}`);
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId });
+    const { discount: result } = await resolve({ lines: basket, customerId });
 
     // Kupon havuzda ama kodu girilmedi: kazanamaz. ("Hiç aday yoksa `none`" hâli motorun birim
     // testinde — yerel veritabanında elle girilmiş kampanya olabileceği için burada ölçülemez.)
@@ -204,7 +207,7 @@ describe('otomatik indirimin sebebi ekrana taşınır', () => {
   it('sepet kapsamlı yüzde kampanyasında ORAN da taşınır', async () => {
     await makeDiscount({ name: `Sebep-sepet ${stamp}`, trigger: 'automatic', type: 'percent', percent: 85, scope: 'cart' });
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId });
+    const { discount: result } = await resolve({ lines: basket, customerId });
 
     expect(result).toMatchObject({ status: 'automatic', reason: { kind: 'campaign', percent: 85 } });
   });
@@ -215,7 +218,7 @@ describe('otomatik indirimin sebebi ekrana taşınır', () => {
     // oranının müşteriye sepet oranı gibi gösterilmemesi.
     const inCategory: DiscountableLine[] = [{ variantId: 'v1', qty: 2, unitPriceCents: 5_000, categoryId }];
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: inCategory, customerId });
+    const { discount: result } = await resolve({ lines: inCategory, customerId });
 
     expect(result).toMatchObject({ status: 'automatic', amountCents: 9_500, reason: { kind: 'campaign', percent: null } });
   });
@@ -230,7 +233,7 @@ describe('matrah muafiyetleri sepette de geçerli', () => {
       { variantId: 'v2', qty: 1, unitPriceCents: 3_000, offerStockId: 's1' },
     ];
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: mixed, customerId });
+    const { discount: result } = await resolve({ lines: mixed, customerId });
 
     // Matrah yalnız 40 € — paket ve teklif kendi özel fiyatındadır (DOMAIN §5/§13).
     expect(result).toMatchObject({ status: 'automatic', amountCents: 3_600 });
@@ -244,7 +247,7 @@ describe('matrah muafiyetleri sepette de geçerli', () => {
       { variantId: '', qty: 1, unitPriceCents: 5_000, bundleId: 'b1' }, // 50 € paket
     ];
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: mixed, customerId, couponCode: `ESIK${stamp}` });
+    const { discount: result } = await resolve({ lines: mixed, customerId, couponCode: `ESIK${stamp}` });
 
     // Ekranda 90 € görünse de indirim matrahı 40 €: eşik tutmuyor. Motorun matrahıyla teşhisin
     // matrahı AYNI yüklemi kullanmalı, yoksa "geçerli" diyen uyarı indirimsiz sepetle biterdi.
@@ -258,8 +261,22 @@ describe('matrah muafiyetleri sepette de geçerli', () => {
       { variantId: 'v2', qty: 1, unitPriceCents: 5_000, specialPrice: true },
     ];
 
-    const { discount: result } = await resolveCartDiscount(db,{ lines: mixed, customerId, couponCode: `OZEL${stamp}` });
+    const { discount: result } = await resolve({ lines: mixed, customerId, couponCode: `OZEL${stamp}` });
 
     expect(result).toMatchObject({ status: 'rejected', reason: 'min_basket' });
+  });
+});
+
+describe('indirim yalnız Lezzet sepetinde', () => {
+  it("QUALITE sepetine kampanya inmez ve kupon kodu yok sayılır; aynı sepet Lezzet'te kuponu alır", async () => {
+    await makeDiscount({ name: `Oto-is ${stamp}`, trigger: 'automatic', type: 'percent', percent: 85, scope: 'cart' });
+    await coupon(`ISQ${stamp}`);
+
+    const lezzet = await resolveCartDiscount(db, { business: 'lezzet', lines: basket, customerId, couponCode: `ISQ${stamp}` });
+    const qualite = await resolveCartDiscount(db, { business: 'qualite', lines: basket, customerId, couponCode: `ISQ${stamp}` });
+
+    expect(lezzet.discount.status).toBe('applied');
+    expect(qualite.discount).toEqual({ status: 'none' });
+    expect(qualite.rules).toEqual([]);
   });
 });

@@ -99,6 +99,7 @@ export function cartView(lines: MeCartViewLine[], overrides: Partial<MeCartView>
     lines,
     subtotalCents,
     discount: { status: 'none' },
+    acceptsCoupons: true,
     reachableDiscount: null,
   discountRules: [],
   isFirstOrder: false,

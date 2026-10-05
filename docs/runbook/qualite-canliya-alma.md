@@ -32,3 +32,5 @@ Kayıtlar girdikten sonra, aynı posta kodlu bir QUALITE ve bir Lezzet müşteri
 3. QUALITE deposunda mobil yerinde satış açılmaz ("Bu depoda yerinde satış yapılmaz").
 4. QUALITE tedarik siparişi yalnız QUALITE deposuna kabul edilir ve Lezzet deposunun bekleyen kabul listesinde görünmez.
 5. Adres vermeyen bir ziyaretçi, yalnız QUALITE deposunda duran ürünü "tükendi" görür.
+6. Açık bir kampanya varken QUALITE müşterisinin sepetinde indirim satırı ve kupon alanı yoktur; Lezzet müşterisinin aynı sepeti
+   indirimi alır.

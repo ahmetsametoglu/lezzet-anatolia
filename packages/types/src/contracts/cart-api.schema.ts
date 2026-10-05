@@ -240,6 +240,8 @@ export const MeCartViewSchema = z.object({
   /** Kalem toplamı — kargo ve indirim HARİÇ. */
   subtotalCents: z.number().int(),
   discount: MeCartDiscountSchema,
+  /** Bu sepete kupon girilebilir mi; kupon geçmeyen işin müşterisinde kupon alanı çizilmez. */
+  acceptsCoupons: z.boolean(),
   /** Eşiğe az kalmış kampanya; `null` = söylenecek bir şey yok. Toplama GİRMEZ, yalnız söylenir. */
   reachableDiscount: MeCartReachableDiscountSchema.nullable(),
   /** Ara toplam − indirim. */

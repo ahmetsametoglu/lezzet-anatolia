@@ -1,6 +1,7 @@
 import { DiscountCodeService, DiscountService, OrderService, type Db, type DiscountUsage } from '@lezzet/database';
 import {
   applyBestDiscount,
+  businessHasDiscounts,
   checkCouponEligibility,
   findReachableDiscount,
   isDiscountable,
@@ -8,7 +9,7 @@ import {
   type DiscountRule,
   type DiscountableLine,
 } from '@lezzet/domain-core';
-import type { Discount, DiscountCode, LocalizedText } from '@lezzet/types';
+import type { Business, Discount, DiscountCode, LocalizedText } from '@lezzet/types';
 import type { CartDiscount, CartReachableDiscount, CartDiscountResult, CouponFailure, DiscountReason } from './cart-types';
 
 /**
@@ -23,6 +24,8 @@ export interface CartDiscountInput {
   customerId?: string | null;
   /** Müşterinin girdiği kod; boşsa yalnız otomatik adaylar değerlendirilir. */
   couponCode?: string | null;
+  /** Sepetin işi; zorunludur, çünkü unutulursa QUALITE sepeti Lezzet'in kampanyasını alırdı (`businessHasDiscounts`). */
+  business: Business;
   now?: Date;
 }
 
@@ -36,7 +39,21 @@ export interface CartDiscountData {
   isFirstOrder: boolean;
 }
 
-export async function loadCartDiscountData(db: Db, input: Pick<CartDiscountInput, 'customerId' | 'couponCode'>): Promise<CartDiscountData> {
+export async function loadCartDiscountData(
+  db: Db,
+  input: Pick<CartDiscountInput, 'customerId' | 'couponCode' | 'business'>,
+): Promise<CartDiscountData> {
+  // İndirim geçmeyen işte kural okunmaz ve kod yok sayılır; o sepette kupon alanı da çizilmez (`CartView.acceptsCoupons`).
+  if (!businessHasDiscounts(input.business)) {
+    return {
+      code: '',
+      hit: null,
+      pool: [],
+      codesByDiscount: new Map(),
+      usage: new Map(),
+      isFirstOrder: await isFirstOrder(db, input.customerId),
+    };
+  }
   const discounts = new DiscountService(db);
   const code = input.couponCode?.trim() ?? '';
   const [candidates, hit, firstOrder] = await Promise.all([

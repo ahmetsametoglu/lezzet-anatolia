@@ -230,6 +230,7 @@ Toptanda "bugün 10 koli alırsan şu fiyat" gündeliktir; kalıcı `Price` sat�
 - **Müşterinin genel fiyat kuralı bu havuzda değildir** — bir fiyattır (yukarıda "Fiyat çözüm sırası"); kazandığı kalem indirim matrahına girmez.
 - **Paketler hariç:** `Bundle` fiyatı sabittir — hiçbir genel indirim/kupon uygulanmaz. Near-expiry teklif satırı ve müşteriye özel fiyatlı kalem de kendi fiyatındadır; genel indirim binmez.
 - **Koşullar (parametrik):** asgari sepet, ilk sipariş, geçerlilik tarihi, kullanım sınırı.
+- **Yalnız Lezzet:** kampanya ve kupon Lezzet'indir; QUALITE sepeti indirim almaz, vitrin QUALITE müşterisine kampanya duyurmaz ve indirim taşıyan sipariş QUALITE deposundan yazılamaz (`docs/feature/iki-is.md`, karar 13).
 - Uygulanan indirim siparişe yazılır (`Order.discount_id` + `discount_amount`); net tutar para hareketine yansır, kâr buna göre türetilir.
 - **Kalemlere dağıtım:** sepet düzeyi indirim sipariş anında kalemlere **oransal dağıtılır** (`OrderItem.line_discount_amount`) — kısmi karşılamada iade tutarı ve kalem KDV'si **indirimli birim fiyattan** hesaplanır; sonradan hesap belirsizliği kalmaz.
 

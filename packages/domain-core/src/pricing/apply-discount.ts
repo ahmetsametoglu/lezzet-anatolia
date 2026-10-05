@@ -1,4 +1,4 @@
-import type { CouponRejection, DiscountScope, DiscountTrigger, DiscountType } from '@lezzet/types';
+import type { Business, CouponRejection, DiscountScope, DiscountTrigger, DiscountType } from '@lezzet/types';
 import { distributeDiscount, percentOf } from '@lezzet/helper';
 
 /**
@@ -24,6 +24,14 @@ export interface DiscountableLine {
 /** Kalem indirim matrahına girer mi; paket, teklif ve müşteriye özel fiyatlı kalem kendi fiyatındadır. */
 export function isDiscountable(line: DiscountableLine): boolean {
   return !line.bundleId && !line.offerStockId && !line.specialPrice;
+}
+
+/** İndirim geçen işler: kampanya ve kupon yalnız Lezzet'indir (`docs/feature/iki-is.md`, karar 13). */
+const BUSINESS_DISCOUNTS: Readonly<Record<Business, boolean>> = { lezzet: true, qualite: false };
+
+/** İşte kampanya ve kupon geçer mi; geçmeyen işin sepeti kural okumaz, vitrini kampanya duyurmaz. */
+export function businessHasDiscounts(business: Business): boolean {
+  return BUSINESS_DISCOUNTS[business];
 }
 
 /** İndirim kuralı — DB karşılığı `Discount`; motor yalnız karar için gerekli alanları görür. */

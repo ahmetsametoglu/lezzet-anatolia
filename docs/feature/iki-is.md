@@ -8,7 +8,7 @@
 **QUALITE** şirketin adıdır ve restoran ile marketlere toptan satış yapan iştir; **Lezzet** markamızdır ve çevrim içi
 satış yapan iştir. İkisi aynı tüzel kişilik (QUALITE SAS) altındadır: muhasebede tek şirkettir, iki işin ayrımı iç takip içindir.
 
-## 1. Kararlar (kullanıcı, 03–04.10)
+## 1. Kararlar (kullanıcı, 03–05.10)
 
 | # | Karar | Sonucu |
 |---|---|---|
@@ -24,6 +24,7 @@ satış yapan iştir. İkisi aynı tüzel kişilik (QUALITE SAS) altındadır: m
 | 10 | **QUALITE etiketi yalnız B2B onaylı müşteriye verilir; QUALITE deposundan anonim kapı satışı yapılmaz; QUALITE kargo göndermez** | Toptan fiyat onaysız açılmaz (`effectiveChannelOf`). QUALITE bölgelerinin dışındaki QUALITE müşterisi "teslimat noktası belirlenemedi" mesajını alır, Lezzet deposuna düşmez. |
 | 11 | **Banka hesapları işe göre ayrılmaz** (04.10): Crédit Mutuel ile Revolut şirketin hesaplarıdır | Ödemenin işi bağından gelir (belge, siparişin ya da mal kabulün deposu, tedarikçi, cari); hiçbiri iş söylemiyorsa Lezzet'tir. İki banka da Pennylane'den okunur (`kasa-muhasebe.md` 15. karar). |
 | 12 | **Pennylane'de bizde olmayan bir faturaya eşli banka satırı izah bekler** (04.10) | O fatura Pennylane'e doğrudan girilmiştir (1. karar). Satır izah kuyruğunda kalır, önerisi yoksa "Belgeyi bizde girin" der; belge bizde girilir, Pennylane'deki kopyası silinir. |
+| 13 | **Kampanya ve kupon yalnız Lezzet'indir** (05.10) | QUALITE müşterisinin sepetine otomatik kampanya inmez ve kupon alanı çizilmez; vitrin ona kampanya rozeti göstermez. İndirim taşıyan sipariş yalnız Lezzet deposundan yazılır (`order_discount_business`). |
 
 **Dayanak (ölçüm ve araştırma, 03.10):** Pennylane'in yerleşik stok modülü yok (yardım merkezi: *"Pennylane ne dispose pas
 de module natif dédié à la gestion des stocks"*); stok için önerdiği Stockpit ayrı abonelikli ikinci bir sistemdir.

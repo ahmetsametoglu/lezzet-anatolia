@@ -2,7 +2,7 @@ import 'server-only';
 import { CategoryImageService, CategoryService, CollectionService, ProductService, serviceDb } from '@lezzet/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Locale } from '@lezzet/i18n';
-import { resolveLocalizedText } from '@lezzet/types';
+import { resolveLocalizedText, type Business } from '@lezzet/types';
 import { FIXTURE_CATEGORIES } from './fixtures';
 import {
   imageOf,
@@ -85,7 +85,7 @@ async function readOffers(
  * Koleksiyon bandı: önce havuz süzülür, güne göre ikisi seçilir ve ürün sayısı yalnız o ikisi için sorulur, maliyet koleksiyon
  * sayısıyla büyümesin diye. Sayaç kataloğun ölçütüyle aynıdır ve ürünü kalmamış koleksiyon banda girmez.
  */
-async function readCollections(db: SupabaseClient, locale: Locale): Promise<StorefrontCollection[]> {
+async function readCollections(db: SupabaseClient, locale: Locale, business: Business): Promise<StorefrontCollection[]> {
   const pool = pickFeatured(await new CollectionService(db).list({ activeOnly: true }));
   const chosen = rotateDaily(pool, HOME_COLLECTION_LIMIT);
   if (chosen.length === 0) return [];
@@ -93,7 +93,7 @@ async function readCollections(db: SupabaseClient, locale: Locale): Promise<Stor
   const products = new ProductService(db);
   /* Kampanya okuması yalnız seçilenler içindir; web'in seçimi güne göre döndüğü için kampanyalı bant öne alınmaz, her koleksiyon
      sırası gelince görünür. BEKLEYEN(08.44) */
-  const campaigns = await readScopeCampaigns(db, { collectionIds: chosen.map((c) => c.id) });
+  const campaigns = await readScopeCampaigns(db, { collectionIds: chosen.map((c) => c.id), business });
   const cards = await Promise.all(
     chosen.map(async (c) => {
       return {
@@ -126,7 +126,7 @@ export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer
     readOffers(db, locale, place, viewer),
     // Yer paket bandına da geçer: kart yol işaretini ancak yeri bilirse basabilir.
     listStorefrontPackages(locale, HOME_PACKAGE_LIMIT, place),
-    readCollections(db, locale),
+    readCollections(db, locale, place.business),
     // Tarif şeridi liste sayfasının kapısından okunur ve `place`/`viewer` taşır ki ana sayfa tarif sayfasıyla aynı fiyatı bassın.
     listStorefrontRecipes(locale, place, viewer, HOME_RECIPE_LIMIT),
   ]);

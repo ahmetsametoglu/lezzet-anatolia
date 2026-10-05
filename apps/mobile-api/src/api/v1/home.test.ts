@@ -236,7 +236,7 @@ describe('composeHomeBands — kendi havuzumuzla deterministik kompozisyon', () 
 
     // rng=0: işaretli iki koleksiyon (dolu + boş) seçilir, boş olan sayımda düşer ve kalan koleksiyon başa yerleşir.
     // Beklenen dizi [koleksiyon, kategori]; tohum sabit olduğu için iddia tam sıradır.
-    const bands = await composeHomeBands(db, 'fr', pools, () => 0);
+    const bands = await composeHomeBands(db, 'fr', pools, 'lezzet', () => 0);
     expect(bands.map((b) => [b.kind, b.slug])).toEqual([
       ['collection', colWithMembers.slug],
       ['category', catFeatured.slug],
@@ -260,14 +260,14 @@ describe('composeHomeBands — kendi havuzumuzla deterministik kompozisyon', () 
       categories: [{ ...catPlain, isFeatured: true }],
       collections: [],
     };
-    const bands = await composeHomeBands(db, 'fr', pools, () => 0);
+    const bands = await composeHomeBands(db, 'fr', pools, 'lezzet', () => 0);
     // catPlain'in ürünleri: boylu AKTİF ürün (teklif zemini) → sayaç 1..n, altyazı null.
     expect(bands[0]?.subtitle).toBeNull();
     expect(bands[0]?.kind).toBe('category');
   });
 
   it('hiç işaret yoksa bant listesi BOŞ döner — web yedeğine düşülmediğinin uç kanıtı', async () => {
-    const bands = await composeHomeBands(db, 'fr', { categories: [catPlain], collections: [] }, () => 0);
+    const bands = await composeHomeBands(db, 'fr', { categories: [catPlain], collections: [] }, 'lezzet', () => 0);
     expect(bands).toEqual([]);
   });
 });

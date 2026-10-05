@@ -2,8 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Channel } from '@lezzet/types';
 import { serviceDb } from '../client';
 import { createTestWarehouse } from '../testing/warehouse';
-import { purgeTestData } from '../testing/cleanup';
+import { mustDelete, purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
+import { DiscountService } from './discount.service';
 import { OrderService } from './order.service';
 import { ProductService } from './product.service';
 import { UserProfileService } from './user-profile.service';
@@ -21,6 +22,7 @@ let qualiteMusteri: string;
 let categoryId: string;
 let productId: string;
 let variantId: string;
+let discountId: string;
 
 beforeAll(async () => {
   lezzetDepo = (await createTestWarehouse(db, { label: 'ISL' })).id;
@@ -41,6 +43,18 @@ beforeAll(async () => {
   ).id;
   await profiles.approveB2b(qualiteMusteri);
   await profiles.update({ id: qualiteMusteri, business: 'qualite' });
+  // Kodsuz ve pasif kupon: başka testin sepetine inemez, sipariş yine ona bağlanabilir.
+  discountId = (
+    await new DiscountService(db).insert({
+      name: `Siparişin indirimi ${stamp}`,
+      publicLabel: { tr: `Siparişin indirimi ${stamp}` },
+      trigger: 'coupon',
+      type: 'percent',
+      percent: 10,
+      scope: 'cart',
+      isActive: false,
+    })
+  ).id;
 });
 
 afterAll(async () => {
@@ -51,6 +65,7 @@ afterAll(async () => {
     profileIds: [lezzetMusteri, qualiteMusteri],
     warehouseIds: [lezzetDepo, qualiteDepo],
   });
+  if (discountId) await mustDelete(db, 'discount', (q) => q.eq('id', discountId));
 });
 
 const siparis = (customerId: string, warehouseId: string, channel: Channel) =>
@@ -64,6 +79,18 @@ describe('siparişin işi', () => {
 
     const { data } = await db.from('order').select('id').eq('customer_id', lezzetMusteri).eq('warehouse_id', qualiteDepo);
     expect(data).toEqual([]);
+  });
+
+  it('indirim taşıyan sipariş QUALITE deposundan yazılmaz, Lezzet deposundan yazılır', async () => {
+    const line = [{ variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }];
+    await expect(
+      orders.create({ customerId: qualiteMusteri, warehouseId: qualiteDepo, channel: 'b2b', orderedTotalCents: 1000, discountId }, line),
+    ).rejects.toThrow(/order_discount_business/);
+    const { order } = await orders.create(
+      { customerId: lezzetMusteri, warehouseId: lezzetDepo, channel: 'b2c', orderedTotalCents: 1000, discountId },
+      line,
+    );
+    expect(order.discountId).toBe(discountId);
   });
 
   it('yazılmış siparişin deposu öteki işin deposuna taşınamaz', async () => {
