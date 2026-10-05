@@ -8,14 +8,15 @@ import { analyticsUrl, parseAnalyticsUrl, periodRange } from './analytics-url';
 
 describe('parseAnalyticsUrl', () => {
   it('boş parametrelerde varsayılana düşer', () => {
-    expect(parseAnalyticsUrl({})).toEqual({ mode: 'ticaret', period: 'd30', channel: 'all' });
+    expect(parseAnalyticsUrl({})).toEqual({ mode: 'ticaret', period: 'd30', channel: 'all', business: 'all' });
   });
 
   it('tanınmayan değerleri sessizce varsayılana çevirir (bozuk link ekranı kırmaz)', () => {
-    expect(parseAnalyticsUrl({ mode: 'kar', period: 'd365', ch: 'b2g' })).toEqual({
+    expect(parseAnalyticsUrl({ mode: 'kar', period: 'd365', ch: 'b2g', business: 'migros' })).toEqual({
       mode: 'ticaret',
       period: 'd30',
       channel: 'all',
+      business: 'all',
     });
   });
 
@@ -30,9 +31,9 @@ describe('analyticsUrl', () => {
   });
 
   it('gidiş-dönüş kayıpsız', () => {
-    const url = analyticsUrl({ mode: 'trafik', period: 'd90', channel: 'b2c' });
-    const params = Object.fromEntries(new URLSearchParams(url.split('?')[1]));
-    expect(parseAnalyticsUrl(params)).toEqual({ mode: 'trafik', period: 'd90', channel: 'b2c' });
+    const state = { mode: 'trafik', period: 'd90', channel: 'b2c', business: 'qualite' } as const;
+    const params = Object.fromEntries(new URLSearchParams(analyticsUrl(state).split('?')[1]));
+    expect(parseAnalyticsUrl(params)).toEqual(state);
   });
 });
 

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { AnalyticsEventService, UserProfileService } from '@lezzet/database';
-import { dailySalt, type PlaceWarehouses } from '@lezzet/application';
+import { customerBusiness, dailySalt, type PlaceWarehouses } from '@lezzet/application';
 import {
   AnalyticsInputSchema,
   type AnalyticsEventInsert,
@@ -41,7 +41,7 @@ export interface NativeEventContext {
    * atmak zorunda kalırdı.
    */
   channel: Channel;
-  /** Personel süzgeci için — `null` = misafir. Kimliği bilmeyen uç `null` geçer. */
+  /** Personel süzgeci ve olayın işi için; `null` misafirdir ve işi Lezzet sayılır. Kimliği bilmeyen uç `null` geçer. */
   customerId: string | null;
   /** Ölçüm yerden yalnız depoyu yazar; `null` uç yeri çözmüyor demektir. */
   place: Pick<PlaceWarehouses, 'warehouseId' | 'shippingWarehouseId'> | null;
@@ -70,7 +70,8 @@ export async function recordNativeEvent(ctx: NativeEventContext, input: Analytic
        de girebildiği için süzgeç burada daha da gereklidir. */
     if (ctx.customerId !== null && (await new UserProfileService(ctx.db).isStaff(ctx.customerId))) return;
 
-    const salt = await dailySalt(ctx.db);
+    // İş yerden değil kimlikten okunur, çünkü ödeme ve yer çözümü uçları yer taşımaz; kural yerinkiyle aynıdır, ziyaretçi Lezzet'tir.
+    const [salt, business] = await Promise.all([dailySalt(ctx.db), customerBusiness(ctx.db, ctx.customerId)]);
     const satir: AnalyticsEventInsert = {
       type: girdi.type,
       sessionKey: sessionKeyOf(salt, ctx.customerId),
@@ -83,6 +84,7 @@ export async function recordNativeEvent(ctx: NativeEventContext, input: Analytic
       productId: 'productId' in girdi ? (girdi.productId ?? null) : null,
       channel: ctx.channel,
       warehouseId: ctx.place?.warehouseId ?? ctx.place?.shippingWarehouseId ?? null,
+      business,
       availability: 'availability' in girdi ? girdi.availability : null,
       blockedReason: 'reason' in girdi ? girdi.reason : null,
       /* Native'de cihaz HER ZAMAN mobil — türetilecek bir şey yok. Ayrımı `surface` taşıyor. */

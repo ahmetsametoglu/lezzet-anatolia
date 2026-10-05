@@ -104,6 +104,7 @@ export async function recordEvent(input: AnalyticsInput, context: EventContext =
       channel: viewer.channel,
       // `null` bir KOVADIR (yer seçilmemiş), eksik veri değil — huninin ilk adımı orada.
       warehouseId: place.warehouseId,
+      business: place.business,
       device: await detectDevice(),
       /**
        * Yüzey sabittir, çünkü bu kapı yalnız web'den çağrılır, native kendi kapısını kullanır. Alanın varsayılanı yoktur ki yüzeyi

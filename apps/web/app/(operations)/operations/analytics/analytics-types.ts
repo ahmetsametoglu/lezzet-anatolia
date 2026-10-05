@@ -110,6 +110,7 @@ export interface AnalyticsViewProps {
   onMode: (mode: AnalyticsUrlState['mode']) => void;
   onPeriod: (period: AnalyticsUrlState['period']) => void;
   onChannel: (channel: AnalyticsUrlState['channel']) => void;
+  onBusiness: (business: AnalyticsUrlState['business']) => void;
   /** Süzgeç turu sürüyor — bloklar soluklaşır. */
   navPending: boolean;
 }

@@ -13,7 +13,7 @@ import { money, num, percent } from '@/components/operation/ui/format';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { customersUrl } from '../customers/customers-url';
 import { AnalyticsClient } from './analytics-client';
-import { CONVERSION_MIN_SAMPLE, HERO_NOTES, NOTES, toChannelFilter } from './analytics-labels';
+import { CONVERSION_MIN_SAMPLE, HERO_NOTES, NOTES, toFilter } from './analytics-labels';
 import { changeRatio, deltaView, sumEvents, toFunnel, toHeat, toRevenueSeries, toSeries } from './analytics-read';
 import { PERIOD_DAYS, parseAnalyticsUrl, periodRange } from './analytics-url';
 import type { AnalyticsData, BlockView } from './analytics-types';
@@ -41,7 +41,8 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   // TEK an, tüm bloklar: dönem sınırları bir kez hesaplanır. İki blok kendi `now`'unu okusaydı
   // gece yarısını geçen bir istekte biri dünü, öteki bugünü sayardı (`ANALYTICS §5` kıyas omurgası).
   const range = periodRange(urlState.period, new Date());
-  const channel = toChannelFilter(urlState.channel);
+  const channel = toFilter(urlState.channel);
+  const business = toFilter(urlState.business);
 
   const db = serviceDb();
   const daily = new AnalyticsDailyService(db);
@@ -53,27 +54,40 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   const prevFrom = range.prevFrom.slice(0, 10);
   const prevTo = range.prevTo.slice(0, 10);
 
-  const [rows, prevRows, revenue, prevRevenue, campaigns, sources, zeroSearch, interest, segments, insight, consentAny, consentEmail, consentWhatsapp] =
-    await Promise.all([
-      daily.list({ from, to, channel }),
-      daily.list({ from: prevFrom, to: prevTo, channel }),
-      // Ciro SİPARİŞ tablosundan (`ANALYTICS §4`: defter değil tablo yetkili) ve sipariş tarihine
-      // göre — teslim gününe göre okunsaydı kampanya giderinin dönemiyle hizalanmazdı.
-      readOrderRevenue(from, to),
-      readOrderRevenue(prevFrom, prevTo),
-      readCampaignRoi(from, to),
-      readTrafficSources(from, to),
-      readZeroResultSearches(from, to),
-      readProductInterest(from, to),
-      // Segmentler DÖNEMSİZ: "uyuyan müşteri" bugüne göre tanımlı bir hâldir, seçili pencereye göre
-      // değil. Dönem çipini buraya bağlamak "son 7 günde kaç uyuyan vardı" gibi anlamsız bir soru
-      // üretirdi — uyuyanlık zaten geçmişe bakarak tanımlanıyor.
-      readCustomerSegments(),
-      readWeeklyInsight(),
-      profiles.countByMarketingConsent('any'),
-      profiles.countByMarketingConsent('email'),
-      profiles.countByMarketingConsent('whatsapp'),
-    ]);
+  const [
+    rows,
+    prevRows,
+    revenue,
+    prevRevenue,
+    campaigns,
+    sources,
+    zeroSearch,
+    interest,
+    segments,
+    insight,
+    consentAny,
+    consentEmail,
+    consentWhatsapp,
+  ] = await Promise.all([
+    daily.list({ from, to, channel, business }),
+    daily.list({ from: prevFrom, to: prevTo, channel, business }),
+    // Ciro SİPARİŞ tablosundan (`ANALYTICS §4`: defter değil tablo yetkili) ve sipariş tarihine
+    // göre — teslim gününe göre okunsaydı kampanya giderinin dönemiyle hizalanmazdı.
+    readOrderRevenue(from, to, business),
+    readOrderRevenue(prevFrom, prevTo, business),
+    readCampaignRoi(from, to, business),
+    readTrafficSources(from, to, business),
+    readZeroResultSearches(from, to, business),
+    readProductInterest(from, to, business),
+    // Segmentler DÖNEMSİZ: "uyuyan müşteri" bugüne göre tanımlı bir hâldir, seçili pencereye göre
+    // değil. Dönem çipini buraya bağlamak "son 7 günde kaç uyuyan vardı" gibi anlamsız bir soru
+    // üretirdi — uyuyanlık zaten geçmişe bakarak tanımlanıyor.
+    readCustomerSegments({ business }),
+    readWeeklyInsight(),
+    profiles.countByMarketingConsent('any'),
+    profiles.countByMarketingConsent('email'),
+    profiles.countByMarketingConsent('whatsapp'),
+  ]);
 
   const hasLedger = rows.length > 0;
   const trafik = urlState.mode === 'trafik';

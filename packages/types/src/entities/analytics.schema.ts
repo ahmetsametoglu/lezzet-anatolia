@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ChannelEnum, CountryEnum, PreferredLanguageEnum } from '../primitives/enums.schema';
+import { BusinessEnum, ChannelEnum, CountryEnum, PreferredLanguageEnum } from '../primitives/enums.schema';
 
 /**
  * Analitik olay sözleşmesi; kuralların tamamı `docs/architecture/ANALYTICS.md`'dedir. Atıcının söylediği (`AnalyticsInput`) ile deftere
@@ -189,12 +189,10 @@ export const AnalyticsEventInsertSchema = z.object({
   availability: AnalyticsAvailabilityEnum.nullish(),
   blockedReason: AnalyticsBlockedReasonEnum.nullish(),
   device: AnalyticsDeviceEnum.nullish(),
-  /**
-   * Hangi yüzeyden geldi — **ZORUNLU, `nullish` değil.** `default 'web'` ya da opsiyonel bir alan,
-   * yüzeyi söylemeyi unutan bir yazımın sessizce web sayılması demekti; yani MB-63'ün arızasının
-   * yeniden üretilmesi. Zorunlu alan, unutmayı DERLEME hatasına çevirir.
-   */
+  /** Hangi yüzeyden geldiği zorunludur: yüzeyi söylemeyi unutan yazım sessizce web sayılmasın, unutmak derleme hatası olsun. */
   surface: AnalyticsSurfaceEnum,
+  /** Olayın işi, yerin işidir ve ziyaretçi Lezzet'tir; yüzey gibi zorunludur. */
+  business: BusinessEnum,
   country: CountryEnum.nullish(),
   language: PreferredLanguageEnum.nullish(),
   meta: z.record(z.unknown()).nullish(),
@@ -227,6 +225,7 @@ export type AnalyticsSessionInsert = z.infer<typeof AnalyticsSessionInsertSchema
  */
 export const AnalyticsDailySchema = z.object({
   day: z.string(),
+  business: BusinessEnum,
   type: AnalyticsEventTypeEnum,
   path: z.string().nullable(),
   warehouseId: z.string().uuid().nullable(),
@@ -250,6 +249,7 @@ export type AnalyticsDaily = z.infer<typeof AnalyticsDailySchema>;
 /** Gün × ürün; vitrin seçkisi de bunu okur, ham deftere bağlanmaz. */
 export const AnalyticsProductDailySchema = z.object({
   day: z.string(),
+  business: BusinessEnum,
   productId: z.string().uuid(),
   viewCount: z.number().int(),
   cartCount: z.number().int(),
@@ -271,6 +271,7 @@ export type AnalyticsZeroResultKind = z.infer<typeof AnalyticsZeroResultKindEnum
 /** Gün × terim × kova. Sistemdeki tek KALICI serbest metin — ham defterle aynı 25 ayı yaşar. */
 export const AnalyticsSearchDailySchema = z.object({
   day: z.string(),
+  business: BusinessEnum,
   query: z.string(),
   zeroResultKind: AnalyticsZeroResultKindEnum.nullable(),
   searchCount: z.number().int(),
@@ -282,6 +283,7 @@ export type AnalyticsSearchDaily = z.infer<typeof AnalyticsSearchDailySchema>;
 /** Gün × kaynak × kampanya. `source: null` DOĞRUDAN trafiktir — eksik veri değil. */
 export const AnalyticsSourceDailySchema = z.object({
   day: z.string(),
+  business: BusinessEnum,
   source: z.string().nullable(),
   campaign: z.string().nullable(),
   medium: z.string().nullable(),

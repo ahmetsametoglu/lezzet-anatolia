@@ -45,14 +45,37 @@ describe('analytics_rollup', () => {
       utm: { source: 'instagram', campaign, medium: 'cpc' },
       source: 'instagram.com',
     });
-    // `surface` zorunludur ve varsayılanı yoktur; ham `insert`te unutulursa Supabase hatayı döndürür, satır doğmaz ve test sebebi görünmeden
-    // düşerdi.
+    // `surface` ve `business` zorunludur ve varsayılanı yoktur; ham `insert`te unutulursa Supabase hatayı döndürür, satır doğmaz ve test
+    // sebebi görünmeden düşerdi.
     await db.from('analytics_event').insert([
-      { created_at: at(8), type: 'page_view', session_key: sessionKey, path: '/', surface: 'web' },
-      { created_at: at(9), type: 'product_view', session_key: sessionKey, product_id: productId, availability: 'sellable', surface: 'web' },
-      { created_at: at(9), type: 'add_to_cart', session_key: sessionKey, product_id: productId, surface: 'web' },
-      { created_at: at(10), type: 'search', session_key: sessionKey, meta: { query: searchQuery, resultCount: 0, zeroResultKind: 'search' }, surface: 'web' },
-      { created_at: at(11), type: 'checkout_blocked', session_key: sessionKey, path: '/checkout', blocked_reason: 'min_basket', surface: 'web' },
+      { created_at: at(8), type: 'page_view', session_key: sessionKey, path: '/', business: 'lezzet', surface: 'web' },
+      {
+        created_at: at(9),
+        type: 'product_view',
+        session_key: sessionKey,
+        product_id: productId,
+        availability: 'sellable',
+        business: 'lezzet',
+        surface: 'web',
+      },
+      { created_at: at(9), type: 'add_to_cart', session_key: sessionKey, product_id: productId, business: 'lezzet', surface: 'web' },
+      {
+        created_at: at(10),
+        type: 'search',
+        session_key: sessionKey,
+        meta: { query: searchQuery, resultCount: 0, zeroResultKind: 'search' },
+        business: 'lezzet',
+        surface: 'web',
+      },
+      {
+        created_at: at(11),
+        type: 'checkout_blocked',
+        session_key: sessionKey,
+        path: '/checkout',
+        blocked_reason: 'min_basket',
+        business: 'lezzet',
+        surface: 'web',
+      },
     ]);
 
     const sonuc = await analyticsRollupJob();

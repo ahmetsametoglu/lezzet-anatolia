@@ -47,6 +47,8 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
   hesabı "araçsız devam" der. Soğuk zincir izi araç kaydına bağlı olduğu için aynı aracın izi iki kayda bölünür. Ortak bölge
   seçilmedi, çünkü araçlar ayrılınca bozulurdu: bölge ve gün başına tek sefer var, seferde tek kurye ve tek araç.
 - **Kapı ve araç satışının işi deposundan gelir;** anonim alıcı işe göre bölünmez.
+- **Analitik iki işi ayrı sayar:** olayın işi müşterinin işidir (ziyaretçi Lezzet), siparişin işi deposundandır; ekran iki işi
+  birlikte ya da ayrı okur (`ANALYTICS.md`).
 - **WhatsApp'tan yazan yeni kişi Lezzet'te taslak müşteri olarak açılır** (7. ve 10. karar): taslak B2B onaylı olamaz;
   profesyonelse admin onaydan sonra QUALITE yapar. Bu yüzden iki işin aynı numarayı kullanması sorun değildir. QUALITE ayrı bir
   numara açarsa konuşmanın tekilliği bizim hesabı da içerecek şekilde genişler (`0039_conversation.sql`,

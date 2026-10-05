@@ -5,6 +5,7 @@
 -- İki tüketicisi var: yönetici raporu ve müşteri vitrini (`readShowcase`); vitrin ham deftere bağlansa her açılış toplama koşardı.
 create table public.analytics_daily_product (
   day date not null,
+  business business not null,
   -- FK YOK — defterle aynı gerekçe: silinen ürünün geçmiş sayıları silinmemeli, yoksa mart ayının
   -- grafiği haziranda başka bir sayı gösterir. Öksüz satır burada bir arıza değil, tarihtir.
   product_id uuid not null,
@@ -19,7 +20,7 @@ create table public.analytics_daily_product (
   session_count integer not null default 0,
 
   updated_at timestamptz not null default now(),
-  constraint analytics_daily_product_key unique (day, product_id)
+  constraint analytics_daily_product_key unique (day, business, product_id)
 );
 
 comment on table public.analytics_daily_product is
@@ -36,6 +37,7 @@ create type analytics_zero_result_kind as enum ('search', 'filter');
 
 create table public.analytics_daily_search (
   day date not null,
+  business business not null,
   -- Defterdeki tek serbest metnin özeti. Kapıda `scrubMessage` + normalleştirme + 100 karakter
   -- tavanından geçmiş hâli yazılır; ham kullanıcı metni buraya hiç gelmez.
   query text not null,
@@ -45,7 +47,7 @@ create table public.analytics_daily_search (
   session_count integer not null default 0,
 
   updated_at timestamptz not null default now(),
-  constraint analytics_daily_search_key unique nulls not distinct (day, query, zero_result_kind)
+  constraint analytics_daily_search_key unique nulls not distinct (day, business, query, zero_result_kind)
 );
 
 comment on table public.analytics_daily_search is
@@ -62,6 +64,7 @@ create index analytics_daily_search_day_idx on public.analytics_daily_search (da
 -- gerçek bir kovadır: "doğrudan / bilinmeyen".
 create table public.analytics_daily_source (
   day date not null,
+  business business not null,
   source text,
   campaign text,
   medium text,
@@ -72,7 +75,7 @@ create table public.analytics_daily_source (
   order_session_count integer not null default 0,
 
   updated_at timestamptz not null default now(),
-  constraint analytics_daily_source_key unique nulls not distinct (day, source, campaign, medium)
+  constraint analytics_daily_source_key unique nulls not distinct (day, business, source, campaign, medium)
 );
 
 comment on table public.analytics_daily_source is
@@ -98,8 +101,9 @@ declare
   yazilan integer;
 begin
   insert into public.analytics_daily_product as t
-    (day, product_id, view_count, cart_count, share_count, sellable_view_count, session_count, updated_at)
+    (day, business, product_id, view_count, cart_count, share_count, sellable_view_count, session_count, updated_at)
   select p_day,
+         e.business,
          coalesce(e.product_id, v.product_id),
          count(*) filter (where e.type = 'product_view')::int,
          count(*) filter (where e.type = 'add_to_cart')::int,
@@ -113,7 +117,7 @@ begin
            on e.subject_type = 'variant' and v.id = e.subject_id
    where e.created_at >= p_day and e.created_at < p_day + 1
      and coalesce(e.product_id, v.product_id) is not null
-   group by coalesce(e.product_id, v.product_id)
+   group by e.business, coalesce(e.product_id, v.product_id)
   on conflict on constraint analytics_daily_product_key do update
     set view_count = excluded.view_count,
         cart_count = excluded.cart_count,
@@ -147,8 +151,9 @@ declare
   yazilan integer;
 begin
   insert into public.analytics_daily_search as t
-    (day, query, zero_result_kind, search_count, session_count, updated_at)
+    (day, business, query, zero_result_kind, search_count, session_count, updated_at)
   select p_day,
+         e.business,
          e.meta->>'query',
          nullif(e.meta->>'zeroResultKind', '')::analytics_zero_result_kind,
          count(*)::int,
@@ -158,7 +163,7 @@ begin
    where e.created_at >= p_day and e.created_at < p_day + 1
      and e.type = 'search'
      and coalesce(e.meta->>'query', '') <> ''
-   group by 2, 3
+   group by 2, 3, 4
   on conflict on constraint analytics_daily_search_key do update
     set search_count = excluded.search_count,
         session_count = excluded.session_count,
@@ -184,19 +189,22 @@ as $$
 declare
   yazilan integer;
 begin
+  -- Oturum iş başına sayılır: girişten önce ziyaretçi olan tarayıcı aynı gün iki işin de oturumu olabilir.
   with oturum as (
     select e.session_key,
+           e.business,
            count(*)::int as olay,
            bool_or(e.type = 'order_placed') as siparisli
       from public.analytics_event e
      where e.created_at >= p_day and e.created_at < p_day + 1
-     group by e.session_key
+     group by e.session_key, e.business
   )
   insert into public.analytics_daily_source as t
-    (day, source, campaign, medium, session_count, event_count, order_session_count, updated_at)
+    (day, business, source, campaign, medium, session_count, event_count, order_session_count, updated_at)
   -- Sol birleşim, çünkü künyesiz oturum da sayılmalı. UTM yönlendirenden önce gelir, yoksa reklamla gelen ziyaretçi
   -- iki kovaya bölünürdü; sıra `rememberAcquisition` ile aynı olmak zorunda.
   select p_day,
+         o.business,
          coalesce(s.utm->>'source', s.source),
          s.utm->>'campaign',
          s.utm->>'medium',
@@ -206,7 +214,7 @@ begin
          now()
     from oturum o
     left join public.analytics_session s on s.session_key = o.session_key
-   group by 2, 3, 4
+   group by 2, 3, 4, 5
   on conflict on constraint analytics_daily_source_key do update
     set session_count = excluded.session_count,
         event_count = excluded.event_count,
@@ -250,7 +258,8 @@ comment on function public.purge_analytics_before(date) is
 create or replace function public.analytics_product_signals(
   p_from date,
   p_to date,
-  p_limit integer default 20
+  p_limit integer default 20,
+  p_business business default null
 )
 returns table (
   product_id uuid,
@@ -280,12 +289,13 @@ as $$
          end
     from public.analytics_daily_product t
    where t.day >= p_from and t.day <= p_to
+     and (p_business is null or t.business = p_business)
    group by t.product_id
    order by sum(t.view_count) desc
    limit p_limit;
 $$;
 
-comment on function public.analytics_product_signals(date, date, integer) is
+comment on function public.analytics_product_signals(date, date, integer, business) is
   'Dönemin ürün sinyalleri: ilgi ve dönüşüm; vitrin seçkisi de bunu okur.';
 
 -- Dönemin arama sinyalleri; `p_zero_only` sıfır sonuçluları süzer, kova gruplamada kalır (`ANALYTICS §4`).
@@ -293,7 +303,8 @@ create or replace function public.analytics_search_signals(
   p_from date,
   p_to date,
   p_limit integer default 20,
-  p_zero_only boolean default false
+  p_zero_only boolean default false,
+  p_business business default null
 )
 returns table (
   query text,
@@ -313,20 +324,23 @@ as $$
     from public.analytics_daily_search t
    where t.day >= p_from and t.day <= p_to
      and (not p_zero_only or t.zero_result_kind is not null)
+     and (p_business is null or t.business = p_business)
    group by t.query, t.zero_result_kind
    order by sum(t.search_count) desc
    limit p_limit;
 $$;
 
-comment on function public.analytics_search_signals(date, date, integer, boolean) is
+comment on function public.analytics_search_signals(date, date, integer, boolean, business) is
   'Dönemin arama sinyalleri; sıfır-sonuç süzgeci kovayı korur.';
 
 -- ═══ "HANGİ SİPARİŞ CİRO SAYILIR" — TEK TANIM ════════════════════════════════
 -- Üç okuma aynı tanımı kullanır ki ayrışmasın: taslak, iptal ve iade sayılmaz. İki tutar taşınır, raporlar bugün
 -- `ordered_total`ı okur; `revenue_total`a geçiş BEKLEYEN(12.25).
 create or replace view public.analytics_order_base with (security_invoker = true) as
-  select o.id, o.customer_id, o.channel, o.ordered_total, o.revenue_total, o.created_at, o.address_snapshot
+  select o.id, o.customer_id, o.channel, o.ordered_total, o.revenue_total, o.created_at, o.address_snapshot, w.business
     from public.order o
+    -- Siparişin işi deposunun işidir; müşterinin işiyle eşitliğini `order_business_matches` korur.
+    join public.warehouse w on w.id = o.warehouse_id
    where o.status not in ('draft', 'cancelled', 'returned');
 
 comment on view public.analytics_order_base is
@@ -334,7 +348,7 @@ comment on view public.analytics_order_base is
 
 -- Dönem cirosu, gün × kanal: `order_counts` teslim gününe süzer, analitik sipariş gününü sorar. Kanal ayrı satırdır,
 -- çünkü karışık ölçüm yalan söyler (`ANALYTICS §3`); satır sayısı gün × 2 ile sınırlı.
-create or replace function public.analytics_order_revenue(p_from date, p_to date)
+create or replace function public.analytics_order_revenue(p_from date, p_to date, p_business business default null)
 returns table (
   day date,
   channel channel,
@@ -354,17 +368,18 @@ as $$
          round(sum(o.ordered_total) * 100)::bigint as revenue_cents
     from public.analytics_order_base o
    where o.created_at >= p_from and o.created_at < p_to + 1
+     and (p_business is null or o.business = p_business)
    group by 1, 2
    order by 1;
 $$;
 
-comment on function public.analytics_order_revenue(date, date) is
+comment on function public.analytics_order_revenue(date, date, business) is
   'Dönem cirosu gün × kanal; süzgeç sipariş tarihinde, teslim gününde değil.';
 
 -- ═══ KAMPANYA CİROSU — İLK TEMAS ATFI ═════════════════════════════════════════
 -- Siparişleri müşterinin edinim kaynağına göre toplar: kampanyanın kazandırdığı müşterilerin dönem siparişleri, tekrarlar dahil.
 -- Oturum anahtarı siparişe yazılmadığı için tek bağ `acquisition_source`tur; jsonb anahtarları camelCase.
-create or replace function public.analytics_campaign_revenue(p_from date, p_to date)
+create or replace function public.analytics_campaign_revenue(p_from date, p_to date, p_business business default null)
 returns table (
   campaign text,
   source text,
@@ -381,7 +396,7 @@ set timezone = 'Europe/Paris'
 as $$
   -- Ciro tanımı `analytics_order_base`'ten gelir — üç okuma da aynı yerden, yoksa aynı ekranda
   -- iki farklı ciro belirir ve hiçbiri hata vermez.
-  with sip as (select * from public.analytics_order_base),
+  with sip as (select * from public.analytics_order_base where p_business is null or business = p_business),
   ilk as (
     select s.customer_id, min(s.created_at) as ilk_at from sip s group by 1
   )
@@ -401,7 +416,7 @@ as $$
    group by 1, 2;
 $$;
 
-comment on function public.analytics_campaign_revenue(date, date) is
+comment on function public.analytics_campaign_revenue(date, date, business) is
   'Kampanya cirosu, ilk temas atfı: tekrar siparişler de müşteriyi kazandıran kaynağa yazılır.';
 
 -- Posta kodu başına sipariş, `postal_code_demand` talebinin karşı ucu. Anahtar `address_snapshot`, çünkü canlı adres
@@ -433,7 +448,8 @@ create or replace function public.analytics_customer_segments(
   p_reference date default current_date,
   p_dormant_days integer default 90,
   p_new_days integer default 30,
-  p_champion_orders integer default 3
+  p_champion_orders integer default 3,
+  p_business business default null
 )
 returns table (
   segment text,
@@ -449,7 +465,7 @@ set timezone = 'Europe/Paris'
 as $$
   -- Segment de aynı ciro tanımından okur (`analytics_order_base`): "iyi müşteri" yargısı ile
   -- "dönem cirosu" farklı sipariş kümelerinden çıksaydı ekran kendiyle çelişirdi.
-  with sip as (select * from public.analytics_order_base),
+  with sip as (select * from public.analytics_order_base where p_business is null or business = p_business),
   musteri as (
     select s.customer_id,
            count(*)::int as siparis,
@@ -472,7 +488,7 @@ as $$
    group by 1;
 $$;
 
-comment on function public.analytics_customer_segments(date, integer, integer, integer) is
+comment on function public.analytics_customer_segments(date, integer, integer, integer, business) is
   'Müşteri segmenti sayıları: segment türetilir, saklanmaz; eşikler parametrik.';
 
 -- Segmentin üyeleri: sayı ile liste aynı ölçütten çıkmalı. Sayfalanır ve en yeni uyuyan üstte, çünkü geri kazanma şansı en yüksek odur.
@@ -483,7 +499,8 @@ create or replace function public.analytics_segment_members(
   p_reference date default current_date,
   p_dormant_days integer default 90,
   p_new_days integer default 30,
-  p_champion_orders integer default 3
+  p_champion_orders integer default 3,
+  p_business business default null
 )
 returns table (
   customer_id uuid,
@@ -499,7 +516,7 @@ set timezone = 'Europe/Paris'
 as $$
   -- Segment de aynı ciro tanımından okur (`analytics_order_base`): "iyi müşteri" yargısı ile
   -- "dönem cirosu" farklı sipariş kümelerinden çıksaydı ekran kendiyle çelişirdi.
-  with sip as (select * from public.analytics_order_base),
+  with sip as (select * from public.analytics_order_base where p_business is null or business = p_business),
   musteri as (
     select s.customer_id,
            count(*)::int as siparis,
@@ -521,5 +538,5 @@ as $$
    limit p_limit offset p_offset;
 $$;
 
-comment on function public.analytics_segment_members(text, integer, integer, date, integer, integer, integer) is
+comment on function public.analytics_segment_members(text, integer, integer, date, integer, integer, integer, business) is
   'Bir segmentin üyeleri, sayfalı; dışa alma ve Müşteriler köprüsü bunu okur.';

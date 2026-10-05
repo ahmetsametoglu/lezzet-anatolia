@@ -9,6 +9,7 @@ import { changeRatio, deltaView, sumEvents, toFunnel, toHeat, toSeries } from '.
 
 const row = (over: Partial<AnalyticsDaily>): AnalyticsDaily => ({
   day: '2026-08-01',
+  business: 'lezzet',
   type: 'page_view',
   path: null,
   warehouseId: null,

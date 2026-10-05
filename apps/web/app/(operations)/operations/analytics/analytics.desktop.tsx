@@ -20,14 +20,14 @@ import {
   ZeroSearchChips,
   ZoneDemandBridge,
 } from './analytics-sections';
-import { CHANNEL_LABEL, CHANNEL_ORDER, MODE_LABEL } from './analytics-labels';
+import { BUSINESS_LABEL, BUSINESS_ORDER, CHANNEL_LABEL, CHANNEL_ORDER, MODE_LABEL } from './analytics-labels';
 import { ANALYTICS_MODES, ANALYTICS_PERIODS, PERIOD_LABEL } from './analytics-url';
 import type { AnalyticsViewProps } from './analytics-types';
 
 // Analitik, web: çizimdeki tek dikey akış (kontrol barı → kırılım şeridi → içgörü → hero → seri → bloklar), ızgara oranları çizimden.
 // Çizimdeki "Dolu / İlk gün" anahtarı demo kontrolüdür, kodlanmadı; yönetici veri hâlini seçmez, veriden okur.
 
-export function AnalyticsDesktop({ data, urlState, onMode, onPeriod, onChannel, navPending }: AnalyticsViewProps) {
+export function AnalyticsDesktop({ data, urlState, onMode, onPeriod, onChannel, onBusiness, navPending }: AnalyticsViewProps) {
   const trafik = urlState.mode === 'trafik';
 
   return (
@@ -58,6 +58,15 @@ export function AnalyticsDesktop({ data, urlState, onMode, onPeriod, onChannel, 
         {CHANNEL_ORDER.map((c) => (
           <Chip key={c} tone={c === 'b2b' ? 'amber' : 'olive'} active={urlState.channel === c} onClick={() => onChannel(urlState.channel === c ? 'all' : c)}>
             {CHANNEL_LABEL[c]}
+          </Chip>
+        ))}
+        <span className="mx-1 h-4 w-px bg-ops-line" />
+        <Chip active={urlState.business === 'all'} onClick={() => onBusiness('all')}>
+          {BUSINESS_LABEL.all}
+        </Chip>
+        {BUSINESS_ORDER.map((b) => (
+          <Chip key={b} active={urlState.business === b} onClick={() => onBusiness(urlState.business === b ? 'all' : b)}>
+            {BUSINESS_LABEL[b]}
           </Chip>
         ))}
         <span className="mx-1 h-4 w-px bg-ops-line" />

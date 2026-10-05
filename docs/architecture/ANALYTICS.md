@@ -47,6 +47,9 @@
 ## 3. Olay şekli
 
 - **`channel`** (B2C/B2B) — sunucuda çözülü, karışık ölçüm yalan söyler.
+- **`business` olayın işidir:** yerin işi, yani müşterinin işi; ziyaretçi Lezzet'tir. Depodan türetilmez, çünkü deposuz olay da
+  (yer seçilmemiş gezinme, native ödeme adımı) bir işe aittir; kolon zorunludur, varsayılanı yoktur. İş kanaldan bağımsızdır:
+  QUALITE müşterisi de Lezzet'in şirket müşterisi de `b2b`dir.
 - **`place` DEPO granülünde, posta kodu DEĞİL** — `b2b + posta kodu + zaman ≈ tek işletme`
   (k-anonimlik). Posta kodu sorusunun sahibi `postal_code_demand` (kanalsız, yolsuz sayaç);
   "sepeti bölünen/vazgeçen" bölge kırılımı oraya iki sayaç olarak eklenir, deftere değil.
@@ -118,8 +121,8 @@
 - **Ham tablo AYA GÖRE BÖLÜMLENİR;** süresi dolan veri satır silinerek değil **bölüm düşürülerek**
   gider (toplu DELETE şişkinliği yok). Silen iş 13.1'in parçasıdır — silen iş yoksa "saklama
   süresi" bir cümledir, kural değil. Sıra: günlük özet ÖNCE üretilir, silme SONRA.
-- **Günlük özet (`analytics_daily`) SÜRESİZ** ve boyutları ZENGİN: gün × olay tipi × rota × depo ×
-  kanal × satılabilirlik. Ekranlar HAM DEFTERE BAĞLANMAZ, özetten okur; ham yalnız detay içindir.
+- **Günlük özet (`analytics_daily`) SÜRESİZ** ve boyutları ZENGİN: gün × iş × olay tipi × rota ×
+  depo × kanal × satılabilirlik. Ekranlar HAM DEFTERE BAĞLANMAZ, özetten okur; ham yalnız detay içindir.
 - **Gün ve saat Paris takvimindedir:** günlük özetin günü, saat kırılımı, oturum tuzunun dönüşü ve
   dönem raporları `Europe/Paris`e göre kurulur (SQL fonksiyonlarında `set timezone`); sunucunun UTC
   günü gece yarısından sonraki olayları önceki güne ve kayık saate yazardı.
@@ -142,8 +145,8 @@
   ayrımda *"aranıp bulunamayan listesi ham defterden"* yazıyordu; kasıt "kaynağı `analytics_daily`
   değil" idi ve o kısım aynen geçerli. Ama okumayı hama bağlamadık, çünkü **ham okuma iki yerden
   çürür**: her açılışta ayın tüm bölümünü tarar, ve 25 ay dolunca listenin geçmişi sessizce kısalır.
-  Yerine üç dar özet: `analytics_daily_product` (gün × ürün) · `analytics_daily_search`
-  (gün × terim × sıfır-sonuç kovası) · `analytics_daily_source` (gün × kaynak × kampanya).
+  Yerine üç dar özet: `analytics_daily_product` (gün × iş × ürün) · `analytics_daily_search`
+  (gün × iş × terim × sıfır-sonuç kovası) · `analytics_daily_source` (gün × iş × kaynak × kampanya).
   **`analytics_daily`'ye BOYUT olarak eklenmediler** — satır sayısını katalog büyüklüğüyle ve arama
   çeşitliliğiyle çarparlardı; huni/ısı/seri okumaları da o şişmiş tabloyu taramak zorunda kalırdı.
 - **Kaynak dökümü OTURUM tablosundan değil DEFTERDEN üretilir.** `analytics_session` yalnız künyeli
@@ -157,6 +160,8 @@
 - **Terk sebebi GÜNLÜK ÖZETİN boyutudur** (04.08 düzeltmesi). Yalnız ham defterde durduğu sürece
   huninin en değerli kolonu hiçbir ekrana ulaşmıyordu: *"checkout'ta %38 düşüyor"* tek başına aksiyon
   üretmez, *"%38'in yarısı asgari sepet"* üretir.
+- **Okumalar işe göre süzülür:** özet okumaları özetin iş boyutundan, sipariş okumaları (ciro, kampanya cirosu, segment) siparişin
+  deposunun işinden, kampanya gideri hareketin işinden. Süzgeç verilmezse iki iş birlikte okunur.
 - **AI içgörüye (13.7) HAM SATIR GİTMEZ, ÖZET GİDER** — sözleşme maddesi, tercih değil. **Artık bir
   tiple zorlanıyor:** `AnalyticsInsightInput` yalnız toplanmış sayı taşır; satır geçiremez.
 
@@ -164,6 +169,8 @@
 
 - **"Bölge dışı talep — posta kodları" tablosu DEPOLAR ekranındadır** (karar orada veriliyor);
   analitikte yalnız işaret + köprü.
+- **İş kırılımı Kırılım şeridindedir** (Tüm işler · Lezzet · QUALITE), kanal çiplerinin yanında; haftalık içgörü ve pazarlama izni
+  sayıları iş süzgecine bağlı değildir.
 - **Pazarlama kişi listesi MÜŞTERİLER ekranındadır;** analitikte sayı + `customersUrl` köprüsü —
   analitik "kaç" der, Müşteriler "kim" der; kişi bazlı gezinme ekranı yoktur.
 - Ekran önce defterden bağımsız bloklarla iner (beyan · posta kodu talebi · kampanya gideri ·

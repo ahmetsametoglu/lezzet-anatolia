@@ -32,6 +32,7 @@ import {
   type AccountInsert,
   type AccountLedgerRow,
   type AccountUpdate,
+  type Business,
   type Counterparty,
   type CounterpartyInsert,
   type CounterpartyUpdate,
@@ -384,13 +385,15 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
    * Kampanya başına reklam gideri; süzgeç tip değil türdür (`reklam`), çünkü reklam kredisi `misc` olarak girer ve tipe göre süzmek
    * gideri eksik gösterirdi. Künyesiz satır `campaign: null` kovasında toplanır, atılsaydı kampanyalar kârlı görünürdü.
    */
-  async campaignSpend(from: string, to: string): Promise<CampaignSpend[]> {
-    const { data, error } = await this.supabase
+  async campaignSpend(from: string, to: string, business?: Business): Promise<CampaignSpend[]> {
+    let query = this.supabase
       .from('money_movement')
       .select('direction,amount,meta')
       .eq('nature', ADVERTISING_NATURE)
       .gte('value_date', from)
       .lte('value_date', to);
+    if (business) query = query.eq('business', business);
+    const { data, error } = await query;
     if (error) throw error;
 
     const buckets = new Map<string | null, CampaignSpend>();

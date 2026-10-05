@@ -31,6 +31,7 @@ export function AnalyticsClient({ data, urlState }: AnalyticsClientProps) {
     onMode: (mode: AnalyticsUrlState['mode']) => go({ mode }),
     onPeriod: (period: AnalyticsUrlState['period']) => go({ period }),
     onChannel: (channel: AnalyticsUrlState['channel']) => go({ channel }),
+    onBusiness: (business: AnalyticsUrlState['business']) => go({ business }),
   };
 
   return <AnalyticsDesktop {...view} />;

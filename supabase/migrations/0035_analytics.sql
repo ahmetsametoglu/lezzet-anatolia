@@ -94,6 +94,9 @@ create table public.analytics_event (
   -- Yer depo granülündedir, posta kodu değil, çünkü kanal, posta kodu ve zaman birlikte tek işletmeyi ele verir; `null` yer seçmeden
   -- gezinmenin kovasıdır. FK yoktur, çünkü silinen bir depo geçmiş satırları `null` kovasına karıştırırdı.
   warehouse_id uuid,
+  -- Olayın işi yerin işidir, ziyaretçi Lezzet'tir. Depodan türetilmez, çünkü deposuz olay da (yer seçilmemiş gezinme, native ödeme
+  -- adımı) bir işe aittir; varsayılanı yoktur ki işi söylemeyi unutan kapı yazamasın.
+  business business not null,
 
   availability analytics_availability,
   -- Yalnız `cart_blocked` / `checkout_blocked` olaylarında dolu.
@@ -189,6 +192,7 @@ comment on function public.drop_analytics_partitions_before(date) is
 -- tablo değildir; günlükten ve satırın 24 öğeli saat dizisinden türetilir.
 create table public.analytics_daily (
   day date not null,
+  business business not null,
   type analytics_event_type not null,
   path text,
   warehouse_id uuid,
@@ -213,7 +217,7 @@ create table public.analytics_daily (
 
   -- `nulls not distinct` şarttır, çünkü boyutların çoğu nullable ve standart `unique` aynı gün ve tip için `null` boyutlu satırın defalarca
   -- yazılmasına izin verirdi.
-  constraint analytics_daily_key unique nulls not distinct (day, type, path, warehouse_id, channel, availability, blocked_reason)
+  constraint analytics_daily_key unique nulls not distinct (day, business, type, path, warehouse_id, channel, availability, blocked_reason)
 );
 
 comment on table public.analytics_daily is
@@ -241,32 +245,33 @@ begin
   -- kırılımını verir. Diziyi doğrudan gruplama içinde kurmak mümkün değil (24 kovanın hepsi, hiç
   -- olay düşmeyen saatler dahil, satırda bulunmalı) — bu yüzden `generate_series` ile sol birleşim.
   with boyut as (
-    select e.type, e.path, e.warehouse_id, e.channel, e.availability, e.blocked_reason,
+    select e.business, e.type, e.path, e.warehouse_id, e.channel, e.availability, e.blocked_reason,
            count(*)::int as olay,
            -- Oturum sayısı YAKLAŞIKTIR: aynı oturum birden çok boyut satırına düşebilir, yani
            -- satırların toplamı gerçek oturum sayısından büyüktür. Toplanabilir tek sayı `olay`.
            count(distinct e.session_key)::int as oturum
       from public.analytics_event e
      where e.created_at >= p_day and e.created_at < p_day + 1
-     group by 1, 2, 3, 4, 5, 6
+     group by 1, 2, 3, 4, 5, 6, 7
   ),
   saatlik as (
-    select e.type, e.path, e.warehouse_id, e.channel, e.availability, e.blocked_reason,
+    select e.business, e.type, e.path, e.warehouse_id, e.channel, e.availability, e.blocked_reason,
            extract(hour from e.created_at)::int as saat,
            count(*)::int as olay
       from public.analytics_event e
      where e.created_at >= p_day and e.created_at < p_day + 1
-     group by 1, 2, 3, 4, 5, 6, 7
+     group by 1, 2, 3, 4, 5, 6, 7, 8
   )
-  insert into public.analytics_daily as d (day, type, path, warehouse_id, channel, availability, blocked_reason, event_count, session_count, hourly, updated_at)
-  select p_day, b.type, b.path, b.warehouse_id, b.channel, b.availability, b.blocked_reason, b.olay, b.oturum,
+  insert into public.analytics_daily as d (day, business, type, path, warehouse_id, channel, availability, blocked_reason, event_count, session_count, hourly, updated_at)
+  select p_day, b.business, b.type, b.path, b.warehouse_id, b.channel, b.availability, b.blocked_reason, b.olay, b.oturum,
          -- 24 kovalı dizi; olay düşmeyen saat 0 olur (eksik değil — o saatte gerçekten kimse yoktu).
          -- Boyut karşılaştırmaları `is not distinct from`: `null` kovası da eşleşmeli, yoksa yer
          -- seçmemiş ziyaretçinin saat kırılımı sessizce boş kalırdı.
          (select array_agg(coalesce(s.olay, 0) order by g.saat)
             from generate_series(0, 23) as g(saat)
             left join saatlik s
-              on s.type = b.type
+              on s.business = b.business
+             and s.type = b.type
              and s.path is not distinct from b.path
              and s.warehouse_id is not distinct from b.warehouse_id
              and s.channel is not distinct from b.channel

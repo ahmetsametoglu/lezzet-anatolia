@@ -22,6 +22,7 @@ import {
   type AnalyticsSession,
   type AnalyticsSessionInsert,
   type AnalyticsSourceDaily,
+  type Business,
   type CustomerSegment,
   type CustomerSegmentCount,
   type CustomerSegmentMember,
@@ -92,6 +93,7 @@ export interface AnalyticsDailyFilter {
   types?: AnalyticsEventType[];
   warehouseId?: string;
   channel?: 'b2b' | 'b2c';
+  business?: Business;
 }
 
 /**
@@ -110,7 +112,7 @@ export class AnalyticsDailyService extends BaseDbService<AnalyticsDaily, never, 
    */
   list(filter: AnalyticsDailyFilter): Promise<AnalyticsDaily[]> {
     return this.getAll(
-      { type: filter.types, warehouseId: filter.warehouseId, channel: filter.channel },
+      { type: filter.types, warehouseId: filter.warehouseId, channel: filter.channel, business: filter.business },
       {
         orderBy: 'day',
         orderDirection: 'desc',
@@ -204,8 +206,13 @@ export class AnalyticsProductDailyService extends BaseDbService<z.infer<typeof A
    * dönem toplandıktan sonra bilinir — uygulamada toplasaydık gün × ürün kadar satırı yalnız
    * atmak için taşırdık.
    */
-  async signals(from: string, to: string, limit = 20): Promise<AnalyticsProductSignal[]> {
-    const { data, error } = await this.supabase.rpc('analytics_product_signals', { p_from: from, p_to: to, p_limit: limit });
+  async signals(from: string, to: string, limit = 20, business?: Business): Promise<AnalyticsProductSignal[]> {
+    const { data, error } = await this.supabase.rpc('analytics_product_signals', {
+      p_from: from,
+      p_to: to,
+      p_limit: limit,
+      p_business: business ?? null,
+    });
     if (error) throw error;
     return ((data ?? []) as unknown[]).map((row) => AnalyticsProductSignalSchema.parse(dbToApp(row as Record<string, unknown>)));
   }
@@ -231,12 +238,13 @@ export class AnalyticsSearchDailyService extends BaseDbService<z.infer<typeof An
    * (`ANALYTICS §4`): süzgeç boşluğu sık bir arayüz sinyali, arama boşluğu seyrek bir çeşit
    * sinyalidir; tek listede toplansalardı sık olan seyreği boğardı.
    */
-  async signals(from: string, to: string, limit = 20, zeroOnly = false): Promise<AnalyticsSearchSignal[]> {
+  async signals(from: string, to: string, limit = 20, zeroOnly = false, business?: Business): Promise<AnalyticsSearchSignal[]> {
     const { data, error } = await this.supabase.rpc('analytics_search_signals', {
       p_from: from,
       p_to: to,
       p_limit: limit,
       p_zero_only: zeroOnly,
+      p_business: business ?? null,
     });
     if (error) throw error;
     return ((data ?? []) as unknown[]).map((row) => AnalyticsSearchSignalSchema.parse(dbToApp(row as Record<string, unknown>)));
@@ -259,9 +267,9 @@ export class AnalyticsSourceDailyService extends BaseDbService<AnalyticsSourceDa
   }
 
   /** Dönemin kaynak satırları — `source: null` DOĞRUDAN trafiktir, düşürülmez. */
-  list(from: string, to: string): Promise<AnalyticsSourceDaily[]> {
+  list(from: string, to: string, business?: Business): Promise<AnalyticsSourceDaily[]> {
     return this.getAll(
-      {},
+      { business },
       {
         orderBy: 'day',
         orderDirection: 'desc',
@@ -285,8 +293,8 @@ export class AnalyticsReportService {
    * Kampanya cirosu, ilk temas atfı: satır "o kampanyanın kazandırdığı müşterilerin o dönemki siparişleri"dir. Başka türlüsü oturum
    * anahtarını siparişe yazmayı gerektirir ve anonim defteri geriye dönük kimliklendirirdi.
    */
-  async campaignRevenue(from: string, to: string): Promise<AnalyticsCampaignRevenue[]> {
-    const { data, error } = await this.supabase.rpc('analytics_campaign_revenue', { p_from: from, p_to: to });
+  async campaignRevenue(from: string, to: string, business?: Business): Promise<AnalyticsCampaignRevenue[]> {
+    const { data, error } = await this.supabase.rpc('analytics_campaign_revenue', { p_from: from, p_to: to, p_business: business ?? null });
     if (error) throw error;
     return ((data ?? []) as unknown[]).map((row) => AnalyticsCampaignRevenueSchema.parse(dbToApp(row as Record<string, unknown>)));
   }
@@ -295,8 +303,8 @@ export class AnalyticsReportService {
    * Dönem cirosu gün × kanal: tek çağrı dönem toplamını, B2C/B2B ayrımını ve günlük seriyi karşılar. Süzgeç sipariş tarihindedir, teslim
    * gününe göre okunan ciro kampanya giderinin dönemiyle hizalanmazdı.
    */
-  async orderRevenue(from: string, to: string): Promise<OrderRevenueDaily[]> {
-    const { data, error } = await this.supabase.rpc('analytics_order_revenue', { p_from: from, p_to: to });
+  async orderRevenue(from: string, to: string, business?: Business): Promise<OrderRevenueDaily[]> {
+    const { data, error } = await this.supabase.rpc('analytics_order_revenue', { p_from: from, p_to: to, p_business: business ?? null });
     if (error) throw error;
     return ((data ?? []) as unknown[]).map((row) => OrderRevenueDailySchema.parse(dbToApp(row as Record<string, unknown>)));
   }
@@ -346,6 +354,7 @@ export interface SegmentOptions {
   dormantDays?: number;
   newDays?: number;
   championOrders?: number;
+  business?: Business;
 }
 
 function segmentArgs(o: SegmentOptions): Record<string, unknown> {
@@ -356,5 +365,6 @@ function segmentArgs(o: SegmentOptions): Record<string, unknown> {
   if (o.dormantDays !== undefined) args.p_dormant_days = o.dormantDays;
   if (o.newDays !== undefined) args.p_new_days = o.newDays;
   if (o.championOrders !== undefined) args.p_champion_orders = o.championOrders;
+  if (o.business) args.p_business = o.business;
   return args;
 }

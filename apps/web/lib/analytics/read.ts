@@ -15,6 +15,7 @@ import {
   StoredAnalyticsInsightSchema,
   resolveLocalizedText,
   type AnalyticsSearchSignal,
+  type Business,
   type CustomerSegment,
   type StoredAnalyticsInsight,
 } from '@lezzet/types';
@@ -45,9 +46,9 @@ export interface ProductInterestRow {
  * Dönemin ürün ilgisi, adıyla: ad tek turda çözülür (`listByIds`). Silinmiş ürün de listede kalır ve kimliğinin kısası görünür, çünkü geçmiş
  * sayılar geriye dönük değişmemeli.
  */
-export async function readProductInterest(from: string, to: string, limit = 20): Promise<ProductInterestRow[]> {
+export async function readProductInterest(from: string, to: string, business?: Business, limit = 20): Promise<ProductInterestRow[]> {
   const db = serviceDb();
-  const signals = await new AnalyticsProductDailyService(db).signals(from, to, limit);
+  const signals = await new AnalyticsProductDailyService(db).signals(from, to, limit, business);
   if (signals.length === 0) return [];
 
   const products = await new ProductService(db).listByIds(signals.map((s) => s.productId));
@@ -67,8 +68,8 @@ export async function readProductInterest(from: string, to: string, limit = 20):
  * Aranıp bulunamayan terimler, çeşit ve talep sinyali: `filter` boşluğu arayüz sinyalidir, `search` boşluğu çeşit sinyalidir ve ikincisi
  * seyrek olduğu için ayrı kovada kalır.
  */
-export function readZeroResultSearches(from: string, to: string, limit = 20): Promise<AnalyticsSearchSignal[]> {
-  return new AnalyticsSearchDailyService(serviceDb()).signals(from, to, limit, true);
+export function readZeroResultSearches(from: string, to: string, business?: Business, limit = 20): Promise<AnalyticsSearchSignal[]> {
+  return new AnalyticsSearchDailyService(serviceDb()).signals(from, to, limit, true, business);
 }
 
 /** Trafik kaynağı satırı — `source: null` DOĞRUDAN trafiktir. */
@@ -85,8 +86,8 @@ export interface TrafficSourceRow {
  * Dönemin trafik kaynakları: gün satırları kaynak + kampanya kovalarında uygulamada toplanır, küme doğal tavanlıdır. `medium` kovada yoktur,
  * aynı kaynağın iki ortamı tek satırda toplanır; bugün ekranın sorusu "nereden geldi"dir.
  */
-export async function readTrafficSources(from: string, to: string, limit = 10): Promise<TrafficSourceRow[]> {
-  const rows = await new AnalyticsSourceDailyService(serviceDb()).list(from, to);
+export async function readTrafficSources(from: string, to: string, business?: Business, limit = 10): Promise<TrafficSourceRow[]> {
+  const rows = await new AnalyticsSourceDailyService(serviceDb()).list(from, to, business);
 
   const kovalar = new Map<string, TrafficSourceRow>();
   for (const row of rows) {
@@ -124,11 +125,11 @@ export interface CampaignRoiRow {
  * Kampanya ROI tablosu, dönemin giderini ilk temas atfıyla gelen ciroyla birleştirir: iki sütun aynı şeyi ölçmez, `newCustomerCount` farkı
  * okutmak için satırdadır. Etiketsiz kova (`campaign: null`) düşürülmez, yoksa toplamlar ne gideri ne ciroyu tutar ve ROI kendiliğinden şişerdi.
  */
-export async function readCampaignRoi(from: string, to: string): Promise<CampaignRoiRow[]> {
+export async function readCampaignRoi(from: string, to: string, business?: Business): Promise<CampaignRoiRow[]> {
   const db = serviceDb();
   const [spend, revenue] = await Promise.all([
-    new MoneyMovementService(db).campaignSpend(from, to),
-    new AnalyticsReportService(db).campaignRevenue(from, to),
+    new MoneyMovementService(db).campaignSpend(from, to, business),
+    new AnalyticsReportService(db).campaignRevenue(from, to, business),
   ]);
 
   const kovalar = new Map<string | null, CampaignRoiRow>();
@@ -167,8 +168,8 @@ interface RevenueView {
  * Dönem cirosu, Ticaret modunun kaynağı: yetki `order` tablosundadır, defterdeki `order_placed` tasarım gereği azdır. Süzgeç sipariş
  * tarihindedir, teslim gününe göre okunan ciro kampanya giderinin dönemiyle hizalanmazdı.
  */
-export async function readOrderRevenue(from: string, to: string): Promise<RevenueView> {
-  const rows = await new AnalyticsReportService(serviceDb()).orderRevenue(from, to);
+export async function readOrderRevenue(from: string, to: string, business?: Business): Promise<RevenueView> {
+  const rows = await new AnalyticsReportService(serviceDb()).orderRevenue(from, to, business);
 
   const gunler = new Map<string, { revenueCents: number; orderCount: number }>();
   let b2cCents = 0;
