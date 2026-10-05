@@ -612,12 +612,13 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
 }
 
 const styles = StyleSheet.create((theme, rt) => ({
+  /* Üst pay kaydırılan içerikte değil kapta, çünkü içerikte olsaydı kaydırılan bantlar saatin arkasından geçerdi. */
   screen: {
     flex: 1,
     backgroundColor: theme.colors['sand-50'],
+    paddingTop: rt.insets.top,
   },
   content: {
-    paddingTop: rt.insets.top,
     paddingBottom: theme.space['6xl'],
     gap: theme.space['4xl'],
   },

@@ -292,6 +292,7 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
                   onPress={() => pickPhoto('camera')}
                   feedback="opacity"
                   disabled={submitting}
+                  grow
                   style={styles.photoBox}
                   accessibilityLabel={t.new.photo.camera}
                   testID="new-ticket-photo-camera"
@@ -302,6 +303,7 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
                   onPress={() => pickPhoto('library')}
                   feedback="opacity"
                   disabled={submitting}
+                  grow
                   style={styles.photoBox}
                   accessibilityLabel={t.new.photo.library}
                   testID="new-ticket-photo-library"
@@ -376,7 +378,6 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.space.md,
   },
   photoBox: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: theme.border.base,

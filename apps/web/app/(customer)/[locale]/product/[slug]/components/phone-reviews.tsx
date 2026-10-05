@@ -4,27 +4,14 @@ import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import productMessages from '@lezzet/i18n/customer/product';
 import { formatDecimal } from '@/lib/storefront/format';
-import { Icon } from '@/components/customer/ui/icons';
 import type { Messages, ReviewsData } from '../product-types';
 import { ReviewForm } from './review-form';
 import { PhoneAllReviews } from './phone-all-reviews';
 import { PhoneReviewCard, PhoneStars } from './phone-review-card';
 
 /**
- * Telefon yorumlar bölümü — referansın "Değerlendirmeler" bloğu: başlık, kartlar, altında özet.
- * Masaüstünün `Reviews`'ından ayrı dosya (iki tasarım ayrıldı, ortak komponent yok).
- *
- * **Sayfa yalnız ONAYLI yorumu gösterir** ve bu kural burada değil kapıda yaşıyor: yayın okuması
- * durum parametresi almıyor (`listProductReviews`), "kim yazabilir" sorusunu da kapı cevaplıyor
- * (`getReviewEligibility`).
- *
- * Tasarımın üç kuralı:
- *   · **Puan alanı GİZLENİR** — "0,0" gösterilmez; sıfır puan kötü ürün değil "henüz kimse
- *     yazmadı" demektir ve ikisi aynı ekranla anlatılamaz.
- *   · **İlk üç yorum** görünür; bağlantı ancak fazlası varken çizilir (tıklayınca aynı listeyi
- *     gösteren bir bağ, bir vaat ihlalidir).
- *   · **"Yorum yaz" yalnız satın almış girişli müşteride** — göstermek, yazamayacak kişiye
- *     kapalı bir kapı açmaktır.
+ * Yorum yokken puan alanı çizilmez, çünkü "0,0" kötü ürünle henüz kimsenin yazmadığı ürünü ayırmaz. "Yorum yaz" yalnız satın
+ * almış girişli müşteride çizilir; onaylı yorum süzgeci ve yazma izni kapıdadır (`listProductReviews`, `getReviewEligibility`).
  */
 interface PhoneReviewsProps {
   t: Messages;
@@ -44,7 +31,7 @@ export function PhoneReviews({ t, locale, productId, productName, data }: PhoneR
 
   const { score, reviews, total, canReview, alreadyWrote } = data;
 
-  /** Telefon seçkisi: sayfa masaüstü için altı yorum okuyor, dar ekranda üçü gösterilir. */
+  /** Sayfa masaüstü için altı yorum okur; dar ekranda üçü gösterilir, çünkü alt alta altı yorum sayfanın kalanını görünmez kılardı. */
   const shown = reviews.slice(0, 3);
 
   /**
@@ -106,18 +93,14 @@ export function PhoneReviews({ t, locale, productId, productName, data }: PhoneR
         />
       )}
 
-      {/* Telefonda seçki ÜÇ karttır (sayfa altı okur, masaüstü hepsini çizer): dar ekranda alt alta
-          altı yorum, sayfanın kalanını görünmez kılıyordu. */}
       {shown.map((review) => (
         <PhoneReviewCard key={review.id} review={review} locale={locale} translation={t.reviews.translation} />
       ))}
 
       {score.average === null ? (
-        <div className="flex flex-col items-center gap-1.5 rounded-soft border border-dashed border-sand-400 px-6 py-6 text-center">
-          <Icon name="star" size={24} className="text-sand-400" />
-          <span className="font-sans text-copy font-bold text-ink">{t.reviews.emptyTitle}</span>
-          <span className="font-sans text-note text-muted">{t.reviews.emptyBody}</span>
-        </div>
+        <p className="rounded-card bg-sand-150 px-3 py-2.5 font-sans text-note leading-[1.6] text-muted">
+          {productMessages[locale].reviews.empty}
+        </p>
       ) : (
         /* Özet kart LİSTENİN ALTINDA ve BEYAZ: okunacak şey yorumların kendisi, kart onların
            toplamını söylüyor. Kum zemine alınsaydı dördüncü bir yorum gibi okunurdu. */
@@ -144,7 +127,10 @@ export function PhoneReviews({ t, locale, productId, productName, data }: PhoneR
         </div>
       )}
 
-      {!canReview && <span className="font-sans text-micro leading-relaxed text-muted">{t.reviews.onlyBuyers}</span>}
+      {/* Boş hâlde çizilmez, çünkü kutunun cümlesi kimin yazabileceğini zaten söylüyor. */}
+      {!canReview && score.average !== null && (
+        <span className="font-sans text-micro leading-relaxed text-muted">{t.reviews.onlyBuyers}</span>
+      )}
 
       {panelOpen && (
         <PhoneAllReviews

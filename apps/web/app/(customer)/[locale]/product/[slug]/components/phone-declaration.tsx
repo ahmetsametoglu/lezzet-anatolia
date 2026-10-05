@@ -82,8 +82,9 @@ function Accordion({ title, divided, children }: AccordionProps) {
   return (
     <details className={['group', divided ? 'border-t-[1.5px] border-dashed border-sand-400' : ''].filter(Boolean).join(' ')}>
       <summary className="flex cursor-pointer list-none items-center justify-between p-2.5 [&::-webkit-details-marker]:hidden">
-        <span className="font-sans text-note font-bold text-ink">{title}</span>
-        <span aria-hidden className="text-muted transition-transform group-open:rotate-180">
+        {/* Satır yüksekliği yazının doğal ölçüsünde, çünkü miras kalan sayfa yüksekliği satırı native'inkinden uzun yapar. */}
+        <span className="font-sans text-note leading-[normal] font-bold text-ink">{title}</span>
+        <span aria-hidden className="text-body-sm leading-[normal] text-muted transition-transform group-open:rotate-180">
           ▾
         </span>
       </summary>
