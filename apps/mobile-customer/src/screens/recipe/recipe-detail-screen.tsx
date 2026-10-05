@@ -20,56 +20,21 @@ import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, addProducts, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
-// Metin ortak pakette (14.09): web'in telefon tarif detayı aynı sözlüğü okur.
+// Metin ortak pakette: web'in telefon tarif detayı aynı sözlüğü okur.
 import messages from '@lezzet/i18n/customer/recipe-detail';
 import { RecipeSkeleton } from './recipe-skeleton';
 import { useRecipe } from './use-recipe.hook';
 
 /*
-  TARİF DETAY (v3 `vRecipe`, tasarım 21: v3:1182-1223 + yapışkan bar v3:1272-1276 + kurucu
-  v3:1892-1899) — GERÇEK UÇTAN okur (`GET /api/v1/recipes/:slug`): sayfaya vitrinin "Sofradan
-  fikirler" kartından gerçek slug'la gelinir. Satır fiyat/stok kararları MOTORUN (katalogla aynı
-  kapı); ekran karar hesaplamaz, sözleşmeyi çizer.
-
-  ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
-  1. **`qty` ekseni EKLENDİ**: v3 kurucusunda yok (mock verisi hep 1 adetti), veri modelinde var
-     ve toplamın tanımı onun (`recipe.schema.ts`: toplam = Σ qty × fiyat). Satır 2+ adette
-     "2 × 500 g" yazar; + ve "hepsini ekle" tarifin istediği adediyle ekler — satırın +'sı ile
-     alt barın toplamı birbirini yalanlamasın.
-  2. **Fiyatsız (satışa kapalı) satır hâli**: v3 mock'unda doğmuyordu; sözleşme `priceCents: null`
-     taşıyabilir → + çizilmez, fiyat parçası düşer (katalog kartının kuralı: sıfır yazılmaz).
-  3. **Hiçbir satır eklenemezse yapışkan bar ÇİZİLMEZ**: v3 barı koşulsuz basar ama mock'ta bu hâl
-     yok; "…ekle · 0,00 €" ölü ve yalancı bir düğme olurdu (CLAUDE §1 — ölçülemeyen değer sıfır
-     değildir). Bar yoksa kaydırma payı da yok.
-  4. **Tükendi satırı SOLUKLAŞTIRILMAZ**: v3'ün `so` hâli yalnız +'ı "Tükendi" etiketiyle
-     değiştiriyor (v3:1198), satıra opaklık düşürmüyor — v3 hakem, katalogdaki `soldOutOpacity`
-     buraya taşınmadı.
-  5. **Sepete ekleme onayı sessiz** (v3 `addAll` toast basıyor: "c malzeme sepete eklendi ✓"):
-     küresel toast katmanı bilinen borç (ürün ekranı sapma 6'nın aynısı) — katman gelince
-     `addAll` da onu çağırır.
-  6. **İskelet v3'te tanımlı değil**; ürün ekranının bekleme diliyle asgari bloklar çizildi.
-  7. **+ kutusunun gölgesi `2px 2px 0 ink`** (v3:1194) token renginden yerinde kurulur: kitte
-     yalnız 3'lük `hard` durağı var; yeni durak (hard-sm) kit işi, ihtiyaç raporlandı. Basılı
-     kayma (2,2) gölgeyi tam yutar — tasarımın kendi davranışı.
-
-  Sepet FAB'ı bu sayfada YOK ve bu sapma değil v3 KURALI: fab dörtlüsü vitrin·katalog·ürün·paket
-  (v3:602) — tarif sayfası listede değil.
-
-  KAHRAMAN ROZETİ KOMŞUYA TAŞAR (süre·porsiyon, alt kenardan -18): kardeş çizim sırası yüzünden
-  içerik bloğu rozeti ezerdi — kahraman kapsayıcısı `zIndex` ile üste alındı (ürün ekranının dersi).
+  Tarif detayı: satır fiyat ve stok kararları katalogla aynı kapıdan gelir, ekran yalnız sözleşmeyi çizer. Toplam `Σ adet × fiyat`tır;
+  fiyatsız satıra + çizilmez, hiçbir satır eklenemezse alt çubuk ve payı da çizilmez, çünkü "0,00 €" düğmesi ölü ve yanıltıcı olurdu.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/*
-  EKRANA-ÖZEL ÖLÇÜLER KİTE TERFİ ETTİ (10.08): `hero`/`badgeDrop`/`rowPhoto`/`addBox`/`stepBadge`/
-  `barSpace` artık `customerMetrics`te (`recipe*` önekiyle) — bu dosyanın künyesi zaten "kit
-  açıldığında oraya terfi eder" diyordu. Terfiyi zorunlu kılan skeleton oldu: aynı ölçülere o da
-  ihtiyaç duyunca ekran dosyasından import etmek dairesel bağımlılık, kopyalamak duplikasyon
-  olurdu.
-*/
+/* Ekranın ölçüleri `customerMetrics`te (`recipe*`), çünkü iskelet de aynı ölçüleri okuyor. */
 
-/** Satır eklenebilir mi — fiyatı var VE tükenmedi (v3 `l.ok`'un sözleşmedeki karşılığı). */
+/** Satır eklenebilir mi: fiyatı var ve tükenmedi. */
 function isAddable(row: RecipeRow): row is RecipeRow & { priceCents: number } {
   return !row.soldOut && row.priceCents !== null;
 }
@@ -78,8 +43,7 @@ function isAddable(row: RecipeRow): row is RecipeRow & { priceCents: number } {
 function cartLineOf(row: RecipeRow & { priceCents: number }) {
   return {
     id: `${row.productSlug}-${row.variantId}`,
-    /* Sunucudaki ADRES açıkça geçer (27.08 · eski 21.14 işareti) — depo `id`den ayıklayabiliyor
-       ama çıkarım biçime bağlıdır; bilen taraf burası (`cart-store` künyesi). */
+    /* Varyant kimliği ayrı alanda geçer; depo onu `id`den ayıklayabiliyor ama çıkarım biçime bağlıdır. */
     variantId: row.variantId,
     slug: row.productSlug,
     name: row.name,
@@ -101,13 +65,10 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { status, detail, retry } = useRecipe(slug, locale);
-  /* Hook'lar erken çıkışların ÜSTÜNDE: aşağıdaki `loading`/`error` dalları `return` ediyor ve
-     aboneliği o dallarda atlamak React'in çağrı sırası kuralını kırardı. */
+  /* Abonelik erken çıkışların üstünde, çünkü dallarda atlamak React'in çağrı sırası kuralını kırar. */
   const fabCount = cartCount(useCart());
 
-  /* İLK YÜK: sayfanın yerini skeleton tutar (`recipe-skeleton` — ölçülerin kaynağı ve neyin
-     çizilip neyin çizilmediği o dosyanın künyesinde). Ekranın içine gömülü dört çubuk sökülüp
-     oraya taşındı: ölçüleri ham sayıydı ve sayfanın bölümlerini temsil etmiyordu. */
+  /* İlk yükte sayfanın yerini iskelet tutar; neyin çizildiği iskelet dosyasında. */
   if (status === 'loading') return <RecipeSkeleton testID="recipe-loading" />;
 
   if (status === 'missing' || status === 'error' || detail === null) {
@@ -131,20 +92,14 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
     );
   }
 
-  /* Rozet parçaları eksik veride düşer; ikisi de boşsa rozet hiç çizilmez (v3: "{time} · {serves}"). */
+  /* Rozet parçaları eksik veride düşer; ikisi de boşsa rozet hiç çizilmez. */
   const badge = [detail.duration, detail.serves].filter((part): part is string => part !== null).join(' · ');
   const addable = detail.rows.filter(isAddable);
-  /* Toplam veri modelinin kendi tanımı: Σ qty × fiyat (sapma 1). */
+  /* Toplam veri modelinin tanımı: Σ adet × fiyat. */
   const totalCents = addable.reduce((sum, row) => sum + row.priceCents * row.qty, 0);
 
   const addAll = () => {
-    /* v3 `rc.addAll` (v3:1899): yalnız eklenebilir satırlar; onay v3'ün kendi toast'ı —
-       "{n} malzeme sepete eklendi ✓" (toast altyapısı gelince eski "sessiz onay" sapması kapandı).
-
-       TEK ÇAĞRI, DÖNGÜ DEĞİL (09.08): burada `for` içinde `addProduct` çağrılıyordu ve her çağrı
-       sunucuya AYRI bir istek atıyordu; sepet tek satırda yaşadığı için eşzamanlı istekler
-       birbirini eziyor ve üç malzemeden yalnız biri sepete giriyordu — üstelik toast "3 malzeme
-       eklendi" diyordu. Gerekçenin tamamı deponun `addProducts` künyesinde. */
+    /* Tek çağrı, döngü değil: sepet tek satırda yaşıyor ve eşzamanlı istekler birbirini ezip malzemelerin çoğunu düşürüyordu. */
     addProducts(addable.map((row) => ({ ...cartLineOf(row), quantity: row.qty })));
     toastSuccess(t.addAllToast.replace('{n}', String(addable.length)));
   };
@@ -152,7 +107,7 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
   return (
     <View style={styles.screen} testID="recipe-detail">
       <ScrollView contentContainerStyle={styles.content} testID="recipe-scroll">
-        {/* ── Kahraman: foto + üst degrade + geri + süre·porsiyon rozeti (v3:1184-1187) ── */}
+        {/* Kahraman: fotoğraf, üst degrade, geri düğmesi ve süre·porsiyon rozeti. */}
         <View style={styles.hero}>
           {detail.image.url === null ? (
             <View style={styles.heroFallback}>
@@ -161,7 +116,7 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
           ) : (
             <FrameImage image={detail.image} style={styles.heroImage} />
           )}
-          {/* Skrim token gradyanının kendisi (photo-top: .28 → şeffaf %32 — v3:1185 birebir). */}
+          {/* Skrim token gradyanının kendisi. */}
           <LinearGradient {...theme.gradient.photoTop} style={styles.heroScrim} pointerEvents="none" />
           <View style={styles.heroButtons}>
             <BackButton onPress={() => router.back()} accessibilityLabel={t.back} variant="photo" testID="recipe-back" />
@@ -173,7 +128,7 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
           )}
         </View>
 
-        {/* ── Künye + üç bölüm (v3:1188-1211): üstbaşlık · ad · açıklama · bizden · evinizden · adımlar ── */}
+        {/* Künye ve üç bölüm: bizden, evinizden, adımlar. */}
         <View style={styles.head}>
           <Text style={styles.eyebrow}>{t.eyebrow}</Text>
           <Text style={styles.title} accessibilityRole="header">
@@ -187,10 +142,7 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
               <View>
                 {detail.rows.map((row) => (
                   <View key={row.variantId} style={styles.row}>
-                    {/* Satırın esneme payı SARMALAYICIDA: kitin Pressable'ı stilsiz bir dış
-                        kutudur, `style` içteki yüzeye gider — pay yüzeyde kalınca satır
-                        çöküyordu (cihazda ölçüldü 08.09: ad/fiyat 0 genişlikte, + kutusu
-                        fotoğrafın dibinde; uç doluydu, toplam bile doğruydu). */}
+                    {/* Esneme payı sarmalayıcıda, çünkü kitin `Pressable`ı stili içteki yüzeye verir ve pay orada kalınca satır çöküyordu. */}
                     <View style={styles.rowMainWrap}>
                       <PressableSurface
                         onPress={() => router.push(`/product/${row.productSlug}`)}
@@ -211,7 +163,7 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
                             {row.name}
                           </Text>
                           <Text style={styles.rowMeta} numberOfLines={1}>
-                            {/* "{adet} × {boy} · {fiyat}" — web'in telefon görünümüyle ortak kurucu (14.09). */}
+                            {/* "{adet} × {boy} · {fiyat}": web'in telefon görünümüyle ortak kurucu. */}
                             {recipeRowMetaOf({ qty: row.qty, label: row.variantLabel, priceCents: row.priceCents }, locale)}
                           </Text>
                         </View>
@@ -262,7 +214,7 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
               <View style={styles.stepList}>
                 {detail.steps.map((step, index) => (
                   <View key={index} style={styles.stepRow}>
-                    {/* Numarayı EKRAN verir (05.16 — metin taşımaz). */}
+                    {/* Numarayı ekran verir, metin taşımaz. */}
                     <View style={styles.stepBadge}>
                       <Text style={styles.stepBadgeText}>{index + 1}</Text>
                     </View>
@@ -274,22 +226,19 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
           )}
         </View>
 
-        {/* Yapışkan barın payı (v3:1223 — 108); bar yoksa pay da yok (sapma 3). */}
+        {/* Alt çubuğun payı; çubuk yoksa pay da yok. */}
         {addable.length === 0 ? null : <View style={styles.barSpace} />}
       </ScrollView>
 
-      {/* ── Yapışkan alt bar (v3:1272-1276) — krem cam; düğme kitin birincil bloğu ── */}
+      {/* Yapışkan alt çubuk: krem cam, düğme kitin birincil bloğu. */}
       {addable.length === 0 ? null : (
         <BlurView intensity={theme.glassBlurIntensity} tint="light" style={styles.bar} testID="recipe-bar">
           <View style={styles.barGlass} pointerEvents="none" />
-          <PrimaryButton label={`${t.addAll} · ${formatPrice(totalCents, locale)}`} onPress={addAll} testID="recipe-add-all" />
+          <PrimaryButton label={`${t.addAll} · ${formatPrice(totalCents, locale)}`} onPress={addAll} singleLine testID="recipe-add-all" />
         </BlurView>
       )}
 
-      {/* Sepet FAB'ı — ürün ve paket detaylarının aynı yuvası (kullanıcı isteği 09.08): malzemeleri
-          ekleyen müşterinin sepete gitmek için geri çıkması gerekiyordu. Yapışkan bar VARSA onun
-          üstünde durur; bar yokken de aynı yükseklikte kalır — sepet doluyken düğmenin yeri
-          sayfadan sayfaya oynamasın. Boş sepette komponent kendini çizmez. */}
+      {/* Sepet düğmesi ürün ve paket sayfalarıyla aynı yuvada durur ki sepet doluyken yeri sayfadan sayfaya oynamasın; boş sepette çizilmez. */}
       <View style={styles.fabSlot} pointerEvents="box-none">
         <CartFab
           count={fabCount}
@@ -317,7 +266,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     padding: theme.space['3xl'],
   },
 
-  /* Kahraman kapsayıcısı içeriğin ÜSTÜNE çizilir (zIndex) — süre·porsiyon rozeti alt komşuya taşıyor. */
+  /* Kahraman içeriğin üstüne çizilir, çünkü süre·porsiyon rozeti alt komşuya taşıyor. */
   hero: {
     height: customerMetrics.recipeHero,
     zIndex: 2,
@@ -343,9 +292,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     inset: 0,
   },
   heroButtons: {
-    /* Ürün kahramanının aynı kararı (kullanıcı bulgusu 08.08): foto saat altına taşar, düğme
-       taşmaz — şablonun 8px'i üst güvenli alanın üstüne eklenir; iki ekranın geri düğmesi hizalı.
-       Değerler v3'ün kendisi (göz denetimi 09.08): `top:8 · left/right:16` — md/3xl. */
+    /* Fotoğraf saatin altına taşar, düğme taşmaz: ürün sayfasıyla aynı karar, iki ekranın geri düğmesi hizalı. */
     position: 'absolute',
     top: rt.insets.top + theme.space.md,
     left: theme.space['3xl'],
@@ -353,7 +300,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  /** Süre·porsiyon rozeti alt kenardan sarkar (v3:1187 — -18, 3° dönüş); taşma tasarımın imzası. */
+  /** Süre·porsiyon rozeti alt kenardan sarkar; taşma tasarımın imzası. */
   timeBadge: {
     position: 'absolute',
     right: theme.space['4xl'],
@@ -401,7 +348,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.body,
   },
 
-  /* Bölüm üstbaşlıkları tek stil (v3 10px/.18em) — aralar yalnız üst boşlukla ayrışır. */
+  /* Bölüm üstbaşlıkları tek stil; aralar yalnız üst boşlukla ayrışır. */
   sectionEyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
@@ -421,7 +368,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     borderStyle: 'dashed',
     borderBottomColor: theme.colors['sand-400'],
   },
-  /** Esneme payı burada (gerekçe JSX'te — kitin Pressable'ı stilsiz, pay yüzeyde işlemiyor). */
+  /** Esneme payı burada; gerekçesi JSX'te. */
   rowMainWrap: {
     flex: 1,
     minWidth: 0,
@@ -436,9 +383,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     minWidth: 0,
     gap: theme.space['2xs'],
   },
-  /* v3 700 13.5 (v3:26) = `control` kademesinin KENDİSİ — ölçü ve ağırlık tek kademeden gelir
-     (note 13 + chip ağırlığı devşirmesi Token Kararlari #16'nın yasakladığı desendi); basılabilir
-     satır başlığında kitin emsali de bu (`nav-row`). */
+  /* Ölçü ve ağırlık tek kademeden (`control`); iki kademeden devşirmek ayrışan bir yazı üretirdi. */
   rowName: {
     fontFamily: theme.font.body[theme.text['control--font-weight']],
     fontSize: theme.text.control,
@@ -454,7 +399,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.micro,
     color: theme.colors.muted,
   },
-  /** + kutusu (v3:1193-1194): mürekkep çerçeve + krem zemin + 2'lik sert gölge (künye sapma 7). */
+  /** + kutusu: mürekkep çerçeve, krem zemin, 2'lik sert gölge; kitte bu boyda gölge durağı yok, token renginden kurulur. */
   addBox: {
     width: customerMetrics.recipeAddBox,
     height: customerMetrics.recipeAddBox,
@@ -466,8 +411,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     backgroundColor: theme.colors['sand-50'],
     boxShadow: `${theme.press.translate}px ${theme.press.translate}px 0 ${theme.colors.ink}`,
   },
-  /* İM, BAŞLIK DEĞİL (18.08) — tarif satırındaki "+" düğmesinin imi; gerekçe adet seçicininkiyle
-     aynı (`product-detail-screen`, `stepGlyph`). Boy aynı (20), değişen kullanılan rol. */
+  /* "+" bir imdir, başlık değil: başlık ölçeği değişince oynamamalı. */
   addGlyph: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text['icon-sm'],
@@ -515,8 +459,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   barSpace: {
     height: customerMetrics.recipeBarSpace,
   },
-  /* FAB yuvası — ürün ve paket detaylarının BİREBİR aynı hesabı (`productFabBottom` + güvenli
-     alanın barı aşan payı). Üç sayfada aynı ölçü: müşteri düğmeyi hep aynı yerde bulsun. */
+  /* Sepet düğmesinin yuvası ürün ve paket sayfalarıyla aynı hesap: müşteri düğmeyi hep aynı yerde bulsun. */
   fabSlot: {
     position: 'absolute',
     right: theme.space['4xl'],
@@ -531,8 +474,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     borderTopColor: theme.colors.ink,
     paddingTop: theme.space.xl,
     paddingHorizontal: theme.space['4xl'],
-    /* Alt güvenli alan barın İÇİNDE, dolguyla toplanmaz (tab bar kararı 08.08 — ikisinin büyüğü);
-       şablonun 24'ü (v3:52) ölçekte yok, 22/26'ya eşit uzak → FERAH yön kuralıyla 26 ('7xl'). */
+    /* Alt güvenli alan çubuğun içinde ve dolguyla toplanmaz, ikisinin büyüğü alınır. */
     paddingBottom: Math.max(rt.insets.bottom, theme.space['7xl']),
   },
   barGlass: {

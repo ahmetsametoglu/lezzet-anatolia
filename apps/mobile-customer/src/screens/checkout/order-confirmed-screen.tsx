@@ -93,15 +93,17 @@ export function OrderConfirmedScreen({
           </Text>
         )}
 
-        <SummaryPanel
-          rows={[
-            { key: 'delivery', label: t.confirmed.delivery, value: delivery },
-            { key: 'payment', label: t.confirmed.payment, value: payment },
-          ]}
-          totalLabel={t.confirmed.total}
-          totalValue={total === null ? t.confirmed.unknown : formatPrice(total, locale)}
-          testID="confirmed-summary"
-        />
+        <View style={styles.summary}>
+          <SummaryPanel
+            rows={[
+              { key: 'delivery', label: t.confirmed.delivery, value: delivery },
+              { key: 'payment', label: t.confirmed.payment, value: payment },
+            ]}
+            totalLabel={t.confirmed.total}
+            totalValue={total === null ? t.confirmed.unknown : formatPrice(total, locale)}
+            testID="confirmed-summary"
+          />
+        </View>
 
         {phase === 'placed' ? <Text style={styles.note}>{t.confirmed.note}</Text> : null}
 
@@ -306,6 +308,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors['terracotta-bright'],
     textAlign: 'center',
   },
+  // Ekran içeriği ortalanıyor; özet ortalanınca içerik genişliğine büzülüp etiketle değeri yan yana sıkıştırırdı.
+  summary: { alignSelf: 'stretch' },
   actions: {
     alignSelf: 'stretch',
     gap: theme.space.lg,

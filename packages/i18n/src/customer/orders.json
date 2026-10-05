@@ -67,8 +67,8 @@
       "support": "Bir sorun mu var? Bize yazın",
       "carrierLabel": "Kargo",
       "trackingNumber": "Takip no",
-      "trackingCta": "Kargoyu takip et ↗",
-      "trackingCtaBox": "Kutu {ordinal} · takip et ↗",
+      "trackingCta": "Kargoyu takip et ↗︎",
+      "trackingCtaBox": "Kutu {ordinal} · takip et ↗︎",
       "carrier": {
         "colissimo": "Colissimo",
         "chronopost": "Chronopost",
@@ -184,8 +184,8 @@
       "support": "Un souci ? Écrivez-nous",
       "carrierLabel": "Transporteur",
       "trackingNumber": "N° de suivi",
-      "trackingCta": "Suivre mon colis ↗",
-      "trackingCtaBox": "Colis {ordinal} · suivre ↗",
+      "trackingCta": "Suivre mon colis ↗︎",
+      "trackingCtaBox": "Colis {ordinal} · suivre ↗︎",
       "carrier": {
         "colissimo": "Colissimo",
         "chronopost": "Chronopost",
@@ -301,8 +301,8 @@
       "support": "Ein Problem? Schreiben Sie uns",
       "carrierLabel": "Versand",
       "trackingNumber": "Sendungsnummer",
-      "trackingCta": "Sendung verfolgen ↗",
-      "trackingCtaBox": "Sendung {ordinal} · verfolgen ↗",
+      "trackingCta": "Sendung verfolgen ↗︎",
+      "trackingCtaBox": "Sendung {ordinal} · verfolgen ↗︎",
       "carrier": {
         "colissimo": "Colissimo",
         "chronopost": "Chronopost",

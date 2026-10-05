@@ -87,10 +87,10 @@ export function ProductCircleCard({
           </View>
         )}
       </View>
-      <Text style={styles.name} numberOfLines={2}>
+      {/* Kartın genişliği sabit değil: ad ve boy satırı dairenin çapıyla sınırlanır ki uzun metin rayda kartı açmasın. */}
+      <Text style={[styles.name, { maxWidth: diameter }]} numberOfLines={2}>
         {name}
       </Text>
-      {/* Kartın genişliği sabit değil: satır dairenin çapıyla sınırlanır ki uzun boy listesi rayda kartı açmasın. */}
       {quantityLabel === undefined ? null : (
         <Text style={[styles.quantity, { maxWidth: diameter }]} numberOfLines={1}>
           {quantityLabel}

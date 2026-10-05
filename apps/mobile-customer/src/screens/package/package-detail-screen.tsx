@@ -290,7 +290,7 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
             </PressableSurface>
           </View>
           <View style={styles.ctaSlot}>
-            <PrimaryButton label={`${t.cta.add} · ${formatPrice(totalCents, locale)}`} onPress={addToCart} testID="package-add" />
+            <PrimaryButton label={`${t.cta.add} · ${formatPrice(totalCents, locale)}`} onPress={addToCart} singleLine testID="package-add" />
           </View>
         </View>
         )}

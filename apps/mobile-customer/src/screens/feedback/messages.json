@@ -20,7 +20,7 @@
     "done": {
       "title": "Değerlendirmeniz için teşekkürler",
       "reviewBody": "Memnuniyetinizi {platform} üzerinden paylaşırsanız çok seviniriz — bir dakikanızı alır.",
-      "reviewCta": "{platform} üzerinden değerlendir ↗",
+      "reviewCta": "{platform} üzerinden değerlendir ↗︎",
       "issueBody": "Beğenmediğiniz bir ürün mü vardı? Sorunu bize iletin, düzeltelim.",
       "issueCta": "Sorun bildir",
       "home": "Vitrine dön"
@@ -67,7 +67,7 @@
     "done": {
       "title": "Merci pour votre évaluation",
       "reviewBody": "Si vous partagiez votre satisfaction sur {platform}, cela nous ferait très plaisir — cela ne prend qu'une minute.",
-      "reviewCta": "Évaluer sur {platform} ↗",
+      "reviewCta": "Évaluer sur {platform} ↗︎",
       "issueBody": "Un produit ne vous a pas plu ? Signalez-le-nous, nous arrangerons cela.",
       "issueCta": "Signaler un problème",
       "home": "Retour à la vitrine"
@@ -114,7 +114,7 @@
     "done": {
       "title": "Danke für Ihre Bewertung",
       "reviewBody": "Wir würden uns sehr freuen, wenn Sie Ihre Zufriedenheit auf {platform} teilen – es dauert nur eine Minute.",
-      "reviewCta": "Auf {platform} bewerten ↗",
+      "reviewCta": "Auf {platform} bewerten ↗︎",
       "issueBody": "War ein Produkt nicht in Ordnung? Sagen Sie es uns, wir kümmern uns darum.",
       "issueCta": "Problem melden",
       "home": "Zurück zur Startseite"

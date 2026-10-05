@@ -517,9 +517,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
 
         {packages.length === 0 ? null : (
           <>
-        <View style={styles.sectionPad}>
           <Text style={styles.sectionEyebrow}>{upperIn(t.packages.eyebrow, locale)}</Text>
-        </View>
         <View style={styles.packages}>
           {/* Paket kartı da yer işareti taşımaz; solma yalnız tükendide kalır (ürün rafıyla aynı gerekçe). */}
           {packages.map((pack) => {
