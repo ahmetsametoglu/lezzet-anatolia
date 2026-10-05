@@ -25,21 +25,14 @@ import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
 
 /**
- * Stok partisi servisi (06.2). Parti CRUD + kullanılabilir stok okumaları.
- *
- * **Karar vermez, satır getirir** (STACK §4): "bu parti satılabilir mi", "yaklaşan son tarih mi",
- * "FEFO'da hangisi çıkar" kararları saf motordadır (`domain-core/stock/*`). Servis o kararların
- * girdisini tek turda toplar.
- *
- * Kullanılabilir stok SAKLANMAZ, `available_stock` görünümünden türetilir:
- * `fiili − aktif rezervasyon` (süresi dolmuş rezervasyon sayılmaz — görünüm cron'u beklemez).
+ * Stok partisi servisi: parti CRUD ve kullanılabilir stok okumaları; satılabilirlik ve FEFO kararları motordadır, servis girdisini
+ * tek turda toplar. Kullanılabilir stok saklanmaz, `available_stock` görünümünden türer (fiili eksi aktif rezervasyon).
  */
 
 /** Parti + kimin partisi olduğu — iki okumanın paylaştığı gömülü seçim (tek yerde yazılır). */
 /**
- * Alan ADI gömülü geliyor (19.29): rafta aranan şey tabeladır, kimlik değil — her okuyanın onu
- * ayrıca çözmesi ekran başına ikinci bir sorgu demekti. Üç okuma paylaşıyor (parti detayı, tarihli
- * parti, varyant geçmişi); metni üç kez yazmak, birinin bir gün `kind`ı unutması demekti.
+ * Alan adı gömülü gelir, çünkü rafta aranan şey tabeladır; üç okuma (parti detayı, tarihli parti, varyant geçmişi) aynı seçimi
+ * paylaşır.
  */
 const AREA_EMBED = 'storage_area:storage_area(id,name,kind,sort_order)';
 
@@ -47,9 +40,8 @@ const BATCH_DETAIL_SELECT =
   `*,variant:product_variant(id,label,product:product(id,name,category_id,date_type,shelf_life_days,vat_rate)),${AREA_EMBED}`;
 
 /**
- * Lot aramasının tavanı. Geri çağırma bir NUMARAYLA yapılır; onlarca eşleşme çıkıyorsa terim fazla
- * geniştir ve cevap liste değil daraltma olmalıdır. Tavan SESSİZ değil: çağıran satır sayısını görür
- * ve tavana dayanıldığını ekranda söyler.
+ * Lot aramasının tavanı: geri çağırma bir numarayla yapılır ve çok eşleşme terimin geniş olduğunu söyler. Çağıran tavana
+ * dayanıldığını satır sayısından görür.
  */
 export const LOT_SEARCH_LIMIT = 50;
 export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate> {
@@ -61,10 +53,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * (bkz. `BaseDbService.embeds`). Yalnız üst takma ad beyan edilir: gömülü alt ağaç bütünüyle
    * çevrilir, yani içteki `product` da kapsam altında (`date_type` → `dateType`).
    */
-  // `storageArea` 23.6'da eklendi: gömüye `sort_order` girince (yürüyüş sırası) ilk çok-kelimeli
-  // alan doğdu — beyansız iç satır snake kalıyor ve projeksiyon şeması OKUMA ANINDA patlıyordu
-  // (tek kelimeli id/name/kind yıllarca beyansız geçti; taban künyesindeki "arıza sessiz değildir"
-  // cümlesi burada ölçüldü).
+  // `storageArea` gömüsü çok kelimeli alan taşıdığı için beyan edilir; beyansız iç satır snake kalır ve projeksiyon şeması
+  // okumada patlar.
   protected override readonly embeds = ['variant', 'storageArea'];
 
   constructor(supabase: SupabaseClient) {
@@ -80,25 +70,12 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * Varyantın BİR DEPODAKİ partileri — **FEFO sırasında** (önce süresi dolan). Hazırlık ekranının
-   * okuması.
-   *
-   * `warehouseId` zorunlu: hazırlık daima siparişin deposundan toplanır ve başka deponun partisi
-   * listede görünürse depocu onu seçer — DB kısıtı reddeder ama bu kötü bir yol. Depo-ÜSTÜ okuma
-   * gereken tek yer geri çağırmadır ve onun kendi yolu var (`findByLot` / `listByIds`).
+   * Varyantın bir depodaki partileri FEFO sırasında, hazırlık ekranının okuması; `warehouseId` zorunludur, çünkü başka deponun
+   * partisi listede görünse depocu onu seçerdi. Depo üstü okuma yalnız geri çağırmanındır (`findByLot`, `listByIds`).
    */
   /**
-   * **VARYANT BAŞINA SON LOT KODLARI** — mal kabulde lot çekmecesinin öneri kaynağı (21.175).
-   *
-   * Tek sorgu, N varyant: form açılışında varyant başına ayrı tur atmak, on kalemlik bir sevkiyatta
-   * on uçuş demekti (`listByVariants` ile aynı gerekçe).
-   *
-   * YENİDEN ESKİYE ve varyant başına SINIRLI: depocunun elindeki koliyle en çok benzeşme ihtimali
-   * olan kod en son gireni. Sınır çağırandan gelir — kaç öneri gösterileceği EKRANIN kararı, bu
-   * okumanın değil.
-   *
-   * KODSUZ PARTİLER ELENİR ve tekrarlar teke iner: aynı lottan üç parti girmişse depocu listede
-   * onu bir kez görmeli. Sıra korunur (`Map` ekleme sırasını tutar), yani "en yeni önce" bozulmaz.
+   * Varyant başına son lot kodları, mal kabulde lot önerisinin kaynağı: tek sorgu, yeniden eskiye ve varyant başına sınırlı, sınırı
+   * ekran verir. Kodsuz partiler elenir, tekrarlar teke iner ve sıra korunur.
    */
   async recentLotsByVariants(
     warehouseId: string,
@@ -128,15 +105,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * **Varyantın PARTİ GEÇMİŞİ — tükenmişler DAHİL** (22.30).
-   *
-   * `listByVariant` yalnız bir deponun elindekini FEFO sırasında verir; burada soru başka: *"bu
-   * üründen ne zaman, ne kadar, kaça girdi ve ne oldu"*. Cevap tükenmiş partileri de gerektirir —
-   * onları eleyen bir liste, geçmişin tam da anlatmak istediği kısmını siler.
-   *
-   * En YENİ önce ve TAVANLI: parti kaydı veriyle sınırsız büyüyen bir kümedir (`CLAUDE §1`), ama
-   * burası bir defter değil bir bakış — "son N giriş" sorusunun cevabı. Tavana dayanıldığını çağıran
-   * satır sayısından anlar ve ekranda söyler; sessiz kırpma yok.
+   * Varyantın parti geçmişi, tükenmişler dahil: soru "ne zaman, ne kadar, kaça girdi ve ne oldu" olduğu için tükenmişi eleyen liste
+   * geçmişi silerdi. En yeni önce ve tavanlıdır; çağıran tavana dayanıldığını satır sayısından anlar.
    */
   async listVariantHistory(
     variantId: string,
@@ -148,7 +118,7 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
     if (warehouseIds?.length === 0) return [];
     const filters: Record<string, unknown> = { variantId };
     if (warehouseIds) filters.warehouseId = [...warehouseIds];
-    // Alan ADIYLA geliyor (19.29): geçmiş satırı "bu parti hangi dolapta duruyordu" diye soruyor.
+    // Alan adıyla gelir: geçmiş satırı "bu parti hangi dolapta duruyordu" diye sorar.
     return this.getAllAs(StockWithAreaSchema, filters, {
       select: `*,${AREA_EMBED}`,
       orderBy: 'createdAt',
@@ -177,11 +147,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * İndirimli teklife açılmış partiler (offer_price dolu) — near-expiry vitrini.
-   *
-   * Varyant listesi de kabul eder: vitrin bir sayfadaki tüm ürünlerin teklifini TEK sorguda okur,
-   * kart başına sorgu atmaz (N+1). Süzgeçsiz çağrı katalogdaki tüm açık teklifleri verir — teklif
-   * sayısı doğası gereği küçüktür (partiyi insan teklife açar, DOMAIN §5).
+   * İndirimli teklife açılmış partiler; vitrin bir sayfanın tekliflerini tek sorguda okur. Süzgeçsiz çağrı bütün açık teklifleri
+   * verir, çünkü teklifi insan açar ve sayısı küçüktür.
    */
   async listOfferBatches(variantId?: string | string[], warehouseId?: string): Promise<Stock[]> {
     // Depo süzgeci OPSİYONEL, `getAvailableMap`'in tersine — ve gerekçesi var: teklif bir partiye
@@ -199,15 +166,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * **Eldeki TÜM partiler**, kimin partisi olduklarıyla birlikte (09.13 stok ekranının gövdesi).
-   *
-   * Sayfalanmaz ve bu bilinçlidir: küme fiziksel gerçekle sınırlı — depoda duran parti sayısı kadar.
-   * Zamanla büyümez, mal tükendikçe erir (`physical_qty > 0` süzgeci boşalanı düşürür). Sayfalasaydık
-   * "yaklaşan tarihli" uyarısı listenin kuyruğunda kalan partileri sessizce yutardı; oysa o uyarının
-   * TAM olması gerekir — bir partiyi kaçırmak imha edilecek malı satmak demektir.
-   *
-   * Kararı motor verir (`domain-core/stock/offer` + `shelf-life`): bu okuma yalnız ölçütün girdisini
-   * (tarih tipi, toplam raf ömrü, teklif fiyatı) tek turda toplar.
+   * Eldeki bütün partiler, stok ekranının gövdesi: sayfalanmaz, çünkü küme fiziksel stokla sınırlıdır ve yakın-SKT uyarısı tam olmalı;
+   * kaçan parti imha edilecek malın satılması demektir. Kararı motor verir, bu okuma girdiyi tek turda toplar.
    */
   async listInStockDetailed(variantIds?: readonly string[], warehouseIds?: readonly string[]): Promise<StockBatchDetail[]> {
     // Boş dizi ile çağrı BOŞ döner: `in.()` süzgeci PostgREST'te "hiçbiri" değil sözdizimi hatasıdır,
@@ -229,19 +189,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * **RAF LİSTESİNİN SAYFASI** — depodaki partiler, SKT sırasında, keyset imleçli (kullanıcı
-   * bulgusu 03.09: *"tüm stok yükleniyor galiba, parça parça yüklenmesi gerekir"*).
-   *
-   * `listInStockDetailed`den ayrı ve ayrı olmak ZORUNDA: o okuma TAM küme ister (yakın-SKT turu bir
-   * partiyi kaçırırsa imha edilecek mal satılır), bu okuma ise bir SEÇİCİYİ besliyor ve depocu
-   * aradığı partiyi listeyi akıtarak buluyor. Aynı metoda `limit` eklemek, tam küme isteyen
-   * çağıranın bir gün sessizce kırpılmış liste almasıydı.
-   *
-   * Süzgeçler SORGUDA: depo (değişmez — `CLAUDE §1`), stoğu duranlar, isteğe bağlı ALAN. Elde
-   * süzmek sayfayı delerdi — otuz satır çekip yirmisini atınca sayfa boyu yalan söyler.
-   *
-   * Arama (`q`) burada YOK: ürün adı `product` tablosunda ve çok dilli bir JSON; bu okumanın
-   * sorgusuna eklenemez. Adı çağıran süzüyor (`listWarehouseBatches` künyesi).
+   * Raf listesinin sayfası: depodaki partiler SKT sırasında, keyset imleçli; tam küme isteyen `listInStockDetailed`den ayrıdır,
+   * çünkü ona `limit` eklemek o çağıranı bir gün kırpılmış listeyle bırakırdı. Süzgeçler sorgudadır, ürün adıyla arama çağırandadır.
    */
   async pageInStockDetailed(input: {
     warehouseId: string;
@@ -267,18 +216,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * **Girişlerin parti özeti — "o kabulde kaç kalem, kaç paket girdi"** (22.28).
-   *
-   * Mal kabul defteri `stock_intake` başlıklarını sayfalıyor; kalemler ise partilerdir ve onlar
-   * BU tabloda. Sayfa başına TEK tur: satır başına sorgu atmak otuz satırlık bir defteri otuz
-   * sorguya çevirirdi.
-   *
-   * **`initial_qty` okunur, `physical_qty` DEĞİL** (`orderVsReceived` ile aynı kural): defter
-   * "ne geldi" der, "bugün ne kaldı" demez. Parti satıldıkça erir; erimiş bir sayı geçmişteki
-   * kabulü küçük gösterir ve fark denetimini sessizce yanıltır.
-   *
-   * Şema entiteden TÜRER (`CLAUDE §1`): iki alanlık bir tip elle yazılsaydı `initialQty`'nin
-   * tamsayı olduğu ikinci bir yerde daha beyan edilirdi.
+   * Girişlerin parti özeti, mal kabul defterinin sayfası için tek tur. `initial_qty` okunur, `physical_qty` değil, çünkü defter "ne
+   * geldi" der ve satıldıkça eriyen sayı geçmiş kabulü küçük gösterirdi.
    */
   async summaryByIntake(intakeIds: readonly string[]): Promise<Map<string, { lineCount: number; qty: number }>> {
     const summary = new Map<string, { lineCount: number; qty: number }>();
@@ -301,19 +240,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * Lot numarasıyla parti arama — geri çağırmanın (rappel) ilk adımı. Tedarikçi "şu lotu topla"
-   * dediğinde elde yalnız o numara vardır; hangi varyantın hangi partisi olduğu buradan çıkar.
-   *
-   * Eşleşme PARÇA aramasıdır (`ilike`): operatör telefonda okunan numarayı eksik/parçalı girer.
-   * Stoğu bitmiş partiler de gelir — geri çağırmada asıl aranan zaten satılıp gitmiş maldır.
-   *
-   * ── İKİ SORU, TEK OKUMA (30.08) ─────────────────────────────────────────────
-   * Sayım ekranının "raftaki etiketi okut" yolu aynı numarayı soruyor ama başka bir kümeyi
-   * istiyor: YALNIZ kendi deposunun, YALNIZ stoğu duran partileri (düşürülemeyecek bir satırı
-   * göstermek, depocuya kapının reddedeceği bir iş yaptırırdı). İkinci bir `findByLot` yazmak
-   * "lot nasıl aranır" sorusunun ikinci cevabı olurdu (`CLAUDE §1`) — süzgeç SORGUYA eklendi,
-   * çağırana değil: tavana (`LOT_SEARCH_LIMIT`) dayanan bir okumayı sonradan elde süzmek,
-   * kapsamdaki partiyi sessizce listenin dışında bırakabilirdi.
+   * Lot numarasıyla parti arama, geri çağırmanın ilk adımı: eşleşme parça aramasıdır ve stoğu bitmiş partiler de gelir. Sayım ekranı
+   * aynı kapıyı kendi deposu ve stoğu duran partilerle süzerek kullanır; süzgeç sorgudadır, tavanlı okumayı elde süzmek kaybettirirdi.
    */
   async findByLot(lot: string, opts: { warehouseId?: string; onlyInStock?: boolean } = {}): Promise<StockBatchDetail[]> {
     // `%`, `,` ve parantez PostgREST'in `or=()` gramerinde ayraçtır — terim temizlenmezse sorgu bozulur.
@@ -321,14 +249,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
     if (!term) return [];
     return this.getAllAs(StockBatchDetailSchema, opts.warehouseId ? { warehouseId: opts.warehouseId } : undefined, {
       select: BATCH_DETAIL_SELECT,
-      // Parti numarası da eşleşir (03.09): raftaki etiket ister tedarikçinin lotu ister bizim
-      // `PRT-…` numaramız olsun, aynı kapıdan çözülür. İki sütun, tek soru: "bu kod hangi parti".
-      //
-      // TEK GRUP, VİRGÜLLE (cihazda ölçüldü 03.09): dizinin her elemanı AYRI bir `or=(…)` grubudur
-      // ve gruplar birbirine VE ile bağlanır (`base.service` künyesi). İki eleman olarak yazılınca
-      // sorgu "lot eşleşsin VE parti no eşleşsin" oldu — hiçbir satır iki sütunda aynı kodu taşımaz,
-      // okutma hem lotta hem parti numarasında "açık parti yok" dedi; raf listesi aynı satırı
-      // gösterirken. `discount.service` deseniyle aynı: grup = virgülle ayrılmış tek dize.
+      // Parti numarası da eşleşir: raftaki etiket tedarikçinin lotu da olabilir bizim `PRT-…` numaramız da. İki sütun tek `or=(…)`
+      // grubunda virgülle yazılır, çünkü dizinin her elemanı ayrı grup olur ve gruplar VE ile bağlanırdı.
       orFilters: [`lot_number.ilike.*${term}*,batch_no.ilike.*${term}*`],
       rangeFilters: opts.onlyInStock ? [{ field: 'physical_qty', operator: 'gt', value: 0 }] : undefined,
       orderBy: 'expiryDate',
@@ -347,13 +269,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * Çok varyantın kullanılabilirini TEK sorguda — vitrin listesi ve sepet doğrulaması varyant başına
-   * ayrı sorgu atarsa N+1 doğar. Dönen harita eksik anahtar bırakmaz.
-   *
-   * **`warehouseId` ZORUNLU ve ilk parametre (T8).** Geçişin en riskli sessiz bozulması buradaydı:
-   * süzgeç olmasaydı iki deponun satırı aynı varyant anahtarına düşer ve `Map`'te SON DEPO
-   * KAZANIRDI — kimse fark etmeden yanlış stok gösterilir, olmayan mal satılırdı. Parametreyi
-   * zorunlu yapmak o kırılmayı derleme anında gürültülü hale getirir.
+   * Çok varyantın kullanılabilirini tek sorguda verir, eksik anahtar bırakmaz. `warehouseId` zorunlu ve ilk parametredir, çünkü
+   * süzgeçsiz okumada iki deponun satırı aynı anahtara düşer ve haritada son depo kazanırdı.
    */
   async getAvailableMap(warehouseId: string, variantIds: string[]): Promise<Map<string, AvailableStock>> {
     const rows = await this.readAvailable(warehouseId, variantIds);
@@ -367,32 +284,9 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * ÇOK DEPO × çok varyant — `(depo, varyant)` taneli ham satırlar.
-   *
-   * Elimizde iki uç vardı ve **arada bir şey yoktu**: tek depo (`getAvailableMap`) ve depo-üstü
-   * toplam (`getNetworkAvailabilityMap`, ki satış kararı onu okuyamaz). Operasyonun "Tüm depolar"
-   * görünümü tam ortada duruyor — hem toplamı hem kırılımı istiyor ve beş depo için beş tur atmak
-   * N+1'dir.
-   *
-   * **Ham satır dönüyor, hazır toplam değil.** Toplamı serviste üretmek "N depoda var" ipucunu da
-   * servise taşırdı ve o tamamen sunum. Sınır şurada: hangi satırların toplanacağı (kapsam) bir
-   * karardır ve o burada; nasıl toplanacağı sunumdur ve o ekranda.
-   *
-   * **`warehouseIds` zorunlu ve varsayılansız (T8).** Boş dizi "hepsi" DEĞİL "hiçbiri"dir —
-   * kapsamsız personel hiçbir şey görmez. O hâlde sorgu HİÇ atılmaz: PostgREST'te `in.()` boş
-   * listesi güvenilmez ve fail-closed niyetini veriye değil koda yazıyoruz.
-   *
-   * ── BOŞ SATIRLAR İSTENMİYOR — VE BU BİR PERFORMANS SÜSÜ DEĞİL, ARIZA DÜZELTMESİ (22.31) ──
-   * Görünüm `varyant × depo` ÇAPRAZ birleşimidir: malı olmayan her çift için de bir satır üretir ve
-   * hepsi sıfırdır. Süzgeçsiz sorgu bu yüzden `varyant sayısı × depo sayısı` satır ister ve
-   * PostgREST'in satır tavanına (`max_rows`, yerelde 1000) dayanınca kalanı **sessizce keser** —
-   * sıralama da olmadığı için hangi varyantın satırının düştüğü rastgeledir. Sonuç: elde 34 adet
-   * duran ürün ekranda "elde 0" görünür (ölçüldü 14.08: 53 aktif depo × ~50 boy = 2650 satır
-   * istenirken 1000 dönüyordu; kullanıcı ekran görüntüsü).
-   *
-   * Sıfır satırın taşıdığı bilgi yok: çağıran satırları TOPLUYOR, eksik satır zaten 0 demek. Süzgeç
-   * kümeyi "gerçekten malı ya da rezervasyonu olan çiftler"e indiriyor — aynı cevap, tavana
-   * dayanmayan bir sorgu.
+   * Çok depo × çok varyant, `(depo, varyant)` taneli ham satırlar: "Tüm depolar" görünümü hem toplamı hem kırılımı ister, toplama
+   * ekranındır. Boş dizi hiçbiri demektir ve sorgu atılmaz; sıfır satırlar istenmez, çünkü çapraz görünüm satır tavanına dayanıp
+   * malı olan satırları sessizce keserdi.
    */
   async listAvailableAcross(warehouseIds: readonly string[], variantIds: readonly string[]): Promise<AvailableStock[]> {
     if (warehouseIds.length === 0 || variantIds.length === 0) return [];
@@ -407,24 +301,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * Depo AĞI genelinde toplam kullanılabilir (`available_stock_total`).
-   *
-   * **Satış kararı bunu OKUMAZ:** birleştirilmiş stok kimsenin stoğu değildir — 3 STR'de + 2
-   * KEHL'de duran maldan 5 kişilik sipariş çıkmaz. Meşru iki tüketicisi var: tedarik önerisi
-   * ("toplamda ne kadar kaldı, sipariş vermeli miyim") ve ziyaretçiye "tükendi" demenin tek
-   * dayanağı (C3 — yalnız HİÇBİR depoda yoksa söylenir).
-   *
-   * ── ADI NİYETİNİ SÖYLÜYOR (19.13) ────────────────────────────────────────────
-   * Eski adı `getAvailableTotalMap`'ti ve bu bir açıktı: `getAvailableMap`'e fazladan bir kelime
-   * eklenmiş gibi duruyordu, oysa **sözleşmesi bambaşka**. `getAvailableMap`'te unutulan argüman
-   * DERLENMEZ; burada unutulan bağlam derlenir, çalışır ve makul görünen bir sayı döndürür. Ad artık
-   * çağıranı bir cümle kurmaya zorluyor: "ağ genelinde".
-   *
-   * Kapsamla süzülmüş çoklu-depo okuması isteyen `listAvailableAcross`'a gider — o kapı 19.13'te
-   * tam olarak bu metodun yanlış kullanımını gereksiz kılmak için açıldı.
-   *
-   * Dönüş tipi `boolean` haritasına DARALTILAMIYOR (ölçüldü): paket okuması `available < item.qty`
-   * karşılaştırması yapıyor, yani gerçek miktara ihtiyacı var (`storefront/packages.ts`).
+   * Depo ağı genelinde toplam kullanılabilir (`available_stock_total`); satış kararı bunu okumaz, çünkü birleştirilmiş stok kimsenin
+   * stoğu değildir. Tüketicileri tedarik önerisi ve "hiçbir depoda yok mu" sorusudur, dönüş miktar taşır çünkü paket okuması karşılaştırır.
    */
   async getNetworkAvailabilityMap(variantIds: string[]): Promise<Map<string, AvailableStockTotal>> {
     if (variantIds.length === 0) return new Map();
@@ -444,26 +322,12 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * Varyant başına **tahmini birim maliyet** (KDV hariç): eldeki partilerin alış fiyatlarının, fiili
-   * adetle **ağırlıklı ortalaması**. Tek sorgu — varyant başına okuma N+1 doğururdu.
-   *
-   * Gerçek COGS parti başına bellidir ve sipariş anında FEFO ile kesinleşir; bu okuma **planlama**
-   * içindir: fiyat verirken (paket kurarken, marj-altı uyarısında) "bana kaça mal oluyor" sorusunun
-   * bugünkü en iyi cevabı. İki tahmin arasında ağırlıklı ortalamayı seçtik: son alış fiyatı tek bir
-   * pazarlığın sapmasını tüm stoğa yayardı, en ucuz/en pahalı parti ise uçları gösterirdi.
-   *
-   * Alış fiyatı GİRİLMEMİŞ parti hesaba KATILMAZ (0 saymak maliyeti düşük gösterip marjı şişirirdi).
-   * Hiç fiyatlı partisi olmayan varyant haritada YER ALMAZ: "bilmiyorum" ile "sıfır" farklı şeyler —
-   * çağıran eksikliği söyleyebilsin diye ayrımı koruyoruz.
+   * Varyant başına tahmini birim maliyet: eldeki partilerin alış fiyatlarının fiili adetle ağırlıklı ortalaması, planlama içindir.
+   * Fiyatı girilmemiş parti katılmaz ve fiyatlı partisi olmayan varyant haritada yer almaz, çünkü "bilmiyorum" sıfır değildir.
    */
   /**
-   * Varyant başına SON alışlar — en yeniden eskiye, en fazla `limit` tane (**cent**).
-   *
-   * `unitCostMap`'ten iki farkı var ve ikisi de bilinçli:
-   * - **Tükenmiş parti de sayılır.** Soru "elimde ne var" değil, "bunu yeniden almak kaça" — alış
-   *   geçmişi stok bitince silinmez, fiyat kararı da stoksuz kalmaz.
-   * - **Ortalama alınmaz, sıra korunur.** Aykırı alım ancak komşularıyla karşılaştırılınca
-   *   anlaşılır; ortalama onu zaten içine alıp saklardı (karar `domain-core/replacementCost`).
+   * Varyant başına son alışlar, en yeniden eskiye ve en fazla `limit` tane (cent): tükenmiş parti de sayılır, çünkü soru "yeniden
+   * almak kaça". Ortalama alınmaz, aykırı alım komşularıyla karşılaştırılınca anlaşılır.
    */
   async purchaseHistoryCentsMap(variantIds: string[], limit: number): Promise<Map<string, number[]>> {
     const map = new Map<string, number[]>();
@@ -496,10 +360,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   /** Eldeki partilerin ağırlıklı ortalama alışı, varyant başına (**cent**). */
   async unitCostCentsMap(variantIds: string[]): Promise<Map<string, number>> {
     if (variantIds.length === 0) return new Map();
-    // ÜÇ KOLON okunur, satırın tamamı değil: parti satırı geniş (lot, konum, tarihler, teklif fiyatı,
-    // damgalar) ve yüz varyantlık bir okumada 58 KB taşıyordu — hesap için gereken üç sayı. Ham sorgu,
-    // çünkü dar seçim `StockSchema`'yı doğrulayamaz (zorunlu alanlar gelmiyor); şema yerine burada
-    // sayıya indiriyoruz. `numeric` string dönebilir (bkz. dbNumeric) → Number() ile normalize.
+    // Üç kolon okunur, satırın tamamı değil: parti satırı geniş ve hesap üç sayı ister; dar seçim `StockSchema`yı doğrulayamadığı
+    // için sayıya burada inilir (`numeric` string dönebilir).
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('variant_id,physical_qty,purchase_price')
@@ -519,25 +381,17 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
       cur.total += qty * price;
       acc.set(row.variant_id, cur);
     }
-    // Ortalama ÖNCE euro'da alınır, kuruşa SONRA inilir: parti başına yuvarlamak çok partili bir
-    // varyantta her partide bir kuruş kaybettirirdi. Eskiden burası yuvarlanmamış euro döndürüyor ve
-    // her tüketici kendi `toCents`'ini çağırıyordu — sonuç aynı, dönüşümün yeri farklıydı (02.9).
+    // Ortalama önce euro'da alınır, kuruşa sonra inilir: parti başına yuvarlamak çok partili varyantta her partide bir kuruş
+    // kaybettirirdi.
     return new Map([...acc].flatMap(([id, { qty, total }]) => (qty > 0 ? [[id, toCents(total / qty)] as const] : [])));
   }
 
   /**
-   * BİR DEPODA eşik altına inen varyantlar ("sipariş zamanı" önerisinin girdisi, 06.11).
-   *
-   * **Eşik iki katmanlı (C6):** varyanttaki `minStockQty` varsayılandır, `warehouse_variant_threshold`
-   * satırı yalnız İSTİSNA yazar — fiyatın müşteriye-özel satır deseniyle aynı. Küresel tek eşik çok
-   * depoda yapısal olarak yanlış cevap verir: 20 adet Strasbourg'da bol, Kehl'de kritik olabilir.
-   * İkisi de yoksa varyantın eşiği yok demektir ve listeye hiç girmez.
-   *
-   * Üç turda okur (varsayılanlar · istisnalar · kullanılabilirler) — varyant başına sorgu YOK.
+   * Bir depoda eşik altına inen varyantlar, sipariş önerisinin girdisi: varyanttaki `minStockQty` varsayılandır, depo istisnası
+   * yalnız farkı yazar, çünkü küresel tek eşik çok depoda yanlış cevap verir. İkisi de yoksa varyant listeye girmez.
    */
   async listBelowMinStock(warehouseId: string, variantIds?: readonly string[]): Promise<Array<AvailableStock & { minStockQty: number }>> {
-    // Daraltma (14.15 stock_low üreticisi): rezervasyon SONRASI yalnız dokunulan varyantlar sorulur —
-    // her checkout'ta tüm katalogu taramak, kapı zilinin bedelini sipariş yoluna ödetmek olurdu.
+    // Daraltma: rezervasyondan sonra yalnız dokunulan varyantlar sorulur, her checkout'ta bütün katalogu taramamak için.
     let variantQuery = this.supabase.from('product_variant').select('id,min_stock_qty').eq('is_active', true);
     if (variantIds !== undefined) {
       if (variantIds.length === 0) return [];
@@ -545,10 +399,7 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
     }
     const [{ data: variantRows, error: variantError }, { data: overrideRows, error: overrideError }] = await Promise.all([
       variantQuery,
-      // Projeksiyon ŞEMANIN İSTEDİĞİ ÜÇ KOLONU da çeker. `warehouse_id` süzgeçte var diye
-      // seçilmemişti; şema onu zorunlu tuttuğu için `parse` `undefined` görüp patlıyordu ve
-      // `/operations/procurement` tamamen çöküyordu. Arıza kodun girdiği gün değil, o depoya
-      // İLK eşik istisnası yazıldığı gün doğdu — satır yoksa `.map` hiç koşmuyor.
+      // Projeksiyon şemanın istediği üç kolonu da çeker: `warehouse_id` seçilmeseydi `parse` patlar ve tedarik ekranı çökerdi.
       this.supabase.from('warehouse_variant_threshold').select('warehouse_id,variant_id,min_stock_qty').eq('warehouse_id', warehouseId),
     ]);
     if (variantError) throw variantError;
@@ -573,11 +424,7 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
       .filter((row) => row.availableQty < row.minStockQty);
   }
 
-  /**
-   * Partinin fiili miktarını değiştirir. **İmha/fire buradan geçmez** — o iki tabloya yazar ve
-   * `adjust_stock` RPC'sindedir (06.6, STACK §13). Bu uç sayım düzeltmesi gibi tek-tablo işleri
-   * içindir.
-   */
+  /** Partinin fiili miktarını değiştirir; imha ve fire buradan geçmez, `adjust_stock` RPC'sindedir. */
   async setPhysicalQty(id: string, physicalQty: number): Promise<Stock> {
     return this.update({ id, physicalQty });
   }
@@ -588,9 +435,8 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
-   * Partinin alanını yazar — "son görüldüğü yer" (kullanıcı kararı 03.09). Tek kolon, tek tablo;
-   * hareket defterine satır düşmez (adet değişmiyor). Alanın bu deponun olup olmadığı KAPININ
-   * sorusudur (`markBatchSeen`), servis satır yazar.
+   * Partinin alanını yazar, "son görüldüğü yer": tek kolon, hareket defterine satır düşmez. Alanın bu deponun olup olmadığı kapının
+   * sorusudur (`markBatchSeen`).
    */
   async setStorageArea(id: string, storageAreaId: string | null): Promise<Stock> {
     return this.update({ id, storageAreaId });

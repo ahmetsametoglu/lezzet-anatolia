@@ -265,7 +265,7 @@ export async function getCartView(
    */
   const undeliverableSubtotalCents = undeliverableTotalOf(lines);
   const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0) - undeliverableSubtotalCents;
-  // Kargo grubunun kendi toplamı — ücretsiz kargo eşiği BUNA bakar (K37).
+  // Kargo grubunun kendi toplamı; ücretsiz kargo eşiği buna bakar.
   const shippingSubtotalCents = lines.reduce((sum, l) => (l.route === 'shipping' ? sum + (l.lineTotalCents ?? 0) : sum), 0);
   const hasLocal = lines.some((l) => l.route === 'local');
   const hasShipping = lines.some((l) => l.route === 'shipping');

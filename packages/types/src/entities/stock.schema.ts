@@ -4,12 +4,8 @@ import { ProductSchema } from './product.schema';
 import { ProductVariantSchema } from './product-variant.schema';
 import { StorageAreaSchema } from './storage-point.schema';
 
-// Stock — stok PARTİSİ (lot). Stok varyant seviyesinde tutulur; her partinin kendi son tarihi ve
-// alış maliyeti vardır (DOMAIN §4, data-model/stok-tedarik.md).
-//
-// Ayrılmış miktar burada YOK: `Reservation` satırlarından türetilir (sayaç tutulmaz).
-// Son tarihin TİPİ üründedir (`Product.date_type`) — bu yüzden alan adı tipten bağımsız:
-// `expiryDate`. DLC = güvenlik (geçince satılamaz), DDM = kalite (geçse de satılır).
+// Stok partisi (lot), varyant seviyesinde: her partinin kendi son tarihi ve alış maliyeti vardır; ayrılmış miktar burada değil,
+// `Reservation` satırlarından türer. Son tarihin tipi üründedir (DLC güvenlik, DDM kalite), alan adı bu yüzden `expiryDate`.
 
 export const StockSchema = z.object({
   id: z.string().uuid(),
@@ -21,28 +17,20 @@ export const StockSchema = z.object({
   initialQty: z.number().int(),
   expiryDate: z.string(),
   /**
-   * PARTİ NUMARASI — bizim kimliğimiz (`PRT-STR-26-0031`), veritabanı tetikleyicisi üretir
-   * (kullanıcı kararı 03.09). LOT DEĞİL: lot tedarikçinin üretim numarasıdır ve boş olabilir;
-   * parti numarası bizim mal alımımızdır, hep vardır ve benzersizdir. Ekranlar partiyi bununla
-   * anar, lotu yanına yazar.
+   * Parti numarası, bizim kimliğimiz (`PRT-STR-26-0031`), veritabanı tetikleyicisi üretir. Lot değildir: lot tedarikçinin üretim
+   * numarasıdır ve boş olabilir, parti numarası hep vardır ve benzersizdir.
    */
   batchNo: z.string(),
   lotNumber: z.string().nullable(), // geri çağırmada (rappel) eşleşme anahtarı
-  // Para **cent** (02.9 · STACK §8); DB kolonları `purchase_price` / `offer_price` euro `numeric`.
+  // Para cent (STACK §8); DB kolonları `purchase_price` / `offer_price` euro `numeric`.
   purchasePriceCents: z.number().int().nullable(), // birim (paket) başına alış — gerçek COGS
   intakeId: z.string().uuid().nullable(),
   /** Hangi tedarik kalemini karşıladı (T5) — parçalı kabulde fark raporunun bağı. */
   purchaseOrderItemId: z.string().uuid().nullable(),
   offerPriceCents: z.number().int().nullable(), // dolu → parti indirimli teklifte
   /**
-   * Partinin durduğu depo İÇİ alan (`StorageArea`) — **serbest metin değil, tanımlı kayıt** (19.29).
-   *
-   * Önce `location: string` idi ve `temperature_log`un kapattığı üç zarar burada aynen geçerliydi:
-   * gruplama yazımla bölünüyordu, "hangi alan boş/dolu" sorusu sorulamıyordu, ve `storage_area.kind`
-   * ile `product.storageType` aynı kelimeleri konuşmasına rağmen "donuk ürün donuk alanda mı" sorusu
-   * cevapsızdı — cümlenin öteki yarısı bu alandı.
-   *
-   * `null` meşru: rafı bilinmeden de mal kabul edilir.
+   * Partinin durduğu depo içi alan, serbest metin değil tanımlı kayıt: gruplama yazımla bölünmesin ve "donuk ürün donuk alanda mı"
+   * sorulabilsin diye. `null` meşrudur, rafı bilinmeden de mal kabul edilir.
    */
   storageAreaId: z.string().uuid().nullable(),
   createdAt: z.string(),
@@ -68,14 +56,9 @@ export const StockUpdateSchema = StockSchema.omit({ batchNo: true }).partial().r
 export type StockUpdate = z.infer<typeof StockUpdateSchema>;
 
 /**
- * `available_stock` görünümü — kullanılabilir = fiili − aktif rezervasyon (süresi dolan sayılmaz).
- * Görünüm karar vermez: `expiredDlcQty` bir olgudur ("tarihi geçmiş DLC partilerde ne kadar var"),
- * "satma" kararını motor verir.
- *
- * **Grain `(warehouse_id, variant_id)` — `warehouseId` ZORUNLU alan (T8).** Bu, geçişin en riskli
- * sessiz bozulmasının panzehiridir: alan olmasaydı iki deponun satırı aynı varyant anahtarına
- * düşer ve `Map`'te SON DEPO KAZANIRDI — kimse fark etmeden yanlış stok gösterilirdi. Zorunlu alan
- * o kırılmayı gürültülü hale getirir.
+ * `available_stock` görünümü: kullanılabilir fiili eksi aktif rezervasyondur ve `expiredDlcQty` bir olgudur, kararı motor verir.
+ * Tanesi `(warehouse_id, variant_id)` ve `warehouseId` zorunludur, çünkü alan olmasa iki deponun satırı aynı varyant anahtarına
+ * düşerdi.
  */
 export const AvailableStockSchema = z.object({
   warehouseId: z.string().uuid(),
@@ -88,31 +71,25 @@ export const AvailableStockSchema = z.object({
 export type AvailableStock = z.infer<typeof AvailableStockSchema>;
 
 /**
- * `available_stock_total` — depo-üstü toplam. SATIŞ KARARI BUNU OKUMAZ: birleştirilmiş stok
- * kimsenin stoğu değildir (3 STR'de + 2 KEHL'de duran maldan 5 kişilik sipariş çıkmaz).
- * Tüketicileri: tedarik önerisi ve "hiçbir depoda yok mu" sorusu (C3 — ziyaretçiye 'tükendi'
- * demenin tek meşru dayanağı). Geri çağırma bunu değil parti tablosunu okur (0042 notu).
+ * `available_stock_total`, depo üstü toplam: satış kararı bunu okumaz, çünkü birleştirilmiş stok kimsenin stoğu değildir.
+ * Tüketicileri tedarik önerisi ve "hiçbir depoda yok mu" sorusudur; geri çağırma parti tablosunu okur.
  */
 export const AvailableStockTotalSchema = AvailableStockSchema.omit({ warehouseId: true });
 export type AvailableStockTotal = z.infer<typeof AvailableStockTotalSchema>;
 
 /**
- * Parti + kararın ihtiyaç duyduğu ürün alanları, TEK sorguda. Raf ömrü kararları (satılabilir mi,
- * yaklaşan mı, MLOR) `date_type` ve `shelf_life_days` ister; bunlar üründedir. Parti başına ayrı
- * ürün sorgusu (N+1) yerine gömülü `select` ile gelir (STACK §13). Karar yine motorundur
- * (`domain-core/stock/shelf-life`) — servis yalnız satırı getirir.
+ * Parti ve raf ömrü kararının ürün alanları (`date_type`, `shelf_life_days`) tek sorguda, gömülü `select` ile; karar motorundur
+ * (`domain-core/stock/shelf-life`), servis satırı getirir.
  */
 /**
- * Partinin alanı, GÖMÜLÜ hâliyle (19.29) — üç ayrı okuma aynı üç alanı istiyor (FEFO önerisi,
- * toplama, varyant geçmişi) ve hepsi ADI kullanıyor. Tek yerde tanımlı: üç şemada elle
- * tekrarlansaydı biri bir gün `kind`ı unutur ve o ekran uyumsuzluk uyarısını kuramazdı.
+ * Partinin alanı gömülü hâliyle; üç okuma (FEFO önerisi, toplama, varyant geçmişi) aynı alanları adıyla ister ve tanım tek
+ * yerdedir.
  */
 export const StockAreaEmbedSchema = StorageAreaSchema.pick({
   id: true,
   name: true,
   kind: true,
-  // Yürüyüş sırası (23.6 · karar §1.13): toplama listesi kalemlerini bu sayıya göre dizer —
-  // depocu rafların arasında zikzak çizmez. Sıra operatörün Depolar ekranındaki dizilimidir.
+  // Yürüyüş sırası: toplama listesi kalemleri bu sayıya göre dizilir, depocu raflar arasında zikzak çizmez.
   sortOrder: true,
 }).nullable();
 
@@ -133,11 +110,8 @@ export const StockWithProductDatesSchema = StockSchema.extend({
 export type StockWithProductDates = z.infer<typeof StockWithProductDatesSchema>;
 
 /**
- * Parti + KİMİN partisi olduğu (09.13 stok ekranı). `StockWithProductDates`'in üstüne yalnız ad
- * alanlarını ekler — ekran "Fıstıklı Baklava · 1 kg · LOT-2451-A" yazabilmek için varyantın boy adını
- * ve ürünün adını ister; parti başına ayrı ürün sorgusu (N+1) yerine gömülü `select` ile gelir.
- *
- * `productId` ekranın köprüsüdür: partiden ürüne (oradan fiyata, pakete) geçilir.
+ * Parti ve kimin partisi olduğu, stok ekranı için: ekran "Fıstıklı Baklava · 1 kg · LOT-2451-A" yazabilmek için ad alanlarını
+ * gömülü `select` ile alır. `productId` partiden ürüne geçişin köprüsüdür.
  */
 export const StockBatchDetailSchema = StockSchema.extend({
   // Gömülü satırlar VARLIK ŞEMASINDAN türetilir (CLAUDE.md §1), elle yazılmaz. Elle yazıldığında
@@ -158,25 +132,15 @@ export const StockBatchDetailSchema = StockSchema.extend({
       vatRate: true,
     }),
   }),
-  /**
-   * Partinin alanı — **ad gömülü geliyor** (19.29). Okuyan her yer (FEFO önerisi, toplama ekranı,
-   * varyant geçmişi) rafta aranacak TABELAYI istiyor; kimliği ayrıca çözmek her ekranda ikinci bir
-   * okuma demekti. `null` = rafı bilinmeyen parti (kabulde alan seçmek zorunlu değil).
-   */
+  /** Partinin alanı, ad gömülü gelir: okuyan her yer rafta aranacak tabelayı ister; `null` rafı bilinmeyen partidir. */
   storageArea: StockAreaEmbedSchema,
 });
 export type StockBatchDetail = z.infer<typeof StockBatchDetailSchema>;
 
 /**
- * Geri çağırma (rappel) sorgusunun TEK satırı: "bu partiden çıkan mal kime gitti".
- *
- * Türetme yönü hazırlık kayıtlarındandır (`OrderItemBatch`): depocu hangi partiden ne kadar
- * çıkardığını onayladığı için zincir gerçektir, tahmin değil. Tedarikçi bir lotu geri çağırdığında
- * cevap dakikalar içinde verilmelidir — sorgu bu yüzden tek turda çalışır.
- *
- * `referenceNo` null olabilir: referans ilk KALICI durumda üretilir, taslak siparişte henüz yoktur.
- * O satır yine görünür — ekran o zaman müşterinin adıyla söyler. Telefon geri çağırmanın çalışma
- * aracıdır: müşteriye ulaşmak gerekir.
+ * Geri çağırma sorgusunun tek satırı, "bu partiden çıkan mal kime gitti": zincir hazırlık kayıtlarından türer, çünkü depocu hangi
+ * partiden ne çıkardığını onaylar. `referenceNo` taslak siparişte boş olabilir; satır yine görünür ve telefon müşteriye ulaşmanın
+ * aracıdır.
  */
 export const RecallHitSchema = z.object({
   orderId: z.string().uuid(),
@@ -191,8 +155,8 @@ export const RecallHitSchema = z.object({
 });
 export type RecallHit = z.infer<typeof RecallHitSchema>;
 
-// Reservation — her ayırma bir satır. Kurallar: DOMAIN §4.
-// `stockId` YALNIZ partiye çıpalı teklif satırında dolar; `expiresAt` yalnız online checkout TTL'inde.
+// Ayırma (DOMAIN §4), her ayırma bir satır; `stockId` yalnız partiye çıpalı teklif satırında, `expiresAt` yalnız online checkout
+// süresinde dolar.
 
 export const ReservationSchema = z.object({
   id: z.string().uuid(),
@@ -224,10 +188,7 @@ export type ReservationInsert = z.infer<typeof ReservationInsertSchema>;
 export const ReservationUpdateSchema = ReservationSchema.partial().required({ id: true });
 export type ReservationUpdate = z.infer<typeof ReservationUpdateSchema>;
 
-/**
- * `reserve_stock` RPC'sinin dönüşü — atomik ayırma (06.3). Yetmezse satır YAZILMAZ ve
- * `available` ile ne kadar kaldığı bildirilir; kısmi ayırma yoktur (DOMAIN §4).
- */
+/** `reserve_stock` RPC'sinin dönüşü: ayırma atomiktir, yetmezse satır yazılmaz ve kalan `available` bildirilir. */
 export const ReserveResultSchema = z.object({
   ok: z.boolean(),
   reservationId: z.string().uuid().nullable(),
