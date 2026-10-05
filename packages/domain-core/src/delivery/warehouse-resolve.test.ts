@@ -257,11 +257,11 @@ describe('çözüm müşterinin işi içindedir', () => {
     });
   });
 
-  it('QUALITE müşterisi kendi bölgesi dışında Lezzet kargosuna düşmez', () => {
+  it('QUALITE müşterisi kendi bölgesi dışında Lezzet kargosuna düşmez; cevap yapılandırma eksiği değil, teslimat noktası yok', () => {
     const disarida = { country: 'FR' as const, postalCode: '75001' };
     expect(resolveWarehouseForPostalCode(disarida, [lezzetBolge, qualiteBolge], [STR, QLT], 'qualite')).toEqual({
       kind: 'unresolved',
-      reason: 'no_shipping_warehouse',
+      reason: 'outside_zones',
     });
   });
 

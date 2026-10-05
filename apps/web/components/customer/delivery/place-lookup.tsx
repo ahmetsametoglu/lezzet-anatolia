@@ -135,7 +135,11 @@ export function lookupMessage(state: PlaceLookupState, t: Copy): string | null {
   if (state.invalid) return state.suggest && /\p{L}/u.test(state.value) ? t.pickFromList : t.invalid;
   if (state.failed) return t.failed;
   if (state.lookup?.kind === 'unknown') return t.unknownTitle;
-  if (state.lookup?.kind === 'unresolved') return state.lookup.reason === 'no_shipping_warehouse' ? t.unresolvedShipTitle : t.unresolvedZoneTitle;
+  if (state.lookup?.kind === 'unresolved') {
+    const { reason } = state.lookup;
+    if (reason === 'outside_zones') return t.unresolvedOutsideTitle;
+    return reason === 'no_shipping_warehouse' ? t.unresolvedShipTitle : t.unresolvedZoneTitle;
+  }
   if (state.lookup?.kind === 'ambiguous') return t.ambiguousTitle;
   return null;
 }

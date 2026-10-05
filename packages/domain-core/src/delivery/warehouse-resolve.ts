@@ -28,10 +28,10 @@ export type PlaceResolution =
   | { kind: 'route'; warehouseId: string; zoneId: string; weekdays: readonly number[] }
   | { kind: 'shipping'; warehouseId: string }
   /**
-   * `no_shipping_warehouse` bizim yapılandırma eksiğimizdir, müşteriye "bölge dışısınız" dedirtmemeli; `ambiguous_zone` aynı
-   * kodun iki bölgede olmasıdır.
+   * `no_shipping_warehouse` bizim yapılandırma eksiğimizdir, müşteriye "bölge dışısınız" dedirtmemeli; `ambiguous_zone` aynı kodun iki
+   * bölgede olmasıdır, `outside_zones` kargo göndermeyen işin bölgesi dışıdır ve eksik değil cevaptır.
    */
-  | { kind: 'unresolved'; reason: 'no_shipping_warehouse' | 'ambiguous_zone' };
+  | { kind: 'unresolved'; reason: 'no_shipping_warehouse' | 'ambiguous_zone' | 'outside_zones' };
 
 /**
  * Bir işin bölgeleri: bölgenin işi deposundan gelir ve aynı posta kodu iki işte ayrı bölgede olabildiği için her çözüm önce işe göre
@@ -45,6 +45,9 @@ export function zonesOfBusiness<T extends { warehouseId: string }>(
   const own = new Set(warehouses.filter((w) => w.business === business).map((w) => w.id));
   return zones.filter((zone) => own.has(zone.warehouseId));
 }
+
+/** Kargo gönderen işler: QUALITE kargo göndermez (karar 10), veritabanı da QUALITE deposunu kargo deposu yapmaz. */
+const BUSINESS_SHIPS: Readonly<Record<Business, boolean>> = { lezzet: true, qualite: false };
 
 /** Müşterinin işi; anonim ziyaretçi Lezzet'tir, çünkü QUALITE yalnız onaylı şirkete admin tarafından verilir. */
 export function customerBusinessOf(customer: { business: Business } | null | undefined): Business {
@@ -70,7 +73,7 @@ export function resolveWarehouseForPostalCode(
   }
 
   const shipping = findShippingWarehouse(place.country, warehouses, business);
-  if (!shipping) return { kind: 'unresolved', reason: 'no_shipping_warehouse' };
+  if (!shipping) return { kind: 'unresolved', reason: BUSINESS_SHIPS[business] ? 'no_shipping_warehouse' : 'outside_zones' };
   return { kind: 'shipping', warehouseId: shipping.id };
 }
 

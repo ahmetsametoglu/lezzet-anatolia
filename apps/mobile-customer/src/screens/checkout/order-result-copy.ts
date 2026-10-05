@@ -34,9 +34,8 @@ export function rejectionMessage(
   const r = t.reject;
   switch (result.status) {
     case 'warehouse_unresolved':
-      // İki sebep de (belirsiz bölge · kargo deposu yok) operatörün müdahalesini bekler ve
-      // müşteriye "bölge dışısınız" DENMEZ: o başka bir gerçek (sözleşme künyesi).
-      return r.warehouse_unresolved;
+      // Kargo göndermeyen işin bölgesi dışı bir cevaptır; öteki iki sebep operatörü bekler ve müşteriye "bölge dışısınız" denmez.
+      return result.reason === 'outside_zones' ? r.warehouse_outside_zones : r.warehouse_unresolved;
     case 'empty_cart':
       return r.empty_cart;
     case 'blocked_lines':

@@ -130,6 +130,8 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
   if (draft.status !== 'ok') {
     // Depo çözülemedi: veri ya da yapılandırma hatasıdır ve operatörü bekler; müşteri bunu ödeme hatası görmemeli, iz bırakılır.
     if (draft.status === 'warehouse_unresolved') {
+      // Kargo göndermeyen işin bölgesi dışı bir arıza değil, cevaptır; iz bırakmaz.
+      if (draft.reason === 'outside_zones') return draft;
       // Log'a kimlik yazılır: sebep ve müşteri kimliği teşhise yeter, adres kişisel veridir.
       await captureError(new Error(`checkout: yer çözülemedi (${draft.reason})`), {
         source: SOURCES.applicationOrder,

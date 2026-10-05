@@ -96,7 +96,9 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
           ? copy.ambiguousNote
           : place.kind === 'unknown'
             ? copy.unknownNote
-            : copy.unresolvedNote;
+            : place.reason === 'outside_zones'
+              ? copy.outsideNote
+              : copy.unresolvedNote;
 
   const idOf = (part: string) => (testID === undefined ? undefined : `${testID}-${part}`);
 

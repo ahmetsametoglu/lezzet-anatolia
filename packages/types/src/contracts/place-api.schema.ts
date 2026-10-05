@@ -54,9 +54,10 @@ export const PlaceResolutionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('unknown') }),
   /**
    * Zincir koptu: `no_shipping_warehouse` bizim eksiğimizdir (müşteriye "bölge dışısınız" dedirtilmemeli), `ambiguous_zone` veri
-   * çakışmasıdır (aynı kod iki bölgede). Değerler motorun `PlaceResolution` birliğinin aynısı ve bağ derlemede kilitli.
+   * çakışmasıdır, `outside_zones` kargo göndermeyen işin bölgesi dışıdır. Değerler motorun `PlaceResolution` birliğinin aynısı ve bağ
+   * derlemede kilitli.
    */
-  z.object({ kind: z.literal('unresolved'), reason: z.enum(['no_shipping_warehouse', 'ambiguous_zone']) }),
+  z.object({ kind: z.literal('unresolved'), reason: z.enum(['no_shipping_warehouse', 'ambiguous_zone', 'outside_zones']) }),
 ]);
 export type PlaceResolution = z.infer<typeof PlaceResolutionSchema>;
 

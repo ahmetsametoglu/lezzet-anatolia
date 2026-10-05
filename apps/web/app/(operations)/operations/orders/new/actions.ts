@@ -251,6 +251,7 @@ function rejectionMessage(outcome: Exclude<Awaited<ReturnType<typeof placeOrder>
     case 'cold_chain_unshippable':
       return 'Soğuk zincir ürünü bu adrese gönderilemez — rota dışı adrese kargoyla çıkamaz.';
     case 'warehouse_unresolved':
+      if (outcome.reason === 'outside_zones') return 'Adres müşterinin işinin bölgeleri dışında; QUALITE kargo göndermez.';
       return outcome.reason === 'ambiguous_zone'
         ? 'Posta kodu birden çok bölgeye bağlı — bölge tanımları düzeltilmeli.'
         : 'Kargo deposu tanımlı değil.';

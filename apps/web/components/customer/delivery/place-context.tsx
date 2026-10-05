@@ -21,7 +21,8 @@ interface PlaceContextValue {
   address: PlaceAddress | null;
   /**
    * Seçili adres neden yer vermiyor: kod tanınıyor ama ne rota ne kargo karşılıyor (`no_shipping_warehouse` ayar eksiğimiz,
-   * `ambiguous_zone` veri çakışması). Sepet bunu teslim şeridinde, satır notunda ve pasif "Ödemeye geç"te söyler.
+   * `ambiguous_zone` veri çakışması, `outside_zones` kargo göndermeyen işin bölgesi dışı). Sepet bunu teslim şeridinde, satır notunda ve
+   * pasif "Ödemeye geç"te söyler.
    */
   unresolved: PlaceUnresolved | null;
   /**

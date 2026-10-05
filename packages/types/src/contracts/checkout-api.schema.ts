@@ -278,8 +278,11 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
     deliveryType: DeliveryTypeEnum,
     referenceNo: OrderSchema.shape.referenceNo,
   }),
-  /** Yer çözülemedi — VERİ/YAPILANDIRMA hatası; müşteriye "bölge dışısınız" DENMEZ, o başka şey. */
-  z.object({ status: z.literal('warehouse_unresolved'), reason: z.enum(['ambiguous_zone', 'no_shipping_warehouse']) }),
+  /** Yer çözülemedi: `outside_zones` kargo göndermeyen işin bölgesi dışıdır, ötekiler veri ya da yapılandırma hatasıdır. */
+  z.object({
+    status: z.literal('warehouse_unresolved'),
+    reason: z.enum(['ambiguous_zone', 'no_shipping_warehouse', 'outside_zones']),
+  }),
   z.object({ status: z.literal('empty_cart') }),
   /** Tükenmiş/satışa kapanmış satır — çıkarılmadan sipariş açılmaz. */
   z.object({ status: z.literal('blocked_lines'), lines: z.array(z.string()) }),

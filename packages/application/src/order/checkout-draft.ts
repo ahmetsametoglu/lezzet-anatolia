@@ -52,7 +52,7 @@ import {
   type CartLine,
 } from '../cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
-import { readDeliveryInputs, resolveDelivery } from './delivery';
+import { readDeliveryInputs, resolveDelivery, type DeliveryResolution } from './delivery';
 import { readUnitCosts } from './unit-costs';
 import { optionForPricing, parcelPlanSnapshot, pricedOptions, servicePointSnapshot, shippingVatLines } from './shipping-selection';
 import { quoteDataGap, quoteFailureOf, quoteShipping } from '../shipping/quote';
@@ -77,10 +77,10 @@ export type CheckoutDraftOutcome =
       items: OrderItem[];
     }
   /**
-   * `ambiguous_zone` veri hatası, `no_shipping_warehouse` yapılandırma eksiğidir; ikisi de müşteriye "bölge dışısınız"
-   * dedirtmemeli.
+   * `ambiguous_zone` veri hatası, `no_shipping_warehouse` yapılandırma eksiğidir, ikisi de müşteriye "bölge dışısınız" dedirtmemeli;
+   * `outside_zones` kargo göndermeyen işin bölgesi dışıdır.
    */
-  | { status: 'warehouse_unresolved'; reason: 'ambiguous_zone' | 'no_shipping_warehouse' }
+  | { status: 'warehouse_unresolved'; reason: NonNullable<DeliveryResolution['unresolvedReason']> }
   | { status: 'empty_cart' }
   /** Tükenmiş ya da satışa kapanmış satır; çıkarılmadan sipariş açılmaz. */
   | { status: 'blocked_lines'; lines: string[] }

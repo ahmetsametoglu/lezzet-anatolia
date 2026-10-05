@@ -50,6 +50,7 @@
       "ambiguousNote": "Bu kod birden çok yerde geçerli — teslimat adresinizi girerken netleştireceğiz.",
       "unknownNote": "Bu kodu bulamadık — yazımını kontrol eder misiniz?",
       "unresolvedNote": "Şu an bu kod için teslimat şeklini söyleyemiyoruz; sipariş adımında birlikte bakacağız.",
+      "outsideNote": "Bu posta kodu için teslimat noktası belirlenemedi.",
       "browsingOnly": "Bu kod yalnız vitrini gezmek içindir; siparişte kayıtlı adresiniz kullanılır."
     },
     "countryFR": "Fransa",
@@ -108,6 +109,7 @@
       "ambiguousNote": "Ce code correspond à plusieurs lieux — nous préciserons lors de la saisie de l'adresse.",
       "unknownNote": "Nous n'avons pas trouvé ce code — pouvez-vous vérifier la saisie ?",
       "unresolvedNote": "Nous ne pouvons pas encore préciser la livraison pour ce code ; nous verrons cela à la commande.",
+      "outsideNote": "Aucun point de livraison n'a pu être déterminé pour ce code postal.",
       "browsingOnly": "Ce code sert uniquement à parcourir la boutique ; votre adresse enregistrée sera utilisée pour la commande."
     },
     "countryFR": "France",
@@ -166,6 +168,7 @@
       "ambiguousNote": "Dieser Code gilt für mehrere Orte – wir klären das bei der Adresseingabe.",
       "unknownNote": "Diesen Code konnten wir nicht finden – bitte die Eingabe prüfen.",
       "unresolvedNote": "Für diesen Code können wir die Lieferart noch nicht sagen; wir klären das bei der Bestellung.",
+      "outsideNote": "Für diese Postleitzahl konnte kein Lieferpunkt bestimmt werden.",
       "browsingOnly": "Diese Postleitzahl dient nur zum Stöbern; für die Bestellung wird Ihre gespeicherte Adresse verwendet."
     },
     "countryFR": "Frankreich",

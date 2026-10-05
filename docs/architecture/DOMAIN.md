@@ -741,7 +741,8 @@ Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet
   bölgesinde durabilir (`docs/feature/iki-is.md`). Tekillik veritabanında `(ülke, kod, iş)` anahtarıyla zorlanır,
   çakışma kayıt anında reddedilir ("ilki kazanır" sessiz çözümü kalkar). Ülke bölgeye değil kod satırına yazılır —
   bölge sınır ötesi olabilir (ADR-002). Sonuç: posta kodu müşterinin işi içinde her zaman tek depoya çözülür; ziyaretçi
-  Lezzet'tir, QUALITE kendi bölgesi dışında Lezzet deposuna düşmez ve kargo göndermez.
+  Lezzet'tir, QUALITE kendi bölgesi dışında Lezzet deposuna düşmez ve kargo göndermez; o müşteriye "teslimat noktası
+  belirlenemedi" denir ve bu bir yapılandırma eksiği sayılmaz.
 - Müşteriye depo **gösterilmez** — altın kural: sistemin karmaşıklığı arayüze yansımaz. Müşteri
   posta kodunu girer; gerisi içeride çözülür.
 - **Varsayılan depo kavramı YOKTUR.** Belirsizlik varsayılanla çözülmez: sipariş deposunun kaynağı

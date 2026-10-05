@@ -34,9 +34,9 @@ export type PlaceLookup =
   | { kind: 'unknown' }
   /**
    * `no_shipping_warehouse` bizim yapılandırma eksiğimizdir ve müşteriye "bölge dışısınız" dedirtmemeli; `ambiguous_zone` veri
-   * çakışmasıdır.
+   * çakışmasıdır, `outside_zones` kargo göndermeyen işin bölgesi dışıdır.
    */
-  | { kind: 'unresolved'; reason: 'no_shipping_warehouse' | 'ambiguous_zone' };
+  | { kind: 'unresolved'; reason: 'no_shipping_warehouse' | 'ambiguous_zone' | 'outside_zones' };
 
 export interface DeliveryPlace {
   /** Normalleştirilmiş, boşluksuz. */

@@ -472,6 +472,8 @@ function rejectionMessage(t: Messages, reason: string, detail?: string[] | strin
   const template =
     reason === 'insufficient_stock' && list
       ? t.rejected.insufficient_stock_named
-      : (t.rejected[reason as keyof typeof t.rejected] ?? t.pay.error);
+      : reason === 'warehouse_unresolved' && detail === 'outside_zones'
+        ? t.rejected.warehouse_outside_zones
+        : (t.rejected[reason as keyof typeof t.rejected] ?? t.pay.error);
   return template.replace('{detail}', list);
 }

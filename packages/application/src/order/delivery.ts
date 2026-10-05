@@ -8,7 +8,7 @@ import {
   resolveWarehouseForPostalCode,
   upcomingDeliveryDates,
 } from '@lezzet/domain-core';
-import type { WarehouseCandidate, ZoneWithWarehouse } from '@lezzet/domain-core';
+import type { PlaceResolution, WarehouseCandidate, ZoneWithWarehouse } from '@lezzet/domain-core';
 import type { AddressDeliveryType } from '@lezzet/types';
 import type { Business, Country } from '@lezzet/types';
 
@@ -32,7 +32,7 @@ export interface DeliveryResolution {
    * yapılmıyor demektir.
    */
   shippingWarehouseId: string | null;
-  unresolvedReason: 'ambiguous_zone' | 'no_shipping_warehouse' | null;
+  unresolvedReason: Extract<PlaceResolution, { kind: 'unresolved' }>['reason'] | null;
   /** Rota-içi teslimat için yaklaşan somut tarihler; kargoda boş. */
   availableDates: string[];
   /** Tek tarih varsa arayüz seçim sunmaz, onu gösterir (DOMAIN §6). */
@@ -92,8 +92,8 @@ export async function resolveDelivery(db: Db, input: ResolveDeliveryInput): Prom
   // Kargo deposu ÜLKEDEN türer, rotadan değil — rota içindeki müşteri de kargo dolgusu alabilir.
   const shippingWarehouseId = findShippingWarehouse(place.country, warehouses, input.business)?.id ?? null;
 
-  // Çözümsüz: ya aynı kod iki bölgede (veri çakışması) ya da kargo deposu tanımlı değil. İkisi de
-  // sipariş verilemez demektir ama SEBEPLERİ ayrıdır — biri veri hatası, öteki yapılandırma eksiği.
+  // Çözümsüz: aynı kod iki bölgede, kargo deposu tanımlı değil ya da adres kargo göndermeyen işin bölgesi dışında; üçü de sipariş
+  // verilemez demektir ama sebepleri ayrıdır.
   if (resolution.kind === 'unresolved') {
     return {
       deliveryType: 'shipping',
