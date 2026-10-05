@@ -1,7 +1,7 @@
 import { OrderItemService, OrderSaleService, OrderService, serviceDb } from '@lezzet/database';
 import { buildAccountingExport, type AccountingExport, type AccountingExportRow } from '@lezzet/domain-core';
 import { toCsv } from '@lezzet/helper';
-import type { KeysetCursor, OrderSale, Page } from '@lezzet/types';
+import { BUSINESS_LABELS, type KeysetCursor, type OrderSale, type Page } from '@lezzet/types';
 
 /**
  * Muhasebe export kapısı (DOMAIN §9): sistem resmî muhasebe değildir, fatura kesmez ve numara üretmez, muhasebeciye temiz veri verir.
@@ -9,11 +9,15 @@ import type { KeysetCursor, OrderSale, Page } from '@lezzet/types';
  * sütun eşlemesidir.
  */
 
+/** Dosyanın satırı — aktarım satırı artı işin okunur adı. */
+type ExportCsvRow = AccountingExportRow & { businessLabel: string };
+
 /** Dosyanın sütunları — sıra ve başlıklar AÇIK yazılır; alan eklenince biçim habersiz kaymasın. */
-const COLUMNS: ReadonlyArray<{ key: keyof AccountingExportRow & string; label: string }> = [
+const COLUMNS: ReadonlyArray<{ key: keyof ExportCsvRow & string; label: string }> = [
   { key: 'saleDate', label: 'Satış tarihi' },
   { key: 'referenceNo', label: 'Referans' },
   { key: 'invoiceNo', label: 'Fatura no' },
+  { key: 'businessLabel', label: 'İş' },
   { key: 'channel', label: 'Kanal' },
   { key: 'deliveryCountry', label: 'Ülke' },
   { key: 'vatTreatment', label: 'KDV işlemi' },
@@ -62,7 +66,8 @@ export async function buildExport(period: ExportPeriod): Promise<AccountingExpor
  * olduğu tartışılır.
  */
 export function toExportCsv(data: AccountingExport): string {
-  const body = toCsv(data.rows as unknown as Array<Record<string, unknown>>, COLUMNS);
+  const rows: ExportCsvRow[] = data.rows.map((row) => ({ ...row, businessLabel: BUSINESS_LABELS[row.business] }));
+  const body = toCsv(rows as unknown as Array<Record<string, unknown>>, COLUMNS);
   const summary = data.summary;
   const summaryLines = [
     '',

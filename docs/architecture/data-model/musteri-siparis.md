@@ -575,7 +575,7 @@ durumumuzun geçiş defteri) **yerine geçmez** — bu koli düzeyi ve taşıyı
 Sipariş kayıt anında değil, **gerçekleştiği anda** gelirdir. `order_sale`, teslim edilmiş ya da kapanmış siparişleri `sale_date` ile birlikte verir: `sale_date` = `OrderStatusLog`'un İLK `delivered`/`completed` kaydının günü. Muhasebe export'u (12.7) da dönemsel kârlılık (12.6) da bu tarihi okur — iki rapor iki ayrı "satış günü" hesaplamaz.
 
 - **`min(...)` şart:** tam yolda sipariş önce `delivered` sonra `completed` olur, ikisi farklı aya düşebilir. Kapanışı esas alsaydık ocakta teslim edilmiş satış şubat cirosuna yazılırdı.
-- **`o.*` seçilir:** görünüm siparişin alanlarını yeniden yazmaz, yalnız `sale_date` ekler. Şema da öyle türetilir (`OrderSaleSchema = OrderSchema.extend({saleDate})`); alan listesi kopyalansaydı `order`a eklenen kolon burada sessizce eksik kalırdı.
+- **`o.*` seçilir:** görünüm siparişin alanlarını yeniden yazmaz, yalnız `sale_date` ile satışın işini (`business`, deposundan) ekler. Şema da öyle türetilir (`OrderSaleSchema = OrderSchema.extend({business, saleDate})`); alan listesi kopyalansaydı `order`a eklenen kolon burada sessizce eksik kalırdı.
 - **Hediye sipariş DIŞLANMAZ:** cirosu sıfırdır ama mal maliyeti kârda gider olarak görünmelidir. Dış muhasebe süzgeci aktarım kapısındadır (`domain-core/accounting`); burada dışlansaydı kâr raporu hediyenin maliyetini kaybederdi.
 - **`returned` dışarıda:** mal geri gelmiş, para iadesi süreci açık (07.9). Sipariş `completed`'a dönünce satış yine görünür ve `sale_date` orijinal teslim günüdür — geçmiş dönemin raporu yeniden üretildiğinde satır doğru aya oturur.
 

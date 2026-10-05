@@ -1,4 +1,5 @@
-import { BusinessEnum, ChannelEnum, type Business, type Channel } from '@lezzet/types';
+import { ChannelEnum, type Channel } from '@lezzet/types';
+import { parseBusinessFilter, type BusinessFilter } from '@/lib/business-filter';
 import { oneOf, type RawParams } from '@/lib/url-params';
 
 // Analitik ekranının URL sözleşmesi: mod, dönem ve kanal adreste taşınır, çünkü paylaşılan bağlantı aynı görünümü açmalı. İmleç yoktur,
@@ -33,14 +34,11 @@ export const PERIOD_LABEL: Record<AnalyticsPeriod, string> = {
 /** Kanal kırılımı — `all` süzgeç yok demek. */
 export type AnalyticsChannel = Channel | 'all';
 
-/** İş kırılımı — `all` iki işi birlikte okur. */
-export type AnalyticsBusiness = Business | 'all';
-
 export interface AnalyticsUrlState {
   mode: AnalyticsMode;
   period: AnalyticsPeriod;
   channel: AnalyticsChannel;
-  business: AnalyticsBusiness;
+  business: BusinessFilter;
 }
 
 const DEFAULTS: AnalyticsUrlState = { mode: 'ticaret', period: 'd30', channel: 'all', business: 'all' };
@@ -51,7 +49,7 @@ export function parseAnalyticsUrl(params: RawParams): AnalyticsUrlState {
     mode: oneOf(params.mode, ANALYTICS_MODES, DEFAULTS.mode),
     period: oneOf(params.period, ANALYTICS_PERIODS, DEFAULTS.period),
     channel: oneOf(params.ch, [...ChannelEnum.options, 'all'] as const, DEFAULTS.channel),
-    business: oneOf(params.business, [...BusinessEnum.options, 'all'] as const, DEFAULTS.business),
+    business: parseBusinessFilter(params.business),
   };
 }
 

@@ -17,6 +17,7 @@ import {
   type MovementExportRow,
 } from '@lezzet/domain-core';
 import { toCsv } from '@lezzet/helper';
+import { BUSINESS_LABELS } from '@lezzet/types';
 import { MOVEMENT_TYPE_LABEL } from '@/app/(operations)/operations/finance/finance-labels';
 import { DOCUMENT_KIND_LABEL, VAT_REGIME_LABEL } from '@/components/operation/form/document-form/labels';
 
@@ -111,6 +112,7 @@ export async function buildMovementExport(period: ExportPeriod): Promise<Movemen
 /** Dosyanın satırı — dökümün satırı artı operatörün diliyle yazılan sütunlar (tip, belge türü, kaynak). */
 type MovementCsvRow = MovementExportRow & {
   typeLabel: string;
+  businessLabel: string;
   documentKindLabel: string | null;
   /** KDV rejiminin okunur adı; "Ters yükleme"de belgede KDV yoktur ama beyanda hesaplanır. */
   documentVatRegimeLabel: string | null;
@@ -131,6 +133,7 @@ const COLUMNS: ReadonlyArray<{ key: keyof MovementCsvRow & string; label: string
   { key: 'typeLabel', label: 'Tip' },
   { key: 'nature', label: 'Tür' },
   { key: 'accountCode', label: 'Hesap kodu' },
+  { key: 'businessLabel', label: 'İş' },
   { key: 'amount', label: 'Tutar' },
   { key: 'counterparty', label: 'Karşı taraf' },
   { key: 'documentKindLabel', label: 'Belge türü' },
@@ -154,6 +157,7 @@ export function toMovementCsv(data: MovementExport): string {
   const rows: MovementCsvRow[] = data.rows.map((row) => ({
     ...row,
     typeLabel: MOVEMENT_TYPE_LABEL[row.type],
+    businessLabel: BUSINESS_LABELS[row.business],
     documentKindLabel: row.documentKind ? DOCUMENT_KIND_LABEL[row.documentKind] : null,
     documentVatRegimeLabel: row.documentVatRegime ? VAT_REGIME_LABEL[row.documentVatRegime] : null,
     sourceLabel: SOURCE_LABEL[row.source],

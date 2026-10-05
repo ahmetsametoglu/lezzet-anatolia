@@ -20,7 +20,8 @@ import {
   ZeroSearchChips,
   ZoneDemandBridge,
 } from './analytics-sections';
-import { BUSINESS_LABEL, BUSINESS_ORDER, CHANNEL_LABEL, CHANNEL_ORDER, MODE_LABEL } from './analytics-labels';
+import { BUSINESS_FILTERS } from '@/lib/business-filter';
+import { BUSINESS_LABEL, CHANNEL_LABEL, CHANNEL_ORDER, MODE_LABEL } from './analytics-labels';
 import { ANALYTICS_MODES, ANALYTICS_PERIODS, PERIOD_LABEL } from './analytics-url';
 import type { AnalyticsViewProps } from './analytics-types';
 
@@ -61,11 +62,8 @@ export function AnalyticsDesktop({ data, urlState, onMode, onPeriod, onChannel, 
           </Chip>
         ))}
         <span className="mx-1 h-4 w-px bg-ops-line" />
-        <Chip active={urlState.business === 'all'} onClick={() => onBusiness('all')}>
-          {BUSINESS_LABEL.all}
-        </Chip>
-        {BUSINESS_ORDER.map((b) => (
-          <Chip key={b} active={urlState.business === b} onClick={() => onBusiness(urlState.business === b ? 'all' : b)}>
+        {BUSINESS_FILTERS.map((b) => (
+          <Chip key={b} active={urlState.business === b} onClick={() => onBusiness(b !== 'all' && urlState.business === b ? 'all' : b)}>
             {BUSINESS_LABEL[b]}
           </Chip>
         ))}

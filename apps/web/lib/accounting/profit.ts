@@ -4,7 +4,7 @@ import {
   type CompanyProfit, type OrderContribution, type SoldLine, type VariantProfit,
 } from '@lezzet/domain-core';
 import { fromCents } from '@lezzet/helper';
-import type { OrderItem, OrderSale } from '@lezzet/types';
+import type { Business, OrderItem, OrderSale } from '@lezzet/types';
 
 /**
  * Kârlılık kapısı (DOMAIN §12): karar motorun, okuma servisin, birleştiren yer burasıdır. Hediye siparişler dahildir, çünkü patron
@@ -17,9 +17,12 @@ interface ProfitPeriod {
 }
 
 /** Dönemin satışları + kalemleri — üç raporun ortak ham girdisi, tek okumada. */
-async function loadPeriod(period: ProfitPeriod): Promise<{ sales: OrderSale[]; itemsByOrder: Map<string, OrderItem[]> }> {
+async function loadPeriod(
+  period: ProfitPeriod,
+  business?: Business,
+): Promise<{ sales: OrderSale[]; itemsByOrder: Map<string, OrderItem[]> }> {
   const db = serviceDb();
-  const sales = await new OrderSaleService(db).listPeriod(period.from, period.to);
+  const sales = await new OrderSaleService(db).listPeriod(period.from, period.to, business);
   const items = await new OrderItemService(db).listByOrders(sales.map((s) => s.id));
 
   const itemsByOrder = new Map<string, OrderItem[]>();
@@ -32,8 +35,8 @@ async function loadPeriod(period: ProfitPeriod): Promise<{ sales: OrderSale[]; i
 }
 
 /** Sipariş bazında katkı payı — en kârlıdan en kârsıza. Kapanmamışlar sonda (kârı yok). */
-export async function orderProfits(period: ProfitPeriod): Promise<OrderContribution[]> {
-  const { sales, itemsByOrder } = await loadPeriod(period);
+export async function orderProfits(period: ProfitPeriod, business?: Business): Promise<OrderContribution[]> {
+  const { sales, itemsByOrder } = await loadPeriod(period, business);
   return sales
     .map((sale) => orderContribution(sale, itemsByOrder.get(sale.id) ?? []))
     .sort((a, b) => (b.contribution ?? -Infinity) - (a.contribution ?? -Infinity));
@@ -45,9 +48,9 @@ export async function orderProfits(period: ProfitPeriod): Promise<OrderContribut
  * Maliyet siparişin `cogs_amount` toplamından PAY EDİLMEZ, kalemin kendi partilerinden okunur:
  * pay etmek, ucuz partiden çıkan kalemle pahalı partiden çıkanı aynı gösterirdi.
  */
-export async function productProfits(period: ProfitPeriod): Promise<VariantProfit[]> {
+export async function productProfits(period: ProfitPeriod, business?: Business): Promise<VariantProfit[]> {
   const db = serviceDb();
-  const { sales, itemsByOrder } = await loadPeriod(period);
+  const { sales, itemsByOrder } = await loadPeriod(period, business);
 
   const salesById = new Map(sales.map((s) => [s.id, s]));
   const allItems = [...itemsByOrder.values()].flat();
@@ -68,7 +71,7 @@ export async function productProfits(period: ProfitPeriod): Promise<VariantProfi
 
   // Fire yalnız imha ve sayım farkıdır: satış ve sevkin maliyeti COGS'ta, iade restokunun karşılığı `order_item_batch`te zaten düşülür;
   // iade fireye girseydi aynı iade hem COGS'u azaltır hem kârı artırırdı.
-  const losses = await new StockMovementService(db).lossSummary(new Date(period.from), new Date(`${period.to}T23:59:59.999Z`));
+  const losses = await new StockMovementService(db).lossSummary(new Date(period.from), new Date(`${period.to}T23:59:59.999Z`), business);
   return variantProfit(lines, losses);
 }
 
@@ -76,12 +79,12 @@ export async function productProfits(period: ProfitPeriod): Promise<VariantProfi
  * Şirket P&L: katkı paylarının toplamından fire ve genel gider bir kez düşülür. Genel gider yalnız `expense` hareketleridir, stok alımı
  * (`purchase`) girmez, çünkü malın maliyeti satıldığı anda COGS olarak düşülür ve aynı para iki kez gider yazılırdı.
  */
-export async function companyPnl(period: ProfitPeriod): Promise<CompanyProfit> {
+export async function companyPnl(period: ProfitPeriod, business?: Business): Promise<CompanyProfit> {
   const db = serviceDb();
   const [contributions, products, totals] = await Promise.all([
-    orderProfits(period),
-    productProfits(period),
-    new MoneyMovementService(db).periodTotals(period.from, period.to),
+    orderProfits(period, business),
+    productProfits(period, business),
+    new MoneyMovementService(db).periodTotals(period.from, period.to, business),
   ]);
 
   // Toplama cent'te ve tamsayıdadır, euro'ya yalnız motorun girdisi için inilir.

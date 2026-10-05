@@ -846,28 +846,6 @@ $$;
 revoke execute on function public.unmatch_bank_movement(uuid) from public, anon, authenticated;
 
 
--- ═══ MUHASEBE ═══
-
--- Muhasebe sipariş değil satış ister: satış gerçekleştiği anda gelirdir ve o an `order_status_log`tan türer.
--- Bu görünüm o türetimin tek yeridir ki export ile kârlılık aynı satış gününü okusun.
-
--- `sale_date` ilk gerçekleşme anıdır (`min`), çünkü `delivered` ile `completed` farklı aya düşebilir. Hediye sipariş burada
--- dışlanmaz (yalnız export süzer), `returned` dışarıdadır.
-
--- `o.*` görünüm kurulduğu an donar: `order`a eklenen kolon için görünüm drop edilip yeniden kurulmalıdır.
-create or replace view public.order_sale with (security_invoker = true) as
-select o.*,
-       s.sale_date
-  from public."order" o
-  join (
-    select order_id, min(created_at)::date as sale_date
-      from public.order_status_log
-     where to_status in ('delivered', 'completed')
-     group by order_id
-  ) s on s.order_id = o.id
- where o.status in ('delivered', 'completed');
-
-
 -- ═══ BANKA İÇE AKTARIMI ═══
 
 -- Banka dosyası bir gerçek kaynağıdır: aynı satır iki kez yazılmaz (`import_fingerprint`) ve eşleştirme onaya düşer.

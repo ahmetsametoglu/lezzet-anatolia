@@ -412,7 +412,7 @@ Sipariş kalem-kalem karşılanabilir (all-or-nothing değil). Eksik iki noktada
 ## 9. Ön muhasebe sınırı
 
 - Sistem **resmî muhasebe değildir**, e-fatura kesmez; **hiçbir resmî belge (fatura, avoir vb.) sistemde üretilmez** — müşteri faturasını muhasebe tarafından alır, sitede fatura indirme yoktur.
-- Yaptığı: Pennylane'e alış belgesini ve eşleşmeyi temiz yazmak ve iş rakamları çıkarmak. Pennylane QUALITE ile Lezzet'in buluştuğu iç defterdir; muhasebeciye giden dosya oradan üretilir. Raporlar ekranındaki satış dosyası ve dönemin **hareket dökümü** (her hareket hesabı, türü ve hesap kodu, belgeleri, karşı tarafı ve etiketleriyle) genel amaçlı dışa aktarımdır.
+- Yaptığı: Pennylane'e alış belgesini ve eşleşmeyi temiz yazmak ve iş rakamları çıkarmak. Pennylane QUALITE ile Lezzet'in buluştuğu iç defterdir; muhasebeciye giden dosya oradan üretilir. Raporlar ekranındaki satış dosyası ve dönemin **hareket dökümü** (her hareket hesabı, türü ve hesap kodu, belgeleri, karşı tarafı ve etiketleriyle) genel amaçlı dışa aktarımdır; ikisi de şirketin tamamıdır ve her satır işini taşır.
 - Resmî fatura numarası dış yazılımda üretilir; sistem bir **referans numarası** verir, sonradan gerçek fatura numarasıyla eşleştirilir.
 - Banka hareketleri Pennylane'den okunur (eşlenmemiş hesapta Excel ile alınır), sipariş/alımlarla eşleştirilir (öneri + elle onay; tam otomatik değil). Eşlenen hesaba canlıya geçiş gününden sonrası için Excel yüklenmez, çünkü iki kaynak aynı satırı iki kez yazardı; aynı sebeple Excel satırı o güne ya da sonrasına düşen hesap eşlenmez.
 - Alış belgesi (ödeyeceğimiz fatura ve fiş) bizde girilir ve Pennylane'e bizden yüklenir; belge değişince Pennylane güncellenir. Belge dosyası PDF, JPEG ya da PNG'dir, çünkü Pennylane başka türü almıyor. Belge Pennylane'de işinin analitik kategorisini taşır ("Lezzet" ya da "QUALITE"), çünkü Pennylane iki işin ortak defteridir.
@@ -591,6 +591,8 @@ Yalnızca siparişin **doğrudan** (o sipariş yüzünden var olan) giderleri d�
 ### Şirket kârlılığı — bütünsel
 
 Ürün kârlarının toplamından **genel giderler** (kira, maaş, araç, sabit masraf — ön muhasebe gelir/gider, §9) düşülür. Genel giderler tek tek ürüne dağıtılmaz; şirket seviyesinde bir kez düşülür. Böylece hem ürün kararı temiz kalır hem şirketin gerçek kârı görünür.
+
+**İki iş ayrı okunabilir:** kâr raporları işe göre süzülür; satışın işi deposundan, firenin işi düştüğü depodan, genel giderin işi hareketin bağından gelir. Süzgeçsiz rapor şirketin tamamıdır.
 
 > Ürün kârlılığı = katkı payı (doğrudan gider düşülür). Şirket kârlılığı = tam P&L (genel gider de düşülür). Ortaklık paylaşımı platform satışları üzerinden yürür (bkz. `PRODUCT.md`); sistem her satışı doğru ve değişmez kaydeder.
 

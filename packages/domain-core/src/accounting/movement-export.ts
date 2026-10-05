@@ -1,5 +1,5 @@
 import { fromCents } from '@lezzet/helper';
-import type { DocumentKind, MoneyDocument, MoneyMovement, MovementDirection, MovementSource, MovementType } from '@lezzet/types';
+import type { Business, DocumentKind, MoneyDocument, MoneyMovement, MovementDirection, MovementSource, MovementType } from '@lezzet/types';
 
 /**
  * Hareket dökümü (DOMAIN §9), satış dosyasının yanında dönemin her para hareketi: muhasebeci "bu ödeme ne" diye sorduğunda cevap
@@ -47,6 +47,8 @@ export interface MovementExportRow {
   nature: string | null;
   /** Türün hesap planı kodu — "645"; muhasebecinin kendi yazılımına aktarımı buna bakar. */
   accountCode: string | null;
+  /** Hareketin işi, bağından türer; döküm şirketin tamamıdır, satır işini taşır. */
+  business: Business;
   /** "Ortak A aracı, Bayram" — serbest etiketlerin okunur adları, virgülle. */
   tags: string;
   /** İlk belgenin türü (belge tarihine göre). */
@@ -120,6 +122,7 @@ export function buildMovementRow(input: MovementExportInput): MovementExportRow 
     type: movement.type,
     nature: input.natureLabel,
     accountCode: input.accountCode,
+    business: movement.business,
     tags: input.tagLabels.join(', '),
     documentKind: first?.kind ?? null,
     documentNo: numbers.length > 0 ? numbers.join('; ') : null,

@@ -9,6 +9,7 @@ import {
   DEFAULT_PAGE_SIZE,
   type AdjustBatchResult,
   type AdjustResult,
+  type Business,
   type KeysetCursor,
   type Page,
   type StockDirection,
@@ -243,13 +244,15 @@ export class StockMovementService extends BaseDbService<StockMovement, StockMove
    * Dönemsel fire, varyant bazında adet ve maliyet (DOMAIN §12): yalnız `write_off` ve `count_diff` sayılır, iade restokunun karşılığı
    * `order_item_batch`ten, satış ve sevkin maliyeti COGS'tan zaten düşülür. Sayım fazlası (`in`) toplamı düşürür, kaybın telafisidir.
    */
-  async lossSummary(from: Date, to: Date): Promise<Array<{ variantId: string; qty: number; costCents: number }>> {
-    const { data, error } = await this.supabase
+  async lossSummary(from: Date, to: Date, business?: Business): Promise<Array<{ variantId: string; qty: number; costCents: number }>> {
+    let query = this.supabase
       .from('stock_movement')
-      .select('direction,qty,unit_cost,stock:stock(variant_id)')
+      .select('direction,qty,unit_cost,stock:stock(variant_id),warehouse:warehouse!inner(business)')
       .in('kind', ['write_off', 'count_diff'])
       .gte('occurred_at', from.toISOString())
       .lte('occurred_at', to.toISOString());
+    if (business) query = query.eq('warehouse.business', business);
+    const { data, error } = await query;
     if (error) throw error;
 
     type Row = {

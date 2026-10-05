@@ -14,6 +14,7 @@ const BASE_SALE: OrderSale = {
   customerId: '22222222-2222-2222-2222-222222222222',
   // Sipariş tek depodan çıkar (DOMAIN §17) — muhasebe hesabını etkilemez ama alan zorunlu.
   warehouseId: '99999999-9999-9999-9999-999999999999',
+  business: 'lezzet',
   channel: 'b2c',
   orderSource: 'web',
   isGiftOrder: false,

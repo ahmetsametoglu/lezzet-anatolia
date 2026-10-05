@@ -1,11 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import {
-  OrderSaleSchema,
-  DEFAULT_PAGE_SIZE,
-  type KeysetCursor,
-  type OrderSale,
-  type Page,
-} from '@lezzet/types';
+import { OrderSaleSchema, DEFAULT_PAGE_SIZE, type Business, type KeysetCursor, type OrderSale, type Page } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 // Para alan listesi tek yerde (`order.service`), çünkü görünüm siparişin kolonlarını aynen taşır ve kopya liste ad değişikliğinde
 // birini güncellemeyi unutturur.
@@ -27,14 +21,14 @@ export class OrderSaleService extends BaseDbService<OrderSale, never, never> {
    * Dönemin bütün satışları, sayfa sayfa çekilip birleştirilir: tek sorgu PostgREST'in satır tavanında (varsayılan 1000) sessizce
    * kesilir ve dosya eksik çıkardı. Sayfalama tam okuma içindir, bu yüzden imleç dışarı sızmaz.
    */
-  async listPeriod(from: string, to: string): Promise<OrderSale[]> {
+  async listPeriod(from: string, to: string, business?: Business): Promise<OrderSale[]> {
     const BATCH_SIZE = 500;
     const all: OrderSale[] = [];
     let cursor: KeysetCursor | undefined;
 
     do {
       const page = await this.getPage(
-        {},
+        { business },
         {
           orderBy: 'saleDate',
           keysetAfter: cursor,

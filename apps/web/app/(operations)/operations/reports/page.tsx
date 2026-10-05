@@ -35,13 +35,14 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   // okuyan her yer, yetki kuralının ikinci bir kopyası olurdu.
   const canSeeProfit = (await guarded(requireAdmin)).ok;
   const period = monthRange(urlState.ym);
+  const business = urlState.business === 'all' ? undefined : urlState.business;
 
   const [profits, pnl, prevPnl, exportData, movementData, invoicePage] = await Promise.all([
     // Kâr okumaları YALNIZ yetkisi olana yapılır — yetkisiz kullanıcıya gösterilmeyecek bir sayıyı
     // hesaplamak hem boşuna iş, hem de bir gün bir sızıntının kaynağı.
-    canSeeProfit ? productProfits(period) : [],
-    canSeeProfit ? companyPnl(period) : null,
-    canSeeProfit && urlState.cmp ? companyPnl(monthRange(previousMonth(urlState.ym))) : null,
+    canSeeProfit ? productProfits(period, business) : [],
+    canSeeProfit ? companyPnl(period, business) : null,
+    canSeeProfit && urlState.cmp ? companyPnl(monthRange(previousMonth(urlState.ym)), business) : null,
     buildExport(period),
     // Hareket dökümünün özeti: dosyaya girmeden "kaç hareket, kaçı izahsız" görünsün.
     buildMovementExport(period),
@@ -103,8 +104,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     })),
     unpricedCount: pnl?.unpricedCount ?? 0,
     unpricedRevenueCents: pnl ? toCents(pnl.unpricedRevenue) : 0,
-    // Dönemde satış var mı — export özeti herkese okunduğu için boş hâlin ölçütü de o.
-    hasSales: exportData.summary.orderCount > 0 || (pnl?.orderCount ?? 0) > 0,
+    // Dönemde satış var mı: kâr okunuyorsa iş süzgecine uyan satışlardan (maliyeti bilinen ve bilinmeyen), okunmuyorsa export özetinden.
+    hasSales: pnl ? pnl.orderCount + pnl.unpricedCount > 0 : exportData.summary.orderCount > 0,
   };
 
   return (

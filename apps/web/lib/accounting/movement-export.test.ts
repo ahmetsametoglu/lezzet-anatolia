@@ -67,11 +67,12 @@ describe('hareket dökümü', () => {
 
     const csv = toMovementCsv(data);
     expect(csv.split('\n')[0]).toBe(
-      'Tarih;Hesap;Karşı hesap;Tip;Tür;Hesap kodu;Tutar;Karşı taraf;Belge türü;Belge no;Belge tarihi;Belge toplamı;Belge KDV;KDV rejimi;Etiketler;Açıklama;Kaynak;İzah;Hareket kimliği',
+      'Tarih;Hesap;Karşı hesap;Tip;Tür;Hesap kodu;İş;Tutar;Karşı taraf;Belge türü;Belge no;Belge tarihi;Belge toplamı;Belge KDV;KDV rejimi;Etiketler;Açıklama;Kaynak;İzah;Hareket kimliği',
     );
     // KDV belgenin kırılımından türer; rejim belgeden, kira faturası varsayılanla yazıldı — standart.
     expect(data.rows[0]).toMatchObject({ documentVatRegime: 'standard' });
-    expect(csv).toContain(`;gider;Kira;613;`);
+    // Hiçbir bağı iş söylemeyen hareket Lezzet'indir; döküm şirketin tamamıdır, satır işini taşır.
+    expect(csv).toContain(`;gider;Kira;613;Lezzet;`);
     expect(csv).toContain(`Fatura;LOYER-${stamp};`);
     expect(csv).toContain('TOPLAM;3 hareket;;;giriş 0;çıkış 2054.5');
     expect(csv).toContain('İZAHSIZ;1 hareket');

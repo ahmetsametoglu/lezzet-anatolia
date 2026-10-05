@@ -1,3 +1,4 @@
+import { parseBusinessFilter, type BusinessFilter } from '@/lib/business-filter';
 import { one, oneOf, type RawParams } from '@/lib/url-params';
 
 // Raporlar ekranının URL sözleşmesi: sekme ve dönem adreste taşınır, çünkü "temmuzun şirket kârı" bağlantısı paylaşılabilir olmalı.
@@ -18,6 +19,8 @@ export interface ReportsUrlState {
   ym: string;
   /** "↳ geçen aya göre" — karşılaştırma açık mı. */
   cmp: boolean;
+  /** Kâr sekmelerinin iş süzgeci; muhasebe dosyası şirketin tamamıdır, süzülmez. */
+  business: BusinessFilter;
 }
 
 /** Geçerli bir `YYYY-MM` mi. Bozuk değer sessizce bu aya düşer (bozuk bağlantı ekranı kırmaz). */
@@ -36,6 +39,7 @@ export function parseReportsUrl(params: RawParams, now: Date): ReportsUrlState {
     tab: oneOf(params.tab, REPORT_TABS, 'urun'),
     ym: isMonth(ym) ? ym : monthOf(now),
     cmp: one(params.cmp) === '1',
+    business: parseBusinessFilter(params.business),
   };
 }
 
@@ -45,6 +49,7 @@ export function reportsUrl(state: ReportsUrlState, now: Date): string {
   if (state.tab !== 'urun') p.set('tab', state.tab);
   if (state.ym !== monthOf(now)) p.set('ym', state.ym);
   if (state.cmp) p.set('cmp', '1');
+  if (state.business !== 'all') p.set('business', state.business);
   const qs = p.toString();
   return qs ? `${REPORTS_PATH}?${qs}` : REPORTS_PATH;
 }

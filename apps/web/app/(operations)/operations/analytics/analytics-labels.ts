@@ -1,5 +1,6 @@
-import { BUSINESS_LABELS, type Business, type Channel } from '@lezzet/types';
-import type { AnalyticsBusiness, AnalyticsChannel, AnalyticsMode } from './analytics-url';
+import { BUSINESS_LABELS, type Channel } from '@lezzet/types';
+import type { BusinessFilter } from '@/lib/business-filter';
+import type { AnalyticsChannel, AnalyticsMode } from './analytics-url';
 
 // Ekran sözlüğü: iç terim arayüze çıkmaz ("funnel", "RFM", "kohort", "UTM" yerine insan dili). Sözlük tek yerde durduğu için yeni
 // bloğun terimini yazan kişi ham terimi de burada görür.
@@ -30,10 +31,7 @@ export const CHANNEL_LABEL: Record<AnalyticsChannel, string> = {
  */
 export const CHANNEL_ORDER = ['b2c', 'b2b'] as const satisfies readonly Channel[];
 
-export const BUSINESS_LABEL: Record<AnalyticsBusiness, string> = { all: 'Tüm işler', ...BUSINESS_LABELS };
-
-/** Çip sırası Lezzet önce; enum sırası (`qualite`, `lezzet`) bir veri kararıdır, ekranı bağlamaz. */
-export const BUSINESS_ORDER = ['lezzet', 'qualite'] as const satisfies readonly Business[];
+export const BUSINESS_LABEL: Record<BusinessFilter, string> = { all: 'Tüm işler', ...BUSINESS_LABELS };
 
 /** Servis süzgecine geçen değer — `all` hiç geçilmez (süzgeç yok). */
 export function toFilter<T extends string>(value: T | 'all'): T | undefined {

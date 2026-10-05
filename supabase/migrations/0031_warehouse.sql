@@ -356,6 +356,27 @@ create trigger order_business_matches
   before insert or update of warehouse_id on public.order
   for each row execute function public.order_business_matches();
 
+-- Muhasebe sipariş değil satış ister: satış gerçekleştiği anda gelirdir ve o an `order_status_log`tan türer. Bu görünüm o türetimin
+-- tek yeridir ki export ile kârlılık aynı satış gününü okusun; satışın işi deposunun işidir, görünüm bu yüzden depodan sonra kurulur.
+
+-- `sale_date` ilk gerçekleşme anıdır (`min`), çünkü `delivered` ile `completed` farklı aya düşebilir. Hediye sipariş burada
+-- dışlanmaz (yalnız export süzer), `returned` dışarıdadır.
+
+-- `o.*` görünüm kurulduğu an donar: `order`a eklenen kolon için görünüm drop edilip yeniden kurulmalıdır.
+create or replace view public.order_sale with (security_invoker = true) as
+select o.*,
+       w.business,
+       s.sale_date
+  from public."order" o
+  join public.warehouse w on w.id = o.warehouse_id
+  join (
+    select order_id, min(created_at)::date as sale_date
+      from public.order_status_log
+     where to_status in ('delivered', 'completed')
+     group by order_id
+  ) s on s.order_id = o.id
+ where o.status in ('delivered', 'completed');
+
 -- Tedarik siparişi tek işe yazılır: kalemin hedef deposu siparişin işinden olmak zorunda, yoksa tek fatura iki işin malını kapsardı
 -- (docs/feature/iki-is.md, karar 4).
 create or replace function public.purchase_order_item_business() returns trigger

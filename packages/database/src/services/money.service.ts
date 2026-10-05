@@ -361,12 +361,10 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   }
 
   /** Dönem toplamları tipe göre — kâr ve nakit akışı raporlarının girdisi; satırlar dönemle sınırlı, toplama uygulamada. */
-  async periodTotals(from: string, to: string): Promise<PeriodTotal[]> {
-    const { data, error } = await this.supabase
-      .from('money_movement')
-      .select('type,direction,amount')
-      .gte('value_date', from)
-      .lte('value_date', to);
+  async periodTotals(from: string, to: string, business?: Business): Promise<PeriodTotal[]> {
+    let query = this.supabase.from('money_movement').select('type,direction,amount').gte('value_date', from).lte('value_date', to);
+    if (business) query = query.eq('business', business);
+    const { data, error } = await query;
     if (error) throw error;
 
     const buckets = new Map<string, PeriodTotal>();
