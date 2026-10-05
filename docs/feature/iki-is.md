@@ -1,7 +1,8 @@
 # İki iş tek sistem — QUALITE ve Lezzet
 
 > **Statü: KARAR ALINDI (03–04.10.2026); uygulama B fazında (dal `iki-is-b`).** Özelliğin tek kaydı bu dosya: kararlar, sonuçları, yol haritası ve
-> açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Muhasebe tarafının kararları
+> açık sorular burada tutulur; iş `docs/KALAN.md`'ye satır olarak açılmaz. Canlıya alma adımları
+> [`docs/runbook/qualite-canliya-alma.md`](../runbook/qualite-canliya-alma.md)'dedir. Muhasebe tarafının kararları
 > [`kasa-muhasebe.md`](kasa-muhasebe.md)'dedir; bu dosya onların iki işe genişlemesidir.
 
 **QUALITE** şirketin adıdır ve restoran ile marketlere toptan satış yapan iştir; **Lezzet** markamızdır ve çevrim içi
