@@ -61,11 +61,14 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
     }
 
     if (lookup.kind === 'unresolved') {
-      // İki sebep de bizim tarafımızın sorunu olduğu için iz bırakılır; ekran sebebe göre ayrı cümle kurar.
-      await captureError(new Error(`Yer çözülemedi: ${lookup.reason}`), {
-        source: SOURCES.webAction,
-        context: { postalCode, country: lookup.country, reason: lookup.reason },
-      });
+      // Veri ya da yapılandırma hatası iz bırakır; kargo göndermeyen işin bölgesi dışı arıza değil, cevaptır. Ekran sebebe göre
+      // cümle kurar.
+      if (lookup.reason !== 'outside_zones') {
+        await captureError(new Error(`Yer çözülemedi: ${lookup.reason}`), {
+          source: SOURCES.webAction,
+          context: { postalCode, country: lookup.country, reason: lookup.reason },
+        });
+      }
       return { data: { kind: 'unresolved', reason: lookup.reason }, errorKey: null };
     }
 
