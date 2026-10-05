@@ -17,22 +17,8 @@ import { readWarehouseContext, readWarehouseLabels, readWorkWarehouse } from '@/
 import type { IntakeTabData, PendingPurchase, ReceivedIntake } from './stock-types';
 
 /**
- * **Mal kabul sekmesinin okuması** (22.26) — `receiving-read.ts`ten geldi, iki değişiklikle.
- *
- * ── "KABUL BEKLİYOR" LİSTESİ AÇIK SİPARİŞLERİN EKSİK KALEMLERİDİR ───────────
- * `openProgress()` tam bunu veriyor: `received`/`cancelled` dışarıda (ilki zaten stoğa girdi,
- * ikincisi hiç gelmeyecek) ve tamamlanmış kalem "yolda" sayılmıyor. Sayfalama yok ve gerekmiyor —
- * açık sipariş kümesi veriyle büyümez, kabul edildikçe kapanır (`CLAUDE §1`).
- *
- * ── DEPO SÜZGECİ YOK, DEPO KİMLİKTEN GELİR ──────────────────────────────────
- * Liste depo-üstüdür ve öyle kalmalı: **tedarik siparişi bir depoya ait değildir**, mal kabul
- * edilirken bir kapıdan girer. Depo sorusu okumanın değil YAZMANIN sorusu — cevabı kabul
- * diyaloğunda veriliyor ve **ön seçim üretilmiyor** (`CLAUDE §1`).
- *
- * ── N+1 KIRILDI (22.26) ─────────────────────────────────────────────────────
- * Eski okuma sipariş başına `getById` atıyordu; on açık siparişte on tur. Künyeler artık tek
- * `getAll` ile geliyor — `openProgress` zaten aynı kümeyi içeride okuyor, sayısı da açık sipariş
- * kadar, yani ikinci turun maliyeti sabit.
+ * Mal kabul sekmesinin okuması: "kabul bekliyor" listesi açık siparişlerin eksik kalemleridir (`openProgress`), küme veriyle büyümediği
+ * için sayfalanmaz. Liste depoya göre süzülmez, çünkü sipariş bir depoya ait değildir; depo kabul diyaloğunda seçilir ve ön seçim üretilmez.
  */
 
 /** İlerleme satırı + siparişin durumu — `openProgress`in döndürdüğü şekil. */
@@ -49,25 +35,9 @@ export function readIntakeProgress(): Promise<ProgressRow[]> {
 }
 
 /**
- * **Kabul edilenler defteri** (22.28) — ilk sayfa ve "daha fazla" AYNI yoldan geçer.
- *
- * İki okuma yolu olsaydı biri gün gelir ötekinden ayrışırdı: birinde para süzülür ötekinde
- * süzülmez, birinde depo süzgeci vardır ötekinde yoktur. Sayfalamanın sessiz kırpması da tam
- * böyle doğar (`CLAUDE §1` — sayfalayan her okumanın tüketeni olmalı).
- *
- * ── SÜZGEÇ `ctx.warehouseIds`, `visibleWarehouseIds` DEĞİL ──────────────────
- * İkisi karıştırılabilir ve fark tam da BURADA görünür: `visibleWarehouseIds` bir kırılım evreni
- * ve yalnız AKTİF depoları taşıyor. Defter ise GEÇMİŞTİR — kapatılmış bir tesise yapılmış eski
- * kabul, tesis kapandı diye olmamış sayılamaz. Bağlamın kendi künyesi de bunu yazıyor:
- * *"Bunu bir süzgeç yerine KOYMA."*
- *
- * Süzgeç bekleyenler listesinden AYRI davranıyor ve bu bilinçli: tedarik siparişi bir depoya ait
- * değildir (depo-üstü), ama kabul bir kapıya yazılır — deposu vardır. Yani üst bardaki seçim
- * defteri daraltır, tıpkı ekranın partileri ve sayaçları gibi.
- *
- * ── PARA KAPSAMLA GELİR, EKRAN DİSİPLİNİYLE DEĞİL ───────────────────────────
- * `canSeeCost` false ise alan hiç doldurulmaz (`null`). Süzmeyi ekrana bırakmak, veriyi tarayıcıya
- * göndermenin en sessiz yoluydu — depocunun HTML kaynağında alış toplamı dururdu.
+ * Kabul edilenler defteri: ilk sayfa ve "daha fazla" aynı yoldan geçer ki iki okuma ayrışmasın. Süzgeç `ctx.warehouseIds`tir,
+ * `visibleWarehouseIds` değil, çünkü defter geçmiştir ve kapanmış tesisin eski kabulü de görünmeli; `canSeeCost` false ise para hiç
+ * doldurulmaz.
  */
 export async function readReceivedIntakes(opts: {
   /** `undefined` = depo-üstü kapsam (yönetici); dizi = o depolar; boş dizi = hiçbiri. */
@@ -130,11 +100,8 @@ function toReceived(
 export async function readIntakeTab(rows: ProgressRow[]): Promise<IntakeTabData> {
   const db = serviceDb();
 
-  // Tedarikçiler TEK TURDA: doğal tavanlı bir küme (operatörün elle kurduğu liste, `CLAUDE §1`);
-  // adları hem bekleyen kartlarda hem siparişsiz kabulün seçicisinde kullanılıyor.
-  //
-  // Bağlam iki soruyu birden cevaplıyor: "kabul hangi kapıdan" (seçilmişse) ve "seçilmemişse hangi
-  // kapılar açık". Ek okuma yok — `readWarehouseContext` istek başına önbellekli (`cache()`).
+  // Tedarikçiler tek turda gelir, küme operatörün kurduğu doğal tavanlı listedir. Bağlam istek başına önbelleklidir ve kabulün hangi
+  // kapıdan yapılacağını, seçilmemişse hangi kapıların açık olduğunu söyler.
   const [orders, suppliers, workplace, ctx] = await Promise.all([
     new PurchaseOrderService(db).listOpen(),
     new SupplierService(db).list(),
@@ -143,11 +110,8 @@ export async function readIntakeTab(rows: ProgressRow[]): Promise<IntakeTabData>
   ]);
 
   /**
-   * Kabul formunun raf seçeneği (19.29) — **çalışılan deponun** alanları.
-   *
-   * Bağlam seçili değilse boş: mal hangi tesise girdiği belli olmadan bir rafa konamaz ve form
-   * zaten depo seçilmeden kaydetmiyor. Yalnız AKTİF alanlar — kullanımdan kalkmış bir dolaba yeni
-   * mal koymak, susturma kararını geri almak olurdu.
+   * Kabul formunun raf seçeneği, çalışılan deponun aktif alanları: depo seçilmeden mal bir rafa konamaz ve kullanımdan kalkmış dolaba
+   * yeni mal koymak susturma kararını geri almak olurdu.
    */
   const storageAreas =
     workplace.status === 'ok'

@@ -262,7 +262,7 @@ type IntakeOutcome =
 export async function receiveGoods(
   db: SupabaseClient,
   input: {
-    /** Mal HANGİ depoya girdi (K6) — zorunlu: satın alma depo-üstüdür ama mal bir kapıdan girer. */
+    /** Malın girdiği depo, zorunlu: satın alma depo-üstüdür ama mal bir kapıdan girer. */
     warehouseId: string;
     lines: readonly IntakeFormLine[];
     purchaseOrderId?: string | null;
