@@ -18,18 +18,8 @@ import { changeRatio, deltaView, sumEvents, toFunnel, toHeat, toRevenueSeries, t
 import { PERIOD_DAYS, parseAnalyticsUrl, periodRange } from './analytics-url';
 import type { AnalyticsData, BlockView } from './analytics-types';
 
-// Analitik (13) — yalnız YÖNETİCİ. Tasarım §1: "site nasıl gidiyor, reklam çalışıyor mu, müşteri ne
-// istiyor". Ekran OKUMA-AĞIRLIKLIDIR: hiçbir yazma kapısı yok.
-//
-// ── EKRAN BUGÜN ÇOĞUNLUKLA "VERİ BİRİKİYOR" GÖSTERİR VE BU BİR ARIZA DEĞİL ───
-// Olay defteri ve günlük özet bu turda indi (13.1), ama müşteri yüzeyindeki ATICILAR henüz
-// bağlanmadı (08.9) — yani okuma yolu gerçek, veri yok. Çizim bunu zaten bir DURUM olarak
-// tanımlıyor ("ilk-gün hali birinci sınıf: uydurma rakam göstermez"), bu yüzden ekran boş bir
-// iskelet değil, dürüst bir ekran.
-//
-// ── ÜÇ HÂL AYRI YAZILIR ─────────────────────────────────────────────────────
-// `ready` (sayı var) · `warming` (kapı var, veri yok) · `absent` (bu sayı hiç hesaplanmıyor).
-// Son ikisini birleştirmek, hiç dolmayacak bir bloğun dolmasını bekletmek olurdu.
+// Analitik yalnız yöneticiye açıktır ve okuma ağırlıklıdır, yazma kapısı yoktur. Bloklar üç hâli ayrı yazar: `ready` (sayı var), `warming`
+// (kapı var, veri yok) ve `absent` (sayı hiç hesaplanmıyor); son ikisi birleşseydi hiç dolmayacak blok beklenirdi.
 
 interface AnalyticsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -166,7 +156,6 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
                     : undefined,
             },
           ],
-          // B2C/B2B şeridi çizimde hero'nun ilk hücresinde; ciro artık ölçüldüğü için çizilebiliyor.
           split: { b2cCents: revenue.split.b2cCents, b2bCents: revenue.split.b2bCents },
         },
 
@@ -187,12 +176,8 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     heat: ledgerBlock(toHeat(rows, trafik ? ['page_view'] : ['order_placed'])),
 
     /**
-     * Defterden okuyan blokların hepsi artık kapıya BAĞLI — hiçbiri `absent` değil.
-     *
-     * Bir tur bu satırlar "bu sayı hiç hesaplanmıyor" diyordu ve o gün DOĞRUYDU: özet satırı
-     * kaynağı, arama terimini ve ürün kırılımını taşımıyordu. Kapılar indi (13.2 · 13.4 · 13.5),
-     * yani cümle artık yanlış olurdu. `warming` ile `absent` ayrımının bütün değeri burada:
-     * ekranın hangi bloğunun ne beklediği tek yerden değişiyor.
+     * Defterden okuyan blokların hepsi kapıya bağlıdır, hiçbiri `absent` değil; `warming` ile `absent` ayrımı hangi bloğun ne beklediğini
+     * tek yerden değiştirir.
      */
     sources: { state: sources.length > 0 ? 'ready' : 'warming', data: sources, note: NOTES.warmingLedger },
     zeroSearch: {
@@ -215,12 +200,8 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     },
 
     /**
-     * Kaynağa göre tekrar sipariş — kampanya tablosuyla AYNI kapıdan, farklı soruyla.
-     *
-     * Tabloda okunan "ne harcadım / ne kazandım", burada okunan "hangi kaynak SADIK müşteri
-     * getiriyor". İkinci kapı açmak aynı atfı iki yerde hesaplamak olurdu; satırlar aynı, sıralama
-     * ve vurgu farklı. Yeni müşterisi olmayan kampanya bu blokta bir şey söylemiyor, o yüzden
-     * süzülüyor.
+     * Kaynağa göre tekrar sipariş, kampanya tablosuyla aynı kapıdan farklı soruyla: "hangi kaynak sadık müşteri getiriyor". Yeni müşterisi
+     * olmayan kampanya bu blokta bir şey söylemediği için süzülür.
      */
     cohort: {
       state: campaigns.some((c) => c.newCustomerCount > 0) ? 'ready' : 'warming',

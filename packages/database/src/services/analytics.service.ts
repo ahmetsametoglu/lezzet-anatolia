@@ -32,12 +32,8 @@ import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
 
 /**
- * Analitik I/O (13.1) — kurallar `docs/architecture/ANALYTICS.md`'de, burada yalnız satır getirip
- * yazan kod var (`STACK §4`).
- *
- * **Üç ayrı servis, çünkü üç ayrı işler:** defter YAZILIR (okunmaz), oturum bir kez yazılır, özet
- * OKUNUR (ekranların tek kaynağı). Tek sınıfa toplamak, yazma-yalnız bir tabloya okuma metotları
- * açardı.
+ * Analitik I/O: kurallar `docs/architecture/ANALYTICS.md`'dedir, burada yalnız satır getirip yazan kod durur. Üç ayrı servis, çünkü
+ * defter yazılır ama okunmaz, oturum bir kez yazılır, özet okunur; tek sınıf yazma-yalnız tabloya okuma açardı.
  */
 
 /** Ham satır şeması — yalnız yazım doğrulaması için; defter geri okunmuyor. */
@@ -81,10 +77,7 @@ export class AnalyticsSessionService extends BaseDbService<AnalyticsSession, Ana
   }
 
   /**
-   * Oturumun künyesi — edinim atfının (13.2) tek okuması.
-   *
-   * `getById` DEĞİL: bu tablonun birincil anahtarı `session_key`, `id` değil. Vekil anahtar
-   * yokluğu 0035'in bilinçli kararı; okuma da ona uymak zorunda.
+   * Oturumun künyesi, edinim atfının tek okuması; tablonun birincil anahtarı `session_key` olduğu için `getById` kullanılmaz.
    */
   async bySessionKey(sessionKey: string): Promise<AnalyticsSession | null> {
     const rows = await this.getAll({ sessionKey }, { limit: 1 });
@@ -160,11 +153,8 @@ export class AnalyticsDailyService extends BaseDbService<AnalyticsDaily, never, 
   }
 
   /**
-   * Ürün · arama · kaynak özetlerini de üretir (0036) → toplam yazılan satır.
-   *
-   * **Dört özet TEK metotta ve bilerek:** ayrı çağrılar bırakılsaydı yeni bir özet eklendiği gün
-   * işe eklenmeyi unutmak mümkün olurdu ve **unutulduğunda hata vermezdi** — yalnız o blok hiç
-   * dolmazdı. Bir gün özetlenirken hepsi birlikte özetlenir.
+   * Ürün, arama ve kaynak özetlerini de üretir → toplam yazılan satır. Dört özet tek metotta, çünkü ayrı çağrılarda yeni özeti eklemeyi
+   * unutmak hata vermez, yalnız o blok hiç dolmazdı.
    */
   async buildAll(day: string): Promise<number> {
     let toplam = await this.build(day);
@@ -192,9 +182,8 @@ export class AnalyticsDailyService extends BaseDbService<AnalyticsDaily, never, 
 }
 
 /**
- * **Ürün kırılımı** (13.4) — hem "çok bakılıp az alınan" raporu hem vitrin seçkisi (08.9) buradan
- * okur. İki tüketici tek kapıdan geçsin ki "hangi ürün ilgi görüyor" sorusu iki ekranda iki cevap
- * vermesin.
+ * Ürün kırılımı: "çok bakılıp az alınan" raporu ve vitrin seçkisi buradan okur ki "hangi ürün ilgi görüyor" sorusu iki ekranda iki
+ * cevap vermesin.
  */
 export class AnalyticsProductDailyService extends BaseDbService<z.infer<typeof AnalyticsProductDailySchema>, never, never> {
   constructor(supabase: SupabaseClient) {
@@ -223,8 +212,7 @@ export class AnalyticsProductDailyService extends BaseDbService<z.infer<typeof A
 }
 
 /**
- * **Arama sinyalleri** (13.4) — sistemin tek kalıcı serbest metni. Tablo süresiz DEĞİL, ham defterle
- * aynı 25 ayı yaşıyor (`purgeBefore`).
+ * Arama sinyalleri, sistemin tek kalıcı serbest metni; tablo süresiz değil, ham defterle aynı 25 ayı yaşar (`purgeBefore`).
  */
 export class AnalyticsSearchDailyService extends BaseDbService<z.infer<typeof AnalyticsSearchDailySchema>, never, never> {
   constructor(supabase: SupabaseClient) {
@@ -256,8 +244,7 @@ export class AnalyticsSearchDailyService extends BaseDbService<z.infer<typeof An
 }
 
 /**
- * **Trafik kaynağı** (13.2). Satır sayısı doğal tavanlı (gün × kaynak bileşimi) olduğu için dönem
- * toplaması uygulamada yapılır — RPC eşiğini karşılamıyor (`STACK §13`).
+ * Trafik kaynağı: satır sayısı doğal tavanlı (gün × kaynak bileşimi) olduğu için dönem toplaması uygulamada yapılır.
  */
 export class AnalyticsSourceDailyService extends BaseDbService<AnalyticsSourceDaily, never, never> {
   constructor(supabase: SupabaseClient) {
@@ -288,26 +275,15 @@ export class AnalyticsSourceDailyService extends BaseDbService<AnalyticsSourceDa
 }
 
 /**
- * **Analitiğin defter DIŞI okumaları** (13.2 · 13.5) — kaynağı sipariş ve müşteri tablosu.
- *
- * `BaseDbService`'ten türemiyor ve sebebi dürüst olmalı: bunlar bir tablonun satırları değil, iki
- * tablodan hesaplanan RAPORLARDIR. Bir tabloya bağlasaydık (`order`?) servis kendi tablosuyla
- * ilgisiz metotlar taşırdı ve "sipariş servisi" bir gün analitik kuralları da içerir hâle gelirdi.
- *
- * **`ANALYTICS §1`'in kuralı burada görünüyor:** analitik bir tablo değil bir sorudur — segment ve
- * ciro sorusunun yetkili kaynağı olay defteri değil siparişin kendisidir.
+ * Analitiğin defter dışı okumaları, kaynağı sipariş ve müşteri tablosu: bunlar bir tablonun satırı değil iki tablodan hesaplanan
+ * raporlardır, bu yüzden `BaseDbService`'ten türemez. Segment ve ciro sorusunun yetkili kaynağı olay defteri değil siparişin kendisidir.
  */
 export class AnalyticsReportService {
   constructor(private readonly supabase: SupabaseClient) {}
 
   /**
-   * Kampanya cirosu — **İLK TEMAS atfı** (13.2). Ciro sütununu `campaignSpend` giderinin yanına
-   * koyan tablo bunu okur.
-   *
-   * Okuyan tarafın bilmesi gereken: satır "o dönemde o reklama tıklayıp sipariş verenler" değil,
-   * "o kampanyanın kazandırdığı müşterilerin o dönemki siparişleri"dir. Başka türlüsü oturum
-   * anahtarını siparişe yazmayı gerektirirdi ve o tek `join` anonim defteri geriye dönük
-   * kimliklendirirdi (`ANALYTICS §2`).
+   * Kampanya cirosu, ilk temas atfı: satır "o kampanyanın kazandırdığı müşterilerin o dönemki siparişleri"dir. Başka türlüsü oturum
+   * anahtarını siparişe yazmayı gerektirir ve anonim defteri geriye dönük kimliklendirirdi.
    */
   async campaignRevenue(from: string, to: string): Promise<AnalyticsCampaignRevenue[]> {
     const { data, error } = await this.supabase.rpc('analytics_campaign_revenue', { p_from: from, p_to: to });
@@ -316,12 +292,8 @@ export class AnalyticsReportService {
   }
 
   /**
-   * **Dönem cirosu — gün × kanal** (13.2). Tek çağrı üç soruyu birden karşılıyor: dönem toplamı,
-   * B2C/B2B ayrımı ve günlük seri. Üç ayrı okuma yazsaydık üçü de aynı ciro tanımını tekrarlardı.
-   *
-   * **Süzgeç SİPARİŞ tarihinde** — `order_counts`'un teslim günü süzgeci analitiğin sorusunu
-   * karşılamıyor; teslim gününe göre okunan bir dönem cirosu kampanya giderinin dönemiyle
-   * hizalanmaz.
+   * Dönem cirosu gün × kanal: tek çağrı dönem toplamını, B2C/B2B ayrımını ve günlük seriyi karşılar. Süzgeç sipariş tarihindedir, teslim
+   * gününe göre okunan ciro kampanya giderinin dönemiyle hizalanmazdı.
    */
   async orderRevenue(from: string, to: string): Promise<OrderRevenueDaily[]> {
     const { data, error } = await this.supabase.rpc('analytics_order_revenue', { p_from: from, p_to: to });
@@ -330,14 +302,8 @@ export class AnalyticsReportService {
   }
 
   /**
-   * **Posta kodu başına sipariş/ciro** — talep sayacının karşı ucu (kullanıcı sorusu 04.08).
-   *
-   * Anahtar `address_snapshot`'tır, canlı adres değil: adres sonradan düzeltilebilir ve geçmiş
-   * dönüşüm oranları bugün değişirdi.
-   *
-   * **Kod listesi ZORUNLU** (tümünü dönen bir hâli yok): ekranın göstereceği liste zaten sınırlı,
-   * tüm siparişleri posta koduna toplamak hiç bakılmayacak yüzlerce kova hesaplamak olurdu.
-   * Boş liste verilirse sorgu hiç koşmaz.
+   * Posta kodu başına sipariş ve ciro, talep sayacının karşı ucu: anahtar `address_snapshot`tır, çünkü düzeltilen adres geçmiş oranları
+   * değiştirirdi. Kod listesi zorunludur, boş liste verilirse sorgu koşmaz.
    */
   async postalCodeOrders(codes: readonly string[]): Promise<Map<string, { orderCount: number; revenueCents: number }>> {
     if (codes.length === 0) return new Map();
@@ -348,10 +314,8 @@ export class AnalyticsReportService {
   }
 
   /**
-   * Segment SAYILARI (13.5) — analitik "kaç" der (`ANALYTICS §6`).
-   *
-   * Eşikler parametrik: uyuyan sınırı, "yeni" penceresi, şampiyon sipariş sayısı. Varsayılanlar
-   * SQL tarafında (90 / 30 / 3) — iki yerde varsayılan tutmak, bir gün ikisinin ayrışması demektir.
+   * Segment sayıları (`ANALYTICS §6`): eşikler parametriktir (uyuyan sınırı, yeni penceresi, şampiyon sipariş sayısı) ve varsayılanlar
+   * yalnız SQL tarafındadır, iki yerde tutulsa ayrışırdı.
    */
   async customerSegments(options: SegmentOptions = {}): Promise<CustomerSegmentCount[]> {
     const { data, error } = await this.supabase.rpc('analytics_customer_segments', segmentArgs(options));
@@ -360,10 +324,8 @@ export class AnalyticsReportService {
   }
 
   /**
-   * Bir segmentin ÜYELERİ (13.5) — Müşteriler köprüsünün "kim" tarafı ve dışa almanın kaynağı.
-   *
-   * **Sayfalı** (`CLAUDE §1`: müşteri kümesi veriyle sınırsız büyür). Sıra son siparişe göre: uyuyan
-   * listesinde en yeni uyuyan en üstte durur, çünkü geri kazanma şansı en yüksek olan odur.
+   * Bir segmentin üyeleri, Müşteriler köprüsünün "kim" tarafı ve dışa almanın kaynağı. Sayfalıdır ve sıra son siparişe göredir, en yeni
+   * uyuyanın geri kazanma şansı en yüksektir.
    */
   async segmentMembers(segment: CustomerSegment, limit = 50, offset = 0, options: SegmentOptions = {}): Promise<CustomerSegmentMember[]> {
     const { data, error } = await this.supabase.rpc('analytics_segment_members', {

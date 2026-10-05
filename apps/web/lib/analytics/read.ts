@@ -20,14 +20,8 @@ import {
 } from '@lezzet/types';
 
 /**
- * **ANALİTİK OKUMA KAPILARI** (13.2 · 13.4 · 13.5) — ekranların çağırdığı bileşik okumalar.
- *
- * Servisler ham satır verir; ekranın sorduğu sorular birden çok kaynağı birleştirir (kampanya
- * gideri + ciro, ürün sinyali + ürün adı). O birleştirmeyi ekranda yapmak, aynı kuralın iki cihaz
- * görünümünde iki kez yazılması demekti — ve `ANALYTICS §1`'in kendi cümlesi bunu söylüyor:
- * *analitik bir tablo değil bir sorudur.*
- *
- * **Hepsi ÖZETTEN okur, ham deftere hiç dokunmaz** (`ANALYTICS §5`).
+ * Analitik okuma kapıları: servisler ham satır verir, ekranın soruları birden çok kaynağı birleştirir (kampanya gideri + ciro, ürün sinyali +
+ * ad) ve bu birleştirme iki cihaz görünümünde iki kez yazılmasın diye buradadır. Hepsi özetten okur, ham deftere dokunmaz.
  */
 
 /** Operasyon yüzeyi tek dillidir; ürün adı orada Türkçe okunur. */
@@ -41,19 +35,15 @@ export interface ProductInterestRow {
   cartCount: number;
   sellableViewCount: number;
   /**
-   * Sepete dönüşüm. `null` "hiç satılabilir hâlde görünmedi" demek — SIFIR DEĞİL. Sıfır yazsaydık
-   * stoksuz duran ürün listenin en tepesine oturur ve yönetici onu "kimse almıyor" diye okurdu;
-   * oysa doğru aksiyon tedariktir (`CLAUDE §1`).
+   * Sepete dönüşüm; `null` "hiç satılabilir hâlde görünmedi" demektir, sıfır değil: sıfır yazılsaydı stoksuz ürün listenin tepesine
+   * oturur ve "kimse almıyor" diye okunurdu, oysa doğru aksiyon tedariktir.
    */
   cartRate: number | null;
 }
 
 /**
- * Dönemin ürün ilgisi (13.4) — adıyla birlikte.
- *
- * Ürün adı **tek turda** çözülür (`listByIds`): satır başına bir sorgu N+1 olurdu ve liste zaten
- * sınırlı (ilk N). Silinmiş ürün de listede kalır — geçmiş sayılar geriye dönük değişmemeli
- * (`0035`'in FK'siz olma gerekçesi) — ve adı yerine kimliğinin kısası görünür.
+ * Dönemin ürün ilgisi, adıyla: ad tek turda çözülür (`listByIds`). Silinmiş ürün de listede kalır ve kimliğinin kısası görünür, çünkü geçmiş
+ * sayılar geriye dönük değişmemeli.
  */
 export async function readProductInterest(from: string, to: string, limit = 20): Promise<ProductInterestRow[]> {
   const db = serviceDb();
@@ -74,11 +64,8 @@ export async function readProductInterest(from: string, to: string, limit = 20):
 }
 
 /**
- * Aranıp BULUNAMAYAN terimler (13.4) — çeşit/talep sinyalinin kendisi.
- *
- * Kova gruplamada kalır: `filter` boşluğu bir ARAYÜZ sinyalidir (süzgeç kombinasyonu boş küme
- * verdi), `search` boşluğu bir ÇEŞİT sinyalidir (bizde olmayan ürün arandı). İkincisi seyrektir ve
- * tek listede birincinin altında kalırdı (`ANALYTICS §4`).
+ * Aranıp bulunamayan terimler, çeşit ve talep sinyali: `filter` boşluğu arayüz sinyalidir, `search` boşluğu çeşit sinyalidir ve ikincisi
+ * seyrek olduğu için ayrı kovada kalır.
  */
 export function readZeroResultSearches(from: string, to: string, limit = 20): Promise<AnalyticsSearchSignal[]> {
   return new AnalyticsSearchDailyService(serviceDb()).signals(from, to, limit, true);
@@ -95,14 +82,8 @@ export interface TrafficSourceRow {
 }
 
 /**
- * Dönemin trafik kaynakları (13.2).
- *
- * Gün satırları kaynak+kampanya kovalarında toplanır. **Toplama uygulamada ve bu bilinçli:** küme
- * doğal tavanlı (gün × kaynak bileşimi), yani `STACK §13`'ün RPC eşiğini karşılamıyor — ürün ve
- * arama okumalarının aksine burada sıralama ölçütü de türetilmiş bir oran değil, düz bir sayı.
- *
- * **`medium` kovada YOK ve düşürülmüyor:** aynı kaynağın iki ortamı (cpc/organic) tek satırda
- * toplanır. Ortam kırılımı istenirse anahtar büyür; bugün ekranın sorduğu soru "nereden geldi".
+ * Dönemin trafik kaynakları: gün satırları kaynak + kampanya kovalarında uygulamada toplanır, küme doğal tavanlıdır. `medium` kovada yoktur,
+ * aynı kaynağın iki ortamı tek satırda toplanır; bugün ekranın sorusu "nereden geldi"dir.
  */
 export async function readTrafficSources(from: string, to: string, limit = 10): Promise<TrafficSourceRow[]> {
   const rows = await new AnalyticsSourceDailyService(serviceDb()).list(from, to);
@@ -128,7 +109,7 @@ export async function readTrafficSources(from: string, to: string, limit = 10): 
     .slice(0, limit);
 }
 
-/** Kampanya ROI satırı — gider ve ciro yan yana (13.2 · 12.5). */
+/** Kampanya ROI satırı: gider ve ciro yan yana. */
 export interface CampaignRoiRow {
   campaign: string | null;
   spendCents: number;
@@ -140,21 +121,8 @@ export interface CampaignRoiRow {
 }
 
 /**
- * **Kampanya ROI tablosu** (13.2) — 12.5'in gideri ile bu modülün cirosunu birleştirir.
- *
- * ── İKİ SÜTUN AYNI ŞEYİ ÖLÇMÜYOR VE OKUYAN BUNU BİLMELİ ─────────────────────
- * Gider DÖNEMİN gideridir. Ciro ise **ilk temas atfıyla** gelir: o kampanyanın kazandırdığı
- * müşterilerin bu dönemdeki siparişleri — tekrar siparişler dâhil. Yani yeni bir kampanyada ciro
- * geç görünür, kapatılmış bir kampanyada gider bittiği hâlde ciro sürer. `newCustomerCount` tam
- * olarak bu farkı okutmak için satırda duruyor.
- *
- * Başka türlüsü oturum anahtarını siparişe yazmayı gerektirirdi ve o tek `join` anonim defterin
- * tamamını geriye dönük kimliklendirirdi (`ANALYTICS §2`). Kısıt mahremiyet kararının bedeli.
- *
- * ── ETİKETSİZ KOVA DÜŞÜRÜLMEZ ───────────────────────────────────────────────
- * `campaign: null` hem "etiketsiz reklam gideri" hem "kaynağı ölçülmemiş ciro" taşır. Düşürülseydi
- * satırların toplamı ne dönemin gerçek reklam giderini ne gerçek ciroyu tutardı — ve ROI
- * kendiliğinden şişerdi (`campaignSpend`'in kendi kuralı).
+ * Kampanya ROI tablosu, dönemin giderini ilk temas atfıyla gelen ciroyla birleştirir: iki sütun aynı şeyi ölçmez, `newCustomerCount` farkı
+ * okutmak için satırdadır. Etiketsiz kova (`campaign: null`) düşürülmez, yoksa toplamlar ne gideri ne ciroyu tutar ve ROI kendiliğinden şişerdi.
  */
 export async function readCampaignRoi(from: string, to: string): Promise<CampaignRoiRow[]> {
   const db = serviceDb();
@@ -184,10 +152,7 @@ export async function readCampaignRoi(from: string, to: string): Promise<Campaig
 }
 
 /**
- * Dönem cirosu — hero şeridi ve Ticaret modunun zaman serisi (13.2).
- *
- * Dışa AÇILMADI: tipi adıyla anan bir çağıran yok, dönüş tipi zaten çıkarsanıyor. Adı gerekince
- * (ör. ekran bir yardımcıya geçirmek isterse) `export` tek kelime.
+ * Dönem cirosu, hero şeridinin ve Ticaret modunun zaman serisi; tipi adıyla anan bir çağıran olmadığı için dışa açılmaz.
  */
 interface RevenueView {
   totalCents: number;
@@ -199,14 +164,8 @@ interface RevenueView {
 }
 
 /**
- * **Dönem cirosu** (13.2) — ekranın Ticaret modunun kaynağı.
- *
- * **Yetki `order` tablosundadır, defter değil** (`ANALYTICS §4`): defterdeki `order_placed` "bu
- * oturum siparişle bitti" der ve tabloya göre AZ olması tasarımdır. Ciroyu defterden okumak, ödeme
- * dalına ve oturuma bağlı bir sayıyı para sayısı gibi göstermek olurdu.
- *
- * **Süzgeç SİPARİŞ tarihinde**, teslim gününde değil — teslim gününe göre okunan bir dönem cirosu
- * kampanya giderinin dönemiyle hizalanmaz ve ROI tablosunun iki sütunu farklı dönemleri anlatırdı.
+ * Dönem cirosu, Ticaret modunun kaynağı: yetki `order` tablosundadır, defterdeki `order_placed` tasarım gereği azdır. Süzgeç sipariş
+ * tarihindedir, teslim gününe göre okunan ciro kampanya giderinin dönemiyle hizalanmazdı.
  */
 export async function readOrderRevenue(from: string, to: string): Promise<RevenueView> {
   const rows = await new AnalyticsReportService(serviceDb()).orderRevenue(from, to);
@@ -246,10 +205,7 @@ export interface CustomerSegmentRow {
 const SEGMENT_ORDER: CustomerSegment[] = ['champion', 'active', 'new', 'dormant', 'lost'];
 
 /**
- * Müşteri segmentleri (13.5) — sayılar.
- *
- * **Boş segment de dönülür** (`customerCount: 0`): "uyuyan müşteri yok" ile "uyuyan müşteri
- * hesaplanmıyor" farklı cümlelerdir ve satırı hiç göndermeseydik ekran ikisini ayıramazdı.
+ * Müşteri segmentlerinin sayıları; boş segment de döner (`customerCount: 0`), çünkü "uyuyan yok" ile "hesaplanmıyor" farklı cümlelerdir.
  */
 export async function readCustomerSegments(options: SegmentOptions = {}): Promise<CustomerSegmentRow[]> {
   const counts = await new AnalyticsReportService(serviceDb()).customerSegments(options);
@@ -269,32 +225,13 @@ export async function readCustomerSegments(options: SegmentOptions = {}): Promis
 }
 
 /**
- * **Segment ÜYELERİ için burada hâlâ bir kapı YOK — ve 07.08'de bir kez yazılıp GERİ ALINDI.**
- *
- * Dışa alma kapısı (`export.ts`) yazıldı, test edildi, sonra silindi: **çağıranı yoktu.** İndirme
- * düğmesi operasyon şeridinin klasöründe (`operations/analytics/**`, 13.8) ve oraya dokunmuyorum;
- * yani kapı, tüketicisi olmayan bir dışa açık fonksiyon olarak kalacaktı. `knip` bunu 1 ile
- * kesti ve haklıydı — bu oturumda üç kez adını koyduğum arıza sınıfının ("motor yazılmış,
- * çağrılmamış") tam olarak kendisiydi, üstelik bu sefer yapan bendim.
- *
- * Tasarımın tamamı boşa gitmedi, `docs/talep`'e yazıldı (izin sütunu üç hâlli, tavan + `truncated`,
- * kimlik birleştirmesi uygulama katmanında). Düğme yazıldığı gün kapı buraya, sayacın yanına gelir —
- * köprünün iki ucu aynı dosyadan okunsun diye.
- *
- * Servis tarafı hazır ve tek satır uzakta:
+ * Segment üyeleri için burada kapı yoktur, çünkü dışa alma düğmesinin çağıranı henüz yok; servis tarafı hazırdır:
  * `new AnalyticsReportService(serviceDb()).segmentMembers(segment, limit, offset, options)`.
  */
 
 /**
- * Haftalık AI anlatısı (13.7) — **üretilmiş olanı okur, üretmez.**
- *
- * Model burada çağrılmaz: ekran her açıldığında çağırmak parayı ziyaret sayısıyla çarpardı ve aynı
- * haftanın anlatısını her yenilemede biraz farklı yazardı. Üreten taraf haftalık iştir
- * (`analytics-insight`).
- *
- * `null` = "henüz üretilmedi". Ekran bunu `warming` hâlinde göstermeli, `absent` değil — kapı var,
- * yalnız ilk tur koşmamış. Dönemi de dönüyoruz ki ekran "hangi haftanın anlatısı" diyebilsin:
- * tarihsiz gösterilen bir anlatı, iş bir hafta koşmadığında bu haftanınmış gibi okunur.
+ * Haftalık yapay zekâ anlatısı: üretilmiş olanı okur, üretmez, çünkü ekran her açılışta modeli çağırsa para ziyaret sayısıyla çarpılırdı.
+ * `null` henüz üretilmedi demektir; dönem de döner ki ekran hangi haftanın anlatısı olduğunu söyleyebilsin.
  */
 export async function readWeeklyInsight(): Promise<StoredAnalyticsInsight | null> {
   const raw = await new SettingsService(serviceDb()).get<unknown>(ANALYTICS_INSIGHT_SETTING, null);

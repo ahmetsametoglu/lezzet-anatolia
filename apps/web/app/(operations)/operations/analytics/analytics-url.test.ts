@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { analyticsUrl, parseAnalyticsUrl, periodRange } from './analytics-url';
 
 /**
- * URL sözleşmesi saf mantıktır (DB yok) → birim test. Bu ekranda önemi ayrıca büyük: mod/dönem/kanal
- * SUNUCUDA okunuyor ve analitikte bir bulguyu göstermenin tek yolu bağlantı paylaşmak. Adres yanlış
- * ayrıştırılırsa hata vermez — karşı taraf başka bir döneme bakar ve iki kişi aynı ekranda farklı
+ * URL sözleşmesi saf mantıktır: adres yanlış ayrıştırılırsa hata vermez, karşı taraf başka döneme bakar ve iki kişi aynı ekranda farklı
  * sayı görür.
  */
 

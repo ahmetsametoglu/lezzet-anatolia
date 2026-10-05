@@ -61,14 +61,8 @@ export interface ConsentCountView {
 }
 
 /**
- * Bir bloğun VERİ HÂLİ. Üç değer, üç ayrı cümle:
- *  · `ready`   → sayı var, çizilir
- *  · `warming` → kapı var, veri henüz birikmedi ("ilk gün" hâli — çizimin birinci sınıf durumu)
- *  · `absent`  → bu sayı bugün HİÇ hesaplanmıyor (kapı yok ya da özet bu boyutu taşımıyor)
- *
- * `warming` ile `absent` ayrımı bu ekranın en önemli dürüstlüğü: ikisi de boş görünür ama biri
- * "bekle", öteki "bekleme, gelmeyecek" der. Tek bir "veri yok" hâline indirilseydi yönetici
- * hiç dolmayacak bir bloğun dolmasını beklerdi.
+ * Bir bloğun veri hâli: `ready` sayı var, `warming` kapı var ama veri birikmedi, `absent` sayı bugün hiç hesaplanmıyor. `warming` ile
+ * `absent` ayrı tutulur, ikisi de boş görünür ama biri "bekle", öteki "gelmeyecek" der.
  */
 export type BlockState = 'ready' | 'warming' | 'absent';
 
@@ -82,7 +76,7 @@ export interface BlockView<T> {
 export interface AnalyticsData {
   /** Dönemin başlangıç/bitişi — alt başlıkta ve kıyas cümlesinde kullanılır. */
   period: { from: string; to: string; days: number };
-  /** AI içgörü (13.7) — haftalık iş üretir, ekran okur; `null` = ilk tur henüz koşmadı. */
+  /** Yapay zekâ içgörüsü: haftalık iş üretir, ekran okur; `null` ilk tur henüz koşmadı demektir. */
   insight: BlockView<StoredAnalyticsInsight | null>;
   /** Hero bandı: ilk ölçü büyük, kalan üçü yanında (çizim). */
   hero: { main: MetricView; rest: MetricView[]; split: { b2cCents: number; b2bCents: number } | null };

@@ -23,7 +23,7 @@ create table public.analytics_daily_product (
 );
 
 comment on table public.analytics_daily_product is
-  'Günlük ürün kırılımı (13.4) — ilgi/dönüşüm sinyali; vitrin seçkisi de buradan okur (08.9).';
+  'Günlük ürün kırılımı: ilgi ve dönüşüm sinyali; vitrin seçkisi de buradan okur.';
 
 alter table public.analytics_daily_product enable row level security;
 
@@ -49,7 +49,7 @@ create table public.analytics_daily_search (
 );
 
 comment on table public.analytics_daily_search is
-  'Günlük arama terimi özeti (13.4) — SÜRESİZ DEĞİL: ham defterle aynı 25 ayı yaşar (serbest metin).';
+  'Günlük arama terimi özeti; süresiz değil, ham defterle aynı 25 ayı yaşar (serbest metin).';
 
 alter table public.analytics_daily_search enable row level security;
 
@@ -76,7 +76,7 @@ create table public.analytics_daily_source (
 );
 
 comment on table public.analytics_daily_source is
-  'Günlük trafik kaynağı özeti (13.2) — doğrudan trafik `source is null` kovasında; oturum başına dönüşüm taşır.';
+  'Günlük trafik kaynağı özeti; doğrudan trafik `source is null` kovasındadır, oturum başına dönüşüm taşır.';
 
 alter table public.analytics_daily_source enable row level security;
 
@@ -128,7 +128,7 @@ end;
 $$;
 
 comment on function public.build_analytics_daily_product(date) is
-  'Bir günün ürün kırılımını üretir (13.4). İdempotent.';
+  'Bir günün ürün kırılımını üretir. İdempotent.';
 
 /**
  * Arama terimi özetini üretir (idempotent) → yazılan satır sayısı.
@@ -170,7 +170,7 @@ end;
 $$;
 
 comment on function public.build_analytics_daily_search(date) is
-  'Bir günün arama terimi özetini üretir (13.4). İdempotent.';
+  'Bir günün arama terimi özetini üretir. İdempotent.';
 
 -- Trafik kaynağı özetini üretir (idempotent). UTM anahtarları kapalı sözlüktür ve kapı normalleştirir
 -- (`lib/analytics/record.ts`); sözlük değişirse iki yer birden değişir.
@@ -219,7 +219,7 @@ end;
 $$;
 
 comment on function public.build_analytics_daily_source(date) is
-  'Bir günün trafik kaynağı özetini üretir (13.2). Doğrudan trafik null kovasında.';
+  'Bir günün trafik kaynağı özetini üretir. Doğrudan trafik null kovasında.';
 
 -- Oturum künyelerini ve arama özetlerini ham defterle aynı 25 ayda siler: künye psödonim anahtar, arama özeti tek kalıcı
 -- serbest metindir. Sayı taşıyan öteki özetler kişisel veri değildir ve süresiz kalır.
@@ -242,7 +242,7 @@ end;
 $$;
 
 comment on function public.purge_analytics_before(date) is
-  'Oturum künyelerini ve arama özetlerini saklama süresine göre siler (13.1) — sayı özetleri süresizdir.';
+  'Oturum künyelerini ve arama özetlerini saklama süresine göre siler; sayı özetleri süresizdir.';
 
 -- ═══ DÖNEM OKUMALARI — TOPLAMA SQL'DE (STACK §13) ═══════════════════════════
 -- RPC, çünkü sıralama türetilmiş bir orandır ve ilk N ancak dönem toplandıktan sonra bilinir. `cart_rate` paydası satılabilir
@@ -286,7 +286,7 @@ as $$
 $$;
 
 comment on function public.analytics_product_signals(date, date, integer) is
-  'Dönemin ürün sinyalleri (13.4) — ilgi/dönüşüm; vitrin seçkisi de bunu okur (08.9).';
+  'Dönemin ürün sinyalleri: ilgi ve dönüşüm; vitrin seçkisi de bunu okur.';
 
 -- Dönemin arama sinyalleri; `p_zero_only` sıfır sonuçluları süzer, kova gruplamada kalır (`ANALYTICS §4`).
 create or replace function public.analytics_search_signals(
@@ -319,7 +319,7 @@ as $$
 $$;
 
 comment on function public.analytics_search_signals(date, date, integer, boolean) is
-  'Dönemin arama sinyalleri (13.4) — sıfır-sonuç süzgeci kovayı korur.';
+  'Dönemin arama sinyalleri; sıfır-sonuç süzgeci kovayı korur.';
 
 -- ═══ "HANGİ SİPARİŞ CİRO SAYILIR" — TEK TANIM ════════════════════════════════
 -- Üç okuma aynı tanımı kullanır ki ayrışmasın: taslak, iptal ve iade sayılmaz. İki tutar taşınır, raporlar bugün
@@ -330,7 +330,7 @@ create or replace view public.analytics_order_base with (security_invoker = true
    where o.status not in ('draft', 'cancelled', 'returned');
 
 comment on view public.analytics_order_base is
-  'Analitik ciro tanımı (13.2 · 13.5) — hangi siparişin ciro sayıldığı TEK yerde; üç okuma da bunu kullanır.';
+  'Analitik ciro tanımı: hangi siparişin ciro sayıldığı tek yerde; üç okuma da bunu kullanır.';
 
 -- Dönem cirosu, gün × kanal: `order_counts` teslim gününe süzer, analitik sipariş gününü sorar. Kanal ayrı satırdır,
 -- çünkü karışık ölçüm yalan söyler (`ANALYTICS §3`); satır sayısı gün × 2 ile sınırlı.
@@ -359,7 +359,7 @@ as $$
 $$;
 
 comment on function public.analytics_order_revenue(date, date) is
-  'Dönem cirosu gün × kanal (13.2) — süzgeç SİPARİŞ tarihinde, teslim gününde değil.';
+  'Dönem cirosu gün × kanal; süzgeç sipariş tarihinde, teslim gününde değil.';
 
 -- ═══ KAMPANYA CİROSU — İLK TEMAS ATFI ═════════════════════════════════════════
 -- Siparişleri müşterinin edinim kaynağına göre toplar: kampanyanın kazandırdığı müşterilerin dönem siparişleri, tekrarlar dahil.
@@ -402,7 +402,7 @@ as $$
 $$;
 
 comment on function public.analytics_campaign_revenue(date, date) is
-  'Kampanya cirosu — İLK TEMAS atfı (13.2): tekrar siparişler de müşteriyi kazandıran kaynağa yazılır.';
+  'Kampanya cirosu, ilk temas atfı: tekrar siparişler de müşteriyi kazandıran kaynağa yazılır.';
 
 -- Posta kodu başına sipariş, `postal_code_demand` talebinin karşı ucu. Anahtar `address_snapshot`, çünkü canlı adres
 -- geçmiş oranı değiştirirdi; talep sayacı zaman kırılımı taşımadığı için iki taraf da tüm zamandır.
@@ -424,7 +424,7 @@ as $$
 $$;
 
 comment on function public.analytics_postal_code_orders(text[]) is
-  'Posta kodu başına sipariş/ciro (13.4) — talep sayacının karşı ucu; kod normalleştirmesi 0023 ile aynı.';
+  'Posta kodu başına sipariş ve ciro, talep sayacının karşı ucu; kod normalleştirmesi bölge haberiyle aynı.';
 
 -- ═══ MÜŞTERİ SEGMENTLERİ ═════════════════════════════════════════════════════
 -- Segment türetilir, saklanan segment tazeleme işi koşmayınca sessizce yanlışa döner. Eşikler çağırandan gelir
@@ -473,7 +473,7 @@ as $$
 $$;
 
 comment on function public.analytics_customer_segments(date, integer, integer, integer) is
-  'Müşteri segmenti SAYILARI (13.5) — segment türetilir, saklanmaz; eşikler parametrik.';
+  'Müşteri segmenti sayıları: segment türetilir, saklanmaz; eşikler parametrik.';
 
 -- Segmentin üyeleri: sayı ile liste aynı ölçütten çıkmalı. Sayfalanır ve en yeni uyuyan üstte, çünkü geri kazanma şansı en yüksek odur.
 create or replace function public.analytics_segment_members(
@@ -522,4 +522,4 @@ as $$
 $$;
 
 comment on function public.analytics_segment_members(text, integer, integer, date, integer, integer, integer) is
-  'Bir segmentin üyeleri (13.5) — sayfalı; dışa alma ve Müşteriler köprüsü bunu okur.';
+  'Bir segmentin üyeleri, sayfalı; dışa alma ve Müşteriler köprüsü bunu okur.';

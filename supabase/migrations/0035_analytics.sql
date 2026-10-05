@@ -66,7 +66,7 @@ create table public.analytics_session (
 );
 
 comment on table public.analytics_session is
-  'Oturumun kampanya künyesi (13.1) — UTM bir kez düşer, siparişe YAZILMAZ: eşleşme sipariş anında tüketilir.';
+  'Oturumun kampanya künyesi: UTM bir kez düşer, siparişe yazılmaz, eşleşme sipariş anında tüketilir.';
 
 alter table public.analytics_session enable row level security;
 
@@ -111,7 +111,7 @@ create table public.analytics_event (
 ) partition by range (created_at);
 
 comment on table public.analytics_event is
-  'Ham gezinme izi (13.1) — kimliksiz, aylık bölümlenmiş, 25 ay. Ekranlar buradan DEĞİL analytics_daily''den okur.';
+  'Ham gezinme izi: kimliksiz, aylık bölümlenmiş, 25 ay. Ekranlar buradan değil analytics_daily''den okur.';
 
 alter table public.analytics_event enable row level security;
 
@@ -183,7 +183,7 @@ end;
 $$;
 
 comment on function public.drop_analytics_partitions_before(date) is
-  'Süresi dolmuş olay bölümlerini düşürür (13.1) — satır silmez, bölüm düşürür.';
+  'Süresi dolmuş olay bölümlerini düşürür; satır silmez, bölüm düşürür.';
 
 -- Günlük özet süresiz yaşar, çünkü kişisel veri değildir ve yıllar arası karşılaştırma ancak böyle mümkündür. Hafta, ay ve saat ayrı
 -- tablo değildir; günlükten ve satırın 24 öğeli saat dizisinden türetilir.
@@ -217,7 +217,7 @@ create table public.analytics_daily (
 );
 
 comment on table public.analytics_daily is
-  'Günlük özet (13.1) — ekranların okuduğu yer. Süresiz; hafta/ay/yıl ve saat kırılımı buradan türetilir.';
+  'Günlük özet, ekranların okuduğu yer. Süresiz; hafta/ay/yıl ve saat kırılımı buradan türetilir.';
 
 alter table public.analytics_daily enable row level security;
 
@@ -287,4 +287,4 @@ end;
 $$;
 
 comment on function public.build_analytics_daily(date) is
-  'Bir günün özetini üretir (13.1). İdempotent — yeniden koşmak üzerine yazar; sıra: özet ÖNCE, silme SONRA.';
+  'Bir günün özetini üretir. İdempotent, yeniden koşmak üzerine yazar; sıra: özet önce, silme sonra.';
