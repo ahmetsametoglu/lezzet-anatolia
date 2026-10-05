@@ -4,20 +4,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Skeleton } from '@/components/ui/skeleton';
 
 /*
-  SİPARİŞLER LİSTESİ SKELETON'I — ilk yükte kartların yerini tutar.
-
-  ÖNCEKİ HÂLİ üç boş dikdörtgendi (`SKELETON_HEIGHT = 110`): yükseklik şablondan alınmıştı ama
-  KARTIN İÇİ hiç tanınmıyordu ve tek ham sayı olarak duruyordu — kartın dolgusu ya da satırları
-  değiştiğinde 110 sessizce yanlışa düşerdi. Artık yükseklik YAZILMIYOR, kartın kendi yapısı
-  kuruluyor (kabuk stilleri + üç satır) ve yükseklik kendiliğinden çıkıyor.
-
-  SAYFA BAŞLIĞI BURADA DEĞİL, EKRANDA: başlık her dalda GERÇEK basılıyor ve içinde çalışan bir
-  geri düğmesi var (ekranın kendi kuralı — bu ekran yığında açılıyor, geri dönüşün tek yolu o).
-
-  KART SAYISI şablonun kendi ölçüsüdür (v3:27-31 — üç kart), uydurma değil.
-
-  KARTIN KABUĞU GERÇEK (zemin · köşe · dolgu · kesikli ayraç): sabit yapı veriye bağlı değil.
-  Gri kalan yalnız numara, künye, durum etiketi, küçük resimler ve tutar.
+  Siparişler listesinin iskeleti: yükseklik yazılmaz, kartın kendi kabuğu ve satırları kurulur ki kart değişince iskelet ondan
+  ayrışmasın. Başlık burada değil ekranda, çünkü içindeki geri düğmesi her hâlde çalışmalı.
 */
 
 const CARD_SLOTS = [0, 1, 2];
@@ -113,7 +101,7 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: 'space-between',
     gap: theme.space.lg,
     borderTopWidth: theme.border.base,
-    borderTopColor: theme.colors['sand-400'],
+    borderColor: theme.colors['sand-400'],
     borderStyle: 'dashed',
     paddingTop: theme.space.lg,
   },

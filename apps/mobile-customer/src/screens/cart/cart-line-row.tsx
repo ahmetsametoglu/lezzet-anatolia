@@ -1,6 +1,6 @@
 import type { CatalogImage } from '@lezzet/types';
 import { Text, View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
@@ -9,22 +9,9 @@ import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { QuantityStepper } from '@/screens/customer-kit/quantity-stepper';
 
 /*
-  SEPET SATIRI — iki yüzeyde aynı iskelet (v3:411 ve v3:429): daire küçük resim · metin sütunu ·
-  sağda adet sayacı ile "kaldır".
-
-  İKİ TON, tasarımın kendi ayrımı:
-  · `bundle` — HAZIR PAKET: koyu mürekkep kart, üstbaşlığı zeytin yeşili. Paket bir üründen
-    fazlasıdır ve listede öyle görünmesi gerekiyor.
-  · `product` — ÜRÜN: zeminsiz satır, altında kesikli ayraç.
-
-  ROZETLER (indirimli fiyat · tükendi) YALNIZ ÜRÜN SATIRINDA: şablon paket kartında hiç rozet
-  çizmiyor — paketin kendi içeriğinin durumu paket detayında konuşur.
-
-  SALT OKUNUR HÂL (`readOnly`): sunucu sepetinde OLUP mobilden yazılamayan satır — bugün yalnız
-  webden eklenmiş PAKET satırı (yazma gövdesi yalnız varyant kabul ediyor, `MeCartItemWriteSchema`).
-  Satır gizlenmez, çünkü sepettedir ve toplamın içindedir; yalnız sayaç ile "kaldır" yerine adet
-  yazısı çizilir ve sebebi `noticeLabel` ile söylenir — basılınca hiçbir şey yapmayan bir düğme,
-  müşteriye arızalı bir uygulama gösterirdi.
+  Sepet satırı: paket koyu kartta, ürün kesikli ayraçlı zeminsiz satırda; rozetler yalnız üründe, çünkü paketin içeriğinin durumu
+  paket detayında konuşur. Salt okunur satır (yalnız webden eklenebilen paket) gizlenmez ve sayaç yerine adet yazar, çünkü basılınca
+  bir şey yapmayan düğme arızalı görünürdü.
 */
 
 interface CartLineRowProps {
@@ -44,11 +31,8 @@ interface CartLineRowProps {
   /** "Tükendi — teslim edilemez" rozeti. */
   soldOutLabel?: string;
   /**
-   * "Bu adrese teslim edemiyoruz" künyesi — kalem SATILABİLİR, yalnız BU adrese gelmiyor
-   * (`group: 'undeliverable'`). `soldOutLabel`den ayrı ve hata renginde DEĞİL: tükenmiş kalem
-   * çıkarılmadan devam edilemez, gelemeyen kalem ise sepette bekler ve müşteriye sildirilmez
-   * (kullanıcı kararı 10.08). İkisini tek rozete toplamak, adresin gerçeğini bir arıza gibi
-   * okuturdu.
+   * "Bu adrese teslim edemiyoruz" künyesi; tükendi rozetinden ayrı ve hata renginde değil, çünkü gelemeyen kalem sepette bekler ve
+   * silinmez. İkisini tek rozete toplamak adresin gerçeğini arıza gibi okuturdu.
    */
   awayLabel?: string;
   /**
@@ -90,13 +74,8 @@ export function CartLineRow({
   onRemove,
   testID,
 }: CartLineRowProps) {
-  const { theme } = useUnistyles();
-  /* Üstbaşlık BÜYÜK HARFE dilin kuralıyla çevrilir (`upperIn`), stilin `textTransform`una
-     bırakılmaz: onu Android native yapıyor ve CİHAZIN dilini kullanıyor. Bu satırda ölçüldü
-     (28.08, Türkçe telefon + Fransızca arayüz): "Panier prêt" → **"PANİER PRÊT"**. Aynı ekranda
-     paketler sekmesinin üstbaşlığı doğruydu, çünkü o `upperIn`den geçiyordu — fark koddaydı,
-     metinde değil. `styles.eyebrow`daki kural yerinde kalıyor: buradan zaten büyük çıkan harflere
-     dokunmaz. */
+  /* Üstbaşlık büyük harfe dilin kuralıyla çevrilir (`upperIn`), çünkü stilin `textTransform`u Android'de cihazın dilini kullanır
+     ("Panier prêt" → "PANİER PRÊT"). */
   const locale = useAppLocale();
   const isBundle = tone === 'bundle';
 
@@ -165,8 +144,6 @@ export function CartLineRow({
           </>
         )}
       </View>
-      {/* Ürün satırının kesikli alt ayracı — paket kartında yok (kartın kendi kenarı var). */}
-      {isBundle ? null : <View style={[styles.divider, { borderBottomColor: theme.colors['sand-400'] }]} />}
     </View>
   );
 }
@@ -183,9 +160,14 @@ const styles = StyleSheet.create((theme) => ({
     padding: theme.space.xl,
     paddingHorizontal: theme.space['2xl'],
   },
+  /* Kesikli ayraç satırın kendi kenarında ve rengi dört kenara verilir, çünkü iOS kesik kenarı yalnız içeriği olan bir kutuda ve
+     bütün kenarların rengi aynıyken çizer. */
   productRow: {
     paddingVertical: theme.space.xl,
     paddingHorizontal: theme.space['2xs'],
+    borderBottomWidth: theme.border.base,
+    borderStyle: 'dashed',
+    borderColor: theme.colors['sand-400'],
   },
   text: { flex: 1, gap: theme.space['2xs'] },
   eyebrow: {
@@ -233,24 +215,13 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors['error-bg'],
   },
   controls: {
-    /* Aralık tasarımın 6'sı değil 10 — ve fark GÖRSEL DEĞİL, dokunma payının artığı (20.08).
-       Sayaç ile "kaldır"ın görünmez etekleri çakışıyor ve "+"ın içine dokunmak ürünü siliyordu;
-       çare payı komşuya bakan yönden çekmek oldu (`compactEdges`), aralığı büyütmek değil —
-       26 dp'lik ilk deneme çakışmayı bitirdi ama kompozisyonu bozdu. 10, iki hedefin çizili
-       kutuları arasında gözle görülür bir nefes bırakır ve payların hiçbiri komşuya taşmaz. */
+    /* Aralık tasarımın 6'sı değil 10, çünkü daha dar aralıkta sayaç ile "kaldır"ın görünmez dokunma payları çakışır ve "+"a
+       dokunuş ürünü siler. */
     alignItems: 'center',
     gap: theme.space.lg,
   },
   readOnlyQuantity: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.control,
-  },
-  divider: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderBottomWidth: theme.border.base,
-    borderStyle: 'dashed',
   },
 }));

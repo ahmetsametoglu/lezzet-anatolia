@@ -5,16 +5,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 
 /*
-  GEÇİŞ SATIRI — "ikon · başlık · ›". Hesap ekranının menü kartı (v3:850-855) dört kez, adres ve
-  bilgi listeleri de aynı satırı kullanıyor. Kartın İÇİNDE dururlar: ilk satır hariç hepsinin
-  üstünde kesikli bir ayraç vardır.
-
-  AYRAÇ SATIRIN KENDİSİNDE, aralarına serpiştirilen ayrı bir öğede değil: çağıran `divider`
-  bayrağını verir. Ayrı bir `<Divider/>` çizmek, listenin ilk öğesini bilme sorumluluğunu her
-  çağırana dağıtırdı ve biri bir gün unuturdu.
-
-  İŞARET (›) METİNDİR: şablonda da öyle. Ekran okuyucuya gitmez — satırın kendisi zaten bir
-  düğmedir ve adı başlıktır.
+  Geçiş satırı ("ikon · başlık · ›"); ayraç satırın kendisinde (`divider`), çünkü ayrı bir ayraç öğesi listenin ilk öğesini bilme
+  sorumluluğunu her çağırana dağıtırdı. İşaret metindir ve ekran okuyucuya gitmez, çünkü satırın adı başlığıdır.
 */
 
 interface NavRowProps {
@@ -60,7 +52,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   divider: {
     borderTopWidth: theme.border.base,
-    borderTopColor: theme.colors['sand-400'],
+    borderColor: theme.colors['sand-400'],
     borderStyle: 'dashed',
   },
   label: {

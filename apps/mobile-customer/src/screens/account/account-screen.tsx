@@ -1007,7 +1007,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   /* Kart içi ayraç — menü kartının kesikli çizgisi; üstten nefes verir ki satırlar yapışmasın. */
   settingsDivider: {
     borderTopWidth: theme.border.base,
-    borderTopColor: theme.colors['sand-400'],
+    borderColor: theme.colors['sand-400'],
     borderStyle: 'dashed',
     paddingTop: theme.space.lg,
     marginTop: theme.space.xs,
@@ -1025,7 +1025,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   switchDivider: {
     borderTopWidth: theme.border.base,
-    borderTopColor: theme.colors['sand-400'],
+    borderColor: theme.colors['sand-400'],
     borderStyle: 'dashed',
   },
   switchLabel: {

@@ -366,7 +366,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingVertical: theme.space.lg,
     borderBottomWidth: theme.border.base,
     borderStyle: 'dashed',
-    borderBottomColor: theme.colors['sand-400'],
+    borderColor: theme.colors['sand-400'],
   },
   /** Esneme payı burada; gerekçesi JSX'te. */
   rowMainWrap: {

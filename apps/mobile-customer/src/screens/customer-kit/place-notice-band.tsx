@@ -256,7 +256,7 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: 'space-between',
     columnGap: theme.space.lg,
     borderTopWidth: theme.border.base,
-    borderTopColor: theme.colors['terracotta-line'],
+    borderColor: theme.colors['terracotta-line'],
     borderStyle: 'dashed',
     paddingTop: theme.space.md,
   },

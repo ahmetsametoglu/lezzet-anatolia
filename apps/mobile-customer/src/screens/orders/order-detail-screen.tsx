@@ -401,7 +401,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   itemBlock: {
     paddingVertical: theme.space.lg,
     borderBottomWidth: theme.border.base,
-    borderBottomColor: theme.colors['sand-400'],
+    borderColor: theme.colors['sand-400'],
     borderStyle: 'dashed',
   },
   itemRow: {

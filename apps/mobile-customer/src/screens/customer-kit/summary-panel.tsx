@@ -5,19 +5,8 @@ import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 
 /*
-  TUTAR ÖZETİ — sepet (v3:464), checkout (v3:544) ve sipariş onayı/detayı (v3:617, 744) aynı
-  paneli çiziyor: kum zemin, alt alta "etiket ⟷ tutar" satırları, kesikli bir çizgiden sonra
-  eğik toplam rozeti, altında isteğe bağlı bir açıklama.
-
-  DÖRT EKRANIN ORTAK PARÇASI olduğu için burada; dördü kendi kopyasını çizseydi kesikli çizginin
-  kalınlığı ya da rozetin açısı bir gün birinde ayrışırdı.
-
-  ROZET NEDEN KİTTEKİ `Tag` DEĞİL: `Tag`in yazısı Karla rozet kademesidir (12,5/700); toplam
-  tutar Lora 17 ile yazılıyor (v3:467) — para burada bir etiket değil, ekranın en büyük sayısı.
-  `Tag`e ikinci bir yazı kademesi eklemek rozet sözlüğünü bulandırırdı.
-
-  İKİ TON, ikisi de tasarımın kendi ayrımı: sepette toplam MÜREKKEP rozetle (henüz karar
-  verilmedi, bilgi), checkout ve onayda TERRACOTTA + gölge (ödenecek tutar, ekranın odağı).
+  Sepet, ödeme ve sipariş aynı tutar özetini çizer ki kesikli çizgi ya da rozet birinde ayrışmasın. Toplam rozeti kitteki `Tag`
+  değil, çünkü tutar Lora ile ekranın en büyük sayısıdır ve `Tag`e ikinci bir yazı kademesi rozet sözlüğünü bulandırırdı.
 */
 
 /** Panelin ara satırı — "Ara toplam · 24,90 €". */
@@ -27,10 +16,8 @@ export interface SummaryRow {
   label: string;
   value: string;
   /**
-   * `olive` indirim satırı (v3:466) — kazanç, gidere benzemesin.
-   * `danger` bu siparişe GİRMEYEN kalem (kullanıcı kararı 10.08): kalem özetten gizlenmez, üstü
-   * çizilir ve kırmızı yazılır. Gizlemek müşteriye "herhâlde bunları alıyorum" dedirtiyordu —
-   * karar özetin uzağında, adresin yanında duruyor ve uyarı gibi okunmuyordu.
+   * `olive` indirim satırı, kazanç gidere benzemesin; `danger` bu siparişe girmeyen kalem, gizlenmez ama üstü çizilir, çünkü
+   * gizlemek müşteriye "bunları da alıyorum" dedirtirdi.
    */
   tone?: 'muted' | 'olive' | 'danger';
   /** Satırın üstü çizilsin mi — `danger` kalem satırlarında; açıklama satırında değil. */
@@ -59,8 +46,7 @@ export function SummaryPanel({
   note,
   testID,
 }: SummaryPanelProps) {
-  /* Büyük harf dilin kuralıyla (`upperIn`), stilin `textTransform`una bırakılmaz — o dönüşümü
-     Android native CİHAZIN diliyle yapıyor (ölçüldü 28.08, `cart-line-row` künyesi). */
+  /* Büyük harf dilin kuralıyla (`upperIn`), çünkü stilin `textTransform`u Android'de cihazın dilini kullanır. */
   const locale = useAppLocale();
   return (
     <View style={styles.panel} testID={testID}>
@@ -135,8 +121,8 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderTopWidth: theme.border.base,
-    borderTopColor: theme.colors['sand-400'],
-    // Kesikli çizgi tasarımın imzası (v3'te 14 kez): "burada bir kupon koparılır" hissi.
+    borderColor: theme.colors['sand-400'],
+    // Renk dört kenara verilir, çünkü iOS kesik kenarı ancak bütün kenarların rengi aynıyken çizer.
     borderStyle: 'dashed',
     paddingTop: theme.space.lg,
   },

@@ -235,13 +235,13 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space.xl,
   },
   header: {
-    // v3:9 `gap:3px` — iki durak arasında; eşitlikte ferah yön (2 yerine 4).
+    // Tasarımın 3 px'i iki basamağın ortasında; eşitlikte ferah olan seçilir.
     gap: theme.space.xs,
     /* Üst pay sayfa dolgusu ile başlık bloğunun kendi payının toplamıdır; `insets.top` durum çubuğunu karşılar, bu pay onun üstüne binir. */
     paddingTop: theme.space['3xl'],
     paddingBottom: theme.space.xs,
   },
-  /** Geri düğmesinin dairesi sayfanın sol dolgusuna taşar (v3:141 `margin-left:-8px`). */
+  /** Geri düğmesinin dairesi sayfanın sol dolgusuna taşar (tasarımda `margin-left:-8px`). */
   backRow: {
     flexDirection: 'row',
     /* Glif başlıkla hizalanır: daire 40 dp ve glif ortalı olduğu için −16 glifin sol kenarını başlığın sol kenarına oturtur. */
@@ -264,7 +264,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingHorizontal: theme.space['4xl'],
     gap: theme.space.xl,
   },
-  /* Kart (v3:42): kum zemin, köşe 18, dolgu 14/16, aralık 9 → ferah yön (10). */
+  /* Tasarımın 9 px aralığı iki basamağın ortasında; ferah olan (10) seçilir. */
   card: {
     backgroundColor: theme.colors['sand-250'],
     borderRadius: theme.radius.card,
@@ -307,7 +307,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     justifyContent: 'space-between',
     gap: theme.space.lg,
     borderTopWidth: theme.border.base,
-    borderTopColor: theme.colors['sand-400'],
+    borderColor: theme.colors['sand-400'],
     borderStyle: 'dashed',
     paddingTop: theme.space.lg,
   },
