@@ -10,16 +10,8 @@ import { StockService } from './stock.service';
 import { SupplierService } from './supplier.service';
 
 /**
- * **Kabul defteri** (22.28) — "ne geldi" sorusunun okuma tarafı.
- *
- * Buradaki iddiaların üçü de SESSİZ arıza sınıfından: hiçbiri ekranı kırmaz, hepsi yanlış bir sayıyı
- * doğru gibi gösterir. Depo süzgeci düşerse defter başka şehrin kabullerini kendi kaydı gibi
- * listeler; sıra `date`e kayarsa operatörün az önce yazdığı kayıt listenin ortasına düşer ve
- * bulunamadığı için mal İKİNCİ kez girilir; `physical_qty` toplanırsa satılmış partiler geçmişteki
- * kabulü küçültür ve fark denetimi sessizce yanılır.
- *
- * İki depo kuruluyor çünkü süzgeç ancak ikincisi varken sınanabilir: tek depolu veride süzgeci
- * unutulan bir okuma da DOĞRU cevap verir (`CLAUDE §1` — depo bir boyut değil değişmezdir).
+ * Kabul defteri, "ne geldi" sorusunun okuma tarafı: depo süzgeci, kayıt sırası ya da `initial_qty` toplamı bozulursa ekran kırılmaz ama
+ * yanlış sayı doğru gibi görünür. İki depo kurulur, çünkü süzgeç ancak ikincisi varken sınanabilir.
  */
 const db = serviceDb();
 const intakes = new StockIntakeService(db);
