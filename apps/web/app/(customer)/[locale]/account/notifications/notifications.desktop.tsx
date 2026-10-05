@@ -1,4 +1,5 @@
 import { notificationSentence, notificationVisual } from '@lezzet/i18n';
+import notificationsMessages from '@lezzet/i18n/customer/notifications';
 import { Icon } from '@/components/customer/ui/icons';
 import { LoadMore } from '@/components/customer/ui/load-more';
 import { Link } from '@/i18n/navigation';
@@ -7,6 +8,7 @@ import { TONE_BG, TONE_TEXT } from './notification-tone';
 import type { NotificationsViewProps } from './notifications-types';
 
 export function NotificationsDesktop({ t, locale, rows, unread, hasMore, loadingMore, onLoadMore, onRead, onReadAll, onDismiss }: NotificationsViewProps) {
+  const shared = notificationsMessages[locale];
   const dateOf = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   return (
@@ -17,14 +19,14 @@ export function NotificationsDesktop({ t, locale, rows, unread, hasMore, loading
           onClick={onReadAll}
           className="self-end cursor-pointer font-sans text-body-sm font-semibold text-olive transition-colors hover:text-olive-dark"
         >
-          {t.markAll}
+          {shared.markAll}
         </button>
       )}
 
       {rows.length === 0 ? (
         <div className="flex flex-col gap-1 rounded-card border border-sand-200 bg-card px-4 py-6">
-          <span className="font-sans text-body-sm font-semibold text-ink">{t.empty.title}</span>
-          <span className="font-sans text-body-sm text-muted">{t.empty.body}</span>
+          <span className="font-sans text-body-sm font-semibold text-ink">{shared.empty.title}</span>
+          <span className="font-sans text-body-sm text-muted">{shared.empty.body}</span>
         </div>
       ) : (
         <div className="flex flex-col divide-y divide-sand-100 rounded-card border border-sand-200 bg-card px-4">
@@ -79,8 +81,8 @@ export function NotificationsDesktop({ t, locale, rows, unread, hasMore, loading
                 <button
                   type="button"
                   onClick={() => onDismiss(row.id)}
-                  aria-label={t.dismiss}
-                  title={t.dismiss}
+                  aria-label={shared.dismiss}
+                  title={shared.dismiss}
                   className="flex-none cursor-pointer px-1 font-sans text-body-sm text-muted transition-colors hover:text-terracotta"
                 >
                   ×
@@ -91,7 +93,7 @@ export function NotificationsDesktop({ t, locale, rows, unread, hasMore, loading
         </div>
       )}
 
-      <LoadMore hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} label={t.loadMore} loadingLabel={t.loading} />
+      <LoadMore hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} label={shared.loadMore} loadingLabel={t.loading} />
     </div>
   );
 }

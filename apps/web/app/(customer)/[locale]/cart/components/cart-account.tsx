@@ -5,6 +5,7 @@ import { initialsOf } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import cartMessages from '@lezzet/i18n/customer/cart';
 import { useSignOut } from '@/components/customer/account/use-sign-out.hook';
+import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { Button } from '@/components/customer/ui/button';
 import type { CustomerIdentity } from '@/lib/guard';
 
@@ -12,10 +13,25 @@ import type { CustomerIdentity } from '@/lib/guard';
  * "Siz değil misiniz?" gerçekten çıkış yapar, yoksa paylaşılan cihazda ikinci kişi birincinin hesabıyla sipariş verirdi. Tek dokunuşla
  * değil onayla çıkar, çünkü yanlışlıkla basan müşteri oturumunu kaybetmemeli; soru ayrı pencerede değil satırın içinde sorulur.
  */
-function NotYou({ locale }: { locale: Locale }) {
+function NotYou({ locale, compact }: { locale: Locale; compact: boolean }) {
   const copy = cartMessages[locale].account;
   const [confirming, setConfirming] = useState(false);
   const { busy, signOut } = useSignOut();
+
+  // Telefonda eylemler native kartın `TextAction`ının ikizi, ki iki yüzeyde aynı ağırlıkta okunsun.
+  if (compact) {
+    return confirming ? (
+      <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+        <span className="font-sans text-micro text-olive-dark">{copy.confirm}</span>
+        <TextAction label={copy.yes} tone="terracotta" disabled={busy} onClick={() => void signOut()} />
+        <TextAction label={copy.cancel} disabled={busy} onClick={() => setConfirming(false)} />
+      </span>
+    ) : (
+      <span className="self-start">
+        <TextAction label={copy.notYou} onClick={() => setConfirming(true)} />
+      </span>
+    );
+  }
 
   if (!confirming) {
     return (
@@ -64,7 +80,7 @@ export function AccountIdentity({ locale, account, compact = false }: AccountIde
       <span className="flex min-w-0 flex-1 flex-col gap-px">
         <span className="truncate font-sans text-body-sm font-bold text-ink">{account.name || account.email}</span>
         {account.name && account.email && <span className="truncate font-sans text-micro text-muted">{account.email}</span>}
-        <NotYou locale={locale} />
+        <NotYou locale={locale} compact={compact} />
       </span>
     </>
   );

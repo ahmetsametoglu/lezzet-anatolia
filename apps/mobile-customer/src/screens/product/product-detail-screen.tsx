@@ -579,6 +579,7 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
               <PrimaryButton
                 label={`${t.cta.add} · ${formatPrice(price * quantity, locale)}`}
                 onPress={addToCart}
+                singleLine
                 testID="product-add"
               />
             </View>

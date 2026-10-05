@@ -75,8 +75,9 @@ export function OrderConfirmedScreen({
         <View style={styles.mark(tone)} testID={`confirmed-mark-${tone}`}>
           <Icon
             name={tone === 'failed' ? 'close' : tone === 'ok' ? 'check' : 'timer'}
-            size={theme.text['page-title-sm']}
+            size={customerMetrics.confirmIcon}
             color={theme.colors.card}
+            bold
           />
         </View>
         <Text style={styles.title} accessibilityRole="header" testID="confirmed-title">
@@ -93,15 +94,17 @@ export function OrderConfirmedScreen({
           </Text>
         )}
 
-        <SummaryPanel
-          rows={[
-            { key: 'delivery', label: t.confirmed.delivery, value: delivery },
-            { key: 'payment', label: t.confirmed.payment, value: payment },
-          ]}
-          totalLabel={t.confirmed.total}
-          totalValue={total === null ? t.confirmed.unknown : formatPrice(total, locale)}
-          testID="confirmed-summary"
-        />
+        <View style={styles.summary}>
+          <SummaryPanel
+            rows={[
+              { key: 'delivery', label: t.confirmed.delivery, value: delivery },
+              { key: 'payment', label: t.confirmed.payment, value: payment },
+            ]}
+            totalLabel={t.confirmed.total}
+            totalValue={total === null ? t.confirmed.unknown : formatPrice(total, locale)}
+            testID="confirmed-summary"
+          />
+        </View>
 
         {phase === 'placed' ? <Text style={styles.note}>{t.confirmed.note}</Text> : null}
 
@@ -255,14 +258,16 @@ function PendingPaymentActions({ t, locale, orderId, totalCents, payBy, onSettle
 }
 
 const styles = StyleSheet.create((theme, rt) => ({
+  /* Üst pay kaydırılan içerikte değil kapta, çünkü içerikte olsaydı uzun özet kaydırılınca saatin arkasından geçerdi. */
   screen: {
     flex: 1,
     backgroundColor: theme.colors['sand-50'],
+    paddingTop: rt.insets.top,
   },
   content: {
     alignItems: 'center',
     gap: theme.space['2xl'],
-    paddingTop: rt.insets.top + theme.space['9xl'],
+    paddingTop: theme.space['9xl'],
     paddingHorizontal: theme.space['8xl'],
     paddingBottom: rt.insets.bottom + theme.space['8xl'],
   },
@@ -306,6 +311,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors['terracotta-bright'],
     textAlign: 'center',
   },
+  // Ekran içeriği ortalanıyor; özet ortalanınca içerik genişliğine büzülüp etiketle değeri yan yana sıkıştırırdı.
+  summary: { alignSelf: 'stretch' },
   actions: {
     alignSelf: 'stretch',
     gap: theme.space.lg,

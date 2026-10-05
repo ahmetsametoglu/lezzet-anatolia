@@ -4,25 +4,9 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Skeleton } from '@/components/ui/skeleton';
 
 /*
-  HESABIM — AĞDAN BEKLEYEN İKİ BÖLÜMÜN SKELETON'I (kullanıcı isteği 10.08: "açılırken bazı
-  bölümler geç geliyor, kullanıcının bilgilerini barındıran kısımlar").
-
-  Hesap ekranı TEK PARÇA yüklenmiyor: kimlik kartı rota `/me`yi çözdükten sonra çiziliyor (yani
-  ekran açıldığında zaten dolu), ama İKİ bölüm kendi çağrılarını bekliyor:
-    · PUAN CÜZDANI (`GET /api/v1/me/points`) — bakiye · eşik · kuponlar,
-    · ADRES DEFTERİ (`GET /api/v1/me/addresses`).
-  İkisi de yüklenirken HİÇ ÇİZİLMİYORDU ve veri gelince ekranın ortasına giriyor, altındaki her
-  şeyi aşağı itiyordu. Adres defterinde bir de yanlış cümle vardı: liste boş dizi olarak
-  başladığı için "adresler yükleniyor" ile "hiç adresin yok" ayırt edilemiyordu — ekranın
-  sessizce yanlış şey söylediği tek yer buydu (CLAUDE §1: ölçülemeyen değer sıfır değildir).
-
-  İKİ AYRI BİLEŞEN, TEK EKRAN SKELETON'I DEĞİL: bölümler AYRI çağrılara bağlı ve ayrı anlarda
-  doluyor. Tek bir tam ekran skeleton'ı, zaten hazır olan kimlik kartını ve menüyü de gizlerdi —
-  eldeki bilgiyi saklamak, beklemeyi uzatmaktan kötüdür.
-
-  ÖLÇÜLER SAYFANIN KENDİ STİLLERİNDEN; kartların kabuğu (zemin · köşe · dolgu · kesikli ayraç)
-  GERÇEK çizilir, çünkü sabit yapı veriye bağlı değil. Her iki bileşen kendi `progressbar`ını
-  taşır: ekranda aynı anda iki bekleme olabilir ve ekran okuyucu hangisinin sürdüğünü bilmeli.
+  Hesap ekranında ağdan bekleyen iki bölümün (puan cüzdanı, adres defteri) iskeleti; ayrı bileşenler, çünkü bölümler ayrı çağrılara
+  bağlı ve tek tam ekran iskelet zaten hazır olan kimlik kartını da gizlerdi. Her biri kendi `progressbar`ını taşır ki ekran okuyucu
+  hangi beklemenin sürdüğünü bilsin.
 */
 
 /** Adres satırı — kaç adres geleceği bilinmiyor; en az makul sayı (fazlası kaybolur, azı eklenir). */
@@ -33,11 +17,8 @@ interface AccountSectionSkeletonProps {
 }
 
 /**
- * PUAN CÜZDANI KARTI — başlık + bakiye, altında tek açıklama satırı.
- *
- * Düğme ve "puan kazanma yolları" listesi ÇİZİLMEZ: hangisinin geleceği bakiyeye bağlı (sıfırsa
- * liste, değilse dönüştür düğmesi) ve ikisi çok farklı yükseklikte. Yanlış olanı çizmek, veri
- * gelince kartı büyütür ya da küçültürdü; ikisi de kaymadır ama küçülme daha kötüsüdür.
+ * Puan cüzdanı kartı: düğme ya da kazanma yolları listesi çizilmez, çünkü hangisinin geleceği bakiyeye bağlı ve yanlışını çizmek
+ * veri gelince kartı büyütür ya da küçültürdü.
  */
 export function AccountPointsSkeleton({ testID }: AccountSectionSkeletonProps) {
   const { theme } = useUnistyles();
@@ -105,7 +86,7 @@ const styles = StyleSheet.create((theme) => ({
   /** Satır ayracı (`account-screen.settingsDivider`) — panelin kendi kesikli çizgisi. */
   divider: {
     borderTopWidth: theme.border.base,
-    borderTopColor: theme.colors['sand-400'],
+    borderColor: theme.colors['sand-400'],
     borderStyle: 'dashed',
     paddingTop: theme.space.lg,
     marginTop: theme.space.xs,

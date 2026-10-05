@@ -1,4 +1,4 @@
-import { UNKNOWN_AMOUNT, formatPrice, servicePointRequired, shippingNotice, type ServicePointEntry } from '@lezzet/helper';
+import { UNKNOWN_AMOUNT, discountRowLabel, formatPrice, servicePointRequired, shippingNotice, type ServicePointEntry } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { AddressCheckResult, PaymentMethod } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -362,10 +362,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       : [
           {
             key: 'discount',
-            label:
-              discountSummary.name === null
-                ? t.summary.discount
-                : `${t.summary.discount} · ${discountSummary.name}`,
+            label: discountRowLabel(t.summary.discount, discountSummary.name),
             value: `−${formatPrice(discountSummary.amountCents, locale)}`,
             tone: 'olive' as const,
           },
@@ -672,7 +669,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                     testID="checkout-pickup-place"
                   />
                   {selectedAddress === null ? null : (
-                    <Text style={styles.dayLine} testID="checkout-pickup-billing">
+                    <Text style={styles.helpNote} testID="checkout-pickup-billing">
                       {t.address.billing.replace('{address}', `${addressTitle(selectedAddress)} · ${addressLine(selectedAddress)}`)}
                     </Text>
                   )}
@@ -688,7 +685,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                     trailing={<TextAction label={t.address.change} onPress={router.back} testID="checkout-address-change" />}
                     testID="checkout-address-selected"
                   />
-                  <Text style={styles.dayLine}>{t.address.inCartNote}</Text>
+                  <Text style={styles.helpNote}>{t.address.inCartNote}</Text>
                 </>
               ) : (
                 <Note
@@ -710,7 +707,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                 <Text style={styles.eyebrow}>{upperIn(t.delivery.eyebrow, locale)}</Text>
                 {/* Kapı/kargo adresin cevabıdır (dokunuş değiştirmez); gel-al seçiliyken ikisi de çizilmez — depo bloğu konuşur. */}
                 {isPickup ? (
-                  <Text style={styles.dayLine} testID="checkout-pickup-phone">
+                  <Text style={styles.pickupBody} testID="checkout-pickup-phone">
                     {t.delivery.pickupBody}
                     {'\n'}
                     {t.delivery.pickupPhone.replace('{phone}', brand.contact.phoneDisplay)}
@@ -1032,6 +1029,19 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text['body-sm'],
     color: theme.colors['olive-dark'],
+  },
+  /** Seçili adresin altındaki yardım cümlesi: bir onay değil izah, bu yüzden günün yeşil satırından ayrı ve soluk. */
+  helpNote: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    lineHeight: theme.text.micro * 1.45,
+    color: theme.colors.muted,
+  },
+  pickupBody: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text['body-sm'],
+    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors.body,
   },
   paymentNote: {
     fontFamily: theme.font.body[400],

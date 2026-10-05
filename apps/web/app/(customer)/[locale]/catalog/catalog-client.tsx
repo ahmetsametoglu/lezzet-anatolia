@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
@@ -51,13 +51,22 @@ export function CatalogClient({ t, locale, data, active, placeMode, device, sear
   const { remember } = listReturn;
   useEffect(() => remember(extraPages, cursor), [remember, extraPages, cursor]);
 
+  // Sayfa isteği hangi ilk sayfa için yapıldıysa cevabı yalnız o listeye eklenir; süzgeç değiştikten sonra dönen eski sayfa yeni
+  // listeye ekleseydi aramada eski ürünler ve eski imleç kalırdı. Düzen etkisi, cevap kesinleşmiş çizimle etki arasına düşemesin diye.
+  const listRef = useRef(data);
+  useLayoutEffect(() => {
+    listRef.current = data;
+  }, [data]);
+
   const onLoadMore = () => {
     if (!cursor || loadingMore) return;
+    const asked = data;
     setLoadingMore(true);
     setTailFailed(false);
     // Süzgeç alan alan sayılmaz, yayılarak geçer ki eklenen yeni süzgeç sonraki sayfa isteğinden düşmesin.
     void loadMoreCatalogAction(locale, { ...active, search }, cursor)
       .then(({ data: page, errorKey }) => {
+        if (listRef.current !== asked) return;
         // Liste olduğu yerde kalır ve düşüş görünüme söylenir: telefonun tetikleyicisi kendiliğinden yeniden denemez, sonda "Tekrar dene" çizer.
         if (errorKey || !page) {
           setTailFailed(true);

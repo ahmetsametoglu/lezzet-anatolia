@@ -70,8 +70,9 @@ export const customerMetrics = {
   /** Karşılama ve künye tamamlama ekranlarının üstündeki logo; genişlik görselin oranından türer. */
   onboardingLogoHeight: 52,
 
-  /** Onay ekranlarının büyük ✓ dairesi ve ödeme ekranındaki küçüğü. */
+  /** Onay ekranlarının büyük ✓ dairesi, içindeki işaret ve ödeme ekranındaki küçük daire. */
   confirmMark: 92,
+  confirmIcon: 40,
   paymentMark: 64,
 
   /** Kampanya iletişimi anahtarı: gövde ve topuz. */

@@ -5,25 +5,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 
 /*
-  TARİF DETAY SKELETON'I — ilk yükte sayfanın YERİNİ TUTAR. Ürün detay skeleton'ının
-  (`product-skeleton`) aynı iki kuralı: ölçüler TAHMİN DEĞİL, sayfanın kendi stillerinden türer;
-  metin yazılmaz, tek ses ekran okuyucuya kökten gider.
-
-  ÖNCEKİ HÂLİ ekranın içine gömülü dört çubuktu ve ölçüleri ham sayıydı (`120` `12` `26` `46`) —
-  hiçbiri sayfadan alınmamıştı, yani skeleton'ın yüksekliği sayfanın yüksekliği değildi.
-
-  NEYİ ÇİZERİZ — ölçüt "bu bölüm olmadan sayfa VAR OLABİLİR Mİ" (ürün detayının aynı ölçütü,
-  kullanıcı kararı 10.08):
-  · ÇİZİLİR — kahraman + yüzen geri düğmesi · künye (üstbaşlık + ad) · "Bizden" bölümü ve malzeme
-    satırları · "Hazırlanış" bölümü ve adımlar · yapışkan bar. Malzemesi ve adımı olmayan bir
-    tarif tarif değildir; koddaki `length === 0` koruması bozuk veriye karşıdır, gerçek bir hâl
-    değil.
-  · ÇİZİLMEZ — süre·porsiyon rozeti, açıklama, "Evinizden" listesi (üçü de gerçekten opsiyonel:
-    süresi girilmemiş tarif, açıklamasız tarif, evden malzeme istemeyen tarif olağan hâllerdir).
-
-  SAYISI BİLİNMEYEN LİSTEDE EN AZ MAKUL SAYI ÇİZİLİR: kaç malzeme ve kaç adım geleceğini
-  bilmiyoruz. Fazla çizmek veri gelince blokları KAYBETTİRİR (kullanıcının arıza diye okuduğu
-  hareket), az çizmek yalnız aşağı doğru EKLER. İkisi eşit değil, o yüzden alt sınır seçildi.
+  Tarif detayının iskeleti: ölçüler sayfanın stillerinden türer ve yalnız sayfanın onsuz var olamayacağı bölümler çizilir (kahraman,
+  künye, malzemeler, adımlar). Sayısı bilinmeyen listede en az makul sayı çizilir, çünkü fazlası veri gelince blok kaybettirir, azı
+  yalnız ekler.
 */
 
 const ROW_SLOTS = [0, 1, 2];
@@ -145,7 +129,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingVertical: theme.space.lg,
     borderBottomWidth: theme.border.base,
     borderStyle: 'dashed',
-    borderBottomColor: theme.colors['sand-400'],
+    borderColor: theme.colors['sand-400'],
   },
   rowText: { flex: 1, minWidth: 0, gap: theme.space['2xs'] },
 

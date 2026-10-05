@@ -1,6 +1,7 @@
 'use client';
 
 import type { OrderTimelineStep } from '@lezzet/domain-core';
+import { discountRowLabel } from '@lezzet/helper';
 import { formatDeliveryDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
 import { buttonClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
@@ -10,27 +11,18 @@ import { Link } from '@/i18n/navigation';
 import type { CustomerOrderDetail, CustomerOrderDetailLine } from '@/lib/order/customer-orders';
 import { paymentKeyOf, type DetailViewProps } from '../detail-types';
 
-/**
- * Sipariş detayının MASAÜSTÜ blokları (tasarım: `Musteri - Siparis Detay.dc.html`).
- *
- * Telefon görünümü 14.09'dan beri native detay ekranının kitini çiziyor (`detail.mobile.tsx`); buradan yalnız iki
- * görünümün ortak kurallarını okur — damga (`formatStamp`), taşıyıcı adı (`carrierLabel`), ödeme hâli
- * (`paymentKeyOf`). Eski telefon blokları (durum kahramanı, yatay mini çizgi, kargo kartı) o gün kalktı.
- */
+/*
+  Sipariş detayının masaüstü blokları. Telefon görünümü (`detail.mobile.tsx`) native ekranın kitini çizer ve buradan yalnız iki
+  görünümün ortak kurallarını okur: damga (`formatStamp`) ve taşıyıcı adı (`carrierLabel`).
+*/
 
 /**
- * Beyaz kart — tasarımın standart bloğu (1px sand kenar, 18px köşe).
- *
- * Paylaşılan `Card`a bağlanmadı (M2): bu blok BAŞLIK taşıyor (`<h2>`) ve tasarımda kendi pedi var
- * (`px-6 py-5`). Kabuğu paylaşmak için `Card`a beşinci bir ped kademesi ve bir başlık yuvası eklemek,
- * primitifi tek çağrı yeri uğruna genişletmek olurdu. Köşe artık jetondan (`rounded-card`); ham
- * `rounded-[18px]` yazılıydı ve jeton değişse geride kalırdı.
+ * Başlıklı beyaz kart. Paylaşılan `Card` kullanılmaz, çünkü başlık yuvası ve bu ped için onu genişletmek primitifi tek çağrı yeri
+ * uğruna büyütmek olurdu.
  */
 function Panel({ title, children, className = '' }: { title?: string; children: React.ReactNode; className?: string }) {
   return (
     <section className={['flex flex-col rounded-card border border-sand-200 bg-card px-6 py-5', className].join(' ')}>
-      {/* Kart başlığı tasarımda 18px Lora 600 → `text-lead` (18px). Ağırlık ve satır yüksekliği
-          jetonun içinde; ayrıca yazmak jetonu ezer. */}
       {title && <h2 className="mb-2.5 font-serif text-lead font-semibold leading-tight text-ink">{title}</h2>}
       {children}
     </section>
@@ -40,12 +32,8 @@ function Panel({ title, children, className = '' }: { title?: string; children: 
 /* ————————————————————————————— Zaman çizgisi ————————————————————————————— */
 
 /**
- * Dört sabit adım, dikey çizgiyle (tasarım). Halka üç hâlli: geçilmiş ✓ dolu, şu an ● dolu ve
- * etiketi zeytin, bekleyen boş halka + soluk etiket.
- *
- * **Saat yalnız kaydı olan adımda yazılır** — motor `at: null` döndürdüğünde ekran boş bırakır.
- * Geçilmiş sayılan ama damgası olmayan adım olabilir (atlanan geçiş); orada tarih uydurmak, kaydı
- * olmayan bir olaya saat yazmak olurdu.
+ * Saat yalnız kaydı olan adımda yazılır, çünkü geçilmiş sayılan ama damgası olmayan adıma (atlanan geçiş) saat yazmak kaydı
+ * olmayan bir olaya tarih uydurmak olurdu.
  */
 export function TimelineCard({ t, locale, order }: Pick<DetailViewProps, 't' | 'locale' | 'order'>) {
   if (!order.timeline) return <ClosedStateCard t={t} order={order} />;
@@ -58,9 +46,7 @@ export function TimelineCard({ t, locale, order }: Pick<DetailViewProps, 't' | '
             <Bead state={step.state} />
             {/* Son adımdan sonra bağlantı çizilmez; çizgi adımları BAĞLAR, kuyruk bırakmaz. */}
             {i < order.timeline!.length - 1 && (
-              /* Rengi SONRAKİ adım belirler: "Yolda" geçilmiş olsa da ondan sonrası henüz
-                 yaşanmadıysa çizgi kum rengidir (tasarım). Kendi hâline bakmak, gelecekteki bir
-                 adıma giden yolu yaşanmış gibi boyardı. */
+              /* Rengi sonraki adım belirler, çünkü kendi hâline bakmak henüz yaşanmamış bir adıma giden yolu yaşanmış gibi boyardı. */
               <span
                 className={[
                   'h-7 w-0.5',
@@ -97,11 +83,7 @@ function Bead({ state }: { state: OrderTimelineStep['state'] }) {
   );
 }
 
-/**
- * İptal/iade — tasarım burada çizgi YERİNE tek durum bloğu istiyor ("iptal/iade durumunda çizgi
- * yerine tek durum bloğu gösterilir"). Doğru karar: iptal bir yolculuk adımı değil, yolculuğun
- * sonlanması; dört adımlı çizgide onu göstermenin yeri yok.
- */
+/** İptal ve iadede çizgi yerine tek durum bloğu çizilir, çünkü iptal bir yolculuk adımı değil yolculuğun sonudur. */
 function ClosedStateCard({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
   const cancelled = order.status === 'cancelled';
   return (
@@ -120,24 +102,14 @@ function ClosedStateCard({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
   );
 }
 
-/**
- * Kısa damga — "22 Tem, 09:14" (tasarım). Gün+kısa ay + saat; yıl yok, çizgi tek siparişin içinde.
- *
- * Parçalar ORTAK biçimlendiriciden gelir (denetim bulgusu M5, 02.08): burada `Intl` iki kez elle
- * kuruluyordu ve yanında `INTL_LOCALE`in birebir kopyası olan yerel bir harita duruyordu. Kopya
- * bugün aynı değeri üretiyordu, ama biçim kararı (ör. `fr-FR` yerine `fr-BE`) tek yerde
- * değiştirilebilmeli — iki harita, birinin öğrenip ötekinin öğrenmediği bir karar demek.
- */
+/** Kısa damga ("22 Tem, 09:14"); yıl yazılmaz, çünkü çizgi tek siparişin içindedir. */
 export function formatStamp(iso: string, locale: DetailViewProps['locale']): string {
   return `${formatShortDate(iso, locale)}, ${formatTime(iso, locale)}`;
 }
 
 /* ————————————————————————————— Kalemler ————————————————————————————— */
 
-/**
- * Kalemler. Satır biçimi tasarımın kendisi: solda ad (+ boy), sağda **`2 × 16,90 € = 33,80 €`** —
- * yani hesabın kendisi görünür. Müşteri "neden bu tutar" sorusunu satırın içinde cevaplıyor.
- */
+/** Satır hesabın kendisini yazar (`2 × 16,90 € = 33,80 €`) ki müşteri "neden bu tutar" sorusunun cevabını satırda bulsun. */
 export function ItemsCard({ t, locale, order, title }: Pick<DetailViewProps, 't' | 'locale' | 'order'> & { title: string }) {
   return (
     <Panel title={title}>
@@ -202,7 +174,6 @@ function ItemRow({
 
 /* ————————————————————————————— Teslimat / Tutar / Yardım ————————————————————————————— */
 
-/** Teslimat — tasarımda etiket/değer tablosu DEĞİL, akıcı tek metin (emoji + kalın gün + adres). */
 export function DeliveryCard({ t, locale, order, title }: Pick<DetailViewProps, 't' | 'locale' | 'order'> & { title: string }) {
   const day = order.deliveryDate ? formatDeliveryDate(order.deliveryDate, locale) : null;
   const address = order.address
@@ -241,12 +212,8 @@ export function DeliveryCard({ t, locale, order, title }: Pick<DetailViewProps, 
 }
 
 /**
- * **Taşıyıcı adı** — sağlayıcıdan gelen özel isim ("Chronopost") çeviri istemez, elle girilen
- * taşıyıcı anahtarı ise ister (`other` → "Kargo firması"). Tek arama iki hâli de karşılıyor:
- * tanıdığımız anahtar çevrilir, tanımadığımız olduğu gibi basılır.
- *
- * İki ayrı alana bölmek ("enum ya da isim") derleyicinin doğrulayamayacağı bir sözleşme kurardı —
- * "tam olarak biri dolu" tipte yazılamaz, ve bir gün ikisi de boş kalırdı.
+ * Sağlayıcının verdiği özel ad ("Chronopost") olduğu gibi basılır, elle girilen taşıyıcı anahtarı (`other`) çevrilir. Tek alan,
+ * çünkü "ya anahtar ya ad" diye iki alan tipin doğrulayamayacağı bir sözleşme kurardı.
  */
 export function carrierLabel(t: DetailViewProps['t'], name: string | null): string {
   if (!name) return '';
@@ -254,15 +221,8 @@ export function carrierLabel(t: DetailViewProps['t'], name: string | null): stri
 }
 
 /**
- * **KOLİ BAŞINA TAKİP SATIRI** (07.12) — iki cihaz dalının ortak parçası.
- *
- * Çok kolili gönderide her kolinin AYRI takip numarası var (multicollo). Eskiden tek numara
- * basılıyordu; üç kutulu bir siparişin ikisi ekranda HİÇ görünmüyordu.
- *
- * **Tek kutuluda görüntü değişmiyor:** sıra (`2/3`) yalnız birden çok kutuda basılır — `1/1`
- * yazmak olmayan bir bölünmeyi varmış gibi gösterirdi. Çok kutuluda her numara kendi bağlantısını
- * satır içinde taşır; büyük düğme (`TrackingButton`) o hâlde çizilmez, çünkü üç kutu için üç
- * büyük düğme kartı okunmaz yapardı.
+ * Sıra (`2/3`) yalnız birden çok kolide yazılır, çünkü `1/1` olmayan bir bölünmeyi gösterirdi. Çok kolide her numara kendi
+ * bağlantısını satırda taşır, çünkü kutu başına bir büyük düğme kartı okunmaz yapardı.
  */
 function TrackingLines({ t, shipment }: { t: DetailViewProps['t']; shipment: CustomerOrderDetail['shipment'] }) {
   if (!shipment?.parcels.length) return null;
@@ -289,17 +249,10 @@ function TrackingLines({ t, shipment }: { t: DetailViewProps['t']; shipment: Cus
 }
 
 /**
- * **"Kargoyu takip et ↗"** — iki cihaz dalının ortak parçası (08.5).
- *
- * Düğme YALNIZ adres bilindiğinde çizilir (`other` taşıyıcıda `trackingUrl` `null`): nereye
- * gideceğini bilmediğimiz bir bağlantı, tıklanınca müşteriyi hiçbir yere götürmeyen bir söz olurdu.
- * Numara metinde yine görünür — müşteri taşıyıcıyı kendisi arayabilir.
- *
- * `rel="noopener"` şart: `_blank` ile açılan sekme `window.opener` üzerinden bu sayfaya erişebilir.
+ * Büyük düğme yalnız tek kolide (çok kolide bağlantılar `TrackingLines`'ta) ve takip adresi bilinince çizilir, çünkü adressiz
+ * bağlantı müşteriyi hiçbir yere götürmez; numara metinde yine yazılıdır.
  */
 function TrackingButton({ t, shipment }: { t: DetailViewProps['t']; shipment: CustomerOrderDetail['shipment'] }) {
-  // TEK kutuda büyük düğme; çok kutuda bağlantılar satır içinde (`TrackingLines`) — üç kutu için
-  // üç büyük düğme kartı okunmaz yapardı ve hangisinin hangi kutu olduğunu da söylemezdi.
   const tek = shipment?.parcels.length === 1 ? shipment.parcels[0] : null;
   if (!tek?.trackingUrl) return null;
   return (
@@ -315,15 +268,10 @@ function TrackingButton({ t, shipment }: { t: DetailViewProps['t']; shipment: Cu
   );
 }
 
-/**
- * Tutar + ödeme. Ödeme bir SATIR değil **hap** (tasarım) ve emojiyle geliyor; hâller kapalı liste.
- * Eksik kalem varsa altında iade notu — para nerede kaldı sorusunu ekran cevaplıyor.
- */
+/** Çevrim içi ödenmiş eksik kalemde altına iade notu yazılır ki müşteri farkın nerede kaldığını sormasın. */
 export function SummaryCard({ t, locale, order, title }: Pick<DetailViewProps, 't' | 'locale' | 'order'> & { title: string }) {
   const shortfallTotal = order.lines.reduce((sum, l) => sum + l.shortfallCents, 0);
-  // Özetin ORTAK sözcükleri (08.20) — aynı blok sepette, checkout'ta ve onay ekranında da çiziliyor.
-  // Sipariş detayı checkout'un sözlüğüne BAĞLANMADI: bağımlılık yönü anlamı takip etmeli, sipariş
-  // geçmişi ödeme akışının devamı değil. Sözlük her ikisinin de dışında, bloğu çizen komponentte.
+  // Sözcükler checkout'un değil bloğun kendi sözlüğünden gelir, çünkü sipariş geçmişi ödeme akışının devamı değildir.
   const summary = summaryCopy(locale);
 
   return (
@@ -331,7 +279,7 @@ export function SummaryCard({ t, locale, order, title }: Pick<DetailViewProps, '
       <SummaryRow label={t.subtotal} value={formatPrice(order.subtotalCents, locale)} />
       {order.discountCents > 0 && (
         <SummaryRow
-          label={order.discountLabel ? `${summary.discount} — ${order.discountLabel}` : summary.discount}
+          label={discountRowLabel(summary.discount, order.discountLabel || null)}
           value={`−${formatPrice(order.discountCents, locale)}`}
           tone="olive"
         />
@@ -359,7 +307,6 @@ export function SummaryCard({ t, locale, order, title }: Pick<DetailViewProps, '
 }
 
 
-/** Ödeme hapı — anahtar `paymentKeyOf`tan, ton hâlin kendisinden. */
 function PaymentPill({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
   const key = paymentKeyOf(order);
 
@@ -377,18 +324,13 @@ function PaymentPill({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
 }
 
 /**
- * "Bir sorun mu var?" — tasarımda beyaz kart DEĞİL, **cream-deep zeminli** blok ve içinde gerçek
- * bir birincil düğme. Ton farkı bilinçli: bu bir bilgi kartı değil, bir davet.
- *
- * Düğme talep formuna **siparişin kimliğiyle** gider (08.6): form o siparişin kalemlerini hazır
- * listeler ve müşteri hangi ürünlerden şikâyetçi olduğunu işaretler. Kimlik sorgu dizesinde taşınır,
- * yolda değil — talep açma tek bir sayfadır ve siparişli/siparişsiz iki ayrı rota kurmak aynı formu
- * ikiye bölerdi.
+ * Siparişin kimliği talep formuna yolda değil sorgu dizesinde gider, çünkü talep açma tek sayfadır ve siparişli/siparişsiz iki
+ * rota aynı formu ikiye bölerdi.
  */
 export function HelpCard({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
   return (
     <section className="flex flex-col gap-2 rounded-[16px] bg-cream-deep px-5.5 py-4.5">
-      {/* Tasarımda 16px Lora 600 → `text-body` (15px); `text-lead` 18px olurdu ve blok kart gibi okunurdu. */}
+      {/* Başlık `text-lead` değil, çünkü 18px'te blok bir bilgi kartı gibi okunurdu. */}
       <span className="font-serif text-copy font-semibold leading-tight text-ink">{t.helpTitle}</span>
       <span className="font-sans text-note leading-relaxed text-body">{t.helpBodyLong}</span>
       <Link href={{ pathname: '/support/new', query: { order: order.id } }} className={buttonClass({ fullWidth: true })}>
@@ -399,19 +341,8 @@ export function HelpCard({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
 }
 
 /**
- * YORUM TEŞVİKİ (27.08 · kullanıcı kararı) — davet bildiriminin indiği yer burasıdır.
- *
- * Blok YALNIZ açık davet varken çizilir: sözleşme (`readOrderFeedbackInvite`) davet yok ·
- * tamamlanmış · süresi dolmuş hâllerinin ÜÇÜNDE de `null` döner ve ekran üçünü ayırt etmez —
- * gerekçe o künyede. Kapalı davette blok hiç doğmaz, çünkü tıklanınca akış açmayan bir düğme
- * verilmiş bir sözün geri alınmasıdır.
- *
- * PUAN SUNUCUDAN gelir (`completionPoints`, ayardan) — ekran rakam uydurmaz: yazılmayacak bir
- * ödülü vaat etmek 29.07 denetiminin kapattığı arıza sınıfının aynısıdır.
- *
- * Görsel dil YENİ DEĞİL: kesikli zeytin çerçeve hesap alanının kupon kartından (`coupons-card`),
- * native karşılığı da kitin davet kartını kullanıyor (`DashedInvite`) — iki yüzey aynı vaadi aynı
- * biçimde söylüyor.
+ * Blok yalnız açık davet varken çizilir, çünkü tıklanınca akış açmayan düğme verilmiş bir sözün geri alınmasıdır. Puan sunucudan
+ * gelir; ekran yazılmayacak bir ödülü vaat etmez.
  */
 export function FeedbackInviteCard({
   t,

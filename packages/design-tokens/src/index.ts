@@ -15,6 +15,7 @@ export {
   customerText,
   customerPhoneTextStepPx,
   customerTabBarHomeIndicatorTrimPx,
+  customerSheetMaxHeightRatio,
   customerRadius,
   customerMotion,
   customerShadow,
@@ -33,10 +34,8 @@ export {
   customerAppBlur,
   customerAppGradient,
 } from './customer-app';
-// OPERASYON MOBİL (21.9): müşteri tabanının ÜÇÜNCÜ katmanı — `operations.ts`in "Veri Masası"
-// setiyle akrabalığı yalnız addadır. Operasyon mobil teması üç katmanı yayar:
-//     { ...customerColors, ...customerAppColors, ...operationsAppColors }
-// Gerekçe ve ölçüm `operations-app.ts` başlığında; web bu ihraçları da hiç görmez.
+// Operasyon mobil teması müşteri tabanının üçüncü katmanıdır: `{ ...customerColors, ...customerAppColors, ...operationsAppColors }`.
+// Web bu ihraçları görmez; gerekçe `operations-app.ts` başlığında.
 export {
   operationsAppOverrides,
   operationsAppSurface,

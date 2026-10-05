@@ -517,9 +517,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
 
         {packages.length === 0 ? null : (
           <>
-        <View style={styles.sectionPad}>
           <Text style={styles.sectionEyebrow}>{upperIn(t.packages.eyebrow, locale)}</Text>
-        </View>
         <View style={styles.packages}>
           {/* Paket kartı da yer işareti taşımaz; solma yalnız tükendide kalır (ürün rafıyla aynı gerekçe). */}
           {packages.map((pack) => {
@@ -614,12 +612,13 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
 }
 
 const styles = StyleSheet.create((theme, rt) => ({
+  /* Üst pay kaydırılan içerikte değil kapta, çünkü içerikte olsaydı kaydırılan bantlar saatin arkasından geçerdi. */
   screen: {
     flex: 1,
     backgroundColor: theme.colors['sand-50'],
+    paddingTop: rt.insets.top,
   },
   content: {
-    paddingTop: rt.insets.top,
     paddingBottom: theme.space['6xl'],
     gap: theme.space['4xl'],
   },

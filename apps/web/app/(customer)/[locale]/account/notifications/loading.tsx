@@ -1,4 +1,5 @@
 import type { Locale } from '@lezzet/i18n';
+import notificationsMessages from '@lezzet/i18n/customer/notifications';
 import { getLocale } from 'next-intl/server';
 import { PhoneSkeleton } from '@/components/customer/phone-kit/phone-skeleton';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
@@ -15,7 +16,7 @@ export default async function NotificationsLoading() {
   const t = messages[locale];
 
   return (
-    <SiteFrame device={device} locale={locale} accountChrome={{ back: { label: t.back, href: '/account' }, title: t.title }}>
+    <SiteFrame device={device} locale={locale} accountChrome={{ back: { label: t.back, href: '/account' }, title: notificationsMessages[locale].title }}>
       <SkeletonRegion>
         {device === 'mobile' ? (
           <div className="flex flex-col gap-2.5 px-4.5 py-3.5">

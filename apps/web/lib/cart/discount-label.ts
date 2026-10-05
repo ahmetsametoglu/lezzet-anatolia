@@ -1,3 +1,4 @@
+import { discountRowLabel } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { resolveLocalizedText, type CheckoutSummary } from '@lezzet/types';
 import type { CartDiscount } from './cart-types';
@@ -41,14 +42,14 @@ export function discountLabel(discount: CartDiscount, t: DiscountLabelCopy, loca
   // Kampanyanın kendi adı varsa hiçbir tahmine gerek yok: operatör müşteriye ne diyeceğini yazmış.
   // Kuponda bile ada öncelik verilir — "Hoş geldin indirimi", "HOSGELDIN10"dan daha çok şey söyler.
   const named = locale && source.label ? resolveLocalizedText(source.label, locale) : '';
-  if (named) return `${t.discount} — ${named}`;
+  if (named) return discountRowLabel(t.discount, named);
 
   // Kupon: ad yoksa sebep kodun kendisidir ve tasarımda birebir böyle yazılı.
-  if (!('reason' in source)) return `${t.discount} — ${source.code}`;
+  if (!('reason' in source)) return discountRowLabel(t.discount, source.code);
 
   const { reason } = source;
   // Oran bilinmiyorsa sebep söylenir, sayı UYDURULMAZ (bkz. `DiscountReason`).
-  return `${t.discount} — ${reason.percent == null ? t.discountCampaign : percent(t.discountCampaignPercent, reason.percent)}`;
+  return discountRowLabel(t.discount, reason.percent == null ? t.discountCampaign : percent(t.discountCampaignPercent, reason.percent));
 }
 
 /**
@@ -64,8 +65,8 @@ function percent(template: string, value: number): string {
  */
 export function orderDiscountLabel(discount: CheckoutSummary['discount'], t: DiscountLabelCopy): string {
   if (!discount) return t.discount;
-  if (discount.label) return `${t.discount} — ${discount.label}`;
+  if (discount.label) return discountRowLabel(t.discount, discount.label);
   const reason = discount.reason;
   if (!reason) return t.discount;
-  return `${t.discount} — ${reason.percent == null ? t.discountCampaign : percent(t.discountCampaignPercent, reason.percent)}`;
+  return discountRowLabel(t.discount, reason.percent == null ? t.discountCampaign : percent(t.discountCampaignPercent, reason.percent));
 }

@@ -128,7 +128,7 @@ const styles = StyleSheet.create((theme) => ({
   row: {
     gap: theme.space.md,
     borderTopWidth: theme.border.base,
-    borderTopColor: theme.colors['sand-400'],
+    borderColor: theme.colors['sand-400'],
     borderStyle: 'dashed',
     paddingTop: theme.space.lg,
     marginTop: theme.space.xs,

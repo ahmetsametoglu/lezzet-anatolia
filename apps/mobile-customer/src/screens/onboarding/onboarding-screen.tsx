@@ -658,7 +658,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   // Ayraç deseni kitin `NavRow` ayracıyla aynı.
   payRowDivider: {
     borderBottomWidth: theme.border.base,
-    borderBottomColor: theme.colors['sand-400'],
+    borderColor: theme.colors['sand-400'],
     borderStyle: 'dashed',
   },
   payText: {

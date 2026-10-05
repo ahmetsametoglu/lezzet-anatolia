@@ -36,6 +36,26 @@ export function SupportMobile({ t, locale, mode, tickets, nextCursor, loadingMor
     if (thread) thread.scrollTop = thread.scrollHeight;
   }, [messageCount]);
 
+  // Klavye açılıp yazışma alanı daralınca sondaki mesajlar yazma kutusunun altında kalmasın: kaydırıcı sondaysa sonda tutulur.
+  const openId = open?.id;
+  useEffect(() => {
+    const thread = threadRef.current;
+    if (!thread || typeof ResizeObserver === 'undefined') return;
+    let atEnd = true;
+    const onScroll = () => {
+      atEnd = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 24;
+    };
+    const observer = new ResizeObserver(() => {
+      if (atEnd) thread.scrollTop = thread.scrollHeight;
+    });
+    thread.addEventListener('scroll', onScroll, { passive: true });
+    observer.observe(thread);
+    return () => {
+      observer.disconnect();
+      thread.removeEventListener('scroll', onScroll);
+    };
+  }, [mode, openId]);
+
   if (mode === 'detail') {
     // Sayfa bulunamayan talepte zaten `notFound()` veriyor; buraya yalnız cihaz kararı istemcide değişirse düşülür.
     if (!open) {

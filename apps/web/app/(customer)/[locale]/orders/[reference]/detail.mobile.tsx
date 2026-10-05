@@ -1,6 +1,7 @@
 'use client';
 
 import { isCourierOnTheWay } from '@lezzet/domain-core';
+import { discountRowLabel } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import ordersMessages from '@lezzet/i18n/customer/orders';
 import { CirclePhoto } from '@/components/customer/phone-kit/circle-photo';
@@ -45,7 +46,7 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
       ? [
           {
             key: 'discount',
-            label: order.discountLabel ? `${d.discount} — ${order.discountLabel}` : d.discount,
+            label: discountRowLabel(d.discount, order.discountLabel || null),
             value: `−${formatPrice(order.discountCents, locale)}`,
             tone: 'olive' as const,
           },

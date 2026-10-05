@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { RECIPE_LIST_LIMIT, readRecipeCards } from '@lezzet/application';
 import { CategoryService, PriceService, ProductService, RecipeService, StockService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { getRecipeDetail, listStorefrontRecipes } from './recipe';
@@ -190,6 +191,7 @@ describe('tarif detayı', () => {
  */
 describe('satıştan kalkmış malzeme', () => {
   const products = new ProductService(db);
+  const uygulamaKarti = async () => (await readRecipeCards(db, 'tr', RECIPE_LIST_LIMIT)).find((r) => r.slug === yayindaSlug);
 
   it('satırı HİÇ taşınmaz ve kart sayısı da onunla düşer — "tükendi" burada yalan olurdu', async () => {
     try {
@@ -199,6 +201,9 @@ describe('satıştan kalkmış malzeme', () => {
       // Kalan tek malzeme peynir (1 × 6,40 €). Tereyağı ne satırda ne toplamda.
       expect(kart?.itemCount).toBe(1);
       expect(kart?.totalCents).toBe(640);
+
+      // Vitrin ve native liste kartı da aynı kuraldan sayar; ayrışırsa kart sayfadakinden fazla malzeme yazar.
+      expect((await uygulamaKarti())?.itemCount).toBe(1);
 
       const detay = await getRecipeDetail(yayindaSlug, 'tr', place(), VISITOR);
       expect(detay?.items).toHaveLength(1);
@@ -214,6 +219,7 @@ describe('satıştan kalkmış malzeme', () => {
   it('geri açılınca satır KENDİLİĞİNDEN döner — okuma niyeti değil durumu okur', async () => {
     const kart = await bizimki();
     expect(kart?.itemCount).toBe(2);
+    expect((await uygulamaKarti())?.itemCount).toBe(2);
     expect(kart?.totalCents).toBe(640 + 360 * 2);
   });
 });

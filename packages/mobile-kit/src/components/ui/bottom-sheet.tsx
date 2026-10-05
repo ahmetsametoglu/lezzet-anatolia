@@ -1,8 +1,10 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Dimensions, Keyboard, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { customerSheetMaxHeightRatio } from '@lezzet/design-tokens/customer';
+import { NavigationContext } from 'expo-router/react-navigation';
 
 /*
   İçerikteki boşluğa dokunuş örtüye düşüp çekmeceyi kapatmasın diye içeriğe hiçbir şey yapmayan bir dokunma jesti verilir: jest
@@ -14,9 +16,6 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@g
   Yüzen sayfa: içerik yuvadır, çekmece yalnız örtüyü, tutamağı, başlığı ve kapanma yollarını garanti eder. Gövde kütüphaneye
   olabildiğince az şey ekler, çünkü eklenen her makine (örtü, açma muhasebesi, kapanış sinyali) cihazda ayrı bir arıza çıkardı.
 */
-
-/** Panel ekranın en çok bu kadarını kaplar: üstte örtü görünmezse metni uzun dillerde çekmece olduğu anlaşılmaz. */
-const MAX_HEIGHT_RATIO = 0.82;
 
 interface BottomSheetProps {
   visible: boolean;
@@ -91,6 +90,14 @@ export function BottomSheet({
     return () => cancelAnimationFrame(frame);
   }, [onClosed, onDismissed, visible]);
 
+  // Çekmece kök portalda çizildiği için ekran değişince kendiliğinden gitmez; bildirim ya da bağlantıyla başka ekrana geçilince
+  // açık kalıp yeni ekranı örterdi. Gezinme bağlamı yoksa (ekran dışı kullanım) dinlenmez.
+  const navigation = use(NavigationContext);
+  useEffect(() => {
+    if (!visible || !navigation) return;
+    return navigation.addListener('blur', onClose);
+  }, [navigation, onClose, visible]);
+
   // Kütüphanede Android'in geri hareketi yok; geri tuşuyla kapanmayan çekmece arızadır. iOS'ta `BackHandler` zaten sessiz.
   useEffect(() => {
     if (!visible) return;
@@ -131,8 +138,8 @@ export function BottomSheet({
     <BottomSheetModal
       ref={sheet}
       enableDynamicSizing={!fill}
-      snapPoints={fill ? [`${MAX_HEIGHT_RATIO * 100}%`] : undefined}
-      maxDynamicContentSize={Math.round(windowHeight * MAX_HEIGHT_RATIO)}
+      snapPoints={fill ? [`${customerSheetMaxHeightRatio * 100}%`] : undefined}
+      maxDynamicContentSize={Math.round(windowHeight * customerSheetMaxHeightRatio)}
       enablePanDownToClose
       // Sürükleme yalnız tutamaktan, çünkü panelin her yerinden sürüklemek içerideki kaydırma alanlarıyla yarışır.
       enableContentPanningGesture={false}

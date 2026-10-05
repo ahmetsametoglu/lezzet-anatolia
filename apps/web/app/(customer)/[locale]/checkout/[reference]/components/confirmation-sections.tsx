@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { whatsappHref } from '@lezzet/brand';
+import { discountRowLabel } from '@lezzet/helper';
 import { RATIO_SQUARE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Button, buttonClass } from '@/components/customer/ui/button';
@@ -340,7 +341,7 @@ export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps)
   // Özetin ortak sözcükleri bloğun yanındaki nötr sözlükten: aynı blok sipariş detayında da çizilir.
   const summary = summaryCopy(locale);
   // Kod tasarımda birebir yazılı ("İndirim — HOSGELDIN10"); kodsuz indirimde satır genel adında kalır.
-  const discountLabel = view.discountName ? `${summary.discount} — ${view.discountName}` : summary.discount;
+  const discountLabel = discountRowLabel(summary.discount, view.discountName || null);
 
   return (
     <Card compact={compact} gap="sm">
