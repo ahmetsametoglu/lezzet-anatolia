@@ -1,6 +1,7 @@
 'use client';
 
 import { movementToday } from '@/components/operation/form/movement-form/schema';
+import { BusinessToggle } from '@/components/operation/form/business-toggle';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { AccountSetup } from './account-setup';
 import { BankImportDialog } from './bank-import-dialog';
@@ -65,7 +66,9 @@ export function FinanceDesktop({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      <PageHeader title="Para" subtitle="İşletme para takibi · resmî muhasebe değil, ama her hareket izahlı" />
+      <PageHeader title="Para" subtitle="İşletme para takibi · resmî muhasebe değil, ama her hareket izahlı">
+        <BusinessToggle value={urlState.business} onChange={(business) => onFilter({ business })} />
+      </PageHeader>
 
       {hasAccounts ? (
         <>

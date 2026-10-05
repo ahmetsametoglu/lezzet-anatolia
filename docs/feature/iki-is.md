@@ -49,6 +49,8 @@ Pennylane'de faturaya ve banka hareketine analitik kategori yazılıyor (test ş
 - **Kapı ve araç satışının işi deposundan gelir;** anonim alıcı işe göre bölünmez.
 - **Raporlar iki işi ayrı okur:** kâr sekmelerinin başlığında Tümü · Lezzet · QUALITE anahtarı var; muhasebe dosyası ve hareket
   dökümü şirketin tamamıdır, her satır işini taşır (`DOMAIN.md` §9, §12).
+- **Para ekranında iş anahtarı listeleri daraltır:** hareketler ve belgeler seçili işe göre süzülür; hesap bakiyeleri bölünmez
+  (11. karar), izah ve açık belge sayaçları şirketin tamamını sayar.
 - **Analitik iki işi ayrı sayar:** olayın işi müşterinin işidir (ziyaretçi Lezzet), siparişin işi deposundandır; ekran iki işi
   birlikte ya da ayrı okur (`ANALYTICS.md`).
 - **WhatsApp'tan yazan yeni kişi Lezzet'te taslak müşteri olarak açılır** (7. ve 10. karar): taslak B2B onaylı olamaz;

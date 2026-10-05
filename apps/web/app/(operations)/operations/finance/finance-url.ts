@@ -1,4 +1,5 @@
 import { MovementTypeEnum, type MovementType } from '@lezzet/types';
+import { parseBusinessFilter, type BusinessFilter } from '@/lib/business-filter';
 import { one, oneOf, type RawParams } from '@/lib/url-params';
 
 // Para ekranının URL sözleşmesi: süzgeç adreste taşınır, çünkü yenilemede aynı görünüm açılır ve sunucu süzebilir; imleç adrese
@@ -34,9 +35,20 @@ export interface FinanceUrlState {
   scope: FinanceScope;
   /** Belgeler sekmesinde yalnız AÇIK belgeler — ödenmemiş fatura, bize ödenecek dekont. */
   open: boolean;
+  /** Listelerin iş süzgeci; bakiyeler bölünmez, çünkü iki iş aynı hesapları kullanır. */
+  business: BusinessFilter;
 }
 
-const DEFAULTS: FinanceUrlState = { acct: ALL_ACCOUNTS, tab: 'movements', type: 'all', from: '', to: '', scope: ALL_ACCOUNTS, open: false };
+const DEFAULTS: FinanceUrlState = {
+  acct: ALL_ACCOUNTS,
+  tab: 'movements',
+  type: 'all',
+  from: '',
+  to: '',
+  scope: ALL_ACCOUNTS,
+  open: false,
+  business: 'all',
+};
 
 /** Adresteki gün — biçimi ve kendisi geçerliyse (`2026-13-40` düşer); değilse boş (sınırsız). */
 function dayOf(raw: RawParams[string]): string {
@@ -58,6 +70,7 @@ export function parseFinanceUrl(params: RawParams): FinanceUrlState {
     to: end,
     scope: oneOf(params.scope, FINANCE_SCOPES, DEFAULTS.scope),
     open: one(params.open) === '1',
+    business: parseBusinessFilter(params.business),
   };
 }
 
@@ -71,6 +84,7 @@ export function financeUrl(state: FinanceUrlState): string {
   if (state.to) p.set('to', state.to);
   if (state.scope !== DEFAULTS.scope) p.set('scope', state.scope);
   if (state.open) p.set('open', '1');
+  if (state.business !== DEFAULTS.business) p.set('business', state.business);
   const qs = p.toString();
   return qs ? `${FINANCE_PATH}?${qs}` : FINANCE_PATH;
 }

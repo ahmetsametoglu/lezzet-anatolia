@@ -123,6 +123,7 @@ class AccountLedgerService extends BaseDbService<AccountLedgerRow, never, never>
         // Hesap zorunlu değil, bir süzgeçtir: liste tektir, zorunlu imza ekranı açılışta boş bırakır ya da bir hesabı keyfî öne alırdı.
         ledgerAccountId: opts.accountId,
         type: opts.type,
+        business: opts.business,
         ...(opts.unreconciledOnly ? { reconciled: false } : {}),
         ...(opts.unexplainedOnly ? { explained: false } : {}),
       },
@@ -160,6 +161,8 @@ export interface LedgerFilter {
   accountId?: string;
   /** Hareket tipi — tasarımın süzgeç barındaki "+ tip" çipi. Kapalı enum, ek indeks istemiyor. */
   type?: MovementType;
+  /** Hareketin işi, bağından türer. */
+  business?: Business;
   cursor?: KeysetCursor;
   limit?: number;
   from?: string;
@@ -609,17 +612,22 @@ export class MoneyDocumentService extends BaseDbService<MoneyDocument, MoneyDocu
   }
 
   /** Belgeler — belge tarihine göre en yeni önce, keyset sayfalı (arşiv sınırsız büyür); `from`/`to` belge gününü süzer. */
-  page(opts: { from?: string; to?: string; cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<MoneyDocument>> {
+  page(
+    opts: { from?: string; to?: string; business?: Business; cursor?: KeysetCursor; limit?: number } = {},
+  ): Promise<Page<MoneyDocument>> {
     const rangeFilters: Array<{ field: string; operator: 'gte' | 'lte'; value: string }> = [];
     if (opts.from) rangeFilters.push({ field: 'issuedOn', operator: 'gte', value: opts.from });
     if (opts.to) rangeFilters.push({ field: 'issuedOn', operator: 'lte', value: opts.to });
-    return this.getPage(undefined, {
-      orderBy: 'issuedOn',
-      orderDirection: 'desc',
-      keysetAfter: opts.cursor,
-      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
-      rangeFilters,
-    });
+    return this.getPage(
+      { business: opts.business },
+      {
+        orderBy: 'issuedOn',
+        orderDirection: 'desc',
+        keysetAfter: opts.cursor,
+        limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+        rangeFilters,
+      },
+    );
   }
 
   /** Kimlik listesiyle belgeler — hareket dökümü satırların belgelerini tek turda okur. */

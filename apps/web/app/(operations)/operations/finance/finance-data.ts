@@ -94,7 +94,14 @@ export function withResolvedAccount(urlState: FinanceUrlState, accounts: readonl
 
 /** Süzgeç açık mı — boş listenin cümlesi buna göre ("hiç yok" ≠ "bu süzgeçte yok"). */
 const filtered = (urlState: FinanceUrlState) =>
-  urlState.acct !== ALL_ACCOUNTS || urlState.type !== 'all' || Boolean(urlState.from || urlState.to) || urlState.scope !== ALL_ACCOUNTS;
+  urlState.acct !== ALL_ACCOUNTS ||
+  urlState.type !== 'all' ||
+  Boolean(urlState.from || urlState.to) ||
+  urlState.scope !== ALL_ACCOUNTS ||
+  urlState.business !== 'all';
+
+/** Servisin iş süzgeci — `all` hiç geçilmez. */
+const businessOf = (urlState: FinanceUrlState) => (urlState.business === 'all' ? undefined : urlState.business);
 
 /** Hareketler sekmesinin bir sayfası — süzgeç adresten, satırlar adlarıyla ve belge bağlarıyla. */
 export async function readLedgerPage(
@@ -107,6 +114,7 @@ export async function readLedgerPage(
     // Hesap bir DARALTMA: `all` iken alan hiç geçilmez, süzgeç de kurulmaz.
     accountId: urlState.acct !== ALL_ACCOUNTS ? urlState.acct : undefined,
     type: urlState.type === 'all' ? undefined : urlState.type,
+    business: businessOf(urlState),
     from: urlState.from || undefined,
     to: urlState.to || undefined,
     // Adresteki `scope=unmatched` izah kuyruğudur; parametre adı paylaşılmış bağlantılar kırılmasın diye kaldı.
@@ -208,7 +216,10 @@ export async function readDocumentsPage(
   const service = new MoneyDocumentService(db);
   if (urlState.open) {
     const inRange = (day: string) => (!urlState.from || day >= urlState.from) && (!urlState.to || day <= urlState.to);
-    const open = (await service.listOpen()).filter((doc) => inRange(doc.issuedOn)).sort((a, b) => b.issuedOn.localeCompare(a.issuedOn));
+    const business = businessOf(urlState);
+    const open = (await service.listOpen())
+      .filter((doc) => inRange(doc.issuedOn) && (!business || doc.business === business))
+      .sort((a, b) => b.issuedOn.localeCompare(a.issuedOn));
     const rows = toDocumentRows(
       open,
       names,
@@ -220,7 +231,13 @@ export async function readDocumentsPage(
     return { rows, nextCursor: null, note: rows.length > 0 ? null : NOTES.noOpenDocuments };
   }
 
-  const page = await service.page({ from: urlState.from || undefined, to: urlState.to || undefined, cursor, limit: DEFAULT_PAGE_SIZE });
+  const page = await service.page({
+    from: urlState.from || undefined,
+    to: urlState.to || undefined,
+    business: businessOf(urlState),
+    cursor,
+    limit: DEFAULT_PAGE_SIZE,
+  });
   const ids = page.rows.map((doc) => doc.id);
   const [balances, pennylane] = await Promise.all([service.balances(ids), pennylaneOf(db, ids)]);
   const rows = toDocumentRows(
@@ -234,6 +251,6 @@ export async function readDocumentsPage(
   return {
     rows,
     nextCursor: page.nextCursor ? JSON.stringify(page.nextCursor) : null,
-    note: rows.length > 0 ? null : urlState.from || urlState.to ? NOTES.noDocumentMatch : NOTES.noDocuments,
+    note: rows.length > 0 ? null : urlState.from || urlState.to || businessOf(urlState) ? NOTES.noDocumentMatch : NOTES.noDocuments,
   };
 }
