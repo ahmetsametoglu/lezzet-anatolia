@@ -1,11 +1,13 @@
 import { customerAppText } from '@lezzet/design-tokens';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { NavigationContext } from 'expo-router/react-navigation';
+import type React from 'react';
 import { BackHandler, Keyboard, Text } from 'react-native';
 
 import { BottomSheet } from './bottom-sheet';
 import { customerStops } from '../../theme/unistyles';
 
-// Çeviri temanın kullandığının aynısı: px→dp + müşteri yüzeyinin bir kademesi (18.08).
+// Çeviri temanın kullandığının aynısı: px→dp ve müşteri yüzeyinin bir kademesi.
 const appText = customerStops(customerAppText);
 
 describe('BottomSheet', () => {
@@ -75,13 +77,36 @@ describe('BottomSheet', () => {
       </BottomSheet>,
     );
 
-    /* Kanca artık `Modal.onRequestClose` DEĞİL, `BackHandler` — kütüphane geri tuşunu dinlemiyor
-       (kaynağı okundu 01.09) ve söz KİTTE tutuluyor. RN'in jest sahtesi `mockPressBack` sunmuyor,
-       o yüzden kaydı yakalayıp elle tetikliyoruz. */
+    /* Kütüphane geri tuşunu dinlemediği için söz kitte `BackHandler` ile tutuluyor; jest sahtesi geri tuşu sunmadığından kayıt elle tetiklenir. */
     const back = onBack.mock.calls.at(-1)?.[1] as (() => boolean) | undefined;
     expect(back).toBeDefined();
     await act(async () => {
       back?.();
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // Ekran değişince kapanmasaydı çekmece kök portalda kalıp bildirimle açılan yeni ekranı örterdi; bu test o hâlde kırmızıya döner.
+  it('çekmecenin ekranı arka plana geçince kapanma istenir', async () => {
+    const onClose = jest.fn();
+    const listeners = new Map<string, () => void>();
+    const navigation = {
+      addListener: jest.fn((event: string, listener: () => void) => {
+        listeners.set(event, listener);
+        return () => listeners.delete(event);
+      }),
+    } as unknown as React.ContextType<typeof NavigationContext>;
+    await render(
+      <NavigationContext value={navigation}>
+        <BottomSheet visible title="Écrivez-nous" onClose={onClose}>
+          <Text>içerik</Text>
+        </BottomSheet>
+      </NavigationContext>,
+    );
+
+    await act(async () => {
+      listeners.get('blur')?.();
     });
 
     expect(onClose).toHaveBeenCalledTimes(1);

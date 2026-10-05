@@ -1,13 +1,14 @@
 'use client';
 
+import { customerSheetMaxHeightRatio } from '@lezzet/design-tokens/customer';
 import { useEffect, useRef, type ReactNode } from 'react';
+import { useVisualViewport } from '@/lib/use-visual-viewport.hook';
 import { iconHitClass } from './button';
 import { Icon } from './icons';
 
 /**
- * Açık panellerin yığını. Esc yalnız EN ÜSTTEKİNİ kapatır — iç içe panel doğduğu gün tek tuş iki
- * paneli birden kapatmasın. Gövde kaydırma kilidi de buradan sayılır: kilit yığın 0→1 olunca kurulur,
- * son panel kapanınca kalkar.
+ * Açık panellerin yığını: Esc yalnız en üsttekini kapatır, gövde kaydırma kilidi ilk panelle kurulup sonuncusuyla kalkar. İç içe
+ * panelde tek tuş iki paneli birden kapatmasın diye.
  */
 const dialogStack: object[] = [];
 
@@ -15,58 +16,25 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
- * Müşteri paneli (modal) — örtü + ortalanmış kutu + başlık satırı + kapatma (denetim bulgusu K3, 02.08).
- *
- * İki panel bu kabuğu ayrı ayrı kurmuştu (`place-dialog` · `notice-dialog`) ve asıl sorun görsel
- * kopya değildi: **kapanma sözleşmeleri farklıydı.** Biri Escape'i dinliyordu, öteki dinlemiyordu;
- * müşteri hangisinde olduğunu bilemez. Kapanma davranışı bir stil değil, arayüzün verdiği sözdür —
- * tek yerde durur.
- *
- * Odak tuzağı buranın işi: panel açıkken Tab arkadaki sayfaya kaçmaz, açılışta odak panele gelir,
- * kapanışta çağıran öğeye geri döner. Elle kurulmuş iki kabukta bunların hiçbiri yoktu.
- *
- * Operasyon `Dialog`'u kopyalanmadı — token aileleri ayrı (`ops-*` karanlık modda döner). Ortak olan
- * desen, sınıf değil.
- *
- * Panel HER ZAMAN `max-h-[85vh]` + kendi kaydırması: kısa içerikte hiçbir etkisi yok, uzun içerikte
- * (bölge listesi) panelin ekranı taşmasını engelliyor. İki kopyada bu yalnız birinde vardı.
+ * Müşteri paneli: örtü, kutu, başlık satırı ve kapatma. Kapanma davranışı (Esc yığını, odak tuzağı, odağın çağırana dönmesi, kaydırma
+ * kilidi) bir stil değil arayüzün sözü olduğu için bütün paneller bu tek kabuktan geçer.
  */
 interface DialogProps {
-  /** Başlık — `aria-label` olarak da kullanılır. */
+  /** Başlık; `aria-label` olarak da kullanılır. */
   title: string;
-  /** Başlığın altındaki tek cümle — v1 mobil çekmecelerinin ikinci satırı. Verilmezse çizilmez. */
+  /** Başlığın altındaki tek cümle; verilmezse çizilmez. */
   description?: string;
-  /** Kapatma düğmesinin erişilebilir adı; komponent metin taşımaz, çerçeveden gelir (i18n). */
+  /** Kapatma düğmesinin erişilebilir adı; metin çerçeveden gelir (i18n). */
   closeLabel: string;
   onClose: () => void;
-  /** Panel genişliği (px). İçeriğe göre değişir: kısa form 420, listeli panel 460. `sheet`te yok sayılır. */
+  /** Ortalanmış kutunun genişliği (px); çekmecede yok sayılır, çünkü çekmece ekranın genişliğidir. */
   maxWidth?: number;
   /**
-   * Nerede duracağı — ortalanmış kutu (varsayılan) ya da alttan açılan ÇEKMECE (kullanıcı kararı 21.08).
-   *
-   * **Ayrı bir çekmece bileşeni YAZILMADI ve bu bilinçli.** Bu kabuğun asıl taşıdığı şey görüntü
-   * değil SÖZLEŞME: odak tuzağı, Escape yığını, gövde kaydırma kilidi, kapanışta odağın çağırana
-   * dönmesi, `85vh` tavanı. Künyenin kendi dersi bunu söylüyor — iki panel kabuğu ayrı kurulduğunda
-   * *"asıl sorun görsel kopya değildi: kapanma sözleşmeleri farklıydı"*. Çekmeceyi ayrı yazmak o
-   * hatanın üçüncü sürümü olurdu.
-   *
-   * **Kararı ÇAĞIRAN verir, kabuk cihazı sormaz** (`CLAUDE §2` cihaz forku): mobil web forku
-   * `sheet` geçer, masaüstü hiç geçmez. `md:` ile akışkan bir dönüşüm YOK.
-   *
-   * **Görünüşü v1 mobilin çekmecesi (13.09, yer ve adres çekmeceleri):** krem zemin, 24px üst köşe,
-   * 20px serif başlık + tek cümle açıklama, çizgi ✕; alttan kayarak girer. 21.08'in tutamağı v1'de
-   * çizilmediği için kalktı.
+   * Ortalanmış kutu ya da alttan açılan çekmece; kararı cihaz forku verir, kabuk cihazı sormaz. Çekmecede tutamak yok, çünkü sürükleme
+   * yok ve çalışmayan bir jest vaat etmek kırık hissettirir.
    */
   placement?: 'center' | 'sheet';
-  /**
-   * Kaymayan alt bölme (yalnız `sheet`) — eylem düğmeleri buraya konur.
-   *
-   * **Yapışkan (`sticky`) bir satır bunu KARŞILAMIYORDU** (kullanıcı bildirimi 21.08): satır
-   * kayan gövdenin İÇİNDE durduğu için, henüz dibe kaydırılmamışken kendisinden sonra gelen
-   * içerik (varsayılan-adres kutusu) düğmenin ALTINDAN görünüyordu — ekranda düğmenin altında
-   * ince bir şerit hâlinde form kalıyordu. Kaymayan bölme bunu yapısal olarak imkânsız kılar:
-   * gövde ile alt bölme ayrı kutular, biri ötekinin üstüne binemez.
-   */
+  /** Çekmecenin kaymayan alt bölmesi (eylem düğmeleri): gövdeyle ayrı kutu olduğu için kayan içerik düğmenin altından görünemez. */
   footer?: ReactNode;
   children: ReactNode;
 }
@@ -75,6 +43,7 @@ export function Dialog({ title, description, closeLabel, onClose, maxWidth = 420
   const sheet = placement === 'sheet';
   const panelRef = useRef<HTMLDivElement>(null);
   const tokenRef = useRef<object>({});
+  const viewport = useVisualViewport();
 
   useEffect(() => {
     const token = tokenRef.current;
@@ -107,15 +76,20 @@ export function Dialog({ title, description, closeLabel, onClose, maxWidth = 420
       const i = dialogStack.indexOf(token);
       if (i >= 0) dialogStack.splice(i, 1);
       if (dialogStack.length === 0) document.body.style.overflow = '';
-      // Odak çağıran öğeye döner: panel kapanınca odak `<body>`de kalırsa klavye kullanıcısı
-      // listenin başına fırlar ve nereden geldiğini kaybeder.
+      // Odak çağırana döner: `<body>`de kalırsa klavye kullanıcısı listenin başına fırlar.
       opener?.focus?.();
     };
   }, [onClose]);
 
+  /* Çekmecenin örtüsü tarayıcının görünür alanına oturur: klavye ve Chrome'un otomatik doldurma şeridi açıldığında çekmece onların
+     üstüne çıkar, tavanı da o alanın oranıdır ki başlık ekranda kalsın. */
+  const sheetOverlayStyle = sheet && viewport ? { top: viewport.offsetTop, bottom: 'auto', height: viewport.height } : undefined;
+  const sheetMaxHeight = viewport ? Math.round(viewport.height * customerSheetMaxHeightRatio) : `${customerSheetMaxHeightRatio * 100}dvh`;
+
   return (
     <div
       className={`fixed inset-0 z-40 flex animate-fade-in bg-ink/40 motion-reduce:animate-none ${sheet ? 'items-end justify-center' : 'items-center justify-center px-4'}`}
+      style={sheetOverlayStyle}
       onClick={onClose}
     >
       <div
@@ -125,25 +99,16 @@ export function Dialog({ title, description, closeLabel, onClose, maxWidth = 420
         aria-label={title}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        /* Çekmecede genişlik ekranın kendisi; `maxWidth` ortalanmış kutunun ölçüsü ve burada
-           uygulanırsa çekmece dar kalır — mobilde tam da kaçındığımız sıkışma. */
-        style={sheet ? undefined : { maxWidth }}
+        style={sheet ? { maxHeight: sheetMaxHeight } : { maxWidth }}
         className={[
           'flex w-full flex-col outline-none',
-          /* ── İKİ ANATOMİ, TEK SÖZLEŞME ───────────────────────────────────────────────────────
-             Ortalanmış kutuda PANELİN KENDİSİ kayar (bugünkü davranış, dokunulmadı).
-             Çekmecede başlık SABİT, yalnız gövde kayar — ölçüldü (21.08): tek gövde kaydırmasıyla
-             başlık içerikle birlikte yukarı kayıp üstten kırpılıyordu. Çekmecenin başlığı onun
-             "neredeyim" işaretidir; kaybolursa müşteri uzun bir formun ortasında bağlamsız kalır. */
+          /* Çekmecede başlık sabit, yalnız gövde kayar: başlık uzun formda "neredeyim" işaretidir ve gövdeyle kaysa üstten kırpılırdı.
+             Ortalanmış kutuda panelin kendisi kayar. */
           sheet
-            ? 'max-h-[88vh] animate-sheet-in overflow-hidden rounded-t-3xl bg-cream shadow-sheet motion-reduce:animate-none'
-            : // Ortalanmış kutu v1 masaüstü penceresi (13.09, adres penceresi): krem zemin, kum-275 kenar,
-              // 22px köşe, 26/30/28 ped, 16px aralık, gölge; başlık 24px serif, altında 13,5px cümle.
-              'max-h-[86vh] gap-4 overflow-y-auto rounded-[22px] border border-sand-275 bg-cream px-7.5 pt-6.5 pb-7 shadow-dialog',
+            ? 'animate-sheet-in overflow-hidden rounded-t-3xl bg-cream shadow-sheet motion-reduce:animate-none'
+            : 'max-h-[86vh] gap-4 overflow-y-auto rounded-[22px] border border-sand-275 bg-cream px-7.5 pt-6.5 pb-7 shadow-dialog',
         ].join(' ')}
       >
-        {/* Kapatma ✕ ile ve örtüye dokunarak (kabuğun sözleşmesi). Çekmecede sürükleme YOK — vaat
-            edilmeyen bir jest, çalışmadığında kırık hissettirir. */}
         <div className={`flex items-start justify-between gap-3 ${sheet ? 'flex-none px-[18px] pt-[18px] pb-[13px]' : ''}`}>
           <div className="flex min-w-0 flex-col gap-1">
             <span className={['font-serif text-ink', sheet ? 'text-h2-sm' : 'text-card-title'].join(' ')}>{title}</span>

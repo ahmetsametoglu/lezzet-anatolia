@@ -245,6 +245,12 @@ export const customerPhoneTextStepPx = 1;
  */
 export const customerTabBarHomeIndicatorTrimPx = 18;
 
+/**
+ * Alttan açılan çekmecenin kaplayabileceği en büyük oran: üstte örtü görünmezse çekmece olduğu anlaşılmaz. Native çekmece ekranın,
+ * web çekmecesi tarayıcının görünür alanının (klavye açıkken klavyenin üstü) bu kadarını kaplar.
+ */
+export const customerSheetMaxHeightRatio = 0.82;
+
 /* ── §0.4c Köşe yarıçapları (`--radius-` öneki) ──────────────────────────────
    Tabanda boş olan rozet ve kontrol kademeleri burada; aynı adı başka değerle taşıyan kart ve hap `customer-app.ts`te kalır,
    çünkü masaüstünü de değiştirirdi. */

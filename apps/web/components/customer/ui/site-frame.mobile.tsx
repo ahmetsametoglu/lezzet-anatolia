@@ -9,6 +9,7 @@ import { useWholesale } from '@/components/customer/account/account-context';
 import { CartFab } from '@/components/customer/cart/cart-fab';
 import { PlaceSheet } from '@/components/customer/delivery/place-sheet';
 import { tickOnTap } from '@/lib/haptics/haptics';
+import { useVisualViewport } from '@/lib/use-visual-viewport.hook';
 import { AppBar } from './app-bar';
 import { BackButton } from './back-button';
 import { FunnelHeader } from './funnel-header';
@@ -105,6 +106,8 @@ export function SiteFrameMobile({ locale, mobileChrome, accountChrome, fill, chi
   // Geçmiş boşken ‹'nin gideceği üst sayfa (`BackButton` sözleşmesi) — derin bağlantıyla gelen de döner.
   const fallback = accountChrome?.back?.href ?? '/';
   const hero = HERO_PAGES.includes(route);
+  // Tam ekran çerçeve (yazışma) görünür alana oturur: klavye açılınca tarayıcı sayfayı küçültmeyip kaydırır ve yazışma ekrandan çıkardı.
+  const viewport = useVisualViewport(Boolean(fill));
 
   return (
     <div
@@ -116,6 +119,7 @@ export function SiteFrameMobile({ locale, mobileChrome, accountChrome, fill, chi
         'flex flex-col bg-sand-50 pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-ink',
         fill ? 'h-dvh overflow-hidden' : 'min-h-dvh',
       ].join(' ')}
+      style={viewport ? { position: 'fixed', left: 0, right: 0, top: viewport.offsetTop, height: viewport.height } : undefined}
     >
       {/* iOS 26 durum çubuğunu, sayfanın üst kenarına değen sabit öğenin rengiyle boyar; öğe yoksa kaydırılan içerik saatin arkasından
           görünür. 6px'ten ince öğe örneklenmiyor, zemin 8px. */}
