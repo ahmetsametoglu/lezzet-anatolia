@@ -3,10 +3,8 @@ import type { AnalyticsDaily } from '@lezzet/types';
 import { changeRatio, deltaView, sumEvents, toFunnel, toHeat, toSeries } from './analytics-read';
 
 /**
- * Özet satırı → blok indirgemeleri. Saf mantık, DB yok → birim test.
- *
- * Bu dosyanın asıl koruduğu şey bir SAYI DEĞİL, bir DÜRÜSTLÜK: analitikte yanlış bir toplama hata
- * vermez, yalnız inandırıcı bir yanlış sayı üretir. Testler o yanlışların her birini adıyla tutuyor.
+ * Özet satırından bloğa indirgemeler, saf mantık. Analitikte yanlış toplama hata vermez, inandırıcı bir yanlış sayı üretir; testler o
+ * yanlışların her birini adıyla tutar.
  */
 
 const row = (over: Partial<AnalyticsDaily>): AnalyticsDaily => ({
@@ -16,7 +14,6 @@ const row = (over: Partial<AnalyticsDaily>): AnalyticsDaily => ({
   warehouseId: null,
   channel: null,
   availability: null,
-  // Özet 04.08'de terk sebebi boyutu kazandı (0035 · arka uç şeridi); fabrikanın varsayılanı `null`.
   blockedReason: null,
   eventCount: 0,
   sessionCount: 0,
@@ -140,15 +137,10 @@ describe('toSeries', () => {
   });
 });
 
-// `toCampaignRows` testleri SİLİNDİ: işlev 13.2 inince kapıya taşındı (`readCampaignRoi`) ve
-// kuralları orada sınanıyor. Ekranda kalan bir kopyayı test etmek, artık kimsenin çağırmadığı bir
-// birleştirmeyi yeşil tutmak olurdu.
-
 describe('toFunnel — adımlar iç içe kümeler DEĞİL', () => {
   it('bir adım öncekinden BÜYÜKSE çubuk taşmaz ve kayıp negatif kalır', () => {
-    // Gerçek veride yaşandı: tek ziyaret sayfada birden çok ürün kartı görüyor, yani
-    // `product_view` `page_view`'dan büyük çıkabiliyor. Kırpmasaydık çubuk kutudan taşardı;
-    // işareti ekrana bırakmasaydık "−%-300" yazardı.
+    // Tek ziyaret sayfada birden çok ürün kartı gördüğü için `product_view` `page_view`'dan büyük çıkabilir. Kırpılmasaydı çubuk kutudan
+    // taşar, işaret ekrana bırakılmasaydı "−%-300" yazardı.
     const steps = toFunnel([row({ type: 'page_view', eventCount: 1 }), row({ type: 'product_view', eventCount: 4 })]);
     expect(steps[1]!.share).toBe(1);
     expect(steps[1]!.drop).toBeLessThan(0);
