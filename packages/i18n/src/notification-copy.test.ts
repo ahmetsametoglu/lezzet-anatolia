@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AppNotificationKindEnum, STAFF_NOTIFICATION_KINDS, type AppNotificationKind } from '@lezzet/types';
-import { notificationSentence, notificationTitle, notificationVisual, staffNotificationBrief } from './notification-copy';
+import { notificationSentence, notificationTime, notificationTitle, notificationVisual, staffNotificationBrief } from './notification-copy';
 
 /*
   Küme açık (tip bunu zorlayamaz): bilinen her tür üç dilde kendi metnini üretmeli, bilinmeyen tür genel metne düşmeli.
@@ -65,8 +65,7 @@ describe('notificationVisual', () => {
   it('bilinen her müşteri türü zilden ayrı kendi görselini taşır — "bir bakışta tip" sözleşmesi', () => {
     for (const kind of KNOWN) {
       const visual = notificationVisual({ kind, payload: { approved: true } });
-      // Emoji native'in, çizgi ikonun adı web'in çizimi; zil bilinmeyen türün işaretidir.
-      expect(visual.icon, kind).not.toBe('🔔');
+      // Zil bilinmeyen türün işaretidir.
       expect(visual.symbol, kind).not.toBe('bell');
       expect(['positive', 'attention', 'issue', 'neutral']).toContain(visual.tone);
       for (const locale of LOCALES) expect(visual.label(locale).length).toBeGreaterThan(1);
@@ -79,9 +78,24 @@ describe('notificationVisual', () => {
     expect(notificationVisual({ kind: 'b2b_application_result', payload: { approved: true } }).tone).toBe('positive');
     expect(notificationVisual({ kind: 'b2b_application_result', payload: { approved: false } }).tone).toBe('attention');
     const bilinmeyen = notificationVisual({ kind: 'yarin_gelecek_tur', payload: {} });
-    expect(bilinmeyen.icon).toBe('🔔');
     expect(bilinmeyen.symbol).toBe('bell');
     expect(bilinmeyen.label('tr')).toBe('Bildirim');
+  });
+});
+
+// Haftadan eski satır göreli yazılırsa ya da dün sınırı kayarsa bu test kırmızıya döner.
+describe('notificationTime', () => {
+  const now = Date.parse('2026-10-05T12:00:00Z');
+  const ago = (ms: number) => new Date(now - ms).toISOString();
+
+  it('haftadan yeni satır tazeliğiyle, eskisi takvim günüyle yazılır', () => {
+    expect(notificationTime(ago(30_000), 'tr', now)).toBe('1 dk önce');
+    expect(notificationTime(ago(2 * 3_600_000), 'tr', now)).toBe('2 sa önce');
+    expect(notificationTime(ago(30 * 3_600_000), 'fr', now)).toBe('hier');
+    expect(notificationTime(ago(3 * 86_400_000), 'de', now)).toBe('vor 3 Tagen');
+    expect(notificationTime(ago(8 * 86_400_000), 'tr', now)).toBe('27 Eylül');
+    expect(notificationTime('2026-07-12T10:00:00Z', 'tr', now)).toBe('12 Temmuz');
+    expect(notificationTime('2025-07-12T10:00:00Z', 'fr', now)).toBe('12 juillet 2025');
   });
 });
 

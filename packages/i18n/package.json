@@ -29,7 +29,8 @@
     "./customer/discover": "./src/customer/discover.json",
     "./customer/points-history": "./src/customer/points-history.json",
     "./customer/points-earn": "./src/customer/points-earn.json",
-    "./customer/points-award": "./src/customer/points-award.json"
+    "./customer/points-award": "./src/customer/points-award.json",
+    "./customer/notifications": "./src/customer/notifications.json"
   },
   "types": "./src/index.ts",
   "scripts": {

@@ -93,6 +93,11 @@ export const ICON_PATHS = {
   },
   /* Tuş takımının silme tuşu. */
   backspace: { paths: ['M21 5H9l-6 7 6 7h12z', 'M14 9l-4 6M10 9l4 6'] },
+  /* Bildirim türlerinin üç yüzü (eksik karşılama, talep cevabı, kurumsal başvuru); web masaüstü çiziminin aynısı, çünkü iki yüzey
+     aynı türü aynı ikonla tanıtır. */
+  warning: { paths: ['M12 4.5 21 19.5H3z', 'M12 10v4M12 16.8h.01'] },
+  chat: { paths: ['M20.5 12.3c0 3.5-3.8 6.4-8.5 6.4-1 0-2-.1-2.9-.4L4 20.5l1.3-3.4c-1.1-1.2-1.8-2.9-1.8-4.8 0-3.5 3.8-6.4 8.5-6.4s8.5 2.9 8.5 6.4z'] },
+  building: { paths: ['M4.5 20.5V7.5L11 4l6.5 3.5v13', 'M3 20.5h18M8 11h1.5M8 14.5h1.5M13 11h1.5M13 14.5h1.5M11 20.5v-3.2'] },
 
   /* ── Kurye bölümü ─────────────────────────────────────────────────────────────
      Kanıt (`signature`, `camera`), iletişim (`navigate`, `phone`, `whatsapp`) ve "kaydedildi" bandı (`check-circle`). */

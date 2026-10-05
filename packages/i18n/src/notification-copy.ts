@@ -1,6 +1,6 @@
 import type { AppNotificationKind } from '@lezzet/types';
 import support from './customer/support.json';
-import type { Locale } from './locale';
+import { INTL_LOCALE, type Locale } from './locale';
 
 /*
   Müşteri bildiriminin başlığı ve cümlesi — iki yüzeyin (native bildirim ekranı, web hesap akışı) ortak kaynağı. Satır
@@ -185,19 +185,16 @@ export function notificationSentence(row: { kind: string; payload: Record<string
 }
 
 /*
-  Türün görsel kimliği: ikon, semantik ton ve kısa tür etiketi — müşteri bir bakışta türü ayırt eder. İkon iki biçimde
-  (`symbol` web çizgi setinin adı, `icon` native'in emojisi); ton renk değil anlamdır, yüzey kendi paletine çevirir.
+  Türün görsel kimliği: çizgi ikon, semantik ton ve kısa tür etiketi, ki müşteri türü bir bakışta ayırsın. Ton renk değil anlamdır;
+  yüzey kendi paletine çevirir.
 */
 
 export type NotificationVisualTone = 'positive' | 'attention' | 'issue' | 'neutral';
 
-/** Web çizgi setinin (`IconName`) adları — sette olmayan ad yazılırsa web derlenmez. */
+/** Telefon setinin (`@lezzet/design-tokens/icons`) ve masaüstü web setinin ortak adları; sette olmayan ad çizen yüzeyi derletmez. */
 export type NotificationSymbol = 'check' | 'truck' | 'box' | 'close' | 'warning' | 'undo' | 'chat' | 'star' | 'pin' | 'building' | 'bell';
 
 export interface NotificationVisual {
-  /** Emoji — native uygulamanın çizimi. */
-  icon: string;
-  /** Çizgi ikonun adı — web müşteri yüzeyi bununla çizer. */
   symbol: NotificationSymbol;
   tone: NotificationVisualTone;
   label: (locale: Locale) => string;
@@ -206,20 +203,19 @@ export interface NotificationVisual {
 const etiket = (phrases: Record<Locale, string>) => (locale: Locale) => phrases[locale];
 
 const VISUAL: Partial<Record<AppNotificationKind, (payload: Record<string, unknown>) => NotificationVisual>> = {
-  order_confirmed: () => ({ symbol: 'check', icon: '✅', tone: 'positive', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
-  order_out_for_delivery: () => ({ symbol: 'truck', icon: '🚚', tone: 'positive', label: etiket({ tr: 'Teslimat', fr: 'Livraison', de: 'Lieferung' }) }),
-  order_ready_for_pickup: () => ({ symbol: 'box', icon: '📦', tone: 'positive', label: etiket({ tr: 'Depodan teslim', fr: 'Retrait', de: 'Abholung' }) }),
-  order_delivered: () => ({ symbol: 'box', icon: '📦', tone: 'positive', label: etiket({ tr: 'Teslimat', fr: 'Livraison', de: 'Lieferung' }) }),
-  order_cancelled: () => ({ symbol: 'close', icon: '✖️', tone: 'issue', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
-  order_shortfall: () => ({ symbol: 'warning', icon: '⚠️', tone: 'attention', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
-  order_refunded: () => ({ symbol: 'undo', icon: '💶', tone: 'attention', label: etiket({ tr: 'İade', fr: 'Remboursement', de: 'Erstattung' }) }),
-  ticket_replied: () => ({ symbol: 'chat', icon: '💬', tone: 'neutral', label: etiket({ tr: 'Talep', fr: 'Demande', de: 'Anfrage' }) }),
-  ticket_status_changed: () => ({ symbol: 'chat', icon: '💬', tone: 'neutral', label: etiket({ tr: 'Talep', fr: 'Demande', de: 'Anfrage' }) }),
-  feedback_invite: () => ({ symbol: 'star', icon: '⭐', tone: 'attention', label: etiket({ tr: 'Değerlendirme', fr: 'Avis', de: 'Bewertung' }) }),
-  zone_available: () => ({ symbol: 'pin', icon: '📍', tone: 'positive', label: etiket({ tr: 'Bölge', fr: 'Zone', de: 'Gebiet' }) }),
+  order_confirmed: () => ({ symbol: 'check', tone: 'positive', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
+  order_out_for_delivery: () => ({ symbol: 'truck', tone: 'positive', label: etiket({ tr: 'Teslimat', fr: 'Livraison', de: 'Lieferung' }) }),
+  order_ready_for_pickup: () => ({ symbol: 'box', tone: 'positive', label: etiket({ tr: 'Depodan teslim', fr: 'Retrait', de: 'Abholung' }) }),
+  order_delivered: () => ({ symbol: 'box', tone: 'positive', label: etiket({ tr: 'Teslimat', fr: 'Livraison', de: 'Lieferung' }) }),
+  order_cancelled: () => ({ symbol: 'close', tone: 'issue', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
+  order_shortfall: () => ({ symbol: 'warning', tone: 'attention', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
+  order_refunded: () => ({ symbol: 'undo', tone: 'attention', label: etiket({ tr: 'İade', fr: 'Remboursement', de: 'Erstattung' }) }),
+  ticket_replied: () => ({ symbol: 'chat', tone: 'neutral', label: etiket({ tr: 'Talep', fr: 'Demande', de: 'Anfrage' }) }),
+  ticket_status_changed: () => ({ symbol: 'chat', tone: 'neutral', label: etiket({ tr: 'Talep', fr: 'Demande', de: 'Anfrage' }) }),
+  feedback_invite: () => ({ symbol: 'star', tone: 'attention', label: etiket({ tr: 'Değerlendirme', fr: 'Avis', de: 'Bewertung' }) }),
+  zone_available: () => ({ symbol: 'pin', tone: 'positive', label: etiket({ tr: 'Bölge', fr: 'Zone', de: 'Gebiet' }) }),
   b2b_application_result: (p) => ({
     symbol: 'building',
-    icon: '🏢',
     // Onay "yolunda", öteki sonuç "bak" — metnin aynı ayrımı.
     tone: p.approved === true ? 'positive' : 'attention',
     label: etiket({ tr: 'Kurumsal', fr: 'Professionnel', de: 'Geschäftlich' }),
@@ -229,7 +225,6 @@ const VISUAL: Partial<Record<AppNotificationKind, (payload: Record<string, unkno
 /** Bilinmeyen tür görselsiz kalmaz: zil ikonu ve nötr ton. */
 const VISUAL_FALLBACK: NotificationVisual = {
   symbol: 'bell',
-  icon: '🔔',
   tone: 'neutral',
   label: etiket({ tr: 'Bildirim', fr: 'Notification', de: 'Benachrichtigung' }),
 };
@@ -237,6 +232,31 @@ const VISUAL_FALLBACK: NotificationVisual = {
 export function notificationVisual(row: { kind: string; payload: Record<string, unknown> }): NotificationVisual {
   const build = VISUAL[row.kind as AppNotificationKind];
   return build ? build(row.payload) : VISUAL_FALLBACK;
+}
+
+/* Metin sözlükten kurulur, `Intl.RelativeTimeFormat`a dayanmaz, çünkü Hermes'in Intl kapsamı sürüme göre değişiyor. */
+const AGO: Record<Locale, { minutes: string; hours: string; yesterday: string; days: string }> = {
+  tr: { minutes: '{n} dk önce', hours: '{n} sa önce', yesterday: 'dün', days: '{n} gün önce' },
+  fr: { minutes: 'il y a {n} min', hours: 'il y a {n} h', yesterday: 'hier', days: 'il y a {n} j' },
+  de: { minutes: 'vor {n} Min.', hours: 'vor {n} Std.', yesterday: 'gestern', days: 'vor {n} Tagen' },
+};
+
+/**
+ * Kartın zamanı: bir haftadan yeni satır tazeliğiyle ("2 sa önce"), eskisi takvim günüyle ("12 Temmuz") yazılır, çünkü
+ * "9 hafta önce" bir kaydı tarihlendirmez.
+ */
+export function notificationTime(iso: string, locale: Locale, now: number): string {
+  const at = new Date(iso);
+  const phrases = AGO[locale];
+  const minutes = Math.round((now - at.getTime()) / 60_000);
+  if (minutes < 60) return phrases.minutes.replace('{n}', String(Math.max(1, minutes)));
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return phrases.hours.replace('{n}', String(hours));
+  const days = Math.round(hours / 24);
+  if (days === 1) return phrases.yesterday;
+  if (days < 7) return phrases.days.replace('{n}', String(days));
+  const sameYear = at.getFullYear() === new Date(now).getFullYear();
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { day: 'numeric', month: 'long', ...(sameYear ? {} : { year: 'numeric' }) }).format(at);
 }
 
 /*

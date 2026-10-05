@@ -1,0 +1,50 @@
+{
+  "tr": {
+    "title": "Bildirimler",
+    "markAll": "Tümünü okundu say",
+    "dismiss": "Bildirimi kaldır",
+    "empty": {
+      "title": "Şimdilik her şey sakin",
+      "body": "Siparişleriniz ve talepleriniz hakkındaki gelişmeler burada görünür."
+    },
+    "guest": {
+      "title": "Bildirimleriniz burada toplanır",
+      "body": "Sipariş durumu, fırsatlar ve stok haberleri için giriş yapın.",
+      "cta": "Giriş yap"
+    },
+    "prefsNote": "Kampanya bildirimlerini Hesap bölümündeki Kampanya iletişimi ayarından yönetebilirsiniz.",
+    "loadMore": "Devamını yükle"
+  },
+  "fr": {
+    "title": "Notifications",
+    "markAll": "Tout marquer comme lu",
+    "dismiss": "Retirer la notification",
+    "empty": {
+      "title": "Tout est calme pour l'instant",
+      "body": "Les nouvelles concernant vos commandes et vos demandes apparaîtront ici."
+    },
+    "guest": {
+      "title": "Vos notifications arrivent ici",
+      "body": "Connectez-vous pour suivre vos commandes, les offres et les retours en stock.",
+      "cta": "Se connecter"
+    },
+    "prefsNote": "Gérez les messages promotionnels depuis le réglage « Communications commerciales » de votre compte.",
+    "loadMore": "Charger la suite"
+  },
+  "de": {
+    "title": "Benachrichtigungen",
+    "markAll": "Alle als gelesen markieren",
+    "dismiss": "Benachrichtigung entfernen",
+    "empty": {
+      "title": "Im Moment ist alles ruhig",
+      "body": "Neuigkeiten zu Ihren Bestellungen und Anfragen erscheinen hier."
+    },
+    "guest": {
+      "title": "Hier sammeln sich Ihre Benachrichtigungen",
+      "body": "Melden Sie sich an, um Bestellstatus, Angebote und Hinweise zu wieder verfügbaren Produkten zu erhalten.",
+      "cta": "Anmelden"
+    },
+    "prefsNote": "Werbenachrichten verwalten Sie in Ihrem Konto unter „Werbenachrichten“.",
+    "loadMore": "Mehr laden"
+  }
+}

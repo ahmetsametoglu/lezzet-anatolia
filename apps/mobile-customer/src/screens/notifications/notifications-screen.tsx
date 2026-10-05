@@ -1,4 +1,6 @@
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
+import { notificationSentence, notificationTime, notificationTitle, notificationVisual, type NotificationVisualTone } from '@lezzet/i18n';
+import notificationsMessages from '@lezzet/i18n/customer/notifications';
 import { useRouter } from 'expo-router';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -15,41 +17,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
-// Damga `formatStamp`ten (gün + uzun ay + SAAT, yılsız): akış bir arşiv değil, yakın zamanın
-// sırası — aynı güne düşen onlarca satırı yalnız saat ayırır. `formatOrderDate` yıl yazıp saati
-// atıyordu ve cihazda otuz satır birden "27 août 2026" diyordu (ölçüldü 27.08); web aynı ekranda
-// zaten saatli damgayı gösteriyor, iki yüzey ayrışmamalı.
-import { formatStamp } from '@/screens/orders/order-format';
 import messages from './messages.json';
-import { notificationVisual, type NotificationVisualTone } from '@lezzet/i18n';
-import { notificationHref, notificationSentence } from './notification-copy';
+import { notificationHref } from './notification-copy';
 import { useNotifications } from './use-notifications.hook';
 
 /*
-  BİLDİRİMLER (14.13'ün ekranı — vitrin zilinin açtığı yer; yer tutucuydu, uca bağlandı).
-  Desen puan geçmişinin BİREBİR aynısı: keyset akış, beş hâl (yükleniyor · misafir · hata · boş ·
-  liste), kuyruk hataları listeyi düşürmez.
-
-  ── SATIR CÜMLESİ EKRANDA KURULUR ───────────────────────────────────────────
-  Uç `kind` + dil-bağımsız `payload` gönderir (metin taşımaz — 14.12); cümle `notification-copy`de,
-  üç dil. BİLİNMEYEN tür genel cümleye düşer: `kind` kümesi sunucuda büyür ve eski uygulama
-  sürümü yeni türü boş satırla değil, "bir gelişme var" ile karşılar.
-
-  ── DOKUNUŞ = OKU + GİT; ✕ = GİZLE ─────────────────────────────────────────
-  Satıra dokunmak okundu işaretler ve hedefi açar (sipariş → referansla, talep → kimlikle — rota
-  sözleşmeleri `notification-copy` künyesinde). Gidecek yeri olmayan satırda dokunuş yalnız okur.
-  Gizleme ayrı ve KÜÇÜK bir hedef: listeden ve rozetten düşürür ama satır sunucuda durur
-  ("akış ≠ gelen kutusu" — okunan satır listede kalır, gizlenen kalkar).
-
-  ── OKUNMAMIŞLIK YALNIZ NOKTADAN OKUNMAZ ────────────────────────────────────
-  Nokta + kalın metin birlikte: renk körlüğünde okunmuşu ayıran tek şey renk olamaz (puan
-  ekranının +/− kararının aynısı).
+  Satır metin taşımaz: başlık, cümle, zaman ve görsel kimlik web'in telefon görünümüyle ortak sözlükten (`@lezzet/i18n`) kurulur.
+  Dokunuş okundu işaretler ve hedefi açar; gizleme ayrı ve küçük bir hedeftir, satırı listeden ve rozetten düşürür.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
+type SharedMessages = LocalizedCopy<typeof notificationsMessages>;
 
 interface NotificationsScreenProps {
-  /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili (sipariş ekranının deseni). */
+  /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili. */
   locale?: Locale;
 }
 
@@ -57,15 +38,14 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
   const appLocale = useAppLocale();
   const locale = forcedLocale ?? appLocale;
   const t: Messages = messages[locale];
+  const shared: SharedMessages = notificationsMessages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
-  /* Kanal aboneliği profil kimliği ister (doğal sır); `useMe` zaten kabuğun her yerinde okunuyor —
-     ikinci bir kimlik çağrısı değil, aynı paylaşılan durumun bir okuması daha. */
+  // Kanal aboneliği profil kimliği ister; kimlik kabuğun her yerinde okunan paylaşılan durumdan gelir.
   const meState = useMe();
   const feed = useNotifications(meState.status === 'ready' && meState.me !== null ? meState.me.id : null);
 
-  /* HEADER: "sayfa başlığı" durağı (üç header kuralı — puan geçmişinin aynısı). "Tümünü okundu
-     say" başlığın altında ve YALNIZ okunmamış varken: işi kalmamış bir eylem çizilmez. */
+  // "Tümünü okundu say" yalnız okunmamış varken: işi kalmamış bir eylem çizilmez.
   const header = (
     <View style={styles.header}>
       <View style={styles.backRow}>
@@ -73,11 +53,11 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
       </View>
       <Text style={styles.eyebrow}>{upperIn(t.eyebrow, locale)}</Text>
       <Text style={styles.title} accessibilityRole="header">
-        {t.title}
+        {shared.title}
       </Text>
       {feed.status === 'ready' && feed.unread > 0 ? (
         <PressableSurface onPress={feed.markAllRead} feedback="opacity" style={styles.markAll} testID="notifications-mark-all">
-          <Text style={styles.markAllLabel}>{t.markAll}</Text>
+          <Text style={styles.markAllLabel}>{shared.markAll}</Text>
         </PressableSurface>
       ) : null}
     </View>
@@ -88,13 +68,13 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
       <View style={styles.screen}>
         <View style={styles.headerPad}>{header}</View>
         <View style={styles.skeletonBody} testID="notifications-loading">
-          {/* İskelet, gelen satırın YENİ anatomisiyle aynı yeri tutar: ikon dairesi + etiket + cümle. */}
+          {/* İskelet gelen kartın yerini tutar: ikon dairesi, başlık ve cümle. */}
           {[0, 1, 2, 3, 4].map((row) => (
-            <View key={row} style={styles.skeletonLine}>
-              <Skeleton width={theme.space['4xl']} height={theme.space['4xl']} radius="full" tone="soft" />
-              <View style={styles.skeletonRow}>
-                <Skeleton width="30%" height={theme.text.micro} radius="badge" tone="soft" />
-                <Skeleton width="75%" height={theme.text.note} radius="badge" />
+            <View key={row} style={[styles.card, styles.cardBody]}>
+              <Skeleton width={theme.size.iconButton} height={theme.size.iconButton} radius="full" tone="deep" />
+              <View style={styles.texts}>
+                <Skeleton width="40%" height={theme.text.note} radius="badge" tone="deep" />
+                <Skeleton width={row % 2 === 0 ? '80%' : '60%'} height={theme.text.helper} radius="badge" tone="deep" />
               </View>
             </View>
           ))}
@@ -109,10 +89,10 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
         <View style={styles.headerPad}>{header}</View>
         <EmptyState
           fill
-          icon={<Icon name="account" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
-          title={t.guest.title}
-          description={t.guest.body}
-          action={<PrimaryButton label={t.guest.cta} shape="pill" onPress={() => router.push('/login')} testID="notifications-login" />}
+          icon={<Icon name="bell" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
+          title={shared.guest.title}
+          description={shared.guest.body}
+          action={<PrimaryButton label={shared.guest.cta} shape="pill" onPress={() => router.push('/login')} testID="notifications-login" />}
           testID="notifications-guest"
         />
       </View>
@@ -142,35 +122,25 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
         <EmptyState
           fill
           icon={<Icon name="bell" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
-          title={t.empty.title}
-          description={t.empty.body}
+          title={shared.empty.title}
+          description={shared.empty.body}
           testID="notifications-empty"
         />
       </View>
     );
   }
 
-  const listFooter = () => {
-    if (feed.loadingMore) {
-      return (
-        <View style={styles.tail}>
-          <LoadingState size="sm" accessibilityLabel={t.tailRetry} testID="notifications-tail-loading" />
-        </View>
-      );
-    }
-    if (feed.tailFailed) {
-      return (
-        <View style={styles.tail}>
-          <PrimaryButton label={t.tailRetry} shape="pill" onPress={feed.loadMore} testID="notifications-tail-retry" />
-        </View>
-      );
-    }
-    return null;
-  };
+  const listFooter = (
+    <View style={styles.footer}>
+      {feed.loadingMore ? <LoadingState size="sm" accessibilityLabel={shared.loadMore} testID="notifications-tail-loading" /> : null}
+      {!feed.loadingMore && feed.tailFailed ? (
+        <PrimaryButton label={shared.loadMore} shape="pill" onPress={feed.loadMore} testID="notifications-tail-retry" />
+      ) : null}
+      <Text style={styles.prefsNote}>{shared.prefsNote}</Text>
+    </View>
+  );
 
-  /* TÜRÜN GÖRSEL KİMLİĞİ (kullanıcı kararı 26.08): satır tek tip metin değil — ikon dairesi +
-     tür etiketi + cümle. Anlam paylaşılan sözlükten (`notificationVisual`), renk BURADA temaya
-     çevrilir (webin aynı aileleri: olive/honey/terracotta/kum). */
+  // Ton anlamdır, renk burada temaya çevrilir; web'in telefon görünümüyle aynı aileler.
   const toneBg: Record<NotificationVisualTone, string> = {
     positive: theme.colors['olive-bg'],
     attention: theme.colors['honey-bg'],
@@ -180,44 +150,45 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
   const toneText: Record<NotificationVisualTone, string> = {
     positive: theme.colors['olive-dark'],
     attention: theme.colors.honey,
-    issue: theme.colors.terracotta,
-    neutral: theme.colors['sand-600'],
+    issue: theme.colors['terracotta-bright'],
+    neutral: theme.colors.muted,
   };
+  const now = Date.now();
 
   const renderRow = (row: NotificationRow) => {
-    const unread = row.readAt === null;
     const href = notificationHref(row);
     const visual = notificationVisual(row);
     return (
-      <View style={styles.row} testID={`notification-row-${row.id}`}>
-        <View style={[styles.iconCircle, { backgroundColor: toneBg[visual.tone] }]}>
-          <Text style={styles.iconEmoji}>{visual.icon}</Text>
-        </View>
+      <View style={styles.card} testID={`notification-row-${row.id}`}>
         <PressableSurface
-          feedback="opacity"
+          feedback="scale"
           grow
-          style={styles.rowBody}
+          style={styles.cardBody}
           onPress={() => {
             feed.markRead(row.id);
             if (href !== null) router.push(href as never);
           }}
           testID={`notification-open-${row.id}`}
         >
-          <View style={styles.rowLine}>
-            <Text style={[styles.kindLabel, { color: toneText[visual.tone] }]}>{upperIn(visual.label(locale), locale)}</Text>
-            <Text style={styles.date}>{formatStamp(row.createdAt, locale)}</Text>
-            {unread ? <View style={styles.unreadDot} /> : null}
+          <View style={[styles.iconCircle, { backgroundColor: toneBg[visual.tone] }]}>
+            <Icon name={visual.symbol} size={theme.size.headerIcon} color={toneText[visual.tone]} />
           </View>
-          <Text style={unread ? styles.sentenceUnread : styles.sentence}>{notificationSentence(row, locale)}</Text>
+          <View style={styles.texts}>
+            <Text style={styles.cardTitle}>{notificationTitle(row, locale)}</Text>
+            <Text style={styles.cardSentence}>{notificationSentence(row, locale)}</Text>
+            <Text style={styles.cardTime}>{notificationTime(row.createdAt, locale, now)}</Text>
+          </View>
+          {row.readAt === null ? <View style={styles.unreadDot} testID={`notification-unread-${row.id}`} /> : null}
         </PressableSurface>
         <PressableSurface
           feedback="opacity"
+          compact
           style={styles.dismiss}
           onPress={() => feed.dismiss(row.id)}
-          accessibilityLabel={t.dismiss}
+          accessibilityLabel={shared.dismiss}
           testID={`notification-dismiss-${row.id}`}
         >
-          <Icon name="close" size={theme.text.micro} color={theme.colors['sand-600']} />
+          <Icon name="close" size={theme.text['body-sm']} color={theme.colors['sand-600']} />
         </PressableSurface>
       </View>
     );
@@ -229,17 +200,22 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
         data={feed.rows}
         keyExtractor={(row) => row.id}
         renderItem={({ item }) => renderRow(item)}
+        ItemSeparatorComponent={RowGap}
         ListHeaderComponent={header}
-        ListFooterComponent={listFooter()}
+        ListFooterComponent={listFooter}
         contentContainerStyle={styles.content}
         onEndReached={feed.loadMore}
-        // `FlatList` eşiği cömertçe tetikler; ikinci kapı hook'ta (imleç yoksa istek atılmaz).
+        // Liste eşiği cömertçe tetikler; ikinci kapı kancada (imleç yoksa istek atılmaz).
         onEndReachedThreshold={0.5}
         refreshControl={<RefreshControl refreshing={feed.refreshing} onRefresh={feed.refresh} {...pullRefreshColors(theme.colors.olive)} />}
         testID="notifications-list"
       />
     </View>
   );
+}
+
+function RowGap() {
+  return <View style={styles.rowGap} />;
 }
 
 const styles = StyleSheet.create((theme, rt) => ({
@@ -287,44 +263,26 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   skeletonBody: {
     paddingHorizontal: theme.space['4xl'],
-    gap: theme.space['2xl'],
-    paddingTop: theme.space.lg,
+    gap: theme.space.lg,
   },
-  skeletonLine: {
+  rowGap: {
+    height: theme.space.lg,
+  },
+  card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: theme.space.md,
-  },
-  skeletonRow: {
-    flex: 1,
     gap: theme.space.xs,
+    borderRadius: theme.radius.card,
+    backgroundColor: theme.colors['sand-250'],
+    paddingVertical: theme.space.xl,
+    paddingLeft: theme.space['2xl'],
+    paddingRight: theme.space.sm,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: theme.space.md,
-    paddingVertical: theme.space.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors['sand-200'],
-  },
-  /** Esneme `grow` prop'unda — stile flex yazınca iç yüzey metni eziyor (pressable-surface
-      künyesi; cihazda ölçüldü 26.08: satır cümleleri görünmez olmuştu). */
-  rowBody: {
-    gap: theme.space['2xs'],
-  },
-  rowLine: {
+  cardBody: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.space.sm,
+    gap: theme.space.xl,
   },
-  /**
-   * Türün yüzü — renk render'da tondan gelir (toneBg); ölçü sabit: satırlar arası hiza.
-   *
-   * Ölçü webin `h-9 w-9`una denk gelen jetondan (`size.iconButton`). Önceki değer `space['4xl']`
-   * (18px) idi ve emojiyle AYNI boydaydı: daire çiziliyordu ama hiç görünmüyordu — tonlu zemin
-   * emojinin altında kayboluyor, satır webdeki anatomiyi taşımıyordu (cihazda ölçüldü 27.08).
-   * Emoji de webin `text-icon-sm`i (20px): iki yüzeyde türün yüzü aynı büyüklükte okunur.
-   */
   iconCircle: {
     width: theme.size.iconButton,
     height: theme.size.iconButton,
@@ -332,46 +290,47 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconEmoji: {
-    fontSize: theme.text['icon-sm'],
-    lineHeight: theme.text['icon-sm'],
+  texts: {
+    flex: 1,
+    gap: theme.space['2xs'],
   },
-  /** Tür şapkası — eyebrow ailesinin küçük boyu; rengi tondan (render'da). */
-  kindLabel: {
+  cardTitle: {
     fontFamily: theme.font.body[700],
-    fontSize: theme.text.micro,
-    letterSpacing: theme.text.micro * 0.05,
-  },
-  unreadDot: {
-    width: theme.space.sm,
-    height: theme.space.sm,
-    borderRadius: theme.space.sm / 2,
-    backgroundColor: theme.colors.terracotta,
-  },
-  sentence: {
-    flex: 1,
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text.note,
-    color: theme.colors['sand-600'],
-  },
-  sentenceUnread: {
-    flex: 1,
-    fontFamily: theme.font.body[600],
     fontSize: theme.text.note,
     color: theme.colors.ink,
   },
-  date: {
+  cardSentence: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.micro,
+    fontSize: theme.text.helper,
+    lineHeight: theme.text.helper * 1.4,
+    color: theme.colors.muted,
+  },
+  cardTime: {
+    marginTop: theme.space['2xs'],
+    fontFamily: theme.font.body[600],
+    fontSize: theme.text['badge-sm'],
     color: theme.colors['sand-600'],
   },
-  /** Gizleme küçük ama DOKUNULUR hedef: satır dokunuşuyla karışmasın diye kendi yüzeyi var. */
+  unreadDot: {
+    width: theme.space.lg,
+    height: theme.space.lg,
+    borderRadius: theme.space.lg / 2,
+    backgroundColor: theme.colors.terracotta,
+  },
   dismiss: {
-    padding: theme.space.sm,
-    marginTop: theme.space['2xs'],
+    paddingHorizontal: theme.space.sm,
   },
-  tail: {
-    paddingVertical: theme.space['2xl'],
+  footer: {
     alignItems: 'center',
+    gap: theme.space['2xl'],
+    paddingTop: theme.space['2xl'],
   },
-}))
+  prefsNote: {
+    paddingHorizontal: theme.space.xl,
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    lineHeight: theme.text.micro * 1.5,
+    color: theme.colors.muted,
+    textAlign: 'center',
+  },
+}));

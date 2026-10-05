@@ -40,11 +40,8 @@ export function formatDeliveryDate(iso: string, locale: Locale): string {
 }
 
 /**
- * Geçen süre ("3 dk önce" · "2 hafta önce" · "geçen yıl") — bir olayın TAZELİĞİNİ söyler, gününü
- * değil; yorum ve bildirim satırında okuyan "ne zamandı" değil "yeni mi" diye bakar.
- *
- * Eşik çağıranındır: bu işlev her uzaklığı göreli yazar, takvim gününe geçme kararını (bildirim
- * satırı bir haftadan sonra geçiyor) veren taraf kendi bağlamını bilir.
+ * Geçen süre ("3 dk önce" · "2 hafta önce" · "geçen yıl") — bir olayın tazeliğini söyler, gününü değil, çünkü yorum satırında
+ * okuyan "ne zamandı" değil "yeni mi" diye bakar.
  */
 export function formatRelativeTime(iso: string, locale: Locale, now: number): string {
   const at = new Date(iso).getTime();

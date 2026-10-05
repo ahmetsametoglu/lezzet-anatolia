@@ -1,10 +1,11 @@
 import { EmptyState } from '@/components/customer/phone-kit/empty-state';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
-import type { Messages } from './notifications-types';
+import type { LocalizedCopy } from '@lezzet/i18n';
+import type notificationsMessages from '@lezzet/i18n/customer/notifications';
 
 interface NotificationsGuestProps {
-  copy: Messages['guest'];
+  copy: LocalizedCopy<typeof notificationsMessages>['guest'];
   /** Doğrulanınca dönülecek adres — bu sayfa. */
   next: string;
 }

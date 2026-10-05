@@ -4,6 +4,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { serviceDb } from '@lezzet/database';
 import { listNotifications } from '@lezzet/application';
 import { notificationsChannelName } from '@lezzet/types';
+import notificationsMessages from '@lezzet/i18n/customer/notifications';
 import { detectDevice } from '@/lib/device';
 import { currentCustomerId } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
@@ -29,15 +30,16 @@ export default async function NotificationsPage({ params }: NotificationsPagePro
   void recordPageView('/account/notifications');
 
   const t: Messages = messages[locale];
+  const shared = notificationsMessages[locale];
   const [device, customerId] = await Promise.all([detectDevice(), currentCustomerId()]);
-  const chrome = { back: { label: t.back, href: '/account' as const }, title: t.title };
+  const chrome = { back: { label: t.back, href: '/account' as const }, title: shared.title };
 
   if (!customerId) {
     // Telefonda misafir sayfada kalır ve doğrulama davetini görür (tasarım); masaüstü girişe yönlenir.
     if (device === 'desktop') redirect(`/${locale}${routing.pathnames['/login'][locale]}`);
     return (
       <SiteFrame device={device} locale={locale} accountChrome={chrome}>
-        <NotificationsGuest copy={t.guest} next={`/${locale}${routing.pathnames['/account/notifications'][locale]}`} />
+        <NotificationsGuest copy={shared.guest} next={`/${locale}${routing.pathnames['/account/notifications'][locale]}`} />
       </SiteFrame>
     );
   }

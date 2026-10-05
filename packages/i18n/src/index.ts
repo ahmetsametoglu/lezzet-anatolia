@@ -33,10 +33,11 @@ export function localizedUrl(route: AppRoute, locale: Locale, params: Record<str
   return `${siteOrigin()}${localizedHref(route, locale, params)}`;
 }
 
-// Bildirim başlığı, cümlesi ve görsel kimliği — iki yüzeyin (native + web) ortak dili.
+// Bildirim başlığı, cümlesi, zamanı ve görsel kimliği — iki yüzeyin (native + web) ortak dili.
 export {
   notificationTitle,
   notificationSentence,
+  notificationTime,
   notificationVisual,
   pennylaneBlockReasonLabel,
   registerBlockReasonLabel,
