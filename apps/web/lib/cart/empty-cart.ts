@@ -14,25 +14,8 @@ import { getCartView } from './read';
 import type { CartEntry } from './cart-types';
 
 /**
- * Boş sepetin ÖNERİ ALANI (08.4) — tasarım: `Musteri - Sepet.dc.html` → "Bos Sepet Web/Mobil".
- *
- * Boş sepet bir hata ekranı değil, **yön verme** ekranıdır. Bu yüzden okuduğu tek şey "müşteriye
- * bugün ne önerebiliriz" sorusunun cevabıdır; ödeme diline (özet, kupon, checkout) hiç girmez.
- *
- * **Öneri alanı TEK blok değil, ÜÇ bloktan oluşur** (tasarım: son sipariş tekrarı · vitrin seçkisi ·
- * kategori girişleri). Bir süre yalnız ilk ikisinden biri çiziliyordu ve künye "bağlama göre değişen
- * TEK blok" diye yazılıydı — tasarımın "son sipariş **+** çok sevilenler" kuralı kodun o günkü
- * hâline göre yeniden ifade edilmişti. Böyle bir künye eksiği bir sonraki denetimde de görünmez
- * kılar (29.07 kullanıcı geri bildirimi).
- *
- * Dallanma sebebi geçmiş, oturum değil: son siparişi olan müşteri onu tekrarlar, olmayan (ziyaretçi
- * ya da ilk kez alan) kategori girişlerini görür. Tasarım bu iki dalı "girişli / girişsiz" diye
- * anlatıyor ama ayıran şey aslında geçmişin varlığı — ilk siparişini vermemiş girişli müşteriye
- * "son siparişinizi tekrarlayın" gösterilemez. **Vitrin seçkisi ise her iki dalda da vardır:** ne
- * sipariş geçmişine ne oturuma bağlı, katalog varsa o da vardır.
- *
- * BEKLEYEN(BACKLOG §2): B2B'nin sipariş şablonları — tasarım B2B'de vitrin seçkisi yerine şablon
- * listesi istiyor; şablon diye bir veri modeli henüz yok, müşteri tipi bu yüzden hiç okunmuyor.
+ * Boş sepetin öneri alanı, yön verme ekranı: son sipariş tekrarı, vitrin seçkisi ve kategori girişleri; ayıran şey oturum değil sipariş
+ * geçmişidir, vitrin seçkisi iki dalda da vardır. BEKLEYEN(BACKLOG §2): B2B sipariş şablonları, veri modeli henüz yok.
  */
 
 /** Meta satırında kaç ürün adı yazılır — fazlası satırı sarar ve okunmaz olur. */
@@ -70,20 +53,15 @@ export interface EmptyCartContext {
    */
   showcase: StorefrontProduct[];
   /**
-   * Boş sepet çizimi (`site_image.empty_cart`, 08.33) — operatörün yüklediği sayfa görseli.
-   *
-   * Bağlamın içinde çünkü aynı ekranın parçası ve **aynı turda** okunuyor: ayrı beklenseydi kahraman
-   * görselsiz görünür, fotoğraf sonradan patlardı — bu dosyanın kendi künyesinin öneri için söylediği
-   * şeyin aynısı. `null` = yüklenmemiş; ekran 🧺 yer tutucusunu çizmeye devam eder.
+   * Boş sepet çizimi (`site_image.empty_cart`), aynı turda okunur, yoksa kahraman görselsiz görünürdü; `null` yüklenmemiş
+   * demektir.
    */
   illustration: SitePageImage | null;
 }
 
 /**
- * Boş sepet bağlamı. Ziyaretçide TEK sorgu (kategoriler) çalışır — sipariş geçmişi zinciri yalnız
- * oturum varken kurulur. Sepet doluyken de okunur, çünkü sayfa boş olup olmadığını sunucuda
- * bilemez (ziyaretçinin sepeti tarayıcıda yaşar); tasarım da boş ekranın **tek adımda** gelmesini
- * istiyor — ikinci bir tura bırakılsaydı kahraman görünür, öneri sonradan patlardı.
+ * Boş sepet bağlamı: ziyaretçide tek sorgu (kategoriler), sipariş geçmişi zinciri yalnız oturumla kurulur. Sepet doluyken de
+ * okunur, çünkü ziyaretçinin sepeti tarayıcıdadır ve boş ekran tek adımda gelmeli.
  */
 export async function getEmptyCartContext(locale: Locale): Promise<EmptyCartContext> {
   const db = serviceDb();
@@ -94,8 +72,7 @@ export async function getEmptyCartContext(locale: Locale): Promise<EmptyCartCont
     readShowcase(db, locale, await readPlaceWarehouses(), await readPricingViewer(), { limit: SHOWCASE_LIMIT }),
     readSiteImage('empty_cart', locale),
   ]);
-  // Son sipariş varsa kategori girişleri hiç çizilmez; boşuna taşınmasın — havuz sorgusu da o dalda
-  // hiç atılmaz (05.23).
+  // Son sipariş varsa kategori girişleri çizilmez ve havuz sorgusu o dalda hiç atılmaz.
   const shown = lastOrder ? [] : categoryRows.length ? categoryRows : FIXTURE_CATEGORIES;
   const pools = await new CategoryImageService(db).listByCategories(shown.map((c) => c.id));
   const categories = shown.map((c) => toCategory(c, locale, pools.get(c.id)));
@@ -117,9 +94,8 @@ async function readLastOrder(locale: Locale): Promise<LastOrderSuggestion | null
   const withItems = await orders.getWithItems(order.id);
   if (!withItems || withItems.items.length === 0) return null;
 
-  // Kalemleri BUGÜNKÜ görünüme çözdürüyoruz — ad, görsel ve "hâlâ satılıyor mu" bilgisi oradan gelir.
-  // Sepet okumasının aynısı; ikinci bir çözümleyici yazmak iki yerde ayrışabilen kural demekti.
-  // Paket kalemleri (bundleId dolu) atlanır: paket bütün olarak eklenir, kalem kalem değil (05.5).
+  // Kalemler bugünkü görünüme sepet okumasıyla aynı yoldan çözülür (ad, görsel, satılıyor mu); paket kalemleri atlanır, paket
+  // bütün olarak eklenir.
   const items = withItems.items.filter((i) => i.bundleId === null);
   if (items.length === 0) return null;
 

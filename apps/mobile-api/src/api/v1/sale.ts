@@ -29,22 +29,8 @@ import { requireStaffRole } from './auth';
 import { warehouseGuard, type WarehouseEnv } from './warehouse';
 
 /**
- * **YERİNDE SATIŞ UCU** (21.119) — depo kapısı ve kuryenin aracı, tek çağrı.
- *
- * ── BU DOSYA KURAL HESAPLAMAZ ────────────────────────────────────────────────
- * Depo/kurye uçlarıyla aynı çizgi: parse → kapı → zarf. Fiyat çözümü, pazarlık izi, stok kontrolü,
- * FEFO, referans üretimi ve tahsilat — hiçbiri burada YOK; hepsi `sellOnSite`ta.
- *
- * ── NEDEN AYRI BİR YÖNLENDİRİCİ, `warehouse.ts`İN İÇİNDE DEĞİL ──────────────
- * Depo yönlendiricisinin rol kapısı `warehouse`/`admin`; **kurye oraya giremez ve girmemeli**
- * (hazırlık kuyruğu, mal kabul, kutu mühürleme onun işi değil). Ama yerinde satışı KURYE DE yapar —
- * `DOMAIN §17`: *"satan kişi, malın yanında duran personeldir."* Rol kümesi farklı olduğu için kapı
- * da ayrı; paylaşılan tek şey depo çözümü (`warehouseGuard` ihraç edildi, kopyalanmadı).
- *
- * ── DEPO VE MÜŞTERİ GÖVDEDE YOK ─────────────────────────────────────────────
- * Depo personelin künyesinden geliyor (kapsam kontrolüyle), müşteri ise anonim alıcıdır — kimlik
- * SORULMUYOR (kullanıcı kararı 26.08). İkisini de istemciden almak, kararı istemciye vermek olurdu;
- * `placeOrder`ın *"müşteri kimliği istemciden ASLA alınmaz"* kuralının aynısı.
+ * Yerinde satış ucu, depo kapısı ve kuryenin aracı için tek çağrı: kural hesaplamaz, hepsi `sellOnSite`tadır. Ayrı yönlendiricidir,
+ * çünkü yerinde satışı kurye de yapar ve depo yönlendiricisinin rol kapısına giremez; depo personelin künyesinden, alıcı anonimdir.
  */
 /**
  * Satışın kendi bağlamı: depo kapısının değişkenlerine **satış yeri** eklenir. Yer, çözülen deponun
@@ -58,33 +44,9 @@ interface SaleEnv {
 export const sale = new Hono<SaleEnv>();
 
 /**
- * **SATIŞ YERİ — YÜZEYİN BEYANI, KAPSAMIN İZNİ** (01.09 · kullanıcı kararı, cihazda ölçüldü).
- *
- * ── ÖNCEKİ ÖRTÜK KURAL NEDEN ÇÖKTÜ ──────────────────────────────────────────
- * Burada `courierVehicleFirst` duruyordu: *"kurye PARAMETRESİZ geldiyse satış yeri aracıdır."*
- * Kural doğruydu ama sinyali YOKLUKTU ve yokluk bir gün doldu — mobil istemci 30.08'de cihazdaki
- * depo seçimini her satış isteğine yazmaya başladı (`withWarehouseChoice`). O günden beri adım hiç
- * çalışmıyordu: kurye "Strasbourg — ana depo"yu seçtiği için kendi ekranında ana deponun katalogunu
- * görüyordu (ölçüldü 01.09: araçta 4 kalem, ekranda 154 partilik tesis; "kalan 23" birebir
- * Strasbourg'un stoğu). Kural sunucuda yazılıydı, istemci onu sessizce iptal ediyordu.
- *
- * ── YERİNE: AÇIK BEYAN ──────────────────────────────────────────────────────
- * Yüzey artık `?place=van` diyerek NEREDEN sattığını SÖYLER. Beyan bir yetki değil bir sorudur ve
- * cevabı **SEFER** verir: araç, kuryenin sürdüğü seferin YAZDIĞI araçtır ve satılan mal o aracın
- * deposundadır (`vehicleWarehouseOf`). İstemci hangi aracı istediğini seçemez, yalnız "aracımdan"
- * diyebilir.
- *
- * CEVABIN KAYNAĞI 21.249'DA DEĞİŞTİ ve bu satır bir tur eski hâli anlatmaya devam etmişti (ölçüldü
- * 05.09): eskiden cevabı KAPSAM veriyordu — `warehouseIds` dizisi taranıp türü araç olan İLKİ
- * alınıyordu. Yani cevap bir listenin SIRASINDAN geliyordu, kaydından değil; kapsamda iki araç
- * varsa kurye A'yı sürerken B'nin malını satabiliyordu, üstelik seferde hangi aracı seçtiği yazılı
- * olduğu hâlde o bilgi hiç okunmuyordu. Künye ve ölçüm `van-stock.ts`te.
- *
- * Beyansız istek eskisi gibi guard'a gider: depo kapısından satan depocu da, `?warehouseId=` ile
- * tesisini söyleyen kurye de aynen çalışır (`DOMAIN §17` — satan kişi malın yanındaki personeldir).
- *
- * Kuralın kendisi veri modelinde: *"yerinde satış yalnız aracın KENDİ stoğundan yapılır — zaten
- * ayrılmış mal satılamaz"* (`data-model/depo.md`, `DOMAIN §17`).
+ * Satış yeri yüzeyin açık beyanıdır (`?place=van`), izni sefer verir: araç kuryenin sürdüğü seferin yazdığı araçtır
+ * (`vehicleWarehouseOf`) ve istemci hangi aracı istediğini seçemez. Beyansız istek guard'a gider, depocu ve tesisini söyleyen kurye
+ * aynen çalışır.
  */
 async function salePlaceGuard(c: Context<SaleEnv>, next: Next): Promise<Response | void> {
   const raw = c.req.query('place');
@@ -120,12 +82,8 @@ sale.use('*', requireStaffRole('warehouse', 'courier', 'admin'));
 sale.use('*', salePlaceGuard);
 
 /**
- * Satış — tek çağrıda kapanır. **Kapının kararı ne olursa olsun 200**; "satış oldu mu" gövdede.
- *
- * `sale_failed` gövdeye AYRINTISIZ iniyor ve bu bilinçli: kapanış reddinin sebepleri (yarış,
- * geçiş kuralı, yazım anında biten parti) personelin yapabileceği bir şeye çevrilemiyor — ekranda
- * tek cümle, ayrıntı logda. Yetersiz stok ise AYRI ve ayrıntılı, çünkü onun bir karşılığı var:
- * adedi düşür ya da müşteriye kalanı söyle.
+ * Satış tek çağrıda kapanır ve kapının kararı ne olursa olsun 200 döner; `sale_failed` ayrıntısızdır, çünkü sebepleri personelin
+ * yapabileceği bir şeye çevrilemez. Yetersiz stok ayrı ve ayrıntılıdır, karşılığı adedi düşürmektir.
  */
 sale.post('/on-site', async (c) => {
   const parsed = OnSiteSaleRequestSchema.safeParse(await readJsonBody(c));
@@ -163,27 +121,9 @@ const SaleCatalogQuerySchema = z.object({
 });
 
 /**
- * **BU DEPODA NE VAR** — satış ekranının listesi.
- *
- * Katalog okumasının TA KENDİSİ (`getCatalogData`), yalnız YERİ değişiyor: `place.warehouseId`
- * personelin o anki deposu. Ayrı bir "araç stoğu" okuması YAZILMADI ve yazılmamalı — depo bazlı
- * `available_stock` aracı zaten aynen gösteriyor (`available_stock_total` araçları dışlıyor, ama
- * bu okuma toplamı değil DEPOYU soruyor). İkinci bir okuma, vitrinle satış ekranının aynı ürün
- * için farklı "tükendi" demesine açık kapı bırakırdı.
- *
- * **Kargo deposu bilerek `null`:** yerinde satışta kargo yok, o yüzden "burada yok ama kargoyla
- * gelir" hâli de yok. Personel elinde olanı satar.
- *
- * **`b2c` görüşü:** alıcı anonim, kanal perakende. Toptan kademe kimliğe bağlıdır ve burada kimlik
- * yok — onaysız şirketin B2C'ye düşmesiyle aynı kural.
- *
- * ── KALAN ADET SATIŞA ÖZEL ALANDAN GELİR (21.119, BEKLEYEN kapandı) ─────────
- * Katalog sözleşmesi adet TAŞIMAZ ve taşımamalı (müşteriye stok sayısı sızdırılmaz — `soldOut`
- * yeter). Personelin ihtiyacı farklı: müşterinin yüzüne "kaç tane var" diyebilmek. Cevap vitrin
- * sözleşmesini genişletmek değil, satış zarfına alan eklemek oldu (`SaleCatalogProductSchema.
- * availableHere`) — kaynağı `getAvailableMap`, yani sepet doğrulamasının okuduğu görünümün
- * TA KENDİSİ. İkinci bir stok gerçeği yok: ekranın gösterdiği sayı ile satışın reddettiği sayı
- * aynı satırdan çıkıyor.
+ * Bu depoda ne var, satış ekranının listesi: katalog okumasının kendisidir, yalnız yer personelin o anki deposudur ve kargo deposu
+ * yoktur; görüş `b2c`, çünkü alıcı anonimdir. Kalan adet satışa özel alandan (`availableHere`) gelir, kaynağı sepet doğrulamasının
+ * okuduğu görünümdür.
  */
 sale.get('/catalog', async (c) => {
   const parsed = SaleCatalogQuerySchema.safeParse(c.req.query());
@@ -196,9 +136,7 @@ sale.get('/catalog', async (c) => {
     query: {
       search: q,
       cursor: decodeCursor(parsed.data.cursor),
-      /* ARAÇ BİR VİTRİN DEĞİL (01.09): kurye elinde ne varsa onu satar. Tesis kapısında kural
-         tersine dönüyor ve öyle kalmalı — depocu katalogu tarayıp "burada yok" cevabını da alabilir.
-         Gerekçenin tamamı `listStockedProductIds` künyesinde. */
+      /* Araç bir vitrin değildir, kurye elindekini satar; tesis kapısında kural tersinedir (`listStockedProductIds`). */
       onlyStockedHere: c.get('salePlace') === 'van',
     },
     place: { warehouseId: c.get('warehouseId'), shippingWarehouseId: null },
@@ -226,11 +164,8 @@ sale.get('/catalog', async (c) => {
 });
 
 /**
- * **Çok boylu ürünün boy çekmecesi** — kartta tek boy taşınır (vitrinle aynı karar), seçim burada.
- *
- * Kaynak `getProductDetail`in ta kendisi (yer = personelin deposu, görüş `b2c`): fiyat, indirim ve
- * `soldOut` vitrinle aynı motordan çıkar. Buraya ikinci bir fiyat yolu yazılsaydı, çekmece ile
- * satışın faturası bir gün ayrışırdı. Kalan adet katalogla aynı gerekçeyle ekleniyor (üst künye).
+ * Çok boylu ürünün boy çekmecesi: kaynak `getProductDetail`in kendisidir (yer personelin deposu, görüş `b2c`), fiyat ve `soldOut`
+ * vitrinle aynı motordan çıkar. Kalan adet katalogla aynı gerekçeyle eklenir.
  */
 sale.get('/catalog/:slug/variants', async (c) => {
   const locale = PreferredLanguageEnum.default('tr').safeParse(c.req.query('locale') ?? undefined);
@@ -260,15 +195,8 @@ sale.get('/catalog/:slug/variants', async (c) => {
       productId: detail.id,
       name: detail.name,
       /*
-        ARAÇTA OLMAYAN BOY ÇEKMECEDE DE GÖRÜNMEZ (kullanıcı bulgusu 02.09).
-
-        Liste ve kart araca göre süzülüyor (`onlyStockedHere`), ama boy çekmecesi ürünün TÜM
-        boylarını döndürüyordu ve araçta olmayanlar orada "kalan 0" diye duruyordu — kurye
-        satamayacağı bir boyu seçebiliyordu. Aynı cümlenin devamı: **araç bir vitrin değil, bir
-        yüktür** (`DOMAIN §17`).
-
-        Süzgeç YALNIZ araçta: depo kapısında satış tesisin katalogundan yapılıyor ve orada "bu boy
-        şu an yok" bilgisi kendisi de bir cevaptır (vitrinin "süzülmez, işaretlenir" kuralı).
+        Araçta olmayan boy çekmecede de görünmez, çünkü araç bir yüktür ve kurye satamayacağı boyu seçememeli. Süzgeç yalnız
+        araçtadır, depo kapısında "bu boy şu an yok" bilgisi kendisi bir cevaptır.
       */
       variants: detail.variants
         .filter((v) => yer !== 'van' || (available.get(v.id)?.availableQty ?? 0) > 0)
@@ -281,19 +209,8 @@ sale.get('/catalog/:slug/variants', async (c) => {
 });
 
 /*
-  ── BARKOD OKUTMA (kullanıcı kararı 02.09) ─────────────────────────────────────
-
-  Kod → varyant → ürün → KART. Cevap kartın kendisi çünkü ekran okutmadan sonra kartla açılan
-  aynı çekmeceyi açıyor (adet · boy · fiyat) ve o çekmece kartı ister. Kart katalog motorundan
-  (`getCatalogData` + `productIds`), boy ise detay motorundan (`getProductDetail`) — listeyle ve
-  boy çekmecesiyle AYNI iki kaynak; ikinci bir fiyat/kalan yolu açılmıyor.
-
-  ARAÇTA "BURADA DURAN MAL" KURALI OKUTMADA DA GEÇERLİ: `onlyStockedHere` kartı süzüyor ve süzülen
-  ürün `not_here` diye döner — kurye araçta olmayan bir ürünü okutup sepete alamaz. Tesis kapısında
-  kural yok (vitrin kuralı) ama okutulan BOYUN kendisi bu depoda sıfırsa yine `not_here`: sıfır
-  kalanla sepete alınan bir satır, satışta zaten reddedilirdi — erken söylemek daha dürüst.
-
-  Kalem sayısı `qtyPerCode` ile döner (koli barkodu 1'den büyük taşır); çekmece o adetle açılır.
+  Barkod okutma: kod → varyant → ürün → kart; ekran okutmadan sonra kartla açılan aynı çekmeceyi açar ve kaynaklar listeyle aynıdır.
+  Araçta olmayan ürün ve bu depoda kalanı sıfır olan boy `not_here` döner; kalem sayısı `qtyPerCode` ile gelir.
 */
 sale.get('/scan', async (c) => {
   const locale = PreferredLanguageEnum.default('tr').safeParse(c.req.query('locale') ?? undefined);
@@ -321,10 +238,8 @@ sale.get('/scan', async (c) => {
   });
   const card = page.products[0];
   if (card === undefined) {
-    /* Kart yoksa iki sebep var ve ayrılmalı: ürün pasif/kanalsız (satışa kapalı) ya da araçta
-       değil. İkincisi yalnız araçta doğar (`onlyStockedHere`); adı söylenir ki kurye elindeki
-       paketin ne olduğunu bilsin. Ürünün adı için süzgeçsiz ikinci bir okuma yapılıyor — nadir
-       dal, mutlu yol hiçbir şey ödemiyor. */
+    /* Kart yoksa ürün satışa kapalıdır ya da araçta değildir; ikincisinde adı söylenir ki kurye elindeki paketi bilsin, ad için
+       süzgeçsiz ikinci okuma yalnız bu nadir dalda yapılır. */
     if (yer === 'van') {
       const plain = await getCatalogData(db, { locale: locale.data, query: { productIds: [variant.productId] }, place, viewer, limit: 1 });
       const adsiz = plain.products[0];
@@ -357,9 +272,8 @@ sale.get('/scan', async (c) => {
 });
 
 /**
- * **Son satışlar** — "az önce yazdığım kayıt ne oldu, kim yazmış" kontrolü (kullanıcı isteği
- * 26.08). Depo yine künyeden: kurye ARACININ satışlarını, depocu TESİSİNİN satışlarını görür.
- * Karar hesaplanmaz; okuma `listRecentDoorSales`ın kendisi.
+ * Son satışlar, "az önce yazdığım kayıt ne oldu" kontrolü: depo künyeden gelir, kurye aracının, depocu tesisinin satışlarını
+ * görür.
  */
 sale.get('/recent', async (c) => {
   const sales = await listRecentDoorSales(serviceDb(), c.get('warehouseId'));

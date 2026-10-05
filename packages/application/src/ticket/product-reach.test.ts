@@ -3,11 +3,8 @@ import type { StockStatus } from '@lezzet/types';
 import { gitmeyenAlani, kargoYalniz, stokCumlesi, yereGider, yereGoreAyir } from './product-reach';
 
 /**
- * ÜRÜN BU YERE GİDER Mİ (10.09) — ajanın ürün araçlarının yere göre ayıklaması, saf kararlar.
- *
- * Kargo bölgesi entegrasyonda KURULAMIYOR: kargo deposu ülkenin ilk aktif, çevrimiçi satan tesisidir
- * ve paylaşılan DB'de onun var olup olmadığı küresel bir durumdur (`delivery/place.test.ts` künyesi).
- * Dalların kilidi burada; rota bölgesindeki uçtan uca hâl `support-tools.test.ts`te.
+ * Ürün bu yere gider mi: ajanın ürün araçlarının yere göre ayıklaması, saf kararlar. Kargo bölgesi entegrasyonda kurulamaz, çünkü
+ * ülkenin kargo deposu paylaşılan DB'de küresel durumdur; rota bölgesindeki uçtan uca hâl `support-tools.test.ts`tedir.
  */
 const ROTA = { warehouseId: 'rota-deposu', shippingWarehouseId: 'kargo-deposu' };
 const KARGO = { warehouseId: null, shippingWarehouseId: 'kargo-deposu' };

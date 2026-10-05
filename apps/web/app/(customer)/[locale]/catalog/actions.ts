@@ -13,15 +13,8 @@ import { routing } from '@/i18n/routing';
 import type { CatalogFilters } from './catalog-types';
 
 /**
- * Katalogun sonraki sayfası — sonsuz kaydırmanın sunucu ucu (08.10).
- *
- * Liste RSC'de ilk sayfayla gelir; müşteri aşağı kaydırdıkça bu action bir sonrakini EKLER. Guard
- * YOK: katalog herkese açıktır (operasyon action'larındaki `requireStaff` buraya taşınmaz), ama
- * girdilerin hepsi yine de doğrulanır — dışarıdan gelen her değer şüphelidir.
- *
- * Süzgeç neden URL'de, imleç neden değil: süzgeçli liste PAYLAŞILABİLİR olmalı (kategori + arama
- * adreste yaşar), ama "3. sayfa" diye bir adres yoktur — yenilemede müşteri baştan başlar. Sonsuz
- * kaydırmanın deseni budur; operasyon tarafı da aynı ayrımı yapar.
+ * Katalogun sonraki sayfası, sonsuz kaydırmanın sunucu ucu: guard yoktur, katalog herkese açıktır ama girdiler doğrulanır. Süzgeç
+ * URL'dedir ve paylaşılabilir, imleç değil; yenilemede liste baştan başlar.
  */
 interface CatalogPageResult {
   products: StorefrontProduct[];
@@ -29,15 +22,8 @@ interface CatalogPageResult {
 }
 
 /**
- * Sonraki sayfanın süzgeci — **`CatalogFilters`ten türer, elle yazılmaz** (03.08).
- *
- * Bir ara burada ayrı bir arayüz duruyordu ve `onlyShippable` alanı yoktu: ilk sayfa süzgeçliydi,
- * kaydırınca gelen sayfa süzgeçsiz. Müşteri "adresime gönderilebilir"i seçmiş olmasına rağmen
- * listeye gönderilemeyen ürünler karışıyordu. Türetilen tip bunu bir daha yaşatmaz — yeni bir
- * süzgeç `CatalogFilters`e eklendiği anda bu kapı da onu istemek zorunda kalır.
- *
- * `sort` gevşetiliyor (`string`): değer istemciden geliyor ve aşağıda doğrulanıyor; tipe güvenip
- * doğrulamayı atlamak, uydurma bir sıralamayla sorguyu bozmak demekti.
+ * Sonraki sayfanın süzgeci `CatalogFilters`ten türer, yeni süzgeç eklenince bu kapı da onu istemek zorunda kalsın diye. `sort`
+ * gevşetilir, çünkü değer istemciden gelir ve aşağıda doğrulanır.
  */
 type CatalogPageQuery = Omit<CatalogFilters, 'sort'> & { sort?: string; search?: string };
 
@@ -45,16 +31,8 @@ export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery,
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     /**
-     * İmleç ve sıralama client'tan geliyor → doğrulanır (uydurma değer sorguyu bozmasın).
-     *
-     * **`safeParse`, `parse` değil** (denetim H3 · 03.08): `parse` fırlatınca ZodError funnel'a
-     * düşüyor ve alan adlarıyla çok satırlı dökümü **müşterinin ekranına** basılıyordu — hem iç
-     * yapıyı sızdıran hem de kimsenin okuyamayacağı bir metin.
-     *
-     * Bozuk imleç zaten bir ARIZA değil, geçersiz bir istek: adres çubuğuyla oynanmış ya da bir
-     * bağlantı eskimiş. Doğru cevap hata göstermek değil, listeyi baştan vermek — müşterinin
-     * göreceği en anlamlı sonuç o. Sıralama da bir satır aşağıda tam olarak böyle davranıyordu;
-     * imleç tek istisna kalmıştı.
+     * İmleç ve sıralama istemciden gelir, `safeParse` ile doğrulanır: fırlatan `parse` iç yapıyı müşterinin ekranına basardı. Bozuk
+     * imleç geçersiz bir istektir, cevap listeyi baştan vermektir.
      */
     const parsed = KeysetCursorSchema.safeParse(cursor);
     const safeCursor = parsed.success ? parsed.data : undefined;
@@ -72,10 +50,8 @@ export async function loadMoreCatalogAction(locale: string, q: CatalogPageQuery,
         search: q.search,
         sort,
         onlyOffers: q.onlyOffers,
-        // Kargo süzgeci YERE göre uygulanır ve kip SUNUCUDA yeniden çözülür (08.27) — istemciden
-        // gelen bayrağa güvenilmez. İlk sayfa `page.tsx`te aynı kuraldan geçiyor; burada
-        // atlansaydı kaydırmayla gelen sayfa BAŞKA bir süzgeçle dolar ve liste kendi içinde
-        // çelişirdi. Künyedeki `onlyShippable` vakasının aynı sınıfı, tersinden.
+        // Kargo süzgeci yere göre uygulanır ve kip sunucuda yeniden çözülür; ilk sayfa `page.tsx`te aynı kuraldan geçer, atlansaydı
+        // kaydırmayla gelen sayfa başka süzgeçle dolardı.
         onlyShippable: shippableFilterApplies(q.onlyShippable, await readPlaceMode()),
         cursor: safeCursor,
       },

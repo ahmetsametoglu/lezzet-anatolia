@@ -13,17 +13,9 @@ import { readSiteImage, type SitePageImage } from './site-image';
 import type { StorefrontHome } from './storefront-types';
 
 /**
- * ANASAYFANIN İKİ YÜZÜ — telefon ile masaüstü artık FARKLI bileşimleri okur (14.09).
- *
- * Telefon görünümü native vitrini aldı (kullanıcı kararı): bölümleri native uçla AYNI okumadan gelir
- * (`readHome`, `@lezzet/application` — bant karışımı, on fırsat, altı seçki, tarif ve paket kartları,
- * keşif sayısı). Masaüstü v1 tasarımının bileşiminde kalır (`getHomeData`). İkisini birden okumak her
- * ziyaretin veritabanı maliyetini ikiye katlardı; sayfa sunucunun cihaz ipucuyla (UA) TEK yüzü okur,
- * ipucu yanlışsa istemci öteki yüzü `loadHomeViewAction` ile ister (`home-client.tsx` künyesi).
- *
- * Telefon yüzünün kimlikli iki parçası da BURADA okunur, çünkü native'de de ayrı uçlardan gelirler
- * (kullanıcı kararı 08.08 — vitrin ucu kimliksiz): süren/geçen sipariş bandı ve toptan başvurusunun
- * durumu. Selamlama adı, toptan rozeti ve bildirim zili kökteki bağlamdan okunur (layout).
+ * Anasayfanın iki yüzü: telefon native vitrinin okumasını (`readHome`), masaüstü v1 bileşimini (`getHomeData`) okur ve sayfa cihaz
+ * ipucuyla tek yüzü seçer, ikisini okumak maliyeti ikiye katlardı. Telefon yüzünün kimlikli parçaları (sipariş bandı, toptan
+ * başvurusu) burada okunur, çünkü native'de de ayrı uçlardan gelirler.
  */
 
 /** Vitrinin sipariş bandının taşıdığı kadarı — sipariş listesinin satırından daraltılmış. */
@@ -42,7 +34,7 @@ export interface PhoneHome {
    * aynısı: "süren" kararı sözleşmenin `active` alanından okunur (motorun kuralı), "geçen" `delivered`dır.
    */
   orders: { live: PhoneOrderBand | null; last: PhoneOrderBand | null };
-  /** Toptan başvurusu incelemede mi — cevabı belli soru sorulmaz, profesyonel daveti çizilmez (native 20.08). */
+  /** Toptan başvurusu incelemede mi: cevabı belli soru sorulmaz, profesyonel daveti çizilmez. */
   b2bPending: boolean;
 }
 

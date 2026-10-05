@@ -23,35 +23,16 @@ import type { StorefrontProduct } from '@lezzet/application';
 import type { StorefrontCollection, StorefrontHome, StorefrontOffer } from './storefront-types';
 
 /**
- * Anasayfa okuması — vitrinin veri KAPISI (08.10). Sayfa servisi doğrudan çağırmaz, buradan okur.
- *
- * Bugünkü kaynak durumu:
- *   kategoriler · vitrin ürünleri → GERÇEK (`CategoryService`, `ProductService`, R2 görselleri)
- *   fiyat · stok · fırsatlar      → GERÇEK (`PriceService`, `StockService`, `domain-core`)
- *   paketler                      → GERÇEK (05.5 indi; `listStorefrontPackages`, fixture kalktı)
- *
- * Kaynak geldiğinde değişen tek yer bu dosyadır; sayfa ve komponentler bugünkü hâliyle kalır.
- *
- * Katalog boşken (seed atılmamış yerel ortam) fixture'a düşülür — geliştirme sırasında vitrinin
- * görünür kalması için. Gerçek katalog dolunca bu yedek kendiliğinden devre dışı kalır.
+ * Anasayfa okuması, vitrinin veri kapısı: sayfa servisi doğrudan çağırmaz, kaynak değişirse yalnız bu dosya değişir. Katalog
+ * boşken (seed atılmamış yerel ortam) fixture'a düşülür, gerçek katalog dolunca yedek kendiliğinden devre dışı kalır.
  */
 
-/**
- * Fırsat bandında kaç kart — tasarımda üçlü ızgara (`repeat(3,1fr)`), fazlası bandı taşırır.
- *
- * **6'ydı ve künyesi zaten "üçlü ızgara" diyordu** (kullanıcı bulgusu 09.08): sayı ile cümle
- * çelişiyordu ve dördüncü fırsat sessizce ikinci satıra kayıyordu. Bant bir liste değil, tıklatma
- * davetidir (`CLAUDE §1`) — fazlası "Daha fazla gör" bağının arkasında.
- */
+/** Fırsat bandında kaç kart: tasarımda üçlü ızgara, fazlası bandı taşırırdı; bant liste değil tıklatma davetidir. */
 const OFFER_LIMIT = 3;
 
 /**
- * Rastgele seçimin çekildiği HAVUZ — emniyet sınırı, sunum kararı değil.
- *
- * Üçü rastgele seçebilmek için önce adayları görmek gerekiyor; havuzsuz "ilk üç" hep aynı üç
- * olurdu. Teklif kümesi yakın-SKT partileriyle sınırlı olduğu için küçük kalır (`home.ts` künyesi:
- * *"teklif sayısı küçük olduğu için zincir sabit maliyetlidir"*), ama sınırsız bırakmak bir gün
- * yüz satır çeken bir ana sayfa demekti.
+ * Rastgele seçimin çekildiği havuz, emniyet sınırıdır: havuzsuz "ilk üç" hep aynı üç olurdu ve sınırsız havuz bir gün yüz satır
+ * çeken ana sayfa demekti.
  */
 const OFFER_POOL_LIMIT = 24;
 
@@ -62,25 +43,14 @@ const HOME_CATEGORY_LIMIT = 6;
 const HOME_COLLECTION_LIMIT = 2;
 
 /**
- * Vitrin seçkisinde kaç kart — tasarımda dörtlü ızgara (anasayfa ve boş sepet, ikisinde de 4).
- * Seçki bir LİSTE DEĞİL, tıklatma davetidir: sayfalanmaz ama sabit sınırı vardır (CLAUDE.md §1).
- *
- * **OKUMANIN KENDİSİ ARTIK PAKETTE** (terfi 27.08, kullanıcı kararı): `readShowcase` ölçütüyle
- * (görüntüleme + sepete ekleme sinyali · ayardan gelen pencere · veri yokken katalog yedeği)
- * birlikte `@lezzet/application`a taşındı ve native uygulama da onu okuyor. Mobil kopyalamamıştı —
- * kataloğun ham sırasını alıyordu, yani "seçki" ne haftalık ne seçilmişti (`BEKLEYEN(21.14)`).
- * Buraya kalan tek şey web'in SINIRI: kaç kart çizileceği yüzeyin tasarım kararıdır. Export,
- * çünkü boş sepet de aynı bandı çiziyor (`lib/cart/empty-cart.ts`) ve iki yerde iki sayı yazmak
- * bir gün iki farklı ızgara üretirdi.
+ * Vitrin seçkisinde kaç kart (tasarımda dörtlü ızgara); seçki tıklatma davetidir, sayfalanmaz ama sabit sınırı vardır. Okuma
+ * pakettedir (`readShowcase`), burada web'in sınırı kalır ve boş sepet aynı bandı çizdiği için dışa açıktır.
  */
 export const SHOWCASE_LIMIT = 4;
 
 /**
- * ANA SAYFANIN vitrini iki satır: dört sütun × iki satır (tasarım 20.09). Boş sepetin bandı tek
- * satırda kalır (`SHOWCASE_LIMIT`) — orada vitrin bir tekliftir, sayfanın kendisi değil.
- *
- * Telefon görünümü seçkiyi kendi içinde dörde indirir: orada kartlar iki sütun ve tasarımın kendi
- * kararı tek satır + "tüm katalog" kapısı.
+ * Ana sayfanın vitrini iki satırdır (dört sütun × iki satır); boş sepetin bandı tek satırda kalır (`SHOWCASE_LIMIT`), çünkü orada
+ * vitrin bir tekliftir. Telefon görünümü seçkiyi kendi içinde dörde indirir.
  */
 export const HOME_SHOWCASE_LIMIT = 8;
 
@@ -91,12 +61,8 @@ function isOffer(p: StorefrontProduct): p is StorefrontOffer {
 }
 
 /**
- * Fırsat bandı — near-expiry teklifine açılmış partilerden doğar (DOMAIN §5). Teklif sayısı küçük
- * olduğu için zincir sabit maliyetlidir; kart başına sorgu yoktur.
- *
- * İndirimin gerçekten uygulanıp uygulanmadığına burada karar VERİLMEZ: `toProduct` fiyatı motora
- * çözdürür, teklif normal fiyatı yenemezse ürün fırsat sayılmaz ve banda girmez. Bant boş kalırsa
- * sayfa bölümü tamamen kaldırır — boş hâl gösterilmez (komponent envanteri K8).
+ * Fırsat bandı, yakın-SKT teklifine açılmış partilerden doğar; teklif sayısı küçük olduğu için zincir sabit maliyetlidir. İndirimin
+ * uygulanıp uygulanmadığına motor karar verir, bant boşsa sayfa bölümü kaldırır.
  */
 async function readOffers(
   db: SupabaseClient,
@@ -117,18 +83,8 @@ async function readOffers(
 }
 
 /**
- * **Koleksiyon bandı** (08.26) — kataloğun bir kesitine açılan iki kapı.
- *
- * Sıra bilinçli ve maliyeti belirliyor: önce HAVUZ süzülür (`pickFeatured`), sonra güne göre İKİSİ
- * seçilir, ürün sayısı **yalnız o ikisi için** sorulur. Ters sırada koleksiyon başına bir sayım
- * sorgusu atılırdı ve bandın maliyeti kataloğun koleksiyon sayısıyla büyürdü — iki kart çizen bir
- * bölüm için.
- *
- * **Sayaç kataloğun ölçütüyle AYNI** (`status: 'active'` + aynı `collectionId` süzgeci): kart "9
- * ürün" deyip katalog 4 gösterirse müşteri haklı olarak kandırıldığını düşünür. Üyelik sayısını
- * basmak daha ucuz olurdu ve tam bu yalanı söylerdi.
- *
- * Ürünü kalmamış koleksiyon banda GİRMEZ: tıklanınca boş katalog açan bir kapı, kapı değildir.
+ * Koleksiyon bandı: önce havuz süzülür, güne göre ikisi seçilir ve ürün sayısı yalnız o ikisi için sorulur, maliyet koleksiyon
+ * sayısıyla büyümesin diye. Sayaç kataloğun ölçütüyle aynıdır ve ürünü kalmamış koleksiyon banda girmez.
  */
 async function readCollections(db: SupabaseClient, locale: Locale): Promise<StorefrontCollection[]> {
   const pool = pickFeatured(await new CollectionService(db).list({ activeOnly: true }));
@@ -136,12 +92,8 @@ async function readCollections(db: SupabaseClient, locale: Locale): Promise<Stor
   if (chosen.length === 0) return [];
 
   const products = new ProductService(db);
-  /* Kampanya okuması SEÇİLENLER için (08.44) — havuzun tamamı için değil: seçim `rotateDaily`nin
-     kararı ve bugün kampanyaya göre değişmiyor. **Mobil vitrinde kampanyalı bant ÖNE ALINIYOR,
-     web'de alınmıyor** ve bu bilinçli bir fark değil, ölçülmüş bir sıra: web'in seçimi zaten
-     GÜNE göre dönüyor (`rotateDaily`), yani mobildeki "rastgele seçim kampanyayı yutabilir"
-     arızası burada yok — her koleksiyon sırası gelince görünüyor. Öncelik gerekirse ayrı ölçülür.
-     BEKLEYEN(08.44). */
+  /* Kampanya okuması yalnız seçilenler içindir; web'in seçimi güne göre döndüğü için kampanyalı bant öne alınmaz, her koleksiyon
+     sırası gelince görünür. BEKLEYEN(08.44) */
   const campaigns = await readScopeCampaigns(db, { collectionIds: chosen.map((c) => c.id) });
   const cards = await Promise.all(
     chosen.map(async (c) => {
@@ -153,9 +105,7 @@ async function readCollections(db: SupabaseClient, locale: Locale): Promise<Stor
         image: imageOf(c),
         // Kampanya kartın YANINDA duyurulur, fiyatta değil (künye `lib/storefront/campaign-note`).
         campaign: campaigns.byCollection.get(c.id) ?? null,
-        // Sayaç kataloğun ölçütüyle AYNI: üye VE aktif — kartın sayısı, karta tıklayınca açılan
-        // listenin sayısıdır. Üyelik sayısını basmak kartı yalancı yapardı (pasif ürün de üyedir).
-        // Süzgeç doğrudan `collectionId`: üyeliği önce kimliklere çözen köprü 08.08'de söküldü.
+        // Sayaç kataloğun ölçütüyle aynıdır, üye ve aktif: kartın sayısı tıklanınca açılan listenin sayısıdır, pasif ürün de üyedir.
         productCount: await products.countMatching({ collectionId: c.id, status: 'active' }),
       };
     }),
@@ -165,41 +115,28 @@ async function readCollections(db: SupabaseClient, locale: Locale): Promise<Stor
 
 /** Anasayfanın tüm bölümleri tek turda — bölüm başına ayrı çağrı yapılmaz. */
 /**
- * `warehouseId` — müşterinin yerinden çözülen depo. **Zorunlu ve varsayılansız**: `null` meşru bir
- * değerdir ("yer bilinmiyor", posta kodu zorunlu değil — K1) ama VERİLMESİ zorunludur. Varsayılan
- * bıraksaydık argümanı unutan çağrı derlenir ve sessizce depo-üstü okurdu — `getAvailableMap`'i
- * kurtaran şey (T8) tam olarak parametrenin zorunluluğuydu, aynı disiplin burada da geçerli.
- *
- * `null` → depo-ÜSTÜ okuma: "tükendi" demenin tek dayanağı hiçbir depoda bulunmamasıdır (C3).
- *
- * `viewer` — **kim soruyor** (kanal/onay/kimlik). Aynı gerekçeyle zorunlu ve aynı gerekçeyle
- * ÇAĞIRANDAN gelir: çözümü çerezi okur (`readPricingViewer`), yani okuma kapısının içine konsaydı
- * bu dosya istek bağlamı olmadan çağrılamaz olurdu — testler ve ileride sunucu görevleri dahil.
- * `place` de tam olarak bu yüzden parametre.
+ * `place` ve `viewer` zorunlu ve varsayılansızdır: unutan çağrı derlenip sessizce depo üstü ya da perakende okurdu; yer bilinmiyorsa
+ * okuma işin depo üstü toplamına düşer. İkisi de çağırandan gelir, çünkü çözümleri çerez okur.
  */
 export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer: PricingViewer): Promise<StorefrontHome> {
   const db = serviceDb();
   const [categoryRows, featured, offers, packages, collections, recipes] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
-    // Vitrin seçkisi boş sepetle PAYLAŞILIR — tek kaynak (`readShowcase`, artık pakette).
+    // Vitrin seçkisi boş sepetle paylaşılır; tek kaynak `readShowcase`.
     readShowcase(db, locale, place, viewer, { limit: HOME_SHOWCASE_LIMIT }),
     readOffers(db, locale, place, viewer),
-    // Yer paket bandına da geçer (19.22): kart yol işaretini ancak yeri bilirse basabilir.
+    // Yer paket bandına da geçer: kart yol işaretini ancak yeri bilirse basabilir.
     listStorefrontPackages(locale, HOME_PACKAGE_LIMIT, place),
     readCollections(db, locale),
-    // Tarif şeridi LİSTE SAYFASININ kapısından okunur, ikinci bir okuma yazılmadı: aynı kart aynı
-    // kuralları taşıyor (tükenen kalem toplamdan düşer, fiyat personaya ve DEPOYA bağlı — 05.16).
-    // `place`/`viewer` geçmeseydi ana sayfa yer bilmeden fiyat basardı; kart "6,40 €" derken tarif
-    // sayfası başka bir sayı gösterirdi.
+    // Tarif şeridi liste sayfasının kapısından okunur: aynı kart aynı kuralları taşır ve `place`/`viewer` geçmeseydi ana sayfa
+    // tarif sayfasından farklı fiyat basardı.
     listStorefrontRecipes(locale, place, viewer, HOME_RECIPE_LIMIT),
   ]);
 
-  // **Üç bölümün üçü de VİTRİNE İŞARETLİ olanı gösterir** (08.26). Sınır tasarımın ızgarası:
-  // kategori 6 · paket 2 · koleksiyon 2. Kural tek yerde (`pickFeatured`) — ayrı ayrı yazılsaydı
-  // biri gün gelip ötekilerden ayrışır ve ayrışma sessiz olurdu.
+  // Üç bölüm de vitrine işaretli olanı gösterir ve sınır tasarımın ızgarasıdır (kategori 6, paket 2, koleksiyon 2); kural tek
+  // yerdedir (`pickFeatured`).
   const shown = categoryRows.length ? pickFeatured(categoryRows, HOME_CATEGORY_LIMIT) : FIXTURE_CATEGORIES;
-  // Fotoğraf havuzu (05.23) TEK turda ve YALNIZ vitrine çıkanlar için: seçki `pickFeatured`ten sonra
-  // okunuyor, yoksa on kategorinin havuzu çekilip altısı kullanılırdı. Kart başına sorgu yok.
+  // Fotoğraf havuzu tek turda ve yalnız vitrine çıkanlar için okunur; seçki `pickFeatured`ten sonra gelir, kart başına sorgu yok.
   const products = new ProductService(db);
   const [pools, counts] = await Promise.all([
     new CategoryImageService(db).listByCategories(shown.map((c) => c.id)),
