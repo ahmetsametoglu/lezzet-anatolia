@@ -195,15 +195,16 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // Sipariş kalemlerini sepetten alır: eski ekrandan gelen ikinci basış sepette olmayan kalemle yeni sipariş açmamalı.
   if (input.requireEntriesInCart && !entriesInCart(input.entries, storedCart.items)) return { status: 'cart_changed' };
   if (!customer) return { status: 'customer_not_found' };
+  const business = customerBusinessOf(customer);
 
   // Adres müşterinin kendi adresleri arasından aranır, çünkü `addressId` istemciden geliyor.
   const address = addresses.find((a) => a.id === input.addressId);
   if (!address) return { status: 'address_not_found' };
 
-  // Gel-al: izin ve depo SUNUCUDA sorulur — ekran kartı göstermemiş olsa da istek elle kurulabilir.
+  // Gel-al: izin, depo ve deponun işi sunucuda sorulur, çünkü ekran kartı göstermemiş olsa da istek elle kurulabilir.
   if (input.pickupWarehouseId) {
     if (!customer.pickupAllowed) return { status: 'pickup_not_allowed' };
-    if (!pickupWarehouse) return { status: 'pickup_warehouse_unavailable' };
+    if (!pickupWarehouse || pickupWarehouse.business !== business) return { status: 'pickup_warehouse_unavailable' };
   }
   // Malın teslim edildiği ülke: adresinki, gel-al'da deponunki — KDV oraya bağlıdır (DOMAIN §5); Almanya adresli müşteri
   // Strasbourg'dan alıyorsa mal Fransa'da teslim edilmiştir.
@@ -221,7 +222,6 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
 
   // Depo önce, çünkü sepet o deponun stoğuyla okunur; seçilen adresin kodu seçili yerin kodundan farklıysa adres kazanır. Teslimat
   // iki kez çözülür ama döngü yok: depo yalnız adrese bağlı, sepet yalnız "kargo da kapalı mı" kararını etkiler.
-  const business = customerBusinessOf(customer);
   const place = await resolveDelivery(db, {
     postalCode: address.postalCode,
     country: address.country,

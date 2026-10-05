@@ -261,8 +261,8 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
   - Kural **kodda zorlanır, veriyle değil** (`packages/application/src/cart/min-basket.ts`): kargo yolunda ayar yalnız kanal kapsamından okunur (`only: ['channel']`), küresel satır bile sayılmaz. Kapsam düşürmek yetmiyordu — küresel satır her zaman eşleşir, yani operatör küresel bir eşik yazdığı gün kargo siparişleri sessizce ona takılırdı. **Kimsenin vermediği bir kararın oluşabildiği yol kapatıldı.**
   - Bu güvence sayesinde taban **küresel satıra** yazılabiliyor (bölge bölge tekrarlanmadan); bölge satırı yalnız gerçekten farklı bir tur için gerekir.
 - **Depodan teslim (gel-al) — yalnız izinli müşteriye (22.09):** üçüncü teslim türü `pickup`, checkout'ta yalnız
-  `Customer.pickup_allowed` müşteriye ve yalnız gel-al noktası olan tesisler (`Warehouse.pickup_enabled`) için
-  sunulur; herkese açık bir Drive değildir. Seçim adres seçicide yapılır: depo bir adres gibi listelenir (web sepet,
+  `Customer.pickup_allowed` müşteriye ve yalnız müşterinin işindeki gel-al noktası olan tesisler (`Warehouse.pickup_enabled`)
+  için sunulur; herkese açık bir Drive değildir. Seçim adres seçicide yapılır: depo bir adres gibi listelenir (web sepet,
   telefon adres çekmecesi, checkout adres bölümü), seçilen adres fatura adresi olarak kalır (seçim yoksa varsayılan),
   posta koduyla ilişkisi yoktur. Depo seçiliyken sepet, katalog, ürün, vitrin ve paket okumaları seçilen depoya göre
   yapılır (liste ile detay aynı yeri sorar). Sipariş seçilen depodan çıkar, bölge ve gün yok, kargo ücreti yok, asgari

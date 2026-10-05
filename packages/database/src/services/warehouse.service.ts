@@ -3,6 +3,7 @@ import {
   WarehouseSchema,
   WarehouseInsertSchema,
   WarehouseUpdateSchema,
+  type Business,
   type Warehouse,
   type WarehouseInsert,
   type WarehouseUpdate,
@@ -33,6 +34,8 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
       vehicleId?: string;
       /** Gel-al noktaları — checkout'un müşteriye sunduğu küme. */
       pickupEnabled?: boolean;
+      /** Bu işin depoları; gel-al teklifi müşterinin işinden okunur. */
+      business?: Business;
     } = {},
   ): Promise<Warehouse[]> {
     if (opts.warehouseIds?.length === 0) return Promise.resolve([]);
@@ -40,6 +43,7 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
     if (opts.activeOnly) filters.isActive = true;
     if (opts.kind) filters.kind = opts.kind;
     if (opts.pickupEnabled !== undefined) filters.pickupEnabled = opts.pickupEnabled;
+    if (opts.business) filters.business = opts.business;
     if (opts.homeWarehouseId) filters.homeWarehouseId = opts.homeWarehouseId;
     if (opts.vehicleId) filters.vehicleId = opts.vehicleId;
     if (opts.warehouseIds) filters.id = [...opts.warehouseIds];
