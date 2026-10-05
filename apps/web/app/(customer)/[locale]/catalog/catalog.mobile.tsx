@@ -67,7 +67,7 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
   const noticePlace = place !== null && !place.inRoute ? place : null;
   const campaignLine = campaignNote(data.campaign, copy.campaign, locale);
   // Kuyruk düştüyse gözlemci susar — kendiliğinden yeniden denemek düşen isteği döngüye sokardı.
-  const tail = useLoadMore({ hasMore: hasMore && !tailFailed, loading: loadingMore, onLoadMore });
+  const tail = useLoadMore({ hasMore: hasMore && !tailFailed && !pending, loading: loadingMore, onLoadMore });
 
   /** Sözleşme satırı → kart — native `cardOf`un karşılığı; cümleler ortak kuruculardan. */
   const cardOf = (product: StorefrontProduct) => {
