@@ -1,37 +1,35 @@
 import 'server-only';
-import {
-  PurchaseOrderService,
-  StockIntakeService,
-  StockService,
-  StorageAreaService,
-  SupplierService,
-  serviceDb,
-} from '@lezzet/database';
-import type {
-  KeysetCursor,
-  PurchaseOrderProgress,
-  PurchaseOrderStatus,
-  StockIntake,
-} from '@lezzet/types';
+import { PurchaseOrderService, StockIntakeService, StockService, StorageAreaService, SupplierService, serviceDb } from '@lezzet/database';
+import type { Business, KeysetCursor, PurchaseOrderProgress, PurchaseOrderStatus, StockIntake } from '@lezzet/types';
 import { readWarehouseContext, readWarehouseLabels, readWorkWarehouse } from '@/lib/warehouse/context';
 import type { IntakeTabData, PendingPurchase, ReceivedIntake } from './stock-types';
 
 /**
  * Mal kabul sekmesinin okuması: "kabul bekliyor" listesi açık siparişlerin eksik kalemleridir (`openProgress`), küme veriyle büyümediği
- * için sayfalanmaz. Liste depoya göre süzülmez, çünkü sipariş bir depoya ait değildir; depo kabul diyaloğunda seçilir ve ön seçim üretilmez.
+ * için sayfalanmaz. Çalışılan depo seçiliyse liste o deponun işinin siparişleridir; depo kabul diyaloğunda seçilir, ön seçim üretilmez.
  */
 
-/** İlerleme satırı + siparişin durumu — `openProgress`in döndürdüğü şekil. */
-type ProgressRow = PurchaseOrderProgress & { status: PurchaseOrderStatus };
+/** İlerleme satırı + siparişin durumu ve işi — `openProgress`in döndürdüğü şekil. */
+type ProgressRow = PurchaseOrderProgress & { status: PurchaseOrderStatus; business: Business };
 
 /** Rozetin sayısı: kaç açık sipariş kabul bekliyor. Sekme kapalıyken de okunur (`StockCounts`). */
 export function pendingOrderCount(rows: ProgressRow[]): number {
   return new Set(rows.map((row) => row.purchaseOrderId)).size;
 }
 
-/** Açık siparişlerin bekleyen kalemleri — rozet ve sekme aynı okumadan beslenir. */
-export function readIntakeProgress(): Promise<ProgressRow[]> {
-  return new PurchaseOrderService(serviceDb()).openProgress();
+/** Çalışılan deponun işi; depo seçili değilse `undefined` ve okuma iki işi birlikte görür. */
+async function readWorkBusiness(): Promise<Business | undefined> {
+  const [workplace, ctx] = await Promise.all([readWorkWarehouse(), readWarehouseContext()]);
+  return workplace.status === 'ok' ? ctx.facilities.find((w) => w.id === workplace.warehouseId)?.business : undefined;
+}
+
+/**
+ * Açık siparişlerin bekleyen kalemleri; rozet ve sekme aynı okumadan beslenir. Öteki işin siparişi bu depoya kabul edilemediği için
+ * çalışılan depo seçiliyken sayılmaz.
+ */
+export async function readIntakeProgress(): Promise<ProgressRow[]> {
+  const [rows, business] = await Promise.all([new PurchaseOrderService(serviceDb()).openProgress(), readWorkBusiness()]);
+  return business ? rows.filter((row) => row.business === business) : rows;
 }
 
 /**
@@ -140,10 +138,7 @@ export async function readIntakeTab(rows: ProgressRow[]): Promise<IntakeTabData>
   const supplierOf = new Map(suppliers.map((supplier) => [supplier.id, supplier.name]));
   const now = Date.now();
 
-  // Çalışılan depo seçiliyse liste o deponun işinin siparişleridir: öteki işin siparişi bu depoya kabul edilemez.
-  const workBusiness = workplace.status === 'ok' ? ctx.facilities.find((w) => w.id === workplace.warehouseId)?.business : undefined;
   const pending: PendingPurchase[] = orders.flatMap((order) => {
-    if (workBusiness && order.business !== workBusiness) return [];
     const lines = byOrder.get(order.id);
     // Bekleyen kalemi kalmamış sipariş listede DURMAZ: durumu henüz `received`e dönmemiş olabilir
     // ama kabul edilecek bir şeyi yoktur ve kartı boş bir iş gibi görünürdü.

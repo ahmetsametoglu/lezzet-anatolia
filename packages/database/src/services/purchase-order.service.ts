@@ -239,22 +239,27 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
    * Açık siparişlerin bekleyen kalemleri: `received` ve `cancelled` dışarıda, `draft` içeride ama ayrı sayılmalı, çünkü tedarikçi
    * taslaktan habersizdir. Açık küme veriyle büyümediği için sayfalanmaz.
    */
-  async openProgress(): Promise<Array<PurchaseOrderProgress & { status: PurchaseOrderStatus }>> {
+  async openProgress(): Promise<Array<PurchaseOrderProgress & { status: PurchaseOrderStatus; business: Business }>> {
     const open = await this.getAll({ status: ['draft', 'sent', 'partially_received'] });
     if (open.length === 0) return [];
-    const statusOf = new Map(open.map((o) => [o.id, o.status]));
+    const orderOf = new Map(open.map((o) => [o.id, o]));
 
     const { data, error } = await this.supabase
       .from('purchase_order_progress')
       .select('*')
-      .in('purchase_order_id', [...statusOf.keys()]);
+      .in('purchase_order_id', [...orderOf.keys()]);
     if (error) throw error;
 
-    return (data ?? [])
-      .map((row) => PurchaseOrderProgressSchema.parse(dbToApp(row)))
-      // Tamamlanmış kalem "yolda" değildir: sipariş açık olsa da o satırın malı geldi.
-      .filter((row) => row.missingQty > 0)
-      .map((row) => ({ ...row, status: statusOf.get(row.purchaseOrderId)! }));
+    return (
+      (data ?? [])
+        .map((row) => PurchaseOrderProgressSchema.parse(dbToApp(row)))
+        // Tamamlanmış kalem "yolda" değildir: sipariş açık olsa da o satırın malı geldi.
+        .filter((row) => row.missingQty > 0)
+        .map((row) => {
+          const order = orderOf.get(row.purchaseOrderId)!;
+          return { ...row, status: order.status, business: order.business };
+        })
+    );
   }
 
   async progressOf(purchaseOrderId: string): Promise<PurchaseOrderProgress[]> {

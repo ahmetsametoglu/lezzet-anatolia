@@ -69,6 +69,12 @@ describe('tedarik siparişinin işi', () => {
     expect(outcome.stockIds).toHaveLength(1);
   });
 
+  it('açık siparişin bekleyen kalemleri siparişin işini taşır', async () => {
+    const { order } = await orders.createDraft(supplierId, 'qualite', [{ variantId, qty: 2, targetWarehouseId: qualiteDepo }]);
+    const rows = (await orders.openProgress()).filter((row) => row.purchaseOrderId === order.id);
+    expect(rows.map((row) => row.business)).toEqual(['qualite']);
+  });
+
   it('siparişin işi sonradan değişmez', async () => {
     const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 1 }]);
     const { error } = await db.from('purchase_order').update({ business: 'qualite' }).eq('id', order.id);
