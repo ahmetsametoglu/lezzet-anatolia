@@ -4,15 +4,8 @@ import type { SupplyDraftResponse, SupplyGroup } from '@lezzet/types';
 import { displayName, variantNames } from './names';
 
 /*
-  TEDARİK ÖNERİSİ KAPISI (21.12 · Y4) — öneri listesi + grup onayından taslak TS.
-
-  ÖNERİYİ MOTOR KURAR (`ReorderService`: eşik depo bazlı, yoldaki düşülür, koli katına yuvarlanır);
-  bu dosya yalnız ADLANDIRIR (varyant/tedarikçi/depo adları) ve BAŞKA TESİSTEKİ adedi iliştirir —
-  transfer seçeneğinin ham verisi, kararı değil (v2:648; K6: ölçülmeyen varsayılmaz, ayrı gösterilir).
-
-  ONAY ANINDA ÖNERİ YENİDEN HESAPLANIR: istemci kalem listesi GÖNDERMEZ. Bayat bir ekranın
-  kalemlerini kayda geçirmek, onay ile stok arasında geçen sürede değişen gerçeği yok saymak olurdu;
-  taslak TS zaten tedarikçiye gitmiyor (DOMAIN §16), tazesi her zaman doğrusudur.
+  Tedarik önerisi kapısı: öneriyi motor kurar (`ReorderService`), bu dosya adlandırır ve başka tesisteki adedi transfer seçeneğinin ham
+  verisi olarak iliştirir. Onay anında öneri yeniden hesaplanır, istemci kalem listesi göndermez.
 */
 
 /** Verilen tesislerin eşik-altı önerileri, tedarikçiye gruplu ve adlandırılmış. */

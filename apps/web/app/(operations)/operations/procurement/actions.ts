@@ -20,12 +20,8 @@ const PATH = '/operations/procurement';
 // kendi kapısını kendi tutar (çağrı doğrudan da yapılabilir).
 
 /**
- * Sipariş listesinin bir sonraki sayfası (sonsuz kaydırma).
- *
- * İmleç ve SÜZGEÇ birlikte gelir: ikinci sayfa birincinin ölçütünü taşımazsa liste sessizce
- * karışır — "gönderildi" süzgecinin altına iptal edilmiş siparişler eklenir ve kimse fark etmez.
- * Süzgeç istemciden geliyor ama tehlikesiz: daraltmadır, yetki genişletmez ve sunucu yine kendi
- * kapısını tutar.
+ * Sipariş listesinin sonraki sayfası (sonsuz kaydırma): imleç ve süzgeç birlikte gelir, yoksa ikinci sayfa birincinin ölçütünü taşımaz
+ * ve liste sessizce karışırdı. Süzgeç istemciden gelir ama tehlikesizdir, daraltır ve yetki genişletmez.
  */
 export async function loadMorePurchaseOrdersAction(
   cursor: KeysetCursor,
@@ -53,8 +49,8 @@ export async function loadOrderDetailAction(orderId: string): Promise<ActionResu
 // Kart olmadan sipariş de olmaz: sıfırdan kurulumda ilk iş tedarikçiyi tanıtmaktır. Bu yüzden
 // CRUD ekranın en temel parçası, süsü değil.
 
-// Kartın kaydı `lib/stock/supplier-actions.ts`te (`saveSupplierAction`, 22.44): asistan kuyruğunun
-// tedarikçi önerisi de aynı kapıdan yazar ve kardeş sayfadan import edemez (`STACK §7`).
+// Kartın kaydı `lib/stock/supplier-actions.ts`tedir (`saveSupplierAction`): asistan kuyruğunun tedarikçi önerisi de aynı kapıdan yazar ve
+// kardeş sayfadan import edemez.
 
 // ─── Ürün–kod eşlemesi ────────────────────────────────────────────────────────
 // `DOMAIN §16`: tedarik siparişi TEDARİKÇİNİN DİLİYLE yazılsın diye — bizim varyantımız ↔ onun
@@ -82,11 +78,8 @@ export async function searchVariantsForMappingAction(term: string): Promise<Acti
 }
 
 /**
- * Eşleme yazar/günceller. Aynı (tedarikçi, varyant) ikilisi iki kez tanımlanmaz — servis `upsert`
- * yapar, kod değişirse satır güncellenir, kopya satır doğmaz.
- *
- * `lastPurchasePriceCents` BURADAN yazılmaz: onu mal kabul günceller ("geçen sefer kaçtı" ölçülen bir
- * gerçektir, beyan değil).
+ * Eşleme yazar ya da günceller; aynı (tedarikçi, varyant) ikilisi bir kez tanımlanır, servis `upsert` yapar. `lastPurchasePriceCents`
+ * buradan yazılmaz, onu mal kabul günceller.
  */
 export async function saveSupplierProductAction(input: {
   supplierId: string;
@@ -97,10 +90,8 @@ export async function saveSupplierProductAction(input: {
 }): Promise<ActionResult> {
   try {
     await requireFinance();
-    // ── KOD YOKSA AD ANAHTAR OLUR (06.16 · kullanıcı kararı 14.09) ──────────
-    // Anahtarı motor türetir (`supplierItemKeyOf`); ikisi de boşsa kalem tanınamaz. Aynı anahtar ya da
-    // aynı ad bu tedarikçide başka varyanta bağlıysa veritabanı zaten reddeder (tekil indeks) — önce
-    // okunur bir cümleyle söylenir, PG mesajı operatöre gitmez.
+    // Kod yoksa ad anahtar olur, anahtarı motor türetir (`supplierItemKeyOf`); aynı anahtar başka varyanta bağlıysa veritabanı reddeder,
+    // önce okunur bir cümleyle söylenir.
     const code = supplierItemKeyOf(input.supplierCode, input.nameAtSupplier);
     if (!code) throw new Error('Tedarikçideki kod ya da tedarikçinin ürün adı gerekli — ikisinden biri kalemin anahtarıdır.');
     const service = new SupplierProductService(serviceDb());
@@ -158,11 +149,8 @@ export async function deleteSupplierProductAction(mappingId: string): Promise<Ac
 // ─── Tedarik siparişi ─────────────────────────────────────────────────────────
 
 /**
- * Öneri grubundan **tek dokunuşla** taslak açar (DOMAIN §16'nın ana vaadi).
- *
- * Grup sunucuda YENİDEN okunur, istemciden gelen satırlarla değil: ekrandaki liste birkaç dakika
- * önce okunmuş olabilir ve o arada stok değişebilir. İstemcinin gönderdiği adetlere güvenmek,
- * "eşik altı" olmayan bir ürünü de sipariş etmek demekti — kararın dayanağı ekranda değil veride.
+ * Öneri grubundan tek dokunuşla taslak açar (DOMAIN §16). Grup sunucuda yeniden okunur, istemcinin satırlarına güvenmek eşik altı olmayan
+ * ürünü de sipariş ettirebilirdi.
  */
 export async function createDraftFromSuggestionAction(supplierId: string): Promise<ActionResult<{ orderId: string }>> {
   try {
@@ -171,14 +159,11 @@ export async function createDraftFromSuggestionAction(supplierId: string): Promi
     const ctx = await readWarehouseContext();
     const reorder = new ReorderService(db);
 
-    // **Kalem HEDEF DEPOSUNU taşır** (C7): eşik STR'de delindiyse o satır "STR'ye" diye yazılır.
-    // Depoları toplayıp tek satıra indirmek, tedarikçiye giden listeden niyeti silerdi — mal tek
-    // adrese gelir ve iki deponun eksiği tek yerde birikirdi. Aynı varyant iki depoda eşik altıysa
-    // iki satır olur ve bu doğrudur: farklı yere gidecek iki parti.
+    // Kalem hedef deposunu taşır: depoları tek satıra toplamak tedarikçiye giden listeden niyeti silerdi; aynı varyant iki depoda eşik
+    // altıysa iki satır olur.
     const lines: Array<{ variantId: string; qty: number; unitPriceCents: number | null; targetWarehouseId: string }> = [];
-    // Tur YALNIZ TESİSLERDEN — `readSuggestionGroups` ile aynı evren ve aynı gerekçe (02.09):
-    // hedef depo bir tesistir, araca tedarikçi malı sipariş edilmez. İkisi ayrışsaydı ekranda
-    // görünen öneri ile taslağa yazılan satırlar birbirini tutmazdı.
+    // Tur yalnız tesislerden, `readSuggestionGroups` ile aynı evren: hedef depo bir tesistir ve ikisi ayrışsaydı ekrandaki öneri ile
+    // taslağın satırları tutmazdı.
     const facilityIds = ctx.facilities.map((w) => w.id).filter((id) => ctx.visibleWarehouseIds.includes(id));
     for (const warehouseId of facilityIds) {
       const group = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId);
@@ -205,15 +190,8 @@ export async function createDraftFromSuggestionAction(supplierId: string): Promi
 }
 
 /**
- * **Elle sipariş** — öneriden bağımsız (sayfa sözleşmesi §3).
- *
- * Öneri yalnız "eşik altına düşen"i yakalar; gerçek hayatta sipariş bundan ibaret değil: kampanya
- * için fazladan mal, yeni ürün denemesi, tedarikçinin "bu hafta şu var" demesi. Öneriyi bekleyen
- * bir ekran üçünü de imkânsız kılardı.
- *
- * Kalemler PENCEREDE toplanır ve sipariş tek turda doğar (`createDraft`) — kalemsiz taslak açıp
- * sonra doldurmak değil. Sebebi kural: kod eşlemesini ve "geçen sefer kaçtı" fiyatını bulan yer
- * `createDraft`'tır; kalemi ayrı bir kapıdan eklemek o kuralı ikinci kez yazmak olurdu (§1).
+ * Elle sipariş, öneriden bağımsız: kampanya malı, yeni ürün ya da tedarikçinin teklifi öneriyi beklemez. Kalemler pencerede toplanır ve
+ * sipariş tek turda `createDraft`ten doğar, çünkü kod eşlemesini ve son alış fiyatını bulan yer orasıdır.
  */
 export async function createManualDraftAction(input: {
   supplierId: string;
@@ -238,18 +216,12 @@ export async function createManualDraftAction(input: {
   }
 }
 
-// Öneriden sipariş açan kapı BURADA DEĞİL: `lib/stock/purchase-order-actions.ts` (22.33). Sebep
-// kolokasyonun sınırı — o eylemi asistan kuyruğu çağırıyor ve kardeş sayfadan import yasak
-// (`STACK §7`, `docs:check` zorluyor).
+// Öneriden sipariş açan kapı `lib/stock/purchase-order-actions.ts`tedir: o eylemi asistan kuyruğu çağırır ve kardeş sayfadan import
+// yasaktır.
 
 // ─── Taslak kalemleri ─────────────────────────────────────────────────────────
-// Öneri bir başlangıçtır, son söz değil: adet değişir, vazgeçilen kalem çıkarılır. Düzenlenemeyen
-// bir taslak, "sipariş taslağı" değil bir dayatmadır.
-//
-// İKİSİ DE AYNI KAPIDAN GEÇER (`requireDraft`): gönderilmiş siparişin kalemi değiştirilemez. Bu bir
-// görgü kuralı değil kayıt bütünlüğüdür — tedarikçiye 10 koli yazıp kaydı 6'ya çekmek gelen malı
-// "fazla" gösterir ve fark raporu yalan söyler. Kural bugün UYGULAMA katmanında duruyor; kalıcı yeri
-// veridir (talep: `tedarik-arka-uc-talebi.md §5`).
+// Öneri başlangıçtır, taslağın adedi değişir ve kalemi çıkarılır; ikisi de `requireDraft` kapısından geçer, çünkü gönderilmiş siparişin
+// kalemini değiştirmek gelen malı "fazla" gösterir.
 
 /** Taslak mı — değilse eylem reddedilir. Sipariş okunur, istemcinin beyanına güvenilmez. */
 async function requireDraft(orderId: string): Promise<void> {
@@ -259,10 +231,7 @@ async function requireDraft(orderId: string): Promise<void> {
 }
 
 /**
- * Kalemin adedini ya da beklenen alışını değiştirir.
- *
- * Fiyat İSTEĞE BAĞLI ve `null` anlamlı: "bilinmiyor" demektir ve tutarı eksik bırakır (ekran "≈"
- * der). Sıfır yazmak bedava alım demek olurdu (`CLAUDE.md §1`).
+ * Kalemin adedini ya da beklenen alışını değiştirir; fiyat isteğe bağlıdır ve `null` "bilinmiyor" demektir, sıfır bedava alım olurdu.
  */
 export async function updateDraftLineAction(input: {
   orderId: string;
@@ -280,7 +249,7 @@ export async function updateDraftLineAction(input: {
     await new PurchaseOrderItemService(serviceDb()).update({
       id: input.itemId,
       ...(input.qty === undefined ? {} : { qty: input.qty }),
-      // Cent → euro dönüşümü artık servisin kendi işi (`moneyFields`, 02.9) — burada birim değişmez.
+      // Cent ile euro arasındaki çevrim servisin işidir (`moneyFields`), burada birim değişmez.
       ...(input.unitPriceCents === undefined ? {} : { unitPriceCents: input.unitPriceCents }),
     });
     revalidatePath(PATH);
@@ -304,10 +273,8 @@ export async function removeDraftLineAction(input: { orderId: string; itemId: st
 }
 
 /**
- * "Gönderildi" işareti — sistem GÖNDERMEZ, insan gönderir ve dönüp bunu söyler (DOMAIN §16).
- *
- * Bu yüzden ayrı bir eylem: listeyi kopyalamak/paylaşmak gönderim değildir (kopyalayıp vazgeçmiş
- * olabilir). Damgayı basan şey operatörün beyanıdır.
+ * "Gönderildi" işareti: sistem göndermez, insan gönderir ve bunu söyler (DOMAIN §16). Ayrı eylemdir, çünkü listeyi kopyalamak gönderim
+ * değildir.
  */
 export async function markOrderSentAction(orderId: string): Promise<ActionResult> {
   try {
@@ -323,10 +290,8 @@ export async function markOrderSentAction(orderId: string): Promise<ActionResult
 }
 
 /**
- * Siparişi iptal eder. Mal gelmiş siparişte servis reddeder (zincir kopar) — ekran o hâlde
- * eylemi zaten sunmaz, ama kapı kendi kuralını kendi tutar.
- *
- * İptal YALNIZ yöneticinin: muhasebeci tedarik zincirini okur, akışı durdurmaz.
+ * Siparişi iptal eder; mal gelmiş siparişi servis reddeder, ekran o hâlde eylemi sunmasa da kapı kuralını kendisi tutar. İptal yalnız
+ * yöneticinindir, muhasebeci akışı okur ama durdurmaz.
  */
 export async function cancelOrderAction(orderId: string): Promise<ActionResult> {
   try {

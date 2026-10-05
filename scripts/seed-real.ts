@@ -109,19 +109,9 @@ try {
 const DRY_RUN = process.argv.includes('--dry-run');
 
 /**
- * Katmanlar yalnız TEST verisini açar; ölçütleri ÜRÜNÜN BEYANINA DOKUNUP DOKUNMADIKLARI:
- *
- * - **1** (varsayılan) gerçek veri — stok yok, tedarikçi siparişleri mal kabulü bekler.
- * - **2** test mal kabulü (lot `TEST-001`, SKT uydurma): stok açar, ürünler alınabilir olur.
- *   Beyana dokunmaz, bu yüzden vitrin denemesi bu katmanda yapılır.
- * - **3** VİTRİNİ UÇTAN UCA AÇAR ve bunun için dört şey uydurur: belgesiz ürünün beyanını addan
- *   türetir, her kalemi "satış kurgusunda" sayar (motorun kapısı `teklifli || kurguda`), fiyatı
- *   olmayan varyanta kilo başına tek oranla fiyat yazar ve partisi olmayana kurgu stoğu açar.
- *   Tahmin edilmiş beyan yanlış beyandır ve uydurma fiyat gerçek fiyat değildir — bu yüzden ayrı
- *   katman: stok görmek için buna razı olmak gerekmemeli (işletmeci kararı 19.09).
- *
- * Varsayılan 1, çünkü üretim kurulumu bayraksız koşar ve orada tek bir uydurma değer yazılamaz.
- * Bizim 39 ürünümüzün beyanı katmansızdır: kaynağı veritabanı aynasıdır, hiçbir katmanda doldurulmaz.
+ * Katmanlar yalnız test verisini açar ve ölçüt ürünün beyanına dokunup dokunmadıklarıdır: 1 (varsayılan) gerçek veri, stok yok; 2 test mal
+ * kabulü, beyana dokunmadan stok açar; 3 vitrini uçtan uca açmak için beyan, fiyat ve kurgu stoğu uydurur. Varsayılan 1, çünkü üretim
+ * kurulumu bayraksız koşar ve orada tek bir uydurma değer yazılamaz.
  */
 const LAYERS = (() => {
   const arg = process.argv.find((a) => a.startsWith('--layers='))?.split('=')[1];
@@ -437,12 +427,8 @@ async function seedCategories(db: Db): Promise<Map<string, string>> {
 }
 
 /**
- * Katalog ürününün YEREL kareleri — kapak `0`, kalanlar ada göre galeriye. Klasörün adı ÜRÜNÜN
- * slug'ı, kaynağın İngilizce slug'ı değil; köprü `data/katalog-gorsel-klasoru.json`da durur.
- *
- * Neden bir köprü dosyası: katalog kaynağı kendi adlandırmasından (`turkish-bagel-simit`) başkasını
- * bilmez, işletmeci ise klasörü sitede gördüğü adla (`simit`) arar. İkisini kodda eşlemek, iki
- * adlandırmayı da koda gömmek olurdu.
+ * Katalog ürününün yerel kareleri, kapak `0`, kalanlar ada göre galeriye. Klasör ürünün slug'ıyla adlanır ve kaynağın İngilizce slug'ına
+ * köprü `data/katalog-gorsel-klasoru.json`dadır, çünkü işletmeci klasörü sitede gördüğü adla arar.
  */
 function katalogKareleri(catalogSlug: string): string[] | null {
   const klasor = KATALOG_GORSEL_KLASORU[catalogSlug];
@@ -506,8 +492,8 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
       if (boy) secim.set(sku, { ...boy, ...duzeltme });
     }
   }
-  // KATMAN 3: her kalem "satış kurgusunda" sayılır. Motorun kapısı `teklifli || kurguda`; alış
-  // fiyatı olmayan kalem aksi hâlde aday kalırdı. Fiyatı `seedTestCatalogPrices` üretir.
+  // Katman 3: her kalem "satış kurgusunda" sayılır, çünkü motorun kapısı `teklifli || kurguda`dır ve alış fiyatı olmayan kalem aday
+  // kalırdı; fiyatı `seedTestCatalogPrices` üretir.
   const kurguSku = LAYERS >= 3 ? new Set(secim.keys()) : new Set(lines.map((l) => l.sku));
   const made = await seedLezzaProducts(
     new CategoryService(db),
@@ -547,10 +533,8 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
       continue;
     }
     const kunye = kunyeOf(draft);
-    // Yayına hazır mı sorusunu MOTOR cevaplar (`canPublishProduct`) — besleme kendi ölçütünü
-    // uydurmaz ve veritabanı kısıtıyla aynı cümleyi kurar; ayrışsalardı insert sessizce patlardı.
-    // FİYAT ayrı bir şart ve motorun sorusu değil: fiyatsız ürün vitrine fiyatsız kart olarak düşerdi.
-    // Uydurma fatura taslağa ADINDAN bağlanır; faturalı taslakta iki kaynak da aynı satırı verir.
+    // Yayına hazır mı sorusunu motor cevaplar (`canPublishProduct`) ve veritabanı kısıtıyla aynı cümleyi kurar; fiyat ayrı şarttır, fiyatsız
+    // ürün vitrine fiyatsız kart olarak düşerdi. Uydurma fatura taslağa adından bağlanır.
     const satirlar = SATIRLAR_ADA_GORE.get(ad) ?? faturaSatirlari(draft);
     const fiyatli = satirlar.length > 0 && satirlar.every((v) => FIYATLAR[v.nameAtSupplier] !== undefined);
     const yayina =
@@ -627,9 +611,8 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
 }
 
 /**
- * Çeşit blokları — üyesi taslağımız da kataloğun ürünü de olabilir. Tek üyeli aile KURULMAZ (katalog
- * tarafındaki kuralın aynısı: bir çeşit bloğu en az iki kart ister). Adı var olan aileye ÜYE EKLENİR:
- * katalog kendi ailesini kurmuş olabilir ve bir ürün tek aileye girer — ikinci bir aile rafı böler.
+ * Çeşit blokları: üye taslağımız da kataloğun ürünü de olabilir, tek üyeli aile kurulmaz. Adı var olan aileye üye eklenir, çünkü bir ürün
+ * tek aileye girer ve ikinci aile rafı böler.
  */
 async function seedFamilies(db: Db): Promise<void> {
   console.log('▸ aileler');
@@ -666,9 +649,8 @@ async function seedFamilies(db: Db): Promise<void> {
     }
     plan(`${aile.ad} · ${yazilacak.length} çeşit${aileId ? ' (var olan aileye eklendi)' : ''}`);
     const id = aileId ?? (await families.insert({ name: aile.ad })).id;
-    // Sıra var olan üyelerin ARDINDAN gider: katalog kendi dizisini kurmuşsa o dizi korunur. Ölçüt
-    // SAYI DEĞİL EN BÜYÜK SIRA: katalog dizisi 0'dan başlamayabilir ya da boşluk taşıyabilir, sayıyla
-    // hesaplarsak yeni üye var olan bir sıranın üstüne düşer (23.09'da düştü: iki üye de 8 oldu).
+    // Sıra var olan üyelerin ardından gider ve ölçüt sayı değil en büyük sıradır: katalog dizisi 0'dan başlamayabilir ya da boşluk
+    // taşıyabilir, sayıyla hesaplanırsa yeni üye var olan bir sıranın üstüne düşerdi.
     const baslangic = aileId ? Math.max(-1, ...urunler.filter((p) => p.familyId === aileId).map((p) => p.familyPosition ?? -1)) + 1 : 0;
     for (const [sira, uye] of yazilacak.entries()) {
       await products.update({ id: uye.id, familyId: id, familyLabel: uye.etiket, familyPosition: baslangic + sira });
@@ -905,9 +887,8 @@ async function seedRecipes(db: Db): Promise<void> {
 }
 
 /**
- * KATMAN 3: fiyatı olmayan varyanta UYDURMA fiyat yazar (`TEST_KATALOG_FIYATI` — kilo başına tek
- * oran). Gerçek fiyatın üstüne yazmaz: teklifi ya da faturası olan varyant zaten fiyatlıdır ve
- * atlanır. Ölçüsü olmayan varyant tabana düşer.
+ * Katman 3: fiyatı olmayan varyanta uydurma fiyat yazar (`TEST_KATALOG_FIYATI`, kilo başına tek oran). Gerçek fiyatın üstüne yazmaz,
+ * ölçüsü olmayan varyant tabana düşer.
  */
 async function seedTestCatalogPrices(db: Db): Promise<void> {
   console.log(`▸ test fiyatı · ${TEST_KATALOG_FIYATI.b2cPerKg} €/kg — uydurma değer, vitrin denemesi`);
@@ -980,9 +961,8 @@ async function seedTestIntake(db: Db, facilityId: string): Promise<void> {
 }
 
 /**
- * KATMAN 3: partisi olmayan varyanta UYDURMA stok açar (`TEST_KURGU_STOGU`) — tedarikçi başına tek
- * sipariş ve tek mal kabulü. Gerçek kabulden SONRA koşar ve onun yazdığına dokunmaz: eldekisi olan
- * varyant atlanır. Kabul kapısından geçer, doğrudan parti yazmaz — stok bir belgeden doğar (K6).
+ * Katman 3: partisi olmayan varyanta uydurma stok açar (`TEST_KURGU_STOGU`), tedarikçi başına tek sipariş ve tek mal kabulüyle. Gerçek
+ * kabulden sonra koşar, eldekisi olana dokunmaz ve kabul kapısından geçer, çünkü stok bir belgeden doğar.
  */
 async function seedTestStock(db: Db, facilityId: string): Promise<void> {
   console.log(`▸ kurgu stoğu · boy başına ${TEST_KURGU_STOGU.qty} adet — uydurma değer, vitrin denemesi`);
@@ -1078,9 +1058,8 @@ async function main(): Promise<void> {
   // Sayfa görselleri kuru koşuda YÜKLENMEZ: fonksiyon slot doluysa atlar, boşsa kovaya yazar.
   if (DRY_RUN) console.log(`▸ sayfa görselleri\n  ○ ${SAYFA_GORSELLERI.map((g) => g.slot).join(' · ')} — eklenecek`);
   else await seedSiteImages(db, SAYFA_GORSELLERI);
-  // Mal kabulü KATMAN 2 (işletmeci kararı 19.09): lot ve son kullanma uydurmadır, mal fiilen
-  // sayılmamıştır — ama ürünün BEYANINA dokunmaz, yalnız stok açar. Beyanı tahminle dolduran
-  // türetme katman 3'te kaldı; ikisi aynı kapıda olsaydı stok görmek için beyan bozmak gerekirdi.
+  // Mal kabulü katman 2'dir: lot ve son kullanma uydurmadır ama ürünün beyanına dokunmaz. Beyanı tahminle dolduran türetme katman 3'te
+  // kalır, aynı kapıda olsalar stok görmek için beyan bozmak gerekirdi.
   if (LAYERS >= 2) await seedTestIntake(db, facilityId);
   // Kurgu stoğu gerçek kabulden SONRA: eldekisi olan varyantı görüp atlaması için.
   if (LAYERS >= 3) await seedTestStock(db, facilityId);
