@@ -6,6 +6,7 @@ import {
   MoneyMovementService,
   MovementNatureService,
   MovementTagService,
+  PurchaseOrderService,
   StockIntakeService,
   SupplierService,
   WarehouseService,
@@ -409,6 +410,23 @@ describe('belgenin işi', () => {
 
     const other = await intakes.insert({ supplierId: supplier.id, warehouseId: warehouse.id });
     expect(await createMoneyDocument(db, { ...entry, supplierId: supplier.id, stockIntakeId: other.id, business: 'lezzet' })).toEqual({
+      status: 'invalid',
+      reason: 'business_stock_mismatch',
+    });
+  });
+
+  it('tedarik siparişine bağlı belge siparişin işini alır; siparişle çelişen seçim reddedilir', async () => {
+    const supplier = await new SupplierService(db).insert({ name: `Sipariş belgesi tedarikçisi ${stamp}`, defaultBusiness: 'lezzet' });
+    parties.supplierIds.push(supplier.id);
+    const orders = new PurchaseOrderService(db);
+    const order = await orders.insert({ supplierId: supplier.id, business: 'qualite' });
+    expect(created(await createMoneyDocument(db, { ...entry, supplierId: supplier.id, purchaseOrderId: order.id }))).toMatchObject({
+      status: 'ok',
+      document: { business: 'qualite' },
+    });
+
+    const other = await orders.insert({ supplierId: supplier.id, business: 'qualite' });
+    expect(await createMoneyDocument(db, { ...entry, supplierId: supplier.id, purchaseOrderId: other.id, business: 'lezzet' })).toEqual({
       status: 'invalid',
       reason: 'business_stock_mismatch',
     });

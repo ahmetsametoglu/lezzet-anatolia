@@ -322,7 +322,7 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
     const purchaseOrderId = await draftPurchaseOrder(9, 400);
     await purchaseOrders.markSent(purchaseOrderId, `TS-BEKLEYEN-${stamp}`);
 
-    const mine = (await listPendingIntakes(db, { limit: 100 })).find((row) => row.purchaseOrderId === purchaseOrderId);
+    const mine = (await listPendingIntakes(db, { limit: 100, business: 'lezzet' })).find((row) => row.purchaseOrderId === purchaseOrderId);
 
     expect(mine).toEqual({
       purchaseOrderId,
@@ -335,10 +335,20 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
     });
   });
 
+  it('bekleyen liste kabul deposunun işine göredir — öteki işin siparişi görünmez', async () => {
+    const { order } = await purchaseOrders.createDraft(supplierId, 'qualite', [{ variantId, qty: 2 }]);
+    await purchaseOrders.markSent(order.id, `TS-QUALITE-${stamp}`);
+
+    const ids = async (business: 'lezzet' | 'qualite') =>
+      (await listPendingIntakes(db, { limit: 100, business })).map((row) => row.purchaseOrderId);
+    expect(await ids('qualite')).toContain(order.id);
+    expect(await ids('lezzet')).not.toContain(order.id);
+  });
+
   it('TASLAK listede YOK — tedarikçi ondan habersiz, mal yolda değil', async () => {
     const purchaseOrderId = await draftPurchaseOrder(4, 400);
 
-    const list = await listPendingIntakes(db, { limit: 100 });
+    const list = await listPendingIntakes(db, { limit: 100, business: 'lezzet' });
 
     expect(list.some((row) => row.purchaseOrderId === purchaseOrderId)).toBe(false);
   });
@@ -350,7 +360,7 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
     await receiveGoods(db, { warehouseId, purchaseOrderId, lines: [{ variantId, qty: 8, expiryDate: dayOffset(90) }] });
     expect((await purchaseOrders.getById(purchaseOrderId))?.status).toBe('partially_received');
 
-    const list = await listPendingIntakes(db, { limit: 100 });
+    const list = await listPendingIntakes(db, { limit: 100, business: 'lezzet' });
 
     expect(list.some((row) => row.purchaseOrderId === purchaseOrderId)).toBe(true);
   });
@@ -361,7 +371,7 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
     await receiveGoods(db, { warehouseId, purchaseOrderId, lines: [{ variantId, qty: 5, expiryDate: dayOffset(90) }] });
     expect((await purchaseOrders.getById(purchaseOrderId))?.status).toBe('received');
 
-    const list = await listPendingIntakes(db, { limit: 100 });
+    const list = await listPendingIntakes(db, { limit: 100, business: 'lezzet' });
 
     expect(list.some((row) => row.purchaseOrderId === purchaseOrderId)).toBe(false);
   });
@@ -370,7 +380,7 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
     const purchaseOrderId = await draftPurchaseOrder(7, 1234);
     await purchaseOrders.markSent(purchaseOrderId, `TS-PARASIZ-${stamp}`);
 
-    const mine = (await listPendingIntakes(db, { limit: 100 })).find((row) => row.purchaseOrderId === purchaseOrderId);
+    const mine = (await listPendingIntakes(db, { limit: 100, business: 'lezzet' })).find((row) => row.purchaseOrderId === purchaseOrderId);
 
     expect(Object.keys(mine!).sort()).toEqual([
       'lineCount',

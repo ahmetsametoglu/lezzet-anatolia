@@ -232,7 +232,7 @@ export const DOCUMENT_REASON = {
   link_supplier_mismatch: 'Seçilen mal kabul ya da sipariş başka bir tedarikçinin — belgenin tedarikçisiyle aynı olmalı.',
   link_has_document: 'Bu mal kabulün ya da siparişin faturası zaten girilmiş.',
   business_required: 'Belgenin işi seçilmeli — karşı tarafın varsayılan işi yok.',
-  business_stock_mismatch: 'Belge bir mal kabule bağlı — işi, malın girdiği deponun işidir.',
+  business_stock_mismatch: 'Belge bir mal kabule ya da tedarik siparişine bağlı — işi, bağlı olduğu kaydın işidir.',
 } as const;
 
 /** Belge bağı kapısının reddi → operatörün cümlesi. */

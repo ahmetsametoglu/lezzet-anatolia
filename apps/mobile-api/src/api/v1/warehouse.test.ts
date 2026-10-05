@@ -528,7 +528,7 @@ describe('D2 · mal kabul', () => {
 
     const body = await dataOf<PendingIntakesResponse>(await asStaff('/api/v1/warehouse/intake'));
 
-    // Küresel sayıya bakılmaz: liste depo-üstüdür, kendi kimliğimiz aranır.
+    // Küresel sayıya bakılmaz: liste deponun işinin bütün siparişleridir, kendi kimliğimiz aranır.
     const mine = body.intakes.find((row) => row.purchaseOrderId === purchaseOrderId);
     expect(mine).toEqual({
       purchaseOrderId,

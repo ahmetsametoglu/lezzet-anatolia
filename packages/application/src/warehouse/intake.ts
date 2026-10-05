@@ -12,6 +12,7 @@ import {
 import { meetsMlor } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
 import type {
+  Business,
   CaseSizeContract,
   ProductDateType,
   ProductStorageType,
@@ -177,16 +178,16 @@ export interface PendingIntake extends IntakeHeader {
 
 /**
  * Bekleyen sevkiyatlar `sent` ve `partially_received`dır, çünkü ilk depo kabulü siparişi kapatmaz ve ikinci deponun payı kaybolmamalı.
- * Depo sorulmaz ve dönen tipte para yok: fiyatlar okunsa da bu fonksiyonun sınırında kalır.
+ * Liste kabul deposunun işine göre süzülür, çünkü öteki işin siparişi o kapıdan kabul edilemez; dönen tipte para yoktur.
  */
-export async function listPendingIntakes(db: SupabaseClient, opts: { limit?: number } = {}): Promise<PendingIntake[]> {
+export async function listPendingIntakes(db: SupabaseClient, opts: { limit?: number; business: Business }): Promise<PendingIntake[]> {
   const limit = opts.limit ?? 20;
   const service = new PurchaseOrderService(db);
 
   // İki çağrı, çünkü `listRows` tek durum süzüyor. Paralel: ikisi birbirini beklemez.
   const [sent, partial] = await Promise.all([
-    service.listRows({ status: 'sent', limit }),
-    service.listRows({ status: 'partially_received', limit }),
+    service.listRows({ status: 'sent', limit, business: opts.business }),
+    service.listRows({ status: 'partially_received', limit, business: opts.business }),
   ]);
 
   // Durum satırın kendi alanından okunur, süzgeçten türetilmez: beklenmedik durumdaki satır sessizce yanlış etiketlenmek yerine

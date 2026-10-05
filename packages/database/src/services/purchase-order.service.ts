@@ -138,8 +138,10 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
    * zincir gerçek yabancı anahtarlardan gittiği için gömülü `select` yeter. Depo kırılımı fiilen giren partilerden çıkar, hedef depodan
    * değil.
    */
-  async listRows(opts: { limit?: number; cursor?: KeysetCursor; status?: PurchaseOrderStatus; supplierId?: string } = {}): Promise<Page<PurchaseOrderRow>> {
-    return this.getPageAs(PurchaseOrderRowInCentsSchema, { status: opts.status, supplierId: opts.supplierId }, {
+  async listRows(
+    opts: { limit?: number; cursor?: KeysetCursor; status?: PurchaseOrderStatus; supplierId?: string; business?: Business } = {},
+  ): Promise<Page<PurchaseOrderRow>> {
+    return this.getPageAs(PurchaseOrderRowInCentsSchema, { status: opts.status, supplierId: opts.supplierId, business: opts.business }, {
       // `created_at` hem GÖRÜNÜM hem İMLEÇ alanı — dar şema onu taşısa da select'te bulunması şart
       // (bkz. `pageOf`): eksikse ikinci sayfa istenemez.
       select:

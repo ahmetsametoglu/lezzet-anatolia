@@ -559,7 +559,10 @@ warehouse.get('/near-expiry', async (c) => {
  * Dönen tip fiyat taşımaz.
  */
 warehouse.get('/intake', async (c) => {
-  const intakes = await listPendingIntakes(serviceDb());
+  const db = serviceDb();
+  const workplace = await new WarehouseService(db).getById(c.get('warehouseId'));
+  if (!workplace) return fail(c, 'warehouse_not_found', 404);
+  const intakes = await listPendingIntakes(db, { business: workplace.business });
 
   const body: z.input<typeof PendingIntakesResponseSchema> = { intakes };
   return ok(c, PendingIntakesResponseSchema.parse(body));
