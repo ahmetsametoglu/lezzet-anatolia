@@ -80,7 +80,7 @@ afterAll(async () => {
 
 /** Tedarik siparişi — beklenen adet ve birim maliyetle (**cent**; admin girer, depocu görmez). */
 async function draftPurchaseOrder(qty: number, unitPriceCents: number) {
-  const { order } = await new PurchaseOrderService(db).createDraft(supplierId, [{ variantId, qty, unitPriceCents }]);
+  const { order } = await new PurchaseOrderService(db).createDraft(supplierId, 'lezzet', [{ variantId, qty, unitPriceCents }]);
   return order.id;
 }
 

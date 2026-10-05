@@ -770,6 +770,7 @@ async function seedPurchases(db: Db): Promise<void> {
     if (DRY_RUN) continue;
     const { order } = await orders.createDraft(
       supplierId,
+      'lezzet',
       ready.map(({ line, variantId }) => ({ variantId, qty: line.qty, unitPriceCents: toCents(line.unitCost) })),
       note,
     );
@@ -1002,6 +1003,7 @@ async function seedTestStock(db: Db, facilityId: string): Promise<void> {
     if (DRY_RUN) continue;
     const { order } = await orders.createDraft(
       supplierId,
+      'lezzet',
       satirlar.map((s) => ({ ...s, qty: TEST_KURGU_STOGU.qty })),
       note,
     );

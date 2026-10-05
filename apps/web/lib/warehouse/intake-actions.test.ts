@@ -54,7 +54,7 @@ afterAll(async () => {
 });
 
 async function siparis(unitPriceCents: number): Promise<string> {
-  const { order } = await new PurchaseOrderService(db).createDraft(supplierId, [{ variantId, qty: 10, unitPriceCents }]);
+  const { order } = await new PurchaseOrderService(db).createDraft(supplierId, 'lezzet', [{ variantId, qty: 10, unitPriceCents }]);
   return order.id;
 }
 

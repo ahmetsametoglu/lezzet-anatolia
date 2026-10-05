@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createMoneyDocument } from '@lezzet/application';
-import { PurchaseOrderService, SupplierProductService, serviceDb } from '@lezzet/database';
+import { createMoneyDocument, openPurchaseDraft } from '@lezzet/application';
+import { SupplierProductService, serviceDb } from '@lezzet/database';
 import { parisDateOf } from '@lezzet/helper';
 import type { DocumentVatLine, DocumentVatRegime } from '@lezzet/types';
 import { requireFinance } from '@/lib/guard';
@@ -53,13 +53,19 @@ export async function createDraftFromProposalAction(input: {
       input.proposalId,
       staff.profileId,
       async () => {
-        const draft = await new PurchaseOrderService(serviceDb()).createDraft(
-          input.supplierId,
-          // Hedef depo kalem başına yazılır (C7): hedefsiz sipariş hiçbir deponun eksiğini kapatmaz
-          // ve "yolda" hesabı tam da bu akışta sessizce 0 kalırdı.
-          input.lines.map((l) => ({ variantId: l.variantId, qty: l.qty, unitPriceCents: l.unitPriceCents ?? null, targetWarehouseId: input.targetWarehouseId })),
-          input.note?.trim() || undefined,
-        );
+        const draft = await openPurchaseDraft(serviceDb(), {
+          supplierId: input.supplierId,
+          // Hedef depo kalem başına yazılır: hedefsiz sipariş hiçbir deponun eksiğini kapatmaz ve "yolda" hesabı 0 kalırdı.
+          lines: input.lines.map((l) => ({
+            variantId: l.variantId,
+            qty: l.qty,
+            unitPriceCents: l.unitPriceCents ?? null,
+            targetWarehouseId: input.targetWarehouseId,
+          })),
+          note: input.note?.trim() || undefined,
+        });
+        if (draft.status !== 'ok')
+          throw new Error('Bir sipariş tek işe yazılır; QUALITE ve Lezzet depolarının kalemleri ayrı siparişle açılır.');
         // Faturası kesilen sipariş verilmiş demektir: "gönderildi" işareti numarayı üretir ve siparişi rampanın "kabul bekliyor"
         // listesine sokar; tedarikçiye mesaj gitmez (`sendPurchaseOrder` yalnız işaretler).
         if (input.invoice) await sendPurchaseOrder(draft.order.id);

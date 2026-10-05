@@ -55,7 +55,7 @@ beforeAll(async () => {
   productId = product.id;
   variantId = variants[0]!.id;
 
-  const draft = await purchases.createDraft(supplierId, [{ variantId, qty: 12 }]);
+  const draft = await purchases.createDraft(supplierId, 'lezzet', [{ variantId, qty: 12 }]);
   purchaseOrderId = draft.order.id;
   purchaseRef = draft.order.referenceNo;
 

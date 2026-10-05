@@ -89,7 +89,8 @@ export function ProcurementClient({ data, urlState, canCancelOrders }: Procureme
           // Öneri listesi de yeniden okunur, çünkü istemci yönlendirme önbelleği eski RSC yükünü bir süre tutar. Satır taslak gönderilene
           // kadar "taslakta" olarak durur, gönderilince listeden çıkar.
           router.refresh();
-          setOpenOrderId(result.data.orderId);
+          // İki işin kalemi iki taslak açar ve liste ikisini gösterir; tek taslak doğrudan açılır.
+          setOpenOrderId(result.data.orderIds.length === 1 ? (result.data.orderIds[0] ?? null) : null);
           onFilter({ tab: 'orders' });
         }
       })

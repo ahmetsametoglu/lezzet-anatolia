@@ -6,6 +6,7 @@ import {
   PurchaseOrderItemSchema,
   PurchaseOrderItemInsertSchema,
   PurchaseOrderItemUpdateSchema,
+  type Business,
   type PurchaseOrder,
   type PurchaseOrderInsert,
   type PurchaseOrderUpdate,
@@ -142,7 +143,7 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
       // `created_at` hem GÖRÜNÜM hem İMLEÇ alanı — dar şema onu taşısa da select'te bulunması şart
       // (bkz. `pageOf`): eksikse ikinci sayfa istenemez.
       select:
-        'id,supplier_id,status,reference_no,sent_at,note,created_at,' +
+        'id,supplier_id,business,status,reference_no,sent_at,note,created_at,' +
         'supplier:supplier_id(id,name),' +
         'items:purchase_order_item(id,qty,unit_price,batches:stock(initial_qty,warehouse:warehouse_id(id,code)))',
       orderBy: 'createdAt',
@@ -165,10 +166,15 @@ export class PurchaseOrderService extends BaseDbService<PurchaseOrder, PurchaseO
    * Taslak PO açar. Kalemlerin tedarikçi kod eşlemesi TEK sorguda bulunur (satır başına sorgu yok);
    * eşlemesi olmayan kalem de listeye girer — sadece bizim adımızla yazılır, iş durmaz.
    */
-  async createDraft(supplierId: string, lines: DraftLine[], note?: string): Promise<{ order: PurchaseOrder; items: PurchaseOrderItem[] }> {
+  async createDraft(
+    supplierId: string,
+    business: Business,
+    lines: DraftLine[],
+    note?: string,
+  ): Promise<{ order: PurchaseOrder; items: PurchaseOrderItem[] }> {
     if (lines.length === 0) throw new Error('purchase_order: kalemsiz taslak açılmaz');
 
-    const order = await this.insert({ supplierId, note });
+    const order = await this.insert({ supplierId, business, note });
     const mappings = await this.mappings.listByVariants(lines.map((l) => l.variantId));
     const byVariant = new Map(mappings.filter((m) => m.supplierId === supplierId).map((m) => [m.variantId, m]));
 

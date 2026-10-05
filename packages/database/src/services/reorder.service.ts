@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { PurchaseOrder, PurchaseOrderItem } from '@lezzet/types';
+import type { Business, PurchaseOrder, PurchaseOrderItem } from '@lezzet/types';
 import { PurchaseOrderService, type DraftLine } from './purchase-order.service';
 import { StockService } from './stock.service';
 import { SupplierProductService } from './supplier.service';
@@ -117,7 +117,11 @@ export class ReorderService {
    * Bir öneri grubundan taslak PO üretir — "tek dokunuş". Tedarikçisi olmayan grup sipariş edilemez:
    * kime yazılacağı belli değildir, sessizce boş tedarikçiyle kayıt açmak yerine açıkça reddedilir.
    */
-  async createDraftFrom(group: ReorderGroup, note?: string): Promise<{ order: PurchaseOrder; items: PurchaseOrderItem[] }> {
+  async createDraftFrom(
+    group: ReorderGroup,
+    business: Business,
+    note?: string,
+  ): Promise<{ order: PurchaseOrder; items: PurchaseOrderItem[] }> {
     if (!group.supplierId) throw new Error('reorder: tedarikçisi eşlenmemiş kalemlerden sipariş açılamaz');
 
     const lines: DraftLine[] = group.lines.map((line) => ({
@@ -127,7 +131,7 @@ export class ReorderService {
       // Hedef depo yazılır, çünkü öneri depo başınadır; yazılmasa sonraki turda `incomingQty` 0 kalır ve operatör ikinci siparişi açardı.
       targetWarehouseId: group.warehouseId,
     }));
-    return this.orders.createDraft(group.supplierId, lines, note);
+    return this.orders.createDraft(group.supplierId, business, lines, note);
   }
 }
 

@@ -300,7 +300,7 @@ describe('transfer — iki fiziksel gerçek an', () => {
 
 describe('tedarik — tek sipariş, iki depoda parçalı kabul (K6)', () => {
   it('fark raporu KÜMÜLATİFTİR — ikinci kabul ilkini yok saymaz', async () => {
-    const po = await purchaseOrders.insert({ supplierId, status: 'sent' });
+    const po = await purchaseOrders.insert({ supplierId, business: 'lezzet', status: 'sent' });
     await db.from('purchase_order_item').insert({ purchase_order_id: po.id, variant_id: variantId, qty: 30 });
 
     await intakes.receive({
@@ -321,7 +321,7 @@ describe('tedarik — tek sipariş, iki depoda parçalı kabul (K6)', () => {
   });
 
   it('ilk kabul siparişi KAPATMAZ, tamamlanınca kapanır', async () => {
-    const po = await purchaseOrders.insert({ supplierId, status: 'sent' });
+    const po = await purchaseOrders.insert({ supplierId, business: 'lezzet', status: 'sent' });
     await db.from('purchase_order_item').insert({ purchase_order_id: po.id, variant_id: variantId, qty: 30 });
 
     await intakes.receive({

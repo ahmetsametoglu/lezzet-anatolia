@@ -139,7 +139,7 @@ describe('tedarikçi ve kod eşlemesi (06.8)', () => {
 
 describe('tedarik siparişi (06.9)', () => {
   it('taslak kalemleri tedarikçi koduyla eşleşir; liste onun diliyle çıkar', async () => {
-    const { order, items } = await orders.createDraft(supplierId, [{ variantId, qty: 24 }], 'Haftalık sipariş');
+    const { order, items } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 24 }], 'Haftalık sipariş');
     expect(order.status).toBe('draft');
     expect(items[0]!.supplierProductId).not.toBeNull();
 
@@ -148,16 +148,16 @@ describe('tedarik siparişi (06.9)', () => {
   });
 
   it('gönderim işareti insana aittir; kalemsiz taslak açılmaz', async () => {
-    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 12 }]);
+    const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 12 }]);
     const gonderilen = await orders.markSent(order.id, testRef());
     expect(gonderilen.status).toBe('sent');
     expect(gonderilen.sentAt).not.toBeNull();
 
-    await expect(orders.createDraft(supplierId, [])).rejects.toThrow();
+    await expect(orders.createDraft(supplierId, 'lezzet', [])).rejects.toThrow();
   });
 
   it('mal gelmiş sipariş iptal edilemez — zincir kopmaz', async () => {
-    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 12 }]);
+    const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 12 }]);
     await intakes.receive({ warehouseId, supplierId, purchaseOrderId: order.id, lines: [{ variantId, qty: 12, expiryDate: dayOffset(250) }] });
 
     await expect(orders.cancel(order.id)).rejects.toThrow();
@@ -166,7 +166,7 @@ describe('tedarik siparişi (06.9)', () => {
 
 describe('mal kabul (06.10)', () => {
   it('partiler girişe bağlanır, PO kapanır, son alış fiyatı tazelenir — tek işlemde', async () => {
-    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 24 }]);
+    const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 24 }]);
 
     const outcome = await intakes.receive({
       warehouseId,
@@ -192,7 +192,7 @@ describe('mal kabul (06.10)', () => {
   });
 
   it('eksik gelen mal fark olarak görünür — parti satılsa bile rakam erimez', async () => {
-    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 24 }]);
+    const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 24 }]);
     const outcome = await intakes.receive({
       warehouseId,
       supplierId,
@@ -228,7 +228,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
     await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(250) });
 
     const group = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
-    const { order, items } = await reorder.createDraftFrom(group, 'Eşik altı otomatik taslak');
+    const { order, items } = await reorder.createDraftFrom(group, 'lezzet', 'Eşik altı otomatik taslak');
 
     try {
       expect(order.supplierId).toBe(supplierId);
@@ -241,7 +241,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
   });
 
   it('tedarikçisi eşlenmemiş kalemlerden sipariş açılmaz (açıkça reddedilir)', async () => {
-    await expect(reorder.createDraftFrom({ supplierId: null, warehouseId, lines: [] })).rejects.toThrow();
+    await expect(reorder.createDraftFrom({ supplierId: null, warehouseId, lines: [] }, 'lezzet')).rejects.toThrow();
   });
 
   /**
@@ -275,7 +275,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
     it('taslak açılınca satır DÜŞER — taslak eşiğe sayılır, aynı gruba ikinci taslak açılamaz', async () => {
       expect(await öneriSatiri()).toBeDefined();
       const grup = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
-      const { order } = await reorder.createDraftFrom(grup, 'Test');
+      const { order } = await reorder.createDraftFrom(grup, 'lezzet', 'Test');
       acilanlar.push(order.id);
 
       // Eksik 15 (20 − 5), taslakta 24: satır öneri değildir ve "tek dokunuş" tekrarlanamaz.
@@ -288,6 +288,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
       // Eksiğin yalnız bir kısmını karşılayan elle taslak — öneriden gelmeyen, masada kurulmuş hâl.
       const { order } = await orders.createDraft(
         supplierId,
+        'lezzet',
         [{ variantId, qty: 6, unitPriceCents: null, targetWarehouseId: warehouseId }],
         'Test',
       );
@@ -304,7 +305,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
 
     it('GÖNDERİLİNCE satır düşer — mal yolda, ikinci sipariş açılmamalı', async () => {
       const grup = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
-      const { order } = await reorder.createDraftFrom(grup, 'Test');
+      const { order } = await reorder.createDraftFrom(grup, 'lezzet', 'Test');
       acilanlar.push(order.id);
       await orders.markSent(order.id, testRef());
 
@@ -316,7 +317,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
       const grup = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
       expect(grup.warehouseId).toBe(warehouseId);
 
-      const { order, items } = await reorder.createDraftFrom(grup, 'Test');
+      const { order, items } = await reorder.createDraftFrom(grup, 'lezzet', 'Test');
       acilanlar.push(order.id);
       expect(items[0]?.targetWarehouseId).toBe(warehouseId);
     });
@@ -325,7 +326,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
       const önceki = (await öneriSatiri())?.unassignedQty ?? 0;
 
       // Elle açılmış, hedefi yazılmamış sipariş: malın nereye ineceği bilinmez.
-      const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 100 }]);
+      const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 100 }]);
       acilanlar.push(order.id);
       await orders.markSent(order.id, testRef());
 
@@ -352,7 +353,7 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
  */
 describe('tedarik siparişi listesi (09.14)', () => {
   it('satır tedarikçiyi, kalemleri ve GİREN partileri tek turda taşır', async () => {
-    const { order, items } = await orders.createDraft(supplierId, [{ variantId, qty: 10, unitPriceCents: 450 }]);
+    const { order, items } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 10, unitPriceCents: 450 }]);
     await orders.markSent(order.id, testRef());
     await intakes.receive({
       warehouseId,
@@ -371,8 +372,8 @@ describe('tedarik siparişi listesi (09.14)', () => {
   });
 
   it('keyset imleci kurulur — liste sonsuz kaydırmaya açık', async () => {
-    await orders.createDraft(supplierId, [{ variantId, qty: 1, unitPriceCents: 100 }]);
-    await orders.createDraft(supplierId, [{ variantId, qty: 2, unitPriceCents: 100 }]);
+    await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 1, unitPriceCents: 100 }]);
+    await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 2, unitPriceCents: 100 }]);
 
     const ilk = await orders.listRows({ supplierId, limit: 1 });
     expect(ilk.rows).toHaveLength(1);
@@ -387,7 +388,7 @@ describe('tedarik siparişi listesi (09.14)', () => {
     // siparişle oynar ve tekrarlanmayan bir düşüş üretir (`CLAUDE.md §4b`).
     const önce = await orders.countPending(supplierId);
 
-    const { order } = await orders.createDraft(supplierId, [{ variantId, qty: 3, unitPriceCents: 100 }]);
+    const { order } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 3, unitPriceCents: 100 }]);
     // Taslak henüz gönderilmedi: "yolda" değil.
     expect(await orders.countPending(supplierId)).toBe(önce);
 
@@ -415,7 +416,7 @@ describe('euro↔cent sınırı (02.9)', () => {
   });
 
   it('PO kaleminin beklenen alışı: cent yazılır, kolon euro tutar, cent okunur', async () => {
-    const { order, items } = await orders.createDraft(supplierId, [{ variantId, qty: 2, unitPriceCents: 675 }]);
+    const { order, items } = await orders.createDraft(supplierId, 'lezzet', [{ variantId, qty: 2, unitPriceCents: 675 }]);
     expect(items[0]!.unitPriceCents).toBe(675);
 
     const { data } = await db.from('purchase_order_item').select('unit_price').eq('id', items[0]!.id).single();

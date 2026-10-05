@@ -1,7 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { PurchaseOrderItemService, PurchaseOrderService, ReorderService, SupplierProductService, serviceDb } from '@lezzet/database';
+import { openPurchaseDraft, openSuggestionDrafts } from '@lezzet/application';
+import { PurchaseOrderItemService, PurchaseOrderService, SupplierProductService, serviceDb } from '@lezzet/database';
 import { matchSupplierItem, supplierItemKeyOf } from '@lezzet/domain-core';
 import type { KeysetCursor, PurchaseOrderStatus } from '@lezzet/types';
 import { requireAdmin, requireFinance } from '@/lib/guard';
@@ -149,41 +150,21 @@ export async function deleteSupplierProductAction(mappingId: string): Promise<Ac
 // ─── Tedarik siparişi ─────────────────────────────────────────────────────────
 
 /**
- * Öneri grubundan tek dokunuşla taslak açar (DOMAIN §16). Grup sunucuda yeniden okunur, istemcinin satırlarına güvenmek eşik altı olmayan
- * ürünü de sipariş ettirebilirdi.
+ * Öneri grubundan tek dokunuşla taslak açar, her iş kendi taslağını alır (DOMAIN §16). Grup sunucuda yeniden okunur, istemcinin satırlarına
+ * güvenmek eşik altı olmayan ürünü de sipariş ettirebilirdi.
  */
-export async function createDraftFromSuggestionAction(supplierId: string): Promise<ActionResult<{ orderId: string }>> {
+export async function createDraftFromSuggestionAction(supplierId: string): Promise<ActionResult<{ orderIds: string[] }>> {
   try {
     await requireFinance();
-    const db = serviceDb();
     const ctx = await readWarehouseContext();
-    const reorder = new ReorderService(db);
-
-    // Kalem hedef deposunu taşır: depoları tek satıra toplamak tedarikçiye giden listeden niyeti silerdi; aynı varyant iki depoda eşik
-    // altıysa iki satır olur.
-    const lines: Array<{ variantId: string; qty: number; unitPriceCents: number | null; targetWarehouseId: string }> = [];
     // Tur yalnız tesislerden, `readSuggestionGroups` ile aynı evren: hedef depo bir tesistir ve ikisi ayrışsaydı ekrandaki öneri ile
     // taslağın satırları tutmazdı.
     const facilityIds = ctx.facilities.map((w) => w.id).filter((id) => ctx.visibleWarehouseIds.includes(id));
-    for (const warehouseId of facilityIds) {
-      const group = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId);
-      for (const line of group?.lines ?? []) {
-        lines.push({
-          variantId: line.variantId,
-          qty: line.suggestedQty,
-          unitPriceCents: line.lastPurchasePriceCents,
-          targetWarehouseId: warehouseId,
-        });
-      }
-    }
-    // Öneri sunucuda YENİDEN okunur, istemciden gelen satırlarla değil: ekrandaki liste birkaç
-    // dakika önce okunmuş olabilir ve o arada mal girmiş olabilir. Grup kaybolduysa sessiz başarı
-    // YOK — operatör siparişi verdiğini sanmamalı.
-    if (lines.length === 0) throw new Error('Bu tedarikçide eşik altı kalem kalmadı — liste yenilendi.');
-
-    const { order } = await new PurchaseOrderService(db).createDraft(supplierId, lines);
+    const orders = await openSuggestionDrafts(serviceDb(), { supplierId, facilityIds });
+    // Grup kaybolduysa sessiz başarı yok: operatör siparişi verdiğini sanmamalı.
+    if (orders.length === 0) throw new Error('Bu tedarikçide eşik altı kalem kalmadı — liste yenilendi.');
     revalidatePath(PATH);
-    return { data: { orderId: order.id }, error: null };
+    return { data: { orderIds: orders.map((order) => order.id) }, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }
@@ -204,13 +185,16 @@ export async function createManualDraftAction(input: {
     if (input.lines.length === 0) throw new Error('En az bir kalem ekleyin.');
     if (input.lines.some((l) => !Number.isInteger(l.qty) || l.qty <= 0)) throw new Error('Adet en az 1 olmalı.');
 
-    const { order } = await new PurchaseOrderService(serviceDb()).createDraft(
-      input.supplierId,
-      input.lines.map((l) => ({ variantId: l.variantId, qty: l.qty, targetWarehouseId: l.targetWarehouseId ?? null })),
-      input.note?.trim() || undefined,
-    );
+    const draft = await openPurchaseDraft(serviceDb(), {
+      supplierId: input.supplierId,
+      lines: input.lines.map((l) => ({ variantId: l.variantId, qty: l.qty, targetWarehouseId: l.targetWarehouseId ?? null })),
+      note: input.note?.trim() || undefined,
+    });
+    if (draft.status === 'mixed_business') {
+      throw new Error('Bir sipariş tek işe yazılır: QUALITE ve Lezzet depolarına giden kalemleri ayrı siparişle açın.');
+    }
     revalidatePath(PATH);
-    return { data: { orderId: order.id }, error: null };
+    return { data: { orderId: draft.order.id }, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }

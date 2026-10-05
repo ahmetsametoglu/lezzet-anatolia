@@ -356,6 +356,45 @@ create trigger order_business_matches
   before insert or update of warehouse_id on public.order
   for each row execute function public.order_business_matches();
 
+-- Tedarik siparişi tek işe yazılır: kalemin hedef deposu siparişin işinden olmak zorunda, yoksa tek fatura iki işin malını kapsardı
+-- (docs/feature/iki-is.md, karar 4).
+create or replace function public.purchase_order_item_business() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.target_warehouse_id is not null
+     and (select w.business from public.warehouse w where w.id = new.target_warehouse_id)
+         is distinct from (select o.business from public.purchase_order o where o.id = new.purchase_order_id) then
+    raise exception 'Kalemin hedef deposu tedarik siparişinin işinden değil' using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger purchase_order_item_business
+  before insert or update of target_warehouse_id, purchase_order_id on public.purchase_order_item
+  for each row execute function public.purchase_order_item_business();
+
+-- Siparişe bağlı mal kabul siparişin işinin deposuna yapılır; siparişsiz alım depodan başka iş sormaz.
+create or replace function public.stock_intake_purchase_business() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.purchase_order_id is not null
+     and (select w.business from public.warehouse w where w.id = new.warehouse_id)
+         is distinct from (select o.business from public.purchase_order o where o.id = new.purchase_order_id) then
+    raise exception 'Mal kabulün deposu tedarik siparişinin işinden değil' using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger stock_intake_purchase_business
+  before insert or update of warehouse_id, purchase_order_id on public.stock_intake
+  for each row execute function public.stock_intake_purchase_business();
+
 -- Evine göre araç okuması: panelin ve depo kartının sorgusu ("bu tesisin araçları").
 create index warehouse_home_idx on public.warehouse (home_warehouse_id) where home_warehouse_id is not null;
 -- Parti ↔ tedarik kalemi (T5): parçalı kabulde fark raporunun bağı.
