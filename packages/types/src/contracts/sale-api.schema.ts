@@ -3,34 +3,12 @@ import { PaymentMethodEnum } from '../primitives/enums.schema';
 import { CatalogProductSchema, CatalogVariantSchema } from './catalog-api.schema';
 
 /**
- * **YERİNDE SATIŞ SÖZLEŞMESİ** (21.119 · `DOMAIN §17`) — depo kapısı ve kuryenin aracı.
- *
- * Kapı `packages/application`ın `sellOnSite`ı; bu dosya yalnız telin şeklidir. Kararların hiçbiri
- * burada değil ve olmamalı: fiyat sepet okumasında çözülüyor, tüketim geçiş makinesinde.
- *
- * ── DEPO GÖVDEDE YOK, KÜNYEDE ───────────────────────────────────────────────
- * Satış hangi depodan yapılıyorsa personelin O ANKİ deposudur ve `warehouseGuard` onu istekten
- * çözüyor (kapsam kontrolüyle birlikte). Gövdeye konsaydı kurye başka bir deponun malını satmayı
- * DENEYEBİLİRDİ — reddedilirdi ama denenebilir olması bile yanlış bir kapı şeklidir.
- *
- * ── MÜŞTERİ DE GÖVDEDE YOK ──────────────────────────────────────────────────
- * Kimlik SORULMUYOR (kullanıcı kararı 26.08) ve sipariş anonim alıcıya yazılıyor
- * (`ANONYMOUS_BUYER_ID`, `roles = {system}`). İstemciden müşteri kimliği kabul etmek, kimliği
- * istemcinin belirlemesi demekti — `placeOrder`ın "müşteri kimliği istemciden ASLA alınmaz"
- * kuralının aynısı.
+ * Yerinde satışın tel şekli (DOMAIN §17); kararlar `sellOnSite`tadır. Depo ve müşteri gövdede yoktur: depo personelin künyesinden,
+ * alıcı anonim alıcıdan gelir, çünkü istemcinin seçtiği depo ya da kimlik bir yetki açığı olurdu.
  */
 /**
- * **SATIŞ YERİ** — isteğin `?place=` beyanı (01.09 · kullanıcı kararı).
- *
- * Depo künyeden çözülmeye devam ediyor; beyan edilen şey depo DEĞİL, **yüzey**: personel kapıda mı
- * duruyor yoksa aracından mı satıyor. İkisi aynı kişide birleşebiliyor (kurye rolü tesisleri de
- * kapsar — rota seçimi onlara bakar) ve sunucunun bunu istekten anlamasının başka yolu yok.
- *
- * `van` = kuryenin aracı; depo kimliğini yine SUNUCU çözer (kapsamdaki `kind='vehicle'` depo).
- * Beyansız istek eski davranışı korur: `?warehouseId=` ya da kapsamın tek deposu.
- *
- * **Beyan yetki değildir:** `van` diyen bir depocuya `403`, aracı olmayan kuryeye `400 no_vehicle`
- * döner. İstemci hangi aracı istediğini SEÇEMEZ, yalnız "aracımdan" diyebilir.
+ * Satışın yüzeyi (`?place=`): personel tesiste mi, aracından mı satıyor; depoyu yine sunucu çözer. Beyan yetki değildir: aracı
+ * olmayan kuryeye `400 no_vehicle`, `van` diyen depocuya `403` döner.
  */
 export const SalePlaceEnum = z.enum(['facility', 'van']);
 export type SalePlace = z.infer<typeof SalePlaceEnum>;
@@ -39,10 +17,8 @@ export const OnSiteSaleLineSchema = z.object({
   variantId: z.string().uuid(),
   qty: z.number().int().positive(),
   /**
-   * Pazarlıklı birim fiyat (**cent**) — YALNIZ üstüne yazıldıysa gönderilir.
-   *
-   * Dokunulmamış kalemde alan hiç gelmez ve sunucu fiyatı kendisi çözer. Her kaleme sayı
-   * göndermek, siparişin parasını istemciye yazdırmak olurdu (09.8'in aynı kararı).
+   * Pazarlıklı birim fiyat (**cent**), yalnız üstüne yazılan kalemde gelir; öteki kalemin fiyatını sunucu çözer ki siparişin parası
+   * istemciden yazılmasın.
    */
   negotiatedUnitPriceCents: z.number().int().nonnegative().optional(),
 });
@@ -56,10 +32,8 @@ export const OnSiteSaleRequestSchema = z.object({
 export type OnSiteSaleRequest = z.infer<typeof OnSiteSaleRequestSchema>;
 
 /**
- * Cevap — **kapının kararı ne olursa olsun HTTP 200** (mobil uçların ortak çizgisi).
- *
- * Durum kodu *"istek kapıya ulaştı mı"* sorusunundur; *"satış oldu mu"* gövdede durur. Yetersiz
- * stok bir hata değil bir CEVAPTIR: ekran kalan adedi yazar, personel müşteriye "üçü var" der.
+ * Cevap, kapının kararı ne olursa olsun HTTP 200'dür: durum kodu isteğin kapıya ulaşıp ulaşmadığını, gövde satışın olup olmadığını
+ * söyler. Yetersiz stok hata değil cevaptır; ekran kalan adedi yazar.
  */
 export const OnSiteSaleResponseSchema = z.discriminatedUnion('status', [
   z.object({
@@ -67,9 +41,11 @@ export const OnSiteSaleResponseSchema = z.discriminatedUnion('status', [
     orderId: z.string().uuid(),
     totalCents: z.number().int(),
     referenceNo: z.string().nullable(),
-    /** Tahsilat defterine yazıldı mı — kasa ayarsızsa satış kapanır, para kayıtsız görünür. */
+    /** Tahsilat defterine yazıldı mı; hesap satıştan önce denetlenir, `false` yalnız yazımın kendisi reddedilirse. */
     paymentRecorded: z.boolean(),
   }),
+  /** Seçilen yöntemin kapı hesabı ayarlı değil — sipariş HİÇ yazılmadı; personel başka yöntemle satabilir. */
+  z.object({ status: z.literal('no_payment_account') }),
   /** Bu depoda o kadar yok — sipariş HİÇ yazılmadı, kalan sayı söylenir. */
   z.object({
     status: z.literal('insufficient_here'),
@@ -83,31 +59,25 @@ export const OnSiteSaleResponseSchema = z.discriminatedUnion('status', [
 export type OnSiteSaleResponse = z.infer<typeof OnSiteSaleResponseSchema>;
 
 /* ────────────────────────────────────────────────────────────────────────────
-   SATIŞ KATALOĞU — vitrinin okuması, satışın ihtiyacıyla (21.119)
+   SATIŞ KATALOĞU — vitrinin okuması, satışın ihtiyacıyla
    ──────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Satış kartı = katalog kartı + **bu depoda kalan adet**.
- *
- * Vitrin sözleşmesi adet TAŞIMAZ ve taşımamalı (stok sayısı müşteriye sızdırılmaz — `soldOut`
- * yeter). Satış ekranındaki kişi ise personeldir ve müşterinin yüzüne karşı "kaç tane var"
- * sorusuna cevap vermek zorundadır; adet olmadan bunu ancak satmayı DENEYEREK öğrenirdi
- * (`insufficient_here`). Alan bu yüzden vitrine değil, yalnız satış ucuna eklendi — türetme
- * `extend` ile: kartın geri kalanı vitrinle AYNI kaynaktan gelir, ikinci bir kart şekli yoktur.
+ * Satış kartı = katalog kartı + bu depoda kalan adet. Adet vitrine sızdırılmaz, ama kapıdaki personel "kaç tane var" sorusunu
+ * satmayı denemeden cevaplamalı; kartın geri kalanı vitrinle aynı kaynaktan gelir.
  */
 export const SaleCatalogProductSchema = CatalogProductSchema.extend({
   /**
-   * Bu depoda satılabilir adet (rezervasyonlar düşülmüş) — `variantId`nin stoğu.
-   * **`null` = satılacak birim yok** (aktif boy yok); `0` ise "var ama bitti" demektir. İkisi
-   * aynı kefeye konmaz: biri katalog sorunudur, öteki stok.
+   * Bu depoda satılabilir adet (rezervasyonlar düşülmüş); `null` aktif boy yok, `0` var ama bitti demektir. İkisi ayrı tutulur, çünkü
+   * biri katalog sorunu öteki stoktur.
    */
   availableHere: z.number().int().nullable(),
 });
 export type SaleCatalogProduct = z.infer<typeof SaleCatalogProductSchema>;
 
 /**
- * Sayfa zarfı — `CatalogPageSchema`nın satışa inen kesiti. `activeCollection`/`campaign` yuvası
- * BİLEREK yok: onlar vitrinin kesit başlığıdır, satış ekranının başlığı depodur.
+ * Sayfa zarfı — `CatalogPageSchema`nın satışa inen kesiti. `activeCollection`/`campaign` yuvası BİLEREK yok: onlar vitrinin kesit
+ * başlığıdır, satış ekranının başlığı depodur.
  */
 export const SaleCatalogPageSchema = z.object({
   products: z.array(SaleCatalogProductSchema),
@@ -123,11 +93,8 @@ export const SaleVariantSchema = CatalogVariantSchema.extend({
 export type SaleVariant = z.infer<typeof SaleVariantSchema>;
 
 /**
- * **Çok boylu ürünün çekmecesi** — `GET /sale/catalog/:slug/variants`.
- *
- * Liste kartı tek boy taşır (`variantId` = ilk aktif boy); boy SEÇİMİ detayın işidir ve satışta
- * o "detay" bir çekmecedir. Kaynak `getProductDetail`in ta kendisi (yer = personelin deposu) —
- * fiyat/indirim/stok kararları vitrinle aynı motordan çıkar, ekran ikinci bir fiyat yolu bilmez.
+ * Çok boylu ürünün çekmecesi (`GET /sale/catalog/:slug/variants`): boy seçimi detayın işidir ve satışta detay bir çekmecedir. Kaynak
+ * `getProductDetail`tir (yer = personelin deposu), böylece fiyat, indirim ve stok vitrinle aynı motordan çıkar.
  */
 export const SaleVariantsResponseSchema = z.object({
   productId: z.string().uuid(),
@@ -136,11 +103,7 @@ export const SaleVariantsResponseSchema = z.object({
 });
 export type SaleVariantsResponse = z.infer<typeof SaleVariantsResponseSchema>;
 
-/**
- * **Son kapı satışları** — `GET /sale/recent` (kullanıcı isteği 26.08: "kaydedilen satışı
- * görebileyim; kim yaptıysa görünsün"). Kaynak `listRecentDoorSales`; satıcı adı ayrı bir
- * kolondan değil, zaten tutulan izden gelir (`order_status_log`un `completed` aktörü).
- */
+/** Son kapı satışları (`GET /sale/recent`); satıcı adı ayrı kolondan değil `order_status_log`un `completed` aktöründen gelir. */
 export const SaleRecordSchema = z.object({
   orderId: z.string().uuid(),
   referenceNo: z.string().nullable(),
@@ -154,21 +117,8 @@ export const SaleRecordSchema = z.object({
 export type SaleRecord = z.infer<typeof SaleRecordSchema>;
 
 /**
- * **Barkod okutma** — `GET /sale/scan?code=…` (kullanıcı kararı 02.09: *"ürünü okutmak, hangi
- * ürünün sepette olduğunu sonra görmek önemli; okuttuktan sonra adet çekmecesinin açılması da"*).
- *
- * Cevap KARTIN KENDİSİ + okutulan BOY: ekran okutmadan sonra aynı çekmeceyi açıyor (kartla açılan
- * çekmece) ve o çekmece kartı ister — ikinci bir "okutulmuş ürün" görünümü yazmak aynı ürünü iki
- * şekilde göstermek olurdu. Kart katalog motorundan geliyor (`productIds` daraltması), yani fiyat
- * ve kalan sayısı liste kartıyla aynı kaynaktan.
- *
- * Kod → varyant çözümü `variant_barcode`dan (Modül 23); SKU ve tedarikçi kodu da tanınır
- * (`findByCode`). `qtyPerCode` koli barkodunun çarpanı — çekmece o adetle açılır.
- *
- * Dört olumsuz dal, dördü de 200 ve dördü de ekranda ayrı cümle:
- *   `unknown_code`  — kod hiçbir kayda bağlı değil
- *   `not_sellable`  — ürün var ama bu kanalda satılmıyor / boy pasif
- *   `not_here`      — ürün var, BU depoda/araçta yok (araçta "burada duran mal" kuralı)
+ * Barkod okutma (`GET /sale/scan?code=…`): cevap kartın kendisi ve okutulan boydur, ekran kartla açılan çekmeceyi açar ve ikinci bir
+ * ürün görünümü yazılmaz. Kod barkod, SKU ya da tedarikçi kodudur (`findByCode`); `qtyPerCode` koli barkodunun çarpanıdır.
  */
 export const SaleScanResponseSchema = z.discriminatedUnion('status', [
   z.object({
@@ -177,8 +127,11 @@ export const SaleScanResponseSchema = z.discriminatedUnion('status', [
     variant: SaleVariantSchema,
     qtyPerCode: z.number().int().positive(),
   }),
+  /** Kod hiçbir kayda bağlı değil. */
   z.object({ status: z.literal('unknown_code') }),
+  /** Ürün var ama bu kanalda satılmıyor ya da boyu pasif. */
   z.object({ status: z.literal('not_sellable') }),
+  /** Ürün var, bu depoda ya da araçta yok. */
   z.object({ status: z.literal('not_here'), name: z.string() }),
 ]);
 export type SaleScanResponse = z.infer<typeof SaleScanResponseSchema>;

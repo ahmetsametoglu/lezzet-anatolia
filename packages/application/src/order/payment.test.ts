@@ -39,8 +39,9 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.from('money_movement').delete().eq('account_id', accountId);
+  // Tahsilat siparişe bağlıyken silinmez; sipariş silinince bağı boşalır.
   await db.from('order').delete().eq('customer_id', customerId);
+  await db.from('money_movement').delete().eq('account_id', accountId);
   const { order } = await orders.create(
     { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', paymentMethod: 'cash', orderedTotalCents: 4000 },
     [{ variantId, qty: 4, unitPriceCents: 1000, vatRate: 5.5 }],

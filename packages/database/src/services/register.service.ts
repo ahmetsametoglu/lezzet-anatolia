@@ -226,4 +226,19 @@ export class RegisterQueueService extends QueueDbService<RegisterQueue, Register
   findByOrder(orderId: string): Promise<RegisterQueue | null> {
     return this.getOneBy({ orderId });
   }
+
+  /** Hedefin güncel satırını süreli kilitleyip döndürür; satır yoksa ya da başka bir yazar kilitliyse `null`. */
+  async claim(target: Pick<RegisterQueue, 'orderId' | 'movementId'>, until: string): Promise<RegisterQueue | null> {
+    const rows = await this.executeRpc<unknown[]>('register_queue_claim', {
+      p_order_id: target.orderId,
+      p_movement_id: target.movementId,
+      p_until: until,
+    });
+    return this.parseRows(rows ?? [])[0] ?? null;
+  }
+
+  /** Kilidi bırakır; satır işlenip silindiyse yapacak bir şey kalmamıştır. */
+  async release(id: string): Promise<void> {
+    await this.updateWhereIn('id', [id], { lockedUntil: null });
+  }
 }

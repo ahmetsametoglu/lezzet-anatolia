@@ -3,18 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { SETTING_CATALOG, type SettingValue } from './settings-catalog';
 
 /**
- * NÖBET — sözlükteki fabrika değeri migration'ın yazdığı değerle AYNI mı.
- *
- * Sözlük `fallback` alanını bilerek kopyalıyor (gerekçe `settings-catalog.ts` künyesinde: satır
- * düzenlenince fabrika değeri veride kalmaz, ama ekran "varsayılan 20,00 €" yazıp "Varsayılana dön"
- * sunuyor). Bilinçli kopyanın bedeli sessiz ayrışmadır: migration'daki sayı değişir, ekran eski
- * sayıyı "varsayılan" diye göstermeye devam eder ve kimse fark etmez.
- *
- * Test o yüzden SQL'i okuyor. Tip denetimi bunu göremez — iki taraf da geçerli birer sayı.
+ * Nöbet: sözlükteki fabrika değeri migration'ın yazdığıyla aynı mı. Sözlük `fallback`ı bilerek kopyalar ve kopya sessizce ayrışabilir;
+ * tip denetimi bunu göremediği için test SQL'i okur.
  */
 
 const ROOT = new URL('../../../../../../', import.meta.url).pathname;
-const MIGRATIONS = ['0013_settings.sql', '0028_points.sql', '0029_feedback_request.sql'];
+const MIGRATIONS = ['0013_settings.sql', '0018_money.sql', '0028_points.sql', '0029_feedback_request.sql'];
 
 /** `insert into public.settings … values (…);` bloğundaki anahtar → değer eşlemesi. */
 function seededSettings(): Map<string, SettingValue> {
@@ -51,13 +45,8 @@ describe('ayar sözlüğü ↔ migration', () => {
   for (const def of SETTING_CATALOG) {
     if (def.fallback === undefined) {
       /**
-       * FABRİKA DEĞERİ OLMAYAN AYAR — ve bu bir eksiklik değil, karar.
-       *
-       * `door_cash_account_id` bir hesap kimliği taşıyor ve o kimlik her kurulumda başka;
-       * migration'a uuid gömmek, hiçbir yerde karşılığı olmayan bir hesabı işaret eden bir satır
-       * bırakırdı. Nöbetin bu yönü olmasaydı kural tek taraflı kalırdı: migration'a sonradan
-       * eklenen bir fabrika değeri sözlükte görünmeden yaşar, ekran "Varsayılana dön" sunmadığı
-       * bir ayarın aslında bir varsayılanı olduğunu hiç öğrenmezdi.
+       * Fabrika değeri olmayan ayar (ör. kart aktarım hesabı) migration'da da yazılmamalı; yoksa ekran "Varsayılana dön" sunmadığı bir
+       * ayarın aslında varsayılanı olduğunu hiç öğrenmezdi.
        */
       it(`${def.key} — fabrika değeri YOK, migration da yazmamalı`, () => {
         expect(

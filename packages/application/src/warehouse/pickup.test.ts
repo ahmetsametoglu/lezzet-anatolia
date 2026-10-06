@@ -62,10 +62,15 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await mustDelete(db, 'settings', (q) => q.in('key', ['door_cash_account_id', 'door_card_account_id']).eq('scope_id', warehouseId));
-  await mustDelete(db, 'money_movement', (q) => q.in('account_id', [accountId, cardAccountId]));
   await purgeVariantStock(db, [variantId]);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], profileIds: [customerId, staffId], warehouseIds: [warehouseId] });
-  await mustDelete(db, 'account', (q) => q.in('id', [accountId, cardAccountId]));
+  // Tahsilat siparişe bağlıyken silinmez: hesaplar siparişlerden sonra gider.
+  await purgeTestData(db, {
+    productIds: [productId],
+    categoryIds: [categoryId],
+    profileIds: [customerId, staffId],
+    accountIds: [accountId, cardAccountId],
+    warehouseIds: [warehouseId],
+  });
 });
 
 /** Hazır gel-al siparişi: onay → kutu aç → partiyi kutuya koy → mühürle (son kutu siparişi `ready` yapar). */

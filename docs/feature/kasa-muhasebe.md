@@ -435,6 +435,8 @@ denemede düşen yazım hata kaydı olarak.
   yok), sipariş eşitleme, kasa hareketi, mutabakat. Hiboutik'in cevap biçimi `packages/types` sözleşmesinde;
   istemci ayrı paket değil, kullanıcısı yalnız uygulama katmanı.
 - `apps/backend/src/jobs/`: `register-sync` (dakikalık) ve `register-close-day` (günlük kapanış ve mutabakat).
+- Ödemenin hemen arkasından yazım `register/sync.ts`'teki `kickOrderRegister`'dır; tahsilat ya da iade yazan akış (online onay,
+  kapıda ve gel-al teslimi, kapı önü satış, iade) sonunda çağırır. Kuyruk satırının kilidi `register_queue_claim`.
 - Ortam: `HIBOUTIK_ACCOUNT`, `HIBOUTIK_USER`, `HIBOUTIK_API_KEY`, `HIBOUTIK_MODE` (`demo` | `live`), `REGISTER_CLOSE_AT`.
 
 **Testler:**

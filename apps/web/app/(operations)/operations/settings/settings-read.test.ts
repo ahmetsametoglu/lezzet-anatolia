@@ -187,19 +187,19 @@ describe('depo ekseni — arka uç açtı, ekran kabloladı (03.08)', () => {
   });
 });
 
-describe('fabrika değeri OLMAYAN ayar — kapı önü satış kasası (AÇIK 3)', () => {
-  const ACCOUNTS = [{ id: '1dd7ec2f-27bb-462a-9873-cbbf5a16d885', name: 'Kasa' }];
+describe('fabrika değeri OLMAYAN ayar — kart ödemeleri aktarım hesabı', () => {
+  const ACCOUNTS = [{ id: '1dd7ec2f-27bb-462a-9873-cbbf5a16d885', name: 'Revolut' }];
   const row = (settings: Setting[] = [], accounts = ACCOUNTS) =>
-    toSettingRows({ settings, zones: ZONES, warehouses: [], accounts }).rows.find((r) => r.key === 'door_cash_account_id')!;
+    toSettingRows({ settings, zones: ZONES, warehouses: [], accounts }).rows.find((r) => r.key === 'card_payout_account_id')!;
 
   it('kimlik değil AD gösterilir — operatör uuid okumaz', () => {
-    const view = row([setting({ key: 'door_cash_account_id', value: ACCOUNTS[0]!.id })]);
-    expect(view.display).toBe('Kasa');
+    const view = row([setting({ key: 'card_payout_account_id', value: ACCOUNTS[0]!.id })]);
+    expect(view.display).toBe('Revolut');
   });
 
   it('ad sözlüğü yoksa HAM KİMLİK görünür — uydurma bir ad yazılmaz', () => {
     // "Bilinmeyen hesap" demek, yanlış bir şeyin düzeldiğini düşündürürdü; kimlik en azından aranabilir.
-    const view = row([setting({ key: 'door_cash_account_id', value: ACCOUNTS[0]!.id })], []);
+    const view = row([setting({ key: 'card_payout_account_id', value: ACCOUNTS[0]!.id })], []);
     expect(view.display).toBe(ACCOUNTS[0]!.id);
   });
 
@@ -214,7 +214,7 @@ describe('fabrika değeri OLMAYAN ayar — kapı önü satış kasası (AÇIK 3)
 
   it('"varsayılandan farklı" İŞARETLENMEZ — karşılaştırılacak bir normal yok', () => {
     // Kurulumun kendi seçimi; onu "değiştirilmiş" saymak olmayan bir normalden sapma uydurmaktı.
-    expect(row([setting({ key: 'door_cash_account_id', value: ACCOUNTS[0]!.id })]).changed).toBe(false);
+    expect(row([setting({ key: 'card_payout_account_id', value: ACCOUNTS[0]!.id })]).changed).toBe(false);
   });
 });
 

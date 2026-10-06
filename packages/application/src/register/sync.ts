@@ -34,6 +34,7 @@ import type {
 } from '@lezzet/types';
 import { notifyRegisterWriteStuck } from '../notification/staff-events';
 import { deferBlocked, deferFailed } from '../queue/defer';
+import { hiboutikFromEnv } from './hiboutik/client';
 import type { CashRegister } from './port';
 import { ensureItemProducts, ensureShippingProduct } from './products';
 
@@ -47,10 +48,14 @@ export const REGISTER_LIVE_FROM_KEY = 'register_live_from';
 
 const BATCH = 20;
 
+/** İşleyenin kilidi en uzun yazımdan uzun tutulur; ölen sürecin satırı bu sürenin sonunda boşa çıkar. */
+const CLAIM_LEASE_MS = 10 * 60_000;
+
 type BlockReason = RegisterBlockReason | 'no_store';
 /** `written`: kasa bu kaydı yansıtıyor (şimdi ya da önceden yazıldı); `skipped`: kayıt kasanın kapsamı dışında. */
 type SyncOutcome = { status: 'written' } | { status: 'skipped' } | { status: 'blocked'; reason: BlockReason };
-export type RegisterQueueOutcome = 'written' | 'skipped' | 'blocked' | 'failed';
+/** `busy`: hedefin satırı başka bir yazarda ya da çoktan işlendi; bu yazar dokunmaz. */
+export type RegisterQueueOutcome = 'written' | 'skipped' | 'blocked' | 'failed' | 'busy';
 
 interface SyncContext {
   liveFrom: string;
@@ -89,14 +94,55 @@ export async function syncRegisterQueue(db: Db, register: CashRegister, opts: { 
   if (!liveFrom) return { skipped: 'not_live' };
   const now = opts.now ?? new Date();
   const rows = await new RegisterQueueService(db).listDue(now.toISOString(), BATCH);
-  const counts: Record<RegisterQueueOutcome, number> = { written: 0, skipped: 0, blocked: 0, failed: 0 };
+  const counts: Record<RegisterQueueOutcome, number> = { written: 0, skipped: 0, blocked: 0, failed: 0, busy: 0 };
   for (const row of rows) counts[await processQueueRow(db, register, row, { liveFrom, now })] += 1;
   return counts;
+}
+
+/**
+ * Ödeme yazılınca siparişin kasa satırı hemen işlenir; müşteri ve kurye bunu beklemez, yazılamayanı dakikalık iş tamamlar. Anahtarsız
+ * ortamda kasa yoktur ve tetik bir şey yapmaz.
+ */
+export function kickOrderRegister(db: Db, orderId: string, register: CashRegister | null = hiboutikFromEnv()): void {
+  if (!register) return;
+  void syncOrderNow(db, register, orderId).catch((err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.warn({ orderId, err: message }, 'kasa: anında yazım düştü, dakikalık iş tamamlayacak');
+  });
+}
+
+/** Siparişin kuyruk satırını şimdi işler; kasa canlı değilse ya da satır yoksa yapacak bir şey yoktur (`null`). */
+export async function syncOrderNow(db: Db, register: CashRegister, orderId: string, now = new Date()): Promise<RegisterQueueOutcome | null> {
+  const liveFrom = await registerLiveFrom(db);
+  if (!liveFrom) return null;
+  const row = await new RegisterQueueService(db).findByOrder(orderId);
+  if (!row) return null;
+  return processQueueRow(db, register, row, { liveFrom, now });
 }
 
 /** Kuyruğun tek satırı: yazılırsa ya da yazılacak bir şey yoksa satır tamamlanır, plan durduysa ya da hata çıktıysa ertelenir. */
 export async function processQueueRow(db: Db, register: CashRegister, row: RegisterQueue, ctx: SyncContext): Promise<RegisterQueueOutcome> {
   const queue = new RegisterQueueService(db);
+  // Kasada kapanmış satış ancak ters satışla düzelir; aynı hedefi iki yazar birden işlemesin.
+  const claimed = await queue.claim(row, new Date(ctx.now.getTime() + CLAIM_LEASE_MS).toISOString());
+  if (!claimed) return 'busy';
+  try {
+    return await processClaimedRow(db, register, claimed, ctx, queue);
+  } finally {
+    await queue.release(claimed.id).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn({ rowId: claimed.id, err: message }, 'kasa: kuyruk kilidi bırakılamadı, süresi dolunca düşer');
+    });
+  }
+}
+
+async function processClaimedRow(
+  db: Db,
+  register: CashRegister,
+  row: RegisterQueue,
+  ctx: SyncContext,
+  queue: RegisterQueueService,
+): Promise<RegisterQueueOutcome> {
   try {
     const outcome = row.orderId
       ? await syncOrderRegister(db, register, row.orderId, ctx)

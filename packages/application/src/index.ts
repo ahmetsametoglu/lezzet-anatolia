@@ -503,7 +503,7 @@ export type { CheckoutSessionCreator, CheckoutSessionInput, CheckoutSessionOutco
 export { transitionOrder } from './order/transition';
 export type { TransitionInput, TransitionOutcome } from './order/transition';
 // ── Kart ödemesinin onayı: webhook, ödeme sayfası ve zamanlayıcı aynı yolu çağırır ──
-export { confirmOnlinePayment, providerAccountId } from './order/confirm-payment';
+export { confirmOnlinePayment } from './order/confirm-payment';
 export type { ConfirmPaymentDeps, ConfirmPaymentInput, ConfirmPaymentOutcome } from './order/confirm-payment';
 export { reconcileDraftPayment, sweepUnpaidDrafts } from './order/reconcile-payment';
 export { readCheckoutOrderStatus } from './order/order-status';
@@ -640,7 +640,7 @@ export { parcelOrdinal, readOrderTracking, type OrderTracking, type TrackedParce
 // ── Sertifikalı kasa (Hiboutik) ──
 export { registerDayEnd } from './register/day-end';
 export { hiboutikFromEnv } from './register/hiboutik/client';
-export { registerLiveFrom, requeueRegisterStore, setRegisterLiveFrom, syncRegisterQueue } from './register/sync';
+export { kickOrderRegister, registerLiveFrom, requeueRegisterStore, setRegisterLiveFrom, syncRegisterQueue } from './register/sync';
 export { pennylaneFromEnv } from './accounting/pennylane/client';
 export {
   BANK_FEED_QUIET_JOB,

@@ -1,8 +1,9 @@
-import { AccountService, OrderService, ReservationService, StockService, type Db } from '@lezzet/database';
+import { OrderService, ReservationService, StockService, type Db } from '@lezzet/database';
 import { decideLatePayment } from '@lezzet/domain-core';
-import type { OrderItem } from '@lezzet/types';
+import { SYSTEM_ACCOUNT_IDS, type OrderItem } from '@lezzet/types';
 import { ringBell } from '../realtime/bell';
 import { orderChannelName } from '../realtime/order-channel';
+import { kickOrderRegister } from '../register/sync';
 import type { OrderEffects } from './effects';
 import { recordOrderPayment } from './payment';
 import type { PaymentGateway } from './payment-gateway';
@@ -23,7 +24,7 @@ export interface ConfirmPaymentInput {
   paymentRef: string | null;
   /** Sağlayıcının GERÇEKTEN aldığı tutar (cent) — sipariş toplamı değil. */
   amountCents: number | null;
-  /** Paranın düştüğü hesap; verilmezse aktif sağlayıcı hesabı okunur (`providerAccountId`). */
+  /** Paranın düştüğü hesap; verilmezse sabit Revolut Merchant hesabıdır. */
   accountId?: string | null;
 }
 
@@ -38,7 +39,7 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
   const found = await new OrderService(db).getWithItems(input.orderId);
   if (!found) return { status: 'not_found' };
   const { order, items } = found;
-  const accountId = input.accountId ?? (await providerAccountId(db));
+  const accountId = input.accountId ?? SYSTEM_ACCOUNT_IDS.merchant;
 
   /**
    * İptal edilmiş siparişe gelen para geri verilir: pencere kapandıktan ya da müşteri vazgeçtikten sonra 3-D Secure ödemesi
@@ -75,35 +76,31 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
     }
   }
 
+  // Onay tahsilatsız yazılmaz: alınan tutar okunamazsa hata iz bırakır, sağlayıcı ve canlı bağ yeniden dener.
+  if (input.amountCents == null) throw new Error('Kart tahsilatı yazılamıyor: alınan tutar okunamadı');
   // Tahsilat sağlayıcının gerçekten aldığı tutardır, siparişin toplamı değil; anahtar ikinci çağrının ikinci hareket yazmasını
   // veride engeller.
-  if (accountId && input.amountCents != null) {
-    await recordOrderPayment(db, {
-      orderId: order.id,
-      accountId,
-      amountCents: input.amountCents,
-      method: 'online',
-      description: 'Kart tahsilatı',
-      source: 'system',
-      meta: input.paymentRef ? { providerRef: input.paymentRef } : null,
-      idempotencyKey: input.paymentRef ? `card-payment:${input.paymentRef}` : null,
-    });
-  }
+  await recordOrderPayment(db, {
+    orderId: order.id,
+    accountId,
+    amountCents: input.amountCents,
+    method: 'online',
+    description: 'Kart tahsilatı',
+    source: 'system',
+    meta: input.paymentRef ? { providerRef: input.paymentRef } : null,
+    idempotencyKey: input.paymentRef ? `card-payment:${input.paymentRef}` : null,
+  });
 
   // Numara ve `confirmed` burada doğar; sipariş zaten onaylanmışsa geçiş reddedilir ve bu ikinci çağrının cevabıdır.
   await transitionOrder(db, { orderId: order.id, to: 'confirmed', effects: deps.effects });
 
   // Onay ekranının ZİLİ: müşteri hâlâ "onaylanıyor" yazısına bakıyor olabilir.
   await ringBell(orderChannelName(order.id));
+  kickOrderRegister(db, order.id);
 
   return { status: 'ok', action: decision === 'reserve_again' ? 'reserved_again' : 'confirmed' };
 }
 
-/** Ödemenin düştüğü hesap: sağlayıcı havuzu bir hesaptır (DOMAIN §9), aktarımı transferle bankaya gider. */
-export async function providerAccountId(db: Db): Promise<string | null> {
-  const accounts = await new AccountService(db).list({ activeOnly: true });
-  return accounts.find((account) => account.type === 'provider')?.id ?? null;
-}
 
 /**
  * Sağlayıcı ödemesini iade eder ve damgalar; damga iadeden sonra, yoksa iadesi düşen ödeme "iade edildi" görünürdü. Port yoksa

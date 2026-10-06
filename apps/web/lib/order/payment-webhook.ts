@@ -1,4 +1,4 @@
-import { confirmOnlinePayment, type PaymentGateway } from '@lezzet/application';
+import { confirmOnlinePayment, kickOrderRegister, type PaymentGateway } from '@lezzet/application';
 import { MoneyMovementService, OrderService, ReservationService, SettingsService, WebhookEventService, serviceDb } from '@lezzet/database';
 import { validateMovement } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
@@ -164,6 +164,7 @@ async function reconcileRefund(
     meta: { providerRef: event.paymentRef },
     source: 'system',
   });
+  kickOrderRegister(serviceDb(), order.id);
   return { status: 'ok', action: 'refunded' };
 }
 

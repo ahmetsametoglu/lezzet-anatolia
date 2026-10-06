@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { BUSINESS_LABELS, BusinessEnum, SettingScopeEnum } from '@lezzet/types';
+import { BUSINESS_LABELS, BusinessEnum, SYSTEM_ACCOUNT_IDS, SettingScopeEnum } from '@lezzet/types';
 
 /**
  * İstisna açılabilen eksenler; `global` istisna değil, değerin kendisidir. Tip burada durur, çünkü `settings-types` sözlükten tip
@@ -74,7 +74,7 @@ export interface SettingDef {
   /** `global` dışında istisna açılabilen eksenler; boşsa yalnız genel değer. Tip ekranın sunabildiği eksenlerden gelir. */
   exceptionScopes: readonly ExceptionScope[];
   /**
-   * Fabrika değeri, migration'ın yazdığı satır; kurulumdan kuruluma değişen ayarlarda (hesap kimliği gibi) bilerek boştur. Nöbet
+   * Fabrika değeri, migration'ın yazdığı satır; kurulumdan kuruluma değişen ayarlarda (banka hesabı gibi) bilerek boştur. Nöbet
    * testi iki yönlü doğrular: `fallback` verilen anahtar migration'da bulunmalı, verilmeyen bulunmamalı.
    */
   fallback?: SettingValue;
@@ -306,8 +306,8 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     help: 'Kapıda, gel-al tezgâhında ve kapı önü satışta nakit alınan paranın yazılacağı hesap (çekmece). Boşsa nakit tahsilat yazılmaz.',
     section: 'accounts',
     kind: 'account',
-    // Fabrika değeri YOK ve olamaz: değer bir hesap kimliği, her kurulumda başka. Migration'a uuid
-    // gömmek, hiçbir yerde karşılığı olmayan bir hesabı işaret eden bir satır bırakırdı.
+    // Fabrika değeri migration'ın açtığı sabit Kasa hesabıdır.
+    fallback: SYSTEM_ACCOUNT_IDS.cash_drawer,
     impact:
       'Bu hesap kapıda alınan nakdin çekmecesidir; kartla alınan para buraya değil kapıda kart hesabına yazılır. Yanlış hesap seçilirse nakit yanlış kasada birikir ve gün sonu mutabakatı tutmaz — hareket silinmez, düzeltilmesi elle iş çıkarır.',
     // İstisna ekseni YOK: hangi kasaya yazılacağı kanala ya da bölgeye göre değişmez; değişmesi
@@ -322,7 +322,8 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     kind: 'account',
     impact:
       'Kart parası nakit çekmeceden ayrı tutulur, çünkü çekmece sayımı yalnız nakdi sayar ve kart parası cihazın hesabından bankaya geçer. Yanlış hesap seçilirse kart tahsilatı yanlış hesapta birikir ve banka mutabakatı tutmaz.',
-    // Nakit kasasıyla aynı sebeple fabrika değeri ve istisna ekseni yok.
+    // Fabrika değeri sabit Revolut Merchant hesabıdır; istisna ekseni nakit kasasıyla aynı sebeple yok.
+    fallback: SYSTEM_ACCOUNT_IDS.merchant,
     exceptionScopes: [],
   },
   {
@@ -331,7 +332,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     help: 'Revolut Merchant hesabındaki kart ödemelerinin aktarıldığı banka hesabı. Aktarım tamamlanınca havuz → bu hesap transferi kendiliğinden yazılır.',
     section: 'accounts',
     kind: 'account',
-    // Fabrika değeri YOK (kapı önü kasasıyla aynı gerekçe): değer bir hesap kimliği, her kurulumda başka.
+    // Fabrika değeri YOK: aktarımın gittiği banka sabit hesap değildir, banka eşlemesiyle gelir.
     impact:
       'Ayar boşken aktarım olayı İŞLENMEZ ve sağlayıcı yeniden dener; ayar girilince işlenir. Yanlış hesap seçilirse banka ekstresinin satırı transferin karşısını bulamaz ve para iki hesapta birden görünür.',
     unsetNote: 'Boşken aktarım olayı işlenmez; sağlayıcı yeniden dener.',

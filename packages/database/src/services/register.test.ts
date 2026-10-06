@@ -119,6 +119,54 @@ describe('sipariş parası', () => {
   });
 });
 
+describe('kasaya yazılmayı bekleyen tahsilat', () => {
+  const payCash = (orderId: string, amountCents: number) =>
+    movements.recordForOrder({ orderId, accountId: cashAccountId, amountCents, type: 'order_payment', paymentMethod: 'cash' });
+
+  it('silinmez; tutarı ve siparişi değişmez, açıklaması değişir', async () => {
+    const orderId = await newOrder();
+    const other = await newOrder();
+    await payCash(orderId, 1000);
+    const [movement] = await movements.listByOrder(orderId);
+
+    await expect(movements.delete(movement!.id)).rejects.toThrow('silinmez');
+    await expect(movements.update({ id: movement!.id, amountCents: 900 })).rejects.toThrow('değişmez');
+    await expect(movements.update({ id: movement!.id, orderId: other })).rejects.toThrow('değişmez');
+    await expect(movements.update({ id: movement!.id, orderId: null })).rejects.toThrow('değişmez');
+    await movements.update({ id: movement!.id, description: 'açıklama düzeltildi' });
+
+    expect((await movements.listByOrder(orderId)).map((row) => row.amountCents)).toEqual([1000]);
+  });
+
+  it('sipariş silinince bağı boşalır, hareket kalır', async () => {
+    const orderId = await newOrder();
+    await payCash(orderId, 1000);
+    const [movement] = await movements.listByOrder(orderId);
+
+    await purgeOrders(db, [orderId]);
+
+    expect(await movements.getById(movement!.id)).toMatchObject({ orderId: null, amountCents: 1000 });
+  });
+});
+
+describe('kuyruk kilidi', () => {
+  it('kilitli satırı ikinci yazar alamaz; bırakılınca ya da süresi geçince alınır', async () => {
+    const orderId = await newOrder();
+    await pay(orderId, 400);
+    const row = (await queueRowOf('order_id', orderId))!;
+    const target = { orderId, movementId: null };
+    const later = new Date(Date.now() + 600_000).toISOString();
+
+    expect(await queue.claim(target, later)).toMatchObject({ id: row.id });
+    expect(await queue.claim(target, later)).toBeNull();
+    await queue.release(row.id);
+    expect(await queue.claim(target, later)).toMatchObject({ id: row.id });
+
+    await db.from('register_queue').update({ locked_until: new Date(Date.now() - 1000).toISOString() }).eq('id', row.id);
+    expect(await queue.claim(target, later)).toMatchObject({ id: row.id });
+  });
+});
+
 describe('eşlenmiş kasanın hareketi', () => {
   it('kimliğiyle kuyruğa düşer; silinmesi de düşer ki kasadaki karşılığı geri alınsın', async () => {
     const movement = await movements.insert({ accountId: cashAccountId, direction: 'out', amountCents: 2000, type: 'expense' });

@@ -11,6 +11,7 @@ import {
 } from '@lezzet/database';
 import { fingerprintRows, heuristicColumnMapper, parseBankRows } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
+import { SYSTEM_ACCOUNT_IDS } from '@lezzet/types';
 import { euro, gun, tabloDolu, type Db } from './shared';
 
 // Kasa, bankalar ve Revolut Merchant birer hesaptır; bakiye saklanmaz, hareketlerden türer ve açılış bakiyesi de bir harekettir (`capital`).
@@ -18,12 +19,13 @@ import { euro, gun, tabloDolu, type Db } from './shared';
 // oluşurdu.
 
 const HESAPLAR = [
-  { key: 'kasa', name: 'Kasa', type: 'cash' as const, acilis: 850 },
+  // Kasa ile Revolut Merchant sabit hesaplardır: migration açar, besleme yalnız açılış bakiyesini yazar.
+  { key: 'kasa', name: 'Kasa', type: 'cash' as const, acilis: 850, systemKey: 'cash_drawer' as const },
   { key: 'revolut', name: 'Revolut', type: 'bank' as const, acilis: 4200 },
   { key: 'cm', name: 'Crédit Mutuel', type: 'bank' as const, acilis: 12500 },
   // Kart ödemelerinin havuzunun açılışı var, çünkü aktarımı var: tahsilatlar burada yazılmadığı için açılış onların yerini tutar, yoksa
   // aktarım hiç girmemiş parayı çıkarır ve bakiye eksiye düşerdi.
-  { key: 'merchant', name: 'Revolut Merchant', type: 'provider' as const, acilis: 1980 },
+  { key: 'merchant', name: 'Revolut Merchant', type: 'provider' as const, acilis: 1980, systemKey: 'merchant' as const },
   // Kapanmış hesap: SİLİNMEZ, pasifleşir — geçmiş hareketleri ona bağlıdır.
   { key: 'eskiBanka', name: 'N26 (kapandı)', type: 'bank' as const, acilis: 0, isActive: false },
   // Ortak cari hesabı ortağın tek kaydıdır ve açılışı yoktur: cari bir kasa değil kişiyle hesaptır, bakiyesi yalnız ortak adına ya da
@@ -97,12 +99,15 @@ export async function seedMoney(db: Db): Promise<void> {
   for (const etiket of ETIKETLER) await tagService.insert(etiket);
 
   for (const h of HESAPLAR) {
-    const created = await accounts.insert({ name: h.name, type: h.type, isActive: h.isActive ?? true });
-    hesapId.set(h.key, created.id);
+    const id =
+      'systemKey' in h && h.systemKey
+        ? SYSTEM_ACCOUNT_IDS[h.systemKey]
+        : (await accounts.insert({ name: h.name, type: h.type, isActive: h.isActive ?? true })).id;
+    hesapId.set(h.key, id);
     // Açılış bakiyesi bir HAREKETTİR: bakiye kolonu yok, sayı hareketlerden çıkar. Türü `sermaye`.
     if (h.acilis > 0) {
       await movements.insert({
-        accountId: created.id,
+        accountId: id,
         direction: 'in',
         amountCents: toCents(h.acilis),
         type: 'capital',
@@ -261,16 +266,10 @@ export async function seedMoney(db: Db): Promise<void> {
     valueDate: gun(-2),
   });
 
-  // Kart ödemelerinin aktarıldığı banka: webhook havuz → bu hesap transferini kendiliğinden yazar. Kapıda alınan nakit çekmeceye, kart
-  // parası kart cihazının hesabına (burada Revolut) girer; satış çağrısı hesabı açıkça verirse ayar ezilir.
+  // Kart ödemelerinin aktarıldığı banka: webhook havuz → bu hesap transferini kendiliğinden yazar. Kapı tahsilatının hesaplarını
+  // migration sabit hesaplara bağlar.
   await new SettingsService(db).set('card_payout_account_id', hesapId.get('revolut')!, {
     description: 'Kart ödemeleri havuzunun aktarıldığı banka hesabı.',
-  });
-  await new SettingsService(db).set('door_cash_account_id', hesapId.get('kasa')!, {
-    description: 'Kapı önü satış tahsilatının düştüğü hesap (12.2).',
-  });
-  await new SettingsService(db).set('door_card_account_id', hesapId.get('revolut')!, {
-    description: 'Kapıda kartla alınan paranın düştüğü hesap.',
   });
 
   // Banka ekstresi ayrı adımdır (`seedBankQueue`), çünkü yalnız `full` katmanında koşar.

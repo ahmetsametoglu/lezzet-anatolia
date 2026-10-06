@@ -22,6 +22,7 @@ import { readDoorAccountId, readDoorCollection } from '../order/door-account';
 import type { OrderEffects } from '../order/effects';
 import { deliverOrder } from '../order/fulfillment';
 import { recordOrderPayment, syncOrderPaymentStatus } from '../order/payment';
+import { kickOrderRegister } from '../register/sync';
 
 /**
  * Gel-al teslim (DOMAIN §6): teslim `ready`den yazılır ve sıra kapıdakiyle aynıdır, önce kutu kapısı, sonra mal ve teslim, en sonda
@@ -225,6 +226,7 @@ export async function deliverPickupOrder(
     source: 'system',
   });
   if (paid.status !== 'ok') return { status: 'not_found' };
+  kickOrderRegister(db, input.orderId);
 
   return {
     status: 'ok',

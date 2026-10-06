@@ -23,9 +23,47 @@ create table public.account (
   currency currency not null default 'EUR',
   -- Hesap SİLİNMEZ, pasifleşir: geçmiş hareketleri ona bağlıdır (kapanan banka hesabı da tarihtir).
   is_active boolean not null default true,
+  -- Sabit hesabın rolü: kapı nakdi (`cash_drawer`) ile kart ve online tahsilatı (`merchant`) her kurulumda bir hesaba yazılır.
+  system_key text unique check (system_key in ('cash_drawer', 'merchant')),
   created_at timestamptz not null default now()
 );
 create unique index account_name_key on public.account (lower(name));
+
+-- Kimlikler sabittir (`SYSTEM_ACCOUNT_IDS`): kapı ayarlarının fabrika değeri ve uygulama hesabı bunlarla bulur.
+insert into public.account (id, name, type, system_key) values
+  ('00000000-0000-4000-8000-000000000101', 'Kasa', 'cash', 'cash_drawer'),
+  ('00000000-0000-4000-8000-000000000102', 'Revolut Merchant', 'provider', 'merchant');
+
+-- Sabit hesap silinmez, pasifleşmez, türü ve rolü değişmez: tahsilatın yazılacağı hesap kaybolursa ödeme kayıtsız kalırdı.
+create or replace function public.account_system_guard() returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  if old.system_key is null then
+    if tg_op = 'DELETE' then
+      return old;
+    end if;
+    return new;
+  end if;
+  if tg_op = 'DELETE' then
+    raise exception 'Sabit hesap silinmez (%)', old.name using errcode = 'check_violation';
+  end if;
+  if not new.is_active or new.type <> old.type or new.system_key is distinct from old.system_key then
+    raise exception 'Sabit hesap pasifleşmez, türü ve rolü değişmez (%)', old.name using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+create trigger account_system_guard before update or delete on public.account
+  for each row execute function public.account_system_guard();
+revoke execute on function public.account_system_guard() from public, anon, authenticated;
+
+-- Kapı tahsilatının fabrika hesapları sabit hesaplardır; ayar ekrandan başka hesaba çevrilebilir.
+insert into public.settings (key, value, description) values
+  ('door_cash_account_id', '"00000000-0000-4000-8000-000000000101"', 'Kapıda, gel-al tezgâhında ve kapı önü satışta alınan nakdin hesabı.'),
+  ('door_card_account_id', '"00000000-0000-4000-8000-000000000102"', 'Kapıda, gel-al tezgâhında ve kapı önü satışta kartla alınan paranın hesabı.');
 
 -- ── Tür sözlüğü ─────────────────────────────────────────────────────────────
 -- Hareketin sınıflandırması tek türdür ("bu para neyin parası"); çoklu etikette hangisinin tür olduğu ve hesap kodu kayboluyordu.

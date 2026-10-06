@@ -126,9 +126,26 @@ create table public.register_queue (
   attempts int not null default 0,
   next_attempt_at timestamptz not null default now(),
   last_error text,
+  -- İşleyenin kilidi; yeniden işaretleme dokunmaz, böylece işlenirken gelen değişiklik ikinci bir yazarı başlatmaz.
+  locked_until timestamptz,
   constraint register_queue_one_target check ((order_id is null) <> (movement_id is null))
 );
 create index register_queue_due_idx on public.register_queue (next_attempt_at);
+
+-- Ödemenin hemen arkasından gelen yazım ile dakikalık iş aynı hedefi birlikte işlemesin: satış kasaya iki kez yazılırsa ancak ters
+-- satışla düzelir. Hedefin güncel satırı kilitlenip döner, çünkü işleyenin elindeki satır bu arada işlenip yeniden doğmuş olabilir.
+create or replace function public.register_queue_claim(p_order_id uuid, p_movement_id uuid, p_until timestamptz)
+returns setof public.register_queue
+language sql
+security invoker
+set search_path = public
+as $$
+  update public.register_queue set locked_until = p_until
+  where (order_id = p_order_id or movement_id = p_movement_id)
+    and (locked_until is null or locked_until <= now())
+  returning *;
+$$;
+revoke execute on function public.register_queue_claim(uuid, uuid, timestamptz) from public, anon, authenticated;
 
 -- Para nereden yazılırsa yazılsın (RPC, servis, ekstre birleştirmesi) kuyruğa düşer. Silinen sipariş işaretlenmez, çünkü `set null`
 -- zincirinde sipariş artık yoktur ve kuyruk satırı silmeyi kırardı.
@@ -180,6 +197,44 @@ create trigger money_movement_register_queue
 
 revoke execute on function public.register_queue_mark_movement(uuid, uuid, movement_type, uuid, uuid) from public, anon, authenticated;
 revoke execute on function public.register_queue_mark() from public, anon, authenticated;
+
+-- Nakit, kart ve online sipariş tahsilatının kaydı kasaya yazılana kadar yalnız bizdedir: tutarı, yönü, türü, yöntemi, hesabı, günü ve
+-- siparişi değişmez, hareket silinmez; düzeltme ters harekettir. Sipariş silinince bağın boşalması (`set null`) serbesttir.
+create or replace function public.money_movement_collection_guard() returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  if old.order_id is null
+     or old.type not in ('order_payment', 'order_refund')
+     or old.payment_method is null
+     or old.payment_method = 'bank_transfer' then
+    if tg_op = 'DELETE' then
+      return old;
+    end if;
+    return new;
+  end if;
+  if tg_op = 'DELETE' then
+    raise exception 'Sipariş tahsilatı silinmez; düzeltme ters harekettir' using errcode = 'check_violation';
+  end if;
+  if new.amount is distinct from old.amount
+     or new.direction is distinct from old.direction
+     or new.type is distinct from old.type
+     or new.payment_method is distinct from old.payment_method
+     or new.account_id is distinct from old.account_id
+     or new.value_date is distinct from old.value_date
+     or (new.order_id is not null and new.order_id is distinct from old.order_id)
+     or (new.order_id is null and exists (select 1 from public.order where id = old.order_id)) then
+    raise exception 'Sipariş tahsilatının tutarı, yönü, yöntemi, hesabı, günü ve siparişi değişmez; düzeltme ters harekettir'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+create trigger money_movement_collection_guard before update or delete on public.money_movement
+  for each row execute function public.money_movement_collection_guard();
+revoke execute on function public.money_movement_collection_guard() from public, anon, authenticated;
 
 -- Kalem ve durum değişikliği para doğurmayabilir (eksik ödenmiş siparişte iade, borçsuz iptal); fişi olan sipariş kasayla yine
 -- karşılaştırılsın diye kuyruğa düşer. Fişi olmayan siparişin ilk fişini para açar.

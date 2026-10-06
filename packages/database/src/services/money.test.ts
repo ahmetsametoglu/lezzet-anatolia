@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import type { Business } from '@lezzet/types';
+import { SYSTEM_ACCOUNT_IDS, type Business } from '@lezzet/types';
 import { AccountService, CounterpartyService, MoneyAllocationService, MoneyDocumentService, MoneyMovementService } from './money.service';
 import { CategoryService } from './category.service';
 import { OrderService } from './order.service';
@@ -59,6 +59,21 @@ describe('hesap', () => {
     expect(kapali.isActive).toBe(false);
     expect((await accounts.list({ activeOnly: true })).map((h) => h.id)).not.toContain(bankAccount.id);
     expect((await accounts.list()).map((h) => h.id)).toContain(bankAccount.id);
+  });
+});
+
+describe('sabit hesaplar', () => {
+  it('migration Kasa ile Revolut Merchant\'ı sabit kimlikle açar; ikisi pasifleşmez, silinmez', async () => {
+    const accounts = new AccountService(db);
+    expect(await accounts.getById(SYSTEM_ACCOUNT_IDS.cash_drawer)).toMatchObject({ type: 'cash', systemKey: 'cash_drawer', isActive: true });
+    expect(await accounts.getById(SYSTEM_ACCOUNT_IDS.merchant)).toMatchObject({ type: 'provider', systemKey: 'merchant', isActive: true });
+    try {
+      await expect(accounts.deactivate(SYSTEM_ACCOUNT_IDS.merchant)).rejects.toThrow('pasifleşmez');
+      await expect(accounts.delete(SYSTEM_ACCOUNT_IDS.cash_drawer)).rejects.toThrow('silinmez');
+    } finally {
+      // Küresel satır: koruma bozuksa test hesabı pasif bırakmasın.
+      await db.from('account').update({ is_active: true }).in('id', Object.values(SYSTEM_ACCOUNT_IDS));
+    }
   });
 });
 

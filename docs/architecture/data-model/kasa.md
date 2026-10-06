@@ -157,6 +157,7 @@ Satır "bu siparişi ya da bu nakit hareketini yeniden eşitle" demektir. `money
 | `attempts` | int |  | `0` |
 | `next_attempt_at` | timestamptz |  | `now()` |
 | `last_error` | text | • |  |
+| `locked_until` | timestamptz | • |  |
 <!-- /alanlar -->
 
 **Kararlar**

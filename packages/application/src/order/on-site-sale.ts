@@ -3,6 +3,7 @@ import type { CreateOrderItemInput } from '@lezzet/database';
 import type { PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { getCartView } from '../cart/read';
 import { discountAmountOf, discountIdOf, discountLabelOf, discountSharesOf } from '../cart/cart-types';
+import { readDoorAccountId } from './door-account';
 import { quickSale, type QuickSaleOutcome } from './quick-sale';
 
 /**
@@ -41,7 +42,7 @@ export interface OnSiteSaleInput {
   paymentMethod: PaymentMethod;
   /** Tahsil edilen tutar (**cent**). Verilmezse siparişin toplamı tahsil edilmiş sayılır. */
   collectedAmountCents?: number;
-  /** Paranın girdiği hesap. Verilmezse yöntemin kapı hesabı ayarına düşülür (`quickSale`). */
+  /** Paranın girdiği hesap. Verilmezse yöntemin kapı hesabı ayarına düşülür; o da yoksa satış başlamaz. */
   paymentAccountId?: string;
   /** Satır adlarının dili — ret mesajları müşterinin değil PERSONELİN dilinde okunur. */
   locale?: PreferredLanguage;
@@ -62,6 +63,8 @@ export type OnSiteSaleOutcome =
    * daralmanın ta kendisidir.
    */
   | { status: 'insufficient_here'; lines: { name: string; available: number }[] }
+  /** Yöntemin kapı hesabı ayarlı değil — sipariş HİÇ yazılmaz, çünkü mal giderken para kayıtsız kalırdı. */
+  | { status: 'no_payment_account' }
   /** Kapanış adımının reddi olduğu gibi taşınır — mal yok, yarış, kural reddi. */
   | { status: 'sale_failed'; outcome: Exclude<QuickSaleOutcome, { status: 'ok' }> };
 
@@ -70,6 +73,10 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
 
   const warehouse = await new WarehouseService(db).getById(input.warehouseId);
   if (!warehouse) return { status: 'warehouse_not_found' };
+
+  // Hesap taslaktan önce denetlenir: reddedilen satış kapanmayacak bir taslak sipariş bırakmasın.
+  const paymentAccountId = input.paymentAccountId ?? (await readDoorAccountId(db, input.paymentMethod));
+  if (!paymentAccountId) return { status: 'no_payment_account' };
 
   const locale: PreferredLanguage = input.locale ?? 'tr';
   const overrides = new Map(
@@ -163,7 +170,7 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
     actorId: input.staffId,
     paymentMethod: input.paymentMethod,
     collectedAmountCents: input.collectedAmountCents,
-    paymentAccountId: input.paymentAccountId,
+    paymentAccountId,
   });
 
   if (outcome.status !== 'ok') return { status: 'sale_failed', outcome };

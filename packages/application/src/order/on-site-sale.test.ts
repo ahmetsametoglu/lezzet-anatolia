@@ -7,19 +7,8 @@ import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } fro
 import { ANONYMOUS_BUYER_ID, sellOnSite } from './on-site-sale';
 
 /**
- * YERİNDE SATIŞ (21.118) — depo kapısı ve kuryenin aracı.
- *
- * Çivilenen dört karar:
- *  1. **Tek adım.** `draft → completed`: mal fiiliden düşer, referans doğar, para yazılır. Ara
- *     durum yoktur — yerinde satışın tanımı "mal gider, para alınır, satış kapanır".
- *  2. **Pazarlık izi İKİSİ BİRLİKTE.** `listUnitPriceCents` + `priceSetBy`; ve siparişin TOPLAMI
- *     pazarlıklı fiyattan türer (09.8'in değişmezi: tek sayı disiplini). Yalnız son fiyat
- *     saklansaydı kayıt "taviz verildi" demezdi, kâr motoru da kişisel tavizi kampanyayla aynı
- *     kovaya koyardı.
- *  3. **Satışa kapalı ürün elle fiyatla DİRİLMEZ** — ölçüt liste fiyatının varlığı, yazılan sayı
- *     değil. Ve reddedilen satışta sipariş HİÇ yazılmaz.
- *  4. **Araç da bir depodur.** Aynı kapı `kind='vehicle'` deposundan da satar; kuryenin arabası
- *     ayrı bir kavram değil.
+ * Yerinde satış tek adımda kapanır (`draft → completed`: mal düşer, referans doğar, para yazılır); pazarlık izi liste fiyatıyla
+ * birlikte yazılır ve toplam pazarlıklı fiyattan türer. Satışa kapalı ürün elle fiyatla dirilmez, araç da bir depodur.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -41,10 +30,8 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 
 beforeAll(async () => {
   facilityId = (await createTestWarehouse(db)).id;
-  // ARAÇ DEPOSU: tür bir etiket değil, üç sorgunun süzgeci (0031 künyesi). Satış tarafında ayrım
-  // yok — kurye arabasından da tezgâhtan da aynı kapı satar.
-  // Araç deposu ARACINI söylemek zorunda (21.249 · `warehouse_vehicle_identity`); yardımcı damgalı
-  // aracı kendisi açıyor ve teardown'da depoyla birlikte topluyor.
+  // Araç deposu satışta tezgâhla aynı kapıdan satar; aracını söylemek zorunda olduğu için (`warehouse_vehicle_identity`) yardımcı
+  // damgalı aracı kendisi açar ve depoyla birlikte toplar.
   vehicleId = (await createTestWarehouse(db, { label: 'VEH', kind: 'vehicle' })).id;
 
   const category = await new CategoryService(db).create({ name: { tr: `Yerinde satış testi ${stamp}` } });
@@ -68,8 +55,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // **DEFTER SİPARİŞTEN ÖNCE** (06.14): kapı satışının `counter_sale` satırı siparişi `restrict`
-  // ile tutuyor. Hareketler partiden siliniyor (`stock_id` `not null`).
+  // Defter siparişten önce gider: kapı satışının `counter_sale` satırı siparişi `restrict` ile tutar, hareketler partiden silinir.
   await purgeVariantStock(db, [variantId]);
   await db.from('order').delete().eq('customer_id', customerId);
   await stocks.insert({ warehouseId: facilityId, variantId, physicalQty: 10, expiryDate: dayOffset(30), purchasePriceCents: 400 });
@@ -144,8 +130,7 @@ describe('yerinde satış', () => {
   });
 
   it('OLMAYAN MAL SATILMAZ — ve reddedilen satıştan ORTADA TASLAK KALMAZ', async () => {
-    /* Kullanıcının sorusu (26.08): "oranın stoğunu göz önünde bulunduracak mıyız?" Araçta 5 var;
-       6 istenirse satış olmamalı — ve olmayan satıştan geriye bir sipariş satırı da kalmamalı. */
+    // Araçta 5 var: 6 istenirse satış olmaz ve geriye sipariş satırı kalmaz.
     const sayOrders = async () => (await db.from('order').select('id').eq('customer_id', customerId)).data?.length ?? 0;
     const oncekiSayi = await sayOrders();
 
@@ -158,6 +143,16 @@ describe('yerinde satış', () => {
     // Araçtaki mal DA yerinde durmalı — reddedilen satış hiçbir şeye dokunmaz.
     const kalan = (await stocks.listByVariant(vehicleId, variantId)).reduce((s, b) => s + b.physicalQty, 0);
     expect(kalan).toBe(5);
+  });
+
+  it('kapı hesabı olmayan yöntemle satış başlamaz — sipariş yazılmaz, para kayıtsız kalmaz', async () => {
+    const sayOrders = async () => (await db.from('order').select('id').eq('customer_id', customerId)).data?.length ?? 0;
+    const oncekiSayi = await sayOrders();
+
+    const result = await sale({ paymentMethod: 'bank_transfer', paymentAccountId: undefined });
+
+    expect(result).toEqual({ status: 'no_payment_account' });
+    expect(await sayOrders()).toBe(oncekiSayi);
   });
 
   it('kalemsiz satış yazılmaz', async () => {
@@ -181,39 +176,15 @@ describe('yerinde satış', () => {
     const sayfa = await new UserProfileService(db).list({ limit: 200 });
     expect(sayfa.rows.some((row) => row.id === ANONYMOUS_BUYER_ID)).toBe(false);
 
-    /*
-      **DEFTER SİPARİŞTEN ÖNCE** (06.14): kapı satışı deftere `counter_sale` yazıyor ve satır
-      siparişi `restrict` ile tutuyor. Anonim alıcının siparişi `purgeTestData`nın kapsamında
-      DEĞİL (profil purge'ün malı değil), o yüzden temizliği burada ve sırasıyla yapılıyor.
-
-      SİLME BU TESTİN KENDİ SİPARİŞİ, "bütün anonim satışlar" DEĞİL (03.09). Süzgeç bir tur
-      `eq('customer_id', ANONYMOUS_BUYER_ID)` idi ve anonim alıcı küresel tekil bir satır: ifade
-      veritabanındaki her kapı satışını kapsıyordu. Postgres silmesi atomiktir — cihazdan yapılmış
-      TEK bir satış (`stock_movement_order_fk`) bütün ifadeyi reddediyor, bu testin kendi siparişi
-      de kalıyor ve `afterAll` `order_item_variant_id_fkey`e takılıp yarım kalıyordu (ölçüldü
-      03.09: teardown 2 adımda yarım, dosya kırmızı). Üstelik sessizdi: çıplak `delete()` hatayı
-      fırlatmaz, döndürür (`mustDelete` künyesi). Kimliğe indirildi ve GÜRÜLTÜLÜ oldu.
-    */
+    /* Anonim alıcının siparişi `purgeTestData` kapsamında değil, temizlik burada ve sırasıyla (önce defter) yapılır. Silme yalnız bu
+       testin siparişidir, çünkü anonim alıcı küresel tekil bir satırdır ve geniş süzgeç başka kapı satışlarına uzanırdı. */
     await purgeVariantStock(db, [variantId]);
     await mustDelete(db, 'order', (q) => q.eq('id', result.orderId));
   });
 
   it('OTOMATİK İNDİRİM siparişe DE kaleme DE yazılır — ciro indirimli, borç YOK', async () => {
-    /*
-      Kullanıcı bulgusu 03.09, cihazda ölçüldü: araçtan iki adet baklava satıldı, sepet 18,30 €
-      dedi, kurye 15,30 € tahsil etti (otomatik "Bayram Sofrası seçkisi" 3 €) — ve kayıt şöyleydi:
-      `ordered_total 15,30` · `revenue_total 18,30` · `discount_amount 0` · **`payment_status
-      partial`**. Yani parasını tam ödemiş müşteri sistemde 3 € BORÇLU görünüyordu; ciro da
-      indirimi görmediği için şişikti ve kampanya kotası hiç tükenmiyordu.
-
-      Sebep tek satırdı: kapı `orderedTotalCents`i indirimli yazıyor ama indirimin KENDİSİNİ
-      (başlık + kalem payı) hiç yazmıyordu. `revenue_total` kalemlerden türer ve yalnız
-      `line_discount_amount` okur — pay yoksa indirim ciroya girmez, `payment_status` da ciroyu
-      tahsilatla karşılaştırdığı için `partial` çıkar.
-
-      Test dördünü birden çiviliyor: başlık, kalem payı, ciro ve ödeme durumu. Biri düşerse
-      ötekiler de yalan söylüyor demektir.
-    */
+    /* İndirim toplamla birlikte başlığa ve kalem payına da yazılmalı: ciro kalem payından türer, ödeme durumu ciroyu tahsilatla
+       karşılaştırır ve pay eksikse tam ödemiş müşteri borçlu görünür. Test dördünü birlikte doğrular. */
     const kampanya = await new DiscountService(db).insert({
       name: `Kapı kampanyası ${stamp}`,
       publicLabel: { tr: `Kapı kampanyası ${stamp}` },

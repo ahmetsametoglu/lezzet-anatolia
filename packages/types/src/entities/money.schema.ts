@@ -12,12 +12,23 @@ import { BusinessEnum, CurrencyEnum, PaymentMethodEnum } from '../primitives/enu
 export const AccountTypeEnum = z.enum(['cash', 'bank', 'provider', 'partner']);
 export type AccountType = z.infer<typeof AccountTypeEnum>;
 
+/** Sabit hesabın rolü: kapı nakdi ile kart ve online tahsilatı her kurulumda migration'ın açtığı hesaba yazılır. */
+export const AccountSystemKeyEnum = z.enum(['cash_drawer', 'merchant']);
+export type AccountSystemKey = z.infer<typeof AccountSystemKeyEnum>;
+
+/** Sabit hesapların kimliği; migration hesabı ve kapı ayarlarının fabrika değerini aynı kimlikle yazar. */
+export const SYSTEM_ACCOUNT_IDS: Readonly<Record<AccountSystemKey, string>> = {
+  cash_drawer: '00000000-0000-4000-8000-000000000101',
+  merchant: '00000000-0000-4000-8000-000000000102',
+};
+
 export const AccountSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   type: AccountTypeEnum,
   currency: CurrencyEnum,
   isActive: z.boolean(),
+  systemKey: AccountSystemKeyEnum.nullable(),
   createdAt: z.string(),
 });
 export type Account = z.infer<typeof AccountSchema>;
@@ -30,7 +41,7 @@ export const AccountInsertSchema = z.object({
 });
 export type AccountInsert = z.infer<typeof AccountInsertSchema>;
 
-export const AccountUpdateSchema = AccountSchema.partial().required({ id: true });
+export const AccountUpdateSchema = AccountSchema.omit({ systemKey: true }).partial().required({ id: true });
 export type AccountUpdate = z.infer<typeof AccountUpdateSchema>;
 
 /** Paranın yönü — hesabın gözünden: `in` girdi, `out` çıktı. */

@@ -15,7 +15,7 @@ Hesaplar, para hareketleri, tür · etiket · cari sözlükleri, belgeler ve bel
 
 ## Account (hesap)
 
-Paranın durduğu yer. Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Revolut Merchant — hepsi birer hesap. "Online havuz" ayrı değil = Merchant hesabı (`provider`).
+Paranın durduğu yer. Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Revolut Merchant — hepsi birer hesap. "Online havuz" ayrı değil = Merchant hesabı (`provider`). Kasa ile Revolut Merchant sabit hesaplardır (`system_key`; kimlikleri `SYSTEM_ACCOUNT_IDS`): migration açar, silinmez, pasifleşmez.
 
 <!-- alanlar:account -->
 | Kolon | Tip | Null | Varsayılan |
@@ -25,6 +25,7 @@ Paranın durduğu yer. Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Revolut
 | `type` | account_type |  |  |
 | `currency` | currency |  | `'EUR'` |
 | `is_active` | boolean |  | `true` |
+| `system_key` | text | • |  |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
 

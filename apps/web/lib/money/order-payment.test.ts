@@ -22,6 +22,7 @@ let variantId: string;
 let productId: string;
 let categoryId: string;
 let cashAccount: string;
+let bankAccount: string;
 const createdProfiles: string[] = [];
 
 beforeAll(async () => {
@@ -35,11 +36,13 @@ beforeAll(async () => {
   customerId = profile.id;
   createdProfiles.push(profile.id);
   cashAccount = (await accounts.insert({ name: `Test kasası ${stamp}`, type: 'cash' })).id;
+  bankAccount = (await accounts.insert({ name: `Test bankası ${stamp}`, type: 'bank' })).id;
 });
 
 beforeEach(async () => {
-  await db.from('money_movement').delete().eq('account_id', cashAccount);
+  // Tahsilat siparişe bağlıyken silinmez; sipariş silinince bağı boşalır.
   await db.from('order').delete().eq('customer_id', customerId);
+  await db.from('money_movement').delete().in('account_id', [cashAccount, bankAccount]);
 });
 
 afterAll(async () => {
@@ -48,7 +51,7 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
-    accountIds: [cashAccount],
+    accountIds: [cashAccount, bankAccount],
     warehouseIds: [warehouseId],
   });
 });
@@ -187,9 +190,10 @@ describe('durum TÜRETİLİR — tahsilat değişmeden de değişir', () => {
     expect(result.derivation.refundDueCents).toBe(5000);
   });
 
-  it('hareket elle silinirse cache kendini düzeltir', async () => {
+  it('havale hareketi silinirse cache kendini düzeltir', async () => {
+    // Nakit, kart ve online tahsilat silinmez; banka akışından geri çekilebilen havale silinebilir.
     const { order } = await createOrder();
-    await recordOrderPayment({ orderId: order.id, accountId: cashAccount, amountCents: 5000, method: 'cash' });
+    await recordOrderPayment({ orderId: order.id, accountId: bankAccount, amountCents: 5000, method: 'bank_transfer' });
     await db.from('money_movement').delete().eq('order_id', order.id);
 
     const result = await syncOrderPaymentStatus(order.id);

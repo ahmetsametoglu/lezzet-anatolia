@@ -351,17 +351,17 @@ describe('seferi kapat', () => {
     expect(result).toEqual({ ok: false, reason: 'not_found' });
   });
 
-  it('kapanış sonrası hareket düzeltilse bile BEKLENEN donmuş kalır', async () => {
+  it('kapanıştan sonra siparişe yazılan tahsilat BEKLENENİ değiştirmez', async () => {
     const a = await atTheDoor(3); // beklenen 30 €
     const runId = await depart();
     await collect(a.orderId, a.qty, 'cash', a.boxCode);
     await closeCourierDay(db, { courierId, runId, countedCashCents: 3000 });
 
-    // Ertesi gün biri hareketi düzeltiyor — o gün ne konuşulduğu değişmemeli.
-    await db.from('money_movement').delete().eq('order_id', a.orderId);
+    // Ertesi gün aynı siparişe nakit yazılıyor — o gün ne konuşulduğu değişmemeli.
+    await recordOrderPayment(db, { orderId: a.orderId, accountId, amountCents: 500, method: 'cash', description: 'ertesi gün', source: 'system' });
 
     const draft = await openDayClose(db, { courierId, runId });
     expect(draft.closed?.expectedCashCents).toBe(3000);
-    expect(draft.expected.cashCents).toBe(0); // canlı türetim değişti, kapanış kaydı değişmedi
+    expect(draft.expected.cashCents).toBe(3500); // canlı türetim değişti, kapanış kaydı değişmedi
   });
 });

@@ -74,10 +74,11 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.from('money_movement').delete().eq('account_id', providerAccount);
   // Sıra: defter → parti → sipariş; gerekçe `packages/application/src/courier/day.test.ts`te.
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  // Tahsilat siparişe bağlıyken silinmez; sipariş silinince bağı boşalır.
+  await db.from('money_movement').delete().eq('account_id', providerAccount);
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   await stocks.insert({ warehouseId, variantId, physicalQty: 5, expiryDate: dayOffset(30), purchasePriceCents: 400 });
 });

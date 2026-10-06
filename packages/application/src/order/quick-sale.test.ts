@@ -27,6 +27,8 @@ let batchA: string;
 let batchB: string;
 let cashAccount: string;
 const createdProfiles: string[] = [];
+/** Testin açtığı öteki hesaplar; tahsilat siparişe bağlıyken silinmediği için siparişlerden sonra `afterAll` toplar. */
+const createdAccounts: string[] = [];
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
@@ -61,7 +63,7 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
-    accountIds: [cashAccount], // hareketleri de onunla gider
+    accountIds: [cashAccount, ...createdAccounts], // hareketleri de onunla gider
     warehouseIds: [warehouseId],
   });
 });
@@ -195,6 +197,7 @@ describe('hızlı satış (07.10)', () => {
     const settings = settingsSnapshot(db);
     const ayarKasasi = (await new AccountService(db).insert({ name: `Ayar kasası ${stamp}`, type: 'cash' })).id;
     const ayarKarti = (await new AccountService(db).insert({ name: `Ayar kart cihazı ${stamp}`, type: 'provider' })).id;
+    createdAccounts.push(ayarKasasi, ayarKarti);
     await settings.override('door_cash_account_id', ayarKasasi);
     await settings.override('door_card_account_id', ayarKarti);
 
@@ -210,30 +213,19 @@ describe('hızlı satış (07.10)', () => {
       expect((await new AccountService(db).balance(ayarKarti)).balanceCents).toBe(2000);
     } finally {
       await settings.restore();
-      await mustDelete(db, 'money_movement', (q) => q.in('account_id', [ayarKasasi, ayarKarti]));
-      await mustDelete(db, 'account', (q) => q.in('id', [ayarKasasi, ayarKarti]));
     }
   });
 
-  it('hesap belirsizse satış YİNE kapanır — mal gitti, para kayıtsız görünür', async () => {
-    // Uydurulmuş bir "ödendi"den, kaydedilmemiş ama görünür bir tahsilat iyidir.
-    // Ayar seed'de dolu olabilir; bu senaryo tam da onun BOŞ olduğu hâli sınıyor → geçici olarak kaldır.
+  it('hesap yoksa satış başlamaz — mal gitmez, para kayıtsız kalmaz', async () => {
+    // Ayar migration'da dolu; senaryo onun boşaltıldığı hâli sınar ve testten sonra geri konur.
     const settings = settingsSnapshot(db);
     await settings.remove('door_cash_account_id');
 
     try {
       const { order } = await doorDraft(1);
-      const outcome = await quickSale(db, { orderId: order.id, paymentMethod: 'cash' }); // hesap yok, ayar da yok
-      expect(outcome.status).toBe('ok');
-      if (outcome.status !== 'ok') return;
-      expect(outcome.paymentRecorded).toBe(false);
-
-      const kapanan = await orders.getById(order.id);
-      expect(kapanan?.status).toBe('completed'); // mal gitti, satış kapandı
-      expect(kapanan?.amountCollectedCents).toBe(0); // para kaydı yok — uydurulmadı
-      expect(kapanan?.paymentStatus).toBe('pending');
+      expect(await quickSale(db, { orderId: order.id, paymentMethod: 'cash' })).toEqual({ status: 'no_payment_account' });
+      expect((await orders.getById(order.id))?.status).toBe('draft');
     } finally {
-      // Ne bulduysak onu bırakırız: ayar yoktuysa yok kalır.
       await settings.restore();
     }
   });

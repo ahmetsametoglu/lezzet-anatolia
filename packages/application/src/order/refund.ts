@@ -2,6 +2,7 @@ import { AccountService, MoneyMovementService, OrderService } from '@lezzet/data
 import { canTransition, refundMethodOf } from '@lezzet/domain-core';
 import type { FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { kickOrderRegister } from '../register/sync';
 import { cancelOrderShipment, type ShipmentCancelOutcome } from '../shipping/cancel';
 import { notifyExceptionEffect, notifyStatusEffect, providerRefunder, type OrderEffects } from './effects';
 import { recordOrderRefund, syncOrderPaymentStatus } from './payment';
@@ -329,6 +330,7 @@ async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOpt
       `[refund] sağlayıcı iadesi yapıldı ama hareket yazılamadı — sipariş ${orderId}, iade ${String(refundMeta?.['refundId'] ?? '-')}`,
     );
   }
+  kickOrderRegister(db, orderId);
 
   return {
     refundedAmountCents: dueCents,

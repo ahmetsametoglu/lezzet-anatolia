@@ -4,6 +4,7 @@ import type { OrderStatus, PaymentMethod, PreparationPick } from '@lezzet/types'
 import { readDoorAccountId } from './door-account';
 import { recordOrderPayment } from './payment';
 import { readCourierRuns } from '../courier/day';
+import { kickOrderRegister } from '../register/sync';
 import { suggestPicksForVariant } from '../warehouse/preparation';
 
 /**
@@ -18,9 +19,11 @@ export type QuickSaleOutcome =
       referenceNo: string | null;
       consumedQty: number;
       cogsAmountCents: number;
-      /** Tahsilat hareketi yazıldı mı — hesap belirsizse satış kapanır ama para kayıtsız kalır. */
+      /** Tahsilat hareketi yazıldı mı; hesap satıştan önce denetlendiği için `false` yalnız yazımın kendisi reddedilirse. */
       paymentRecorded: boolean;
     }
+  /** Yöntemin kapı hesabı ayarlı değil — satış başlamaz, çünkü mal giderken para kayıtsız kalırdı. */
+  | { status: 'no_payment_account' }
   /** Kurallara aykırı — sipariş taslak değil (kapanmış siparişi kapıda yeniden satamazsın). */
   | { status: 'forbidden'; reason: 'same_status' | 'terminal' | 'not_allowed' | 'not_fast_sale_path' }
   /** Araya biri girdi: sipariş bu arada ilerletilmiş. */
@@ -37,8 +40,8 @@ export interface QuickSaleInput {
   /** Tahsil edilen tutar (**cent**). Verilmezse siparişin toplamı tahsil edilmiş sayılır. */
   collectedAmountCents?: number;
   /**
-   * Paranın girdiği hesap. Verilmezse yöntemin kapı hesabı ayarına düşülür (nakit çekmeceye, kart kart hesabına); o da yoksa tahsilat
-   * kaydedilmez, satış yine kapanır ve para kayıtsız görünür.
+   * Paranın girdiği hesap. Verilmezse yöntemin kapı hesabı ayarına düşülür (nakit çekmeceye, kart kart hesabına); o da yoksa satış
+   * başlamaz.
    */
   paymentAccountId?: string;
   /**
@@ -62,6 +65,9 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
   if (stockEffectOf(order.status, 'completed') !== 'consume_direct') {
     return { status: 'forbidden', reason: 'not_fast_sale_path' };
   }
+  // Tahsilatın yazılacağı hesap yoksa satış başlamaz: mal giderken para kayıtsız kalırdı.
+  const accountId = input.paymentAccountId ?? (await readDoorAccountId(db, input.paymentMethod));
+  if (!accountId) return { status: 'no_payment_account' };
 
   // 2) Partiler: verilmediyse FEFO önerisi. Yetmiyorsa satış hiç başlamaz.
   let picks: PreparationPick[];
@@ -120,24 +126,20 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
     }
   }
 
-  // 5) Tahsilat ayrı bir gerçektir: para bir hesaba girer, sipariş önbelleği ondan türer. Hesap belirsizse satış yine kapanır ve
-  //    tahsilat kaydedilmemiş görünür; uydurulmuş bir "ödendi"den iyidir.
-  const accountId = input.paymentAccountId ?? (await readDoorAccountId(db, input.paymentMethod));
-  let paymentRecorded = false;
-  if (accountId) {
-    const collected = await recordOrderPayment(db, {
-      orderId: order.id,
-      accountId,
-      amountCents: input.collectedAmountCents ?? order.orderedTotalCents,
-      method: input.paymentMethod,
-      description: 'Kapı önü satış',
-      // Sistemin yazdığı satır: kasiyer tutarı onaylar ama deftere yazan akışın kendisidir.
-      source: 'system',
-    });
-    paymentRecorded = collected.status === 'ok';
-  }
+  // 5) Tahsilat ayrı bir gerçektir: para bir hesaba girer, sipariş önbelleği ondan türer.
+  const collected = await recordOrderPayment(db, {
+    orderId: order.id,
+    accountId,
+    amountCents: input.collectedAmountCents ?? order.orderedTotalCents,
+    method: input.paymentMethod,
+    description: 'Kapı önü satış',
+    // Sistemin yazdığı satır: kasiyer tutarı onaylar ama deftere yazan akışın kendisidir.
+    source: 'system',
+  });
+  const paymentRecorded = collected.status === 'ok';
+  if (paymentRecorded) kickOrderRegister(db, order.id);
 
-  // Getirenin ödülü tahsilatla `finalize`te doğar, burada çağrılmaz; hesap ayarlı değilse ödül de yazılmaz, çünkü ölçüt defterdir.
+  // Getirenin ödülü tahsilatla `finalize`te doğar, burada çağrılmaz, çünkü ölçüt defterdir.
 
   return {
     status: 'ok',

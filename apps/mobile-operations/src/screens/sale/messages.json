@@ -77,7 +77,8 @@
     "sending": "Yazılıyor…"
   },
   "result": {
-    "paymentMissing": "Satış yazıldı ama tahsilat DEFTERE GEÇMEDİ (kasa hesabı ayarsız) — parayı elden takip edin, yöneticiye söyleyin.",
+    "paymentMissing": "Satış yazıldı ama tahsilat DEFTERE GEÇMEDİ — parayı elden takip edin, yöneticiye söyleyin.",
+    "noPaymentAccount": "Bu ödeme yönteminin kasası ayarlı değil — satış yazılmadı. Başka yöntemle deneyin; sürerse yöneticiye haber verin.",
     "insufficientIntro": "Bu depoda yeterli yok — satış yazılmadı: {lines}",
     "insufficientLine": "{name} (kalan {n})",
     "blockedIntro": "Satışa kapalı kalem — satış yazılmadı: {lines}",

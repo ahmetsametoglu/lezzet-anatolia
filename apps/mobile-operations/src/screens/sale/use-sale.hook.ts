@@ -406,5 +406,6 @@ function noticeOfRefusal(outcome: Exclude<SaleOutcome, { status: 'ok' }>): SaleN
   if (outcome.status === 'blocked_lines') {
     return { tone: 'error', text: fillCopy(t.result.blockedIntro, { lines: outcome.lines.join(', ') }) };
   }
+  if (outcome.status === 'no_payment_account') return { tone: 'error', text: t.result.noPaymentAccount };
   return { tone: 'error', text: t.result.failed };
 }

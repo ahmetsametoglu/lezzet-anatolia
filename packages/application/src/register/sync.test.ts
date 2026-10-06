@@ -9,6 +9,7 @@ import {
   ProductService,
   RegisterCashOpService,
   RegisterPaymentService,
+  RegisterQueueService,
   RegisterStoreService,
   RegisterTicketService,
   SettingsService,
@@ -120,7 +121,7 @@ const pay = (
 async function queueRowOf(column: 'order_id' | 'movement_id', id: string): Promise<RegisterQueue | null> {
   const { data, error } = await db
     .from('register_queue')
-    .select('id, order_id, movement_id, marked_at, attempts, next_attempt_at, last_error')
+    .select('id, order_id, movement_id, marked_at, attempts, next_attempt_at, last_error, locked_until')
     .eq(column, id)
     .maybeSingle();
   if (error) throw error;
@@ -133,6 +134,7 @@ async function queueRowOf(column: 'order_id' | 'movement_id', id: string): Promi
     attempts: data.attempts,
     nextAttemptAt: data.next_attempt_at,
     lastError: data.last_error,
+    lockedUntil: data.locked_until,
   };
 }
 
@@ -202,9 +204,10 @@ describe('sipariş fişi', () => {
     await runRow('order_id', order.id);
     await pay(order.id, 1990, 'card');
     const row = (await queueRowOf('order_id', order.id))!;
-    await runAgain(row);
-
     expect(await runAgain(row)).toBe('written');
+
+    // Satır işlenip silindi: tekrar eden tur kasaya dokunmaz.
+    expect(await runAgain(row)).toBe('busy');
 
     const sales = salesOf(order.referenceNo);
     expect(sales).toHaveLength(1);
@@ -293,18 +296,14 @@ describe('sipariş fişi', () => {
     expect(refund!.payments.map(({ method, amountCents }) => ({ method, amountCents }))).toEqual([{ method: 'cash', amountCents: -2990 }]);
   });
 
-  it('başka siparişe taşınan tahsilat ilk siparişin fişinde ters çevrilir, yenisine yazılır', async () => {
-    const first = await newOrder();
-    const second = await newOrder();
-    await pay(first.id, 2990);
-    await runRow('order_id', first.id);
-    const [movement] = await movements.listByOrder(first.id);
-    await movements.update({ id: movement!.id, orderId: second.id });
+  it('başka yazarın kilitlediği satır işlenmez; aynı satış kasaya iki kez yazılmaz', async () => {
+    const order = await newOrder();
+    await pay(order.id, 2990);
+    const row = (await queueRowOf('order_id', order.id))!;
+    expect(await new RegisterQueueService(db).claim(row, new Date(Date.now() + 60_000).toISOString())).not.toBeNull();
 
-    expect(await runRow('order_id', first.id)).toBe('written');
-    expect(await runRow('order_id', second.id)).toBe('written');
-    expect(salesOf(first.referenceNo)[0]!.payments.map((payment) => payment.amountCents)).toEqual([2990, -2990]);
-    expect(salesOf(second.referenceNo)[0]!.payments.map((payment) => payment.amountCents)).toEqual([2990]);
+    expect(await runAgain(row)).toBe('busy');
+    expect(salesOf(order.referenceNo)).toEqual([]);
   });
 
   it('günü kapanmış fişe gelen ödeme nakit akışıdır; cevabı kaybolursa satıştan bulunur, ikinci kez yazılmaz', async () => {
@@ -468,7 +467,8 @@ describe('fiş dışı nakit', () => {
     await movements.delete(deposit.id);
     const removed = (await queueRowOf('movement_id', deposit.id))!;
     expect(await runAgain(removed)).toBe('written');
-    expect(await runAgain(removed)).toBe('written');
+    // Satır işlenip silindi: tekrar eden tur kasaya dokunmaz.
+    expect(await runAgain(removed)).toBe('busy');
 
     expect(tillsOf(deposit.id)).toEqual([
       { direction: 'out', amountCents: 5000, label: `Bankaya yatırma #${deposit.id.slice(0, 8)}` },

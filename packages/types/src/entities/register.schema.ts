@@ -259,6 +259,8 @@ export type RegisterCashOpUpdate = z.infer<typeof RegisterCashOpUpdateSchema>;
 export const RegisterQueueSchema = QueueRowSchema.extend({
   orderId: z.string().uuid().nullable(),
   movementId: z.string().uuid().nullable(),
+  /** İşleyenin kilidi; süresi geçmişse satır boştadır. */
+  lockedUntil: z.string().nullable(),
 });
 export type RegisterQueue = z.infer<typeof RegisterQueueSchema>;
 

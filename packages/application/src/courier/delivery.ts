@@ -12,6 +12,7 @@ import { readDoorAccountId } from '../order/door-account';
 import type { OrderEffects } from '../order/effects';
 import { recordOrderPayment, syncOrderPaymentStatus } from '../order/payment';
 import { deliverOrderWithAdjustments } from '../order/refund';
+import { kickOrderRegister } from '../register/sync';
 
 /**
  * Kapıda teslim: sıra kuralın kendisidir: önce kanıt ve hesap kapısı (hiçbir yazım yapılmadan), sonra mal ve teslim tek yazımda, en sonda para; teslim `stale` dönerse karşılıksız para yazılmaz.
@@ -159,6 +160,7 @@ export async function confirmDoorDelivery(
     source: 'system',
   });
   if (paid.status !== 'ok') return { status: 'not_found' };
+  kickOrderRegister(db, input.orderId);
 
   return {
     status: 'ok',

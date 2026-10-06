@@ -1,7 +1,5 @@
-import { providerAccountId } from '@lezzet/application';
-import { serviceDb } from '@lezzet/database';
 import { logger } from '@lezzet/observability';
-import { RevolutWebhookEventSchema } from '@lezzet/types';
+import { RevolutWebhookEventSchema, SYSTEM_ACCOUNT_IDS } from '@lezzet/types';
 import { handlePaymentEvent } from '@/lib/order/payment-webhook';
 import { toPaymentEvent, verifyRevolutSignature } from '@/lib/order/revolut-event';
 import { revolutWebhookSecret, webRevolutClient } from '@/lib/revolut';
@@ -43,7 +41,7 @@ export async function POST(request: Request): Promise<Response> {
     return new Response(error instanceof Error ? error.message : 'event read failed', { status: 500 });
   }
 
-  const outcome = await handlePaymentEvent(event, await providerAccountId(serviceDb()), parsed.data);
+  const outcome = await handlePaymentEvent(event, SYSTEM_ACCOUNT_IDS.merchant, parsed.data);
   if (outcome.status === 'error') return new Response(outcome.error, { status: 500 });
   return Response.json(outcome);
 }

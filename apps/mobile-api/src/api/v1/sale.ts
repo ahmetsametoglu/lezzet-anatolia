@@ -116,7 +116,12 @@ sale.post('/on-site', async (c) => {
     collectedAmountCents: parsed.data.collectedAmountCents,
   });
 
-  if (outcome.status === 'ok' || outcome.status === 'insufficient_here' || outcome.status === 'blocked_lines') {
+  if (
+    outcome.status === 'ok' ||
+    outcome.status === 'insufficient_here' ||
+    outcome.status === 'blocked_lines' ||
+    outcome.status === 'no_payment_account'
+  ) {
     const body: z.input<typeof OnSiteSaleResponseSchema> = outcome;
     return ok(c, OnSiteSaleResponseSchema.parse(body));
   }

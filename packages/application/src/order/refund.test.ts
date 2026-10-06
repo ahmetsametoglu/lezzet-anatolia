@@ -33,6 +33,8 @@ let categoryId: string;
 let batchId: string;
 let cashAccount: string;
 let providerAccount: string;
+/** Testin açtığı öteki hesaplar; tahsilat siparişe bağlıyken silinmediği için siparişlerden sonra `afterAll` toplar. */
+const createdAccounts: string[] = [];
 const createdProfiles: string[] = [];
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
@@ -52,10 +54,11 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.from('money_movement').delete().in('account_id', [cashAccount, providerAccount]);
   // Defter siparişten önce silinir: `stock_movement.order_id` `restrict`, teslim satırları siparişi tutar.
   await purgeVariantStock(db, [variantId]);
   await db.from('order').delete().eq('customer_id', customerId);
+  // Tahsilat siparişe bağlıyken silinmez; sipariş silinince bağı boşalır.
+  await db.from('money_movement').delete().in('account_id', [cashAccount, providerAccount]);
   await db.from('reservation').delete().eq('variant_id', variantId);
   batchId = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(30), purchasePriceCents: 400 })).id;
 });
@@ -66,7 +69,7 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
-    accountIds: [cashAccount, providerAccount],
+    accountIds: [cashAccount, providerAccount, ...createdAccounts],
     warehouseIds: [warehouseId],
   });
 });
@@ -110,20 +113,17 @@ describe('kısmi karşılama (07.8)', () => {
     /* Bölünmüş ödemede iadenin tamamı son hareketin hesabından çıkarsa para hiç girmediği kasadan düşer. Otomatik bölme yok
        (BEKLEYEN(21.266)): yarım kalan bir iade bugünkü hâlden beter olurdu, borç açıkta bırakılır. */
     const ikinciKasa = (await new AccountService(db).insert({ name: `İkinci kasa ${stamp}`, type: 'cash' })).id;
-    try {
-      const { orderId, itemId } = await sendOut(3);
-      await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000, method: 'cash' });
-      await recordOrderPayment(db, { orderId, accountId: ikinciKasa, amountCents: 1000, method: 'cash' });
+    createdAccounts.push(ikinciKasa);
+    const { orderId, itemId } = await sendOut(3);
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000, method: 'cash' });
+    await recordOrderPayment(db, { orderId, accountId: ikinciKasa, amountCents: 1000, method: 'cash' });
 
-      const outcome = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2 }]);
+    const outcome = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2 }]);
 
-      expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 0, refundBlocked: 'split_payment' });
-      // Borç GÖRÜNÜR kalıyor: tahsil edilecek tutarın negatifi müşteriye borcumuzu söylüyor.
-      const order = await orders.getById(orderId);
-      expect(order?.amountRefundedCents).toBe(0);
-    } finally {
-      await purgeTestData(db, { accountIds: [ikinciKasa] });
-    }
+    expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 0, refundBlocked: 'split_payment' });
+    // Borç GÖRÜNÜR kalıyor: tahsil edilecek tutarın negatifi müşteriye borcumuzu söylüyor.
+    const order = await orders.getById(orderId);
+    expect(order?.amountRefundedCents).toBe(0);
   });
 
   it('TEK hesapta para varsa iade oraya yazılır — bölünme yoksa davranış birebir aynı', async () => {
