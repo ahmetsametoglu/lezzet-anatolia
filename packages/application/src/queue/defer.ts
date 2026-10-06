@@ -14,15 +14,16 @@ export async function deferBlocked(queue: DeferringQueue, row: QueueRow, reason:
   return { firstTime: row.lastError !== lastError };
 }
 
-/** Düşen satır artan aralıkla yeniden denenir; haber eşikteki düşüşte bir kez gider. */
+/** Düşen satır artan aralıkla, kuyruğun tavanına kadar yeniden denenir; haber eşikteki düşüşte bir kez gider. */
 export async function deferFailed(
   queue: DeferringQueue,
   row: QueueRow,
   message: string,
   now: Date,
+  capMs?: number,
 ): Promise<{ attempts: number; alert: boolean }> {
   const attempts = row.attempts + 1;
-  const nextAttemptAt = new Date(now.getTime() + queueBackoffMs(attempts)).toISOString();
+  const nextAttemptAt = new Date(now.getTime() + queueBackoffMs(attempts, capMs)).toISOString();
   await queue.defer(row, { attempts, nextAttemptAt, lastError: message });
   return { attempts, alert: attempts === QUEUE_ALERT_AFTER_ATTEMPTS };
 }

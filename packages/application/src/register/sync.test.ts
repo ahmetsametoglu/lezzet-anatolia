@@ -448,6 +448,8 @@ describe('kasaya yazılamayan kayıt bildirimi', () => {
     const sent = await stuckOf({ orderId: order.id });
     expect(sent.length).toBeGreaterThan(0);
     expect(sent[0]!.payload).toMatchObject({ reason: 'error', referenceNo: order.referenceNo });
+    // Beşinci düşüşte kuyruğun genel aralığı 16 dakikadır; kasa satırı en geç beş dakikada yeniden denenir.
+    expect(Date.parse((await queueRowOf('order_id', order.id))!.nextAttemptAt) - Date.now()).toBeLessThanOrEqual(5 * 60_000);
   });
 });
 

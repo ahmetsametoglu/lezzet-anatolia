@@ -11,7 +11,7 @@ import {
   WarehouseService,
   type Db,
 } from '@lezzet/database';
-import { planRegister, splitRegisterLine, type RegisterBlockReason, type RegisterMovement } from '@lezzet/domain-core';
+import { REGISTER_BACKOFF_CAP_MS, planRegister, splitRegisterLine, type RegisterBlockReason, type RegisterMovement } from '@lezzet/domain-core';
 import { parisDateOf } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type {
@@ -109,7 +109,7 @@ export async function processQueueRow(db: Db, register: CashRegister, row: Regis
     return outcome.status;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const { attempts, alert } = await deferFailed(queue, row, message, ctx.now);
+    const { attempts, alert } = await deferFailed(queue, row, message, ctx.now, REGISTER_BACKOFF_CAP_MS);
     const target = { orderId: row.orderId, movementId: row.movementId, attempts };
     if (alert) {
       await captureError(err, { source: SOURCES.backendCron, context: { job: 'register_sync', ...target } });
