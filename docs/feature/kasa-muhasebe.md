@@ -260,9 +260,9 @@ kopyası `.test-results/revolut/ham/api_merchant.yaml`, depoda değil). Site bot
 | İptal | Bekleyen sipariş `cancel` ile anında `cancelled`. |
 | Aktarım | Deneme hesabında aktarım (payout) kaydı oluşmadı. |
 | Yerleşme raporu | Deneme hesabında tutarsız: yerleşme satırında tutar 12,50, yerleşen 5,00, komisyon 0,00; ödeme ayrıntısı ve ödeme raporuyla uyuşmuyor. Canlıda doğrulanacak. |
+| Webhook | Geçici genel adresle ölçüldü (`b1…b3-*.mjs`). Başarılı ödeme: `ORDER_PAYMENT_AUTHENTICATED` → `ORDER_AUTHORISED` → `ORDER_COMPLETED`; reddedilen kart (yetersiz bakiye): `ORDER_PAYMENT_AUTHENTICATED` → `ORDER_PAYMENT_DECLINED`, sipariş `pending`te kalır; iptal: `ORDER_CANCELLED`; kısmi iade: iade siparişinin `ORDER_COMPLETED`i (kendi referansıyla); süre dolması: `ORDER_FAILED` (bu turda ~2 dk sonra). Gövde her olayda yalnız `event`, `order_id`, `merchant_order_ext_ref`. Dokuz olayın dokuzunda HMAC-SHA256 imza (`v1.{ts}.{ham gövde}`) doğrulandı; olay ile zaman damgası arası ~0,1 sn; gönderen IP'ler belgedeki sandbox adresleri. Abone olunsa da `ORDER_PAYMENT_AUTHORISATION_STARTED` gelmedi. |
 
 **Revolut — açık kalan:**
-- Webhook olayları ve imzası (süre dolan sipariş hangi olayı veriyor dahil): Revolut'un ulaşabileceği genel bir adres gerekiyor.
 - Aktarımın Merchant hesabından ana hesaba kendiliğinden olup olmadığı, yerleşme raporu ve iadede komisyon: canlıda.
 - Tap to Pay (canlıda): SDK'nın açtığı siparişte `description`ın nereye düştüğü ve webhook'tan sipariş numarasına ulaşılıp
   ulaşılamadığı; ödeme komisyonu.
