@@ -8,16 +8,8 @@ import { Link } from '@/i18n/navigation';
 import { limitText, type HomeViewProps } from './home-types';
 
 /**
- * Anasayfa — masaüstü düzeni (tasarım: `Musteri Web.dc.html`, "Web · Anasayfa" ekranı).
- * Bölüm sırası tasarımdan birebir: kahraman → kategoriler → koleksiyonlar → vitrin → fırsatlar →
- * paketler → tarifler → keşif → profesyonel çağrısı.
- *
- * Bu dosya KOMPOZİSYONDUR: parçaları (K7-K10 kartlar, K13-K15 bantlar) dizer, kendi stilini
- * kurmaz. Ham ölçü/renk yazılmaz — tipografi `text-h1`/`text-lead` gibi ölçek kademelerinden,
- * renk token'lardan gelir (envanter §0.4).
- *
- * Fırsat bölümü teklif yoksa HİÇ render edilmez (envanter §4: "teklif yoksa bu bölüm hiç var
- * olmamalı" — boş başlık bırakılmaz).
+ * Anasayfa masaüstü düzeni (`Musteri Web.dc.html`, "Web · Anasayfa"): bölüm sırası tasarımdan birebir, dosya yalnız parçaları dizer.
+ * Fırsat bölümü teklif yoksa hiç çizilmez, boş başlık bırakılmaz.
  */
 export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
   return (
@@ -41,11 +33,8 @@ export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
             </Link>
           </div>
         </div>
-        {/* Kahraman görseli operatörün "Vitrin görselleri" sekmesinden geliyor (`site_image.home_hero`,
-            08.33): bir varlığa değil bir SAYFA YERİNE bağlı. Yüklenmemişse `null` — çerçeve yer
-            tutucusunu çizer ve yerleşim kaymaz. Alt metin operatörünkü varsa onun, yoksa sayfanın:
-            fotoğrafı yükleyen kişi ne olduğunu bilir, sayfa metni yalnız orada bir görsel olduğunu
-            söyler. Kırpım künyesi de kapıdan geliyor — aynı fotoğraf 16:9 ve 3:2'ye farklı oturur. */}
+        {/* Kahraman görseli bir sayfa yerine bağlıdır (`site_image.home_hero`); yüklenmemişse çerçeve yer tutucusunu çizer. Alt
+            metin operatörünkü varsa onun, yoksa sayfanın, çünkü fotoğrafı yükleyen ne olduğunu bilir. */}
         <FramedImage
           src={hero?.url ?? null}
           alt={hero?.alt ?? t.hero.imageAlt}
@@ -162,8 +151,6 @@ export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
         <CtaBand title={t.discover.title} body={t.discover.body} cta={{ label: t.discover.cta, href: '/discover' }} />
       </div>
       <div className="mx-12 mb-12">
-        {/* Anasayfanın B2B çağrısı ana sayfaya dönüyordu (`/`) — tasarımın "gelinen yol" listesinde
-            ilk sırada duran bağ, sayfa açılana kadar ölüydü (08.7). */}
         <InviteBand title={t.pro.title} body={t.pro.body} cta={{ label: t.pro.cta, href: '/professionals' }} />
       </div>
     </div>

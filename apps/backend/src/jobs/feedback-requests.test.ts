@@ -12,10 +12,8 @@ import { createDueFeedbackRequests } from './feedback-requests';
 import { sendPendingFeedbackInvites } from './send-feedback-invites';
 
 /**
- * Davet taraması (17.2) — zamanlanmış işin kendisi.
- *
- * Sınanan üç kural: **zamanı gelmeyen davet edilmez**, **sipariş başına tek davet** (ikinci tarama
- * no-op), **oluşturma ile gönderim ayrı adımlar**.
+ * Davet taraması: zamanı gelmeyen davet edilmez, sipariş başına tek davet açılır (ikinci tarama no-op), oluşturma ile gönderim ayrı
+ * adımlardır.
  */
 const db = serviceDb();
 const requests = new FeedbackRequestService(db);
@@ -118,14 +116,8 @@ describe('createDueFeedbackRequests', () => {
 });
 
 /**
- * Gönderim (17.2) — kuyruğun boşaltılması.
- *
- * **Küresel sayıya bakılmaz** (CLAUDE.md §4b): kuyruk paylaşılan veritabanında başka ajanların
- * davetlerini de taşıyabilir. Her sınama KENDİ davetinin damgasına bakar.
- *
- * Kanal ayrımı testin belkemiği: e-postalı müşteride sağlayıcı anahtarı yereldeyken yok, o yüzden
- * davet KUYRUKTA KALMALI — "gitti" demek en kötü yalan olurdu. Telefonlu müşteride ise `wa.me`
- * bağlantısı gerçekten üretilir ve davet damgalanır.
+ * Gönderim: kuyruk paylaşılan veritabanında başka davetleri de taşıyabildiği için her sınama kendi davetinin damgasına bakar.
+ * E-postalı müşteride sağlayıcı anahtarı yereldeyken yok ve davet kuyrukta kalmalı; telefonlu müşteride `wa.me` bağlantısı üretilir.
  */
 describe('sendPendingFeedbackInvites', () => {
   it('sağlayıcı anahtarı yokken davet kuyrukta KALIR — yanlışlıkla "gitti" damgası atılmaz', async () => {

@@ -43,9 +43,8 @@ export async function openDiscoverDeck(
 }
 
 /**
- * **Turun kalan kartları — DESTEYİ KURAN TEK KURAL.** Hem destenin kendisi hem "kaç kart kaldı"
- * sorusu buradan çıkar; ikisi ayrı yazılsaydı biri bir gün ötekinden ayrı düşer ve vitrin, açtığında
- * boş çıkan bir tura davet ederdi — MB-58(b)'nin tam da önlemek istediği şey.
+ * Turun kalan kartları, desteyi kuran tek kural: hem deste hem "kaç kart kaldı" buradan çıkar ki vitrin açıldığında boş çıkan bir
+ * tura davet etmesin.
  */
 async function remainingCandidates(db: SupabaseClient, customerId: string | null) {
   const candidates = await new ProductService(db).listCandidates();

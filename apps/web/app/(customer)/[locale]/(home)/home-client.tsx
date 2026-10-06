@@ -10,13 +10,8 @@ import { HomeDesktop } from './home.desktop';
 import { HomeMobile } from './home.mobile';
 
 /**
- * Anasayfanın cihaz çatalı. Sunucu ipucu (UA) yanlışsa mount sonrası düzeltilir — kullanıcı tabletten
- * girdiğinde masaüstü düzenini görür (Sapma 3).
- *
- * **İKİ YÜZ FARKLI VERİ OKUR (14.09):** telefon native vitrinin bileşimini, masaüstü v1'inkini
- * (`home-view.ts` künyesi). Sayfa yalnız ipucunun yüzünü okur; düzeltme öteki yüze çevirirse o yüzün
- * verisi `loadHomeViewAction`dan istenir ve gelene kadar sunucunun çizdiği yüz ekranda kalır —
- * boş bir ara ekran çizilmez.
+ * Anasayfanın cihaz çatalı: iki yüz farklı veri okur (`home-view.ts`) ve sayfa yalnız sunucu ipucunun yüzünü okur. İpucu yanlışsa öteki
+ * yüzün verisi `loadHomeViewAction`dan istenir ve gelene kadar sunucunun çizdiği yüz ekranda kalır.
  */
 interface HomeClientProps {
   t: Messages;
