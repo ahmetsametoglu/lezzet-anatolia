@@ -42,9 +42,8 @@ export async function handleSendcloudWebhook(c: Context<AppEnv>, provider: Shipp
   const raw = await c.req.text();
   const signature = c.req.header('sendcloud-signature');
   if (!signature) {
-    // `logger.warn`, `captureError` DEĞİL: bu kapının beklenen reddi, uygulama arızası değil —
-    // sistem ekranındaki hata sayacını şişirseydi gerçek arızayı gizlerdi (Stripe kapısının aynı
-    // gerekçesi). Gövde LOGLANMAZ: doğrulanmamış içeriktir.
+    // Kapının beklenen reddi uygulama arızası değil; hata sayacını şişirip gerçek arızayı gizlemesin diye uyarı düzeyinde.
+    // Gövde loglanmaz, çünkü doğrulanmamış içeriktir.
     logger.warn({ reason: 'missing' }, 'sendcloud webhook imzasız istek reddedildi');
     return c.json({ error: 'missing signature' }, 400);
   }

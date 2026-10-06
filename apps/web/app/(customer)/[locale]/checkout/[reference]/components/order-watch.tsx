@@ -7,7 +7,7 @@ import { BELL_EVENT } from '@lezzet/application/realtime/bell-event';
 import { orderChannelName } from '@/lib/realtime/order-channel';
 import { verifyPaymentAction } from '../actions';
 
-/** İlk soru — Stripe dönüşünden hemen sonra: webhook çoğu zaman bu arada çoktan gelmiştir. */
+/** İlk soru ödemeden hemen sonra: webhook çoğu zaman bu arada çoktan gelmiştir. */
 const FIRST_VERIFY_MS = 4_000;
 /** Sonraki sorular — banka işliyorsa sonuç dakikalar sürebilir. */
 const VERIFY_EVERY_MS = 20_000;
@@ -15,20 +15,8 @@ const VERIFY_EVERY_MS = 20_000;
 const VERIFY_FOR_MS = 30 * 60_000;
 
 /**
- * Ödeme bekleyen onay ekranının canlı bağı. Çizdiği bir şey yok — iki işi var: **zili duyunca sayfayı
- * sunucudan yeniden istemek** ve **ödeme olayı gecikirse sağlayıcıya sordurmak**.
- *
- * Uyandırmalar:
- *  1. **Abonelik** — webhook sonrası gelen "değişti" mesajı (`lib/realtime/order-channel`).
- *  2. **Montajdaki tek yenileme** — webhook, müşteri bu sayfaya varmadan ÖNCE de düşebilir; o durumda
- *     çalan zili duyacak kimse yoktur, ilk kare bayat kalırdı.
- *  3. **Sağlayıcıya sor (07.18)** — webhook HİÇ gelmezse (tünel kapalı, uç yanlış yapılandırılmış)
- *     ekran süresiz "onaylanıyor"da kalıyordu. Birkaç saniyede bir sunucunun eylemi sağlayıcıya sorar ve
- *     cevaba göre siparişi webhook'la AYNI yoldan onaylar ya da ödeme gelmeyecekse kapatır; sonra sayfa
- *     yeniden istenir. Sipariş netleşince ya da süre dolunca sorular biter.
- *
- * `router.refresh()` sunucu bileşenini yeniden çalıştırır: durum yine tek kaynaktan, veritabanından ve
- * sağlayıcıdan okunur. İstemci hiçbir zaman "ödendi" kararını kendi vermez.
+ * Ödeme bekleyen onay ekranının canlı bağı: zili duyunca, açılışta bir kez ve webhook gecikirse sağlayıcıya sordurup sayfayı
+ * sunucudan yeniden ister. Webhook müşteri sayfaya varmadan da düşebilir; "ödendi" kararını istemci hiçbir zaman kendi vermez.
  */
 export function OrderWatch({ orderId }: { orderId: string }) {
   const router = useRouter();

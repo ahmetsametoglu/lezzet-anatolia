@@ -11,10 +11,9 @@ import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
-import { clientStripe } from '@/lib/stripe-client';
 import { errorText } from '@/lib/customer-error-text';
 import { hapticError, hapticSuccess } from '@/lib/haptics/haptics';
-import { CardFields, CardPaymentScope, type CardFieldsHandle, type PayStage } from './components/payment-element';
+import { CardTrustNote, openCardPopup, type PayStage } from './components/revolut-card';
 import { rememberPaymentError } from './payment-error';
 import { CheckoutDesktop } from './checkout.desktop';
 import { CheckoutMobile } from './checkout.mobile';
@@ -95,11 +94,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     }
     setSavedName(name);
   };
-  const cardRef = useRef<CardFieldsHandle>(null);
-  const [cardReady, setCardReady] = useState(false);
   const [payStage, setPayStage] = useState<PayStage | null>(null);
-  // Stripe ödeme grubu ancak kart yolu ilk kez seçilince kurulur ve bir kez verilen sağlayıcı geri alınamaz, bu yüzden bayrak inmez.
-  const [cardOpened, setCardOpened] = useState(false);
 
   const cartEntries = useMemo(() => checkoutEntriesOf(view.lines), [view.lines]);
   /**
@@ -116,7 +111,6 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   const preparedOrder = useRef<string | null>(null);
   /** Siparişin sayfasına geçildi: boşalan sepet bu ekranın okumasını yeniden koşturmasın, istek yeni sayfaya düşerdi. */
   const leaving = useRef(false);
-
 
   /** Adım verisini tazeler. Seçili adres (sepetten), sepet ve gel-al seçimi değiştikçe koşar. */
   const refresh = useCallback(
@@ -270,10 +264,11 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   };
 
   /**
-   * Kart yolunda "hazırla" adımı: Stripe formu kartı doğruladıktan sonra taslağı açar ve `clientSecret` döner, ki kartını yanlış
-   * yazan müşteri için sipariş açılmasın. Anahtar basışın kendisidir: ikinci basış aynı taslağın aynı ödemesine döner.
+   * Kart yolunda taslağı ve ödemesini açar; anahtar basışın kendisidir, ikinci basış aynı taslağın aynı ödemesine döner.
    */
-  const prepare = async (): Promise<{ ok: true; clientSecret: string; orderId: string } | { ok: false; error: string }> => {
+  const prepare = async (): Promise<
+    { ok: true; orderId: string; paymentToken: string; paymentMode: 'sandbox' | 'prod' } | { ok: false; error: string }
+  > => {
     // Ret titreşimi tek yerde, yoksa yeni bir ret dalında unutulurdu.
     const refuse = (error: string) => {
       hapticError();
@@ -302,13 +297,47 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     }
     if (data.status !== 'payment_required') return refuse(t.payment.unavailable);
     preparedOrder.current = data.orderId;
-    return { ok: true, clientSecret: data.clientSecret, orderId: data.orderId };
+    return { ok: true, orderId: data.orderId, paymentToken: data.paymentToken, paymentMode: data.paymentMode };
   };
 
-  /** Adres kart doğrulamasından önce sorulur, çünkü cüzdan penceresi açıldıktan sonra durmak ödemeyi yarıda keserdi. */
+  /** Adres pencere açılmadan sorulur, çünkü pencere açıldıktan sonra durmak ödemeyi yarıda keserdi. */
   const payByCard = async () => {
-    if (!state.addressId || (await addressStops(state.addressId))) return;
-    await cardRef.current?.submit();
+    if (!selectedAddress || !state.addressId || (await addressStops(state.addressId))) return;
+    setPayStage('preparing');
+    const prepared = await prepare();
+    if (!prepared.ok) {
+      setPayStage(null);
+      return setError(prepared.error);
+    }
+    setPayStage('confirming');
+    await openCardPopup({
+      token: prepared.paymentToken,
+      mode: prepared.paymentMode,
+      locale,
+      billing: {
+        name: customerName,
+        email: customer.email,
+        phone: customer.phone,
+        line1: selectedAddress.line1,
+        line2: selectedAddress.line2,
+        postalCode: selectedAddress.postalCode,
+        city: selectedAddress.city,
+        country: selectedAddress.country,
+      },
+      labels: {
+        declined: t.pay.declined,
+        insufficientFunds: t.pay.insufficientFunds,
+        expiredCard: t.pay.expiredCard,
+        incorrectCvv: t.pay.incorrectCvv,
+        authentication: t.pay.authentication,
+        generic: t.pay.error,
+        unavailable: t.payment.unavailable,
+      },
+      onPaid: () => onCardPaid(prepared.orderId),
+      onError: onCardError,
+      // Vazgeçmek hata değildir; kalemler taslakta bekler, müşteri siparişin sayfasında öder ya da iptal eder.
+      onCancel: () => leaveTo(prepared.orderId),
+    });
   };
 
   /** Siparişin sayfasına gidilir, sonra sepet tazelenir: ters sırada boşalan sepet gezinme bitene kadar kalemsiz bir özet çizerdi. */
@@ -330,38 +359,14 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     leaveTo(orderId);
   };
 
-  const stripe = clientStripe();
-  // `window` sunucu render'ında yok; adres ilk karede boş kalır, form zaten istemcide monte
-  // olduktan sonra kullanılıyor. Sipariş kimliği sonuna Stripe onayı verilirken eklenir.
-  const returnUrlBase = typeof window === 'undefined' ? '' : `${window.location.origin}/${locale}/checkout`;
-  const paymentSlot =
-    state.paymentMethod === 'online' && snapshot.payment && selectedAddress ? (
-      stripe ? (
-        <CardFields
-          ref={cardRef}
-          billing={{
-            name: customerName,
-            email: customer.email,
-            phone: customer.phone,
-            line1: selectedAddress.line1,
-            line2: selectedAddress.line2,
-            postalCode: selectedAddress.postalCode,
-            city: selectedAddress.city,
-            country: selectedAddress.country,
-          }}
-          // Dönüş adresi 3-D Secure için: banka doğrulaması müşteriyi götürüp geri getirebiliyor.
-          returnUrlBase={returnUrlBase}
-          onPrepare={prepare}
-          onError={onCardError}
-          onStage={setPayStage}
-          onReady={setCardReady}
-          labels={{ validating: t.pay.validating, confirming: t.pay.confirming, unavailable: t.payment.unavailable }}
-        />
-      ) : (
-        // Anahtar yok: sessiz başarısızlık yerine açık cevap — kapıda ödeme hâlâ seçilebilir.
-        <p className="font-sans text-note leading-relaxed font-semibold text-honey">{t.payment.unavailable}</p>
-      )
-    ) : null;
+  /** Ödeme geçti: siparişin sayfasına gidilir; onayı webhook ya da sayfanın canlı bağı verir. */
+  const onCardPaid = (orderId: string) => {
+    hapticSuccess();
+    leaveTo(orderId);
+    attemptKey.current = newAttemptKey();
+  };
+
+  const paymentSlot = state.paymentMethod === 'online' && snapshot.payment ? <CardTrustNote text={t.payment.cardTrust} /> : null;
 
   const props: CheckoutViewProps = {
     t,
@@ -380,7 +385,6 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     selectedAddress,
     paymentSlot,
     payStage,
-    payReady: state.paymentMethod !== 'online' || cardReady,
     addressNotice,
     /**
      * Teklif kabulü kaydın kendisini düzeltir ve yalnız kod ile şehir değişir, çünkü `wrong_postal_code` sokağın aynı, kodun farklı
@@ -443,7 +447,6 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       if (hadPoint) void refresh(state.addressId, null);
     },
     onSelectPayment: (method, onAccount) => {
-      if (method === 'online') setCardOpened(true);
       setState((prev) => ({ ...prev, paymentMethod: method, onAccount }));
     },
     onToggleConsent: (value) => setState((prev) => ({ ...prev, marketingConsent: value })),
@@ -456,11 +459,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     },
   };
 
-  return (
-    <CardPaymentScope stripe={cardOpened ? stripe : null} locale={locale} amountCents={snapshot.payment?.orderTotalCents ?? null}>
-      {resolved === 'mobile' ? <CheckoutMobile {...props} /> : <CheckoutDesktop {...props} />}
-    </CardPaymentScope>
-  );
+  return resolved === 'mobile' ? <CheckoutMobile {...props} /> : <CheckoutDesktop {...props} />;
 }
 
 /**

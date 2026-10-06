@@ -55,7 +55,7 @@
       "title": "Nasıl isterseniz öyle ödeyin",
       "online": {
         "title": "Online ödeme",
-        "body": "Stripe altyapısıyla — kart bilgileriniz bizde tutulmaz"
+        "body": "Revolut altyapısıyla — kart bilgileriniz bizde tutulmaz"
       },
       "door": {
         "title": "Kapıda ödeme",
@@ -65,7 +65,7 @@
         "title": "Havale ve vadeli hesap",
         "body": "Profesyonel müşterilerimize özel"
       },
-      "secure": "Ödemeleriniz Stripe güvencesinde — bankanızın uyguladığı korumanın aynısı. Bir sorun olursa iade kolay."
+      "secure": "Ödemeleriniz Revolut güvencesinde — bankanızın uyguladığı korumanın aynısı. Bir sorun olursa iade kolay."
     },
     "points": {
       "kicker": "PUAN",
@@ -149,7 +149,7 @@
       "title": "Payez comme vous voulez",
       "online": {
         "title": "Paiement en ligne",
-        "body": "Via Stripe — vos données de carte ne sont jamais stockées chez nous"
+        "body": "Via Revolut — vos données de carte ne sont jamais stockées chez nous"
       },
       "door": {
         "title": "Paiement à la livraison",
@@ -159,7 +159,7 @@
         "title": "Virement et paiement différé",
         "body": "Réservé à nos clients professionnels"
       },
-      "secure": "Vos paiements sont sous la protection de Stripe — la même que celle appliquée par votre banque. En cas de problème, le remboursement est simple."
+      "secure": "Vos paiements sont sous la protection de Revolut — la même que celle appliquée par votre banque. En cas de problème, le remboursement est simple."
     },
     "points": {
       "kicker": "POINTS",
@@ -243,7 +243,7 @@
       "title": "Zahlen Sie, wie Sie möchten",
       "online": {
         "title": "Online-Zahlung",
-        "body": "Über Stripe – Ihre Kartendaten werden bei uns nicht gespeichert"
+        "body": "Über Revolut – Ihre Kartendaten werden bei uns nicht gespeichert"
       },
       "door": {
         "title": "Zahlung bei Lieferung",
@@ -253,7 +253,7 @@
         "title": "Überweisung und Zahlung auf Rechnung",
         "body": "Exklusiv für unsere Geschäftskunden"
       },
-      "secure": "Ihre Zahlungen sind durch Stripe geschützt – derselbe Schutz wie bei Ihrer Bank. Bei Problemen ist die Erstattung einfach."
+      "secure": "Ihre Zahlungen sind durch Revolut geschützt – derselbe Schutz wie bei Ihrer Bank. Bei Problemen ist die Erstattung einfach."
     },
     "points": {
       "kicker": "PUNKTE",

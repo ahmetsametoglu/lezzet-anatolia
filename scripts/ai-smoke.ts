@@ -1,18 +1,10 @@
 /**
- * AI duman testi — `pnpm ai:smoke`
- *
- * GERÇEK anahtarla TEK çeviri çağrısı yapar ve zinciri uçtan uca doğrular: `AI_PROVIDER` okunuyor
- * mu · anahtar geçerli mi · model cevap veriyor mu · çıktı şemadan geçiyor mu. Sonunda kullanılan
- * token sayısını basar.
- *
- * Neden var: birim testleri sağlayıcıya ağdan GİTMEZ (`packages/ai/src/testing.ts` sahte modeli) —
- * "kod doğru" ile "anahtar/sağlayıcı doğru" ayrı sorulardır; bu script ikincisini cevaplar
- * (`stripe-smoke.ts` ile aynı sınıf). Kurulumdan ve anahtar/sağlayıcı değişiminden sonra ELLE
- * çalıştırılır. **Her çağrı gerçek token harcar** — otomatik test paketine bağlanmaz.
+ * AI duman testi — `pnpm ai:smoke`. Birim testleri sağlayıcıya gitmediği için gerçek anahtarla tek çeviri çağrısı yapar ve
+ * zinciri uçtan uca doğrular; her çağrı gerçek token harcadığı için elle koşulur.
  */
 const load = (process as { loadEnvFile?: (path: string) => void }).loadEnvFile;
 
-// SIRA ÖNEMLİ (stripe-smoke ile aynı gerekçe): Node var olan değişkeni ezmez, ilk yükleyen
+// SIRA ÖNEMLİ: Node var olan değişkeni ezmez, ilk yükleyen
 // kazanır. Anahtarlar `apps/web/.env.local`'de; kök `.env` yalnız eksikleri tamamlar.
 try {
   load?.('apps/web/.env.local');

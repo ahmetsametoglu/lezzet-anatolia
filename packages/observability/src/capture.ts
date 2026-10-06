@@ -1,8 +1,5 @@
-// **ALT YOL İMPORT'U ŞART, barrel DEĞİL.** `@lezzet/database` kökü her servisi yeniden dışa açıyor ve
-// içlerinden biri (`email-verification.service`) `node:crypto` kullanıyor. Bu paket Next'in
-// `instrumentation.ts`'inden çağrılıyor, o dosya ise **edge çalışma zamanı için de derleniyor** —
-// orada `node:` şemalı modül yok ve derleme "UnhandledSchemeError: node:crypto" ile kırılıyor.
-// Yaşandı (30.07); referans projede aynı tuzak aynı gerekçeyle yazılıydı.
+// Alt yol içe aktarımı: `@lezzet/database` kökü `node:crypto` kullanan servisi de açar ve bu paket edge'de de derlenen
+// `instrumentation.ts`ten çağrılır; edge'de `node:` şeması yoktur.
 import { serviceDb } from '@lezzet/database/client';
 import { errorMessageOf } from './error-message';
 import { scrubMessage } from './mask';
@@ -11,17 +8,8 @@ import type { ErrorLogLevel } from '@lezzet/types';
 import { logger } from './logger';
 
 /**
- * Hatayı iki yere yazar: **önce stdout, sonra veritabanı** (`OBSERVABILITY §2`).
- *
- * Sıra rastgele değil, iki gerekçesi var ve her biri tek başına yeterli:
- *
- * 1. **Hata kaydının kendisi çökerse orijinal hatayı maskelememeli.** Teşhis edilecek şeyin üstüne
- *    teşhis edilemeyen bir şey koymak, elde hiç iz olmamasından kötüdür.
- * 2. **Veritabanına erişilemezken de iz kalmalı.** DB'nin düştüğü an, iz tutmanın en gerekli olduğu
- *    andır — o anda yalnız DB'ye yazan bir sistem sessiz kalır.
- *
- * Bu yüzden fonksiyon **asla fırlatmaz**. Çağıranın akışı hata kaydı yüzünden bozulamaz: mail
- * gitmese sipariş geri alınmıyor (14.5 kuralı), hata kaydı düşse de öyle.
+ * Hatayı önce stdout'a, sonra veritabanına yazar: hata kaydının çökmesi asıl hatayı gizlemesin ve veritabanı düşmüşken de iz kalsın.
+ * Fonksiyon fırlatmaz, çünkü çağıranın akışı hata kaydı yüzünden bozulmamalı.
  */
 
 export interface CaptureContext {
@@ -29,19 +17,12 @@ export interface CaptureContext {
   source: string;
   /** İstek yolu (varsa). */
   path?: string | null;
-  /**
-   * Ek bağlam. **KİMLİK yazılır, İÇERİK yazılmaz** (`OBSERVABILITY §5`): `orderId` evet, müşterinin
-   * e-postası hayır. Teşhis için kimlik yeter — o kimlikle veritabanına bakılır; ham kopya taşımak
-   * süresi olan bir tabloya kişisel veri taşımak ve kaydı okunmaz kılmaktır.
-   */
+  /** Ek bağlam: kimlik yazılır, içerik yazılmaz (`OBSERVABILITY §5`); teşhis kimlikle veritabanına bakılarak yapılır. */
   context?: Record<string, unknown>;
   level?: ErrorLogLevel;
 }
 
-/**
- * Hatanın geldiği yer. Serbest metin yerine sabit: ekran bu değere göre süzüyor ve elle yazılan
- * `'backend cron'` ile `'backend-cron'` iki ayrı kaynak gibi görünürdü.
- */
+/** Hatanın geldiği yer; ekran bu değere göre süzer ve serbest metin aynı kaynağı iki farklı yazımla bölerdi. */
 export const SOURCES = {
   /** Next sunucu tarafı: RSC render, route handler (`instrumentation.ts` yakalar). */
   webServer: 'web-server',
@@ -51,114 +32,45 @@ export const SOURCES = {
   backendHttp: 'backend-http',
   /** Zamanlanmış iş (`runJob` kabuğu). */
   backendCron: 'backend-cron',
-  /**
-   * Backend SÜRECİNİN kendisi — hiçbir sarmala düşmeyen hata (`unhandledRejection` /
-   * `uncaughtException`). Cron'dan ayrı tutulur: "bir iş düştü" ile "süreç öldü, tüm işler durdu"
-   * aynı ekranda aynı renkte görünmemeli.
-   */
+  /** Hiçbir sarmala düşmeyen süreç hatası; "bir iş düştü" ile "süreç öldü" aynı görünmesin diye cron'dan ayrı. */
   backendProcess: 'backend-process',
-  /** Sağlayıcı bildirimi (Stripe, 360dialog). */
+  /** Sağlayıcı bildirimi (ödeme, mesajlaşma, kargo). */
   webhook: 'webhook',
-  /**
-   * MCP yönetici asistanı yolu (`apps/backend/src/mcp` — 22.1). Ayrı kaynak, çünkü asistanın
-   * "sistem hatalarını raporla" aracı KENDİ hatalarını da bu etiketle görecek (AI_ADMIN_ASSISTANT §8).
-   */
+  /** MCP yönetici asistanı; asistanın "sistem hatalarını raporla" aracı kendi hatalarını bu etiketle görür. */
   mcp: 'mcp',
-  /**
-   * TARAYICIDA doğan hata (`reportClientErrorAction` kapısı). Sunucu kancaları bunu görmez —
-   * hata sınırındaki render çökmesi buradan gelmezse hiçbir yerde iz bırakmaz (denetim G1).
-   */
+  /** Tarayıcıda doğan hata (`reportClientErrorAction`); sunucu kancaları bunu görmez. */
   webClient: 'web-client',
-  /** Mobil API HTTP isteği (21.1) — web'inkinden ayrı: iki yüzeyin arızası aynı kovaya düşmemeli. */
+  /** Mobil API HTTP isteği; iki yüzeyin arızası aynı kovaya düşmesin diye web'den ayrı. */
   mobileApiHttp: 'mobile-api-http',
-  /**
-   * Mobil API SÜRECİNİN kendisi — `backendProcess` ile aynı ayrımın karşılığı: "bir istek düştü"
-   * ile "süreç öldü, tüm uçlar sustu" aynı ekranda aynı renkte görünmemeli.
-   */
+  /** Mobil API sürecinin kendisi; `backendProcess` ile aynı ayrım. */
   mobileApiProcess: 'mobile-api-process',
   /**
-   * Paylaşılan auth akışı (`packages/application/src/auth`) — OTP isteme/doğrulama. Çağıranı iki
-   * yüzey birden (web + mobil), o yüzden kaynağı çağırana değil AKIŞA bağlı: hata akışın
-   * kendisindeyse iki yüzeyde de aynı adla görünmeli, yoksa aynı arıza iki kova arasında bölünür.
+   * Paylaşılan akışların kaynağı çağırana değil akışa bağlıdır: web ve mobil aynı kapıyı çağırır ve akıştaki arıza iki yüzeyde aynı
+   * adla görünmeli, yoksa iki kovaya bölünüp ikisi de eşiğin altında kalır. Auth: OTP isteme ve doğrulama.
    */
   applicationAuth: 'application-auth',
-  /**
-   * Paylaşılan SİPARİŞ akışı (`packages/application/src/order`) — sipariş açma zinciri (21.19).
-   * `applicationAuth` ile aynı gerekçe ve aynı ayrım: web checkout'u ile mobilin "Siparişi
-   * tamamla" ekranı AYNI kapıyı çağırıyor, yani arıza akışın kendisindeyse iki yüzeyde de aynı
-   * adla görünmeli. Çağırana bağlansaydı tek bir yapılandırma hatası (kargo deposu yok) iki kova
-   * arasında bölünür ve ikisi de eşiğin altında kalırdı.
-   */
+  /** Sipariş açma zinciri. */
   applicationOrder: 'application-order',
-  /**
-   * AI kullanım kaydedicisi (15.27) — `packages/application/src/ai/usage-recorder.ts`. Web'de ve backend'de
-   * AYNI kaydedici koşuyor; kaydın düşmesi (DB kesintisi, bozuk satır) iki süreçte de aynı kovada görünmeli.
-   * Koşunun kendisi etkilenmez — bu kova "harcama kaydı eksik kaldı" der.
-   */
+  /** Yapay zekâ kullanım kaydı; koşu etkilenmez, kova "harcama kaydı eksik kaldı" der. */
   applicationAi: 'application-ai',
-  /**
-   * Paylaşılan B2B akışı (`packages/application/src/b2b` + `customer/b2b.ts`) — resmî işletme
-   * kaydı okuması, AB vergi numarası doğrulaması ve başvurunun yazımı (21.31). Aynı ayrım:
-   * web'in Professionnels sayfası ile mobilin başvuru formu AYNI kapıları çağırıyor ve bu
-   * akışın tipik arızası DIŞ SERVİSİN düşmesidir — iki kovaya bölünürse "kayıt servisi bugün
-   * cevap vermiyor" hiçbir ekranda görünmez.
-   */
+  /** B2B başvurusu; tipik arıza dış kayıt servisinin düşmesidir. */
   applicationB2b: 'application-b2b',
-  /**
-   * Paylaşılan TALEP akışı (`packages/application/src/ticket`) — bildirim kurucusu ve AI destek
-   * çekirdeği (16.5/20.4, 16.08 terfisi). Aynı ayrım: web'in Talepler ekranı ile backend'in
-   * destek cron'u AYNI kapıları çağırıyor; arıza akışın kendisindeyse (mail kurulamadı, taslak
-   * yazılamadı) iki yüzeyde de aynı adla görünmeli.
-   */
+  /** Talep bildirimi ve yapay zekâ destek çekirdeği. */
   applicationTicket: 'application-ticket',
-  /**
-   * Paylaşılan KARGO akışı (`packages/application/src/shipping`) — taşıyıcı uzlaştırması (07.12).
-   * Aynı ayrım: uzlaştırmayı hem webhook (`apps/backend/webhooks`) hem nöbet cron'u çağırıyor;
-   * arıza akışın kendisindeyse (tanınmayan durum kodu, sağlayıcıya ulaşılamaması) iki yolda da
-   * aynı adla görünmeli. Çağırana bağlansaydı tek bir eksik eşleme iki kova arasında bölünür ve
-   * ikisi de dikkat çekmezdi.
-   */
+  /** Taşıyıcı uzlaştırması; webhook da nöbet cron'u da çağırır. */
   applicationShipping: 'application-shipping',
-  /**
-   * Bildirimin tek kapısı (`packages/application/src/notification/dispatch`, 14.12) — satır + kanal
-   * + teslim defteri. Aynı ayrım: beş yayım noktası (sipariş, talep, davet, bölge, B2B) üç yüzeyden
-   * bu kapıyı çağırıyor; teslim defterinin yazılamaması hangi yüzeyden gelirse gelsin tek adla
-   * görünmeli.
-   */
+  /** Bildirimin tek kapısı ve teslim defteri. */
   applicationNotification: 'application-notification',
-  /**
-   * Kurye akışının paylaşılan kararları (`packages/application/src/courier`, 11.9) — bugün durak
-   * sırası. Aynı ayrım: hesap hem sefer başlarken hem gün okunurken tetikleniyor ve iki yüzeyden
-   * (mobil uç, web operasyon) geçiyor; sıralamanın düşmesi hangi yoldan gelirse gelsin tek adla
-   * görünmeli. Bu kova SESSİZ arızanın tek izidir: hesap düşse de kurye günü görmeye devam eder,
-   * yalnız duraklar numarasız kalır — kimse şikâyet etmez, log söyler.
-   */
+  /** Kurye durak sırası; hesap düşse de kurye günü görür ve duraklar numarasız kalır, arızanın tek izi bu kovadır. */
   applicationCourier: 'application-courier',
-  /**
-   * Teslimat/adres kararları (`packages/application/src/delivery`, 11.11) — bugün adres
-   * doğrulaması. Kurye kovasıyla aynı gerekçe ve aynı SESSİZLİK riski: doğrulama kapısı FAIL-OPEN,
-   * yani düştüğünde sipariş yine geçer ve müşteri hiçbir şey fark etmez — yalnız kapı bir daha hiç
-   * uyarmaz. Şikâyet gelmez, log söyler.
-   */
+  /** Adres doğrulaması; kapı düşünce sipariş yine geçtiği için arızanın tek izi bu kovadır. */
   applicationDelivery: 'application-delivery',
 } as const;
 
 export async function captureError(error: unknown, ctx: CaptureContext): Promise<void> {
-  /**
-   * Mesaj TEK KAPIDAN maskelenir (03.08). En tehlikeli sızıntı bizim yazdığımız bağlam değil,
-   * veritabanının kendi hata gövdesidir: Postgres kısıt ihlalinde değeri metne gömüyor
-   * (`Key (postal_code, email)=(75011, ahmet@example.com)`) ve o metin `error_log.message`'a
-   * olduğu gibi düşüyordu. Her çağıranın hatırlaması gereken bir kural, bir gün hatırlanmaz —
-   * bu yüzden kural çağıranda değil burada.
-   */
+  /** Mesaj burada maskelenir, çünkü Postgres kısıt ihlalinde değeri metne gömer; kural çağıranda olsa bir gün unutulur. */
   const message = scrubMessage(errorMessageOf(error));
-  /**
-   * **Yığın izi de maskelenir** (05.08 · statik metin söz denetimi, ölçüm 4) ve bu bir düzeltme
-   * değil bir DELİK KAPATMAsıdır: `error.stack`in ilk satırı `Error: <mesaj>`tır. Yani yukarıda
-   * maskelediğimiz mesaj, bir kolon yanda **maskesiz** duruyordu — maskeleme fiilen boşa çıkıyordu.
-   * Ölçülebilir bir örnek: kısıt ihlalinde `message` `Key (…)=(…)` olurken `stack` aynı satırda
-   * e-postayı olduğu gibi taşıyordu.
-   */
+  /** Yığın izinin ilk satırı mesajın kendisidir; maskelenmezse mesajın maskesi boşa çıkar. */
   const stack = error instanceof Error && error.stack ? scrubMessage(error.stack) : null;
 
   logger.error({ source: ctx.source, path: ctx.path, ctx: ctx.context, err: { message, stack } }, message);
@@ -173,7 +85,6 @@ export async function captureError(error: unknown, ctx: CaptureContext): Promise
       context: ctx.context ?? {},
     });
   } catch {
-    // `capture` kendi içinde de yutuyor; buradaki ikinci kat istemci kurulumunun kendisi için
-    // (env eksikse `serviceDb()` fırlatır). Log ZATEN yazıldı.
+    // Env eksikse `serviceDb()` fırlatır; log zaten yazıldı ve fonksiyon fırlatmamalı.
   }
 }

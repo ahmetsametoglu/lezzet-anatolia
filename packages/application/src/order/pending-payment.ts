@@ -15,7 +15,7 @@ export type PendingPaymentSettled = { status: 'paid' | 'processing' | 'closed'; 
 
 export type ResumePaymentOutcome =
   /** Ödeme hâlâ alınabilir; aynı ödemenin anahtarı döner, ikinci ödeme doğmaz. */
-  | { status: 'payment_required'; orderId: string; totalCents: number; deliveryType: DeliveryType; clientSecret: string }
+  | { status: 'payment_required'; orderId: string; totalCents: number; deliveryType: DeliveryType; paymentToken: string }
   | PendingPaymentSettled
   | { status: 'not_found' }
   /** Sağlayıcıya sorulamadı; "ödenmedi" sayılmaz. */
@@ -40,13 +40,13 @@ export async function resumeOrderPayment(db: Db, order: Order, deps: ConfirmPaym
   const settled = await reconcileOrder(db, order, deps);
   if (settled.status !== 'waiting') return settledOutcome(order, settled);
   if (paymentStateOf(settled.payment.status) === 'processing') return { status: 'processing', orderId: order.id };
-  if (!settled.payment.clientSecret) return { status: 'provider_unavailable' };
+  if (!settled.payment.paymentToken) return { status: 'provider_unavailable' };
   return {
     status: 'payment_required',
     orderId: order.id,
     totalCents: order.orderedTotalCents,
     deliveryType: order.deliveryType,
-    clientSecret: settled.payment.clientSecret,
+    paymentToken: settled.payment.paymentToken,
   };
 }
 

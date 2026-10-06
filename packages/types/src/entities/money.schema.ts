@@ -46,7 +46,7 @@ export const MovementTypeEnum = z.enum([
   'order_refund', // müşteriye iade
   'purchase', // stok alımı (StockIntake bağı)
   'expense', // kira/akaryakıt/maaş… (`nature` ile ayrışır)
-  'transfer', // hesaplar arası: nakit→banka, Stripe→banka payout
+  'transfer', // hesaplar arası: nakit→banka, kart ödemeleri→banka aktarımı
   'capital', // sermaye girişi
   'misc',
 ]);
@@ -59,10 +59,10 @@ export type MovementType = z.infer<typeof MovementTypeEnum>;
 export const ADVERTISING_NATURE = 'reklam';
 
 /**
- * Ödeme sağlayıcı ücretinin türü: webhook ödeme başına komisyonu havuzdan bu türle düşer, kârlılık komisyonu siparişin
- * `paymentFee` alanından okur (`movement_nature.slug = 'stripe-ucreti'`).
+ * Kart ödemesi komisyonunun türü: webhook ödeme başına komisyonu havuzdan bu türle düşer, kârlılık komisyonu siparişin
+ * `paymentFee` alanından okur (`movement_nature.slug = 'kart-komisyonu'`).
  */
-export const STRIPE_FEE_NATURE = 'stripe-ucreti';
+export const CARD_FEE_NATURE = 'kart-komisyonu';
 
 /**
  * Sermayenin türü: girişte seçilince hareket `capital` tipine geçer (`classificationTypeOf`); öteki türler çıkışta `expense`,

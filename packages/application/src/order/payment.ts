@@ -24,7 +24,7 @@ export type PaymentOutcome =
 
 export interface OrderMovementInput {
   orderId: string;
-  /** Paranın girdiği/çıktığı hesap (kasa, banka, Stripe). */
+  /** Paranın girdiği/çıktığı hesap (kasa, banka, ödeme sağlayıcısı). */
   accountId: string;
   /** Cent. */
   amountCents: number;
@@ -46,7 +46,7 @@ export interface OrderMovementInput {
   idempotencyKey?: string | null;
 }
 
-/** Tahsilat — kapıda nakit/kart, havale, Stripe onayı, kurye gün kapanışı. */
+/** Tahsilat — kapıda nakit/kart, havale, kart ödemesi onayı, kurye gün kapanışı. */
 export function recordOrderPayment(db: SupabaseClient, input: OrderMovementInput): Promise<PaymentOutcome> {
   return writeOrderMovement(db, input, 'order_payment');
 }

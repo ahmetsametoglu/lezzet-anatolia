@@ -1,5 +1,5 @@
 import type { OrderStatus, PaymentMethod } from '@lezzet/types';
-import type { PaymentIntentStatus } from './draft-payment';
+import type { ProviderPaymentStatus } from './draft-payment';
 
 /** Ödemesi beklenen kart taslağında sağlayıcının söylediği: alındı, banka işliyor ya da tamamlanmadı. */
 export type CardPaymentState = 'paid' | 'processing' | 'incomplete';
@@ -27,18 +27,17 @@ export function isRefundedCancellation(view: { cancelled: boolean; refundedAt: s
   return view.cancelled && view.refundedAt !== null;
 }
 
-/** Sağlayıcının durumundan ekranın hâli; iptal edilmiş ödeme de "tamamlanmadı"dır, `requires_action` 3-D Secure'un bitmediğidir. */
-export function paymentStateOf(status: PaymentIntentStatus): CardPaymentState {
+/** Sağlayıcının durumundan ekranın hâli; iptal edilmiş ya da süresi dolmuş ödeme de "tamamlanmadı"dır. */
+export function paymentStateOf(status: ProviderPaymentStatus): CardPaymentState {
   switch (status) {
-    case 'succeeded':
+    case 'completed':
       return 'paid';
     case 'processing':
-    case 'requires_capture':
+    case 'authorised':
       return 'processing';
-    case 'requires_payment_method':
-    case 'requires_confirmation':
-    case 'requires_action':
-    case 'canceled':
+    case 'pending':
+    case 'cancelled':
+    case 'failed':
       return 'incomplete';
   }
 }

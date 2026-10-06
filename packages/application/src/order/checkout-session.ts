@@ -1,3 +1,4 @@
+import { brand } from '@lezzet/brand';
 import { OrderService, UserProfileService, type Db } from '@lezzet/database';
 import type { Order, OrderItem } from '@lezzet/types';
 import type { BackgroundRunner } from './effects';
@@ -10,7 +11,7 @@ import { reserveOrderStock } from './reserve';
  */
 
 export type CheckoutSessionOutcome =
-  | { status: 'ok'; paymentIntentId: string; clientSecret: string | null; expiresAt: string }
+  | { status: 'ok'; paymentRef: string; paymentToken: string | null; expiresAt: string }
   /** Stok yetmedi — ödeme hiç açılmadı. Hangi varyanttan ne kadar kaldığı çağırana bildirilir. */
   | { status: 'insufficient_stock'; variantId: string; available: number }
   /** Sipariş taslak değil: araya biri girdi ya da ödeme zaten açılmış. */
@@ -20,18 +21,18 @@ export type CheckoutSessionOutcome =
   | { status: 'provider_unavailable' };
 
 /**
- * Ödeme niyetini açan port: bugün Stripe, testte sahte üreteç; sağlayıcı istemcisi pakete girmez, çünkü `stripe` bu paketin
- * bağımlılığı olamaz ve `null` "anahtar yok" demektir. Kalem listesi gönderilmez: tutar `resolveCheckoutPayment`ın hesapladığı sipariş
- * toplamıdır, kalemleri sağlayıcıya ikinci kez yazmak iki toplamın ayrışabildiği bir yol açardı.
+ * Sağlayıcıda ödemeyi açan port (`revolutSessionCreator`, testte sahte); `null` "anahtar yok" demektir. Kalem listesi gönderilmez:
+ * tutar `resolveCheckoutPayment`ın hesapladığı sipariş toplamıdır, kalemleri ikinci kez yazmak iki toplamın ayrışabildiği bir yol açardı.
  */
 export type CheckoutSessionCreator = (params: {
   amountCents: number;
   orderId: string;
-  /** Sağlayıcı panelinde siparişi tanımaya yarar; müşteriye kart ekstresinde de görünebilir. */
+  customerId: string;
+  /** Müşteriye sağlayıcının ödeme penceresinde görünür; bu yüzden dilden bağımsız marka ve numaradır. */
   description: string;
-  /** Ayırmanın bittiği an — niyetin künyesine yazılır, geç ödeme dalı (07.5) bunu okuyabilir. */
+  /** Ayırmanın bittiği an; sağlayıcıdaki ödeme de bu sürede düşer. */
   reservationExpiresAt: string;
-}) => Promise<{ id: string; clientSecret: string | null }>;
+}) => Promise<{ id: string; paymentToken: string | null }>;
 
 export interface CheckoutSessionInput {
   orderId: string;
@@ -71,18 +72,19 @@ export async function createCheckoutSession(
   // Tahsil edilecek tutar siparişin TOPLAMIDIR: kalem toplamı + kargo − indirim, hepsi
   // `resolveCheckoutPayment` tarafından hesaplanıp siparişe yazılmış hâliyle. Burada yeniden
   // toplamak, iki hesabın ayrışabildiği ikinci bir kaynak yaratırdı.
-  const intent = await createSession({
+  const payment = await createSession({
     amountCents: order.orderedTotalCents,
     orderId: order.id,
-    description: order.referenceNo ?? `Sipariş ${order.id.slice(0, 8)} · ${items.length} kalem`,
+    customerId: order.customerId,
+    description: order.referenceNo ? `${brand.name} · ${order.referenceNo}` : brand.name,
     reservationExpiresAt: expiresAt,
   });
 
   /* Ödeme kimliği siparişe yazılır: olmasaydı siparişe dönüşün tek yolu webhook olurdu ve olay gelmezse taslak süresiz
      "onaylanıyor"da kalırdı. Kimlik siparişte olunca ödeme sayfası ve zamanlayıcı sağlayıcıya sorabilir (`reconcileDraftPayment`). */
-  await new OrderService(db).update({ id: order.id, paymentRef: intent.id });
+  await new OrderService(db).update({ id: order.id, paymentRef: payment.id });
 
-  return { status: 'ok', paymentIntentId: intent.id, clientSecret: intent.clientSecret, expiresAt };
+  return { status: 'ok', paymentRef: payment.id, paymentToken: payment.paymentToken, expiresAt };
 }
 
 /**

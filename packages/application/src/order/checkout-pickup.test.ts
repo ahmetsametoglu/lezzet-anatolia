@@ -151,7 +151,7 @@ describe('gel-al siparişi (placeOrder)', () => {
       paymentMethod,
       pickupWarehouseId: warehouseId,
       idempotencyKey: `gla-${stamp}-${customerId}-${warehouseId}-${Math.random().toString(36).slice(2, 8)}`,
-      createPaymentSession: async () => ({ id: `pi_gla_${stamp}`, clientSecret: `secret_${stamp}` }),
+      createPaymentSession: async () => ({ id: `pi_gla_${stamp}`, paymentToken: `secret_${stamp}` }),
     });
   };
 
@@ -273,7 +273,7 @@ describe('gel-al sepetin grubuna ve kapının asgari sepetine bağlı değildir'
       paymentMethod: 'cash',
       pickupWarehouseId: pickupId,
       idempotencyKey: `gld-${stamp}`,
-      createPaymentSession: async () => ({ id: `pi_gld_${stamp}`, clientSecret: `secret_gld_${stamp}` }),
+      createPaymentSession: async () => ({ id: `pi_gld_${stamp}`, paymentToken: `secret_gld_${stamp}` }),
     });
     expect(outcome.status).toBe('placed');
     if (outcome.status !== 'placed') return;

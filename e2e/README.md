@@ -92,12 +92,12 @@ yoğun saatte düşen testler koşudan koşuya DEĞİŞİR, bu senaryo hatası d
 
 Planlanan ~10 yolculuk (tasarım+DOMAIN'den; liste taslak, yazım sırasında daralabilir/gerekçeyle değişir):
 
-- **Müşteri:** vitrin → ürün → sepete ekle → checkout taslağı (Stripe yönlendirme SINIRINA dek —
+- **Müşteri:** vitrin → ürün → sepete ekle → checkout taslağı (kart ödemesi SINIRINA dek —
   webhook zinciri entegrasyon testlerinde) · yer/posta kodu seçimi ve rota-dışı hâli · fr/de/tr
   rota değişimi · sipariş onay ekranı (`/checkout/[reference]`) · sepette fiyat-artışı onayı.
 - **Operasyon:** rol yönlendirmesi · sipariş kuyruğu → hazırlık onayı · mal kabul · Kasa/para
   ekranı ilk bakış.
-- **Dışarıda kalanlar (bilinçli):** OTP akışı (kod-yakalama kapısı inene dek) · Stripe ödeme
+- **Dışarıda kalanlar (bilinçli):** OTP akışı (kod-yakalama kapısı inene dek) · kart ödemesi
   tamamlama · piksel karşılaştırma · WebKit — Kademe 3 konusu.
   *(**Rol yönlendirmesi** bu listeden 19.08'de ÇIKTI: gerekçesi "dev bypass TEK kimlik verir"di,
   bypass söküldü. Artık `e2e/setup/` altına ikinci bir oturum dosyası koyup kurye/depo rolüyle de

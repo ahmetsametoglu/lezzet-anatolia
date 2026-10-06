@@ -1,14 +1,22 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, MoneyMovementService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
+  AccountService,
+  CategoryService,
+  MoneyMovementService,
+  OrderService,
+  ProductService,
+  ReservationService,
+  StockService,
+  UserProfileService,
+  serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete, settingsSnapshot } from '@lezzet/database/testing';
-import type { StripeEffects } from './stripe-effects';
-import { handleStripeEvent, type VerifiedEvent } from './stripe-webhook';
+import type { PaymentGateway } from '@lezzet/application';
+import { handlePaymentEvent as handleWithGateway, type PaymentEvent } from './payment-webhook';
 
 /**
- * Stripe webhook'u: aynı olay iki kez işlenmez, ödeme onayı siparişi `confirmed` yapıp numara üretir ve geç ödeme motorun dediği gibi
- * dallanır (ayırma düşmüşse yeniden ayır, mal yoksa iade et). İmza doğrulaması HTTP kabuğunun işi, buraya doğrulanmış olay gelir.
+ * Ödeme webhook'u: aynı olay iki kez işlenmez, ödeme onayı siparişi `confirmed` yapıp numara üretir ve geç ödeme motorun dediği gibi
+ * dallanır (ayırma düşmüşse yeniden ayır, mal yoksa iade et). İmza ve olay çevirisi HTTP kabuğunun işi, buraya çevrilmiş olay gelir.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -22,28 +30,33 @@ let warehouseId: string;
 let variantId: string;
 let productId: string;
 let categoryId: string;
-let stripeAccount: string;
-/** Payout'un gittiği banka; ayar bu hesabı gösterir. */
+let providerAccount: string;
+/** Aktarımın gittiği banka; ayar bu hesabı gösterir. */
 let bankAccount: string;
 const createdProfiles: string[] = [];
 
-/** Sağlayıcıya sorulan iki şeyin sahtesi: ücret bilinmiyor, payout boş — eski testler ücretsiz dünyada koşar. */
-const noFees: StripeEffects = { feeOf: async () => null, payoutItems: async () => [] };
+/** Geç ödeme dalının iadesi ağa çıkmaz: kök `.env`teki deneme anahtarı sahte ödeme kimliğiyle sağlayıcıya giderdi. */
+const fakeGateway: PaymentGateway = { read: async () => null, cancel: async () => undefined, refund: async () => undefined };
+const handlePaymentEvent = (event: PaymentEvent, accountId: string | null) => handleWithGateway(event, accountId, undefined, fakeGateway);
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 let eventSeq = 0;
 
-function paidEvent(orderId: string, amountCents: number, overrides: Partial<VerifiedEvent> = {}): VerifiedEvent {
+function paidEvent(orderId: string, amountCents: number, fee: { feeCents: number; paymentId: string } | null = null): PaymentEvent {
   eventSeq += 1;
   return {
-    id: `evt_${stamp}_${eventSeq}`,
-    // Varsayılan olay adı niyet ailesinden, çünkü ödeme sayfa içinde alınır.
-    type: 'payment_intent.succeeded',
+    key: `ORDER_COMPLETED:${stamp}_${eventSeq}`,
+    kind: 'payment_completed',
     orderId,
-    paymentIntentId: `pi_${stamp}_${eventSeq}`,
-    amountTotalCents: amountCents,
-    ...overrides,
+    paymentRef: `rv_${stamp}_${eventSeq}`,
+    amountCents,
+    fee,
   };
+}
+
+function releasedEvent(orderId: string): PaymentEvent {
+  eventSeq += 1;
+  return { key: `ORDER_FAILED:${stamp}_${eventSeq}`, kind: 'payment_released', orderId, paymentRef: `rv_${stamp}_${eventSeq}` };
 }
 
 beforeAll(async () => {
@@ -56,12 +69,12 @@ beforeAll(async () => {
   const profile = await new UserProfileService(db).insert({ name: `Webhook müşterisi ${stamp}`, email: `wh-${stamp}@example.test` });
   customerId = profile.id;
   createdProfiles.push(profile.id);
-  stripeAccount = (await new AccountService(db).insert({ name: `Stripe havuzu ${stamp}`, type: 'provider' })).id;
-  bankAccount = (await new AccountService(db).insert({ name: `Payout bankası ${stamp}`, type: 'bank' })).id;
+  providerAccount = (await new AccountService(db).insert({ name: `Revolut Merchant ${stamp}`, type: 'provider' })).id;
+  bankAccount = (await new AccountService(db).insert({ name: `Aktarım bankası ${stamp}`, type: 'bank' })).id;
 });
 
 beforeEach(async () => {
-  await db.from('money_movement').delete().eq('account_id', stripeAccount);
+  await db.from('money_movement').delete().eq('account_id', providerAccount);
   // Sıra: defter → parti → sipariş; gerekçe `packages/application/src/courier/day.test.ts`te.
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
@@ -73,22 +86,21 @@ afterAll(async () => {
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
-  await db.from('webhook_event').delete().like('event_id', `evt_${stamp}_%`);
+  await db.from('webhook_event').delete().like('event_id', `%:${stamp}_%`);
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
-    accountIds: [stripeAccount, bankAccount],
+    accountIds: [providerAccount, bankAccount],
     warehouseIds: [warehouseId],
   });
 });
 
 /** Taslak sipariş + (istenirse) aktif rezervasyon — ödeme onayının geldiği hâl. */
 async function pendingOrder(qty: number, opts: { reserve?: boolean } = { reserve: true }) {
-  const { order } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', orderedTotalCents: qty * 1000 },
-    [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
-  );
+  const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', deliveryType: 'route', orderedTotalCents: qty * 1000 }, [
+    { variantId, qty, unitPriceCents: 1000, vatRate: 5.5 },
+  ]);
   if (opts.reserve) await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty, ttlMinutes: 30 });
   return order.id;
 }
@@ -97,7 +109,7 @@ describe('ödeme onayı', () => {
   it('sipariş `confirmed` olur, referans üretilir, tahsilat kasaya düşer', async () => {
     const orderId = await pendingOrder(2);
 
-    const outcome = await handleStripeEvent(paidEvent(orderId, 2000), stripeAccount, noFees);
+    const outcome = await handlePaymentEvent(paidEvent(orderId, 2000), providerAccount);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'confirmed' });
     const order = await orders.getById(orderId);
@@ -110,7 +122,7 @@ describe('ödeme onayı', () => {
   it('tahsilat sipariş toplamından değil, GERÇEKTEN ödenenden yazılır', async () => {
     const orderId = await pendingOrder(2);
 
-    await handleStripeEvent(paidEvent(orderId, 1850), stripeAccount, noFees);
+    await handlePaymentEvent(paidEvent(orderId, 1850), providerAccount);
 
     expect((await orders.getById(orderId))?.amountCollectedCents).toBe(1850);
   });
@@ -119,8 +131,8 @@ describe('ödeme onayı', () => {
     const orderId = await pendingOrder(2);
     const event = paidEvent(orderId, 2000);
 
-    const first = await handleStripeEvent(event, stripeAccount, noFees);
-    const second = await handleStripeEvent(event, stripeAccount, noFees);
+    const first = await handlePaymentEvent(event, providerAccount);
+    const second = await handlePaymentEvent(event, providerAccount);
 
     expect(first).toMatchObject({ status: 'ok' });
     expect(second).toMatchObject({ status: 'duplicate' });
@@ -131,7 +143,8 @@ describe('ödeme onayı', () => {
   it('ödeme dışı olay sessizce geçilir', async () => {
     const orderId = await pendingOrder(1);
 
-    const outcome = await handleStripeEvent(paidEvent(orderId, 1000, { type: 'payment_intent.created' }), stripeAccount, noFees);
+    eventSeq += 1;
+    const outcome = await handlePaymentEvent({ key: `ORDER_AUTHORISED:${stamp}_${eventSeq}`, kind: 'ignored' }, providerAccount);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'ignored' });
     expect((await orders.getById(orderId))?.status).toBe('draft');
@@ -142,7 +155,7 @@ describe('geç ödeme — rezervasyon düşmüşken onay gelirse (DOMAIN §4)', 
   it('stok duruyorsa YENİDEN ayrılır ve sipariş devam eder', async () => {
     const orderId = await pendingOrder(2, { reserve: false }); // TTL dolmuş gibi: rezervasyon yok
 
-    const outcome = await handleStripeEvent(paidEvent(orderId, 2000), stripeAccount, noFees);
+    const outcome = await handlePaymentEvent(paidEvent(orderId, 2000), providerAccount);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'reserved_again' });
     expect((await orders.getById(orderId))?.status).toBe('confirmed');
@@ -153,10 +166,12 @@ describe('geç ödeme — rezervasyon düşmüşken onay gelirse (DOMAIN §4)', 
   it('stok da kalmadıysa sipariş İPTAL edilir — elle karar beklenmez', async () => {
     const orderId = await pendingOrder(4, { reserve: false });
     // Bu arada mal başkasına gitti: elde kalan 1 adet.
-    const other = await orders.create({ warehouseId, customerId, channel: 'b2c' }, [{ variantId, qty: 4, unitPriceCents: 1000, vatRate: 5.5 }]);
+    const other = await orders.create({ warehouseId, customerId, channel: 'b2c' }, [
+      { variantId, qty: 4, unitPriceCents: 1000, vatRate: 5.5 },
+    ]);
     await reservations.reserve({ orderId: other.order.id, warehouseId, variantId, qty: 4 });
 
-    const outcome = await handleStripeEvent(paidEvent(orderId, 4000), stripeAccount, noFees);
+    const outcome = await handlePaymentEvent(paidEvent(orderId, 4000), providerAccount);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'refunded' });
     const cancelled = await orders.getById(orderId);
@@ -175,7 +190,7 @@ describe('geç ödeme — rezervasyon düşmüşken onay gelirse (DOMAIN §4)', 
     const orderId = await pendingOrder(2, { reserve: false });
     await orders.cancel(orderId, 'draft', null, 'payment_failed');
 
-    const outcome = await handleStripeEvent(paidEvent(orderId, 2000), stripeAccount, noFees);
+    const outcome = await handlePaymentEvent(paidEvent(orderId, 2000), providerAccount);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'refunded' });
     const after = await orders.getById(orderId);
@@ -188,11 +203,9 @@ describe('kart reddedilirse (sayfa içi ödeme)', () => {
   it('mal GERİ BIRAKILMAZ — müşteri hâlâ sayfada, başka kart deneyecek', async () => {
     const orderId = await pendingOrder(3);
 
-    const outcome = await handleStripeEvent(
-      paidEvent(orderId, 3000, { type: 'payment_intent.payment_failed' }),
-      stripeAccount,
-      noFees,
-    );
+    // Revolut reddi `ORDER_PAYMENT_DECLINED` olarak bildirir ve çeviri onu işlenmeyen olaya indirir.
+    eventSeq += 1;
+    const outcome = await handlePaymentEvent({ key: `ORDER_PAYMENT_DECLINED:${stamp}_${eventSeq}`, kind: 'ignored' }, providerAccount);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'ignored' });
     // Bırakılsaydı ikinci denemesinde kendi malını "tükendi" diye bulurdu.
@@ -200,31 +213,23 @@ describe('kart reddedilirse (sayfa içi ödeme)', () => {
     expect((await orders.getById(orderId))?.status).toBe('draft');
   });
 
-  it('niyet İPTAL edilirse mal geri bırakılır', async () => {
+  it('ödeme İPTAL edilirse mal geri bırakılır', async () => {
     const orderId = await pendingOrder(3);
 
-    const outcome = await handleStripeEvent(
-      paidEvent(orderId, 3000, { type: 'payment_intent.canceled' }),
-      stripeAccount,
-      noFees,
-    );
+    const outcome = await handlePaymentEvent(releasedEvent(orderId), providerAccount);
 
-    expect(outcome).toMatchObject({ status: 'ok', action: 'expired_released' });
+    expect(outcome).toMatchObject({ status: 'ok', action: 'released' });
     expect(await reservations.listActiveByOrder(orderId)).toHaveLength(0);
   });
 });
 
-describe('oturum süresi dolarsa', () => {
+describe('ödemenin süresi dolarsa', () => {
   it('ayrılmış mal geri bırakılır ama sipariş TASLAK kalır', async () => {
     const orderId = await pendingOrder(3);
 
-    const outcome = await handleStripeEvent(
-      paidEvent(orderId, 3000, { type: 'checkout.session.expired' }),
-      stripeAccount,
-      noFees,
-    );
+    const outcome = await handlePaymentEvent(releasedEvent(orderId), providerAccount);
 
-    expect(outcome).toMatchObject({ status: 'ok', action: 'expired_released' });
+    expect(outcome).toMatchObject({ status: 'ok', action: 'released' });
     expect(await reservations.listActiveByOrder(orderId)).toHaveLength(0);
     // Müşteri aynı sepetle tekrar deneyebilmeli — iptal onun kararı.
     expect((await orders.getById(orderId))?.status).toBe('draft');
@@ -233,89 +238,77 @@ describe('oturum süresi dolarsa', () => {
 });
 
 /*
-  Stripe muhasebesi: havuza brüt girer, komisyon oradan çıkar, payout bankaya transferdir; üçü yazılınca defterdeki havuz bakiyesi
-  gerçek Stripe bakiyesine eşittir. Sağlayıcıya sorulan iki şey sahte port.
+  Kart muhasebesi: havuza brüt girer, komisyon oradan çıkar, aktarım bankaya transferdir; üçü yazılınca defterdeki havuz bakiyesi
+  sağlayıcının gerçek bakiyesine eşittir. Komisyon olayla gelir, çünkü sağlayıcı onu tahsilden hemen sonra yazar.
 */
-describe('Stripe muhasebesi — ücret ve payout (12.14)', () => {
+describe('kart muhasebesi — komisyon ve aktarım', () => {
   const movements = new MoneyMovementService(db);
   const settings = settingsSnapshot(db);
-  const withFee = (feeCents: number): StripeEffects => ({
-    feeOf: async () => ({ feeCents, balanceTransactionId: `txn_${stamp}_fee`, chargeId: `ch_${stamp}` }),
-    payoutItems: async () => [],
+  const payoutEvent = (key: string, amountCents: number): PaymentEvent => ({
+    key: `PAYOUT_COMPLETED:${stamp}_${key}`,
+    kind: 'payout_completed',
+    payout: { id: `po_${stamp}`, amountCents, currency: 'EUR', valueDate: dayOffset(0) },
   });
-  const payoutEvent = (id: string, amountCents: number): VerifiedEvent => ({
-    id: `evt_${stamp}_${id}`,
-    type: 'payout.paid',
-    orderId: null,
-    paymentIntentId: null,
-    amountTotalCents: null,
-    payout: { id: `po_${stamp}`, amountCents, arrivalDate: dayOffset(0), currency: 'eur' },
-  });
-  const feeRows = async () => (await movements.ledger({ accountId: stripeAccount, type: 'expense', limit: 20 })).rows;
-  const transferRows = async () => (await movements.ledger({ accountId: stripeAccount, type: 'transfer', limit: 20 })).rows;
+  const feeRows = async () => (await movements.ledger({ accountId: providerAccount, type: 'expense', limit: 20 })).rows;
+  const transferRows = async () => (await movements.ledger({ accountId: providerAccount, type: 'transfer', limit: 20 })).rows;
 
   afterAll(() => settings.restore());
 
-  it('ücret ÖDEME BAŞINA: havuzdan `stripe-ucreti` gideri çıkar, siparişin ücret alanı dolar', async () => {
+  it('komisyon ÖDEME BAŞINA: havuzdan `kart-komisyonu` gideri çıkar, siparişin komisyon alanı dolar, tahsilat brüt kalır', async () => {
     const orderId = await pendingOrder(2);
-    const event = paidEvent(orderId, 2000);
+    const event = paidEvent(orderId, 2000, { feeCents: 61, paymentId: `p_${stamp}` });
+    const paymentRef = event.kind === 'payment_completed' ? event.paymentRef : '';
 
-    await handleStripeEvent(event, stripeAccount, withFee(61));
+    await handlePaymentEvent(event, providerAccount);
 
     const fees = await feeRows();
     expect(fees).toHaveLength(1);
     expect(fees[0]).toMatchObject({
-      amountCents: 61, nature: 'stripe-ucreti', source: 'system', explained: true, orderId: null,
-      idempotencyKey: `stripe-fee:${event.paymentIntentId}`,
+      amountCents: 61,
+      nature: 'kart-komisyonu',
+      source: 'system',
+      explained: true,
+      orderId: null,
+      idempotencyKey: `card-fee:${paymentRef}`,
     });
-    expect(fees[0]!.meta).toMatchObject({ providerRef: event.paymentIntentId, orderId });
+    expect(fees[0]!.meta).toMatchObject({ providerRef: paymentRef, orderId });
     expect((await orders.getById(orderId))?.paymentFeeCents).toBe(61);
-    // Tahsilat BRÜT kaldı: ücret siparişin ödemesini küçültmez, ayrı satırdır.
     expect((await orders.getById(orderId))?.amountCollectedCents).toBe(2000);
   });
 
-  it('ücret öğrenilemezse tahsilat yine onaylanır; payout içeriği ücreti TAMAMLAR ve havuz bakiyesi sıfırlanır', async () => {
-    await settings.override('stripe_payout_account_id', bankAccount);
+  it('komisyonu henüz yazılmamış ödeme yine onaylanır; komisyon bilinmiyor kalır, sıfır yazılmaz', async () => {
     const orderId = await pendingOrder(2);
-    const paid = paidEvent(orderId, 2000);
-    expect(await handleStripeEvent(paid, stripeAccount, noFees)).toMatchObject({ status: 'ok', action: 'confirmed' });
+    expect(await handlePaymentEvent(paidEvent(orderId, 2000), providerAccount)).toMatchObject({ status: 'ok', action: 'confirmed' });
     expect((await orders.getById(orderId))?.paymentFeeCents).toBeNull();
+    expect(await feeRows()).toEqual([]);
+  });
 
-    // Payout: tahsilat (2000, ücret 61) + ödeme dışı Stripe ücreti (25) → bankaya net 1914.
-    const items: StripeEffects = {
-      feeOf: async () => null,
-      payoutItems: async () => [
-        { id: `txn_${stamp}_c`, type: 'charge', amountCents: 2000, feeCents: 61, netCents: 1939, paymentIntentId: paid.paymentIntentId },
-        { id: `txn_${stamp}_s`, type: 'stripe_fee', amountCents: -25, feeCents: 0, netCents: -25, paymentIntentId: null },
-      ],
-    };
-    const outcome = await handleStripeEvent(payoutEvent('po1', 1914), stripeAccount, items);
+  it('aktarım havuzdan bankaya TRANSFER olarak yazılır ve bankanın karşılayacağı uç bekler; ikinci olay satır doğurmaz', async () => {
+    await settings.override('card_payout_account_id', bankAccount);
+
+    const outcome = await handlePaymentEvent(payoutEvent('po1', 1914), providerAccount);
     expect(outcome).toMatchObject({ status: 'ok', action: 'payout_recorded' });
 
     const transfers = await transferRows();
     expect(transfers).toHaveLength(1);
     expect(transfers[0]).toMatchObject({
-      amountCents: 1914, counterAccountId: bankAccount, source: 'system', explained: true, idempotencyKey: `stripe-payout:po_${stamp}`,
+      amountCents: 1914,
+      counterAccountId: bankAccount,
+      source: 'system',
+      explained: true,
+      idempotencyKey: `card-payout:po_${stamp}`,
     });
-    expect(transfers[0]!.meta).toMatchObject({ payoutId: `po_${stamp}`, totals: { chargesCents: 2000, feesCents: 61, charges: 1, otherCents: -25 } });
-    // Onay anında öğrenilememiş ücret payout'tan tamamlandı; ödeme dışı ücret de havuzdan düştü.
-    expect((await orders.getById(orderId))?.paymentFeeCents).toBe(61);
-    expect((await feeRows()).map((row) => row.amountCents).sort()).toEqual([25, 61]);
-    // +2000 − 61 − 25 − 1914 = 0: defterdeki havuz, Stripe'ın gerçek bakiyesi.
-    expect((await new AccountService(db).balance(stripeAccount)).balanceCents).toBe(0);
-    // Banka ekstresi bu ucu karşılayabilir: uç bekliyor.
     expect((await movements.listTransferLegsAwaiting(bankAccount)).map((leg) => leg.id)).toContain(transfers[0]!.id);
 
-    // Aynı payout yeni bir olay kimliğiyle gelirse hiçbir satır tekrarlanmaz — karar veritabanının.
-    await handleStripeEvent(payoutEvent('po2', 1914), stripeAccount, items);
+    // Aynı aktarım yeni bir olay anahtarıyla gelirse satır tekrarlanmaz — karar veritabanının.
+    await handlePaymentEvent(payoutEvent('po2', 1914), providerAccount);
     expect(await transferRows()).toHaveLength(1);
-    expect(await feeRows()).toHaveLength(2);
   });
 
-  it('payout hesabı ayarlı değilse olay İŞLENMEMİŞ kalır — sessizce geçilmez', async () => {
-    await settings.remove('stripe_payout_account_id');
+  it('aktarım hesabı ayarlı değilse olay İŞLENMEMİŞ kalır — sessizce geçilmez', async () => {
+    await settings.remove('card_payout_account_id');
 
-    const outcome = await handleStripeEvent(payoutEvent('po3', 500), stripeAccount, noFees);
+    const outcome = await handlePaymentEvent(payoutEvent('po3', 500), providerAccount);
 
     expect(outcome).toMatchObject({ status: 'error' });
     expect(await transferRows()).toEqual([]);

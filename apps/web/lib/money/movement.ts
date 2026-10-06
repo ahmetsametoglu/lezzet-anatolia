@@ -4,20 +4,11 @@ import { acceptsNature, classificationTypeOf, validateMovement, type MovementChe
 import { ADVERTISING_NATURE, type MoneyMovement, type MoneyMovementInsert } from '@lezzet/types';
 
 /**
- * Para hareketi kapısı (12.1) — **uygulama katmanı orkestrasyonu**. DOMAIN §9.
- *
- * Karar motorun (`domain-core/money`: tipten yön türetimi, bağ zorunlulukları), yazım servisin.
- * İkisi birbirini bilmez (STACK §4); birleştiren yer burasıdır.
- *
- * İki ayrı "hayır" vardır ve karıştırılmaz:
- * - **`invalid`** — hareket ANLAMSIZ (tahsilat diyip parayı dışarı çıkarmak, siparişsiz sipariş
- *   ödemesi, gider türünü giren paraya vermek). Motorun ya da tür kapısının cevabı; kullanıcıya
- *   sebebiyle gösterilir.
- * - **veritabanı reddi** — veri BOZUK (karşı ucu olmayan transfer, sıfır tutar). Kısıt fırlatır;
- *   motor zaten önce yakalar, kısıt son emniyettir (başka bir yol satır yazmaya kalkarsa).
+ * Para hareketi kapısı: karar motorda, yazım serviste, ikisini burası birleştirir. Anlamsız hareket motorun sebepli `invalid`
+ * cevabıdır; bozuk veri ise veritabanı kısıtına takılır ve kısıt son emniyettir.
  */
 
-/** Motorun reddi + tür kapısının reddi (13.09) — ikisi de "hiçbir şey yazılmadı" demektir, sebebiyle. */
+/** Motorun ya da tür kapısının reddi; ikisi de "hiçbir şey yazılmadı" demektir, sebebiyle. */
 export type MovementInvalidReason =
   | Extract<MovementCheck, { valid: false }>['reason']
   | 'unknown_nature'
@@ -27,9 +18,8 @@ export type MovementInvalidReason =
 type MovementOutcome = { status: 'ok'; movement: MoneyMovement } | { status: 'invalid'; reason: MovementInvalidReason };
 
 /**
- * Elle para hareketi girişi (kasa/banka ekranı). Tür verildiyse (13.09) tür kapısından da geçer:
- * sipariş parası, stok alımı ve transfer tür almaz; tür sözlükte, aktif ve paranın yönüne uygun
- * olmalı.
+ * Elle para hareketi girişi. Tür verildiyse tür kapısından da geçer: sipariş parası, stok alımı ve transfer tür almaz; tür
+ * sözlükte, aktif ve paranın yönüne uygun olmalı.
  */
 export async function recordMovement(input: MoneyMovementInsert): Promise<MovementOutcome> {
   const verdict = validateMovement({
@@ -49,9 +39,7 @@ export async function recordMovement(input: MoneyMovementInsert): Promise<Moveme
     if (!acceptsNature(input.type)) return { status: 'invalid', reason: 'nature_not_applicable' };
     const problem = await natureProblemOf(db, input.nature, input.direction);
     if (problem) return { status: 'invalid', reason: problem };
-    // Türlü satırın kaba tipi TÜRDEN türer (motor: `classificationTypeOf`) — satırdaki seçicinin
-    // kapısıyla aynı kural (`setMovementNature`): çıkışın türü gider, sermaye girişi sermaye, öteki
-    // giriş sınıflandırılmamış giriş. Form uyumsuz ikiliyi göstermiyor; kapı son emniyet.
+    // Türlü satırın kaba tipi türden türer; satırdaki seçicinin kapısıyla aynı kural.
     const type = classificationTypeOf(input.direction, input.nature);
     return { status: 'ok', movement: await new MoneyMovementService(db).insert({ ...input, type }) };
   }
@@ -59,14 +47,13 @@ export async function recordMovement(input: MoneyMovementInsert): Promise<Moveme
 }
 
 /**
- * **Tedarikçiye ödeme** (12.3) — mal bedelinin ödenmesi. `supplierId` bağı zorunludur: tedarikçi
- * borcu (Σ giriş − Σ ödeme) o bağdan TÜRETİLİR, hiçbir yerde saklanmaz. `stockIntakeId` verilirse
- * ödeme hangi mal kabule ait olduğunu da taşır — kısmi ödemelerde hangi girişin kapandığı görünür.
+ * Tedarikçiye ödeme: tedarikçi borcu `supplierId` bağından türetilir ve hiçbir yerde saklanmaz. `stockIntakeId` kısmi ödemede
+ * hangi mal kabulün kapandığını gösterir.
  */
 export function recordSupplierPayment(input: {
   supplierId: string;
   accountId: string;
-  /** **Cent** (02.9 · STACK §8) — işaretsiz; yönü fonksiyonun kendisi belirler. */
+  /** Cent, işaretsiz; yönü fonksiyonun kendisi belirler. */
   amountCents: number;
   stockIntakeId?: string | null;
   valueDate?: string;
@@ -84,17 +71,13 @@ export function recordSupplierPayment(input: {
   });
 }
 
-/**
- * **Gider** (kira, akaryakıt, maaş, ambalaj…) — sınıflandırma TÜRLE (13.09 · ikinci karar): tek tür,
- * sözlükten. Etiket serbest işarettir, isteğe bağlı. Tür verilmezse gider yine yazılır ama izah
- * bekler — "bu para neyin parası" sorusu açık kalır ve kuyrukta görünür.
- */
+/** Gider: sınıflandırma sözlükten tek türle. Tür verilmezse gider yine yazılır ama izah bekleyen kuyrukta görünür. */
 export function recordExpense(input: {
   accountId: string;
-  /** **Cent** (02.9 · STACK §8) — işaretsiz; yönü fonksiyonun kendisi belirler. */
+  /** Cent, işaretsiz; yönü fonksiyonun kendisi belirler. */
   amountCents: number;
   nature: string | null;
-  /** Kime ödendi (13.09) — kurum, hizmet veren, çalışan. */
+  /** Kime ödendi: kurum, hizmet veren, çalışan. */
   counterpartyId?: string | null;
   tags?: readonly string[];
   meta?: Record<string, unknown> | null;
@@ -116,17 +99,12 @@ export function recordExpense(input: {
 }
 
 /**
- * **Reklam gideri** (12.5) — DOMAIN §350. `reklam` TÜRÜ + `meta.campaign` ile girer (13.09). Analitik
- * (13.2) kampanyanın **cirosunu ve giderini yan yana** koyar; gerçek ROI Excel'e taşınmaz.
- *
- * Kampanya künyesi **zorlanmaz, boşsa yazılmaz**: kampanyası bilinmeyen bir reklam ödemesi de
- * girilebilmelidir (ajans faturası aya yayılır, ekstre satırı sonra eşleşir). Reddetseydik operatör
- * onu `misc` yazardı ve gider reklam toplamından tamamen düşerdi. Künyesiz satır rapordaki `null`
- * kovasında görünür — eksik bilgi, kayıp bilgiden iyidir.
+ * Reklam gideri `reklam` türü ve `meta.campaign` ile girer ki analitik kampanyanın cirosunu ve giderini yan yana koysun. Künye
+ * zorlanmaz: reddedilse operatör satırı `misc` yazar ve gider reklam toplamından düşerdi; künyesiz satır `null` kovasında görünür.
  */
 export function recordAdvertisingExpense(input: {
   accountId: string;
-  /** **Cent** (02.9 · STACK §8) — işaretsiz; yönü fonksiyonun kendisi belirler. */
+  /** Cent, işaretsiz; yönü fonksiyonun kendisi belirler. */
   amountCents: number;
   counterpartyId?: string | null;
   /** Serbest etiketler; tür burada garanti edilir (`reklam`), çağıran yazmak zorunda değil. */
@@ -149,14 +127,11 @@ export function recordAdvertisingExpense(input: {
   });
 }
 
-/**
- * Hesaplar arası transfer — nakit→banka, Stripe→banka payout. TEK satır yazılır; para karşı hesaba
- * ters işaretle yansır (`account_movement` görünümü). Yön gönderenin gözündendir: `out`.
- */
+/** Hesaplar arası transfer tek satırdır ve karşı hesaba ters işaretle yansır (`account_movement`); yön gönderenin gözünden `out`. */
 export function transfer(input: {
   fromAccountId: string;
   toAccountId: string;
-  /** **Cent** (02.9 · STACK §8) — işaretsiz; yönü fonksiyonun kendisi belirler. */
+  /** Cent, işaretsiz; yönü fonksiyonun kendisi belirler. */
   amountCents: number;
   valueDate?: string;
   description?: string | null;

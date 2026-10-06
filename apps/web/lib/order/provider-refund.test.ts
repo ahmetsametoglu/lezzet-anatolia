@@ -12,13 +12,13 @@ import {
 import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { recordOrderPayment } from '../money/order-payment';
 import { cancelOrder, retryRefund } from './refund';
-import { handleStripeEvent } from './stripe-webhook';
-import type { ProviderRefundInput, ProviderRefundOutcome, ProviderRefunder } from './provider-refund';
+import type { ProviderRefundInput, ProviderRefundOutcome, ProviderRefunder } from '@lezzet/application';
+import { handlePaymentEvent } from './payment-webhook';
 import { transitionOrder } from './transition';
 
 /**
  * Sağlayıcıya iadede sıra önce sağlayıcı çağrısı, sonra harekettir; ters sırada düşen iade defterde kapanmış görünür ama para dönmemiş
- * olur. Sağlayıcı port olduğu için "döndü" ve "düştü" hâlleri gerçek Stripe'a çıkmadan kurulur.
+ * olur. Sağlayıcı port olduğu için "döndü" ve "düştü" hâlleri gerçek sağlayıcıya çıkmadan kurulur.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -45,8 +45,8 @@ beforeAll(async () => {
   productId = product.id;
   variantId = variants[0]!.id;
   customerId = (await new UserProfileService(db).insert({ name: `Sağlayıcı iade müşterisi ${stamp}` })).id;
-  // Stripe havuzu bir HESAPTIR (DOMAIN §9) — sağlayıcı çağrısı hesabın türünden tetiklenir.
-  providerAccount = (await new AccountService(db).insert({ name: `Stripe ${stamp}`, type: 'provider' })).id;
+  // Sağlayıcı havuzu bir hesaptır (DOMAIN §9); sağlayıcı çağrısı hesabın türünden tetiklenir.
+  providerAccount = (await new AccountService(db).insert({ name: `Revolut Merchant ${stamp}`, type: 'provider' })).id;
   cashAccount = (await new AccountService(db).insert({ name: `Kasa ${stamp}`, type: 'cash' })).id;
 });
 
@@ -59,7 +59,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await db.from('webhook_event').delete().like('event_id', `evt_${stamp}_%`);
+  await db.from('webhook_event').delete().like('event_id', `%:${stamp}_%`);
   // Parti ÖNCE: son testin siparişi deftere `sale` yazmış olabilir ve o satır siparişi tutuyor.
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
@@ -98,15 +98,15 @@ async function paidOrder(opts: { providerRef?: string | null; accountId?: string
     accountId: opts.accountId ?? providerAccount,
     amountCents: 2000,
     method: opts.accountId === cashAccount ? 'cash' : 'online',
-    description: 'Stripe tahsilatı',
-    meta: opts.providerRef === null ? null : { providerRef: opts.providerRef ?? `pi_${stamp}_${order.id.slice(0, 8)}` },
+    description: 'Kart tahsilatı',
+    meta: opts.providerRef === null ? null : { providerRef: opts.providerRef ?? `rv_${stamp}_${order.id.slice(0, 8)}` },
   });
   return order.id;
 }
 
 describe('sıra: önce sağlayıcı, sonra hareket', () => {
   it('iade sağlayıcıya GİDER ve hareket ondan sonra yazılır', async () => {
-    const orderId = await paidOrder({ providerRef: 'pi_test_ok' });
+    const orderId = await paidOrder({ providerRef: 'rv_test_ok' });
     const refunder = fakeRefunder({ status: 'ok', refundId: 're_test_1' });
 
     const result = await cancelOrder(orderId, { refunder });
@@ -114,16 +114,16 @@ describe('sıra: önce sağlayıcı, sonra hareket', () => {
     expect(result).toMatchObject({ status: 'ok', refundedAmountCents: 2000 });
     expect(refunder.calls).toHaveLength(1);
     // Tutar CENT gider: sağlayıcı euro bilmez, yuvarlama burada bir kez yapılır.
-    expect(refunder.calls[0]).toMatchObject({ paymentIntentId: 'pi_test_ok', amountCents: 2000 });
+    expect(refunder.calls[0]).toMatchObject({ paymentRef: 'rv_test_ok', amountCents: 2000 });
 
     // Hareketin künyesi iadeyi sağlayıcıdaki kaydına bağlar — mutabakat bunun üstünde durur.
     const movements = await money.listByOrder(orderId);
     const refund = movements.find((m) => m.type === 'order_refund');
-    expect(refund?.meta).toMatchObject({ providerRef: 'pi_test_ok', refundId: 're_test_1' });
+    expect(refund?.meta).toMatchObject({ providerRef: 'rv_test_ok', refundId: 're_test_1' });
   });
 
   it('sağlayıcı DÜŞERSE hareket HİÇ yazılmaz — defter yalan söylemez', async () => {
-    const orderId = await paidOrder({ providerRef: 'pi_test_fail' });
+    const orderId = await paidOrder({ providerRef: 'rv_test_fail' });
 
     const result = await cancelOrder(orderId, { refunder: fakeRefunder({ status: 'failed', error: 'card_declined' }) });
 
@@ -137,7 +137,7 @@ describe('sıra: önce sağlayıcı, sonra hareket', () => {
   });
 
   it('anahtar yoksa iade yazılmaz — "sağlayıcı tanımlı değil" ile "iade edildi" karıştırılmaz', async () => {
-    const orderId = await paidOrder({ providerRef: 'pi_test_unavailable' });
+    const orderId = await paidOrder({ providerRef: 'rv_test_unavailable' });
 
     const result = await cancelOrder(orderId, { refunder: fakeRefunder({ status: 'unavailable' }) });
 
@@ -158,7 +158,7 @@ describe('sıra: önce sağlayıcı, sonra hareket', () => {
 
 describe('sağlayıcı çağrısı hesabın TÜRÜNE bağlı', () => {
   it('kasadan iadede sağlayıcıya gidilmez — operatör nakit vermeyi seçmiştir', async () => {
-    const orderId = await paidOrder({ providerRef: 'pi_test_cash' });
+    const orderId = await paidOrder({ providerRef: 'rv_test_cash' });
     const refunder = fakeRefunder({ status: 'ok', refundId: 're_never' });
 
     const result = await cancelOrder(orderId, { refundAccountId: cashAccount, refunder });
@@ -179,46 +179,43 @@ describe('sağlayıcı çağrısı hesabın TÜRÜNE bağlı', () => {
 });
 
 /**
- * **Mutabakat** (`charge.refunded`): sağlayıcıdaki iade toplamı ile defterdeki toplam eşitlenir.
- * İki yol aynı olayı doğurur ve ikisi de doğru işlenmeli — biz başlattıysak yazılacak bir şey
- * yoktur (yoksa iade iki kez düşerdi), panelden elle yapıldıysa fark deftere düşmelidir.
+ * Mutabakat: sağlayıcıdaki iade toplamı ile defterdeki toplam eşitlenir. Biz başlattıysak yazılacak bir şey yoktur (yoksa iade iki
+ * kez düşerdi), panelden elle yapıldıysa fark deftere düşmelidir.
  */
-describe('charge.refunded mutabakatı', () => {
-  const refundEvent = (paymentIntentId: string, amountRefundedCents: number, suffix: string) => ({
-    id: `evt_${stamp}_${suffix}`,
-    type: 'charge.refunded',
-    orderId: null,
-    paymentIntentId,
-    amountTotalCents: 2000,
-    amountRefundedCents,
+describe('iade mutabakatı', () => {
+  const refundEvent = (paymentRef: string, refundedTotalCents: number, suffix: string) => ({
+    key: `ORDER_COMPLETED:${stamp}_${suffix}`,
+    kind: 'refund_completed' as const,
+    paymentRef,
+    refundedTotalCents,
   });
 
   it('panelden yapılan iade DEFTERE düşer — sipariş "ödendi" görünmeye devam etmez', async () => {
-    const orderId = await paidOrder({ providerRef: `pi_panel_${stamp}` });
+    const orderId = await paidOrder({ providerRef: `rv_panel_${stamp}` });
 
-    // Sipariş kimliği olayda YOK: bulunması bizim sakladığımız künyeye bağlı.
-    const outcome = await handleStripeEvent(refundEvent(`pi_panel_${stamp}`, 2000, 'panel'), providerAccount);
+    // Bizim sipariş olayda yok: bulunması tahsilatta sakladığımız künyeye bağlı.
+    const outcome = await handlePaymentEvent(refundEvent(`rv_panel_${stamp}`, 2000, 'panel'), providerAccount);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'refunded' });
     expect((await orders.getById(orderId))?.amountRefundedCents).toBe(2000);
   });
 
   it('kendi başlattığımız iadede İKİNCİ kez yazılmaz — toplam zaten eşit', async () => {
-    const orderId = await paidOrder({ providerRef: `pi_own_${stamp}` });
+    const orderId = await paidOrder({ providerRef: `rv_own_${stamp}` });
     await cancelOrder(orderId, { refunder: fakeRefunder({ status: 'ok', refundId: 're_own' }) });
 
-    const outcome = await handleStripeEvent(refundEvent(`pi_own_${stamp}`, 2000, 'own'), providerAccount);
+    const outcome = await handlePaymentEvent(refundEvent(`rv_own_${stamp}`, 2000, 'own'), providerAccount);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'ignored' });
     expect((await orders.getById(orderId))?.amountRefundedCents).toBe(2000);
   });
 
   it('kısmi iadede yalnız FARK yazılır', async () => {
-    const orderId = await paidOrder({ providerRef: `pi_part_${stamp}` });
+    const orderId = await paidOrder({ providerRef: `rv_part_${stamp}` });
     await cancelOrder(orderId, { refundAmountCents: 500, refunder: fakeRefunder({ status: 'ok', refundId: 're_part' }) });
 
     // Sağlayıcıda toplam 12 € iade görünüyor: 5 € bizim, 7 € panelden eklenmiş.
-    await handleStripeEvent(refundEvent(`pi_part_${stamp}`, 1200, 'part'), providerAccount);
+    await handlePaymentEvent(refundEvent(`rv_part_${stamp}`, 1200, 'part'), providerAccount);
 
     expect((await orders.getById(orderId))?.amountRefundedCents).toBe(1200);
   });
@@ -232,7 +229,7 @@ describe('charge.refunded mutabakatı', () => {
  */
 describe('yeniden deneme', () => {
   it('iade tek başına yeniden denenir ve İKİNCİSİNDE yazılır', async () => {
-    const orderId = await paidOrder({ providerRef: 'pi_test_retry' });
+    const orderId = await paidOrder({ providerRef: 'rv_test_retry' });
     await cancelOrder(orderId, { refunder: fakeRefunder({ status: 'failed', error: 'network' }) });
 
     const retried = await retryRefund(orderId, { refunder: fakeRefunder({ status: 'ok', refundId: 're_retry' }) });
@@ -242,7 +239,7 @@ describe('yeniden deneme', () => {
   });
 
   it('aynı iade tekrar denendiğinde AYNI anahtar gider — para iki kez çıkmaz', async () => {
-    const orderId = await paidOrder({ providerRef: 'pi_test_idem' });
+    const orderId = await paidOrder({ providerRef: 'rv_test_idem' });
     const failing = fakeRefunder({ status: 'failed', error: 'network' });
 
     await cancelOrder(orderId, { refunder: failing });
@@ -256,7 +253,7 @@ describe('yeniden deneme', () => {
   });
 
   it('borç kalmadıysa ikinci kez iade YAZILMAZ — tekrar basmak parayı iki kez döndürmez', async () => {
-    const orderId = await paidOrder({ providerRef: 'pi_test_twice' });
+    const orderId = await paidOrder({ providerRef: 'rv_test_twice' });
     await cancelOrder(orderId, { refunder: fakeRefunder({ status: 'ok', refundId: 're_first' }) });
 
     const again = fakeRefunder({ status: 'ok', refundId: 're_second' });

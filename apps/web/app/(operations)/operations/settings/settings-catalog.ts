@@ -63,7 +63,7 @@ export interface SettingDef {
   /** Alt/üst sınır — ham sayı üzerinden (para cent, yüzde tam sayı). */
   min?: number;
   max?: number;
-  /** Sınırın SEBEBİ — reddi anlaşılır kılar ("Stripe oturum asgarisi"). Sınır varsa yazılır. */
+  /** Sınırın SEBEBİ — reddi anlaşılır kılar ("ödeme penceresinin asgarisi"). Sınır varsa yazılır. */
   limitReason?: string;
   /** Geniş etkili ayar: düzenleme penceresi bu cümleyi uyarı olarak gösterir. */
   impact?: string;
@@ -261,8 +261,7 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     section: 'paymentLimits',
     kind: 'integer',
     unit: 'dk',
-    min: 30,
-    limitReason: 'Ödeme sağlayıcısının oturum asgarisi 30 dakika — altına inilirse stok, ödeme penceresi kapanmadan serbest kalır.',
+    min: 1,
     impact: 'Geniş etkili: kısaltmak, ödemesini yavaş tamamlayan müşterinin sepetindeki malı başkasına açar.',
     exceptionScopes: NONE,
     fallback: 30,
@@ -327,15 +326,15 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     exceptionScopes: [],
   },
   {
-    key: 'stripe_payout_account_id',
-    label: 'Stripe payout hesabı',
-    help: 'Stripe havuzundaki paranın aktarıldığı banka hesabı. Payout geldiğinde Stripe → bu hesap transferi kendiliğinden yazılır.',
+    key: 'card_payout_account_id',
+    label: 'Kart ödemeleri aktarım hesabı',
+    help: 'Revolut Merchant hesabındaki kart ödemelerinin aktarıldığı banka hesabı. Aktarım tamamlanınca havuz → bu hesap transferi kendiliğinden yazılır.',
     section: 'accounts',
     kind: 'account',
     // Fabrika değeri YOK (kapı önü kasasıyla aynı gerekçe): değer bir hesap kimliği, her kurulumda başka.
     impact:
-      'Ayar boşken payout olayı İŞLENMEZ ve sağlayıcı yeniden dener; ayar girilince işlenir. Yanlış hesap seçilirse banka ekstresinin satırı transferin karşısını bulamaz ve para iki hesapta birden görünür.',
-    unsetNote: 'Boşken payout olayı işlenmez; sağlayıcı yeniden dener.',
+      'Ayar boşken aktarım olayı İŞLENMEZ ve sağlayıcı yeniden dener; ayar girilince işlenir. Yanlış hesap seçilirse banka ekstresinin satırı transferin karşısını bulamaz ve para iki hesapta birden görünür.',
+    unsetNote: 'Boşken aktarım olayı işlenmez; sağlayıcı yeniden dener.',
     exceptionScopes: [],
   },
 

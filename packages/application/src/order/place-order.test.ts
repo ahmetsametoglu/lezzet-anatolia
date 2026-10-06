@@ -13,7 +13,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock, testPostalCode } from '@lezzet/database/testing';
-import type { PaymentIntentStatus } from '@lezzet/domain-core';
+import type { ProviderPaymentStatus } from '@lezzet/domain-core';
 import type { PaymentMethod } from '@lezzet/types';
 import type { CheckoutSessionCreator } from './checkout-session';
 import type { PaymentGateway } from './payment-gateway';
@@ -25,7 +25,7 @@ import { readDeliveryInputs, resolveDelivery } from './delivery';
 
 /**
  * Kart siparişinin taslak modeli: ödeme açılınca kalemler sepetten siparişe geçer, ödeme gelmezse ya da müşteri vazgeçerse geri
- * döner; aynı basış aynı taslağın ödemesine döner ve yeni sipariş bekleyen taslağa dokunmaz. Stripe sahte, gerisi gerçek.
+ * döner; aynı basış aynı taslağın ödemesine döner ve yeni sipariş bekleyen taslağa dokunmaz. Ödeme sağlayıcısı sahte, gerisi gerçek.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -40,13 +40,13 @@ let addressId = '';
 let zoneId = '';
 let gun = '';
 
-/** Stripe'ın gerçeği: ödeme kimliği → durum; iptal durumu değiştirir. */
-const odemeler = new Map<string, { status: PaymentIntentStatus; orderId: string; clientSecret: string }>();
+/** Sağlayıcının gerçeği: ödeme kimliği → durum; iptal durumu değiştirir. */
+const odemeler = new Map<string, { status: ProviderPaymentStatus; orderId: string; paymentToken: string }>();
 let oturum = 0;
 const createPaymentSession: CheckoutSessionCreator = async ({ orderId }) => {
   const id = `pi_taslak_${stamp}_${++oturum}`;
-  odemeler.set(id, { status: 'requires_payment_method', orderId, clientSecret: `secret_${oturum}` });
-  return { id, clientSecret: `secret_${oturum}` };
+  odemeler.set(id, { status: 'pending', orderId, paymentToken: `secret_${oturum}` });
+  return { id, paymentToken: `secret_${oturum}` };
 };
 const gateway: PaymentGateway = {
   read: async (id) => {
@@ -55,14 +55,14 @@ const gateway: PaymentGateway = {
     return {
       id,
       status: odeme.status,
-      amountReceivedCents: odeme.status === 'succeeded' ? 6000 : 0,
+      amountReceivedCents: odeme.status === 'completed' ? 6000 : 0,
       orderId: odeme.orderId,
-      clientSecret: odeme.clientSecret,
+      paymentToken: odeme.paymentToken,
     };
   },
   cancel: async (id) => {
     const odeme = odemeler.get(id);
-    if (odeme) odeme.status = 'canceled';
+    if (odeme) odeme.status = 'cancelled';
   },
   refund: async () => undefined,
 };
@@ -140,7 +140,7 @@ const siparis = (paymentMethod: PaymentMethod, idempotencyKey: string, over: Par
     ...over,
   });
 
-async function kartla(anahtar: string): Promise<{ orderId: string; clientSecret: string }> {
+async function kartla(anahtar: string): Promise<{ orderId: string; paymentToken: string }> {
   const sonuc = await siparis('online', anahtar);
   if (sonuc.status !== 'payment_required') throw new Error(`ödeme açılmadı: ${sonuc.status}`);
   return sonuc;
@@ -154,13 +154,13 @@ describe('kart ödemesi açılınca', () => {
 
   it('ödeme açılamazsa taslak ve açılan ödeme kapanır, sepete dokunulmaz', async () => {
     const sonuc = await siparis('online', `acilamadi-${stamp}`, {
-      createPaymentSession: async (params) => ({ ...(await createPaymentSession(params)), clientSecret: null }),
+      createPaymentSession: async (params) => ({ ...(await createPaymentSession(params)), paymentToken: null }),
     });
 
-    expect(sonuc).toMatchObject({ status: 'payment_unavailable', reason: 'no_client_secret' });
+    expect(sonuc).toMatchObject({ status: 'payment_unavailable', reason: 'no_payment_token' });
     const { data } = await db.from('order').select('status, payment_ref').eq('customer_id', customerId);
     expect(data?.map((row) => row.status)).toEqual(['cancelled']);
-    expect(odemeler.get(data![0]!.payment_ref!)?.status).toBe('canceled');
+    expect(odemeler.get(data![0]!.payment_ref!)?.status).toBe('cancelled');
     expect(await sepet()).toEqual([{ variantId, qty: 1 }]);
   });
 
@@ -168,7 +168,7 @@ describe('kart ödemesi açılınca', () => {
     const ilk = await kartla(`ayni-${stamp}`);
     const ikinci = await siparis('online', `ayni-${stamp}`);
 
-    expect(ikinci).toMatchObject({ status: 'payment_required', orderId: ilk.orderId, clientSecret: ilk.clientSecret });
+    expect(ikinci).toMatchObject({ status: 'payment_required', orderId: ilk.orderId, paymentToken: ilk.paymentToken });
     const { count } = await db.from('order').select('id', { count: 'exact', head: true }).eq('customer_id', customerId);
     expect(count).toBe(1);
   });
@@ -218,7 +218,7 @@ describe('ödemesi bekleyen sipariş', () => {
 
     const order = await new OrderService(db).getById(orderId);
     expect(order).toMatchObject({ status: 'cancelled', cancelReason: 'customer' });
-    expect(odemeler.get(order!.paymentRef!)?.status).toBe('canceled');
+    expect(odemeler.get(order!.paymentRef!)?.status).toBe('cancelled');
     expect(await sepet()).toEqual([{ variantId, qty: 1 }]);
     expect(haberler).toEqual([]);
   });
@@ -243,7 +243,7 @@ describe('ödemesi bekleyen sipariş', () => {
     expect(await resumePendingPayment(db, { orderId: ilk.orderId, customerId }, deps)).toMatchObject({
       status: 'payment_required',
       orderId: ilk.orderId,
-      clientSecret: ilk.clientSecret,
+      paymentToken: ilk.paymentToken,
     });
   });
 

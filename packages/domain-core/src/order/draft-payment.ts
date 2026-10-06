@@ -1,33 +1,10 @@
 /**
- * **Ödemesi beklenen taslakta ne yapılır** (07.18) — sağlayıcı ne dedi ve ödeme penceresi açık mı,
- * ondan çıkan SAF karar.
- *
- * Neden var: siparişe dönüşün tek yolu webhook'tu. Olay gelmezse (tünel kapalı, uç yanlış
- * yapılandırılmış, sağlayıcı gecikmesi) taslak süresiz "onaylanıyor"da kalıyordu; 30 dakika sonra stok
- * ayırması düşse bile sipariş ne onaylanıyor ne iptal ediliyordu ve müşteri yeniden ödeyince eski
- * ödeme durdurulamıyordu. Ödeme sayfası ve zamanlayıcı artık sağlayıcıya soruyor; cevaba göre
- * yapılacak şey burada — iki çağıran aynı kuralı okur.
+ * Ödemesi beklenen taslakta ne yapılır: sağlayıcının durumu ve ödeme penceresinden çıkan saf karar. Webhook gelmezse ödeme sayfası ve
+ * zamanlayıcı sağlayıcıya sorar; iki çağıran aynı kuralı okur ki taslak süresiz "onaylanıyor"da kalmasın.
  */
 
-/** Sağlayıcıdaki ödemenin durumu — Stripe PaymentIntent `status` kümesinin aynası. */
-export type PaymentIntentStatus =
-  | 'requires_payment_method'
-  | 'requires_confirmation'
-  | 'requires_action'
-  | 'processing'
-  | 'requires_capture'
-  | 'canceled'
-  | 'succeeded';
-
-export const PAYMENT_INTENT_STATUSES: readonly PaymentIntentStatus[] = [
-  'requires_payment_method',
-  'requires_confirmation',
-  'requires_action',
-  'processing',
-  'requires_capture',
-  'canceled',
-  'succeeded',
-];
+/** Sağlayıcıdaki ödemenin durumu; sözlük Revolut sipariş durumlarıdır, sağlayıcı uyarlaması kendi durumunu buna çevirir. */
+export type ProviderPaymentStatus = 'pending' | 'processing' | 'authorised' | 'completed' | 'cancelled' | 'failed';
 
 export type DraftPaymentDecision =
   /** Para alındı — webhook'la aynı onay yolundan geçer. */
@@ -38,27 +15,28 @@ export type DraftPaymentDecision =
   | 'cancel';
 
 export function decideDraftPayment(input: {
-  status: PaymentIntentStatus;
-  /** Stok ayırması hâlâ duruyor mu — 30 dakikalık ödeme penceresi. */
+  status: ProviderPaymentStatus;
+  /** Stok ayırması hâlâ duruyor mu — ödeme penceresi. */
   windowOpen: boolean;
 }): DraftPaymentDecision {
   switch (input.status) {
-    // Para alındı: pencere kapanmış olsa da onaylanır. Mal o arada bittiyse onay yolunun geç ödeme
-    // kuralı (`decideLatePayment`) parayı iade eder — bu karar onun işine karışmaz.
-    case 'succeeded':
+    // Pencere kapanmış olsa da onaylanır; mal o arada bittiyse geç ödeme kuralı (`decideLatePayment`) parayı iade eder.
+    case 'completed':
       return 'confirm';
-    // Banka işliyor, ya da para ayrılmış ama tahsil edilmemiş (elle tahsilat kullanmıyoruz; görülürse
-    // para müşterinin hesabından ayrılmıştır). Pencere kapansa da İPTAL EDİLMEZ — para gelebilir.
+    // Banka işliyor ya da para ayrılmış: pencere kapansa da iptal edilmez, çünkü para gelebilir.
     case 'processing':
-    case 'requires_capture':
+    case 'authorised':
       return 'wait';
-    case 'canceled':
+    case 'cancelled':
+    case 'failed':
       return 'cancel';
-    // Müşteri ödemeyi bitirmedi (kart girilmedi, 3-D Secure yarım kaldı, kart reddedildi): pencere
-    // açıkken hâlâ deneyebilir; kapandıysa ödeme gelmeyecek.
-    case 'requires_payment_method':
-    case 'requires_confirmation':
-    case 'requires_action':
+    // Ödeme bitmedi (kart girilmedi, 3-D Secure yarım kaldı ya da kart reddedildi): pencere açıkken müşteri yeniden deneyebilir.
+    case 'pending':
       return input.windowOpen ? 'wait' : 'cancel';
   }
+}
+
+/** Sağlayıcıda zaten kapanmış ödeme: iptal isteği gönderilmez, sağlayıcı kapalı ödemenin iptalini reddeder. */
+export function isClosedPayment(status: ProviderPaymentStatus): boolean {
+  return status === 'cancelled' || status === 'failed';
 }

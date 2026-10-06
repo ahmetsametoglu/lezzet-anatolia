@@ -43,7 +43,7 @@ create table public.order (
   -- Sağlayıcıya iade damgası: sebepten ayrı soru ("para çekilip geri verildi mi"), webhook'un geç ödeme iadesinde
   -- sebep `payment_failed` kalırken para dönmüştür. Tarih, çünkü destek konuşmasının ilk sorusu "ne zaman"dır.
   provider_refunded_at timestamptz,
-  -- Sağlayıcıdaki ödeme kimliği (Stripe PaymentIntent): webhook gelmezse ödeme sayfası ve zamanlayıcı "ödendi mi"
+  -- Sağlayıcıdaki ödeme kimliği (Revolut sipariş kimliği): webhook gelmezse ödeme sayfası ve zamanlayıcı "ödendi mi"
   -- diye bununla sorar, yeni denemede eski ödeme iptal edilir. Kısmi unique: bir ödeme tek siparişe bağlanır.
   payment_ref text,
   -- TÜRETİLİR (net tahsilat vs karşılanan tutar) — elle set edilmez, motor hesaplar.

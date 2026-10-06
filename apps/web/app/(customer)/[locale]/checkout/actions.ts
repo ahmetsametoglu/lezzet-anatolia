@@ -23,8 +23,8 @@ import type { CartEntry } from '@/lib/cart/cart-types';
 import { getPackagesByIds } from '@/lib/storefront/packages';
 import { resolveOrderLines } from '@/lib/order/customer-lines';
 import { webPaymentEffects } from '@/lib/order/transition';
-import { stripeSessionCreator } from '@/lib/order/checkout-session';
-import { stripePaymentGateway } from '@/lib/stripe';
+import { webSessionCreator } from '@/lib/order/checkout-session';
+import { revolutBrowserMode, revolutPaymentGateway } from '@/lib/revolut';
 import { rememberAcquisition } from '@/lib/analytics/attribution';
 import { recordEvent } from '@/lib/analytics/record';
 import { routing } from '@/i18n/routing';
@@ -135,12 +135,12 @@ export async function checkCheckoutAddressAction(addressId: string): Promise<Cus
 }
 
 /**
- * "Siparişi onayla": taslağı açar, stoğu ayırır, ödeme niyetini doğurur; tek turda, çünkü ayrı çağrılar yetim taslak bırakırdı.
+ * "Siparişi onayla": taslağı açar, stoğu ayırır, sağlayıcı ödemesini açar ya da kart alanının ödemesini bağlar; tek turda, çünkü ayrı çağrılar yetim taslak bırakırdı.
  * Zincir `@lezzet/application`ın `order/place-order`ında; uç dil, kimlik, hata zarfı, reddin ekran diline çevrilmesi ve yüzey
  * portlarını taşır.
  */
 type ConfirmOutcome =
-  | { status: 'payment_required'; orderId: string; clientSecret: string; totalCents: number }
+  | { status: 'payment_required'; orderId: string; paymentToken: string; paymentMode: 'sandbox' | 'prod'; totalCents: number }
   /** Kapıda/vadeli: ödeme sağlayıcısı yok, sipariş açıldı. */
   | { status: 'placed'; orderId: string; totalCents: number }
   /** Aynı basışın ödemesi bankada işleniyor: yeni sipariş açılmadı, müşteri o siparişin sayfasına gider. */
@@ -196,9 +196,9 @@ export async function confirmCheckoutAction(input: {
       bundles: getPackagesByIds,
       // Edinim kaynağı oturumun kampanya ÇEREZİNİ okur — taşıma ayrıntısı, pakette yaşayamaz.
       onCustomerAcquired: (id) => void rememberAcquisition(id),
-      // Sağlayıcı istemcisi pakete GİRMEZ (`stripe` npm bağımlılığı): üreteç buradan geçer.
-      createPaymentSession: stripeSessionCreator(),
-      paymentGateway: stripePaymentGateway(),
+      // Sağlayıcı istemcisi yüzeyin anahtarlarıyla kurulur ve porttan geçer.
+      createPaymentSession: webSessionCreator(),
+      paymentGateway: revolutPaymentGateway(),
       // Ödeme etkileri, çünkü aynı basışın taslağına dönüşte kapanan ödemenin müşteri haberi de gider.
       effects: webPaymentEffects,
       // Haberler ve stok eşiği uyarısı yanıttan sonra gider: müşteri onayı, kendi e-postasının gönderilmesini beklemeden görür.
@@ -215,11 +215,15 @@ export async function confirmCheckoutAction(input: {
       return { data: { status: 'open_payment', orderId: outcome.orderId, state: outcome.state }, errorKey: null };
     }
     if (outcome.status === 'payment_required') {
+      // Kip ödeme açan istemciyle aynı ayardan türer; ödeme açıldıysa vardır, yoksa sağlayıcı yok sayılır.
+      const paymentMode = revolutBrowserMode();
+      if (!paymentMode) return { data: { status: 'rejected', reason: 'provider_unavailable' }, errorKey: null };
       return {
         data: {
           status: 'payment_required',
           orderId: outcome.orderId,
-          clientSecret: outcome.clientSecret,
+          paymentToken: outcome.paymentToken,
+          paymentMode,
           totalCents: outcome.totalCents,
         },
         errorKey: null,
@@ -265,7 +269,7 @@ async function rejectionOutcome(rejection: PlaceOrderRejection, locale: Locale):
       return { status: 'rejected', reason: rejection.status, detail: await raceDetail(rejection, locale) };
     /**
      * Ödeme oturumu açılamadı: ekranın sözlüğü sağlayıcı hâllerini adıyla tanır (`rejected.provider_unavailable`, `rejected.stale`),
-     * tanımadıkları genel hata cümlesine düşer. `no_client_secret` de oraya düşer, çünkü "sağlayıcı jeton vermedi" müşteriye
+     * tanımadıkları genel hata cümlesine düşer. `no_payment_token` de oraya düşer, çünkü "sağlayıcı jeton vermedi" müşteriye
      * anlatılacak bir şey değildir.
      */
     case 'payment_unavailable':

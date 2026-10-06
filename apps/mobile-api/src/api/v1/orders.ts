@@ -84,7 +84,7 @@ orders.get('/', async (c) => {
     return fail(c, parsed.error.issues[0]?.path[0] === 'locale' ? 'invalid_locale' : 'invalid_query', 400);
   }
 
-  // Ödemesi beklenen siparişler önce netleşir: Stripe'ın mesajı gelmese de ödenen sipariş onaylı, ödenmeyen kapanmış görünür.
+  // Ödemesi beklenen siparişler önce netleşir: webhook gelmese de ödenen sipariş onaylı, ödenmeyen kapanmış görünür.
   await settlePendingPaymentsQuietly(serviceDb(), c.get('customerId'));
   const page = await listCustomerOrders(serviceDb(), {
     customerId: c.get('customerId'),

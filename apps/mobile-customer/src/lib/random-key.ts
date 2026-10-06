@@ -1,20 +1,6 @@
 /*
-  RASTGELE ANAHTAR — istemcinin ürettiği tek kullanımlık kimlik (21.313'te sipariş anahtarından ayrıldı:
-  adres çekmecesinin Google oturum jetonu da aynı üreticiyi istiyordu; ikinci bir üretici yazmak iki
-  ayrı rastgelelik kuralı demekti).
-
-  ── RASTGELELİK NEREDEN GELİYOR (ölçüldü 10.08) ─────────────────────────────
-  `expo-crypto` KURULU DEĞİL (`apps/mobile/package.json`) ve yeni bağımsızlık eklemek bu işin kapsamı
-  değil. Çalışma ortamında bir web-crypto kapısı da bulunamadı: `expo`nun WinterCG çalışma zamanı
-  (`expo/src/winter/runtime.native.ts`) `TextDecoder`/`URL`/`fetch` kuruyor ama `crypto` KURMUYOR,
-  React Native'in `setUpGlobals`ında da yok. Yine de var olan bir kapıyı KULLANMAMAK anlamsız olurdu:
-  yerel derlemeye yarın bir polyfill girerse (Stripe/Supabase bir gün getirebilir) burası kendiliğinden
-  ona geçer.
-
-  Kapı yoksa anahtar zaman damgası + iki rastgele parçadan kurulur. **Bu bir güvenlik anahtarı DEĞİL:**
-  kimseye yetki vermez — sipariş anahtarında "bu istek az önceki isteğin aynısı mı", Google jetonunda
-  "bu yazma aynı oturum mu" sorusunu cevaplar. Uzunluk ve rastgelelik yine cömert (36 haneye yakın,
-  iki bağımsız kaynak) ve karakterler URL/dosya adı güvenli — Google jetonunun biçim şartı.
+  İstemcinin ürettiği tek kullanımlık kimlik (sipariş anahtarı, Google oturum jetonu); yetki vermez, yalnız "aynı istek mi" sorusunu
+  cevaplar. Çalışma ortamında web-crypto yoksa zaman damgası ve iki rastgele parçadan kurulur; karakterler URL ve dosya adı güvenlidir.
 */
 
 /**

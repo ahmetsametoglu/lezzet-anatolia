@@ -3,7 +3,7 @@ import type { Locale } from '@lezzet/i18n';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { PaymentMethod } from '@lezzet/types';
 import type { StorefrontImage } from '@lezzet/application';
-import type { BillingDetails } from '../components/payment-element';
+import type { BillingDetails } from '../components/revolut-card';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir).
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import messages from './messages.json';
@@ -44,7 +44,7 @@ export interface ConfirmationView {
   paymentState: CardPaymentState | null;
   /** Ödeme bekleyen kart siparişinde ödemenin son anı; `null` saat yazılmaz. */
   payBy: string | null;
-  /** Ödemeye dönüşün fatura bilgisi, yalnız ödeme bekleyen kart siparişinde; Stripe'ın adres formu kapalı olduğu için elle geçer. */
+  /** Ödemeye dönüşün fatura bilgisi, yalnız ödeme bekleyen kart siparişinde; kart alanı adres sormadığı için elle geçer. */
   billing: BillingDetails | null;
   onRoute: boolean;
   /** Gel-al: müşteri depodan alır — gün yok, kargo yok; kart depoyu ve aranacak numarayı yazar. */

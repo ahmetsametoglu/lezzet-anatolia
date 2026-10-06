@@ -75,7 +75,7 @@ function overviewData(overrides: Partial<MoneyOverview> = {}): MoneyOverview {
     accounts: [
       { name: 'Kasa', type: 'cash', cents: 41_230 },
       { name: 'Revolut', type: 'bank', cents: 821_477 },
-      { name: 'Stripe', type: 'provider', cents: 12_000 },
+      { name: 'Revolut Merchant', type: 'provider', cents: 12_000 },
     ],
     ...overrides,
   };
@@ -174,8 +174,8 @@ describe('M1 · tahsilat izleme', () => {
     expect(screen.getByText(`${t.track.pending.noRef} · L. Petit`)).toBeOnTheScreen();
     // Günün parası EN ÜSTTE ve toplamı kırılımdan TÜRÜYOR (42,00 + 12,90 değil; bugünkü tahsilat).
     expect(screen.getByTestId('money-today-total')).toBeOnTheScreen();
-    // Hesaplar adlarıyla — üçüncü hesap (Stripe) iki sabit satıra indirgenip yutulmuyor.
-    for (const name of ['Kasa', 'Revolut', 'Stripe']) {
+    // Üçüncü hesap iki sabit satıra indirgenip yutulmuyor.
+    for (const name of ['Kasa', 'Revolut', 'Revolut Merchant']) {
       expect(screen.getByText(name)).toBeOnTheScreen();
     }
   });

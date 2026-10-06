@@ -1,7 +1,5 @@
-// Müşteri yüzeyi URL yol tablosu — iç yol İngilizce, dış URL dile göre; URL'in tek kaynağı (web, backend, native okur).
-// Kendi modülünde ve değer importsuz, çünkü `apps/mobile-customer/app.config.ts` onu Node ESM'le okur ve
-// uzantısız göreli ihracı çözemez: buraya değer importu eklenirse `expo start` sebepsiz bir hatayla kırılır.
-// Operasyon yüzeyi (Türkçe, öneksiz) bu tablonun dışında.
+// Müşteri yüzeyi URL'lerinin tek kaynağı: iç yol İngilizce, dış URL dile göre. Değer importsuz, çünkü `app.config.ts` onu Node
+// ESM'le okur ve uzantısız göreli ihracı çözemez; değer importu `expo start`ı sebepsiz kırar.
 
 import type { Locale } from './locale';
 
@@ -17,7 +15,7 @@ export const PATHNAMES = {
   '/cart': { fr: '/panier', de: '/warenkorb', tr: '/sepet' },
   // Sepetteki düğmenin sözcüğüyle aynı; ayrı kelime müşteriye başka yere geldiğini düşündürürdü.
   '/checkout': { fr: '/commande', de: '/kasse', tr: '/odeme' },
-  // Sipariş numarası yolda: Stripe dönüş adresinde sorgu dizesi paylaşılan bağda kaybolur.
+  // Sipariş numarası yolda, çünkü sorgu dizesi paylaşılan bağda kaybolur.
   '/checkout/[reference]': { fr: '/commande/[reference]', de: '/kasse/[reference]', tr: '/odeme/[reference]' },
   '/packages': { fr: '/coffrets', de: '/pakete', tr: '/paketler' },
   '/package/[slug]': { fr: '/coffret/[slug]', de: '/paket/[slug]', tr: '/paket/[slug]' },

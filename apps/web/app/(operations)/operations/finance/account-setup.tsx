@@ -53,7 +53,7 @@ export function AccountSetup({ onCreated }: { onCreated: () => void }) {
               id="account-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Kasa · Crédit Mutuel · Stripe"
+              placeholder="Kasa · Crédit Mutuel · Revolut"
             />
           </div>
 

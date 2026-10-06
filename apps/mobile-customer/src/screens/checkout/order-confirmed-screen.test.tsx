@@ -22,8 +22,8 @@ jest.mock('@/lib/api/checkout', () => ({
   resumeCheckoutPayment: (locale: string, id: string) => mockResume(locale, id),
   cancelPendingCheckoutOrder: (locale: string, id: string) => mockCancel(locale, id),
 }));
-const mockPresentPayment = jest.fn<Promise<unknown>, [{ clientSecret: string }]>();
-jest.mock('@/lib/payment/payment-sheet', () => ({ presentPayment: (input: { clientSecret: string }) => mockPresentPayment(input) }));
+const mockPresentPayment = jest.fn<Promise<unknown>, [{ paymentToken: string }]>();
+jest.mock('@/lib/payment/payment-sheet', () => ({ presentPayment: (input: { paymentToken: string }) => mockPresentPayment(input) }));
 const mockRefreshCart = jest.fn();
 jest.mock('@/screens/customer-kit/cart-store', () => ({ refreshCart: () => mockRefreshCart() }));
 jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => {
@@ -138,7 +138,7 @@ describe('OrderConfirmedScreen — ödemesi gerçekleşmeyen sipariş', () => {
   it('ödemeyi tamamla aynı ödemenin anahtarıyla kartı açar, geçince durum yeniden sorulur', async () => {
     cevap(eksik);
     mockResume.mockResolvedValue({
-      data: { status: 'payment_required', orderId: ORDER_ID, clientSecret: 'pi_1_secret' },
+      data: { status: 'payment_required', orderId: ORDER_ID, paymentToken: 'rv_token_1' },
       error: null,
       status: 200,
     });
@@ -151,7 +151,7 @@ describe('OrderConfirmedScreen — ödemesi gerçekleşmeyen sipariş', () => {
 
     await waitFor(() => expect(mockStatus.mock.calls.length).toBeGreaterThan(sorular));
     expect(mockResume).toHaveBeenCalledWith('tr', ORDER_ID);
-    expect(mockPresentPayment).toHaveBeenCalledWith({ clientSecret: 'pi_1_secret' });
+    expect(mockPresentPayment).toHaveBeenCalledWith({ paymentToken: 'rv_token_1' });
   });
 
   // İptalden sonra sepete gidilmez ya da sepet tazelenmezse müşteri geri dönen ürünlerini göremez.

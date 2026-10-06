@@ -18,7 +18,7 @@ import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import { checkoutBlocker, servicePointMissing, type CheckoutViewProps } from '../checkout-types';
-import { PayProgress } from './payment-element';
+import { PayProgress } from './revolut-card';
 import { ServicePointPicker } from './service-point-picker';
 
 /**
@@ -480,8 +480,7 @@ export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, paym
   if (!payment) return null;
 
   const options: { method: PaymentMethod; onAccount: boolean; title: string; body: string; blocked: string | null }[] = [
-    // `online` Stripe yoludur (peşin, sayfa içinde); `card` kapıda kullanılan bir araçtır ve kullanılıp kullanılmadığını
-    // kurye kapanışta yazar.
+    // `online` sayfa içi kart ödemesidir (peşin); `card` kapıda kullanılan bir araçtır, kullanıldığını kurye kapanışta yazar.
     { method: 'online', onAccount: false, title: t.payment.card, body: t.payment.cardBody, blocked: null },
     {
       method: 'cash',
@@ -531,8 +530,8 @@ export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, paym
         <p className="font-sans text-note leading-relaxed font-semibold text-honey">{t.payment.cashWarning}</p>
       )}
 
-      {/* Kart alanı yalnız online ödeme seçiliyken monte edilir: Stripe iframe'ini görünmez de olsa
-          baştan yüklemek, ödemeyi seçmeyen müşteriye üçüncü tarafa istek attırmak olurdu. */}
+      {/* Kart alanı yalnız online ödeme seçiliyken monte edilir: sağlayıcının çerçevesini baştan yüklemek, ödemeyi seçmeyen müşteriye
+          üçüncü tarafa istek attırmak olurdu. */}
       {state.paymentMethod === 'online' && paymentSlot}
     </StepShell>
   );
@@ -569,7 +568,7 @@ function CheckRow({ checked, onChange, label, link }: CheckRowProps) {
 export function OrderSummary(props: CheckoutViewProps) {
   const { t, locale, cart, cartReady, cartFailed, snapshot, snapshotReady, state, compact, busy, error, onConfirm, selectedAddress } =
     props;
-  const { addressNotice, onAcceptAddressFix, onDismissAddressNotice, onToggleConsent, onToggleTerms, payStage, payReady } = props;
+  const { addressNotice, onAcceptAddressFix, onDismissAddressNotice, onToggleConsent, onToggleTerms, payStage } = props;
   const copy = checkoutMessages[locale];
   const payment = snapshot.payment;
   const delivery = snapshot.delivery;
@@ -756,7 +755,7 @@ export function OrderSummary(props: CheckoutViewProps) {
         size="md"
         compact={compact}
         fullWidth
-        disabled={busy || blocked || state.paymentMethod === null || !payReady || !state.termsAccepted}
+        disabled={busy || blocked || state.paymentMethod === null || !state.termsAccepted}
         onClick={onConfirm}
       >
         {confirmLabel}

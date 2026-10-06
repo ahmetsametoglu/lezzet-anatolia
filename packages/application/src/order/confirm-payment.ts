@@ -20,7 +20,7 @@ export type ConfirmPaymentOutcome = { status: 'ok'; action: 'confirmed' | 'reser
 export interface ConfirmPaymentInput {
   orderId: string;
   /** Sağlayıcıdaki ödeme — iade bunun üzerinden döner ve tahsilatın künyesine yazılır. */
-  paymentIntentId: string | null;
+  paymentRef: string | null;
   /** Sağlayıcının GERÇEKTEN aldığı tutar (cent) — sipariş toplamı değil. */
   amountCents: number | null;
   /** Paranın düştüğü hesap; verilmezse aktif sağlayıcı hesabı okunur (`providerAccountId`). */
@@ -45,7 +45,7 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
    * geçebilir. Bu emniyet olmasa para alınmış ama siparişi olmayan bir müşteri kalırdı.
    */
   if (order.status === 'cancelled') {
-    await refundProviderPayment(db, deps.gateway, input.paymentIntentId, order.id);
+    await refundProviderPayment(db, deps.gateway, input.paymentRef, order.id);
     return { status: 'ok', action: 'refunded' };
   }
 
@@ -54,7 +54,7 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
   // Stok kalmadı: para iade edilir ve sipariş `out_of_stock` sebebiyle iptal olur. Sağlayıcı iadesi önce, çünkü iadesi düşen
   // ödemede siparişi iptal etmek müşteriyi hem malsız hem parasız bırakırdı.
   if (decision === 'refund') {
-    await refundProviderPayment(db, deps.gateway, input.paymentIntentId, order.id);
+    await refundProviderPayment(db, deps.gateway, input.paymentRef, order.id);
     await cancelOrder(db, order.id, { refundAccountId: accountId, refundAmountCents: 0, reason: 'out_of_stock', effects: deps.effects });
     // İptal de bir cevaptır: ekran "onaylanıyor"da asılı kalmaz.
     await ringBell(orderChannelName(order.id));
@@ -83,10 +83,10 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
       accountId,
       amountCents: input.amountCents,
       method: 'online',
-      description: 'Stripe tahsilatı',
+      description: 'Kart tahsilatı',
       source: 'system',
-      meta: input.paymentIntentId ? { providerRef: input.paymentIntentId } : null,
-      idempotencyKey: input.paymentIntentId ? `stripe-payment:${input.paymentIntentId}` : null,
+      meta: input.paymentRef ? { providerRef: input.paymentRef } : null,
+      idempotencyKey: input.paymentRef ? `card-payment:${input.paymentRef}` : null,
     });
   }
 
@@ -99,7 +99,7 @@ export async function confirmOnlinePayment(db: Db, input: ConfirmPaymentInput, d
   return { status: 'ok', action: decision === 'reserve_again' ? 'reserved_again' : 'confirmed' };
 }
 
-/** Ödemenin düştüğü hesap — Stripe havuzu bir hesaptır (DOMAIN §9); payout'u transferle bankaya gider. */
+/** Ödemenin düştüğü hesap: sağlayıcı havuzu bir hesaptır (DOMAIN §9), aktarımı transferle bankaya gider. */
 export async function providerAccountId(db: Db): Promise<string | null> {
   const accounts = await new AccountService(db).list({ activeOnly: true });
   return accounts.find((account) => account.type === 'provider')?.id ?? null;
@@ -109,8 +109,8 @@ export async function providerAccountId(db: Db): Promise<string | null> {
  * Sağlayıcı ödemesini iade eder ve damgalar; damga iadeden sonra, yoksa iadesi düşen ödeme "iade edildi" görünürdü. Port yoksa
  * iade iletilemez ama damga yine düşer.
  */
-async function refundProviderPayment(db: Db, gateway: PaymentGateway | null, paymentIntentId: string | null, orderId: string): Promise<void> {
-  if (gateway && paymentIntentId) await gateway.refund(paymentIntentId);
+async function refundProviderPayment(db: Db, gateway: PaymentGateway | null, paymentRef: string | null, orderId: string): Promise<void> {
+  if (gateway && paymentRef) await gateway.refund(paymentRef);
   await new OrderService(db).update({ id: orderId, providerRefundedAt: new Date().toISOString() });
 }
 

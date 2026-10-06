@@ -1,13 +1,8 @@
 import { JobRunService, WebhookEventService } from '@lezzet/database';
 import { an, tabloDolu, type Db } from './shared';
 
-// ── Zamanlanmış iş izi (06) ──────────────────────────────────────────────────────────────────────
-// İş başına TEK satır (tarihçe tutulmaz). Biri BAŞARISIZ: "koştu ama hata verdi" ile "hiç koşmadı"
-// birbirine karışmasın — gecikme alarmı bu ayrımı okur.
-//
-// İSİMLER UYDURULMAZ: satırın anahtarı, cron kabuğunun (`runJob`) yazdığı adın AYNISI olmalı. Farklı
-// bir ad yazmak, ekranda hiçbir zaman tazelenmeyen bir hayalet satır bırakır — üstelik gerçek iş
-// tabloya kendi adıyla girince aynı iş iki kez listelenir.
+// İş başına tek satır; biri başarısız ki "koştu ama hata verdi" ile "hiç koşmadı" karışmasın. Adlar cron kabuğunun yazdığıyla
+// aynı olmalı, yoksa ekranda hiç tazelenmeyen hayalet satır kalır.
 
 /** Kayıtlı cron işleri — `apps/backend/src/jobs/*` içindeki sabitlerle birebir. */
 const SWEEP_RESERVATIONS = 'sweep_reservations';
@@ -32,13 +27,8 @@ export async function seedJobRuns(db: Db): Promise<void> {
   await seedWebhookEvents(db);
 }
 
-// ── Dış sağlayıcı olayları (0028 · 07.5) ─────────────────────────────────────────────────────────
-// Stripe aynı olayı birden çok kez gönderir; `(provider, event_id)` benzersizliği tek emniyettir.
-// `processed_at` idempotensin KAYNAĞI değil izidir — bu yüzden seed üç hâli de kurar: işlenmiş,
-// işlenmemiş (kuyrukta bekliyor) ve DÜŞMÜŞ (hata metni dolu, işlenmemiş).
-//
-// Ödeme kapısının hata kuyruğu ancak düşmüş bir olay varsa denenebilir; hepsi yeşil bir tablo,
-// "tekrar dene" düğmesinin hiç çalışmadığı anlamına gelir.
+// Sağlayıcı olayları üç hâlde kurulur (işlenmiş, bekleyen, düşmüş), çünkü hata kuyruğu ve "tekrar dene" ancak düşmüş olayla
+// denenebilir.
 
 async function seedWebhookEvents(db: Db): Promise<void> {
   if (await tabloDolu(db, 'webhook_event')) {
@@ -48,16 +38,14 @@ async function seedWebhookEvents(db: Db): Promise<void> {
   console.log('▸ WEBHOOK OLAYI seed');
   const events = new WebhookEventService(db);
 
-  // Olayları gerçek siparişlere bağla: `metadata.order_id` ile gelen yük, ödeme kapısının
-  // eşleştirdiği alandır — uydurma bir kimlik, izlemeyi ekranda kopuk gösterirdi.
+  // Olaylar gerçek siparişlere bağlanır; uydurma bir kimlik izlemeyi ekranda kopuk gösterirdi.
   const { data: siparisData } = await db
     .from('order')
-    .select('id,reference_no,ordered_total')
+    .select('id')
     .not('reference_no', 'is', null)
     .order('created_at', { ascending: false })
     .limit(4);
-  const siparisler = (siparisData ?? []) as Array<{ id: string; reference_no: string; ordered_total: number }>;
-  const cent = (v: number): number => Math.round(v * 100);
+  const siparisler = (siparisData ?? []) as Array<{ id: string }>;
 
   const olaylar: Array<{
     eventId: string;
@@ -67,42 +55,27 @@ async function seedWebhookEvents(db: Db): Promise<void> {
     hata?: string;
     etiket: string;
   }> = [
-    // 1) Mutlu yol: checkout tamamlandı, işlendi.
+    // 1) Mutlu yol: ödeme tamamlandı, işlendi. Olay anahtarı olay adı + sağlayıcı siparişidir, çünkü Revolut olay kimliği göndermez.
     ...(siparisler[0]
       ? [
           {
-            eventId: 'evt_seed_checkout_completed_01',
-            type: 'checkout.session.completed',
-            payload: {
-              id: 'cs_test_seed01',
-              object: 'checkout.session',
-              amount_total: cent(siparisler[0].ordered_total),
-              currency: 'eur',
-              payment_status: 'paid',
-              metadata: { order_id: siparisler[0].id, reference_no: siparisler[0].reference_no },
-            },
+            eventId: 'ORDER_COMPLETED:seed-rv-01',
+            type: 'payment_completed',
+            payload: { event: 'ORDER_COMPLETED', order_id: 'seed-rv-01', merchant_order_ext_ref: siparisler[0].id },
             islendi: 2,
-            etiket: 'İŞLENDİ · checkout tamamlandı',
+            etiket: 'İŞLENDİ · ödeme tamamlandı',
           },
         ]
       : []),
-    // 2) Ödeme onayı — aynı siparişin ikinci olayı. Stripe tek ödeme için birden çok olay yollar;
-    //    ikisinin de tabloda durması normaldir, mükerrer DEĞİLDİR (event_id'leri farklı).
+    // 2) Aynı ödemenin ikinci olayı: Revolut tek ödeme için birden çok olay yollar (yetki, tamamlanma); anahtarları farklıdır.
     ...(siparisler[0]
       ? [
           {
-            eventId: 'evt_seed_pi_succeeded_01',
-            type: 'payment_intent.succeeded',
-            payload: {
-              id: 'pi_test_seed01',
-              object: 'payment_intent',
-              amount: cent(siparisler[0].ordered_total),
-              currency: 'eur',
-              status: 'succeeded',
-              metadata: { order_id: siparisler[0].id },
-            },
+            eventId: 'ORDER_AUTHORISED:seed-rv-01',
+            type: 'ignored',
+            payload: { event: 'ORDER_AUTHORISED', order_id: 'seed-rv-01', merchant_order_ext_ref: siparisler[0].id },
             islendi: 2,
-            etiket: 'İŞLENDİ · ödeme onayı (aynı sipariş)',
+            etiket: 'İŞLENDİ · yetki olayı (aynı ödeme, dinlenmeyen adım)',
           },
         ]
       : []),
@@ -110,16 +83,9 @@ async function seedWebhookEvents(db: Db): Promise<void> {
     ...(siparisler[1]
       ? [
           {
-            eventId: 'evt_seed_pi_failed_01',
-            type: 'payment_intent.succeeded',
-            payload: {
-              id: 'pi_test_seed02',
-              object: 'payment_intent',
-              amount: cent(siparisler[1].ordered_total),
-              currency: 'eur',
-              status: 'succeeded',
-              metadata: { order_id: siparisler[1].id },
-            },
+            eventId: 'ORDER_COMPLETED:seed-rv-02',
+            type: 'payment_completed',
+            payload: { event: 'ORDER_COMPLETED', order_id: 'seed-rv-02', merchant_order_ext_ref: siparisler[1].id },
             hata: 'Sipariş kilitli: aynı anda başka bir geçiş işleniyordu (deadlock) — olay yeniden denenmeli.',
             etiket: 'DÜŞTÜ · işlenemedi (yeniden denenecek)',
           },
@@ -127,23 +93,16 @@ async function seedWebhookEvents(db: Db): Promise<void> {
       : []),
     // 4) HENÜZ İŞLENMEMİŞ: az önce geldi, kuyrukta. Ne yeşil ne kırmızı — üçüncü hâl.
     {
-      eventId: 'evt_seed_charge_refunded_01',
-      type: 'charge.refunded',
-      payload: {
-        id: 'ch_test_seed03',
-        object: 'charge',
-        amount_refunded: 1290,
-        currency: 'eur',
-        refunded: true,
-      },
+      eventId: 'ORDER_COMPLETED:seed-rv-iade-03',
+      type: 'refund_completed',
+      payload: { event: 'ORDER_COMPLETED', order_id: 'seed-rv-iade-03' },
       etiket: 'BEKLİYOR · henüz işlenmedi',
     },
-    // 5) TANINMAYAN tür: sağlayıcı bizim dinlemediğimiz bir olay yolladı. Kapı bunu sessizce
-    //    geçmeli ama İZ bırakmalı — "neden hiçbir şey olmadı" sorusunun cevabı bu satırdır.
+    // 5) Dinlenmeyen olay: sağlayıcının yolladığı ama bizim işlemediğimiz tür. Sessizce geçilir ama iz kalır.
     {
-      eventId: 'evt_seed_unknown_01',
-      type: 'customer.subscription.created',
-      payload: { id: 'sub_test_seed01', object: 'subscription' },
+      eventId: 'DISPUTE_UNDER_REVIEW:seed-dp-01',
+      type: 'ignored',
+      payload: { event: 'DISPUTE_UNDER_REVIEW', dispute_id: 'seed-dp-01' },
       islendi: 1,
       etiket: 'İŞLENDİ · dinlenmeyen tür (sessizce geçildi)',
     },
@@ -152,7 +111,7 @@ async function seedWebhookEvents(db: Db): Promise<void> {
   for (const o of olaylar) {
     // `claim` üretim yoludur: aynı olay ikinci kez gelirse `fresh:false` döner ve YENİ satır açılmaz.
     // Seed onu kullanır — mükerrer koruması seed'de de aynı kapıdan geçsin.
-    const { event, fresh } = await events.claim({ provider: 'stripe', eventId: o.eventId, type: o.type, payload: o.payload });
+    const { event, fresh } = await events.claim({ provider: 'revolut', eventId: o.eventId, type: o.type, payload: o.payload });
     if (!fresh) continue;
     if (o.hata) await events.markFailed(event.id, o.hata);
     else if (o.islendi != null) await events.markProcessed(event.id);

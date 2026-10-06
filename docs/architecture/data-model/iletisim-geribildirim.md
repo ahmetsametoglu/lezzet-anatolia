@@ -144,7 +144,7 @@ Müşteriye GİTMEYEN satır (15.29 · kullanıcı kararı 10.09): operatör soh
 
 ## WebhookEvent (dış olay kaydı)
 
-Stripe/360dialog webhook'ları için tekrar-işleme kilidi (idempotency): aynı olay ikinci kez gelirse no-op (bkz. `STACK.md §13`).
+Ödeme ve mesajlaşma webhook'ları için tekrar-işleme kilidi (idempotency): aynı olay ikinci kez gelirse no-op (bkz. `STACK.md §13`).
 
 <!-- alanlar:webhook_event -->
 | Kolon | Tip | Null | Varsayılan |
@@ -161,7 +161,7 @@ Stripe/360dialog webhook'ları için tekrar-işleme kilidi (idempotency): aynı 
 
 **Kararlar**
 
-- **`provider`** — stripe / 360dialog
+- **`provider`** — revolut / meta / sendcloud
 - **`event_id`** — **unique** (provider ile birlikte). *(Doküman 26.08'e kadar bu kolonu `provider_event_id` diye anlatıyordu; migration'daki ad `event_id`.)*
 - **`payload`** — ham gövde (hata ayıklama)
 
@@ -688,7 +688,7 @@ Parametrik değerler **env'e veya koda gömülmez** (blueprint STACK §10): kesi
 
 | Anahtar | Varsayılan | Ne işe yarar |
 | --- | --- | --- |
-| `reservation_ttl_minutes` | 30 | Checkout rezervasyon + ödeme + fiyat penceresi (Stripe oturum asgarisi; altına inilemez) |
+| `reservation_ttl_minutes` | 30 | Checkout rezervasyon + ödeme + fiyat penceresi; sağlayıcıdaki ödeme de bu sürede düşer |
 | `order_cutoff_time` | `"16:00"` | Sonrasında gelen sipariş bir SONRAKİ rota gününe yazılır |
 | `min_basket_cents` | 4000 | Asgari sepet — **yalnız kapıya teslim** için lojistik taban; kargoda uygulanmaz (0 = alt sınır yok) |
 | `free_shipping_threshold_cents` | 6000 | Ücretsiz kargo eşiği |

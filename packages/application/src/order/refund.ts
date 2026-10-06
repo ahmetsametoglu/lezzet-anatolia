@@ -301,7 +301,7 @@ async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOpt
     if (!providerRef) return unsettled('provider_ref_missing');
 
     const result = await providerRefunder(opts.effects)({
-      paymentIntentId: providerRef,
+      paymentRef: providerRef,
       amountCents: dueCents,
       idempotencyKey: await refundIdempotencyKey(db, orderId, dueCents),
     });

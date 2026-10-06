@@ -3,7 +3,7 @@ import { parseBusinessFilter, type BusinessFilter } from '@/lib/business-filter'
 import { one, oneOf, type RawParams } from '@/lib/url-params';
 
 // Para ekranının URL sözleşmesi: süzgeç adreste taşınır, çünkü yenilemede aynı görünüm açılır ve sunucu süzebilir; imleç adrese
-// yazılmaz. Hesap eksen değil daraltmadır: kasa, banka ve Stripe aynı kavramdır, varsayılan `all`, hesap bakiye şeridinin kartıyla seçilir.
+// yazılmaz. Hesap eksen değil daraltmadır: kasa, banka ve ödeme sağlayıcısı aynı kavramdır, varsayılan `all`, hesap bakiye şeridinin kartıyla seçilir.
 
 export const FINANCE_PATH = '/operations/finance';
 

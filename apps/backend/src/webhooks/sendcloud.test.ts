@@ -183,9 +183,8 @@ describe('sendcloud webhook — işleme', () => {
   });
 
   /**
-   * Stripe kapısı burada koşulsuz `duplicate` diyor; bu kulvarda ayrım GEREKLİ çünkü en olası
-   * düşüş sebebi geçici (sağlayıcıya çıkan REST çağrısı o an düşer). Koşulsuz 200 dönseydik,
-   * 10 turluk yeniden deneme penceresinin tamamı ilk tur bir kez düştüğü için boşa giderdi.
+   * En olası düşüş geçicidir (sağlayıcıya çıkan REST çağrısı o an düşer); koşulsuz 200 dönseydik 10 turluk yeniden deneme
+   * penceresi ilk tur bir kez düştüğü için boşa giderdi.
    */
   it('İŞLENEMEMİŞ olayın tekrarı YENİDEN DENENİR — damgasız kayıt "işlendi" sayılmaz', async () => {
     const k = await gonderiKur();

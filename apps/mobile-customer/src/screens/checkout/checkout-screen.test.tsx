@@ -48,8 +48,7 @@ jest.mock('react-native-maps', () => {
   return { __esModule: true, default: Pass, Marker: Pass, PROVIDER_GOOGLE: 'google' };
 });
 
-/* Stripe'ın Jest mock'u `PaymentSheetError`ı taşımadığı için modül yüklenirken düşer; bu dosya ödemeyi değil siparişin
-   kapsamını ölçtüğü için kapı sahtelenir. */
+/* Bu dosya ödemeyi değil siparişin kapsamını ölçer; ödeme kapısı vazgeçilmiş döner. */
 jest.mock('@/lib/payment/payment-sheet', () => ({ presentPayment: async () => ({ status: 'canceled' }) }));
 
 jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
@@ -333,7 +332,7 @@ describe('CheckoutScreen — sipariş numarası', () => {
             orderId: '22222222-2222-4222-8222-222222222222',
             totalCents: 2000,
             deliveryType: 'shipping',
-            clientSecret: 'pi_1_secret',
+            paymentToken: 'rv_token_1',
           })
         : reply(snapshot(false, 2000)),
     );

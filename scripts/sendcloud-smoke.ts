@@ -1,16 +1,6 @@
 /**
- * Kargo duman testi — `pnpm sendcloud:smoke`
- *
- * GERÇEK anahtarla TEK teklif çağrısı yapar ve zinciri uçtan uca doğrular: anahtarlar okunuyor mu ·
- * kimlik geçiyor mu · gram/milimetre kabul ediliyor mu · cevap şemamızdan geçiyor mu.
- *
- * **HİÇBİR ŞEY YARATMAZ VE PARA HARCAMAZ:** teklif (`/shipping-options`) salt okumadır — gönderi
- * açılmaz, etiket satın alınmaz. Duyuru (`announce`) bu script'te BİLEREK yok; o gerçek para
- * harcar ve elle, ücretsiz `sendcloud:letter` seçeneğiyle denenir.
- *
- * Neden var: birim testleri sahte `fetch` ile koşuyor (`packages/sendcloud/src/testing.ts`) —
- * "kod doğru" ile "anahtar/sağlayıcı doğru" ayrı sorulardır ve bu script ikincisini cevaplar
- * (`ai-smoke.ts` · `stripe-smoke.ts` ile aynı sınıf).
+ * Kargo duman testi — `pnpm sendcloud:smoke`. Birim testleri sahte `fetch` ile koştuğu için gerçek anahtarla tek teklif çağrısı
+ * yapar; teklif salt okumadır, gönderi açılmaz ve para harcanmaz.
  */
 import { fetchShippingQuotes, isSendcloudError } from '@lezzet/sendcloud';
 

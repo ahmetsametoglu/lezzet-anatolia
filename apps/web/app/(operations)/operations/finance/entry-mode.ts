@@ -2,11 +2,8 @@ import { MANUAL_TYPE_VIEW, type ManualMovementForm, type ManualType } from '@/co
 import type { TransferForm } from '@/components/operation/form/transfer-form/schema';
 
 /*
-  "YENİ HAREKET" PENCERESİNİN KİPLERİ (12.24 · kullanıcı isteği: "transferi de doğrudan bu diyaloğun
-  içinde yapabiliriz" · seçim: "sabit yuvalar") — gider, sermaye, transfer ve sınıflandırılmamış para
-  tek pencerede, tek seçicide. İki gövde ayrı kalır (şema ve kaydeden kapı ayrı); kip değişince ORTAK
-  alanlar taşınır: yazılan tutar, gün ve açıklama kaybolmaz, elle hareketin hesabı transferin "Nereden"i
-  olur. Taşıma saf ve burada — pencere yalnız çağırır, kural sınanır (`entry-mode.test.ts`).
+  "Yeni hareket" penceresinin kipleri: gider, sermaye, transfer ve sınıflandırılmamış para tek seçicide, iki gövde ayrı şemayla.
+  Kip değişince ortak alanlar (tutar, gün, açıklama, hesap) taşınır ki yazılan kaybolmasın; taşıma saf ve burada sınanır.
 */
 
 export type EntryMode = ManualType | 'transfer';
@@ -16,8 +13,8 @@ export const ENTRY_MODES = ['expense', 'capital', 'transfer', 'misc'] as const s
 
 export const ENTRY_MODE_VIEW: Record<EntryMode, { label: string; hint: string }> = {
   ...MANUAL_TYPE_VIEW,
-  // İpucu TEK satır (12.24 turu ölçtü: iki satıra taşan ipucu bu kipin bütün yuvalarını 19px aşağı itiyordu).
-  transfer: { label: 'Transfer', hint: 'Hesaptan hesaba — kasadan bankaya ya da Stripe payout.' },
+  // İpucu tek satır: iki satıra taşan ipucu kipin bütün yuvalarını aşağı iter.
+  transfer: { label: 'Transfer', hint: 'Hesaptan hesaba — kasadan bankaya ya da kart ödemeleri aktarımı.' },
 };
 
 /**

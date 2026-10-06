@@ -31,8 +31,7 @@
     "@lezzet/observability": "workspace:*",
     "@lezzet/storage": "workspace:*",
     "@lezzet/types": "workspace:*",
-    "@stripe/react-stripe-js": "^6.8.0",
-    "@stripe/stripe-js": "^9.12.1",
+    "@revolut/checkout": "^1.1.25",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.48.1",
     "leaflet": "^1.9.4",
@@ -44,7 +43,6 @@
     "react-hook-form": "^7.75.0",
     "read-excel-file": "9.3.10",
     "server-only": "^0.0.1",
-    "stripe": "^22.3.2",
     "zod": "^3.24.1"
   },
   "devDependencies": {

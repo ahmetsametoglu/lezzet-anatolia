@@ -30,7 +30,7 @@ import {
 import { readJsonBody, UuidSchema } from '../../lib/request';
 import { fail, ok } from '../../lib/respond';
 import { recordNativeEvent } from '../../lib/analytics';
-import { paymentGateway, paymentSessionCreator } from '../../lib/stripe';
+import { paymentGateway, paymentSessionCreator } from '../../lib/revolut';
 import type { V1Env } from './auth';
 import { localeOf } from './cart-view';
 
@@ -174,7 +174,7 @@ checkout.post('/order/:orderId/resume', async (c) => {
   if (outcome.status === 'provider_unavailable') return fail(c, 'payment_unavailable', 503);
   const result: z.input<typeof CheckoutResumeResultSchema> =
     outcome.status === 'payment_required'
-      ? { status: outcome.status, orderId: outcome.orderId, clientSecret: outcome.clientSecret }
+      ? { status: outcome.status, orderId: outcome.orderId, paymentToken: outcome.paymentToken }
       : { status: outcome.status };
   return ok(c, CheckoutResumeResultSchema.parse(result));
 });

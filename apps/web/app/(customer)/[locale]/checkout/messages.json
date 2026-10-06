@@ -31,7 +31,7 @@
       "step": "3",
       "title": "Ödeme",
       "card": "Online öde",
-      "cardBody": "Kart bilgileriniz Stripe tarafından şifrelenir",
+      "cardBody": "Kart bilgileriniz Revolut tarafından şifrelenir",
       "cod": "Kapıda öde",
       "codBody": "Nakit ya da kart",
       "credit": "Hesaba yaz",
@@ -48,7 +48,8 @@
       "transferBody": "Fatura ile hesabımıza",
       "onlineRequired": "Bu tutarda online ödeme gerekir.",
       "codPickup": "Depoda öde",
-      "codPickupBody": "Teslim alırken nakit ya da kart"
+      "codPickupBody": "Teslim alırken nakit ya da kart",
+      "cardTrust": "Kart bilgileriniz bizde tutulmaz — güvenli Revolut penceresinde girilir."
     },
     "summary": {
       "coldChain": "Siparişiniz soğuk zincir bozulmadan, {date} günü kapınıza gelir.",
@@ -58,10 +59,14 @@
       "cartUnreachable": "Sepetiniz şu an okunamadı. Sayfayı yenileyip tekrar deneyin."
     },
     "pay": {
-      "validating": "Kart kontrol ediliyor…",
       "preparing": "Siparişiniz hazırlanıyor…",
       "confirming": "Ödeme onaylanıyor…",
-      "error": "Ödeme tamamlanamadı"
+      "error": "Ödeme tamamlanamadı",
+      "declined": "Kartınız reddedildi. Başka bir kart deneyin.",
+      "insufficientFunds": "Kartın bakiyesi yetersiz.",
+      "expiredCard": "Kartın süresi dolmuş.",
+      "incorrectCvv": "Güvenlik kodu (CVV) hatalı.",
+      "authentication": "Bankanızın doğrulaması tamamlanamadı."
     },
     "rejected": {
       "empty_cart": "Sepetiniz boş görünüyor.",
@@ -92,7 +97,7 @@
     "eyebrow": "sepetiniz · ödeme",
     "shippingEyebrow": "kargo siparişi · ayrı ödeme",
     "shippingNote": "Bu, sepetinizdeki kargoyla gidecek ürünler için ayrı bir sipariştir — kapıya teslim edilecek ürünleriniz sepette bekliyor. Kargo ücreti bu siparişin tutarından hesaplanır ve ödeme yalnız online yapılır.",
-    "secure": "Stripe · 3D Secure · şifreli bağlantı",
+    "secure": "Revolut · 3D Secure · şifreli bağlantı",
     "progress": {
       "cart": "Sepet",
       "address": "Adres",
@@ -148,7 +153,7 @@
       "step": "3",
       "title": "Paiement",
       "card": "Payer en ligne",
-      "cardBody": "Vos données de carte sont chiffrées par Stripe",
+      "cardBody": "Vos données de carte sont chiffrées par Revolut",
       "cod": "Payer à la livraison",
       "codBody": "Espèces ou carte",
       "credit": "Paiement différé",
@@ -165,7 +170,8 @@
       "transferBody": "Sur notre compte, avec facture",
       "onlineRequired": "À ce montant, le paiement en ligne est requis.",
       "codPickup": "Payer à l'entrepôt",
-      "codPickupBody": "Espèces ou carte au retrait"
+      "codPickupBody": "Espèces ou carte au retrait",
+      "cardTrust": "Vos données de carte ne sont jamais conservées chez nous — vous les saisissez dans la fenêtre sécurisée de Revolut."
     },
     "summary": {
       "coldChain": "Votre commande arrive chez vous le {date}, chaîne du froid respectée.",
@@ -175,10 +181,14 @@
       "cartUnreachable": "Votre panier n'a pas pu être chargé. Actualisez la page et réessayez."
     },
     "pay": {
-      "validating": "Vérification de la carte…",
       "preparing": "Préparation de votre commande…",
       "confirming": "Confirmation du paiement…",
-      "error": "Le paiement n'a pas abouti"
+      "error": "Le paiement n'a pas abouti",
+      "declined": "Votre carte a été refusée. Essayez une autre carte.",
+      "insufficientFunds": "Le solde de la carte est insuffisant.",
+      "expiredCard": "La carte a expiré.",
+      "incorrectCvv": "Le cryptogramme (CVV) est incorrect.",
+      "authentication": "L'authentification de votre banque n'a pas abouti."
     },
     "rejected": {
       "empty_cart": "Votre panier semble vide.",
@@ -209,7 +219,7 @@
     "eyebrow": "votre panier · commande",
     "shippingEyebrow": "commande expédiée · paiement séparé",
     "shippingNote": "Ceci est une commande séparée pour les articles de votre panier expédiés par transporteur — vos articles livrés à domicile restent dans le panier. Les frais de livraison se calculent sur cette commande et le paiement se fait uniquement en ligne.",
-    "secure": "Stripe · 3D Secure · connexion chiffrée",
+    "secure": "Revolut · 3D Secure · connexion chiffrée",
     "progress": {
       "cart": "Panier",
       "address": "Adresse",
@@ -265,7 +275,7 @@
       "step": "3",
       "title": "Zahlung",
       "card": "Online bezahlen",
-      "cardBody": "Ihre Kartendaten werden von Stripe verschlüsselt",
+      "cardBody": "Ihre Kartendaten werden von Revolut verschlüsselt",
       "cod": "Bei Lieferung zahlen",
       "codBody": "Bar oder Karte",
       "credit": "Auf Rechnung",
@@ -282,7 +292,8 @@
       "transferBody": "Auf unser Konto, mit Rechnung",
       "onlineRequired": "In dieser Höhe ist Online-Zahlung erforderlich.",
       "codPickup": "Im Lager bezahlen",
-      "codPickupBody": "Bar oder Karte bei der Abholung"
+      "codPickupBody": "Bar oder Karte bei der Abholung",
+      "cardTrust": "Ihre Kartendaten werden nie bei uns gespeichert — Sie geben sie im sicheren Revolut-Fenster ein."
     },
     "summary": {
       "coldChain": "Ihre Bestellung kommt am {date} ohne Unterbrechung der Kühlkette zu Ihnen.",
@@ -292,10 +303,14 @@
       "cartUnreachable": "Ihr Warenkorb konnte nicht geladen werden. Bitte Seite neu laden und erneut versuchen."
     },
     "pay": {
-      "validating": "Karte wird geprüft…",
       "preparing": "Bestellung wird angelegt…",
       "confirming": "Zahlung wird bestätigt…",
-      "error": "Zahlung nicht abgeschlossen"
+      "error": "Zahlung nicht abgeschlossen",
+      "declined": "Ihre Karte wurde abgelehnt. Versuchen Sie eine andere Karte.",
+      "insufficientFunds": "Die Karte ist nicht ausreichend gedeckt.",
+      "expiredCard": "Die Karte ist abgelaufen.",
+      "incorrectCvv": "Die Prüfnummer (CVV) ist falsch.",
+      "authentication": "Die Bestätigung Ihrer Bank konnte nicht abgeschlossen werden."
     },
     "rejected": {
       "empty_cart": "Ihr Warenkorb scheint leer zu sein.",
@@ -326,7 +341,7 @@
     "eyebrow": "Ihr Warenkorb · Kasse",
     "shippingEyebrow": "Versandbestellung · separate Zahlung",
     "shippingNote": "Dies ist eine separate Bestellung für die Artikel Ihres Warenkorbs, die verschickt werden – Ihre Artikel für die Lieferung an die Tür bleiben im Warenkorb. Die Versandkosten werden aus dieser Bestellung berechnet und die Zahlung erfolgt nur online.",
-    "secure": "Stripe · 3D Secure · verschlüsselt",
+    "secure": "Revolut · 3D Secure · verschlüsselt",
     "progress": {
       "cart": "Warenkorb",
       "address": "Adresse",

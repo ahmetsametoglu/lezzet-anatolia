@@ -142,7 +142,7 @@ function expireSettingsCache(): void {
 }
 
 describe('seed varsayılanları (02.7)', () => {
-  it('rezervasyon TTL 30 dk — Stripe oturum asgarisi, ödeme penceresiyle eşit', async () => {
+  it('rezervasyon TTL 30 dk, ödeme penceresiyle eşit', async () => {
     expect(await settings.getNumber('reservation_ttl_minutes', 0)).toBe(30);
   });
 

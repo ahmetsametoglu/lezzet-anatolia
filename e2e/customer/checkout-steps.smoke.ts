@@ -5,7 +5,7 @@ import { ANA_SEPETE_EKLE } from '../fixtures/selectors';
 import { addAddressManually } from '../fixtures/address-dialog';
 
 /**
- * Checkout'un mutlu yolu tek yolculukta: sepette kimlik ve adres, sonra gün, kapıda ödeme (Stripe'sız tek yol) ve
+ * Checkout'un mutlu yolu tek yolculukta: sepette kimlik ve adres, sonra gün, kapıda ödeme (sağlayıcısız tek yol) ve
  * gerçek sipariş. Sipariş `orderIds` ile ayrıca toplanır, çünkü rezervasyonun `order_id` bağı FK'sız ve cascade onu
  * silmez; dev server'da `OTP_TEST_CODE=123456` gerekir.
  */
@@ -120,7 +120,7 @@ test.describe('kademe 2 · checkout adımları: adres → gün → kapıda ödem
       await expect(daySection.getByText(/chez vous le/i)).toBeVisible();
     }
 
-    // ── ADIM 3 · Ödeme: kapıda ödeme (Stripe'sız tek yol — kart alanı bu seçimde hiç yüklenmez).
+    // ── ADIM 3 · Ödeme: kapıda ödeme (sağlayıcısız tek yol — kart alanı bu seçimde hiç yüklenmez).
     const cod = page.getByRole('button', { name: /payer à la livraison/i });
     await cod.click();
     await expect(cod).toHaveAttribute('aria-pressed', 'true');

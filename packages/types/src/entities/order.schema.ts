@@ -61,7 +61,7 @@ export const OrderSchema = z.object({
    */
   providerRefundedAt: z.string().datetime({ offset: true }).nullable(),
   /**
-   * Sağlayıcıdaki ödeme kimliği (Stripe PaymentIntent); `null` = ödeme açılmadı ya da açılamadı. Webhook gelmezse
+   * Sağlayıcıdaki ödeme kimliği (Revolut sipariş kimliği); `null` = ödeme açılmadı ya da açılamadı. Webhook gelmezse
    * ödeme sayfası ve zamanlayıcı "ödendi mi" sorusunu bununla sorar.
    */
   paymentRef: z.string().nullable(),

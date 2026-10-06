@@ -6,33 +6,8 @@ import type { ShippingRateProvider } from './port';
 import { sendcloudProvider, shippingProviderConfigured } from './provider';
 
 /**
- * **SİPARİŞ İPTAL EDİLİNCE GÖNDERİ DE KAPANIR** (21.265 · iptal ön çalışması 05.09).
- *
- * ── ÖLÇÜLEN AÇIK ────────────────────────────────────────────────────────────
- * `cancel_order` gönderi tarafına HİÇ dokunmuyordu ve `ShippingRateProvider.cancel` repoda tanımlı
- * olmasına rağmen **hiçbir yerden çağrılmıyordu** (grep: yalnız tanım, uygulama ve testkit).
- * Sonuç: iptalde müşteriye kargo bedeli iade ediliyor ama **etiket taşıyıcıda ayakta kalıyor**.
- * Koli bir şekilde alınırsa iptal edilmiş sipariş gerçekten yola çıkıyor; alınmasa bile gönderi
- * terminal olmayan bir durumda kalıyor ve öksüz nöbeti (`watch.ts`) onu sonsuza dek görüyor.
- *
- * ── ÜÇ YAZIM, VE SIRASI ÖNEMLİ ──────────────────────────────────────────────
- * 1. **Sağlayıcı** — etiketi iptal et. ÖNCE, çünkü tek geri alınamayan adım bu: yereli kapatıp
- *    sağlayıcıyı kapatamazsak elimizde "iptal ettim" diyen bir kayıt ve ayakta bir etiket kalır.
- * 2. **Yerel gönderi** — `status='cancelled'` + `cancelled_at`. Sağlayıcı düşse BİLE yazılır ve bu
- *    bilinçli: siparişin iptali kesin bir olgu, gönderinin bizim defterimizdeki hâli onu izlemeli.
- *    Sağlayıcı düştüyse cevap bunu SÖYLER (`provider_failed`) — sessiz geçmez.
- * 3. **Olay satırı** — kaynağı biz olduğumuz için `providerCode: 'ORDER_CANCELLED'`. Uzlaştırma
- *    turu bir gün "bu satırı kim yazdı" diye sorduğunda cevap kaydın içinde olsun (devir
- *    okutmasının `HANDOVER_SCAN` deseni).
- *
- * ── PORT DEĞİL, DOĞRUDAN SAĞLAYICI ──────────────────────────────────────────
- * `refunder` bir port çünkü `stripe` bu paketin ağacında YOK. Kargo öyle değil: `sendcloudProvider`
- * bu paketin içinde ve anahtarları ENV'den KENDİSİ okuyor (`provider.ts` künyesi). Yeni bir port
- * açmak, çağıranların hepsine doldurulacak bir kanca daha eklemek olurdu — ve o kanca bir gün bir
- * yüzeyde unutulur, gönderi orada sessizce açık kalırdı.
- *
- * Sağlayıcı yapılandırılmamışsa (yerel/geliştirme) yerel kapanış yine yazılır ve cevap
- * `provider_unavailable` der — "iptal edildi" ile karıştırılmaz (`ProviderRefundOutcome`in aynı ayrımı).
+ * Sipariş iptal edilince gönderi de kapanır: önce taşıyıcıdaki etiket iptal edilir, çünkü geri alınamayan adım odur; yerel kapanış
+ * sağlayıcı düşse de yazılır ve cevap düşüşü ayrı hâlle söyler. Sağlayıcı ENV'den kurulur, port yok ki bir yüzeyde unutulmasın.
  */
 
 export type ShipmentCancelOutcome =
@@ -46,12 +21,8 @@ export type ShipmentCancelOutcome =
   | { status: 'provider_failed'; shipmentId: string; error: string };
 
 /**
- * **AÇIK GÖNDERİ** — iki alan birden sorulur ve bu bir titizlik değil zorunluluk: `status` akış
- * boyunca sağlayıcının söylediğiyle güncelleniyor, `cancelled_at` ise bizim kararımızın damgası.
- * Yalnız birine bakan bir okuma, öbür yoldan kapatılmış gönderiyi açık sanar.
- *
- * Aynı ölçüt `announce.ts:95` ve `tracking.ts:60`ta da yazılıydı; üçüncü kopya doğmasın diye buraya
- * alındı ve o ikisi de buradan okuyor (CLAUDE §1).
+ * Açık gönderi: `status` sağlayıcının söylediğiyle güncellenir, `cancelled_at` bizim kararımızdır; yalnız birine bakan okuma öbür
+ * yoldan kapanmış gönderiyi açık sanar. Duyuru ve takip de bu ölçütü buradan okur.
  */
 export function isOpenShipment(shipment: Shipment): boolean {
   return shipment.cancelledAt === null && shipment.status !== 'cancelled';
@@ -75,8 +46,7 @@ export async function cancelOrderShipment(
     try {
       await port.cancel(acik.providerShipmentId);
     } catch (error) {
-      /* Sağlayıcı reddi YEREL KAPANIŞI DURDURMAZ (yukarıdaki künye) ama yutulmaz da: iz `error_log`a
-         düşer ki "etiket hâlâ ayakta" hâli teşhis edilebilsin. Kimlik yazılır, içerik yazılmaz. */
+      // Sağlayıcı reddi yerel kapanışı durdurmaz; iz bırakılır ki ayakta kalan etiket teşhis edilebilsin.
       await captureError(error, {
         source: 'application/shipping/cancel',
         context: { orderId: input.orderId, shipmentId: acik.id },

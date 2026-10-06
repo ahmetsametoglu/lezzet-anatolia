@@ -1,34 +1,9 @@
 /**
- * WhatsApp GÖNDERİM duman testi (15.11) — `pnpm whatsapp:smoke <phone_number_id> <alıcı> [şablon] [dil]`
- *
- * Kendi gönderim zincirimizi uçtan uca koşturur: `sendOutboundMessage` (pencere/kanal kararı) →
- * `metaCloudSender` (kavram çevirisi) → `sendCloudApiMessage` (HTTP). **Bizim kodumuzdan çıkar**,
- * elle `curl` atmaz — sınanan şey sağlayıcının değil ZİNCİRİN doğruluğudur.
- *
- * ── NEDEN `meta:smoke`TAN AYRI ──────────────────────────────────────────────
- * `meta:smoke` GELEN tarafı sınar (kendi ucumuza imzalı olay atar; Meta'ya hiç çıkmaz). Bu script
- * GİDEN tarafı sınar ve gerçekten Meta'ya çıkar. İki ayrı soru: "gelen olayı doğru okuyor muyuz"
- * ile "giden mesajı doğru kurup gönderebiliyor muyuz". Birincisi jetonsuz koşar, ikincisi koşamaz.
- *
- * ── PENCERE VE ŞABLON ──────────────────────────────────────────────────────
- * Yeni konuşmada 24 saatlik servis penceresi KAPALIDIR; kapalı pencereden yalnız Meta-onaylı KALIP
- * mesaj geçer (`send.ts` bunu gönderimden ÖNCE reddeder — sağlayıcıya boşuna gitmek hem tur hem
- * para demektir). Bu yüzden varsayılan `hello_world`: Meta'nın her test numarasında hazır bulunan
- * şablonu. **Dili `en_US`** — şablon ad + dil ÇİFTİYLE aranır ve yanlış dil `132001` ("şablon
- * bulunamadı") diye döner, yani sebep bizdeyken sağlayıcı arızası gibi okunur.
- *
- * ── GERÇEK MESAJ GİDER ─────────────────────────────────────────────────────
- * Her koşu alıcının telefonunda gerçek bir WhatsApp mesajı doğurur ve (üretim numarasında) ücret
- * yazar. Otomatik test paketine BAĞLANMAZ; kurulumdan ve jeton değişiminden sonra ELLE koşulur —
- * `ai:smoke`/`stripe:smoke` ile aynı sınıf.
- *
- * ── BIRAKTIĞI İZ ───────────────────────────────────────────────────────────
- * Konuşma `SMOKE-SEND` profil adıyla açılır: gelen kutusunda gerçek müşteriyle karışmaz ve
- * `--clean` ile nokta atışı silinir. Varsayılan SİLMEZ — amacı ekranda görmek.
+ * WhatsApp gönderim duman testi — `pnpm whatsapp:smoke <phone_number_id> <alıcı> [şablon] [dil]`. Kendi gönderim zincirimizden
+ * gerçekten Meta'ya çıkar ve gerçek mesaj doğurur, bu yüzden elle koşulur; konuşma `SMOKE-SEND` adıyla açılır ve `--clean` siler.
  */
 const load = (process as { loadEnvFile?: (path: string) => void }).loadEnvFile;
-// SIRA ÖNEMLİ (öteki duman betikleriyle aynı gerekçe): Node var olan değişkeni ezmez, ilk yükleyen
-// kazanır. Anahtarlar `apps/web/.env.local`'de; kök `.env` yalnız eksikleri tamamlar.
+// Node var olan değişkeni ezmez, ilk yükleyen kazanır; anahtarlar `apps/web/.env.local`'de, kök `.env` eksikleri tamamlar.
 try {
   load?.('apps/web/.env.local');
 } catch {

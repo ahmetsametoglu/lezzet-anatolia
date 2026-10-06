@@ -190,7 +190,7 @@ export const NOTES = {
 
 /** Hesabı olmayan bir kurulumda ekranın ilk cümlesi — boş liste değil, kurulum daveti. */
 export const NO_ACCOUNTS =
-  'Henüz hesap tanımlı değil. Para bir hesapta durur: kasa, banka ve Stripe aynı kavramın örnekleridir — ilkini ekleyerek başlayın.';
+  'Henüz hesap tanımlı değil. Para bir hesapta durur: kasa, banka ve ödeme sağlayıcısı aynı kavramın örnekleridir — ilkini ekleyerek başlayın.';
 
 /**
  * Motorun ve tür kapısının reddi (`validateMovement` · `natureProblemOf`) → operatörün cümlesi; ham anahtar kimseye bir

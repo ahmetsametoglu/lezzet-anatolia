@@ -21,7 +21,7 @@ import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import { getPathname } from '@/i18n/navigation';
-import { PayProgress } from './components/payment-element';
+import { PayProgress } from './components/revolut-card';
 import { PhoneCheckoutSkeleton } from './components/phone-checkout-skeleton';
 import { PhoneShippingChoice } from './components/phone-shipping-choice';
 import { ShippingOrderNote } from './components/shipping-order-note';
@@ -133,7 +133,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
   const methods = payment?.methods ?? [];
   const codReason = payment?.codBlockedReason ?? null;
   const paymentOptions: PaymentOption[] = [
-    // `online` Stripe yolu (peşin, sayfanın içinde); `cash` KAPIDA ödemedir — aracı (nakit ya da kart) kurye kapanışta yazar.
+    // `online` sayfa içi kart ödemesidir (peşin); `cash` kapıda ödemedir, aracı (nakit ya da kart) kurye kapanışta yazar.
     { key: 'online', method: 'online', onAccount: false, label: copy.payment.online, body: copy.payment.onlineBody, available: methods.includes('online') },
     {
       key: 'cod',
@@ -411,11 +411,11 @@ export function CheckoutMobile(props: CheckoutViewProps) {
           shape="block"
           label={props.payStage ? t.pay[props.payStage] : busy ? copy.submitting : copy.confirm.replace('{total}', totalLabel)}
           onClick={props.onConfirm}
-          disabled={busy || blockText !== null || !props.payReady}
+          disabled={busy || blockText !== null}
         />
         {props.payStage && <PayProgress stage={props.payStage} />}
 
-        {/* Güvence satırı yalnız kartla ödemede: kapıda ve vadeli ödemede Stripe devreye girmez, satır yanlış bilgi olurdu. */}
+        {/* Güvence satırı yalnız kartla ödemede: kapıda ve vadeli ödemede sağlayıcı devreye girmez, satır yanlış bilgi olurdu. */}
         {state.paymentMethod === 'online' && (
           <span className="flex items-center justify-center gap-1.5 font-sans text-micro font-semibold text-muted">
             <Icon name="lock" size={13} />

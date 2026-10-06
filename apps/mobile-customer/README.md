@@ -4,7 +4,7 @@ Expo SDK 57 (React Native 0.86, expo-router, Unistyles 3). Mimari ve şerit sın
 `docs/uygulama/02-mimari-ve-sinirlar.md` · görev takibi: `docs/build/21-mobil-uygulama.md`.
 
 > **Expo Go KULLANILMAZ; geliştirme daima development build (expo-dev-client) ile yapılır** —
-> push ve Stripe Apple/Google Pay Expo Go'da çalışmadığından Go yeşili yalancı yeşildir (01-teknoloji-secimi §10).
+> push ve Revolut kart formu yerel modül istediği için Expo Go'da çalışmaz; Go yeşili yalancı yeşildir (01-teknoloji-secimi §10).
 
 ## Komutlar
 

@@ -1,69 +1,23 @@
-import { PAYMENT_INTENT_STATUSES, type PaymentIntentStatus } from '@lezzet/domain-core';
+import type { ProviderPaymentStatus } from '@lezzet/domain-core';
 
-/**
- * Sağlayıcıya soran port: ödemenin durumu, iptali ve iadesi. Paket `stripe`e bağlanamaz (bağımlılık ağacını React Native de okur),
- * bu yüzden kullandığımız yüz `StripeLike` ile tarif edilir ve uyarlama web ile arka ucun ortak tek yeridir.
- */
+/** Sağlayıcıya soran port: ödemenin durumu, iptali ve iadesi; uyarlama `revolut.ts`te, testte sahte. */
 
 /** Sağlayıcıdaki ödemenin bize yeten yüzü. */
 export interface PaymentSnapshot {
   id: string;
-  status: PaymentIntentStatus;
+  status: ProviderPaymentStatus;
   /** Gerçekten alınan tutar (cent) — sipariş toplamı değil; ikisi ayrılırsa doğru olan paradır. */
   amountReceivedCents: number;
   /** Sağlayıcının künyesindeki sipariş — ödemenin BU siparişe ait olduğunu doğrulamak için. */
   orderId: string | null;
   /** Yarım kalan ödemeye dönmenin anahtarı: aynı ödeme yeniden açılır, ikinci ödeme doğmaz. */
-  clientSecret: string | null;
+  paymentToken: string | null;
 }
 
 export interface PaymentGateway {
   /** `null` = tanımadığımız bir durum: karar verilemez, bir sonraki soruya bırakılır. */
-  read(intentId: string): Promise<PaymentSnapshot | null>;
-  cancel(intentId: string): Promise<void>;
-  refund(intentId: string): Promise<void>;
-}
-
-/** Stripe istemcisinin kullandığımız yüzü — yapısal: `stripe` paketinin tipine bağlanmaz. */
-export interface StripeLike {
-  paymentIntents: {
-    retrieve(id: string): Promise<{
-      id: string;
-      status: string;
-      amount_received: number;
-      metadata?: Record<string, string> | null;
-      client_secret?: string | null;
-    }>;
-    cancel(id: string): Promise<unknown>;
-  };
-  refunds: {
-    create(params: { payment_intent: string }): Promise<unknown>;
-  };
-}
-
-/** Stripe istemcisini porta uyarlar; anahtarsız ortamda istemci yoktur, port da yoktur. */
-export function stripeGateway(client: StripeLike | null): PaymentGateway | null {
-  if (!client) return null;
-  return {
-    async read(intentId) {
-      const intent = await client.paymentIntents.retrieve(intentId);
-      const status = PAYMENT_INTENT_STATUSES.find((known) => known === intent.status);
-      // Sağlayıcı yeni bir durum eklediyse karar VERİLMEZ: yanlış tahmin, ödenmiş bir siparişi iptal
-      // edebilirdi. Bir sonraki soru (sayfa ya da zamanlayıcı) yine sorar.
-      if (!status) return null;
-      return {
-        id: intent.id,
-        status,
-        amountReceivedCents: intent.amount_received,
-        orderId: intent.metadata?.['order_id'] ?? null,
-        clientSecret: intent.client_secret ?? null,
-      };
-    },
-    async cancel(intentId) {
-      await client.paymentIntents.cancel(intentId);
-    },
-    async refund(intentId) {
-      await client.refunds.create({ payment_intent: intentId });
-    },
-  };
+  read(paymentRef: string): Promise<PaymentSnapshot | null>;
+  cancel(paymentRef: string): Promise<void>;
+  /** Ödemenin iade edilmemiş kalanının tamamını iade eder. */
+  refund(paymentRef: string): Promise<void>;
 }

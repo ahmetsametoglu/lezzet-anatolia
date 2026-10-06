@@ -70,8 +70,8 @@ page.tsx                    → sunucu: veri çeker, yetki (blueprint aynen)
 
 **Blueprint ne diyor:** `STACK §7` — "Webhook'lar (ödeme) `apps/backend`'e."
 
-**Ne yaptık (28.07, 07.5):** Stripe webhook'u `apps/web/app/api/webhooks/stripe/route.ts`'te; imza
-doğrulaması orada, karar ve yazım `apps/web/lib/order/stripe-webhook.ts`'te.
+**Ne yaptık:** Ödeme webhook'u `apps/web/app/api/webhooks/revolut/route.ts`'te; imza doğrulaması orada,
+sağlayıcı olayının çevirisi `lib/order/revolut-event.ts`'te, karar ve yazım `lib/order/payment-webhook.ts`'te.
 
 **Neden:** Ödeme onayının yaptığı iş üç kapıyı birden çağırır — tahsilat hareketi (`lib/money`),
 durum geçişi (`lib/order/transition`), bildirim (`lib/order/notify`). Bu kapılar uygulama
@@ -103,49 +103,16 @@ ended abruptly ... originService=http://localhost:3000`. Next dev sunucusu rotay
 derliyor, sağlayıcı o kadar beklemiyor. **Yan kazanç tek tünel:** kargo webhook'u zaten backend'e
 bakıyordu; ikinci tünel gereksizleşti (o gün üç kez tünel arızası yaşandı ve her biri sessizdi).
 
-**Stripe DURUYOR ve bilinçli:** para akışının kapıları hâlâ `apps/web/lib`'de. Onu taşımak
+**Ödeme webhook'u DURUYOR ve bilinçli:** para akışının kapıları hâlâ `apps/web/lib`'de. Onu taşımak
 `lib/money` + `lib/order/transition` + `lib/order/notify` üçlüsünü de pakete çıkarmak demek — ayrı
 bir iş ve para akışında acele edilecek bir yer değil. Yani sapma daralmıştır, kapanmamıştır.
 
-**Arka uç Stripe'a SORAR (14.09 · kullanıcı kararı — 07.18).** Ödeme olayı gelmediğinde taslağı
+**Arka uç sağlayıcıya SORAR.** Ödeme olayı gelmediğinde taslağı
 netleştirecek bir zamanlayıcı gerekti ve zamanlayıcının evi arka uç (cron). Onay yolu bu iş sırasında
 pakete çıktı (`@lezzet/application/order/confirm-payment`): webhook, ödeme sayfası ve zamanlayıcı aynı
 kapıyı çağırıyor, para hareketi ödeme kimliğiyle bir kez yazılıyor. Arka uç anahtarı yalnız SORMAK için
-tutar — ödemenin durumu, iptali, iadesi (`PaymentGateway`, uyarlaması tek: `stripeGateway`). Ödeme açmak
+tutar — ödemenin durumu, iptali, iadesi (`PaymentGateway`, uyarlaması tek: `revolutGateway`). Ödeme açmak
 ve webhook web'de kalıyor; sapma bir kez daha daraldı, kapanmadı.
-
----
-
-## Sapma 6 — Stripe kart alanı SAYFA İÇİNDE, ham renk orada meşru
-
-**Karar (28.07, kullanıcı onaylı).** Ödeme önce Stripe'ın barındırdığı Checkout sayfasıyla
-kurulmuştu: müşteri siteden çıkıp `checkout.stripe.com`'da ödüyor, `success_url` ile dönüyordu.
-Artık kart alanı **kendi checkout sayfamızda**, Stripe'ın `PaymentElement` iframe'i içinde.
-
-**Neden.** Zor olan yön içeri almaktır; dışarı yönlendirmeye dönmek her zaman birkaç satır. Güvenlik
-tarafında bir ödün YOK: alanlar Stripe'ın kendi iframe'inde yaşar, kart numarası ne sunucumuza ne de
-istemci kodumuza uğrar — PCI kapsamı barındırılan Checkout ile aynı (SAQ A).
-
-**Ne değişti, ne değişmedi.** `CheckoutSessionCreator` bir PORT olduğu için değişim dar kaldı:
-`checkout.sessions.create` → `paymentIntents.create`, port `url` yerine `clientSecret` taşıyor.
-"Önce stok ayrılır, sonra ödeme açılır" sırası ve testleri aynen duruyor. Webhook normalize bir
-`VerifiedEvent` arkasında olduğu için yalnız olay adları büyüdü (`payment_intent.*`); eski
-`checkout.session.*` olayları da kabul edilmeye devam ediyor, çünkü geçişten önce açılmış bir oturum
-sağlayıcıda hâlâ duruyor olabilir.
-
-**Pencere eşitliği kuralı düştü — yerine daha iyisi geldi.** `PaymentIntent`'in son kullanma tarihi
-yok. Ama istemci **ertelenmiş Elements** kullanıyor: form açılışta monte olur, niyet ancak "öde"ye
-basınca doğar. Ayırma ile ödeme arasındaki mesafe dakikalar değil saniyeler. Gecikirse 07.5'in geç
-ödeme dalı zaten devrede.
-
-**Ham renk yasağına istisna (CLAUDE.md §3).** Stripe iframe'i bizim CSS değişkenlerimizi okuyamaz;
-`var(--color-olive)` orada çözülmez. Bu yüzden `Appearance` nesnesinde token DEĞERLERİ ham yazılır.
-Kural şu: yalnız `checkout/components/payment-element.tsx` içinde, ve her değerin yanında token adı
-yorumda. Palet değişirse burası da değişir — tek dosya, aranabilir.
-
-**Ne zaman geri dönülür:** Stripe'ın barındırdığı sayfanın verdiği bir şeye (yeni bir ödeme yöntemi,
-yerelleştirme, dolandırıcılık ekranı) ihtiyaç duyulur ve `PaymentElement` onu vermezse — port
-sayesinde dönüş tek dosyalık iş.
 
 ---
 

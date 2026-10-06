@@ -1,5 +1,5 @@
 import { OrderService, ReservationService, type Db } from '@lezzet/database';
-import { decideDraftPayment } from '@lezzet/domain-core';
+import { decideDraftPayment, isClosedPayment } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { Order } from '@lezzet/types';
 import { restoreOrderedLines } from '../cart/settle';
@@ -66,7 +66,7 @@ export async function reconcileOrder(
 
   if (decision === 'wait') return { status: 'waiting', payment };
   if (decision === 'confirm') {
-    await confirmOnlinePayment(db, { orderId: order.id, paymentIntentId: payment.id, amountCents: payment.amountReceivedCents }, deps);
+    await confirmOnlinePayment(db, { orderId: order.id, paymentRef: payment.id, amountCents: payment.amountReceivedCents }, deps);
     return { status: 'confirmed', payment };
   }
 
@@ -74,16 +74,16 @@ export async function reconcileOrder(
     Ödeme gelmeyecek: önce sağlayıcıdaki ödeme, sonra taslak kapanır; tersi sırada o an biten ödeme iptal edilmiş siparişe gelirdi.
     İptal reddedilirse sebep çoğunlukla o yarıştır ve ödeme yeniden sorulur; başka sebepte hata fırlar, açık ödemeli taslak iptal edilmez.
   */
-  if (payment.status !== 'canceled') {
+  if (!isClosedPayment(payment.status)) {
     try {
       await deps.gateway.cancel(payment.id);
     } catch (error) {
       const again = await deps.gateway.read(payment.id);
       if (again && decideDraftPayment({ status: again.status, windowOpen: false }) === 'confirm') {
-        await confirmOnlinePayment(db, { orderId: order.id, paymentIntentId: again.id, amountCents: again.amountReceivedCents }, deps);
+        await confirmOnlinePayment(db, { orderId: order.id, paymentRef: again.id, amountCents: again.amountReceivedCents }, deps);
         return { status: 'confirmed', payment: again };
       }
-      if (!again || again.status !== 'canceled') throw error;
+      if (!again || !isClosedPayment(again.status)) throw error;
     }
   }
 

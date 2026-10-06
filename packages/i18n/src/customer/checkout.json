@@ -95,7 +95,7 @@
     "payment": {
       "eyebrow": "Ödeme",
       "online": "Online ödeme",
-      "onlineBody": "Kart bilgileriniz Stripe tarafından şifrelenir.",
+      "onlineBody": "Kart bilgileriniz Revolut tarafından şifrelenir.",
       "onDelivery": "Kapıda ödeme",
       "onDeliveryBody": "Nakit ya da kart.",
       "transfer": "Havale ile öde",
@@ -174,7 +174,7 @@
         "stale": "Bu sipariş zaten işleme alınmış.",
         "not_found": "Ödeme oturumu açılamadı. Kapıda ödemeyi seçebilir ya da biraz sonra tekrar deneyebilirsiniz.",
         "provider_unavailable": "Ödeme sağlayıcısına ulaşılamıyor. Kapıda ödemeyi seçebilirsiniz.",
-        "no_client_secret": "Ödeme oturumu açılamadı. Kapıda ödemeyi seçebilir ya da biraz sonra tekrar deneyebilirsiniz."
+        "no_payment_token": "Ödeme oturumu açılamadı. Kapıda ödemeyi seçebilir ya da biraz sonra tekrar deneyebilirsiniz."
       },
       "order_not_placed": "Sipariş kesinleştirilemedi. Lütfen tekrar deneyin.",
       "shipping_option_unavailable": "Seçtiğiniz kargo servisi bu sepet için artık sunulmuyor. Lütfen kargo seçimini yeniden yapın.",
@@ -326,7 +326,7 @@
     "payment": {
       "eyebrow": "Paiement",
       "online": "Paiement en ligne",
-      "onlineBody": "Vos données de carte sont chiffrées par Stripe.",
+      "onlineBody": "Vos données de carte sont chiffrées par Revolut.",
       "onDelivery": "Paiement à la livraison",
       "onDeliveryBody": "Espèces ou carte.",
       "transfer": "Payer par virement",
@@ -405,7 +405,7 @@
         "stale": "Cette commande est déjà en cours de traitement.",
         "not_found": "Le paiement en ligne n'a pas pu démarrer. Choisissez le paiement à la livraison ou réessayez dans un instant.",
         "provider_unavailable": "Le paiement en ligne est momentanément indisponible. Vous pouvez choisir le paiement à la livraison.",
-        "no_client_secret": "Le paiement en ligne n'a pas pu démarrer. Choisissez le paiement à la livraison ou réessayez dans un instant."
+        "no_payment_token": "Le paiement en ligne n'a pas pu démarrer. Choisissez le paiement à la livraison ou réessayez dans un instant."
       },
       "order_not_placed": "La commande n'a pas pu être confirmée. Veuillez réessayer.",
       "shipping_option_unavailable": "Le mode de livraison choisi n'est plus proposé pour ce panier. Merci de choisir à nouveau.",
@@ -557,7 +557,7 @@
     "payment": {
       "eyebrow": "Zahlung",
       "online": "Online bezahlen",
-      "onlineBody": "Ihre Kartendaten werden von Stripe verschlüsselt.",
+      "onlineBody": "Ihre Kartendaten werden von Revolut verschlüsselt.",
       "onDelivery": "Zahlung bei Lieferung",
       "onDeliveryBody": "Bar oder Karte.",
       "transfer": "Per Überweisung",
@@ -636,7 +636,7 @@
         "stale": "Diese Bestellung wird bereits bearbeitet.",
         "not_found": "Die Zahlungssitzung konnte nicht geöffnet werden. Wählen Sie Zahlung bei Lieferung oder versuchen Sie es gleich noch einmal.",
         "provider_unavailable": "Der Zahlungsanbieter ist nicht erreichbar. Sie können bei Lieferung zahlen.",
-        "no_client_secret": "Die Zahlungssitzung konnte nicht geöffnet werden. Wählen Sie Zahlung bei Lieferung oder versuchen Sie es gleich noch einmal."
+        "no_payment_token": "Die Zahlungssitzung konnte nicht geöffnet werden. Wählen Sie Zahlung bei Lieferung oder versuchen Sie es gleich noch einmal."
       },
       "order_not_placed": "Die Bestellung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
       "shipping_option_unavailable": "Die gewählte Versandart ist für diesen Warenkorb nicht mehr verfügbar. Bitte wählen Sie erneut.",

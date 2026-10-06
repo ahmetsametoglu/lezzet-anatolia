@@ -1,5 +1,5 @@
 /*
-  Kartın düştüğü anın cümlesi checkout'tan siparişin sayfasına taşınır; cümle Stripe'ın müşteri dilindeki cevabıdır ve sunucu onu
+  Kartın düştüğü anın cümlesi checkout'tan siparişin sayfasına taşınır; cümle sağlayıcının ret türünden kurulur ve sunucu onu
   bilmez. Tarayıcı deposu kapalıysa not düşer: sayfa "ödemesi gerçekleşmedi" cümlesini zaten söylüyor.
 */
 

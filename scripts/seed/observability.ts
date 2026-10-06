@@ -3,17 +3,8 @@ import { healthStatusOf } from '@lezzet/domain-core';
 import type { SystemHealthMetrics } from '@lezzet/types';
 import { tabloDolu, type Db } from './shared';
 
-// ── Gözlemleme: sağlık görüntüsü + hata kaydı (18.5) ─────────────────────────────────────────────
-//
-// **Neden seed gerekiyor:** bu iki tabloyu `apps/backend` cron'u dolduruyor ve yerelde backend
-// çoğu zaman koşmuyor. Seed'siz `/operations/system` yalnız "kayıt yeni başladı" boş hâlini
-// gösteriyordu — yani tasarımın yedi hâlinden altısı hiç denenemiyordu. Bir ekran, en çok
-// görüleceği hâlde değil, EN KÖTÜ hâlinde denenmelidir; alarmın yerini tutan bir ekran için bu
-// bir tercih değil (`OBSERVABILITY §4.1`).
-//
-// **Hüküm UYDURULMAZ.** Satırın `status`'ü elle yazılmaz, ölçülen metriklerden `healthStatusOf` ile
-// hesaplanır — üretimde de öyle oluyor. Elle yazılsaydı seed, eşikleri sınamak yerine eşiklerin
-// yanlış olduğunu gizleyen bir dekor olurdu.
+// Sağlık görüntüsü ve hata kaydı: iki tabloyu backend cron'u doldurur ve yerelde backend çoğu zaman koşmaz; ekran en kötü hâlinde
+// denenebilsin diye seed'lenir. Hüküm elle yazılmaz, `healthStatusOf` hesaplar; yoksa seed yanlış eşiği gizleyen bir dekor olurdu.
 
 /** Son görüntünün anlatısı: disk eşiği aşmış, sertifika penceresi açılmış, bir süreç düşüp kalkmış. */
 const SIMDIKI_DISK_PCT = 84;
@@ -27,35 +18,18 @@ const MEM_TOPLAM_MB = 7936;
 /** `n` dakika öncesinin ISO damgası — bu tabloların çözünürlüğü gün değil dakika. */
 const dakikaOnce = (n: number): string => new Date(Date.now() - n * DK).toISOString();
 
-/**
- * Kapatılan hatanın AKTÖRÜ — `error_log.resolved_by`, `user_profiles`a FK'li.
- *
- * Eskiden burada `DEV_ADMIN_PROFILE_ID` sabiti vardı; o kimlik web'in dev auth bypass'ının profil
- * satırıydı ve bypass 19.08'de söküldü (`apps/web/lib/guard.ts` künyesi). Aktör artık gerçek
- * yöneticinin kendisi — sabit değil, seed'in az önce açtığı satırdan OKUNUYOR.
- *
- * Bulunamazsa `null` dönülür ve satır aktörsüz yazılır: kolon zaten nullable, ve **ölçülemeyen
- * değer uydurulmaz** (CLAUDE §1). Yanlış bir kimlik yazmak, FK'yi ihlal etmese bile seed'i
- * "kim kapattı" sorusuna yalan söyler hâle getirirdi.
- */
+/** Kapatılan hatanın aktörü seed'in açtığı yöneticidir; bulunamazsa `null`, çünkü yanlış kimlik "kim kapattı" sorusuna yalan söyler. */
 async function yoneticiId(db: Db): Promise<string | null> {
   const { data } = await db.from('user_profiles').select('id').contains('roles', ['admin']).limit(1).maybeSingle();
   return data?.id ?? null;
 }
 
-/**
- * Bir anın metrikleri. `yasDk` = kaç dakika önce ölçüldü; geçmişe gidildikçe disk boşalır, yük ve
- * bellek dalgalanır. Dalga sinüsle üretiliyor: düz bir çizgi grafiği "veri yok" gibi gösteriyor.
- */
+/** Bir anın metrikleri; dalga sinüsle üretilir, çünkü düz çizgi grafiği "veri yok" gibi gösterir. */
 function goruntu(yasDk: number): SystemHealthMetrics {
   const t = yasDk / (7 * 24 * 60); // 0 = şimdi, 1 = yedi gün önce
   const dalga = (genlik: number, faz: number) => Math.sin(yasDk / 47 + faz) * genlik;
 
-  // Disk YEDİ GÜNDE dolmuş: %60 → %84. Anlık değer değil, YÖN haberdir (tasarım O22).
-  //
-  // İKİ GÜN ÖNCE bir OLAY var: disk kritik eşiği (%90) aşmış, sonra temizlik yapılmış. Pencere dar
-  // ve bilinçli geçmişte: hüküm `crit` yalnız orada doğar. Bugüne konsaydı ekran sürekli kırmızı
-  // kalır, kırmızının anlamı da kaybolurdu — alarm her zaman çalıyorsa alarm değildir.
+  // Disk yedi günde dolar; kritik pencere bilinçli olarak geçmişte, çünkü sürekli kırmızı ekran alarmın anlamını yok eder.
   const kritikPencere = yasDk > 2760 && yasDk < 3000; // ~46–50 saat önce
   const diskPct = kritikPencere
     ? 92.4
@@ -63,8 +37,7 @@ function goruntu(yasDk: number): SystemHealthMetrics {
   const memAvailable = Math.round(1290 + 2600 * t + dalga(140, 3));
   const load1 = Math.round((2.1 - 1.5 * t + dalga(0.5, 5)) * 100) / 100;
 
-  // **Bir pencere bilinçli ÖLÇÜLEMEDİ** (6–9 saat önce): `df` düşmüş. Trendin boşluk çizmesi ve
-  // "sıfır değil, bilinmiyor" kuralı ancak böyle bir aralık varsa ekranda denenebilir.
+  // Bir pencere bilinçli ölçülemedi; "sıfır değil, bilinmiyor" çizimi ancak böyle bir aralıkla denenir.
   const diskOlculemedi = yasDk > 360 && yasDk < 540;
 
   return {
@@ -80,8 +53,7 @@ function goruntu(yasDk: number): SystemHealthMetrics {
       diskTotalGb: diskOlculemedi ? null : 78,
       diskUsedGb: diskOlculemedi ? null : Math.round(78 * (diskPct / 100) * 10) / 10,
       diskUsedPct: diskOlculemedi ? null : diskPct,
-      // Sunucu 14 gündür ayakta: "beklenmeyen yeniden başlatma" notu ÇIKMAMALI. O notun da bir
-      // hâli var ama onu görmek için `uptimeSec`'i düşürmek gerekir — burada sakin hâl kuruluyor.
+      // Sakin hâl: "beklenmeyen yeniden başlatma" notu çıkmamalı.
       uptimeSec: 14 * 86_400 - yasDk * 60,
     },
     processes: {
@@ -92,12 +64,7 @@ function goruntu(yasDk: number): SystemHealthMetrics {
         { name: 'backend-cron', status: 'online', restarts: 0, memoryMb: 112, cpuPct: 0.4 },
       ],
     },
-    // Caddy `true`: seed sunucuyu taklit ediyor, geliştirme makinesini değil. `null` (ölçülemedi)
-    // hâli zaten yerelde gerçek toplayıcıdan geliyor — ikisini birden uydurmak gerekmez.
-    //
-    // SERTİFİKA GÜNÜ ZAMANLA AZALIR ve bu, serinin üç hükmü de taşıması için şart: gün sabit 12
-    // bırakıldığında `cert-warn` sinyali YEDİ GÜN BOYUNCA yanıyor ve 481 satırın hepsi `warn`
-    // çıkıyordu — sağlık ekranı hiç yeşil, hiç kırmızı görülemiyordu. Gerçekte de gün geçtikçe azalır.
+    // Seed sunucuyu taklit eder; `null` hâli yerelde gerçek toplayıcıdan gelir. Sertifika günü azalır ki seri üç hükmü de taşısın.
     services: { webUp: true, caddyActive: true, certDaysLeft: Math.round(12 + yasDk / (24 * 60) * 9) },
     app: {
       errorLogsLastHour: yasDk < 60 ? 6 : 0,
@@ -106,13 +73,7 @@ function goruntu(yasDk: number): SystemHealthMetrics {
   };
 }
 
-/**
- * Görüntü zamanları — YAKINDA SIK, geçmişte seyrek.
- *
- * Üretimde iki dakikada bir satır var (7 gün ≈ 5.000). Seed onu birebir kopyalamıyor: ekranın dört
- * penceresinin de çizecek noktası olsun yeter, beş bin satır yazmanın seed'e kattığı tek şey süre
- * olurdu. Çözünürlük pencereye göre iner — "10 dk" penceresi gerçek sıklığı görür.
- */
+/** Görüntü zamanları yakında sık, geçmişte seyrek: ekranın dört penceresine nokta yeter, beş bin satır yalnız süre katardı. */
 function zamanlar(): number[] {
   const out: number[] = [];
   for (let dk = 0; dk < 120; dk += 2) out.push(dk); // son 2 saat · gerçek sıklık
@@ -137,8 +98,7 @@ export async function seedSystemHealth(db: Db): Promise<void> {
     if (error) throw error;
   }
 
-  // Hüküm dağılımı SAYILIR, varsayılmaz: "üç hâl de var" ancak sayılınca bilinir. Bir eşik değişip
-  // seri tek renge düşerse burada görünür — sessizce tek renk kalmaz.
+  // Hüküm dağılımı sayılır ki bir eşik değişip seri tek renge düşerse görünsün.
   const dagilim = anlar.reduce<Record<string, number>>((m, dk) => {
     const h = healthStatusOf(goruntu(dk));
     return { ...m, [h]: (m[h] ?? 0) + 1 };
@@ -149,11 +109,7 @@ export async function seedSystemHealth(db: Db): Promise<void> {
   );
 }
 
-// ── Hata kaydı ───────────────────────────────────────────────────────────────────────────────────
-// Satır = hata TÜRÜ, olay değil: 212 kez görülen bir hata tek satırdır ve sayacı 212'dir. Seed bu
-// yüzden `capture` RPC'sini değil doğrudan insert'i kullanıyor — RPC her çağrıda sayacı bir artırır,
-// yani 212'yi kurmak için 212 çağrı gerekirdi. Parmak izi yine SERVİSİN fonksiyonuyla hesaplanıyor:
-// uydurulmuş bir anahtar, gruplamanın gerçekten çalışıp çalışmadığını gizlerdi.
+// Satır hata türüdür, sayacı tekrar sayısıdır. Parmak izi servisin fonksiyonuyla hesaplanır; uydurma anahtar gruplamayı sınamazdı.
 
 interface HataTohumu {
   level: 'warning' | 'error' | 'fatal';
@@ -198,12 +154,12 @@ const HATALAR: HataTohumu[] = [
   },
   {
     level: 'error',
-    source: 'backend-webhook',
-    message: 'Stripe webhook imza doğrulaması başarısız — olay işlenmedi',
-    path: '/webhooks/stripe',
+    source: 'webhook',
+    message: 'aktarım hesabı ayarı yok — aktarım ana hesaba yazılamadı (Ayarlar → Ödeme)',
+    path: '/api/webhooks/revolut',
     stack:
-      'WebhookSignatureVerificationError: No signatures found matching the expected signature for payload\n    at verifyHeader (/srv/lezzet/node_modules/stripe/lib/Webhooks.js:128:15)\n    at /srv/lezzet/apps/backend/src/http/webhooks/stripe.ts:31:26',
-    context: { eventType: 'payment_intent.succeeded', signature: 'mismatch' },
+      'Error: aktarım hesabı ayarı yok — aktarım ana hesaba yazılamadı (Ayarlar → Ödeme)\n    at recordPayout (/srv/lezzet/apps/web/lib/order/payment-webhook.ts:165:30)\n    at handlePaymentEvent (/srv/lezzet/apps/web/lib/order/payment-webhook.ts:52:27)',
+    context: { provider: 'revolut', kind: 'payout_completed' },
     count: 7,
     ilkGunOnce: 2,
     sonDkOnce: 95,
@@ -221,8 +177,7 @@ const HATALAR: HataTohumu[] = [
     sonDkOnce: 320,
   },
   {
-    // REGRESYON: aşağıda aynı parmak izinin çözülmüş ikizi var. Kısmi unique indeks yalnız aktif
-    // satıra baktığı için ikisi yan yana durabilir — ekranın "geri geldi" rozeti tam bunu okur.
+    // Aşağıda aynı parmak izinin çözülmüş ikizi var; ekranın "geri geldi" rozeti bunu okur.
     level: 'error',
     source: 'backend-http',
     message: 'Kurye atama: rota servisi 502 döndü, atama yapılamadı',
@@ -288,29 +243,12 @@ const HATALAR: HataTohumu[] = [
 const REGRESYON_IKIZI = HATALAR.find((h) => h.regresyon);
 
 /**
- * Örnek kaydın İŞARETİ — mesajın başına yazılır.
- *
- * **Neden var** (kullanıcı kararı 03.08): bu tablo yalnız kurgu taşımıyor; `captureError` gerçek
- * arızaları da buraya yazıyor. Yerelde bir hata avlarken kurgu satırlarla gerçek satırlar aynı
- * listede yan yana duruyordu ve ayırt edilemiyordu — yaşandı: sekiz kayıttan yedisi tohumdu,
- * biri gerçek bir `ReferenceError`'dı ve ancak `path`/`context` alanlarına bakılarak ayrıldı.
- *
- * İşaret MESAJIN İÇİNDE, ayrı bir kolonda değil: kolon eklemek şemayı yalnız yerel bir kolaylık
- * için büyütürdü ve her okuyan ekranın onu göstermeyi hatırlaması gerekirdi. Önek ise listede,
- * aramada, `psql` çıktısında ve parmak izinde — her yerde görünür.
- *
- * Parmak izi mesajdan türediği için işaretli satır gerçek bir hatayla **asla gruplanamaz**: aynı
- * metni üreten gerçek bir arıza gelse bile ayrı bir satır açar.
+ * Örnek kaydın işareti: `captureError` gerçek arızaları da bu tabloya yazar ve kurgu satırlarla karışmasın gerekir. İşaret mesajın
+ * içindedir, çünkü parmak izi mesajdan türer ve işaretli satır gerçek hatayla gruplanamaz.
  */
 const ORNEK_ONEKI = '[ÖRNEK]';
 
-/**
- * Örnek hata kaydı hiç yazılmasın mı — `SEED_ERROR_LOG=0`.
- *
- * Varsayılan AÇIK, çünkü seed'in var olma sebebi bu: `/operations/system` alarmın yerini tutuyor ve
- * yedi hâlinin altısı kayıt olmadan hiç denenemiyor (dosya başlığındaki gerekçe). Ama tamamen boş
- * bir tablo isteyen bir tur olabilir — o zaman tek değişken yeter, dosya düzenlemek gerekmez.
- */
+/** `SEED_ERROR_LOG=0` örnek hata kaydını hiç yazmaz; varsayılan açık, çünkü sistem ekranının hâlleri kayıtsız denenemez. */
 const ORNEK_HATA_YAZ = process.env.SEED_ERROR_LOG !== '0';
 
 export async function seedErrorLog(db: Db): Promise<void> {
@@ -347,12 +285,9 @@ export async function seedErrorLog(db: Db): Promise<void> {
     };
   });
 
-  // Geri gelen hatanın ÖNCEKİ hayatı: aynı parmak izi, kapalı. Kısmi unique indeks
-  // (`where resolved_at is null`) buna izin verir — iki satır, biri kapalı biri açık.
+  // Kısmi unique indeks yalnız açık satıra baktığı için kapalı ikiz yan yana durabilir.
   if (REGRESYON_IKIZI) {
-    // `!` DEĞİL, açık kontrol: `REGRESYON_IKIZI` listeden seçildiği için indeks daima bulunur, ama
-    // liste elle düzenlenen bir sabit — biri o satırı silerse burası sessizce `undefined` yaymak
-    // yerine görünür biçimde durmalı. (`scripts/` artık typecheck kapsamında; bu hata orada çıktı.)
+    // Liste elle düzenlenen bir sabit; ikiz silinirse `undefined` yaymak yerine görünür biçimde durmalı.
     const ikiz = satirlar[HATALAR.indexOf(REGRESYON_IKIZI)];
     if (!ikiz) throw new Error('seed: regresyon ikizi listede yok — HATALAR ile REGRESYON_IKIZI ayrışmış');
     satirlar.push({
@@ -366,8 +301,7 @@ export async function seedErrorLog(db: Db): Promise<void> {
     });
   }
 
-  // Ham insert, servis DEĞİL: `capture` RPC'si sayacı birer birer artırır (üretimde doğru olan bu),
-  // seed ise 212'yi tek satırda kurmak zorunda. Parmak izi yine servisin fonksiyonundan geliyor.
+  // Ham insert: `capture` RPC'si sayacı birer artırır, seed ise yüksek sayacı tek satırda kurmalı.
   const { error } = await db.from('error_log').insert(satirlar);
   if (error) throw error;
 

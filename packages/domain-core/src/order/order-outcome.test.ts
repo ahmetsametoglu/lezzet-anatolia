@@ -3,13 +3,13 @@ import { confirmationPhaseOf, confirmationToneOf, isRefundedCancellation, orderO
 
 describe('sağlayıcının durumundan onay ekranının hâli', () => {
   it('para alındıysa "alındı", banka işliyorsa "işleniyor"', () => {
-    expect(paymentStateOf('succeeded')).toBe('paid');
+    expect(paymentStateOf('completed')).toBe('paid');
     expect(paymentStateOf('processing')).toBe('processing');
-    expect(paymentStateOf('requires_capture')).toBe('processing');
+    expect(paymentStateOf('authorised')).toBe('processing');
   });
 
   it('tamamlanmamış ya da iptal edilmiş ödeme "tamamlanmadı" — müşteri beklemez, yeniden dener', () => {
-    for (const status of ['requires_payment_method', 'requires_confirmation', 'requires_action', 'canceled'] as const) {
+    for (const status of ['pending', 'cancelled', 'failed'] as const) {
       expect(paymentStateOf(status)).toBe('incomplete');
     }
   });

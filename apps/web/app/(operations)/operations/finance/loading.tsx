@@ -3,19 +3,8 @@ import { PageHeader } from '@/components/operation/ui/page-header';
 import { buttonClass } from '@/components/operation/ui/button';
 import { SkeletonFilterBar, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 
-// Para ekranının yükleme hâli (09.2'nin iskelet kuralı): iskelet GERÇEK ekranın iskeletidir —
-// bakiye şeridi, süzgeç barı, iki sütunlu gövde. Tek bir dönen çark, sayfanın neye benzeyeceğini
-// söylemez ve gelince ekran zıplar.
-//
-// ── STATİK KİMLİK GERÇEK (15.08, emsal: fiyatlar) ───────────────────────────
-// Bu ekranın başlık bandında VERİ YOK: başlık, alt başlık ve iki eylem metni de statik — hepsi
-// gerçek çizilir, tek çubuk kalmaz. Eylemler tıklanmaz süs (`buttonClass`lı span): davranışları
-// sayfayla gelir, görünümleri sayfadan önce de doğru. Eski hâl `SkeletonPageHeader
-// actions={['+ Hareket', …]}` yazmıştı — o parametre GENİŞLİK SINIFI bekler, metinler geçersiz
-// class olarak yutuluyor ve çubuklar sıfır genişlikte hiç görünmüyordu (raporlarla aynı arıza).
-//
-// **Kolon başlıkları gerçek metin**, çubuk değil: statik oldukları için bekleyen bir şey yok, çubuk
-// yapmak bilgi saklamak olurdu.
+// İskelet gerçek ekranın iskeletidir, tek çark ekranı gelince zıplatır. Başlık bandı ve kolon başlıkları statik olduğu için
+// gerçek metinle çizilir; eylemler davranışları sayfayla geldiği için tıklanmaz süstür.
 
 export default function FinanceLoading() {
   return (
@@ -33,7 +22,7 @@ export default function FinanceLoading() {
         ))}
       </div>
 
-      {/* Hesap sayısı bilinmiyor — dört çip makul bir tahmin (kasa + iki banka + Stripe). */}
+      {/* Hesap sayısı bilinmiyor — dört çip makul bir tahmin (kasa + iki banka + ödeme sağlayıcısı). */}
       <SkeletonFilterBar count={4} />
 
       <div className="grid min-h-0 flex-1 grid-cols-[1.65fr_1fr] overflow-hidden">

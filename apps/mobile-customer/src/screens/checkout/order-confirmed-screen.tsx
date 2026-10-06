@@ -204,7 +204,7 @@ function PendingPaymentActions({ t, locale, orderId, totalCents, payBy, onSettle
       onSettled();
       return;
     }
-    const sheet = await presentPayment({ clientSecret: resumed.data.clientSecret });
+    const sheet = await presentPayment({ paymentToken: resumed.data.paymentToken });
     setBusy(false);
     if (sheet.status === 'succeeded') {
       hapticSuccess();

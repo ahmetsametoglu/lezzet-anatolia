@@ -141,7 +141,7 @@ INBOUND  (müşteri → biz)                 OUTBOUND  (biz → müşteri)
     → apps/backend                         packages/notify (soyut katman)
     → AI ajanı (packages/ai)                 ├─ e-posta sürücüsü
     → domain-core (stok/fiyat/sipariş)       ├─ wa.me bağlantısı (e-postasız belgede, operatör eliyle)
-    → yanıt/kart/Stripe link                 ├─ native push (Expo)
+    → yanıt/kart/ödeme bağlantısı            ├─ native push (Expo)
                                              └─ tarayıcı bildirimi (Web Push)
 ```
 
@@ -159,7 +159,7 @@ INBOUND  (müşteri → biz)                 OUTBOUND  (biz → müşteri)
 - **WhatsApp = taşıyıcı.** Butonu/listeyi/carousel'i/ürün kartını taşır; içeriği ajan üretir, render'ı Cloud API/360dialog yapar.
 - Sağlayıcı-agnostik: AI arayüzü `packages/ai`'da; çeviri ve konuşma ajanı aynı paketin yetenekleridir.
 
-Akış: `müşteri mesajı → 360dialog webhook → apps/backend → packages/ai (cevap + kart kararı) → domain-core (stok/sipariş) → carousel/Stripe link → onay`.
+Akış: `müşteri mesajı → 360dialog webhook → apps/backend → packages/ai (cevap + kart kararı) → domain-core (stok/sipariş) → carousel/ödeme bağlantısı → onay`.
 
 ---
 
@@ -195,7 +195,7 @@ Konuşma durumu **bizim veritabanımızda** yaşar (karar: kendi DB — AI ajan 
 | WhatsApp sipariş girişi | elle (admin) | AI ajanı otomatik | — |
 | Outbound | e-posta + `wa.me` | + WhatsApp API (360dialog) template | + segmentli kampanya |
 | Inbound sohbet | yok | AI ajanı + interaktif kart | tam chatbot/SSS |
-| Ödeme | web checkout / kapıda | + Stripe payment link (sohbette) | — |
+| Ödeme | web checkout / kapıda | + ödeme bağlantısı (sohbette) | — |
 
 Sıra kuralı (SCOPE ile uyumlu): zemin adımında yalnızca **genişlemeye engel olmayan** kararlar verilir; canlı API kodu zeminle aynı anda yazılmaz ama alanları ve arayüzü hazır bırakılır.
 
@@ -211,4 +211,4 @@ Sıra kuralı (SCOPE ile uyumlu): zemin adımında yalnızca **genişlemeye enge
 - `DATA_MODEL.md` — `order_source`, `Conversation`, `Message`, telefon kimliği
 - `DOMAIN.md §3` — kanal vs sipariş kaynağı ayrımı, kimlik kuralı
 - `ORDER_LIFECYCLE.md` — kaynak eksenin durum makinesine etkisi (yok)
-- `INTEGRATIONS.md` — 360dialog, Stripe, AI sağlayıcı arayüzleri
+- `INTEGRATIONS.md` — 360dialog, Revolut, AI sağlayıcı arayüzleri

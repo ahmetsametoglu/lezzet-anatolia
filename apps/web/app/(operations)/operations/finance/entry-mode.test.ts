@@ -17,7 +17,7 @@ const movement: ManualMovementForm = {
   documentId: null,
 };
 const transfer: TransferForm = { fromAccountId: 'cash', toAccountId: 'bank', amount: null, valueDate: '2026-09-01', description: '' };
-const accounts = ['cash', 'bank', 'stripe'];
+const accounts = ['cash', 'bank', 'merchant'];
 
 describe('"Yeni hareket" penceresinin kipleri (12.24)', () => {
   it('dört kip, seçicideki sırayla', () => {
@@ -35,7 +35,7 @@ describe('"Yeni hareket" penceresinin kipleri (12.24)', () => {
   });
 
   it('"Nereye" hâlâ farklı bir hesapsa yerinde kalır', () => {
-    expect(carryToTransfer({ ...movement, accountId: 'cash' }, { ...transfer, toAccountId: 'stripe' }, accounts).toAccountId).toBe('stripe');
+    expect(carryToTransfer({ ...movement, accountId: 'cash' }, { ...transfer, toAccountId: 'merchant' }, accounts).toAccountId).toBe('merchant');
   });
 
   it('geri dönerken "Nereden" hesap olur; tür, cari ve etiket yerinde kalır', () => {

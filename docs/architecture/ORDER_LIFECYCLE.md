@@ -104,7 +104,7 @@ Bu yolda `confirmed/preparing/ready/out_for_delivery` durumlarına uğranmaz. Te
 
 > **Rezervasyon ne zaman yapılır — ödeme yöntemine bağlıdır** (`DOMAIN.md §4`): **online** ödemede stok **checkout başlarken** ayrılır (sipariş hâlâ `draft`, rezervasyon TTL'li) ve `confirmed` yalnız ödeme onayında olur — "önce ayır, sonra tahsil et" kuralı budur. **Kapıda / vadeli** ödemede rezervasyon `confirmed` geçişindedir. **Hızlı satışta** rezervasyon yoktur, fiiliden düşülür. Yani `confirmed` her zaman "stok şimdi ayrıldı" demek değildir; ayrılmış olabilir.
 
-> **Online ödemede `draft → confirmed`in iki tetikleyicisi, tek kapısı var:** ödeme olayı (webhook) ya da sağlayıcıya sorulan durum (`reconcileDraftPayment` — web'de ödeme sayfası, native'de onay ekranının durum sorusu, sipariş listesi okuması, ödeme zamanlayıcısı `sweep_unpaid_drafts`). İkisi de `confirmOnlinePayment`tan geçer; tahsilat hareketi ödeme kimliğiyle (`stripe-payment:<pi>`) bir kez yazılır — iki tetikleyici aynı ödemeyi iki kez sayamaz. Webhook gelmezse taslak süresiz beklemez: ödeme penceresi (`reservation_ttl_minutes`) kapanınca zamanlayıcı sorar; ödeme geçtiyse onaylar, gelmeyecekse önce sağlayıcıdaki ödemeyi, sonra taslağı iptal eder (`payment_failed`), kalemler sepete döner ve müşteriye "siparişiniz oluşmadı" e-postası gider (`order_payment_incomplete`; sipariş oluşmadığı için uygulama içi satır yazılmaz).
+> **Online ödemede `draft → confirmed`in iki tetikleyicisi, tek kapısı var:** ödeme olayı (webhook) ya da sağlayıcıya sorulan durum (`reconcileDraftPayment` — web'de ödeme sayfası, native'de onay ekranının durum sorusu, sipariş listesi okuması, ödeme zamanlayıcısı `sweep_unpaid_drafts`). İkisi de `confirmOnlinePayment`tan geçer; tahsilat hareketi ödeme kimliğiyle (`card-payment:<ödeme>`) bir kez yazılır — iki tetikleyici aynı ödemeyi iki kez sayamaz. Webhook gelmezse taslak süresiz beklemez: ödeme penceresi (`reservation_ttl_minutes`) kapanınca zamanlayıcı sorar; ödeme geçtiyse onaylar, gelmeyecekse önce sağlayıcıdaki ödemeyi, sonra taslağı iptal eder (`payment_failed`), kalemler sepete döner ve müşteriye "siparişiniz oluşmadı" e-postası gider (`order_payment_incomplete`; sipariş oluşmadığı için uygulama içi satır yazılmaz).
 
 > **Kart taslağı sepetin yerini alır:** ödeme açılınca siparişin kalemleri sepetten çıkar ve sipariş müşterinin listesinde numarasız, "ödeme bekleniyor" (`awaiting_payment`) satırı olarak durur; ödeme açılamazsa taslak kapanır ve sepete dokunulmaz. Yeniden deneme aynı taslağın aynı ödemesidir (`resumePendingPayment`; aynı basışın tekrar anahtarı da aynı ödemeye döner), yeni taslak açılmaz ve yeni sipariş ödemesi bekleyen taslağa dokunmaz. Müşteri vazgeçerse (`cancelPendingOrder`, sebep `customer`) ya da pencere kapanırsa kalemler sepete döner. Müşteri siparişi sunucudaki sepette duran kalemle açılır; personel siparişi müşterinin sepetine dokunmaz.
 
@@ -118,7 +118,7 @@ Bu yolda `confirmed/preparing/ready/out_for_delivery` durumlarına uğranmaz. Te
 - **door** (kapı önü) → hızlı satış yolu (`draft → completed`), stok fiiliden anında düşülür.
 - **manual** → telefon/DM'den gelenin elle işlenmesi; tam yol.
 
-Yani kaynak yeni bir durum yolu açmaz; mevcut iki yoldan (tam / hızlı) birini kullanır. Ödeme yine `payment_status` ekseninden yürür (WhatsApp'ta Stripe payment link, web'de checkout, kapıda nakit/kart).
+Yani kaynak yeni bir durum yolu açmaz; mevcut iki yoldan (tam / hızlı) birini kullanır. Ödeme yine `payment_status` ekseninden yürür (WhatsApp'ta ödeme bağlantısı, web'de checkout, kapıda nakit/kart).
 
 ## Uygulama notu
 

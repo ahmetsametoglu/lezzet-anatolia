@@ -1,16 +1,6 @@
 /*
-  KOMPOZİSYON SÖZLEŞMESİ — `customer-app.ts`in güvencesi (21.3, kullanıcı kararı 07.08).
-
-  Mobil uygulama temasının tek kuralı şu: taban (`customer.ts`) üstüne uygulama dosyası yayılır,
-  aynı addaki anahtarda UYGULAMA kazanır. Bu dosya o kuralın iki yönünü de sabitler —
-    · fark anahtarları gerçekten uygulama değerini veriyor mu (ezme ÇALIŞIYOR mu),
-    · tabanın geri kalanı olduğu gibi geçiyor mu (ezme SIZMIYOR mu).
-  Ayrıca "fark" ve "yeni" ayrımı sayıyla sabitlenir: uygulamaya eklenen bir token, tabanda aynı
-  ad varken sessizce fark'a dönüşürse (ya da tersi) burada görünür — yorumla anlatılan şeyin
-  makineyle doğrulanan hâli.
-
-  Parite testinden AYRI dosya: o test CSS ikizini denetler ve `customer-app.ts`i hiç görmez.
-  DB'siz, saf: birim projesinde koşar.
+  Uygulama teması tabanın üstüne yayılır ve aynı adda uygulama kazanır; bu dosya ezmenin çalıştığını ve sızmadığını sabitler.
+  Fark ile yeni ayrımı sayıyla sabitlenir ki tabanda aynı adı olan yeni token sessizce farka dönüşmesin.
 */
 import { describe, expect, it } from 'vitest';
 import {
@@ -40,32 +30,26 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     expect(composedColors.star).toBe('#d9a441'); // taban #d99a2b
     expect(composedColors['closed-bg']).toBe('#e9e2cf'); // taban #f0e9d6
     expect(composedColors['disabled-fill']).toBe('#b9b29e'); // taban #c9c3b0
-    // Token Kararlari #15: rolün RESMÎ değeri artık SICAK; web kendi turunda buna çekilecek.
     expect(composedColors['on-image-soft']).toBe('#d5d0c2'); // taban #dfe3cf
     expect(composedRadius.card).toBe('20px'); // taban 18px
     expect(composedRadius.pill).toBe('22px'); // taban 26px
   });
 
   it('foto-üstü ROL ikilisi ayrışmaz: ad `on-image`, altyazı `on-image-soft`', () => {
-    /* Token Kararlari #14 tasarımı `on-image`e ÇEKTİ (`on-image-bright` açılmadı), #15 ise
-       `on-image-soft`u sıcak değere aldı. İkisi bir ÇİFT: ad ile altyazı aynı fotoğrafın üstünde
-       yan yana durur ve biri değişip öteki kalırsa çift soğuk/sıcak diye ayrışır. `on-image`
-       tabandan gelmeye devam ediyor (uygulama ezmiyor) — bu test o hizanın bekçisi. */
+    // Ad ile altyazı aynı fotoğrafın üstünde yan yana durur; biri değişip öteki kalırsa çift soğuk ve sıcak diye ayrışır.
     expect(composedColors['on-image']).toBe('#f5f1e6');
     expect(customerAppColors).not.toHaveProperty('on-image');
     expect(composedColors).not.toHaveProperty('on-image-bright');
   });
 
   it('örtü ailesinde `.72` KENDİ durağıdır — `.82`ye yuvarlanmaz', () => {
-    // #18: .82 metni okunur kılar (gradyanın ucu), .72 fotoğrafı soldurur (tükendi örtüsü).
-    // Aynı değere çekilseler "bu ürün alınamaz" bilgisi görsel olarak kaybolurdu.
+    // .82 metni okunur kılar, .72 fotoğrafı soldurur; aynı değere çekilseler "bu ürün alınamaz" bilgisi kaybolurdu.
     expect(composedColors['scrim-72']).toBe('rgba(21, 23, 15, 0.72)');
     expect(composedColors['scrim-heavy']).toBe('rgba(21, 23, 15, 0.82)');
   });
 
   it('krem cam iki durak + bulanıklık kuralı birlikte durur', () => {
-    // #17: saydamlık ile bulanıklık TEK yüzeyi tarif eder; biri token olup öteki olmasaydı
-    // çağıran yarım bir yüzey kurar ve altından akan metin çubuğu kirletirdi.
+    // Saydamlık ile bulanıklık tek yüzeyi tarif eder; biri eksik kalsa altından akan metin çubuğu kirletirdi.
     expect(composedColors['cream-glass-soft']).toBe('rgba(243, 239, 226, 0.90)');
     expect(composedColors['cream-glass']).toBe('rgba(243, 239, 226, 0.96)');
     expect(customerAppBlur.glass).toBe('8px');
@@ -99,10 +83,8 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     }
   });
 
-  it('TABANA ÇIKAN telefon token’ları (14.09): uygulamada yok, birleşimde tabanın değeriyle var', () => {
-    /* Telefon görünümü native tasarımı aldı; kullandığı token web'e girebilsin diye tabana taşındı.
-       Taşıma bir DEĞER değişikliği değil: uygulama teması aynı sayıyı almaya devam etmeli — bu test
-       hem "taşındı" (uygulamada kopyası kalmadı) hem "kaybolmadı" (birleşimde var) der. */
+  it('TABANA ÇIKAN telefon token’ları: uygulamada yok, birleşimde tabanın değeriyle var', () => {
+    // Taşıma değer değişikliği değil: uygulamada kopya kalmamalı ve birleşim aynı değeri vermeli.
     for (const key of ['sand-150', 'sand-250', 'ink-deep', 'scrim-soft', 'scrim', 'scrim-72', 'scrim-heavy', 'error', 'error-bg']) {
       expect(customerAppColors, `${key} uygulamada kopya kalmamalı`).not.toHaveProperty(key);
       expect(composedColors[key as keyof typeof composedColors]).toBe(customerColors[key as keyof typeof customerColors]);
@@ -122,8 +104,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
   });
 
   it('rozet kademesi TEK kaynaktan: küçük boy yalnız ÖLÇÜ farkıdır', () => {
-    /* #16 — ağırlık/aralık `badge-sm` için ikinci kez YAZILMAZ; `badge`inkinden okunur. Alt
-       anahtarların doğması, iki rozetin bir gün farklı görünmeye başlaması demek olurdu. */
+    // Küçük rozetin ağırlığı ve aralığı ayrıca yazılmaz; yazılsa iki rozet bir gün farklı görünmeye başlardı.
     expect(composedText.badge).toBe('12.5px');
     expect(composedText['badge--font-weight']).toBe('700');
     expect(composedText['badge--letter-spacing']).toBe('0.06em');
@@ -132,7 +113,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     expect(composedText).not.toHaveProperty('badge-sm--letter-spacing');
   });
 
-  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 20 yeni', () => {
+  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 19 yeni', () => {
     expect(sharedKeys(customerColors, customerAppColors)).toHaveLength(6);
     expect(sharedKeys(customerRadius, customerAppRadius)).toHaveLength(2);
     // Tipografide tek çakışma üstbaşlığın üç alt-anahtarıdır; dördüncü bir çakışma bilinçsizdir.
@@ -149,20 +130,8 @@ describe('customer-app ↔ customer kompozisyonu', () => {
       Object.keys(customerAppShadow).length +
       Object.keys(customerAppBlur).length +
       Object.keys(customerAppGradient).length;
-    /* 42 → `error-line` 30.08'de eklendi: HATA ailesinin üçüncü katmanı. Künye onu "gerçek bir
-       ihtiyaç doğunca" diye ertelemişti; ihtiyaç paylaşılan kitte doğdu (`SecondaryButton`ın
-       `error` tonu iki yüzeyde birden yaşıyor ve yalnız operasyonda var olan bir durak stil
-       fabrikasında çözülemiyordu — cihazda ölçüldü).
-       50 → 34 (14.09): telefon görünümünün kullandığı 16 token tabana çıktı (7 renk · 7 yazı ·
-       2 yarıçap). Gölgelerin `hard` ve `badge`i sayıda KALIR: uygulama teması gölge ailesini bu
-       nesneden okuduğu için tabandaki tanım burada yeniden dışa veriliyor.
-       34 → 32 (14.09, katalog turu): düğme etiketi (`button` + ağırlık) tabana çıktı; gölgenin
-       `soft`u da tabana çıktı ama sayıda kalır (aynı gerekçe).
-       32 → 30 (14.09, paketler turu): hata ailesinin metni ve zemini (`error` · `error-bg`) tabana çıktı —
-       web telefon görünümünün "bu adrese gitmiyor" işareti; çerçevesi (`error-line`) burada kalır.
-       30 → 28 (15.09, giriş turu): giriş düğmelerinin iki marka işareti (`brand-google` · `brand-whatsapp-pure`)
-       tabana çıktı — web telefon girişi aynı işaretleri çiziyor. */
-    expect(appTotal).toBe(28); // 8 fark + 20 uygulamaya-yeni
+    // Gölgelerin `soft`, `hard` ve `badge`i sayıda kalır: tema gölge ailesini bu nesneden okur ve tabandaki tanım burada yeniden verilir.
+    expect(appTotal).toBe(27); // 8 fark + 19 uygulamaya-yeni
   });
 
   it('birleşim tabanı BÜYÜTÜR, küçültmez — hiçbir taban anahtarı kaybolmaz', () => {

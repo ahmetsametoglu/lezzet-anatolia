@@ -25,9 +25,8 @@ import { MovementTypeIcon } from './movement-type-icon';
 import { MovementMatchCell, type RowMatcher } from './row-actions';
 import { useRowWrites } from './use-row-writes.hook';
 
-// Para ekranının blokları (12.17 düzeni): bakiye şeridi (hesap süzgeci) · sekme ve süzgeç bandı ·
-// hareket listesi (12.21: sağ sütun kalktı — satırın bütün eylemleri satırın kendisinde). Operasyon web'i masaüstü-yalnız (06.08) — telefon
-// kartı ve `stacked` kipi söküldü; personelin mobil deneyimi native uygulamada.
+// Para ekranının blokları: bakiye şeridi (hesap süzgeci), sekme ve süzgeç bandı, hareket listesi. Satırın bütün eylemleri
+// satırın kendisindedir.
 
 /** İşaretli tutarın rengi — giriş olive, çıkış nötr, iade kırmızı. */
 export function amountTone(cents: number, isRefund: boolean): string {
@@ -40,24 +39,16 @@ export function signedAmount(cents: number): string {
   return `${cents >= 0 ? '+' : '−'}${amount(Math.abs(cents))}`;
 }
 
-/**
- * Ortak carisinin bakiye RENGİ — şema künyesi: eksi = şirket ortağa borçlu (kırmızı), artı = ortak
- * şirkete borçlu (olive). 14.09'da cümlenin yerini aldı (kullanıcı isteği: "artı eksi zaten bunu ifade
- * ediyor"; kart bir satır kısaldı). Öteki hesapta işaret borcun yönünü söylemez, bakiye mürekkep kalır.
- */
+/** Ortak carisinde eksi şirketin ortağa, artı ortağın şirkete borcudur; öteki hesapta işaret borcun yönünü söylemez. */
 function partnerBalanceTone(cents: number): string {
   if (cents < 0) return 'text-ops-red';
   if (cents > 0) return 'text-ops-olive-dark';
   return 'text-ops-ink';
 }
 
-// ── Bakiye şeridi = hesap süzgeci (12.17) ─────────────────────────────────────────────────────
+// ── Bakiye şeridi = hesap süzgeci ─────────────────────────────────────────────────────
 
-/**
- * Şeridin grup sırası — kullanıcı isteği (13.09): "benzer şeyler bir arada; banka, kasa birbirinden
- * ayrılsın, arka arkaya gelsin; kapananlar hep en sonda". Toplam en solda: ilk okunacak sayı
- * "elimde ne kadar var".
- */
+/** Şeridin grup sırası: benzer hesaplar bir arada, kapananlar en sonda; toplam en solda, çünkü ilk okunan sayıdır. */
 const ACCOUNT_GROUP_ORDER = ['bank', 'cash', 'provider', 'partner'] as const satisfies readonly AccountType[];
 
 interface AccountStripProps {
@@ -69,12 +60,8 @@ interface AccountStripProps {
 }
 
 /**
- * "Param nerede, ne kadar" — tek bakışta; ve 12.17'den beri HESAP SÜZGECİ: karta dokunmak listeyi o
- * hesaba daraltır, "Toplam" kartı daraltmayı kaldırır. Süzgeç çubuğundaki "Hesap" çipleri kalktı —
- * aynı hesabın adı iki yerde yazıyordu (kullanıcı isteği 13.09).
- *
- * Bakiye HAREKETLERDEN gelir, saklanmaz (`account_balance`). Sığmayan şerit yatay kayar; kartlar
- * daralmaz — daralan kartta tutar kırılır ve para sayısının ortasından bölünmesi okuyanı yanıltır.
+ * Kart bakiyeyi söyler ve listeyi o hesaba daraltır; bakiye hareketlerden gelir. Sığmayan şerit yatay kayar, kartlar daralmaz,
+ * çünkü daralan kartta tutar sayının ortasından kırılır.
  */
 export function AccountStrip({ accounts, totalCents, selected, onSelect }: AccountStripProps) {
   const groups = ACCOUNT_GROUP_ORDER.map((type) => ({
@@ -146,8 +133,7 @@ function AccountTile({ account, active, dimmed = false, onSelect }: AccountTileP
       }
       balanceCents={account.balanceCents}
       caption={account.movementCount > 0 ? `${num(account.movementCount)} hareket` : 'henüz hareket yok'}
-      // ORTAK CARİSİNDE İŞARET RENKLE (12.12'de cümleydi, 14.09 renk): eksi/artı bir kasada "para
-      // var/yok" derken burada borcun YÖNÜNÜ söylüyor — renk o yönü sayının kendisinde okutur.
+      // Ortak carisinde işaret borcun yönünü söyler; renk o yönü sayının kendisinde okutur.
       balanceTone={account.type === 'partner' ? partnerBalanceTone(account.balanceCents) : undefined}
       active={active}
       dimmed={dimmed}
@@ -178,19 +164,18 @@ function AccountCard({ name, balanceCents, caption, balanceTone = 'text-ops-ink'
       } ${dimmed ? 'opacity-70' : ''}`}
     >
       <span className="flex min-h-[20px] min-w-0 items-center">{name}</span>
-      {/* Tutar SARMAZ: binlik ayracı geldikten sonra dar kartta "12.931,53 €" ikiye bölünüyordu — para
-          sayısının ortasından kırılması, okuyanı bir an için başka bir sayıya baktırır. */}
+      {/* Tutar sarmaz: sayının ortasından kırılan para okuyanı bir an başka bir sayıya baktırır. */}
       <span className={`whitespace-nowrap font-ops-mono text-ops-title tracking-tight ${balanceTone}`}>{money(balanceCents)}</span>
       <span className="font-ops-mono text-ops-micro text-ops-faint">{caption}</span>
     </button>
   );
 }
 
-// ── Sekme ve süzgeç bandı (12.17) ─────────────────────────────────────────────────────────────
+// ── Sekme ve süzgeç bandı ─────────────────────────────────────────────────────────────
 
 interface FinanceToolbarProps {
   urlState: FinanceUrlState;
-  /** İzah edilmemiş hareket sayısı (13.09); `null` = sayaç kapısı yok. */
+  /** İzah edilmemiş hareket sayısı; `null` = sayaç kapısı yok. */
   unexplainedCount: number | null;
   openDocumentCount: number;
   /** Açık hesap sayısı — kapalı eylem gizlenmez, sebebiyle soluk çizilir. */
@@ -200,10 +185,8 @@ interface FinanceToolbarProps {
 }
 
 /**
- * TEK BANT: solda "Hareketler | Belgeler" sekmesi, sağda o sekmenin süzgeçleri, izah sayacı ve
- * EYLEMLER menüsü (kullanıcı isteği 13.09: başlıktaki beş düğme süzgeç satırının en sağına, izah
- * rozetinin yanına, tek menüye). Sayaç bir rozet değil kuyruğun KAPISI: dokununca aynı ölçütle
- * süzülmüş listeye iner. Tarih aralığı iki sekmede aynı anlamda (değer günü · belge günü).
+ * Tek bant: solda sekme, sağda süzgeçler, izah sayacı ve eylemler menüsü. Sayaç kuyruğun kapısıdır, dokununca aynı ölçütle süzülmüş
+ * listeye iner; tarih aralığı iki sekmede aynı anlamdadır (değer günü · belge günü).
  */
 export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, writableAccountCount, onChange, onOpenDialog }: FinanceToolbarProps) {
   const unexplainedActive = urlState.scope === 'unmatched';
@@ -220,8 +203,7 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
       action={
         <>
           {urlState.tab === 'movements' ? (
-            // "+ tip", çizimdeki "+ tür" DEĞİL (13.09): "tür" artık sözlükteki sınıflandırmanın adı
-            // ve satırın "+ tür" menüsü aynı ekranda; bu süzgeç kaba tipi süzer.
+            // "+ tip", çünkü "tür" sözlükteki sınıflandırmanın adı ve satırın "+ tür" menüsü aynı ekranda; bu süzgeç kaba tipi süzer.
             <FilterChip
               value={urlState.type}
               emptyValue="all"
@@ -262,7 +244,8 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
                 key: 'transfer',
                 icon: <TransferIcon />,
                 label: 'Transfer',
-                hint: writableAccountCount >= 2 ? 'hesaptan hesaba — kasadan bankaya, Stripe payout' : 'en az iki açık hesap gerekir',
+                hint:
+                  writableAccountCount >= 2 ? 'hesaptan hesaba — kasadan bankaya, kart ödemeleri aktarımı' : 'en az iki açık hesap gerekir',
                 disabled: writableAccountCount < 2,
                 onSelect: () => onOpenDialog('transfer'),
               },
@@ -286,14 +269,7 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
 
 // ── Hareket listesi ───────────────────────────────────────────────────────────────────────────
 
-/**
- * Tablo şeridi — başlıklar ve hücreler AYNI diziyi okur, hiza elle tutulmaz. Orta sütun (12.17):
- * tür · cari · etiket — kullanıcı "etiketleri ortadaki boş alana koy, satır yüksekliği artmasın" dedi.
- */
-// 12.21: sağ sütun kalktı, liste tam genişlik — "Karşılığı" sütunu geldi; hesap · tip sütunu kaynağı da
-// taşıyor ("sipariş ödemesi · sistem" 130px'te kesiliyordu, ölçüldü).
-// 12.22 (kullanıcı isteği: "en önemli şey tutar, sonra tarih — tutar çok küçük"): tarih sütunu gün
-// başlığına dönüştü, tutar en sağa geçti ve satırın en büyük yazısı oldu; izah noktası sol kenara.
+/** Başlıklar ve hücreler aynı diziyi okur, hiza elle tutulmaz. Tutar satırın en büyük yazısıdır ve sağ kenardadır. */
 const ROW_GRID = 'grid grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,180px)_132px] items-center gap-x-3';
 
 interface MovementListProps {
@@ -301,7 +277,7 @@ interface MovementListProps {
   /** Boşken basılacak cümle — "hiç yok" ile "bu süzgeçte yok" ayrı cümlelerdir. */
   note: string | null;
   editor: RowEditor;
-  /** Satırın bağ kararları — "Karşılığı" sütununun hapı ve ✓'si (12.21). */
+  /** Satırın bağ kararları — "Karşılığı" sütununun hapı ve ✓'si. */
   matcher: RowMatcher;
   hasMore: boolean;
   loadingMore: boolean;
@@ -321,7 +297,7 @@ export function MovementList({ rows, note, editor, matcher, hasMore, loadingMore
         <span>Açıklama</span>
         <span>Tür · cari · etiket</span>
         <span>Karşılığı</span>
-        {/* "Tip", "tür" değil (13.09): bu sütun kaba tipi (gider · transfer · sipariş ödemesi) söyler. */}
+        {/* "Tip", "tür" değil: bu sütun kaba tipi (gider · transfer · sipariş ödemesi) söyler. */}
         <span>Hesap · tip</span>
         <span className="text-right">Tutar</span>
       </div>
@@ -330,13 +306,12 @@ export function MovementList({ rows, note, editor, matcher, hasMore, loadingMore
           const date = dayMonthLong(group.key, group.key.slice(0, 4) !== newestYear);
           const weekday = weekdayName(group.key);
           return (
-            // GÜN (12.22): başlık yapışkan ve toplamsız — bkz. `GroupHeading`.
+            // Gün başlığı yapışkan ve toplamsız — bkz. `GroupHeading`.
             <li key={group.key}>
               <GroupHeading title={date} detail={weekday} />
               <ul aria-label={`${date} ${weekday}`}>
                 {group.rows.map((row) => (
-                  // SATIR SEÇİLMEZ (12.21): her iş satırın kendi kontrolünde. Görsel sıra bilginin önemine göre
-                  // (12.22): tutar en büyük ve sağ kenarda, açıklama gövde boyunda, kontroller sakin.
+                  // Satır seçilmez, her iş satırın kendi kontrolündedir.
                   <li
                     key={ledgerRowKey(row)}
                     className={`${ROW_GRID} border-b border-ops-line-soft px-6 py-2 transition-colors hover:bg-ops-subtle ${row.explained ? '' : ROW_EDGE.amber}`}
@@ -350,14 +325,13 @@ export function MovementList({ rows, note, editor, matcher, hasMore, loadingMore
                       {row.explained ? null : <span className="sr-only">{EXPLAINED_LABEL.unexplained}</span>}
                     </div>
                     <RowCell row={row} editor={editor} />
-                    {/* Hücre HER satırda durur: bağı olmayan satırda boş kalır — yoksa ızgarada sütunlar bir sola
-                        kayıyordu (ölçüldü 12.21: bağsız 12 satırda "Karşılığı" sütununda tutar okunuyordu). */}
+                    {/* Hücre her satırda durur, bağsız satırda boş kalır; yoksa ızgarada sütunlar bir sola kayar. */}
                     <div className="flex min-w-0 items-center">
                       <MovementMatchCell row={row} matcher={matcher} />
                     </div>
                     <div className="flex min-w-0 flex-col gap-0.5">
                       <span className="truncate font-ops-body text-ops-xs text-ops-ink">{row.accountName}</span>
-                      {/* Kaynak (ekstre · elle · sistem) tipin yanında — panelin künyesindeydi (12.21). */}
+                      {/* Kaynak (ekstre · elle · sistem) tipin yanında. */}
                       <span className="flex min-w-0 items-center gap-1 font-ops-body text-ops-micro text-ops-faint">
                         <MovementTypeIcon type={row.type} size={12} />
                         <span title={`${row.typeLabel} · ${MOVEMENT_SOURCE_LABEL[row.source]}`} className="truncate">
@@ -365,7 +339,7 @@ export function MovementList({ rows, note, editor, matcher, hasMore, loadingMore
                         </span>
                       </span>
                     </div>
-                    {/* TUTAR satırın en büyük yazısı, sağ kenarda (12.22): rakamlar alt alta hizalı taranır. */}
+                    {/* Rakamlar sağ kenarda alt alta hizalı taranır. */}
                     <span
                       className={`whitespace-nowrap text-right font-ops-mono text-ops-lead font-semibold ${amountTone(row.signedAmountCents, row.type === 'order_refund')}`}
                     >
@@ -393,17 +367,8 @@ interface RowCellProps {
 }
 
 /**
- * Satırın ORTA hücresi (12.17) — tür · cari · etiket, tablo hücresi ölçüsünde (`cell`), tek satırda;
- * satır yüksekliği artmaz. muhasebeci deseni: aranabilir menü, dokunuşta yazılır, Kaydet yok; etiket
- * menüsü bütün etiketleri seçilileri işaretli gösterir ve menüde olmayanı oluşturur. Hücrede tek
- * etiket çizilir, kalanı "+N" çipinde sayılır. Tür ve cari yalnız sınıflandırılabilen satırda.
- *
- * GENİŞLİK BÜTÇESİ: hücre dar (1440 pikselde 177px idi; 12.21'de sağ panel kalkınca ~260px) ve hiçbir kontrol ondan DÜŞMEZ. Tür/cari taşıyan
- * satırda etiket alanı daralmaz ama sınırlıdır (tek çip, adı kesik); tür ve cari kalanı paylaşıp
- * adlarını keser (tam ad menüde). Taşımayan satırda hücrenin tamamı etiketindir. Cari İKİ kat hızlı daralır: satırın izahı türdür, cari çoğu kez açıklamada
- * zaten yazılı. Tür/cari taşıyan satırda etiket daveti "+" (üçüncü bir "+ x" yazısı yer yiyordu).
- * Ölçüldü 13.09: uzun cari adı ("Cabinet Comptable Muller") etiket düğmesini hücrenin dışına itiyordu
- * ve o satırda etiket eklenemiyordu; ilk düzeltmede de tür 41px'e ("Mu…") düşüyordu.
+ * Satırın orta hücresi: tür · cari · etiket tek satırda, satır yüksekliği artmaz; menüde yazılır, Kaydet yok. Hücre dar ve hiçbir
+ * kontrol ondan düşmez: etiket tek çip, tür ve cari adlarını keser, cari iki kat hızlı daralır çünkü açıklamada çoğu kez yazılıdır.
  */
 function RowCell({ row, editor }: RowCellProps) {
   const writes = useRowWrites(row, editor);

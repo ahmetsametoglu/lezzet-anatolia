@@ -6,7 +6,7 @@ import { currentCustomerId } from '@/lib/guard';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { orderIdOrNull } from '@/lib/order/order-id';
 import { webPaymentEffects } from '@/lib/order/transition';
-import { stripePaymentGateway } from '@/lib/stripe';
+import { revolutBrowserMode, revolutPaymentGateway } from '@/lib/revolut';
 
 /**
  * Onay sayfasının "sağlayıcıya sor" eylemi: ödeme olayı gelmediğinde siparişi webhook'la aynı yoldan netleştirir; canlı bağ
@@ -21,7 +21,7 @@ export async function verifyPaymentAction(orderId: string): Promise<CustomerResu
     const order = id ? await new OrderService(db).getById(id) : null;
     if (!order || order.customerId !== customerId) return { data: { settled: true }, errorKey: null };
 
-    const outcome = await reconcileDraftPayment(db, order.id, { gateway: stripePaymentGateway(), effects: webPaymentEffects });
+    const outcome = await reconcileDraftPayment(db, order.id, { gateway: revolutPaymentGateway(), effects: webPaymentEffects });
     // Sorulamayan hâllerde de (anahtar yok) sormayı sürdürmenin anlamı yok; tanınmayan sağlayıcı durumunda sorular sürer.
     const settled =
       outcome.status === 'confirmed' ||
@@ -34,7 +34,7 @@ export async function verifyPaymentAction(orderId: string): Promise<CustomerResu
 }
 
 /** Ödemeye dönüş: aynı siparişin aynı ödemesinin anahtarı döner; ödeme geçmiş, işleniyor ya da sipariş kapanmışsa sayfa yenilenir. */
-type ResumeResult = { status: 'payment_required'; orderId: string; clientSecret: string } | { status: 'settled' };
+type ResumeResult = { status: 'payment_required'; orderId: string; paymentToken: string; mode: 'sandbox' | 'prod' } | { status: 'settled' };
 
 export async function resumePaymentAction(orderId: string): Promise<CustomerResult<ResumeResult>> {
   try {
@@ -45,12 +45,14 @@ export async function resumePaymentAction(orderId: string): Promise<CustomerResu
     const outcome = await resumePendingPayment(
       serviceDb(),
       { orderId: id, customerId },
-      { gateway: stripePaymentGateway(), effects: webPaymentEffects },
+      { gateway: revolutPaymentGateway(), effects: webPaymentEffects },
     );
     if (outcome.status === 'not_found') throw new CustomerError('not_found');
     if (outcome.status === 'provider_unavailable') throw new CustomerError('payment_unavailable');
     if (outcome.status !== 'payment_required') return { data: { status: 'settled' }, errorKey: null };
-    return { data: { status: 'payment_required', orderId: outcome.orderId, clientSecret: outcome.clientSecret }, errorKey: null };
+    const mode = revolutBrowserMode();
+    if (!mode) throw new CustomerError('payment_unavailable');
+    return { data: { status: 'payment_required', orderId: outcome.orderId, paymentToken: outcome.paymentToken, mode }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
@@ -66,7 +68,7 @@ export async function cancelPendingOrderAction(orderId: string): Promise<Custome
     const outcome = await cancelPendingOrder(
       serviceDb(),
       { orderId: id, customerId },
-      { gateway: stripePaymentGateway(), effects: webPaymentEffects },
+      { gateway: revolutPaymentGateway(), effects: webPaymentEffects },
     );
     if (outcome.status === 'not_found') throw new CustomerError('not_found');
     if (outcome.status === 'provider_unavailable') throw new CustomerError('payment_unavailable');

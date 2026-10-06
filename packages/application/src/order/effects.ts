@@ -17,8 +17,8 @@ export type ProviderRefundOutcome =
   | { status: 'unavailable' };
 
 export interface ProviderRefundInput {
-  /** Paranın GELDİĞİ ödeme niyeti — tahsilat hareketinin künyesinden okunur. */
-  paymentIntentId: string;
+  /** Paranın geldiği sağlayıcı ödemesi — tahsilat hareketinin künyesinden okunur. */
+  paymentRef: string;
   amountCents: number;
   /**
    * Aynı iadenin iki kez gönderilmesini sağlayıcı tarafında engelleyen anahtar. Çağrı geçip hareket
@@ -38,11 +38,11 @@ export interface OrderExceptionDetail {
 }
 
 export interface OrderEffects {
-  /** Durum haberi (14.5) — web karşılığı `notifyOrderStatus`. */
+  /** Durum haberi; web karşılığı `notifyOrderStatus`. */
   notifyStatus?: (orderId: string, status: OrderStatus) => Promise<unknown>;
-  /** İstisna haberi (14.5) — web karşılığı `notifyOrderException`. */
+  /** İstisna haberi; web karşılığı `notifyOrderException`. */
   notifyException?: (orderId: string, event: OrderExceptionEvent, opts: OrderExceptionDetail) => Promise<unknown>;
-  /** Sağlayıcıya iade; web karşılığı `stripeRefunder()`. */
+  /** Sağlayıcıya iade; web karşılığı `revolutRefunder()`. */
   refunder?: ProviderRefunder;
 }
 

@@ -1,143 +1,6 @@
 /**
- * Seed — `supabase db reset` sonrası veriyi kurar. **Üç katman** (kullanıcı kararı 16.08).
- *
- * Kullanım:  pnpm db:refresh          → `full`   (bugünkü tam fikstür; varsayılan)
- *            pnpm db:refresh:base     → `base`   (YALNIZ gerçek veri — hiçbir şey üretilmez)
- *            pnpm db:refresh:extend   → `extend` (base + kusurlar + bir miktar geçmiş)
- *
- * Katmanın ne olduğu ve neden üç tane olduğu `seed/tier.ts` künyesinde; **buradaki tablo listesi
- * `full` katmanını anlatır.** Katman koşu anında seçilir (`--tier=`), değiştirmek için reset gerekir.
- *
- * `base` üretimde de koşacak (`SEED_ALLOW_REMOTE=true`) ve **uzak hedefe yalnız o geçer**. Yazdığı
- * her satırın arkasında ya üreticinin kataloğu ya kullanıcının bir kararı var; hesaplanmış tek bir
- * alan (fiyat · stok · besin künyesi · alerjen · KDV tahmini · marj) ve uydurulmuş tek bir kayıt
- * (depo · rota · personel · banka hesabı · tedarikçi) yazmaz.
- *
- * Görseller Cloudflare R2'ye yüklenir (R2 env yoksa atlanır); görsel künyesinde olan ve depoda aynı duran
- * dosya YÜKLENMEZ, sürümü ve ölçüsü künyeden gelir (`seed/image-manifest.ts`). Giriş: OTP kodu Mailpit'e
- * düşer (54324).
- *
- * ── §SİPARİŞ: BESLEME ZİNCİR YAZMAZ — İKİ DENEME SİPARİŞİ HARİÇ ──────────────────────────────
- *
- * **02.09 DARALTMASI:** karar aşağıdaki hâliyle bir tur yaşadı ve bedeli görüldü — her `db:refresh`
- * sonrası kurye akışını denemek için önce müşteri yüzeyinden sipariş vermek gerekiyordu. Kullanıcı
- * *"sipariş oluşturmayı sen yap… doğrudan besleme üzerinden"* dedi. `seed/test-orders.ts` iki
- * `confirmed` sipariş yazıyor ve **zinciri açmıyor**: kutu, sefer, tahsilat, geri bildirim, puan —
- * hiçbiri doğmuyor. Aşağıdaki gerekçenin tamamı o zincir için geçerli ve yürürlükte.
- *
- * ── ESKİ KARARIN GEREKÇESİ (01.09, zincir için hâlâ geçerli) ─────────────────────────────────
- * Kullanıcının cümlesi: *"Sistemde hiç sipariş kalmasın istiyorum … sipariş yoksa o siparişle
- * alakalı sonraki tüm kayıtların da olmaması lazım."*
- *
- * Sipariş beslemenin en çok TÜRETEN kaydıydı: rezervasyon, parti izi, durum logu, kutu, gönderi,
- * sefer, sefer kapanışı, talep, geri bildirim daveti, değerlendirme, puan, kupon kullanımı ve para
- * tahsilatı — hepsi bir siparişin varlığından doğuyordu. Karar bu yüzden tek bir tabloyu değil bir
- * ZİNCİRİ kaldırıyor; yarısını bırakmak sahipsiz kayıtlar (kimsenin siparişine ait olmayan kutu,
- * boşluğa bakan sefer) demek olurdu ve o kayıtlar "veri" değil ENKAZ olurdu.
- *
- * **Kalanlar bilinçli:** `cart` KALDI — sepet bir sipariş değil, ondan ÖNCEKİ hâldir ve müşteri
- * yüzeyi onu siparişsiz de göstermek zorunda. `discount` tanımları KALDI (operatörün kurduğu şey),
- * yalnız kullanım kayıtları gitti. Banka ekstresi KALDI, siparişten türeyen üç satırı gitti.
- *
- * **Bedeli açık olsun:** kurye bölümünün ve para mutabakatının ekranları besleme sonrası BOŞ açılır;
- * `seed:coverage`ın sipariş eksenli alanları da boş kalır ve artık kapıyı kapatmaz (künye
- * `seed/coverage.ts` → `KapsamAlani.siparisGerektirir`). Hâllerin hepsi hâlâ üretilebilir — yalnız
- * beslemenin değil AKIŞIN eliyle: kullanıcı siparişi kendisi oluşturur, depo toplar, kurye taşır.
- * Zaten istenen de buydu.
- *
- * TABLO KAPSAMI (`full`) — hangi tabloya veri girer, girmeyenin sebebi:
- *   ✓ category            4 kategori — 3'ü görselli (anasayfa şeridi), 1'i görselsiz (boş durum)
- *   ✓ product             69 ürün — 5'i elle (yasal beyan/KDV/raf ömrü/marj dolu, farklı durumlar
- *                         örneklenir), 64'ü taban×niteleme çarpımından türetilir (16×4): sayfalama ve
- *                         sonsuz kaydırma ancak gerçekçi hacimde denenebilir — 30'luk sayfada 3 sayfa.
- *                         Görseller 5 PAYLAŞILAN anahtara işaret eder (64 yükleme yerine 5); bir kısmı
- *                         bilinçli görselsiz. Süzgeç dağılımı: 21 beyan eksik · 8 pasif · 5 aday.
- *   ✓ product_variant     ürün başına 1-2 varyant (varyantsız üründe servis varsayılan varyant açar)
- *   ✓ product_image       galeri (ek fotoğraflar) — YENİ DOSYA YÜKLENMEZ, aynı 5 anahtara işaret eder.
- *                         Sayılar arayüzün her durumunu kapsar: dolu (sınır notu) · 2'li · tek · boş;
- *                         kapaksız ürünlere de galeri verilir ("Kapak yap" takası orada denenir).
- *                         Kırpma değerleri bilinçli farklı — odak/zoom etkisi ekranda görünsün.
- *   ✓ collection          4 koleksiyon — açıklama + kapak görseli (paylaşım/OG), aktif+pasif, dolu+boş
- *   ✓ product_collections üyelik + `position` (vitrin kürasyon sırası)
- *   ✓ bundle · bundle_item 3 paket — görselli/kişilikli · görselsiz + HEDİYE kalemli (0 €) · pasif ve
- *                         mutabakatı bilinçli TUTMAYAN (liste rozeti kırmızı görünsün). Kalem fiyatları
- *                         toplamı paket fiyatını verir; kalemler SKU ile varyanta bağlanır
- *   ✓ user_profiles       taslak müşteriler + TİCARİ KARTLAR (B2B onaylı/bekleyen, B2C, DE) + personel
- *                         (dev admin + depo/kurye/muhasebe)
- *   ✓ price               varyant başına b2c TTC + b2b HT; bir kısmında geçmiş liste ve İLERİ TARİHLİ
- *                         zam; 6 satır müşteriye özel → "en özgül kazanır" çözümü denenebilir
- *   ✓ delivery_zone       3 aktif + 1 pasif bölge (rota günü ve kargo dallanması)
- *   ✓ address             rota içi · rota dışı (kargo) · pasif bölgede — "in_route" türetimi denenir
- *   ✓ supplier            3 tedarikçi (biri pasif) + ürün–kod eşlemesi (bir kısmı ÇİFT kaynaklı)
- *   ✓ purchase_order      BEŞ durumun beşi: taslak · gönderildi · iptal · kısmi teslim · TAM teslim
- *   ✓ stock_intake        2 giriş — biri PO'lu ve bilinçli EKSİK geldi (sipariş↔gelen fark raporu)
- *   ✓ stock              ~140 parti: FEFO için farklı tarihler + sınır durumlar (indirimli teklif,
- *                         yaklaşan, DLC geçmiş, DDM geçmiş, tükenmiş, alış fiyatı girilmemiş)
- *   ✓ stock_movement      elle düzeltmenin üç tipi (imha · sayım · iade) + imhanın üç sebebi;
- *                        sayım farkı İKİ YÖNLÜ (yön kolonu boş bir kümeyle sınanmasın)
- *   ✓ temperature_log     4 nokta × 21 gün × 2 ölçüm (STR) + 7 gün (KEHL) — İKİ depo, biri aralık DIŞI
- *   ✓ cart                normal · toptan · BAYAT (1 yıllık) + partiye çıpalı teklif satırı
- *   ✗ order               **SEED SİPARİŞ YAZMAZ** (kullanıcı kararı 01.09) — künye aşağıda, §SİPARİŞ.
- *   ✗ reservation         siparişten doğar → yok
- *   ✗ order_item_batch    hazırlık onayında yazılır → yok
- *   ✗ order_status_log    geçişten doğar → yok
- *   ✗ order_box(+item)    kutu döngüsü siparişin üstünde kurulur → yok
- *   ✗ shipment(+event)    kargo künyesi siparişe yazılır → yok
- *   ✗ delivery_run(+close) sefer siparişten türer → yok
- *   ✗ ticket(+message)    talep siparişe ve kalemine bağlanır → yok
- *   ✗ feedback_request    davet TESLİM EDİLMİŞ siparişe gider → yok
- *   ✗ product_feedback    davetten doğar → yok
- *   ✗ points_entry        puan değerlendirmenin izine dayanır → yok
- *   ✗ discount_use        kullanım siparişten doğar → yok (tanımlar `discount`ta duruyor)
- *   ✓ account             5 hesap: kasa · 2 banka · Stripe · kapanmış (pasif) — bakiye SAKLANMAZ
- *   ✓ money_movement      açılış bakiyeleri (`capital`) · 9 gider (2'si kampanya etiketli reklam) ·
- *                         tedarikçiye KISMİ ödeme (borç açık kalsın) · 2 transfer (kasa→banka,
- *                         Stripe payout). Sipariş tahsilatları YOK — onlar 12.2'de siparişe bağlı doğar
- *   ✓ discount            11 tanım: 8 kupon (geçerli · ilk-sipariş · süresi dolmuş · başlamamış ·
- *                         tek haklı · kişiye özel · pasif · kişi-başı sınırlı) + 3 otomatik kampanya
- *                         (kategori · koleksiyon · asgari sepetli). Kupon kutusunun HER cevabı denenir
- *   ✓ postal_code_demand  7 posta kodu, YOĞUNLAŞMIŞ dağılım (47 → 2) — "bölge nereye açılmalı"
- *   ✓ zone_notice         6 kayıt: bekleyen + haber verilmiş · kayıtlı müşteri + kayıtsız ziyaretçi
- *   ✓ webhook_event       işlenmiş · DÜŞMÜŞ (hata metinli) · bekleyen · dinlenmeyen tür
- *   ✓ job_run             2 iz — adlar `apps/backend/src/jobs`'takilerle BİREBİR (uydurma ad, ekranda
- *                         hiç tazelenmeyen hayalet satır bırakır). Biri HATALI; kayıtsız iş = hiç koşmadı
- *   ✓ system_health_snapshot 7 günlük seri (yakında 2 dk, geçmişte 30 dk çözünürlük): disk %60→%84
- *                         tırmanıyor, ~2 gün önce %92 ile KRİTİK pencere, 6–9 sa arası ÖLÇÜLEMEDİ.
- *                         Sertifika günü de zamanla azalır → hüküm ok/warn/crit ÜÇÜ de doğar. Hüküm
- *                         elle yazılmaz, `healthStatusOf` hesaplar — yoksa seed eşikleri gizlerdi
- *   ✓ error_log           10 satır: 3 seviye · açık/çözülmüş · 1 REGRESYON (aynı parmak izinin kapalı
- *                         ikizi). Parmak izi servisin fonksiyonundan; sayaç tek satırda kurulur
- *   ✓ settings            global satırlar migration'da; seed KAPSAMLI satırları ekler (ülke · kanal ·
- *                         bölge) — "en özgül kazanır" zinciri ancak aynı anahtarın üç kapsamı varsa
- *                         denenir. `warehouse` kapsamı YAZILMAZ: servisin öncelik listesinde yok
- *   ✗ email_verifications GEÇİCİ OTP kaydı — seed'lenmez (dakikalar içinde ölür, giriş akışı üretir)
- *   ✓ bank_import         şablon + bir ekstre yüklemesi; satırlar GERÇEK okuyucudan geçer →
- *                         eşleştirme kuyruğu dolu gelir (money bölümünde)
- *   ✓ warehouse           2 depo (STR kargo çıkışı · KEHL sınır) — tek depolu veri, depo süzgeci
- *                         hatalarının hiçbirini göstermez (CLAUDE.md §1)
- *   ✓ warehouse_transfer  3 sevkiyat: yolda · kabul edilmiş (biri EKSİK geldi) · iptal
- *   ✓ warehouse_variant_threshold  depo bazlı asgari stok — yarısı eşiğin ALTINDA (yeniden sipariş
- *                         uyarısı yansın). İki katmanlı ezme kuralı ancak depo satırı varsa görünür
- *   ✓ variant_stock_notice "stok gelince haber ver": aynı varyantı bekleyen üç kişi · ziyaretçi +
- *                         kayıtlı · başka ÜLKE (yer süzgeci) · haber verilmiş (damgalı) kayıt
- *   ✓ vehicle             ölçüm noktası (0045) + seferin aracı (0046) — depo seed'i kuruyor;
- *                         eski "kullanan yok (0042)" notu bayattı, 18.08'de düzeltildi
- *   ✗ document_counter    numara VERİLDİKÇE dolar (0033) — önceden doldurmak sayacı yalanlar
- *   ✗ auth.users          seed auth hesabı AÇMAZ; profiller auth'suz durur (giriş yapılınca 0002
- *                         trigger'ı e-postadan eşleştirip bağlar)
- *
- * ADMİN — dikkat: dev auth bypass'ı (`apps/web/lib/guard.ts`, dev'de varsayılan AÇIK) operasyon
- * kapılarını atlayıp sabit bir kimlik enjekte eder. Seed o kimlikle GERÇEK bir admin profili açar
- * (`DEV_ADMIN_PROFILE_ID`) — zorunlu, çünkü `order_status_log.actor_id` gibi alanlar
- * `user_profiles`'a FK'lidir; profilsiz sahte kullanıcı ilk durum geçişinde FK ihlali verirdi.
- *
- * BEDELİ: veritabanında artık bir admin bulunduğu için 0002'nin "ilk giriş yapan admin olur"
- * bootstrap'ı ARTIK TETİKLENMEZ — gerçek hesabınız `customer` olarak açılır. Kendi hesabınızı
- * yükseltmek için: `pnpm set-role <e-posta> admin`. (Seed yalnız YEREL kurulumdur; üretim
- * veritabanına atılmadığı için oradaki bootstrap olduğu gibi durur.)
- *
- * Her bölüm kendi guard'ıyla idempotent: dolu tabloyu atlar, bu yüzden tekrar çalıştırmak güvenlidir.
- * Değerler DETERMİNİSTİK (indise göre) — rastgelelik yok: iki koşu aynı veriyi kurar.
+ * `supabase db reset` sonrası veriyi katmanla kurar (`seed/tier.ts`): `base` yalnız gerçek veri ve uzağa yalnız o geçer. Sipariş
+ * zinciri yazılmaz, çünkü yarım zincir enkaz bırakır; deneme siparişleri ve kurye sahnesi gerçek kapılardan geçer.
  */
 
 import { createServiceRoleClient, waitForRest } from '@lezzet/database';
@@ -174,23 +37,8 @@ try {
 }
 
 /**
- * **Seed YALNIZ yerel veritabanına yazar** (08.08 · kullanıcı besin künyesi sorununu sorunca ölçüldü).
- *
- * Koruma YOKTU ve bedeli somuttu: `pnpm db:seed`, `.env`'i ne gösteriyorsa oraya yazıyor. Bir kez
- * yanlış `SUPABASE_URL` ile çalıştırıldığında canlı kataloğa **141 sahte ürün** ve bunların
- * **üretilmiş besin künyeleri** girerdi — besin künyesi INCO kapsamında yasal bir beyandır ve
- * kategori ortalamasından türetilmiş bir sayı orada durursa yanlış beyan olur. Seed'i geri alan bir
- * düğme de yok.
- *
- * **Neden koda gömülü işaret (ör. künyeye "örnek" anahtarı) yerine BU:** `NutritionSchema` kapalı bir
- * nesne ve `NUTRITION_KEYS` onun şeklinden türüyor (INCO beyan sırası — hem form hem müşteri tablosu
- * onu izliyor). Torbaya fazladan bir anahtar koymak müşteri tablosuna sahte bir beyan satırı ekler;
- * Zod da bilinmeyen anahtarı zaten okurken düşürür, yani işaret sessizce kaybolurdu. Verinin şekli
- * bir sözleşme; koruma kapıda durmalı, verinin içinde değil.
- *
- * Yerel ölçüt HOST: Supabase yereli `127.0.0.1`/`localhost` üzerinden konuşur. Bilerek üretime
- * yazmak isteyen (ör. demo ortamı kurulumu) `SEED_ALLOW_REMOTE=true` der — ve o an ne yaptığını
- * bilir; kaza ile yazılmaz.
+ * Seed yalnız yerel veritabanına yazar: üretilmiş besin künyesi canlı kataloğa girerse yanlış yasal beyan olur ve geri alan düğme yoktur.
+ * Ölçüt host'tur; bilerek uzağa yazmak `SEED_ALLOW_REMOTE=true` ister.
  */
 function assertLocalDatabase(): void {
   if (process.env.SEED_ALLOW_REMOTE === 'true') {
@@ -216,19 +64,8 @@ function assertLocalDatabase(): void {
 
 async function main(): Promise<void> {
   assertLocalDatabase();
-  // Katman koşu ANINDA seçilir (`--tier=base|extend|full`, varsayılan `full`) — künye `seed/tier.ts`.
   const katman = katmanOku();
-  /**
-   * **UZAK HEDEFE YALNIZ `base` GEÇER** (kullanıcı kararı 16.08).
-   *
-   * `base` tanımı gereği yalnız gerçek veri yazıyor (kaynak katalog + kullanıcının kararları), o
-   * yüzden üretime gidebilir. `extend` ve `full` ise yerel fikstürler: uydurma personel ve onlara
-   * açılmış GİRİŞ HESAPLARI, uydurma depo/rota/tedarikçi/banka hesabı, ağırlıktan hesaplanmış
-   * fiyat, indisten üretilmiş stok, ve bilinçli olarak bozulmuş kayıtlar. Bunların üretime gitmesi
-   * yanlış veri değil, GÜVENLİK AÇIĞI olurdu.
-   *
-   * Kapı burada, tek yerde: aşağıdaki bölümlerin hiçbiri ayrıca "uzak mıyım" diye sormuyor.
-   */
+  // `extend` ve `full` uydurma personel ve giriş hesabı yazar; uzağa gitmeleri güvenlik açığı olurdu. Kapı tek yerde, burada.
   if (uzakHedefMi() && katman !== 'base') {
     throw new Error(
       `Uzak hedefe yalnız \`base\` katmanı yazılabilir (istenen: ${katman}).\n` +
@@ -238,71 +75,39 @@ async function main(): Promise<void> {
   }
   console.log(`▸ BESLEME KATMANI: ${katman}${uzakHedefMi() ? ' · UZAK HEDEF' : ''}`);
   const db = createServiceRoleClient();
-  // `db:refresh` = reset + seed. Reset, VERİTABANI sağlıklı olur olmaz döner ama PostgREST o anda hâlâ
-  // şema önbelleğini yüklüyor olabilir; ilk sorgu kapıdan 502 alıp seed'i ilk bölümde düşürüyordu.
+  // Reset veritabanı hazır olunca döner ama PostgREST şema önbelleğini hâlâ yüklüyor olabilir; ilk sorgu 502 alırdı.
   await waitForRest(db);
-  // ── `base` — YALNIZ GERÇEK VERİ ──────────────────────────────────────────────────────────────
-  // Buradaki dört bölümün yazdığı her satırın arkasında ya kaynak katalog ya kullanıcının bir
-  // kararı var: kategori ve ürün üreticinin kataloğundan, kapaklar kullanıcının seçiminden,
-  // koleksiyon üyeliği kullanıcının kürasyonundan, tarif bizim editoryal metnimiz.
-  //
-  // **Paket burada YOK ve bu bir tercih değil ŞEMA:** `bundle.total_price` `NOT NULL`, varsayılanı
-  // yok ve tutar kalem fiyatlarından türüyor. Fiyat yazılmayan bir katmanda paket kurulamaz.
-  // Tarif kalabiliyor çünkü kendi fiyatını SAKLAMIYOR (05.16) — malzeme satırları fiyatsız çizilir.
+  // Paket `base`te kurulamaz: `bundle.total_price` zorunlu ve kalem fiyatlarından türer. Tarif fiyat saklamaz, kalabilir.
   await seedCatalog(db, katman);
   await seedCollections(db, katman);
   await seedRecipes(db);
-  // Sayfa görselleri hiçbir şeye bağlı DEĞİL (bir varlığa değil bir sayfa yerine ait) — sırası
-  // serbest; katalogun yanında duruyor çünkü ikisi de aynı kovaya yazıyor.
   await seedSiteImages(db);
-  // Görsel ölçüsü CDN'e SORULMAZ (14.09), künyeden gelir (`seed/image-manifest.ts`). Eskiden burada ve
-  // paketlerden sonra `backfillImageDimensions` koşuyordu; sürüm her tazelemede yenilendiği için her
-  // ölçü sorusu yeni bir CDN dönüşümüydü ve ücretsiz kotayı bitirdi. Dolgu artık elle: `pnpm images:dims`.
+  // Görsel ölçüsü CDN'e sorulmaz, künyeden gelir; her soru yeni bir CDN dönüşümüdür ve ücretsiz kotayı bitirir.
 
-  // FİYAT ARTIK `base`TE (kullanıcı kararı 19.08) — çünkü artık uydurma değil.
-  //
-  // Eskiden fiyat bu çizginin altındaydı ve haklı olarak: uydurma bir kilo tabanından üretiliyordu.
-  // Bugün 34 varyantın fiyatı tedarikçinin 22.12.2025 tarihli teklifinden ve kendi toptan satış
-  // listemizden türüyor — ikisi de gerçek belge. Maliyeti OLMAYAN varyant `base`te fiyatsız kalır;
-  // uydurma sayı yalnız `extend`+ katmanında doğar (künye `seed/pricing.ts`).
+  // Fiyat `base`te, çünkü tedarikçi teklifinden ve toptan listemizden türer; maliyeti olmayan varyant fiyatsız kalır.
   const varyantlar = await katalogVaryantlari(db);
   await seedPrices(db, varyantlar, katman);
 
-  // ── `base` BURADA BİTER ──────────────────────────────────────────────────────────────────────
-  // Buradan sonrasının TAMAMI uydurmadır (kullanıcı kararı 16.08: *"hiçbir içerik
-  // üretilmeyecek"*): depo · rota · personel ve giriş hesapları · banka hesapları ·
-  // tedarikçiler · ayar değerleri · üretilmiş stok, ve onların üstüne kurulan bütün geçmiş.
-  // Gerçek olanları üretimde operatör kurar. Künye `seed/tier.ts`.
+  // Buradan sonrası uydurmadır; gerçek olanları üretimde operatör kurar.
   if (!enAz(katman, 'extend')) {
     gorselOzeti();
     console.log('✓ seed tamam · KATMAN: base — yalnız gerçek veri (stok · depo · personel · tedarikçi YOK; fiyat YALNIZ teklifteki 34 varyantta; 128 ürün beyansız → is_incomplete)');
     return;
   }
 
-  // Depolar geçmişin EN BAŞINDA: parti, sipariş, bölge ve personel kapsamı hepsi depoya bağlı —
-  // deposuz hiçbir satır yazılamaz (DOMAIN §17).
+  // Sıra bağlayıcıdır: her bölüm öncekinin ürettiği kimliğe dayanır ve deposuz hiçbir satır yazılamaz.
   const depolar = await seedWarehouses(db);
-  // Ölçüm noktaları depodan HEMEN sonra (19.28/19.29): hem sıcaklık kaydı hem stok partisi onlara
-  // `restrict` ile bağlı, yani ikisinden de önce var olmaları gerekiyor.
   const noktalar = await seedStoragePoints(db, depolar);
-  // Kargo kutuları (07.12) — depolardan HEMEN sonra: kutu deponun künyesidir, alan gibi.
   await seedShippingBoxes(db, depolar);
-  // Ticari zemin — SIRA BAĞLAYICIDIR: her bölüm bir öncekinin ürettiği kimliğe dayanır.
   const kisiler = await seedKisiler(db, depolar);
-  // Giriş hesapları profillerden SONRA: trigger yeni auth kullanıcısını e-postayla eşleşen profile
-  // bağlıyor, yani profil önce var olmak zorunda (gerekçe `seedStaffLogins` künyesinde).
+  // Trigger yeni auth kullanıcısını e-postayla eşleşen profile bağlar; profil önce var olmalı.
   await seedStaffLogins(db);
-  // Pazarlıklı fiyat müşteriden SONRA: kanal listesini ezen satır bir müşteri kimliğine yazılıyor.
   await seedNegotiatedPrices(db, varyantlar, kisiler);
-  // Barkodlar kişilerden SONRA: "öğrenilmiş kod" satırı depocunun kimliğine yazılıyor (Modül 23).
   await seedBarcodes(db, varyantlar, kisiler);
-  // Paketler FİYATLARDAN SONRA: paket fiyatı kalemlerin birim fiyatlarından türetiliyor (elle
-  // yazılan bir sayı değil). Sıra bozulursa paketler fiyatsız kalemlerle kurulur.
+  // Paket fiyatı kalemlerin birim fiyatlarından türer; fiyatlardan önce koşsa paket fiyatsız kurulurdu.
   await seedBundles(db);
-  // Görsel yazan son bölüm paketler — özet burada (`base` katmanı kendi çıkışında basıyor).
   gorselOzeti();
   await seedDeliveryZones(db, depolar);
-  // Kapsamlı ayarlar BÖLGELERDEN SONRA: bölge kapsamlı satır, bölgenin kimliğine yazılır.
   await seedScopedSettings(db, depolar);
   await seedDraftCustomers(db);
   await seedAddresses(db, kisiler);
@@ -313,41 +118,15 @@ async function main(): Promise<void> {
   await seedAdjustments(db, kisiler);
   await seedTemperatureLogs(db, kisiler, depolar, noktalar);
   await seedCarts(db, kisiler, varyantlar);
-  // Para SİPARİŞLERDEN ÖNCE: sipariş tahsilatları bir hesaba yazılıyor (12.2), hesap hazır olmalı.
   await seedMoney(db);
-  /*
-    KUPON TANIMI KALIYOR, KULLANIMI YOK — beslemede sipariş olmadığı için (kullanıcı kararı 01.09).
-    Tanım operatörün kurduğu bir şeydir ve kendi başına anlamlıdır; kullanım kaydı ise ancak bir
-    sipariş kuponu uygulayınca doğar.
-  */
   await seedDiscounts(db, kisiler);
-  // FİZİKSEL test etiketleri: sabit kodlar tedarik siparişinin ve katalog varyantlarının GERÇEK
-  // kalemlerine bağlanıyor, sonra bağlar DOĞRULANIYOR (künye: `seed/test-labels.ts`).
   await seedTestLabels(db, varyantlar);
-  // Eşikler: "eşiğin altında mı" sorusu kullanılabilir stoğa bakar. `full`de transferden SONRA
-  // koşuyor (sevk edilen mal o sayıyı düşürür); `extend`te transfer yok, sıra da sorun değil.
+  // Eşik kullanılabilir stoğa bakar; `full`de transfer o sayıyı düşürdüğü için transferden sonra koşar.
   await seedThresholds(db, depolar);
-  // Stok bildirimi: tükenmiş varyantlar. Beslemede tükenmişlik SİPARİŞTEN değil, bilinçli sıfır
-  // bakiyeli partilerden doğuyor (`seed/stock.ts`) — bekleyen müşteri kaydı bir sipariş değildir.
   await seedStockNotices(db, kisiler);
-  /*
-    DENEME SİPARİŞLERİ (kullanıcı kararı 02.09) — §SİPARİŞ'in DAR bir istisnası, künyesi kendi
-    dosyasında. İki `confirmed` sipariş: zincir doğurmuyorlar (kutu · sefer · tahsilat · geri
-    bildirim yok), yalnız depo toplama kuyruğunun başında bekliyorlar.
-
-    SIRA SONDA: stoğun ve bölgelerin kurulmuş olması şart (rezervasyon kullanılabilir stoğa bakar,
-    teslim günü bölgenin gününden hesaplanır).
-  */
+  // Deneme siparişleri sonda: rezervasyon kurulu stoğa, teslim günü bölgenin gününe bakar.
   await seedTestOrders(db, varyantlar, depolar);
-  /*
-    KURYE DÖNÜŞÜ SAHNESİ (kullanıcı kararı 04.09) — D6 ve "araçtaki seferler" ekranlarının hiçbir
-    hâli beslemede doğmuyordu; her `db:refresh`ten sonra akışın tamamı elle koşuluyordu. Blok
-    satırları GERÇEK KAPILARDAN geçiriyor (sefer aç · kutu mühürle · araca yükle · kapıda sonuçlandır
-    · seferi kapat), gerekçesi kendi künyesinde.
-
-    SIRA `seedTestOrders`TAN SONRA ve zorunlu: sahne o bloğun açtığı deneme MÜŞTERİLERİNİ ve
-    adreslerini kullanıyor — ikinci bir müşteri kümesi açmak, aynı kişiyi iki kez uydurmak olurdu.
-  */
+  // Kurye dönüşü sahnesi deneme siparişlerinin müşterilerini ve adreslerini kullanır.
   await seedCourierReturn(db, varyantlar, depolar);
 
   if (!enAz(katman, 'full')) {
@@ -355,33 +134,19 @@ async function main(): Promise<void> {
     return;
   }
 
-  // ── YALNIZ `full` ────────────────────────────────────────────────────────────────────────────
-  // Kapsam denetiminin (`pnpm seed:coverage`) zorunlu kovalarının tamamı ancak burada dolar.
-  // Banka ekstresi KALIYOR ama artık siparişten türeyen satırı yok (01.09): ekstre bir BANKA
-  // belgesidir, eşleştirme kuyruğu onun ekranıdır. Kuyruk siparişsiz "öneri yok" hâlinde durur —
-  // ve o hâl de gerçek bir hâldir (banka masrafı hiçbir siparişe uymaz).
   await seedBankQueue(db);
   await seedTransfer(db, depolar);
-  /* Konuşmalar (15.1) — SİPARİŞTEN BAĞIMSIZ. Bir tur `seed/support.ts`in içindeydi ve talep
-     siparişe bağlı olduğu için o dosyayla birlikte silinmişti; kapsam denetimi dört boş kovayla
-     yakaladı (künye `seed/conversation.ts`). Müşteri WhatsApp'tan yazmak için sipariş vermiş
-     olmak zorunda değil. */
   await seedConversations(db);
-  // Bildirimler EN SONA YAKIN: satırlar bölge kaydından TÜRETİLİR (künye `seed/notifications.ts`) —
-  // kaynakları bu noktada kurulmuş olmalı.
+  // Bildirim satırları bölge kaydından türer.
   await seedNotifications(db, kisiler);
-  // Asistan kuyruğu HER ŞEYDEN SONRA: onbir dilekçenin payload'ı gerçek kimlikler taşıyor (varyant,
-  // depo, hesap, bölge, açık tedarik siparişi, eldeki en yakın tarihli parti) ve hepsi bu noktada
-  // kurulmuş oluyor. Erken koşsaydı çapalar bulunamaz, dilekçeler sahte uuid ile doğardı — gövde
-  // açılırken ad "—" görünür, onaylandığında uygulayıcı `23503` ile kesilirdi.
+  // Asistan dilekçeleri gerçek kimlikler taşır; erken koşsa sahte uuid ile doğar ve onayda FK ihlaliyle kesilirdi.
   await seedAssistantProposals(db, varyantlar, kisiler);
   await seedJobRuns(db);
-  // Gözlemleme EN SONDA: sağlık görüntüsünün "son bir saatte kaç hata" alanı ile hata kaydı aynı
-  // hikâyeyi anlatıyor; hata satırları yazılmadan görüntü alınsaydı ekran kendiyle çelişirdi.
+  // Sağlık görüntüsünün hata sayısı hata kaydıyla aynı hikâyeyi anlatmalı.
   await seedSystemHealth(db);
   await seedErrorLog(db);
 
-  // Seed bir admin açtığı için 0002'nin "ilk giren admin olur" bootstrap'ı artık tetiklenmez.
+  // Seed bir admin açtığı için "ilk giren admin olur" bootstrap'ı tetiklenmez.
   console.log('✓ seed tamam · KATMAN: full · operasyon yüzeyi dev bypass ile açık · gerçek hesabı yükseltmek: pnpm set-role <e-posta> admin');
 }
 

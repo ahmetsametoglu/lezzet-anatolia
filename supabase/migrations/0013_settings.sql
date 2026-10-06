@@ -30,7 +30,7 @@ alter table public.settings enable row level security;
 
 -- Varsayılanlar global satırlardır, özgül kapsam admin ekranından eklenir; para değerleri cent (STACK §8), yüzdeler tam sayıdır.
 insert into public.settings (key, value, description) values
-  ('reservation_ttl_minutes',      '30',     'Checkout rezervasyon penceresi (dk). Stripe oturum asgarisi 30 dk — altına inilemez; ödeme penceresi buna eşitlenir.'),
+  ('reservation_ttl_minutes',      '30',     'Checkout rezervasyon penceresi (dk); sağlayıcıdaki ödeme de bu sürede düşer.'),
   -- Yeni sohbetin yürütücüsü; yalnız yeni sohbete uygulanır (`open_conversation` çakışmada dokunmaz).
   ('conversation_default_handler', '"ai"',   'Yeni sohbetin yürütücüsü: human | hybrid | ai. Açık sohbetleri değiştirmez; Ayarlar ve Sosyal Mesajlar ekranından değiştirilir.'),
   -- Yeni talebin yürütücüsü; talep çoğu zaman şikâyet taşıdığı için fabrika değeri hibrit (AI taslak yazar, operatör onaylar).

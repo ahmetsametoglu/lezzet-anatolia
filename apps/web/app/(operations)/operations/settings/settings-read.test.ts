@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONVERSATION_DEFAULT_HANDLER_KEY } from '@lezzet/domain-core';
 import type { Setting, UserProfile } from '@lezzet/types';
-import { SETTING_BY_KEY } from './settings-catalog';
+import { SETTING_BY_KEY, SETTING_CATALOG } from './settings-catalog';
 import { checkBounds, formatSettingValue, parseSettingValue } from './settings-labels';
 import { filterSettingRows, toScopeOptions, toSettingRows, toStaffRows } from './settings-read';
 
@@ -235,16 +235,16 @@ describe('filterSettingRows', () => {
 });
 
 describe('parseSettingValue — sınır', () => {
-  const ttl = SETTING_BY_KEY.get('reservation_ttl_minutes')!;
+  const reward = SETTING_CATALOG.find((def) => def.section === 'trust' && def.min === 0)!;
 
   it('alt sınırın altı SEBEBİYLE reddedilir', () => {
-    const result = parseSettingValue(ttl, '15');
+    const result = parseSettingValue(reward, '-1');
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain('sağlayıcısının oturum asgarisi');
+    if (!result.ok) expect(result.error).toContain('ödülü cezaya çevirirdi');
   });
 
   it('sınırdaki değer geçer', () => {
-    expect(parseSettingValue(ttl, '30')).toEqual({ ok: true, value: 30 });
+    expect(parseSettingValue(reward, '0')).toEqual({ ok: true, value: 0 });
   });
 
   it('para virgüllü yazımdan CENT üretir', () => {

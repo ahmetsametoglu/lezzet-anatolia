@@ -1,23 +1,5 @@
 /**
- * Bir siparişin canlı kanalı — **kapı zili, veri borusu değil.**
- *
- * Ödeme onayı bize Stripe webhook'uyla gelir ve o çağrı müşterinin tarayıcısından bağımsızdır:
- * müşteri onay ekranında "onaylanıyor" yazısına bakarken sipariş arka planda kesinleşir ve ekran
- * bunu ancak elle yenilenince görürdü.
- *
- * **Neden `postgres_changes` DEĞİL.** Projede hiç RLS yok; her okuma sunucuda, service-role ile
- * yapılıyor (STACK §6). Tarayıcıyı `order` tablosuna abone etmek o duvarda ilk delik olurdu —
- * tablo yayına açılır, satır güvenliği yazmak zorunda kalırdık ve bir yanlış politika bütün
- * siparişleri açardı. Broadcast'te tablo hiç görünmez: sunucu boş bir "değişti" mesajı atar,
- * tarayıcı da bunu duyunca sayfayı SUNUCUDAN yeniden ister. Veri yine tek kapıdan çıkar.
- *
- * Kanal adı siparişin kimliğidir (UUID): tahmin edilemez ve zaten mesaj taşımadığı için duyulması
- * da bir şey söylemez.
- *
- * **Adın kendisi ortak katmanda (07.18):** arka ucun ödeme zamanlayıcısı da aynı zili çalıyor.
+ * Siparişin canlı kanalı veri taşımaz, yalnız "değişti" der ve tarayıcı sayfayı sunucudan yeniden ister. `postgres_changes`
+ * kullanılmaz, çünkü tabloyu yayına açmak satır güvenliği gerektirirdi; kanal adı tahmin edilemeyen sipariş kimliğidir.
  */
 export { orderChannelName } from '@lezzet/application/realtime/order-channel';
-
-// Olay adı BURADAN KALKTI (16.8): zili çalan taraf ortak modüle terfi edince aynı sabit iki yerde
-// yaşamaya başlamıştı — biri değişse zil sessizce çalmaz olurdu. Tek kaynak:
-// `@lezzet/application/realtime/bell-event` → `BELL_EVENT`.

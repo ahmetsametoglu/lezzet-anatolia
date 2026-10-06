@@ -5,15 +5,8 @@ import type { SettingDef, SettingValue } from './settings-catalog';
 import type { ExceptionScope } from './settings-types';
 
 /**
- * Ayar değerinin OKUNAN ve YAZILAN hâli (09.16) — saf, testli.
- *
- * Tür bilgisi sözlükte (`SettingDef.kind`); burada o türün iki yönü var: `formatSettingValue`
- * değeri operatörün diline çevirir, `parseSettingValue` operatörün yazdığını değere çevirir ve
- * **sınırı burada uygular.** İkisi yan yana duruyor çünkü aynı sözleşmenin iki ucu: biri "%25"
- * yazarken öteki "%25"i 25 diye okumak zorunda.
- *
- * Sınır denetimi ekranda DEĞİL burada: aynı fonksiyonu server action da çağırıyor. İstemcide
- * yazılmış bir kontrol, doğrudan çağrılan bir eylemde hiç koşmaz.
+ * Ayar değerinin okunan ve yazılan hâli: `formatSettingValue` değeri operatörün diline, `parseSettingValue` yazılanı değere çevirir
+ * ve sınırı uygular. Sınır ekranda değil burada, çünkü server action da aynı fonksiyonu çağırır.
  */
 
 const CHANNEL_LABELS: Record<string, string> = { b2b: 'B2B (toptan)', b2c: 'B2C (perakende)' };
@@ -48,12 +41,8 @@ export function channelLabel(id: string): string {
 }
 
 /**
- * Kimlik taşıyan değerlerin AD sözlüğü — `scopeLabel`'daki `names` deseninin aynısı.
- *
- * Ayar tablosunda `door_cash_account_id` bir uuid tutuyor; ekranda "Kasa" yazmalı. Çeviri burada
- * yapılamaz (ad veritabanında), o yüzden dışarıdan gelir. Sözlük verilmezse ya da hesap silinmişse
- * kimliğin kendisi görünür — uydurma bir ad ("Bilinmeyen hesap") operatöre yanlış bir şeyin
- * düzeldiğini düşündürürdü; ham kimlik en azından aranabilir.
+ * Kimlik taşıyan değerlerin ad sözlüğü; ad veritabanında olduğu için dışarıdan gelir. Ad bulunamazsa kimliğin kendisi görünür,
+ * çünkü uydurma bir ad operatöre yanlış bir şeyin düzeldiğini düşündürürdü.
  */
 interface SettingValueNames {
   accounts?: ReadonlyMap<string, string>;
@@ -107,9 +96,8 @@ type ParseResult = { ok: true; value: SettingValue } | { ok: false; error: strin
 /**
  * Operatörün yazdığını değere çevirir; sınır ihlalini ANLAŞILIR cümleyle reddeder.
  *
- * Sınırın sebebi (`limitReason`) cümleye katılır: "30 dakikanın altına inemez" bir kural bildirir,
- * "ödeme sağlayıcısının oturum asgarisi 30 dakika" ise **neden** olduğunu söyler — ikincisini okuyan
- * kişi kuralı bir daha zorlamaz.
+ * Sınırın sebebi (`limitReason`) cümleye katılır: "0 altına inemez" bir kural bildirir, "eksi yazmak ödülü cezaya
+ * çevirirdi" ise nedenini söyler ve okuyan kuralı bir daha zorlamaz.
  */
 export function parseSettingValue(def: SettingDef, raw: string | boolean | Record<string, boolean>): ParseResult {
   if (def.kind === 'boolean') return { ok: true, value: Boolean(raw) };
@@ -130,12 +118,7 @@ export function parseSettingValue(def: SettingDef, raw: string | boolean | Recor
     return { ok: true, value: text };
   }
 
-  /**
-   * Hesap seçimi. Biçim BURADA elenir, VARLIK burada elenemez — hangi hesapların var olduğunu bu
-   * saf fonksiyon bilmez. Varlık kontrolü kapıda (`saveSettingAction`), çünkü ekran bir seçici
-   * sunsa da action doğrudan çağrılabilir ve o zaman uydurma bir uuid ayara yazılırdı: kapı önü
-   * satış sessizce olmayan bir hesaba para yazmaya başlardı.
-   */
+  /** Hesap seçiminde burada yalnız biçim elenir; varlık kapıda (`saveSettingAction`) denetlenir, çünkü eylem doğrudan çağrılabilir. */
   if (def.kind === 'account') {
     if (!UUID.test(text)) return { ok: false, error: 'Listeden bir hesap seçin.' };
     return { ok: true, value: text };

@@ -182,7 +182,7 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 ## 18 · Operasyon ve Güvenlik
 
 - [ ] (18.1) **Veri erişim modeli (RLS kapsamı):** service-role + guard tek kat mı, + RLS ikinci hat mı; RLS'nin ilk kapsadığı tablolar (müşteri kendi satırı, kurye kendi teslimatı). *Öneri:* çift kat, RLS temel tablolarda ikinci savunma.
-- [ ] (18.3) **Webhook güvenliği gözden geçirme:** 07 (Stripe) ve 15 (360dialog) idempotency + imza doğrulaması yerinde mi; `WebhookEvent` tablosu tüm sağlayıcıları kapsıyor mu. *Öneri:* tek desen, her sağlayıcı aynı.
+- [ ] (18.3) **Webhook güvenliği gözden geçirme:** 07 (Revolut) ve 15 (Meta) idempotency + imza doğrulaması yerinde mi; `WebhookEvent` tablosu tüm sağlayıcıları kapsıyor mu. *Öneri:* tek desen, her sağlayıcı aynı.
 - [ ] (18.4) **Yedekleme / felaki kurtarma:** günlük yedek/PITR (Supabase planı) + haftalık off-site `pg_dump` + Storage senkronu + yılda bir **restore provası**. *Öneri:* provası yapılmamış yedeğe güvenilmez — provayı takvime bağla.
 - [ ] (18.6) **Cron disiplini doğrulama:** `apps/backend` tek instance (fork); her iş taramalı-idempotent; kritik işler `last_run` + gecikince alarm. (TTL süpürme 06'da, feedback daveti 17'de bu disiplinle yazıldı — kontrol.)
 - [ ] (18.8) **CI + staging:** GitHub Actions (typecheck+lint+birim test her push); entegrasyon testleri lokal Supabase'de (özellikle **paralel rezervasyon yarışı** + para RPC'leri); staging = ikinci ücretsiz Supabase projesi + ikinci PM2 app; migration provası önce staging. *Öneri:* erken kur — geliştirmeyi hızlandırır.
@@ -270,7 +270,7 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 
 ### BACKLOG §1 · Tasarımı hazır, başka modül bekliyor
 
-- [ ] **"Checkout'a geç" düğmesi** — girişli müşteri doğrudan, ziyaretçi önce hızlı doğrulamaya — bekleyen: **ENGEL KALKTI (28.07):** `07.4`/`07.5` indi. Kapı hazır — `lib/order/checkout-session.ts` `createCheckoutSession` (rezervasyon → Stripe oturumu, TTL'li), webhook `api/webhooks/stripe`. Kalan iş yüzeyin: düğmeyi kapıya b…
+- [ ] **"Checkout'a geç" düğmesi** — girişli müşteri doğrudan, ziyaretçi önce hızlı doğrulamaya — bekleyen: **ENGEL KALKTI (28.07):** `07.4`/`07.5` indi. Kapı hazır — `lib/order/checkout-session.ts` `createCheckoutSession` (rezervasyon → ödeme, TTL'li), webhook `api/webhooks/revolut`. Kalan iş yüzeyin: düğmeyi kapıya b…
 - [ ] **Sipariş kalemi düzenleme** — hazırlanmamış siparişte kalem ekleme/çıkarma/adet değiştirme (`design/pages/admin-siparisler.md` §4 "İşlemler"), stok yeniden ayrılır/bırakılır — bekleyen: **09.8 kapandı ama bunu KAPSAMADI (26.08).** Elle giriş siparişi AÇIYOR; açılmış bir siparişin kalemini değiştirmek ayrı bir iş ve ayrı bir risk: rezervasyon geri bırakılıp yeniden alınmalı, indirim payları (`discount_am…
 - [ ] **"Fiyat değişti" bildirimi** — `DOMAIN §5`: fiyat arttıysa müşteriye açıkça söylenir ve onay istenir (kabul et / çıkar); düştüyse sessizce uygulanır — bekleyen: `CartItem.unitPrice` okuma tarafına bağlanmalı — alan yazılıyor, karşılaştırılmıyor
 - [ ] **Boş sepet: B2B sipariş şablonları** ("Haftalık standart · 14 kalem" + "Yükle") — bekleyen: şablon modeli yok (`07`); B2B müşteri bugün "son siparişi tekrarla" + vitrin seçkisi görür. Kod işareti: `BEKLEYEN(BACKLOG §2)` → aşağıdaki karar maddesi
@@ -349,7 +349,7 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [ ] (B.4) Native uygulama · dokunmatik geri bildirim (haptic) kapsamı dar ⟶ MOBİL ŞERİT
 - [ ] (B.6) Native uygulamada online ödeme "henüz açık değil" — anahtar eksik, kod değil
 - [ ] (B.7) Native uygulama · kapsam bilgisi bayat kalıyor — uygulama kapatılmadan tazelenmiyor ⟶ MOBİL ŞERİT
-- [ ] (B.9) Stripe çekmecesinde test kartı otomatik doldurma ⟶ MOBİL ŞERİT · araştırma gerekiyor
+- [ ] (B.9) Revolut kart formunda test kartı otomatik doldurma ⟶ MOBİL ŞERİT · araştırma gerekiyor
 - [ ] (B.12) AI cevap yazdı, müşteriye hiçbir bildirim gitmedi — bildirim mailin bastırma kuralına asılı
 
 ## Şeritler arası (eski `docs/talep/` — arşiv: `.arsiv/2026-09-15/talep/`)

@@ -1,39 +1,11 @@
 /**
- * Meta webhook duman testi (15.7) — `pnpm meta:smoke [senaryo] [--clean]`
- *
- * Kendi webhook ucumuza (`/api/webhooks/meta`) **imzalı ve gerçek biçimli** olay gönderir ve
- * gelen-taraf zincirini uçtan uca doğrular: imza → idempotency → kanal ayrımı → kimlik çözümü →
- * pencere hesabı → defter yazımı.
- *
- * ── NEDEN VAR: SAĞLAYICIYA "ŞU OLAYI GÖNDER" DENEMEZ ────────────────────────
- * `stripe-smoke` "anahtarlar doğru mu" sorusunu cevaplıyordu; bu script BAŞKA bir soruyu
- * cevaplıyor ve sağlayıcı elverişli olsa bile gerekli olurdu: **Meta'dan istediğin olayı istediğin
- * an isteyemezsin.** Echo (sayfadan giden cevabın geri düşmesi), ses mesajı, aynı olayın ikinci kez
- * teslimi, milisaniye/saniye damga farkı — bunların hepsi gerçek trafikte ya seyrek ya tetiklenemez.
- * Oysa her biri bir TUZAK taşıyor ve tuzağın kapalı kaldığı ancak tekrar tekrar sınanarak bilinir.
- *
- * İmza bunu mümkün kılıyor: `X-Hub-Signature-256` bizim `META_APP_SECRET`imizle hesaplanıyor, yani
- * geçerli bir Meta olayını yerelde üretebiliriz. Uç noktada HİÇBİR gevşetme yok — script de tam
- * olarak Meta'nın geçtiği kapıdan geçiyor. `bad-signature` senaryosu bunu her koşuda kanıtlıyor.
- *
- * ── GÖVDELER ÖLÇÜLMÜŞ, UYDURULMAMIŞ ────────────────────────────────────────
- * Alan adları ve biçimler 22.08 canlı turunda gerçek Meta trafiğinden doğrulandı (`15.7` durum
- * notu): `wa_id` `+`SIZ gelir, WhatsApp damgası SANİYE, Messenger/IG damgası MİLİSANİYE, echo'da
- * kişi `recipient.id`'dedir. O turun gerçek gövdeleri veritabanı yeniden seed edilince kayboldu —
- * bu script onların yerine geçiyor ve bir daha kaybolmuyor.
- *
- * ── KİMLİKLER İŞARETLİ ─────────────────────────────────────────────────────
- * Ürettiği satırlar `+33600000001` / `SMOKE-*` gibi tanınır kimlikler taşır: gelen kutusunda gerçek
- * müşteriyle karışmaz ve `--clean` onları nokta atışı siler. Varsayılan SİLMEZ — bu script'in asıl
- * amacı ekranda görmek; silme ayrı bir karar.
+ * Meta webhook duman testi — `pnpm meta:smoke [senaryo] [--clean]`. Echo, ses mesajı ve ikinci teslim gibi tuzaklı olaylar Meta'dan
+ * istenince alınamadığı için kendi ucumuza imzalı ve gerçek biçimli olay gönderir; satırlar `SMOKE-*` taşır ve `--clean` siler.
  */
 import { createHmac } from 'node:crypto';
 
 const load = (process as { loadEnvFile?: (path: string) => void }).loadEnvFile;
-// SIRA ÖNEMLİ (stripe-smoke ile aynı gerekçe): Node var olan değişkeni ezmez, ilk yükleyen kazanır.
-// Ve sıranın BAŞI backend'in dosyası, çünkü imzayı DOĞRULAYAN uç orada koşuyor: iki dosyadaki
-// `META_APP_SECRET` bir gün ayrışırsa script yanlış sırla imzalar ve arıza "işleyici bozuk" diye
-// okunur. Bugün ikisi aynı (ölçüldü 06.09) — kural o günü değil, ayrıştığı günü hedefliyor.
+// Node var olan değişkeni ezmez, ilk yükleyen kazanır; imzayı doğrulayan uç backend'de olduğu için önce onun dosyası okunur.
 try {
   load?.('apps/backend/.env.local');
 } catch {
@@ -56,17 +28,7 @@ if (!SECRET) {
   process.exit(1);
 }
 
-/*
-  Uç nokta adresi — tünel/prod denemek için `META_SMOKE_URL` ile ezilir.
-
-  **ADRES 06.09'da DÜZELTİLDİ.** Script 23.08'de yazıldığında uç `apps/web`'deydi
-  (`http://localhost:3000/api/webhooks/meta`); 29.08'de `apps/backend`'e taşındı (`ef9b545e`,
-  Sapma 5) ama script güncellenmedi ve o günden beri **ölü bir adrese** atıyordu. Arıza sessizdi
-  çünkü belirtisi 404'tü: koşu "başarısız" der, sebebi işleyicide aranırdı.
-
-  Yol artık `BASE`in içinde değil AYRI: eski hâlde `META_SMOKE_URL` yalnız konağı eziyordu, yani
-  kaçış kapısıyla bile yeni yola erişilemiyordu — adres değişince tek env ile telafi edilebilsin.
-*/
+// Tünel ya da sunucu denemek için konak `META_SMOKE_URL` ile ezilir; yol ayrı durur ki konak değişince yol kaybolmasın.
 const BASE = process.env.META_SMOKE_URL ?? 'http://localhost:8787';
 const ENDPOINT = `${BASE}/webhooks/meta`;
 
@@ -76,9 +38,7 @@ const WA_PERSON = '33600000001';
 const WA_ACCOUNT = '1227633040438008'; // test numarasının phone_number_id'si (kimlik, sır değil)
 const FB_PERSON = 'SMOKE-PSID-0001';
 const IG_PERSON = 'SMOKE-IGSID-0001';
-// Gerçek Sayfa (Lezzet Anatolie, 08.09'da ölçüldü); '1297615503430731' 22.08'in test Sayfasıydı ve artık çözülmüyor.
-// Sahte sohbetler bu kimlikle doğar; AI varsayılanında ajan bir kez gerçek Sayfadan sahte PSID'ye yazmayı dener,
-// Meta reddeder (kalıcı ret → devir, 08.09), ikinci deneme olmaz.
+// Gerçek Sayfa kimliği; yapay zekâ ajanı sahte kişiye bir kez yazmayı dener, Meta kalıcı retle reddeder ve sohbet devre düşer.
 const PAGE_ACCOUNT = '1214267358444912';
 const IG_ACCOUNT = 'SMOKE-IGACCOUNT';
 
@@ -232,8 +192,7 @@ async function clean(): Promise<void> {
   const db = serviceDb();
   const service = new ConversationService(db);
 
-  // Arama ÇİFTLE yapılır (`findByExternalRef(source, ref)`) — tekillik ölçütü de o çifttir
-  // (`(source, external_ref)`, 0039). Tek anahtarla aramak üç kanalı birbirine karıştırırdı.
+  // Arama kanal ve kimlik çiftiyle yapılır, çünkü tekillik o çifttedir; tek anahtar üç kanalı karıştırırdı.
   const targets: [Parameters<typeof service.findByExternalRef>[0], string][] = [
     ['whatsapp', `+${WA_PERSON}`],
     ['messenger', FB_PERSON],
@@ -251,12 +210,7 @@ async function clean(): Promise<void> {
   // Olay kayıtları: yalnız bu script'in ürettikleri (`SMOKE` damgalı kimlikler).
   await mustDelete(db, 'webhook_event', (q) => q.eq('provider', 'meta').like('event_id', '%SMOKE%'));
 
-  /*
-    WhatsApp senaryosunun açtığı TASLAK müşteri de silinir — teardown yarım bırakılmaz (`CLAUDE §4b`).
-    İki koruma: yalnız işaretli numara VE yalnız `is_draft`. Gerçek bir müşteri o numarayı bir gün
-    alırsa (almaz, ama kural varsayıma dayanmamalı) taslak olmadığı için dokunulmaz. Siparişi olan
-    bir kayıt zaten FK `restrict` ile reddedilir ve `mustDelete` bunu SESSİZ geçmez, fırlatır.
-  */
+  // WhatsApp senaryosunun açtığı taslak müşteri de silinir; yalnız işaretli numara ve `is_draft`, ki gerçek müşteriye dokunulmasın.
   await mustDelete(db, 'user_profiles', (q) => q.eq('phone', `+${WA_PERSON}`).eq('is_draft', true));
 
   console.log(`temizlendi: ${removed} konuşma · damgalı webhook olayları · taslak müşteri`);

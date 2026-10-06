@@ -17,7 +17,7 @@ pnpm mobile-operations:e2e                # Maestro akışları (maestro/README.
 
 `cp .env.example .env` ile başla — dört anahtar: API ve Supabase adresleri, anon anahtar, otomatik geliştirme
 girişi. Okuyan tek yer kitin env kapısı (`packages/mobile-kit/src/lib/env.ts`); eksik anahtar açılışta gürültülü
-hata verir. Site adresi ve Stripe anahtarları müşteri uygulamasınındır, burada yok.
+hata verir. Site adresi ve ödeme anahtarları müşteri uygulamasınındır, burada yok.
 
 ## Kimlikler
 

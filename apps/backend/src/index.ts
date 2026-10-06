@@ -115,7 +115,7 @@ cron.schedule('* * * * *', () => {
   void runJob(SWEEP_RESERVATIONS, sweepReservations);
 });
 
-// Ödeme zamanlayıcısı dakikada bir, penceresi kapanmış kart taslaklarını Stripe'a sorar; rezervasyon süpürmesinden ayrı iş,
+// Ödeme zamanlayıcısı dakikada bir, penceresi kapanmış kart taslaklarını sağlayıcıya sorar; rezervasyon süpürmesinden ayrı iş,
 // çünkü sağlayıcı düşerse stok temizliği durmamalı.
 cron.schedule('* * * * *', () => {
   void runJob(SWEEP_UNPAID_DRAFTS, sweepUnpaidDraftsJob);

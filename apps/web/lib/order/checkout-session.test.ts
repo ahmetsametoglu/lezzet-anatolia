@@ -7,10 +7,8 @@ import { createCheckoutSession, type CheckoutSessionCreator } from './checkout-s
 import { transitionOrder } from './transition';
 
 /**
- * Rezervasyon → ödeme sırası (07.4). Doğrulanan tek şey: **ödeme, mal ayrılmadan açılmıyor** ve
- * ayrılamadığında hiç açılmıyor — arada kalan ayırma da geride bırakılmıyor.
- *
- * Stripe'a ağdan gidilmez: oturum üreteci bir porttur, test sahtesini verir.
+ * Rezervasyon → ödeme sırası: ödeme mal ayrılmadan açılmıyor, ayrılamadığında hiç açılmıyor ve arada kalan ayırma geride
+ * bırakılmıyor. Sağlayıcıya ağdan gidilmez; ödeme açan port sahtedir.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -33,7 +31,7 @@ function fakeCreator() {
   const calls: Parameters<CheckoutSessionCreator>[0][] = [];
   const creator: CheckoutSessionCreator = async (params) => {
     calls.push(params);
-    return { id: `pi_test_${calls.length}`, clientSecret: `pi_test_${calls.length}_secret` };
+    return { id: `rv_test_${calls.length}`, paymentToken: `rv_test_${calls.length}_jeton` };
   };
   return { creator, calls };
 }
@@ -51,7 +49,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  // Silme sırası defter → parti → sipariş: defterin `sale` satırı siparişi tutar.
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
@@ -86,14 +84,14 @@ describe('önce ayır, sonra öde (07.4)', () => {
 
     const outcome = await createCheckoutSession({ orderId }, creator);
 
-    expect(outcome).toMatchObject({ status: 'ok', paymentIntentId: 'pi_test_1', clientSecret: 'pi_test_1_secret' });
+    expect(outcome).toMatchObject({ status: 'ok', paymentRef: 'rv_test_1', paymentToken: 'rv_test_1_jeton' });
     const active = await reservations.listActiveByOrder(orderId);
     expect(active.reduce((sum, row) => sum + row.qty, 0)).toBe(2);
 
     // Tutar siparişin toplamından gelir, kalemlerden yeniden toplanmaz (2 × 10,00 €).
     expect(calls[0]!.amountCents).toBe(2000);
 
-    // Ayırma penceresi niyetin künyesine yazılır: geç ödeme dalı (07.5) bunu okuyabilsin.
+    // Ayırma penceresi ödemenin künyesine yazılır ki geç ödeme dalı onu okuyabilsin.
     const minutesAhead = (Date.parse(calls[0]!.reservationExpiresAt) - Date.now()) / 60_000;
     expect(minutesAhead).toBeGreaterThan(29);
     expect(minutesAhead).toBeLessThanOrEqual(30);
@@ -161,22 +159,7 @@ describe('önce ayır, sonra öde (07.4)', () => {
     );
     const second = await profiles.getById(customerId);
 
-    /**
-     * **jsonb YAZILDIĞI GİBİ okunur — iddia 15.08'de düzeltildi.**
-     *
-     * Bu satır eskiden `utmSource` bekliyordu ve yorumu da onu anlatıyordu: *"jsonb anahtarları da
-     * case dönüşümünden geçer."* Geçiyordu — ama **tek yönde**: yazarken `utm_source` olduğu gibi
-     * gidiyor (`camelToSnake` alt tireye dokunmaz), okurken `snakeToCamel` onu `utmSource` yapıyordu.
-     * Yani uygulama bir şekil yazıp başka bir şekil okuyordu ve test tam olarak o asimetriyi
-     * çiviliyordu.
-     *
-     * Dönüşüm artık satır düzeyinde kalıyor (kullanıcı kararı; `case-transformers` künyesi): ne
-     * yazıldıysa o okunuyor. UTM etiketleri zaten adreste `utm_source` diye geliyor — onları
-     * "düzeltmek" bu katmanın işi değildi.
-     *
-     * *(`marketingConsent` iddiası dokunulmadan geçti: anahtarları tek kelime, çevirici onlara iki
-     * yönde de dokunmuyor — kuralın neden yıllarca fark edilmediğinin de cevabı bu.)*
-     */
+    // jsonb yazıldığı gibi okunur: dönüşüm satır düzeyindedir ve UTM etiketleri adreste zaten `utm_source` diye gelir.
     expect(first?.acquisitionSource).toMatchObject({ utm_source: 'instagram' });
     expect(first?.marketingConsent).toMatchObject({ email: { granted: true, source: 'checkout' } });
     expect(second?.acquisitionSource).toMatchObject({ utm_source: 'instagram' }); // google EZMEDİ

@@ -23,13 +23,13 @@ export type PlaceOrderRejection =
   /** Sepet okumasıyla ayırma arasında stok düştü; kalem kimliği ve kalan adet taşınır, adı çağıran çözer. */
   | { status: 'insufficient_stock'; variantId: string; available: number }
   /** Ödeme oturumu açılamadı; kartın reddi burada değil, o karar sağlayıcının kendi arayüzünde verilir. */
-  | { status: 'payment_unavailable'; reason: 'stale' | 'not_found' | 'provider_unavailable' | 'no_client_secret' }
+  | { status: 'payment_unavailable'; reason: 'stale' | 'not_found' | 'provider_unavailable' | 'no_payment_token' }
   /** Taslak açıldı ama kesinleşemedi (sipariş okunamadı ya da geçişi motor reddetti) — iç arıza. */
   | { status: 'order_not_placed' };
 
 export type PlaceOrderOutcome =
   /** Kart yolu: sipariş `draft`, ödeme istemcide tamamlanacak. */
-  | { status: 'payment_required'; orderId: string; totalCents: number; deliveryType: DeliveryType; clientSecret: string }
+  | { status: 'payment_required'; orderId: string; totalCents: number; deliveryType: DeliveryType; paymentToken: string }
   /**
    * Kapıda ya da vadeli: sipariş açıldı ve kesinleşti. Numara ilk kalıcı durumda doğar, bu yüzden bu dala özgüdür; üretilmediyse
    * `null` kalır, uydurulmaz.
@@ -77,7 +77,7 @@ export interface PlaceOrderInput {
   bundles?: CartBundlePort;
   /** Edinim kaynağı kapısı, taslağa olduğu gibi geçer; web'de çerez okur. */
   onCustomerAcquired?: (customerId: string) => void;
-  /** Ödeme oturumunu açan sağlayıcı; `null` "anahtar yok" demektir, varsayılan verilseydi paket `stripe`a bağlanırdı. */
+  /** Ödeme oturumunu açan sağlayıcı; `null` "anahtar yok" demektir ve kart siparişi açılmaz. */
   createPaymentSession: CheckoutSessionCreator | null;
   /** Sağlayıcıya soran port; aynı basışın taslağının ödemesini okur, açılamayan ödemeyi iptal eder. */
   paymentGateway?: PaymentGateway | null;
@@ -202,12 +202,12 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
       },
       input.createPaymentSession,
     );
-    if (session.status === 'ok' && session.clientSecret && !input.staff) await clearOrderedLines(db, input.customerId, draft.orderId);
+    if (session.status === 'ok' && session.paymentToken && !input.staff) await clearOrderedLines(db, input.customerId, draft.orderId);
   } catch (error) {
     await abandonDraft(db, draft.orderId, deps.gateway, null);
     throw error;
   }
-  if (session.status !== 'ok' || !session.clientSecret) {
+  if (session.status !== 'ok' || !session.paymentToken) {
     await abandonDraft(db, draft.orderId, deps.gateway, session.status === 'insufficient_stock' ? 'out_of_stock' : null);
     // Ödeme oturumu açılamadı: müşteri her şeyi doğru yaptı, kasa açılmadı.
     input.onRejected?.('payment_failed');
@@ -218,7 +218,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
     return {
       status: 'payment_unavailable',
       // Jetonsuz `ok` ayrı adlandırılır: "oturum açılamadı" ile "açıldı ama ödeme başlatılamaz" ayrı arızalardır.
-      reason: session.status === 'ok' ? 'no_client_secret' : session.status,
+      reason: session.status === 'ok' ? 'no_payment_token' : session.status,
     };
   }
   // Kart yolunun huni adımı: müşteri ödeme düğmesine bastı; huni niyeti ölçer, muhasebeyi değil.
@@ -228,7 +228,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
     orderId: draft.orderId,
     totalCents: draft.totalCents,
     deliveryType: draft.deliveryType,
-    clientSecret: session.clientSecret,
+    paymentToken: session.paymentToken,
   };
 }
 

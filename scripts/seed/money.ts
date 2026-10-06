@@ -13,7 +13,7 @@ import { fingerprintRows, heuristicColumnMapper, parseBankRows } from '@lezzet/d
 import { toCents } from '@lezzet/helper';
 import { euro, gun, tabloDolu, type Db } from './shared';
 
-// Kasa, bankalar ve Stripe birer hesaptır; bakiye saklanmaz, hareketlerden türer ve açılış bakiyesi de bir harekettir (`capital`).
+// Kasa, bankalar ve Revolut Merchant birer hesaptır; bakiye saklanmaz, hareketlerden türer ve açılış bakiyesi de bir harekettir (`capital`).
 // Sipariş tahsilatları burada yazılmaz, çünkü siparişe bağlı doğarlar ve ayrı yazılsalar `Order.amount_*` önbelleğiyle iki gerçek
 // oluşurdu.
 
@@ -21,9 +21,9 @@ const HESAPLAR = [
   { key: 'kasa', name: 'Kasa', type: 'cash' as const, acilis: 850 },
   { key: 'revolut', name: 'Revolut', type: 'bank' as const, acilis: 4200 },
   { key: 'cm', name: 'Crédit Mutuel', type: 'bank' as const, acilis: 12500 },
-  // Stripe'ın açılışı var, çünkü payout'u var: tahsilatlar burada yazılmadığı için açılış onların yerini tutar, yoksa payout hiç
-  // girmemiş parayı çıkarır ve bakiye eksiye düşerdi.
-  { key: 'stripe', name: 'Stripe', type: 'provider' as const, acilis: 1980 },
+  // Kart ödemelerinin havuzunun açılışı var, çünkü aktarımı var: tahsilatlar burada yazılmadığı için açılış onların yerini tutar, yoksa
+  // aktarım hiç girmemiş parayı çıkarır ve bakiye eksiye düşerdi.
+  { key: 'merchant', name: 'Revolut Merchant', type: 'provider' as const, acilis: 1980 },
   // Kapanmış hesap: SİLİNMEZ, pasifleşir — geçmiş hareketleri ona bağlıdır.
   { key: 'eskiBanka', name: 'N26 (kapandı)', type: 'bank' as const, acilis: 0, isActive: false },
   // Ortak cari hesabı ortağın tek kaydıdır ve açılışı yoktur: cari bir kasa değil kişiyle hesaptır, bakiyesi yalnız ortak adına ya da
@@ -252,19 +252,19 @@ export async function seedMoney(db: Db): Promise<void> {
     valueDate: gun(-7),
   });
   await movements.insert({
-    accountId: hesapId.get('stripe')!,
+    accountId: hesapId.get('merchant')!,
     counterAccountId: hesapId.get('revolut')!,
     direction: 'out',
     amountCents: 124_050,
     type: 'transfer',
-    description: 'Stripe payout',
+    description: 'Kart ödemeleri aktarımı',
     valueDate: gun(-2),
   });
 
-  // Payout'un aktarıldığı banka: webhook Stripe → bu hesap transferini kendiliğinden yazar. Kapıda alınan nakit çekmeceye, kart parası
-  // kart cihazının hesabına (burada Revolut) girer; satış çağrısı hesabı açıkça verirse ayar ezilir.
-  await new SettingsService(db).set('stripe_payout_account_id', hesapId.get('revolut')!, {
-    description: 'Stripe payout\'unun aktarıldığı banka hesabı (12.14).',
+  // Kart ödemelerinin aktarıldığı banka: webhook havuz → bu hesap transferini kendiliğinden yazar. Kapıda alınan nakit çekmeceye, kart
+  // parası kart cihazının hesabına (burada Revolut) girer; satış çağrısı hesabı açıkça verirse ayar ezilir.
+  await new SettingsService(db).set('card_payout_account_id', hesapId.get('revolut')!, {
+    description: 'Kart ödemeleri havuzunun aktarıldığı banka hesabı.',
   });
   await new SettingsService(db).set('door_cash_account_id', hesapId.get('kasa')!, {
     description: 'Kapı önü satış tahsilatının düştüğü hesap (12.2).',

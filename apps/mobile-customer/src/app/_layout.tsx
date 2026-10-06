@@ -1,4 +1,4 @@
-// Kök layout. Unistyles tema kaydı uygulama girişinde BİR KEZ yüklenir (yan etkili import).
+// Unistyles tema kaydı yan etkili import'tur ve girişte bir kez yüklenmelidir.
 import '@lezzet/mobile-kit/src/theme/unistyles';
 
 import { loadAsync } from 'expo-font';
@@ -17,7 +17,6 @@ import { useSessionEndedLogin } from '@lezzet/mobile-kit/src/lib/auth/use-sessio
 import { initAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { claimPendingInvite } from '@/lib/invite/invite-api';
 import { useOnboardingGate } from '@/lib/onboarding/use-onboarding-gate.hook';
-import { PaymentProvider } from '@/lib/payment/payment-provider';
 import { useVisitPoints } from '@/lib/points/use-visit-points.hook';
 import { usePushNavigation } from '@lezzet/mobile-kit/src/lib/push/use-push-navigation.hook';
 import { usePushRegistration } from '@lezzet/mobile-kit/src/lib/push/use-push-registration.hook';
@@ -28,67 +27,32 @@ import { notificationHref } from '@/screens/notifications/notification-copy';
 import { appFontAssets } from '@lezzet/mobile-kit/src/theme/fonts';
 
 /*
-  Kök yığın: sekme kabuğu (`(tabs)`) + onun ÜSTÜNE açılan ekranlar (bugün ürün detayı). Tasarımda
-  yığına girildiğinde sekme çubuğu gizleniyor (envanter §4); dosya düzeni bunu kendiliğinden
-  veriyor — `(tabs)` grubunun dışındaki her rota çubuksuz açılır.
-
-  `contentStyle` zemini: geçiş anında BEYAZ bir kare görünmesin diye. Yığının varsayılan zemini
-  platformun kendi rengi (beyaz); uygulamanın zemini ise krem kumdur (`sand-50` — tasarımın telefon
-  çerçevesi de o renkte). Değer temadan gelir, ham yazılmaz.
-
-  FONTLAR BURADA, KÖKTE yüklenir (Token Kararlari #24): tek yükleme noktası, çünkü `expo-font`
-  aileleri KÜRESEL kaydeder — ikinci bir çağrı aynı işi tekrar eder ve hangi ekranın hangi aileyi
-  yüklediği sorusunu doğururdu.
+  `(tabs)` dışındaki rotalar sekme çubuğu olmadan açılır. `expo-font` aileleri küresel kaydettiği için fontlar yalnız kökte yüklenir.
 */
 
 /**
- * SEPETİ OLMAYAN İKİ AĞAÇ — kök yığından geçen ama alışverişle ilgisi olmayan yollar.
- *
- * · `feedback` · `invite` — kimlik TOKEN'ın kendisidir, ziyaretçi oturumsuz gelir (e-postadaki
- *   link). Burada sepet turu açmak, oturumu olmayan birini oturum altyapısına bağlardı.
- *
- * DAHİL etme değil HARİÇ tutma listesi olması bilinçli: yeni bir müşteri rotası eklendiğinde kapı
- * kendiliğinden AÇIK gelir. Ters kurgu, kapıyı takmayı unutan her yeni ekranda 28.08'de ölçülen
- * arızayı sessizce geri getirirdi (`cart-store.ts` künyesi).
+ * Sepet eşitlemesinin açılmadığı ağaçlar: kimliği bağlantıdaki jeton olan oturumsuz ziyaretçiler. Hariç tutma listesi, ki yeni müşteri
+ * rotası kapıyı takmayı unutmadan açık gelsin.
  */
 const CARTLESS_TREES = new Set(['feedback', 'invite']);
 
-/* GİRİŞ SONRASI İŞ — bekleyen davetin bağlanması (21.310). Kod ve Google girişi oturumu kurduktan
-   sonra kayıtlı işleri koşar; kapı ortak çekirdekte ve davet modülünü tanımaz. Kayıt KÖKTE ve modül
-   yüklenirken yapılır: bekleyen davet cihaz deposunda durur ve uygulama hangi ekrandan açılırsa
-   açılsın ilk girişte bağlanmalı (gerekçe `lib/auth/sign-in-effects` künyesinde). */
+/* Bekleyen davet, uygulama hangi ekrandan açılırsa açılsın ilk girişte bağlanmalı; bu yüzden kayıt modül yüklenirken kökte yapılır. */
 registerSignInEffect(claimPendingInvite);
 
 export default function RootLayout() {
   const { theme } = useUnistyles();
 
-  /* YENİDEN KURULUM KAPISI (ölçülmüş arıza 09.08, fiziksel iPhone): uygulama silinip yeniden
-     kurulunca oturum ve onboarding izi HAYATTA KALIYORDU — iOS Keychain kayıtları uygulama
-     silinince silinmez. Karar ve mekanizma `lib/storage/device-store.ts`'te; burada yalnız
-     "temizlik bitmeden ağaç ÇİZİLMESİN" var: sonra koşsaydı kullanıcı bir an girişli görünüp
-     ardından atılırdı. Depo okumaları aynı sözü kendileri de bekler (tek uçuşlu), bu kapı
-     ikinci bir temizlik başlatmaz — yalnız ilk kareyi geciktirir, splash o sırada ekranda. */
+  /* iOS Keychain uygulama silinince silinmez; temizlik bitmeden ağaç çizilmez, yoksa kullanıcı bir an girişli görünüp atılırdı. */
   const [installReady, setInstallReady] = useState(false);
   useEffect(() => {
     ensureFreshInstall()
       .then(() => setInstallReady(true))
-      // Son emniyet: iç adımlar hatalarını zaten karşılıyor; buraya düşen bir şey olsa bile
-      // uygulama açık kalır — kapalı bir kapı, düzeltmeye çalıştığı arızadan beter olurdu.
+      // Kapalı kalan kapı uygulamayı hiç açmazdı; iç adımlar hatalarını kendileri karşılar.
       .catch(() => setInstallReady(true));
   }, []);
 
-  /* FONT KAPISI — FOUT hükmü (Token Kararları #24) İKİ ölçümle düştü (08.08, ekrana basılan
-     teşhisle):
-     1. `useFonts(appFontAssets)` bu kurulumda yüklemeyi hiç TAMAMLAMIYOR (`isLoaded` iki kesitte
-        de false; aynı haritayla `loadAsync` anında başarılı) — hook, bu sürüm bileşiminde
-        (expo-font 57 + yeni mimari) etkisiz.
-     2. FOUT'un varsaydığı "yüklenince yeniden çizilir" akmıyor: navigatör ekranları kök
-        re-render'ına karşı MEMOIZE — kayıt tamamlansa bile açık ekran sistem fontunda kalıyor
-        (ekran-içi setState ile anında Lora'ya döndüğü kanıtlandı).
-     Bu yüzden KAPI: yerel varlıklar milisaniyelerde yükleniyor, splash zaten ekranda — ilk kare
-     fontlar hazırken çizilir. Yükleme DÜŞERSE kapı açılır ve uygulama sistem fontunda AÇIK kalır
-     (boş ekranda kilitlenmek yalanın büyüğü olurdu); kayıt düşülemiyor — log altyapısı yok
-     (01-teknoloji §9), altyapı gelince ilk bağlanacak yer burası. */
+  /* `useFonts` bu sürümde yüklemeyi tamamlamıyor ve ekranlar kök yeniden çizimine karşı ezberli; ilk kare fontlar hazırken çizilir.
+     Yükleme düşerse uygulama sistem fontuyla açılır, çünkü müşteri tarafında hata kaydı altyapısı yok. */
   const [fontsReady, setFontsReady] = useState(false);
   useEffect(() => {
     loadAsync(appFontAssets)
@@ -96,14 +60,10 @@ export default function RootLayout() {
       .catch(() => setFontsReady(true));
   }, []);
 
-  /* ONBOARDING KAPISI — ilk açılışta tek seferlik akışa yönlendirme. Karar ve gerekçeler hook'ta
-     (`lib/onboarding/use-onboarding-gate.hook.ts`); burada yalnız "bayrak okunana dek boş kal"
-     var — font kapısıyla aynı desen, splash o sırada ekranda. */
+  // İlk açılış yönlendirmesi; bayrak okunana dek ağaç çizilmez.
   const onboardingReady = useOnboardingGate();
 
-  /* YAZI ÖLÇEĞİ KAPISI (kullanıcı kararı 09.08): kayıtlı seçim İLK kareden önce uygulanır —
-     kapısız uygulansa ekran bir an normal boyda çizilip sonra sıçrardı. Okuma düşerse 'normal'
-     ile açılır (`readFontScale` kendi içinde sessiz-varsayılanlı). */
+  // Kayıtlı yazı ölçeği ilk kareden önce uygulanır, yoksa ekran bir an normal boyda çizilip sıçrardı.
   const [scaleReady, setScaleReady] = useState(false);
   useEffect(() => {
     void readFontScale().then((scale) => {
@@ -112,95 +72,40 @@ export default function RootLayout() {
     });
   }, []);
 
-  /* DİL KAPISI (kullanıcı kararı 09.08): kayıtlı dil seçimi İLK kareden önce okunur — kapısız
-     okunsa ekran bir an cihaz dilinde çizilip seçilen dile sıçrardı. Okuma düşerse cihaz diliyle
-     açılır (`initAppLocale` kendi içinde sessiz-varsayılanlı, künyesi orada). */
+  // Kayıtlı dil ilk kareden önce okunur, yoksa ekran bir an cihaz dilinde çizilirdi.
   const [localeReady, setLocaleReady] = useState(false);
   useEffect(() => {
     void initAppLocale().then(() => setLocaleReady(true));
   }, []);
 
-  /* OTOMATİK DEV GİRİŞİ (kullanıcı isteği 30.08) — yalnız `__DEV__`, yalnız OTURUMSUZ hâlde:
-     seed'in müşteri hesabıyla giriş kurulur (21.310 — personel operasyon uygulamasında).
-     Üretimde gövdesi hiç koşmaz; gerekçe ve kapatma anahtarı künyede. */
+  // Yalnız `__DEV__` derlemesinde ve oturumsuzken seed'in müşteri hesabıyla girer.
   useDevAutoLogin(DEV_CUSTOMER_EMAIL);
 
-  /* REDDEDİLEN OTURUM → GİRİŞ (21.304 — kullanıcı kararı 10.09): sunucu jetonu, auth sunucusu da
-     tazelemeyi kesin reddettiğinde oturum kapanır (`authorizedFetch`) ve giriş ekranı sebebiyle
-     açılır — hangi yüzeyde olursa olsun. Kökte, çünkü ret her yerden gelebilir; kökteki istekler
-     (sepet, push kaydı) dahil. Gerekçe ve ölçüm hook'un künyesinde. */
+  // Sunucunun kesin reddettiği oturum her yüzeyden gelebilir; giriş ekranı bu yüzden kökten açılır.
   useSessionEndedLogin();
 
-  /* GÜNLÜK GİRİŞ PUANI (MB-50) — bir KAPI DEĞİL, sessiz bir yan etki: ilk karede ve uygulama her
-     öne geldiğinde tetiklenir, sonucu beklenmez. Kökte olmasının gerekçesi hook'un künyesinde. */
+  // Kökte yan etkiler: hiçbiri tek bir ekrana bağlanamaz. Push jetonu müşteri uygulamasınındır.
   useVisitPoints();
-  // Push kaydı da kökte ve aynı gerekçeyle (hook künyesi): bir ekrana bağlanamaz. Jeton MÜŞTERİ
-  // uygulamasının (21.311) — sunucu müşteri bildirimini yalnız bu jetonlara gönderir.
   usePushRegistration('customer');
-  // Bildirime dokunuş → doğru ekran: adres, uygulama içi listeyle AYNI sözlükten (hook künyesi).
   usePushNavigation(notificationHref);
 
-  /* SUNUCU SEPETİNİN KAPISI KÖKE TAŞINDI (ölçüldü 28.08, fiziksel Android).
-     Önce sekme kabuğundaydı ve gerekçesi şuydu: "kabuk müşteri ağacının altındaki her yığın
-     ekranı boyunca MONTE KALIR". Bu normal gezinmede doğru, DERİN BAĞLANTIDA değil — sepet ·
-     ürün · paket · tarif · checkout rotalarının hepsi `(tabs)` grubunun DIŞINDA ve bildirimden
-     ya da paylaşılan bir linkten doğrudan açıldıklarında kabuk hiç monte olmuyor. O hâlde kapı
-     kapalı kalıyordu ve sonucu sessizdi: girişli müşterinin yazmaları sunucuya HİÇ gitmiyor,
-     görünüm de çözülmüyordu — sepet "1 ürün" deyip toplamı "0,00 €" gösteriyordu. Checkout ise
-     her zaman SUNUCUDAKİ sepeti okur; yani müşteri gördüğünden başka bir sepeti onaylayabilirdi.
-
-     Kökte durmasının eski gerekçesi ÖLÇÜLDÜ ve artık geçerli değil: "personelin sepeti yoktur,
-     orada takmak her personel oturumunda `profile_not_found` dönen bir tur açardı" deniyordu.
-     Bugün personelin de profil satırı var (auth↔profile trigger) ve `/api/v1/me/cart` yönetim ile
-     depo oturumlarında `200` + BOŞ sepet dönüyor. Maliyet personel başına tek bir boş istek.
-
-     Kapı burada `useVisitPoints`/`usePushRegistration` ile aynı sınıftadır: bir ekrana
-     bağlanamayan, kök seviyeli yan etki — ama körlemesine değil: kök yığın müşterinin alışveriş
-     ağacından İBARET DEĞİL (`CARTLESS_TREES`). */
+  /* Sepet eşitlemesi kökte, çünkü derin bağlantıyla açılan sepet ve checkout rotaları sekme kabuğunu hiç monte etmez; kapı kapalı
+     kalırsa yazmalar sunucuya gitmez ve checkout müşterinin görmediği sepeti onaylar. */
   const segments = useSegments();
   useCartSync(!CARTLESS_TREES.has(segments[0] ?? ''));
 
-  /* KÜNYE KAPISI BURADA DEĞİL (kullanıcı kararı 10.08): kökte dururken açık oturumla uygulamayı
-     her açanın önüne çıkıyordu. Soru artık anlamlı olduğu üç anda soruluyor — giriş, OAuth
-     dönüşü, sepet (`screens/profile-setup/use-profile-setup-gate.hook` künyesi). */
-
   if (!installReady || !fontsReady || !onboardingReady || !scaleReady || !localeReady) return null;
 
+  // Hareket kökü tek kopya: jestler yalnız onun altında çalışır. `app-root` uçtan uca akışların açılışı beklediği kancadır.
   return (
-    /* ÖDEME SAĞLAYICISI (09.08) — yerel ödeme kartının kök bağlantısı. Anahtar yoksa ağaç
-       sarmalanmaz ve uygulama normal açılır; düşen tek şey ödeme kartıdır
-       (`lib/payment/stripe-config.ts` künyesi). Saf efekt sağlayıcı olduğu için hareket kökünün
-       ÜSTÜNDE durur, dokunuş ağacını bozmaz (ölçüldü). */
-    <PaymentProvider>
-      {/* HAREKET KÖKÜ (09.08) — `react-native-gesture-handler`ın hareketleri yalnız bu kökün
-          ALTINDA çalışır; Android'de dokunuşları buradan dağıtır. Tek kopya, kökte: her ekranın
-          kendi kökünü kurması, iki ayrı hareket ağacı demek olurdu. */}
-      {/* `app-root`: uygulamanın ÇİZİLDİĞİNİ söyleyen tek kanca (30.08). Uçtan uca akışlar açılışı
-          burada bekler; operasyon uygulamasının kökü de aynı kancayı taşır (21.310). Tek uygulama
-          iki kabuğu taşırken ortak bir kanca yoktu ve akış "hangisini bekleyeyim" sorusunu
-          çözemiyordu. */}
-      <GestureHandlerRootView style={styles.root} testID="app-root">
-        {/* ÇEKMECE PORTALI (01.09) — `BottomSheetModal` kendi katmanını buraya asar.
-
-            RN `Modal`ının YERİNE geçen şey bu portal ve göçün asıl sebebi de o: iOS kapanmakta
-            olan bir modal'ın üstüne yenisini SUNMUYOR ve çekmecelerimiz o yüzden bazen ekranın
-            altında asılı kalıyordu (30.08 mal kabul · 31.08 toplama, ikisi de kullanıcı bulgusu).
-            Native modal ortadan kalkınca arıza sınıfı da kalkıyor — dünkü `modal-traffic` kuralı,
-            `onDismissed` teli ve emniyet sayacı bu yüzden söküldü.
-
-            Hareket kökünün İÇİNDE: çekmecenin tutamağı ve içine konan her jest (adet rayı) aynı
-            köke bağlı olmak zorunda (RNGH kuralı — eski kopyada bu kök Modal'ın içine ayrıca
-            konuyordu, portal ağacın kendisinde yaşadığı için artık gerekmiyor). */}
-        <BottomSheetModalProvider>
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors['sand-50'] } }} />
-        </BottomSheetModalProvider>
-        {/* Toast KÖKTE tek kopya (v3 toast katmanı): her ekranın üstünde, dokunuş yutmaz —
-            basan taraf `toastSuccess`/`toastError`/`toastInfo` (lib/toast), gerekçeler host'un
-            künyesinde. */}
-        <ToastHost />
-        <StatusBar style="auto" />
-      </GestureHandlerRootView>
-    </PaymentProvider>
+    <GestureHandlerRootView style={styles.root} testID="app-root">
+      {/* Çekmeceler native modal yerine bu portala asılır; iOS kapanan modalın üstüne yenisini sunmadığı için çekmece asılı kalıyordu. */}
+      <BottomSheetModalProvider>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors['sand-50'] } }} />
+      </BottomSheetModalProvider>
+      <ToastHost />
+      <StatusBar style="auto" />
+    </GestureHandlerRootView>
   );
 }
 

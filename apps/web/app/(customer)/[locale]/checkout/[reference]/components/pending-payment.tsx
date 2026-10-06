@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { SecondaryButton } from '@/components/customer/phone-kit/secondary-button';
@@ -10,22 +10,19 @@ import { Card } from '@/components/customer/ui/card';
 import { useRouter } from '@/i18n/navigation';
 import { hapticError } from '@/lib/haptics/haptics';
 import { formatPrice, formatTime } from '@/lib/storefront/format';
-import { clientStripe } from '@/lib/stripe-client';
-import { CardFields, CardPaymentScope, type CardFieldsHandle, type PayStage } from '../../components/payment-element';
+import { CardTrustNote, openCardPopup, type PayStage } from '../../components/revolut-card';
 import { takePaymentError } from '../../payment-error';
 import { cancelPendingOrderAction, resumePaymentAction } from '../actions';
 import type { ConfirmationViewProps } from '../confirmation-types';
 
 /**
  * Ödemesi gerçekleşmeyen kart siparişinin eylemleri: müşteri aynı siparişi başka kartla öder ya da iptal eder, yeni sipariş açılmaz.
- * Kart alanı checkout'unkiyle aynıdır; hazırlık adımı taslak açmaz, aynı ödemenin anahtarını ister.
+ * Ödeme checkout'takiyle aynı Revolut penceresinde alınır; basınca aynı ödemenin jetonu istenir.
  */
 export function PendingPayment({ shared, locale, view, compact }: ConfirmationViewProps) {
   const c = checkoutMessages[locale].confirmed;
   const router = useRouter();
   const { reload: reloadCart } = useCart();
-  const cardRef = useRef<CardFieldsHandle>(null);
-  const [cardReady, setCardReady] = useState(false);
   const [stage, setStage] = useState<PayStage | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,23 +31,49 @@ export function PendingPayment({ shared, locale, view, compact }: ConfirmationVi
     const message = takePaymentError(view.orderId);
     if (message !== null) setError(message);
   }, [view.orderId]);
-  const stripe = clientStripe();
   const busy = stage !== null || cancelling;
-  const returnUrlBase = typeof window === 'undefined' ? '' : `${window.location.origin}/${locale}/checkout`;
   const errorOf = (key: string | null, fallback: string) => (key === 'session_expired' ? shared.errors.session_expired : fallback);
 
-  const prepare = async (): Promise<{ ok: true; clientSecret: string; orderId: string } | { ok: false; error: string }> => {
+  // Ödeme bu arada geçtiyse, işleniyorsa ya da sipariş kapandıysa sayfa sunucudan yeniden okunur ve yeni hâlini söyler.
+  const pay = async () => {
+    const billing = view.billing;
+    if (!billing) return setError(shared.payment.unavailable);
+    setStage('preparing');
+    setError(null);
     const { data, errorKey } = await resumePaymentAction(view.orderId);
     if (errorKey || !data) {
+      setStage(null);
       hapticError();
-      return { ok: false, error: errorOf(errorKey, shared.payment.unavailable) };
+      return setError(errorOf(errorKey, shared.payment.unavailable));
     }
-    // Ödeme bu arada geçti, işleniyor ya da sipariş kapandı: sayfa sunucudan yeniden okunur ve yeni hâlini söyler.
-    if (data.status === 'settled') {
-      router.refresh();
-      return { ok: false, error: '' };
-    }
-    return { ok: true, clientSecret: data.clientSecret, orderId: data.orderId };
+    if (data.status === 'settled') return router.refresh();
+    setStage('confirming');
+    await openCardPopup({
+      token: data.paymentToken,
+      mode: data.mode,
+      locale,
+      billing,
+      labels: {
+        declined: shared.pay.declined,
+        insufficientFunds: shared.pay.insufficientFunds,
+        expiredCard: shared.pay.expiredCard,
+        incorrectCvv: shared.pay.incorrectCvv,
+        authentication: shared.pay.authentication,
+        generic: shared.pay.error,
+        unavailable: shared.payment.unavailable,
+      },
+      // Ödeme geçti: sayfa sunucudan yeniden okunur; onayı webhook ya da canlı bağın sorusu verir.
+      onPaid: () => {
+        setStage(null);
+        router.refresh();
+      },
+      onError: (message) => {
+        setStage(null);
+        hapticError();
+        setError(message);
+      },
+      onCancel: () => setStage(null),
+    });
   };
 
   const cancel = async () => {
@@ -68,40 +91,20 @@ export function PendingPayment({ shared, locale, view, compact }: ConfirmationVi
     else router.refresh();
   };
 
-  const stageLabel = stage === 'validating' ? shared.pay.validating : stage === 'confirming' ? shared.pay.confirming : null;
+  const stageLabel = stage ? shared.pay[stage] : null;
   const payLabel = stageLabel ?? `${c.payNow} · ${formatPrice(view.totalCents, locale)}`;
   const deadline = view.payBy ? c.unpaidDeadline.replace('{time}', formatTime(view.payBy, locale)) : null;
 
-  const fields =
-    stripe && view.billing ? (
-      <CardFields
-        ref={cardRef}
-        billing={view.billing}
-        returnUrlBase={returnUrlBase}
-        onPrepare={prepare}
-        onError={(message) => {
-          // Boş mesaj ödemenin bu arada geçtiği hâldir, hata değil.
-          if (message) hapticError();
-          setError(message || null);
-        }}
-        onStage={setStage}
-        onReady={setCardReady}
-        labels={{ validating: shared.pay.validating, confirming: shared.pay.confirming, unavailable: shared.payment.unavailable }}
-      />
-    ) : (
-      <p className="font-sans text-note leading-relaxed font-semibold text-honey">{shared.payment.unavailable}</p>
-    );
-  const pay = () => void cardRef.current?.submit();
-  const canPay = cardReady && !busy;
+  const fields = <CardTrustNote text={shared.payment.cardTrust} />;
 
   return (
-    <CardPaymentScope stripe={stripe} locale={locale} amountCents={view.totalCents}>
+    <>
       {compact ? (
         <div className="flex w-full flex-col gap-3 text-left">
           {deadline && <p className="text-center font-sans text-note leading-[1.6] text-muted">{deadline}</p>}
           <div className="rounded-card bg-card px-4 py-4">{fields}</div>
           {error && <p className="font-sans text-note leading-relaxed text-terracotta-bright">{error}</p>}
-          <PrimaryButton shape="block" label={payLabel} onClick={pay} disabled={!canPay} />
+          <PrimaryButton shape="block" label={payLabel} onClick={() => void pay()} disabled={busy} />
           <SecondaryButton label={c.cancelOrder} onClick={() => void cancel()} disabled={busy} />
         </div>
       ) : (
@@ -111,7 +114,7 @@ export function PendingPayment({ shared, locale, view, compact }: ConfirmationVi
           {fields}
           {error && <p className="font-sans text-note leading-relaxed text-terracotta-bright">{error}</p>}
           <div className="flex flex-wrap items-center gap-3 pt-1">
-            <Button onClick={pay} disabled={!canPay}>
+            <Button onClick={() => void pay()} disabled={busy}>
               {payLabel}
             </Button>
             <Button variant="secondary" onClick={() => void cancel()} disabled={busy}>
@@ -120,6 +123,6 @@ export function PendingPayment({ shared, locale, view, compact }: ConfirmationVi
           </div>
         </Card>
       )}
-    </CardPaymentScope>
+    </>
   );
 }

@@ -20,6 +20,8 @@ const PAKET_DBSIZ = [
  * koşar. Liste makineyle denetlenmez: eksik satır yalnız yavaşlık doğurur, DB'ye vuran satır birim projesinde gürültüyle patlar.
  */
 const UYGULAMA_DBSIZ = [
+  // Revolut uyarlamasının kararları saf: sağlayıcı `fetch` taklidiyle cevap verir.
+  'packages/application/src/order/revolut.test.ts',
   'packages/application/src/analytics/availability.test.ts',
   // Coğrafi kodlama taramasının kararı saf: sayaç muhasebesi ve "yarım nokta yazılmaz" kuralı; yazma tarafı entegrasyonda kalır.
   'packages/application/src/delivery/geocode-scan.test.ts',
@@ -63,6 +65,8 @@ const UYGULAMA_DBSIZ = [
 ];
 
 const WEB_LIB_DBSIZ = [
+  // Revolut bildiriminin imzası ve olaya çevrilmesi saf: sağlayıcı `fetch` taklidiyle cevap verir.
+  'apps/web/lib/order/revolut-event.test.ts',
   // Seviye satırının eşik kararı saf: ürün ve stok satırı girer, satır çıkar.
   'apps/web/lib/stock/level-rows.test.ts',
   // Titreşim yolunun seçimi saf: tarayıcı kimliği girer, yol çıkar.

@@ -211,7 +211,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const methods = payment?.methods ?? [];
   const codBlockedReason = payment?.codBlockedReason ?? null;
   const paymentOptions: PaymentOption[] = [
-    // `online` Stripe yoludur; `cash` kapıda ödemedir ve aracı (nakit ya da kart) kurye kapanışta yazar.
+    // `online` kart ödemesidir; `cash` kapıda ödemedir ve aracı (nakit ya da kart) kurye kapanışta yazar.
     {
       key: 'online',
       method: 'online',
@@ -520,7 +520,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     }
     if (outcome.status === 'payment_required') {
       // Yerel ödeme kartı sağlayıcının kendi yüzeyi; ayrı bir ekran yazılmaz.
-      const sheet = await presentPayment({ clientSecret: outcome.clientSecret });
+      const sheet = await presentPayment({ paymentToken: outcome.paymentToken });
       if (sheet.status === 'succeeded') {
         // Numara yok: sipariş hâlâ taslak, onayı sağlayıcının cevabı yazar.
         finish(outcome.orderId, outcome.totalCents, outcome.deliveryType, null);

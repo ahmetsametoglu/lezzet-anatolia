@@ -1,4 +1,4 @@
--- Para (DOMAIN §9): para bir hesapta durur, hareketlerle girer ve çıkar; kasa, banka ve Stripe yalnız hesap türüdür.
+-- Para (DOMAIN §9): para bir hesapta durur, hareketlerle girer ve çıkar; kasa, banka ve ödeme sağlayıcısı yalnız hesap türüdür.
 -- Bakiye kolonu yok, çünkü saklanan bakiye kayar ve kaydıranı bulunamaz; türetim tek yerde, `account_movement`.
 
 -- `partner` ortak cari hesabıdır (compte courant d'associé, 455): ortakla şirket arasındaki her para buradan geçer.
@@ -8,7 +8,7 @@ create type movement_direction as enum ('in', 'out');
 create type movement_type as enum (
   'order_payment', 'order_refund', 'purchase', 'expense', 'transfer', 'capital', 'misc'
 );
--- `system` sistemin kendi yazdığı harekettir (Stripe, kapıda tahsilat, hızlı satış, payout); elle girilenden ayırt edilsin diye ayrı.
+-- `system` sistemin kendi yazdığı harekettir (kart ödemesi, kapıda tahsilat, hızlı satış, aktarım); elle girilenden ayırt edilsin diye ayrı.
 create type movement_source as enum ('manual', 'bank_import', 'system');
 -- Hareketin resmî dayanağının türü; küme kapalıdır, `other` bir kaçış kutusu değil.
 create type document_kind as enum ('invoice', 'receipt', 'payslip', 'contract', 'statement', 'other');
@@ -52,7 +52,7 @@ insert into public.movement_nature (slug, label, direction, account_code) values
   ('muhasebe-ucreti', 'Muhasebe ücreti', 'out', '622'),
   ('reklam', 'Reklam', 'out', '623'),
   ('banka-masrafi', 'Banka masrafı', 'out', '627'),
-  ('stripe-ucreti', 'Stripe ücreti', 'out', '627'),
+  ('kart-komisyonu', 'Kart ödemesi komisyonu', 'out', '627'),
   ('sermaye', 'Sermaye', 'in', '101');
 
 -- ── Etiket ───────────────────────────────────────────────────────────────────
@@ -216,7 +216,7 @@ create table public.money_movement (
   counterparty_id uuid references public.counterparty (id) on delete set null,
   -- Serbest işaretler, izah değildir; tetikleyici sözlükte olmayanı reddeder ki yazım tek kalsın.
   tags text[] not null default '{}',
-  -- Ek künye: reklam giderinde `{"campaign"}` ciroyla yan yana konsun diye, Stripe tahsilatında `{"providerRef"}`.
+  -- Ek künye: reklam giderinde `{"campaign"}` ciroyla yan yana konsun diye, kart tahsilatında `{"providerRef"}`.
   meta jsonb,
   -- Transfer tek satırdır ve karşı hesaba ters işaretle yansır (`account_movement`), çünkü iki satırın bağı kopunca
   -- yarım transfer hiçbir yerde görünmezdi.

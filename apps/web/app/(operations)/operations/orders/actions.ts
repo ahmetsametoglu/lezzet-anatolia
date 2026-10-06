@@ -208,13 +208,13 @@ function refundNotice(reason: RefundBlockReason | undefined): string | null {
   const notices: Record<RefundBlockReason, string> = {
     no_account: 'İade yazılamadı: bu siparişte tahsilat kaydı yok, para hangi hesaptan çıkacağı belirlenemedi. Para hareketini elle girin.',
     provider_ref_missing:
-      'İade yazılamadı: kart ödemesinin sağlayıcı künyesi kayıtlı değil, hangi ödemenin üzerinden dönüleceği bilinmiyor. Stripe panelinden iade edin.',
+      'İade yazılamadı: kart ödemesinin sağlayıcı künyesi kayıtlı değil, hangi ödemenin üzerinden dönüleceği bilinmiyor. Revolut panelinden iade edin.',
     provider_unavailable: 'İade yazılamadı: ödeme sağlayıcısı bu ortamda tanımlı değil.',
     /* Para birden çok hesaba girmiş: otomatik bölme yok, parayı almamış hesaptan iade yazmak o hesabın bakiyesini bozardı.
        Çare "tekrar dene" değil. */
     split_payment:
       'İade yazılamadı: bu siparişin parası birden çok hesaba girmiş (ör. kartla kapora + kapıda nakit). İadeyi hesap başına, o hesabı seçerek yazın.',
-    provider_failed: 'İade yazılamadı: sağlayıcı çağrısı başarısız oldu. Para ÇIKMADI — tekrar deneyin ya da Stripe panelinden iade edin.',
+    provider_failed: 'İade yazılamadı: sağlayıcı çağrısı başarısız oldu. Para ÇIKMADI — tekrar deneyin ya da Revolut panelinden iade edin.',
   };
   return notices[reason];
 }

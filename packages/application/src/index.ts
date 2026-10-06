@@ -334,7 +334,7 @@ export { closeCourierDay, openDayClose } from './courier/day-close';
 export type { DayCloseDraft } from './courier/day-close';
 export { readDeliveryProof, requestDeliveryProofUploadUrl } from './courier/proof';
 
-// ── Sipariş düzeltmesi ve para bağları: kurye, operasyon, şikâyet ve Stripe webhook'u aynı kapıyı çağırır ──
+// ── Sipariş düzeltmesi ve para bağları: kurye, operasyon, şikâyet ve ödeme webhook'u aynı kapıyı çağırır ──
 export { adjustFulfillment, cancelOrder, deliverOrderWithAdjustments, retryRefund } from './order/refund';
 export { cancelOrderShipment, isOpenShipment, type ShipmentCancelOutcome } from './shipping/cancel';
 export type { AdjustOutcome, CancelOutcome, RefundBlockReason, RefundOptions, WarehouseScope } from './order/refund';
@@ -495,7 +495,7 @@ export { readCheckoutSnapshot } from './order/checkout-snapshot';
 export { pickupOfferFor, readPickupOffer } from './order/pickup-offer';
 export type { CheckoutSnapshot, CheckoutSnapshotInput } from './order/checkout-snapshot';
 // ── Sipariş onaylama ──
-// `stripe` pakete girmez, çünkü paket React Native ağacında da okunur; ödeme niyeti, ölçüm ve durum yan etkileri port.
+// Sağlayıcı istemcisi `fetch` ile konuşur ve Node'a özgü modül almaz, çünkü paket React Native ağacında da okunur.
 export { placeOrder } from './order/place-order';
 export type { PlaceOrderInput, PlaceOrderOutcome, PlaceOrderRejection } from './order/place-order';
 export { createCheckoutSession } from './order/checkout-session';
@@ -510,8 +510,19 @@ export { readCheckoutOrderStatus } from './order/order-status';
 export type { ReconcileOutcome } from './order/reconcile-payment';
 export { cancelPendingOrder, paymentDeadlineOf, resumePendingPayment, settlePendingPayments } from './order/pending-payment';
 export type { CancelPendingOutcome, ResumePaymentOutcome } from './order/pending-payment';
-export { stripeGateway } from './order/payment-gateway';
-export type { PaymentGateway, PaymentSnapshot, StripeLike } from './order/payment-gateway';
+export type { PaymentGateway, PaymentSnapshot } from './order/payment-gateway';
+export {
+  RevolutError,
+  readRevolutOrder,
+  readRevolutPayout,
+  refundRevolutOrder,
+  revolutClient,
+  revolutConfigFromEnv,
+  revolutFeeOf,
+  revolutGateway,
+  revolutSessionCreator,
+} from './order/revolut';
+export type { RevolutClient, RevolutConfig } from './order/revolut';
 // ── Paket (bundle) çözümü ──
 export { getPackageDetail, getPackagesByIds, listStorefrontPackages } from './catalog/packages';
 // Tarif malzeme okumasının tek kapısı.

@@ -19,7 +19,6 @@ import { home } from './home';
 import { invite, inviteClaim } from './invite';
 import { orders } from './orders';
 import { packages } from './packages';
-import { payments } from './payments';
 import { deliveryTerms } from './delivery-terms';
 import { places } from './places';
 import { stockNotices } from './stock-notices';
@@ -137,9 +136,6 @@ v1.route('/me/checkout', checkout);
 
 v1.route('/me/preferences', preferences);
 v1.route('/me/channels', channels);
-
-// Ödeme tutarı gövdeden alınmaz, siparişten çözülür; niyet web'inkiyle aynı künyeyi taşır ki onayı aynı webhook işlesin.
-v1.route('/payments', payments);
 
 v1.route('/me/points', points);
 

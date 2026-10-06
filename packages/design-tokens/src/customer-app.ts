@@ -49,7 +49,6 @@ export const customerAppAccent = {
 export const customerAppBrand = {
   /* Apple Pay işareti: `ink`e çekilmez, çünkü Apple'ın kılavuzu tam siyah ister. */
   'brand-apple': '#000000',
-  'brand-stripe': '#635bff', // ödeme sağlayıcı künyesi
   'brand-visa': '#1a1f71',
   /* Mastercard iç içe iki halkadır; işaret ancak ikisiyle doğru çizildiği için ikisi de token. */
   'brand-mastercard': '#eb001b',

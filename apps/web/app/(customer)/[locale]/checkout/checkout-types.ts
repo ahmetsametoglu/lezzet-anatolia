@@ -5,7 +5,7 @@ import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 // Telefon görünümü native ödeme ekranıyla aynı metni kullanır (CLAUDE §2).
 import type checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { entryOf, isSplitCart, type CartEntry, type CartLine, type CartView } from '@/lib/cart/cart-types';
-import type { PayStage } from './components/payment-element';
+import type { PayStage } from './components/revolut-card';
 import type messages from './messages.json';
 
 /** Sayfa metinleri — şekli JSON'un kendisinden TÜRER, elle interface yazılmaz (CLAUDE.md §2). */
@@ -84,14 +84,12 @@ export interface CheckoutViewProps extends StepProps {
    * Adım verisinin (adres · teslimat · ödeme) ilk okuması bitti mi: bitmeden adım çizmek henüz bilinmeyen bir hüküm verdirir.
    */
   snapshotReady: boolean;
-  /** Tek sipariş düğmesinin işi: kart yolunda formu doğrulayıp öder, öteki yollarda siparişi açar. */
+  /** Tek sipariş düğmesinin işi: kart yolunda taslağı açıp Revolut penceresini açar, öteki yollarda siparişi açar. */
   onConfirm: () => void;
-  /** Kart ödemesi seçiliyse ödeme bölümüne yerleşen kart alanları; değilse null. */
+  /** Kart ödemesi seçiliyse ödeme bölümüne yerleşen güven notu; değilse null. */
   paymentSlot: React.ReactNode;
   /** Kart ödemesinin aşaması, `null` boşta; düğme yazısı ve ilerleme çubuğu bunu çizer. */
   payStage: PayStage | null;
-  /** Seçili ödeme yolu onaya hazır mı: kart yolunda form yüklenmeden düğme kapalıdır. */
-  payReady: boolean;
   /** Seçili adresin künyesi — adres adımı, özetteki soğuk zincir cümlesi ve fatura bilgisi için. */
   selectedAddress: Address | null;
   /**

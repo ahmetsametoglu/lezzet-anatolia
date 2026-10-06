@@ -260,14 +260,14 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
     referenceNo: OrderSchema.shape.referenceNo,
   }),
   /**
-   * Sipariş açıldı, sıra ödemede: `clientSecret` yetki değil oturum anahtarıdır, tutarı belirlemez; onayı sunucu işler.
+   * Sipariş açıldı, sıra ödemede: `paymentToken` yetki değil ödeme formunun anahtarıdır, tutarı belirlemez; onayı sunucu işler.
    */
   z.object({
     status: z.literal('payment_required'),
     orderId: OrderSchema.shape.id,
     totalCents: z.number().int(),
     deliveryType: DeliveryTypeEnum,
-    clientSecret: z.string().min(1),
+    paymentToken: z.string().min(1),
   }),
   /** Aynı basışın ödemesi bankada işleniyor: yeni sipariş açılmadı, müşteri o siparişe gider. */
   z.object({
@@ -340,7 +340,7 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
   /** Ödeme oturumu doğmadı, müşteri her şeyi doğru yaptı. Kart reddi burada değildir, sağlayıcının yüzeyinde verilir. */
   z.object({
     status: z.literal('payment_unavailable'),
-    reason: z.enum(['stale', 'not_found', 'provider_unavailable', 'no_client_secret']),
+    reason: z.enum(['stale', 'not_found', 'provider_unavailable', 'no_payment_token']),
   }),
   /** İç arıza — sipariş açılamadı ve sebebi kümedeki hiçbir hâlle anlatılamıyor. Sebep UYDURULMAZ. */
   z.object({ status: z.literal('order_not_placed') }),
@@ -375,7 +375,7 @@ export type CheckoutOrderStatus = z.infer<typeof CheckoutOrderStatusSchema>;
  * işleniyorsa ya da sipariş kapandıysa anahtar yok, ekran durumu yeniden okur.
  */
 export const CheckoutResumeResultSchema = z.union([
-  z.object({ status: z.literal('payment_required'), orderId: OrderSchema.shape.id, clientSecret: z.string().min(1) }),
+  z.object({ status: z.literal('payment_required'), orderId: OrderSchema.shape.id, paymentToken: z.string().min(1) }),
   z.object({ status: z.enum(['paid', 'processing', 'closed']) }),
 ]);
 export type CheckoutResumeResult = z.infer<typeof CheckoutResumeResultSchema>;

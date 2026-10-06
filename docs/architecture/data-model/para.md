@@ -15,7 +15,7 @@ Hesaplar, para hareketleri, tür · etiket · cari sözlükleri, belgeler ve bel
 
 ## Account (hesap)
 
-Paranın durduğu yer. Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Stripe — hepsi birer hesap. "Online havuz" ayrı değil = Stripe hesabı.
+Paranın durduğu yer. Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Revolut Merchant — hepsi birer hesap. "Online havuz" ayrı değil = Merchant hesabı (`provider`).
 
 <!-- alanlar:account -->
 | Kolon | Tip | Null | Varsayılan |
@@ -72,9 +72,9 @@ Tüm para hareketleri **tek tablo**; kasa/banka ayrımı yok — hareketin **hes
 - **Belge bağı hareketin kolonu DEĞİL** — `money_allocation` (aşağıda): tutarıyla, çoktan çoğa. Bir tur `document_id` vardı ve tedarikçinin üç faturasını tek havaleyle kapatan ödeme üç faturaya bağlanamıyordu.
 - **`explained`** — İZAH: bir işe bağ (sipariş, mal kabul, tedarikçi), transfer, TÜR ya da belge bağı varsa `true`; etiket ve cari saymaz. Uygulama yazmaz, **tetikleyici yazar** (`money_movement_explain`; bağ eklenip silinince `money_allocation_touch` satırı yeniden hesaplatır) — üretilmiş kolon olamazdı, belge bağı başka tablodadır. İzahsız hareket "izah edilmemiş" kuyruğundadır; kayıt **engellenmez** (banka satırı ham gelir, sonra izah edilir). Ekranın sayacı ve noktası bunu okur, `reconciled`i değil.
 - **`reconciled`** — banka ekstresiyle eşleşme; **yalnız `source = bank_import` satırında anlamlı.** 13.09'a kadar ekran her satırda bunu "eşleşti/eşleşmedi" diye okuyordu ve sistemin yazdığı her tahsilat eşleşmemiş görünüyordu (yerelde 28 satırın 5'i banka satırıydı). Ekstre satırında tür koymak satırı mutabık yapar; türü kaldırmak, başka açıklaması yoksa satırı kuyruğa döndürür.
-- **`source`** — `system` (13.09): webhook, kapıda tahsilat, hızlı satış, payout. Eskiden hepsi `manual` yazılıyor, Stripe tahsilatı elle girilmiş satırdan ayırt edilemiyordu.
-- **`meta`** — ek künye. Reklam giderinde `{campaign}` taşır: kampanya gideri ↔ ciro eşleşmesi (gerçek ROI) bu alandan çıkar; Stripe tahsilatında `{providerRef}`.
-- **`counter_account_id`** — transferde karşı hesap (nakit→banka, Stripe→banka payout, banka→ortak carisi).
+- **`source`** — `system`: webhook, kapıda tahsilat, hızlı satış, aktarım; kart tahsilatı elle girilmiş satırdan ayırt edilsin diye.
+- **`meta`** — ek künye. Reklam giderinde `{campaign}` taşır: kampanya gideri ↔ ciro eşleşmesi (gerçek ROI) bu alandan çıkar; kart tahsilatında `{providerRef}`.
+- **`counter_account_id`** — transferde karşı hesap (nakit→banka, Merchant→banka aktarımı, banka→ortak carisi).
 - **`counterpart_movement_id`** (12.13) — "bu ekstre satırı şu transferin öteki yakasıdır". Transfer tek satırdır ve karşı hesaba aynalanır; karşı hesap ekstreyle beslenen bir bankaysa ekstre o yakayı bir kez daha getirir (kasadan yatırılan 600 € bankada hem ayna hem ekstre satırı). Ekstre satırı buradan uca bağlanınca **ayna susar** (`account_movement`): iki gerçek satır kendi hesaplarında durur, hiçbiri aynalanmaz. Yalnız ekstre satırı taşır, yalnız transferde; bir ucu tek satır sahiplenir (tekil indeks). Uç silinirse bağ düşer ve satır kendi başına aynalanan bir transfer olarak kalır.
 - **`matched_elsewhere`** — hareket muhasebe yazılımında (Pennylane) bizde olmayan bir faturaya eşli, yani fatura oraya doğrudan girilmiş. İzah sayılmaz; satır belgesi bizde girilene kadar kuyrukta durur. Yalnız Pennylane'den gelen banka satırında, eşleşmesi okununca yazılır; eşleşmeyi geri almak onu sıfırlamaz, çünkü Pennylane'deki eşleşme durur.
 - **`import_fingerprint`** — mükerrer koruması; aşağıdaki bölüme bak.
@@ -96,9 +96,9 @@ Her banka satırının bir karşılığı olmalı. Kuyruk satıra şu hedefleri 
 
 **Cevap geri alınabilir** (13.09 · kullanıcı bulgusu: "eşleştirmeyle ilgili düzenleme yapamıyorum"): `unmatch_bank_movement` bağlanan, sınıflanan ya da atlanan ekstre satırını ekstreden geldiği hâle döndürür — tip `misc`, tür, cari ve bağlar boş, belge bağları silinir, eşleşmemiş; serbest etiketler kalır. Birleşme geri alınırsa elle yazılan satır `meta.absorbed` izinden yeniden kurulur ve birleşmeyle gelen her şey (tip, tür, cari, etiketler, belge bağları, yazım kimliği, künye) ona döner. Satırı başka bir ekstre satırı transfer ucu diye sahiplenmişse önce o geri alınır.
 
-### Stripe: brüt tahsilat · ücret · payout (12.14 · kullanıcı kararı 13.09)
+### Kart ödemesi: brüt tahsilat · komisyon · aktarım
 
-Stripe bir hesaptır ve üç satır tutar: **tahsilat brüt** (`order_payment`, künye `providerRef`), **ücret ödeme başına** (`expense` + `stripe-ucreti`, yazım kimliği `stripe-fee:<niyet>`; sipariş bağı künyede — `order_id` yazılsaydı siparişin tahsilat toplamı kayardı) ve **payout** (`transfer`, Stripe → banka, tutar payout'un NET'i, değer tarihi varış günü, yazım kimliği `stripe-payout:<payout>`, künyede toplamlar ve kalemler). Ödeme dışı Stripe ücretleri (`stripe_fee`) payout içeriğinden düşer. Banka hesabı `stripe_payout_account_id` ayarıdır. Yazım kimliği tekil olduğu için tekrar gelen olay ikinci satır doğurmaz (`insertOnce`). Ekstre payout'u getirince satır transferin karşı satırı olur (`counterpart_movement_id`).
+Revolut Merchant bir hesaptır ve üç satır tutar: **tahsilat brüt** (`order_payment`, künye `providerRef`, yazım kimliği `card-payment:<ödeme>`), **komisyon ödeme başına** (`expense` + `kart-komisyonu`, yazım kimliği `card-fee:<ödeme>`; sipariş bağı künyede — `order_id` yazılsaydı siparişin tahsilat toplamı kayardı) ve **aktarım** (`transfer`, Merchant → ana hesap, yazım kimliği `card-payout:<aktarım>`). Aktarım bakiyenin tamamını taşır; hedef hesap `card_payout_account_id` ayarıdır. Yazım kimliği tekil olduğu için tekrar gelen olay ikinci satır doğurmaz (`insertOnce`). Ekstre aktarımı getirince satır transferin karşı satırı olur (`counterpart_movement_id`).
 
 ### Ortak cari hesabı (`account.type = partner`, 13.09)
 

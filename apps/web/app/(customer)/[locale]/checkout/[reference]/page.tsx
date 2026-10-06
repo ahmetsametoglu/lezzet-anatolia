@@ -22,10 +22,10 @@ import { orderIdOrNull } from '@/lib/order/order-id';
 import { routing } from '@/i18n/routing';
 import { OrderWatch } from './components/order-watch';
 import { ConfirmationClient } from './confirmation-client';
-import { stripePaymentGateway } from '@/lib/stripe';
+import { revolutPaymentGateway } from '@/lib/revolut';
 import { orderOutcomeOf, paymentStateOf } from '@lezzet/domain-core';
 import type { ConfirmationView } from './confirmation-types';
-import type { BillingDetails } from '../components/payment-element';
+import type { BillingDetails } from '../components/revolut-card';
 import messages from './messages.json';
 // Aile kökünün sözlüğü: özetin ortak sözcükleri orada yaşıyor (`confirmation-types`).
 import checkoutMessages from '../messages.json';
@@ -77,7 +77,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     /* Sağlayıcının söylediği, yalnız ödemesi beklenen kart taslağında sorulur; okuma yan etkisizdir. Hata burada `null`a düşer, çünkü
        canlı bağın eylemi aynı soruyu saniyeler sonra sorar ve orada iz bırakır. */
     awaitingCard && order.paymentRef
-      ? (stripePaymentGateway()
+      ? (revolutPaymentGateway()
           ?.read(order.paymentRef)
           .catch(() => null) ?? null)
       : null,

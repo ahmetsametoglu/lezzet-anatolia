@@ -1,4 +1,6 @@
 import type { ExpoConfig } from 'expo/config';
+// Uzantı açık yazılır: dosyayı Node'un ESM yükleyicisi okur ve `expo` paketinin `exports` haritası yok.
+import { withMainActivity, type ConfigPlugin } from 'expo/config-plugins.js';
 /* Paketlerin girişi değil yaprak alt yollar: bu dosyayı Node, Metro'dan önce kendi ESM yükleyicisiyle okur ve girişlerdeki uzantısız
    yeniden ihraçları çözemez. */
 import { LOCALES } from '@lezzet/i18n/locale';
@@ -165,20 +167,8 @@ const config: ExpoConfig = {
         microphonePermission: false,
       },
     ],
-    [
-      '@stripe/stripe-react-native',
-      {
-        /*
-          Apple Pay bilerek koşullu: `merchantIdentifier` verilince eklenti iOS'a `in-app-payments` yetkisini yazar ve Apple'da kayıtlı
-          olmayan kimlik imzalamayı düşürür. Değeri `lib/payment/stripe-config.ts` de okur; `enableGooglePay` yalnız manifest'e
-          cüzdan satırı ekler.
-        */
-        enableGooglePay: true,
-        ...(process.env.EXPO_PUBLIC_STRIPE_APPLE_MERCHANT_ID
-          ? { merchantIdentifier: process.env.EXPO_PUBLIC_STRIPE_APPLE_MERCHANT_ID }
-          : {}),
-      },
-    ],
+    // Revolut'un Android kart formu en az Android 9 (API 28) ister; daha düşük tabanla manifest birleştirmesi düşer.
+    ['expo-build-properties', { android: { minSdkVersion: 28 } }],
     [
       'expo-localization',
       {
@@ -195,4 +185,23 @@ const config: ExpoConfig = {
   },
 };
 
-export default config;
+/*
+  Revolut'un Android kart formu sonucu ana aktiviteden alır ve aktivitenin `CardPaymentLauncherHolder` olmasını şart koşar; `android/`
+  her prebuild'de üretildiği için arayüz burada eklenir ve şablon değişip ekleme tutmazsa prebuild sessiz geçmez, düşer.
+*/
+const withRevolutCardLauncher: ConfigPlugin = (base) =>
+  withMainActivity(base, (mod) => {
+    const source = mod.modResults.contents;
+    if (source.includes('CardPaymentLauncherHolder')) return mod;
+    const declaration = 'class MainActivity : ReactActivity() {';
+    if (!source.includes(declaration)) throw new Error('MainActivity şablonu beklenen biçimde değil; Revolut kart formu bağlanamadı');
+    mod.modResults.contents = source
+      .replace(
+        /^(package [^\n]+\n)/,
+        '$1import com.revolut.merchantcardform.api.CardPaymentLauncherHolder\nimport com.revolut.merchantcardform.api.CardPaymentLauncherWrapper\n',
+      )
+      .replace(declaration, 'class MainActivity : ReactActivity(), CardPaymentLauncherHolder {\n  override val launcher = CardPaymentLauncherWrapper(this)\n');
+    return mod;
+  });
+
+export default withRevolutCardLauncher(config);
