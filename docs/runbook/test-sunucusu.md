@@ -78,6 +78,11 @@ kullanıcının parolası ve kabuğu yoktur.
   `https://test.lezzetanatolie.com`, Redirect URLs `https://test.lezzetanatolie.com/**` ve uygulama
   şeması `lezzetanatolie://**`. Yereldeki karşılığı `supabase/config.toml` `[auth]`; uzak projeye
   kendiliğinden gitmez.
+- **Revolut webhook'u:** Merchant API'de (`POST /api/webhooks`, sürüm başlığı `Revolut-Api-Version`) adres
+  `https://test.lezzetanatolie.com/api/webhooks/revolut`, olaylar `ORDER_COMPLETED` · `ORDER_CANCELLED` · `ORDER_FAILED` ·
+  `PAYOUT_COMPLETED`. Kaydın `signing_secret`i `app.env`'e `REVOLUT_WEBHOOK_SECRET` olarak yazılır; yanında
+  `REVOLUT_SECRET_KEY` ve `REVOLUT_MODE` (`sandbox` / `live`). Anahtar yoksa uç 503, imzasız istek 400 döner.
+  Kayıt kip başınadır: canlıya geçişte canlı hesapta yeniden kaydedilir.
 
 ## Caddy
 
