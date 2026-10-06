@@ -228,11 +228,32 @@ raporlar aynı klasörde; ölçüm verisi test şirketinde `LA-TEST-…` etiketi
 - E-fatura okuma: test şirketine e-fatura gelmiyor; canlı hesapta yalnız okuyarak ölçülür.
 - Ters yüklemenin KDV kodu (AB dışı `extracom`, AB içi `intracom_*`) ve hesap kodları muhasebeciyle netleşir.
 
-**Revolut** (deneme hesabı):
-- Ödeme başına komisyon (`fees`) ve Merchant hesabından ana hesaba aktarmanın görünüşü.
-- Kapıda kart: Tap to Pay / Reader ödemesi sipariş numarası taşıyor mu; Terminal'e sunucudan tutar
-  gönderme.
-- Android'de Google Pay, itiraz akışı.
+**Revolut — belgeden okundu (06.10).** Kaynak geliştirici belgesi ve OpenAPI şeması (`Revolut-Api-Version: 2026-08-17`;
+kopyası `.test-results/revolut/ham/api_merchant.yaml`, depoda değil). Site bot kontrolü yapıyor; sayfalar tarayıcıyla çekildi
+(`.test-results/revolut/cek-cok.mjs`, `ham-indir.mjs`).
+
+| Konu | Belgede yazan | Bizdeki karşılığı |
+|---|---|---|
+| Model | Her ödeme bir **sipariş** (`order`) üstünden yürür; siparişin altında ödeme denemeleri vardır, başarılı ödemeden sonra yeni deneme kabul edilmez. Durumlar: `pending → processing → authorised → completed`; deneme düşerse sipariş `pending`e döner ve aynı sipariş yeniden ödenebilir. Ara durumlara (`authentication_challenge` …) göre karar verilmez. | Stripe `PaymentIntent`in yerini Revolut siparişi alır. Yarım kalan ödemeye dönüş `clientSecret` yerine siparişin `token`ıyla olur. |
+| Sipariş açma | `POST /api/orders`: `amount` (cent), `currency` zorunlu; `merchant_order_data.reference` (bizim sipariş no, webhook'ta `merchant_order_ext_ref` olarak döner), `metadata` (yalnız metin), `expire_pending_after` (ödenmeyen sipariş bu sürede düşer), `capture_mode` (`automatic`/`manual`), `customer`, `line_items` (vergili), `shipping`, `location_id`, `redirect_url`. | `metadata.order_id` + rezervasyon bitişi bugün Stripe'ta; Revolut'ta `reference` + `expire_pending_after`. |
+| Manuel tahsil | `capture_mode: manual`: yetki varsayılan 7 gün geçerli (`cancel_authorised_after` ile değişir); tahsil edilmeyen yetki iptal edilir, para hemen serbest kalır (iade 5–7 gün sürer). | Bugün otomatik tahsil kullanılıyor; değiştirmek ayrı karar. |
+| Webhook | Olaylar: `ORDER_COMPLETED · AUTHORISED · CANCELLED · FAILED`, `ORDER_PAYMENT_DECLINED · FAILED`, `PAYOUT_INITIATED · COMPLETED · FAILED`, `DISPUTE_*`. Gövde yalnız `event`, `order_id`, `merchant_order_ext_ref` taşır; ayrıntı siparişi okuyarak alınır. Sıra garanti değil; hata ya da zaman aşımında 10 dk arayla 3 kez yeniden gönderilir; en fazla 10 adres. İmza: `Revolut-Signature: v1=<HMAC-SHA256>`, imzalanan metin `v1.{Revolut-Request-Timestamp}.{ham gövde}`; zaman 5 dk toleransla doğrulanır; anahtar dönerken başlıkta birden çok imza olabilir. Gönderen IP'ler sabit (canlı 35.246.21.235 · 34.89.70.170). | `stripe-webhook.ts`'in karşılığı; olay kaydı (`claim`) ve sıra bağımsızlığı aynen geçerli. |
+| İade | `POST /api/orders/{id}/refund`: yalnız `completed` sipariş; kısmi iade birden çok kez, toplamı ödemeyi aşamaz. İade **yeni bir sipariş** (`type: refund`, `related_order_id`) doğurur ve eşzamansızdır; sonucu iade siparişinin `ORDER_COMPLETED` ya da `ORDER_PAYMENT_DECLINED/FAILED` olayıdır. Pay by Bank ödemesi iade edilemez. | `provider-refund.ts` kısmi tutarla zaten çalışıyor; iade siparişinin kimliği saklanıp olayla eşlenir. |
+| İptal | `POST /api/orders/{id}/cancel`: yalnız `pending` ya da `authorised` (manuel tahsil) sipariş. | Rezervasyonu düşen siparişin ödemesi kapatılır. |
+| Komisyon | Ödeme ayrıntısında (`GET /api/payments/{id}`) `fees[]`: `type` (`acquiring` · `fx`), `amount`, `currency`; ayrıca `settled_amount`. Raporlar (`settlement_report`, `payout_statement_report`) işlem başına `fee_amount` taşır. | Bugünkü `stripe-ucreti` doğasının Revolut karşılığı bu alandan yazılır. |
+| Merchant → ana hesap | Para Merchant hesabına (Business'ın alt hesabı) yaklaşık 24 saatte yerleşir. `POST /api/payouts` bakiyenin **tamamını** Business hesabına aktarır (tutar seçilemez); `PAYOUT_*` olayları ve `payout_statement_report` aktarımın hangi işlemlerden oluştuğunu verir. | Stripe'taki ödeme aktarımı (payout) kaydının karşılığı. |
+| Web ödeme | `@revolut/checkout`: gömülü kart alanı (`createCardField`), açılır kart penceresi, Revolut Pay, Apple Pay / Google Pay düğmesi, ya da Revolut'un barındırdığı ödeme sayfası (`redirect_url`). Kart kabulünün canlıda sağlıklı çalışması için ad, e-posta ve **fatura adresi** verilmeli. Apple Pay için alan adı kaydı (`/.well-known/apple-developer-merchantid-domain-association` + `POST /api/apple-pay/domains/register`); Google Pay ek adım istemez. | `payment-element.tsx` (Stripe Elements) yerine kart alanı; ödeme ekranı tasarımı aynı kalır. |
+| Native | React Native için `@revolut/revolut-merchant-card-form` + `@revolut/revolut-payments-core`: siparişin `token`ıyla açılan hazır kart formu (3D Secure dahil). | `payment-sheet.ts` (Stripe) yerine; müşteri native uygulaması ilk etapta yayında değil. |
+| Kapıda kart | **Revolut Reader artık satılmıyor.** Tap to Pay SDK yalnız iPhone'da (XS ve üstü, iOS 16.4+). Terminal'e sunucudan ödeme gönderme: sipariş `channel: pos` ve fiziksel `location_id` ile açılır, Terminal aynı konumda "Pay at Counter" kipinde olmalı, sonuç ödeme isteği yoklanarak alınır. | Tap to Pay yalnız kuryesi iPhone taşıyan teslimatta mümkün (test cihazlarımız Android). Kapıda kartın yolu açık karar (aşağıda). |
+| Deneme ortamı | Ayrı Sandbox Business hesabı (kayıt anında onaylanır, e-posta/SMS yok), ayrı anahtarlar, taban adres `sandbox-merchant.revolut.com`; yalnız test kartları (başarılı: 4929420573595709 Visa, 5281438801804148 Mastercard; ret senaryoları için ayrı kartlar). Apple Pay deneme ortamında yok. | Ölçüm turu buradan. |
+
+**Revolut — açık kalan (deneme hesabında ölçülecek):**
+- `fees[]` ödemenin hangi anında doluyor (tahsilde mi, yerleşmede mi); iadede komisyon iadesi var mı.
+- Merchant hesabından ana hesaba aktarma kendiliğinden mi oluyor, yoksa `POST /api/payouts` ile mi tetiklenmeli.
+- `expire_pending_after` dolunca hangi olay geliyor (`ORDER_FAILED` mi `ORDER_CANCELLED` mı).
+- Kapıda kart için yol (karar kullanıcıda): Terminal'in kurye yanında taşınıp "Pay at Counter" kipinde ödeme alıp alamadığı;
+  alamıyorsa elle onay + sonradan doğrulama (sipariş listesi ya da rapor üstünden).
+- Android'de Google Pay, itiraz (dispute) akışı.
 
 ## 7. Faz 1 tasarımı — Hiboutik kasa (01.10)
 
@@ -628,8 +649,14 @@ Pennylane:
 - [Webhook olayları](https://pennylane.readme.io/docs/list-of-events) · [E-fatura durumu](https://pennylane.readme.io/reference/putsupplierinvoiceeinvoicestatus)
 
 Revolut:
-- [Merchant API](https://developer.revolut.com/docs/merchant/merchant-api)
-- [Deneme ortamı](https://developer.revolut.com/docs/guides/merchant/test-and-go-live/set-up-sandbox.md)
+- [Merchant API'ye giriş](https://developer.revolut.com/docs/guides/merchant/introduction) · [Başlarken](https://developer.revolut.com/docs/guides/merchant/get-started)
+- [Merchant API başvurusu](https://developer.revolut.com/docs/api/merchant) · [OpenAPI şeması](https://developer.revolut.com/docs/api/merchant.yaml)
+- [Sipariş ve ödeme yaşam döngüsü](https://developer.revolut.com/docs/guides/merchant/reference/order-lifecycle)
+- [Webhook](https://developer.revolut.com/docs/guides/merchant/monitor-and-observe/webhooks/using-webhooks) · [İmza doğrulama](https://developer.revolut.com/docs/guides/merchant/monitor-and-observe/webhooks/verify-the-payload-signature)
+- [İade](https://developer.revolut.com/docs/guides/merchant/operations/refunds) · [Sonra tahsil](https://developer.revolut.com/docs/guides/merchant/operations/capture-and-settlement/capture-later)
+- [Kart alanı](https://developer.revolut.com/docs/guides/merchant/accept-payments/online-payments/card-payments/web/card-field) · [Apple Pay / Google Pay](https://developer.revolut.com/docs/guides/merchant/accept-payments/online-payments/apple-pay-google-pay/web) · [React Native kart formu](https://developer.revolut.com/docs/guides/merchant/accept-payments/online-payments/card-payments/mobile/react-native)
+- [Tap to Pay](https://developer.revolut.com/docs/guides/merchant/accept-payments/in-person-payments/tap-to-pay/introduction) · [Terminal'e ödeme gönderme](https://developer.revolut.com/docs/guides/merchant/accept-payments/in-person-payments/terminal/push-payments)
+- [Deneme ortamı](https://developer.revolut.com/docs/guides/merchant/test-and-go-live/set-up-sandbox) · [Test kartları](https://developer.revolut.com/docs/guides/merchant/test-and-go-live/testing/test-cards) · [Canlıya geçiş listesi](https://developer.revolut.com/docs/guides/merchant/test-and-go-live/testing/implementation-checklists)
 - [Terminal'e sunucudan ödeme gönderme](https://developer.revolut.com/updates/2025/12/01/push-payments-to-terminal)
 - [Pennylane entegrasyonu](https://www.revolut.com/fr-FR/business/integrations/pennylane-integration/)
 - [Ödeme işleme sözleşmesi (Merchant hesabı)](https://www.revolut.com/en-FR/legal/business-acquiring)
