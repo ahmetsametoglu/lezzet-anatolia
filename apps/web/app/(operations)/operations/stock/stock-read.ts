@@ -1,16 +1,25 @@
-import { resolveLocalizedText, type StockMovementDetail } from '@lezzet/types';
-import type { UserProfileService } from '@lezzet/database';
+import { resolveLocalizedText, type ProductStockRow, type StockMovementDetail } from '@lezzet/types';
+import { WarehouseVariantThresholdService, type Db, type UserProfileService } from '@lezzet/database';
+import type { WarehouseContext } from '@/lib/warehouse/context';
 import { titleOf } from '@/lib/catalog/title';
 import { type LossRow } from './stock-types';
 
-// DB satırı → view-model indirgemesi. RSC ve server action'lar bunu PAYLAŞIR: ilk sayfa ile sonraki
-// sayfalar (ve lot sorgusunun sonucu) aynı şekli üretsin diye tek yerde durur.
-//
-// `toLevelRows` LIB'E TAŞINDI (16.08 — `lib/stock/level-rows`): seviye satırını artık ürünler
-// önizlemesinin stok bakışı da kuruyor, kurulum tek sayfanın malı değil. Buradaki re-export bu
-// klasördeki çağıranların (page · actions) yolunu korur.
+// DB satırı → view-model indirgemesi; sayfa ile eylemler paylaşır ki ilk sayfa ile sonraki sayfalar aynı şekli üretsin.
+// `toLevelRows` ürünler önizlemesiyle ortak olduğu için lib'de durur, buradan yeniden dışa verilir.
 
 export { toLevelRows } from '@/lib/stock/level-rows';
+
+/** Seviye bakışının odak deposu: süzgeç seçiliyse o, bağlam tek depoya inmişse o; ağ bakışında depo eşiği yoktur. */
+export function focusDepotOf(ctx: WarehouseContext, active: { id: string } | null): string | null {
+  return active?.id ?? ctx.activeWarehouseId;
+}
+
+/** Odak deponun sayfadaki boylar için etkin eşikleri; varsayılan, ürün satırındaki varyant eşiğidir. */
+export async function readDepotThresholds(db: Db, depotId: string | null, products: readonly ProductStockRow[]) {
+  if (!depotId) return null;
+  const defaults = new Map(products.flatMap((p) => p.variants.map((v) => [v.id, v.minStockQty] as const)));
+  return { warehouseId: depotId, thresholds: await new WarehouseVariantThresholdService(db).resolve(depotId, defaults) };
+}
 
 export async function readActorNames(db: UserProfileService, rows: StockMovementDetail[]): Promise<Map<string, string>> {
   // `actor_id` FK taşımıyor (personel kimliği auth şemasında), gömülü select ile gelemez →
@@ -34,16 +43,11 @@ export function toLossRows(
     return {
       ...row,
       title: titleOf(productName, variantLabel),
-      // Maliyet POZİTİF — `qty` de öyle. Yön `direction`da duruyor ve ekran onu YÖNLE söylüyor;
-      // eskiden işaret buraya gömülüydü ve "−14,45 €" gibi satırlar doğuruyordu.
+      // Maliyet ve `qty` pozitiftir; yön `direction`da durur ve ekran onu sözle söyler, işaret "−14,45 €" gibi satır doğururdu.
       costCents: row.unitCostCents === null ? null : row.unitCostCents * row.qty,
       actorName: (row.actorId && actorNames.get(row.actorId)) || null,
-      // Ad çözülemezse `null` — kimlik satırda duruyor, uydurulmuş bir ad göstermekten iyidir.
-      //
-      // **KOD da taşınıyor** ve ekran onu gösteriyor: tam ad ("Strasbourg — ana depo") dar bir
-      // sütuna sığmıyor ve ölçüldüğünde komşu sütunun üstüne biniyordu. Kod zaten operasyonun
-      // dili — belge numaraları da onunla ayrışıyor (`TRF-STR-26-0006`), yani satırdaki iki alan
-      // aynı şeyi söylüyor. Tam ad `title`da duruyor, kaybolmuyor.
+      // Ad çözülemezse `null`, uydurma ad gösterilmez. Ekran dar sütunda kodu gösterir (belge numaraları da kodla ayrışır),
+      // tam ad `title`da durur.
       warehouseCode: warehouseNames.get(row.warehouseId)?.code ?? null,
       warehouseName: warehouseNames.get(row.warehouseId)?.name ?? null,
     };

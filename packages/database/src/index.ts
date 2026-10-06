@@ -59,6 +59,7 @@ export { OrderItemBatchService } from './services/order-item-batch.service';
 export { OrderBoxService, OrderBoxItemService } from './services/order-box.service';
 export { ShippingBoxService } from './services/shipping-box.service';
 export { WarehousePrinterService } from './services/warehouse-printer.service';
+export { WarehouseVariantThresholdService } from './services/warehouse-variant-threshold.service';
 export { ShipmentService, ShipmentEventService } from './services/shipment.service';
 export {
   OrderService,

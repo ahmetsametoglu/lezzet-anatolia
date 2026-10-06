@@ -1,7 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   AvailableStockSchema,
-  WarehouseVariantThresholdSchema,
   AvailableStockTotalRowSchema,
   StockBatchDetailSchema,
   StockSchema,
@@ -24,6 +23,7 @@ import {
 import { toCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
+import { WarehouseVariantThresholdService } from './warehouse-variant-threshold.service';
 
 /**
  * Stok partisi servisi: parti CRUD ve kullanılabilir stok okumaları; satılabilirlik ve FEFO kararları motordadır, servis girdisini
@@ -404,25 +404,16 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
       if (variantIds.length === 0) return [];
       variantQuery = variantQuery.in('id', [...variantIds]);
     }
-    const [{ data: variantRows, error: variantError }, { data: overrideRows, error: overrideError }] = await Promise.all([
+    const [{ data: variantRows, error: variantError }, overrides] = await Promise.all([
       variantQuery,
-      // Projeksiyon şemanın istediği üç kolonu da çeker: `warehouse_id` seçilmeseydi `parse` patlar ve tedarik ekranı çökerdi.
-      this.supabase.from('warehouse_variant_threshold').select('warehouse_id,variant_id,min_stock_qty').eq('warehouse_id', warehouseId),
+      new WarehouseVariantThresholdService(this.supabase).listForWarehouse(warehouseId),
     ]);
     if (variantError) throw variantError;
-    if (overrideError) throw overrideError;
-
-    // Satırlar ŞEMADAN geçer (CLAUDE.md §1): elle yazılmış bir yapısal tip, aynı bilgiyi ikinci kez
-    // tanımlar ve kolon adı değişince sessizce `undefined` okumaya başlardı.
-    const overrides = new Map(
-      (overrideRows ?? [])
-        .map((row) => WarehouseVariantThresholdSchema.parse(dbToApp(row)))
-        .map((r) => [r.variantId, r.minStockQty] as const),
+    const defaults = new Map(
+      ((variantRows ?? []) as Array<{ id: string; min_stock_qty: number | null }>).map((v) => [v.id, v.min_stock_qty]),
     );
-    const thresholds = ((variantRows ?? []) as Array<{ id: string; min_stock_qty: number | null }>).flatMap((v) => {
-      const limit = overrides.get(v.id) ?? v.min_stock_qty;
-      return limit == null ? [] : [{ id: v.id, minStockQty: limit }];
-    });
+    const resolved = WarehouseVariantThresholdService.combine(defaults, overrides);
+    const thresholds = [...resolved].flatMap(([id, t]) => (t.minStockQty === null ? [] : [{ id, minStockQty: t.minStockQty }]));
     if (thresholds.length === 0) return [];
 
     const available = await this.getAvailableMap(warehouseId, thresholds.map((t) => t.id));

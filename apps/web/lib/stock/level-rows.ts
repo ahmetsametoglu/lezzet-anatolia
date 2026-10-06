@@ -1,23 +1,21 @@
 import { needsExpiryAttention } from '@lezzet/domain-core';
-import { resolveLocalizedText, type AvailableStock, type ProductStatus, type ProductStockRow } from '@lezzet/types';
+import {
+  resolveLocalizedText,
+  type AvailableStock,
+  type DepotStockThreshold,
+  type ProductStatus,
+  type ProductStockRow,
+} from '@lezzet/types';
 import { thumbnailImageUrl } from '@lezzet/application';
 import type { BatchView } from '@/lib/stock/batch-types';
 import { titleOf } from '@/lib/catalog/title';
 
-// Stok seviyesi satırı — İKİ yüzeyin ortak kurulumu (16.08): stok ekranının ana listesi ve ürünler
-// önizlemesinin stok bakışı aynı satırı okur. `stock-read.ts`ten taşındı (desen:
-// `lib/pricing/price-rows` — fiyat satırı da aynı devri yaşadı); stok sayfasındaki 30+ kullanım
-// yeri `stock-types` re-export'u üzerinden yoluna devam eder.
-//
-// KARARLAR BURADA SORULUR, BURADA VERİLMEZ: her satır `domain-core/stock`'a danışır. Uygulama
-// katmanı motoru veriyle buluşturur (STACK §4) — eşiği kendi kurmaz, yüzdeyi kendi hesaplamaz.
+// Stok seviyesi satırı: stok ekranının listesi ve ürünler önizlemesinin stok bakışı aynı satırı okur. Kararlar `domain-core/stock`ta
+// verilir, burada yalnız sorulur.
 
 /**
- * Bir boyun TEK depodaki gerçeği — satır açılınca görünen kırılım (19.5).
- *
- * Satırın toplamı bu parçaların toplamıdır; iki ayrı okumadan gelmez. "3 STR'de + 2 KEHL'de duran
- * maldan 5 kişilik sipariş çıkmaz" (`DOMAIN §17`) — operatörün transfer kararı bu kırılımda doğar,
- * ama kararın kendisi burada VERİLMEZ (Transfer ekranının işi).
+ * Bir boyun tek depodaki gerçeği; satırın toplamı bu parçaların toplamıdır. "3 STR'de + 2 KEHL'de duran maldan 5 kişilik sipariş
+ * çıkmaz" (`DOMAIN §17`): transfer ihtiyacı bu kırılımda görünür, kararı Transfer ekranında verilir.
  */
 export interface StockWarehouseSplit {
   warehouseId: string;
@@ -31,12 +29,8 @@ export interface StockWarehouseSplit {
 }
 
 /**
- * Stok seviyesi satırı — ekranın ana listesi. Satır BOYDUR (satılabilir birim), ama adı ve tarih
- * rejimi üründen gelir.
- *
- * `batches` satırla birlikte taşınır: partiler zaten toplu okundu (depoda duran parti sayısı fiziksel
- * olarak sınırlı), o yüzden satırı açmak yeni bir tur gerektirmez. Ürün formunun tersi bir karar
- * ve sebebi ölçüdür: orada katalogun tamamı taşınıyordu, burada elde ne varsa o kadar.
+ * Stok seviyesi satırı: satır boydur, adı ve tarih rejimi üründen gelir. Partiler satırla taşınır, çünkü zaten toplu okundu ve depoda
+ * duran parti sayısı fiziksel olarak sınırlıdır; satırı açmak yeni tur istemez.
  */
 export interface StockLevelRow {
   variantId: string;
@@ -46,11 +40,8 @@ export interface StockLevelRow {
   /** Listede görünen tam ad — "Fıstıklı Baklava · 1 kg". */
   title: string;
   /**
-   * Ürünün görseli (22.30) — `null` = görsel yüklenmemiş, ekran yer tutucu çizer.
-   *
-   * Adres SUNUCUDA kuruluyor (`thumbnailImageUrl`, `R2_PUBLIC_BASE_URL` sunucu env'i) ve sürüm damgası
-   * `imageUpdatedAt`ten geliyor: görsel değişince adres de değişir, tarayıcı bayat kopyayı göstermez.
-   * Küçük resim (05.37): CDN kare@200, operatörün kadrajıyla — satır 36 px, özgün dosya 1500–2000 px.
+   * Ürünün küçük resmi; `null` = görsel yok, ekran yer tutucu çizer. Adres sunucuda kurulur (`R2_PUBLIC_BASE_URL` sunucu env'i) ve
+   * `imageUpdatedAt` damgası taşır ki görsel değişince tarayıcı bayat kopyayı göstermesin.
    */
   imageUrl: string | null;
   categoryName: string;
@@ -60,15 +51,14 @@ export interface StockLevelRow {
   physicalQty: number;
   reservedQty: number;
   availableQty: number;
-  /** Eşik (varsa) ve altına düşmüş mü — "sipariş zamanı" göstergesi. */
+  /** Eşik (varsa) ve altına düşmüş mü — "sipariş zamanı" göstergesi; odak depo varsa o deponun eşiği ve stoğu. */
   minStockQty: number | null;
   belowMin: boolean;
+  /** Odak deponun eşik kırılımı (varsayılan · istisna); `null` = bakış ağın tamamı, depo eşiği düzenlenmez. */
+  depotThreshold: (DepotStockThreshold & { warehouseId: string }) | null;
   /**
-   * Depo kırılımı — yalnız MALI OLAN depolar, operatörün seçici sırasıyla (19.5).
-   *
-   * Boş = hiçbir depoda stok yok. Tek elemanlı = mal tek yerde (satır kodu doğrudan söyler).
-   * Çok elemanlı = "N depoda" ipucu + açılır kırılım. Üç hâl de aynı diziden okunur; ayrı bir
-   * "kaç depoda" alanı tutmak, sayının listeden sapabileceği ikinci bir gerçek yaratırdı.
+   * Malı olan depolar, operatörün seçici sırasıyla; boş, tek ve çok elemanlı hâller aynı diziden okunur. Ayrı bir "kaç depoda" alanı
+   * listeden sapabilecek ikinci bir gerçek olurdu.
    */
   warehouses: StockWarehouseSplit[];
   batches: BatchView[];
@@ -82,27 +72,22 @@ interface StockLevelInput {
   products: ProductStockRow[];
   batches: BatchView[];
   /**
-   * `available_stock` satırları — **(depo, varyant) taneli** (19.5).
-   *
-   * Satırın toplamı da depo kırılımı da BUNDAN türer, iki ayrı okumadan değil: toplam depo-üstü bir
-   * görünümden gelseydi (`available_stock_total`) kırılımın toplamıyla ayrışabilirdi ve hangisinin
-   * doğru olduğu belli olmazdı. Tek kaynak, tek gerçek.
+   * `available_stock` satırları, (depo, varyant) taneli; toplam da kırılım da bundan türer. Toplam depo üstü görünümden gelseydi
+   * (`available_stock_total`) kırılımın toplamıyla ayrışabilirdi.
    */
   available: readonly AvailableStock[];
   categoryNames: Map<string, string>;
   /** Kimlik → ad/kod; SIRASI operatörün seçici sırasıdır ve kırılım o sırayla çizilir. */
   warehouseLabels: Map<string, { id: string; code: string; name: string }>;
+  /** Bakış tek depoya indiyse o deponun etkin eşikleri (`WarehouseVariantThresholdService.resolve`). */
+  depot?: { warehouseId: string; thresholds: ReadonlyMap<string, DepotStockThreshold> } | null;
 }
 
 /**
- * Ürün sayfasını + partileri + kullanılabilirliği stok seviyesi satırlarına indirger.
- *
- * Satır BOYDUR: bir ürünün üç boyu üç satır olur — çok depoda bile. Varyant×depo düz listesi tarama
- * düzenini bozardı (aynı ürün üç kez), o yüzden depo satıra değil satırın İÇİNE iner: toplam üstte,
- * kırılım açılınca. Partiler varyant kimliğine göre eşlenir; eşleşme bulunamayan boy da listede
- * kalır ("stok yok" da bir cevaptır — gizlenirse operatör ürünün hiç girilmediğini fark edemez).
+ * Ürün sayfasını, partileri ve kullanılabilirliği seviye satırlarına indirger; depo satıra değil satırın içine iner, çünkü varyant×depo
+ * düz listesi aynı ürünü üç kez gösterirdi. Stoğu olmayan boy da listede kalır, yoksa operatör ürünün hiç girilmediğini fark edemezdi.
  */
-export function toLevelRows({ products, batches, available, categoryNames, warehouseLabels }: StockLevelInput): StockLevelRow[] {
+export function toLevelRows({ products, batches, available, categoryNames, warehouseLabels, depot }: StockLevelInput): StockLevelRow[] {
   const byVariant = new Map<string, BatchView[]>();
   for (const b of batches) {
     const list = byVariant.get(b.variantId);
@@ -131,6 +116,9 @@ export function toLevelRows({ products, batches, available, categoryNames, wareh
       const physicalQty = stockRows.reduce((s, r) => s + r.physicalQty, 0);
       const reservedQty = stockRows.reduce((s, r) => s + r.reservedQty, 0);
       const availableQty = stockRows.reduce((s, r) => s + r.availableQty, 0);
+      // Odak depo varken stok okuması da yalnız o depodandır, eşik onunla karşılaştırılır.
+      const threshold = depot ? (depot.thresholds.get(v.id) ?? null) : null;
+      const minStockQty = depot ? (threshold?.minStockQty ?? null) : v.minStockQty;
 
       rows.push({
         variantId: v.id,
@@ -138,8 +126,7 @@ export function toLevelRows({ products, batches, available, categoryNames, wareh
         productName,
         variantLabel,
         title: titleOf(productName, variantLabel),
-        // Görsel ÜRÜNÜN, boyun değil: aynı ürünün iki boyu aynı fotoğrafı paylaşır ve boy başına
-        // ayrı görsel diye bir kavram yok (22.30).
+        // Görsel ürünündür: aynı ürünün boyları aynı fotoğrafı paylaşır.
         imageUrl: thumbnailImageUrl(p),
         categoryName: (p.categoryId && categoryNames.get(p.categoryId)) || '—',
         status: p.status,
@@ -147,13 +134,11 @@ export function toLevelRows({ products, batches, available, categoryNames, wareh
         physicalQty,
         reservedQty,
         availableQty,
-        minStockQty: v.minStockQty,
-        // Eşik yoksa "altında" da yoktur; 0 eşik "her zaman yeter" demektir, uyarı üretmez.
-        //
-        // ⚠ Eşik burada AĞ TOPLAMINA bakıyor ve bu bilinçli bir SINIRDIR: asgari stok eşiği aslında
-        // depo bazlı bir gerçektir (`DOMAIN §17`, `warehouse_variant_threshold`) ve o kuyruk Satın
-        // Alma'nın "sipariş zamanı" listesidir — burası bir tarama listesi, karar kuyruğu değil.
-        belowMin: v.minStockQty !== null && v.minStockQty > 0 && availableQty < v.minStockQty,
+        minStockQty,
+        // Eşik yoksa "altında" da yoktur; 0 eşik "her zaman yeter" demektir, uyarı üretmez. Odak depo yoksa eşik ağ toplamına
+        // bakar: bu bir tarama listesidir, depo bazlı karar kuyruğu Tedarik'in "sipariş zamanı" listesidir.
+        belowMin: minStockQty !== null && minStockQty > 0 && availableQty < minStockQty,
+        depotThreshold: depot && threshold ? { warehouseId: depot.warehouseId, ...threshold } : null,
         warehouses: splitsOf(stockRows, own, warehouseLabels, order),
         batches: own,
         nearest: own[0] ?? null,
@@ -165,11 +150,8 @@ export function toLevelRows({ products, batches, available, categoryNames, wareh
 }
 
 /**
- * Depo kırılımı — yalnız MALI OLAN depolar.
- *
- * `available_stock` her aktif depo için satır döndürür (yeni depoda parti olmasa da "0 da bir
- * cevaptır"), ama kırılımda her varyantın altına "KEHL: 0" yazmak listeyi okunmaz kılardı. Sıfır
- * satırın söyleyeceği şey zaten satırın kendisinde: toplam.
+ * Depo kırılımı yalnız malı olan depoları taşır; `available_stock` her aktif depoya satır döndürür, ama her boyun altına "KEHL: 0"
+ * yazmak listeyi okunmaz kılardı.
  */
 function splitsOf(
   stockRows: readonly AvailableStock[],

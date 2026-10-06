@@ -836,7 +836,8 @@ izi ve soğuk zincir kendiliğinden çalışır.
   depoda parçalı kabul edilebilir, PO durumu kabullerden **türetilir**. PO kalemine isteğe bağlı
   hedef depo yazılabilir ("20 koli STR'ye, 10 koli KEHL'e") — kabul eden depocu kendi payını
   listeden okur. Asgari stok eşiği depo bazlıdır: varyanttaki genel eşik varsayılan, depo satırı
-  istisnadır (müşteriye-özel fiyat deseni); sipariş önerisi depo başına hesaplanır. Sipariş tek işe yazılır
+  istisnadır (müşteriye-özel fiyat deseni); istisna Stok › Seviyeler'de bakış tek depoya inince sağ panelden girilir ve sipariş
+  önerisi depo başına hesaplanır. Sipariş tek işe yazılır
   (`docs/feature/iki-is.md`, karar 4): kalemlerin hedef deposu ve siparişe bağlı kabulün deposu siparişin işindendir, öneriden açılan
   taslak işe göre bölünür.
 - **Depolar arası transfer** iki fiziksel-gerçek anıyla çalışır (sevk → kabul; §4'ün "yalnız

@@ -10,31 +10,27 @@ import {
   StockMovementService,
   StockService,
   UserProfileService,
+  WarehouseVariantThresholdService,
   serviceDb,
 } from '@lezzet/database';
 import { needsExpiryAttention } from '@lezzet/domain-core';
-import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type KeysetCursor } from '@lezzet/types';
-import { requireStaff } from '@/lib/guard';
+import { DEFAULT_PAGE_SIZE, WarehouseVariantThresholdSchema, resolveLocalizedText, type KeysetCursor } from '@lezzet/types';
+import { requireStaff, requireWarehouseScope } from '@/lib/guard';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import { warehouseFilterOf } from '@/lib/warehouse/filter';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readReceivedIntakes } from './intake-read';
-import { readActorNames, toLevelRows, toLossRows } from './stock-read';
+import { focusDepotOf, readActorNames, readDepotThresholds, toLevelRows, toLossRows } from './stock-read';
 import { parseStockUrl, periodStart, toStockFilters } from './stock-url';
 import type { LossRow, RecallResult, ReceivedIntake, StockLevelRow } from './stock-types';
 
-// Stok ekranı server action'ları — 'use server' + requireStaff ilk + servise/motora devret +
-// `{ data, error }` DÖNER (throw yok) + revalidatePath.
-//
-// Teklif YAZMA eylemi burada değil: iki ekranın ortak işi olduğu için `lib/stock/offer-actions`'a
-// taşındı (fiyat ekranının near-expiry sekmesi aynı kararı verir).
+// Stok ekranı eylemleri: önce kapı, sonra servis ya da motor, sonuç `{ data, error }` döner. Teklif yazımı fiyat ekranıyla
+// ortak olduğu için `lib/stock/offer-actions`ta durur.
 
 /**
- * **Geri çağırma sorgusu** — lot numarasından siparişlere ve müşterilere.
- *
- * İki adım: numara partileri bulur, partiler hazırlık kayıtları üzerinden siparişleri bulur. Sonuç
- * boş dönebilir ve bu iyi haberdir ("bu partiden hiç mal çıkmamış"); ekran onu da söyler.
+ * Geri çağırma sorgusu: lot numarası partileri, partiler hazırlık kayıtları üzerinden siparişleri bulur. Boş sonuç da cevaptır
+ * ("bu partiden hiç mal çıkmamış") ve ekran onu söyler.
  */
 export async function recallByLotAction(lot: string): Promise<ActionResult<RecallResult>> {
   try {
@@ -60,11 +56,8 @@ export async function recallByLotAction(lot: string): Promise<ActionResult<Recal
 }
 
 /**
- * Stok seviyesi listesinin SONRAKİ sayfası. Süzgeçler adresten okunur (`search`), böylece devam eden
- * sayfa ilk sayfayla aynı ölçüte uyar — client'ın süzgeci ayrıca taşımasına gerek kalmaz.
- *
- * Partiler burada YALNIZ yeni sayfanın boyları için okunur: ilk okumada eldeki tüm partiler zaten
- * gelmişti, hepsini yeniden taşımak sayfa başına aynı yükü ikinci kez ödemek olurdu.
+ * Stok seviyesi listesinin sonraki sayfası; süzgeçler adresten okunur ki devam sayfası ilk sayfayla aynı ölçüte uysun. Partiler
+ * yalnız yeni sayfanın boyları için okunur, çünkü ilk okuma eldeki partilerin hepsini zaten getirmişti.
  */
 export async function loadMoreLevelsAction(
   search: string,
@@ -85,12 +78,13 @@ export async function loadMoreLevelsAction(
     const variantIds = page.rows.flatMap((p) => p.variants.map((v) => v.id));
     const ctx = await readWarehouseContext();
     const warehouse = warehouseFilterOf(ctx, urlState.depo);
-    const [batchRows, available, warehouseLabels] = await Promise.all([
+    const [batchRows, available, warehouseLabels, depot] = await Promise.all([
       // Parti listesi BAĞLAMLA okunur, süzgeçle değil — ilk sayfayla aynı kural (kural 5).
       // `undefined` = depo-üstü ve yalnız admin/muhasebede oluşur.
       stockSvc.listInStockDetailed(variantIds, ctx.warehouseIds),
       stockSvc.listAvailableAcross(warehouse.active ? [warehouse.active.id] : ctx.visibleWarehouseIds, variantIds),
       readWarehouseLabels(),
+      readDepotThresholds(db, focusDepotOf(ctx, warehouse.active), page.rows),
     ]);
 
     const now = new Date();
@@ -111,6 +105,7 @@ export async function loadMoreLevelsAction(
       available,
       categoryNames: new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name)])),
       warehouseLabels,
+      depot,
     });
     return { data: { levels, nextCursor: page.nextCursor }, error: null };
   } catch (err) {
@@ -118,13 +113,31 @@ export async function loadMoreLevelsAction(
   }
 }
 
+const DepotThresholdInputSchema = WarehouseVariantThresholdSchema.extend({
+  minStockQty: WarehouseVariantThresholdSchema.shape.minStockQty.nullable(),
+});
+
+/** Deponun eşik istisnasını yazar; `null` istisnayı kaldırır ve depo varyantın varsayılan eşiğine döner. */
+export async function setDepotThresholdAction(input: {
+  warehouseId: string;
+  variantId: string;
+  minStockQty: number | null;
+}): Promise<ActionResult> {
+  try {
+    await requireWarehouseScope(input.warehouseId);
+    const { warehouseId, variantId, minStockQty } = DepotThresholdInputSchema.parse(input);
+    const thresholds = new WarehouseVariantThresholdService(serviceDb());
+    if (minStockQty === null) await thresholds.clear(warehouseId, variantId);
+    else await thresholds.set({ warehouseId, variantId, minStockQty });
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
 /**
- * **Kabul defterinin sonraki sayfası** (22.28) — giriş kaydı hiç erimez, yalnız uzar.
- *
- * Kapsam ve para yetkisi burada YENİDEN çözülüyor, istemciden gelmiyor: imleci elle değiştiren
- * biri en fazla başka bir sayfa ister, başka bir deponun defterini ya da gizlenmiş tutarı alamaz.
- * Dönem süzgeci YOK ve gerekmiyor — bu defterin adres durumu ilk sayfayla aynı (`losses`teki
- * `period` gibi bir aralık taşımıyor), yani devam sayfası ilk sayfadan ayrışamaz.
+ * Kabul defterinin sonraki sayfası; kapsam ve para yetkisi burada yeniden çözülür, istemciden gelmez. İmleci elle değiştiren biri
+ * en fazla başka bir sayfa ister, başka deponun defterini ya da gizlenmiş tutarı alamaz.
  */
 export async function loadMoreReceivedAction(
   cursor: KeysetCursor,
@@ -155,16 +168,14 @@ export async function loadMoreLossesAction(
     const { period } = parseStockUrl(Object.fromEntries(new URLSearchParams(search)));
     const db = serviceDb();
     const svc = new StockMovementService(db);
-    // Depo süzgeci ilk sayfayla AYNI (22.28 turu): devam sayfası daha geniş bir evren görseydi
-    // liste kaydırıldıkça başka depoların kayıtları sızardı — ve sızıntı yalnız aşağıda olurdu.
+    // Depo süzgeci ilk sayfayla aynıdır; devam sayfası daha geniş evren görseydi kaydırdıkça başka depoların kayıtları sızardı.
     const ctx = await readWarehouseContext();
     const page = await svc.listRecent({
       from: periodStart(period, new Date()),
       cursor,
       limit: DEFAULT_PAGE_SIZE,
       warehouseIds: ctx.warehouseIds,
-      // **YÖN de ilk sayfayla aynı** (06.14): sekme yalnız çıkışları gösteriyor ve devam sayfası
-      // süzgeci düşürseydi liste kaydırıldıkça girişler sızardı — üstelik yalnız aşağıda.
+      // Yön de ilk sayfayla aynıdır; sekme yalnız çıkışları gösterir, süzgeç düşseydi kaydırdıkça girişler sızardı.
       direction: 'out',
     });
     const [actorNames, warehouseLabels] = await Promise.all([

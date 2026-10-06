@@ -9,15 +9,11 @@ import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { shortDate } from '@/components/operation/ui/format';
 import { expiryBadge } from '@/lib/stock/batch-labels';
 import { ProductHistoryPanel } from '@/components/operation/stock/product-history-panel';
+import { DepotThresholdCard } from '../components/depot-threshold-card';
 import type { StockLevelRow, StockViewProps } from '../stock-types';
 
-// Stok seviyeleri — SOL tabloda boylar (fiili/ayrılmış/kullanılabilir + en yakın tarih), SAĞ panelde
-// SEÇİLİ BOYUN stok geçmişi (22.30).
-//
-// Panelde eskiden karar kuyruğunun ilk üçü vardı ve seçime bağlı DEĞİLDİ; gerekçesi tutarlıydı ama
-// sonucu bir tekrardı — aynı liste bir sekme ötede duruyor ve başlık satırı kaç parti beklediğini
-// zaten söylüyor. Aynı alan artık başka hiçbir yerde cevabı olmayan soruya ayrılıyor: "bu üründen ne
-// zaman, kaça girdi; ne kadarı satıldı, ne kadarı çöpe gitti".
+// Stok seviyeleri: solda boylar, sağda seçili boyun stok geçmişi. Karar kuyruğu kendi sekmesinde durduğu için panel başka hiçbir
+// yerde cevabı olmayan soruya ayrılır: bu üründen ne zaman, kaça girdi; ne kadarı satıldı, ne kadarı çöpe gitti.
 
 export function LevelsTab({
   data,
@@ -40,10 +36,8 @@ export function LevelsTab({
   const columns: Column<StockLevelRow>[] = withCells<StockLevelRow>(STOCK_COLUMN_TRACKS, {
     name: (r) => (
       <div className="flex min-w-0 items-center gap-2.5">
-        {/* Görsel ADIN SOLUNDA ve küçük (22.30, kullanıcı tespiti): depoda ürünler adlarıyla değil
-            görünüşleriyle hatırlanır, uzun listede satırı okumadan tanıtır. Görsel yoksa YER TUTULUR
-            (`Thumbnail` zaten yer tutucu çiziyor) — kayan bir sütun, tarama düzenini görselin
-            kendisinden çok bozar. Ham `<img>` yazılmıyor: kutu ortak havuzda. */}
+        {/* Depoda ürün görünüşüyle hatırlanır, görsel satırı okumadan tanıtır. Görsel yoksa yer tutucu çizilir, çünkü kayan
+            sütun tarama düzenini görselin kendisinden çok bozar. */}
         <Thumbnail src={r.imageUrl} alt="" size={36} />
         <div className="flex min-w-0 flex-col gap-px">
           <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{r.title}</span>
@@ -129,41 +123,36 @@ export function LevelsTab({
         />
       </div>
 
-      {/* Sağ panel SEÇİLİ ÜRÜNÜN geçmişi (22.30). Burada karar kuyruğunun ilk üçü duruyordu ve tamamı
-          bir sekme ötedeydi; ekranın en geniş boş alanı artık başka hiçbir yerde cevabı olmayan bir
-          soruya ayrılıyor. Aciliyet başlık satırında sayıyla ve kendi sekmesinde duruyor. */}
       <ProductHistoryPanel
         row={selected}
         warehouseNames={warehouseNames}
-        // Depo adı yalnız çok depolu bakışta anlamlı — tek depoda aynı bilgi gürültüdür (eksen kural 4).
-        // Süzgeç aktifken de gereksiz: panelin tamamı zaten o depo ve başlıkta yazıyor.
+        // Depo adı yalnız çok depolu bakışta anlamlıdır; tek depoda ve süzgeç açıkken panelin tamamı zaten o depodur.
         showWarehouse={(warehouse.showSplit || warehouse.available) && warehouse.active === null}
         warehouseFilter={warehouseFilter}
         warehouseFilterName={warehouse.active?.name ?? null}
+        aside={
+          selected?.depotThreshold ? (
+            <DepotThresholdCard
+              key={`${selected.variantId}:${selected.depotThreshold.warehouseId}:${selected.depotThreshold.overrideQty}`}
+              variantId={selected.variantId}
+              threshold={selected.depotThreshold}
+              depotCode={warehouse.options.find((w) => w.id === selected.depotThreshold?.warehouseId)?.code ?? '—'}
+            />
+          ) : null
+        }
       />
     </div>
   );
 }
 
 /**
- * Depo kırılımı — satırın altında açılan blok.
- *
- * Sayılar satırın toplamının parçalarıdır, ayrı bir okuma değil (`toLevelRows`). Blok bir KARAR
- * yeri değil bir bakış: transfer kararı burada verilmez, çünkü karar iki deponun ihtiyacını
- * karşılaştırmayı gerektirir ve o karşılaştırma Transfer ekranının işidir.
+ * Satırın altında açılan depo kırılımı; sayılar satırın toplamının parçalarıdır. Transfer kararı burada verilmez, çünkü iki deponun
+ * ihtiyacını karşılaştırmak Transfer ekranının işidir.
  */
 function WarehouseSplit({ row }: { row: StockLevelRow }) {
   /**
-   * **KIRILIM TABLONUN KENDİ IZGARASINI KULLANIR** (22.33, kullanıcı tespiti 14.08).
-   *
-   * Blok kendi `flex` düzenini kurmuştu ve sayıları elle verilmiş genişliklerle sağa itiyordu:
-   * "ayrılmış" değeri Ayrılmış sütununun altına denk gelmiyordu, ötekiler de kaymıştı. Kırılım
-   * satırın PARÇASIDIR — aynı sütunların altında durmalı, yoksa okuyan hangi sayının hangi başlığa
-   * ait olduğunu göz kararı eşleştirir.
-   *
-   * Şablon, dolgu ve sütun boşluğu tablonunkiyle BİREBİR aynı kaynaktan (`STOCK_COLUMN_TRACKS` +
-   * `templateOf`); iskeletin elle yazılmış ölçüleri tutmadığında yaşanan hatanın aynısı
-   * (`table-columns` künyesi).
+   * Kırılım tablonun ızgarasını aynı kaynaktan kullanır (`STOCK_COLUMN_TRACKS` + `templateOf`); kendi genişlikleri olsaydı sayılar
+   * başlıklarının altına denk gelmez, okuyan hangi sayının hangi sütuna ait olduğunu göz kararı eşleştirirdi.
    */
   return (
     <div className="flex flex-col gap-1.5 border-b border-ops-line-soft bg-ops-subtle py-2.5">

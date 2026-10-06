@@ -63,6 +63,8 @@ const UYGULAMA_DBSIZ = [
 ];
 
 const WEB_LIB_DBSIZ = [
+  // Seviye satırının eşik kararı saf: ürün ve stok satırı girer, satır çıkar.
+  'apps/web/lib/stock/level-rows.test.ts',
   // Titreşim yolunun seçimi saf: tarayıcı kimliği girer, yol çıkar.
   'apps/web/lib/haptics/haptics.test.ts',
   'apps/web/lib/analytics/route-pattern.test.ts',

@@ -85,6 +85,14 @@ export type WarehouseVariantThreshold = z.infer<typeof WarehouseVariantThreshold
 
 // Ayrı bir `Insert` şeması YOK: üç alanın üçü de zorunlu — yazım ile okuma aynı şekil.
 
+/** Bir boyun bir depodaki eşiği: istisna varsa o, yoksa varyantın varsayılanı; ikisi de yoksa `null` ve uyarı üretilmez. */
+export const DepotStockThresholdSchema = z.object({
+  defaultQty: WarehouseVariantThresholdSchema.shape.minStockQty.nullable(),
+  overrideQty: WarehouseVariantThresholdSchema.shape.minStockQty.nullable(),
+  minStockQty: WarehouseVariantThresholdSchema.shape.minStockQty.nullable(),
+});
+export type DepotStockThreshold = z.infer<typeof DepotStockThresholdSchema>;
+
 // ── Transfer ────────────────────────────────────────────────────────────────
 // Sevk ve kabul iki ayrı andır; yoldaki mal hiçbir deponun stoğunda değildir, bu yüzden sanal "transit depo" yoktur.
 
