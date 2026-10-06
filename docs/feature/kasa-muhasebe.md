@@ -248,10 +248,22 @@ kopyası `.test-results/revolut/ham/api_merchant.yaml`, depoda değil). Site bot
 | Kapıda kart | **Revolut Reader artık satılmıyor.** Tap to Pay SDK yalnız iPhone'da (XS ve üstü, iOS 16.4+), **deneme ortamını desteklemiyor**: deneme yalnız canlıda gerçek ödemeyle (ilk kurulumda 1 birimlik deneme ödemesi). Önkoşullar: Revolut Developer Portal'da uygulama + `tap_to_pay_sdk` kapsamı ve canlı onayı; işletmeden OAuth (PKCE) izni, arka uçta jeton saklama ve yenileme, cihaza kısa ömürlü jeton; Apple'dan Tap to Pay hakkı (`com.apple.developer.proximity-reader.payment.acceptance`); SDK yerel iOS (CocoaPods). `performPayment` tutar, para birimi ve isteğe bağlı açıklama alır; sonuç olarak yalnız başarı/hata ve makbuz adresi döner, Revolut sipariş kimliği dönmez. Terminal'e sunucudan ödeme gönderme: sipariş `channel: pos` ve fiziksel `location_id` ile açılır, Terminal aynı konumda "Pay at Counter" kipinde olmalı. | 17. karar. SDK siparişi kendi açtığı için bizim siparişle bağ açıklamadan kurulur: açıklamaya sipariş numarası yazılır, webhook'taki sipariş okunup eşlenir; açıklamanın siparişte hangi alana düştüğü canlı denemede ölçülecek. Operasyon uygulaması Expo olduğu için SDK'yı saran yerel modül gerekir. |
 | Deneme ortamı | Ayrı Sandbox Business hesabı (kayıt anında onaylanır, e-posta/SMS yok), ayrı anahtarlar, taban adres `sandbox-merchant.revolut.com`; yalnız test kartları (başarılı: 4929420573595709 Visa, 5281438801804148 Mastercard; ret senaryoları için ayrı kartlar). Apple Pay deneme ortamında yok. | Ölçüm turu buradan. |
 
-**Revolut — açık kalan (deneme hesabında ölçülecek):**
-- `fees[]` ödemenin hangi anında doluyor (tahsilde mi, yerleşmede mi); iadede komisyon iadesi var mı.
-- Merchant hesabından ana hesaba aktarma kendiliğinden mi oluyor, yoksa `POST /api/payouts` ile mi tetiklenmeli.
-- `expire_pending_after` dolunca hangi olay geliyor (`ORDER_FAILED` mi `ORDER_CANCELLED` mı).
+**Revolut — deneme hesabında ölçüldü (06.10).** Betikler `.test-results/revolut/a1…a6-*.mjs`, çıktılar `olcum/`.
+
+| Konu | Sonuç |
+|---|---|
+| Sipariş açma | 201, `pending`; cevapta `token`, `checkout_url`, `merchant_order_data.reference` ve `metadata` geri dönüyor, `expire_pending_after` cevapta görünmüyor. |
+| Ödeme | Barındırılan ödeme sayfası kart için ad, e-posta, kart ve posta kodu istedi; test kartıyla (Visa) ödeme geçti, sayfa `redirect_url`e döndü. Sipariş `completed`, ödeme `captured`. Deneme hesabında sayfadaki işletme adı "Acme Corporation". |
+| Komisyon | Tahsilden hemen sonra ödeme ayrıntısında `fees: [{ type: acquiring, amount: 36 }]` ve `settled_amount: 1214` (12,50 € − 0,36 €); ödeme raporunda da `fee_amount 0.36`. |
+| Kısmi iade (5,00 €) | `type: refund` sipariş `processing` açıldı, 5 sn içinde `completed`; iade ödemesinde `fees: []`, `settled_amount: -500`; özgün siparişe `refunded_amount` eklendi. Komisyon iade edilmiş görünmüyor. |
+| Süre dolması | `expire_pending_after: PT1M` verilen sipariş ~3 dk 20 sn sonra `failed` oldu (hemen değil). |
+| İptal | Bekleyen sipariş `cancel` ile anında `cancelled`. |
+| Aktarım | Deneme hesabında aktarım (payout) kaydı oluşmadı. |
+| Yerleşme raporu | Deneme hesabında tutarsız: yerleşme satırında tutar 12,50, yerleşen 5,00, komisyon 0,00; ödeme ayrıntısı ve ödeme raporuyla uyuşmuyor. Canlıda doğrulanacak. |
+
+**Revolut — açık kalan:**
+- Webhook olayları ve imzası (süre dolan sipariş hangi olayı veriyor dahil): Revolut'un ulaşabileceği genel bir adres gerekiyor.
+- Aktarımın Merchant hesabından ana hesaba kendiliğinden olup olmadığı, yerleşme raporu ve iadede komisyon: canlıda.
 - Tap to Pay (canlıda): SDK'nın açtığı siparişte `description`ın nereye düştüğü ve webhook'tan sipariş numarasına ulaşılıp
   ulaşılamadığı; ödeme komisyonu.
 - Android'de Google Pay, itiraz (dispute) akışı.
