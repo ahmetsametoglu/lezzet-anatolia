@@ -22,6 +22,15 @@
 - **§10:** işletmeler arası (B2B) satış kasa kapsamı dışında; fatura zorunlu.
 - LF 2026 md. 125, 21.02.2026'dan itibaren editör beyanını sertifikanın yanına geri getirdi.
 
+**Kasa SSS'si** — DGFiP, *logiciels de caisse* soru-cevap (28.07.2017; bağlayıcı yorum BOFiP'tir):
+
+- **Soru 16:** ödemeler biri bilgisayarda biri kâğıtta iki yolla kaydedilebilir; kasa çalışmazken kâğıda geçmek yasal.
+- **Soru 22:** işlemin verisi siparişin alınmasından ödemenin kaydına kadar değiştirilemez olmalı.
+- **Soru 36:** ödeme kuruluşunun (Revolut) aracılık işlevi sertifika kapsamında değil.
+- BOFiP arıza, çevrimdışı çalışma ve kaydın ne kadar sürede yapılacağı hakkında bir şey söylemiyor. Uygulamada sertifikalı
+  kasa bağlantı kopunca satışı cihazda tutup bağlantı dönünce gönderiyor; tamamen çökünce satış elle yazılıp kasa dönünce
+  yeniden giriliyor.
+
 **E-fatura** — DGFiP fiş 1 (Haziran 2026):
 
 - Fransa'da yerleşik iki profesyonel arasındaki fatura, kayıtlı bir platform (*plateforme agréée*, PA)
@@ -62,6 +71,7 @@
 | 15 | **Banka hesapları işe göre ayrılmaz** (04.10) | Revolut ve Crédit Mutuel şirketin hesaplarıdır; ikisi de Pennylane'e bağlı ve kurulum kartında eşlenir. Ödemenin işi hesaptan değil, bağlandığı belgeden ya da siparişten gelir ([`iki-is.md`](iki-is.md) 11. karar). Nakit Crédit Mutuel'e yatırılır: bizde "Kasa → Crédit Mutuel" transferi yazılır, Crédit Mutuel'e gelen satır bu transferin öteki yakası olarak eşleşir. |
 | 16 | **Lezzet'in faturası Pennylane'de "Lezzet" analitik kategorisini taşır** (03.10) | Pennylane şirketi toptan operasyonuyla ortak; iki işin gideri ve kârı Pennylane'de kategoriyle ayrı raporlanır. Kategorinin adı ayardır (iş başına: `pennylane_category_lezzet` · `pennylane_category_qualite`, varsayılanı işin adı, boşsa kategori yazılmaz; QUALITE'nin belgesi `iki-is.md` ile eklendi); Pennylane'de adla bulunur, yoksa "Activité" grubunda açılır. Faturanın öteki eksenlerdeki kategorisi korunur, Pennylane'de elle değiştirilen kategori ezilmez. |
 | 17 | **Kapıda kart Revolut Tap to Pay on iPhone ile alınır** (06.10) | Ödemeyi kuryenin uygulaması başlatır, ayrı cihazda tutar yazılmaz. Kurye iPhone taşır (XS ve üstü, iOS 16.4+); Android'de bu yol yok. |
+| 18 | **Kasa yazımı ödemenin hemen arkasından, kimseyi bekletmeden** (06.10) | Ödeme kaydı ve kasa kuyruğu satırı aynı işlemde yazılır; işlem biter bitmez o siparişin satışı Hiboutik'te açılıp kapanır, müşteri ve kurye beklemez. Yazılamazsa satır bekler, dakikalık iş ilk fırsatta yazar (yeniden deneme tavanı 5 dk). Bekleme süresince ödemenin kaydını bizim yazılım tutar: B2C tahsilat hareketinin tutarı, yöntemi, hesabı ve siparişi değişmez, hareket silinmez, düzeltme ters harekettir (SSS 22, BOFiP §90). Satırı işleyen onu kilitler; satış Hiboutik'e iki kez yazılmaz. Kasa ve Revolut Merchant sabit hesaplardır: migration açar, pasifleşmez; kapı nakdi Kasa'ya, kapıda kart ve online ödeme Revolut Merchant'a yazılır. Ödemenin yazılacağı hesap yoksa ödeme başlamaz. Ödemeden önce Hiboutik'te taslak satış açılmaz: açık satış mali kayıt değildir (silinir, Z'ye girmez) ve yalnız beklemeyi uzatır. |
 
 ## 3. Veri akışı
 
@@ -92,7 +102,8 @@
   - `money_document` KDV'yi oran başına kırılımla taşır (`vat_lines`; gıda %5,5 ile ambalaj %20 aynı
     faturada olabilir), KDV toplamı kırılımdan türer. KDV rejimi ve para birimi alanı var.
   - `money_allocation` (hareket ↔ belge, tutarıyla, çoktan çoğa) değişmez; 5. karar bunun üstüne.
-  - Hesap türleri `cash · bank · provider · partner`. Revolut Merchant hesabı `provider` türündedir; komisyon
+  - Hesap türleri `cash · bank · provider · partner`. Kasa (`cash`) ve Revolut Merchant (`provider`) sabit hesaplardır
+    (18. karar); komisyon
     `kart-komisyonu` doğasıyla, aktarım `card_payout_account_id` hesabına transferle yazılır.
 - **Banka içe aktarma (Excel + yapay zekâ şablonu):** yedek olarak kalır.
 - **B2B havalesi:** peşin ve vadeli havale siparişe bizim sistemde bağlanır
@@ -149,6 +160,15 @@ aynı klasörde. Güncel API belgesi `/docapi/yaml/` (belge sayfası bunu yükl�
 | Yuvarlama | `sale_total_net/tax` (23,12 / 1,88) ile oran toplamları (23,13 / 1,87) bir kuruş ayrışıyor; mutabakat oran toplamlarından yapılır. |
 | Hız | Çağrı başına 40–110 ms; kota başlığı yok. |
 | Demo sıfırlama | `POST /reset` (`reset_action`: `sales_and_products`, `sales_keep_stock`, `sales_and_stock`, `clients`, `everything`), yalnız demo modunda. `sales_and_products` satışları, ürünleri ve kasa sayımını siliyor; ödeme yöntemleri, KDV oranları ve mağaza kalıyor. |
+
+**Hiboutik — belgeden okundu (06.10).** Kaynak Hiboutik SSS'si ve hesabın API belgesi:
+- Açık satış mali kayıt değildir: kalemi ve ödeme satırı değişir, boşaltılan satış silinir (SSS örneği: "ödenmediği için iptal
+  edilen siparişler"). Açılışta hesap genelinde bir oluşturma numarası, kapanışta satış noktasının doğrulama numarası verilir;
+  boşluk yalnız oluşturma sırasında olur. Premium'da en çok 500 açık satış.
+- Z, o gün kapanan satışları içerir. Kapanmış satış silinmez, eksi kopyası olan ters satışla o gün düzeltilir. Mali arşiv
+  doğrulanmış satışları, ödemeleri ve kapanışları elektronik imzayla korur.
+- Hiboutik'in Revolut uygulaması yalnız Revolut Terminal'i "Pay at counter" kipinde sürer (satış Hiboutik ekranında açılır);
+  online ödeme ve Tap to Pay kapsam dışı. WooCommerce eşitlemesi online satışı ödemeden sonra açıp kapatır.
 
 **Hiboutik — açık kalan:**
 - Gün kapanışı, satışı önceki güne taşıma, mali arşiv ve kapanış sonrası kasa defteri yalnız üretim hesabında
@@ -284,8 +304,10 @@ hediye sipariş hiç para görmez (11. karar). Canlıya geçiş anı ayardır; k
 1. `money_movement`ta sipariş parası yazılınca, değişince ya da silinince tetikleyici siparişi kasa
    kuyruğuna işaretler; eşlenmiş nakit hesabının öteki hareketleri de kuyruğa düşer. Aynı işlemde olduğu
    için kuyruğa düşmeyen para kalmaz.
-2. Backend cron'u (`register-sync`, dakikada bir) kuyruğu sırayla işler: motor planı çıkarır, Hiboutik
-   uyarlaması yazar, sonuç bizdeki kasa aynasına geçer. Hiç para görmemiş sipariş yazılmaz.
+2. İşlem biter bitmez o siparişin kuyruk satırı işlenir (18. karar): motor planı çıkarır, Hiboutik uyarlaması
+   yazar, sonuç bizdeki kasa aynasına geçer; müşteri ve kurye bunu beklemez. Yazılamayan satırı backend cron'u
+   (`register-sync`, dakikada bir) tamamlar. Satırı işleyen onu kilitler, aynı satırı iki yazar birden işlemez.
+   Hiç para görmemiş sipariş yazılmaz.
 3. **Kalem farkı varsa yeni fiş** (Hiboutik satışı): fark kalemleri (artı ya da eksi) ve yöntem
    farkı kadar ödeme satırı. İade, eksi kalemli fiştir; `void` kullanılmaz, çünkü iadeyi asıl ödemenin
    yöntemine yazıyor, oysa operatör kartla ödenmiş siparişi nakit iade edebilir (DOMAIN §8).
@@ -294,8 +316,8 @@ hediye sipariş hiç para görmez (11. karar). Canlıya geçiş anı ayardır; k
    açılır: tutarlar açık yazılır, eksik ya da fazla ödeme fişin bakiyesinde görünür.
 5. **Para doğurmayan kalem farkı** (eksik ödenmiş siparişte iade, borçsuz iptal) ödemesiz fiştir; fişi
    olan siparişi kalem ve durum değişikliği de kuyruğa düşürür.
-6. **Değişen hareket:** kasadaki satır değişmez; tutarı, yöntemi ya da siparişi değişen hareketin farkı
-   aynı harekete yeni ödeme satırıdır, siparişten çıkan hareketin neti ters satırla geri alınır.
+6. **Değişen hareket:** B2C tahsilat hareketinin tutarı, yöntemi, hesabı ve siparişi değişmez, hareket silinmez;
+   bunu veritabanı korur (18. karar). Düzeltme ters harekettir ve kasaya eksi satır olarak gider.
 
 **Ücretlenen kalem motorun tanımıdır** (`fulfilledLineAmountCents`, `isFulfillmentSettled`): hazırlık
 kesinleşmeden sipariş edilen adet, sonra giden eksi müşteride kalan; iptalde sıfır; kargo ancak ücretlenen
@@ -307,6 +329,12 @@ kalem varsa. Hiboutik kalemi:
   düzeltilir.
 - Kalemler türetilen borcu tutmazsa plan bunu işaretler ve uyarı yazılır; fark fişin bakiyesinde görünür.
   İndirimin kalemlere tam dağıtıldığını veritabanı zaten zorluyor (`assert_order_discount_balance`).
+
+**Sabit hesaplar** (18. karar): Kasa (nakit) ve Revolut Merchant (sağlayıcı) migration'la açılır ve pasifleşmez. Kapı nakdi
+ayarı (`door_cash_account_id`) Kasa'yı, kapıda kart ayarı (`door_card_account_id`) Revolut Merchant'ı gösterir; online
+tahsilat da Revolut Merchant'a yazılır. Kart parasının aktarıldığı banka (`card_payout_account_id`) sabit değildir, banka
+eşlemesiyle gelir. Ödemenin yazılacağı hesap okunamazsa ödeme başlamaz: online'da ödeme sayfası açılmaz, kapıda ve kapı
+önünde tahsilat başlamaz.
 
 **Ödeme kodu hareketin yönteminden:** nakit `ESP`, kapıda ve tezgâhta kart `CB`, çevrim içi `WEB`, havale
 `VIR`. Yöntem bugün siparişte duruyor ve sonraki tahsilatta üzerine yazılıyor (kapıda nakit ve kart aynı
@@ -336,8 +364,9 @@ asıl ödemenin yöntemi; ortak cari iade yolu olarak sunulmaz, çünkü müşte
 - Kapanmamış fişin satışı silinip aynadan yeniden yazılır (kapanmamış satış mali kayıt değil). Kapanmış
   fişe ödeme eklenmeden önce Hiboutik'te sahipsiz bir ödeme satırı ya da nakit akışı var mı diye okunur.
 
-**Hata:** Hiboutik'e ulaşılamazsa sipariş kuyrukta kalır, artan aralıkla (1 dakikadan 1 saate) yeniden
-denenir; beşinci denemede (yaklaşık 15 dakika) `error_log`a yazılır ve yönetime ve muhasebeye bildirim gider. Plan
+**Hata:** Hiboutik'e ulaşılamazsa sipariş kuyrukta kalır, artan aralıkla (1 dakikadan 5 dakikaya; bağlantı dönünce kayıt
+en geç 5 dakikada yazılır) yeniden denenir; beşinci denemede (yaklaşık 12 dakika) `error_log`a yazılır ve yönetime ve
+muhasebeye bildirim gider. Plan
 durursa (yöntemi bilinmeyen hareket, iadeyle başlayan sipariş, eşlenmemiş depo) satır sebebiyle bekler ve ilk turda
 bildirim gider, eşlenmemiş depoda depo ve gün başına bir kez; gece kapanışını beklemek düzeltmeyi ertesi güne,
 kaydı da o günün Z'sine kaydırırdı. Çözüm bir para değişikliğiyle gelir ve satırı yeniden işaretler. Mağaza
@@ -627,7 +656,8 @@ Operatörün Hiboutik ve Pennylane'de yapmaması gerekenler `docs/runbook/muhase
    vb.) açılırsa aynı satış iki kez gelir sayılır. B2C satışı Pennylane'e yalnız Hiboutik'ten, B2B satışı
    yalnız Pennylane'de kesilen faturadan girer.
 5. **Kasa kaydının yazılamaması.** Hiboutik erişilemezse satış bizde var, kasada yok: yasal açık.
-   Çare: kuyruk + yeniden deneme + günlük mutabakatta fark uyarısı; gün kapanmadan kuyruk boşalmalı.
+   Çare (18. karar): ödemenin hemen arkasından yazım, değiştirilemez bekleyen kayıt, en geç 5 dakikada bir yeniden
+   deneme ve günlük mutabakatta fark uyarısı; gün kapanmadan kuyruk boşalmalı.
 6. **Kasa sıfırlanması.** Hiboutik'te ürünler silinirse (demo sıfırlama) bizdeki ürün eşlemesi
    (`register_product`) olmayan ürünleri anar ve her yazım düşer; sıfırlamadan sonra eşleme silinmeli.
 
@@ -638,6 +668,7 @@ Resmî:
 - [DGFiP fiş 1: e-fatura (Haziran 2026)](https://www.impots.gouv.fr/sites/default/files/media/1_metier/2_professionnel/EV/2_gestion/290_facturation_electronique/fiches_reforme/fiche-1_que-va-t-il-se-passer-pour-mon-entreprise.pdf)
 - [DGFiP: e-reporting fişi (Eylül 2025)](https://www.impots.gouv.fr/sites/default/files/media/1_metier/2_professionnel/EV/2_gestion/290_facturation_electronique/fiches_reforme/fiche-e-reporting_transactions.pdf)
 - [impots.gouv.fr: e-faturayı tanıyın](https://www.impots.gouv.fr/professionnel/je-decouvre-la-facturation-electronique)
+- [DGFiP: logiciels de caisse soru-cevap (28.07.2017)](https://www.economie.gouv.fr/files/files/directions_services/dgfip/controle_fiscal/actualites_reponses/logiciels_de_caisse.pdf)
 
 Hiboutik:
 - API belgesi: `https://lezzetanatolie.hiboutik.com/docapi/yaml/` (kopyası `.test-results/hiboutik-docapi-hesap.yaml`, depoda değil)
@@ -646,6 +677,8 @@ Hiboutik:
 - [Kapanış](https://faq.hiboutik.com/en/till-closing/perform-a-closing) · [Kapanış (FR)](https://faq.hiboutik.com/?faq=84)
 - [Demo ve üretim modları](https://faq.hiboutik.com/fr/mon-compte/modes-demonstration-production)
 - [Satışı önceki güne taşıma](https://faq.hiboutik.com/fr/caisse-cloture/transferer-une-vente-sur-une-journee-anterieure)
+- [Açık satışlar](https://faq.hiboutik.com/en/sales/parked-sales) · [Satış numara sıraları](https://faq.hiboutik.com/?faq=38&locale=en) · [Ters satış](https://faq.hiboutik.com/?faq=54&locale=en) · [Mali arşiv](https://faq.hiboutik.com/?faq=2&locale=en)
+- [Revolut Terminal uygulaması](https://faq.hiboutik.com/en/integrations/revolut-terminal) · [WooCommerce satış eşitlemesi](https://faq.hiboutik.com/en/integrations/sync-your-inventory-and-sales-with-woocommerce)
 
 Pennylane:
 - [Kasa yazılımlarından satış senkronu](https://help.pennylane.com/fr/articles/212053-logiciels-de-gestion-de-point-de-vente-synchroniser-les-ventes-en-magasin)
