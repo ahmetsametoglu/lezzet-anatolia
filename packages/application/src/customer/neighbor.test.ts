@@ -38,6 +38,7 @@ let zoneId: string;
 let inviterId: string;
 let neighborId: string;
 let otherId: string;
+let professionalId: string;
 const createdProfiles: string[] = [];
 
 /** Sefer AÇIK olsun diye teslimat günü ileriye alınır — kesim saati testin koştuğu saate bağlanmasın. */
@@ -80,6 +81,15 @@ beforeAll(async () => {
     expiryDate: ileriGun(60),
     purchasePriceCents: 300,
   });
+
+  const professional = await profiles.insert({
+    name: 'Bistro Kaya',
+    email: `komsu-pro-${stamp}@example.test`,
+    type: 'company',
+    companyInfo: { legalName: `SARL Komşu ${stamp}` },
+  });
+  professionalId = professional.id;
+  createdProfiles.push(professional.id);
 });
 
 beforeEach(async () => {
@@ -164,6 +174,14 @@ describe('davetin açılması', () => {
     const outcome = await openNeighborInvite(db, { orderId: order.id, customerId: inviterId });
 
     expect(outcome.status).toBe('not_route');
+  });
+
+  it('profesyonel müşterinin siparişinde davet açılmaz, çünkü davet puan vaat eder', async () => {
+    const order = await rotaSiparisi({ customerId: professionalId });
+
+    const outcome = await openNeighborInvite(db, { orderId: order.id, customerId: professionalId });
+
+    expect(outcome.status).toBe('not_eligible');
   });
 
   it('olmayan sipariş `not_found` — sessizce boş davet doğmaz', async () => {

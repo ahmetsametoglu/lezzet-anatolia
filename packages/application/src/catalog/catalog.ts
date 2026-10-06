@@ -155,7 +155,7 @@ async function readCatalogProducts(
     const only = await readScopeCampaigns(db, {
       categoryIds: activeCategory ? [activeCategory.id] : [],
       collectionIds: activeCollection ? [activeCollection.id] : [],
-      business: place.business,
+      professional: viewer.professional,
     });
     return noProducts(activeCollection, sectionCampaignOf(only, activeCategory, activeCollection));
   }
@@ -204,7 +204,7 @@ async function readCatalogProducts(
         ...(activeCollection ? [activeCollection.id] : []),
         ...page.rows.flatMap((p) => p.collections.map((c) => c.collectionId)),
       ],
-      business: place.business,
+      professional: viewer.professional,
     }),
   ]);
   /* Kesit başlığı kampanyayı zaten söylüyorsa kartta tekrarlanmaz: kategori ekranında 40 özdeş rozet rozeti anlamsızlaştırır. */

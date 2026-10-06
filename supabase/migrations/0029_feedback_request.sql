@@ -63,7 +63,7 @@ select r.id as feedback_request_id,
   ) f on true;
 
 comment on view public.feedback_request_progress is
-  'Davetin ilerlemesi — "2/5" siparişten ve değerlendirmelerden TÜRETİLİR, saklanmaz (17.2).';
+  'Davetin ilerlemesi — "2/5" siparişten ve değerlendirmelerden TÜRETİLİR, saklanmaz.';
 
 -- Süzgeç kaynakta, çünkü uygulamada olsaydı davetli siparişler tarama penceresini doldurur ve yenilere sıra gelmezdi.
 -- Bekleme süresi (`feedback_delay_days`) motorun kararıdır; görünüm yalnız olguyu verir.
@@ -80,10 +80,12 @@ select o.id          as order_id,
   ) d on true
  where o.status in ('delivered', 'completed')
    and d.delivered_at is not null
-   and not exists (select 1 from public.feedback_request r where r.order_id = o.id);
+   and not exists (select 1 from public.feedback_request r where r.order_id = o.id)
+   -- Davet puan vaat eder; profesyonel müşterinin siparişi kuyruğa girmez, girseydi davet edilmeden birikip pencereyi doldururdu.
+   and not public.customer_is_professional(o.customer_id);
 
 comment on view public.feedback_due_order is
-  'Daveti bekleyen siparişler — teslim edilmiş, daveti YOK (17.2). Bekleme süresi motorun kararı.';
+  'Daveti bekleyen siparişler — teslim edilmiş, daveti YOK, müşterisi bireysel. Bekleme süresi motorun kararı.';
 
 -- Bekleme süresi ve dış değerlendirme platformu ayardadır, çünkü ikisi de dağıtım beklemeden değişebilen iş kararıdır.
 -- `review_platform_url` boş başlar: kayıt açılmadan uydurma adrese yönlendirmektense davet gösterilmez (`feedbackOutcomeOf`).

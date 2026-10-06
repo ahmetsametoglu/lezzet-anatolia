@@ -109,13 +109,27 @@ describe('pricingViewerOf', () => {
     // `channel` fiyatın okunacağı liste, `b2bApproved` motorun daraltmada bakacağı gerçek; ikincisini b2c'ye çevirmek bilgiyi silerdi.
     // `groupPercentOff` iki kez null: müşterinin grubu yok ve onaysız şirkette kademe zaten kapalı.
     const customerId = await newCustomer({ company: true, approved: false });
-    expect(await pricingViewerOf(db, customerId)).toEqual({ channel: 'b2c', b2bApproved: false, customerId, groupPercentOff: null, customerRule: null });
+    expect(await pricingViewerOf(db, customerId)).toEqual({
+      channel: 'b2c',
+      b2bApproved: false,
+      customerId,
+      groupPercentOff: null,
+      customerRule: null,
+      professional: true,
+    });
   });
 
   it('ONAYLI şirket b2b kanalına açılır', async () => {
     // Kanal açık ama müşteri hiçbir gruba üye değil — kademe yokluğu `null`dır, sıfır değil.
     const customerId = await newCustomer({ company: true, approved: true });
-    expect(await pricingViewerOf(db, customerId)).toEqual({ channel: 'b2b', b2bApproved: true, customerId, groupPercentOff: null, customerRule: null });
+    expect(await pricingViewerOf(db, customerId)).toEqual({
+      channel: 'b2b',
+      b2bApproved: true,
+      customerId,
+      groupPercentOff: null,
+      customerRule: null,
+      professional: true,
+    });
   });
 
   it('bulunamayan kimlik ZİYARETÇİye düşer — uydurma bir kanal açılmaz', async () => {

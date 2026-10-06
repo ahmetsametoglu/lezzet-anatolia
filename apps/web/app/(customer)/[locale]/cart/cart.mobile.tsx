@@ -274,7 +274,7 @@ export function CartMobile({ t, locale }: CartViewProps) {
         {freeShippingNote}
         {split && <Note tone="warm" description={copy.group.split} />}
 
-        {/* Kupon geçmeyen işin sepetinde kupon alanı yoktur (`acceptsCoupons`). */}
+        {/* Profesyonel müşterinin sepetinde kupon alanı yoktur (`acceptsCoupons`). */}
         {!view.acceptsCoupons ? null : discount.status === 'applied' ? (
           <div className="flex items-center gap-2.5 rounded-control bg-sand-150 px-3.5 py-3">
             <MobileIcon name="coupon" size={17} className="flex-none text-olive-dark" />

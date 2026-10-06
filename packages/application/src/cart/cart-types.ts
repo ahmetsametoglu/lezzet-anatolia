@@ -213,7 +213,7 @@ export interface CartView {
    * Sepete inen indirim ya da kuponun neden inmediği; karar motorundur, kapı yalnız taşır.
    */
   discount: CartDiscount;
-  /** Bu sepete kupon girilebilir mi; kupon geçmeyen işte (`businessHasDiscounts`) kupon alanı çizilmez. */
+  /** Bu sepete kupon girilebilir mi; profesyonel müşteride (`isProfessionalCustomer`) kupon alanı çizilmez. */
   acceptsCoupons: boolean;
   /**
    * Eşiğe az kalmış kampanya; toplama girmez, bir bilgi, tahsilat değil.
@@ -265,7 +265,7 @@ export const EMPTY_CART: CartView = {
   discountRules: [],
   discountContext: { isFirstOrder: false },
   discount: { status: 'none' },
-  // Okunmamış sepet ziyaretçinindir ve ziyaretçi Lezzet'tir; ilk okumada sepetin işinden dolar.
+  // Okunmamış sepet ziyaretçinindir ve ziyaretçi bireyseldir; ilk okumada müşterinin tipinden dolar.
   acceptsCoupons: true,
   reachableDiscount: null,
   totalCents: 0,

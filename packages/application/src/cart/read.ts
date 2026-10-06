@@ -1,6 +1,5 @@
 import { ProductService, ProductVariantService, SettingsService, type Db } from '@lezzet/database';
 import {
-  businessHasDiscounts,
   decideCartAgainstWarehouse,
   meetsMinBasket,
   minBasketBaseOf,
@@ -142,7 +141,7 @@ export async function getCartView(
   const [viewer, rows, discountData] = await Promise.all([
     pricingViewerOf(db, opts.customerId ?? null),
     empty ? null : readCartRows(db, locale, { variantIds, bundleIds, place, bundles: opts.bundles }),
-    empty ? null : loadCartDiscountData(db, { customerId: opts.customerId, couponCode: opts.couponCode, business: opts.business }),
+    empty ? null : loadCartDiscountData(db, { customerId: opts.customerId, couponCode: opts.couponCode }),
   ]);
   // Eşikler parametrik ve checkout ile aynı anahtar ve kapsamla okunur (`settingScopeOf`), yoksa sepetin gösterdiği eşik kasada
   // tutmazdı.
@@ -160,7 +159,7 @@ export async function getCartView(
     minBasketFor(settings, 'shipping', scope),
     settings.getNumber(FREE_SHIPPING_THRESHOLD_KEY, FREE_SHIPPING_THRESHOLD_DEFAULT, scope),
   ]);
-  const acceptsCoupons = businessHasDiscounts(opts.business);
+  const acceptsCoupons = !viewer.professional;
   // Boş sepette yol da yok: kapıya teslim tabanı yazılır ki ekran "en az şu kadar" diyebilsin.
   if (rows === null || discountData === null) return { ...EMPTY_CART, freeShippingCents, acceptsCoupons, ...meets(0, minBasketRouteCents) };
   const { variants, packageRows, page } = rows;
@@ -289,7 +288,7 @@ export async function getCartView(
       localOrderLines: split ? discountable.filter((_, index) => lines[index] && cartGroupOf(lines[index]) === 'local') : undefined,
       customerId: opts.customerId,
       couponCode: opts.couponCode,
-      business: opts.business,
+      professional: viewer.professional,
     },
     discountData,
   );

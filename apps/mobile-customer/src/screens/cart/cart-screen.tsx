@@ -497,7 +497,7 @@ export function CartScreen() {
         {/* Bölünme SEPETİN kendi hâlidir, bir seçim değil: müşteri kalem taşımaz, yol seçmez. */}
         {split ? <Note tone="warm" description={t.group.split} testID="cart-split" /> : null}
 
-        {/* Kupon geçmeyen işin sepetinde kupon alanı yoktur (`acceptsCoupons`). */}
+        {/* Profesyonel müşterinin sepetinde kupon alanı yoktur (`acceptsCoupons`). */}
         {!view.acceptsCoupons ? null : discount.status === 'applied' ? (
           <View style={styles.couponApplied} testID="cart-coupon-applied">
             <Icon name="coupon" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />

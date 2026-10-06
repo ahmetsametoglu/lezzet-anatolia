@@ -11,7 +11,7 @@ import { limitText, type HomeViewProps } from './home-types';
  * Anasayfa masaüstü düzeni (`Musteri Web.dc.html`, "Web · Anasayfa"): bölüm sırası tasarımdan birebir, dosya yalnız parçaları dizer.
  * Fırsat bölümü teklif yoksa hiç çizilmez, boş başlık bırakılmaz.
  */
-export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
+export function HomeDesktop({ t, locale, data, hero, discover }: HomeViewProps) {
   return (
     <div className="flex flex-col">
       {/* Kahraman */}
@@ -147,9 +147,11 @@ export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
         </Band>
       )}
 
-      <div className="mx-12 mt-11 mb-5">
-        <CtaBand title={t.discover.title} body={t.discover.body} cta={{ label: t.discover.cta, href: '/discover' }} />
-      </div>
+      {discover && (
+        <div className="mx-12 mt-11 mb-5">
+          <CtaBand title={t.discover.title} body={t.discover.body} cta={{ label: t.discover.cta, href: '/discover' }} />
+        </div>
+      )}
       <div className="mx-12 mb-12">
         <InviteBand title={t.pro.title} body={t.pro.body} cta={{ label: t.pro.cta, href: '/professionals' }} />
       </div>

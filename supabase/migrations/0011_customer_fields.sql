@@ -334,3 +334,13 @@ alter table public.address enable row level security;
 
 alter table public.price add constraint price_customer_fk
   foreign key (customer_id) references public.user_profiles (id) on delete cascade;
+
+-- Profesyonel müşteri: şirket tipinde ya da şirket künyesi taşıyan; tüketici promosyonları (kampanya, kupon, puan ve puana bağlı
+-- davetler) ona kapalıdır. `domain-core` `isProfessionalCustomer` ile aynı kuraldır, veri tarafında tek yerde durur.
+create or replace function public.customer_is_professional(p_customer_id uuid) returns boolean
+language sql
+stable
+set search_path = public
+as $$
+  select coalesce((select p.type = 'company' or p.company_info is not null from public.user_profiles p where p.id = p_customer_id), false);
+$$;

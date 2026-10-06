@@ -1,16 +1,6 @@
 import { CategoryService, CollectionService, ProductService } from '@lezzet/database';
 import { HomeSchema, resolveLocalizedText } from '@lezzet/types';
-import type {
-  Business,
-  Category,
-  Collection,
-  Home,
-  HomeBand,
-  HomeBandKind,
-  ImageMeta,
-  LocalizedText,
-  PreferredLanguage,
-} from '@lezzet/types';
+import type { Category, Collection, Home, HomeBand, HomeBandKind, ImageMeta, LocalizedText, PreferredLanguage } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { countDiscoverDeck } from '../feedback/discover';
 import { EMPTY_SCOPE_CAMPAIGNS, readScopeCampaigns, type ScopeCampaign, type ScopeCampaigns } from './campaign';
@@ -156,7 +146,7 @@ export async function composeHomeBands(
   db: SupabaseClient,
   locale: PreferredLanguage,
   pools: HomeBandPools,
-  business: Business,
+  professional: boolean,
   rng: Rng = dailyRng(),
 ): Promise<HomeBand[]> {
   /* Kampanya okuması SEÇİMDEN ÖNCE: seçimin kendisi kampanyalıyı öne alıyor (`selectHomeBandSources`
@@ -164,7 +154,7 @@ export async function composeHomeBands(
   const campaigns = await readScopeCampaigns(db, {
     categoryIds: pools.categories.map((c) => c.id),
     collectionIds: pools.collections.map((c) => c.id),
-    business,
+    professional,
   });
   const chosen = selectHomeBandSources(pools.categories, pools.collections, rng, campaigns);
 
@@ -190,12 +180,17 @@ export async function composeHomeBands(
 }
 
 /** Havuzları küresel listeden kurar (2 okuma), kuralı kompozisyona bırakır. */
-async function readHomeBands(db: SupabaseClient, locale: PreferredLanguage, business: Business, rng: Rng = dailyRng()): Promise<HomeBand[]> {
+async function readHomeBands(
+  db: SupabaseClient,
+  locale: PreferredLanguage,
+  professional: boolean,
+  rng: Rng = dailyRng(),
+): Promise<HomeBand[]> {
   const [categories, collections] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
     new CollectionService(db).listWithProductIds({ activeOnly: true }),
   ]);
-  return composeHomeBands(db, locale, { categories, collections }, business, rng);
+  return composeHomeBands(db, locale, { categories, collections }, professional, rng);
 }
 
 /** Kartın fırsat hâline geçtiğinin tek ölçütü: motor teklifi kazandırdı → üstü çizili referans var. */
@@ -242,7 +237,7 @@ export async function readHome(
   viewer: PricingViewer,
 ): Promise<Home> {
   const [bands, offers, featured, recipes, packages, discoverCards] = await Promise.all([
-    readHomeBands(db, locale, place.business),
+    readHomeBands(db, locale, viewer.professional),
     readHomeOffers(db, locale, place, viewer),
     readHomeFeatured(db, locale, place, viewer),
     readRecipeCards(db, locale, HOME_RECIPE_LIMIT),
@@ -250,7 +245,7 @@ export async function readHome(
     readPackageCards(db, locale, { featuredOnly: true, limit: HOME_PACKAGE_LIMIT, place }),
     /* Keşif davetinin şartı kalan kart sayısıdır ve desteyi kuran kuraldan sayılır (`countDiscoverDeck`); iki ayrı sayım bir gün
        ayrışır ve vitrin boş çıkan bir tura davet eder. */
-    countDiscoverDeck(db, viewer.customerId),
+    countDiscoverDeck(db, viewer.customerId, viewer.professional),
   ]);
 
   return HomeSchema.parse({

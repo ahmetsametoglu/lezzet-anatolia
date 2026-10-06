@@ -117,7 +117,7 @@ const EMPTY_VIEW: MeCartView = {
   lines: [],
   subtotalCents: 0,
   discount: { status: 'none' },
-  // Okunmamış sepet ziyaretçinindir ve ziyaretçi Lezzet'tir; ilk okumada sepetin işinden dolar.
+  // Okunmamış sepet ziyaretçinindir ve ziyaretçi bireyseldir; ilk okumada müşterinin tipinden dolar.
   acceptsCoupons: true,
   // Boş sepette eşiğe "az kalmış" bir kampanya da yoktur: kapsamda kalem olmadan cümle kurulamaz.
   reachableDiscount: null,

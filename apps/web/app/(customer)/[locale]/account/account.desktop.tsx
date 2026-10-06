@@ -108,11 +108,13 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
             <ZoneNoticeList copy={saved} notices={account.zoneNotices} />
           </Card>
 
-          {/* Kupon kartı boşken de durur ki puan zincirinin nereye çıktığı görünsün. */}
-          <Card compact={compact}>
-            <CardHead title={t.couponsTitle} compact={compact} />
-            <DesktopCouponsCard t={t} locale={locale} coupons={account.coupons} />
-          </Card>
+          {/* Kupon kartı boşken de durur ki puan zincirinin nereye çıktığı görünsün; puan programı dışındaki müşteride zincir yoktur. */}
+          {account.points && (
+            <Card compact={compact}>
+              <CardHead title={t.couponsTitle} compact={compact} />
+              <DesktopCouponsCard t={t} locale={locale} coupons={account.coupons} />
+            </Card>
+          )}
 
           <Card compact={compact}>
             <CardHead title={t.linksTitle} compact={compact} />

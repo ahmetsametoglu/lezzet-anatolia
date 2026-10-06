@@ -3,7 +3,10 @@ import { CategoryService, DiscountService, serviceDb } from '@lezzet/database';
 import { mustDelete, purgeTestData } from '@lezzet/database/testing';
 import { readScopeCampaigns } from './campaign';
 
-/** Vitrin kampanyayı yalnız Lezzet görüntüleyenine duyurur (docs/feature/iki-is.md, karar 13). */
+/**
+ * Vitrin kampanyayı yalnız bireysel görüntüleyene duyurur; profesyonel müşteriye tüketici promosyonu yoktur
+ * (docs/feature/iki-is.md, karar 13).
+ */
 const db = serviceDb();
 const stamp = Date.now();
 let categoryId: string;
@@ -31,11 +34,11 @@ afterAll(async () => {
 });
 
 describe('vitrinin kampanyası', () => {
-  it('Lezzet görüntüleyenine kategori kampanyası duyurulur, QUALITE görüntüleyenine duyurulmaz', async () => {
-    const lezzet = await readScopeCampaigns(db, { categoryIds: [categoryId], business: 'lezzet' });
-    const qualite = await readScopeCampaigns(db, { categoryIds: [categoryId], business: 'qualite' });
+  it('bireysel görüntüleyene kategori kampanyası duyurulur, profesyonele duyurulmaz', async () => {
+    const individualView = await readScopeCampaigns(db, { categoryIds: [categoryId], professional: false });
+    const professionalView = await readScopeCampaigns(db, { categoryIds: [categoryId], professional: true });
 
-    expect(lezzet.byCategory.get(categoryId)?.id).toBe(discountId);
-    expect(qualite.byCategory.size).toBe(0);
+    expect(individualView.byCategory.get(categoryId)?.id).toBe(discountId);
+    expect(professionalView.byCategory.size).toBe(0);
   });
 });

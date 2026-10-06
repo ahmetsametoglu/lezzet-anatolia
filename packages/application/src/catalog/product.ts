@@ -118,11 +118,11 @@ async function readSimilar(
   // Kartlar farklı kategori ve koleksiyonlardan gelir ve üstünde kampanyayı söyleyecek başlık yoktur, rozet kapsamı bu yüzden okunur.
   const [context, scopeCampaigns] = await Promise.all([
     placeAndViewer.then(([place, viewer]) => loadProductContext(db, candidates, place, viewer)),
-    placeAndViewer.then(([place]) =>
+    placeAndViewer.then(([, viewer]) =>
       readScopeCampaigns(db, {
         categoryIds: candidates.flatMap((p) => (p.categoryId === null ? [] : [p.categoryId])),
         collectionIds: candidates.flatMap((p) => p.collections.map((c) => c.collectionId)),
-        business: place.business,
+        professional: viewer.professional,
       }),
     ),
   ]);

@@ -1,6 +1,7 @@
 import { NeighborInviteClaimService, NeighborInviteService, OrderService, SettingsService, UserProfileService } from '@lezzet/database';
 import {
   deliveryRunWindow,
+  isProfessionalCustomer,
   NEIGHBOR_INVITE_MAX_USES,
   ORDER_CUTOFF_DEFAULT,
   ORDER_CUTOFF_KEY,
@@ -38,6 +39,8 @@ export type OpenNeighborInviteOutcome =
   | { status: 'not_owner' }
   /** Kargo siparişi: sefer diye bir şey yok, çağrılacak bir gün de yok. */
   | { status: 'not_route' }
+  /** Profesyonel müşteri: davet puan vaat eder ve tüketici promosyonu ona kapalıdır (`isProfessionalCustomer`). */
+  | { status: 'not_eligible' }
   /** Sefer geçti ya da bugünün kesim saati doldu — çağrılacak bir şey kalmadı. */
   | { status: 'run_closed'; window: DeliveryRunWindow };
 
@@ -57,7 +60,12 @@ export async function openNeighborInvite(
 
   const invites = new NeighborInviteService(db);
   // Pencere yalnız yeni davet açılacaksa gerekir ama var olan davetle aynı turda okunur: sipariş sonrası ekran bu zinciri bekliyor.
-  const [existing, window] = await Promise.all([invites.findByOrder(order.id), runWindowOf(db, order.deliveryDate, order.deliveryZoneId)]);
+  const [existing, window, customer] = await Promise.all([
+    invites.findByOrder(order.id),
+    runWindowOf(db, order.deliveryDate, order.deliveryZoneId),
+    new UserProfileService(db).getById(order.customerId),
+  ]);
+  if (isProfessionalCustomer(customer)) return { status: 'not_eligible' };
   // Var olan davet, penceresi kapansa bile AYNEN döner: ekranın söyleyeceği cümleyi pencere
   // belirler (`readNeighborWelcome`), ama paylaşılmış bir bağlantı burada ikinci kez üretilmez.
   if (existing) return { status: 'ok', invite: existing, created: false };

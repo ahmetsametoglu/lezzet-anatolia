@@ -5,10 +5,11 @@ import { setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@lezzet/i18n';
 import { openDiscoverDeck, readDiscoverReward } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
+import { isProfessionalCustomer } from '@lezzet/domain-core';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { detectDevice } from '@/lib/device';
 import { localeAlternates } from '@/lib/seo/alternates';
-import { currentCustomerId } from '@/lib/guard';
+import { readSessionProfile } from '@/lib/guard';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { DiscoverClient } from './discover-client';
@@ -42,10 +43,12 @@ export default async function DiscoverPage({ params, searchParams }: DiscoverPag
   void recordPageView('/discover', await searchParams);
 
   const t: Messages = messages[locale];
-  const customerId = await currentCustomerId();
+  const profile = await readSessionProfile();
+  // Keşif turu puan için oynanır; profesyonel müşteri için sayfa yoktur, vitrin de ona davet etmez.
+  if (isProfessionalCustomer(profile)) notFound();
   const [device, cards, reward] = await Promise.all([
     detectDevice(),
-    openDiscoverDeck(serviceDb(), locale as Locale, customerId),
+    openDiscoverDeck(serviceDb(), locale as Locale, profile?.id ?? null, false),
     readDiscoverReward(serviceDb()),
   ]);
 
@@ -58,7 +61,7 @@ export default async function DiscoverPage({ params, searchParams }: DiscoverPag
       mobileChrome="bare"
       thinChrome={{ title: t.title, fallback: '/catalog' }}
     >
-      <DiscoverClient t={t} locale={locale as Locale} device={device} cards={cards} signedIn={customerId !== null} reward={reward} />
+      <DiscoverClient t={t} locale={locale as Locale} device={device} cards={cards} signedIn={profile !== null} reward={reward} />
     </SiteFrame>
   );
 }

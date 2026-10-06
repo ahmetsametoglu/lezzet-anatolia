@@ -40,7 +40,8 @@ export interface PhoneHome {
 
 export type HomeView =
   | { device: 'mobile'; data: PhoneHome }
-  | { device: 'desktop'; data: StorefrontHome; hero: SitePageImage | null };
+  /** `discover`: keşif bandı çizilir mi; profesyonel müşteriye tur yoktur. */
+  | { device: 'desktop'; data: StorefrontHome; hero: SitePageImage | null; discover: boolean };
 
 export async function loadHomeView(locale: Locale, device: Device): Promise<HomeView> {
   const [place, viewer] = await Promise.all([readPlaceWarehouses(), readPricingViewer()]);
@@ -48,7 +49,7 @@ export async function loadHomeView(locale: Locale, device: Device): Promise<Home
   if (device === 'desktop') {
     // Kahraman görseli katalogla AYNI turda — ikisi arasında bağımlılık yok.
     const [data, hero] = await Promise.all([getHomeData(locale, place, viewer), readSiteImage('home_hero', locale)]);
-    return { device, data, hero };
+    return { device, data, hero, discover: !viewer.professional };
   }
 
   const customerId = viewer.customerId;

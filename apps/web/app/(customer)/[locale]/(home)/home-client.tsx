@@ -45,6 +45,6 @@ export function HomeClient({ t, locale, view }: HomeClientProps) {
   return shown.device === 'mobile' ? (
     <HomeMobile t={t} locale={locale} data={shown.data} />
   ) : (
-    <HomeDesktop t={t} locale={locale} data={shown.data} hero={shown.hero} />
+    <HomeDesktop t={t} locale={locale} data={shown.data} hero={shown.hero} discover={shown.discover} />
   );
 }

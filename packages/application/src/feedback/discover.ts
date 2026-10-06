@@ -32,8 +32,9 @@ export async function openDiscoverDeck(
   db: SupabaseClient,
   locale: PreferredLanguage,
   customerId: string | null,
+  professional: boolean,
 ): Promise<DiscoverCard[]> {
-  return (await remainingCandidates(db, customerId)).map((p) => ({
+  return (await remainingCandidates(db, customerId, professional)).map((p) => ({
       productId: p.id,
       name: resolveLocalizedText(p.name, locale),
       // Boş/boşluk metin YOK sayılır — boş bir paragraf kartın altında açıklanmamış bir boşluk bırakır.
@@ -46,7 +47,9 @@ export async function openDiscoverDeck(
  * Turun kalan kartları, desteyi kuran tek kural: hem deste hem "kaç kart kaldı" buradan çıkar ki vitrin açıldığında boş çıkan bir
  * tura davet etmesin.
  */
-async function remainingCandidates(db: SupabaseClient, customerId: string | null) {
+async function remainingCandidates(db: SupabaseClient, customerId: string | null, professional: boolean) {
+  // Tur puan için oynanır; profesyonel müşteriye deste açılmaz ve vitrin davet etmez.
+  if (professional) return [];
   const candidates = await new ProductService(db).listCandidates();
   if (candidates.length === 0) return [];
 
@@ -62,8 +65,8 @@ export async function readDiscoverReward(db: SupabaseClient): Promise<DiscoverRe
 }
 
 /** Vitrinin sorusu, tur açılırsa kart çıkar mı; sayı döner, çünkü karar için kartın kendisi gereksiz. */
-export async function countDiscoverDeck(db: SupabaseClient, customerId: string | null): Promise<number> {
-  return (await remainingCandidates(db, customerId)).length;
+export async function countDiscoverDeck(db: SupabaseClient, customerId: string | null, professional: boolean): Promise<number> {
+  return (await remainingCandidates(db, customerId, professional)).length;
 }
 
 /** Müşterinin daha önce kaydırdığı aday ürünler. */

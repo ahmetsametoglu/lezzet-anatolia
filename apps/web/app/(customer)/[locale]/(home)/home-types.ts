@@ -24,6 +24,8 @@ export interface HomeViewProps {
    * girerse vitrin okumasının tipi sayfanın yerleşimine bağlanır. `null` = operatör henüz yüklemedi, çerçeve yer tutucusunu çizer.
    */
   hero: SitePageImage | null;
+  /** Keşif bandı çizilir mi; profesyonel müşteriye tur yoktur. */
+  discover: boolean;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { AddressService, type Db } from '@lezzet/database';
+import { AddressService, UserProfileService, type Db } from '@lezzet/database';
 import {
   resolveLocalizedText,
   type Address,
@@ -14,7 +14,7 @@ import { getCartView, type CartBundlePort } from '../cart/read';
 import { laneEntriesOf, orderLaneOf, orderScopeOf, undeliverableLinesOf } from '../cart/cart-types';
 import { cartFingerprint } from '../cart/fingerprint';
 import type { CartDiscount, CartEntry, CartLine, DiscountReason } from '../cart/cart-types';
-import { chooseShippingOption, homeShortlist, needsServicePoint } from '@lezzet/domain-core';
+import { chooseShippingOption, customerBusinessOf, homeShortlist, isProfessionalCustomer, needsServicePoint } from '@lezzet/domain-core';
 import { resolveCheckoutPayment } from './checkout-options';
 import { optionForPricing, pricedOptions, shippingVatLines } from './shipping-selection';
 import { quoteDataGap, quoteShipping } from '../shipping/quote';
@@ -22,7 +22,6 @@ import { notifyShippingDataMissing } from '../notification/staff-events';
 import { sendcloudProvider, shippingProviderConfigured } from '../shipping/provider';
 import type { ShippingRateProvider } from '../shipping/port';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
-import { customerBusiness } from '../delivery/place';
 import { readPickupOffer } from './pickup-offer';
 
 /**
@@ -166,7 +165,8 @@ export async function readCheckoutSnapshot(
 
   // Yer seçilen adresten çözülür, çerezden değil: eşik, tarife ve bölge müşterinin gönderdiği adresin değeridir. Teslimat iki kez
   // çözülür (önce depo, sepet bilinince kargo kararı) ve taslak aynı deseni koşar ki ekranla kasa aynı hesaptan çıksın.
-  const [deliveryInputs, business] = await Promise.all([readDeliveryInputs(db), customerBusiness(db, input.customerId)]);
+  const [deliveryInputs, profile] = await Promise.all([readDeliveryInputs(db), new UserProfileService(db).getById(input.customerId)]);
+  const business = customerBusinessOf(profile);
   const place = await resolveDelivery(db, {
     postalCode: selected.postalCode,
     country: selected.country,
@@ -258,9 +258,11 @@ export async function readCheckoutSnapshot(
   const finalChoice = free ? chooseShippingOption(quoted, { free: true, requestedCode: null }) : null;
   const chosen = free ? (finalChoice?.ok ? finalChoice.option : null) : priced;
 
-  // Komşu daveti kişiye yazılı kabulden okunur, çerezden değil; kargo siparişinde sefer olmadığı için sorulmaz.
+  // Komşu daveti kişiye yazılı kabulden okunur, çerezden değil; kargo siparişinde sefer olmadığı, profesyonel müşteride de davet puan
+  // sözü olduğu için sorulmaz.
   /* Bütün davetler döner: müşteriyi birden çok komşusu farklı günlere çağırmış olabilir ve gün seçici her günün davetini söylemeli. */
-  const pendingInvites = input.shippingOrder ? [] : await readPendingNeighborInvites(db, input.customerId);
+  const pendingInvites =
+    input.shippingOrder || isProfessionalCustomer(profile) ? [] : await readPendingNeighborInvites(db, input.customerId);
   const matchingInvites = pendingInvites.filter(
     (invite) => invite.deliveryZoneId === place.zoneId && delivery.availableDates.includes(invite.deliveryDate),
   );

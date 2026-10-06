@@ -1,5 +1,5 @@
 import { PriceGroupService, UserProfileService } from '@lezzet/database';
-import { deriveChannel, type CustomerPriceRule } from '@lezzet/domain-core';
+import { deriveChannel, isProfessionalCustomer, type CustomerPriceRule } from '@lezzet/domain-core';
 import type { Channel, UserProfile } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -24,10 +24,19 @@ export interface PricingViewer {
   groupPercentOff: number | null;
   /** Müşterinin genel fiyat kuralı, her iki kanalda uygulanır; yoksa kural yok. */
   customerRule?: CustomerPriceRule | null;
+  /** Profesyonel müşteri mi (`isProfessionalCustomer`); tüketici promosyonları (kampanya, kupon, puan) ona kapalıdır. */
+  professional: boolean;
 }
 
 /** Ziyaretçi — kimliksiz, perakende. Bağlamı olmayan okumaların (boş bağlam) hâli. */
-export const VISITOR: PricingViewer = { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null, customerRule: null };
+export const VISITOR: PricingViewer = {
+  channel: 'b2c',
+  b2bApproved: false,
+  customerId: null,
+  groupPercentOff: null,
+  customerRule: null,
+  professional: false,
+};
 
 /**
  * Müşterinin geçerli kanalı: şirket olmak yetmez, onay da gerekir. Sepet ucu profili zaten okuduğu için ayrı fonksiyondur.
@@ -68,5 +77,6 @@ export async function pricingViewerFor(db: SupabaseClient, profile: UserProfile 
       profile.priceRuleBasis != null && profile.priceRulePercent != null
         ? { basis: profile.priceRuleBasis, percent: profile.priceRulePercent }
         : null,
+    professional: isProfessionalCustomer(profile),
   };
 }

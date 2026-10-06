@@ -66,7 +66,7 @@ async function makeProduct(label: string, priceCents: number, b2bCents: number) 
  * Onaylı toptan müşteri — künye elle kurulur, çünkü kapı `PricingViewer`i çağırandan alır ve fiyat okuması yalnız `channel` ile
  * `customerId`ye bakar. Müşteriye özel fiyat bilerek sınanmaz: pazarlıklı fiyat sıralamaya girmez (`0032` künyesi).
  */
-const TOPTANCI: PricingViewer = { channel: 'b2b', b2bApproved: true, customerId: null, groupPercentOff: null };
+const TOPTANCI: PricingViewer = { channel: 'b2b', b2bApproved: true, customerId: null, groupPercentOff: null, professional: true };
 
 let ucuz: { productId: string; variantId: string };
 let orta: { productId: string; variantId: string };

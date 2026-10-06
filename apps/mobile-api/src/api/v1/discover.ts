@@ -3,6 +3,7 @@ import type { Context, Next } from 'hono';
 import type { z } from 'zod';
 import { claimDiscoverSwipes, openDiscoverDeck, readDiscoverReward, recordDiscoverSwipe } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
+import { isProfessionalCustomer } from '@lezzet/domain-core';
 import {
   DiscoverClaimBodySchema,
   DiscoverClaimResultSchema,
@@ -14,7 +15,7 @@ import {
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { readJsonBody } from '../../lib/request';
-import { optionalCustomerId, type V1Env } from './auth';
+import { optionalCustomerId, optionalCustomerProfile, type V1Env } from './auth';
 
 /**
  * Keşif uçları: deste ve oy ziyaretçiye açık, çünkü girişi turun önüne koymak turu hiç başlatmamaktır; Bearer varsa oylanmış
@@ -31,8 +32,11 @@ discover.get('/discover', async (c) => {
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   const db = serviceDb();
-  const customerId = await optionalCustomerId(db, c.req.header('authorization'));
-  const [cards, reward] = await Promise.all([openDiscoverDeck(db, locale.data, customerId), readDiscoverReward(db)]);
+  const profile = await optionalCustomerProfile(db, c.req.header('authorization'));
+  const [cards, reward] = await Promise.all([
+    openDiscoverDeck(db, locale.data, profile?.id ?? null, isProfessionalCustomer(profile)),
+    readDiscoverReward(db),
+  ]);
 
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
   // Gövde `z.input<…>` ile TİPLENİR: kapının döndürdüğü şekil sözleşmeye alan alan uymak zorunda ve

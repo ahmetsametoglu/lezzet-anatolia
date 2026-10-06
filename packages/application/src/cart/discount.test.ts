@@ -55,8 +55,8 @@ afterAll(async () => {
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId, otherCategoryId], profileIds: createdProfiles });
 });
 
-/** Bu dosyanın sepetleri Lezzet'indir; işin kapısı en alttaki blokta ölçülür. */
-const resolve = (input: Omit<CartDiscountInput, 'business'>) => resolveCartDiscount(db, { business: 'lezzet', ...input });
+/** Bu dosyanın sepetleri bireysel müşterinindir; profesyonel kapısı en alttaki blokta ölçülür. */
+const resolve = (input: Omit<CartDiscountInput, 'professional'>) => resolveCartDiscount(db, { professional: false, ...input });
 
 async function makeDiscount(
   input: Omit<Parameters<DiscountService['insert']>[0], 'publicLabel'> & { publicLabel?: LocalizedText },
@@ -89,7 +89,7 @@ describe('kupon uygulanır', () => {
   it('geçerli kupon sepete iner ve payı kalemlere dağıtılır', async () => {
     await coupon(`YAZ${stamp}`);
     // Ekranın göndereceği şekil: sepet satırları + kim + hangi kod.
-    const input: CartDiscountInput = { business: 'lezzet', lines: basket, customerId, couponCode: `YAZ${stamp}` };
+    const input: CartDiscountInput = { professional: false, lines: basket, customerId, couponCode: `YAZ${stamp}` };
 
     const { discount: result } = await resolveCartDiscount(db, input);
 
@@ -267,16 +267,16 @@ describe('matrah muafiyetleri sepette de geçerli', () => {
   });
 });
 
-describe('indirim yalnız Lezzet sepetinde', () => {
-  it("QUALITE sepetine kampanya inmez ve kupon kodu yok sayılır; aynı sepet Lezzet'te kuponu alır", async () => {
+describe('indirim yalnız bireysel müşteride', () => {
+  it('profesyonel sepete kampanya inmez ve kupon kodu yok sayılır; aynı sepet bireysel müşteride kuponu alır', async () => {
     await makeDiscount({ name: `Oto-is ${stamp}`, trigger: 'automatic', type: 'percent', percent: 85, scope: 'cart' });
     await coupon(`ISQ${stamp}`);
 
-    const lezzet = await resolveCartDiscount(db, { business: 'lezzet', lines: basket, customerId, couponCode: `ISQ${stamp}` });
-    const qualite = await resolveCartDiscount(db, { business: 'qualite', lines: basket, customerId, couponCode: `ISQ${stamp}` });
+    const individualCart = await resolveCartDiscount(db, { professional: false, lines: basket, customerId, couponCode: `ISQ${stamp}` });
+    const professionalCart = await resolveCartDiscount(db, { professional: true, lines: basket, customerId, couponCode: `ISQ${stamp}` });
 
-    expect(lezzet.discount.status).toBe('applied');
-    expect(qualite.discount).toEqual({ status: 'none' });
-    expect(qualite.rules).toEqual([]);
+    expect(individualCart.discount.status).toBe('applied');
+    expect(professionalCart.discount).toEqual({ status: 'none' });
+    expect(professionalCart.rules).toEqual([]);
   });
 });

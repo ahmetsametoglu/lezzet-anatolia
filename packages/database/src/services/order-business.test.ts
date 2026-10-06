@@ -81,11 +81,11 @@ describe('siparişin işi', () => {
     expect(data).toEqual([]);
   });
 
-  it('indirim taşıyan sipariş QUALITE deposundan yazılmaz, Lezzet deposundan yazılır', async () => {
+  it('indirim taşıyan sipariş profesyonel müşteriye yazılmaz, bireysel müşteriye yazılır', async () => {
     const line = [{ variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }];
     await expect(
       orders.create({ customerId: qualiteMusteri, warehouseId: qualiteDepo, channel: 'b2b', orderedTotalCents: 1000, discountId }, line),
-    ).rejects.toThrow(/order_discount_business/);
+    ).rejects.toThrow(/order_discount_consumer/);
     const { order } = await orders.create(
       { customerId: lezzetMusteri, warehouseId: lezzetDepo, channel: 'b2c', orderedTotalCents: 1000, discountId },
       line,

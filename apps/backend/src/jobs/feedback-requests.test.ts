@@ -107,6 +107,36 @@ describe('createDueFeedbackRequests', () => {
     expect(await requests.findByOrder(orderId)).toBeNull();
   });
 
+  it('profesyonel müşterinin siparişi davet almaz ve kuyrukta beklemez', async () => {
+    const professional = await new UserProfileService(db).insert({
+      name: 'Bistro Deniz',
+      email: `tarama-pro-${stamp}@example.test`,
+      type: 'company',
+      companyInfo: { legalName: `SARL Tarama ${stamp}` },
+    });
+    profileIds.push(professional.id);
+    const { order } = await orders.create(
+      {
+        customerId: professional.id,
+        warehouseId,
+        channel: 'b2b',
+        orderSource: 'web',
+        deliveryType: 'shipping',
+        status: 'confirmed',
+        orderedTotalCents: 1200,
+      },
+      [{ variantId, qty: 1, unitPriceCents: 1200, vatRate: 5.5 }],
+    );
+    createdOrders.push(order.id);
+    await markDelivered(order.id, 12);
+
+    await createDueFeedbackRequests({ limit: 500 });
+    expect(await requests.findByOrder(order.id)).toBeNull();
+    // Kuyrukta beklemesi de arızadır: davet edilmeden birikir ve tarama penceresini doldururdu.
+    const { data } = await db.from('feedback_due_order').select('order_id').eq('order_id', order.id);
+    expect(data).toEqual([]);
+  });
+
   it('teslim edilmemiş sipariş davet almaz', async () => {
     const orderId = await newOrder(); // `confirmed` kalır, teslim kaydı yok
 

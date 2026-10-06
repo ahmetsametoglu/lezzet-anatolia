@@ -9,57 +9,20 @@ import {
   anchorStateOf,
   canOpenHistory,
   canRedeem,
+  isProfessionalCustomer,
   nextRedemption,
   redemptionCode,
 } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
-import type { CompanyInfo, CustomerType, KeysetCursor, MePointsEarnWayKey, PointsEntry } from '@lezzet/types';
+import type { KeysetCursor, MePointsEarnWayKey, PointsEntry } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getPointsBalance } from '../feedback/points';
 import { readPendingNeighborAwards, type PendingNeighborAward } from './neighbor';
 import { ensureCustomerReferralCode, inviteUrl } from './referral';
 
 /*
-  MÜŞTERİ PUAN CÜZDANI — bakiye + çevirme eşiği + kullanılabilir kuponlar + puan→kupon çevirme
-  (21.17). Web'de İKİ dosyada duran kuralın TERFİSİ (kopya değil, CLAUDE §1):
-  `apps/web/lib/account/coupons.ts` (kullanılabilirlik süzgeci) ve `apps/web/lib/feedback/points.ts`
-  (`redeemPoints` + eşik okuması). Ölçüt karşılandı: aynı kuralları artık iki yüzey istiyor (web
-  hesap sayfası + mobil `vHesap` puan kartı). Web dosyaları bugün kendi ekranlarını besliyor
-  (KÖPRÜ); benimsemesi web şeridinin işi.
-
-  ── NEDEN `feedback/points.ts` DEĞİL DE BURASI ──────────────────────────────────────────────
-  O dosya puanın YAZIM çekirdeğidir (kazanım: yorum, sipariş, ziyaret, getiren) ve künyesi kupon
-  çevrimini "bugün tek yüzeyi var, ikinci yüzeyi doğduğu gün AYNI yoldan taşınır" diye bilerek
-  dışarıda bırakmıştı. O gün geldi — ama çevirme bir geri bildirim aksiyonu değil, müşterinin
-  cüzdan hareketidir: tetikleyeni hesap ekranıdır, geri bildirim akışı değil. Bakiye okuması
-  ikisinin ORTAK zeminidir ve kopyalanmıyor: `getPointsBalance` oradan çağrılıyor.
-
-  Web'den ölçülen ve BİREBİR korunan kurallar:
-  · **Kupon ayrı bir tablo değil**, `customerId`si dolu bir indirim satırıdır; `redeem_points`
-    RPC'si onu doğurur. İkinci bir "kupon" varlığı, sepetteki indirim motorunun onu hiç görmemesi
-    demekti.
-  · **Süzgeç KULLANILABİLİRLİĞE göre, sahipliğe göre değil** — pasif · tarih penceresi dışı · kotası
-    dolmuş kupon listeye girmez. Kullanılmış bir kodu göstermek, checkout'ta reddedilecek bir kodu
-    vaat etmektir.
-  · **Kota sayımı `usageCounts` ile**, `discount_use` satırı elle sayılarak değil: o metot iptal
-    edilmiş siparişleri zaten dışlıyor ("iptal hiç olmadı, iade oldu ve döndü") ve o kural burada
-    ikinci kez yazılmamalı.
-  · **Kodsuz kupon listeye girmez** — ilk kod alınır; kod ayrı varlıktır ve tekliği varsayılmaz.
-  · **Puan/kupon B2C'nindir** — B2B'de ikisi de yok (DOMAIN §14). İkisi TEK koşulda çözülür ki bir
-    gün biri B2B'ye sızmasın (web `read.ts` künyesindeki gerekçe).
-  · **Eşik AYARDAN** (`points_redeem_min` × `points_cent_value`), ekrana gömülmez: ekranın söylediği
-    eşik ile motorun uyguladığı eşik ayrıştığında müşteri reddedilecek bir düğmeye basar (29.07).
-    Anahtarlar artık `@lezzet/domain-core`da, kazanım anahtarlarının yanında — üç literal kopyaya
-    çıkmasın diye.
-  · **Kaç puanın harcanacağını İSTEMCİ SÖYLEMEZ** — `canRedeem`e istek geçilmiyor, motor bakiyenin
-    tamamını çeviriyor. İstemciden sayı kabul etseydik ekranın gördüğü eşik ile motorun uyguladığı
-    eşik ayrışabilirdi (web action künyesindeki aynı karar).
-  · **Puan düşümü ile kuponun doğuşu BÖLÜNEMEZ** — ikisi de `redeem_points` RPC'sinin içinde, tek
-    transaction ve müşteri başına advisory kilitle. Uygulama katmanı bunu kendi hesaplamaz.
-
-  Sonuç GÖRÜNÜR RETLİ döner (`updateCustomerPreferences` · `addCustomerAddress` emsali) ve başarıda
-  GÜNCEL CÜZDANI taşır: çevirme hem bakiyeyi düşürür hem listeye kupon ekler — tek kaydı dönmek
-  istemciyi ikinci tura mecbur bırakırdı (sözleşmedeki "aynı zarf" kararı).
+  Web hesabı ile mobil puan kartı cüzdan kuralını buradan okur ki iki yüzeyin eşiği ve kupon süzgeci ayrışmasın. Puan ve kupon
+  yalnız bireysel müşterinindir; puan düşümü ile kuponun doğuşu `redeem_points` RPC'sinde bölünmeden olur.
 */
 
 /** Kullanılabilir kişisel kupon — şekli sözleşmede (`MeCouponSchema`), kaynağı `discount` satırı. */
@@ -109,7 +72,7 @@ export interface CustomerPointsCard extends CustomerPointsRules {
 }
 
 export interface CustomerPointsView {
-  /** `null` = B2B, yani program dışı. SIFIR DEĞİL: kazanılamayan bakiye boş bir hedef gibi durur. */
+  /** `null` = profesyonel müşteri, yani program dışı. Sıfır değil: kazanılamayan bakiye boş bir hedef gibi durur. */
   points: CustomerPointsCard | null;
   coupons: CustomerCoupon[];
 }
@@ -122,14 +85,6 @@ export type RedeemCustomerPointsOutcome =
   | { status: 'ok'; view: CustomerPointsView; code: string | null }
   /** Kimlik çapası yok; puanı harcatmak "seni tanıyorum" demektir ve yanlış kişiye söylenirse geri alınamaz. */
   | { status: 'insufficient_balance' | 'below_minimum' | 'not_eligible' | 'anchor_required' };
-
-/**
- * Program dışı mı: `type` ile `companyInfo`dan hangisi B2B derse kart çizilmez, çünkü iki ölçüt ayrışabiliyor ve kart
- * motorun kararından cömert olursa müşteri reddedilecek düğmeye basar.
- */
-function isOutsideProgram(type: CustomerType, companyInfo: CompanyInfo | null): boolean {
-  return type === 'company' || companyInfo !== null;
-}
 
 /** Çevirme eşiği — tek yerde okunur; kart da çevirme kapısı da AYNI sayıyı görür. */
 async function redeemSettings(db: SupabaseClient): Promise<{ minimum: number; maximum: number; centValue: number }> {
@@ -195,11 +150,12 @@ export async function readPointsRules(db: SupabaseClient): Promise<CustomerPoint
 
 /**
  * Hesap ekranının puan bölümü tek turda. Okuma davet kodu yoksa üretir: kod olmadan "arkadaşını davet et" düğmesi hiçbir
- * şey paylaşamazdı; yazım idempotent ve B2B'de hiç koşmaz.
+ * şey paylaşamazdı; yazım idempotent ve profesyonel müşteride hiç koşmaz.
  */
 export async function readCustomerPoints(db: SupabaseClient, customerId: string): Promise<CustomerPointsView> {
   const profile = await new UserProfileService(db).getById(customerId);
-  if (!profile || isOutsideProgram(profile.type, profile.companyInfo)) return { points: null, coupons: [] };
+  // Profesyonel müşteri program dışıdır; kart motorun kararından cömert olursa müşteri reddedilecek düğmeye basar.
+  if (!profile || isProfessionalCustomer(profile)) return { points: null, coupons: [] };
 
   const [balance, rules, coupons, referralCode, pendingNeighborAwards, visitEarnedToday] = await Promise.all([
     getPointsBalance(db, customerId),
@@ -211,13 +167,11 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
     // tur her puan okumasında boşuna atılırdı — elimizdeki satır aynı cevabı taşıyor. Kapı yine de
     // kimliği alır (profili değil): üretim yolunda tek doğrulanmış kaynak vardır, o da DB satırı.
     profile.referralCode ?? ensureCustomerReferralCode(db, customerId),
-    // "Puan yolda" (★ karar 3): komşu sipariş verdi, parası henüz alınmadı. Kartın İÇİNDE çünkü
-    // program dışı profilde anlamı yok — yukarıdaki erken `return` ikisini birden düşürüyor.
+    // "Puan yolda": komşu sipariş verdi, parası henüz alınmadı. Kartın içinde, çünkü program dışı profilde anlamı yok ve
+    // yukarıdaki erken `return` ikisini birden düşürüyor.
     readPendingNeighborAwards(db, customerId),
-    /* BUGÜNKÜ ZİYARET PUANI (MB-54) — sayı değil VARLIK sorusu; `earnedToday` işletme gününü
-       (Europe/Paris) kısıtla ve günlük tavanla AYNI tanımdan okuyor. İkinci bir "bugün" tanımı
-       yazmak, ekranın "alındı" dediği anla motorun yeni günü açtığı anın ayrışması demekti —
-       yazın Paris'te 00:00–02:00 arasında görünür, hiçbir yerde hata vermez. */
+    // Bugünkü ziyaret puanı sayı değil varlık sorusu; `earnedToday` işletme gününü (Europe/Paris) kısıt ve günlük tavanla aynı
+    // tanımdan okur. İkinci bir "bugün" tanımı, ekranın "alındı" dediği an ile motorun yeni günü açtığı anı sessizce ayrıştırırdı.
     new PointsEntryService(db).earnedToday(customerId, ['visit']),
   ]);
 
@@ -245,11 +199,8 @@ export async function readCustomerPoints(db: SupabaseClient, customerId: string)
 }
 
 /**
- * Müşterinin KULLANILABİLİR kişisel kuponları — üç eleme (pasif · tarih penceresi · kota).
- *
- * Süzgeç "sahibi kim" değil "bugün kullanılabilir mi" sorusunu yanıtlar: ekran "kuponlarım" dese de
- * müşterinin beklediği anlam budur, ve kullanılmış bir kodu listelemek onu checkout'ta hataya
- * göndermektir (web künyesindeki ders).
+ * Müşterinin bugün kullanılabilir kişisel kuponları; pasif, tarih penceresi dışı ve kotası dolmuş kupon elenir, çünkü
+ * kullanılmış bir kodu listelemek müşteriyi checkout'ta hataya gönderirdi.
  */
 export async function listCustomerCoupons(db: SupabaseClient, customerId: string): Promise<CustomerCoupon[]> {
   const discounts = new DiscountService(db);
@@ -354,7 +305,7 @@ export async function readCustomerPointsHistory(
   input: { customerId: string; cursor?: KeysetCursor; limit?: number },
 ): Promise<ReadPointsHistoryOutcome> {
   const profile = await new UserProfileService(db).getById(input.customerId);
-  if (!profile || isOutsideProgram(profile.type, profile.companyInfo)) return { status: 'not_eligible' };
+  if (!profile || isProfessionalCustomer(profile)) return { status: 'not_eligible' };
 
   const page = await new PointsEntryService(db).listByCustomer(input.customerId, input.cursor, input.limit);
   return { status: 'ok', entries: page.rows, nextCursor: page.nextCursor };

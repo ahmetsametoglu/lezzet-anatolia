@@ -17,7 +17,7 @@ import { CatalogImageSchema } from './catalog-api.schema';
 export const MeCartLineSchema = CartItemSchema.omit({ unitPrice: true, addedAt: true });
 export type MeCartLine = z.infer<typeof MeCartLineSchema>;
 
-/** Sepetin tamamı — HER ucun cevabı (karar 3). */
+/** Sepetin tamamı — her ucun cevabı. */
 export const MeCartLinesSchema = z.array(MeCartLineSchema);
 
 /**
@@ -240,7 +240,7 @@ export const MeCartViewSchema = z.object({
   /** Kalem toplamı — kargo ve indirim HARİÇ. */
   subtotalCents: z.number().int(),
   discount: MeCartDiscountSchema,
-  /** Bu sepete kupon girilebilir mi; kupon geçmeyen işin müşterisinde kupon alanı çizilmez. */
+  /** Bu sepete kupon girilebilir mi; profesyonel müşteride kupon alanı çizilmez. */
   acceptsCoupons: z.boolean(),
   /** Eşiğe az kalmış kampanya; `null` = söylenecek bir şey yok. Toplama GİRMEZ, yalnız söylenir. */
   reachableDiscount: MeCartReachableDiscountSchema.nullable(),

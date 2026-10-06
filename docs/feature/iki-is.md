@@ -8,7 +8,7 @@
 **QUALITE** şirketin adıdır ve restoran ile marketlere toptan satış yapan iştir; **Lezzet** markamızdır ve çevrim içi
 satış yapan iştir. İkisi aynı tüzel kişilik (QUALITE SAS) altındadır: muhasebede tek şirkettir, iki işin ayrımı iç takip içindir.
 
-## 1. Kararlar (kullanıcı, 03–05.10)
+## 1. Kararlar (kullanıcı, 03–06.10)
 
 | # | Karar | Sonucu |
 |---|---|---|
@@ -24,7 +24,7 @@ satış yapan iştir. İkisi aynı tüzel kişilik (QUALITE SAS) altındadır: m
 | 10 | **QUALITE etiketi yalnız B2B onaylı müşteriye verilir; QUALITE deposundan anonim kapı satışı yapılmaz; QUALITE kargo göndermez** | Toptan fiyat onaysız açılmaz (`effectiveChannelOf`). QUALITE bölgelerinin dışındaki QUALITE müşterisi "teslimat noktası belirlenemedi" mesajını alır, Lezzet deposuna düşmez. |
 | 11 | **Banka hesapları işe göre ayrılmaz** (04.10): Crédit Mutuel ile Revolut şirketin hesaplarıdır | Ödemenin işi bağından gelir (belge, siparişin ya da mal kabulün deposu, tedarikçi, cari); hiçbiri iş söylemiyorsa Lezzet'tir. İki banka da Pennylane'den okunur (`kasa-muhasebe.md` 15. karar). |
 | 12 | **Pennylane'de bizde olmayan bir faturaya eşli banka satırı izah bekler** (04.10) | O fatura Pennylane'e doğrudan girilmiştir (1. karar). Satır izah kuyruğunda kalır, önerisi yoksa "Belgeyi bizde girin" der; belge bizde girilir, Pennylane'deki kopyası silinir. |
-| 13 | **Kampanya ve kupon yalnız Lezzet'indir** (05.10) | QUALITE müşterisinin sepetine otomatik kampanya inmez ve kupon alanı çizilmez; vitrin ona kampanya rozeti göstermez. İndirim taşıyan sipariş yalnız Lezzet deposundan yazılır (`order_discount_business`). |
+| 13 | **Tüketici promosyonları yalnız bireysel müşteride** (05–06.10): kampanya, kupon, puan ve puana bağlı özellikler (komşu daveti, keşif turu, geri bildirim daveti) profesyonel müşteriye kapalıdır | Profesyonel müşteri şirket tipinde ya da şirket künyesi taşıyandır; QUALITE müşterisi her zaman profesyonel olduğu için bunlar ona hiç açılmaz, Lezzet'in profesyonel müşterisi de aynı kuraldadır. Sepete kampanya inmez ve kupon alanı çizilmez, vitrin kampanya duyurmaz, hesapta kupon kartı yoktur. İndirim taşıyan sipariş profesyonel müşteriye yazılmaz (`order_discount_consumer`), geri bildirim kuyruğu profesyonelin siparişini almaz (`customer_is_professional`). |
 | 14 | **Muhasebe dosyası ve hareket dökümü işe göre ayrı da alınır** (05.10) | Raporların iş anahtarı export sekmesinde de durur: dosya, özeti ve fatura kuyruğu seçili işi taşır, dosya adı işi söyler (`muhasebe-2026-10-qualite.csv`). Süzgeçsiz dosya şirketin tamamıdır. |
 
 **Dayanak (ölçüm ve araştırma, 03.10):** Pennylane'in yerleşik stok modülü yok (yardım merkezi: *"Pennylane ne dispose pas

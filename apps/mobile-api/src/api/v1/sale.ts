@@ -85,8 +85,8 @@ async function salePlaceGuard(c: Context<SaleEnv>, next: Next): Promise<Response
 }
 
 /**
- * QUALITE deposundan anonim kapı satışı yapılmaz (karar 10): satışın alıcısı anonimdir ve anonim alıcı Lezzet'tir. Ekran bu cevapla
- * sebebi söyler, liste ve okutma açılmaz.
+ * QUALITE deposundan anonim kapı satışı yapılmaz: satışın alıcısı anonimdir ve anonim alıcı Lezzet'tir (docs/feature/iki-is.md,
+ * karar 10). Ekran bu cevapla sebebi söyler, liste ve okutma açılmaz.
  */
 async function doorSaleOpen(c: Context<SaleEnv>, next: Next): Promise<Response | void> {
   const warehouse = await new WarehouseService(serviceDb()).getById(c.get('warehouseId'));
@@ -158,7 +158,7 @@ sale.get('/catalog', async (c) => {
       onlyStockedHere: c.get('salePlace') === 'van',
     },
     place: salePlaceOf(c.get('warehouseId')),
-    viewer: { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null },
+    viewer: { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null, professional: false },
     limit: DEFAULT_PAGE_SIZE,
   });
 
@@ -198,7 +198,7 @@ sale.get('/catalog/:slug/variants', async (c) => {
     locale: locale.data,
     slug: c.req.param('slug'),
     place: salePlaceOf(c.get('warehouseId')),
-    viewer: { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null },
+    viewer: { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null, professional: false },
   });
   if (!detail) return fail(c, 'product_not_found', 404);
 
@@ -245,7 +245,7 @@ sale.get('/scan', async (c) => {
   if (variant === null) return ok(c, SaleScanResponseSchema.parse({ status: 'unknown_code' }));
 
   const place = salePlaceOf(c.get('warehouseId'));
-  const viewer = { channel: 'b2c' as const, b2bApproved: false, customerId: null, groupPercentOff: null };
+  const viewer = { channel: 'b2c' as const, b2bApproved: false, customerId: null, groupPercentOff: null, professional: false };
 
   const page = await getCatalogData(db, {
     locale: locale.data,

@@ -1,7 +1,6 @@
 import { DiscountCodeService, DiscountService, OrderService, type Db, type DiscountUsage } from '@lezzet/database';
 import {
   applyBestDiscount,
-  businessHasDiscounts,
   checkCouponEligibility,
   findReachableDiscount,
   isDiscountable,
@@ -9,7 +8,7 @@ import {
   type DiscountRule,
   type DiscountableLine,
 } from '@lezzet/domain-core';
-import type { Business, Discount, DiscountCode, LocalizedText } from '@lezzet/types';
+import type { Discount, DiscountCode, LocalizedText } from '@lezzet/types';
 import type { CartDiscount, CartReachableDiscount, CartDiscountResult, CouponFailure, DiscountReason } from './cart-types';
 
 /**
@@ -24,8 +23,8 @@ export interface CartDiscountInput {
   customerId?: string | null;
   /** Müşterinin girdiği kod; boşsa yalnız otomatik adaylar değerlendirilir. */
   couponCode?: string | null;
-  /** Sepetin işi; zorunludur, çünkü unutulursa QUALITE sepeti Lezzet'in kampanyasını alırdı (`businessHasDiscounts`). */
-  business: Business;
+  /** Profesyonel müşteri mi (`isProfessionalCustomer`); zorunlu, çünkü unutulursa profesyonel sepete tüketici promosyonu inerdi. */
+  professional: boolean;
   now?: Date;
 }
 
@@ -39,21 +38,7 @@ export interface CartDiscountData {
   isFirstOrder: boolean;
 }
 
-export async function loadCartDiscountData(
-  db: Db,
-  input: Pick<CartDiscountInput, 'customerId' | 'couponCode' | 'business'>,
-): Promise<CartDiscountData> {
-  // İndirim geçmeyen işte kural okunmaz ve kod yok sayılır; o sepette kupon alanı da çizilmez (`CartView.acceptsCoupons`).
-  if (!businessHasDiscounts(input.business)) {
-    return {
-      code: '',
-      hit: null,
-      pool: [],
-      codesByDiscount: new Map(),
-      usage: new Map(),
-      isFirstOrder: await isFirstOrder(db, input.customerId),
-    };
-  }
+export async function loadCartDiscountData(db: Db, input: Pick<CartDiscountInput, 'customerId' | 'couponCode'>): Promise<CartDiscountData> {
   const discounts = new DiscountService(db);
   const code = input.couponCode?.trim() ?? '';
   const [candidates, hit, firstOrder] = await Promise.all([
@@ -88,7 +73,10 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput, data
     enteredCouponCode: code || null,
     now,
   };
-  const rules = pool.map((row) => toRule(row, codesByDiscount.get(row.id) ?? [], usage.get(row.id), input.customerId));
+  // Profesyonel müşteriye kampanya ve kupon inmez: kural havuzu boş, kod yok sayılır (kupon alanı ona çizilmez).
+  const rules = input.professional
+    ? []
+    : pool.map((row) => toRule(row, codesByDiscount.get(row.id) ?? [], usage.get(row.id), input.customerId));
   const winner = applyBestDiscount(input.lines, rules, ctx);
   // Checkout kapı siparişini yalnız kendi kalemleriyle yeniden okur ve indirimi yine kazananın tutarıdır; aynı kurallarla burada da çözülür.
   const localOrderDiscountCents = input.localOrderLines ? (applyBestDiscount(input.localOrderLines, rules, ctx)?.amountCents ?? 0) : null;
@@ -113,7 +101,7 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput, data
     localOrderDiscountCents,
   });
 
-  if (!code) return out(winner ? automatic(winner, pool) : { status: 'none' });
+  if (!code || input.professional) return out(winner ? automatic(winner, pool) : { status: 'none' });
 
   // Kod girildi: önce kuponun kendisi teşhis edilir.
   const rejected = (reason: CouponFailure): CartDiscount => ({

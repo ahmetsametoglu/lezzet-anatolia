@@ -1,6 +1,5 @@
 import { DiscountService, type Db } from '@lezzet/database';
-import { businessHasDiscounts } from '@lezzet/domain-core';
-import type { Business, Discount, LocalizedText } from '@lezzet/types';
+import type { Discount, LocalizedText } from '@lezzet/types';
 
 /*
   Kapsam kampanyasının tek kapısı: bu kategoride ya da koleksiyonda duyurulabilir bir kampanya var mı. Tutar değil kampanyanın
@@ -36,10 +35,10 @@ export const EMPTY_SCOPE_CAMPAIGNS: ScopeCampaigns = { byCategory: new Map(), by
  */
 export async function readScopeCampaigns(
   db: Db,
-  opts: { categoryIds?: readonly string[]; collectionIds?: readonly string[]; now?: Date; business: Business },
+  opts: { categoryIds?: readonly string[]; collectionIds?: readonly string[]; now?: Date; professional: boolean },
 ): Promise<ScopeCampaigns> {
-  // İndirim geçmeyen işin vitrini kampanya duyurmaz, çünkü sepeti o indirimi vermez (`loadCartDiscountData`).
-  if (!businessHasDiscounts(opts.business)) return EMPTY_SCOPE_CAMPAIGNS;
+  // Profesyonel müşteriye kampanya duyurulmaz, çünkü sepeti o indirimi vermez (`resolveCartDiscount`).
+  if (opts.professional) return EMPTY_SCOPE_CAMPAIGNS;
   const categoryIds = new Set(opts.categoryIds ?? []);
   const collectionIds = new Set(opts.collectionIds ?? []);
   if (categoryIds.size === 0 && collectionIds.size === 0) return EMPTY_SCOPE_CAMPAIGNS;
