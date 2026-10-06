@@ -199,6 +199,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
         marketingConsent: input.marketingConsent,
         placed: { order: draft.order, items: draft.items },
         runLater: input.runLater,
+        locale: input.locale,
       },
       input.createPaymentSession,
     );

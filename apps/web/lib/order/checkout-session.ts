@@ -23,5 +23,5 @@ export async function createCheckoutSession(
 
 /** Portun web uygulaması; anahtar yoksa `null`, kapı `provider_unavailable` döner ve stok hiç ayrılmaz. */
 export function webSessionCreator(): CheckoutSessionCreator | null {
-  return revolutSessionCreator(webRevolutClient());
+  return revolutSessionCreator(webRevolutClient(), { hostedPage: true });
 }

@@ -49,7 +49,7 @@
       "onlineRequired": "Bu tutarda online ödeme gerekir.",
       "codPickup": "Depoda öde",
       "codPickupBody": "Teslim alırken nakit ya da kart",
-      "cardTrust": "Kart bilgileriniz bizde tutulmaz — güvenli Revolut penceresinde girilir."
+      "cardTrust": "Kart bilgilerinizi Revolut'un güvenli ödeme sayfasında girersiniz; bizde tutulmaz."
     },
     "summary": {
       "coldChain": "Siparişiniz soğuk zincir bozulmadan, {date} günü kapınıza gelir.",
@@ -61,12 +61,7 @@
     "pay": {
       "preparing": "Siparişiniz hazırlanıyor…",
       "confirming": "Ödeme onaylanıyor…",
-      "error": "Ödeme tamamlanamadı",
-      "declined": "Kartınız reddedildi. Başka bir kart deneyin.",
-      "insufficientFunds": "Kartın bakiyesi yetersiz.",
-      "expiredCard": "Kartın süresi dolmuş.",
-      "incorrectCvv": "Güvenlik kodu (CVV) hatalı.",
-      "authentication": "Bankanızın doğrulaması tamamlanamadı."
+      "error": "Ödeme tamamlanamadı"
     },
     "rejected": {
       "empty_cart": "Sepetiniz boş görünüyor.",
@@ -171,7 +166,7 @@
       "onlineRequired": "À ce montant, le paiement en ligne est requis.",
       "codPickup": "Payer à l'entrepôt",
       "codPickupBody": "Espèces ou carte au retrait",
-      "cardTrust": "Vos données de carte ne sont jamais conservées chez nous — vous les saisissez dans la fenêtre sécurisée de Revolut."
+      "cardTrust": "Vous saisissez vos données de carte sur la page de paiement sécurisée de Revolut ; elles ne sont jamais conservées chez nous."
     },
     "summary": {
       "coldChain": "Votre commande arrive chez vous le {date}, chaîne du froid respectée.",
@@ -183,12 +178,7 @@
     "pay": {
       "preparing": "Préparation de votre commande…",
       "confirming": "Confirmation du paiement…",
-      "error": "Le paiement n'a pas abouti",
-      "declined": "Votre carte a été refusée. Essayez une autre carte.",
-      "insufficientFunds": "Le solde de la carte est insuffisant.",
-      "expiredCard": "La carte a expiré.",
-      "incorrectCvv": "Le cryptogramme (CVV) est incorrect.",
-      "authentication": "L'authentification de votre banque n'a pas abouti."
+      "error": "Le paiement n'a pas abouti"
     },
     "rejected": {
       "empty_cart": "Votre panier semble vide.",
@@ -293,7 +283,7 @@
       "onlineRequired": "In dieser Höhe ist Online-Zahlung erforderlich.",
       "codPickup": "Im Lager bezahlen",
       "codPickupBody": "Bar oder Karte bei der Abholung",
-      "cardTrust": "Ihre Kartendaten werden nie bei uns gespeichert — Sie geben sie im sicheren Revolut-Fenster ein."
+      "cardTrust": "Sie geben Ihre Kartendaten auf der sicheren Zahlungsseite von Revolut ein; sie werden nie bei uns gespeichert."
     },
     "summary": {
       "coldChain": "Ihre Bestellung kommt am {date} ohne Unterbrechung der Kühlkette zu Ihnen.",
@@ -305,12 +295,7 @@
     "pay": {
       "preparing": "Bestellung wird angelegt…",
       "confirming": "Zahlung wird bestätigt…",
-      "error": "Zahlung nicht abgeschlossen",
-      "declined": "Ihre Karte wurde abgelehnt. Versuchen Sie eine andere Karte.",
-      "insufficientFunds": "Die Karte ist nicht ausreichend gedeckt.",
-      "expiredCard": "Die Karte ist abgelaufen.",
-      "incorrectCvv": "Die Prüfnummer (CVV) ist falsch.",
-      "authentication": "Die Bestätigung Ihrer Bank konnte nicht abgeschlossen werden."
+      "error": "Zahlung nicht abgeschlossen"
     },
     "rejected": {
       "empty_cart": "Ihr Warenkorb scheint leer zu sein.",

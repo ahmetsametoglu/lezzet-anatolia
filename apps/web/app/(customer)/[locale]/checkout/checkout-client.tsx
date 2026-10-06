@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 // Router next-intl'den: `next/navigation` dilsiz yol üretir, middleware onu 307 ile dilli yola çevirir ve çerez dili URL diliyle
 // ayrışınca müşteri yanlış dile düşer.
-import { useRouter } from '@/i18n/navigation';
+import { getPathname, useRouter } from '@/i18n/navigation';
 import { isNameMissing } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
@@ -13,8 +13,7 @@ import { useCart } from '@/components/customer/cart/cart-context';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { errorText } from '@/lib/customer-error-text';
 import { hapticError, hapticSuccess } from '@/lib/haptics/haptics';
-import { CardTrustNote, openCardPopup, type PayStage } from './components/revolut-card';
-import { rememberPaymentError } from './payment-error';
+import { CardTrustNote, type PayStage } from './components/revolut-card';
 import { CheckoutDesktop } from './checkout.desktop';
 import { CheckoutMobile } from './checkout.mobile';
 import type { AddressCheckOutcome } from '@lezzet/application';
@@ -79,7 +78,6 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   const [savedName, setSavedName] = useState<string | null>(null);
   const [savingContact, setSavingContact] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
-  const customerName = savedName ?? customer.name;
   const nameMissing = savedName === null && isNameMissing(customer);
   const saveContact = async () => {
     const name = contactName.trim();
@@ -107,8 +105,6 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
    * yenilenir, çünkü sonraki sipariş bilerek verilen ayrı bir istektir.
    */
   const attemptKey = useRef(newAttemptKey());
-  /** Kart yolunda açılan taslak; ödeme düşerse müşteri onun sayfasına gider. */
-  const preparedOrder = useRef<string | null>(null);
   /** Siparişin sayfasına geçildi: boşalan sepet bu ekranın okumasını yeniden koşturmasın, istek yeni sayfaya düşerdi. */
   const leaving = useRef(false);
 
@@ -266,9 +262,7 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
   /**
    * Kart yolunda taslağı ve ödemesini açar; anahtar basışın kendisidir, ikinci basış aynı taslağın aynı ödemesine döner.
    */
-  const prepare = async (): Promise<
-    { ok: true; orderId: string; paymentToken: string; paymentMode: 'sandbox' | 'prod' } | { ok: false; error: string }
-  > => {
+  const prepare = async (): Promise<{ ok: true; orderId: string; checkoutUrl: string } | { ok: false; error: string }> => {
     // Ret titreşimi tek yerde, yoksa yeni bir ret dalında unutulurdu.
     const refuse = (error: string) => {
       hapticError();
@@ -296,13 +290,15 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       return { ok: false, error: t.payment.openPayment };
     }
     if (data.status !== 'payment_required') return refuse(t.payment.unavailable);
-    preparedOrder.current = data.orderId;
-    return { ok: true, orderId: data.orderId, paymentToken: data.paymentToken, paymentMode: data.paymentMode };
+    return { ok: true, orderId: data.orderId, checkoutUrl: data.checkoutUrl };
   };
 
-  /** Adres pencere açılmadan sorulur, çünkü pencere açıldıktan sonra durmak ödemeyi yarıda keserdi. */
+  /**
+   * Adres ödeme sayfasına gitmeden sorulur, çünkü oradan dönmek ödemeyi yarıda keserdi. Geçmişteki bu kayıt siparişin sayfasıyla
+   * değiştirilir: müşteri Revolut'tan geri dönerse boşalmış ödeme ekranına değil, ödeyebileceği ya da iptal edebileceği siparişe gelir.
+   */
   const payByCard = async () => {
-    if (!selectedAddress || !state.addressId || (await addressStops(state.addressId))) return;
+    if (!state.addressId || (await addressStops(state.addressId))) return;
     setPayStage('preparing');
     const prepared = await prepare();
     if (!prepared.ok) {
@@ -310,34 +306,11 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       return setError(prepared.error);
     }
     setPayStage('confirming');
-    await openCardPopup({
-      token: prepared.paymentToken,
-      mode: prepared.paymentMode,
-      locale,
-      billing: {
-        name: customerName,
-        email: customer.email,
-        phone: customer.phone,
-        line1: selectedAddress.line1,
-        line2: selectedAddress.line2,
-        postalCode: selectedAddress.postalCode,
-        city: selectedAddress.city,
-        country: selectedAddress.country,
-      },
-      labels: {
-        declined: t.pay.declined,
-        insufficientFunds: t.pay.insufficientFunds,
-        expiredCard: t.pay.expiredCard,
-        incorrectCvv: t.pay.incorrectCvv,
-        authentication: t.pay.authentication,
-        generic: t.pay.error,
-        unavailable: t.payment.unavailable,
-      },
-      onPaid: () => onCardPaid(prepared.orderId),
-      onError: onCardError,
-      // Vazgeçmek hata değildir; kalemler taslakta bekler, müşteri siparişin sayfasında öder ya da iptal eder.
-      onCancel: () => leaveTo(prepared.orderId),
-    });
+    leaving.current = true;
+    attemptKey.current = newAttemptKey();
+    const orderPage = getPathname({ href: { pathname: '/checkout/[reference]', params: { reference: prepared.orderId } }, locale });
+    window.history.replaceState(null, '', orderPage);
+    window.location.assign(prepared.checkoutUrl);
   };
 
   /** Siparişin sayfasına gidilir, sonra sepet tazelenir: ters sırada boşalan sepet gezinme bitene kadar kalemsiz bir özet çizerdi. */
@@ -345,25 +318,6 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     leaving.current = true;
     router.push({ pathname: '/checkout/[reference]', params: { reference: orderId } });
     reloadCart();
-  };
-
-  /**
-   * Taslak açıldıktan sonra düşen kart ödemesinde kalemler siparişte bekler: müşteri o siparişin sayfasına gider, orada başka
-   * kartla öder ya da iptal eder. Taslak açılmadan önceki hata bu ekranda kalır.
-   */
-  const onCardError = (message: string) => {
-    hapticError();
-    const orderId = preparedOrder.current;
-    if (!orderId) return setError(message);
-    rememberPaymentError(orderId, message);
-    leaveTo(orderId);
-  };
-
-  /** Ödeme geçti: siparişin sayfasına gidilir; onayı webhook ya da sayfanın canlı bağı verir. */
-  const onCardPaid = (orderId: string) => {
-    hapticSuccess();
-    leaveTo(orderId);
-    attemptKey.current = newAttemptKey();
   };
 
   const paymentSlot = state.paymentMethod === 'online' && snapshot.payment ? <CardTrustNote text={t.payment.cardTrust} /> : null;

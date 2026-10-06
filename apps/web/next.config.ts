@@ -32,9 +32,6 @@ const R2_HOSTS = ['https://*.r2.dev', R2_PUBLIC_ORIGIN].filter(Boolean).join(' '
 // buradan okur (`img-src`, `media-src`). Dosyayı sunucudan geçirmek onu iki kez taşımak ve Next'in gövde sınırına takılmak olurdu.
 const R2_S3_HOST = 'https://*.r2.cloudflarestorage.com';
 
-// Kart Revolut'un sayfa üstündeki penceresinde girilir: betik, çerçeve ve istek aynı host'tan gelir; deneme ve canlı host ayrı.
-const REVOLUT_HOSTS = 'https://merchant.revolut.com https://sandbox-merchant.revolut.com';
-
 // Google karoları `<img>` olarak (`img-src`), görünen alanın telif satırı `fetch` ile (`connect-src`) aynı host'tan gelir; giden istek
 // karo koordinatı, oturum jetonu ve herkese açık tarayıcı anahtarıdır.
 const MAP_TILES = 'https://tile.googleapis.com';
@@ -52,15 +49,15 @@ function securityHeaders(): Array<{ key: string; value: string }> {
 
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' ${REVOLUT_HOSTS}${scriptExtra}`,
+    `script-src 'self' 'unsafe-inline'${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
-    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${R2_S3_HOST} ${REVOLUT_HOSTS} ${BAN_API} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
+    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${R2_S3_HOST} ${BAN_API} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
     // Leaflet karoları `<img>` olarak yükler; private kovadaki fotoğraflar da imzalı adresle buradan gelir.
-    `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS} ${R2_S3_HOST} ${REVOLUT_HOSTS} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
+    `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS} ${R2_S3_HOST} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
     // Sesli mesaj `<audio>`: yönerge yoksa `default-src 'self'` devreye girer ve kaydı keser.
     `media-src 'self' ${R2_S3_HOST}`,
     "font-src 'self' data:",
-    `frame-src 'self' ${REVOLUT_HOSTS}`,
+    `frame-src 'self'`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

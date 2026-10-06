@@ -31,7 +31,6 @@
     "@lezzet/observability": "workspace:*",
     "@lezzet/storage": "workspace:*",
     "@lezzet/types": "workspace:*",
-    "@revolut/checkout": "^1.1.25",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.48.1",
     "leaflet": "^1.9.4",

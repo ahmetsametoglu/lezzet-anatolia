@@ -36,7 +36,7 @@ Tek markalı, tek veritabanlı, orta ölçekli bir web ürünü: müşteriye aç
 | **i18n (arayüz)** | kod içi i18n + **`next-intl`** (yalnız yönlendirme) | Statik metinler; içerik jsonb (§5). Sınır aşağıda. |
 | Arka plan işleri | **Hono** + `node-cron` | Webhook ve zamanlı işler için hafif süreç |
 | Süreç yönetimi | **PM2** + reverse proxy (Caddy) | Basit sunucu, sıfır-kesinti reload |
-| Ödeme | **Revolut Merchant** (web kart penceresi `@revolut/checkout` + native kart formu `@revolut/revolut-merchant-card-form` · `@revolut/revolut-payments-core` + webhook + iade) | `INTEGRATIONS.md` §Ödeme |
+| Ödeme | **Revolut Merchant** (web: Revolut'un ödeme sayfasına yönlendirme + native kart formu `@revolut/revolut-merchant-card-form` · `@revolut/revolut-payments-core` + webhook + iade) | `INTEGRATIONS.md` §Ödeme |
 | Sürükle-bırak | **`@dnd-kit`** | Tek kullanım: `components/operation/ui/sortable-list.tsx` (operatör sırası) |
 | Log / hata / sağlık | **`packages/observability`** | pino + `error_log` + sağlık görüntüsü → `OBSERVABILITY.md` |
 | **Etiket görseli** | **`qrcode`** (application) + **`@resvg/resvg-js`** + **`@expo-google-fonts/karla`** (mobile-api) | 4×6 kutu etiketi (23.7): şablon SAF SVG string (`application/warehouse/label-svg` — tek yerde test, karar §1.9), raster uçta (`mobile-api/lib/label-png`). QR matrisi `qrcode.create` (senkron, saf JS); resvg fontu DOSYADAN gömer (`loadSystemFonts` kapalı — ortama göre değişen etiket olmaz), font mobil operasyon temasıyla AYNI paketten. **Petit'ten bilinçli sapma:** oradaki raster headless Chromium'dur (web canvas'ı çizer); düz metin+QR etiketi için o makine fazla — gerekçe `label-svg.ts` künyesinde |

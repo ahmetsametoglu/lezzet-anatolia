@@ -339,7 +339,7 @@ gösterilen sıra aslında **siparişin verilme sırasıydı** — ekran olmayan
 | B2B (credit yok) | Online öde / havale (peşin) |
 | B2B (credit var) | + Hesaba (vadeli) |
 
-Online: Revolut Merchant (SCA/3DS) — kart, "Öde"ye basınca açılan Revolut'un kendi güvenli penceresinde girilir (web'de açılır pencere, native'de kart formu); kart bilgisi bize uğramaz. Apple/Google Pay ayrı düğme. WhatsApp'ta payment link (canlı kanalla). Kapıda ödeme ayrıca değer tavanı ve `cod_allowed`'a tabidir (aşağıda).
+Online: Revolut Merchant (SCA/3DS) — web'de "Öde"ye basınca müşteri Revolut'un ödeme sayfasına gider (satırlar, KDV, kart, Revolut Pay, Google/Apple Pay) ve başarılı ödemeden sonra siparişin sayfasına döner; native'de Revolut'un kart formu açılır. Kart bilgisi bize uğramaz. WhatsApp'ta payment link (canlı kanalla). Kapıda ödeme ayrıca değer tavanı ve `cod_allowed`'a tabidir (aşağıda).
 
 ### Kapıda ödeme sınırı (kötüye kullanım önlemi)
 

@@ -24,9 +24,10 @@ export function revolutWebhookSecret(): string | null {
   return process.env.REVOLUT_WEBHOOK_SECRET || null;
 }
 
-/** Tarayıcı paketinin ortam adı; sunucunun kipinden türer ki iki ayar ayrışıp kart alanı yanlış ortamın jetonunu açmasın. */
-export function revolutBrowserMode(): 'sandbox' | 'prod' | null {
+/** Revolut'un barındırdığı ödeme sayfası; ortam sunucunun kipinden türer ki jeton yanlış ortamın sayfasında açılmasın. */
+export function revolutCheckoutUrl(paymentToken: string): string | null {
   const client = webRevolutClient();
   if (!client) return null;
-  return client.mode === 'live' ? 'prod' : 'sandbox';
+  const host = client.mode === 'live' ? 'https://checkout.revolut.com' : 'https://sandbox-checkout.revolut.com';
+  return `${host}/payment-link/${encodeURIComponent(paymentToken)}`;
 }

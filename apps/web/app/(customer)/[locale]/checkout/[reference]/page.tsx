@@ -25,7 +25,6 @@ import { ConfirmationClient } from './confirmation-client';
 import { revolutPaymentGateway } from '@/lib/revolut';
 import { orderOutcomeOf, paymentStateOf } from '@lezzet/domain-core';
 import type { ConfirmationView } from './confirmation-types';
-import type { BillingDetails } from '../components/revolut-card';
 import messages from './messages.json';
 // Aile kökünün sözlüğü: özetin ortak sözcükleri orada yaşıyor (`confirmation-types`).
 import checkoutMessages from '../messages.json';
@@ -104,7 +103,6 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     awaitingCard,
     paymentState: payment ? paymentStateOf(payment.status) : null,
     payBy,
-    billing: awaitingCard ? billingOf(profile, order.addressSnapshot) : null,
     onRoute: order.deliveryType === 'route',
     pickup: pickupWarehouse
       ? { warehouseName: pickupWarehouse.name, addressLine: warehouseAddressLine(pickupWarehouse), phoneDisplay: brand.contact.phoneDisplay }
@@ -164,24 +162,4 @@ async function lineCatalogOf(db: Db, items: readonly OrderItem[], locale: Locale
       ];
     }),
   );
-}
-
-/** Fatura bilgisi profilden ve siparişin adres görüntüsünden; ülke yoksa kart formu açılmaz, uydurulmaz. */
-function billingOf(
-  profile: { name: string | null; email: string | null; phone: string | null },
-  snapshot: Record<string, unknown> | null,
-): BillingDetails | null {
-  const text = (key: string) => (typeof snapshot?.[key] === 'string' ? (snapshot[key] as string) : null);
-  const country = text('country');
-  if (!country) return null;
-  return {
-    name: profile.name ?? '',
-    email: profile.email ?? '',
-    phone: profile.phone,
-    line1: text('line1') ?? '',
-    line2: text('line2'),
-    postalCode: text('postalCode') ?? '',
-    city: text('city') ?? '',
-    country,
-  };
 }

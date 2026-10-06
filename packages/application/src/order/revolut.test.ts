@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RevolutApiOrder } from '@lezzet/types';
 import { revolutClient, revolutFeeOf, revolutGateway, revolutSessionCreator, snapshotOf } from './revolut';
 
@@ -69,9 +69,84 @@ describe('revolutSessionCreator', () => {
       customerId: 'm-1',
       description: 'Sipariş',
       reservationExpiresAt: expiresAt,
+      locale: 'fr',
+      breakdown: null,
     });
     expect(result).toEqual({ id: 'yeni', paymentToken: 'jeton-yeni' });
     expect(calls[0]?.body).toMatchObject({ amount: 1500, currency: 'EUR', metadata: { order_id: 'o-1' }, expire_pending_after: 'PT30M' });
+  });
+});
+
+describe('revolutSessionCreator · ödeme sayfası', () => {
+  afterEach(() => vi.unstubAllEnvs());
+  const params = (breakdown: Parameters<NonNullable<ReturnType<typeof revolutSessionCreator>>>[0]['breakdown']) => ({
+    amountCents: 1800,
+    orderId: 'o-1',
+    customerId: 'm-1',
+    description: 'Lezzet Anatolie',
+    reservationExpiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+    locale: 'fr' as const,
+    breakdown,
+  });
+  const breakdown = {
+    lines: [
+      {
+        kind: 'product' as const,
+        name: 'Börek',
+        quantity: 2,
+        unitPriceCents: 600,
+        totalCents: 1200,
+        imageUrl: 'https://cdn.example/b.webp',
+        vatRate: 5.5,
+        taxes: [{ name: 'TVA 5,5 %', amountCents: 63 }],
+      },
+      {
+        kind: 'product' as const,
+        name: 'Simit',
+        quantity: 1,
+        unitPriceCents: 300,
+        totalCents: 300,
+        imageUrl: null,
+        vatRate: 5.5,
+        taxes: [{ name: 'TVA 5,5 %', amountCents: 16 }],
+      },
+      {
+        kind: 'shipping' as const,
+        name: 'Livraison',
+        quantity: 1,
+        unitPriceCents: 500,
+        totalCents: 500,
+        imageUrl: null,
+        vatRate: null,
+        taxes: [{ name: 'TVA 5,5 %', amountCents: 26 }],
+      },
+    ],
+    discount: { name: 'Remise gros panier', amountCents: 200 },
+  };
+
+  it('döküm tahsil edilen tutarla aynı toplamı verir, sepet indirimi en büyük satıra adıyla düşülür ve sipariş sayfasına dönülür', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://test.example.com');
+    const { client, calls } = fakeRevolut({});
+    await revolutSessionCreator(client, { hostedPage: true })!(params(breakdown));
+    const body = calls[0]!.body as { line_items: { total_amount: number; discounts?: unknown[] }[]; redirect_url: string };
+    expect(body.line_items.reduce((sum, line) => sum + line.total_amount, 0)).toBe(1800);
+    // İndirim düşülen satırın KDV'si indirimli tutardan: 1000 cent içindeki %5,5 = 52.
+    expect(body.line_items[0]).toMatchObject({
+      total_amount: 1000,
+      discounts: [{ name: 'Remise gros panier', amount: 200 }],
+      taxes: [{ name: 'TVA 5,5 %', amount: 52 }],
+    });
+    expect(body.redirect_url).toBe('https://test.example.com/fr/commande/o-1');
+  });
+
+  it('yerel adreste dönüş adresi, kart formunda döküm gönderilmez', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'http://localhost:3000');
+    const yerel = fakeRevolut({});
+    await revolutSessionCreator(yerel.client, { hostedPage: true })!(params(breakdown));
+    expect(yerel.calls[0]!.body).not.toHaveProperty('redirect_url');
+    const native = fakeRevolut({});
+    await revolutSessionCreator(native.client)!(params(breakdown));
+    expect(native.calls[0]!.body).not.toHaveProperty('line_items');
   });
 });
 

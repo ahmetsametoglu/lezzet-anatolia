@@ -24,7 +24,7 @@ import { getPackagesByIds } from '@/lib/storefront/packages';
 import { resolveOrderLines } from '@/lib/order/customer-lines';
 import { webPaymentEffects } from '@/lib/order/transition';
 import { webSessionCreator } from '@/lib/order/checkout-session';
-import { revolutBrowserMode, revolutPaymentGateway } from '@/lib/revolut';
+import { revolutCheckoutUrl, revolutPaymentGateway } from '@/lib/revolut';
 import { rememberAcquisition } from '@/lib/analytics/attribution';
 import { recordEvent } from '@/lib/analytics/record';
 import { routing } from '@/i18n/routing';
@@ -140,7 +140,7 @@ export async function checkCheckoutAddressAction(addressId: string): Promise<Cus
  * portlarını taşır.
  */
 type ConfirmOutcome =
-  | { status: 'payment_required'; orderId: string; paymentToken: string; paymentMode: 'sandbox' | 'prod'; totalCents: number }
+  | { status: 'payment_required'; orderId: string; checkoutUrl: string; totalCents: number }
   /** Kapıda/vadeli: ödeme sağlayıcısı yok, sipariş açıldı. */
   | { status: 'placed'; orderId: string; totalCents: number }
   /** Aynı basışın ödemesi bankada işleniyor: yeni sipariş açılmadı, müşteri o siparişin sayfasına gider. */
@@ -215,15 +215,14 @@ export async function confirmCheckoutAction(input: {
       return { data: { status: 'open_payment', orderId: outcome.orderId, state: outcome.state }, errorKey: null };
     }
     if (outcome.status === 'payment_required') {
-      // Kip ödeme açan istemciyle aynı ayardan türer; ödeme açıldıysa vardır, yoksa sağlayıcı yok sayılır.
-      const paymentMode = revolutBrowserMode();
-      if (!paymentMode) return { data: { status: 'rejected', reason: 'provider_unavailable' }, errorKey: null };
+      // Sayfa adresi ödeme açan istemciyle aynı ayardan türer; ödeme açıldıysa vardır, yoksa sağlayıcı yok sayılır.
+      const checkoutUrl = revolutCheckoutUrl(outcome.paymentToken);
+      if (!checkoutUrl) return { data: { status: 'rejected', reason: 'provider_unavailable' }, errorKey: null };
       return {
         data: {
           status: 'payment_required',
           orderId: outcome.orderId,
-          paymentToken: outcome.paymentToken,
-          paymentMode,
+          checkoutUrl,
           totalCents: outcome.totalCents,
         },
         errorKey: null,

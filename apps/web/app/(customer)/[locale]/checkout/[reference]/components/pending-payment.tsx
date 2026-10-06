@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { SecondaryButton } from '@/components/customer/phone-kit/secondary-button';
@@ -10,8 +10,7 @@ import { Card } from '@/components/customer/ui/card';
 import { useRouter } from '@/i18n/navigation';
 import { hapticError } from '@/lib/haptics/haptics';
 import { formatPrice, formatTime } from '@/lib/storefront/format';
-import { CardTrustNote, openCardPopup, type PayStage } from '../../components/revolut-card';
-import { takePaymentError } from '../../payment-error';
+import { CardTrustNote, type PayStage } from '../../components/revolut-card';
 import { cancelPendingOrderAction, resumePaymentAction } from '../actions';
 import type { ConfirmationViewProps } from '../confirmation-types';
 
@@ -26,18 +25,11 @@ export function PendingPayment({ shared, locale, view, compact }: ConfirmationVi
   const [stage, setStage] = useState<PayStage | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Checkout'ta kartın düştüğü anın cümlesi; depo yalnız tarayıcıda olduğu için ilk çizimden sonra okunur, boş okuma notu ezmez.
-  useEffect(() => {
-    const message = takePaymentError(view.orderId);
-    if (message !== null) setError(message);
-  }, [view.orderId]);
   const busy = stage !== null || cancelling;
   const errorOf = (key: string | null, fallback: string) => (key === 'session_expired' ? shared.errors.session_expired : fallback);
 
   // Ödeme bu arada geçtiyse, işleniyorsa ya da sipariş kapandıysa sayfa sunucudan yeniden okunur ve yeni hâlini söyler.
   const pay = async () => {
-    const billing = view.billing;
-    if (!billing) return setError(shared.payment.unavailable);
     setStage('preparing');
     setError(null);
     const { data, errorKey } = await resumePaymentAction(view.orderId);
@@ -48,32 +40,7 @@ export function PendingPayment({ shared, locale, view, compact }: ConfirmationVi
     }
     if (data.status === 'settled') return router.refresh();
     setStage('confirming');
-    await openCardPopup({
-      token: data.paymentToken,
-      mode: data.mode,
-      locale,
-      billing,
-      labels: {
-        declined: shared.pay.declined,
-        insufficientFunds: shared.pay.insufficientFunds,
-        expiredCard: shared.pay.expiredCard,
-        incorrectCvv: shared.pay.incorrectCvv,
-        authentication: shared.pay.authentication,
-        generic: shared.pay.error,
-        unavailable: shared.payment.unavailable,
-      },
-      // Ödeme geçti: sayfa sunucudan yeniden okunur; onayı webhook ya da canlı bağın sorusu verir.
-      onPaid: () => {
-        setStage(null);
-        router.refresh();
-      },
-      onError: (message) => {
-        setStage(null);
-        hapticError();
-        setError(message);
-      },
-      onCancel: () => setStage(null),
-    });
+    window.location.assign(data.checkoutUrl);
   };
 
   const cancel = async () => {

@@ -6,7 +6,7 @@ import { currentCustomerId } from '@/lib/guard';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { orderIdOrNull } from '@/lib/order/order-id';
 import { webPaymentEffects } from '@/lib/order/transition';
-import { revolutBrowserMode, revolutPaymentGateway } from '@/lib/revolut';
+import { revolutCheckoutUrl, revolutPaymentGateway } from '@/lib/revolut';
 
 /**
  * Onay sayfasının "sağlayıcıya sor" eylemi: ödeme olayı gelmediğinde siparişi webhook'la aynı yoldan netleştirir; canlı bağ
@@ -33,8 +33,8 @@ export async function verifyPaymentAction(orderId: string): Promise<CustomerResu
   }
 }
 
-/** Ödemeye dönüş: aynı siparişin aynı ödemesinin anahtarı döner; ödeme geçmiş, işleniyor ya da sipariş kapanmışsa sayfa yenilenir. */
-type ResumeResult = { status: 'payment_required'; orderId: string; paymentToken: string; mode: 'sandbox' | 'prod' } | { status: 'settled' };
+/** Ödemeye dönüş: aynı siparişin aynı ödemesinin sayfası döner; ödeme geçmiş, işleniyor ya da sipariş kapanmışsa sayfa yenilenir. */
+type ResumeResult = { status: 'payment_required'; orderId: string; checkoutUrl: string } | { status: 'settled' };
 
 export async function resumePaymentAction(orderId: string): Promise<CustomerResult<ResumeResult>> {
   try {
@@ -50,9 +50,9 @@ export async function resumePaymentAction(orderId: string): Promise<CustomerResu
     if (outcome.status === 'not_found') throw new CustomerError('not_found');
     if (outcome.status === 'provider_unavailable') throw new CustomerError('payment_unavailable');
     if (outcome.status !== 'payment_required') return { data: { status: 'settled' }, errorKey: null };
-    const mode = revolutBrowserMode();
-    if (!mode) throw new CustomerError('payment_unavailable');
-    return { data: { status: 'payment_required', orderId: outcome.orderId, paymentToken: outcome.paymentToken, mode }, errorKey: null };
+    const checkoutUrl = revolutCheckoutUrl(outcome.paymentToken);
+    if (!checkoutUrl) throw new CustomerError('payment_unavailable');
+    return { data: { status: 'payment_required', orderId: outcome.orderId, checkoutUrl }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }

@@ -6,7 +6,9 @@ import {
   type RevolutApiOrder,
   type RevolutMode,
 } from '@lezzet/types';
-import type { CheckoutSessionCreator } from './checkout-session';
+import { vatPortion } from '@lezzet/helper';
+import { localizedUrl } from '@lezzet/i18n';
+import type { CheckoutSessionCreator, PaymentBreakdown } from './checkout-session';
 import type { PaymentGateway, PaymentSnapshot } from './payment-gateway';
 
 /**
@@ -170,9 +172,11 @@ export async function refundRevolutOrder(
  * Ödeme açma portunun Revolut uyarlaması: sipariş künyeye yazılır ki webhook ve zamanlayıcı ödemeyi siparişe bağlayabilsin; ödeme
  * ayırmanın bittiği an sağlayıcıda da düşer.
  */
-export function revolutSessionCreator(client: RevolutClient | null): CheckoutSessionCreator | null {
+export function revolutSessionCreator(client: RevolutClient | null, options: { hostedPage?: boolean } = {}): CheckoutSessionCreator | null {
   if (!client) return null;
   return async (params) => {
+    const lineItems = options.hostedPage ? revolutLineItems(params.breakdown) : null;
+    const returnUrl = options.hostedPage ? hostedReturnUrl(params.orderId, params.locale) : null;
     const body = {
       amount: params.amountCents,
       currency: 'EUR',
@@ -180,12 +184,48 @@ export function revolutSessionCreator(client: RevolutClient | null): CheckoutSes
       merchant_order_data: { reference: params.orderId },
       metadata: { order_id: params.orderId, customer_id: params.customerId, reservation_expires_at: params.reservationExpiresAt },
       expire_pending_after: expiryDuration(params.reservationExpiresAt, new Date()),
+      ...(lineItems ? { line_items: lineItems } : {}),
+      ...(returnUrl ? { redirect_url: returnUrl } : {}),
     };
 
     const created = RevolutApiOrderSchema.safeParse(await client.request('POST', '/api/orders', body));
     if (!created.success) throw new RevolutError('parse', `Revolut sipariş cevabı beklenen biçimde değil: ${created.error.message}`);
     return { id: created.data.id, paymentToken: created.data.token ?? null };
   };
+}
+
+/** Ödeme sayfasının satırları; sepet indirimi en büyük ürün satırına adıyla düşülür, satır eksiye inecekse döküm gönderilmez. */
+function revolutLineItems(breakdown: PaymentBreakdown | null): Record<string, unknown>[] | null {
+  if (!breakdown) return null;
+  const { lines, discount } = breakdown;
+  let host = -1;
+  lines.forEach((line, index) => {
+    if (line.kind === 'product' && (host < 0 || line.totalCents > lines[host]!.totalCents)) host = index;
+  });
+  if (discount && (host < 0 || lines[host]!.totalCents < discount.amountCents)) return null;
+  return lines.map((line, index) => {
+    const discounted = discount && index === host;
+    const total = discounted ? line.totalCents - discount.amountCents : line.totalCents;
+    // İndirim düşülen satırın KDV'si indirimli tutardan yeniden hesaplanır.
+    const taxes = discounted && line.vatRate !== null ? [{ ...line.taxes[0]!, amountCents: vatPortion(total, line.vatRate) }] : line.taxes;
+    return {
+      name: line.name,
+      type: line.kind === 'shipping' ? 'service' : 'physical',
+      quantity: { value: line.quantity },
+      unit_price_amount: line.unitPriceCents,
+      total_amount: total,
+      ...(discounted ? { discounts: [{ name: discount.name, amount: discount.amountCents }] } : {}),
+      ...(taxes.length > 0 ? { taxes: taxes.map((tax) => ({ name: tax.name, amount: tax.amountCents })) } : {}),
+      ...(line.imageUrl ? { image_urls: [line.imageUrl] } : {}),
+    };
+  });
+}
+
+/** Başarılı ödemeden sonra müşterinin döndüğü sipariş sayfası; sağlayıcı yerel adresi ve IP'yi kabul etmediği için orada verilmez. */
+function hostedReturnUrl(orderId: string, locale: Parameters<typeof localizedUrl>[1]): string | null {
+  const url = localizedUrl('/checkout/[reference]', locale, { reference: orderId });
+  const host = new URL(url).hostname;
+  return host === 'localhost' || /^[\d.]+$/.test(host) || host.includes(':') ? null : url;
 }
 
 /** Tahsil edilmiş ödemenin komisyonu; sağlayıcı tahsilden hemen sonra yazar. `null` = henüz yazılmamış ya da ödeme yok. */

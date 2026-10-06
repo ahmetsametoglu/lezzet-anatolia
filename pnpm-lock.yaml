@@ -588,9 +588,6 @@ importers:
       '@lezzet/types':
         specifier: workspace:*
         version: link:../../packages/types
-      '@revolut/checkout':
-        specifier: ^1.1.25
-        version: 1.1.25
       '@supabase/ssr':
         specifier: ^0.5.2
         version: 0.5.2(@supabase/supabase-js@2.110.8)
@@ -3293,9 +3290,6 @@ packages:
   '@resvg/resvg-js@2.6.2':
     resolution: {integrity: sha512-xBaJish5OeGmniDj9cW5PRa/PtmuVU3ziqrbr5xJj901ZDN4TosrVaNZpEiLZAxdfnhAe7uQ7QFWfjPe9d9K2Q==}
     engines: {node: '>= 10'}
-
-  '@revolut/checkout@1.1.25':
-    resolution: {integrity: sha512-SInbH+dzLqOdsooBVfvKhRfJs4EPTIlzVYcPq17Plrh8htSKHV74k5wIth80Pa0C2nIDqBGSRsTh4pIUoGBTBw==}
 
   '@revolut/revolut-merchant-card-form@1.2.0':
     resolution: {integrity: sha512-0pu0UVTyk73xvUYXQWANvYWgHVlz4lItQEQhc7LKxv0lT+ekTtK3XIxDOkBTuBgRSNTVJoh+T7WoTrlXd+db2w==}
@@ -10060,8 +10054,6 @@ snapshots:
       '@resvg/resvg-js-win32-arm64-msvc': 2.6.2
       '@resvg/resvg-js-win32-ia32-msvc': 2.6.2
       '@resvg/resvg-js-win32-x64-msvc': 2.6.2
-
-  '@revolut/checkout@1.1.25': {}
 
   '@revolut/revolut-merchant-card-form@1.2.0(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)':
     dependencies:

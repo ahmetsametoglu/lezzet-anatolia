@@ -1,6 +1,11 @@
 import { brand } from '@lezzet/brand';
 import { OrderService, UserProfileService, type Db } from '@lezzet/database';
-import type { Order, OrderItem } from '@lezzet/types';
+import { apportionShippingVat } from '@lezzet/domain-core';
+import { vatPortion } from '@lezzet/helper';
+import { DEFAULT_LOCALE } from '@lezzet/i18n';
+import checkoutCopy from '@lezzet/i18n/customer/checkout';
+import { resolveLocalizedText, type Order, type OrderItem, type PreferredLanguage } from '@lezzet/types';
+import { resolveOrderLines } from './customer-orders';
 import type { BackgroundRunner } from './effects';
 import { reserveOrderStock } from './reserve';
 
@@ -20,9 +25,29 @@ export type CheckoutSessionOutcome =
   /** Sağlayıcı anahtarı yok — yerelde beklenen hâl; "ödendi" ile karıştırılmaz. */
   | { status: 'provider_unavailable' };
 
+/** Ödeme sayfasında görünen döküm; tahsil edilen tutarı belirlemez. */
+export interface PaymentLine {
+  kind: 'product' | 'shipping';
+  name: string;
+  quantity: number;
+  unitPriceCents: number;
+  totalCents: number;
+  imageUrl: string | null;
+  /** Ürün satırının KDV oranı; kargo satırında `null`, çünkü kargonun KDV'si kalem oranlarına paylaştırılır. */
+  vatRate: number | null;
+  /** Satır tutarının içindeki KDV (cent) ve adı ("TVA 5,5 %"). */
+  taxes: { name: string; amountCents: number }[];
+}
+
+export interface PaymentBreakdown {
+  lines: PaymentLine[];
+  /** Sepet düzeyindeki indirim; satırlara dağıtılmaz, adıyla ayrı gösterilir. */
+  discount: { name: string; amountCents: number } | null;
+}
+
 /**
- * Sağlayıcıda ödemeyi açan port (`revolutSessionCreator`, testte sahte); `null` "anahtar yok" demektir. Kalem listesi gönderilmez:
- * tutar `resolveCheckoutPayment`ın hesapladığı sipariş toplamıdır, kalemleri ikinci kez yazmak iki toplamın ayrışabildiği bir yol açardı.
+ * Sağlayıcıda ödemeyi açan port (`revolutSessionCreator`, testte sahte); `null` "anahtar yok" demektir. Tahsil edilen tutar her zaman
+ * sipariş toplamıdır; döküm yalnız gösterim içindir ve toplamı tutmazsa hiç verilmez.
  */
 export type CheckoutSessionCreator = (params: {
   amountCents: number;
@@ -32,6 +57,9 @@ export type CheckoutSessionCreator = (params: {
   description: string;
   /** Ayırmanın bittiği an; sağlayıcıdaki ödeme de bu sürede düşer. */
   reservationExpiresAt: string;
+  /** Müşterinin dili; ödeme sayfasındaki döküm ve dönüş adresi bu dilde kurulur. */
+  locale: PreferredLanguage;
+  breakdown: PaymentBreakdown | null;
 }) => Promise<{ id: string; paymentToken: string | null }>;
 
 export interface CheckoutSessionInput {
@@ -44,6 +72,7 @@ export interface CheckoutSessionInput {
   placed?: { order: Order; items: OrderItem[] };
   /** Stok eşiği uyarısını yanıttan sonra koşturan kapı. */
   runLater?: BackgroundRunner;
+  locale?: PreferredLanguage;
 }
 
 export async function createCheckoutSession(
@@ -69,15 +98,16 @@ export async function createCheckoutSession(
   await recordCustomerContext(db, order.customerId, input);
 
   const expiresAt = reserved.expiresAt ?? new Date().toISOString();
-  // Tahsil edilecek tutar siparişin TOPLAMIDIR: kalem toplamı + kargo − indirim, hepsi
-  // `resolveCheckoutPayment` tarafından hesaplanıp siparişe yazılmış hâliyle. Burada yeniden
-  // toplamak, iki hesabın ayrışabildiği ikinci bir kaynak yaratırdı.
+  const locale = input.locale ?? DEFAULT_LOCALE;
+  // Tahsil edilecek tutar siparişin toplamıdır (`resolveCheckoutPayment`); döküm ondan türemez, yalnız ona eşitse gösterilir.
   const payment = await createSession({
     amountCents: order.orderedTotalCents,
     orderId: order.id,
     customerId: order.customerId,
     description: order.referenceNo ? `${brand.name} · ${order.referenceNo}` : brand.name,
     reservationExpiresAt: expiresAt,
+    locale,
+    breakdown: await paymentBreakdownOf(db, order, items, locale),
   });
 
   /* Ödeme kimliği siparişe yazılır: olmasaydı siparişe dönüşün tek yolu webhook olurdu ve olay gelmezse taslak süresiz
@@ -107,4 +137,52 @@ async function recordCustomerContext(db: Db, customerId: string, input: Checkout
   if (input.acquisitionSource && !customer.acquisitionSource) patch.acquisitionSource = input.acquisitionSource;
 
   if (Object.keys(patch).length > 0) await profiles.update({ id: customerId, ...patch });
+}
+
+/**
+ * Ödeme sayfasının dökümü: kalemler, kargo ve sepet indirimi. Satırların toplamı sipariş toplamına eşit değilse `null` döner, çünkü
+ * müşteriye tahsil edilenle tutmayan bir döküm göstermek yanlış bilgi olurdu.
+ */
+async function paymentBreakdownOf(db: Db, order: Order, items: OrderItem[], locale: PreferredLanguage): Promise<PaymentBreakdown | null> {
+  const names = await resolveOrderLines(db, items, locale);
+  const copy = checkoutCopy[locale].summary;
+  const lines: PaymentLine[] = items
+    .filter((item) => item.qty > 0)
+    .map((item) => {
+      const line = names.get(item.variantId);
+      return {
+        kind: 'product',
+        name: [line?.name, line?.unit].filter(Boolean).join(' · ') || brand.name,
+        quantity: item.qty,
+        unitPriceCents: item.unitPriceCents,
+        totalCents: item.unitPriceCents * item.qty - item.lineDiscountAmountCents,
+        imageUrl: line?.image.url ?? null,
+        vatRate: item.vatRate,
+        taxes: [],
+      };
+    });
+  const vatName = (rate: number) => copy.vat.replace('{rate}', String(rate).replace('.', ','));
+  for (const line of lines) line.taxes = [{ name: vatName(line.vatRate!), amountCents: vatPortion(line.totalCents, line.vatRate!) }];
+  if (order.shippingFeeCents > 0) {
+    lines.push({
+      kind: 'shipping',
+      name: copy.delivery,
+      quantity: 1,
+      unitPriceCents: order.shippingFeeCents,
+      totalCents: order.shippingFeeCents,
+      imageUrl: null,
+      vatRate: null,
+      taxes: apportionShippingVat(
+        order.shippingFeeCents,
+        lines.map((line) => ({ totalCents: line.totalCents, vatRate: line.vatRate! })),
+      ).map((part) => ({ name: vatName(part.vatRate), amountCents: part.vatCents })),
+    });
+  }
+  const sum = lines.reduce((total, line) => total + line.totalCents, 0);
+  if (sum === order.orderedTotalCents) return { lines, discount: null };
+  if (order.discountAmountCents > 0 && sum - order.discountAmountCents === order.orderedTotalCents) {
+    const name = order.discountLabel ? resolveLocalizedText(order.discountLabel, locale) : '';
+    return { lines, discount: { name: name || copy.discount, amountCents: order.discountAmountCents } };
+  }
+  return null;
 }
