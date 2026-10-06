@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.65). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.66). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 Vade: en üstteki **Acil** bölümü yayından önce yapılacaklardır; geri kalan satırlar orta vadedir; ileri vade
 `docs/GELECEK.md`'dedir.
@@ -190,6 +190,7 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [~] (18.11) **Süreç emniyet ağı + cron kabuğu testi** (denetim G2 · T4).
 - [~] (18.12) **GDPR: kişisel verinin silinmesi ve maskelenmesi — arka uç motoru.**
 - [ ] (18.13) **`OTP_TEST_CODE` kapısı üretime çıkmadan SÖKÜLECEK** (kullanıcı kararı 15.08: *"şimdilik kalsın ama ileride kaldırılması gereken bir özellik"*).
+- [ ] (K.66) **Entegrasyon anahtarları veritabanında şifreli:** Revolut, Pennylane, Hiboutik ve e-posta anahtarları env yerine Supabase Vault'ta tutulur, Ayarlar › Kurulum'dan yenilenir ve değişiklik deftere yazılır; veritabanı adresi, servis anahtarı ve ana anahtar env'de kalır. Neden: anahtar sunucuya girmeden ve dağıtımsız değişsin, yedeklerde düz metin anahtar dolaşmasın.
 
 ## 19 · Çok Depo (Depo Ağı)
 
