@@ -14,6 +14,7 @@ import { sendEmailOtp, verifyEmailOtp } from '@/lib/auth/otp-actions';
 import type { LoginErrors, LoginViewProps, Messages, Stage } from './login-types';
 import { LoginDesktop } from './login.desktop';
 import { LoginMobile } from './login.mobile';
+import { useOAuthResume } from './use-oauth-resume.hook';
 
 /** Müşteri OTP girişi (yalnız e-posta). Kod doğrulama OtpCodeInput içinde yapılır. */
 const LoginEmailSchema = z.object({
@@ -28,14 +29,26 @@ interface LoginClientProps {
   t: Messages;
   errors: LoginErrors;
   initialError?: string | null;
+  /** Google dönüşü "bekle" dediyse oturum belirmediğinde gösterilecek hata; o ana kadar ekran hata göstermez. */
+  pendingOAuthError?: string | null;
   device: Device;
 }
 
-export function LoginClient({ next, subtitle, locale, t, errors: copyErrors, initialError = null, device }: LoginClientProps) {
+export function LoginClient({
+  next,
+  subtitle,
+  locale,
+  t,
+  errors: copyErrors,
+  initialError = null,
+  pendingOAuthError = null,
+  device,
+}: LoginClientProps) {
   const [stage, setStage] = useState<Stage>({ kind: 'email' });
   const [error, setError] = useState<string | null>(initialError);
   const [isSending, startSending] = useTransition();
   const resolvedDevice = useDevice(device);
+  useOAuthResume(pendingOAuthError, next, setError);
 
   const {
     register,

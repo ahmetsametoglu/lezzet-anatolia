@@ -26,6 +26,8 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
   const t: Messages = messages[locale];
   const subtitle = (reason && t.reasons[reason as keyof typeof t.reasons]) || t.reasons.default;
   const initialError = error === 'oauth' ? authErrorMessage('oauth_failed', locale as Locale) : null;
+  // Google dönüşü kodu öbür istekte çevirirken buraya "bekle" işaretiyle gelinir; hata ancak oturum belirmezse gösterilir.
+  const pendingOAuthError = error === 'oauth_pending' ? authErrorMessage('oauth_failed', locale as Locale) : null;
   const device = await detectDevice();
 
   return (
@@ -40,6 +42,7 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
           googleUnavailable: authErrorMessage('google_unavailable', locale as Locale),
         }}
         initialError={initialError}
+        pendingOAuthError={pendingOAuthError}
         device={device}
       />
       {/* Cihaz ayrımının dışında: hesap listesi iki görünümde ayrı yaşamasın. */}

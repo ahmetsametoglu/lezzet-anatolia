@@ -20,7 +20,8 @@ export async function GET(request: Request): Promise<Response> {
   const next = url.searchParams.get('next');
 
   // OAuth hata dönüşü — yerelleştirilmiş girişe (locale bilinmiyor → varsayılan fr: /fr/connexion).
-  const loginErrorUrl = `${origin}${getPathname({ locale: DEFAULT_LOCALE, href: '/login' })}?error=oauth`;
+  const loginUrl = `${origin}${getPathname({ locale: DEFAULT_LOCALE, href: '/login' })}`;
+  const loginErrorUrl = `${loginUrl}?error=oauth`;
 
   if (!code) {
     return NextResponse.redirect(loginErrorUrl);
@@ -37,6 +38,13 @@ export async function GET(request: Request): Promise<Response> {
   // Kurulu PWA varken Android, tarayıcı sekmesi kodu çevirdikten sonra aynı dönüş adresini uygulamada bir kez daha açar; o istek
   // doğrulama çerezini değil ilk çevirmenin oturumunu taşır, yani giriş tamamdır.
   const alreadyExchanged = exchangeErr !== null && !hadVerifier && user !== null;
+  // Aynı istek ilk çevirmenin cevabından önce de gelebilir: kod tükenmiştir ama oturum henüz tarayıcıya yazılmamıştır. Giriş birkaç
+  // an içinde tamamlanacağı için giriş sayfası hatayı göstermeden önce oturumu bekler.
+  const pendingElsewhere = exchangeErr?.code === 'flow_state_not_found' && hadVerifier && user === null;
+  if (pendingElsewhere) {
+    logger.info({ flow: 'auth/callback' }, 'Google dönüşü: kod öbür istekte çevriliyor, giriş sayfası oturumu bekleyecek');
+    return NextResponse.redirect(`${loginUrl}?error=oauth_pending${next ? `&next=${encodeURIComponent(next)}` : ''}`);
+  }
   if (!user || (exchangeErr && !alreadyExchanged)) {
     await captureError(new Error(`Google dönüşü oturum açamadı: ${exchangeErr?.message ?? 'kullanıcı okunamadı'}`), {
       source: SOURCES.webServer,

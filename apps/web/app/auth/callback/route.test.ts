@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Sınırlar taklit edilir (çerez, Supabase istemcisi, yönlendirme hedefi); kodun çevrilip çevrilmediğine göre verilen karar gerçek koddan.
 const durum: {
   cerezler: { name: string; value: string }[];
-  cevirmeHatasi: { message: string } | null;
+  cevirmeHatasi: { message: string; code?: string } | null;
   kullanici: { id: string } | null;
 } = { cerezler: [], cevirmeHatasi: null, kullanici: null };
 const { captureError } = vi.hoisted(() => ({ captureError: vi.fn() }));
@@ -48,6 +48,30 @@ describe('Google dönüşü', () => {
     durum.cerezler = [DOGRULAMA, OTURUM];
     durum.cevirmeHatasi = { message: 'invalid grant' };
     durum.kullanici = { id: 'baska-hesap' };
+
+    const cevap = await donus();
+
+    expect(cevap.headers.get('location')).toBe('https://test.lezzetanatolie.com/fr/connexion?error=oauth');
+    expect(captureError).toHaveBeenCalledTimes(1);
+  });
+
+  // İkinci istek ilk çevirmenin cevabından önce gelince hata sayfasına düşerse bu test kırmızıya döner.
+  it('kod öbür istekte çevrilirken (doğrulama çerezi var, oturum yok) giriş sayfası hatadan önce oturumu bekler', async () => {
+    durum.cerezler = [DOGRULAMA];
+    durum.cevirmeHatasi = { message: 'invalid flow state, no valid flow state found', code: 'flow_state_not_found' };
+    durum.kullanici = null;
+
+    const cevap = await donus();
+
+    expect(cevap.headers.get('location')).toBe('https://test.lezzetanatolie.com/fr/connexion?error=oauth_pending');
+    expect(captureError).not.toHaveBeenCalled();
+  });
+
+  // Bekleme bütün çevirme hatalarına yayılırsa gerçek hatalar gecikir; bu test o hâlde kırmızıya döner.
+  it('doğrulama çerezi varken başka bir çevirme hatası beklemeden hata sayfasına gider', async () => {
+    durum.cerezler = [DOGRULAMA];
+    durum.cevirmeHatasi = { message: 'code challenge does not match previously saved code verifier', code: 'bad_code_verifier' };
+    durum.kullanici = null;
 
     const cevap = await donus();
 
