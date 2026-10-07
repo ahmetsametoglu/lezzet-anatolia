@@ -15,8 +15,8 @@ import messages from './place-messages.json';
 type Copy = (typeof messages)['tr'];
 
 /**
- * Telefonun yer çekmecesi: misafire ülke ve posta kodu sorulur, girişli müşteri sepetle aynı adres çekmecesini görür ki aynı seçim
- * için iki ayrı çekmece olmasın (native'de de tek). Gel-al kartı o çekmecede yalnız izinli müşteriye gelir.
+ * Telefonun yer çekmecesi: adresi olan müşteri sepetle aynı adres çekmecesini görür ki aynı seçim için iki ayrı çekmece olmasın,
+ * adresi olmayana posta kodu sorulur (native'in kuralı). Gel-al kartı adres çekmecesinde yalnız izinli müşteriye gelir.
  */
 interface PlaceSheetProps {
   locale: Locale;
@@ -24,13 +24,13 @@ interface PlaceSheetProps {
 
 export function PlaceSheet({ locale }: PlaceSheetProps) {
   const t = messages[locale];
-  const { panelOpen, setPanelOpen } = useDeliveryPlace();
+  const { panelOpen, setPanelOpen, address } = useDeliveryPlace();
   const account = useAccount();
   // `Dialog` kapanma işlevine bağlı bir efekt taşıyor; kimliği her çizimde değişirse odak tuzağı her seferinde yeniden kurulur.
   const close = useCallback(() => setPanelOpen(false), [setPanelOpen]);
 
   if (!panelOpen) return null;
-  if (account) return <AddressPickerDialog locale={locale} compact initialMode="list" onClose={close} />;
+  if (account && address) return <AddressPickerDialog locale={locale} compact initialMode="list" onClose={close} />;
   return (
     <Dialog placement="sheet" title={t.panelTitle} description={t.panelBody} closeLabel={t.close} onClose={close}>
       <CodeForm t={t} locale={locale} />
