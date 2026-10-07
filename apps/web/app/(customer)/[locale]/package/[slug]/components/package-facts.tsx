@@ -5,15 +5,8 @@ import type { StorefrontPackageDetail } from '@/lib/storefront/storefront-types'
 import type { Messages } from '../package-types';
 
 /**
- * K29 · Güven künyesi — ağırlık · tüketim süresi · toplu alerjen.
- *
- * Üçü de kalemlerden TÜRER (`lib/storefront/packages`), operatörden ayrıca istenmez. **Hesaplanamayan
- * satır hiç basılmaz:** bir kalemin ağırlığı girilmemişse toplam yerine yalnız kalem sayısı yazılır,
- * hiçbir kalemin raf ömrü yoksa o kutu çizilmez, alerjen listesi boşsa satır yoktur. Gıdada eksik
- * veriyi makul bir varsayılanla doldurmak ("3 gün") yanlış bir söz vermek olurdu.
- *
- * Burası ÖZETTİR, beyan değil: INCO'nun istediği tam beyan (içindekiler, besin değeri, çapraz
- * bulaşma) her kalemin kendi ürün sayfasındadır — alt not okuyucuyu oraya yollar.
+ * Ağırlık, tüketim süresi ve alerjen kalemlerden türer; hesaplanamayan satır hiç basılmaz, çünkü gıdada eksik veriyi varsayılanla
+ * doldurmak yanlış söz vermektir. Burası özettir, tam beyan her kalemin kendi ürün sayfasındadır.
  */
 interface PackageFactsProps {
   t: Messages;

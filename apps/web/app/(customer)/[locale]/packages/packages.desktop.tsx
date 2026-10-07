@@ -14,17 +14,8 @@ import type { PackagesViewProps } from './packages-types';
 const FIRST_PAGE = 12;
 
 /**
- * Paketler — masaüstü düzeni (tasarım: `Musteri - Paketler.dc.html`, "Paketler Web").
- *
- * Tasarımın dört bloğu, sırasıyla: **kahraman** (iki sütun: söz + görsel) → **bölüm başlığı** →
- * ızgara + "Daha fazla" → **katalog bandı**. Süzgeç, arama ve sıralama YOKTUR: sıra yönetimin
- * kurduğu seçkidir, müşteriye seçenek sunmak kürasyonu bozar (etkileşim sözleşmesi).
- *
- * Kahraman ve alt bant BOŞ DURUMDA DA KALIR (tasarımın açık kararı): yalnız ızgara yerini tek bir
- * boş durum kutusuna bırakır. Sayfanın kimliği kartlarda değil, verdiği sözde.
- *
- * "Daha fazla paket" sunucuya GİTMEZ: paket kümesi operatörün elle kurduğu, doğal tavanı olan bir
- * küme (CLAUDE.md §1) — tek turda okundu, düğme yalnız ilk 12'yi açıyor.
+ * Süzgeç, arama ve sıralama yoktur: sıra yönetimin kurduğu seçkidir. Paket kümesi operatörün kurduğu sınırlı bir küme olduğu için
+ * tek turda okunur; "Daha fazla" yalnız ilk 12'den sonrasını açar.
  */
 export function PackagesDesktop({ t, locale, packages, hero }: PackagesViewProps) {
   const [shown, setShown] = useState(FIRST_PAGE);
@@ -52,11 +43,8 @@ export function PackagesDesktop({ t, locale, packages, hero }: PackagesViewProps
             <span>{t.promise.onePrice}</span>
           </div>
         </div>
-        {/* Kahraman görseli operatörün "Vitrin görselleri" sekmesinden (`site_image.packages_hero`,
-            08.33). Yüklenmemişse çerçeve tam ölçüsüyle durur — kaldırılsaydı sol sütun tek başına
-            kalır ve tasarımın iki sütunlu dengesi bozulurdu.
-            Alt metni operatör yazar; yazmamışsa BOŞ kalır ve bu doğru: kahraman burada bilgi değil
-            süstür, uydurma bir cümle ekran okuyucuya gereksiz gürültü olurdu (`alt=""` = dekoratif). */}
+        {/* Görsel yüklenmemişse çerçeve tam ölçüsüyle durur, iki sütunlu denge bozulmasın; alt metin yazılmamışsa boş kalır, çünkü
+            görsel dekoratiftir. */}
         {/* İki sütunun biri: ~612 px (içerik 1360 px'te durur). */}
         <FramedImage
           src={hero?.url ?? null}

@@ -10,13 +10,8 @@ interface SectionAction {
 }
 
 /**
- * §3 · Yerleşim ve bantlar — K13 Bölüm Başlığı · K14 CTA Bandı · K15 B2B Bandı.
- *
- * Üçü aynı dosyada çünkü aynı işi yapıyorlar: sayfayı BÖLÜMLERE ayırmak. Anasayfada doğdular ama
- * katalog, ürün detay ve genel sayfalar da aynı ritmi kullanacak — sayfa dosyasına gömülürlerse
- * her sayfada yeniden yazılır ve ritim sessizce kayar.
- *
- * Cihaz farkı `compact` ile (Sapma 3: `md:` akışkan responsive yok).
+ * Bölüm başlığı, CTA bandı ve B2B bandı aynı dosyadadır, çünkü üçü de sayfayı bölümlere ayırır ve sayfaya gömülürlerse ritim
+ * sessizce kayar. Cihaz farkı `compact` ile verilir.
  */
 
 interface SectionHeadingProps {
@@ -112,8 +107,7 @@ export function CtaBand({ title, body, cta, compact = false }: CtaBandProps) {
       </div>
       <Link
         href={cta.href}
-        /* `!py-3` KALDIRILDI (03.08): sabit `h-*` yanında dikey ped ölü yazıdır — butonun kendi
-           künyesi de bu tuzağı anlatıyor. Mobil yükseklik artık kademeden geliyor (K2 → 48px). */
+        /* Sabit `h-*` yanında dikey ped ölü yazıdır; telefonda yükseklik kademeden gelir. */
         className={buttonClass({ compact, fullWidth: compact, size: compact ? 'sm' : 'md', className: compact ? 'mt-1' : 'flex-none' })}
       >
         {cta.label}
@@ -131,9 +125,8 @@ interface InviteBandProps {
 }
 
 /**
- * K15 · B2B Bandı — kesikli çerçeveli, zeminsiz davet. Kesikli kenar bilinçli: bu bir kampanya
- * değil, "buraya da bakabilirsiniz" tonunda ikincil bir yol (restoran/market ziyaretçisi için).
- * Bandın tamamı bağlantıdır; sağdaki çağrı onun etiketidir, bağ içinde bağ kurulmaz.
+ * B2B bandı kesikli çerçeveli ve zeminsizdir, çünkü kampanya değil ikincil bir yoldur. Bandın tamamı bağlantıdır; sağdaki çağrı onun
+ * etiketidir, bağ içinde bağ kurulmaz.
  */
 export function InviteBand({ title, body, cta, compact = false }: InviteBandProps) {
   return (

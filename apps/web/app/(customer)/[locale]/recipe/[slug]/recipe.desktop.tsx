@@ -8,27 +8,16 @@ import { IngredientRow } from './components/ingredient-row';
 import type { RecipeViewProps } from './recipe-types';
 
 /**
- * Tarif detayı — masaüstü düzeni (tasarım: `Musteri - Tarifler.dc.html`, "Tarif detayı").
- *
- * İki sütun: solda **fotoğraf + hazırlanış**, sağda **yapışkan malzeme kartı**. Yapışkanlık
- * tasarımın kararı ve gerekçesi akış: adımları okurken sayfa uzuyor, malzeme kartı ekrandan
- * çıkarsa "tümünü sepete ekle" ancak başa dönülerek bulunur.
- *
- * ── ZEMİN RENGİ ÇİZİMDEN ALINMADI ───────────────────────────────────────────
- * `.dc.html`'de detay bloğu krem-koyu bir bant üstünde duruyor — ama orada liste ve detay AYNI
- * tuvale alt alta çizilmiş ve bant ikisini AYIRIYOR. Gerçekte bu ayrı bir sayfa; site zemini
- * (krem) korunuyor, ayırmaya gerek yok (`CLAUDE §3`: dış çerçeve canvas chrome'dur, UI değil).
+ * Malzeme kartı yapışkandır: adımları okurken kart ekrandan çıkarsa "tümünü sepete ekle" ancak başa dönülerek bulunur. Tasarımdaki
+ * krem-koyu bant liste ile detayı aynı tuvalde ayırır, ayrı sayfada site zemini korunur.
  */
 export function RecipeDesktop({ t, locale, recipe }: RecipeViewProps) {
   const badges = [recipe.duration, recipe.serves].filter((value): value is string => Boolean(value));
 
   return (
     <div className="flex flex-col gap-6 px-12 pt-5 pb-11">
-      {/* Breadcrumb — tasarım (09.08): "Tarifler › Künefe Sofrası". Mobilde YOK ve gerekmiyor:
-          orada kabuğun kendi başlık çubuğu "← Tarifler" bağını zaten taşıyor (`SiteFrame back`).
-          **Ayırıcı `›` ve bu tasarımın seçimi:** ürün ve paket detayları `·` kullanıyor (kodda da
-          öyle). Üç sayfada iki ayırıcı bir tutarsızlıktır ama çizim burada `›` diyor ve improvise
-          etmiyoruz (`CLAUDE §3`); birleştirme kararı tasarım tarafının, `design/BACKLOG`'a yazıldı. */}
+      {/* Ayırıcı `›` tasarımdandır, ürün ve paket detayları `·` kullanır; birleştirme kararı tasarımındır. Telefonda kabuğun başlık
+          çubuğu geri bağını taşıdığı için breadcrumb yoktur. */}
       <nav className="flex gap-1.5 font-sans text-body-sm text-muted">
         <Link href="/recipes" className="font-bold text-olive hover:text-olive-dark">
           {t.back}

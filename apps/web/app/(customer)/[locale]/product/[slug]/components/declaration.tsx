@@ -9,13 +9,8 @@ import type { StorefrontDeclaration } from '@lezzet/application';
 import type { Messages } from '../product-types';
 
 /**
- * Yasal beyan bölümleri (INCO) — içindekiler + alerjenler · besin değerleri · saklama.
- *
- * Bu bölümler bir "detay" değil, uzaktan satışın ÖNKOŞULU: satın alma öncesi erişilebilir olmak
- * zorundalar. Bu yüzden satın alma butonundan önce DOM'da bulunurlar; mobilde akordeon olsalar bile
- * başlıkları kapalıyken görünür (`musteri-urun-detay.md §7`).
- *
- * Boş bölüm çizilmez: beyanı girilmemiş ürün "beyan var ama boş" izlenimi vermemeli.
+ * Yasal beyan (INCO) uzaktan satışın ön koşuludur: satın alma düğmesinden önce DOM'da durur, telefonda akordeon kapalıyken de
+ * başlıkları görünür. Boş bölüm çizilmez, beyan var ama boş izlenimi vermesin.
  */
 
 /** Operatörün `**vurgu**` işareti — alerjen kelimesini metin içinde öne çıkarır (`helper/rich-text`). */
@@ -38,12 +33,8 @@ interface DeclarationCardProps {
 }
 
 /**
- * Beyan bölümü. MASAÜSTÜNDE açık kart, MOBİLDE akordeon (`<details>`) — tasarımın kararı: dar
- * ekranda üç uzun beyan, satın alma çubuğunu ekranlarca aşağı iter.
- *
- * `<details>` bilinçli: yerli öğe, klavyeyle çalışır, JavaScript istemez ve **kapalıyken de içerik
- * DOM'da durur**. INCO gereği beyanın satın alma öncesi erişilebilir olması gerekiyor; içeriği
- * koşullu render eden bir akordeon bunu bozardı. Başlıklar kapalıyken de görünür.
+ * Masaüstünde açık kart, telefonda `<details>` akordeondur, çünkü dar ekranda üç uzun beyan satın alma çubuğunu aşağı iter.
+ * `<details>` kapalıyken de içeriği DOM'da tutar; koşullu render eden akordeon satın alma öncesi erişim şartını bozardı.
  */
 function DeclarationCard({ title, note, warn = false, compact = false, children }: DeclarationCardProps) {
   const heading = (
@@ -76,10 +67,7 @@ function DeclarationCard({ title, note, warn = false, compact = false, children 
   );
 }
 
-/**
- * Alerjen listesini dile göre çözüp virgülle birleştirir — çapraz bulaşma cümlesi bundan kurulur. Telefon
- * görünümünün akordeonları da okur (14.09): alerjen satırı ve çapraz bulaşma cümlesi aynı adlarla yazılır.
- */
+/** Alerjen listesini dile göre çözüp virgülle birleştirir; telefonun akordeonları da okur, iki yüzey aynı adları yazsın. */
 export function allergenNames(codes: ProductAllergen[], locale: Locale): string {
   return codes.map((c) => resolveLocalizedText(ALLERGEN_LABELS[c], locale)).join(', ');
 }
@@ -103,7 +91,7 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
   const hasIngredientsBlock = ingredients !== null || allergens.length > 0 || traces.length > 0;
 
   return (
-    // Masaüstünde üç eşit kart (tasarım 20.09, künye bandı); mobilde akordeonlar alt alta.
+    // Masaüstünde üç eşit kart, telefonda alt alta akordeonlar.
     <div className={compact ? 'flex flex-col gap-2' : 'grid grid-cols-3 items-stretch gap-4.5'}>
       {hasIngredientsBlock && (
         <DeclarationCard title={t.declaration.ingredients} warn={allergens.length > 0} compact={compact}>
@@ -144,10 +132,8 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
       {nutrition && (
         <DeclarationCard
           title={t.declaration.nutrition}
-          // Net miktar da DİLE göre biçimlenir: 1500 g Türkçe/Fransızca'da binlik ayracı ister.
-          // Birim değerin içinde gelir (g/kg ya da ml/L) — şablon birim yazmaz, yoksa sıvıya "g" derdi.
-          // Başlığın yanında yalnız beyanın ÖLÇEĞİ durur; net miktar tablonun altına indi (tasarım
-          // 20.09), çünkü o beyanın değil SEÇİLEN BOYUN bilgisi ve tablo okunduktan sonra anlam kazanır.
+          // Net miktar dile göre biçimlenir ve birim değerin içinde gelir; şablon "g" yazsaydı sıvıya da yazardı. Başlığın
+          // yanında beyanın ölçeği durur, net miktar seçilen boyun bilgisi olduğu için tablonun altındadır.
           note={t.declaration.per100g}
           compact={compact}
         >
@@ -193,14 +179,8 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
 }
 
 /**
- * Besin tablosu satırları — beyanın SEKİZ kalemi BEŞ satıra iner (tasarım: `Musteri - Urun Detay`).
- *
- * İki enerji birimi tek satırda ("1932 kJ / 462 kcal"), alt kalemler ana kalemin yanında parantezde
- * ("Yağ (doymuş) — 24 g (9 g)"). Sekiz ayrı satır beyanı eksiksiz gösteriyordu ama tabloyu bir
- * mevzuat çıktısına çeviriyordu; müşterinin okuduğu şey bir etiket, bir form değil.
- *
- * Hiçbir değer KAYBOLMAZ: ana kalem girilmemişse alt kalem kendi satırında, kendi adıyla görünür —
- * beyan edilmiş bir değeri gizlemek, sadeleştirme değil eksiltmedir.
+ * Beyanın sekiz kalemi beş satıra iner (iki enerji birimi tek satırda, alt kalem ana kalemin yanında parantezde), çünkü müşterinin
+ * okuduğu bir etikettir, form değil. Ana kalem girilmemişse alt kalem kendi satırında görünür; beyan edilmiş değer gizlenmez.
  */
 interface NutritionRow {
   label: string;

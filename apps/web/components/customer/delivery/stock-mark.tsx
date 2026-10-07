@@ -13,43 +13,16 @@ import { noticeButtonClass, ZoneNoticeButton, type NoticeEmphasis } from './zone
 import messages from './place-messages.json';
 
 /**
- * Kalemin dört hâlinin İŞARET DİLİ (19.7 · tasarım §3) — kart ve liste düzeyinde.
- *
- * Dördü de stoktan doğar, müşteri seçmez:
- *   `available`     → **hiçbir işaret yok.** İyi haber sessizdir; normal ürün araçla ücretsiz gelir.
- *   `shipping`      → "📦 Kargoyla gönderilir" — yerelde yok ama kargolanabiliyor.
- *   `elsewhere`     → soğuk zincir, kargoya verilemez. **İKİ ALT HÂLİ VAR** (aşağıda).
- *   `out_of_stock`  → işaret BURADA basılmaz: "Tükendi" kartın kendi köşe rozetidir (K7), çünkü o
- *                     yere bağlı değil evrensel bir hâldir ve görselin üstünde durur.
- *
- * ── `elsewhere` TEK CÜMLEYLE ANLATILAMAZ (09.08) ─────────────────────────────
- * Sebebi müşterinin rotada olup olmamasına göre değişir ve ikisi aynı şeyi vaat etmez:
- *   rota İÇİ  → "Bölgenizde şu an yok" — GEÇİCİ; bölgenin deposuna mal gelince çözülür ve
- *               bekleyeceği şey KALEM (`variant_stock_notice`).
- *   rota DIŞI → "bu adrese gönderemiyoruz" — KALICI; ürün gelse bile ona gidemez, çünkü soğuk
- *               zincir kargoya verilemiyor. Bekleyeceği şey BÖLGENİN açılması (`zone_notice`).
- * "Şu an yok" demek rota dışındaki müşteriye gelmeyecek bir mal beklettirirdi. Ayrım sepetin kısıt
- * bloğunda 01.08'den beri yapılıyordu (`place-restriction`: `reason` ↔ `reasonHere`); kart ve ürün
- * detayı düzeyinde yapılmıyordu, çünkü rota dışı müşteri bu hâle 19.23'e kadar hiç düşmüyordu.
- *
- * İki cümle de yer ailesinin mevcut sözlüğünden geliyor (`lineBlocked` sepet satırında da aynı
- * durumu anlatıyor) — yeni bir cümle ailesi yazılmadı.
- *
- * **Metin burada, sayfada değil.** Aynı dört cümle anasayfa, katalog, ürün detayı ve sepette
- * görünüyor; dört `messages.json`'a kopyalansaydı biri değişince ötekiler eskirdi. Yer ailesinin
- * ortak metni yer ailesinin yanında durur (`place-chip` ile aynı desen).
- *
- * **Yer bilinmiyorken hiçbir işaret basılmaz** — çağıran sayfa yeri bilmeden `stockStatus`'ü zaten
- * ağ-geneli okumadan alır (`available` ya da `out_of_stock`); bu bileşen o hâllerde sessizdir.
+ * Kalemin dört hâlinin işaret dili: `available` sessizdir, `out_of_stock` kartın köşe rozetidir, `elsewhere` rota içinde geçici
+ * ("bölgenizde şu an yok"), rota dışında kalıcıdır ("bu adrese gönderemiyoruz") ve ikisi aynı şeyi vaat etmez. Metin yer ailesinin
+ * yanında durur, çünkü aynı cümleler dört sayfada görünür ve kopyalar ayrı ayrı eskirdi.
  */
 interface StockMarkProps {
   status: StockStatus;
   locale: Locale;
   /**
-   * `lg` = ÜRÜN DETAYININ başlık altı işareti (16.08, kullanıcı tespiti): sepete ekleme yolu
-   * bilinçli olarak açık kaldığı için müşterinin "buraya gönderemiyoruz" gerçeğini İLK okuyacağı
-   * yer burası — rozet puntosunda kaçıyordu ve müşteri alabileceğini sanıyordu. Kart/listede
-   * varsayılan rozet kalır: orada işaret bir tarama ipucudur, sayfanın uyarısı değil.
+   * `lg` ürün detayının başlık altı uyarısıdır: sepete ekleme yolu açık kaldığı için müşteri "buraya gönderemiyoruz" gerçeğini ilk
+   * burada okur. Kart ve listede varsayılan rozet kalır, orada işaret bir tarama ipucudur.
    */
   size?: 'sm' | 'lg';
 }
@@ -58,17 +31,12 @@ export function StockMark({ status, locale, size = 'sm' }: StockMarkProps) {
   const t = messages[locale];
   const { place } = useDeliveryPlace();
 
-  // Büyük hâl Badge'e ölçü eklemez, kendi bandını çizer: rozet ailesi kısa etiketler için
-  // (envanter K5), buradaki ise tek cümlelik bir uyarı bandı — tonlar aynı aileden (honey · kum).
-  // Simge işaretin anlamını taşır (14.09: emoji yerine ikon seti) — kargo `box`, soğuk zincir `snowflake`.
+  // Büyük hâl rozet ailesine ölçü eklemez, kendi bandını çizer: rozet kısa etiketler içindir, bu tek cümlelik bir uyarıdır.
   const band = (tone: 'blocked' | 'ship', text: string, icon?: IconName) =>
     size === 'lg' ? (
       <span
         className={[
-          // Ölçü `ColdChainMark` ile ORTAK (kullanıcı isteği 19.08): ikisi yan yana duruyor ve
-          // farklı boyda oldukları için biri rozet, öteki etiket gibi okunuyordu (ölçüldü: dikey
-          // dolgu 8px'e 2px, yazı bir kademe büyük). Ortada buluştular — bu kutu küçüldü, öteki
-          // büyüdü. **Değiştirirken ikisi birlikte değişir**, yoksa fark geri gelir.
+          // Ölçü `ColdChainMark` ile ortaktır: yan yana durdukları için farklı boyda biri rozet, öteki etiket gibi okunurdu.
           'inline-flex w-fit items-center gap-1.5 rounded-soft border px-2.5 py-1 font-sans text-note font-semibold leading-snug',
           tone === 'blocked' ? 'border-honey-line bg-honey-bg text-honey' : 'border-sand-300 bg-closed-bg text-closed',
         ].join(' ')}
@@ -97,18 +65,8 @@ export function StockMark({ status, locale, size = 'sm' }: StockMarkProps) {
 }
 
 /**
- * **Soğuk zincir işareti** — ürün detayında stok rozetinin YANINDA (kullanıcı isteği 16.08).
- *
- * Bu cümle teslimat kutusunun içindeydi ve orada bir teslimat ayrıntısı gibi okunuyordu; oysa
- * ÜRÜNÜN künyesi: kargoya verilememesinin sebebi bu. Yeri künyenin yanı — adın ve stok rozetinin
- * hemen altındaki satır.
- *
- * `StockMark`in kardeşi ama tonu bilerek SESSİZ: stok işaretleri bir engel ya da bir yol
- * söylüyor (honey/kapalı), bu ise yalnız bir özellik. Uyarı tonuna sokmak, sorunu olmayan bir ürünü
- * sorunlu gösterirdi.
- *
- * Metin çağırandan geliyor (`assurance.coldChainShort`), çünkü sayfanın kendi güvence sözlüğünün
- * parçası — yer ailesinin değil.
+ * Soğuk zincir ürünün künyesidir, teslimat ayrıntısı değil: kargoya verilememesinin sebebi budur. Tonu bilerek sessizdir, çünkü bir
+ * engel değil bir özellik söyler ve uyarı tonu sorunsuz ürünü sorunlu gösterirdi.
  */
 export function ColdChainMark({ label }: { label: string }) {
   return (
@@ -121,20 +79,8 @@ export function ColdChainMark({ label }: { label: string }) {
 }
 
 /**
- * "Gelince haber ver" — `elsewhere` hâlinin BİRİNCİL eylemi (tasarım: kartta çerçeveli, ürün
- * detayında dolu düğme).
- *
- * **Sepete ekleme yolunu kapatmaz:** müşteri bölge içindeki birine gönderiyor olabilir. Yer bir
- * söz, bir filtre değil (`place-types`) — bu düğme sepete eklemenin yerine değil, YANINA konur;
- * kartta yer dar olduğu için orada tek eylem odur, detayda ikisi birden durur.
- *
- * Kayıt bir SÖZ değil bir NOT: tetikleyici (stok girince mail) henüz yazılmadı ve metin de öyle
- * diyor ("not aldık"). Kaydın bugünkü değeri hangi ürünün nerede beklendiğini bilmek.
- *
- * **ROTA DIŞINDA kendi yerini bölge notuna bırakır** (09.08 · kullanıcı kararı): orada beklenecek
- * şey kalem değil bölgedir, kalem notu tutulamayacak bir sözdür. Kararı ÇAĞIRAN değil bu bileşen
- * verir — düğmenin kendi ön koşulunu bilmesi, üç çağıranın (kart · ürün detayı masaüstü/mobil)
- * aynı koşulu üç kez yazıp birinde unutmasından güvenlidir.
+ * "Gelince haber ver" sepete eklemenin yerine değil yanına konur: müşteri bölge içindeki birine gönderiyor olabilir. Rota dışında
+ * yerini bölge notuna bırakır ve kararı bu bileşen verir, ki üç çağıran aynı koşulu ayrı ayrı yazmasın.
  */
 interface StockNoticeButtonProps {
   variantId: string | null;

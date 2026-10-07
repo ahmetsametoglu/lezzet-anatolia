@@ -1,13 +1,8 @@
 import type { ReactNode } from 'react';
 
 /*
-  BOŞ DURUM — native `EmptyState`in (`apps/mobile/src/components/ui/empty-state.tsx`) web telefon ikizi:
-  ikon → Lora başlık → açıklama → eylem, ortalı; dikey nefes 70, yan 30 (native `9xl` · `8xl`).
-
-  İki hâl native'in ikisi. Kabın İÇİNDEKİ hâl (listenin boş hâli) varsayılan; `fill` tam ekran hâli — blok kalan
-  yüksekliği 4:6 paylaştıran iki esnek payın arasına oturur (native 16.08: optik merkez geometrik merkezin biraz
-  üstündedir; oran başlığın boyuna göre kendini ayarlar). `fill` için kap `flex flex-col` ve yükseklik sahibi olmalı.
-  Native'in varsayılanı `fill`dir; burada tersi çünkü telefonun ilk çağıranları kabın içindeydi.
+  Native `EmptyState`in web telefon ikizi; `fill` hâli kalan yüksekliği 4:6 paylaştıran iki esnek payın arasına oturur, çünkü optik
+  merkez geometrik merkezin biraz üstündedir. Varsayılan kap içi hâldir; `fill` için kap `flex flex-col` ve yükseklik sahibi olmalı.
 */
 
 interface EmptyStateProps {

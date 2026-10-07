@@ -9,22 +9,8 @@ import type { StorefrontRecipeItem } from '@/lib/storefront/storefront-types';
 import { buyableItems, type Messages } from '../recipe-types';
 
 /**
- * **"Tüm malzemeleri sepete ekle"** — tarifin tek toplu eylemi (08.24).
- *
- * ── SEPETE YENİ KAVRAM GİRMEDİ ──────────────────────────────────────────────
- * Tarif bir satış birimi DEĞİL: `addMany` var olan kalemleri sepete taşıyor ve aynı varyant zaten
- * sepetteyse adet artıyor (`mergeEntry`). Tarife özel bir sepet satırı yazılsaydı, tarif bir gün
- * faturaya kalem olarak düşmeye çalışırdı — oysa siparişte yalnız ürünler var.
- *
- * ── SAYI EKLENENİ SAYAR, TARİFİN MALZEMESİNİ DEĞİL ──────────────────────────
- * Tasarımın cümlesi *"3 malzeme sepete eklendi ✓"*. Dört malzemeden biri tükendiyse ÜÇ der:
- * sepete girmeyen bir kalemi saymak, müşteriye sepetinde olmayan bir şeyi söylemektir. Eleme
- * `buyableItems`ta, yani düğmenin pasifliğiyle ve gönderilen listeyle AYNI yerde.
- *
- * ── SEPETE GİDİLMEZ ─────────────────────────────────────────────────────────
- * Tekrar sipariş düğmesi sepete yönlendiriyor (`reorder-button.tsx`) çünkü orada niyet zaten
- * "siparişi tekrarla" — akış tamamlanıyor. Burada müşteri bir tarif OKUYOR; sayfadan koparmak,
- * hazırlanışı yarıda kesmek olurdu. Onay satırda kalır, sepet rozeti başlıkta zaten artar.
+ * Tarif bir satış birimi değildir: `addMany` var olan kalemleri sepete taşır, aynı varyant sepetteyse adet artar. Sayı eklenen kalemi
+ * sayar, tarifin malzemesini değil; eklemeden sonra sepete gidilmez, çünkü müşteri tarifi okumaya devam ediyor.
  */
 interface AddAllBarProps {
   items: readonly StorefrontRecipeItem[];
@@ -83,8 +69,7 @@ export function AddAllBar({ items, totalCents, locale, t, compact = false }: Add
         {t.addAll}
       </Button>
       {added !== null && <Confirmation count={added} t={t} />}
-      {/* Not her hâlde durur (tasarım): tükenme kuralını ve "fiyat hesabınıza göre" sözünü
-          müşterinin ÖNCEDEN okuması gerekiyor — tükenme yaşandıktan sonra açıklamak geç olurdu. */}
+      {/* Not her hâlde durur: tükenme kuralını ve fiyat sözünü müşteri bir malzeme tükenmeden önce okumalı. */}
       <span className="font-sans text-micro leading-relaxed text-muted">{t.note}</span>
     </div>
   );

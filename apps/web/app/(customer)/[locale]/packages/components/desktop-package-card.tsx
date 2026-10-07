@@ -10,17 +10,8 @@ import { buttonClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
 
 /**
- * Paket liste kartı — Paketler sayfasının tek yapı taşı.
- *
- * **Kartın TAMAMI bağlantıdır** ve detaya gider; listede "sepete ekle" yok, çünkü paket bütün
- * olarak satılıyor ve listeden tek dokunuşla sepete atmak içeriğini görmeden 50 €'luk bir sofra
- * almak demek.
- *
- * Künye satırları TÜRETİLMİŞ bilgidir ve hesaplanamıyorsa hiç basılmaz; kalem sayısı ile ağırlık
- * ayrı satırlarda durur, tek satırda birleşince uzun adlı dilde (DE) sarıp kartın ritmini bozuyor.
- *
- * Tükendi hâli kartı GİZLEMEZ, soluklaştırır: sosyal medyada dolaşan link boşa düşmemeli ve
- * "yakında yeniden" beklentisi sürmeli.
+ * Kartın tamamı detaya gider ve listede "sepete ekle" yoktur, çünkü paket içeriği görülmeden alınmamalı; tükenen kart da gizlenmez,
+ * paylaşılan bağ boşa düşmesin. Kalem sayısı ile ağırlık ayrı satırdadır, birleşince Almancada satır sarar.
  */
 interface PackageCardLabels {
   serves: string;

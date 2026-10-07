@@ -10,24 +10,9 @@ import type { StorefrontRecipeItem } from '@/lib/storefront/storefront-types';
 import type { Messages } from '../recipe-types';
 
 /**
- * **Tarifin tek malzeme satırı** (08.24) — görsel + ad + boy/fiyat + "+ Sepete".
- *
- * ── SATIR ÜRÜNE GİDER, DÜĞME SEPETE EKLER ───────────────────────────────────
- * Tasarımın etkileşim sözleşmesi: *"Malzeme satırına dokunmak ürünün detay sayfasına gider;
- * '+ Sepete' yalnız o malzemeyi ekler."* İkisi ayrı hedef olduğu için düğme bağın İÇİNDE değil
- * YANINDA duruyor — bağ içinde düğme hem erişilebilirlikte geçersiz hem de tıklama ikisinden
- * hangisine gideceği belirsiz olurdu.
- *
- * ── TÜKENMİŞ SATIR KALIR, DÜĞMESİ GİDER ─────────────────────────────────────
- * Malzeme listeden silinmiyor: tarif "1 ürün" derken sıfır satır göstermek tarifi eksik anlatmak
- * olurdu. Satır soluklaşır, düğmenin yerini "Tükendi" alır. Toplamdan düşmesi ayrı bir karar ve
- * okumada veriliyor (`lib/storefront/recipe.ts`).
- *
- * ── "SEPETTE" ETİKETİ TASARIMDA YOK, BİLİNÇLİ EKLENDİ ───────────────────────
- * Çizimde düğme tek hâlli. Ama eklemenin tek geri bildirimi başlıktaki sepet rozeti olsaydı, aynı
- * satıra ikinci kez basan müşteri hiçbir şey olmadığını sanıp üçüncü kez basardı. Katalog kartı bu
- * hâlde adet seçicisine dönüyor; burada seçici DEĞİL yalnız etiket değişiyor — tarif sayfasında
- * karar "bu malzeme lazım mı", "kaç tane" değil (adet tarifin kendisinden geliyor).
+ * Satır ürüne gider, "+ Sepete" yalnız o malzemeyi ekler; iki ayrı hedef olduğu için düğme bağın yanında durur, bağ içinde düğme
+ * erişilebilirlikte geçersizdir. Tükenen satır silinmez, soluklaşır; eklenen satırın etiketi "Sepette"ye döner ki ikinci basış boşa
+ * gitmiş sanılmasın.
  */
 interface IngredientRowProps {
   item: StorefrontRecipeItem;

@@ -10,19 +10,9 @@ import { AllReviews } from './all-reviews';
 import { ReviewCard, Stars } from './review-card';
 
 /**
- * Yorumlar bölümü — puan kartı, ilk yorumlar ve "yorum yaz".
- *
- * **Sayfa yalnız ONAYLI yorumu gösterir** ve bu kural burada değil kapıda yaşıyor: yayın okuması
- * durum parametresi almıyor (`listProductReviews`), "kim yazabilir" sorusunu da kapı cevaplıyor
- * (`getReviewEligibility`) — ekranın bu iki kararı esnetebileceği bir yol yok.
- *
- * Tasarımın üç kuralı:
- *   · **Puan alanı GİZLENİR** — "0,0" gösterilmez; sıfır puan kötü ürün değil "henüz kimse
- *     yazmadı" demektir ve ikisi aynı ekranla anlatılamaz.
- *   · **İlk üç yorum** görünür; bağlantı ancak fazlası varken çizilir (tıklayınca aynı listeyi
- *     gösteren bir bağ, bir vaat ihlalidir).
- *   · **"Yorum yaz" yalnız satın almış girişli müşteride** — göstermek, yazamayacak kişiye
- *     kapalı bir kapı açmaktır.
+ * Sayfa yalnız onaylı yorumu gösterir ve kural kapıda yaşar (`listProductReviews`, `getReviewEligibility`), ekran esnetemez. Puan
+ * alanı yorum yokken gizlenir ("0,0" kötü ürün demektir), tüm yorumlar bağı ancak üçten fazlası varken çizilir ve "yorum yaz" yalnız
+ * satın almış girişli müşteride görünür.
  */
 interface ReviewsProps {
   t: Messages;
@@ -67,8 +57,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
 
   return (
     <section id="reviews" className="flex scroll-mt-24 flex-col gap-4">
-      {/* Masaüstünde başlık, puan ve bağlantılar TEK SATIR (tasarım 20.09): bölüm tam genişlik banda
-          çıkınca ayrı bir puan kartı satırın altında yetim kalıyordu. */}
+      {/* Masaüstünde başlık, puan ve bağlantılar tek satırdır: ayrı bir puan kartı tam genişlik bantta yetim kalır. */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <h2 className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-page-title-sm'].join(' ')}>{t.reviews.title}</h2>
         {!compact && score.average !== null && (

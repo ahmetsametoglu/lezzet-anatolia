@@ -6,14 +6,8 @@ import { useSignOut } from './use-sign-out.hook';
 import messages from './account-messages.json';
 
 /**
- * Hesap başlığının "Çıkış" bağlantısı (20.08) — tasarım hesap ekranında sağ üstte çiziyor
- * (`Musteri - Hesap.dc.html`: "Hesabım … Çıkış") ve bugüne kadar hiç kodlanmamıştı: hesap
- * sayfasındaki müşteri çıkmak için vitrine dönüp menüyü açmak zorundaydı.
- *
- * Davranış avatar menüsündeki çıkışla AYNI kapıdan (`useSignOut` — iki yüzey, tek davranış).
- *
- * Telefon görünümünde yeri hesabın EN ALTI ve biçimi native'in terracotta metin eylemi (`TextAction`,
- * 14.09): üst bar yalnız sepeti taşıyor.
+ * Hesap başlığının "Çıkış" bağlantısı; davranış avatar menüsündeki çıkışla aynı kapıdan (`useSignOut`). Telefonda yeri hesabın en
+ * altıdır ve biçimi native'in metin eylemidir (`TextAction`), çünkü üst bar yalnız sepeti taşır.
  */
 interface SignOutLinkProps {
   locale: Locale;

@@ -1,8 +1,6 @@
 /*
-  BÖLÜM BAŞLIĞI — native `SectionHeader`ın web ikizi (14.09): terracotta üstbaşlık (native'in 10 · 700 ·
-  .18em kademesi) ve altında isteğe bağlı Lora başlık. Başlık `h2`: sayfanın `h1`i vitrinde arama
-  motoru için duruyor, bölümler onun altında sıralanır. Büyük harf CSS'le — tarayıcı sayfanın `lang`
-  özniteliğine göre çevirir (Türkçede "i" → "İ"), native'deki `upperIn`in işini burada o görür.
+  Başlık `h2`dir, çünkü sayfanın `h1`i vitrinde arama motoru için durur. Büyük harf CSS'le verilir: tarayıcı sayfanın `lang`ına göre
+  çevirir (Türkçede "i" → "İ").
 */
 
 interface SectionHeaderProps {

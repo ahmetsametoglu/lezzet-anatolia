@@ -10,18 +10,8 @@ import { Link } from '@/i18n/navigation';
 import type { StorefrontRecipeItem } from '@/lib/storefront/storefront-types';
 
 /*
-  TARİFİN MALZEME SATIRI — native tarif detayının satırının (`recipe-detail-screen.tsx` `row`) web telefon ikizi
-  (14.09): 46'lık daire fotoğraf · ad (kontrol kademesi) · "{adet} × {boy} · {fiyat}" · sağda + kutusu. Satırlar
-  arası kesikli kum çizgi.
-
-  · Satır ürüne gider, + sepete ekler: iki ayrı hedef, düğme bağın İÇİNDE değil YANINDA (bağ içinde düğme
-    erişilebilirlikte geçersiz). Ürünü çözülemeyen satır bağlanmaz — boş bir adrese bağ müşteriyi 404'e götürür.
-  · + kutusu native'in: 38'lik kare, 1,5 mürekkep çerçeve, krem zemin, 2'lik sert gölge; basılınca gölgeyi yutar.
-    Gölge mürekkep token'ından yerinde kurulur — native'de de öyle (kitte yalnız 3'lük `hard` durağı var).
-  · Tükenmiş satır solmaz, +'nın yerini "Tükendi" alır; fiyatsız (satışa kapalı) satırda + çizilmez.
-  · Alt metin iki yüzeyin ortak kurucusundan (`recipeRowMetaOf`).
-
-  WEB'E ÖZGÜ: ekleme web'in sepetine (`useCart().add`, adet tarifin istediği kadar), onay bildirim hapında.
+  Satır ürüne gider, + sepete ekler: iki ayrı hedef olduğu için düğme bağın yanında durur, ürünü çözülemeyen satır bağlanmaz.
+  Gölge mürekkep token'ından yerinde kurulur, çünkü kitte yalnız 3'lük `hard` durağı var.
 */
 
 type RecipeCopy = LocalizedCopy<typeof recipeDetailMessages>;

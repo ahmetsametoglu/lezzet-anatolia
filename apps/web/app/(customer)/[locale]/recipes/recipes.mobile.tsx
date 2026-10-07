@@ -9,19 +9,8 @@ import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import type { RecipesViewProps } from './recipes-types';
 
 /**
- * Tarifler — TELEFON görünümü: native tarif listesinin (`apps/mobile/src/screens/recipes-list/recipes-list-screen.tsx`)
- * web ikizi (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı, referans native). Vitrinin
- * "Sofradan Fikirler" şeridinin tamamı; YIĞIN ekranı: sekme çubuğu yok, başlık satırı ‹ ile başlar. Altında tek
- * cümle ve tam genişlikte 168'lik fotoğraf kartları (vitrindeki tarif kartıyla aynı öğe, farkı yalnız ölçü): sol
- * üstte süre rozeti (girilmemişse hiç çizilmez), altta ad ve "{n} malzeme · Tarifi gör ›" — n bizim satırlarımız
- * artı evden malzemeler. Metin ortak sözlükten (`@lezzet/i18n/customer/recipes`).
- *
- * ── WEB'E ÖZGÜ ─────────────────────────────────────────────────────────────
- * · `h1` ekranın başlığı ("Sofradan Fikirler"); sekme başlığı, açıklama ve `hreflang` `page.tsx`te (web sözlüğünden).
- * · ‹ tarayıcı geçmişine döner; geçmiş boşsa vitrine (listenin açıldığı yer).
- * · Liste sunucuda okunur: native'in iskeleti, hata kutusu ve aşağı çekmesi yok.
- * · Üst pay tasarımın 16'sı (sayfa 10 + başlık satırı 6) — native bu ekranda yalnız 6 bırakıyor; aynı eksik
- *   siparişler ekranında kullanıcı bulgusuyla 16'ya çıkmıştı (native `orders-screen.tsx` künyesi).
+ * Native tarif listesinin web telefon ikizi; yığın ekranıdır, sekme çubuğu yok ve başlık satırı ‹ ile başlar. Üst pay tasarımın
+ * 16'sıdır (sayfa 10 + başlık satırı 6); native'in bu ekrandaki 6'sı tasarımdan eksiktir.
  */
 export function RecipesMobile({ locale, recipes }: RecipesViewProps) {
   const copy = recipesMessages[locale];

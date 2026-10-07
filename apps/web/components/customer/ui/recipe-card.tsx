@@ -6,21 +6,8 @@ import { formatPrice } from '@/lib/storefront/format';
 import type { StorefrontRecipe } from '@/lib/storefront/storefront-types';
 
 /**
- * **Tarif kartı** — "Sofradan Fikirler" listesinin tek yapı taşı (08.24, tasarım:
- * `Musteri - Tarifler.dc.html`).
- *
- * **Kartın TAMAMI bağlantıdır** ve detaya gider; listede "sepete ekle" YOKTUR — ve bu paket
- * kartıyla aynı gerekçe değil: pakette karar detayda verilir çünkü içeriği görülmeden 50 €'luk bir
- * sofra alınmamalı. Tarifte ise listeden eklenecek TEK bir şey yok — tarif bir satış birimi değil,
- * birkaç ayrı ürünün anlatısı. "Hepsini ekle" ancak hangi malzemelerin alınabilir olduğu
- * görüldükten sonra anlam taşır.
- *
- * ── ÇERÇEVE ORANI: TASARIMDAN SAPMA, BİLİNÇLİ ───────────────────────────────
- * Tasarım masaüstünde 16/10, mobil webde 16/9 çiziyor. Envanterde 16/10 YOK
- * (`RATIO_SOURCE` 3/2 · `RATIO_BAND` 16/9) ve yeni bir oran açmak yalnız bu kart için operatörün
- * odak panelinde karşılığı olmayan bir çerçeve doğururdu — kırpma künyesi her görselde o çerçeveye
- * göre ayarlanıyor. 3/2 (1,50) ile 16/10 (1,60) arasındaki fark kırpmayla kapanır; mobilde tasarım
- * zaten envanterdeki 16/9'u istiyor, o birebir kullanılıyor.
+ * Kartın tamamı detaya giden bağdır ve listede "sepete ekle" yoktur: tarif bir satış birimi değil, hangi malzemenin alınabildiği
+ * detayda görülür. Çerçeve 3/2'dir, tasarımın 16/10'u envanterde olmadığı için operatörün kırpma panelinde karşılığı olmazdı.
  */
 interface RecipeCardLabels {
   items: string;
@@ -44,22 +31,8 @@ interface RecipeTeaserCardProps {
 }
 
 /**
- * **Ana sayfa tarif kartı** — "Sofradan Fikirler" şeridi (tasarım 09.08: `Musteri - Anasayfa.dc.html`).
- *
- * Liste kartının varyantı DEĞİL, kardeşi — ve bu bir tercih değil, tasarımın kendi ayrımı: burada
- * kart kabuğu yok (çerçevesiz, zeminsiz), rozet yok, düğme yok. Ortak olan yalnız veri tipi ve
- * hedef. Liste kartına üçüncü bir `variant` bayrağı eklemek, gövdesinin yarısını koşula sarardı;
- * iki ayrı sunum iki ayrı bileşendir, aynı DOSYADA durmaları da bunu söylüyor.
- *
- * **Künye sözcükleri de tasarımda AYRI:** şeritte *"1 malzeme + evinizden 3"*, listede *"1 ürün +
- * 3 ev malzemesi"*. Aynı sayıların iki farklı cümlesi — metin anahtarları bu yüzden paylaşılmadı.
- *
- * **Fiyat YOK ve bu tasarımın kararı:** şerit bir davet, vitrin değil. Tükendiğinde de sayı yerine
- * tek cümle kalır — alınamayan bir tarifte malzeme sayısı saymak yanlış bir söz olurdu.
- *
- * Çerçeve 3/2: tasarım 4/3 çiziyor ama envanterde o oran yok (`RATIO_SOURCE` 3/2 · `RATIO_BAND`
- * 16/9 · `RATIO_SQUARE` 1) ve yalnız bu kart için yeni bir oran açmak, operatörün kırpma panelinde
- * karşılığı olmayan bir çerçeve doğururdu — liste kartının 16/10 için verdiği kararın aynısı.
+ * Ana sayfa tarif kartı liste kartının varyantı değil kardeşidir: kabuk, rozet ve düğme yoktur, ortak olan yalnız veri ve hedeftir.
+ * Fiyat yoktur ve künye cümleleri listedekinden ayrıdır; çerçeve 3/2, tasarımın 4/3'ü envanterde yok.
  */
 export function RecipeTeaserCard({ recipe, labels }: RecipeTeaserCardProps) {
   const meta = recipe.soldOut
@@ -166,9 +139,8 @@ export function RecipeListCard({ recipe, locale, labels, compact = false }: Reci
           ].join(' ')}
         >
           <span className="font-sans text-note font-semibold text-muted">
-            {/* Künye: kaç ürünümüz + kaç ev malzemesi + toplam. Ev malzemesi sayısı YALNIZ masaüstünde
-                (tasarım): dar kartta satır sarıp fiyatı aşağı itiyor. Tükendiğinde sayı yerine tek
-                cümle kalır — alınamayan bir tarifte "1 ürün · 6,40 €" yazmak yanlış bir söz olurdu. */}
+            {/* Ev malzemesi sayısı yalnız masaüstünde: dar kartta satır sarıp fiyatı aşağı iter. Tükendiğinde sayı yerine tek cümle
+                kalır, alınamayan tarifte fiyat yazmak yanlış söz olurdu. */}
             {recipe.soldOut ? (
               <span className="text-ink">{labels.soldOutShort}</span>
             ) : (

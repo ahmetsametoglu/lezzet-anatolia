@@ -4,31 +4,9 @@ import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from
 import { BackButton } from './back-button';
 
 /**
- * Huni sayfalarının (sepet · checkout) mobil başlığı (kullanıcı kararı 20.08): `‹` ikon →
- * (eyebrow) → büyük serif başlık. Yedinci turda detay ve hesap alanı da bunu kullanıyordu; Mobil v1
- * (13.09) onları çerçevenin üst barına taşıdı (`site-frame.mobile.tsx`). Bugün çerçeve eylemsiz bölüm
- * sayfalarında da (siparişlerim · puan geçmişi · bildirimler) bunu çiziyor — native'in "sayfa başlığı" durağı.
- *
- * ── YAPIŞKAN KİMLİK (beşinci tur) ───────────────────────────────────────────
- * *"Sticky olan kısım sayfanın ne sayfası olduğunu anlatan kısım olmalı."* iOS'un büyük-başlık
- * deseni: büyük başlık içerikle AKAR; ekrandan çıktığı anda üstteki yapışkan satırda kompakt adı
- * belirir. Yapışkan satır hep durur (geri yolu kaydırırken de erişilebilir — native üç-durak
- * kuralının ölçütü), ama adı ancak büyük başlık görünmezken taşır: ikisi aynı anda görünse aynı
- * kelime ekranda iki kez dururdu. Gözlemci `IntersectionObserver` — kaydırma dinleyicisi değil:
- * her karede koşmaz, yalnız eşik geçişinde tetiklenir.
- *
- * Checkout'un çip şeridi (altıncı tur) barın ALTINA yapışır: kendi başına ikinci bir kimlik
- * katmanı değil, barın uzantısıdır — `top` değeri BAR_HEIGHT'tır ve orada yinelenir
- * (`checkout-progress.tsx`), bar boyu değişirse ikisi birlikte değişmeli. Zemin de ikisinde aynı.
- *
- * ── NATIVE'İN ÖLÇÜLERİ (14.09 · kullanıcı bulgusu "başlıklar kötü") ─────────
- * Değerler native siparişler ekranının başlığından (`apps/mobile/src/screens/orders/orders-screen.tsx`):
- * üstbaşlık native'in kademesi (`eyebrow-xs` — 10 · 700 · .18em, terracotta; harf aralığı token'a gömülü),
- * başlık sayfa başlığı kademesi (`page-title-sm`). `‹` sayfa dolgusuna taşar ki glifi başlığın sol kenarıyla
- * hizalansın (native `backRow` −16). Yapışkan satırın zemini sayfanınki (`sand-50`) krem camda; kompakt ad
- * başlık çubuğunun kademesinde (`screen-title`). Satırın boyu değişmedi: 6 + 40 + 6 = 52 (BAR_HEIGHT).
- * Önceki hâl: üstbaşlık web'in eski mobil kademesi (`eyebrow-sm` 11 · 600 · .1em), başlık 30'luk `h1-sm`,
- * satır zemini `cream/95` — sayfanın üstünde açık bir şerit gibi duruyordu.
+ * Huni ve eylemsiz bölüm sayfalarının telefon başlığı; büyük başlık içerikle akar, ekrandan çıkınca yapışkan satırda kompakt adı
+ * belirir ki aynı kelime ekranda iki kez durmasın. Checkout'un çip şeridi barın altına `BAR_HEIGHT` ile yapışır, bar boyu değişirse
+ * ikisi birlikte değişmeli.
  */
 interface FunnelHeaderProps {
   /** Geri ikonunun ekran okuyucu adı ("Geri" / "Retour" / "Zurück"). */
@@ -61,10 +39,8 @@ export function FunnelHeader({ backLabel, fallback, eyebrow, title, right }: Fun
   }, []);
 
   return (
-    // Ebeveyn PEDSİZ ve SAYFA BOYU olmalı: `sticky` en yakın kaydırılan atası boyunca yapışır —
-    // başlık dar bir sarmalayıcıya konursa sarmalayıcı bitince bar da akıp gider (yaşandı, sepette
-    // ölçüldü). Fragment döner ki bar uzun kök konteynerin DOĞRUDAN çocuğu olsun; yatay pedi
-    // iki parça da kendi taşır.
+    // Ebeveyn pedsiz ve sayfa boyu olmalı: `sticky` en yakın kaydırılan atası boyunca yapışır, dar sarmalayıcı bitince bar da akıp
+    // gider. Fragment döner ki bar kök konteynerin doğrudan çocuğu olsun.
     <>
       <div className="sticky top-0 z-20 flex items-center gap-1.5 bg-sand-50/96 px-4 py-1.5 backdrop-blur-sm">
         {/* Daire sayfa dolgusuna taşar: glif başlığın sol kenarıyla hizalı (native `backRow` −16). */}

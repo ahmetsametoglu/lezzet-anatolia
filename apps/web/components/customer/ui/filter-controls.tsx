@@ -4,17 +4,9 @@ import { buttonClass } from './button';
 import { Icon, type IconName } from './icons';
 
 /**
- * §4 · Katalog süzgeç parçaları — K17 Filtre Çipi · K20 Boş Durum. (K18 Sıralama ayrı dosyada:
- * gerçek açılır menü dışarı-tıklama dinleyicisi ister, o yüzden client bileşendir.)
- *
- * Üçü de LINK tabanlıdır, client state değil: süzme sunucuda çözülüyor (`catalog.ts`), seçim URL'de
- * yaşıyor. Böylece filtreli liste paylaşılabilir, geri tuşu çalışır ve ilk boya sunucudan tam gelir.
- *
- * ÖLÇÜLER TASARIMDAN BİREBİR (`Musteri - Katalog.dc.html`) ve İKİ EKSENDE değişir:
- *   rol   → kategori çipi (büyük) · sonuç satırı düğmesi (küçük). Aynı ölçüyle bağlanınca indirim
- *           düğmesi çip kadar büyüyor ve satırın dengesi bozuluyor (yaşandı, 27.07).
- *   cihaz → masaüstü 14/700 ped 10-20 · mobil 13/700 ped 9-16 (düğmede 13.5 → 12). Mobil ölçü
- *           atlanınca çipler dar ekranda şişiyor ve şeridin yarısını üç çip yiyor (yaşandı, 28.07).
+ * Süzgeç parçaları bağ tabanlıdır, client state değil: süzme sunucuda çözülür ve seçim URL'de yaşar, liste paylaşılabilir ve geri tuşu
+ * çalışır. Ölçü rol ve cihazla değişir; indirim düğmesi kategori çipiyle aynı ölçüde satırın dengesini bozar, telefon ölçüsü olmadan
+ * çipler dar ekranda şişer.
  */
 
 type ChipHref = ComponentProps<typeof Link>['href'];
@@ -40,7 +32,7 @@ interface FilterChipProps {
   size?: ChipSize;
   /** Mobil ölçü. */
   compact?: boolean;
-  /** Etiketin önündeki simge — ikon setinden (yer süzgeci iğne taşır; v1, 14.09: emoji yerine). */
+  /** Etiketin önündeki simge (yer süzgeci iğne taşır). */
   icon?: IconName;
 }
 
@@ -63,9 +55,7 @@ export function FilterChip({ label, href, active = false, tone = 'neutral', size
       href={href}
       // Süzgeç değiştirmek sayfayı BAŞA FIRLATMAZ — kullanıcı listenin ortasındaysa orada kalır.
       scroll={false}
-      // `flex-none` + `nowrap`: şerit yatay kaydırmalı, çipler SIKIŞMAMALI. Sıkışınca uzun ad
-      // ("Şerbetli Tatlılar") çipin içinde iki satıra bölünüyor, o çip diğerlerinden yüksek kalıyor
-      // ve şeridin hizası bozuluyor (yaşandı, 28.07).
+      // `flex-none` + `nowrap`: şerit yatay kaydırmalıdır, sıkışan çipte uzun ad iki satıra bölünür ve hiza bozulur.
       className={[
         'inline-flex flex-none cursor-pointer items-center gap-1.5 rounded-pill border-[1.5px] font-sans whitespace-nowrap transition-colors',
         compact ? SIZE[size].compact : SIZE[size].wide,
@@ -82,7 +72,7 @@ interface EmptyStateProps {
   title: string;
   body: string;
   action?: { label: string; href: ChipHref };
-  /** Kutunun simgesi — ikon setinden (14.09: emoji yerine çizgi ikon). */
+  /** Kutunun simgesi, ikon setinden. */
   icon?: IconName;
 }
 
@@ -97,10 +87,8 @@ export function EmptyState({ title, body, action, icon }: EmptyStateProps) {
       {icon && <Icon name={icon} size={30} className="text-olive" />}
       <span className="font-serif text-card-title text-ink">{title}</span>
       <span className="max-w-md font-sans text-copy text-muted">{body}</span>
-      {/* Düğme `buttonClass`tan gelir. Elle yazılmış hâli ODAK HALKASINI kaybetmişti ve sabit
-          yükseklik yerine `py-3` kullanıyordu — `Button` künyesinin adıyla uyardığı tuzak: kontrol
-          gövde metninin 1,5 satır aralığını miras alıp çizilenden uzuyor. Kardeş boş-durumlar
-          (`packages`, `orders`) zaten `buttonClass` kullanıyordu; sapan taraf paylaşılan primitifti. */}
+      {/* Düğme `buttonClass`tan gelir: elle yazılan hâl odak halkasını kaybeder ve `py-3` ile gövde metninin satır aralığını miras
+          alıp uzar. */}
       {action && (
         <Link href={action.href} className={buttonClass({ className: 'mt-1' })}>
           {action.label}

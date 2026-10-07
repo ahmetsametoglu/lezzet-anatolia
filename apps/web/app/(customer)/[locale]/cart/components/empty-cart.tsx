@@ -16,30 +16,12 @@ import type { EmptyCartContext } from '@/lib/cart/empty-cart';
 import type { Messages } from '../cart-types';
 
 /**
- * Boş sepet ekranı (tasarım: `Musteri - Sepet.dc.html` → "Bos Sepet Web/Mobil").
- *
- * Bu bir BOŞ DURUM kutusu değil, kendi ekranıdır — ve tasarımın kuralı açık: **boş sepette ödeme
- * dili hiç geçmez.** Özet kartı, kupon, teslimat günü, pasif hâliyle bile "Checkout'a geç" — hiçbiri
- * çizilmez. Sepette tek eylem yön vermektir. Bu yüzden burada `CartSummary` de yok.
- *
- * Başlık İKİ HÂLLİDİR: "Sepetiniz şu an boş" (durum) · "Sepetiniz boşaldı" (az önce son kalem
- * çıkarıldı). Ayrım tasarımdan: ikincisi müşterinin az önce yaptığı işin sonucudur, ona "boş" demek
- * yaptığı şeyi görmezden gelmektir. Geri alma şeridi 5 sn üstünde durmaya devam eder.
- *
- * Öneri alanı ÜÇ bloktan oluşur (tasarım): son sipariş tekrarı · **vitrin seçkisi** · kategori
- * girişleri. Hiçbiri yoksa alan tamamen kaldırılır — ekran başlık ve iki düğmeyle kalır.
- *
- * Seçki bir süre hiç çizilmiyordu ("popülerlik sinyalimiz yok" gerekçesiyle) ve ekranın altı bomboş
- * kalıyordu. **Ölçüt yokluğu, alanı boş bırakmanın gerekçesi değil** (kullanıcı kararı 29.07):
- * gerçek bir "çok sevilen" listesi hesaplanana kadar alan katalogla dolar — müşteri o boşlukta
- * ekranın bittiğini sanıyordu. Sıralamanın kaynağı `readShowcase`, anasayfanın bandıyla aynı.
+ * Boş sepet kendi ekranıdır, boş durum kutusu değil: ödeme dili hiç geçmez, tek eylem yön vermektir. Başlık "boşaldı" ile "boş"
+ * arasında ayrılır, çünkü son kalemi az önce çıkaran müşteriye "boş" demek yaptığı işi görmezden gelir.
  */
 
-// Kahraman görselinin çerçevesi (tasarım: web 260×200 · mobil 180×140 — ikisi de ~1,3) artık
-// `@lezzet/types`te (`RATIO_ILLUSTRATION`, operasyon notu 09.08): operatörün kadraj panelinde
-// kırptığı çerçeve ile müşterinin gördüğü çerçeve aynı sayıdan gelmek zorunda. İki kopya bugün
-// eşitti ama ayrışsalardı fark KODDA değil FOTOĞRAFIN KENARINDA görünürdü — kimse hata görmez,
-// yalnız görselin bir yanı sitede kesilir.
+// Kahraman çerçevesi `RATIO_ILLUSTRATION`dan gelir: operatörün kırptığı çerçeve ile müşterinin gördüğü aynı sayıdan doğmazsa
+// fark yalnız görselin kesilen kenarında görünür.
 
 interface EmptyCartProps {
   t: Messages;
@@ -51,11 +33,8 @@ interface EmptyCartProps {
 export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProps) {
   const { addMany, justRemoved } = useCart();
   /**
-   * İkinci tıklamayı kapatır — `addMany` adetleri TOPLAR, iki tık siparişi ikiye katlardı.
-   *
-   * "N kalem eklenmedi" uyarısı BURADA tutulmaz: ekleme bu ekranı hemen söküyor, uyarı da onunla
-   * gidiyordu. Artık sağlayıcıda yaşıyor (`addSkipped`) ve tasarımın istediği yerde — sepette —
-   * görünüyor.
+   * İkinci tıklamayı kapatır, çünkü `addMany` adetleri toplar ve iki tık siparişi ikiye katlardı. "N kalem eklenmedi" uyarısı
+   * sağlayıcıda yaşar (`addSkipped`), çünkü ekleme bu ekranı hemen söker.
    */
   const [sent, setSent] = useState(false);
   const last = context.lastOrder;
@@ -70,18 +49,9 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
       ].join(' ')}
     >
       <div className={compact ? 'w-[180px]' : 'w-[260px] flex-none opacity-90'}>
-        {/* Çizim operatörün "Vitrin görselleri" sekmesinden (`site_image.empty_cart`, 08.33).
-            Yüklenmemişse çerçeve TAM boyutuyla durur ve yer tutucu boş bir kutu değil, sepet
-            işaretidir — fotoğraf gelince yerleşim kaymaz.
-
-            Ton ve köşe SITE'ın: `FramedImage`ın varsayılanı operasyon grisidir (`ops-gray`) ve
-            karanlık modda döner — krem sayfanın ortasında soğuk gri bir kutu duruyordu. Primitifin
-            varsayılanı değiştirilmedi (operasyon ekranları onu doğru kullanıyor), çağrı yerinde
-            eziliyor. Köşe tasarımdan: web 16 · mobil 14.
-
-            `alt` boş kalabilir ve kalmalı: bu bir DEKORATİF çizimdir, yanındaki başlık zaten aynı
-            şeyi söylüyor — ekran okuyucuya iki kez okutmak gürültüdür. Operatör bir cümle yazdıysa
-            o kazanır (bilerek yazılmış bir metni yok saymak, yazma imkânını anlamsız kılardı). */}
+        {/* Çizim yüklenmemişse çerçeve tam boyutuyla durur, fotoğraf gelince yerleşim kaymaz; ton ve köşe çağrı yerinde ezilir,
+            çünkü `FramedImage`ın varsayılanı karanlıkta dönen operasyon grisidir. `alt` boş kalabilir: çizim dekoratiftir ve
+            yanındaki başlık aynı şeyi söyler. */}
         <FramedImage
           src={context.illustration?.url ?? null}
           alt={context.illustration?.alt ?? ''}
@@ -140,10 +110,8 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
       )}
       <div className="flex flex-1 flex-col gap-1">
         <span className={['font-sans font-bold text-ink', compact ? 'text-body-sm' : 'text-copy'].join(' ')}>{t.empty.repeatTitle}</span>
-        {/* Meta satırı cihaza göre FARKLI ve bu tasarımın kararı: masaüstünde ürün adları
-            ("…Fıstıklı Baklava, Ispanaklı Gözleme…"), mobilde kalem SAYISI ("3 kalem"). Dar ekranda
-            üç uzun ad üç satıra yayılıp düğmeyi aşağı itiyor; sayı tek satırda aynı bilgiyi veriyor.
-            `itemCount` kapıda zaten hesaplanıyordu ama hiç okunmuyordu. */}
+        {/* Meta satırı masaüstünde ürün adlarını, telefonda kalem sayısını yazar: dar ekranda üç uzun ad üç satıra yayılıp düğmeyi
+            aşağı iter. */}
         <span className={['font-sans text-body', compact ? 'text-micro' : 'text-body-sm'].join(' ')}>
           {[
             last.reference,
@@ -184,12 +152,8 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
   );
 
   /**
-   * Vitrin seçkisi — tasarımda web 4'lü, mobil 2'li ızgara. Kart ve bölüm başlığı ANASAYFANIN
-   * parçaları (`ProductCard` · `SectionHeading`): burada ikinci bir ürün kartı yazmak aynı kartın
-   * iki görünümü demekti, biri iyileştiğinde öbürü geride kalırdı (CLAUDE.md §1).
-   *
-   * Mobilde ızgara ikiye düşer ama kart `compact` olur — küçültülmüş masaüstü değil, kartın kendi
-   * dar hâli. Katalog boşsa bölüm hiç çizilmez.
+   * Vitrin seçkisi anasayfanın kartını, bölüm başlığını ve sıralamasını (`readShowcase`) kullanır. Sıralama ölçütü olmasa da alan
+   * boş bırakılmaz: boşluk müşteriye ekranın bittiği izlenimini verir.
    */
   const showcaseBlock = context.showcase.length > 0 && (
     <div className={['flex flex-col', compact ? 'gap-2.5' : 'gap-4'].join(' ')}>

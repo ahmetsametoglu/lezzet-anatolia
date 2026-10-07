@@ -13,26 +13,9 @@ import type { StorefrontFamilyMember, StorefrontVariant } from '@lezzet/applicat
 import type { Messages } from '../product-types';
 
 /**
- * **Çeşit kartları** — ailenin öteki üyeleri (05.15, tasarım `musteri-urun-detay.md §1b`).
- *
- * ── NEDEN SATIN ALMA PANELİNİN İÇİNDE ────────────────────────────────────────────────────────
- * Müşterinin karar akışı *"hangisi?" → "hangi boy?" → "kaç adet?"*. Çeşit bir KİMLİK kararıdır ve
- * satın alma kararından önce gelir; blok bu yüzden boy seçicinin ÜSTÜNDE, panelin içinde durur.
- * Sayfanın altındaki "benzer ürünler" bölgesine inseydi müşteri kendi aradığı çeşidi keşif
- * önerileriyle aynı raftan seçerdi — oysa aradığı zaten bu ürün, yalnız başka bir hâli.
- *
- * ── İKİ SEÇİCİ ASLA KARIŞMAZ ────────────────────────────────────────────────────────────────
- * Çeşit kartı FOTOĞRAFLIDIR ve tıklayınca **sayfa değişir**; boy kartı METİN ESASLIDIR ve yalnız
- * fiyatı değiştirir (`VariantPicker`). Ayrı başlık, ayrı kart dili, ayrı kutu — tasarımın en çok
- * vurguladığı kural bu. Aynı görsel dille çizilselerdi müşteri bir çeşide tıklayıp "boy seçtim"
- * sanır, sayfa değişince yolunu kaybederdi.
- *
- * ── ALT SATIR YALNIZ GENİŞ KARTTA ───────────────────────────────────────────────────────────
- * Başlangıç fiyatı ("14,90 €'dan") ve "Bakıyorsunuz" AYNI satırı paylaşır — biri varken öteki
- * olmaz: bakılan çeşidin fiyatı hemen altındaki boy seçicisinde zaten tam hâliyle duruyor, kartta
- * ikinci kez yazmak aynı sayıyı iki kez basmak olurdu.
- * Satır yalnız 106 px'lik kartta çizilir; kalabalık (66 px) ve mobil (84 px) kartlarda tasarım da
- * yalnız adı gösteriyor — dar kartta üç satır metin, adı okunamaz hâle getirir.
+ * Çeşit kartları satın alma panelinin içinde, boy seçicinin üstündedir: çeşit bir kimlik kararıdır ve boydan önce gelir. Çeşit kartı
+ * fotoğraflıdır ve sayfayı değiştirir, boy kartı metindir ve yalnız fiyatı değiştirir; aynı dille çizilselerdi müşteri çeşide basıp
+ * boy seçtiğini sanırdı.
  */
 
 /** Kartların küçülüp tek satırda kaydırıldığı eşik (tasarım "kalabalık hâl · 12 üye"). */
@@ -42,11 +25,8 @@ const CROWDED_AT = 10;
 const WIDE_AT = 2;
 
 /**
- * Bakılan ürün hiç alınamıyor mu — blok başlığı ve aktif işaret buna bakar.
- *
- * Ölçüt varyantın değil ÜRÜNÜN alınabilirliği: tek bir boyu tükenmiş üründe müşteri öteki boyu
- * alabilir, o hâlde "Alınabilir çeşitler" demek yanlış olurdu. Kapalı (fiyatsız) varyant da
- * alınamaz sayılır — ikisi müşteri için aynı kapıdır.
+ * Bakılan ürün hiç alınamıyor mu: ölçüt varyantın değil ürünün alınabilirliğidir, çünkü tek boyu tükenen üründe öteki boy alınabilir.
+ * Kapalı (fiyatsız) varyant da alınamaz sayılır.
  */
 export function isProductUnavailable(variants: readonly StorefrontVariant[]): boolean {
   return variants.length > 0 && variants.every((v) => v.soldOut || v.priceCents === null);
@@ -55,13 +35,8 @@ export function isProductUnavailable(variants: readonly StorefrontVariant[]): bo
 type CardSize = 'wide' | 'normal' | 'crowded' | 'mobile';
 
 /**
- * Tasarımın dört kart ölçüsü. `wide` satırı paylaşır, ötekiler sabit genişlikte kayar.
- *
- * `wide`in TAVANI var ve gerekçesi ölçüldü (04.08, iki üyeli "Mini Pide"): tavansız `flex-1`, iki
- * kartı panelin yarısına kadar (~230 px) şişiriyor — çeşit bloğu galeriden büyük görünüyor, "Sepete
- * ekle" ekranın altına iniyor ve kimlik seçimi satın alma eyleminin önüne geçiyor. Tasarımın kendi
- * oranı da bu değil: 320 px'lik hâl maketinde iki kart ~124 px, yani "kartlar genişler" 106 → ~140
- * demek, iki katına çıkmak değil.
+ * Tasarımın dört kart ölçüsü; `wide` satırı paylaşır, ötekiler sabit genişlikte kayar. `wide`in tavanı vardır, çünkü tavansız iki
+ * kart panelin yarısına kadar şişip "Sepete ekle"yi ekranın altına iter.
  */
 const CARD_WIDTH: Record<CardSize, string> = {
   wide: 'flex-1 max-w-[140px]',
@@ -106,8 +81,7 @@ function FamilyCard({ member, size, subLine }: FamilyCardProps) {
     <FramedImage
       src={member.image.url}
       alt={member.label}
-      // Kart görseli 3:2 (tasarım 20.09): kare kart, adın altındaki satırla birlikte üç satırlık bir
-      // kutu yapıyordu ve çeşit şeridi boy seçicisinden uzun duruyordu.
+      // Kart görseli 3:2: kare görsel, adın altındaki satırla çeşit şeridini boy seçicisinden uzun yapar.
       ratio={RATIO_SOURCE}
       crop={member.image.crop}
       frames={member.image.frames}
@@ -150,9 +124,8 @@ interface FamilyBlockProps {
   /** Mobil kabuk: daha küçük kartlar, "Bakıyorsunuz" satırı yok. */
   compact?: boolean;
   /**
-   * `rail` — karar rafında, kendi kutusunda ve tek satır kaydırmalı (boy seçicisi olmayan ürün).
-   * `grid` — galerinin altında, kutusuz ve sarmalanan ızgara: orada blok sütunun tamamına yayılır
-   * ve kaydırılacak bir şey bırakmaz (tasarım 20.09).
+   * `rail` karar rafında, kendi kutusunda ve tek satır kaydırmalı (boy seçicisi olmayan ürün). `grid` galerinin altında, kutusuz
+   * ve sarmalanan ızgaradır: blok sütunun tamamına yayıldığından kaydırılacak bir şey kalmaz.
    */
   layout?: 'rail' | 'grid';
 }
@@ -165,11 +138,8 @@ export function FamilyBlock({ t, locale, members, currentUnavailable, compact = 
   if (members.length === 0) return null;
 
   const crowded = members.length >= CROWDED_AT;
-  // "İki üyede kartlar genişler, kaydırma yoktur" CİHAZDAN BAĞIMSIZ bir kural: mobilde de 84 px'lik
-  // kaydırma kartı kullanmak, kaydıracak bir şey yokken kartı daraltmak olurdu — ölçüldü (04.08,
-  // "Épinards & fromage" 84 px'te üç satıra bölünüyordu).
-  // Izgarada kart daima SABİT ölçüdedir: satırı paylaşan `wide` kart, sarmalanan ızgarada iki
-  // üyeyi sütunun yarısına kadar şişirirdi.
+  // İki üyede kartlar cihazdan bağımsız genişler: kaydıracak bir şey yokken dar kart kullanmak adı üç satıra böler. Izgarada kart
+  // sabit ölçüdedir, satırı paylaşan `wide` kart iki üyeyi sütunun yarısına kadar şişirirdi.
   const size: CardSize = layout === 'grid' ? (crowded ? 'crowded' : 'normal') : members.length <= WIDE_AT ? 'wide' : compact ? 'mobile' : crowded ? 'crowded' : 'normal';
 
   // Bakılan çeşit alınamıyorken aktif işaret BASILMAZ: yeşil çerçeve ve ✓ "seçtiğiniz bu" der,
@@ -177,10 +147,8 @@ export function FamilyBlock({ t, locale, members, currentUnavailable, compact = 
   const cards = currentUnavailable ? members.map((m) => ({ ...m, isCurrent: false })) : members;
 
   /**
-   * Ad altındaki satır. Bakılan çeşitte fiyat YERİNE "Bakıyorsunuz" yazılır — veri ikisini de
-   * taşıyor, hangisinin gösterileceği ekranın kararı (sözleşme künyesi de böyle diyor).
-   * Fiyat çözülemediyse (kanal fiyatı girilmemiş) satır hiç çizilmez: sıfır yazmak bedava
-   * göstermek olurdu (`CLAUDE §1` — ölçülemeyen değer sıfır değildir).
+   * Ad altındaki satır: bakılan çeşitte fiyat yerine "Bakıyorsunuz" yazılır, çünkü fiyat hemen altındaki boy seçicisinde tam hâliyle
+   * durur. Fiyat çözülemediyse satır çizilmez; sıfır yazmak bedava göstermek olurdu.
    */
   const subLineOf = (m: StorefrontFamilyMember, detailed: boolean) => {
     if (!detailed) return null;
@@ -189,10 +157,8 @@ export function FamilyBlock({ t, locale, members, currentUnavailable, compact = 
   };
 
   return (
-    // Mobilde KAPSIZ (kullanıcı bildirimi 20.08, görüntüyle): kum kartın iç pedi şeridi kenardan
-    // kırpıyor ve iki yanda ölü boşluk bırakıyordu — sayfanın öbür bölümleri (boy seçimi) zaten
-    // kapsız akıyor, çeşitler de akar. Masaüstünde kart duruyor: orada blok bir sütunun içinde ve
-    // çerçeve onu komşularından ayırıyor.
+    // Telefonda kapsızdır: kum kartın iç pedi şeridi kenardan kırpar, sayfanın öbür bölümleri de kapsız akar. Masaüstünde kart
+    // bloğu sütundaki komşularından ayırır.
     <div
       className={
         compact || layout === 'grid'
@@ -219,12 +185,9 @@ export function FamilyBlock({ t, locale, members, currentUnavailable, compact = 
         )}
       </div>
 
-      {/* Blok TEK SATIRDA kalır (tasarım): ızgaraya dönüşseydi kalabalık ailede satın alma panelini
-          ekranlarca aşağı iterdi. Üst ped aktif kartın taşan ✓ rozeti içindir.
-          Mobilde şerit KENARDAN KENARA (`-mx-4`, bölümün pedinden taşar) ve kaydırma çubuğu GİZLİ
-          (checkout çip şeridinin aynı kararı): dokunmatikte çubuk yönlendirme değil kirdir — kesik
-          duran son kart zaten "devamı var" diyor. Masaüstü `SCROLL_STRIP`te kalır (çubuk orada
-          bilinçli görünür — künyesindeki Windows gerekçesi). */}
+      {/* Blok tek satırda kalır (ızgara kalabalık ailede satın alma panelini aşağı iterdi), üst ped aktif kartın taşan rozeti
+          içindir. Telefonda şerit kenardan kenara taşar ve kaydırma çubuğu gizlidir, çünkü kesik duran son kart devamı olduğunu
+          zaten söyler. */}
       <div
         className={
           compact

@@ -9,21 +9,8 @@ import { PhoneRecipeBar } from './components/phone-recipe-bar';
 import { buyableItems, type RecipeViewProps } from './recipe-types';
 
 /**
- * Tarif detayı — TELEFON görünümü: native tarif detayının (`apps/mobile/src/screens/recipe/recipe-detail-screen.tsx`)
- * web ikizi (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı, referans native). Sıra native'inki:
- * kahraman (300'lük fotoğraf · üst degrade · yüzen ‹ · alt kenardan sarkan "süre · porsiyon" rozeti) → künye
- * (üstbaşlık · ad · açıklama) → "Malzemeler — bizden" satırları (satır ürüne, + sepete) → "Evinizden" maddeleri →
- * "Hazırlanışı" numaralı adımlar → yapışkan "Malzemeleri sepete ekle · toplam" barı. Metin ortak sözlükten
- * (`@lezzet/i18n/customer/recipe-detail`), satırın alt metni ortak kurucudan (`recipeRowMetaOf`).
- *
- * ── WEB'E ÖZGÜ KORUNANLAR ──────────────────────────────────────────────────
- * · `h1` tarifin adı; yapısal veri (`RecipeJsonLd`), paylaşım kartı ve `hreflang` `page.tsx`te.
- * · Çerçeve bu rotada başlık çizmez (fotoğraf ekranın tepesine taşar — native); ‹ geçmiş boşsa tariflere döner.
- * · Sepete ekleme web'in sepetine (`phone-ingredient-row.tsx` · `phone-recipe-bar.tsx` künyeleri).
- *
- * ── BİLİNÇLİ, KÜÇÜK FARK ───────────────────────────────────────────────────
- * · Sarkan rozetin gölgesi `shadow-price` (0 8 20, mürekkep %28); native'de bu rozet 0 6 16 çiziyor — ayrı bir durak
- *   açılmadı, iki değer telefon ekranında ayırt edilmiyor.
+ * Native tarif detayının web telefon ikizi; sıra ve ölçüler native'den, metin ortak sözlükten (`@lezzet/i18n/customer/recipe-detail`).
+ * Sarkan rozetin gölgesi `shadow-price`tır, native'in 0 6 16 değeri için ayrı durak açılmaz: iki değer telefon ekranında ayırt edilmez.
  */
 export function RecipeMobile({ locale, recipe }: RecipeViewProps) {
   const copy = recipeDetailMessages[locale];
@@ -51,7 +38,7 @@ export function RecipeMobile({ locale, recipe }: RecipeViewProps) {
           />
         )}
         <span aria-hidden className="pointer-events-none absolute inset-0 bg-linear-to-b from-scrim-soft to-ink-deep/0 to-30%" />
-        {/* ‹ üst güvenli alanın 8px altında (native 08.08: saate binmesin), soldan 16. */}
+        {/* ‹ üst güvenli alanın 8px altında, saate binmesin; soldan 16. */}
         <div className="absolute top-[calc(env(safe-area-inset-top)+8px)] left-4">
           <BackButton variant="photo" label={copy.back} fallback="/recipes" />
         </div>
@@ -97,7 +84,7 @@ export function RecipeMobile({ locale, recipe }: RecipeViewProps) {
             <h2 className="mt-2 font-sans text-eyebrow-xs text-terracotta">{copy.sections.steps}</h2>
             <ol className="flex flex-col gap-3">
               {recipe.steps.map((step, index) => (
-                // Adımların kimliği yok; numarayı ekran verir (05.16 — metin taşımaz).
+                // Adımların kimliği yok; numarayı ekran verir.
                 <li key={index} className="flex gap-3">
                   <span aria-hidden className="grid size-7 flex-none place-items-center rounded-full bg-sand-150 font-sans text-note font-bold text-terracotta">
                     {index + 1}
