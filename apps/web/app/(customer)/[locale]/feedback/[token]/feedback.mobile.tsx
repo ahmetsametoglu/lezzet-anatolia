@@ -145,7 +145,7 @@ export function FeedbackMobile({ locale, token, invite, copy, t }: FeedbackViewP
             <PointsSpark size={120} className="text-terracotta" />
             <h1 className="font-serif text-card-title text-ink">{completion === null ? copy.already.title : copy.done.title}</h1>
             {completion === null && <p className="font-sans text-note leading-[1.6] text-body">{copy.already.body}</p>}
-            {completion !== null && <PointsAward locale={locale} points={completion.invitePointsTotal} balance={completion.balance} />}
+            {completion !== null && <PointsAward locale={locale} points={completion.invitePointsTotal} balance={completion.balance} framed />}
 
             {completion?.outcome === 'review_invite' && completion.reviewUrl !== null && completion.reviewPlatform !== null && (
               <>

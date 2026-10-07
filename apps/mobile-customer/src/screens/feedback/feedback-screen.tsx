@@ -240,7 +240,7 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
           <>
             <View style={styles.spacerTop} />
           <View style={styles.doneBlock} testID="feedback-done">
-            {/* Sonuç sayfası kutusuz: hiyerarşi kutuyla değil ölçek ve boşlukla kurulur. */}
+            {/* Sonuç sayfası kutusuz, hiyerarşi ölçek ve boşlukla kurulur; yalnız puan tasarımın eğik kartında durur. */}
             {/* Kahraman işaret dairesiz, doğrudan zeminde, çünkü büyük solgun daire leke gibi okunur. */}
             <PointsSpark size={feedbackMetrics.sparkIcon} color={theme.colors.terracotta} />
             <Text style={styles.doneTitle} accessibilityRole="header">
@@ -253,7 +253,7 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
             {/* Yazılan sayı turun toplamıdır (`invitePointsTotal`), tamamlama primi değil: oy, yorum ve prim ayrı kayıtlardır ve toplamı
                 yalnız motor bilir. */}
             {completion === null ? null : (
-              <PointsAward points={completion.invitePointsTotal} balance={completion.balance} testID="feedback-points" />
+              <PointsAward points={completion.invitePointsTotal} balance={completion.balance} framed testID="feedback-points" />
             )}
 
             {completion !== null &&

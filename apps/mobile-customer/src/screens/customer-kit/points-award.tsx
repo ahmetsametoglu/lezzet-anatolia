@@ -58,14 +58,16 @@ interface PointsAwardProps {
    * tamamlanmamış bir sayı tam gibi gösterilirdi.
    */
   settling?: boolean;
+  /** Tasarımın eğik kum kartı (değerlendirmenin sonu); varsayılan kutusuz küme (keşif turunun bitişi). */
+  framed?: boolean;
   testID?: string;
 }
 
 /**
- * Kazanımın üç satırı kutu değil, kendi aralığı olan bir küme: sayfa ekranla bütünleşik durur, hiyerarşi çerçeveyle değil ölçek ve
- * boşlukla kurulur.
+ * Kazanımın üç satırı: varsayılanda kendi aralığı olan kutusuz bir küme, hiyerarşi ölçek ve boşlukla kurulur. Değerlendirmenin sonu
+ * tasarımın eğik kum kartını ister (`framed`).
  */
-export function PointsAward({ points, balance, settling = false, testID }: PointsAwardProps) {
+export function PointsAward({ points, balance, settling = false, framed = false, testID }: PointsAwardProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
 
@@ -80,7 +82,7 @@ export function PointsAward({ points, balance, settling = false, testID }: Point
   if (points === null || points <= 0) return null;
 
   return (
-    <View style={styles.block} testID={testID}>
+    <View style={[styles.block, framed ? styles.framed : undefined]} testID={testID}>
       <Text style={styles.value}>{t.points.replace('{points}', String(points))}</Text>
       <Text style={styles.note}>{t.note}</Text>
       {balance === null ? null : (
@@ -97,6 +99,17 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: 'center',
     gap: theme.space.xs,
     marginTop: theme.space.lg,
+  },
+  /** Tasarımın puan kartı: kum zemin, sert gölge ve ters yöne eğik, ki içindeki eğik toplam rozetiyle birlikte elle konmuş gibi dursun. */
+  framed: {
+    backgroundColor: theme.colors['sand-150'],
+    borderRadius: theme.radius.card,
+    paddingVertical: theme.space['4xl'],
+    paddingHorizontal: theme.space['8xl'],
+    marginTop: theme.space.sm,
+    marginBottom: theme.space.sm,
+    transform: [{ rotate: '-2deg' }],
+    boxShadow: theme.shadow.hard,
   },
   value: {
     fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
