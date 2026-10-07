@@ -148,7 +148,7 @@ function CartAddress({ locale }: Pick<CartIdentityProps, 'locale'>) {
         address && (
           <>
             <span className="font-sans text-copy font-semibold text-ink">{addressLine(address)}</span>
-            {addressContact(address) && <span className="font-sans text-body-sm leading-[1.6] text-muted">{addressContact(address)}</span>}
+            <AddressContact address={address} />
             <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.note}</span>
             <TextAction label={copy.change} onClick={() => setOpen('list')} />
           </>
@@ -161,6 +161,17 @@ function CartAddress({ locale }: Pick<CartIdentityProps, 'locale'>) {
 }
 
 /** Masaüstünde kimlik ve adres iki ayrı kart: sağ sütunun boşluğu onları ayırır, bu yüzden parça iki kart döndürür. */
+interface AddressContactProps {
+  address: PlaceAddress;
+}
+
+/** Alıcı ve telefon. Telefon her sayfaya giden yer bilgisinde taşınmaz (`PlaceAddress`); yalnız burada, adres listesinden okunur. */
+function AddressContact({ address }: AddressContactProps) {
+  const { addresses } = useMyAddresses();
+  const contact = addressContact(addresses?.find((row) => row.id === address.id) ?? address);
+  return contact && <span className="font-sans text-body-sm leading-[1.6] text-muted">{contact}</span>;
+}
+
 interface CartAccountDesktopProps {
   t: Messages;
   locale: Locale;
