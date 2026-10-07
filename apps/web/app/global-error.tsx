@@ -38,7 +38,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
             <Icon name="warning" size={42} />
           </span>
           <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600 }}>Beklenmeyen bir hata oluştu</h1>
-          <p style={{ margin: 0, maxWidth: 460, fontSize: 15, lineHeight: 1.6, color: '#6d7261' }}>
+          <p style={{ margin: 0, maxWidth: 460, fontSize: 15, lineHeight: 1.6, color: '#616656' }}>
             Sorun bizde, sizde değil. Birkaç saniye sonra yeniden deneyin.
           </p>
           <button

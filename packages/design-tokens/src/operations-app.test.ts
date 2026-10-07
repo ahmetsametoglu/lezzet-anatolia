@@ -145,7 +145,7 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(composedColors.error).toBe('#a44a3f');
     expect(composedColors['terracotta-bg']).toBe('#f9ede2');
     expect(composedColors['olive-dark']).toBe('#4a6121');
-    expect(composedColors.body).toBe('#6d7261');
+    expect(composedColors.body).toBe('#616656');
     // Sekme çubuğu = krem cam + 8px bulanıklık; ikisi de mobil müşteri setinden gelir.
     expect(composedColors['cream-glass']).toBe('rgba(243, 239, 226, 0.96)');
     expect(customerAppBlur.glass).toBe('8px');

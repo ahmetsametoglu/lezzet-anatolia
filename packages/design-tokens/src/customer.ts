@@ -13,7 +13,7 @@ export const customerSurface = {
   'ink-deep': '#15170f', // "TAKİP" çipinin metni
   'ink-raised': '#3f474e', // koyu bant üstündeki kart zemini
   'ink-raised-line': '#565f66', // koyu bant üstündeki kartın çerçevesi
-  body: '#6d7261', // gövde açıklaması, kart alt satırı
+  body: '#616656', // gövde açıklaması, kart alt satırı
   muted: '#8a8270', // etiket, yardımcı satır, placeholder
   card: '#ffffff', // kart, dialog, girdi zemini
   cream: '#faf6ec', // sayfa zemini (= sand-25)
@@ -73,7 +73,7 @@ export const customerHoney = {
 
 /* Nötr: kapanmış, teslim edildi, pasif — kendi tonu yok, skaladan türer */
 export const customerClosed = {
-  closed: '#6d7261', // kapanmış durum etiketi (= body)
+  closed: '#616656', // kapanmış durum etiketi (= body)
   'closed-bg': '#f0e9d6', // kapanmış rozet arkası (= sand-100)
   'closed-line': '#c9cdc2', // pasif çerçeve (= neutral-400)
 } as const satisfies Record<string, string>;

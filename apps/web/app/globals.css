@@ -17,7 +17,7 @@
   --color-ink-deep: #15170f; /* örtü mürekkebinin katısı — "TAKİP" çipinin metni */
   --color-ink-raised: #3f474e; /* koyu bant üstündeki kart zemini */
   --color-ink-raised-line: #565f66; /* koyu bant üstündeki kartın çerçevesi */
-  --color-body: #6d7261; /* gövde açıklaması, kart alt satırı */
+  --color-body: #616656; /* gövde açıklaması, kart alt satırı */
   --color-muted: #8a8270; /* etiket, yardımcı satır, placeholder */
   --color-card: #ffffff; /* kart, dialog, girdi zemini */
   --color-cream: #faf6ec; /* sayfa zemini (= sand-25) */
@@ -64,7 +64,7 @@
   --color-star: #d99a2b; /* dolu yıldız, puan göstergesi */
 
   /* Nötr: kapanmış, teslim edildi, pasif — kendi tonu yok, skaladan türer */
-  --color-closed: #6d7261; /* kapanmış durum etiketi (= body) */
+  --color-closed: #616656; /* kapanmış durum etiketi (= body) */
   --color-closed-bg: #f0e9d6; /* kapanmış rozet arkası (= sand-100) */
   --color-closed-line: #c9cdc2; /* pasif çerçeve (= neutral-400) */
 
