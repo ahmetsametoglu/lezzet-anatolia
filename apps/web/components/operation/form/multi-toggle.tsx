@@ -5,32 +5,12 @@ import { CONTROL_H } from '@/components/operation/ui/control';
 import type { OpsTone } from '@/components/operation/ui/tone';
 
 /**
- * Çok durumlu anahtar (segment) — Komponent Envanteri O8 (girdi kontrolleri).
- *
- * TEK bilginin ikiden çok değeri için: "Satışta / Pasif / Aday", "%5,5 / %20", "DLC / DDM". İki
- * değerli hâli `Toggle`'dır (yuvarlak ray + topuz); üç ve üstü burada.
- *
- * Biçim envanterdeki segmentin kendisidir: **tek gri ray**, içinde SEÇİLİ olanın altında kayan hap.
- * Önceki `Segment` her seçeneği ayrı çerçeveli buton çiziyordu — üç ayrı düğme gibi okunuyordu, oysa
- * bunlar bir alanın değerleri; "hangisi açık" değil "hangisindeyiz" sorusunun cevabı.
- *
- * SAPMA: envanterdeki hap beyaz dolgulu; burada DOLU RENK (varsayılan olive). Gerekçe iki yönlü —
- * beyaz hap gri rayın üstünde silik kalıyordu, ayrıca palet koyu temada bütünüyle ters çevrildiği için
- * (globals §0.6) "beyaz" orada rayın altına düşüyor, yani seçili olan sönük görünüyordu. Dolu renk iki
- * temada da aynı yönde okunur: `ops-olive` koyuda açılır, üstündeki `ops-card` metin koyulaşır.
- *
- * Seçenek genişlikleri EŞİT (`flex-1 basis-0`): kayan hap tek bir `translateX(i × 100%)` ile yerine
- * oturur, etiket uzunluğu değişince hizalama bozulmaz. Toplam genişliği çağıran verir (`className`).
- *
- * `tone` seçeneğe anlam rengi verir — durum seçicilerinde rozetle AYNI sözlük (bkz. OpsTone), böylece
- * "Aday" formda mavi, önizlemedeki rozette de mavi. Verilmezse olive (marka rengi).
+ * Çok durumlu anahtar: tek bilginin ikiden çok değeri için tek gri ray ve seçili olanın altında kayan dolu renkli hap. Hap dolu
+ * renk, çünkü beyaz hap koyu temada rayın altına düşüp seçileni sönük gösteriyordu; `tone` seçeneğe rozetle aynı anlam rengini verir.
  */
 type MultiToggleSize = 'sm' | 'md';
 
-// Yükseklik ORTAK sözlükten (15.08): boy dolgudan doğuyordu (md ≈ 39px) ve yan yana durduğu girdi
-// 36px'ti — aynı satırda iki farklı yükseklik, control.ts'in "beş farklı yükseklik" dersinin
-// küçük tekrarı (kullanıcı bildirimi: kupon formunda satırlar hizasız). Dolgu yerine açık yükseklik:
-// içerik ne olursa olsun ray girdiyle aynı boyda.
+// Yükseklik ortak sözlükten, çünkü ray yan yana durduğu girdiyle aynı satırda aynı boyda olmalı.
 const SIZE: Record<MultiToggleSize, string> = {
   sm: CONTROL_H.sm,
   md: CONTROL_H.md,
@@ -56,16 +36,8 @@ export interface MultiToggleOption<T extends string> {
   /** Uzun açıklama — kısa etiketin altını dolduran ipucu. */
   title?: string;
   /**
-   * Bu seçenek şu an SEÇİLEMEZ — ama görünür kalır (03.08).
-   *
-   * İhtiyaç talep ekranından geldi: durum geçişlerine motor karar veriyor
-   * (`allowedTicketTransitions`) ve çözülmüş bir talepte "İlgileniliyor" tıklanamıyor. Seçeneği
-   * GİZLEMEK yanlış olurdu — kontrolün genişliği talebe göre oynar, operatör aynı ekranı her
-   * seferinde farklı bulur; kapalı ama görünür bir seçenek ise kuralı da öğretir.
-   *
-   * Bu alan olmadığı için o ekran bir tur boyunca kendi segmentini ELDEN yazmıştı (ve ok tuşu
-   * gezinmesini, roving tabindex'i, kayan hapı kaybetmişti). Ortak komponenti çatallamak yerine
-   * yeteneklendirmek doğru olan: eksik olan bir yetenekti, ayrı bir komponent değil.
+   * Seçenek şu an seçilemez ama görünür kalır: gizlemek kontrolün genişliğini oynatırdı, kapalı ama görünür seçenek kuralı da
+   * öğretir.
    */
   disabled?: boolean;
 }
@@ -84,17 +56,8 @@ export function MultiToggle<T extends string>({ value, options, onChange, size =
   const index = Math.max(0, options.findIndex((o) => o.key === value));
 
   /**
-   * Hapın yeri ve genişliği SEÇİLİ DÜĞMEDEN ölçülür.
-   *
-   * Önceki hâl seçenekleri eşit genişliğe zorluyordu (`flex-1 basis-0`) çünkü hap
-   * `translateX(i × 100%)` ile kayıyordu — yani ölçü değil ARİTMETİK. Bedeli: uzun etiket kendi
-   * hücresini taşıp komşusunun üstüne biniyordu (kullanıcı bildirimi, 03.08), kısa etiket ise
-   * gereksiz yer kaplıyordu. Ölçüm bu bağı kesiyor: düğmeler içeriklerine göre büyüyor, hap
-   * onları izliyor.
-   *
-   * `useLayoutEffect` — boyamadan ÖNCE koşar, yani hap hiçbir karede yanlış yerde görünmez.
-   * Ölçüm gelene kadar (ilk sunucu çıktısı) hap saydam; `ResizeObserver` ray genişliği ya da yazı
-   * tipi değiştiğinde yeniden ölçüyor.
+   * Hapın yeri ve genişliği seçili düğmeden ölçülür, çünkü düğmeler içeriklerine göre büyür ve eşit bölme uzun etiketi komşusuna
+   * bindirirdi. Ölçüm boyamadan önce koşar; gelene kadar hap saydamdır.
    */
   const railRef = useRef<HTMLDivElement>(null);
   const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
@@ -115,10 +78,7 @@ export function MultiToggle<T extends string>({ value, options, onChange, size =
   // Hap SEÇİLİ seçeneğin tonunu alır — kayarken rengi de değişir, "hangi durumdayım" tek bakışta.
   const tone = TONE[options[index]?.tone ?? 'olive'];
 
-  // Ok tuşları radiogroup'ta seçimi taşır (ARIA deseni). Odak da taşınmalı — seçili olmayan düğmeler
-  // sekme sırasının dışında (roving tabindex), aksi hâlde odak geride kalırdı.
-  // Kapalı seçenekler ATLANIR: ok tuşu onların üstünde durursa kontrol kilitlenmiş gibi hissettirir.
-  // Döngü en fazla `options.length` adım atar — hepsi kapalıysa olduğu yerde kalır, sonsuza gitmez.
+  // Ok tuşları seçimi ve odağı birlikte taşır (roving tabindex); kapalı seçenekler atlanır, hepsi kapalıysa döngü yerinde kalır.
   const moveBy = (container: HTMLElement, delta: number) => {
     for (let step = 1; step <= options.length; step += 1) {
       const next = (index + delta * step + options.length * step) % options.length;
@@ -143,17 +103,8 @@ export function MultiToggle<T extends string>({ value, options, onChange, size =
       }}
       ref={railRef}
       /**
-       * Ray İÇERİĞİ KADAR (`w-fit`) — genişliği çağıran verirse onunki geçerli (12.08).
-       *
-       * `div` blok kutusudur ve `flex` bunu değiştirmez: ray satırın tamamını kaplıyordu. Düğmeler
-       * 03.08'de içerik genişliğine geçince (`flex-none`, uzun etiketin komşusuna binmesi) rayın
-       * sağında **kocaman boş gri bir alan** kaldı — kullanıcı tespiti 12.08: *"bütün bulunduğu
-       * satırı komple kaplamaya çalışıyor"*. Bir segment kontrolü kaç seçenek taşıyorsa o kadar
-       * yer tutar; kalan boşluk ona ait değildir.
-       *
-       * `w-fit` çağıranın sınıfıyla ÇAKIŞMASIN diye yalnız `className` yokken ekleniyor: ikisi de
-       * `width` yazan iki utility'nin hangisinin kazanacağı sınıf sırasına değil CSS sırasına bağlı
-       * olurdu ve sessizce yanlış tarafa düşerdi.
+       * Ray içeriği kadar yer tutar; genişliği çağıran verirse onunki geçerli. `w-fit` yalnız `className` yokken eklenir, çünkü iki
+       * genişlik sınıfından hangisinin kazanacağı CSS sırasına bağlı kalırdı.
        */
       className={['relative flex rounded-ops-btn border border-ops-gray-300 bg-ops-gray-100 p-[2px]', SIZE[size], className ?? 'w-fit'].join(' ')}
     >
@@ -177,17 +128,8 @@ export function MultiToggle<T extends string>({ value, options, onChange, size =
             disabled={o.disabled}
             onClick={() => onChange(o.key)}
             className={[
-              // Genişlik İÇERİKTEN BAŞLAR, fazlasını PAYLAŞIR (`flex-1 basis-auto`,
-              // `whitespace-nowrap`). Eskiden üçü de eşit genişlikteydi (`flex-1 basis-0`) çünkü
-              // kayan hap `translateX(i × 100%)` ile yer değiştiriyordu — ve uzun bir etiket
-              // (`İlgileniliyor`) komşusunun ÜSTÜNE biniyordu. Kırpmak (`truncate`) taşmayı
-              // durduruyordu ama etiketi de yiyordu ("İlgilen…"); asıl çözüm hapın ÖLÇÜLMESİ oldu
-              // ve düğmeler `flex-none`a geçti.
-              //
-              // `basis-auto` o düzeltmeyi bozmadan bir eksiği kapatıyor (12.08): ray genişliği
-              // DIŞARIDAN verildiğinde (`w-full`, `w-[248px]`) düğmeler onu doldurmuyor, sağda boş
-              // gri bir alan kalıyordu. Taşma geri gelmez — `min-width: auto` + `nowrap` düğmeyi
-              // kendi metninin altına indirmez; büyürler, küçülmezler.
+              // Genişlik içerikten başlar, ray dışarıdan genişletildiyse fazlasını paylaşır; `nowrap` düğmeyi kendi metninin altına
+              // indirmez, yani uzun etiket komşusuna binmez.
               'relative z-[1] flex-1 basis-auto whitespace-nowrap rounded-md px-3 text-center font-ops-display font-semibold transition-colors',
               'flex items-center justify-center text-ops-sm',
               // Kapalı seçenek SOLUK ama okunur: gizlemiyoruz, "şu an olmaz" diyoruz.
