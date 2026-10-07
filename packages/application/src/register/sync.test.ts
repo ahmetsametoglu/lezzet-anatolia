@@ -294,6 +294,23 @@ describe('sipariş fişi', () => {
     expect(refund!.payments.map(({ method, amountCents }) => ({ method, amountCents }))).toEqual([{ method: 'cash', amountCents: -2990 }]);
   });
 
+  it('iki yoldan alınmış paranın iadesi tek iade fişinde her yol için ayrı eksi ödeme satırıdır', async () => {
+    const order = await newOrder();
+    await pay(order.id, 500, 'online');
+    await pay(order.id, 2490, 'cash');
+    await runRow('order_id', order.id);
+    await orders.update({ id: order.id, status: 'cancelled' });
+    await pay(order.id, 2490, 'cash', 'order_refund');
+    await pay(order.id, 500, 'online', 'order_refund');
+
+    expect(await runRow('order_id', order.id)).toBe('written');
+    const refund = salesOf(order.referenceNo).find((sale) => sale.extRef === `${order.referenceNo}-2`);
+    expect(refund!.payments.map(({ method, amountCents }) => ({ method, amountCents }))).toEqual([
+      { method: 'cash', amountCents: -2490 },
+      { method: 'online', amountCents: -500 },
+    ]);
+  });
+
   it('başka yazarın kilitlediği satır işlenmez; aynı satış kasaya iki kez yazılmaz', async () => {
     const order = await newOrder();
     await pay(order.id, 2990);

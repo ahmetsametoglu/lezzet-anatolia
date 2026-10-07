@@ -233,7 +233,6 @@ Sıra iş sırasıdır: önce web, sonra operasyon uygulaması; fiyat listesi en
 - [~] (21.235) ~~**SAYIM LİSTESİ LOT ALTINDA GRUPLANIR — aynı ürün · aynı lot · aynı son tarih · aynı alan tek satır, sayım fark dağılımını sistem yapar** (kullanıcı kararı 03.09, henüz başlanmadı)
 - [ ] (21.238) **KURYE DENETİMİ — kalan bulgular (kenara not, kullanıcı kararı 03.09: "şimdilik not olarak düş")**
 - [ ] (21.245) **Dokunma ertelemesi geçicidir — RN/screens kök düzeltmesi gelince sökülür** (21.219'un kalanı)
-- [ ] (21.266) **İadeyi hesap başına BÖL — bölünmüş tahsilatta bugün hiç yazılmıyor** (21.265'in kalanı)
 - [x] (21.272) ~~**Kurye sözleşmesine `already_marked` dalı — bugün `stale` diye söyleniyor**~~ → **AKIBET ALANI KURYE İSTEĞİNDEN ÇIKARILDI** (21.271'in kalanı · yön değişti 07.09, kullanıcı kararı)
   - Görev kapandı; koddaki `BEKLEYEN(21.272)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [ ] (21.284) **Hedefi olmayan iki bildirim türü — belge ve askıda kapanış** (21.217'den ayrıldı 07.09)

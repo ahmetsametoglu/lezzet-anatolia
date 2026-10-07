@@ -11,6 +11,7 @@ import {
   type OrderStatus,
 } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
+import { money } from '@/components/operation/ui/format';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { adjustFulfillment, cancelOrder, retryRefund, type RefundBlockReason } from '@/lib/order/refund';
 import { transitionOrder } from '@/lib/order/transition';
@@ -120,7 +121,7 @@ export async function adjustFulfillmentAction(
       data: {
         refundedAmountCents: result.refundedAmountCents,
         amountToCollectCents: result.amountToCollectCents,
-        refundNotice: refundNotice(result.refundBlocked),
+        refundNotice: refundNotice(result.refundBlocked, result.refundedAmountCents),
         refundBlocked: result.refundBlocked ?? null,
       },
       error: null,
@@ -160,7 +161,7 @@ export async function cancelOrderAction(
     return {
       data: {
         refundedAmountCents: result.refundedAmountCents,
-        refundNotice: refundNotice(result.refundBlocked),
+        refundNotice: refundNotice(result.refundBlocked, result.refundedAmountCents),
         refundBlocked: result.refundBlocked ?? null,
       },
       error: null,
@@ -188,7 +189,7 @@ export async function retryRefundAction(
     return {
       data: {
         refundedAmountCents: result.refundedAmountCents,
-        refundNotice: refundNotice(result.refundBlocked),
+        refundNotice: refundNotice(result.refundBlocked, result.refundedAmountCents),
         refundBlocked: result.refundBlocked ?? null,
       },
       error: null,
@@ -202,21 +203,19 @@ export async function retryRefundAction(
  * İade yazılamadıysa operatöre söylenecek cümle: hata değil, çünkü düzeltme kaydedildi ve tekrar denenirse ikinci kez
  * uygulanırdı; sessiz de değil, çünkü sıfır iade "borç yoktu" gibi görünürdü. Her cümle ne yapılacağını söyler.
  */
-function refundNotice(reason: RefundBlockReason | undefined): string | null {
+function refundNotice(reason: RefundBlockReason | undefined, refundedAmountCents: number): string | null {
   if (!reason) return null;
 
-  const notices: Record<RefundBlockReason, string> = {
-    no_account: 'İade yazılamadı: bu siparişte tahsilat kaydı yok, para hangi hesaptan çıkacağı belirlenemedi. Para hareketini elle girin.',
+  const causes: Record<RefundBlockReason, string> = {
+    no_account: 'paranın hangi hesaptan çıkacağı belirlenemedi. Para hareketini elle girin.',
     provider_ref_missing:
-      'İade yazılamadı: kart ödemesinin sağlayıcı künyesi kayıtlı değil, hangi ödemenin üzerinden dönüleceği bilinmiyor. Revolut panelinden iade edin.',
-    provider_unavailable: 'İade yazılamadı: ödeme sağlayıcısı bu ortamda tanımlı değil.',
-    /* Para birden çok hesaba girmiş: otomatik bölme yok, parayı almamış hesaptan iade yazmak o hesabın bakiyesini bozardı.
-       Çare "tekrar dene" değil. */
-    split_payment:
-      'İade yazılamadı: bu siparişin parası birden çok hesaba girmiş (ör. kartla kapora + kapıda nakit). İadeyi hesap başına, o hesabı seçerek yazın.',
-    provider_failed: 'İade yazılamadı: sağlayıcı çağrısı başarısız oldu. Para ÇIKMADI — tekrar deneyin ya da Revolut panelinden iade edin.',
+      'kart ödemesinin sağlayıcı künyesi kayıtlı değil, hangi ödemenin üzerinden dönüleceği bilinmiyor. Revolut panelinden iade edin.',
+    provider_unavailable: 'ödeme sağlayıcısı bu ortamda tanımlı değil.',
+    provider_failed: 'sağlayıcı çağrısı başarısız oldu, bu kısım karttan ÇIKMADI — tekrar deneyin ya da Revolut panelinden iade edin.',
   };
-  return notices[reason];
+  // Bölünmüş iadede önceki parçalar yazılmış olabilir; operatör yazılanı ve kalanı ayrı görmeli.
+  const head = refundedAmountCents > 0 ? `${money(refundedAmountCents)} iade edildi, kalanı yazılamadı` : 'İade yazılamadı';
+  return `${head}: ${causes[reason]}`;
 }
 
 /**

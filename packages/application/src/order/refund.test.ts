@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  AccountService, CategoryService, OrderItemBatchService, OrderItemReturnService, OrderItemService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
+  AccountService, CategoryService, MoneyMovementService, OrderItemBatchService, OrderItemReturnService, OrderItemService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeVariantStock } from '@lezzet/database/testing';
 import { recordOrderPayment } from './payment';
@@ -90,6 +90,15 @@ async function prepare(qty: number, extra: { shippingFeeCents?: number; lineDisc
   });
 }
 
+/** Siparişin iade hareketleri, tutara göre; listenin gün içi sırası belirsizdir. */
+async function refundsOf(orderId: string) {
+  const movements = await new MoneyMovementService(db).listByOrder(orderId);
+  return movements
+    .filter((m) => m.type === 'order_refund')
+    .map(({ accountId, amountCents }) => ({ accountId, amountCents }))
+    .sort((a, b) => b.amountCents - a.amountCents);
+}
+
 /** Hazırlananı yola çıkarır — teslime hazır hâl. */
 async function sendOut(qty: number, extra: { shippingFeeCents?: number; lineDiscountAmountCents?: number } = {}) {
   const prepared = await prepare(qty, extra);
@@ -109,9 +118,7 @@ describe('kısmi karşılama (07.8)', () => {
     expect(order).toMatchObject({ amountCollectedCents: 3000, amountRefundedCents: 1000, paymentStatus: 'paid' });
   });
 
-  it('PARA İKİ HESABA girmişse iade YAZILMAZ — yanlış hesaptan çıkarmaktansa borç açıkta kalır', async () => {
-    /* Bölünmüş ödemede iadenin tamamı son hareketin hesabından çıkarsa para hiç girmediği kasadan düşer. Otomatik bölme yok
-       (BEKLEYEN(21.266)): yarım kalan bir iade bugünkü hâlden beter olurdu, borç açıkta bırakılır. */
+  it('PARA İKİ HESABA girmişse iade en son ödemenin hesabından çıkar; önceki hesaba dokunulmaz', async () => {
     const ikinciKasa = (await new AccountService(db).insert({ name: `İkinci kasa ${stamp}`, type: 'cash' })).id;
     createdAccounts.push(ikinciKasa);
     const { orderId, itemId } = await sendOut(3);
@@ -120,14 +127,29 @@ describe('kısmi karşılama (07.8)', () => {
 
     const outcome = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2 }]);
 
-    expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 0, refundBlocked: 'split_payment' });
-    // Borç GÖRÜNÜR kalıyor: tahsil edilecek tutarın negatifi müşteriye borcumuzu söylüyor.
-    const order = await orders.getById(orderId);
-    expect(order?.amountRefundedCents).toBe(0);
+    expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 1000 });
+    expect(outcome).not.toHaveProperty('refundBlocked');
+    expect(await refundsOf(orderId)).toEqual([{ accountId: ikinciKasa, amountCents: 1000 }]);
+  });
+
+  it('iptalde iki hesabın her biri yalnız kendi aldığı kadar iade eder; hiçbir hesap almadığı parayı vermez', async () => {
+    const ikinciKasa = (await new AccountService(db).insert({ name: `Üçüncü kasa ${stamp}`, type: 'cash' })).id;
+    createdAccounts.push(ikinciKasa);
+    const { orderId } = await prepare(3);
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000, method: 'cash' });
+    await recordOrderPayment(db, { orderId, accountId: ikinciKasa, amountCents: 1000, method: 'cash' });
+
+    const outcome = await cancelOrder(db, orderId);
+
+    expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 3000, paymentStatus: 'refunded' });
+    expect(await refundsOf(orderId)).toEqual([
+      { accountId: cashAccount, amountCents: 2000 },
+      { accountId: ikinciKasa, amountCents: 1000 },
+    ]);
   });
 
   it('TEK hesapta para varsa iade oraya yazılır — bölünme yoksa davranış birebir aynı', async () => {
-    // Karşı-örnek: üstteki testin "iade hiç yazılmaz" diye okunmasını engelliyor.
+    // Aynı hesaba iki ödeme tek kaynaktır: iade tek parça yazılır.
     const { orderId, itemId } = await sendOut(3);
     await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 1500, method: 'cash' });
     await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 1500, method: 'cash' });

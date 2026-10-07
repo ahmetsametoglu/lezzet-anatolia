@@ -141,8 +141,8 @@ async function recordPaymentFee(
 }
 
 /**
- * İade mutabakatı: sağlayıcıda iade edilmiş toplam ile defterdeki toplam eşitlenir; bizim başlattığımız iadede ikisi zaten eşittir,
- * sağlayıcının panelinden yapılan iadede fark deftere düşer. Sipariş tahsilatta sakladığımız künyeden (`providerRef`) bulunur.
+ * İade mutabakatı: bir kart ödemesinin sağlayıcıdaki iade toplamı ile defterde o ödemeye bağlı iadeler eşitlenir; bizim başlattığımız
+ * iadede ikisi zaten eşittir, sağlayıcının panelinden yapılan iadede fark deftere düşer. Sipariş ve ödeme künyeden (`providerRef`) bulunur.
  */
 async function reconcileRefund(
   event: Extract<PaymentEvent, { kind: 'refund_completed' }>,
@@ -155,8 +155,12 @@ async function reconcileRefund(
   const order = await new OrderService(db).getById(payment.orderId);
   if (!order) return { status: 'not_found' };
 
+  // Karşılaştırma o kart ödemesinin kendi iadeleriyledir: siparişin öteki iadeleri (nakit, başka kart ödemesi) bu ödemeden çıkmadı.
   // Sağlayıcı bizden az iade göstermiş olamaz; negatif fark mutabakat sorunudur ve burada "düzeltilmez", defter kaynaktır.
-  const missingCents = event.refundedTotalCents - order.amountRefundedCents;
+  const refundedHere = (await new MoneyMovementService(db).listByOrder(order.id))
+    .filter((movement) => movement.type === 'order_refund' && movement.meta?.['providerRef'] === event.paymentRef)
+    .reduce((sum, movement) => sum + movement.amountCents, 0);
+  const missingCents = event.refundedTotalCents - refundedHere;
   if (missingCents <= 0) return { status: 'ok', action: 'ignored' };
 
   // Para hangi hesaba girdiyse oradan çıkar; ikisi de yoksa yazılmaz, yanlış hesaba yazmak bakiyeyi sessizce kaydırırdı.

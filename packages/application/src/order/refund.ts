@@ -1,16 +1,16 @@
 import { AccountService, MoneyMovementService, OrderService } from '@lezzet/database';
-import { canTransition, refundMethodOf } from '@lezzet/domain-core';
-import type { FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus } from '@lezzet/types';
+import { canTransition, planRefund, refundSourcesOf, type RefundLeg, type RefundPlan } from '@lezzet/domain-core';
+import type { AccountType, FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { kickOrderRegister } from '../register/sync';
 import { cancelOrderShipment, type ShipmentCancelOutcome } from '../shipping/cancel';
 import { notifyExceptionEffect, notifyStatusEffect, providerRefunder, type OrderEffects } from './effects';
-import { recordOrderRefund, syncOrderPaymentStatus } from './payment';
+import { recordOrderRefund, syncOrderPaymentStatus, type PaymentOutcome } from './payment';
 
 /**
  * Kısmi karşılama, iade ve iptalin kapısı (DOMAIN §8, ORDER_LIFECYCLE): malı veritabanı yazar, iade borcunu motor türetir,
- * hareketi para kapısı yazar. Kapıda ödemede borç sıfır çıktığı için ödeme yöntemine bakan dal yoktur; iade hesabı
- * paranın girdiği hesaptan türetilir.
+ * hareketi para kapısı yazar. Kapıda ödemede borç sıfır çıktığı için ödeme yöntemine bakan dal yoktur; iade paranın girdiği
+ * yollara, en son ödemeden geriye bölünerek döner.
  */
 
 interface RefundOutcome {
@@ -27,17 +27,10 @@ interface RefundOutcome {
 }
 
 /**
- * İadenin yazılamama sebepleri: hesap türetilemedi (`no_account`), sağlayıcı tahsilatının künyesi yok
- * (`provider_ref_missing`), port ya da anahtar yok (`provider_unavailable`), sağlayıcı reddetti (`provider_failed`), para
- * birden çok hesaba girmiş (`split_payment`). Bölünmüş parada tek hesaptan yazmak parayı almamış hesabın bakiyesini
- * bozardı; operatör `refundAccountId` ile hesap başına yazar, otomatik bölme yok (BEKLEYEN(21.266)).
+ * İadenin yazılamama sebepleri: hesap türetilemedi ya da para planın karşılayabileceğinden fazla (`no_account`), sağlayıcı tahsilatının
+ * künyesi yok (`provider_ref_missing`), port ya da anahtar yok (`provider_unavailable`), sağlayıcı reddetti (`provider_failed`).
  */
-export type RefundBlockReason =
-  | 'no_account'
-  | 'provider_ref_missing'
-  | 'provider_unavailable'
-  | 'provider_failed'
-  | 'split_payment';
+export type RefundBlockReason = 'no_account' | 'provider_ref_missing' | 'provider_unavailable' | 'provider_failed';
 
 export type AdjustOutcome =
   | ({ status: 'ok'; restockedQty: number; discardedQty: number; releasedQty: number } & RefundOutcome)
@@ -67,7 +60,7 @@ export type CancelOutcome =
   | { status: 'not_found' };
 
 export interface RefundOptions {
-  /** İadenin çıkacağı hesap — verilmezse paranın girdiği hesaptan türetilir. */
+  /** İadenin çıkacağı hesap — verilmezse paranın girdiği yollara bölünür; kart hesabı verilirse o hesabın kart ödemelerine bölünür. */
   refundAccountId?: string | null;
   /** Tutarı elle vermek — türetilen borcun YERİNE geçer (ör. stok yokluğu iptalinde `0`: para sağlayıcıda kalır). */
   refundAmountCents?: number | null;
@@ -264,102 +257,97 @@ export async function retryRefund(
 
 /**
  * Ödeme durumunu tazeler, borç varsa iadeyi yazar ve hareketten sonraki hâli döner; tutar türetimden gelir, elle verilen tutar
- * yerine geçer. Önce sağlayıcı çağrısı, sonra hareket: para dönmeden hareket yazılsa defter kapanmış görünürdü.
+ * yerine geçer. Para birden çok yoldan geldiyse iade motorun planıyla parçalara bölünür; her parçada önce sağlayıcı çağrısı, sonra
+ * hareket, çünkü para dönmeden hareket yazılsa defter kapanmış görünürdü.
  */
 async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOptions): Promise<RefundOutcome | null> {
   const before = await syncOrderPaymentStatus(db, orderId);
   if (before.status !== 'ok') return null;
 
-  const dueCents = opts.refundAmountCents ?? before.derivation.refundDueCents;
-  const unsettled = (refundBlocked?: RefundBlockReason): RefundOutcome => ({
-    refundedAmountCents: 0,
-    paymentStatus: before.paymentStatus,
-    amountToCollectCents: before.derivation.amountToCollectCents,
+  let state = { paymentStatus: before.paymentStatus, amountToCollectCents: before.derivation.amountToCollectCents };
+  let refundedAmountCents = 0;
+  const outcome = (refundBlocked?: RefundBlockReason): RefundOutcome => ({
+    refundedAmountCents,
+    ...state,
     ...(refundBlocked ? { refundBlocked } : {}),
   });
 
-  if (dueCents <= 0) return unsettled();
+  const dueCents = opts.refundAmountCents ?? before.derivation.refundDueCents;
+  if (dueCents <= 0) return outcome();
 
-  const payment = await lastPayment(db, orderId);
-  /* Hesap, paranın net olarak durduğu tek hesaptır; para birden çok hesaba bölünmüşse otomatik bölme yapılmaz, borç açıkta kalır.
-     Orantılı bölmenin yarım kalan sağlayıcı çağrısı geri alınamazdı; operatör `refundAccountId` ile hesap başına yazar. */
-  const accountId = opts.refundAccountId ?? (await soleFundedAccount(db, orderId));
-  if (accountId === 'split') return unsettled('split_payment');
-  // Hesap türetilemiyorsa iade yazılamaz ama düzeltme geçerlidir: borç `amountToCollect`'in negatifi
-  // olarak zaten görünür. Sessizce yanlış hesaba yazmaktansa borcu açıkta bırakmak doğrudur.
-  if (!accountId) return unsettled('no_account');
+  const plan = await refundPlanOf(db, orderId, dueCents, opts.refundAccountId ?? null);
+  // Hesap türetilemiyorsa iade yazılamaz ama düzeltme geçerlidir: borç `amountToCollect`'in negatifi olarak zaten görünür.
+  if (plan.legs.length === 0) return outcome(plan.routeType === 'provider' ? 'provider_ref_missing' : 'no_account');
 
-  // Sağlayıcı çağrısı hesabın TÜRÜNE bağlıdır, siparişin ödeme yöntemine değil. Operatör kartla
-  // ödenmiş bir siparişi kasadan nakit iade etmeyi seçebilir (`refundAccountId`) — o zaman dönülecek
-  // bir sağlayıcı yoktur ve olmamalıdır.
-  const account = await new AccountService(db).getById(accountId);
-  let refundMeta: Record<string, unknown> | null = null;
+  try {
+    for (const leg of plan.legs) {
+      const written = await writeRefundLeg(db, orderId, leg, opts);
+      // Yazılan parçalar geçerlidir; kalan borç açıkta görünür ve yeniden deneme onu yeni planla kapatır.
+      if (written.status === 'blocked') return outcome(written.reason);
+      refundedAmountCents += written.refundedCents;
+      state = { paymentStatus: written.after.paymentStatus, amountToCollectCents: written.after.derivation.amountToCollectCents };
+    }
+  } finally {
+    if (refundedAmountCents > 0) kickOrderRegister(db, orderId);
+  }
+  return outcome(plan.uncoveredCents > 0 ? 'no_account' : undefined);
+}
 
-  if (account?.type === 'provider') {
-    const providerRef = typeof payment?.meta?.['providerRef'] === 'string' ? payment.meta['providerRef'] : null;
-    // Künye yoksa hangi ödemenin üzerinden dönüleceği bilinmiyor. Tahmin edilemez: yanlış niyete
-    // yapılan bir iade başka bir müşterinin parasını geri gönderir.
-    if (!providerRef) return unsettled('provider_ref_missing');
+/** Siparişin paraları ve operatörün seçtiği yol motorun planından geçer; bilinmeyen yol iadeyi durdurur, tahminle yazılmaz. */
+async function refundPlanOf(
+  db: SupabaseClient,
+  orderId: string,
+  dueCents: number,
+  routeAccountId: string | null,
+): Promise<RefundPlan & { routeType: AccountType | null }> {
+  const [movements, accounts] = await Promise.all([new MoneyMovementService(db).listByOrder(orderId), new AccountService(db).list()]);
+  const types = new Map(accounts.map((account) => [account.id, account.type]));
+  const routeType = routeAccountId ? (types.get(routeAccountId) ?? null) : null;
+  if (routeAccountId && !routeType) return { legs: [], uncoveredCents: dueCents, routeType: null };
+  const route = routeAccountId && routeType ? { accountId: routeAccountId, accountType: routeType } : null;
+  return { ...planRefund({ dueCents, sources: refundSourcesOf(movements, types), route }), routeType };
+}
 
-    const result = await providerRefunder(opts.effects)({
-      paymentRef: providerRef,
-      amountCents: dueCents,
-      idempotencyKey: await refundIdempotencyKey(db, orderId, dueCents),
-    });
-    if (result.status === 'unavailable') return unsettled('provider_unavailable');
-    if (result.status === 'failed') return unsettled('provider_failed');
+type LegResult =
+  | { status: 'written'; refundedCents: number; after: Extract<PaymentOutcome, { status: 'ok' }> }
+  | { status: 'blocked'; reason: RefundBlockReason };
 
-    refundMeta = { providerRef, refundId: result.refundId };
+/**
+ * Tek parça. Sağlayıcı ve hareket aynı anahtarı taşır: çağrı geçip hareket yazılamazsa yeniden deneme aynı anahtarla gider, sağlayıcı
+ * ilk iadeyi döner ve hareket bir kez yazılır.
+ */
+async function writeRefundLeg(db: SupabaseClient, orderId: string, leg: RefundLeg, opts: RefundOptions): Promise<LegResult> {
+  const idempotencyKey = await refundIdempotencyKey(db, orderId, leg.amountCents);
+  let meta: Record<string, unknown> | null = null;
+
+  // Sağlayıcı çağrısı hesabın TÜRÜNE bağlıdır, siparişin ödeme yöntemine değil: operatör kartla ödenmiş siparişi kasadan nakit iade
+  // edebilir, o zaman dönülecek bir sağlayıcı yoktur.
+  if (leg.accountType === 'provider') {
+    // Künye yoksa hangi ödemenin üzerinden dönüleceği bilinmiyor; yanlış niyete yapılan iade başka bir müşterinin parasını gönderir.
+    if (!leg.providerRef) return { status: 'blocked', reason: 'provider_ref_missing' };
+    const result = await providerRefunder(opts.effects)({ paymentRef: leg.providerRef, amountCents: leg.amountCents, idempotencyKey });
+    if (result.status === 'unavailable') return { status: 'blocked', reason: 'provider_unavailable' };
+    if (result.status === 'failed') return { status: 'blocked', reason: 'provider_failed' };
+    meta = { providerRef: leg.providerRef, refundId: result.refundId };
   }
 
   const after = await recordOrderRefund(db, {
     orderId,
-    accountId,
-    amountCents: dueCents,
-    method: account ? refundMethodOf(account.type, payment?.paymentMethod ?? null) : null,
+    accountId: leg.accountId,
+    amountCents: leg.amountCents,
+    method: leg.method,
     valueDate: opts.valueDate,
     description: opts.description ?? 'Sipariş iadesi',
-    meta: refundMeta,
+    meta,
     // Sistemin yazdığı satır: iade borcu motordan türedi, hareketi bu zincir yazar.
     source: 'system',
+    idempotencyKey,
   });
   if (after.status !== 'ok') {
-    // Para SAĞLAYICIDAN ÇIKTI ama deftere geçmedi — sessiz kalınamaz. Hangi iade olduğunu ancak bu
-    // satır söyleyebilir; çağıranın hata funnel'ı bunu `error_log`'a düşürür.
-    throw new Error(
-      `[refund] sağlayıcı iadesi yapıldı ama hareket yazılamadı — sipariş ${orderId}, iade ${String(refundMeta?.['refundId'] ?? '-')}`,
-    );
+    // Para SAĞLAYICIDAN ÇIKMIŞ olabilir ama deftere geçmedi — sessiz kalınamaz; çağıranın hata funnel'ı bunu `error_log`'a düşürür.
+    throw new Error(`[refund] iade parası çıktı ama hareket yazılamadı — sipariş ${orderId}, iade ${String(meta?.['refundId'] ?? '-')}`);
   }
-  kickOrderRegister(db, orderId);
-
-  return {
-    refundedAmountCents: dueCents,
-    paymentStatus: after.paymentStatus,
-    amountToCollectCents: after.derivation.amountToCollectCents,
-  };
-}
-
-/**
- * **Paranın net olarak durduğu tek hesap** — yoksa `null`, birden çoksa `'split'`. Net = tahsilat − iade: sıfıra inen hesap
- * listeye girmez, yoksa ikinci iade oraya yazılırdı.
- */
-async function soleFundedAccount(db: SupabaseClient, orderId: string): Promise<string | null | 'split'> {
-  const movements = await new MoneyMovementService(db).listByOrder(orderId);
-  const net = new Map<string, number>();
-  for (const m of movements) {
-    if (m.type !== 'order_payment' && m.type !== 'order_refund') continue;
-    const isaret = m.type === 'order_payment' ? 1 : -1;
-    net.set(m.accountId, (net.get(m.accountId) ?? 0) + isaret * m.amountCents);
-  }
-  const dolu = [...net.entries()].filter(([, tutar]) => tutar > 0).map(([id]) => id);
-  if (dolu.length === 0) return null;
-  return dolu.length === 1 ? dolu[0]! : 'split';
-}
-
-/** Para hangi hesaba girdiyse oradan çıkar — son tahsilat hareketi (künyesi de ondan okunur). */
-async function lastPayment(db: SupabaseClient, orderId: string) {
-  const movements = await new MoneyMovementService(db).listByOrder(orderId);
-  return movements.filter((movement) => movement.type === 'order_payment').at(-1) ?? null;
+  return { status: 'written', refundedCents: after.deduped ? 0 : leg.amountCents, after };
 }
 
 /**

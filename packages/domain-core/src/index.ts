@@ -59,6 +59,7 @@ export * from './payment/checkout-options';
 export * from './payment/credit';
 export * from './payment/payment-status';
 export * from './payment/refund-method';
+export * from './payment/refund-split';
 export * from './register/plan';
 export * from './register/split';
 export * from './register/reconcile';

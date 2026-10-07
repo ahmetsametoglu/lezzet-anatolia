@@ -1167,13 +1167,8 @@ export const WarehouseReturnResponseSchema = z.discriminatedUnion('status', [
     refundedAmountCents: z.number().int(),
     paymentStatus: PaymentStatusEnum,
     amountToCollectCents: z.number().int(),
-    /**
-     * Borç vardı ama iade yazılamadı — sebebiyle; yokluğu "iade tamam" demektir. `split_payment`da ekranın cümlesi "tekrar
-     * dene" değil hesap başına elle iadedir, çünkü tek hesaptan yazmak parayı almamış hesabın bakiyesini bozardı.
-     */
-    refundBlocked: z
-      .enum(['no_account', 'provider_ref_missing', 'provider_unavailable', 'provider_failed', 'split_payment'])
-      .optional(),
+    /** Borç vardı ama iade yazılamadı ya da eksik yazıldı — sebebiyle; yokluğu "iade tamam" demektir. */
+    refundBlocked: z.enum(['no_account', 'provider_ref_missing', 'provider_unavailable', 'provider_failed']).optional(),
   }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),

@@ -50,10 +50,10 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
   /** Akıbet alabilecek adet: müşteride kalan adet geri iade edilemez. */
   const openQtyOf = (line: OrderLineView) => line.fulfilledQty - line.goodwillQty;
   const [note, setNote] = useState('');
-  // Seçim paranın GİRDİĞİ hesaptan başlar; hiç tahsilat olmamışsa ilk yol seçili gelir — o durumda
-  // iade borcu da doğmayacağı için seçim zaten hareketsiz kalır.
+  // Seçim varsayılan yoldan başlar; hiç tahsilat olmamışsa ilk yol seçili gelir — o durumda iade borcu da doğmayacağı için seçim
+  // zaten hareketsiz kalır.
   const [routeId, setRouteId] = useState<string | null>(
-    order.refundRoutes.find((r) => r.isDefault)?.accountId ?? order.refundRoutes[0]?.accountId ?? null,
+    (order.refundRoutes.find((r) => r.isDefault) ?? order.refundRoutes[0])?.accountId ?? null,
   );
   const [preview, setPreview] = useState<{ refundDueCents: number; amountToCollectCents: number; fulfilledAmountCents: number } | null>(null);
   /** Önizleme düşerse SESSİZ kalınmaz: para konuşan pencerede boş bir "…" onaya izin veremez. */
@@ -201,7 +201,7 @@ export function DecisionDialog({ order, kind, onClose, onConfirm, busy, error }:
           <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-2">
             {order.refundRoutes.map((option) => (
               <RouteCard
-                key={option.accountId}
+                key={option.accountId ?? 'geldigi-yollara'}
                 option={option}
                 active={option.accountId === routeId}
                 onSelect={() => setRouteId(option.accountId)}

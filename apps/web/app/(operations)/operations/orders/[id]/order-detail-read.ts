@@ -47,6 +47,7 @@ import {
   isZeroRated,
   officeTransitions,
   orderContribution,
+  refundSourcesOf,
   skippedBetween,
   vatSplitOf,
 } from '@lezzet/domain-core';
@@ -387,11 +388,18 @@ function costNoteOf(order: Order): string | null {
 }
 
 /**
- * Varsayılan paranın girdiği hesaptır; operatör saptırabilir, çünkü karttan tahsil edip nakit iade etmek meşrudur. Kapalı hesap
- * listelenmez.
+ * Varsayılan paranın girdiği yoldur; para birden çok yoldan geldiyse varsayılan, iadeyi geldiği yollara en son ödemeden geriye bölen
+ * yoldur (`planRefund`). Operatör saptırabilir, çünkü karttan tahsil edip nakit iade etmek meşrudur; kapalı hesap listelenmez.
  */
 function refundRoutesOf(accounts: readonly Account[], movements: readonly MoneyMovement[]): RefundRouteView[] {
-  const paidInto = movements.filter((m) => m.type === 'order_payment').at(-1)?.accountId ?? null;
+  const funded = refundSourcesOf(movements, new Map(accounts.map((account) => [account.id, account.type])));
+  const fundedAccounts = [...new Set(funded.map((source) => source.accountId))];
+  // Hareket listesi güne göre sıralı, gün içi sırası belirsiz; son ödeme kayıt anından okunur.
+  const lastPaid = movements
+    .filter((m) => m.type === 'order_payment')
+    .reduce<MoneyMovement | null>((latest, m) => (!latest || Date.parse(m.createdAt) > Date.parse(latest.createdAt) ? m : latest), null);
+  const paidInto = fundedAccounts.length === 1 ? fundedAccounts[0]! : (lastPaid?.accountId ?? null);
+  const split = fundedAccounts.length > 1;
 
   // Yol hesap türüdür: on kasa satırı soruyu "nasıl geri veriyorum"dan "hangi kasa"ya kaydırırdı. Tür başına paranın girdiği hesap,
   // yoksa türün en eskisi seçilir.
@@ -402,16 +410,30 @@ function refundRoutesOf(accounts: readonly Account[], movements: readonly MoneyM
     else if (!byType.has(account.type)) byType.set(account.type, account);
   }
 
-  return [...byType.values()]
+  const routes: RefundRouteView[] = [...byType.values()]
     .map((account) => ({
       accountId: account.id,
       label: ROUTE_LABELS[account.type],
       sub: account.name,
-      isDefault: account.id === paidInto,
+      isDefault: !split && account.id === paidInto,
       // Karta iade müşteriye birkaç gün sonra ulaşır; ekran bunu söyler.
       caveat: account.type === 'provider' ? 'Para karta döner; bankaya geçmesi birkaç gün sürebilir.' : '',
     }))
     .sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+  if (!split) return routes;
+
+  const nameOf = new Map(accounts.map((account) => [account.id, account.name]));
+  const toCard = funded.some((source) => source.accountType === 'provider');
+  return [
+    {
+      accountId: null,
+      label: 'Geldiği yollara',
+      sub: fundedAccounts.map((id) => nameOf.get(id) ?? '—').join(' · '),
+      isDefault: true,
+      caveat: `En son ödemeden geriye bölünür${toCard ? '; karta dönen kısmın bankaya geçmesi birkaç gün sürebilir' : ''}.`,
+    },
+    ...routes,
+  ];
 }
 
 /** Ortak cari iade yolu değildir: müşteri parası şirketin kasasından, bankasından ya da kartından döner ve kasaya yöntemiyle yazılır. */

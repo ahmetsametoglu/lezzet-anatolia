@@ -10,7 +10,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
-import { recordOrderPayment } from '../money/order-payment';
+import { recordOrderPayment, recordOrderRefund } from '../money/order-payment';
 import { cancelOrder, retryRefund } from './refund';
 import type { ProviderRefundInput, ProviderRefundOutcome, ProviderRefunder } from '@lezzet/application';
 import { handlePaymentEvent } from './payment-webhook';
@@ -103,6 +103,96 @@ async function paidOrder(opts: { providerRef?: string | null; accountId?: string
   });
   return order.id;
 }
+
+/** İki yoldan ödenmiş, onaylanmış sipariş; ödemeler verilen sırayla yazılır (en sonuncusu en yeni). */
+async function splitOrder(parts: Array<{ accountId: string; amountCents: number; providerRef?: string }>) {
+  const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', deliveryType: 'route', orderedTotalCents: 2000 }, [
+    { variantId, qty: 2, unitPriceCents: 1000, vatRate: 5.5 },
+  ]);
+  await transitionOrder({ orderId: order.id, to: 'confirmed' });
+  for (const part of parts) {
+    await recordOrderPayment({
+      orderId: order.id,
+      accountId: part.accountId,
+      amountCents: part.amountCents,
+      method: part.accountId === cashAccount ? 'cash' : 'online',
+      meta: part.providerRef ? { providerRef: part.providerRef } : null,
+    });
+  }
+  return order.id;
+}
+
+/** Siparişin iade satırları, tutara göre; listenin gün içi sırası belirsizdir. */
+const refundRowsOf = async (orderId: string) =>
+  (await money.listByOrder(orderId))
+    .filter((m) => m.type === 'order_refund')
+    .map((m) => ({
+      accountId: m.accountId,
+      amountCents: m.amountCents,
+      providerRef: (m.meta?.['providerRef'] as string | undefined) ?? null,
+    }))
+    .sort((a, b) => b.amountCents - a.amountCents);
+
+describe('bölünmüş ödemenin iadesi', () => {
+  it('kartla kapora + kapıda nakit: iptalde nakit kasadan, kapora karttan döner; sağlayıcıya yalnız kapora tutarı gider', async () => {
+    const orderId = await splitOrder([
+      { accountId: providerAccount, amountCents: 500, providerRef: `rv_kapora_${stamp}` },
+      { accountId: cashAccount, amountCents: 1500 },
+    ]);
+    const refunder = fakeRefunder({ status: 'ok', refundId: 're_kapora' });
+
+    const result = await cancelOrder(orderId, { refunder });
+
+    expect(result).toMatchObject({ status: 'ok', refundedAmountCents: 2000, paymentStatus: 'refunded' });
+    expect(refunder.calls.map(({ paymentRef, amountCents }) => ({ paymentRef, amountCents }))).toEqual([
+      { paymentRef: `rv_kapora_${stamp}`, amountCents: 500 },
+    ]);
+    expect(await refundRowsOf(orderId)).toEqual([
+      { accountId: cashAccount, amountCents: 1500, providerRef: null },
+      { accountId: providerAccount, amountCents: 500, providerRef: `rv_kapora_${stamp}` },
+    ]);
+  });
+
+  it('aynı Revolut hesabına iki kart ödemesi: her biri kendi künyesinden ve kendi tutarı kadar iade edilir', async () => {
+    const orderId = await splitOrder([
+      { accountId: providerAccount, amountCents: 500, providerRef: `rv_once_${stamp}` },
+      { accountId: providerAccount, amountCents: 1500, providerRef: `rv_sonra_${stamp}` },
+    ]);
+    const refunder = fakeRefunder({ status: 'ok', refundId: 're_iki' });
+
+    await cancelOrder(orderId, { refunder });
+
+    expect(refunder.calls.map(({ paymentRef, amountCents }) => ({ paymentRef, amountCents }))).toEqual([
+      { paymentRef: `rv_sonra_${stamp}`, amountCents: 1500 },
+      { paymentRef: `rv_once_${stamp}`, amountCents: 500 },
+    ]);
+    // İki çağrı iki ayrı anahtar taşır: aynı anahtar sağlayıcıda ikinci iadeyi birincinin tekrarı sayardı.
+    expect(new Set(refunder.calls.map((call) => call.idempotencyKey)).size).toBe(2);
+  });
+
+  it('kart parçası düşerse yazılan nakit parçası kalır; yeniden deneme yalnız kalanı karttan yazar, nakit ikinci kez çıkmaz', async () => {
+    const orderId = await splitOrder([
+      { accountId: providerAccount, amountCents: 500, providerRef: `rv_dusen_${stamp}` },
+      { accountId: cashAccount, amountCents: 1500 },
+    ]);
+
+    const first = await cancelOrder(orderId, { refunder: fakeRefunder({ status: 'failed', error: 'network' }) });
+    expect(first).toMatchObject({ status: 'ok', refundedAmountCents: 1500, refundBlocked: 'provider_failed' });
+    expect((await orders.getById(orderId))?.amountRefundedCents).toBe(1500);
+
+    const refunder = fakeRefunder({ status: 'ok', refundId: 're_kalan' });
+    const retried = await retryRefund(orderId, { refunder });
+
+    expect(retried).toMatchObject({ status: 'ok', refundedAmountCents: 500 });
+    expect(refunder.calls.map(({ paymentRef, amountCents }) => ({ paymentRef, amountCents }))).toEqual([
+      { paymentRef: `rv_dusen_${stamp}`, amountCents: 500 },
+    ]);
+    expect(await refundRowsOf(orderId)).toEqual([
+      { accountId: cashAccount, amountCents: 1500, providerRef: null },
+      { accountId: providerAccount, amountCents: 500, providerRef: `rv_dusen_${stamp}` },
+    ]);
+  });
+});
 
 describe('sıra: önce sağlayıcı, sonra hareket', () => {
   it('iade sağlayıcıya GİDER ve hareket ondan sonra yazılır', async () => {
@@ -207,6 +297,19 @@ describe('iade mutabakatı', () => {
     const outcome = await handlePaymentEvent(refundEvent(`rv_own_${stamp}`, 2000, 'own'), providerAccount);
 
     expect(outcome).toMatchObject({ status: 'ok', action: 'ignored' });
+    expect((await orders.getById(orderId))?.amountRefundedCents).toBe(2000);
+  });
+
+  it('bölünmüş siparişte panelden yapılan kart iadesi deftere düşer; nakit iadesi o kart ödemesinden düşülmez', async () => {
+    const orderId = await splitOrder([
+      { accountId: providerAccount, amountCents: 500, providerRef: `rv_panel_bolunmus_${stamp}` },
+      { accountId: cashAccount, amountCents: 1500 },
+    ]);
+    await recordOrderRefund({ orderId, accountId: cashAccount, amountCents: 1500, method: 'cash' });
+
+    const outcome = await handlePaymentEvent(refundEvent(`rv_panel_bolunmus_${stamp}`, 500, 'panel_bolunmus'), providerAccount);
+
+    expect(outcome).toMatchObject({ status: 'ok', action: 'refunded' });
     expect((await orders.getById(orderId))?.amountRefundedCents).toBe(2000);
   });
 

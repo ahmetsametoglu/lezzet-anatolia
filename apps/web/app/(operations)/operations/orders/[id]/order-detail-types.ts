@@ -205,13 +205,12 @@ export interface CustomerContextView {
 }
 
 /**
- * İadenin çıkacağı yol — **gerçek hesaplardan** kurulur, uydurma bir menüden değil.
- *
- * Varsayılan "paranın girdiği hesap"tır: iade kuralı zaten öyle diyor (`lib/order/refund`), ekran
- * onu yeniden karar vermez, yalnız gösterir ve gerekirse saptırır.
+ * İadenin çıkacağı yol — **gerçek hesaplardan** kurulur, uydurma bir menüden değil. Varsayılan iade kuralının kendisidir
+ * (`planRefund`); ekran onu yeniden karar vermez, yalnız gösterir ve gerekirse saptırır.
  */
 export interface RefundRouteView {
-  accountId: string;
+  /** `null`: para birden çok yoldan geldi, iade geldiği yollara bölünür. */
+  accountId: string | null;
   label: string;
   sub: string;
   /** Para bu hesaptan girmişti — seçim buradan başlar. */
