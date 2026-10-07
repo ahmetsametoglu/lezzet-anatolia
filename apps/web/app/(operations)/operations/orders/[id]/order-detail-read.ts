@@ -193,7 +193,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     vatRate: item.vatRate,
     lineTotalCents: lineTotalOf(item),
     // Hazırlık kesinleşmediyse sipariş edilen okunur: o aşamada `fulfilled_qty` bir karar değil, henüz yazılmamış bir sayıdır.
-    payableCents: fulfilledLineAmountCents(payableLineOf(item), isFulfillmentSettled(order.status, items)),
+    payableCents: fulfilledLineAmountCents(payableLineOf(item), isFulfillmentSettled(order.status)),
     bundleId: item.bundleId,
     returns: returns
       .filter((entry) => entry.orderItemId === item.id)
@@ -227,7 +227,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     refundedCents: order.amountRefundedCents,
   });
 
-  const settled = isFulfillmentSettled(order.status, items);
+  const settled = isFulfillmentSettled(order.status);
   return {
     id: order.id,
     referenceNo: order.referenceNo,

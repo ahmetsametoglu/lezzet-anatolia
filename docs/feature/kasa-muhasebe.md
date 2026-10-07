@@ -324,9 +324,10 @@ hediye sipariş hiç para görmez (11. karar). Tarih ayarı yoktur (19. karar): 
 6. **Değişen hareket:** B2C tahsilat hareketinin tutarı, yöntemi, hesabı ve siparişi değişmez, hareket silinmez;
    bunu veritabanı korur (18. karar). Düzeltme ters harekettir ve kasaya eksi satır olarak gider.
 
-**Ücretlenen kalem motorun tanımıdır** (`fulfilledLineAmountCents`, `isFulfillmentSettled`): hazırlık
-kesinleşmeden sipariş edilen adet, sonra giden eksi müşteride kalan; iptalde sıfır; kargo ancak ücretlenen
-kalem varsa. Hiboutik kalemi:
+**Ücretlenen kalem motorun tanımıdır** (`fulfilledLineAmountCents`, `hasLeftWarehouse`): sipariş depodan çıkana
+kadar (araca yükleme, kargoya teslim, gel-al teslimi) sipariş edilen adet, sonra giden eksi müşteride kalan; iptalde
+sıfır; kargo ancak ücretlenen kalem varsa. Düzeltme çıkışı bekler, çünkü kutu kutu yazılan hazırlık yarıda "eksik"
+görünür ve hazır siparişin kutusu hâlâ yeniden açılabilir. Hiboutik kalemi:
 - Tutar indirim payı düşülmüş tutardır. Birim fiyat kuruşa bölünmüyorsa kalem ikiye ayrılır.
 - Paket kalemleri zaten ayrı `order_item`, ayrı yazılır.
 - Kargo, ücretlenen kalem tutarlarına göre KDV oranlarına bölünür (`apportionShippingVat`); oran başına

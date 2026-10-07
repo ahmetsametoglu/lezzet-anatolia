@@ -84,7 +84,7 @@ describe('kasa planı — fiş', () => {
   it('eksik çıkan kalemin iadesi eksi kalemli fiştir; kargonun oran payı da düzelir', () => {
     // İade yalnız ödeme satırı olsaydı kasa gitmeyen malı satılmış gösterirdi.
     const r = plan({
-      order: order({ status: 'ready' }),
+      order: order({ status: 'out_for_delivery' }),
       items: [lokum({ fulfilledQty: 2 }), ambalaj({ fulfilledQty: 1 })],
       movements: [move('h1', 3690), move('h2', -1000, 'online', '11:00')],
       tickets: [firstTicket()],
@@ -100,6 +100,20 @@ describe('kasa planı — fiş', () => {
       ],
       blocked: null,
       dueMismatch: false,
+    });
+  });
+
+  it('kutu kutu hazırlıkta ve hazır siparişte kasaya düzeltme yazılmaz; eksik kalem sipariş depodan çıkınca düşülür', () => {
+    // İlk kutu mühürlenince öteki kalem toplanmamış görünür; o an düzeltme yazılsaydı kasaya sahte iade ve yeniden satış giderdi.
+    const firstBoxOnly = [lokum({ fulfilledQty: 3 }), ambalaj({ fulfilledQty: 0 })];
+    for (const status of ['preparing', 'ready'] as const) {
+      expect(plan({ order: order({ status }), items: firstBoxOnly, tickets: [firstTicket()] })).toMatchObject({ status: 'plan', ops: [] });
+    }
+
+    const left = plan({ order: order({ status: 'out_for_delivery' }), items: firstBoxOnly, tickets: [firstTicket()] });
+
+    expect(left).toMatchObject({
+      ops: [{ op: 'open_ticket', seq: 2, lines: expect.arrayContaining([item('ambalaj', -1, -200, 20)]), payments: [] }],
     });
   });
 

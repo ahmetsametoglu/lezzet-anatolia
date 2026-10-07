@@ -1,6 +1,6 @@
 import type { MoneyMovement, Order, OrderItem, PaymentMethod, RegisterLine, RegisterPayment, RegisterTicketSnapshot } from '@lezzet/types';
 import { chargedShippingParts } from '../delivery/shipping-fee';
-import { isFulfillmentSettled } from '../order/status-machine';
+import { hasLeftWarehouse, isFulfillmentSettled } from '../order/status-machine';
 import {
   chargedQtyOf,
   derivePaymentStatusForOrder,
@@ -159,11 +159,12 @@ function paymentDeltaOf(
 
 /**
  * Siparişin kasadaki hedef kalemleri: `charged` ödeme türetiminin tanımıdır (iptalde boş), `ordered` sipariş edilen hâldir. Kargo,
- * ücretlenen kalem varsa oran başına bölünür.
+ * ücretlenen kalem varsa oran başına bölünür. İçerik düzeltmesi sipariş depodan çıkınca yazılır, çünkü kapanmış fiş değişmez ve
+ * hazır siparişin kutusu hâlâ yeniden açılabilir.
  */
 function registerLinesOf(order: RegisterOrder, items: readonly RegisterItem[], basis: 'charged' | 'ordered'): RegisterLine[] {
   if (basis === 'charged' && order.status === 'cancelled') return [];
-  const settled = basis === 'charged' && isFulfillmentSettled(order.status, items);
+  const settled = basis === 'charged' && hasLeftWarehouse(order.status);
 
   const lines: RegisterLine[] = [];
   for (const item of items) {
@@ -235,6 +236,8 @@ function deltaOf(base: RegisterLine, target: Amount, written: Amount): RegisterL
 }
 
 function dueMismatchOf(order: RegisterOrder, items: readonly RegisterItem[]): boolean {
+  // Hazır siparişte borç hazırlıktan türer, kasa kalemleri depodan çıkışta düzelir; aradaki fark uyarı değildir.
+  if (isFulfillmentSettled(order.status) !== hasLeftWarehouse(order.status)) return false;
   const due = derivePaymentStatusForOrder(order, items, { collectedCents: 0, refundedCents: 0 }).fulfilledAmountCents;
   return registerLinesOf(order, items, 'charged').reduce((sum, line) => sum + line.amountCents, 0) !== due;
 }

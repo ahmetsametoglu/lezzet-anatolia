@@ -2,29 +2,23 @@ import { describe, expect, it } from 'vitest';
 import { isFulfillmentSettled } from './status-machine';
 
 describe('isFulfillmentSettled', () => {
-  const picked = [{ fulfilledQty: 2 }, { fulfilledQty: 0 }];
-  const none = [{ fulfilledQty: 0 }, { fulfilledQty: 0 }];
-
   it('hazırlık başlamadan karşılanan adet bir karar DEĞİLDİR', () => {
-    expect(isFulfillmentSettled('draft', none)).toBe(false);
-    expect(isFulfillmentSettled('confirmed', none)).toBe(false);
-    // Onaylanmış siparişte toplama yazılmış olamaz; yazılsa bile karar hazırlıkta verilir.
-    expect(isFulfillmentSettled('confirmed', picked)).toBe(false);
+    expect(isFulfillmentSettled('draft')).toBe(false);
+    expect(isFulfillmentSettled('confirmed')).toBe(false);
   });
 
-  it('hazırlanırken ayıran şey KAYITTIR: bir kalem toplandıysa sayı kesinleşmiştir', () => {
-    expect(isFulfillmentSettled('preparing', none)).toBe(false);
-    expect(isFulfillmentSettled('preparing', picked)).toBe(true);
+  it('hazırlanırken toplanan adet kesin değildir: kutu akışı toplamayı kutu kutu yazar', () => {
+    expect(isFulfillmentSettled('preparing')).toBe(false);
   });
 
   it('hazırlık bittikten sonra sayı her hâlde kesindir', () => {
     for (const status of ['ready', 'out_for_delivery', 'delivered', 'completed', 'returned'] as const) {
-      expect(isFulfillmentSettled(status, none)).toBe(true);
+      expect(isFulfillmentSettled(status)).toBe(true);
     }
   });
 
   it('iptal edilen siparişte karşılanan sorusu sorulmaz', () => {
-    expect(isFulfillmentSettled('cancelled', picked)).toBe(false);
+    expect(isFulfillmentSettled('cancelled')).toBe(false);
   });
 });
 import type { OrderStatus } from '@lezzet/types';

@@ -121,11 +121,12 @@ describe('bildirim verisi siparişten türer', () => {
 
   it('eksik karşılanan kalem müşteriye SEBEPSİZ ama rakamlı görünür (tasarım kuralı)', async () => {
     const { orderId, itemId } = await confirmOrder(5);
-    // Depo 5 istenenden 4'ünü hazırlayabildi — eksik hazırlıkta doğar (DOMAIN §8).
-    // Sipariş `preparing`'de olmalı: karşılanan adet ancak hazırlık kaydı yazıldığında bir karardır
-    // (`isFulfillmentSettled`), onaylanmış siparişte 0 olması "eksik gitti" demek değildir.
+    // Depo 5 istenenden 4'ünü hazırlayabildi — eksik hazırlıkta doğar (DOMAIN §8). Karşılanan adet hazırlık kapanınca bir
+    // karardır (`isFulfillmentSettled`); bildirim siparişin yola çıktığı andadır.
     await transitionOrder({ orderId, to: 'preparing' });
     await orders.recordPreparation(orderId, [{ orderItemId: itemId, batches: [{ stockId: batchId, qty: 4 }] }]);
+    await transitionOrder({ orderId, to: 'ready' });
+    await transitionOrder({ orderId, to: 'out_for_delivery' });
 
     const bundle = await buildOrderNotification(orderId, 'order_out_for_delivery');
 

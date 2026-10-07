@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { derivePaymentStatus, fulfilledLineAmountCents, type FulfilledLine, type PaymentDerivationInput } from './payment-status';
+import {
+  derivePaymentStatus,
+  derivePaymentStatusForOrder,
+  fulfilledLineAmountCents,
+  type FulfilledLine,
+  type PaymentDerivationInput,
+} from './payment-status';
 
 /** 2 adet × 10 € = 20 € — tamamı gitmiş kalem. */
 const line = (over: Partial<FulfilledLine> = {}): FulfilledLine => ({
@@ -125,6 +131,22 @@ describe('iade senaryoları (03.6)', () => {
  * Hazırlık kesinleşmeden beklenen tutar siparişin kendi toplamıdır: kaleme yazılmamış indirim payı tamamı ödenmiş siparişi
  * `partial` göstermemeli.
  */
+describe('kutu kutu hazırlık', () => {
+  it('hazırlık sürerken ilk kutuya giren kalemler borcu düşürmez; sipariş "iade bekliyor" görünmez', () => {
+    const items = [
+      { fulfilledQty: 2, goodwillQty: 0, qty: 2, unitPriceCents: 1000, lineDiscountAmountCents: 0 },
+      { fulfilledQty: 0, goodwillQty: 0, qty: 1, unitPriceCents: 500, lineDiscountAmountCents: 0 },
+    ];
+
+    const r = derivePaymentStatusForOrder({ status: 'preparing', shippingFeeCents: 0, orderedTotalCents: 2500 }, items, {
+      collectedCents: 2500,
+      refundedCents: 0,
+    });
+
+    expect(r).toMatchObject({ status: 'paid', fulfilledAmountCents: 2500, refundDueCents: 0 });
+  });
+});
+
 describe('hazırlık kesinleşmemişken beklenen tutar', () => {
   const unsettled = { fulfillmentSettled: false, lines: [line({ fulfilledQty: 0 })] };
 

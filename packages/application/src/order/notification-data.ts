@@ -70,7 +70,7 @@ export async function buildOrderNotification(
 
   // Aynı ayrım hem kalem satırlarını hem para türetimini yönetir — iki yerde farklı okunursa
   // mailin listesi ile toplamı çelişir.
-  const settled = isFulfillmentSettled(order.status, items);
+  const settled = isFulfillmentSettled(order.status);
   /* Takip yalnız kargo siparişinde sorulur, rota teslimatında gönderi satırı hiç doğmaz. Ayrım `delivery_type`tan gelir,
      olayın adından değil: `order_out_for_delivery` iki kulvarda da kullanılıyor (DOMAIN §6). */
   const [names, steps, tracking, pickupWarehouse] = await Promise.all([

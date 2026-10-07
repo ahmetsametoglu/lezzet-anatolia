@@ -10,7 +10,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 |---|---|---|---|
 | 1 | Araç satışı ana deponun kasa gününü kilitliyor | Yüksek | Yapıldı |
 | 2 | Onaylı işletme müşterisinden KDV alınmıyor | Yüksek | Kabul, yapılacak |
-| 3 | Çok kutulu hazırlık kasaya sahte iade ve yeniden satış yazıyor | Orta | Kabul, yapılacak |
+| 3 | Çok kutulu hazırlık kasaya sahte iade ve yeniden satış yazıyor | Orta | Yapıldı |
 | 4 | Yerinde satış bağlantı koparsa iki kez yazılabiliyor | Orta | Önlem alındı |
 | 5 | Kart iadesi sonradan başarısız olursa bizde yapılmış görünüyor | Orta | Yapıldı |
 | 6 | Onaysız şirkette ve işletme kargosunda KDV aktarımda iki kez sayılıyor | Orta | Konuşulacak |
@@ -70,7 +70,7 @@ tek konuşulur; karar ve sonuç maddenin altına yazılır.
 
 ## 3. Çok kutulu hazırlık kasaya sahte iade ve yeniden satış yazıyor
 
-**Durum:** Kabul, yapılacak (07.10; çözüm kullanıcının önerisi) · **Ağırlık:** orta
+**Durum:** Yapıldı (08.10; çözüm kullanıcının önerisi) · **Ağırlık:** orta
 
 - **Mevcut durum:** Online ödeme gelince para alınmıştır ve kanun gereği hemen kasaya yazılır (18. karar): sipariş edilen
   kalemlerle bir fiş açılıp kapatılır, kasada taslak yoktur. Kapanmış fiş değişmez; sonraki her değişiklik yeni bir düzeltme

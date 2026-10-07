@@ -48,13 +48,16 @@ export function isTerminal(status: OrderStatus): boolean {
 }
 
 /**
- * `fulfilled_qty` bir hazırlık kararı mı, yoksa henüz yazılmamış varsayılan mı? Ayrılmazsa onaylı her sipariş
- * "hiç karşılanmamış" görünür; `preparing`de ayıran şey en az bir kalemin toplanmış olmasıdır.
+ * `fulfilled_qty` bir hazırlık kararı mı: hazırlık kapanmadan (`ready` öncesi) değildir, çünkü kutu akışı toplamayı kutu kutu yazar
+ * ve yarım hazırlık "eksik çıktı" sayılırdı.
  */
-export function isFulfillmentSettled(status: OrderStatus, lines: readonly { fulfilledQty: number }[]): boolean {
-  if (status === 'draft' || status === 'confirmed' || status === 'cancelled') return false;
-  if (status === 'preparing') return lines.some((line) => line.fulfilledQty > 0);
-  return true;
+export function isFulfillmentSettled(status: OrderStatus): boolean {
+  return status !== 'draft' && status !== 'confirmed' && status !== 'preparing' && status !== 'cancelled';
+}
+
+/** Sipariş depodan çıktı mı (araca bindi, kargoya verildi ya da teslim edildi); hazır siparişin kutusu hâlâ yeniden açılabilir. */
+export function hasLeftWarehouse(status: OrderStatus): boolean {
+  return status === 'out_for_delivery' || status === 'delivered' || status === 'completed' || status === 'returned';
 }
 
 /** Bir durumdan gidilebilecek durumlar (UI yalnız bunları sunar — yasak geçiş hiç gösterilmez). */

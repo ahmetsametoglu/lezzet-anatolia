@@ -66,7 +66,7 @@ export function derivePaymentStatusForOrder(
     // iade borcudur.
     cancelled: order.status === 'cancelled',
     // Hazırlanmamış siparişin `fulfilled_qty`'si bir karar değil, henüz yazılmamış bir sayıdır.
-    fulfillmentSettled: isFulfillmentSettled(order.status, items),
+    fulfillmentSettled: isFulfillmentSettled(order.status),
     // O aşamada beklenen tutar SİPARİŞ EDİLENDİR (bkz. `orderTotalCents`) — `revenueTotalCents`
     // orada 0'dır ve doğru cevap değildir: mal henüz hazırlanmadı, "hiçbiri gitmedi" demek değil.
     orderTotalCents: order.orderedTotalCents,
